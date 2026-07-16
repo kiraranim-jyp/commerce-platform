@@ -13,3 +13,5 @@ coverage/
 playwright-report/
 test-results/
 .pnpm-store/
+storage/
+logs/

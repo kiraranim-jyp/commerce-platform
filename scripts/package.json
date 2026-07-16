@@ -1,0 +1,17 @@
+{
+  "name": "@commerce/scripts",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "image-pipeline": "tsx run-image-pipeline.ts"
+  },
+  "dependencies": {
+    "@commerce/crawler": "workspace:*",
+    "@commerce/image": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.15",
+    "tsx": "^4.19.1",
+    "typescript": "^5.5.4"
+  }
+}

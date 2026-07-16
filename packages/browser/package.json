@@ -2,15 +2,18 @@
   "name": "@commerce/browser",
   "version": "0.0.1",
   "private": true,
+  "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@commerce/shared": "workspace:*",
     "playwright": "^1.47.0"
   },
   "devDependencies": {
+    "@types/node": "^20.14.15",
     "typescript": "^5.5.4"
   }
 }
