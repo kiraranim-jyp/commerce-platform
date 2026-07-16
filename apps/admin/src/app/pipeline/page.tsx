@@ -14,10 +14,8 @@ interface PipelineResponse {
     classifications: Array<{ file: string; type: string; confidence: number }>;
   };
   thumbnail: string | null;
-  productImages: ImageResult[];
-  modelImages: ImageResult[];
   detailImages: ImageResult[];
-  sizeChartImages: ImageResult[];
+  storageNote: string;
   error?: string;
 }
 
@@ -121,10 +119,9 @@ export default function PipelinePage() {
             </section>
           )}
 
-          <ImageGallery title="제품컷 (PRODUCT)" images={result.productImages} />
-          <ImageGallery title="모델컷 (MODEL)" images={result.modelImages} />
-          <ImageGallery title="상세컷 (DETAIL)" images={result.detailImages} />
-          <ImageGallery title="사이즈표 (SIZE_CHART)" images={result.sizeChartImages} />
+          <ImageGallery title="상세컷" images={result.detailImages} />
+
+          <p className="rounded bg-amber-50 p-3 text-xs text-amber-800">{result.storageNote}</p>
         </div>
       )}
     </main>
