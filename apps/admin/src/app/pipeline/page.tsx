@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import JSZip from "jszip";
 
 interface ImageResult {
   fileName: string;
@@ -50,6 +51,36 @@ export default function PipelinePage() {
     }
   }
 
+  async function downloadZip() {
+    if (!result) return;
+
+    const dateFolder = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const zip = new JSZip();
+    const folder = zip.folder(dateFolder);
+    if (!folder) return;
+
+    if (result.thumbnail) {
+      folder.file(`thumbnail${extensionOf(result.thumbnail)}`, base64Of(result.thumbnail), {
+        base64: true,
+      });
+    }
+
+    const detailFolder = folder.folder("detail");
+    for (const image of result.detailImages) {
+      detailFolder?.file(image.fileName, base64Of(image.dataUrl), { base64: true });
+    }
+
+    folder.file("metadata.json", JSON.stringify(result.metadata, null, 2));
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = `${dateFolder}.zip`;
+    link.click();
+    URL.revokeObjectURL(objectUrl);
+  }
+
   return (
     <main className="mx-auto max-w-4xl p-8">
       <h1 className="text-2xl font-semibold">Image Pipeline 테스트</h1>
@@ -85,6 +116,13 @@ export default function PipelinePage() {
 
       {result && (
         <div className="mt-8 space-y-8">
+          <button
+            onClick={downloadZip}
+            className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50"
+          >
+            결과 ZIP 다운로드 (날짜별 폴더)
+          </button>
+
           <section>
             <h2 className="text-lg font-medium">분류 결과</h2>
             <table className="mt-2 w-full text-sm">
@@ -149,4 +187,14 @@ function ImageGallery({ title, images }: { title: string; images: ImageResult[] 
       </div>
     </section>
   );
+}
+
+function base64Of(dataUrl: string): string {
+  return dataUrl.slice(dataUrl.indexOf(",") + 1);
+}
+
+function extensionOf(dataUrl: string): string {
+  const match = /^data:image\/(\w+);/.exec(dataUrl);
+  const format = match?.[1] ?? "jpeg";
+  return format === "jpeg" ? ".jpg" : `.${format}`;
 }
