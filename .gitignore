@@ -15,3 +15,6 @@ test-results/
 .pnpm-store/
 storage/
 logs/
+
+.vercel
+.env*

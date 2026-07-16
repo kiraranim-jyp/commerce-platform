@@ -1,5 +1,6 @@
-import { chromium, type Page } from "playwright";
+import type { Page } from "playwright-core";
 import type { ExtractedImage } from "@commerce/shared";
+import { launchChromium } from "./browser-launcher";
 import { loadCrawlerConfig, type CrawlerConfig } from "./config";
 
 interface RawImage {
@@ -15,7 +16,7 @@ const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
 
 export async function extractProductImages(url: string): Promise<ExtractedImage[]> {
   const config = loadCrawlerConfig();
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchChromium();
 
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });

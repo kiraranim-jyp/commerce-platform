@@ -7,7 +7,8 @@
   },
   "dependencies": {
     "@commerce/crawler": "workspace:*",
-    "@commerce/image": "workspace:*"
+    "@commerce/image": "workspace:*",
+    "@imgly/background-removal-node": "^1.4.5"
   },
   "devDependencies": {
     "@types/node": "^20.14.15",
