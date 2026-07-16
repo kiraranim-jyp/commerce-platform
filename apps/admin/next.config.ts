@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
   // 번들링하면 경로가 깨지므로(webpack/turbopack 가상 경로) 번들 대상에서 제외한다.
   serverExternalPackages: [
     "@imgly/background-removal-node",
+    "onnxruntime-node",
     "sharp",
     "playwright-core",
     "@sparticuz/chromium",
