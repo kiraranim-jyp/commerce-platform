@@ -72,6 +72,8 @@ export class ImglyRemoverProvider implements BackgroundRemoverProvider {
     const blob = await removeBackground(inputPath, {
       output: { format: "image/png" },
       publicPath: PUBLIC_PATH,
+      // 서버리스 함수의 메모리 제약 때문에 기본(medium) 모델보다 가벼운 모델을 쓴다.
+      model: (process.env.IMGLY_MODEL as "small" | "medium" | "large" | undefined) ?? "small",
     });
     const buffer = Buffer.from(await blob.arrayBuffer());
     fs.writeFileSync(outputPath, buffer);

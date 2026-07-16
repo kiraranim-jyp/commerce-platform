@@ -89,7 +89,48 @@ function filterAndDedupe(
     seen.add(key);
     out.push({ url: image.url, alt: image.alt, width: image.width, height: image.height });
   }
-  return out;
+  return dedupeByCdnImageId(out);
+}
+
+/**
+ * 많은 쇼핑몰(PrestaShop 계열 등)은 이미지 URL에 "/{숫자ID}-{사이즈명}/파일명" 형태로
+ * 같은 사진의 여러 해상도 변형을 표시한다 (예: /24726-big_default/, /24726-home_default/).
+ * 지각적 해시(perceptual hash)만으로는 같은 배경/구도의 서로 다른 실제 사진들을
+ * 오탐지로 합쳐버릴 수 있어서(예: 같은 흰 배경 위 카키 바지의 다른 각도 사진들),
+ * 신뢰도 높은 URL 패턴을 우선 사용해 같은 ID의 저해상도 중복만 제거한다.
+ * ID 패턴이 없는 URL은 건드리지 않는다.
+ */
+function dedupeByCdnImageId(images: ExtractedImage[]): ExtractedImage[] {
+  const groups = new Map<string, ExtractedImage[]>();
+  const ungrouped: ExtractedImage[] = [];
+
+  for (const image of images) {
+    const id = extractCdnImageId(image.url);
+    if (!id) {
+      ungrouped.push(image);
+      continue;
+    }
+    groups.set(id, [...(groups.get(id) ?? []), image]);
+  }
+
+  const deduped = [...ungrouped];
+  for (const group of groups.values()) {
+    const best = group.reduce((a, b) =>
+      (b.width ?? 0) * (b.height ?? 0) > (a.width ?? 0) * (a.height ?? 0) ? b : a,
+    );
+    deduped.push(best);
+  }
+  return deduped;
+}
+
+function extractCdnImageId(url: string): string | null {
+  try {
+    const pathname = new URL(url).pathname;
+    const match = /\/(\d{3,})-[a-z0-9_]+\//i.exec(pathname);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
 }
 
 function isAllowed(image: RawImage, pageUrl: string, config: CrawlerConfig): boolean {
