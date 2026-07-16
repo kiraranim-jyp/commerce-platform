@@ -54,25 +54,42 @@ export async function POST(request: Request) {
       thumbnailSelector: new ResolutionThumbnailSelector(),
     });
 
+    const mimeFor = (fileName: string): string | null => {
+      const ext = path.extname(fileName).replace(".", "").toLowerCase();
+      const format = ext === "jpeg" ? "jpg" : ext;
+      return format in MIME_BY_EXT ? MIME_BY_EXT[format] : null;
+    };
+
+    const readAsDataUrl = (filePath: string, fileName: string): string | null => {
+      const mime = mimeFor(fileName);
+      if (!mime || !fs.existsSync(filePath)) return null;
+      const buffer = fs.readFileSync(filePath);
+      return `data:${mime};base64,${buffer.toString("base64")}`;
+    };
+
     const toDataUrl = (fileName: string): string | null => {
       const ext = path.extname(fileName).replace(".", "").toLowerCase();
       const format = ext === "jpeg" ? "jpg" : ext;
       if (!(format in MIME_BY_EXT)) return null;
-
       const filePath = path.join(
         storagePaths.optimized(format as "jpg" | "png" | "webp"),
         fileName,
       );
-      if (!fs.existsSync(filePath)) return null;
-
-      const buffer = fs.readFileSync(filePath);
-      return `data:${MIME_BY_EXT[format]};base64,${buffer.toString("base64")}`;
+      return readAsDataUrl(filePath, fileName);
     };
 
     const withDataUrls = (fileNames: string[]) =>
       fileNames
         .map((fileName) => ({ fileName, dataUrl: toDataUrl(fileName) }))
         .filter((item): item is { fileName: string; dataUrl: string } => item.dataUrl !== null);
+
+    // 원본(다운로드 직후, 가공 전) 이미지도 함께 내려준다.
+    const originalImages = result.metadata.classifications
+      .map((c) => ({
+        fileName: c.file,
+        dataUrl: readAsDataUrl(path.join(storagePaths.downloadsOriginal, c.file), c.file),
+      }))
+      .filter((item): item is { fileName: string; dataUrl: string } => item.dataUrl !== null);
 
     // 같은 사진이 jpg/png/webp 여러 포맷으로 생성되므로, 화면에는 사진 1장당
     // 대표 포맷 하나만 보여준다 (실제 파일은 optimized/{jpg,png,webp}/에 전부 남아있다).
@@ -103,6 +120,7 @@ export async function POST(request: Request) {
         ? toDataUrl(thumbnailFileName)
         : toDataUrl(result.metadata.thumbnail),
       detailImages: withDataUrls([...restProductPreview, ...detailPreview]),
+      originalImages,
       storageNote:
         "이미지는 서버리스 함수의 임시 저장소(/tmp)에만 저장되며 다음 요청 시 자동 삭제됩니다. " +
         "영구 저장이 필요하면 Supabase Storage 등 별도 연동이 필요합니다.",

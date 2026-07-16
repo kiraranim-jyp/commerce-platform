@@ -17,6 +17,7 @@ interface PipelineResponse {
   };
   thumbnail: string | null;
   detailImages: ImageResult[];
+  originalImages: ImageResult[];
   storageNote: string;
   error?: string;
 }
@@ -70,6 +71,7 @@ export default function PipelinePage() {
 
     const thumbnailFolder = zip.folder("thumbnail");
     const detailFolder = zip.folder("detail");
+    const originalFolder = zip.folder("original");
 
     for (const image of allImages) {
       const baseName = image.fileName.replace(/\.\w+$/, "");
@@ -82,6 +84,14 @@ export default function PipelinePage() {
       // thumbnail: 800x800 정사각형으로 리사이즈해서 저장
       const squareDataUrl = await resizeToSquare(image.dataUrl, 800);
       thumbnailFolder?.file(`${baseName}.jpg`, base64Of(squareDataUrl), { base64: true });
+    }
+
+    // original: 가공 전 원본 다운로드 이미지
+    for (const image of result.originalImages) {
+      const baseName = image.fileName.replace(/\.\w+$/, "");
+      originalFolder?.file(`${baseName}${extensionOf(image.dataUrl)}`, base64Of(image.dataUrl), {
+        base64: true,
+      });
     }
 
     zip.file("metadata.json", JSON.stringify(result.metadata, null, 2));
@@ -134,7 +144,7 @@ export default function PipelinePage() {
             onClick={downloadZip}
             className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50"
           >
-            결과 ZIP 다운로드 (thumbnail 800×800 + detail 1500×2000)
+            결과 ZIP 다운로드 (thumbnail 800×800 + detail 1500×2000 + original)
           </button>
 
           <section>

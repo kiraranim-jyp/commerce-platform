@@ -10,6 +10,8 @@ export interface MarketplaceImagePolicy {
   /** 가로/세로 모두 이 값보다 작을 때만 업스케일한다. */
   upscaleThresholdWidth: number;
   upscaleThresholdHeight: number;
+  /** PRODUCT 캔버스에서 제품이 차지해야 할 면적 비율(0~1). 88~92% 범위의 목표값. */
+  productFillRatio: number;
 }
 
 export const NAVER_IMAGE_POLICY: MarketplaceImagePolicy = {
@@ -21,6 +23,7 @@ export const NAVER_IMAGE_POLICY: MarketplaceImagePolicy = {
   removeBackgroundFor: ["PRODUCT"],
   upscaleThresholdWidth: 1500,
   upscaleThresholdHeight: 2000,
+  productFillRatio: 0.9,
 };
 
 /** 쿠팡/Shopify 등 다른 채널 추가 시 이 맵에 정책만 추가하면 동일한 파이프라인을 재사용할 수 있다. */
@@ -53,6 +56,7 @@ export function loadImagePolicy(): MarketplaceImagePolicy {
     upscaleThresholdHeight: Number(
       process.env.IMAGE_UPSCALE_THRESHOLD_HEIGHT ?? base.upscaleThresholdHeight,
     ),
+    productFillRatio: Number(process.env.IMAGE_PRODUCT_FILL_RATIO ?? base.productFillRatio),
   };
 }
 

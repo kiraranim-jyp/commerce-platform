@@ -60,8 +60,9 @@ export async function runImagePipeline(
       .map((c) => path.join(storagePaths.classified(type), c.file));
 
   const productImages = await processProductStage(filesOfType("PRODUCT"), deps);
+  // MODEL은 색감 변경/자동 샤프닝이 금지되어 있어 enhance() 단계를 거치지 않는다.
   const modelImages = await processStandardStage(filesOfType("MODEL"), "MODEL", deps, {
-    preEnhance: true,
+    preEnhance: false,
   });
   const detailImages = await processStandardStage(filesOfType("DETAIL"), "DETAIL", deps, {
     preEnhance: false,
