@@ -54,29 +54,30 @@ export default function PipelinePage() {
   async function downloadZip() {
     if (!result) return;
 
-    const dateFolder = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    // 압축 해제 시 파일탐색기가 zip 파일명으로 폴더를 만들어주므로,
+    // zip 내부에 같은 이름의 폴더를 또 넣으면 폴더가 이중으로 중첩된다.
+    // 파일은 zip 루트에 바로 담고, zip 파일명 자체를 날짜+시각 폴더명으로 쓴다.
+    const timestamp = formatTimestamp(new Date());
     const zip = new JSZip();
-    const folder = zip.folder(dateFolder);
-    if (!folder) return;
 
     if (result.thumbnail) {
-      folder.file(`thumbnail${extensionOf(result.thumbnail)}`, base64Of(result.thumbnail), {
+      zip.file(`thumbnail${extensionOf(result.thumbnail)}`, base64Of(result.thumbnail), {
         base64: true,
       });
     }
 
-    const detailFolder = folder.folder("detail");
+    const detailFolder = zip.folder("detail");
     for (const image of result.detailImages) {
       detailFolder?.file(image.fileName, base64Of(image.dataUrl), { base64: true });
     }
 
-    folder.file("metadata.json", JSON.stringify(result.metadata, null, 2));
+    zip.file("metadata.json", JSON.stringify(result.metadata, null, 2));
 
     const blob = await zip.generateAsync({ type: "blob" });
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = objectUrl;
-    link.download = `${dateFolder}.zip`;
+    link.download = `${timestamp}.zip`;
     link.click();
     URL.revokeObjectURL(objectUrl);
   }
@@ -197,4 +198,11 @@ function extensionOf(dataUrl: string): string {
   const match = /^data:image\/(\w+);/.exec(dataUrl);
   const format = match?.[1] ?? "jpeg";
   return format === "jpeg" ? ".jpg" : `.${format}`;
+}
+
+function formatTimestamp(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const datePart = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  const timePart = `${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getSeconds())}`;
+  return `${datePart}_${timePart}`;
 }
