@@ -72,14 +72,30 @@ async function standardizeProduct(
 
     fs.mkdirSync(storagePaths.tmp, { recursive: true });
     tempUpscaledPath = path.join(storagePaths.tmp, `${baseName}-upscaled.png`);
+    console.log(`[standardizer] ${baseName}: upscale 시작`);
     await enhancer.upscale(inputPath, tempUpscaledPath, policy.width, policy.height);
+    console.log(`[standardizer] ${baseName}: upscale 완료`);
     workingPath = tempUpscaledPath;
   }
 
-  const outputs = [
-    await placeOnCanvasWithFillRatio(workingPath, outputDir, baseName, policy, "transparent"),
-    await placeOnCanvasWithFillRatio(workingPath, outputDir, baseName, policy, "white"),
-  ];
+  console.log(`[standardizer] ${baseName}: transparent 캔버스 합성 시작`);
+  const transparentOutput = await placeOnCanvasWithFillRatio(
+    workingPath,
+    outputDir,
+    baseName,
+    policy,
+    "transparent",
+  );
+  console.log(`[standardizer] ${baseName}: transparent 완료, white 캔버스 합성 시작`);
+  const whiteOutput = await placeOnCanvasWithFillRatio(
+    workingPath,
+    outputDir,
+    baseName,
+    policy,
+    "white",
+  );
+  console.log(`[standardizer] ${baseName}: white 완료`);
+  const outputs = [transparentOutput, whiteOutput];
 
   if (tempUpscaledPath && fs.existsSync(tempUpscaledPath)) {
     fs.rmSync(tempUpscaledPath);

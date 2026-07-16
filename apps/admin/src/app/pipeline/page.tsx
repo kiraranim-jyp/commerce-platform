@@ -39,7 +39,19 @@ export default function PipelinePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
-      const data = (await response.json()) as PipelineResponse;
+
+      const rawText = await response.text();
+      let data: PipelineResponse;
+      try {
+        data = JSON.parse(rawText) as PipelineResponse;
+      } catch {
+        // 서버가 크래시하면 Next.js가 JSON이 아닌 에러 HTML 페이지를 대신 반환한다.
+        setError(
+          `서버에서 정상 응답을 받지 못했습니다 (HTTP ${response.status}). 이미지 처리 도중 서버가 ` +
+            "죽었을 수 있습니다. 잠시 후 다시 시도하거나 이미지 수가 적은 상품 URL로 시도해보세요.",
+        );
+        return;
+      }
 
       if (!response.ok) {
         setError(data.error ?? "파이프라인 실행에 실패했습니다.");

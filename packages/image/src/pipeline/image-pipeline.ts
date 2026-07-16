@@ -7,7 +7,7 @@ import { deduplicateImages } from "../services/dedup.service";
 import { ImageDownloader } from "../services/downloader.service";
 import { pipelineLogger } from "../services/logger.service";
 import { buildProductMetadata, saveProductMetadata } from "../services/metadata.service";
-import { processProductImages } from "../services/product-processor.service";
+import { processProductImage } from "../services/product-processor.service";
 import { standardizeImage } from "../services/standardizer.service";
 import type { ThumbnailSelector } from "../services/thumbnail.service";
 import type {
@@ -106,21 +106,30 @@ interface StageOutputFile {
   file: string;
 }
 
+/**
+ * 이미지 1장씩 배경제거 -> 보정 -> 표준화 -> 압축을 전부 끝내고 다음 이미지로 넘어간다.
+ * (배경제거를 여러 장 연속 호출하면 ONNX 런타임의 메모리가 누적되어 서버리스
+ * 환경에서 두 번째 호출부터 프로세스가 죽는 문제가 있었다. 각 이미지의 중간
+ * 산출물이 완전히 끝나고 GC될 기회를 준 뒤 다음 이미지로 넘어가도록 인터리빙한다.)
+ */
 async function processProductStage(
   files: string[],
   deps: ImagePipelineDeps,
 ): Promise<StageOutputFile[]> {
   if (files.length === 0) return [];
 
-  const removed = await processProductImages(files, deps.backgroundRemover);
-  pipelineLogger.info("removebg", "배경제거 완료", { count: removed.length });
-
   const outputs: StageOutputFile[] = [];
-  for (const item of removed) {
-    const baseName = path.parse(item.file).name;
+  for (const file of files) {
+    const baseName = path.parse(file).name;
+
+    console.log(`[pipeline] PRODUCT ${baseName}: 배경제거 시작`);
+    const removed = await processProductImage(file, deps.backgroundRemover);
+    console.log(`[pipeline] PRODUCT ${baseName}: 배경제거 완료, enhance 시작`);
+
     fs.mkdirSync(storagePaths.tmp, { recursive: true });
     const enhancedPath = path.join(storagePaths.tmp, `${baseName}-enhanced.png`);
-    await deps.enhancer.enhance(item.file, enhancedPath);
+    await deps.enhancer.enhance(removed.file, enhancedPath);
+    console.log(`[pipeline] PRODUCT ${baseName}: enhance 완료, standardize 시작`);
 
     const standardized = await standardizeImage(
       enhancedPath,
@@ -131,12 +140,22 @@ async function processProductStage(
       baseName,
     );
     fs.rmSync(enhancedPath);
+    console.log(
+      `[pipeline] PRODUCT ${baseName}: standardize 완료(${standardized.length}개), optimize 시작`,
+    );
 
     for (const std of standardized) {
       const optimized = await deps.optimizer.optimize(std.file);
       for (const opt of optimized) pushUnique(outputs, { fileName: opt.fileName, file: opt.file });
     }
+    console.log(`[pipeline] PRODUCT ${baseName}: optimize 완료`);
+
+    if (global.gc) {
+      global.gc();
+    }
   }
+
+  pipelineLogger.info("removebg", "PRODUCT 처리 완료", { count: files.length });
   return outputs;
 }
 
