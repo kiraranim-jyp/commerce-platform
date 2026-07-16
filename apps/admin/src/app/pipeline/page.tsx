@@ -12,6 +12,7 @@ interface PipelineResponse {
   metadata: {
     title: string;
     sourceUrl: string;
+    thumbnail: string;
     classifications: Array<{ file: string; type: string; confidence: number }>;
   };
   thumbnail: string | null;
@@ -60,15 +61,27 @@ export default function PipelinePage() {
     const timestamp = formatTimestamp(new Date());
     const zip = new JSZip();
 
-    if (result.thumbnail) {
-      zip.file(`thumbnail${extensionOf(result.thumbnail)}`, base64Of(result.thumbnail), {
+    const allImages: ImageResult[] = [
+      ...(result.thumbnail
+        ? [{ fileName: result.metadata.thumbnail || "0001", dataUrl: result.thumbnail }]
+        : []),
+      ...result.detailImages,
+    ];
+
+    const thumbnailFolder = zip.folder("thumbnail");
+    const detailFolder = zip.folder("detail");
+
+    for (const image of allImages) {
+      const baseName = image.fileName.replace(/\.\w+$/, "");
+
+      // detail: 파이프라인이 만든 표준 규격(1500x2000) 그대로 저장
+      detailFolder?.file(`${baseName}${extensionOf(image.dataUrl)}`, base64Of(image.dataUrl), {
         base64: true,
       });
-    }
 
-    const detailFolder = zip.folder("detail");
-    for (const image of result.detailImages) {
-      detailFolder?.file(image.fileName, base64Of(image.dataUrl), { base64: true });
+      // thumbnail: 800x800 정사각형으로 리사이즈해서 저장
+      const squareDataUrl = await resizeToSquare(image.dataUrl, 800);
+      thumbnailFolder?.file(`${baseName}.jpg`, base64Of(squareDataUrl), { base64: true });
     }
 
     zip.file("metadata.json", JSON.stringify(result.metadata, null, 2));
@@ -121,7 +134,7 @@ export default function PipelinePage() {
             onClick={downloadZip}
             className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50"
           >
-            결과 ZIP 다운로드 (날짜별 폴더)
+            결과 ZIP 다운로드 (thumbnail 800×800 + detail 1500×2000)
           </button>
 
           <section>
@@ -205,4 +218,30 @@ function formatTimestamp(date: Date): string {
   const datePart = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   const timePart = `${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getSeconds())}`;
   return `${datePart}_${timePart}`;
+}
+
+/** 원본 비율을 유지한 채 흰 배경 위에 중앙 정렬해 size x size 정사각형으로 만든다 (잘림 없음). */
+function resizeToSquare(dataUrl: string, size: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("canvas context를 생성하지 못했습니다."));
+        return;
+      }
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, size, size);
+      const scale = Math.min(size / img.width, size / img.height);
+      const w = img.width * scale;
+      const h = img.height * scale;
+      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+      resolve(canvas.toDataURL("image/jpeg", 0.92));
+    };
+    img.onerror = () => reject(new Error("이미지를 불러오지 못했습니다."));
+    img.src = dataUrl;
+  });
 }
