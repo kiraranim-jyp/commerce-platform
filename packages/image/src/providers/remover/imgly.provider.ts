@@ -1,63 +1,11 @@
+import { execFile } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { removeBackground } from "@imgly/background-removal-node";
+import { promisify } from "node:util";
 import type { BackgroundRemoverProvider } from "../../types/provider.types";
 
-interface OnnxSession {
-  release: () => Promise<void>;
-}
-interface OnnxInferenceSessionClass {
-  create: (...args: unknown[]) => Promise<OnnxSession>;
-  __patchedToReleasePrevious?: boolean;
-}
-
-/**
- * @imgly는 remove() 호출마다 새 onnxruntime InferenceSession을 만들지만
- * 이전 세션을 명시적으로 release()하지 않는다. onnxruntime-node의 세션은
- * V8 GC가 회수하지 않는 네이티브(WASM 밖) 메모리를 붙잡고 있어서, 같은
- * 프로세스(서버리스 warm invocation)에서 이미지 2장째부터 네이티브 메모리가
- * 누적되어 OOM으로 프로세스가 죽는다(JS에서 catch 불가능한 크래시로 관측됨).
- *
- * onnxruntime-node는 onnxruntime-common의 InferenceSession 클래스 객체를
- * 그대로 재노출(live re-export)하므로, 우리가 import한 것과 @imgly 내부가
- * require("onnxruntime-node")로 가져온 것은 동일한 클래스 객체를 참조한다.
- * 따라서 여기서 static create()를 한 번만 감싸서 "새 세션을 만들기 전에
- * 직전 세션을 release()"하도록 패치하면 @imgly의 호출에도 그대로 적용된다.
- * (호출 시점에 patch가 되어 있으면 되므로, 최초 remove() 호출 직전에 지연 적용한다.)
- */
-let patchPromise: Promise<void> | undefined;
-function ensureInferenceSessionPatched(): Promise<void> {
-  if (!patchPromise) {
-    patchPromise = (async () => {
-      // onnxruntime-node는 이 pnpm 레이아웃에서 .d.ts가 실제로 배포되지 않아
-      // (package.json은 dist/index.d.ts를 가리키지만 파일 자체가 없다) 타입 없이 값만 가져온다.
-      const mod = (await import("onnxruntime-node")) as unknown as {
-        InferenceSession: OnnxInferenceSessionClass;
-      };
-      const SessionClass = mod.InferenceSession;
-      if (SessionClass.__patchedToReleasePrevious) return;
-
-      let activeSession: OnnxSession | undefined;
-      const originalCreate = SessionClass.create.bind(SessionClass);
-      SessionClass.create = async (...args: unknown[]) => {
-        if (activeSession) {
-          try {
-            await activeSession.release();
-          } catch {
-            // 이미 해제되었거나 해제 불가한 상태 — 무시하고 새 세션 생성을 계속한다.
-          }
-          activeSession = undefined;
-        }
-        const session = await originalCreate(...args);
-        activeSession = session;
-        return session;
-      };
-      SessionClass.__patchedToReleasePrevious = true;
-    })();
-  }
-  return patchPromise;
-}
+const execFileAsync = promisify(execFile);
 
 // @imgly는 리소스 경로를 기본적으로 process.cwd() 기준 상대경로로 계산한다.
 // require.resolve()는 Next.js(Turbopack/webpack) 번들링 하에서 실제 파일시스템
@@ -117,6 +65,41 @@ function findImglyDistDir(): string | undefined {
 
 const imglyDistDir = findImglyDistDir();
 const PUBLIC_PATH = imglyDistDir ? pathToFileURL(imglyDistDir).href : undefined;
+const IMGLY_CJS_ENTRY = imglyDistDir
+  ? path.join(imglyDistDir, "index.cjs")
+  : "@imgly/background-removal-node";
+
+/**
+ * @imgly의 removeBackground()는 onnxruntime 세션을 config 기준으로 memoize해서
+ * 재사용한다(같은 config로 두 번째 이미지를 처리해도 세션은 새로 안 만들고 재사용).
+ * 그런데 이 "재사용된 세션으로 두 번째 추론을 실행"하는 시점에 Vercel 서버리스
+ * 환경에서만 프로세스가 JS로 catch 불가능하게 죽는 현상이 있었다(로컬 Windows에서는
+ * 재현 안 됨). onnxruntime-node의 네이티브 addon에 정확히 어떤 상태가 재사용 시
+ * 깨지는지 라이브러리 밖에서는 알 수도 고칠 수도 없으므로, 이미지 한 장의 배경제거를
+ * 완전히 독립된 자식 프로세스에서 실행해 워커가 죽어도 부모(요청을 처리 중인 함수)는
+ * 영향받지 않고, 매 이미지마다 깨끗한 네이티브 힙에서 시작하도록 한다.
+ *
+ * 워커는 별도 파일로 컴파일해서 배포할 필요 없이 `node -e`로 인라인 실행한다 —
+ * Next.js가 packages/image의 다른 .ts 파일들을 트레이싱/번들링하지 않아도 되고,
+ * @imgly의 실제 CJS 진입 파일(findImglyDistDir로 찾은 경로)을 그대로 require한다.
+ */
+const WORKER_SCRIPT = `
+const fs = require("fs");
+(async () => {
+  const [imglyCjsPath, inputPath, outputPath, publicPath, model] = process.argv.slice(1);
+  const { removeBackground } = require(imglyCjsPath);
+  const blob = await removeBackground(inputPath, {
+    output: { format: "image/png" },
+    publicPath: publicPath || undefined,
+    model: model || "small",
+  });
+  const buffer = Buffer.from(await blob.arrayBuffer());
+  fs.writeFileSync(outputPath, buffer);
+})().catch((err) => {
+  console.error(err && err.stack ? err.stack : String(err));
+  process.exit(1);
+});
+`;
 
 /**
  * 무료/로컬 배경제거 Provider. ONNX 모델을 로컬에서 실행하므로 API 비용이 없다.
@@ -124,14 +107,25 @@ const PUBLIC_PATH = imglyDistDir ? pathToFileURL(imglyDistDir).href : undefined;
  */
 export class ImglyRemoverProvider implements BackgroundRemoverProvider {
   async remove(inputPath: string, outputPath: string): Promise<void> {
-    await ensureInferenceSessionPatched();
-    const blob = await removeBackground(inputPath, {
-      output: { format: "image/png" },
-      publicPath: PUBLIC_PATH,
-      // 서버리스 함수의 메모리 제약 때문에 기본(medium) 모델보다 가벼운 모델을 쓴다.
-      model: (process.env.IMGLY_MODEL as "small" | "medium" | "large" | undefined) ?? "small",
-    });
-    const buffer = Buffer.from(await blob.arrayBuffer());
-    fs.writeFileSync(outputPath, buffer);
+    const model = process.env.IMGLY_MODEL ?? "small";
+    try {
+      await execFileAsync(
+        process.execPath,
+        [
+          "-e",
+          WORKER_SCRIPT,
+          "--",
+          IMGLY_CJS_ENTRY,
+          inputPath,
+          outputPath,
+          PUBLIC_PATH ?? "",
+          model,
+        ],
+        { maxBuffer: 1024 * 1024 * 16, timeout: 120_000 },
+      );
+    } catch (err) {
+      const stderr = (err as { stderr?: string; message?: string }).stderr;
+      throw new Error(`배경제거 하위 프로세스 실패: ${stderr || String(err)}`);
+    }
   }
 }
