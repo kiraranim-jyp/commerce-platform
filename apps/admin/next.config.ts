@@ -30,15 +30,19 @@ const nextConfig: NextConfig = {
       "../../node_modules/.pnpm/onnxruntime-node@*/node_modules/onnxruntime-node/bin/**/*",
       "../../node_modules/.pnpm/onnxruntime-node@*/node_modules/onnxruntime-node/dist/**/*",
       "../../node_modules/.pnpm/@imgly+background-removal-node@*/node_modules/@imgly/background-removal-node/dist/**/*",
-      // @imgly 자신의 pnpm 격리 node_modules 안에 있는 하위 의존성 심링크. bin/**처럼
-      // onnxruntime-node의 .so 바이너리(133MB)를 또 다른 경로로 재귀 포함시키면 두 배로
-      // 잡혀 배포 용량 한도를 넘긴다 — onnxruntime-node는 위에서 이미 포함했으니 여기서는
-      // 빼고, 나머지 작은 순수 JS 의존성만 이름을 명시해서 담는다.
+      // @imgly 자신의 pnpm 격리 node_modules 안에 있는 순수 JS 하위 의존성들의 심링크.
+      // node_modules/**처럼 재귀 와일드카드로 통째로 담으면 그 안의 onnxruntime-node 심링크를
+      // 타고 133MB짜리 .so 바이너리 전체가 (위에서 이미 담은 것과) 중복으로 다시 잡혀 배포
+      // 용량 한도를 넘긴다(outputFileTracingExcludes로는 안 빠짐 — includes로 명시된 파일에는
+      // 적용되지 않는 것으로 보인다). onnxruntime-node/sharp는 제외하고 작은 순수 JS 패키지만
+      // 이름으로 하나씩 나열한다. ndarray는 자체적으로 iota-array/is-buffer에 의존한다.
       "../../node_modules/.pnpm/@imgly+background-removal-node@*/node_modules/lodash/**/*",
       "../../node_modules/.pnpm/@imgly+background-removal-node@*/node_modules/ndarray/**/*",
       "../../node_modules/.pnpm/@imgly+background-removal-node@*/node_modules/zod/**/*",
       "../../node_modules/.pnpm/lodash@*/node_modules/lodash/**/*",
       "../../node_modules/.pnpm/ndarray@*/node_modules/ndarray/**/*",
+      "../../node_modules/.pnpm/iota-array@*/node_modules/iota-array/**/*",
+      "../../node_modules/.pnpm/is-buffer@*/node_modules/is-buffer/**/*",
       "../../node_modules/.pnpm/zod@*/node_modules/zod/**/*",
       "../../node_modules/.pnpm/sharp@*/node_modules/sharp/**/*",
       "../../node_modules/.pnpm/playwright-core@*/node_modules/playwright-core/**/*",
