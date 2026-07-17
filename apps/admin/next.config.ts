@@ -28,8 +28,15 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/pipeline": [
       "../../node_modules/.pnpm/onnxruntime-node@*/node_modules/onnxruntime-node/bin/**/*",
-      // dist뿐 아니라 @imgly 자신의 pnpm 격리 node_modules 전체(하위 의존성 심링크 포함)를 담는다.
-      "../../node_modules/.pnpm/@imgly+background-removal-node@*/node_modules/**/*",
+      "../../node_modules/.pnpm/onnxruntime-node@*/node_modules/onnxruntime-node/dist/**/*",
+      "../../node_modules/.pnpm/@imgly+background-removal-node@*/node_modules/@imgly/background-removal-node/dist/**/*",
+      // @imgly 자신의 pnpm 격리 node_modules 안에 있는 하위 의존성 심링크. bin/**처럼
+      // onnxruntime-node의 .so 바이너리(133MB)를 또 다른 경로로 재귀 포함시키면 두 배로
+      // 잡혀 배포 용량 한도를 넘긴다 — onnxruntime-node는 위에서 이미 포함했으니 여기서는
+      // 빼고, 나머지 작은 순수 JS 의존성만 이름을 명시해서 담는다.
+      "../../node_modules/.pnpm/@imgly+background-removal-node@*/node_modules/lodash/**/*",
+      "../../node_modules/.pnpm/@imgly+background-removal-node@*/node_modules/ndarray/**/*",
+      "../../node_modules/.pnpm/@imgly+background-removal-node@*/node_modules/zod/**/*",
       "../../node_modules/.pnpm/lodash@*/node_modules/lodash/**/*",
       "../../node_modules/.pnpm/ndarray@*/node_modules/ndarray/**/*",
       "../../node_modules/.pnpm/zod@*/node_modules/zod/**/*",
