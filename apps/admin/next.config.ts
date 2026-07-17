@@ -29,6 +29,13 @@ const nextConfig: NextConfig = {
     "/api/pipeline": [
       "../../node_modules/.pnpm/onnxruntime-node@*/node_modules/onnxruntime-node/bin/**/*",
       "../../node_modules/.pnpm/onnxruntime-node@*/node_modules/onnxruntime-node/dist/**/*",
+      // package.json이 없으면 require("onnxruntime-node")가 bare specifier로 NODE_PATH를
+      // 통해 찾아갈 때 "main"/"exports"를 읽을 수 없어 실패한다 — bin/dist만으로는 부족했다.
+      "../../node_modules/.pnpm/onnxruntime-node@*/node_modules/onnxruntime-node/package.json",
+      // onnxruntime-node 자신도 onnxruntime-common에 의존한다(자기 격리 node_modules 안의
+      // 형제 심링크로 풀린다 — @imgly의 lodash/ndarray/zod와 같은 패턴).
+      "../../node_modules/.pnpm/onnxruntime-node@*/node_modules/onnxruntime-common/**/*",
+      "../../node_modules/.pnpm/onnxruntime-common@*/node_modules/onnxruntime-common/**/*",
       "../../node_modules/.pnpm/@imgly+background-removal-node@*/node_modules/@imgly/background-removal-node/dist/**/*",
       // @imgly 자신의 pnpm 격리 node_modules 안에 있는 순수 JS 하위 의존성들의 심링크.
       // node_modules/**처럼 재귀 와일드카드로 통째로 담으면 그 안의 onnxruntime-node 심링크를
