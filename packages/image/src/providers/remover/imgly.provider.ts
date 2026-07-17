@@ -70,6 +70,54 @@ const IMGLY_CJS_ENTRY = imglyDistDir
   : "@imgly/background-removal-node";
 
 /**
+ * @imgly는 자기 pnpm 격리 node_modules 안에 onnxruntime-node/sharp의 심링크(직접
+ * 의존성)를 갖고 있지만, 그 실제 대상은 133MB짜리 onnxruntime-node .so 바이너리처럼
+ * 커서 bundle-imgly-deps.cjs로도 복사해 넣지 않았다(이미 별도 outputFileTracingIncludes
+ * 글롭으로 최상위 pnpm 저장소 경로에 포함되어 있으므로, 거기에 또 복사하면 중복으로
+ * 배포 용량 한도를 넘긴다). 대신 Node의 NODE_PATH(레거시 폴백 검색 경로)를 이용해서
+ * 자식 프로세스가 "onnxruntime-node"/"sharp"를 bare specifier로 require할 때, 정상
+ * node_modules 탐색이 실패하면 여기 지정한 디렉터리도 추가로 뒤지도록 한다 — 이미
+ * 존재하는 최상위 사본을 가리키기만 하면 되므로 파일을 하나도 새로 옮기지 않는다.
+ */
+function findPackageNodeModulesDir(pkgName: string): string | undefined {
+  const roots = [process.cwd(), process.argv[1] ? path.dirname(process.argv[1]) : undefined].filter(
+    (value): value is string => Boolean(value),
+  );
+
+  for (const root of roots) {
+    let dir = root;
+    for (let i = 0; i < 8; i++) {
+      const nodeModulesDir = path.join(dir, "node_modules");
+
+      const direct = path.join(nodeModulesDir, pkgName);
+      if (fs.existsSync(direct)) return nodeModulesDir;
+
+      const pnpmDir = path.join(nodeModulesDir, ".pnpm");
+      if (fs.existsSync(pnpmDir)) {
+        const escaped = pkgName.replace("/", "+");
+        const match = fs.readdirSync(pnpmDir).find((name) => name.startsWith(`${escaped}@`));
+        if (match) {
+          const candidateNodeModules = path.join(pnpmDir, match, "node_modules");
+          if (fs.existsSync(path.join(candidateNodeModules, pkgName))) return candidateNodeModules;
+        }
+      }
+
+      const parent = path.dirname(dir);
+      if (parent === dir) break;
+      dir = parent;
+    }
+  }
+  return undefined;
+}
+
+const EXTRA_NODE_PATH = [
+  findPackageNodeModulesDir("onnxruntime-node"),
+  findPackageNodeModulesDir("sharp"),
+]
+  .filter((value): value is string => Boolean(value))
+  .join(path.delimiter);
+
+/**
  * @imgly의 removeBackground()는 onnxruntime 세션을 config 기준으로 memoize해서
  * 재사용한다(같은 config로 두 번째 이미지를 처리해도 세션은 새로 안 만들고 재사용).
  * 그런데 이 "재사용된 세션으로 두 번째 추론을 실행"하는 시점에 Vercel 서버리스
@@ -121,7 +169,14 @@ export class ImglyRemoverProvider implements BackgroundRemoverProvider {
           PUBLIC_PATH ?? "",
           model,
         ],
-        { maxBuffer: 1024 * 1024 * 16, timeout: 120_000 },
+        {
+          maxBuffer: 1024 * 1024 * 16,
+          timeout: 120_000,
+          env: {
+            ...process.env,
+            NODE_PATH: [EXTRA_NODE_PATH, process.env.NODE_PATH].filter(Boolean).join(path.delimiter),
+          },
+        },
       );
     } catch (err) {
       const stderr = (err as { stderr?: string; message?: string }).stderr;
