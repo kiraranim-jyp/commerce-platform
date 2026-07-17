@@ -36,16 +36,17 @@ const nextConfig: NextConfig = {
       // 용량 한도를 넘긴다(outputFileTracingExcludes로는 안 빠짐 — includes로 명시된 파일에는
       // 적용되지 않는 것으로 보인다). onnxruntime-node/sharp는 제외하고 작은 순수 JS 패키지만
       // 이름으로 하나씩 나열한다. ndarray는 자체적으로 iota-array/is-buffer에 의존한다.
+      // Vercel의 출력 트레이싱은 심링크를 그대로 두지 않고 해당 상대 경로에 실제
+      // 파일로 "평탄화"해서 복사한다. 그래서 @imgly의 require("iota-array")는(ndarray를
+      // 거쳐 왔더라도) pnpm 저장소 상의 원래 위치가 아니라, @imgly 자신의 node_modules
+      // 바로 밑(형제 디렉터리)에서 풀린다 — lodash/ndarray/zod와 같은 레벨이다.
       "../../node_modules/.pnpm/@imgly+background-removal-node@*/node_modules/lodash/**/*",
       "../../node_modules/.pnpm/@imgly+background-removal-node@*/node_modules/ndarray/**/*",
+      "../../node_modules/.pnpm/@imgly+background-removal-node@*/node_modules/iota-array/**/*",
+      "../../node_modules/.pnpm/@imgly+background-removal-node@*/node_modules/is-buffer/**/*",
       "../../node_modules/.pnpm/@imgly+background-removal-node@*/node_modules/zod/**/*",
       "../../node_modules/.pnpm/lodash@*/node_modules/lodash/**/*",
       "../../node_modules/.pnpm/ndarray@*/node_modules/ndarray/**/*",
-      // pnpm은 패키지마다 격리된 node_modules를 두므로, ndarray의 require("iota-array")는
-      // @imgly가 아니라 ndarray 자신의 격리 node_modules(.pnpm/ndarray@*/node_modules/) 안의
-      // 심링크를 통해 풀린다 — @imgly 바로 밑이 아니라 한 단계 더 안쪽이다.
-      "../../node_modules/.pnpm/ndarray@*/node_modules/iota-array/**/*",
-      "../../node_modules/.pnpm/ndarray@*/node_modules/is-buffer/**/*",
       "../../node_modules/.pnpm/iota-array@*/node_modules/iota-array/**/*",
       "../../node_modules/.pnpm/is-buffer@*/node_modules/is-buffer/**/*",
       "../../node_modules/.pnpm/zod@*/node_modules/zod/**/*",
