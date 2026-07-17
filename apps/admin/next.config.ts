@@ -41,6 +41,11 @@ const nextConfig: NextConfig = {
       "../../node_modules/.pnpm/@imgly+background-removal-node@*/node_modules/zod/**/*",
       "../../node_modules/.pnpm/lodash@*/node_modules/lodash/**/*",
       "../../node_modules/.pnpm/ndarray@*/node_modules/ndarray/**/*",
+      // pnpm은 패키지마다 격리된 node_modules를 두므로, ndarray의 require("iota-array")는
+      // @imgly가 아니라 ndarray 자신의 격리 node_modules(.pnpm/ndarray@*/node_modules/) 안의
+      // 심링크를 통해 풀린다 — @imgly 바로 밑이 아니라 한 단계 더 안쪽이다.
+      "../../node_modules/.pnpm/ndarray@*/node_modules/iota-array/**/*",
+      "../../node_modules/.pnpm/ndarray@*/node_modules/is-buffer/**/*",
       "../../node_modules/.pnpm/iota-array@*/node_modules/iota-array/**/*",
       "../../node_modules/.pnpm/is-buffer@*/node_modules/is-buffer/**/*",
       "../../node_modules/.pnpm/zod@*/node_modules/zod/**/*",
