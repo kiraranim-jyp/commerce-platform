@@ -78,44 +78,45 @@ const IMGLY_CJS_ENTRY = imglyDistDir
  * 자식 프로세스가 "onnxruntime-node"/"sharp"를 bare specifier로 require할 때, 정상
  * node_modules 탐색이 실패하면 여기 지정한 디렉터리도 추가로 뒤지도록 한다 — 이미
  * 존재하는 최상위 사본을 가리키기만 하면 되므로 파일을 하나도 새로 옮기지 않는다.
+ *
+ * process.cwd()에서부터 다시 걸어 올라가는 방식은 Vercel 배포 환경에서 실패했다
+ * (cwd가 로컬과 다른 위치인 것으로 보인다). 대신 이미 정확하게 resolve된 것으로
+ * 확인된 imglyDistDir 자체의 경로에서 ".pnpm" 세그먼트를 찾아 pnpm 저장소 루트를
+ * 역산한다 — @imgly가 성공적으로 로드되고 있다는 사실 자체가 이 경로의 정확성을
+ * 보장해준다.
  */
-function findPackageNodeModulesDir(pkgName: string): string | undefined {
-  const roots = [process.cwd(), process.argv[1] ? path.dirname(process.argv[1]) : undefined].filter(
-    (value): value is string => Boolean(value),
-  );
-
-  for (const root of roots) {
-    let dir = root;
-    for (let i = 0; i < 8; i++) {
-      const nodeModulesDir = path.join(dir, "node_modules");
-
-      const direct = path.join(nodeModulesDir, pkgName);
-      if (fs.existsSync(direct)) return nodeModulesDir;
-
-      const pnpmDir = path.join(nodeModulesDir, ".pnpm");
-      if (fs.existsSync(pnpmDir)) {
-        const escaped = pkgName.replace("/", "+");
-        const match = fs.readdirSync(pnpmDir).find((name) => name.startsWith(`${escaped}@`));
-        if (match) {
-          const candidateNodeModules = path.join(pnpmDir, match, "node_modules");
-          if (fs.existsSync(path.join(candidateNodeModules, pkgName))) return candidateNodeModules;
-        }
-      }
-
-      const parent = path.dirname(dir);
-      if (parent === dir) break;
-      dir = parent;
-    }
-  }
-  return undefined;
+function findPnpmStoreRootFromImglyDistDir(): string | undefined {
+  if (!imglyDistDir) return undefined;
+  const segments = imglyDistDir.split(path.sep);
+  const pnpmIndex = segments.lastIndexOf(".pnpm");
+  if (pnpmIndex === -1) return undefined;
+  return segments.slice(0, pnpmIndex + 1).join(path.sep);
 }
 
-const EXTRA_NODE_PATH = [
-  findPackageNodeModulesDir("onnxruntime-node"),
-  findPackageNodeModulesDir("sharp"),
-]
-  .filter((value): value is string => Boolean(value))
-  .join(path.delimiter);
+function findPackageNodeModulesDirInPnpmStore(
+  pnpmStoreRoot: string,
+  pkgName: string,
+): string | undefined {
+  if (!fs.existsSync(pnpmStoreRoot)) return undefined;
+  const escaped = pkgName.replace("/", "+");
+  const match = fs.readdirSync(pnpmStoreRoot).find((name) => name.startsWith(`${escaped}@`));
+  if (!match) return undefined;
+  const candidateNodeModules = path.join(pnpmStoreRoot, match, "node_modules");
+  return fs.existsSync(path.join(candidateNodeModules, pkgName)) ? candidateNodeModules : undefined;
+}
+
+const pnpmStoreRoot = findPnpmStoreRootFromImglyDistDir();
+const EXTRA_NODE_PATH = pnpmStoreRoot
+  ? [
+      findPackageNodeModulesDirInPnpmStore(pnpmStoreRoot, "onnxruntime-node"),
+      findPackageNodeModulesDirInPnpmStore(pnpmStoreRoot, "sharp"),
+    ]
+      .filter((value): value is string => Boolean(value))
+      .join(path.delimiter)
+  : "";
+console.log(
+  `[imgly-provider] imglyDistDir=${imglyDistDir ?? "(none)"} pnpmStoreRoot=${pnpmStoreRoot ?? "(none)"} EXTRA_NODE_PATH=${EXTRA_NODE_PATH || "(empty)"}`,
+);
 
 /**
  * @imgly의 removeBackground()는 onnxruntime 세션을 config 기준으로 memoize해서
