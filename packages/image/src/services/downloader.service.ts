@@ -20,7 +20,10 @@ export class ImageDownloader {
     fs.mkdirSync(this.outputDir, { recursive: true });
   }
 
-  async downloadAll(images: ExtractedImage[]): Promise<DownloadedImage[]> {
+  async downloadAll(
+    images: ExtractedImage[],
+    onEach?: (current: number, total: number, fileName: string) => void,
+  ): Promise<DownloadedImage[]> {
     const cache = new ImageCache();
     const results: DownloadedImage[] = [];
 
@@ -31,6 +34,7 @@ export class ImageDownloader {
 
       if (cached && fs.existsSync(cached.file)) {
         results.push({ ...cached, index, fromCache: true });
+        onEach?.(index, images.length, cached.fileName);
         index += 1;
         continue;
       }
@@ -51,6 +55,7 @@ export class ImageDownloader {
       };
       cache.set(urlHash, record);
       results.push({ ...record, index, fromCache: false });
+      onEach?.(index, images.length, fileName);
       index += 1;
     }
 

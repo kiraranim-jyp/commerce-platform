@@ -12,6 +12,7 @@
   "dependencies": {
     "@commerce/crawler": "workspace:*",
     "@commerce/image": "workspace:*",
+    "@commerce/shared": "workspace:*",
     "@imgly/background-removal-node": "^1.4.5",
     "jszip": "^3.10.1",
     "next": "16.2.10",
