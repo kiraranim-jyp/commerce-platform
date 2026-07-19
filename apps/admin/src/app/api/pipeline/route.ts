@@ -144,6 +144,7 @@ export async function POST(request: Request) {
                 originalBytes: 0,
                 detailDataUrl: null,
                 isRepresentative: false,
+                processingTimeSec: 0,
               };
             }
 
@@ -172,6 +173,9 @@ export async function POST(request: Request) {
               isRepresentative: processed.files.some(
                 (f) => f.fileName === result.metadata.thumbnail,
               ),
+              quality: processed.quality,
+              usedOriginal: processed.usedOriginal,
+              processingTimeSec: Math.round(processed.processingTimeMs / 100) / 10,
             };
           });
 
@@ -179,6 +183,10 @@ export async function POST(request: Request) {
         for (const item of items) {
           byType[item.type] = (byType[item.type] ?? 0) + 1;
         }
+
+        const nukkiApplied = items.filter(
+          (item) => item.type === "PRODUCT" && item.status === "success" && item.usedOriginal === false,
+        ).length;
 
         const response: PipelineResponse = {
           metadata: result.metadata,
@@ -188,7 +196,9 @@ export async function POST(request: Request) {
             success: items.filter((item) => item.status === "success").length,
             failed: items.filter((item) => item.status === "failed").length,
             processingTimeSec: Math.round((result.stats.processingTimeMs / 1000) * 10) / 10,
+            downloaded: result.stats.totalDownloaded,
             byType,
+            nukkiApplied,
             dedupRemoved: result.stats.dedupRemoved,
             resized: result.stats.resized,
             compressed: result.stats.compressed,

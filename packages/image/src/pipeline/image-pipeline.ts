@@ -9,7 +9,9 @@ import { ImageDownloader } from "../services/downloader.service";
 import { pipelineLogger } from "../services/logger.service";
 import { buildProductMetadata, saveProductMetadata } from "../services/metadata.service";
 import { processProductImage } from "../services/product-processor.service";
-import { standardizeImage } from "../services/standardizer.service";
+import type { QualityScore } from "../services/quality-score.service";
+import { loadImagePolicy } from "../config/marketplace-policy";
+import { standardizeImage, standardizeKeepOriginal } from "../services/standardizer.service";
 import type { ThumbnailSelector } from "../services/thumbnail.service";
 import type {
   BackgroundRemoverProvider,
@@ -50,6 +52,12 @@ export interface ProcessedImageResult {
   original: { width: number; height: number; bytes: number };
   output?: { width: number; height: number };
   files: ProcessedImageFile[];
+  /** PRODUCT에서만 계산된다 — 배경제거 세그멘테이션 품질 점수. */
+  quality?: QualityScore;
+  /** PRODUCT에서 품질이 기준 미달(혹은 배경제거 자체 실패)이라 원본을 그대로 썼는지 여부. */
+  usedOriginal?: boolean;
+  /** 이미지 1장 처리에 걸린 시간(ms) — Workspace UI 카드에 처리 시간으로 표시된다. */
+  processingTimeMs: number;
 }
 
 export interface PipelineStats {
@@ -104,6 +112,7 @@ export async function processSingleProductImage(
   progress?: SingleImageProgressContext,
 ): Promise<ProcessedImageResult> {
   const baseName = path.parse(file).name;
+  const itemStartedAt = Date.now();
   let original: ProcessedImageResult["original"] = { width: 0, height: 0, bytes: 0 };
   const emit = (message: string, extra?: { errorMessage?: string }) =>
     progress?.reporter.emit(progress.stageKey, progress.step, "processing", message, {
@@ -119,30 +128,70 @@ export async function processSingleProductImage(
     // 계약이 깨지고 호출자(배치 파이프라인이든 재실행 라우트든)까지 예외가 새어나간다.
     original = await readOriginalInfo(file);
 
-    console.log(`[pipeline] PRODUCT ${baseName}: 배경제거 시작`);
-    emit(`${baseName}: 배경제거 시작`);
-    const removed = await processProductImage(file, deps.backgroundRemover);
-    console.log(`[pipeline] PRODUCT ${baseName}: 배경제거 완료, enhance 시작`);
-    emit(`${baseName}: 배경제거 완료`);
+    // 배경제거는 "필수 단계"가 아니라 "품질이 좋을 때만 쓰는 옵션"이다 — 무료 로컬
+    // 모델의 세그멘테이션 자체가 나쁘면 후처리로는 못 살리므로, 여기서 실패하거나
+    // (ONNX 워커 크래시 등) 품질 점수가 기준 미달이면 배경제거 결과를 버리고 원본을
+    // 그대로 표준화하는 경로로 폴백한다.
+    let quality: QualityScore | undefined;
+    let removedFile: string | undefined;
+    try {
+      console.log(`[pipeline] PRODUCT ${baseName}: 배경제거 시작`);
+      emit(`${baseName}: 배경제거 시작`);
+      const removed = await processProductImage(file, deps.backgroundRemover);
+      quality = removed.quality;
+      removedFile = removed.file;
+      console.log(
+        `[pipeline] PRODUCT ${baseName}: 배경제거 완료 (품질 ${quality.overall}점)`,
+      );
+      emit(`${baseName}: 배경제거 완료 (품질 ${quality.overall}점)`);
+    } catch (removeError) {
+      console.warn(
+        `[pipeline] PRODUCT ${baseName}: 배경제거 실패, 원본 사용으로 폴백`,
+        removeError,
+      );
+      emit(`${baseName}: 배경제거 실패 - 원본 사용`, {
+        errorMessage: toFailureReason(removeError),
+      });
+    }
 
-    fs.mkdirSync(storagePaths.tmp, { recursive: true });
-    const enhancedPath = path.join(storagePaths.tmp, `${baseName}-enhanced.png`);
-    await deps.enhancer.enhance(removed.file, enhancedPath);
-    console.log(`[pipeline] PRODUCT ${baseName}: enhance 완료, standardize 시작`);
+    const threshold = Number(process.env.IMAGE_QUALITY_THRESHOLD ?? 80);
+    const usedOriginal = !removedFile || !quality || quality.overall < threshold;
 
-    const standardized = await standardizeImage(
-      enhancedPath,
-      storagePaths.processed("product"),
-      "PRODUCT",
-      deps.enhancer,
-      undefined,
-      baseName,
-    );
-    fs.rmSync(enhancedPath);
+    let standardized;
+    if (!usedOriginal && removedFile) {
+      console.log(`[pipeline] PRODUCT ${baseName}: 품질 통과, enhance 시작`);
+      fs.mkdirSync(storagePaths.tmp, { recursive: true });
+      const enhancedPath = path.join(storagePaths.tmp, `${baseName}-enhanced.png`);
+      await deps.enhancer.enhance(removedFile, enhancedPath);
+      console.log(`[pipeline] PRODUCT ${baseName}: enhance 완료, standardize 시작`);
+
+      standardized = await standardizeImage(
+        enhancedPath,
+        storagePaths.processed("product"),
+        "PRODUCT",
+        deps.enhancer,
+        undefined,
+        baseName,
+      );
+      fs.rmSync(enhancedPath);
+      emit(`${baseName}: 표준화 완료 (누끼 사용)`);
+    } else {
+      console.log(
+        `[pipeline] PRODUCT ${baseName}: 품질 ${quality?.overall ?? "N/A"}점(기준 ${threshold}점 미만) 또는 배경제거 실패 - 원본 표준화`,
+      );
+      standardized = [
+        await standardizeKeepOriginal(
+          file,
+          storagePaths.processed("product"),
+          baseName,
+          loadImagePolicy(),
+        ),
+      ];
+      emit(`${baseName}: 표준화 완료 (원본 사용)`);
+    }
     console.log(
       `[pipeline] PRODUCT ${baseName}: standardize 완료(${standardized.length}개), optimize 시작`,
     );
-    emit(`${baseName}: 표준화 완료`);
 
     const files: ProcessedImageFile[] = [];
     for (const std of standardized) {
@@ -163,6 +212,9 @@ export async function processSingleProductImage(
       original,
       output: { width: standardized[0]?.width ?? 0, height: standardized[0]?.height ?? 0 },
       files,
+      quality,
+      usedOriginal,
+      processingTimeMs: Date.now() - itemStartedAt,
     };
   } catch (error) {
     console.error(`[pipeline] PRODUCT ${baseName}: 처리 실패`, error);
@@ -175,6 +227,7 @@ export async function processSingleProductImage(
       failureReason,
       original,
       files: [],
+      processingTimeMs: Date.now() - itemStartedAt,
     };
   }
 }
@@ -191,6 +244,7 @@ export async function processSingleStandardImage(
   progress?: SingleImageProgressContext,
 ): Promise<ProcessedImageResult> {
   const baseName = path.parse(file).name;
+  const itemStartedAt = Date.now();
   let original: ProcessedImageResult["original"] = { width: 0, height: 0, bytes: 0 };
   const emit = (message: string, extra?: { errorMessage?: string }) =>
     progress?.reporter.emit(progress.stageKey, progress.step, "processing", message, {
@@ -237,6 +291,7 @@ export async function processSingleStandardImage(
       original,
       output: { width: standardized[0]?.width ?? 0, height: standardized[0]?.height ?? 0 },
       files,
+      processingTimeMs: Date.now() - itemStartedAt,
     };
   } catch (error) {
     if (sourcePath !== file && fs.existsSync(sourcePath)) fs.rmSync(sourcePath);
@@ -250,6 +305,7 @@ export async function processSingleStandardImage(
       failureReason,
       original,
       files: [],
+      processingTimeMs: Date.now() - itemStartedAt,
     };
   }
 }

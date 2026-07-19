@@ -1,5 +1,5 @@
 import type { ImageType, ProductMetadata } from "@commerce/shared";
-import type { PipelineProgressEvent } from "@commerce/image";
+import type { PipelineProgressEvent, QualityScore } from "@commerce/image";
 
 /**
  * 이미지 1장(사진 1장) 단위의 Workspace 카드 데이터.
@@ -21,6 +21,12 @@ export interface WorkspaceItem {
   outputHeight?: number;
   fileSize?: number;
   isRepresentative: boolean;
+  /** PRODUCT에서만 값이 있다 — 배경제거 세그멘테이션 품질 점수. */
+  quality?: QualityScore;
+  /** PRODUCT에서 품질 미달(또는 배경제거 실패)로 원본을 그대로 썼는지 여부. */
+  usedOriginal?: boolean;
+  /** 이 이미지 1장 처리에 걸린 시간(초). */
+  processingTimeSec: number;
 }
 
 export interface ProcessingReport {
@@ -28,7 +34,11 @@ export interface ProcessingReport {
   success: number;
   failed: number;
   processingTimeSec: number;
+  /** 소스 URL에서 실제로 다운로드한 원본 이미지 개수. */
+  downloaded: number;
   byType: Record<string, number>;
+  /** PRODUCT 중 실제로 누끼(배경제거)가 적용된 개수 — 품질 미달로 원본을 쓴 건 제외. */
+  nukkiApplied: number;
   dedupRemoved: number;
   resized: number;
   compressed: number;

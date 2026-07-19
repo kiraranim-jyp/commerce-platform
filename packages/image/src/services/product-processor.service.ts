@@ -3,24 +3,29 @@ import path from "node:path";
 import sharp from "sharp";
 import { storagePaths } from "../utils/storage-paths.util";
 import type { BackgroundRemoverProvider } from "../types/provider.types";
+import { labelComponents, largestComponentLabel } from "../utils/connected-components.util";
+import { scoreSegmentation, type QualityScore } from "./quality-score.service";
 
 export interface ProcessedProductImage {
   fileName: string;
   file: string;
+  quality: QualityScore;
 }
 
 /**
  * 배경제거 모델(특히 가벼운 "small" 모델)은 완전한 배경 영역 곳곳에 산발적인
- * 잔류 알파값(수십~수백 단위로 흩어진 작은 얼룩)을 남긴다. 원본 해상도에서는
- * 눈에 안 띄지만, 이후 Standardizer가 1500x2000으로 확대하면 이 얼룩들이
- * 흐릿한 노이즈로 확대되어 보인다.
+ * 잔류 알파값을 남긴다. 원본 해상도에서는 눈에 안 띄지만, 이후 Standardizer가
+ * 1500x2000으로 확대하면 이 얼룩들이 흐릿한 노이즈로 확대되어 보인다.
  *
- * 단순 threshold(낮은 알파값을 0으로)만으로는 부족했다 — 실측해보니 노이즈
- * 얼룩의 알파값이 threshold=30 정도로는 못 잡을 만큼 높게(100~200대) 나오는
- * 경우가 있었다. 대신 median 필터로 먼저 "작고 고립된 얼룩"을 제거한다(제품
- * 실루엣처럼 크고 연결된 영역은 median에도 살아남고, 노이즈처럼 작은 점들은
- * 주변 배경값으로 뭉개진다). median 결과에 최종 threshold(128)를 적용해
- * 완전한 이진(배경/전경) 알파 매트를 만든다.
+ * median 필터 + 단순 threshold만으로는 부족하다 — 제품과 배경의 색 대비가
+ * 약한 이미지(예: 크림색 니트)에서는 모델이 배경 일부를 어느 정도 크기가 있는
+ * 뭉텅이(알파 100~200대)로 오인식하는데, 이 뭉텅이가 9x9 median보다 크면
+ * 살아남고 threshold(128)보다 높은 알파값을 가지면 그대로 통과해버린다.
+ *
+ * 그래서 "얼마나 흐릿한가"가 아니라 "제품 실루엣과 붙어 있는가"로 판단한다.
+ * 얼룩은 정의상 제품 몸통과 떨어진 섬(connected component)이므로, 이진화된
+ * 마스크에서 가장 큰 덩어리(제품 실루엣) 하나만 남기고 나머지는 크기·알파값과
+ * 무관하게 전부 지운다.
  *
  * sharp의 median()은 단일 채널 raw 버퍼를 내부적으로 3채널 sRGB로 승격시키는
  * 것으로 보여서, 처리 후 toColourspace("b-w")로 명시적으로 1채널로 되돌려야
@@ -29,7 +34,9 @@ export interface ProcessedProductImage {
 const ALPHA_MEDIAN_KERNEL_SIZE = 9;
 const ALPHA_THRESHOLD = 128;
 
-async function cleanAlphaNoise(inputPath: string): Promise<Buffer> {
+async function cleanAlphaNoise(
+  inputPath: string,
+): Promise<{ buffer: Buffer; quality: QualityScore }> {
   const { data, info } = await sharp(inputPath)
     .ensureAlpha()
     .raw()
@@ -45,11 +52,20 @@ async function cleanAlphaNoise(inputPath: string): Promise<Buffer> {
     .raw()
     .toBuffer();
 
-  for (let i = 0, p = 3; i < medianed.length; i++, p += channels) {
-    if (medianed[i] < ALPHA_THRESHOLD) data[p] = 0;
+  const binary = new Uint8Array(medianed.length);
+  for (let i = 0; i < medianed.length; i++) binary[i] = medianed[i] >= ALPHA_THRESHOLD ? 1 : 0;
+
+  const quality = scoreSegmentation({ rawAlpha: alpha, binary, width, height });
+
+  const { labels, sizes } = labelComponents(binary, width, height);
+  const largest = largestComponentLabel(sizes);
+
+  for (let i = 0, p = 3; i < labels.length; i++, p += channels) {
+    if (labels[i] !== largest) data[p] = 0;
   }
 
-  return sharp(data, { raw: { width, height, channels } }).png().toBuffer();
+  const buffer = await sharp(data, { raw: { width, height, channels } }).png().toBuffer();
+  return { buffer, quality };
 }
 
 /** 이미지 1장을 배경제거 -> 알파 노이즈 정리 -> 투명 여백 트림까지 처리한다. */
@@ -65,11 +81,11 @@ export async function processProductImage(
   const tmpFile = `${outFile}.tmp.png`;
 
   await remover.remove(file, tmpFile);
-  const cleaned = await cleanAlphaNoise(tmpFile);
+  const { buffer: cleaned, quality } = await cleanAlphaNoise(tmpFile);
   await sharp(cleaned).trim().png().toFile(outFile);
   fs.rmSync(tmpFile);
 
-  return { fileName: `${baseName}.png`, file: outFile };
+  return { fileName: `${baseName}.png`, file: outFile, quality };
 }
 
 /**

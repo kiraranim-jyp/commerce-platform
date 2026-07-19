@@ -26,6 +26,7 @@ export function ProcessingReportView({ report }: { report: ProcessingReport }) {
       <hr className="my-3 border-zinc-100" />
 
       <dl className="grid grid-cols-2 gap-y-2 sm:grid-cols-4">
+        <Row label="다운로드" value={report.downloaded} />
         {Object.entries(report.byType).map(([type, count]) => (
           <Row key={type} label={TYPE_LABELS[type] ?? type} value={count} />
         ))}
@@ -34,7 +35,7 @@ export function ProcessingReportView({ report }: { report: ProcessingReport }) {
       <hr className="my-3 border-zinc-100" />
 
       <dl className="grid grid-cols-2 gap-y-2 sm:grid-cols-4">
-        <Row label="중복 제거" value={report.dedupRemoved} />
+        <Row label="누끼" value={report.nukkiApplied} />
         <Row label="리사이즈" value={report.resized} />
         <Row label="압축" value={report.compressed} />
       </dl>

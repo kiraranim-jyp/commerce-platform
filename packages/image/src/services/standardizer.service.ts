@@ -38,7 +38,7 @@ export async function standardizeImage(
     case "PRODUCT":
       return standardizeProduct(inputPath, outputDir, baseName, policy, enhancer);
     case "MODEL":
-      return [await standardizeModel(inputPath, outputDir, baseName, policy)];
+      return [await standardizeKeepOriginal(inputPath, outputDir, baseName, policy)];
     case "DETAIL":
       return [await resizeWithinBounds(inputPath, outputDir, baseName, policy)];
     default:
@@ -174,8 +174,10 @@ async function placeOnCanvasWithFillRatio(
 /**
  * 원본 구도/비율을 그대로 유지한다. 이미 규격(1500x2000) 이상이면 손대지 않고,
  * 작을 때만 긴 변 기준으로 확대한다. 강제 캔버스/패딩과 샤프닝, 색감 보정은 하지 않는다.
+ * MODEL 타입 표준화뿐 아니라, PRODUCT의 배경제거 품질이 기준 미달일 때 "원본 그대로
+ * 사용" 폴백 경로에서도 그대로 재사용한다(image-pipeline.ts의 processSingleProductImage).
  */
-async function standardizeModel(
+export async function standardizeKeepOriginal(
   inputPath: string,
   outputDir: string,
   baseName: string,

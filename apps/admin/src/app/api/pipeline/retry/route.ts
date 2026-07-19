@@ -119,6 +119,9 @@ export async function POST(request: Request) {
       outputHeight: processed.output?.height,
       fileSize: preferred?.bytes,
       isRepresentative: false,
+      quality: processed.quality,
+      usedOriginal: processed.usedOriginal,
+      processingTimeSec: Math.round(processed.processingTimeMs / 100) / 10,
     };
 
     return NextResponse.json({ item });
@@ -140,6 +143,7 @@ export async function POST(request: Request) {
       originalBytes: 0,
       detailDataUrl: null,
       isRepresentative: false,
+      processingTimeSec: 0,
     };
     return NextResponse.json({ item });
   } finally {

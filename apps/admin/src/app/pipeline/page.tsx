@@ -21,7 +21,9 @@ export default function PipelinePage() {
   const [representativeId, setRepresentativeId] = useState<string | null>(null);
   const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [retryingIds, setRetryingIds] = useState<Set<string>>(new Set());
+  const [retryCounts, setRetryCounts] = useState<Record<string, number>>({});
   const [currentProgress, setCurrentProgress] = useState<PipelineProgressEvent | null>(null);
   const [progressLog, setProgressLog] = useState<PipelineProgressEvent[]>([]);
 
@@ -45,6 +47,8 @@ export default function PipelinePage() {
     setRepresentativeId(null);
     setExcludedIds(new Set());
     setPreviewId(null);
+    setSelectedId(null);
+    setRetryCounts({});
     setCurrentProgress(null);
     setProgressLog([]);
 
@@ -86,6 +90,7 @@ export default function PipelinePage() {
     if (!item.originalDataUrl) return;
 
     setRetryingIds((prev) => new Set(prev).add(item.id));
+    setRetryCounts((prev) => ({ ...prev, [item.id]: (prev[item.id] ?? 0) + 1 }));
     try {
       const response = await fetch("/api/pipeline/retry", {
         method: "POST",
@@ -117,6 +122,23 @@ export default function PipelinePage() {
         return next;
       });
     }
+  }
+
+  function resetWorkspace() {
+    setUrl("");
+    setLoading(false);
+    setError(null);
+    setResult(null);
+    setItems([]);
+    setThumbnails({});
+    setRepresentativeId(null);
+    setExcludedIds(new Set());
+    setPreviewId(null);
+    setSelectedId(null);
+    setRetryingIds(new Set());
+    setRetryCounts({});
+    setCurrentProgress(null);
+    setProgressLog([]);
   }
 
   function toggleExclude(id: string) {
@@ -154,14 +176,26 @@ export default function PipelinePage() {
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://example.com/product/123"
-          className="flex-1 rounded border border-zinc-300 px-3 py-2 text-sm"
+          disabled={loading}
+          className="flex-1 rounded border border-zinc-300 px-3 py-2 text-sm disabled:opacity-60"
         />
         <button
           onClick={runPipeline}
           disabled={loading || !url}
-          className="rounded bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+          className="flex items-center gap-2 rounded bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
         >
-          {loading ? "실행 중..." : "실행"}
+          {loading && (
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+          )}
+          {loading ? "작업 중..." : "실행"}
+        </button>
+        <button
+          type="button"
+          onClick={resetWorkspace}
+          disabled={loading}
+          className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 disabled:opacity-40"
+        >
+          초기화
         </button>
       </div>
 
@@ -184,8 +218,13 @@ export default function PipelinePage() {
                 thumbnailDataUrl={thumbnails[item.id]}
                 isExcluded={excludedIds.has(item.id)}
                 isRepresentative={representativeId === item.id}
+                isSelected={selectedId === item.id}
                 retrying={retryingIds.has(item.id)}
-                onPreview={() => setPreviewId(item.id)}
+                retryCount={retryCounts[item.id] ?? 0}
+                onPreview={() => {
+                  setSelectedId(item.id);
+                  setPreviewId(item.id);
+                }}
                 onRetry={() => retryItem(item)}
                 onToggleRepresentative={() => setRepresentativeId(item.id)}
                 onToggleExclude={() => toggleExclude(item.id)}

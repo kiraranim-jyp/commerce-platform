@@ -9,7 +9,9 @@ interface ImageCardProps {
   thumbnailDataUrl?: string;
   isExcluded: boolean;
   isRepresentative: boolean;
+  isSelected: boolean;
   retrying: boolean;
+  retryCount: number;
   onPreview: () => void;
   onRetry: () => void;
   onToggleRepresentative: () => void;
@@ -27,7 +29,9 @@ export function ImageCard({
   thumbnailDataUrl,
   isExcluded,
   isRepresentative,
+  isSelected,
   retrying,
+  retryCount,
   onPreview,
   onRetry,
   onToggleRepresentative,
@@ -43,9 +47,9 @@ export function ImageCard({
 
   return (
     <div
-      className={`flex h-[380px] flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white transition-opacity ${
-        isExcluded ? "opacity-40" : ""
-      }`}
+      className={`flex h-[420px] flex-col overflow-hidden rounded-lg border bg-white transition-opacity ${
+        isSelected ? "border-black ring-2 ring-black" : "border-zinc-200"
+      } ${isExcluded ? "opacity-40" : ""}`}
     >
       <button
         type="button"
@@ -83,6 +87,7 @@ export function ImageCard({
         <p className="truncate font-medium text-zinc-800" title={item.fileName}>
           {item.fileName}
         </p>
+        <p className="text-zinc-500">Type: {item.type}</p>
         <p className="text-zinc-500">
           Original: {formatDimensions(item.originalWidth, item.originalHeight)}
         </p>
@@ -90,6 +95,11 @@ export function ImageCard({
           Output: {formatDimensions(item.outputWidth, item.outputHeight)}
         </p>
         <p className="text-zinc-500">File: {formatBytes(item.fileSize)}</p>
+        {item.quality && (
+          <p className="text-zinc-500">
+            Quality {item.quality.overall}/100 · {item.usedOriginal ? "원본 사용" : "누끼"}
+          </p>
+        )}
 
         <p className="mt-0.5">
           {status === "success" && <span>🟢 Success</span>}
@@ -101,6 +111,7 @@ export function ImageCard({
             {item.failureReason}
           </p>
         )}
+        <p className="text-zinc-500">Processing: {item.processingTimeSec}s</p>
 
         <div className="mt-auto flex items-center justify-between gap-2 pt-2">
           <label className="flex items-center gap-1 text-zinc-500">
@@ -108,25 +119,27 @@ export function ImageCard({
             제외
           </label>
 
-          {status === "success" && item.detailDataUrl && (
-            <a
-              href={item.detailDataUrl}
-              download={item.fileName}
-              className="rounded border border-zinc-300 px-2 py-1 font-medium hover:bg-zinc-50"
-            >
-              다운로드
-            </a>
-          )}
-          {status === "failed" && (
-            <button
-              type="button"
-              onClick={onRetry}
-              disabled={retrying}
-              className="rounded border border-zinc-300 px-2 py-1 font-medium hover:bg-zinc-50 disabled:opacity-50"
-            >
-              {retrying ? "재실행 중..." : "재실행"}
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {previewSrc && (
+              <a
+                href={previewSrc}
+                download={item.fileName}
+                className="rounded border border-zinc-300 px-2 py-1 font-medium hover:bg-zinc-50"
+              >
+                ⬇ Download
+              </a>
+            )}
+            {status === "failed" && (
+              <button
+                type="button"
+                onClick={onRetry}
+                disabled={retrying}
+                className="rounded border border-zinc-300 px-2 py-1 font-medium hover:bg-zinc-50 disabled:opacity-50"
+              >
+                {retrying ? "재실행 중..." : retryCount > 0 ? `재실행 (${retryCount}회)` : "재실행"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
