@@ -26,6 +26,15 @@ const nextConfig: NextConfig = {
   // 전부 명시적으로 포함시켜야 한다 — 안 그러면 "Cannot find module 'lodash'"처럼
   // 자식 프로세스에서만 나는 모듈 누락 에러가 배포 후에야 드러난다.
   outputFileTracingIncludes: {
+    // /api/extractor-test는 packages/crawler(Playwright 렌더링)만 쓰고 배경제거는
+    // 안 하므로 onnxruntime/@imgly 쪽은 필요 없다 — playwright-core/chromium만 포함한다.
+    // 이것도 /api/pipeline과 마찬가지로, 새 API 라우트를 추가할 때마다 그 라우트가 실제로
+    // 쓰는 네이티브/리소스 의존 패키지를 여기에 명시적으로 추가해야 한다는 걸 잊지 말 것 —
+    // 안 그러면 로컬에서는 멀쩡하다가 배포 후에만 "Cannot find module ..." 로 터진다.
+    "/api/extractor-test": [
+      "../../node_modules/.pnpm/playwright-core@*/node_modules/playwright-core/**/*",
+      "../../node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/**/*",
+    ],
     "/api/pipeline": [
       "../../node_modules/.pnpm/onnxruntime-node@*/node_modules/onnxruntime-node/bin/**/*",
       "../../node_modules/.pnpm/onnxruntime-node@*/node_modules/onnxruntime-node/dist/**/*",
