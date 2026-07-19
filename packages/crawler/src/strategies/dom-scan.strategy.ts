@@ -43,11 +43,16 @@ function linksToDifferentPage(anchorHref: string | null, pageUrl: string): boole
  * 항상 실행되는 안전망 Strategy — 실제 렌더링된 DOM을 스캔한다. 구조화 데이터가 없거나
  * 대표 이미지 1장만 주는 사이트에서도 전체 상품 갤러리(여러 장)를 찾아내는 유일한 경로다.
  *
- * 기존 로직(img 스캔 + 링크-다른페이지 제외) 위에 두 가지를 추가한다:
+ * 기존 로직(img 스캔 + 링크-다른페이지 제외) 위에 세 가지를 추가한다:
  * 1. srcset/<picture><source srcset>에서 w descriptor가 가장 큰 후보로 업그레이드
  *    (currentSrc는 브라우저 뷰포트가 "선택"한 크기라 항상 최대 해상도가 아니다).
  * 2. data-src류 lazy-load 속성 — currentSrc가 blur/placeholder(1x1, base64 등)로
  *    보이는데 lazy 속성에 실제 URL이 있으면 그쪽을 우선한다.
+ * 3. 라이트박스 갤러리 패턴(PrestaShop 기본 테마 등) — 썸네일 <img src="...small...">를
+ *    감싼 <a href="...large/original....jpg">가 있으면 그 href가 진짜 원본 크기다.
+ *    지금까지는 이 href를 "다른 페이지로 링크됐는지" 판별에만 쓰고 실제 후보로는
+ *    한 번도 채택하지 않아서, 이 패턴을 쓰는 사이트에서 썸네일(대개 100px 안팎이라
+ *    최소 해상도 미달로 걸러짐)만 남고 진짜 큰 사진은 통째로 누락되고 있었다.
  */
 export const domScanStrategy: ExtractionStrategy = {
   name: "dom-scan",
@@ -87,6 +92,8 @@ export const domScanStrategy: ExtractionStrategy = {
         siblingCount: number;
       }[] = [];
 
+      const imageExtensionRe = /\.(jpe?g|png|webp|gif)$/i;
+
       for (const img of Array.from(document.querySelectorAll("img"))) {
         let src = img.currentSrc || img.src;
 
@@ -106,6 +113,32 @@ export const domScanStrategy: ExtractionStrategy = {
             }
           }
         }
+
+        const anchor = img.closest("a");
+        // 라이트박스 갤러리: <a href="...큰사진.jpg"><img src="...작은썸네일.jpg"></a>.
+        // 앵커가 같은 출처의 실제 이미지 파일을 가리키면 썸네일보다 신뢰도 높은
+        // "진짜 원본" 후보이므로 우선한다. 이때 img의 naturalWidth/Height는 화면에
+        // 실제로 로드된 "썸네일" 크기이지 앵커가 가리키는 원본 크기가 아니다 — 0으로
+        // 비우면 "해상도 모름"으로는 통과하지만, 같은 CDN ID를 가진 다른 후보와
+        // "누가 더 큰가" 비교할 때(collapseByCdnId) 무조건 지게 된다(실제로는 라이트박스
+        // 원본이 제일 큰 게 거의 확실한데도). 그래서 "모름"이 아니라 "확실히 크다"는
+        // 뜻으로 큰 sentinel 값을 준다.
+        let linkedToFullSize = false;
+        if (anchor?.href) {
+          try {
+            const anchorUrl = new URL(anchor.href, location.href);
+            if (
+              anchorUrl.origin === location.origin &&
+              imageExtensionRe.test(anchorUrl.pathname)
+            ) {
+              src = anchor.href;
+              linkedToFullSize = true;
+            }
+          } catch {
+            // 무시 — anchor.href 파싱 실패 시 기존 src를 그대로 쓴다.
+          }
+        }
+
         if (!src || looksLikePlaceholder(src)) continue;
 
         let context = "";
@@ -115,7 +148,6 @@ export const domScanStrategy: ExtractionStrategy = {
           el = el.parentElement;
         }
 
-        const anchor = img.closest("a");
         const siblingCount = img.parentElement
           ? img.parentElement.querySelectorAll("img").length
           : 1;
@@ -123,8 +155,8 @@ export const domScanStrategy: ExtractionStrategy = {
         out.push({
           url: src,
           alt: img.alt ?? "",
-          width: img.naturalWidth || img.width,
-          height: img.naturalHeight || img.height,
+          width: linkedToFullSize ? 4000 : img.naturalWidth || img.width,
+          height: linkedToFullSize ? 4000 : img.naturalHeight || img.height,
           context,
           anchorHref: anchor ? anchor.href : null,
           siblingCount,
