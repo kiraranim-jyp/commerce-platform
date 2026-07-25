@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CommerceWorkspace } from "./CommerceWorkspace";
 import { ImageCard } from "./ImageCard";
 import { PreviewModal } from "./PreviewModal";
 import { ProcessingReportView } from "./ProcessingReport";
@@ -248,6 +249,13 @@ export default function PipelinePage() {
 
           {result && (
             <p className="rounded bg-amber-50 p-3 text-xs text-amber-800">{result.storageNote}</p>
+          )}
+
+          {result && (
+            <CommerceWorkspace
+              key={result.canonicalProduct.sourceUrl}
+              initialProduct={result.canonicalProduct}
+            />
           )}
         </div>
       )}

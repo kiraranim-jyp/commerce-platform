@@ -2,6 +2,7 @@ import type { Page } from "playwright-core";
 import type { ExtractedImage } from "@commerce/shared";
 import { launchChromium } from "./browser-launcher";
 import { loadCrawlerConfig } from "./config";
+import { extractProductData, type ExtractedProductData } from "./product-data-extractor";
 import { scoreAndFilter, type ExtractionTrace } from "./scoring";
 import { jsonLdStrategy } from "./strategies/json-ld.strategy";
 import { openGraphStrategy } from "./strategies/open-graph.strategy";
@@ -27,6 +28,8 @@ export interface UniversalExtractResult {
   images: ExtractedImage[];
   trace?: ExtractionTrace[];
   strategyCounts?: Record<StrategySource, number>;
+  productData: ExtractedProductData;
+  productDataSources: Record<string, "json-ld" | "open-graph" | "dom">;
 }
 
 async function autoScroll(page: Page, passes: number): Promise<void> {
@@ -136,10 +139,19 @@ export async function universalExtract(
       ({ images, trace } = scoreAndFilter(candidates, config));
     }
 
+    // 이미지 추출에 쓴 것과 같은 page/html을 재사용한다 — 상품 정보만 보려고
+    // 페이지를 한 번 더 열 필요가 없다.
+    const { data: productData, sources: productDataSources } = await extractProductData(
+      html,
+      page,
+    );
+
     return {
       images,
       trace: options.debug ? trace : undefined,
       strategyCounts,
+      productData,
+      productDataSources,
     };
   } finally {
     await browser.close();

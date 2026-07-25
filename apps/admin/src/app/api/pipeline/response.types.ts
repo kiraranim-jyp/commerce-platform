@@ -1,4 +1,4 @@
-import type { ImageType, ProductMetadata } from "@commerce/shared";
+import type { CanonicalProduct, ImageType, ProductMetadata } from "@commerce/shared";
 import type { PipelineProgressEvent, QualityScore } from "@commerce/image";
 
 /**
@@ -57,6 +57,9 @@ export interface PipelineResponse {
   items: WorkspaceItem[];
   report: ProcessingReport;
   storageNote: string;
+  /** Commerce Listing Preview Engine의 유일한 입력 — 플랫폼별 Adapter가 이 값 하나를
+   * 각자의 ListingModel로 변환한다. 플랫폼별로 데이터를 따로 만들지 않는다. */
+  canonicalProduct: CanonicalProduct;
 }
 
 /**

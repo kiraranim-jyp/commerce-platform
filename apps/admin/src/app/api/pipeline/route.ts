@@ -17,6 +17,7 @@ import {
   type ProcessedImageResult,
 } from "@commerce/image";
 import { NextResponse } from "next/server";
+import { buildCanonicalProduct } from "./canonical-product";
 import type { PipelineResponse, PipelineSSEEvent, WorkspaceItem } from "./response.types";
 
 export const runtime = "nodejs";
@@ -194,9 +195,17 @@ export async function POST(request: Request) {
           (item) => item.type === "PRODUCT" && item.status === "success" && item.usedOriginal === false,
         ).length;
 
+        const canonicalProduct = buildCanonicalProduct(
+          url,
+          extraction.productData,
+          extraction.productDataSources,
+          items,
+        );
+
         const response: PipelineResponse = {
           metadata: result.metadata,
           items,
+          canonicalProduct,
           report: {
             total: items.length,
             success: items.filter((item) => item.status === "success").length,
