@@ -65,6 +65,11 @@ const results = [];
 for (const [name, url] of SITES) {
   const result = await testSite(name, url);
   results.push(result);
+  // 서버리스 함수 하나가 요청마다 크로미움 인스턴스를 새로 띄운다 — 연속 호출을
+  // 너무 붙여서 쏘면(특히 프로덕션 warm 컨테이너 재사용 시) 리소스 경합으로
+  // "context/browser has been closed" 같은 오류가 나서 회귀 테스트가 오탐한다.
+  // 실제 사용 패턴(한 번에 URL 1개)과도 더 가깝게, 호출 사이에 짧게 쉰다.
+  await new Promise((resolve) => setTimeout(resolve, 5000));
 }
 
 console.log("=== Regression: 7-site extraction test ===");
