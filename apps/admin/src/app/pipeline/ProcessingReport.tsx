@@ -39,6 +39,19 @@ export function ProcessingReportView({ report }: { report: ProcessingReport }) {
         <Row label="리사이즈" value={report.resized} />
         <Row label="압축" value={report.compressed} />
       </dl>
+
+      {report.extraction && (
+        <>
+          <hr className="my-3 border-zinc-100" />
+          <h3 className="text-xs font-medium text-zinc-500">Extraction</h3>
+          <dl className="mt-2 grid grid-cols-2 gap-y-2 sm:grid-cols-4">
+            <Row label="Strategy" value={report.extraction.strategies.join(" + ") || "dom-scan"} />
+            <Row label="Candidates" value={report.extraction.candidates} />
+            <Row label="Excluded" value={report.extraction.excluded} />
+            <Row label="Final" value={report.extraction.final} />
+          </dl>
+        </>
+      )}
     </section>
   );
 }

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { extractProductImages } from "@commerce/crawler";
+import { universalExtract } from "@commerce/crawler";
 import type { ImageType } from "@commerce/shared";
 import {
   CompositeClassifierProvider,
@@ -87,15 +87,21 @@ export async function POST(request: Request) {
           percent: 0,
           timestamp: new Date().toISOString(),
         });
-        const images = await extractProductImages(url);
+        const extraction = await universalExtract(url, { debug: true });
+        const images = extraction.images;
         if (images.length === 0) {
           send({ type: "error", error: "이미지를 찾지 못했습니다." });
           return;
         }
+        const usedStrategies = Object.entries(extraction.strategyCounts ?? {})
+          .filter(([, count]) => count > 0)
+          .map(([source]) => source);
+        const candidateCount = extraction.trace?.length ?? images.length;
+        const excludedCount = extraction.trace?.filter((t) => !t.included).length ?? 0;
         sendProgress({
           step: "이미지 추출",
           status: "success",
-          message: `이미지 ${images.length}개 추출`,
+          message: `이미지 ${images.length}개 추출 (전략: ${usedStrategies.join("+") || "dom-scan"}, 후보 ${candidateCount}개 중 ${excludedCount}개 제외)`,
           percent: 7,
           current: images.length,
           total: images.length,
@@ -202,6 +208,12 @@ export async function POST(request: Request) {
             dedupRemoved: result.stats.dedupRemoved,
             resized: result.stats.resized,
             compressed: result.stats.compressed,
+            extraction: {
+              strategies: usedStrategies,
+              candidates: candidateCount,
+              excluded: excludedCount,
+              final: images.length,
+            },
           },
           storageNote:
             "이미지는 서버리스 함수의 임시 저장소(/tmp)에만 저장되며 다음 요청 시 자동 삭제됩니다. " +

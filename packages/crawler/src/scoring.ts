@@ -40,6 +40,16 @@ const LOGO_KEYWORDS = [
   "footer",
   "placeholder",
 ];
+/** 광고/분석 추적 픽셀 도메인 — 상품과 무관한 1x1 이미지가 실려오는 경우가 많다. */
+const TRACKER_HOSTS = [
+  "bat.bing.com",
+  "googletagmanager.com",
+  "google-analytics.com",
+  "doubleclick.net",
+  "facebook.com",
+  "connect.facebook.net",
+  "analytics.tiktok.com",
+];
 const GALLERY_CONTEXT_KEYWORDS = [
   "gallery",
   "swiper",
@@ -152,6 +162,11 @@ function scoreOne(
   );
   if (isExcluded) {
     return { score: 0, included: false, reason: "추천상품/로고 키워드 매치" };
+  }
+
+  const isTracker = TRACKER_HOSTS.some((host) => lowerUrl.includes(host));
+  if (isTracker) {
+    return { score: 0, included: false, reason: "광고/분석 추적 픽셀" };
   }
 
   const belowHardFloor =

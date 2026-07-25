@@ -83,7 +83,24 @@ export async function universalExtract(
   const browser = await launchChromium();
 
   try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    // 기본 Playwright 컨텍스트는 navigator.webdriver=true 등 자동화 신호를 그대로
+    // 노출해서 일부 사이트(Zalando/Babyshop처럼 엔터프라이즈급 봇 차단이 걸린 곳)가
+    // 페이지 콘텐츠 자체를 안 내려준다. 실제 Chrome처럼 보이도록 UA/locale/헤더를
+    // 맞춘다 — 강력한 지문 인식(Cloudflare/Akamai 등)까지 뚫는다는 보장은 없지만
+    // 비용 없이 시도할 가치가 있는 최소한의 개선이다.
+    const page = await browser.newPage({
+      viewport: { width: 1440, height: 900 },
+      userAgent:
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      locale: "en-US",
+      timezoneId: "Europe/Amsterdam",
+      extraHTTPHeaders: {
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+    });
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "webdriver", { get: () => undefined });
+    });
     // 채팅 위젯/분석 스크립트가 계속 폴링하는 사이트(특히 Shopify)는 네트워크가 절대
     // idle 상태가 안 돼서 networkidle 대기가 타임아웃난다. 그런 경우 페이지 자체는
     // 이미 렌더링됐을 가능성이 높으니 domcontentloaded로 한 번 더 시도해서 살린다.

@@ -42,6 +42,14 @@ export interface ProcessingReport {
   dedupRemoved: number;
   resized: number;
   compressed: number;
+  /** Universal Image Extractor가 어떤 전략으로 몇 개 후보 중 몇 개를 걸러내고 최종
+   * 몇 장을 채택했는지 — Extractor Test 페이지 없이도 Workspace에서 바로 보여준다. */
+  extraction: {
+    strategies: string[];
+    candidates: number;
+    excluded: number;
+    final: number;
+  };
 }
 
 export interface PipelineResponse {
