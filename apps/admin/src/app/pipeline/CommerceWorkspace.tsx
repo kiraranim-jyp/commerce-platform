@@ -9,8 +9,10 @@ import {
   type CategorySelection,
 } from "@commerce/category";
 import { mockProductContentProvider } from "@commerce/content";
+import { LISTING_EXECUTORS, type ListingResult, type ListingStatus } from "@commerce/listing";
 import { PLATFORM_ADAPTERS, PLATFORM_ORDER } from "@commerce/marketplace";
 import { AIContentPanel } from "./commerce/AIContentPanel";
+import { ListingConfirmationModal } from "./commerce/ListingConfirmationModal";
 import { PlatformPreview } from "./commerce/PlatformPreview";
 import { ReadinessChecklist } from "./commerce/ReadinessChecklist";
 import { SourceDataView } from "./commerce/SourceDataView";
@@ -21,6 +23,18 @@ const INITIAL_CATEGORY_MAPPINGS: Record<PlatformId, CategorySelection> = {
   smartstore: UNRESOLVED_CATEGORY,
   coupang: UNRESOLVED_CATEGORY,
   elevenst: UNRESOLVED_CATEGORY,
+};
+
+const INITIAL_LISTING_STATES: Record<PlatformId, ListingStatus> = {
+  smartstore: "DRAFT",
+  coupang: "DRAFT",
+  elevenst: "DRAFT",
+};
+
+const INITIAL_LISTING_RESULTS: Record<PlatformId, ListingResult | null> = {
+  smartstore: null,
+  coupang: null,
+  elevenst: null,
 };
 
 const TAB_LABELS: Record<Exclude<CommerceTab, PlatformId>, string> = {
@@ -38,6 +52,9 @@ export function CommerceWorkspace({ initialProduct }: { initialProduct: Canonica
   const [product, setProduct] = useState(initialProduct);
   const [tab, setTab] = useState<CommerceTab>("source");
   const [categoryMappings, setCategoryMappings] = useState(INITIAL_CATEGORY_MAPPINGS);
+  const [listingStates, setListingStates] = useState(INITIAL_LISTING_STATES);
+  const [listingResults, setListingResults] = useState(INITIAL_LISTING_RESULTS);
+  const [confirmingPlatform, setConfirmingPlatform] = useState<PlatformId | null>(null);
 
   function updateField(
     key: "title" | "brand" | "sku" | "description" | "material" | "titleKo" | "descriptionKo" | "seoTitle" | "seoDescription",
@@ -123,6 +140,49 @@ export function CommerceWorkspace({ initialProduct }: { initialProduct: Canonica
     return PLATFORM_ADAPTERS[tab].toListingModel(product, effectiveCategorySelection);
   }, [tab, product, effectiveCategorySelection]);
 
+  /**
+   * DRAFT인데 ERROR급 validation이 하나도 없으면 화면에는 READY로 보여준다 —
+   * 카테고리의 RECOMMENDED와 같은 패턴으로, 실제 state는 사용자가 등록 버튼을
+   * 눌러야만(USER_CONFIRMED로) 바뀐다.
+   */
+  const effectiveListingStatus: ListingStatus = useMemo(() => {
+    if (tab === "source" || tab === "content" || !listing) return "DRAFT";
+    const stored = listingStates[tab];
+    if (stored === "DRAFT" && listing.validations.every((v) => v.status !== "ERROR")) {
+      return "READY";
+    }
+    return stored;
+  }, [tab, listing, listingStates]);
+
+  function openListingModal() {
+    if (tab === "source" || tab === "content") return;
+    setListingStates((prev) => ({ ...prev, [tab]: "USER_CONFIRMED" }));
+    setConfirmingPlatform(tab);
+  }
+
+  function cancelListingModal() {
+    if (confirmingPlatform) {
+      setListingStates((prev) => ({ ...prev, [confirmingPlatform]: "DRAFT" }));
+    }
+    setConfirmingPlatform(null);
+  }
+
+  async function confirmListing() {
+    if (!confirmingPlatform || !listing) return;
+    const platform = confirmingPlatform;
+    setConfirmingPlatform(null);
+    setListingStates((prev) => ({ ...prev, [platform]: "SUBMITTING" }));
+    const result = await LISTING_EXECUTORS[platform].execute(listing, "DRY_RUN");
+    setListingResults((prev) => ({ ...prev, [platform]: result }));
+    setListingStates((prev) => ({ ...prev, [platform]: result.status }));
+  }
+
+  function retryListing() {
+    if (tab === "source" || tab === "content") return;
+    setListingStates((prev) => ({ ...prev, [tab]: "DRAFT" }));
+    setListingResults((prev) => ({ ...prev, [tab]: null }));
+  }
+
   return (
     <section className="mt-8 space-y-4">
       <ReadinessChecklist
@@ -171,9 +231,21 @@ export function CommerceWorkspace({ initialProduct }: { initialProduct: Canonica
         <PlatformPreview
           listing={listing}
           categoryCandidates={categoryCandidates}
+          listingStatus={effectiveListingStatus}
+          listingResult={listingResults[tab]}
           onUpdateField={updateField}
           onUpdatePriceKrw={(amountKrw) => updatePrice(amountKrw, "KRW")}
           onSelectCategory={(candidate) => selectCategory(tab, candidate)}
+          onOpenListingModal={openListingModal}
+          onRetryListing={retryListing}
+        />
+      )}
+
+      {confirmingPlatform && listing && (
+        <ListingConfirmationModal
+          listing={listing}
+          onCancel={cancelListingModal}
+          onConfirm={confirmListing}
         />
       )}
     </section>

@@ -32,6 +32,9 @@ importers:
       '@commerce/image':
         specifier: workspace:*
         version: link:../../packages/image
+      '@commerce/listing':
+        specifier: workspace:*
+        version: link:../../packages/listing
       '@commerce/marketplace':
         specifier: workspace:*
         version: link:../../packages/marketplace
@@ -189,6 +192,22 @@ importers:
     devDependencies:
       '@types/node':
         specifier: ^20.14.15
+        version: 20.19.43
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
+
+  packages/listing:
+    dependencies:
+      '@commerce/marketplace':
+        specifier: workspace:*
+        version: link:../marketplace
+      '@commerce/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@types/node':
+        specifier: ^20
         version: 20.19.43
       typescript:
         specifier: ^5.5.4
