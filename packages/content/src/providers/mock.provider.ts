@@ -33,14 +33,14 @@ function generateTitle(product: CanonicalProduct): ProvenanceField<string> {
   if (parts.length === 0) {
     return {
       value: product.title.value || "상품명 미확인",
-      source: "GENERATED",
+      source: "AI_GENERATED",
       confidence: 0.3,
     };
   }
 
   return {
     value: parts.join(" "),
-    source: "GENERATED",
+    source: "AI_GENERATED",
     confidence: brand && koreanType ? 0.9 : 0.6,
   };
 }
@@ -61,12 +61,12 @@ function generateDescription(product: CanonicalProduct): ProvenanceField<string>
   if (originalDescription) lines.push(`원문 설명: "${originalDescription}"`);
 
   if (lines.length === 0) {
-    return { value: "", source: "GENERATED", confidence: 0 };
+    return { value: "", source: "AI_GENERATED", confidence: 0 };
   }
 
   return {
     value: lines.join("\n"),
-    source: "GENERATED",
+    source: "AI_GENERATED",
     confidence: Math.min(0.95, 0.35 + lines.length * 0.15),
   };
 }
@@ -87,7 +87,7 @@ function generateKeywords(product: CanonicalProduct): ProvenanceField<string[]> 
   const unique = Array.from(new Set(keywords.filter(Boolean)));
   const confidence = top ? Math.min(0.95, top.confidence) : brand ? 0.5 : 0.2;
 
-  return { value: unique, source: "GENERATED", confidence };
+  return { value: unique, source: "AI_GENERATED", confidence };
 }
 
 function generateSeo(product: CanonicalProduct): {
@@ -108,10 +108,10 @@ function generateSeo(product: CanonicalProduct): {
       : "";
 
   return {
-    title: { value: seoTitle, source: "GENERATED", confidence: titleField.confidence },
+    title: { value: seoTitle, source: "AI_GENERATED", confidence: titleField.confidence },
     description: {
       value: seoDescriptionValue,
-      source: "GENERATED",
+      source: "AI_GENERATED",
       confidence: summaryParts.length > 0 ? 0.7 : 0,
     },
   };

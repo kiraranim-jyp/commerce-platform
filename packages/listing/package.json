@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@commerce/category": "workspace:*",
     "@commerce/marketplace": "workspace:*",
     "@commerce/shared": "workspace:*"
   },

@@ -2,14 +2,18 @@ import type { FieldSource } from "@commerce/shared";
 
 const STATUS_STYLES: Record<FieldSource, string> = {
   ORIGINAL: "bg-background text-text-secondary border border-border",
-  EDITED: "bg-selected-soft text-selected border border-selected-border",
-  GENERATED: "bg-ai-soft text-ai border border-ai/20",
+  USER_EDITED: "bg-selected-soft text-selected border border-selected-border",
+  AI_GENERATED: "bg-ai-soft text-ai border border-ai/20",
+  DEFAULT: "bg-warning-soft text-warning border border-warning/20",
+  REQUIRED: "bg-error-soft text-error border border-error/20",
 };
 
 const STATUS_LABELS: Record<FieldSource, string> = {
   ORIGINAL: "원본",
-  EDITED: "수정됨",
-  GENERATED: "AI 생성",
+  USER_EDITED: "수정됨",
+  AI_GENERATED: "AI 생성",
+  DEFAULT: "기본값",
+  REQUIRED: "입력 필요",
 };
 
 export function ProvenanceBadge({ source }: { source: FieldSource }) {
@@ -28,7 +32,9 @@ export function ProvenanceBadge({ source }: { source: FieldSource }) {
  * PM이 요청한 "Source" 컬럼을 표시할 수 있다.
  */
 export function extractionSourceLabel(field: { source: FieldSource; confidence: number }): string {
-  if (field.source === "EDITED") return "사용자 입력";
+  if (field.source === "USER_EDITED") return "사용자 입력";
+  if (field.source === "DEFAULT") return "기본값";
+  if (field.source === "REQUIRED") return "—";
   if (field.confidence >= 0.9) return "JSON-LD";
   if (field.confidence >= 0.7) return "OpenGraph";
   if (field.confidence >= 0.4) return "DOM";

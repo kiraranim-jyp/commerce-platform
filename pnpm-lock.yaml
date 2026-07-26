@@ -199,6 +199,9 @@ importers:
 
   packages/listing:
     dependencies:
+      '@commerce/category':
+        specifier: workspace:*
+        version: link:../category
       '@commerce/marketplace':
         specifier: workspace:*
         version: link:../marketplace

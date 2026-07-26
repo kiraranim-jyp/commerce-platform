@@ -168,7 +168,7 @@ export default function PipelinePage() {
   const started = loading || result !== null;
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-10">
+    <main className="mx-auto min-w-0 max-w-5xl px-6 py-10">
       <header className="flex items-center justify-between">
         <button
           type="button"

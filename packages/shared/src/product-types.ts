@@ -4,11 +4,15 @@
  * 화면에서 구분해서 보여주기 위한 것이다.
  *
  * ORIGINAL: 원본 사이트에서 추출한 값 그대로.
- * GENERATED: AI가 만들어낸 값(이번 범위에는 없지만, 다음 Mission인 Product Data
- *   Extraction/자동 번역·설명 생성이 붙으면 이 값을 쓰게 된다 — 미리 자리를 만들어둔다).
- * EDITED: 사람이 Preview 화면에서 직접 고친 값.
+ * AI_GENERATED: AI가 만들어낸 값(한국어 상품명/설명/키워드/SEO 생성 등).
+ * USER_EDITED: 사람이 Preview 화면에서 직접 고친 값.
+ * DEFAULT: 시스템이 채워넣은 기본값 — 값은 있지만 사용자가 확인한 적은 없다
+ *   (예: 재고 999개, 배송비 무료). ERROR로 막을 정도는 아니지만 그대로 등록하면
+ *   위험할 수 있어서 WARNING으로 표시한다 — REQUIRED와 다르다(REQUIRED는 값 자체가
+ *   없다).
+ * REQUIRED: 값이 아직 없고, 등록 전에 반드시 채워야 한다(예: 원산지). ERROR로 막는다.
  */
-export type FieldSource = "ORIGINAL" | "GENERATED" | "EDITED";
+export type FieldSource = "ORIGINAL" | "AI_GENERATED" | "USER_EDITED" | "DEFAULT" | "REQUIRED";
 
 export interface ProvenanceField<T> {
   value: T;
@@ -49,6 +53,15 @@ export interface CanonicalProduct {
   keywords: ProvenanceField<string[]>;
   seoTitle: ProvenanceField<string>;
   seoDescription: ProvenanceField<string>;
+  /** 등록 실행 직전에야 문제가 드러나는 필드들 — 원산지/반품정보는 원본 사이트에
+   * 거의 없고(REQUIRED로 시작), 배송비/재고는 합리적인 기본값으로 시작하되
+   * 사용자가 확인 전까진 DEFAULT로 표시한다. */
+  countryOfOrigin: ProvenanceField<string>;
+  returnPolicy: ProvenanceField<string>;
+  shippingFee: ProvenanceField<number>;
+  stockQuantity: ProvenanceField<number>;
+  /** 대부분의 카테고리는 필요 없다 — 있으면 참고 정보로만 쓰고 등록을 막지 않는다. */
+  certification: ProvenanceField<string>;
 }
 
 /**

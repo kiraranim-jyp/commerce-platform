@@ -1,8 +1,9 @@
 import type { ListingModel } from "@commerce/marketplace";
+import type { CanonicalProduct } from "@commerce/shared";
 import type { ListingExecutor } from "../executor";
-import { buildSmartStorePayload } from "../payload/smartstore-payload";
+import { buildSmartStorePayload } from "../smartstore/build-payload";
+import { validateSmartStoreListing } from "../smartstore/validate-listing";
 import type { ExecutionMode, ListingResult } from "../types";
-import { blockingErrors, isCategoryConfirmed } from "../validation";
 
 /**
  * SmartStore는 이번 Mission에서 유일하게 "진짜" 구현되는 플랫폼이다(PM 지시:
@@ -14,39 +15,30 @@ import { blockingErrors, isCategoryConfirmed } from "../validation";
 export const smartstoreExecutor: ListingExecutor = {
   platform: "smartstore",
 
-  async execute(listing: ListingModel, mode: ExecutionMode): Promise<ListingResult> {
-    const errors = blockingErrors(listing);
-    if (errors.length > 0) {
+  async execute(
+    product: CanonicalProduct,
+    listing: ListingModel,
+    mode: ExecutionMode,
+  ): Promise<ListingResult> {
+    const readiness = validateSmartStoreListing(product, listing);
+    if (readiness.errorCount > 0) {
+      const errorFields = readiness.fields.filter((f) => f.status === "ERROR");
+      const first = errorFields[0];
       return {
         status: "FAILED",
         platform: "smartstore",
         mode,
         retryable: true,
         error: {
-          step: "validation",
-          message: errors.map((e) => e.message ?? e.label).join(" "),
+          step: first.field === "category" ? "CATEGORY" : "VALIDATION",
+          message: errorFields.map((f) => f.message ?? f.label).join(" "),
           retryable: true,
-          resolution: "필수 필드를 모두 채운 뒤 다시 시도해주세요.",
+          resolution: first.resolution ?? "필수 필드를 모두 채운 뒤 다시 시도해주세요.",
         },
       };
     }
 
-    if (!isCategoryConfirmed(listing)) {
-      return {
-        status: "FAILED",
-        platform: "smartstore",
-        mode,
-        retryable: true,
-        error: {
-          step: "category",
-          message: "카테고리가 확인되지 않았습니다.",
-          retryable: true,
-          resolution: "카테고리 추천에서 후보를 선택해주세요.",
-        },
-      };
-    }
-
-    const payload = buildSmartStorePayload(listing);
+    const payload = buildSmartStorePayload(product, listing);
 
     if (mode === "PREVIEW") {
       return { status: "READY", platform: "smartstore", mode, retryable: false, payload };
@@ -80,10 +72,10 @@ export const smartstoreExecutor: ListingExecutor = {
         retryable: false,
         payload,
         error: {
-          step: "auth",
-          message: "SmartStore 인증 정보가 설정되지 않았습니다.",
+          step: "AUTHENTICATION",
+          message: "SmartStore 인증이 필요합니다.",
           retryable: false,
-          resolution: "환경변수 SMARTSTORE_CLIENT_ID / SMARTSTORE_CLIENT_SECRET을 설정한 뒤 다시 시도해주세요.",
+          resolution: "다시 로그인하거나 인증 정보를 확인해주세요.",
         },
       };
     }
@@ -95,7 +87,7 @@ export const smartstoreExecutor: ListingExecutor = {
       retryable: false,
       payload,
       error: {
-        step: "not_implemented",
+        step: "NOT_IMPLEMENTED",
         message: "실제 SmartStore 등록 API 연동은 아직 구현되지 않았습니다.",
         retryable: false,
       },

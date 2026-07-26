@@ -10,14 +10,14 @@ import type { ListingExecutor } from "../executor";
 export function createNotImplementedExecutor(platform: PlatformId, label: string): ListingExecutor {
   return {
     platform,
-    async execute(_listing, mode) {
+    async execute(_product, _listing, mode) {
       return {
         status: "FAILED",
         platform,
         mode,
         retryable: false,
         error: {
-          step: "not_implemented",
+          step: "NOT_IMPLEMENTED",
           message: `${label} 등록 자동화는 아직 준비 중입니다.`,
           retryable: false,
         },

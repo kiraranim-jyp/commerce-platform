@@ -9,12 +9,19 @@ import {
   type CategorySelection,
 } from "@commerce/category";
 import { mockProductContentProvider } from "@commerce/content";
-import { LISTING_EXECUTORS, type ListingResult, type ListingStatus } from "@commerce/listing";
+import {
+  LISTING_EXECUTORS,
+  validateSmartStoreListing,
+  type ListingResult,
+  type ListingStatus,
+  type RegistrationHistoryEntry,
+} from "@commerce/listing";
 import { PLATFORM_ADAPTERS, PLATFORM_ORDER } from "@commerce/marketplace";
 import { AIContentPanel } from "./commerce/AIContentPanel";
 import { ListingConfirmationModal } from "./commerce/ListingConfirmationModal";
 import { PlatformPreview } from "./commerce/PlatformPreview";
 import { ReadinessChecklist } from "./commerce/ReadinessChecklist";
+import { RegistrationHistoryPanel } from "./commerce/RegistrationHistoryPanel";
 import { SourceDataView } from "./commerce/SourceDataView";
 
 type CommerceTab = "source" | "content" | PlatformId;
@@ -55,21 +62,40 @@ export function CommerceWorkspace({ initialProduct }: { initialProduct: Canonica
   const [listingStates, setListingStates] = useState(INITIAL_LISTING_STATES);
   const [listingResults, setListingResults] = useState(INITIAL_LISTING_RESULTS);
   const [confirmingPlatform, setConfirmingPlatform] = useState<PlatformId | null>(null);
+  const [registrationHistory, setRegistrationHistory] = useState<RegistrationHistoryEntry[]>([]);
 
   function updateField(
-    key: "title" | "brand" | "sku" | "description" | "material" | "titleKo" | "descriptionKo" | "seoTitle" | "seoDescription",
+    key:
+      | "title"
+      | "brand"
+      | "sku"
+      | "description"
+      | "material"
+      | "titleKo"
+      | "descriptionKo"
+      | "seoTitle"
+      | "seoDescription"
+      | "countryOfOrigin"
+      | "returnPolicy",
     value: string,
   ) {
     setProduct((prev) => ({
       ...prev,
-      [key]: { value, source: "EDITED" as FieldSource, confidence: 1 },
+      [key]: { value, source: "USER_EDITED" as FieldSource, confidence: 1 },
+    }));
+  }
+
+  function updateNumberField(key: "shippingFee" | "stockQuantity", value: number) {
+    setProduct((prev) => ({
+      ...prev,
+      [key]: { value, source: "USER_EDITED" as FieldSource, confidence: 1 },
     }));
   }
 
   function updatePrice(amount: number, currency: string) {
     setProduct((prev) => ({
       ...prev,
-      price: { value: { amount, currency }, source: "EDITED" as FieldSource, confidence: 1 },
+      price: { value: { amount, currency }, source: "USER_EDITED" as FieldSource, confidence: 1 },
     }));
   }
 
@@ -80,7 +106,7 @@ export function CommerceWorkspace({ initialProduct }: { initialProduct: Canonica
       .filter(Boolean);
     setProduct((prev) => ({
       ...prev,
-      options: { value: options, source: "EDITED" as FieldSource, confidence: 1 },
+      options: { value: options, source: "USER_EDITED" as FieldSource, confidence: 1 },
     }));
   }
 
@@ -91,7 +117,7 @@ export function CommerceWorkspace({ initialProduct }: { initialProduct: Canonica
       .filter(Boolean);
     setProduct((prev) => ({
       ...prev,
-      keywords: { value: keywords, source: "EDITED" as FieldSource, confidence: 1 },
+      keywords: { value: keywords, source: "USER_EDITED" as FieldSource, confidence: 1 },
     }));
   }
 
@@ -141,18 +167,29 @@ export function CommerceWorkspace({ initialProduct }: { initialProduct: Canonica
   }, [tab, product, effectiveCategorySelection]);
 
   /**
+   * SmartStore에서만 계산한다 — 원산지/반품정보/배송비/재고 같은 등록 직전
+   * 필드는 CanonicalProduct에만 있고 ListingModel에는 없어서, product와 listing을
+   * 둘 다 받는 이 함수로 합쳐야 한다(STEP 1의 3단 분리 원칙).
+   */
+  const smartStoreReadiness = useMemo(() => {
+    if (tab !== "smartstore" || !listing) return undefined;
+    return validateSmartStoreListing(product, listing);
+  }, [tab, listing, product]);
+
+  /**
    * DRAFT인데 ERROR급 validation이 하나도 없으면 화면에는 READY로 보여준다 —
    * 카테고리의 RECOMMENDED와 같은 패턴으로, 실제 state는 사용자가 등록 버튼을
-   * 눌러야만(USER_CONFIRMED로) 바뀐다.
+   * 눌러야만(USER_CONFIRMED로) 바뀐다. SmartStore는 원산지/반품정보 누락도
+   * ERROR로 잡아야 하므로 readiness.errorCount도 함께 확인한다.
    */
   const effectiveListingStatus: ListingStatus = useMemo(() => {
     if (tab === "source" || tab === "content" || !listing) return "DRAFT";
     const stored = listingStates[tab];
-    if (stored === "DRAFT" && listing.validations.every((v) => v.status !== "ERROR")) {
-      return "READY";
-    }
-    return stored;
-  }, [tab, listing, listingStates]);
+    if (stored !== "DRAFT") return stored;
+    const noMarketplaceErrors = listing.validations.every((v) => v.status !== "ERROR");
+    const noReadinessErrors = smartStoreReadiness ? smartStoreReadiness.errorCount === 0 : true;
+    return noMarketplaceErrors && noReadinessErrors ? "READY" : "DRAFT";
+  }, [tab, listing, listingStates, smartStoreReadiness]);
 
   function openListingModal() {
     if (tab === "source" || tab === "content") return;
@@ -172,8 +209,18 @@ export function CommerceWorkspace({ initialProduct }: { initialProduct: Canonica
     const platform = confirmingPlatform;
     setConfirmingPlatform(null);
     setListingStates((prev) => ({ ...prev, [platform]: "SUBMITTING" }));
-    const result = await LISTING_EXECUTORS[platform].execute(listing, "DRY_RUN");
+    const result = await LISTING_EXECUTORS[platform].execute(product, listing, "DRY_RUN");
     setListingResults((prev) => ({ ...prev, [platform]: result }));
+    setRegistrationHistory((prev) => [
+      {
+        productName: listing.title,
+        platform,
+        executedAt: new Date().toISOString(),
+        mode: "DRY_RUN",
+        result,
+      },
+      ...prev,
+    ]);
     setListingStates((prev) => ({ ...prev, [platform]: result.status }));
   }
 
@@ -233,13 +280,18 @@ export function CommerceWorkspace({ initialProduct }: { initialProduct: Canonica
           categoryCandidates={categoryCandidates}
           listingStatus={effectiveListingStatus}
           listingResult={listingResults[tab]}
+          readiness={smartStoreReadiness}
           onUpdateField={updateField}
           onUpdatePriceKrw={(amountKrw) => updatePrice(amountKrw, "KRW")}
           onSelectCategory={(candidate) => selectCategory(tab, candidate)}
+          onFixTextField={updateField}
+          onFixNumberField={updateNumberField}
           onOpenListingModal={openListingModal}
           onRetryListing={retryListing}
         />
       )}
+
+      <RegistrationHistoryPanel history={registrationHistory} />
 
       {confirmingPlatform && listing && (
         <ListingConfirmationModal

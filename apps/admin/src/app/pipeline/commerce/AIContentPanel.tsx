@@ -1,6 +1,6 @@
 "use client";
 
-import type { CanonicalProduct } from "@commerce/shared";
+import type { CanonicalProduct, FieldSource } from "@commerce/shared";
 import { EditableText, EditableTextarea } from "./EditableField";
 import { ProvenanceBadge } from "./provenance";
 
@@ -132,7 +132,7 @@ function Field({
   children,
 }: {
   label: string;
-  field: { source: "ORIGINAL" | "GENERATED" | "EDITED" };
+  field: { source: FieldSource };
   children: React.ReactNode;
 }) {
   return (

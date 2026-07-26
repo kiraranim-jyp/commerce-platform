@@ -58,5 +58,13 @@ export function buildCanonicalProduct(
     keywords: { value: [], source: "ORIGINAL", confidence: 0 },
     seoTitle: { value: "", source: "ORIGINAL", confidence: 0 },
     seoDescription: { value: "", source: "ORIGINAL", confidence: 0 },
+    // 원산지/반품정보는 원본 사이트에서 신뢰성 있게 뽑아낼 방법이 없다 — 항상
+    // REQUIRED로 시작해서 사용자가 직접 채워야 등록 가능 상태가 된다. 배송비/재고는
+    // "일단 등록은 되지만 확인이 필요한" 합리적 기본값으로 시작한다(DEFAULT).
+    countryOfOrigin: { value: "", source: "REQUIRED", confidence: 0 },
+    returnPolicy: { value: "", source: "REQUIRED", confidence: 0 },
+    shippingFee: { value: 0, source: "DEFAULT", confidence: 0.5 },
+    stockQuantity: { value: 999, source: "DEFAULT", confidence: 0.5 },
+    certification: { value: "", source: "DEFAULT", confidence: 1 },
   };
 }

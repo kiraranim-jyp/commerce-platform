@@ -24,9 +24,16 @@ export type ListingStatus =
  */
 export type ExecutionMode = "DRY_RUN" | "PREVIEW" | "LIVE";
 
+/** 실패 원인을 사용자에게 다른 문장/CTA로 보여주기 위한 분류. */
+export type ListingErrorStep =
+  | "VALIDATION"
+  | "CATEGORY"
+  | "AUTHENTICATION"
+  | "NETWORK"
+  | "NOT_IMPLEMENTED";
+
 export interface ListingError {
-  /** 어느 단계에서 실패했는지 — "validation" | "category" | "auth" | "not_implemented" | "network" 등. */
-  step: string;
+  step: ListingErrorStep;
   message: string;
   retryable: boolean;
   resolution?: string;
@@ -43,4 +50,42 @@ export interface ListingResult {
   retryable: boolean;
   /** DRY_RUN/PREVIEW에서 "실제로 등록됐다면 이런 데이터가 갔을 것"을 보여주기 위한 값. */
   payload?: unknown;
+}
+
+/** PM 스펙의 VALID/WARNING/ERROR — ListingModel.validations의 PASS/WARNING/ERROR와
+ * 이름만 다르고 의미는 같다(VALID=PASS). 새 이름을 쓰는 이유는 이 리포트가
+ * "등록 준비도"라는 사용자용 화면 개념이라 marketplace의 내부 validation 결과와
+ * 섞이지 않도록 구분하기 위해서다. */
+export type ReadinessFieldStatus = "VALID" | "WARNING" | "ERROR";
+
+export interface ReadinessField {
+  field: string;
+  label: string;
+  status: ReadinessFieldStatus;
+  message?: string;
+  /** WARNING/ERROR일 때 보여줄 CTA 문구 — 예: "원산지 입력". */
+  resolution?: string;
+}
+
+export interface ReadinessReport {
+  fields: ReadinessField[];
+  /** 0~100. VALID=1, WARNING=0.5, ERROR=0으로 평균 낸 값. */
+  score: number;
+  requiredTotal: number;
+  requiredPassed: number;
+  warningCount: number;
+  errorCount: number;
+}
+
+/**
+ * 등록 시도 이력 한 건 — 이번 Mission은 세션(브라우저 탭) 안에서만 들고 있는다.
+ * 실제 DB 영속화는 범위 밖이다("이력을 저장할 수 있는 구조를 만든다"까지가
+ * 요구사항이지, 새로고침 후에도 남아있어야 한다는 요구는 아니다).
+ */
+export interface RegistrationHistoryEntry {
+  productName: string;
+  platform: PlatformId;
+  executedAt: string;
+  mode: ExecutionMode;
+  result: ListingResult;
 }

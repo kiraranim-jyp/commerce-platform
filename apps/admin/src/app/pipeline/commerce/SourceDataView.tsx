@@ -121,7 +121,7 @@ function Row({
       <td className="py-2 pr-2">{children}</td>
       <td className="py-2 pr-2 text-xs text-text-secondary">{extractionSourceLabel(field)}</td>
       <td className="py-2 pr-2 text-xs text-text-secondary">
-        {field.source === "EDITED" ? "—" : `${Math.round(field.confidence * 100)}%`}
+        {field.source === "USER_EDITED" ? "—" : `${Math.round(field.confidence * 100)}%`}
       </td>
       <td className="py-2">
         <ProvenanceBadge source={field.source} />

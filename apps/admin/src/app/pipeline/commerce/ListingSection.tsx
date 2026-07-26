@@ -1,6 +1,8 @@
 "use client";
 
-import type { ListingResult, ListingStatus } from "@commerce/listing";
+import type { ListingResult, ListingStatus, ReadinessReport, SmartStorePayload } from "@commerce/listing";
+import { PayloadInspector } from "./PayloadInspector";
+import { ReadinessScorePanel } from "./ReadinessScorePanel";
 
 const STATUS_LABELS: Record<ListingStatus, string> = {
   DRAFT: "상품 준비 중",
@@ -20,30 +22,66 @@ function payloadReplacer(_key: string, value: unknown): unknown {
   return value;
 }
 
+function isSmartStorePayload(payload: unknown): payload is SmartStorePayload {
+  return typeof payload === "object" && payload !== null && "product" in payload && "shipping" in payload;
+}
+
 export function ListingSection({
   platformLabel,
   status,
   result,
+  readiness,
+  onFixTextField,
+  onFixNumberField,
   onOpenModal,
   onRetry,
 }: {
   platformLabel: string;
   status: ListingStatus;
   result: ListingResult | null;
+  /** SmartStore에서만 넘어온다 — 있으면 점수/체크리스트/보완 UI를 보여준다. */
+  readiness?: ReadinessReport;
+  onFixTextField?: (field: "countryOfOrigin" | "returnPolicy", value: string) => void;
+  onFixNumberField?: (field: "shippingFee" | "stockQuantity", value: number) => void;
   onOpenModal: () => void;
   onRetry: () => void;
 }) {
-  if (status === "DRAFT") {
-    return (
-      <section className="rounded-lg border border-border bg-surface p-4 text-sm shadow-subtle">
-        <p className="text-text-secondary">
-          필수 정보를 먼저 채워주세요 — 상품명, 대표이미지, 판매가격, 카테고리가 필요합니다.
-        </p>
-      </section>
-    );
-  }
+  if (status === "DRAFT" || status === "READY") {
+    if (readiness && onFixTextField && onFixNumberField) {
+      return (
+        <div className="space-y-3">
+          <ReadinessScorePanel
+            report={readiness}
+            onFixTextField={onFixTextField}
+            onFixNumberField={onFixNumberField}
+          />
+          {status === "READY" ? (
+            <button
+              type="button"
+              onClick={onOpenModal}
+              className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+            >
+              {platformLabel}에 등록
+            </button>
+          ) : (
+            <p className="rounded-md bg-warning-soft px-3 py-2 text-xs text-warning">
+              누락된 정보를 모두 채우면 등록을 시작할 수 있습니다.
+            </p>
+          )}
+        </div>
+      );
+    }
 
-  if (status === "READY") {
+    if (status === "DRAFT") {
+      return (
+        <section className="rounded-lg border border-border bg-surface p-4 text-sm shadow-subtle">
+          <p className="text-text-secondary">
+            필수 정보를 먼저 채워주세요 — 상품명, 대표이미지, 판매가격, 카테고리가 필요합니다.
+          </p>
+        </section>
+      );
+    }
+
     return (
       <section className="rounded-lg border border-border bg-surface p-4 text-sm shadow-subtle">
         <p className="font-medium text-text-primary">상품 등록 준비 완료</p>
@@ -89,9 +127,15 @@ export function ListingSection({
           </p>
         )}
         {result?.payload != null && (
-          <pre className="mt-2 max-h-48 overflow-auto rounded-md bg-surface p-2 text-[11px] text-text-secondary">
-            {JSON.stringify(result.payload, payloadReplacer, 2)}
-          </pre>
+          <div className="mt-3">
+            {isSmartStorePayload(result.payload) ? (
+              <PayloadInspector payload={result.payload} />
+            ) : (
+              <pre className="max-h-48 overflow-auto rounded-md bg-surface p-2 text-[11px] text-text-secondary">
+                {JSON.stringify(result.payload, payloadReplacer, 2)}
+              </pre>
+            )}
+          </div>
         )}
         <button
           type="button"
@@ -105,7 +149,7 @@ export function ListingSection({
   }
 
   if (status === "FAILED" && result?.error) {
-    const isCategoryError = result.error.step === "category";
+    const isCategoryError = result.error.step === "CATEGORY";
     return (
       <section className="rounded-lg border border-error/30 bg-error-soft p-4 text-sm">
         <p className="font-medium text-error">{platformLabel} 등록 실패</p>

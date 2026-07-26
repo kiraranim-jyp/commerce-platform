@@ -1,7 +1,7 @@
 "use client";
 
 import type { CategoryCandidate } from "@commerce/category";
-import type { ListingResult, ListingStatus } from "@commerce/listing";
+import type { ListingResult, ListingStatus, ReadinessReport } from "@commerce/listing";
 import type { ListingModel } from "@commerce/marketplace";
 import { formatKrw } from "@commerce/pricing";
 import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
@@ -14,9 +14,12 @@ export function PlatformPreview({
   categoryCandidates,
   listingStatus,
   listingResult,
+  readiness,
   onUpdateField,
   onUpdatePriceKrw,
   onSelectCategory,
+  onFixTextField,
+  onFixNumberField,
   onOpenListingModal,
   onRetryListing,
 }: {
@@ -24,9 +27,13 @@ export function PlatformPreview({
   categoryCandidates: CategoryCandidate[];
   listingStatus: ListingStatus;
   listingResult: ListingResult | null;
+  /** SmartStore에서만 넘어온다 — 등록 준비도 패널을 대신 보여줄지 판단하는 신호. */
+  readiness?: ReadinessReport;
   onUpdateField: (key: "title" | "brand" | "description", value: string) => void;
   onUpdatePriceKrw: (amountKrw: number) => void;
   onSelectCategory: (candidate: CategoryCandidate) => void;
+  onFixTextField?: (field: "countryOfOrigin" | "returnPolicy", value: string) => void;
+  onFixNumberField?: (field: "shippingFee" | "stockQuantity", value: number) => void;
   onOpenListingModal: () => void;
   onRetryListing: () => void;
 }) {
@@ -156,7 +163,11 @@ export function PlatformPreview({
             selection={listing.category}
             onSelect={onSelectCategory}
           />
-          <ValidationPanel validations={listing.validations} score={listing.registrableScore} />
+          {/* SmartStore는 ListingSection의 등록 준비도 패널이 이 정보를 더 자세히
+           * 보여준다 — 같은 내용을 두 번 안 보여준다. */}
+          {!readiness && (
+            <ValidationPanel validations={listing.validations} score={listing.registrableScore} />
+          )}
         </div>
       </div>
 
@@ -164,6 +175,9 @@ export function PlatformPreview({
         platformLabel={listing.platformLabel}
         status={listingStatus}
         result={listingResult}
+        readiness={readiness}
+        onFixTextField={onFixTextField}
+        onFixNumberField={onFixNumberField}
         onOpenModal={onOpenListingModal}
         onRetry={onRetryListing}
       />
