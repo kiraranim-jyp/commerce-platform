@@ -1,9 +1,9 @@
 import type { ValidationResult } from "@commerce/marketplace";
 
 const STATUS_META: Record<ValidationResult["status"], { icon: string; className: string }> = {
-  PASS: { icon: "✓", className: "text-emerald-600" },
-  WARNING: { icon: "!", className: "text-amber-600" },
-  ERROR: { icon: "✕", className: "text-red-600" },
+  PASS: { icon: "✓", className: "text-success" },
+  WARNING: { icon: "!", className: "text-warning" },
+  ERROR: { icon: "✕", className: "text-error" },
 };
 
 export function ValidationPanel({
@@ -13,11 +13,10 @@ export function ValidationPanel({
   validations: ValidationResult[];
   score: number;
 }) {
-  const scoreClassName =
-    score >= 80 ? "text-emerald-600" : score >= 50 ? "text-amber-600" : "text-red-600";
+  const scoreClassName = score >= 80 ? "text-success" : score >= 50 ? "text-warning" : "text-error";
 
   return (
-    <section className="rounded-lg border border-zinc-200 p-4 text-sm">
+    <section className="rounded-lg border border-border p-4 text-sm">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-base font-medium">Validation</h3>
         <span className="text-sm font-semibold">
@@ -31,8 +30,8 @@ export function ValidationPanel({
               {STATUS_META[v.status].icon}
             </span>
             <div>
-              <span className="font-medium text-zinc-800">{v.label}</span>
-              {v.message && <span className="ml-2 text-xs text-zinc-500">{v.message}</span>}
+              <span className="font-medium text-text-primary">{v.label}</span>
+              {v.message && <span className="ml-2 text-xs text-text-secondary">{v.message}</span>}
             </div>
           </li>
         ))}

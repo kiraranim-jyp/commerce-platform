@@ -1,26 +1,89 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/**
+ * CartPilot 디자인 토큰. "Premium SaaS + AI Workspace + Commerce Operations"
+ * 방향 — Linear/Notion/Shopify Admin을 참고하되 복제하지 않는다.
+ *
+ * 모든 신규 UI는 여기 정의된 토큰(bg-primary, text-secondary, border-border,
+ * bg-ai-soft 등)만 사용한다. 임의의 zinc-500/emerald-600 같은 팔레트 값을 직접
+ * 쓰지 않는다 — 나중에 톤을 한 번에 바꿀 수 있어야 "기능부터 만들고 나중에
+ * 디자인을 입히는" 방식으로 되돌아가지 않는다.
+ *
+ * Selected(선택함)와 Success(검증 통과)를 의도적으로 다른 색으로 분리했다 —
+ * 인디고는 "사용자가 방금 고른 것", 에메랄드는 "시스템이 통과시킨 것"이라는
+ * 서로 다른 의미라 같은 색을 쓰면 화면에서 구분이 안 된다.
+ */
+@theme {
+  --color-background: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #ffffff;
+  --color-border: #e4e4e7;
+  --color-border-strong: #d4d4d8;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-text-primary: #18181b;
+  --color-text-secondary: #71717a;
+  --color-text-tertiary: #a1a1aa;
+
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
+  --color-primary-soft: #eef2ff;
+
+  --color-accent: #8b5cf6;
+  --color-accent-soft: #f5f3ff;
+
+  --color-success: #059669;
+  --color-success-soft: #ecfdf5;
+  --color-warning: #d97706;
+  --color-warning-soft: #fffbeb;
+  --color-error: #dc2626;
+  --color-error-soft: #fef2f2;
+
+  /** AI가 생성한 값임을 표시하는 전용 색 — accent와 같은 보라 계열이지만
+   * 별도 토큰으로 둬서 "AI 생성"과 "일반 강조"를 화면에서 구분할 수 있게 한다. */
+  --color-ai: #7c3aed;
+  --color-ai-soft: #f5f3ff;
+
+  --color-selected: #4f46e5;
+  --color-selected-soft: #eef2ff;
+  --color-selected-border: #c7d2fe;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  --shadow-subtle: 0 1px 2px rgba(24, 24, 27, 0.04), 0 1px 1px rgba(24, 24, 27, 0.03);
+  --shadow-elevated: 0 8px 24px rgba(24, 24, 27, 0.08), 0 2px 6px rgba(24, 24, 27, 0.04);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+body {
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/**
+ * Tailwind preflight가 기본 outline을 지운다 — 버튼 등 인터랙티브 요소마다
+ * focus-visible 유틸리티를 일일이 붙이는 대신 전역 규칙 하나로 키보드 포커스
+ * 표시를 보장한다. 마우스 클릭(:focus만 걸리고 :focus-visible은 안 걸림)에는
+ * 안 나타나고 키보드 탐색에서만 나타난다.
+ */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
+/**
+ * Typography 컨벤션(토큰이 아니라 클래스 조합 규칙 — Tailwind 기본 스케일을
+ * 그대로 쓰되 용도별로 조합을 고정한다):
+ *
+ * Heading  : text-lg/text-xl font-semibold tracking-tight text-text-primary
+ * Body     : text-sm text-text-primary
+ * Caption  : text-xs text-text-secondary
+ * Label    : text-[11px] font-medium uppercase tracking-wide text-text-tertiary
+ * Numeric  : tabular-nums font-medium
+ */

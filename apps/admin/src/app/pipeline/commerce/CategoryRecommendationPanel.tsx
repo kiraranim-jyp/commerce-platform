@@ -16,7 +16,7 @@ export function CategoryRecommendationPanel({
   const isConfirmed = selection.state === "SELECTED" || selection.state === "CONFIRMED";
 
   return (
-    <section className="rounded-lg border border-zinc-200 p-4 text-sm">
+    <section className="rounded-lg border border-border p-4 text-sm">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
@@ -24,7 +24,7 @@ export function CategoryRecommendationPanel({
       >
         <div>
           <h3 className="text-base font-medium">카테고리 추천</h3>
-          <p className="mt-0.5 text-xs text-zinc-500">
+          <p className="mt-0.5 text-xs text-text-secondary">
             {isConfirmed && selection.candidate
               ? `선택됨: ${selection.candidate.path.join(" > ")}`
               : candidates.length > 0
@@ -32,7 +32,7 @@ export function CategoryRecommendationPanel({
                 : "상품명/설명에서 카테고리를 추론할 수 없습니다 — 직접 확인이 필요합니다."}
           </p>
         </div>
-        <span className="shrink-0 text-xs text-zinc-400">{expanded ? "접기" : "펼치기"}</span>
+        <span className="shrink-0 text-xs text-text-tertiary">{expanded ? "접기" : "펼치기"}</span>
       </button>
 
       {expanded && candidates.length > 0 && (
@@ -42,17 +42,17 @@ export function CategoryRecommendationPanel({
             return (
               <li
                 key={candidate.id}
-                className={`rounded border p-3 ${isSelected ? "border-emerald-400 bg-emerald-50" : "border-zinc-200"}`}
+                className={`rounded-md border p-3 ${isSelected ? "border-selected-border bg-selected-soft" : "border-border"}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs text-zinc-400">{index + 1}순위</p>
-                    <p className="font-medium text-zinc-800">{candidate.path.join(" > ")}</p>
-                    <p className="mt-0.5 text-xs text-zinc-500">
+                    <p className="text-xs text-text-tertiary">{index + 1}순위</p>
+                    <p className="font-medium text-text-primary">{candidate.path.join(" > ")}</p>
+                    <p className="mt-0.5 text-xs text-text-secondary">
                       신뢰도 {Math.round(candidate.confidence * 100)}%
                     </p>
                     {candidate.reason.length > 0 && (
-                      <ul className="mt-1.5 space-y-0.5 text-xs text-zinc-500">
+                      <ul className="mt-1.5 space-y-0.5 text-xs text-text-secondary">
                         {candidate.reason.map((r) => (
                           <li key={r}>- {r}</li>
                         ))}
@@ -63,7 +63,7 @@ export function CategoryRecommendationPanel({
                     type="button"
                     onClick={() => onSelect(candidate)}
                     disabled={isSelected}
-                    className="shrink-0 rounded border border-zinc-300 px-3 py-1 text-xs font-medium hover:bg-zinc-50 disabled:opacity-50"
+                    className="shrink-0 rounded border border-border px-3 py-1 text-xs font-medium hover:bg-background disabled:opacity-50"
                   >
                     {isSelected ? "선택됨" : "선택"}
                   </button>

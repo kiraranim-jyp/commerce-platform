@@ -27,6 +27,7 @@ export default function PipelinePage() {
   const [retryCounts, setRetryCounts] = useState<Record<string, number>>({});
   const [currentProgress, setCurrentProgress] = useState<PipelineProgressEvent | null>(null);
   const [progressLog, setProgressLog] = useState<PipelineProgressEvent[]>([]);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
 
   async function precomputeThumbnails(newItems: WorkspaceItem[]) {
     const entries = await Promise.all(
@@ -52,6 +53,7 @@ export default function PipelinePage() {
     setRetryCounts({});
     setCurrentProgress(null);
     setProgressLog([]);
+    setDetailsExpanded(false);
 
     try {
       const response = await fetch("/api/pipeline", {
@@ -140,6 +142,7 @@ export default function PipelinePage() {
     setRetryCounts({});
     setCurrentProgress(null);
     setProgressLog([]);
+    setDetailsExpanded(false);
   }
 
   function toggleExclude(id: string) {
@@ -162,101 +165,144 @@ export default function PipelinePage() {
 
   const previewItem = items.find((item) => item.id === previewId) ?? null;
   const canDownload = !loading && items.length > 0 && retryingIds.size === 0;
+  const started = loading || result !== null;
 
   return (
-    <main className="mx-auto max-w-6xl p-8">
-      <h1 className="text-2xl font-semibold">Image Workspace</h1>
-      <p className="mt-2 text-sm text-zinc-500">
-        상품 URL을 입력하면 이미지 수집 → 분류(Gemini) → 배경제거 → 표준화 → 압축까지 전체
-        파이프라인을 실행합니다.
-      </p>
-
-      <div className="mt-6 flex gap-2">
-        <input
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://example.com/product/123"
-          disabled={loading}
-          className="flex-1 rounded border border-zinc-300 px-3 py-2 text-sm disabled:opacity-60"
-        />
-        <button
-          onClick={runPipeline}
-          disabled={loading || !url}
-          className="flex items-center gap-2 rounded bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
-        >
-          {loading && (
-            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-          )}
-          {loading ? "작업 중..." : "실행"}
-        </button>
+    <main className="mx-auto max-w-5xl px-6 py-10">
+      <header className="flex items-center justify-between">
         <button
           type="button"
           onClick={resetWorkspace}
-          disabled={loading}
-          className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 disabled:opacity-40"
+          className="text-lg font-semibold tracking-tight text-text-primary"
         >
-          초기화
+          CartPilot
         </button>
-      </div>
+        {started && (
+          <button
+            type="button"
+            onClick={resetWorkspace}
+            disabled={loading}
+            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface disabled:opacity-40"
+          >
+            새 상품 분석
+          </button>
+        )}
+      </header>
 
-      {(loading || progressLog.length > 0) && (
-        <ProgressPanel current={currentProgress} log={progressLog} />
-      )}
+      {!started ? (
+        <section className="mx-auto mt-20 max-w-xl text-center">
+          <h1 className="text-3xl font-semibold tracking-tight text-text-primary">
+            상품 등록 준비
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-text-secondary">
+            해외 상품 URL을 입력하세요. AI가 상품을 분석하고 스토어 등록에 필요한 정보를
+            준비합니다.
+          </p>
 
-      {error && <p className="mt-4 rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-
-      {items.length > 0 && (
-        <div className="mt-8 space-y-6">
-          <WorkspaceTabs active={activeTab} counts={counts} onChange={setActiveTab} />
-
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {items.map((item) => (
-              <ImageCard
-                key={item.id}
-                item={item}
-                tab={activeTab}
-                thumbnailDataUrl={thumbnails[item.id]}
-                isExcluded={excludedIds.has(item.id)}
-                isRepresentative={representativeId === item.id}
-                isSelected={selectedId === item.id}
-                retrying={retryingIds.has(item.id)}
-                retryCount={retryCounts[item.id] ?? 0}
-                onPreview={() => {
-                  setSelectedId(item.id);
-                  setPreviewId(item.id);
-                }}
-                onRetry={() => retryItem(item)}
-                onToggleRepresentative={() => setRepresentativeId(item.id)}
-                onToggleExclude={() => toggleExclude(item.id)}
-              />
-            ))}
-          </div>
-
-          <div>
+          <div className="mt-8 flex flex-col gap-2 sm:flex-row">
+            <input
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://example.com/product/123"
+              aria-label="상품 URL"
+              disabled={loading}
+              className="flex-1 rounded-md border border-border bg-surface px-3 py-2.5 text-sm text-text-primary shadow-subtle focus:border-primary focus:outline-none disabled:opacity-60"
+            />
             <button
-              onClick={() =>
-                result && downloadWorkspaceZip(items, excludedIds, result.metadata, result.report)
-              }
-              disabled={!canDownload}
-              className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 disabled:opacity-40"
+              onClick={runPipeline}
+              disabled={loading || !url}
+              className="flex items-center justify-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-white shadow-subtle transition-colors hover:bg-primary-hover disabled:opacity-40"
             >
-              Download ZIP (original + thumbnail 800×800 + detail + metadata.json + report.json)
+              상품 분석 시작
             </button>
           </div>
-
-          {result && <ProcessingReportView report={result.report} />}
-
-          {result && (
-            <p className="rounded bg-amber-50 p-3 text-xs text-amber-800">{result.storageNote}</p>
+        </section>
+      ) : (
+        <>
+          {loading && (
+            <p className="mt-6 text-sm text-text-secondary">
+              AI가 상품을 분석하고 있습니다 — 이미지 수집, 상품 정보 추출, 배경 제거까지 자동으로
+              진행됩니다.
+            </p>
           )}
 
-          {result && (
-            <CommerceWorkspace
-              key={result.canonicalProduct.sourceUrl}
-              initialProduct={result.canonicalProduct}
-            />
+          {(loading || progressLog.length > 0) && (
+            <ProgressPanel current={currentProgress} log={progressLog} />
           )}
+        </>
+      )}
+
+      {error && (
+        <p className="mt-4 rounded-md border border-error/20 bg-error-soft p-3 text-sm text-error">
+          {error}
+        </p>
+      )}
+
+      {result && (
+        <div className="mt-6 space-y-6">
+          <CommerceWorkspace
+            key={result.canonicalProduct.sourceUrl}
+            initialProduct={result.canonicalProduct}
+          />
+
+          <section className="rounded-lg border border-border bg-surface shadow-subtle">
+            <button
+              type="button"
+              onClick={() => setDetailsExpanded((v) => !v)}
+              className="flex w-full items-center justify-between px-5 py-3 text-left text-sm font-medium text-text-secondary"
+            >
+              <span>상세 정보 (이미지 원본, 처리 리포트, ZIP 다운로드)</span>
+              <span className="text-text-tertiary">{detailsExpanded ? "접기 ▲" : "펼치기 ▼"}</span>
+            </button>
+
+            {detailsExpanded && (
+              <div className="space-y-6 border-t border-border p-5">
+                <WorkspaceTabs active={activeTab} counts={counts} onChange={setActiveTab} />
+
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                  {items.map((item) => (
+                    <ImageCard
+                      key={item.id}
+                      item={item}
+                      tab={activeTab}
+                      thumbnailDataUrl={thumbnails[item.id]}
+                      isExcluded={excludedIds.has(item.id)}
+                      isRepresentative={representativeId === item.id}
+                      isSelected={selectedId === item.id}
+                      retrying={retryingIds.has(item.id)}
+                      retryCount={retryCounts[item.id] ?? 0}
+                      onPreview={() => {
+                        setSelectedId(item.id);
+                        setPreviewId(item.id);
+                      }}
+                      onRetry={() => retryItem(item)}
+                      onToggleRepresentative={() => setRepresentativeId(item.id)}
+                      onToggleExclude={() => toggleExclude(item.id)}
+                    />
+                  ))}
+                </div>
+
+                <div>
+                  <button
+                    onClick={() =>
+                      result && downloadWorkspaceZip(items, excludedIds, result.metadata, result.report)
+                    }
+                    disabled={!canDownload}
+                    className="rounded-md border border-border px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-background disabled:opacity-40"
+                  >
+                    ZIP 다운로드 (원본 + 썸네일 800×800 + 상세 + metadata.json + report.json)
+                  </button>
+                </div>
+
+                <ProcessingReportView report={result.report} />
+
+                <p className="rounded-md bg-warning-soft p-3 text-xs text-warning">
+                  {result.storageNote}
+                </p>
+              </div>
+            )}
+          </section>
         </div>
       )}
 

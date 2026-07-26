@@ -1,9 +1,9 @@
 import type { FieldSource } from "@commerce/shared";
 
 const STATUS_STYLES: Record<FieldSource, string> = {
-  ORIGINAL: "bg-zinc-100 text-zinc-600",
-  EDITED: "bg-blue-100 text-blue-700",
-  GENERATED: "bg-purple-100 text-purple-700",
+  ORIGINAL: "bg-background text-text-secondary border border-border",
+  EDITED: "bg-selected-soft text-selected border border-selected-border",
+  GENERATED: "bg-ai-soft text-ai border border-ai/20",
 };
 
 const STATUS_LABELS: Record<FieldSource, string> = {

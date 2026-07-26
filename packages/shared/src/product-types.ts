@@ -23,6 +23,14 @@ export interface ProvenanceField<T> {
  * 플랫폼과 무관한 "기준" 상품 데이터. 스마트스토어/쿠팡/11번가 Preview는 전부
  * 이 하나의 구조에서 PlatformAdapter를 통해 파생된다 — 플랫폼마다 별도로 상품
  * 데이터를 복제하지 않는다(packages/marketplace의 어댑터 설계 원칙).
+ *
+ * titleKo/descriptionKo/keywords/seoTitle/seoDescription은 title/description과
+ * 다른 필드다 — title/description은 "원본 사이트에서 추출한 값"이고, 이 5개는
+ * "AI가 만든 한국어 등록용 콘텐츠"다. 둘을 하나로 합쳐 덮어쓰지 않는 이유는
+ * Source Data 화면이 계속 원본 그대로를 보여줘야 하기 때문이다(그래야 AI가
+ * 뭘 보고 콘텐츠를 만들었는지 사용자가 비교할 수 있다). 크롤러는 이 5개를 절대
+ * 채우지 않으므로 항상 빈 값 + ORIGINAL로 시작하고, AI 생성 시 GENERATED로,
+ * 사용자가 고치면 EDITED로 바뀐다 — title/description과 같은 규칙이다.
  */
 export interface CanonicalProduct {
   sourceUrl: string;
@@ -36,6 +44,11 @@ export interface CanonicalProduct {
    * 구조가 너무 달라 이번 범위에서는 다루지 않는다. */
   options: ProvenanceField<string[]>;
   images: { url: string; isRepresentative: boolean }[];
+  titleKo: ProvenanceField<string>;
+  descriptionKo: ProvenanceField<string>;
+  keywords: ProvenanceField<string[]>;
+  seoTitle: ProvenanceField<string>;
+  seoDescription: ProvenanceField<string>;
 }
 
 /**

@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@commerce/category": "workspace:*",
+    "@commerce/content": "workspace:*",
     "@commerce/crawler": "workspace:*",
     "@commerce/image": "workspace:*",
     "@commerce/marketplace": "workspace:*",

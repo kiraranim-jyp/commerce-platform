@@ -20,7 +20,7 @@ export function WorkspaceTabs({
   onChange: (tab: TabKey) => void;
 }) {
   return (
-    <div className="flex gap-1 border-b border-zinc-200">
+    <div className="flex gap-1 border-b border-border">
       {TAB_ORDER.map((tab) => (
         <button
           key={tab}
@@ -28,8 +28,8 @@ export function WorkspaceTabs({
           onClick={() => onChange(tab)}
           className={`px-4 py-2 text-sm font-medium transition-colors ${
             active === tab
-              ? "border-b-2 border-black text-black"
-              : "border-b-2 border-transparent text-zinc-500 hover:text-zinc-700"
+              ? "border-b-2 border-primary text-primary"
+              : "border-b-2 border-transparent text-text-secondary hover:text-text-primary"
           }`}
         >
           {TAB_LABELS[tab]} ({counts[tab]})

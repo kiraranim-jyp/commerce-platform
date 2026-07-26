@@ -25,17 +25,17 @@ export function PreviewModal({ item, onClose }: { item: WorkspaceItem; onClose: 
       onClick={onClose}
     >
       <div
-        className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-white"
+        className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-surface"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h3 className="text-sm font-medium">{item.fileName}</h3>
           <div className="flex gap-2">
             {canCompare && (
               <button
                 type="button"
                 onClick={() => setCompare((v) => !v)}
-                className="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50"
+                className="rounded border border-border px-2 py-1 text-xs hover:bg-background"
               >
                 {compare ? "비교 끄기" : "원본/결과 비교"}
               </button>
@@ -43,14 +43,14 @@ export function PreviewModal({ item, onClose }: { item: WorkspaceItem; onClose: 
             <button
               type="button"
               onClick={() => setZoomed((v) => !v)}
-              className="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50"
+              className="rounded border border-border px-2 py-1 text-xs hover:bg-background"
             >
               {zoomed ? "축소" : "확대"}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50"
+              className="rounded border border-border px-2 py-1 text-xs hover:bg-background"
             >
               닫기
             </button>
@@ -60,7 +60,7 @@ export function PreviewModal({ item, onClose }: { item: WorkspaceItem; onClose: 
         <div className={`flex-1 gap-4 p-4 ${zoomed ? "overflow-auto" : "overflow-hidden"} flex`}>
           {compare && item.originalDataUrl && (
             <figure className="min-w-0 flex-1">
-              <figcaption className="mb-1 text-center text-xs text-zinc-500">원본</figcaption>
+              <figcaption className="mb-1 text-center text-xs text-text-secondary">원본</figcaption>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={item.originalDataUrl}
@@ -74,7 +74,7 @@ export function PreviewModal({ item, onClose }: { item: WorkspaceItem; onClose: 
           {item.detailDataUrl ? (
             <figure className="min-w-0 flex-1">
               {compare && (
-                <figcaption className="mb-1 text-center text-xs text-zinc-500">결과</figcaption>
+                <figcaption className="mb-1 text-center text-xs text-text-secondary">결과</figcaption>
               )}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -101,26 +101,26 @@ export function PreviewModal({ item, onClose }: { item: WorkspaceItem; onClose: 
           )}
         </div>
 
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-1 border-t border-zinc-200 px-4 py-3 text-xs text-zinc-600 sm:grid-cols-4">
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-1 border-t border-border px-4 py-3 text-xs text-text-secondary sm:grid-cols-4">
           <div>
-            <dt className="text-zinc-400">타입</dt>
-            <dd className="font-medium text-zinc-800">{item.type}</dd>
+            <dt className="text-text-tertiary">타입</dt>
+            <dd className="font-medium text-text-primary">{item.type}</dd>
           </div>
           <div>
-            <dt className="text-zinc-400">원본 크기</dt>
-            <dd className="font-medium text-zinc-800">
+            <dt className="text-text-tertiary">원본 크기</dt>
+            <dd className="font-medium text-text-primary">
               {formatDimensions(item.originalWidth, item.originalHeight)}
             </dd>
           </div>
           <div>
-            <dt className="text-zinc-400">결과 크기</dt>
-            <dd className="font-medium text-zinc-800">
+            <dt className="text-text-tertiary">결과 크기</dt>
+            <dd className="font-medium text-text-primary">
               {formatDimensions(item.outputWidth, item.outputHeight)}
             </dd>
           </div>
           <div>
-            <dt className="text-zinc-400">파일 크기</dt>
-            <dd className="font-medium text-zinc-800">{formatBytes(item.fileSize)}</dd>
+            <dt className="text-text-tertiary">파일 크기</dt>
+            <dd className="font-medium text-text-primary">{formatBytes(item.fileSize)}</dd>
           </div>
         </dl>
       </div>

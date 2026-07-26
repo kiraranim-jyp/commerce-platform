@@ -10,7 +10,7 @@ interface EditableTextProps {
 }
 
 const DEFAULT_INPUT_CLASS =
-  "w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-sm hover:border-zinc-200 focus:border-zinc-400 focus:bg-white focus:outline-none";
+  "w-full rounded-md border border-transparent bg-transparent px-1 py-0.5 text-sm text-text-primary hover:border-border focus:border-primary focus:bg-surface focus:outline-none";
 
 /**
  * 값을 controlled draft로 들고 있다가 blur 시점에만 onCommit을 호출한다 — 키 입력마다

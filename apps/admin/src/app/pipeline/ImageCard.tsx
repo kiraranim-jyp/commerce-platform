@@ -47,8 +47,8 @@ export function ImageCard({
 
   return (
     <div
-      className={`flex h-[420px] flex-col overflow-hidden rounded-lg border bg-white transition-opacity ${
-        isSelected ? "border-black ring-2 ring-black" : "border-zinc-200"
+      className={`flex h-[420px] flex-col overflow-hidden rounded-lg border bg-surface transition-opacity ${
+        isSelected ? "border-primary ring-2 ring-primary" : "border-border"
       } ${isExcluded ? "opacity-40" : ""}`}
     >
       <button
@@ -65,7 +65,7 @@ export function ImageCard({
             className="max-h-full max-w-full object-contain"
           />
         ) : (
-          <span className="text-xs text-zinc-400">미리보기 없음</span>
+          <span className="text-xs text-text-tertiary">미리보기 없음</span>
         )}
         {tab === "thumbnail" && (
           <span
@@ -84,19 +84,19 @@ export function ImageCard({
       </button>
 
       <div className="flex flex-1 flex-col gap-0.5 p-3 text-xs">
-        <p className="truncate font-medium text-zinc-800" title={item.fileName}>
+        <p className="truncate font-medium text-text-primary" title={item.fileName}>
           {item.fileName}
         </p>
-        <p className="text-zinc-500">Type: {item.type}</p>
-        <p className="text-zinc-500">
+        <p className="text-text-secondary">Type: {item.type}</p>
+        <p className="text-text-secondary">
           Original: {formatDimensions(item.originalWidth, item.originalHeight)}
         </p>
-        <p className="text-zinc-500">
+        <p className="text-text-secondary">
           Output: {formatDimensions(item.outputWidth, item.outputHeight)}
         </p>
-        <p className="text-zinc-500">File: {formatBytes(item.fileSize)}</p>
+        <p className="text-text-secondary">File: {formatBytes(item.fileSize)}</p>
         {item.quality && (
-          <p className="text-zinc-500">
+          <p className="text-text-secondary">
             Quality {item.quality.overall}/100 · {item.usedOriginal ? "원본 사용" : "누끼"}
           </p>
         )}
@@ -107,14 +107,14 @@ export function ImageCard({
           {status === "failed" && <span>🔴 Failed</span>}
         </p>
         {status === "failed" && item.failureReason && (
-          <p className="line-clamp-2 text-red-600" title={item.failureReason}>
+          <p className="line-clamp-2 text-error" title={item.failureReason}>
             {item.failureReason}
           </p>
         )}
-        <p className="text-zinc-500">Processing: {item.processingTimeSec}s</p>
+        <p className="text-text-secondary">Processing: {item.processingTimeSec}s</p>
 
         <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-          <label className="flex items-center gap-1 text-zinc-500">
+          <label className="flex items-center gap-1 text-text-secondary">
             <input type="checkbox" checked={isExcluded} onChange={onToggleExclude} />
             제외
           </label>
@@ -124,7 +124,7 @@ export function ImageCard({
               <a
                 href={previewSrc}
                 download={item.fileName}
-                className="rounded border border-zinc-300 px-2 py-1 font-medium hover:bg-zinc-50"
+                className="rounded border border-border px-2 py-1 font-medium text-text-primary hover:bg-background"
               >
                 ⬇ Download
               </a>
@@ -134,7 +134,7 @@ export function ImageCard({
                 type="button"
                 onClick={onRetry}
                 disabled={retrying}
-                className="rounded border border-zinc-300 px-2 py-1 font-medium hover:bg-zinc-50 disabled:opacity-50"
+                className="rounded border border-border px-2 py-1 font-medium text-text-primary hover:bg-background disabled:opacity-50"
               >
                 {retrying ? "재실행 중..." : retryCount > 0 ? `재실행 (${retryCount}회)` : "재실행"}
               </button>

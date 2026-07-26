@@ -13,7 +13,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 export function ProcessingReportView({ report }: { report: ProcessingReport }) {
   return (
-    <section className="rounded-lg border border-zinc-200 p-4 text-sm">
+    <section className="rounded-lg border border-border p-4 text-sm">
       <h2 className="text-base font-medium">작업 리포트</h2>
 
       <dl className="mt-3 grid grid-cols-2 gap-y-2 sm:grid-cols-4">
@@ -23,7 +23,7 @@ export function ProcessingReportView({ report }: { report: ProcessingReport }) {
         <Row label="처리 시간" value={`${report.processingTimeSec}s`} />
       </dl>
 
-      <hr className="my-3 border-zinc-100" />
+      <hr className="my-3 border-border" />
 
       <dl className="grid grid-cols-2 gap-y-2 sm:grid-cols-4">
         <Row label="다운로드" value={report.downloaded} />
@@ -32,7 +32,7 @@ export function ProcessingReportView({ report }: { report: ProcessingReport }) {
         ))}
       </dl>
 
-      <hr className="my-3 border-zinc-100" />
+      <hr className="my-3 border-border" />
 
       <dl className="grid grid-cols-2 gap-y-2 sm:grid-cols-4">
         <Row label="누끼" value={report.nukkiApplied} />
@@ -42,8 +42,8 @@ export function ProcessingReportView({ report }: { report: ProcessingReport }) {
 
       {report.extraction && (
         <>
-          <hr className="my-3 border-zinc-100" />
-          <h3 className="text-xs font-medium text-zinc-500">Extraction</h3>
+          <hr className="my-3 border-border" />
+          <h3 className="text-xs font-medium text-text-secondary">Extraction</h3>
           <dl className="mt-2 grid grid-cols-2 gap-y-2 sm:grid-cols-4">
             <Row label="Strategy" value={report.extraction.strategies.join(" + ") || "dom-scan"} />
             <Row label="Candidates" value={report.extraction.candidates} />
@@ -59,8 +59,8 @@ export function ProcessingReportView({ report }: { report: ProcessingReport }) {
 function Row({ label, value }: { label: string; value: string | number }) {
   return (
     <div>
-      <dt className="text-zinc-500">{label}</dt>
-      <dd className="font-medium text-zinc-800">{value}</dd>
+      <dt className="text-text-secondary">{label}</dt>
+      <dd className="font-medium text-text-primary">{value}</dd>
     </div>
   );
 }

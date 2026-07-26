@@ -23,6 +23,9 @@ importers:
       '@commerce/category':
         specifier: workspace:*
         version: link:../../packages/category
+      '@commerce/content':
+        specifier: workspace:*
+        version: link:../../packages/content
       '@commerce/crawler':
         specifier: workspace:*
         version: link:../../packages/crawler
@@ -107,6 +110,19 @@ importers:
 
   packages/category:
     dependencies:
+      '@commerce/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
+
+  packages/content:
+    dependencies:
+      '@commerce/category':
+        specifier: workspace:*
+        version: link:../category
       '@commerce/shared':
         specifier: workspace:*
         version: link:../shared

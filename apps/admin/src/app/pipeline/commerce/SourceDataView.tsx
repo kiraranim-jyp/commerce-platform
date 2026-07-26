@@ -19,9 +19,9 @@ export function SourceDataView({
   onUpdateOptions: (raw: string) => void;
 }) {
   return (
-    <section className="rounded-lg border border-zinc-200 p-4 text-sm">
+    <section className="rounded-lg border border-border p-4 text-sm">
       <h3 className="text-base font-medium">Source Data</h3>
-      <p className="mt-1 text-xs text-zinc-500">
+      <p className="mt-1 text-xs text-text-secondary">
         원본 사이트에서 추출한 상품 정보입니다. 값을 직접 수정할 수 있으며, 수정한 필드는
         &ldquo;수정됨&rdquo;으로 표시됩니다.
       </p>
@@ -29,7 +29,7 @@ export function SourceDataView({
       <div className="mt-4 overflow-x-auto">
         <table className="w-full border-collapse text-left">
           <thead>
-            <tr className="border-b border-zinc-200 text-xs text-zinc-500">
+            <tr className="border-b border-border text-xs text-text-secondary">
               <th className="w-24 py-2 pr-2 font-medium">필드</th>
               <th className="py-2 pr-2 font-medium">값</th>
               <th className="w-24 py-2 pr-2 font-medium">Source</th>
@@ -53,13 +53,13 @@ export function SourceDataView({
                 <EditableText
                   value={String(product.price.value.amount)}
                   onCommit={(v) => onUpdatePrice(Number(v) || 0, product.price.value.currency)}
-                  className="w-24 rounded border border-transparent bg-transparent px-1 py-0.5 text-sm hover:border-zinc-200 focus:border-zinc-400 focus:bg-white focus:outline-none"
+                  className="w-24 rounded border border-transparent bg-transparent px-1 py-0.5 text-sm hover:border-border focus:border-primary focus:bg-surface focus:outline-none"
                 />
                 <EditableText
                   value={product.price.value.currency}
                   onCommit={(v) => onUpdatePrice(product.price.value.amount, v.toUpperCase())}
                   placeholder="통화"
-                  className="w-16 rounded border border-transparent bg-transparent px-1 py-0.5 text-sm hover:border-zinc-200 focus:border-zinc-400 focus:bg-white focus:outline-none"
+                  className="w-16 rounded border border-transparent bg-transparent px-1 py-0.5 text-sm hover:border-border focus:border-primary focus:bg-surface focus:outline-none"
                 />
               </div>
             </Row>
@@ -91,8 +91,8 @@ export function SourceDataView({
                 placeholder="상세설명 없음"
               />
             </Row>
-            <tr className="border-b border-zinc-100 align-top">
-              <td className="py-2 pr-2 text-zinc-500">이미지</td>
+            <tr className="border-b border-border align-top">
+              <td className="py-2 pr-2 text-text-secondary">이미지</td>
               <td className="py-2 pr-2" colSpan={4}>
                 {product.images.length === 0
                   ? "이미지 없음"
@@ -116,11 +116,11 @@ function Row({
   children: React.ReactNode;
 }) {
   return (
-    <tr className="border-b border-zinc-100 align-top">
-      <td className="py-2 pr-2 text-zinc-500">{label}</td>
+    <tr className="border-b border-border align-top">
+      <td className="py-2 pr-2 text-text-secondary">{label}</td>
       <td className="py-2 pr-2">{children}</td>
-      <td className="py-2 pr-2 text-xs text-zinc-500">{extractionSourceLabel(field)}</td>
-      <td className="py-2 pr-2 text-xs text-zinc-500">
+      <td className="py-2 pr-2 text-xs text-text-secondary">{extractionSourceLabel(field)}</td>
+      <td className="py-2 pr-2 text-xs text-text-secondary">
         {field.source === "EDITED" ? "—" : `${Math.round(field.confidence * 100)}%`}
       </td>
       <td className="py-2">

@@ -28,17 +28,17 @@ export function ProgressPanel({
     <div className="mt-4 space-y-3">
       <div>
         <div className="flex items-center justify-between text-sm">
-          <span className="font-medium text-zinc-800">{current?.step ?? "대기 중"}</span>
-          <span className="text-zinc-500">{current?.percent ?? 0}%</span>
+          <span className="font-medium text-text-primary">{current?.step ?? "대기 중"}</span>
+          <span className="text-text-secondary">{current?.percent ?? 0}%</span>
         </div>
-        <div className="mt-1 h-2 w-full overflow-hidden rounded bg-zinc-100">
+        <div className="mt-1 h-2 w-full overflow-hidden rounded bg-background">
           <div
-            className="h-full rounded bg-black transition-all duration-300 ease-out"
+            className="h-full rounded bg-primary transition-all duration-300 ease-out"
             style={{ width: `${current?.percent ?? 0}%` }}
           />
         </div>
         {current && (
-          <p className="mt-1 truncate text-xs text-zinc-500">
+          <p className="mt-1 truncate text-xs text-text-secondary">
             {current.message}
             {current.fileName && current.current != null && current.total != null
               ? ` (${current.current}/${current.total})`
@@ -47,11 +47,11 @@ export function ProgressPanel({
         )}
       </div>
 
-      <div className="h-48 overflow-y-auto rounded border border-zinc-800 bg-zinc-950 p-2 font-mono text-xs text-zinc-200">
-        {log.length === 0 && <p className="text-zinc-500">로그 대기 중...</p>}
+      <div className="h-48 overflow-y-auto rounded-md border border-text-primary bg-text-primary p-2 font-mono text-xs text-white/80">
+        {log.length === 0 && <p className="text-white/50">로그 대기 중...</p>}
         {log.map((entry, index) => (
-          <p key={index} className={entry.status === "failed" ? "text-red-400" : undefined}>
-            <span className="text-zinc-500">[{formatTime(entry.timestamp)}]</span> {entry.message}
+          <p key={index} className={entry.status === "failed" ? "text-error" : undefined}>
+            <span className="text-white/40">[{formatTime(entry.timestamp)}]</span> {entry.message}
           </p>
         ))}
         <div ref={logEndRef} />
