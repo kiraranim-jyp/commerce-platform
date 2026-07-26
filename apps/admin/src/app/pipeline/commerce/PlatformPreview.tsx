@@ -1,19 +1,26 @@
 "use client";
 
+import type { CategoryCandidate } from "@commerce/category";
 import type { ListingModel } from "@commerce/marketplace";
 import { formatKrw } from "@commerce/pricing";
+import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
 import { EditableText, EditableTextarea } from "./EditableField";
 import { ValidationPanel } from "./ValidationPanel";
 
 export function PlatformPreview({
   listing,
+  categoryCandidates,
   onUpdateField,
   onUpdatePriceKrw,
+  onSelectCategory,
 }: {
   listing: ListingModel;
+  categoryCandidates: CategoryCandidate[];
   onUpdateField: (key: "title" | "brand" | "description", value: string) => void;
   onUpdatePriceKrw: (amountKrw: number) => void;
+  onSelectCategory: (candidate: CategoryCandidate) => void;
 }) {
+  const isCategoryConfirmed = listing.category.state === "SELECTED" || listing.category.state === "CONFIRMED";
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       <section className="rounded-lg border border-zinc-200 p-4 text-sm">
@@ -87,6 +94,15 @@ export function PlatformPreview({
           </div>
         )}
 
+        <div className="mt-4">
+          <label className="text-xs text-zinc-500">카테고리</label>
+          <p className={`mt-0.5 text-sm ${isCategoryConfirmed ? "text-zinc-700" : "text-amber-600"}`}>
+            {isCategoryConfirmed && listing.category.candidate
+              ? listing.category.candidate.path.join(" > ")
+              : "미지정 — 아래 카테고리 추천에서 선택해주세요."}
+          </p>
+        </div>
+
         {listing.options.length > 0 && (
           <div className="mt-4">
             <label className="text-xs text-zinc-500">옵션</label>
@@ -119,7 +135,14 @@ export function PlatformPreview({
         </div>
       </section>
 
-      <ValidationPanel validations={listing.validations} score={listing.registrableScore} />
+      <div className="space-y-4">
+        <CategoryRecommendationPanel
+          candidates={categoryCandidates}
+          selection={listing.category}
+          onSelect={onSelectCategory}
+        />
+        <ValidationPanel validations={listing.validations} score={listing.registrableScore} />
+      </div>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@commerce/marketplace",
+  "name": "@commerce/category",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -9,8 +9,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@commerce/category": "workspace:*",
-    "@commerce/pricing": "workspace:*",
     "@commerce/shared": "workspace:*"
   },
   "devDependencies": {

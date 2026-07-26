@@ -1,12 +1,17 @@
 import type { CanonicalProduct } from "@commerce/shared";
+import { UNRESOLVED_CATEGORY, type CategorySelection } from "@commerce/category";
 import { convertToKrw } from "@commerce/pricing";
+import { categoryFieldRule } from "../category-field";
 import { runValidation, scoreValidations, type FieldRule } from "../validation";
 import type { ListingModel, PlatformAdapter } from "../types";
 
 export const elevenstAdapter: PlatformAdapter = {
   platform: "elevenst",
   label: "11번가",
-  toListingModel(product: CanonicalProduct): ListingModel {
+  toListingModel(
+    product: CanonicalProduct,
+    categorySelection: CategorySelection = UNRESOLVED_CATEGORY,
+  ): ListingModel {
     const representativeImage = product.images.find((img) => img.isRepresentative)?.url;
     const additionalImages = product.images
       .filter((img) => img.url !== representativeImage)
@@ -38,6 +43,7 @@ export const elevenstAdapter: PlatformAdapter = {
         onFail: "ERROR",
         message: "판매가격을 확인할 수 없습니다.",
       },
+      categoryFieldRule(categorySelection),
       {
         field: "options",
         label: "옵션",
@@ -73,6 +79,7 @@ export const elevenstAdapter: PlatformAdapter = {
       options: product.options.value,
       shippingInfo: "해외배송",
       description: product.description.value,
+      category: categorySelection,
       validations,
       registrableScore: scoreValidations(validations),
     };

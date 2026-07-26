@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@commerce/category": "workspace:*",
     "@commerce/crawler": "workspace:*",
     "@commerce/image": "workspace:*",
     "@commerce/marketplace": "workspace:*",

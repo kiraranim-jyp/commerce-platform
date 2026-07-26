@@ -20,6 +20,9 @@ importers:
 
   apps/admin:
     dependencies:
+      '@commerce/category':
+        specifier: workspace:*
+        version: link:../../packages/category
       '@commerce/crawler':
         specifier: workspace:*
         version: link:../../packages/crawler
@@ -102,6 +105,16 @@ importers:
         specifier: ^5.5.4
         version: 5.9.3
 
+  packages/category:
+    dependencies:
+      '@commerce/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
+
   packages/crawler:
     dependencies:
       '@commerce/shared':
@@ -167,6 +180,9 @@ importers:
 
   packages/marketplace:
     dependencies:
+      '@commerce/category':
+        specifier: workspace:*
+        version: link:../category
       '@commerce/pricing':
         specifier: workspace:*
         version: link:../pricing

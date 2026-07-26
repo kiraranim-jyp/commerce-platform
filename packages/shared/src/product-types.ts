@@ -33,7 +33,15 @@ export interface CanonicalProduct {
   description: ProvenanceField<string>;
   material: ProvenanceField<string>;
   /** 옵션 "종류"만 다룬다(예: ["Color", "Size"]) — 값 목록까지 추출하는 건 사이트마다
-   * 구조가 너무 달라 다음 Mission(카테고리 매핑/필수 필드) 범위로 미룬다. */
+   * 구조가 너무 달라 이번 범위에서는 다루지 않는다. */
   options: ProvenanceField<string[]>;
   images: { url: string; isRepresentative: boolean }[];
 }
+
+/**
+ * @commerce/marketplace와 @commerce/category 둘 다 이 id로 플랫폼을 구분한다.
+ * marketplace가 category를 참조하고(ListingModel이 CategorySelection을 들고 있음)
+ * category는 marketplace를 참조하지 않는 단방향 의존이라, 순환 참조를 피하려면
+ * PlatformId는 둘 다의 하위 의존인 shared에 있어야 한다.
+ */
+export type PlatformId = "smartstore" | "coupang" | "elevenst";

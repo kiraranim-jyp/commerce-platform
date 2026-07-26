@@ -1,12 +1,24 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { CanonicalProduct, FieldSource } from "@commerce/shared";
-import { PLATFORM_ADAPTERS, PLATFORM_ORDER, type PlatformId } from "@commerce/marketplace";
+import type { CanonicalProduct, FieldSource, PlatformId } from "@commerce/shared";
+import {
+  ruleBasedCategoryProvider,
+  UNRESOLVED_CATEGORY,
+  type CategoryCandidate,
+  type CategorySelection,
+} from "@commerce/category";
+import { PLATFORM_ADAPTERS, PLATFORM_ORDER } from "@commerce/marketplace";
 import { PlatformPreview } from "./commerce/PlatformPreview";
 import { SourceDataView } from "./commerce/SourceDataView";
 
 type CommerceTab = "source" | PlatformId;
+
+const INITIAL_CATEGORY_MAPPINGS: Record<PlatformId, CategorySelection> = {
+  smartstore: UNRESOLVED_CATEGORY,
+  coupang: UNRESOLVED_CATEGORY,
+  elevenst: UNRESOLVED_CATEGORY,
+};
 
 /**
  * CanonicalProduct 하나를 들고 있다가 Source Data / SmartStore / Coupang / 11번가
@@ -17,6 +29,7 @@ type CommerceTab = "source" | PlatformId;
 export function CommerceWorkspace({ initialProduct }: { initialProduct: CanonicalProduct }) {
   const [product, setProduct] = useState(initialProduct);
   const [tab, setTab] = useState<CommerceTab>("source");
+  const [categoryMappings, setCategoryMappings] = useState(INITIAL_CATEGORY_MAPPINGS);
 
   function updateField(
     key: "title" | "brand" | "sku" | "description" | "material",
@@ -46,10 +59,36 @@ export function CommerceWorkspace({ initialProduct }: { initialProduct: Canonica
     }));
   }
 
+  const categoryCandidates = useMemo(() => {
+    if (tab === "source") return [];
+    return ruleBasedCategoryProvider.recommendCategory(product, tab);
+  }, [tab, product]);
+
+  /**
+   * 저장된 선택이 아직 UNRESOLVED인데 추천 후보가 있으면, 실제로 state를 바꾸지
+   * 않고 렌더링/Validation에만 "RECOMMENDED + 1순위 후보"로 보이게 한다 — 사용자가
+   * [선택]을 눌러야만 진짜 SELECTED로 커밋된다(추천이 보이는 것과 확정한 것을 구분).
+   */
+  const effectiveCategorySelection = useMemo((): CategorySelection => {
+    if (tab === "source") return UNRESOLVED_CATEGORY;
+    const stored = categoryMappings[tab];
+    if (stored.state === "UNRESOLVED" && categoryCandidates.length > 0) {
+      return { state: "RECOMMENDED", candidate: categoryCandidates[0], provenance: "RECOMMENDED" };
+    }
+    return stored;
+  }, [tab, categoryMappings, categoryCandidates]);
+
+  function selectCategory(platform: PlatformId, candidate: CategoryCandidate) {
+    setCategoryMappings((prev) => ({
+      ...prev,
+      [platform]: { state: "SELECTED", candidate, provenance: "USER_SELECTED" },
+    }));
+  }
+
   const listing = useMemo(() => {
     if (tab === "source") return null;
-    return PLATFORM_ADAPTERS[tab].toListingModel(product);
-  }, [tab, product]);
+    return PLATFORM_ADAPTERS[tab].toListingModel(product, effectiveCategorySelection);
+  }, [tab, product, effectiveCategorySelection]);
 
   return (
     <section className="mt-8 space-y-4">
@@ -85,11 +124,13 @@ export function CommerceWorkspace({ initialProduct }: { initialProduct: Canonica
         />
       )}
 
-      {listing && (
+      {listing && tab !== "source" && (
         <PlatformPreview
           listing={listing}
+          categoryCandidates={categoryCandidates}
           onUpdateField={updateField}
           onUpdatePriceKrw={(amountKrw) => updatePrice(amountKrw, "KRW")}
+          onSelectCategory={(candidate) => selectCategory(tab, candidate)}
         />
       )}
     </section>

@@ -1,5 +1,7 @@
 import type { CanonicalProduct } from "@commerce/shared";
+import { UNRESOLVED_CATEGORY, type CategorySelection } from "@commerce/category";
 import { convertToKrw } from "@commerce/pricing";
+import { categoryFieldRule } from "../category-field";
 import { runValidation, scoreValidations, type FieldRule } from "../validation";
 import type { ListingModel, PlatformAdapter } from "../types";
 
@@ -11,7 +13,10 @@ import type { ListingModel, PlatformAdapter } from "../types";
 export const coupangAdapter: PlatformAdapter = {
   platform: "coupang",
   label: "쿠팡",
-  toListingModel(product: CanonicalProduct): ListingModel {
+  toListingModel(
+    product: CanonicalProduct,
+    categorySelection: CategorySelection = UNRESOLVED_CATEGORY,
+  ): ListingModel {
     const representativeImage = product.images.find((img) => img.isRepresentative)?.url;
     const additionalImages = product.images
       .filter((img) => img.url !== representativeImage)
@@ -36,13 +41,7 @@ export const coupangAdapter: PlatformAdapter = {
         onFail: "ERROR",
         message: "쿠팡은 브랜드 미기재 시 등록이 반려될 수 있습니다.",
       },
-      {
-        field: "category",
-        label: "카테고리",
-        check: () => false,
-        onFail: "WARNING",
-        message: "카테고리 매핑은 다음 Mission에서 지원됩니다.",
-      },
+      categoryFieldRule(categorySelection),
       {
         field: "price",
         label: "판매가격",
@@ -85,6 +84,7 @@ export const coupangAdapter: PlatformAdapter = {
       options: product.options.value,
       shippingInfo: "해외배송",
       description: product.description.value,
+      category: categorySelection,
       validations,
       registrableScore: scoreValidations(validations),
     };
