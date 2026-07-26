@@ -1,3 +1,5 @@
+import type { ImageType } from "./image-types";
+
 /**
  * 필드 하나의 출처를 추적한다. Commerce Listing Preview Engine의 핵심 개념 —
  * "이 값이 원본 사이트에서 그대로 온 건지, AI가 만든 건지, 사람이 고친 건지"를
@@ -24,6 +26,39 @@ export interface ProvenanceField<T> {
 }
 
 /**
+ * 이미지 파이프라인이 PRODUCT 이미지마다 만드는 두 변형 중 어느 쪽을 등록에 쓸지.
+ * MODEL/LIFESTYLE/DETAIL/SIZE_CHART는 배경제거 대상이 아니라 항상 ORIGINAL이고
+ * processedUrl 자체가 없다.
+ */
+export type ImageVariant = "ORIGINAL" | "PROCESSED";
+
+/**
+ * 이미지 카드 UI에서 사용자가 원본/배경제거 후보 중 고른 결과가 여기(selectedVariant)에
+ * 반영돼야 SmartStore/Coupang 등록 payload까지 그대로 이어진다 — UI가 URL 문자열을
+ * 직접 바꾸는 대신 항상 이 필드를 통해서만 어떤 이미지가 쓰일지 결정한다
+ * (getSelectedImageUrl 참고).
+ */
+export interface CanonicalProductImage {
+  id: string;
+  originalUrl: string;
+  /** 배경제거가 성공하고 JPEG 검증도 통과했을 때만 있다(PRODUCT 전용). */
+  processedUrl?: string;
+  selectedVariant: ImageVariant;
+  isRepresentative: boolean;
+  classification: ImageType;
+}
+
+/** 등록 payload/미리보기가 실제로 쓸 이미지 URL을 결정하는 유일한 통로 —
+ * selectedVariant가 PROCESSED인데 processedUrl이 없으면(배경제거 실패) 항상
+ * originalUrl로 안전하게 폴백한다. */
+export function getSelectedImageUrl(image: CanonicalProductImage): string {
+  if (image.selectedVariant === "PROCESSED" && image.processedUrl) {
+    return image.processedUrl;
+  }
+  return image.originalUrl;
+}
+
+/**
  * 플랫폼과 무관한 "기준" 상품 데이터. 스마트스토어/쿠팡/11번가 Preview는 전부
  * 이 하나의 구조에서 PlatformAdapter를 통해 파생된다 — 플랫폼마다 별도로 상품
  * 데이터를 복제하지 않는다(packages/marketplace의 어댑터 설계 원칙).
@@ -47,7 +82,7 @@ export interface CanonicalProduct {
   /** 옵션 "종류"만 다룬다(예: ["Color", "Size"]) — 값 목록까지 추출하는 건 사이트마다
    * 구조가 너무 달라 이번 범위에서는 다루지 않는다. */
   options: ProvenanceField<string[]>;
-  images: { url: string; isRepresentative: boolean }[];
+  images: CanonicalProductImage[];
   titleKo: ProvenanceField<string>;
   descriptionKo: ProvenanceField<string>;
   keywords: ProvenanceField<string[]>;

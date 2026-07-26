@@ -1,4 +1,5 @@
 import type { CanonicalProduct } from "@commerce/shared";
+import { getSelectedImageUrl } from "@commerce/shared";
 import { UNRESOLVED_CATEGORY, type CategorySelection } from "@commerce/category";
 import { convertToKrw } from "@commerce/pricing";
 import { categoryFieldRule } from "../category-field";
@@ -14,10 +15,13 @@ export const elevenstAdapter: PlatformAdapter = {
     product: CanonicalProduct,
     categorySelection: CategorySelection = UNRESOLVED_CATEGORY,
   ): ListingModel {
-    const representativeImage = product.images.find((img) => img.isRepresentative)?.url;
+    const representativeImageEntry = product.images.find((img) => img.isRepresentative);
+    const representativeImage = representativeImageEntry
+      ? getSelectedImageUrl(representativeImageEntry)
+      : undefined;
     const additionalImages = product.images
-      .filter((img) => img.url !== representativeImage)
-      .map((img) => img.url);
+      .filter((img) => !img.isRepresentative)
+      .map((img) => getSelectedImageUrl(img));
     const { amountKrw, isEstimate } = convertToKrw(
       product.price.value.amount,
       product.price.value.currency,

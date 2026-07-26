@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { CanonicalProduct } from "@commerce/shared";
 import { CommerceWorkspace } from "./CommerceWorkspace";
 import { ImageCard } from "./ImageCard";
 import { PreviewModal } from "./PreviewModal";
@@ -16,6 +17,10 @@ export default function PipelinePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PipelineResponse | null>(null);
+  // product는 CommerceWorkspace가 아니라 여기서 소유한다(controlled) — 이미지 카드의
+  // 원본/누끼 후보 전환(swapVariant)이 등록 화면에도 그대로 반영되려면 두 UI가 같은
+  // state를 공유해야 한다. CommerceWorkspace는 이 값을 그대로 받아 렌더링만 한다.
+  const [product, setProduct] = useState<CanonicalProduct | null>(null);
   const [items, setItems] = useState<WorkspaceItem[]>([]);
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<TabKey>("original");
@@ -44,6 +49,7 @@ export default function PipelinePage() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setProduct(null);
     setItems([]);
     setThumbnails({});
     setRepresentativeId(null);
@@ -77,6 +83,7 @@ export default function PipelinePage() {
           setError(event.error);
         } else if (event.type === "complete") {
           setResult(event);
+          setProduct(event.canonicalProduct);
           setItems(event.items);
           setRepresentativeId(event.items.find((item) => item.isRepresentative)?.id ?? null);
           await precomputeThumbnails(event.items);
@@ -132,6 +139,7 @@ export default function PipelinePage() {
     setLoading(false);
     setError(null);
     setResult(null);
+    setProduct(null);
     setItems([]);
     setThumbnails({});
     setRepresentativeId(null);
@@ -143,6 +151,13 @@ export default function PipelinePage() {
     setCurrentProgress(null);
     setProgressLog([]);
     setDetailsExpanded(false);
+  }
+
+  /** CommerceWorkspace는 product가 항상 있다고 가정하고 업데이터를 호출한다(그 컴포넌트가
+   * 렌더링될 때는 이미 product가 null이 아니므로) — page.tsx의 product state는 로딩 중엔
+   * null일 수 있어서 그 차이를 여기서 좁혀준다. */
+  function updateProduct(updater: (prev: CanonicalProduct) => CanonicalProduct) {
+    setProduct((prev) => (prev ? updater(prev) : prev));
   }
 
   function toggleExclude(id: string) {
@@ -158,10 +173,15 @@ export default function PipelinePage() {
   }
 
   /** PRODUCT는 원본/배경제거 후보 두 변형을 함께 갖고 있다 — detailDataUrl과
-   * alternateDataUrl을 맞바꿔서 이 카드가 어느 쪽을 대표로 쓸지 사용자가 고를 수 있게 한다. */
+   * alternateDataUrl을 맞바꿔서 이 카드가 어느 쪽을 대표로 쓸지 사용자가 고를 수 있게 한다.
+   * 카드 표시(items)만 바꾸고 끝나면 안 된다 — product.images의 selectedVariant도
+   * 반드시 같이 갱신해야 등록 화면(SmartStore/Coupang Preview)과 실제 payload에
+   * 이 선택이 반영된다. UI가 URL을 직접 등록 데이터에 꽂아넣지 않고, 항상
+   * selectedVariant라는 단일 필드를 통해서만 어떤 이미지가 쓰일지 결정한다. */
   async function swapVariant(id: string) {
     const item = items.find((existing) => existing.id === id);
-    if (!item?.alternateDataUrl) return;
+    if (!item?.alternateDataUrl || !item.alternateKind) return;
+    const newVariant = item.alternateKind;
     const swapped: WorkspaceItem = {
       ...item,
       detailDataUrl: item.alternateDataUrl,
@@ -176,6 +196,16 @@ export default function PipelinePage() {
       alternateKind: item.usedOriginal ? "ORIGINAL" : "PROCESSED",
     };
     setItems((prev) => prev.map((existing) => (existing.id === id ? swapped : existing)));
+    setProduct((prev) =>
+      prev
+        ? {
+            ...prev,
+            images: prev.images.map((img) =>
+              img.id === id ? { ...img, selectedVariant: newVariant } : img,
+            ),
+          }
+        : prev,
+    );
     if (swapped.detailDataUrl) {
       const square = await resizeToSquare(swapped.detailDataUrl, 800);
       setThumbnails((prev) => ({ ...prev, [id]: square }));
@@ -306,12 +336,9 @@ export default function PipelinePage() {
         </p>
       )}
 
-      {result && (
+      {result && product && (
         <div className="mt-6 space-y-6">
-          <CommerceWorkspace
-            key={result.canonicalProduct.sourceUrl}
-            initialProduct={result.canonicalProduct}
-          />
+          <CommerceWorkspace product={product} onUpdateProduct={updateProduct} />
 
           <section className="rounded-lg border border-border bg-surface shadow-subtle">
             <button

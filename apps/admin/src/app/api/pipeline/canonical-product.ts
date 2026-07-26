@@ -1,5 +1,10 @@
 import type { ExtractedProductData } from "@commerce/crawler";
-import type { CanonicalProduct, FieldSource, ProvenanceField } from "@commerce/shared";
+import type {
+  CanonicalProduct,
+  CanonicalProductImage,
+  FieldSource,
+  ProvenanceField,
+} from "@commerce/shared";
 import type { WorkspaceItem } from "./response.types";
 
 const CONFIDENCE_BY_SOURCE: Record<"json-ld" | "open-graph" | "dom", number> = {
@@ -19,6 +24,38 @@ function field<T>(
 }
 
 /**
+ * WorkspaceItem 하나(이미지 파이프라인이 만든 원본/배경제거 후보 정보)를
+ * CanonicalProductImage로 변환한다. usedOriginal/alternateKind로 "지금 detailDataUrl에
+ * 들어있는 게 원본인지 누끼 후보인지"를 역산해서 originalUrl/processedUrl 두 필드로
+ * 나눈다 — MODEL/LIFESTYLE/DETAIL/SIZE_CHART처럼 변형이 없는 타입은 usedOriginal이
+ * undefined이므로 항상 ORIGINAL로 취급한다.
+ *
+ * page.tsx의 이미지 카드에서 사용자가 원본/누끼 후보를 전환할 때도 이 함수와 같은
+ * 규칙으로 selectedVariant를 다시 계산한다(app/pipeline/page.tsx의 swapVariant 참고) —
+ * 두 곳이 다른 규칙을 쓰면 카드에 보이는 것과 실제 등록 payload가 어긋난다.
+ */
+export function toCanonicalProductImage(item: WorkspaceItem): CanonicalProductImage | null {
+  if (item.status !== "success" || !item.detailDataUrl) return null;
+
+  const usedOriginal = item.usedOriginal ?? true;
+  const originalUrl = usedOriginal
+    ? item.detailDataUrl
+    : (item.alternateKind === "ORIGINAL" ? item.alternateDataUrl : null) ?? item.detailDataUrl;
+  const processedUrl = usedOriginal
+    ? (item.alternateKind === "PROCESSED" ? (item.alternateDataUrl ?? undefined) : undefined)
+    : item.detailDataUrl;
+
+  return {
+    id: item.id,
+    originalUrl,
+    processedUrl,
+    selectedVariant: usedOriginal ? "ORIGINAL" : "PROCESSED",
+    isRepresentative: item.isRepresentative,
+    classification: item.type,
+  };
+}
+
+/**
  * universalExtract()가 이미지 추출과 같은 페이지 방문에서 뽑아온 상품 정보
  * (title/brand/price/...)와, 그 뒤 이미지 파이프라인이 실제로 처리한 이미지
  * 목록을 하나의 CanonicalProduct로 합친다. 이게 모든 플랫폼 Preview의 유일한
@@ -31,11 +68,8 @@ export function buildCanonicalProduct(
   items: WorkspaceItem[],
 ): CanonicalProduct {
   const images = items
-    .filter((item) => item.status === "success" && item.detailDataUrl)
-    .map((item) => ({
-      url: item.detailDataUrl as string,
-      isRepresentative: item.isRepresentative,
-    }));
+    .map(toCanonicalProductImage)
+    .filter((image): image is CanonicalProductImage => image !== null);
 
   return {
     sourceUrl,

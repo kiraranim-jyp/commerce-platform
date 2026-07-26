@@ -54,9 +54,19 @@ const TAB_LABELS: Record<Exclude<CommerceTab, PlatformId>, string> = {
  * 11번가 탭을 전환할 때마다 같은 데이터를 해당 플랫폼 Adapter에 통과시켜 다시
  * 렌더링한다. 플랫폼별로 데이터를 복제하지 않는다 — 새 플랫폼을 추가하려면
  * PLATFORM_ADAPTERS에 Adapter 하나만 등록하면 이 컴포넌트는 그대로 재사용된다.
+ *
+ * product는 이 컴포넌트가 소유하지 않는다(controlled) — page.tsx가 이미지 카드의
+ * 원본/누끼 후보 전환도 같은 product state에 반영해야 하므로, 소유권이 상위로
+ * 올라가 있어야 두 UI(이미지 카드 / 등록 Preview)가 항상 같은 값을 본다.
  */
-export function CommerceWorkspace({ initialProduct }: { initialProduct: CanonicalProduct }) {
-  const [product, setProduct] = useState(initialProduct);
+export function CommerceWorkspace({
+  product,
+  onUpdateProduct,
+}: {
+  product: CanonicalProduct;
+  onUpdateProduct: (updater: (prev: CanonicalProduct) => CanonicalProduct) => void;
+}) {
+  const setProduct = onUpdateProduct;
   const [tab, setTab] = useState<CommerceTab>("source");
   const [categoryMappings, setCategoryMappings] = useState(INITIAL_CATEGORY_MAPPINGS);
   const [listingStates, setListingStates] = useState(INITIAL_LISTING_STATES);

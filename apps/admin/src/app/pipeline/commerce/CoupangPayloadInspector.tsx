@@ -14,32 +14,36 @@ function payloadReplacer(_key: string, value: unknown): unknown {
 
 export function CoupangPayloadInspector({ payload }: { payload: CoupangPayload }) {
   const [showJson, setShowJson] = useState(false);
+  const item = payload.items[0];
+  const representativeImage = item?.images.find((img) => img.imageType === "REPRESENTATION");
+  const detailImages = item?.images.filter((img) => img.imageType === "DETAIL") ?? [];
+  const description = item?.contents.flatMap((c) => c.contentDetails.map((d) => d.content)).join(" ") ?? "";
 
   return (
     <div className="space-y-3">
       <Section title="상품 정보">
-        <Row label="상품명" value={payload.vendorItemName} />
-        <Row label="브랜드" value={payload.brandName || "미확인"} />
+        <Row label="상품명" value={payload.sellerProductName} />
+        <Row label="브랜드" value={payload.brand || "미확인"} />
         <Row label="카테고리" value={payload.displayCategoryPath?.join(" > ") ?? "미지정"} />
-        <Row label="옵션" value={payload.options.join(", ") || "없음"} />
-        <Row label="상세설명" value={payload.contents.join(" ") || "없음"} multiline />
+        <Row label="옵션" value={item?.searchTags.join(", ") || "없음"} />
+        <Row label="상세설명" value={description || "없음"} multiline />
       </Section>
 
       <Section title="이미지">
         <div className="flex flex-wrap gap-2">
-          {payload.images.representativeImageUrl && (
+          {representativeImage && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={payload.images.representativeImageUrl}
+              src={representativeImage.vendorPath}
               alt="대표"
               className="h-14 w-14 rounded border-2 border-primary object-cover"
             />
           )}
-          {payload.images.additionalImageUrls.map((src) => (
+          {detailImages.map((img) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              key={src}
-              src={src}
+              key={img.imageOrder}
+              src={img.vendorPath}
               alt=""
               className="h-14 w-14 rounded border border-border object-cover"
             />
@@ -50,18 +54,18 @@ export function CoupangPayloadInspector({ payload }: { payload: CoupangPayload }
       <Section title="가격 / 재고">
         <Row
           label="판매가"
-          value={`${formatKrw(payload.salePrice)}${payload.priceIsEstimate ? " (환율 추정)" : ""}`}
+          value={`${formatKrw(item?.salePrice ?? 0)}${payload.priceIsEstimate ? " (환율 추정)" : ""}`}
         />
-        <Row label="재고" value={`${payload.stockQuantity}개`} />
+        <Row label="재고" value={`${item?.maximumBuyCount ?? 0}개`} />
       </Section>
 
       <Section title="배송 / 반품">
-        <Row label="배송방법" value={payload.delivery.deliveryMethod} />
+        <Row label="배송방법" value={payload.deliveryMethod} />
         <Row
           label="배송비"
-          value={payload.delivery.shippingFee > 0 ? formatKrw(payload.delivery.shippingFee) : "무료배송"}
+          value={payload.deliveryChargeType === "FREE" ? "무료배송" : formatKrw(payload.deliveryCharge)}
         />
-        <Row label="원산지" value={payload.delivery.countryOfOrigin || "미입력"} />
+        <Row label="원산지" value={payload.countryOfOrigin || "미입력"} />
         <Row label="반품정책" value={payload.returnPolicy || "미입력"} />
       </Section>
 

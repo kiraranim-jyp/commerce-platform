@@ -37,8 +37,8 @@ function isCoupangPayload(payload: unknown): payload is CoupangPayload {
   return (
     typeof payload === "object" &&
     payload !== null &&
-    "vendorItemName" in payload &&
-    "delivery" in payload
+    "sellerProductName" in payload &&
+    "items" in payload
   );
 }
 
