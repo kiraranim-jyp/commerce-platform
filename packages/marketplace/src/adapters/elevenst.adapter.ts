@@ -3,6 +3,7 @@ import { UNRESOLVED_CATEGORY, type CategorySelection } from "@commerce/category"
 import { convertToKrw } from "@commerce/pricing";
 import { categoryFieldRule } from "../category-field";
 import { effectiveDescription, effectiveTitle } from "../content-field";
+import { imageFormatFieldRule } from "../image-field";
 import { runValidation, scoreValidations, type FieldRule } from "../validation";
 import type { ListingModel, PlatformAdapter } from "../types";
 
@@ -32,6 +33,7 @@ export const elevenstAdapter: PlatformAdapter = {
         onFail: "ERROR",
         message: "대표 이미지가 지정되지 않았습니다.",
       },
+      imageFormatFieldRule(product),
       {
         field: "title",
         label: "상품명",

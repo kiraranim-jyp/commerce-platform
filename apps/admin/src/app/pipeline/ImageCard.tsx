@@ -44,6 +44,7 @@ export function ImageCard({
         ? thumbnailDataUrl
         : item.detailDataUrl;
   const status = retrying ? "processing" : item.status;
+  const originalFormat = (item.fileName.split(".").pop() ?? "").toUpperCase();
 
   return (
     <div
@@ -89,12 +90,18 @@ export function ImageCard({
         </p>
         <p className="text-text-secondary">Type: {item.type}</p>
         <p className="text-text-secondary">
-          Original: {formatDimensions(item.originalWidth, item.originalHeight)}
+          Original: {formatDimensions(item.originalWidth, item.originalHeight)} ({originalFormat})
         </p>
         <p className="text-text-secondary">
           Output: {formatDimensions(item.outputWidth, item.outputHeight)}
+          {item.status === "success" ? " (JPEG)" : ""}
         </p>
         <p className="text-text-secondary">File: {formatBytes(item.fileSize)}</p>
+        {item.status === "success" && (
+          <p className={item.isJPEG ? "text-success" : "text-error"}>
+            {item.isJPEG ? "✓ JPG 표준화 완료" : "✕ JPG 검증 실패"}
+          </p>
+        )}
         {item.quality && (
           <p className="text-text-secondary">
             Quality {item.quality.overall}/100 · {item.usedOriginal ? "원본 사용" : "누끼"}

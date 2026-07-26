@@ -32,12 +32,9 @@ function decodeDataUrl(dataUrl: string): { buffer: Buffer; mime: string } | null
   return { buffer: Buffer.from(match[2], "base64"), mime: match[1] };
 }
 
-function pickPreferredFile(
-  files: ProcessedImageFile[],
-  type: ImageType,
-): ProcessedImageFile | undefined {
-  const preferredExt = type === "PRODUCT" ? "png" : "jpg";
-  return files.find((f) => f.format === preferredExt) ?? files[0];
+/** 최종 산출물은 항상 JPG로 통일한다 — WEBP 등 보조 산출물이 있어도 대표로 쓰지 않는다. */
+function pickPreferredFile(files: ProcessedImageFile[]): ProcessedImageFile | undefined {
+  return files.find((f) => f.format === "jpg") ?? files[0];
 }
 
 function toDataUrl(filePath: string, mime: string): string | null {
@@ -95,8 +92,7 @@ export async function POST(request: Request) {
             { preEnhance: false },
           );
 
-    const preferred =
-      processed.status === "success" ? pickPreferredFile(processed.files, type) : undefined;
+    const preferred = processed.status === "success" ? pickPreferredFile(processed.files) : undefined;
     const detailDataUrl = preferred
       ? toDataUrl(preferred.file, MIME_BY_FORMAT[preferred.format] ?? "image/jpeg")
       : null;
@@ -121,6 +117,7 @@ export async function POST(request: Request) {
       isRepresentative: false,
       quality: processed.quality,
       usedOriginal: processed.usedOriginal,
+      isJPEG: processed.isJPEG,
       processingTimeSec: Math.round(processed.processingTimeMs / 100) / 10,
     };
 

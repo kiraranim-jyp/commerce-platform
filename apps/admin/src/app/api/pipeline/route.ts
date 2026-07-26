@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import { universalExtract } from "@commerce/crawler";
-import type { ImageType } from "@commerce/shared";
 import {
   CompositeClassifierProvider,
   GeminiClassifierProvider,
@@ -49,13 +48,9 @@ function readAsDataUrl(filePath: string, fileName: string): string | null {
   return `data:${mime};base64,${buffer.toString("base64")}`;
 }
 
-/** PRODUCT는 누끼 결과(투명배경)를 보여주기 위해 PNG를, 그 외는 JPG를 우선한다. */
-function pickPreferredFile(
-  files: ProcessedImageFile[],
-  type: ImageType,
-): ProcessedImageFile | undefined {
-  const preferredExt = type === "PRODUCT" ? "png" : "jpg";
-  return files.find((f) => f.format === preferredExt) ?? files[0];
+/** 최종 산출물은 항상 JPG로 통일한다 — WEBP 등 보조 산출물이 있어도 대표로 쓰지 않는다. */
+function pickPreferredFile(files: ProcessedImageFile[]): ProcessedImageFile | undefined {
+  return files.find((f) => f.format === "jpg") ?? files[0];
 }
 
 export async function POST(request: Request) {
@@ -156,9 +151,7 @@ export async function POST(request: Request) {
             }
 
             const preferred =
-              processed.status === "success"
-                ? pickPreferredFile(processed.files, classified.type)
-                : undefined;
+              processed.status === "success" ? pickPreferredFile(processed.files) : undefined;
             const detailDataUrl = preferred
               ? readAsDataUrl(preferred.file, preferred.fileName)
               : null;
@@ -182,6 +175,7 @@ export async function POST(request: Request) {
               ),
               quality: processed.quality,
               usedOriginal: processed.usedOriginal,
+              isJPEG: processed.isJPEG,
               processingTimeSec: Math.round(processed.processingTimeMs / 100) / 10,
             };
           });

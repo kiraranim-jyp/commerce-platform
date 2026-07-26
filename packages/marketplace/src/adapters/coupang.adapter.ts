@@ -3,6 +3,7 @@ import { UNRESOLVED_CATEGORY, type CategorySelection } from "@commerce/category"
 import { convertToKrw } from "@commerce/pricing";
 import { categoryFieldRule } from "../category-field";
 import { effectiveDescription, effectiveTitle } from "../content-field";
+import { imageFormatFieldRule } from "../image-field";
 import { runValidation, scoreValidations, type FieldRule } from "../validation";
 import type { ListingModel, PlatformAdapter } from "../types";
 
@@ -44,6 +45,7 @@ export const coupangAdapter: PlatformAdapter = {
         onFail: "ERROR",
         message: "쿠팡은 브랜드 미기재 시 등록이 반려될 수 있습니다.",
       },
+      imageFormatFieldRule(product),
       categoryFieldRule(categorySelection),
       {
         field: "price",

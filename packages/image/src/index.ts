@@ -7,6 +7,7 @@ export * from "./config/marketplace-policy";
 // utils
 export * from "./utils/hash.util";
 export * from "./utils/storage-paths.util";
+export * from "./utils/jpeg.util";
 
 // providers
 export * from "./providers/classifier/gemini.provider";

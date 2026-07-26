@@ -19,6 +19,34 @@ function extensionOf(dataUrl: string): string {
   return format === "jpeg" ? ".jpg" : `.${format}`;
 }
 
+function isJpegDataUrl(dataUrl: string): boolean {
+  return dataUrl.startsWith("data:image/jpeg");
+}
+
+/** 원본 비율/크기를 그대로 유지한 채 흰 배경에 합성해서 JPEG로 다시 인코딩한다
+ * (투명 PNG/WEBP 원본을 export할 때도 최종 파일은 항상 JPG로 통일한다). */
+function toJpegDataUrl(dataUrl: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("canvas context를 생성하지 못했습니다."));
+        return;
+      }
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL("image/jpeg", 0.9));
+    };
+    img.onerror = () => reject(new Error("이미지를 불러오지 못했습니다."));
+    img.src = dataUrl;
+  });
+}
+
 /** 원본 비율을 유지한 채 흰 배경 위에 중앙 정렬해 size x size 정사각형으로 만든다 (잘림 없음). */
 export function resizeToSquare(dataUrl: string, size: number): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -81,11 +109,12 @@ export async function downloadWorkspaceZip(
 
   for (const item of notExcluded) {
     if (!item.originalDataUrl) continue;
-    originalFolder?.file(
-      `${item.id}${extensionOf(item.originalDataUrl)}`,
-      base64Of(item.originalDataUrl),
-      { base64: true },
-    );
+    // original/ 폴더도 최종 파일은 항상 JPG로 통일한다 — 다운로드 당시 원본이
+    // WEBP/PNG였더라도 export 시점에 흰 배경 합성 후 JPEG로 다시 인코딩한다.
+    const jpegDataUrl = isJpegDataUrl(item.originalDataUrl)
+      ? item.originalDataUrl
+      : await toJpegDataUrl(item.originalDataUrl);
+    originalFolder?.file(`${item.id}.jpg`, base64Of(jpegDataUrl), { base64: true });
   }
 
   zip.file("metadata.json", JSON.stringify(metadata, null, 2));

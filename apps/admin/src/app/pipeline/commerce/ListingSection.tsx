@@ -1,6 +1,13 @@
 "use client";
 
-import type { ListingResult, ListingStatus, ReadinessReport, SmartStorePayload } from "@commerce/listing";
+import type {
+  CoupangPayload,
+  ListingResult,
+  ListingStatus,
+  ReadinessReport,
+  SmartStorePayload,
+} from "@commerce/listing";
+import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
 import { PayloadInspector } from "./PayloadInspector";
 import { ReadinessScorePanel } from "./ReadinessScorePanel";
 
@@ -24,6 +31,15 @@ function payloadReplacer(_key: string, value: unknown): unknown {
 
 function isSmartStorePayload(payload: unknown): payload is SmartStorePayload {
   return typeof payload === "object" && payload !== null && "product" in payload && "shipping" in payload;
+}
+
+function isCoupangPayload(payload: unknown): payload is CoupangPayload {
+  return (
+    typeof payload === "object" &&
+    payload !== null &&
+    "vendorItemName" in payload &&
+    "delivery" in payload
+  );
 }
 
 export function ListingSection({
@@ -123,13 +139,15 @@ export function ListingSection({
         <p className="font-medium text-success">✓ 등록 완료</p>
         {result?.mode === "DRY_RUN" && (
           <p className="mt-1 text-xs text-warning">
-            DRY_RUN 모드 — 실제로 등록되지 않았습니다. 등록될 데이터만 검증하고 생성했습니다.
+            미리보기 모드 — 실제로 등록되지 않았습니다. 등록될 데이터만 검증하고 생성했습니다.
           </p>
         )}
         {result?.payload != null && (
           <div className="mt-3">
             {isSmartStorePayload(result.payload) ? (
               <PayloadInspector payload={result.payload} />
+            ) : isCoupangPayload(result.payload) ? (
+              <CoupangPayloadInspector payload={result.payload} />
             ) : (
               <pre className="max-h-48 overflow-auto rounded-md bg-surface p-2 text-[11px] text-text-secondary">
                 {JSON.stringify(result.payload, payloadReplacer, 2)}

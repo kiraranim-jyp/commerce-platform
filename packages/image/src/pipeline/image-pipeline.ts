@@ -13,6 +13,7 @@ import type { QualityScore } from "../services/quality-score.service";
 import { loadImagePolicy } from "../config/marketplace-policy";
 import { standardizeImage, standardizeKeepOriginal } from "../services/standardizer.service";
 import type { ThumbnailSelector } from "../services/thumbnail.service";
+import { validateJpegFile } from "../utils/jpeg.util";
 import type {
   BackgroundRemoverProvider,
   ImageClassifierProvider,
@@ -56,8 +57,28 @@ export interface ProcessedImageResult {
   quality?: QualityScore;
   /** PRODUCT에서 품질이 기준 미달(혹은 배경제거 자체 실패)이라 원본을 그대로 썼는지 여부. */
   usedOriginal?: boolean;
+  /** 최종 산출 JPG가 실제로 디코딩 가능한 JPEG인지(확장자/MIME/디코딩 전부 확인) —
+   * 플랫폼 등록 전 공통 검증(isJPEG === true)의 근거가 된다. status가 "success"면 항상 true다. */
+  isJPEG?: boolean;
   /** 이미지 1장 처리에 걸린 시간(ms) — Workspace UI 카드에 처리 시간으로 표시된다. */
   processingTimeMs: number;
+}
+
+/** optimize() 결과 중 최종 JPG 파일을 찾아 실제로 디코딩 가능한 JPEG인지 검증한다.
+ * 실패하면 이미지 1장 전체를 FAILED로 취급한다 — 이름만 .jpg인 손상 파일이
+ * 플랫폼 등록 payload까지 조용히 흘러가는 것을 막는다. */
+async function validateFinalJpeg(
+  files: ProcessedImageFile[],
+): Promise<{ ok: true } | { ok: false; failureReason: string }> {
+  const jpgFile = files.find((f) => f.format === "jpg");
+  if (!jpgFile) {
+    return { ok: false, failureReason: "JPG 산출물을 찾을 수 없습니다." };
+  }
+  const validation = await validateJpegFile(jpgFile.file);
+  if (!validation.isJPEG) {
+    return { ok: false, failureReason: validation.failureReason ?? "JPEG 검증에 실패했습니다." };
+  }
+  return { ok: true };
 }
 
 export interface PipelineStats {
@@ -201,6 +222,24 @@ export async function processSingleProductImage(
     console.log(`[pipeline] PRODUCT ${baseName}: optimize 완료`);
     emit(`${baseName}: 압축 완료`);
 
+    const jpegCheck = await validateFinalJpeg(files);
+    if (!jpegCheck.ok) {
+      console.error(`[pipeline] PRODUCT ${baseName}: JPEG 검증 실패 - ${jpegCheck.failureReason}`);
+      emit(`${baseName}: JPEG 검증 실패 - ${jpegCheck.failureReason}`, {
+        errorMessage: jpegCheck.failureReason,
+      });
+      return {
+        baseName,
+        type: "PRODUCT",
+        status: "failed",
+        failureReason: jpegCheck.failureReason,
+        original,
+        files: [],
+        isJPEG: false,
+        processingTimeMs: Date.now() - itemStartedAt,
+      };
+    }
+
     if (global.gc) {
       global.gc();
     }
@@ -214,6 +253,7 @@ export async function processSingleProductImage(
       files,
       quality,
       usedOriginal,
+      isJPEG: true,
       processingTimeMs: Date.now() - itemStartedAt,
     };
   } catch (error) {
@@ -284,6 +324,24 @@ export async function processSingleStandardImage(
     }
     emit(`${baseName}: 압축 완료`);
 
+    const jpegCheck = await validateFinalJpeg(files);
+    if (!jpegCheck.ok) {
+      console.error(`[pipeline] ${type} ${baseName}: JPEG 검증 실패 - ${jpegCheck.failureReason}`);
+      emit(`${baseName}: JPEG 검증 실패 - ${jpegCheck.failureReason}`, {
+        errorMessage: jpegCheck.failureReason,
+      });
+      return {
+        baseName,
+        type,
+        status: "failed",
+        failureReason: jpegCheck.failureReason,
+        original,
+        files: [],
+        isJPEG: false,
+        processingTimeMs: Date.now() - itemStartedAt,
+      };
+    }
+
     return {
       baseName,
       type,
@@ -291,6 +349,7 @@ export async function processSingleStandardImage(
       original,
       output: { width: standardized[0]?.width ?? 0, height: standardized[0]?.height ?? 0 },
       files,
+      isJPEG: true,
       processingTimeMs: Date.now() - itemStartedAt,
     };
   } catch (error) {

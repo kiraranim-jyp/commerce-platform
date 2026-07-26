@@ -190,13 +190,18 @@ export default function PipelinePage() {
       </header>
 
       {!started ? (
-        <section className="mx-auto mt-20 max-w-xl text-center">
-          <h1 className="text-3xl font-semibold tracking-tight text-text-primary">
-            상품 등록 준비
+        <section className="mx-auto mt-16 max-w-xl text-center">
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+            AI Commerce Copilot
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-text-primary">
+            해외 상품을 판매 가능한 상품으로
+            <br />
+            바꾸는 가장 빠른 방법
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-text-secondary">
-            해외 상품 URL을 입력하세요. AI가 상품을 분석하고 스토어 등록에 필요한 정보를
-            준비합니다.
+            URL 하나를 입력하면 CartPilot AI가 상품 정보, 이미지, 카테고리, 콘텐츠를 분석하고
+            국내 판매 등록을 준비합니다.
           </p>
 
           <div className="mt-8 flex flex-col gap-2 sm:flex-row">
@@ -217,14 +222,51 @@ export default function PipelinePage() {
               상품 분석 시작
             </button>
           </div>
+
+          <div className="mt-12 border-t border-border pt-8">
+            <p className="text-xs font-medium text-text-tertiary">
+              CartPilot이 자동으로 처리합니다
+            </p>
+            <ul className="mt-3 grid grid-cols-1 gap-2 text-left text-sm text-text-secondary sm:grid-cols-2">
+              {[
+                "상품 정보 추출",
+                "이미지 최적화 (JPG 표준화)",
+                "상품 카테고리 추천",
+                "AI 상품명/설명 생성",
+                "국내 커머스 등록 준비",
+              ].map((feature) => (
+                <li key={feature} className="flex items-center gap-2">
+                  <span className="text-success">✓</span>
+                  {feature}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="mt-8 border-t border-border pt-6">
+            <p className="text-xs font-medium text-text-tertiary">지원 플랫폼</p>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              {["스마트스토어", "쿠팡", "11번가"].map((platform) => (
+                <span
+                  key={platform}
+                  className="rounded-full bg-surface px-3 py-1 text-xs font-medium text-text-secondary shadow-subtle"
+                >
+                  {platform}
+                </span>
+              ))}
+            </div>
+          </div>
         </section>
       ) : (
         <>
           {loading && (
-            <p className="mt-6 text-sm text-text-secondary">
-              AI가 상품을 분석하고 있습니다 — 이미지 수집, 상품 정보 추출, 배경 제거까지 자동으로
-              진행됩니다.
-            </p>
+            <div className="mt-6">
+              <p className="text-sm text-text-secondary">
+                AI가 상품을 분석하고 있습니다 — 이미지 수집, 상품 정보 추출, 배경 제거까지
+                자동으로 진행됩니다.
+              </p>
+              <AnalysisStageIndicator percent={currentProgress?.percent ?? 0} />
+            </div>
           )}
 
           {(loading || progressLog.length > 0) && (
@@ -308,5 +350,53 @@ export default function PipelinePage() {
 
       {previewItem && <PreviewModal item={previewItem} onClose={() => setPreviewId(null)} />}
     </main>
+  );
+}
+
+/**
+ * StageStepper(commerce/StageStepper.tsx)의 5단계 중 앞의 두 단계(상품 분석/이미지
+ * 준비)만 보여주는 축소판 — 이미지 파이프라인이 끝나기 전(CommerceWorkspace가
+ * 마운트되기 전)에는 나머지 세 단계(카테고리/AI 콘텐츠/스토어 등록)를 판단할
+ * 데이터가 아직 없다. percent<=7(URL 분석+이미지 URL 추출)까지는 1단계가
+ * 진행 중이고, 그 이후는 이미지 다운로드/분류/가공 단계이므로 2단계가 진행 중이다
+ * (packages/image/src/pipeline/progress.ts의 STAGE_WEIGHTS와 맞춘 값).
+ */
+function AnalysisStageIndicator({ percent }: { percent: number }) {
+  const stage1 = percent > 7 ? "done" : "active";
+  const stage2 = percent >= 100 ? "done" : percent > 7 ? "active" : "locked";
+
+  return (
+    <div className="mt-3 flex items-center gap-2 text-xs">
+      <StagePill label="① 상품 분석" state={stage1} />
+      <span className="text-text-tertiary" aria-hidden>
+        →
+      </span>
+      <StagePill label="② 이미지 준비" state={stage2} />
+    </div>
+  );
+}
+
+function StagePill({
+  label,
+  state,
+}: {
+  label: string;
+  state: "locked" | "active" | "done";
+}) {
+  const icon = state === "done" ? "✓" : state === "active" ? "●" : "○";
+  const className =
+    state === "done"
+      ? "border-success/30 bg-success-soft text-success"
+      : state === "active"
+        ? "border-warning/30 bg-warning-soft text-warning"
+        : "border-border text-text-tertiary";
+
+  return (
+    <span
+      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-medium ${className}`}
+    >
+      <span aria-hidden>{icon}</span>
+      {label}
+    </span>
   );
 }

@@ -78,24 +78,13 @@ async function standardizeProduct(
     workingPath = tempUpscaledPath;
   }
 
-  console.log(`[standardizer] ${baseName}: transparent 캔버스 합성 시작`);
-  const transparentOutput = await placeOnCanvasWithFillRatio(
-    workingPath,
-    outputDir,
-    baseName,
-    policy,
-    "transparent",
-  );
-  console.log(`[standardizer] ${baseName}: transparent 완료, white 캔버스 합성 시작`);
-  const whiteOutput = await placeOnCanvasWithFillRatio(
-    workingPath,
-    outputDir,
-    baseName,
-    policy,
-    "white",
-  );
+  // 모든 최종 산출물은 JPG로 통일한다(원본 확장자와 무관) — 배경제거로 얻은
+  // 투명 배경은 여기서 흰 배경에 합성한 뒤 JPG로만 저장하고, 예전처럼 투명 PNG를
+  // 별도 산출물로 남기지 않는다. 등록 payload/ZIP 어디에도 PNG가 섞이지 않는다.
+  console.log(`[standardizer] ${baseName}: white 캔버스 합성 시작`);
+  const whiteOutput = await placeOnCanvasWithFillRatio(workingPath, outputDir, baseName, policy);
   console.log(`[standardizer] ${baseName}: white 완료`);
-  const outputs = [transparentOutput, whiteOutput];
+  const outputs = [whiteOutput];
 
   if (tempUpscaledPath && fs.existsSync(tempUpscaledPath)) {
     fs.rmSync(tempUpscaledPath);
@@ -115,7 +104,6 @@ async function placeOnCanvasWithFillRatio(
   outputDir: string,
   baseName: string,
   policy: MarketplaceImagePolicy,
-  mode: "white" | "transparent",
 ): Promise<StandardizedImage> {
   const metadata = await sharp(inputPath).metadata();
   const w0 = metadata.width ?? policy.width;
@@ -134,28 +122,19 @@ async function placeOnCanvasWithFillRatio(
     .resize(targetWidth, targetHeight, { fit: "fill" })
     .toBuffer({ resolveWithObject: true });
 
-  const background =
-    mode === "transparent" ? { r: 0, g: 0, b: 0, alpha: 0 } : { r: 255, g: 255, b: 255, alpha: 1 };
-
-  // 상하좌우 여백을 균등(중앙 정렬)하게 배치한다.
+  // 상하좌우 여백을 균등(중앙 정렬)하게 배치한다. 배경은 항상 흰색 —
+  // 최종 산출물은 JPG로 통일하므로 투명 캔버스를 만들 필요가 없다.
   const left = Math.round((policy.width - resized.info.width) / 2);
   const top = Math.round((policy.height - resized.info.height) / 2);
 
   const canvas = sharp({
-    create: { width: policy.width, height: policy.height, channels: 4, background },
-  }).composite([{ input: resized.data, left, top }]);
-
-  if (mode === "transparent") {
-    const file = path.join(outputDir, `${baseName}.png`);
-    await canvas.png().toFile(file);
-    return {
-      fileName: `${baseName}.png`,
-      file,
-      format: "png",
+    create: {
       width: policy.width,
       height: policy.height,
-    };
-  }
+      channels: 4,
+      background: { r: 255, g: 255, b: 255, alpha: 1 },
+    },
+  }).composite([{ input: resized.data, left, top }]);
 
   const file = path.join(outputDir, `${baseName}.jpg`);
   await canvas

@@ -8,3 +8,5 @@ export * from "./smartstore/validate-listing";
 export * from "./smartstore/build-payload";
 export * from "./executors/smartstore.executor";
 export * from "./executors/not-implemented.executor";
+export * from "./coupang/build-payload";
+export * from "./executors/coupang.executor";

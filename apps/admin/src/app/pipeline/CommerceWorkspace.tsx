@@ -20,8 +20,8 @@ import { PLATFORM_ADAPTERS, PLATFORM_ORDER } from "@commerce/marketplace";
 import { AIContentPanel } from "./commerce/AIContentPanel";
 import { ListingConfirmationModal } from "./commerce/ListingConfirmationModal";
 import { PlatformPreview } from "./commerce/PlatformPreview";
-import { ReadinessChecklist } from "./commerce/ReadinessChecklist";
 import { RegistrationHistoryPanel } from "./commerce/RegistrationHistoryPanel";
+import { StageStepper } from "./commerce/StageStepper";
 import { SourceDataView } from "./commerce/SourceDataView";
 
 type CommerceTab = "source" | "content" | PlatformId;
@@ -232,11 +232,7 @@ export function CommerceWorkspace({ initialProduct }: { initialProduct: Canonica
 
   return (
     <section className="mt-8 space-y-4">
-      <ReadinessChecklist
-        product={product}
-        categoryMappings={categoryMappings}
-        onNavigate={setTab}
-      />
+      <StageStepper product={product} categoryMappings={categoryMappings} onNavigate={setTab} />
 
       <div className="flex gap-1 overflow-x-auto border-b border-border">
         <TabButton active={tab === "source"} onClick={() => setTab("source")}>

@@ -25,6 +25,8 @@ export interface WorkspaceItem {
   quality?: QualityScore;
   /** PRODUCT에서 품질 미달(또는 배경제거 실패)로 원본을 그대로 썼는지 여부. */
   usedOriginal?: boolean;
+  /** 최종 산출물(detailDataUrl)이 실제로 디코딩 가능한 JPEG인지 — status가 "success"면 항상 true다. */
+  isJPEG?: boolean;
   /** 이 이미지 1장 처리에 걸린 시간(초). */
   processingTimeSec: number;
 }

@@ -18,7 +18,7 @@ export function ValidationPanel({
   return (
     <section className="rounded-lg border border-border p-4 text-sm">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-base font-medium">Validation</h3>
+        <h3 className="text-base font-medium">등록 검증</h3>
         <span className="text-sm font-semibold">
           등록 가능성: <span className={scoreClassName}>{score}%</span>
         </span>
