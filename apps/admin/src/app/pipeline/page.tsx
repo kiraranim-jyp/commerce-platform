@@ -157,6 +157,31 @@ export default function PipelinePage() {
     });
   }
 
+  /** PRODUCT는 원본/배경제거 후보 두 변형을 함께 갖고 있다 — detailDataUrl과
+   * alternateDataUrl을 맞바꿔서 이 카드가 어느 쪽을 대표로 쓸지 사용자가 고를 수 있게 한다. */
+  async function swapVariant(id: string) {
+    const item = items.find((existing) => existing.id === id);
+    if (!item?.alternateDataUrl) return;
+    const swapped: WorkspaceItem = {
+      ...item,
+      detailDataUrl: item.alternateDataUrl,
+      outputWidth: item.alternateWidth,
+      outputHeight: item.alternateHeight,
+      fileSize: item.alternateBytes,
+      usedOriginal: item.alternateKind === "ORIGINAL",
+      alternateDataUrl: item.detailDataUrl,
+      alternateWidth: item.outputWidth,
+      alternateHeight: item.outputHeight,
+      alternateBytes: item.fileSize,
+      alternateKind: item.usedOriginal ? "ORIGINAL" : "PROCESSED",
+    };
+    setItems((prev) => prev.map((existing) => (existing.id === id ? swapped : existing)));
+    if (swapped.detailDataUrl) {
+      const square = await resizeToSquare(swapped.detailDataUrl, 800);
+      setThumbnails((prev) => ({ ...prev, [id]: square }));
+    }
+  }
+
   const counts: Record<TabKey, number> = {
     original: items.length,
     thumbnail: items.length,
@@ -321,6 +346,7 @@ export default function PipelinePage() {
                       onRetry={() => retryItem(item)}
                       onToggleRepresentative={() => setRepresentativeId(item.id)}
                       onToggleExclude={() => toggleExclude(item.id)}
+                      onSwapVariant={item.alternateDataUrl ? () => swapVariant(item.id) : undefined}
                     />
                   ))}
                 </div>

@@ -10,6 +10,7 @@ export interface MetadataInput {
   productImages: string[];
   detailImages: string[];
   modelImages: string[];
+  lifestyleImages: string[];
   sizeChart: string[];
   classifications: ClassifiedImage[];
 }
@@ -18,11 +19,17 @@ export function buildProductMetadata(input: MetadataInput): ProductMetadata {
   return {
     title: input.title,
     sourceUrl: input.sourceUrl,
-    images: [...input.productImages, ...input.detailImages, ...input.modelImages],
+    images: [
+      ...input.productImages,
+      ...input.detailImages,
+      ...input.modelImages,
+      ...input.lifestyleImages,
+    ],
     thumbnail: input.thumbnail,
     productImages: input.productImages,
     detailImages: input.detailImages,
     modelImages: input.modelImages,
+    lifestyleImages: input.lifestyleImages,
     sizeChart: input.sizeChart,
     classifications: input.classifications,
   };

@@ -7,8 +7,9 @@ import type { ClassificationResult, ImageClassifierProvider } from "../../types/
 const PROMPT = `너는 이커머스 상품 이미지를 분류하는 전문가다. 아래 카테고리 중 정확히 하나를 선택하고,
 반드시 JSON만 출력한다 (설명 문장 금지).
 
-- MODEL: 사람(모델)이 착용/사용하는 사진
+- MODEL: 사람(모델)이 착용/사용하는 스튜디오 사진 (배경이 단순함)
 - PRODUCT: 제품 단독 컷 (모델 없음)
+- LIFESTYLE: 사람이 실제 생활/야외 환경에서 제품을 착용/사용하는 연출컷 (배경이 실제 장소)
 - DETAIL: 제품의 부분/재질/디테일 확대컷
 - SIZE_CHART: 사이즈표, 치수 안내 이미지
 - PACKAGE: 포장, 박스, 구성품 사진

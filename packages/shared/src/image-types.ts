@@ -1,6 +1,7 @@
 export const IMAGE_TYPES = [
   "MODEL",
   "PRODUCT",
+  "LIFESTYLE",
   "DETAIL",
   "SIZE_CHART",
   "PACKAGE",
@@ -32,6 +33,7 @@ export interface ProductMetadata {
   productImages: string[];
   detailImages: string[];
   modelImages: string[];
+  lifestyleImages: string[];
   sizeChart: string[];
   /** 사람 검수 모드용: 이미지별 AI 분류 결과와 신뢰도. 관리자 화면에서 재분류/제외에 사용한다. */
   classifications: ClassifiedImage[];

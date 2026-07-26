@@ -26,7 +26,7 @@ export const maxDuration = 300;
  * PACKAGE/LOGO/BANNER/UNKNOWN은 분류만 되고 가공 단계를 거치지 않으므로, 이걸
  * "처리 결과를 찾을 수 없음(Failed)"으로 보여주면 실제 실패와 구분이 안 돼 혼란스럽다
  * — 예전 UI에서도 이 타입들은 그냥 조용히 갤러리에서 빠졌었다, 그 동작을 그대로 유지한다. */
-const PROCESSED_TYPES = new Set(["PRODUCT", "MODEL", "DETAIL", "SIZE_CHART"]);
+const PROCESSED_TYPES = new Set(["PRODUCT", "MODEL", "LIFESTYLE", "DETAIL", "SIZE_CHART"]);
 
 const MIME_BY_EXT: Record<string, string> = {
   jpg: "image/jpeg",
@@ -51,6 +51,29 @@ function readAsDataUrl(filePath: string, fileName: string): string | null {
 /** 최종 산출물은 항상 JPG로 통일한다 — WEBP 등 보조 산출물이 있어도 대표로 쓰지 않는다. */
 function pickPreferredFile(files: ProcessedImageFile[]): ProcessedImageFile | undefined {
   return files.find((f) => f.format === "jpg") ?? files[0];
+}
+
+/** PRODUCT는 원본/누끼 후보 두 변형을 모두 만든다 — detailDataUrl이 기본으로 선택되지
+ * 않은 반대쪽 변형을 "대안"으로 노출해서, 사용자가 대표/추가 이미지에 원본 또는
+ * 누끼 후보 중 고를 수 있게 한다. */
+function resolveAlternate(processed: ProcessedImageResult): {
+  dataUrl: string | null;
+  width?: number;
+  height?: number;
+  bytes?: number;
+  kind: "ORIGINAL" | "PROCESSED";
+} | null {
+  const alt = processed.usedOriginal ? processed.processedVariant : processed.originalVariant;
+  if (!alt) return null;
+  const preferred = pickPreferredFile(alt.files);
+  if (!preferred) return null;
+  return {
+    dataUrl: readAsDataUrl(preferred.file, preferred.fileName),
+    width: alt.width,
+    height: alt.height,
+    bytes: preferred.bytes,
+    kind: processed.usedOriginal ? "PROCESSED" : "ORIGINAL",
+  };
 }
 
 export async function POST(request: Request) {
@@ -155,6 +178,7 @@ export async function POST(request: Request) {
             const detailDataUrl = preferred
               ? readAsDataUrl(preferred.file, preferred.fileName)
               : null;
+            const alternate = processed.status === "success" ? resolveAlternate(processed) : null;
 
             return {
               id: baseName,
@@ -176,6 +200,11 @@ export async function POST(request: Request) {
               quality: processed.quality,
               usedOriginal: processed.usedOriginal,
               isJPEG: processed.isJPEG,
+              alternateDataUrl: alternate?.dataUrl,
+              alternateWidth: alternate?.width,
+              alternateHeight: alternate?.height,
+              alternateBytes: alternate?.bytes,
+              alternateKind: alternate?.kind,
               processingTimeSec: Math.round(processed.processingTimeMs / 100) / 10,
             };
           });

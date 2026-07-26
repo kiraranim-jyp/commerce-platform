@@ -33,6 +33,7 @@ const STAGE_WEIGHTS = {
   classify: 12,
   product: 30,
   model: 12,
+  lifestyle: 6,
   detail: 10,
   sizeChart: 5,
   thumbnail: 5,

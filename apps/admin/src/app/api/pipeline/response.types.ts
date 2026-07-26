@@ -27,6 +27,14 @@ export interface WorkspaceItem {
   usedOriginal?: boolean;
   /** 최종 산출물(detailDataUrl)이 실제로 디코딩 가능한 JPEG인지 — status가 "success"면 항상 true다. */
   isJPEG?: boolean;
+  /** PRODUCT 전용: detailDataUrl과 반대되는 변형(원본↔배경제거 후보) — 둘 다 만들어졌을
+   * 때만 있다. 사용자가 대표/추가 이미지에 원본 또는 누끼 후보 중 선택할 수 있게 한다. */
+  alternateDataUrl?: string | null;
+  alternateWidth?: number;
+  alternateHeight?: number;
+  alternateBytes?: number;
+  /** alternateDataUrl이 "누끼 처리 후보"인지("PROCESSED") 아니면 "원본"인지("ORIGINAL"). */
+  alternateKind?: "ORIGINAL" | "PROCESSED";
   /** 이 이미지 1장 처리에 걸린 시간(초). */
   processingTimeSec: number;
 }

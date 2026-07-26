@@ -10,6 +10,7 @@ import {
   processSingleStandardImage,
   storagePaths,
   type ProcessedImageFile,
+  type ProcessedImageResult,
 } from "@commerce/image";
 import type { WorkspaceItem } from "../response.types";
 
@@ -48,6 +49,28 @@ const MIME_BY_FORMAT: Record<string, string> = {
   webp: "image/webp",
 };
 
+/** PRODUCT는 원본/누끼 후보 두 변형을 모두 만든다 — detailDataUrl이 기본으로 선택되지
+ * 않은 반대쪽 변형을 "대안"으로 노출한다. */
+function resolveAlternate(processed: ProcessedImageResult): {
+  dataUrl: string | null;
+  width?: number;
+  height?: number;
+  bytes?: number;
+  kind: "ORIGINAL" | "PROCESSED";
+} | null {
+  const alt = processed.usedOriginal ? processed.processedVariant : processed.originalVariant;
+  if (!alt) return null;
+  const preferred = pickPreferredFile(alt.files);
+  if (!preferred) return null;
+  return {
+    dataUrl: toDataUrl(preferred.file, MIME_BY_FORMAT[preferred.format] ?? "image/jpeg"),
+    width: alt.width,
+    height: alt.height,
+    bytes: preferred.bytes,
+    kind: processed.usedOriginal ? "PROCESSED" : "ORIGINAL",
+  };
+}
+
 export async function POST(request: Request) {
   const { dataUrl, fileName, type } = (await request.json()) as {
     dataUrl?: string;
@@ -58,9 +81,9 @@ export async function POST(request: Request) {
   if (!dataUrl || !fileName || !type) {
     return NextResponse.json({ error: "dataUrl, fileName, type이 필요합니다." }, { status: 400 });
   }
-  // 파이프라인 본류에서도 PRODUCT/MODEL/DETAIL/SIZE_CHART만 실제로 가공한다
+  // 파이프라인 본류에서도 PRODUCT/MODEL/LIFESTYLE/DETAIL/SIZE_CHART만 실제로 가공한다
   // (PACKAGE/LOGO/BANNER/UNKNOWN은 분류만 되고 처리 단계를 거치지 않으므로 재실행 대상이 아니다).
-  const STANDARD_TYPES = ["MODEL", "DETAIL", "SIZE_CHART"] as const;
+  const STANDARD_TYPES = ["MODEL", "LIFESTYLE", "DETAIL", "SIZE_CHART"] as const;
   if (type !== "PRODUCT" && !STANDARD_TYPES.includes(type as (typeof STANDARD_TYPES)[number])) {
     return NextResponse.json({ error: `재실행할 수 없는 타입입니다: ${type}` }, { status: 400 });
   }
@@ -96,6 +119,7 @@ export async function POST(request: Request) {
     const detailDataUrl = preferred
       ? toDataUrl(preferred.file, MIME_BY_FORMAT[preferred.format] ?? "image/jpeg")
       : null;
+    const alternate = processed.status === "success" ? resolveAlternate(processed) : null;
 
     const item: WorkspaceItem = {
       // processed.baseName은 임시 소스 파일명("retry-0002")에서 나온 것이라 원래 카드의
@@ -118,6 +142,11 @@ export async function POST(request: Request) {
       quality: processed.quality,
       usedOriginal: processed.usedOriginal,
       isJPEG: processed.isJPEG,
+      alternateDataUrl: alternate?.dataUrl,
+      alternateWidth: alternate?.width,
+      alternateHeight: alternate?.height,
+      alternateBytes: alternate?.bytes,
+      alternateKind: alternate?.kind,
       processingTimeSec: Math.round(processed.processingTimeMs / 100) / 10,
     };
 

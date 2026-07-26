@@ -18,14 +18,15 @@ export function normalizeUrl(url: string): string {
 }
 
 /**
- * 많은 쇼핑몰(PrestaShop 계열 등)은 이미지 URL에 "/{숫자ID}-{사이즈명}/파일명" 형태로
- * 같은 사진의 여러 해상도 변형을 표시한다 (예: /24726-big_default/, /24726-home_default/).
+ * 많은 쇼핑몰(PrestaShop 계열 등)은 이미지 URL에 "/{ID}-{사이즈명}/파일명" 형태로
+ * 같은 사진의 여러 해상도 변형을 표시한다. ID는 순수 숫자(/24726-big_default/)이거나
+ * 짧은 문자 접두사+숫자(Smallable의 /gs_11748876-2000x2000q80/)인 경우가 흔하다.
  * 이 ID를 뽑아내면 같은 사진의 저해상도 중복을 안전하게 병합할 수 있다.
  */
 export function extractCdnImageId(url: string): string | null {
   try {
     const pathname = new URL(toParsableUrl(url)).pathname;
-    const match = /\/(\d{3,})-[a-z0-9_]+\//i.exec(pathname);
+    const match = /\/([a-z]*_?\d{3,})-[a-z0-9_]+\//i.exec(pathname);
     return match ? match[1] : null;
   } catch {
     return null;

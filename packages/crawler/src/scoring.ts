@@ -42,7 +42,7 @@ const LOGO_KEYWORDS = [
 ];
 /** 광고/분석 추적 픽셀 도메인 — 상품과 무관한 1x1 이미지가 실려오는 경우가 많다. */
 const TRACKER_HOSTS = [
-  "bat.bing.com",
+  "bat.bing.", // .com/.net 등 TLD와 무관하게 매치
   "googletagmanager.com",
   "google-analytics.com",
   "doubleclick.net",

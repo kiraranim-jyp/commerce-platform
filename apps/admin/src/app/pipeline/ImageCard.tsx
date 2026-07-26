@@ -16,6 +16,9 @@ interface ImageCardProps {
   onRetry: () => void;
   onToggleRepresentative: () => void;
   onToggleExclude: () => void;
+  /** PRODUCT는 원본/배경제거 후보 둘 다 만들어진다 — 이 카드가 지금 어느 쪽을 쓸지
+   * 전환한다(alternateDataUrl이 있을 때만 호출 가능). */
+  onSwapVariant?: () => void;
 }
 
 /**
@@ -36,6 +39,7 @@ export function ImageCard({
   onRetry,
   onToggleRepresentative,
   onToggleExclude,
+  onSwapVariant,
 }: ImageCardProps) {
   const previewSrc =
     tab === "original"
@@ -102,9 +106,15 @@ export function ImageCard({
             {item.isJPEG ? "✓ JPG 표준화 완료" : "✕ JPG 검증 실패"}
           </p>
         )}
+        {item.type === "PRODUCT" && item.status === "success" && (
+          <p className="text-text-secondary">
+            Processing: ✦ 배경제거 후보
+            {item.quality && ` (${item.usedOriginal ? "원본 사용" : "누끼 사용"})`}
+          </p>
+        )}
         {item.quality && (
           <p className="text-text-secondary">
-            Quality {item.quality.overall}/100 · {item.usedOriginal ? "원본 사용" : "누끼"}
+            Quality {item.quality.overall}/100 · Background: {item.usedOriginal ? "원본 유지" : "제거됨"}
           </p>
         )}
 
@@ -127,6 +137,20 @@ export function ImageCard({
           </label>
 
           <div className="flex items-center gap-2">
+            {item.alternateDataUrl && onSwapVariant && (
+              <button
+                type="button"
+                onClick={onSwapVariant}
+                title={
+                  item.alternateKind === "PROCESSED"
+                    ? "배경제거 후보로 전환"
+                    : "원본으로 전환"
+                }
+                className="rounded border border-border px-2 py-1 font-medium text-text-primary hover:bg-background"
+              >
+                {item.alternateKind === "PROCESSED" ? "⇄ 누끼 후보" : "⇄ 원본"}
+              </button>
+            )}
             {previewSrc && (
               <a
                 href={previewSrc}

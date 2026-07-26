@@ -16,6 +16,8 @@ import type { ImageEnhancerProvider, StandardizedImage } from "../types/provider
  *   상하좌우 여백 균등(중앙 정렬), 흰배경(JPG) + 투명배경(PNG), Crop 금지
  * - MODEL: 원본 구도/비율 유지. 1500x2000보다 이미 크면 원본 그대로 사용,
  *   작을 때만 긴 변 기준으로 확대. 강제 캔버스/패딩 없음, 색감 변경·자동 샤프닝 금지
+ * - LIFESTYLE: MODEL과 동일하게 원본 구도/비율 유지, 색감 변경·자동 샤프닝 금지
+ *   (실제 생활/야외 연출컷 — 배경제거 대상이 아니다)
  * - DETAIL: 원본 유지, 리사이즈는 규격을 초과할 때만(최소화), 텍스트 선명도 유지
  * - SIZE_CHART / 기타: 원본 유지 + 선명도 강화, 고품질 압축
  *
@@ -38,6 +40,7 @@ export async function standardizeImage(
     case "PRODUCT":
       return standardizeProduct(inputPath, outputDir, baseName, policy, enhancer);
     case "MODEL":
+    case "LIFESTYLE":
       return [await standardizeKeepOriginal(inputPath, outputDir, baseName, policy)];
     case "DETAIL":
       return [await resizeWithinBounds(inputPath, outputDir, baseName, policy)];

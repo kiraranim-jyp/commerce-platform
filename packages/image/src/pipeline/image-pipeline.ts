@@ -39,6 +39,12 @@ export interface ProcessedImageFile {
   bytes: number;
 }
 
+export interface ProductImageVariant {
+  files: ProcessedImageFile[];
+  width: number;
+  height: number;
+}
+
 /**
  * 이미지 1장의 처리 결과. status가 "failed"여도 전체 파이프라인은 계속 진행된다 —
  * 이전에는 한 장이라도 실패하면 요청 전체가 죽었는데(narrow try/catch가 없었음),
@@ -52,11 +58,20 @@ export interface ProcessedImageResult {
   failureReason?: string;
   original: { width: number; height: number; bytes: number };
   output?: { width: number; height: number };
+  /** 등록/미리보기에 기본으로 쓰이는 변형(quality 기준으로 선택됨) — usedOriginal/원산지와
+   * 무관하게 항상 존재한다. */
   files: ProcessedImageFile[];
   /** PRODUCT에서만 계산된다 — 배경제거 세그멘테이션 품질 점수. */
   quality?: QualityScore;
-  /** PRODUCT에서 품질이 기준 미달(혹은 배경제거 자체 실패)이라 원본을 그대로 썼는지 여부. */
+  /** PRODUCT에서 품질이 기준 미달(혹은 배경제거 자체 실패)이라 기본값으로 원본을 선택했는지
+   * 여부 — 배경제거 후보 자체가 사라진다는 뜻은 아니다(processedVariant는 별도로 유지된다). */
   usedOriginal?: boolean;
+  /** PRODUCT 전용: 배경제거 후보(흰 배경 합성 JPG). 배경제거가 실패했거나 결과 JPEG
+   * 검증에 실패하면 없다 — usedOriginal이 true여도 이 값은 버려지지 않는다. */
+  processedVariant?: ProductImageVariant;
+  /** PRODUCT 전용: 원본을 그대로 표준화한 JPG. usedOriginal이 false여도 항상 만들어
+   * 함께 보존한다(대표 이미지는 누끼 후보 우선, 추가 이미지는 원본/누끼 중 선택 가능하도록). */
+  originalVariant?: ProductImageVariant;
   /** 최종 산출 JPG가 실제로 디코딩 가능한 JPEG인지(확장자/MIME/디코딩 전부 확인) —
    * 플랫폼 등록 전 공통 검증(isJPEG === true)의 근거가 된다. status가 "success"면 항상 true다. */
   isJPEG?: boolean;
@@ -176,69 +191,105 @@ export async function processSingleProductImage(
     }
 
     const threshold = Number(process.env.IMAGE_QUALITY_THRESHOLD ?? 80);
-    const usedOriginal = !removedFile || !quality || quality.overall < threshold;
+    const backgroundRemovalSucceeded = Boolean(removedFile && quality);
+    const preferOriginal = !backgroundRemovalSucceeded || (quality as QualityScore).overall < threshold;
 
-    let standardized;
-    if (!usedOriginal && removedFile) {
-      console.log(`[pipeline] PRODUCT ${baseName}: 품질 통과, enhance 시작`);
-      fs.mkdirSync(storagePaths.tmp, { recursive: true });
-      const enhancedPath = path.join(storagePaths.tmp, `${baseName}-enhanced.png`);
-      await deps.enhancer.enhance(removedFile, enhancedPath);
-      console.log(`[pipeline] PRODUCT ${baseName}: enhance 완료, standardize 시작`);
-
-      standardized = await standardizeImage(
-        enhancedPath,
+    // 원본은 항상 표준화한다 — 배경제거 품질과 무관하게 "원본 유지" 산출물을
+    // 버리지 않는다(대표 이미지는 누끼 후보 우선, 추가 이미지는 원본/누끼 중
+    // 사용자가 선택할 수 있어야 한다).
+    let originalVariant: ProductImageVariant | undefined;
+    try {
+      const originalStandardized = await standardizeKeepOriginal(
+        file,
         storagePaths.processed("product"),
-        "PRODUCT",
-        deps.enhancer,
-        undefined,
-        baseName,
+        `${baseName}-original`,
+        loadImagePolicy(),
       );
-      fs.rmSync(enhancedPath);
-      emit(`${baseName}: 표준화 완료 (누끼 사용)`);
-    } else {
-      console.log(
-        `[pipeline] PRODUCT ${baseName}: 품질 ${quality?.overall ?? "N/A"}점(기준 ${threshold}점 미만) 또는 배경제거 실패 - 원본 표준화`,
-      );
-      standardized = [
-        await standardizeKeepOriginal(
-          file,
-          storagePaths.processed("product"),
-          baseName,
-          loadImagePolicy(),
-        ),
-      ];
-      emit(`${baseName}: 표준화 완료 (원본 사용)`);
+      const originalFiles: ProcessedImageFile[] = [];
+      for (const opt of await deps.optimizer.optimize(originalStandardized.file)) {
+        pushUniqueFile(originalFiles, opt);
+      }
+      const check = await validateFinalJpeg(originalFiles);
+      if (check.ok) {
+        originalVariant = {
+          files: originalFiles,
+          width: originalStandardized.width,
+          height: originalStandardized.height,
+        };
+      } else {
+        console.warn(`[pipeline] PRODUCT ${baseName}: 원본 변형 JPEG 검증 실패 - ${check.failureReason}`);
+      }
+    } catch (error) {
+      console.warn(`[pipeline] PRODUCT ${baseName}: 원본 변형 생성 실패`, error);
     }
-    console.log(
-      `[pipeline] PRODUCT ${baseName}: standardize 완료(${standardized.length}개), optimize 시작`,
-    );
+    emit(`${baseName}: 원본 표준화 완료`);
 
-    const files: ProcessedImageFile[] = [];
-    for (const std of standardized) {
-      const optimized = await deps.optimizer.optimize(std.file);
-      for (const opt of optimized) pushUniqueFile(files, opt);
+    // 배경제거가 성공했으면(품질 점수와 무관하게) 누끼 후보 변형도 별도로 만들어
+    // 보존한다 — 예전에는 품질 기준 미달 시 이 결과를 통째로 버렸다.
+    let processedVariant: ProductImageVariant | undefined;
+    if (backgroundRemovalSucceeded && removedFile) {
+      try {
+        console.log(`[pipeline] PRODUCT ${baseName}: 누끼 후보 표준화 시작`);
+        fs.mkdirSync(storagePaths.tmp, { recursive: true });
+        const enhancedPath = path.join(storagePaths.tmp, `${baseName}-enhanced.png`);
+        await deps.enhancer.enhance(removedFile, enhancedPath);
+
+        const processedStandardized = await standardizeImage(
+          enhancedPath,
+          storagePaths.processed("product"),
+          "PRODUCT",
+          deps.enhancer,
+          undefined,
+          `${baseName}-processed`,
+        );
+        fs.rmSync(enhancedPath);
+
+        const processedFiles: ProcessedImageFile[] = [];
+        for (const std of processedStandardized) {
+          for (const opt of await deps.optimizer.optimize(std.file)) {
+            pushUniqueFile(processedFiles, opt);
+          }
+        }
+        const check = await validateFinalJpeg(processedFiles);
+        if (check.ok) {
+          processedVariant = {
+            files: processedFiles,
+            width: processedStandardized[0]?.width ?? 0,
+            height: processedStandardized[0]?.height ?? 0,
+          };
+          emit(`${baseName}: 누끼 후보 표준화 완료`);
+        } else {
+          console.warn(
+            `[pipeline] PRODUCT ${baseName}: 누끼 후보 JPEG 검증 실패 - ${check.failureReason}`,
+          );
+        }
+      } catch (error) {
+        console.warn(`[pipeline] PRODUCT ${baseName}: 누끼 후보 생성 실패`, error);
+      }
     }
     console.log(`[pipeline] PRODUCT ${baseName}: optimize 완료`);
     emit(`${baseName}: 압축 완료`);
 
-    const jpegCheck = await validateFinalJpeg(files);
-    if (!jpegCheck.ok) {
-      console.error(`[pipeline] PRODUCT ${baseName}: JPEG 검증 실패 - ${jpegCheck.failureReason}`);
-      emit(`${baseName}: JPEG 검증 실패 - ${jpegCheck.failureReason}`, {
-        errorMessage: jpegCheck.failureReason,
-      });
+    // 선호하는 변형(품질 기준)을 기본으로 쓰되, 검증에 실패해서 없으면 존재하는
+    // 쪽으로 자동 대체한다. 둘 다 없으면(원본 변형까지 실패) 이미지 전체를 FAILED로 본다.
+    const chosen = preferOriginal
+      ? (originalVariant ?? processedVariant)
+      : (processedVariant ?? originalVariant);
+    if (!chosen) {
+      const failureReason = "원본/누끼 후보 모두 유효한 JPEG를 만들지 못했습니다.";
+      emit(`${baseName}: JPEG 검증 실패 - ${failureReason}`, { errorMessage: failureReason });
       return {
         baseName,
         type: "PRODUCT",
         status: "failed",
-        failureReason: jpegCheck.failureReason,
+        failureReason,
         original,
         files: [],
         isJPEG: false,
         processingTimeMs: Date.now() - itemStartedAt,
       };
     }
+    const usedOriginal = chosen === originalVariant;
 
     if (global.gc) {
       global.gc();
@@ -249,10 +300,12 @@ export async function processSingleProductImage(
       type: "PRODUCT",
       status: "success",
       original,
-      output: { width: standardized[0]?.width ?? 0, height: standardized[0]?.height ?? 0 },
-      files,
+      output: { width: chosen.width, height: chosen.height },
+      files: chosen.files,
       quality,
       usedOriginal,
+      processedVariant,
+      originalVariant,
       isJPEG: true,
       processingTimeMs: Date.now() - itemStartedAt,
     };
@@ -273,12 +326,12 @@ export async function processSingleProductImage(
 }
 
 /**
- * MODEL/DETAIL/SIZE_CHART 이미지 1장을 (필요 시 보정 후) 표준화 -> 압축까지 처리한다.
- * Workspace UI의 "재실행" 버튼이 이미지 1장만 다시 돌릴 때도 이 함수를 그대로 쓴다.
+ * MODEL/LIFESTYLE/DETAIL/SIZE_CHART 이미지 1장을 (필요 시 보정 후) 표준화 -> 압축까지
+ * 처리한다. Workspace UI의 "재실행" 버튼이 이미지 1장만 다시 돌릴 때도 이 함수를 그대로 쓴다.
  */
 export async function processSingleStandardImage(
   file: string,
-  type: "MODEL" | "DETAIL" | "SIZE_CHART",
+  type: "MODEL" | "LIFESTYLE" | "DETAIL" | "SIZE_CHART",
   deps: Pick<ImagePipelineDeps, "enhancer" | "optimizer">,
   options: { preEnhance: boolean },
   progress?: SingleImageProgressContext,
@@ -463,6 +516,17 @@ export async function runImagePipeline(
     "model",
     "MODEL 표준화",
   );
+  // LIFESTYLE(생활/야외 연출컷)도 MODEL과 같은 정책 — 배경제거 대상이 아니고
+  // 색감/샤프닝 변경도 하지 않는다.
+  const lifestyleResults = await processStandardStage(
+    filesOfType("LIFESTYLE"),
+    "LIFESTYLE",
+    deps,
+    { preEnhance: false },
+    reporter,
+    "lifestyle",
+    "LIFESTYLE 표준화",
+  );
   const detailResults = await processStandardStage(
     filesOfType("DETAIL"),
     "DETAIL",
@@ -482,7 +546,13 @@ export async function runImagePipeline(
     "SIZE_CHART 표준화",
   );
 
-  const allResults = [...productResults, ...modelResults, ...detailResults, ...sizeChartResults];
+  const allResults = [
+    ...productResults,
+    ...modelResults,
+    ...lifestyleResults,
+    ...detailResults,
+    ...sizeChartResults,
+  ];
   const succeeded = allResults.filter((result) => result.status === "success");
 
   const fileNamesOf = (type: ImageType): string[] =>
@@ -513,6 +583,7 @@ export async function runImagePipeline(
     productImages: productFileNames,
     detailImages: fileNamesOf("DETAIL"),
     modelImages: fileNamesOf("MODEL"),
+    lifestyleImages: fileNamesOf("LIFESTYLE"),
     sizeChart: fileNamesOf("SIZE_CHART"),
     classifications,
   });
@@ -596,7 +667,7 @@ async function processProductStage(
 
 async function processStandardStage(
   files: string[],
-  type: "MODEL" | "DETAIL" | "SIZE_CHART",
+  type: "MODEL" | "LIFESTYLE" | "DETAIL" | "SIZE_CHART",
   deps: ImagePipelineDeps,
   options: { preEnhance: boolean },
   reporter: ProgressReporter,
