@@ -30,10 +30,26 @@ export async function POST() {
       return NextResponse.json({
         status,
         message: "쿠팡이 인증 정보를 거부했습니다 — access key/secret key를 다시 확인해주세요.",
+        // 시크릿 값 자체는 절대 내려보내지 않는다 — 길이/공백 여부 같은 "복붙 실수
+        // 있었는지" 힌트와, 쿠팡 응답 원문(서명 오류 vs 키 미등록 vs 승인 대기 등
+        // 구체적 사유)만 진단용으로 함께 내려준다.
+        debug: {
+          httpStatus: response.status,
+          coupangResponse: response.body,
+          accessKeyLength: credentials.accessKey.length,
+          accessKeyHasWhitespace: /\s/.test(credentials.accessKey),
+          secretKeyLength: credentials.secretKey.length,
+          secretKeyHasWhitespace: /\s/.test(credentials.secretKey),
+          vendorId: credentials.vendorId,
+        },
       });
     }
     const status: PlatformConnectionStatus = "CONNECTED";
-    return NextResponse.json({ status, message: "쿠팡 API 인증에 성공했습니다." });
+    return NextResponse.json({
+      status,
+      message: "쿠팡 API 인증에 성공했습니다.",
+      debug: { httpStatus: response.status },
+    });
   } catch (error) {
     const status: PlatformConnectionStatus = "AUTH_FAILED";
     return NextResponse.json({
