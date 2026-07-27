@@ -1,8 +1,13 @@
 /**
  * 이진 마스크(1=전경, 0=배경) 위에서 4-neighbor BFS로 connected component를 찾는
- * 공용 유틸. product-processor(가장 큰 덩어리만 남기기)와 quality-score(파편화/구멍
- * 측정) 양쪽에서 같은 라벨링 로직을 재사용한다.
+ * 공용 유틸. product-processor(노이즈 필터링)와 quality-score(파편화/구멍 측정)
+ * 양쪽에서 같은 라벨링 로직과 같은 "정상 전경" 판단 기준을 재사용한다 — 둘이 서로
+ * 다른 기준을 쓰면, product-processor가 정상으로 보존한 덩어리를 quality-score가
+ * 노이즈로 오판해 점수를 깎는 불일치가 생긴다(신발 한 켤레처럼 서로 떨어진 두 덩어리
+ * 모두 정상인 상품에서 실제로 이 문제가 있었다).
  */
+export const MIN_COMPONENT_AREA_RATIO = 0.15;
+
 export interface ComponentLabels {
   labels: Int32Array;
   sizes: number[];
@@ -61,6 +66,23 @@ export function largestComponentLabel(sizes: number[]): number {
     if (sizes[i] > sizes[largest]) largest = i;
   }
   return largest;
+}
+
+/**
+ * 가장 큰 컴포넌트 크기 대비 minRatio 이상인 컴포넌트들의 라벨 집합을 반환한다.
+ * largestComponentLabel과 달리 "1개만" 남기지 않는다 — 신발 한 켤레처럼 서로 떨어져
+ * 있지만 크기가 비슷한 여러 실제 상품 덩어리는 함께 유지하고, 그보다 훨씬 작은
+ * 노이즈 얼룩만 걸러내기 위한 용도.
+ */
+export function componentsAboveRelativeSize(sizes: number[], minRatio: number): Set<number> {
+  const kept = new Set<number>();
+  if (sizes.length === 0) return kept;
+  const largestSize = Math.max(...sizes);
+  const minSize = largestSize * minRatio;
+  for (let i = 0; i < sizes.length; i++) {
+    if (sizes[i] >= minSize) kept.add(i);
+  }
+  return kept;
 }
 
 /**

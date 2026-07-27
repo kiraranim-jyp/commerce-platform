@@ -3,7 +3,11 @@ import path from "node:path";
 import sharp from "sharp";
 import { storagePaths } from "../utils/storage-paths.util";
 import type { BackgroundRemoverProvider } from "../types/provider.types";
-import { labelComponents, largestComponentLabel } from "../utils/connected-components.util";
+import {
+  componentsAboveRelativeSize,
+  labelComponents,
+  MIN_COMPONENT_AREA_RATIO,
+} from "../utils/connected-components.util";
 import { scoreSegmentation, type QualityScore } from "./quality-score.service";
 
 export interface ProcessedProductImage {
@@ -24,8 +28,13 @@ export interface ProcessedProductImage {
  *
  * 그래서 "얼마나 흐릿한가"가 아니라 "제품 실루엣과 붙어 있는가"로 판단한다.
  * 얼룩은 정의상 제품 몸통과 떨어진 섬(connected component)이므로, 이진화된
- * 마스크에서 가장 큰 덩어리(제품 실루엣) 하나만 남기고 나머지는 크기·알파값과
- * 무관하게 전부 지운다.
+ * 마스크에서 덩어리별 크기를 비교해 지운다.
+ *
+ * 다만 "가장 큰 덩어리 1개만" 남기면 안 된다 — 신발 한 켤레처럼 서로 붙어있지
+ * 않은 두 개의 실제 상품이 한 사진에 있는 경우, 둘 중 작은 쪽(다른 한 짝)까지
+ * 통째로 지워지는 회귀가 있었다. 그래서 가장 큰 덩어리 대비 상대 크기가
+ * MIN_COMPONENT_AREA_RATIO 이상인 덩어리는 모두 유지한다 — 진짜 노이즈 얼룩은
+ * 보통 실루엣보다 훨씬 작아서 이 기준에 걸리지 않는다.
  *
  * sharp의 median()은 단일 채널 raw 버퍼를 내부적으로 3채널 sRGB로 승격시키는
  * 것으로 보여서, 처리 후 toColourspace("b-w")로 명시적으로 1채널로 되돌려야
@@ -58,10 +67,10 @@ async function cleanAlphaNoise(
   const quality = scoreSegmentation({ rawAlpha: alpha, binary, width, height });
 
   const { labels, sizes } = labelComponents(binary, width, height);
-  const largest = largestComponentLabel(sizes);
+  const keptLabels = componentsAboveRelativeSize(sizes, MIN_COMPONENT_AREA_RATIO);
 
   for (let i = 0, p = 3; i < labels.length; i++, p += channels) {
-    if (labels[i] !== largest) data[p] = 0;
+    if (!keptLabels.has(labels[i])) data[p] = 0;
   }
 
   const buffer = await sharp(data, { raw: { width, height, channels } }).png().toBuffer();
@@ -81,22 +90,8 @@ export async function processProductImage(
   const tmpFile = `${outFile}.tmp.png`;
 
   await remover.remove(file, tmpFile);
-  // TEMP DEBUG (제거 예정): 회귀 조사를 위해 각 단계 산출물을 storage/debug/에 남긴다.
-  if (process.env.DEBUG_IMAGE_STAGES) {
-    const debugDir = path.join(storagePaths.root, "debug");
-    fs.mkdirSync(debugDir, { recursive: true });
-    fs.copyFileSync(tmpFile, path.join(debugDir, `${baseName}-1-ai-removed.png`));
-  }
   const { buffer: cleaned, quality } = await cleanAlphaNoise(tmpFile);
-  if (process.env.DEBUG_IMAGE_STAGES) {
-    const debugDir = path.join(storagePaths.root, "debug");
-    await sharp(cleaned).png().toFile(path.join(debugDir, `${baseName}-2-after-clean.png`));
-  }
   await sharp(cleaned).trim().png().toFile(outFile);
-  if (process.env.DEBUG_IMAGE_STAGES) {
-    const debugDir = path.join(storagePaths.root, "debug");
-    fs.copyFileSync(outFile, path.join(debugDir, `${baseName}-3-after-trim.png`));
-  }
   fs.rmSync(tmpFile);
 
   return { fileName: `${baseName}.png`, file: outFile, quality };

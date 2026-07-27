@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { formatBytes, formatDimensions } from "./format";
 import type { TabKey, WorkspaceItem } from "./types";
 
@@ -51,6 +52,7 @@ export function ImageCard({
   onToggleExclude,
   onSwapVariant,
 }: ImageCardProps) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const previewSrc =
     tab === "original"
       ? item.originalDataUrl
@@ -102,33 +104,7 @@ export function ImageCard({
         <p className="truncate font-medium text-text-primary" title={item.fileName}>
           {item.fileName}
         </p>
-        <p className="text-text-secondary">Type: {item.type}</p>
-        <p className="text-text-secondary">
-          Original: {formatDimensions(item.originalWidth, item.originalHeight)} ({originalFormat})
-        </p>
-        <p className="text-text-secondary">
-          Output: {formatDimensions(item.outputWidth, item.outputHeight)}
-          {item.status === "success" ? " (JPEG)" : ""}
-        </p>
-        <p className="text-text-secondary">File: {formatBytes(item.fileSize)}</p>
-        {item.status === "success" && (
-          <p className={item.isJPEG ? "text-success" : "text-error"}>
-            {item.isJPEG ? "✓ JPG 표준화 완료" : "✕ JPG 검증 실패"}
-          </p>
-        )}
-        {item.type === "PRODUCT" && item.status === "success" && (
-          <p className="text-text-secondary">
-            Processing: ✦ 배경제거 후보
-            {item.quality && ` (${item.usedOriginal ? "원본 사용" : "누끼 사용"})`}
-          </p>
-        )}
-        {item.quality && (
-          <p className="text-text-secondary">
-            Quality {item.quality.overall}/100 · Background: {item.usedOriginal ? "원본 유지" : "제거됨"}
-          </p>
-        )}
-
-        <p className="mt-0.5">
+        <p>
           {status === "success" && <span>🟢 Success</span>}
           {status === "processing" && <span>🟡 Processing</span>}
           {status === "failed" && <span>🔴 Failed</span>}
@@ -138,7 +114,46 @@ export function ImageCard({
             {item.failureReason}
           </p>
         )}
-        <p className="text-text-secondary">Processing: {item.processingTimeSec}s</p>
+
+        <button
+          type="button"
+          onClick={() => setDetailsOpen((v) => !v)}
+          className="mt-0.5 self-start text-text-tertiary underline-offset-2 hover:underline"
+        >
+          처리 정보 {detailsOpen ? "숨기기 ▲" : "보기 ▼"}
+        </button>
+
+        {detailsOpen && (
+          <div className="flex flex-col gap-0.5">
+            <p className="text-text-secondary">Type: {item.type}</p>
+            <p className="text-text-secondary">
+              Original: {formatDimensions(item.originalWidth, item.originalHeight)} ({originalFormat})
+            </p>
+            <p className="text-text-secondary">
+              Output: {formatDimensions(item.outputWidth, item.outputHeight)}
+              {item.status === "success" ? " (JPEG)" : ""}
+            </p>
+            <p className="text-text-secondary">File: {formatBytes(item.fileSize)}</p>
+            {item.status === "success" && (
+              <p className={item.isJPEG ? "text-success" : "text-error"}>
+                {item.isJPEG ? "✓ JPG 표준화 완료" : "✕ JPG 검증 실패"}
+              </p>
+            )}
+            {item.type === "PRODUCT" && item.status === "success" && (
+              <p className="text-text-secondary">
+                Processing: ✦ 배경제거 후보
+                {item.quality && ` (${item.usedOriginal ? "원본 사용" : "누끼 사용"})`}
+              </p>
+            )}
+            {item.quality && (
+              <p className="text-text-secondary">
+                Quality {item.quality.overall}/100 · Background:{" "}
+                {item.usedOriginal ? "원본 유지" : "제거됨"}
+              </p>
+            )}
+            <p className="text-text-secondary">Processing: {item.processingTimeSec}s</p>
+          </div>
+        )}
 
         {useInProductGallery != null && useInDescription != null && (
           <div className="mt-1 flex flex-col gap-0.5 border-t border-border pt-1.5 text-[11px]">
