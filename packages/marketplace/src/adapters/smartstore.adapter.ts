@@ -24,12 +24,11 @@ export const smartstoreAdapter: PlatformAdapter = {
       ? getSelectedImageUrl(representativeImageEntry)
       : undefined;
     const additionalImages = product.images
-      .filter((img) => !img.isRepresentative)
+      .filter((img) => !img.isRepresentative && img.useInProductGallery)
       .map((img) => getSelectedImageUrl(img));
-    const { amountKrw, isEstimate } = convertToKrw(
-      product.price.value.amount,
-      product.price.value.currency,
-    );
+    const estimated = convertToKrw(product.price.value.amount, product.price.value.currency);
+    const amountKrw = product.priceOverrideKrw?.value ?? estimated.amountKrw;
+    const isEstimate = product.priceOverrideKrw ? false : estimated.isEstimate;
     const title = effectiveTitle(product);
     const description = effectiveDescription(product);
 
@@ -52,7 +51,7 @@ export const smartstoreAdapter: PlatformAdapter = {
       {
         field: "price",
         label: "판매가격",
-        check: () => product.price.value.amount > 0,
+        check: () => amountKrw > 0,
         onFail: "ERROR",
         message: "판매가격을 확인할 수 없습니다.",
       },

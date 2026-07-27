@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { CanonicalProduct } from "@commerce/shared";
 import { CommerceWorkspace } from "./CommerceWorkspace";
 import { ImageCard } from "./ImageCard";
+import { ImageUsageTable } from "./ImageUsageTable";
 import { PreviewModal } from "./PreviewModal";
 import { ProcessingReportView } from "./ProcessingReport";
 import { ProgressPanel } from "./ProgressPanel";
@@ -158,6 +159,26 @@ export default function PipelinePage() {
    * null일 수 있어서 그 차이를 여기서 좁혀준다. */
   function updateProduct(updater: (prev: CanonicalProduct) => CanonicalProduct) {
     setProduct((prev) => (prev ? updater(prev) : prev));
+  }
+
+  /** ⭐ 토글이 기존엔 representativeId(카드 UI 표시용 로컬 state)만 바꾸고
+   * product.images에는 전혀 반영되지 않던 버그를 여기서 같이 고친다 — 대표 이미지를
+   * 바꿔도 실제 등록 payload가 계속 이전 이미지를 대표로 썼던 문제였다. Mission 3의
+   * swapVariant와 같은 원칙: UI 표시(representativeId)와 등록 데이터(product.images)를
+   * 반드시 같은 액션 안에서 함께 갱신한다. */
+  function setRepresentative(itemId: string) {
+    setRepresentativeId(itemId);
+    updateProduct((prev) => ({
+      ...prev,
+      images: prev.images.map((img) => ({ ...img, isRepresentative: img.id === itemId })),
+    }));
+  }
+
+  function toggleImageUsage(itemId: string, field: "useInProductGallery" | "useInDescription") {
+    updateProduct((prev) => ({
+      ...prev,
+      images: prev.images.map((img) => (img.id === itemId ? { ...img, [field]: !img[field] } : img)),
+    }));
   }
 
   function toggleExclude(id: string) {
@@ -354,28 +375,37 @@ export default function PipelinePage() {
               <div className="space-y-6 border-t border-border p-5">
                 <WorkspaceTabs active={activeTab} counts={counts} onChange={setActiveTab} />
 
+                {product && <ImageUsageTable product={product} items={items} />}
+
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                  {items.map((item) => (
-                    <ImageCard
-                      key={item.id}
-                      item={item}
-                      tab={activeTab}
-                      thumbnailDataUrl={thumbnails[item.id]}
-                      isExcluded={excludedIds.has(item.id)}
-                      isRepresentative={representativeId === item.id}
-                      isSelected={selectedId === item.id}
-                      retrying={retryingIds.has(item.id)}
-                      retryCount={retryCounts[item.id] ?? 0}
-                      onPreview={() => {
-                        setSelectedId(item.id);
-                        setPreviewId(item.id);
-                      }}
-                      onRetry={() => retryItem(item)}
-                      onToggleRepresentative={() => setRepresentativeId(item.id)}
-                      onToggleExclude={() => toggleExclude(item.id)}
-                      onSwapVariant={item.alternateDataUrl ? () => swapVariant(item.id) : undefined}
-                    />
-                  ))}
+                  {items.map((item) => {
+                    const imageUsage = product?.images.find((img) => img.id === item.id);
+                    return (
+                      <ImageCard
+                        key={item.id}
+                        item={item}
+                        tab={activeTab}
+                        thumbnailDataUrl={thumbnails[item.id]}
+                        isExcluded={excludedIds.has(item.id)}
+                        isRepresentative={representativeId === item.id}
+                        useInProductGallery={imageUsage?.useInProductGallery}
+                        useInDescription={imageUsage?.useInDescription}
+                        isSelected={selectedId === item.id}
+                        retrying={retryingIds.has(item.id)}
+                        retryCount={retryCounts[item.id] ?? 0}
+                        onPreview={() => {
+                          setSelectedId(item.id);
+                          setPreviewId(item.id);
+                        }}
+                        onRetry={() => retryItem(item)}
+                        onSetRepresentative={() => setRepresentative(item.id)}
+                        onToggleGalleryUsage={() => toggleImageUsage(item.id, "useInProductGallery")}
+                        onToggleDescriptionUsage={() => toggleImageUsage(item.id, "useInDescription")}
+                        onToggleExclude={() => toggleExclude(item.id)}
+                        onSwapVariant={item.alternateDataUrl ? () => swapVariant(item.id) : undefined}
+                      />
+                    );
+                  })}
                 </div>
 
                 <div>

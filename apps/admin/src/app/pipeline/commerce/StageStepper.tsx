@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { CategorySelection } from "@commerce/category";
 import type { CanonicalProduct, PlatformId } from "@commerce/shared";
 
@@ -46,6 +47,7 @@ export function StageStepper({
     store: imagesDone && categoryDone && contentDone ? "NEEDS_ACTION" : "LOCKED",
   };
 
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
   const nextStage = STAGE_ORDER.find((stage) => statuses[stage] !== "COMPLETED") ?? "store";
 
   const stageTab: Record<Stage, "source" | "content" | PlatformId> = {
@@ -79,38 +81,13 @@ export function StageStepper({
     <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
       <h2 className="text-base font-semibold tracking-tight text-text-primary">상품 등록 준비</h2>
 
-      <ol className="mt-4 flex flex-wrap items-center gap-y-3">
-        {STAGE_ORDER.map((stage, index) => (
-          <li key={stage} className="flex items-center">
-            <button
-              type="button"
-              onClick={() => onNavigate(stageTab[stage])}
-              className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs transition-colors hover:bg-background"
-            >
-              <StageIcon status={statuses[stage]} index={index + 1} />
-              <span
-                className={
-                  statuses[stage] === "COMPLETED"
-                    ? "text-text-secondary line-through decoration-border"
-                    : statuses[stage] === "LOCKED"
-                      ? "text-text-tertiary"
-                      : "font-medium text-text-primary"
-                }
-              >
-                {STAGE_LABELS[stage]}
-              </span>
-            </button>
-            {index < STAGE_ORDER.length - 1 && (
-              <span className="mx-1 text-text-tertiary" aria-hidden>
-                →
-              </span>
-            )}
-          </li>
-        ))}
-      </ol>
-
-      <div className="mt-4 flex items-center justify-between gap-3 rounded-md bg-primary-soft px-4 py-3">
-        <p className="text-sm font-medium text-primary">{nextActionMessage[nextStage]}</p>
+      {/* 사용자가 화면에 들어오자마자 "지금 뭘 해야 하는지"부터 보이게 최상단에
+       * 둔다 — 5단계 진행바 전체를 먼저 훑지 않아도 된다. */}
+      <div className="mt-3 flex items-center justify-between gap-3 rounded-md bg-primary-soft px-4 py-3">
+        <div>
+          <p className="text-xs text-primary/70">현재 단계: {STAGE_LABELS[nextStage]}</p>
+          <p className="text-sm font-medium text-primary">{nextActionMessage[nextStage]}</p>
+        </div>
         <button
           type="button"
           onClick={() => onNavigate(stageTab[nextStage])}
@@ -119,6 +96,46 @@ export function StageStepper({
           {nextActionCta[nextStage]} →
         </button>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setDetailsExpanded((v) => !v)}
+        className="mt-3 text-xs font-medium text-text-secondary hover:text-text-primary"
+      >
+        상세 진행과정 {detailsExpanded ? "접기 ▴" : "펼치기 ▾"}
+      </button>
+
+      {detailsExpanded && (
+        <ol className="mt-3 flex flex-wrap items-center gap-y-3">
+          {STAGE_ORDER.map((stage, index) => (
+            <li key={stage} className="flex items-center">
+              <button
+                type="button"
+                onClick={() => onNavigate(stageTab[stage])}
+                className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs transition-colors hover:bg-background"
+              >
+                <StageIcon status={statuses[stage]} index={index + 1} />
+                <span
+                  className={
+                    statuses[stage] === "COMPLETED"
+                      ? "text-text-secondary line-through decoration-border"
+                      : statuses[stage] === "LOCKED"
+                        ? "text-text-tertiary"
+                        : "font-medium text-text-primary"
+                  }
+                >
+                  {STAGE_LABELS[stage]}
+                </span>
+              </button>
+              {index < STAGE_ORDER.length - 1 && (
+                <span className="mx-1 text-text-tertiary" aria-hidden>
+                  →
+                </span>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
     </section>
   );
 }

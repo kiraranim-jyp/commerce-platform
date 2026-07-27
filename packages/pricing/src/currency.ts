@@ -33,3 +33,13 @@ export function convertToKrw(amount: number, currency: string): KrwPrice {
 export function formatKrw(amountKrw: number): string {
   return `₩${amountKrw.toLocaleString("ko-KR")}`;
 }
+
+/** 원본 통화 그대로 사람이 읽기 좋게 포맷("£21.00" 등) — Intl이 모르는 통화 코드가
+ * 오면(크롤러가 이상한 값을 넣었을 경우) 통화 기호 없이 숫자만 보여준다. */
+export function formatOriginalPrice(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(amount);
+  } catch {
+    return `${amount.toLocaleString()} ${currency}`;
+  }
+}

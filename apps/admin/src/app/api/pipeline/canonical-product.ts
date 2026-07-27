@@ -51,6 +51,12 @@ export function toCanonicalProductImage(item: WorkspaceItem): CanonicalProductIm
     processedUrl,
     selectedVariant: usedOriginal ? "ORIGINAL" : "PROCESSED",
     isRepresentative: item.isRepresentative,
+    // 기본값: 대표 이미지가 아닌 모든 이미지는 추가 갤러리/상세설명 둘 다에
+    // 자연스럽게 쓰인다고 가정한다. 대표 이미지는 상세설명에서 또 반복해서
+    // 보여줄 필요가 적어 기본 off — 둘 다 사용자가 이미지 카드에서 언제든
+    // 켜고 끌 수 있다(자동 결정이 아니라 기본값일 뿐).
+    useInProductGallery: true,
+    useInDescription: !item.isRepresentative,
     classification: item.type,
   };
 }

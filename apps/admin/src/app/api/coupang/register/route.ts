@@ -48,7 +48,6 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
     product?: CanonicalProduct;
     listing?: ListingModel;
-    resolvedCategoryCode?: number | null;
   } | null;
 
   if (!body?.product || !body?.listing) {
@@ -74,10 +73,7 @@ export async function POST(request: Request) {
   }
 
   const sellerConfig = getCoupangSellerConfig(credentials.vendorId);
-  const payload = buildCoupangPayload(product, listing, {
-    sellerConfig,
-    resolvedCategoryCode: body.resolvedCategoryCode ?? null,
-  });
+  const payload = buildCoupangPayload(product, listing, { sellerConfig });
 
   const missing = missingSellerConfigFields(payload);
   if (missing.length > 0) {

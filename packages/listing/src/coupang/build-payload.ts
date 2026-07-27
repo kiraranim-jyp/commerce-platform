@@ -1,5 +1,6 @@
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
+import { getSelectedImageUrl } from "@commerce/shared";
 
 /**
  * 쿠팡 Open API "상품 생성"(POST .../v1/marketplace/seller-products) 요청 바디를
@@ -152,15 +153,25 @@ function formatCoupangDateTime(date: Date): string {
 export function buildCoupangPayload(
   product: CanonicalProduct,
   listing: ListingModel,
-  options: {
-    sellerConfig?: CoupangSellerConfig;
-    /** 쿠팡 카테고리 추천 API(/api/coupang/category-recommend)로 얻은 실제 숫자
-     * displayCategoryCode. 아직 없으면 null — CartPilot 내부 카테고리 id를 그
-     * 자리에 넣지 않는다(둘은 서로 다른 코드 체계다). */
-    resolvedCategoryCode?: number | null;
-  } = {},
+  options: { sellerConfig?: CoupangSellerConfig } = {},
 ): CoupangPayload {
   const sellerConfig = options.sellerConfig ?? BLANK_COUPANG_SELLER_CONFIG;
+
+  // listing.category.candidate.id는 대부분 CartPilot 내부 카테고리 id다 — 실제
+  // 쿠팡 숫자 코드로 쓸 수 있는 건 /api/coupang/category-recommend가 만든
+  // candidate(isVerifiedPlatformCode: true)를 사용자가 SELECTED/CONFIRMED로
+  // 확정했을 때뿐이다. 그 외에는 추측하지 않고 null로 둔다.
+  const isCategoryConfirmed =
+    listing.category.state === "SELECTED" || listing.category.state === "CONFIRMED";
+  const verifiedCandidate =
+    isCategoryConfirmed && listing.category.candidate?.isVerifiedPlatformCode
+      ? listing.category.candidate
+      : null;
+  const displayCategoryCode = verifiedCandidate ? Number(verifiedCandidate.id) : null;
+
+  const descriptionImageUrls = product.images
+    .filter((img) => img.useInDescription)
+    .map((img) => getSelectedImageUrl(img));
 
   const images: CoupangItemImage[] = [];
   if (listing.representativeImage) {
@@ -178,7 +189,7 @@ export function buildCoupangPayload(
   const deliveryChargeType: CoupangPayload["deliveryChargeType"] = deliveryCharge > 0 ? "NOT_FREE" : "FREE";
 
   return {
-    displayCategoryCode: options.resolvedCategoryCode ?? null,
+    displayCategoryCode,
     displayCategoryPath: listing.category.candidate?.path ?? null,
     sellerProductName: listing.title,
     vendorId: sellerConfig.vendorId,
@@ -225,9 +236,20 @@ export function buildCoupangPayload(
         images,
         attributes: [],
         notices: [],
-        contents: listing.description
-          ? [{ contentsType: "TEXT", contentDetails: [{ content: listing.description, detailType: "TEXT" }] }]
-          : [],
+        contents: [
+          ...(listing.description
+            ? [
+                {
+                  contentsType: "TEXT" as const,
+                  contentDetails: [{ content: listing.description, detailType: "TEXT" as const }],
+                },
+              ]
+            : []),
+          ...descriptionImageUrls.map((url) => ({
+            contentsType: "IMAGE" as const,
+            contentDetails: [{ content: url, detailType: "IMAGE" as const }],
+          })),
+        ],
         searchTags: listing.options,
       },
     ],

@@ -29,6 +29,14 @@ export interface CategoryCandidate {
   /** 사람이 읽을 수 있는 추천 이유 목록. */
   reason: string[];
   source: "rule" | "ai";
+  /**
+   * true면 id가 CartPilot 내부 카테고리 id가 아니라 플랫폼 공식 API가 돌려준
+   * 실제 카테고리 코드다(예: 쿠팡 categorization/predict의 predictedCategoryId).
+   * 등록 payload의 displayCategoryCode 같은 필드는 이 값이 true인 candidate가
+   * 선택됐을 때만 채운다 — "AI 추천 내부 카테고리를 그대로 실제 플랫폼 코드로
+   * 보내면 안 된다"는 원칙을 타입 레벨에서 강제한다.
+   */
+  isVerifiedPlatformCode?: boolean;
 }
 
 export interface CategorySelection {

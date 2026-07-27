@@ -9,12 +9,18 @@ interface ImageCardProps {
   thumbnailDataUrl?: string;
   isExcluded: boolean;
   isRepresentative: boolean;
+  /** product.images에 아직 반영 안 됐으면(예: 처리 실패한 이미지) undefined —
+   * 그 경우 용도 선택 컨트롤 자체를 숨긴다(등록에 쓰일 수 없는 이미지이므로). */
+  useInProductGallery?: boolean;
+  useInDescription?: boolean;
   isSelected: boolean;
   retrying: boolean;
   retryCount: number;
   onPreview: () => void;
   onRetry: () => void;
-  onToggleRepresentative: () => void;
+  onSetRepresentative: () => void;
+  onToggleGalleryUsage: () => void;
+  onToggleDescriptionUsage: () => void;
   onToggleExclude: () => void;
   /** PRODUCT는 원본/배경제거 후보 둘 다 만들어진다 — 이 카드가 지금 어느 쪽을 쓸지
    * 전환한다(alternateDataUrl이 있을 때만 호출 가능). */
@@ -32,12 +38,16 @@ export function ImageCard({
   thumbnailDataUrl,
   isExcluded,
   isRepresentative,
+  useInProductGallery,
+  useInDescription,
   isSelected,
   retrying,
   retryCount,
   onPreview,
   onRetry,
-  onToggleRepresentative,
+  onSetRepresentative,
+  onToggleGalleryUsage,
+  onToggleDescriptionUsage,
   onToggleExclude,
   onSwapVariant,
 }: ImageCardProps) {
@@ -78,9 +88,9 @@ export function ImageCard({
             tabIndex={0}
             onClick={(event) => {
               event.stopPropagation();
-              onToggleRepresentative();
+              onSetRepresentative();
             }}
-            title="네이버 대표 이미지로 지정"
+            title="대표 이미지로 지정"
             className="absolute right-1.5 top-1.5 text-xl leading-none drop-shadow"
           >
             {isRepresentative ? "⭐" : "☆"}
@@ -129,6 +139,28 @@ export function ImageCard({
           </p>
         )}
         <p className="text-text-secondary">Processing: {item.processingTimeSec}s</p>
+
+        {useInProductGallery != null && useInDescription != null && (
+          <div className="mt-1 flex flex-col gap-0.5 border-t border-border pt-1.5 text-[11px]">
+            <label className="flex items-center gap-1.5">
+              <input
+                type="radio"
+                name={`representative-${item.id}`}
+                checked={isRepresentative}
+                onChange={onSetRepresentative}
+              />
+              대표 이미지
+            </label>
+            <label className="flex items-center gap-1.5">
+              <input type="checkbox" checked={useInProductGallery} onChange={onToggleGalleryUsage} />
+              상품 이미지
+            </label>
+            <label className="flex items-center gap-1.5">
+              <input type="checkbox" checked={useInDescription} onChange={onToggleDescriptionUsage} />
+              상세페이지
+            </label>
+          </div>
+        )}
 
         <div className="mt-auto flex items-center justify-between gap-2 pt-2">
           <label className="flex items-center gap-1 text-text-secondary">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import type { CanonicalProduct, FieldSource, PlatformId } from "@commerce/shared";
 import {
   ruleBasedCategoryProvider,
@@ -20,6 +20,7 @@ import {
 } from "@commerce/listing";
 import { PLATFORM_ADAPTERS, PLATFORM_ORDER } from "@commerce/marketplace";
 import { AIContentPanel } from "./commerce/AIContentPanel";
+import { CoupangConnectionPanel } from "./commerce/CoupangConnectionPanel";
 import { ListingConfirmationModal } from "./commerce/ListingConfirmationModal";
 import { PlatformPreview } from "./commerce/PlatformPreview";
 import { RegistrationHistoryPanel } from "./commerce/RegistrationHistoryPanel";
@@ -76,22 +77,31 @@ export function CommerceWorkspace({
   const [confirmingPlatform, setConfirmingPlatform] = useState<PlatformId | null>(null);
   const [registrationHistory, setRegistrationHistory] = useState<RegistrationHistoryEntry[]>([]);
   const [coupangConnection, setCoupangConnection] = useState<PlatformConnectionStatus>("UNKNOWN");
-  const coupangConnectionRequested = useRef(false);
+  const [coupangConnectionCheckedAt, setCoupangConnectionCheckedAt] = useState<string | null>(null);
+  const [coupangConnectionChecking, setCoupangConnectionChecking] = useState(false);
+  const [coupangApiCandidate, setCoupangApiCandidate] = useState<CategoryCandidate | null>(null);
+  const [coupangCategoryFetching, setCoupangCategoryFetching] = useState(false);
 
-  /** 쿠팡 탭에 처음 들어올 때만 "쿠팡 연결 상태"를 확인한다 — 매 렌더마다 다시
-   * 확인하면 실제 쿠팡 API를 불필요하게 반복 호출하게 된다. ref로 중복 요청을
-   * 막아서, effect 본문에서는 setState를 동기로 호출하지 않고 fetch 콜백
-   * 안에서만(CHECKING 중간 상태 없이) 최종 상태를 반영한다. */
-  useEffect(() => {
-    if (tab !== "coupang" || coupangConnectionRequested.current) return;
-    coupangConnectionRequested.current = true;
-    fetch("/api/coupang/auth-test", { method: "POST" })
-      .then((res) => res.json())
-      .then((data: { status?: PlatformConnectionStatus }) => {
-        setCoupangConnection(data.status ?? "NOT_CONFIGURED");
-      })
-      .catch(() => setCoupangConnection("AUTH_FAILED"));
-  }, [tab]);
+  /** 페이지/탭 진입 시 자동으로 호출하지 않는다 — 사용자가 [연결 다시 확인]을
+   * 누르거나(CoupangConnectionPanel), 등록 직전(confirmListing)에만 실제 쿠팡
+   * API가 호출된다. 반환값을 그대로 쓸 수 있게 해서, confirmListing이 방금 setState한
+   * "다음 렌더의" coupangConnection이 아니라 "지금 이 순간의" 상태를 즉시 판단할 수
+   * 있게 한다(React state는 비동기라 setState 직후 값을 바로 읽을 수 없다). */
+  async function checkCoupangConnection(): Promise<PlatformConnectionStatus> {
+    setCoupangConnectionChecking(true);
+    let status: PlatformConnectionStatus = "AUTH_FAILED";
+    try {
+      const res = await fetch("/api/coupang/auth-test", { method: "POST" });
+      const data = (await res.json()) as { status?: PlatformConnectionStatus };
+      status = data.status ?? "NOT_CONFIGURED";
+    } catch {
+      status = "AUTH_FAILED";
+    }
+    setCoupangConnection(status);
+    setCoupangConnectionCheckedAt(new Date().toISOString());
+    setCoupangConnectionChecking(false);
+    return status;
+  }
 
   function updateField(
     key:
@@ -125,6 +135,17 @@ export function CommerceWorkspace({
     setProduct((prev) => ({
       ...prev,
       price: { value: { amount, currency }, source: "USER_EDITED" as FieldSource, confidence: 1 },
+    }));
+  }
+
+  /** "원본 가격"(product.price, 항상 원본 통화)과 별개로 "실제 판매가"(KRW)만
+   * 저장한다 — updatePrice처럼 product.price를 덮어쓰면 원본 통화 정보가
+   * 사라져서 다시 보여줄 수 없게 된다. 어댑터는 이 값이 있으면 환율 추정 대신
+   * 이 값을 우선 쓴다(packages/marketplace의 각 adapter 참고). */
+  function updateSalePriceKrw(amountKrw: number) {
+    setProduct((prev) => ({
+      ...prev,
+      priceOverrideKrw: { value: amountKrw, source: "USER_EDITED" as FieldSource, confidence: 1 },
     }));
   }
 
@@ -166,8 +187,12 @@ export function CommerceWorkspace({
 
   const categoryCandidates = useMemo(() => {
     if (tab === "source" || tab === "content") return [];
-    return ruleBasedCategoryProvider.recommendCategory(product, tab);
-  }, [tab, product]);
+    const ruleBased = ruleBasedCategoryProvider.recommendCategory(product, tab);
+    // 쿠팡 API가 준 실제 코드 후보를 맨 앞에 보여준다 — CartPilot 내부 AI 추천과
+    // 섞이긴 하지만 isVerifiedPlatformCode로 화면에서 구분 배지를 보여준다.
+    if (tab === "coupang" && coupangApiCandidate) return [coupangApiCandidate, ...ruleBased];
+    return ruleBased;
+  }, [tab, product, coupangApiCandidate]);
 
   /**
    * 저장된 선택이 아직 UNRESOLVED인데 추천 후보가 있으면, 실제로 state를 바꾸지
@@ -194,6 +219,44 @@ export function CommerceWorkspace({
     if (tab === "source" || tab === "content") return null;
     return PLATFORM_ADAPTERS[tab].toListingModel(product, effectiveCategorySelection);
   }, [tab, product, effectiveCategorySelection]);
+
+  /** 쿠팡 카테고리 추천(자동매칭) API를 호출해서 실제 쿠팡 숫자 코드를 후보로
+   * 보여준다 — CartPilot 내부 AI 추천(categoryCandidates)과는 완전히 다른 코드
+   * 체계이므로 별도 state로 관리하고, isVerifiedPlatformCode: true로 표시해서
+   * 사용자가 "이건 실제 쿠팡 코드"라는 걸 구분할 수 있게 한다. */
+  async function fetchCoupangCategoryRecommendation() {
+    if (!listing) return;
+    setCoupangCategoryFetching(true);
+    try {
+      const res = await fetch("/api/coupang/category-recommend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productName: listing.title, brand: listing.brand }),
+      });
+      const data = (await res.json()) as {
+        categoryCode?: number | null;
+        categoryName?: string | null;
+        unverified?: boolean;
+      };
+      if (data.categoryCode != null && data.categoryName) {
+        setCoupangApiCandidate({
+          id: String(data.categoryCode),
+          name: data.categoryName,
+          path: [data.categoryName],
+          platform: "coupang",
+          confidence: 1,
+          reason: ["쿠팡 API가 상품명 기반으로 예측한 실제 카테고리 코드 — 등록 전 최종 확인이 필요합니다."],
+          source: "ai",
+          isVerifiedPlatformCode: true,
+        });
+      }
+    } catch {
+      // 조용히 실패 — 이 후보는 참고용 추가 옵션일 뿐, 실패해도 기존 AI 추천
+      // 흐름(내부 카테고리 선택)은 그대로 쓸 수 있다.
+    } finally {
+      setCoupangCategoryFetching(false);
+    }
+  }
 
   /**
    * SmartStore에서만 계산한다 — 원산지/반품정보/배송비/재고 같은 등록 직전
@@ -236,9 +299,15 @@ export function CommerceWorkspace({
   /** 쿠팡 + 연결됨 상태일 때만 LIVE를 시도한다 — 그 외(SmartStore/11번가, 또는
    * 쿠팡이지만 인증 안 됨)는 항상 DRY_RUN이다. 아직 SmartStore/11번가는 이번
    * Mission 범위 밖이라 LIVE 경로 자체가 없다(executor가 NOT_IMPLEMENTED로
-   * 막는다 — 여기서 미리 걸러도 되지만 executor가 이미 안전하므로 그대로 둔다). */
-  function resolveExecutionMode(platform: PlatformId): ExecutionMode {
-    if (platform === "coupang" && coupangConnection === "CONNECTED") return "LIVE";
+   * 막는다 — 여기서 미리 걸러도 되지만 executor가 이미 안전하므로 그대로 둔다).
+   * connectionOverride: confirmListing이 방금 재확인한 "지금 이 순간의" 상태를
+   * 넘겨줄 때 쓴다 — 안 넘기면 화면에 표시 중인(마지막으로 확인된) 상태를 쓴다. */
+  function resolveExecutionMode(
+    platform: PlatformId,
+    connectionOverride?: PlatformConnectionStatus,
+  ): ExecutionMode {
+    const connection = connectionOverride ?? coupangConnection;
+    if (platform === "coupang" && connection === "CONNECTED") return "LIVE";
     return "DRY_RUN";
   }
 
@@ -247,7 +316,12 @@ export function CommerceWorkspace({
     const platform = confirmingPlatform;
     setConfirmingPlatform(null);
 
-    const mode = resolveExecutionMode(platform);
+    // 등록 직전 한 번 더 인증을 확인한다 — 모달을 열어둔 사이에 키가 만료되거나
+    // 세션 시작 뒤 한 번도 확인 안 했을 수 있다. 여기서 확인한 "지금 이 순간의"
+    // 상태로만 LIVE 여부를 결정한다(모달이 열려 있던 시점의 오래된 상태로 실제
+    // 등록을 시도하지 않는다).
+    const freshConnection = platform === "coupang" ? await checkCoupangConnection() : undefined;
+    const mode = resolveExecutionMode(platform, freshConnection);
     const listingKey = `${product.sourceUrl}::${platform}`;
 
     // 중복 LIVE 등록 방지: 같은 상품(sourceUrl)+플랫폼으로 이미 성공한 LIVE 이력이
@@ -326,21 +400,32 @@ export function CommerceWorkspace({
         />
       )}
 
+      {tab === "coupang" && (
+        <CoupangConnectionPanel
+          status={coupangConnection}
+          checking={coupangConnectionChecking}
+          checkedAt={coupangConnectionCheckedAt}
+          onCheck={checkCoupangConnection}
+        />
+      )}
+
       {listing && tab !== "source" && tab !== "content" && (
         <PlatformPreview
+          product={product}
           listing={listing}
           categoryCandidates={categoryCandidates}
           listingStatus={effectiveListingStatus}
           listingResult={listingResults[tab]}
           readiness={smartStoreReadiness}
-          connectionStatus={tab === "coupang" ? coupangConnection : undefined}
           onUpdateField={updateField}
-          onUpdatePriceKrw={(amountKrw) => updatePrice(amountKrw, "KRW")}
+          onUpdateSalePriceKrw={updateSalePriceKrw}
           onSelectCategory={(candidate) => selectCategory(tab, candidate)}
           onFixTextField={updateField}
           onFixNumberField={updateNumberField}
           onOpenListingModal={openListingModal}
           onRetryListing={retryListing}
+          onFetchCoupangCategory={tab === "coupang" ? fetchCoupangCategoryRecommendation : undefined}
+          coupangCategoryFetching={coupangCategoryFetching}
         />
       )}
 
@@ -350,6 +435,8 @@ export function CommerceWorkspace({
         <ListingConfirmationModal
           listing={listing}
           mode={resolveExecutionMode(confirmingPlatform)}
+          connectionStatus={confirmingPlatform === "coupang" ? coupangConnection : undefined}
+          descriptionImageCount={product.images.filter((img) => img.useInDescription).length}
           onCancel={cancelListingModal}
           onConfirm={confirmListing}
         />

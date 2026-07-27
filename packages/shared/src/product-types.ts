@@ -45,6 +45,14 @@ export interface CanonicalProductImage {
   processedUrl?: string;
   selectedVariant: ImageVariant;
   isRepresentative: boolean;
+  /** 마켓플레이스 등록 시 대표 이미지 외 "추가 이미지" 갤러리에도 쓸지. 대부분
+   * true가 기본값이다 — 사용자가 직접 빼고 싶은 사진(예: 로고만 있는 사이즈표성
+   * 이미지)만 끄는 용도다. */
+  useInProductGallery: boolean;
+  /** 상세페이지 설명 콘텐츠에도 이 이미지를 넣을지. isRepresentative가 아닌
+   * 이미지는 기본 true(설명에도 자연스럽게 들어가는 경우가 많음), 대표 이미지는
+   * 기본 false(설명에서 또 반복해서 보여줄 필요가 적음)로 시작한다. */
+  useInDescription: boolean;
   classification: ImageType;
 }
 
@@ -76,6 +84,10 @@ export interface CanonicalProduct {
   title: ProvenanceField<string>;
   brand: ProvenanceField<string>;
   price: ProvenanceField<{ amount: number; currency: string }>;
+  /** 사용자가 직접 입력한 "실제 판매가"(KRW) — price(원본 통화 원가)를 덮어쓰지
+   * 않는다. 있으면 어댑터가 환율 변환값 대신 이 값을 쓴다. 없으면(아직 입력 전)
+   * 환율 추정값을 그대로 쓴다 — packages/pricing의 convertToKrw() 참고. */
+  priceOverrideKrw?: ProvenanceField<number>;
   sku: ProvenanceField<string>;
   description: ProvenanceField<string>;
   material: ProvenanceField<string>;

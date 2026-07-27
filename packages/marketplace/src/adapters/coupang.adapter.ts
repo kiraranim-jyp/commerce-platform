@@ -25,12 +25,13 @@ export const coupangAdapter: PlatformAdapter = {
       ? getSelectedImageUrl(representativeImageEntry)
       : undefined;
     const additionalImages = product.images
-      .filter((img) => !img.isRepresentative)
+      .filter((img) => !img.isRepresentative && img.useInProductGallery)
       .map((img) => getSelectedImageUrl(img));
-    const { amountKrw, isEstimate } = convertToKrw(
-      product.price.value.amount,
-      product.price.value.currency,
-    );
+    const estimated = convertToKrw(product.price.value.amount, product.price.value.currency);
+    // priceOverrideKrw가 있으면(사용자가 판매가를 직접 입력함) 환율 추정값 대신
+    // 그 값을 쓴다 — 더 이상 "추정"이 아니라 사용자가 확정한 값이므로 isEstimate도 false.
+    const amountKrw = product.priceOverrideKrw?.value ?? estimated.amountKrw;
+    const isEstimate = product.priceOverrideKrw ? false : estimated.isEstimate;
     const title = effectiveTitle(product);
     const description = effectiveDescription(product);
 
@@ -54,7 +55,7 @@ export const coupangAdapter: PlatformAdapter = {
       {
         field: "price",
         label: "판매가격",
-        check: () => product.price.value.amount > 0,
+        check: () => amountKrw > 0,
         onFail: "ERROR",
         message: "판매가격을 확인할 수 없습니다.",
       },

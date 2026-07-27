@@ -1,18 +1,32 @@
 "use client";
 
-import type { ExecutionMode } from "@commerce/listing";
+import type { ExecutionMode, PlatformConnectionStatus } from "@commerce/listing";
 import type { ListingModel } from "@commerce/marketplace";
 import { formatKrw } from "@commerce/pricing";
+
+const CONNECTION_LABEL: Record<PlatformConnectionStatus, string> = {
+  UNKNOWN: "미확인",
+  CHECKING: "확인 중",
+  NOT_CONFIGURED: "⚠ 연결 설정 필요",
+  CONNECTED: "✓ 연결됨",
+  AUTH_FAILED: "✕ 인증 실패",
+};
 
 export function ListingConfirmationModal({
   listing,
   mode = "DRY_RUN",
+  connectionStatus,
+  descriptionImageCount,
   onCancel,
   onConfirm,
 }: {
   listing: ListingModel;
   /** LIVE면 실제 쿠팡 API가 호출된다는 경고 문구와 버튼 문구를 바꾼다. */
   mode?: ExecutionMode;
+  /** 쿠팡일 때만 넘어온다 — "✓ 쿠팡 연결됨" 행 표시용(등록 직전 실제로 재확인된 값). */
+  connectionStatus?: PlatformConnectionStatus;
+  /** 상세설명에 함께 들어갈 이미지 개수 — useInDescription으로 사용자가 고른 값. */
+  descriptionImageCount?: number;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -71,6 +85,10 @@ export function ListingConfirmationModal({
               )}
             </div>
           </li>
+          <ConfirmRow label="추가 이미지" value={`${listing.additionalImages.length}장`} />
+          {descriptionImageCount != null && (
+            <ConfirmRow label="상세 이미지" value={`${descriptionImageCount}장`} />
+          )}
           <li className="flex items-start gap-2">
             <span className="mt-0.5 text-success">✓</span>
             <div>
@@ -80,6 +98,13 @@ export function ListingConfirmationModal({
               </p>
             </div>
           </li>
+          {connectionStatus && (
+            <ConfirmRow
+              label="쿠팡 연결"
+              value={CONNECTION_LABEL[connectionStatus]}
+              warning={connectionStatus !== "CONNECTED"}
+            />
+          )}
         </ul>
 
         <div className="mt-5 flex justify-end gap-2">
