@@ -41,8 +41,8 @@ export function PlatformPreview({
   onFixNumberField?: (field: "shippingFee" | "stockQuantity", value: number) => void;
   onOpenListingModal: () => void;
   onRetryListing: () => void;
-  /** 쿠팡 탭에서만 넘어온다 — 있으면 카테고리 추천 패널에 "쿠팡 API로 확인" 버튼이 보인다. */
-  onFetchCoupangCategory?: () => void;
+  /** 쿠팡 탭에서만 넘어온다 — 있으면 카테고리 추천 패널에 "쿠팡 API로 확인"/검색 UI가 보인다. */
+  onFetchCoupangCategory?: (query?: string) => void;
   coupangCategoryFetching?: boolean;
 }) {
   const isCategoryConfirmed =

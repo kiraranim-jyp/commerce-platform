@@ -23,6 +23,7 @@ export * from "./services/cache.service";
 export * from "./services/downloader.service";
 export * from "./services/dedup.service";
 export * from "./services/classify.service";
+export * from "./services/original-passthrough.service";
 export * from "./services/product-processor.service";
 export * from "./services/quality-score.service";
 export * from "./services/standardizer.service";

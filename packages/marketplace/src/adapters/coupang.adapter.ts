@@ -8,6 +8,12 @@ import { imageFormatFieldRule } from "../image-field";
 import { runValidation, scoreValidations, type FieldRule } from "../validation";
 import type { ListingModel, PlatformAdapter } from "../types";
 
+/** 쿠팡 실제 등록 한도 — 대표 1장 + 추가 최대 9장(총 10장). product.images에는
+ * 커머스별 제한을 저장하지 않는다 — 사용자가 몇 장을 선택했든 이 어댑터가 등록
+ * 시점에 쿠팡 한도만큼만 잘라서 쓴다. 다른 커머스(스마트스토어/11번가)를 추가해도
+ * 이미지 선택 상태나 product.images 구조를 다시 손댈 필요가 없다. */
+const MAX_ADDITIONAL_IMAGES = 9;
+
 /**
  * 쿠팡은 브랜드 미기재 상품에 대한 규제가 스마트스토어보다 엄격해서(상표권 이슈로
  * 반려되는 경우가 실제로 흔하다) 브랜드 누락을 ERROR로 잡는다 — 스마트스토어
@@ -26,7 +32,8 @@ export const coupangAdapter: PlatformAdapter = {
       : undefined;
     const additionalImages = product.images
       .filter((img) => !img.isRepresentative && img.useInProductGallery)
-      .map((img) => getSelectedImageUrl(img));
+      .map((img) => getSelectedImageUrl(img))
+      .slice(0, MAX_ADDITIONAL_IMAGES);
     const estimated = convertToKrw(product.price.value.amount, product.price.value.currency);
     // priceOverrideKrw가 있으면(사용자가 판매가를 직접 입력함) 환율 추정값 대신
     // 그 값을 쓴다 — 더 이상 "추정"이 아니라 사용자가 확정한 값이므로 isEstimate도 false.
@@ -49,6 +56,13 @@ export const coupangAdapter: PlatformAdapter = {
         check: () => product.brand.value.trim().length > 0,
         onFail: "ERROR",
         message: "쿠팡은 브랜드 미기재 시 등록이 반려될 수 있습니다.",
+      },
+      {
+        field: "representativeImage",
+        label: "대표이미지",
+        check: () => Boolean(representativeImage),
+        onFail: "ERROR",
+        message: "대표 이미지가 지정되지 않았습니다.",
       },
       imageFormatFieldRule(product),
       categoryFieldRule(categorySelection),

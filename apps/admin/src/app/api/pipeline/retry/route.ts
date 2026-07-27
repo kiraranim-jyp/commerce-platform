@@ -3,10 +3,9 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import type { ImageType } from "@commerce/shared";
 import {
-  ImglyRemoverProvider,
   SharpEnhancerProvider,
   SharpOptimizerProvider,
-  processSingleProductImage,
+  processSingleProductImageOriginal,
   processSingleStandardImage,
   storagePaths,
   type ProcessedImageFile,
@@ -103,11 +102,7 @@ export async function POST(request: Request) {
 
     const processed =
       type === "PRODUCT"
-        ? await processSingleProductImage(sourcePath, {
-            backgroundRemover: new ImglyRemoverProvider(),
-            enhancer,
-            optimizer,
-          })
+        ? await processSingleProductImageOriginal(sourcePath)
         : await processSingleStandardImage(
             sourcePath,
             type as (typeof STANDARD_TYPES)[number],

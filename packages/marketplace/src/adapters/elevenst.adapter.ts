@@ -8,6 +8,10 @@ import { imageFormatFieldRule } from "../image-field";
 import { runValidation, scoreValidations, type FieldRule } from "../validation";
 import type { ListingModel, PlatformAdapter } from "../types";
 
+/** 11번가 실제 등록 한도 — 대표 1장 + 추가 최대 20장. product.images에는 커머스별
+ * 제한을 저장하지 않는다 — 이 어댑터가 등록 시점에만 적용한다. */
+const MAX_ADDITIONAL_IMAGES = 20;
+
 export const elevenstAdapter: PlatformAdapter = {
   platform: "elevenst",
   label: "11번가",
@@ -21,7 +25,8 @@ export const elevenstAdapter: PlatformAdapter = {
       : undefined;
     const additionalImages = product.images
       .filter((img) => !img.isRepresentative && img.useInProductGallery)
-      .map((img) => getSelectedImageUrl(img));
+      .map((img) => getSelectedImageUrl(img))
+      .slice(0, MAX_ADDITIONAL_IMAGES);
     const estimated = convertToKrw(product.price.value.amount, product.price.value.currency);
     const amountKrw = product.priceOverrideKrw?.value ?? estimated.amountKrw;
     const isEstimate = product.priceOverrideKrw ? false : estimated.isEstimate;

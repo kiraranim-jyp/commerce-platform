@@ -5,7 +5,6 @@ import type { PlatformConnectionStatus } from "@commerce/listing";
 import type { CanonicalProduct } from "@commerce/shared";
 import { CommerceWorkspace } from "./CommerceWorkspace";
 import { CoupangConnectionPanel } from "./commerce/CoupangConnectionPanel";
-import { ImageSelectionGate } from "./commerce/ImageSelectionGate";
 import { ImageCard } from "./ImageCard";
 import { ImageUsageTable } from "./ImageUsageTable";
 import { PreviewModal } from "./PreviewModal";
@@ -37,11 +36,6 @@ export default function PipelinePage() {
   const [currentProgress, setCurrentProgress] = useState<PipelineProgressEvent | null>(null);
   const [progressLog, setProgressLog] = useState<PipelineProgressEvent[]>([]);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
-  // 이미지 처리가 끝나도 곧바로 등록 준비 화면(CommerceWorkspace)으로 안 넘어간다 —
-  // [이미지 선택 완료]를 눌러야만 true가 되고, 그 전까지는 ImageSelectionGate만
-  // 보여준다. AI 추천(대표/상품 이미지 기본값)은 유지하되 최종 확정은 항상
-  // 사용자가 하게 만드는 게 목적이다.
-  const [imageSelectionConfirmed, setImageSelectionConfirmed] = useState(false);
   // 홈 화면 전용 쿠팡 연결 상태 — CommerceWorkspace 안의 쿠팡 탭이 갖고 있는
   // coupangConnection과는 별개의 state다. 여기는 "분석 비용을 쓰기 전 게이트",
   // 그쪽은 "실제 등록 직전 최종 재확인"으로 목적이 달라서 공유하지 않는다 —
@@ -100,7 +94,6 @@ export default function PipelinePage() {
     setCurrentProgress(null);
     setProgressLog([]);
     setDetailsExpanded(false);
-    setImageSelectionConfirmed(false);
 
     try {
       const response = await fetch("/api/pipeline", {
@@ -192,7 +185,6 @@ export default function PipelinePage() {
     setCurrentProgress(null);
     setProgressLog([]);
     setDetailsExpanded(false);
-    setImageSelectionConfirmed(false);
   }
 
   /** CommerceWorkspace는 product가 항상 있다고 가정하고 업데이터를 호출한다(그 컴포넌트가
@@ -414,28 +406,24 @@ export default function PipelinePage() {
         </p>
       )}
 
-      {result && product && !imageSelectionConfirmed && (
-        <ImageSelectionGate
-          product={product}
-          items={items}
-          thumbnails={thumbnails}
-          representativeId={representativeId}
-          excludedIds={excludedIds}
-          onPreview={(id) => {
-            setSelectedId(id);
-            setPreviewId(id);
-          }}
-          onSetRepresentative={setRepresentative}
-          onToggleGalleryUsage={(id) => toggleImageUsage(id, "useInProductGallery")}
-          onToggleDescriptionUsage={(id) => toggleImageUsage(id, "useInDescription")}
-          onToggleExclude={toggleExclude}
-          onConfirm={() => setImageSelectionConfirmed(true)}
-        />
-      )}
-
-      {result && product && imageSelectionConfirmed && (
+      {result && product && (
         <div className="mt-6 space-y-6">
-          <CommerceWorkspace product={product} onUpdateProduct={updateProduct} />
+          <CommerceWorkspace
+            product={product}
+            onUpdateProduct={updateProduct}
+            items={items}
+            thumbnails={thumbnails}
+            representativeId={representativeId}
+            excludedIds={excludedIds}
+            onPreviewImage={(id) => {
+              setSelectedId(id);
+              setPreviewId(id);
+            }}
+            onSetRepresentative={setRepresentative}
+            onToggleGalleryUsage={(id) => toggleImageUsage(id, "useInProductGallery")}
+            onToggleDescriptionUsage={(id) => toggleImageUsage(id, "useInDescription")}
+            onToggleExclude={toggleExclude}
+          />
 
           <section className="rounded-lg border border-border bg-surface shadow-subtle">
             <button

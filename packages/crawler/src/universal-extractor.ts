@@ -29,7 +29,7 @@ export interface UniversalExtractResult {
   trace?: ExtractionTrace[];
   strategyCounts?: Record<StrategySource, number>;
   productData: ExtractedProductData;
-  productDataSources: Record<string, "json-ld" | "open-graph" | "dom">;
+  productDataSources: Record<string, "json-ld" | "microdata" | "open-graph" | "dom">;
 }
 
 async function autoScroll(page: Page, passes: number): Promise<void> {

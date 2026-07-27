@@ -17,6 +17,7 @@ export function ListingConfirmationModal({
   mode = "DRY_RUN",
   connectionStatus,
   descriptionImageCount,
+  selectedGalleryCount,
   onCancel,
   onConfirm,
 }: {
@@ -27,6 +28,10 @@ export function ListingConfirmationModal({
   connectionStatus?: PlatformConnectionStatus;
   /** 상세설명에 함께 들어갈 이미지 개수 — useInDescription으로 사용자가 고른 값. */
   descriptionImageCount?: number;
+  /** 사용자가 "상품 이미지"로 선택한 전체 장수(대표 제외) — 커머스 어댑터가 실제로
+   * 담은 listing.additionalImages.length보다 많으면 플랫폼 한도 때문에 일부가
+   * 잘렸다는 뜻이라 그 사실을 등록 직전에 알려준다. */
+  selectedGalleryCount?: number;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -85,7 +90,20 @@ export function ListingConfirmationModal({
               )}
             </div>
           </li>
-          <ConfirmRow label="추가 이미지" value={`${listing.additionalImages.length}장`} />
+          <ConfirmRow
+            label="추가 이미지"
+            value={
+              selectedGalleryCount != null && selectedGalleryCount > listing.additionalImages.length
+                ? `선택 ${selectedGalleryCount}장 · 등록 가능 ${listing.additionalImages.length}장 · 실제 등록 ${listing.additionalImages.length}장`
+                : `${listing.additionalImages.length}장`
+            }
+            warning={selectedGalleryCount != null && selectedGalleryCount > listing.additionalImages.length}
+            warningNote={
+              selectedGalleryCount != null && selectedGalleryCount > listing.additionalImages.length
+                ? "플랫폼 이미지 장수 한도 때문에 일부만 등록됩니다."
+                : undefined
+            }
+          />
           {descriptionImageCount != null && (
             <ConfirmRow label="상세 이미지" value={`${descriptionImageCount}장`} />
           )}

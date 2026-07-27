@@ -4,6 +4,20 @@ import { useState } from "react";
 import { formatBytes, formatDimensions } from "./format";
 import type { TabKey, WorkspaceItem } from "./types";
 
+/** 다운로드 파일명은 원본 파일명을 최대한 유지하되, 실제 산출물 포맷과 확장자가
+ * 다르면(예: 원본 webp를 JPG로 변환) data URL의 진짜 MIME을 기준으로 확장자를
+ * 맞춘다 — 그래야 "product.webp"라는 이름으로 실제로는 JPEG 바이트가 저장되는
+ * 불일치가 없다. */
+function downloadNameFor(fileName: string, dataUrl: string | null | undefined): string {
+  if (!dataUrl) return fileName;
+  const match = /^data:image\/(\w+);/.exec(dataUrl);
+  const mimeSubtype = match?.[1];
+  if (!mimeSubtype) return fileName;
+  const ext = mimeSubtype === "jpeg" ? "jpg" : mimeSubtype;
+  const base = fileName.replace(/\.[^./]+$/, "");
+  return `${base}.${ext}`;
+}
+
 interface ImageCardProps {
   item: WorkspaceItem;
   tab: TabKey;
@@ -61,6 +75,7 @@ export function ImageCard({
         : item.detailDataUrl;
   const status = retrying ? "processing" : item.status;
   const originalFormat = (item.fileName.split(".").pop() ?? "").toUpperCase();
+  const downloadFileName = downloadNameFor(item.fileName, previewSrc);
 
   return (
     <div
@@ -201,7 +216,7 @@ export function ImageCard({
             {previewSrc && (
               <a
                 href={previewSrc}
-                download={item.fileName}
+                download={downloadFileName}
                 className="rounded border border-border px-2 py-1 font-medium text-text-primary hover:bg-background"
               >
                 ⬇ Download

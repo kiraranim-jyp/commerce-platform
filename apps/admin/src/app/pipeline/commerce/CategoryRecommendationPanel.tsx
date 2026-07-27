@@ -13,11 +13,15 @@ export function CategoryRecommendationPanel({
   candidates: CategoryCandidate[];
   selection: CategorySelection;
   onSelect: (candidate: CategoryCandidate) => void;
-  /** 쿠팡 탭에서만 넘어온다 — 있으면 "쿠팡 API로 카테고리 확인" 버튼이 보인다. */
-  onFetchCoupangCategory?: () => void;
+  /** 쿠팡 탭에서만 넘어온다 — 있으면 "쿠팡 API로 카테고리 확인"/검색 UI가 보인다.
+   * query를 주면 상품명 대신 그 검색어로 쿠팡 카테고리 예측 API를 호출한다(MVP —
+   * 전체 카테고리 트리 대신 검색어 기반으로 실제 쿠팡 API에 물어본다). */
+  onFetchCoupangCategory?: (query?: string) => void;
   coupangCategoryFetching?: boolean;
 }) {
   const [expanded, setExpanded] = useState(true);
+  const [searching, setSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const isConfirmed = selection.state === "SELECTED" || selection.state === "CONFIRMED";
 
   return (
@@ -41,17 +45,50 @@ export function CategoryRecommendationPanel({
       </button>
 
       {expanded && onFetchCoupangCategory && (
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onFetchCoupangCategory();
-          }}
-          disabled={coupangCategoryFetching}
-          className="mt-3 w-full rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-background disabled:opacity-50"
-        >
-          {coupangCategoryFetching ? "쿠팡 API 확인 중…" : "쿠팡 API로 카테고리 확인"}
-        </button>
+        <div className="mt-3 space-y-2" onClick={(event) => event.stopPropagation()}>
+          <button
+            type="button"
+            onClick={() => onFetchCoupangCategory()}
+            disabled={coupangCategoryFetching}
+            className="w-full rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-background disabled:opacity-50"
+          >
+            {coupangCategoryFetching ? "쿠팡 API 확인 중…" : "쿠팡 API로 카테고리 확인"}
+          </button>
+
+          {!searching ? (
+            <button
+              type="button"
+              onClick={() => setSearching(true)}
+              className="w-full rounded-md border border-dashed border-border px-3 py-1.5 text-xs font-medium text-text-tertiary transition-colors hover:bg-background"
+            >
+              카테고리 변경 (검색)
+            </button>
+          ) : (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (searchQuery.trim()) onFetchCoupangCategory(searchQuery);
+              }}
+              className="flex gap-1.5"
+            >
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="예: 샌들"
+                autoFocus
+                className="min-w-0 flex-1 rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={coupangCategoryFetching || !searchQuery.trim()}
+                className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+              >
+                검색
+              </button>
+            </form>
+          )}
+        </div>
       )}
 
       {expanded && candidates.length > 0 && (

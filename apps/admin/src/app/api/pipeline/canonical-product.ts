@@ -7,8 +7,9 @@ import type {
 } from "@commerce/shared";
 import type { WorkspaceItem } from "./response.types";
 
-const CONFIDENCE_BY_SOURCE: Record<"json-ld" | "open-graph" | "dom", number> = {
+const CONFIDENCE_BY_SOURCE: Record<"json-ld" | "microdata" | "open-graph" | "dom", number> = {
   "json-ld": 0.9,
+  microdata: 0.85,
   "open-graph": 0.7,
   dom: 0.4,
 };
@@ -16,7 +17,7 @@ const CONFIDENCE_BY_SOURCE: Record<"json-ld" | "open-graph" | "dom", number> = {
 function field<T>(
   value: T,
   key: string,
-  sources: Record<string, "json-ld" | "open-graph" | "dom">,
+  sources: Record<string, "json-ld" | "microdata" | "open-graph" | "dom">,
 ): ProvenanceField<T> {
   const detected = sources[key];
   const source: FieldSource = "ORIGINAL";
@@ -70,7 +71,7 @@ export function toCanonicalProductImage(item: WorkspaceItem): CanonicalProductIm
 export function buildCanonicalProduct(
   sourceUrl: string,
   productData: ExtractedProductData,
-  sources: Record<string, "json-ld" | "open-graph" | "dom">,
+  sources: Record<string, "json-ld" | "microdata" | "open-graph" | "dom">,
   items: WorkspaceItem[],
 ): CanonicalProduct {
   const images = items

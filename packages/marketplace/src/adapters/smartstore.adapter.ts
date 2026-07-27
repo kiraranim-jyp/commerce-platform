@@ -8,6 +8,10 @@ import { imageFormatFieldRule } from "../image-field";
 import { runValidation, scoreValidations, type FieldRule } from "../validation";
 import type { ListingModel, PlatformAdapter } from "../types";
 
+/** 스마트스토어 실제 등록 한도 — 대표 1장 + 추가 최대 20장. product.images에는
+ * 커머스별 제한을 저장하지 않는다 — 이 어댑터가 등록 시점에만 적용한다. */
+const MAX_ADDITIONAL_IMAGES = 20;
+
 /**
  * 스마트스토어는 옵션이 없는 단일 상품 등록도 흔해서 옵션 미입력을 WARNING에
  * 그친다(ERROR로 막지 않는다).
@@ -25,7 +29,8 @@ export const smartstoreAdapter: PlatformAdapter = {
       : undefined;
     const additionalImages = product.images
       .filter((img) => !img.isRepresentative && img.useInProductGallery)
-      .map((img) => getSelectedImageUrl(img));
+      .map((img) => getSelectedImageUrl(img))
+      .slice(0, MAX_ADDITIONAL_IMAGES);
     const estimated = convertToKrw(product.price.value.amount, product.price.value.currency);
     const amountKrw = product.priceOverrideKrw?.value ?? estimated.amountKrw;
     const isEstimate = product.priceOverrideKrw ? false : estimated.isEstimate;

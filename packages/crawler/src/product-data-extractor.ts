@@ -125,6 +125,47 @@ function extractFromOpenGraph(html: string): Partial<ExtractedProductData> {
   };
 }
 
+/**
+ * schema.org Microdata(itemprop 속성) — JSON-LD가 없는 사이트에서 흔히 이 방식으로
+ * 구조화 데이터를 노출한다(PrestaShop 계열이 대표적: LillaMode/LojaDada 등 이미
+ * 검증된 사이트도 실제로 이 형식을 쓴다 — JSON-LD가 아예 없고 OpenGraph에도 가격이
+ * 없어서, 개선 전에는 price가 항상 0으로 빠졌다). price/priceCurrency는 반드시
+ * itemprop="offers" 범위 안에서 우선 찾는다 — 그래야 같은 페이지의 관련상품 가격과
+ * 섞이지 않는다.
+ */
+async function extractFromMicrodata(page: Page): Promise<Partial<ExtractedProductData>> {
+  const raw = await page.evaluate(() => {
+    const text = (el: Element | null | undefined) => el?.textContent?.trim() || undefined;
+    const attr = (el: Element | null | undefined, name: string) =>
+      el?.getAttribute(name)?.trim() || undefined;
+
+    const offerScope = document.querySelector('[itemprop="offers"]');
+    const priceEl =
+      offerScope?.querySelector('[itemprop="price"]') ?? document.querySelector('[itemprop="price"]');
+    const currencyEl =
+      offerScope?.querySelector('[itemprop="priceCurrency"]') ??
+      document.querySelector('[itemprop="priceCurrency"]');
+    const nameEl = document.querySelector('[itemprop="name"]');
+    const brandEl = document.querySelector('[itemprop="brand"]');
+    const skuEl = document.querySelector('[itemprop="sku"]');
+
+    return {
+      title: text(nameEl),
+      brand: attr(brandEl, "content") || text(brandEl),
+      priceRaw: attr(priceEl, "content") || text(priceEl),
+      currency: attr(currencyEl, "content") || text(currencyEl),
+      sku: attr(skuEl, "content") || text(skuEl),
+    };
+  });
+
+  return {
+    title: raw.title,
+    brand: raw.brand,
+    sku: raw.sku,
+    price: raw.priceRaw ? parsePrice(raw.priceRaw, raw.currency) : undefined,
+  };
+}
+
 /** <title>/<h1> 같은 아주 기본적인 DOM 요소 — 구조화 데이터가 전혀 없는 사이트를 위한
  * 최후의 보루. 신뢰도가 가장 낮으므로(Confidence 계산에서 낮게 잡는다) 다른 소스가
  * 있으면 절대 우선순위를 뺏지 않는다. */
@@ -136,23 +177,34 @@ async function extractFromDom(page: Page): Promise<Partial<ExtractedProductData>
   });
 }
 
-/** JSON-LD → OpenGraph → DOM 순으로 시도하고, 필드 단위로 부족한 부분을 다음 소스로
- * 보강한다(예: JSON-LD에 title은 있는데 price가 없으면 OG의 price로 채운다). */
+/** JSON-LD → Microdata → OpenGraph → DOM 순으로 시도하고, 필드 단위로 부족한 부분을
+ * 다음 소스로 보강한다(예: JSON-LD에 title은 있는데 price가 없으면 Microdata의
+ * price로 채운다). Microdata를 OpenGraph보다 앞에 두는 이유: 둘 다 "구조화 데이터"로
+ * 신뢰도가 비슷하지만, 실제로 많은 사이트가 og:price를 아예 안 넣는 반면 상품
+ * 페이지의 itemprop="offers"는 결제 흐름에 실제로 쓰이는 값이라 더 정확하다. */
 export async function extractProductData(
   html: string,
   page: Page,
-): Promise<{ data: ExtractedProductData; sources: Record<string, "json-ld" | "open-graph" | "dom"> }> {
+): Promise<{
+  data: ExtractedProductData;
+  sources: Record<string, "json-ld" | "microdata" | "open-graph" | "dom">;
+}> {
   const jsonLd = extractFromJsonLd(html);
+  const microdata = await extractFromMicrodata(page);
   const og = extractFromOpenGraph(html);
   const dom = await extractFromDom(page);
 
-  const sources: Record<string, "json-ld" | "open-graph" | "dom"> = {};
+  const sources: Record<string, "json-ld" | "microdata" | "open-graph" | "dom"> = {};
   const pick = <K extends keyof ExtractedProductData>(
     field: K,
   ): ExtractedProductData[K] | undefined => {
     if (jsonLd?.[field] != null) {
       sources[field as string] = "json-ld";
       return jsonLd[field];
+    }
+    if (microdata[field] != null) {
+      sources[field as string] = "microdata";
+      return microdata[field] as ExtractedProductData[K];
     }
     if (og[field] != null) {
       sources[field as string] = "open-graph";

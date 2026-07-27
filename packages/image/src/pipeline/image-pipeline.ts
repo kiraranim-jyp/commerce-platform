@@ -8,6 +8,7 @@ import { deduplicateImages } from "../services/dedup.service";
 import { ImageDownloader } from "../services/downloader.service";
 import { pipelineLogger } from "../services/logger.service";
 import { buildProductMetadata, saveProductMetadata } from "../services/metadata.service";
+import { preserveOriginalForCommerce } from "../services/original-passthrough.service";
 import { processProductImage } from "../services/product-processor.service";
 import type { QualityScore } from "../services/quality-score.service";
 import { loadImagePolicy } from "../config/marketplace-policy";
@@ -307,6 +308,65 @@ export async function processSingleProductImage(
       processedVariant,
       originalVariant,
       isJPEG: true,
+      processingTimeMs: Date.now() - itemStartedAt,
+    };
+  } catch (error) {
+    console.error(`[pipeline] PRODUCT ${baseName}: 처리 실패`, error);
+    const failureReason = toFailureReason(error);
+    emit(`${baseName}: 처리 실패 - ${failureReason}`, { errorMessage: failureReason });
+    return {
+      baseName,
+      type: "PRODUCT",
+      status: "failed",
+      failureReason,
+      original,
+      files: [],
+      processingTimeMs: Date.now() - itemStartedAt,
+    };
+  }
+}
+
+/**
+ * 기본 상품 등록 흐름에서 PRODUCT 이미지 1장을 처리한다 — AI 배경제거/강제 캔버스
+ * 없이 원본 구도·비율을 그대로 보존한다(정책은 preserveOriginalForCommerce 참고).
+ * AI 배경제거 기반 처리(processSingleProductImage)는 향후 "AI 이미지 개선" 기능을
+ * 위해 그대로 남겨두되, 기본 등록 흐름(processProductStage)에서는 더 이상 호출하지
+ * 않는다 — 품질점수/원본·누끼 자동선택 로직 자체가 이 경로에는 없다.
+ */
+export async function processSingleProductImageOriginal(
+  file: string,
+  progress?: SingleImageProgressContext,
+): Promise<ProcessedImageResult> {
+  const baseName = path.parse(file).name;
+  const itemStartedAt = Date.now();
+  let original: ProcessedImageResult["original"] = { width: 0, height: 0, bytes: 0 };
+  const emit = (message: string, extra?: { errorMessage?: string }) =>
+    progress?.reporter.emit(progress.stageKey, progress.step, "processing", message, {
+      current: progress.current,
+      total: progress.total,
+      fileName: baseName,
+      errorMessage: extra?.errorMessage,
+    });
+
+  try {
+    original = await readOriginalInfo(file);
+    emit(`${baseName}: 원본 이미지 준비 중`);
+    const result = await preserveOriginalForCommerce(file, storagePaths.processed("product"), baseName);
+    emit(`${baseName}: 처리 완료`);
+
+    if (global.gc) {
+      global.gc();
+    }
+
+    return {
+      baseName,
+      type: "PRODUCT",
+      status: "success",
+      original,
+      output: { width: result.width, height: result.height },
+      files: [{ fileName: result.fileName, file: result.file, format: result.format, bytes: result.bytes }],
+      usedOriginal: true,
+      isJPEG: result.format === "jpg",
       processingTimeMs: Date.now() - itemStartedAt,
     };
   } catch (error) {
@@ -633,7 +693,7 @@ async function processProductStage(
 
   const results: ProcessedImageResult[] = [];
   for (let i = 0; i < files.length; i++) {
-    const result = await processSingleProductImage(files[i], deps, {
+    const result = await processSingleProductImageOriginal(files[i], {
       reporter,
       stageKey,
       step,

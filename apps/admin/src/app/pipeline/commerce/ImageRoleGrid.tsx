@@ -5,17 +5,16 @@ import { ImageCard } from "../ImageCard";
 import type { WorkspaceItem } from "../types";
 
 /**
- * 이미지 처리 완료 직후 ~ 상품 등록 준비 화면(CommerceWorkspace) 사이에 끼워 넣는
- * 필수 확인 단계. AI가 고른 대표 이미지(해상도 기준, ResolutionThumbnailSelector)와
- * "상품 이미지로 쓸지"(useInProductGallery) 기본값은 여전히 자동으로 채워지지만,
- * 어디까지나 초기 추천값일 뿐이다 — 이 화면을 통과([이미지 선택 완료])해야만
- * 등록 준비 화면에 갈 수 있으므로, 최종 선택은 항상 사용자가 확정하게 된다.
+ * 상품 정보 화면에 통합된 이미지 역할 선택 그리드 — 예전에는 별도 "이미지 선택"
+ * 화면(ImageSelectionGate)이 상품정보 화면 앞을 가로막았지만, 이제는 상품정보 탭
+ * 안에서 원본 이미지 미리보기와 함께 바로 대표/상품/상세 역할을 고른다. AI가 고른
+ * 대표/상품 이미지 기본값은 여전히 자동으로 채워지지만 사용자가 카드에서 언제든
+ * 바꿀 수 있고, 별도 확인 버튼 없이 즉시 상품 데이터(product.images)에 반영된다.
  *
  * 카드 자체는 새로 만들지 않고 기존 ImageCard를 그대로 재사용한다 — 대표/상품/상세
- * 3-way 컨트롤이 이미 있고, page.tsx의 "상세 정보" 패널과 완전히 같은 방식으로
- * 상태를 다루므로 두 화면이 서로 다르게 동작할 위험이 없다.
+ * 3-way 컨트롤과 다운로드 버튼이 이미 있다.
  */
-export function ImageSelectionGate({
+export function ImageRoleGrid({
   product,
   items,
   thumbnails,
@@ -26,7 +25,6 @@ export function ImageSelectionGate({
   onToggleGalleryUsage,
   onToggleDescriptionUsage,
   onToggleExclude,
-  onConfirm,
 }: {
   product: CanonicalProduct;
   items: WorkspaceItem[];
@@ -38,19 +36,22 @@ export function ImageSelectionGate({
   onToggleGalleryUsage: (id: string) => void;
   onToggleDescriptionUsage: (id: string) => void;
   onToggleExclude: (id: string) => void;
-  onConfirm: () => void;
 }) {
+  if (items.length === 0) return null;
+
   const galleryCount = product.images.filter((img) => img.useInProductGallery).length;
   const hasRepresentative = representativeId !== null;
-  const canConfirm = hasRepresentative && galleryCount >= 1;
 
   return (
-    <section className="mt-6 rounded-lg border border-border bg-surface p-5 shadow-subtle">
-      <h2 className="text-base font-semibold tracking-tight text-text-primary">1. 이미지 선택</h2>
+    <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
+      <h2 className="text-base font-semibold tracking-tight text-text-primary">이미지</h2>
       <p className="mt-1 text-xs text-text-secondary">
         AI가 추천한 대표/상품 이미지가 기본으로 선택되어 있습니다 — 카드에서 직접 바꾸실 수
-        있습니다. 대표 이미지는 정확히 1장, 상품 이미지는 1장 이상 선택해야 다음 단계로
-        진행할 수 있습니다.
+        있습니다.
+      </p>
+      <p className="mt-1 text-xs text-text-secondary">
+        대표 이미지: {hasRepresentative ? "1장 선택됨" : "선택 필요"} · 상품 이미지: {galleryCount}장
+        선택됨
       </p>
 
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
@@ -78,26 +79,6 @@ export function ImageSelectionGate({
             />
           );
         })}
-      </div>
-
-      <div className="mt-5 flex flex-col items-start justify-between gap-3 border-t border-border pt-4 sm:flex-row sm:items-center">
-        <div className="text-xs text-text-secondary">
-          <p>대표 이미지: {hasRepresentative ? "1장 선택됨" : "선택 필요"}</p>
-          <p>상품 이미지: {galleryCount}장 선택됨</p>
-          {!canConfirm && (
-            <p className="mt-1 font-medium text-warning">
-              대표 이미지 1장과 상품 이미지 1장 이상을 선택해주세요.
-            </p>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={onConfirm}
-          disabled={!canConfirm}
-          className="shrink-0 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-white shadow-subtle transition-colors hover:bg-primary-hover disabled:opacity-40"
-        >
-          이미지 선택 완료
-        </button>
       </div>
     </section>
   );

@@ -20,14 +20,21 @@ import {
 } from "@commerce/listing";
 import { PLATFORM_ADAPTERS, PLATFORM_ORDER } from "@commerce/marketplace";
 import { AIContentPanel } from "./commerce/AIContentPanel";
+import { BacklogPanel } from "./commerce/BacklogPanel";
 import { CoupangConnectionPanel } from "./commerce/CoupangConnectionPanel";
+import { ImageRoleGrid } from "./commerce/ImageRoleGrid";
 import { ListingConfirmationModal } from "./commerce/ListingConfirmationModal";
 import { PlatformPreview } from "./commerce/PlatformPreview";
 import { RegistrationHistoryPanel } from "./commerce/RegistrationHistoryPanel";
 import { StageStepper } from "./commerce/StageStepper";
 import { SourceDataView } from "./commerce/SourceDataView";
+import type { WorkspaceItem } from "./types";
 
 type CommerceTab = "source" | "content" | PlatformId;
+
+/** 아직 구현되지 않아 탭에서 비활성화하고 SOON 배지로 표시하는 플랫폼/기능 —
+ * 백로그 패널에도 같은 목록을 보여준다. */
+const SOON_PLATFORMS = new Set<PlatformId>(["smartstore", "elevenst"]);
 
 const INITIAL_CATEGORY_MAPPINGS: Record<PlatformId, CategorySelection> = {
   smartstore: UNRESOLVED_CATEGORY,
@@ -65,9 +72,27 @@ const TAB_LABELS: Record<Exclude<CommerceTab, PlatformId>, string> = {
 export function CommerceWorkspace({
   product,
   onUpdateProduct,
+  items,
+  thumbnails,
+  representativeId,
+  excludedIds,
+  onPreviewImage,
+  onSetRepresentative,
+  onToggleGalleryUsage,
+  onToggleDescriptionUsage,
+  onToggleExclude,
 }: {
   product: CanonicalProduct;
   onUpdateProduct: (updater: (prev: CanonicalProduct) => CanonicalProduct) => void;
+  items: WorkspaceItem[];
+  thumbnails: Record<string, string>;
+  representativeId: string | null;
+  excludedIds: Set<string>;
+  onPreviewImage: (id: string) => void;
+  onSetRepresentative: (id: string) => void;
+  onToggleGalleryUsage: (id: string) => void;
+  onToggleDescriptionUsage: (id: string) => void;
+  onToggleExclude: (id: string) => void;
 }) {
   const setProduct = onUpdateProduct;
   const [tab, setTab] = useState<CommerceTab>("source");
@@ -224,14 +249,14 @@ export function CommerceWorkspace({
    * 보여준다 — CartPilot 내부 AI 추천(categoryCandidates)과는 완전히 다른 코드
    * 체계이므로 별도 state로 관리하고, isVerifiedPlatformCode: true로 표시해서
    * 사용자가 "이건 실제 쿠팡 코드"라는 걸 구분할 수 있게 한다. */
-  async function fetchCoupangCategoryRecommendation() {
+  async function fetchCoupangCategoryRecommendation(searchQuery?: string) {
     if (!listing) return;
     setCoupangCategoryFetching(true);
     try {
       const res = await fetch("/api/coupang/category-recommend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productName: listing.title, brand: listing.brand }),
+        body: JSON.stringify({ productName: searchQuery?.trim() || listing.title, brand: listing.brand }),
       });
       const data = (await res.json()) as {
         categoryCode?: number | null;
@@ -368,27 +393,48 @@ export function CommerceWorkspace({
         <TabButton active={tab === "source"} onClick={() => setTab("source")}>
           {TAB_LABELS.source}
         </TabButton>
-        <TabButton active={tab === "content"} onClick={() => setTab("content")}>
+        <TabButton active={tab === "content"} disabled onClick={() => setTab("content")}>
           {TAB_LABELS.content}
+          <SoonBadge />
         </TabButton>
-        {PLATFORM_ORDER.map((platformId) => (
-          <TabButton
-            key={platformId}
-            active={tab === platformId}
-            onClick={() => setTab(platformId)}
-          >
-            {PLATFORM_ADAPTERS[platformId].label}
-          </TabButton>
-        ))}
+        {PLATFORM_ORDER.map((platformId) => {
+          const soon = SOON_PLATFORMS.has(platformId);
+          return (
+            <TabButton
+              key={platformId}
+              active={tab === platformId}
+              disabled={soon}
+              onClick={() => setTab(platformId)}
+            >
+              {PLATFORM_ADAPTERS[platformId].label}
+              {soon && <SoonBadge />}
+            </TabButton>
+          );
+        })}
       </div>
 
       {tab === "source" && (
-        <SourceDataView
-          product={product}
-          onUpdateField={updateField}
-          onUpdatePrice={updatePrice}
-          onUpdateOptions={updateOptions}
-        />
+        <>
+          <ImageRoleGrid
+            product={product}
+            items={items}
+            thumbnails={thumbnails}
+            representativeId={representativeId}
+            excludedIds={excludedIds}
+            onPreview={onPreviewImage}
+            onSetRepresentative={onSetRepresentative}
+            onToggleGalleryUsage={onToggleGalleryUsage}
+            onToggleDescriptionUsage={onToggleDescriptionUsage}
+            onToggleExclude={onToggleExclude}
+          />
+          <SourceDataView
+            product={product}
+            onUpdateField={updateField}
+            onUpdatePrice={updatePrice}
+            onUpdateOptions={updateOptions}
+          />
+          <BacklogPanel />
+        </>
       )}
 
       {tab === "content" && (
@@ -437,6 +483,9 @@ export function CommerceWorkspace({
           mode={resolveExecutionMode(confirmingPlatform)}
           connectionStatus={confirmingPlatform === "coupang" ? coupangConnection : undefined}
           descriptionImageCount={product.images.filter((img) => img.useInDescription).length}
+          selectedGalleryCount={
+            product.images.filter((img) => img.useInProductGallery && !img.isRepresentative).length
+          }
           onCancel={cancelListingModal}
           onConfirm={confirmListing}
         />
@@ -447,24 +496,39 @@ export function CommerceWorkspace({
 
 function TabButton({
   active,
+  disabled,
   onClick,
   children,
 }: {
   active: boolean;
+  disabled?: boolean;
   onClick: () => void;
   children: React.ReactNode;
 }) {
   return (
     <button
       type="button"
-      onClick={onClick}
-      className={`shrink-0 px-4 py-2 text-sm font-medium transition-colors ${
-        active
-          ? "border-b-2 border-primary text-primary"
-          : "border-b-2 border-transparent text-text-secondary hover:text-text-primary"
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      title={disabled ? "다음 스프린트에 제공될 예정입니다" : undefined}
+      className={`flex shrink-0 items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors ${
+        disabled
+          ? "cursor-not-allowed border-b-2 border-transparent text-text-tertiary"
+          : active
+            ? "border-b-2 border-primary text-primary"
+            : "border-b-2 border-transparent text-text-secondary hover:text-text-primary"
       }`}
     >
       {children}
     </button>
+  );
+}
+
+/** 작고 둥근 muted pill — 비활성 탭 옆에 붙어 "곧 제공될 기능"임을 알려준다. */
+function SoonBadge() {
+  return (
+    <span className="rounded-full bg-background px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-text-tertiary">
+      SOON
+    </span>
   );
 }
