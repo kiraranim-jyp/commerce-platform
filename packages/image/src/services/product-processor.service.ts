@@ -81,8 +81,22 @@ export async function processProductImage(
   const tmpFile = `${outFile}.tmp.png`;
 
   await remover.remove(file, tmpFile);
+  // TEMP DEBUG (제거 예정): 회귀 조사를 위해 각 단계 산출물을 storage/debug/에 남긴다.
+  if (process.env.DEBUG_IMAGE_STAGES) {
+    const debugDir = path.join(storagePaths.root, "debug");
+    fs.mkdirSync(debugDir, { recursive: true });
+    fs.copyFileSync(tmpFile, path.join(debugDir, `${baseName}-1-ai-removed.png`));
+  }
   const { buffer: cleaned, quality } = await cleanAlphaNoise(tmpFile);
+  if (process.env.DEBUG_IMAGE_STAGES) {
+    const debugDir = path.join(storagePaths.root, "debug");
+    await sharp(cleaned).png().toFile(path.join(debugDir, `${baseName}-2-after-clean.png`));
+  }
   await sharp(cleaned).trim().png().toFile(outFile);
+  if (process.env.DEBUG_IMAGE_STAGES) {
+    const debugDir = path.join(storagePaths.root, "debug");
+    fs.copyFileSync(outFile, path.join(debugDir, `${baseName}-3-after-trim.png`));
+  }
   fs.rmSync(tmpFile);
 
   return { fileName: `${baseName}.png`, file: outFile, quality };

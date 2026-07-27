@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import type { PlatformConnectionStatus } from "@commerce/listing";
 import type { CanonicalProduct } from "@commerce/shared";
 import { CommerceWorkspace } from "./CommerceWorkspace";
+import { CoupangConnectionPanel } from "./commerce/CoupangConnectionPanel";
+import { ImageSelectionGate } from "./commerce/ImageSelectionGate";
 import { ImageCard } from "./ImageCard";
 import { ImageUsageTable } from "./ImageUsageTable";
 import { PreviewModal } from "./PreviewModal";
@@ -34,6 +37,38 @@ export default function PipelinePage() {
   const [currentProgress, setCurrentProgress] = useState<PipelineProgressEvent | null>(null);
   const [progressLog, setProgressLog] = useState<PipelineProgressEvent[]>([]);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
+  // 이미지 처리가 끝나도 곧바로 등록 준비 화면(CommerceWorkspace)으로 안 넘어간다 —
+  // [이미지 선택 완료]를 눌러야만 true가 되고, 그 전까지는 ImageSelectionGate만
+  // 보여준다. AI 추천(대표/상품 이미지 기본값)은 유지하되 최종 확정은 항상
+  // 사용자가 하게 만드는 게 목적이다.
+  const [imageSelectionConfirmed, setImageSelectionConfirmed] = useState(false);
+  // 홈 화면 전용 쿠팡 연결 상태 — CommerceWorkspace 안의 쿠팡 탭이 갖고 있는
+  // coupangConnection과는 별개의 state다. 여기는 "분석 비용을 쓰기 전 게이트",
+  // 그쪽은 "실제 등록 직전 최종 재확인"으로 목적이 달라서 공유하지 않는다 —
+  // 등록 직전엔 항상 그 순간 다시 확인하는 게 더 안전하다.
+  const [coupangConnection, setCoupangConnection] = useState<PlatformConnectionStatus>("UNKNOWN");
+  const [coupangConnectionCheckedAt, setCoupangConnectionCheckedAt] = useState<string | null>(null);
+  const [coupangConnectionChecking, setCoupangConnectionChecking] = useState(false);
+
+  /** 페이지 로딩 시 자동으로 호출하지 않는다 — 사용자가 [연결 확인] 버튼을 눌러야만
+   * 실제 쿠팡 API가 나간다(불필요한 호출 방지). 반환값을 그대로 써서, 방금 호출한
+   * runPipeline()이 "다음 렌더의" state가 아니라 "지금 이 순간" 확인한 결과로
+   * 바로 판단할 수 있게 한다. */
+  async function checkCoupangConnection(): Promise<PlatformConnectionStatus> {
+    setCoupangConnectionChecking(true);
+    let status: PlatformConnectionStatus = "AUTH_FAILED";
+    try {
+      const res = await fetch("/api/coupang/auth-test", { method: "POST" });
+      const data = (await res.json()) as { status?: PlatformConnectionStatus };
+      status = data.status ?? "NOT_CONFIGURED";
+    } catch {
+      status = "AUTH_FAILED";
+    }
+    setCoupangConnection(status);
+    setCoupangConnectionCheckedAt(new Date().toISOString());
+    setCoupangConnectionChecking(false);
+    return status;
+  }
 
   async function precomputeThumbnails(newItems: WorkspaceItem[]) {
     const entries = await Promise.all(
@@ -47,6 +82,10 @@ export default function PipelinePage() {
   }
 
   async function runPipeline() {
+    // 버튼이 disabled로 막혀 있어도, 혹시 모를 우회 호출을 한 번 더 막는다 —
+    // 쿠팡 연결이 확인되지 않은 상태에서 이미지 처리 비용이 나가지 않게 한다.
+    if (coupangConnection !== "CONNECTED") return;
+
     setLoading(true);
     setError(null);
     setResult(null);
@@ -61,6 +100,7 @@ export default function PipelinePage() {
     setCurrentProgress(null);
     setProgressLog([]);
     setDetailsExpanded(false);
+    setImageSelectionConfirmed(false);
 
     try {
       const response = await fetch("/api/pipeline", {
@@ -152,6 +192,7 @@ export default function PipelinePage() {
     setCurrentProgress(null);
     setProgressLog([]);
     setDetailsExpanded(false);
+    setImageSelectionConfirmed(false);
   }
 
   /** CommerceWorkspace는 product가 항상 있다고 가정하고 업데이터를 호출한다(그 컴포넌트가
@@ -280,6 +321,21 @@ export default function PipelinePage() {
             국내 판매 등록을 준비합니다.
           </p>
 
+          {coupangConnection !== "CONNECTED" && (
+            <div className="mt-8 text-left">
+              <CoupangConnectionPanel
+                status={coupangConnection}
+                checking={coupangConnectionChecking}
+                checkedAt={coupangConnectionCheckedAt}
+                onCheck={checkCoupangConnection}
+              />
+              <p className="mt-2 text-xs text-text-tertiary">
+                쿠팡 연결을 먼저 확인해야 상품 분석을 시작할 수 있습니다 — 분석은 이미지
+                처리 등 비용이 드는 작업이라, 등록할 수 없는 상태로 미리 진행하지 않습니다.
+              </p>
+            </div>
+          )}
+
           <div className="mt-8 flex flex-col gap-2 sm:flex-row">
             <input
               type="url"
@@ -292,7 +348,8 @@ export default function PipelinePage() {
             />
             <button
               onClick={runPipeline}
-              disabled={loading || !url}
+              disabled={loading || !url || coupangConnection !== "CONNECTED"}
+              title={coupangConnection !== "CONNECTED" ? "쿠팡 연결을 먼저 확인해주세요" : undefined}
               className="flex items-center justify-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-white shadow-subtle transition-colors hover:bg-primary-hover disabled:opacity-40"
             >
               상품 분석 시작
@@ -357,7 +414,26 @@ export default function PipelinePage() {
         </p>
       )}
 
-      {result && product && (
+      {result && product && !imageSelectionConfirmed && (
+        <ImageSelectionGate
+          product={product}
+          items={items}
+          thumbnails={thumbnails}
+          representativeId={representativeId}
+          excludedIds={excludedIds}
+          onPreview={(id) => {
+            setSelectedId(id);
+            setPreviewId(id);
+          }}
+          onSetRepresentative={setRepresentative}
+          onToggleGalleryUsage={(id) => toggleImageUsage(id, "useInProductGallery")}
+          onToggleDescriptionUsage={(id) => toggleImageUsage(id, "useInDescription")}
+          onToggleExclude={toggleExclude}
+          onConfirm={() => setImageSelectionConfirmed(true)}
+        />
+      )}
+
+      {result && product && imageSelectionConfirmed && (
         <div className="mt-6 space-y-6">
           <CommerceWorkspace product={product} onUpdateProduct={updateProduct} />
 
