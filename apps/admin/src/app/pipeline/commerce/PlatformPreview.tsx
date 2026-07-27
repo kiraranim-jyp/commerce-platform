@@ -1,7 +1,12 @@
 "use client";
 
 import type { CategoryCandidate } from "@commerce/category";
-import type { ListingResult, ListingStatus, ReadinessReport } from "@commerce/listing";
+import type {
+  ListingResult,
+  ListingStatus,
+  PlatformConnectionStatus,
+  ReadinessReport,
+} from "@commerce/listing";
 import type { ListingModel } from "@commerce/marketplace";
 import { formatKrw } from "@commerce/pricing";
 import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
@@ -9,12 +14,21 @@ import { EditableText, EditableTextarea } from "./EditableField";
 import { ListingSection } from "./ListingSection";
 import { ValidationPanel } from "./ValidationPanel";
 
+const CONNECTION_BADGE: Record<PlatformConnectionStatus, { label: string; className: string }> = {
+  UNKNOWN: { label: "연결 확인 중…", className: "text-text-tertiary" },
+  CHECKING: { label: "연결 확인 중…", className: "text-text-tertiary" },
+  NOT_CONFIGURED: { label: "⚠ 연결 필요", className: "text-warning" },
+  CONNECTED: { label: "✓ 연결됨", className: "text-success" },
+  AUTH_FAILED: { label: "✕ 인증 실패", className: "text-error" },
+};
+
 export function PlatformPreview({
   listing,
   categoryCandidates,
   listingStatus,
   listingResult,
   readiness,
+  connectionStatus,
   onUpdateField,
   onUpdatePriceKrw,
   onSelectCategory,
@@ -29,6 +43,8 @@ export function PlatformPreview({
   listingResult: ListingResult | null;
   /** SmartStore에서만 넘어온다 — 등록 준비도 패널을 대신 보여줄지 판단하는 신호. */
   readiness?: ReadinessReport;
+  /** 쿠팡 탭에서만 넘어온다 — "쿠팡 연결 상태" 배지 표시용. */
+  connectionStatus?: PlatformConnectionStatus;
   onUpdateField: (key: "title" | "brand" | "description", value: string) => void;
   onUpdatePriceKrw: (amountKrw: number) => void;
   onSelectCategory: (candidate: CategoryCandidate) => void;
@@ -44,7 +60,14 @@ export function PlatformPreview({
     <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <section className="rounded-lg border border-border p-4 text-sm">
-          <h3 className="text-base font-medium">{listing.platformLabel} 등록 미리보기</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-medium">{listing.platformLabel} 등록 미리보기</h3>
+            {connectionStatus && (
+              <span className={`text-xs font-medium ${CONNECTION_BADGE[connectionStatus].className}`}>
+                {CONNECTION_BADGE[connectionStatus].label}
+              </span>
+            )}
+          </div>
 
           <div className="mt-4 flex gap-4">
             <div className="h-40 w-40 flex-shrink-0 overflow-hidden rounded border border-border bg-background">

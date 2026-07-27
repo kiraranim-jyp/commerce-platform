@@ -1,19 +1,24 @@
 "use client";
 
+import type { ExecutionMode } from "@commerce/listing";
 import type { ListingModel } from "@commerce/marketplace";
 import { formatKrw } from "@commerce/pricing";
 
 export function ListingConfirmationModal({
   listing,
+  mode = "DRY_RUN",
   onCancel,
   onConfirm,
 }: {
   listing: ListingModel;
+  /** LIVE면 실제 쿠팡 API가 호출된다는 경고 문구와 버튼 문구를 바꾼다. */
+  mode?: ExecutionMode;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
   const isCategoryConfirmed =
     listing.category.state === "SELECTED" || listing.category.state === "CONFIRMED";
+  const isLive = mode === "LIVE";
 
   return (
     <div
@@ -30,6 +35,11 @@ export function ListingConfirmationModal({
         <p className="mt-1 text-xs text-text-secondary">
           AI가 준비한 값입니다. 다시 입력할 필요 없이 확인만 하고 등록을 시작하세요.
         </p>
+        {isLive && (
+          <p className="mt-2 rounded-md bg-warning-soft px-3 py-2 text-xs font-medium text-warning">
+            ⚠ 실제로 {listing.platformLabel}에 등록됩니다 — 등록 후 되돌릴 수 없으니 아래 내용을 확인해주세요.
+          </p>
+        )}
 
         <ul className="mt-4 space-y-3 text-sm">
           <ConfirmRow label="상품명" value={listing.title} />
@@ -44,6 +54,7 @@ export function ListingConfirmationModal({
             }
           />
           <ConfirmRow label="판매가" value={formatKrw(listing.priceKrw)} />
+          <ConfirmRow label="배송방식" value={listing.shippingInfo || "미지정"} />
           <li className="flex items-start gap-2">
             <span className="mt-0.5 text-success">✓</span>
             <div>
@@ -82,9 +93,11 @@ export function ListingConfirmationModal({
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+            className={`rounded-md px-4 py-1.5 text-sm font-medium text-white transition-colors ${
+              isLive ? "bg-error hover:bg-error/90" : "bg-primary hover:bg-primary-hover"
+            }`}
           >
-            등록 시작
+            {isLive ? `${listing.platformLabel}에 등록` : "등록 시작"}
           </button>
         </div>
       </div>

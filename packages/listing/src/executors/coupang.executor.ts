@@ -5,29 +5,32 @@ import type { ListingExecutor } from "../executor";
 import type { ExecutionMode, ListingResult } from "../types";
 
 /**
- * 쿠팡은 이번 Mission에서 MVP로 구현한다 — "실제 쿠팡 API를 처음부터 전부
- * 구현"하지 않고, 등록 가능한 payload를 정확히 만들고 검증하는 데까지만
- * 집중한다(PM 지시). DRY_RUN은 완전히 동작하고, LIVE는 인증 정보가 없으면
- * (지금 항상 없다) 시도조차 하지 않는다 — SmartStore executor와 동일한 패턴.
+ * LIVE는 이 executor 안에서 직접 HMAC 서명/API 호출을 하지 않는다 — 이 파일은
+ * "use client" 컴포넌트 트리(CommerceWorkspace)에서 실행되므로 브라우저
+ * 번들이고, COUPANG_SECRET_KEY 같은 서버 전용 환경변수는 여기서 애초에
+ * undefined다. 실제 서명/호출은 같은 오리진의 /api/coupang/register 라우트
+ * (서버에서만 실행)로 위임하고, 이 함수는 그 응답을 그대로 ListingResult로
+ * 전달하는 얇은 클라이언트일 뿐이다.
  */
 export const coupangExecutor: ListingExecutor = {
   platform: "coupang",
 
   async execute(
-    _product: CanonicalProduct,
+    product: CanonicalProduct,
     listing: ListingModel,
     mode: ExecutionMode,
   ): Promise<ListingResult> {
     const errors = listing.validations.filter((v) => v.status === "ERROR");
     if (errors.length > 0) {
       const first = errors[0];
+      const step = first.field === "category" ? "CATEGORY" : first.field === "imageFormat" ? "IMAGE" : "VALIDATION";
       return {
         status: "FAILED",
         platform: "coupang",
         mode,
         retryable: true,
         error: {
-          step: first.field === "category" ? "CATEGORY" : "VALIDATION",
+          step,
           message: errors.map((e) => e.message ?? e.label).join(" "),
           retryable: true,
           resolution: "필수 필드를 모두 채운 뒤 다시 시도해주세요.",
@@ -35,7 +38,7 @@ export const coupangExecutor: ListingExecutor = {
       };
     }
 
-    const payload = buildCoupangPayload(_product, listing);
+    const payload = buildCoupangPayload(product, listing);
 
     if (mode === "PREVIEW") {
       return { status: "READY", platform: "coupang", mode, retryable: false, payload };
@@ -52,38 +55,29 @@ export const coupangExecutor: ListingExecutor = {
       };
     }
 
-    // LIVE — 실제 쿠팡 Open API 연동은 이번 Mission 범위 밖이다. 인증 정보가
-    // 없으면(지금은 항상 없다) 네트워크 요청을 시도조차 하지 않는다.
-    const hasCredentials = Boolean(
-      process.env.COUPANG_ACCESS_KEY && process.env.COUPANG_SECRET_KEY,
-    );
-    if (!hasCredentials) {
+    // LIVE — 서버 라우트에 위임한다. 네트워크 자체가 실패하면(서버가 안 떠있는
+    // 로컬 상황 등) 이 catch가 NETWORK 에러로 감싸서 반환한다.
+    try {
+      const response = await fetch("/api/coupang/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product, listing }),
+      });
+      const result = (await response.json()) as ListingResult;
+      return result;
+    } catch (error) {
       return {
         status: "FAILED",
         platform: "coupang",
         mode,
-        retryable: false,
+        retryable: true,
         payload,
         error: {
-          step: "AUTHENTICATION",
-          message: "쿠팡 인증이 필요합니다.",
-          retryable: false,
-          resolution: "쿠팡 판매자 인증 정보를 확인해주세요.",
+          step: "NETWORK",
+          message: error instanceof Error ? error.message : "등록 서버에 연결할 수 없습니다.",
+          retryable: true,
         },
       };
     }
-
-    return {
-      status: "FAILED",
-      platform: "coupang",
-      mode,
-      retryable: false,
-      payload,
-      error: {
-        step: "NOT_IMPLEMENTED",
-        message: "실제 쿠팡 등록 API 연동은 아직 구현되지 않았습니다.",
-        retryable: false,
-      },
-    };
   },
 };

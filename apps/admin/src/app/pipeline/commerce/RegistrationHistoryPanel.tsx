@@ -35,10 +35,17 @@ export function RegistrationHistoryPanel({ history }: { history: RegistrationHis
             <div className="min-w-0">
               <p className="truncate font-medium text-text-primary">{entry.productName}</p>
               <p className="text-text-secondary">
-                {PLATFORM_ADAPTERS[entry.platform].label} · {entry.mode} · {formatTime(entry.executedAt)}
+                {PLATFORM_ADAPTERS[entry.platform].label} ·{" "}
+                <span className={entry.mode === "LIVE" ? "font-semibold text-error" : undefined}>
+                  {entry.mode}
+                </span>{" "}
+                · {formatTime(entry.executedAt)}
               </p>
               {entry.result.status === "FAILED" && entry.result.error && (
                 <p className="mt-0.5 text-error">{entry.result.error.message}</p>
+              )}
+              {entry.result.externalProductId && (
+                <p className="mt-0.5 text-text-secondary">쿠팡 상품 ID: {entry.result.externalProductId}</p>
               )}
               {entry.result.externalUrl && (
                 <p className="mt-0.5 text-text-secondary">{entry.result.externalUrl}</p>

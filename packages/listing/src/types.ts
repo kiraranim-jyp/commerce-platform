@@ -19,18 +19,40 @@ export type ListingStatus =
  * DRY_RUN: 실제 등록하지 않고 payload만 만들고 validation을 통과하는지 확인한다.
  * PREVIEW: DRY_RUN과 비슷하지만 상태를 SUBMITTED로 만들지 않고 READY로 멈춘다 —
  *   "등록될 데이터를 미리 보여주기만" 할 때 쓴다.
- * LIVE: 실제 플랫폼에 등록한다. 이번 Mission에는 실제 인증 정보가 없으므로
- *   LIVE를 시도해도 항상 인증 실패로 끝난다(코드가 있어도 실행되지 않는다).
+ * LIVE: 실제 플랫폼에 등록한다. 쿠팡은 서버 API 라우트(/api/coupang/register)로
+ *   위임해서 실제로 시도한다 — 이 환경처럼 COUPANG_ACCESS_KEY 등이 없으면
+ *   NOT_CONFIGURED로 막히고, 있으면 실제 쿠팡 Open API를 호출한다.
  */
 export type ExecutionMode = "DRY_RUN" | "PREVIEW" | "LIVE";
 
-/** 실패 원인을 사용자에게 다른 문장/CTA로 보여주기 위한 분류. */
+/** 실패 원인을 사용자에게 다른 문장/CTA로 보여주기 위한 분류.
+ * IMAGE: 대표/추가 이미지가 플랫폼이 요구하는 형식(JPG 등)을 만족하지 못함.
+ * COUPANG_API: 쿠팡 서버가 요청은 정상 인증했지만 등록을 거부함(필수 옵션 누락,
+ *   카테고리 코드 오류 등) — AUTHENTICATION/CATEGORY/VALIDATION 어디에도 깔끔히
+ *   안 들어가는, 쿠팡 응답 메시지를 그대로 보여줘야 하는 나머지 경우들. */
 export type ListingErrorStep =
   | "VALIDATION"
   | "CATEGORY"
   | "AUTHENTICATION"
   | "NETWORK"
+  | "IMAGE"
+  | "COUPANG_API"
   | "NOT_IMPLEMENTED";
+
+/**
+ * 플랫폼 LIVE 등록 API에 대한 인증 연결 상태 — "쿠팡 연결 상태" UI 배지용.
+ * UNKNOWN: 아직 확인 안 함(탭 진입 전). CHECKING: 확인 요청 중.
+ * NOT_CONFIGURED: 서버에 인증 정보(access/secret/vendorId)가 아예 없음 — 이번
+ *   세션처럼 LIVE 인증 정보를 안 넣은 로컬/스테이징 환경에서 나오는 정상 상태다.
+ * CONNECTED: 인증 정보가 있고 쿠팡이 서명을 정상 수락함.
+ * AUTH_FAILED: 인증 정보는 있지만 쿠팡이 서명/키를 거부함(오타, 만료 등).
+ */
+export type PlatformConnectionStatus =
+  | "UNKNOWN"
+  | "CHECKING"
+  | "NOT_CONFIGURED"
+  | "CONNECTED"
+  | "AUTH_FAILED";
 
 export interface ListingError {
   step: ListingErrorStep;
@@ -88,4 +110,8 @@ export interface RegistrationHistoryEntry {
   executedAt: string;
   mode: ExecutionMode;
   result: ListingResult;
+  /** 같은 상품을 같은 플랫폼에 중복 LIVE 등록하지 않기 위한 키(productHash+platform
+   * 대신 sourceUrl+platform으로 충분하다 — 세션 안에서만 비교하면 되므로). LIVE
+   * 등록을 시도하기 전 이 값으로 기존 성공 이력이 있는지 먼저 확인한다. */
+  listingKey?: string;
 }

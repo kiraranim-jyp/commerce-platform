@@ -2,6 +2,7 @@
 
 import type {
   CoupangPayload,
+  ListingErrorStep,
   ListingResult,
   ListingStatus,
   ReadinessReport,
@@ -18,6 +19,17 @@ const STATUS_LABELS: Record<ListingStatus, string> = {
   SUBMITTING: "등록 중",
   SUBMITTED: "등록 완료",
   FAILED: "등록 실패",
+};
+
+/** ListingError.step -> "실패 단계" 사용자용 문구. */
+const ERROR_STEP_LABELS: Record<ListingErrorStep, string> = {
+  VALIDATION: "상품 정보 확인",
+  CATEGORY: "카테고리 확인",
+  AUTHENTICATION: "쿠팡 연결 확인",
+  NETWORK: "쿠팡 서버 연결",
+  IMAGE: "이미지 처리",
+  COUPANG_API: "상품 등록 요청",
+  NOT_IMPLEMENTED: "상품 등록 요청",
 };
 
 /** 이미지가 data URL(base64)로 들어있으면 그대로 JSON.stringify하면 payload
@@ -142,6 +154,11 @@ export function ListingSection({
             미리보기 모드 — 실제로 등록되지 않았습니다. 등록될 데이터만 검증하고 생성했습니다.
           </p>
         )}
+        {result?.mode === "LIVE" && result.externalProductId && (
+          <p className="mt-1 text-xs text-success">
+            실제로 등록되었습니다 — 쿠팡 상품 ID: {result.externalProductId}. Wing에서 최종 확인해주세요.
+          </p>
+        )}
         {result?.payload != null && (
           <div className="mt-3">
             {isSmartStorePayload(result.payload) ? (
@@ -171,6 +188,9 @@ export function ListingSection({
     return (
       <section className="rounded-lg border border-error/30 bg-error-soft p-4 text-sm">
         <p className="font-medium text-error">{platformLabel} 등록 실패</p>
+        <p className="mt-2 text-xs text-text-secondary">
+          실패 단계: {ERROR_STEP_LABELS[result.error.step]}
+        </p>
         <p className="mt-1 text-xs text-text-secondary">원인: {result.error.message}</p>
         {result.error.resolution && (
           <p className="mt-1 text-xs text-text-secondary">해결 방법: {result.error.resolution}</p>

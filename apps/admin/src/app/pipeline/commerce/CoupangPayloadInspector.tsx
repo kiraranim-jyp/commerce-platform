@@ -65,8 +65,16 @@ export function CoupangPayloadInspector({ payload }: { payload: CoupangPayload }
           label="배송비"
           value={payload.deliveryChargeType === "FREE" ? "무료배송" : formatKrw(payload.deliveryCharge)}
         />
-        <Row label="원산지" value={payload.countryOfOrigin || "미입력"} />
-        <Row label="반품정책" value={payload.returnPolicy || "미입력"} />
+        <Row label="반품지" value={payload.returnChargeName || "미설정"} />
+        <Row label="반품지 연락처" value={payload.companyContactNumber || "미설정"} />
+        <Row
+          label="반품지 주소"
+          value={
+            payload.returnAddress
+              ? `${payload.returnZipCode} ${payload.returnAddress} ${payload.returnAddressDetail}`.trim()
+              : "미설정"
+          }
+        />
       </Section>
 
       <button

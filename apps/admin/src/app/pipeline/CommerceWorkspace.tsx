@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CanonicalProduct, FieldSource, PlatformId } from "@commerce/shared";
 import {
   ruleBasedCategoryProvider,
@@ -12,8 +12,10 @@ import { mockProductContentProvider } from "@commerce/content";
 import {
   LISTING_EXECUTORS,
   validateSmartStoreListing,
+  type ExecutionMode,
   type ListingResult,
   type ListingStatus,
+  type PlatformConnectionStatus,
   type RegistrationHistoryEntry,
 } from "@commerce/listing";
 import { PLATFORM_ADAPTERS, PLATFORM_ORDER } from "@commerce/marketplace";
@@ -73,6 +75,23 @@ export function CommerceWorkspace({
   const [listingResults, setListingResults] = useState(INITIAL_LISTING_RESULTS);
   const [confirmingPlatform, setConfirmingPlatform] = useState<PlatformId | null>(null);
   const [registrationHistory, setRegistrationHistory] = useState<RegistrationHistoryEntry[]>([]);
+  const [coupangConnection, setCoupangConnection] = useState<PlatformConnectionStatus>("UNKNOWN");
+  const coupangConnectionRequested = useRef(false);
+
+  /** 쿠팡 탭에 처음 들어올 때만 "쿠팡 연결 상태"를 확인한다 — 매 렌더마다 다시
+   * 확인하면 실제 쿠팡 API를 불필요하게 반복 호출하게 된다. ref로 중복 요청을
+   * 막아서, effect 본문에서는 setState를 동기로 호출하지 않고 fetch 콜백
+   * 안에서만(CHECKING 중간 상태 없이) 최종 상태를 반영한다. */
+  useEffect(() => {
+    if (tab !== "coupang" || coupangConnectionRequested.current) return;
+    coupangConnectionRequested.current = true;
+    fetch("/api/coupang/auth-test", { method: "POST" })
+      .then((res) => res.json())
+      .then((data: { status?: PlatformConnectionStatus }) => {
+        setCoupangConnection(data.status ?? "NOT_CONFIGURED");
+      })
+      .catch(() => setCoupangConnection("AUTH_FAILED"));
+  }, [tab]);
 
   function updateField(
     key:
@@ -214,20 +233,47 @@ export function CommerceWorkspace({
     setConfirmingPlatform(null);
   }
 
+  /** 쿠팡 + 연결됨 상태일 때만 LIVE를 시도한다 — 그 외(SmartStore/11번가, 또는
+   * 쿠팡이지만 인증 안 됨)는 항상 DRY_RUN이다. 아직 SmartStore/11번가는 이번
+   * Mission 범위 밖이라 LIVE 경로 자체가 없다(executor가 NOT_IMPLEMENTED로
+   * 막는다 — 여기서 미리 걸러도 되지만 executor가 이미 안전하므로 그대로 둔다). */
+  function resolveExecutionMode(platform: PlatformId): ExecutionMode {
+    if (platform === "coupang" && coupangConnection === "CONNECTED") return "LIVE";
+    return "DRY_RUN";
+  }
+
   async function confirmListing() {
     if (!confirmingPlatform || !listing) return;
     const platform = confirmingPlatform;
     setConfirmingPlatform(null);
+
+    const mode = resolveExecutionMode(platform);
+    const listingKey = `${product.sourceUrl}::${platform}`;
+
+    // 중복 LIVE 등록 방지: 같은 상품(sourceUrl)+플랫폼으로 이미 성공한 LIVE 이력이
+    // 세션 안에 있으면 쿠팡에 다시 요청하지 않고 그 결과를 그대로 다시 보여준다.
+    if (mode === "LIVE") {
+      const existing = registrationHistory.find(
+        (entry) => entry.listingKey === listingKey && entry.mode === "LIVE" && entry.result.status === "SUBMITTED",
+      );
+      if (existing) {
+        setListingResults((prev) => ({ ...prev, [platform]: existing.result }));
+        setListingStates((prev) => ({ ...prev, [platform]: existing.result.status }));
+        return;
+      }
+    }
+
     setListingStates((prev) => ({ ...prev, [platform]: "SUBMITTING" }));
-    const result = await LISTING_EXECUTORS[platform].execute(product, listing, "DRY_RUN");
+    const result = await LISTING_EXECUTORS[platform].execute(product, listing, mode);
     setListingResults((prev) => ({ ...prev, [platform]: result }));
     setRegistrationHistory((prev) => [
       {
         productName: listing.title,
         platform,
         executedAt: new Date().toISOString(),
-        mode: "DRY_RUN",
+        mode,
         result,
+        listingKey,
       },
       ...prev,
     ]);
@@ -287,6 +333,7 @@ export function CommerceWorkspace({
           listingStatus={effectiveListingStatus}
           listingResult={listingResults[tab]}
           readiness={smartStoreReadiness}
+          connectionStatus={tab === "coupang" ? coupangConnection : undefined}
           onUpdateField={updateField}
           onUpdatePriceKrw={(amountKrw) => updatePrice(amountKrw, "KRW")}
           onSelectCategory={(candidate) => selectCategory(tab, candidate)}
@@ -302,6 +349,7 @@ export function CommerceWorkspace({
       {confirmingPlatform && listing && (
         <ListingConfirmationModal
           listing={listing}
+          mode={resolveExecutionMode(confirmingPlatform)}
           onCancel={cancelListingModal}
           onConfirm={confirmListing}
         />
