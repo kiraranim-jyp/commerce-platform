@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { InquiryRecord } from "@/app/api/admin/inquiries/route";
 
@@ -26,7 +27,6 @@ function formatDateTime(iso: string): string {
 export default function AdminInquiriesPage() {
   const router = useRouter();
   const [inquiries, setInquiries] = useState<InquiryRecord[]>([]);
-  const [countsByErrorCodeToday, setCountsByErrorCodeToday] = useState<Record<string, number>>({});
   const [statusFilter, setStatusFilter] = useState<InquiryRecord["status"] | "ALL">("ALL");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,14 +37,10 @@ export default function AdminInquiriesPage() {
     fetch("/api/admin/inquiries")
       .then(async (res) => {
         if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "불러오기 실패");
-        return res.json() as Promise<{
-          inquiries: InquiryRecord[];
-          countsByErrorCodeToday: Record<string, number>;
-        }>;
+        return res.json() as Promise<{ inquiries: InquiryRecord[] }>;
       })
       .then((data) => {
         setInquiries(data.inquiries);
-        setCountsByErrorCodeToday(data.countsByErrorCodeToday);
         setError(null);
       })
       .catch((e: Error) => setError(e.message))
@@ -61,15 +57,11 @@ export default function AdminInquiriesPage() {
     fetch("/api/admin/inquiries")
       .then(async (res) => {
         if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "불러오기 실패");
-        return res.json() as Promise<{
-          inquiries: InquiryRecord[];
-          countsByErrorCodeToday: Record<string, number>;
-        }>;
+        return res.json() as Promise<{ inquiries: InquiryRecord[] }>;
       })
       .then((data) => {
         if (cancelled) return;
         setInquiries(data.inquiries);
-        setCountsByErrorCodeToday(data.countsByErrorCodeToday);
         setError(null);
       })
       .catch((e: Error) => {
@@ -99,38 +91,27 @@ export default function AdminInquiriesPage() {
 
   const filtered =
     statusFilter === "ALL" ? inquiries : inquiries.filter((i) => i.status === statusFilter);
-  const sortedCounts = Object.entries(countsByErrorCodeToday).sort((a, b) => b[1] - a[1]);
 
   return (
     <div className="mx-auto max-w-5xl p-6 text-sm">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-text-primary">문의 게시판</h1>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
-        >
-          로그아웃
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/dashboard"
+            className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
+          >
+            ← 대시보드
+          </Link>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
+          >
+            로그아웃
+          </button>
+        </div>
       </div>
-
-      <section className="mt-4 rounded-lg border border-border bg-surface p-4">
-        <p className="text-xs font-medium text-text-secondary">오늘 발생 ErrorCode 집계</p>
-        {sortedCounts.length === 0 ? (
-          <p className="mt-2 text-xs text-text-tertiary">오늘 접수된 문의가 없습니다.</p>
-        ) : (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {sortedCounts.map(([code, count]) => (
-              <span
-                key={code}
-                className="rounded-full bg-background px-2.5 py-1 text-xs font-medium text-text-primary"
-              >
-                {code} <span className="text-text-secondary">{count}건</span>
-              </span>
-            ))}
-          </div>
-        )}
-      </section>
 
       <div className="mt-4 flex items-center gap-2">
         <label className="text-xs text-text-secondary">상태</label>

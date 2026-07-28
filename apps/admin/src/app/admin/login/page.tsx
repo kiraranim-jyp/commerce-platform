@@ -25,7 +25,7 @@ export default function AdminLoginPage() {
         setError(data.error ?? "로그인에 실패했습니다.");
         return;
       }
-      router.push("/admin/inquiries");
+      router.push("/admin/dashboard");
       router.refresh();
     } catch {
       setError("서버에 연결할 수 없습니다.");

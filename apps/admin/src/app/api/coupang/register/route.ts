@@ -3,9 +3,31 @@ import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct, ErrorCode } from "@commerce/shared";
 import { buildCoupangPayload, type CoupangPayload } from "@commerce/listing";
 import type { ListingResult, RegistrationStepLog } from "@commerce/listing";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getCoupangCredentials, getCoupangSellerConfig } from "../_lib/env";
 import { callCoupangApi, type CoupangApiResponse } from "../_lib/client";
 import { withRetry } from "../_lib/retry";
+
+/** 성공/실패 모든 시도를 기록한다 — 관리자 대시보드의 "오늘 등록 N건, 성공/실패"
+ * 카운트가 여기서 나온다(support_inquiries는 사용자가 직접 문의를 제출한 것만
+ * 있어서 전체 시도 수를 대표하지 못한다). Supabase가 없거나 insert가 실패해도
+ * 응답 자체를 막으면 안 되므로 fire-and-forget으로 처리하고 실패는 로그만 남긴다. */
+function logRegistrationAttempt(result: ListingResult): void {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return;
+  void supabase
+    .from("registration_attempts")
+    .insert({
+      platform: result.platform,
+      status: result.status,
+      error_code: result.error?.code ?? null,
+      trace_id: result.traceId ?? null,
+      duration_ms: result.durationMs ?? null,
+    })
+    .then(({ error }) => {
+      if (error) console.warn("[register] registration_attempts 기록 실패:", error.message);
+    });
+}
 
 /**
  * 실제 쿠팡 상품 등록 — HMAC 서명 + API 호출이 전부 여기, 서버에서만 일어난다.
@@ -102,6 +124,7 @@ export async function POST(request: Request) {
         resolution: "설정 페이지에서 Access Key/Secret Key/Vendor ID를 입력해주세요.",
       },
     });
+    logRegistrationAttempt(result);
     return NextResponse.json(result);
   }
   logStep("인증 확인", "success", "쿠팡 인증 정보 확인 완료");
@@ -126,6 +149,7 @@ export async function POST(request: Request) {
         resolution: "설정 페이지에서 쿠팡 배송 설정을 채운 뒤 다시 시도해주세요.",
       },
     });
+    logRegistrationAttempt(result);
     return NextResponse.json(result);
   }
   logStep("설정 확인", "success", "카테고리/배송/반품 설정 확인 완료");
@@ -155,6 +179,7 @@ export async function POST(request: Request) {
           resolution: "access key/secret key를 다시 확인해주세요.",
         },
       });
+      logRegistrationAttempt(result);
       return NextResponse.json(result);
     }
 
@@ -173,6 +198,7 @@ export async function POST(request: Request) {
         externalProductId: parsed.data?.data != null ? String(parsed.data.data) : undefined,
         submittedAt: new Date().toISOString(),
       });
+      logRegistrationAttempt(result);
       return NextResponse.json(result);
     }
 
@@ -193,6 +219,7 @@ export async function POST(request: Request) {
         resolution: "표시된 원인을 확인하고 데이터를 고친 뒤 다시 시도해주세요.",
       },
     });
+    logRegistrationAttempt(result);
     return NextResponse.json(result);
   } catch (error) {
     logStep(
@@ -213,6 +240,7 @@ export async function POST(request: Request) {
         retryable: true,
       },
     });
+    logRegistrationAttempt(result);
     return NextResponse.json(result);
   }
 }
