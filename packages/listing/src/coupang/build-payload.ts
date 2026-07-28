@@ -231,7 +231,10 @@ export function buildCoupangPayload(
         adultOnly: "EVERYONE",
         taxType: "TAX",
         parallelImported: "NOT_PARALLEL_IMPORTED",
-        overseasPurchased: "NOT_OVERSEAS_PURCHASED",
+        // CartPilot이 등록하는 상품은 정의상 전부 해외 URL에서 소싱한 것이다 —
+        // 이전에는 이 값이 반대(NOT_OVERSEAS_PURCHASED)로 고정되어 있었다
+        // (docs/coupang-registration-requirements-audit.md 참고).
+        overseasPurchased: "OVERSEAS_PURCHASED",
         pccNeeded: false,
         images,
         attributes: [],

@@ -319,6 +319,12 @@ export function CommerceWorkspace({
    * 카테고리의 RECOMMENDED와 같은 패턴으로, 실제 state는 사용자가 등록 버튼을
    * 눌러야만(USER_CONFIRMED로) 바뀐다. SmartStore는 원산지/반품정보 누락도
    * ERROR로 잡아야 하므로 readiness.errorCount도 함께 확인한다.
+   *
+   * 카테고리는 marketplace validation에서 WARNING으로만 잡힌다(추천이 떠 있는
+   * 상태와 사용자가 실제로 확정한 상태를 구분해야 해서 ERROR로 못 올린다 — WARNING
+   * 의미 자체가 여러 곳에서 재사용된다). 하지만 실등록이 가능한 플랫폼(SOON이 아닌
+   * 곳)은 카테고리 미확정 상태로 등록 API를 호출하면 서버가 CP001로 거부하는 게
+   * 이미 확인된 문제였다 — 그 실패를 API 호출 이후가 아니라 여기서 미리 막는다.
    */
   const effectiveListingStatus: ListingStatus = useMemo(() => {
     if (tab === "source" || tab === "content" || !listing) return "DRAFT";
@@ -326,7 +332,12 @@ export function CommerceWorkspace({
     if (stored !== "DRAFT") return stored;
     const noMarketplaceErrors = listing.validations.every((v) => v.status !== "ERROR");
     const noReadinessErrors = smartStoreReadiness ? smartStoreReadiness.errorCount === 0 : true;
-    return noMarketplaceErrors && noReadinessErrors ? "READY" : "DRAFT";
+    const categoryConfirmed =
+      listing.category.state === "SELECTED" || listing.category.state === "CONFIRMED";
+    const requiresCategory = !SOON_PLATFORMS.has(tab);
+    return noMarketplaceErrors && noReadinessErrors && (!requiresCategory || categoryConfirmed)
+      ? "READY"
+      : "DRAFT";
   }, [tab, listing, listingStates, smartStoreReadiness]);
 
   function openListingModal() {

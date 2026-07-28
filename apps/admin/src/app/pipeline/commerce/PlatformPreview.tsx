@@ -177,6 +177,8 @@ export function PlatformPreview({
         status={listingStatus}
         result={listingResult}
         readiness={readiness}
+        validations={listing.validations}
+        category={listing.category}
         onFixTextField={onFixTextField}
         onFixNumberField={onFixNumberField}
         onOpenModal={onOpenListingModal}
