@@ -7,6 +7,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getCoupangCredentials, getCoupangSellerConfig } from "../_lib/env";
 import { callCoupangApi, type CoupangApiResponse } from "../_lib/client";
 import { withRetry } from "../_lib/retry";
+import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } from "../_lib/shipping-place";
 
 /** 성공/실패 모든 시도를 기록한다 — 관리자 대시보드의 "오늘 등록 N건, 성공/실패"
  * 카운트가 여기서 나온다(support_inquiries는 사용자가 직접 문의를 제출한 것만
@@ -130,7 +131,33 @@ export async function POST(request: Request) {
   logStep("인증 확인", "success", "쿠팡 인증 정보 확인 완료");
 
   const sellerConfig = await getCoupangSellerConfig(credentials.vendorId);
-  const payload = buildCoupangPayload(product, listing, { sellerConfig });
+
+  // 출고지는 Settings의 고정값 하나로 정확할 수 없다 — CartPilot 계정은
+  // 해외구매대행(AGENT_BUY)만 등록하고, 실제 계정에 등록된 출고지가 전부 해외
+  // 주소이며 나라마다 다르다(Wing 정책 문서로 확인: AGENT_BUY는 출고지가 반드시
+  // 해외 주소여야 함). 그래서 등록 시점에 매번 최신 목록을 조회해서 상품의
+  // 소싱 국가(sourceUrl 기반)에 맞는 출고지를 자동으로 고른다 — 조회/선택이
+  // 실패하면(계정에 출고지가 하나도 없는 등) Settings에 저장된 값으로 폴백한다.
+  let outboundShippingPlaceCode = sellerConfig.outboundShippingPlaceCode;
+  const shippingPlaces = await fetchShippingPlaces(credentials);
+  const sourceCountry = inferSourceCountry(product.sourceUrl);
+  const selectedPlace = selectOutboundShippingPlace(sourceCountry, shippingPlaces.options);
+  if (selectedPlace?.code != null) {
+    outboundShippingPlaceCode = selectedPlace.code;
+    logStep(
+      "출고지 자동 선택",
+      "success",
+      `${selectedPlace.name}(${selectedPlace.code})${sourceCountry ? ` — 소싱 국가 ${sourceCountry} 매칭` : " — 최신 사용가능 출고지로 폴백"}`,
+    );
+  } else if (outboundShippingPlaceCode != null) {
+    logStep("출고지 자동 선택", "skipped", "실시간 조회 실패 — 저장된 설정값으로 폴백");
+  } else {
+    logStep("출고지 자동 선택", "failed", shippingPlaces.error ?? "등록된 출고지가 없습니다.");
+  }
+
+  const payload = buildCoupangPayload(product, listing, {
+    sellerConfig: { ...sellerConfig, outboundShippingPlaceCode },
+  });
 
   const missing = missingSellerConfigFields(payload);
   if (missing.length > 0) {

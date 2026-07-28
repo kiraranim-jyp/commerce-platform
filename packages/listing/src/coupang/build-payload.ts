@@ -119,7 +119,12 @@ export interface CoupangPayload {
   saleEndedAt: string;
   brand?: string;
   generalProductName?: string;
-  deliveryMethod: "SEQUENCIAL";
+  /** SEQUENCIAL(일반배송)/COLD_FRESH(신선냉동)/MAKE_ORDER(주문제작)/AGENT_BUY(구매대행)/
+   * VENDOR_DIRECT(설치배송/판매자직배송) 중 하나 — CartPilot은 전량 해외구매대행이라
+   * 항상 AGENT_BUY다(developers.coupang.com "How can I list products as an overseas
+   * buying agent?" 문서로 확인). AGENT_BUY를 쓰면 출고지가 반드시 해외 주소여야
+   * 하고(우리 계정 출고지는 전부 해외라 이미 맞음), pccNeeded도 true여야 한다. */
+  deliveryMethod: "AGENT_BUY";
   deliveryCompanyCode: string;
   deliveryChargeType: "FREE" | "NOT_FREE" | "CHARGE_RECEIVED" | "CONDITIONAL_FREE";
   deliveryCharge: number;
@@ -197,7 +202,7 @@ export function buildCoupangPayload(
     saleEndedAt: formatCoupangDateTime(twoYearsLater),
     brand: listing.brand,
     generalProductName: listing.title,
-    deliveryMethod: "SEQUENCIAL",
+    deliveryMethod: "AGENT_BUY",
     deliveryCompanyCode: sellerConfig.deliveryCompanyCode,
     deliveryChargeType,
     deliveryCharge,
@@ -235,7 +240,10 @@ export function buildCoupangPayload(
         // 이전에는 이 값이 반대(NOT_OVERSEAS_PURCHASED)로 고정되어 있었다
         // (docs/coupang-registration-requirements-audit.md 참고).
         overseasPurchased: "OVERSEAS_PURCHASED",
-        pccNeeded: false,
+        // deliveryMethod가 AGENT_BUY(해외구매대행)면 쿠팡 공식 문서가 명시적으로
+        // "product PCC must be entered as true"라고 요구한다 — 구매자가 개인
+        // 통관고유부호를 입력해야 하는 상품이라는 뜻이다.
+        pccNeeded: true,
         images,
         attributes: [],
         notices: [],
