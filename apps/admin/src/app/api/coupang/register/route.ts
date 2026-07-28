@@ -12,12 +12,16 @@ import { withRetry } from "../_lib/retry";
 import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } from "../_lib/shipping-place";
 
 /** 성공/실패 모든 시도를 기록한다 — 관리자 대시보드의 "오늘 등록 N건, 성공/실패"
- * 카운트가 여기서 나온다(support_inquiries는 사용자가 직접 문의를 제출한 것만
- * 있어서 전체 시도 수를 대표하지 못한다). Supabase가 없거나 insert가 실패해도
- * 응답 자체를 막으면 안 되므로 fire-and-forget으로 처리하고 실패는 로그만 남긴다. */
-function logRegistrationAttempt(result: ListingResult): void {
+ * 카운트, 그리고 등록 이력 화면의 Payload/Response 상세가 여기서 나온다
+ * (support_inquiries는 사용자가 직접 문의를 제출한 것만 있어서 전체 시도 수를
+ * 대표하지 못한다). CoupangPayload에는 Access/Secret Key 같은 민감정보가 애초에
+ * 없다(HMAC 서명은 요청 헤더에서만 만들어짐) — payload를 그대로 저장해도 안전하다.
+ * Supabase가 없거나 insert가 실패해도 응답 자체를 막으면 안 되므로 fire-and-forget
+ * 으로 처리하고 실패는 로그만 남긴다. */
+function logRegistrationAttempt(result: ListingResult, apiResponseBody?: unknown): void {
   const supabase = getSupabaseAdmin();
   if (!supabase) return;
+  const payload = result.payload as CoupangPayload | undefined;
   void supabase
     .from("registration_attempts")
     .insert({
@@ -26,6 +30,10 @@ function logRegistrationAttempt(result: ListingResult): void {
       error_code: result.error?.code ?? null,
       trace_id: result.traceId ?? null,
       duration_ms: result.durationMs ?? null,
+      product_name: payload?.sellerProductName ?? null,
+      external_product_id: result.externalProductId ?? null,
+      payload: payload ?? null,
+      response: apiResponseBody ?? null,
     })
     .then(({ error }) => {
       if (error) console.warn("[register] registration_attempts 기록 실패:", error.message);
@@ -247,7 +255,7 @@ export async function POST(request: Request) {
           resolution: "access key/secret key를 다시 확인해주세요.",
         },
       });
-      logRegistrationAttempt(result);
+      logRegistrationAttempt(result, response.body);
       return NextResponse.json(result);
     }
 
@@ -266,7 +274,7 @@ export async function POST(request: Request) {
         externalProductId: parsed.data?.data != null ? String(parsed.data.data) : undefined,
         submittedAt: new Date().toISOString(),
       });
-      logRegistrationAttempt(result);
+      logRegistrationAttempt(result, response.body);
       return NextResponse.json(result);
     }
 
@@ -287,7 +295,7 @@ export async function POST(request: Request) {
         resolution: "표시된 원인을 확인하고 데이터를 고친 뒤 다시 시도해주세요.",
       },
     });
-    logRegistrationAttempt(result);
+    logRegistrationAttempt(result, response.body);
     return NextResponse.json(result);
   } catch (error) {
     logStep(

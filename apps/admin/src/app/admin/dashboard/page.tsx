@@ -34,12 +34,20 @@ export default function AdminDashboardPage() {
     <div className="mx-auto max-w-3xl p-6 text-sm">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-text-primary">운영 대시보드</h1>
-        <Link
-          href="/admin/inquiries"
-          className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
-        >
-          문의 게시판 →
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/registrations"
+            className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
+          >
+            등록 이력 →
+          </Link>
+          <Link
+            href="/admin/inquiries"
+            className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
+          >
+            문의 게시판 →
+          </Link>
+        </div>
       </div>
 
       {error && <p className="mt-3 text-xs text-error">{error}</p>}
