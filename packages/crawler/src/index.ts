@@ -1,3 +1,4 @@
+export * from "./browser-launcher";
 export * from "./config";
 export * from "./image-extractor";
 export * from "./universal-extractor";
