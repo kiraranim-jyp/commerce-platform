@@ -4,7 +4,9 @@ import type { CanonicalProduct, ErrorCode } from "@commerce/shared";
 import { buildCoupangPayload, type CoupangPayload } from "@commerce/listing";
 import type { ListingResult, RegistrationStepLog } from "@commerce/listing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { getCoupangCredentials, getCoupangSellerConfig } from "../_lib/env";
+import { getCoupangCredentials, getVendorUserId } from "../_lib/env";
+import { getDefaultDescriptionTemplate } from "../_lib/description-template";
+import { getDefaultSellerProfile } from "../_lib/seller-profile";
 import { callCoupangApi, type CoupangApiResponse } from "../_lib/client";
 import { withRetry } from "../_lib/retry";
 import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } from "../_lib/shipping-place";
@@ -130,15 +132,42 @@ export async function POST(request: Request) {
   }
   logStep("인증 확인", "success", "쿠팡 인증 정보 확인 완료");
 
-  const sellerConfig = await getCoupangSellerConfig(credentials.vendorId);
+  const vendorUserId = await getVendorUserId();
+  const sellerProfile = await getDefaultSellerProfile();
+  if (!sellerProfile) {
+    logStep("배송 프로필 확인", "failed", "등록된 배송 프로필이 없습니다.");
+    const result: ListingResult = withMeta({
+      status: "FAILED",
+      platform: "coupang",
+      mode: "LIVE",
+      retryable: true,
+      error: {
+        step: "VALIDATION",
+        code: "CP002",
+        message: "배송 프로필이 아직 없습니다.",
+        retryable: true,
+        resolution: "설정 페이지에서 배송 프로필을 먼저 만들어주세요(최초 1회).",
+      },
+    });
+    logRegistrationAttempt(result);
+    return NextResponse.json(result);
+  }
+  logStep("배송 프로필 확인", "success", `프로필 "${sellerProfile.name}" 사용`);
 
-  // 출고지는 Settings의 고정값 하나로 정확할 수 없다 — CartPilot 계정은
+  const descriptionTemplate = await getDefaultDescriptionTemplate();
+  logStep(
+    "설명 템플릿",
+    descriptionTemplate ? "success" : "skipped",
+    descriptionTemplate ? `템플릿 "${descriptionTemplate.name}" 병합` : "템플릿 없음 — AI 생성분만 사용",
+  );
+
+  // 출고지는 SellerProfile의 고정값 하나로 정확할 수 없다 — CartPilot 계정은
   // 해외구매대행(AGENT_BUY)만 등록하고, 실제 계정에 등록된 출고지가 전부 해외
   // 주소이며 나라마다 다르다(Wing 정책 문서로 확인: AGENT_BUY는 출고지가 반드시
   // 해외 주소여야 함). 그래서 등록 시점에 매번 최신 목록을 조회해서 상품의
   // 소싱 국가(sourceUrl 기반)에 맞는 출고지를 자동으로 고른다 — 조회/선택이
-  // 실패하면(계정에 출고지가 하나도 없는 등) Settings에 저장된 값으로 폴백한다.
-  let outboundShippingPlaceCode = sellerConfig.outboundShippingPlaceCode;
+  // 실패하면 프로필에 저장된 값으로 폴백한다.
+  let outboundShippingPlaceCode = sellerProfile.outboundShippingPlaceCode;
   const shippingPlaces = await fetchShippingPlaces(credentials);
   const sourceCountry = inferSourceCountry(product.sourceUrl);
   const selectedPlace = selectOutboundShippingPlace(sourceCountry, shippingPlaces.options);
@@ -150,13 +179,25 @@ export async function POST(request: Request) {
       `${selectedPlace.name}(${selectedPlace.code})${sourceCountry ? ` — 소싱 국가 ${sourceCountry} 매칭` : " — 최신 사용가능 출고지로 폴백"}`,
     );
   } else if (outboundShippingPlaceCode != null) {
-    logStep("출고지 자동 선택", "skipped", "실시간 조회 실패 — 저장된 설정값으로 폴백");
+    logStep("출고지 자동 선택", "skipped", "실시간 조회 실패 — 프로필 저장값으로 폴백");
   } else {
     logStep("출고지 자동 선택", "failed", shippingPlaces.error ?? "등록된 출고지가 없습니다.");
   }
 
   const payload = buildCoupangPayload(product, listing, {
-    sellerConfig: { ...sellerConfig, outboundShippingPlaceCode },
+    sellerConfig: {
+      vendorId: credentials.vendorId,
+      vendorUserId,
+      deliveryCompanyCode: sellerProfile.deliveryCompanyCode,
+      returnCenterCode: sellerProfile.returnCenterCode,
+      returnChargeName: sellerProfile.returnChargeName,
+      companyContactNumber: sellerProfile.companyContactNumber,
+      returnZipCode: sellerProfile.returnZipCode,
+      returnAddress: sellerProfile.returnAddress,
+      returnAddressDetail: sellerProfile.returnAddressDetail,
+      outboundShippingPlaceCode,
+    },
+    descriptionTemplate: descriptionTemplate ?? undefined,
   });
 
   const missing = missingSellerConfigFields(payload);

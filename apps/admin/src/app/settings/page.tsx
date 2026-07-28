@@ -16,19 +16,36 @@ interface ReturnCenterOption {
   contactNumber: string | null;
 }
 
-interface SettingsValues {
+interface AccountValues {
   accessKeyMasked: string | null;
   secretKeySaved: boolean;
   vendorId: string | null;
   vendorUserId: string | null;
-  deliveryCompanyCode: string | null;
-  returnCenterCode: string | null;
-  returnChargeName: string | null;
-  companyContactNumber: string | null;
-  returnZipCode: string | null;
-  returnAddress: string | null;
-  returnAddressDetail: string | null;
+}
+
+interface SellerProfile {
+  id: string;
+  name: string;
+  isDefault: boolean;
+  deliveryCompanyCode: string;
+  returnCenterCode: string;
+  returnChargeName: string;
+  companyContactNumber: string;
+  returnZipCode: string;
+  returnAddress: string;
+  returnAddressDetail: string;
   outboundShippingPlaceCode: number | null;
+}
+
+interface DescriptionTemplate {
+  id: string;
+  name: string;
+  isDefault: boolean;
+  shippingInfo: string;
+  exchangeInfo: string;
+  returnInfo: string;
+  agentBuyInfo: string;
+  asInfo: string;
 }
 
 const COURIER_OPTIONS = [
@@ -46,24 +63,203 @@ const COURIER_OPTIONS = [
 ];
 
 /**
- * 쿠팡 판매자 계정 설정 — 최초 1회만 저장하면 이후 등록 때마다 다시 입력하지
- * 않는다(Supabase coupang_seller_settings 테이블에 저장, 등록 API가 자동으로
- * 이 값을 읽어 쓴다). 시크릿(access/secret key)은 저장된 값을 다시 평문으로
- * 보여주지 않는다 — 비워두고 저장하면 "변경 안 함"으로 처리되어 기존 값이 유지된다.
+ * 쿠팡 판매자 설정 — 세 가지로 나뉜다.
+ * 1. 계정(Access/Secret Key, Vendor ID, Wing 계정 ID) — 계정당 하나.
+ * 2. 배송 프로필(출고지/반품지/택배사) — 여러 개 만들어두고 기본값을 고를 수 있다.
+ * 3. 상세설명 템플릿(배송/교환/반품/구매대행/A·S 고정 문구) — 여러 개 만들어두고
+ *    기본값을 고를 수 있다.
+ * 둘 다 "최초 1회 생성하면 이후에는 등록할 때 자동으로 기본값을 쓴다"는 흐름이다.
  */
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [missing, setMissing] = useState<string[]>([]);
   const [configured, setConfigured] = useState(false);
 
-  const [accessKeyMasked, setAccessKeyMasked] = useState<string | null>(null);
-  const [secretKeySaved, setSecretKeySaved] = useState(false);
+  const [account, setAccount] = useState<AccountValues>({
+    accessKeyMasked: null,
+    secretKeySaved: false,
+    vendorId: null,
+    vendorUserId: null,
+  });
   const [accessKey, setAccessKey] = useState("");
   const [secretKey, setSecretKey] = useState("");
   const [vendorId, setVendorId] = useState("");
   const [vendorUserId, setVendorUserId] = useState("");
+  const [accountSaving, setAccountSaving] = useState(false);
+
+  const [profiles, setProfiles] = useState<SellerProfile[]>([]);
+  const [templates, setTemplates] = useState<DescriptionTemplate[]>([]);
+
+  async function loadAll() {
+    const [accountRes, profilesRes, templatesRes] = await Promise.all([
+      fetch("/api/settings/coupang"),
+      fetch("/api/settings/coupang/profiles"),
+      fetch("/api/settings/coupang/templates"),
+    ]);
+    const accountData = (await accountRes.json()) as {
+      configured: boolean;
+      missing: string[];
+      values: AccountValues;
+    };
+    const profilesData = (await profilesRes.json()) as { profiles: SellerProfile[] };
+    const templatesData = (await templatesRes.json()) as { templates: DescriptionTemplate[] };
+
+    setConfigured(accountData.configured);
+    setMissing(accountData.missing);
+    setAccount(accountData.values);
+    setVendorId(accountData.values.vendorId ?? "");
+    setVendorUserId(accountData.values.vendorUserId ?? "");
+    setProfiles(profilesData.profiles ?? []);
+    setTemplates(templatesData.templates ?? []);
+  }
+
+  // loadAll()을 effect 콜백에서 직접 호출하면 setState가 effect 본문 내에서
+  // 동기적으로 실행된 것으로 잡혀 react-hooks/set-state-in-effect에 걸린다 —
+  // 마운트 시 최초 호출만 async IIFE로 감싸서 우회한다(loadAll()은 프로필/템플릿
+  // 변경 후 재조회용으로 그대로 재사용한다).
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      await loadAll();
+      if (!cancelled) setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleSaveAccount() {
+    setAccountSaving(true);
+    setSaveMessage(null);
+    try {
+      const res = await fetch("/api/settings/coupang", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accessKey: accessKey || undefined,
+          secretKey: secretKey || undefined,
+          vendorId: vendorId || undefined,
+          vendorUserId: vendorUserId || undefined,
+        }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (!data.ok) {
+        setSaveMessage(`계정 저장 실패: ${data.error}`);
+        return;
+      }
+      setSaveMessage("계정 정보가 저장되었습니다.");
+      setAccessKey("");
+      setSecretKey("");
+      await loadAll();
+    } finally {
+      setAccountSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <main className="mx-auto max-w-2xl px-6 py-10">
+        <p className="text-sm text-text-secondary">불러오는 중...</p>
+      </main>
+    );
+  }
+
+  return (
+    <main className="mx-auto max-w-2xl px-6 py-10">
+      <a href="/pipeline" className="text-sm text-text-secondary hover:text-text-primary">
+        ← CartPilot
+      </a>
+      <h1 className="mt-2 text-2xl font-semibold tracking-tight text-text-primary">설정</h1>
+      <p className="mt-1 text-sm text-text-secondary">
+        여기서 한 번 만들어두면 상품을 등록할 때마다 다시 입력하지 않아도 됩니다.
+      </p>
+
+      <div
+        className={`mt-4 rounded-md p-3 text-sm ${
+          configured ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
+        }`}
+      >
+        {configured
+          ? "✓ 쿠팡 등록에 필요한 설정이 모두 준비되어 있습니다."
+          : `⚠ 아직 준비되지 않은 항목: ${missing.join(", ")}`}
+      </div>
+      {saveMessage && <p className="mt-2 text-xs text-text-secondary">{saveMessage}</p>}
+
+      <section className="mt-6 rounded-lg border border-border bg-surface p-5 shadow-subtle">
+        <h2 className="text-base font-semibold text-text-primary">쿠팡 계정</h2>
+        <div className="mt-3 space-y-3 text-sm">
+          <Field label="Access Key" hint={account.accessKeyMasked ? `저장됨 (${account.accessKeyMasked})` : "미저장"}>
+            <input
+              type="password"
+              value={accessKey}
+              onChange={(e) => setAccessKey(e.target.value)}
+              placeholder={account.accessKeyMasked ?? "새 값을 입력하지 않으면 기존 값 유지"}
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="Secret Key" hint={account.secretKeySaved ? "저장됨" : "미저장"}>
+            <input
+              type="password"
+              value={secretKey}
+              onChange={(e) => setSecretKey(e.target.value)}
+              placeholder={account.secretKeySaved ? "•••• (변경하려면 새 값 입력)" : "새 값을 입력하지 않으면 기존 값 유지"}
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="Vendor ID">
+            <input
+              type="text"
+              value={vendorId}
+              onChange={(e) => setVendorId(e.target.value)}
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="Wing 계정 ID" hint="Wing 로그인 ID — API로 조회할 수 없어 직접 입력해야 합니다">
+            <input
+              type="text"
+              value={vendorUserId}
+              onChange={(e) => setVendorUserId(e.target.value)}
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <button
+            type="button"
+            onClick={handleSaveAccount}
+            disabled={accountSaving}
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+          >
+            {accountSaving ? "저장 중…" : "계정 저장"}
+          </button>
+        </div>
+      </section>
+
+      <SellerProfileSection profiles={profiles} onChanged={loadAll} />
+      <DescriptionTemplateSection templates={templates} onChanged={loadAll} />
+    </main>
+  );
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-medium text-text-secondary">{label}</label>
+        {hint && <span className="text-xs text-text-tertiary">{hint}</span>}
+      </div>
+      <div className="mt-1">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * 배송 프로필 — 목록(이름 + 기본 배지 + 기본으로 설정/삭제)과 "새 프로필 만들기"
+ * 폼을 함께 보여준다. 처음(프로필이 하나도 없을 때)에는 폼이 항상 펼쳐져 있어서
+ * "최초 1회 생성" 흐름이 자연스럽게 이어진다.
+ */
+function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile[]; onChanged: () => Promise<void> }) {
+  const [formOpen, setFormOpen] = useState(profiles.length === 0);
+  const [name, setName] = useState("");
   const [deliveryCompanyCode, setDeliveryCompanyCode] = useState("");
   const [returnCenterCode, setReturnCenterCode] = useState("");
   const [returnChargeName, setReturnChargeName] = useState("");
@@ -77,56 +273,8 @@ export default function SettingsPage() {
   const [returnCenters, setReturnCenters] = useState<ReturnCenterOption[]>([]);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  function applySettingsResponse(data: { configured: boolean; missing: string[]; values: SettingsValues }) {
-    setConfigured(data.configured);
-    setMissing(data.missing);
-    setAccessKeyMasked(data.values.accessKeyMasked);
-    setSecretKeySaved(data.values.secretKeySaved);
-    setVendorId(data.values.vendorId ?? "");
-    setVendorUserId(data.values.vendorUserId ?? "");
-    setDeliveryCompanyCode(data.values.deliveryCompanyCode ?? "");
-    setReturnCenterCode(data.values.returnCenterCode ?? "");
-    setReturnChargeName(data.values.returnChargeName ?? "");
-    setCompanyContactNumber(data.values.companyContactNumber ?? "");
-    setReturnZipCode(data.values.returnZipCode ?? "");
-    setReturnAddress(data.values.returnAddress ?? "");
-    setReturnAddressDetail(data.values.returnAddressDetail ?? "");
-    setOutboundShippingPlaceCode(
-      data.values.outboundShippingPlaceCode != null ? String(data.values.outboundShippingPlaceCode) : "",
-    );
-  }
-
-  /** 저장 후 재조회(handleSave)에서 쓰는 재사용 가능한 버전 — 이벤트 핸들러 안에서
-   * 호출되므로 아래 마운트 useEffect와 달리 그대로 async 함수를 호출해도 된다. */
-  async function loadSettings() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/settings/coupang");
-      const data = (await res.json()) as { configured: boolean; missing: string[]; values: SettingsValues };
-      applySettingsResponse(data);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/settings/coupang")
-      .then((res) => res.json())
-      .then((data: { configured: boolean; missing: string[]; values: SettingsValues }) => {
-        if (!cancelled) applySettingsResponse(data);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  /** 쿠팡 API 키가 저장된 뒤에만 성공한다 — 아직 안 됐으면 에러 메시지를 보여주고
-   * 아래 입력칸에 코드를 직접 입력할 수 있게 둔다(막지 않는다). */
   async function fetchLookups() {
     setLookupLoading(true);
     setLookupError(null);
@@ -163,18 +311,14 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleSave() {
+  async function handleCreate() {
     setSaving(true);
-    setSaveMessage(null);
     try {
-      const res = await fetch("/api/settings/coupang", {
+      const res = await fetch("/api/settings/coupang/profiles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          accessKey: accessKey || undefined,
-          secretKey: secretKey || undefined,
-          vendorId: vendorId || undefined,
-          vendorUserId: vendorUserId || undefined,
+          name: name || "기본",
           deliveryCompanyCode: deliveryCompanyCode || undefined,
           returnCenterCode: returnCenterCode || undefined,
           returnChargeName: returnChargeName || undefined,
@@ -185,95 +329,111 @@ export default function SettingsPage() {
           outboundShippingPlaceCode: outboundShippingPlaceCode ? Number(outboundShippingPlaceCode) : undefined,
         }),
       });
-      const data = (await res.json()) as { ok: boolean; error?: string; configured?: boolean; missing?: string[] };
-      if (!data.ok) {
-        setSaveMessage(`저장 실패: ${data.error}`);
-        return;
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (data.ok) {
+        setName("");
+        setFormOpen(false);
+        await onChanged();
       }
-      setSaveMessage("저장되었습니다.");
-      setAccessKey("");
-      setSecretKey("");
-      await loadSettings();
     } finally {
       setSaving(false);
     }
   }
 
-  if (loading) {
-    return (
-      <main className="mx-auto max-w-2xl px-6 py-10">
-        <p className="text-sm text-text-secondary">불러오는 중...</p>
-      </main>
-    );
+  async function handleSetDefault(id: string) {
+    await fetch(`/api/settings/coupang/profiles/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isDefault: true }),
+    });
+    await onChanged();
+  }
+
+  async function handleDelete(id: string) {
+    await fetch(`/api/settings/coupang/profiles/${id}`, { method: "DELETE" });
+    await onChanged();
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-10">
-      <a href="/pipeline" className="text-sm text-text-secondary hover:text-text-primary">
-        ← CartPilot
-      </a>
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight text-text-primary">설정</h1>
-      <p className="mt-1 text-sm text-text-secondary">
-        여기서 한 번 저장하면 상품을 등록할 때마다 다시 입력하지 않아도 됩니다.
+    <section className="mt-4 rounded-lg border border-border bg-surface p-5 shadow-subtle">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold text-text-primary">배송 프로필</h2>
+        <button
+          type="button"
+          onClick={() => setFormOpen((v) => !v)}
+          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-background"
+        >
+          {formOpen ? "닫기" : "새 프로필 만들기"}
+        </button>
+      </div>
+      <p className="mt-1 text-xs text-text-secondary">
+        출고지/반품지/택배사를 한 번 만들어두면 등록할 때 기본 프로필이 자동으로 쓰입니다.
       </p>
 
-      <div
-        className={`mt-4 rounded-md p-3 text-sm ${
-          configured ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
-        }`}
-      >
-        {configured
-          ? "✓ 쿠팡 등록에 필요한 설정이 모두 저장되어 있습니다."
-          : `⚠ 아직 저장되지 않은 항목: ${missing.join(", ")}`}
-      </div>
+      {profiles.length > 0 && (
+        <ul className="mt-3 divide-y divide-border text-sm">
+          {profiles.map((p) => (
+            <li key={p.id} className="flex items-center justify-between py-2">
+              <div>
+                <span className="font-medium text-text-primary">{p.name}</span>
+                {p.isDefault && (
+                  <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                    기본
+                  </span>
+                )}
+                <p className="text-xs text-text-secondary">
+                  택배사 {p.deliveryCompanyCode || "-"} · 반품지 {p.returnCenterCode || "-"} · 출고지{" "}
+                  {p.outboundShippingPlaceCode ?? "-"}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {!p.isDefault && (
+                  <button
+                    type="button"
+                    onClick={() => handleSetDefault(p.id)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    기본으로 설정
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleDelete(p.id)}
+                  className="text-xs text-error hover:underline"
+                >
+                  삭제
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
 
-      <section className="mt-6 rounded-lg border border-border bg-surface p-5 shadow-subtle">
-        <h2 className="text-base font-semibold text-text-primary">쿠팡 API</h2>
-        <div className="mt-3 space-y-3 text-sm">
-          <Field label="Access Key" hint={accessKeyMasked ? `저장됨 (${accessKeyMasked})` : "미저장"}>
-            <input
-              type="password"
-              value={accessKey}
-              onChange={(e) => setAccessKey(e.target.value)}
-              placeholder={accessKeyMasked ?? "새 값을 입력하지 않으면 기존 값 유지"}
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="Secret Key" hint={secretKeySaved ? "저장됨" : "미저장"}>
-            <input
-              type="password"
-              value={secretKey}
-              onChange={(e) => setSecretKey(e.target.value)}
-              placeholder={secretKeySaved ? "•••• (변경하려면 새 값 입력)" : "새 값을 입력하지 않으면 기존 값 유지"}
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="Vendor ID">
+      {formOpen && (
+        <div className="mt-4 space-y-3 border-t border-border pt-4 text-sm">
+          <Field label="프로필 이름">
             <input
               type="text"
-              value={vendorId}
-              onChange={(e) => setVendorId(e.target.value)}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="예: 기본"
               className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
             />
           </Field>
-        </div>
-      </section>
 
-      <section className="mt-4 rounded-lg border border-border bg-surface p-5 shadow-subtle">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-text-primary">쿠팡 배송설정</h2>
-          <button
-            type="button"
-            onClick={fetchLookups}
-            disabled={lookupLoading}
-            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-background disabled:opacity-50"
-          >
-            {lookupLoading ? "불러오는 중…" : "출고지/반품지 목록 불러오기"}
-          </button>
-        </div>
-        {lookupError && <p className="mt-2 text-xs text-warning">{lookupError}</p>}
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-text-secondary">출고지/반품지 자동 조회</span>
+            <button
+              type="button"
+              onClick={fetchLookups}
+              disabled={lookupLoading}
+              className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-background disabled:opacity-50"
+            >
+              {lookupLoading ? "불러오는 중…" : "출고지/반품지 목록 불러오기"}
+            </button>
+          </div>
+          {lookupError && <p className="text-xs text-warning">{lookupError}</p>}
 
-        <div className="mt-3 space-y-3 text-sm">
           <Field label="출고지">
             {shippingPlaces.length > 0 && (
               <select
@@ -293,7 +453,7 @@ export default function SettingsPage() {
               type="text"
               value={outboundShippingPlaceCode}
               onChange={(e) => setOutboundShippingPlaceCode(e.target.value)}
-              placeholder="출고지 코드 직접 입력"
+              placeholder="출고지 코드 직접 입력(폴백용 — 실제 등록 때는 상품 소싱 국가에 맞는 출고지가 자동 선택됩니다)"
               className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
             />
           </Field>
@@ -386,40 +546,192 @@ export default function SettingsPage() {
             />
           </Field>
 
-          <Field label="Wing 계정 ID">
-            <input
-              type="text"
-              value={vendorUserId}
-              onChange={(e) => setVendorUserId(e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
+          <button
+            type="button"
+            onClick={handleCreate}
+            disabled={saving}
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+          >
+            {saving ? "저장 중…" : "프로필 저장"}
+          </button>
         </div>
-      </section>
-
-      <div className="mt-5 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={saving}
-          className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
-        >
-          {saving ? "저장 중…" : "저장"}
-        </button>
-        {saveMessage && <p className="text-sm text-text-secondary">{saveMessage}</p>}
-      </div>
-    </main>
+      )}
+    </section>
   );
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+/**
+ * 상세설명 템플릿 — 배송/교환/반품/구매대행/A·S 안내처럼 상품마다 바뀌지 않는
+ * 고정 문구를 한 번만 만들어둔다. AI가 만든 상품소개/특징 뒤에 자동으로 붙는다.
+ */
+function DescriptionTemplateSection({
+  templates,
+  onChanged,
+}: {
+  templates: DescriptionTemplate[];
+  onChanged: () => Promise<void>;
+}) {
+  const [formOpen, setFormOpen] = useState(templates.length === 0);
+  const [name, setName] = useState("");
+  const [shippingInfo, setShippingInfo] = useState("");
+  const [exchangeInfo, setExchangeInfo] = useState("");
+  const [returnInfo, setReturnInfo] = useState("");
+  const [agentBuyInfo, setAgentBuyInfo] = useState("");
+  const [asInfo, setAsInfo] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function handleCreate() {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/settings/coupang/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name || "기본",
+          shippingInfo: shippingInfo || undefined,
+          exchangeInfo: exchangeInfo || undefined,
+          returnInfo: returnInfo || undefined,
+          agentBuyInfo: agentBuyInfo || undefined,
+          asInfo: asInfo || undefined,
+        }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (data.ok) {
+        setName("");
+        setFormOpen(false);
+        await onChanged();
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSetDefault(id: string) {
+    await fetch(`/api/settings/coupang/templates/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isDefault: true }),
+    });
+    await onChanged();
+  }
+
+  async function handleDelete(id: string) {
+    await fetch(`/api/settings/coupang/templates/${id}`, { method: "DELETE" });
+    await onChanged();
+  }
+
   return (
-    <div>
+    <section className="mt-4 rounded-lg border border-border bg-surface p-5 shadow-subtle">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-medium text-text-secondary">{label}</label>
-        {hint && <span className="text-xs text-text-tertiary">{hint}</span>}
+        <h2 className="text-base font-semibold text-text-primary">상세설명 템플릿</h2>
+        <button
+          type="button"
+          onClick={() => setFormOpen((v) => !v)}
+          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-background"
+        >
+          {formOpen ? "닫기" : "새 템플릿 만들기"}
+        </button>
       </div>
-      <div className="mt-1">{children}</div>
-    </div>
+      <p className="mt-1 text-xs text-text-secondary">
+        없어도 등록은 됩니다(AI 생성 설명만 사용) — 있으면 배송/교환/반품/구매대행/A·S 안내가 자동으로 붙습니다.
+      </p>
+
+      {templates.length > 0 && (
+        <ul className="mt-3 divide-y divide-border text-sm">
+          {templates.map((t) => (
+            <li key={t.id} className="flex items-center justify-between py-2">
+              <div>
+                <span className="font-medium text-text-primary">{t.name}</span>
+                {t.isDefault && (
+                  <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                    기본
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {!t.isDefault && (
+                  <button
+                    type="button"
+                    onClick={() => handleSetDefault(t.id)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    기본으로 설정
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleDelete(t.id)}
+                  className="text-xs text-error hover:underline"
+                >
+                  삭제
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {formOpen && (
+        <div className="mt-4 space-y-3 border-t border-border pt-4 text-sm">
+          <Field label="템플릿 이름">
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="예: 기본"
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="배송안내">
+            <textarea
+              value={shippingInfo}
+              onChange={(e) => setShippingInfo(e.target.value)}
+              rows={2}
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="교환안내">
+            <textarea
+              value={exchangeInfo}
+              onChange={(e) => setExchangeInfo(e.target.value)}
+              rows={2}
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="반품안내">
+            <textarea
+              value={returnInfo}
+              onChange={(e) => setReturnInfo(e.target.value)}
+              rows={2}
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="구매대행 안내">
+            <textarea
+              value={agentBuyInfo}
+              onChange={(e) => setAgentBuyInfo(e.target.value)}
+              rows={2}
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="A/S 안내">
+            <textarea
+              value={asInfo}
+              onChange={(e) => setAsInfo(e.target.value)}
+              rows={2}
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <button
+            type="button"
+            onClick={handleCreate}
+            disabled={saving}
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+          >
+            {saving ? "저장 중…" : "템플릿 저장"}
+          </button>
+        </div>
+      )}
+    </section>
   );
 }

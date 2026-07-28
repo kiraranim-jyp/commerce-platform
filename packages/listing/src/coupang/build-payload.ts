@@ -155,12 +155,46 @@ function formatCoupangDateTime(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
+/** 상품마다 바뀌지 않는 고정 문구(배송/교환/반품/구매대행/A·S 안내)를 한 번만
+ * 등록해두고 재사용하기 위한 템플릿 — apps/admin의 description-template.ts가
+ * Supabase CRUD를 담당하고, 실제 병합 로직은 여기(순수 함수)에 둔다. 필드가
+ * 비어 있으면 그 섹션은 건너뛴다 — 템플릿은 등록을 막는 필수 관문이 아니라
+ * 품질을 높이는 보강재다. */
+export interface CoupangDescriptionTemplate {
+  shippingInfo?: string;
+  exchangeInfo?: string;
+  returnInfo?: string;
+  agentBuyInfo?: string;
+  asInfo?: string;
+}
+
+export function mergeCoupangDescription(
+  aiDescription: string,
+  template: CoupangDescriptionTemplate | null | undefined,
+): string {
+  if (!template) return aiDescription;
+
+  const sections = [
+    { label: "배송안내", content: template.shippingInfo ?? "" },
+    { label: "교환안내", content: template.exchangeInfo ?? "" },
+    { label: "반품안내", content: template.returnInfo ?? "" },
+    { label: "구매대행 안내", content: template.agentBuyInfo ?? "" },
+    { label: "A/S 안내", content: template.asInfo ?? "" },
+  ].filter((section) => section.content.trim().length > 0);
+
+  if (sections.length === 0) return aiDescription;
+
+  const templateText = sections.map((s) => `[${s.label}]\n${s.content.trim()}`).join("\n\n");
+  return aiDescription.trim().length > 0 ? `${aiDescription.trim()}\n\n${templateText}` : templateText;
+}
+
 export function buildCoupangPayload(
   product: CanonicalProduct,
   listing: ListingModel,
-  options: { sellerConfig?: CoupangSellerConfig } = {},
+  options: { sellerConfig?: CoupangSellerConfig; descriptionTemplate?: CoupangDescriptionTemplate } = {},
 ): CoupangPayload {
   const sellerConfig = options.sellerConfig ?? BLANK_COUPANG_SELLER_CONFIG;
+  const description = mergeCoupangDescription(listing.description, options.descriptionTemplate);
 
   // listing.category.candidate.id는 대부분 CartPilot 내부 카테고리 id다 — 실제
   // 쿠팡 숫자 코드로 쓸 수 있는 건 /api/coupang/category-recommend가 만든
@@ -248,11 +282,11 @@ export function buildCoupangPayload(
         attributes: [],
         notices: [],
         contents: [
-          ...(listing.description
+          ...(description
             ? [
                 {
                   contentsType: "TEXT" as const,
-                  contentDetails: [{ content: listing.description, detailType: "TEXT" as const }],
+                  contentDetails: [{ content: description, detailType: "TEXT" as const }],
                 },
               ]
             : []),
