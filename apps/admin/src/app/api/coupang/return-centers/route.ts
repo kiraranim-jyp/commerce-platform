@@ -25,10 +25,19 @@ export interface ReturnCenterOption {
   raw: RawReturnCenter;
 }
 
+/** 실제 계정으로 확인된 응답 모양: {code, message, data: {content: [...], pagination}}
+ * — data 자체가 배열이 아니라 그 안에 content가 있다. 예전 코드는 obj.data가
+ * "배열이 아닌 객체"인 경우를 대비하지 못해서, 반품지가 실제로 등록돼 있어도
+ * 항상 빈 배열을 반환하는 버그가 있었다(raw 응답으로 실측 확인). data.content를
+ * 최우선으로 보고, 혹시 스키마가 또 바뀌어도 넘어갈 수 있게 나머지 후보도 유지한다. */
 function extractList(body: unknown): RawReturnCenter[] {
   if (!body || typeof body !== "object") return [];
   const obj = body as Record<string, unknown>;
-  const candidate = obj.content ?? obj.data ?? obj.result ?? obj.returnShippingCenterList;
+  const data = obj.data;
+  if (data && typeof data === "object" && Array.isArray((data as Record<string, unknown>).content)) {
+    return (data as Record<string, unknown>).content as RawReturnCenter[];
+  }
+  const candidate = obj.content ?? data ?? obj.result ?? obj.returnShippingCenterList;
   if (Array.isArray(candidate)) return candidate as RawReturnCenter[];
   return [];
 }

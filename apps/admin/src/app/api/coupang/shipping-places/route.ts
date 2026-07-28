@@ -24,10 +24,16 @@ export interface ShippingPlaceOption {
   raw: RawShippingPlace;
 }
 
+/** return-centers/route.ts와 동일한 응답 모양이 확인됐다: {data: {content: [...]}}.
+ * data 자체가 배열이 아니라 그 안에 content가 있다 — 최우선으로 그 경로를 본다. */
 function extractList(body: unknown): RawShippingPlace[] {
   if (!body || typeof body !== "object") return [];
   const obj = body as Record<string, unknown>;
-  const candidate = obj.content ?? obj.data ?? obj.result ?? obj.shippingPlaces;
+  const data = obj.data;
+  if (data && typeof data === "object" && Array.isArray((data as Record<string, unknown>).content)) {
+    return (data as Record<string, unknown>).content as RawShippingPlace[];
+  }
+  const candidate = obj.content ?? data ?? obj.result ?? obj.shippingPlaces;
   if (Array.isArray(candidate)) return candidate as RawShippingPlace[];
   return [];
 }
@@ -53,13 +59,12 @@ export async function GET() {
 
   try {
     // 쿠팡이 이 API는 vendorId만으로는 안 되고 pageNum/pageSize(또는 placeCodes/
-    // placeNames) 중 하나는 반드시 있어야 한다고 명시적으로 요구한다(실제 계정으로
-    // 처음 호출했을 때 INVALID_ARGUMENT "pageNum & pageSize ... must be provided"로
-    // 확인됨) — 전체 목록을 한 번에 보고 싶으니 페이지네이션 쪽을 넉넉하게 채운다.
+    // placeNames) 중 하나는 반드시 있어야 한다고 명시적으로 요구한다. pageSize는
+    // 1~50만 허용한다(둘 다 실제 계정 호출로 확인된 INVALID_ARGUMENT 메시지 그대로).
     const response = await callCoupangApi(credentials, {
       method: "GET",
       path: SHIPPING_PLACE_PATH,
-      query: `vendorId=${encodeURIComponent(credentials.vendorId)}&pageNum=1&pageSize=100`,
+      query: `vendorId=${encodeURIComponent(credentials.vendorId)}&pageNum=1&pageSize=50`,
     });
     if (!response.ok) {
       return NextResponse.json(
