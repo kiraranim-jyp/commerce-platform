@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "productName이 필요합니다." }, { status: 400 });
   }
 
-  const credentials = getCoupangCredentials();
+  const credentials = await getCoupangCredentials();
   if (!credentials) {
     return NextResponse.json(
       { error: "쿠팡 인증 정보가 설정되어 있지 않습니다.", status: "NOT_CONFIGURED" },

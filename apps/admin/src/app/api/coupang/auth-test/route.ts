@@ -14,12 +14,12 @@ const AUTH_TEST_PATH =
   "/v2/providers/seller_api/apis/api/v1/marketplace/meta/category-related-metas/display-category-codes/78877";
 
 export async function POST() {
-  const credentials = getCoupangCredentials();
+  const credentials = await getCoupangCredentials();
   if (!credentials) {
     const status: PlatformConnectionStatus = "NOT_CONFIGURED";
     return NextResponse.json({
       status,
-      message: "쿠팡 인증 정보가 설정되어 있지 않습니다(COUPANG_ACCESS_KEY/COUPANG_SECRET_KEY/COUPANG_VENDOR_ID).",
+      message: "쿠팡 인증 정보가 설정되어 있지 않습니다 — 설정 페이지에서 Access Key/Secret Key/Vendor ID를 입력해주세요.",
     });
   }
 

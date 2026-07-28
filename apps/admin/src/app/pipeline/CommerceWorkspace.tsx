@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { CanonicalProduct, FieldSource, PlatformId } from "@commerce/shared";
 import {
   ruleBasedCategoryProvider,
@@ -106,6 +106,27 @@ export function CommerceWorkspace({
   const [coupangConnectionChecking, setCoupangConnectionChecking] = useState(false);
   const [coupangApiCandidate, setCoupangApiCandidate] = useState<CategoryCandidate | null>(null);
   const [coupangCategoryFetching, setCoupangCategoryFetching] = useState(false);
+  const [coupangSettingsMissing, setCoupangSettingsMissing] = useState<string[] | null>(null);
+
+  /** 쿠팡 탭에 들어올 때마다 저장된 판매자 설정이 등록에 필요한 항목을 모두
+   * 채웠는지 확인한다 — 실제 쿠팡 API를 호출하지 않는 단순 DB/env 조회라 자동으로
+   * 확인해도 비용/부작용이 없다(쿠팡 연결 확인 자체와는 다르다, 그건 여전히
+   * 수동이다). 누락됐으면 등록 버튼 대신 "설정하러 가기" 배너를 보여준다. */
+  useEffect(() => {
+    if (tab !== "coupang") return;
+    let cancelled = false;
+    fetch("/api/settings/coupang")
+      .then((res) => res.json())
+      .then((data: { missing?: string[] }) => {
+        if (!cancelled) setCoupangSettingsMissing(data.missing ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setCoupangSettingsMissing(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab]);
 
   /** 페이지/탭 진입 시 자동으로 호출하지 않는다 — 사용자가 [연결 다시 확인]을
    * 누르거나(CoupangConnectionPanel), 등록 직전(confirmListing)에만 실제 쿠팡
@@ -472,6 +493,7 @@ export function CommerceWorkspace({
           onRetryListing={retryListing}
           onFetchCoupangCategory={tab === "coupang" ? fetchCoupangCategoryRecommendation : undefined}
           coupangCategoryFetching={coupangCategoryFetching}
+          settingsMissing={tab === "coupang" ? (coupangSettingsMissing ?? undefined) : undefined}
         />
       )}
 

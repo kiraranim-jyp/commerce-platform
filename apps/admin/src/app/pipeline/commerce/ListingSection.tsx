@@ -63,6 +63,7 @@ export function ListingSection({
   onFixNumberField,
   onOpenModal,
   onRetry,
+  settingsMissing,
 }: {
   platformLabel: string;
   status: ListingStatus;
@@ -73,7 +74,32 @@ export function ListingSection({
   onFixNumberField?: (field: "shippingFee" | "stockQuantity", value: number) => void;
   onOpenModal: () => void;
   onRetry: () => void;
+  /** 쿠팡 탭에서만 넘어온다 — 판매자 계정 설정(출고지/반품지/택배사 등)이 저장 안
+   * 됐으면 등록 버튼 대신 이 목록과 "설정하러 가기" 버튼을 보여준다. 아직 상품
+   * 데이터를 확인하기 전(READY/DRAFT)에만 끼어든다 — 이미 등록을 시도한 뒤라면
+   * 그 결과 화면을 그대로 보여준다. */
+  settingsMissing?: string[];
 }) {
+  if ((status === "DRAFT" || status === "READY") && settingsMissing && settingsMissing.length > 0) {
+    return (
+      <section className="rounded-lg border border-warning/30 bg-warning-soft p-4 text-sm">
+        <p className="font-medium text-warning">⚠ {platformLabel} 등록을 위해 추가 설정이 필요합니다.</p>
+        <p className="mt-2 text-xs font-medium text-text-secondary">필수 항목</p>
+        <ul className="mt-1 space-y-1 text-xs text-text-secondary">
+          {settingsMissing.map((label) => (
+            <li key={label}>□ {label}</li>
+          ))}
+        </ul>
+        <a
+          href="/settings"
+          className="mt-3 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+        >
+          설정하러 가기
+        </a>
+      </section>
+    );
+  }
+
   if (status === "DRAFT" || status === "READY") {
     if (readiness && onFixTextField && onFixNumberField) {
       return (

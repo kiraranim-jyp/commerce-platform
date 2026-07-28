@@ -26,6 +26,7 @@ export function PlatformPreview({
   onRetryListing,
   onFetchCoupangCategory,
   coupangCategoryFetching,
+  settingsMissing,
 }: {
   product: CanonicalProduct;
   listing: ListingModel;
@@ -44,6 +45,8 @@ export function PlatformPreview({
   /** 쿠팡 탭에서만 넘어온다 — 있으면 카테고리 추천 패널에 "쿠팡 API로 확인"/검색 UI가 보인다. */
   onFetchCoupangCategory?: (query?: string) => void;
   coupangCategoryFetching?: boolean;
+  /** 쿠팡 탭에서만 넘어온다 — 비어있지 않으면 등록 버튼 대신 "설정 필요" 배너를 보여준다. */
+  settingsMissing?: string[];
 }) {
   const isCategoryConfirmed =
     listing.category.state === "SELECTED" || listing.category.state === "CONFIRMED";
@@ -178,6 +181,7 @@ export function PlatformPreview({
         onFixNumberField={onFixNumberField}
         onOpenModal={onOpenListingModal}
         onRetry={onRetryListing}
+        settingsMissing={settingsMissing}
       />
     </div>
   );

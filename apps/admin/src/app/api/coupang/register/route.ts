@@ -32,14 +32,14 @@ interface CreateProductResponse {
 function missingSellerConfigFields(payload: CoupangPayload): string[] {
   const missing: string[] = [];
   if (payload.displayCategoryCode == null) missing.push("쿠팡 카테고리 코드");
-  if (!payload.deliveryCompanyCode) missing.push("택배사 코드(COUPANG_DELIVERY_COMPANY_CODE)");
-  if (!payload.returnCenterCode) missing.push("반품지 코드(COUPANG_RETURN_CENTER_CODE)");
-  if (!payload.returnChargeName) missing.push("반품지명(COUPANG_RETURN_CHARGE_NAME)");
-  if (!payload.companyContactNumber) missing.push("반품지 연락처(COUPANG_COMPANY_CONTACT_NUMBER)");
-  if (!payload.returnZipCode) missing.push("반품지 우편번호(COUPANG_RETURN_ZIP_CODE)");
-  if (!payload.returnAddress) missing.push("반품지 주소(COUPANG_RETURN_ADDRESS)");
-  if (payload.outboundShippingPlaceCode == null) missing.push("출고지 코드(COUPANG_OUTBOUND_SHIPPING_PLACE_CODE)");
-  if (!payload.vendorUserId) missing.push("Wing 계정 ID(COUPANG_VENDOR_USER_ID)");
+  if (!payload.deliveryCompanyCode) missing.push("택배사");
+  if (!payload.returnCenterCode) missing.push("반품지");
+  if (!payload.returnChargeName) missing.push("반품지명");
+  if (!payload.companyContactNumber) missing.push("반품지 연락처");
+  if (!payload.returnZipCode) missing.push("반품지 우편번호");
+  if (!payload.returnAddress) missing.push("반품지 주소");
+  if (payload.outboundShippingPlaceCode == null) missing.push("출고지");
+  if (!payload.vendorUserId) missing.push("Wing 계정 ID");
   if (payload.items[0]?.images.length === 0) missing.push("대표 이미지");
   return missing;
 }
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
   }
   const { product, listing } = body;
 
-  const credentials = getCoupangCredentials();
+  const credentials = await getCoupangCredentials();
   if (!credentials) {
     const result: ListingResult = {
       status: "FAILED",
@@ -66,13 +66,13 @@ export async function POST(request: Request) {
         step: "AUTHENTICATION",
         message: "쿠팡 인증 정보가 설정되어 있지 않습니다.",
         retryable: false,
-        resolution: "서버 환경변수에 COUPANG_ACCESS_KEY/COUPANG_SECRET_KEY/COUPANG_VENDOR_ID를 설정해주세요.",
+        resolution: "설정 페이지에서 Access Key/Secret Key/Vendor ID를 입력해주세요.",
       },
     };
     return NextResponse.json(result);
   }
 
-  const sellerConfig = getCoupangSellerConfig(credentials.vendorId);
+  const sellerConfig = await getCoupangSellerConfig(credentials.vendorId);
   const payload = buildCoupangPayload(product, listing, { sellerConfig });
 
   const missing = missingSellerConfigFields(payload);
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
         step: "VALIDATION",
         message: `실제 등록에 필요한 값이 없습니다: ${missing.join(", ")}`,
         retryable: true,
-        resolution: "쿠팡 카테고리를 확인하고, 서버 환경변수에 판매자 계정 설정을 채운 뒤 다시 시도해주세요.",
+        resolution: "설정 페이지에서 쿠팡 배송 설정을 채운 뒤 다시 시도해주세요.",
       },
     };
     return NextResponse.json(result);
