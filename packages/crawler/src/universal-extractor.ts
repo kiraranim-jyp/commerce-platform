@@ -2,8 +2,14 @@ import type { Page } from "playwright-core";
 import type { ExtractedImage } from "@commerce/shared";
 import { launchChromium } from "./browser-launcher";
 import { loadCrawlerConfig } from "./config";
-import { extractProductData, type ExtractedProductData } from "./product-data-extractor";
+import {
+  extractProductData,
+  type ExtractedProductData,
+  type ProductDataSource,
+} from "./product-data-extractor";
+import { acquireDomainSlot, recordRateLimitResponse } from "./rate-limit/domain-rate-limiter";
 import { scoreAndFilter, type ExtractionTrace } from "./scoring";
+import { trySiteStrategies } from "./site-strategies/registry";
 import { jsonLdStrategy } from "./strategies/json-ld.strategy";
 import { openGraphStrategy } from "./strategies/open-graph.strategy";
 import { shopifyStrategy } from "./strategies/shopify.strategy";
@@ -29,7 +35,7 @@ export interface UniversalExtractResult {
   trace?: ExtractionTrace[];
   strategyCounts?: Record<StrategySource, number>;
   productData: ExtractedProductData;
-  productDataSources: Record<string, "json-ld" | "microdata" | "open-graph" | "dom">;
+  productDataSources: Record<string, ProductDataSource>;
 }
 
 async function autoScroll(page: Page, passes: number): Promise<void> {
@@ -72,6 +78,56 @@ function countBySource(candidates: ImageCandidate[]): Record<StrategySource, num
   return counts;
 }
 
+/** SiteStrategy(Partial<ExtractedProductData>)가 채운 필드를 전부 "shopify-json"
+ * 출처로 표시한다 — canonical-product.ts의 confidence 계산이 이 값을 읽는다. */
+function buildSiteStrategySources(
+  data: Partial<ExtractedProductData>,
+): Record<string, ProductDataSource> {
+  const sources: Record<string, ProductDataSource> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value == null) continue;
+    if (Array.isArray(value) && value.length === 0) continue;
+    sources[key] = "shopify-json";
+  }
+  return sources;
+}
+
+/**
+ * Playwright를 아예 켜지 않고 등록된 SiteStrategy(현재는 Shopify)만으로 이미지+
+ * 상품데이터를 확정할 수 있는지 시도한다. URL이 어떤 전략에도 안 걸리거나, 걸려도
+ * 실제 fetch가 실패하면 null을 반환해 호출부가 기존 Playwright 파이프라인을
+ * 그대로 타게 한다 — 이 경로를 타지 않는 사이트는 동작이 전혀 바뀌지 않는다.
+ */
+async function tryFastPath(
+  url: string,
+  config: ReturnType<typeof loadCrawlerConfig>,
+  debug: boolean,
+): Promise<UniversalExtractResult | null> {
+  const siteResult = await trySiteStrategies(url);
+  if (!siteResult) return null;
+
+  const { images, trace } = scoreAndFilter(siteResult.images, config);
+  if (images.length === 0) return null;
+
+  const productData: ExtractedProductData = {
+    title: siteResult.productData.title,
+    brand: siteResult.productData.brand,
+    price: siteResult.productData.price,
+    sku: siteResult.productData.sku,
+    description: siteResult.productData.description,
+    material: siteResult.productData.material,
+    options: siteResult.productData.options ?? [],
+  };
+
+  return {
+    images,
+    trace: debug ? trace : undefined,
+    strategyCounts: countBySource(siteResult.images),
+    productData,
+    productDataSources: buildSiteStrategySources(siteResult.productData),
+  };
+}
+
 /**
  * 구조화 데이터 계열(JSON-LD/OpenGraph/Shopify/Next) Strategy를 전부 병렬로 시도해서
  * 후보 풀에 합치고, DOM 스캔은 항상 함께 돌려 안전망 역할을 하게 한다(구조화 데이터는
@@ -83,6 +139,14 @@ export async function universalExtract(
   options: UniversalExtractOptions = {},
 ): Promise<UniversalExtractResult> {
   const config = loadCrawlerConfig();
+
+  // Epic 1-3: Shopify처럼 Playwright 없이도 신뢰도 높은 데이터를 얻을 수 있는
+  // 사이트는 브라우저를 켜기 전에 먼저 시도한다 — 이 URL이 어떤 SiteStrategy에도
+  // 안 걸리면 fastResult는 null이고, 그 아래 기존 Playwright 파이프라인이 지금까지와
+  // 완전히 동일하게 실행된다(회귀 없음).
+  const fastResult = await tryFastPath(url, config, options.debug ?? false);
+  if (fastResult) return fastResult;
+
   const browser = await launchChromium();
 
   try {
@@ -107,18 +171,37 @@ export async function universalExtract(
     // 채팅 위젯/분석 스크립트가 계속 폴링하는 사이트(특히 Shopify)는 네트워크가 절대
     // idle 상태가 안 돼서 networkidle 대기가 타임아웃난다. 그런 경우 페이지 자체는
     // 이미 렌더링됐을 가능성이 높으니 domcontentloaded로 한 번 더 시도해서 살린다.
+    //
+    // Epic 4: 이 네비게이션도 도메인별 속도 제어를 거친다 — 같은 인스턴스에서 같은
+    // 도메인으로 짧은 시간에 여러 번 재시도/재검증할 때 요청이 몰리는 걸 줄인다.
+    // 429를 받으면 recordRateLimitResponse가 그 도메인을 blockedUntil까지 쉬게
+    // 기록해서, 다음 요청(같은 URL의 재시도든 다른 이미지 다운로드든)이 곧바로
+    // 같은 벽에 다시 부딪히지 않게 한다.
+    const releaseDomainSlot = await acquireDomainSlot(url);
     try {
-      await page.goto(url, { waitUntil: "networkidle", timeout: config.navigationTimeoutMs });
-    } catch (error) {
-      console.warn(
-        `[universal-extractor] networkidle 대기 타임아웃, domcontentloaded로 재시도: ${url}`,
-        error,
-      );
-      await page.goto(url, {
-        waitUntil: "domcontentloaded",
-        timeout: config.navigationTimeoutMs,
-      });
-      await page.waitForTimeout(2000);
+      let response;
+      try {
+        response = await page.goto(url, {
+          waitUntil: "networkidle",
+          timeout: config.navigationTimeoutMs,
+        });
+      } catch (error) {
+        console.warn(
+          `[universal-extractor] networkidle 대기 타임아웃, domcontentloaded로 재시도: ${url}`,
+          error,
+        );
+        response = await page.goto(url, {
+          waitUntil: "domcontentloaded",
+          timeout: config.navigationTimeoutMs,
+        });
+        await page.waitForTimeout(2000);
+      }
+      if (response) {
+        const headers = await response.allHeaders().catch(() => ({}) as Record<string, string>);
+        recordRateLimitResponse(url, response.status(), headers["retry-after"] ?? null);
+      }
+    } finally {
+      releaseDomainSlot();
     }
     await autoScroll(page, 1);
     await page.waitForTimeout(500);

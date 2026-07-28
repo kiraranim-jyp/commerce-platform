@@ -1,5 +1,7 @@
 import type { Page } from "playwright-core";
 
+export type ProductDataSource = "json-ld" | "microdata" | "open-graph" | "dom" | "shopify-json";
+
 export interface ExtractedProductData {
   title?: string;
   brand?: string;
@@ -45,8 +47,9 @@ function parsePrice(
 
 /** JSON-LD Product 노드에서 name/brand/offers/sku/description을 뽑는다.
  * 이미지 추출용 json-ld.strategy.ts와 같은 스크립트 태그를 다시 파싱하지만, 여기서는
- * 이미지가 아니라 상품 정보 필드가 관심사라 별도 파서로 둔다(관심사 분리). */
-function extractFromJsonLd(html: string): ExtractedProductData | null {
+ * 이미지가 아니라 상품 정보 필드가 관심사라 별도 파서로 둔다(관심사 분리).
+ * shopify.site-strategy.ts가 통화(currency) 보강용으로 재사용하므로 export한다. */
+export function extractFromJsonLd(html: string): ExtractedProductData | null {
   const scriptRe = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
   for (const match of html.matchAll(scriptRe)) {
     const raw = match[1]?.trim();
@@ -99,8 +102,9 @@ function findProductNode(node: unknown): Record<string, any> | null {
   return isProduct ? obj : null;
 }
 
-/** OpenGraph 메타 태그 — JSON-LD가 없거나 일부 필드가 비어 있을 때 보강용으로 쓴다. */
-function extractFromOpenGraph(html: string): Partial<ExtractedProductData> {
+/** OpenGraph 메타 태그 — JSON-LD가 없거나 일부 필드가 비어 있을 때 보강용으로 쓴다.
+ * shopify.site-strategy.ts가 통화(currency) 보강용으로 재사용하므로 export한다. */
+export function extractFromOpenGraph(html: string): Partial<ExtractedProductData> {
   const get = (property: string): string | undefined => {
     const re = new RegExp(
       `<meta[^>]+property=["']${property}["'][^>]+content=["']([^"']+)["']`,
@@ -187,14 +191,14 @@ export async function extractProductData(
   page: Page,
 ): Promise<{
   data: ExtractedProductData;
-  sources: Record<string, "json-ld" | "microdata" | "open-graph" | "dom">;
+  sources: Record<string, ProductDataSource>;
 }> {
   const jsonLd = extractFromJsonLd(html);
   const microdata = await extractFromMicrodata(page);
   const og = extractFromOpenGraph(html);
   const dom = await extractFromDom(page);
 
-  const sources: Record<string, "json-ld" | "microdata" | "open-graph" | "dom"> = {};
+  const sources: Record<string, ProductDataSource> = {};
   const pick = <K extends keyof ExtractedProductData>(
     field: K,
   ): ExtractedProductData[K] | undefined => {

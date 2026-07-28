@@ -1,4 +1,4 @@
-import type { ExtractedProductData } from "@commerce/crawler";
+import type { ExtractedProductData, ProductDataSource } from "@commerce/crawler";
 import type {
   CanonicalProduct,
   CanonicalProductImage,
@@ -7,7 +7,8 @@ import type {
 } from "@commerce/shared";
 import type { WorkspaceItem } from "./response.types";
 
-const CONFIDENCE_BY_SOURCE: Record<"json-ld" | "microdata" | "open-graph" | "dom", number> = {
+const CONFIDENCE_BY_SOURCE: Record<ProductDataSource, number> = {
+  "shopify-json": 0.95,
   "json-ld": 0.9,
   microdata: 0.85,
   "open-graph": 0.7,
@@ -17,7 +18,7 @@ const CONFIDENCE_BY_SOURCE: Record<"json-ld" | "microdata" | "open-graph" | "dom
 function field<T>(
   value: T,
   key: string,
-  sources: Record<string, "json-ld" | "microdata" | "open-graph" | "dom">,
+  sources: Record<string, ProductDataSource>,
 ): ProvenanceField<T> {
   const detected = sources[key];
   const source: FieldSource = "ORIGINAL";
@@ -71,7 +72,7 @@ export function toCanonicalProductImage(item: WorkspaceItem): CanonicalProductIm
 export function buildCanonicalProduct(
   sourceUrl: string,
   productData: ExtractedProductData,
-  sources: Record<string, "json-ld" | "microdata" | "open-graph" | "dom">,
+  sources: Record<string, ProductDataSource>,
   items: WorkspaceItem[],
 ): CanonicalProduct {
   const images = items
