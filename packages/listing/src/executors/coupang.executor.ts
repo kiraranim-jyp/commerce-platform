@@ -1,8 +1,18 @@
 import type { ListingModel } from "@commerce/marketplace";
-import type { CanonicalProduct } from "@commerce/shared";
+import type { CanonicalProduct, ErrorCode } from "@commerce/shared";
 import { buildCoupangPayload } from "../coupang/build-payload";
 import type { ListingExecutor } from "../executor";
 import type { ExecutionMode, ListingResult } from "../types";
+
+/** listing.validations의 field 이름을 ErrorCode로 매핑한다 — 서버 라우트까지
+ * 가지 않고 클라이언트에서 바로 막히는 경우(필수값 미입력)에도 문의하기/
+ * Registration Report가 같은 코드 체계를 쓸 수 있게 한다. */
+function classifyValidationField(field: string): ErrorCode {
+  if (field === "category") return "CP001";
+  if (field === "imageFormat") return "CP006";
+  if (field === "representativeImage") return "IMG004";
+  return "CP005";
+}
 
 /**
  * LIVE는 이 executor 안에서 직접 HMAC 서명/API 호출을 하지 않는다 — 이 파일은
@@ -29,8 +39,10 @@ export const coupangExecutor: ListingExecutor = {
         platform: "coupang",
         mode,
         retryable: true,
+        traceId: crypto.randomUUID(),
         error: {
           step,
+          code: classifyValidationField(first.field),
           message: errors.map((e) => e.message ?? e.label).join(" "),
           retryable: true,
           resolution: "필수 필드를 모두 채운 뒤 다시 시도해주세요.",
@@ -72,8 +84,10 @@ export const coupangExecutor: ListingExecutor = {
         mode,
         retryable: true,
         payload,
+        traceId: crypto.randomUUID(),
         error: {
           step: "NETWORK",
+          code: "API003",
           message: error instanceof Error ? error.message : "등록 서버에 연결할 수 없습니다.",
           retryable: true,
         },

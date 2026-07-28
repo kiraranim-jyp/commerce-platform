@@ -6,11 +6,15 @@ import type {
   ListingResult,
   ListingStatus,
   ReadinessReport,
+  RegistrationStepLog,
   SmartStorePayload,
 } from "@commerce/listing";
+import { buildRegistrationReport } from "@commerce/listing";
+import { APP_VERSION } from "@/lib/app-version";
 import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
 import { PayloadInspector } from "./PayloadInspector";
 import { ReadinessScorePanel } from "./ReadinessScorePanel";
+import { SupportInquiryButton } from "./SupportInquiryButton";
 
 const STATUS_LABELS: Record<ListingStatus, string> = {
   DRAFT: "상품 준비 중",
@@ -54,6 +58,49 @@ function isCoupangPayload(payload: unknown): payload is CoupangPayload {
   );
 }
 
+/** 문의하기 진단 번들의 "Site" 필드용 — URL 파싱이 실패해도(빈 값 등) 화면이 깨지지
+ * 않도록 항상 문자열을 반환한다. */
+function safeHostname(url: string | undefined): string {
+  if (!url) return "";
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
+
+const STEP_STATUS_ICON: Record<RegistrationStepLog["status"], string> = {
+  success: "✓",
+  failed: "✗",
+  skipped: "—",
+};
+
+const STEP_STATUS_CLASS: Record<RegistrationStepLog["status"], string> = {
+  success: "text-success",
+  failed: "text-error",
+  skipped: "text-text-tertiary",
+};
+
+/** 등록 시도가 어느 단계(인증 확인 → 설정 확인 → API 호출 → 완료)까지 갔다가
+ * 어디서 실패했는지 한눈에 보여준다 — SUBMITTED/FAILED 양쪽에서 재사용한다. */
+function StepLogList({ steps }: { steps: RegistrationStepLog[] }) {
+  return (
+    <ol className="mt-3 space-y-1 rounded-md bg-surface p-3 text-xs">
+      {steps.map((step, index) => (
+        <li key={index} className="flex items-start gap-2">
+          <span className={`shrink-0 font-medium ${STEP_STATUS_CLASS[step.status]}`}>
+            {STEP_STATUS_ICON[step.status]}
+          </span>
+          <span className="text-text-primary">
+            {step.step}
+            <span className="ml-1.5 text-text-secondary">{step.message}</span>
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export function ListingSection({
   platformLabel,
   status,
@@ -64,6 +111,7 @@ export function ListingSection({
   onOpenModal,
   onRetry,
   settingsMissing,
+  sourceUrl,
 }: {
   platformLabel: string;
   status: ListingStatus;
@@ -79,6 +127,8 @@ export function ListingSection({
    * 데이터를 확인하기 전(READY/DRAFT)에만 끼어든다 — 이미 등록을 시도한 뒤라면
    * 그 결과 화면을 그대로 보여준다. */
   settingsMissing?: string[];
+  /** 문의하기 진단 번들의 URL/Site 필드용 — 원본 상품 URL. */
+  sourceUrl?: string;
 }) {
   if ((status === "DRAFT" || status === "READY") && settingsMissing && settingsMissing.length > 0) {
     return (
@@ -172,6 +222,7 @@ export function ListingSection({
   }
 
   if (status === "SUBMITTED") {
+    const report = result ? buildRegistrationReport(result) : null;
     return (
       <section className="rounded-lg border border-success/30 bg-success-soft p-4 text-sm">
         <p className="font-medium text-success">✓ 등록 완료</p>
@@ -185,6 +236,29 @@ export function ListingSection({
             실제로 등록되었습니다 — 쿠팡 상품 ID: {result.externalProductId}. Wing에서 최종 확인해주세요.
           </p>
         )}
+        {report?.outcome === "SUCCESS" && (
+          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 rounded-md bg-surface p-3 text-xs">
+            <dt className="text-text-secondary">상품명</dt>
+            <dd className="truncate text-text-primary">{report.productName || "—"}</dd>
+            <dt className="text-text-secondary">이미지</dt>
+            <dd className="text-text-primary">{report.imageCount}장</dd>
+            <dt className="text-text-secondary">옵션</dt>
+            <dd className="text-text-primary">{report.optionCount}개</dd>
+            {report.externalProductId && (
+              <>
+                <dt className="text-text-secondary">등록번호</dt>
+                <dd className="text-text-primary">{report.externalProductId}</dd>
+              </>
+            )}
+            {report.durationMs != null && (
+              <>
+                <dt className="text-text-secondary">소요시간</dt>
+                <dd className="text-text-primary">{(report.durationMs / 1000).toFixed(1)}초</dd>
+              </>
+            )}
+          </dl>
+        )}
+        {result?.steps && result.steps.length > 0 && <StepLogList steps={result.steps} />}
         {result?.payload != null && (
           <div className="mt-3">
             {isSmartStorePayload(result.payload) ? (
@@ -211,9 +285,27 @@ export function ListingSection({
 
   if (status === "FAILED" && result?.error) {
     const isCategoryError = result.error.step === "CATEGORY";
+    const code = result.error.code;
+    const bundle = {
+      url: sourceUrl ?? "",
+      site: safeHostname(sourceUrl),
+      platform: platformLabel,
+      errorCode: code,
+      errorMessage: result.error.message,
+      traceId: result.traceId,
+      registeredAt: new Date().toISOString(),
+      appVersion: APP_VERSION,
+    };
     return (
       <section className="rounded-lg border border-error/30 bg-error-soft p-4 text-sm">
-        <p className="font-medium text-error">{platformLabel} 등록 실패</p>
+        <div className="flex items-center gap-2">
+          <p className="font-medium text-error">{platformLabel} 등록 실패</p>
+          {code && (
+            <span className="rounded-full bg-error/10 px-2 py-0.5 text-[11px] font-mono font-semibold text-error">
+              {code}
+            </span>
+          )}
+        </div>
         <p className="mt-2 text-xs text-text-secondary">
           실패 단계: {ERROR_STEP_LABELS[result.error.step]}
         </p>
@@ -221,6 +313,10 @@ export function ListingSection({
         {result.error.resolution && (
           <p className="mt-1 text-xs text-text-secondary">해결 방법: {result.error.resolution}</p>
         )}
+        <p className="mt-1 text-xs text-text-secondary">
+          자동 해결 가능: {result.error.retryable ? "예 — 다시 시도해보세요" : "아니오 — 설정/데이터 확인 필요"}
+        </p>
+        {result.steps && result.steps.length > 0 && <StepLogList steps={result.steps} />}
         {result.error.retryable && (
           <button
             type="button"
@@ -230,6 +326,7 @@ export function ListingSection({
             {isCategoryError ? "카테고리 다시 선택" : "다시 시도"}
           </button>
         )}
+        <SupportInquiryButton bundle={bundle} />
       </section>
     );
   }

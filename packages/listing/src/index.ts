@@ -10,3 +10,4 @@ export * from "./executors/smartstore.executor";
 export * from "./executors/not-implemented.executor";
 export * from "./coupang/build-payload";
 export * from "./executors/coupang.executor";
+export * from "./registration-report";

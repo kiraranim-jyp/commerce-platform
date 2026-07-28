@@ -182,6 +182,7 @@ export function PlatformPreview({
         onOpenModal={onOpenListingModal}
         onRetry={onRetryListing}
         settingsMissing={settingsMissing}
+        sourceUrl={product.sourceUrl}
       />
     </div>
   );

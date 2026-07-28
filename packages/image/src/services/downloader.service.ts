@@ -63,13 +63,37 @@ export class ImageDownloader {
     return results;
   }
 
+  /** 429/5xx나 네트워크 예외(타임아웃 등)는 일시적일 가능성이 높아 최대 3회(최초
+   * 포함)까지 지수 백오프로 재시도한다 — 400/403/404 같은 영구 실패는 재시도해도
+   * 똑같이 실패하므로 즉시 던지고 루프를 빠져나간다(permanent 플래그로 구분 —
+   * 이 throw까지 같은 try/catch에 걸리면 영구 실패도 재시도해버리는 버그가 난다). */
   private async fetchBuffer(url: string): Promise<Buffer> {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`이미지 다운로드 실패 (${response.status}): ${url}`);
+    const maxAttempts = 3;
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      let permanentError: Error | null = null;
+      try {
+        const response = await fetch(url);
+        if (response.ok) {
+          const arrayBuffer = await response.arrayBuffer();
+          return Buffer.from(arrayBuffer);
+        }
+        const error = new Error(`이미지 다운로드 실패 (${response.status}): ${url}`);
+        if (response.status !== 429 && response.status < 500) {
+          permanentError = error;
+        } else {
+          lastError = error;
+        }
+      } catch (error) {
+        lastError = error;
+      }
+      if (permanentError) throw permanentError;
+      if (attempt < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, Math.min(500 * 2 ** (attempt - 1), 4000)));
+      }
     }
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
+    throw lastError instanceof Error ? lastError : new Error(`이미지 다운로드 실패: ${url}`);
   }
 }
 

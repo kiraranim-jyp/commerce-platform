@@ -15,6 +15,7 @@ import {
   type ProcessedImageFile,
   type ProcessedImageResult,
 } from "@commerce/image";
+import type { ErrorCode } from "@commerce/shared";
 import { NextResponse } from "next/server";
 import { buildCanonicalProduct } from "./canonical-product";
 import type { PipelineResponse, PipelineSSEEvent, WorkspaceItem } from "./response.types";
@@ -34,6 +35,19 @@ const MIME_BY_EXT: Record<string, string> = {
   png: "image/png",
   webp: "image/webp",
 };
+
+/** 파이프라인 전체를 감싸는 catch에서 error.message만 보고 최선의 ErrorCode를
+ * 추정한다 — 완벽한 분류는 아니지만(문자열 매칭 기반), 문의하기/Registration
+ * Report가 "알 수 없는 오류" 대신 대략적인 영역이라도 보여줄 수 있게 한다. */
+function classifyPipelineError(message: string): ErrorCode {
+  const lower = message.toLowerCase();
+  if (lower.includes("429") || lower.includes("rate limit") || lower.includes("rate_limited")) {
+    return "IMG001";
+  }
+  if (lower.includes("다운로드")) return "IMG002";
+  if (lower.includes("jpg") || lower.includes("jpeg") || lower.includes("변환")) return "IMG003";
+  return "EXT001";
+}
 
 function mimeFor(fileName: string): string | null {
   const ext = path.extname(fileName).replace(".", "").toLowerCase();
@@ -109,7 +123,7 @@ export async function POST(request: Request) {
         const extraction = await universalExtract(url, { debug: true });
         const images = extraction.images;
         if (images.length === 0) {
-          send({ type: "error", error: "이미지를 찾지 못했습니다." });
+          send({ type: "error", error: "이미지를 찾지 못했습니다.", code: "IMG001" });
           return;
         }
         const usedStrategies = Object.entries(extraction.strategyCounts ?? {})
@@ -255,7 +269,8 @@ export async function POST(request: Request) {
         send({ type: "complete", ...response });
       } catch (error) {
         console.error("[pipeline] 실행 실패", error);
-        send({ type: "error", error: error instanceof Error ? error.message : "알 수 없는 오류" });
+        const message = error instanceof Error ? error.message : "알 수 없는 오류";
+        send({ type: "error", error: message, code: classifyPipelineError(message) });
       } finally {
         controller.close();
       }

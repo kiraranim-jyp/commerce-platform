@@ -1,4 +1,4 @@
-import type { PlatformId } from "@commerce/shared";
+import type { ErrorCode, PlatformId } from "@commerce/shared";
 
 /**
  * 사용자 화면에는 STATUS_LABELS로 번역해서 보여준다(예: DRAFT → "상품 준비 중").
@@ -59,6 +59,18 @@ export interface ListingError {
   message: string;
   retryable: boolean;
   resolution?: string;
+  /** 문의하기/Registration Report에서 쓰는 표준 에러 코드 — step보다 더 세분화된
+   * 원인 식별자다. 기존 step 분류를 대체하지 않고 나란히 둔다(하위 호환). */
+  code?: ErrorCode;
+}
+
+/** 등록 시도 한 단계(인증 확인/설정 확인/카테고리 확인/API 호출 등)의 진행 로그
+ * 한 줄 — 어느 단계에서 실패했는지 한눈에 보여주기 위한 용도다. */
+export interface RegistrationStepLog {
+  step: string;
+  status: "success" | "failed" | "skipped";
+  message: string;
+  timestamp: string;
 }
 
 export interface ListingResult {
@@ -72,6 +84,14 @@ export interface ListingResult {
   retryable: boolean;
   /** DRY_RUN/PREVIEW에서 "실제로 등록됐다면 이런 데이터가 갔을 것"을 보여주기 위한 값. */
   payload?: unknown;
+  /** 이 시도를 식별하는 고유 ID — 문의하기에 포함해서 서버 로그와 대조할 수 있게 한다. */
+  traceId?: string;
+  /** LIVE 등록 처리에 걸린 시간(ms) — 서버 라우트가 요청을 받은 시점부터 응답을
+   * 만들기 직전까지. Registration Report의 "소요시간"에 쓴다. */
+  durationMs?: number;
+  /** 인증 확인 → 설정 확인 → 카테고리 확인 → 이미지 확인 → API 호출 → 완료 순서의
+   * 단계별 로그 — LIVE 등록에서만 채워진다. */
+  steps?: RegistrationStepLog[];
 }
 
 /** PM 스펙의 VALID/WARNING/ERROR — ListingModel.validations의 PASS/WARNING/ERROR와
@@ -115,3 +135,27 @@ export interface RegistrationHistoryEntry {
    * 등록을 시도하기 전 이 값으로 기존 성공 이력이 있는지 먼저 확인한다. */
   listingKey?: string;
 }
+
+/**
+ * 등록 시도 하나가 끝난 뒤 보여주는 요약 — buildRegistrationReport()(coupang.executor.ts
+ * 옆에 둔다)가 ListingResult에서 파생시킨다. 성공/실패에 따라 보여줄 필드가
+ * 근본적으로 다르므로 판별 유니언으로 분리한다.
+ */
+export interface RegistrationReportSuccess {
+  outcome: "SUCCESS";
+  productName: string;
+  imageCount: number;
+  optionCount: number;
+  externalProductId?: string;
+  durationMs?: number;
+}
+
+export interface RegistrationReportFailure {
+  outcome: "FAILURE";
+  reason: string;
+  code?: ErrorCode;
+  autoRetryable: boolean;
+  resolution?: string;
+}
+
+export type RegistrationReport = RegistrationReportSuccess | RegistrationReportFailure;

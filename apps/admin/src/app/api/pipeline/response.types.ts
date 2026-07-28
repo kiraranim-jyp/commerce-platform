@@ -1,4 +1,4 @@
-import type { CanonicalProduct, ImageType, ProductMetadata } from "@commerce/shared";
+import type { CanonicalProduct, ErrorCode, ImageType, ProductMetadata } from "@commerce/shared";
 import type { PipelineProgressEvent, QualityScore } from "@commerce/image";
 
 /**
@@ -80,4 +80,4 @@ export interface PipelineResponse {
 export type PipelineSSEEvent =
   | ({ type: "progress" } & PipelineProgressEvent)
   | ({ type: "complete" } & PipelineResponse)
-  | { type: "error"; error: string };
+  | { type: "error"; error: string; code?: ErrorCode };
