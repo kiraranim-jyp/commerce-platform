@@ -66,8 +66,14 @@ function toOption(item: RawReturnCenter): ReturnCenterOption {
     address: (address.returnAddress as string | undefined) ?? (address.address as string | undefined) ?? null,
     addressDetail:
       (address.returnAddressDetail as string | undefined) ?? (address.addressDetail as string | undefined) ?? null,
+    // companyContactNumber는 item 최상위가 아니라 placeAddresses[0] 안에 있다
+    // (실제 계정 응답으로 확인됨 — item 최상위엔 이 필드가 아예 없어서 이전엔
+    // 항상 null이었다).
     contactNumber:
-      (item.companyContactNumber as string | undefined) ?? (item.contactNumber as string | undefined) ?? null,
+      (address.companyContactNumber as string | undefined) ??
+      (item.companyContactNumber as string | undefined) ??
+      (item.contactNumber as string | undefined) ??
+      null,
     raw: item,
   };
 }
