@@ -52,10 +52,14 @@ export async function GET() {
   }
 
   try {
+    // 쿠팡이 이 API는 vendorId만으로는 안 되고 pageNum/pageSize(또는 placeCodes/
+    // placeNames) 중 하나는 반드시 있어야 한다고 명시적으로 요구한다(실제 계정으로
+    // 처음 호출했을 때 INVALID_ARGUMENT "pageNum & pageSize ... must be provided"로
+    // 확인됨) — 전체 목록을 한 번에 보고 싶으니 페이지네이션 쪽을 넉넉하게 채운다.
     const response = await callCoupangApi(credentials, {
       method: "GET",
       path: SHIPPING_PLACE_PATH,
-      query: `vendorId=${encodeURIComponent(credentials.vendorId)}`,
+      query: `vendorId=${encodeURIComponent(credentials.vendorId)}&pageNum=1&pageSize=100`,
     });
     if (!response.ok) {
       return NextResponse.json(
@@ -64,7 +68,10 @@ export async function GET() {
       );
     }
     const options = extractList(response.body).map(toOption);
-    return NextResponse.json({ options });
+    // 응답은 ok인데 목록이 비어 있으면(필드명이 예상과 달라서 파싱이 실패했을
+    // 수도, 실제로 등록된 출고지가 없을 수도 있다) raw를 같이 내려줘서 설정
+    // 페이지가 "수동 입력" 폴백으로 자연스럽게 넘어가면서도 원인을 바로 알 수 있게 한다.
+    return NextResponse.json(options.length > 0 ? { options } : { options, raw: response.body });
   } catch (error) {
     return NextResponse.json(
       {

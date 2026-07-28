@@ -81,7 +81,10 @@ export async function GET() {
       );
     }
     const options = extractList(response.body).map(toOption);
-    return NextResponse.json({ options });
+    // shipping-places/route.ts와 동일한 이유로, 목록이 비어 있으면 raw도 같이
+    // 내려줘서 "실제로 반품지가 없는 것"과 "필드명이 안 맞아 파싱이 실패한 것"을
+    // 구분할 수 있게 한다.
+    return NextResponse.json(options.length > 0 ? { options } : { options, raw: response.body });
   } catch (error) {
     return NextResponse.json(
       {
