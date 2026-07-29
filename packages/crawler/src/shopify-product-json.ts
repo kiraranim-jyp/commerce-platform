@@ -1,3 +1,4 @@
+import type { CanonicalProductOptionGroup, CanonicalProductVariant } from "@commerce/shared";
 import type { ExtractedProductData } from "./product-data-extractor";
 import { fetchWithDomainRateLimit } from "./rate-limit/domain-rate-limiter";
 import type { ImageCandidate } from "./strategies/types";
@@ -23,16 +24,33 @@ function stripHtmlTags(html: string): string {
 }
 
 interface ShopifyJsonImage {
+  id?: number;
   src: string;
   width?: number;
   height?: number;
+  /** 이 이미지가 연결된 variant id 목록 — 매장이 옵션별(주로 색상) 대표컷을
+   * 지정해뒀을 때만 값이 있다. */
+  variant_ids?: number[];
 }
 interface ShopifyJsonVariant {
+  id?: number;
+  title?: string;
   price?: string;
   price_currency?: string;
+  sku?: string;
+  option1?: string | null;
+  option2?: string | null;
+  option3?: string | null;
+  inventory_quantity?: number;
+  /** inventory_management가 없으면(null) 매장이 재고 추적을 안 한다는 뜻이라
+   * inventory_quantity 숫자를 신뢰할 수 없다 — 이 경우 stockQuantity를 채우지
+   * 않는다("모른다"를 "0이다"로 취급하지 않는다). */
+  inventory_management?: string | null;
+  image_id?: number | null;
 }
 interface ShopifyJsonOption {
   name?: string;
+  values?: string[];
 }
 interface ShopifyJsonProduct {
   title?: string;
@@ -41,6 +59,22 @@ interface ShopifyJsonProduct {
   images?: ShopifyJsonImage[];
   variants?: ShopifyJsonVariant[];
   options?: ShopifyJsonOption[];
+}
+
+/** variants[].option1/2/3 + options[].name을 CanonicalProductVariant.optionValues
+ * (옵션명 -> 선택값 맵)로 합친다 — Shopify는 옵션을 이름이 아니라 순서(1/2/3)로
+ * variant에 연결하기 때문에 options 배열의 순서와 맞춰서 읽어야 한다. */
+function buildOptionValues(
+  variant: ShopifyJsonVariant,
+  optionNames: string[],
+): Record<string, string> {
+  const positions = [variant.option1, variant.option2, variant.option3];
+  const optionValues: Record<string, string> = {};
+  optionNames.forEach((name, index) => {
+    const value = positions[index];
+    if (value) optionValues[name] = value;
+  });
+  return optionValues;
 }
 
 interface ShopifyJsMedia {
@@ -113,6 +147,35 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
       ? { amount: Number(variant.price), currency: (variant.price_currency ?? "").toUpperCase() }
       : undefined;
 
+  const optionNames = (product.options ?? []).map((o) => o.name).filter((n): n is string => Boolean(n));
+  const optionGroups: CanonicalProductOptionGroup[] = (product.options ?? [])
+    .filter((o): o is Required<Pick<ShopifyJsonOption, "name" | "values">> => Boolean(o.name && o.values))
+    .map((o) => ({ name: o.name, values: o.values }));
+  // 옵션이 하나뿐이고 값도 하나뿐이면(사실상 "옵션 없음"과 같은 Shopify 기본
+  // 상태 — 매장이 옵션을 안 쓰면 항상 {name:"Title", values:["Default Title"]}
+  // 하나만 온다) variant를 별도로 만들 필요가 없다.
+  const hasRealOptions = optionGroups.length > 0 && !(optionGroups.length === 1 && optionGroups[0].values.length === 1);
+  const variants: CanonicalProductVariant[] = hasRealOptions
+    ? (product.variants ?? [])
+        .filter((v) => v.id != null)
+        .map((v) => ({
+          id: String(v.id),
+          optionValues: buildOptionValues(v, optionNames),
+          sku: v.sku || undefined,
+          price:
+            v.price != null
+              ? { amount: Number(v.price), currency: (v.price_currency ?? "").toUpperCase() }
+              : undefined,
+          // inventory_management가 없으면(재고 추적 꺼진 매장) 숫자를 신뢰할 수
+          // 없어서 채우지 않는다 — "모른다"를 "0개"로 잘못 전달하지 않기 위함.
+          stockQuantity: v.inventory_management ? v.inventory_quantity : undefined,
+          // TODO(P1-6): image_id는 Shopify 내부 이미지 id라 파이프라인이 다운로드 후
+          // 새로 부여하는 CanonicalProductImage.id와 다르다 — URL 기준 매칭이
+          // 필요하다(canonical-product.ts가 원본 URL을 알고 있을 때만 가능).
+          // 지금은 채우지 않는다(빈 값 = "모른다", 지어내지 않는다).
+        }))
+    : [];
+
   return {
     images,
     productData: {
@@ -120,7 +183,9 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
       brand: product.vendor,
       description: product.body_html ? stripHtmlTags(product.body_html) : undefined,
       price,
-      options: (product.options ?? []).map((o) => o.name).filter((n): n is string => Boolean(n)),
+      options: optionNames,
+      optionGroups,
+      variants,
     },
   };
 }

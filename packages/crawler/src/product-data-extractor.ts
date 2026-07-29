@@ -1,4 +1,5 @@
 import type { Page } from "playwright-core";
+import type { CanonicalProductOptionGroup, CanonicalProductVariant } from "@commerce/shared";
 
 export type ProductDataSource = "json-ld" | "microdata" | "open-graph" | "dom" | "shopify-json";
 
@@ -8,9 +9,15 @@ export interface ExtractedProductData {
   price?: { amount: number; currency: string };
   sku?: string;
   description?: string;
-  /** 옵션 "종류"(Color/Size 등) — 값 목록까지는 사이트마다 구조가 너무 달라 이번 범위에서는
-   * 다루지 않는다(구조화 데이터에 없으면 대부분 JS 드롭다운 안에만 있다). */
+  /** @deprecated optionGroups[].name으로 대체됐다 — Shopify처럼 값 목록/Variant까지
+   * 나오는 소스는 optionGroups/variants를 채운다. 이 필드는 이름만 필요한 기존
+   * 코드(검색태그 등) 하위호환용으로 남겨뒀다. */
   options: string[];
+  /** Shopify처럼 옵션 값 목록까지 구조화 데이터로 주는 소스에서만 채워진다 —
+   * DOM 드롭다운만 있는 사이트는 사이트마다 구조가 너무 달라 이번 범위에서
+   * 다루지 않는다(빈 배열). */
+  optionGroups?: CanonicalProductOptionGroup[];
+  variants?: CanonicalProductVariant[];
   material?: string;
 }
 

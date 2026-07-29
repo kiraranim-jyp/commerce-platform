@@ -117,6 +117,8 @@ async function tryFastPath(
     description: siteResult.productData.description,
     material: siteResult.productData.material,
     options: siteResult.productData.options ?? [],
+    optionGroups: siteResult.productData.optionGroups ?? [],
+    variants: siteResult.productData.variants ?? [],
   };
 
   return {

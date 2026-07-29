@@ -59,6 +59,36 @@ export interface CanonicalProductImage {
 /** 등록 payload/미리보기가 실제로 쓸 이미지 URL을 결정하는 유일한 통로 —
  * selectedVariant가 PROCESSED인데 processedUrl이 없으면(배경제거 실패) 항상
  * originalUrl로 안전하게 폴백한다. */
+/**
+ * 원본 사이트의 옵션 축 하나(예: Size, Colour, 색상 — 플랫폼/매장마다 이름이
+ * 전부 다르다). 이름을 정규화하지 않고 원본 그대로 둔다 — 정규화는 플랫폼
+ * 어댑터가 등록 시점에 판단할 문제이지, 크롤링 시점에 CartPilot이 임의로
+ * "Colour"를 "Color"로 바꾸는 식으로 정보를 잃으면 안 된다.
+ */
+export interface CanonicalProductOptionGroup {
+  name: string;
+  values: string[];
+}
+
+/**
+ * 옵션 값 조합 하나(예: {Size: "48cm", Colour: "Red"})에 대응하는 실제 판매
+ * 단위 — 마켓플레이스에 등록되는 최소 단위(vendorItem/variant)와 1:1로 대응한다.
+ * price/stockQuantity가 없으면(옵션마다 가격/재고가 다르지 않은 매장) 어댑터가
+ * CanonicalProduct.price/stockQuantity로 폴백한다 — "값이 없다"를 "0이다"로
+ * 취급하지 않는다.
+ */
+export interface CanonicalProductVariant {
+  id: string;
+  /** CanonicalProduct.optionGroups[].name과 일치해야 한다. */
+  optionValues: Record<string, string>;
+  sku?: string;
+  price?: { amount: number; currency: string };
+  stockQuantity?: number;
+  /** 이 조합 전용 이미지(색상별 대표컷 등) — CanonicalProductImage.id를 가리킨다.
+   * 원본 사이트가 실제로 옵션-이미지를 연결해뒀을 때만 있다. */
+  imageId?: string;
+}
+
 export function getSelectedImageUrl(image: CanonicalProductImage): string {
   if (image.selectedVariant === "PROCESSED" && image.processedUrl) {
     return image.processedUrl;
@@ -91,9 +121,19 @@ export interface CanonicalProduct {
   sku: ProvenanceField<string>;
   description: ProvenanceField<string>;
   material: ProvenanceField<string>;
-  /** 옵션 "종류"만 다룬다(예: ["Color", "Size"]) — 값 목록까지 추출하는 건 사이트마다
-   * 구조가 너무 달라 이번 범위에서는 다루지 않는다. */
+  /** @deprecated optionGroups[].name으로 대체됐다 — 이름만 필요한 기존 코드
+   * (예: 검색태그)는 계속 이 필드를 쓸 수 있게 남겨뒀지만, 새 코드는
+   * optionGroups/variants를 써야 한다. crawler가 optionGroups를 채우면 이 값은
+   * optionGroups.map(g => g.name)과 항상 같다. */
   options: ProvenanceField<string[]>;
+  /** 옵션 축 정의(Size/Colour 등 이름 + 선택 가능한 값 목록) — 플랫폼 어댑터가
+   * 등록 화면의 "구매옵션"을 구성하는 데 쓴다. 옵션이 없는 상품은 빈 배열. */
+  optionGroups: CanonicalProductOptionGroup[];
+  /** optionGroups의 실제 조합별 판매 단위(SKU/가격/재고/이미지). 옵션이 없는
+   * 상품은 빈 배열 — "옵션 없음"과 "옵션은 있는데 조합 정보를 못 가져옴"을
+   * 구분하기 위해 optionGroups가 비어있지 않은데 variants가 비어있는 상태도
+   * 유효하다(어댑터가 이 경우 "옵션 미확정"으로 표시해야 한다). */
+  variants: CanonicalProductVariant[];
   images: CanonicalProductImage[];
   titleKo: ProvenanceField<string>;
   descriptionKo: ProvenanceField<string>;
