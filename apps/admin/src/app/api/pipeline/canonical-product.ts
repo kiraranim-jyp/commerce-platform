@@ -39,13 +39,21 @@ function field<T>(
 export function toCanonicalProductImage(item: WorkspaceItem): CanonicalProductImage | null {
   if (item.status !== "success" || !item.detailDataUrl) return null;
 
+  // 마켓플레이스 등록 payload(vendorPath)는 공개 HTTP(S) URL이어야 한다 — data URI를
+  // 그대로 보내면 실제 쿠팡 API가 200자 제한으로 거부한다(실등록 시도로 확인).
+  // detailPublicUrl/alternatePublicUrl(Supabase Storage 업로드 결과)이 있으면 그걸
+  // 쓰고, 업로드가 실패했을 때만 data URI로 폴백한다(등록은 다시 실패하겠지만
+  // 브라우저 미리보기 자체는 계속 동작해야 하므로 여기서 null을 반환하지 않는다).
+  const detailUrl = item.detailPublicUrl ?? item.detailDataUrl;
+  const alternateUrl = item.alternatePublicUrl ?? item.alternateDataUrl;
+
   const usedOriginal = item.usedOriginal ?? true;
   const originalUrl = usedOriginal
-    ? item.detailDataUrl
-    : (item.alternateKind === "ORIGINAL" ? item.alternateDataUrl : null) ?? item.detailDataUrl;
+    ? detailUrl
+    : (item.alternateKind === "ORIGINAL" ? alternateUrl : null) ?? detailUrl;
   const processedUrl = usedOriginal
-    ? (item.alternateKind === "PROCESSED" ? (item.alternateDataUrl ?? undefined) : undefined)
-    : item.detailDataUrl;
+    ? (item.alternateKind === "PROCESSED" ? (alternateUrl ?? undefined) : undefined)
+    : detailUrl;
 
   return {
     id: item.id,

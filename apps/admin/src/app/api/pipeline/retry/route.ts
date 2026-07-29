@@ -11,6 +11,7 @@ import {
   type ProcessedImageFile,
   type ProcessedImageResult,
 } from "@commerce/image";
+import { uploadPublicImage } from "@/lib/image-storage";
 import type { WorkspaceItem } from "../response.types";
 
 export const runtime = "nodejs";
@@ -48,21 +49,31 @@ const MIME_BY_FORMAT: Record<string, string> = {
   webp: "image/webp",
 };
 
+/** 마켓플레이스 등록 payload가 쓸 공개 URL — /api/pipeline route.ts와 같은 이유
+ * (data URI는 vendorPath 200자 제한에 걸려 실제 쿠팡 API가 거부한다). */
+async function toPublicUrl(filePath: string, fileName: string, mime: string): Promise<string | null> {
+  if (!fs.existsSync(filePath)) return null;
+  return uploadPublicImage(fs.readFileSync(filePath), fileName, mime);
+}
+
 /** PRODUCT는 원본/누끼 후보 두 변형을 모두 만든다 — detailDataUrl이 기본으로 선택되지
  * 않은 반대쪽 변형을 "대안"으로 노출한다. */
-function resolveAlternate(processed: ProcessedImageResult): {
+async function resolveAlternate(processed: ProcessedImageResult): Promise<{
   dataUrl: string | null;
+  publicUrl: string | null;
   width?: number;
   height?: number;
   bytes?: number;
   kind: "ORIGINAL" | "PROCESSED";
-} | null {
+} | null> {
   const alt = processed.usedOriginal ? processed.processedVariant : processed.originalVariant;
   if (!alt) return null;
   const preferred = pickPreferredFile(alt.files);
   if (!preferred) return null;
+  const mime = MIME_BY_FORMAT[preferred.format] ?? "image/jpeg";
   return {
-    dataUrl: toDataUrl(preferred.file, MIME_BY_FORMAT[preferred.format] ?? "image/jpeg"),
+    dataUrl: toDataUrl(preferred.file, mime),
+    publicUrl: await toPublicUrl(preferred.file, preferred.fileName, mime),
     width: alt.width,
     height: alt.height,
     bytes: preferred.bytes,
@@ -111,10 +122,14 @@ export async function POST(request: Request) {
           );
 
     const preferred = processed.status === "success" ? pickPreferredFile(processed.files) : undefined;
-    const detailDataUrl = preferred
-      ? toDataUrl(preferred.file, MIME_BY_FORMAT[preferred.format] ?? "image/jpeg")
-      : null;
-    const alternate = processed.status === "success" ? resolveAlternate(processed) : null;
+    let detailDataUrl: string | null = null;
+    let detailPublicUrl: string | null = null;
+    if (preferred) {
+      const mime = MIME_BY_FORMAT[preferred.format] ?? "image/jpeg";
+      detailDataUrl = toDataUrl(preferred.file, mime);
+      detailPublicUrl = await toPublicUrl(preferred.file, preferred.fileName, mime);
+    }
+    const alternate = processed.status === "success" ? await resolveAlternate(processed) : null;
 
     const item: WorkspaceItem = {
       // processed.baseName은 임시 소스 파일명("retry-0002")에서 나온 것이라 원래 카드의
@@ -130,6 +145,7 @@ export async function POST(request: Request) {
       originalHeight: processed.original.height,
       originalBytes: processed.original.bytes,
       detailDataUrl,
+      detailPublicUrl,
       outputWidth: processed.output?.width,
       outputHeight: processed.output?.height,
       fileSize: preferred?.bytes,
@@ -138,6 +154,7 @@ export async function POST(request: Request) {
       usedOriginal: processed.usedOriginal,
       isJPEG: processed.isJPEG,
       alternateDataUrl: alternate?.dataUrl,
+      alternatePublicUrl: alternate?.publicUrl,
       alternateWidth: alternate?.width,
       alternateHeight: alternate?.height,
       alternateBytes: alternate?.bytes,

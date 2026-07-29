@@ -17,6 +17,10 @@ export interface WorkspaceItem {
   originalHeight: number;
   originalBytes: number;
   detailDataUrl: string | null;
+  /** detailDataUrl과 같은 이미지를 Supabase Storage에 올린 공개 URL — 마켓플레이스
+   * 등록 payload(vendorPath)는 반드시 이 값을 써야 한다(data URI는 200자 제한에
+   * 걸려 실제 쿠팡 API가 거부한다, 실등록 시도로 확인). 업로드 실패 시 null. */
+  detailPublicUrl?: string | null;
   outputWidth?: number;
   outputHeight?: number;
   fileSize?: number;
@@ -30,6 +34,8 @@ export interface WorkspaceItem {
   /** PRODUCT 전용: detailDataUrl과 반대되는 변형(원본↔배경제거 후보) — 둘 다 만들어졌을
    * 때만 있다. 사용자가 대표/추가 이미지에 원본 또는 누끼 후보 중 선택할 수 있게 한다. */
   alternateDataUrl?: string | null;
+  /** alternateDataUrl의 Supabase Storage 공개 URL — detailPublicUrl과 같은 이유. */
+  alternatePublicUrl?: string | null;
   alternateWidth?: number;
   alternateHeight?: number;
   alternateBytes?: number;

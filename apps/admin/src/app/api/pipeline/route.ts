@@ -17,6 +17,7 @@ import {
 } from "@commerce/image";
 import type { ErrorCode } from "@commerce/shared";
 import { NextResponse } from "next/server";
+import { uploadPublicImage } from "@/lib/image-storage";
 import { buildCanonicalProduct } from "./canonical-product";
 import type { PipelineResponse, PipelineSSEEvent, WorkspaceItem } from "./response.types";
 
@@ -62,6 +63,15 @@ function readAsDataUrl(filePath: string, fileName: string): string | null {
   return `data:${mime};base64,${buffer.toString("base64")}`;
 }
 
+/** 마켓플레이스 등록 payload가 쓸 공개 URL — 실패해도 null만 반환하고 파이프라인
+ * 전체를 막지 않는다(브라우저 미리보기는 data URL로 계속 동작해야 한다). */
+async function uploadAsPublicUrl(filePath: string, fileName: string): Promise<string | null> {
+  const mime = mimeFor(fileName);
+  if (!mime || !fs.existsSync(filePath)) return null;
+  const buffer = fs.readFileSync(filePath);
+  return uploadPublicImage(buffer, fileName, mime);
+}
+
 /** 최종 산출물은 항상 JPG로 통일한다 — WEBP 등 보조 산출물이 있어도 대표로 쓰지 않는다. */
 function pickPreferredFile(files: ProcessedImageFile[]): ProcessedImageFile | undefined {
   return files.find((f) => f.format === "jpg") ?? files[0];
@@ -70,19 +80,21 @@ function pickPreferredFile(files: ProcessedImageFile[]): ProcessedImageFile | un
 /** PRODUCT는 원본/누끼 후보 두 변형을 모두 만든다 — detailDataUrl이 기본으로 선택되지
  * 않은 반대쪽 변형을 "대안"으로 노출해서, 사용자가 대표/추가 이미지에 원본 또는
  * 누끼 후보 중 고를 수 있게 한다. */
-function resolveAlternate(processed: ProcessedImageResult): {
+async function resolveAlternate(processed: ProcessedImageResult): Promise<{
   dataUrl: string | null;
+  publicUrl: string | null;
   width?: number;
   height?: number;
   bytes?: number;
   kind: "ORIGINAL" | "PROCESSED";
-} | null {
+} | null> {
   const alt = processed.usedOriginal ? processed.processedVariant : processed.originalVariant;
   if (!alt) return null;
   const preferred = pickPreferredFile(alt.files);
   if (!preferred) return null;
   return {
     dataUrl: readAsDataUrl(preferred.file, preferred.fileName),
+    publicUrl: await uploadAsPublicUrl(preferred.file, preferred.fileName),
     width: alt.width,
     height: alt.height,
     bytes: preferred.bytes,
@@ -162,9 +174,10 @@ export async function POST(request: Request) {
           result.images.map((image) => [image.baseName, image]),
         );
 
-        const items: WorkspaceItem[] = result.metadata.classifications
+        const items: WorkspaceItem[] = await Promise.all(
+          result.metadata.classifications
           .filter((classified) => PROCESSED_TYPES.has(classified.type))
-          .map((classified) => {
+          .map(async (classified) => {
             const baseName = path.parse(classified.file).name;
             const processed = resultByBaseName.get(baseName);
             const originalPath = path.join(storagePaths.downloadsOriginal, classified.file);
@@ -192,7 +205,10 @@ export async function POST(request: Request) {
             const detailDataUrl = preferred
               ? readAsDataUrl(preferred.file, preferred.fileName)
               : null;
-            const alternate = processed.status === "success" ? resolveAlternate(processed) : null;
+            const detailPublicUrl = preferred
+              ? await uploadAsPublicUrl(preferred.file, preferred.fileName)
+              : null;
+            const alternate = processed.status === "success" ? await resolveAlternate(processed) : null;
 
             return {
               id: baseName,
@@ -205,6 +221,7 @@ export async function POST(request: Request) {
               originalHeight: processed.original.height,
               originalBytes: processed.original.bytes,
               detailDataUrl,
+              detailPublicUrl,
               outputWidth: processed.output?.width,
               outputHeight: processed.output?.height,
               fileSize: preferred?.bytes,
@@ -215,13 +232,15 @@ export async function POST(request: Request) {
               usedOriginal: processed.usedOriginal,
               isJPEG: processed.isJPEG,
               alternateDataUrl: alternate?.dataUrl,
+              alternatePublicUrl: alternate?.publicUrl,
               alternateWidth: alternate?.width,
               alternateHeight: alternate?.height,
               alternateBytes: alternate?.bytes,
               alternateKind: alternate?.kind,
               processingTimeSec: Math.round(processed.processingTimeMs / 100) / 10,
             };
-          });
+          }),
+        );
 
         const byType: Record<string, number> = {};
         for (const item of items) {
@@ -262,8 +281,9 @@ export async function POST(request: Request) {
             },
           },
           storageNote:
-            "이미지는 서버리스 함수의 임시 저장소(/tmp)에만 저장되며 다음 요청 시 자동 삭제됩니다. " +
-            "영구 저장이 필요하면 Supabase Storage 등 별도 연동이 필요합니다.",
+            "미리보기용 원본/처리본은 서버리스 함수의 임시 저장소(/tmp)에만 있어 다음 요청 시 " +
+            "자동 삭제됩니다. 마켓플레이스 등록에 실제로 쓰이는 이미지는 Supabase Storage에 " +
+            "별도로 영구 업로드됩니다(canonicalProduct.images[].originalUrl/processedUrl).",
         };
 
         send({ type: "complete", ...response });

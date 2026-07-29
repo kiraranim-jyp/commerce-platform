@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct, ErrorCode } from "@commerce/shared";
-import { buildCoupangPayload, type CoupangPayload } from "@commerce/listing";
+import { buildCoupangPayload, resolveVerifiedCategoryCode, type CoupangPayload } from "@commerce/listing";
 import type { ListingResult, RegistrationStepLog } from "@commerce/listing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getCoupangCredentials, getVendorUserId } from "../_lib/env";
@@ -10,34 +10,34 @@ import { getDefaultSellerProfile } from "../_lib/seller-profile";
 import { callCoupangApi, type CoupangApiResponse } from "../_lib/client";
 import { withRetry } from "../_lib/retry";
 import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } from "../_lib/shipping-place";
+import { fetchCategoryMeta } from "../_lib/category-meta";
+import { resolveBrand } from "../_lib/brand";
 
 /** 성공/실패 모든 시도를 기록한다 — 관리자 대시보드의 "오늘 등록 N건, 성공/실패"
  * 카운트, 그리고 등록 이력 화면의 Payload/Response 상세가 여기서 나온다
  * (support_inquiries는 사용자가 직접 문의를 제출한 것만 있어서 전체 시도 수를
  * 대표하지 못한다). CoupangPayload에는 Access/Secret Key 같은 민감정보가 애초에
  * 없다(HMAC 서명은 요청 헤더에서만 만들어짐) — payload를 그대로 저장해도 안전하다.
- * Supabase가 없거나 insert가 실패해도 응답 자체를 막으면 안 되므로 fire-and-forget
- * 으로 처리하고 실패는 로그만 남긴다. */
-function logRegistrationAttempt(result: ListingResult, apiResponseBody?: unknown): void {
+ * 반드시 await한다 — fire-and-forget(void supabase.insert(...))으로 뒀더니 실제
+ * LIVE 성공 건 하나가 등록 이력에 아예 안 남는 게 실측으로 확인됐다(Vercel
+ * 서버리스 함수가 응답을 보낸 뒤 백그라운드 Promise를 끝까지 기다려주지 않음).
+ * Supabase가 없거나 insert가 실패해도 응답 자체를 막으면 안 되므로 예외만 삼킨다. */
+async function logRegistrationAttempt(result: ListingResult, apiResponseBody?: unknown): Promise<void> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return;
   const payload = result.payload as CoupangPayload | undefined;
-  void supabase
-    .from("registration_attempts")
-    .insert({
-      platform: result.platform,
-      status: result.status,
-      error_code: result.error?.code ?? null,
-      trace_id: result.traceId ?? null,
-      duration_ms: result.durationMs ?? null,
-      product_name: payload?.sellerProductName ?? null,
-      external_product_id: result.externalProductId ?? null,
-      payload: payload ?? null,
-      response: apiResponseBody ?? null,
-    })
-    .then(({ error }) => {
-      if (error) console.warn("[register] registration_attempts 기록 실패:", error.message);
-    });
+  const { error } = await supabase.from("registration_attempts").insert({
+    platform: result.platform,
+    status: result.status,
+    error_code: result.error?.code ?? null,
+    trace_id: result.traceId ?? null,
+    duration_ms: result.durationMs ?? null,
+    product_name: payload?.sellerProductName ?? null,
+    external_product_id: result.externalProductId ?? null,
+    payload: payload ?? null,
+    response: apiResponseBody ?? null,
+  });
+  if (error) console.warn("[register] registration_attempts 기록 실패:", error.message);
 }
 
 /**
@@ -51,16 +51,17 @@ function logRegistrationAttempt(result: ListingResult, apiResponseBody?: unknown
  */
 const CREATE_PRODUCT_PATH = "/v2/providers/seller_api/apis/api/v1/marketplace/seller-products";
 
+/** 실제 계정 응답 모양은 평평하다(실등록 시도로 확인) — code/data/message/details/
+ * errorItems가 모두 최상위에 있고, 중첩된 data.code 같은 건 없다. 성공 시
+ * data는 새로 생성된 sellerProductId(숫자)다. message는 오류가 없어도 "[]"
+ * (빈 배열이 문자열로 옴 — 쿠팡 쪽 특이 동작)로 오는 경우가 있어 성공 여부
+ * 판정에는 절대 쓰지 않는다 — code === "SUCCESS"만 본다. */
 interface CreateProductResponse {
   code?: string;
   message?: string;
-  data?: {
-    code?: string;
-    message?: string;
-    data?: number;
-    details?: string;
-    errorItems?: unknown[];
-  };
+  data?: number;
+  details?: string | null;
+  errorItems?: unknown[] | null;
 }
 
 function missingSellerConfigFields(payload: CoupangPayload): string[] {
@@ -135,7 +136,7 @@ export async function POST(request: Request) {
         resolution: "설정 페이지에서 Access Key/Secret Key/Vendor ID를 입력해주세요.",
       },
     });
-    logRegistrationAttempt(result);
+    await logRegistrationAttempt(result);
     return NextResponse.json(result);
   }
   logStep("인증 확인", "success", "쿠팡 인증 정보 확인 완료");
@@ -157,7 +158,7 @@ export async function POST(request: Request) {
         resolution: "설정 페이지에서 배송 프로필을 먼저 만들어주세요(최초 1회).",
       },
     });
-    logRegistrationAttempt(result);
+    await logRegistrationAttempt(result);
     return NextResponse.json(result);
   }
   logStep("배송 프로필 확인", "success", `프로필 "${sellerProfile.name}" 사용`);
@@ -192,6 +193,30 @@ export async function POST(request: Request) {
     logStep("출고지 자동 선택", "failed", shippingPlaces.error ?? "등록된 출고지가 없습니다.");
   }
 
+  // 카테고리별 필수 구매옵션(attributes)/고시정보(notices)를 빈 배열로 보내면
+  // 실제 쿠팡 API가 등록을 거부한다(실제 등록 시도로 확인: "고시정보 입력해야
+  // 합니다") — 등록 직전에 실제 스키마를 조회해서 payload에 채워 넣는다.
+  const categoryCode = resolveVerifiedCategoryCode(listing.category);
+  const categoryMeta = categoryCode != null ? await fetchCategoryMeta(credentials, categoryCode) : null;
+  logStep(
+    "카테고리 메타정보 조회",
+    categoryMeta ? "success" : "skipped",
+    categoryMeta
+      ? `구매옵션 ${categoryMeta.attributes.length}개, 고시정보 카테고리 ${categoryMeta.noticeCategories.length}개 확인`
+      : "카테고리 코드 없음 또는 조회 실패 — 구매옵션/고시정보 없이 시도",
+  );
+
+  // 브랜드명 문자열만 보내면 실제 쿠팡 API가 "브랜드 ID가 필요합니다"로 거부한다
+  // (실등록 시도로 확인) — Wing에 등록된 brandId를 Brand Search API로 찾아야 한다.
+  const resolvedBrand = listing.brand ? await resolveBrand(credentials, listing.brand) : null;
+  logStep(
+    "브랜드 조회",
+    resolvedBrand ? "success" : "skipped",
+    resolvedBrand
+      ? `"${resolvedBrand.brandName}"(${resolvedBrand.brandId}) 매칭`
+      : "브랜드 미기재 또는 매칭 실패 — brandId 없이 시도",
+  );
+
   const payload = buildCoupangPayload(product, listing, {
     sellerConfig: {
       vendorId: credentials.vendorId,
@@ -206,6 +231,8 @@ export async function POST(request: Request) {
       outboundShippingPlaceCode,
     },
     descriptionTemplate: descriptionTemplate ?? undefined,
+    categoryMeta,
+    resolvedBrand,
   });
 
   const missing = missingSellerConfigFields(payload);
@@ -225,7 +252,7 @@ export async function POST(request: Request) {
         resolution: "설정 페이지에서 쿠팡 배송 설정을 채운 뒤 다시 시도해주세요.",
       },
     });
-    logRegistrationAttempt(result);
+    await logRegistrationAttempt(result);
     return NextResponse.json(result);
   }
   logStep("설정 확인", "success", "카테고리/배송/반품 설정 확인 완료");
@@ -255,12 +282,12 @@ export async function POST(request: Request) {
           resolution: "access key/secret key를 다시 확인해주세요.",
         },
       });
-      logRegistrationAttempt(result, response.body);
+      await logRegistrationAttempt(result, response.body);
       return NextResponse.json(result);
     }
 
     const parsed = response.body as CreateProductResponse;
-    const succeeded = response.ok && parsed?.data?.code === "SUCCESS";
+    const succeeded = response.ok && parsed?.code === "SUCCESS";
 
     if (succeeded) {
       logStep("API 호출", "success", "쿠팡이 등록 요청을 수락했습니다.");
@@ -271,15 +298,19 @@ export async function POST(request: Request) {
         mode: "LIVE",
         retryable: false,
         payload,
-        externalProductId: parsed.data?.data != null ? String(parsed.data.data) : undefined,
+        externalProductId: parsed.data != null ? String(parsed.data) : undefined,
         submittedAt: new Date().toISOString(),
       });
-      logRegistrationAttempt(result, response.body);
+      await logRegistrationAttempt(result, response.body);
       return NextResponse.json(result);
     }
 
-    const message = parsed?.data?.message || parsed?.message || "쿠팡이 등록 요청을 거부했습니다.";
-    const details = parsed?.data?.details;
+    const rawMessage = parsed?.message;
+    const message =
+      typeof rawMessage === "string" && rawMessage.trim() && rawMessage !== "[]"
+        ? rawMessage
+        : "쿠팡이 등록 요청을 거부했습니다.";
+    const details = parsed?.details;
     logStep("API 호출", "failed", details ? `${message} (${details})` : message);
     const result: ListingResult = withMeta({
       status: "FAILED",
@@ -295,7 +326,7 @@ export async function POST(request: Request) {
         resolution: "표시된 원인을 확인하고 데이터를 고친 뒤 다시 시도해주세요.",
       },
     });
-    logRegistrationAttempt(result, response.body);
+    await logRegistrationAttempt(result, response.body);
     return NextResponse.json(result);
   } catch (error) {
     logStep(
@@ -316,7 +347,7 @@ export async function POST(request: Request) {
         retryable: true,
       },
     });
-    logRegistrationAttempt(result);
+    await logRegistrationAttempt(result);
     return NextResponse.json(result);
   }
 }

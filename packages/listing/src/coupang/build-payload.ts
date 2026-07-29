@@ -1,4 +1,5 @@
 import type { ListingModel } from "@commerce/marketplace";
+import type { CategorySelection } from "@commerce/category";
 import type { CanonicalProduct } from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
 
@@ -118,6 +119,10 @@ export interface CoupangPayload {
   saleStartedAt: string;
   saleEndedAt: string;
   brand?: string;
+  /** 브랜드명 문자열만 보내면 실제 쿠팡 API가 거부한다("브랜드 ID가 필요합니다",
+   * 실등록 시도로 확인) — Wing 브랜드 관리에 등록된 brandId가 있어야 한다.
+   * register 라우트가 Brand Search API로 조회해서 채운다. */
+  brandId?: string;
   generalProductName?: string;
   /** SEQUENCIAL(일반배송)/COLD_FRESH(신선냉동)/MAKE_ORDER(주문제작)/AGENT_BUY(구매대행)/
    * VENDOR_DIRECT(설치배송/판매자직배송) 중 하나 — CartPilot은 전량 해외구매대행이라
@@ -188,25 +193,111 @@ export function mergeCoupangDescription(
   return aiDescription.trim().length > 0 ? `${aiDescription.trim()}\n\n${templateText}` : templateText;
 }
 
+/** listing.category.candidate.id는 대부분 CartPilot 내부 카테고리 id다 — 실제
+ * 쿠팡 숫자 코드로 쓸 수 있는 건 /api/coupang/category-recommend가 만든
+ * candidate(isVerifiedPlatformCode: true)를 사용자가 SELECTED/CONFIRMED로
+ * 확정했을 때뿐이다. 그 외에는 추측하지 않고 null로 둔다. register 라우트가
+ * 카테고리 메타정보(attributes/notices)를 조회할 때도 이 함수로 같은 코드를
+ * 얻어야 한다 — buildCoupangPayload 내부와 결과가 어긋나면 안 된다. */
+export function resolveVerifiedCategoryCode(category: CategorySelection): number | null {
+  const isCategoryConfirmed = category.state === "SELECTED" || category.state === "CONFIRMED";
+  const verifiedCandidate =
+    isCategoryConfirmed && category.candidate?.isVerifiedPlatformCode ? category.candidate : null;
+  return verifiedCandidate ? Number(verifiedCandidate.id) : null;
+}
+
+export interface CoupangCategoryAttributeMeta {
+  attributeTypeName: string;
+  dataType: string;
+  inputType: string;
+  inputValues: string[];
+  /** NUMBER 타입일 때 값에 붙여야 하는 단위(예: "개") — "없음"이면 단위가 없다는
+   * 뜻이라 값에 붙이지 않는다(실제 등록 시도로 확인: 단위를 안 붙이면 "유효하지
+   * 않은 구매 옵션 값 혹은 단위가 존재합니다"로 거부됨). */
+  basicUnit: string;
+  required: "MANDATORY" | "OPTIONAL";
+}
+
+export interface CoupangCategoryNoticeMeta {
+  noticeCategoryName: string;
+  noticeCategoryDetailNames: { noticeCategoryDetailName: string; required: "MANDATORY" | "OPTIONAL" }[];
+}
+
+export interface CoupangCategoryMeta {
+  attributes: CoupangCategoryAttributeMeta[];
+  noticeCategories: CoupangCategoryNoticeMeta[];
+}
+
+const NOTICE_DEFAULT_CONTENT = "상세페이지 참조";
+
+/** 카테고리별 필수 고시정보(notices)/구매옵션(attributes)을 채운다. 실제 값을 알 수
+ * 없는 필드(제조국/인증사항 등)는 추측해서 지어내지 않고 쿠팡이 넓게 허용하는
+ * "상세페이지 참조"를 쓴다 — 연락처처럼 CartPilot이 실제로 갖고 있는 값은 그대로
+ * 채운다. noticeCategories가 여러 개면 필수 항목이 가장 적은(=충족하기 가장
+ * 단순한) 카테고리를 고른다 — 특정 카테고리를 강제로 골라야 할 근거가 없다.
+ * attributes는 카테고리마다 이름이 다르므로 숫자 타입(dataType === "NUMBER")만
+ * 안전하게 "1"로 채우고, 나머지 필수 텍스트 필드는 NOTICE_DEFAULT_CONTENT로 채운다. */
+export function buildCoupangCompliance(
+  categoryMeta: CoupangCategoryMeta | null | undefined,
+  context: { productName: string; contactNumber: string },
+): { attributes: CoupangItemAttribute[]; notices: CoupangItemNotice[] } {
+  if (!categoryMeta) return { attributes: [], notices: [] };
+
+  const attributes: CoupangItemAttribute[] = categoryMeta.attributes
+    .filter((attr) => attr.required === "MANDATORY")
+    .map((attr) => {
+      if (attr.dataType === "NUMBER") {
+        const unit = attr.basicUnit && attr.basicUnit !== "없음" ? attr.basicUnit : "";
+        return { attributeTypeName: attr.attributeTypeName, attributeValueName: `1${unit}` };
+      }
+      const value = attr.inputValues[0] ?? NOTICE_DEFAULT_CONTENT;
+      return { attributeTypeName: attr.attributeTypeName, attributeValueName: value };
+    });
+
+  const simplestNoticeCategory = [...categoryMeta.noticeCategories].sort(
+    (a, b) => a.noticeCategoryDetailNames.length - b.noticeCategoryDetailNames.length,
+  )[0];
+
+  const KNOWN_NOTICE_VALUES: Record<string, string> = {
+    "품명 및 모델명": context.productName,
+    "품명": context.productName,
+    "소비자상담 관련 전화번호": context.contactNumber,
+    "A/S 책임자와 전화번호": context.contactNumber,
+  };
+
+  const notices: CoupangItemNotice[] = simplestNoticeCategory
+    ? simplestNoticeCategory.noticeCategoryDetailNames
+        .filter((detail) => detail.required === "MANDATORY")
+        .map((detail) => ({
+          noticeCategoryName: simplestNoticeCategory.noticeCategoryName,
+          noticeCategoryDetailName: detail.noticeCategoryDetailName,
+          content: KNOWN_NOTICE_VALUES[detail.noticeCategoryDetailName] ?? NOTICE_DEFAULT_CONTENT,
+        }))
+    : [];
+
+  return { attributes, notices };
+}
+
 export function buildCoupangPayload(
   product: CanonicalProduct,
   listing: ListingModel,
-  options: { sellerConfig?: CoupangSellerConfig; descriptionTemplate?: CoupangDescriptionTemplate } = {},
+  options: {
+    sellerConfig?: CoupangSellerConfig;
+    descriptionTemplate?: CoupangDescriptionTemplate;
+    categoryMeta?: CoupangCategoryMeta | null;
+    /** Brand Search API로 찾은 Wing 등록 브랜드 — 있으면 listing.brand(원본 추출
+     * 브랜드 문자열) 대신 이 이름과 brandId를 함께 보낸다. */
+    resolvedBrand?: { brandId: string; brandName: string } | null;
+  } = {},
 ): CoupangPayload {
   const sellerConfig = options.sellerConfig ?? BLANK_COUPANG_SELLER_CONFIG;
   const description = mergeCoupangDescription(listing.description, options.descriptionTemplate);
 
-  // listing.category.candidate.id는 대부분 CartPilot 내부 카테고리 id다 — 실제
-  // 쿠팡 숫자 코드로 쓸 수 있는 건 /api/coupang/category-recommend가 만든
-  // candidate(isVerifiedPlatformCode: true)를 사용자가 SELECTED/CONFIRMED로
-  // 확정했을 때뿐이다. 그 외에는 추측하지 않고 null로 둔다.
-  const isCategoryConfirmed =
-    listing.category.state === "SELECTED" || listing.category.state === "CONFIRMED";
-  const verifiedCandidate =
-    isCategoryConfirmed && listing.category.candidate?.isVerifiedPlatformCode
-      ? listing.category.candidate
-      : null;
-  const displayCategoryCode = verifiedCandidate ? Number(verifiedCandidate.id) : null;
+  const displayCategoryCode = resolveVerifiedCategoryCode(listing.category);
+  const compliance = buildCoupangCompliance(options.categoryMeta, {
+    productName: listing.title,
+    contactNumber: sellerConfig.companyContactNumber,
+  });
 
   const descriptionImageUrls = product.images
     .filter((img) => img.useInDescription)
@@ -234,7 +325,8 @@ export function buildCoupangPayload(
     vendorId: sellerConfig.vendorId,
     saleStartedAt: formatCoupangDateTime(now),
     saleEndedAt: formatCoupangDateTime(twoYearsLater),
-    brand: listing.brand,
+    brand: options.resolvedBrand?.brandName ?? listing.brand,
+    brandId: options.resolvedBrand?.brandId,
     generalProductName: listing.title,
     deliveryMethod: "AGENT_BUY",
     deliveryCompanyCode: sellerConfig.deliveryCompanyCode,
@@ -262,7 +354,10 @@ export function buildCoupangPayload(
         salePrice: listing.priceKrw,
         maximumBuyCount: product.stockQuantity.value,
         maximumBuyForPerson: 0,
-        maximumBuyForPersonPeriod: 0,
+        // 0을 보내면 실제 쿠팡 API가 "최소 1이상 입력해야 합니다"로 거부한다(실제
+        // 등록 시도로 확인) — maximumBuyForPerson(1인당 최대구매수량)이 0(무제한)
+        // 이어도 기간 필드 자체는 항상 1 이상이어야 한다.
+        maximumBuyForPersonPeriod: 1,
         // 해외 URL을 소싱해서 등록하는 CartPilot 특성상 국내 사입 대비 배송이 오래
         // 걸린다고 보수적으로 가정한다 — 실제 배송 정책이 정해지면 조정한다.
         outboundShippingTimeDay: 7,
@@ -279,8 +374,8 @@ export function buildCoupangPayload(
         // 통관고유부호를 입력해야 하는 상품이라는 뜻이다.
         pccNeeded: true,
         images,
-        attributes: [],
-        notices: [],
+        attributes: compliance.attributes,
+        notices: compliance.notices,
         contents: [
           ...(description
             ? [
