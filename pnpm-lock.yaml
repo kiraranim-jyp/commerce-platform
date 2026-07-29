@@ -214,6 +214,9 @@ importers:
       '@commerce/marketplace':
         specifier: workspace:*
         version: link:../marketplace
+      '@commerce/pricing':
+        specifier: workspace:*
+        version: link:../pricing
       '@commerce/shared':
         specifier: workspace:*
         version: link:../shared

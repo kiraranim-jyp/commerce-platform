@@ -1,7 +1,8 @@
 import type { ListingModel } from "@commerce/marketplace";
 import type { CategorySelection } from "@commerce/category";
-import type { CanonicalProduct } from "@commerce/shared";
+import type { CanonicalProduct, CanonicalProductOptionGroup, CanonicalProductVariant } from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
+import { convertToKrw } from "@commerce/pricing";
 
 /**
  * 쿠팡 Open API "상품 생성"(POST .../v1/marketplace/seller-products) 요청 바디를
@@ -86,6 +87,8 @@ export interface CoupangItem {
   itemName: string;
   originalPrice: number;
   salePrice: number;
+  /** 원본 사이트의 옵션별 SKU(variant.sku) — 옵션이 없는 상품은 없음. */
+  externalVendorSku?: string;
   maximumBuyCount: number;
   maximumBuyForPerson: number;
   maximumBuyForPersonPeriod: number;
@@ -230,22 +233,57 @@ export interface CoupangCategoryMeta {
 
 const NOTICE_DEFAULT_CONTENT = "상세페이지 참조";
 
+/** 쿠팡 구매옵션 이름(예: "패션의류/잡화 사이즈", "색상")과 원본 사이트 옵션 그룹명
+ * (예: "Size", "Colour", "색상")을 동의어로 느슨하게 매칭한다 — 플랫폼마다 옵션
+ * 이름이 전부 달라서(P0-2 조사) 정확히 일치하는 경우가 드물다. */
+const SIZE_SYNONYMS = ["사이즈", "size"];
+const COLOR_SYNONYMS = ["색상", "컬러", "color", "colour"];
+
+function matchOptionValueForAttribute(
+  attributeTypeName: string,
+  optionGroups: CanonicalProductOptionGroup[],
+  variant: CanonicalProductVariant | undefined,
+): string | undefined {
+  if (!variant) return undefined;
+  const lowerAttr = attributeTypeName.toLowerCase();
+  const synonyms = SIZE_SYNONYMS.some((s) => lowerAttr.includes(s))
+    ? SIZE_SYNONYMS
+    : COLOR_SYNONYMS.some((s) => lowerAttr.includes(s))
+      ? COLOR_SYNONYMS
+      : null;
+  if (!synonyms) return undefined;
+  const matchedGroup = optionGroups.find((g) => synonyms.some((s) => g.name.toLowerCase().includes(s)));
+  return matchedGroup ? variant.optionValues[matchedGroup.name] : undefined;
+}
+
 /** 카테고리별 필수 고시정보(notices)/구매옵션(attributes)을 채운다. 실제 값을 알 수
  * 없는 필드(제조국/인증사항 등)는 추측해서 지어내지 않고 쿠팡이 넓게 허용하는
  * "상세페이지 참조"를 쓴다 — 연락처처럼 CartPilot이 실제로 갖고 있는 값은 그대로
  * 채운다. noticeCategories가 여러 개면 필수 항목이 가장 적은(=충족하기 가장
  * 단순한) 카테고리를 고른다 — 특정 카테고리를 강제로 골라야 할 근거가 없다.
- * attributes는 카테고리마다 이름이 다르므로 숫자 타입(dataType === "NUMBER")만
- * 안전하게 "1"로 채우고, 나머지 필수 텍스트 필드는 NOTICE_DEFAULT_CONTENT로 채운다. */
+ * attributes는 카테고리마다 이름이 다르므로: 원본 옵션(사이즈/색상)과 매칭되면
+ * 실제 옵션 값을 쓰고, 숫자 타입(dataType === "NUMBER")은 안전하게 "1"로,
+ * 나머지 필수 텍스트 필드는 NOTICE_DEFAULT_CONTENT로 채운다. */
 export function buildCoupangCompliance(
   categoryMeta: CoupangCategoryMeta | null | undefined,
   context: { productName: string; contactNumber: string },
+  variantContext: { optionGroups: CanonicalProductOptionGroup[]; variant?: CanonicalProductVariant } = {
+    optionGroups: [],
+  },
 ): { attributes: CoupangItemAttribute[]; notices: CoupangItemNotice[] } {
   if (!categoryMeta) return { attributes: [], notices: [] };
 
   const attributes: CoupangItemAttribute[] = categoryMeta.attributes
     .filter((attr) => attr.required === "MANDATORY")
     .map((attr) => {
+      const matchedOptionValue = matchOptionValueForAttribute(
+        attr.attributeTypeName,
+        variantContext.optionGroups,
+        variantContext.variant,
+      );
+      if (matchedOptionValue) {
+        return { attributeTypeName: attr.attributeTypeName, attributeValueName: matchedOptionValue };
+      }
       if (attr.dataType === "NUMBER") {
         const unit = attr.basicUnit && attr.basicUnit !== "없음" ? attr.basicUnit : "";
         return { attributeTypeName: attr.attributeTypeName, attributeValueName: `1${unit}` };
@@ -278,6 +316,72 @@ export function buildCoupangCompliance(
   return { attributes, notices };
 }
 
+/** item 하나(옵션 조합 하나)를 만든다 — variant가 있으면 그 옵션 조합 전용
+ * itemName/가격/SKU/재고/구매옵션값을 쓰고, 없으면(옵션 없는 상품, 또는 아직
+ * variant를 못 뽑는 소스) 상품 전체 값을 그대로 쓴다(기존 동작과 100% 동일). */
+function buildCoupangItem(args: {
+  product: CanonicalProduct;
+  listing: ListingModel;
+  sellerConfig: CoupangSellerConfig;
+  categoryMeta?: CoupangCategoryMeta | null;
+  images: CoupangItemImage[];
+  contents: CoupangItemContent[];
+  optionGroups: CanonicalProductOptionGroup[];
+  variant?: CanonicalProductVariant;
+}): CoupangItem {
+  const { product, listing, sellerConfig, categoryMeta, images, contents, optionGroups, variant } = args;
+
+  const compliance = buildCoupangCompliance(
+    categoryMeta,
+    { productName: listing.title, contactNumber: sellerConfig.companyContactNumber },
+    { optionGroups, variant },
+  );
+
+  const optionSuffix = variant ? Object.values(variant.optionValues).join(", ") : "";
+  const itemName = optionSuffix ? `${listing.title} - ${optionSuffix}` : listing.title;
+
+  // variant.price가 있으면(옵션마다 가격이 다른 매장) 그 옵션의 실제 가격을
+  // 원화로 환산해서 쓴다 — 없으면 listing.priceKrw(상품 전체 대표가)로 폴백한다.
+  const priceKrw = variant?.price
+    ? convertToKrw(variant.price.amount, variant.price.currency).amountKrw
+    : listing.priceKrw;
+
+  return {
+    itemName,
+    originalPrice: priceKrw,
+    salePrice: priceKrw,
+    externalVendorSku: variant?.sku,
+    // variant.stockQuantity가 없으면(재고 추적 안 하는 매장, 또는 옵션 없는
+    // 상품) 상품 전체 기본 재고로 폴백한다.
+    maximumBuyCount: variant?.stockQuantity ?? product.stockQuantity.value,
+    maximumBuyForPerson: 0,
+    // 0을 보내면 실제 쿠팡 API가 "최소 1이상 입력해야 합니다"로 거부한다(실제
+    // 등록 시도로 확인) — maximumBuyForPerson(1인당 최대구매수량)이 0(무제한)
+    // 이어도 기간 필드 자체는 항상 1 이상이어야 한다.
+    maximumBuyForPersonPeriod: 1,
+    // 해외 URL을 소싱해서 등록하는 CartPilot 특성상 국내 사입 대비 배송이 오래
+    // 걸린다고 보수적으로 가정한다 — 실제 배송 정책이 정해지면 조정한다.
+    outboundShippingTimeDay: 7,
+    unitCount: 1,
+    adultOnly: "EVERYONE",
+    taxType: "TAX",
+    parallelImported: "NOT_PARALLEL_IMPORTED",
+    // CartPilot이 등록하는 상품은 정의상 전부 해외 URL에서 소싱한 것이다 —
+    // 이전에는 이 값이 반대(NOT_OVERSEAS_PURCHASED)로 고정되어 있었다
+    // (docs/coupang-registration-requirements-audit.md 참고).
+    overseasPurchased: "OVERSEAS_PURCHASED",
+    // deliveryMethod가 AGENT_BUY(해외구매대행)면 쿠팡 공식 문서가 명시적으로
+    // "product PCC must be entered as true"라고 요구한다 — 구매자가 개인
+    // 통관고유부호를 입력해야 하는 상품이라는 뜻이다.
+    pccNeeded: true,
+    images,
+    attributes: compliance.attributes,
+    notices: compliance.notices,
+    contents,
+    searchTags: listing.options,
+  };
+}
+
 export function buildCoupangPayload(
   product: CanonicalProduct,
   listing: ListingModel,
@@ -294,10 +398,6 @@ export function buildCoupangPayload(
   const description = mergeCoupangDescription(listing.description, options.descriptionTemplate);
 
   const displayCategoryCode = resolveVerifiedCategoryCode(listing.category);
-  const compliance = buildCoupangCompliance(options.categoryMeta, {
-    productName: listing.title,
-    contactNumber: sellerConfig.companyContactNumber,
-  });
 
   const descriptionImageUrls = product.images
     .filter((img) => img.useInDescription)
@@ -311,12 +411,45 @@ export function buildCoupangPayload(
     images.push({ imageOrder: index + 1, imageType: "DETAIL", vendorPath: url });
   });
 
+  const contents: CoupangItemContent[] = [
+    ...(description
+      ? [
+          {
+            contentsType: "TEXT" as const,
+            contentDetails: [{ content: description, detailType: "TEXT" as const }],
+          },
+        ]
+      : []),
+    ...descriptionImageUrls.map((url) => ({
+      contentsType: "IMAGE" as const,
+      contentDetails: [{ content: url, detailType: "IMAGE" as const }],
+    })),
+  ];
+
   const now = new Date();
   const twoYearsLater = new Date(now);
   twoYearsLater.setFullYear(now.getFullYear() + 2);
 
   const deliveryCharge = product.shippingFee.value;
   const deliveryChargeType: CoupangPayload["deliveryChargeType"] = deliveryCharge > 0 ? "NOT_FREE" : "FREE";
+
+  // 옵션이 있으면(variants가 채워졌으면) variant별로 item을 하나씩 만든다 —
+  // 없으면(대부분의 크롤러 소스는 아직 variant를 못 뽑는다, 또는 옵션 없는
+  // 상품) 기존처럼 단일 item 하나만 만든다.
+  const variantSlots: (CanonicalProductVariant | undefined)[] =
+    product.variants.length > 0 ? product.variants : [undefined];
+  const items: CoupangItem[] = variantSlots.map((variant) =>
+    buildCoupangItem({
+      product,
+      listing,
+      sellerConfig,
+      categoryMeta: options.categoryMeta,
+      images,
+      contents,
+      optionGroups: product.optionGroups,
+      variant,
+    }),
+  );
 
   return {
     displayCategoryCode,
@@ -347,51 +480,6 @@ export function buildCoupangPayload(
     vendorUserId: sellerConfig.vendorUserId,
     requested: false,
     priceIsEstimate: listing.priceIsEstimate,
-    items: [
-      {
-        itemName: listing.title,
-        originalPrice: listing.priceKrw,
-        salePrice: listing.priceKrw,
-        maximumBuyCount: product.stockQuantity.value,
-        maximumBuyForPerson: 0,
-        // 0을 보내면 실제 쿠팡 API가 "최소 1이상 입력해야 합니다"로 거부한다(실제
-        // 등록 시도로 확인) — maximumBuyForPerson(1인당 최대구매수량)이 0(무제한)
-        // 이어도 기간 필드 자체는 항상 1 이상이어야 한다.
-        maximumBuyForPersonPeriod: 1,
-        // 해외 URL을 소싱해서 등록하는 CartPilot 특성상 국내 사입 대비 배송이 오래
-        // 걸린다고 보수적으로 가정한다 — 실제 배송 정책이 정해지면 조정한다.
-        outboundShippingTimeDay: 7,
-        unitCount: 1,
-        adultOnly: "EVERYONE",
-        taxType: "TAX",
-        parallelImported: "NOT_PARALLEL_IMPORTED",
-        // CartPilot이 등록하는 상품은 정의상 전부 해외 URL에서 소싱한 것이다 —
-        // 이전에는 이 값이 반대(NOT_OVERSEAS_PURCHASED)로 고정되어 있었다
-        // (docs/coupang-registration-requirements-audit.md 참고).
-        overseasPurchased: "OVERSEAS_PURCHASED",
-        // deliveryMethod가 AGENT_BUY(해외구매대행)면 쿠팡 공식 문서가 명시적으로
-        // "product PCC must be entered as true"라고 요구한다 — 구매자가 개인
-        // 통관고유부호를 입력해야 하는 상품이라는 뜻이다.
-        pccNeeded: true,
-        images,
-        attributes: compliance.attributes,
-        notices: compliance.notices,
-        contents: [
-          ...(description
-            ? [
-                {
-                  contentsType: "TEXT" as const,
-                  contentDetails: [{ content: description, detailType: "TEXT" as const }],
-                },
-              ]
-            : []),
-          ...descriptionImageUrls.map((url) => ({
-            contentsType: "IMAGE" as const,
-            contentDetails: [{ content: url, detailType: "IMAGE" as const }],
-          })),
-        ],
-        searchTags: listing.options,
-      },
-    ],
+    items,
   };
 }
