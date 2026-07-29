@@ -44,7 +44,7 @@ CPO 지시(P0-1): "URL 하나 넣으면 자동등록" 컨셉에서 옵션을 못
 | Variant별 SKU | 가능 — `variants[].sku` |
 | Variant별 가격 | 가능 — `variants[].price` + `price_currency`(할인 전가는 `compare_at_price`) |
 | Variant별 재고 | 가능 — `variants[].inventory_quantity` (단, `inventory_management`가 `null`이면 재고추적 안 하는 매장이라 이 필드가 의미 없을 수 있음) |
-| 옵션 이미지 | **구조적으로 가능, 이번 상품엔 없음** — `images[].variant_ids`로 특정 이미지를 특정 variant에 연결하는 필드가 존재하지만, 이번 실측 상품은 색상 옵션이 없어서(사이즈만) 전부 빈 배열(`variant_ids: []`)이었다. 색상 옵션이 있는 다른 Shopify 상품으로 별도 검증 필요. |
+| 옵션 이미지 | **가능 — 실측 확인(Sprint A Epic 3)** — 같은 매장의 색상 옵션 상품(`clampy-pla-clip-by-hightide-penco`, Colour 14개)으로 재검증: `variant.image_id`가 `images[].id`와 정확히 일치했다(예: Red variant의 `image_id: 14582938370111` == 해당 이미지의 `id: 14582938370111`). 매장이 옵션-이미지를 연결해뒀으면 100% 정확하게 매칭된다. |
 
 **가능 %(Shopify)**: **거의 100%** — 지금 크롤러가 이미 호출하는 API 응답에
 전부 들어있다. 추가 네트워크 호출 없이 파싱 필드만 늘리면 된다(`packages/crawler/src/shopify-product-json.ts`의
@@ -58,6 +58,13 @@ CPO 지시(P0-1): "URL 하나 넣으면 자동등록" 컨셉에서 옵션을 못
   매장일 수 있음).
 - 옵션 이미지는 매장이 실제로 연결해뒀을 때만 있다(구조는 100% 지원, 데이터는
   매장 나름).
+- **연결 자체는 실측 확인됐지만 아직 CanonicalProduct까지는 안 이어져 있다** —
+  `variant.image_id`는 Shopify 쪽 이미지 id인데, 우리 파이프라인은 이미지를
+  다운로드하면서 자체 순번 id(0001, 0002...)를 새로 부여한다. 두 id를 연결하려면
+  Shopify 이미지 URL을 다운로드~분류 단계까지 그대로 들고 가서 최종
+  WorkspaceItem과 매칭해야 하는데, 지금 파이프라인은 그 URL을 도중에 버린다 —
+  이건 옵션 파싱 문제가 아니라 이미지 파이프라인 배관(plumbing) 문제라 별도
+  작업으로 다음 스프린트에서 진행한다.
 
 ## Epic B — Magento: 추정(미검증)
 
