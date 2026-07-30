@@ -33,7 +33,7 @@ async function logRegistrationAttempt(result: ListingResult, apiResponseBody?: u
   if (!supabase) return;
   const payload = result.payload as CoupangPayload | undefined;
   const complianceReport = result.complianceReport as ComplianceReport | undefined;
-  const { error } = await supabase.from("registration_attempts").insert({
+  const row = {
     platform: result.platform,
     status: result.status,
     error_code: result.error?.code ?? null,
@@ -46,8 +46,17 @@ async function logRegistrationAttempt(result: ListingResult, apiResponseBody?: u
     compliance_score: complianceReport?.score ?? null,
     compliance_report: complianceReport ?? null,
     brand_resolution: result.brandResolution ?? null,
-  });
-  if (error) console.warn("[register] registration_attempts 기록 실패:", error.message);
+  };
+  const { error } = await supabase.from("registration_attempts").insert(row);
+  if (!error) return;
+  console.warn("[register] registration_attempts 기록 실패, brand_resolution 없이 재시도:", error.message);
+  // brand_resolution 컬럼은 마이그레이션 009를 수동 실행해야 생긴다(구조적으로
+  // 여기서 직접 실행 불가) — 마이그레이션 전에는 컬럼이 없어 insert 전체가
+  // 실패한다. payload/response/compliance 등 나머지 데이터까지 통째로 유실되는
+  // 걸 막기 위해 이 필드만 빼고 한 번 더 시도한다.
+  const { brand_resolution: _omit, ...rowWithoutBrandResolution } = row;
+  const retry = await supabase.from("registration_attempts").insert(rowWithoutBrandResolution);
+  if (retry.error) console.warn("[register] registration_attempts 재시도도 실패:", retry.error.message);
 }
 
 /**
