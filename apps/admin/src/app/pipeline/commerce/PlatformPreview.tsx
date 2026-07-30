@@ -2,6 +2,7 @@
 
 import type { CategoryCandidate } from "@commerce/category";
 import type { ListingResult, ListingStatus, ReadinessReport } from "@commerce/listing";
+import { isVerifiedCategorySelected } from "@commerce/marketplace";
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
 import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
@@ -22,6 +23,7 @@ export function PlatformPreview({
   readiness,
   onUpdateField,
   onUpdateSalePriceKrw,
+  onUpdatePriceBreakdown,
   onSelectCategory,
   onFixTextField,
   onFixNumberField,
@@ -41,6 +43,7 @@ export function PlatformPreview({
   readiness?: ReadinessReport;
   onUpdateField: (key: "title" | "brand" | "description", value: string) => void;
   onUpdateSalePriceKrw: (amountKrw: number) => void;
+  onUpdatePriceBreakdown: (breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) => void;
   onSelectCategory: (candidate: CategoryCandidate) => void;
   onFixTextField?: (field: "countryOfOrigin" | "returnPolicy", value: string) => void;
   onFixNumberField?: (field: "shippingFee" | "stockQuantity", value: number) => void;
@@ -54,8 +57,9 @@ export function PlatformPreview({
   /** P0-UI Epic 1/4 — Developer Mode가 꺼져 있으면 Payload/개발 로그를 숨긴다. */
   developerMode: boolean;
 }) {
-  const isCategoryConfirmed =
-    listing.category.state === "SELECTED" || listing.category.state === "CONFIRMED";
+  // isVerifiedPlatformCode까지 확인해야 한다 — state만 보면 미리보기가
+  // "선택 완료"로 보이는데 실제 등록은 CP001로 거부되는 버그가 재발한다.
+  const isCategoryConfirmed = isVerifiedCategorySelected(listing.category);
 
   // P0-UI Epic 2 — 등록 준비 카드와 상세 체크리스트(ListingSection 안의
   // PreflightChecklist/ReadinessScorePanel)가 반드시 같은 판정을 봐야 한다. readiness가
@@ -169,7 +173,11 @@ export function PlatformPreview({
           </div>
         </section>
 
-        <PriceEditor product={product} onUpdateSalePriceKrw={onUpdateSalePriceKrw} />
+        <PriceEditor
+          product={product}
+          onUpdateSalePriceKrw={onUpdateSalePriceKrw}
+          onUpdatePriceBreakdown={onUpdatePriceBreakdown}
+        />
         <CategoryRecommendationPanel
           candidates={categoryCandidates}
           selection={listing.category}

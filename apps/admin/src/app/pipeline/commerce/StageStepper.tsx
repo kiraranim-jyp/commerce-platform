@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { CategorySelection } from "@commerce/category";
+import { isVerifiedCategorySelected } from "@commerce/marketplace";
 import type { CanonicalProduct, PlatformId } from "@commerce/shared";
 
 type StageStatus = "LOCKED" | "IN_PROGRESS" | "COMPLETED" | "NEEDS_ACTION";
@@ -33,9 +34,9 @@ export function StageStepper({
   categoryMappings: Record<PlatformId, CategorySelection>;
   onNavigate: (tab: "source" | "content" | PlatformId) => void;
 }) {
-  const categoryDone = Object.values(categoryMappings).some(
-    (c) => c.state === "SELECTED" || c.state === "CONFIRMED",
-  );
+  // isVerifiedPlatformCode까지 확인해야 한다 — state만 보면 CP001 버그가
+  // 재발한다(packages/marketplace/src/category-field.ts 주석 참고).
+  const categoryDone = Object.values(categoryMappings).some(isVerifiedCategorySelected);
   const contentDone = product.titleKo.value.trim().length > 0;
   const imagesDone = product.images.length > 0;
 

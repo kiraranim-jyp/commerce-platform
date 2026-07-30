@@ -1,28 +1,43 @@
 "use client";
 
 import type { CanonicalProduct } from "@commerce/shared";
-import { convertToKrw, formatKrw, formatOriginalPrice } from "@commerce/pricing";
+import {
+  computePriceBreakdown,
+  DEFAULT_PRICE_BREAKDOWN_INPUT,
+  formatKrw,
+  formatOriginalPrice,
+} from "@commerce/pricing";
 import { EditableText } from "./EditableField";
 
 /**
- * "원본 가격"(product.price, 원본 통화 그대로)은 절대 건드리지 않는다 — 판매가만
- * 따로 입력받아 product.priceOverrideKrw에 저장한다(onUpdateSalePriceKrw). 저장
- * 버튼이 없다: 입력 → state 업데이트 → 이 화면 아래 등록 Preview까지 즉시
- * 반영되는 controlled input이다.
+ * P0-1(가격 계산 투명화) — "원가 → 최종 판매가"만 보여주던 걸 원본가격→환율→
+ * 상품원가→배송비→수수료→마진→제안가 단계별로 전부 노출한다(CPO가 실측에서
+ * "가격 계산 과정이 전혀 안 보인다"고 지적한 문제). 계산기(배송비/수수료율/
+ * 마진율)와 실제 등록에 쓰이는 "판매가격"은 분리돼 있다 — "적용" 버튼을 눌러야만
+ * 제안가가 판매가격에 반영된다. "원본 가격"(product.price)은 절대 건드리지
+ * 않는다.
  */
 export function PriceEditor({
   product,
   onUpdateSalePriceKrw,
+  onUpdatePriceBreakdown,
 }: {
   product: CanonicalProduct;
   onUpdateSalePriceKrw: (amountKrw: number) => void;
+  onUpdatePriceBreakdown: (breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) => void;
 }) {
-  const estimated = convertToKrw(product.price.value.amount, product.price.value.currency);
-  const salePriceKrw = product.priceOverrideKrw?.value ?? estimated.amountKrw;
-  // 아주 대략적인 참고용 마진이다 — 배송비/관세/부가세/쿠팡 수수료를 전혀
-  // 반영하지 않는다(가격 자동계산 자체는 이번 범위 밖). "정확한 마진"이 아니라
-  // "판매가가 원가 대비 얼마나 남는지" 감을 잡는 용도로만 보여준다.
-  const roughMargin = salePriceKrw - estimated.amountKrw;
+  const breakdownInput = product.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT;
+  const breakdown = computePriceBreakdown({
+    originalAmount: product.price.value.amount,
+    originalCurrency: product.price.value.currency,
+    ...breakdownInput,
+  });
+  const salePriceKrw = product.priceOverrideKrw?.value ?? breakdown.costKrw;
+  const roughMargin = salePriceKrw - breakdown.costKrw;
+
+  function commitBreakdown(patch: Partial<typeof breakdownInput>) {
+    onUpdatePriceBreakdown({ ...breakdownInput, ...patch });
+  }
 
   return (
     <section className="rounded-lg border border-border p-4 text-sm">
@@ -37,8 +52,8 @@ export function PriceEditor({
         </div>
 
         <div>
-          <p className="text-xs text-text-secondary">현재 환율 기준 예상 원가{estimated.isEstimate ? " (추정)" : ""}</p>
-          <p className="mt-0.5 text-sm text-text-secondary">약 {formatKrw(estimated.amountKrw)}</p>
+          <p className="text-xs text-text-secondary">현재 환율 기준 예상 원가{breakdown.isRateEstimate ? " (추정)" : ""}</p>
+          <p className="mt-0.5 text-sm text-text-secondary">약 {formatKrw(breakdown.costKrw)}</p>
         </div>
 
         <div className="border-t border-border pt-2.5">
@@ -62,6 +77,93 @@ export function PriceEditor({
           </p>
         </div>
       </div>
+
+      <details className="mt-4 border-t border-border pt-3">
+        <summary className="cursor-pointer text-xs font-medium text-text-secondary hover:text-text-primary">
+          가격 계산 Breakdown — 왜 이 금액인지 보기
+        </summary>
+        <div className="mt-3 space-y-2 text-xs">
+          <BreakdownRow label="원본 가격">
+            {formatOriginalPrice(breakdown.originalAmount, breakdown.originalCurrency)}
+          </BreakdownRow>
+          <BreakdownRow label="환율">
+            1 {breakdown.originalCurrency} = {formatKrw(Math.round(breakdown.exchangeRate))}
+            {breakdown.isRateEstimate ? " (추정 고정환율)" : ""}
+          </BreakdownRow>
+          <BreakdownRow label="상품 원가">{formatKrw(breakdown.costKrw)}</BreakdownRow>
+          <BreakdownRow label="예상 국제배송비">
+            <EditableAmount
+              valueKrw={breakdownInput.shippingKrw}
+              onCommit={(v) => commitBreakdown({ shippingKrw: v })}
+            />
+          </BreakdownRow>
+          <BreakdownRow label="랜디드 원가(원가+배송비)">{formatKrw(breakdown.landedCostKrw)}</BreakdownRow>
+          <BreakdownRow label="예상 수수료">
+            <EditablePercent
+              valuePercent={breakdownInput.feePercent}
+              onCommit={(v) => commitBreakdown({ feePercent: v })}
+            />
+          </BreakdownRow>
+          <BreakdownRow label="목표 마진">
+            <EditablePercent
+              valuePercent={breakdownInput.marginPercent}
+              onCommit={(v) => commitBreakdown({ marginPercent: v })}
+            />
+          </BreakdownRow>
+          <div className="flex items-center justify-between border-t border-border pt-2">
+            <span className="font-medium text-text-primary">제안 판매가</span>
+            <span className="flex items-center gap-2">
+              <span className="font-medium text-text-primary">{formatKrw(breakdown.suggestedPriceKrw)}</span>
+              <button
+                type="button"
+                onClick={() => onUpdateSalePriceKrw(breakdown.suggestedPriceKrw)}
+                className="rounded border border-primary px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-primary/10"
+              >
+                판매가격에 적용
+              </button>
+            </span>
+          </div>
+          <p className="pt-1 text-[11px] text-text-tertiary">
+            배송비/수수료율/마진율은 실제 물류·정산 데이터가 없어 추정치입니다 — 직접 아는 값으로 고쳐서 다시 계산할 수
+            있습니다.
+          </p>
+        </div>
+      </details>
     </section>
+  );
+}
+
+function BreakdownRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-text-secondary">{label}</span>
+      <span className="text-text-primary">{children}</span>
+    </div>
+  );
+}
+
+function EditableAmount({ valueKrw, onCommit }: { valueKrw: number; onCommit: (v: number) => void }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      ₩
+      <EditableText
+        value={String(valueKrw)}
+        onCommit={(v) => onCommit(Math.max(0, Number(v) || 0))}
+        className="w-20 rounded border border-border px-1 py-0.5 text-right text-xs focus:border-primary focus:outline-none"
+      />
+    </span>
+  );
+}
+
+function EditablePercent({ valuePercent, onCommit }: { valuePercent: number; onCommit: (v: number) => void }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <EditableText
+        value={String(valuePercent)}
+        onCommit={(v) => onCommit(Math.min(99, Math.max(0, Number(v) || 0)))}
+        className="w-12 rounded border border-border px-1 py-0.5 text-right text-xs focus:border-primary focus:outline-none"
+      />
+      %
+    </span>
   );
 }

@@ -127,6 +127,11 @@ export interface CanonicalProduct {
    * 않는다. 있으면 어댑터가 환율 변환값 대신 이 값을 쓴다. 없으면(아직 입력 전)
    * 환율 추정값을 그대로 쓴다 — packages/pricing의 convertToKrw() 참고. */
   priceOverrideKrw?: ProvenanceField<number>;
+  /** P0-1(가격 계산 투명화) — 판매가격이 어떻게 나왔는지(배송비/수수료율/
+   * 마진율 입력값) 보관한다. priceOverrideKrw만으로는 "왜 이 금액인지"가 안
+   * 남아서 등록 이력에서 재구성할 수 없었다 — 이 필드가 그 계산 근거다.
+   * priceOverrideKrw 없이(자동 환율값 그대로 등록) 이 필드만 있을 수도 있다. */
+  priceBreakdown?: { shippingKrw: number; feePercent: number; marginPercent: number };
   sku: ProvenanceField<string>;
   description: ProvenanceField<string>;
   material: ProvenanceField<string>;

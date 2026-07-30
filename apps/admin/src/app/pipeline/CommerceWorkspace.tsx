@@ -18,7 +18,7 @@ import {
   type PlatformConnectionStatus,
   type RegistrationHistoryEntry,
 } from "@commerce/listing";
-import { PLATFORM_ADAPTERS, PLATFORM_ORDER } from "@commerce/marketplace";
+import { PLATFORM_ADAPTERS, PLATFORM_ORDER, isVerifiedCategorySelected } from "@commerce/marketplace";
 import { AIContentPanel } from "./commerce/AIContentPanel";
 import { BacklogPanel } from "./commerce/BacklogPanel";
 import { CoupangConnectionPanel } from "./commerce/CoupangConnectionPanel";
@@ -203,6 +203,14 @@ export function CommerceWorkspace({
     }));
   }
 
+  /** P0-1(가격 계산 투명화) — 배송비/수수료율/마진율 입력값을 저장한다.
+   * priceOverrideKrw(최종 판매가)와는 별개다 — "적용" 버튼을 눌러야만
+   * suggestedPriceKrw가 priceOverrideKrw로 반영된다(계산기와 최종값을
+   * 분리해서, 계산기를 만지는 중에 등록가가 먼저 바뀌지 않게 한다). */
+  function updatePriceBreakdown(breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) {
+    setProduct((prev) => ({ ...prev, priceBreakdown: breakdown }));
+  }
+
   function updateOptions(raw: string) {
     const options = raw
       .split(",")
@@ -340,8 +348,11 @@ export function CommerceWorkspace({
     if (stored !== "DRAFT") return stored;
     const noMarketplaceErrors = listing.validations.every((v) => v.status !== "ERROR");
     const noReadinessErrors = smartStoreReadiness ? smartStoreReadiness.errorCount === 0 : true;
-    const categoryConfirmed =
-      listing.category.state === "SELECTED" || listing.category.state === "CONFIRMED";
+    // isVerifiedPlatformCode까지 확인해야 한다 — state만 보면 이 화면이
+    // READY로 잘못 판정해 등록 버튼을 열어주고 register API가 CP001로
+    // 거부하는 버그가 재발한다(같은 실수가 StageStepper/PlatformPreview에도
+    // 각각 따로 있었다 — packages/marketplace/category-field.ts 참고).
+    const categoryConfirmed = isVerifiedCategorySelected(listing.category);
     const requiresCategory = !SOON_PLATFORMS.has(tab);
     return noMarketplaceErrors && noReadinessErrors && (!requiresCategory || categoryConfirmed)
       ? "READY"
@@ -499,6 +510,7 @@ export function CommerceWorkspace({
           readiness={smartStoreReadiness}
           onUpdateField={updateField}
           onUpdateSalePriceKrw={updateSalePriceKrw}
+          onUpdatePriceBreakdown={updatePriceBreakdown}
           onSelectCategory={(candidate) => selectCategory(tab, candidate)}
           onFixTextField={updateField}
           onFixNumberField={updateNumberField}

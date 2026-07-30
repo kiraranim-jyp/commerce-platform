@@ -15,6 +15,7 @@ export interface RegistrationAttemptRecord {
   compliance_score: number | null;
   compliance_report: unknown;
   brand_resolution: unknown;
+  price_breakdown: unknown;
   created_at: string;
 }
 

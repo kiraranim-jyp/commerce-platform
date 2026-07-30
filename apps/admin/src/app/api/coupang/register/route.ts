@@ -33,7 +33,7 @@ async function logRegistrationAttempt(result: ListingResult, apiResponseBody?: u
   if (!supabase) return;
   const payload = result.payload as CoupangPayload | undefined;
   const complianceReport = result.complianceReport as ComplianceReport | undefined;
-  const row = {
+  const row: Record<string, unknown> = {
     platform: result.platform,
     status: result.status,
     error_code: result.error?.code ?? null,
@@ -46,17 +46,22 @@ async function logRegistrationAttempt(result: ListingResult, apiResponseBody?: u
     compliance_score: complianceReport?.score ?? null,
     compliance_report: complianceReport ?? null,
     brand_resolution: result.brandResolution ?? null,
+    price_breakdown: result.priceBreakdown ?? null,
   };
-  const { error } = await supabase.from("registration_attempts").insert(row);
-  if (!error) return;
-  console.warn("[register] registration_attempts 기록 실패, brand_resolution 없이 재시도:", error.message);
-  // brand_resolution 컬럼은 마이그레이션 009를 수동 실행해야 생긴다(구조적으로
-  // 여기서 직접 실행 불가) — 마이그레이션 전에는 컬럼이 없어 insert 전체가
-  // 실패한다. payload/response/compliance 등 나머지 데이터까지 통째로 유실되는
-  // 걸 막기 위해 이 필드만 빼고 한 번 더 시도한다.
-  const { brand_resolution: _omit, ...rowWithoutBrandResolution } = row;
-  const retry = await supabase.from("registration_attempts").insert(rowWithoutBrandResolution);
-  if (retry.error) console.warn("[register] registration_attempts 재시도도 실패:", retry.error.message);
+  // brand_resolution/price_breakdown 컬럼은 각각 수동 마이그레이션(009/010)을
+  // 실행해야 생긴다(구조적으로 여기서 직접 실행 불가) — 마이그레이션 전에는
+  // 컬럼이 없어 insert 전체가 실패한다. payload/response/compliance 등 나머지
+  // 데이터까지 통째로 유실되는 걸 막기 위해, 아직 없는 컬럼이 뭔지 모르는 채로
+  // 하나씩 제외해가며 재시도한다(둘 다 없어도 나머지는 저장되도록).
+  const optionalColumns = ["brand_resolution", "price_breakdown"];
+  for (let attempt = 0; attempt <= optionalColumns.length; attempt++) {
+    const { error } = await supabase.from("registration_attempts").insert(row);
+    if (!error) return;
+    console.warn(`[register] registration_attempts 기록 실패(시도 ${attempt + 1}):`, error.message);
+    const nextColumn = optionalColumns[attempt];
+    if (!nextColumn || !(nextColumn in row)) break;
+    delete row[nextColumn];
+  }
 }
 
 /**
@@ -143,15 +148,6 @@ export async function POST(request: Request) {
         brandNameKr: string | null;
       }
     | undefined;
-  const withMeta = (result: ListingResult): ListingResult => ({
-    ...result,
-    traceId,
-    durationMs: Date.now() - startedAt,
-    steps,
-    complianceReport,
-    brandResolution: brandResolutionMeta,
-  });
-
   const body = (await request.json().catch(() => null)) as {
     product?: CanonicalProduct;
     listing?: ListingModel;
@@ -161,6 +157,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "product와 listing이 필요합니다." }, { status: 400 });
   }
   const { product, listing } = body;
+
+  // P0-1(가격 계산 투명화) — 이 등록 시도 시점의 배송비/수수료율/마진율 입력값을
+  // 스냅샷으로 남긴다(product.priceBreakdown은 사용자가 나중에 또 바꿀 수 있어서
+  // "그때 왜 이 가격이었는지"를 등록 이력에서 재구성하려면 순간값이 필요하다).
+  const priceBreakdownSnapshot = product.priceBreakdown
+    ? {
+        originalAmount: product.price.value.amount,
+        originalCurrency: product.price.value.currency,
+        ...product.priceBreakdown,
+        salePriceKrw: product.priceOverrideKrw?.value ?? null,
+      }
+    : undefined;
+
+  const withMeta = (result: ListingResult): ListingResult => ({
+    ...result,
+    traceId,
+    durationMs: Date.now() - startedAt,
+    steps,
+    complianceReport,
+    brandResolution: brandResolutionMeta,
+    priceBreakdown: priceBreakdownSnapshot,
+  });
 
   const credentials = await getCoupangCredentials();
   if (!credentials) {

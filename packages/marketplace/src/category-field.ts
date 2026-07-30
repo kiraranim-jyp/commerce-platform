@@ -15,13 +15,22 @@ import type { FieldRule } from "./validation";
  * 이제 이 파일이 유일한 기준이 되도록 등록 라우트도 이 논리와 정확히 일치하게
  * 맞춘다("등록 가능 100%"가 실제로 등록 가능함을 보장해야 한다).
  */
-export function categoryFieldRule(categorySelection: CategorySelection): FieldRule {
+/** 이 파일 밖(StageStepper/PlatformPreview/CommerceWorkspace 등 UI 표시용
+ * 코드)에서 "카테고리가 확정됐는가"를 다시 판단해야 할 때는 반드시 이 함수를
+ * 써야 한다 — state만 보는 자체 판정을 새로 만들면 위 주석에 적힌 CP001
+ * 버그가 그대로 재발한다(실제로 SaaS-UX 개편 때 3곳에서 재발했었다). */
+export function isVerifiedCategorySelected(categorySelection: CategorySelection): boolean {
   const isSelected = categorySelection.state === "SELECTED" || categorySelection.state === "CONFIRMED";
   const isVerified = categorySelection.candidate?.isVerifiedPlatformCode === true;
+  return isSelected && isVerified;
+}
+
+export function categoryFieldRule(categorySelection: CategorySelection): FieldRule {
+  const isSelected = categorySelection.state === "SELECTED" || categorySelection.state === "CONFIRMED";
   return {
     field: "category",
     label: "카테고리",
-    check: () => isSelected && isVerified,
+    check: () => isVerifiedCategorySelected(categorySelection),
     onFail: "WARNING",
     message: !isSelected
       ? categorySelection.state === "RECOMMENDED"

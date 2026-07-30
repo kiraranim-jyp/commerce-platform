@@ -101,6 +101,11 @@ export interface ListingResult {
    * API 매칭 결과를 등록 이력(registration_attempts)과 관리자 화면에서 볼 수
    * 있게 한다. 지금은 쿠팡만 채운다. */
   brandResolution?: unknown;
+  /** P0-1(가격 계산 투명화) — 등록 시점에 실제로 어떤 환율/배송비/수수료율/
+   * 마진율로 판매가격이 산출됐는지 스냅샷. 사용자가 나중에 배송비 입력값을
+   * 또 바꿀 수 있어(product.priceBreakdown은 계속 바뀜) 등록 순간의 값을
+   * 별도로 남겨야 등록 이력에서 "그때 왜 이 가격이었는지" 재구성할 수 있다. */
+  priceBreakdown?: unknown;
 }
 
 /** PM 스펙의 VALID/WARNING/ERROR — ListingModel.validations의 PASS/WARNING/ERROR와
