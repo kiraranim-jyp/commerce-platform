@@ -252,6 +252,19 @@ function isComplianceCritical(fieldName: string): boolean {
   return COMPLIANCE_CRITICAL_SYNONYMS.some((s) => lower.includes(s));
 }
 
+/** Sprint C(Category Resolver) — "필수 항목이 가장 적은 카테고리"를 무조건
+ * 고르면 점수는 잘 나오지만, 유아동 상품인데 KC 인증정보가 필요 없는 "기타
+ * 재화"로 등록되는 컴플라이언스 리스크가 생긴다(실제 등록 역검증에서 확인된
+ * 문제). 상품명에 이 키워드가 있으면 점수가 당장 낮아지더라도(필수 항목이
+ * 5개→14개로 늘어난다) "어린이제품" 고시정보 카테고리를 우선한다 — 점수보다
+ * 정확도가 우선이라는 원칙. */
+const CHILDREN_PRODUCT_KEYWORDS = ["baby", "babies", "kids", "child", "children", "toddler", "infant", "아동", "유아", "키즈"];
+
+function isLikelyChildrenProduct(productName: string): boolean {
+  const lower = productName.toLowerCase();
+  return CHILDREN_PRODUCT_KEYWORDS.some((k) => lower.includes(k));
+}
+
 function matchOptionValue(
   fieldName: string,
   optionGroups: CanonicalProductOptionGroup[],
@@ -300,7 +313,22 @@ export interface ComplianceFieldResult {
   /** buildComplianceReport가 requiredAttributeRate/requiredNoticeRate를 나눠
    * 계산할 수 있도록 구매옵션(attribute)인지 고시정보(notice)인지 표시한다. */
   kind: "ATTRIBUTE" | "NOTICE";
+  /** Sprint C(Epic 5) — 0~1. 값의 출처별로 고정 배정한다(추측해서 세밀하게
+   * 매기지 않는다 — 근거 없는 정밀도는 오히려 신뢰를 떨어뜨린다):
+   * KNOWN_VALUE=1(CartPilot이 실제로 아는 값), OPTION_MATCH=0.95(선택된 옵션
+   * 값 그대로), DETERMINISTIC=0.9(항상 맞는 고정값), PRODUCT_FIELD=0.8(정규식
+   * 등으로 원문에서 뽑은 값 — 패턴이 못 잡는 표기법도 있어 완벽하진 않음),
+   * PLACEHOLDER=0.1(자리표시자, 사실상 "모른다"). */
+  confidence: number;
 }
+
+const FIELD_SOURCE_CONFIDENCE: Record<ComplianceFieldSource, number> = {
+  KNOWN_VALUE: 1,
+  OPTION_MATCH: 0.95,
+  DETERMINISTIC: 0.9,
+  PRODUCT_FIELD: 0.8,
+  PLACEHOLDER: 0.1,
+};
 
 /** 카테고리별 필수 고시정보(notices)/구매옵션(attributes)을 채운다. 실제 값을 알 수
  * 없는 필드(제조국/인증사항 등)는 추측해서 지어내지 않고 쿠팡이 넓게 허용하는
@@ -363,7 +391,8 @@ export function buildCoupangCompliance(
         critical: isComplianceCritical(attr.attributeTypeName),
         kind: "ATTRIBUTE" as const,
       };
-    });
+    })
+    .map((r) => ({ ...r, confidence: FIELD_SOURCE_CONFIDENCE[r.source] }));
   const attributes: CoupangItemAttribute[] = attributeResults.map((r) => ({
     attributeTypeName: r.fieldName,
     attributeValueName: r.value,
@@ -372,6 +401,11 @@ export function buildCoupangCompliance(
   const simplestNoticeCategory = [...categoryMeta.noticeCategories].sort(
     (a, b) => a.noticeCategoryDetailNames.length - b.noticeCategoryDetailNames.length,
   )[0];
+  const childrenNoticeCategory = categoryMeta.noticeCategories.find((c) => c.noticeCategoryName.includes("어린이"));
+  const chosenNoticeCategory =
+    isLikelyChildrenProduct(context.productName) && childrenNoticeCategory
+      ? childrenNoticeCategory
+      : simplestNoticeCategory;
 
   const KNOWN_NOTICE_VALUES: Record<string, string> = {
     "품명 및 모델명": context.productName,
@@ -380,8 +414,8 @@ export function buildCoupangCompliance(
     "A/S 책임자와 전화번호": context.contactNumber,
   };
 
-  const noticeResults: ComplianceFieldResult[] = simplestNoticeCategory
-    ? simplestNoticeCategory.noticeCategoryDetailNames
+  const noticeResults: ComplianceFieldResult[] = chosenNoticeCategory
+    ? chosenNoticeCategory.noticeCategoryDetailNames
         .filter((detail) => detail.required === "MANDATORY")
         .map((detail) => {
           const known = KNOWN_NOTICE_VALUES[detail.noticeCategoryDetailName];
@@ -412,10 +446,11 @@ export function buildCoupangCompliance(
             kind: "NOTICE" as const,
           };
         })
+        .map((r) => ({ ...r, confidence: FIELD_SOURCE_CONFIDENCE[r.source] }))
     : [];
-  const notices: CoupangItemNotice[] = simplestNoticeCategory
+  const notices: CoupangItemNotice[] = chosenNoticeCategory
     ? noticeResults.map((r) => ({
-        noticeCategoryName: simplestNoticeCategory.noticeCategoryName,
+        noticeCategoryName: chosenNoticeCategory.noticeCategoryName,
         noticeCategoryDetailName: r.fieldName,
         content: r.value,
       }))

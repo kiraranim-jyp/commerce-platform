@@ -128,7 +128,9 @@ export default function AdminRegistrationsPage() {
                         <div className="mt-2 rounded border border-border bg-surface p-2">
                           <p className="text-xs font-medium text-text-secondary">
                             Compliance {compliance.score}점 — 필수옵션 {compliance.requiredAttributeRate}% · 고시정보{" "}
-                            {compliance.requiredNoticeRate}% · 자동입력 {compliance.aiAutoFillRate}% ·{" "}
+                            {compliance.requiredNoticeRate}% · 자동입력 {compliance.autoResolvedCount}/
+                            {compliance.autoResolvedCount + compliance.userRequiredCount} · 평균신뢰도{" "}
+                            {Math.round(compliance.confidenceAvg * 100)}% ·{" "}
                             <span
                               className={
                                 compliance.verdict === "PASS"
@@ -139,13 +141,34 @@ export default function AdminRegistrationsPage() {
                               }
                             >
                               {compliance.verdict}
+                            </span>{" "}
+                            · 승인가능성{" "}
+                            <span
+                              className={
+                                compliance.approvalReadiness === "High"
+                                  ? "text-success"
+                                  : compliance.approvalReadiness === "Medium"
+                                    ? "text-warning"
+                                    : "text-error"
+                              }
+                            >
+                              {compliance.approvalReadiness}
                             </span>
                           </p>
+                          {compliance.scoreBreakdown.length > 0 && (
+                            <ul className="mt-1.5 space-y-0.5 text-[11px] text-text-secondary">
+                              {compliance.scoreBreakdown.map((b) => (
+                                <li key={b.fieldName}>
+                                  -{b.deduction}점 {b.fieldName} — {b.reason}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                           {compliance.userInputNeeded.length > 0 && (
                             <ul className="mt-1.5 space-y-0.5 text-[11px] text-text-secondary">
                               {compliance.userInputNeeded.map((f) => (
                                 <li key={f.fieldName}>
-                                  ☐ {f.fieldName} — {f.reason}
+                                  ☐ {f.fieldName} — {f.reason}(신뢰도 {Math.round(f.confidence * 100)}%)
                                 </li>
                               ))}
                             </ul>

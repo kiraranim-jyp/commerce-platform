@@ -1,3 +1,4 @@
+import { extractCountryOfOrigin, extractMaterial } from "@commerce/crawler";
 import type { ExtractedProductData, ProductDataSource } from "@commerce/crawler";
 import type {
   CanonicalProduct,
@@ -86,6 +87,7 @@ export function buildCanonicalProduct(
   const images = items
     .map(toCanonicalProductImage)
     .filter((image): image is CanonicalProductImage => image !== null);
+  const resolvedCountryOfOrigin = extractCountryOfOrigin(productData.description);
 
   return {
     sourceUrl,
@@ -98,7 +100,14 @@ export function buildCanonicalProduct(
     ),
     sku: field(productData.sku ?? "", "sku", sources),
     description: field(productData.description ?? "", "description", sources),
-    material: field(productData.material ?? "", "material", sources),
+    // Sprint C(Compliance Resolver) — 크롤러가 구조화된 material을 안 주면(대부분의
+    // 경우) 상품 설명 원문에서 "88% Polyester, 12% Elastane" 같은 표준 표기를
+    // 정규식으로 찾아본다. 못 찾으면 그대로 빈 값 — 지어내지 않는다.
+    material: field(
+      productData.material || extractMaterial(productData.description) || "",
+      "material",
+      sources,
+    ),
     options: field(productData.options ?? [], "options", sources),
     optionGroups: productData.optionGroups ?? [],
     variants: productData.variants ?? [],
@@ -110,10 +119,14 @@ export function buildCanonicalProduct(
     keywords: { value: [], source: "ORIGINAL", confidence: 0 },
     seoTitle: { value: "", source: "ORIGINAL", confidence: 0 },
     seoDescription: { value: "", source: "ORIGINAL", confidence: 0 },
-    // 원산지/반품정보는 원본 사이트에서 신뢰성 있게 뽑아낼 방법이 없다 — 항상
-    // REQUIRED로 시작해서 사용자가 직접 채워야 등록 가능 상태가 된다. 배송비/재고는
-    // "일단 등록은 되지만 확인이 필요한" 합리적 기본값으로 시작한다(DEFAULT).
-    countryOfOrigin: { value: "", source: "REQUIRED", confidence: 0 },
+    // 원산지/반품정보는 원본 사이트에서 신뢰성 있게 뽑아낼 방법이 거의 없다 —
+    // "Made in China"처럼 설명문에 표준 문구로 적혀있을 때만(Sprint C) 그 값을
+    // 쓰고, 못 찾으면 그대로 REQUIRED로 시작해서 사용자가 직접 채워야 한다.
+    // 배송비/재고는 "일단 등록은 되지만 확인이 필요한" 합리적 기본값으로
+    // 시작한다(DEFAULT).
+    countryOfOrigin: resolvedCountryOfOrigin
+      ? { value: resolvedCountryOfOrigin, source: "ORIGINAL", confidence: 0.75 }
+      : { value: "", source: "REQUIRED", confidence: 0 },
     returnPolicy: { value: "", source: "REQUIRED", confidence: 0 },
     shippingFee: { value: 0, source: "DEFAULT", confidence: 0.5 },
     stockQuantity: { value: 999, source: "DEFAULT", confidence: 0.5 },

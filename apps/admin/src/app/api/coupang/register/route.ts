@@ -262,7 +262,7 @@ export async function POST(request: Request) {
   logStep(
     "Compliance 검증",
     complianceReport.verdict === "FAIL" ? "failed" : complianceReport.verdict === "WARNING" ? "skipped" : "success",
-    `Compliance Score ${complianceReport.score}점 (필수옵션 ${complianceReport.requiredAttributeRate}%, 고시정보 ${complianceReport.requiredNoticeRate}%, 자동입력 ${complianceReport.aiAutoFillRate}%)` +
+    `Compliance Score ${complianceReport.score}점 (필수옵션 ${complianceReport.requiredAttributeRate}%, 고시정보 ${complianceReport.requiredNoticeRate}%, 자동입력 ${complianceReport.autoResolvedCount}/${complianceReport.autoResolvedCount + complianceReport.userRequiredCount}, 평균신뢰도 ${Math.round(complianceReport.confidenceAvg * 100)}%, 승인가능성 ${complianceReport.approvalReadiness})` +
       (complianceReport.userInputNeeded.length > 0
         ? ` — 확인 필요: ${complianceReport.userInputNeeded.map((f) => f.fieldName).join(", ")}`
         : ""),

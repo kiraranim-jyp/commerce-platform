@@ -1,10 +1,11 @@
 import type { ComplianceFieldResult } from "./build-payload";
 
 /**
- * Sprint B(Product Compliance Engine) — "등록됐다"가 아니라 "얼마나 실제
- * 판매/승인 가능한 수준으로 등록됐는가"를 점수로 보여준다. buildCoupangCompliance가
- * 만든 ComplianceFieldResult[](각 필드가 실제 값인지 자리표시자인지)를 입력으로
- * 받아 계산하는 순수 함수 — register 라우트가 실제 등록 직후(또는 직전) 호출한다.
+ * Sprint B(Product Compliance Engine) + Sprint C(Confidence/Explainable) —
+ * "등록됐다"가 아니라 "얼마나 실제 판매/승인 가능한 수준으로 등록됐는가"를
+ * 점수로 보여준다. buildCoupangCompliance가 만든 ComplianceFieldResult[](각
+ * 필드가 실제 값인지 자리표시자인지, 얼마나 확실한지)를 입력으로 받아 계산하는
+ * 순수 함수 — register 라우트가 실제 등록 직후(또는 직전) 호출한다.
  */
 export interface ComplianceReport {
   /** 0~100. 전체 필드 중 "실제 근거가 있는 값"의 비율(자리표시자는 절반만 인정). */
@@ -15,10 +16,23 @@ export interface ComplianceReport {
   requiredNoticeRate: number;
   /** 전체 필드 중 사람 손 없이 자동으로 채운(자리표시자가 아닌) 비율. */
   aiAutoFillRate: number;
+  /** 사람 손 없이 자동으로 채운 필드 개수. */
+  autoResolvedCount: number;
+  /** 아직 자리표시자라 사용자 확인이 필요한 필드 개수(= userInputNeeded.length). */
+  userRequiredCount: number;
+  /** 0~1. 전체 필드 confidence의 평균 — 자리표시자(0.1)가 많을수록 낮아진다. */
+  confidenceAvg: number;
   /** 아직 자리표시자인 필드 목록 — "등록 전 이것만 채우면 됩니다" 화면에 그대로 쓸 수 있다. */
-  userInputNeeded: { fieldName: string; reason: string }[];
+  userInputNeeded: { fieldName: string; reason: string; confidence: number }[];
+  /** score가 왜 이 값인지 필드별 감점 근거 — 자리표시자 필드만 나열한다(감점이
+   * 있는 필드만 "설명할 거리"가 있다). 감점이 큰 순서로 정렬. */
+  scoreBreakdown: { fieldName: string; deduction: number; reason: string }[];
   verdict: "PASS" | "WARNING" | "FAIL";
   reasons: string[];
+  /** "High"(score>=90, 컴플라이언스 필수 항목 전부 확보) / "Medium"(실제 값은
+   * 있지만 일부 미확인) / "Low"(KC/인증 등 필수 항목이 자리표시자) — Wing에
+   * 승인 요청하기 전 사람이 얼마나 봐야 하는지에 대한 요약 신호. */
+  approvalReadiness: "High" | "Medium" | "Low";
 }
 
 /** OPTION_MATCH/PRODUCT_FIELD/KNOWN_VALUE/DETERMINISTIC은 전부 실제 근거가 있는
@@ -39,9 +53,6 @@ function rate(results: ComplianceFieldResult[]): number {
   return Math.round((earned / results.length) * 100);
 }
 
-/** attributeCount/noticeCount가 있으면 requiredAttributeRate/requiredNoticeRate를
- * 구분해서 계산한다 — 없으면(register 라우트가 구분 안 하고 그냥 다 넘기는 경우)
- * 전부 attribute로 취급해도 score 자체는 동일하게 나온다. */
 export function buildComplianceReport(
   attributeResults: ComplianceFieldResult[],
   noticeResults: ComplianceFieldResult[],
@@ -50,27 +61,56 @@ export function buildComplianceReport(
   const score = rate(all);
   const requiredAttributeRate = rate(attributeResults);
   const requiredNoticeRate = rate(noticeResults);
-  const aiAutoFillRate =
-    all.length > 0 ? Math.round((all.filter((r) => r.source !== "PLACEHOLDER").length / all.length) * 100) : 100;
+  const autoResolvedCount = all.filter((r) => r.source !== "PLACEHOLDER").length;
+  const aiAutoFillRate = all.length > 0 ? Math.round((autoResolvedCount / all.length) * 100) : 100;
+  const confidenceAvg =
+    all.length > 0 ? Math.round((all.reduce((sum, r) => sum + r.confidence, 0) / all.length) * 100) / 100 : 1;
 
-  const userInputNeeded = all
-    .filter((r) => r.source === "PLACEHOLDER")
+  const placeholders = all.filter((r) => r.source === "PLACEHOLDER");
+  const userInputNeeded = placeholders.map((r) => ({
+    fieldName: r.fieldName,
+    reason: r.critical
+      ? "법적/컴플라이언스 필수 항목(KC/인증 등) — 실제 값 확인이 꼭 필요합니다."
+      : "원본 사이트에서 확인되지 않아 자리표시자로 등록됐습니다.",
+    confidence: r.confidence,
+  }));
+
+  // 필드 하나가 (1 - 0.5)만큼 감점되는데, 그 실제 점수 영향은 전체 필드 수에
+  // 반비례한다(필드가 적을수록 하나의 감점이 더 크다) — "82점, 왜?"에 대한
+  // 실제 계산 근거를 그대로 보여준다.
+  const perFieldWeight = all.length > 0 ? 100 / all.length : 0;
+  const scoreBreakdown = placeholders
     .map((r) => ({
       fieldName: r.fieldName,
-      reason: r.critical
-        ? "법적/컴플라이언스 필수 항목(KC/인증 등) — 실제 값 확인이 꼭 필요합니다."
-        : "원본 사이트에서 확인되지 않아 자리표시자로 등록됐습니다.",
-    }));
+      deduction: Math.round(perFieldWeight * (1 - FIELD_CREDIT.PLACEHOLDER)),
+      reason: r.critical ? "KC/인증 등 필수 컴플라이언스 항목 미확인" : "원본에서 확인 안 됨(자리표시자)",
+    }))
+    .sort((a, b) => b.deduction - a.deduction);
 
   const criticalMissing = all.some((r) => r.critical && r.source === "PLACEHOLDER");
-  const verdict: ComplianceReport["verdict"] = criticalMissing
-    ? "FAIL"
-    : userInputNeeded.length > 0
-      ? "WARNING"
-      : "PASS";
+  const verdict: ComplianceReport["verdict"] = criticalMissing ? "FAIL" : userInputNeeded.length > 0 ? "WARNING" : "PASS";
   const reasons = criticalMissing
     ? ["KC/인증 등 법적 필수 항목이 자리표시자 상태로 등록됐습니다 — Wing 승인 요청 전 반드시 확인하세요."]
     : [];
 
-  return { score, requiredAttributeRate, requiredNoticeRate, aiAutoFillRate, userInputNeeded, verdict, reasons };
+  const approvalReadiness: ComplianceReport["approvalReadiness"] = criticalMissing
+    ? "Low"
+    : score >= 90
+      ? "High"
+      : "Medium";
+
+  return {
+    score,
+    requiredAttributeRate,
+    requiredNoticeRate,
+    aiAutoFillRate,
+    autoResolvedCount,
+    userRequiredCount: userInputNeeded.length,
+    confidenceAvg,
+    userInputNeeded,
+    scoreBreakdown,
+    verdict,
+    reasons,
+    approvalReadiness,
+  };
 }
