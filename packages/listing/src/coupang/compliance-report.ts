@@ -86,7 +86,18 @@ export function buildComplianceReport(
     .map((r) => ({ fieldName: r.fieldName, value: r.value, source: r.source }));
 
   const placeholders = all.filter((r) => r.source === "PLACEHOLDER");
-  const userInputNeeded = placeholders.map((r) => ({
+  // 같은 필드명이 구매옵션(ATTRIBUTE)과 고시정보(NOTICE) 양쪽에 다 필수라서 자리
+  // 표시자로 두 번 잡히는 경우가 흔하다(예: "색상") — resolvedFields와 같은 이유로
+  // 화면 목록(userInputNeeded/scoreBreakdown)에는 필드명당 한 번만 보여준다. score/
+  // rate/카운트 계산(all.length 기반)은 실제 검사 항목 수를 그대로 반영해야 하므로
+  // 여기서 건드리지 않는다 — dedupe는 "표시용 목록"에만 적용한다.
+  const seenPlaceholder = new Set<string>();
+  const dedupedPlaceholders = placeholders.filter((r) => {
+    if (seenPlaceholder.has(r.fieldName)) return false;
+    seenPlaceholder.add(r.fieldName);
+    return true;
+  });
+  const userInputNeeded = dedupedPlaceholders.map((r) => ({
     fieldName: r.fieldName,
     reason: r.critical
       ? "법적/컴플라이언스 필수 항목(KC/인증 등) — 실제 값 확인이 꼭 필요합니다."
@@ -98,7 +109,7 @@ export function buildComplianceReport(
   // 반비례한다(필드가 적을수록 하나의 감점이 더 크다) — "82점, 왜?"에 대한
   // 실제 계산 근거를 그대로 보여준다.
   const perFieldWeight = all.length > 0 ? 100 / all.length : 0;
-  const scoreBreakdown = placeholders
+  const scoreBreakdown = dedupedPlaceholders
     .map((r) => ({
       fieldName: r.fieldName,
       deduction: Math.round(perFieldWeight * (1 - FIELD_CREDIT.PLACEHOLDER)),

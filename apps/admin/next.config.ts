@@ -7,6 +7,29 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: monorepoRoot,
   },
+  // P0-UI Sprint 2 — CPO 지시: "Sensitive 해제/Secret 공유 없이 Production 환경에서
+  // 직접 QA 가능한 구조로 바꿔라." 로컬 dev 서버는 프로덕션 시크릿(Vercel Sensitive
+  // 처리된 쿠팡/Supabase 키)에 구조적으로 접근할 수 없다 — `vercel env pull`도 빈
+  // 문자열만 내려준다(의도된 동작). 로컬 dev 서버가 렌더링하는 페이지/컴포넌트는
+  // 방금 수정한 최신 소스 그대로 쓰되, API 호출만 프로덕션으로 우회시켜서 실제
+  // 쿠팡/Supabase 응답으로 화면을 검증한다. QA_PROXY_TO_PROD=1일 때만 켜진다 —
+  // 기본값(꺼짐)에서는 평소처럼 로컬 API 라우트를 그대로 쓴다. 프로덕션 배포본에는
+  // 이 env var가 없으므로 배포 후에는 항상 비활성 상태다.
+  async rewrites() {
+    if (process.env.QA_PROXY_TO_PROD !== "1") return [];
+    // beforeFiles여야 한다 — 평범한 배열(afterFiles와 동일)은 파일시스템에 이미
+    // 존재하는 로컬 API 라우트가 먼저 매칭돼버려서 절대 이 rewrite까지 오지 않는다.
+    return {
+      beforeFiles: [
+        {
+          source: "/api/:path*",
+          destination: "https://commerce-platform-mocha.vercel.app/api/:path*",
+        },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
   // 네이티브 바이너리/런타임 리소스를 파일시스템에서 직접 읽는 패키지들은
   // 번들링하면 경로가 깨지므로(webpack/turbopack 가상 경로) 번들 대상에서 제외한다.
   serverExternalPackages: [
