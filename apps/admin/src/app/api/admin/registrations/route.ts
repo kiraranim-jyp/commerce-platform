@@ -12,6 +12,8 @@ export interface RegistrationAttemptRecord {
   external_product_id: string | null;
   payload: unknown;
   response: unknown;
+  compliance_score: number | null;
+  compliance_report: unknown;
   created_at: string;
 }
 

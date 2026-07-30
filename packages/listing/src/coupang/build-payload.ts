@@ -156,6 +156,9 @@ export interface CoupangPayload {
   items: CoupangItem[];
   /** 공식 필드가 아니다 — 환율 추정가인지 CartPilot UI가 표시하기 위한 참고 필드. */
   priceIsEstimate: boolean;
+  /** 공식 필드가 아니다 — Sprint B Compliance Report(0~100점, "사용자 입력 필요"
+   * 목록)를 만드는 재료. items[]가 여러 개(옵션별)면 전부 합쳐서 담는다. */
+  complianceFieldResults: ComplianceFieldResult[];
 }
 
 function formatCoupangDateTime(date: Date): string {
@@ -233,22 +236,32 @@ export interface CoupangCategoryMeta {
 
 const NOTICE_DEFAULT_CONTENT = "상세페이지 참조";
 
-/** 쿠팡 구매옵션 이름(예: "패션의류/잡화 사이즈", "색상")과 원본 사이트 옵션 그룹명
- * (예: "Size", "Colour", "색상")을 동의어로 느슨하게 매칭한다 — 플랫폼마다 옵션
- * 이름이 전부 달라서(P0-2 조사) 정확히 일치하는 경우가 드물다. */
+/** 쿠팡 구매옵션/고시정보 이름(예: "패션의류/잡화 사이즈", "색상", "재질")과 원본
+ * 데이터(옵션 그룹명 또는 CanonicalProduct 필드)를 동의어로 느슨하게 매칭한다 —
+ * 플랫폼마다 이름이 전부 달라서(P0-2 조사) 정확히 일치하는 경우가 드물다. */
 const SIZE_SYNONYMS = ["사이즈", "size"];
 const COLOR_SYNONYMS = ["색상", "컬러", "color", "colour"];
+const MATERIAL_SYNONYMS = ["재질", "소재", "material"];
+const COUNTRY_SYNONYMS = ["제조국", "원산지", "country"];
+/** KC 인증정보처럼 법적/컴플라이언스 성격이 강한 필드 — 플레이스홀더로 채워지면
+ * Compliance Report가 다른 필드보다 무겁게(FAIL 수준으로) 취급해야 한다. */
+const COMPLIANCE_CRITICAL_SYNONYMS = ["kc", "인증"];
 
-function matchOptionValueForAttribute(
-  attributeTypeName: string,
+function isComplianceCritical(fieldName: string): boolean {
+  const lower = fieldName.toLowerCase();
+  return COMPLIANCE_CRITICAL_SYNONYMS.some((s) => lower.includes(s));
+}
+
+function matchOptionValue(
+  fieldName: string,
   optionGroups: CanonicalProductOptionGroup[],
   variant: CanonicalProductVariant | undefined,
 ): string | undefined {
   if (!variant) return undefined;
-  const lowerAttr = attributeTypeName.toLowerCase();
-  const synonyms = SIZE_SYNONYMS.some((s) => lowerAttr.includes(s))
+  const lower = fieldName.toLowerCase();
+  const synonyms = SIZE_SYNONYMS.some((s) => lower.includes(s))
     ? SIZE_SYNONYMS
-    : COLOR_SYNONYMS.some((s) => lowerAttr.includes(s))
+    : COLOR_SYNONYMS.some((s) => lower.includes(s))
       ? COLOR_SYNONYMS
       : null;
   if (!synonyms) return undefined;
@@ -256,41 +269,105 @@ function matchOptionValueForAttribute(
   return matchedGroup ? variant.optionValues[matchedGroup.name] : undefined;
 }
 
+/** CanonicalProduct.material/countryOfOrigin이 실제로 채워져 있을 때만(크롤러가
+ * 못 뽑아오면 거의 항상 빈 문자열이다 — 대부분 여전히 플레이스홀더로 남는다는
+ * 뜻) "재질"/"제조국" 계열 필드에 실제 값을 준다. */
+function matchProductField(
+  fieldName: string,
+  productFields: { material?: string; countryOfOrigin?: string },
+): string | undefined {
+  const lower = fieldName.toLowerCase();
+  if (MATERIAL_SYNONYMS.some((s) => lower.includes(s)) && productFields.material) {
+    return productFields.material;
+  }
+  if (COUNTRY_SYNONYMS.some((s) => lower.includes(s)) && productFields.countryOfOrigin) {
+    return productFields.countryOfOrigin;
+  }
+  return undefined;
+}
+
+/** 값 하나가 어디서 왔는지 — Compliance Report(Sprint B)가 이 출처로 점수를 매긴다.
+ * OPTION_MATCH/PRODUCT_FIELD/KNOWN_VALUE/DETERMINISTIC은 전부 "실제 근거가 있는
+ * 값"이고, PLACEHOLDER만 "지어내지 않기 위해 넣은 자리표시자"다. */
+export type ComplianceFieldSource = "OPTION_MATCH" | "PRODUCT_FIELD" | "KNOWN_VALUE" | "DETERMINISTIC" | "PLACEHOLDER";
+
+export interface ComplianceFieldResult {
+  fieldName: string;
+  value: string;
+  source: ComplianceFieldSource;
+  /** KC/인증 관련이라 플레이스홀더면 특히 중요하게(FAIL 수준으로) 취급해야 하는지. */
+  critical: boolean;
+  /** buildComplianceReport가 requiredAttributeRate/requiredNoticeRate를 나눠
+   * 계산할 수 있도록 구매옵션(attribute)인지 고시정보(notice)인지 표시한다. */
+  kind: "ATTRIBUTE" | "NOTICE";
+}
+
 /** 카테고리별 필수 고시정보(notices)/구매옵션(attributes)을 채운다. 실제 값을 알 수
  * 없는 필드(제조국/인증사항 등)는 추측해서 지어내지 않고 쿠팡이 넓게 허용하는
  * "상세페이지 참조"를 쓴다 — 연락처처럼 CartPilot이 실제로 갖고 있는 값은 그대로
  * 채운다. noticeCategories가 여러 개면 필수 항목이 가장 적은(=충족하기 가장
  * 단순한) 카테고리를 고른다 — 특정 카테고리를 강제로 골라야 할 근거가 없다.
- * attributes는 카테고리마다 이름이 다르므로: 원본 옵션(사이즈/색상)과 매칭되면
- * 실제 옵션 값을 쓰고, 숫자 타입(dataType === "NUMBER")은 안전하게 "1"로,
- * 나머지 필수 텍스트 필드는 NOTICE_DEFAULT_CONTENT로 채운다. */
+ * 채운 값마다 출처(attributeResults/noticeResults)도 함께 반환한다 — Compliance
+ * Report가 "이 값이 진짜인지 자리표시자인지"를 판단하는 데 쓴다. */
 export function buildCoupangCompliance(
   categoryMeta: CoupangCategoryMeta | null | undefined,
-  context: { productName: string; contactNumber: string },
+  context: { productName: string; contactNumber: string; material?: string; countryOfOrigin?: string },
   variantContext: { optionGroups: CanonicalProductOptionGroup[]; variant?: CanonicalProductVariant } = {
     optionGroups: [],
   },
-): { attributes: CoupangItemAttribute[]; notices: CoupangItemNotice[] } {
-  if (!categoryMeta) return { attributes: [], notices: [] };
+): {
+  attributes: CoupangItemAttribute[];
+  notices: CoupangItemNotice[];
+  attributeResults: ComplianceFieldResult[];
+  noticeResults: ComplianceFieldResult[];
+} {
+  if (!categoryMeta) return { attributes: [], notices: [], attributeResults: [], noticeResults: [] };
 
-  const attributes: CoupangItemAttribute[] = categoryMeta.attributes
+  const attributeResults: ComplianceFieldResult[] = categoryMeta.attributes
     .filter((attr) => attr.required === "MANDATORY")
     .map((attr) => {
-      const matchedOptionValue = matchOptionValueForAttribute(
-        attr.attributeTypeName,
-        variantContext.optionGroups,
-        variantContext.variant,
-      );
-      if (matchedOptionValue) {
-        return { attributeTypeName: attr.attributeTypeName, attributeValueName: matchedOptionValue };
+      const optionValue = matchOptionValue(attr.attributeTypeName, variantContext.optionGroups, variantContext.variant);
+      if (optionValue) {
+        return {
+          fieldName: attr.attributeTypeName,
+          value: optionValue,
+          source: "OPTION_MATCH" as const,
+          critical: false,
+          kind: "ATTRIBUTE" as const,
+        };
+      }
+      const productFieldValue = matchProductField(attr.attributeTypeName, context);
+      if (productFieldValue) {
+        return {
+          fieldName: attr.attributeTypeName,
+          value: productFieldValue,
+          source: "PRODUCT_FIELD" as const,
+          critical: false,
+          kind: "ATTRIBUTE" as const,
+        };
       }
       if (attr.dataType === "NUMBER") {
         const unit = attr.basicUnit && attr.basicUnit !== "없음" ? attr.basicUnit : "";
-        return { attributeTypeName: attr.attributeTypeName, attributeValueName: `1${unit}` };
+        return {
+          fieldName: attr.attributeTypeName,
+          value: `1${unit}`,
+          source: "DETERMINISTIC" as const,
+          critical: false,
+          kind: "ATTRIBUTE" as const,
+        };
       }
-      const value = attr.inputValues[0] ?? NOTICE_DEFAULT_CONTENT;
-      return { attributeTypeName: attr.attributeTypeName, attributeValueName: value };
+      return {
+        fieldName: attr.attributeTypeName,
+        value: attr.inputValues[0] ?? NOTICE_DEFAULT_CONTENT,
+        source: attr.inputValues[0] ? ("DETERMINISTIC" as const) : ("PLACEHOLDER" as const),
+        critical: isComplianceCritical(attr.attributeTypeName),
+        kind: "ATTRIBUTE" as const,
+      };
     });
+  const attributes: CoupangItemAttribute[] = attributeResults.map((r) => ({
+    attributeTypeName: r.fieldName,
+    attributeValueName: r.value,
+  }));
 
   const simplestNoticeCategory = [...categoryMeta.noticeCategories].sort(
     (a, b) => a.noticeCategoryDetailNames.length - b.noticeCategoryDetailNames.length,
@@ -303,17 +380,48 @@ export function buildCoupangCompliance(
     "A/S 책임자와 전화번호": context.contactNumber,
   };
 
-  const notices: CoupangItemNotice[] = simplestNoticeCategory
+  const noticeResults: ComplianceFieldResult[] = simplestNoticeCategory
     ? simplestNoticeCategory.noticeCategoryDetailNames
         .filter((detail) => detail.required === "MANDATORY")
-        .map((detail) => ({
-          noticeCategoryName: simplestNoticeCategory.noticeCategoryName,
-          noticeCategoryDetailName: detail.noticeCategoryDetailName,
-          content: KNOWN_NOTICE_VALUES[detail.noticeCategoryDetailName] ?? NOTICE_DEFAULT_CONTENT,
-        }))
+        .map((detail) => {
+          const known = KNOWN_NOTICE_VALUES[detail.noticeCategoryDetailName];
+          if (known) {
+            return {
+              fieldName: detail.noticeCategoryDetailName,
+              value: known,
+              source: "KNOWN_VALUE" as const,
+              critical: false,
+              kind: "NOTICE" as const,
+            };
+          }
+          const productFieldValue = matchProductField(detail.noticeCategoryDetailName, context);
+          if (productFieldValue) {
+            return {
+              fieldName: detail.noticeCategoryDetailName,
+              value: productFieldValue,
+              source: "PRODUCT_FIELD" as const,
+              critical: false,
+              kind: "NOTICE" as const,
+            };
+          }
+          return {
+            fieldName: detail.noticeCategoryDetailName,
+            value: NOTICE_DEFAULT_CONTENT,
+            source: "PLACEHOLDER" as const,
+            critical: isComplianceCritical(detail.noticeCategoryDetailName),
+            kind: "NOTICE" as const,
+          };
+        })
+    : [];
+  const notices: CoupangItemNotice[] = simplestNoticeCategory
+    ? noticeResults.map((r) => ({
+        noticeCategoryName: simplestNoticeCategory.noticeCategoryName,
+        noticeCategoryDetailName: r.fieldName,
+        content: r.value,
+      }))
     : [];
 
-  return { attributes, notices };
+  return { attributes, notices, attributeResults, noticeResults };
 }
 
 /** item 하나(옵션 조합 하나)를 만든다 — variant가 있으면 그 옵션 조합 전용
@@ -328,12 +436,17 @@ function buildCoupangItem(args: {
   contents: CoupangItemContent[];
   optionGroups: CanonicalProductOptionGroup[];
   variant?: CanonicalProductVariant;
-}): CoupangItem {
+}): { item: CoupangItem; complianceResults: ComplianceFieldResult[] } {
   const { product, listing, sellerConfig, categoryMeta, images, contents, optionGroups, variant } = args;
 
   const compliance = buildCoupangCompliance(
     categoryMeta,
-    { productName: listing.title, contactNumber: sellerConfig.companyContactNumber },
+    {
+      productName: listing.title,
+      contactNumber: sellerConfig.companyContactNumber,
+      material: product.material.value || undefined,
+      countryOfOrigin: product.countryOfOrigin.value || undefined,
+    },
     { optionGroups, variant },
   );
 
@@ -346,7 +459,7 @@ function buildCoupangItem(args: {
     ? convertToKrw(variant.price.amount, variant.price.currency).amountKrw
     : listing.priceKrw;
 
-  return {
+  const item: CoupangItem = {
     itemName,
     originalPrice: priceKrw,
     salePrice: priceKrw,
@@ -379,6 +492,11 @@ function buildCoupangItem(args: {
     notices: compliance.notices,
     contents,
     searchTags: listing.options,
+  };
+
+  return {
+    item,
+    complianceResults: [...compliance.attributeResults, ...compliance.noticeResults],
   };
 }
 
@@ -438,7 +556,7 @@ export function buildCoupangPayload(
   // 상품) 기존처럼 단일 item 하나만 만든다.
   const variantSlots: (CanonicalProductVariant | undefined)[] =
     product.variants.length > 0 ? product.variants : [undefined];
-  const items: CoupangItem[] = variantSlots.map((variant) =>
+  const built = variantSlots.map((variant) =>
     buildCoupangItem({
       product,
       listing,
@@ -450,6 +568,11 @@ export function buildCoupangPayload(
       variant,
     }),
   );
+  const items: CoupangItem[] = built.map((b) => b.item);
+  // Sprint B: register 라우트가 Compliance Report(0~100점 + "사용자 입력 필요"
+  // 목록)를 만드는 데 쓴다 — 공식 쿠팡 스키마 필드가 아니라 CartPilot 전용
+  // 참고 필드다(displayCategoryPath와 같은 성격).
+  const complianceFieldResults: ComplianceFieldResult[] = built.flatMap((b) => b.complianceResults);
 
   return {
     displayCategoryCode,
@@ -481,5 +604,6 @@ export function buildCoupangPayload(
     requested: false,
     priceIsEstimate: listing.priceIsEstimate,
     items,
+    complianceFieldResults,
   };
 }

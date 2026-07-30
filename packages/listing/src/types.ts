@@ -92,6 +92,11 @@ export interface ListingResult {
   /** 인증 확인 → 설정 확인 → 카테고리 확인 → 이미지 확인 → API 호출 → 완료 순서의
    * 단계별 로그 — LIVE 등록에서만 채워진다. */
   steps?: RegistrationStepLog[];
+  /** Sprint B(Product Compliance Engine) — "등록됐다"와 별개로 "얼마나 실제
+   * 판매/승인 가능한 수준인가"를 보여준다. 지금은 쿠팡만 채운다(coupang/
+   * compliance-report.ts의 ComplianceReport) — payload와 같은 이유로 unknown:
+   * 플랫폼마다 컴플라이언스 항목이 다를 수 있어 여기서 구체 타입을 강제하지 않는다. */
+  complianceReport?: unknown;
 }
 
 /** PM 스펙의 VALID/WARNING/ERROR — ListingModel.validations의 PASS/WARNING/ERROR와

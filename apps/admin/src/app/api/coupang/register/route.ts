@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct, ErrorCode } from "@commerce/shared";
-import { buildCoupangPayload, resolveVerifiedCategoryCode, type CoupangPayload } from "@commerce/listing";
+import {
+  buildComplianceReport,
+  buildCoupangPayload,
+  resolveVerifiedCategoryCode,
+  type ComplianceReport,
+  type CoupangPayload,
+} from "@commerce/listing";
 import type { ListingResult, RegistrationStepLog } from "@commerce/listing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getCoupangCredentials, getVendorUserId } from "../_lib/env";
@@ -26,6 +32,7 @@ async function logRegistrationAttempt(result: ListingResult, apiResponseBody?: u
   const supabase = getSupabaseAdmin();
   if (!supabase) return;
   const payload = result.payload as CoupangPayload | undefined;
+  const complianceReport = result.complianceReport as ComplianceReport | undefined;
   const { error } = await supabase.from("registration_attempts").insert({
     platform: result.platform,
     status: result.status,
@@ -36,6 +43,8 @@ async function logRegistrationAttempt(result: ListingResult, apiResponseBody?: u
     external_product_id: result.externalProductId ?? null,
     payload: payload ?? null,
     response: apiResponseBody ?? null,
+    compliance_score: complianceReport?.score ?? null,
+    compliance_report: complianceReport ?? null,
   });
   if (error) console.warn("[register] registration_attempts 기록 실패:", error.message);
 }
@@ -103,11 +112,19 @@ export async function POST(request: Request) {
   const logStep = (step: string, status: RegistrationStepLog["status"], message: string) => {
     steps.push({ step, status, message, timestamp: new Date().toISOString() });
   };
+  // payload가 만들어지기 전(인증/배송 프로필 확인 단계)에는 채울 게 없어 undefined다
+  // — payload를 만든 직후 여기 재할당한다. withMeta는 그 뒤에 호출되는 모든 결과에
+  // 자동으로 실린다(클로저라 재할당 시점 이후 호출부터 최신값을 본다). const로
+  // 바꾸면 payload 이전에 return하는 분기(인증 실패 등)에서 TDZ 에러가 난다 —
+  // eslint의 단순 "대입 1번=const" 판정이 이 케이스엔 안 맞는다.
+  // eslint-disable-next-line prefer-const
+  let complianceReport: ComplianceReport | undefined;
   const withMeta = (result: ListingResult): ListingResult => ({
     ...result,
     traceId,
     durationMs: Date.now() - startedAt,
     steps,
+    complianceReport,
   });
 
   const body = (await request.json().catch(() => null)) as {
@@ -234,6 +251,22 @@ export async function POST(request: Request) {
     categoryMeta,
     resolvedBrand,
   });
+
+  // Sprint B(Product Compliance Engine) — "등록됐다"가 아니라 "얼마나 실제
+  // 판매/승인 가능한 수준으로 등록됐는가"를 0~100점 + "사용자 입력 필요" 목록으로
+  // 계산한다. 등록 성공/실패와 무관하게(실패해도) 계산해서 남긴다 — 실패 원인
+  // 진단에도 쓸 수 있다.
+  const attributeResults = payload.complianceFieldResults.filter((r) => r.kind === "ATTRIBUTE");
+  const noticeResults = payload.complianceFieldResults.filter((r) => r.kind === "NOTICE");
+  complianceReport = buildComplianceReport(attributeResults, noticeResults);
+  logStep(
+    "Compliance 검증",
+    complianceReport.verdict === "FAIL" ? "failed" : complianceReport.verdict === "WARNING" ? "skipped" : "success",
+    `Compliance Score ${complianceReport.score}점 (필수옵션 ${complianceReport.requiredAttributeRate}%, 고시정보 ${complianceReport.requiredNoticeRate}%, 자동입력 ${complianceReport.aiAutoFillRate}%)` +
+      (complianceReport.userInputNeeded.length > 0
+        ? ` — 확인 필요: ${complianceReport.userInputNeeded.map((f) => f.fieldName).join(", ")}`
+        : ""),
+  );
 
   const missing = missingSellerConfigFields(payload);
   if (missing.length > 0) {
