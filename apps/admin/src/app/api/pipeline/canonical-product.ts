@@ -5,6 +5,7 @@ import {
   extractCountryOfOrigin,
   extractManufacturer,
   extractMaterial,
+  resolveBrandName,
 } from "@commerce/crawler";
 import type { ExtractedProductData, ProductDataSource } from "@commerce/crawler";
 import type {
@@ -99,11 +100,23 @@ export function buildCanonicalProduct(
   const resolvedAge = extractAge(productData.description);
   const resolvedManufacturer = extractManufacturer(productData.description);
   const resolvedCareInstructions = extractCareInstructions(productData.description);
+  // P1-1(Brand Resolver) — 크롤러가 뽑아온 브랜드 문자열에 시즌/세일 문구가
+  // 섞여 오는 경우(실측: "Bobo Choses SS26 Baby 50% Off Sale")가 있어 정제한다.
+  // 규칙에 안 걸리면 원본 그대로 — 지어내지 않는다.
+  const brandResolution = resolveBrandName(productData.brand);
 
   return {
     sourceUrl,
     title: field(productData.title ?? sourceUrl, "title", sources),
-    brand: field(productData.brand ?? "", "brand", sources),
+    brand: field(brandResolution?.cleaned ?? productData.brand ?? "", "brand", sources),
+    brandResolution:
+      brandResolution?.changed && brandResolution.confidence
+        ? {
+            raw: brandResolution.raw,
+            ruleApplied: brandResolution.ruleApplied,
+            confidence: brandResolution.confidence,
+          }
+        : undefined,
     price: field(
       productData.price ?? { amount: 0, currency: "" },
       "price",

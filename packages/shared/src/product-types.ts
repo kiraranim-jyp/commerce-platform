@@ -113,6 +113,15 @@ export interface CanonicalProduct {
   sourceUrl: string;
   title: ProvenanceField<string>;
   brand: ProvenanceField<string>;
+  /** P1-1(Brand Resolver) — brand.value가 이미 마케팅 문구를 제거한 정제값일 때,
+   * 원본 문자열과 어떤 규칙이 적용됐는지, 정제 신뢰도를 같이 보관한다(Explainable
+   * Resolver — CPO 요구사항). 등록 시점(register/route.ts)에 "Raw → Rule Applied →
+   * Cleaned → Brand Search API → Confidence"를 전부 로그로 남기려면 이 시점엔 이미
+   * 정제 전 원본이 사라져 있어서(brand.value에는 정제값만 남음) 필요하다. 정제로
+   * 값이 바뀌지 않았으면 없다(원본=정제값이라 보여줄 이유가 없다). optional로 둬서
+   * 이 필드를 모르는 기존 CanonicalProduct 생성 코드(테스트 스크립트 등)를 깨지
+   * 않는다. */
+  brandResolution?: { raw: string; ruleApplied: string[]; confidence: "HIGH" | "LOW" };
   price: ProvenanceField<{ amount: number; currency: string }>;
   /** 사용자가 직접 입력한 "실제 판매가"(KRW) — price(원본 통화 원가)를 덮어쓰지
    * 않는다. 있으면 어댑터가 환율 변환값 대신 이 값을 쓴다. 없으면(아직 입력 전)

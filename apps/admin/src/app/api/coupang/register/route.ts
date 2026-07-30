@@ -45,6 +45,7 @@ async function logRegistrationAttempt(result: ListingResult, apiResponseBody?: u
     response: apiResponseBody ?? null,
     compliance_score: complianceReport?.score ?? null,
     compliance_report: complianceReport ?? null,
+    brand_resolution: result.brandResolution ?? null,
   });
   if (error) console.warn("[register] registration_attempts 기록 실패:", error.message);
 }
@@ -119,12 +120,27 @@ export async function POST(request: Request) {
   // eslint의 단순 "대입 1번=const" 판정이 이 케이스엔 안 맞는다.
   // eslint-disable-next-line prefer-const
   let complianceReport: ComplianceReport | undefined;
+  // P1-1(Brand Resolver) 검증 요구사항 — 관리자 화면/DB에서 Raw/Cleaned/Rule/
+  // Confidence/Brand API 매칭 결과를 볼 수 있게 한다. complianceReport와 같은
+  // 패턴(브랜드 조회 단계 이후에 재할당, withMeta가 그 이후 모든 결과에 자동으로 싣는다).
+  // eslint-disable-next-line prefer-const
+  let brandResolutionMeta:
+    | {
+        raw: string;
+        cleaned: string;
+        ruleApplied: string[];
+        confidence: "HIGH" | "LOW";
+        brandId: string | null;
+        brandNameKr: string | null;
+      }
+    | undefined;
   const withMeta = (result: ListingResult): ListingResult => ({
     ...result,
     traceId,
     durationMs: Date.now() - startedAt,
     steps,
     complianceReport,
+    brandResolution: brandResolutionMeta,
   });
 
   const body = (await request.json().catch(() => null)) as {
@@ -226,12 +242,40 @@ export async function POST(request: Request) {
   // 브랜드명 문자열만 보내면 실제 쿠팡 API가 "브랜드 ID가 필요합니다"로 거부한다
   // (실등록 시도로 확인) — Wing에 등록된 brandId를 Brand Search API로 찾아야 한다.
   const resolvedBrand = listing.brand ? await resolveBrand(credentials, listing.brand) : null;
-  logStep(
-    "브랜드 조회",
-    resolvedBrand ? "success" : "skipped",
+  // P1-1(Brand Resolver) 검증 요구사항 — "Raw → Rule Applied → Cleaned → Brand
+  // Search API → Confidence"를 한 로그에서 추적할 수 있게(Explainable) 요청했다.
+  // product.brandResolution은 정제로 값이 실제로 바뀐 경우에만 있다
+  // (canonical-product.ts) — 안 바뀐 대다수 케이스는 "Raw" 줄 없이 Brand Search
+  // 결과만 보여준다.
+  const brandLogLines = [
+    product.brandResolution
+      ? `Raw "${product.brandResolution.raw}" → [${product.brandResolution.ruleApplied.join(", ")}] → Cleaned "${listing.brand}" (신뢰도: ${product.brandResolution.confidence})`
+      : null,
     resolvedBrand
-      ? `"${resolvedBrand.brandName}"(${resolvedBrand.brandId}) 매칭`
-      : "브랜드 미기재 또는 매칭 실패 — brandId 없이 시도",
+      ? `Brand API: "${resolvedBrand.brandName}"(${resolvedBrand.brandId}) 매칭`
+      : "Brand API: 브랜드 미기재 또는 매칭 실패 — brandId 없이 시도",
+  ].filter((line): line is string => line !== null);
+  logStep("브랜드 조회", resolvedBrand ? "success" : "skipped", brandLogLines.join(" / "));
+  // 운영 KPI 요구사항 — 이번 시도의 Brand Resolver 결과를 4개 카테고리로
+  // 태깅해서 남긴다(Raw/Cleaned/Brand API Match/User Required). 이 값 자체를
+  // 집계하는 대시보드는 아직 없다 — registration_attempts.steps에 매 시도마다
+  // 쌓이므로, 나중에 "select count(*) ... where message like '%CLEANED%'"류
+  // 쿼리로 누적 집계할 수 있는 최소 데이터만 지금 만들어 둔다.
+  // 정제가 실제로 일어나지 않은 경우(product.brandResolution 없음)도 관리자
+  // 화면/DB에는 남긴다 — "이 등록 건은 브랜드가 원본 그대로 쓰였다"는 것 자체가
+  // 유의미한 정보다(정제 안 됨 = 원본이 이미 깨끗했다는 뜻).
+  brandResolutionMeta = {
+    raw: product.brandResolution?.raw ?? listing.brand ?? "",
+    cleaned: listing.brand ?? "",
+    ruleApplied: product.brandResolution?.ruleApplied ?? [],
+    confidence: product.brandResolution?.confidence ?? "HIGH",
+    brandId: resolvedBrand?.brandId ?? null,
+    brandNameKr: resolvedBrand?.brandName ?? null,
+  };
+  logStep(
+    "Brand Resolver KPI",
+    "success",
+    `RAW=${product.brand.value ? 1 : 0} / CLEANED=${product.brandResolution ? 1 : 0} / BRAND_API_MATCH=${resolvedBrand ? 1 : 0} / USER_REQUIRED=${resolvedBrand ? 0 : 1}`,
   );
 
   const payload = buildCoupangPayload(product, listing, {

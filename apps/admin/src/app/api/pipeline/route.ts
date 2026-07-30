@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { universalExtract } from "@commerce/crawler";
+import { resolveBrandName, universalExtract } from "@commerce/crawler";
 import {
   CompositeClassifierProvider,
   GeminiClassifierProvider,
@@ -257,6 +257,23 @@ export async function POST(request: Request) {
           extraction.productDataSources,
           items,
         );
+
+        // P1-1(Brand Resolver) 검증 요구사항 — CPO가 "Raw → Rule Applied →
+        // Cleaned → Confidence"를 전부 로그로 남기라고(Explainable) 명시적으로
+        // 요청했다. 여기서는 Brand Search API를 뺀 나머지 단계만 남긴다 — Brand
+        // Search API 매칭은 등록 시점에만 알 수 있어 register/route.ts의
+        // RegistrationStepLog에 별도로 남는다. 정제로 값이 바뀐 경우에만 로그를
+        // 남긴다 — 안 바뀐 대다수 케이스까지 매번 로그를 채우지 않는다.
+        const brandResolution = resolveBrandName(extraction.productData.brand);
+        if (brandResolution?.changed) {
+          sendProgress({
+            step: "브랜드 정제",
+            status: "success",
+            message: `"${brandResolution.raw}" → [${brandResolution.ruleApplied.join(", ")}] → "${brandResolution.cleaned}" (신뢰도: ${brandResolution.confidence})`,
+            percent: 99,
+            timestamp: new Date().toISOString(),
+          });
+        }
 
         const response: PipelineResponse = {
           metadata: result.metadata,

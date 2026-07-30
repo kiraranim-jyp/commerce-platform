@@ -97,6 +97,10 @@ export interface ListingResult {
    * compliance-report.ts의 ComplianceReport) — payload와 같은 이유로 unknown:
    * 플랫폼마다 컴플라이언스 항목이 다를 수 있어 여기서 구체 타입을 강제하지 않는다. */
   complianceReport?: unknown;
+  /** P1-1(Brand Resolver) 검증 요구사항 — 원본/정제/적용규칙/신뢰도/Brand Search
+   * API 매칭 결과를 등록 이력(registration_attempts)과 관리자 화면에서 볼 수
+   * 있게 한다. 지금은 쿠팡만 채운다. */
+  brandResolution?: unknown;
 }
 
 /** PM 스펙의 VALID/WARNING/ERROR — ListingModel.validations의 PASS/WARNING/ERROR와

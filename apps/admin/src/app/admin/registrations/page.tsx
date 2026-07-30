@@ -5,6 +5,17 @@ import Link from "next/link";
 import type { ComplianceReport } from "@commerce/listing";
 import type { RegistrationAttemptRecord } from "@/app/api/admin/registrations/route";
 
+/** register/route.ts의 brandResolutionMeta와 같은 모양 — DB에는 jsonb로 통째로
+ * 저장되므로(brand_resolution 컬럼) 여기서만 타입을 붙인다. */
+interface BrandResolutionRecord {
+  raw: string;
+  cleaned: string;
+  ruleApplied: string[];
+  confidence: "HIGH" | "LOW";
+  brandId: string | null;
+  brandNameKr: string | null;
+}
+
 function complianceScoreClass(score: number | null): string {
   if (score == null) return "text-text-tertiary";
   if (score >= 90) return "text-success";
@@ -95,6 +106,7 @@ export default function AdminRegistrationsPage() {
               <th className="px-3 py-2">상품명</th>
               <th className="px-3 py-2">등록번호</th>
               <th className="px-3 py-2">Compliance</th>
+              <th className="px-3 py-2">Brand</th>
               <th className="px-3 py-2">ErrorCode</th>
               <th className="px-3 py-2">소요시간</th>
             </tr>
@@ -102,6 +114,7 @@ export default function AdminRegistrationsPage() {
           <tbody>
             {registrations.map((r) => {
               const compliance = r.compliance_report as ComplianceReport | null;
+              const brandResolution = r.brand_resolution as BrandResolutionRecord | null;
               return (
               <Fragment key={r.id}>
                 <tr
@@ -115,6 +128,9 @@ export default function AdminRegistrationsPage() {
                   <td className={`px-3 py-2 font-medium ${complianceScoreClass(r.compliance_score)}`}>
                     {r.compliance_score != null ? `${r.compliance_score}점` : "—"}
                   </td>
+                  <td className="max-w-[10rem] truncate px-3 py-2 text-text-secondary">
+                    {brandResolution?.cleaned ?? "—"}
+                  </td>
                   <td className="px-3 py-2 font-mono font-medium text-error">{r.error_code ?? "—"}</td>
                   <td className="px-3 py-2 text-text-secondary">
                     {r.duration_ms != null ? `${(r.duration_ms / 1000).toFixed(1)}초` : "—"}
@@ -122,7 +138,7 @@ export default function AdminRegistrationsPage() {
                 </tr>
                 {expandedId === r.id && (
                   <tr className="border-t border-border bg-background">
-                    <td colSpan={7} className="px-3 py-3">
+                    <td colSpan={8} className="px-3 py-3">
                       <p className="text-xs text-text-secondary">TraceId: {r.trace_id ?? "—"}</p>
                       {compliance && (
                         <div className="mt-2 rounded border border-border bg-surface p-2">
@@ -173,6 +189,44 @@ export default function AdminRegistrationsPage() {
                               ))}
                             </ul>
                           )}
+                        </div>
+                      )}
+                      {brandResolution && (
+                        <div className="mt-2 rounded border border-border bg-surface p-2">
+                          <p className="text-xs font-medium text-text-secondary">Brand Resolver</p>
+                          <p className="mt-1 text-[11px] text-text-secondary">
+                            Raw <span className="font-mono text-text-primary">{brandResolution.raw || "—"}</span>
+                            {" → "}
+                            Cleaned{" "}
+                            <span className="font-mono text-text-primary">{brandResolution.cleaned || "—"}</span>
+                          </p>
+                          <p className="mt-1 text-[11px] text-text-secondary">
+                            Rule Applied{" "}
+                            <span className="font-mono">
+                              {brandResolution.ruleApplied.length > 0
+                                ? brandResolution.ruleApplied.join(", ")
+                                : "(정제 없음)"}
+                            </span>
+                            {" · "}
+                            신뢰도{" "}
+                            <span
+                              className={
+                                brandResolution.confidence === "HIGH" ? "text-success" : "text-warning"
+                              }
+                            >
+                              {brandResolution.confidence}
+                            </span>
+                          </p>
+                          <p className="mt-1 text-[11px] text-text-secondary">
+                            Brand API 매칭{" "}
+                            {brandResolution.brandId ? (
+                              <span className="text-success">
+                                {brandResolution.brandNameKr ?? brandResolution.cleaned} ({brandResolution.brandId})
+                              </span>
+                            ) : (
+                              <span className="text-warning">미매칭 — brandId 없이 등록</span>
+                            )}
+                          </p>
                         </div>
                       )}
                       <div className="mt-2 grid grid-cols-2 gap-3">
