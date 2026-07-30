@@ -2,6 +2,7 @@
 
 import type { CategorySelection } from "@commerce/category";
 import type {
+  ComplianceReport,
   CoupangPayload,
   ListingErrorStep,
   ListingResult,
@@ -11,13 +12,18 @@ import type {
   SmartStorePayload,
 } from "@commerce/listing";
 import { buildRegistrationReport } from "@commerce/listing";
+import type { PlatformId } from "@commerce/shared";
 import type { ValidationResult } from "@commerce/marketplace";
 import { APP_VERSION } from "@/lib/app-version";
+import { CollapsibleSection } from "./CollapsibleSection";
+import { ComplianceBreakdown } from "./ComplianceBreakdown";
 import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
 import { PayloadInspector } from "./PayloadInspector";
 import { PreflightChecklist } from "./PreflightChecklist";
 import { ReadinessScorePanel } from "./ReadinessScorePanel";
 import { SupportInquiryButton } from "./SupportInquiryButton";
+
+const WING_URL = "https://wing.coupang.com";
 
 const STATUS_LABELS: Record<ListingStatus, string> = {
   DRAFT: "상품 준비 중",
@@ -105,6 +111,7 @@ function StepLogList({ steps }: { steps: RegistrationStepLog[] }) {
 }
 
 export function ListingSection({
+  platformId,
   platformLabel,
   status,
   result,
@@ -113,11 +120,12 @@ export function ListingSection({
   category,
   onFixTextField,
   onFixNumberField,
-  onOpenModal,
   onRetry,
   settingsMissing,
   sourceUrl,
+  developerMode,
 }: {
+  platformId: PlatformId;
   platformLabel: string;
   status: ListingStatus;
   result: ListingResult | null;
@@ -129,7 +137,6 @@ export function ListingSection({
   category: CategorySelection;
   onFixTextField?: (field: "countryOfOrigin" | "returnPolicy", value: string) => void;
   onFixNumberField?: (field: "shippingFee" | "stockQuantity", value: number) => void;
-  onOpenModal: () => void;
   onRetry: () => void;
   /** 쿠팡 탭에서만 넘어온다 — 판매자 계정 설정(출고지/반품지/택배사 등) 중 비어있는
    * 한글 라벨 목록. PreflightChecklist가 상품 validation과 합쳐서 하나의 목록으로
@@ -137,54 +144,29 @@ export function ListingSection({
   settingsMissing?: string[];
   /** 문의하기 진단 번들의 URL/Site 필드용 — 원본 상품 URL. */
   sourceUrl?: string;
+  /** P0-UI Epic 1/4 — Payload JSON 등 개발자용 상세는 이 값이 true일 때만 보여준다. */
+  developerMode: boolean;
 }) {
+  // P0-UI Epic 2(등록 준비 카드)가 등록 버튼의 유일한 위치가 됐다 — 여기서는
+  // 상세 체크리스트만 참고용으로 보여주고(기본 접힘, 카드가 이미 요약을 보여주므로),
+  // 버튼은 그리지 않는다.
   if (status === "DRAFT" || status === "READY") {
     if (readiness && onFixTextField && onFixNumberField) {
       return (
-        <div className="space-y-3">
+        <CollapsibleSection title="상세 체크리스트">
           <ReadinessScorePanel
             report={readiness}
             onFixTextField={onFixTextField}
             onFixNumberField={onFixNumberField}
           />
-          {status === "READY" ? (
-            <button
-              type="button"
-              onClick={onOpenModal}
-              className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
-            >
-              {platformLabel}에 등록
-            </button>
-          ) : (
-            <p className="rounded-md bg-warning-soft px-3 py-2 text-xs text-warning">
-              누락된 정보를 모두 채우면 등록을 시작할 수 있습니다.
-            </p>
-          )}
-        </div>
+        </CollapsibleSection>
       );
     }
 
     return (
-      <div className="space-y-3">
+      <CollapsibleSection title="상세 체크리스트">
         <PreflightChecklist validations={validations} category={category} settingsMissing={settingsMissing} />
-        {settingsMissing && settingsMissing.length > 0 && (
-          <a
-            href="/settings"
-            className="inline-block rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-background"
-          >
-            설정하러 가기
-          </a>
-        )}
-        {status === "READY" && (
-          <button
-            type="button"
-            onClick={onOpenModal}
-            className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
-          >
-            {platformLabel}에 등록
-          </button>
-        )}
-      </div>
+      </CollapsibleSection>
     );
   }
 
@@ -243,9 +225,22 @@ export function ListingSection({
             )}
           </dl>
         )}
-        {result?.steps && result.steps.length > 0 && <StepLogList steps={result.steps} />}
-        {result?.payload != null && (
+        {/* P0-UI Epic 7 — Compliance 점수 숫자 하나 대신 자동 채움/확인 필요 목록을
+         * 그대로 보여준다. register/route.ts가 붙여준 result.complianceReport를 쓴다
+         * (지금은 쿠팡 등록에서만 채워진다 — 다른 플랫폼은 undefined). */}
+        {result?.complianceReport != null && (
           <div className="mt-3">
+            <ComplianceBreakdown report={result.complianceReport as ComplianceReport} />
+          </div>
+        )}
+
+        {developerMode && result?.steps && result.steps.length > 0 && (
+          <CollapsibleSection title="개발 로그">
+            <StepLogList steps={result.steps} />
+          </CollapsibleSection>
+        )}
+        {developerMode && result?.payload != null && (
+          <CollapsibleSection title="Payload (Developer)">
             {isSmartStorePayload(result.payload) ? (
               <PayloadInspector payload={result.payload} />
             ) : isCoupangPayload(result.payload) ? (
@@ -255,15 +250,42 @@ export function ListingSection({
                 {JSON.stringify(result.payload, payloadReplacer, 2)}
               </pre>
             )}
-          </div>
+          </CollapsibleSection>
         )}
-        <button
-          type="button"
-          onClick={onRetry}
-          className="mt-3 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-background"
-        >
-          다시 준비하기
-        </button>
+
+        {/* P0-UI Epic 9 — 등록 후 액션. externalUrl은 아직 쿠팡 register 라우트가
+         * 채워주지 않아서(실제 승인 전 고객용 URL이 없다) 있을 때만 보여준다 —
+         * 확인되지 않은 URL을 지어내서 링크로 걸지 않는다. Wing은 특정 상품
+         * 딥링크를 확실히 알 수 없어 판매자센터 홈으로만 연결한다. */}
+        <div className="mt-3 flex flex-wrap gap-2">
+          {platformId === "coupang" && result?.mode === "LIVE" && (
+            <a
+              href={WING_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-background"
+            >
+              Wing에서 확인
+            </a>
+          )}
+          {result?.externalUrl && (
+            <a
+              href={result.externalUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-background"
+            >
+              상품 바로가기
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={onRetry}
+            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-background"
+          >
+            다시 등록
+          </button>
+        </div>
       </section>
     );
   }
@@ -302,7 +324,11 @@ export function ListingSection({
         <p className="mt-1 text-xs text-text-secondary">
           자동 해결 가능: {result.error.retryable ? "예 — 다시 시도해보세요" : "아니오 — 설정/데이터 확인 필요"}
         </p>
-        {result.steps && result.steps.length > 0 && <StepLogList steps={result.steps} />}
+        {developerMode && result.steps && result.steps.length > 0 && (
+          <CollapsibleSection title="개발 로그">
+            <StepLogList steps={result.steps} />
+          </CollapsibleSection>
+        )}
         {result.error.retryable && (
           <button
             type="button"

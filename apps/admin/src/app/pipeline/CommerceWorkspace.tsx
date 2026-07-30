@@ -22,7 +22,8 @@ import { PLATFORM_ADAPTERS, PLATFORM_ORDER } from "@commerce/marketplace";
 import { AIContentPanel } from "./commerce/AIContentPanel";
 import { BacklogPanel } from "./commerce/BacklogPanel";
 import { CoupangConnectionPanel } from "./commerce/CoupangConnectionPanel";
-import { ImageRoleGrid } from "./commerce/ImageRoleGrid";
+import { ImageGalleryModal } from "./commerce/ImageGalleryModal";
+import { ImageSummaryCard } from "./commerce/ImageSummaryCard";
 import { ListingConfirmationModal } from "./commerce/ListingConfirmationModal";
 import { PlatformPreview } from "./commerce/PlatformPreview";
 import { RegistrationHistoryPanel } from "./commerce/RegistrationHistoryPanel";
@@ -81,6 +82,7 @@ export function CommerceWorkspace({
   onToggleGalleryUsage,
   onToggleDescriptionUsage,
   onToggleExclude,
+  developerMode,
 }: {
   product: CanonicalProduct;
   onUpdateProduct: (updater: (prev: CanonicalProduct) => CanonicalProduct) => void;
@@ -93,7 +95,13 @@ export function CommerceWorkspace({
   onToggleGalleryUsage: (id: string) => void;
   onToggleDescriptionUsage: (id: string) => void;
   onToggleExclude: (id: string) => void;
+  /** P0-UI Epic 1/4 — Payload JSON/개발 로그 등은 이 값이 true일 때만 보여준다. */
+  developerMode: boolean;
 }) {
+  // P0-UI Epic 1 — "이미지" 영역을 대표이미지+장수 요약 카드로 줄이고, 기존
+  // ImageRoleGrid(대표/상품/상세 역할 지정 그리드)는 이 카드를 눌렀을 때만 여는
+  // 모달로 옮긴다. 데이터/핸들러는 전부 이 컴포넌트가 이미 갖고 있던 그대로 재사용한다.
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const setProduct = onUpdateProduct;
   const [tab, setTab] = useState<CommerceTab>("source");
   const [categoryMappings, setCategoryMappings] = useState(INITIAL_CATEGORY_MAPPINGS);
@@ -447,17 +455,11 @@ export function CommerceWorkspace({
 
       {tab === "source" && (
         <>
-          <ImageRoleGrid
+          <ImageSummaryCard
             product={product}
             items={items}
             thumbnails={thumbnails}
-            representativeId={representativeId}
-            excludedIds={excludedIds}
-            onPreview={onPreviewImage}
-            onSetRepresentative={onSetRepresentative}
-            onToggleGalleryUsage={onToggleGalleryUsage}
-            onToggleDescriptionUsage={onToggleDescriptionUsage}
-            onToggleExclude={onToggleExclude}
+            onOpen={() => setGalleryOpen(true)}
           />
           <SourceDataView
             product={product}
@@ -505,6 +507,7 @@ export function CommerceWorkspace({
           onFetchCoupangCategory={tab === "coupang" ? fetchCoupangCategoryRecommendation : undefined}
           coupangCategoryFetching={coupangCategoryFetching}
           settingsMissing={tab === "coupang" ? (coupangSettingsMissing ?? undefined) : undefined}
+          developerMode={developerMode}
         />
       )}
 
@@ -521,6 +524,22 @@ export function CommerceWorkspace({
           }
           onCancel={cancelListingModal}
           onConfirm={confirmListing}
+        />
+      )}
+
+      {galleryOpen && (
+        <ImageGalleryModal
+          product={product}
+          items={items}
+          thumbnails={thumbnails}
+          representativeId={representativeId}
+          excludedIds={excludedIds}
+          onPreview={onPreviewImage}
+          onSetRepresentative={onSetRepresentative}
+          onToggleGalleryUsage={onToggleGalleryUsage}
+          onToggleDescriptionUsage={onToggleDescriptionUsage}
+          onToggleExclude={onToggleExclude}
+          onClose={() => setGalleryOpen(false)}
         />
       )}
     </section>

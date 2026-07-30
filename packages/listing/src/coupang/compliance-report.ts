@@ -27,6 +27,11 @@ export interface ComplianceReport {
   /** score가 왜 이 값인지 필드별 감점 근거 — 자리표시자 필드만 나열한다(감점이
    * 있는 필드만 "설명할 거리"가 있다). 감점이 큰 순서로 정렬. */
   scoreBreakdown: { fieldName: string; deduction: number; reason: string }[];
+  /** P0-UI Epic 7(Resolver 결과 시각화) — "몇 개 자동 채움"이라는 카운트만으로는
+   * 사용자가 "왜 이 점수인지" 바로 이해할 수 없다. 실제로 채워진 필드 이름과 값을
+   * 그대로 나열해서 "✓ 소재: 88% Polyester, 12% Elastane" 같은 화면을 만들 수 있게
+   * 한다 — userInputNeeded(플레이스홀더 목록)의 반대쪽 목록. */
+  resolvedFields: { fieldName: string; value: string; source: ComplianceFieldResult["source"] }[];
   verdict: "PASS" | "WARNING" | "FAIL";
   reasons: string[];
   /** "High"(score>=90, 컴플라이언스 필수 항목 전부 확보) / "Medium"(실제 값은
@@ -65,6 +70,20 @@ export function buildComplianceReport(
   const aiAutoFillRate = all.length > 0 ? Math.round((autoResolvedCount / all.length) * 100) : 100;
   const confidenceAvg =
     all.length > 0 ? Math.round((all.reduce((sum, r) => sum + r.confidence, 0) / all.length) * 100) / 100 : 1;
+
+  // 같은 필드(예: "색상")가 구매옵션(ATTRIBUTE)과 고시정보(NOTICE) 양쪽에 같은 값으로
+  // 채워지는 경우가 흔하다 — 화면에는 한 번만 보여준다(같은 이름+값 조합만 dedupe,
+  // 이름은 같아도 값이 다르면 둘 다 보여준다).
+  const seenResolved = new Set<string>();
+  const resolvedFields = all
+    .filter((r) => r.source !== "PLACEHOLDER")
+    .filter((r) => {
+      const key = `${r.fieldName}::${r.value}`;
+      if (seenResolved.has(key)) return false;
+      seenResolved.add(key);
+      return true;
+    })
+    .map((r) => ({ fieldName: r.fieldName, value: r.value, source: r.source }));
 
   const placeholders = all.filter((r) => r.source === "PLACEHOLDER");
   const userInputNeeded = placeholders.map((r) => ({
@@ -109,6 +128,7 @@ export function buildComplianceReport(
     confidenceAvg,
     userInputNeeded,
     scoreBreakdown,
+    resolvedFields,
     verdict,
     reasons,
     approvalReadiness,

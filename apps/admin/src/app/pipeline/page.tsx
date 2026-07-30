@@ -36,6 +36,11 @@ export default function PipelinePage() {
   const [currentProgress, setCurrentProgress] = useState<PipelineProgressEvent | null>(null);
   const [progressLog, setProgressLog] = useState<PipelineProgressEvent[]>([]);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
+  // P0-UI Sprint — 기본은 판매자용 단순 화면. 켜면 JSON/ZIP/원본 URL/Payload/개발
+  // 로그 등 전에는 항상 보이던 것들이 다시 보인다(기능을 지운 게 아니라 기본 노출만
+  // 바꿨다). 세션 동안만 유지되고 새로고침하면 다시 꺼진다 — 딱히 저장할 이유가
+  // 없는 일시적 모드다.
+  const [developerMode, setDeveloperMode] = useState(false);
   // 홈 화면 전용 쿠팡 연결 상태 — CommerceWorkspace 안의 쿠팡 탭이 갖고 있는
   // coupangConnection과는 별개의 state다. 여기는 "분석 비용을 쓰기 전 게이트",
   // 그쪽은 "실제 등록 직전 최종 재확인"으로 목적이 달라서 공유하지 않는다 —
@@ -286,16 +291,29 @@ export default function PipelinePage() {
         >
           CartPilot
         </button>
-        {started && (
-          <button
-            type="button"
-            onClick={resetWorkspace}
-            disabled={loading}
-            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface disabled:opacity-40"
-          >
-            새 상품 분석
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {started && (
+            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-text-secondary">
+              <input
+                type="checkbox"
+                checked={developerMode}
+                onChange={(e) => setDeveloperMode(e.target.checked)}
+                className="h-3.5 w-3.5 accent-primary"
+              />
+              Developer Mode
+            </label>
+          )}
+          {started && (
+            <button
+              type="button"
+              onClick={resetWorkspace}
+              disabled={loading}
+              className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface disabled:opacity-40"
+            >
+              새 상품 분석
+            </button>
+          )}
+        </div>
       </header>
 
       {!started ? (
@@ -390,7 +408,6 @@ export default function PipelinePage() {
                 AI가 상품을 분석하고 있습니다 — 이미지 수집, 상품 정보 추출, 배경 제거까지
                 자동으로 진행됩니다.
               </p>
-              <AnalysisStageIndicator percent={currentProgress?.percent ?? 0} />
             </div>
           )}
 
@@ -423,8 +440,15 @@ export default function PipelinePage() {
             onToggleGalleryUsage={(id) => toggleImageUsage(id, "useInProductGallery")}
             onToggleDescriptionUsage={(id) => toggleImageUsage(id, "useInDescription")}
             onToggleExclude={toggleExclude}
+            developerMode={developerMode}
           />
 
+          {/* P0-UI Epic 1 — JSON/ZIP/원본 URL/처리 리포트 등은 판매자가 매일 볼
+           * 필요가 없는 개발자 정보다. Developer Mode를 껐으면 이 섹션 자체가
+           * 화면에 없다(토글 버튼도 안 보인다) — 대표이미지 관리는 이미
+           * ImageSummaryCard→갤러리 모달로 옮겨졌으니 여기 안 보여도 기능 손실이
+           * 없다. */}
+          {developerMode && (
           <section className="rounded-lg border border-border bg-surface shadow-subtle">
             <button
               type="button"
@@ -492,58 +516,11 @@ export default function PipelinePage() {
               </div>
             )}
           </section>
+          )}
         </div>
       )}
 
       {previewItem && <PreviewModal item={previewItem} onClose={() => setPreviewId(null)} />}
     </main>
-  );
-}
-
-/**
- * StageStepper(commerce/StageStepper.tsx)의 5단계 중 앞의 두 단계(상품 분석/이미지
- * 준비)만 보여주는 축소판 — 이미지 파이프라인이 끝나기 전(CommerceWorkspace가
- * 마운트되기 전)에는 나머지 세 단계(카테고리/AI 콘텐츠/스토어 등록)를 판단할
- * 데이터가 아직 없다. percent<=7(URL 분석+이미지 URL 추출)까지는 1단계가
- * 진행 중이고, 그 이후는 이미지 다운로드/분류/가공 단계이므로 2단계가 진행 중이다
- * (packages/image/src/pipeline/progress.ts의 STAGE_WEIGHTS와 맞춘 값).
- */
-function AnalysisStageIndicator({ percent }: { percent: number }) {
-  const stage1 = percent > 7 ? "done" : "active";
-  const stage2 = percent >= 100 ? "done" : percent > 7 ? "active" : "locked";
-
-  return (
-    <div className="mt-3 flex items-center gap-2 text-xs">
-      <StagePill label="① 상품 분석" state={stage1} />
-      <span className="text-text-tertiary" aria-hidden>
-        →
-      </span>
-      <StagePill label="② 이미지 준비" state={stage2} />
-    </div>
-  );
-}
-
-function StagePill({
-  label,
-  state,
-}: {
-  label: string;
-  state: "locked" | "active" | "done";
-}) {
-  const icon = state === "done" ? "✓" : state === "active" ? "●" : "○";
-  const className =
-    state === "done"
-      ? "border-success/30 bg-success-soft text-success"
-      : state === "active"
-        ? "border-warning/30 bg-warning-soft text-warning"
-        : "border-border text-text-tertiary";
-
-  return (
-    <span
-      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-medium ${className}`}
-    >
-      <span aria-hidden>{icon}</span>
-      {label}
-    </span>
   );
 }

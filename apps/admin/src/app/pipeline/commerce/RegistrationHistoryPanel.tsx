@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import type { RegistrationHistoryEntry } from "@commerce/listing";
 import { PLATFORM_ADAPTERS } from "@commerce/marketplace";
+
+const COLLAPSED_LIMIT = 5;
 
 const STATUS_LABEL: Record<string, string> = {
   SUBMITTED: "성공",
@@ -20,17 +23,33 @@ function formatTime(iso: string): string {
 }
 
 export function RegistrationHistoryPanel({ history }: { history: RegistrationHistoryEntry[] }) {
+  const [showAll, setShowAll] = useState(false);
   if (history.length === 0) return null;
+
+  // P1-UI Epic 8 — 이력이 쌓일수록 화면을 길게 늘어뜨리지 않는다. 최근 5건만
+  // 기본으로 보여주고, 전체를 봐야 할 때만(재고/오류 추적 등) 펼친다.
+  const visible = showAll ? history : history.slice(0, COLLAPSED_LIMIT);
 
   return (
     <section className="rounded-lg border border-border bg-surface p-4 text-sm shadow-subtle">
-      <h3 className="text-base font-semibold tracking-tight text-text-primary">등록 이력</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-base font-semibold tracking-tight text-text-primary">등록 이력</h3>
+        {history.length > COLLAPSED_LIMIT && (
+          <button
+            type="button"
+            onClick={() => setShowAll((v) => !v)}
+            className="text-xs font-medium text-primary hover:text-primary-hover"
+          >
+            {showAll ? "최근 5건만 보기" : `전체보기 (${history.length}건)`}
+          </button>
+        )}
+      </div>
       <p className="mt-1 text-xs text-text-secondary">
         이 세션에서 시도한 등록 기록입니다 — 새로고침하면 초기화됩니다.
       </p>
 
       <ul className="mt-3 divide-y divide-border">
-        {history.map((entry, index) => (
+        {visible.map((entry, index) => (
           <li key={index} className="flex items-center justify-between gap-2 py-2 text-xs">
             <div className="min-w-0">
               <p className="truncate font-medium text-text-primary">{entry.productName}</p>

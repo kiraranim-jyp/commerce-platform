@@ -5,9 +5,12 @@ import type { ListingResult, ListingStatus, ReadinessReport } from "@commerce/li
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
 import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
+import { CollapsibleSection } from "./CollapsibleSection";
 import { EditableText, EditableTextarea } from "./EditableField";
 import { ListingSection } from "./ListingSection";
 import { PriceEditor } from "./PriceEditor";
+import { computeChecklistReadiness, computeReadinessScoreSummary } from "./readiness";
+import { RegistrationReadinessCard } from "./RegistrationReadinessCard";
 import { ValidationPanel } from "./ValidationPanel";
 
 export function PlatformPreview({
@@ -27,6 +30,7 @@ export function PlatformPreview({
   onFetchCoupangCategory,
   coupangCategoryFetching,
   settingsMissing,
+  developerMode,
 }: {
   product: CanonicalProduct;
   listing: ListingModel;
@@ -47,13 +51,23 @@ export function PlatformPreview({
   coupangCategoryFetching?: boolean;
   /** 쿠팡 탭에서만 넘어온다 — 비어있지 않으면 등록 버튼 대신 "설정 필요" 배너를 보여준다. */
   settingsMissing?: string[];
+  /** P0-UI Epic 1/4 — Developer Mode가 꺼져 있으면 Payload/개발 로그를 숨긴다. */
+  developerMode: boolean;
 }) {
   const isCategoryConfirmed =
     listing.category.state === "SELECTED" || listing.category.state === "CONFIRMED";
 
+  // P0-UI Epic 2 — 등록 준비 카드와 상세 체크리스트(ListingSection 안의
+  // PreflightChecklist/ReadinessScorePanel)가 반드시 같은 판정을 봐야 한다. readiness가
+  // 있으면(SmartStore) 그 계산을, 없으면(쿠팡/11번가) validations+category 계산을 쓴다 —
+  // 계산 로직 자체는 commerce/readiness.ts 한 곳뿐이다.
+  const readinessSummary = readiness
+    ? computeReadinessScoreSummary(readiness)
+    : computeChecklistReadiness(listing.validations, listing.category, settingsMissing);
+
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="space-y-4">
         <section className="rounded-lg border border-border p-4 text-sm">
           <h3 className="text-base font-medium">{listing.platformLabel} 등록 미리보기</h3>
 
@@ -155,36 +169,46 @@ export function PlatformPreview({
           </div>
         </section>
 
-        <div className="space-y-4">
-          <PriceEditor product={product} onUpdateSalePriceKrw={onUpdateSalePriceKrw} />
-          <CategoryRecommendationPanel
-            candidates={categoryCandidates}
-            selection={listing.category}
-            onSelect={onSelectCategory}
-            onFetchCoupangCategory={onFetchCoupangCategory}
-            coupangCategoryFetching={coupangCategoryFetching}
-          />
-          {/* SmartStore는 ListingSection의 등록 준비도 패널이 이 정보를 더 자세히
-           * 보여준다 — 같은 내용을 두 번 안 보여준다. */}
-          {!readiness && (
-            <ValidationPanel validations={listing.validations} score={listing.registrableScore} />
-          )}
-        </div>
+        <PriceEditor product={product} onUpdateSalePriceKrw={onUpdateSalePriceKrw} />
+        <CategoryRecommendationPanel
+          candidates={categoryCandidates}
+          selection={listing.category}
+          onSelect={onSelectCategory}
+          onFetchCoupangCategory={onFetchCoupangCategory}
+          coupangCategoryFetching={coupangCategoryFetching}
+        />
+
+        {/* P0-UI Epic 3/4 — "추가정보"는 기본 접힘. ValidationPanel은 등록 준비
+         * 카드와 같은 정보를 더 자세히 보여줄 뿐이라 여기 접어둔다. */}
+        <CollapsibleSection title="Compliance / 검증 상세">
+          <ValidationPanel validations={listing.validations} score={listing.registrableScore} />
+        </CollapsibleSection>
+
+        <ListingSection
+          platformId={listing.platform}
+          platformLabel={listing.platformLabel}
+          status={listingStatus}
+          result={listingResult}
+          readiness={readiness}
+          validations={listing.validations}
+          category={listing.category}
+          onFixTextField={onFixTextField}
+          onFixNumberField={onFixNumberField}
+          onRetry={onRetryListing}
+          settingsMissing={settingsMissing}
+          sourceUrl={product.sourceUrl}
+          developerMode={developerMode}
+        />
       </div>
 
-      <ListingSection
+      <RegistrationReadinessCard
+        percent={readinessSummary.percent}
+        items={readinessSummary.items}
+        allRequiredPassed={readinessSummary.allRequiredPassed}
         platformLabel={listing.platformLabel}
         status={listingStatus}
-        result={listingResult}
-        readiness={readiness}
-        validations={listing.validations}
-        category={listing.category}
-        onFixTextField={onFixTextField}
-        onFixNumberField={onFixNumberField}
-        onOpenModal={onOpenListingModal}
-        onRetry={onRetryListing}
+        onRegister={onOpenListingModal}
         settingsMissing={settingsMissing}
-        sourceUrl={product.sourceUrl}
       />
     </div>
   );

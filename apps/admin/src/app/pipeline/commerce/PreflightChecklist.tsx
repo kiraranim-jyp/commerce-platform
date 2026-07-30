@@ -1,11 +1,6 @@
 import type { CategorySelection } from "@commerce/category";
 import type { ValidationResult } from "@commerce/marketplace";
-
-interface ChecklistItem {
-  label: string;
-  passed: boolean;
-  required: boolean;
-}
+import { computeChecklistReadiness, type ReadinessItem } from "./readiness";
 
 /**
  * 상품 validation(브랜드/이미지/가격/설명 등)과 판매자 설정(출고지/반품지/택배사)을
@@ -13,10 +8,9 @@ interface ChecklistItem {
  * 보여준다. "필수"만 등록 버튼을 막는다 — 옵션/설명처럼 없어도 등록은 되는
  * 항목은 "권장"으로 따로 보여줘서 사용자가 급하지 않은 걸 억지로 채우지 않게 한다.
  *
- * 목적은 CPO가 지적한 문제 그대로다: "등록 API를 호출한 뒤에야 필수값 부족을
- * 안다"를 없애는 것 — 이 컴포넌트가 보여주는 필수 항목이 전부 ✓가 되기 전에는
- * ListingSection이 등록 버튼 자체를 열지 않는다(CommerceWorkspace의
- * effectiveListingStatus가 같은 조건을 게이트로 쓴다).
+ * 판정 로직 자체는 여기 없다 — computeChecklistReadiness(commerce/readiness.ts)
+ * 하나만 쓴다. RegistrationReadinessCard(우측 고정 카드)도 같은 함수를 쓰므로 이
+ * 컴포넌트와 카드가 서로 다른 답을 보여줄 수 없다.
  */
 export function PreflightChecklist({
   validations,
@@ -29,31 +23,11 @@ export function PreflightChecklist({
    * 한글 라벨 목록. */
   settingsMissing?: string[];
 }) {
-  // state만 보면 안 된다 — 실제 등록(register 라우트)은 isVerifiedPlatformCode가
-  // true인 후보만 실제 카테고리 코드로 인정한다(CartPilot 내부 AI 추천 후보는
-  // SELECTED가 돼도 실제 등록 코드가 아니다). 여기서 state만 확인하고 있어서
-  // "등록가능성 100%인데 실제 등록은 CP001로 실패"하는 버그가 실측으로
-  // 확인됐다 — categoryFieldRule(packages/marketplace)과 반드시 같은 기준을
-  // 써야 한다.
-  const categoryConfirmed =
-    (category.state === "SELECTED" || category.state === "CONFIRMED") &&
-    category.candidate?.isVerifiedPlatformCode === true;
-
-  const items: ChecklistItem[] = [
-    { label: "카테고리", passed: categoryConfirmed, required: true },
-    ...validations
-      .filter((v) => v.field !== "category" && v.field !== "shipping")
-      .map((v) => ({
-        label: v.label,
-        passed: v.status === "PASS",
-        required: v.status !== "WARNING",
-      })),
-    ...(settingsMissing ?? []).map((label) => ({ label, passed: false, required: true })),
-  ];
-
-  const required = items.filter((i) => i.required);
-  const recommended = items.filter((i) => !i.required);
-  const allRequiredPassed = required.every((i) => i.passed);
+  const { required, recommended, allRequiredPassed } = computeChecklistReadiness(
+    validations,
+    category,
+    settingsMissing,
+  );
 
   return (
     <section className="rounded-lg border border-border bg-surface p-4 text-sm shadow-subtle">
@@ -82,7 +56,7 @@ export function PreflightChecklist({
   );
 }
 
-function ChecklistRow({ item }: { item: ChecklistItem }) {
+function ChecklistRow({ item }: { item: ReadinessItem }) {
   return (
     <li className="flex items-center gap-2 text-xs">
       <span className={item.passed ? "text-success" : "text-error"}>{item.passed ? "✓" : "✗"}</span>
