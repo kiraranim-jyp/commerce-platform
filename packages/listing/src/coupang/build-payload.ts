@@ -243,6 +243,14 @@ const SIZE_SYNONYMS = ["사이즈", "size"];
 const COLOR_SYNONYMS = ["색상", "컬러", "color", "colour"];
 const MATERIAL_SYNONYMS = ["재질", "소재", "material"];
 const COUNTRY_SYNONYMS = ["제조국", "원산지", "country"];
+/** P0 Epic 1/4(Resolver 확장) — color/recommendedAge/manufacturer/careInstructions도
+ * material/countryOfOrigin과 같은 패턴으로 matchProductField에 추가한다. COLOR_SYNONYMS는
+ * matchOptionValue(옵션 그룹 매칭)에서도 이미 쓰고 있으므로 재사용 — 옵션에 색상 그룹이
+ * 있으면 그쪽이 항상 우선(matchOptionValue가 먼저 시도됨)이고, 이건 옵션이 없을 때의
+ * 폴백이다. */
+const AGE_SYNONYMS = ["사용연령", "연령", "age"];
+const MANUFACTURER_SYNONYMS = ["제조자", "수입자", "manufacturer"];
+const CARE_SYNONYMS = ["세탁방법", "취급방법", "취급시 주의사항", "care"];
 /** KC 인증정보처럼 법적/컴플라이언스 성격이 강한 필드 — 플레이스홀더로 채워지면
  * Compliance Report가 다른 필드보다 무겁게(FAIL 수준으로) 취급해야 한다. */
 const COMPLIANCE_CRITICAL_SYNONYMS = ["kc", "인증"];
@@ -287,7 +295,14 @@ function matchOptionValue(
  * 뜻) "재질"/"제조국" 계열 필드에 실제 값을 준다. */
 function matchProductField(
   fieldName: string,
-  productFields: { material?: string; countryOfOrigin?: string },
+  productFields: {
+    material?: string;
+    countryOfOrigin?: string;
+    color?: string;
+    recommendedAge?: string;
+    manufacturer?: string;
+    careInstructions?: string;
+  },
 ): string | undefined {
   const lower = fieldName.toLowerCase();
   if (MATERIAL_SYNONYMS.some((s) => lower.includes(s)) && productFields.material) {
@@ -295,6 +310,18 @@ function matchProductField(
   }
   if (COUNTRY_SYNONYMS.some((s) => lower.includes(s)) && productFields.countryOfOrigin) {
     return productFields.countryOfOrigin;
+  }
+  if (COLOR_SYNONYMS.some((s) => lower.includes(s)) && productFields.color) {
+    return productFields.color;
+  }
+  if (AGE_SYNONYMS.some((s) => lower.includes(s)) && productFields.recommendedAge) {
+    return productFields.recommendedAge;
+  }
+  if (MANUFACTURER_SYNONYMS.some((s) => lower.includes(s)) && productFields.manufacturer) {
+    return productFields.manufacturer;
+  }
+  if (CARE_SYNONYMS.some((s) => lower.includes(s)) && productFields.careInstructions) {
+    return productFields.careInstructions;
   }
   return undefined;
 }
@@ -339,7 +366,16 @@ const FIELD_SOURCE_CONFIDENCE: Record<ComplianceFieldSource, number> = {
  * Report가 "이 값이 진짜인지 자리표시자인지"를 판단하는 데 쓴다. */
 export function buildCoupangCompliance(
   categoryMeta: CoupangCategoryMeta | null | undefined,
-  context: { productName: string; contactNumber: string; material?: string; countryOfOrigin?: string },
+  context: {
+    productName: string;
+    contactNumber: string;
+    material?: string;
+    countryOfOrigin?: string;
+    color?: string;
+    recommendedAge?: string;
+    manufacturer?: string;
+    careInstructions?: string;
+  },
   variantContext: { optionGroups: CanonicalProductOptionGroup[]; variant?: CanonicalProductVariant } = {
     optionGroups: [],
   },
@@ -481,6 +517,10 @@ function buildCoupangItem(args: {
       contactNumber: sellerConfig.companyContactNumber,
       material: product.material.value || undefined,
       countryOfOrigin: product.countryOfOrigin.value || undefined,
+      color: product.color.value || undefined,
+      recommendedAge: product.recommendedAge.value || undefined,
+      manufacturer: product.manufacturer.value || undefined,
+      careInstructions: product.careInstructions.value || undefined,
     },
     { optionGroups, variant },
   );

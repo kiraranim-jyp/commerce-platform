@@ -121,6 +121,20 @@ export interface CanonicalProduct {
   sku: ProvenanceField<string>;
   description: ProvenanceField<string>;
   material: ProvenanceField<string>;
+  /** P0 Epic 1(Resolver 확장) — 옵션(Color 그룹)과 별개로, 상품 설명에 "Colour -
+   * Green" 처럼 단일 대표 색상이 문장으로 적혀 있을 때만 채운다. 옵션에 색상
+   * 그룹이 있으면 그쪽이 우선(더 정확함) — 이 필드는 옵션이 없는 단일 색상
+   * 상품, 또는 고시정보처럼 "대표 색상 하나만" 필요한 곳에 쓴다. */
+  color: ProvenanceField<string>;
+  /** "2-3 years", "6-12 months" 같은 권장 사용연령 — 원문에 실제로 적혀 있을
+   * 때만 채운다(REQUIRED 기본값 그대로 두는 게 기본, 지어내지 않는다). */
+  recommendedAge: ProvenanceField<string>;
+  /** "Imported by X"/"Manufactured by X" — 브랜드와 다른 개념(브랜드는 판매
+   * 브랜드명, 제조자는 실제 제조/수입 주체)이라 별도 필드로 둔다. */
+  manufacturer: ProvenanceField<string>;
+  /** "Machine wash cold", "Dry clean only" 같은 표준 케어 라벨 — 쿠팡
+   * 고시정보의 "세탁방법"/"취급방법 및 취급시 주의사항"에 그대로 쓴다. */
+  careInstructions: ProvenanceField<string>;
   /** @deprecated optionGroups[].name으로 대체됐다 — 이름만 필요한 기존 코드
    * (예: 검색태그)는 계속 이 필드를 쓸 수 있게 남겨뒀지만, 새 코드는
    * optionGroups/variants를 써야 한다. crawler가 optionGroups를 채우면 이 값은

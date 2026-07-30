@@ -1,4 +1,11 @@
-import { extractCountryOfOrigin, extractMaterial } from "@commerce/crawler";
+import {
+  extractAge,
+  extractCareInstructions,
+  extractColor,
+  extractCountryOfOrigin,
+  extractManufacturer,
+  extractMaterial,
+} from "@commerce/crawler";
 import type { ExtractedProductData, ProductDataSource } from "@commerce/crawler";
 import type {
   CanonicalProduct,
@@ -88,6 +95,10 @@ export function buildCanonicalProduct(
     .map(toCanonicalProductImage)
     .filter((image): image is CanonicalProductImage => image !== null);
   const resolvedCountryOfOrigin = extractCountryOfOrigin(productData.description);
+  const resolvedColor = extractColor(productData.description);
+  const resolvedAge = extractAge(productData.description);
+  const resolvedManufacturer = extractManufacturer(productData.description);
+  const resolvedCareInstructions = extractCareInstructions(productData.description);
 
   return {
     sourceUrl,
@@ -108,6 +119,25 @@ export function buildCanonicalProduct(
       "material",
       sources,
     ),
+    // P0 Epic 1(Resolver 확장) — color/recommendedAge/manufacturer도 material과 같은
+    // 규칙: 크롤러가 구조화된 값을 안 주면 설명문 원문에서 정규식으로 찾아보고,
+    // 못 찾으면 REQUIRED/DEFAULT로 시작해서 지어내지 않는다.
+    color: resolvedColor
+      ? { value: resolvedColor, source: "ORIGINAL", confidence: 0.7 }
+      : { value: "", source: "REQUIRED", confidence: 0 },
+    recommendedAge: resolvedAge
+      ? { value: resolvedAge, source: "ORIGINAL", confidence: 0.7 }
+      : { value: "", source: "REQUIRED", confidence: 0 },
+    manufacturer: resolvedManufacturer
+      ? { value: resolvedManufacturer, source: "ORIGINAL", confidence: 0.7 }
+      : { value: "", source: "REQUIRED", confidence: 0 },
+    // P0 Epic 4(Notice Resolver) — 세탁방법은 브랜드가 있어도 상품마다 다르고
+    // 설명문에 없는 경우가 흔하다 → REQUIRED가 아니라 DEFAULT(등록은 막지 않되
+    // 확인 필요)로 시작한다. countryOfOrigin/color/manufacturer와 달리 고시정보의
+    // "필수" 항목이 아닌 카테고리도 많다.
+    careInstructions: resolvedCareInstructions
+      ? { value: resolvedCareInstructions, source: "ORIGINAL", confidence: 0.7 }
+      : { value: "", source: "DEFAULT", confidence: 0 },
     options: field(productData.options ?? [], "options", sources),
     optionGroups: productData.optionGroups ?? [],
     variants: productData.variants ?? [],
