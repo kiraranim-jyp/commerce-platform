@@ -104,9 +104,17 @@ export function CategoryRecommendationPanel({
                   <div>
                     <div className="flex items-center gap-1.5">
                       <p className="text-xs text-text-tertiary">{index + 1}순위</p>
-                      {candidate.isVerifiedPlatformCode && (
+                      {candidate.isVerifiedPlatformCode ? (
                         <span className="rounded-full bg-primary-soft px-1.5 py-0.5 text-[10px] font-medium text-primary">
                           쿠팡 API 추천
+                        </span>
+                      ) : (
+                        // 이 후보는 CartPilot 내부 AI 추천이라 실제 쿠팡 카테고리 코드가
+                        // 아니다 — 선택해도 실제 등록은 막힌다("쿠팡 API로 카테고리
+                        // 확인" 후보를 골라야 진짜로 등록 가능해진다). 배지가 없으면
+                        // 사용자가 이것도 확정 가능한 후보로 오해할 수 있다.
+                        <span className="rounded-full bg-warning-soft px-1.5 py-0.5 text-[10px] font-medium text-warning">
+                          참고용 — 등록 불가
                         </span>
                       )}
                     </div>

@@ -29,7 +29,15 @@ export function PreflightChecklist({
    * 한글 라벨 목록. */
   settingsMissing?: string[];
 }) {
-  const categoryConfirmed = category.state === "SELECTED" || category.state === "CONFIRMED";
+  // state만 보면 안 된다 — 실제 등록(register 라우트)은 isVerifiedPlatformCode가
+  // true인 후보만 실제 카테고리 코드로 인정한다(CartPilot 내부 AI 추천 후보는
+  // SELECTED가 돼도 실제 등록 코드가 아니다). 여기서 state만 확인하고 있어서
+  // "등록가능성 100%인데 실제 등록은 CP001로 실패"하는 버그가 실측으로
+  // 확인됐다 — categoryFieldRule(packages/marketplace)과 반드시 같은 기준을
+  // 써야 한다.
+  const categoryConfirmed =
+    (category.state === "SELECTED" || category.state === "CONFIRMED") &&
+    category.candidate?.isVerifiedPlatformCode === true;
 
   const items: ChecklistItem[] = [
     { label: "카테고리", passed: categoryConfirmed, required: true },
