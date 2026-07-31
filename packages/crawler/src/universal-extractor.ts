@@ -119,6 +119,10 @@ async function tryFastPath(
     options: siteResult.productData.options ?? [],
     optionGroups: siteResult.productData.optionGroups ?? [],
     variants: siteResult.productData.variants ?? [],
+    breadcrumbPath: siteResult.productData.breadcrumbPath,
+    jsonLdCategory: siteResult.productData.jsonLdCategory,
+    shopifyTags: siteResult.productData.shopifyTags,
+    shopifyProductType: siteResult.productData.shopifyProductType,
   };
 
   return {
