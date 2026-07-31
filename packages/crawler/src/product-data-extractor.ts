@@ -26,6 +26,11 @@ export interface ExtractedProductData {
    * 사이트 자신의 분류(예: "Kids Shoes" 섹션)는 갖고 있는 경우가 많아서,
    * 쿠팡 predict API의 오분류를 잡아내는 추가 신호로 쓴다. */
   breadcrumbPath?: string[];
+  /** Sprint A-2.5(Category Resolver 2.0) — schema.org Product.category(있으면).
+   * "Apparel > Shoes" 처럼 슬래시/화살표로 구분된 문자열이거나 단일 카테고리명
+   * 문자열이다. 사이트가 자체적으로 붙인 값이라 breadcrumbPath와 같은 급의
+   * 신호다(둘 다 없는 사이트도 많다). */
+  jsonLdCategory?: string;
 }
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -97,6 +102,7 @@ export function extractFromJsonLd(html: string): ExtractedProductData | null {
             description: typeof product.description === "string" ? product.description : undefined,
             options: [],
             material: typeof product.material === "string" ? product.material : undefined,
+            jsonLdCategory: typeof product.category === "string" ? product.category : undefined,
           };
         }
       }
@@ -279,6 +285,7 @@ export async function extractProductData(
     material: pick("material"),
     options: jsonLd?.options ?? [],
     breadcrumbPath: jsonLd?.breadcrumbPath,
+    jsonLdCategory: jsonLd?.jsonLdCategory,
   };
 
   return { data, sources };

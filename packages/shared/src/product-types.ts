@@ -144,6 +144,20 @@ export interface CanonicalProduct {
    * detectKidsSignal()의 추가 신호로 쓴다. 크롤러가 못 찾으면 없다(지어내지
    * 않는다). */
   breadcrumbPath?: string[];
+  /** Sprint A-2.5(Category Resolver 2.0) — schema.org Product.category(있으면).
+   * breadcrumbPath와 같은 급의 "사이트 자체 분류" 신호. */
+  jsonLdCategory?: string;
+  /** Sprint A-2.5(Category Resolver 2.0) — CPO 요구사항: "등록마다 Resolver
+   * Accuracy KPI를 저장한다." 사용자가 카테고리를 선택하는 시점에(CommerceWorkspace의
+   * selectCategory) predict API 결과/선택한 후보/수동 override 여부를 기록해두고,
+   * 실제 등록 시점(register/route.ts)에 finalRegistered를 채워 registration_attempts에
+   * 함께 저장한다. */
+  categoryResolverKpi?: {
+    predictResult?: { code: number; name: string } | null;
+    selectedResult?: { code: number; name: string } | null;
+    manualOverride: boolean;
+    evidence: string[];
+  };
   sku: ProvenanceField<string>;
   description: ProvenanceField<string>;
   material: ProvenanceField<string>;

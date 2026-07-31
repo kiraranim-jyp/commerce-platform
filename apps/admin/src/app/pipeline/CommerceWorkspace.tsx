@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CanonicalProduct, FieldSource, PlatformId } from "@commerce/shared";
 import {
-  detectKidsSignal,
+  buildResolverBiasedQuery,
+  resolveProductSignals,
   ruleBasedCategoryProvider,
   UNRESOLVED_CATEGORY,
   type CategoryCandidate,
@@ -414,6 +415,27 @@ export function CommerceWorkspace({
       ...prev,
       `선택: "${candidate.path.join(" > ")}" (id ${candidate.id}, 검증됨=${candidate.isVerifiedPlatformCode ?? false})`,
     ]);
+    // Sprint A-2.5(Resolver KPI) — CPO 요구사항: "등록마다 Resolver Accuracy
+    // KPI를 저장한다." predict API가 준 후보(coupangApiCandidate, 있으면)와
+    // 실제 선택한 후보가 다르면 사용자가 수동으로 override한 것이다 — 이
+    // 시점에 알 수 있는 것만 여기서 기록해두고, 실제 등록 시점(register
+    // 라우트)에 finalRegistered를 더해 registration_attempts에 함께 저장한다.
+    if (platform === "coupang") {
+      const predictResult =
+        coupangApiCandidate != null
+          ? { code: Number(coupangApiCandidate.id), name: coupangApiCandidate.name }
+          : null;
+      const manualOverride = predictResult != null && String(predictResult.code) !== candidate.id;
+      setProduct((prev) => ({
+        ...prev,
+        categoryResolverKpi: {
+          predictResult,
+          selectedResult: { code: Number(candidate.id) || 0, name: candidate.name },
+          manualOverride,
+          evidence: candidate.reason,
+        },
+      }));
+    }
   }
 
   const listing = useMemo(() => {
@@ -466,21 +488,31 @@ export function CommerceWorkspace({
   async function fetchCoupangCategoryRecommendation(searchQuery?: string) {
     if (!listing) return;
     setCoupangCategoryFetching(true);
-    // P0(Category Resolver 품질) — 쿠팡 predict API는 상품명 텍스트만 보고
-    // 추측한다. 원본 제목에 나이/성별 신호가 없으면(예: "Bobo organic cotton
-    // T-shirt | Pale Pink") 기본값(여성)으로 잘못 추측하는 게 실측으로
-    // 확인됐다 — CartPilot이 이미 갖고 있는 신호(권장연령/브랜드/설명의
-    // kids 키워드)로 먼저 판단해서, predict API에 보내는 질의문 자체를
-    // "아동 상품"으로 보정한다. 사용자가 직접 검색어를 입력했으면(searchQuery)
-    // 그건 이미 사람이 확정한 의도라 보정하지 않는다.
-    const kidsSignal = detectKidsSignal(product);
+    // Sprint A-2.5(Category Resolver 2.0) — CPO 지시: "Predict API 중심 →
+    // CartPilot Resolver 중심"으로 뒤집는다. predict API는 상품명 텍스트만 보고
+    // 추측해서, 원본 사이트 자체 분류(breadcrumb/JSON-LD category/URL 경로)나
+    // 브랜드(Kids Brand 목록)에 이미 있는 신호를 놓치면 성인/여성 쪽으로
+    // 잘못 추측하는 게 실측으로 반복 확인됐다(Veja 스니커즈→여성스니커즈,
+    // Eastpak 백팩→여성백팩). resolveProductSignals()가 CartPilot이 이미
+    // 갖고 있는 신호를 전부 모아 먼저 판단하고, 그 판단으로 predict API에
+    // 보내는 질의문을 보정한다 — 사용자가 직접 검색어를 입력했으면(searchQuery)
+    // 이미 사람이 확정한 의도라 보정하지 않는다.
+    const signals = resolveProductSignals(product);
     const baseQuery = searchQuery?.trim() || listing.title;
-    const biasedQuery = !searchQuery?.trim() && kidsSignal.isKids ? `Kids ${baseQuery}` : baseQuery;
+    const isUserQuery = !!searchQuery?.trim();
+    const biasedQuery = buildResolverBiasedQuery(signals, baseQuery, isUserQuery);
+    const evidenceLines = isUserQuery
+      ? ["사용자가 직접 검색어를 입력함 — 자동 신호 보정 건너뜀"]
+      : signals.evidence.length > 0
+        ? signals.evidence.map((e) => `✓ ${e.label}`)
+        : ["신호 없음 — 원본 상품명 그대로 질의"];
+    // CPO 요구사항: Trace Log 형식(Breadcrumb → Kids → Brand → Kids Brand →
+    // Product Type → T-shirt → Predict API → 여아 티셔츠 → Verified → 코드).
     setCategoryTraceLog((prev) => [
       ...prev,
-      kidsSignal.isKids
-        ? `추천 신호: 아동 상품으로 판단(${kidsSignal.reasons.join(", ")}) → 쿠팡 API 질의="${biasedQuery}"`
-        : `추천 신호: 아동 상품 신호 없음 → 쿠팡 API 질의="${biasedQuery}"`,
+      `Resolver 판단: 연령대=${signals.ageGroup} / 성별=${signals.gender} / 상품유형=${signals.productType ?? "미상"}`,
+      ...evidenceLines,
+      `→ Predict API 질의="${biasedQuery}"`,
     ]);
     try {
       const res = await fetch("/api/coupang/category-recommend", {
@@ -500,11 +532,20 @@ export function CommerceWorkspace({
           path: [data.categoryName],
           platform: "coupang",
           confidence: 1,
-          reason: ["쿠팡 API가 상품명 기반으로 예측한 실제 카테고리 코드 — 등록 전 최종 확인이 필요합니다."],
+          // Sprint A-2.5(UI 판단 근거) — "왜 이 카테고리를 추천했는지" 후보
+          // 카드 자체에서 보이게 한다(CategoryRecommendationPanel이 reason을
+          // 그대로 목록으로 렌더링하는 걸 재사용 — 별도 UI를 새로 안 만든다).
+          reason: [
+            ...evidenceLines,
+            `✓ Predict API: "${data.categoryName}"(코드 ${data.categoryCode}) — 등록 전 최종 확인이 필요합니다.`,
+          ],
           source: "ai",
           isVerifiedPlatformCode: true,
         });
-        setCategoryTraceLog((prev) => [...prev, `검증 결과: "${data.categoryName}" (코드 ${data.categoryCode})`]);
+        setCategoryTraceLog((prev) => [
+          ...prev,
+          `→ Predict API 결과: "${data.categoryName}" (코드 ${data.categoryCode}) → Verified`,
+        ]);
       }
     } catch {
       // 조용히 실패 — 이 후보는 참고용 추가 옵션일 뿐, 실패해도 기존 AI 추천

@@ -18,7 +18,7 @@ export interface DemographicSignal {
  * product.breadcrumbPath(사이트 자신의 분류 — 예: ["Home","Shoes","Children"])가
  * 남은 유일한 신호라 KIDS_KEYWORDS와 같은 방식으로 함께 검사한다.
  */
-const KNOWN_KIDS_BRANDS = [
+export const KNOWN_KIDS_BRANDS = [
   "bobo choses",
   "bonton",
   "bonpoint",

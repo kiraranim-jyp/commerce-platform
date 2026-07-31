@@ -106,6 +106,10 @@ export interface ListingResult {
    * 또 바꿀 수 있어(product.priceBreakdown은 계속 바뀜) 등록 순간의 값을
    * 별도로 남겨야 등록 이력에서 "그때 왜 이 가격이었는지" 재구성할 수 있다. */
   priceBreakdown?: unknown;
+  /** Sprint A-2.5(Category Resolver 2.0) — 등록마다 Predict Result/Selected
+   * Result/Final Registered/Manual Override 여부/판단 근거를 남겨 Resolver
+   * 정확도를 나중에 분석할 수 있게 한다. brandResolution과 같은 이유로 unknown. */
+  categoryResolverKpi?: unknown;
 }
 
 /** PM 스펙의 VALID/WARNING/ERROR — ListingModel.validations의 PASS/WARNING/ERROR와

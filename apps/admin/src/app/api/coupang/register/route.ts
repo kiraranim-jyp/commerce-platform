@@ -47,13 +47,14 @@ async function logRegistrationAttempt(result: ListingResult, apiResponseBody?: u
     compliance_report: complianceReport ?? null,
     brand_resolution: result.brandResolution ?? null,
     price_breakdown: result.priceBreakdown ?? null,
+    category_resolver_kpi: result.categoryResolverKpi ?? null,
   };
-  // brand_resolution/price_breakdown 컬럼은 각각 수동 마이그레이션(009/010)을
-  // 실행해야 생긴다(구조적으로 여기서 직접 실행 불가) — 마이그레이션 전에는
-  // 컬럼이 없어 insert 전체가 실패한다. payload/response/compliance 등 나머지
-  // 데이터까지 통째로 유실되는 걸 막기 위해, 아직 없는 컬럼이 뭔지 모르는 채로
-  // 하나씩 제외해가며 재시도한다(둘 다 없어도 나머지는 저장되도록).
-  const optionalColumns = ["brand_resolution", "price_breakdown"];
+  // brand_resolution/price_breakdown/category_resolver_kpi 컬럼은 각각 수동
+  // 마이그레이션(009/010/011)을 실행해야 생긴다(구조적으로 여기서 직접 실행
+  // 불가) — 마이그레이션 전에는 컬럼이 없어 insert 전체가 실패한다.
+  // payload/response/compliance 등 나머지 데이터까지 통째로 유실되는 걸 막기
+  // 위해, 아직 없는 컬럼이 뭔지 모르는 채로 하나씩 제외해가며 재시도한다.
+  const optionalColumns = ["brand_resolution", "price_breakdown", "category_resolver_kpi"];
   for (let attempt = 0; attempt <= optionalColumns.length; attempt++) {
     const { error } = await supabase.from("registration_attempts").insert(row);
     if (!error) return;
@@ -148,6 +149,20 @@ export async function POST(request: Request) {
         brandNameKr: string | null;
       }
     | undefined;
+  // Sprint A-2.5(Category Resolver 2.0 KPI) — CPO 요구사항: "등록마다 Resolver
+  // Accuracy KPI를 저장한다(Predict Result/Selected Result/Final Registered/
+  // Manual Override 여부)." brandResolutionMeta와 같은 패턴 — 카테고리 코드가
+  // 확정된 뒤에 재할당된다.
+  // eslint-disable-next-line prefer-const
+  let categoryResolverKpiSnapshot:
+    | {
+        predictResult?: { code: number; name: string } | null;
+        selectedResult?: { code: number; name: string } | null;
+        finalRegistered: { code: number; name: string } | null;
+        manualOverride: boolean;
+        evidence: string[];
+      }
+    | undefined;
   const body = (await request.json().catch(() => null)) as {
     product?: CanonicalProduct;
     listing?: ListingModel;
@@ -178,6 +193,7 @@ export async function POST(request: Request) {
     complianceReport,
     brandResolution: brandResolutionMeta,
     priceBreakdown: priceBreakdownSnapshot,
+    categoryResolverKpi: categoryResolverKpiSnapshot,
   });
 
   const credentials = await getCoupangCredentials();
@@ -274,6 +290,17 @@ export async function POST(request: Request) {
         ? " ⚠ 선택값과 Payload값 불일치"
         : ""),
   );
+  // Sprint A-2.5(Category Resolver 2.0 KPI) — 클라이언트가 선택 시점에 이미
+  // 기록해둔 predictResult/selectedResult/evidence(product.categoryResolverKpi)에
+  // 이 등록에서 실제로 쓰인 finalRegistered만 더한다.
+  categoryResolverKpiSnapshot = {
+    predictResult: product.categoryResolverKpi?.predictResult ?? null,
+    selectedResult: product.categoryResolverKpi?.selectedResult ?? null,
+    finalRegistered:
+      categoryCode != null ? { code: categoryCode, name: selectedCandidate?.name ?? "" } : null,
+    manualOverride: product.categoryResolverKpi?.manualOverride ?? false,
+    evidence: product.categoryResolverKpi?.evidence ?? [],
+  };
   const categoryMeta = categoryCode != null ? await fetchCategoryMeta(credentials, categoryCode) : null;
   logStep(
     "카테고리 메타정보 조회",

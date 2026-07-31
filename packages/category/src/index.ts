@@ -1,6 +1,7 @@
 export * from "./types";
 export * from "./classify";
 export * from "./demographic-signal";
+export * from "./product-resolver";
 export * from "./keyword-rules";
 export * from "./provider";
 export * from "./providers/rule-based.provider";
