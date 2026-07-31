@@ -32,9 +32,9 @@ export interface PriceBreakdown extends PriceBreakdownInput {
   suggestedPriceKrw: number;
 }
 
-export function computePriceBreakdown(input: PriceBreakdownInput): PriceBreakdown {
+export function computePriceBreakdown(input: PriceBreakdownInput, liveRates?: Record<string, number>): PriceBreakdown {
   const { originalAmount, originalCurrency, shippingKrw, feePercent, marginPercent } = input;
-  const converted = convertToKrw(originalAmount, originalCurrency);
+  const converted = convertToKrw(originalAmount, originalCurrency, liveRates);
   const rate = originalAmount === 0 ? 0 : converted.amountKrw / originalAmount;
   const costKrw = converted.amountKrw;
   const landedCostKrw = costKrw + shippingKrw;

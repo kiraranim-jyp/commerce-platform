@@ -257,6 +257,23 @@ export async function POST(request: Request) {
   // 실제 쿠팡 API가 등록을 거부한다(실제 등록 시도로 확인: "고시정보 입력해야
   // 합니다") — 등록 직전에 실제 스키마를 조회해서 payload에 채워 넣는다.
   const categoryCode = resolveVerifiedCategoryCode(listing.category);
+  // CPO 요구사항 — "추천 카테고리 -> 선택 카테고리 -> Verified 카테고리 -> Payload
+  // 카테고리"가 실제로 같은 값인지 등록 이력에서 바로 확인할 수 있어야 한다.
+  // 여기 candidate는 CategoryRecommendationPanel에서 사용자가 "선택"을 누른
+  // 후보 그대로다(추천 목록과 분리된 별도 상태가 없다 — 즉 "추천"과 "선택"은
+  // 이 시점엔 이미 같은 객체). categoryCode가 candidate.categoryCode와 다르면
+  // resolveVerifiedCategoryCode 자체에 버그가 있다는 뜻이라 반드시 로그로
+  // 남긴다.
+  const selectedCandidate = listing.category.candidate;
+  const selectedCandidateCode = selectedCandidate ? Number(selectedCandidate.id) : null;
+  logStep(
+    "카테고리 추적",
+    categoryCode != null ? "success" : "failed",
+    `선택="${selectedCandidate?.path?.join(" > ") ?? "없음"}"(id ${selectedCandidate?.id ?? "-"}, 검증됨=${selectedCandidate?.isVerifiedPlatformCode ?? false}) → Payload 카테고리 코드=${categoryCode ?? "null"}` +
+      (selectedCandidate?.isVerifiedPlatformCode && categoryCode !== selectedCandidateCode
+        ? " ⚠ 선택값과 Payload값 불일치"
+        : ""),
+  );
   const categoryMeta = categoryCode != null ? await fetchCategoryMeta(credentials, categoryCode) : null;
   logStep(
     "카테고리 메타정보 조회",

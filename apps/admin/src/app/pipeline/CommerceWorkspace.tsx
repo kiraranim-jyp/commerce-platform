@@ -115,6 +115,34 @@ export function CommerceWorkspace({
   const [coupangApiCandidate, setCoupangApiCandidate] = useState<CategoryCandidate | null>(null);
   const [coupangCategoryFetching, setCoupangCategoryFetching] = useState(false);
   const [coupangSettingsMissing, setCoupangSettingsMissing] = useState<string[] | null>(null);
+  const [exchangeRates, setExchangeRates] = useState<{
+    rates: Record<string, number>;
+    fetchedAt: string;
+    source: "frankfurter" | "fallback";
+  } | null>(null);
+  const [exchangeRatesLoading, setExchangeRatesLoading] = useState(false);
+
+  /** P0(환율 시스템) — 고정 환율표 대신 실제 환율을 보여준다. 컴포넌트 마운트
+   * 시 한 번 불러오고, 이후엔 "새로고침" 버튼으로만 다시 부른다(CPO 요구사항:
+   * "실시간일 필요 없다" — 매 렌더/매 타이핑마다 다시 부르지 않는다). */
+  async function fetchExchangeRates() {
+    setExchangeRatesLoading(true);
+    try {
+      const res = await fetch("/api/exchange-rates");
+      const data = await res.json();
+      setExchangeRates(data);
+    } catch {
+      // 실패해도 화면은 packages/pricing의 고정 환율표로 계속 동작한다
+      // (PriceEditor가 liveRates 없으면 자동 폴백) — 여기서 에러를 삼킨다.
+    } finally {
+      setExchangeRatesLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchExchangeRates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /** 쿠팡 탭에 들어올 때마다 저장된 판매자 설정이 등록에 필요한 항목을 모두
    * 채웠는지 확인한다 — 실제 쿠팡 API를 호출하지 않는 단순 DB/env 조회라 자동으로
@@ -516,6 +544,9 @@ export function CommerceWorkspace({
           onUpdateField={updateField}
           onUpdateSalePriceKrw={updateSalePriceKrw}
           onUpdatePriceBreakdown={updatePriceBreakdown}
+          exchangeRates={exchangeRates}
+          exchangeRatesLoading={exchangeRatesLoading}
+          onRefreshExchangeRates={fetchExchangeRates}
           onSelectCategory={(candidate) => selectCategory(tab, candidate)}
           onFixTextField={updateField}
           onFixNumberField={updateNumberField}

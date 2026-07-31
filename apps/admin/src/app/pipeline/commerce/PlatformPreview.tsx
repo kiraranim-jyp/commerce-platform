@@ -25,6 +25,9 @@ export function PlatformPreview({
   onUpdateField,
   onUpdateSalePriceKrw,
   onUpdatePriceBreakdown,
+  exchangeRates,
+  exchangeRatesLoading,
+  onRefreshExchangeRates,
   onSelectCategory,
   onFixTextField,
   onFixNumberField,
@@ -45,6 +48,9 @@ export function PlatformPreview({
   onUpdateField: (key: "title" | "brand" | "description", value: string) => void;
   onUpdateSalePriceKrw: (amountKrw: number) => void;
   onUpdatePriceBreakdown: (breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) => void;
+  exchangeRates: { rates: Record<string, number>; fetchedAt: string; source: "frankfurter" | "fallback" } | null;
+  exchangeRatesLoading: boolean;
+  onRefreshExchangeRates: () => void;
   onSelectCategory: (candidate: CategoryCandidate) => void;
   onFixTextField?: (
     field: "countryOfOrigin" | "returnPolicy" | "sku" | "manufacturer" | "certification" | "brand",
@@ -181,6 +187,9 @@ export function PlatformPreview({
           product={product}
           onUpdateSalePriceKrw={onUpdateSalePriceKrw}
           onUpdatePriceBreakdown={onUpdatePriceBreakdown}
+          exchangeRates={exchangeRates}
+          exchangeRatesLoading={exchangeRatesLoading}
+          onRefreshExchangeRates={onRefreshExchangeRates}
         />
         {onFixTextField && onFixNumberField && (
           <RequiredFieldsEditor

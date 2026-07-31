@@ -21,17 +21,27 @@ export function PriceEditor({
   product,
   onUpdateSalePriceKrw,
   onUpdatePriceBreakdown,
+  exchangeRates,
+  exchangeRatesLoading,
+  onRefreshExchangeRates,
 }: {
   product: CanonicalProduct;
   onUpdateSalePriceKrw: (amountKrw: number) => void;
   onUpdatePriceBreakdown: (breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) => void;
+  exchangeRates: { rates: Record<string, number>; fetchedAt: string; source: "frankfurter" | "fallback" } | null;
+  exchangeRatesLoading: boolean;
+  onRefreshExchangeRates: () => void;
 }) {
   const breakdownInput = product.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT;
-  const breakdown = computePriceBreakdown({
-    originalAmount: product.price.value.amount,
-    originalCurrency: product.price.value.currency,
-    ...breakdownInput,
-  });
+  const liveRates = exchangeRates?.rates;
+  const breakdown = computePriceBreakdown(
+    {
+      originalAmount: product.price.value.amount,
+      originalCurrency: product.price.value.currency,
+      ...breakdownInput,
+    },
+    liveRates,
+  );
   const salePriceKrw = product.priceOverrideKrw?.value ?? breakdown.costKrw;
   const roughMargin = salePriceKrw - breakdown.costKrw;
 
@@ -52,8 +62,29 @@ export function PriceEditor({
         </div>
 
         <div>
-          <p className="text-xs text-text-secondary">현재 환율 기준 예상 원가{breakdown.isRateEstimate ? " (추정)" : ""}</p>
-          <p className="mt-0.5 text-sm text-text-secondary">약 {formatKrw(breakdown.costKrw)}</p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-text-secondary">
+              환율 · {product.price.value.currency} {breakdown.exchangeRate.toFixed(2)}
+              {breakdown.isRateEstimate ? " (추정 고정환율)" : ""}
+            </p>
+            <button
+              type="button"
+              onClick={onRefreshExchangeRates}
+              disabled={exchangeRatesLoading}
+              className="text-[11px] text-primary hover:underline disabled:opacity-50"
+            >
+              {exchangeRatesLoading ? "불러오는 중…" : "새로고침"}
+            </button>
+          </div>
+          {exchangeRates && !breakdown.isRateEstimate && (
+            <p className="mt-0.5 text-[11px] text-text-tertiary">
+              {new Date(exchangeRates.fetchedAt).toLocaleString("ko-KR")} 기준
+            </p>
+          )}
+          <p className="mt-0.5 text-sm text-text-secondary">
+            {product.price.value.amount} {product.price.value.currency} × {breakdown.exchangeRate.toFixed(2)} ={" "}
+            {formatKrw(breakdown.costKrw)}
+          </p>
         </div>
 
         <div className="border-t border-border pt-2.5">
@@ -87,7 +118,7 @@ export function PriceEditor({
             {formatOriginalPrice(breakdown.originalAmount, breakdown.originalCurrency)}
           </BreakdownRow>
           <BreakdownRow label="환율">
-            1 {breakdown.originalCurrency} = {formatKrw(Math.round(breakdown.exchangeRate))}
+            1 {breakdown.originalCurrency} = ₩{breakdown.exchangeRate.toFixed(2)}
             {breakdown.isRateEstimate ? " (추정 고정환율)" : ""}
           </BreakdownRow>
           <BreakdownRow label="상품 원가">{formatKrw(breakdown.costKrw)}</BreakdownRow>
