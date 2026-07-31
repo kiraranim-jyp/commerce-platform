@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CanonicalProduct, FieldSource, PlatformId } from "@commerce/shared";
 import {
+  detectKidsSignal,
   ruleBasedCategoryProvider,
   UNRESOLVED_CATEGORY,
   type CategoryCandidate,
@@ -115,6 +116,10 @@ export function CommerceWorkspace({
   const [coupangApiCandidate, setCoupangApiCandidate] = useState<CategoryCandidate | null>(null);
   const [coupangCategoryFetching, setCoupangCategoryFetching] = useState(false);
   const [coupangSettingsMissing, setCoupangSettingsMissing] = useState<string[] | null>(null);
+  /** P0(Category Resolver 추적) — "추천 → 검증 → 선택"이 실제로 어떻게 이어졌는지
+   * 등록 전에도 화면에서 바로 볼 수 있게 한다(register/route.ts의 "카테고리 추적"
+   * 로그는 등록 시점에만 남아서, 등록 전 단계의 추론 과정은 별도로 남겨야 한다). */
+  const [categoryTraceLog, setCategoryTraceLog] = useState<string[]>([]);
   const [exchangeRates, setExchangeRates] = useState<{
     rates: Record<string, number>;
     fetchedAt: string;
@@ -308,6 +313,10 @@ export function CommerceWorkspace({
       ...prev,
       [platform]: { state: "SELECTED", candidate, provenance: "USER_SELECTED" },
     }));
+    setCategoryTraceLog((prev) => [
+      ...prev,
+      `선택: "${candidate.path.join(" > ")}" (id ${candidate.id}, 검증됨=${candidate.isVerifiedPlatformCode ?? false})`,
+    ]);
   }
 
   const listing = useMemo(() => {
@@ -322,11 +331,27 @@ export function CommerceWorkspace({
   async function fetchCoupangCategoryRecommendation(searchQuery?: string) {
     if (!listing) return;
     setCoupangCategoryFetching(true);
+    // P0(Category Resolver 품질) — 쿠팡 predict API는 상품명 텍스트만 보고
+    // 추측한다. 원본 제목에 나이/성별 신호가 없으면(예: "Bobo organic cotton
+    // T-shirt | Pale Pink") 기본값(여성)으로 잘못 추측하는 게 실측으로
+    // 확인됐다 — CartPilot이 이미 갖고 있는 신호(권장연령/브랜드/설명의
+    // kids 키워드)로 먼저 판단해서, predict API에 보내는 질의문 자체를
+    // "아동 상품"으로 보정한다. 사용자가 직접 검색어를 입력했으면(searchQuery)
+    // 그건 이미 사람이 확정한 의도라 보정하지 않는다.
+    const kidsSignal = detectKidsSignal(product);
+    const baseQuery = searchQuery?.trim() || listing.title;
+    const biasedQuery = !searchQuery?.trim() && kidsSignal.isKids ? `Kids ${baseQuery}` : baseQuery;
+    setCategoryTraceLog((prev) => [
+      ...prev,
+      kidsSignal.isKids
+        ? `추천 신호: 아동 상품으로 판단(${kidsSignal.reasons.join(", ")}) → 쿠팡 API 질의="${biasedQuery}"`
+        : `추천 신호: 아동 상품 신호 없음 → 쿠팡 API 질의="${biasedQuery}"`,
+    ]);
     try {
       const res = await fetch("/api/coupang/category-recommend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productName: searchQuery?.trim() || listing.title, brand: listing.brand }),
+        body: JSON.stringify({ productName: biasedQuery, brand: listing.brand }),
       });
       const data = (await res.json()) as {
         categoryCode?: number | null;
@@ -344,6 +369,7 @@ export function CommerceWorkspace({
           source: "ai",
           isVerifiedPlatformCode: true,
         });
+        setCategoryTraceLog((prev) => [...prev, `검증 결과: "${data.categoryName}" (코드 ${data.categoryCode})`]);
       }
     } catch {
       // 조용히 실패 — 이 후보는 참고용 추가 옵션일 뿐, 실패해도 기존 AI 추천
@@ -554,6 +580,7 @@ export function CommerceWorkspace({
           onRetryListing={retryListing}
           onFetchCoupangCategory={tab === "coupang" ? fetchCoupangCategoryRecommendation : undefined}
           coupangCategoryFetching={coupangCategoryFetching}
+          categoryTraceLog={categoryTraceLog}
           settingsMissing={tab === "coupang" ? (coupangSettingsMissing ?? undefined) : undefined}
           developerMode={developerMode}
         />

@@ -35,6 +35,7 @@ export function PlatformPreview({
   onRetryListing,
   onFetchCoupangCategory,
   coupangCategoryFetching,
+  categoryTraceLog,
   settingsMissing,
   developerMode,
 }: {
@@ -62,6 +63,9 @@ export function PlatformPreview({
   /** 쿠팡 탭에서만 넘어온다 — 있으면 카테고리 추천 패널에 "쿠팡 API로 확인"/검색 UI가 보인다. */
   onFetchCoupangCategory?: (query?: string) => void;
   coupangCategoryFetching?: boolean;
+  /** P0(Category Resolver 추적) — "추천 신호 → 쿠팡 API 질의 → 검증 결과 → 선택"
+   * 순서를 그대로 보여준다. */
+  categoryTraceLog?: string[];
   /** 쿠팡 탭에서만 넘어온다 — 비어있지 않으면 등록 버튼 대신 "설정 필요" 배너를 보여준다. */
   settingsMissing?: string[];
   /** P0-UI Epic 1/4 — Developer Mode가 꺼져 있으면 Payload/개발 로그를 숨긴다. */
@@ -205,6 +209,16 @@ export function PlatformPreview({
           onFetchCoupangCategory={onFetchCoupangCategory}
           coupangCategoryFetching={coupangCategoryFetching}
         />
+        {categoryTraceLog && categoryTraceLog.length > 0 && (
+          <div className="rounded-lg border border-border bg-background p-3 text-[11px] text-text-secondary">
+            <p className="font-medium text-text-tertiary">카테고리 추적 로그</p>
+            <ul className="mt-1 space-y-0.5">
+              {categoryTraceLog.map((line, i) => (
+                <li key={i}>{line}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* P0-UI Epic 3/4 — "추가정보"는 기본 접힘. ValidationPanel은 등록 준비
          * 카드와 같은 정보를 더 자세히 보여줄 뿐이라 여기 접어둔다. */}
