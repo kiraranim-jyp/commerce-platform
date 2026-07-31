@@ -65,7 +65,11 @@ export function PriceEditor({
           <div className="flex items-center justify-between">
             <p className="text-xs text-text-secondary">
               환율 · {product.price.value.currency} {breakdown.exchangeRate.toFixed(2)}
-              {breakdown.isRateEstimate ? " (추정 고정환율)" : ""}
+              {breakdown.isRateEstimate
+                ? " (추정 고정환율)"
+                : exchangeRates?.source === "frankfurter"
+                  ? " (출처: ECB)"
+                  : ""}
             </p>
             <button
               type="button"
