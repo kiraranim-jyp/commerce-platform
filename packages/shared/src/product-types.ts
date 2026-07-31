@@ -137,6 +137,13 @@ export interface CanonicalProduct {
    * attributeTypeName 또는 noticeCategoryDetailName 원문 그대로(쿠팡 카테고리
    * 메타 API가 주는 이름과 정확히 일치해야 build-payload.ts의 매칭이 된다). */
   categoryFieldOverrides?: Record<string, string>;
+  /** Sprint A-2(Category Resolver 보강) — 원본 사이트의 JSON-LD BreadcrumbList
+   * (예: ["Home", "Kids", "Shoes", "Sneakers"]). title/description에 나이·성별
+   * 신호가 전혀 없는 상품(같은 브랜드가 성인/키즈 라인을 이름만으로 구분 못
+   * 하는 경우 — 예: Veja 스니커즈)도 사이트 자신의 분류는 갖고 있을 때가 많아,
+   * detectKidsSignal()의 추가 신호로 쓴다. 크롤러가 못 찾으면 없다(지어내지
+   * 않는다). */
+  breadcrumbPath?: string[];
   sku: ProvenanceField<string>;
   description: ProvenanceField<string>;
   material: ProvenanceField<string>;
