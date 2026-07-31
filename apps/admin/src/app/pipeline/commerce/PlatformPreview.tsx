@@ -10,7 +10,7 @@ import type {
 } from "@commerce/listing";
 import { isVerifiedCategorySelected } from "@commerce/marketplace";
 import type { ListingModel } from "@commerce/marketplace";
-import type { CanonicalProduct } from "@commerce/shared";
+import type { CanonicalProduct, CanonicalProductOptionGroup } from "@commerce/shared";
 import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
 import { CategoryRequirementsEditor } from "./CategoryRequirementsEditor";
 import { CollapsibleSection } from "./CollapsibleSection";
@@ -49,6 +49,7 @@ export function PlatformPreview({
   categoryFieldOverrides,
   onUpdateCategoryFieldOverride,
   resolvedCategoryFields,
+  productOptionGroups,
   settingsMissing,
   developerMode,
 }: {
@@ -90,6 +91,10 @@ export function PlatformPreview({
    * fieldName별로 미리 계산해둔 결과. CategoryRequirementsEditor가 이 값을 보고
    * "✓ 자동"으로 미리 채워 보여줄지, 빈 입력으로 사용자에게 요청할지 정한다. */
   resolvedCategoryFields?: Record<string, { value: string; source: ComplianceFieldSource; confidence: number }>;
+  /** Sprint A-2(Auto Fill 완성도) — 사이즈/색상처럼 옵션마다 값이 여러 개라
+   * 자동으로 하나를 고를 수 없는 필드도, 실제 옵션 값 목록이 있으면 자유
+   * 입력 대신 select로 빠르게 고르게 한다. */
+  productOptionGroups?: CanonicalProductOptionGroup[];
   /** 쿠팡 탭에서만 넘어온다 — 비어있지 않으면 등록 버튼 대신 "설정 필요" 배너를 보여준다. */
   settingsMissing?: string[];
   /** P0-UI Epic 1/4 — Developer Mode가 꺼져 있으면 Payload/개발 로그를 숨긴다. */
@@ -241,6 +246,7 @@ export function PlatformPreview({
             overrides={categoryFieldOverrides}
             onUpdateOverride={onUpdateCategoryFieldOverride}
             resolvedFields={resolvedCategoryFields}
+            productOptionGroups={productOptionGroups ?? []}
           />
         )}
         {categoryTraceLog && categoryTraceLog.length > 0 && (

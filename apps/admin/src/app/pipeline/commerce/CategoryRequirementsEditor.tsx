@@ -1,6 +1,8 @@
 "use client";
 
 import type { ComplianceFieldSource, CoupangCategoryMeta } from "@commerce/listing";
+import { findMatchingOptionGroupValues } from "@commerce/listing";
+import type { CanonicalProductOptionGroup } from "@commerce/shared";
 import { EditableText } from "./EditableField";
 
 /**
@@ -29,6 +31,7 @@ export function CategoryRequirementsEditor({
   overrides,
   onUpdateOverride,
   resolvedFields,
+  productOptionGroups,
 }: {
   categoryMeta: CoupangCategoryMeta | null;
   loading: boolean;
@@ -36,6 +39,7 @@ export function CategoryRequirementsEditor({
   overrides: Record<string, string> | undefined;
   onUpdateOverride: (fieldName: string, value: string) => void;
   resolvedFields: Record<string, { value: string; source: ComplianceFieldSource; confidence: number }> | undefined;
+  productOptionGroups: CanonicalProductOptionGroup[];
 }) {
   if (loading) {
     return (
@@ -105,6 +109,7 @@ export function CategoryRequirementsEditor({
                 inputValues={attr.inputValues}
                 override={overrides?.[attr.attributeTypeName]}
                 resolved={resolvedFields?.[attr.attributeTypeName]}
+                productOptionGroups={productOptionGroups}
                 onCommit={(v) => onUpdateOverride(attr.attributeTypeName, v)}
               />
             ))}
@@ -175,6 +180,7 @@ function RequirementField({
   inputValues,
   override,
   resolved,
+  productOptionGroups,
   onCommit,
 }: {
   label: string;
@@ -182,6 +188,7 @@ function RequirementField({
   inputValues: string[];
   override: string | undefined;
   resolved: { value: string; source: ComplianceFieldSource; confidence: number } | undefined;
+  productOptionGroups?: CanonicalProductOptionGroup[];
   onCommit: (value: string) => void;
 }) {
   // OPTION_MATCH는 값이 옵션(품목)마다 다르다 — 여기서 하나의 값으로 덮어쓰면
@@ -211,6 +218,16 @@ function RequirementField({
   // 받으면 오히려 "유효하지 않은 구매 옵션 값"으로 거부된다 — 목록이 있으면
   // select로 강제해서 잘못된 값을 아예 못 입력하게 막는다.
   const isEnum = inputValues.length > 0 && inputValues.length <= 100;
+  // Sprint A-2(Auto Fill 완성도) — 쿠팡이 정해준 목록은 없지만(자유 입력
+  // 필드) 사이즈/색상처럼 원본 사이트에 실제 옵션 값이 여러 개 있는 경우,
+  // 빈 텍스트박스 대신 그 실제 값 목록으로 고르게 한다 — 타이핑 대신 클릭
+  // 한 번. 값이 하나뿐이면 matchOptionValue가 이미 자동으로 채웠을 것이므로
+  // 여기 도달하는 건 항상 "여러 개 중 하나를 사람이 골라야 하는" 경우다.
+  const optionCandidates =
+    !isEnum && !override && (!resolved || resolved.source === "PLACEHOLDER")
+      ? findMatchingOptionGroupValues(label, productOptionGroups ?? [])
+      : undefined;
+  const isOptionSelect = !!optionCandidates && optionCandidates.length > 1;
 
   return (
     <div>
@@ -224,14 +241,14 @@ function RequirementField({
         {unit && <span className="ml-1 text-text-tertiary">({unit})</span>}
       </label>
       <div className="mt-0.5">
-        {isEnum ? (
+        {isEnum || isOptionSelect ? (
           <select
             value={displayValue}
             onChange={(e) => onCommit(e.target.value)}
             className="w-full rounded border border-border bg-surface px-2 py-1 text-sm focus:border-primary focus:outline-none"
           >
             <option value="">직접 선택해주세요</option>
-            {inputValues.map((v) => (
+            {(isEnum ? inputValues : (optionCandidates ?? [])).map((v) => (
               <option key={v} value={v}>
                 {v}
               </option>

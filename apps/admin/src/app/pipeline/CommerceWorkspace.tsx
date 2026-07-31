@@ -722,6 +722,7 @@ export function CommerceWorkspace({
           categoryFieldOverrides={product.categoryFieldOverrides}
           onUpdateCategoryFieldOverride={updateCategoryFieldOverride}
           resolvedCategoryFields={resolvedCategoryFields}
+          productOptionGroups={product.optionGroups}
           settingsMissing={tab === "coupang" ? (coupangSettingsMissing ?? undefined) : undefined}
           developerMode={developerMode}
         />

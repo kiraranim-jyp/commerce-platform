@@ -277,12 +277,16 @@ function isLikelyChildrenProduct(productName: string): boolean {
   return CHILDREN_PRODUCT_KEYWORDS.some((k) => lower.includes(k));
 }
 
-function matchOptionValue(
+/** 쿠팡 필드 이름(예: "패션의류/잡화 사이즈")이 사이즈/색상 계열 동의어와
+ * 매칭되면, 그 이름에 대응하는 CanonicalProduct.optionGroups 그룹(실제 옵션
+ * 값 목록)을 찾는다. matchOptionValue(값 하나를 확정하는 용도)와
+ * CategoryRequirementsEditor(값을 아직 못 정했을 때 select로 고를 목록을
+ * 보여주는 용도) 양쪽이 이 하나의 매칭 규칙만 쓴다 — 매칭 로직이 두 곳에
+ *따로 있으면 서버 판단과 화면 판단이 어긋나는 CP001과 같은 문제가 재발한다. */
+function findMatchingOptionGroup(
   fieldName: string,
   optionGroups: CanonicalProductOptionGroup[],
-  variant: CanonicalProductVariant | undefined,
-): string | undefined {
-  if (!variant) return undefined;
+): CanonicalProductOptionGroup | undefined {
   const lower = fieldName.toLowerCase();
   const synonyms = SIZE_SYNONYMS.some((s) => lower.includes(s))
     ? SIZE_SYNONYMS
@@ -290,8 +294,33 @@ function matchOptionValue(
       ? COLOR_SYNONYMS
       : null;
   if (!synonyms) return undefined;
-  const matchedGroup = optionGroups.find((g) => synonyms.some((s) => g.name.toLowerCase().includes(s)));
-  return matchedGroup ? variant.optionValues[matchedGroup.name] : undefined;
+  return optionGroups.find((g) => synonyms.some((s) => g.name.toLowerCase().includes(s)));
+}
+
+/** Sprint A-2(Auto Fill 완성도) — CategoryRequirementsEditor가 아직 값을 못
+ * 정한 사이즈/색상류 필드에 자유 입력 대신 실제 옵션 값 목록으로 select를
+ * 보여줄 때 쓴다(타이핑 대신 클릭 한 번). */
+export function findMatchingOptionGroupValues(
+  fieldName: string,
+  optionGroups: CanonicalProductOptionGroup[],
+): string[] | undefined {
+  return findMatchingOptionGroup(fieldName, optionGroups)?.values;
+}
+
+function matchOptionValue(
+  fieldName: string,
+  optionGroups: CanonicalProductOptionGroup[],
+  variant: CanonicalProductVariant | undefined,
+): string | undefined {
+  const matchedGroup = findMatchingOptionGroup(fieldName, optionGroups);
+  if (!matchedGroup) return undefined;
+  if (variant) return variant.optionValues[matchedGroup.name];
+  // variant가 없는 경우(옵션 조합을 못 뽑아서 단일 item으로 등록되는 상품)라도,
+  // 그 옵션 그룹의 실제 값이 하나뿐이면 "지어내는" 게 아니라 "유일하게 가능한
+  // 값을 그대로 쓰는" 것이라 안전하다. 값이 여러 개면(어떤 옵션인지 확정할 수
+  // 없음) 여기서 고르지 않는다 — findMatchingOptionGroupValues로 실제 후보
+  // 목록을 보여주고 사용자가 직접 고르게 한다.
+  return matchedGroup.values.length === 1 ? matchedGroup.values[0] : undefined;
 }
 
 /** CanonicalProduct.material/countryOfOrigin이 실제로 채워져 있을 때만(크롤러가
