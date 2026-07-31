@@ -162,14 +162,27 @@ import { KNOWN_KIDS_BRANDS } from "./demographic-signal";
 export function resolveProductSignals(
   product: Pick<
     CanonicalProduct,
-    "title" | "description" | "brand" | "recommendedAge" | "breadcrumbPath" | "jsonLdCategory" | "sourceUrl"
+    | "title"
+    | "description"
+    | "brand"
+    | "recommendedAge"
+    | "breadcrumbPath"
+    | "jsonLdCategory"
+    | "sourceUrl"
+    | "shopifyTags"
+    | "shopifyProductType"
   >,
 ): ProductSignals {
   const breadcrumbText = (product.breadcrumbPath ?? []).join(" ");
   const urlSegments = extractUrlSegments(product.sourceUrl);
   const urlText = urlSegments.join(" ");
   const jsonLdCategoryText = product.jsonLdCategory ?? "";
-  const keywordText = `${product.title.value} ${product.description.value}`;
+  // Shopify tags/product_type — vendor 필드가 시즌코드 등으로 오염돼 브랜드
+  // 신호를 못 쓰는 매장(bobochoses.com 실측)에서도 남아있는 나이·상품유형
+  // 신호라 title/description과 같은 급(keyword)으로 취급한다.
+  const keywordText =
+    `${product.title.value} ${product.description.value} ` +
+    `${product.shopifyTags ?? ""} ${product.shopifyProductType ?? ""}`;
 
   const { ageGroup, gender, evidence } = resolveAgeAndGender([
     { source: "breadcrumb", text: breadcrumbText },

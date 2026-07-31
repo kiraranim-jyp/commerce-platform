@@ -31,6 +31,14 @@ export interface ExtractedProductData {
    * 문자열이다. 사이트가 자체적으로 붙인 값이라 breadcrumbPath와 같은 급의
    * 신호다(둘 다 없는 사이트도 많다). */
   jsonLdCategory?: string;
+  /** Sprint A-2.5(Category Resolver 2.0) — Shopify 전용 신호. Shopify 상품은
+   * fast-path(shopify-product-json.ts)로 처리되어 breadcrumbPath/jsonLdCategory를
+   * 채우는 JSON-LD 파싱을 안 타는 경우가 많다 — vendor 필드에 시즌코드가 들어오는
+   * 매장(bobochoses.com 실측: vendor="SS26")도 있어 tags/product_type이 나이·성별·
+   * 상품유형을 판단할 유일한 신호가 되는 경우가 있다. Shopify가 아닌 소스는 항상
+   * undefined. */
+  shopifyTags?: string;
+  shopifyProductType?: string;
 }
 
 const CURRENCY_SYMBOLS: Record<string, string> = {

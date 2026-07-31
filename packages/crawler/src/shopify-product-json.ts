@@ -59,6 +59,13 @@ interface ShopifyJsonProduct {
   images?: ShopifyJsonImage[];
   variants?: ShopifyJsonVariant[];
   options?: ShopifyJsonOption[];
+  /** Sprint A-2.5(Category Resolver 2.0) — Shopify 상품은 breadcrumbPath/
+   * jsonLdCategory 경로를 안 타므로(fillMissingCurrency만 HTML을 보강 조회한다)
+   * vendor에 시즌코드("SS26")가 들어오는 등 브랜드 필드가 신뢰 안 될 때도
+   * tags/product_type이 유일하게 남는 나이·성별·상품유형 신호인 경우가 실측으로
+   * 확인됐다(bobochoses.com: vendor="SS26"이지만 tags에 "children","Kid" 포함). */
+  tags?: string;
+  product_type?: string;
 }
 
 /** variants[].option1/2/3 + options[].name을 CanonicalProductVariant.optionValues
@@ -186,6 +193,8 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
       options: optionNames,
       optionGroups,
       variants,
+      shopifyTags: product.tags,
+      shopifyProductType: product.product_type,
     },
   };
 }

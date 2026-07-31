@@ -147,6 +147,12 @@ export interface CanonicalProduct {
   /** Sprint A-2.5(Category Resolver 2.0) — schema.org Product.category(있으면).
    * breadcrumbPath와 같은 급의 "사이트 자체 분류" 신호. */
   jsonLdCategory?: string;
+  /** Sprint A-2.5(Category Resolver 2.0) — Shopify 상품 전용(fast-path라
+   * breadcrumbPath/jsonLdCategory를 못 채우는 경우가 많다). 실측(bobochoses.com):
+   * vendor 필드에 시즌코드("SS26")가 들어와 브랜드 신호를 못 쓸 때도 tags에
+   * "children","Kid" 같은 나이 신호가 남아 있었다 — Shopify가 아니면 undefined. */
+  shopifyTags?: string;
+  shopifyProductType?: string;
   /** Sprint A-2.5(Category Resolver 2.0) — CPO 요구사항: "등록마다 Resolver
    * Accuracy KPI를 저장한다." 사용자가 카테고리를 선택하는 시점에(CommerceWorkspace의
    * selectCategory) predict API 결과/선택한 후보/수동 override 여부를 기록해두고,

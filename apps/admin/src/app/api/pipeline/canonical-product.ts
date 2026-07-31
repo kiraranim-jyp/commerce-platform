@@ -156,6 +156,8 @@ export function buildCanonicalProduct(
     variants: productData.variants ?? [],
     breadcrumbPath: productData.breadcrumbPath,
     jsonLdCategory: productData.jsonLdCategory,
+    shopifyTags: productData.shopifyTags,
+    shopifyProductType: productData.shopifyProductType,
     images,
     // 크롤러는 한국어 AI 콘텐츠를 만들지 않는다 — 항상 빈 값으로 시작해서
     // CommerceWorkspace의 AI 콘텐츠 생성 버튼을 눌러야 채워진다.
