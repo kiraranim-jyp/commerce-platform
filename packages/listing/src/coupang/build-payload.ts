@@ -329,7 +329,13 @@ function matchProductField(
 /** 값 하나가 어디서 왔는지 — Compliance Report(Sprint B)가 이 출처로 점수를 매긴다.
  * OPTION_MATCH/PRODUCT_FIELD/KNOWN_VALUE/DETERMINISTIC은 전부 "실제 근거가 있는
  * 값"이고, PLACEHOLDER만 "지어내지 않기 위해 넣은 자리표시자"다. */
-export type ComplianceFieldSource = "OPTION_MATCH" | "PRODUCT_FIELD" | "KNOWN_VALUE" | "DETERMINISTIC" | "PLACEHOLDER";
+export type ComplianceFieldSource =
+  | "USER_INPUT"
+  | "OPTION_MATCH"
+  | "PRODUCT_FIELD"
+  | "KNOWN_VALUE"
+  | "DETERMINISTIC"
+  | "PLACEHOLDER";
 
 export interface ComplianceFieldResult {
   fieldName: string;
@@ -350,6 +356,7 @@ export interface ComplianceFieldResult {
 }
 
 const FIELD_SOURCE_CONFIDENCE: Record<ComplianceFieldSource, number> = {
+  USER_INPUT: 1,
   KNOWN_VALUE: 1,
   OPTION_MATCH: 0.95,
   DETERMINISTIC: 0.9,
@@ -375,6 +382,11 @@ export function buildCoupangCompliance(
     recommendedAge?: string;
     manufacturer?: string;
     careInstructions?: string;
+    /** P0(Category Meta -> 동적 입력폼) — 사용자가 등록 전 화면에서 직접 채운
+     * 구매옵션/고시정보 값. attributeTypeName 또는 noticeCategoryDetailName을
+     * 키로 쓴다(둘이 이름이 겹칠 일은 실무상 없다 — 겹치면 attribute가 먼저
+     * 매칭된다). 사람이 직접 입력한 값이라 다른 어떤 자동 매칭보다 우선한다. */
+    userOverrides?: Record<string, string>;
   },
   variantContext: { optionGroups: CanonicalProductOptionGroup[]; variant?: CanonicalProductVariant } = {
     optionGroups: [],
@@ -390,6 +402,16 @@ export function buildCoupangCompliance(
   const attributeResults: ComplianceFieldResult[] = categoryMeta.attributes
     .filter((attr) => attr.required === "MANDATORY")
     .map((attr) => {
+      const userOverride = context.userOverrides?.[attr.attributeTypeName];
+      if (userOverride) {
+        return {
+          fieldName: attr.attributeTypeName,
+          value: userOverride,
+          source: "USER_INPUT" as const,
+          critical: false,
+          kind: "ATTRIBUTE" as const,
+        };
+      }
       const optionValue = matchOptionValue(attr.attributeTypeName, variantContext.optionGroups, variantContext.variant);
       if (optionValue) {
         return {
@@ -454,6 +476,16 @@ export function buildCoupangCompliance(
     ? chosenNoticeCategory.noticeCategoryDetailNames
         .filter((detail) => detail.required === "MANDATORY")
         .map((detail) => {
+          const userOverride = context.userOverrides?.[detail.noticeCategoryDetailName];
+          if (userOverride) {
+            return {
+              fieldName: detail.noticeCategoryDetailName,
+              value: userOverride,
+              source: "USER_INPUT" as const,
+              critical: false,
+              kind: "NOTICE" as const,
+            };
+          }
           const known = KNOWN_NOTICE_VALUES[detail.noticeCategoryDetailName];
           if (known) {
             return {
@@ -521,6 +553,7 @@ function buildCoupangItem(args: {
       recommendedAge: product.recommendedAge.value || undefined,
       manufacturer: product.manufacturer.value || undefined,
       careInstructions: product.careInstructions.value || undefined,
+      userOverrides: product.categoryFieldOverrides,
     },
     { optionGroups, variant },
   );

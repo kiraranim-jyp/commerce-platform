@@ -132,6 +132,11 @@ export interface CanonicalProduct {
    * 남아서 등록 이력에서 재구성할 수 없었다 — 이 필드가 그 계산 근거다.
    * priceOverrideKrw 없이(자동 환율값 그대로 등록) 이 필드만 있을 수도 있다. */
   priceBreakdown?: { shippingKrw: number; feePercent: number; marginPercent: number };
+  /** P0(Category Meta -> 동적 입력폼) — 카테고리 확정 후 사용자가 화면에서
+   * 직접 채운 쿠팡 구매옵션(attribute)/고시정보(notice) 값. 키는
+   * attributeTypeName 또는 noticeCategoryDetailName 원문 그대로(쿠팡 카테고리
+   * 메타 API가 주는 이름과 정확히 일치해야 build-payload.ts의 매칭이 된다). */
+  categoryFieldOverrides?: Record<string, string>;
   sku: ProvenanceField<string>;
   description: ProvenanceField<string>;
   material: ProvenanceField<string>;

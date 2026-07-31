@@ -1,11 +1,12 @@
 "use client";
 
 import type { CategoryCandidate } from "@commerce/category";
-import type { ListingResult, ListingStatus, ReadinessReport } from "@commerce/listing";
+import type { CoupangCategoryMeta, ListingResult, ListingStatus, ReadinessReport } from "@commerce/listing";
 import { isVerifiedCategorySelected } from "@commerce/marketplace";
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
 import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
+import { CategoryRequirementsEditor } from "./CategoryRequirementsEditor";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { EditableText, EditableTextarea } from "./EditableField";
 import { ListingSection } from "./ListingSection";
@@ -36,6 +37,11 @@ export function PlatformPreview({
   onFetchCoupangCategory,
   coupangCategoryFetching,
   categoryTraceLog,
+  categoryMeta,
+  categoryMetaLoading,
+  categoryMetaError,
+  categoryFieldOverrides,
+  onUpdateCategoryFieldOverride,
   settingsMissing,
   developerMode,
 }: {
@@ -66,6 +72,13 @@ export function PlatformPreview({
   /** P0(Category Resolver 추적) — "추천 신호 → 쿠팡 API 질의 → 검증 결과 → 선택"
    * 순서를 그대로 보여준다. */
   categoryTraceLog?: string[];
+  /** Sprint A #1(Category Meta -> 동적 입력폼) — 쿠팡 탭에서 카테고리가 실제
+   * 선택됐을 때만 채워진다. */
+  categoryMeta?: CoupangCategoryMeta | null;
+  categoryMetaLoading?: boolean;
+  categoryMetaError?: string | null;
+  categoryFieldOverrides?: Record<string, string>;
+  onUpdateCategoryFieldOverride?: (fieldName: string, value: string) => void;
   /** 쿠팡 탭에서만 넘어온다 — 비어있지 않으면 등록 버튼 대신 "설정 필요" 배너를 보여준다. */
   settingsMissing?: string[];
   /** P0-UI Epic 1/4 — Developer Mode가 꺼져 있으면 Payload/개발 로그를 숨긴다. */
@@ -209,6 +222,15 @@ export function PlatformPreview({
           onFetchCoupangCategory={onFetchCoupangCategory}
           coupangCategoryFetching={coupangCategoryFetching}
         />
+        {onUpdateCategoryFieldOverride && (categoryMeta || categoryMetaLoading || categoryMetaError) && (
+          <CategoryRequirementsEditor
+            categoryMeta={categoryMeta ?? null}
+            loading={categoryMetaLoading ?? false}
+            error={categoryMetaError ?? null}
+            overrides={categoryFieldOverrides}
+            onUpdateOverride={onUpdateCategoryFieldOverride}
+          />
+        )}
         {categoryTraceLog && categoryTraceLog.length > 0 && (
           <div className="rounded-lg border border-border bg-background p-3 text-[11px] text-text-secondary">
             <p className="font-medium text-text-tertiary">카테고리 추적 로그</p>

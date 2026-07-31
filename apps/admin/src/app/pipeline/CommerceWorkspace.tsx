@@ -13,6 +13,7 @@ import { mockProductContentProvider } from "@commerce/content";
 import {
   LISTING_EXECUTORS,
   validateSmartStoreListing,
+  type CoupangCategoryMeta,
   type ExecutionMode,
   type ListingResult,
   type ListingStatus,
@@ -126,6 +127,16 @@ export function CommerceWorkspace({
     source: "frankfurter" | "fallback";
   } | null>(null);
   const [exchangeRatesLoading, setExchangeRatesLoading] = useState(false);
+  /** Sprint A #1(Category Meta -> 동적 입력폼) — 카테고리를 실제로 선택(검증된
+   * 쿠팡 코드로 SELECTED)하면 그 코드의 필수 구매옵션/고시정보를 미리 불러와서
+   * 등록 전에 화면에서 채울 수 있게 한다. 지금까지는 이 API가 등록 시점
+   * (register 라우트) 안에서만 호출돼서, 카테고리를 골라도 "아무것도 안 생기고"
+   * 등록해야 비로소 "카테고리 코드 없음/속성 없음" 오류를 만났다 — 그 공백을
+   * 메운다. 쿠팡에만 있다(요구사항 자체가 쿠팡 등록 실패에서 나왔고,
+   * buildCoupangCompliance도 쿠팡 전용이다). */
+  const [categoryMeta, setCategoryMeta] = useState<CoupangCategoryMeta | null>(null);
+  const [categoryMetaLoading, setCategoryMetaLoading] = useState(false);
+  const [categoryMetaError, setCategoryMetaError] = useState<string | null>(null);
 
   /** P0(환율 시스템) — 고정 환율표 대신 실제 환율을 보여준다. 컴포넌트 마운트
    * 시 한 번 불러오고, 이후엔 "새로고침" 버튼으로만 다시 부른다(CPO 요구사항:
@@ -148,6 +159,47 @@ export function CommerceWorkspace({
     fetchExchangeRates();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /** 쿠팡 탭에서 카테고리가 "검증된 코드로 실제 선택"됐을 때만 부른다 — 추천만
+   * 떠 있는 상태(RECOMMENDED)나 미검증 후보로는 부르지 않는다(CP001과 같은 이유:
+   * state만 보고 판단하면 검증 안 된 후보에도 반응해서 register 라우트가 이미
+   * 겪은 것과 같은 문제가 여기서도 재발한다 — isVerifiedCategorySelected 하나로
+   * 통일). */
+  useEffect(() => {
+    const selection = categoryMappings.coupang;
+    if (tab !== "coupang" || !isVerifiedCategorySelected(selection) || !selection.candidate) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fetchExchangeRates 위와 같은 패턴(기존 코드)
+      setCategoryMeta(null);
+      setCategoryMetaError(null);
+      return;
+    }
+    let cancelled = false;
+    setCategoryMetaLoading(true);
+    setCategoryMetaError(null);
+    fetch(`/api/coupang/category-meta?code=${selection.candidate.id}`)
+      .then((res) => res.json())
+      .then((data: { body?: CoupangCategoryMeta; error?: string }) => {
+        if (cancelled) return;
+        if (data.body) {
+          setCategoryMeta(data.body);
+        } else {
+          setCategoryMeta(null);
+          setCategoryMetaError(data.error ?? "카테고리 필수 항목을 불러오지 못했습니다.");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCategoryMeta(null);
+          setCategoryMetaError("카테고리 필수 항목을 불러오지 못했습니다.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setCategoryMetaLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, categoryMappings.coupang]);
 
   /** 쿠팡 탭에 들어올 때마다 저장된 판매자 설정이 등록에 필요한 항목을 모두
    * 채웠는지 확인한다 — 실제 쿠팡 API를 호출하지 않는 단순 DB/env 조회라 자동으로
@@ -247,6 +299,21 @@ export function CommerceWorkspace({
    * 분리해서, 계산기를 만지는 중에 등록가가 먼저 바뀌지 않게 한다). */
   function updatePriceBreakdown(breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) {
     setProduct((prev) => ({ ...prev, priceBreakdown: breakdown }));
+  }
+
+  /** Sprint A #1 — CategoryRequirementsEditor에서 입력한 값을 저장한다. 빈
+   * 문자열로 지우면 다시 자동 매칭/임시값 경로로 돌아간다(build-payload.ts가
+   * falsy 값은 override로 취급하지 않는다). */
+  function updateCategoryFieldOverride(fieldName: string, value: string) {
+    setProduct((prev) => {
+      const next = { ...(prev.categoryFieldOverrides ?? {}) };
+      if (value) {
+        next[fieldName] = value;
+      } else {
+        delete next[fieldName];
+      }
+      return { ...prev, categoryFieldOverrides: next };
+    });
   }
 
   function updateOptions(raw: string) {
@@ -581,6 +648,11 @@ export function CommerceWorkspace({
           onFetchCoupangCategory={tab === "coupang" ? fetchCoupangCategoryRecommendation : undefined}
           coupangCategoryFetching={coupangCategoryFetching}
           categoryTraceLog={categoryTraceLog}
+          categoryMeta={tab === "coupang" ? categoryMeta : null}
+          categoryMetaLoading={tab === "coupang" && categoryMetaLoading}
+          categoryMetaError={tab === "coupang" ? categoryMetaError : null}
+          categoryFieldOverrides={product.categoryFieldOverrides}
+          onUpdateCategoryFieldOverride={updateCategoryFieldOverride}
           settingsMissing={tab === "coupang" ? (coupangSettingsMissing ?? undefined) : undefined}
           developerMode={developerMode}
         />

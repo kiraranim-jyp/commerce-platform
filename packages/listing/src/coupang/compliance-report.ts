@@ -45,6 +45,7 @@ export interface ComplianceReport {
  * 인정한다 — 0점을 주면 "일단 등록되게는 한다"는 기존 원칙과 충돌하고, 100%를
  * 주면 자리표시자가 실제 데이터인 것처럼 숨겨진다. */
 const FIELD_CREDIT: Record<ComplianceFieldResult["source"], number> = {
+  USER_INPUT: 1,
   OPTION_MATCH: 1,
   PRODUCT_FIELD: 1,
   KNOWN_VALUE: 1,
