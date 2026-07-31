@@ -35,7 +35,7 @@ export function CategoryRequirementsEditor({
   error: string | null;
   overrides: Record<string, string> | undefined;
   onUpdateOverride: (fieldName: string, value: string) => void;
-  resolvedFields: Record<string, { value: string; source: ComplianceFieldSource }> | undefined;
+  resolvedFields: Record<string, { value: string; source: ComplianceFieldSource; confidence: number }> | undefined;
 }) {
   if (loading) {
     return (
@@ -138,10 +138,30 @@ export function CategoryRequirementsEditor({
 /** OPTION_MATCH(사이즈/색상처럼 옵션마다 값이 다른 필드)는 등록 시 품목별로
  * 이미 채워지므로 "직접 입력 필요" 카운트에서 제외한다 — PLACEHOLDER만
  * 진짜 사람 입력이 필요한 상태다. */
+/** Sprint A-2(Auto Fill 매핑 엔진) — CPO 요구사항: "자동 입력도 출처와
+ * 신뢰도를 함께 관리해야 디버깅/승인율 분석에 도움된다." buildCoupangCompliance()가
+ * 이미 소스별로 고정 confidence를 매기고 있으므로(FIELD_SOURCE_CONFIDENCE),
+ * 여기서는 그 값을 사람이 읽을 수 있는 문구로만 바꿔서 필드 아래 보여준다 —
+ * 새로 판단하지 않는다(단일 계산 원칙). */
+const SOURCE_LABELS: Record<ComplianceFieldSource, string> = {
+  USER_INPUT: "직접 입력함",
+  OPTION_MATCH: "선택한 옵션에서",
+  PRODUCT_FIELD: "상품 정보에서 추출",
+  KNOWN_VALUE: "CartPilot이 확인한 값",
+  DETERMINISTIC: "카테고리 규칙 기본값",
+  PLACEHOLDER: "",
+};
+
+function confidenceLabel(confidence: number): string {
+  if (confidence >= 0.9) return "높음";
+  if (confidence >= 0.5) return "보통";
+  return "낮음";
+}
+
 function needsUserInput(
   fieldName: string,
   overrides: Record<string, string> | undefined,
-  resolvedFields: Record<string, { value: string; source: ComplianceFieldSource }> | undefined,
+  resolvedFields: Record<string, { value: string; source: ComplianceFieldSource; confidence: number }> | undefined,
 ): boolean {
   if (overrides?.[fieldName]) return false;
   const resolved = resolvedFields?.[fieldName];
@@ -161,7 +181,7 @@ function RequirementField({
   unit?: string;
   inputValues: string[];
   override: string | undefined;
-  resolved: { value: string; source: ComplianceFieldSource } | undefined;
+  resolved: { value: string; source: ComplianceFieldSource; confidence: number } | undefined;
   onCommit: (value: string) => void;
 }) {
   // OPTION_MATCH는 값이 옵션(품목)마다 다르다 — 여기서 하나의 값으로 덮어쓰면
@@ -177,6 +197,9 @@ function RequirementField({
         </label>
         <p className="mt-0.5 rounded border border-transparent px-1 py-0.5 text-sm text-text-tertiary">
           옵션별로 자동 반영됨 (예: {resolved.value})
+        </p>
+        <p className="mt-0.5 text-[11px] text-text-tertiary">
+          출처: {SOURCE_LABELS[resolved.source]} · 신뢰도 {confidenceLabel(resolved.confidence)}
         </p>
       </div>
     );
@@ -223,6 +246,11 @@ function RequirementField({
           />
         )}
       </div>
+      {isAutoFilled && resolved && (
+        <p className="mt-0.5 text-[11px] text-text-tertiary">
+          출처: {SOURCE_LABELS[resolved.source]} · 신뢰도 {confidenceLabel(resolved.confidence)}
+        </p>
+      )}
     </div>
   );
 }

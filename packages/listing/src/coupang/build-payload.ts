@@ -243,6 +243,10 @@ const SIZE_SYNONYMS = ["사이즈", "size"];
 const COLOR_SYNONYMS = ["색상", "컬러", "color", "colour"];
 const MATERIAL_SYNONYMS = ["재질", "소재", "material"];
 const COUNTRY_SYNONYMS = ["제조국", "원산지", "country"];
+/** Sprint A-2(Auto Fill 매핑 엔진) — CPO가 1차 자동 매핑 대상으로 명시한
+ * "브랜드"가 원래 빠져 있었다(구매옵션/고시정보 이름에 "브랜드"가 나오는
+ * 카테고리가 있다 — 예: 잡화류). */
+const BRAND_SYNONYMS = ["브랜드", "brand"];
 /** P0 Epic 1/4(Resolver 확장) — color/recommendedAge/manufacturer/careInstructions도
  * material/countryOfOrigin과 같은 패턴으로 matchProductField에 추가한다. COLOR_SYNONYMS는
  * matchOptionValue(옵션 그룹 매칭)에서도 이미 쓰고 있으므로 재사용 — 옵션에 색상 그룹이
@@ -296,6 +300,7 @@ function matchOptionValue(
 function matchProductField(
   fieldName: string,
   productFields: {
+    brand?: string;
     material?: string;
     countryOfOrigin?: string;
     color?: string;
@@ -305,6 +310,9 @@ function matchProductField(
   },
 ): string | undefined {
   const lower = fieldName.toLowerCase();
+  if (BRAND_SYNONYMS.some((s) => lower.includes(s)) && productFields.brand) {
+    return productFields.brand;
+  }
   if (MATERIAL_SYNONYMS.some((s) => lower.includes(s)) && productFields.material) {
     return productFields.material;
   }
@@ -370,12 +378,44 @@ const FIELD_SOURCE_CONFIDENCE: Record<ComplianceFieldSource, number> = {
  * 채운다. noticeCategories가 여러 개면 필수 항목이 가장 적은(=충족하기 가장
  * 단순한) 카테고리를 고른다 — 특정 카테고리를 강제로 골라야 할 근거가 없다.
  * 채운 값마다 출처(attributeResults/noticeResults)도 함께 반환한다 — Compliance
- * Report가 "이 값이 진짜인지 자리표시자인지"를 판단하는 데 쓴다. */
+ * Report가 "이 값이 진짜인지 자리표시자인지"를 판단하는 데 쓴다.
+ *
+ * Sprint A-2(Auto Fill 매핑 엔진) — 필드마다 각자 규칙을 만들지 않고, 모든
+ * attribute/notice가 아래 하나의 우선순위를 그대로 통과한다(CPO 요구사항:
+ * "필드별 규칙이 제각각 생기면 유지보수가 어렵다"). 이 함수 안의
+ * .map() 블록 두 개(attribute용/notice용)가 실제 구현이고, 이 순서를
+ * 벗어나는 매칭은 없다:
+ *
+ *   1. USER_INPUT      — context.userOverrides (CPO가 부른 "Category Override"와
+ *                         같은 것 — 화면에서 사람이 직접 채운 값이라는 뜻으로,
+ *                         이 함수 안에서는 한 이름(USER_INPUT)만 쓴다.)
+ *   2. VARIANT          — matchOptionValue: 선택된 옵션 조합(variant)의 실제 값.
+ *                         소스 이름은 OPTION_MATCH.
+ *   3. CANONICAL_PRODUCT — matchProductField: CanonicalProduct 필드(브랜드/재질/
+ *                         제조국/색상/사용연령/제조자/세탁방법). 이 필드들 자체는
+ *                         크롤러(Extractor)가 원문에서 뽑았거나 Resolver(P0 Epic 1/4)가
+ *                         정규식/휴리스틱으로 뽑은 값이다 — 소스 이름은 PRODUCT_FIELD.
+ *   4. KNOWN_VALUE       — 품명/연락처처럼 CartPilot이 문자 그대로 이미 들고 있는 값.
+ *   5. DETERMINISTIC     — NUMBER 타입 기본값("1개") · 허용값 목록의 첫 값처럼
+ *                         "항상 맞는 규칙"으로 정하는 값(실제로 아는 값은 아니다).
+ *   6. AI                — 아직 없다. 크롤링/정규식으로 못 찾은 값을 LLM이 추론해서
+ *                         채우는 단계인데, 근거 없이 지어낸 값을 컴플라이언스 필드에
+ *                         넣는 건 이 코드베이스의 "지어내지 않는다" 원칙과 정면으로
+ *                         충돌한다(NOTICE_DEFAULT_CONTENT 주석 참고) — 이번 스프린트
+ *                         범위에서 의도적으로 제외했다. 필요해지면 낮은 confidence로
+ *                         별도 소스("AI_INFERRED")를 추가하고 반드시 사용자 확인을
+ *                         거치게 해야 한다.
+ *   7. EMPTY(PLACEHOLDER) — 아무것도 못 찾은 경우. 화면에서 빨간 "*"로 표시되고
+ *                         사용자 입력을 요청한다.
+ *
+ * KC 인증번호/수입자/A/S 연락처/인증기관은 이 매핑에서 의도적으로 제외한다 —
+ * CartPilot이 원본 사이트에서 알 수 없는, 반드시 사람이 확인해야 하는 정보다. */
 export function buildCoupangCompliance(
   categoryMeta: CoupangCategoryMeta | null | undefined,
   context: {
     productName: string;
     contactNumber: string;
+    brand?: string;
     material?: string;
     countryOfOrigin?: string;
     color?: string;
@@ -547,6 +587,7 @@ function buildCoupangItem(args: {
     {
       productName: listing.title,
       contactNumber: sellerConfig.companyContactNumber,
+      brand: product.brand.value || undefined,
       material: product.material.value || undefined,
       countryOfOrigin: product.countryOfOrigin.value || undefined,
       color: product.color.value || undefined,

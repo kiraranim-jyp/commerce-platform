@@ -437,6 +437,7 @@ export function CommerceWorkspace({
       {
         productName: listing.title,
         contactNumber: defaultContactNumber,
+        brand: product.brand.value || undefined,
         material: product.material.value || undefined,
         countryOfOrigin: product.countryOfOrigin.value || undefined,
         color: product.color.value || undefined,
@@ -451,9 +452,9 @@ export function CommerceWorkspace({
 
   const resolvedCategoryFields = useMemo(() => {
     if (!compliancePreview) return undefined;
-    const map: Record<string, { value: string; source: ComplianceFieldSource }> = {};
+    const map: Record<string, { value: string; source: ComplianceFieldSource; confidence: number }> = {};
     for (const r of [...compliancePreview.attributeResults, ...compliancePreview.noticeResults]) {
-      map[r.fieldName] = { value: r.value, source: r.source };
+      map[r.fieldName] = { value: r.value, source: r.source, confidence: r.confidence };
     }
     return map;
   }, [compliancePreview]);
