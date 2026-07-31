@@ -1,6 +1,6 @@
 import type { CategorySelection } from "@commerce/category";
 import type { ReadinessReport } from "@commerce/listing";
-import type { ValidationResult } from "@commerce/marketplace";
+import { isVerifiedCategorySelected, type ValidationResult } from "@commerce/marketplace";
 
 export interface ReadinessItem {
   label: string;
@@ -40,9 +40,7 @@ export function computeChecklistReadiness(
   category: CategorySelection,
   settingsMissing?: string[],
 ): ReadinessSummary {
-  const categoryConfirmed =
-    (category.state === "SELECTED" || category.state === "CONFIRMED") &&
-    category.candidate?.isVerifiedPlatformCode === true;
+  const categoryConfirmed = isVerifiedCategorySelected(category);
 
   const items: ReadinessItem[] = [
     { label: "카테고리", passed: categoryConfirmed, required: true },

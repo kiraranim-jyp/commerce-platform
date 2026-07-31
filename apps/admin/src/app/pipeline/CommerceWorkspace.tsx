@@ -169,7 +169,12 @@ export function CommerceWorkspace({
       | "seoTitle"
       | "seoDescription"
       | "countryOfOrigin"
-      | "returnPolicy",
+      | "returnPolicy"
+      | "manufacturer"
+      | "certification"
+      | "careInstructions"
+      | "color"
+      | "recommendedAge",
     value: string,
   ) {
     setProduct((prev) => ({

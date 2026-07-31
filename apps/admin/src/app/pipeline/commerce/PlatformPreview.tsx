@@ -11,6 +11,7 @@ import { EditableText, EditableTextarea } from "./EditableField";
 import { ListingSection } from "./ListingSection";
 import { PriceEditor } from "./PriceEditor";
 import { computeChecklistReadiness, computeReadinessScoreSummary } from "./readiness";
+import { RequiredFieldsEditor } from "./RequiredFieldsEditor";
 import { RegistrationReadinessCard } from "./RegistrationReadinessCard";
 import { ValidationPanel } from "./ValidationPanel";
 
@@ -45,7 +46,10 @@ export function PlatformPreview({
   onUpdateSalePriceKrw: (amountKrw: number) => void;
   onUpdatePriceBreakdown: (breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) => void;
   onSelectCategory: (candidate: CategoryCandidate) => void;
-  onFixTextField?: (field: "countryOfOrigin" | "returnPolicy", value: string) => void;
+  onFixTextField?: (
+    field: "countryOfOrigin" | "returnPolicy" | "sku" | "manufacturer" | "certification" | "brand",
+    value: string,
+  ) => void;
   onFixNumberField?: (field: "shippingFee" | "stockQuantity", value: number) => void;
   onOpenListingModal: () => void;
   onRetryListing: () => void;
@@ -178,6 +182,13 @@ export function PlatformPreview({
           onUpdateSalePriceKrw={onUpdateSalePriceKrw}
           onUpdatePriceBreakdown={onUpdatePriceBreakdown}
         />
+        {onFixTextField && onFixNumberField && (
+          <RequiredFieldsEditor
+            product={product}
+            onUpdateField={onFixTextField}
+            onUpdateNumberField={onFixNumberField}
+          />
+        )}
         <CategoryRecommendationPanel
           candidates={categoryCandidates}
           selection={listing.category}
