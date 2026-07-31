@@ -1,7 +1,13 @@
 "use client";
 
 import type { CategoryCandidate } from "@commerce/category";
-import type { CoupangCategoryMeta, ListingResult, ListingStatus, ReadinessReport } from "@commerce/listing";
+import type {
+  ComplianceFieldSource,
+  CoupangCategoryMeta,
+  ListingResult,
+  ListingStatus,
+  ReadinessReport,
+} from "@commerce/listing";
 import { isVerifiedCategorySelected } from "@commerce/marketplace";
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
@@ -42,6 +48,7 @@ export function PlatformPreview({
   categoryMetaError,
   categoryFieldOverrides,
   onUpdateCategoryFieldOverride,
+  resolvedCategoryFields,
   settingsMissing,
   developerMode,
 }: {
@@ -79,6 +86,10 @@ export function PlatformPreview({
   categoryMetaError?: string | null;
   categoryFieldOverrides?: Record<string, string>;
   onUpdateCategoryFieldOverride?: (fieldName: string, value: string) => void;
+  /** Sprint A-2(Auto Fill) — CartPilot이 이미 아는 값(브랜드/제조국/색상/소재 등)을
+   * fieldName별로 미리 계산해둔 결과. CategoryRequirementsEditor가 이 값을 보고
+   * "✓ 자동"으로 미리 채워 보여줄지, 빈 입력으로 사용자에게 요청할지 정한다. */
+  resolvedCategoryFields?: Record<string, { value: string; source: ComplianceFieldSource }>;
   /** 쿠팡 탭에서만 넘어온다 — 비어있지 않으면 등록 버튼 대신 "설정 필요" 배너를 보여준다. */
   settingsMissing?: string[];
   /** P0-UI Epic 1/4 — Developer Mode가 꺼져 있으면 Payload/개발 로그를 숨긴다. */
@@ -229,6 +240,7 @@ export function PlatformPreview({
             error={categoryMetaError ?? null}
             overrides={categoryFieldOverrides}
             onUpdateOverride={onUpdateCategoryFieldOverride}
+            resolvedFields={resolvedCategoryFields}
           />
         )}
         {categoryTraceLog && categoryTraceLog.length > 0 && (

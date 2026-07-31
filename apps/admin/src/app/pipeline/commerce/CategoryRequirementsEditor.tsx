@@ -1,6 +1,6 @@
 "use client";
 
-import type { CoupangCategoryMeta } from "@commerce/listing";
+import type { ComplianceFieldSource, CoupangCategoryMeta } from "@commerce/listing";
 import { EditableText } from "./EditableField";
 
 /**
@@ -11,11 +11,16 @@ import { EditableText } from "./EditableField";
  * 라우트) 안에서만 호출되고, 사용자가 등록 전에 뭘 채워야 하는지 볼 방법이
  * 없었다는 것 — 이 컴포넌트가 그 공백을 메운다.
  *
+ * Sprint A-2(Auto Fill) — 처음 버전은 필수 항목을 전부 빈 입력으로 보여줘서
+ * "AI가 이미 아는 값도 사람이 다시 입력해야 하는" 문제가 있었다(CPO 지적:
+ * "88%가 나와도 실제로 입력할 게 많으면 의미 없다"). resolvedFields는
+ * register 라우트가 실제 등록 때 쓰는 것과 같은 buildCoupangCompliance()
+ * 계산 결과라, 이미 채워질 값은 미리 보여주고 진짜 모르는 것만 입력을 요청한다.
+ *
  * 여기서 입력한 값(categoryFieldOverrides)은 build-payload.ts의
  * buildCoupangCompliance()에서 다른 어떤 자동 매칭(OPTION_MATCH/
  * PRODUCT_FIELD 등)보다 먼저 확인되는 USER_INPUT 소스로 등록 payload에
- * 그대로 반영된다 — 비워두면 기존처럼 자동 매칭/임시값으로 채워진다(필수
- * 항목이라고 전부 사용자가 입력해야 하는 건 아니다).
+ * 그대로 반영된다.
  */
 export function CategoryRequirementsEditor({
   categoryMeta,
@@ -23,12 +28,14 @@ export function CategoryRequirementsEditor({
   error,
   overrides,
   onUpdateOverride,
+  resolvedFields,
 }: {
   categoryMeta: CoupangCategoryMeta | null;
   loading: boolean;
   error: string | null;
   overrides: Record<string, string> | undefined;
   onUpdateOverride: (fieldName: string, value: string) => void;
+  resolvedFields: Record<string, { value: string; source: ComplianceFieldSource }> | undefined;
 }) {
   if (loading) {
     return (
@@ -60,12 +67,30 @@ export function CategoryRequirementsEditor({
 
   if (mandatoryAttributes.length === 0 && mandatoryNotices.length === 0) return null;
 
+  const totalCount = mandatoryAttributes.length + mandatoryNotices.length;
+  const needsInputCount = [
+    ...mandatoryAttributes.map((a) => a.attributeTypeName),
+    ...mandatoryNotices.map((d) => d.noticeCategoryDetailName),
+  ].filter((fieldName) => needsUserInput(fieldName, overrides, resolvedFields)).length;
+
   return (
     <section className="rounded-lg border border-border p-4 text-sm">
-      <h3 className="text-base font-medium">카테고리 필수 입력</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-base font-medium">카테고리 필수 입력</h3>
+        <span className="text-xs text-text-secondary">
+          {needsInputCount === 0 ? (
+            <span className="text-success">전부 자동 채움</span>
+          ) : (
+            <>
+              직접 입력 필요 <span className="font-medium text-warning">{needsInputCount}</span>개 (전체{" "}
+              {totalCount}개)
+            </>
+          )}
+        </span>
+      </div>
       <p className="mt-1 text-xs text-text-secondary">
-        이 카테고리에 등록하려면 쿠팡이 요구하는 항목입니다. 비워두면 상품 정보에서 자동으로 채우거나, 찾지 못하면
-        임시값이 들어갑니다 — 정확한 값을 알고 있으면 직접 입력해주세요.
+        브랜드/제조국/색상/소재처럼 CartPilot이 이미 아는 값은 자동으로 채워집니다 — KC 인증 같은 항목만 직접
+        입력해주세요.
       </p>
 
       {mandatoryAttributes.length > 0 && (
@@ -78,7 +103,8 @@ export function CategoryRequirementsEditor({
                 label={attr.attributeTypeName}
                 unit={attr.basicUnit !== "없음" ? attr.basicUnit : undefined}
                 inputValues={attr.inputValues}
-                value={overrides?.[attr.attributeTypeName] ?? ""}
+                override={overrides?.[attr.attributeTypeName]}
+                resolved={resolvedFields?.[attr.attributeTypeName]}
                 onCommit={(v) => onUpdateOverride(attr.attributeTypeName, v)}
               />
             ))}
@@ -97,7 +123,8 @@ export function CategoryRequirementsEditor({
                 key={detail.noticeCategoryDetailName}
                 label={detail.noticeCategoryDetailName}
                 inputValues={[]}
-                value={overrides?.[detail.noticeCategoryDetailName] ?? ""}
+                override={overrides?.[detail.noticeCategoryDetailName]}
+                resolved={resolvedFields?.[detail.noticeCategoryDetailName]}
                 onCommit={(v) => onUpdateOverride(detail.noticeCategoryDetailName, v)}
               />
             ))}
@@ -108,38 +135,79 @@ export function CategoryRequirementsEditor({
   );
 }
 
+/** OPTION_MATCH(사이즈/색상처럼 옵션마다 값이 다른 필드)는 등록 시 품목별로
+ * 이미 채워지므로 "직접 입력 필요" 카운트에서 제외한다 — PLACEHOLDER만
+ * 진짜 사람 입력이 필요한 상태다. */
+function needsUserInput(
+  fieldName: string,
+  overrides: Record<string, string> | undefined,
+  resolvedFields: Record<string, { value: string; source: ComplianceFieldSource }> | undefined,
+): boolean {
+  if (overrides?.[fieldName]) return false;
+  const resolved = resolvedFields?.[fieldName];
+  if (!resolved) return true;
+  return resolved.source === "PLACEHOLDER";
+}
+
 function RequirementField({
   label,
   unit,
   inputValues,
-  value,
+  override,
+  resolved,
   onCommit,
 }: {
   label: string;
   unit?: string;
   inputValues: string[];
-  value: string;
+  override: string | undefined;
+  resolved: { value: string; source: ComplianceFieldSource } | undefined;
   onCommit: (value: string) => void;
 }) {
+  // OPTION_MATCH는 값이 옵션(품목)마다 다르다 — 여기서 하나의 값으로 덮어쓰면
+  // 등록 시 모든 품목에 그 한 값이 그대로 적용돼버린다(실제로는 품목별로
+  // buildCoupangItem이 각자 옵션값을 넣는데, override가 있으면 그걸 무시하고
+  // 전부 같은 값이 된다 — 옵션 조합이 여러 개인 상품에서 조용히 틀린 데이터가
+  // 등록되는 사고로 이어진다). 그래서 이 소스는 입력을 아예 막고 정보만 보여준다.
+  if (!override && resolved?.source === "OPTION_MATCH") {
+    return (
+      <div>
+        <label className="text-xs text-text-secondary">
+          {label} <span className="ml-0.5 text-success">✓ 자동</span>
+        </label>
+        <p className="mt-0.5 rounded border border-transparent px-1 py-0.5 text-sm text-text-tertiary">
+          옵션별로 자동 반영됨 (예: {resolved.value})
+        </p>
+      </div>
+    );
+  }
+
+  const isAutoFilled = !override && resolved && resolved.source !== "PLACEHOLDER";
+  const displayValue = override ?? (isAutoFilled ? resolved.value : "");
   // 쿠팡이 값을 정해진 목록으로 제한한 항목(색상 코드, 등급 등)은 자유 입력을
   // 받으면 오히려 "유효하지 않은 구매 옵션 값"으로 거부된다 — 목록이 있으면
   // select로 강제해서 잘못된 값을 아예 못 입력하게 막는다.
   const isEnum = inputValues.length > 0 && inputValues.length <= 100;
+
   return (
     <div>
       <label className="text-xs text-text-secondary">
         {label}
-        <span className="ml-0.5 text-error">*</span>
+        {isAutoFilled ? (
+          <span className="ml-1 text-success">✓ 자동</span>
+        ) : (
+          <span className="ml-0.5 text-error">*</span>
+        )}
         {unit && <span className="ml-1 text-text-tertiary">({unit})</span>}
       </label>
       <div className="mt-0.5">
         {isEnum ? (
           <select
-            value={value}
+            value={displayValue}
             onChange={(e) => onCommit(e.target.value)}
             className="w-full rounded border border-border bg-surface px-2 py-1 text-sm focus:border-primary focus:outline-none"
           >
-            <option value="">자동 매칭 사용</option>
+            <option value="">직접 선택해주세요</option>
             {inputValues.map((v) => (
               <option key={v} value={v}>
                 {v}
@@ -148,9 +216,9 @@ function RequirementField({
           </select>
         ) : (
           <EditableText
-            value={value}
+            value={displayValue}
             onCommit={onCommit}
-            placeholder="자동 매칭 사용"
+            placeholder="직접 입력해주세요"
             className="w-full rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
           />
         )}

@@ -11,8 +11,10 @@ import {
 } from "@commerce/category";
 import { mockProductContentProvider } from "@commerce/content";
 import {
+  buildCoupangCompliance,
   LISTING_EXECUTORS,
   validateSmartStoreListing,
+  type ComplianceFieldSource,
   type CoupangCategoryMeta,
   type ExecutionMode,
   type ListingResult,
@@ -137,6 +139,12 @@ export function CommerceWorkspace({
   const [categoryMeta, setCategoryMeta] = useState<CoupangCategoryMeta | null>(null);
   const [categoryMetaLoading, setCategoryMetaLoading] = useState(false);
   const [categoryMetaError, setCategoryMetaError] = useState<string | null>(null);
+  /** Sprint A-2(Auto Fill) — register 라우트가 실제 등록 시 쓰는 기본 배송
+   * 프로필의 연락처를 미리 가져온다. buildCoupangCompliance의 "소비자상담
+   * 관련 전화번호"/"A/S 책임자와 전화번호" KNOWN_VALUE 매칭이 등록 시점과
+   * 똑같이 동작하게 하려면 이 값이 필요하다(없으면 그 두 필드만 실제로는
+   * 자동 채워지는데도 화면에서 "입력 필요"로 잘못 보인다). */
+  const [defaultContactNumber, setDefaultContactNumber] = useState("");
 
   /** P0(환율 시스템) — 고정 환율표 대신 실제 환율을 보여준다. 컴포넌트 마운트
    * 시 한 번 불러오고, 이후엔 "새로고침" 버튼으로만 다시 부른다(CPO 요구사항:
@@ -200,6 +208,28 @@ export function CommerceWorkspace({
       cancelled = true;
     };
   }, [tab, categoryMappings.coupang]);
+
+  /** Sprint A-2(Auto Fill) — 기본 배송 프로필의 연락처만 필요하다(전체 설정
+   * 미비 여부는 아래 별도 effect가 이미 확인한다). 쿠팡 탭 진입 시 한 번만
+   * 조회한다 — 자주 안 바뀌는 값이라 카테고리 선택마다 다시 부를 이유가 없다. */
+  useEffect(() => {
+    if (tab !== "coupang") return;
+    let cancelled = false;
+    fetch("/api/settings/coupang/profiles")
+      .then((res) => res.json())
+      .then((data: { profiles?: { isDefault: boolean; companyContactNumber: string }[] }) => {
+        if (cancelled) return;
+        const profiles = data.profiles ?? [];
+        const defaultProfile = profiles.find((p) => p.isDefault) ?? profiles[0];
+        setDefaultContactNumber(defaultProfile?.companyContactNumber ?? "");
+      })
+      .catch(() => {
+        if (!cancelled) setDefaultContactNumber("");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab]);
 
   /** 쿠팡 탭에 들어올 때마다 저장된 판매자 설정이 등록에 필요한 항목을 모두
    * 채웠는지 확인한다 — 실제 쿠팡 API를 호출하지 않는 단순 DB/env 조회라 자동으로
@@ -390,6 +420,43 @@ export function CommerceWorkspace({
     if (tab === "source" || tab === "content") return null;
     return PLATFORM_ADAPTERS[tab].toListingModel(product, effectiveCategorySelection);
   }, [tab, product, effectiveCategorySelection]);
+
+  /** Sprint A-2(Auto Fill) — register 라우트가 등록 시점에만 돌리던
+   * buildCoupangCompliance()를 여기서도 그대로 호출해서 "이미 자동으로 채워질
+   * 값"을 등록 전에 미리 보여준다. 별도 매칭 로직을 새로 만들지 않는다 — 등록
+   * 시점 계산과 다른 결과를 보여주면 그 자체로 CP001과 같은 종류의 신뢰
+   * 문제가 된다(하나의 계산만 있어야 한다). variant는 대표로 첫 번째 것만
+   * 쓴다 — 사이즈/색상처럼 옵션마다 값이 달라지는 필드는 CategoryRequirementsEditor가
+   * source==="OPTION_MATCH"일 때 값을 직접 보여주지 않고 "옵션별로 자동 반영"
+   * 안내만 하므로, 여기서 어떤 variant를 대표로 쓰든 최종 등록 결과에는 영향이
+   * 없다(실제 등록은 품목마다 buildCoupangItem이 자기 variant로 다시 계산한다). */
+  const compliancePreview = useMemo(() => {
+    if (tab !== "coupang" || !categoryMeta || !listing) return null;
+    return buildCoupangCompliance(
+      categoryMeta,
+      {
+        productName: listing.title,
+        contactNumber: defaultContactNumber,
+        material: product.material.value || undefined,
+        countryOfOrigin: product.countryOfOrigin.value || undefined,
+        color: product.color.value || undefined,
+        recommendedAge: product.recommendedAge.value || undefined,
+        manufacturer: product.manufacturer.value || undefined,
+        careInstructions: product.careInstructions.value || undefined,
+        userOverrides: product.categoryFieldOverrides,
+      },
+      { optionGroups: product.optionGroups, variant: product.variants[0] },
+    );
+  }, [tab, categoryMeta, listing, product, defaultContactNumber]);
+
+  const resolvedCategoryFields = useMemo(() => {
+    if (!compliancePreview) return undefined;
+    const map: Record<string, { value: string; source: ComplianceFieldSource }> = {};
+    for (const r of [...compliancePreview.attributeResults, ...compliancePreview.noticeResults]) {
+      map[r.fieldName] = { value: r.value, source: r.source };
+    }
+    return map;
+  }, [compliancePreview]);
 
   /** 쿠팡 카테고리 추천(자동매칭) API를 호출해서 실제 쿠팡 숫자 코드를 후보로
    * 보여준다 — CartPilot 내부 AI 추천(categoryCandidates)과는 완전히 다른 코드
@@ -653,6 +720,7 @@ export function CommerceWorkspace({
           categoryMetaError={tab === "coupang" ? categoryMetaError : null}
           categoryFieldOverrides={product.categoryFieldOverrides}
           onUpdateCategoryFieldOverride={updateCategoryFieldOverride}
+          resolvedCategoryFields={resolvedCategoryFields}
           settingsMissing={tab === "coupang" ? (coupangSettingsMissing ?? undefined) : undefined}
           developerMode={developerMode}
         />
