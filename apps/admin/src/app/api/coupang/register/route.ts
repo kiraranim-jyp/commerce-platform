@@ -383,6 +383,35 @@ export async function POST(request: Request) {
         : ""),
   );
 
+  // Sprint A-4(작업3 — Payload QA) — 지금까지는 Compliance FAIL(KC/인증 등 법적
+  // 필수 항목이 자리표시자)이어도 로그만 남기고 실제 쿠팡 API 제출까지 그대로
+  // 진행됐다. 화면의 Sticky Summary/등록 버튼이 막아주는 게 정상 경로지만,
+  // 클라이언트가 오래된 상태를 들고 있거나 그 판정을 우회해서 요청을 보내는
+  // 경우까지 대비해 서버에서도 마지막으로 한 번 더 막는다 — 카테고리 미확정
+  // 시 LIVE 차단(#175)과 같은 이유의 방어선이다.
+  if (complianceReport.verdict === "FAIL") {
+    const criticalFields = complianceReport.userInputNeeded
+      .filter((f) => f.reasonCode === "CRITICAL")
+      .map((f) => f.fieldName);
+    logStep("Compliance 최종 확인", "failed", `법적 필수 항목 미확인으로 제출을 막았습니다: ${criticalFields.join(", ")}`);
+    const result: ListingResult = withMeta({
+      status: "FAILED",
+      platform: "coupang",
+      mode: "LIVE",
+      retryable: true,
+      payload,
+      error: {
+        step: "VALIDATION",
+        code: "CP004",
+        message: `법적/컴플라이언스 필수 항목이 확인되지 않아 등록을 진행하지 않았습니다: ${criticalFields.join(", ")}`,
+        retryable: true,
+        resolution: "등록 화면에서 해당 항목(KC/인증 등)을 직접 입력한 뒤 다시 시도해주세요.",
+      },
+    });
+    await logRegistrationAttempt(result);
+    return NextResponse.json(result);
+  }
+
   const missing = missingSellerConfigFields(payload);
   if (missing.length > 0) {
     logStep("설정 확인", "failed", `필요한 값이 없습니다: ${missing.join(", ")}`);

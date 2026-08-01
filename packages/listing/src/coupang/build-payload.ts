@@ -253,7 +253,11 @@ const BRAND_SYNONYMS = ["브랜드", "brand"];
  * 있으면 그쪽이 항상 우선(matchOptionValue가 먼저 시도됨)이고, 이건 옵션이 없을 때의
  * 폴백이다. */
 const AGE_SYNONYMS = ["사용연령", "연령", "age"];
-const MANUFACTURER_SYNONYMS = ["제조자", "수입자", "manufacturer"];
+/** Sprint A-4(작업1) — CPO 실측 보고: "제조사는 Bobo Choses가 있는데 고시정보
+ * 제조자에는 안 들어갑니다." 쿠팡 카테고리별로 필드 이름이 "제조자"가 아니라
+ * "제조사"인 경우가 있어("제조사".includes("제조자") === false) 동의어 누락으로
+ * 매칭이 조용히 실패하고 있었다. */
+const MANUFACTURER_SYNONYMS = ["제조자", "제조사", "수입자", "manufacturer"];
 const CARE_SYNONYMS = ["세탁방법", "취급방법", "취급시 주의사항", "care"];
 /** KC 인증정보처럼 법적/컴플라이언스 성격이 강한 필드 — 플레이스홀더로 채워지면
  * Compliance Report가 다른 필드보다 무겁게(FAIL 수준으로) 취급해야 한다. */
@@ -323,10 +327,54 @@ function matchOptionValue(
   return matchedGroup.values.length === 1 ? matchedGroup.values[0] : undefined;
 }
 
-/** CanonicalProduct.material/countryOfOrigin이 실제로 채워져 있을 때만(크롤러가
- * 못 뽑아오면 거의 항상 빈 문자열이다 — 대부분 여전히 플레이스홀더로 남는다는
- * 뜻) "재질"/"제조국" 계열 필드에 실제 값을 준다. */
-function matchProductField(
+/** Sprint A-4(작업1) — CPO 실측 보고: "색상에는 Pink가 있는데 쿠팡 Attribute
+ * 색상으로 자동 연결이 안 됩니다." matchProductField는 원문 값을 그대로
+ * 돌려줬을 뿐 그 값이 쿠팡이 실제로 허용하는 값 목록(attr.inputValues, 대부분
+ * 한국어)에 있는지 확인하지 않았다 — "Pink"는 원문에 실제로 있는 값이라
+ * PRODUCT_FIELD로 채워졌지만, 쿠팡 색상 속성은 "핑크" 같은 한국어 값만
+ * 허용하므로 실제 등록 시점엔 거부될 값이었다. 흔한 색상 영단어만 최소한으로
+ * 번역해서 매칭 성공률을 높이고, 사전에 없는 값은 지어내지 않는다. */
+const COLOR_TRANSLATIONS: Record<string, string> = {
+  pink: "핑크", white: "화이트", black: "블랙", red: "레드", blue: "블루",
+  green: "그린", yellow: "옐로우", grey: "그레이", gray: "그레이", brown: "브라운",
+  beige: "베이지", navy: "네이비", purple: "퍼플", orange: "오렌지", ivory: "아이보리",
+  khaki: "카키", mint: "민트", silver: "실버", gold: "골드", multicolor: "혼합색상",
+};
+
+/** candidate(원문에서 뽑은 값)가 attr.inputValues(쿠팡이 실제로 허용하는 값
+ * 목록)의 어느 값에 해당하는지 확인한다. inputValues가 비어 있으면(자유 입력
+ * 필드) 제약이 없으므로 그대로 통과시킨다. 못 찾으면 undefined — 이 경우
+ * 호출자는 "값은 있지만 후보를 못 정했다"는 별도 사유로 처리해야 한다(지어낸
+ * 값을 쓰면 안 됨). */
+function resolveEnumValue(candidate: string, inputValues: string[]): string | undefined {
+  if (inputValues.length === 0) return candidate;
+  const normalized = candidate.trim().toLowerCase();
+  const exact = inputValues.find((v) => v.toLowerCase() === normalized);
+  if (exact) return exact;
+  const translated = COLOR_TRANSLATIONS[normalized];
+  if (translated) {
+    const translatedMatch = inputValues.find((v) => v.includes(translated));
+    if (translatedMatch) return translatedMatch;
+  }
+  const partial = inputValues.find((v) => v.toLowerCase().includes(normalized) || normalized.includes(v.toLowerCase()));
+  return partial;
+}
+
+/** Sprint A-4(작업2 — 미매핑 필드 리포트) — "자동 입력 실패"를 하나로 뭉치지
+ * 않고 CPO가 요청한 3가지 이유로 구분한다: 이 함수 이름 자체가 매칭 단계
+ * 이름과 대응한다.
+ *   NO_RULE  — 쿠팡 필드 이름과 매칭되는 동의어 규칙 자체가 없다(예: 아직
+ *              모르는 필드 이름).
+ *   NO_VALUE — 동의어는 매칭됐지만(어떤 CartPilot 필드인지는 안다)
+ *              CanonicalProduct에 그 필드 값이 비어 있다.
+ *   MATCHED  — 동의어도 매칭되고 값도 있다(enum 검증은 호출자가 별도로 한다 —
+ *              이 함수는 "원문에 값이 있는가"만 판단한다). */
+type ProductFieldMatch =
+  | { status: "MATCHED"; value: string }
+  | { status: "NO_VALUE" }
+  | { status: "NO_RULE" };
+
+function matchProductFieldDetailed(
   fieldName: string,
   productFields: {
     brand?: string;
@@ -337,30 +385,23 @@ function matchProductField(
     manufacturer?: string;
     careInstructions?: string;
   },
-): string | undefined {
+): ProductFieldMatch {
   const lower = fieldName.toLowerCase();
-  if (BRAND_SYNONYMS.some((s) => lower.includes(s)) && productFields.brand) {
-    return productFields.brand;
+  const rules: [string[], string | undefined][] = [
+    [BRAND_SYNONYMS, productFields.brand],
+    [MATERIAL_SYNONYMS, productFields.material],
+    [COUNTRY_SYNONYMS, productFields.countryOfOrigin],
+    [COLOR_SYNONYMS, productFields.color],
+    [AGE_SYNONYMS, productFields.recommendedAge],
+    [MANUFACTURER_SYNONYMS, productFields.manufacturer],
+    [CARE_SYNONYMS, productFields.careInstructions],
+  ];
+  for (const [synonyms, value] of rules) {
+    if (synonyms.some((s) => lower.includes(s))) {
+      return value ? { status: "MATCHED", value } : { status: "NO_VALUE" };
+    }
   }
-  if (MATERIAL_SYNONYMS.some((s) => lower.includes(s)) && productFields.material) {
-    return productFields.material;
-  }
-  if (COUNTRY_SYNONYMS.some((s) => lower.includes(s)) && productFields.countryOfOrigin) {
-    return productFields.countryOfOrigin;
-  }
-  if (COLOR_SYNONYMS.some((s) => lower.includes(s)) && productFields.color) {
-    return productFields.color;
-  }
-  if (AGE_SYNONYMS.some((s) => lower.includes(s)) && productFields.recommendedAge) {
-    return productFields.recommendedAge;
-  }
-  if (MANUFACTURER_SYNONYMS.some((s) => lower.includes(s)) && productFields.manufacturer) {
-    return productFields.manufacturer;
-  }
-  if (CARE_SYNONYMS.some((s) => lower.includes(s)) && productFields.careInstructions) {
-    return productFields.careInstructions;
-  }
-  return undefined;
+  return { status: "NO_RULE" };
 }
 
 /** 값 하나가 어디서 왔는지 — Compliance Report(Sprint B)가 이 출처로 점수를 매긴다.
@@ -390,6 +431,11 @@ export interface ComplianceFieldResult {
    * 등으로 원문에서 뽑은 값 — 패턴이 못 잡는 표기법도 있어 완벽하진 않음),
    * PLACEHOLDER=0.1(자리표시자, 사실상 "모른다"). */
   confidence: number;
+  /** Sprint A-4(작업2 — 미매핑 필드 리포트) — source가 PLACEHOLDER일 때만 의미
+   * 있다. compliance-report.ts가 이 값으로 "값 없음/규칙 없음/후보 다수" 3가지
+   * 사유를 구분해서 보여준다. undefined면 이 필드 자체가 애초에 자동 매핑
+   * 대상이 아니었다는 뜻(예: KC 인증정보처럼 사람만 알 수 있는 항목). */
+  unmappedReason?: "NO_VALUE" | "NO_RULE" | "ENUM_MISMATCH";
 }
 
 const FIELD_SOURCE_CONFIDENCE: Record<ComplianceFieldSource, number> = {
@@ -491,15 +537,21 @@ export function buildCoupangCompliance(
           kind: "ATTRIBUTE" as const,
         };
       }
-      const productFieldValue = matchProductField(attr.attributeTypeName, context);
-      if (productFieldValue) {
-        return {
-          fieldName: attr.attributeTypeName,
-          value: productFieldValue,
-          source: "PRODUCT_FIELD" as const,
-          critical: false,
-          kind: "ATTRIBUTE" as const,
-        };
+      const fieldMatch = matchProductFieldDetailed(attr.attributeTypeName, context);
+      if (fieldMatch.status === "MATCHED") {
+        const resolvedValue = resolveEnumValue(fieldMatch.value, attr.inputValues);
+        if (resolvedValue) {
+          return {
+            fieldName: attr.attributeTypeName,
+            value: resolvedValue,
+            source: "PRODUCT_FIELD" as const,
+            critical: false,
+            kind: "ATTRIBUTE" as const,
+          };
+        }
+        // 원문에 값은 실제로 있지만("Pink") 쿠팡이 요구하는 값 목록(한국어
+        // enum) 어디에도 대응시키지 못했다 — 지어내서 넣지 않고, "후보 다수"
+        // 사유로 사람이 직접 고르게 한다.
       }
       if (attr.dataType === "NUMBER") {
         const unit = attr.basicUnit && attr.basicUnit !== "없음" ? attr.basicUnit : "";
@@ -511,12 +563,29 @@ export function buildCoupangCompliance(
           kind: "ATTRIBUTE" as const,
         };
       }
+      // Sprint A-4(작업5 — Readiness 재보정) — inputValues가 2개 이상이면
+      // "첫 값을 자동으로 고르는" 건 실제로는 모르면서 찍는 것과 같다(예:
+      // 색상 후보가 10개인데 그중 임의로 하나를 골라 "자동 채움"이라고
+      // 표시하면 점수가 실제보다 부풀려진다). 후보가 정확히 1개뿐이라 고를
+      // 여지가 없을 때만 안전하게 DETERMINISTIC으로 채운다.
+      if (attr.inputValues.length === 1) {
+        return {
+          fieldName: attr.attributeTypeName,
+          value: attr.inputValues[0],
+          source: "DETERMINISTIC" as const,
+          critical: false,
+          kind: "ATTRIBUTE" as const,
+        };
+      }
+      const unmappedReason: ComplianceFieldResult["unmappedReason"] =
+        fieldMatch.status === "MATCHED" ? "ENUM_MISMATCH" : fieldMatch.status === "NO_VALUE" ? "NO_VALUE" : "NO_RULE";
       return {
         fieldName: attr.attributeTypeName,
         value: attr.inputValues[0] ?? NOTICE_DEFAULT_CONTENT,
-        source: attr.inputValues[0] ? ("DETERMINISTIC" as const) : ("PLACEHOLDER" as const),
+        source: "PLACEHOLDER" as const,
         critical: isComplianceCritical(attr.attributeTypeName),
         kind: "ATTRIBUTE" as const,
+        unmappedReason,
       };
     })
     .map((r) => ({ ...r, confidence: FIELD_SOURCE_CONFIDENCE[r.source] }));
@@ -565,22 +634,25 @@ export function buildCoupangCompliance(
               kind: "NOTICE" as const,
             };
           }
-          const productFieldValue = matchProductField(detail.noticeCategoryDetailName, context);
-          if (productFieldValue) {
+          const fieldMatch = matchProductFieldDetailed(detail.noticeCategoryDetailName, context);
+          if (fieldMatch.status === "MATCHED") {
             return {
               fieldName: detail.noticeCategoryDetailName,
-              value: productFieldValue,
+              value: fieldMatch.value,
               source: "PRODUCT_FIELD" as const,
               critical: false,
               kind: "NOTICE" as const,
             };
           }
+          const noticeUnmappedReason: ComplianceFieldResult["unmappedReason"] =
+            fieldMatch.status === "NO_VALUE" ? "NO_VALUE" : "NO_RULE";
           return {
             fieldName: detail.noticeCategoryDetailName,
             value: NOTICE_DEFAULT_CONTENT,
             source: "PLACEHOLDER" as const,
             critical: isComplianceCritical(detail.noticeCategoryDetailName),
             kind: "NOTICE" as const,
+            unmappedReason: noticeUnmappedReason,
           };
         })
         .map((r) => ({ ...r, confidence: FIELD_SOURCE_CONFIDENCE[r.source] }))

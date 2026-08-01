@@ -22,8 +22,18 @@ export interface ComplianceReport {
   userRequiredCount: number;
   /** 0~1. 전체 필드 confidence의 평균 — 자리표시자(0.1)가 많을수록 낮아진다. */
   confidenceAvg: number;
-  /** 아직 자리표시자인 필드 목록 — "등록 전 이것만 채우면 됩니다" 화면에 그대로 쓸 수 있다. */
-  userInputNeeded: { fieldName: string; reason: string; confidence: number }[];
+  /** 아직 자리표시자인 필드 목록 — "등록 전 이것만 채우면 됩니다" 화면에 그대로 쓸 수 있다.
+   * Sprint A-4(작업2) — reasonCode로 CPO가 요청한 3가지 실패 사유를 구분한다:
+   * NO_VALUE(원본에 값 자체가 없음) / NO_RULE(매칭 규칙이 없음) /
+   * ENUM_MISMATCH(값은 있지만 쿠팡 허용 목록과 안 맞음, 후보가 여럿이라 자동
+   * 선택이 위험함) / CRITICAL(KC/인증처럼 애초에 자동화 대상이 아닌 법적 필수
+   * 항목). reason은 화면에 그대로 보여줄 한국어 문장. */
+  userInputNeeded: {
+    fieldName: string;
+    reason: string;
+    reasonCode: "NO_VALUE" | "NO_RULE" | "ENUM_MISMATCH" | "CRITICAL";
+    confidence: number;
+  }[];
   /** score가 왜 이 값인지 필드별 감점 근거 — 자리표시자 필드만 나열한다(감점이
    * 있는 필드만 "설명할 거리"가 있다). 감점이 큰 순서로 정렬. */
   scoreBreakdown: { fieldName: string; deduction: number; reason: string }[];
@@ -52,6 +62,40 @@ const FIELD_CREDIT: Record<ComplianceFieldResult["source"], number> = {
   DETERMINISTIC: 1,
   PLACEHOLDER: 0.5,
 };
+
+/** Sprint A-4(작업2 — 미매핑 필드 리포트) — CPO 요구사항: "자동 입력 실패 필드
+ * 표시, 실패 이유 표시(값 없음/규칙 없음/후보 다수)". critical(KC/인증 등)이
+ * 최우선이고, 그 외에는 build-payload.ts가 매칭 단계에서 이미 판단해 둔
+ * unmappedReason을 그대로 문장으로 옮긴다 — 이유 판단 로직을 여기서 다시
+ * 추측하지 않는다(판단은 매칭이 실제로 일어나는 곳에서 한 번만). */
+function unmappedFieldReason(
+  r: ComplianceFieldResult,
+): { reason: string; reasonCode: "NO_VALUE" | "NO_RULE" | "ENUM_MISMATCH" | "CRITICAL" } {
+  if (r.critical) {
+    return {
+      reason: "법적/컴플라이언스 필수 항목(KC/인증 등) — 실제 값 확인이 꼭 필요합니다.",
+      reasonCode: "CRITICAL",
+    };
+  }
+  switch (r.unmappedReason) {
+    case "ENUM_MISMATCH":
+      return {
+        reason: "원본에 값은 있지만 쿠팡이 허용하는 값 목록과 일치하지 않습니다(후보 다수) — 아래에서 직접 선택해주세요.",
+        reasonCode: "ENUM_MISMATCH",
+      };
+    case "NO_VALUE":
+      return {
+        reason: "원본 사이트에서 이 항목의 값을 찾지 못했습니다(값 없음) — 직접 입력해주세요.",
+        reasonCode: "NO_VALUE",
+      };
+    case "NO_RULE":
+    default:
+      return {
+        reason: "이 항목과 자동으로 연결할 매칭 규칙이 아직 없습니다(규칙 없음) — 직접 입력해주세요.",
+        reasonCode: "NO_RULE",
+      };
+  }
+}
 
 function rate(results: ComplianceFieldResult[]): number {
   if (results.length === 0) return 100;
@@ -98,13 +142,10 @@ export function buildComplianceReport(
     seenPlaceholder.add(r.fieldName);
     return true;
   });
-  const userInputNeeded = dedupedPlaceholders.map((r) => ({
-    fieldName: r.fieldName,
-    reason: r.critical
-      ? "법적/컴플라이언스 필수 항목(KC/인증 등) — 실제 값 확인이 꼭 필요합니다."
-      : "원본 사이트에서 확인되지 않아 자리표시자로 등록됐습니다.",
-    confidence: r.confidence,
-  }));
+  const userInputNeeded = dedupedPlaceholders.map((r) => {
+    const { reason, reasonCode } = unmappedFieldReason(r);
+    return { fieldName: r.fieldName, reason, reasonCode, confidence: r.confidence };
+  });
 
   // 필드 하나가 (1 - 0.5)만큼 감점되는데, 그 실제 점수 영향은 전체 필드 수에
   // 반비례한다(필드가 적을수록 하나의 감점이 더 크다) — "82점, 왜?"에 대한
@@ -114,7 +155,7 @@ export function buildComplianceReport(
     .map((r) => ({
       fieldName: r.fieldName,
       deduction: Math.round(perFieldWeight * (1 - FIELD_CREDIT.PLACEHOLDER)),
-      reason: r.critical ? "KC/인증 등 필수 컴플라이언스 항목 미확인" : "원본에서 확인 안 됨(자리표시자)",
+      reason: unmappedFieldReason(r).reason,
     }))
     .sort((a, b) => b.deduction - a.deduction);
 

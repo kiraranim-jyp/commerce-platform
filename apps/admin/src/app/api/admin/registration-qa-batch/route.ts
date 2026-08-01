@@ -1,0 +1,264 @@
+import { NextResponse } from "next/server";
+import { universalExtract } from "@commerce/crawler";
+import {
+  GOLDEN_DATASET,
+  buildResolverBiasedQuery,
+  resolveProductSignals,
+  type GoldenBucket,
+  type GoldenDatasetItem,
+} from "@commerce/category";
+import type { CategoryCandidate, CategorySelection } from "@commerce/category";
+import { coupangAdapter } from "@commerce/marketplace";
+import { buildComplianceReport, buildCoupangPayload, resolveVerifiedCategoryCode } from "@commerce/listing";
+import { buildCanonicalProduct } from "../../pipeline/canonical-product";
+import { getCoupangCredentials, getVendorUserId } from "../../coupang/_lib/env";
+import { callCoupangApi } from "../../coupang/_lib/client";
+import { getDefaultDescriptionTemplate } from "../../coupang/_lib/description-template";
+import { getDefaultSellerProfile } from "../../coupang/_lib/seller-profile";
+import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } from "../../coupang/_lib/shipping-place";
+import { fetchCategoryMeta } from "../../coupang/_lib/category-meta";
+import { resolveBrand } from "../../coupang/_lib/brand";
+
+export const runtime = "nodejs";
+export const maxDuration = 300;
+
+/**
+ * Sprint A-4(작업4 — 실제 등록 QA) — CPO 지시: "최소 30개의 실제 상품으로 등록
+ * QA를 수행한다... 카테고리별 분산, 성공/실패 원인 기록." Golden Dataset(80개,
+ * Sprint A-2.6에서 이미 카테고리 정확도 100%를 확인한 셋)에서 CPO가 요구한 7개
+ * 그룹(의류/신발/가방/모자/장난감/홈/뷰티, kids+adult를 "의류"로 묶음)에 맞춰
+ * 30개를 뽑아 register/route.ts와 완전히 같은 조립 로직(Payload Preview 라우트가
+ * 재사용하는 것과 같은 경로)으로 실제 Compliance Report를 계산한다.
+ *
+ * 안전 범위(Sprint A-2.6과 같은 원칙) — 30개 상품을 판매자 계정에 실제로
+ * LIVE 등록하지 않는다. callCoupangApi(등록 제출)는 절대 호출하지 않고,
+ * register/route.ts가 실제 제출 직전까지 계산하는 것과 완전히 같은 Payload/
+ * Compliance Report만 계산한다 — 30건의 되돌리기 힘든 실제 등록은 사용자 승인
+ * 없이 진행하지 않는다는 판단이다.
+ */
+
+interface BatchItemResult {
+  url: string;
+  bucket: GoldenBucket;
+  group: string;
+  status: "success" | "compliance_fail" | "error";
+  categoryCode: number | null;
+  categoryName: string | null;
+  complianceScore: number | null;
+  verdict: "PASS" | "WARNING" | "FAIL" | null;
+  approvalReadiness: "High" | "Medium" | "Low" | null;
+  unmapped: { fieldName: string; reasonCode: string }[];
+  error?: string;
+}
+
+const BUCKET_GROUP: Record<GoldenBucket, string> = {
+  kids: "의류",
+  adult: "의류",
+  shoes: "신발",
+  bag: "가방",
+  hat: "모자",
+  toy: "장난감",
+  home: "홈",
+  beauty: "뷰티",
+};
+
+/** 8개 버킷 × 10개 중 카테고리별로 나눠서 30개를 뽑는다(kids/adult/shoes/bag/hat/toy
+ * 각 4개 + home/beauty 각 3개 = 30). Golden Dataset은 이미 Sprint A-2.6에서 200
+ * 응답을 확인한 URL이라 크롤링 실패 위험이 낮다 — 이번 QA는 크롤링이 아니라
+ * Attribute Mapper/Compliance 계산 자체를 검증하는 게 목적이다. */
+function pickBatch(): GoldenDatasetItem[] {
+  const counts: Record<GoldenBucket, number> = {
+    kids: 4,
+    adult: 4,
+    shoes: 4,
+    bag: 4,
+    hat: 4,
+    toy: 4,
+    home: 3,
+    beauty: 3,
+  };
+  const picked: GoldenDatasetItem[] = [];
+  (Object.keys(counts) as GoldenBucket[]).forEach((bucket) => {
+    const items = GOLDEN_DATASET.filter((item) => item.bucket === bucket).slice(0, counts[bucket]);
+    picked.push(...items);
+  });
+  return picked;
+}
+
+async function runOne(
+  item: GoldenDatasetItem,
+  credentials: NonNullable<Awaited<ReturnType<typeof getCoupangCredentials>>>,
+  vendorUserId: string,
+  sellerProfile: NonNullable<Awaited<ReturnType<typeof getDefaultSellerProfile>>>,
+  descriptionTemplate: Awaited<ReturnType<typeof getDefaultDescriptionTemplate>>,
+): Promise<BatchItemResult> {
+  const base: Pick<BatchItemResult, "url" | "bucket" | "group"> = {
+    url: item.url,
+    bucket: item.bucket,
+    group: BUCKET_GROUP[item.bucket],
+  };
+  try {
+    const { productData, productDataSources } = await universalExtract(item.url);
+
+    const signals = resolveProductSignals({
+      title: { value: productData.title ?? "", source: "ORIGINAL", confidence: 0 },
+      description: { value: productData.description ?? "", source: "ORIGINAL", confidence: 0 },
+      brand: { value: productData.brand ?? "", source: "ORIGINAL", confidence: 0 },
+      recommendedAge: { value: "", source: "REQUIRED", confidence: 0 },
+      breadcrumbPath: productData.breadcrumbPath,
+      jsonLdCategory: productData.jsonLdCategory,
+      shopifyTags: productData.shopifyTags,
+      shopifyProductType: productData.shopifyProductType,
+      sourceUrl: item.url,
+    });
+
+    const biasedQuery = buildResolverBiasedQuery(signals, productData.title ?? item.url, false);
+    const predictResponse = await callCoupangApi(credentials, {
+      method: "POST",
+      path: "/v2/providers/openapi/apis/api/v1/categorization/predict",
+      body: { productName: biasedQuery, brand: productData.brand },
+    });
+    const predictBody = predictResponse.body as {
+      data?: { predictedCategoryId?: string; predictedCategoryName?: string };
+    };
+    const predictedId = predictBody.data?.predictedCategoryId ? Number(predictBody.data.predictedCategoryId) : null;
+    const predictedName = predictBody.data?.predictedCategoryName ?? null;
+
+    if (predictedId == null || !Number.isFinite(predictedId)) {
+      return { ...base, status: "error", categoryCode: null, categoryName: null, complianceScore: null, verdict: null, approvalReadiness: null, unmapped: [], error: "카테고리 예측 실패(Predict API가 코드를 반환하지 않음)" };
+    }
+
+    const candidate: CategoryCandidate = {
+      id: String(predictedId),
+      name: predictedName ?? "",
+      path: predictedName ? [predictedName] : [],
+      platform: "coupang",
+      confidence: 1,
+      reason: ["Coupang categorization/predict"],
+      source: "ai",
+      isVerifiedPlatformCode: true,
+    };
+    const categorySelection: CategorySelection = { state: "SELECTED", candidate, provenance: "INFERRED" };
+
+    const product = buildCanonicalProduct(item.url, productData, productDataSources, []);
+    const listing = coupangAdapter.toListingModel(product, categorySelection);
+
+    const categoryCode = resolveVerifiedCategoryCode(listing.category);
+    const categoryMeta = categoryCode != null ? await fetchCategoryMeta(credentials, categoryCode) : null;
+    const resolvedBrand = listing.brand ? await resolveBrand(credentials, listing.brand) : null;
+
+    let outboundShippingPlaceCode = sellerProfile.outboundShippingPlaceCode;
+    const shippingPlaces = await fetchShippingPlaces(credentials);
+    const sourceCountry = inferSourceCountry(product.sourceUrl);
+    const selectedPlace = selectOutboundShippingPlace(sourceCountry, shippingPlaces.options);
+    if (selectedPlace?.code != null) outboundShippingPlaceCode = selectedPlace.code;
+
+    const payload = buildCoupangPayload(product, listing, {
+      sellerConfig: {
+        vendorId: credentials.vendorId,
+        vendorUserId,
+        deliveryCompanyCode: sellerProfile.deliveryCompanyCode,
+        returnCenterCode: sellerProfile.returnCenterCode,
+        returnChargeName: sellerProfile.returnChargeName,
+        companyContactNumber: sellerProfile.companyContactNumber,
+        returnZipCode: sellerProfile.returnZipCode,
+        returnAddress: sellerProfile.returnAddress,
+        returnAddressDetail: sellerProfile.returnAddressDetail,
+        outboundShippingPlaceCode,
+      },
+      descriptionTemplate: descriptionTemplate ?? undefined,
+      categoryMeta,
+      resolvedBrand,
+    });
+
+    const attributeResults = payload.complianceFieldResults.filter((r) => r.kind === "ATTRIBUTE");
+    const noticeResults = payload.complianceFieldResults.filter((r) => r.kind === "NOTICE");
+    const complianceReport = buildComplianceReport(attributeResults, noticeResults);
+
+    return {
+      ...base,
+      status: complianceReport.verdict === "FAIL" ? "compliance_fail" : "success",
+      categoryCode,
+      categoryName: candidate.name,
+      complianceScore: complianceReport.score,
+      verdict: complianceReport.verdict,
+      approvalReadiness: complianceReport.approvalReadiness,
+      unmapped: complianceReport.userInputNeeded.map((f) => ({ fieldName: f.fieldName, reasonCode: f.reasonCode })),
+    };
+  } catch (error) {
+    return {
+      ...base,
+      status: "error",
+      categoryCode: null,
+      categoryName: null,
+      complianceScore: null,
+      verdict: null,
+      approvalReadiness: null,
+      unmapped: [],
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+export async function POST() {
+  const credentials = await getCoupangCredentials();
+  if (!credentials) {
+    return NextResponse.json({ error: "쿠팡 인증 정보가 설정되어 있지 않습니다." }, { status: 400 });
+  }
+  const sellerProfile = await getDefaultSellerProfile();
+  if (!sellerProfile) {
+    return NextResponse.json({ error: "배송 프로필이 없습니다." }, { status: 400 });
+  }
+  const vendorUserId = await getVendorUserId();
+  const descriptionTemplate = await getDefaultDescriptionTemplate();
+
+  const batch = pickBatch();
+  const results: BatchItemResult[] = [];
+  // Golden Dataset 검증 라우트와 같은 이유(도메인별 레이트리밋/Vercel maxDuration)로
+  // 소규모 동시성으로 순차 배치 처리한다.
+  const concurrency = 5;
+  for (let i = 0; i < batch.length; i += concurrency) {
+    const chunk = batch.slice(i, i + concurrency);
+    const chunkResults = await Promise.all(
+      chunk.map((item) => runOne(item, credentials, vendorUserId, sellerProfile, descriptionTemplate)),
+    );
+    results.push(...chunkResults);
+  }
+
+  const groups = ["의류", "신발", "가방", "모자", "장난감", "홈", "뷰티"];
+  const groupSummary = groups.map((group) => {
+    const groupResults = results.filter((r) => r.group === group);
+    const scored = groupResults.filter((r) => r.complianceScore != null);
+    const avgScore =
+      scored.length > 0 ? Math.round(scored.reduce((sum, r) => sum + (r.complianceScore ?? 0), 0) / scored.length) : null;
+    return {
+      group,
+      total: groupResults.length,
+      success: groupResults.filter((r) => r.status === "success").length,
+      complianceFail: groupResults.filter((r) => r.status === "compliance_fail").length,
+      error: groupResults.filter((r) => r.status === "error").length,
+      avgComplianceScore: avgScore,
+    };
+  });
+
+  const reasonCounts: Record<string, number> = {};
+  results.forEach((r) => r.unmapped.forEach((u) => {
+    reasonCounts[u.reasonCode] = (reasonCounts[u.reasonCode] ?? 0) + 1;
+  }));
+
+  const scored = results.filter((r) => r.complianceScore != null);
+  const overallAvgScore =
+    scored.length > 0 ? Math.round(scored.reduce((sum, r) => sum + (r.complianceScore ?? 0), 0) / scored.length) : null;
+
+  return NextResponse.json({
+    generatedAt: new Date().toISOString(),
+    totalItems: results.length,
+    overallAvgComplianceScore: overallAvgScore,
+    successCount: results.filter((r) => r.status === "success").length,
+    complianceFailCount: results.filter((r) => r.status === "compliance_fail").length,
+    errorCount: results.filter((r) => r.status === "error").length,
+    groupSummary,
+    unmappedReasonCounts: reasonCounts,
+    results,
+  });
+}
