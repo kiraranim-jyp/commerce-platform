@@ -14,19 +14,39 @@ export function CollapsibleSection({
   defaultOpen = false,
   badge,
   children,
+  id,
+  open: openProp,
+  onToggle,
 }: {
   title: string;
   defaultOpen?: boolean;
   badge?: React.ReactNode;
   children: React.ReactNode;
+  /** Sprint A-3(Auto Scroll) — Sticky Summary에서 이 섹션으로 스크롤할 때
+   * anchor로 쓴다(scrollIntoView 대상). */
+  id?: string;
+  /** open/onToggle을 둘 다 주면 controlled 모드로 동작한다 — 부모(RegistrationEditor)가
+   * "Summary에서 클릭 → 이 섹션을 펼친다"를 제어해야 하기 때문이다. 안 주면 기존처럼
+   * 내부 state로 독립 동작한다(하위 호환 — Compliance/개발 로그 등 기존 사용처는
+   * 그대로 둔다). */
+  open?: boolean;
+  onToggle?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [internalOpen, setInternalOpen] = useState(defaultOpen);
+  const isControlled = openProp !== undefined;
+  const open = isControlled ? openProp : internalOpen;
+
+  function toggle() {
+    const next = !open;
+    onToggle?.(next);
+    if (!isControlled) setInternalOpen(next);
+  }
 
   return (
-    <section className="rounded-lg border border-border bg-surface shadow-subtle">
+    <section id={id} className="scroll-mt-4 rounded-lg border border-border bg-surface shadow-subtle">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         className="flex w-full items-center justify-between px-4 py-3 text-left"
       >
         <span className="flex items-center gap-2 text-sm font-medium text-text-primary">

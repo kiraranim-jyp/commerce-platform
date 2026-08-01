@@ -12,11 +12,14 @@ import {
 } from "@commerce/category";
 import { mockProductContentProvider } from "@commerce/content";
 import {
+  buildComplianceReport,
   buildCoupangCompliance,
   LISTING_EXECUTORS,
   validateSmartStoreListing,
   type ComplianceFieldSource,
+  type ComplianceReport,
   type CoupangCategoryMeta,
+  type CoupangPayload,
   type ExecutionMode,
   type ListingResult,
   type ListingStatus,
@@ -481,6 +484,77 @@ export function CommerceWorkspace({
     return map;
   }, [compliancePreview]);
 
+  /** Sprint A-3(작업7/8 — Summary가 KC/고시정보까지 반영, Resolver Trace를 등록 전에도
+   * 보여주기) — compliancePreview(원시 attributeResults/noticeResults)를 register
+   * 라우트와 똑같은 buildComplianceReport()에 통과시켜 점수/등급/근거까지 낸다.
+   * 다른 계산을 새로 만들면 등록 시점 결과와 달라질 수 있다(CP001과 같은 위험). */
+  const complianceReportPreview = useMemo(() => {
+    if (!compliancePreview) return null;
+    return buildComplianceReport(compliancePreview.attributeResults, compliancePreview.noticeResults);
+  }, [compliancePreview]);
+
+  // Sprint A-3(작업6 — Payload Preview) — CPO 요구사항: "등록 버튼을 누르는 순간
+  // 생성하지 않는다. 항상 생성되어 있어야 한다." register/route.ts와 완전히 같은
+  // 조립 로직을 재사용하는 /api/coupang/payload-preview를 카테고리가 확정되고
+  // 필드가 바뀔 때마다(1.2초 디바운스) 호출해서 최신 payload를 들고 있는다 —
+  // 등록 버튼 클릭과 무관하게 항상 최신 상태를 보여준다.
+  const [payloadPreview, setPayloadPreview] = useState<{
+    payload: CoupangPayload;
+    complianceReport: ComplianceReport;
+  } | null>(null);
+  const [payloadPreviewUnavailableReason, setPayloadPreviewUnavailableReason] = useState<string | null>(null);
+
+  // 카테고리가 아직 확정 안 됐거나 쿠팡 탭이 아니면 새로 요청할 것도 없다 — 이때
+  // stale한 이전 payload를 지우는 setState는 여기서 하지 않는다(effect 본문
+  // 안에서 곧바로 setState하면 react-hooks/set-state-in-effect가 캐스케이딩
+  // 렌더 경고를 낸다). 대신 아래 렌더 시점에 같은 조건으로 null을 넘긴다 —
+  // "언제 숨길지"는 파생 값 계산이지 effect의 일이 아니다.
+  const payloadPreviewEligible = tab === "coupang" && !!listing && isVerifiedCategorySelected(listing.category);
+
+  useEffect(() => {
+    if (!payloadPreviewEligible || !listing) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetch("/api/coupang/payload-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product, listing }),
+        signal: controller.signal,
+      })
+        .then((res) => res.json())
+        .then(
+          (data: {
+            payload?: CoupangPayload;
+            complianceReport?: ComplianceReport;
+            reason?: string;
+            error?: string;
+          }) => {
+            if (data.payload && data.complianceReport) {
+              setPayloadPreview({ payload: data.payload, complianceReport: data.complianceReport });
+              setPayloadPreviewUnavailableReason(null);
+            } else {
+              setPayloadPreview(null);
+              setPayloadPreviewUnavailableReason(
+                data.reason === "NOT_CONFIGURED"
+                  ? "쿠팡 인증 정보가 설정되어 있지 않습니다."
+                  : data.reason === "NO_SELLER_PROFILE"
+                    ? "배송 프로필이 아직 없습니다 — 설정 페이지에서 먼저 만들어주세요."
+                    : (data.error ?? "Payload를 생성하지 못했습니다."),
+              );
+            }
+          },
+        )
+        .catch(() => {
+          // AbortError(다음 입력이 이전 요청을 취소한 경우)는 조용히 무시한다 —
+          // 진짜 실패가 아니라 디바운스가 의도한 동작이다.
+        });
+    }, 1200);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [payloadPreviewEligible, product, listing]);
+
   /** 쿠팡 카테고리 추천(자동매칭) API를 호출해서 실제 쿠팡 숫자 코드를 후보로
    * 보여준다 — CartPilot 내부 AI 추천(categoryCandidates)과는 완전히 다른 코드
    * 체계이므로 별도 state로 관리하고, isVerifiedPlatformCode: true로 표시해서
@@ -743,6 +817,9 @@ export function CommerceWorkspace({
           listingStatus={effectiveListingStatus}
           listingResult={listingResults[tab]}
           readiness={smartStoreReadiness}
+          compliancePreview={complianceReportPreview}
+          payloadPreview={payloadPreviewEligible ? payloadPreview : null}
+          payloadPreviewUnavailableReason={payloadPreviewEligible ? payloadPreviewUnavailableReason : null}
           onUpdateField={updateField}
           onUpdateSalePriceKrw={updateSalePriceKrw}
           onUpdatePriceBreakdown={updatePriceBreakdown}
@@ -752,6 +829,7 @@ export function CommerceWorkspace({
           onSelectCategory={(candidate) => selectCategory(tab, candidate)}
           onFixTextField={updateField}
           onFixNumberField={updateNumberField}
+          onUpdateOptions={updateOptions}
           onOpenListingModal={openListingModal}
           onRetryListing={retryListing}
           onFetchCoupangCategory={tab === "coupang" ? fetchCoupangCategoryRecommendation : undefined}
@@ -766,6 +844,9 @@ export function CommerceWorkspace({
           productOptionGroups={product.optionGroups}
           settingsMissing={tab === "coupang" ? (coupangSettingsMissing ?? undefined) : undefined}
           developerMode={developerMode}
+          items={items}
+          thumbnails={thumbnails}
+          onOpenGallery={() => setGalleryOpen(true)}
         />
       )}
 

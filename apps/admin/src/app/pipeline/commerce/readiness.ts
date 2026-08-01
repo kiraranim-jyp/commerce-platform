@@ -1,11 +1,18 @@
 import type { CategorySelection } from "@commerce/category";
-import type { ReadinessReport } from "@commerce/listing";
+import type { ComplianceReport, ReadinessReport } from "@commerce/listing";
 import { isVerifiedCategorySelected, type ValidationResult } from "@commerce/marketplace";
 
 export interface ReadinessItem {
   label: string;
   passed: boolean;
   required: boolean;
+  /** Sprint A-3(Auto Scroll) — Sticky Summary에서 이 항목을 클릭하면 이동할
+   * accordion 섹션 id. 없으면(예: settingsMissing 항목처럼 /settings로 가야 하는
+   * 것) 클릭해도 스크롤하지 않는다. */
+  sectionId?: string;
+  /** Sprint A-3(작업7 — "무엇이 부족한지, 어떻게 채워지는지") — 통과 못 했을 때만
+   * 의미 있는 설명. 통과한 항목은 굳이 채우지 않는다. */
+  hint?: string;
 }
 
 export interface ReadinessSummary {
@@ -28,25 +35,60 @@ function summarize(items: ReadinessItem[]): ReadinessSummary {
   return { items, required, recommended, allRequiredPassed, percent };
 }
 
+/** ValidationResult.label(쿠팡 어댑터 기준 "상품명"/"브랜드"/"대표이미지"/"판매가격"/
+ * "옵션"/"배송정보"/"상세설명")을 Registration Editor의 accordion 섹션 id로
+ * 매핑한다 — 라벨 문자열이 두 곳(marketplace 어댑터, 여기)에 있는 게 이상적이진
+ * 않지만, 검증 규칙 자체를 옮기는 건 이번 스프린트 범위 밖이라 매핑 테이블로
+ * 최소 침습적으로 연결한다. */
+const LABEL_TO_SECTION: Record<string, string> = {
+  카테고리: "section-category",
+  상품명: "section-basic",
+  브랜드: "section-basic",
+  대표이미지: "section-images",
+  판매가격: "section-price",
+  옵션: "section-options",
+  배송정보: "section-shipping",
+  상세설명: "section-description",
+};
+
 /**
  * PreflightChecklist와 RegistrationReadinessCard가 반드시 같은 계산을 써야 한다 —
  * "같은 판정 조건을 두 곳에서 따로 구현"한 게 CP001 버그의 근본 원인이었다(실제
  * register API는 통과 못 시키는데 미리보기 UI는 100%로 보여준 사고). category 확정
  * 조건은 register API(resolveVerifiedCategoryCode)와 완전히 동일하게
  * isVerifiedPlatformCode까지 확인한다 — state만 보고 판단하지 않는다.
+ *
+ * Sprint A-3(CPO 요구사항: "Summary는 ✔ KC ✖ 인증번호까지 보여야 한다") — 지금까지는
+ * 고시정보/KC가 아예 이 계산에 안 들어가서 100%로 보여도 실제로는 고시정보가
+ * 비어있을 수 있었다. compliance(있으면)의 userInputNeeded를 필수 항목으로 섞어서
+ * 카테고리 필수속성/고시정보/KC 미입력도 퍼센트에 반영한다.
  */
 export function computeChecklistReadiness(
   validations: ValidationResult[],
   category: CategorySelection,
   settingsMissing?: string[],
+  compliance?: ComplianceReport,
 ): ReadinessSummary {
   const categoryConfirmed = isVerifiedCategorySelected(category);
 
   const items: ReadinessItem[] = [
-    { label: "카테고리", passed: categoryConfirmed, required: true },
+    { label: "카테고리", passed: categoryConfirmed, required: true, sectionId: "section-category" },
     ...validations
       .filter((v) => v.field !== "category" && v.field !== "shipping")
-      .map((v) => ({ label: v.label, passed: v.status === "PASS", required: v.status !== "WARNING" })),
+      .map((v) => ({
+        label: v.label,
+        passed: v.status === "PASS",
+        required: v.status !== "WARNING",
+        sectionId: LABEL_TO_SECTION[v.label],
+        hint: v.status !== "PASS" ? v.message : undefined,
+      })),
+    ...(compliance?.userInputNeeded ?? []).map((f) => ({
+      label: f.fieldName,
+      passed: false,
+      required: true,
+      sectionId: /인증|KC/i.test(f.fieldName) ? "section-kc" : "section-notice",
+      hint: f.reason,
+    })),
     ...(settingsMissing ?? []).map((label) => ({ label, passed: false, required: true })),
   ];
 
@@ -61,6 +103,7 @@ export function computeReadinessScoreSummary(report: ReadinessReport): Readiness
     label: f.label,
     passed: f.status === "VALID",
     required: f.status !== "WARNING",
+    hint: f.status !== "VALID" ? (f.resolution ?? f.message) : undefined,
   }));
   return { ...summarize(items), percent: report.score };
 }

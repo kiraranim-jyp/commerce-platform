@@ -13,10 +13,13 @@ const BUTTON_LABEL: Record<ListingStatus, string> = {
 };
 
 /**
- * P0-UI Epic 2(등록 준비 카드) — 우측에 고정(sticky)돼서 스크롤해도 항상 보이는
- * 단일 등록 진입점. 예전에는 체크리스트(PreflightChecklist)와 등록 버튼이
- * ListingSection 안에 같이 있어서 화면 아무 데나 있었다 — 이제 버튼은 여기 하나뿐이고,
- * PreflightChecklist는 상세 확인용으로 본문에 남지만 버튼은 갖지 않는다.
+ * P0-UI Epic 2(등록 준비 카드) → Sprint A-3(Registration Editor) — 우측에
+ * 고정(sticky)돼서 스크롤해도 항상 보이는 단일 등록 진입점.
+ *
+ * Sprint A-3 CPO 요구사항: "가능/불가능이 아니라 95%처럼, 그리고 왜 95%인지 —
+ * 무엇이 부족한지 — 어떻게 채워지는지까지 보여야 한다." 필수/선택을 분리하고,
+ * 통과 못 한 항목엔 hint(readiness.ts가 채워준 이유/CTA 문구)를 보여주고, 항목을
+ * 클릭하면 해당 accordion 섹션으로 스크롤+펼침(onItemClick)한다.
  *
  * percent/items 계산은 여기서 하지 않는다 — computeChecklistReadiness /
  * computeReadinessScoreSummary(readiness.ts) 결과를 그대로 받아 표시만 한다. 판정
@@ -24,30 +27,36 @@ const BUTTON_LABEL: Record<ListingStatus, string> = {
  */
 export function RegistrationReadinessCard({
   percent,
-  items,
+  required,
+  recommended,
   allRequiredPassed,
   platformLabel,
   status,
   onRegister,
+  onItemClick,
   settingsMissing,
 }: {
   percent: number;
-  items: ReadinessItem[];
+  required: ReadinessItem[];
+  recommended: ReadinessItem[];
   allRequiredPassed: boolean;
   platformLabel: string;
   status: ListingStatus;
   onRegister: () => void;
+  /** Sprint A-3(Auto Scroll) — 항목에 sectionId가 있을 때만 클릭 가능하게 렌더한다. */
+  onItemClick?: (sectionId: string) => void;
   settingsMissing?: string[];
 }) {
   const scoreClassName = percent >= 90 ? "text-success" : percent >= 60 ? "text-warning" : "text-error";
   const barClassName = percent >= 90 ? "bg-success" : percent >= 60 ? "bg-warning" : "bg-error";
   const canRegister = allRequiredPassed && status === "READY";
   const isTerminal = status === "SUBMITTED" || status === "FAILED";
+  const remaining = [...required, ...recommended].filter((i) => !i.passed).length;
 
   return (
     <aside className="space-y-4 rounded-lg border border-border bg-surface p-4 text-sm shadow-elevated lg:sticky lg:top-4 lg:self-start">
       <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">등록 준비</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">등록 가능성</p>
         <p className={`mt-1 text-3xl font-semibold tabular-nums ${scoreClassName}`}>{percent}%</p>
         <div className="mt-2 h-2 w-full overflow-hidden rounded bg-background">
           <div
@@ -57,20 +66,21 @@ export function RegistrationReadinessCard({
         </div>
       </div>
 
-      <ul className="space-y-1.5">
-        {items.map((item, index) => (
-          <li key={`${item.label}-${index}`} className="flex items-center gap-2 text-xs">
-            <span
-              className={item.passed ? "text-success" : item.required ? "text-error" : "text-warning"}
-            >
-              {item.passed ? "✓" : item.required ? "✗" : "△"}
-            </span>
-            <span className={item.passed ? "text-text-primary" : "font-medium text-text-primary"}>
-              {item.label}
-            </span>
-          </li>
-        ))}
-      </ul>
+      <div className="space-y-1">
+        <p className="text-xs font-medium text-text-tertiary">필수</p>
+        <ItemList items={required} onItemClick={onItemClick} />
+      </div>
+
+      {recommended.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-text-tertiary">선택</p>
+          <ItemList items={recommended} onItemClick={onItemClick} />
+        </div>
+      )}
+
+      <p className="border-t border-border pt-2 text-xs text-text-secondary">
+        남은 작업 <span className="font-medium text-text-primary">{remaining}개</span>
+      </p>
 
       {settingsMissing && settingsMissing.length > 0 && !isTerminal && (
         <a
@@ -96,5 +106,53 @@ export function RegistrationReadinessCard({
         {status === "READY" ? `${platformLabel}에 등록` : BUTTON_LABEL[status]}
       </button>
     </aside>
+  );
+}
+
+function ItemList({
+  items,
+  onItemClick,
+}: {
+  items: ReadinessItem[];
+  onItemClick?: (sectionId: string) => void;
+}) {
+  return (
+    <ul className="space-y-1.5">
+      {items.map((item, index) => {
+        const clickable = !item.passed && item.sectionId && onItemClick;
+        const content = (
+          <>
+            <span
+              className={`shrink-0 ${item.passed ? "text-success" : item.required ? "text-error" : "text-warning"}`}
+            >
+              {item.passed ? "✓" : item.required ? "✗" : "△"}
+            </span>
+            <span className="min-w-0 flex-1 text-left">
+              <span className={item.passed ? "text-text-primary" : "font-medium text-text-primary"}>
+                {item.label}
+              </span>
+              {!item.passed && item.hint && (
+                <span className="block text-[11px] text-text-tertiary">{item.hint}</span>
+              )}
+            </span>
+          </>
+        );
+        return (
+          <li key={`${item.label}-${index}`} className="text-xs">
+            {clickable ? (
+              <button
+                type="button"
+                onClick={() => onItemClick!(item.sectionId!)}
+                className="flex w-full items-start gap-2 rounded px-1 py-0.5 text-left hover:bg-background"
+              >
+                {content}
+              </button>
+            ) : (
+              <div className="flex items-start gap-2 px-1 py-0.5">{content}</div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }

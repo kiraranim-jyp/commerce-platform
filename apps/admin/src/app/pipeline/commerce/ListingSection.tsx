@@ -1,6 +1,5 @@
 "use client";
 
-import type { CategorySelection } from "@commerce/category";
 import type {
   ComplianceReport,
   CoupangPayload,
@@ -13,13 +12,11 @@ import type {
 } from "@commerce/listing";
 import { buildRegistrationReport } from "@commerce/listing";
 import type { PlatformId } from "@commerce/shared";
-import type { ValidationResult } from "@commerce/marketplace";
 import { APP_VERSION } from "@/lib/app-version";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { ComplianceBreakdown } from "./ComplianceBreakdown";
 import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
 import { PayloadInspector } from "./PayloadInspector";
-import { PreflightChecklist } from "./PreflightChecklist";
 import { ReadinessScorePanel } from "./ReadinessScorePanel";
 import { SupportInquiryButton } from "./SupportInquiryButton";
 
@@ -116,12 +113,9 @@ export function ListingSection({
   status,
   result,
   readiness,
-  validations,
-  category,
   onFixTextField,
   onFixNumberField,
   onRetry,
-  settingsMissing,
   sourceUrl,
   developerMode,
 }: {
@@ -131,25 +125,20 @@ export function ListingSection({
   result: ListingResult | null;
   /** SmartStore에서만 넘어온다 — 있으면 점수/체크리스트/보완 UI를 보여준다. */
   readiness?: ReadinessReport;
-  /** 쿠팡처럼 readiness가 없는 플랫폼에서 통합 Pre-flight 체크리스트를 그리는 데
-   * 쓴다 — listing.validations/listing.category를 그대로 넘겨받는다. */
-  validations: ValidationResult[];
-  category: CategorySelection;
   onFixTextField?: (field: "countryOfOrigin" | "returnPolicy", value: string) => void;
   onFixNumberField?: (field: "shippingFee" | "stockQuantity", value: number) => void;
   onRetry: () => void;
-  /** 쿠팡 탭에서만 넘어온다 — 판매자 계정 설정(출고지/반품지/택배사 등) 중 비어있는
-   * 한글 라벨 목록. PreflightChecklist가 상품 validation과 합쳐서 하나의 목록으로
-   * 보여준다. */
-  settingsMissing?: string[];
   /** 문의하기 진단 번들의 URL/Site 필드용 — 원본 상품 URL. */
   sourceUrl?: string;
   /** P0-UI Epic 1/4 — Payload JSON 등 개발자용 상세는 이 값이 true일 때만 보여준다. */
   developerMode: boolean;
 }) {
-  // P0-UI Epic 2(등록 준비 카드)가 등록 버튼의 유일한 위치가 됐다 — 여기서는
-  // 상세 체크리스트만 참고용으로 보여주고(기본 접힘, 카드가 이미 요약을 보여주므로),
-  // 버튼은 그리지 않는다.
+  // Sprint A-3(Registration Editor) — 등록 준비 카드(Sticky Summary)가 필수/선택
+  // 분리 + 클릭 시 해당 accordion 섹션으로 이동까지 다 하므로, 쿠팡은 더 이상
+  // 별도의 "상세 체크리스트"(PreflightChecklist)를 중복으로 보여주지 않는다 —
+  // 같은 판정을 두 곳에서 보여주면 그 자체로 CP001과 같은 종류의 혼란이 된다.
+  // SmartStore는 ReadinessScorePanel이 체크리스트 이상의 것(필드별 인라인 수정
+  // CTA)을 하므로 그대로 남긴다.
   if (status === "DRAFT" || status === "READY") {
     if (readiness && onFixTextField && onFixNumberField) {
       return (
@@ -163,11 +152,7 @@ export function ListingSection({
       );
     }
 
-    return (
-      <CollapsibleSection title="상세 체크리스트">
-        <PreflightChecklist validations={validations} category={category} settingsMissing={settingsMissing} />
-      </CollapsibleSection>
-    );
+    return null;
   }
 
   if (status === "USER_CONFIRMED" || status === "SUBMITTING") {
