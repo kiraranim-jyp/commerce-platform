@@ -2,6 +2,13 @@ import type { CategorySelection } from "@commerce/category";
 import type { ComplianceReport, ReadinessReport } from "@commerce/listing";
 import { isVerifiedCategorySelected, type ValidationResult } from "@commerce/marketplace";
 
+/** Sprint A-6(개선4 — CPO 요구사항: "사용자는 왜 이것을 내가 입력해야 하지를
+ * 바로 이해할 수 있어야 한다") — 남은 입력을 성격별로 나눈다. LEGAL(KC/인증
+ * 등 법적 필수 — CartPilot이 절대 대신 채울 수 없음) / BUSINESS_SETTINGS(배송지/
+ * 반품지/택배사 — Settings 페이지에서 한 번만 하면 됨) / PRODUCT_INFO(색상/
+ * 소재/제조국 등 원문에서 못 찾은 상품 정보 — Resolver 개선 대상). */
+export type ReadinessGroup = "LEGAL" | "BUSINESS_SETTINGS" | "PRODUCT_INFO";
+
 export interface ReadinessItem {
   label: string;
   passed: boolean;
@@ -13,6 +20,11 @@ export interface ReadinessItem {
   /** Sprint A-3(작업7 — "무엇이 부족한지, 어떻게 채워지는지") — 통과 못 했을 때만
    * 의미 있는 설명. 통과한 항목은 굳이 채우지 않는다. */
   hint?: string;
+  /** Sprint A-6(개선1) — CRITICAL이면 "자동입력 불가 · 법적 필수정보 ·
+   * 사용자 확인 필요"를 문장이 아니라 구조화된 배지로 보여준다(추측 없음을
+   * 명시적으로 드러내기 위함). */
+  reasonCode?: "NO_VALUE" | "NO_RULE" | "ENUM_MISMATCH" | "CRITICAL";
+  group?: ReadinessGroup;
 }
 
 export interface ReadinessSummary {
@@ -72,7 +84,7 @@ export function computeChecklistReadiness(
   const categoryConfirmed = isVerifiedCategorySelected(category);
 
   const items: ReadinessItem[] = [
-    { label: "카테고리", passed: categoryConfirmed, required: true, sectionId: "section-category" },
+    { label: "카테고리", passed: categoryConfirmed, required: true, sectionId: "section-category", group: "PRODUCT_INFO" },
     ...validations
       .filter((v) => v.field !== "category" && v.field !== "shipping")
       .map((v) => ({
@@ -81,6 +93,7 @@ export function computeChecklistReadiness(
         required: v.status !== "WARNING",
         sectionId: LABEL_TO_SECTION[v.label],
         hint: v.status !== "PASS" ? v.message : undefined,
+        group: "PRODUCT_INFO" as const,
       })),
     ...(compliance?.userInputNeeded ?? []).map((f) => ({
       label: f.fieldName,
@@ -88,8 +101,19 @@ export function computeChecklistReadiness(
       required: true,
       sectionId: /인증|KC/i.test(f.fieldName) ? "section-kc" : "section-notice",
       hint: f.reason,
+      reasonCode: f.reasonCode,
+      // Sprint A-6(개선4) — CartPilot이 원본에서 절대 알 수 없는 KC/인증/수입자
+      // 계열만 LEGAL로 분류한다. 나머지(색상/제조국 등 Resolver가 놓친 값)는
+      // PRODUCT_INFO — "법적으로 막힌 것"과 "아직 Resolver가 못 찾은 것"은
+      // 사용자 입장에서 완전히 다른 문제라 섞으면 안 된다.
+      group: (f.reasonCode === "CRITICAL" ? "LEGAL" : "PRODUCT_INFO") as ReadinessGroup,
     })),
-    ...(settingsMissing ?? []).map((label) => ({ label, passed: false, required: true })),
+    ...(settingsMissing ?? []).map((label) => ({
+      label,
+      passed: false,
+      required: true,
+      group: "BUSINESS_SETTINGS" as const,
+    })),
   ];
 
   return summarize(items);

@@ -281,6 +281,18 @@ function isLikelyChildrenProduct(productName: string): boolean {
   return CHILDREN_PRODUCT_KEYWORDS.some((k) => lower.includes(k));
 }
 
+/** Sprint A-6(KC-free 고시정보 카테고리 선택) — 고시정보 카테고리 "이름"과
+ * 상품명에 흔히 나오는 단어를 대조하는 최소한의 표. 확신 없는 매칭으로
+ * 엉뚱한 고시정보 템플릿(예: 화장품에 "악기" 템플릿)을 붙이지 않도록, 여기
+ * 없는 카테고리 이름은 절대 KC-free 후보로 승격시키지 않는다(안전한
+ * 카테고리만 좁게 등록). */
+const NOTICE_CATEGORY_NAME_KEYWORDS: Record<string, string[]> = {
+  "구두/신발": ["shoe", "sneaker", "boot", "sandal", "loafer", "slip-on", "runner", "trainer"],
+  "가방": ["bag", "backpack", "tote", "pouch", "duffle", "duffel", "crossbody", "purse", "handbag"],
+  "모자": ["hat", "cap", "beanie", "trucker"],
+  "화장품": ["makeup", "cosmetic", "skincare", "lipstick", "serum", "cleanser", "moisturizer", "mascara", "foundation", "powder", "blush"],
+};
+
 /** 쿠팡 필드 이름(예: "패션의류/잡화 사이즈")이 사이즈/색상 계열 동의어와
  * 매칭되면, 그 이름에 대응하는 CanonicalProduct.optionGroups 그룹(실제 옵션
  * 값 목록)을 찾는다. matchOptionValue(값 하나를 확정하는 용도)와
@@ -594,9 +606,30 @@ export function buildCoupangCompliance(
     attributeValueName: r.value,
   }));
 
-  const simplestNoticeCategory = [...categoryMeta.noticeCategories].sort(
-    (a, b) => a.noticeCategoryDetailNames.length - b.noticeCategoryDetailNames.length,
-  )[0];
+  // Sprint A-6(CPO 피드백) — "KC가 필요 없는 카테고리부터 실제 등록 성공을
+  // 확보하라." 기존엔 필드 개수만 보고 가장 단순한 고시정보 카테고리를 골랐다
+  // — 실측 확인: 뷰티 상품에서 "기타 재화"(5개, KC 포함)가 "화장품"(11개, KC
+  // 없음)보다 필드가 적다는 이유만으로 선택되면, 필드 수는 줄어도 자동화가
+  // 원천적으로 불가능한 KC 항목이 남아버려 오히려 손해다. KC가 아예 없는
+  // 대안이 있고 그 이름이 실제 상품명과 관련 있어 보일 때만 그쪽을 우선한다 —
+  // 아무 KC-free 카테고리나 골라서(예: "악기") 엉뚱한 고시정보 템플릿을
+  // 뷰티 상품에 붙이는 오분류는 만들지 않는다(신뢰할 수 없는 매칭이면 그냥
+  // 기존 방식대로 필드 수 기준으로 되돌아간다).
+  const noticeCategoryHasMandatoryKc = (c: CoupangCategoryNoticeMeta) =>
+    c.noticeCategoryDetailNames.some(
+      (d) => d.required === "MANDATORY" && (d.noticeCategoryDetailName.includes("인증") || d.noticeCategoryDetailName.includes("허가")),
+    );
+  const kcFreeMatch = categoryMeta.noticeCategories
+    .filter((c) => !noticeCategoryHasMandatoryKc(c))
+    .find((c) => {
+      const keywords = NOTICE_CATEGORY_NAME_KEYWORDS[c.noticeCategoryName];
+      return keywords?.some((k) => context.productName.toLowerCase().includes(k));
+    });
+  const simplestNoticeCategory =
+    kcFreeMatch ??
+    [...categoryMeta.noticeCategories].sort(
+      (a, b) => a.noticeCategoryDetailNames.length - b.noticeCategoryDetailNames.length,
+    )[0];
   const childrenNoticeCategory = categoryMeta.noticeCategories.find((c) => c.noticeCategoryName.includes("어린이"));
   const chosenNoticeCategory =
     isLikelyChildrenProduct(context.productName) && childrenNoticeCategory

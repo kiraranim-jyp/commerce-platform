@@ -48,9 +48,8 @@ export function RegistrationReadinessCard({
   onItemClick?: (sectionId: string) => void;
   settingsMissing?: string[];
   /** Sprint A-6(작업3 — Auto Fill KPI) — CPO 요구사항: "대표님이 가장 궁금한
-   * 숫자." "필수항목 총 18개, 자동입력 15, 사용자입력 3" 그대로. Compliance
-   * Report의 autoResolvedCount/userRequiredCount를 그대로 옮겨온 값이라 이
-   * 카드가 다시 계산하지 않는다(판정 로직 중복 방지 원칙). */
+   * 숫자." Compliance Report의 autoResolvedCount/userRequiredCount를 그대로
+   * 옮겨온 값이라 이 카드가 다시 계산하지 않는다(판정 로직 중복 방지 원칙). */
   autoFillStats?: { total: number; autoFilled: number; userInput: number };
 }) {
   const scoreClassName = percent >= 90 ? "text-success" : percent >= 60 ? "text-warning" : "text-error";
@@ -58,6 +57,15 @@ export function RegistrationReadinessCard({
   const canRegister = allRequiredPassed && status === "READY";
   const isTerminal = status === "SUBMITTED" || status === "FAILED";
   const remaining = [...required, ...recommended].filter((i) => !i.passed).length;
+
+  // Sprint A-6(개선4) — CPO 요구사항: "사용자는 왜 이것을 내가 입력해야 하지를
+  // 바로 이해할 수 있어야 한다." 필수 목록을 하나로 뭉치지 않고 성격별로
+  // 나눈다 — 법적 필수(KC 등, CartPilot이 절대 대신 못 채움)/비즈니스
+  // 설정(배송지 등, Settings에서 한 번만 하면 됨)/상품 정보(Resolver가 아직
+  // 못 찾은 값). 순서도 이 우선순위대로 — 법적 필수가 가장 급하다.
+  const legalItems = required.filter((i) => i.group === "LEGAL");
+  const businessItems = required.filter((i) => i.group === "BUSINESS_SETTINGS");
+  const productInfoItems = required.filter((i) => i.group !== "LEGAL" && i.group !== "BUSINESS_SETTINGS");
 
   return (
     <aside className="space-y-4 rounded-lg border border-border bg-surface p-4 text-sm shadow-elevated lg:sticky lg:top-4 lg:self-start">
@@ -70,26 +78,56 @@ export function RegistrationReadinessCard({
             style={{ width: `${percent}%` }}
           />
         </div>
-        {/* Sprint A-6(작업3 — Auto Fill KPI) — "대표님이 가장 궁금한 숫자"를
-            CPO 예시 형식 그대로("필수항목 총 18개, 자동입력 15, 사용자입력
-            3") 등록 가능성 % 바로 아래, 항상 보이는 위치에 둔다. */}
-        {autoFillStats && (
-          <p className="mt-2 text-xs text-text-secondary">
-            필수항목 총 <span className="font-medium text-text-primary">{autoFillStats.total}개</span> 중 자동입력{" "}
-            <span className="font-medium text-success">{autoFillStats.autoFilled}</span> · 사용자입력{" "}
-            <span className="font-medium text-warning">{autoFillStats.userInput}</span>
-          </p>
+        {/* Sprint A-6(개선3) — "대표님이 가장 궁금한 숫자"를 한눈에 — 자동입력/
+            사용자입력 둘 다 %와 (N/M)을 같이 보여준다. */}
+        {autoFillStats && autoFillStats.total > 0 && (
+          <div className="mt-3 grid grid-cols-2 gap-2 rounded-md bg-background p-2 text-center">
+            <div>
+              <p className="text-[10px] text-text-tertiary">자동 입력</p>
+              <p className="text-lg font-semibold tabular-nums text-success">
+                {Math.round((autoFillStats.autoFilled / autoFillStats.total) * 100)}%
+              </p>
+              <p className="text-[10px] text-text-tertiary">
+                ({autoFillStats.autoFilled}/{autoFillStats.total})
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] text-text-tertiary">사용자 입력</p>
+              <p className="text-lg font-semibold tabular-nums text-warning">
+                {Math.round((autoFillStats.userInput / autoFillStats.total) * 100)}%
+              </p>
+              <p className="text-[10px] text-text-tertiary">
+                ({autoFillStats.userInput}/{autoFillStats.total})
+              </p>
+            </div>
+          </div>
         )}
       </div>
 
-      <div className="space-y-1">
-        <p className="text-xs font-medium text-text-tertiary">필수</p>
-        <ItemList items={required} onItemClick={onItemClick} />
+      <div className="space-y-3">
+        {legalItems.length > 0 && (
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-text-tertiary">법적 필수 — CartPilot이 대신 채울 수 없음</p>
+            <ItemList items={legalItems} onItemClick={onItemClick} />
+          </div>
+        )}
+        {businessItems.length > 0 && (
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-text-tertiary">비즈니스 설정 — Settings에서 한 번만 하면 됨</p>
+            <ItemList items={businessItems} onItemClick={onItemClick} />
+          </div>
+        )}
+        {productInfoItems.length > 0 && (
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-text-tertiary">상품 정보</p>
+            <ItemList items={productInfoItems} onItemClick={onItemClick} />
+          </div>
+        )}
       </div>
 
       {recommended.length > 0 && (
         <div className="space-y-1">
-          <p className="text-xs font-medium text-text-tertiary">선택</p>
+          <p className="text-xs font-medium text-text-tertiary">선택 입력</p>
           <ItemList items={recommended} onItemClick={onItemClick} />
         </div>
       )}
@@ -147,7 +185,23 @@ function ItemList({
               <span className={item.passed ? "text-text-primary" : "font-medium text-text-primary"}>
                 {item.label}
               </span>
-              {!item.passed && item.hint && (
+              {/* Sprint A-6(개선1) — CPO 지시: "AI가 추측하거나 기본값을 넣으면
+                  안 된다. 대신 자동입력 불가/사유/사용자 확인 필요를 명확하게
+                  표시하라." 문장 하나로 뭉치지 않고 구조화된 배지로 보여준다. */}
+              {!item.passed && item.reasonCode === "CRITICAL" && (
+                <span className="mt-0.5 flex flex-wrap items-center gap-1">
+                  <span className="rounded bg-error-soft px-1 py-0.5 text-[10px] font-medium text-error">
+                    자동입력 불가
+                  </span>
+                  <span className="rounded bg-background px-1 py-0.5 text-[10px] text-text-tertiary">
+                    사유: 법적 필수정보
+                  </span>
+                  <span className="rounded bg-background px-1 py-0.5 text-[10px] text-text-tertiary">
+                    사용자 확인 필요
+                  </span>
+                </span>
+              )}
+              {!item.passed && item.reasonCode !== "CRITICAL" && item.hint && (
                 <span className="block text-[11px] text-text-tertiary">{item.hint}</span>
               )}
             </span>
