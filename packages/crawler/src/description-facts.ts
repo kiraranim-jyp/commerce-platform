@@ -81,6 +81,10 @@ const KNOWN_COLOR_WORDS = [
   "pink", "anthracite", "charcoal", "olive", "burgundy", "maroon", "teal", "coral",
   "lavender", "mustard", "rust", "clay", "sand", "cream", "tan", "taupe", "indigo",
   "turquoise", "magenta", "crimson", "emerald", "sapphire", "bronze", "copper",
+  // Sprint A-7(작업2) — 실측 확인(bobochoses.com "Offwhite t-shirt."): 표준
+  // 색이름 밖의 표기도 실제로 쓰인다. off-white/offwhite는 white의 변형이라
+  // 별도 화이트리스트 확장으로 안전하게 추가한다(임의 단어 허용이 아님).
+  "off-white", "offwhite",
 ];
 const COLOR_TITLE_PATTERN = new RegExp(
   `\\b(${KNOWN_COLOR_WORDS.join("|")})\\b`,
@@ -92,8 +96,18 @@ const COLOR_TITLE_PATTERN = new RegExp(
  * 바로 오는 경우가 실제로 있다. 문서 전체에서 아무 데나 찾으면 오탐 위험이
  * 크지만(예: 중간 문장의 "black"이 상품과 무관할 수 있음), "맨 앞"으로
  * 앵커링하면 라벨과 거의 같은 신뢰도를 갖는다 — 화이트리스트 밖 표현은 여전히
- * 못 잡는다. */
-const COLOR_LEADING_WORD_PATTERN = new RegExp(`^(${KNOWN_COLOR_WORDS.join("|")})\\b`, "i");
+ * 못 잡는다.
+ *
+ * 실측 확인(bobochoses.com "Heather grey t-shirt."): 색상 단어 앞에 수식어
+ * 하나가 더 붙는 경우도 있다("Heather grey"/"Dusty pink" 등) — 앞 단어 최대
+ * 1개까지만 선택적으로 허용한다(문장 전체를 삼키지 않도록 제한). 정규식
+ * 백트래킹 덕분에 수식어가 없는 "Beige sweatshirt."도 그대로 "Beige"만
+ * 잡힌다(sweatshirt는 색상 화이트리스트에 없어 수식어 시도가 실패하고
+ * 색상 단어 자체를 바로 매칭). */
+const COLOR_LEADING_WORD_PATTERN = new RegExp(
+  `^((?:[a-z]+\\s+)?(?:${KNOWN_COLOR_WORDS.join("|")}))\\b`,
+  "i",
+);
 
 export function extractColor(description: string | undefined): string | undefined {
   if (!description) return undefined;
