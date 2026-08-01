@@ -555,11 +555,11 @@ export const GOLDEN_DATASET: GoldenDatasetItem[] = [
 
   // ── Beauty × 10 ────────────────────────────────────────────────────
   {
-    url: "https://glossier.com/products/the-glossier-icons",
+    url: "https://glossier.com/products/boy-brow-duo",
     bucket: "beauty",
     expectedLabel: "Beauty",
     expectedProductType: "뷰티",
-    note: "product_type: Makeup",
+    note: "product_type: Makeup — 단일상품(원래 the-glossier-icons를 썼으나 다중상품 번들 페이지라 fast-path/Playwright 둘 다 콘텐츠를 못 읽어옴(images:[] 실측 확인) → 크롤링 가능한 단일상품으로 교체",
   },
   {
     url: "https://glossier.com/products/balm-dotcom-trio",
@@ -576,11 +576,11 @@ export const GOLDEN_DATASET: GoldenDatasetItem[] = [
     note: "product_type: Skincare",
   },
   {
-    url: "https://glossier.com/products/the-skincare-icons",
+    url: "https://kosas.com/products/cloud-set-loose",
     bucket: "beauty",
     expectedLabel: "Beauty",
     expectedProductType: "뷰티",
-    note: "product_type: Makeup, tags: Sub-Category: Skincare",
+    note: "product_type: Setting Powder — 단일상품(원래 the-skincare-icons를 썼으나 다중상품 번들 페이지라 fast-path/Playwright 둘 다 콘텐츠를 못 읽어옴(images:[] 실측 확인) → 크롤링 가능한 단일상품으로 교체",
   },
   {
     url: "https://kosas.com/products/air-brow-clear",
