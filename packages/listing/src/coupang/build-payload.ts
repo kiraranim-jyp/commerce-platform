@@ -32,6 +32,18 @@ export interface CoupangSellerConfig {
   returnAddressDetail: string;
   /** Wing에 등록된 출고지(발송지) 코드. */
   outboundShippingPlaceCode: number | null;
+  /** Sprint A-8(작업1/5) — 상품마다 다시 입력하지 않는 배송 정책 기본값.
+   * product.shippingFee(사용자가 실제로 편집한 값)가 있으면 그게 우선이고
+   * (상품 Override > SellerProfile 우선순위), 없을 때만 이 기본값을 쓴다. */
+  deliveryCharge: number | null;
+  returnDeliveryCharge: number | null;
+  outboundLeadTimeDays: number | null;
+  /** Sprint A-8(추가 권장사항) — Sprint A-7 실측에서 30건 중 30건을 막은 1위
+   * 블로커. 원본 사이트가 아니라 판매자(대표님) 본인의 사업자 정보라 상품마다
+   * 크롤링/정규식으로 찾을 게 아니라 SellerProfile에서 가져온다. */
+  manufacturer: string;
+  asContactNumber: string;
+  qualityGuarantee: string;
 }
 
 export const BLANK_COUPANG_SELLER_CONFIG: CoupangSellerConfig = {
@@ -45,6 +57,12 @@ export const BLANK_COUPANG_SELLER_CONFIG: CoupangSellerConfig = {
   returnAddress: "",
   returnAddressDetail: "",
   outboundShippingPlaceCode: null,
+  deliveryCharge: null,
+  returnDeliveryCharge: null,
+  outboundLeadTimeDays: null,
+  manufacturer: "",
+  asContactNumber: "",
+  qualityGuarantee: "",
 };
 
 export interface CoupangItemImage {
@@ -259,6 +277,11 @@ const AGE_SYNONYMS = ["사용연령", "연령", "age"];
  * 매칭이 조용히 실패하고 있었다. */
 const MANUFACTURER_SYNONYMS = ["제조자", "제조사", "수입자", "manufacturer"];
 const CARE_SYNONYMS = ["세탁방법", "취급방법", "취급시 주의사항", "care"];
+/** Sprint A-8(추가 권장사항) — Sprint A-7 실측에서 "품질보증기준"이 상위
+ * 블로커 중 하나였다(30건 중 6건). 상품마다 다른 값이 아니라 판매자가 매장
+ * 전체에 적용하는 정책 문구인 경우가 대부분이라 SellerProfile 기본값으로
+ * 채운다(product.* 필드에는 대응하는 크롤링 값이 애초에 없다). */
+const QUALITY_GUARANTEE_SYNONYMS = ["품질보증기준", "품질보증"];
 /** KC 인증정보처럼 법적/컴플라이언스 성격이 강한 필드 — 플레이스홀더로 채워지면
  * Compliance Report가 다른 필드보다 무겁게(FAIL 수준으로) 취급해야 한다. */
 const COMPLIANCE_CRITICAL_SYNONYMS = ["kc", "인증"];
@@ -396,6 +419,7 @@ function matchProductFieldDetailed(
     recommendedAge?: string;
     manufacturer?: string;
     careInstructions?: string;
+    qualityGuarantee?: string;
   },
 ): ProductFieldMatch {
   const lower = fieldName.toLowerCase();
@@ -407,6 +431,7 @@ function matchProductFieldDetailed(
     [AGE_SYNONYMS, productFields.recommendedAge],
     [MANUFACTURER_SYNONYMS, productFields.manufacturer],
     [CARE_SYNONYMS, productFields.careInstructions],
+    [QUALITY_GUARANTEE_SYNONYMS, productFields.qualityGuarantee],
   ];
   for (const [synonyms, value] of rules) {
     if (synonyms.some((s) => lower.includes(s))) {
@@ -495,8 +520,12 @@ const FIELD_SOURCE_CONFIDENCE: Record<ComplianceFieldSource, number> = {
  *   7. EMPTY(PLACEHOLDER) — 아무것도 못 찾은 경우. 화면에서 빨간 "*"로 표시되고
  *                         사용자 입력을 요청한다.
  *
- * KC 인증번호/수입자/A/S 연락처/인증기관은 이 매핑에서 의도적으로 제외한다 —
- * CartPilot이 원본 사이트에서 알 수 없는, 반드시 사람이 확인해야 하는 정보다. */
+ * KC 인증번호/인증기관은 이 매핑에서 의도적으로 제외한다 — CartPilot이 원본
+ * 사이트에서도, 판매자 기본값으로도 대신할 수 없는(상품/인증기관마다 실제로
+ * 다른) 정보다. 수입자/A-S 연락처/품질보증기준은 Sprint A-8부터 예외다 —
+ * 원본 사이트에서는 알 수 없는 게 맞지만, 상품마다 다른 게 아니라 판매자
+ * 본인이 어차피 반복 입력할 상수라서 SellerProfile 기본값(context.manufacturer/
+ * qualityGuarantee, context.contactNumber는 기존부터 있었음)으로 대신 채운다. */
 export function buildCoupangCompliance(
   categoryMeta: CoupangCategoryMeta | null | undefined,
   context: {
@@ -509,6 +538,7 @@ export function buildCoupangCompliance(
     recommendedAge?: string;
     manufacturer?: string;
     careInstructions?: string;
+    qualityGuarantee?: string;
     /** P0(Category Meta -> 동적 입력폼) — 사용자가 등록 전 화면에서 직접 채운
      * 구매옵션/고시정보 값. attributeTypeName 또는 noticeCategoryDetailName을
      * 키로 쓴다(둘이 이름이 겹칠 일은 실무상 없다 — 겹치면 attribute가 먼저
@@ -720,14 +750,19 @@ function buildCoupangItem(args: {
     categoryMeta,
     {
       productName: listing.title,
-      contactNumber: sellerConfig.companyContactNumber,
+      contactNumber: sellerConfig.asContactNumber || sellerConfig.companyContactNumber,
       brand: product.brand.value || undefined,
       material: product.material.value || undefined,
       countryOfOrigin: product.countryOfOrigin.value || undefined,
       color: product.color.value || undefined,
       recommendedAge: product.recommendedAge.value || undefined,
-      manufacturer: product.manufacturer.value || undefined,
+      // Sprint A-8(추가 권장사항) — 원본 사이트에서 크롤링한 값이 있으면
+      // 그게 우선(상품 Override > SellerProfile). 없을 때만 판매자 기본값으로
+      // 채운다 — Sprint A-7 실측에서 이 필드가 30건 중 30건을 막았는데,
+      // 대부분 상품마다 다른 정보가 아니라 판매자 본인의 사업자 정보였다.
+      manufacturer: product.manufacturer.value || sellerConfig.manufacturer || undefined,
       careInstructions: product.careInstructions.value || undefined,
+      qualityGuarantee: sellerConfig.qualityGuarantee || undefined,
       userOverrides: product.categoryFieldOverrides,
     },
     { optionGroups, variant },
@@ -755,9 +790,10 @@ function buildCoupangItem(args: {
     // 등록 시도로 확인) — maximumBuyForPerson(1인당 최대구매수량)이 0(무제한)
     // 이어도 기간 필드 자체는 항상 1 이상이어야 한다.
     maximumBuyForPersonPeriod: 1,
-    // 해외 URL을 소싱해서 등록하는 CartPilot 특성상 국내 사입 대비 배송이 오래
-    // 걸린다고 보수적으로 가정한다 — 실제 배송 정책이 정해지면 조정한다.
-    outboundShippingTimeDay: 7,
+    // Sprint A-8(작업1/5) — 판매자가 SellerProfile에 실제 출고 소요일을
+    // 설정했으면 그 값을 쓴다. 없으면 기존처럼 "해외 URL 소싱이라 국내 사입
+    // 대비 오래 걸린다"는 보수적 기본값(7일)으로 폴백한다.
+    outboundShippingTimeDay: sellerConfig.outboundLeadTimeDays ?? 7,
     unitCount: 1,
     adultOnly: "EVERYONE",
     taxType: "TAX",
@@ -831,8 +867,18 @@ export function buildCoupangPayload(
   const twoYearsLater = new Date(now);
   twoYearsLater.setFullYear(now.getFullYear() + 2);
 
-  const deliveryCharge = product.shippingFee.value;
+  // Sprint A-8(작업5 — "상품 Override > SellerProfile" 우선순위) —
+  // shippingFee.source가 "DEFAULT"면 아무도 이 상품에서 실제로 배송비를
+  // 정한 적이 없다는 뜻(canonical-product.ts가 항상 DEFAULT로 시작한다)이라
+  // 판매자 기본값을 대신 쓴다. 사용자가 Editor에서 직접 고쳤거나 원본
+  // 사이트에서 실제로 읽어온 값이면(ORIGINAL/USER_EDITED 등) 그 상품별 값이
+  // 항상 우선한다.
+  const deliveryCharge =
+    product.shippingFee.source === "DEFAULT" && sellerConfig.deliveryCharge != null
+      ? sellerConfig.deliveryCharge
+      : product.shippingFee.value;
   const deliveryChargeType: CoupangPayload["deliveryChargeType"] = deliveryCharge > 0 ? "NOT_FREE" : "FREE";
+  const returnCharge = sellerConfig.returnDeliveryCharge ?? deliveryCharge;
 
   // 옵션이 있으면(variants가 채워졌으면) variant별로 item을 하나씩 만든다 —
   // 없으면(대부분의 크롤러 소스는 아직 variant를 못 뽑는다, 또는 옵션 없는
@@ -872,7 +918,7 @@ export function buildCoupangPayload(
     deliveryChargeType,
     deliveryCharge,
     freeShipOverAmount: 0,
-    deliveryChargeOnReturn: deliveryCharge,
+    deliveryChargeOnReturn: returnCharge,
     remoteAreaDeliverable: "N",
     unionDeliveryType: "NOT_UNION_DELIVERY",
     returnCenterCode: sellerConfig.returnCenterCode,
@@ -881,7 +927,7 @@ export function buildCoupangPayload(
     returnZipCode: sellerConfig.returnZipCode,
     returnAddress: sellerConfig.returnAddress,
     returnAddressDetail: sellerConfig.returnAddressDetail,
-    returnCharge: deliveryCharge,
+    returnCharge,
     outboundShippingPlaceCode: sellerConfig.outboundShippingPlaceCode,
     vendorUserId: sellerConfig.vendorUserId,
     requested: false,

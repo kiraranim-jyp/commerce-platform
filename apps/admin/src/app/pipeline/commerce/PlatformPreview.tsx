@@ -26,6 +26,7 @@ import { ListingSection } from "./ListingSection";
 import { PriceEditor } from "./PriceEditor";
 import { computeChecklistReadiness, computeReadinessScoreSummary } from "./readiness";
 import { RegistrationReadinessCard } from "./RegistrationReadinessCard";
+import { SellerProfileSummaryCard } from "./SellerProfileSummaryCard";
 import { extractionSourceLabel, ProvenanceBadge } from "./provenance";
 
 /** Sprint A-3(작업1 — 모든 항목 Editable, 작업8 — Resolver Trace) 필드 라벨 행.
@@ -384,7 +385,18 @@ export function PlatformPreview({
             </FieldRow>
           </div>
           <p className="text-xs text-text-tertiary">현재 배송 요약: {listing.shippingInfo}</p>
+          {listing.platform === "coupang" && (
+            <p className="text-xs text-text-tertiary">
+              비워두면 판매자 기본값(아래 "배송 정책 · 반품/교환" 카드)이 자동 적용됩니다.
+            </p>
+          )}
         </CollapsibleSection>
+
+        {/* Sprint A-8(작업1/3) — 상품마다 다시 입력하지 않는 배송/반품/교환/
+            제조자 정보를 판매자 기본값(SellerProfile)에서 자동으로 불러와
+            보여준다. 실제 수정은 Settings 페이지에서만(CP001 방지 — 판정/편집
+            로직을 두 곳에 두지 않는다). */}
+        {listing.platform === "coupang" && <SellerProfileSummaryCard />}
 
         <CollapsibleSection title="고시정보" {...sectionProps("section-notice")}>
           <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">

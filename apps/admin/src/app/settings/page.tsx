@@ -35,6 +35,14 @@ interface SellerProfile {
   returnAddress: string;
   returnAddressDetail: string;
   outboundShippingPlaceCode: number | null;
+  deliveryCharge: number | null;
+  returnDeliveryCharge: number | null;
+  exchangeDeliveryCharge: number | null;
+  outboundLeadTimeDays: number | null;
+  deliveryMethod: string;
+  manufacturer: string;
+  asContactNumber: string;
+  qualityGuarantee: string;
 }
 
 interface DescriptionTemplate {
@@ -259,6 +267,10 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
  */
 function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile[]; onChanged: () => Promise<void> }) {
   const [formOpen, setFormOpen] = useState(profiles.length === 0);
+  // Sprint A-8(작업2/4/6) — 지금까지는 "새로 만들기"만 있었다. editingId가
+  // null이 아니면 그 프로필을 고치는 중이라는 뜻이고, 폼은 그대로 재사용하되
+  // 저장 버튼이 POST(생성) 대신 PATCH(수정)를 부른다.
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [deliveryCompanyCode, setDeliveryCompanyCode] = useState("");
   const [returnCenterCode, setReturnCenterCode] = useState("");
@@ -268,12 +280,63 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
   const [returnAddress, setReturnAddress] = useState("");
   const [returnAddressDetail, setReturnAddressDetail] = useState("");
   const [outboundShippingPlaceCode, setOutboundShippingPlaceCode] = useState("");
+  const [deliveryCharge, setDeliveryCharge] = useState("");
+  const [returnDeliveryCharge, setReturnDeliveryCharge] = useState("");
+  const [exchangeDeliveryCharge, setExchangeDeliveryCharge] = useState("");
+  const [outboundLeadTimeDays, setOutboundLeadTimeDays] = useState("");
+  const [deliveryMethod, setDeliveryMethod] = useState("구매대행");
+  const [manufacturer, setManufacturer] = useState("");
+  const [asContactNumber, setAsContactNumber] = useState("");
+  const [qualityGuarantee, setQualityGuarantee] = useState("");
 
   const [shippingPlaces, setShippingPlaces] = useState<ShippingPlaceOption[]>([]);
   const [returnCenters, setReturnCenters] = useState<ReturnCenterOption[]>([]);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  function resetForm() {
+    setEditingId(null);
+    setName("");
+    setDeliveryCompanyCode("");
+    setReturnCenterCode("");
+    setReturnChargeName("");
+    setCompanyContactNumber("");
+    setReturnZipCode("");
+    setReturnAddress("");
+    setReturnAddressDetail("");
+    setOutboundShippingPlaceCode("");
+    setDeliveryCharge("");
+    setReturnDeliveryCharge("");
+    setExchangeDeliveryCharge("");
+    setOutboundLeadTimeDays("");
+    setDeliveryMethod("구매대행");
+    setManufacturer("");
+    setAsContactNumber("");
+    setQualityGuarantee("");
+  }
+
+  function startEdit(p: SellerProfile) {
+    setEditingId(p.id);
+    setName(p.name);
+    setDeliveryCompanyCode(p.deliveryCompanyCode);
+    setReturnCenterCode(p.returnCenterCode);
+    setReturnChargeName(p.returnChargeName);
+    setCompanyContactNumber(p.companyContactNumber);
+    setReturnZipCode(p.returnZipCode);
+    setReturnAddress(p.returnAddress);
+    setReturnAddressDetail(p.returnAddressDetail);
+    setOutboundShippingPlaceCode(p.outboundShippingPlaceCode != null ? String(p.outboundShippingPlaceCode) : "");
+    setDeliveryCharge(p.deliveryCharge != null ? String(p.deliveryCharge) : "");
+    setReturnDeliveryCharge(p.returnDeliveryCharge != null ? String(p.returnDeliveryCharge) : "");
+    setExchangeDeliveryCharge(p.exchangeDeliveryCharge != null ? String(p.exchangeDeliveryCharge) : "");
+    setOutboundLeadTimeDays(p.outboundLeadTimeDays != null ? String(p.outboundLeadTimeDays) : "");
+    setDeliveryMethod(p.deliveryMethod || "구매대행");
+    setManufacturer(p.manufacturer);
+    setAsContactNumber(p.asContactNumber);
+    setQualityGuarantee(p.qualityGuarantee);
+    setFormOpen(true);
+  }
 
   async function fetchLookups() {
     setLookupLoading(true);
@@ -311,27 +374,39 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
     }
   }
 
-  async function handleCreate() {
+  async function handleSave() {
     setSaving(true);
     try {
-      const res = await fetch("/api/settings/coupang/profiles", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name || "기본",
-          deliveryCompanyCode: deliveryCompanyCode || undefined,
-          returnCenterCode: returnCenterCode || undefined,
-          returnChargeName: returnChargeName || undefined,
-          companyContactNumber: companyContactNumber || undefined,
-          returnZipCode: returnZipCode || undefined,
-          returnAddress: returnAddress || undefined,
-          returnAddressDetail: returnAddressDetail || undefined,
-          outboundShippingPlaceCode: outboundShippingPlaceCode ? Number(outboundShippingPlaceCode) : undefined,
-        }),
-      });
+      const body = {
+        name: name || "기본",
+        deliveryCompanyCode: deliveryCompanyCode || undefined,
+        returnCenterCode: returnCenterCode || undefined,
+        returnChargeName: returnChargeName || undefined,
+        companyContactNumber: companyContactNumber || undefined,
+        returnZipCode: returnZipCode || undefined,
+        returnAddress: returnAddress || undefined,
+        returnAddressDetail: returnAddressDetail || undefined,
+        outboundShippingPlaceCode: outboundShippingPlaceCode ? Number(outboundShippingPlaceCode) : undefined,
+        deliveryCharge: deliveryCharge ? Number(deliveryCharge) : undefined,
+        returnDeliveryCharge: returnDeliveryCharge ? Number(returnDeliveryCharge) : undefined,
+        exchangeDeliveryCharge: exchangeDeliveryCharge ? Number(exchangeDeliveryCharge) : undefined,
+        outboundLeadTimeDays: outboundLeadTimeDays ? Number(outboundLeadTimeDays) : undefined,
+        deliveryMethod: deliveryMethod || undefined,
+        manufacturer: manufacturer || undefined,
+        asContactNumber: asContactNumber || undefined,
+        qualityGuarantee: qualityGuarantee || undefined,
+      };
+      const res = await fetch(
+        editingId ? `/api/settings/coupang/profiles/${editingId}` : "/api/settings/coupang/profiles",
+        {
+          method: editingId ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        },
+      );
       const data = (await res.json()) as { ok: boolean; error?: string };
       if (data.ok) {
-        setName("");
+        resetForm();
         setFormOpen(false);
         await onChanged();
       }
@@ -360,7 +435,10 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
         <h2 className="text-base font-semibold text-text-primary">배송 프로필</h2>
         <button
           type="button"
-          onClick={() => setFormOpen((v) => !v)}
+          onClick={() => {
+            if (formOpen) resetForm();
+            setFormOpen((v) => !v);
+          }}
           className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-background"
         >
           {formOpen ? "닫기" : "새 프로필 만들기"}
@@ -385,8 +463,20 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
                   택배사 {p.deliveryCompanyCode || "-"} · 반품지 {p.returnCenterCode || "-"} · 출고지{" "}
                   {p.outboundShippingPlaceCode ?? "-"}
                 </p>
+                <p className="text-xs text-text-secondary">
+                  배송비 {p.deliveryCharge != null ? `${p.deliveryCharge.toLocaleString()}원` : "-"} · 반품배송비{" "}
+                  {p.returnDeliveryCharge != null ? `${p.returnDeliveryCharge.toLocaleString()}원` : "-"} ·
+                  제조자(수입자) {p.manufacturer || "-"}
+                </p>
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => startEdit(p)}
+                  className="text-xs text-text-secondary hover:underline"
+                >
+                  수정
+                </button>
                 {!p.isDefault && (
                   <button
                     type="button"
@@ -546,13 +636,94 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
             />
           </Field>
 
+          {/* Sprint A-8(작업1/5) — 상품마다 다시 입력하지 않는 배송 정책 기본값.
+              등록 Editor의 "배송 정책"/"반품/교환" 카드가 이 값을 그대로 보여준다. */}
+          <p className="border-t border-border pt-3 text-xs font-medium text-text-secondary">배송 정책 기본값</p>
+          <Field label="배송방법" hint="현재 CartPilot은 해외구매대행으로만 등록합니다">
+            <input
+              type="text"
+              value={deliveryMethod}
+              onChange={(e) => setDeliveryMethod(e.target.value)}
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="배송비(원)">
+            <input
+              type="number"
+              value={deliveryCharge}
+              onChange={(e) => setDeliveryCharge(e.target.value)}
+              placeholder="예: 19800"
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="반품배송비(원)">
+            <input
+              type="number"
+              value={returnDeliveryCharge}
+              onChange={(e) => setReturnDeliveryCharge(e.target.value)}
+              placeholder="예: 25000"
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="교환배송비(원)" hint="현재 쿠팡 등록 Payload에는 반영되지 않고 참고용으로만 저장됩니다">
+            <input
+              type="number"
+              value={exchangeDeliveryCharge}
+              onChange={(e) => setExchangeDeliveryCharge(e.target.value)}
+              placeholder="예: 25000"
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="출고 소요일">
+            <input
+              type="number"
+              value={outboundLeadTimeDays}
+              onChange={(e) => setOutboundLeadTimeDays(e.target.value)}
+              placeholder="예: 7"
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+
+          {/* Sprint A-8(추가 권장사항) — Sprint A-7 실측에서 "제조자(수입자)"가
+              30건 중 30건을 막은 1위 블로커였다. 원본 사이트가 아니라 판매자
+              본인의 사업자 정보라 상품마다 다시 찾을 게 아니라 여기서 한 번만
+              입력한다. */}
+          <p className="border-t border-border pt-3 text-xs font-medium text-text-secondary">판매자 기본정보</p>
+          <Field label="제조자(수입자)" hint="Sprint A-7 실측 1위 블로커 — 여기 입력하면 상품마다 자동 채워집니다">
+            <input
+              type="text"
+              value={manufacturer}
+              onChange={(e) => setManufacturer(e.target.value)}
+              placeholder="예: 대표님 사업자명"
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="A/S 연락처" hint="비워두면 반품지 연락처를 대신 씁니다">
+            <input
+              type="text"
+              value={asContactNumber}
+              onChange={(e) => setAsContactNumber(e.target.value)}
+              placeholder="02-1234-5678"
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="품질보증기준">
+            <input
+              type="text"
+              value={qualityGuarantee}
+              onChange={(e) => setQualityGuarantee(e.target.value)}
+              placeholder="예: 관련 법령 및 소비자분쟁해결기준에 따름"
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+
           <button
             type="button"
-            onClick={handleCreate}
+            onClick={handleSave}
             disabled={saving}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
           >
-            {saving ? "저장 중…" : "프로필 저장"}
+            {saving ? "저장 중…" : editingId ? "수정 저장" : "프로필 저장"}
           </button>
         </div>
       )}
