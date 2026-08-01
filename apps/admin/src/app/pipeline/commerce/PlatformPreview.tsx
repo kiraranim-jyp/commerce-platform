@@ -486,6 +486,15 @@ export function PlatformPreview({
         onRegister={onOpenListingModal}
         onItemClick={goToSection}
         settingsMissing={settingsMissing}
+        autoFillStats={
+          compliancePreview
+            ? {
+                total: compliancePreview.autoResolvedCount + compliancePreview.userRequiredCount,
+                autoFilled: compliancePreview.autoResolvedCount,
+                userInput: compliancePreview.userRequiredCount,
+              }
+            : undefined
+        }
       />
     </div>
   );

@@ -402,7 +402,12 @@ export async function POST(request: Request) {
       payload,
       error: {
         step: "VALIDATION",
-        code: "CP004",
+        // Sprint A-6(작업2) — isComplianceCritical()이 "kc"/"인증" 키워드로만
+        // critical을 판단하므로(build-payload.ts) 이 분기의 criticalFields는
+        // 항상 KC/인증 계열이다 — CP004(일반 옵션 누락)가 아니라 KC 전용
+        // 코드로 분류해야 실패 원인 통계에서 "Attribute Mapper 문제"와 섞이지
+        // 않는다.
+        code: "CP007",
         message: `법적/컴플라이언스 필수 항목이 확인되지 않아 등록을 진행하지 않았습니다: ${criticalFields.join(", ")}`,
         retryable: true,
         resolution: "등록 화면에서 해당 항목(KC/인증 등)을 직접 입력한 뒤 다시 시도해주세요.",
@@ -497,7 +502,10 @@ export async function POST(request: Request) {
       payload,
       error: {
         step: "COUPANG_API",
-        code: isRetryableCoupangResponse(response) ? "API004" : "API005",
+        // Sprint A-6(작업2) — 429는 "잠시 후 재시도하면 되는" 문제고 나머지
+        // 5xx/4xx는 "데이터를 고쳐야 하는" 문제라 원인이 다르다 — 같은
+        // API004로 뭉치면 실패 원인 통계에서 둘이 섞인다.
+        code: response.status === 429 ? "API006" : isRetryableCoupangResponse(response) ? "API004" : "API005",
         message: details ? `${message} (${details})` : message,
         retryable: true,
         resolution: "표시된 원인을 확인하고 데이터를 고친 뒤 다시 시도해주세요.",

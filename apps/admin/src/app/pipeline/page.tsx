@@ -48,6 +48,10 @@ export default function PipelinePage() {
   const [coupangConnection, setCoupangConnection] = useState<PlatformConnectionStatus>("UNKNOWN");
   const [coupangConnectionCheckedAt, setCoupangConnectionCheckedAt] = useState<string | null>(null);
   const [coupangConnectionChecking, setCoupangConnectionChecking] = useState(false);
+  // Sprint A-6(작업4 — 등록 소요시간 측정) — CPO 요구사항: "URL 입력 → 등록
+  // 완료" 총 시간. URL 제출(runPipeline 시작) 시점을 여기서 잡아 CommerceWorkspace로
+  // 내려보낸다 — 등록 자체는 CommerceWorkspace가 처리하므로 종료 시점은 그쪽에서 잰다.
+  const [analysisStartedAt, setAnalysisStartedAt] = useState<number | null>(null);
 
   /** 페이지 로딩 시 자동으로 호출하지 않는다 — 사용자가 [연결 확인] 버튼을 눌러야만
    * 실제 쿠팡 API가 나간다(불필요한 호출 방지). 반환값을 그대로 써서, 방금 호출한
@@ -85,6 +89,7 @@ export default function PipelinePage() {
     // 쿠팡 연결이 확인되지 않은 상태에서 이미지 처리 비용이 나가지 않게 한다.
     if (coupangConnection !== "CONNECTED") return;
 
+    setAnalysisStartedAt(Date.now());
     setLoading(true);
     setError(null);
     setResult(null);
@@ -441,6 +446,7 @@ export default function PipelinePage() {
             onToggleDescriptionUsage={(id) => toggleImageUsage(id, "useInDescription")}
             onToggleExclude={toggleExclude}
             developerMode={developerMode}
+            analysisStartedAt={analysisStartedAt}
           />
 
           {/* P0-UI Epic 1 — JSON/ZIP/원본 URL/처리 리포트 등은 판매자가 매일 볼

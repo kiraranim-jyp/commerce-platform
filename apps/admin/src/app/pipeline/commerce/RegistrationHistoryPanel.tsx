@@ -22,6 +22,14 @@ function formatTime(iso: string): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+/** Sprint A-6(작업4 — 등록 소요시간 측정) — CPO 예시 형식("2분 31초") 그대로. */
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.round(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return minutes > 0 ? `${minutes}분 ${seconds}초` : `${seconds}초`;
+}
+
 export function RegistrationHistoryPanel({ history }: { history: RegistrationHistoryEntry[] }) {
   const [showAll, setShowAll] = useState(false);
   if (history.length === 0) return null;
@@ -68,6 +76,13 @@ export function RegistrationHistoryPanel({ history }: { history: RegistrationHis
               )}
               {entry.result.externalUrl && (
                 <p className="mt-0.5 text-text-secondary">{entry.result.externalUrl}</p>
+              )}
+              {entry.timing && (entry.timing.totalElapsedMs != null || entry.timing.editorElapsedMs != null) && (
+                <p className="mt-0.5 text-text-tertiary">
+                  {entry.timing.totalElapsedMs != null && `전체 ${formatDuration(entry.timing.totalElapsedMs)}`}
+                  {entry.timing.totalElapsedMs != null && entry.timing.editorElapsedMs != null && " · "}
+                  {entry.timing.editorElapsedMs != null && `입력 ${formatDuration(entry.timing.editorElapsedMs)}`}
+                </p>
               )}
             </div>
             <span

@@ -31,11 +31,14 @@ export type ErrorCode =
   | "CP004"
   | "CP005"
   | "CP006"
+  | "CP007"
+  | "CP008"
   | "API001"
   | "API002"
   | "API003"
   | "API004"
-  | "API005";
+  | "API005"
+  | "API006";
 
 export type ErrorCodeCategory = "IMG" | "EXT" | "AI" | "CP" | "API";
 
@@ -142,6 +145,21 @@ export const ERROR_CODE_INFO: Record<ErrorCode, ErrorCodeInfo> = {
     defaultMessage: "이미지 형식이 플랫폼 요구사항에 맞지 않습니다.",
     autoRetryable: false,
   },
+  /** Sprint A-6(작업2 — 실패 원인 자동 분류) — CPO 요구사항: "KC를 별도 항목으로
+   * 남긴다." KC/인증은 CartPilot이 원본 사이트에서 알 수 없는, 반드시 사람이
+   * 채워야 하는 값이라 CP004/CP005(일반 필수값 누락)와 원인이 다르다 — 대응
+   * 방법도 다르다(전자는 Resolver 개선 대상이 아니라 판매자가 실제 인증
+   * 정보를 입력해야 하는 문제). */
+  CP007: {
+    category: "CP",
+    defaultMessage: "KC/인증 등 법적 필수 정보가 확인되지 않았습니다.",
+    autoRetryable: false,
+  },
+  CP008: {
+    category: "CP",
+    defaultMessage: "판매가격을 확인할 수 없습니다.",
+    autoRetryable: false,
+  },
   API001: {
     category: "API",
     defaultMessage: "쿠팡 인증 정보가 설정되어 있지 않습니다.",
@@ -167,4 +185,63 @@ export const ERROR_CODE_INFO: Record<ErrorCode, ErrorCodeInfo> = {
     defaultMessage: "쿠팡이 등록 요청을 거부했습니다.",
     autoRetryable: false,
   },
+  /** Sprint A-6(작업2) — 429는 API004(일반 API 실패)로 뭉뚱그리면 "일시적으로
+   * 너무 많이 요청했다"는 원인이 "쿠팡이 데이터를 거부했다"는 원인과 섞여
+   * 보인다 — 전자는 잠시 후 재시도하면 그만이고 후자는 데이터를 고쳐야 한다. */
+  API006: {
+    category: "API",
+    defaultMessage: "쿠팡 API 요청 한도를 초과했습니다(Rate Limit).",
+    autoRetryable: true,
+  },
 };
+
+/**
+ * Sprint A-6(작업2 — 실패 원인 자동 분류) — CPO가 지정한 9개 버킷(CATEGORY/
+ * ATTRIBUTE/KC/OPTION/IMAGE/PRICE/API_ERROR/RATE_LIMIT/NETWORK)으로 기존
+ * ErrorCode를 묶는다. "무조건 등록 실패"가 아니라 원인별로 다음 개선
+ * 우선순위를 정할 수 있게 하는 게 목적이다 — ErrorCode 자체(더 세밀함)는 그대로
+ * 두고, 이 함수는 리포트/대시보드 표시용 상위 분류만 담당한다.
+ */
+export type FailureBucket =
+  | "CATEGORY"
+  | "ATTRIBUTE"
+  | "KC"
+  | "OPTION"
+  | "IMAGE"
+  | "PRICE"
+  | "API_ERROR"
+  | "RATE_LIMIT"
+  | "NETWORK";
+
+const FAILURE_BUCKET_BY_CODE: Record<ErrorCode, FailureBucket> = {
+  IMG001: "IMAGE",
+  IMG002: "IMAGE",
+  IMG003: "IMAGE",
+  IMG004: "IMAGE",
+  IMG005: "IMAGE",
+  EXT001: "NETWORK",
+  EXT002: "ATTRIBUTE",
+  EXT003: "PRICE",
+  EXT004: "NETWORK",
+  AI001: "CATEGORY",
+  AI002: "ATTRIBUTE",
+  AI003: "IMAGE",
+  CP001: "CATEGORY",
+  CP002: "OPTION",
+  CP003: "OPTION",
+  CP004: "OPTION",
+  CP005: "ATTRIBUTE",
+  CP006: "IMAGE",
+  CP007: "KC",
+  CP008: "PRICE",
+  API001: "NETWORK",
+  API002: "NETWORK",
+  API003: "NETWORK",
+  API004: "API_ERROR",
+  API005: "API_ERROR",
+  API006: "RATE_LIMIT",
+};
+
+export function classifyFailureBucket(code: ErrorCode): FailureBucket {
+  return FAILURE_BUCKET_BY_CODE[code];
+}

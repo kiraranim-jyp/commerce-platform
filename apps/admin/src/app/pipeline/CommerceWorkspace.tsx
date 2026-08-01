@@ -91,6 +91,7 @@ export function CommerceWorkspace({
   onToggleDescriptionUsage,
   onToggleExclude,
   developerMode,
+  analysisStartedAt,
 }: {
   product: CanonicalProduct;
   onUpdateProduct: (updater: (prev: CanonicalProduct) => CanonicalProduct) => void;
@@ -105,11 +106,19 @@ export function CommerceWorkspace({
   onToggleExclude: (id: string) => void;
   /** P0-UI Epic 1/4 — Payload JSON/개발 로그 등은 이 값이 true일 때만 보여준다. */
   developerMode: boolean;
+  /** Sprint A-6(작업4 — 등록 소요시간 측정) — page.tsx가 URL 제출 시점에 잰
+   * epoch ms. 없으면(예: 재시도로 이 화면에 다시 진입한 경우) 총 소요시간은
+   * 생략하고 에디터 소요시간만 잰다. */
+  analysisStartedAt?: number | null;
 }) {
   // P0-UI Epic 1 — "이미지" 영역을 대표이미지+장수 요약 카드로 줄이고, 기존
   // ImageRoleGrid(대표/상품/상세 역할 지정 그리드)는 이 카드를 눌렀을 때만 여는
   // 모달로 옮긴다. 데이터/핸들러는 전부 이 컴포넌트가 이미 갖고 있던 그대로 재사용한다.
   const [galleryOpen, setGalleryOpen] = useState(false);
+  // Sprint A-6(작업4) — 이 컴포넌트가 처음 마운트되는 시점 = AI 분석이 끝나고
+  // Registration Editor가 실제로 뜬 시점이다. useState 초기화 함수는 최초
+  // 렌더에서 딱 한 번만 실행되므로 재렌더마다 값이 바뀌지 않는다.
+  const [editorEnteredAt] = useState(() => Date.now());
   const setProduct = onUpdateProduct;
   const [tab, setTab] = useState<CommerceTab>("source");
   const [categoryMappings, setCategoryMappings] = useState(INITIAL_CATEGORY_MAPPINGS);
@@ -755,6 +764,7 @@ export function CommerceWorkspace({
     setListingStates((prev) => ({ ...prev, [platform]: "SUBMITTING" }));
     const result = await LISTING_EXECUTORS[platform].execute(product, listing, mode);
     setListingResults((prev) => ({ ...prev, [platform]: result }));
+    const finishedAt = Date.now();
     setRegistrationHistory((prev) => [
       {
         productName: listing.title,
@@ -763,6 +773,15 @@ export function CommerceWorkspace({
         mode,
         result,
         listingKey,
+        // Sprint A-6(작업4 — 등록 소요시간 측정) — CPO 예시: "URL 입력 → 등록
+        // 완료 2분 31초", "사용자 입력시간 42초"를 그대로 잰다. 재시도로 이
+        // 시도가 여러 번째면 analysisStartedAt/editorEnteredAt은 최초 진입
+        // 시점 그대로라 재시도 대기시간까지 포함된다 — "몇 번 막혔는지"를
+        // 간접적으로도 보여주는 값이라 의도적으로 그대로 둔다.
+        timing: {
+          totalElapsedMs: analysisStartedAt != null ? finishedAt - analysisStartedAt : null,
+          editorElapsedMs: finishedAt - editorEnteredAt,
+        },
       },
       ...prev,
     ]);

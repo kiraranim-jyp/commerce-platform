@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { DashboardData } from "@/app/api/admin/dashboard/route";
+import { classifyFailureBucket, type ErrorCode } from "@commerce/shared";
 
 /** 매일 아침 훑어보는 용도 — 복잡한 통계 없이 오늘 등록 성공/실패 건수와
  * ErrorCode 집계 두 가지만 보여준다. */
@@ -29,6 +30,19 @@ export default function AdminDashboardPage() {
   }, []);
 
   const sortedCounts = data ? Object.entries(data.errorCodeCounts).sort((a, b) => b[1] - a[1]) : [];
+
+  /** Sprint A-6(작업2 — 실패 원인 자동 분류) — CPO 요구사항: "무조건 등록 실패가
+   * 아니라 CATEGORY/ATTRIBUTE/KC/OPTION/IMAGE/PRICE/API_ERROR/RATE_LIMIT/
+   * NETWORK로 자동 분류한다." errorCodeCounts는 이미 코드별로 집계돼 있으니
+   * classifyFailureBucket으로 상위 버킷별 합계만 한 번 더 낸다 — "미분류"(코드
+   * 없는 레코드)는 버킷을 매길 근거가 없어 제외한다. */
+  const bucketCounts = sortedCounts.reduce<Record<string, number>>((acc, [code, count]) => {
+    if (code === "미분류") return acc;
+    const bucket = classifyFailureBucket(code as ErrorCode);
+    acc[bucket] = (acc[bucket] ?? 0) + count;
+    return acc;
+  }, {});
+  const sortedBuckets = Object.entries(bucketCounts).sort((a, b) => b[1] - a[1]);
 
   return (
     <div className="mx-auto max-w-3xl p-6 text-sm">
@@ -72,14 +86,30 @@ export default function AdminDashboardPage() {
             {sortedCounts.length === 0 ? (
               <p className="mt-2 text-xs text-text-tertiary">오늘 발생한 오류가 없습니다.</p>
             ) : (
-              <ul className="mt-2 space-y-1.5">
-                {sortedCounts.map(([code, count]) => (
-                  <li key={code} className="flex items-center justify-between text-xs">
-                    <span className="font-mono font-medium text-text-primary">{code}</span>
-                    <span className="text-text-secondary">{count}건</span>
-                  </li>
-                ))}
-              </ul>
+              <>
+                {/* Sprint A-6(작업2) — 원인별 다음 개선 우선순위를 바로 알 수
+                    있게 상위 버킷 요약을 코드 목록보다 먼저 보여준다. */}
+                {sortedBuckets.length > 0 && (
+                  <ul className="mt-2 flex flex-wrap gap-1.5">
+                    {sortedBuckets.map(([bucket, count]) => (
+                      <li
+                        key={bucket}
+                        className="rounded-full bg-background px-2 py-0.5 text-[11px] font-medium text-text-primary"
+                      >
+                        {bucket} {count}건
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <ul className="mt-2 space-y-1.5">
+                  {sortedCounts.map(([code, count]) => (
+                    <li key={code} className="flex items-center justify-between text-xs">
+                      <span className="font-mono font-medium text-text-primary">{code}</span>
+                      <span className="text-text-secondary">{count}건</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
           </section>
 

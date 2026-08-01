@@ -11,6 +11,7 @@ function classifyValidationField(field: string): ErrorCode {
   if (field === "category") return "CP001";
   if (field === "imageFormat") return "CP006";
   if (field === "representativeImage") return "IMG004";
+  if (field === "price") return "CP008";
   return "CP005";
 }
 

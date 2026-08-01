@@ -35,6 +35,7 @@ export function RegistrationReadinessCard({
   onRegister,
   onItemClick,
   settingsMissing,
+  autoFillStats,
 }: {
   percent: number;
   required: ReadinessItem[];
@@ -46,6 +47,11 @@ export function RegistrationReadinessCard({
   /** Sprint A-3(Auto Scroll) — 항목에 sectionId가 있을 때만 클릭 가능하게 렌더한다. */
   onItemClick?: (sectionId: string) => void;
   settingsMissing?: string[];
+  /** Sprint A-6(작업3 — Auto Fill KPI) — CPO 요구사항: "대표님이 가장 궁금한
+   * 숫자." "필수항목 총 18개, 자동입력 15, 사용자입력 3" 그대로. Compliance
+   * Report의 autoResolvedCount/userRequiredCount를 그대로 옮겨온 값이라 이
+   * 카드가 다시 계산하지 않는다(판정 로직 중복 방지 원칙). */
+  autoFillStats?: { total: number; autoFilled: number; userInput: number };
 }) {
   const scoreClassName = percent >= 90 ? "text-success" : percent >= 60 ? "text-warning" : "text-error";
   const barClassName = percent >= 90 ? "bg-success" : percent >= 60 ? "bg-warning" : "bg-error";
@@ -64,6 +70,16 @@ export function RegistrationReadinessCard({
             style={{ width: `${percent}%` }}
           />
         </div>
+        {/* Sprint A-6(작업3 — Auto Fill KPI) — "대표님이 가장 궁금한 숫자"를
+            CPO 예시 형식 그대로("필수항목 총 18개, 자동입력 15, 사용자입력
+            3") 등록 가능성 % 바로 아래, 항상 보이는 위치에 둔다. */}
+        {autoFillStats && (
+          <p className="mt-2 text-xs text-text-secondary">
+            필수항목 총 <span className="font-medium text-text-primary">{autoFillStats.total}개</span> 중 자동입력{" "}
+            <span className="font-medium text-success">{autoFillStats.autoFilled}</span> · 사용자입력{" "}
+            <span className="font-medium text-warning">{autoFillStats.userInput}</span>
+          </p>
+        )}
       </div>
 
       <div className="space-y-1">

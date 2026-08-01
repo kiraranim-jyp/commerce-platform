@@ -152,6 +152,19 @@ export interface RegistrationHistoryEntry {
    * 대신 sourceUrl+platform으로 충분하다 — 세션 안에서만 비교하면 되므로). LIVE
    * 등록을 시도하기 전 이 값으로 기존 성공 이력이 있는지 먼저 확인한다. */
   listingKey?: string;
+  /** Sprint A-6(작업4 — 등록 소요시간 측정) — CPO 요구사항: "URL 입력 →
+   * 등록완료 총 시간"과 "사용자 입력시간"을 분리해서 측정한다. 둘 다 이
+   * 브라우저 세션 안에서 클라이언트가 잰 값이라 근사치다(사용자가 다른 탭을
+   * 보다 돌아온 시간 등은 구분 못 함) — 그래도 "AI가 처리하는 시간"과 "사람이
+   * 실제로 만지는 시간"을 나눠보는 첫 신호로는 충분하다. */
+  timing?: {
+    /** URL 제출 시점부터 이 등록 시도가 성공/실패로 끝난 시점까지(ms). */
+    totalElapsedMs: number | null;
+    /** AI 분석이 끝나 Registration Editor가 뜬 시점부터 등록 시도가 끝난
+     * 시점까지(ms) — "사용자 입력시간"의 근사치(생각하는 시간도 포함되므로
+     * 순수 타이핑 시간보다는 크다). */
+    editorElapsedMs: number | null;
+  };
 }
 
 /**
