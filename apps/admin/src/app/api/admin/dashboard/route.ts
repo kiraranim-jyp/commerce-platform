@@ -8,6 +8,21 @@ export interface DashboardData {
     failed: number;
   };
   errorCodeCounts: Record<string, number>;
+  categoryResolverKpi: {
+    /** 011 마이그레이션(category_resolver_kpi 컬럼)이 아직 실행 안 됐으면 true —
+     * 이 경우 이 섹션 전체를 "아직 집계할 수 없음"으로 표시해야 한다. */
+    columnMissing: boolean;
+    totalWithKpi: number;
+    manualOverrideCount: number;
+    manualOverrideRate: number;
+    recent: {
+      createdAt: string;
+      predictResult: string | null;
+      selectedResult: string | null;
+      finalRegistered: string | null;
+      manualOverride: boolean;
+    }[];
+  };
 }
 
 /**
@@ -61,6 +76,47 @@ export async function GET() {
     bump(i.error_code);
   }
 
-  const data: DashboardData = { today, errorCodeCounts };
+  // Sprint A-2.6(Resolver Accuracy Validation) — CPO 요구사항: "KPI Dashboard에서
+  // Accuracy/Manual Override/Failure/Trend를 볼 수 있게 한다." registration_attempts
+  // .category_resolver_kpi(Sprint A-2.5에서 등록마다 기록해두는 값)를 최근 50건
+  // 모아 Manual Override 비율/최근 판단 이력을 낸다. 011 마이그레이션이 아직 안
+  // 돌았으면 컬럼 자체가 없어 이 쿼리가 에러를 내므로, 그 경우 columnMissing:true로
+  // 표시하고 나머지 대시보드는 그대로 정상 응답한다.
+  const kpiRes = await supabase
+    .from("registration_attempts")
+    .select("created_at, category_resolver_kpi")
+    .not("category_resolver_kpi", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  const categoryResolverKpi: DashboardData["categoryResolverKpi"] = kpiRes.error
+    ? { columnMissing: true, totalWithKpi: 0, manualOverrideCount: 0, manualOverrideRate: 0, recent: [] }
+    : (() => {
+        const rows = (kpiRes.data ?? []) as {
+          created_at: string;
+          category_resolver_kpi: {
+            predictResult?: { code: number; name: string } | null;
+            selectedResult?: { code: number; name: string } | null;
+            finalRegistered?: { code: number; name: string } | null;
+            manualOverride?: boolean;
+          } | null;
+        }[];
+        const manualOverrideCount = rows.filter((r) => r.category_resolver_kpi?.manualOverride).length;
+        return {
+          columnMissing: false,
+          totalWithKpi: rows.length,
+          manualOverrideCount,
+          manualOverrideRate: rows.length > 0 ? Math.round((manualOverrideCount / rows.length) * 1000) / 10 : 0,
+          recent: rows.slice(0, 10).map((r) => ({
+            createdAt: r.created_at,
+            predictResult: r.category_resolver_kpi?.predictResult?.name ?? null,
+            selectedResult: r.category_resolver_kpi?.selectedResult?.name ?? null,
+            finalRegistered: r.category_resolver_kpi?.finalRegistered?.name ?? null,
+            manualOverride: r.category_resolver_kpi?.manualOverride ?? false,
+          })),
+        };
+      })();
+
+  const data: DashboardData = { today, errorCodeCounts, categoryResolverKpi };
   return NextResponse.json(data);
 }

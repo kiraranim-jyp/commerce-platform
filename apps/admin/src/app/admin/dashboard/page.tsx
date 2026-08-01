@@ -47,6 +47,12 @@ export default function AdminDashboardPage() {
           >
             문의 게시판 →
           </Link>
+          <Link
+            href="/admin/resolver-validation"
+            className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
+          >
+            Resolver 정확도 →
+          </Link>
         </div>
       </div>
 
@@ -74,6 +80,45 @@ export default function AdminDashboardPage() {
                   </li>
                 ))}
               </ul>
+            )}
+          </section>
+
+          <section className="mt-4 rounded-lg border border-border bg-surface p-4">
+            <p className="text-xs font-medium text-text-secondary">Category Resolver KPI</p>
+            {data.categoryResolverKpi.columnMissing ? (
+              <p className="mt-2 text-xs text-text-tertiary">
+                011 마이그레이션(category_resolver_kpi 컬럼)이 아직 실행되지 않아 집계할 수
+                없습니다.
+              </p>
+            ) : data.categoryResolverKpi.totalWithKpi === 0 ? (
+              <p className="mt-2 text-xs text-text-tertiary">
+                아직 카테고리 선택 이력이 있는 등록이 없습니다.
+              </p>
+            ) : (
+              <>
+                <div className="mt-2 flex items-center gap-4 text-xs text-text-secondary">
+                  <span>
+                    최근 {data.categoryResolverKpi.totalWithKpi}건 중 Manual Override{" "}
+                    <span className="font-medium text-text-primary">
+                      {data.categoryResolverKpi.manualOverrideRate}%
+                    </span>
+                    ({data.categoryResolverKpi.manualOverrideCount}건)
+                  </span>
+                </div>
+                <ul className="mt-2 space-y-1">
+                  {data.categoryResolverKpi.recent.map((r, i) => (
+                    <li key={i} className="flex items-center justify-between text-xs">
+                      <span className="text-text-tertiary">
+                        {new Date(r.createdAt).toLocaleDateString("ko-KR")}
+                      </span>
+                      <span className="truncate text-text-secondary">
+                        Predict: {r.predictResult ?? "-"} → 최종: {r.finalRegistered ?? "-"}
+                      </span>
+                      {r.manualOverride && <span className="text-warning">수동변경</span>}
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
           </section>
         </>
