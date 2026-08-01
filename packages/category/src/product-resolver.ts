@@ -123,7 +123,11 @@ const PRODUCT_TYPE_KEYWORDS: { type: string; terms: string[] }[] = [
   // 전혀 없어 productType이 항상 null로 나왔다(측정 전에는 드러나지 않던
   // 공백). 신발/가방/모자와 같은 방식으로 실제 상품 태그에서 관찰된 단어를
   // 채워넣는다.
-  { type: "완구", terms: ["toy", "toys", "game", "puzzle", "plush", "stuffed animal", "playset"] },
+  // Sprint A-2.6 실측 발견: "plush"는 봉제완구뿐 아니라 로브/블랭킷 같은 원단
+  // 질감("extra plush feel")을 설명할 때도 흔히 쓰여 false positive를 냈다
+  // (brooklinen.com robe 오분류 실측 확인) — "plush toy"/"stuffed animal"처럼
+  // 두 단어 조합으로 좁혀서 원단 묘사와 구분한다.
+  { type: "완구", terms: ["toy", "toys", "game", "puzzle", "plush toy", "stuffed animal", "playset"] },
   {
     type: "홈/리빙",
     terms: [
@@ -236,6 +240,15 @@ function sourceLabel(source: ResolverEvidence["source"]): string {
  * 두면 한쪽만 갱신됐을 때 어긋난다(CP001과 같은 종류의 문제). */
 import { KNOWN_KIDS_BRANDS } from "./demographic-signal";
 
+/** Sprint A-2.6 실측 발견: plantoys.com(완구 전문 브랜드)의 "Farmers Market Mix
+ * Basket" 같은 상품명은 "basket"/"market"/"harvest"류 단어만 쓰고 toy/game/
+ * puzzle 같은 키워드가 전혀 없다 — product_type 필드도 비어 있어(Shopify에
+ * 값을 안 채워둠) 키워드만으로는 상품유형을 알 수 없다. KNOWN_KIDS_BRANDS와
+ * 같은 패턴으로, "이 브랜드는 완구만 판다"는 사실 자체를 신호로 쓴다(다른
+ * 상품유형 키워드가 이미 매치됐으면 이 폴백은 쓰지 않는다 — 브랜드가 완구
+ * 전문이어도 굿즈/의류를 같이 팔 수 있어서 키워드 매치가 항상 우선한다). */
+const KNOWN_TOY_BRANDS = ["plantoys", "plan toys", "melissa & doug", "melissa and doug"];
+
 /**
  * Category Resolver 2.0의 진입점 — CanonicalProduct가 이미 갖고 있는 모든
  * 신호(breadcrumbPath/jsonLdCategory/sourceUrl/brand/title/description)를
@@ -302,10 +315,16 @@ export function resolveProductSignals(
     evidence.push({ source: "keyword", label: `상품 유형 키워드 "${typeMatch.term}" 발견 → ${typeMatch.value}` });
   }
 
+  let productType = typeMatch?.value ?? null;
+  if (!productType && KNOWN_TOY_BRANDS.some((b) => brandLower === b || brandLower.includes(b))) {
+    productType = "완구";
+    evidence.push({ source: "brand", label: `"${product.brand.value}"는 완구 전문 브랜드로 알려져 있음` });
+  }
+
   return {
     ageGroup: finalAgeGroup,
     gender,
-    productType: typeMatch?.value ?? null,
+    productType,
     evidence,
   };
 }

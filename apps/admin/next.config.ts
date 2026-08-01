@@ -58,6 +58,17 @@ const nextConfig: NextConfig = {
       "../../node_modules/.pnpm/playwright-core@*/node_modules/playwright-core/**/*",
       "../../node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/**/*",
     ],
+    // Sprint A-2.6(Resolver Accuracy Validation) — Golden Dataset은 전부 Shopify
+    // fast-path URL이라 원칙적으로 Playwright를 안 타지만, fast-path가 실패하면
+    // universalExtract()가 조용히 기존 Playwright 파이프라인으로 폴백한다(Epic
+    // 1-3 설계 — "이 경로를 타지 않는 사이트는 동작이 전혀 바뀌지 않는다"). 이
+    // 폴백이 실제로 발생했을 때(glossier.com 번들 상품 2건에서 실측 확인)
+    // playwright-core를 안 담아두면 "Cannot find module .../browsers.json"으로
+    // 죽는다 — /api/pipeline, /api/extractor-test와 같은 이유.
+    "/api/admin/category-resolver-validate": [
+      "../../node_modules/.pnpm/playwright-core@*/node_modules/playwright-core/**/*",
+      "../../node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/**/*",
+    ],
     "/api/pipeline": [
       "../../node_modules/.pnpm/onnxruntime-node@*/node_modules/onnxruntime-node/bin/**/*",
       "../../node_modules/.pnpm/onnxruntime-node@*/node_modules/onnxruntime-node/dist/**/*",
