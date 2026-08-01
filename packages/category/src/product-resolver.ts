@@ -169,6 +169,10 @@ const PRODUCT_TYPE_KEYWORDS: { type: string; terms: string[] }[] = [
       "deodorant",
       "brow",
       "concealer",
+      // Sprint A-2.6 실측 발견(kosas.com "Cloud Set Loose", product_type:
+      // "Setting Powder"): 단독 "powder"는 베이비파우더/세탁세제/단백질보충제
+      // 등과 겹쳐 위험해서 "setting powder"로 좁힌다.
+      "setting powder",
     ],
   },
 ];
