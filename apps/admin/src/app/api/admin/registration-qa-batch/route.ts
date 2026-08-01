@@ -57,6 +57,12 @@ interface BatchItemResult {
    * 에러가 났다는 뜻. */
   resolverDecision?: "AUTO_SELECT" | "RECOMMEND" | "REJECT" | null;
   unmapped: { fieldName: string; reasonCode: string }[];
+  /** Sprint A-7(작업3 — Attribute Coverage KPI) — 이 상품의 필수 필드 총
+   * 개수와 자동으로 채워진 개수. Readiness/Compliance 점수(플레이스홀더에도
+   * 절반 크레딧을 주는 부드러운 점수)와 다르게, Coverage는 "실제로 값이
+   * 있었는가"만 본다(unmapped.length = totalFields - autoResolvedCount). */
+  totalFields: number | null;
+  autoResolvedCount: number | null;
   error?: string;
 }
 
@@ -140,6 +146,8 @@ async function runOne(
         approvalReadiness: null,
         breakdown: null,
         resolverDecision: resolverResult.decision,
+        totalFields: null,
+        autoResolvedCount: null,
         unmapped: [],
         error: resolverResult.best
           ? `카테고리 Resolver 3.0이 예측을 거부했습니다: "${resolverResult.best.categoryName}" — ${resolverResult.best.reason}`
@@ -207,6 +215,8 @@ async function runOne(
         autoFillRate: complianceReport.breakdown.autoFillRate,
         legalRequiredRate: complianceReport.breakdown.legalRequiredRate,
       },
+      totalFields: complianceReport.autoResolvedCount + complianceReport.userRequiredCount,
+      autoResolvedCount: complianceReport.autoResolvedCount,
       unmapped: complianceReport.userInputNeeded.map((f) => ({ fieldName: f.fieldName, reasonCode: f.reasonCode })),
     };
   } catch (error) {
@@ -219,6 +229,8 @@ async function runOne(
       verdict: null,
       approvalReadiness: null,
       breakdown: null,
+      totalFields: null,
+      autoResolvedCount: null,
       unmapped: [],
       error: error instanceof Error ? error.message : String(error),
     };
@@ -271,11 +283,37 @@ export async function POST() {
     reasonCounts[u.reasonCode] = (reasonCounts[u.reasonCode] ?? 0) + 1;
   }));
 
+  // Sprint A-7(작업1 — Blocking Field Analyzer) — CPO 요구사항: "실제 데이터
+  // 기준으로 어떤 필드가 등록을 가장 많이 막는지" 추측이 아니라 이번 배치
+  // results[].unmapped를 그대로 집계한다("색상 31건, 소재 26건..." 포맷).
+  // fieldName 그대로 집계하므로 컴플라이언스 리포트가 쓰는 라벨과 항상 같다
+  // (여기서 별도 이름 매핑 테이블을 만들지 않는다 — CP001 중복 판정 방지 원칙).
+  const blockingFieldTally: Record<string, number> = {};
+  results.forEach((r) => r.unmapped.forEach((u) => {
+    blockingFieldTally[u.fieldName] = (blockingFieldTally[u.fieldName] ?? 0) + 1;
+  }));
+  const blockingFieldCounts = Object.entries(blockingFieldTally)
+    .map(([fieldName, count]) => ({ fieldName, count }))
+    .sort((a, b) => b.count - a.count);
+
   const scored = results.filter((r) => r.complianceScore != null);
   const overallAvgScore =
     scored.length > 0 ? Math.round(scored.reduce((sum, r) => sum + (r.complianceScore ?? 0), 0) / scored.length) : null;
 
   const rejectedByResolver = results.filter((r) => r.resolverDecision === "REJECT").length;
+
+  // Sprint A-7(작업3 — Attribute Coverage KPI) — Readiness/Compliance 점수는
+  // PLACEHOLDER에도 절반 크레딧을 주는 부드러운 점수라 CPO가 별도로 요청한
+  // "실제로 값이 있었는가"만 보는 이진 커버리지. totalFields/autoResolvedCount가
+  // null인 항목(REJECT/에러로 여기까지 못 온 상품)은 합산에서 제외한다.
+  const coverageItems = results.filter(
+    (r): r is BatchItemResult & { totalFields: number; autoResolvedCount: number } =>
+      r.totalFields != null && r.autoResolvedCount != null,
+  );
+  const coverageTotalFields = coverageItems.reduce((sum, r) => sum + r.totalFields, 0);
+  const coverageAutoResolved = coverageItems.reduce((sum, r) => sum + r.autoResolvedCount, 0);
+  const coveragePercent =
+    coverageTotalFields > 0 ? Math.round((coverageAutoResolved / coverageTotalFields) * 1000) / 10 : null;
 
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
@@ -291,6 +329,14 @@ export async function POST() {
     rejectedByResolverCount: rejectedByResolver,
     groupSummary,
     unmappedReasonCounts: reasonCounts,
+    // Sprint A-7(작업1) — Top-N 정렬된 배열, 프론트/리포트가 그대로 잘라 쓴다.
+    blockingFieldCounts,
+    // Sprint A-7(작업3) — "필수 Attribute 총 N, 자동 추출 M, Coverage X%" 포맷.
+    coverageKPI: {
+      totalFields: coverageTotalFields,
+      autoResolvedCount: coverageAutoResolved,
+      coveragePercent,
+    },
     results,
   });
 }

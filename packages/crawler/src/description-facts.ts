@@ -14,7 +14,10 @@
 const COUNTRY_PATTERNS = [
   /made\s+in\s+([a-z][a-z\s]{1,20}?)(?:[.,;\n]|$)/i,
   /country\s+of\s+origin[:\s]+([a-z][a-z\s]{1,20}?)(?:[.,;\n]|$)/i,
+  // Sprint A-7(작업2) — "Origin: Portugal" 처럼 짧은 라벨도 흔하다.
+  /\borigin\s*[:：]\s*([a-z][a-z\s]{1,20}?)(?:[.,;\n]|$)/i,
   /제조국\s*[:：]\s*([가-힣]{1,10})/,
+  /원산지\s*[:：]\s*([가-힣]{1,10})/,
 ];
 
 export function extractCountryOfOrigin(description: string | undefined): string | undefined {
@@ -40,17 +43,49 @@ const MATERIAL_COMPOSITION_PATTERN = new RegExp(
   "gi",
 );
 
+/** Sprint A-7(작업2) — 실측 확인: "88% Polyester" 같은 구성비 표기가 없는
+ * 설명문(예: allbirds.com의 마케팅 위주 서술)에서는 소재 정보가 전부 빠졌다.
+ * "Material: Organic Cotton", "Fabric: Recycled Polyester" 처럼 라벨이 붙은
+ * 문장은 구성비 없이도 흔하다 — FABRIC_WORDS 화이트리스트(같은 불변식: 원문에
+ * 실제로 있는 단어만 반환)에 형용사 접두어(organic/recycled/genuine/premium
+ * 등)까지만 허용해서 좁게 매칭한다. */
+const MATERIAL_LABEL_PATTERN = new RegExp(
+  `(?:material|fabric|fabrication)\\s*[:：]\\s*((?:[a-z]+\\s+){0,2}(?:${FABRIC_WORDS}))\\b`,
+  "i",
+);
+
 export function extractMaterial(description: string | undefined): string | undefined {
   if (!description) return undefined;
   const matches = description.match(MATERIAL_COMPOSITION_PATTERN);
-  if (!matches || matches.length === 0) return undefined;
-  return matches.reduce((longest, m) => (m.length > longest.length ? m : longest)).trim();
+  if (matches && matches.length > 0) {
+    return matches.reduce((longest, m) => (m.length > longest.length ? m : longest)).trim();
+  }
+  const labeled = MATERIAL_LABEL_PATTERN.exec(description);
+  return labeled?.[1]?.trim();
 }
 
 /** "Colour - Green.", "Color: Blue" — 라벨이 명시적이라(material의 "%"와 달리
  * 이 문구가 다른 맥락에서 우연히 등장할 일이 거의 없다) 화이트리스트 없이도
  * 오탐 위험이 낮다. */
 const COLOR_PATTERNS = [/colou?r\s*[-:]\s*([a-z][a-z\s/]{1,20}?)(?:[.,;\n]|$)/i];
+
+/** Sprint A-7(작업2) — 실측 확인(allbirds.com "Men's Cruiser Terralux -
+ * Anthracite (Dark Gum Sole)"): 색상이 설명문 라벨이 아니라 **제목**에 대시로
+ * 붙는 경우가 흔하다("상품명 - 색상" 패턴). 알려진 색상 이름 화이트리스트로만
+ * 매칭해서(임의 단어를 색상으로 오인하지 않도록) 좁게 잡는다 — 목록에 없는
+ * 색상 표현은 못 잡아도, 잡은 건 확실히 맞는 값이라는 이 파일의 불변식을
+ * 유지한다. */
+const KNOWN_COLOR_WORDS = [
+  "black", "white", "red", "blue", "green", "yellow", "grey", "gray", "brown",
+  "beige", "navy", "purple", "orange", "ivory", "khaki", "mint", "silver", "gold",
+  "pink", "anthracite", "charcoal", "olive", "burgundy", "maroon", "teal", "coral",
+  "lavender", "mustard", "rust", "clay", "sand", "cream", "tan", "taupe", "indigo",
+  "turquoise", "magenta", "crimson", "emerald", "sapphire", "bronze", "copper",
+];
+const COLOR_TITLE_PATTERN = new RegExp(
+  `\\b(${KNOWN_COLOR_WORDS.join("|")})\\b`,
+  "i",
+);
 
 export function extractColor(description: string | undefined): string | undefined {
   if (!description) return undefined;
@@ -59,6 +94,17 @@ export function extractColor(description: string | undefined): string | undefine
     if (match?.[1]) return match[1].trim();
   }
   return undefined;
+}
+
+/** description에서 못 찾았을 때만 호출하는 폴백 — 상품명(title)에서 알려진
+ * 색상 단어를 찾는다. description보다 신뢰도가 낮은 게 아니라(제목도 원문
+ * 그대로다) 단지 "라벨이 명시된 값"보다 "단어 하나만 보고 판단한 값"이라
+ * 화이트리스트 밖 색상(예: 브랜드가 지어낸 색상명 "Dark Gum")은 놓친다는
+ * 한계가 있을 뿐이다. */
+export function extractColorFromTitle(title: string | undefined): string | undefined {
+  if (!title) return undefined;
+  const match = COLOR_TITLE_PATTERN.exec(title);
+  return match?.[1] ? match[1].trim() : undefined;
 }
 
 /** "2-3 years", "6-12 months" — 사이즈 안내에도 나이대가 자주 같이 적힌다(실측:

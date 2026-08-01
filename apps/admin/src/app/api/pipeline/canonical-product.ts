@@ -2,6 +2,7 @@ import {
   extractAge,
   extractCareInstructions,
   extractColor,
+  extractColorFromTitle,
   extractCountryOfOrigin,
   extractManufacturer,
   extractMaterial,
@@ -96,7 +97,11 @@ export function buildCanonicalProduct(
     .map(toCanonicalProductImage)
     .filter((image): image is CanonicalProductImage => image !== null);
   const resolvedCountryOfOrigin = extractCountryOfOrigin(productData.description);
-  const resolvedColor = extractColor(productData.description);
+  // Sprint A-7(작업2) — 실측 확인(allbirds.com): 설명문엔 색상 라벨이 없어도
+  // 제목에 "- Anthracite (Dark Gum Sole)"처럼 색상이 그대로 들어있는 경우가
+  // 흔하다. 설명문에서 못 찾았을 때만 제목에서 찾는다(설명문 라벨이 더
+  // 명시적이라 우선순위가 높다).
+  const resolvedColor = extractColor(productData.description) ?? extractColorFromTitle(productData.title);
   const resolvedAge = extractAge(productData.description);
   const resolvedManufacturer = extractManufacturer(productData.description);
   const resolvedCareInstructions = extractCareInstructions(productData.description);
