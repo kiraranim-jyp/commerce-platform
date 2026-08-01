@@ -39,6 +39,31 @@ export function ComplianceBreakdown({ report }: { report: ComplianceReport }) {
         {Math.round(report.confidenceAvg * 100)}%
       </p>
 
+      {/* Sprint A-4(작업5 재보정, CPO 피드백) — "73점"이 왜 73점인지 하나의
+          숫자로는 설명이 안 된다. 자동 매핑 자체가 부족한 건지(자동완성),
+          아니면 원래 사람만 채울 수 있는 KC/인증 같은 항목이라 그런 건지
+          (법적필수)를 나눠서 보여준다 — 대응 방법이 서로 다르기 때문이다. */}
+      <div className="mt-2 grid grid-cols-3 gap-2 rounded-md bg-background p-2 text-center">
+        <div>
+          <p className="text-[10px] text-text-tertiary">자동완성</p>
+          <p className="text-sm font-semibold tabular-nums text-text-primary">{report.breakdown.autoFillRate}%</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-text-tertiary">법적필수</p>
+          <p
+            className={`text-sm font-semibold tabular-nums ${report.breakdown.legalRequiredRate >= 100 ? "text-success" : "text-error"}`}
+          >
+            {report.breakdown.legalRequiredRate}%
+          </p>
+        </div>
+        <div>
+          <p className="text-[10px] text-text-tertiary">최종등록가능</p>
+          <p className="text-sm font-semibold tabular-nums text-text-primary">
+            {report.breakdown.finalRegistrableRate}%
+          </p>
+        </div>
+      </div>
+
       {report.resolvedFields.length > 0 && (
         <div className="mt-3">
           <p className="font-medium text-text-secondary">자동 채움</p>

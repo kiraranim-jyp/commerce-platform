@@ -121,6 +121,14 @@ export function CommerceWorkspace({
   const [coupangConnectionCheckedAt, setCoupangConnectionCheckedAt] = useState<string | null>(null);
   const [coupangConnectionChecking, setCoupangConnectionChecking] = useState(false);
   const [coupangApiCandidate, setCoupangApiCandidate] = useState<CategoryCandidate | null>(null);
+  /** Sprint A-5(Category Resolver 3.0 KPI) — coupangApiCandidate가 어떤
+   * 판정(AUTO_SELECT/RECOMMEND/REJECT)과 유사도로 나왔는지. selectCategory가
+   * 사용자 확정 시점에 categoryResolverKpi로 그대로 옮겨 담아서 등록 이력에
+   * 남긴다(대시보드 Reject Rate/Resolver Accuracy 집계용). */
+  const [coupangResolverDecision, setCoupangResolverDecision] = useState<{
+    decision: "AUTO_SELECT" | "RECOMMEND" | "REJECT";
+    score: number;
+  } | null>(null);
   const [coupangCategoryFetching, setCoupangCategoryFetching] = useState(false);
   const [coupangSettingsMissing, setCoupangSettingsMissing] = useState<string[] | null>(null);
   /** P0(Category Resolver 추적) — "추천 → 검증 → 선택"이 실제로 어떻게 이어졌는지
@@ -436,6 +444,8 @@ export function CommerceWorkspace({
           selectedResult: { code: Number(candidate.id) || 0, name: candidate.name },
           manualOverride,
           evidence: candidate.reason,
+          resolverDecision: coupangResolverDecision?.decision ?? null,
+          similarityScore: coupangResolverDecision?.score ?? null,
         },
       }));
     }
@@ -592,33 +602,53 @@ export function CommerceWorkspace({
       const res = await fetch("/api/coupang/category-recommend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productName: biasedQuery, brand: listing.brand }),
+        body: JSON.stringify({ productName: biasedQuery, brand: listing.brand, signals }),
       });
       const data = (await res.json()) as {
-        categoryCode?: number | null;
-        categoryName?: string | null;
-        unverified?: boolean;
+        decision?: "AUTO_SELECT" | "RECOMMEND" | "REJECT";
+        best?: { categoryCode: number; categoryName: string; score: number; reason: string } | null;
+        candidates?: { categoryCode: number; categoryName: string; query: string; score: number; reason: string; conflict: boolean }[];
       };
-      if (data.categoryCode != null && data.categoryName) {
+      // Sprint A-5(Category Resolver 3.0) — CPO 지시: "말이 안 되면 Reject."
+      // Top5 후보 비교를 새 UI 없이 기존 Trace Log(사람이 읽는 텍스트 목록)에
+      // 그대로 노출한다 — CPO 예시 형식("1위 Coffee 22% ×, 2위 침구 94% ○")을
+      // 그대로 따른다.
+      const candidateLines = (data.candidates ?? []).map(
+        (c, i) => `  ${i + 1}위 "${c.categoryName}"(코드 ${c.categoryCode}) — 유사도 ${c.score}% ${c.conflict ? "✗" : "○"} — ${c.reason}`,
+      );
+      if (data.decision === "REJECT") {
+        setCoupangResolverDecision({ decision: "REJECT", score: data.best?.score ?? 0 });
+        setCategoryTraceLog((prev) => [
+          ...prev,
+          "→ Resolver 3.0 판정: REJECT — 예측 결과가 상품유형과 명백히 다른 도메인이라 자동 후보로 채택하지 않았습니다.",
+          ...candidateLines,
+          "→ 카테고리를 직접 검색해서 선택해주세요.",
+        ]);
+      } else if (data.best) {
+        setCoupangResolverDecision({ decision: data.decision ?? "RECOMMEND", score: data.best.score });
         setCoupangApiCandidate({
-          id: String(data.categoryCode),
-          name: data.categoryName,
-          path: [data.categoryName],
+          id: String(data.best.categoryCode),
+          name: data.best.categoryName,
+          path: [data.best.categoryName],
           platform: "coupang",
-          confidence: 1,
+          confidence: data.best.score / 100,
           // Sprint A-2.5(UI 판단 근거) — "왜 이 카테고리를 추천했는지" 후보
           // 카드 자체에서 보이게 한다(CategoryRecommendationPanel이 reason을
           // 그대로 목록으로 렌더링하는 걸 재사용 — 별도 UI를 새로 안 만든다).
           reason: [
             ...evidenceLines,
-            `✓ Predict API: "${data.categoryName}"(코드 ${data.categoryCode}) — 등록 전 최종 확인이 필요합니다.`,
+            `✓ Predict API: "${data.best.categoryName}"(코드 ${data.best.categoryCode}, 유사도 ${data.best.score}%) — 등록 전 최종 확인이 필요합니다.`,
+            ...(data.decision === "RECOMMEND"
+              ? ["⚠ 유사도가 95% 미만이라 자동 선택 대상이 아닙니다 — 직접 확인 후 선택해주세요."]
+              : []),
           ],
           source: "ai",
           isVerifiedPlatformCode: true,
         });
         setCategoryTraceLog((prev) => [
           ...prev,
-          `→ Predict API 결과: "${data.categoryName}" (코드 ${data.categoryCode}) → Verified`,
+          `→ Resolver 3.0 판정: ${data.decision}(유사도 ${data.best!.score}%) — "${data.best!.categoryName}" (코드 ${data.best!.categoryCode})`,
+          ...candidateLines,
         ]);
       }
     } catch {

@@ -12,12 +12,12 @@ import { coupangAdapter } from "@commerce/marketplace";
 import { buildComplianceReport, buildCoupangPayload, resolveVerifiedCategoryCode } from "@commerce/listing";
 import { buildCanonicalProduct } from "../../pipeline/canonical-product";
 import { getCoupangCredentials, getVendorUserId } from "../../coupang/_lib/env";
-import { callCoupangApi } from "../../coupang/_lib/client";
 import { getDefaultDescriptionTemplate } from "../../coupang/_lib/description-template";
 import { getDefaultSellerProfile } from "../../coupang/_lib/seller-profile";
 import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } from "../../coupang/_lib/shipping-place";
 import { fetchCategoryMeta } from "../../coupang/_lib/category-meta";
 import { resolveBrand } from "../../coupang/_lib/brand";
+import { resolveCategoryV3 } from "../../coupang/_lib/category-resolver-v3";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -47,6 +47,15 @@ interface BatchItemResult {
   complianceScore: number | null;
   verdict: "PASS" | "WARNING" | "FAIL" | null;
   approvalReadiness: "High" | "Medium" | "Low" | null;
+  /** Sprint A-4(작업5 재보정, CPO 피드백) — 73점의 원인이 Attribute Mapper
+   * 문제인지(자동완성 낮음) 원래 사람만 채울 수 있는 항목 때문인지(법적필수
+   * 낮음)를 배치 리포트에서도 바로 구분할 수 있게 한다. */
+  breakdown: { autoFillRate: number; legalRequiredRate: number } | null;
+  /** Sprint A-5(Category Resolver 3.0) — 이 카테고리가 AUTO_SELECT(유사도
+   * 95%+)/RECOMMEND(정상이지만 자동선택 기준 미달)/REJECT(명백히 다른
+   * 도메인) 중 무엇이었는지. null이면 아직 이 필드를 계산하기 전 단계에서
+   * 에러가 났다는 뜻. */
+  resolverDecision?: "AUTO_SELECT" | "RECOMMEND" | "REJECT" | null;
   unmapped: { fieldName: string; reasonCode: string }[];
   error?: string;
 }
@@ -112,29 +121,39 @@ async function runOne(
       sourceUrl: item.url,
     });
 
+    // Sprint A-5(Category Resolver 3.0) — 이전엔 predict API 결과를 검증 없이
+    // 그대로 받아들였다(이 배치의 이전 실행에서 파라슈트홈 베갯잇이 "원두
+    // 커피믹스"로 잘못 예측됐는데도 "성공"으로 집계된 사고 발견). 이제
+    // resolveCategoryV3가 여러 질의 변형 + 상품유형 대조 채점을 거쳐 REJECT
+    // 여부까지 판정한 뒤에만 후보로 채택한다.
     const biasedQuery = buildResolverBiasedQuery(signals, productData.title ?? item.url, false);
-    const predictResponse = await callCoupangApi(credentials, {
-      method: "POST",
-      path: "/v2/providers/openapi/apis/api/v1/categorization/predict",
-      body: { productName: biasedQuery, brand: productData.brand },
-    });
-    const predictBody = predictResponse.body as {
-      data?: { predictedCategoryId?: string; predictedCategoryName?: string };
-    };
-    const predictedId = predictBody.data?.predictedCategoryId ? Number(predictBody.data.predictedCategoryId) : null;
-    const predictedName = predictBody.data?.predictedCategoryName ?? null;
+    const resolverResult = await resolveCategoryV3(credentials, biasedQuery, signals, productData.brand);
 
-    if (predictedId == null || !Number.isFinite(predictedId)) {
-      return { ...base, status: "error", categoryCode: null, categoryName: null, complianceScore: null, verdict: null, approvalReadiness: null, unmapped: [], error: "카테고리 예측 실패(Predict API가 코드를 반환하지 않음)" };
+    if (resolverResult.decision === "REJECT" || !resolverResult.best) {
+      return {
+        ...base,
+        status: "error",
+        categoryCode: null,
+        categoryName: null,
+        complianceScore: null,
+        verdict: null,
+        approvalReadiness: null,
+        breakdown: null,
+        resolverDecision: resolverResult.decision,
+        unmapped: [],
+        error: resolverResult.best
+          ? `카테고리 Resolver 3.0이 예측을 거부했습니다: "${resolverResult.best.categoryName}" — ${resolverResult.best.reason}`
+          : "카테고리 예측 실패(Predict API가 유효한 후보를 하나도 반환하지 않음)",
+      };
     }
 
     const candidate: CategoryCandidate = {
-      id: String(predictedId),
-      name: predictedName ?? "",
-      path: predictedName ? [predictedName] : [],
+      id: String(resolverResult.best.categoryCode),
+      name: resolverResult.best.categoryName,
+      path: [resolverResult.best.categoryName],
       platform: "coupang",
-      confidence: 1,
-      reason: ["Coupang categorization/predict"],
+      confidence: resolverResult.best.score / 100,
+      reason: [`Coupang categorization/predict (Resolver 3.0 유사도 ${resolverResult.best.score}%)`],
       source: "ai",
       isVerifiedPlatformCode: true,
     };
@@ -183,6 +202,11 @@ async function runOne(
       complianceScore: complianceReport.score,
       verdict: complianceReport.verdict,
       approvalReadiness: complianceReport.approvalReadiness,
+      resolverDecision: resolverResult.decision,
+      breakdown: {
+        autoFillRate: complianceReport.breakdown.autoFillRate,
+        legalRequiredRate: complianceReport.breakdown.legalRequiredRate,
+      },
       unmapped: complianceReport.userInputNeeded.map((f) => ({ fieldName: f.fieldName, reasonCode: f.reasonCode })),
     };
   } catch (error) {
@@ -194,6 +218,7 @@ async function runOne(
       complianceScore: null,
       verdict: null,
       approvalReadiness: null,
+      breakdown: null,
       unmapped: [],
       error: error instanceof Error ? error.message : String(error),
     };
@@ -250,6 +275,8 @@ export async function POST() {
   const overallAvgScore =
     scored.length > 0 ? Math.round(scored.reduce((sum, r) => sum + (r.complianceScore ?? 0), 0) / scored.length) : null;
 
+  const rejectedByResolver = results.filter((r) => r.resolverDecision === "REJECT").length;
+
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
     totalItems: results.length,
@@ -257,6 +284,11 @@ export async function POST() {
     successCount: results.filter((r) => r.status === "success").length,
     complianceFailCount: results.filter((r) => r.status === "compliance_fail").length,
     errorCount: results.filter((r) => r.status === "error").length,
+    // Sprint A-5(Category Resolver 3.0) — 이 배치를 재실행했을 때 Resolver
+    // 3.0이 predict 결과를 몇 건이나 거부했는지(작업4 Reject Rate와 같은 값,
+    // 배치 규모 기준). 0이면 이번 30개 표본에서는 명백한 오분류가 재현되지
+    // 않았다는 뜻이지, Resolver 3.0이 항상 통과시킨다는 뜻이 아니다.
+    rejectedByResolverCount: rejectedByResolver,
     groupSummary,
     unmappedReasonCounts: reasonCounts,
     results,

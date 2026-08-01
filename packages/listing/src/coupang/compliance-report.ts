@@ -48,6 +48,26 @@ export interface ComplianceReport {
    * 있지만 일부 미확인) / "Low"(KC/인증 등 필수 항목이 자리표시자) — Wing에
    * 승인 요청하기 전 사람이 얼마나 봐야 하는지에 대한 요약 신호. */
   approvalReadiness: "High" | "Medium" | "Low";
+  /** Sprint A-4(작업5 재보정, CPO 피드백) — "73점"이라는 단일 숫자로는 73점의
+   * 원인이 "Attribute Mapper가 색상/소재를 못 찾아서"인지 "KC/인증처럼 원래
+   * 사람만 채울 수 있는 값이라서"인지 구분이 안 된다. 두 원인은 대응 방법이
+   * 완전히 다르다(전자는 Resolver 개선 대상, 후자는 원래부터 자동화 대상이
+   * 아님) — CPO 요구사항: "자동완성 92% / 법적필수 55% / 최종등록가능 73%"처럼
+   * 나눠서 보여준다. */
+  breakdown: {
+    /** 법적 필수(critical) 항목을 제외한 나머지가 얼마나 자동으로 채워졌는가.
+     * 이게 낮으면 Resolver/Attribute Mapper를 더 고쳐야 한다는 뜻. */
+    autoFillRate: number;
+    /** KC/인증 등 법적 필수(critical) 항목이 실제 값으로 채워진 비율. 이게
+     * 100이 아니면(대부분의 카테고리에서 항상 그렇다 — CartPilot은 KC 인증번호를
+     * 원본 사이트에서 알 수 없다) 등록 전 반드시 사람이 채워야 한다는 뜻이지,
+     * Attribute Mapper의 결함이 아니다. */
+    legalRequiredRate: number;
+    /** = score와 같은 값. 세 지표를 한 화면에서 나란히 보여줄 때 이름을 맞추기
+     * 위해 breakdown 안에도 중복 배치한다(위 score 필드를 없애지 않는다 — 기존
+     * 소비처가 report.score를 그대로 쓰고 있어서). */
+    finalRegistrableRate: number;
+  };
 }
 
 /** OPTION_MATCH/PRODUCT_FIELD/KNOWN_VALUE/DETERMINISTIC은 전부 실제 근거가 있는
@@ -103,6 +123,17 @@ function rate(results: ComplianceFieldResult[]): number {
   return Math.round((earned / results.length) * 100);
 }
 
+/** Sprint A-4(작업5 재보정) — score/rate()는 자리표시자에도 50% 크레딧을 줘서
+ * "일단 등록은 되게 한다"는 원칙을 반영한 부드러운 점수다. 하지만 "자동완성
+ * 92%"/"법적필수 55%"처럼 "다 채웠는가/안 채웠는가"를 물을 때는 절반짜리
+ * 완성이라는 개념이 없다 — 실제 값이 있으면 100%, 자리표시자면 0%인 이진
+ * 비율이 CPO가 원하는 지표의 의미에 더 맞는다. */
+function binaryRate(results: ComplianceFieldResult[]): number {
+  if (results.length === 0) return 100;
+  const filled = results.filter((r) => r.source !== "PLACEHOLDER").length;
+  return Math.round((filled / results.length) * 100);
+}
+
 export function buildComplianceReport(
   attributeResults: ComplianceFieldResult[],
   noticeResults: ComplianceFieldResult[],
@@ -111,6 +142,10 @@ export function buildComplianceReport(
   const score = rate(all);
   const requiredAttributeRate = rate(attributeResults);
   const requiredNoticeRate = rate(noticeResults);
+  const nonCriticalFields = all.filter((r) => !r.critical);
+  const criticalFields = all.filter((r) => r.critical);
+  const autoFillRate = binaryRate(nonCriticalFields);
+  const legalRequiredRate = binaryRate(criticalFields);
   const autoResolvedCount = all.filter((r) => r.source !== "PLACEHOLDER").length;
   const aiAutoFillRate = all.length > 0 ? Math.round((autoResolvedCount / all.length) * 100) : 100;
   const confidenceAvg =
@@ -185,5 +220,10 @@ export function buildComplianceReport(
     verdict,
     reasons,
     approvalReadiness,
+    breakdown: {
+      autoFillRate,
+      legalRequiredRate,
+      finalRegistrableRate: score,
+    },
   };
 }

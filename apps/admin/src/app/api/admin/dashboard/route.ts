@@ -15,12 +15,28 @@ export interface DashboardData {
     totalWithKpi: number;
     manualOverrideCount: number;
     manualOverrideRate: number;
+    /** Sprint A-5(Category Resolver 3.0 KPI) — CPO 요구사항: "Predict
+     * Accuracy / Resolver Accuracy / Manual Override / Reject Rate."
+     * resolverDecision을 기록해둔 건수 기준으로 계산한다(마이그레이션 전 기록엔
+     * 이 값이 없으므로 분모에서 자연히 빠진다). */
+    resolverV3: {
+      totalWithDecision: number;
+      autoSelectCount: number;
+      recommendCount: number;
+      rejectCount: number;
+      rejectRate: number;
+      /** AUTO_SELECT + RECOMMEND(=REJECT되지 않고 실제 등록까지 이어진 판단)
+       * 비율 — "Resolver가 최종적으로 쓸만한 후보를 냈는가". */
+      resolverAccuracy: number;
+    };
     recent: {
       createdAt: string;
       predictResult: string | null;
       selectedResult: string | null;
       finalRegistered: string | null;
       manualOverride: boolean;
+      resolverDecision: string | null;
+      similarityScore: number | null;
     }[];
   };
 }
@@ -89,8 +105,17 @@ export async function GET() {
     .order("created_at", { ascending: false })
     .limit(50);
 
+  const emptyResolverV3 = {
+    totalWithDecision: 0,
+    autoSelectCount: 0,
+    recommendCount: 0,
+    rejectCount: 0,
+    rejectRate: 0,
+    resolverAccuracy: 0,
+  };
+
   const categoryResolverKpi: DashboardData["categoryResolverKpi"] = kpiRes.error
-    ? { columnMissing: true, totalWithKpi: 0, manualOverrideCount: 0, manualOverrideRate: 0, recent: [] }
+    ? { columnMissing: true, totalWithKpi: 0, manualOverrideCount: 0, manualOverrideRate: 0, resolverV3: emptyResolverV3, recent: [] }
     : (() => {
         const rows = (kpiRes.data ?? []) as {
           created_at: string;
@@ -99,20 +124,44 @@ export async function GET() {
             selectedResult?: { code: number; name: string } | null;
             finalRegistered?: { code: number; name: string } | null;
             manualOverride?: boolean;
+            resolverDecision?: "AUTO_SELECT" | "RECOMMEND" | "REJECT" | null;
+            similarityScore?: number | null;
           } | null;
         }[];
         const manualOverrideCount = rows.filter((r) => r.category_resolver_kpi?.manualOverride).length;
+
+        // Sprint A-5(Category Resolver 3.0 KPI) — resolverDecision을 기록해둔
+        // 건수만 분모로 쓴다(A-5 배포 이전 기록은 이 필드가 없어 자동으로
+        // 제외된다 — 없는 값을 0으로 취급해서 Reject Rate를 왜곡하지 않는다).
+        const withDecision = rows.filter((r) => r.category_resolver_kpi?.resolverDecision != null);
+        const autoSelectCount = withDecision.filter((r) => r.category_resolver_kpi?.resolverDecision === "AUTO_SELECT").length;
+        const recommendCount = withDecision.filter((r) => r.category_resolver_kpi?.resolverDecision === "RECOMMEND").length;
+        const rejectCount = withDecision.filter((r) => r.category_resolver_kpi?.resolverDecision === "REJECT").length;
+        const totalWithDecision = withDecision.length;
+        const resolverV3 = {
+          totalWithDecision,
+          autoSelectCount,
+          recommendCount,
+          rejectCount,
+          rejectRate: totalWithDecision > 0 ? Math.round((rejectCount / totalWithDecision) * 1000) / 10 : 0,
+          resolverAccuracy:
+            totalWithDecision > 0 ? Math.round(((autoSelectCount + recommendCount) / totalWithDecision) * 1000) / 10 : 0,
+        };
+
         return {
           columnMissing: false,
           totalWithKpi: rows.length,
           manualOverrideCount,
           manualOverrideRate: rows.length > 0 ? Math.round((manualOverrideCount / rows.length) * 1000) / 10 : 0,
+          resolverV3,
           recent: rows.slice(0, 10).map((r) => ({
             createdAt: r.created_at,
             predictResult: r.category_resolver_kpi?.predictResult?.name ?? null,
             selectedResult: r.category_resolver_kpi?.selectedResult?.name ?? null,
             finalRegistered: r.category_resolver_kpi?.finalRegistered?.name ?? null,
             manualOverride: r.category_resolver_kpi?.manualOverride ?? false,
+            resolverDecision: r.category_resolver_kpi?.resolverDecision ?? null,
+            similarityScore: r.category_resolver_kpi?.similarityScore ?? null,
           })),
         };
       })();

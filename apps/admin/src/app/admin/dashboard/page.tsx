@@ -105,6 +105,42 @@ export default function AdminDashboardPage() {
                     ({data.categoryResolverKpi.manualOverrideCount}건)
                   </span>
                 </div>
+
+                {/* Sprint A-5(Category Resolver 3.0 KPI) — CPO 요구사항: "Predict
+                    Accuracy / Resolver Accuracy / Manual Override / Reject
+                    Rate." resolverDecision을 기록해둔 건수가 있을 때만 보여준다
+                    (A-5 배포 이전 기록만 있으면 0/0이라 표시할 게 없다). */}
+                {data.categoryResolverKpi.resolverV3.totalWithDecision > 0 && (
+                  <div className="mt-3 grid grid-cols-2 gap-2 rounded-md bg-background p-2 text-center sm:grid-cols-4">
+                    <div>
+                      <p className="text-[10px] text-text-tertiary">Resolver Accuracy</p>
+                      <p className="text-sm font-semibold tabular-nums text-text-primary">
+                        {data.categoryResolverKpi.resolverV3.resolverAccuracy}%
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-text-tertiary">Reject Rate</p>
+                      <p
+                        className={`text-sm font-semibold tabular-nums ${data.categoryResolverKpi.resolverV3.rejectRate > 0 ? "text-warning" : "text-text-primary"}`}
+                      >
+                        {data.categoryResolverKpi.resolverV3.rejectRate}%
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-text-tertiary">Auto Select</p>
+                      <p className="text-sm font-semibold tabular-nums text-text-primary">
+                        {data.categoryResolverKpi.resolverV3.autoSelectCount}건
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-text-tertiary">Reject</p>
+                      <p className="text-sm font-semibold tabular-nums text-text-primary">
+                        {data.categoryResolverKpi.resolverV3.rejectCount}건
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <ul className="mt-2 space-y-1">
                   {data.categoryResolverKpi.recent.map((r, i) => (
                     <li key={i} className="flex items-center justify-between text-xs">
@@ -113,6 +149,7 @@ export default function AdminDashboardPage() {
                       </span>
                       <span className="truncate text-text-secondary">
                         Predict: {r.predictResult ?? "-"} → 최종: {r.finalRegistered ?? "-"}
+                        {r.resolverDecision && ` (${r.resolverDecision}${r.similarityScore != null ? ` ${r.similarityScore}%` : ""})`}
                       </span>
                       {r.manualOverride && <span className="text-warning">수동변경</span>}
                     </li>

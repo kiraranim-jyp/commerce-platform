@@ -163,6 +163,13 @@ export interface CanonicalProduct {
     selectedResult?: { code: number; name: string } | null;
     manualOverride: boolean;
     evidence: string[];
+    /** Sprint A-5(Category Resolver 3.0) — predict 결과가 AUTO_SELECT(유사도
+     * 95%+)/RECOMMEND(정상이지만 자동선택 기준 미달)/REJECT(명백히 다른
+     * 도메인이라 후보로 채택 안 함) 중 무엇이었는지. 대시보드 KPI(Reject
+     * Rate/Resolver Accuracy)가 이 값을 집계한다. */
+    resolverDecision?: "AUTO_SELECT" | "RECOMMEND" | "REJECT" | null;
+    /** predictResult가 채택됐을 때 scoreCategoryCandidate가 매긴 0~100 유사도. */
+    similarityScore?: number | null;
   };
   sku: ProvenanceField<string>;
   description: ProvenanceField<string>;
