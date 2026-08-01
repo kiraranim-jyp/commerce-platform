@@ -87,13 +87,22 @@ const COLOR_TITLE_PATTERN = new RegExp(
   "i",
 );
 
+/** Sprint A-7(작업2) — 실측 확인(bobochoses.com "Beige sweatshirt. Cotton 66%,
+ * Organic Cotton 34%..."): 라벨 없이 색상 단어가 설명문 맨 앞 문장의 첫 단어로
+ * 바로 오는 경우가 실제로 있다. 문서 전체에서 아무 데나 찾으면 오탐 위험이
+ * 크지만(예: 중간 문장의 "black"이 상품과 무관할 수 있음), "맨 앞"으로
+ * 앵커링하면 라벨과 거의 같은 신뢰도를 갖는다 — 화이트리스트 밖 표현은 여전히
+ * 못 잡는다. */
+const COLOR_LEADING_WORD_PATTERN = new RegExp(`^(${KNOWN_COLOR_WORDS.join("|")})\\b`, "i");
+
 export function extractColor(description: string | undefined): string | undefined {
   if (!description) return undefined;
   for (const pattern of COLOR_PATTERNS) {
     const match = pattern.exec(description);
     if (match?.[1]) return match[1].trim();
   }
-  return undefined;
+  const leading = COLOR_LEADING_WORD_PATTERN.exec(description.trim());
+  return leading?.[1] ? leading[1].trim() : undefined;
 }
 
 /** description에서 못 찾았을 때만 호출하는 폴백 — 상품명(title)에서 알려진
