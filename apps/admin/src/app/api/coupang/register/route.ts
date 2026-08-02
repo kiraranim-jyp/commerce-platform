@@ -14,6 +14,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getCoupangCredentials, getVendorUserId } from "../_lib/env";
 import { getDefaultDescriptionTemplate } from "../_lib/description-template";
 import { getDefaultSellerProfile } from "../_lib/seller-profile";
+import { findBrandProfileByName } from "../_lib/brand-profile";
 import { callCoupangApi, type CoupangApiResponse } from "../_lib/client";
 import { withRetry } from "../_lib/retry";
 import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } from "../_lib/shipping-place";
@@ -220,6 +221,10 @@ export async function POST(request: Request) {
 
   const vendorUserId = await getVendorUserId();
   const sellerProfile = await getDefaultSellerProfile();
+  // Sprint A-12(작업3/4) — 제조자/원산지 우선순위: 상품 추출값 > 브랜드
+  // 프로필 > SellerProfile 기본값. product.brand.value로 조회해서 없으면
+  // null(build-payload.ts가 다음 우선순위로 자동 폴백).
+  const brandProfile = await findBrandProfileByName(product.brand.value);
   if (!sellerProfile) {
     logStep("배송 프로필 확인", "failed", "등록된 배송 프로필이 없습니다.");
     const result: ListingResult = withMeta({
@@ -377,6 +382,9 @@ export async function POST(request: Request) {
     descriptionTemplate: descriptionTemplate ?? undefined,
     categoryMeta,
     resolvedBrand,
+    brandProfile: brandProfile
+      ? { countryOfOrigin: brandProfile.countryOfOrigin, manufacturer: brandProfile.manufacturer }
+      : null,
   });
 
   // Sprint B(Product Compliance Engine) — "등록됐다"가 아니라 "얼마나 실제

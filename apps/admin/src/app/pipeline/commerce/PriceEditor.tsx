@@ -126,7 +126,12 @@ export function PriceEditor({
   }, [autoPriceKrw, isLinked]);
 
   const salePriceKrw = product.priceOverrideKrw?.value ?? autoPriceKrw;
-  const roughMargin = salePriceKrw - breakdown.costKrw;
+  // Sprint A-12(작업1 — CPO 지시: "쿠팡 수수료 예상 / 예상 순이익까지 항상
+  // 보여야 한다") — 기존 상세 Breakdown의 feePercent(product.priceBreakdown)를
+  // 그대로 재사용한다(새 필드를 또 만들면 두 계산기가 서로 다른 수수료율을
+  // 갖는 CP001류 불일치가 생긴다).
+  const feeAmountKrw = Math.round((salePriceKrw * breakdownInput.feePercent) / 100);
+  const netProfitKrw = salePriceKrw - costBasis - feeAmountKrw;
 
   function commitBreakdown(patch: Partial<typeof breakdownInput>) {
     onUpdatePriceBreakdown({ ...breakdownInput, ...patch });
@@ -239,10 +244,26 @@ export function PriceEditor({
         </div>
 
         <div>
-          <p className="text-xs text-text-secondary">예상 마진(참고용 — 배송비/관세/수수료 미반영)</p>
-          <p className={`mt-0.5 text-sm font-medium ${roughMargin >= 0 ? "text-success" : "text-error"}`}>
-            {roughMargin >= 0 ? "+" : ""}
-            {formatKrw(roughMargin)}
+          <p className="text-xs text-text-secondary">쿠팡 수수료 예상</p>
+          <div className="mt-0.5 flex items-center gap-1">
+            <EditableText
+              value={String(breakdownInput.feePercent)}
+              onCommit={(v) => commitBreakdown({ feePercent: Math.min(99, Math.max(0, Number(v) || 0)) })}
+              className="w-14 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+            />
+            <span className="text-sm text-text-secondary">%</span>
+            <span className="ml-1 text-xs text-text-tertiary">≈ {formatKrw(feeAmountKrw)}</span>
+          </div>
+          <p className="mt-0.5 text-[11px] text-text-tertiary">
+            실제 카테고리별 수수료율은 쿠팡 정산 화면에서 확인 가능 — 여기서는 판매가 기준 추정치
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs text-text-secondary">예상 순이익(판매가 − 환율적용가 − 쿠팡수수료)</p>
+          <p className={`mt-0.5 text-sm font-medium ${netProfitKrw >= 0 ? "text-success" : "text-error"}`}>
+            {netProfitKrw >= 0 ? "+" : ""}
+            {formatKrw(netProfitKrw)}
           </p>
         </div>
       </div>

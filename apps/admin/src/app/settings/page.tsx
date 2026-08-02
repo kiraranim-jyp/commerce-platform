@@ -53,6 +53,16 @@ interface SellerProfile {
   bottomCommonImageEnabled: boolean;
 }
 
+interface BrandProfile {
+  id: string;
+  name: string;
+  countryOfOrigin: string;
+  manufacturer: string;
+  brandIntro: string;
+  representativeImageUrl: string | null;
+  commonDescription: string;
+}
+
 interface DescriptionTemplate {
   id: string;
   name: string;
@@ -105,12 +115,14 @@ export default function SettingsPage() {
   const [accountSaving, setAccountSaving] = useState(false);
 
   const [profiles, setProfiles] = useState<SellerProfile[]>([]);
+  const [brandProfiles, setBrandProfiles] = useState<BrandProfile[]>([]);
   const [templates, setTemplates] = useState<DescriptionTemplate[]>([]);
 
   async function loadAll() {
-    const [accountRes, profilesRes, templatesRes] = await Promise.all([
+    const [accountRes, profilesRes, brandProfilesRes, templatesRes] = await Promise.all([
       fetch("/api/settings/coupang"),
       fetch("/api/settings/coupang/profiles"),
+      fetch("/api/settings/coupang/brand-profiles"),
       fetch("/api/settings/coupang/templates"),
     ]);
     const accountData = (await accountRes.json()) as {
@@ -119,6 +131,7 @@ export default function SettingsPage() {
       values: AccountValues;
     };
     const profilesData = (await profilesRes.json()) as { profiles: SellerProfile[] };
+    const brandProfilesData = (await brandProfilesRes.json()) as { profiles: BrandProfile[] };
     const templatesData = (await templatesRes.json()) as { templates: DescriptionTemplate[] };
 
     setConfigured(accountData.configured);
@@ -127,6 +140,7 @@ export default function SettingsPage() {
     setVendorId(accountData.values.vendorId ?? "");
     setVendorUserId(accountData.values.vendorUserId ?? "");
     setProfiles(profilesData.profiles ?? []);
+    setBrandProfiles(brandProfilesData.profiles ?? []);
     setTemplates(templatesData.templates ?? []);
   }
 
@@ -251,6 +265,7 @@ export default function SettingsPage() {
       </section>
 
       <SellerProfileSection profiles={profiles} onChanged={loadAll} />
+      <BrandProfileSection profiles={brandProfiles} onChanged={loadAll} />
       <DescriptionTemplateSection templates={templates} onChanged={loadAll} />
     </main>
   );
@@ -925,6 +940,230 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
           >
             {saving ? "저장 중…" : editingId ? "수정 저장" : "프로필 저장"}
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Sprint A-12(작업4 — CPO 지시: "Apolina 원산지 영국, 제조자 Apolina Ltd.를
+ * 한 번만 입력하면 Apolina 상품은 자동 적용") — SellerProfileSection과 같은
+ * 목록+폼 패턴이지만 매칭 단위가 브랜드명이다(isDefault 개념 없음). 원산지/
+ * 제조자는 register/route.ts가 product.brand.value로 조회해 build-payload.ts의
+ * 우선순위(상품 추출값 > 이 프로필 > SellerProfile 기본값)에 끼워 넣는다.
+ * 브랜드소개/대표이미지/공통설명은 지금은 저장만 하고 등록 Payload에는 아직
+ * 안 쓴다(상세설명 템플릿 블록화는 A-12의 다음 작업 범위).
+ */
+function BrandProfileSection({
+  profiles,
+  onChanged,
+}: {
+  profiles: BrandProfile[];
+  onChanged: () => Promise<void>;
+}) {
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [countryOfOrigin, setCountryOfOrigin] = useState("");
+  const [manufacturer, setManufacturer] = useState("");
+  const [brandIntro, setBrandIntro] = useState("");
+  const [representativeImageUrl, setRepresentativeImageUrl] = useState<string | null>(null);
+  const [commonDescription, setCommonDescription] = useState("");
+  const [imageUploading, setImageUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  function resetForm() {
+    setEditingId(null);
+    setName("");
+    setCountryOfOrigin("");
+    setManufacturer("");
+    setBrandIntro("");
+    setRepresentativeImageUrl(null);
+    setCommonDescription("");
+  }
+
+  function startEdit(p: BrandProfile) {
+    setEditingId(p.id);
+    setName(p.name);
+    setCountryOfOrigin(p.countryOfOrigin);
+    setManufacturer(p.manufacturer);
+    setBrandIntro(p.brandIntro);
+    setRepresentativeImageUrl(p.representativeImageUrl);
+    setCommonDescription(p.commonDescription);
+    setFormOpen(true);
+  }
+
+  async function uploadRepresentativeImage(file: File) {
+    setImageUploading(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch("/api/settings/coupang/common-images", { method: "POST", body });
+      const data = (await res.json()) as { ok: boolean; url?: string; error?: string };
+      if (data.ok && data.url) setRepresentativeImageUrl(data.url);
+    } finally {
+      setImageUploading(false);
+    }
+  }
+
+  async function handleSave() {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      const body = {
+        name,
+        countryOfOrigin: countryOfOrigin || undefined,
+        manufacturer: manufacturer || undefined,
+        brandIntro: brandIntro || undefined,
+        representativeImageUrl,
+        commonDescription: commonDescription || undefined,
+      };
+      const res = await fetch(
+        editingId ? `/api/settings/coupang/brand-profiles/${editingId}` : "/api/settings/coupang/brand-profiles",
+        {
+          method: editingId ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        },
+      );
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (data.ok) {
+        resetForm();
+        setFormOpen(false);
+        await onChanged();
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    await fetch(`/api/settings/coupang/brand-profiles/${id}`, { method: "DELETE" });
+    await onChanged();
+  }
+
+  return (
+    <section className="mt-4 rounded-lg border border-border bg-surface p-5 shadow-subtle">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold text-text-primary">브랜드 프로필</h2>
+        <button
+          type="button"
+          onClick={() => {
+            if (formOpen) resetForm();
+            setFormOpen((v) => !v);
+          }}
+          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-background"
+        >
+          {formOpen ? "닫기" : "새 브랜드 만들기"}
+        </button>
+      </div>
+      <p className="mt-1 text-xs text-text-secondary">
+        브랜드별로 원산지/제조자를 한 번 등록해두면, 상품 원문에서 못 찾았을 때 이 값이 자동으로 채워집니다.
+      </p>
+
+      {profiles.length > 0 && (
+        <ul className="mt-3 divide-y divide-border text-sm">
+          {profiles.map((p) => (
+            <li key={p.id} className="flex items-center justify-between py-2">
+              <div>
+                <span className="font-medium text-text-primary">{p.name}</span>
+                <p className="text-xs text-text-secondary">
+                  원산지 {p.countryOfOrigin || "-"} · 제조자 {p.manufacturer || "-"}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => startEdit(p)} className="text-xs text-text-secondary hover:underline">
+                  수정
+                </button>
+                <button type="button" onClick={() => handleDelete(p.id)} className="text-xs text-error hover:underline">
+                  삭제
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {formOpen && (
+        <div className="mt-4 space-y-3 border-t border-border pt-4 text-sm">
+          <Field label="브랜드명" hint="상품의 브랜드값과 정확히 일치해야 자동 적용됩니다(대소문자 무시)">
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="예: Apolina"
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="원산지">
+            <input
+              type="text"
+              value={countryOfOrigin}
+              onChange={(e) => setCountryOfOrigin(e.target.value)}
+              placeholder="예: 영국"
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="제조자">
+            <input
+              type="text"
+              value={manufacturer}
+              onChange={(e) => setManufacturer(e.target.value)}
+              placeholder="예: Apolina Ltd."
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="브랜드 소개" hint="상세설명 템플릿 블록화(다음 작업)에서 사용 예정 — 지금은 저장만 됩니다">
+            <textarea
+              value={brandIntro}
+              onChange={(e) => setBrandIntro(e.target.value)}
+              rows={3}
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="대표 이미지">
+            <div className="flex items-center gap-3">
+              {representativeImageUrl ? (
+                <img
+                  src={representativeImageUrl}
+                  alt="브랜드 대표 이미지"
+                  className="h-16 w-16 rounded border border-border object-cover"
+                />
+              ) : (
+                <div className="flex h-16 w-16 items-center justify-center rounded border border-dashed border-border text-[10px] text-text-tertiary">
+                  없음
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                disabled={imageUploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void uploadRepresentativeImage(file);
+                  e.target.value = "";
+                }}
+                className="text-xs text-text-secondary file:mr-2 file:rounded file:border file:border-border file:bg-background file:px-2 file:py-1 file:text-xs"
+              />
+            </div>
+          </Field>
+          <Field label="공통 설명" hint="상세설명 템플릿 블록화(다음 작업)에서 사용 예정 — 지금은 저장만 됩니다">
+            <textarea
+              value={commonDescription}
+              onChange={(e) => setCommonDescription(e.target.value)}
+              rows={3}
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || !name.trim()}
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+          >
+            {saving ? "저장 중…" : editingId ? "수정 저장" : "브랜드 저장"}
           </button>
         </div>
       )}

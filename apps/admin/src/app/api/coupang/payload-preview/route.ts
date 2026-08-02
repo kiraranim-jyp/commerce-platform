@@ -5,6 +5,7 @@ import { buildComplianceReport, buildCoupangPayload, resolveVerifiedCategoryCode
 import { getCoupangCredentials, getVendorUserId } from "../_lib/env";
 import { getDefaultDescriptionTemplate } from "../_lib/description-template";
 import { getDefaultSellerProfile } from "../_lib/seller-profile";
+import { findBrandProfileByName } from "../_lib/brand-profile";
 import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } from "../_lib/shipping-place";
 import { fetchCategoryMeta } from "../_lib/category-meta";
 import { resolveBrand } from "../_lib/brand";
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
   }
 
   const descriptionTemplate = await getDefaultDescriptionTemplate();
+  const brandProfile = await findBrandProfileByName(product.brand.value);
 
   let outboundShippingPlaceCode = sellerProfile.outboundShippingPlaceCode;
   const shippingPlaces = await fetchShippingPlaces(credentials);
@@ -82,6 +84,9 @@ export async function POST(request: Request) {
     descriptionTemplate: descriptionTemplate ?? undefined,
     categoryMeta,
     resolvedBrand,
+    brandProfile: brandProfile
+      ? { countryOfOrigin: brandProfile.countryOfOrigin, manufacturer: brandProfile.manufacturer }
+      : null,
   });
 
   const attributeResults = payload.complianceFieldResults.filter((r) => r.kind === "ATTRIBUTE");

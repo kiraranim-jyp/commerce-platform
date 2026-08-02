@@ -762,8 +762,14 @@ function buildCoupangItem(args: {
   contents: CoupangItemContent[];
   optionGroups: CanonicalProductOptionGroup[];
   variant?: CanonicalProductVariant;
+  /** Sprint A-12(작업4 — CPO 지시: "제조자/원산지 우선순위: 상품추출 >
+   * 브랜드기본값 > Seller기본값 > 사용자입력") — sellerConfig보다 먼저
+   * 확인하는 중간 단계. product.brand.value로 미리 조회해서 넘겨받는다
+   * (build-payload.ts는 DB에 접근하지 않는다 — register/route.ts 등 호출부의
+   * 책임). */
+  brandProfile?: { countryOfOrigin: string; manufacturer: string } | null;
 }): { item: CoupangItem; complianceResults: ComplianceFieldResult[] } {
-  const { product, listing, sellerConfig, categoryMeta, images, contents, optionGroups, variant } = args;
+  const { product, listing, sellerConfig, categoryMeta, images, contents, optionGroups, variant, brandProfile } = args;
 
   const compliance = buildCoupangCompliance(
     categoryMeta,
@@ -772,16 +778,18 @@ function buildCoupangItem(args: {
       contactNumber: sellerConfig.asContactNumber || sellerConfig.companyContactNumber,
       brand: product.brand.value || undefined,
       material: product.material.value || undefined,
-      // Sprint A-11(작업4) — manufacturer와 같은 우선순위: 상품 설명에서 찾은
-      // 값이 있으면 그게 우선, 없을 때만 SellerProfile 기본값을 쓴다.
-      countryOfOrigin: product.countryOfOrigin.value || sellerConfig.defaultCountryOfOrigin || undefined,
+      // Sprint A-12(작업3) — 우선순위: 상품 추출값 > 브랜드 프로필 > Seller
+      // 기본값. 브랜드 프로필이 없거나 값이 비어 있으면 자동으로 다음 단계로
+      // 넘어간다(빈 문자열은 falsy라 || 체인이 그대로 스킵한다).
+      countryOfOrigin:
+        product.countryOfOrigin.value || brandProfile?.countryOfOrigin || sellerConfig.defaultCountryOfOrigin || undefined,
       color: product.color.value || undefined,
       recommendedAge: product.recommendedAge.value || undefined,
       // Sprint A-8(추가 권장사항) — 원본 사이트에서 크롤링한 값이 있으면
-      // 그게 우선(상품 Override > SellerProfile). 없을 때만 판매자 기본값으로
-      // 채운다 — Sprint A-7 실측에서 이 필드가 30건 중 30건을 막았는데,
-      // 대부분 상품마다 다른 정보가 아니라 판매자 본인의 사업자 정보였다.
-      manufacturer: product.manufacturer.value || sellerConfig.manufacturer || undefined,
+      // 그게 우선(상품 Override > 브랜드 프로필 > SellerProfile). Sprint A-7
+      // 실측에서 이 필드가 30건 중 30건을 막았는데, 대부분 상품마다 다른
+      // 정보가 아니라 브랜드 또는 판매자 본인의 사업자 정보였다.
+      manufacturer: product.manufacturer.value || brandProfile?.manufacturer || sellerConfig.manufacturer || undefined,
       careInstructions: product.careInstructions.value || undefined,
       qualityGuarantee: sellerConfig.qualityGuarantee || undefined,
       userOverrides: product.categoryFieldOverrides,
@@ -850,6 +858,8 @@ export function buildCoupangPayload(
     /** Brand Search API로 찾은 Wing 등록 브랜드 — 있으면 listing.brand(원본 추출
      * 브랜드 문자열) 대신 이 이름과 brandId를 함께 보낸다. */
     resolvedBrand?: { brandId: string; brandName: string } | null;
+    /** Sprint A-12(작업4) — product.brand.value로 미리 조회해둔 브랜드 프로필. */
+    brandProfile?: { countryOfOrigin: string; manufacturer: string } | null;
   } = {},
 ): CoupangPayload {
   const sellerConfig = options.sellerConfig ?? BLANK_COUPANG_SELLER_CONFIG;
@@ -926,6 +936,7 @@ export function buildCoupangPayload(
       contents,
       optionGroups: product.optionGroups,
       variant,
+      brandProfile: options.brandProfile,
     }),
   );
   const items: CoupangItem[] = built.map((b) => b.item);

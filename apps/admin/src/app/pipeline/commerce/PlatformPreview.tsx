@@ -23,6 +23,7 @@ import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
 import { EditableText, EditableTextarea } from "./EditableField";
 import { ImageSummaryCard } from "./ImageSummaryCard";
 import { ListingSection } from "./ListingSection";
+import { OptionVariantEditor } from "./OptionVariantEditor";
 import { PriceEditor } from "./PriceEditor";
 import { computeChecklistReadiness, computeReadinessScoreSummary } from "./readiness";
 import { RegistrationReadinessCard } from "./RegistrationReadinessCard";
@@ -84,6 +85,7 @@ export function PlatformPreview({
   onFixTextField,
   onFixNumberField,
   onUpdateOptions,
+  onUpdateVariant,
   onOpenListingModal,
   onRetryListing,
   onFetchCoupangCategory,
@@ -142,6 +144,11 @@ export function PlatformPreview({
   onFixNumberField?: (field: "shippingFee" | "stockQuantity", value: number) => void;
   /** Sprint A-3(작업1 — 옵션도 Editable) */
   onUpdateOptions?: (raw: string) => void;
+  /** Sprint A-12(작업6) — 옵션 조합별 SKU/재고/가격 편집. */
+  onUpdateVariant?: (
+    variantId: string,
+    patch: Partial<{ sku: string; stockQuantity: number; price: { amount: number; currency: string } | undefined }>,
+  ) => void;
   onOpenListingModal: () => void;
   onRetryListing: () => void;
   /** 쿠팡 탭에서만 넘어온다 — 있으면 카테고리 추천 패널에 "쿠팡 API로 확인"/검색 UI가 보인다. */
@@ -397,6 +404,7 @@ export function PlatformPreview({
               </div>
             </>
           ) : null}
+          {onUpdateVariant && <OptionVariantEditor variants={product.variants} onUpdateVariant={onUpdateVariant} />}
           <EditableText
             value={product.options.value.join(", ")}
             onCommit={(v) => onUpdateOptions?.(v)}

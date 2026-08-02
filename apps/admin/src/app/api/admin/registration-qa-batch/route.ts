@@ -14,6 +14,7 @@ import { buildCanonicalProduct } from "../../pipeline/canonical-product";
 import { getCoupangCredentials, getVendorUserId } from "../../coupang/_lib/env";
 import { getDefaultDescriptionTemplate } from "../../coupang/_lib/description-template";
 import { getDefaultSellerProfile } from "../../coupang/_lib/seller-profile";
+import { findBrandProfileByName } from "../../coupang/_lib/brand-profile";
 import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } from "../../coupang/_lib/shipping-place";
 import { fetchCategoryMeta } from "../../coupang/_lib/category-meta";
 import { resolveBrand } from "../../coupang/_lib/brand";
@@ -173,6 +174,7 @@ async function runOne(
     const categoryCode = resolveVerifiedCategoryCode(listing.category);
     const categoryMeta = categoryCode != null ? await fetchCategoryMeta(credentials, categoryCode) : null;
     const resolvedBrand = listing.brand ? await resolveBrand(credentials, listing.brand) : null;
+    const brandProfile = await findBrandProfileByName(product.brand.value);
 
     let outboundShippingPlaceCode = sellerProfile.outboundShippingPlaceCode;
     const shippingPlaces = await fetchShippingPlaces(credentials);
@@ -207,6 +209,9 @@ async function runOne(
       descriptionTemplate: descriptionTemplate ?? undefined,
       categoryMeta,
       resolvedBrand,
+      brandProfile: brandProfile
+        ? { countryOfOrigin: brandProfile.countryOfOrigin, manufacturer: brandProfile.manufacturer }
+        : null,
     });
 
     const attributeResults = payload.complianceFieldResults.filter((r) => r.kind === "ATTRIBUTE");

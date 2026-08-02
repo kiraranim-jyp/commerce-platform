@@ -365,6 +365,20 @@ export function CommerceWorkspace({
     }));
   }
 
+  /** Sprint A-12(작업6 — CPO 지시: "옵션 품질 개선: SKU/재고/가격추가까지
+   * 편집 가능해야 한다") — variants[]는 이미 sku?/stockQuantity?/price?를
+   * 갖고 있었지만(P0-2 Option 모델 설계) 편집 UI가 없어서 실질적으로 항상
+   * 비어 있었다. id로 하나만 골라 patch한다 — 나머지 variant는 그대로 둔다. */
+  function updateVariant(
+    variantId: string,
+    patch: Partial<{ sku: string; stockQuantity: number; price: { amount: number; currency: string } | undefined }>,
+  ) {
+    setProduct((prev) => ({
+      ...prev,
+      variants: prev.variants.map((v) => (v.id === variantId ? { ...v, ...patch } : v)),
+    }));
+  }
+
   function updatePrice(amount: number, currency: string) {
     setProduct((prev) => ({
       ...prev,
@@ -929,6 +943,7 @@ export function CommerceWorkspace({
           onFixTextField={updateField}
           onFixNumberField={updateNumberField}
           onUpdateOptions={updateOptions}
+          onUpdateVariant={updateVariant}
           onOpenListingModal={openListingModal}
           onRetryListing={retryListing}
           onFetchCoupangCategory={tab === "coupang" ? fetchCoupangCategoryRecommendation : undefined}
