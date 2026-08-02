@@ -835,6 +835,7 @@ export function CommerceWorkspace({
             onUpdateField={updateField}
             onUpdatePrice={updatePrice}
             onUpdateOptions={updateOptions}
+            exchangeRates={exchangeRates}
           />
           <BacklogPanel />
         </>

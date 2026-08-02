@@ -1,14 +1,24 @@
 "use client";
 
 import type { CanonicalProduct, FieldSource } from "@commerce/shared";
+import { convertToKrw, formatKrw } from "@commerce/pricing";
 import { EditableText, EditableTextarea } from "./EditableField";
 import { extractionSourceLabel, ProvenanceBadge } from "./provenance";
 
+/**
+ * Sprint A-9(작업4 — CEO 지시: "현재 원본 가격만 가져옵니다. 원하는 것은
+ * 원본통화 → 실시간 환율 → KRW 자동 계산") — 실제 환율 변환 로직(PriceEditor,
+ * /api/exchange-rates)은 이미 있었지만, 분석 직후 가장 먼저 보이는 이 화면
+ * (source 탭)에는 원본 통화만 보이고 KRW 환산이 전혀 없었다. "가격" 아코디언을
+ * 열어야만(쿠팡 탭 안) 환산값이 보였다 — 대표님이 본 화면은 여기였을 가능성이
+ * 높다. 같은 계산 로직(convertToKrw)을 재사용해 라이트하게 옆에 붙인다.
+ */
 export function SourceDataView({
   product,
   onUpdateField,
   onUpdatePrice,
   onUpdateOptions,
+  exchangeRates,
 }: {
   product: CanonicalProduct;
   onUpdateField: (
@@ -17,7 +27,9 @@ export function SourceDataView({
   ) => void;
   onUpdatePrice: (amount: number, currency: string) => void;
   onUpdateOptions: (raw: string) => void;
+  exchangeRates?: { rates: Record<string, number> } | null;
 }) {
+  const krw = convertToKrw(product.price.value.amount, product.price.value.currency, exchangeRates?.rates);
   return (
     <section className="rounded-lg border border-border p-4 text-sm">
       <h3 className="text-base font-medium">Source Data</h3>
@@ -61,6 +73,13 @@ export function SourceDataView({
                   placeholder="통화"
                   className="w-16 rounded border border-transparent bg-transparent px-1 py-0.5 text-sm hover:border-border focus:border-primary focus:bg-surface focus:outline-none"
                 />
+                {product.price.value.currency.toUpperCase() !== "KRW" && (
+                  <span className="text-xs text-text-tertiary">
+                    ≈ {formatKrw(krw.amountKrw)}
+                    {krw.isEstimate ? " (추정 환율)" : " (실시간 환율)"} — 배송비/마진 포함 계산은
+                    플랫폼 탭의 &ldquo;가격&rdquo; 섹션에서
+                  </span>
+                )}
               </div>
             </Row>
             <Row label="SKU" field={product.sku}>
