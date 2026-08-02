@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { PlatformConnectionStatus } from "@commerce/listing";
 import type { CanonicalProduct } from "@commerce/shared";
 import { CommerceWorkspace } from "./CommerceWorkspace";
@@ -52,6 +52,92 @@ export default function PipelinePage() {
   // 완료" 총 시간. URL 제출(runPipeline 시작) 시점을 여기서 잡아 CommerceWorkspace로
   // 내려보낸다 — 등록 자체는 CommerceWorkspace가 처리하므로 종료 시점은 그쪽에서 잰다.
   const [analysisStartedAt, setAnalysisStartedAt] = useState<number | null>(null);
+  // Sprint A-9(작업6 — CEO 실측: "쿠팡 탭에서 배송 수정하다가 뒤로가기하면
+  // 랜딩으로 돌아간다") — 분석 결과(product/items 등)는 전부 이 컴포넌트의
+  // useState에만 있고 어디에도 저장되지 않았다. 이 페이지를 벗어났다 브라우저
+  // 뒤로가기로 돌아오면(다른 관리자 화면을 잠깐 봤다거나) 컴포넌트가 처음부터
+  // 다시 마운트돼서 크롤링/이미지 처리를 처음부터 다시 해야 했다. sessionStorage에
+  // 스냅샷을 저장해뒀다가 마운트 시 있으면 그걸로 복원한다 — 탭을 닫으면 사라지고
+  // (영구 저장이 아니다), 새 URL을 분석하거나 "새 상품 분석"을 누르면 지워진다.
+  const WORKSPACE_STORAGE_KEY = "cartpilot-pipeline-workspace-v1";
+  const [hydrated, setHydrated] = useState(false);
+
+  /** items에는 상세/원본/누끼후보 3장 분량의 base64 data URI가 다 들어있어서
+   * (1500x2000 JPG 기준 장당 수백 KB~1MB대) 5장만 있어도 sessionStorage
+   * 용량(보통 5~10MB)을 쉽게 넘긴다 — 그러면 setItem이 조용히
+   * QuotaExceededError를 던지고 catch에서 삼켜져서 아예 저장이 안 됐다(실측
+   * 확인). 무거운 data URI(originalDataUrl/detailDataUrl/alternateDataUrl)는
+   * 빼고 공개 URL(Supabase Storage에 업로드된 detailPublicUrl/
+   * alternatePublicUrl — 마켓플레이스 등록에도 어차피 이 값을 쓴다)과
+   * 메타데이터만 남긴다. */
+  function stripHeavyDataUrls(source: WorkspaceItem[]): WorkspaceItem[] {
+    return source.map((item) => ({
+      ...item,
+      originalDataUrl: null,
+      detailDataUrl: item.detailPublicUrl ?? item.detailDataUrl,
+      alternateDataUrl: item.alternatePublicUrl ?? null,
+    }));
+  }
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(WORKSPACE_STORAGE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw) as {
+          url?: string;
+          result?: PipelineResponse | null;
+          product?: CanonicalProduct | null;
+          items?: WorkspaceItem[];
+          thumbnails?: Record<string, string>;
+          representativeId?: string | null;
+          excludedIds?: string[];
+        };
+        if (saved.result && saved.product) {
+          setUrl(saved.url ?? "");
+          setResult(saved.result);
+          setProduct(saved.product);
+          setItems(saved.items ?? []);
+          setThumbnails(saved.thumbnails ?? {});
+          setRepresentativeId(saved.representativeId ?? null);
+          setExcludedIds(new Set(saved.excludedIds ?? []));
+        }
+      }
+    } catch {
+      // sessionStorage가 막혀있거나(프라이빗 브라우징 등) 저장된 값이 깨져있으면
+      // 그냥 랜딩부터 시작한다 — 복원은 "되면 좋은" 편의 기능이지 필수 경로가 아니다.
+    }
+    setHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 분석이 끝난 뒤(product/items가 채워진 뒤)에만, 값이 바뀔 때마다 스냅샷을
+  // 갱신한다. hydrated 이전에는 저장하지 않는다 — 복원 직후 빈 초기값으로
+  // 방금 불러온 세션을 덮어쓰는 사고를 막기 위해서다.
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      if (result && product) {
+        sessionStorage.setItem(
+          WORKSPACE_STORAGE_KEY,
+          JSON.stringify({
+            url,
+            result,
+            product,
+            items: stripHeavyDataUrls(items),
+            thumbnails,
+            representativeId,
+            excludedIds: [...excludedIds],
+          }),
+        );
+      } else {
+        sessionStorage.removeItem(WORKSPACE_STORAGE_KEY);
+      }
+    } catch {
+      // 용량 초과(QuotaExceededError) 등 — 복원 기능만 못 쓸 뿐 화면 동작에는
+      // 영향 없게 조용히 무시한다.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, url, result, product, items, thumbnails, representativeId, excludedIds]);
 
   /** 페이지 로딩 시 자동으로 호출하지 않는다 — 사용자가 [연결 확인] 버튼을 눌러야만
    * 실제 쿠팡 API가 나간다(불필요한 호출 방지). 반환값을 그대로 써서, 방금 호출한
@@ -179,6 +265,11 @@ export default function PipelinePage() {
   }
 
   function resetWorkspace() {
+    try {
+      sessionStorage.removeItem(WORKSPACE_STORAGE_KEY);
+    } catch {
+      // no-op — 세션 스토리지가 막혀있어도 리셋 자체는 계속 진행한다.
+    }
     setUrl("");
     setLoading(false);
     setError(null);
