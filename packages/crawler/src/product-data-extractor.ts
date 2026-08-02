@@ -244,6 +244,50 @@ async function extractFromDom(page: Page): Promise<Partial<ExtractedProductData>
   });
 }
 
+/** Sprint A-9(작업3 — CEO 실측: "Size 2-3 Years/3-5 Years/5-7 Years가 실제
+ * 상세페이지에 있는데 옵션이 비어있다") — 이 파일 상단 주석에 "DOM 드롭다운만
+ * 있는 사이트는 이번 범위에서 다루지 않는다"고 명시돼 있었는데, 실제로는
+ * Shopify(shopify-product-json.ts)가 아닌 사이트는 옵션 추출 경로 자체가
+ * 없었다(구조화 데이터에 옵션값 목록이 있는 경우가 거의 없어서). `<select>`
+ * 드롭다운은 대부분의 비-Shopify 쇼핑몰(WooCommerce/Cafe24/PrestaShop 등)이
+ * 실제로 쓰는 표준 HTML 폼 컨트롤이라, 여기서부터 좁게 시작한다 — "사이즈"류
+ * 키워드로 이름이 명확한 select만 채택해서, 언어선택/정렬옵션 같은 무관한
+ * select를 옵션으로 잘못 채우는 오탐을 막는다. */
+async function extractOptionsFromDom(page: Page): Promise<CanonicalProductOptionGroup[]> {
+  return page.evaluate(() => {
+    const SIZE_KEYWORD_PATTERN = /size|사이즈|taille|größe|grösse|misura|maat|talla|tamanho/i;
+    const PLACEHOLDER_PATTERN = /^(select|choose|please|선택|고르|--|—|-)/i;
+
+    function labelFor(select: HTMLSelectElement): string {
+      if (select.id) {
+        const byFor = document.querySelector(`label[for="${CSS.escape(select.id)}"]`);
+        if (byFor?.textContent?.trim()) return byFor.textContent.trim();
+      }
+      const wrappingLabel = select.closest("label");
+      if (wrappingLabel?.textContent?.trim()) return wrappingLabel.textContent.trim();
+      const prevLabel = select.previousElementSibling;
+      if (prevLabel?.tagName === "LABEL" && prevLabel.textContent?.trim()) {
+        return prevLabel.textContent.trim();
+      }
+      return [select.name, select.id, select.getAttribute("aria-label")].filter(Boolean).join(" ");
+    }
+
+    const groups: { name: string; values: string[] }[] = [];
+    document.querySelectorAll("select").forEach((select) => {
+      const label = labelFor(select);
+      if (!SIZE_KEYWORD_PATTERN.test(label)) return;
+      const values = Array.from(select.querySelectorAll("option"))
+        .map((opt) => opt.textContent?.trim() ?? "")
+        .filter((v) => v.length > 0 && !PLACEHOLDER_PATTERN.test(v));
+      // 값이 하나도 안 남거나 딱 1개뿐이면(선택지가 아니라 사실상 고정값) 굳이
+      // "옵션"으로 만들 필요가 없다 — 진짜 여러 값 중 고르는 select만 채택한다.
+      if (values.length < 2) return;
+      groups.push({ name: "사이즈", values });
+    });
+    return groups;
+  });
+}
+
 /** JSON-LD → Microdata → OpenGraph → DOM 순으로 시도하고, 필드 단위로 부족한 부분을
  * 다음 소스로 보강한다(예: JSON-LD에 title은 있는데 price가 없으면 Microdata의
  * price로 채운다). Microdata를 OpenGraph보다 앞에 두는 이유: 둘 다 "구조화 데이터"로
@@ -260,6 +304,7 @@ export async function extractProductData(
   const microdata = await extractFromMicrodata(page);
   const og = extractFromOpenGraph(html);
   const dom = await extractFromDom(page);
+  const domOptionGroups = await extractOptionsFromDom(page);
 
   const sources: Record<string, ProductDataSource> = {};
   const pick = <K extends keyof ExtractedProductData>(
@@ -292,9 +337,14 @@ export async function extractProductData(
     description: pick("description"),
     material: pick("material"),
     options: jsonLd?.options ?? [],
+    // Sprint A-9(작업3) — Shopify가 아닌 사이트는 이 DOM select 스캔이 유일한
+    // 옵션 소스다. jsonLd?.optionGroups는 이 함수 안에서 절대 채워지지 않으므로
+    // (extractFromJsonLd가 options:[]만 세팅) 항상 domOptionGroups를 쓴다.
+    optionGroups: domOptionGroups,
     breadcrumbPath: jsonLd?.breadcrumbPath,
     jsonLdCategory: jsonLd?.jsonLdCategory,
   };
+  if (domOptionGroups.length > 0) sources.optionGroups = "dom";
 
   return { data, sources };
 }
