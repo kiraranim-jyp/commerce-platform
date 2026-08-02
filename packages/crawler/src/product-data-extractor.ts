@@ -257,6 +257,10 @@ async function extractOptionsFromDom(page: Page): Promise<CanonicalProductOption
   return page.evaluate(() => {
     const SIZE_KEYWORD_PATTERN = /size|사이즈|taille|größe|grösse|misura|maat|talla|tamanho/i;
     const PLACEHOLDER_PATTERN = /^(select|choose|please|선택|고르|--|—|-)/i;
+    // 실측(lojadada.com "8-9Y - Sold Out"): 재고 상태 표시가 select option 텍스트에
+    // 그대로 붙어나오는 사이트가 있다 — 사이즈 값 자체("8-9Y")는 진짜 원문이니
+    // 지어내는 게 아니라, 뒤에 붙은 재고 상태 문구만 걷어내는 정제(trim)다.
+    const SOLD_OUT_SUFFIX_PATTERN = /\s*[-–(]\s*(sold\s*out|out\s*of\s*stock|품절|매진)\s*\)?\s*$/i;
 
     function labelFor(select: HTMLSelectElement): string {
       if (select.id) {
@@ -277,7 +281,7 @@ async function extractOptionsFromDom(page: Page): Promise<CanonicalProductOption
       const label = labelFor(select);
       if (!SIZE_KEYWORD_PATTERN.test(label)) return;
       const values = Array.from(select.querySelectorAll("option"))
-        .map((opt) => opt.textContent?.trim() ?? "")
+        .map((opt) => (opt.textContent?.trim() ?? "").replace(SOLD_OUT_SUFFIX_PATTERN, "").trim())
         .filter((v) => v.length > 0 && !PLACEHOLDER_PATTERN.test(v));
       // 값이 하나도 안 남거나 딱 1개뿐이면(선택지가 아니라 사실상 고정값) 굳이
       // "옵션"으로 만들 필요가 없다 — 진짜 여러 값 중 고르는 select만 채택한다.
