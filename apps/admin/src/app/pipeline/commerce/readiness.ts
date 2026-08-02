@@ -98,7 +98,17 @@ export function computeChecklistReadiness(
     ...(compliance?.userInputNeeded ?? []).map((f) => ({
       label: f.fieldName,
       passed: false,
-      required: true,
+      // Sprint A-9(작업9 — CEO 실측 피드백: "이 값 없이도 실제 쿠팡 등록은
+      // 됐던 것으로 기억합니다") — register/route.ts의 실제 서버 게이트
+      // (compliance-report.ts: verdict FAIL은 criticalMissing일 때만)를
+      // 그대로 확인해보니 정확히 그랬다: 서버는 KC/인증/수입자 등 CRITICAL
+      // 필드가 없을 때만 제출을 막고, 색상/소재/제조자(비-KC) 같은 나머지는
+      // WARNING으로 통과시킨다. 그런데 이 화면(client)은 지금까지 전부
+      // required:true로 막고 있었다 — 서버는 등록해주는데 화면이 못 누르게
+      // 막는 모순([[project_commerce_platform_readiness_gate]] 참고). 이제
+      // "실제 등록을 막는 것(CRITICAL)"만 필수로 취급하고, 나머지는 권장으로
+      // 내려서 두 게이트를 일치시킨다.
+      required: f.reasonCode === "CRITICAL",
       sectionId: /인증|KC/i.test(f.fieldName) ? "section-kc" : "section-notice",
       hint: f.reason,
       reasonCode: f.reasonCode,
