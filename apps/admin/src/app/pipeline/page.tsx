@@ -287,7 +287,12 @@ export default function PipelinePage() {
   const started = loading || result !== null;
 
   return (
-    <main className="mx-auto min-w-0 max-w-5xl px-6 py-10">
+    // Sprint A-9(작업1 — CEO 실측 피드백: "노트북 기준으로도 답답합니다,
+    // 쿠팡 Wing처럼 거의 전체화면을 쓰고 싶다") — 랜딩(!started)은 마케팅
+    // 카피라 좁은 폭(max-w-5xl)이 오히려 읽기 좋지만, Editor(started)는
+    // 필드가 많은 폼이라 넓은 폭이 필요하다. 두 상태를 하나의 max-w로
+    // 묶어뒀던 게 문제였다 — started일 때만 1800px까지 넓힌다.
+    <main className={`mx-auto min-w-0 py-10 ${started ? "max-w-[1800px] px-4" : "max-w-5xl px-6"}`}>
       <header className="flex items-center justify-between">
         <button
           type="button"
