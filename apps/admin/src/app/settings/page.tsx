@@ -43,6 +43,14 @@ interface SellerProfile {
   manufacturer: string;
   asContactNumber: string;
   qualityGuarantee: string;
+  defaultMarginPercent: number | null;
+  includeShippingInPrice: boolean;
+  priceRoundingUnit: number;
+  defaultCountryOfOrigin: string;
+  topCommonImageUrl: string | null;
+  topCommonImageEnabled: boolean;
+  bottomCommonImageUrl: string | null;
+  bottomCommonImageEnabled: boolean;
 }
 
 interface DescriptionTemplate {
@@ -260,6 +268,62 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
+/** Sprint A-11(작업3) — 파일 선택 즉시 업로드해서 미리보기+URL을 보여주고,
+ * ON/OFF 토글로 실제 등록 payload에 넣을지 정한다. */
+function CommonImageField({
+  label,
+  imageUrl,
+  enabled,
+  uploading,
+  onEnabledChange,
+  onUpload,
+}: {
+  label: string;
+  imageUrl: string | null;
+  enabled: boolean;
+  uploading: boolean;
+  onEnabledChange: (v: boolean) => void;
+  onUpload: (file: File) => void;
+}) {
+  return (
+    <Field label={label} hint="상세설명 이미지의 맨 앞/맨 뒤에 자동으로 붙습니다">
+      <div className="flex items-center gap-3">
+        {imageUrl ? (
+          <img src={imageUrl} alt={label} className="h-16 w-16 rounded border border-border object-cover" />
+        ) : (
+          <div className="flex h-16 w-16 items-center justify-center rounded border border-dashed border-border text-[10px] text-text-tertiary">
+            없음
+          </div>
+        )}
+        <div className="flex flex-1 flex-col gap-1.5">
+          <input
+            type="file"
+            accept="image/*"
+            disabled={uploading}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) onUpload(file);
+              e.target.value = "";
+            }}
+            className="text-xs text-text-secondary file:mr-2 file:rounded file:border file:border-border file:bg-background file:px-2 file:py-1 file:text-xs"
+          />
+          {uploading && <span className="text-[11px] text-text-tertiary">업로드 중…</span>}
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
+            <input
+              type="checkbox"
+              checked={enabled}
+              disabled={!imageUrl}
+              onChange={(e) => onEnabledChange(e.target.checked)}
+              className="h-4 w-4 rounded border-border"
+            />
+            사용 (ON)
+          </label>
+        </div>
+      </div>
+    </Field>
+  );
+}
+
 /**
  * 배송 프로필 — 목록(이름 + 기본 배지 + 기본으로 설정/삭제)과 "새 프로필 만들기"
  * 폼을 함께 보여준다. 처음(프로필이 하나도 없을 때)에는 폼이 항상 펼쳐져 있어서
@@ -288,6 +352,19 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
   const [manufacturer, setManufacturer] = useState("");
   const [asContactNumber, setAsContactNumber] = useState("");
   const [qualityGuarantee, setQualityGuarantee] = useState("");
+  // Sprint A-11(작업1/2/4 — CPO 지시: "판매가 = 환율변환가격 × (1+기본마진)",
+  // "가격 반올림 단위", "원산지 기본값") — 상품마다 다시 입력하지 않는 가격
+  // 정책/원산지 기본값도 위 배송/판매자 기본정보와 같은 패턴으로 저장한다.
+  const [defaultMarginPercent, setDefaultMarginPercent] = useState("");
+  const [includeShippingInPrice, setIncludeShippingInPrice] = useState(false);
+  const [priceRoundingUnit, setPriceRoundingUnit] = useState("10");
+  const [defaultCountryOfOrigin, setDefaultCountryOfOrigin] = useState("");
+  // Sprint A-11(작업3) — 상세페이지 상단/하단에 항상 붙는 공통 이미지.
+  const [topCommonImageUrl, setTopCommonImageUrl] = useState<string | null>(null);
+  const [topCommonImageEnabled, setTopCommonImageEnabled] = useState(false);
+  const [bottomCommonImageUrl, setBottomCommonImageUrl] = useState<string | null>(null);
+  const [bottomCommonImageEnabled, setBottomCommonImageEnabled] = useState(false);
+  const [imageUploading, setImageUploading] = useState<"top" | "bottom" | null>(null);
 
   const [shippingPlaces, setShippingPlaces] = useState<ShippingPlaceOption[]>([]);
   const [returnCenters, setReturnCenters] = useState<ReturnCenterOption[]>([]);
@@ -314,6 +391,14 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
     setManufacturer("");
     setAsContactNumber("");
     setQualityGuarantee("");
+    setDefaultMarginPercent("");
+    setIncludeShippingInPrice(false);
+    setPriceRoundingUnit("10");
+    setDefaultCountryOfOrigin("");
+    setTopCommonImageUrl(null);
+    setTopCommonImageEnabled(false);
+    setBottomCommonImageUrl(null);
+    setBottomCommonImageEnabled(false);
   }
 
   function startEdit(p: SellerProfile) {
@@ -335,7 +420,35 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
     setManufacturer(p.manufacturer);
     setAsContactNumber(p.asContactNumber);
     setQualityGuarantee(p.qualityGuarantee);
+    setDefaultMarginPercent(p.defaultMarginPercent != null ? String(p.defaultMarginPercent) : "");
+    setIncludeShippingInPrice(p.includeShippingInPrice);
+    setPriceRoundingUnit(p.priceRoundingUnit != null ? String(p.priceRoundingUnit) : "10");
+    setDefaultCountryOfOrigin(p.defaultCountryOfOrigin);
+    setTopCommonImageUrl(p.topCommonImageUrl);
+    setTopCommonImageEnabled(p.topCommonImageEnabled);
+    setBottomCommonImageUrl(p.bottomCommonImageUrl);
+    setBottomCommonImageEnabled(p.bottomCommonImageEnabled);
     setFormOpen(true);
+  }
+
+  async function uploadCommonImage(position: "top" | "bottom", file: File) {
+    setImageUploading(position);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch("/api/settings/coupang/common-images", { method: "POST", body });
+      const data = (await res.json()) as { ok: boolean; url?: string; error?: string };
+      if (data.ok && data.url) {
+        if (position === "top") setTopCommonImageUrl(data.url);
+        else setBottomCommonImageUrl(data.url);
+      } else {
+        setLookupError(data.error ?? "이미지 업로드에 실패했습니다.");
+      }
+    } catch (err) {
+      setLookupError(err instanceof Error ? err.message : "이미지 업로드에 실패했습니다.");
+    } finally {
+      setImageUploading(null);
+    }
   }
 
   async function fetchLookups() {
@@ -404,6 +517,14 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
         manufacturer: manufacturer || undefined,
         asContactNumber: asContactNumber || undefined,
         qualityGuarantee: qualityGuarantee || undefined,
+        defaultMarginPercent: defaultMarginPercent ? Number(defaultMarginPercent) : undefined,
+        includeShippingInPrice,
+        priceRoundingUnit: priceRoundingUnit ? Number(priceRoundingUnit) : undefined,
+        defaultCountryOfOrigin: defaultCountryOfOrigin || undefined,
+        topCommonImageUrl,
+        topCommonImageEnabled,
+        bottomCommonImageUrl,
+        bottomCommonImageEnabled,
       };
       const res = await fetch(
         editingId ? `/api/settings/coupang/profiles/${editingId}` : "/api/settings/coupang/profiles",
@@ -728,6 +849,74 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
               className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
             />
           </Field>
+          <Field label="원산지 기본값" hint="상품 설명에서 원산지를 못 찾았을 때만 이 값을 대신 씁니다">
+            <input
+              type="text"
+              value={defaultCountryOfOrigin}
+              onChange={(e) => setDefaultCountryOfOrigin(e.target.value)}
+              placeholder="예: 중국"
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+
+          {/* Sprint A-11(작업1/2 — CPO 지시: "판매가 = 환율변환가격 × (1+기본마진)")
+              — 상품마다 다시 정하지 않는 가격 정책 기본값. PriceEditor 최상단의
+              "원가 → 환율 → 마진 → 최종 판매가" 자동계산이 이 값을 그대로 쓴다. */}
+          <p className="border-t border-border pt-3 text-xs font-medium text-text-secondary">가격 정책</p>
+          <Field label="기본 마진율(%)" hint="비워두면 22%를 씁니다">
+            <input
+              type="number"
+              value={defaultMarginPercent}
+              onChange={(e) => setDefaultMarginPercent(e.target.value)}
+              placeholder="예: 22"
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="배송비 포함 여부" hint="켜면 자동계산에 위 배송비(원)를 더한 뒤 마진을 적용합니다">
+            <label className="flex items-center gap-2 text-xs text-text-secondary">
+              <input
+                type="checkbox"
+                checked={includeShippingInPrice}
+                onChange={(e) => setIncludeShippingInPrice(e.target.checked)}
+                className="h-4 w-4 rounded border-border"
+              />
+              판매가 자동계산에 배송비를 포함
+            </label>
+          </Field>
+          <Field label="가격 반올림 단위" hint="최종 판매가를 이 단위로 반올림합니다(쿠팡은 10원 단위 필수)">
+            <select
+              value={priceRoundingUnit}
+              onChange={(e) => setPriceRoundingUnit(e.target.value)}
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            >
+              <option value="10">10원</option>
+              <option value="100">100원</option>
+              <option value="1000">1,000원</option>
+            </select>
+          </Field>
+
+          {/* Sprint A-11(작업3 — CPO 지시: "상세페이지 공통 이미지(상단/하단)")
+              — 상세설명 맨 앞/맨 뒤에 항상 붙는 고정 이미지(배송/구매대행 안내
+              등). 업로드는 여기서 즉시 하고(uploadCommonImage), 실제 프로필
+              저장은 아래 "프로필 저장" 버튼을 눌러야 반영된다(다른 필드와 같은
+              흐름 — CP001류 이중 저장 로직 방지). */}
+          <p className="border-t border-border pt-3 text-xs font-medium text-text-secondary">상세페이지 공통 이미지</p>
+          <CommonImageField
+            label="상단 공통 이미지"
+            imageUrl={topCommonImageUrl}
+            enabled={topCommonImageEnabled}
+            uploading={imageUploading === "top"}
+            onEnabledChange={setTopCommonImageEnabled}
+            onUpload={(file) => uploadCommonImage("top", file)}
+          />
+          <CommonImageField
+            label="하단 공통 이미지"
+            imageUrl={bottomCommonImageUrl}
+            enabled={bottomCommonImageEnabled}
+            uploading={imageUploading === "bottom"}
+            onEnabledChange={setBottomCommonImageEnabled}
+            onUpload={(file) => uploadCommonImage("bottom", file)}
+          />
 
           <button
             type="button"

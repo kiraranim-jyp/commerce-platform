@@ -98,6 +98,7 @@ export function PlatformPreview({
   resolvedCategoryFields,
   productOptionGroups,
   settingsMissing,
+  settingsRecommended,
   developerMode,
   items,
   thumbnails,
@@ -176,6 +177,9 @@ export function PlatformPreview({
   productOptionGroups?: CanonicalProductOptionGroup[];
   /** 쿠팡 탭에서만 넘어온다 — 비어있지 않으면 등록 버튼 대신 "설정 필요" 배너를 보여준다. */
   settingsMissing?: string[];
+  /** Sprint A-11(작업8) — 없어도 등록은 되지만 채워두면 좋은 판매자 설정
+   * (배송비/반품배송비/교환배송비/제조자/품질보증/AS연락처) 중 비어있는 것들. */
+  settingsRecommended?: string[];
   /** P0-UI Epic 1/4 — Developer Mode가 꺼져 있으면 Payload/개발 로그를 숨긴다. */
   developerMode: boolean;
   /** Sprint A-3(작업1 — 이미지도 Accordion 안에서) — "source" 탭 전용이던 이미지
@@ -205,6 +209,7 @@ export function PlatformPreview({
         listing.category,
         settingsMissing,
         compliancePreview ?? undefined,
+        settingsRecommended,
       );
 
   // Sprint A-3(작업2 — Accordion, 작업4 — Auto Scroll) — 어떤 섹션이 펼쳐져 있는지

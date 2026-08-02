@@ -7,6 +7,20 @@ export interface DashboardData {
     success: number;
     failed: number;
   };
+  /** Sprint A-11(작업6 — CPO 지시: "관리자 등록 성공률 Dashboard — 시도/성공/실패/
+   * 성공률 + 실패 TOP N 원인") — today는 "오늘 아침에 훑어보는 용도"라 표본이
+   * 작을 때가 많다("실제로 등록 성공률이 높은 서비스"인지 판단하려면 더 넓은
+   * 창이 필요하다). 최근 30일 전체를 한 번 더 집계한다 — 같은 registration_attempts
+   * 테이블, 다른 기간일 뿐이라 today와 계산 로직을 공유한다(CP001류 중복 방지 —
+   * 아래 buildWindowStats 한 함수만 쓴다). */
+  overall: {
+    windowDays: number;
+    total: number;
+    success: number;
+    failed: number;
+    successRate: number;
+    topFailureCauses: { code: string; count: number }[];
+  };
   errorCodeCounts: Record<string, number>;
   categoryResolverKpi: {
     /** 011 마이그레이션(category_resolver_kpi 컬럼)이 아직 실행 안 됐으면 true —
@@ -56,12 +70,21 @@ export async function GET() {
   todayStart.setHours(0, 0, 0, 0);
   const todayStartIso = todayStart.toISOString();
 
-  const [attemptsRes, inquiriesRes] = await Promise.all([
+  const WINDOW_DAYS = 30;
+  const windowStart = new Date();
+  windowStart.setDate(windowStart.getDate() - WINDOW_DAYS);
+  const windowStartIso = windowStart.toISOString();
+
+  const [attemptsRes, inquiriesRes, windowAttemptsRes] = await Promise.all([
     supabase
       .from("registration_attempts")
       .select("status, error_code")
       .gte("created_at", todayStartIso),
     supabase.from("support_inquiries").select("error_code").gte("created_at", todayStartIso),
+    supabase
+      .from("registration_attempts")
+      .select("status, error_code")
+      .gte("created_at", windowStartIso),
   ]);
 
   if (attemptsRes.error) {
@@ -70,9 +93,13 @@ export async function GET() {
   if (inquiriesRes.error) {
     return NextResponse.json({ error: inquiriesRes.error.message }, { status: 500 });
   }
+  if (windowAttemptsRes.error) {
+    return NextResponse.json({ error: windowAttemptsRes.error.message }, { status: 500 });
+  }
 
   const attempts = attemptsRes.data ?? [];
   const inquiries = inquiriesRes.data ?? [];
+  const windowAttempts = windowAttemptsRes.data ?? [];
 
   const today = {
     total: attempts.length,
@@ -91,6 +118,26 @@ export async function GET() {
   for (const i of inquiries) {
     bump(i.error_code);
   }
+
+  const overallSuccess = windowAttempts.filter((a) => a.status === "SUBMITTED").length;
+  const overallFailed = windowAttempts.filter((a) => a.status === "FAILED").length;
+  const overallFailureCounts: Record<string, number> = {};
+  for (const a of windowAttempts) {
+    if (a.status !== "FAILED") continue;
+    const key = a.error_code ?? "미분류";
+    overallFailureCounts[key] = (overallFailureCounts[key] ?? 0) + 1;
+  }
+  const overall: DashboardData["overall"] = {
+    windowDays: WINDOW_DAYS,
+    total: windowAttempts.length,
+    success: overallSuccess,
+    failed: overallFailed,
+    successRate: windowAttempts.length > 0 ? Math.round((overallSuccess / windowAttempts.length) * 1000) / 10 : 0,
+    topFailureCauses: Object.entries(overallFailureCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([code, count]) => ({ code, count })),
+  };
 
   // Sprint A-2.6(Resolver Accuracy Validation) — CPO 요구사항: "KPI Dashboard에서
   // Accuracy/Manual Override/Failure/Trend를 볼 수 있게 한다." registration_attempts
@@ -166,6 +213,6 @@ export async function GET() {
         };
       })();
 
-  const data: DashboardData = { today, errorCodeCounts, categoryResolverKpi };
+  const data: DashboardData = { today, overall, errorCodeCounts, categoryResolverKpi };
   return NextResponse.json(data);
 }

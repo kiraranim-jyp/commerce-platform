@@ -81,6 +81,56 @@ export default function AdminDashboardPage() {
             <StatCard label="실패" value={data.today.failed} tone="error" />
           </section>
 
+          {/* Sprint A-11(작업6 — CPO 지시: "실제 등록 성공률이 높은 서비스로
+              완성도를 높인다" — 오늘 하루만 보면 표본이 작으니 최근 30일 전체
+              성공률/실패 원인 TOP5를 별도로 보여준다. */}
+          <section className="mt-4 rounded-lg border border-border bg-surface p-4">
+            <p className="text-xs font-medium text-text-secondary">
+              최근 {data.overall.windowDays}일 등록 성공률
+            </p>
+            {data.overall.total === 0 ? (
+              <p className="mt-2 text-xs text-text-tertiary">최근 {data.overall.windowDays}일간 등록 시도가 없습니다.</p>
+            ) : (
+              <>
+                <div className="mt-2 grid grid-cols-4 gap-2 rounded-md bg-background p-2 text-center">
+                  <div>
+                    <p className="text-[10px] text-text-tertiary">시도</p>
+                    <p className="text-lg font-semibold tabular-nums text-text-primary">{data.overall.total}건</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-text-tertiary">성공</p>
+                    <p className="text-lg font-semibold tabular-nums text-success">{data.overall.success}건</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-text-tertiary">실패</p>
+                    <p className="text-lg font-semibold tabular-nums text-error">{data.overall.failed}건</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-text-tertiary">성공률</p>
+                    <p
+                      className={`text-lg font-semibold tabular-nums ${data.overall.successRate >= 50 ? "text-success" : "text-error"}`}
+                    >
+                      {data.overall.successRate}%
+                    </p>
+                  </div>
+                </div>
+                {data.overall.topFailureCauses.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-[11px] text-text-tertiary">실패 원인 TOP {data.overall.topFailureCauses.length}</p>
+                    <ul className="mt-1 space-y-1">
+                      {data.overall.topFailureCauses.map((f) => (
+                        <li key={f.code} className="flex items-center justify-between text-xs">
+                          <span className="font-mono font-medium text-text-primary">{f.code}</span>
+                          <span className="text-text-secondary">{f.count}건</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+
           <section className="mt-4 rounded-lg border border-border bg-surface p-4">
             <p className="text-xs font-medium text-text-secondary">오늘 발생 ErrorCode 집계</p>
             {sortedCounts.length === 0 ? (

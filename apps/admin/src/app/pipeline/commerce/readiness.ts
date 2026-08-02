@@ -88,6 +88,10 @@ export function computeChecklistReadiness(
   category: CategorySelection,
   settingsMissing?: string[],
   compliance?: ComplianceReport,
+  // Sprint A-11(작업8) — 없어도 등록은 되지만 채워두면 좋은 판매자 설정
+  // (배송비/반품배송비/교환배송비/제조자/품질보증/AS연락처). settingsMissing과
+  // 달리 required:false로 넣어서 등록 버튼을 막지 않는다.
+  settingsRecommended?: string[],
 ): ReadinessSummary {
   const categoryConfirmed = isVerifiedCategorySelected(category);
 
@@ -131,6 +135,16 @@ export function computeChecklistReadiness(
       passed: false,
       required: true,
       group: "BUSINESS_SETTINGS" as const,
+    })),
+    // Sprint A-11(작업8) — 이미 채워져 있으면(즉, settingsRecommended에 없으면)
+    // 여기서 굳이 항목을 만들지 않는다(통과한 걸 매번 뭉텅이로 보여줄 필요는
+    // 없다는 기존 hint 원칙과 같다) — 비어있는 것만 △로 보여준다.
+    ...(settingsRecommended ?? []).map((label) => ({
+      label,
+      passed: false,
+      required: false,
+      group: "BUSINESS_SETTINGS" as const,
+      hint: "Settings에서 채우면 등록 품질이 올라갑니다(없어도 등록은 됩니다)",
     })),
   ];
 

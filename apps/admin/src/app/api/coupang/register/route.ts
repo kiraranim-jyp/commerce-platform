@@ -5,6 +5,7 @@ import {
   buildComplianceReport,
   buildCoupangPayload,
   resolveVerifiedCategoryCode,
+  validateCoupangPricing,
   type ComplianceReport,
   type CoupangPayload,
 } from "@commerce/listing";
@@ -367,6 +368,11 @@ export async function POST(request: Request) {
       manufacturer: sellerProfile.manufacturer,
       asContactNumber: sellerProfile.asContactNumber,
       qualityGuarantee: sellerProfile.qualityGuarantee,
+      defaultCountryOfOrigin: sellerProfile.defaultCountryOfOrigin,
+      topCommonImageUrl: sellerProfile.topCommonImageUrl,
+      topCommonImageEnabled: sellerProfile.topCommonImageEnabled,
+      bottomCommonImageUrl: sellerProfile.bottomCommonImageUrl,
+      bottomCommonImageEnabled: sellerProfile.bottomCommonImageEnabled,
     },
     descriptionTemplate: descriptionTemplate ?? undefined,
     categoryMeta,
@@ -444,6 +450,33 @@ export async function POST(request: Request) {
     return NextResponse.json(result);
   }
   logStep("설정 확인", "success", "카테고리/배송/반품 설정 확인 완료");
+
+  // Sprint A-11(작업9) — 이번 스프린트 LIVE 시도 3회에서 실제로 확인된 쿠팡
+  // 가격 제약(10원 단위, 반품배송비 상한)을 API 호출 전에 한 번 더 막는다.
+  // build-payload.ts의 validateCoupangPricing()이 유일한 판정 로직이다(CP001류
+  // 중복 방지) — 여기서는 그 결과만 보고 FAILED로 응답한다.
+  const pricingIssues = validateCoupangPricing(payload);
+  if (pricingIssues.length > 0) {
+    const message = pricingIssues.map((i) => i.message).join(" ");
+    logStep("가격 사전 검증", "failed", message);
+    const result: ListingResult = withMeta({
+      status: "FAILED",
+      platform: "coupang",
+      mode: "LIVE",
+      retryable: true,
+      payload,
+      error: {
+        step: "VALIDATION",
+        code: "CP008",
+        message,
+        retryable: true,
+        resolution: "판매가/반품배송비를 등록 화면에서 고친 뒤 다시 시도해주세요.",
+      },
+    });
+    await logRegistrationAttempt(result);
+    return NextResponse.json(result);
+  }
+  logStep("가격 사전 검증", "success", "판매가 10원 단위 · 반품배송비 상한 확인 완료");
 
   try {
     const { value: response, attempts } = await withRetry(

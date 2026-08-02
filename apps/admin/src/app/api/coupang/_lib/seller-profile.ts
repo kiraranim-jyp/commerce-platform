@@ -37,6 +37,29 @@ export interface SellerProfile {
   manufacturer: string;
   asContactNumber: string;
   qualityGuarantee: string;
+  /** Sprint A-11(작업1/2 — CPO 지시: "판매가 = 환율변환가격 × (1+기본마진)")
+   * null이면 packages/pricing의 DEFAULT_MARGIN_PERCENT(22%)를 쓴다 — 프로필을
+   * 아직 안 만든 판매자도 바로 자동계산이 동작해야 하기 때문이다. */
+  defaultMarginPercent: number | null;
+  /** true면 자동계산에 배송비를 포함한다(향후 확장용 — 현재 기본 자동계산은
+   * 마진만 적용하고 배송비는 "가격 계산 Breakdown"에서 별도로 다룬다). */
+  includeShippingInPrice: boolean;
+  /** 최종 판매가를 이 단위로 반올림한다 — 쿠팡의 10원 단위 규칙을 항상
+   * 만족시키기 위한 기본값 10, Settings에서 100/1000으로 바꿀 수 있다. */
+  priceRoundingUnit: number;
+  /** Sprint A-11(작업4) — 원본 사이트에 원산지 표기가 없는 상품이 많아(구매대행
+   * 특성상) 판매자가 실제로 아는 원산지를 한 번만 입력해두면 상품마다 자동
+   * 적용한다. product.countryOfOrigin(실제 원본에서 추출된 값)이 있으면 그게
+   * 우선이고, 없을 때만 이 기본값을 쓴다(원본 값을 덮어쓰지 않는다). */
+  defaultCountryOfOrigin: string;
+  /** Sprint A-11(작업3 — CPO 지시: "상세페이지 공통 이미지") — 브랜드 안내/배송
+   * 안내/교환·반품/주의사항/A·S 같이 상품마다 똑같이 붙는 이미지. 실제 업로드된
+   * 파일의 공개 URL만 저장한다(파일 자체는 Supabase Storage). enabled가 꺼져
+   * 있으면 URL이 있어도 등록 시 삽입하지 않는다. */
+  topCommonImageUrl: string | null;
+  topCommonImageEnabled: boolean;
+  bottomCommonImageUrl: string | null;
+  bottomCommonImageEnabled: boolean;
 }
 
 interface SellerProfileRow {
@@ -59,6 +82,14 @@ interface SellerProfileRow {
   manufacturer: string | null;
   as_contact_number: string | null;
   quality_guarantee: string | null;
+  default_margin_percent: number | null;
+  include_shipping_in_price: boolean | null;
+  price_rounding_unit: number | null;
+  default_country_of_origin: string | null;
+  top_common_image_url: string | null;
+  top_common_image_enabled: boolean | null;
+  bottom_common_image_url: string | null;
+  bottom_common_image_enabled: boolean | null;
 }
 
 function toProfile(row: SellerProfileRow): SellerProfile {
@@ -82,6 +113,14 @@ function toProfile(row: SellerProfileRow): SellerProfile {
     manufacturer: row.manufacturer ?? "",
     asContactNumber: row.as_contact_number ?? "",
     qualityGuarantee: row.quality_guarantee ?? "",
+    defaultMarginPercent: row.default_margin_percent,
+    includeShippingInPrice: row.include_shipping_in_price ?? false,
+    priceRoundingUnit: row.price_rounding_unit ?? 10,
+    defaultCountryOfOrigin: row.default_country_of_origin ?? "",
+    topCommonImageUrl: row.top_common_image_url,
+    topCommonImageEnabled: row.top_common_image_enabled ?? false,
+    bottomCommonImageUrl: row.bottom_common_image_url,
+    bottomCommonImageEnabled: row.bottom_common_image_enabled ?? false,
   };
 }
 
@@ -117,6 +156,14 @@ export interface SellerProfileInput {
   manufacturer?: string;
   asContactNumber?: string;
   qualityGuarantee?: string;
+  defaultMarginPercent?: number | null;
+  includeShippingInPrice?: boolean;
+  priceRoundingUnit?: number;
+  defaultCountryOfOrigin?: string;
+  topCommonImageUrl?: string | null;
+  topCommonImageEnabled?: boolean;
+  bottomCommonImageUrl?: string | null;
+  bottomCommonImageEnabled?: boolean;
 }
 
 /** insert/update가 같은 컬럼 매핑을 쓰므로 한 곳에서만 관리한다(CP001류 중복
@@ -142,6 +189,14 @@ function toRowFields(input: Partial<SellerProfileInput>): Record<string, unknown
   if (input.manufacturer !== undefined) row.manufacturer = input.manufacturer || null;
   if (input.asContactNumber !== undefined) row.as_contact_number = input.asContactNumber || null;
   if (input.qualityGuarantee !== undefined) row.quality_guarantee = input.qualityGuarantee || null;
+  if (input.defaultMarginPercent !== undefined) row.default_margin_percent = input.defaultMarginPercent;
+  if (input.includeShippingInPrice !== undefined) row.include_shipping_in_price = input.includeShippingInPrice;
+  if (input.priceRoundingUnit !== undefined) row.price_rounding_unit = input.priceRoundingUnit;
+  if (input.defaultCountryOfOrigin !== undefined) row.default_country_of_origin = input.defaultCountryOfOrigin || null;
+  if (input.topCommonImageUrl !== undefined) row.top_common_image_url = input.topCommonImageUrl || null;
+  if (input.topCommonImageEnabled !== undefined) row.top_common_image_enabled = input.topCommonImageEnabled;
+  if (input.bottomCommonImageUrl !== undefined) row.bottom_common_image_url = input.bottomCommonImageUrl || null;
+  if (input.bottomCommonImageEnabled !== undefined) row.bottom_common_image_enabled = input.bottomCommonImageEnabled;
   return row;
 }
 

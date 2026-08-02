@@ -44,6 +44,20 @@ export interface CoupangSellerConfig {
   manufacturer: string;
   asContactNumber: string;
   qualityGuarantee: string;
+  /** Sprint A-11(작업4 — CPO 지시: "판매자 기본정보 자동 적용 확장(원산지)")
+   * — manufacturer와 같은 이유(상품마다 다시 찾지 않는 판매자 운영 데이터)로
+   * SellerProfile에서 가져온다. 상품 설명에서 원산지를 못 찾았을 때만(빈 값일
+   * 때만) 대신 쓴다 — product.countryOfOrigin이 있으면 그게 항상 우선이다. */
+  defaultCountryOfOrigin: string;
+  /** Sprint A-11(작업3 — CPO 지시: "상세페이지 공통 이미지(상단/하단)") —
+   * 상세설명 맨 앞/맨 뒤에 항상 붙는 배송안내/구매대행 안내 등의 고정
+   * 이미지다. ON일 때만 상세설명 이미지 블록의 맨 앞/맨 뒤에 추가한다 —
+   * 상품별 실제 상세 이미지(descriptionImageUrls)는 그대로 두고 감싸기만
+   * 한다. */
+  topCommonImageUrl: string | null;
+  topCommonImageEnabled: boolean;
+  bottomCommonImageUrl: string | null;
+  bottomCommonImageEnabled: boolean;
 }
 
 export const BLANK_COUPANG_SELLER_CONFIG: CoupangSellerConfig = {
@@ -63,6 +77,11 @@ export const BLANK_COUPANG_SELLER_CONFIG: CoupangSellerConfig = {
   manufacturer: "",
   asContactNumber: "",
   qualityGuarantee: "",
+  defaultCountryOfOrigin: "",
+  topCommonImageUrl: null,
+  topCommonImageEnabled: false,
+  bottomCommonImageUrl: null,
+  bottomCommonImageEnabled: false,
 };
 
 export interface CoupangItemImage {
@@ -753,7 +772,9 @@ function buildCoupangItem(args: {
       contactNumber: sellerConfig.asContactNumber || sellerConfig.companyContactNumber,
       brand: product.brand.value || undefined,
       material: product.material.value || undefined,
-      countryOfOrigin: product.countryOfOrigin.value || undefined,
+      // Sprint A-11(작업4) — manufacturer와 같은 우선순위: 상품 설명에서 찾은
+      // 값이 있으면 그게 우선, 없을 때만 SellerProfile 기본값을 쓴다.
+      countryOfOrigin: product.countryOfOrigin.value || sellerConfig.defaultCountryOfOrigin || undefined,
       color: product.color.value || undefined,
       recommendedAge: product.recommendedAge.value || undefined,
       // Sprint A-8(추가 권장사항) — 원본 사이트에서 크롤링한 값이 있으면
@@ -848,6 +869,16 @@ export function buildCoupangPayload(
     images.push({ imageOrder: index + 1, imageType: "DETAIL", vendorPath: url });
   });
 
+  // Sprint A-11(작업3) — 상품별 실제 상세 이미지는 그대로 두고, ON인 공통
+  // 이미지만 맨 앞/맨 뒤에 감싼다. URL이 비어있으면(설정 안 함) enabled여도
+  // 아무것도 추가하지 않는다 — 빈 content 블록을 보내면 API가 거부한다.
+  const topCommonImage =
+    sellerConfig.topCommonImageEnabled && sellerConfig.topCommonImageUrl ? [sellerConfig.topCommonImageUrl] : [];
+  const bottomCommonImage =
+    sellerConfig.bottomCommonImageEnabled && sellerConfig.bottomCommonImageUrl
+      ? [sellerConfig.bottomCommonImageUrl]
+      : [];
+
   const contents: CoupangItemContent[] = [
     ...(description
       ? [
@@ -857,7 +888,7 @@ export function buildCoupangPayload(
           },
         ]
       : []),
-    ...descriptionImageUrls.map((url) => ({
+    ...[...topCommonImage, ...descriptionImageUrls, ...bottomCommonImage].map((url) => ({
       contentsType: "IMAGE" as const,
       contentDetails: [{ content: url, detailType: "IMAGE" as const }],
     })),
@@ -935,4 +966,41 @@ export function buildCoupangPayload(
     items,
     complianceFieldResults,
   };
+}
+
+/** Sprint A-11(작업9 — CPO 지시: "등록 전 자동 검증: 가격 반올림 + 반품배송비
+ * 상한") — 이번 스프린트 LIVE 시도 3회에서 실제로 확인된 쿠팡 제약이다:
+ * (1) 판매가는 10원 단위여야 한다("판매가는 최소 10원 단위로 입력가능합니다"),
+ * (2) 반품배송비는 min(20000, 판매가)를 넘을 수 없다(가격대별로 순차 확인된
+ * 두 에러 메시지를 합친 추정 공식 — 카테고리 메타 응답에는 이 상한이 없어
+ * client-side로 검증할 방법이 이 추정 규칙뿐이다. 모든 카테고리에서
+ * 100% 보장되는 공식은 아니므로, 여기서 걸러지지 않아도 실제 API가 최종
+ * 방어선이다). register/route.ts가 실제 API 호출 직전에 이 함수로 한 번 더
+ * 막는다 — 화면의 Sticky Summary가 막아주는 게 정상 경로지만, 오래된 상태를
+ * 들고 있는 클라이언트에 대비해 서버에서도 막는 CP007과 같은 방어선이다. */
+export interface CoupangPricingIssue {
+  field: "salePrice" | "returnCharge";
+  message: string;
+}
+
+export function validateCoupangPricing(payload: CoupangPayload): CoupangPricingIssue[] {
+  const issues: CoupangPricingIssue[] = [];
+  const nonRoundItems = payload.items.filter((item) => item.salePrice % 10 !== 0);
+  if (nonRoundItems.length > 0) {
+    issues.push({
+      field: "salePrice",
+      message: `판매가는 10원 단위여야 합니다(현재: ${nonRoundItems.map((i) => i.salePrice.toLocaleString()).join(", ")}원).`,
+    });
+  }
+  if (payload.items.length > 0) {
+    const minSalePrice = Math.min(...payload.items.map((i) => i.salePrice));
+    const maxReturnCharge = Math.min(20000, minSalePrice);
+    if (payload.returnCharge > maxReturnCharge) {
+      issues.push({
+        field: "returnCharge",
+        message: `반품배송비(${payload.returnCharge.toLocaleString()}원)가 상한(${maxReturnCharge.toLocaleString()}원 = min(20,000원, 판매가))을 초과합니다.`,
+      });
+    }
+  }
+  return issues;
 }

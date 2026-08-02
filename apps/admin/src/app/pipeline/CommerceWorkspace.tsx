@@ -171,6 +171,8 @@ export function CommerceWorkspace({
   } | null>(null);
   const [coupangCategoryFetching, setCoupangCategoryFetching] = useState(false);
   const [coupangSettingsMissing, setCoupangSettingsMissing] = useState<string[] | null>(null);
+  /** Sprint A-11(작업8) — 없어도 등록은 되지만 채워두면 좋은 판매자 설정 목록. */
+  const [coupangSettingsRecommended, setCoupangSettingsRecommended] = useState<string[] | null>(null);
   /** P0(Category Resolver 추적) — "추천 → 검증 → 선택"이 실제로 어떻게 이어졌는지
    * 등록 전에도 화면에서 바로 볼 수 있게 한다(register/route.ts의 "카테고리 추적"
    * 로그는 등록 시점에만 남아서, 등록 전 단계의 추론 과정은 별도로 남겨야 한다). */
@@ -292,11 +294,17 @@ export function CommerceWorkspace({
     let cancelled = false;
     fetch("/api/settings/coupang")
       .then((res) => res.json())
-      .then((data: { missing?: string[] }) => {
-        if (!cancelled) setCoupangSettingsMissing(data.missing ?? []);
+      .then((data: { missing?: string[]; recommended?: string[] }) => {
+        if (!cancelled) {
+          setCoupangSettingsMissing(data.missing ?? []);
+          setCoupangSettingsRecommended(data.recommended ?? []);
+        }
       })
       .catch(() => {
-        if (!cancelled) setCoupangSettingsMissing(null);
+        if (!cancelled) {
+          setCoupangSettingsMissing(null);
+          setCoupangSettingsRecommended(null);
+        }
       });
     return () => {
       cancelled = true;
@@ -935,6 +943,7 @@ export function CommerceWorkspace({
           resolvedCategoryFields={resolvedCategoryFields}
           productOptionGroups={product.optionGroups}
           settingsMissing={tab === "coupang" ? (coupangSettingsMissing ?? undefined) : undefined}
+          settingsRecommended={tab === "coupang" ? (coupangSettingsRecommended ?? undefined) : undefined}
           developerMode={developerMode}
           items={items}
           thumbnails={thumbnails}
