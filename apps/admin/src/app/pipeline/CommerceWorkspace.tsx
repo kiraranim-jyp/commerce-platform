@@ -120,7 +120,32 @@ export function CommerceWorkspace({
   // 렌더에서 딱 한 번만 실행되므로 재렌더마다 값이 바뀌지 않는다.
   const [editorEnteredAt] = useState(() => Date.now());
   const setProduct = onUpdateProduct;
-  const [tab, setTab] = useState<CommerceTab>("source");
+  // Sprint A-10(작업6 — CEO 지시: "URL 분석→쿠팡 수정→설정→뒤로가기→쿠팡 수정
+  // 화면 유지") — page.tsx의 sessionStorage 복원(A-9-6)은 product/items 등
+  // 분석 결과만 복원했지, 어느 탭이 열려 있었는지는 기억하지 못했다. 그래서
+  // Settings에 갔다가 뒤로가기하면 상품 데이터는 그대로인데 탭만 "source"로
+  // 되돌아갔다. 이 컴포넌트가 다시 마운트될 때(= 페이지를 벗어났다 돌아올 때)
+  // 마지막으로 보던 탭을 그대로 복원한다.
+  const TAB_STORAGE_KEY = "cartpilot-pipeline-tab-v1";
+  const [tab, setTab] = useState<CommerceTab>(() => {
+    if (typeof window === "undefined") return "source";
+    try {
+      const saved = sessionStorage.getItem(TAB_STORAGE_KEY);
+      if (saved === "source" || saved === "content" || PLATFORM_ORDER.includes(saved as PlatformId)) {
+        return saved as CommerceTab;
+      }
+    } catch {
+      // sessionStorage 접근 불가 — 기본값(source)으로 시작한다.
+    }
+    return "source";
+  });
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(TAB_STORAGE_KEY, tab);
+    } catch {
+      // 저장 실패해도 이번 세션 안에서는 정상 동작한다 — 복원만 안 될 뿐이다.
+    }
+  }, [tab]);
   const [categoryMappings, setCategoryMappings] = useState(INITIAL_CATEGORY_MAPPINGS);
   const [listingStates, setListingStates] = useState(INITIAL_LISTING_STATES);
   const [listingResults, setListingResults] = useState(INITIAL_LISTING_RESULTS);
@@ -137,6 +162,12 @@ export function CommerceWorkspace({
   const [coupangResolverDecision, setCoupangResolverDecision] = useState<{
     decision: "AUTO_SELECT" | "RECOMMEND" | "REJECT";
     score: number;
+    // Sprint A-10(작업2/8 — CEO 지시: "사유: 상품유형 불일치 / KC 요구 카테고리 /
+    // 식품 카테고리 충돌처럼 사람이 이해할 수 있는 문장으로") — scoreCategoryCandidate
+    // (packages/category)가 이미 만들어둔 실제 대조 근거 문장을 그대로 옮긴다.
+    // 지어낸 사유 목록을 새로 만들지 않는다 — REJECT일 때만 있다.
+    reason?: string;
+    rejectedCandidates?: { categoryName: string; categoryCode: number; score: number; reason: string }[];
   } | null>(null);
   const [coupangCategoryFetching, setCoupangCategoryFetching] = useState(false);
   const [coupangSettingsMissing, setCoupangSettingsMissing] = useState<string[] | null>(null);
@@ -626,7 +657,17 @@ export function CommerceWorkspace({
         (c, i) => `  ${i + 1}위 "${c.categoryName}"(코드 ${c.categoryCode}) — 유사도 ${c.score}% ${c.conflict ? "✗" : "○"} — ${c.reason}`,
       );
       if (data.decision === "REJECT") {
-        setCoupangResolverDecision({ decision: "REJECT", score: data.best?.score ?? 0 });
+        setCoupangResolverDecision({
+          decision: "REJECT",
+          score: data.best?.score ?? 0,
+          reason: data.best?.reason,
+          rejectedCandidates: (data.candidates ?? []).slice(0, 3).map((c) => ({
+            categoryName: c.categoryName,
+            categoryCode: c.categoryCode,
+            score: c.score,
+            reason: c.reason,
+          })),
+        });
         setCategoryTraceLog((prev) => [
           ...prev,
           "→ Resolver 3.0 판정: REJECT — 예측 결과가 상품유형과 명백히 다른 도메인이라 자동 후보로 채택하지 않았습니다.",
@@ -912,6 +953,7 @@ export function CommerceWorkspace({
           selectedGalleryCount={
             product.images.filter((img) => img.useInProductGallery && !img.isRepresentative).length
           }
+          complianceReport={confirmingPlatform === "coupang" ? complianceReportPreview : null}
           onCancel={cancelListingModal}
           onConfirm={confirmListing}
         />

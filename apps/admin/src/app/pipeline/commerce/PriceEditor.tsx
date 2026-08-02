@@ -53,9 +53,14 @@ export function PriceEditor({
     <section className="rounded-lg border border-border p-4 text-sm">
       <h3 className="text-base font-medium">판매가격</h3>
 
+      {/* Sprint A-10(작업4 — CEO 지시: "가격 계산 과정이 한눈에 보여야 한다,
+          보는 위치가 너무 깊다") — A-9까지는 환율/자동계산이 "환율" 한 항목 안에
+          문단으로 뭉쳐 있었다. 원본/실시간 환율/자동 계산/판매가를 각각 독립된
+          행으로 분리해서 Breakdown을 펼치지 않아도 4줄만 보면 계산 과정 전체가
+          보이게 한다. */}
       <div className="mt-3 space-y-2.5">
         <div>
-          <p className="text-xs text-text-secondary">원본 가격</p>
+          <p className="text-xs text-text-secondary">원본</p>
           <p className="mt-0.5 text-sm font-medium text-text-primary">
             {formatOriginalPrice(product.price.value.amount, product.price.value.currency)}
           </p>
@@ -63,14 +68,7 @@ export function PriceEditor({
 
         <div>
           <div className="flex items-center justify-between">
-            <p className="text-xs text-text-secondary">
-              환율 · {product.price.value.currency} {breakdown.exchangeRate.toFixed(2)}
-              {breakdown.isRateEstimate
-                ? " (추정 고정환율)"
-                : exchangeRates?.source === "frankfurter"
-                  ? " (출처: ECB)"
-                  : ""}
-            </p>
+            <p className="text-xs text-text-secondary">실시간 환율</p>
             <button
               type="button"
               onClick={onRefreshExchangeRates}
@@ -80,19 +78,31 @@ export function PriceEditor({
               {exchangeRatesLoading ? "불러오는 중…" : "새로고침"}
             </button>
           </div>
+          <p className="mt-0.5 text-sm font-medium text-text-primary">
+            1 {product.price.value.currency} = {Math.round(breakdown.exchangeRate).toLocaleString("ko-KR")}원
+            {breakdown.isRateEstimate
+              ? " (추정 고정환율)"
+              : exchangeRates?.source === "frankfurter"
+                ? " (출처: ECB)"
+                : ""}
+          </p>
           {exchangeRates && !breakdown.isRateEstimate && (
             <p className="mt-0.5 text-[11px] text-text-tertiary">
               {new Date(exchangeRates.fetchedAt).toLocaleString("ko-KR")} 기준
             </p>
           )}
-          <p className="mt-0.5 text-sm text-text-secondary">
-            {product.price.value.amount} {product.price.value.currency} × {breakdown.exchangeRate.toFixed(2)} ={" "}
-            {formatKrw(breakdown.costKrw)}
+        </div>
+
+        <div>
+          <p className="text-xs text-text-secondary">자동 계산</p>
+          <p className="mt-0.5 text-sm font-medium text-text-primary">≈ {formatKrw(breakdown.costKrw)}</p>
+          <p className="mt-0.5 text-[11px] text-text-tertiary">
+            {product.price.value.amount} {product.price.value.currency} × {breakdown.exchangeRate.toFixed(2)}
           </p>
         </div>
 
         <div className="border-t border-border pt-2.5">
-          <label className="text-xs text-text-secondary">판매가격</label>
+          <label className="text-xs text-text-secondary">판매가</label>
           <div className="mt-0.5 flex items-center gap-2">
             <span className="text-sm text-text-secondary">₩</span>
             <EditableText

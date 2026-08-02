@@ -57,6 +57,11 @@ export function RegistrationReadinessCard({
   const canRegister = allRequiredPassed && status === "READY";
   const isTerminal = status === "SUBMITTED" || status === "FAILED";
   const remaining = [...required, ...recommended].filter((i) => !i.passed).length;
+  // A-10.1-②(CEO 지시: "남은 항목 N개 → 다음 입력하기 → 를 누르면 자동으로
+  // 해당 Accordion이 열리고 포커스") — 필수 항목을 먼저, 그다음 선택 항목
+  // 순서로 훑어서 아직 안 채워졌고 이동할 섹션이 있는 첫 항목을 다음 목표로
+  // 삼는다(법적 필수가 가장 급하다는 기존 우선순위와 같은 방향).
+  const nextIncomplete = [...required, ...recommended].find((i) => !i.passed && i.sectionId);
 
   // Sprint A-6(개선4) — CPO 요구사항: "사용자는 왜 이것을 내가 입력해야 하지를
   // 바로 이해할 수 있어야 한다." 필수 목록을 하나로 뭉치지 않고 성격별로
@@ -132,9 +137,20 @@ export function RegistrationReadinessCard({
         </div>
       )}
 
-      <p className="border-t border-border pt-2 text-xs text-text-secondary">
-        남은 작업 <span className="font-medium text-text-primary">{remaining}개</span>
-      </p>
+      <div className="flex items-center justify-between border-t border-border pt-2 text-xs text-text-secondary">
+        <span>
+          남은 작업 <span className="font-medium text-text-primary">{remaining}개</span>
+        </span>
+        {nextIncomplete && onItemClick && !isTerminal && (
+          <button
+            type="button"
+            onClick={() => onItemClick(nextIncomplete.sectionId!)}
+            className="font-medium text-primary hover:underline"
+          >
+            다음 입력하기 →
+          </button>
+        )}
+      </div>
 
       {settingsMissing && settingsMissing.length > 0 && !isTerminal && (
         <a

@@ -42,8 +42,16 @@ function summarize(items: ReadinessItem[]): ReadinessSummary {
   const required = items.filter((i) => i.required);
   const recommended = items.filter((i) => !i.required);
   const allRequiredPassed = required.every((i) => i.passed);
-  const passedCount = items.filter((i) => i.passed).length;
-  const percent = items.length > 0 ? Math.round((passedCount / items.length) * 100) : 100;
+  // Sprint A-10(작업9 — CEO 재확인: "100% → 카테고리 선택 → 80%로 떨어졌다,
+  // 이 값 없이도 실제 쿠팡 등록은 됐던 것으로 기억한다") — A-9에서 등록 버튼
+  // 게이트(allRequiredPassed)는 서버와 맞췄지만, 이 카드 제목 자체가 "등록
+  // 가능성"인데 정작 퍼센트는 선택 입력(권장) 항목까지 분모에 섞어서 계산했다.
+  // 그래서 필수 항목을 전부 통과해 버튼이 이미 눌리는 상태에서도 선택 항목이
+  // 비어있으면 80%처럼 보여 "등록이 막혔다"는 오해를 줬다. "등록 가능성"이라는
+  // 라벨대로 필수 항목 충족률만 반영하고, 선택 입력은 "남은 작업" 카운트에서만
+  // 보여준다(recommended는 그대로 items에 남아 있어 화면 목록에는 계속 뜬다).
+  const passedRequiredCount = required.filter((i) => i.passed).length;
+  const percent = required.length > 0 ? Math.round((passedRequiredCount / required.length) * 100) : 100;
   return { items, required, recommended, allRequiredPassed, percent };
 }
 

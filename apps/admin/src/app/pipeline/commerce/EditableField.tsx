@@ -9,6 +9,10 @@ interface EditableTextProps {
   className?: string;
 }
 
+interface EditableTextareaProps extends EditableTextProps {
+  rows?: number;
+}
+
 const DEFAULT_INPUT_CLASS =
   "w-full rounded-md border border-transparent bg-transparent px-1 py-0.5 text-sm text-text-primary hover:border-border focus:border-primary focus:bg-surface focus:outline-none";
 
@@ -41,7 +45,7 @@ export function EditableText({ value, onCommit, placeholder, className }: Editab
   );
 }
 
-export function EditableTextarea({ value, onCommit, placeholder, className }: EditableTextProps) {
+export function EditableTextarea({ value, onCommit, placeholder, className, rows }: EditableTextareaProps) {
   const [draft, setDraft] = useState(value);
   const [syncedValue, setSyncedValue] = useState(value);
   if (value !== syncedValue) {
@@ -53,7 +57,7 @@ export function EditableTextarea({ value, onCommit, placeholder, className }: Ed
     <textarea
       value={draft}
       placeholder={placeholder}
-      rows={4}
+      rows={rows ?? 4}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={() => {
         if (draft !== value) onCommit(draft);

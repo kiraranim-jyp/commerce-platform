@@ -234,6 +234,10 @@ export default function PipelinePage() {
   function resetWorkspace() {
     try {
       sessionStorage.removeItem(WORKSPACE_STORAGE_KEY);
+      // Sprint A-10(작업6) — CommerceWorkspace가 마지막 탭을 기억하는 별도 키.
+      // 새 상품 분석을 시작하면 이전 상품에서 열려 있던 탭(예: 쿠팡)이 새
+      // 상품에 그대로 이어지면 안 되므로 같이 지운다.
+      sessionStorage.removeItem("cartpilot-pipeline-tab-v1");
     } catch {
       // no-op — 세션 스토리지가 막혀있어도 리셋 자체는 계속 진행한다.
     }
@@ -350,7 +354,7 @@ export default function PipelinePage() {
     // 카피라 좁은 폭(max-w-5xl)이 오히려 읽기 좋지만, Editor(started)는
     // 필드가 많은 폼이라 넓은 폭이 필요하다. 두 상태를 하나의 max-w로
     // 묶어뒀던 게 문제였다 — started일 때만 1800px까지 넓힌다.
-    <main className={`mx-auto min-w-0 py-10 ${started ? "max-w-[1800px] px-4" : "max-w-5xl px-6"}`}>
+    <main className={`mx-auto min-w-0 py-10 ${started ? "max-w-[1900px] px-4" : "max-w-5xl px-6"}`}>
       <header className="flex items-center justify-between">
         <button
           type="button"

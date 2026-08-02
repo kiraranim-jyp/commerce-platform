@@ -292,6 +292,57 @@ async function extractOptionsFromDom(page: Page): Promise<CanonicalProductOption
   });
 }
 
+/** Sprint A-10(작업3 — CEO 실측: "본문에 2-3 Years/3-5 Years/5-7 Years, Dress
+ * length 53cm/56cm 전부 있는데 옵션이 비어있다") — A-9의 extractOptionsFromDom은
+ * `<select>` 드롭다운만 본다. 이 값들이 select가 아니라 상세설명 본문에 그냥
+ * 텍스트로 나열된 사이트도 있어서, select 스캔이 아무것도 못 찾았을 때만
+ * (폴백 — DOM select가 더 구조화된 신호라 항상 우선) 상세 영역 텍스트에서 같은
+ * 패턴을 정규식으로 찾는다. 없는 값을 추론하지 않는다 — 실제 본문 문자열만
+ * 그대로 추출하고, 애매하면(패턴이 1개만 매칭되면) 채택하지 않는다. */
+async function extractOptionsFromDescriptionText(page: Page): Promise<CanonicalProductOptionGroup[]> {
+  return page.evaluate(() => {
+    const DETAIL_SELECTOR =
+      '[class*="description" i], [class*="detail" i], [id*="description" i], [id*="detail" i], [class*="product-info" i], [class*="product-details" i]';
+    const seenText = new Set<string>();
+    const chunks: string[] = [];
+    document.querySelectorAll(DETAIL_SELECTOR).forEach((el) => {
+      const t = (el as HTMLElement).innerText?.trim();
+      if (t && !seenText.has(t)) {
+        seenText.add(t);
+        chunks.push(t);
+      }
+    });
+    const text = chunks.join("\n");
+    if (!text) return [];
+
+    const groups: { name: string; values: string[] }[] = [];
+
+    // "2-3 Years", "3-5 Years", "6-12 Months" 류 나이/사이즈 범위 나열.
+    const AGE_RANGE_PATTERN = /\b\d{1,2}\s*[-–]\s*\d{1,2}\s*(?:years?|yrs?|months?|mo)\b/gi;
+    const ageMatches = Array.from(new Set((text.match(AGE_RANGE_PATTERN) ?? []).map((m) => m.trim())));
+    if (ageMatches.length >= 2) {
+      groups.push({ name: "사이즈", values: ageMatches });
+    }
+
+    // "Dress length: 53cm/56cm", "Waist - 30cm, 32cm" 류 "라벨: 값(cm) 목록" —
+    // 옵션값별 상세 스펙(CEO 지시: "옵션별 상세정보도 함께 매핑").
+    const SPEC_LINE_PATTERN = /([A-Za-z][A-Za-z ]{2,24}?)\s*[:\-]\s*((?:\d+(?:\.\d+)?\s*cm\s*[/,]?\s*){2,})/gi;
+    let specMatch: RegExpExecArray | null;
+    while ((specMatch = SPEC_LINE_PATTERN.exec(text)) != null) {
+      const label = specMatch[1].trim();
+      const values = specMatch[2]
+        .split(/[/,]/)
+        .map((v) => v.trim())
+        .filter((v) => /^\d+(\.\d+)?\s*cm$/.test(v));
+      if (values.length >= 2 && !groups.some((g) => g.name.toLowerCase() === label.toLowerCase())) {
+        groups.push({ name: label, values });
+      }
+    }
+
+    return groups;
+  });
+}
+
 /** JSON-LD → Microdata → OpenGraph → DOM 순으로 시도하고, 필드 단위로 부족한 부분을
  * 다음 소스로 보강한다(예: JSON-LD에 title은 있는데 price가 없으면 Microdata의
  * price로 채운다). Microdata를 OpenGraph보다 앞에 두는 이유: 둘 다 "구조화 데이터"로
@@ -309,6 +360,8 @@ export async function extractProductData(
   const og = extractFromOpenGraph(html);
   const dom = await extractFromDom(page);
   const domOptionGroups = await extractOptionsFromDom(page);
+  const textOptionGroups = domOptionGroups.length === 0 ? await extractOptionsFromDescriptionText(page) : [];
+  const resolvedOptionGroups = domOptionGroups.length > 0 ? domOptionGroups : textOptionGroups;
 
   const sources: Record<string, ProductDataSource> = {};
   const pick = <K extends keyof ExtractedProductData>(
@@ -341,14 +394,16 @@ export async function extractProductData(
     description: pick("description"),
     material: pick("material"),
     options: jsonLd?.options ?? [],
-    // Sprint A-9(작업3) — Shopify가 아닌 사이트는 이 DOM select 스캔이 유일한
+    // Sprint A-9(작업3) — Shopify가 아닌 사이트는 이 DOM select 스캔이 우선
     // 옵션 소스다. jsonLd?.optionGroups는 이 함수 안에서 절대 채워지지 않으므로
-    // (extractFromJsonLd가 options:[]만 세팅) 항상 domOptionGroups를 쓴다.
-    optionGroups: domOptionGroups,
+    // (extractFromJsonLd가 options:[]만 세팅) domOptionGroups를 우선 쓴다.
+    // Sprint A-10(작업3) — select가 없으면 상세설명 본문 텍스트 스캔(textOptionGroups)으로
+    // 폴백한다.
+    optionGroups: resolvedOptionGroups,
     breadcrumbPath: jsonLd?.breadcrumbPath,
     jsonLdCategory: jsonLd?.jsonLdCategory,
   };
-  if (domOptionGroups.length > 0) sources.optionGroups = "dom";
+  if (resolvedOptionGroups.length > 0) sources.optionGroups = "dom";
 
   return { data, sources };
 }

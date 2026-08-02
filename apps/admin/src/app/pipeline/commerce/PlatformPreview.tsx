@@ -153,7 +153,12 @@ export function PlatformPreview({
    * Resolver 3.0의 최종 판정을 사람이 읽을 문장으로 보여주는 데 쓴다. 원시
    * categoryTraceLog(개발 로그 형식)와 분리된 이유는, 로그는 Developer Mode
    * 뒤로 숨기고 이 판정만 항상 보이게 하기 위해서다. */
-  coupangResolverDecision?: { decision: "AUTO_SELECT" | "RECOMMEND" | "REJECT"; score: number } | null;
+  coupangResolverDecision?: {
+    decision: "AUTO_SELECT" | "RECOMMEND" | "REJECT";
+    score: number;
+    reason?: string;
+    rejectedCandidates?: { categoryName: string; categoryCode: number; score: number; reason: string }[];
+  } | null;
   /** Sprint A #1(Category Meta -> 동적 입력폼) — 쿠팡 탭에서 카테고리가 실제
    * 선택됐을 때만 채워진다. */
   categoryMeta?: CoupangCategoryMeta | null;
@@ -212,7 +217,19 @@ export function PlatformPreview({
   function goToSection(sectionId: string) {
     setOpenSections((prev) => ({ ...prev, [sectionId]: true }));
     requestAnimationFrame(() => {
-      document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      const section = document.getElementById(sectionId);
+      section?.scrollIntoView({ behavior: "smooth", block: "start" });
+      // A-10.1-②(CEO 지시: "다음 입력하기 → 해당 Accordion이 열리고 해당 입력칸에
+      // 포커스") — 필드마다 고유 id를 새로 붙이는 대신, 방금 연 섹션 안에서 첫
+      // 번째 입력 가능한 요소를 찾아 포커스한다(스크롤 애니메이션이 끝나길
+      // 기다려야 해서 약간 지연시킨다 — 스크롤 도중 포커스하면 브라우저가 다시
+      // 그 위치로 스크롤을 끌어당겨서 사용자가 보던 위치가 흔들린다).
+      window.setTimeout(() => {
+        const input = section?.querySelector<HTMLElement>(
+          'input:not([type="checkbox"]):not([disabled]), textarea:not([disabled])',
+        );
+        input?.focus();
+      }, 400);
     });
   }
 
@@ -224,13 +241,30 @@ export function PlatformPreview({
     };
   }
 
+  /** A-10.1-①(CEO 지시: "Accordion 제목에 기본정보 ✅ / 옵션 ⚠️처럼 완료 여부
+   * 표시") — readinessSummary.items가 이미 sectionId별로 필수/통과 여부를 갖고
+   * 있다(readiness.ts, RegistrationReadinessCard와 같은 계산). 그 섹션에 매핑된
+   * 필수 항목이 하나라도 안 채워졌으면 ⚠️, 다 채워졌으면(또는 이 섹션에 필수
+   * 항목이 없으면) ✅ — "등록 가능성" 퍼센트(#306에서 고친 필수 항목 기준)와
+   * 같은 기준이라 서로 다른 판정을 보여줄 일이 없다. */
+  function sectionCompletionBadge(sectionId: string) {
+    const relevant = readinessSummary.items.filter((i) => i.sectionId === sectionId);
+    if (relevant.length === 0) return null;
+    const hasRequiredFail = relevant.some((i) => i.required && !i.passed);
+    return (
+      <span aria-label={hasRequiredFail ? "확인 필요" : "완료"} className="text-xs">
+        {hasRequiredFail ? "⚠️" : "✅"}
+      </span>
+    );
+  }
+
   const fix = onFixTextField;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="space-y-3">
-        <CollapsibleSection title="기본정보" {...sectionProps("section-basic")}>
-          <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+        <CollapsibleSection title="기본정보" badge={sectionCompletionBadge("section-basic")} {...sectionProps("section-basic")}>
+          <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 xl:grid-cols-3">
             <FieldRow label="상품명" field={product.title} required>
               <EditableText
                 value={listing.title}
@@ -289,7 +323,7 @@ export function PlatformPreview({
           </div>
         </CollapsibleSection>
 
-        <CollapsibleSection title="카테고리" {...sectionProps("section-category")}>
+        <CollapsibleSection title="카테고리" badge={sectionCompletionBadge("section-category")} {...sectionProps("section-category")}>
           <p
             className={`text-sm ${isCategoryConfirmed ? "text-text-primary" : "text-warning"}`}
           >
@@ -321,13 +355,42 @@ export function PlatformPreview({
           )}
         </CollapsibleSection>
 
-        <CollapsibleSection title="옵션" badge={<span className="text-xs text-text-tertiary">{listing.options.length}개</span>} {...sectionProps("section-options")}>
+        <CollapsibleSection
+          title="옵션"
+          badge={
+            <>
+              {sectionCompletionBadge("section-options")}
+              <span className="text-xs text-text-tertiary">{listing.options.length}개</span>
+            </>
+          }
+          {...sectionProps("section-options")}
+        >
           {productOptionGroups && productOptionGroups.length > 0 ? (
-            <p className="text-xs text-text-tertiary">
-              원본 사이트의 옵션 구조(사이즈/색상 등 옵션그룹 {productOptionGroups.length}개)가
-              품목별 가격/재고에 그대로 반영됩니다. 값 목록은 아래에서 확인·수정할 수
-              있습니다.
-            </p>
+            <>
+              <p className="text-xs text-text-tertiary">
+                원본 사이트의 옵션 구조(사이즈/색상 등 옵션그룹 {productOptionGroups.length}개)가
+                품목별 가격/재고에 그대로 반영됩니다. 값 목록은 아래에서 확인할 수 있습니다.
+              </p>
+              {/* A-10(작업1 — 넓어진 폭을 옵션그룹 여러 개가 나란히 보이는 데 쓴다.
+                  기존엔 그룹 이름/값이 콤마로 뭉친 한 줄 텍스트라 사이즈/색상이
+                  몇 개인지 한눈에 안 보였다. */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {productOptionGroups.map((group) => (
+                  <div key={group.name} className="rounded-md border border-border p-2.5">
+                    <p className="text-xs font-medium text-text-secondary">
+                      {group.name} <span className="text-text-tertiary">({group.values.length}개)</span>
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {group.values.map((v) => (
+                        <span key={v} className="rounded-full bg-background px-2 py-0.5 text-xs text-text-primary">
+                          {v}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : null}
           <EditableText
             value={product.options.value.join(", ")}
@@ -335,13 +398,10 @@ export function PlatformPreview({
             placeholder="옵션 없음 (쉼표로 구분)"
             className={FIELD_INPUT_CLASS}
           />
-          {listing.options.length > 0 && (
+          {(!productOptionGroups || productOptionGroups.length === 0) && listing.options.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {listing.options.map((opt) => (
-                <span
-                  key={opt}
-                  className="rounded-full bg-background px-2 py-0.5 text-xs text-text-primary"
-                >
+                <span key={opt} className="rounded-full bg-background px-2 py-0.5 text-xs text-text-primary">
                   {opt}
                 </span>
               ))}
@@ -349,7 +409,7 @@ export function PlatformPreview({
           )}
         </CollapsibleSection>
 
-        <CollapsibleSection title="가격" {...sectionProps("section-price")}>
+        <CollapsibleSection title="가격" badge={sectionCompletionBadge("section-price")} {...sectionProps("section-price")}>
           <PriceEditor
             product={product}
             onUpdateSalePriceKrw={onUpdateSalePriceKrw}
@@ -360,12 +420,21 @@ export function PlatformPreview({
           />
         </CollapsibleSection>
 
-        <CollapsibleSection title="이미지" badge={<span className="text-xs text-text-tertiary">{items.length}장</span>} {...sectionProps("section-images")}>
+        <CollapsibleSection
+          title="이미지"
+          badge={
+            <>
+              {sectionCompletionBadge("section-images")}
+              <span className="text-xs text-text-tertiary">{items.length}장</span>
+            </>
+          }
+          {...sectionProps("section-images")}
+        >
           <ImageSummaryCard product={product} items={items} thumbnails={thumbnails} onOpen={onOpenGallery} />
         </CollapsibleSection>
 
-        <CollapsibleSection title="배송" {...sectionProps("section-shipping")}>
-          <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+        <CollapsibleSection title="배송" badge={sectionCompletionBadge("section-shipping")} {...sectionProps("section-shipping")}>
+          <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 xl:grid-cols-3">
             <FieldRow label="재고">
               <div className="flex items-center gap-1">
                 <EditableText
@@ -409,7 +478,7 @@ export function PlatformPreview({
             로직을 두 곳에 두지 않는다). */}
         {listing.platform === "coupang" && <SellerProfileSummaryCard />}
 
-        <CollapsibleSection title="고시정보" {...sectionProps("section-notice")}>
+        <CollapsibleSection title="고시정보" badge={sectionCompletionBadge("section-notice")} {...sectionProps("section-notice")}>
           <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
             <FieldRow label="원산지" field={product.countryOfOrigin} required>
               <EditableText
@@ -442,7 +511,7 @@ export function PlatformPreview({
           {compliancePreview && <ComplianceBreakdown report={compliancePreview} />}
         </CollapsibleSection>
 
-        <CollapsibleSection title="KC (어린이제품 등 인증정보)" {...sectionProps("section-kc")}>
+        <CollapsibleSection title="KC (어린이제품 등 인증정보)" badge={sectionCompletionBadge("section-kc")} {...sectionProps("section-kc")}>
           <FieldRow label="인증정보(KC 등)" field={product.certification}>
             <EditableText
               value={product.certification.value}
@@ -457,12 +526,13 @@ export function PlatformPreview({
           </p>
         </CollapsibleSection>
 
-        <CollapsibleSection title="상세설명" {...sectionProps("section-description")}>
+        <CollapsibleSection title="상세설명" badge={sectionCompletionBadge("section-description")} {...sectionProps("section-description")}>
           <FieldRow label="상세설명" field={product.description}>
             <EditableTextarea
               value={listing.description}
               onCommit={(v) => onUpdateField("description", v)}
               placeholder="상세설명 없음"
+              rows={10}
               className={FIELD_INPUT_CLASS}
             />
           </FieldRow>

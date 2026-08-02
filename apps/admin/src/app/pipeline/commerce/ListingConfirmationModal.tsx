@@ -1,6 +1,6 @@
 "use client";
 
-import type { ExecutionMode, PlatformConnectionStatus } from "@commerce/listing";
+import type { ComplianceReport, ExecutionMode, PlatformConnectionStatus } from "@commerce/listing";
 import type { ListingModel } from "@commerce/marketplace";
 import { formatKrw } from "@commerce/pricing";
 
@@ -18,6 +18,7 @@ export function ListingConfirmationModal({
   connectionStatus,
   descriptionImageCount,
   selectedGalleryCount,
+  complianceReport,
   onCancel,
   onConfirm,
 }: {
@@ -32,12 +33,19 @@ export function ListingConfirmationModal({
    * 담은 listing.additionalImages.length보다 많으면 플랫폼 한도 때문에 일부가
    * 잘렸다는 뜻이라 그 사실을 등록 직전에 알려준다. */
   selectedGalleryCount?: number;
+  /** A-10.1-③(CEO 지시: "등록 버튼을 누르면 자동 입력 N개/직접 입력 M개/필수
+   * 누락 없음을 한 번 더 보여주고 등록") — CommerceWorkspace가 이미 계산해둔
+   * complianceReportPreview를 그대로 받는다(register 라우트/Sticky Summary와
+   * 같은 계산 — CP001과 같은 종류의 판정 불일치를 피하려고 새로 계산하지
+   * 않는다). 쿠팡 외 플랫폼이거나 카테고리가 아직 확정 안 됐으면 없다. */
+  complianceReport?: ComplianceReport | null;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
   const isCategoryConfirmed =
     listing.category.state === "SELECTED" || listing.category.state === "CONFIRMED";
   const isLive = mode === "LIVE";
+  const criticalMissing = complianceReport?.userInputNeeded.some((f) => f.reasonCode === "CRITICAL") ?? false;
 
   return (
     <div
@@ -58,6 +66,29 @@ export function ListingConfirmationModal({
           <p className="mt-2 rounded-md bg-warning-soft px-3 py-2 text-xs font-medium text-warning">
             ⚠ 실제로 {listing.platformLabel}에 등록됩니다 — 등록 후 되돌릴 수 없으니 아래 내용을 확인해주세요.
           </p>
+        )}
+
+        {complianceReport && (
+          <div className="mt-3 grid grid-cols-3 gap-2 rounded-md bg-background p-2.5 text-center">
+            <div>
+              <p className="text-[10px] text-text-tertiary">자동 입력</p>
+              <p className="text-base font-semibold tabular-nums text-success">
+                {complianceReport.autoResolvedCount}개
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] text-text-tertiary">직접 입력</p>
+              <p className="text-base font-semibold tabular-nums text-text-primary">
+                {complianceReport.userRequiredCount}개
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] text-text-tertiary">필수 누락</p>
+              <p className={`text-base font-semibold ${criticalMissing ? "text-error" : "text-success"}`}>
+                {criticalMissing ? "있음" : "없음"}
+              </p>
+            </div>
+          </div>
         )}
 
         <ul className="mt-4 space-y-3 text-sm">
