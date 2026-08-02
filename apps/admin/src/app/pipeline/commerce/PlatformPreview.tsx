@@ -89,6 +89,7 @@ export function PlatformPreview({
   onFetchCoupangCategory,
   coupangCategoryFetching,
   categoryTraceLog,
+  coupangResolverDecision,
   categoryMeta,
   categoryMetaLoading,
   categoryMetaError,
@@ -148,6 +149,11 @@ export function PlatformPreview({
   /** P0(Category Resolver 추적) — "추천 신호 → 쿠팡 API 질의 → 검증 결과 → 선택"
    * 순서를 그대로 보여준다. */
   categoryTraceLog?: string[];
+  /** Sprint A-9(작업2/8 — CEO 지시: "왜 등록불가인지 전혀 이해하지 못합니다") —
+   * Resolver 3.0의 최종 판정을 사람이 읽을 문장으로 보여주는 데 쓴다. 원시
+   * categoryTraceLog(개발 로그 형식)와 분리된 이유는, 로그는 Developer Mode
+   * 뒤로 숨기고 이 판정만 항상 보이게 하기 위해서다. */
+  coupangResolverDecision?: { decision: "AUTO_SELECT" | "RECOMMEND" | "REJECT"; score: number } | null;
   /** Sprint A #1(Category Meta -> 동적 입력폼) — 쿠팡 탭에서 카테고리가 실제
    * 선택됐을 때만 채워진다. */
   categoryMeta?: CoupangCategoryMeta | null;
@@ -297,10 +303,15 @@ export function PlatformPreview({
             onSelect={onSelectCategory}
             onFetchCoupangCategory={onFetchCoupangCategory}
             coupangCategoryFetching={coupangCategoryFetching}
+            resolverDecision={coupangResolverDecision}
           />
-          {categoryTraceLog && categoryTraceLog.length > 0 && (
+          {/* Sprint A-9(작업2/8) — "검증됨=false" 같은 개발자 로그 문구는 일반
+              사용자에게 의미가 없다. Developer Mode를 켰을 때만 원시 추적
+              로그를 보여주고, 평소엔 CategoryRecommendationPanel의 사람이
+              읽는 판정 문장(resolverDecision)만 보인다. */}
+          {developerMode && categoryTraceLog && categoryTraceLog.length > 0 && (
             <div className="rounded-md bg-background p-3 text-[11px] text-text-secondary">
-              <p className="font-medium text-text-tertiary">카테고리 추적 로그</p>
+              <p className="font-medium text-text-tertiary">카테고리 추적 로그(Developer Mode)</p>
               <ul className="mt-1 space-y-0.5">
                 {categoryTraceLog.map((line, i) => (
                   <li key={i}>{line}</li>

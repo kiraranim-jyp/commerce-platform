@@ -884,6 +884,7 @@ export function CommerceWorkspace({
           onFetchCoupangCategory={tab === "coupang" ? fetchCoupangCategoryRecommendation : undefined}
           coupangCategoryFetching={coupangCategoryFetching}
           categoryTraceLog={categoryTraceLog}
+          coupangResolverDecision={tab === "coupang" ? coupangResolverDecision : null}
           categoryMeta={tab === "coupang" ? categoryMeta : null}
           categoryMetaLoading={tab === "coupang" && categoryMetaLoading}
           categoryMetaError={tab === "coupang" ? categoryMetaError : null}
