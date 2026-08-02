@@ -362,6 +362,15 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
     }
   }
 
+  // Sprint A-9(작업5 — CEO 지시: "출고지 코드가 그대로 보인다") — 프로필 목록
+  // 요약 줄이 출고지/반품지 코드를 이름으로 바꿔 보여주려면 이 조회가 폼을
+  // 펼치기 전에도 미리 되어 있어야 한다. 기존엔 사용자가 "목록 불러오기"를
+  // 눌러야만(폼 안에서만) 조회됐다 — 화면 진입 시 한 번만 자동으로 불러온다.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    fetchLookups();
+  }, []);
+
   function selectReturnCenter(code: string) {
     setReturnCenterCode(code);
     const found = returnCenters.find((c) => c.code === code);
@@ -460,8 +469,11 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
                   </span>
                 )}
                 <p className="text-xs text-text-secondary">
-                  택배사 {p.deliveryCompanyCode || "-"} · 반품지 {p.returnCenterCode || "-"} · 출고지{" "}
-                  {p.outboundShippingPlaceCode ?? "-"}
+                  택배사 {COURIER_OPTIONS.find((c) => c.code === p.deliveryCompanyCode)?.label ?? p.deliveryCompanyCode ?? "-"} ·
+                  반품지 {returnCenters.find((c) => c.code === p.returnCenterCode)?.name ?? p.returnChargeName ?? "-"} ·
+                  출고지{" "}
+                  {shippingPlaces.find((s) => s.code === p.outboundShippingPlaceCode)?.name ??
+                    (p.outboundShippingPlaceCode != null ? `#${p.outboundShippingPlaceCode}` : "-")}
                 </p>
                 <p className="text-xs text-text-secondary">
                   배송비 {p.deliveryCharge != null ? `${p.deliveryCharge.toLocaleString()}원` : "-"} · 반품배송비{" "}

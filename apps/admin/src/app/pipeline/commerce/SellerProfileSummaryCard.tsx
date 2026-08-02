@@ -25,6 +25,12 @@ interface SellerProfile {
   qualityGuarantee: string;
 }
 
+interface ShippingPlaceOption {
+  code: number | null;
+  name: string;
+  countryCode: string | null;
+}
+
 const COURIER_LABELS: Record<string, string> = {
   CJGLS: "CJ대한통운",
   HANJIN: "한진택배",
@@ -53,6 +59,12 @@ function won(value: number | null): string {
  */
 export function SellerProfileSummaryCard() {
   const [profile, setProfile] = useState<SellerProfile | null | undefined>(undefined);
+  // Sprint A-9(작업5 — CEO 지시: "출고지 코드가 그대로 보인다. 사용자가 알 필요
+  // 없다 — 이름만 보여주고 코드는 내부에서만 관리하라") — SellerProfile은
+  // outboundShippingPlaceCode(숫자)만 갖고 있고 이름은 안 갖고 있다. Settings
+  // 페이지가 이미 쓰는 것과 같은 실제 쿠팡 API(/api/coupang/shipping-places)로
+  // 코드→이름을 조회해서 화면에는 이름만 보여준다.
+  const [shippingPlaces, setShippingPlaces] = useState<ShippingPlaceOption[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,6 +77,14 @@ export function SellerProfileSummaryCard() {
       })
       .catch(() => {
         if (!cancelled) setProfile(null);
+      });
+    fetch("/api/coupang/shipping-places")
+      .then((res) => res.json())
+      .then((data: { options?: ShippingPlaceOption[] }) => {
+        if (!cancelled) setShippingPlaces(data.options ?? []);
+      })
+      .catch(() => {
+        // 조회 실패해도 아래에서 코드로 폴백 표시하므로 조용히 무시한다.
       });
     return () => {
       cancelled = true;
@@ -87,6 +107,12 @@ export function SellerProfileSummaryCard() {
   }
 
   const courierLabel = COURIER_LABELS[profile.deliveryCompanyCode] ?? (profile.deliveryCompanyCode || "미설정");
+  const outboundPlace = shippingPlaces.find((p) => p.code === profile.outboundShippingPlaceCode);
+  const outboundLabel = outboundPlace
+    ? [outboundPlace.name, outboundPlace.countryCode].filter(Boolean).join(", ")
+    : profile.outboundShippingPlaceCode == null
+      ? "소싱 국가에 맞춰 자동 선택"
+      : `출고지 #${profile.outboundShippingPlaceCode}`;
 
   return (
     <CollapsibleSection title="배송 정책 · 반품/교환" defaultOpen={false}>
@@ -100,7 +126,7 @@ export function SellerProfileSummaryCard() {
           </div>
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5">
             <dt className="text-text-tertiary">출고지</dt>
-            <dd className="text-text-primary">{profile.outboundShippingPlaceCode ?? "소싱 국가에 맞춰 자동 선택"}</dd>
+            <dd className="text-text-primary">{outboundLabel}</dd>
             <dt className="text-text-tertiary">택배사</dt>
             <dd className="text-text-primary">{courierLabel}</dd>
             <dt className="text-text-tertiary">배송방법</dt>
