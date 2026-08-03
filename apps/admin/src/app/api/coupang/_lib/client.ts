@@ -76,14 +76,20 @@ export async function callCoupangApi(
     // failed")는 실제 원인을 .cause에 숨긴다(DNS/TCP/TLS/proxy 중 어디서
     // 끊겼는지). 여기서 그 cause를 명시적으로 로그에 남겨서 "AUTH_FAILED"라는
     // 뭉뚱그려진 최종 메시지 대신 실제 실패 단계를 구분한다.
-    const cause = err instanceof Error ? (err.cause as { code?: string; errno?: number; syscall?: string } | undefined) : undefined;
+    const cause = err instanceof Error ? err.cause : undefined;
     console.error("[coupang-client][DEBUG] fetch threw", {
       usedProxy: Boolean(coupangProxyDispatcher),
       errorName: err instanceof Error ? err.name : typeof err,
       errorMessage: err instanceof Error ? err.message : String(err),
-      causeCode: cause?.code,
-      causeErrno: cause?.errno,
-      causeSyscall: cause?.syscall,
+      // 이전 로그에서 causeCode:0/errno:undefined로 애매하게 나와서, cause를
+      // 짐작해서 필드를 뽑지 않고 own-property 전체를 그대로 덤프한다(값에
+      // 시크릿이 섞일 여지가 없는 네트워크 에러 객체이므로 안전).
+      causeRaw: cause instanceof Error
+        ? { name: cause.name, message: cause.message, ...Object.fromEntries(Object.entries(cause)) }
+        : cause,
+      causeOfCause: cause instanceof Error && cause.cause
+        ? (cause.cause instanceof Error ? { name: cause.cause.name, message: cause.cause.message } : cause.cause)
+        : undefined,
     });
     throw err;
   }
