@@ -60,6 +60,10 @@ export interface SellerProfile {
   topCommonImageEnabled: boolean;
   bottomCommonImageUrl: string | null;
   bottomCommonImageEnabled: boolean;
+  /** A-12.3-P0-2(CPO 지시) — 빈 문자열이면 기능이 꺼진 것("KC 항목은 원래처럼
+   * 사용자가 직접 확인해야 함")이다. build-payload.ts의 buildCoupangCompliance
+   * 참고 주석에 이 필드를 켰을 때의 컴플라이언스 책임 소재가 적혀 있다. */
+  kcExemptionText: string;
 }
 
 interface SellerProfileRow {
@@ -90,6 +94,7 @@ interface SellerProfileRow {
   top_common_image_enabled: boolean | null;
   bottom_common_image_url: string | null;
   bottom_common_image_enabled: boolean | null;
+  kc_exemption_text: string | null;
 }
 
 function toProfile(row: SellerProfileRow): SellerProfile {
@@ -121,6 +126,7 @@ function toProfile(row: SellerProfileRow): SellerProfile {
     topCommonImageEnabled: row.top_common_image_enabled ?? false,
     bottomCommonImageUrl: row.bottom_common_image_url,
     bottomCommonImageEnabled: row.bottom_common_image_enabled ?? false,
+    kcExemptionText: row.kc_exemption_text ?? "",
   };
 }
 
@@ -164,6 +170,7 @@ export interface SellerProfileInput {
   topCommonImageEnabled?: boolean;
   bottomCommonImageUrl?: string | null;
   bottomCommonImageEnabled?: boolean;
+  kcExemptionText?: string;
 }
 
 /** insert/update가 같은 컬럼 매핑을 쓰므로 한 곳에서만 관리한다(CP001류 중복
@@ -197,6 +204,7 @@ function toRowFields(input: Partial<SellerProfileInput>): Record<string, unknown
   if (input.topCommonImageEnabled !== undefined) row.top_common_image_enabled = input.topCommonImageEnabled;
   if (input.bottomCommonImageUrl !== undefined) row.bottom_common_image_url = input.bottomCommonImageUrl || null;
   if (input.bottomCommonImageEnabled !== undefined) row.bottom_common_image_enabled = input.bottomCommonImageEnabled;
+  if (input.kcExemptionText !== undefined) row.kc_exemption_text = input.kcExemptionText || null;
   return row;
 }
 

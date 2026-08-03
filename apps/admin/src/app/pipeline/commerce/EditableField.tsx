@@ -41,6 +41,7 @@ export function EditableText({ value, onCommit, placeholder, className }: Editab
         if (draft !== value) onCommit(draft);
       }}
       className={className ?? DEFAULT_INPUT_CLASS}
+      data-draft-field="true"
     />
   );
 }
@@ -63,6 +64,7 @@ export function EditableTextarea({ value, onCommit, placeholder, className, rows
         if (draft !== value) onCommit(draft);
       }}
       className={className ?? `${DEFAULT_INPUT_CLASS} resize-y`}
+      data-draft-field="true"
     />
   );
 }

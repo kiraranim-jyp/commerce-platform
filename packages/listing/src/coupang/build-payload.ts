@@ -58,6 +58,14 @@ export interface CoupangSellerConfig {
   topCommonImageEnabled: boolean;
   bottomCommonImageUrl: string | null;
   bottomCommonImageEnabled: boolean;
+  /** A-12.3-P0-2(CPO 지시: "인증/허가 사항 — 대부분 구매대행은 KC마크 없이
+   * 구매대행 가능한 품목입니다. Seller Profile 기본값으로 자동 입력") — 빈
+   * 문자열이면 기능이 꺼진 것과 같다(기존 동작 그대로 PLACEHOLDER+critical로
+   * 남는다). 판매자가 이 문구를 직접 확인하고 설정했을 때만 적용한다 — 실제로
+   * KC 인증이 법적으로 필요한 카테고리/상품에도 무조건 이 문구를 채우면
+   * 컴플라이언스 리스크가 된다는 걸 판매자가 인지해야 하는 값이라, CartPilot이
+   * 임의로 강제 기본값을 넣지 않고 Settings에서 명시적으로 켜야만 쓴다. */
+  kcExemptionText: string;
 }
 
 export const BLANK_COUPANG_SELLER_CONFIG: CoupangSellerConfig = {
@@ -82,6 +90,7 @@ export const BLANK_COUPANG_SELLER_CONFIG: CoupangSellerConfig = {
   topCommonImageEnabled: false,
   bottomCommonImageUrl: null,
   bottomCommonImageEnabled: false,
+  kcExemptionText: "",
 };
 
 export interface CoupangItemImage {
@@ -271,7 +280,9 @@ export interface CoupangCategoryMeta {
   noticeCategories: CoupangCategoryNoticeMeta[];
 }
 
-const NOTICE_DEFAULT_CONTENT = "상세페이지 참조";
+// A-12.3-P0-2(CPO 지시: "상품정보제공고시는 대부분 '전체 상품 상세페이지
+// 참조'를 씁니다") — 쿠팡 판매자들이 관용적으로 쓰는 정식 문구로 맞춘다.
+const NOTICE_DEFAULT_CONTENT = "전체 상품 상세페이지 참조";
 
 /** 쿠팡 구매옵션/고시정보 이름(예: "패션의류/잡화 사이즈", "색상", "재질")과 원본
  * 데이터(옵션 그룹명 또는 CanonicalProduct 필드)를 동의어로 느슨하게 매칭한다 —
@@ -334,6 +345,45 @@ const NOTICE_CATEGORY_NAME_KEYWORDS: Record<string, string[]> = {
   "모자": ["hat", "cap", "beanie", "trucker"],
   "화장품": ["makeup", "cosmetic", "skincare", "lipstick", "serum", "cleanser", "moisturizer", "mascara", "foundation", "powder", "blush"],
 };
+
+/** A-12.3-P0-2(CPO 지시: 실측으로 발견된 버그 수정) — 이 선택 로직이
+ * `CategoryRequirementsEditor.tsx`에도 독립적으로(더 단순하게, "필드 수 최소"
+ * 기준으로만) 복제돼 있었다. 두 곳이 서로 다른 noticeCategory를 고르면
+ * 화면에 보이는 입력폼(사용자가 값을 채우는 곳)과 실제 채점 대상
+ * (buildCoupangCompliance가 채점하는 곳)이 어긋나서, 사용자가 "인증/허가
+ * 사항"에 값을 입력해도 점수가 절대 안 바뀌는 사고가 났다(CP001과 같은 종류
+ * — "판정 로직이 여러 곳에 있으면 재발한다"는 이 코드베이스의 원칙을 고시정보
+ * 선택에는 아직 안 지켰던 것). 이제 이 함수 하나만 있고, 화면과 서버가 둘 다
+ * 이것만 호출한다. */
+export function selectCoupangNoticeCategory(
+  noticeCategories: CoupangCategoryNoticeMeta[],
+  productName: string,
+): CoupangCategoryNoticeMeta | undefined {
+  // Sprint A-6(CPO 피드백) — "KC가 필요 없는 카테고리부터 실제 등록 성공을
+  // 확보하라." 기존엔 필드 개수만 보고 가장 단순한 고시정보 카테고리를 골랐다
+  // — 실측 확인: 뷰티 상품에서 "기타 재화"(5개, KC 포함)가 "화장품"(11개, KC
+  // 없음)보다 필드가 적다는 이유만으로 선택되면, 필드 수는 줄어도 자동화가
+  // 원천적으로 불가능한 KC 항목이 남아버려 오히려 손해다. KC가 아예 없는
+  // 대안이 있고 그 이름이 실제 상품명과 관련 있어 보일 때만 그쪽을 우선한다 —
+  // 아무 KC-free 카테고리나 골라서(예: "악기") 엉뚱한 고시정보 템플릿을
+  // 뷰티 상품에 붙이는 오분류는 만들지 않는다(신뢰할 수 없는 매칭이면 그냥
+  // 기존 방식대로 필드 수 기준으로 되돌아간다).
+  const noticeCategoryHasMandatoryKc = (c: CoupangCategoryNoticeMeta) =>
+    c.noticeCategoryDetailNames.some(
+      (d) => d.required === "MANDATORY" && (d.noticeCategoryDetailName.includes("인증") || d.noticeCategoryDetailName.includes("허가")),
+    );
+  const kcFreeMatch = noticeCategories
+    .filter((c) => !noticeCategoryHasMandatoryKc(c))
+    .find((c) => {
+      const keywords = NOTICE_CATEGORY_NAME_KEYWORDS[c.noticeCategoryName];
+      return keywords?.some((k) => productName.toLowerCase().includes(k));
+    });
+  const simplestNoticeCategory =
+    kcFreeMatch ??
+    [...noticeCategories].sort((a, b) => a.noticeCategoryDetailNames.length - b.noticeCategoryDetailNames.length)[0];
+  const childrenNoticeCategory = noticeCategories.find((c) => c.noticeCategoryName.includes("어린이"));
+  return isLikelyChildrenProduct(productName) && childrenNoticeCategory ? childrenNoticeCategory : simplestNoticeCategory;
+}
 
 /** 쿠팡 필드 이름(예: "패션의류/잡화 사이즈")이 사이즈/색상 계열 동의어와
  * 매칭되면, 그 이름에 대응하는 CanonicalProduct.optionGroups 그룹(실제 옵션
@@ -563,6 +613,10 @@ export function buildCoupangCompliance(
      * 키로 쓴다(둘이 이름이 겹칠 일은 실무상 없다 — 겹치면 attribute가 먼저
      * 매칭된다). 사람이 직접 입력한 값이라 다른 어떤 자동 매칭보다 우선한다. */
     userOverrides?: Record<string, string>;
+    /** A-12.3-P0-2(CPO 지시) — SellerProfile.kcExemptionText. 판매자가
+     * Settings에서 명시적으로 켠 경우에만(빈 문자열이 아닐 때만) KC/인증
+     * 이름이 매칭된 고시정보 필드의 PLACEHOLDER 대신 쓴다. */
+    kcExemptionText?: string;
   },
   variantContext: { optionGroups: CanonicalProductOptionGroup[]; variant?: CanonicalProductVariant } = {
     optionGroups: [],
@@ -655,35 +709,7 @@ export function buildCoupangCompliance(
     attributeValueName: r.value,
   }));
 
-  // Sprint A-6(CPO 피드백) — "KC가 필요 없는 카테고리부터 실제 등록 성공을
-  // 확보하라." 기존엔 필드 개수만 보고 가장 단순한 고시정보 카테고리를 골랐다
-  // — 실측 확인: 뷰티 상품에서 "기타 재화"(5개, KC 포함)가 "화장품"(11개, KC
-  // 없음)보다 필드가 적다는 이유만으로 선택되면, 필드 수는 줄어도 자동화가
-  // 원천적으로 불가능한 KC 항목이 남아버려 오히려 손해다. KC가 아예 없는
-  // 대안이 있고 그 이름이 실제 상품명과 관련 있어 보일 때만 그쪽을 우선한다 —
-  // 아무 KC-free 카테고리나 골라서(예: "악기") 엉뚱한 고시정보 템플릿을
-  // 뷰티 상품에 붙이는 오분류는 만들지 않는다(신뢰할 수 없는 매칭이면 그냥
-  // 기존 방식대로 필드 수 기준으로 되돌아간다).
-  const noticeCategoryHasMandatoryKc = (c: CoupangCategoryNoticeMeta) =>
-    c.noticeCategoryDetailNames.some(
-      (d) => d.required === "MANDATORY" && (d.noticeCategoryDetailName.includes("인증") || d.noticeCategoryDetailName.includes("허가")),
-    );
-  const kcFreeMatch = categoryMeta.noticeCategories
-    .filter((c) => !noticeCategoryHasMandatoryKc(c))
-    .find((c) => {
-      const keywords = NOTICE_CATEGORY_NAME_KEYWORDS[c.noticeCategoryName];
-      return keywords?.some((k) => context.productName.toLowerCase().includes(k));
-    });
-  const simplestNoticeCategory =
-    kcFreeMatch ??
-    [...categoryMeta.noticeCategories].sort(
-      (a, b) => a.noticeCategoryDetailNames.length - b.noticeCategoryDetailNames.length,
-    )[0];
-  const childrenNoticeCategory = categoryMeta.noticeCategories.find((c) => c.noticeCategoryName.includes("어린이"));
-  const chosenNoticeCategory =
-    isLikelyChildrenProduct(context.productName) && childrenNoticeCategory
-      ? childrenNoticeCategory
-      : simplestNoticeCategory;
+  const chosenNoticeCategory = selectCoupangNoticeCategory(categoryMeta.noticeCategories, context.productName);
 
   const KNOWN_NOTICE_VALUES: Record<string, string> = {
     "품명 및 모델명": context.productName,
@@ -722,6 +748,19 @@ export function buildCoupangCompliance(
               fieldName: detail.noticeCategoryDetailName,
               value: fieldMatch.value,
               source: "PRODUCT_FIELD" as const,
+              critical: false,
+              kind: "NOTICE" as const,
+            };
+          }
+          // A-12.3-P0-2(CPO 지시) — KC/인증 이름이 매칭된 필드만, 그리고
+          // 판매자가 Settings에서 명시적으로 이 기본값을 켠 경우에만 적용한다.
+          // 다른 자동 매칭(PRODUCT_FIELD 등)보다 뒤에 확인하는 이유는 실제
+          // 상품 데이터가 있으면 그게 항상 더 정확하기 때문이다.
+          if (isComplianceCritical(detail.noticeCategoryDetailName) && context.kcExemptionText) {
+            return {
+              fieldName: detail.noticeCategoryDetailName,
+              value: context.kcExemptionText,
+              source: "KNOWN_VALUE" as const,
               critical: false,
               kind: "NOTICE" as const,
             };
@@ -793,6 +832,7 @@ function buildCoupangItem(args: {
       careInstructions: product.careInstructions.value || undefined,
       qualityGuarantee: sellerConfig.qualityGuarantee || undefined,
       userOverrides: product.categoryFieldOverrides,
+      kcExemptionText: sellerConfig.kcExemptionText || undefined,
     },
     { optionGroups, variant },
   );

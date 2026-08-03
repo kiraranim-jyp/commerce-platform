@@ -56,12 +56,21 @@ export function RegistrationReadinessCard({
   const barClassName = percent >= 90 ? "bg-success" : percent >= 60 ? "bg-warning" : "bg-error";
   const canRegister = allRequiredPassed && status === "READY";
   const isTerminal = status === "SUBMITTED" || status === "FAILED";
-  const remaining = [...required, ...recommended].filter((i) => !i.passed).length;
+  // A-12.3-P0(CPO 지시: "선택 → 미입력 → 감점 없음") — recommended는 required:false라
+  // percent 계산(readiness.ts summarize)에서는 이미 빠져 있었지만, 이 카운터는
+  // recommended까지 섞어서 "남은 작업 N개"로 보여줘 선택 항목도 감점처럼 느껴지는
+  // UX 버그가 있었다. 필수 미완료만 남은 작업으로 센다 — recommended는 여전히
+  // "선택 입력" 목록에는 그대로 보여준다(있으면 좋다는 안내는 유지, 압박감만 제거).
+  const remaining = required.filter((i) => !i.passed).length;
   // A-10.1-②(CEO 지시: "남은 항목 N개 → 다음 입력하기 → 를 누르면 자동으로
   // 해당 Accordion이 열리고 포커스") — 필수 항목을 먼저, 그다음 선택 항목
   // 순서로 훑어서 아직 안 채워졌고 이동할 섹션이 있는 첫 항목을 다음 목표로
   // 삼는다(법적 필수가 가장 급하다는 기존 우선순위와 같은 방향).
-  const nextIncomplete = [...required, ...recommended].find((i) => !i.passed && i.sectionId);
+  // A-12.3 — settingsMissing/settingsRecommended 항목은 sectionId 대신
+  // externalHref(/settings)만 갖고 있어서, 이 페이지 안 스크롤 대상만 찾던
+  // 기존 조건으로는 절대 다음 목표로 뽑히지 않았다(그 항목들은 영원히 "다음
+  // 입력하기"에 안 걸림). 둘 중 하나라도 있으면 이동 가능한 항목으로 본다.
+  const nextIncomplete = [...required, ...recommended].find((i) => !i.passed && (i.sectionId || i.externalHref));
 
   // Sprint A-6(개선4) — CPO 요구사항: "사용자는 왜 이것을 내가 입력해야 하지를
   // 바로 이해할 수 있어야 한다." 필수 목록을 하나로 뭉치지 않고 성격별로
@@ -141,7 +150,7 @@ export function RegistrationReadinessCard({
         <span>
           남은 작업 <span className="font-medium text-text-primary">{remaining}개</span>
         </span>
-        {nextIncomplete && onItemClick && !isTerminal && (
+        {nextIncomplete && !isTerminal && nextIncomplete.sectionId && onItemClick && (
           <button
             type="button"
             onClick={() => onItemClick(nextIncomplete.sectionId!)}
@@ -149,6 +158,16 @@ export function RegistrationReadinessCard({
           >
             다음 입력하기 →
           </button>
+        )}
+        {nextIncomplete && !isTerminal && !nextIncomplete.sectionId && nextIncomplete.externalHref && (
+          <a
+            href={nextIncomplete.externalHref}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-primary hover:underline"
+          >
+            다음 입력하기 →
+          </a>
         )}
       </div>
 
@@ -179,6 +198,18 @@ export function RegistrationReadinessCard({
   );
 }
 
+/** A-12.3(CPO 지시: "자동입력됨/기본설정 사용/직접입력 필요 상태 표시") —
+ * sourceStatus 하나당 배지 라벨/색을 한 곳에서만 정의한다(판정 로직처럼
+ * 문구가 여러 곳에 흩어지면 나중에 말이 안 맞는 CP001류 문제가 재발한다). */
+const SOURCE_STATUS_BADGE: Record<
+  NonNullable<ReadinessItem["sourceStatus"]>,
+  { label: string; className: string }
+> = {
+  AUTO: { label: "자동입력됨", className: "bg-success-soft text-success" },
+  SETTINGS_DEFAULT: { label: "기본설정 사용", className: "bg-background text-text-tertiary" },
+  MANUAL_REQUIRED: { label: "직접입력 필요", className: "bg-warning-soft text-warning" },
+};
+
 function ItemList({
   items,
   onItemClick,
@@ -189,7 +220,12 @@ function ItemList({
   return (
     <ul className="space-y-1.5">
       {items.map((item, index) => {
-        const clickable = !item.passed && item.sectionId && onItemClick;
+        // A-12.3 — sectionId(이 페이지 안 스크롤)와 externalHref(/settings로
+        // 이동)는 배타적이다. 둘 중 하나만 있어도 "부족항목 클릭 → 이동"이
+        // 성립하도록 클릭 가능 여부를 두 경로 다 확인한다.
+        const clickableSection = !item.passed && item.sectionId && onItemClick;
+        const clickableExternal = !item.passed && item.externalHref && !item.sectionId;
+        const statusBadge = !item.passed && item.sourceStatus ? SOURCE_STATUS_BADGE[item.sourceStatus] : null;
         const content = (
           <>
             <span
@@ -198,8 +234,15 @@ function ItemList({
               {item.passed ? "✓" : item.required ? "✗" : "△"}
             </span>
             <span className="min-w-0 flex-1 text-left">
-              <span className={item.passed ? "text-text-primary" : "font-medium text-text-primary"}>
-                {item.label}
+              <span className="flex flex-wrap items-center gap-1">
+                <span className={item.passed ? "text-text-primary" : "font-medium text-text-primary"}>
+                  {item.label}
+                </span>
+                {statusBadge && (
+                  <span className={`rounded px-1 py-0.5 text-[10px] font-medium ${statusBadge.className}`}>
+                    {statusBadge.label}
+                  </span>
+                )}
               </span>
               {/* Sprint A-6(개선1) — CPO 지시: "AI가 추측하거나 기본값을 넣으면
                   안 된다. 대신 자동입력 불가/사유/사용자 확인 필요를 명확하게
@@ -223,16 +266,17 @@ function ItemList({
             </span>
           </>
         );
+        const itemClassName = "flex w-full items-start gap-2 rounded px-1 py-0.5 text-left hover:bg-background";
         return (
           <li key={`${item.label}-${index}`} className="text-xs">
-            {clickable ? (
-              <button
-                type="button"
-                onClick={() => onItemClick!(item.sectionId!)}
-                className="flex w-full items-start gap-2 rounded px-1 py-0.5 text-left hover:bg-background"
-              >
+            {clickableSection ? (
+              <button type="button" onClick={() => onItemClick!(item.sectionId!)} className={itemClassName}>
                 {content}
               </button>
+            ) : clickableExternal ? (
+              <a href={item.externalHref} target="_blank" rel="noreferrer" className={itemClassName}>
+                {content}
+              </a>
             ) : (
               <div className="flex items-start gap-2 px-1 py-0.5">{content}</div>
             )}

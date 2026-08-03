@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CanonicalProduct, FieldSource, PlatformId } from "@commerce/shared";
 import {
   buildResolverBiasedQuery,
@@ -150,11 +150,29 @@ export function CommerceWorkspace({
   const [listingStates, setListingStates] = useState(INITIAL_LISTING_STATES);
   const [listingResults, setListingResults] = useState(INITIAL_LISTING_RESULTS);
   const [confirmingPlatform, setConfirmingPlatform] = useState<PlatformId | null>(null);
+  // A-12.3(작업8, CPO 지시: "React State → Payload → 등록 구조는 유지하고, 지금은
+  // 임시 수정 상태인지 저장된 상태인지 알려주는 UX만 추가") — EditableText/
+  // EditableTextarea(commerce/EditableField.tsx)는 blur 시점에만 CanonicalProduct에
+  // 커밋한다. 그 사이(포커스 중)엔 화면에 보이는 값이 아직 product state에
+  // 반영되지 않은 상태다 — data-draft-field로 마킹된 필드만 추적한다(카테고리
+  // 검색창 등 커밋 개념이 없는 다른 input과 섞이지 않도록).
+  const [isEditingDraftField, setIsEditingDraftField] = useState(false);
+  // 등록 버튼 클릭은 마우스다운→(포커스 이동에 따른 blur)→click 순으로 일어나서,
+  // click 핸들러(openListingModal) 시점엔 이미 blur가 끝나 있다 — 그래서 "클릭
+  // 직전에 편집 중이었는지"는 blur보다 먼저 도착하는 mousedown에서 미리 기록해둔다.
+  const wasEditingDraftFieldRef = useRef(false);
+  function isDraftFieldTarget(target: EventTarget | null): boolean {
+    return target instanceof HTMLElement && target.getAttribute("data-draft-field") === "true";
+  }
   const [registrationHistory, setRegistrationHistory] = useState<RegistrationHistoryEntry[]>([]);
   const [coupangConnection, setCoupangConnection] = useState<PlatformConnectionStatus>("UNKNOWN");
   const [coupangConnectionCheckedAt, setCoupangConnectionCheckedAt] = useState<string | null>(null);
   const [coupangConnectionChecking, setCoupangConnectionChecking] = useState(false);
-  const [coupangApiCandidate, setCoupangApiCandidate] = useState<CategoryCandidate | null>(null);
+  // A-12.3-P0-2(CPO 지시: "① 쿠팡 API 추천이 후보 1개가 아니라 순위 리스트로
+  // 보여야 한다") — 예전엔 resolveCategoryV3가 이미 계산해둔 Top5 후보 중
+  // best 하나만 화면에 올라갔다(나머지는 Trace Log 텍스트로만 보였다). 이제
+  // 실존 검증(metaVerified)까지 통과한 후보를 전부 배열로 들고 있는다.
+  const [coupangApiCandidates, setCoupangApiCandidates] = useState<CategoryCandidate[]>([]);
   /** Sprint A-5(Category Resolver 3.0 KPI) — coupangApiCandidate가 어떤
    * 판정(AUTO_SELECT/RECOMMEND/REJECT)과 유사도로 나왔는지. selectCategory가
    * 사용자 확정 시점에 categoryResolverKpi로 그대로 옮겨 담아서 등록 이력에
@@ -459,11 +477,11 @@ export function CommerceWorkspace({
   const categoryCandidates = useMemo(() => {
     if (tab === "source" || tab === "content") return [];
     const ruleBased = ruleBasedCategoryProvider.recommendCategory(product, tab);
-    // 쿠팡 API가 준 실제 코드 후보를 맨 앞에 보여준다 — CartPilot 내부 AI 추천과
+    // 쿠팡 API가 준 실제 코드 후보들을 맨 앞에 보여준다 — CartPilot 내부 AI 추천과
     // 섞이긴 하지만 isVerifiedPlatformCode로 화면에서 구분 배지를 보여준다.
-    if (tab === "coupang" && coupangApiCandidate) return [coupangApiCandidate, ...ruleBased];
+    if (tab === "coupang" && coupangApiCandidates.length > 0) return [...coupangApiCandidates, ...ruleBased];
     return ruleBased;
-  }, [tab, product, coupangApiCandidate]);
+  }, [tab, product, coupangApiCandidates]);
 
   /**
    * 저장된 선택이 아직 UNRESOLVED인데 추천 후보가 있으면, 실제로 state를 바꾸지
@@ -494,9 +512,10 @@ export function CommerceWorkspace({
     // 시점에 알 수 있는 것만 여기서 기록해두고, 실제 등록 시점(register
     // 라우트)에 finalRegistered를 더해 registration_attempts에 함께 저장한다.
     if (platform === "coupang") {
+      const bestCoupangApiCandidate = coupangApiCandidates[0] ?? null;
       const predictResult =
-        coupangApiCandidate != null
-          ? { code: Number(coupangApiCandidate.id), name: coupangApiCandidate.name }
+        bestCoupangApiCandidate != null
+          ? { code: Number(bestCoupangApiCandidate.id), name: bestCoupangApiCandidate.name }
           : null;
       const manualOverride = predictResult != null && String(predictResult.code) !== candidate.id;
       setProduct((prev) => ({
@@ -669,16 +688,28 @@ export function CommerceWorkspace({
       const data = (await res.json()) as {
         decision?: "AUTO_SELECT" | "RECOMMEND" | "REJECT";
         best?: { categoryCode: number; categoryName: string; score: number; reason: string } | null;
-        candidates?: { categoryCode: number; categoryName: string; query: string; score: number; reason: string; conflict: boolean }[];
+        candidates?: {
+          categoryCode: number;
+          categoryName: string;
+          query: string;
+          score: number;
+          reason: string;
+          conflict: boolean;
+          /** A-12.3-P0-2 — category-meta 조회로 실제 존재(등록 가능한 리프
+           * 카테고리)까지 확인됐는지. false면 predict가 코드를 줬을 뿐 등록
+           * 시점에 거부될 수 있다는 뜻이라 "바로 등록 가능"으로 올리지 않는다. */
+          metaVerified?: boolean;
+        }[];
       };
       // Sprint A-5(Category Resolver 3.0) — CPO 지시: "말이 안 되면 Reject."
-      // Top5 후보 비교를 새 UI 없이 기존 Trace Log(사람이 읽는 텍스트 목록)에
-      // 그대로 노출한다 — CPO 예시 형식("1위 Coffee 22% ×, 2위 침구 94% ○")을
-      // 그대로 따른다.
+      // Top5 후보 비교를 Trace Log(사람이 읽는 텍스트 목록)에도 그대로
+      // 노출한다 — CPO 예시 형식("1위 Coffee 22% ×, 2위 침구 94% ○")을 따른다.
       const candidateLines = (data.candidates ?? []).map(
-        (c, i) => `  ${i + 1}위 "${c.categoryName}"(코드 ${c.categoryCode}) — 유사도 ${c.score}% ${c.conflict ? "✗" : "○"} — ${c.reason}`,
+        (c, i) =>
+          `  ${i + 1}위 "${c.categoryName}"(코드 ${c.categoryCode}) — 유사도 ${c.score}% ${c.conflict ? "✗" : "○"}${c.metaVerified === false ? " · 실존 확인 안 됨" : ""} — ${c.reason}`,
       );
       if (data.decision === "REJECT") {
+        setCoupangApiCandidates([]);
         setCoupangResolverDecision({
           decision: "REJECT",
           score: data.best?.score ?? 0,
@@ -692,31 +723,35 @@ export function CommerceWorkspace({
         });
         setCategoryTraceLog((prev) => [
           ...prev,
-          "→ Resolver 3.0 판정: REJECT — 예측 결과가 상품유형과 명백히 다른 도메인이라 자동 후보로 채택하지 않았습니다.",
+          "→ Resolver 3.0 판정: REJECT — 예측 결과가 상품유형과 명백히 다르거나, 실제 등록 가능한 카테고리로 확인되지 않았습니다.",
           ...candidateLines,
           "→ 카테고리를 직접 검색해서 선택해주세요.",
         ]);
-      } else if (data.best) {
+      } else if (data.best && data.candidates && data.candidates.length > 0) {
         setCoupangResolverDecision({ decision: data.decision ?? "RECOMMEND", score: data.best.score });
-        setCoupangApiCandidate({
-          id: String(data.best.categoryCode),
-          name: data.best.categoryName,
-          path: [data.best.categoryName],
-          platform: "coupang",
-          confidence: data.best.score / 100,
-          // Sprint A-2.5(UI 판단 근거) — "왜 이 카테고리를 추천했는지" 후보
-          // 카드 자체에서 보이게 한다(CategoryRecommendationPanel이 reason을
-          // 그대로 목록으로 렌더링하는 걸 재사용 — 별도 UI를 새로 안 만든다).
-          reason: [
-            ...evidenceLines,
-            `✓ Predict API: "${data.best.categoryName}"(코드 ${data.best.categoryCode}, 유사도 ${data.best.score}%) — 등록 전 최종 확인이 필요합니다.`,
-            ...(data.decision === "RECOMMEND"
-              ? ["⚠ 유사도가 95% 미만이라 자동 선택 대상이 아닙니다 — 직접 확인 후 선택해주세요."]
-              : []),
-          ],
-          source: "ai",
-          isVerifiedPlatformCode: true,
-        });
+        // A-12.3-P0-2(CPO 지시: "① 쿠팡 API 추천이 순위 리스트로 보여야
+        // 한다") — best 하나만이 아니라 candidates 전부를 후보로 올린다.
+        // 실존 검증(metaVerified)을 통과한 것만 "바로 등록 가능"(①) 배지를
+        // 받는다 — 통과 못 한 건 CategoryRecommendationPanel의 다른
+        // 버킷(②/③)으로 자연히 내려간다.
+        setCoupangApiCandidates(
+          data.candidates.map((c) => ({
+            id: String(c.categoryCode),
+            name: c.categoryName,
+            path: [c.categoryName],
+            platform: "coupang",
+            confidence: c.score / 100,
+            reason: [
+              ...evidenceLines,
+              `✓ Predict API: "${c.categoryName}"(코드 ${c.categoryCode}, 유사도 ${c.score}%) — 등록 전 최종 확인이 필요합니다.`,
+              c.metaVerified === false
+                ? "⚠ 쿠팡 카테고리 메타 조회에서 존재가 확인되지 않았습니다 — 실제 등록 시 거부될 수 있습니다."
+                : "✓ 쿠팡 카테고리 메타 조회로 실제 존재/등록 가능이 확인됐습니다.",
+            ],
+            source: "ai",
+            isVerifiedPlatformCode: c.metaVerified === true,
+          })),
+        );
         setCategoryTraceLog((prev) => [
           ...prev,
           `→ Resolver 3.0 판정: ${data.decision}(유사도 ${data.best!.score}%) — "${data.best!.categoryName}" (코드 ${data.best!.categoryCode})`,
@@ -772,6 +807,13 @@ export function CommerceWorkspace({
 
   function openListingModal() {
     if (tab === "source" || tab === "content") return;
+    if (wasEditingDraftFieldRef.current) {
+      wasEditingDraftFieldRef.current = false;
+      const proceed = window.confirm(
+        "적용되지 않은 변경사항이 있습니다. 적용 후 등록하시겠습니까?",
+      );
+      if (!proceed) return;
+    }
     setListingStates((prev) => ({ ...prev, [tab]: "USER_CONFIRMED" }));
     setConfirmingPlatform(tab);
   }
@@ -858,8 +900,36 @@ export function CommerceWorkspace({
   }
 
   return (
-    <section className="mt-8 space-y-4">
+    <section
+      className="mt-8 space-y-4"
+      onFocusCapture={(e) => {
+        if (isDraftFieldTarget(e.target)) setIsEditingDraftField(true);
+      }}
+      onBlurCapture={(e) => {
+        if (isDraftFieldTarget(e.target)) setIsEditingDraftField(false);
+      }}
+      onMouseDownCapture={() => {
+        wasEditingDraftFieldRef.current = isDraftFieldTarget(document.activeElement);
+      }}
+    >
       <StageStepper product={product} categoryMappings={categoryMappings} onNavigate={setTab} />
+
+      {isEditingDraftField && (
+        <div className="flex w-fit items-center gap-2 rounded-md border border-warning/30 bg-warning-soft px-3 py-1.5 text-xs font-medium text-warning">
+          {/* A-12.3-P0(CPO 지시: "저장은 DB 저장을 오해시킨다") — 실제로는
+           * React State에 커밋될 뿐 DB에는 아무것도 쓰지 않는다. "저장"이라는
+           * 단어가 주는 "DB에 안전하게 들어갔다"는 인상을 피하려고 문구를
+           * 바꾼다 — 동작은 그대로(blur → onCommit), 이름만 정확하게. */}
+          <span>● 적용되지 않은 변경사항이 있습니다.</span>
+          <button
+            type="button"
+            onClick={() => (document.activeElement as HTMLElement | null)?.blur()}
+            className="rounded border border-warning/40 px-2 py-0.5 hover:bg-warning/10"
+          >
+            변경사항 적용
+          </button>
+        </div>
+      )}
 
       <div className="flex gap-1 overflow-x-auto border-b border-border">
         <TabButton active={tab === "source"} onClick={() => setTab("source")}>

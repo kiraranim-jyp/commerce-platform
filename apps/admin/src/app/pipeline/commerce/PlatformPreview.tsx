@@ -209,13 +209,20 @@ export function PlatformPreview({
   // ReadinessScorePanel)가 반드시 같은 판정을 봐야 한다. readiness가 있으면
   // (SmartStore) 그 계산을, 없으면(쿠팡/11번가) validations+category+compliance
   // 계산을 쓴다 — 계산 로직 자체는 commerce/readiness.ts 한 곳뿐이다.
+  // A-12.3-P0(CPO 지시: "품질점수는 Payload 기준으로 — Brand Profile/Seller
+  // Profile로 채워질 수 있으면 100%") — compliancePreview(클라이언트에서
+  // product 필드만 보고 계산, 브랜드/셀러 프로필 모름)는 카테고리 확정 전
+  // 잠정 안내용일 뿐이다. payloadPreview.complianceReport는 실제 등록과 동일한
+  // buildCoupangPayload(브랜드 프로필 → Seller 기본값 우선순위까지 적용)가 낸
+  // 결과라 이게 있으면 항상 이걸 우선한다 — 두 계산이 다른 결과를 보여주면
+  // CP001과 같은 신뢰 문제가 재발한다.
   const readinessSummary = readiness
     ? computeReadinessScoreSummary(readiness)
     : computeChecklistReadiness(
         listing.validations,
         listing.category,
         settingsMissing,
-        compliancePreview ?? undefined,
+        payloadPreview?.complianceReport ?? compliancePreview ?? undefined,
         settingsRecommended,
       );
 
@@ -519,6 +526,7 @@ export function PlatformPreview({
               onUpdateOverride={onUpdateCategoryFieldOverride}
               resolvedFields={resolvedCategoryFields}
               productOptionGroups={productOptionGroups ?? []}
+              productName={listing.title}
             />
           )}
           {compliancePreview && <ComplianceBreakdown report={compliancePreview} />}

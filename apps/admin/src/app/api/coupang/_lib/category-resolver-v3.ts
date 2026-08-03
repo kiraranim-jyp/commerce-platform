@@ -2,6 +2,7 @@ import type { ProductSignals } from "@commerce/category";
 import { scoreCategoryCandidate } from "@commerce/category";
 import type { CoupangCredentials } from "./env";
 import { callCoupangApi } from "./client";
+import { fetchCategoryMeta } from "./category-meta";
 
 /**
  * Sprint A-5(Category Resolver 3.0) — CPO 지시: "Predict → Resolver 검증 →
@@ -33,6 +34,15 @@ export interface ScoredCategoryCandidate {
   score: number;
   reason: string;
   conflict: boolean;
+  /** A-12.3-P0-2(CPO 지시: "categoryCode → GetDisplayCategory → 실제 존재 여부
+   * 검증까지 해야 한다") — predict API는 코드를 "추측"만 해줄 뿐, 그 코드가
+   * 실제로 등록 가능한(말단/리프) 카테고리인지는 보장하지 않는다. 쿠팡에 별도
+   * "카테고리 존재 검증" 전용 API는 없지만, category-meta 조회(등록 시점에
+   * 이미 필수 호출하는 API)가 존재하지 않는 코드에는 필연적으로 실패하므로
+   * (non-2xx → null) 이걸 존재 검증으로 그대로 재사용한다 — 새 엔드포인트를
+   * 지어내지 않는다. null이면(=메타를 못 가져오면) "바로 등록 가능"으로
+   * 표시하면 안 된다. */
+  metaVerified: boolean;
 }
 
 export interface CategoryResolverV3Result {
@@ -85,17 +95,34 @@ export async function resolveCategoryV3(
       // 피한다).
       if (seen.has(code)) continue;
       const { score, reason, conflict } = scoreCategoryCandidate(name, [], signals);
-      seen.set(code, { categoryCode: code, categoryName: name, query, score, reason, conflict });
+      seen.set(code, { categoryCode: code, categoryName: name, query, score, reason, conflict, metaVerified: false });
     } catch {
       // 질의 변형 하나가 실패해도 나머지로 계속 진행한다 — 후보가 끝까지 0개일
       // 때만 REJECT로 처리한다.
     }
   }
 
-  const candidates = [...seen.values()].sort((a, b) => b.score - a.score).slice(0, 5);
-  const best = candidates[0] ?? null;
+  const ranked = [...seen.values()].sort((a, b) => b.score - a.score).slice(0, 5);
+  // A-12.3-P0-2 — 상위 후보들만 실존 검증한다(전부 검증하면 predict 호출 +
+  // meta 호출이 배로 늘어 Vercel 함수 시간 제한/쿠팡 레이트리밋에 걸릴 수
+  // 있다 — MAX_QUERY_VARIANTS를 3으로 제한한 것과 같은 이유). 병렬로 호출해서
+  // 지연을 최소화한다.
+  const verified = await Promise.all(
+    ranked.map(async (c) => {
+      const meta = await fetchCategoryMeta(credentials, c.categoryCode);
+      return { ...c, metaVerified: meta != null };
+    }),
+  );
+
+  // A-12.3-P0-2 — 존재하지 않는(리프가 아니거나 폐지된) 코드는 "바로 등록
+  // 가능"의 최상위 후보가 될 수 없다 — 점수가 가장 높아도 실존 검증을 통과한
+  // 후보 중에서만 best를 고른다. 검증 통과 후보가 하나도 없으면(전부 무효)
+  // REJECT — 그래도 candidates 배열 자체는(검증 실패 포함) 그대로 반환해서
+  // 화면이 "왜 후보가 다 안 되는지" 보여줄 수 있게 한다.
+  const verifiedOnly = verified.filter((c) => c.metaVerified);
+  const best = verifiedOnly[0] ?? null;
   const decision: CategoryResolverV3Result["decision"] =
     best == null || best.conflict ? "REJECT" : best.score >= AUTO_SELECT_THRESHOLD ? "AUTO_SELECT" : "RECOMMEND";
 
-  return { decision, best, candidates };
+  return { decision, best, candidates: verified };
 }

@@ -205,6 +205,7 @@ async function runOne(
         topCommonImageEnabled: sellerProfile.topCommonImageEnabled,
         bottomCommonImageUrl: sellerProfile.bottomCommonImageUrl,
         bottomCommonImageEnabled: sellerProfile.bottomCommonImageEnabled,
+        kcExemptionText: sellerProfile.kcExemptionText,
       },
       descriptionTemplate: descriptionTemplate ?? undefined,
       categoryMeta,

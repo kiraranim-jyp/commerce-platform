@@ -51,6 +51,7 @@ interface SellerProfile {
   topCommonImageEnabled: boolean;
   bottomCommonImageUrl: string | null;
   bottomCommonImageEnabled: boolean;
+  kcExemptionText: string;
 }
 
 interface BrandProfile {
@@ -367,6 +368,10 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
   const [manufacturer, setManufacturer] = useState("");
   const [asContactNumber, setAsContactNumber] = useState("");
   const [qualityGuarantee, setQualityGuarantee] = useState("");
+  // A-12.3-P0-2(CPO 지시: "KC마크 없이 구매대행 가능한 품목 — 기본값 자동
+  // 입력") — 빈 문자열이면 기능이 꺼진 것과 같다(기존처럼 사용자가 직접
+  // 확인해야 하는 상태 유지).
+  const [kcExemptionText, setKcExemptionText] = useState("");
   // Sprint A-11(작업1/2/4 — CPO 지시: "판매가 = 환율변환가격 × (1+기본마진)",
   // "가격 반올림 단위", "원산지 기본값") — 상품마다 다시 입력하지 않는 가격
   // 정책/원산지 기본값도 위 배송/판매자 기본정보와 같은 패턴으로 저장한다.
@@ -435,6 +440,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
     setManufacturer(p.manufacturer);
     setAsContactNumber(p.asContactNumber);
     setQualityGuarantee(p.qualityGuarantee);
+    setKcExemptionText(p.kcExemptionText);
     setDefaultMarginPercent(p.defaultMarginPercent != null ? String(p.defaultMarginPercent) : "");
     setIncludeShippingInPrice(p.includeShippingInPrice);
     setPriceRoundingUnit(p.priceRoundingUnit != null ? String(p.priceRoundingUnit) : "10");
@@ -532,6 +538,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
         manufacturer: manufacturer || undefined,
         asContactNumber: asContactNumber || undefined,
         qualityGuarantee: qualityGuarantee || undefined,
+        kcExemptionText: kcExemptionText || undefined,
         defaultMarginPercent: defaultMarginPercent ? Number(defaultMarginPercent) : undefined,
         includeShippingInPrice,
         priceRoundingUnit: priceRoundingUnit ? Number(priceRoundingUnit) : undefined,
@@ -861,6 +868,22 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
               value={qualityGuarantee}
               onChange={(e) => setQualityGuarantee(e.target.value)}
               placeholder="예: 관련 법령 및 소비자분쟁해결기준에 따름"
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          {/* A-12.3-P0-2(CPO 지시) — 비워두면(기본값) 기존처럼 "인증/허가
+              사항"은 사용자가 직접 입력해야 하는 상태로 남는다. 실제로 KC
+              인증이 법적으로 필요한 카테고리에는 이 문구를 쓰면 안 되므로,
+              대표님이 직접 확인하고 채워야 하는 값이라는 걸 hint로 명시한다. */}
+          <Field
+            label="인증/허가 사항 기본값 (KC 등)"
+            hint="대부분의 구매대행 상품에 해당되는 문구만 넣어주세요 — 실제로 KC 인증이 필요한 상품에는 비워두고 직접 입력해야 합니다"
+          >
+            <input
+              type="text"
+              value={kcExemptionText}
+              onChange={(e) => setKcExemptionText(e.target.value)}
+              placeholder="예: KC마크 없이 구매대행 가능한 품목"
               className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
             />
           </Field>

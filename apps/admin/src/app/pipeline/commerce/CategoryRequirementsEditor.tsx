@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComplianceFieldSource, CoupangCategoryMeta } from "@commerce/listing";
-import { findMatchingOptionGroupValues } from "@commerce/listing";
+import { findMatchingOptionGroupValues, selectCoupangNoticeCategory } from "@commerce/listing";
 import type { CanonicalProductOptionGroup } from "@commerce/shared";
 import { EditableText } from "./EditableField";
 
@@ -32,6 +32,7 @@ export function CategoryRequirementsEditor({
   onUpdateOverride,
   resolvedFields,
   productOptionGroups,
+  productName,
 }: {
   categoryMeta: CoupangCategoryMeta | null;
   loading: boolean;
@@ -40,6 +41,10 @@ export function CategoryRequirementsEditor({
   onUpdateOverride: (fieldName: string, value: string) => void;
   resolvedFields: Record<string, { value: string; source: ComplianceFieldSource; confidence: number }> | undefined;
   productOptionGroups: CanonicalProductOptionGroup[];
+  /** A-12.3-P0-2 — build-payload.ts의 buildCoupangCompliance()가 실제 채점에
+   * 쓰는 것과 똑같은 selectCoupangNoticeCategory()를 여기서도 써야 화면에
+   * 보이는 입력폼과 실제 채점 대상 고시정보 카테고리가 항상 일치한다. */
+  productName: string;
 }) {
   if (loading) {
     return (
@@ -62,9 +67,7 @@ export function CategoryRequirementsEditor({
   if (!categoryMeta) return null;
 
   const mandatoryAttributes = categoryMeta.attributes.filter((attr) => attr.required === "MANDATORY");
-  const noticeCategory = [...categoryMeta.noticeCategories].sort(
-    (a, b) => a.noticeCategoryDetailNames.length - b.noticeCategoryDetailNames.length,
-  )[0];
+  const noticeCategory = selectCoupangNoticeCategory(categoryMeta.noticeCategories, productName);
   const mandatoryNotices = (noticeCategory?.noticeCategoryDetailNames ?? []).filter(
     (detail) => detail.required === "MANDATORY",
   );

@@ -25,6 +25,13 @@ export interface ReadinessItem {
    * 명시적으로 드러내기 위함). */
   reasonCode?: "NO_VALUE" | "NO_RULE" | "ENUM_MISMATCH" | "CRITICAL";
   group?: ReadinessGroup;
+  /** A-12.3(CPO 지시: "부족항목 오른쪽에 자동입력됨/기본설정 사용/직접입력 필요
+   * 상태 표시") — 이 값이 어디서 채워지는지(또는 왜 안 채워졌는지) 사용자가 한
+   * 눈에 알 수 있게 한다. 통과(passed=true)한 항목엔 표시하지 않는다. */
+  sourceStatus?: "AUTO" | "SETTINGS_DEFAULT" | "MANUAL_REQUIRED";
+  /** A-12.3 — settingsRecommended/settingsMissing처럼 이 페이지 안이 아니라
+   * /settings로 가야 채울 수 있는 항목의 이동 경로. sectionId와 배타적이다. */
+  externalHref?: string;
 }
 
 export interface ReadinessSummary {
@@ -129,12 +136,20 @@ export function computeChecklistReadiness(
       // PRODUCT_INFO — "법적으로 막힌 것"과 "아직 Resolver가 못 찾은 것"은
       // 사용자 입장에서 완전히 다른 문제라 섞으면 안 된다.
       group: (f.reasonCode === "CRITICAL" ? "LEGAL" : "PRODUCT_INFO") as ReadinessGroup,
+      // A-12.3 — Resolver가 상품 원문에서 못 찾았고 규칙도 없어서 CartPilot이
+      // 대신 채울 수 없다는 뜻이니 전부 "직접입력 필요"다.
+      sourceStatus: "MANUAL_REQUIRED" as const,
     })),
     ...(settingsMissing ?? []).map((label) => ({
       label,
       passed: false,
       required: true,
       group: "BUSINESS_SETTINGS" as const,
+      // A-12.3 — settingsMissing은 출고지/반품지처럼 애초에 Settings에서만
+      // 만들 수 있는 값이라 이 페이지 안에서는 채울 방법이 없다 — /settings로
+      // 보내는 것 자체가 "직접입력 필요"에 대한 해결책이다.
+      sourceStatus: "MANUAL_REQUIRED" as const,
+      externalHref: "/settings",
     })),
     // Sprint A-11(작업8) — 이미 채워져 있으면(즉, settingsRecommended에 없으면)
     // 여기서 굳이 항목을 만들지 않는다(통과한 걸 매번 뭉텅이로 보여줄 필요는
@@ -144,7 +159,16 @@ export function computeChecklistReadiness(
       passed: false,
       required: false,
       group: "BUSINESS_SETTINGS" as const,
-      hint: "Settings에서 채우면 등록 품질이 올라갑니다(없어도 등록은 됩니다)",
+      hint: "Settings에서 한 번 채워두면 이후 모든 상품에 자동 적용됩니다(없어도 등록은 됩니다)",
+      // A-12.3(CPO 지시: "제조자/원산지는 Brand Profile, 품질보증/AS는
+      // SellerProfile에서 가져온다") — 둘 다 "지금 당장 이 상품에 직접
+      // 입력"이 아니라 "Settings에 기본값을 한 번 등록해두면 그걸 쓴다"는
+      // 성격이 같아서 SETTINGS_DEFAULT로 통일한다. 값을 채우는 장소가
+      // Settings라는 사실 자체가 핵심이지, Brand Profile인지 SellerProfile
+      // 인지는 이 카드가 구분할 정보가 아니다(Settings 페이지 안에서 각
+      // 필드가 어디 속하는지 이미 보여주고 있다).
+      sourceStatus: "SETTINGS_DEFAULT" as const,
+      externalHref: "/settings",
     })),
   ];
 
