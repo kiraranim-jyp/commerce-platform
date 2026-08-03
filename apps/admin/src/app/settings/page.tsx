@@ -284,6 +284,34 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
+/** CEO 지시(2026-08-03) — "설정 메뉴의 수정 정보를 상품등록시 필요한 정보카테고리
+ * 기준으로 분류해줬으면 해, 너무 숨겨져 있어." 배송 프로필 폼이 출고지/반품지/
+ * 가격정책/판매자정보가 전부 한 줄로 이어져 있어 다 펼쳐봐야만 확인 가능했다 —
+ * 등록 시 실제로 쓰이는 정보 단위(출고·배송 / 반품·교환 / 판매자 기본정보 /
+ * 가격 정책 / 공통 이미지)로 접이식 그룹을 나눈다. state/저장 로직은 그대로
+ * 두고 시각적 그룹핑만 바꾼다 — 필드 하나도 옮기지 않고 감싸기만 한다. */
+function SettingsSubSection({
+  title,
+  hint,
+  defaultOpen,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <details open={defaultOpen} className="rounded-md border border-border">
+      <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-text-secondary hover:bg-background hover:text-text-primary">
+        {title}
+        {hint && <span className="ml-2 font-normal text-text-tertiary">{hint}</span>}
+      </summary>
+      <div className="space-y-3 border-t border-border p-3">{children}</div>
+    </details>
+  );
+}
+
 /** Sprint A-11(작업3) — 파일 선택 즉시 업로드해서 미리보기+URL을 보여주고,
  * ON/OFF 토글로 실제 등록 payload에 넣을지 정한다. */
 function CommonImageField({
@@ -679,282 +707,286 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
           </div>
           {lookupError && <p className="text-xs text-warning">{lookupError}</p>}
 
-          <Field label="출고지">
-            {shippingPlaces.length > 0 && (
-              <select
+          <SettingsSubSection title="출고지 · 배송" hint="상품이 출발하는 곳과 어떻게 보낼지" defaultOpen>
+            <Field label="출고지">
+              {shippingPlaces.length > 0 && (
+                <select
+                  value={outboundShippingPlaceCode}
+                  onChange={(e) => setOutboundShippingPlaceCode(e.target.value)}
+                  className="mb-1.5 w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+                >
+                  <option value="">목록에서 선택...</option>
+                  {shippingPlaces.map((p) => (
+                    <option key={p.code ?? p.name} value={p.code ?? ""}>
+                      {p.name} {p.code != null ? `(${p.code})` : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <input
+                type="text"
                 value={outboundShippingPlaceCode}
                 onChange={(e) => setOutboundShippingPlaceCode(e.target.value)}
-                className="mb-1.5 w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-              >
-                <option value="">목록에서 선택...</option>
-                {shippingPlaces.map((p) => (
-                  <option key={p.code ?? p.name} value={p.code ?? ""}>
-                    {p.name} {p.code != null ? `(${p.code})` : ""}
-                  </option>
-                ))}
-              </select>
-            )}
-            <input
-              type="text"
-              value={outboundShippingPlaceCode}
-              onChange={(e) => setOutboundShippingPlaceCode(e.target.value)}
-              placeholder="출고지 코드 직접 입력(폴백용 — 실제 등록 때는 상품 소싱 국가에 맞는 출고지가 자동 선택됩니다)"
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
+                placeholder="출고지 코드 직접 입력(폴백용 — 실제 등록 때는 상품 소싱 국가에 맞는 출고지가 자동 선택됩니다)"
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
 
-          <Field label="반품지">
-            {returnCenters.length > 0 && (
+            <Field label="택배사">
               <select
-                value={returnCenterCode}
-                onChange={(e) => selectReturnCenter(e.target.value)}
+                value={deliveryCompanyCode}
+                onChange={(e) => setDeliveryCompanyCode(e.target.value)}
                 className="mb-1.5 w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
               >
-                <option value="">목록에서 선택...</option>
-                {returnCenters.map((c) => (
-                  <option key={c.code ?? c.name} value={c.code ?? ""}>
-                    {c.name} {c.code != null ? `(${c.code})` : ""}
+                <option value="">선택...</option>
+                {COURIER_OPTIONS.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.label} ({c.code})
                   </option>
                 ))}
               </select>
-            )}
-            <input
-              type="text"
-              value={returnCenterCode}
-              onChange={(e) => setReturnCenterCode(e.target.value)}
-              placeholder="반품지 코드 직접 입력"
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
+              <input
+                type="text"
+                value={deliveryCompanyCode}
+                onChange={(e) => setDeliveryCompanyCode(e.target.value)}
+                placeholder="목록에 없으면 코드 직접 입력"
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
 
-          <Field label="반품지명">
-            <input
-              type="text"
-              value={returnChargeName}
-              onChange={(e) => setReturnChargeName(e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="반품지 연락처">
-            <input
-              type="text"
-              value={companyContactNumber}
-              onChange={(e) => setCompanyContactNumber(e.target.value)}
-              placeholder="02-1234-5678"
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="반품지 우편번호">
-            <input
-              type="text"
-              value={returnZipCode}
-              onChange={(e) => setReturnZipCode(e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="반품지 주소">
-            <input
-              type="text"
-              value={returnAddress}
-              onChange={(e) => setReturnAddress(e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="반품지 상세주소">
-            <input
-              type="text"
-              value={returnAddressDetail}
-              onChange={(e) => setReturnAddressDetail(e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
+            <Field label="배송방법" hint="현재 CartPilot은 해외구매대행으로만 등록합니다">
+              <input
+                type="text"
+                value={deliveryMethod}
+                onChange={(e) => setDeliveryMethod(e.target.value)}
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+            <Field label="배송비(원)">
+              <input
+                type="number"
+                value={deliveryCharge}
+                onChange={(e) => setDeliveryCharge(e.target.value)}
+                placeholder="예: 19800"
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+            <Field label="출고 소요일">
+              <input
+                type="number"
+                value={outboundLeadTimeDays}
+                onChange={(e) => setOutboundLeadTimeDays(e.target.value)}
+                placeholder="예: 7"
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+          </SettingsSubSection>
 
-          <Field label="택배사">
-            <select
-              value={deliveryCompanyCode}
-              onChange={(e) => setDeliveryCompanyCode(e.target.value)}
-              className="mb-1.5 w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            >
-              <option value="">선택...</option>
-              {COURIER_OPTIONS.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.label} ({c.code})
-                </option>
-              ))}
-            </select>
-            <input
-              type="text"
-              value={deliveryCompanyCode}
-              onChange={(e) => setDeliveryCompanyCode(e.target.value)}
-              placeholder="목록에 없으면 코드 직접 입력"
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
+          <SettingsSubSection title="반품 · 교환" hint="반품/교환 요청이 왔을 때 쓰는 정보">
+            <Field label="반품지">
+              {returnCenters.length > 0 && (
+                <select
+                  value={returnCenterCode}
+                  onChange={(e) => selectReturnCenter(e.target.value)}
+                  className="mb-1.5 w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+                >
+                  <option value="">목록에서 선택...</option>
+                  {returnCenters.map((c) => (
+                    <option key={c.code ?? c.name} value={c.code ?? ""}>
+                      {c.name} {c.code != null ? `(${c.code})` : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <input
+                type="text"
+                value={returnCenterCode}
+                onChange={(e) => setReturnCenterCode(e.target.value)}
+                placeholder="반품지 코드 직접 입력"
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
 
-          {/* Sprint A-8(작업1/5) — 상품마다 다시 입력하지 않는 배송 정책 기본값.
-              등록 Editor의 "배송 정책"/"반품/교환" 카드가 이 값을 그대로 보여준다. */}
-          <p className="border-t border-border pt-3 text-xs font-medium text-text-secondary">배송 정책 기본값</p>
-          <Field label="배송방법" hint="현재 CartPilot은 해외구매대행으로만 등록합니다">
-            <input
-              type="text"
-              value={deliveryMethod}
-              onChange={(e) => setDeliveryMethod(e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="배송비(원)">
-            <input
-              type="number"
-              value={deliveryCharge}
-              onChange={(e) => setDeliveryCharge(e.target.value)}
-              placeholder="예: 19800"
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="반품배송비(원)">
-            <input
-              type="number"
-              value={returnDeliveryCharge}
-              onChange={(e) => setReturnDeliveryCharge(e.target.value)}
-              placeholder="예: 25000"
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="교환배송비(원)" hint="현재 쿠팡 등록 Payload에는 반영되지 않고 참고용으로만 저장됩니다">
-            <input
-              type="number"
-              value={exchangeDeliveryCharge}
-              onChange={(e) => setExchangeDeliveryCharge(e.target.value)}
-              placeholder="예: 25000"
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="출고 소요일">
-            <input
-              type="number"
-              value={outboundLeadTimeDays}
-              onChange={(e) => setOutboundLeadTimeDays(e.target.value)}
-              placeholder="예: 7"
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
+            <Field label="반품지명">
+              <input
+                type="text"
+                value={returnChargeName}
+                onChange={(e) => setReturnChargeName(e.target.value)}
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+            <Field label="반품지 연락처">
+              <input
+                type="text"
+                value={companyContactNumber}
+                onChange={(e) => setCompanyContactNumber(e.target.value)}
+                placeholder="02-1234-5678"
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+            <Field label="반품지 우편번호">
+              <input
+                type="text"
+                value={returnZipCode}
+                onChange={(e) => setReturnZipCode(e.target.value)}
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+            <Field label="반품지 주소">
+              <input
+                type="text"
+                value={returnAddress}
+                onChange={(e) => setReturnAddress(e.target.value)}
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+            <Field label="반품지 상세주소">
+              <input
+                type="text"
+                value={returnAddressDetail}
+                onChange={(e) => setReturnAddressDetail(e.target.value)}
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+            <Field label="반품배송비(원)">
+              <input
+                type="number"
+                value={returnDeliveryCharge}
+                onChange={(e) => setReturnDeliveryCharge(e.target.value)}
+                placeholder="예: 25000"
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+            <Field label="교환배송비(원)" hint="현재 쿠팡 등록 Payload에는 반영되지 않고 참고용으로만 저장됩니다">
+              <input
+                type="number"
+                value={exchangeDeliveryCharge}
+                onChange={(e) => setExchangeDeliveryCharge(e.target.value)}
+                placeholder="예: 25000"
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+          </SettingsSubSection>
 
           {/* Sprint A-8(추가 권장사항) — Sprint A-7 실측에서 "제조자(수입자)"가
               30건 중 30건을 막은 1위 블로커였다. 원본 사이트가 아니라 판매자
               본인의 사업자 정보라 상품마다 다시 찾을 게 아니라 여기서 한 번만
               입력한다. */}
-          <p className="border-t border-border pt-3 text-xs font-medium text-text-secondary">판매자 기본정보</p>
-          <Field label="제조자(수입자)" hint="Sprint A-7 실측 1위 블로커 — 여기 입력하면 상품마다 자동 채워집니다">
-            <input
-              type="text"
-              value={manufacturer}
-              onChange={(e) => setManufacturer(e.target.value)}
-              placeholder="예: 대표님 사업자명"
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="A/S 연락처" hint="비워두면 반품지 연락처를 대신 씁니다">
-            <input
-              type="text"
-              value={asContactNumber}
-              onChange={(e) => setAsContactNumber(e.target.value)}
-              placeholder="02-1234-5678"
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="품질보증기준">
-            <input
-              type="text"
-              value={qualityGuarantee}
-              onChange={(e) => setQualityGuarantee(e.target.value)}
-              placeholder="예: 관련 법령 및 소비자분쟁해결기준에 따름"
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          {/* A-12.3-P0-2(CPO 지시) — 비워두면(기본값) 기존처럼 "인증/허가
-              사항"은 사용자가 직접 입력해야 하는 상태로 남는다. 실제로 KC
-              인증이 법적으로 필요한 카테고리에는 이 문구를 쓰면 안 되므로,
-              대표님이 직접 확인하고 채워야 하는 값이라는 걸 hint로 명시한다. */}
-          <Field
-            label="인증/허가 사항 기본값 (KC 등)"
-            hint="대부분의 구매대행 상품에 해당되는 문구만 넣어주세요 — 실제로 KC 인증이 필요한 상품에는 비워두고 직접 입력해야 합니다"
-          >
-            <input
-              type="text"
-              value={kcExemptionText}
-              onChange={(e) => setKcExemptionText(e.target.value)}
-              placeholder="예: KC마크 없이 구매대행 가능한 품목"
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="원산지 기본값" hint="상품 설명에서 원산지를 못 찾았을 때만 이 값을 대신 씁니다">
-            <input
-              type="text"
-              value={defaultCountryOfOrigin}
-              onChange={(e) => setDefaultCountryOfOrigin(e.target.value)}
-              placeholder="예: 중국"
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
+          <SettingsSubSection title="판매자 기본정보" hint="사업자/인증/원산지 — 상품마다 자동 채워집니다">
+            <Field label="제조자(수입자)" hint="Sprint A-7 실측 1위 블로커 — 여기 입력하면 상품마다 자동 채워집니다">
+              <input
+                type="text"
+                value={manufacturer}
+                onChange={(e) => setManufacturer(e.target.value)}
+                placeholder="예: 대표님 사업자명"
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+            <Field label="A/S 연락처" hint="비워두면 반품지 연락처를 대신 씁니다">
+              <input
+                type="text"
+                value={asContactNumber}
+                onChange={(e) => setAsContactNumber(e.target.value)}
+                placeholder="02-1234-5678"
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+            <Field label="품질보증기준">
+              <input
+                type="text"
+                value={qualityGuarantee}
+                onChange={(e) => setQualityGuarantee(e.target.value)}
+                placeholder="예: 관련 법령 및 소비자분쟁해결기준에 따름"
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+            {/* A-12.3-P0-2(CPO 지시) — 비워두면(기본값) 기존처럼 "인증/허가
+                사항"은 사용자가 직접 입력해야 하는 상태로 남는다. 실제로 KC
+                인증이 법적으로 필요한 카테고리에는 이 문구를 쓰면 안 되므로,
+                대표님이 직접 확인하고 채워야 하는 값이라는 걸 hint로 명시한다. */}
+            <Field
+              label="인증/허가 사항 기본값 (KC 등)"
+              hint="대부분의 구매대행 상품에 해당되는 문구만 넣어주세요 — 실제로 KC 인증이 필요한 상품에는 비워두고 직접 입력해야 합니다"
+            >
+              <input
+                type="text"
+                value={kcExemptionText}
+                onChange={(e) => setKcExemptionText(e.target.value)}
+                placeholder="예: KC마크 없이 구매대행 가능한 품목"
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+            <Field label="원산지 기본값" hint="상품 설명에서 원산지를 못 찾았을 때만 이 값을 대신 씁니다">
+              <input
+                type="text"
+                value={defaultCountryOfOrigin}
+                onChange={(e) => setDefaultCountryOfOrigin(e.target.value)}
+                placeholder="예: 중국"
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+          </SettingsSubSection>
 
           {/* Sprint A-11(작업1/2 — CPO 지시: "판매가 = 환율변환가격 × (1+기본마진)")
               — 상품마다 다시 정하지 않는 가격 정책 기본값. PriceEditor 최상단의
               "원가 → 환율 → 마진 → 최종 판매가" 자동계산이 이 값을 그대로 쓴다. */}
-          <p className="border-t border-border pt-3 text-xs font-medium text-text-secondary">가격 정책</p>
-          <Field label="기본 마진율(%)" hint="비워두면 22%를 씁니다">
-            <input
-              type="number"
-              value={defaultMarginPercent}
-              onChange={(e) => setDefaultMarginPercent(e.target.value)}
-              placeholder="예: 22"
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="배송비 포함 여부" hint="켜면 자동계산에 위 배송비(원)를 더한 뒤 마진을 적용합니다">
-            <label className="flex items-center gap-2 text-xs text-text-secondary">
+          <SettingsSubSection title="가격 정책" hint="마진율 · 반올림 단위 — 판매가 자동계산 기준">
+            <Field label="기본 마진율(%)" hint="비워두면 22%를 씁니다">
               <input
-                type="checkbox"
-                checked={includeShippingInPrice}
-                onChange={(e) => setIncludeShippingInPrice(e.target.checked)}
-                className="h-4 w-4 rounded border-border"
+                type="number"
+                value={defaultMarginPercent}
+                onChange={(e) => setDefaultMarginPercent(e.target.value)}
+                placeholder="예: 22"
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
               />
-              판매가 자동계산에 배송비를 포함
-            </label>
-          </Field>
-          <Field label="가격 반올림 단위" hint="최종 판매가를 이 단위로 반올림합니다(쿠팡은 10원 단위 필수)">
-            <select
-              value={priceRoundingUnit}
-              onChange={(e) => setPriceRoundingUnit(e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            >
-              <option value="10">10원</option>
-              <option value="100">100원</option>
-              <option value="1000">1,000원</option>
-            </select>
-          </Field>
+            </Field>
+            <Field label="배송비 포함 여부" hint="켜면 자동계산에 위 배송비(원)를 더한 뒤 마진을 적용합니다">
+              <label className="flex items-center gap-2 text-xs text-text-secondary">
+                <input
+                  type="checkbox"
+                  checked={includeShippingInPrice}
+                  onChange={(e) => setIncludeShippingInPrice(e.target.checked)}
+                  className="h-4 w-4 rounded border-border"
+                />
+                판매가 자동계산에 배송비를 포함
+              </label>
+            </Field>
+            <Field label="가격 반올림 단위" hint="최종 판매가를 이 단위로 반올림합니다(쿠팡은 10원 단위 필수)">
+              <select
+                value={priceRoundingUnit}
+                onChange={(e) => setPriceRoundingUnit(e.target.value)}
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              >
+                <option value="10">10원</option>
+                <option value="100">100원</option>
+                <option value="1000">1,000원</option>
+              </select>
+            </Field>
+          </SettingsSubSection>
 
           {/* Sprint A-11(작업3 — CPO 지시: "상세페이지 공통 이미지(상단/하단)")
               — 상세설명 맨 앞/맨 뒤에 항상 붙는 고정 이미지(배송/구매대행 안내
               등). 업로드는 여기서 즉시 하고(uploadCommonImage), 실제 프로필
               저장은 아래 "프로필 저장" 버튼을 눌러야 반영된다(다른 필드와 같은
               흐름 — CP001류 이중 저장 로직 방지). */}
-          <p className="border-t border-border pt-3 text-xs font-medium text-text-secondary">상세페이지 공통 이미지</p>
-          <CommonImageField
-            label="상단 공통 이미지"
-            imageUrl={topCommonImageUrl}
-            enabled={topCommonImageEnabled}
-            uploading={imageUploading === "top"}
-            onEnabledChange={setTopCommonImageEnabled}
-            onUpload={(file) => uploadCommonImage("top", file)}
-          />
-          <CommonImageField
-            label="하단 공통 이미지"
-            imageUrl={bottomCommonImageUrl}
-            enabled={bottomCommonImageEnabled}
-            uploading={imageUploading === "bottom"}
-            onEnabledChange={setBottomCommonImageEnabled}
-            onUpload={(file) => uploadCommonImage("bottom", file)}
-          />
+          <SettingsSubSection title="상세페이지 공통 이미지" hint="상단/하단에 항상 붙는 고정 이미지">
+            <CommonImageField
+              label="상단 공통 이미지"
+              imageUrl={topCommonImageUrl}
+              enabled={topCommonImageEnabled}
+              uploading={imageUploading === "top"}
+              onEnabledChange={setTopCommonImageEnabled}
+              onUpload={(file) => uploadCommonImage("top", file)}
+            />
+            <CommonImageField
+              label="하단 공통 이미지"
+              imageUrl={bottomCommonImageUrl}
+              enabled={bottomCommonImageEnabled}
+              uploading={imageUploading === "bottom"}
+              onEnabledChange={setBottomCommonImageEnabled}
+              onUpload={(file) => uploadCommonImage("bottom", file)}
+            />
+          </SettingsSubSection>
 
           <button
             type="button"
