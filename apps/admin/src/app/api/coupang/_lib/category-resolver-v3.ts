@@ -165,15 +165,24 @@ export async function resolveCategoryV3(
     }),
   );
 
-  // A-12.3-P0-3(CPO 2차 지시 — "실제 등록 가능한 카테고리만 노출. 존재하지
-  // 않는 category는 숨기는 게 맞다") — 이전엔 검증 실패 후보도 candidates에
-  // 그대로 담아 화면에 "실존 확인 안 됨" 딱지를 붙여 보여줬다. 이제는 애초에
-  // 등록 불가능한 코드를 후보 목록에 노출하지 않는다 — 검증 통과한 것만
-  // 반환한다.
+  // A-12.3-P0-4(CPO 3차 지시 — regression 수정: "추천이 항상 살아있어야
+  // 한다") — 직전 커밋에서 "검증 통과한 것만 반환"으로 바꿨더니, meta 조회가
+  // 레이트리밋/네트워크 문제로 실패하는 순간 후보가 통째로 0개가 되어 추천·
+  // 검색이 동시에 죽는 회귀가 발생했다(실측 확인됨). "존재하지 않는 카테고리를
+  // 등록 가능처럼 보이면 안 된다"는 원래 취지는 옳지만, 그 판단은 candidates를
+  // 아예 숨기는 게 아니라 각 후보에 metaVerified 배지를 붙여 화면(①/② 구간)이
+  // 구분해서 보여주는 방식으로 지켜야 한다 — 검증에 실패해도 최소한 "여기 후보가
+  // 있다"는 사실 자체는 항상 보여준다.
   const verifiedOnly = verified.filter((c) => c.metaVerified);
-  const best = verifiedOnly[0] ?? null;
+  const best = verifiedOnly[0] ?? verified[0] ?? null;
   const decision: CategoryResolverV3Result["decision"] =
-    best == null || best.conflict ? "REJECT" : best.score >= AUTO_SELECT_THRESHOLD ? "AUTO_SELECT" : "RECOMMEND";
+    best == null
+      ? "REJECT"
+      : best.conflict
+        ? "REJECT"
+        : best.metaVerified && best.score >= AUTO_SELECT_THRESHOLD
+          ? "AUTO_SELECT"
+          : "RECOMMEND";
 
-  return { decision, best, candidates: verifiedOnly };
+  return { decision, best, candidates: verified };
 }

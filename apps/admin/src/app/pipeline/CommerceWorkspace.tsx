@@ -173,6 +173,14 @@ export function CommerceWorkspace({
   // best 하나만 화면에 올라갔다(나머지는 Trace Log 텍스트로만 보였다). 이제
   // 실존 검증(metaVerified)까지 통과한 후보를 전부 배열로 들고 있는다.
   const [coupangApiCandidates, setCoupangApiCandidates] = useState<CategoryCandidate[]>([]);
+  /** A-12.3-P0-4(CPO 3차 지시 — regression 수정: "추천과 검색은 대체관계가
+   * 아니라 항상 동시에 존재해야 한다") — 이전엔 검색 결과를 recommend와 같은
+   * state(coupangApiCandidates)에 덮어써서, 검색하면 추천이 사라지고 추천을
+   * 다시 부르면 검색 결과가 사라졌다. 완전히 분리된 state로 "AI 추천"과
+   * "직접 검색" 두 결과가 동시에 화면에 남아있게 한다. */
+  const [coupangSearchCandidates, setCoupangSearchCandidates] = useState<CategoryCandidate[]>([]);
+  const [coupangSearchAttempted, setCoupangSearchAttempted] = useState(false);
+  const [coupangRecommendAttempted, setCoupangRecommendAttempted] = useState(false);
   /** Sprint A-5(Category Resolver 3.0 KPI) — coupangApiCandidate가 어떤
    * 판정(AUTO_SELECT/RECOMMEND/REJECT)과 유사도로 나왔는지. selectCategory가
    * 사용자 확정 시점에 categoryResolverKpi로 그대로 옮겨 담아서 등록 이력에
@@ -477,14 +485,17 @@ export function CommerceWorkspace({
   const categoryCandidates = useMemo(() => {
     if (tab === "source" || tab === "content") return [];
     const ruleBased = ruleBasedCategoryProvider.recommendCategory(product, tab);
-    // A-12.3-P0-3(CPO 2차 지시 — "실제 등록 가능한 카테고리만 노출, 존재하지
-    // 않는 category는 숨기는 게 맞다") — ruleBasedCategoryProvider의 후보는
-    // CartPilot 내부 카테고리 이름표일 뿐 실제 쿠팡 displayCategoryCode가
-    // 아니라(rule-based.provider.ts 참고) 존재 검증이 아예 불가능하다. 쿠팡
-    // 탭에서는 category-resolver-v3가 실제 존재를 확인한 coupangApiCandidates만
-    // 보여준다 — 검증 안 된 후보를 섞어서 "등록 가능해 보이는" 착시를 만들지
-    // 않는다(다른 플랫폼은 아직 이 검증 체계가 없어 기존처럼 rule 후보를 쓴다).
-    if (tab === "coupang") return coupangApiCandidates;
+    // A-12.3-P0-4(CPO 3차 지시 — regression 수정: "추천 리스트가 항상 보여야
+    // 한다") — 직전 커밋(4dbd5eb)에서 "검증된 쿠팡 API 후보만 보여준다"고
+    // coupangApiCandidates만 반환하게 바꿨는데, 이 state는 사용자가 "쿠팡
+    // API로 카테고리 확인" 버튼을 눌러야만(또는 아래 자동 fetch effect가
+    // 끝나야만) 채워진다 — 그 전까지는 빈 배열이라 추천 섹션 전체가
+    // 아무것도 없이 비어 보였다(실측 확인된 regression). CartPilot의 즉시
+    // 계산되는 rule-based 후보(실제 코드는 아니지만 화면엔 항상 존재)를
+    // 다시 항상 같이 보여주고, isVerifiedPlatformCode로 "바로 등록 가능"과
+    // "AI 추정"을 구분한다 — "검증된 것만 노출"이라는 원래 취지는
+    // CategoryRecommendationPanel의 ①/②/③ 등급 구분으로 지킨다.
+    if (tab === "coupang") return [...coupangApiCandidates, ...ruleBased];
     return ruleBased;
   }, [tab, product, coupangApiCandidates]);
 
@@ -727,33 +738,44 @@ export function CommerceWorkspace({
         (c, i) =>
           `  ${i + 1}위 "${c.categoryName}"(코드 ${c.categoryCode}) — 유사도 ${c.score}% ${c.conflict ? "✗" : "○"}${c.metaVerified === false ? " · 실존 확인 안 됨" : ""} — ${c.reason}`,
       );
-      if (data.decision === "REJECT") {
-        setCoupangApiCandidates([]);
-        setCoupangResolverDecision({
-          decision: "REJECT",
-          score: data.best?.score ?? 0,
-          reason: data.best?.reason,
-          rejectedCandidates: (data.candidates ?? []).slice(0, 3).map((c) => ({
-            categoryName: c.categoryName,
-            categoryCode: c.categoryCode,
-            score: c.score,
-            reason: c.reason,
-          })),
-        });
+      // A-12.3-P0-4(CPO 3차 지시 — regression 수정) — 검색(isUserQuery)과
+      // 자동추천은 서로 다른 state에 쓴다. 결과가 REJECT거나 candidates가
+      // 0개여도 반드시 setState를 호출해서(빈 배열이라도) "시도했다"는
+      // 사실이 남게 한다 — 그래야 화면이 "결과 없음" 메시지를 보여줄 수
+      // 있다(이전엔 이 경로에서 아무 것도 안 하고 조용히 끝나서 검색
+      // 버튼을 눌러도 화면이 그대로였다).
+      const setCandidates = isUserQuery ? setCoupangSearchCandidates : setCoupangApiCandidates;
+      if (isUserQuery) setCoupangSearchAttempted(true);
+      else setCoupangRecommendAttempted(true);
+
+      if (data.decision === "REJECT" || !data.candidates || data.candidates.length === 0) {
+        setCandidates([]);
+        if (!isUserQuery) {
+          setCoupangResolverDecision({
+            decision: "REJECT",
+            score: data.best?.score ?? 0,
+            reason: data.best?.reason,
+            rejectedCandidates: (data.candidates ?? []).slice(0, 3).map((c) => ({
+              categoryName: c.categoryName,
+              categoryCode: c.categoryCode,
+              score: c.score,
+              reason: c.reason,
+            })),
+          });
+        }
         setCategoryTraceLog((prev) => [
           ...prev,
-          "→ Resolver 3.0 판정: REJECT — 예측 결과가 상품유형과 명백히 다르거나, 실제 등록 가능한 카테고리로 확인되지 않았습니다.",
+          `→ Resolver 3.0 판정: REJECT${isUserQuery ? "(검색)" : ""} — 예측 결과가 상품유형과 명백히 다르거나, 실제 등록 가능한 카테고리로 확인되지 않았습니다.`,
           ...candidateLines,
-          "→ 카테고리를 직접 검색해서 선택해주세요.",
         ]);
-      } else if (data.best && data.candidates && data.candidates.length > 0) {
-        setCoupangResolverDecision({ decision: data.decision ?? "RECOMMEND", score: data.best.score });
+      } else {
+        if (!isUserQuery) setCoupangResolverDecision({ decision: data.decision ?? "RECOMMEND", score: data.best!.score });
         // A-12.3-P0-2(CPO 지시: "① 쿠팡 API 추천이 순위 리스트로 보여야
         // 한다") — best 하나만이 아니라 candidates 전부를 후보로 올린다.
         // 실존 검증(metaVerified)을 통과한 것만 "바로 등록 가능"(①) 배지를
         // 받는다 — 통과 못 한 건 CategoryRecommendationPanel의 다른
         // 버킷(②/③)으로 자연히 내려간다.
-        setCoupangApiCandidates(
+        setCandidates(
           data.candidates.map((c) => ({
             id: String(c.categoryCode),
             name: c.categoryName,
@@ -773,17 +795,45 @@ export function CommerceWorkspace({
         );
         setCategoryTraceLog((prev) => [
           ...prev,
-          `→ Resolver 3.0 판정: ${data.decision}(유사도 ${data.best!.score}%) — "${data.best!.categoryName}" (코드 ${data.best!.categoryCode})`,
+          `→ Resolver 3.0 판정: ${data.decision}${isUserQuery ? "(검색)" : ""}(유사도 ${data.best!.score}%) — "${data.best!.categoryName}" (코드 ${data.best!.categoryCode})`,
           ...candidateLines,
         ]);
       }
     } catch {
-      // 조용히 실패 — 이 후보는 참고용 추가 옵션일 뿐, 실패해도 기존 AI 추천
-      // 흐름(내부 카테고리 선택)은 그대로 쓸 수 있다.
+      // A-12.3-P0-4(CPO 3차 지시) — 이전엔 catch에서 아무것도 안 해서 실패해도
+      // 화면이 조용히 그대로였다("검색 버튼만 있고 아무 결과도 안 나온다"는
+      // CPO 지적의 실제 원인 중 하나). 실패도 "시도했다"로 기록해서 화면이
+      // 명시적인 에러/빈 상태 메시지를 보여줄 수 있게 한다.
+      if (isUserQuery) {
+        setCoupangSearchAttempted(true);
+        setCoupangSearchCandidates([]);
+      } else {
+        setCoupangRecommendAttempted(true);
+      }
     } finally {
       setCoupangCategoryFetching(false);
     }
   }
+
+  /** A-12.3-P0-4(CPO 3차 지시 — regression 수정: "AI 추천 → 항상 표시") —
+   * 지금까지 "쿠팡 API로 카테고리 확인"은 사용자가 버튼을 직접 눌러야만
+   * 실행됐다(이 자체가 처음부터 있던 설계였다 — 최근 회귀와는 별개). CPO가
+   * 원하는 흐름은 AI 추천이 사람 개입 없이 자동으로 나타나는 것이라, 쿠팡
+   * 탭에 들어오면 한 번 자동으로 호출한다. sourceUrl이 바뀌면(새 상품)
+   * 다시 자동 호출되도록 ref로 마지막에 자동 호출한 상품을 기억한다 —
+   * 그 외의 리렌더/재선택에서는 재호출하지 않는다(무한 루프 방지, 또한
+   * 이미 쿠팡 API를 여러 번 두드린 뒤라 불필요한 재호출로 레이트리밋을
+   * 더 태우지 않기 위함).
+   */
+  const autoFetchedForRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (tab !== "coupang" || !listing) return;
+    const key = product.sourceUrl;
+    if (autoFetchedForRef.current === key) return;
+    autoFetchedForRef.current = key;
+    void fetchCoupangCategoryRecommendation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, listing, product.sourceUrl]);
 
   /**
    * SmartStore에서만 계산한다 — 원산지/반품정보/배송비/재고 같은 등록 직전
@@ -1037,6 +1087,9 @@ export function CommerceWorkspace({
           onRetryListing={retryListing}
           onFetchCoupangCategory={tab === "coupang" ? fetchCoupangCategoryRecommendation : undefined}
           coupangCategoryFetching={coupangCategoryFetching}
+          coupangSearchCandidates={tab === "coupang" ? coupangSearchCandidates : undefined}
+          coupangSearchAttempted={coupangSearchAttempted}
+          coupangRecommendAttempted={coupangRecommendAttempted}
           categoryTraceLog={categoryTraceLog}
           coupangResolverDecision={tab === "coupang" ? coupangResolverDecision : null}
           categoryMeta={tab === "coupang" ? categoryMeta : null}

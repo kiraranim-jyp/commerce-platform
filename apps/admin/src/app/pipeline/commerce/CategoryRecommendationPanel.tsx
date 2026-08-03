@@ -13,6 +13,12 @@ function starsFor(candidate: CategoryCandidate, verified: boolean): string {
   return "★★";
 }
 
+/** A-12.3-P0-4(CPO 3차 지시 — regression 수정: "AI 추천 → 항상 표시 / 검색 →
+ * 결과 리스트까지 항상 동작 / 이 둘은 대체관계가 아니라 항상 동시에 존재해야
+ * 한다") — 이전 버전은 candidates 하나를 추천/검색 겸용으로 썼고, "검증된
+ * 것만 노출"이 겹치면서 두 기능이 동시에 죽는 회귀가 있었다(실측 확인,
+ * git 4dbd5eb). 이번 버전은 두 결과를 완전히 분리된 prop(candidates=AI
+ * 추천, searchCandidates=직접 검색)으로 받아 항상 나란히 렌더링한다. */
 export function CategoryRecommendationPanel({
   candidates,
   selection,
@@ -20,6 +26,9 @@ export function CategoryRecommendationPanel({
   onFetchCoupangCategory,
   coupangCategoryFetching,
   resolverDecision,
+  searchCandidates,
+  searchAttempted,
+  recommendAttempted,
 }: {
   candidates: CategoryCandidate[];
   selection: CategorySelection;
@@ -39,11 +48,17 @@ export function CategoryRecommendationPanel({
     reason?: string;
     rejectedCandidates?: { categoryName: string; categoryCode: number; score: number; reason: string }[];
   } | null;
+  /** "직접 검색" 결과 — AI 추천(candidates)과 완전히 분리된 목록. */
+  searchCandidates?: CategoryCandidate[];
+  /** 검색을 한 번이라도 시도했는지 — 결과가 0개일 때 "검색 결과 없음"과
+   * "아직 검색 안 함"을 구분하는 데 쓴다. */
+  searchAttempted?: boolean;
+  /** AI 추천을 한 번이라도 시도했는지(자동 fetch 포함) — 0개일 때 "추천 결과
+   * 없음"과 "아직 불러오는 중"을 구분하는 데 쓴다. */
+  recommendAttempted?: boolean;
 }) {
   const [expanded, setExpanded] = useState(true);
-  const [searching, setSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showAllCandidates, setShowAllCandidates] = useState(false);
   const isConfirmed = selection.state === "SELECTED" || selection.state === "CONFIRMED";
 
   // Sprint A-10(작업2/8 — CEO 지시: "① 쿠팡 API 추천 ② 추천 후보 ③ 전체 후보
@@ -57,6 +72,14 @@ export function CategoryRecommendationPanel({
   const recommendedCandidates = unverified.filter((c) => c.confidence >= 0.6);
   const similarCandidates = unverified.filter((c) => c.confidence < 0.6);
 
+  const search = searchCandidates ?? [];
+  const verifiedSearch = search.filter((c) => c.isVerifiedPlatformCode);
+  const otherSearch = search.filter((c) => !c.isVerifiedPlatformCode);
+
+  const isCoupang = !!onFetchCoupangCategory;
+  const recommendEmpty = candidates.length === 0;
+  const recommendLoading = !!coupangCategoryFetching && !recommendAttempted;
+
   return (
     <section className="rounded-lg border border-border p-4 text-sm">
       <button
@@ -69,140 +92,183 @@ export function CategoryRecommendationPanel({
           <p className="mt-0.5 text-xs text-text-secondary">
             {isConfirmed && selection.candidate
               ? `선택됨: ${selection.candidate.path.join(" > ")}`
-              : candidates.length > 0
-                ? "추천 후보 중 하나를 선택하세요."
-                : "상품명/설명에서 카테고리를 추론할 수 없습니다 — 직접 확인이 필요합니다."}
+              : "AI 추천 또는 검색으로 카테고리를 선택하세요."}
           </p>
         </div>
         <span className="shrink-0 text-xs text-text-tertiary">{expanded ? "접기" : "펼치기"}</span>
       </button>
 
-      {expanded && onFetchCoupangCategory && (
-        <div className="mt-3 space-y-2" onClick={(event) => event.stopPropagation()}>
-          <button
-            type="button"
-            onClick={() => onFetchCoupangCategory()}
-            disabled={coupangCategoryFetching}
-            className="w-full rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-background disabled:opacity-50"
-          >
-            {coupangCategoryFetching ? "쿠팡 API 확인 중…" : "쿠팡 API로 카테고리 확인"}
-          </button>
-
-          {!searching ? (
-            <button
-              type="button"
-              onClick={() => setSearching(true)}
-              className="w-full rounded-md border border-dashed border-border px-3 py-1.5 text-xs font-medium text-text-tertiary transition-colors hover:bg-background"
-            >
-              카테고리 변경 (검색)
-            </button>
-          ) : (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (searchQuery.trim()) onFetchCoupangCategory(searchQuery);
-              }}
-              className="flex gap-1.5"
-            >
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="예: 샌들"
-                autoFocus
-                className="min-w-0 flex-1 rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
-              />
-              <button
-                type="submit"
-                disabled={coupangCategoryFetching || !searchQuery.trim()}
-                className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
-              >
-                검색
-              </button>
-            </form>
-          )}
-        </div>
-      )}
-
-      {expanded && resolverDecision?.decision === "REJECT" && (
-        <div className="mt-3 rounded-md border border-warning bg-warning-soft p-3 text-xs text-warning">
-          <p className="font-medium">이 카테고리는 상품 특성과 맞지 않아 추천하지 않습니다.</p>
-          {(resolverDecision.reason || (resolverDecision.rejectedCandidates?.length ?? 0) > 0) && (
-            <div className="mt-1.5">
-              <p className="font-medium">사유</p>
-              <ul className="mt-0.5 space-y-0.5">
-                {resolverDecision.reason && <li>- {resolverDecision.reason}</li>}
-                {resolverDecision.rejectedCandidates
-                  ?.filter((c) => c.reason !== resolverDecision.reason)
-                  .map((c) => (
-                    <li key={c.categoryCode}>
-                      - {c.categoryName}: {c.reason}
-                    </li>
-                  ))}
-              </ul>
+      {expanded && (
+        <div className="mt-3 space-y-4" onClick={(event) => event.stopPropagation()}>
+          {/* ── AI 추천 (항상 존재) ─────────────────────────────────── */}
+          <div>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-text-secondary">AI 추천</p>
+              {isCoupang && (
+                <button
+                  type="button"
+                  onClick={() => onFetchCoupangCategory!()}
+                  disabled={coupangCategoryFetching}
+                  className="rounded border border-border px-2 py-0.5 text-[11px] font-medium text-text-tertiary transition-colors hover:bg-background disabled:opacity-50"
+                >
+                  {coupangCategoryFetching ? "확인 중…" : "다시 확인"}
+                </button>
+              )}
             </div>
-          )}
-          <p className="mt-1.5">아래 추천 후보 중에서 고르거나, 검색으로 직접 확인해주세요.</p>
-        </div>
-      )}
 
-      {expanded && verifiedCandidates.length > 0 && (
-        <div className="mt-3">
-          <p className="text-xs font-medium text-text-secondary">① 쿠팡 API 추천 — 바로 등록 가능</p>
-          <ol className="mt-1.5 space-y-2">
-            {verifiedCandidates.map((candidate) => (
-              <CandidateCard
-                key={candidate.id}
-                candidate={candidate}
-                isSelected={isConfirmed && selection.candidate?.id === candidate.id}
-                onSelect={onSelect}
-                verified
-              />
-            ))}
-          </ol>
-        </div>
-      )}
-      {expanded && recommendedCandidates.length > 0 && (
-        <div className="mt-3">
-          <p className="text-xs font-medium text-text-secondary">② 추천 후보 — AI가 추정, 선택 가능</p>
-          <ol className="mt-1.5 space-y-2">
-            {recommendedCandidates.map((candidate) => (
-              <CandidateCard
-                key={candidate.id}
-                candidate={candidate}
-                isSelected={isConfirmed && selection.candidate?.id === candidate.id}
-                onSelect={onSelect}
-                verified={false}
-              />
-            ))}
-          </ol>
-        </div>
-      )}
-      {expanded && similarCandidates.length > 0 && (
-        <div className="mt-3">
-          {!showAllCandidates ? (
-            <button
-              type="button"
-              onClick={() => setShowAllCandidates(true)}
-              className="text-xs font-medium text-primary hover:underline"
-            >
-              ③ 전체 후보 보기 ({similarCandidates.length}개)
-            </button>
-          ) : (
-            <>
-              <p className="text-xs font-medium text-text-secondary">③ 유사 카테고리 — 신뢰도가 낮아 참고용</p>
-              <ol className="mt-1.5 space-y-2">
-                {similarCandidates.map((candidate) => (
-                  <CandidateCard
-                    key={candidate.id}
-                    candidate={candidate}
-                    isSelected={isConfirmed && selection.candidate?.id === candidate.id}
-                    onSelect={onSelect}
-                    verified={false}
-                  />
-                ))}
-              </ol>
-            </>
+            {resolverDecision?.decision === "REJECT" && (
+              <div className="mt-2 rounded-md border border-warning bg-warning-soft p-3 text-xs text-warning">
+                <p className="font-medium">이 카테고리는 상품 특성과 맞지 않아 추천하지 않습니다.</p>
+                {(resolverDecision.reason || (resolverDecision.rejectedCandidates?.length ?? 0) > 0) && (
+                  <div className="mt-1.5">
+                    <p className="font-medium">사유</p>
+                    <ul className="mt-0.5 space-y-0.5">
+                      {resolverDecision.reason && <li>- {resolverDecision.reason}</li>}
+                      {resolverDecision.rejectedCandidates
+                        ?.filter((c) => c.reason !== resolverDecision.reason)
+                        .map((c) => (
+                          <li key={c.categoryCode}>
+                            - {c.categoryName}: {c.reason}
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                )}
+                <p className="mt-1.5">아래 추천 후보 중에서 고르거나, 검색으로 직접 확인해주세요.</p>
+              </div>
+            )}
+
+            {verifiedCandidates.length > 0 && (
+              <div className="mt-2">
+                <p className="text-xs font-medium text-text-secondary">① 쿠팡 API 추천 — 바로 등록 가능</p>
+                <ol className="mt-1.5 space-y-2">
+                  {verifiedCandidates.map((candidate) => (
+                    <CandidateCard
+                      key={candidate.id}
+                      candidate={candidate}
+                      isSelected={isConfirmed && selection.candidate?.id === candidate.id}
+                      onSelect={onSelect}
+                      verified
+                    />
+                  ))}
+                </ol>
+              </div>
+            )}
+            {recommendedCandidates.length > 0 && (
+              <div className="mt-2">
+                <p className="text-xs font-medium text-text-secondary">② 추천 후보 — AI가 추정, 선택 가능</p>
+                <ol className="mt-1.5 space-y-2">
+                  {recommendedCandidates.map((candidate) => (
+                    <CandidateCard
+                      key={candidate.id}
+                      candidate={candidate}
+                      isSelected={isConfirmed && selection.candidate?.id === candidate.id}
+                      onSelect={onSelect}
+                      verified={false}
+                    />
+                  ))}
+                </ol>
+              </div>
+            )}
+            {similarCandidates.length > 0 && (
+              <div className="mt-2">
+                <p className="text-xs font-medium text-text-secondary">③ 유사 카테고리 — 신뢰도가 낮아 참고용</p>
+                <ol className="mt-1.5 space-y-2">
+                  {similarCandidates.map((candidate) => (
+                    <CandidateCard
+                      key={candidate.id}
+                      candidate={candidate}
+                      isSelected={isConfirmed && selection.candidate?.id === candidate.id}
+                      onSelect={onSelect}
+                      verified={false}
+                    />
+                  ))}
+                </ol>
+              </div>
+            )}
+
+            {/* A-12.3-P0-4 — 후보가 진짜 0개일 때 빈 화면 대신 명시적 안내를
+                보여준다(CPO 지시: "추천이 없으면 빈화면이 아니라 '추천 결과가
+                없습니다. 검색을 이용해주세요.'를 보여주세요"). 아직 첫 시도
+                전이거나 로딩 중이면 빈 화면 대신 진행 상태를 보여준다. */}
+            {recommendEmpty && (
+              <p className="mt-2 rounded-md bg-background p-2.5 text-xs text-text-tertiary">
+                {recommendLoading || (isCoupang && !recommendAttempted)
+                  ? "AI 추천을 불러오는 중…"
+                  : "추천 결과가 없습니다. 검색을 이용해주세요."}
+              </p>
+            )}
+          </div>
+
+          {/* ── 직접 검색 (항상 존재, 추천의 대체가 아니라 별도 경로) ──── */}
+          {isCoupang && (
+            <div>
+              <p className="text-xs font-medium text-text-secondary">직접 검색</p>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (searchQuery.trim()) onFetchCoupangCategory!(searchQuery);
+                }}
+                className="mt-1.5 flex gap-1.5"
+              >
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="예: 샌들"
+                  className="min-w-0 flex-1 rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={coupangCategoryFetching || !searchQuery.trim()}
+                  className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+                >
+                  검색
+                </button>
+              </form>
+
+              {verifiedSearch.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-xs font-medium text-text-secondary">검색결과 — 바로 등록 가능</p>
+                  <ol className="mt-1.5 space-y-2">
+                    {verifiedSearch.map((candidate) => (
+                      <CandidateCard
+                        key={candidate.id}
+                        candidate={candidate}
+                        isSelected={isConfirmed && selection.candidate?.id === candidate.id}
+                        onSelect={onSelect}
+                        verified
+                      />
+                    ))}
+                  </ol>
+                </div>
+              )}
+              {otherSearch.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-xs font-medium text-text-secondary">검색결과 — 참고용</p>
+                  <ol className="mt-1.5 space-y-2">
+                    {otherSearch.map((candidate) => (
+                      <CandidateCard
+                        key={candidate.id}
+                        candidate={candidate}
+                        isSelected={isConfirmed && selection.candidate?.id === candidate.id}
+                        onSelect={onSelect}
+                        verified={false}
+                      />
+                    ))}
+                  </ol>
+                </div>
+              )}
+              {/* A-12.3-P0-4(CPO 지시: "검색 버튼만 있고 아무 결과도 안 나오면
+                  안 된다") — 검색을 시도했는데 결과가 0개면 반드시 사유를
+                  보여준다. 아직 검색을 안 했으면(searchAttempted=false)
+                  아무것도 보여주지 않는다(빈 결과와 "아직 안 함"을 구분). */}
+              {search.length === 0 && searchAttempted && !coupangCategoryFetching && (
+                <p className="mt-2 rounded-md bg-background p-2.5 text-xs text-text-tertiary">
+                  검색 결과가 없습니다 — 다른 검색어로 다시 시도해주세요.
+                </p>
+              )}
+            </div>
           )}
         </div>
       )}

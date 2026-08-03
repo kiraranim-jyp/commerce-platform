@@ -90,6 +90,9 @@ export function PlatformPreview({
   onRetryListing,
   onFetchCoupangCategory,
   coupangCategoryFetching,
+  coupangSearchCandidates,
+  coupangSearchAttempted,
+  coupangRecommendAttempted,
   categoryTraceLog,
   coupangResolverDecision,
   categoryMeta,
@@ -154,6 +157,12 @@ export function PlatformPreview({
   /** 쿠팡 탭에서만 넘어온다 — 있으면 카테고리 추천 패널에 "쿠팡 API로 확인"/검색 UI가 보인다. */
   onFetchCoupangCategory?: (query?: string) => void;
   coupangCategoryFetching?: boolean;
+  /** A-12.3-P0-4(CPO 3차 지시 — regression 수정: "추천과 검색은 항상 동시에
+   * 존재해야 한다") — 검색 결과는 AI 추천(categoryCandidates)과 완전히 분리된
+   * 목록이라 별도로 내려받는다. */
+  coupangSearchCandidates?: CategoryCandidate[];
+  coupangSearchAttempted?: boolean;
+  coupangRecommendAttempted?: boolean;
   /** P0(Category Resolver 추적) — "추천 신호 → 쿠팡 API 질의 → 검증 결과 → 선택"
    * 순서를 그대로 보여준다. */
   categoryTraceLog?: string[];
@@ -357,6 +366,9 @@ export function PlatformPreview({
             onFetchCoupangCategory={onFetchCoupangCategory}
             coupangCategoryFetching={coupangCategoryFetching}
             resolverDecision={coupangResolverDecision}
+            searchCandidates={coupangSearchCandidates}
+            searchAttempted={coupangSearchAttempted}
+            recommendAttempted={coupangRecommendAttempted}
           />
           {/* Sprint A-9(작업2/8) — "검증됨=false" 같은 개발자 로그 문구는 일반
               사용자에게 의미가 없다. Developer Mode를 켰을 때만 원시 추적
