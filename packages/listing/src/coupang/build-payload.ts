@@ -1046,14 +1046,18 @@ export function buildCoupangPayload(
 
 /** Sprint A-11(작업9 — CPO 지시: "등록 전 자동 검증: 가격 반올림 + 반품배송비
  * 상한") — 이번 스프린트 LIVE 시도 3회에서 실제로 확인된 쿠팡 제약이다:
- * (1) 판매가는 10원 단위여야 한다("판매가는 최소 10원 단위로 입력가능합니다"),
- * (2) 반품배송비는 min(20000, 판매가)를 넘을 수 없다(가격대별로 순차 확인된
- * 두 에러 메시지를 합친 추정 공식 — 카테고리 메타 응답에는 이 상한이 없어
- * client-side로 검증할 방법이 이 추정 규칙뿐이다. 모든 카테고리에서
- * 100% 보장되는 공식은 아니므로, 여기서 걸러지지 않아도 실제 API가 최종
- * 방어선이다). register/route.ts가 실제 API 호출 직전에 이 함수로 한 번 더
- * 막는다 — 화면의 Sticky Summary가 막아주는 게 정상 경로지만, 오래된 상태를
- * 들고 있는 클라이언트에 대비해 서버에서도 막는 CP007과 같은 방어선이다. */
+ * 판매가는 10원 단위여야 한다("판매가는 최소 10원 단위로 입력가능합니다").
+ *
+ * 반품배송비 상한은 이전에 min(20000, 판매가)로 20,000원을 하드코딩했었다 —
+ * 대표님 피드백(2026-08-03): "해외 결제라 반품 배송비가 비싸. min/max 기준은
+ * 셀러가 등록한 가격 기준으로 진행이 되어야 해." 20,000원은 실제 쿠팡 API
+ * 문서에 있는 값이 아니라 가격대별로 순차 확인된 두 에러 메시지를 합쳐 만든
+ * 추정치였고, 해외소싱처럼 반품배송비가 실제로 더 비싼 정상적인 케이스까지
+ * 우리 쪽 client-side 검증이 먼저 막아버리는 오탐이었다. 이제 판매가만을
+ * 상한으로 쓴다(반품배송비가 판매가를 넘는 건 논리적으로 말이 안 되니 그
+ * 최소한의 방어선만 유지) — 임의의 원화 상한은 걸지 않는다. 쿠팡이 실제로
+ * 거부하면(진짜 API 제약이면) 그건 register/route.ts의 API 에러 처리가
+ * 그대로 보여준다 — 그게 정상 방어선이다. */
 export interface CoupangPricingIssue {
   field: "salePrice" | "returnCharge";
   message: string;
@@ -1069,12 +1073,11 @@ export function validateCoupangPricing(payload: CoupangPayload): CoupangPricingI
     });
   }
   if (payload.items.length > 0) {
-    const minSalePrice = Math.min(...payload.items.map((i) => i.salePrice));
-    const maxReturnCharge = Math.min(20000, minSalePrice);
+    const maxReturnCharge = Math.min(...payload.items.map((i) => i.salePrice));
     if (payload.returnCharge > maxReturnCharge) {
       issues.push({
         field: "returnCharge",
-        message: `반품배송비(${payload.returnCharge.toLocaleString()}원)가 상한(${maxReturnCharge.toLocaleString()}원 = min(20,000원, 판매가))을 초과합니다.`,
+        message: `반품배송비(${payload.returnCharge.toLocaleString()}원)가 판매가(${maxReturnCharge.toLocaleString()}원)를 초과합니다.`,
       });
     }
   }

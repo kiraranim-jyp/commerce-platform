@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { CategoryCandidate, CategorySelection } from "@commerce/category";
+import { CategoryTreeBrowser } from "./CategoryTreeBrowser";
 
 /** Sprint A-10(작업2/8 — CEO 지시: "★★★★★ 쿠팡 추천 / ★★★★ 추천 후보 / ★★ 유사
  * 카테고리"처럼 등급을 별점으로") — 실제 쿠팡 API가 검증한 코드(isVerifiedPlatformCode)는
@@ -268,6 +269,11 @@ export function CategoryRecommendationPanel({
                   검색 결과가 없습니다 — 다른 검색어로 다시 시도해주세요.
                 </p>
               )}
+
+              {/* CEO 지시(2026-08-03) — 검색(predict API)이 흔한 검색어에서
+                  관련없는 카테고리를 줄 때가 있다(실측 확인) — 대분류부터
+                  직접 훑어 고르는 목록형 대안. */}
+              <CategoryTreeBrowser onSelect={onSelect} />
             </div>
           )}
         </div>
