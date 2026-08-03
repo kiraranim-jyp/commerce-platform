@@ -112,6 +112,30 @@ export interface ShopifyProductResult {
   productData: Partial<ExtractedProductData>;
 }
 
+/** 실측 확인(2026-08-03, CEO 리포트) — Shopify Markets를 쓰는 스토어는
+ * `/products/{handle}.json`의 `variants[].price_currency`가 "요청이 어느
+ * 지역에서 왔는지"에 따라 달라진다(presentment currency, 지오 기반). 영국
+ * 매장(junioredition.com, GB)을 로컬에서 curl하면 GBP가 오지만 Vercel(미국
+ * 리전) 서버에서 같은 요청을 보내면 USD로 바뀌는 걸 실측으로 확인했다 —
+ * 상품 원가가 실제와 다른 통화로 잘못 표시/환산되는 심각한 버그였다.
+ * `/meta.json`(모든 Shopify 스토어가 공개하는 매장 메타데이터)의 `currency`
+ * 필드는 매장 관리자가 설정한 고정 기준 통화라 지역에 관계없이 항상 같다 —
+ * 이 값을 always-authoritative override로 쓴다(있으면 무조건 우선, 없을 때만
+ * variant.price_currency로 폴백). */
+async function fetchShopifyShopCurrency(origin: string): Promise<string | null> {
+  try {
+    const response = await fetchWithDomainRateLimit(`${origin}/meta.json`, {
+      headers: { Accept: "application/json", "User-Agent": CHROME_UA },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+    if (!response.ok) return null;
+    const meta = (await response.json()) as { currency?: string };
+    return meta.currency ? meta.currency.toUpperCase() : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Shopify 공개 REST 엔드포인트 — 인증 불필요, 모든 스토어에서 동작한다.
  * .json은 variants[].price_currency까지 포함해서 통화까지 한 번에 확정할 수 있어
  * 1순위로 쓴다(.js는 가격이 센트 단위 정수로만 있고 통화 코드가 없다). */
@@ -121,11 +145,15 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
   const origin = new URL(url).origin;
 
   let response: Response;
+  let shopCurrency: string | null;
   try {
-    response = await fetchWithDomainRateLimit(`${origin}/products/${handle}.json`, {
-      headers: { Accept: "application/json", "User-Agent": CHROME_UA },
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
+    [response, shopCurrency] = await Promise.all([
+      fetchWithDomainRateLimit(`${origin}/products/${handle}.json`, {
+        headers: { Accept: "application/json", "User-Agent": CHROME_UA },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      }),
+      fetchShopifyShopCurrency(origin),
+    ]);
   } catch {
     return null;
   }
@@ -151,7 +179,7 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
   const variant = product.variants?.[0];
   const price =
     variant?.price != null
-      ? { amount: Number(variant.price), currency: (variant.price_currency ?? "").toUpperCase() }
+      ? { amount: Number(variant.price), currency: shopCurrency ?? (variant.price_currency ?? "").toUpperCase() }
       : undefined;
 
   const optionNames = (product.options ?? []).map((o) => o.name).filter((n): n is string => Boolean(n));
@@ -171,7 +199,7 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
           sku: v.sku || undefined,
           price:
             v.price != null
-              ? { amount: Number(v.price), currency: (v.price_currency ?? "").toUpperCase() }
+              ? { amount: Number(v.price), currency: shopCurrency ?? (v.price_currency ?? "").toUpperCase() }
               : undefined,
           // inventory_management가 없으면(재고 추적 꺼진 매장) 숫자를 신뢰할 수
           // 없어서 채우지 않는다 — "모른다"를 "0개"로 잘못 전달하지 않기 위함.
@@ -208,11 +236,15 @@ export async function fetchShopifyProductJs(url: string): Promise<ShopifyProduct
   const origin = new URL(url).origin;
 
   let response: Response;
+  let shopCurrency: string | null;
   try {
-    response = await fetchWithDomainRateLimit(`${origin}/products/${handle}.js`, {
-      headers: { Accept: "application/json", "User-Agent": CHROME_UA },
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
+    [response, shopCurrency] = await Promise.all([
+      fetchWithDomainRateLimit(`${origin}/products/${handle}.js`, {
+        headers: { Accept: "application/json", "User-Agent": CHROME_UA },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      }),
+      fetchShopifyShopCurrency(origin),
+    ]);
   } catch {
     return null;
   }
@@ -250,7 +282,7 @@ export async function fetchShopifyProductJs(url: string): Promise<ShopifyProduct
       title: product.title,
       brand: product.vendor,
       description: product.description ? stripHtmlTags(product.description) : undefined,
-      price: centsAmount != null ? { amount: centsAmount / 100, currency: "" } : undefined,
+      price: centsAmount != null ? { amount: centsAmount / 100, currency: shopCurrency ?? "" } : undefined,
       options: (product.options ?? []).map((o) => o.name).filter((n): n is string => Boolean(n)),
     },
   };

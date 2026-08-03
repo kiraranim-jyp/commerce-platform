@@ -385,6 +385,14 @@ export default function PipelinePage() {
               새 상품 분석
             </button>
           )}
+          {/* CEO 지시(2026-08-03) — "setting 메뉴가 상단에 노출되면 좋겠어."
+              예전에는 카드 안쪽 인라인 링크로만 닿을 수 있어서 눈에 안 띄었다. */}
+          <a
+            href="/settings"
+            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface"
+          >
+            설정
+          </a>
         </div>
       </header>
 
