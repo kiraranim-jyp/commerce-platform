@@ -395,6 +395,23 @@ export function selectCoupangNoticeCategory(
   return isLikelyChildrenProduct(productName) && childrenNoticeCategory ? childrenNoticeCategory : simplestNoticeCategory;
 }
 
+/** 실제 LIVE 등록 실패(2026-08-03, API005) — "사이즈 옵션값은 최대 30자까지만
+ * 입력해 주세요." 원본 사이트가 옵션값을 "Kid's Hat 6-12 Years (Large / 56cm)"
+ * 처럼 장황하게 쓰는 경우가 흔해서 30자를 넘겼다. 무작정 잘라내면 "6-12 Years
+ * (Larg"처럼 단어 중간이 끊기고 정작 핵심 정보(실측 사이즈)가 날아갈 수 있다 —
+ * 괄호 안에 실측 사이즈/규격이 있으면(대부분의 사이트가 이 패턴을 쓴다) 그걸
+ * 우선 쓰고, 없으면 30자 이내 마지막 단어 경계에서 자른다. */
+function truncateAttributeValue(value: string, maxLength = 30): string {
+  if (value.length <= maxLength) return value;
+  const parenMatch = value.match(/\(([^)]+)\)\s*$/);
+  if (parenMatch && parenMatch[1].length > 0 && parenMatch[1].length <= maxLength) {
+    return parenMatch[1];
+  }
+  const cut = value.slice(0, maxLength);
+  const lastSpace = cut.lastIndexOf(" ");
+  return lastSpace > maxLength * 0.6 ? cut.slice(0, lastSpace) : cut;
+}
+
 /** 쿠팡 필드 이름(예: "패션의류/잡화 사이즈")이 사이즈/색상 계열 동의어와
  * 매칭되면, 그 이름에 대응하는 CanonicalProduct.optionGroups 그룹(실제 옵션
  * 값 목록)을 찾는다. matchOptionValue(값 하나를 확정하는 용도)와
@@ -723,7 +740,7 @@ export function buildCoupangCompliance(
     .map((r) => ({ ...r, confidence: FIELD_SOURCE_CONFIDENCE[r.source] }));
   const attributes: CoupangItemAttribute[] = attributeResults.map((r) => ({
     attributeTypeName: r.fieldName,
-    attributeValueName: r.value,
+    attributeValueName: truncateAttributeValue(r.value),
   }));
 
   const chosenNoticeCategory = selectCoupangNoticeCategory(categoryMeta.noticeCategories, context.productName);
