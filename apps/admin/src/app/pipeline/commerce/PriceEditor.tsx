@@ -30,9 +30,14 @@ import { EditableText } from "./EditableField";
  * 단위(기본 10원)로 맞춘다 — 쿠팡이 1원 단위 입력을 거부하기 때문이다(실제
  * LIVE 등록에서 확인된 제약).
  */
+/** exchange-rates API가 실제로 추적하는 통화 목록과 맞춘다(apps/admin/src/app/api/exchange-rates/route.ts) —
+ * 여기 없는 통화를 고르면 환율 계산이 고정 폴백표로 넘어가 부정확해진다. */
+const SELECTABLE_CURRENCIES = ["USD", "EUR", "JPY", "GBP", "SEK", "CNY", "HKD", "KRW"];
+
 export function PriceEditor({
   product,
   onUpdateSalePriceKrw,
+  onUpdateOriginalPrice,
   onUpdatePriceBreakdown,
   exchangeRates,
   exchangeRatesLoading,
@@ -40,6 +45,11 @@ export function PriceEditor({
 }: {
   product: CanonicalProduct;
   onUpdateSalePriceKrw: (amountKrw: number) => void;
+  /** CEO 실측 리포트(2026-08-03) — Shopify Markets 스토어는 요청 지역에 따라
+   * 공개 상품 JSON의 가격/통화가 달라질 수 있어(presentment pricing), 자동
+   * 감지가 실제와 다를 때 직접 고칠 수 있어야 한다. 고치는 즉시 아래 환율
+   * 계산이 새 값 기준으로 다시 돈다. */
+  onUpdateOriginalPrice?: (patch: Partial<{ amount: number; currency: string }>) => void;
   onUpdatePriceBreakdown: (breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) => void;
   exchangeRates: { rates: Record<string, number>; fetchedAt: string; source: "frankfurter" | "fallback" } | null;
   exchangeRatesLoading: boolean;
@@ -149,8 +159,32 @@ export function PriceEditor({
       <div className="mt-3 space-y-2.5">
         <div>
           <p className="text-xs text-text-secondary">원본</p>
-          <p className="mt-0.5 text-sm font-medium text-text-primary">
-            {formatOriginalPrice(product.price.value.amount, product.price.value.currency)}
+          {onUpdateOriginalPrice ? (
+            <div className="mt-0.5 flex items-center gap-1.5">
+              <EditableText
+                value={String(product.price.value.amount)}
+                onCommit={(v) => onUpdateOriginalPrice({ amount: Math.max(0, Number(v) || 0) })}
+                className="w-24 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+              />
+              <select
+                value={product.price.value.currency}
+                onChange={(e) => onUpdateOriginalPrice({ currency: e.target.value })}
+                className="rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+              >
+                {SELECTABLE_CURRENCIES.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <p className="mt-0.5 text-sm font-medium text-text-primary">
+              {formatOriginalPrice(product.price.value.amount, product.price.value.currency)}
+            </p>
+          )}
+          <p className="mt-0.5 text-[11px] text-text-tertiary">
+            사이트에서 자동으로 가져온 값 — 실제 판매 통화/가격과 다르면 직접 고쳐주세요.
           </p>
         </div>
 

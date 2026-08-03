@@ -77,6 +77,7 @@ export function PlatformPreview({
   compliancePreview,
   onUpdateField,
   onUpdateSalePriceKrw,
+  onUpdateOriginalPrice,
   onUpdatePriceBreakdown,
   exchangeRates,
   exchangeRatesLoading,
@@ -125,6 +126,10 @@ export function PlatformPreview({
   compliancePreview?: ComplianceReport | null;
   onUpdateField: (key: "title" | "brand" | "description", value: string) => void;
   onUpdateSalePriceKrw: (amountKrw: number) => void;
+  /** CEO 지시(2026-08-03) — Shopify Markets 스토어의 presentment pricing 때문에
+   * 자동 감지된 원본 통화/금액이 실제와 다를 수 있어, 원본 가격을 직접 고칠 수
+   * 있게 한다. */
+  onUpdateOriginalPrice?: (patch: Partial<{ amount: number; currency: string }>) => void;
   onUpdatePriceBreakdown: (breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) => void;
   exchangeRates: { rates: Record<string, number>; fetchedAt: string; source: "frankfurter" | "fallback" } | null;
   exchangeRatesLoading: boolean;
@@ -445,6 +450,7 @@ export function PlatformPreview({
           <PriceEditor
             product={product}
             onUpdateSalePriceKrw={onUpdateSalePriceKrw}
+            onUpdateOriginalPrice={onUpdateOriginalPrice}
             onUpdatePriceBreakdown={onUpdatePriceBreakdown}
             exchangeRates={exchangeRates}
             exchangeRatesLoading={exchangeRatesLoading}

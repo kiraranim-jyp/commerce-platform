@@ -423,6 +423,20 @@ export function CommerceWorkspace({
     }));
   }
 
+  /** CEO 실측 리포트(2026-08-03) — Shopify Markets 스토어는 공개 상품 JSON의
+   * 통화/가격이 요청 지역(서버 리전)에 따라 달라지는 경우가 있어(presentment
+   * pricing), 자동 크롤링이 실제 판매 통화/금액과 다른 값을 가져올 수 있다.
+   * 완벽한 자동 감지가 불가능하니, "재화를 선택하면 대상 환율로 변경되서
+   * 적용" — 원본 통화/금액을 직접 고칠 수 있게 하고, 고치는 즉시 아래
+   * PriceEditor의 환율 계산이 새 통화 기준으로 그대로 다시 돈다(별도 재계산
+   * 로직 불필요 — computePriceBreakdown이 product.price.value를 그대로 읽는다). */
+  function updateOriginalPrice(patch: Partial<{ amount: number; currency: string }>) {
+    setProduct((prev) => ({
+      ...prev,
+      price: { value: { ...prev.price.value, ...patch }, source: "USER_EDITED" as FieldSource, confidence: 1 },
+    }));
+  }
+
   /** P0-1(가격 계산 투명화) — 배송비/수수료율/마진율 입력값을 저장한다.
    * priceOverrideKrw(최종 판매가)와는 별개다 — "적용" 버튼을 눌러야만
    * suggestedPriceKrw가 priceOverrideKrw로 반영된다(계산기와 최종값을
@@ -1074,6 +1088,7 @@ export function CommerceWorkspace({
           payloadPreviewUnavailableReason={payloadPreviewEligible ? payloadPreviewUnavailableReason : null}
           onUpdateField={updateField}
           onUpdateSalePriceKrw={updateSalePriceKrw}
+          onUpdateOriginalPrice={updateOriginalPrice}
           onUpdatePriceBreakdown={updatePriceBreakdown}
           exchangeRates={exchangeRates}
           exchangeRatesLoading={exchangeRatesLoading}
