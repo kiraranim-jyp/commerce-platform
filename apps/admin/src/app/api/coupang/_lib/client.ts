@@ -17,6 +17,12 @@ const COUPANG_API_BASE = "https://api-gateway.coupang.com";
 const fixieUrl = process.env.FIXIE_URL;
 const coupangProxyDispatcher = fixieUrl ? new ProxyAgent(fixieUrl) : undefined;
 
+/** TEMP DEBUG (P0-4 진단, 제거 예정) — 값은 절대 로그로 남기지 않고 로드 여부/길이만
+ * 확인한다. cold start마다 한 번씩만 찍히면 충분하다. */
+console.log(
+  `[coupang-client][DEBUG] FIXIE_URL loaded=${Boolean(fixieUrl)} length=${fixieUrl?.length ?? 0} dispatcherCreated=${Boolean(coupangProxyDispatcher)}`,
+);
+
 /** 이전에는 타임아웃이 전혀 없어 응답이 올 때까지 무한 대기했다 — 프록시를 거치면
  * 왕복이 더 걸릴 수 있어, Vercel 함수 자체 제한에 걸려 죽기 전에 명확한 네트워크
  * 에러로 실패하도록 여유 있게 20초로 끊는다. */
@@ -52,17 +58,35 @@ export async function callCoupangApi(
   });
 
   const url = `${COUPANG_API_BASE}${path}${query ? `?${query}` : ""}`;
-  const res = await coupangFetch(url, {
-    method,
-    headers: {
-      Authorization: authorization,
-      "Content-Type": "application/json;charset=UTF-8",
-      "X-Requested-By": credentials.vendorId,
-    },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(COUPANG_REQUEST_TIMEOUT_MS),
-    dispatcher: coupangProxyDispatcher,
-  });
+  let res: Awaited<ReturnType<typeof coupangFetch>>;
+  try {
+    res = await coupangFetch(url, {
+      method,
+      headers: {
+        Authorization: authorization,
+        "Content-Type": "application/json;charset=UTF-8",
+        "X-Requested-By": credentials.vendorId,
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(COUPANG_REQUEST_TIMEOUT_MS),
+      dispatcher: coupangProxyDispatcher,
+    });
+  } catch (err) {
+    // TEMP DEBUG (P0-4 진단, 제거 예정) — undici가 던지는 TypeError("fetch
+    // failed")는 실제 원인을 .cause에 숨긴다(DNS/TCP/TLS/proxy 중 어디서
+    // 끊겼는지). 여기서 그 cause를 명시적으로 로그에 남겨서 "AUTH_FAILED"라는
+    // 뭉뚱그려진 최종 메시지 대신 실제 실패 단계를 구분한다.
+    const cause = err instanceof Error ? (err.cause as { code?: string; errno?: number; syscall?: string } | undefined) : undefined;
+    console.error("[coupang-client][DEBUG] fetch threw", {
+      usedProxy: Boolean(coupangProxyDispatcher),
+      errorName: err instanceof Error ? err.name : typeof err,
+      errorMessage: err instanceof Error ? err.message : String(err),
+      causeCode: cause?.code,
+      causeErrno: cause?.errno,
+      causeSyscall: cause?.syscall,
+    });
+    throw err;
+  }
 
   let parsedBody: unknown = null;
   try {
