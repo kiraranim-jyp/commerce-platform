@@ -284,6 +284,16 @@ export interface CoupangCategoryMeta {
 // 참조'를 씁니다") — 쿠팡 판매자들이 관용적으로 쓰는 정식 문구로 맞춘다.
 const NOTICE_DEFAULT_CONTENT = "전체 상품 상세페이지 참조";
 
+// A-12.3-P0-3(CPO 2차 지시: "KC는 DB 저장보다 기본값 우선 — 코드 기본값을
+// 먼저 넣고, Seller Profile은 나중에 덮어쓰는 구조가 더 자연스럽다") — 대부분의
+// 해외구매대행 상품은 실제로 이 문구에 해당한다. Settings(SellerProfile.
+// kcExemptionText)에서 판매자가 다른 문구로 명시적으로 덮어쓰면 그 값이 우선한다
+// (아래 buildCoupangCompliance의 `context.kcExemptionText || DEFAULT_KC_EXEMPTION_TEXT`).
+// 실제로 KC 인증이 법적으로 필요한 상품은 사용자가 "카테고리 필수 입력" 화면에서
+// 이 필드를 직접 다른 값으로 override하면 된다(USER_INPUT이 이 기본값보다 항상
+// 먼저 확인됨).
+const DEFAULT_KC_EXEMPTION_TEXT = "KC마크 없이 구매대행 가능한 품목";
+
 /** 쿠팡 구매옵션/고시정보 이름(예: "패션의류/잡화 사이즈", "색상", "재질")과 원본
  * 데이터(옵션 그룹명 또는 CanonicalProduct 필드)를 동의어로 느슨하게 매칭한다 —
  * 플랫폼마다 이름이 전부 달라서(P0-2 조사) 정확히 일치하는 경우가 드물다. */
@@ -519,6 +529,7 @@ export type ComplianceFieldSource =
   | "PRODUCT_FIELD"
   | "KNOWN_VALUE"
   | "DETERMINISTIC"
+  | "DEFAULT_VALUE"
   | "PLACEHOLDER";
 
 export interface ComplianceFieldResult {
@@ -550,6 +561,12 @@ const FIELD_SOURCE_CONFIDENCE: Record<ComplianceFieldSource, number> = {
   OPTION_MATCH: 0.95,
   DETERMINISTIC: 0.9,
   PRODUCT_FIELD: 0.8,
+  // CPO 지시(2차 P0 — "KC 기본값을 코드 레벨에서 우선 적용, 015 의존성 제거") —
+  // "우리가 대신 채운 관용적 기본값"이라는 뜻으로, 실제로 아는 값(KNOWN_VALUE)도
+  // 안전한 고정 규칙(DETERMINISTIC)도 아니지만 근거 없는 추측(PLACEHOLDER)과도
+  // 다르다 — 업계 관용 문구를 썼다는 확신은 있지만 상품마다 다를 수 있는 값이라
+  // PLACEHOLDER보다는 높고 KNOWN_VALUE보다는 낮게 둔다.
+  DEFAULT_VALUE: 0.7,
   PLACEHOLDER: 0.1,
 };
 
@@ -752,26 +769,34 @@ export function buildCoupangCompliance(
               kind: "NOTICE" as const,
             };
           }
-          // A-12.3-P0-2(CPO 지시) — KC/인증 이름이 매칭된 필드만, 그리고
-          // 판매자가 Settings에서 명시적으로 이 기본값을 켠 경우에만 적용한다.
-          // 다른 자동 매칭(PRODUCT_FIELD 등)보다 뒤에 확인하는 이유는 실제
-          // 상품 데이터가 있으면 그게 항상 더 정확하기 때문이다.
-          if (isComplianceCritical(detail.noticeCategoryDetailName) && context.kcExemptionText) {
+          // A-12.3-P0-3(CPO 2차 지시 — "KC는 DB 저장보다 기본값 우선": 코드
+          // 기본값 → Seller Profile 있으면 우선 → 상품별 Override 순서) —
+          // Settings에서 판매자가 직접 설정한 문구가 있으면 그걸 쓰고, 없으면
+          // 대부분의 해외구매대행 상품에 실제로 해당되는 코드 레벨 기본값을
+          // 쓴다. 015 마이그레이션(Settings 저장)이 아직 안 돌아도 이 기본값
+          // 하나만으로 KC 블로커가 즉시 풀린다 — Settings는 나중에 이 기본값을
+          // "덮어쓰는" 선택적 상위 레이어일 뿐, 전제조건이 아니다.
+          if (isComplianceCritical(detail.noticeCategoryDetailName)) {
             return {
               fieldName: detail.noticeCategoryDetailName,
-              value: context.kcExemptionText,
-              source: "KNOWN_VALUE" as const,
+              value: context.kcExemptionText || DEFAULT_KC_EXEMPTION_TEXT,
+              source: "DEFAULT_VALUE" as const,
               critical: false,
               kind: "NOTICE" as const,
             };
           }
           const noticeUnmappedReason: ComplianceFieldResult["unmappedReason"] =
             fieldMatch.status === "NO_VALUE" ? "NO_VALUE" : "NO_RULE";
+          // A-12.3-P0-3(CPO 2차 지시 — "상품정보제공고시도 기본값으로 자동
+          // 입력") — 대부분 "전체 상품 상세페이지 참조"를 그대로 쓰므로
+          // PLACEHOLDER(사람 입력 필요)가 아니라 DEFAULT_VALUE(자동 적용됨,
+          // 등록을 막지 않음)로 채운다 — 근거 없이 지어낸 값이 아니라 업계
+          // 관용 문구를 그대로 쓰는 것이므로 KC 기본값과 같은 신뢰 수준이다.
           return {
             fieldName: detail.noticeCategoryDetailName,
             value: NOTICE_DEFAULT_CONTENT,
-            source: "PLACEHOLDER" as const,
-            critical: isComplianceCritical(detail.noticeCategoryDetailName),
+            source: "DEFAULT_VALUE" as const,
+            critical: false,
             kind: "NOTICE" as const,
             unmappedReason: noticeUnmappedReason,
           };

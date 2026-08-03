@@ -208,6 +208,10 @@ const SOURCE_STATUS_BADGE: Record<
   AUTO: { label: "자동입력됨", className: "bg-success-soft text-success" },
   SETTINGS_DEFAULT: { label: "기본설정 사용", className: "bg-background text-text-tertiary" },
   MANUAL_REQUIRED: { label: "직접입력 필요", className: "bg-warning-soft text-warning" },
+  // A-12.3-P0-3(CPO 2차 지시 — "⚠ KC 인증 → 기본값 적용") — 등록은 막지
+  // 않지만(passed:true) "CartPilot이 관용적 기본값을 대신 채웠다"는 사실은
+  // ✓ 로 조용히 넘기지 않고 별도로 드러낸다.
+  DEFAULT_VALUE: { label: "기본값 적용", className: "bg-warning-soft text-warning" },
 };
 
 function ItemList({
@@ -225,13 +229,18 @@ function ItemList({
         // 성립하도록 클릭 가능 여부를 두 경로 다 확인한다.
         const clickableSection = !item.passed && item.sectionId && onItemClick;
         const clickableExternal = !item.passed && item.externalHref && !item.sectionId;
-        const statusBadge = !item.passed && item.sourceStatus ? SOURCE_STATUS_BADGE[item.sourceStatus] : null;
+        // A-12.3-P0-3 — DEFAULT_VALUE는 passed:true라 기존 조건(!item.passed)으로는
+        // 배지가 안 보였다. 등록을 막지 않는다는 것과 "CartPilot이 대신 채운
+        // 값이라는 걸 알아야 한다"는 것은 별개라 이 소스만 예외로 항상 보여준다.
+        const isDefaultApplied = item.sourceStatus === "DEFAULT_VALUE";
+        const statusBadge =
+          (!item.passed || isDefaultApplied) && item.sourceStatus ? SOURCE_STATUS_BADGE[item.sourceStatus] : null;
         const content = (
           <>
             <span
-              className={`shrink-0 ${item.passed ? "text-success" : item.required ? "text-error" : "text-warning"}`}
+              className={`shrink-0 ${isDefaultApplied ? "text-warning" : item.passed ? "text-success" : item.required ? "text-error" : "text-warning"}`}
             >
-              {item.passed ? "✓" : item.required ? "✗" : "△"}
+              {isDefaultApplied ? "⚠" : item.passed ? "✓" : item.required ? "✗" : "△"}
             </span>
             <span className="min-w-0 flex-1 text-left">
               <span className="flex flex-wrap items-center gap-1">
@@ -260,7 +269,7 @@ function ItemList({
                   </span>
                 </span>
               )}
-              {!item.passed && item.reasonCode !== "CRITICAL" && item.hint && (
+              {(isDefaultApplied || (!item.passed && item.reasonCode !== "CRITICAL")) && item.hint && (
                 <span className="block text-[11px] text-text-tertiary">{item.hint}</span>
               )}
             </span>

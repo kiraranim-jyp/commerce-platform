@@ -42,6 +42,12 @@ export interface ComplianceReport {
    * 그대로 나열해서 "✓ 소재: 88% Polyester, 12% Elastane" 같은 화면을 만들 수 있게
    * 한다 — userInputNeeded(플레이스홀더 목록)의 반대쪽 목록. */
   resolvedFields: { fieldName: string; value: string; source: ComplianceFieldResult["source"] }[];
+  /** A-12.3-P0-3(CPO 2차 지시 — "준비도 카드에 자동 적용 상태 표시") —
+   * resolvedFields의 부분집합(source === DEFAULT_VALUE)만 따로 뽑은 목록.
+   * "CartPilot이 실제로 확인한 값"과 "우리가 관용적 기본값을 대신 넣어준 값"은
+   * 사용자에게 다른 신뢰 수준으로 보여야 한다 — 화면(RegistrationReadinessCard)이
+   * ⚠ 배지로 구분해서 그린다. */
+  defaultsApplied: { fieldName: string; value: string }[];
   verdict: "PASS" | "WARNING" | "FAIL";
   reasons: string[];
   /** "High"(score>=90, 컴플라이언스 필수 항목 전부 확보) / "Medium"(실제 값은
@@ -80,6 +86,10 @@ const FIELD_CREDIT: Record<ComplianceFieldResult["source"], number> = {
   PRODUCT_FIELD: 1,
   KNOWN_VALUE: 1,
   DETERMINISTIC: 1,
+  // A-12.3-P0-3(CPO 2차 지시) — 코드 기본값(KC 면제 문구/상품정보제공고시 상세
+  // 참조)이 자동 적용된 필드. PLACEHOLDER처럼 "등록은 되지만 비어있다"가
+  // 아니라 실제로 값이 채워져 등록에 그대로 나가므로 만점을 준다.
+  DEFAULT_VALUE: 1,
   PLACEHOLDER: 0.5,
 };
 
@@ -165,6 +175,19 @@ export function buildComplianceReport(
     })
     .map((r) => ({ fieldName: r.fieldName, value: r.value, source: r.source }));
 
+  // A-12.3-P0-3 — resolvedFields와 같은 이유로 필드명+값 조합 기준 dedupe한다
+  // (예: "인증/허가 사항"이 여러 고시 카테고리에 걸쳐 중복될 수 있음).
+  const seenDefault = new Set<string>();
+  const defaultsApplied = all
+    .filter((r) => r.source === "DEFAULT_VALUE")
+    .filter((r) => {
+      const key = `${r.fieldName}::${r.value}`;
+      if (seenDefault.has(key)) return false;
+      seenDefault.add(key);
+      return true;
+    })
+    .map((r) => ({ fieldName: r.fieldName, value: r.value }));
+
   const placeholders = all.filter((r) => r.source === "PLACEHOLDER");
   // 같은 필드명이 구매옵션(ATTRIBUTE)과 고시정보(NOTICE) 양쪽에 다 필수라서 자리
   // 표시자로 두 번 잡히는 경우가 흔하다(예: "색상") — resolvedFields와 같은 이유로
@@ -217,6 +240,7 @@ export function buildComplianceReport(
     userInputNeeded,
     scoreBreakdown,
     resolvedFields,
+    defaultsApplied,
     verdict,
     reasons,
     approvalReadiness,

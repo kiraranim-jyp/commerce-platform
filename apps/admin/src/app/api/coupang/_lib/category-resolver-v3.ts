@@ -22,9 +22,13 @@ const CATEGORY_PREDICT_PATH = "/v2/providers/openapi/apis/api/v1/categorization/
 
 /** CPO 지시: "95% 이상만 자동 선택, 그 이하는 추천만." */
 const AUTO_SELECT_THRESHOLD = 95;
-/** predict 호출 횟수를 제한한다 — 쿠팡 API 레이트리밋과 Vercel 함수 시간 제한을
- * 동시에 지켜야 한다(Golden Dataset 검증 라우트와 같은 이유). */
-const MAX_QUERY_VARIANTS = 3;
+/** A-12.3-P0-3(CPO 2차 지시 — "최소 5~10개 정도의 후보") — predict 호출을
+ * Promise.all로 병렬화해서(기존엔 순차 for-loop) 변형 개수를 늘려도 지연이
+ * 크게 늘지 않는다. 그래도 무한정 늘리면 쿠팡 API 레이트리밋에 걸리므로
+ * 상한은 둔다. */
+const MAX_QUERY_VARIANTS = 8;
+/** meta 존재 검증까지 하는 후보 상한 — 늘어난 MAX_QUERY_VARIANTS에 맞춰 5→10. */
+const MAX_CANDIDATES = 10;
 
 export interface ScoredCategoryCandidate {
   categoryCode: number;
@@ -54,17 +58,45 @@ export interface CategoryResolverV3Result {
   candidates: ScoredCategoryCandidate[];
 }
 
-/** productType 힌트/브랜드를 붙인 질의 변형을 만든다 — 실측 사고의 근본
- * 원인(신호 없는 밋밋한 상품명만 predict API에 보냄)을 애초에 줄인다. 원본
- * 질의를 포함해 최대 MAX_QUERY_VARIANTS개로 제한한다. */
-function buildQueryVariants(baseQuery: string, signals: ProductSignals, brand?: string): string[] {
+/** productType/브랜드/연령/성별 힌트 + CartPilot 규칙 기반 후보 이름을 조합해
+ * 최대한 다양한 질의 변형을 만든다 — 실측 사고의 근본 원인(신호 없는 밋밋한
+ * 상품명만 predict API에 보냄)을 줄이는 동시에, A-12.3-P0-3(CPO 2차 지시:
+ * "Predict/Search/Rule/Parent Category를 합쳐서 추천")의 "Rule" 입력을
+ * 실현한다 — CartPilot 자체 카테고리 규칙(ruleBasedNames, packages/category의
+ * 키워드 매칭 결과)이 맞춘 카테고리 이름 그 자체를 predict 질의로 다시
+ * 보내서, 그 이름에 대응하는 실제 쿠팡 코드를 얻고 존재 검증까지 거치게
+ * 한다. (주의: 쿠팡은 키워드로 카테고리 코드 목록을 검색하는 별도 API나
+ * 부모→자식 카테고리 목록 조회 API를 공개하지 않는다 — 이 코드베이스가 실제로
+ * 가진 건 predict 1건→1코드 API와 코드 단위 meta 조회뿐이다. "Search"/"Parent
+ * Category"는 그 두 API를 조합해 흉내 낼 방법이 없어 지어내지 않았다 — 대신
+ * 질의 다양화로 실질적 커버리지를 최대한 넓힌다.) */
+function buildQueryVariants(baseQuery: string, signals: ProductSignals, brand?: string, ruleBasedNames?: string[]): string[] {
   const variants: string[] = [baseQuery];
-  if (signals.productType && !baseQuery.includes(signals.productType)) {
-    variants.push(`${signals.productType} ${baseQuery}`);
+  const push = (q: string) => {
+    if (q && !variants.some((v) => v.toLowerCase() === q.toLowerCase())) variants.push(q);
+  };
+
+  if (signals.productType) {
+    if (!baseQuery.includes(signals.productType)) push(`${signals.productType} ${baseQuery}`);
+    push(signals.productType);
   }
   if (brand && !baseQuery.toLowerCase().includes(brand.toLowerCase())) {
-    variants.push(`${brand} ${baseQuery}`);
+    push(`${brand} ${baseQuery}`);
   }
+  if (signals.productType && signals.ageGroup && signals.ageGroup !== "unknown") {
+    push(`${signals.ageGroup} ${signals.productType}`);
+  }
+  if (signals.productType && signals.gender && signals.gender !== "unknown") {
+    push(`${signals.gender} ${signals.productType}`);
+  }
+  // CartPilot 규칙 기반(rule-based.provider.ts) 후보 이름 — CommerceWorkspace가
+  // 클라이언트에서 이미 계산해 둔 걸 그대로 받는다(같은 판단을 서버에서
+  // 다시 하지 않는다).
+  for (const name of ruleBasedNames ?? []) {
+    push(name);
+    if (brand) push(`${brand} ${name}`);
+  }
+
   return variants.slice(0, MAX_QUERY_VARIANTS);
 }
 
@@ -73,40 +105,59 @@ export async function resolveCategoryV3(
   baseQuery: string,
   signals: ProductSignals,
   brand?: string,
+  ruleBasedNames?: string[],
 ): Promise<CategoryResolverV3Result> {
-  const queries = buildQueryVariants(baseQuery, signals, brand);
-  const seen = new Map<number, ScoredCategoryCandidate>();
+  const queries = buildQueryVariants(baseQuery, signals, brand, ruleBasedNames);
 
-  for (const query of queries) {
-    try {
-      const response = await callCoupangApi(credentials, {
-        method: "POST",
-        path: CATEGORY_PREDICT_PATH,
-        body: { productName: query, brand },
-      });
-      const body = response.body as {
-        data?: { predictedCategoryId?: string; predictedCategoryName?: string };
-      };
-      const code = body.data?.predictedCategoryId ? Number(body.data.predictedCategoryId) : null;
-      const name = body.data?.predictedCategoryName ?? null;
-      if (code == null || !Number.isFinite(code) || !name) continue;
-      // 이미 다른 질의 변형으로 같은 코드가 나왔으면 먼저 나온 채점 결과를
-      // 유지한다(질의마다 다시 채점해도 같은 이름이라 결과가 같다 — 중복 계산만
-      // 피한다).
-      if (seen.has(code)) continue;
-      const { score, reason, conflict } = scoreCategoryCandidate(name, [], signals);
-      seen.set(code, { categoryCode: code, categoryName: name, query, score, reason, conflict, metaVerified: false });
-    } catch {
-      // 질의 변형 하나가 실패해도 나머지로 계속 진행한다 — 후보가 끝까지 0개일
-      // 때만 REJECT로 처리한다.
-    }
+  // A-12.3-P0-3 — 기존엔 순차 for-loop라 변형을 늘릴수록 지연이 그대로
+  // 늘었다. 각 질의는 서로 독립적이라 병렬로 호출해도 안전하다(레이트리밋은
+  // MAX_QUERY_VARIANTS 상한으로 여전히 관리한다).
+  const predictResults = await Promise.all(
+    queries.map(async (query) => {
+      try {
+        const response = await callCoupangApi(credentials, {
+          method: "POST",
+          path: CATEGORY_PREDICT_PATH,
+          body: { productName: query, brand },
+        });
+        const body = response.body as {
+          data?: { predictedCategoryId?: string; predictedCategoryName?: string };
+        };
+        const code = body.data?.predictedCategoryId ? Number(body.data.predictedCategoryId) : null;
+        const name = body.data?.predictedCategoryName ?? null;
+        if (code == null || !Number.isFinite(code) || !name) return null;
+        return { query, code, name };
+      } catch {
+        // 질의 변형 하나가 실패해도 나머지로 계속 진행한다 — 후보가 끝까지
+        // 0개일 때만 REJECT로 처리한다.
+        return null;
+      }
+    }),
+  );
+
+  const seen = new Map<number, ScoredCategoryCandidate>();
+  for (const result of predictResults) {
+    if (!result) continue;
+    // 이미 다른 질의 변형으로 같은 코드가 나왔으면 먼저 나온 채점 결과를
+    // 유지한다(질의마다 다시 채점해도 같은 이름이라 결과가 같다 — 중복 계산만
+    // 피한다).
+    if (seen.has(result.code)) continue;
+    const { score, reason, conflict } = scoreCategoryCandidate(result.name, [], signals);
+    seen.set(result.code, {
+      categoryCode: result.code,
+      categoryName: result.name,
+      query: result.query,
+      score,
+      reason,
+      conflict,
+      metaVerified: false,
+    });
   }
 
-  const ranked = [...seen.values()].sort((a, b) => b.score - a.score).slice(0, 5);
-  // A-12.3-P0-2 — 상위 후보들만 실존 검증한다(전부 검증하면 predict 호출 +
-  // meta 호출이 배로 늘어 Vercel 함수 시간 제한/쿠팡 레이트리밋에 걸릴 수
-  // 있다 — MAX_QUERY_VARIANTS를 3으로 제한한 것과 같은 이유). 병렬로 호출해서
-  // 지연을 최소화한다.
+  const ranked = [...seen.values()].sort((a, b) => b.score - a.score).slice(0, MAX_CANDIDATES);
+  // A-12.3-P0-2 — 상위 후보들만 실존 검증한다(전부 검증하면 meta 호출이 배로
+  // 늘어 Vercel 함수 시간 제한/쿠팡 레이트리밋에 걸릴 수 있다). 병렬로
+  // 호출해서 지연을 최소화한다.
   const verified = await Promise.all(
     ranked.map(async (c) => {
       const meta = await fetchCategoryMeta(credentials, c.categoryCode);
@@ -114,15 +165,15 @@ export async function resolveCategoryV3(
     }),
   );
 
-  // A-12.3-P0-2 — 존재하지 않는(리프가 아니거나 폐지된) 코드는 "바로 등록
-  // 가능"의 최상위 후보가 될 수 없다 — 점수가 가장 높아도 실존 검증을 통과한
-  // 후보 중에서만 best를 고른다. 검증 통과 후보가 하나도 없으면(전부 무효)
-  // REJECT — 그래도 candidates 배열 자체는(검증 실패 포함) 그대로 반환해서
-  // 화면이 "왜 후보가 다 안 되는지" 보여줄 수 있게 한다.
+  // A-12.3-P0-3(CPO 2차 지시 — "실제 등록 가능한 카테고리만 노출. 존재하지
+  // 않는 category는 숨기는 게 맞다") — 이전엔 검증 실패 후보도 candidates에
+  // 그대로 담아 화면에 "실존 확인 안 됨" 딱지를 붙여 보여줬다. 이제는 애초에
+  // 등록 불가능한 코드를 후보 목록에 노출하지 않는다 — 검증 통과한 것만
+  // 반환한다.
   const verifiedOnly = verified.filter((c) => c.metaVerified);
   const best = verifiedOnly[0] ?? null;
   const decision: CategoryResolverV3Result["decision"] =
     best == null || best.conflict ? "REJECT" : best.score >= AUTO_SELECT_THRESHOLD ? "AUTO_SELECT" : "RECOMMEND";
 
-  return { decision, best, candidates: verified };
+  return { decision, best, candidates: verifiedOnly };
 }

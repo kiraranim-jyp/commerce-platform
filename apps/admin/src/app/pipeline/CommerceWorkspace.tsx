@@ -477,11 +477,25 @@ export function CommerceWorkspace({
   const categoryCandidates = useMemo(() => {
     if (tab === "source" || tab === "content") return [];
     const ruleBased = ruleBasedCategoryProvider.recommendCategory(product, tab);
-    // 쿠팡 API가 준 실제 코드 후보들을 맨 앞에 보여준다 — CartPilot 내부 AI 추천과
-    // 섞이긴 하지만 isVerifiedPlatformCode로 화면에서 구분 배지를 보여준다.
-    if (tab === "coupang" && coupangApiCandidates.length > 0) return [...coupangApiCandidates, ...ruleBased];
+    // A-12.3-P0-3(CPO 2차 지시 — "실제 등록 가능한 카테고리만 노출, 존재하지
+    // 않는 category는 숨기는 게 맞다") — ruleBasedCategoryProvider의 후보는
+    // CartPilot 내부 카테고리 이름표일 뿐 실제 쿠팡 displayCategoryCode가
+    // 아니라(rule-based.provider.ts 참고) 존재 검증이 아예 불가능하다. 쿠팡
+    // 탭에서는 category-resolver-v3가 실제 존재를 확인한 coupangApiCandidates만
+    // 보여준다 — 검증 안 된 후보를 섞어서 "등록 가능해 보이는" 착시를 만들지
+    // 않는다(다른 플랫폼은 아직 이 검증 체계가 없어 기존처럼 rule 후보를 쓴다).
+    if (tab === "coupang") return coupangApiCandidates;
     return ruleBased;
   }, [tab, product, coupangApiCandidates]);
+
+  /** A-12.3-P0-3 — resolveCategoryV3의 "Rule" 입력 소스로 쓸 이름 목록.
+   * ruleBasedCategoryProvider가 이미 매칭한 카테고리 이름을 predict 질의로
+   * 다시 보내 실제 쿠팡 코드를 얻는다(위 categoryCandidates와 달리 이건 화면에
+   * 직접 보여주지 않고 서버 질의 힌트로만 쓴다). */
+  const ruleBasedQueryNames = useMemo(() => {
+    if (tab !== "coupang") return [];
+    return ruleBasedCategoryProvider.recommendCategory(product, tab).map((c) => c.name);
+  }, [tab, product]);
 
   /**
    * 저장된 선택이 아직 UNRESOLVED인데 추천 후보가 있으면, 실제로 state를 바꾸지
@@ -683,7 +697,12 @@ export function CommerceWorkspace({
       const res = await fetch("/api/coupang/category-recommend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productName: biasedQuery, brand: listing.brand, signals }),
+        body: JSON.stringify({
+          productName: biasedQuery,
+          brand: listing.brand,
+          signals,
+          ruleBasedNames: ruleBasedQueryNames,
+        }),
       });
       const data = (await res.json()) as {
         decision?: "AUTO_SELECT" | "RECOMMEND" | "REJECT";

@@ -157,6 +157,7 @@ const SOURCE_LABELS: Record<ComplianceFieldSource, string> = {
   PRODUCT_FIELD: "상품 정보에서 추출",
   KNOWN_VALUE: "CartPilot이 확인한 값",
   DETERMINISTIC: "카테고리 규칙 기본값",
+  DEFAULT_VALUE: "업계 관용 기본값 자동 적용",
   PLACEHOLDER: "",
 };
 

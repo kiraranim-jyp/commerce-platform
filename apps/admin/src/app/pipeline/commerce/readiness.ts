@@ -28,7 +28,10 @@ export interface ReadinessItem {
   /** A-12.3(CPO 지시: "부족항목 오른쪽에 자동입력됨/기본설정 사용/직접입력 필요
    * 상태 표시") — 이 값이 어디서 채워지는지(또는 왜 안 채워졌는지) 사용자가 한
    * 눈에 알 수 있게 한다. 통과(passed=true)한 항목엔 표시하지 않는다. */
-  sourceStatus?: "AUTO" | "SETTINGS_DEFAULT" | "MANUAL_REQUIRED";
+  /** A-12.3-P0-3(CPO 2차 지시) — DEFAULT_VALUE는 "CartPilot이 대신 관용적
+   * 기본값을 채웠다"는 뜻으로, 실제 데이터를 확인한 AUTO나 Settings에서
+   * 가져온 SETTINGS_DEFAULT와는 다른 신뢰 수준이라 별도 배지로 구분한다. */
+  sourceStatus?: "AUTO" | "SETTINGS_DEFAULT" | "MANUAL_REQUIRED" | "DEFAULT_VALUE";
   /** A-12.3 — settingsRecommended/settingsMissing처럼 이 페이지 안이 아니라
    * /settings로 가야 채울 수 있는 항목의 이동 경로. sectionId와 배타적이다. */
   externalHref?: string;
@@ -139,6 +142,20 @@ export function computeChecklistReadiness(
       // A-12.3 — Resolver가 상품 원문에서 못 찾았고 규칙도 없어서 CartPilot이
       // 대신 채울 수 없다는 뜻이니 전부 "직접입력 필요"다.
       sourceStatus: "MANUAL_REQUIRED" as const,
+    })),
+    // A-12.3-P0-3(CPO 2차 지시 — "준비도 카드에 자동 적용 상태 표시: ⚠ KC 인증
+    // → 기본값 적용") — 이 필드들은 이제 PLACEHOLDER가 아니라서(userInputNeeded에
+    // 안 잡힘) 등록을 막지 않지만, "CartPilot이 관용적 기본값을 대신 채워 넣었다"는
+    // 사실 자체는 사용자가 알아야 한다 — 조용히 사라지면 KC 문구가 실제로 이
+    // 상품에 맞는지 확인할 기회를 놓친다.
+    ...(compliance?.defaultsApplied ?? []).map((f) => ({
+      label: f.fieldName,
+      passed: true,
+      required: false,
+      sectionId: /인증|KC/i.test(f.fieldName) ? "section-kc" : "section-notice",
+      hint: `기본값 자동 적용: ${f.value}`,
+      group: (/인증|KC/i.test(f.fieldName) ? "LEGAL" : "PRODUCT_INFO") as ReadinessGroup,
+      sourceStatus: "DEFAULT_VALUE" as const,
     })),
     ...(settingsMissing ?? []).map((label) => ({
       label,

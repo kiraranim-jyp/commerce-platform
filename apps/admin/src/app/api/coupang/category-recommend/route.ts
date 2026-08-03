@@ -27,6 +27,11 @@ export async function POST(request: Request) {
     productName?: string;
     brand?: string;
     signals?: ProductSignals;
+    /** A-12.3-P0-3(CPO 2차 지시 — "Predict/Search/Rule/Parent Category를
+     * 합쳐서 추천") — CommerceWorkspace가 이미 클라이언트에서 계산해 둔
+     * 규칙 기반(rule-based.provider.ts) 카테고리 이름들. 서버가 판단을
+     * 다시 하지 않고 그대로 받아 predict 질의 변형으로 재사용한다. */
+    ruleBasedNames?: string[];
   } | null;
   if (!body?.productName) {
     return NextResponse.json({ error: "productName이 필요합니다." }, { status: 400 });
@@ -48,7 +53,7 @@ export async function POST(request: Request) {
   };
 
   try {
-    const result = await resolveCategoryV3(credentials, body.productName, signals, body.brand);
+    const result = await resolveCategoryV3(credentials, body.productName, signals, body.brand, body.ruleBasedNames);
 
     return NextResponse.json({
       // 하위 호환 — 기존 클라이언트가 categoryCode/categoryName만 읽어도 계속
