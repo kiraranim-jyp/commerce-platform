@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Tabs } from "@/components/ui/Tabs";
+
+const TAB_KEYS = ["coupang", "shipping", "brand", "detail", "smartstore"] as const;
+type SettingsTabKey = (typeof TAB_KEYS)[number];
 
 interface ShippingPlaceOption {
   code: number | null;
@@ -119,6 +125,25 @@ export default function SettingsPage() {
   const [brandProfiles, setBrandProfiles] = useState<BrandProfile[]>([]);
   const [templates, setTemplates] = useState<DescriptionTemplate[]>([]);
 
+  // 4개로 흩어져 있던 <section>(계정/배송프로필/브랜드/템플릿)을 ?tab= 쿼리로 제어하는
+  // 탭으로 전환한다 — useSearchParams는 정적 렌더 시 Suspense 경계가 필요해서, 이미
+  // "use client"로 완전히 클라이언트 렌더되는 이 페이지에서는 window.location을 직접
+  // 읽는 쪽이 더 단순하다. 탭 전환 시 언마운트하지 않고 hidden 클래스로만 감춰서 폼
+  // 입력 중이던 값이 탭을 오가도 유지되게 한다.
+  const [activeTab, setActiveTabState] = useState<SettingsTabKey>("coupang");
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    if (tab && (TAB_KEYS as readonly string[]).includes(tab)) {
+      setActiveTabState(tab as SettingsTabKey);
+    }
+  }, []);
+  function setActiveTab(tab: string) {
+    setActiveTabState(tab as SettingsTabKey);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", tab);
+    window.history.replaceState(null, "", url.toString());
+  }
+
   async function loadAll() {
     const [accountRes, profilesRes, brandProfilesRes, templatesRes] = await Promise.all([
       fetch("/api/settings/coupang"),
@@ -190,85 +215,150 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <main className="mx-auto max-w-2xl px-6 py-10">
-        <p className="text-sm text-text-secondary">불러오는 중...</p>
-      </main>
+      <>
+        <PageHeader title="설정" subtitle="쿠팡/스마트스토어 판매에 필요한 정보를 관리합니다." />
+        <PageContainer size="lg">
+          <p className="text-sm text-text-secondary">불러오는 중...</p>
+        </PageContainer>
+      </>
     );
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-10">
-      <a href="/pipeline" className="text-sm text-text-secondary hover:text-text-primary">
-        ← CartPilot
-      </a>
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight text-text-primary">설정</h1>
-      <p className="mt-1 text-sm text-text-secondary">
-        여기서 한 번 만들어두면 상품을 등록할 때마다 다시 입력하지 않아도 됩니다.
-      </p>
-
-      <div
-        className={`mt-4 rounded-md p-3 text-sm ${
-          configured ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
-        }`}
-      >
-        {configured
-          ? "✓ 쿠팡 등록에 필요한 설정이 모두 준비되어 있습니다."
-          : `⚠ 아직 준비되지 않은 항목: ${missing.join(", ")}`}
-      </div>
-      {saveMessage && <p className="mt-2 text-xs text-text-secondary">{saveMessage}</p>}
-
-      <section className="mt-6 rounded-lg border border-border bg-surface p-5 shadow-subtle">
-        <h2 className="text-base font-semibold text-text-primary">쿠팡 계정</h2>
-        <div className="mt-3 space-y-3 text-sm">
-          <Field label="Access Key" hint={account.accessKeyMasked ? `저장됨 (${account.accessKeyMasked})` : "미저장"}>
-            <input
-              type="password"
-              value={accessKey}
-              onChange={(e) => setAccessKey(e.target.value)}
-              placeholder={account.accessKeyMasked ?? "새 값을 입력하지 않으면 기존 값 유지"}
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="Secret Key" hint={account.secretKeySaved ? "저장됨" : "미저장"}>
-            <input
-              type="password"
-              value={secretKey}
-              onChange={(e) => setSecretKey(e.target.value)}
-              placeholder={account.secretKeySaved ? "•••• (변경하려면 새 값 입력)" : "새 값을 입력하지 않으면 기존 값 유지"}
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="Vendor ID">
-            <input
-              type="text"
-              value={vendorId}
-              onChange={(e) => setVendorId(e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="Wing 계정 ID" hint="Wing 로그인 ID — API로 조회할 수 없어 직접 입력해야 합니다">
-            <input
-              type="text"
-              value={vendorUserId}
-              onChange={(e) => setVendorUserId(e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <button
-            type="button"
-            onClick={handleSaveAccount}
-            disabled={accountSaving}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+    <>
+      <PageHeader title="설정" subtitle="쿠팡/스마트스토어 판매에 필요한 정보를 관리합니다." />
+      <PageContainer size="lg">
+        <div className="mx-auto max-w-2xl">
+          <div
+            className={`rounded-md p-3 text-sm ${
+              configured ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
+            }`}
           >
-            {accountSaving ? "저장 중…" : "계정 저장"}
-          </button>
-        </div>
-      </section>
+            {configured
+              ? "✓ 쿠팡 등록에 필요한 설정이 모두 준비되어 있습니다."
+              : `⚠ 아직 준비되지 않은 항목: ${missing.join(", ")}`}
+          </div>
+          {saveMessage && <p className="mt-2 text-xs text-text-secondary">{saveMessage}</p>}
 
-      <SellerProfileSection profiles={profiles} onChanged={loadAll} />
-      <BrandProfileSection profiles={brandProfiles} onChanged={loadAll} />
-      <DescriptionTemplateSection templates={templates} onChanged={loadAll} />
-    </main>
+          <Tabs
+            className="mt-6"
+            value={activeTab}
+            onChange={setActiveTab}
+            items={[
+              { value: "coupang", label: "쿠팡 계정" },
+              { value: "shipping", label: "배송 프로필" },
+              { value: "brand", label: "브랜드 관리" },
+              { value: "detail", label: "상세페이지 관리" },
+              { value: "smartstore", label: "스마트스토어", badge: "Soon", disabled: true },
+            ]}
+          />
+
+          <div className={activeTab === "coupang" ? "mt-5" : "hidden"}>
+            <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
+              <h2 className="text-base font-semibold text-text-primary">쿠팡 계정</h2>
+              <div className="mt-3 space-y-3 text-sm">
+                <Field label="Access Key" hint={account.accessKeyMasked ? `저장됨 (${account.accessKeyMasked})` : "미저장"}>
+                  <input
+                    type="password"
+                    value={accessKey}
+                    onChange={(e) => setAccessKey(e.target.value)}
+                    placeholder={account.accessKeyMasked ?? "새 값을 입력하지 않으면 기존 값 유지"}
+                    className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+                  />
+                </Field>
+                <Field label="Secret Key" hint={account.secretKeySaved ? "저장됨" : "미저장"}>
+                  <input
+                    type="password"
+                    value={secretKey}
+                    onChange={(e) => setSecretKey(e.target.value)}
+                    placeholder={account.secretKeySaved ? "•••• (변경하려면 새 값 입력)" : "새 값을 입력하지 않으면 기존 값 유지"}
+                    className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+                  />
+                </Field>
+                <Field label="Vendor ID">
+                  <input
+                    type="text"
+                    value={vendorId}
+                    onChange={(e) => setVendorId(e.target.value)}
+                    className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+                  />
+                </Field>
+                <Field label="Wing 계정 ID" hint="Wing 로그인 ID — API로 조회할 수 없어 직접 입력해야 합니다">
+                  <input
+                    type="text"
+                    value={vendorUserId}
+                    onChange={(e) => setVendorUserId(e.target.value)}
+                    className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+                  />
+                </Field>
+                <button
+                  type="button"
+                  onClick={handleSaveAccount}
+                  disabled={accountSaving}
+                  className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+                >
+                  {accountSaving ? "저장 중…" : "계정 저장"}
+                </button>
+              </div>
+            </section>
+          </div>
+
+          <div className={activeTab === "shipping" ? "mt-5" : "hidden"}>
+            <SellerProfileSection profiles={profiles} onChanged={loadAll} />
+          </div>
+          <div className={activeTab === "brand" ? "mt-5" : "hidden"}>
+            <BrandProfileSection profiles={brandProfiles} onChanged={loadAll} />
+          </div>
+          <div className={activeTab === "detail" ? "mt-5" : "hidden"}>
+            <DescriptionTemplateSection templates={templates} onChanged={loadAll} />
+          </div>
+          {activeTab === "smartstore" && (
+            <p className="mt-5 rounded-md border border-dashed border-border p-4 text-sm text-text-tertiary">
+              스마트스토어 설정은 준비 중입니다.
+            </p>
+          )}
+
+          <DeveloperModeSection />
+        </div>
+      </PageContainer>
+    </>
+  );
+}
+
+/** CartPilot UI 2.0 — Developer Mode 토글을 pipeline 페이지 헤더에서 이곳으로
+ * 옮겼다. 계정/프로필과 무관한 순수 UI 설정이라 DB 컬럼 없이 localStorage에만
+ * 저장한다 — 브라우저를 넘어서까지 유지될 필요는 없고, 이 브라우저에서 새로고침해도
+ * 꺼지지 않으면 충분하다. 탭 구조와 무관하게 항상 페이지 맨 아래에 고정한다. */
+function DeveloperModeSection() {
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => {
+    try {
+      setEnabled(window.localStorage.getItem("cartpilot:developerMode") === "true");
+    } catch {
+      // localStorage 접근 불가 — 기본값 false 유지.
+    }
+  }, []);
+  function toggle(next: boolean) {
+    setEnabled(next);
+    try {
+      window.localStorage.setItem("cartpilot:developerMode", String(next));
+    } catch {
+      // 저장 실패해도 화면 동작에는 영향 없음(다음 새로고침 시 다시 꺼진 상태로 보일 뿐).
+    }
+  }
+  return (
+    <div className="mt-10 border-t border-border pt-4">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-text-tertiary">Developer</p>
+      <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-text-secondary">
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(e) => toggle(e.target.checked)}
+          className="h-3.5 w-3.5 accent-primary"
+        />
+        Developer Mode — 상품등록 화면에서 JSON/ZIP/원본 URL/Payload 등 개발자용 정보를 노출합니다.
+      </label>
+    </div>
   );
 }
 
@@ -488,8 +578,18 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
       const res = await fetch("/api/settings/coupang/common-images", { method: "POST", body });
       const data = (await res.json()) as { ok: boolean; url?: string; error?: string };
       if (data.ok && data.url) {
-        if (position === "top") setTopCommonImageUrl(data.url);
-        else setBottomCommonImageUrl(data.url);
+        // CartPilot UI 2.0 — 실측 확인된 버그: 업로드는 됐는데 "사용(ON)"을 따로
+        // 켜야 실제 등록 payload에 반영되는 2단계 흐름이라 사용자가 후자를 놓치기
+        // 쉬웠다(라이브 프로필에 topCommonImageUrl은 있는데 topCommonImageEnabled는
+        // false인 사례로 확인). 업로드 성공 시 자동으로 켜고, 끄고 싶으면 여전히
+        // 체크박스로 끌 수 있다 — 기본 동작만 "업로드 = 사용"으로 바꾼다.
+        if (position === "top") {
+          setTopCommonImageUrl(data.url);
+          setTopCommonImageEnabled(true);
+        } else {
+          setBottomCommonImageUrl(data.url);
+          setBottomCommonImageEnabled(true);
+        }
       } else {
         setLookupError(data.error ?? "이미지 업로드에 실패했습니다.");
       }

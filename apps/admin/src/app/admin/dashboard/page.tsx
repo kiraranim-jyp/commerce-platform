@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { DashboardData } from "@/app/api/admin/dashboard/route";
 import { classifyFailureBucket, type ErrorCode } from "@commerce/shared";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 /** 매일 아침 훑어보는 용도 — 복잡한 통계 없이 오늘 등록 성공/실패 건수와
  * ErrorCode 집계 두 가지만 보여준다. */
@@ -45,31 +47,34 @@ export default function AdminDashboardPage() {
   const sortedBuckets = Object.entries(bucketCounts).sort((a, b) => b[1] - a[1]);
 
   return (
-    <div className="mx-auto max-w-3xl p-6 text-sm">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-text-primary">운영 대시보드</h1>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/admin/registrations"
-            className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
-          >
-            등록 이력 →
-          </Link>
-          <Link
-            href="/admin/inquiries"
-            className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
-          >
-            문의 게시판 →
-          </Link>
-          <Link
-            href="/admin/resolver-validation"
-            className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
-          >
-            Resolver 정확도 →
-          </Link>
-        </div>
-      </div>
-
+    <>
+      <PageHeader
+        title="운영 대시보드"
+        subtitle="오늘 등록 성공/실패 현황과 실패 원인을 한눈에 확인합니다."
+        actions={
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin/registrations"
+              className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
+            >
+              등록 이력 →
+            </Link>
+            <Link
+              href="/admin/inquiries"
+              className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
+            >
+              문의 게시판 →
+            </Link>
+            <Link
+              href="/admin/resolver-validation"
+              className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
+            >
+              Resolver 정확도 →
+            </Link>
+          </div>
+        }
+      />
+      <PageContainer size="lg" className="text-sm">
       {error && <p className="mt-3 text-xs text-error">{error}</p>}
       {!data && !error && <p className="mt-3 text-xs text-text-tertiary">불러오는 중...</p>}
 
@@ -240,7 +245,8 @@ export default function AdminDashboardPage() {
           </section>
         </>
       )}
-    </div>
+      </PageContainer>
+    </>
   );
 }
 

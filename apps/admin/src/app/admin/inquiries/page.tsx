@@ -4,6 +4,8 @@ import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { InquiryRecord } from "@/app/api/admin/inquiries/route";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 const STATUS_LABEL: Record<InquiryRecord["status"], string> = {
   OPEN: "미처리",
@@ -93,26 +95,29 @@ export default function AdminInquiriesPage() {
     statusFilter === "ALL" ? inquiries : inquiries.filter((i) => i.status === statusFilter);
 
   return (
-    <div className="mx-auto max-w-5xl p-6 text-sm">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-text-primary">문의 게시판</h1>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/admin/dashboard"
-            className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
-          >
-            ← 대시보드
-          </Link>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
-          >
-            로그아웃
-          </button>
-        </div>
-      </div>
-
+    <>
+      <PageHeader
+        title="문의 게시판"
+        subtitle="사용자가 남긴 문의와 진단 정보를 확인하고 처리 상태를 관리합니다."
+        actions={
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin/dashboard"
+              className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
+            >
+              ← 대시보드
+            </Link>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
+            >
+              로그아웃
+            </button>
+          </div>
+        }
+      />
+      <PageContainer size="xl" className="text-sm">
       <div className="mt-4 flex items-center gap-2">
         <label className="text-xs text-text-secondary">상태</label>
         <select
@@ -211,6 +216,7 @@ export default function AdminInquiriesPage() {
           <p className="p-4 text-center text-xs text-text-tertiary">해당하는 문의가 없습니다.</p>
         )}
       </div>
-    </div>
+      </PageContainer>
+    </>
   );
 }

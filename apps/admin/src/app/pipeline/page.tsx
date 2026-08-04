@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import type { CanonicalProduct } from "@commerce/shared";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Button } from "@/components/ui/Button";
 import { CommerceWorkspace } from "./CommerceWorkspace";
 import { ImageCard } from "./ImageCard";
 import { ImageUsageTable } from "./ImageUsageTable";
@@ -36,9 +39,16 @@ export default function PipelinePage() {
   const [detailsExpanded, setDetailsExpanded] = useState(false);
   // P0-UI Sprint — 기본은 판매자용 단순 화면. 켜면 JSON/ZIP/원본 URL/Payload/개발
   // 로그 등 전에는 항상 보이던 것들이 다시 보인다(기능을 지운 게 아니라 기본 노출만
-  // 바꿨다). 세션 동안만 유지되고 새로고침하면 다시 꺼진다 — 딱히 저장할 이유가
-  // 없는 일시적 모드다.
+  // 바꿨다). CartPilot UI 2.0부터 토글은 설정 페이지 맨 아래로 옮겼고, 여기서는
+  // localStorage에 저장된 값을 마운트 시 읽기만 한다(브라우저/세션 넘어서도 유지).
   const [developerMode, setDeveloperMode] = useState(false);
+  useEffect(() => {
+    try {
+      setDeveloperMode(window.localStorage.getItem("cartpilot:developerMode") === "true");
+    } catch {
+      // localStorage 접근 불가(프라이빗 브라우징 등) — 기본값 false 유지.
+    }
+  }, []);
   // Sprint A-6(작업4 — 등록 소요시간 측정) — CPO 요구사항: "URL 입력 → 등록
   // 완료" 총 시간. URL 제출(runPipeline 시작) 시점을 여기서 잡아 CommerceWorkspace로
   // 내려보낸다 — 등록 자체는 CommerceWorkspace가 처리하므로 종료 시점은 그쪽에서 잰다.
@@ -349,53 +359,24 @@ export default function PipelinePage() {
   const started = loading || result !== null;
 
   return (
-    // Sprint A-9(작업1 — CEO 실측 피드백: "노트북 기준으로도 답답합니다,
-    // 쿠팡 Wing처럼 거의 전체화면을 쓰고 싶다") — 랜딩(!started)은 마케팅
-    // 카피라 좁은 폭(max-w-5xl)이 오히려 읽기 좋지만, Editor(started)는
-    // 필드가 많은 폼이라 넓은 폭이 필요하다. 두 상태를 하나의 max-w로
-    // 묶어뒀던 게 문제였다 — started일 때만 1800px까지 넓힌다.
-    <main className={`mx-auto min-w-0 py-10 ${started ? "max-w-[1900px] px-4" : "max-w-5xl px-6"}`}>
-      <header className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={resetWorkspace}
-          className="text-lg font-semibold tracking-tight text-text-primary"
-        >
-          CartPilot
-        </button>
-        <div className="flex items-center gap-2">
-          {started && (
-            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-text-secondary">
-              <input
-                type="checkbox"
-                checked={developerMode}
-                onChange={(e) => setDeveloperMode(e.target.checked)}
-                className="h-3.5 w-3.5 accent-primary"
-              />
-              Developer Mode
-            </label>
-          )}
-          {started && (
-            <button
-              type="button"
-              onClick={resetWorkspace}
-              disabled={loading}
-              className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface disabled:opacity-40"
-            >
+    <>
+      <PageHeader
+        title="상품 등록"
+        subtitle="AI가 해외 상품을 분석하고 쿠팡 등록까지 자동으로 준비합니다."
+        actions={
+          started ? (
+            <Button variant="secondary" size="sm" onClick={resetWorkspace} disabled={loading}>
               새 상품 분석
-            </button>
-          )}
-          {/* CEO 지시(2026-08-03) — "setting 메뉴가 상단에 노출되면 좋겠어."
-              예전에는 카드 안쪽 인라인 링크로만 닿을 수 있어서 눈에 안 띄었다. */}
-          <a
-            href="/settings"
-            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface"
-          >
-            설정
-          </a>
-        </div>
-      </header>
-
+            </Button>
+          ) : undefined
+        }
+      />
+      {/* Sprint A-9(작업1 — CEO 실측 피드백: "노트북 기준으로도 답답합니다,
+          쿠팡 Wing처럼 거의 전체화면을 쓰고 싶다") — 랜딩(!started)은 마케팅
+          카피라 좁은 폭이 오히려 읽기 좋지만, Editor(started)는 필드가 많은
+          폼이라 넓은 폭이 필요하다. 바깥 컨테이너는 PageContainer size="xl"로
+          통일하고, 랜딩의 좁은 폭은 안쪽 섹션(max-w-xl)에서만 준다. */}
+      <PageContainer size="xl" className="min-w-0 py-10">
       {!started ? (
         <section className="mx-auto mt-16 max-w-xl text-center">
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">
@@ -593,6 +574,7 @@ export default function PipelinePage() {
       )}
 
       {previewItem && <PreviewModal item={previewItem} onClose={() => setPreviewId(null)} />}
-    </main>
+      </PageContainer>
+    </>
   );
 }

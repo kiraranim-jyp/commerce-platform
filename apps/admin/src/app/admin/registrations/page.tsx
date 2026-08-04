@@ -4,6 +4,8 @@ import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import type { ComplianceReport } from "@commerce/listing";
 import type { RegistrationAttemptRecord } from "@/app/api/admin/registrations/route";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 /** register/route.ts의 brandResolutionMeta와 같은 모양 — DB에는 jsonb로 통째로
  * 저장되므로(brand_resolution 컬럼) 여기서만 타입을 붙인다. */
@@ -80,20 +82,20 @@ export default function AdminRegistrationsPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-5xl p-6 text-sm">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-text-primary">등록 이력</h1>
-        <Link
-          href="/admin/dashboard"
-          className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
-        >
-          ← 대시보드
-        </Link>
-      </div>
-      <p className="mt-1 text-xs text-text-secondary">
-        모든 LIVE 등록 시도(성공/실패)를 시간 역순으로 보여줍니다. 행을 클릭하면 Payload/Response 상세를 볼 수 있습니다.
-      </p>
-
+    <>
+      <PageHeader
+        title="등록 이력"
+        subtitle="모든 LIVE 등록 시도(성공/실패)를 시간 역순으로 보여줍니다. 행을 클릭하면 Payload/Response 상세를 볼 수 있습니다."
+        actions={
+          <Link
+            href="/admin/dashboard"
+            className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
+          >
+            ← 대시보드
+          </Link>
+        }
+      />
+      <PageContainer size="xl" className="text-sm">
       {error && <p className="mt-3 text-xs text-error">{error}</p>}
       {loading && <p className="mt-3 text-xs text-text-tertiary">불러오는 중...</p>}
 
@@ -255,6 +257,7 @@ export default function AdminRegistrationsPage() {
           <p className="p-4 text-center text-xs text-text-tertiary">등록 이력이 없습니다.</p>
         )}
       </div>
-    </div>
+      </PageContainer>
+    </>
   );
 }
