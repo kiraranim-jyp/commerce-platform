@@ -5,6 +5,7 @@ import type { CanonicalProduct } from "@commerce/shared";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
+import type { ProductSnapshot } from "@/app/api/snapshots/_lib/types";
 import { CommerceWorkspace } from "./CommerceWorkspace";
 import { ImageCard } from "./ImageCard";
 import { ImageUsageTable } from "./ImageUsageTable";
@@ -62,6 +63,11 @@ export default function PipelinePage() {
   // (영구 저장이 아니다), 새 URL을 분석하거나 "새 상품 분석"을 누르면 지워진다.
   const WORKSPACE_STORAGE_KEY = "cartpilot-pipeline-workspace-v1";
   const [hydrated, setHydrated] = useState(false);
+  // "최근 작업"(product_snapshots) — sessionStorage(이 브라우저 탭 한정)와 별개로
+  // DB에도 저장해서 다른 탭/기기에서도 "최근 작업" 목록에서 이어할 수 있게 한다.
+  // id가 없으면(첫 저장 전) POST가 insert, 있으면 update로 동작한다(upsert 패턴 —
+  // api/snapshots/_lib/snapshot.ts 참고).
+  const [snapshotId, setSnapshotId] = useState<string | null>(null);
 
   /** items에는 상세/원본/누끼후보 3장 분량의 base64 data URI가 다 들어있어서
    * (1500x2000 JPG 기준 장당 수백 KB~1MB대) 5장만 있어도 sessionStorage
@@ -81,33 +87,67 @@ export default function PipelinePage() {
   }
 
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(WORKSPACE_STORAGE_KEY);
-      if (raw) {
-        const saved = JSON.parse(raw) as {
-          url?: string;
-          result?: PipelineResponse | null;
-          product?: CanonicalProduct | null;
-          items?: WorkspaceItem[];
-          thumbnails?: Record<string, string>;
-          representativeId?: string | null;
-          excludedIds?: string[];
-        };
-        if (saved.result && saved.product) {
-          setUrl(saved.url ?? "");
-          setResult(saved.result);
-          setProduct(saved.product);
-          setItems(saved.items ?? []);
-          setThumbnails(saved.thumbnails ?? {});
-          setRepresentativeId(saved.representativeId ?? null);
-          setExcludedIds(new Set(saved.excludedIds ?? []));
+    void (async () => {
+      // "최근 작업" 목록에서 "이어서 작업"을 누르면 ?resume={id}로 진입한다 —
+      // sessionStorage 복원보다 우선한다(DB가 항상 최신 저장 상태를 갖고 있고,
+      // 다른 탭/기기에서 이어할 수도 있어야 하므로).
+      try {
+        const resumeId = new URLSearchParams(window.location.search).get("resume");
+        if (resumeId) {
+          const res = await fetch(`/api/snapshots/${resumeId}`);
+          const data = (await res.json()) as { ok: boolean; snapshot?: ProductSnapshot };
+          if (data.ok && data.snapshot) {
+            const ws = data.snapshot.workspace;
+            setSnapshotId(data.snapshot.id);
+            setUrl(ws.url);
+            setResult({
+              metadata: ws.pipelineResponse.metadata,
+              items: ws.items,
+              report: ws.pipelineResponse.report,
+              storageNote: ws.pipelineResponse.storageNote,
+              canonicalProduct: ws.canonicalProduct,
+            });
+            setProduct(ws.canonicalProduct);
+            setItems(ws.items);
+            setThumbnails(ws.thumbnails ?? {});
+            setRepresentativeId(ws.representativeId);
+            setExcludedIds(new Set(ws.excludedIds));
+            setHydrated(true);
+            return;
+          }
         }
+      } catch {
+        // 이어서 작업 복원 실패 — 아래 sessionStorage 복원으로 폴백한다.
       }
-    } catch {
-      // sessionStorage가 막혀있거나(프라이빗 브라우징 등) 저장된 값이 깨져있으면
-      // 그냥 랜딩부터 시작한다 — 복원은 "되면 좋은" 편의 기능이지 필수 경로가 아니다.
-    }
-    setHydrated(true);
+
+      try {
+        const raw = sessionStorage.getItem(WORKSPACE_STORAGE_KEY);
+        if (raw) {
+          const saved = JSON.parse(raw) as {
+            url?: string;
+            result?: PipelineResponse | null;
+            product?: CanonicalProduct | null;
+            items?: WorkspaceItem[];
+            thumbnails?: Record<string, string>;
+            representativeId?: string | null;
+            excludedIds?: string[];
+          };
+          if (saved.result && saved.product) {
+            setUrl(saved.url ?? "");
+            setResult(saved.result);
+            setProduct(saved.product);
+            setItems(saved.items ?? []);
+            setThumbnails(saved.thumbnails ?? {});
+            setRepresentativeId(saved.representativeId ?? null);
+            setExcludedIds(new Set(saved.excludedIds ?? []));
+          }
+        }
+      } catch {
+        // sessionStorage가 막혀있거나(프라이빗 브라우징 등) 저장된 값이 깨져있으면
+        // 그냥 랜딩부터 시작한다 — 복원은 "되면 좋은" 편의 기능이지 필수 경로가 아니다.
+      }
+      setHydrated(true);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -139,6 +179,54 @@ export default function PipelinePage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, url, result, product, items, thumbnails, representativeId, excludedIds]);
+
+  async function saveSnapshotToServer() {
+    if (!result || !product) return;
+    try {
+      const representative = items.find((item) => item.id === representativeId);
+      const res = await fetch("/api/snapshots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: snapshotId ?? undefined,
+          sourceUrl: url,
+          title: product.title.value || null,
+          thumbnailUrl: representative?.detailPublicUrl ?? null,
+          workspace: {
+            url,
+            pipelineResponse: { metadata: result.metadata, report: result.report, storageNote: result.storageNote },
+            canonicalProduct: product,
+            items: stripHeavyDataUrls(items),
+            thumbnails,
+            representativeId,
+            excludedIds: [...excludedIds],
+            activeTab: "source",
+            developerMode,
+            platformSettings: {},
+          },
+        }),
+      });
+      const data = (await res.json()) as { ok: boolean; snapshot?: { id: string } };
+      if (data.ok && data.snapshot && !snapshotId) {
+        setSnapshotId(data.snapshot.id);
+      }
+    } catch {
+      // 저장 실패해도 화면 동작에는 영향 없다 — sessionStorage가 로컬 캐시로
+      // 계속 동작하고, 다음 변경 때 다시 저장을 시도한다.
+    }
+  }
+
+  // sessionStorage는 이 브라우저 탭 한정 캐시고, "최근 작업" 목록/다른 탭·기기
+  // 복원은 DB에 저장돼 있어야 가능하다 — 같은 트리거(hydrated 이후 값이 바뀔 때)에
+  // DB 저장도 얹되, 편집 중 키 입력마다 API를 부르지 않도록 2초 디바운스한다.
+  useEffect(() => {
+    if (!hydrated || !result || !product) return;
+    const timer = setTimeout(() => {
+      void saveSnapshotToServer();
+    }, 2000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, url, result, product, items, representativeId, excludedIds]);
 
   async function precomputeThumbnails(newItems: WorkspaceItem[]) {
     const entries = await Promise.all(
@@ -248,9 +336,17 @@ export default function PipelinePage() {
       // 새 상품 분석을 시작하면 이전 상품에서 열려 있던 탭(예: 쿠팡)이 새
       // 상품에 그대로 이어지면 안 되므로 같이 지운다.
       sessionStorage.removeItem("cartpilot-pipeline-tab-v1");
+      // ?resume={id}로 들어왔던 경우 새 상품 분석을 시작하면 URL에서 지운다 —
+      // 남겨두면 새로고침 시 방금 리셋한 화면이 다시 그 스냅샷으로 복원돼버린다.
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("resume")) {
+        url.searchParams.delete("resume");
+        window.history.replaceState(null, "", url.toString());
+      }
     } catch {
       // no-op — 세션 스토리지가 막혀있어도 리셋 자체는 계속 진행한다.
     }
+    setSnapshotId(null);
     setUrl("");
     setLoading(false);
     setError(null);
@@ -494,6 +590,7 @@ export default function PipelinePage() {
             onToggleExclude={toggleExclude}
             developerMode={developerMode}
             analysisStartedAt={analysisStartedAt}
+            snapshotId={snapshotId}
           />
 
           {/* P0-UI Epic 1 — JSON/ZIP/원본 URL/처리 리포트 등은 판매자가 매일 볼

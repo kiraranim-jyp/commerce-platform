@@ -20,5 +20,10 @@ export interface ListingExecutor {
     product: CanonicalProduct,
     listing: ListingModel,
     mode: ExecutionMode,
+    /** "최근 작업" 스냅샷에서 이어서 등록한 경우의 스냅샷 id — LIVE 등록 시
+     * registration_attempts.snapshot_id에 남겨 감사 추적 및 스냅샷 status를
+     * REGISTERED로 갱신하는 데 쓴다. API 기반이 아닌 실행기(Playwright 등)는
+     * 무시해도 된다. */
+    context?: { snapshotId?: string },
   ): Promise<ListingResult>;
 }

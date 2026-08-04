@@ -20,6 +20,7 @@ import { withRetry } from "../_lib/retry";
 import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } from "../_lib/shipping-place";
 import { fetchCategoryMeta } from "../_lib/category-meta";
 import { resolveBrand } from "../_lib/brand";
+import { markSnapshotRegistered } from "../../snapshots/_lib/snapshot";
 
 /** 성공/실패 모든 시도를 기록한다 — 관리자 대시보드의 "오늘 등록 N건, 성공/실패"
  * 카운트, 그리고 등록 이력 화면의 Payload/Response 상세가 여기서 나온다
@@ -30,7 +31,11 @@ import { resolveBrand } from "../_lib/brand";
  * LIVE 성공 건 하나가 등록 이력에 아예 안 남는 게 실측으로 확인됐다(Vercel
  * 서버리스 함수가 응답을 보낸 뒤 백그라운드 Promise를 끝까지 기다려주지 않음).
  * Supabase가 없거나 insert가 실패해도 응답 자체를 막으면 안 되므로 예외만 삼킨다. */
-async function logRegistrationAttempt(result: ListingResult, apiResponseBody?: unknown): Promise<void> {
+async function logRegistrationAttempt(
+  result: ListingResult,
+  apiResponseBody?: unknown,
+  snapshotId?: string | null,
+): Promise<void> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return;
   const payload = result.payload as CoupangPayload | undefined;
@@ -50,13 +55,16 @@ async function logRegistrationAttempt(result: ListingResult, apiResponseBody?: u
     brand_resolution: result.brandResolution ?? null,
     price_breakdown: result.priceBreakdown ?? null,
     category_resolver_kpi: result.categoryResolverKpi ?? null,
+    snapshot_id: snapshotId ?? null,
   };
+  // snapshot_id는 마이그레이션 016을 실행해야 생기는 컬럼이다 — 다른 optional
+  // 컬럼(brand_resolution 등)과 같은 이유로 없으면 제거하고 재시도 목록에 포함한다.
   // brand_resolution/price_breakdown/category_resolver_kpi 컬럼은 각각 수동
   // 마이그레이션(009/010/011)을 실행해야 생긴다(구조적으로 여기서 직접 실행
   // 불가) — 마이그레이션 전에는 컬럼이 없어 insert 전체가 실패한다.
   // payload/response/compliance 등 나머지 데이터까지 통째로 유실되는 걸 막기
   // 위해, 아직 없는 컬럼이 뭔지 모르는 채로 하나씩 제외해가며 재시도한다.
-  const optionalColumns = ["brand_resolution", "price_breakdown", "category_resolver_kpi"];
+  const optionalColumns = ["brand_resolution", "price_breakdown", "category_resolver_kpi", "snapshot_id"];
   for (let attempt = 0; attempt <= optionalColumns.length; attempt++) {
     const { error } = await supabase.from("registration_attempts").insert(row);
     if (!error) return;
@@ -168,12 +176,17 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
     product?: CanonicalProduct;
     listing?: ListingModel;
+    snapshotId?: string;
   } | null;
 
   if (!body?.product || !body?.listing) {
     return NextResponse.json({ error: "product와 listing이 필요합니다." }, { status: 400 });
   }
   const { product, listing } = body;
+  // "최근 작업" 스냅샷에서 이어서 등록한 경우에만 있다 — 없으면(스냅샷 기능
+  // 이전 흐름이거나 스냅샷 저장을 안 한 경우) registration_attempts.snapshot_id는
+  // null로 남는다(감사 로그 자체는 스냅샷 없이도 항상 남는다).
+  const snapshotId = body.snapshotId ?? null;
 
   // P0-1(가격 계산 투명화) — 이 등록 시도 시점의 배송비/수수료율/마진율 입력값을
   // 스냅샷으로 남긴다(product.priceBreakdown은 사용자가 나중에 또 바꿀 수 있어서
@@ -214,7 +227,7 @@ export async function POST(request: Request) {
         resolution: "설정 페이지에서 Access Key/Secret Key/Vendor ID를 입력해주세요.",
       },
     });
-    await logRegistrationAttempt(result);
+    await logRegistrationAttempt(result, undefined, snapshotId);
     return NextResponse.json(result);
   }
   logStep("인증 확인", "success", "쿠팡 인증 정보 확인 완료");
@@ -240,7 +253,7 @@ export async function POST(request: Request) {
         resolution: "설정 페이지에서 배송 프로필을 먼저 만들어주세요(최초 1회).",
       },
     });
-    await logRegistrationAttempt(result);
+    await logRegistrationAttempt(result, undefined, snapshotId);
     return NextResponse.json(result);
   }
   logStep("배송 프로필 확인", "success", `프로필 "${sellerProfile.name}" 사용`);
@@ -434,7 +447,7 @@ export async function POST(request: Request) {
         resolution: "등록 화면에서 해당 항목(KC/인증 등)을 직접 입력한 뒤 다시 시도해주세요.",
       },
     });
-    await logRegistrationAttempt(result);
+    await logRegistrationAttempt(result, undefined, snapshotId);
     return NextResponse.json(result);
   }
 
@@ -455,7 +468,7 @@ export async function POST(request: Request) {
         resolution: "설정 페이지에서 쿠팡 배송 설정을 채운 뒤 다시 시도해주세요.",
       },
     });
-    await logRegistrationAttempt(result);
+    await logRegistrationAttempt(result, undefined, snapshotId);
     return NextResponse.json(result);
   }
   logStep("설정 확인", "success", "카테고리/배송/반품 설정 확인 완료");
@@ -482,7 +495,7 @@ export async function POST(request: Request) {
         resolution: "판매가/반품배송비를 등록 화면에서 고친 뒤 다시 시도해주세요.",
       },
     });
-    await logRegistrationAttempt(result);
+    await logRegistrationAttempt(result, undefined, snapshotId);
     return NextResponse.json(result);
   }
   logStep("가격 사전 검증", "success", "판매가 10원 단위 · 반품배송비 상한 확인 완료");
@@ -512,7 +525,7 @@ export async function POST(request: Request) {
           resolution: "access key/secret key를 다시 확인해주세요.",
         },
       });
-      await logRegistrationAttempt(result, response.body);
+      await logRegistrationAttempt(result, response.body, snapshotId);
       return NextResponse.json(result);
     }
 
@@ -531,7 +544,8 @@ export async function POST(request: Request) {
         externalProductId: parsed.data != null ? String(parsed.data) : undefined,
         submittedAt: new Date().toISOString(),
       });
-      await logRegistrationAttempt(result, response.body);
+      await logRegistrationAttempt(result, response.body, snapshotId);
+      if (snapshotId) await markSnapshotRegistered(snapshotId);
       return NextResponse.json(result);
     }
 
@@ -559,7 +573,7 @@ export async function POST(request: Request) {
         resolution: "표시된 원인을 확인하고 데이터를 고친 뒤 다시 시도해주세요.",
       },
     });
-    await logRegistrationAttempt(result, response.body);
+    await logRegistrationAttempt(result, response.body, snapshotId);
     return NextResponse.json(result);
   } catch (error) {
     logStep(
@@ -580,7 +594,7 @@ export async function POST(request: Request) {
         retryable: true,
       },
     });
-    await logRegistrationAttempt(result);
+    await logRegistrationAttempt(result, undefined, snapshotId);
     return NextResponse.json(result);
   }
 }

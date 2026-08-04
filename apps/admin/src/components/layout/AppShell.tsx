@@ -30,7 +30,7 @@ type NavigationItem = {
 const NAV_ITEMS: NavigationItem[] = [
   { id: "dashboard", title: "Dashboard", href: "/admin/dashboard", icon: Home },
   { id: "pipeline", title: "상품등록", href: "/pipeline", icon: Package },
-  { id: "recent", title: "최근 작업", href: "#", icon: Clock, soon: true },
+  { id: "recent", title: "최근 작업", href: "/snapshots", icon: Clock },
   { id: "images", title: "이미지", href: "#", icon: ImageIcon, soon: true },
   { id: "brand", title: "브랜드 관리", href: "/settings?tab=brand", icon: Tag },
   { id: "settings", title: "설정", href: "/settings", icon: Settings },

@@ -30,6 +30,7 @@ export const coupangExecutor: ListingExecutor = {
     product: CanonicalProduct,
     listing: ListingModel,
     mode: ExecutionMode,
+    context?: { snapshotId?: string },
   ): Promise<ListingResult> {
     const errors = listing.validations.filter((v) => v.status === "ERROR");
     if (errors.length > 0) {
@@ -74,7 +75,7 @@ export const coupangExecutor: ListingExecutor = {
       const response = await fetch("/api/coupang/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product, listing }),
+        body: JSON.stringify({ product, listing, snapshotId: context?.snapshotId }),
       });
       const result = (await response.json()) as ListingResult;
       return result;

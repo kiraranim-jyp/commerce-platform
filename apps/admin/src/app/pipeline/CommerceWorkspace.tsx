@@ -92,6 +92,7 @@ export function CommerceWorkspace({
   onToggleExclude,
   developerMode,
   analysisStartedAt,
+  snapshotId,
 }: {
   product: CanonicalProduct;
   onUpdateProduct: (updater: (prev: CanonicalProduct) => CanonicalProduct) => void;
@@ -110,6 +111,9 @@ export function CommerceWorkspace({
    * epoch ms. 없으면(예: 재시도로 이 화면에 다시 진입한 경우) 총 소요시간은
    * 생략하고 에디터 소요시간만 잰다. */
   analysisStartedAt?: number | null;
+  /** "최근 작업" 스냅샷에서 이어서 등록하는 경우 저장된 스냅샷 id — LIVE 등록
+   * 시 그대로 executor에 넘겨 registration_attempts.snapshot_id로 남긴다. */
+  snapshotId?: string | null;
 }) {
   // P0-UI Epic 1 — "이미지" 영역을 대표이미지+장수 요약 카드로 줄이고, 기존
   // ImageRoleGrid(대표/상품/상세 역할 지정 그리드)는 이 카드를 눌렀을 때만 여는
@@ -950,7 +954,9 @@ export function CommerceWorkspace({
     }
 
     setListingStates((prev) => ({ ...prev, [platform]: "SUBMITTING" }));
-    const result = await LISTING_EXECUTORS[platform].execute(product, listing, mode);
+    const result = await LISTING_EXECUTORS[platform].execute(product, listing, mode, {
+      snapshotId: snapshotId ?? undefined,
+    });
     setListingResults((prev) => ({ ...prev, [platform]: result }));
     const finishedAt = Date.now();
     setRegistrationHistory((prev) => [
