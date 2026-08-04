@@ -1,5 +1,6 @@
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
+import type { DetailPageBlock } from "./coupang/build-payload";
 import type { ExecutionMode, ListingResult } from "./types";
 
 /**
@@ -24,6 +25,11 @@ export interface ListingExecutor {
      * registration_attempts.snapshot_id에 남겨 감사 추적 및 스냅샷 status를
      * REGISTERED로 갱신하는 데 쓴다. API 기반이 아닌 실행기(Playwright 등)는
      * 무시해도 된다. */
-    context?: { snapshotId?: string },
+    context?: {
+      snapshotId?: string;
+      /** Detail Page Editor(2026-08-04) — 있으면 그대로 register API에 전달해서
+       * 이 순서로 상세페이지 contents를 조립한다(coupangExecutor만 쓴다). */
+      detailBlocks?: DetailPageBlock[];
+    },
   ): Promise<ListingResult>;
 }

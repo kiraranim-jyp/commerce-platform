@@ -20,6 +20,7 @@ import {
   type ComplianceReport,
   type CoupangCategoryMeta,
   type CoupangPayload,
+  type DetailPageBlock,
   type ExecutionMode,
   type ListingResult,
   type ListingStatus,
@@ -93,6 +94,8 @@ export function CommerceWorkspace({
   developerMode,
   analysisStartedAt,
   snapshotId,
+  detailBlocks,
+  onDetailBlocksChange,
 }: {
   product: CanonicalProduct;
   onUpdateProduct: (updater: (prev: CanonicalProduct) => CanonicalProduct) => void;
@@ -114,6 +117,11 @@ export function CommerceWorkspace({
   /** "최근 작업" 스냅샷에서 이어서 등록하는 경우 저장된 스냅샷 id — LIVE 등록
    * 시 그대로 executor에 넘겨 registration_attempts.snapshot_id로 남긴다. */
   snapshotId?: string | null;
+  /** Detail Page Editor(2026-08-04) — product와 같은 이유로 controlled다.
+   * page.tsx가 스냅샷 저장/복원 대상에 포함해야 하므로 이 컴포넌트가 상태를
+   * 소유하지 않는다. */
+  detailBlocks: DetailPageBlock[];
+  onDetailBlocksChange: (blocks: DetailPageBlock[]) => void;
 }) {
   // P0-UI Epic 1 — "이미지" 영역을 대표이미지+장수 요약 카드로 줄이고, 기존
   // ImageRoleGrid(대표/상품/상세 역할 지정 그리드)는 이 카드를 눌렀을 때만 여는
@@ -647,7 +655,7 @@ export function CommerceWorkspace({
       fetch("/api/coupang/payload-preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product, listing }),
+        body: JSON.stringify({ product, listing, detailBlocks }),
         signal: controller.signal,
       })
         .then((res) => res.json())
@@ -682,7 +690,7 @@ export function CommerceWorkspace({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [payloadPreviewEligible, product, listing]);
+  }, [payloadPreviewEligible, product, listing, detailBlocks]);
 
   /** 쿠팡 카테고리 추천(자동매칭) API를 호출해서 실제 쿠팡 숫자 코드를 후보로
    * 보여준다 — CartPilot 내부 AI 추천(categoryCandidates)과는 완전히 다른 코드
@@ -951,6 +959,7 @@ export function CommerceWorkspace({
     setListingStates((prev) => ({ ...prev, [platform]: "SUBMITTING" }));
     const result = await LISTING_EXECUTORS[platform].execute(product, listing, mode, {
       snapshotId: snapshotId ?? undefined,
+      detailBlocks: platform === "coupang" ? detailBlocks : undefined,
     });
     setListingResults((prev) => ({ ...prev, [platform]: result }));
     const finishedAt = Date.now();
@@ -1121,6 +1130,8 @@ export function CommerceWorkspace({
           items={items}
           thumbnails={thumbnails}
           onOpenGallery={() => setGalleryOpen(true)}
+          detailBlocks={tab === "coupang" ? detailBlocks : undefined}
+          onDetailBlocksChange={tab === "coupang" ? onDetailBlocksChange : undefined}
         />
       )}
 

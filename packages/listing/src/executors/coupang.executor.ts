@@ -1,5 +1,6 @@
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct, ErrorCode } from "@commerce/shared";
+import type { DetailPageBlock } from "../coupang/build-payload";
 import { buildCoupangPayload } from "../coupang/build-payload";
 import type { ListingExecutor } from "../executor";
 import type { ExecutionMode, ListingResult } from "../types";
@@ -30,7 +31,7 @@ export const coupangExecutor: ListingExecutor = {
     product: CanonicalProduct,
     listing: ListingModel,
     mode: ExecutionMode,
-    context?: { snapshotId?: string },
+    context?: { snapshotId?: string; detailBlocks?: DetailPageBlock[] },
   ): Promise<ListingResult> {
     const errors = listing.validations.filter((v) => v.status === "ERROR");
     if (errors.length > 0) {
@@ -52,7 +53,7 @@ export const coupangExecutor: ListingExecutor = {
       };
     }
 
-    const payload = buildCoupangPayload(product, listing);
+    const payload = buildCoupangPayload(product, listing, { detailBlocks: context?.detailBlocks });
 
     if (mode === "PREVIEW") {
       return { status: "READY", platform: "coupang", mode, retryable: false, payload };
@@ -75,7 +76,12 @@ export const coupangExecutor: ListingExecutor = {
       const response = await fetch("/api/coupang/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product, listing, snapshotId: context?.snapshotId }),
+        body: JSON.stringify({
+          product,
+          listing,
+          snapshotId: context?.snapshotId,
+          detailBlocks: context?.detailBlocks,
+        }),
       });
       const result = (await response.json()) as ListingResult;
       return result;

@@ -7,6 +7,7 @@ import type {
   ComplianceReport,
   CoupangCategoryMeta,
   CoupangPayload,
+  DetailPageBlock,
   ListingResult,
   ListingStatus,
   ReadinessReport,
@@ -20,6 +21,7 @@ import { CategoryRequirementsEditor } from "./CategoryRequirementsEditor";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { ComplianceBreakdown } from "./ComplianceBreakdown";
 import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
+import { DetailPageEditor } from "./DetailPageEditor";
 import { EditableText, EditableTextarea } from "./EditableField";
 import { ImageSummaryCard } from "./ImageSummaryCard";
 import { ListingSection } from "./ListingSection";
@@ -111,6 +113,8 @@ export function PlatformPreview({
   onOpenGallery,
   payloadPreview,
   payloadPreviewUnavailableReason,
+  detailBlocks,
+  onDetailBlocksChange,
 }: {
   product: CanonicalProduct;
   listing: ListingModel;
@@ -214,6 +218,10 @@ export function PlatformPreview({
    * 최신 상태를 보여준다. */
   payloadPreview?: { payload: CoupangPayload; complianceReport: ComplianceReport } | null;
   payloadPreviewUnavailableReason?: string | null;
+  /** Detail Page Editor(2026-08-04) — 쿠팡 탭에서만 넘어온다. 없으면(다른
+   * 플랫폼) 에디터 섹션 자체를 안 그린다. */
+  detailBlocks?: DetailPageBlock[];
+  onDetailBlocksChange?: (blocks: DetailPageBlock[]) => void;
 }) {
   // isVerifiedPlatformCode까지 확인해야 한다 — state만 보면 미리보기가
   // "선택 완료"로 보이는데 실제 등록은 CP001로 거부되는 버그가 재발한다.
@@ -576,6 +584,17 @@ export function PlatformPreview({
             />
           </FieldRow>
         </CollapsibleSection>
+
+        {listing.platform === "coupang" && detailBlocks && onDetailBlocksChange && (
+          <CollapsibleSection title="상세페이지 에디터" {...sectionProps("section-detail-editor")}>
+            <DetailPageEditor
+              product={product}
+              blocks={detailBlocks}
+              onChange={onDetailBlocksChange}
+              payloadPreview={payloadPreview}
+            />
+          </CollapsibleSection>
+        )}
 
         {listing.platform === "coupang" && (
           <CollapsibleSection title="Payload Preview" {...sectionProps("section-payload")}>

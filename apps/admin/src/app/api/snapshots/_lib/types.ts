@@ -1,3 +1,4 @@
+import type { DetailPageBlock } from "@commerce/listing";
 import type { CanonicalProduct, PlatformId, ProductMetadata } from "@commerce/shared";
 import type { ProcessingReport, WorkspaceItem } from "../../pipeline/response.types";
 
@@ -33,6 +34,9 @@ export interface SnapshotWorkspaceState {
   excludedIds: string[];
   activeTab: "source" | "content" | PlatformId;
   developerMode: boolean;
+  /** Detail Page Editor(2026-08-04) — 없으면(레거시 세션) defaultDetailBlocks()로
+   * 대체한다(apps/admin/src/app/pipeline/commerce/detail-blocks.ts). */
+  detailBlocks?: DetailPageBlock[];
   platformSettings: {
     coupang?: {
       sellerProfileId: string | null;

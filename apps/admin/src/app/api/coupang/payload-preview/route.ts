@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
+import type { DetailPageBlock } from "@commerce/listing";
 import { buildComplianceReport, buildCoupangPayload, resolveVerifiedCategoryCode } from "@commerce/listing";
 import { getCoupangCredentials, getVendorUserId } from "../_lib/env";
 import { getDefaultDescriptionTemplate } from "../_lib/description-template";
@@ -24,12 +25,13 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
     product?: CanonicalProduct;
     listing?: ListingModel;
+    detailBlocks?: DetailPageBlock[];
   } | null;
 
   if (!body?.product || !body?.listing) {
     return NextResponse.json({ error: "product와 listing이 필요합니다." }, { status: 400 });
   }
-  const { product, listing } = body;
+  const { product, listing, detailBlocks } = body;
 
   const credentials = await getCoupangCredentials();
   if (!credentials) {
@@ -86,8 +88,13 @@ export async function POST(request: Request) {
     categoryMeta,
     resolvedBrand,
     brandProfile: brandProfile
-      ? { countryOfOrigin: brandProfile.countryOfOrigin, manufacturer: brandProfile.manufacturer }
+      ? {
+          countryOfOrigin: brandProfile.countryOfOrigin,
+          manufacturer: brandProfile.manufacturer,
+          brandIntro: brandProfile.brandIntro,
+        }
       : null,
+    detailBlocks,
   });
 
   const attributeResults = payload.complianceFieldResults.filter((r) => r.kind === "ATTRIBUTE");

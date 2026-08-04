@@ -8,6 +8,7 @@ import {
   validateCoupangPricing,
   type ComplianceReport,
   type CoupangPayload,
+  type DetailPageBlock,
 } from "@commerce/listing";
 import type { ListingResult, RegistrationStepLog } from "@commerce/listing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -177,12 +178,13 @@ export async function POST(request: Request) {
     product?: CanonicalProduct;
     listing?: ListingModel;
     snapshotId?: string;
+    detailBlocks?: DetailPageBlock[];
   } | null;
 
   if (!body?.product || !body?.listing) {
     return NextResponse.json({ error: "product와 listing이 필요합니다." }, { status: 400 });
   }
-  const { product, listing } = body;
+  const { product, listing, detailBlocks } = body;
   // "최근 작업" 스냅샷에서 이어서 등록한 경우에만 있다 — 없으면(스냅샷 기능
   // 이전 흐름이거나 스냅샷 저장을 안 한 경우) registration_attempts.snapshot_id는
   // null로 남는다(감사 로그 자체는 스냅샷 없이도 항상 남는다).
@@ -397,8 +399,13 @@ export async function POST(request: Request) {
     categoryMeta,
     resolvedBrand,
     brandProfile: brandProfile
-      ? { countryOfOrigin: brandProfile.countryOfOrigin, manufacturer: brandProfile.manufacturer }
+      ? {
+          countryOfOrigin: brandProfile.countryOfOrigin,
+          manufacturer: brandProfile.manufacturer,
+          brandIntro: brandProfile.brandIntro,
+        }
       : null,
+    detailBlocks,
   });
 
   // Sprint B(Product Compliance Engine) — "등록됐다"가 아니라 "얼마나 실제

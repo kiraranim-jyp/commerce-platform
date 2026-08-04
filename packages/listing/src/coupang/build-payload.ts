@@ -245,6 +245,162 @@ export function mergeCoupangDescription(
   return aiDescription.trim().length > 0 ? `${aiDescription.trim()}\n\n${templateText}` : templateText;
 }
 
+/** Detail Page Editor(2026-08-04, CEO 지시 — 백로그 A-12-5) 도메인 모델.
+ *
+ * 쿠팡 상세페이지(contents 배열)는 지금까지 mergeCoupangDescription +
+ * buildCoupangPayload의 하드코딩된 순서로만 조립됐다. 이 타입은 그 조립을
+ * 블록 단위로 켜고 끄고 순서를 바꿀 수 있게 만든다 — 배열 순서 = 실제 등록
+ * 순서. enabled:false는 자리를 유지한 채(다시 켜면 원래 위치로) 조립에서만
+ * 제외한다.
+ *
+ * apps/admin(설정 UI, BrandProfile/DescriptionTemplate CRUD 모양과 결합된
+ * 개념)이 이 타입을 쓰지만, 실제 조립 로직(assembleContentsFromBlocks)이
+ * sellerConfig/template 같은 이 파일의 다른 타입과 강하게 묶여 있어서 여기
+ * 정의한다 — apps/admin은 @commerce/listing에서 그대로 가져다 쓴다(반대
+ * 방향으로 packages가 apps/admin을 import하면 안 됨). */
+export type DetailPageBlock =
+  | { id: string; kind: "AI_DESCRIPTION"; enabled: boolean }
+  | { id: string; kind: "BRAND_INTRO"; enabled: boolean }
+  | {
+      id: string;
+      kind: "TEMPLATE_SECTION";
+      section: "shipping" | "exchange" | "return" | "agentBuy" | "as";
+      enabled: boolean;
+    }
+  | { id: string; kind: "COMMON_IMAGE"; position: "top" | "bottom"; enabled: boolean }
+  | { id: string; kind: "SIZE_CHART_IMAGES"; enabled: boolean }
+  | { id: string; kind: "PRODUCT_IMAGES"; enabled: boolean }
+  | { id: string; kind: "CUSTOM_TEXT"; content: string; enabled: boolean };
+
+const TEMPLATE_SECTION_LABELS: Record<
+  Extract<DetailPageBlock, { kind: "TEMPLATE_SECTION" }>["section"],
+  string
+> = {
+  shipping: "배송안내",
+  exchange: "교환안내",
+  return: "반품안내",
+  agentBuy: "구매대행 안내",
+  as: "A/S 안내",
+};
+
+const DETAIL_BLOCK_LABELS: Record<DetailPageBlock["kind"], string> = {
+  AI_DESCRIPTION: "AI 생성 설명",
+  BRAND_INTRO: "브랜드 소개",
+  TEMPLATE_SECTION: "안내 문구",
+  COMMON_IMAGE: "공통 이미지",
+  SIZE_CHART_IMAGES: "사이즈표",
+  PRODUCT_IMAGES: "상품 상세이미지",
+  CUSTOM_TEXT: "직접 입력 텍스트",
+};
+
+export function detailBlockLabel(block: DetailPageBlock): string {
+  if (block.kind === "TEMPLATE_SECTION") return TEMPLATE_SECTION_LABELS[block.section];
+  if (block.kind === "COMMON_IMAGE") return block.position === "top" ? "상단 공통 이미지" : "하단 공통 이미지";
+  return DETAIL_BLOCK_LABELS[block.kind];
+}
+
+/** 사용자가 에디터를 한 번도 안 열었을 때 쓰는 기본값 — 지금까지의 하드코딩
+ * 순서(mergeCoupangDescription + buildCoupangPayload의 contents 조립)와
+ * 완전히 동일하다. BRAND_INTRO/SIZE_CHART_IMAGES/CUSTOM_TEXT는 옵트인이라
+ * 기본값에는 없다 — 회귀 없이 오늘과 100% 같은 결과를 내는 것이 목적. */
+export function defaultDetailBlocks(): DetailPageBlock[] {
+  let seq = 0;
+  const id = () => `default-${seq++}`;
+  return [
+    { id: id(), kind: "AI_DESCRIPTION", enabled: true },
+    { id: id(), kind: "TEMPLATE_SECTION", section: "shipping", enabled: true },
+    { id: id(), kind: "TEMPLATE_SECTION", section: "exchange", enabled: true },
+    { id: id(), kind: "TEMPLATE_SECTION", section: "return", enabled: true },
+    { id: id(), kind: "TEMPLATE_SECTION", section: "agentBuy", enabled: true },
+    { id: id(), kind: "TEMPLATE_SECTION", section: "as", enabled: true },
+    { id: id(), kind: "COMMON_IMAGE", position: "top", enabled: true },
+    { id: id(), kind: "PRODUCT_IMAGES", enabled: true },
+    { id: id(), kind: "COMMON_IMAGE", position: "bottom", enabled: true },
+  ];
+}
+
+/** DetailPageBlock[] → 실제 contents 배열. 같은 종류가 연속으로 여러 개면
+ * TEXT 블록은 하나의 TEXT content로 합치고(쿠팡 API가 빈 TEXT content를
+ * 거부하므로 블록 사이 개행만 넣고 이어붙임), IMAGE 블록은 각각 개별 IMAGE
+ * content로 낸다(기존 하드코딩 로직과 동일하게 한 장당 하나). 값을 못 구하는
+ * 블록(예: 공통이미지 URL 미설정, 빈 템플릿 섹션)은 조용히 건너뛴다 — 빈
+ * content를 보내면 실제 쿠팡 API가 거부한다(기존 로직과 같은 이유). */
+export function assembleContentsFromBlocks(
+  blocks: DetailPageBlock[],
+  ctx: {
+    aiDescription: string;
+    template: CoupangDescriptionTemplate | null | undefined;
+    sellerConfig: CoupangSellerConfig;
+    /** useInDescription && classification !== "SIZE_CHART" 인 이미지 URL들. */
+    productImageUrls: string[];
+    /** useInDescription && classification === "SIZE_CHART" 인 이미지 URL들. */
+    sizeChartImageUrls: string[];
+    brandIntro?: string | null;
+  },
+): CoupangItemContent[] {
+  const textFor = (block: DetailPageBlock): string | null => {
+    if (block.kind === "AI_DESCRIPTION") return ctx.aiDescription.trim() || null;
+    if (block.kind === "BRAND_INTRO") return ctx.brandIntro?.trim() || null;
+    if (block.kind === "CUSTOM_TEXT") return block.content.trim() || null;
+    if (block.kind === "TEMPLATE_SECTION") {
+      const raw =
+        block.section === "shipping"
+          ? ctx.template?.shippingInfo
+          : block.section === "exchange"
+            ? ctx.template?.exchangeInfo
+            : block.section === "return"
+              ? ctx.template?.returnInfo
+              : block.section === "agentBuy"
+                ? ctx.template?.agentBuyInfo
+                : ctx.template?.asInfo;
+      const trimmed = (raw ?? "").trim();
+      return trimmed ? `[${TEMPLATE_SECTION_LABELS[block.section]}]\n${trimmed}` : null;
+    }
+    return null;
+  };
+
+  const imagesFor = (block: DetailPageBlock): string[] => {
+    if (block.kind === "COMMON_IMAGE") {
+      const enabled = block.position === "top" ? ctx.sellerConfig.topCommonImageEnabled : ctx.sellerConfig.bottomCommonImageEnabled;
+      const url = block.position === "top" ? ctx.sellerConfig.topCommonImageUrl : ctx.sellerConfig.bottomCommonImageUrl;
+      return enabled && url ? [url] : [];
+    }
+    if (block.kind === "PRODUCT_IMAGES") return ctx.productImageUrls;
+    if (block.kind === "SIZE_CHART_IMAGES") return ctx.sizeChartImageUrls;
+    return [];
+  };
+
+  const contents: CoupangItemContent[] = [];
+  let pendingText: string[] = [];
+  const flushText = () => {
+    if (pendingText.length === 0) return;
+    contents.push({
+      contentsType: "TEXT",
+      contentDetails: [{ content: pendingText.join("\n\n"), detailType: "TEXT" }],
+    });
+    pendingText = [];
+  };
+
+  for (const block of blocks) {
+    if (!block.enabled) continue;
+    const text = textFor(block);
+    if (text) {
+      pendingText.push(text);
+      continue;
+    }
+    const images = imagesFor(block);
+    if (images.length > 0) {
+      flushText();
+      for (const url of images) {
+        contents.push({ contentsType: "IMAGE", contentDetails: [{ content: url, detailType: "IMAGE" }] });
+      }
+    }
+  }
+  flushText();
+
+  return contents;
+}
+
 /** listing.category.candidate.id는 대부분 CartPilot 내부 카테고리 id다 — 실제
  * 쿠팡 숫자 코드로 쓸 수 있는 건 /api/coupang/category-recommend가 만든
  * candidate(isVerifiedPlatformCode: true)를 사용자가 SELECTED/CONFIRMED로
@@ -941,7 +1097,12 @@ export function buildCoupangPayload(
      * 브랜드 문자열) 대신 이 이름과 brandId를 함께 보낸다. */
     resolvedBrand?: { brandId: string; brandName: string } | null;
     /** Sprint A-12(작업4) — product.brand.value로 미리 조회해둔 브랜드 프로필. */
-    brandProfile?: { countryOfOrigin: string; manufacturer: string } | null;
+    brandProfile?: { countryOfOrigin: string; manufacturer: string; brandIntro?: string | null } | null;
+    /** Detail Page Editor(2026-08-04) — 있으면 이 순서로 contents를 조립한다
+     * (assembleContentsFromBlocks). 없으면 바로 아래의 기존 하드코딩 로직을
+     * 그대로 쓴다 — 에디터를 한 번도 안 연 세션은 오늘과 100% 동일하게
+     * 동작해야 한다(회귀 없음). */
+    detailBlocks?: DetailPageBlock[];
   } = {},
 ): CoupangPayload {
   const sellerConfig = options.sellerConfig ?? BLANK_COUPANG_SELLER_CONFIG;
@@ -951,6 +1112,15 @@ export function buildCoupangPayload(
 
   const descriptionImageUrls = product.images
     .filter((img) => img.useInDescription)
+    .map((img) => getSelectedImageUrl(img));
+  // Detail Page Editor의 SIZE_CHART_IMAGES/PRODUCT_IMAGES 블록이 쓰는 분리된
+  // 목록 — classification으로 나눈다(기존 하드코딩 경로는 안 나누고 그대로
+  // descriptionImageUrls를 쓴다, 위 변수 그대로 유지).
+  const sizeChartImageUrls = product.images
+    .filter((img) => img.useInDescription && img.classification === "SIZE_CHART")
+    .map((img) => getSelectedImageUrl(img));
+  const nonSizeChartDescriptionImageUrls = product.images
+    .filter((img) => img.useInDescription && img.classification !== "SIZE_CHART")
     .map((img) => getSelectedImageUrl(img));
 
   const images: CoupangItemImage[] = [];
@@ -971,20 +1141,29 @@ export function buildCoupangPayload(
       ? [sellerConfig.bottomCommonImageUrl]
       : [];
 
-  const contents: CoupangItemContent[] = [
-    ...(description
-      ? [
-          {
-            contentsType: "TEXT" as const,
-            contentDetails: [{ content: description, detailType: "TEXT" as const }],
-          },
-        ]
-      : []),
-    ...[...topCommonImage, ...descriptionImageUrls, ...bottomCommonImage].map((url) => ({
-      contentsType: "IMAGE" as const,
-      contentDetails: [{ content: url, detailType: "IMAGE" as const }],
-    })),
-  ];
+  const contents: CoupangItemContent[] = options.detailBlocks
+    ? assembleContentsFromBlocks(options.detailBlocks, {
+        aiDescription: listing.description,
+        template: options.descriptionTemplate,
+        sellerConfig,
+        productImageUrls: nonSizeChartDescriptionImageUrls,
+        sizeChartImageUrls,
+        brandIntro: options.brandProfile?.brandIntro,
+      })
+    : [
+        ...(description
+          ? [
+              {
+                contentsType: "TEXT" as const,
+                contentDetails: [{ content: description, detailType: "TEXT" as const }],
+              },
+            ]
+          : []),
+        ...[...topCommonImage, ...descriptionImageUrls, ...bottomCommonImage].map((url) => ({
+          contentsType: "IMAGE" as const,
+          contentDetails: [{ content: url, detailType: "IMAGE" as const }],
+        })),
+      ];
 
   const now = new Date();
   const twoYearsLater = new Date(now);
