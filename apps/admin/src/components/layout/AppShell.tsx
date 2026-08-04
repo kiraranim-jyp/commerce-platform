@@ -9,7 +9,6 @@ import {
   Image as ImageIcon,
   Package,
   Settings,
-  Tag,
   type LucideIcon,
 } from "lucide-react";
 import { AppHeader } from "./AppHeader";
@@ -32,7 +31,6 @@ const NAV_ITEMS: NavigationItem[] = [
   { id: "pipeline", title: "상품등록", href: "/pipeline", icon: Package },
   { id: "recent", title: "최근 작업", href: "/snapshots", icon: Clock },
   { id: "images", title: "이미지", href: "/assets", icon: ImageIcon },
-  { id: "brand", title: "브랜드 관리", href: "/settings?tab=brand", icon: Tag },
   { id: "settings", title: "설정", href: "/settings", icon: Settings },
   { id: "help", title: "도움말", href: "#", icon: HelpCircle, soon: true },
 ];

@@ -62,12 +62,18 @@ export function CategoryRecommendationPanel({
   const [searchQuery, setSearchQuery] = useState("");
   const isConfirmed = selection.state === "SELECTED" || selection.state === "CONFIRMED";
 
+  const isCoupang = !!onFetchCoupangCategory;
+
   // Sprint A-10(작업2/8 — CEO 지시: "① 쿠팡 API 추천 ② 추천 후보 ③ 전체 후보
   // 보기") — verified는 항상 최상위(① 쿠팡 API 추천). 나머지는 confidence로
   // ②(0.6 이상 — 바로 눈에 띄게)와 ③(그 미만 — 접어서 필요할 때만 펼침)으로
   // 나눈다. ②③ 둘 다 CandidateCard의 "선택" 버튼이 항상 활성화돼 있어 클릭할
   // 수 있다 — "등록불가"라는 표현은 어디에도 쓰지 않는다(대표님 피드백: "지금은
   // 왜 못 누르는지 모르겠습니다" — 실제로는 늘 눌렀는데 문구만 오해를 줬었다).
+  // CEO 피드백(2026-08-04) — 쿠팡 탭은 CommerceWorkspace가 이미 순수
+  // coupangApiCandidates만 내려주므로(rule-based 제거), verified/recommended/
+  // similar로 다시 나눌 이유가 없다(CPO 지적) — 아래 3분할은 스마트스토어 등
+  // rule-based만 존재하는 비-쿠팡 탭에서만 쓴다.
   const verifiedCandidates = candidates.filter((c) => c.isVerifiedPlatformCode);
   const unverified = candidates.filter((c) => !c.isVerifiedPlatformCode);
   const recommendedCandidates = unverified.filter((c) => c.confidence >= 0.6);
@@ -77,7 +83,6 @@ export function CategoryRecommendationPanel({
   const verifiedSearch = search.filter((c) => c.isVerifiedPlatformCode);
   const otherSearch = search.filter((c) => !c.isVerifiedPlatformCode);
 
-  const isCoupang = !!onFetchCoupangCategory;
   const recommendEmpty = candidates.length === 0;
   const recommendLoading = !!coupangCategoryFetching && !recommendAttempted;
 
@@ -101,10 +106,12 @@ export function CategoryRecommendationPanel({
 
       {expanded && (
         <div className="mt-3 space-y-4" onClick={(event) => event.stopPropagation()}>
-          {/* ── AI 추천 (항상 존재) ─────────────────────────────────── */}
+          {/* ── 추천 (항상 존재) ─────────────────────────────────── */}
           <div>
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-text-secondary">AI 추천</p>
+              <p className="text-xs font-medium text-text-secondary">
+                {isCoupang ? "쿠팡 추천 카테고리" : "AI 추천"}
+              </p>
               {isCoupang && (
                 <button
                   type="button"
@@ -139,53 +146,76 @@ export function CategoryRecommendationPanel({
               </div>
             )}
 
-            {verifiedCandidates.length > 0 && (
-              <div className="mt-2">
-                <p className="text-xs font-medium text-text-secondary">① 쿠팡 API 추천 — 바로 등록 가능</p>
-                <ol className="mt-1.5 space-y-2">
-                  {verifiedCandidates.map((candidate) => (
+            {/* CEO 피드백(2026-08-04) — 쿠팡 탭은 candidates가 이미 순수
+                coupangApiCandidates뿐이라 verified/recommended/similar 3단계로
+                다시 나눌 필요가 없다(CPO 지적) — 그냥 하나의 목록으로 나열한다.
+                스마트스토어 등 rule-based만 있는 탭은 기존 ①②③ 등급 표시를
+                그대로 쓴다. */}
+            {isCoupang ? (
+              candidates.length > 0 && (
+                <ol className="mt-2 space-y-2">
+                  {candidates.map((candidate) => (
                     <CandidateCard
                       key={candidate.id}
                       candidate={candidate}
                       isSelected={isConfirmed && selection.candidate?.id === candidate.id}
                       onSelect={onSelect}
-                      verified
+                      verified={candidate.isVerifiedPlatformCode ?? false}
                     />
                   ))}
                 </ol>
-              </div>
-            )}
-            {recommendedCandidates.length > 0 && (
-              <div className="mt-2">
-                <p className="text-xs font-medium text-text-secondary">② 추천 후보 — AI가 추정, 선택 가능</p>
-                <ol className="mt-1.5 space-y-2">
-                  {recommendedCandidates.map((candidate) => (
-                    <CandidateCard
-                      key={candidate.id}
-                      candidate={candidate}
-                      isSelected={isConfirmed && selection.candidate?.id === candidate.id}
-                      onSelect={onSelect}
-                      verified={false}
-                    />
-                  ))}
-                </ol>
-              </div>
-            )}
-            {similarCandidates.length > 0 && (
-              <div className="mt-2">
-                <p className="text-xs font-medium text-text-secondary">③ 유사 카테고리 — 신뢰도가 낮아 참고용</p>
-                <ol className="mt-1.5 space-y-2">
-                  {similarCandidates.map((candidate) => (
-                    <CandidateCard
-                      key={candidate.id}
-                      candidate={candidate}
-                      isSelected={isConfirmed && selection.candidate?.id === candidate.id}
-                      onSelect={onSelect}
-                      verified={false}
-                    />
-                  ))}
-                </ol>
-              </div>
+              )
+            ) : (
+              <>
+                {verifiedCandidates.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs font-medium text-text-secondary">① 쿠팡 API 추천 — 바로 등록 가능</p>
+                    <ol className="mt-1.5 space-y-2">
+                      {verifiedCandidates.map((candidate) => (
+                        <CandidateCard
+                          key={candidate.id}
+                          candidate={candidate}
+                          isSelected={isConfirmed && selection.candidate?.id === candidate.id}
+                          onSelect={onSelect}
+                          verified
+                        />
+                      ))}
+                    </ol>
+                  </div>
+                )}
+                {recommendedCandidates.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs font-medium text-text-secondary">② 추천 후보 — AI가 추정, 선택 가능</p>
+                    <ol className="mt-1.5 space-y-2">
+                      {recommendedCandidates.map((candidate) => (
+                        <CandidateCard
+                          key={candidate.id}
+                          candidate={candidate}
+                          isSelected={isConfirmed && selection.candidate?.id === candidate.id}
+                          onSelect={onSelect}
+                          verified={false}
+                        />
+                      ))}
+                    </ol>
+                  </div>
+                )}
+                {similarCandidates.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs font-medium text-text-secondary">③ 유사 카테고리 — 신뢰도가 낮아 참고용</p>
+                    <ol className="mt-1.5 space-y-2">
+                      {similarCandidates.map((candidate) => (
+                        <CandidateCard
+                          key={candidate.id}
+                          candidate={candidate}
+                          isSelected={isConfirmed && selection.candidate?.id === candidate.id}
+                          onSelect={onSelect}
+                          verified={false}
+                        />
+                      ))}
+                    </ol>
+                  </div>
+                )}
+              </>
             )}
 
             {/* A-12.3-P0-4 — 후보가 진짜 0개일 때 빈 화면 대신 명시적 안내를

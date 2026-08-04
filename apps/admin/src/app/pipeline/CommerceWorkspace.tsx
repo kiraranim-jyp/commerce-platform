@@ -503,17 +503,12 @@ export function CommerceWorkspace({
   const categoryCandidates = useMemo(() => {
     if (tab === "source" || tab === "content") return [];
     const ruleBased = ruleBasedCategoryProvider.recommendCategory(product, tab);
-    // A-12.3-P0-4(CPO 3차 지시 — regression 수정: "추천 리스트가 항상 보여야
-    // 한다") — 직전 커밋(4dbd5eb)에서 "검증된 쿠팡 API 후보만 보여준다"고
-    // coupangApiCandidates만 반환하게 바꿨는데, 이 state는 사용자가 "쿠팡
-    // API로 카테고리 확인" 버튼을 눌러야만(또는 아래 자동 fetch effect가
-    // 끝나야만) 채워진다 — 그 전까지는 빈 배열이라 추천 섹션 전체가
-    // 아무것도 없이 비어 보였다(실측 확인된 regression). CartPilot의 즉시
-    // 계산되는 rule-based 후보(실제 코드는 아니지만 화면엔 항상 존재)를
-    // 다시 항상 같이 보여주고, isVerifiedPlatformCode로 "바로 등록 가능"과
-    // "AI 추정"을 구분한다 — "검증된 것만 노출"이라는 원래 취지는
-    // CategoryRecommendationPanel의 ①/②/③ 등급 구분으로 지킨다.
-    if (tab === "coupang") return [...coupangApiCandidates, ...ruleBased];
+    // CEO 피드백(2026-08-04) — "AI 추정 카테고리"(CartPilot 내부 rule-based
+    // 추측)가 실제 쿠팡 코드가 아니고 선택해도 등록에 못 쓰여 혼란만 준다는
+    // 지적. 쿠팡 탭은 실제 쿠팡 API가 돌려준 candidates(coupangApiCandidates)만
+    // 보여주고, rule-based는 더 이상 섞지 않는다. 다른 플랫폼(스마트스토어 등,
+    // 아직 검증 API가 없음)은 rule-based가 유일한 추천 소스라 그대로 둔다.
+    if (tab === "coupang") return coupangApiCandidates;
     return ruleBased;
   }, [tab, product, coupangApiCandidates]);
 

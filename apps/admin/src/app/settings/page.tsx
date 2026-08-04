@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ImagePicker } from "@/components/ui/ImagePicker";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Tabs } from "@/components/ui/Tabs";
 
-const TAB_KEYS = ["coupang", "shipping", "brand", "detail", "smartstore"] as const;
+const TAB_KEYS = ["coupang", "shipping", "seller", "pricing", "brand", "detail", "smartstore"] as const;
 type SettingsTabKey = (typeof TAB_KEYS)[number];
 
 interface ShippingPlaceOption {
@@ -248,6 +249,8 @@ export default function SettingsPage() {
             items={[
               { value: "coupang", label: "쿠팡 계정" },
               { value: "shipping", label: "배송 프로필" },
+              { value: "seller", label: "판매자 정보" },
+              { value: "pricing", label: "가격 정책" },
               { value: "brand", label: "브랜드 관리" },
               { value: "detail", label: "상세페이지 관리" },
               { value: "smartstore", label: "스마트스토어", badge: "Soon", disabled: true },
@@ -304,13 +307,22 @@ export default function SettingsPage() {
             </section>
           </div>
 
-          <div className={activeTab === "shipping" ? "mt-5" : "hidden"}>
-            <SellerProfileSection profiles={profiles} onChanged={loadAll} />
-          </div>
+          {/* 배송 프로필/판매자 정보/가격 정책/상세페이지(공통이미지) 4개 탭이
+              전부 하나의 SellerProfile 저장 단위를 공유하므로, 인스턴스를
+              하나만 마운트하고 내부에서 activeTab에 따라 어느 섹션을 보여줄지
+              결정한다(탭을 오갈 때 상태가 유지되어야 하므로 언마운트 금지 —
+              최상위 탭과 같은 CSS-hidden 패턴을 컴포넌트 내부에 적용). */}
+          <SellerProfileEditor profiles={profiles} onChanged={loadAll} activeTab={activeTab} />
+
           <div className={activeTab === "brand" ? "mt-5" : "hidden"}>
             <BrandProfileSection profiles={brandProfiles} onChanged={loadAll} />
           </div>
           <div className={activeTab === "detail" ? "mt-5" : "hidden"}>
+            <SectionHeader
+              title="상세페이지 템플릿"
+              description="상품 설명 템플릿을 관리합니다."
+              className="mb-3"
+            />
             <DescriptionTemplateSection templates={templates} onChanged={loadAll} />
           </div>
           {activeTab === "smartstore" && (
@@ -406,11 +418,24 @@ function SettingsSubSection({
 /** Sprint A-11(작업3) — 파일 선택 즉시 업로드해서 미리보기+URL을 보여주고,
  * ON/OFF 토글로 실제 등록 payload에 넣을지 정한다. */
 /**
- * 배송 프로필 — 목록(이름 + 기본 배지 + 기본으로 설정/삭제)과 "새 프로필 만들기"
- * 폼을 함께 보여준다. 처음(프로필이 하나도 없을 때)에는 폼이 항상 펼쳐져 있어서
- * "최초 1회 생성" 흐름이 자연스럽게 이어진다.
+ * SellerProfile 저장 단위 하나(배송 프로필/판매자 정보/가격 정책/상세페이지
+ * 공통이미지)를 4개 탭으로 나눠 보여준다. CEO 피드백(2026-08-04) — DB/API는
+ * 그대로 두고 화면만 나눈다("탭 = 화면 분리, 저장 = 기존 API 그대로"). 상태/
+ * 저장(handleSave)/startEdit/resetForm은 이 컴포넌트 하나가 갖고, 화면 조각만
+ * ShippingSection/SellerInfoSection/PricingSection/CommonImagesSection으로
+ * 분리한다(CPO 지적 — activeTab별 if-분기 대신 컴포넌트 트리로 나눠 유지보수
+ * 용이하게). 네 개 wrapper 전부 이 컴포넌트 하나를 참조해야 탭을 오가도 입력
+ * 중이던 값이 유지된다 — page.tsx에서 한 번만 마운트한다.
  */
-function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile[]; onChanged: () => Promise<void> }) {
+function SellerProfileEditor({
+  profiles,
+  onChanged,
+  activeTab,
+}: {
+  profiles: SellerProfile[];
+  onChanged: () => Promise<void>;
+  activeTab: SettingsTabKey;
+}) {
   const [formOpen, setFormOpen] = useState(profiles.length === 0);
   // Sprint A-8(작업2/4/6) — 지금까지는 "새로 만들기"만 있었다. editingId가
   // null이 아니면 그 프로필을 고치는 중이라는 뜻이고, 폼은 그대로 재사용하되
@@ -486,8 +511,9 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
     setBottomCommonImageEnabled(false);
   }
 
-  function startEdit(p: SellerProfile) {
-    setEditingId(p.id);
+  // startEdit(수동 "수정" 클릭)과 아래 자동 채움 effect가 공유하는 필드
+  // 채우기 로직 — 하나로 유지해 두 경로가 어긋나지 않게 한다.
+  function fillForm(p: SellerProfile) {
     setName(p.name);
     setDeliveryCompanyCode(p.deliveryCompanyCode);
     setReturnCenterCode(p.returnCenterCode);
@@ -514,8 +540,28 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
     setTopCommonImageEnabled(p.topCommonImageEnabled);
     setBottomCommonImageUrl(p.bottomCommonImageUrl);
     setBottomCommonImageEnabled(p.bottomCommonImageEnabled);
+  }
+
+  function startEdit(p: SellerProfile) {
+    setEditingId(p.id);
+    fillForm(p);
     setFormOpen(true);
   }
+
+  // CEO 피드백(2026-08-04) — "판매자 정보"/"가격 정책"/"상세페이지 관리" 탭은
+  // 목록/토글이 없어서 "배송 프로필" 탭에서 먼저 "수정"을 눌러야만 값이
+  // 보였다. 프로필이 이미 하나 있는 게 일반적인 상태이므로, 처음 로드되고
+  // 아직 아무 것도 편집 중이 아닐 때 기본 프로필(없으면 첫 프로필)을 자동으로
+  // 채운다. editingId도 같이 세팅해야 이 탭들에서 저장을 눌러도 새 프로필이
+  // 아니라 같은 프로필을 PATCH한다(CPO 지적 — 기본 프로필 우선 순서 명확화).
+  useEffect(() => {
+    if (profiles.length > 0 && editingId === null) {
+      const target = profiles.find((p) => p.isDefault) ?? profiles[0];
+      setEditingId(target.id);
+      fillForm(target);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profiles]);
 
   async function uploadCommonImage(position: "top" | "bottom", file: File) {
     setImageUploading(position);
@@ -656,16 +702,235 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
     await onChanged();
   }
 
+  const saveButtonLabel = saving ? "저장 중…" : editingId ? "수정 저장" : "프로필 저장";
+
+  return (
+    <>
+      <div className={activeTab === "shipping" ? "mt-5" : "hidden"}>
+        <ShippingSection
+          profiles={profiles}
+          formOpen={formOpen}
+          onToggleForm={() => {
+            resetForm();
+            setFormOpen((v) => !v);
+          }}
+          returnCenters={returnCenters}
+          shippingPlaces={shippingPlaces}
+          name={name}
+          onNameChange={setName}
+          lookupLoading={lookupLoading}
+          lookupError={lookupError}
+          onFetchLookups={fetchLookups}
+          outboundShippingPlaceCode={outboundShippingPlaceCode}
+          onOutboundShippingPlaceCodeChange={setOutboundShippingPlaceCode}
+          deliveryCompanyCode={deliveryCompanyCode}
+          onDeliveryCompanyCodeChange={setDeliveryCompanyCode}
+          deliveryMethod={deliveryMethod}
+          onDeliveryMethodChange={setDeliveryMethod}
+          deliveryCharge={deliveryCharge}
+          onDeliveryChargeChange={setDeliveryCharge}
+          outboundLeadTimeDays={outboundLeadTimeDays}
+          onOutboundLeadTimeDaysChange={setOutboundLeadTimeDays}
+          returnCenterCode={returnCenterCode}
+          onReturnCenterCodeChange={setReturnCenterCode}
+          onSelectReturnCenter={selectReturnCenter}
+          returnChargeName={returnChargeName}
+          onReturnChargeNameChange={setReturnChargeName}
+          companyContactNumber={companyContactNumber}
+          onCompanyContactNumberChange={setCompanyContactNumber}
+          returnZipCode={returnZipCode}
+          onReturnZipCodeChange={setReturnZipCode}
+          returnAddress={returnAddress}
+          onReturnAddressChange={setReturnAddress}
+          returnAddressDetail={returnAddressDetail}
+          onReturnAddressDetailChange={setReturnAddressDetail}
+          returnDeliveryCharge={returnDeliveryCharge}
+          onReturnDeliveryChargeChange={setReturnDeliveryCharge}
+          exchangeDeliveryCharge={exchangeDeliveryCharge}
+          onExchangeDeliveryChargeChange={setExchangeDeliveryCharge}
+          onStartEdit={startEdit}
+          onSetDefault={handleSetDefault}
+          onDelete={handleDelete}
+          onSave={handleSave}
+          saving={saving}
+          saveButtonLabel={saveButtonLabel}
+        />
+      </div>
+
+      <div className={activeTab === "seller" ? "mt-5" : "hidden"}>
+        <SellerInfoSection
+          manufacturer={manufacturer}
+          onManufacturerChange={setManufacturer}
+          asContactNumber={asContactNumber}
+          onAsContactNumberChange={setAsContactNumber}
+          qualityGuarantee={qualityGuarantee}
+          onQualityGuaranteeChange={setQualityGuarantee}
+          kcExemptionText={kcExemptionText}
+          onKcExemptionTextChange={setKcExemptionText}
+          defaultCountryOfOrigin={defaultCountryOfOrigin}
+          onDefaultCountryOfOriginChange={setDefaultCountryOfOrigin}
+          onSave={handleSave}
+          saving={saving}
+          saveButtonLabel={saveButtonLabel}
+        />
+      </div>
+
+      <div className={activeTab === "pricing" ? "mt-5" : "hidden"}>
+        <PricingSection
+          defaultMarginPercent={defaultMarginPercent}
+          onDefaultMarginPercentChange={setDefaultMarginPercent}
+          includeShippingInPrice={includeShippingInPrice}
+          onIncludeShippingInPriceChange={setIncludeShippingInPrice}
+          priceRoundingUnit={priceRoundingUnit}
+          onPriceRoundingUnitChange={setPriceRoundingUnit}
+          onSave={handleSave}
+          saving={saving}
+          saveButtonLabel={saveButtonLabel}
+        />
+      </div>
+
+      <div className={activeTab === "detail" ? "mt-5" : "hidden"}>
+        <SectionHeader
+          title="공통 이미지"
+          description="상세페이지 상단/하단에 자동 삽입됩니다."
+          className="mb-3"
+        />
+        <CommonImagesSection
+          topCommonImageUrl={topCommonImageUrl}
+          topCommonImageEnabled={topCommonImageEnabled}
+          onTopCommonImageEnabledChange={setTopCommonImageEnabled}
+          bottomCommonImageUrl={bottomCommonImageUrl}
+          bottomCommonImageEnabled={bottomCommonImageEnabled}
+          onBottomCommonImageEnabledChange={setBottomCommonImageEnabled}
+          imageUploading={imageUploading}
+          onUploadTop={(file) => uploadCommonImage("top", file)}
+          onUploadBottom={(file) => uploadCommonImage("bottom", file)}
+          onSelectTopExisting={(asset) => {
+            setTopCommonImageUrl(asset.url);
+            setTopCommonImageEnabled(true);
+          }}
+          onSelectBottomExisting={(asset) => {
+            setBottomCommonImageUrl(asset.url);
+            setBottomCommonImageEnabled(true);
+          }}
+          onSave={handleSave}
+          saving={saving}
+          saveButtonLabel={saveButtonLabel}
+        />
+      </div>
+    </>
+  );
+}
+
+function SaveButton({ onSave, saving, label }: { onSave: () => void; saving: boolean; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onSave}
+      disabled={saving}
+      className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+    >
+      {label}
+    </button>
+  );
+}
+
+function ShippingSection({
+  profiles,
+  formOpen,
+  onToggleForm,
+  returnCenters,
+  shippingPlaces,
+  name,
+  onNameChange,
+  lookupLoading,
+  lookupError,
+  onFetchLookups,
+  outboundShippingPlaceCode,
+  onOutboundShippingPlaceCodeChange,
+  deliveryCompanyCode,
+  onDeliveryCompanyCodeChange,
+  deliveryMethod,
+  onDeliveryMethodChange,
+  deliveryCharge,
+  onDeliveryChargeChange,
+  outboundLeadTimeDays,
+  onOutboundLeadTimeDaysChange,
+  returnCenterCode,
+  onReturnCenterCodeChange,
+  onSelectReturnCenter,
+  returnChargeName,
+  onReturnChargeNameChange,
+  companyContactNumber,
+  onCompanyContactNumberChange,
+  returnZipCode,
+  onReturnZipCodeChange,
+  returnAddress,
+  onReturnAddressChange,
+  returnAddressDetail,
+  onReturnAddressDetailChange,
+  returnDeliveryCharge,
+  onReturnDeliveryChargeChange,
+  exchangeDeliveryCharge,
+  onExchangeDeliveryChargeChange,
+  onStartEdit,
+  onSetDefault,
+  onDelete,
+  onSave,
+  saving,
+  saveButtonLabel,
+}: {
+  profiles: SellerProfile[];
+  formOpen: boolean;
+  onToggleForm: () => void;
+  returnCenters: ReturnCenterOption[];
+  shippingPlaces: ShippingPlaceOption[];
+  name: string;
+  onNameChange: (v: string) => void;
+  lookupLoading: boolean;
+  lookupError: string | null;
+  onFetchLookups: () => void;
+  outboundShippingPlaceCode: string;
+  onOutboundShippingPlaceCodeChange: (v: string) => void;
+  deliveryCompanyCode: string;
+  onDeliveryCompanyCodeChange: (v: string) => void;
+  deliveryMethod: string;
+  onDeliveryMethodChange: (v: string) => void;
+  deliveryCharge: string;
+  onDeliveryChargeChange: (v: string) => void;
+  outboundLeadTimeDays: string;
+  onOutboundLeadTimeDaysChange: (v: string) => void;
+  returnCenterCode: string;
+  onReturnCenterCodeChange: (v: string) => void;
+  onSelectReturnCenter: (code: string) => void;
+  returnChargeName: string;
+  onReturnChargeNameChange: (v: string) => void;
+  companyContactNumber: string;
+  onCompanyContactNumberChange: (v: string) => void;
+  returnZipCode: string;
+  onReturnZipCodeChange: (v: string) => void;
+  returnAddress: string;
+  onReturnAddressChange: (v: string) => void;
+  returnAddressDetail: string;
+  onReturnAddressDetailChange: (v: string) => void;
+  returnDeliveryCharge: string;
+  onReturnDeliveryChargeChange: (v: string) => void;
+  exchangeDeliveryCharge: string;
+  onExchangeDeliveryChargeChange: (v: string) => void;
+  onStartEdit: (p: SellerProfile) => void;
+  onSetDefault: (id: string) => void;
+  onDelete: (id: string) => void;
+  onSave: () => void;
+  saving: boolean;
+  saveButtonLabel: string;
+}) {
   return (
     <section className="mt-4 rounded-lg border border-border bg-surface p-5 shadow-subtle">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold text-text-primary">배송 프로필</h2>
         <button
           type="button"
-          onClick={() => {
-            if (formOpen) resetForm();
-            setFormOpen((v) => !v);
-          }}
+          onClick={onToggleForm}
           className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-background"
         >
           {formOpen ? "닫기" : "새 프로필 만들기"}
@@ -702,7 +967,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => startEdit(p)}
+                  onClick={() => onStartEdit(p)}
                   className="text-xs text-text-secondary hover:underline"
                 >
                   수정
@@ -710,7 +975,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
                 {!p.isDefault && (
                   <button
                     type="button"
-                    onClick={() => handleSetDefault(p.id)}
+                    onClick={() => onSetDefault(p.id)}
                     className="text-xs text-primary hover:underline"
                   >
                     기본으로 설정
@@ -718,7 +983,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
                 )}
                 <button
                   type="button"
-                  onClick={() => handleDelete(p.id)}
+                  onClick={() => onDelete(p.id)}
                   className="text-xs text-error hover:underline"
                 >
                   삭제
@@ -735,7 +1000,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => onNameChange(e.target.value)}
               placeholder="예: 기본"
               className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
             />
@@ -745,7 +1010,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
             <span className="text-xs font-medium text-text-secondary">출고지/반품지 자동 조회</span>
             <button
               type="button"
-              onClick={fetchLookups}
+              onClick={onFetchLookups}
               disabled={lookupLoading}
               className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-background disabled:opacity-50"
             >
@@ -759,7 +1024,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
               {shippingPlaces.length > 0 && (
                 <select
                   value={outboundShippingPlaceCode}
-                  onChange={(e) => setOutboundShippingPlaceCode(e.target.value)}
+                  onChange={(e) => onOutboundShippingPlaceCodeChange(e.target.value)}
                   className="mb-1.5 w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
                 >
                   <option value="">목록에서 선택...</option>
@@ -773,7 +1038,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
               <input
                 type="text"
                 value={outboundShippingPlaceCode}
-                onChange={(e) => setOutboundShippingPlaceCode(e.target.value)}
+                onChange={(e) => onOutboundShippingPlaceCodeChange(e.target.value)}
                 placeholder="출고지 코드 직접 입력(폴백용 — 실제 등록 때는 상품 소싱 국가에 맞는 출고지가 자동 선택됩니다)"
                 className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
               />
@@ -782,7 +1047,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
             <Field label="택배사">
               <select
                 value={deliveryCompanyCode}
-                onChange={(e) => setDeliveryCompanyCode(e.target.value)}
+                onChange={(e) => onDeliveryCompanyCodeChange(e.target.value)}
                 className="mb-1.5 w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
               >
                 <option value="">선택...</option>
@@ -795,7 +1060,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
               <input
                 type="text"
                 value={deliveryCompanyCode}
-                onChange={(e) => setDeliveryCompanyCode(e.target.value)}
+                onChange={(e) => onDeliveryCompanyCodeChange(e.target.value)}
                 placeholder="목록에 없으면 코드 직접 입력"
                 className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
               />
@@ -805,7 +1070,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
               <input
                 type="text"
                 value={deliveryMethod}
-                onChange={(e) => setDeliveryMethod(e.target.value)}
+                onChange={(e) => onDeliveryMethodChange(e.target.value)}
                 className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
               />
             </Field>
@@ -813,7 +1078,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
               <input
                 type="number"
                 value={deliveryCharge}
-                onChange={(e) => setDeliveryCharge(e.target.value)}
+                onChange={(e) => onDeliveryChargeChange(e.target.value)}
                 placeholder="예: 19800"
                 className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
               />
@@ -822,7 +1087,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
               <input
                 type="number"
                 value={outboundLeadTimeDays}
-                onChange={(e) => setOutboundLeadTimeDays(e.target.value)}
+                onChange={(e) => onOutboundLeadTimeDaysChange(e.target.value)}
                 placeholder="예: 7"
                 className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
               />
@@ -834,7 +1099,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
               {returnCenters.length > 0 && (
                 <select
                   value={returnCenterCode}
-                  onChange={(e) => selectReturnCenter(e.target.value)}
+                  onChange={(e) => onSelectReturnCenter(e.target.value)}
                   className="mb-1.5 w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
                 >
                   <option value="">목록에서 선택...</option>
@@ -848,7 +1113,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
               <input
                 type="text"
                 value={returnCenterCode}
-                onChange={(e) => setReturnCenterCode(e.target.value)}
+                onChange={(e) => onReturnCenterCodeChange(e.target.value)}
                 placeholder="반품지 코드 직접 입력"
                 className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
               />
@@ -858,7 +1123,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
               <input
                 type="text"
                 value={returnChargeName}
-                onChange={(e) => setReturnChargeName(e.target.value)}
+                onChange={(e) => onReturnChargeNameChange(e.target.value)}
                 className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
               />
             </Field>
@@ -866,7 +1131,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
               <input
                 type="text"
                 value={companyContactNumber}
-                onChange={(e) => setCompanyContactNumber(e.target.value)}
+                onChange={(e) => onCompanyContactNumberChange(e.target.value)}
                 placeholder="02-1234-5678"
                 className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
               />
@@ -875,7 +1140,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
               <input
                 type="text"
                 value={returnZipCode}
-                onChange={(e) => setReturnZipCode(e.target.value)}
+                onChange={(e) => onReturnZipCodeChange(e.target.value)}
                 className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
               />
             </Field>
@@ -883,7 +1148,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
               <input
                 type="text"
                 value={returnAddress}
-                onChange={(e) => setReturnAddress(e.target.value)}
+                onChange={(e) => onReturnAddressChange(e.target.value)}
                 className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
               />
             </Field>
@@ -891,7 +1156,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
               <input
                 type="text"
                 value={returnAddressDetail}
-                onChange={(e) => setReturnAddressDetail(e.target.value)}
+                onChange={(e) => onReturnAddressDetailChange(e.target.value)}
                 className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
               />
             </Field>
@@ -899,7 +1164,7 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
               <input
                 type="number"
                 value={returnDeliveryCharge}
-                onChange={(e) => setReturnDeliveryCharge(e.target.value)}
+                onChange={(e) => onReturnDeliveryChargeChange(e.target.value)}
                 placeholder="예: 25000"
                 className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
               />
@@ -908,160 +1173,248 @@ function SellerProfileSection({ profiles, onChanged }: { profiles: SellerProfile
               <input
                 type="number"
                 value={exchangeDeliveryCharge}
-                onChange={(e) => setExchangeDeliveryCharge(e.target.value)}
+                onChange={(e) => onExchangeDeliveryChargeChange(e.target.value)}
                 placeholder="예: 25000"
                 className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
               />
             </Field>
           </SettingsSubSection>
 
-          {/* Sprint A-8(추가 권장사항) — Sprint A-7 실측에서 "제조자(수입자)"가
-              30건 중 30건을 막은 1위 블로커였다. 원본 사이트가 아니라 판매자
-              본인의 사업자 정보라 상품마다 다시 찾을 게 아니라 여기서 한 번만
-              입력한다. */}
-          <SettingsSubSection title="판매자 기본정보" hint="사업자/인증/원산지 — 상품마다 자동 채워집니다">
-            <Field label="제조자(수입자)" hint="Sprint A-7 실측 1위 블로커 — 여기 입력하면 상품마다 자동 채워집니다">
-              <input
-                type="text"
-                value={manufacturer}
-                onChange={(e) => setManufacturer(e.target.value)}
-                placeholder="예: 대표님 사업자명"
-                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-              />
-            </Field>
-            <Field label="A/S 연락처" hint="비워두면 반품지 연락처를 대신 씁니다">
-              <input
-                type="text"
-                value={asContactNumber}
-                onChange={(e) => setAsContactNumber(e.target.value)}
-                placeholder="02-1234-5678"
-                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-              />
-            </Field>
-            <Field label="품질보증기준">
-              <input
-                type="text"
-                value={qualityGuarantee}
-                onChange={(e) => setQualityGuarantee(e.target.value)}
-                placeholder="예: 관련 법령 및 소비자분쟁해결기준에 따름"
-                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-              />
-            </Field>
-            {/* A-12.3-P0-2(CPO 지시) — 비워두면(기본값) 기존처럼 "인증/허가
-                사항"은 사용자가 직접 입력해야 하는 상태로 남는다. 실제로 KC
-                인증이 법적으로 필요한 카테고리에는 이 문구를 쓰면 안 되므로,
-                대표님이 직접 확인하고 채워야 하는 값이라는 걸 hint로 명시한다. */}
-            <Field
-              label="인증/허가 사항 기본값 (KC 등)"
-              hint="대부분의 구매대행 상품에 해당되는 문구만 넣어주세요 — 실제로 KC 인증이 필요한 상품에는 비워두고 직접 입력해야 합니다"
-            >
-              <input
-                type="text"
-                value={kcExemptionText}
-                onChange={(e) => setKcExemptionText(e.target.value)}
-                placeholder="예: KC마크 없이 구매대행 가능한 품목"
-                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-              />
-            </Field>
-            <Field label="원산지 기본값" hint="상품 설명에서 원산지를 못 찾았을 때만 이 값을 대신 씁니다">
-              <input
-                type="text"
-                value={defaultCountryOfOrigin}
-                onChange={(e) => setDefaultCountryOfOrigin(e.target.value)}
-                placeholder="예: 중국"
-                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-              />
-            </Field>
-          </SettingsSubSection>
-
-          {/* Sprint A-11(작업1/2 — CPO 지시: "판매가 = 환율변환가격 × (1+기본마진)")
-              — 상품마다 다시 정하지 않는 가격 정책 기본값. PriceEditor 최상단의
-              "원가 → 환율 → 마진 → 최종 판매가" 자동계산이 이 값을 그대로 쓴다. */}
-          <SettingsSubSection title="가격 정책" hint="마진율 · 반올림 단위 — 판매가 자동계산 기준">
-            <Field label="기본 마진율(%)" hint="비워두면 22%를 씁니다">
-              <input
-                type="number"
-                value={defaultMarginPercent}
-                onChange={(e) => setDefaultMarginPercent(e.target.value)}
-                placeholder="예: 22"
-                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-              />
-            </Field>
-            <Field label="배송비 포함 여부" hint="켜면 자동계산에 위 배송비(원)를 더한 뒤 마진을 적용합니다">
-              <label className="flex items-center gap-2 text-xs text-text-secondary">
-                <input
-                  type="checkbox"
-                  checked={includeShippingInPrice}
-                  onChange={(e) => setIncludeShippingInPrice(e.target.checked)}
-                  className="h-4 w-4 rounded border-border"
-                />
-                판매가 자동계산에 배송비를 포함
-              </label>
-            </Field>
-            <Field label="가격 반올림 단위" hint="최종 판매가를 이 단위로 반올림합니다(쿠팡은 10원 단위 필수)">
-              <select
-                value={priceRoundingUnit}
-                onChange={(e) => setPriceRoundingUnit(e.target.value)}
-                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-              >
-                <option value="10">10원</option>
-                <option value="100">100원</option>
-                <option value="1000">1,000원</option>
-              </select>
-            </Field>
-          </SettingsSubSection>
-
-          {/* Sprint A-11(작업3 — CPO 지시: "상세페이지 공통 이미지(상단/하단)")
-              — 상세설명 맨 앞/맨 뒤에 항상 붙는 고정 이미지(배송/구매대행 안내
-              등). 업로드는 여기서 즉시 하고(uploadCommonImage), 실제 프로필
-              저장은 아래 "프로필 저장" 버튼을 눌러야 반영된다(다른 필드와 같은
-              흐름 — CP001류 이중 저장 로직 방지). */}
-          <SettingsSubSection title="상세페이지 공통 이미지" hint="상단/하단에 항상 붙는 고정 이미지">
-            <ImagePicker
-              label="상단 공통 이미지"
-              hint="상세설명 이미지의 맨 앞/맨 뒤에 자동으로 붙습니다"
-              imageUrl={topCommonImageUrl}
-              enabled={topCommonImageEnabled}
-              uploading={imageUploading === "top"}
-              onEnabledChange={setTopCommonImageEnabled}
-              onUpload={(file) => uploadCommonImage("top", file)}
-              onSelectExisting={(asset) => {
-                setTopCommonImageUrl(asset.url);
-                setTopCommonImageEnabled(true);
-              }}
-            />
-            <ImagePicker
-              label="하단 공통 이미지"
-              hint="상세설명 이미지의 맨 앞/맨 뒤에 자동으로 붙습니다"
-              imageUrl={bottomCommonImageUrl}
-              enabled={bottomCommonImageEnabled}
-              uploading={imageUploading === "bottom"}
-              onEnabledChange={setBottomCommonImageEnabled}
-              onUpload={(file) => uploadCommonImage("bottom", file)}
-              onSelectExisting={(asset) => {
-                setBottomCommonImageUrl(asset.url);
-                setBottomCommonImageEnabled(true);
-              }}
-            />
-          </SettingsSubSection>
-
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
-          >
-            {saving ? "저장 중…" : editingId ? "수정 저장" : "프로필 저장"}
-          </button>
+          <SaveButton onSave={onSave} saving={saving} label={saveButtonLabel} />
         </div>
       )}
     </section>
   );
 }
 
+/** Sprint A-8(추가 권장사항) — Sprint A-7 실측에서 "제조자(수입자)"가 30건 중
+ * 30건을 막은 1위 블로커였다. 원본 사이트가 아니라 판매자 본인의 사업자
+ * 정보라 상품마다 다시 찾을 게 아니라 여기서 한 번만 입력한다. */
+function SellerInfoSection({
+  manufacturer,
+  onManufacturerChange,
+  asContactNumber,
+  onAsContactNumberChange,
+  qualityGuarantee,
+  onQualityGuaranteeChange,
+  kcExemptionText,
+  onKcExemptionTextChange,
+  defaultCountryOfOrigin,
+  onDefaultCountryOfOriginChange,
+  onSave,
+  saving,
+  saveButtonLabel,
+}: {
+  manufacturer: string;
+  onManufacturerChange: (v: string) => void;
+  asContactNumber: string;
+  onAsContactNumberChange: (v: string) => void;
+  qualityGuarantee: string;
+  onQualityGuaranteeChange: (v: string) => void;
+  kcExemptionText: string;
+  onKcExemptionTextChange: (v: string) => void;
+  defaultCountryOfOrigin: string;
+  onDefaultCountryOfOriginChange: (v: string) => void;
+  onSave: () => void;
+  saving: boolean;
+  saveButtonLabel: string;
+}) {
+  return (
+    <section className="mt-4 rounded-lg border border-border bg-surface p-5 shadow-subtle">
+      <h2 className="text-base font-semibold text-text-primary">판매자 정보</h2>
+      <p className="mt-1 text-xs text-text-secondary">사업자/인증/원산지 — 상품마다 자동 채워집니다.</p>
+      <div className="mt-4 space-y-3 text-sm">
+        <Field label="제조자(수입자)" hint="Sprint A-7 실측 1위 블로커 — 여기 입력하면 상품마다 자동 채워집니다">
+          <input
+            type="text"
+            value={manufacturer}
+            onChange={(e) => onManufacturerChange(e.target.value)}
+            placeholder="예: 대표님 사업자명"
+            className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+          />
+        </Field>
+        <Field label="A/S 연락처" hint="비워두면 반품지 연락처를 대신 씁니다">
+          <input
+            type="text"
+            value={asContactNumber}
+            onChange={(e) => onAsContactNumberChange(e.target.value)}
+            placeholder="02-1234-5678"
+            className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+          />
+        </Field>
+        <Field label="품질보증기준">
+          <input
+            type="text"
+            value={qualityGuarantee}
+            onChange={(e) => onQualityGuaranteeChange(e.target.value)}
+            placeholder="예: 관련 법령 및 소비자분쟁해결기준에 따름"
+            className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+          />
+        </Field>
+        {/* A-12.3-P0-2(CPO 지시) — 비워두면(기본값) 기존처럼 "인증/허가 사항"은
+            사용자가 직접 입력해야 하는 상태로 남는다. 실제로 KC 인증이 법적으로
+            필요한 카테고리에는 이 문구를 쓰면 안 되므로, 대표님이 직접 확인하고
+            채워야 하는 값이라는 걸 hint로 명시한다. */}
+        <Field
+          label="인증/허가 사항 기본값 (KC 등)"
+          hint="대부분의 구매대행 상품에 해당되는 문구만 넣어주세요 — 실제로 KC 인증이 필요한 상품에는 비워두고 직접 입력해야 합니다"
+        >
+          <input
+            type="text"
+            value={kcExemptionText}
+            onChange={(e) => onKcExemptionTextChange(e.target.value)}
+            placeholder="예: KC마크 없이 구매대행 가능한 품목"
+            className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+          />
+        </Field>
+        <Field label="원산지 기본값" hint="상품 설명에서 원산지를 못 찾았을 때만 이 값을 대신 씁니다">
+          <input
+            type="text"
+            value={defaultCountryOfOrigin}
+            onChange={(e) => onDefaultCountryOfOriginChange(e.target.value)}
+            placeholder="예: 중국"
+            className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+          />
+        </Field>
+        <SaveButton onSave={onSave} saving={saving} label={saveButtonLabel} />
+      </div>
+    </section>
+  );
+}
+
+/** Sprint A-11(작업1/2 — CPO 지시: "판매가 = 환율변환가격 × (1+기본마진)") —
+ * 상품마다 다시 정하지 않는 가격 정책 기본값. PriceEditor 최상단의 "원가 →
+ * 환율 → 마진 → 최종 판매가" 자동계산이 이 값을 그대로 쓴다. */
+function PricingSection({
+  defaultMarginPercent,
+  onDefaultMarginPercentChange,
+  includeShippingInPrice,
+  onIncludeShippingInPriceChange,
+  priceRoundingUnit,
+  onPriceRoundingUnitChange,
+  onSave,
+  saving,
+  saveButtonLabel,
+}: {
+  defaultMarginPercent: string;
+  onDefaultMarginPercentChange: (v: string) => void;
+  includeShippingInPrice: boolean;
+  onIncludeShippingInPriceChange: (v: boolean) => void;
+  priceRoundingUnit: string;
+  onPriceRoundingUnitChange: (v: string) => void;
+  onSave: () => void;
+  saving: boolean;
+  saveButtonLabel: string;
+}) {
+  return (
+    <section className="mt-4 rounded-lg border border-border bg-surface p-5 shadow-subtle">
+      <h2 className="text-base font-semibold text-text-primary">가격 정책</h2>
+      <p className="mt-1 text-xs text-text-secondary">마진율 · 반올림 단위 — 판매가 자동계산 기준.</p>
+      <div className="mt-4 space-y-3 text-sm">
+        <Field label="기본 마진율(%)" hint="비워두면 22%를 씁니다">
+          <input
+            type="number"
+            value={defaultMarginPercent}
+            onChange={(e) => onDefaultMarginPercentChange(e.target.value)}
+            placeholder="예: 22"
+            className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+          />
+        </Field>
+        <Field label="배송비 포함 여부" hint="켜면 자동계산에 위 배송비(원)를 더한 뒤 마진을 적용합니다">
+          <label className="flex items-center gap-2 text-xs text-text-secondary">
+            <input
+              type="checkbox"
+              checked={includeShippingInPrice}
+              onChange={(e) => onIncludeShippingInPriceChange(e.target.checked)}
+              className="h-4 w-4 rounded border-border"
+            />
+            판매가 자동계산에 배송비를 포함
+          </label>
+        </Field>
+        <Field label="가격 반올림 단위" hint="최종 판매가를 이 단위로 반올림합니다(쿠팡은 10원 단위 필수)">
+          <select
+            value={priceRoundingUnit}
+            onChange={(e) => onPriceRoundingUnitChange(e.target.value)}
+            className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+          >
+            <option value="10">10원</option>
+            <option value="100">100원</option>
+            <option value="1000">1,000원</option>
+          </select>
+        </Field>
+        <SaveButton onSave={onSave} saving={saving} label={saveButtonLabel} />
+      </div>
+    </section>
+  );
+}
+
+/** Sprint A-11(작업3 — CPO 지시: "상세페이지 공통 이미지(상단/하단)") —
+ * 상세설명 맨 앞/맨 뒤에 항상 붙는 고정 이미지(배송/구매대행 안내 등). 업로드는
+ * 여기서 즉시 하고(uploadCommonImage), 실제 프로필 저장은 아래 "프로필 저장"
+ * 버튼을 눌러야 반영된다(다른 필드와 같은 흐름 — CP001류 이중 저장 로직 방지). */
+function CommonImagesSection({
+  topCommonImageUrl,
+  topCommonImageEnabled,
+  onTopCommonImageEnabledChange,
+  bottomCommonImageUrl,
+  bottomCommonImageEnabled,
+  onBottomCommonImageEnabledChange,
+  imageUploading,
+  onUploadTop,
+  onUploadBottom,
+  onSelectTopExisting,
+  onSelectBottomExisting,
+  onSave,
+  saving,
+  saveButtonLabel,
+}: {
+  topCommonImageUrl: string | null;
+  topCommonImageEnabled: boolean;
+  onTopCommonImageEnabledChange: (v: boolean) => void;
+  bottomCommonImageUrl: string | null;
+  bottomCommonImageEnabled: boolean;
+  onBottomCommonImageEnabledChange: (v: boolean) => void;
+  imageUploading: "top" | "bottom" | null;
+  onUploadTop: (file: File) => void;
+  onUploadBottom: (file: File) => void;
+  onSelectTopExisting: (asset: { url: string }) => void;
+  onSelectBottomExisting: (asset: { url: string }) => void;
+  onSave: () => void;
+  saving: boolean;
+  saveButtonLabel: string;
+}) {
+  return (
+    <section className="mt-4 rounded-lg border border-border bg-surface p-5 shadow-subtle">
+      <div className="space-y-3">
+        <ImagePicker
+          label="상단 공통 이미지"
+          hint="상세설명 이미지의 맨 앞/맨 뒤에 자동으로 붙습니다"
+          imageUrl={topCommonImageUrl}
+          enabled={topCommonImageEnabled}
+          uploading={imageUploading === "top"}
+          onEnabledChange={onTopCommonImageEnabledChange}
+          onUpload={onUploadTop}
+          onSelectExisting={onSelectTopExisting}
+        />
+        <ImagePicker
+          label="하단 공통 이미지"
+          hint="상세설명 이미지의 맨 앞/맨 뒤에 자동으로 붙습니다"
+          imageUrl={bottomCommonImageUrl}
+          enabled={bottomCommonImageEnabled}
+          uploading={imageUploading === "bottom"}
+          onEnabledChange={onBottomCommonImageEnabledChange}
+          onUpload={onUploadBottom}
+          onSelectExisting={onSelectBottomExisting}
+        />
+        <SaveButton onSave={onSave} saving={saving} label={saveButtonLabel} />
+      </div>
+    </section>
+  );
+}
+
 /**
  * Sprint A-12(작업4 — CPO 지시: "Apolina 원산지 영국, 제조자 Apolina Ltd.를
- * 한 번만 입력하면 Apolina 상품은 자동 적용") — SellerProfileSection과 같은
+ * 한 번만 입력하면 Apolina 상품은 자동 적용") — ShippingSection과 같은
  * 목록+폼 패턴이지만 매칭 단위가 브랜드명이다(isDefault 개념 없음). 원산지/
  * 제조자는 register/route.ts가 product.brand.value로 조회해 build-payload.ts의
  * 우선순위(상품 추출값 > 이 프로필 > SellerProfile 기본값)에 끼워 넣는다.
