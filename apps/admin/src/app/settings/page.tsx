@@ -679,8 +679,20 @@ function SellerProfileEditor({
       );
       const data = (await res.json()) as { ok: boolean; error?: string };
       if (data.ok) {
-        resetForm();
-        setFormOpen(false);
+        // CEO 피드백(2026-08-07) — "상세페이지 상단/하단 고정 이미지가 실제
+        // 반영되지 않음." 실제 원인: 이 handleSave가 4개 탭(배송/판매자정보/
+        // 가격정책/상세페이지)이 공유하는 단일 저장 버튼인데, 저장 성공 시
+        // 무조건 resetForm()(editingId→null 포함)을 호출했다. editingId가
+        // null이 되면 위쪽 자동 채움 effect가 재실행되며 "기본 프로필"로
+        // 다시 채우는데, 지금 편집 중이던 프로필이 기본 프로필이 아니면
+        // 화면이 방금 저장한 값 대신 다른 프로필 값으로 바뀌어 보인다 —
+        // DB 저장 자체는 성공했지만 사용자 눈에는 "반영 안 됨"으로 보였다.
+        // 새 프로필 생성(POST, editingId 없음)일 때만 폼을 초기화/닫는다 —
+        // 기존 프로필 수정(PATCH)은 같은 프로필을 계속 보여줘야 한다.
+        if (!editingId) {
+          resetForm();
+          setFormOpen(false);
+        }
         await onChanged();
       }
     } finally {

@@ -58,6 +58,19 @@ export interface CategoryScoreResult {
   conflict: boolean;
 }
 
+/** CEO 피드백(2026-08-07) — "kids, baby 검색이 되었는데 일반으로 잡혀
+ * — 유아동 카테고리로 가야 하는데 일반적인 걸로 감." 원인: 이 채점 함수가
+ * 지금까지 productType(신발/가방/의류 등 "무엇인지")만 대조했지 ageGroup(누구
+ * 대상인지)은 전혀 안 봤다 — "여성원피스"와 "유아동원피스"가 둘 다 "원피스"를
+ * 포함해 똑같이 95점을 받으므로, predict API가 어느 쪽을 먼저 주느냐(대개
+ * 성인 쪽 기본값)에 그대로 좌우됐다. 하드 REJECT(conflict:true)로 만들면
+ * 쿠팡이 실제로 유아동 하위분류를 안 나누는 카테고리(가방/모자 일부 등)에서
+ * 오히려 정상 후보를 걸러낼 위험이 있어, conflict는 건드리지 않고 점수만
+ * 가감한다 — 여러 질의 변형에서 나온 후보들 중 나이대가 맞는 쪽이 자연히
+ * 위로 올라오게 하는 타이브레이커. */
+const KIDS_CATEGORY_KEYWORDS = ["유아동", "아동", "주니어", "베이비", "키즈"];
+const ADULT_GENDERED_CATEGORY_KEYWORDS = ["여성", "남성"];
+
 /**
  * categoryName/categoryPath(쿠팡이 돌려준 카테고리 이름과 경로)가
  * signals.productType(CartPilot이 이미 판단해둔 상품유형)과 말이 되는지
@@ -67,16 +80,47 @@ export interface CategoryScoreResult {
 export function scoreCategoryCandidate(
   categoryName: string,
   categoryPath: string[],
-  signals: Pick<ProductSignals, "productType">,
+  signals: Pick<ProductSignals, "productType" | "ageGroup">,
 ): CategoryScoreResult {
+  const nameText = [categoryName, ...categoryPath].join(" ");
+  const isKidsSignal = signals.ageGroup === "baby" || signals.ageGroup === "kids";
+
+  const applyAgeAdjustment = (result: CategoryScoreResult): CategoryScoreResult => {
+    if (!isKidsSignal || result.conflict) return result;
+    const hasKidsKeyword = KIDS_CATEGORY_KEYWORDS.some((kw) => nameText.includes(kw));
+    if (hasKidsKeyword) {
+      return {
+        ...result,
+        score: Math.min(100, result.score + 5),
+        reason: `${result.reason} 카테고리 이름에 아동 연령대 표기가 있어 연령 신호(${signals.ageGroup})와도 일치합니다.`,
+      };
+    }
+    const hasAdultGenderKeyword = ADULT_GENDERED_CATEGORY_KEYWORDS.some((kw) => nameText.includes(kw));
+    if (hasAdultGenderKeyword) {
+      return {
+        ...result,
+        score: Math.max(0, result.score - 30),
+        reason: `${result.reason} 다만 카테고리 이름이 성인 대상("${ADULT_GENDERED_CATEGORY_KEYWORDS.find((kw) => nameText.includes(kw))}")으로 보여 연령 신호(${signals.ageGroup})와 어긋날 수 있습니다.`,
+      };
+    }
+    return result;
+  };
+
   if (!signals.productType) {
-    return { score: 50, reason: "상품유형을 특정하지 못해 카테고리 이름 대조를 생략했습니다.", conflict: false };
+    return applyAgeAdjustment({
+      score: 50,
+      reason: "상품유형을 특정하지 못해 카테고리 이름 대조를 생략했습니다.",
+      conflict: false,
+    });
   }
   const profile = DOMAIN_PROFILES[signals.productType];
   if (!profile) {
-    return { score: 50, reason: `상품유형("${signals.productType}")에 대한 대조 기준이 아직 없습니다.`, conflict: false };
+    return applyAgeAdjustment({
+      score: 50,
+      reason: `상품유형("${signals.productType}")에 대한 대조 기준이 아직 없습니다.`,
+      conflict: false,
+    });
   }
-  const nameText = [categoryName, ...categoryPath].join(" ");
   const conflictHit = profile.conflict.find((kw) => nameText.includes(kw));
   if (conflictHit) {
     return {
@@ -87,15 +131,15 @@ export function scoreCategoryCandidate(
   }
   const expectHit = profile.expect.find((kw) => nameText.includes(kw));
   if (expectHit) {
-    return {
+    return applyAgeAdjustment({
       score: 95,
       reason: `카테고리 이름에 "${expectHit}"가 있어 상품유형("${signals.productType}")과 일치합니다.`,
       conflict: false,
-    };
+    });
   }
-  return {
+  return applyAgeAdjustment({
     score: 60,
     reason: `카테고리 이름에서 상품유형("${signals.productType}")과 직접 일치하는 단어는 못 찾았지만, 충돌하는 단어도 없습니다.`,
     conflict: false,
-  };
+  });
 }

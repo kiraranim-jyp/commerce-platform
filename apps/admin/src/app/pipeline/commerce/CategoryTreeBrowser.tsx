@@ -17,12 +17,26 @@ interface TreeNode {
   child?: TreeNode[];
 }
 
+/** CEO 피드백(2026-08-07) — "AI 추천이 어려우면 직접 선택하면 되는데 너무
+ * 맞추는 노력이 없다." 트리 드릴다운만 있으면 "kids"/"baby" 같은 키워드를
+ * 알아도 대분류부터 몇 단계를 직접 눌러야만 도달할 수 있었다 — 이미 받아온
+ * 트리(위 fetch 결과) 전체를 평탄화해서 이름에 검색어가 포함된 노드를 찾고,
+ * 클릭하면 그 노드까지의 전체 경로(대분류→...→해당 노드)로 바로 이동한다.
+ * 새 API 호출 없이 클라이언트에서만 처리 — 이미 트리를 통째로 갖고 있다. */
+function flattenTree(node: TreeNode, ancestors: TreeNode[] = []): { node: TreeNode; path: TreeNode[] }[] {
+  const path = [...ancestors, node];
+  const own = node.status !== "DISABLED" ? [{ node, path }] : [];
+  const children = (node.child ?? []).flatMap((child) => flattenTree(child, path));
+  return [...own, ...children];
+}
+
 export function CategoryTreeBrowser({ onSelect }: { onSelect: (candidate: CategoryCandidate) => void }) {
   const [open, setOpen] = useState(false);
   const [tree, setTree] = useState<TreeNode | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [path, setPath] = useState<TreeNode[]>([]);
+  const [treeSearch, setTreeSearch] = useState("");
 
   async function handleOpen() {
     setOpen(true);
@@ -58,6 +72,14 @@ export function CategoryTreeBrowser({ onSelect }: { onSelect: (candidate: Catego
   }
   const leaf = path.length > 0 && path[path.length - 1] && !(path[path.length - 1].child?.length);
 
+  const trimmedSearch = treeSearch.trim().toLowerCase();
+  const searchResults =
+    tree && trimmedSearch
+      ? flattenTree(tree)
+          .filter(({ node }) => node.name.toLowerCase().includes(trimmedSearch))
+          .slice(0, 30)
+      : [];
+
   return (
     <div className="mt-3 border-t border-border pt-3">
       {!open ? (
@@ -85,6 +107,42 @@ export function CategoryTreeBrowser({ onSelect }: { onSelect: (candidate: Catego
 
           {loading && <p className="mt-2 text-xs text-text-tertiary">전체 카테고리를 불러오는 중… (최초 1회, 몇 초 걸릴 수 있습니다)</p>}
           {error && <p className="mt-2 text-xs text-error">{error}</p>}
+
+          {tree && (
+            <input
+              type="text"
+              value={treeSearch}
+              onChange={(event) => setTreeSearch(event.target.value)}
+              placeholder="이름으로 찾기 — 예: 유아동, 키즈"
+              className="mt-2 w-full rounded-md border border-border px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+            />
+          )}
+
+          {trimmedSearch && (
+            <ul className="mt-1.5 max-h-40 overflow-y-auto rounded-md border border-border bg-white">
+              {searchResults.length === 0 ? (
+                <li className="px-2 py-1.5 text-xs text-text-tertiary">일치하는 카테고리가 없습니다.</li>
+              ) : (
+                searchResults.map(({ node, path: nodePath }) => (
+                  <li key={node.displayItemCategoryCode}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPath(nodePath);
+                        setTreeSearch("");
+                      }}
+                      className="flex w-full items-center justify-between gap-1 px-2 py-1.5 text-left text-xs transition-colors hover:bg-background"
+                    >
+                      <span className="truncate">{nodePath.map((n) => n.name).join(" > ")}</span>
+                      {(node.child?.length ?? 0) === 0 && (
+                        <span className="shrink-0 text-[10px] text-selected-border">선택 가능</span>
+                      )}
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          )}
 
           {columns.length > 0 && (
             <div className="mt-2 flex gap-1.5 overflow-x-auto rounded-md border border-border bg-background p-1.5">
