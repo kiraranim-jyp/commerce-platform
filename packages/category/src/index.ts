@@ -8,3 +8,4 @@ export * from "./keyword-rules";
 export * from "./provider";
 export * from "./providers/rule-based.provider";
 export type { CategoryPath, CategoryMapping } from "./platform-categories/types";
+export { PLATFORM_CATEGORY_TABLES } from "./platform-categories/index";

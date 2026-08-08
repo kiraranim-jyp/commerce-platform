@@ -12,7 +12,7 @@ import type {
   ListingStatus,
   ReadinessReport,
 } from "@commerce/listing";
-import { isVerifiedCategorySelected } from "@commerce/marketplace";
+import { isVerifiedCategorySelected, MARKETPLACE_DESCRIPTORS } from "@commerce/marketplace";
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct, CanonicalProductOptionGroup, FieldSource } from "@commerce/shared";
 import type { WorkspaceItem } from "../types";
@@ -226,6 +226,12 @@ export function PlatformPreview({
   // isVerifiedPlatformCode까지 확인해야 한다 — state만 보면 미리보기가
   // "선택 완료"로 보이는데 실제 등록은 CP001로 거부되는 버그가 재발한다.
   const isCategoryConfirmed = isVerifiedCategorySelected(listing.category);
+
+  // Sprint A-0(2026-08-09) — 이 아래 4곳의 `listing.platform === "coupang"`을
+  // 대체한다. 새 플랫폼(SmartStore 등)에 같은 기능을 붙일 때 이 파일을 다시
+  // 고치지 않고 capabilities.ts 한 곳만 바꾸면 되게 하기 위함 — 지금은 순수
+  // 리팩터링이라 값은 기존 분기와 동일(coupang만 true).
+  const capabilities = MARKETPLACE_DESCRIPTORS[listing.platform].capabilities;
 
   // P0-UI Epic 2 — 등록 준비 카드와 상세 체크리스트(ListingSection 안의
   // ReadinessScorePanel)가 반드시 같은 판정을 봐야 한다. readiness가 있으면
@@ -511,7 +517,7 @@ export function PlatformPreview({
             </FieldRow>
           </div>
           <p className="text-xs text-text-tertiary">현재 배송 요약: {listing.shippingInfo}</p>
-          {listing.platform === "coupang" && (
+          {capabilities.hasSellerProfileSummary && (
             <p className="text-xs text-text-tertiary">
               비워두면 판매자 기본값(아래 "배송 정책 · 반품/교환" 카드)이 자동 적용됩니다.
             </p>
@@ -522,7 +528,7 @@ export function PlatformPreview({
             제조자 정보를 판매자 기본값(SellerProfile)에서 자동으로 불러와
             보여준다. 실제 수정은 Settings 페이지에서만(CP001 방지 — 판정/편집
             로직을 두 곳에 두지 않는다). */}
-        {listing.platform === "coupang" && <SellerProfileSummaryCard />}
+        {capabilities.hasSellerProfileSummary && <SellerProfileSummaryCard />}
 
         <CollapsibleSection title="고시정보" badge={sectionCompletionBadge("section-notice")} {...sectionProps("section-notice")}>
           <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
@@ -585,7 +591,7 @@ export function PlatformPreview({
           </FieldRow>
         </CollapsibleSection>
 
-        {listing.platform === "coupang" && detailBlocks && onDetailBlocksChange && (
+        {capabilities.hasDetailPageEditor && detailBlocks && onDetailBlocksChange && (
           <CollapsibleSection title="상세페이지 에디터" {...sectionProps("section-detail-editor")}>
             <DetailPageEditor
               product={product}
@@ -596,7 +602,7 @@ export function PlatformPreview({
           </CollapsibleSection>
         )}
 
-        {listing.platform === "coupang" && (
+        {capabilities.hasPayloadInspector && (
           <CollapsibleSection title="Payload Preview" {...sectionProps("section-payload")}>
             <p className="text-xs text-text-tertiary">
               실제로 쿠팡에 전송될 데이터입니다 — 등록 버튼을 누르기 전에도 항상 최신

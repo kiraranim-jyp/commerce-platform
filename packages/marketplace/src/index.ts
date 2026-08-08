@@ -1,6 +1,7 @@
 export * from "./types";
 export * from "./validation";
 export * from "./registry";
+export * from "./capabilities";
 export * from "./image-field";
 export * from "./category-field";
 export * from "./adapters/smartstore.adapter";
