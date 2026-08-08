@@ -1,8 +1,9 @@
 import type { ProductSignals } from "@commerce/category";
-import { scoreCategoryCandidate } from "@commerce/category";
+import { getProductTypeExpectKeywords, scoreCategoryCandidate } from "@commerce/category";
 import type { CoupangCredentials } from "./env";
 import { callCoupangApi } from "./client";
 import { fetchCategoryMeta } from "./category-meta";
+import { fetchCategoryTree, type CategoryTreeNode } from "./category-tree";
 
 /**
  * Sprint A-5(Category Resolver 3.0) — CPO 지시: "Predict → Resolver 검증 →
@@ -29,6 +30,47 @@ const AUTO_SELECT_THRESHOLD = 95;
 const MAX_QUERY_VARIANTS = 8;
 /** meta 존재 검증까지 하는 후보 상한 — 늘어난 MAX_QUERY_VARIANTS에 맞춰 5→10. */
 const MAX_CANDIDATES = 10;
+/** CPO 지시(2026-08-07, kids hat 실측 사례) — 트리 탐색으로 찾은 후보 중
+ * 상위 몇 개까지 채점 대상에 넣을지. 너무 많이 넣으면 meta 검증 호출이
+ * 늘어 레이트리밋 위험이 커진다 — predict 후보(MAX_CANDIDATES=10)와 합쳐도
+ * 여유가 있는 선에서 제한한다. */
+const MAX_TREE_SEARCH_CANDIDATES = 8;
+
+interface TreeLeafMatch {
+  code: number;
+  name: string;
+  path: string[];
+}
+
+/** 트리 전체를 훑어 리프 노드(등록 가능한 실제 말단 카테고리)의 경로 인덱스와,
+ * 상품유형 키워드가 경로 어딘가에 있는 리프 목록을 한 번의 DFS로 함께
+ * 만든다 — CategoryTreeBrowser(클라이언트)가 쓰는 것과 같은 "child가 없으면
+ * 리프"라는 기준을 그대로 쓴다(판단 기준을 두 곳에 두지 않는다). */
+function indexCategoryTree(
+  tree: CategoryTreeNode,
+  expectKeywords: string[] | undefined,
+): { pathIndex: Map<number, string[]>; matches: TreeLeafMatch[] } {
+  const pathIndex = new Map<number, string[]>();
+  const matches: TreeLeafMatch[] = [];
+
+  const walk = (node: CategoryTreeNode, ancestors: string[]) => {
+    const path = [...ancestors, node.name];
+    const isLeaf = !node.child || node.child.length === 0;
+    if (!isLeaf) {
+      for (const child of node.child ?? []) walk(child, path);
+      return;
+    }
+    pathIndex.set(node.displayItemCategoryCode, path);
+    if (node.status === "DISABLED" || !expectKeywords) return;
+    const pathText = path.join(" ");
+    if (expectKeywords.some((kw) => pathText.includes(kw))) {
+      matches.push({ code: node.displayItemCategoryCode, name: node.name, path });
+    }
+  };
+  walk(tree, []);
+
+  return { pathIndex, matches };
+}
 
 export interface ScoredCategoryCandidate {
   categoryCode: number;
@@ -111,47 +153,70 @@ export async function resolveCategoryV3(
 
   // A-12.3-P0-3 — 기존엔 순차 for-loop라 변형을 늘릴수록 지연이 그대로
   // 늘었다. 각 질의는 서로 독립적이라 병렬로 호출해도 안전하다(레이트리밋은
-  // MAX_QUERY_VARIANTS 상한으로 여전히 관리한다).
-  const predictResults = await Promise.all(
-    queries.map(async (query) => {
-      try {
-        const response = await callCoupangApi(credentials, {
-          method: "POST",
-          path: CATEGORY_PREDICT_PATH,
-          body: { productName: query, brand },
-        });
-        const body = response.body as {
-          data?: { predictedCategoryId?: string; predictedCategoryName?: string };
-        };
-        const code = body.data?.predictedCategoryId ? Number(body.data.predictedCategoryId) : null;
-        const name = body.data?.predictedCategoryName ?? null;
-        if (code == null || !Number.isFinite(code) || !name) return null;
-        return { query, code, name };
-      } catch {
-        // 질의 변형 하나가 실패해도 나머지로 계속 진행한다 — 후보가 끝까지
-        // 0개일 때만 REJECT로 처리한다.
-        return null;
-      }
-    }),
-  );
+  // MAX_QUERY_VARIANTS 상한으로 여전히 관리한다). 트리 조회(fetchCategoryTree)는
+  // 6시간 캐시라 사실상 무료에 가까워 predict 호출들과 병렬로 같이 기다린다.
+  const [predictResults, tree] = await Promise.all([
+    Promise.all(
+      queries.map(async (query) => {
+        try {
+          const response = await callCoupangApi(credentials, {
+            method: "POST",
+            path: CATEGORY_PREDICT_PATH,
+            body: { productName: query, brand },
+          });
+          const body = response.body as {
+            data?: { predictedCategoryId?: string; predictedCategoryName?: string };
+          };
+          const code = body.data?.predictedCategoryId ? Number(body.data.predictedCategoryId) : null;
+          const name = body.data?.predictedCategoryName ?? null;
+          if (code == null || !Number.isFinite(code) || !name) return null;
+          return { query, code, name };
+        } catch {
+          // 질의 변형 하나가 실패해도 나머지로 계속 진행한다 — 후보가 끝까지
+          // 0개일 때만 REJECT로 처리한다.
+          return null;
+        }
+      }),
+    ),
+    fetchCategoryTree(credentials),
+  ]);
+
+  // CPO 지시(2026-08-07, kids hat 실측 사례) — predict API는 "kids 모자"처럼
+  // 질의를 보정해도 정답 카테고리("영유아동...모자...공용")를 후보로 아예
+  // 안 줄 때가 있다(상품명 텍스트 하나만 보는 분류기라 접두어를 안정적으로
+  // 못 씀 — 실측 확인). 이미 트리 전체를 갖고 있으므로(category-tree.ts),
+  // 상품유형 키워드로 트리를 직접 훑어 후보를 보강한다 — predict가 놓친
+  // 정답도 채점 대상에 들어오게 된다. 트리 fetch 실패(null) 시에는 predict
+  // 후보만으로 기존처럼 동작한다(신규 의존성이 기존 경로를 깨면 안 됨).
+  const expectKeywords = signals.productType ? getProductTypeExpectKeywords(signals.productType) : undefined;
+  const { pathIndex, matches } = tree
+    ? indexCategoryTree(tree, expectKeywords)
+    : { pathIndex: new Map<number, string[]>(), matches: [] as TreeLeafMatch[] };
 
   const seen = new Map<number, ScoredCategoryCandidate>();
+  const addCandidate = (code: number, name: string, path: string[], query: string) => {
+    // 이미 다른 경로(다른 질의 변형 또는 트리 탐색)로 같은 코드가 나왔으면
+    // 먼저 나온 채점 결과를 유지한다(같은 코드는 경로도 같아 다시 채점해도
+    // 결과가 같다 — 중복 계산만 피한다).
+    if (seen.has(code)) return;
+    const { score, reason, conflict } = scoreCategoryCandidate(name, path, signals);
+    seen.set(code, { categoryCode: code, categoryName: name, query, score, reason, conflict, metaVerified: false });
+  };
+
   for (const result of predictResults) {
     if (!result) continue;
-    // 이미 다른 질의 변형으로 같은 코드가 나왔으면 먼저 나온 채점 결과를
-    // 유지한다(질의마다 다시 채점해도 같은 이름이라 결과가 같다 — 중복 계산만
-    // 피한다).
-    if (seen.has(result.code)) continue;
-    const { score, reason, conflict } = scoreCategoryCandidate(result.name, [], signals);
-    seen.set(result.code, {
-      categoryCode: result.code,
-      categoryName: result.name,
-      query: result.query,
-      score,
-      reason,
-      conflict,
-      metaVerified: false,
-    });
+    addCandidate(result.code, result.name, pathIndex.get(result.code) ?? [], result.query);
+  }
+
+  // 트리 탐색 매치가 많을 수 있으므로(흔한 상품유형은 매치가 수십 개일 수
+  // 있음) 먼저 채점해서 상위 몇 개만 후보 풀에 합친다 — meta 검증(실제 API
+  // 호출)까지 가는 건 이 상한(MAX_TREE_SEARCH_CANDIDATES) 안에서만이다.
+  const topTreeMatches = matches
+    .map((m) => ({ ...m, score: scoreCategoryCandidate(m.name, m.path, signals).score }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_TREE_SEARCH_CANDIDATES);
+  for (const match of topTreeMatches) {
+    addCandidate(match.code, match.name, match.path, `[트리 탐색: ${signals.productType}]`);
   }
 
   const ranked = [...seen.values()].sort((a, b) => b.score - a.score).slice(0, MAX_CANDIDATES);

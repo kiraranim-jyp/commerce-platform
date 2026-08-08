@@ -49,6 +49,16 @@ const DOMAIN_PROFILES: Record<string, DomainProfile> = {
   뷰티: { expect: ["화장품", "뷰티", "스킨케어", "메이크업", "향수"], conflict: [...FOOD_KEYWORDS, "가전", "침구"] },
 };
 
+/** CPO 지시(2026-08-07, kids hat 실측 사례) — category-resolver-v3.ts가
+ * predict API 후보만으로는 정답을 놓칠 때(아래 함수 주석 참고) 카테고리
+ * 트리를 직접 훑어 후보를 보강한다 — 이때 "어떤 키워드로 트리를 훑을지"는
+ * 여기 DOMAIN_PROFILES가 유일한 기준이어야 한다(판단 기준이 두 곳에 있으면
+ * 어긋난다). productType이 이 표에 없으면 undefined — 호출자는 트리 탐색을
+ * 생략해야 한다(추측 금지). */
+export function getProductTypeExpectKeywords(productType: string): string[] | undefined {
+  return DOMAIN_PROFILES[productType]?.expect;
+}
+
 export interface CategoryScoreResult {
   /** 0~100. */
   score: number;
@@ -58,56 +68,92 @@ export interface CategoryScoreResult {
   conflict: boolean;
 }
 
-/** CEO 피드백(2026-08-07) — "kids, baby 검색이 되었는데 일반으로 잡혀
- * — 유아동 카테고리로 가야 하는데 일반적인 걸로 감." 원인: 이 채점 함수가
- * 지금까지 productType(신발/가방/의류 등 "무엇인지")만 대조했지 ageGroup(누구
- * 대상인지)은 전혀 안 봤다 — "여성원피스"와 "유아동원피스"가 둘 다 "원피스"를
- * 포함해 똑같이 95점을 받으므로, predict API가 어느 쪽을 먼저 주느냐(대개
- * 성인 쪽 기본값)에 그대로 좌우됐다. 하드 REJECT(conflict:true)로 만들면
- * 쿠팡이 실제로 유아동 하위분류를 안 나누는 카테고리(가방/모자 일부 등)에서
- * 오히려 정상 후보를 걸러낼 위험이 있어, conflict는 건드리지 않고 점수만
- * 가감한다 — 여러 질의 변형에서 나온 후보들 중 나이대가 맞는 쪽이 자연히
- * 위로 올라오게 하는 타이브레이커. */
-const KIDS_CATEGORY_KEYWORDS = ["유아동", "아동", "주니어", "베이비", "키즈"];
-const ADULT_GENDERED_CATEGORY_KEYWORDS = ["여성", "남성"];
+/** CEO 피드백(2026-08-07, 실측 사례 — "kids hat") — "야구모자"(코드 81536)와
+ * "남성모자"(코드 69741) 둘 다 predict API가 줬는데, 정답인 "패션의류잡화 >
+ * 영유아동 신발/잡화/기타의류(0~17세) > 남녀공용잡화 > 모자 > 공용"보다 높은
+ * 점수를 받았다. 1차 수정(카테고리 "이름"만 아동 키워드 대조)으로는 안 됐다
+ * — categoryPath가 항상 빈 배열로 호출되고 있었기 때문(호출부 category-
+ * resolver-v3.ts가 predict API 응답에는 없는 path를 아예 안 채워서 대조
+ * 대상이 리프 이름 하나뿐이었다). 카테고리 트리 전체를 이미 갖고 있으므로
+ * (category-tree.ts, CategoryTreeBrowser에 이미 사용 중) 이제 categoryPath에
+ * 실제 조상 경로 전체("패션의류잡화","영유아동 신발/잡화/기타의류(0~17세)",
+ * "남녀공용잡화","모자","공용")를 채워서 넘긴다 — 이 함수는 그 전체 경로
+ * 텍스트를 대조 대상으로 쓴다. 성별(gender)도 같은 방식으로 추가한다 —
+ * "공용"/"남녀공용" 같은 유니섹스 표기까지 신호로 반영해야 이 실측 사례처럼
+ * 여러 후보가 동점에 가까울 때 정답이 명확히 위로 올라온다. */
+const KIDS_PATH_KEYWORDS = ["영유아동", "유아동", "아동", "주니어", "베이비", "키즈"];
+const ADULT_GENDERED_PATH_KEYWORDS = ["여성", "남성"];
+const UNISEX_PATH_KEYWORDS = ["남녀공용", "공용", "유니섹스"];
+const GIRL_PATH_KEYWORDS = ["여아", "걸즈"];
+const BOY_PATH_KEYWORDS = ["남아", "보이즈"];
 
 /**
- * categoryName/categoryPath(쿠팡이 돌려준 카테고리 이름과 경로)가
- * signals.productType(CartPilot이 이미 판단해둔 상품유형)과 말이 되는지
- * 대조한다. productType을 못 정한 경우(신호 부족)는 "틀렸다"고 단정할 근거가
- * 없으므로 중립값을 준다 — 정보 부족을 오답으로 취급하지 않는다.
+ * categoryName/categoryPath(쿠팡이 돌려준 카테고리 이름과, 그 카테고리의
+ * 전체 조상 경로)가 signals(CartPilot이 이미 판단해둔 상품유형/연령대/성별)와
+ * 말이 되는지 대조한다. 신호를 못 정한 항목(productType null, ageGroup/gender
+ * unknown)은 "틀렸다"고 단정할 근거가 없으므로 그 항목은 건드리지 않는다 —
+ * 정보 부족을 오답으로 취급하지 않는다.
  */
 export function scoreCategoryCandidate(
   categoryName: string,
   categoryPath: string[],
-  signals: Pick<ProductSignals, "productType" | "ageGroup">,
+  signals: Pick<ProductSignals, "productType" | "ageGroup" | "gender">,
 ): CategoryScoreResult {
   const nameText = [categoryName, ...categoryPath].join(" ");
   const isKidsSignal = signals.ageGroup === "baby" || signals.ageGroup === "kids";
+  const genderKeywords: Record<string, string[]> = {
+    unisex: UNISEX_PATH_KEYWORDS,
+    girl: GIRL_PATH_KEYWORDS,
+    boy: BOY_PATH_KEYWORDS,
+    women: ["여성"],
+    men: ["남성"],
+  };
+  const hasGenderSignal = !!signals.gender && signals.gender !== "unknown";
 
-  const applyAgeAdjustment = (result: CategoryScoreResult): CategoryScoreResult => {
-    if (!isKidsSignal || result.conflict) return result;
-    const hasKidsKeyword = KIDS_CATEGORY_KEYWORDS.some((kw) => nameText.includes(kw));
-    if (hasKidsKeyword) {
-      return {
-        ...result,
-        score: Math.min(100, result.score + 5),
-        reason: `${result.reason} 카테고리 이름에 아동 연령대 표기가 있어 연령 신호(${signals.ageGroup})와도 일치합니다.`,
-      };
+  const applyDemographicAdjustment = (result: CategoryScoreResult): CategoryScoreResult => {
+    if (result.conflict) return result;
+    let { score, reason } = result;
+
+    if (isKidsSignal) {
+      const hasKidsKeyword = KIDS_PATH_KEYWORDS.some((kw) => nameText.includes(kw));
+      if (hasKidsKeyword) {
+        score = Math.min(100, score + 5);
+        reason += ` 카테고리 경로에 아동 연령대 표기가 있어 연령 신호(${signals.ageGroup})와도 일치합니다.`;
+      } else {
+        const adultHit = ADULT_GENDERED_PATH_KEYWORDS.find((kw) => nameText.includes(kw));
+        if (adultHit) {
+          score = Math.max(0, score - 30);
+          reason += ` 다만 카테고리 경로가 성인 대상("${adultHit}")으로 보여 연령 신호(${signals.ageGroup})와 어긋날 수 있습니다.`;
+        }
+      }
     }
-    const hasAdultGenderKeyword = ADULT_GENDERED_CATEGORY_KEYWORDS.some((kw) => nameText.includes(kw));
-    if (hasAdultGenderKeyword) {
-      return {
-        ...result,
-        score: Math.max(0, result.score - 30),
-        reason: `${result.reason} 다만 카테고리 이름이 성인 대상("${ADULT_GENDERED_CATEGORY_KEYWORDS.find((kw) => nameText.includes(kw))}")으로 보여 연령 신호(${signals.ageGroup})와 어긋날 수 있습니다.`,
-      };
+
+    if (hasGenderSignal) {
+      const expectedGenderKeywords = genderKeywords[signals.gender] ?? [];
+      const genderHit = expectedGenderKeywords.find((kw) => nameText.includes(kw));
+      if (genderHit) {
+        score = Math.min(100, score + 3);
+        reason += ` 카테고리 경로에 성별 표기("${genderHit}")가 있어 성별 신호(${signals.gender})와도 일치합니다.`;
+      } else if (signals.gender !== "unisex") {
+        // unisex 신호일 때는 성별 특정 카테고리(여성/남성)를 아래서 감점하지
+        // 않는다 — 쿠팡이 유니섹스 하위분류를 안 나누는 카테고리가 흔해서,
+        // "공용" 표기가 없다고 바로 틀렸다고 보면 정상 후보까지 걸러진다.
+        const mismatchedGenderHit = Object.entries(genderKeywords)
+          .filter(([g]) => g !== signals.gender)
+          .flatMap(([, kws]) => kws)
+          .find((kw) => nameText.includes(kw));
+        if (mismatchedGenderHit) {
+          score = Math.max(0, score - 10);
+          reason += ` 다만 카테고리 경로가 다른 성별("${mismatchedGenderHit}") 대상으로 보여 성별 신호(${signals.gender})와 어긋날 수 있습니다.`;
+        }
+      }
     }
-    return result;
+
+    return { ...result, score, reason };
   };
 
   if (!signals.productType) {
-    return applyAgeAdjustment({
+    return applyDemographicAdjustment({
       score: 50,
       reason: "상품유형을 특정하지 못해 카테고리 이름 대조를 생략했습니다.",
       conflict: false,
@@ -115,7 +161,7 @@ export function scoreCategoryCandidate(
   }
   const profile = DOMAIN_PROFILES[signals.productType];
   if (!profile) {
-    return applyAgeAdjustment({
+    return applyDemographicAdjustment({
       score: 50,
       reason: `상품유형("${signals.productType}")에 대한 대조 기준이 아직 없습니다.`,
       conflict: false,
@@ -131,13 +177,13 @@ export function scoreCategoryCandidate(
   }
   const expectHit = profile.expect.find((kw) => nameText.includes(kw));
   if (expectHit) {
-    return applyAgeAdjustment({
+    return applyDemographicAdjustment({
       score: 95,
       reason: `카테고리 이름에 "${expectHit}"가 있어 상품유형("${signals.productType}")과 일치합니다.`,
       conflict: false,
     });
   }
-  return applyAgeAdjustment({
+  return applyDemographicAdjustment({
     score: 60,
     reason: `카테고리 이름에서 상품유형("${signals.productType}")과 직접 일치하는 단어는 못 찾았지만, 충돌하는 단어도 없습니다.`,
     conflict: false,
