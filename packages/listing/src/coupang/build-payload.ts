@@ -212,17 +212,37 @@ function formatCoupangDateTime(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
+/** Sprint 0(CEO 지시, 2026-08-07) — 안내 섹션 하나가 텍스트 한 덩어리가 아니라
+ * 텍스트/이미지가 섞인 순서 있는 목록일 수 있다("배송 안내에 배송 정책 이미지도
+ * 넣고 싶다"). id는 DetailPageBlock과 같은 이유(React key, 순서 변경 시 안정적
+ * 식별)로 존재한다. */
+export type TemplateSectionBlock =
+  | { id: string; type: "text"; content: string }
+  | { id: string; type: "image"; url: string };
+
 /** 상품마다 바뀌지 않는 고정 문구(배송/교환/반품/구매대행/A·S 안내)를 한 번만
  * 등록해두고 재사용하기 위한 템플릿 — apps/admin의 description-template.ts가
  * Supabase CRUD를 담당하고, 실제 병합 로직은 여기(순수 함수)에 둔다. 필드가
  * 비어 있으면 그 섹션은 건너뛴다 — 템플릿은 등록을 막는 필수 관문이 아니라
- * 품질을 높이는 보강재다. */
+ * 품질을 높이는 보강재다.
+ *
+ * shippingInfo 등 문자열 필드는 그대로 유지한다 — mergeCoupangDescription()
+ * (레거시 폴백 경로, detailBlocks를 안 보내는 호출)이 여전히 이 필드만 읽는다.
+ * shippingBlocks 등은 assembleContentsFromBlocks가 있으면 우선 쓰고, 없거나
+ * 빈 배열이면 문자열 필드로 폴백한다(레거시 데이터 안전망 — description-
+ * template.ts가 DB에서 읽을 때 텍스트만 있는 기존 행을 블록 1개로 자동
+ * 승격시켜 채워주므로, 실제로는 여기 두 표현이 항상 같이 채워져 있다). */
 export interface CoupangDescriptionTemplate {
   shippingInfo?: string;
   exchangeInfo?: string;
   returnInfo?: string;
   agentBuyInfo?: string;
   asInfo?: string;
+  shippingBlocks?: TemplateSectionBlock[];
+  exchangeBlocks?: TemplateSectionBlock[];
+  returnBlocks?: TemplateSectionBlock[];
+  agentBuyBlocks?: TemplateSectionBlock[];
+  asBlocks?: TemplateSectionBlock[];
 }
 
 export function mergeCoupangDescription(
@@ -325,6 +345,60 @@ export function defaultDetailBlocks(): DetailPageBlock[] {
  * content로 낸다(기존 하드코딩 로직과 동일하게 한 장당 하나). 값을 못 구하는
  * 블록(예: 공통이미지 URL 미설정, 빈 템플릿 섹션)은 조용히 건너뛴다 — 빈
  * content를 보내면 실제 쿠팡 API가 거부한다(기존 로직과 같은 이유). */
+const TEMPLATE_SECTION_BLOCKS_KEY: Record<
+  Extract<DetailPageBlock, { kind: "TEMPLATE_SECTION" }>["section"],
+  keyof CoupangDescriptionTemplate
+> = {
+  shipping: "shippingBlocks",
+  exchange: "exchangeBlocks",
+  return: "returnBlocks",
+  agentBuy: "agentBuyBlocks",
+  as: "asBlocks",
+};
+const TEMPLATE_SECTION_INFO_KEY: Record<
+  Extract<DetailPageBlock, { kind: "TEMPLATE_SECTION" }>["section"],
+  keyof CoupangDescriptionTemplate
+> = {
+  shipping: "shippingInfo",
+  exchange: "exchangeInfo",
+  return: "returnInfo",
+  agentBuy: "agentBuyInfo",
+  as: "asInfo",
+};
+
+type ResolvedItem = { kind: "text"; text: string } | { kind: "image"; url: string };
+
+/** Sprint 0(CEO 지시, 2026-08-07) — TEMPLATE_SECTION 블록 하나가 이제 텍스트
+ * 문자열 하나가 아니라 텍스트/이미지가 섞인 목록일 수 있다. `template.
+ * xxxBlocks`가 있으면 그 순서 그대로 텍스트/이미지 아이템으로 풀어내고(라벨은
+ * 그 섹션의 첫 텍스트 아이템에만 붙인다), 없거나 비어 있으면 기존 문자열
+ * 필드(`xxxInfo`)로 폴백한다 — 레거시 데이터/`mergeCoupangDescription`과
+ * 결과가 어긋나지 않게 하는 안전망. */
+function resolveTemplateSectionItems(
+  section: Extract<DetailPageBlock, { kind: "TEMPLATE_SECTION" }>["section"],
+  template: CoupangDescriptionTemplate | null | undefined,
+): ResolvedItem[] {
+  const label = TEMPLATE_SECTION_LABELS[section];
+  const blocks = template?.[TEMPLATE_SECTION_BLOCKS_KEY[section]] as TemplateSectionBlock[] | undefined;
+  if (blocks && blocks.length > 0) {
+    const items: ResolvedItem[] = [];
+    let labelApplied = false;
+    for (const b of blocks) {
+      if (b.type === "text") {
+        const trimmed = b.content.trim();
+        if (!trimmed) continue;
+        items.push({ kind: "text", text: labelApplied ? trimmed : `[${label}]\n${trimmed}` });
+        labelApplied = true;
+      } else if (b.type === "image" && b.url) {
+        items.push({ kind: "image", url: b.url });
+      }
+    }
+    return items;
+  }
+  const raw = ((template?.[TEMPLATE_SECTION_INFO_KEY[section]] as string | undefined) ?? "").trim();
+  return raw ? [{ kind: "text", text: `[${label}]\n${raw}` }] : [];
+}
+
 export function assembleContentsFromBlocks(
   blocks: DetailPageBlock[],
   ctx: {
@@ -342,20 +416,6 @@ export function assembleContentsFromBlocks(
     if (block.kind === "AI_DESCRIPTION") return ctx.aiDescription.trim() || null;
     if (block.kind === "BRAND_INTRO") return ctx.brandIntro?.trim() || null;
     if (block.kind === "CUSTOM_TEXT") return block.content.trim() || null;
-    if (block.kind === "TEMPLATE_SECTION") {
-      const raw =
-        block.section === "shipping"
-          ? ctx.template?.shippingInfo
-          : block.section === "exchange"
-            ? ctx.template?.exchangeInfo
-            : block.section === "return"
-              ? ctx.template?.returnInfo
-              : block.section === "agentBuy"
-                ? ctx.template?.agentBuyInfo
-                : ctx.template?.asInfo;
-      const trimmed = (raw ?? "").trim();
-      return trimmed ? `[${TEMPLATE_SECTION_LABELS[block.section]}]\n${trimmed}` : null;
-    }
     return null;
   };
 
@@ -383,6 +443,19 @@ export function assembleContentsFromBlocks(
 
   for (const block of blocks) {
     if (!block.enabled) continue;
+
+    if (block.kind === "TEMPLATE_SECTION") {
+      for (const item of resolveTemplateSectionItems(block.section, ctx.template)) {
+        if (item.kind === "text") {
+          pendingText.push(item.text);
+        } else {
+          flushText();
+          contents.push({ contentsType: "IMAGE", contentDetails: [{ content: item.url, detailType: "IMAGE" }] });
+        }
+      }
+      continue;
+    }
+
     const text = textFor(block);
     if (text) {
       pendingText.push(text);

@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { ImagePicker } from "@/components/ui/ImagePicker";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Tabs } from "@/components/ui/Tabs";
+import type { TemplateSectionBlock } from "@commerce/listing";
 
 const TAB_KEYS = ["coupang", "shipping", "seller", "pricing", "brand", "detail", "smartstore"] as const;
 type SettingsTabKey = (typeof TAB_KEYS)[number];
@@ -81,6 +82,11 @@ interface DescriptionTemplate {
   returnInfo: string;
   agentBuyInfo: string;
   asInfo: string;
+  shippingBlocks: TemplateSectionBlock[];
+  exchangeBlocks: TemplateSectionBlock[];
+  returnBlocks: TemplateSectionBlock[];
+  agentBuyBlocks: TemplateSectionBlock[];
+  asBlocks: TemplateSectionBlock[];
 }
 
 const COURIER_OPTIONS = [
@@ -1629,9 +1635,132 @@ function BrandProfileSection({
   );
 }
 
+let nextTemplateBlockSeq = 0;
+function newTemplateBlockId(): string {
+  nextTemplateBlockSeq += 1;
+  return `tblock-${Date.now()}-${nextTemplateBlockSeq}`;
+}
+
+function moveTemplateBlock<T>(blocks: T[], index: number, direction: -1 | 1): T[] {
+  const target = index + direction;
+  if (target < 0 || target >= blocks.length) return blocks;
+  const next = [...blocks];
+  [next[index], next[target]] = [next[target], next[index]];
+  return next;
+}
+
+/** 섹션 하나(배송안내 등)의 텍스트/이미지 블록 리스트 편집기 — `DetailPageEditor`와
+ * 같은 상호작용(↑/↓ 순서변경, 삭제, 추가)을 재사용하되 블록 종류가 텍스트/이미지
+ * 2종뿐이라 on/off 체크박스는 두지 않는다(블록 삭제로 대체). */
+function TemplateSectionBlockEditor({
+  blocks,
+  onChange,
+}: {
+  blocks: TemplateSectionBlock[];
+  onChange: (blocks: TemplateSectionBlock[]) => void;
+}) {
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+
+  function updateText(id: string, content: string) {
+    onChange(blocks.map((b) => (b.id === id && b.type === "text" ? { ...b, content } : b)));
+  }
+  function updateImageUrl(id: string, url: string) {
+    onChange(blocks.map((b) => (b.id === id && b.type === "image" ? { ...b, url } : b)));
+  }
+  function removeBlock(id: string) {
+    onChange(blocks.filter((b) => b.id !== id));
+  }
+  async function uploadImage(id: string, file: File) {
+    setUploadingId(id);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch("/api/settings/coupang/common-images", { method: "POST", body });
+      const data = (await res.json()) as { ok: boolean; url?: string };
+      if (data.ok && data.url) updateImageUrl(id, data.url);
+    } finally {
+      setUploadingId(null);
+    }
+  }
+
+  return (
+    <div className="space-y-2 rounded-md border border-border bg-background p-2">
+      {blocks.length === 0 && <p className="text-xs text-text-tertiary">블록이 없습니다. 아래에서 추가하세요.</p>}
+      {blocks.map((block, index) => (
+        <div key={block.id} className="rounded border border-border bg-surface p-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-medium text-text-tertiary">
+              {block.type === "text" ? "텍스트" : "이미지"} {index + 1}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                disabled={index === 0}
+                onClick={() => onChange(moveTemplateBlock(blocks, index, -1))}
+                className="text-xs text-text-secondary disabled:opacity-30"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                disabled={index === blocks.length - 1}
+                onClick={() => onChange(moveTemplateBlock(blocks, index, 1))}
+                className="text-xs text-text-secondary disabled:opacity-30"
+              >
+                ↓
+              </button>
+              <button type="button" onClick={() => removeBlock(block.id)} className="text-xs text-error hover:underline">
+                삭제
+              </button>
+            </div>
+          </div>
+          {block.type === "text" ? (
+            <textarea
+              value={block.content}
+              onChange={(e) => updateText(block.id, e.target.value)}
+              rows={2}
+              className="mt-1 w-full rounded-md border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
+            />
+          ) : (
+            <div className="mt-1">
+              <ImagePicker
+                label=""
+                imageUrl={block.url || null}
+                uploading={uploadingId === block.id}
+                onUpload={(file) => void uploadImage(block.id, file)}
+                onSelectExisting={(asset) => updateImageUrl(block.id, asset.url)}
+              />
+            </div>
+          )}
+        </div>
+      ))}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => onChange([...blocks, { id: newTemplateBlockId(), type: "text", content: "" }])}
+          className="rounded-md border border-border px-2 py-1 text-[11px] text-text-secondary hover:bg-background"
+        >
+          + 텍스트 추가
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange([...blocks, { id: newTemplateBlockId(), type: "image", url: "" }])}
+          className="rounded-md border border-border px-2 py-1 text-[11px] text-text-secondary hover:bg-background"
+        >
+          + 이미지 추가
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /**
  * 상세설명 템플릿 — 배송/교환/반품/구매대행/A·S 안내처럼 상품마다 바뀌지 않는
  * 고정 문구를 한 번만 만들어둔다. AI가 만든 상품소개/특징 뒤에 자동으로 붙는다.
+ *
+ * Sprint 0(CEO 지시, 2026-08-07) — "설정된 거 수정할 수 있어야 하는데 없어."
+ * 수정 버튼 추가 + 각 섹션을 텍스트/이미지 블록 배열로 확장(레거시 문자열
+ * 필드는 백엔드에서 계속 미러로 유지되므로 이 화면은 blocks만 다룬다).
  */
 function DescriptionTemplateSection({
   templates,
@@ -1641,33 +1770,65 @@ function DescriptionTemplateSection({
   onChanged: () => Promise<void>;
 }) {
   const [formOpen, setFormOpen] = useState(templates.length === 0);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
-  const [shippingInfo, setShippingInfo] = useState("");
-  const [exchangeInfo, setExchangeInfo] = useState("");
-  const [returnInfo, setReturnInfo] = useState("");
-  const [agentBuyInfo, setAgentBuyInfo] = useState("");
-  const [asInfo, setAsInfo] = useState("");
+  const [shippingBlocks, setShippingBlocks] = useState<TemplateSectionBlock[]>([]);
+  const [exchangeBlocks, setExchangeBlocks] = useState<TemplateSectionBlock[]>([]);
+  const [returnBlocks, setReturnBlocks] = useState<TemplateSectionBlock[]>([]);
+  const [agentBuyBlocks, setAgentBuyBlocks] = useState<TemplateSectionBlock[]>([]);
+  const [asBlocks, setAsBlocks] = useState<TemplateSectionBlock[]>([]);
   const [saving, setSaving] = useState(false);
+  const [deleteBlockedId, setDeleteBlockedId] = useState<string | null>(null);
 
-  async function handleCreate() {
+  function resetForm() {
+    setEditingId(null);
+    setName("");
+    setShippingBlocks([]);
+    setExchangeBlocks([]);
+    setReturnBlocks([]);
+    setAgentBuyBlocks([]);
+    setAsBlocks([]);
+  }
+
+  function startEdit(t: DescriptionTemplate) {
+    setEditingId(t.id);
+    setName(t.name);
+    setShippingBlocks(t.shippingBlocks);
+    setExchangeBlocks(t.exchangeBlocks);
+    setReturnBlocks(t.returnBlocks);
+    setAgentBuyBlocks(t.agentBuyBlocks);
+    setAsBlocks(t.asBlocks);
+    setDeleteBlockedId(null);
+    setFormOpen(true);
+  }
+
+  async function handleSave() {
     setSaving(true);
     try {
-      const res = await fetch("/api/settings/coupang/templates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name || "기본",
-          shippingInfo: shippingInfo || undefined,
-          exchangeInfo: exchangeInfo || undefined,
-          returnInfo: returnInfo || undefined,
-          agentBuyInfo: agentBuyInfo || undefined,
-          asInfo: asInfo || undefined,
-        }),
-      });
+      const res = await fetch(
+        editingId ? `/api/settings/coupang/templates/${editingId}` : "/api/settings/coupang/templates",
+        {
+          method: editingId ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: name || "기본",
+            shippingBlocks,
+            exchangeBlocks,
+            returnBlocks,
+            agentBuyBlocks,
+            asBlocks,
+          }),
+        },
+      );
       const data = (await res.json()) as { ok: boolean; error?: string };
       if (data.ok) {
-        setName("");
-        setFormOpen(false);
+        // A-8 판매자 프로필에서 겪은 실수를 반복하지 않는다: 신규 생성(POST)일
+        // 때만 폼을 초기화/닫는다 — 수정(PATCH) 후에는 폼을 그대로 유지해서
+        // "저장했는데 내용이 사라졌다"는 착각이 안 생기게 한다.
+        if (!editingId) {
+          resetForm();
+          setFormOpen(false);
+        }
         await onChanged();
       }
     } finally {
@@ -1684,8 +1845,13 @@ function DescriptionTemplateSection({
     await onChanged();
   }
 
-  async function handleDelete(id: string) {
-    await fetch(`/api/settings/coupang/templates/${id}`, { method: "DELETE" });
+  async function handleDelete(t: DescriptionTemplate) {
+    if (t.isDefault && templates.length > 1) {
+      setDeleteBlockedId(t.id);
+      return;
+    }
+    await fetch(`/api/settings/coupang/templates/${t.id}`, { method: "DELETE" });
+    if (editingId === t.id) resetForm();
     await onChanged();
   }
 
@@ -1695,7 +1861,10 @@ function DescriptionTemplateSection({
         <h2 className="text-base font-semibold text-text-primary">상세설명 템플릿</h2>
         <button
           type="button"
-          onClick={() => setFormOpen((v) => !v)}
+          onClick={() => {
+            if (formOpen) resetForm();
+            setFormOpen((v) => !v);
+          }}
           className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-background"
         >
           {formOpen ? "닫기" : "새 템플릿 만들기"}
@@ -1708,33 +1877,41 @@ function DescriptionTemplateSection({
       {templates.length > 0 && (
         <ul className="mt-3 divide-y divide-border text-sm">
           {templates.map((t) => (
-            <li key={t.id} className="flex items-center justify-between py-2">
-              <div>
-                <span className="font-medium text-text-primary">{t.name}</span>
-                {t.isDefault && (
-                  <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
-                    기본
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                {!t.isDefault && (
+            <li key={t.id} className="py-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-medium text-text-primary">{t.name}</span>
+                  {t.isDefault && (
+                    <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                      기본
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => startEdit(t)} className="text-xs text-text-secondary hover:underline">
+                    수정
+                  </button>
+                  {!t.isDefault && (
+                    <button
+                      type="button"
+                      onClick={() => handleSetDefault(t.id)}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      기본으로 설정
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => handleSetDefault(t.id)}
-                    className="text-xs text-primary hover:underline"
+                    onClick={() => void handleDelete(t)}
+                    className="text-xs text-error hover:underline"
                   >
-                    기본으로 설정
+                    삭제
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleDelete(t.id)}
-                  className="text-xs text-error hover:underline"
-                >
-                  삭제
-                </button>
+                </div>
               </div>
+              {deleteBlockedId === t.id && (
+                <p className="mt-1 text-[11px] text-error">다른 템플릿을 기본으로 설정한 후 삭제할 수 있습니다.</p>
+              )}
             </li>
           ))}
         </ul>
@@ -1752,52 +1929,27 @@ function DescriptionTemplateSection({
             />
           </Field>
           <Field label="배송안내">
-            <textarea
-              value={shippingInfo}
-              onChange={(e) => setShippingInfo(e.target.value)}
-              rows={2}
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
+            <TemplateSectionBlockEditor blocks={shippingBlocks} onChange={setShippingBlocks} />
           </Field>
           <Field label="교환안내">
-            <textarea
-              value={exchangeInfo}
-              onChange={(e) => setExchangeInfo(e.target.value)}
-              rows={2}
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
+            <TemplateSectionBlockEditor blocks={exchangeBlocks} onChange={setExchangeBlocks} />
           </Field>
           <Field label="반품안내">
-            <textarea
-              value={returnInfo}
-              onChange={(e) => setReturnInfo(e.target.value)}
-              rows={2}
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
+            <TemplateSectionBlockEditor blocks={returnBlocks} onChange={setReturnBlocks} />
           </Field>
           <Field label="구매대행 안내">
-            <textarea
-              value={agentBuyInfo}
-              onChange={(e) => setAgentBuyInfo(e.target.value)}
-              rows={2}
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
+            <TemplateSectionBlockEditor blocks={agentBuyBlocks} onChange={setAgentBuyBlocks} />
           </Field>
           <Field label="A/S 안내">
-            <textarea
-              value={asInfo}
-              onChange={(e) => setAsInfo(e.target.value)}
-              rows={2}
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
+            <TemplateSectionBlockEditor blocks={asBlocks} onChange={setAsBlocks} />
           </Field>
           <button
             type="button"
-            onClick={handleCreate}
+            onClick={() => void handleSave()}
             disabled={saving}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
           >
-            {saving ? "저장 중…" : "템플릿 저장"}
+            {saving ? "저장 중…" : editingId ? "수정 저장" : "템플릿 저장"}
           </button>
         </div>
       )}

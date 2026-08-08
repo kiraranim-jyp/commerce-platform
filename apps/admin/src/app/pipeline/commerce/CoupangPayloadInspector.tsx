@@ -17,7 +17,15 @@ export function CoupangPayloadInspector({ payload }: { payload: CoupangPayload }
   const item = payload.items[0];
   const representativeImage = item?.images.find((img) => img.imageType === "REPRESENTATION");
   const detailImages = item?.images.filter((img) => img.imageType === "DETAIL") ?? [];
-  const description = item?.contents.flatMap((c) => c.contentDetails.map((d) => d.content)).join(" ") ?? "";
+  // CEO 피드백(2026-08-07) — "설정된 내용이 줄바꿈도 없이 붙어" 원인: TEXT/IMAGE
+  // contents를 구분 없이 전부 이어붙이고 " "(공백 하나)로 join해서, 이미지 URL까지
+  // 텍스트에 섞이고 배송/교환/반품 등 섹션 사이 줄바꿈이 전부 사라졌었다.
+  // TEXT 타입만 모아서, 원래 조립 시 쓴 구분자("\n\n")를 그대로 다시 써서 붙인다.
+  const description =
+    item?.contents
+      .filter((c) => c.contentsType === "TEXT")
+      .flatMap((c) => c.contentDetails.map((d) => d.content))
+      .join("\n\n") ?? "";
 
   return (
     <div className="space-y-3">
@@ -117,7 +125,7 @@ function Row({
   return (
     <div className="flex items-start gap-2 text-xs">
       <dt className="w-16 shrink-0 text-text-secondary">{label}</dt>
-      <dd className={`text-text-primary ${multiline ? "line-clamp-2" : ""}`}>{value}</dd>
+      <dd className={`text-text-primary ${multiline ? "line-clamp-2 whitespace-pre-line" : ""}`}>{value}</dd>
     </div>
   );
 }
