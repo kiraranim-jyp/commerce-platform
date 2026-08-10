@@ -139,11 +139,17 @@ async function fetchShopifyShopCurrency(origin: string): Promise<string | null> 
 /** URL에 Shopify Markets 로케일 프리픽스(/en-kr/products/... 등)가 있으면 그대로
  * 돌려준다("/en-kr") — 없으면 "". 이 프리픽스가 붙은 상품 JSON 요청은 방문자의
  * 실제 로케일로 고정된 가격(예: KRW 직접 표시가)을 돌려주므로, 프리픽스 없는
- * 기본 요청과 섞어 쓰면 안 된다(아래 shopCurrency 오버라이드 분기 참고). */
+ * 기본 요청과 섞어 쓰면 안 된다(아래 shopCurrency 오버라이드 분기 참고).
+ *
+ * 로케일 세그먼트만 뽑는다(경로 시작 바로 뒤, xx-xx 형태) — "/products/" 앞의 전체
+ * 문자열을 취하면 "/en-kr/collections/pepe-shoes/products/handle"처럼 중간에 다른
+ * 경로 세그먼트가 낀 실제 URL(컬렉션 경유 상품 링크)에서 "/en-kr/collections/pepe-shoes"를
+ * 통째로 잘못 붙잡아 존재하지 않는 경로를 만들고 404가 나는 버그가 있었다(Sprint B-1.5
+ * 실측 확인). */
 export function extractShopifyLocalePrefix(url: string): string {
   const pathname = new URL(url).pathname;
-  const idx = pathname.indexOf("/products/");
-  return idx > 0 ? pathname.slice(0, idx) : "";
+  const match = /^\/([a-z]{2}-[a-z]{2})\//i.exec(pathname);
+  return match ? `/${match[1]}` : "";
 }
 
 /** Shopify 공개 REST 엔드포인트 — 인증 불필요, 모든 스토어에서 동작한다.

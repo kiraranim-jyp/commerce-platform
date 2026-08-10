@@ -17,6 +17,7 @@ export { scoreCandidate } from "./match";
  * 그대로 둔다 — 매칭 결과 자체를 막지 않는다. */
 async function enrichTopCandidatePrice(
   candidates: ComparisonCandidate[],
+  shopDomain: string,
   sourceUrl: string | undefined,
 ): Promise<ComparisonCandidate[]> {
   if (candidates.length === 0) return candidates;
@@ -25,7 +26,11 @@ async function enrichTopCandidatePrice(
   if (!handle) return candidates;
 
   try {
-    const origin = new URL(top.url).origin;
+    // 실측(Sprint B-1.5) — junioredition.com은 www. 없는 bare 도메인으로 로케일 프리픽스
+    // 경로(/en-kr/products/...)를 요청하면 404가 난다(기본 경로는 bare/www 둘 다 200).
+    // comparison_shops.domain은 bare로 저장되어 있어서(candidate.url도 그래서 bare) 여기서는
+    // 항상 www.를 붙여서 요청한다 — 두 형태 모두에서 동작하는 것으로 실측 확인됨.
+    const origin = `https://www.${shopDomain.replace(/^www\./, "")}`;
     const localePrefix = sourceUrl ? extractShopifyLocalePrefix(sourceUrl) : "";
     const detail = await fetchShopifyProductJson(`${origin}${localePrefix}/products/${handle}`);
     if (!detail?.productData.price) return candidates;
@@ -43,7 +48,7 @@ async function searchOneShop(shop: ComparisonShopRef, query: ComparisonQuery): P
     if (shop.domain === "junioredition.com") {
       const candidates = await searchShopifySuggest(shop.domain, shop.currency, query.title);
       const scored = withConfidence(query, candidates);
-      const enriched = await enrichTopCandidatePrice(scored, query.sourceUrl);
+      const enriched = await enrichTopCandidatePrice(scored, shop.domain, query.sourceUrl);
       return { ...base, status: "ok", candidates: enriched };
     }
     if (shop.domain === "childrensalon.com") {
