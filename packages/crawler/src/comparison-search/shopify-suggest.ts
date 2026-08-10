@@ -8,9 +8,17 @@ const CHROME_UA =
 interface ShopifySuggestResponse {
   resources?: {
     results?: {
-      // 실측(junioredition.com) 응답 기준 — price/currency 코드 필드는 응답에 없음(로케일
-      // 프리픽스가 있어도 마찬가지). 통화는 로케일 프리픽스(REGION_CURRENCY)로 추정하고,
-      // 추정 불가하면 comparison_shops.currency(DB)로 폴백한다.
+      // 실측(junioredition.com) 응답 기준 — price/currency 코드 필드는 응답에 없음. 통화는
+      // comparison_shops.currency(DB)를 그대로 쓴다.
+      //
+      // Sprint B-1.3에서 sourceUrl의 로케일 프리픽스(/en-kr/ 등)로 이 엔드포인트를 다시
+      // 요청하면 로컬 curl 테스트에서는 로케일화된 가격이 나왔지만, 배포된 Vercel
+      // 서버리스 환경에서 동일 요청을 재현하면 로케일 프리픽스 유무와 무관하게 항상 같은
+      // (기본 통화) 숫자가 돌아왔다(실측 확인, 2회 재현) — 이 엔드포인트는
+      // `/products/{handle}.json`(B-1.1에서 고친 것, `/meta.json` 기준 통화를 함께 반환)과
+      // 달리 URL 로케일 프리픽스만으로 신뢰성 있게 로케일 가격을 주지 않는 것으로 보인다.
+      // 확실하지 않은 통화 라벨을 붙이는 것이 더 위험해서(예: "210 KRW" 같은 말이 안 되는
+      // 값), 이 엔드포인트는 로케일 추정을 하지 않고 항상 DB 기준 통화만 쓴다.
       products?: Array<{
         title?: string;
         url?: string;
@@ -23,74 +31,26 @@ interface ShopifySuggestResponse {
   };
 }
 
-/** Shopify Markets 로케일 프리픽스(/en-kr/, /en-gb/ 등)의 지역 코드로 통화를 추정한다 —
- * suggest.json은 product-json과 달리 price_currency 필드를 아예 안 주기 때문에, 실측으로
- * 확인된 지역만 최소한으로 매핑한다(모르는 지역은 억지로 채우지 않고 null). */
-const REGION_CURRENCY: Record<string, string> = {
-  KR: "KRW",
-  GB: "GBP",
-  US: "USD",
-};
-
-function currencyFromLocalePrefix(localePrefix: string): string | null {
-  const match = /^\/?[a-z]{2}-([a-z]{2})$/i.exec(localePrefix);
-  return match ? (REGION_CURRENCY[match[1].toUpperCase()] ?? null) : null;
-}
-
-/** URL 경로에서 "/products/" 앞의 로케일 프리픽스만 뽑는다(예: "/en-kr") — 없으면 "". */
-function extractLocalePrefix(url: string | undefined): string {
-  if (!url) return "";
-  try {
-    const pathname = new URL(url).pathname;
-    const match = /^\/([a-z]{2}-[a-z]{2})\//i.exec(pathname);
-    return match ? `/${match[1]}` : "";
-  } catch {
-    return "";
-  }
-}
-
-/** junioredition.com 등 Shopify 기반 사이트의 공개 검색 제안 API. 인증 불필요, plain fetch.
- * sourceUrl에 Shopify Markets 로케일 프리픽스(/en-kr/ 등)가 있으면 같은 프리픽스로 먼저
- * 시도해 원본 상품과 동일한 로케일의 표시가를 얻는다(₩256,100 같은 실제 표시가 vs 기본
- * 매장 통화를 재환산하는 오류를 피함). 프리픽스 요청이 실패하면(그 로케일 미지원 등)
- * 기본 경로로 폴백한다 — 검색 자체가 막히면 안 되므로. */
+/** junioredition.com 등 Shopify 기반 사이트의 공개 검색 제안 API. 인증 불필요, plain fetch. */
 export async function searchShopifySuggest(
   domain: string,
   currency: string | null,
   query: string,
-  sourceUrl?: string,
 ): Promise<ComparisonCandidate[]> {
-  const localePrefix = extractLocalePrefix(sourceUrl);
-  const qs = `q=${encodeURIComponent(query)}&resources[type]=product&resources[limit]=5`;
-
-  let response: Response | null = null;
-  if (localePrefix) {
-    try {
-      const localizedResponse = await fetchWithDomainRateLimit(`https://${domain}${localePrefix}/search/suggest.json?${qs}`, {
-        headers: { Accept: "application/json", "User-Agent": CHROME_UA },
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      });
-      if (localizedResponse.ok) response = localizedResponse;
-    } catch {
-      // 로케일 경로 실패 — 아래에서 기본 경로로 폴백
-    }
-  }
-  if (!response) {
-    response = await fetchWithDomainRateLimit(`https://${domain}/search/suggest.json?${qs}`, {
-      headers: { Accept: "application/json", "User-Agent": CHROME_UA },
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
-  }
+  const url = `https://${domain}/search/suggest.json?q=${encodeURIComponent(query)}&resources[type]=product&resources[limit]=5`;
+  const response = await fetchWithDomainRateLimit(url, {
+    headers: { Accept: "application/json", "User-Agent": CHROME_UA },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
   if (!response.ok) throw new Error(`Shopify suggest API ${response.status}`);
 
   const data = (await response.json()) as ShopifySuggestResponse;
   const products = data.resources?.results?.products ?? [];
-  const resolvedCurrency = (localePrefix && currencyFromLocalePrefix(localePrefix)) || currency;
 
   return products.map((p) => ({
     title: p.title ?? "",
     url: p.url ? `https://${domain}${p.url}` : `https://${domain}`,
-    price: p.price && resolvedCurrency ? { amount: Number(p.price), currency: resolvedCurrency } : null,
+    price: p.price && currency ? { amount: Number(p.price), currency } : null,
     imageUrl: p.image ?? null,
     confidence: 0,
     brand: p.vendor || undefined,

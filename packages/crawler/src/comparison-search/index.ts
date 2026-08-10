@@ -12,7 +12,7 @@ async function searchOneShop(shop: ComparisonShopRef, query: ComparisonQuery): P
   const base = { shopId: shop.id, shopName: shop.name, domain: shop.domain };
   try {
     if (shop.domain === "junioredition.com") {
-      const candidates = await searchShopifySuggest(shop.domain, shop.currency, query.title, query.sourceUrl);
+      const candidates = await searchShopifySuggest(shop.domain, shop.currency, query.title);
       return { ...base, status: "ok", candidates: withConfidence(query, candidates) };
     }
     if (shop.domain === "childrensalon.com") {
