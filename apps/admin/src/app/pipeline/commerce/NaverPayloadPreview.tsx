@@ -1,24 +1,37 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { buildNaverProductPayload, validateNaverPayload } from "@commerce/listing";
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
 import { formatKrw } from "@commerce/pricing";
 
 /**
- * Sprint N-2.7 — 네이버 v2 상품등록 payload를 실제 POST 없이 미리 보여준다.
+ * Sprint N-2.7/N-2.8 — 네이버 v2 상품등록 payload를 실제 POST 없이 미리 보여준다.
  * N-2.6에서 만든 buildNaverProductPayload/validateNaverPayload를 그대로 쓴다
  * (payload를 다시 만들지 않는다 — 화면에 보이는 값과 Raw Payload가 어긋나면
  * CP001과 같은 신뢰 문제가 재발한다).
  *
- * CartPilot은 아직 Naver 카테고리 매핑/주소록/인증 카탈로그 연동이 없다(N-2.5까지는
- * 이 값들을 임시 debug route로 조회만 했을 뿐, 저장하는 곳이 없다). 그래서 이
- * Preview는 이 값들을 항상 비워서(leafCategoryId="", 주소록 null) 넘긴다 —
- * validateNaverPayload가 이미 이 상태를 MISSING/BLOCKED로 정확히 표시하도록
- * 만들어져 있어서(N-2.6), 여기서 값을 지어내는 대신 있는 그대로의 미확정 상태를
- * 보여주는 게 이번 Sprint의 목적과 맞다. 실제 리졸버가 붙는 건 다음 Sprint다.
+ * N-2.8 — 카테고리 자동 매칭 Resolver는 별도 Sprint(N-2.9)로 분리됐다(CPO
+ * 지시 — 학습데이터 없이 만들면 Coupang 초기처럼 오분류 위험이 크다). 그래서
+ * leafCategoryId는 QA가 실제 Naver 카테고리 ID를 알고 있을 때 직접 입력하는
+ * "다리" 역할만 한다 — 값을 입력하면 /api/naver/resolve가 실제 카테고리
+ * detail(exceptionalCategories/certificationInfos)과 판매자 주소록을
+ * 실시간으로 조회해서 고시/인증/배송 상태를 채운다. 값이 없으면(대부분의
+ * 실제 상품) 여전히 MISSING/BLOCKED로 정직하게 남는다.
  */
+
+interface NaverResolveResponse {
+  status: string;
+  category: {
+    categoryId: string;
+    exceptionalCategories: string[];
+    requiresChildCertification: boolean;
+    childCertificationInfoId: number | null;
+  } | null;
+  address: { releaseAddressBookNo: number | null; refundAddressBookNo: number | null };
+  courier: { available: boolean; reason: string };
+}
 
 const FIELD_SECTION: Record<string, string> = {
   "originProduct.leafCategoryId": "naver-section-category",
@@ -39,7 +52,9 @@ const FIELD_SECTION: Record<string, string> = {
  * "전체 - 문제있는 항목"으로 역산한다(검증 로직을 이 컴포넌트에서 다시 만들지
  * 않는다). 옵션/인증서처럼 상품마다 있고 없고가 달라지는 항목만 조건부로 센다. */
 function countTotalCheckedFields(hasOptions: boolean, requiresCertification: boolean, hasCertificationId: boolean) {
-  const BASE = 9; // leafCategoryId, name, image, price, stock, outboundLocationId, returnAddressId, address-mapping, deliveryCompany
+  // leafCategoryId, name, image, price, stock, outboundLocationId, returnAddressId,
+  // address-mapping, deliveryCompany, originAreaCode(N-2.8 추가)
+  const BASE = 10;
   let total = BASE;
   if (hasOptions) total += 1;
   if (requiresCertification) total += hasCertificationId ? 2 : 1;
@@ -55,13 +70,52 @@ function payloadReplacer(_key: string, value: unknown): unknown {
 
 export function NaverPayloadPreview({ product, listing }: { product: CanonicalProduct; listing: ListingModel }) {
   const [showJson, setShowJson] = useState(false);
+  const [categoryIdInput, setCategoryIdInput] = useState("");
+  const [resolved, setResolved] = useState<NaverResolveResponse | null>(null);
+  const [resolving, setResolving] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
 
-  // N-2.7 시점 CartPilot 현실 — 아래 4개는 아직 어디서도 채워지지 않는다.
-  const leafCategoryId = "";
-  const releaseAddressBookNo: number | null = null;
-  const refundAddressBookNo: number | null = null;
-  const childCertificationInfoId: number | null = null;
-  const categoryRequiresChildCertification = false;
+  // N-2.8 — 카테고리 ID는 수동 입력(자동 매칭은 N-2.9), 나머지는 실시간 조회.
+  // 500ms 디바운스로 입력 중 매 키 입력마다 호출하지 않는다.
+  useEffect(() => {
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      setResolving(true);
+      setResolveError(null);
+      const query = categoryIdInput.trim() ? `?categoryId=${encodeURIComponent(categoryIdInput.trim())}` : "";
+      fetch(`/api/naver/resolve${query}`)
+        .then((res) => res.json())
+        .then((data: NaverResolveResponse) => {
+          if (cancelled) return;
+          if (data.status !== "OK") {
+            setResolveError(
+              data.status === "NOT_CONFIGURED"
+                ? "네이버 인증 정보가 설정되어 있지 않습니다."
+                : "네이버 API 조회에 실패했습니다.",
+            );
+            setResolved(null);
+            return;
+          }
+          setResolved(data);
+        })
+        .catch(() => {
+          if (!cancelled) setResolveError("리졸버 호출 중 오류가 발생했습니다.");
+        })
+        .finally(() => {
+          if (!cancelled) setResolving(false);
+        });
+    }, 500);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [categoryIdInput]);
+
+  const leafCategoryId = categoryIdInput.trim();
+  const releaseAddressBookNo = resolved?.address.releaseAddressBookNo ?? null;
+  const refundAddressBookNo = resolved?.address.refundAddressBookNo ?? null;
+  const childCertificationInfoId = resolved?.category?.childCertificationInfoId ?? null;
+  const categoryRequiresChildCertification = resolved?.category?.requiresChildCertification ?? false;
 
   const payload = useMemo(
     () =>
@@ -74,8 +128,15 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
         childCertificationInfoId,
         categoryRequiresChildCertification,
       }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [product, listing],
+    [
+      product,
+      listing,
+      leafCategoryId,
+      releaseAddressBookNo,
+      refundAddressBookNo,
+      childCertificationInfoId,
+      categoryRequiresChildCertification,
+    ],
   );
 
   const validation = useMemo(
@@ -85,8 +146,7 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
         { product, releaseAddressBookNo, refundAddressBookNo, childCertificationInfoId },
         categoryRequiresChildCertification,
       ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [payload, product],
+    [payload, product, releaseAddressBookNo, refundAddressBookNo, childCertificationInfoId, categoryRequiresChildCertification],
   );
 
   const hasOptions = product.optionGroups.length > 0;
@@ -159,7 +219,28 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
       </Section>
 
       <Section id="naver-section-category" title="카테고리">
-        <Row label="네이버 카테고리" value={leafCategoryId || "미확정 — Naver 카테고리 매핑 미연동(다음 Sprint)"} />
+        <div>
+          <label className="text-xs text-text-secondary" htmlFor="naver-category-id-input">
+            네이버 카테고리 ID(수동 입력 — 자동 매칭은 N-2.9에서 별도 구현)
+          </label>
+          <input
+            id="naver-category-id-input"
+            type="text"
+            value={categoryIdInput}
+            onChange={(e) => setCategoryIdInput(e.target.value)}
+            placeholder="예: 50000535"
+            className="mt-0.5 w-full rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+          />
+        </div>
+        {resolving && <p className="text-[11px] text-text-tertiary">네이버 카테고리 조회 중...</p>}
+        {resolveError && <p className="text-[11px] text-error">{resolveError}</p>}
+        <Row label="네이버 카테고리" value={leafCategoryId || "미확정 — 위 입력란에 실제 카테고리 ID를 입력하세요"} />
+        {resolved?.category && (
+          <Row
+            label="어린이제품 인증"
+            value={resolved.category.requiresChildCertification ? "필요(CHILD_CERTIFICATION)" : "불필요"}
+          />
+        )}
       </Section>
 
       <Section id="naver-section-images" title="이미지">
@@ -214,8 +295,8 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
               <p className="text-xs text-text-tertiary">옵션 그룹은 있으나 조합(variant) 정보가 없습니다.</p>
             )}
             <p className="rounded bg-error-soft px-2 py-1 text-[11px] text-error">
-              🔴 BLOCKED — Naver optionCombinations 필드 스키마 미확인(N-2.5). 실제 등록 payload에는 반영되지
-              않습니다.
+              🔴 BLOCKED — optionCombinations 필드명은 확인됐지만(GitHub #241) price/id 필드의 정확한 의미는
+              실제 등록 성공 검증 전까지 확인되지 않았습니다(N-2.8).
             </p>
           </>
         ) : (
@@ -249,18 +330,25 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
             <Row label="인증기관" value="MISSING" />
             <Row label="인증일자" value="MISSING" />
           </>
+        ) : resolved?.category ? (
+          <p className="text-xs text-text-tertiary">이 카테고리는 어린이제품 인증(CHILD_CERTIFICATION) 대상이 아닙니다.</p>
         ) : (
           <p className="text-xs text-text-tertiary">
-            카테고리 인증요건 미확인 — Naver 카테고리 실시간 조회 연동 전까지는 CHILD_CERTIFICATION 필요 여부를
-            판단할 수 없습니다(이번 Sprint 범위 밖).
+            카테고리 미입력 — 위 카테고리 섹션에서 실제 Naver 카테고리 ID를 입력하면 인증요건을 실시간으로 조회합니다.
           </p>
         )}
       </Section>
 
       <Section id="naver-section-shipping" title="배송 / 반품">
-        <Row label="출고지" value={releaseAddressBookNo !== null ? `addressBookNo: ${releaseAddressBookNo}` : "MISSING"} />
-        <Row label="반품/교환지" value={refundAddressBookNo !== null ? `addressBookNo: ${refundAddressBookNo}` : "MISSING"} />
-        <Row label="택배사" value="BLOCKED — 택배사 코드 조회 API 미확인(N-2.5)" />
+        <Row
+          label="출고지"
+          value={releaseAddressBookNo !== null ? `addressBookNo: ${releaseAddressBookNo}` : "MISSING"}
+        />
+        <Row
+          label="반품/교환지"
+          value={refundAddressBookNo !== null ? `addressBookNo: ${refundAddressBookNo}` : "MISSING"}
+        />
+        <Row label="택배사" value={`BLOCKED — ${resolved?.courier.reason ?? "택배사 코드 조회 API 미확인(N-2.5)"}`} />
         <Row
           label="배송비"
           value={`${payload.originProduct.deliveryInfo?.deliveryFee?.deliveryFeeType === "FREE" ? "무료배송" : "미확정"} (기본값 — 실제 배송비 정책 미연동)`}
@@ -268,8 +356,9 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
         <Row label="반품배송비" value="BLOCKED/MISSING — 미확정" />
         <Row label="교환배송비" value="BLOCKED/MISSING — 미확정" />
         <p className="text-[11px] text-text-tertiary">
-          addressBookNo → outboundLocationId/shippingAddressId/returnAddressId 매핑은 실제 등록 성공으로 검증된
-          적이 없습니다(N-2.6).
+          출고지/반품지는 판매자 주소록(GET /v1/seller/addressbooks-for-page)에서 실시간 조회됩니다. 다만
+          addressBookNo → outboundLocationId/shippingAddressId/returnAddressId 매핑 자체는 실제 등록 성공으로
+          검증된 적이 없습니다(N-2.6).
         </p>
       </Section>
 

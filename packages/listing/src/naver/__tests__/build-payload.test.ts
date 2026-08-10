@@ -162,6 +162,46 @@ describe("buildNaverProductPayload", () => {
       payloadNonKids.originProduct.detailAttribute?.productInfoProvidedNotice?.productInfoProvidedNoticeType,
     ).toBe("WEAR");
   });
+
+  it("N-2.8: originAreaInfo.content는 countryOfOrigin으로 채우지만 originAreaCode는 비운다", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      product,
+      listing,
+      leafCategoryId: LEAF_CATEGORY_ID,
+      releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+      refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.originProduct.detailAttribute?.originAreaInfo?.content).toBe("대한민국");
+    expect(payload.originProduct.detailAttribute?.originAreaInfo?.originAreaCode).toBeUndefined();
+  });
+
+  it("N-2.8: 옵션이 있는 상품은 variant마다 optionCombinations 항목을 만든다", () => {
+    const product = makeMinimalProduct();
+    product.optionGroups = [{ name: "사이즈", values: ["90", "100"] }];
+    product.variants = [
+      { id: "v1", optionValues: { 사이즈: "90" }, sku: "SKU-90", stockQuantity: 5, price: { amount: 10000, currency: "KRW" } },
+      { id: "v2", optionValues: { 사이즈: "100" }, sku: "SKU-100", stockQuantity: 3, price: { amount: 12000, currency: "KRW" } },
+    ];
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      product,
+      listing,
+      leafCategoryId: LEAF_CATEGORY_ID,
+      releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+      refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    const combos = payload.originProduct.detailAttribute?.optionInfo?.optionCombinations;
+    expect(combos).toHaveLength(2);
+    expect(combos?.[0]).toMatchObject({ id: "SKU-90", optionName1: "90", stockQuantity: 5, price: 0 });
+    // listing.priceKrw는 10000이므로 두 번째 옵션(12000)은 +2000 추가금액으로 계산된다(가정 — validate는 항상 BLOCKED).
+    expect(combos?.[1]).toMatchObject({ id: "SKU-100", optionName1: "100", stockQuantity: 3, price: 2000 });
+  });
 });
 
 describe("validateNaverPayload", () => {
@@ -245,5 +285,34 @@ describe("validateNaverPayload", () => {
       true,
     );
     expect(result.issues.some((i) => i.field === "detailAttribute.optionInfo" && i.severity === "BLOCKED")).toBe(true);
+  });
+
+  it("N-2.8: originAreaCode는 항상 BLOCKED — content를 채워도 마찬가지", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      product,
+      listing,
+      leafCategoryId: LEAF_CATEGORY_ID,
+      releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+      refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    const result = validateNaverPayload(
+      payload,
+      {
+        product,
+        releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+        refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+        childCertificationInfoId: null,
+      },
+      false,
+    );
+    expect(
+      result.issues.some(
+        (i) => i.field === "detailAttribute.originAreaInfo.originAreaCode" && i.severity === "BLOCKED",
+      ),
+    ).toBe(true);
   });
 });

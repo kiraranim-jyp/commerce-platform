@@ -100,14 +100,28 @@ export function validateNaverPayload(
     });
   }
 
+  // N-2.8 — optionCombinations 필드명은 확인됐지만(GitHub #241), price가
+  // 절대가/추가금액인지·id를 미리 채워도 되는지는 실제 등록 성공 전까지
+  // 확인 안 됐다. 필드 구조는 채웠지만(build-payload.ts) 이 값을 신뢰해서
+  // 그대로 등록에 쓰면 안 된다는 걸 항상 상기시킨다.
   const hasOptions = (input.product as CanonicalProduct).optionGroups.length > 0;
   if (hasOptions) {
     issues.push({
       field: "detailAttribute.optionInfo",
-      reason: "옵션 조합(optionCombinations) 필드 스키마가 확인되지 않아 옵션이 있는 상품은 이번 Sprint 대상이 아닙니다.",
+      reason:
+        "optionCombinations 필드명은 확인됨(GitHub #241)이나 price/id 필드의 정확한 의미는 미확인 — 실제 등록 성공 검증 전까지 이 값을 신뢰할 수 없습니다.",
       severity: "BLOCKED",
     });
   }
+
+  // N-2.8 — originAreaCode(네이버 자체 원산지 코드 enum)는 어느 경로로도
+  // 확인되지 않았다. content(원산지 텍스트)는 채웠지만 실제 등록에는
+  // originAreaCode가 필요할 가능성이 높아 항상 BLOCKED로 남긴다.
+  issues.push({
+    field: "detailAttribute.originAreaInfo.originAreaCode",
+    reason: "네이버 원산지 코드(originAreaCode) enum 값이 확인되지 않아 채우지 않았습니다.",
+    severity: "BLOCKED",
+  });
 
   return { ok: issues.length === 0, issues };
 }

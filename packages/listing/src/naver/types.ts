@@ -132,22 +132,44 @@ export interface NaverProductAttributeValue {
   attributeValueSeq: number;
 }
 
-/** 미확인 — N-2.4에서 표준옵션 조회(GET /v1/options/standard-options)까지는
- * 확인했지만, optionCombinations 내부의 정확한 필드명(가격/재고/SKU 등)은
- * 확인 못했다(GitHub #605 메인테이너 답변에 그룹명/조합 개념만 있고 필드
- * 스키마는 없음). 옵션이 있는 상품은 이번 Sprint에서 BLOCKED 처리한다. */
+/** 확인됨(GitHub #241 원문 코드 예제, N-2.8) — 조합형 옵션 하나의 필드.
+ * price/id/usable의 정확한 의미(price가 절대가인지 추가금액인지, id를 미리
+ * 채워야 하는지, usable=false의 등록 시점 처리)는 실제 등록 성공 전까지
+ * 확인 안 됨 — 필드명은 확실하지만 의미는 CartPilot의 최선 추정이다
+ * (build-payload.ts 주석 참고). */
+export interface NaverOptionCombination {
+  id?: string;
+  optionName1?: string;
+  optionName2?: string;
+  optionName3?: string;
+  optionName4?: string;
+  stockQuantity: number;
+  price: number;
+  sellerManagerCode?: string;
+  usable?: boolean;
+}
+
+/** 확인됨(GitHub #241 원문 코드 예제, N-2.8) — 조합형 옵션 컨테이너. */
 export interface NaverOptionInfo {
   useStockManagement?: boolean;
   optionCombinationGroupNames?: string[];
-  /** 미확인 스키마 — 값을 채우지 않는다(옵션 없는 최소 fixture만 이번 Sprint 대상). */
-  optionCombinations?: unknown[];
+  optionCombinations?: NaverOptionCombination[];
+}
+
+/** 확인됨(GitHub #241 원문 코드 예제, N-2.8) — 필드명은 확인됨.
+ * originAreaCode의 실제 유효 값(국가 코드 enum)은 미확인 — CartPilot이
+ * 임의로 채우지 않는다(validate-payload.ts가 BLOCKED 처리). */
+export interface NaverOriginAreaInfo {
+  /** 미확인 — 네이버 자체 원산지 코드 enum. 값을 채우지 않는다. */
+  originAreaCode?: string;
+  importer?: string;
+  content?: string;
+  plural?: string;
 }
 
 export interface NaverDetailAttribute {
   productInfoProvidedNotice?: NaverProductInfoProvidedNotice;
-  /** 미확인 — N-2.4에서 필드 존재만 확인, 하위 구조(originAreaCode/content/
-   * importer/plural)는 확인 못함. */
-  originAreaInfo?: unknown;
+  originAreaInfo?: NaverOriginAreaInfo;
   optionInfo?: NaverOptionInfo;
   naverShoppingSearchInfo?: unknown;
   afterServiceInfo?: unknown;
