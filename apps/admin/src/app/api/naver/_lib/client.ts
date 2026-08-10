@@ -6,24 +6,27 @@ const NAVER_OAUTH_TOKEN_URL = "https://api.commerce.naver.com/external/v1/oauth2
 const NAVER_API_BASE = "https://api.commerce.naver.com/external";
 
 /**
- * Sprint N-1.0/N-1.1 — 네이버 커머스 API는 Coupang과 인증 프로토콜이 다르다(HMAC이
- * 아니다). 공식 문서(apicenter.commerce.naver.com/docs/auth) 기준 서명 방식:
+ * Sprint N-1.0/N-1.2 — 네이버 커머스 API는 Coupang과 인증 프로토콜이 다르다(HMAC이
+ * 아니다). 공식 문서(apicenter.commerce.naver.com/docs/auth) Node.js 예제 기준
+ * 서명 방식:
  *   password = "{client_id}_{timestamp}" (timestamp는 13자리 ms epoch)
- *   client_secret_sign = base64url(bcrypt(password, salt=client_secret))
+ *   client_secret_sign = base64(bcrypt(password, salt=client_secret))  ← 표준 base64
  * client_secret 자체가 bcrypt salt로 쓰인다. Coupang의 HMAC-SHA256과는 근본적으로
  * 다른 방식이라 signing.ts를 그대로 재사용할 수 없다(CPO 지시: 구조만 재사용,
  * 프로토콜은 문서 기준).
  *
- * N-1.1 수정 — production에서 표준 base64로 시도했을 때 네이버가
- * client_secret_sign을 400으로 거부했다(원인 파악 전에는 2차 출처만으로 표준
- * base64라고 판단했었음). 공식 문서 Node.js/Java 예제는 URL-safe base64
- * encoding(Java의 Base64.getUrlEncoder())을 쓴다 — Node 내장 Buffer가
- * "base64url" 인코딩을 직접 지원해서 별도 dependency 없이 고칠 수 있다.
+ * N-1.1에서 URL-safe base64(base64url)로 바꿨다가 N-1.2에서 표준 base64로
+ * 되돌렸다 — 공식 Node.js 예제는 URL-safe가 아닌 표준 base64를 쓴다(Java
+ * 예제만 Base64.getUrlEncoder() 사용, Node/Java 예제를 섞으면 안 됨).
+ *
+ * export하는 이유: scripts/verify-naver-signature.ts에서 공식 문서의 샘플
+ * 벡터(clientId/clientSecret/timestamp 고정값)로 이 함수의 출력이 공식 예제와
+ * byte-level로 일치하는지 검증하기 위해서다(추측 구현 방지, CPO 지시).
  */
-function buildClientSecretSign(clientId: string, clientSecret: string, timestamp: number): string {
+export function buildClientSecretSign(clientId: string, clientSecret: string, timestamp: number): string {
   const password = `${clientId}_${timestamp}`;
   const hashed = bcrypt.hashSync(password, clientSecret);
-  return Buffer.from(hashed, "utf8").toString("base64url");
+  return Buffer.from(hashed, "utf8").toString("base64");
 }
 
 /**
