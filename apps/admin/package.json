@@ -20,6 +20,7 @@
     "@commerce/shared": "workspace:*",
     "@imgly/background-removal-node": "^1.4.5",
     "@supabase/supabase-js": "2.58.0",
+    "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",
     "jszip": "^3.10.1",
     "lucide-react": "^1.28.0",
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
