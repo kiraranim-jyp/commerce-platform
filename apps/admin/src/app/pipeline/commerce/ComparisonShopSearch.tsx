@@ -19,6 +19,7 @@ interface Candidate {
   imageUrl: string | null;
   confidence: number;
   matchLevel?: MatchLevel;
+  priceSource?: "detail" | "search" | null;
 }
 
 interface SearchResult {
@@ -114,6 +115,16 @@ export function ComparisonShopSearch({
                       {c.price && (
                         <span className="text-text-secondary">
                           {c.price.amount.toFixed(2)} {c.price.currency}
+                          {c.priceSource === "detail" && (
+                            <span className="ml-1 text-[10px] text-success" title="상품 상세 페이지에서 확인한 가격">
+                              ✓ 상품 상세 확인
+                            </span>
+                          )}
+                          {c.priceSource === "search" && (
+                            <span className="ml-1 text-[10px] text-text-tertiary" title="검색 결과에서 가져온 가격(참고용)">
+                              검색 결과 가격
+                            </span>
+                          )}
                         </span>
                       )}
                       <span className="text-text-tertiary" title={c.matchLevel ? MATCH_LEVEL_LABEL[c.matchLevel] : undefined}>

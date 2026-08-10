@@ -13,6 +13,10 @@ export interface ComparisonCandidate {
   matchLevel?: "very_high" | "high" | "medium" | "low";
   /** 어떤 신호로 이 confidence가 나왔는지(디버그/설명용). */
   matchReasons?: string[];
+  /** Sprint B-1.8 — "detail"은 상품 상세 API로 실제 가격을 확인한 것(신뢰 가능), "search"는
+   * 검색 결과에 딸려온 값을 그대로 쓴 것(참고용). 매칭(동일상품 여부)과 가격확인은 별개
+   * 단계이므로, 이 필드로 "이 가격을 얼마나 믿어도 되는지"를 구분한다. */
+  priceSource?: "detail" | "search" | null;
 }
 
 export interface ComparisonSearchResult {
