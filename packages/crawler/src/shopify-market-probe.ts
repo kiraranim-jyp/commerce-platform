@@ -44,20 +44,16 @@ export async function probeOriginAndKrMarkets(
 /** 확장 조회 — 흔히 쓰이는 Shopify Markets locale 코드 후보를 실제로 찔러보고
  * 성공한 것만 반환한다. 이 목록은 "존재를 단정"하는 게 아니라 "확인해볼
  * 후보"일 뿐이다 — 404/오류가 나면 그 market은 존재하지 않는 것으로 취급하고
- * 결과에서 완전히 제외한다(추측으로 채우지 않는다). */
-export const EXPAND_CANDIDATE_MARKET_CODES = [
-  "en-us",
-  "en-gb",
-  "en-fr",
-  "en-de",
-  "en-jp",
-  "en-au",
-  "en-ca",
-  "fr",
-  "de",
-  "es",
-  "ja",
-];
+ * 결과에서 완전히 제외한다(추측으로 채우지 않는다).
+ *
+ * N-3.2 실측(2026-08-10) — "xx"(언어만, 지역 없음) 형태 후보("fr","de","es",
+ * "ja")는 junioredition.com에서 200을 반환하지만 실제로는 별도 market이
+ * 아니라 그냥 기본(원본) 가격을 그대로 되돌려줬다(4개 코드 전부 정확히
+ * 같은 GBP 74 — 우연이라기엔 너무 정확히 일치). 이걸 "실제 market"으로
+ * 보여주면 실제로는 없는 프랑스/독일/스페인/일본 시장이 있는 것처럼
+ * 오해를 준다(CPO 금지 원칙 위반) — 그래서 확인된 진짜 Shopify Markets
+ * 프리픽스 형태("xx-yy", 예: "en-kr"/"en-au")만 후보로 남긴다. */
+export const EXPAND_CANDIDATE_MARKET_CODES = ["en-us", "en-gb", "en-fr", "en-de", "en-jp", "en-au", "en-ca"];
 
 export async function probeAdditionalMarkets(
   sourceUrl: string,
