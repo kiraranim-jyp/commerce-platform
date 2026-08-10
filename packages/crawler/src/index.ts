@@ -7,3 +7,4 @@ export * from "./brand-resolver";
 export type { ExtractedProductData, ProductDataSource } from "./product-data-extractor";
 export type { ExtractionTrace } from "./scoring";
 export type { StrategySource } from "./strategies/types";
+export * from "./comparison-search";
