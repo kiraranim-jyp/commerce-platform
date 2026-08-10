@@ -3,6 +3,8 @@ import { buildNaverCategoryPath } from "@commerce/listing";
 import { getNaverCredentials } from "../_lib/env";
 import { callNaverApi, issueNaverAccessToken } from "../_lib/client";
 import { fetchNaverAllCategories } from "../_lib/category";
+import { fetchNaverReturnDeliveryCompanies, resolvePrimaryReturnCompany } from "../_lib/delivery";
+import { getDefaultSellerProfile } from "../../coupang/_lib/seller-profile";
 
 /**
  * Sprint N-2.8 — NaverPayloadPreview에 필요한 실제 read-only 데이터를 한 번에
@@ -11,8 +13,18 @@ import { fetchNaverAllCategories } from "../_lib/category";
  * 라우트의 입력값이지 이 라우트가 만들어내는 값이 아니다(Preview에서 QA가
  * 실제 Naver 카테고리 ID를 알고 있을 때만 수동으로 입력한다).
  *
- * 택배사 코드는 N-2.5에서 전용 조회 API 3곳이 모두 404였던 걸 재확인만 하고
- * 새로 호출하지 않는다 — courier.available은 항상 false로 고정된 값이다.
+ * Sprint N-3.3 — delivery 섹션 추가. 반품 택배사는 공식 OpenAPI 스펙에서
+ * 발견한 실제 존재하는 API(GET /v2/product-delivery-info/
+ * return-delivery-companies — N-2.5가 찾던 "택배사 코드 조회 API"가 사실은
+ * 이 경로였다)로 조회한다. 출고 택배사(deliveryInfo.deliveryCompany) 조회
+ * API는 스펙에 없으므로 여전히 courier.available=false로 고정한다(N-2.5
+ * 결론 유지, 추측 금지).
+ *
+ * 반품/교환 배송비(returnDeliveryFee/exchangeDeliveryFee)는 Naver 전용 설정이
+ * 따로 없어 Coupang용으로 이미 만들어 둔 SellerProfile.returnDeliveryCharge/
+ * exchangeDeliveryCharge(판매자의 실제 반품/교환 배송비 정책 — 플랫폼과
+ * 무관한 판매자 자신의 비용 정책)를 그대로 재사용한다. 새 DB 컬럼을 만들지
+ * 않는다(CPO 원칙 — 이미 있는 판매자 데이터를 다시 입력받지 않는다).
  */
 
 interface NaverCertificationInfo {
@@ -89,11 +101,24 @@ export async function GET(request: Request) {
     refundAddressBookNo = addressBooks.find((a) => a.addressType === "REFUND_OR_EXCHANGE")?.addressBookNo ?? null;
   }
 
+  const [returnCompanies, sellerProfile] = await Promise.all([
+    fetchNaverReturnDeliveryCompanies(accessToken),
+    getDefaultSellerProfile(),
+  ]);
+  const primaryReturnCompany = returnCompanies ? resolvePrimaryReturnCompany(returnCompanies) : null;
+
   return NextResponse.json({
     status: "OK",
     category,
     address: { releaseAddressBookNo, refundAddressBookNo },
-    // N-2.5에서 확인 — 전용 조회 API가 없어 항상 미확인 상태다(추측 코드 금지).
-    courier: { available: false, reason: "택배사 코드 조회 API를 찾지 못했습니다(N-2.5 확인).", },
+    // N-2.5/N-3.3 확인 — 출고 택배사 전용 조회 API는 공식 스펙에 없다(추측 코드 금지).
+    courier: { available: false, reason: "출고 택배사 코드 조회 API를 찾지 못했습니다(N-2.5/N-3.3 확인)." },
+    delivery: {
+      returnCompanies: returnCompanies ?? [],
+      returnCompaniesFetchFailed: returnCompanies === null,
+      primaryReturnCompany,
+      returnDeliveryFee: sellerProfile?.returnDeliveryCharge ?? null,
+      exchangeDeliveryFee: sellerProfile?.exchangeDeliveryCharge ?? null,
+    },
   });
 }

@@ -28,7 +28,20 @@ export interface NaverPayloadValidationResult {
  */
 export function validateNaverPayload(
   payload: NaverProductRegistrationPayload,
-  input: Pick<NaverPayloadInput, "product" | "releaseAddressBookNo" | "refundAddressBookNo" | "childCertificationInfoId">,
+  input: Pick<
+    NaverPayloadInput,
+    | "product"
+    | "releaseAddressBookNo"
+    | "refundAddressBookNo"
+    | "primaryReturnDeliveryCompanyPriorityType"
+    | "returnDeliveryFee"
+    | "exchangeDeliveryFee"
+    | "childCertificationInfoId"
+  > & {
+    /** N-3.3 — 반품 택배사 목록 조회 자체가 실패했는지(계정/네트워크 문제 등).
+     * 실패와 "택배사 미등록"은 서로 다른 사유라 구분한다. */
+    returnCompaniesFetchFailed: boolean;
+  },
   categoryRequiresChildCertification: boolean,
 ): NaverPayloadValidationResult {
   const issues: NaverPayloadValidationIssue[] = [];
@@ -50,9 +63,14 @@ export function validateNaverPayload(
     issues.push({ field: "originProduct.stockQuantity", reason: "재고 수량이 없거나 0 이하입니다.", severity: "MISSING" });
   }
 
+  // N-3.3 — claimDeliveryInfo.shippingAddressId/returnAddressId가 addressBookNo를
+  // 그대로 가리킨다는 게 공식 OpenAPI 스펙(제목 "출고지 주소록 번호"/"반품/교환지
+  // 주소록 번호")으로 확인됐다 — N-2.6~N-3.2까지의 BLOCKED("매핑이 실제 등록으로
+  // 검증되지 않음")는 더 이상 정확하지 않다. 이제는 값이 있으면 READY, 없으면
+  // 일반 MISSING(판매자 주소록 등록 필요)으로만 취급한다.
   if (input.releaseAddressBookNo === null) {
     issues.push({
-      field: "deliveryInfo.outboundLocationId",
+      field: "claimDeliveryInfo.shippingAddressId",
       reason: "출고지 주소(addressType=RELEASE)를 찾지 못했습니다 — 판매자 주소록에 등록 필요.",
       severity: "MISSING",
     });
@@ -65,21 +83,45 @@ export function validateNaverPayload(
     });
   }
 
-  // 이 매핑 자체(addressBookNo → outboundLocationId/shippingAddressId/
-  // returnAddressId)는 N-2.6 시점까지 실제 등록 성공으로 검증된 적이 없다 —
-  // 필드 존재는 확인됐지만 이 값을 그대로 대입해도 되는지는 미확인이므로 항상
-  // BLOCKED를 남겨서 "실제 POST 전에 반드시 재확인"을 상기시킨다.
-  issues.push({
-    field: "deliveryInfo (address mapping)",
-    reason: "addressBookNo → outboundLocationId/shippingAddressId/returnAddressId 매핑이 실제 등록으로 검증되지 않았습니다.",
-    severity: "BLOCKED",
-  });
-
   if (!originProduct.deliveryInfo?.deliveryCompany) {
     issues.push({
       field: "deliveryInfo.deliveryCompany",
-      reason: "택배사 코드 조회 API를 찾지 못해 값을 채우지 않았습니다(N-2.5 미확인 사항).",
+      reason: "출고 택배사 조회 API가 공식 스펙에 없어 값을 채우지 않았습니다(N-2.5/N-3.3 확인 — 반품 택배사 조회 API와는 별개).",
       severity: "BLOCKED",
+    });
+  }
+
+  // N-3.3 — 반품 택배사는 실제 조회 API(GET /v2/product-delivery-info/
+  // return-delivery-companies)가 확인됐다. 조회 자체가 실패하면 BLOCKED(계정/
+  // 네트워크 문제로 확인 불가), 조회는 됐는데 판매자가 하나도 등록 안 했으면
+  // MISSING(Wing에서 등록 필요), 있으면 READY(스펙상 미입력해도 PRIMARY가
+  // 기본값이라 별도 이슈를 남기지 않는다).
+  if (input.returnCompaniesFetchFailed) {
+    issues.push({
+      field: "claimDeliveryInfo.returnDeliveryCompanyPriorityType",
+      reason: "반품 택배사 목록 조회에 실패했습니다(네이버 API 오류).",
+      severity: "BLOCKED",
+    });
+  } else if (input.primaryReturnDeliveryCompanyPriorityType === null) {
+    issues.push({
+      field: "claimDeliveryInfo.returnDeliveryCompanyPriorityType",
+      reason: "판매자 계정에 등록된 반품 택배사가 없습니다 — Wing에서 반품 택배사 등록 필요.",
+      severity: "MISSING",
+    });
+  }
+
+  if (input.returnDeliveryFee === null) {
+    issues.push({
+      field: "claimDeliveryInfo.returnDeliveryFee",
+      reason: "반품 배송비 정책이 설정되어 있지 않습니다 — Settings에서 판매자 배송 정책 입력 필요.",
+      severity: "MISSING",
+    });
+  }
+  if (input.exchangeDeliveryFee === null) {
+    issues.push({
+      field: "claimDeliveryInfo.exchangeDeliveryFee",
+      reason: "교환 배송비 정책이 설정되어 있지 않습니다 — Settings에서 판매자 배송 정책 입력 필요.",
+      severity: "MISSING",
     });
   }
 

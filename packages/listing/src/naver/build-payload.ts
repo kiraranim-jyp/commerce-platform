@@ -2,6 +2,7 @@ import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
 import type {
+  NaverClaimDeliveryInfo,
   NaverImageRef,
   NaverOptionCombination,
   NaverProductRegistrationPayload,
@@ -29,11 +30,24 @@ export interface NaverPayloadInput {
   /** N-2.4 확인 — 리프 카테고리 ID(예: "50000535"). */
   leafCategoryId: string;
   /** N-2.5 확인 — 판매자 주소록(addressbooks-for-page)의 addressType=RELEASE
-   * 항목 addressBookNo. outboundLocationId로 쓴다는 매핑은 가정이다(주석 참고). */
+   * 항목 addressBookNo. N-3.3에서 claimDeliveryInfo.shippingAddressId(출고지
+   * 주소록 번호)가 이 값을 그대로 가리킨다는 걸 공식 OpenAPI 스펙으로 확인했다
+   * (더 이상 가정이 아니다). */
   releaseAddressBookNo: number | null;
   /** N-2.5 확인 — addressType=REFUND_OR_EXCHANGE 항목 addressBookNo.
-   * shippingAddressId/returnAddressId로 쓴다는 매핑은 가정이다. */
+   * claimDeliveryInfo.returnAddressId(반품/교환지 주소록 번호)로 확인됨. */
   refundAddressBookNo: number | null;
+  /** N-3.3 확인 — GET /v2/product-delivery-info/return-delivery-companies로
+   * 조회한 판매자의 실제 등록 반품 택배사 중 우선순위가 가장 높은 것(보통
+   * PRIMARY). 판매자가 반품 택배사를 하나도 등록 안 했으면 null(추측 금지 —
+   * "PRIMARY"라는 값 자체는 확인됐지만 실제로 그 택배사가 존재하는지는
+   * 이 값으로 판단한다). */
+  primaryReturnDeliveryCompanyPriorityType: string | null;
+  /** N-3.3 — Naver 전용 설정이 따로 없어 Coupang용 SellerProfile.
+   * returnDeliveryCharge(판매자의 실제 반품 배송비 정책)를 재사용한다. */
+  returnDeliveryFee: number | null;
+  /** N-3.3 — SellerProfile.exchangeDeliveryCharge 재사용. */
+  exchangeDeliveryFee: number | null;
   /** N-2.4 확인 — 카테고리 detail의 certificationInfos 중 kindTypes에
    * CHILD_CERTIFICATION이 포함된 항목의 id. 실제 인증서 정보(번호/업체명/일자)는
    * 판매자가 실제로 취득한 인증이 있어야만 채울 수 있어 여기서는 다루지 않는다
@@ -93,6 +107,9 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
     leafCategoryId,
     releaseAddressBookNo,
     refundAddressBookNo,
+    primaryReturnDeliveryCompanyPriorityType,
+    returnDeliveryFee,
+    exchangeDeliveryFee,
     childCertificationInfoId,
     categoryRequiresChildCertification,
   } = input;
@@ -114,15 +131,21 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
       salePrice: listing.priceKrw,
       stockQuantity: product.stockQuantity.value || 1,
       deliveryInfo: {
-        outboundLocationId: releaseAddressBookNo ?? undefined,
-        // deliveryCompany: 미확인 — 채우지 않는다.
+        // deliveryCompany: 확인됨(공식 OpenAPI)이나 조회 API가 없어 채우지 않는다.
         deliveryFee: {
           deliveryFeeType: "FREE",
           baseFee: 0,
         },
         claimDeliveryInfo: {
+          // N-3.3 — 출고지는 이 필드 하나다(deliveryInfo.outboundLocationId는
+          // 존재하지 않는 필드였음이 확인되어 제거됨).
           shippingAddressId: releaseAddressBookNo ?? undefined,
           returnAddressId: refundAddressBookNo ?? undefined,
+          returnDeliveryCompanyPriorityType:
+            (primaryReturnDeliveryCompanyPriorityType as NaverClaimDeliveryInfo["returnDeliveryCompanyPriorityType"]) ??
+            undefined,
+          returnDeliveryFee: returnDeliveryFee ?? undefined,
+          exchangeDeliveryFee: exchangeDeliveryFee ?? undefined,
         },
       },
       detailAttribute: {

@@ -80,47 +80,83 @@ export interface NaverProductCertificationInfo {
   certificationDate?: string;
 }
 
-/** 확인됨(GitHub #241) — deliveryFee 필드 목록만 확인, 각 필드의 정확한 enum
- * 값/제약조건은 미확인. FREE 케이스(무료배송)만 최소 구현한다. */
-export interface NaverDeliveryFee {
-  deliveryFeeType: "FREE" | "CONDITIONAL_FREE" | "PAID" | "PAID_ONLY_CHEJU" | string;
-  baseFee?: number;
-  /** 미확인 필드들 — 조건부 무료배송/지역별 차등 등에 필요하나 이번 Sprint는
-   * FREE 케이스만 다룬다. */
-  freeConditionalAmount?: number;
-  deliveryFeePayType?: string;
+/** 확인됨(공식 OpenAPI, commerce-api-naver/commerce-api docs/2.0.0-RC.js,
+ * ExternalApiDeliveryFeeByAreaVo.product) — 제주/도서산간 추가 배송비.
+ * 묶음배송 가능 여부가 true면 이 값은 무시된다(스펙 원문). */
+export interface NaverDeliveryFeeByArea {
+  deliveryAreaType: "AREA_2" | "AREA_3";
+  /** 2권역: "제주 및 도서산간" 추가비. 3권역: "제주" 추가비. 최대 100,000. */
+  area2extraFee?: number;
+  /** "제주 외 도서산간" 추가비. deliveryAreaType이 AREA_3이면 필수. 최대 100,000. */
+  area3extraFee?: number;
 }
 
-/** 확인됨(GitHub #241, 필드명만) — 반품/교환 주소 참조. N-2.5에서 확인한
- * addressBookNo가 여기 shippingAddressId/returnAddressId로 들어간다는 게
- * CPO 판단이나, 이 매핑 자체(addressBookNo → shippingAddressId 대입이 실제로
- * 유효한지)는 production 등록 성공 전까지 "가정"으로 표시한다. */
+/** 확인됨(공식 OpenAPI, ExternalApiDeliveryFeeVo.product) — N-3.3에서 GitHub
+ * 요약이 아니라 commerce-api-naver/commerce-api의 실제 OpenAPI 스펙 파일로
+ * 재확인했다. 입력하지 않으면 FREE로 설정된다(스펙 원문). */
+export interface NaverDeliveryFee {
+  deliveryFeeType?: "FREE" | "CONDITIONAL_FREE" | "PAID" | "UNIT_QUANTITY_PAID" | "RANGE_QUANTITY_PAID";
+  /** 기본 배송비. 최대 100,000. */
+  baseFee?: number;
+  /** 배송비 유형이 CONDITIONAL_FREE일 때만 입력. 최대 999,999,990. */
+  freeConditionalAmount?: number;
+  /** COLLECT(착불) | PREPAID(선결제) | COLLECT_OR_PREPAID(착불 또는 선결제). */
+  deliveryFeePayType?: "COLLECT" | "PREPAID" | "COLLECT_OR_PREPAID";
+  deliveryFeeByArea?: NaverDeliveryFeeByArea;
+}
+
+/** 확인됨(공식 OpenAPI, ExternalApiClaimDeliveryInfoVo.product) — N-3.3에서
+ * 필드명뿐 아니라 각 필드의 정확한 의미/제약까지 원문 스펙으로 확인했다.
+ * shippingAddressId(출고지 주소록 번호)/returnAddressId(반품/교환지 주소록
+ * 번호)는 이름 자체가 addressBookNo(GET /v1/seller/addressbooks-for-page)를
+ * 그대로 가리킨다 — N-2.6~N-3.2까지 "가정"으로 표시했던 매핑이 이제 확인됨으로
+ * 승격된다. returnDeliveryCompanyPriorityType은 판매자가 실제 등록해 둔 반품
+ * 택배사 중 우선순위를 고르는 값이다(GET /v2/product-delivery-info/
+ * return-delivery-companies로 실제 등록된 택배사 목록을 조회해야 의미가
+ * 있다 — "CJGLS" 같은 문자열 코드가 아니라 PRIMARY/SECONDARY_1..9 enum). */
 export interface NaverClaimDeliveryInfo {
-  /** N-2.5 addressBookNo(REFUND_OR_EXCHANGE) 매핑 가정 — 실제 검증 안 됨. */
+  /** 확인됨(공식 OpenAPI) — 반품/교환지 주소록 번호. addressType=REFUND_OR_EXCHANGE
+   * 의 addressBookNo. */
   returnAddressId?: number;
-  /** N-2.5 addressBookNo(RELEASE 또는 별도 배송지) 매핑 가정 — 실제 검증 안 됨. */
+  /** 확인됨(공식 OpenAPI) — 출고지 주소록 번호. addressType=RELEASE의
+   * addressBookNo. deliveryInfo에는 이 필드가 없다(N-2.6의 outboundLocationId
+   * 가정은 틀렸다 — 실제로 존재하지 않는 필드였다, N-3.3에서 제거). */
   shippingAddressId?: number;
-  /** 택배사 코드 — N-2.5에서 전용 조회 API를 못 찾음. 커뮤니티 답변에 등장하는
-   * "CJGLS"는 실사용 예시이긴 하나 CartPilot이 직접 호출해서 확인한 값이
-   * 아니라서(2차 출처) validation은 이 필드가 없어도 강제로 막지 않고
-   * "미확인 필드"로만 표시한다. */
-  returnDeliveryCompanyPriorityType?: string;
+  /** 확인됨(공식 OpenAPI) — "미입력 시 기본 반품 택배사(PRIMARY)로 설정됩니다."
+   * 판매자가 등록해 둔 반품 택배사가 최소 1곳 있어야 의미가 있다(없으면 이
+   * 값을 채워도 실제로 무엇을 가리키는지 CartPilot이 확인할 수 없다). */
+  returnDeliveryCompanyPriorityType?:
+    | "PRIMARY"
+    | "SECONDARY_1"
+    | "SECONDARY_2"
+    | "SECONDARY_3"
+    | "SECONDARY_4"
+    | "SECONDARY_5"
+    | "SECONDARY_6"
+    | "SECONDARY_7"
+    | "SECONDARY_8"
+    | "SECONDARY_9";
+  /** 확인됨(공식 OpenAPI) — 반품 배송비, 필수, 최대 1,000,000원. */
   returnDeliveryFee?: number;
+  /** 확인됨(공식 OpenAPI) — 교환 배송비, 필수, 최대 1,000,000원. */
   exchangeDeliveryFee?: number;
   freeReturnInsuranceYn?: boolean;
 }
 
-/** 확인됨(GitHub #241, 필드명만) — deliveryCompany/outboundLocationId 등 필드
- * 목록은 확인됐으나 각 enum의 정확한 값은 미확인(택배사 코드 제외 전부 미확인). */
+/** 확인됨(공식 OpenAPI, ExternalApiDeliveryInfoVo.product) — N-3.3에서
+ * outboundLocationId 필드가 실제로는 존재하지 않는다는 걸 확인했다(제거함,
+ * 출고지는 claimDeliveryInfo.shippingAddressId 하나로 통일). */
 export interface NaverDeliveryInfo {
-  deliveryType?: string;
-  deliveryAttributeType?: string;
-  /** 미확인 — enum 값을 CartPilot이 임의로 넣지 않는다. */
+  /** DELIVERY(택배/소포/등기) | DIRECT(직접배송/화물배달). */
+  deliveryType?: "DELIVERY" | "DIRECT";
+  /** NORMAL(일반배송) | TODAY(오늘출발) | OPTION_TODAY(옵션별 오늘출발) |
+   * HOPE(희망일배송) | TODAY_ARRIVAL | DAWN_ARRIVAL. */
+  deliveryAttributeType?: "NORMAL" | "TODAY" | "OPTION_TODAY" | "HOPE" | "TODAY_ARRIVAL" | "DAWN_ARRIVAL";
+  /** 확인됨(공식 OpenAPI) — "DELIVERY일 때 필수 입력"이라고만 명시돼 있고 실제
+   * 유효 코드 목록/조회 API는 스펙에 없다(N-2.5/N-3.3 모두 확인 — 반품 택배사
+   * 조회 API(return-delivery-companies)는 있지만 출고 택배사 전용 API는
+   * 없다). 값을 임의로 채우지 않는다 — BLOCKED로 유지. */
   deliveryCompany?: string;
-  /** N-2.5 addressBookNo(RELEASE) 매핑 가정 — 실제 검증 안 됨. 확인됨(GitHub
-   * #1730 릴리즈노트)은 필드명 존재 자체만 — CartPilot의 addressBookNo가
-   * 정확히 이 필드에 들어가는 게 맞는지는 실제 등록 성공 전까지 가정이다. */
-  outboundLocationId?: number;
   deliveryFee?: NaverDeliveryFee;
   claimDeliveryInfo?: NaverClaimDeliveryInfo;
 }

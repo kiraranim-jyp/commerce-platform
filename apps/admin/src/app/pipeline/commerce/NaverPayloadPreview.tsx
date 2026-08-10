@@ -24,6 +24,12 @@ import { PriceIntelligencePanel } from "./PriceIntelligencePanel";
  * 인증/배송 상태를 갱신한다 — 두 리졸버를 하나로 합치지 않는다(관심사 분리).
  */
 
+interface NaverReturnDeliveryCompany {
+  id: number;
+  name: string;
+  priorityType: string;
+}
+
 interface NaverResolveResponse {
   status: string;
   category: {
@@ -35,6 +41,15 @@ interface NaverResolveResponse {
   } | null;
   address: { releaseAddressBookNo: number | null; refundAddressBookNo: number | null };
   courier: { available: boolean; reason: string };
+  // N-3.3 — 반품 택배사/반품·교환 배송비. 출고 택배사(courier 위)는 별개로
+  // 여전히 조회 API가 없어 BLOCKED 고정이다.
+  delivery: {
+    returnCompanies: NaverReturnDeliveryCompany[];
+    returnCompaniesFetchFailed: boolean;
+    primaryReturnCompany: NaverReturnDeliveryCompany | null;
+    returnDeliveryFee: number | null;
+    exchangeDeliveryFee: number | null;
+  };
 }
 
 /** N-3.1 — leaf 이름 하나가 아니라 전체 경로(root→leaf)를 보여준다. hierarchy를
@@ -76,10 +91,12 @@ const FIELD_SECTION: Record<string, string> = {
   "originProduct.images.representativeImage": "naver-section-images",
   "originProduct.salePrice": "naver-section-pricing",
   "originProduct.stockQuantity": "naver-section-pricing",
-  "deliveryInfo.outboundLocationId": "naver-section-shipping",
+  "claimDeliveryInfo.shippingAddressId": "naver-section-shipping",
   "claimDeliveryInfo.returnAddressId": "naver-section-shipping",
-  "deliveryInfo (address mapping)": "naver-section-shipping",
   "deliveryInfo.deliveryCompany": "naver-section-shipping",
+  "claimDeliveryInfo.returnDeliveryCompanyPriorityType": "naver-section-shipping",
+  "claimDeliveryInfo.returnDeliveryFee": "naver-section-shipping",
+  "claimDeliveryInfo.exchangeDeliveryFee": "naver-section-shipping",
   productCertificationInfos: "naver-section-certification",
   "productCertificationInfos[].certificationNumber": "naver-section-certification",
   "detailAttribute.optionInfo": "naver-section-options",
@@ -89,9 +106,10 @@ const FIELD_SECTION: Record<string, string> = {
  * "전체 - 문제있는 항목"으로 역산한다(검증 로직을 이 컴포넌트에서 다시 만들지
  * 않는다). 옵션/인증서처럼 상품마다 있고 없고가 달라지는 항목만 조건부로 센다. */
 function countTotalCheckedFields(hasOptions: boolean, requiresCertification: boolean, hasCertificationId: boolean) {
-  // leafCategoryId, name, image, price, stock, outboundLocationId, returnAddressId,
-  // address-mapping, deliveryCompany, originAreaCode(N-2.8 추가)
-  const BASE = 10;
+  // leafCategoryId, name, image, price, stock, shippingAddressId, returnAddressId,
+  // deliveryCompany, returnDeliveryCompanyPriorityType, returnDeliveryFee,
+  // exchangeDeliveryFee(N-3.3), originAreaCode(N-2.8)
+  const BASE = 12;
   let total = BASE;
   if (hasOptions) total += 1;
   if (requiresCertification) total += hasCertificationId ? 2 : 1;
@@ -209,6 +227,14 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
   const refundAddressBookNo = resolved?.address.refundAddressBookNo ?? null;
   const childCertificationInfoId = resolved?.category?.childCertificationInfoId ?? null;
   const categoryRequiresChildCertification = resolved?.category?.requiresChildCertification ?? false;
+  // N-3.3 — resolve API의 delivery 섹션을 그대로 쓴다(Preview에서 재계산하지 않는다).
+  // resolved가 아직 없으면(초기 로딩) fetchFailed를 true로 간주해 BLOCKED로
+  // 보이게 한다 — "값이 없다"와 "확인 실패"를 구분하되, 조회 전에는 낙관적으로
+  // MISSING 취급하지 않는다.
+  const returnCompaniesFetchFailed = resolved?.delivery?.returnCompaniesFetchFailed ?? true;
+  const primaryReturnDeliveryCompanyPriorityType = resolved?.delivery?.primaryReturnCompany?.priorityType ?? null;
+  const returnDeliveryFee = resolved?.delivery?.returnDeliveryFee ?? null;
+  const exchangeDeliveryFee = resolved?.delivery?.exchangeDeliveryFee ?? null;
 
   const payload = useMemo(
     () =>
@@ -218,6 +244,9 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
         leafCategoryId,
         releaseAddressBookNo,
         refundAddressBookNo,
+        primaryReturnDeliveryCompanyPriorityType,
+        returnDeliveryFee,
+        exchangeDeliveryFee,
         childCertificationInfoId,
         categoryRequiresChildCertification,
       }),
@@ -227,6 +256,9 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
       leafCategoryId,
       releaseAddressBookNo,
       refundAddressBookNo,
+      primaryReturnDeliveryCompanyPriorityType,
+      returnDeliveryFee,
+      exchangeDeliveryFee,
       childCertificationInfoId,
       categoryRequiresChildCertification,
     ],
@@ -236,10 +268,30 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
     () =>
       validateNaverPayload(
         payload,
-        { product, releaseAddressBookNo, refundAddressBookNo, childCertificationInfoId },
+        {
+          product,
+          releaseAddressBookNo,
+          refundAddressBookNo,
+          primaryReturnDeliveryCompanyPriorityType,
+          returnDeliveryFee,
+          exchangeDeliveryFee,
+          returnCompaniesFetchFailed,
+          childCertificationInfoId,
+        },
         categoryRequiresChildCertification,
       ),
-    [payload, product, releaseAddressBookNo, refundAddressBookNo, childCertificationInfoId, categoryRequiresChildCertification],
+    [
+      payload,
+      product,
+      releaseAddressBookNo,
+      refundAddressBookNo,
+      primaryReturnDeliveryCompanyPriorityType,
+      returnDeliveryFee,
+      exchangeDeliveryFee,
+      returnCompaniesFetchFailed,
+      childCertificationInfoId,
+      categoryRequiresChildCertification,
+    ],
   );
 
   const hasOptions = product.optionGroups.length > 0;
@@ -496,23 +548,52 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
       <Section id="naver-section-shipping" title="배송 / 반품">
         <Row
           label="출고지"
-          value={releaseAddressBookNo !== null ? `addressBookNo: ${releaseAddressBookNo}` : "MISSING"}
+          value={
+            releaseAddressBookNo !== null
+              ? `✓ 판매자 등록 출고지 사용 (addressBookNo: ${releaseAddressBookNo})`
+              : "MISSING — 판매자 주소록(Wing)에 출고지 등록 필요"
+          }
         />
         <Row
           label="반품/교환지"
-          value={refundAddressBookNo !== null ? `addressBookNo: ${refundAddressBookNo}` : "MISSING"}
+          value={
+            refundAddressBookNo !== null
+              ? `✓ 판매자 등록 반품지 사용 (addressBookNo: ${refundAddressBookNo})`
+              : "MISSING — 판매자 주소록(Wing)에 반품지 등록 필요"
+          }
         />
-        <Row label="택배사" value={`BLOCKED — ${resolved?.courier.reason ?? "택배사 코드 조회 API 미확인(N-2.5)"}`} />
+        <Row
+          label="출고 택배사"
+          value={`BLOCKED — ${resolved?.courier.reason ?? "택배사 코드 조회 API 미확인(N-2.5)"}`}
+        />
+        <Row
+          label="반품 택배사"
+          value={
+            returnCompaniesFetchFailed
+              ? "BLOCKED — 반품 택배사 목록 조회에 실패했습니다(네이버 API 오류)."
+              : resolved?.delivery?.primaryReturnCompany
+                ? `✓ ${resolved.delivery.primaryReturnCompany.name} (${resolved.delivery.primaryReturnCompany.priorityType})`
+                : "MISSING — Wing에서 반품 택배사 등록 필요"
+          }
+        />
         <Row
           label="배송비"
           value={`${payload.originProduct.deliveryInfo?.deliveryFee?.deliveryFeeType === "FREE" ? "무료배송" : "미확정"} (기본값 — 실제 배송비 정책 미연동)`}
         />
-        <Row label="반품배송비" value="BLOCKED/MISSING — 미확정" />
-        <Row label="교환배송비" value="BLOCKED/MISSING — 미확정" />
+        <Row
+          label="반품배송비"
+          value={returnDeliveryFee !== null ? formatKrw(returnDeliveryFee) : "MISSING — Settings에서 배송 정책 입력 필요"}
+        />
+        <Row
+          label="교환배송비"
+          value={exchangeDeliveryFee !== null ? formatKrw(exchangeDeliveryFee) : "MISSING — Settings에서 배송 정책 입력 필요"}
+        />
         <p className="text-[11px] text-text-tertiary">
-          출고지/반품지는 판매자 주소록(GET /v1/seller/addressbooks-for-page)에서 실시간 조회됩니다. 다만
-          addressBookNo → outboundLocationId/shippingAddressId/returnAddressId 매핑 자체는 실제 등록 성공으로
-          검증된 적이 없습니다(N-2.6).
+          출고지/반품지는 판매자 주소록(GET /v1/seller/addressbooks-for-page)에서, 반품 택배사는 GET
+          /v2/product-delivery-info/return-delivery-companies에서 실시간 조회됩니다. addressBookNo →
+          shippingAddressId/returnAddressId 매핑은 공식 OpenAPI 스펙(필드명 &ldquo;출고지 주소록 번호&rdquo;/
+          &ldquo;반품/교환지 주소록 번호&rdquo;)으로 확인됐습니다(N-3.3). 출고 택배사(deliveryInfo.deliveryCompany)
+          조회 API만 스펙에 없어 여전히 BLOCKED입니다.
         </p>
       </Section>
 

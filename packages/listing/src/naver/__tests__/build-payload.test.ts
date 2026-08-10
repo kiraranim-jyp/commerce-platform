@@ -82,6 +82,10 @@ const CHILD_CERTIFICATION_CATALOG_ID = 1041;
 // 판매자별 실제 주소록 ID — 테스트용 placeholder(실제 값 아님).
 const PLACEHOLDER_RELEASE_ADDRESS = 900000001;
 const PLACEHOLDER_REFUND_ADDRESS = 900000002;
+// N-3.3 — 반품 택배사 우선순위 타입/반품·교환 배송비도 테스트용 placeholder.
+const PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE = "PRIMARY";
+const PLACEHOLDER_RETURN_DELIVERY_FEE = 3000;
+const PLACEHOLDER_EXCHANGE_DELIVERY_FEE = 5000;
 
 describe("buildNaverProductPayload", () => {
   it("최상위 구조가 originProduct/smartstoreChannelProduct 두 객체를 갖는다", () => {
@@ -93,6 +97,9 @@ describe("buildNaverProductPayload", () => {
       leafCategoryId: LEAF_CATEGORY_ID,
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
       categoryRequiresChildCertification: true,
     });
@@ -109,6 +116,9 @@ describe("buildNaverProductPayload", () => {
       leafCategoryId: LEAF_CATEGORY_ID,
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
       categoryRequiresChildCertification: true,
     });
@@ -126,10 +136,39 @@ describe("buildNaverProductPayload", () => {
       leafCategoryId: LEAF_CATEGORY_ID,
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
       categoryRequiresChildCertification: true,
     });
     expect(payload.originProduct.deliveryInfo?.deliveryCompany).toBeUndefined();
+  });
+
+  it("N-3.3: claimDeliveryInfo에 반품 택배사 우선순위/반품·교환 배송비를 채운다", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      product,
+      listing,
+      leafCategoryId: LEAF_CATEGORY_ID,
+      releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+      refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+      childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
+      categoryRequiresChildCertification: true,
+    });
+    expect(payload.originProduct.deliveryInfo?.claimDeliveryInfo).toMatchObject({
+      shippingAddressId: PLACEHOLDER_RELEASE_ADDRESS,
+      returnAddressId: PLACEHOLDER_REFUND_ADDRESS,
+      returnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+    });
+    // N-3.3 — outboundLocationId는 존재하지 않는 필드였음이 확인되어 제거됨.
+    expect(payload.originProduct.deliveryInfo).not.toHaveProperty("outboundLocationId");
   });
 
   it("고시 정보는 인증서 보유 여부와 무관하게 항상 채워진다(N-2.7 수정)", () => {
@@ -141,6 +180,9 @@ describe("buildNaverProductPayload", () => {
       leafCategoryId: LEAF_CATEGORY_ID,
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
       categoryRequiresChildCertification: true,
     });
@@ -155,6 +197,9 @@ describe("buildNaverProductPayload", () => {
       leafCategoryId: LEAF_CATEGORY_ID,
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
       categoryRequiresChildCertification: false,
     });
@@ -172,6 +217,9 @@ describe("buildNaverProductPayload", () => {
       leafCategoryId: LEAF_CATEGORY_ID,
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
       categoryRequiresChildCertification: false,
     });
@@ -193,6 +241,9 @@ describe("buildNaverProductPayload", () => {
       leafCategoryId: LEAF_CATEGORY_ID,
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
       categoryRequiresChildCertification: false,
     });
@@ -214,6 +265,9 @@ describe("validateNaverPayload", () => {
       leafCategoryId: LEAF_CATEGORY_ID,
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
       categoryRequiresChildCertification: true,
     });
@@ -223,6 +277,10 @@ describe("validateNaverPayload", () => {
         product,
         releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
         refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+        primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+        returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+        exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+        returnCompaniesFetchFailed: false,
         childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
       },
       true,
@@ -230,9 +288,10 @@ describe("validateNaverPayload", () => {
     expect(result.ok).toBe(false);
     const blocked = result.issues.filter((i) => i.severity === "BLOCKED");
     expect(blocked.some((i) => i.field === "productCertificationInfos[].certificationNumber")).toBe(true);
-    // 주소 매핑/택배사 코드 미확인도 항상 BLOCKED로 남는다.
-    expect(blocked.some((i) => i.field === "deliveryInfo (address mapping)")).toBe(true);
+    // 출고 택배사(deliveryCompany) 코드는 조회 API 자체가 없어 여전히 BLOCKED.
     expect(blocked.some((i) => i.field === "deliveryInfo.deliveryCompany")).toBe(true);
+    // N-3.3 — 주소 매핑은 공식 스펙으로 확인됐으므로 더 이상 BLOCKED가 아니다.
+    expect(blocked.some((i) => i.field === "deliveryInfo (address mapping)")).toBe(false);
   });
 
   it("출고지/반품지 주소가 없으면 MISSING으로 표시한다", () => {
@@ -244,21 +303,142 @@ describe("validateNaverPayload", () => {
       leafCategoryId: LEAF_CATEGORY_ID,
       releaseAddressBookNo: null,
       refundAddressBookNo: null,
+      primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
       categoryRequiresChildCertification: false,
     });
     const result = validateNaverPayload(
       payload,
-      { product, releaseAddressBookNo: null, refundAddressBookNo: null, childCertificationInfoId: null },
+      {
+        product,
+        releaseAddressBookNo: null,
+        refundAddressBookNo: null,
+        primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+        returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+        exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+        returnCompaniesFetchFailed: false,
+        childCertificationInfoId: null,
+      },
       false,
     );
     expect(result.ok).toBe(false);
-    expect(result.issues.some((i) => i.field === "deliveryInfo.outboundLocationId" && i.severity === "MISSING")).toBe(
-      true,
-    );
+    expect(
+      result.issues.some((i) => i.field === "claimDeliveryInfo.shippingAddressId" && i.severity === "MISSING"),
+    ).toBe(true);
     expect(result.issues.some((i) => i.field === "claimDeliveryInfo.returnAddressId" && i.severity === "MISSING")).toBe(
       true,
     );
+  });
+
+  it("N-3.3: 반품 택배사 목록 조회가 실패하면 BLOCKED", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      product,
+      listing,
+      leafCategoryId: LEAF_CATEGORY_ID,
+      releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+      refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: null,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    const result = validateNaverPayload(
+      payload,
+      {
+        product,
+        releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+        refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+        primaryReturnDeliveryCompanyPriorityType: null,
+        returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+        exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+        returnCompaniesFetchFailed: true,
+        childCertificationInfoId: null,
+      },
+      false,
+    );
+    expect(
+      result.issues.some(
+        (i) => i.field === "claimDeliveryInfo.returnDeliveryCompanyPriorityType" && i.severity === "BLOCKED",
+      ),
+    ).toBe(true);
+  });
+
+  it("N-3.3: 판매자가 반품 택배사를 하나도 등록하지 않았으면(조회는 성공) MISSING", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      product,
+      listing,
+      leafCategoryId: LEAF_CATEGORY_ID,
+      releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+      refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: null,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    const result = validateNaverPayload(
+      payload,
+      {
+        product,
+        releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+        refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+        primaryReturnDeliveryCompanyPriorityType: null,
+        returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+        exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+        returnCompaniesFetchFailed: false,
+        childCertificationInfoId: null,
+      },
+      false,
+    );
+    expect(
+      result.issues.some(
+        (i) => i.field === "claimDeliveryInfo.returnDeliveryCompanyPriorityType" && i.severity === "MISSING",
+      ),
+    ).toBe(true);
+  });
+
+  it("N-3.3: 반품/교환 배송비 정책이 없으면 각각 MISSING", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      product,
+      listing,
+      leafCategoryId: LEAF_CATEGORY_ID,
+      releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+      refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: null,
+      exchangeDeliveryFee: null,
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    const result = validateNaverPayload(
+      payload,
+      {
+        product,
+        releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+        refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+        primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+        returnDeliveryFee: null,
+        exchangeDeliveryFee: null,
+        returnCompaniesFetchFailed: false,
+        childCertificationInfoId: null,
+      },
+      false,
+    );
+    expect(
+      result.issues.some((i) => i.field === "claimDeliveryInfo.returnDeliveryFee" && i.severity === "MISSING"),
+    ).toBe(true);
+    expect(
+      result.issues.some((i) => i.field === "claimDeliveryInfo.exchangeDeliveryFee" && i.severity === "MISSING"),
+    ).toBe(true);
   });
 
   it("옵션이 있는 상품은 옵션 스키마 미확인으로 BLOCKED", () => {
@@ -271,6 +451,9 @@ describe("validateNaverPayload", () => {
       leafCategoryId: LEAF_CATEGORY_ID,
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
       categoryRequiresChildCertification: true,
     });
@@ -280,6 +463,10 @@ describe("validateNaverPayload", () => {
         product,
         releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
         refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+        primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+        returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+        exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+        returnCompaniesFetchFailed: false,
         childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
       },
       true,
@@ -296,6 +483,9 @@ describe("validateNaverPayload", () => {
       leafCategoryId: LEAF_CATEGORY_ID,
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
       categoryRequiresChildCertification: false,
     });
@@ -305,6 +495,10 @@ describe("validateNaverPayload", () => {
         product,
         releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
         refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+        primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+        returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+        exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+        returnCompaniesFetchFailed: false,
         childCertificationInfoId: null,
       },
       false,
