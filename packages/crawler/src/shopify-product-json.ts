@@ -136,6 +136,16 @@ async function fetchShopifyShopCurrency(origin: string): Promise<string | null> 
   }
 }
 
+/** URL에 Shopify Markets 로케일 프리픽스(/en-kr/products/... 등)가 있으면 그대로
+ * 돌려준다("/en-kr") — 없으면 "". 이 프리픽스가 붙은 상품 JSON 요청은 방문자의
+ * 실제 로케일로 고정된 가격(예: KRW 직접 표시가)을 돌려주므로, 프리픽스 없는
+ * 기본 요청과 섞어 쓰면 안 된다(아래 shopCurrency 오버라이드 분기 참고). */
+function extractShopifyLocalePrefix(url: string): string {
+  const pathname = new URL(url).pathname;
+  const idx = pathname.indexOf("/products/");
+  return idx > 0 ? pathname.slice(0, idx) : "";
+}
+
 /** Shopify 공개 REST 엔드포인트 — 인증 불필요, 모든 스토어에서 동작한다.
  * .json은 variants[].price_currency까지 포함해서 통화까지 한 번에 확정할 수 있어
  * 1순위로 쓴다(.js는 가격이 센트 단위 정수로만 있고 통화 코드가 없다). */
@@ -143,12 +153,13 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
   const handle = extractShopifyHandle(url);
   if (!handle) return null;
   const origin = new URL(url).origin;
+  const localePrefix = extractShopifyLocalePrefix(url);
 
   let response: Response;
   let shopCurrency: string | null;
   try {
     [response, shopCurrency] = await Promise.all([
-      fetchWithDomainRateLimit(`${origin}/products/${handle}.json`, {
+      fetchWithDomainRateLimit(`${origin}${localePrefix}/products/${handle}.json`, {
         headers: { Accept: "application/json", "User-Agent": CHROME_UA },
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       }),
@@ -176,10 +187,21 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
       source: "shopify" as const,
     }));
 
+  // 로케일 프리픽스가 있는 요청(/en-kr/products/...)은 방문자가 실제로 보는
+  // 로케일에 고정된 가격+통화 쌍을 돌려준다(예: 248200 KRW) — 이 경우
+  // price_currency를 그대로 믿는다. 로케일이 없는 기본 요청만 shopCurrency
+  // 오버라이드를 쓴다(요청 서버 위치에 따라 presentment currency가 흔들리는
+  // 문제를 막기 위한 기존 처리, 로케일이 명시된 요청에는 적용 대상이 아니다).
   const variant = product.variants?.[0];
   const price =
     variant?.price != null
-      ? { amount: Number(variant.price), currency: shopCurrency ?? (variant.price_currency ?? "").toUpperCase() }
+      ? {
+          amount: Number(variant.price),
+          currency:
+            localePrefix && variant.price_currency
+              ? variant.price_currency.toUpperCase()
+              : (shopCurrency ?? (variant.price_currency ?? "").toUpperCase()),
+        }
       : undefined;
 
   const optionNames = (product.options ?? []).map((o) => o.name).filter((n): n is string => Boolean(n));
@@ -199,7 +221,13 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
           sku: v.sku || undefined,
           price:
             v.price != null
-              ? { amount: Number(v.price), currency: shopCurrency ?? (v.price_currency ?? "").toUpperCase() }
+              ? {
+                  amount: Number(v.price),
+                  currency:
+                    localePrefix && v.price_currency
+                      ? v.price_currency.toUpperCase()
+                      : (shopCurrency ?? (v.price_currency ?? "").toUpperCase()),
+                }
               : undefined,
           // inventory_management가 없으면(재고 추적 꺼진 매장) 숫자를 신뢰할 수
           // 없어서 채우지 않는다 — "모른다"를 "0개"로 잘못 전달하지 않기 위함.

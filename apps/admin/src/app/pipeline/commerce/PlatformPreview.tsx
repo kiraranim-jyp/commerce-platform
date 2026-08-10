@@ -19,7 +19,6 @@ import type { WorkspaceItem } from "../types";
 import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
 import { CategoryRequirementsEditor } from "./CategoryRequirementsEditor";
 import { CollapsibleSection } from "./CollapsibleSection";
-import { ComparisonShopSearch } from "./ComparisonShopSearch";
 import { ComplianceBreakdown } from "./ComplianceBreakdown";
 import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
 import { DetailPageEditor } from "./DetailPageEditor";
@@ -472,8 +471,6 @@ export function PlatformPreview({
             onRefreshExchangeRates={onRefreshExchangeRates}
           />
         </CollapsibleSection>
-
-        <ComparisonShopSearch title={product.title.value} brand={product.brand.value} />
 
         <CollapsibleSection
           title="이미지"

@@ -30,6 +30,7 @@ import {
 import { PLATFORM_ADAPTERS, PLATFORM_ORDER, isVerifiedCategorySelected } from "@commerce/marketplace";
 import { AIContentPanel } from "./commerce/AIContentPanel";
 import { BacklogPanel } from "./commerce/BacklogPanel";
+import { ComparisonShopSearch } from "./commerce/ComparisonShopSearch";
 import { CoupangConnectionPanel } from "./commerce/CoupangConnectionPanel";
 import { ImageGalleryModal } from "./commerce/ImageGalleryModal";
 import { ImageSummaryCard } from "./commerce/ImageSummaryCard";
@@ -1063,6 +1064,7 @@ export function CommerceWorkspace({
             onUpdateOptions={updateOptions}
             exchangeRates={exchangeRates}
           />
+          <ComparisonShopSearch title={product.title.value} brand={product.brand.value} />
           <BacklogPanel />
         </>
       )}
