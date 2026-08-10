@@ -70,6 +70,7 @@ export async function POST() {
     message: "네이버 커머스 API 인증 및 호출에 성공했습니다.",
     debug: {
       httpStatus: apiResult.status,
+      expiresIn: tokenResult.expiresIn,
       fixieConfigured: Boolean(process.env.FIXIE_URL),
       fixieOutboundIp: outboundIp,
       // seller ID는 이번 Sprint에서 API 요청에 쓰지 않았다 — 참고용으로만 표시.
