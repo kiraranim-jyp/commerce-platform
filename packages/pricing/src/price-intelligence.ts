@@ -26,6 +26,14 @@ export interface PriceObservation {
   /** 이 가격을 가져올 때 실제로 사용한 URL 경로 세그먼트("" = 프리픽스 없는
    * 기본 요청, "en-kr" 등). */
   marketCode: string;
+  /** N-3.2 실측(2026-08-10) — marketCode=""(로케일 프리픽스 없는 기본 요청)는
+   * Shopify Markets의 geo 기반 presentment 때문에 요청이 나가는 서버 위치에
+   * 따라 amount가 달라질 수 있다는 걸 직접 확인했다(같은 상품을 로컬(한국
+   * IP)에서 조회하면 GBP 35, Vercel(미국 리전) 서버에서 조회하면 같은 GBP
+   * 라벨로 74가 나옴 — 통화 라벨은 고정되지만 금액은 아니다). 이런 불안정성이
+   * 있는 관측값에는 이유를 설명하는 caveat을 채운다 — "확인됐다"고 조용히
+   * 넘기지 않는다(CPO 원칙: 불확실하면 명시). */
+  caveat?: string;
   sourceUrl: string;
   sourceType: "SHOPIFY_JSON";
   capturedAt: string;

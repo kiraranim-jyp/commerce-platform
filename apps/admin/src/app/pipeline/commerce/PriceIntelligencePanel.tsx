@@ -30,13 +30,16 @@ function MarketRow({ label, observation }: { label: string; observation: PriceOb
     );
   }
   return (
-    <div className="flex items-center justify-between text-xs">
-      <span className="text-text-secondary">
-        {flagFor(observation.country)} {label}
-      </span>
-      <span className="font-medium text-text-primary">
-        {formatOriginalPrice(observation.amount, observation.currency)}
-      </span>
+    <div>
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-text-secondary">
+          {flagFor(observation.country)} {label}
+        </span>
+        <span className="font-medium text-text-primary">
+          {formatOriginalPrice(observation.amount, observation.currency)}
+        </span>
+      </div>
+      {observation.caveat && <p className="mt-0.5 text-[10px] text-warning">⚠ {observation.caveat}</p>}
     </div>
   );
 }

@@ -42,6 +42,17 @@ const UNAMBIGUOUS_CURRENCY_COUNTRY: Record<string, string> = {
   NZD: "NZ",
 };
 
+/** N-3.2 실측(2026-08-10) — 같은 상품을 로컬(한국 IP)에서 조회하면 GBP 35였는데,
+ * 이 라우트(Vercel 서버, 미국 리전)에서 조회하면 같은 GBP 라벨로 74가 나왔다
+ * (재현 확인 — 우연이 아니라 서버 위치에 매인 값). marketCode=""(로케일
+ * 프리픽스 없는 기본 요청)는 Shopify Markets의 geo 기반 presentment 때문에
+ * 이런 일이 생긴다 — 통화 라벨(shopCurrency override)은 고정되지만 금액은
+ * 아니다. 로케일이 명시된 요청(en-kr 등)은 이 문제가 없다(방문자 로케일에
+ * 고정된 가격을 그대로 준다). "확인됐다"고 조용히 넘기지 않고 UI에 그대로
+ * 노출한다. */
+const DEFAULT_MARKET_GEO_CAVEAT =
+  "이 값은 서버 요청 위치에 따라 달라질 수 있습니다(Shopify Markets geo 기반 presentment, N-3.2 실측 확인) — 통화 라벨은 고정되지만 금액은 고정되지 않습니다.";
+
 function toPriceObservation(probe: ShopifyMarketProbeResult): PriceObservation {
   const country = countryFromMarketCode(probe.marketCode) ?? UNAMBIGUOUS_CURRENCY_COUNTRY[probe.currency] ?? null;
   return {
@@ -49,6 +60,7 @@ function toPriceObservation(probe: ShopifyMarketProbeResult): PriceObservation {
     currency: probe.currency,
     country,
     marketCode: probe.marketCode,
+    caveat: probe.marketCode === "" ? DEFAULT_MARKET_GEO_CAVEAT : undefined,
     sourceUrl: probe.sourceUrl,
     sourceType: "SHOPIFY_JSON",
     capturedAt: new Date().toISOString(),
