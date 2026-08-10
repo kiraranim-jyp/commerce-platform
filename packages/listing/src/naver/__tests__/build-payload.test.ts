@@ -94,6 +94,7 @@ describe("buildNaverProductPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
+      categoryRequiresChildCertification: true,
     });
     expect(payload).toHaveProperty("originProduct");
     expect(payload).toHaveProperty("smartstoreChannelProduct");
@@ -109,6 +110,7 @@ describe("buildNaverProductPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
+      categoryRequiresChildCertification: true,
     });
     expect(payload.originProduct.images.representativeImage).toEqual({
       url: product.images[0].originalUrl,
@@ -125,8 +127,40 @@ describe("buildNaverProductPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
+      categoryRequiresChildCertification: true,
     });
     expect(payload.originProduct.deliveryInfo?.deliveryCompany).toBeUndefined();
+  });
+
+  it("고시 정보는 인증서 보유 여부와 무관하게 항상 채워진다(N-2.7 수정)", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    const payloadWithoutCert = buildNaverProductPayload({
+      product,
+      listing,
+      leafCategoryId: LEAF_CATEGORY_ID,
+      releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+      refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: true,
+    });
+    expect(payloadWithoutCert.originProduct.detailAttribute?.productInfoProvidedNotice).toBeDefined();
+    expect(
+      payloadWithoutCert.originProduct.detailAttribute?.productInfoProvidedNotice?.productInfoProvidedNoticeType,
+    ).toBe("KIDS");
+
+    const payloadNonKids = buildNaverProductPayload({
+      product,
+      listing,
+      leafCategoryId: LEAF_CATEGORY_ID,
+      releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+      refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(
+      payloadNonKids.originProduct.detailAttribute?.productInfoProvidedNotice?.productInfoProvidedNoticeType,
+    ).toBe("WEAR");
   });
 });
 
@@ -141,6 +175,7 @@ describe("validateNaverPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
+      categoryRequiresChildCertification: true,
     });
     const result = validateNaverPayload(
       payload,
@@ -170,6 +205,7 @@ describe("validateNaverPayload", () => {
       releaseAddressBookNo: null,
       refundAddressBookNo: null,
       childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
     });
     const result = validateNaverPayload(
       payload,
@@ -196,6 +232,7 @@ describe("validateNaverPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
+      categoryRequiresChildCertification: true,
     });
     const result = validateNaverPayload(
       payload,

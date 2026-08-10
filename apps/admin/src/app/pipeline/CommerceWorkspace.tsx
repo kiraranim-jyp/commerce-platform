@@ -1035,15 +1035,21 @@ export function CommerceWorkspace({
         </TabButton>
         {PLATFORM_ORDER.map((platformId) => {
           const soon = SOON_PLATFORMS.has(platformId);
+          // Sprint N-2.7(CPO 지시) — smartstore(네이버)만 Preview 전용으로 임시
+          // 활성화한다. requiresCategory 등 나머지 SOON_PLATFORMS 판정은 그대로
+          // 두고(등록 버튼 자체가 registrationEnabled=false로 막혀 있어 무관하다),
+          // 탭 클릭 가능 여부/배지만 smartstore를 예외 처리한다.
+          const previewOnly = platformId === "smartstore";
           return (
             <TabButton
               key={platformId}
               active={tab === platformId}
-              disabled={soon}
+              disabled={soon && !previewOnly}
               onClick={() => setTab(platformId)}
             >
               {PLATFORM_ADAPTERS[platformId].label}
-              {soon && <SoonBadge />}
+              {previewOnly && <PreviewBadge />}
+              {soon && !previewOnly && <SoonBadge />}
             </TabButton>
           );
         })}
@@ -1213,6 +1219,16 @@ function SoonBadge() {
   return (
     <span className="rounded-full bg-background px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-text-tertiary">
       SOON
+    </span>
+  );
+}
+
+/** Sprint N-2.7 — smartstore 탭은 클릭 가능하지만 실제 등록은 아직 안 된다는
+ * 걸 SOON과는 다른 문구로 구분한다("준비중"이 아니라 "미리보기 가능"). */
+function PreviewBadge() {
+  return (
+    <span className="rounded-full bg-warning-soft px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-warning">
+      PREVIEW
     </span>
   );
 }

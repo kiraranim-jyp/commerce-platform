@@ -17,6 +17,14 @@ export interface MarketplaceCapabilities {
   hasSellerProfileSummary: boolean;
   /** 실제 등록 API에 보낼 payload 그대로 보여주는 Inspector 노출 여부. */
   hasPayloadInspector: boolean;
+  /** Sprint N-2.7 — Naver v2 payload 미리보기(Section/ValidationSummary/Raw
+   * Payload)를 보여줄지. 지금은 smartstore(=네이버)만 대상이다. */
+  hasNaverPreview: boolean;
+  /** Sprint N-2.7 — 실제 등록 버튼을 누를 수 있는지. false면 RegistrationReadinessCard가
+   * 항상 비활성 상태로 "Preview 전용" 문구를 보여준다. smartstore는 아직 실제 등록
+   * executor가 NOT_IMPLEMENTED라(안전하긴 하지만) 이번 Sprint는 "Preview + Validation"이
+   * 목적이라 버튼 자체를 막는다(CPO 지시). */
+  registrationEnabled: boolean;
 }
 
 export interface MarketplaceDescriptor {
@@ -33,6 +41,8 @@ export const MARKETPLACE_DESCRIPTORS: Record<PlatformId, MarketplaceDescriptor> 
       hasDetailPageEditor: true,
       hasSellerProfileSummary: true,
       hasPayloadInspector: true,
+      hasNaverPreview: false,
+      registrationEnabled: true,
     },
   },
   smartstore: {
@@ -42,6 +52,8 @@ export const MARKETPLACE_DESCRIPTORS: Record<PlatformId, MarketplaceDescriptor> 
       hasDetailPageEditor: false,
       hasSellerProfileSummary: false,
       hasPayloadInspector: false,
+      hasNaverPreview: true,
+      registrationEnabled: false,
     },
   },
   elevenst: {
@@ -51,6 +63,8 @@ export const MARKETPLACE_DESCRIPTORS: Record<PlatformId, MarketplaceDescriptor> 
       hasDetailPageEditor: false,
       hasSellerProfileSummary: false,
       hasPayloadInspector: false,
+      hasNaverPreview: false,
+      registrationEnabled: false,
     },
   },
 };

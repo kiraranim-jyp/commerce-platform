@@ -36,6 +36,7 @@ export function RegistrationReadinessCard({
   onItemClick,
   settingsMissing,
   autoFillStats,
+  registrationEnabled = true,
 }: {
   percent: number;
   required: ReadinessItem[];
@@ -47,6 +48,10 @@ export function RegistrationReadinessCard({
   /** Sprint A-3(Auto Scroll) — 항목에 sectionId가 있을 때만 클릭 가능하게 렌더한다. */
   onItemClick?: (sectionId: string) => void;
   settingsMissing?: string[];
+  /** Sprint N-2.7 — false면(smartstore) 등록 버튼을 항상 비활성화하고 "Preview 전용"
+   * 문구로 대체한다. capabilities.registrationEnabled를 그대로 받는다(판정 로직을
+   * 여기서 다시 만들지 않는다). 안 주면(기존 호출부 하위 호환) true로 취급한다. */
+  registrationEnabled?: boolean;
   /** Sprint A-6(작업3 — Auto Fill KPI) — CPO 요구사항: "대표님이 가장 궁금한
    * 숫자." Compliance Report의 autoResolvedCount/userRequiredCount를 그대로
    * 옮겨온 값이라 이 카드가 다시 계산하지 않는다(판정 로직 중복 방지 원칙). */
@@ -54,7 +59,7 @@ export function RegistrationReadinessCard({
 }) {
   const scoreClassName = percent >= 90 ? "text-success" : percent >= 60 ? "text-warning" : "text-error";
   const barClassName = percent >= 90 ? "bg-success" : percent >= 60 ? "bg-warning" : "bg-error";
-  const canRegister = allRequiredPassed && status === "READY";
+  const canRegister = registrationEnabled && allRequiredPassed && status === "READY";
   const isTerminal = status === "SUBMITTED" || status === "FAILED";
   // A-12.3-P0(CPO 지시: "선택 → 미입력 → 감점 없음") — recommended는 required:false라
   // percent 계산(readiness.ts summarize)에서는 이미 빠져 있었지만, 이 카운터는
@@ -192,7 +197,11 @@ export function RegistrationReadinessCard({
               : "bg-primary text-white hover:bg-primary-hover disabled:opacity-40"
         }`}
       >
-        {status === "READY" ? `${platformLabel}에 등록` : BUTTON_LABEL[status]}
+        {!registrationEnabled
+          ? "미리보기 전용 — 등록 기능은 준비 중입니다"
+          : status === "READY"
+            ? `${platformLabel}에 등록`
+            : BUTTON_LABEL[status]}
       </button>
     </aside>
   );

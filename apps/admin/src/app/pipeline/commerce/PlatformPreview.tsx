@@ -25,6 +25,7 @@ import { DetailPageEditor } from "./DetailPageEditor";
 import { EditableText, EditableTextarea } from "./EditableField";
 import { ImageSummaryCard } from "./ImageSummaryCard";
 import { ListingSection } from "./ListingSection";
+import { NaverPayloadPreview } from "./NaverPayloadPreview";
 import { OptionVariantEditor } from "./OptionVariantEditor";
 import { PriceEditor } from "./PriceEditor";
 import { computeChecklistReadiness, computeReadinessScoreSummary } from "./readiness";
@@ -310,6 +311,8 @@ export function PlatformPreview({
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="space-y-3">
+        {capabilities.hasNaverPreview && <NaverPayloadPreview product={product} listing={listing} />}
+
         <CollapsibleSection title="기본정보" badge={sectionCompletionBadge("section-basic")} {...sectionProps("section-basic")}>
           <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 xl:grid-cols-3">
             <FieldRow label="상품명" field={product.title} required>
@@ -640,6 +643,7 @@ export function PlatformPreview({
         allRequiredPassed={readinessSummary.allRequiredPassed}
         platformLabel={listing.platformLabel}
         status={listingStatus}
+        registrationEnabled={capabilities.registrationEnabled}
         onRegister={onOpenListingModal}
         onItemClick={goToSection}
         settingsMissing={settingsMissing}
