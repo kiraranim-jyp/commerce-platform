@@ -36,10 +36,12 @@ export function ComparisonShopSearch({
   title,
   brand,
   sourceUrl,
+  sku,
 }: {
   title: string;
   brand?: string;
   sourceUrl?: string;
+  sku?: string;
 }) {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchResult[] | null>(null);
@@ -52,7 +54,7 @@ export function ComparisonShopSearch({
       const res = await fetch("/api/comparison/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, brand, sourceUrl }),
+        body: JSON.stringify({ title, brand, sourceUrl, sku }),
       });
       const data = (await res.json()) as { ok: boolean; results?: SearchResult[]; error?: string };
       if (!data.ok) {
