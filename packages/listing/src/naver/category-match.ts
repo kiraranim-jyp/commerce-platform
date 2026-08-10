@@ -1,5 +1,5 @@
 import { getProductTypeExpectKeywords, resolveProductSignals, scoreCategoryCandidate } from "@commerce/category";
-import type { CanonicalProduct } from "@commerce/shared";
+import type { CanonicalProduct, CommerceCategoryPathResult } from "@commerce/shared";
 
 /**
  * Sprint N-2.9 — Naver leaf category 자동 매칭.
@@ -32,6 +32,11 @@ export interface NaverCategoryCandidate {
   score: number;
   reason: string;
   confidence: NaverCategoryConfidence;
+  /** N-3.1 — 각 노드의 실제 id를 포함한 전체 계층. category-search 라우트가
+   * buildNaverCategoryPath로 채워 넣는다(이 파일은 leaf 목록만 다루므로
+   * 순수하게 유지 — 계층 복원에 필요한 전체 카테고리 목록은 여기서 갖고
+   * 있지 않다). */
+  hierarchy?: CommerceCategoryPathResult;
 }
 
 /** N-2.9 완료조건 — "정확한 threshold는 구현 전에 실제 데이터로 결정한다."

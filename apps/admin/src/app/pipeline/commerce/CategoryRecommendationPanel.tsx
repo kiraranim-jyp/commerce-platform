@@ -327,7 +327,17 @@ function CandidateCard({
     <li className={`rounded-md border p-3 ${isSelected ? "border-selected-border bg-selected-soft" : "border-border"}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-medium text-text-primary">{candidate.path.join(" > ")}</p>
+          {/* N-3.1 — leaf 이름 하나가 아니라 전체 경로. hierarchy(실제 id 포함)가
+              있으면 그걸 우선 쓰고, 없으면 path(이름만)로 대체한다 — 둘 다
+              CPO 지시대로 leaf 이름 하나만 보여주지 않는다. */}
+          <p className="font-medium text-text-primary">
+            {(candidate.hierarchy?.resolved ? candidate.hierarchy.nodes.map((n) => n.name) : candidate.path).join(
+              " > ",
+            )}
+          </p>
+          {!candidate.hierarchy?.resolved && candidate.path.length <= 1 && (
+            <p className="text-[10px] text-text-tertiary">(상위 경로 조회 불가 — leaf만 확인됨)</p>
+          )}
           <p className="mt-0.5 text-xs tracking-wide text-warning" aria-label={`신뢰도 등급 ${starsFor(candidate, verified)}`}>
             {starsFor(candidate, verified)}
           </p>

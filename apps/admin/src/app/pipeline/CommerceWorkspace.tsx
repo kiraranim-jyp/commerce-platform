@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CanonicalProduct, FieldSource, PlatformId } from "@commerce/shared";
+import type { CanonicalProduct, CommerceCategoryPathResult, FieldSource, PlatformId } from "@commerce/shared";
 import {
   buildResolverBiasedQuery,
   resolveProductSignals,
@@ -743,6 +743,10 @@ export function CommerceWorkspace({
         candidates?: {
           categoryCode: number;
           categoryName: string;
+          /** N-3.1 — root부터 leaf까지 전체 이름 경로. */
+          path?: string[];
+          /** N-3.1 — 각 노드의 실제 id를 포함한 계층(조회 가능했을 때만). */
+          hierarchy?: CommerceCategoryPathResult;
           query: string;
           score: number;
           reason: string;
@@ -801,7 +805,11 @@ export function CommerceWorkspace({
           data.candidates.map((c) => ({
             id: String(c.categoryCode),
             name: c.categoryName,
-            path: [c.categoryName],
+            // N-3.1 — leaf 이름 하나가 아니라 트리에서 나온 전체 경로. 혹시
+            // 경로 복원이 안 됐으면(트리 조회 실패 등) leaf 이름만이라도
+            // 보여준다(빈 배열보다 낫다) — 추측으로 중간 단계를 채우지 않는다.
+            path: c.path && c.path.length > 0 ? c.path : [c.categoryName],
+            hierarchy: c.hierarchy,
             platform: "coupang",
             confidence: c.score / 100,
             reason: [

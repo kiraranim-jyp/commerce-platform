@@ -1,9 +1,11 @@
 import type { ProductSignals } from "@commerce/category";
+import type { CommerceCategoryPathResult } from "@commerce/shared";
 import { getProductTypeExpectKeywords, scoreCategoryCandidate } from "@commerce/category";
 import type { CoupangCredentials } from "./env";
 import { callCoupangApi } from "./client";
 import { fetchCategoryMeta } from "./category-meta";
 import { fetchCategoryTree, type CategoryTreeNode } from "./category-tree";
+import { buildCoupangCategoryPath } from "./category-hierarchy";
 
 /**
  * Sprint A-5(Category Resolver 3.0) — CPO 지시: "Predict → Resolver 검증 →
@@ -80,6 +82,16 @@ export interface ScoredCategoryCandidate {
   score: number;
   reason: string;
   conflict: boolean;
+  /** N-3.1 — root부터 leaf까지 전체 카테고리 이름 경로(indexCategoryTree의
+   * pathIndex/트리 탐색 path를 그대로 보존). 이전엔 이 필드가 없어서
+   * CommerceWorkspace.tsx가 UI에 `path: [categoryName]`(leaf 이름 하나)로
+   * 채웠다 — CPO 지시: "leaf ID만 보여주지 말고 전체 경로를 보여줘야 한다"에
+   * 따라 실제 트리에서 나온 전체 경로를 그대로 전달한다. */
+  path: string[];
+  /** N-3.1 — path(이름만)와 별개로, 각 노드의 실제 displayItemCategoryCode를
+   * 포함한 계층. buildCoupangCategoryPath로 트리에서 직접 DFS 복원한다 —
+   * 트리 조회가 실패했으면 undefined(추측하지 않는다). */
+  hierarchy?: CommerceCategoryPathResult;
   /** A-12.3-P0-2(CPO 지시: "categoryCode → GetDisplayCategory → 실제 존재 여부
    * 검증까지 해야 한다") — predict API는 코드를 "추측"만 해줄 뿐, 그 코드가
    * 실제로 등록 가능한(말단/리프) 카테고리인지는 보장하지 않는다. 쿠팡에 별도
@@ -200,7 +212,7 @@ export async function resolveCategoryV3(
     // 결과가 같다 — 중복 계산만 피한다).
     if (seen.has(code)) return;
     const { score, reason, conflict } = scoreCategoryCandidate(name, path, signals);
-    seen.set(code, { categoryCode: code, categoryName: name, query, score, reason, conflict, metaVerified: false });
+    seen.set(code, { categoryCode: code, categoryName: name, path, query, score, reason, conflict, metaVerified: false });
   };
 
   for (const result of predictResults) {
@@ -226,7 +238,11 @@ export async function resolveCategoryV3(
   const verified = await Promise.all(
     ranked.map(async (c) => {
       const meta = await fetchCategoryMeta(credentials, c.categoryCode);
-      return { ...c, metaVerified: meta != null };
+      // N-3.1 — 트리를 이미 갖고 있으면(위에서 fetchCategoryTree 성공) 각
+      // 후보의 실제 id 계층을 DFS로 복원한다. 트리가 없으면 hierarchy를
+      // 아예 넣지 않는다(이름만으로 지어내지 않는다).
+      const hierarchy = tree ? buildCoupangCategoryPath(c.categoryCode, tree) : undefined;
+      return { ...c, metaVerified: meta != null, hierarchy };
     }),
   );
 

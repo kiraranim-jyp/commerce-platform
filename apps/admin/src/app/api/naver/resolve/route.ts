@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { buildNaverCategoryPath } from "@commerce/listing";
 import { getNaverCredentials } from "../_lib/env";
 import { callNaverApi, issueNaverAccessToken } from "../_lib/client";
+import { fetchNaverAllCategories } from "../_lib/category";
 
 /**
  * Sprint N-2.8 — NaverPayloadPreview에 필요한 실제 read-only 데이터를 한 번에
@@ -54,6 +56,7 @@ export async function GET(request: Request) {
     exceptionalCategories: string[];
     requiresChildCertification: boolean;
     childCertificationInfoId: number | null;
+    hierarchy: ReturnType<typeof buildNaverCategoryPath> | null;
   } | null = null;
 
   if (categoryId) {
@@ -63,11 +66,15 @@ export async function GET(request: Request) {
       const exceptionalCategories = detail.exceptionalCategories ?? [];
       const requiresChildCertification = exceptionalCategories.includes("CHILD_CERTIFICATION");
       const childCert = (detail.certificationInfos ?? []).find((c) => c.kindTypes?.includes("CHILD_CERTIFICATION"));
+      // N-3.1 — 후보 클릭이 아니라 categoryId를 직접 입력했을 때도 hierarchy를
+      // 보여준다(사용자가 어떤 카테고리에 등록하려는지 항상 알 수 있어야 한다).
+      const allCategories = await fetchNaverAllCategories(accessToken);
       category = {
         categoryId,
         exceptionalCategories,
         requiresChildCertification,
         childCertificationInfoId: childCert?.id ?? null,
+        hierarchy: allCategories ? buildNaverCategoryPath(categoryId, allCategories) : null,
       };
     }
   }

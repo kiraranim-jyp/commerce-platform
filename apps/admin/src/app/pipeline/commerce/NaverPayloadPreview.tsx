@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { buildNaverProductPayload, validateNaverPayload } from "@commerce/listing";
 import type { ListingModel } from "@commerce/marketplace";
 import type { NaverCategoryCandidate } from "@commerce/listing";
-import type { CanonicalProduct } from "@commerce/shared";
+import type { CanonicalProduct, CommerceCategoryPathResult } from "@commerce/shared";
 import { formatKrw } from "@commerce/pricing";
 
 /**
@@ -30,9 +30,43 @@ interface NaverResolveResponse {
     exceptionalCategories: string[];
     requiresChildCertification: boolean;
     childCertificationInfoId: number | null;
+    hierarchy: CommerceCategoryPathResult | null;
   } | null;
   address: { releaseAddressBookNo: number | null; refundAddressBookNo: number | null };
   courier: { available: boolean; reason: string };
+}
+
+/** N-3.1 — leaf 이름 하나가 아니라 전체 경로(root→leaf)를 보여준다. hierarchy를
+ * 아직 못 구했으면(로딩 중이거나 API가 조상 id를 못 준 경우) leaf 이름만이라도
+ * 보여주되 "상위 경로 조회 중/불가"를 명확히 표시한다 — 추측으로 채우지 않는다. */
+function CategoryHierarchyLine({
+  hierarchy,
+  fallbackPath,
+}: {
+  hierarchy: CommerceCategoryPathResult | null | undefined;
+  fallbackPath?: string[];
+}) {
+  if (hierarchy?.resolved) {
+    return (
+      <span className="text-text-primary">
+        {hierarchy.nodes.map((n, i) => (
+          <span key={n.id}>
+            {i > 0 && <span className="text-text-tertiary"> {">"} </span>}
+            <span className={i === hierarchy.nodes.length - 1 ? "font-medium" : "text-text-secondary"}>{n.name}</span>
+          </span>
+        ))}
+      </span>
+    );
+  }
+  if (fallbackPath && fallbackPath.length > 0) {
+    return (
+      <span className="text-text-primary">
+        {fallbackPath.join(" > ")}
+        <span className="ml-1 text-[10px] text-text-tertiary">(상위 경로 id 조회 불가)</span>
+      </span>
+    );
+  }
+  return <span className="text-text-tertiary">상위 경로 조회 중...</span>;
 }
 
 const FIELD_SECTION: Record<string, string> = {
@@ -306,7 +340,9 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium text-text-primary">{c.categoryPath.join(" > ")}</span>
+                        <span className="text-xs">
+                          <CategoryHierarchyLine hierarchy={c.hierarchy} fallbackPath={c.categoryPath} />
+                        </span>
                         <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${badgeClass}`}>
                           {c.confidence} {c.score}
                         </span>
@@ -338,7 +374,16 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
         </div>
         {resolving && <p className="text-[11px] text-text-tertiary">네이버 카테고리 조회 중...</p>}
         {resolveError && <p className="text-[11px] text-error">{resolveError}</p>}
-        <Row label="네이버 카테고리" value={leafCategoryId || "미확정 — 위 추천에서 선택하거나 직접 입력하세요"} />
+        {leafCategoryId ? (
+          <div className="flex items-start gap-2 text-xs">
+            <dt className="w-20 shrink-0 text-text-secondary">선택된 카테고리</dt>
+            <dd>
+              <CategoryHierarchyLine hierarchy={resolved?.category?.hierarchy} />
+            </dd>
+          </div>
+        ) : (
+          <Row label="네이버 카테고리" value="미확정 — 위 추천에서 선택하거나 직접 입력하세요" />
+        )}
         {resolved?.category && (
           <Row
             label="어린이제품 인증"

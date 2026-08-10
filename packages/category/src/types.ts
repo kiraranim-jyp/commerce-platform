@@ -1,4 +1,4 @@
-import type { PlatformId } from "@commerce/shared";
+import type { CommerceCategoryPathResult, PlatformId } from "@commerce/shared";
 
 /**
  * 이 카테고리 값이 어디서 왔는지.
@@ -37,6 +37,10 @@ export interface CategoryCandidate {
    * 보내면 안 된다"는 원칙을 타입 레벨에서 강제한다.
    */
   isVerifiedPlatformCode?: boolean;
+  /** N-3.1 — 각 노드의 실제 id를 포함한 전체 계층(플랫폼 API가 실제로 준
+   * 값만). path(이름 배열)와 별개로, UI가 root→leaf 트리를 id까지 신뢰하고
+   * 보여줄 수 있는 경우에만 채운다 — 없으면 path만으로 표시한다. */
+  hierarchy?: CommerceCategoryPathResult;
 }
 
 export interface CategorySelection {
