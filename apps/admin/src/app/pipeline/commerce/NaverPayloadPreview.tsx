@@ -6,6 +6,7 @@ import type { ListingModel } from "@commerce/marketplace";
 import type { NaverCategoryCandidate } from "@commerce/listing";
 import type { CanonicalProduct, CommerceCategoryPathResult } from "@commerce/shared";
 import { formatKrw } from "@commerce/pricing";
+import { PriceIntelligencePanel } from "./PriceIntelligencePanel";
 
 /**
  * Sprint N-2.7/N-2.8 — 네이버 v2 상품등록 payload를 실제 POST 없이 미리 보여준다.
@@ -308,6 +309,10 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
         <Row label="판매가격" value={formatKrw(payload.originProduct.salePrice)} />
         <Row label="재고" value={`${payload.originProduct.stockQuantity}개`} />
         <Row label="판매상태" value={payload.originProduct.statusType} />
+      </Section>
+
+      <Section id="naver-section-price-intelligence" title="해외 가격 정보 (참고 — 위 판매가격과 별개)">
+        <PriceIntelligencePanel product={product} />
       </Section>
 
       <Section id="naver-section-category" title="카테고리">

@@ -8,3 +8,4 @@ export type { ExtractedProductData, ProductDataSource } from "./product-data-ext
 export type { ExtractionTrace } from "./scoring";
 export type { StrategySource } from "./strategies/types";
 export * from "./comparison-search";
+export * from "./shopify-market-probe";
