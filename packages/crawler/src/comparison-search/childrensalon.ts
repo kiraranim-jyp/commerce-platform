@@ -67,6 +67,7 @@ export async function searchChildrensalon(currency: string | null, query: string
       price: amount && currency ? { amount, currency } : null,
       imageUrl: img ?? null,
       confidence: 0,
+      brand: designer ? decodeEntities(designer) : undefined,
     });
   }
 

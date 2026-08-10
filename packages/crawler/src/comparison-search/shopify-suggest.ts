@@ -15,6 +15,8 @@ interface ShopifySuggestResponse {
         url?: string;
         price?: string;
         image?: string;
+        vendor?: string;
+        body?: string;
       }>;
     };
   };
@@ -42,5 +44,15 @@ export async function searchShopifySuggest(
     price: p.price && currency ? { amount: Number(p.price), currency } : null,
     imageUrl: p.image ?? null,
     confidence: 0,
+    brand: p.vendor || undefined,
+    sku: extractArticleCode(p.body),
   }));
+}
+
+/** 상품 설명(body)에 "Article code: XXX" 형식으로 적혀 있는 경우만 뽑는다 —
+ * 없는 상품에서 억지로 만들지 않는다. */
+function extractArticleCode(body: string | undefined): string | undefined {
+  if (!body) return undefined;
+  const match = /Article code:\s*([^.<\n]+)/i.exec(body);
+  return match ? match[1].trim().slice(0, 100) : undefined;
 }

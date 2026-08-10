@@ -3,12 +3,22 @@
 import { useState } from "react";
 import { CollapsibleSection } from "./CollapsibleSection";
 
+type MatchLevel = "very_high" | "high" | "medium" | "low";
+
+const MATCH_LEVEL_LABEL: Record<MatchLevel, string> = {
+  very_high: "동일상품 가능성 매우 높음",
+  high: "동일상품 가능성 높음",
+  medium: "유사상품 · 확인 필요",
+  low: "관련상품 · 매칭 불확실",
+};
+
 interface Candidate {
   title: string;
   url: string;
   price: { amount: number; currency: string } | null;
   imageUrl: string | null;
   confidence: number;
+  matchLevel?: MatchLevel;
 }
 
 interface SearchResult {
@@ -22,7 +32,15 @@ interface SearchResult {
 
 /** Sprint B-1 Phase 1 — 해외 편집샵 가격비교. 기존 등록 흐름과 완전히 분리된 추가 조회 기능이라
  * 필수/선택 입력 Accordion(sectionProps/sectionCompletionBadge) 체계에는 엮지 않는다. */
-export function ComparisonShopSearch({ title, brand }: { title: string; brand?: string }) {
+export function ComparisonShopSearch({
+  title,
+  brand,
+  sourceUrl,
+}: {
+  title: string;
+  brand?: string;
+  sourceUrl?: string;
+}) {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +52,7 @@ export function ComparisonShopSearch({ title, brand }: { title: string; brand?: 
       const res = await fetch("/api/comparison/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, brand }),
+        body: JSON.stringify({ title, brand, sourceUrl }),
       });
       const data = (await res.json()) as { ok: boolean; results?: SearchResult[]; error?: string };
       if (!data.ok) {
@@ -96,7 +114,9 @@ export function ComparisonShopSearch({ title, brand }: { title: string; brand?: 
                           {c.price.amount.toFixed(2)} {c.price.currency}
                         </span>
                       )}
-                      <span className="text-text-tertiary">신뢰도 {Math.round(c.confidence * 100)}%</span>
+                      <span className="text-text-tertiary" title={c.matchLevel ? MATCH_LEVEL_LABEL[c.matchLevel] : undefined}>
+                        {Math.round(c.confidence * 100)}%{c.matchLevel ? ` · ${MATCH_LEVEL_LABEL[c.matchLevel]}` : ""}
+                      </span>
                     </li>
                   ))}
                 </ul>

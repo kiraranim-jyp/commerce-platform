@@ -1064,7 +1064,7 @@ export function CommerceWorkspace({
             onUpdateOptions={updateOptions}
             exchangeRates={exchangeRates}
           />
-          <ComparisonShopSearch title={product.title.value} brand={product.brand.value} />
+          <ComparisonShopSearch title={product.title.value} brand={product.brand.value} sourceUrl={product.sourceUrl} />
           <BacklogPanel />
         </>
       )}
