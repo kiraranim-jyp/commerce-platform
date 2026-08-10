@@ -140,7 +140,7 @@ async function fetchShopifyShopCurrency(origin: string): Promise<string | null> 
  * 돌려준다("/en-kr") — 없으면 "". 이 프리픽스가 붙은 상품 JSON 요청은 방문자의
  * 실제 로케일로 고정된 가격(예: KRW 직접 표시가)을 돌려주므로, 프리픽스 없는
  * 기본 요청과 섞어 쓰면 안 된다(아래 shopCurrency 오버라이드 분기 참고). */
-function extractShopifyLocalePrefix(url: string): string {
+export function extractShopifyLocalePrefix(url: string): string {
   const pathname = new URL(url).pathname;
   const idx = pathname.indexOf("/products/");
   return idx > 0 ? pathname.slice(0, idx) : "";
