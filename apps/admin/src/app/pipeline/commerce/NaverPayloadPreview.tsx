@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { buildNaverProductPayload, validateNaverPayload } from "@commerce/listing";
 import type { ListingModel } from "@commerce/marketplace";
+import type { NaverCategoryCandidate } from "@commerce/listing";
 import type { CanonicalProduct } from "@commerce/shared";
 import { formatKrw } from "@commerce/pricing";
 
@@ -12,13 +13,14 @@ import { formatKrw } from "@commerce/pricing";
  * (payload를 다시 만들지 않는다 — 화면에 보이는 값과 Raw Payload가 어긋나면
  * CP001과 같은 신뢰 문제가 재발한다).
  *
- * N-2.8 — 카테고리 자동 매칭 Resolver는 별도 Sprint(N-2.9)로 분리됐다(CPO
- * 지시 — 학습데이터 없이 만들면 Coupang 초기처럼 오분류 위험이 크다). 그래서
- * leafCategoryId는 QA가 실제 Naver 카테고리 ID를 알고 있을 때 직접 입력하는
- * "다리" 역할만 한다 — 값을 입력하면 /api/naver/resolve가 실제 카테고리
- * detail(exceptionalCategories/certificationInfos)과 판매자 주소록을
- * 실시간으로 조회해서 고시/인증/배송 상태를 채운다. 값이 없으면(대부분의
- * 실제 상품) 여전히 MISSING/BLOCKED로 정직하게 남는다.
+ * N-2.9 — 카테고리 자동 매칭. /api/naver/category-search가 상품유형(영문→한글
+ * 번역 후 Naver 리프 카테고리 4999건과 대조)/연령/성별 신호로 후보를 점수화해서
+ * 반환한다. HIGH 후보가 있으면 입력란에 자동으로 채우되(사용자가 이미 직접
+ * 입력했으면 덮어쓰지 않는다), 근거 문장은 항상 후보 목록에 그대로 보여준다
+ * (CPO 지시: "HIGH라도 사용자가 확인할 수 있게 근거를 보여주는 방향을
+ * 우선"). MEDIUM/LOW는 자동 채움 없이 후보만 보여주고 클릭해야 선택된다.
+ * 선택된 categoryId는 기존 /api/naver/resolve(N-2.8)로 그대로 이어져 고시/
+ * 인증/배송 상태를 갱신한다 — 두 리졸버를 하나로 합치지 않는다(관심사 분리).
  */
 
 interface NaverResolveResponse {
@@ -74,8 +76,64 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
   const [resolved, setResolved] = useState<NaverResolveResponse | null>(null);
   const [resolving, setResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
+  const [candidates, setCandidates] = useState<NaverCategoryCandidate[]>([]);
+  const [candidatesLoading, setCandidatesLoading] = useState(false);
+  const [candidatesFetched, setCandidatesFetched] = useState(false);
+  const [autoFilledFromCandidate, setAutoFilledFromCandidate] = useState(false);
 
-  // N-2.8 — 카테고리 ID는 수동 입력(자동 매칭은 N-2.9), 나머지는 실시간 조회.
+  // N-2.9 — 상품이 바뀌면 후보를 한 번 새로 가져온다(카테고리 ID 입력값과는
+  // 무관 — 후보 생성은 product 신호만 쓰지 입력값을 안 본다). settings/page.tsx와
+  // 같은 이유로 async IIFE로 감싼다 — setState를 effect 본문에 직접 두면
+  // react-hooks/set-state-in-effect에 걸린다.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      setCandidatesLoading(true);
+      setCandidatesFetched(false);
+      try {
+        const res = await fetch("/api/naver/category-search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(product),
+        });
+        const data = (await res.json()) as { status: string; candidates?: NaverCategoryCandidate[] };
+        if (cancelled) return;
+        setCandidates(data.status === "OK" ? (data.candidates ?? []) : []);
+      } catch {
+        if (!cancelled) setCandidates([]);
+      } finally {
+        if (!cancelled) {
+          setCandidatesLoading(false);
+          setCandidatesFetched(true);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [product]);
+
+  // HIGH 후보가 있고 사용자가 아직 아무것도 입력/선택하지 않았으면 자동으로
+  // 채운다 — 그래도 근거는 후보 목록에 항상 그대로 보여준다(자동 채움 =
+  // 근거를 숨기는 게 아니다, CPO 지시).
+  useEffect(() => {
+    void (async () => {
+      if (autoFilledFromCandidate || categoryIdInput.trim()) return;
+      const topHigh = candidates.find((c) => c.confidence === "HIGH");
+      if (topHigh) {
+        setCategoryIdInput(topHigh.categoryId);
+        setAutoFilledFromCandidate(true);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candidates]);
+
+  function selectCandidate(categoryId: string) {
+    setCategoryIdInput(categoryId);
+    setAutoFilledFromCandidate(true);
+  }
+
+  // N-2.8 — 카테고리 ID는 수동 입력 또는 위 후보 자동/수동 선택, 나머지는 실시간 조회.
   // 500ms 디바운스로 입력 중 매 키 입력마다 호출하지 않는다.
   useEffect(() => {
     let cancelled = false;
@@ -219,22 +277,68 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
       </Section>
 
       <Section id="naver-section-category" title="카테고리">
+        {candidatesLoading && <p className="text-[11px] text-text-tertiary">추천 카테고리 조회 중...</p>}
+        {!candidatesLoading && candidatesFetched && candidates.length === 0 && (
+          <p className="text-[11px] text-text-tertiary">
+            자동 매칭 후보 없음 — 상품유형을 특정하지 못했거나 대조 기준이 아직 없는 유형입니다. 아래에 직접
+            입력하세요.
+          </p>
+        )}
+        {candidates.length > 0 && (
+          <div className="space-y-1">
+            <p className="text-xs text-text-secondary">추천 카테고리</p>
+            <ul className="space-y-1">
+              {candidates.map((c) => {
+                const badgeClass =
+                  c.confidence === "HIGH"
+                    ? "bg-success-soft text-success"
+                    : c.confidence === "MEDIUM"
+                      ? "bg-warning-soft text-warning"
+                      : "bg-error-soft text-error";
+                const isSelected = categoryIdInput.trim() === c.categoryId;
+                return (
+                  <li key={c.categoryId}>
+                    <button
+                      type="button"
+                      onClick={() => selectCandidate(c.categoryId)}
+                      className={`w-full rounded border px-2 py-1.5 text-left text-xs transition-colors ${
+                        isSelected ? "border-primary bg-primary/5" : "border-border hover:bg-background"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-text-primary">{c.categoryPath.join(" > ")}</span>
+                        <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${badgeClass}`}>
+                          {c.confidence} {c.score}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-[11px] text-text-tertiary">{c.reason}</p>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
         <div>
           <label className="text-xs text-text-secondary" htmlFor="naver-category-id-input">
-            네이버 카테고리 ID(수동 입력 — 자동 매칭은 N-2.9에서 별도 구현)
+            네이버 카테고리 ID(위 추천에서 선택하거나 직접 입력)
           </label>
           <input
             id="naver-category-id-input"
             type="text"
             value={categoryIdInput}
-            onChange={(e) => setCategoryIdInput(e.target.value)}
+            onChange={(e) => {
+              setCategoryIdInput(e.target.value);
+              setAutoFilledFromCandidate(true);
+            }}
             placeholder="예: 50000535"
             className="mt-0.5 w-full rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
           />
         </div>
         {resolving && <p className="text-[11px] text-text-tertiary">네이버 카테고리 조회 중...</p>}
         {resolveError && <p className="text-[11px] text-error">{resolveError}</p>}
-        <Row label="네이버 카테고리" value={leafCategoryId || "미확정 — 위 입력란에 실제 카테고리 ID를 입력하세요"} />
+        <Row label="네이버 카테고리" value={leafCategoryId || "미확정 — 위 추천에서 선택하거나 직접 입력하세요"} />
         {resolved?.category && (
           <Row
             label="어린이제품 인증"
