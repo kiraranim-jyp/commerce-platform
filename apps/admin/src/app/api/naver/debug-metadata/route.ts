@@ -12,6 +12,7 @@ import { callNaverApi, issueNaverAccessToken } from "../_lib/client";
  * 호출하지 않는다 — GET만 사용한다.
  */
 const STEP_PATHS: Record<string, (categoryId: string | null) => string | null> = {
+  "0": () => "/v1/categories",
   "1": () => "/v1/categories?last=true",
   "2": (id) => (id ? `/v1/categories/${id}` : null),
   "3": (id) => (id ? `/v1/products-for-provided-notice?categoryId=${id}` : null),
