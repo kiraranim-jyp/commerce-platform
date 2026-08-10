@@ -8,7 +8,16 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Tabs } from "@/components/ui/Tabs";
 import type { TemplateSectionBlock } from "@commerce/listing";
 
-const TAB_KEYS = ["coupang", "shipping", "seller", "pricing", "brand", "detail", "smartstore"] as const;
+const TAB_KEYS = [
+  "coupang",
+  "shipping",
+  "seller",
+  "pricing",
+  "brand",
+  "detail",
+  "comparisonShops",
+  "smartstore",
+] as const;
 type SettingsTabKey = (typeof TAB_KEYS)[number];
 
 interface ShippingPlaceOption {
@@ -259,6 +268,7 @@ export default function SettingsPage() {
               { value: "pricing", label: "가격 정책" },
               { value: "brand", label: "브랜드 관리" },
               { value: "detail", label: "상세페이지 관리" },
+              { value: "comparisonShops", label: "해외 편집샵" },
               { value: "smartstore", label: "스마트스토어", badge: "Soon", disabled: true },
             ]}
           />
@@ -330,6 +340,14 @@ export default function SettingsPage() {
               className="mb-3"
             />
             <DescriptionTemplateSection templates={templates} onChanged={loadAll} />
+          </div>
+          <div className={activeTab === "comparisonShops" ? "mt-5" : "hidden"}>
+            <SectionHeader
+              title="해외 편집샵 가격 비교"
+              description="상품의 해외 가격 비교에 사용할 편집샵을 선택하고 관리합니다."
+              className="mb-3"
+            />
+            <ComparisonShopsSection />
           </div>
           {activeTab === "smartstore" && (
             <p className="mt-5 rounded-md border border-dashed border-border p-4 text-sm text-text-tertiary">
@@ -1953,6 +1971,166 @@ function DescriptionTemplateSection({
           </button>
         </div>
       )}
+    </section>
+  );
+}
+
+interface ComparisonShop {
+  id: string;
+  name: string;
+  domain: string;
+  url: string;
+  country: string | null;
+  currency: string | null;
+  source: "SYSTEM" | "USER";
+  isActive: boolean;
+}
+
+/**
+ * Sprint B-0(CPO 지시, 2026-08-09) — 향후 가격 비교 기능(B-1+)의 기반. 이번
+ * 스프린트는 크롤링/파싱 없이 "어떤 해외 편집샵을 비교 대상으로 쓸지"만
+ * 관리한다. SYSTEM(추천 seed)은 활성/비활성만, USER(직접 추가)는 삭제도
+ * 가능하다 — API가 이미 이 규칙을 강제하므로 UI는 버튼 노출만 그에 맞춘다.
+ */
+function ComparisonShopsSection() {
+  const [shops, setShops] = useState<ComparisonShop[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [urlInput, setUrlInput] = useState("");
+  const [nameInput, setNameInput] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/comparison-shops");
+      const data = (await res.json()) as { shops?: ComparisonShop[] };
+      setShops(data.shops ?? []);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  async function handleAdd() {
+    if (!urlInput.trim()) return;
+    setAdding(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/comparison-shops", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: urlInput, name: nameInput || undefined }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (data.ok) {
+        setUrlInput("");
+        setNameInput("");
+        await load();
+      } else {
+        setError(data.error ?? "추가에 실패했습니다.");
+      }
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function handleToggleActive(shop: ComparisonShop) {
+    await fetch(`/api/comparison-shops/${shop.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isActive: !shop.isActive }),
+    });
+    await load();
+  }
+
+  async function handleDelete(id: string) {
+    await fetch(`/api/comparison-shops/${id}`, { method: "DELETE" });
+    await load();
+  }
+
+  return (
+    <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
+      <h2 className="text-base font-semibold text-text-primary">편집샵 목록</h2>
+      <p className="mt-1 text-xs text-text-secondary">
+        체크된 사이트만 향후 가격 비교 대상이 됩니다. 추천 사이트는 삭제 대신 비활성화할 수 있습니다.
+      </p>
+
+      {loading ? (
+        <p className="mt-3 text-xs text-text-tertiary">불러오는 중…</p>
+      ) : shops.length === 0 ? (
+        <p className="mt-3 text-xs text-text-tertiary">등록된 편집샵이 없습니다.</p>
+      ) : (
+        <ul className="mt-3 divide-y divide-border text-sm">
+          {shops.map((shop) => (
+            <li key={shop.id} className="flex items-center justify-between gap-3 py-2">
+              <label className="flex flex-1 items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={shop.isActive}
+                  onChange={() => void handleToggleActive(shop)}
+                  className="h-4 w-4 rounded border-border accent-primary"
+                />
+                <div>
+                  <span className="font-medium text-text-primary">{shop.name}</span>
+                  {shop.source === "SYSTEM" && (
+                    <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                      추천
+                    </span>
+                  )}
+                  <p className="text-xs text-text-secondary">
+                    {shop.domain}
+                    {shop.country ? ` · ${shop.country}` : ""}
+                    {shop.currency ? ` · ${shop.currency}` : ""}
+                  </p>
+                </div>
+              </label>
+              {shop.source === "USER" && (
+                <button
+                  type="button"
+                  onClick={() => void handleDelete(shop.id)}
+                  className="text-xs text-error hover:underline"
+                >
+                  삭제
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="mt-4 space-y-3 border-t border-border pt-4 text-sm">
+        <Field label="사이트 이름" hint="비워두면 도메인이 이름으로 사용됩니다">
+          <input
+            type="text"
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            placeholder="예: My Kids Boutique"
+            className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+          />
+        </Field>
+        <Field label="사이트 URL">
+          <input
+            type="text"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            placeholder="https://example-shop.com"
+            className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+          />
+        </Field>
+        {error && <p className="text-xs text-error">{error}</p>}
+        <button
+          type="button"
+          onClick={() => void handleAdd()}
+          disabled={adding || !urlInput.trim()}
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+        >
+          {adding ? "추가 중…" : "편집샵 추가"}
+        </button>
+      </div>
     </section>
   );
 }
