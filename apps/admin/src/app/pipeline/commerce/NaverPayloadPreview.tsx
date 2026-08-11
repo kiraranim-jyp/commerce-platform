@@ -118,27 +118,6 @@ const FIELD_SECTION: Record<string, string> = {
   "detailAttribute.originAreaInfo.importer": "naver-section-origin",
 };
 
-/** validateNaverPayload가 실제로 검사하는 필드 수 — READY 카운트는
- * "전체 - 문제있는 항목"으로 역산한다(검증 로직을 이 컴포넌트에서 다시 만들지
- * 않는다). 옵션/인증서/수입사명처럼 상품마다 있고 없고가 달라지는 항목만
- * 조건부로 센다. */
-function countTotalCheckedFields(
-  hasOptions: boolean,
-  requiresCertification: boolean,
-  hasCertificationId: boolean,
-  requiresImporter: boolean,
-) {
-  // leafCategoryId, name, image, price, stock, shippingAddressId, returnAddressId,
-  // deliveryCompany, returnDeliveryCompanyPriorityType, returnDeliveryFee,
-  // exchangeDeliveryFee(N-3.3), originAreaCode(N-3.4)
-  const BASE = 12;
-  let total = BASE;
-  if (hasOptions) total += 1;
-  if (requiresCertification) total += hasCertificationId ? 2 : 1;
-  if (requiresImporter) total += 1;
-  return total;
-}
-
 function payloadReplacer(_key: string, value: unknown): unknown {
   if (typeof value === "string" && value.startsWith("data:") && value.length > 80) {
     return `${value.slice(0, 40)}…(${value.length}자)`;
@@ -337,15 +316,12 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
   );
 
   const hasOptions = product.optionGroups.length > 0;
-  const totalChecked = countTotalCheckedFields(
-    hasOptions,
-    categoryRequiresChildCertification,
-    childCertificationInfoId !== null,
-    originAreaRequiresImporter,
-  );
-  const missingCount = validation.issues.filter((i) => i.severity === "MISSING").length;
-  const blockedCount = validation.issues.filter((i) => i.severity === "BLOCKED").length;
-  const readyCount = Math.max(0, totalChecked - missingCount - blockedCount);
+  // N-3.5 — READY/MISSING/BLOCKED 개수는 validateNaverPayload()가 직접 계산해서
+  // 돌려준다(Final Validator). Preview는 이 값을 그대로 쓰고 별도로 다시
+  // 계산하지 않는다 — 이전의 countTotalCheckedFields() 근사 함수는 제거했다.
+  const { readyCount, missingCount, blockedCount } = validation;
+  const blockedIssues = validation.issues.filter((i) => i.severity === "BLOCKED");
+  const missingIssues = validation.issues.filter((i) => i.severity === "MISSING");
 
   const overallState = blockedCount > 0 || missingCount > 0 ? "등록 불가" : "등록 가능";
   const overallIcon = blockedCount > 0 ? "🔴" : missingCount > 0 ? "🟡" : "🟢";
@@ -369,33 +345,56 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
         </span>
       </div>
 
-      {/* Validation Summary */}
+      {/* Naver Payload Validation — N-3.5 Final Validator 결과를 그대로 표시한다. */}
       <div className="rounded-md bg-background p-3">
-        <div className="flex flex-wrap items-center gap-3 text-xs">
+        <h4 className="text-[11px] font-medium uppercase tracking-wide text-text-tertiary">
+          Naver Payload Validation
+        </h4>
+        <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs">
           <span className="text-success">🟢 READY {readyCount}</span>
           <span className="text-warning">🟡 MISSING {missingCount}</span>
           <span className="text-error">🔴 BLOCKED {blockedCount}</span>
         </div>
         <p className="mt-1.5 text-sm font-medium text-text-primary">
-          현재 상태: {overallIcon} {overallState}
+          등록 가능 여부: {overallIcon} {overallState}
         </p>
-        {validation.issues.length > 0 && (
-          <ul className="mt-2 space-y-1">
-            {validation.issues.map((issue, i) => (
-              <li key={`${issue.field}-${i}`} className="flex items-start gap-1.5 text-[11px]">
-                <span className={issue.severity === "BLOCKED" ? "text-error" : "text-warning"}>
-                  {issue.severity === "BLOCKED" ? "🔴" : "🟡"}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => goToSection(issue.field)}
-                  className="min-w-0 flex-1 text-left text-text-secondary hover:text-text-primary hover:underline"
-                >
-                  <span className="font-medium text-text-primary">{issue.field}</span> — {issue.reason}
-                </button>
-              </li>
-            ))}
-          </ul>
+        {blockedIssues.length > 0 && (
+          <div className="mt-2">
+            <p className="text-[11px] font-semibold text-error">BLOCKED</p>
+            <ul className="mt-1 space-y-1">
+              {blockedIssues.map((issue, i) => (
+                <li key={`blocked-${issue.field}-${i}`} className="flex items-start gap-1.5 text-[11px]">
+                  <span className="text-error">🔴</span>
+                  <button
+                    type="button"
+                    onClick={() => goToSection(issue.field)}
+                    className="min-w-0 flex-1 text-left text-text-secondary hover:text-text-primary hover:underline"
+                  >
+                    <span className="font-medium text-text-primary">{issue.field}</span> — {issue.reason}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {missingIssues.length > 0 && (
+          <div className="mt-2">
+            <p className="text-[11px] font-semibold text-warning">MISSING</p>
+            <ul className="mt-1 space-y-1">
+              {missingIssues.map((issue, i) => (
+                <li key={`missing-${issue.field}-${i}`} className="flex items-start gap-1.5 text-[11px]">
+                  <span className="text-warning">🟡</span>
+                  <button
+                    type="button"
+                    onClick={() => goToSection(issue.field)}
+                    className="min-w-0 flex-1 text-left text-text-secondary hover:text-text-primary hover:underline"
+                  >
+                    <span className="font-medium text-text-primary">{issue.field}</span> — {issue.reason}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
 

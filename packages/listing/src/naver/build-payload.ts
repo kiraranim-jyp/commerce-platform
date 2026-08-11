@@ -211,7 +211,15 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
     },
     smartstoreChannelProduct: {
       channelProductName: listing.title,
-      channelProductDisplayStatusType: "WAIT",
+      // N-3.5 — 공식 OpenAPI 스펙 재검증 중 발견: "ON, SUSPENSION만 입력
+      // 가능합니다"라고 명시돼 있어 WAIT는 실제로 입력 불가능한 값이었다
+      // (지금까지 여기 있던 버그 — DRY_RUN이라 실제 POST로 드러난 적은
+      // 없음). 새 상품을 등록 즉시 노출시키지 않는 게 안전하므로 유효한
+      // 값 중 SUSPENSION(전시 중지)을 기본값으로 쓴다.
+      channelProductDisplayStatusType: "SUSPENSION",
+      // naverShoppingRegistration은 required 필드이지만 CartPilot이 임의로
+      // 정할 근거가 없어 값을 채우지 않는다 — validate-payload.ts가 항상
+      // MISSING으로 표시한다.
     },
   };
 }

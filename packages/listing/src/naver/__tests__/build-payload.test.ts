@@ -687,3 +687,229 @@ describe("validateNaverPayload", () => {
     ).toBe(false);
   });
 });
+
+/** N-3.5 — buildNaverProductPayload 호출 시 매번 반복되는 필수 파라미터를
+ * 한 곳에 모은다(공통 값은 기존 PLACEHOLDER 상수 그대로 재사용, 개별 테스트는
+ * 필요한 값만 override). */
+function baseInput(product: CanonicalProduct, listing: ListingModel) {
+  return {
+    product,
+    listing,
+    leafCategoryId: LEAF_CATEGORY_ID,
+    releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+    refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+    primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+    returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+    exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+    originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+    originAreaRequiresContent: false,
+  };
+}
+
+function baseValidateInput(product: CanonicalProduct) {
+  return {
+    product,
+    releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+    refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+    primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+    returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+    exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+    returnCompaniesFetchFailed: false,
+    originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+    originAreaRequiresImporter: false,
+  };
+}
+
+describe("N-3.5: smartstoreChannelProduct 스키마 재검증", () => {
+  it("channelProductDisplayStatusType은 WAIT가 아니라 유효한 값(SUSPENSION)을 쓴다", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    // 공식 OpenAPI: "ON, SUSPENSION만 입력 가능합니다" — WAIT는 입력 불가능한 값이었다(N-3.5에서 발견한 버그 수정).
+    expect(payload.smartstoreChannelProduct.channelProductDisplayStatusType).toBe("SUSPENSION");
+    expect(payload.smartstoreChannelProduct.channelProductDisplayStatusType).not.toBe("WAIT");
+  });
+
+  it("naverShoppingRegistration은 채우지 않고(근거 없음) 항상 MISSING으로 표시한다", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.smartstoreChannelProduct.naverShoppingRegistration).toBeUndefined();
+    const result = validateNaverPayload(
+      payload,
+      { ...baseValidateInput(product), childCertificationInfoId: null },
+      false,
+    );
+    expect(
+      result.issues.some(
+        (i) => i.field === "smartstoreChannelProduct.naverShoppingRegistration" && i.severity === "MISSING",
+      ),
+    ).toBe(true);
+  });
+
+  it("detailContent(상세설명)가 없으면 MISSING을 표시한다(N-3.5에서 새로 추가된 검사)", () => {
+    const product = makeMinimalProduct();
+    product.description = field("");
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    const result = validateNaverPayload(
+      payload,
+      { ...baseValidateInput(product), childCertificationInfoId: null },
+      false,
+    );
+    expect(
+      result.issues.some((i) => i.field === "originProduct.detailContent" && i.severity === "MISSING"),
+    ).toBe(true);
+  });
+});
+
+describe("N-3.5: Final Validator — readyCount/missingCount/blockedCount", () => {
+  it("Case A: 옵션 없는 일반 상품 — 배송/원산지/인증까지 전부 채워지면 옵션 관련 필드는 검사되지 않는다", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    const result = validateNaverPayload(
+      payload,
+      { ...baseValidateInput(product), childCertificationInfoId: null },
+      false,
+    );
+    expect(result.fields.some((f) => f.field.startsWith("detailAttribute.optionInfo"))).toBe(false);
+    expect(result.readyCount + result.missingCount + result.blockedCount).toBe(result.fields.length);
+    // deliveryCompany(BLOCKED)/naverShoppingRegistration(MISSING)는 항상 남는다 — 완전 READY는 불가능하다.
+    expect(result.blockedCount).toBeGreaterThan(0);
+    expect(result.missingCount).toBeGreaterThan(0);
+    expect(result.ok).toBe(false);
+  });
+
+  it("Case B: Color × Size 2중 옵션 상품 — 4개 조합 모두 optionCombinations로 변환되고 옵션 관련 필드가 검사에 포함된다", () => {
+    const product = makeMinimalProduct();
+    product.optionGroups = [
+      { name: "색상", values: ["Navy", "White"] },
+      { name: "사이즈", values: ["S", "M"] },
+    ];
+    product.variants = [
+      { id: "v1", optionValues: { 색상: "Navy", 사이즈: "S" }, sku: "SKU-NAVY-S", stockQuantity: 2 },
+      { id: "v2", optionValues: { 색상: "Navy", 사이즈: "M" }, sku: "SKU-NAVY-M", stockQuantity: 3 },
+      { id: "v3", optionValues: { 색상: "White", 사이즈: "S" }, sku: "SKU-WHITE-S", stockQuantity: 1 },
+      { id: "v4", optionValues: { 색상: "White", 사이즈: "M" }, sku: "SKU-WHITE-M", stockQuantity: 4 },
+    ];
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    const combos = payload.originProduct.detailAttribute?.optionInfo?.optionCombinations;
+    expect(combos).toHaveLength(4);
+    expect(combos?.[0]).toMatchObject({ optionName1: "Navy", optionName2: "S", sellerManagerCode: "SKU-NAVY-S" });
+    expect(combos?.[3]).toMatchObject({ optionName1: "White", optionName2: "M", sellerManagerCode: "SKU-WHITE-M" });
+    const result = validateNaverPayload(
+      payload,
+      { ...baseValidateInput(product), childCertificationInfoId: null },
+      false,
+    );
+    expect(result.fields.some((f) => f.field === "detailAttribute.optionInfo" && f.status === "BLOCKED")).toBe(true);
+  });
+
+  it("Case D: 아동 인증 대상 상품 — 고시정보는 항상 존재하고, 인증서 항목만 BLOCKED로 분리된다(고시/인증 독립성 회귀)", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    // 인증 카탈로그 id가 없는 케이스(childCertificationInfoId: null) — "인증 필요 + 인증서 없음"
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: true,
+    });
+    // 고시정보(productInfoProvidedNotice)는 인증서 보유 여부와 무관하게 항상 채워져야 한다.
+    expect(payload.originProduct.detailAttribute?.productInfoProvidedNotice).toBeDefined();
+    expect(
+      payload.originProduct.detailAttribute?.productInfoProvidedNotice?.productInfoProvidedNoticeType,
+    ).toBe("KIDS");
+    const result = validateNaverPayload(
+      payload,
+      { ...baseValidateInput(product), childCertificationInfoId: null },
+      true,
+    );
+    // 인증서 관련 필드만 BLOCKED — 고시정보 자체는 issues에 나타나지 않는다(항상 채워지므로).
+    expect(result.issues.some((i) => i.field === "productCertificationInfos" && i.severity === "BLOCKED")).toBe(
+      true,
+    );
+    expect(result.issues.some((i) => i.field.startsWith("originProduct.detailAttribute.productInfoProvidedNotice"))).toBe(
+      false,
+    );
+  });
+
+  it("인증 불필요 카테고리(WEAR)는 고시정보가 READY 상태로 존재하고 인증서 관련 이슈가 없다", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(
+      payload.originProduct.detailAttribute?.productInfoProvidedNotice?.productInfoProvidedNoticeType,
+    ).toBe("WEAR");
+    const result = validateNaverPayload(
+      payload,
+      { ...baseValidateInput(product), childCertificationInfoId: null },
+      false,
+    );
+    expect(result.fields.some((f) => f.field.startsWith("productCertificationInfos"))).toBe(false);
+  });
+
+  it("Case E: 여러 필드가 누락된 상품 — readyCount/missingCount/blockedCount가 정확히 필드 개수 합과 일치한다", () => {
+    const product = makeMinimalProduct();
+    product.description = field("");
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      product,
+      listing,
+      leafCategoryId: "",
+      releaseAddressBookNo: null,
+      refundAddressBookNo: null,
+      primaryReturnDeliveryCompanyPriorityType: null,
+      returnDeliveryFee: null,
+      exchangeDeliveryFee: null,
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+      originAreaCode: null,
+      originAreaRequiresContent: false,
+    });
+    const result = validateNaverPayload(
+      payload,
+      {
+        product,
+        releaseAddressBookNo: null,
+        refundAddressBookNo: null,
+        primaryReturnDeliveryCompanyPriorityType: null,
+        returnDeliveryFee: null,
+        exchangeDeliveryFee: null,
+        returnCompaniesFetchFailed: false,
+        childCertificationInfoId: null,
+        originAreaCode: null,
+        originAreaRequiresImporter: false,
+      },
+      false,
+    );
+    expect(result.readyCount + result.missingCount + result.blockedCount).toBe(result.fields.length);
+    expect(result.missingCount).toBeGreaterThanOrEqual(8); // leafCategoryId/name(비었진 않음)/detailContent/salePrice(있음)/stock/... 등 다수
+    expect(result.ok).toBe(false);
+  });
+});
