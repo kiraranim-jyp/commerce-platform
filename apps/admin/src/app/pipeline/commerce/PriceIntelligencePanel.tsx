@@ -134,9 +134,17 @@ export function PriceIntelligencePanel({
     );
   }
 
+  // N-3.6 GAP CLOSURE(Part 3) — 기준을 브랜드 본국 원본가격으로 전환한다. 예전에는
+  // originMarket(URL locale로 고른 "사이트 기본" 시장)을 기준으로 diff를 계산했는데,
+  // 이건 CPO가 지적한 "URL의 국가 ≠ 가격의 시장" 원칙을 diff 계산에서는 아직
+  // 안 지키고 있던 부분이었다. brandOriginPrice가 없으면(MISSING/BLOCKED) diff를
+  // 계산하지 않는다 — originMarket으로 몰래 대체하지 않는다(Part K 원칙).
   const diffPercent =
-    data.originMarket && data.krMarket && data.convertedOriginToKrw
-      ? Math.round(((data.krMarket.amount - data.convertedOriginToKrw.amount) / data.convertedOriginToKrw.amount) * 1000) / 10
+    data.krMarket && data.convertedBrandOriginToKrw
+      ? Math.round(
+          ((data.krMarket.amount - data.convertedBrandOriginToKrw.amount) / data.convertedBrandOriginToKrw.amount) *
+            1000,
+        ) / 10
       : null;
 
   const allMarkets = [data.originMarket, data.krMarket, ...data.additionalMarkets].filter(
@@ -183,22 +191,24 @@ export function PriceIntelligencePanel({
         </p>
       )}
 
-      <p className="text-[10px] font-medium text-text-tertiary">판매처별 실제 가격(참고)</p>
+      {/* N-3.6 GAP CLOSURE(Part 3) — 이 아래는 전부 "판매처 시장가격 참고 정보"다.
+          originMarket은 더 이상 "원본가격"이라고 부르지 않는다(URL locale로 고른
+          사이트 기본 시장일 뿐 — Part H 원칙: URL의 국가 ≠ 가격의 시장). */}
+      <p className="text-[10px] font-medium text-text-tertiary">판매처별 실제 가격(참고 — 원본가격 아님)</p>
       <MarketRow
-        label={data.originMarketIsBrandCountryMarket ? "브랜드 본국 시장" : "원본 시장(사이트 기본)"}
+        label={data.originMarketIsBrandCountryMarket ? "판매처 시장가(브랜드 본국과 일치)" : "판매처 시장가(사이트 기본)"}
         observation={data.originMarket}
       />
-      <MarketRow label="한국 판매가격" observation={data.krMarket} />
-
       {data.convertedOriginToKrw && (
         <p className="text-[11px] text-text-tertiary">
-          ≈ {formatKrw(data.convertedOriginToKrw.amount)} <span>단순 환율 환산값(실제 판매가격 아님)</span>
+          → 위 판매처 시장가를 환율 적용하면 약 {formatKrw(data.convertedOriginToKrw.amount)}(참고용 환산값)
         </p>
       )}
+      <MarketRow label="한국 판매가격" observation={data.krMarket} />
 
       {diffPercent !== null && (
         <p className="rounded bg-background px-2 py-1.5 text-[11px] text-text-secondary">
-          환율 환산가보다 한국 판매가격이 약 {diffPercent > 0 ? "+" : ""}
+          브랜드 본국 원본가격 환산가보다 한국 판매가격이 약 {diffPercent > 0 ? "+" : ""}
           {diffPercent}% {diffPercent >= 0 ? "높습니다" : "낮습니다"}.
           <br />※ 현지 세금, 시장별 가격정책, 반올림, 배송비 등 정확한 원인은 원본 사이트의 가격정책을 확인해야
           합니다.
