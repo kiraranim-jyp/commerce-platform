@@ -9,4 +9,4 @@ export type { ExtractionTrace } from "./scoring";
 export type { StrategySource } from "./strategies/types";
 export * from "./comparison-search";
 export * from "./shopify-market-probe";
-export * from "./brand-origin-price";
+export { fetchShopifyShopMeta, type ShopifyShopMeta } from "./shopify-product-json";

@@ -81,7 +81,6 @@ interface BrandProfile {
   brandIntro: string;
   representativeImageUrl: string | null;
   commonDescription: string;
-  officialWebsite: string | null;
 }
 
 interface DescriptionTemplate {
@@ -1500,9 +1499,6 @@ function BrandProfileSection({
   const [brandIntro, setBrandIntro] = useState("");
   const [representativeImageUrl, setRepresentativeImageUrl] = useState<string | null>(null);
   const [commonDescription, setCommonDescription] = useState("");
-  // N-3.6(개정 Part C/D) — 브랜드 본국 공식 사이트. Brand Origin Price
-  // Resolver가 이 값이 있을 때만 동작한다(없으면 추측하지 않고 MISSING).
-  const [officialWebsite, setOfficialWebsite] = useState("");
   const [imageUploading, setImageUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -1514,7 +1510,6 @@ function BrandProfileSection({
     setBrandIntro("");
     setRepresentativeImageUrl(null);
     setCommonDescription("");
-    setOfficialWebsite("");
   }
 
   function startEdit(p: BrandProfile) {
@@ -1525,7 +1520,6 @@ function BrandProfileSection({
     setBrandIntro(p.brandIntro);
     setRepresentativeImageUrl(p.representativeImageUrl);
     setCommonDescription(p.commonDescription);
-    setOfficialWebsite(p.officialWebsite ?? "");
     setFormOpen(true);
   }
 
@@ -1553,7 +1547,6 @@ function BrandProfileSection({
         brandIntro: brandIntro || undefined,
         representativeImageUrl,
         commonDescription: commonDescription || undefined,
-        officialWebsite: officialWebsite || undefined,
       };
       const res = await fetch(
         editingId ? `/api/settings/coupang/brand-profiles/${editingId}` : "/api/settings/coupang/brand-profiles",
@@ -1647,18 +1640,6 @@ function BrandProfileSection({
               value={manufacturer}
               onChange={(e) => setManufacturer(e.target.value)}
               placeholder="예: Apolina Ltd."
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field
-            label="브랜드 공식 사이트"
-            hint="브랜드 본국 원본가격을 이 사이트에서 실제로 조회합니다(Shopify 사이트만 지원) — 비워두면 원본가격을 확인하지 않습니다"
-          >
-            <input
-              type="text"
-              value={officialWebsite}
-              onChange={(e) => setOfficialWebsite(e.target.value)}
-              placeholder="예: https://kongessloejd.com"
               className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
             />
           </Field>

@@ -6,11 +6,22 @@
  * 저장하는 걸 금지 — 원본(PriceObservation)과 계산값(ConvertedPriceKrw)을
  * 항상 별도 객체로 유지한다.
  *
- * 브랜드 국가(brandCountry)와 가격이 실제로 관측된 시장(market)은 서로 다른
- * 개념이다 — "브랜드가 스페인이라고 실제 Shopify 기본 시장이 스페인 EUR라는
- * 보장은 없다"(CPO 지시). `originMarketIsBrandCountryMarket`은 실제로 그
- * 국가의 시장에서 가격을 가져왔을 때만 true다 — 브랜드 국가로부터 추론하지
- * 않는다.
+ * Sprint N-3.7 — 원본가격의 기준을 "브랜드 본국"에서 "판매처(편집샵) 원본
+ * 시장"으로 전면 수정했다(CPO 지시). 실측(2026-08-11): Junior Edition에서
+ * 파는 Konges Sløjd 상품을 판매처 기준으로 보면 — Junior Edition 자체의
+ * `/meta.json`이 실제 등록 국가를 돌려준다(country 필드, 지금까지는 fetch만
+ * 하고 버리고 있었다). 브랜드 본국(예: 덴마크) 공식 사이트를 별도로 검색하는
+ * 건 실제로 상품을 판매하는 곳과 무관한 가격을 원본으로 오인시킬 위험이 있고,
+ * 비용도 더 든다 — 이미 크롤링하는 판매처 사이트 자신의 메타데이터가 더 싸고
+ * 더 정확한 소스다. 이전 스프린트(N-3.6)의 `brandOriginPrice`/
+ * `convertedBrandOriginToKrw`/`brandCountry` 기반 market-매칭 로직은 전부
+ * 제거했다 — 브랜드 국가는 원산지 등록 등 다른 용도로는 여전히 유효하지만
+ * 가격 기준 결정에는 쓰지 않는다.
+ *
+ * URL locale(`/en-au/`, `/en-kr/` 등)도 원본가격의 기준이 아니다 — 그건
+ * "이 판매처가 그 시장에도 서비스한다"는 사실일 뿐이다(additionalMarkets로
+ * 분류). 원본가격은 오직 판매처 자신의 실제 등록 국가(`seller.country`,
+ * `/meta.json` 실측)에서 결정된다.
  */
 
 /** 실제로 사이트에서 관측한(fetch 성공) 가격 하나. amount/currency는 그 사이트가
@@ -19,9 +30,10 @@ export interface PriceObservation {
   amount: number;
   currency: string;
   /** 이 market이 속한다고 판단한 국가(ISO 3166-1 alpha-2). 로케일 프리픽스(예:
-   * "en-kr"→"KR")처럼 URL 구조 자체가 알려주는 경우, 또는 통화가 사실상 한
-   * 국가로만 쓰이는 경우(GBP→GB, KRW→KR 등)만 채운다 — EUR/USD처럼 여러 나라가
-   * 같이 쓰는 통화는 국가를 추측하지 않고 null로 둔다. */
+   * "en-kr"→"KR")처럼 URL 구조 자체가 알려주는 경우, 판매처의 실제 등록 국가
+   * (seller.country, marketCode=""일 때), 또는 통화가 사실상 한 국가로만
+   * 쓰이는 경우(GBP→GB, KRW→KR 등)만 채운다 — EUR/USD처럼 여러 나라가 같이
+   * 쓰는 통화는 국가를 추측하지 않고 null로 둔다. */
   country: string | null;
   /** 이 가격을 가져올 때 실제로 사용한 URL 경로 세그먼트("" = 프리픽스 없는
    * 기본 요청, "en-kr" 등). */
@@ -53,39 +65,39 @@ export interface ConvertedPriceKrw {
   confidence: "CALCULATED";
 }
 
+/** N-3.7 — 판매처(편집샵) 식별 정보. 국가를 임의로 추정하지 않는다 — 실제
+ * 소스(지금은 Shopify `/meta.json`)에서 확인된 값만 채우고, 확인 못하면
+ * country/countryCode를 null로 둔다("UNKNOWN"으로 정직하게 취급). */
+export interface SellerInfo {
+  /** 판매처 표시명(예: "Junior Edition") — `/meta.json`의 `name` 필드. 없으면 null. */
+  name: string | null;
+  /** 판매처의 실제 등록 국가(ISO 3166-1 alpha-2, 예: "GB"). 확인 못하면 null. */
+  country: string | null;
+  source: "SHOPIFY_META_JSON" | null;
+}
+
 export interface PriceIntelligenceResult {
   status: "OK" | "NOT_SUPPORTED" | "FETCH_FAILED";
   message?: string;
-  /** 브랜드 프로필(BrandProfile.countryOfOrigin)에서 가져온 참고 정보 — 가격
-   * market 선택에 이 값을 강제로 쓰지 않는다(CPO 지시: 브랜드 국가 ≠ 가격 시장). */
-  brandCountry: string | null;
-  /** Priority 1(브랜드 본국 시장, 실제 확인된 경우만) 또는 Priority 2(사이트
-   * 기본/원본 시장). null이면 원본 가격 자체를 못 가져온 것. */
-  originMarket: PriceObservation | null;
-  /** true면 originMarket이 실제로 brandCountry와 일치하는 시장에서 관측됨
-   * (Priority 1). false면 사이트 기본 시장을 쓴 것(Priority 2) — 추측이 아니라
-   * 실제로 확인된 사실만 담는다. */
-  originMarketIsBrandCountryMarket: boolean;
-  /** Priority 3 — 한국(KR) market 가격. 없으면 null(=MISSING, 존재하지 않는
-   * 걸 만들어내지 않는다). */
+  /** N-3.7 — 판매처 식별 정보. seller.country가 null이면 sellerOriginPrice도
+   * null이어야 한다(Part 11 원칙 — 국가를 확인 못하면 원본가격을 만들어내지
+   * 않는다). */
+  seller: SellerInfo;
+  /** N-3.7 — 판매처 원본 시장 가격(marketCode="" 기본 요청). 이게 이제 "원본
+   * 가격"의 유일한 기준이다 — 브랜드 국가도, URL locale도 아니다. null이면
+   * 판매처 자체를 확인 못했거나(Shopify가 아님 등) 국가를 확인 못한 것. */
+  sellerOriginPrice: PriceObservation | null;
+  /** sellerOriginPrice를 KRW로 환산한 참고값. sellerOriginPrice가 없으면 null. */
+  convertedSellerOriginToKrw: ConvertedPriceKrw | null;
+  /** 한국(KR) market 가격 — additionalMarkets와 별개로 기본 조회에 항상 포함
+   * (비용 최적화, N-3.2 Part H). 없으면 null(=MISSING, 존재하지 않는 걸
+   * 만들어내지 않는다). */
   krMarket: PriceObservation | null;
   /** "국가별 가격 보기"를 눌렀을 때만 채워진다(비용 최적화 — 기본 요청에서는
-   * 조회하지 않는다). originMarket/krMarket과 겹치지 않는, 추가로 실제 확인된
-   * market만 담는다. */
+   * 조회하지 않는다). sellerOriginPrice/krMarket과 겹치지 않는, 추가로 실제
+   * 확인된 market만 담는다 — 이 market들의 marketCode(locale)는 "이 판매처가
+   * 그 시장에도 서비스한다"는 사실일 뿐 원본가격 판정에 쓰이지 않는다. */
   additionalMarkets: PriceObservation[];
   /** 이번 요청에서 실제로 probe한 marketCode 목록(성공/실패 무관) — 투명성용. */
   testedMarketCodes: string[];
-  /** originMarket을 KRW로 환산한 참고값. originMarket이 없으면 null. */
-  convertedOriginToKrw: ConvertedPriceKrw | null;
-  /** N-3.6(개정 Part C/D) — 브랜드 본국 "공식 사이트"에서 실제로 확인한 원본가격
-   * (originMarket과는 다른 개념 — originMarket은 상품이 실제로 팔리는 그 사이트의
-   * market 중 브랜드 국가와 일치하는 것을 고른 것뿐이라, 브랜드가 아예 다른
-   * 사이트를 통해 팔리고 있으면 브랜드 본국 가격 자체를 절대 볼 수 없다). null이면
-   * BrandProfile.officialWebsite가 없거나, 있어도 상품을 확인 못한 것 —
-   * brandOriginPriceStatus/Reason으로 이유를 설명한다. */
-  brandOriginPrice: { amount: number; currency: string; sourceUrl: string } | null;
-  brandOriginPriceStatus: "READY" | "MISSING" | "BLOCKED";
-  brandOriginPriceReason: string;
-  /** brandOriginPrice를 KRW로 환산한 참고값. brandOriginPrice가 없으면 null. */
-  convertedBrandOriginToKrw: ConvertedPriceKrw | null;
 }

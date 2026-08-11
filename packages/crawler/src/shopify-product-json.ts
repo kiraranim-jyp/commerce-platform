@@ -110,6 +110,21 @@ interface ShopifyJsProduct {
 export interface ShopifyProductResult {
   images: ImageCandidate[];
   productData: Partial<ExtractedProductData>;
+  /** N-3.7 — 이 요청이 내부적으로 이미 가져온 판매처 메타(country/name/currency).
+   * shopify-market-probe.ts가 별도로 /meta.json을 다시 fetch하지 않고 이 값을
+   * 그대로 재사용하도록 노출한다. */
+  shopMeta: ShopifyShopMeta | null;
+}
+
+export interface ShopifyShopMeta {
+  currency: string | null;
+  /** N-3.7 — 판매처(편집샵) 원본 시장 국가. `/meta.json`이 실제로 그 매장의
+   * 등록 국가를 돌려준다(실측 확인, 2026-08-11: junioredition.com/meta.json →
+   * country: "GB"). URL locale이나 브랜드 국가로 추정하지 않고 이 값을 그대로
+   * 쓴다 — 지금까지는 currency만 뽑고 이 필드를 버리고 있었다. */
+  country: string | null;
+  /** 매장 표시명(예: "Junior Edition") — 있으면 UI에 그대로 쓴다. */
+  name: string | null;
 }
 
 /** 실측 확인(2026-08-03, CEO 리포트) — Shopify Markets를 쓰는 스토어는
@@ -122,15 +137,19 @@ export interface ShopifyProductResult {
  * 필드는 매장 관리자가 설정한 고정 기준 통화라 지역에 관계없이 항상 같다 —
  * 이 값을 always-authoritative override로 쓴다(있으면 무조건 우선, 없을 때만
  * variant.price_currency로 폴백). */
-async function fetchShopifyShopCurrency(origin: string): Promise<string | null> {
+export async function fetchShopifyShopMeta(origin: string): Promise<ShopifyShopMeta | null> {
   try {
     const response = await fetchWithDomainRateLimit(`${origin}/meta.json`, {
       headers: { Accept: "application/json", "User-Agent": CHROME_UA },
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!response.ok) return null;
-    const meta = (await response.json()) as { currency?: string };
-    return meta.currency ? meta.currency.toUpperCase() : null;
+    const meta = (await response.json()) as { currency?: string; country?: string; name?: string };
+    return {
+      currency: meta.currency ? meta.currency.toUpperCase() : null,
+      country: meta.country ? meta.country.toUpperCase() : null,
+      name: meta.name ? meta.name.trim() : null,
+    };
   } catch {
     return null;
   }
@@ -162,19 +181,20 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
   const localePrefix = extractShopifyLocalePrefix(url);
 
   let response: Response;
-  let shopCurrency: string | null;
+  let shopMeta: ShopifyShopMeta | null;
   try {
-    [response, shopCurrency] = await Promise.all([
+    [response, shopMeta] = await Promise.all([
       fetchWithDomainRateLimit(`${origin}${localePrefix}/products/${handle}.json`, {
         headers: { Accept: "application/json", "User-Agent": CHROME_UA },
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       }),
-      fetchShopifyShopCurrency(origin),
+      fetchShopifyShopMeta(origin),
     ]);
   } catch {
     return null;
   }
   if (!response.ok) return null;
+  const shopCurrency = shopMeta?.currency ?? null;
 
   let product: ShopifyJsonProduct | undefined;
   try {
@@ -247,6 +267,7 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
 
   return {
     images,
+    shopMeta,
     productData: {
       title: product.title,
       brand: product.vendor,
@@ -270,19 +291,20 @@ export async function fetchShopifyProductJs(url: string): Promise<ShopifyProduct
   const origin = new URL(url).origin;
 
   let response: Response;
-  let shopCurrency: string | null;
+  let shopMeta: ShopifyShopMeta | null;
   try {
-    [response, shopCurrency] = await Promise.all([
+    [response, shopMeta] = await Promise.all([
       fetchWithDomainRateLimit(`${origin}/products/${handle}.js`, {
         headers: { Accept: "application/json", "User-Agent": CHROME_UA },
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       }),
-      fetchShopifyShopCurrency(origin),
+      fetchShopifyShopMeta(origin),
     ]);
   } catch {
     return null;
   }
   if (!response.ok) return null;
+  const shopCurrency = shopMeta?.currency ?? null;
 
   let product: ShopifyJsProduct;
   try {
@@ -312,6 +334,7 @@ export async function fetchShopifyProductJs(url: string): Promise<ShopifyProduct
 
   return {
     images,
+    shopMeta,
     productData: {
       title: product.title,
       brand: product.vendor,

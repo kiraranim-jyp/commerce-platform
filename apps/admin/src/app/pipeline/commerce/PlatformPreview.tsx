@@ -476,16 +476,18 @@ export function PlatformPreview({
           />
           {/* N-3.6(개정 Part I/J) — Naver Preview와 같은 Common Price Intelligence를
               그대로 재사용한다(별도 계산 로직을 새로 만들지 않는다). "적용" 버튼을
-              눌러야만 원본가격이 바뀐다 — 자동으로 덮어쓰지 않는다(Part K). */}
+              눌러야만 원본가격이 바뀐다 — 자동으로 덮어쓰지 않는다(Part K).
+              N-3.7 — 기준이 브랜드 본국에서 판매처(편집샵) 원본 시장으로
+              바뀌었다(prop명도 onApplySellerOriginPrice로 함께 변경). */}
           {onUpdateOriginalPrice && (
             <details className="mt-3 rounded-md border border-border p-2">
               <summary className="cursor-pointer text-xs font-medium text-text-secondary hover:text-text-primary">
-                브랜드 본국 원본가격 참고
+                판매처 원본가격 참고
               </summary>
               <div className="mt-2">
                 <PriceIntelligencePanel
                   product={product}
-                  onApplyBrandOriginPrice={(amount, currency) => onUpdateOriginalPrice({ amount, currency })}
+                  onApplySellerOriginPrice={(amount, currency) => onUpdateOriginalPrice({ amount, currency })}
                 />
               </div>
             </details>

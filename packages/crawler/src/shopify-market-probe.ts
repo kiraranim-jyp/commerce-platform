@@ -14,6 +14,9 @@ export interface ShopifyMarketProbeResult {
   amount: number;
   currency: string;
   sourceUrl: string;
+  /** N-3.7 — 이 요청이 내부적으로 이미 가져온 판매처 메타(/meta.json). 별도로
+   * 다시 fetch하지 않고 fetchShopifyProductJson이 가져온 걸 그대로 넘긴다. */
+  shopMeta: import("./shopify-product-json").ShopifyShopMeta | null;
 }
 
 async function probeMarket(origin: string, handle: string, marketCode: string): Promise<ShopifyMarketProbeResult | null> {
@@ -22,7 +25,13 @@ async function probeMarket(origin: string, handle: string, marketCode: string): 
   const result = await fetchShopifyProductJson(url);
   const price = result?.productData.price;
   if (!price || !price.currency) return null;
-  return { marketCode, amount: price.amount, currency: price.currency, sourceUrl: `${url}.json` };
+  return {
+    marketCode,
+    amount: price.amount,
+    currency: price.currency,
+    sourceUrl: `${url}.json`,
+    shopMeta: result?.shopMeta ?? null,
+  };
 }
 
 /** 기본 조회 — 원본(사이트 기본, 프리픽스 없음) + 한국(en-kr) 두 곳만.
