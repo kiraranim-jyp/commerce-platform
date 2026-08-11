@@ -168,13 +168,22 @@ export interface NaverProductAttributeValue {
   attributeValueSeq: number;
 }
 
-/** 확인됨(GitHub #241 원문 코드 예제, N-2.8) — 조합형 옵션 하나의 필드.
- * price/id/usable의 정확한 의미(price가 절대가인지 추가금액인지, id를 미리
- * 채워야 하는지, usable=false의 등록 시점 처리)는 실제 등록 성공 전까지
- * 확인 안 됨 — 필드명은 확실하지만 의미는 CartPilot의 최선 추정이다
- * (build-payload.ts 주석 참고). */
+/** 확인됨(공식 OpenAPI, ExternalApiOptionCombinationVo.product, N-3.4) —
+ * 필드명뿐 아니라 각 필드 설명까지 원문 스펙으로 재확인했다.
+ * - id(int64, "옵션 ID 입력 시 기존 옵션 수정"): 신규 상품 등록에는 절대
+ *   채우지 않는다 — CartPilot의 SKU를 여기 넣으면 "이 SKU가 곧 기존 네이버
+ *   옵션 ID"라는 잘못된 값이 되어 수정 요청으로 오인될 위험이 있다(N-2.8 때
+ *   실제로 이 버그가 있었다 — id에 variant.sku를 넣고 있었음, N-3.4에서 수정).
+ * - price(int32, "옵션가", "미입력 시 0원"): 절대 판매가인지 salePrice 대비
+ *   추가금액인지는 스펙 문구만으로 100% 단정할 수 없다(기본값 0원이 "추가금액
+ *   없음"과는 자연스럽게 맞지만 "절대가 0원"일 수도 있어 실제 등록 성공 전까지
+ *   확정하지 않는다) — validate-payload.ts가 여전히 BLOCKED 처리.
+ * - sellerManagerCode(string, "판매자 관리 코드"): CartPilot의 SKU는 여기
+ *   넣는다(id와 달리 "기존 옵션 수정"이라는 부작용이 없는 순수 식별용 필드).
+ * - usable(boolean, 기본값 true). */
 export interface NaverOptionCombination {
-  id?: string;
+  /** 신규 등록 시 항상 undefined로 둔다("기존 옵션 수정" 트리거 필드라서). */
+  id?: number;
   optionName1?: string;
   optionName2?: string;
   optionName3?: string;
@@ -192,13 +201,23 @@ export interface NaverOptionInfo {
   optionCombinations?: NaverOptionCombination[];
 }
 
-/** 확인됨(GitHub #241 원문 코드 예제, N-2.8) — 필드명은 확인됨.
- * originAreaCode의 실제 유효 값(국가 코드 enum)은 미확인 — CartPilot이
- * 임의로 채우지 않는다(validate-payload.ts가 BLOCKED 처리). */
+/** 확인됨(공식 OpenAPI + GET /v1/product-origin-areas 실측, N-3.4) —
+ * originAreaCode enum이 이제 100% 확인됨. `GET /v1/product-origin-areas`
+ * (commerce-api-naver discussion #3632, 공식 계정 공지 "행정체계 개편에 따른
+ * 상품 원산지 수정 필요"로 발견)를 production 계정으로 호출해서 535개 실제
+ * 코드/이름 쌍을 확인했다 — 최상위 6개: 00(국산)/01(원양산)/02(수입산)/
+ * 03(상세설명에 표시)/04(직접입력)/05(원산지 표기 의무대상 아님), 02 하위에
+ * 234개 국가 리프 노드(예: "0201025"="수입산:유럽>스페인"). 03/04 값이
+ * 실제로 쓰인다는 건 discussion #3531(공식 계정 답변)에서도 교차 확인됨. */
 export interface NaverOriginAreaInfo {
-  /** 미확인 — 네이버 자체 원산지 코드 enum. 값을 채우지 않는다. */
+  /** GET /v1/product-origin-areas로 조회한 실제 코드(추측 금지 — packages/
+   * listing/src/naver/origin-match.ts의 resolveNaverOriginArea가 매칭). */
   originAreaCode?: string;
+  /** "수입사명, 수입산인 경우 필수" — CartPilot에는 이 값의 소스가 없어(제조사와
+   * 별개 개념) originAreaCode가 02(수입산) 계열로 매칭되면 항상 MISSING으로
+   * 표시한다(validate-payload.ts). */
   importer?: string;
+  /** "originAreaCode가 '기타: 직접 입력'(04)인 경우 필수" — 그 외에는 채우지 않는다. */
   content?: string;
   plural?: string;
 }

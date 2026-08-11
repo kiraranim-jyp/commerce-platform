@@ -30,6 +30,13 @@ interface NaverReturnDeliveryCompany {
   priorityType: string;
 }
 
+interface NaverOriginAreaMatch {
+  status: "MATCHED" | "OTHER_MANUAL" | "NO_INPUT";
+  code: string | null;
+  matchedDisplayName: string | null;
+  requiresImporter: boolean;
+}
+
 interface NaverResolveResponse {
   status: string;
   category: {
@@ -49,6 +56,12 @@ interface NaverResolveResponse {
     primaryReturnCompany: NaverReturnDeliveryCompany | null;
     returnDeliveryFee: number | null;
     exchangeDeliveryFee: number | null;
+  };
+  // N-3.4 — GET /v1/product-origin-areas(535개 실제 코드) 매칭 결과.
+  origin: {
+    areaListFetchFailed: boolean;
+    resolvedCountryText: string | null;
+    match: NaverOriginAreaMatch;
   };
 }
 
@@ -100,19 +113,29 @@ const FIELD_SECTION: Record<string, string> = {
   productCertificationInfos: "naver-section-certification",
   "productCertificationInfos[].certificationNumber": "naver-section-certification",
   "detailAttribute.optionInfo": "naver-section-options",
+  "detailAttribute.optionInfo.optionCombinations[].optionName": "naver-section-options",
+  "detailAttribute.originAreaInfo.originAreaCode": "naver-section-origin",
+  "detailAttribute.originAreaInfo.importer": "naver-section-origin",
 };
 
 /** validateNaverPayload가 실제로 검사하는 필드 수 — READY 카운트는
  * "전체 - 문제있는 항목"으로 역산한다(검증 로직을 이 컴포넌트에서 다시 만들지
- * 않는다). 옵션/인증서처럼 상품마다 있고 없고가 달라지는 항목만 조건부로 센다. */
-function countTotalCheckedFields(hasOptions: boolean, requiresCertification: boolean, hasCertificationId: boolean) {
+ * 않는다). 옵션/인증서/수입사명처럼 상품마다 있고 없고가 달라지는 항목만
+ * 조건부로 센다. */
+function countTotalCheckedFields(
+  hasOptions: boolean,
+  requiresCertification: boolean,
+  hasCertificationId: boolean,
+  requiresImporter: boolean,
+) {
   // leafCategoryId, name, image, price, stock, shippingAddressId, returnAddressId,
   // deliveryCompany, returnDeliveryCompanyPriorityType, returnDeliveryFee,
-  // exchangeDeliveryFee(N-3.3), originAreaCode(N-2.8)
+  // exchangeDeliveryFee(N-3.3), originAreaCode(N-3.4)
   const BASE = 12;
   let total = BASE;
   if (hasOptions) total += 1;
   if (requiresCertification) total += hasCertificationId ? 2 : 1;
+  if (requiresImporter) total += 1;
   return total;
 }
 
@@ -193,7 +216,13 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
     const timer = window.setTimeout(() => {
       setResolving(true);
       setResolveError(null);
-      const query = categoryIdInput.trim() ? `?categoryId=${encodeURIComponent(categoryIdInput.trim())}` : "";
+      const params = new URLSearchParams();
+      if (categoryIdInput.trim()) params.set("categoryId", categoryIdInput.trim());
+      // N-3.4 — 상품추출 원산지 텍스트/브랜드명을 넘겨서 서버가 A-12-3과 동일한
+      // 우선순위(상품추출 > 브랜드기본값 > Seller기본값)로 원산지 코드를 매칭한다.
+      if (product.countryOfOrigin.value) params.set("countryOfOrigin", product.countryOfOrigin.value);
+      if (product.brand.value) params.set("brand", product.brand.value);
+      const query = params.toString() ? `?${params.toString()}` : "";
       fetch(`/api/naver/resolve${query}`)
         .then((res) => res.json())
         .then((data: NaverResolveResponse) => {
@@ -220,7 +249,7 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [categoryIdInput]);
+  }, [categoryIdInput, product.countryOfOrigin.value, product.brand.value]);
 
   const leafCategoryId = categoryIdInput.trim();
   const releaseAddressBookNo = resolved?.address.releaseAddressBookNo ?? null;
@@ -235,6 +264,11 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
   const primaryReturnDeliveryCompanyPriorityType = resolved?.delivery?.primaryReturnCompany?.priorityType ?? null;
   const returnDeliveryFee = resolved?.delivery?.returnDeliveryFee ?? null;
   const exchangeDeliveryFee = resolved?.delivery?.exchangeDeliveryFee ?? null;
+  // N-3.4 — resolve API의 origin 섹션을 그대로 쓴다(Preview에서 재매칭하지 않는다).
+  const originMatch = resolved?.origin?.match ?? { status: "NO_INPUT" as const, code: null, matchedDisplayName: null, requiresImporter: false };
+  const originAreaCode = originMatch.code;
+  const originAreaRequiresContent = originMatch.status === "OTHER_MANUAL";
+  const originAreaRequiresImporter = originMatch.requiresImporter;
 
   const payload = useMemo(
     () =>
@@ -249,6 +283,8 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
         exchangeDeliveryFee,
         childCertificationInfoId,
         categoryRequiresChildCertification,
+        originAreaCode,
+        originAreaRequiresContent,
       }),
     [
       product,
@@ -261,6 +297,8 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
       exchangeDeliveryFee,
       childCertificationInfoId,
       categoryRequiresChildCertification,
+      originAreaCode,
+      originAreaRequiresContent,
     ],
   );
 
@@ -277,6 +315,8 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
           exchangeDeliveryFee,
           returnCompaniesFetchFailed,
           childCertificationInfoId,
+          originAreaCode,
+          originAreaRequiresImporter,
         },
         categoryRequiresChildCertification,
       ),
@@ -291,6 +331,8 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
       returnCompaniesFetchFailed,
       childCertificationInfoId,
       categoryRequiresChildCertification,
+      originAreaCode,
+      originAreaRequiresImporter,
     ],
   );
 
@@ -299,6 +341,7 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
     hasOptions,
     categoryRequiresChildCertification,
     childCertificationInfoId !== null,
+    originAreaRequiresImporter,
   );
   const missingCount = validation.issues.filter((i) => i.severity === "MISSING").length;
   const blockedCount = validation.issues.filter((i) => i.severity === "BLOCKED").length;
@@ -501,13 +544,54 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
               <p className="text-xs text-text-tertiary">옵션 그룹은 있으나 조합(variant) 정보가 없습니다.</p>
             )}
             <p className="rounded bg-error-soft px-2 py-1 text-[11px] text-error">
-              🔴 BLOCKED — optionCombinations 필드명은 확인됐지만(GitHub #241) price/id 필드의 정확한 의미는
-              실제 등록 성공 검증 전까지 확인되지 않았습니다(N-2.8).
+              🔴 BLOCKED — optionCombinations 필드명/구조는 확인됐지만(공식 OpenAPI) price 필드가 절대가인지
+              추가금액인지는 실제 등록 성공 검증 전까지 확인되지 않았습니다.
             </p>
+            {validation.issues.some(
+              (i) => i.field === "detailAttribute.optionInfo.optionCombinations[].optionName",
+            ) && (
+              <p className="rounded bg-warning-soft px-2 py-1 text-[11px] text-warning">
+                🟡 MISSING — 일부 옵션 조합에 값이 비어 있는 옵션 그룹이 있습니다. 원본 상품의 옵션 값을
+                확인하세요.
+              </p>
+            )}
           </>
         ) : (
           <p className="text-xs text-text-tertiary">옵션 없음</p>
         )}
+      </Section>
+
+      <Section id="naver-section-origin" title="원산지">
+        <Row
+          label="원산지"
+          value={
+            resolved?.origin?.resolvedCountryText ??
+            "MISSING — 상품 원본/브랜드 설정/판매자 기본값 중 어느 것도 없음"
+          }
+        />
+        <Row
+          label="원산지 코드"
+          value={
+            originMatch.status === "NO_INPUT"
+              ? "MISSING — 원산지 텍스트 없음"
+              : originMatch.status === "OTHER_MANUAL"
+                ? `✓ 04(직접입력) — 원문 텍스트 그대로 표기`
+                : `✓ ${originMatch.code} (${originMatch.matchedDisplayName})`
+          }
+        />
+        <Row
+          label="수입사명"
+          value={
+            originMatch.requiresImporter
+              ? "MISSING — CartPilot에 소스 없음(수입산 필수 항목)"
+              : "해당없음(수입산 아님)"
+          }
+        />
+        <p className="text-[11px] text-text-tertiary">
+          원산지 코드는 GET /v1/product-origin-areas(535개 실제 코드, N-3.4 실측 확인)에서 매칭합니다. 목록에
+          없는 표현은 코드를 지어내지 않고 04(직접입력)로 대체합니다. 브랜드 국가를 원산지로 자동 추정하지
+          않습니다.
+        </p>
       </Section>
 
       <Section id="naver-section-notice" title="상품정보제공고시">

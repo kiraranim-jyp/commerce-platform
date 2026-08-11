@@ -86,6 +86,9 @@ const PLACEHOLDER_REFUND_ADDRESS = 900000002;
 const PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE = "PRIMARY";
 const PLACEHOLDER_RETURN_DELIVERY_FEE = 3000;
 const PLACEHOLDER_EXCHANGE_DELIVERY_FEE = 5000;
+// N-3.4 — 실제 GET /v1/product-origin-areas 응답에서 확인한 "00"(국산) 코드.
+// 대부분의 테스트는 국산(수입사명 불필요, content 불필요)으로 고정해 둔다.
+const PLACEHOLDER_ORIGIN_AREA_CODE = "00";
 
 describe("buildNaverProductPayload", () => {
   it("최상위 구조가 originProduct/smartstoreChannelProduct 두 객체를 갖는다", () => {
@@ -102,6 +105,8 @@ describe("buildNaverProductPayload", () => {
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
       categoryRequiresChildCertification: true,
+      originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+      originAreaRequiresContent: false,
     });
     expect(payload).toHaveProperty("originProduct");
     expect(payload).toHaveProperty("smartstoreChannelProduct");
@@ -121,6 +126,8 @@ describe("buildNaverProductPayload", () => {
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
       categoryRequiresChildCertification: true,
+      originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+      originAreaRequiresContent: false,
     });
     expect(payload.originProduct.images.representativeImage).toEqual({
       url: product.images[0].originalUrl,
@@ -141,6 +148,8 @@ describe("buildNaverProductPayload", () => {
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
       categoryRequiresChildCertification: true,
+      originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+      originAreaRequiresContent: false,
     });
     expect(payload.originProduct.deliveryInfo?.deliveryCompany).toBeUndefined();
   });
@@ -159,6 +168,8 @@ describe("buildNaverProductPayload", () => {
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
       categoryRequiresChildCertification: true,
+      originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+      originAreaRequiresContent: false,
     });
     expect(payload.originProduct.deliveryInfo?.claimDeliveryInfo).toMatchObject({
       shippingAddressId: PLACEHOLDER_RELEASE_ADDRESS,
@@ -185,6 +196,8 @@ describe("buildNaverProductPayload", () => {
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
       categoryRequiresChildCertification: true,
+      originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+      originAreaRequiresContent: false,
     });
     expect(payloadWithoutCert.originProduct.detailAttribute?.productInfoProvidedNotice).toBeDefined();
     expect(
@@ -202,13 +215,15 @@ describe("buildNaverProductPayload", () => {
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
       categoryRequiresChildCertification: false,
+      originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+      originAreaRequiresContent: false,
     });
     expect(
       payloadNonKids.originProduct.detailAttribute?.productInfoProvidedNotice?.productInfoProvidedNoticeType,
     ).toBe("WEAR");
   });
 
-  it("N-2.8: originAreaInfo.content는 countryOfOrigin으로 채우지만 originAreaCode는 비운다", () => {
+  it("N-3.4: originAreaCode를 채우고, requiresContent가 false면 content는 비운다", () => {
     const product = makeMinimalProduct();
     const listing = makeMinimalListing(product);
     const payload = buildNaverProductPayload({
@@ -222,12 +237,35 @@ describe("buildNaverProductPayload", () => {
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
       categoryRequiresChildCertification: false,
+      originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+      originAreaRequiresContent: false,
     });
-    expect(payload.originProduct.detailAttribute?.originAreaInfo?.content).toBe("대한민국");
-    expect(payload.originProduct.detailAttribute?.originAreaInfo?.originAreaCode).toBeUndefined();
+    expect(payload.originProduct.detailAttribute?.originAreaInfo?.originAreaCode).toBe(PLACEHOLDER_ORIGIN_AREA_CODE);
+    expect(payload.originProduct.detailAttribute?.originAreaInfo?.content).toBeUndefined();
   });
 
-  it("N-2.8: 옵션이 있는 상품은 variant마다 optionCombinations 항목을 만든다", () => {
+  it("N-3.4: 04(직접입력)로 폴백된 경우(requiresContent=true)에만 content를 채운다", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      product,
+      listing,
+      leafCategoryId: LEAF_CATEGORY_ID,
+      releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+      refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+      originAreaCode: "04",
+      originAreaRequiresContent: true,
+    });
+    expect(payload.originProduct.detailAttribute?.originAreaInfo?.originAreaCode).toBe("04");
+    expect(payload.originProduct.detailAttribute?.originAreaInfo?.content).toBe(product.countryOfOrigin.value);
+  });
+
+  it("N-3.4: 옵션이 있는 상품은 variant마다 optionCombinations 항목을 만들고, id는 절대 채우지 않는다", () => {
     const product = makeMinimalProduct();
     product.optionGroups = [{ name: "사이즈", values: ["90", "100"] }];
     product.variants = [
@@ -246,12 +284,22 @@ describe("buildNaverProductPayload", () => {
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
       categoryRequiresChildCertification: false,
+      originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+      originAreaRequiresContent: false,
     });
     const combos = payload.originProduct.detailAttribute?.optionInfo?.optionCombinations;
     expect(combos).toHaveLength(2);
-    expect(combos?.[0]).toMatchObject({ id: "SKU-90", optionName1: "90", stockQuantity: 5, price: 0 });
+    expect(combos?.[0]).toMatchObject({ sellerManagerCode: "SKU-90", optionName1: "90", stockQuantity: 5, price: 0 });
     // listing.priceKrw는 10000이므로 두 번째 옵션(12000)은 +2000 추가금액으로 계산된다(가정 — validate는 항상 BLOCKED).
-    expect(combos?.[1]).toMatchObject({ id: "SKU-100", optionName1: "100", stockQuantity: 3, price: 2000 });
+    expect(combos?.[1]).toMatchObject({
+      sellerManagerCode: "SKU-100",
+      optionName1: "100",
+      stockQuantity: 3,
+      price: 2000,
+    });
+    // N-3.4 — id는 "기존 옵션 수정용"이라 신규 등록에는 절대 채우지 않는다(N-2.8의 버그 수정).
+    expect(combos?.[0].id).toBeUndefined();
+    expect(combos?.[1].id).toBeUndefined();
   });
 });
 
@@ -270,6 +318,8 @@ describe("validateNaverPayload", () => {
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
       categoryRequiresChildCertification: true,
+      originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+      originAreaRequiresContent: false,
     });
     const result = validateNaverPayload(
       payload,
@@ -282,6 +332,8 @@ describe("validateNaverPayload", () => {
         exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
         returnCompaniesFetchFailed: false,
         childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
+        originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+        originAreaRequiresImporter: false,
       },
       true,
     );
@@ -292,6 +344,8 @@ describe("validateNaverPayload", () => {
     expect(blocked.some((i) => i.field === "deliveryInfo.deliveryCompany")).toBe(true);
     // N-3.3 — 주소 매핑은 공식 스펙으로 확인됐으므로 더 이상 BLOCKED가 아니다.
     expect(blocked.some((i) => i.field === "deliveryInfo (address mapping)")).toBe(false);
+    // N-3.4 — 국산(00)으로 매칭됐고 수입사명도 필요 없으니 원산지 이슈는 없어야 한다.
+    expect(result.issues.some((i) => i.field.startsWith("detailAttribute.originAreaInfo"))).toBe(false);
   });
 
   it("출고지/반품지 주소가 없으면 MISSING으로 표시한다", () => {
@@ -308,6 +362,8 @@ describe("validateNaverPayload", () => {
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
       categoryRequiresChildCertification: false,
+      originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+      originAreaRequiresContent: false,
     });
     const result = validateNaverPayload(
       payload,
@@ -320,6 +376,8 @@ describe("validateNaverPayload", () => {
         exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
         returnCompaniesFetchFailed: false,
         childCertificationInfoId: null,
+        originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+        originAreaRequiresImporter: false,
       },
       false,
     );
@@ -346,6 +404,8 @@ describe("validateNaverPayload", () => {
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
       categoryRequiresChildCertification: false,
+      originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+      originAreaRequiresContent: false,
     });
     const result = validateNaverPayload(
       payload,
@@ -358,6 +418,8 @@ describe("validateNaverPayload", () => {
         exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
         returnCompaniesFetchFailed: true,
         childCertificationInfoId: null,
+        originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+        originAreaRequiresImporter: false,
       },
       false,
     );
@@ -382,6 +444,8 @@ describe("validateNaverPayload", () => {
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
       categoryRequiresChildCertification: false,
+      originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+      originAreaRequiresContent: false,
     });
     const result = validateNaverPayload(
       payload,
@@ -394,6 +458,8 @@ describe("validateNaverPayload", () => {
         exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
         returnCompaniesFetchFailed: false,
         childCertificationInfoId: null,
+        originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+        originAreaRequiresImporter: false,
       },
       false,
     );
@@ -418,6 +484,8 @@ describe("validateNaverPayload", () => {
       exchangeDeliveryFee: null,
       childCertificationInfoId: null,
       categoryRequiresChildCertification: false,
+      originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+      originAreaRequiresContent: false,
     });
     const result = validateNaverPayload(
       payload,
@@ -430,6 +498,8 @@ describe("validateNaverPayload", () => {
         exchangeDeliveryFee: null,
         returnCompaniesFetchFailed: false,
         childCertificationInfoId: null,
+        originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+        originAreaRequiresImporter: false,
       },
       false,
     );
@@ -441,9 +511,12 @@ describe("validateNaverPayload", () => {
     ).toBe(true);
   });
 
-  it("옵션이 있는 상품은 옵션 스키마 미확인으로 BLOCKED", () => {
+  it("옵션이 있는 상품은 옵션 스키마 미확인(price 의미)으로 BLOCKED", () => {
     const product = makeMinimalProduct();
     product.optionGroups = [{ name: "사이즈", values: ["90", "100"] }];
+    product.variants = [
+      { id: "v1", optionValues: { 사이즈: "90" }, sku: "SKU-90", stockQuantity: 5, price: { amount: 10000, currency: "KRW" } },
+    ];
     const listing = makeMinimalListing(product);
     const payload = buildNaverProductPayload({
       product,
@@ -456,6 +529,8 @@ describe("validateNaverPayload", () => {
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
       categoryRequiresChildCertification: true,
+      originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+      originAreaRequiresContent: false,
     });
     const result = validateNaverPayload(
       payload,
@@ -468,13 +543,63 @@ describe("validateNaverPayload", () => {
         exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
         returnCompaniesFetchFailed: false,
         childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
+        originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+        originAreaRequiresImporter: false,
       },
       true,
     );
     expect(result.issues.some((i) => i.field === "detailAttribute.optionInfo" && i.severity === "BLOCKED")).toBe(true);
+    // 이 케이스는 모든 옵션값이 채워져 있으니 완전성 이슈는 없어야 한다.
+    expect(
+      result.issues.some((i) => i.field === "detailAttribute.optionInfo.optionCombinations[].optionName"),
+    ).toBe(false);
   });
 
-  it("N-2.8: originAreaCode는 항상 BLOCKED — content를 채워도 마찬가지", () => {
+  it("N-3.4: 옵션명은 있는데 특정 조합의 옵션값이 비어 있으면 MISSING을 추가로 표시한다", () => {
+    const product = makeMinimalProduct();
+    product.optionGroups = [{ name: "사이즈", values: ["90"] }];
+    // 옵션 그룹은 있지만 variant에 해당 옵션값이 비어 있음(원본 파싱 일부 실패 시뮬레이션).
+    product.variants = [{ id: "v1", optionValues: {}, sku: "SKU-90", stockQuantity: 5 }];
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      product,
+      listing,
+      leafCategoryId: LEAF_CATEGORY_ID,
+      releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+      refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+      originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+      originAreaRequiresContent: false,
+    });
+    const result = validateNaverPayload(
+      payload,
+      {
+        product,
+        releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+        refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+        primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+        returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+        exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+        returnCompaniesFetchFailed: false,
+        childCertificationInfoId: null,
+        originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+        originAreaRequiresImporter: false,
+      },
+      false,
+    );
+    expect(
+      result.issues.some(
+        (i) =>
+          i.field === "detailAttribute.optionInfo.optionCombinations[].optionName" && i.severity === "MISSING",
+      ),
+    ).toBe(true);
+  });
+
+  it("N-3.4: 원산지 텍스트를 확인하지 못했으면 originAreaCode가 MISSING", () => {
     const product = makeMinimalProduct();
     const listing = makeMinimalListing(product);
     const payload = buildNaverProductPayload({
@@ -488,6 +613,8 @@ describe("validateNaverPayload", () => {
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
       categoryRequiresChildCertification: false,
+      originAreaCode: null,
+      originAreaRequiresContent: false,
     });
     const result = validateNaverPayload(
       payload,
@@ -500,13 +627,63 @@ describe("validateNaverPayload", () => {
         exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
         returnCompaniesFetchFailed: false,
         childCertificationInfoId: null,
+        originAreaCode: null,
+        originAreaRequiresImporter: false,
       },
       false,
     );
     expect(
       result.issues.some(
-        (i) => i.field === "detailAttribute.originAreaInfo.originAreaCode" && i.severity === "BLOCKED",
+        (i) => i.field === "detailAttribute.originAreaInfo.originAreaCode" && i.severity === "MISSING",
       ),
     ).toBe(true);
+  });
+
+  it("N-3.4: 원산지가 수입산으로 매칭되면 수입사명(importer)이 MISSING", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    // 실제 GET /v1/product-origin-areas 응답에서 확인한 "수입산:유럽>스페인" 코드.
+    const spainCode = "0201025";
+    const payload = buildNaverProductPayload({
+      product,
+      listing,
+      leafCategoryId: LEAF_CATEGORY_ID,
+      releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+      refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+      originAreaCode: spainCode,
+      originAreaRequiresContent: false,
+    });
+    const result = validateNaverPayload(
+      payload,
+      {
+        product,
+        releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+        refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+        primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+        returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+        exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+        returnCompaniesFetchFailed: false,
+        childCertificationInfoId: null,
+        originAreaCode: spainCode,
+        originAreaRequiresImporter: true,
+      },
+      false,
+    );
+    expect(
+      result.issues.some(
+        (i) => i.field === "detailAttribute.originAreaInfo.importer" && i.severity === "MISSING",
+      ),
+    ).toBe(true);
+    // originAreaCode 자체는 이미 매칭됐으니 그 필드에 대한 이슈는 없어야 한다.
+    expect(
+      result.issues.some(
+        (i) => i.field === "detailAttribute.originAreaInfo.originAreaCode",
+      ),
+    ).toBe(false);
   });
 });

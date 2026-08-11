@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
-import { buildNaverCategoryPath } from "@commerce/listing";
+import { buildNaverCategoryPath, resolveNaverOriginArea } from "@commerce/listing";
 import { getNaverCredentials } from "../_lib/env";
 import { callNaverApi, issueNaverAccessToken } from "../_lib/client";
 import { fetchNaverAllCategories } from "../_lib/category";
 import { fetchNaverReturnDeliveryCompanies, resolvePrimaryReturnCompany } from "../_lib/delivery";
+import { fetchNaverOriginAreas } from "../_lib/origin";
 import { getDefaultSellerProfile } from "../../coupang/_lib/seller-profile";
+import { findBrandProfileByName } from "../../coupang/_lib/brand-profile";
 
 /**
  * Sprint N-2.8 — NaverPayloadPreview에 필요한 실제 read-only 데이터를 한 번에
@@ -25,6 +27,16 @@ import { getDefaultSellerProfile } from "../../coupang/_lib/seller-profile";
  * exchangeDeliveryCharge(판매자의 실제 반품/교환 배송비 정책 — 플랫폼과
  * 무관한 판매자 자신의 비용 정책)를 그대로 재사용한다. 새 DB 컬럼을 만들지
  * 않는다(CPO 원칙 — 이미 있는 판매자 데이터를 다시 입력받지 않는다).
+ *
+ * Sprint N-3.4 — origin 섹션 추가. GET /v1/product-origin-areas(공식 GitHub
+ * 공지 discussion #3632로 발견)로 조회한 535개 실제 코드 목록을
+ * resolveNaverOriginArea(원산지 텍스트 매칭)에 넘긴다. 원산지 텍스트 자체는
+ * Coupang의 A-12-3에서 이미 검증된 것과 동일한 우선순위(상품추출 >
+ * 브랜드기본값 > Seller기본값)로 이 라우트가 결정한다 — countryOfOrigin/brand
+ * 쿼리 파라미터로 호출부(상품 데이터)가 상품추출 값과 브랜드명을 넘겨준다.
+ * "브랜드 국가 = 원산지"라는 자동 추론은 하지 않는다 — brandProfile.
+ * countryOfOrigin은 판매자가 그 브랜드에 대해 실제로 알고 입력해 둔 값이지
+ * CartPilot이 브랜드 본사 국가를 조회해서 채운 값이 아니다(N-3.4 Part 7).
  */
 
 interface NaverCertificationInfo {
@@ -45,6 +57,8 @@ interface NaverAddressBookEntry {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const categoryId = searchParams.get("categoryId");
+  const extractedCountryOfOrigin = searchParams.get("countryOfOrigin");
+  const brandName = searchParams.get("brand");
 
   const credentials = getNaverCredentials();
   if (!credentials) {
@@ -101,11 +115,21 @@ export async function GET(request: Request) {
     refundAddressBookNo = addressBooks.find((a) => a.addressType === "REFUND_OR_EXCHANGE")?.addressBookNo ?? null;
   }
 
-  const [returnCompanies, sellerProfile] = await Promise.all([
+  const [returnCompanies, sellerProfile, originAreas, brandProfile] = await Promise.all([
     fetchNaverReturnDeliveryCompanies(accessToken),
     getDefaultSellerProfile(),
+    fetchNaverOriginAreas(accessToken),
+    brandName ? findBrandProfileByName(brandName) : Promise.resolve(null),
   ]);
   const primaryReturnCompany = returnCompanies ? resolvePrimaryReturnCompany(returnCompanies) : null;
+
+  // A-12-3과 동일한 우선순위: 상품 원본에서 실제로 추출된 값 > 브랜드별 판매자
+  // 설정값 > 판매자 전역 기본값. 브랜드 국가 추정은 하지 않는다.
+  const resolvedCountryText =
+    extractedCountryOfOrigin || brandProfile?.countryOfOrigin || sellerProfile?.defaultCountryOfOrigin || null;
+  const originMatch = originAreas
+    ? resolveNaverOriginArea(resolvedCountryText, originAreas)
+    : { status: "NO_INPUT" as const, code: null, matchedDisplayName: null, requiresImporter: false };
 
   return NextResponse.json({
     status: "OK",
@@ -119,6 +143,11 @@ export async function GET(request: Request) {
       primaryReturnCompany,
       returnDeliveryFee: sellerProfile?.returnDeliveryCharge ?? null,
       exchangeDeliveryFee: sellerProfile?.exchangeDeliveryCharge ?? null,
+    },
+    origin: {
+      areaListFetchFailed: originAreas === null,
+      resolvedCountryText,
+      match: originMatch,
     },
   });
 }

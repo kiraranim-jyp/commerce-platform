@@ -37,10 +37,15 @@ export function validateNaverPayload(
     | "returnDeliveryFee"
     | "exchangeDeliveryFee"
     | "childCertificationInfoId"
+    | "originAreaCode"
   > & {
     /** N-3.3 — 반품 택배사 목록 조회 자체가 실패했는지(계정/네트워크 문제 등).
      * 실패와 "택배사 미등록"은 서로 다른 사유라 구분한다. */
     returnCompaniesFetchFailed: boolean;
+    /** N-3.4 — originAreaCode가 수입산(02) 계열로 매칭됐는지. true면
+     * originAreaInfo.importer가 스펙상 필수인데 CartPilot에는 이 값의
+     * 소스가 없어(제조사와 별개 개념) 항상 MISSING으로 표시한다. */
+    originAreaRequiresImporter: boolean;
   },
   categoryRequiresChildCertification: boolean,
 ): NaverPayloadValidationResult {
@@ -142,28 +147,50 @@ export function validateNaverPayload(
     });
   }
 
-  // N-2.8 — optionCombinations 필드명은 확인됐지만(GitHub #241), price가
-  // 절대가/추가금액인지·id를 미리 채워도 되는지는 실제 등록 성공 전까지
-  // 확인 안 됐다. 필드 구조는 채웠지만(build-payload.ts) 이 값을 신뢰해서
-  // 그대로 등록에 쓰면 안 된다는 걸 항상 상기시킨다.
-  const hasOptions = (input.product as CanonicalProduct).optionGroups.length > 0;
+  // N-2.8/N-3.4 — optionCombinations 필드명/각 필드 설명은 공식 OpenAPI로
+  // 확인됐다(id는 "기존 옵션 수정용"이라 신규 등록엔 항상 비움, N-3.4에서
+  // 수정된 실제 버그). 다만 price가 절대가/추가금액인지는 여전히 실제 등록
+  // 성공 전까지 확인 안 됐다 — 이 값을 신뢰해서 그대로 등록에 쓰면 안 된다는
+  // 걸 항상 상기시킨다.
+  const product = input.product as CanonicalProduct;
+  const hasOptions = product.optionGroups.length > 0;
   if (hasOptions) {
     issues.push({
       field: "detailAttribute.optionInfo",
       reason:
-        "optionCombinations 필드명은 확인됨(GitHub #241)이나 price/id 필드의 정확한 의미는 미확인 — 실제 등록 성공 검증 전까지 이 값을 신뢰할 수 없습니다.",
+        "optionCombinations 필드명/구조는 확인됨(공식 OpenAPI)이나 price 필드가 절대가인지 추가금액인지는 미확인 — 실제 등록 성공 검증 전까지 이 값을 신뢰할 수 없습니다.",
       severity: "BLOCKED",
     });
+    // N-3.4 — 옵션명은 있는데 특정 조합의 옵션값이 비어 있으면(원본 페이지
+    // 파싱이 일부만 성공한 경우) price 의미와 무관하게 별도로 알려준다.
+    const groupNames = product.optionGroups.map((g) => g.name);
+    const hasIncompleteVariant = product.variants.some((v) => groupNames.some((name) => !v.optionValues[name]));
+    if (hasIncompleteVariant) {
+      issues.push({
+        field: "detailAttribute.optionInfo.optionCombinations[].optionName",
+        reason: "일부 옵션 조합에 값이 비어 있는 옵션 그룹이 있습니다 — 원본 상품의 옵션 값을 확인해야 합니다.",
+        severity: "MISSING",
+      });
+    }
   }
 
-  // N-2.8 — originAreaCode(네이버 자체 원산지 코드 enum)는 어느 경로로도
-  // 확인되지 않았다. content(원산지 텍스트)는 채웠지만 실제 등록에는
-  // originAreaCode가 필요할 가능성이 높아 항상 BLOCKED로 남긴다.
-  issues.push({
-    field: "detailAttribute.originAreaInfo.originAreaCode",
-    reason: "네이버 원산지 코드(originAreaCode) enum 값이 확인되지 않아 채우지 않았습니다.",
-    severity: "BLOCKED",
-  });
+  // N-3.4 — originAreaCode는 GET /v1/product-origin-areas(535개 실제 코드)로
+  // 확인됐다(더 이상 BLOCKED 아님). 원산지 텍스트 자체가 없으면 MISSING,
+  // 수입산(02) 계열로 매칭됐으면 importer(수입사명)가 스펙상 필수인데
+  // CartPilot에 소스가 없어 별도 MISSING으로 알린다.
+  if (input.originAreaCode === null) {
+    issues.push({
+      field: "detailAttribute.originAreaInfo.originAreaCode",
+      reason: "원산지 텍스트를 확인하지 못했습니다 — 상품 원본/브랜드 설정/판매자 기본값 중 어느 것도 없습니다.",
+      severity: "MISSING",
+    });
+  } else if (input.originAreaRequiresImporter) {
+    issues.push({
+      field: "detailAttribute.originAreaInfo.importer",
+      reason: "원산지가 수입산으로 확인되어 수입사명이 필수이지만 CartPilot에 이 값의 소스가 없습니다.",
+      severity: "MISSING",
+    });
+  }
 
   return { ok: issues.length === 0, issues };
 }
