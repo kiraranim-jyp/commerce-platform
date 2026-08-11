@@ -19,8 +19,15 @@ import { findBrandProfileByName } from "../../coupang/_lib/brand-profile";
  * 발견한 실제 존재하는 API(GET /v2/product-delivery-info/
  * return-delivery-companies — N-2.5가 찾던 "택배사 코드 조회 API"가 사실은
  * 이 경로였다)로 조회한다. 출고 택배사(deliveryInfo.deliveryCompany) 조회
- * API는 스펙에 없으므로 여전히 courier.available=false로 고정한다(N-2.5
- * 결론 유지, 추측 금지).
+ * API는 스펙에 없다(N-2.5/N-3.3/N-3.6 재확인 — bundle-delivery-groups,
+ * hope-delivery-groups 스키마까지 전수 확인했지만 택배사 필드 자체가 없다).
+ *
+ * Sprint N-3.6(개정 Part A) — Coupang의 deliveryCompanyCode(공식 조회 API가
+ * 없어 판매자가 직접 입력)와 같은 패턴으로 SellerProfile.
+ * naverDeliveryCompanyCode를 추가했다. API 조회가 불가능하다는 결론은 그대로
+ * 지만, 판매자가 Settings에서 입력한 값이 있으면 그 값을 courier.value로
+ * 내려준다 — BLOCKED(해결 불가)가 아니라 MISSING(입력하면 해결됨)이 정확한
+ * 상태다.
  *
  * 반품/교환 배송비(returnDeliveryFee/exchangeDeliveryFee)는 Naver 전용 설정이
  * 따로 없어 Coupang용으로 이미 만들어 둔 SellerProfile.returnDeliveryCharge/
@@ -135,8 +142,17 @@ export async function GET(request: Request) {
     status: "OK",
     category,
     address: { releaseAddressBookNo, refundAddressBookNo },
-    // N-2.5/N-3.3 확인 — 출고 택배사 전용 조회 API는 공식 스펙에 없다(추측 코드 금지).
-    courier: { available: false, reason: "출고 택배사 코드 조회 API를 찾지 못했습니다(N-2.5/N-3.3 확인)." },
+    // N-2.5/N-3.3/N-3.6 확인 — 출고 택배사 전용 조회 API는 공식 스펙에 없다(추측
+    // 코드 금지). N-3.6부터는 Settings에 판매자가 직접 입력한 값이 있으면
+    // 그 값을 함께 내려준다(Coupang deliveryCompanyCode와 같은 수동 입력 패턴).
+    courier: sellerProfile?.naverDeliveryCompanyCode
+      ? { available: true, value: sellerProfile.naverDeliveryCompanyCode, source: "SELLER_PROFILE" as const }
+      : {
+          available: false,
+          value: null,
+          source: null,
+          reason: "출고 택배사 코드 조회 API를 찾지 못했습니다(N-2.5/N-3.3/N-3.6 확인) — Settings에서 직접 입력하면 해결됩니다.",
+        },
     delivery: {
       returnCompanies: returnCompanies ?? [],
       returnCompaniesFetchFailed: returnCompanies === null,

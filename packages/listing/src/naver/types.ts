@@ -5,15 +5,23 @@
  * 임의로 필드를 지어내지 않는다(CPO 반복 지시).
  *
  * 확인 방법:
- * - "확인됨(공식 GitHub 기술지원 답변/릴리즈노트)": commerce-api-naver/commerce-api
- *   discussions #241, #337, #1730에서 메인테이너가 직접 인용한 필드.
+ * - "확인됨(공식 OpenAPI 스펙)": commerce-api-naver/commerce-api의
+ *   docs/2.0.0-RC.js(공식 OpenAPI 3.0.3 스펙)에서 직접 확인한 필드/타입/제약.
  * - "확인됨(production GET)": Sprint N-2.4/N-2.5에서 실제 프로덕션 인증으로 호출해서
  *   받은 실제 응답(카테고리/속성/고시/주소록).
  * - "미확인": 어느 쪽으로도 확인 못함 — 구현에서 값을 넣지 않고 validation이
  *   BLOCKED로 표시한다.
+ *
+ * N-3.6 정정 — 과거 "GitHub #241 원문 코드 예제로 확인됨"이라고 적었던 항목들은
+ * discussion #241을 다시 읽어보니 실제로는 한 사용자가 GET 파라미터로 잘못 보낸
+ * 요청을 메인테이너가 "형식이 잘못됐다"고 지적한 스레드였다 — 즉 필드값이
+ * 공식적으로 확인된 적이 없었다(사용자의 추측을 마치 공식 예제처럼 잘못
+ * 인용한 것). 다행히 필드명/구조 자체는 N-3.3/N-3.4에서 공식 OpenAPI 스펙으로
+ * 별도 재확인됐기 때문에 실제 값에는 문제가 없었다 — 아래 주석들을 인용
+ * 출처만 정정한다(추측 근거를 정식 근거로 교체).
  */
 
-/** 확인됨(GitHub #241) — images는 단순 URL 문자열이 아니라 object로 감싼다. */
+/** 확인됨(공식 OpenAPI 스펙) — images는 단순 URL 문자열이 아니라 object로 감싼다. */
 export interface NaverImageRef {
   url: string;
 }
@@ -194,7 +202,7 @@ export interface NaverOptionCombination {
   usable?: boolean;
 }
 
-/** 확인됨(GitHub #241 원문 코드 예제, N-2.8) — 조합형 옵션 컨테이너. */
+/** 확인됨(공식 OpenAPI 스펙) — 조합형 옵션 컨테이너. */
 export interface NaverOptionInfo {
   useStockManagement?: boolean;
   optionCombinationGroupNames?: string[];
@@ -244,13 +252,29 @@ export interface NaverOriginProduct {
   productCertificationInfos?: NaverProductCertificationInfo[];
 }
 
-/** 확인됨(GitHub #241, 필드명만) — 필수 여부와 각 필드의 정확한 타입/제약은
- * 미확인. channelProductDisplayStatusType 등 enum 값도 미확인. */
+/** 확인됨(공식 OpenAPI 스펙, ExternalApiSmartstoreChannelProductVo.product,
+ * N-3.5/N-3.6 재검증) — required: channelProductDisplayStatusType,
+ * naverShoppingRegistration(둘 다 필수인데 N-3.5 이전까지는 놓치고 있었다).
+ * channelProductDisplayStatusType은 "ON, SUSPENSION만 입력 가능"이라고 스펙에
+ * 명시돼 있다 — WAIT은 응답에만 나오는 상태이지 입력 가능한 값이 아니다
+ * (N-2.6부터 여기 WAIT을 쓰고 있던 게 실제 버그였음, N-3.5에서 수정).
+ * naverShoppingRegistration은 "네이버 쇼핑 광고주가 아닌 경우 false로 강제
+ * 저장"된다고 스펙에 적혀 있고, 광고주 여부를 조회하는 API를 공식 스펙 어디서도
+ * 찾지 못했다(N-3.6 재확인) — CartPilot이 임의로 true/false를 정할 근거가
+ * 없어 항상 비워두고 validate-payload.ts가 MISSING으로 표시한다. */
 export interface NaverSmartstoreChannelProduct {
   channelProductName?: string;
+  /** 선택. 미입력 시 false(알림받기 동의 회원 전용 상품 아님)로 저장된다. */
   storeKeepExclusiveProduct?: boolean;
+  /** 필수. "네이버 쇼핑 광고주가 아닌 경우에는 false로 저장됩니다" — 조회 API
+   * 미확인이라 CartPilot은 값을 채우지 않는다(항상 MISSING). */
   naverShoppingRegistration?: boolean;
-  channelProductDisplayStatusType?: string;
+  /** 선택("콘텐츠 게시글 일련번호" — 공지사항 게시글 연결용). CartPilot이
+   * 관리하는 게시판이 없어 채우지 않는다(등록 자체에 필수는 아니라 이슈로
+   * 표시하지 않는다). */
+  bbsSeq?: number;
+  /** 필수. ON | SUSPENSION만 입력 가능(WAIT은 응답 전용 상태). */
+  channelProductDisplayStatusType?: "ON" | "SUSPENSION";
 }
 
 /** 확인됨(GitHub #337) — POST /v2/products의 최상위 구조. */

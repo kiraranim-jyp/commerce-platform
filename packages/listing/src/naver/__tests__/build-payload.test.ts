@@ -154,6 +154,45 @@ describe("buildNaverProductPayload", () => {
     expect(payload.originProduct.deliveryInfo?.deliveryCompany).toBeUndefined();
   });
 
+  it("N-3.6(개정): deliveryCompany가 입력되면(Settings 수동 입력) 그대로 채운다", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      product,
+      listing,
+      leafCategoryId: LEAF_CATEGORY_ID,
+      releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+      refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+      childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
+      categoryRequiresChildCertification: true,
+      originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+      originAreaRequiresContent: false,
+      deliveryCompany: "CJ대한통운",
+    });
+    expect(payload.originProduct.deliveryInfo?.deliveryCompany).toBe("CJ대한통운");
+    const result = validateNaverPayload(
+      payload,
+      {
+        product,
+        releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+        refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+        primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+        returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+        exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+        returnCompaniesFetchFailed: false,
+        childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
+        originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+        originAreaRequiresImporter: false,
+        deliveryCompany: "CJ대한통운",
+      },
+      true,
+    );
+    expect(result.fields.find((f) => f.field === "deliveryInfo.deliveryCompany")?.status).toBe("READY");
+  });
+
   it("N-3.3: claimDeliveryInfo에 반품 택배사 우선순위/반품·교환 배송비를 채운다", () => {
     const product = makeMinimalProduct();
     const listing = makeMinimalListing(product);
@@ -340,8 +379,12 @@ describe("validateNaverPayload", () => {
     expect(result.ok).toBe(false);
     const blocked = result.issues.filter((i) => i.severity === "BLOCKED");
     expect(blocked.some((i) => i.field === "productCertificationInfos[].certificationNumber")).toBe(true);
-    // 출고 택배사(deliveryCompany) 코드는 조회 API 자체가 없어 여전히 BLOCKED.
-    expect(blocked.some((i) => i.field === "deliveryInfo.deliveryCompany")).toBe(true);
+    // N-3.6(개정) — 출고 택배사 조회 API는 여전히 없지만 판매자가 Settings에서
+    // 직접 입력할 수 있는 필드가 생겨서 BLOCKED가 아니라 MISSING이다(값을 안
+    // 넘겼으니 MISSING으로 남아야 한다).
+    const missing = result.issues.filter((i) => i.severity === "MISSING");
+    expect(missing.some((i) => i.field === "deliveryInfo.deliveryCompany")).toBe(true);
+    expect(blocked.some((i) => i.field === "deliveryInfo.deliveryCompany")).toBe(false);
     // N-3.3 — 주소 매핑은 공식 스펙으로 확인됐으므로 더 이상 BLOCKED가 아니다.
     expect(blocked.some((i) => i.field === "deliveryInfo (address mapping)")).toBe(false);
     // N-3.4 — 국산(00)으로 매칭됐고 수입사명도 필요 없으니 원산지 이슈는 없어야 한다.
@@ -791,8 +834,11 @@ describe("N-3.5: Final Validator — readyCount/missingCount/blockedCount", () =
     );
     expect(result.fields.some((f) => f.field.startsWith("detailAttribute.optionInfo"))).toBe(false);
     expect(result.readyCount + result.missingCount + result.blockedCount).toBe(result.fields.length);
-    // deliveryCompany(BLOCKED)/naverShoppingRegistration(MISSING)는 항상 남는다 — 완전 READY는 불가능하다.
-    expect(result.blockedCount).toBeGreaterThan(0);
+    // N-3.6(개정) — deliveryCompany는 이제 BLOCKED가 아니라 MISSING(Settings에서
+    // 입력하면 해결됨)이다. naverShoppingRegistration은 여전히 항상 MISSING —
+    // 완전 READY는 불가능하다. 옵션/인증 관련 BLOCKED가 없는 이 케이스에서는
+    // blockedCount가 0이어도 정상이다.
+    expect(result.blockedCount).toBe(0);
     expect(result.missingCount).toBeGreaterThan(0);
     expect(result.ok).toBe(false);
   });

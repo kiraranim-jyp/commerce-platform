@@ -13,6 +13,12 @@ export interface SellerProfile {
   name: string;
   isDefault: boolean;
   deliveryCompanyCode: string;
+  /** N-3.6(개정 Part A) — Naver는 출고 택배사 조회 API가 존재하지 않는다(공식
+   * OpenAPI 스펙 전수 확인, N-3.6 재검증). Coupang의 deliveryCompanyCode와 같은
+   * 패턴(공식 API가 없으면 판매자가 직접 입력)으로 공통화한다 — 이 필드가
+   * 생기기 전까지는 BLOCKED였지만, 입력 가능한 필드가 생겼으니 MISSING(입력하면
+   * 해결됨)이 정확한 상태다. */
+  naverDeliveryCompanyCode: string;
   returnCenterCode: string;
   returnChargeName: string;
   companyContactNumber: string;
@@ -71,6 +77,7 @@ interface SellerProfileRow {
   name: string;
   is_default: boolean;
   delivery_company_code: string | null;
+  naver_delivery_company_code: string | null;
   return_center_code: string | null;
   return_charge_name: string | null;
   company_contact_number: string | null;
@@ -103,6 +110,7 @@ function toProfile(row: SellerProfileRow): SellerProfile {
     name: row.name,
     isDefault: row.is_default,
     deliveryCompanyCode: row.delivery_company_code ?? "",
+    naverDeliveryCompanyCode: row.naver_delivery_company_code ?? "",
     returnCenterCode: row.return_center_code ?? "",
     returnChargeName: row.return_charge_name ?? "",
     companyContactNumber: row.company_contact_number ?? "",
@@ -147,6 +155,7 @@ export async function listSellerProfiles(): Promise<SellerProfile[]> {
 export interface SellerProfileInput {
   name: string;
   deliveryCompanyCode?: string;
+  naverDeliveryCompanyCode?: string;
   returnCenterCode?: string;
   returnChargeName?: string;
   companyContactNumber?: string;
@@ -181,6 +190,8 @@ function toRowFields(input: Partial<SellerProfileInput>): Record<string, unknown
   const row: Record<string, unknown> = {};
   if (input.name !== undefined) row.name = input.name;
   if (input.deliveryCompanyCode !== undefined) row.delivery_company_code = input.deliveryCompanyCode || null;
+  if (input.naverDeliveryCompanyCode !== undefined)
+    row.naver_delivery_company_code = input.naverDeliveryCompanyCode || null;
   if (input.returnCenterCode !== undefined) row.return_center_code = input.returnCenterCode || null;
   if (input.returnChargeName !== undefined) row.return_charge_name = input.returnChargeName || null;
   if (input.companyContactNumber !== undefined) row.company_contact_number = input.companyContactNumber || null;

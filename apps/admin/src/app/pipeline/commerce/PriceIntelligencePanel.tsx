@@ -44,7 +44,18 @@ function MarketRow({ label, observation }: { label: string; observation: PriceOb
   );
 }
 
-export function PriceIntelligencePanel({ product }: { product: CanonicalProduct }) {
+export function PriceIntelligencePanel({
+  product,
+  onApplyBrandOriginPrice,
+}: {
+  product: CanonicalProduct;
+  /** N-3.6(개정 Part J) — Coupang PriceEditor의 "원본" 입력칸에 브랜드 본국
+   * 원본가격을 반영하고 싶을 때만 넘긴다. 절대 자동으로(사용자 클릭 없이)
+   * 호출하지 않는다(CPO 지시 Part K — "현재 URL의 가격을 몰래 원본가격으로
+   * 승격하지 않는다"는 원칙을 여기도 그대로 적용한다). Naver Preview처럼
+   * 원본가격을 편집하는 필드 자체가 없으면 넘기지 않는다. */
+  onApplyBrandOriginPrice?: (amount: number, currency: string) => void;
+}) {
   const [data, setData] = useState<PriceIntelligenceResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [showExpanded, setShowExpanded] = useState(false);
@@ -59,7 +70,7 @@ export function PriceIntelligencePanel({ product }: { product: CanonicalProduct 
         const res = await fetch("/api/price-intelligence", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sourceUrl: product.sourceUrl, brand: product.brand?.value }),
+          body: JSON.stringify({ sourceUrl: product.sourceUrl, brand: product.brand?.value, title: product.title?.value }),
         });
         const json = (await res.json()) as PriceIntelligenceResult;
         if (!cancelled) setData(json);
@@ -75,6 +86,10 @@ export function PriceIntelligencePanel({ product }: { product: CanonicalProduct 
             additionalMarkets: [],
             testedMarketCodes: [],
             convertedOriginToKrw: null,
+            brandOriginPrice: null,
+            brandOriginPriceStatus: "MISSING",
+            brandOriginPriceReason: "가격 정보 조회 중 오류가 발생했습니다.",
+            convertedBrandOriginToKrw: null,
           });
         }
       } finally {
@@ -84,7 +99,7 @@ export function PriceIntelligencePanel({ product }: { product: CanonicalProduct 
     return () => {
       cancelled = true;
     };
-  }, [product.sourceUrl, product.brand?.value]);
+  }, [product.sourceUrl, product.brand?.value, product.title?.value]);
 
   function toggleExpand() {
     if (showExpanded) {
@@ -130,6 +145,45 @@ export function PriceIntelligencePanel({ product }: { product: CanonicalProduct 
 
   return (
     <div className="space-y-2">
+      {/* N-3.6(개정 Part G/K) — 브랜드 본국 "공식 사이트"에서 확인한 원본가격.
+          아래 originMarket(원본 시장)과는 다른 개념이다 — originMarket은 상품이
+          실제로 팔리는 그 사이트 안에서 브랜드 국가와 일치하는 market을 고른
+          것뿐이라, 브랜드가 완전히 다른 판매처를 통해 팔리면(예: 덴마크 브랜드가
+          영국 편집샵에서 팔리는 경우) 브랜드 본국 가격 자체를 절대 보여줄 수
+          없다. */}
+      {data.brandOriginPrice ? (
+        <div className="rounded-md border border-primary/30 bg-primary/5 p-2">
+          <p className="text-[11px] font-medium text-text-secondary">브랜드 본국 원본가격</p>
+          <p className="mt-0.5 text-sm font-semibold text-text-primary">
+            {formatOriginalPrice(data.brandOriginPrice.amount, data.brandOriginPrice.currency)}
+          </p>
+          {data.convertedBrandOriginToKrw && (
+            <p className="mt-0.5 text-[11px] text-text-tertiary">
+              → 환율 적용 약 {formatKrw(data.convertedBrandOriginToKrw.amount)}
+            </p>
+          )}
+          <p className="mt-1 text-[10px] text-text-tertiary">{data.brandOriginPriceReason}</p>
+          <p className="mt-1 text-[10px] text-text-tertiary">
+            브랜드 본국 가격을 기준으로 환산한 참고가격입니다. 실제 판매가격은 국가/시장별 가격정책에 따라 다를 수
+            있습니다.
+          </p>
+          {onApplyBrandOriginPrice && (
+            <button
+              type="button"
+              onClick={() => onApplyBrandOriginPrice(data.brandOriginPrice!.amount, data.brandOriginPrice!.currency)}
+              className="mt-1.5 rounded border border-primary px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-primary/10"
+            >
+              이 값을 원본가격으로 적용
+            </button>
+          )}
+        </div>
+      ) : (
+        <p className="rounded-md bg-background px-2 py-1.5 text-[11px] text-warning">
+          ⚠ 브랜드 본국 원본가격을 확인하지 못했습니다 — {data.brandOriginPriceReason}
+        </p>
+      )}
+
+      <p className="text-[10px] font-medium text-text-tertiary">판매처별 실제 가격(참고)</p>
       <MarketRow
         label={data.originMarketIsBrandCountryMarket ? "브랜드 본국 시장" : "원본 시장(사이트 기본)"}
         observation={data.originMarket}

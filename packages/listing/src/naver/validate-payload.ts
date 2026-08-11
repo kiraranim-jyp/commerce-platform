@@ -76,6 +76,7 @@ export function validateNaverPayload(
     | "exchangeDeliveryFee"
     | "childCertificationInfoId"
     | "originAreaCode"
+    | "deliveryCompany"
   > & {
     /** N-3.3 — 반품 택배사 목록 조회 자체가 실패했는지(계정/네트워크 문제 등).
      * 실패와 "택배사 미등록"은 서로 다른 사유라 구분한다. */
@@ -138,12 +139,17 @@ export function validateNaverPayload(
     "반품지 주소(addressType=REFUND_OR_EXCHANGE)를 찾지 못했습니다 — 판매자 주소록에 등록 필요.",
   );
 
-  // N-3.5 — 출고 택배사 조회 API 존재 여부를 다시 확인했다(OpenAPI/GitHub/
-  // Discussion 재검토, N-2.5/N-3.3 이후 새로운 공식 근거 없음) — BLOCKED 유지.
-  blocked(
+  // N-3.6(개정 Part A) — 출고 택배사 조회 API는 여전히 없다(N-2.5/N-3.3/N-3.5/
+  // N-3.6 재확인, 배송 관련 스키마 전수 확인 포함). 하지만 Coupang의
+  // deliveryCompanyCode와 같은 패턴으로 판매자가 Settings에서 직접 입력할 수
+  // 있게 됐으므로, "해결 불가"인 BLOCKED가 아니라 "입력하면 해결됨"인
+  // MISSING이 정확하다 — 값이 있으면 READY.
+  check(
     fields,
     "deliveryInfo.deliveryCompany",
-    "출고 택배사 조회 API가 공식 스펙에 없어 값을 채우지 않았습니다(N-2.5/N-3.3/N-3.5 확인 — 반품 택배사 조회 API와는 별개).",
+    Boolean(input.deliveryCompany),
+    "MISSING",
+    "출고 택배사가 입력되어 있지 않습니다 — Settings의 배송 프로필에서 네이버 택배사를 입력하면 해결됩니다(공식 조회 API는 없어 직접 입력이 필요합니다).",
   );
 
   // N-3.3 — 반품 택배사는 실제 조회 API(GET /v2/product-delivery-info/

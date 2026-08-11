@@ -15,6 +15,9 @@ export interface BrandProfile {
   brandIntro: string;
   representativeImageUrl: string | null;
   commonDescription: string;
+  /** N-3.6(개정) — 브랜드 본국 공식 사이트 URL. Brand Origin Price Resolver가
+   * 이 값이 있을 때만 동작한다(없으면 brandOriginPrice=null, 추측하지 않음). */
+  officialWebsite: string | null;
 }
 
 interface BrandProfileRow {
@@ -25,6 +28,7 @@ interface BrandProfileRow {
   brand_intro: string | null;
   representative_image_url: string | null;
   common_description: string | null;
+  official_website: string | null;
 }
 
 function toProfile(row: BrandProfileRow): BrandProfile {
@@ -36,6 +40,7 @@ function toProfile(row: BrandProfileRow): BrandProfile {
     brandIntro: row.brand_intro ?? "",
     representativeImageUrl: row.representative_image_url,
     commonDescription: row.common_description ?? "",
+    officialWebsite: row.official_website,
   };
 }
 
@@ -77,6 +82,7 @@ export interface BrandProfileInput {
   brandIntro?: string;
   representativeImageUrl?: string | null;
   commonDescription?: string;
+  officialWebsite?: string | null;
 }
 
 /** insert/update가 같은 컬럼 매핑을 쓴다(CP001류 중복 방지 — seller-profile.ts의
@@ -89,6 +95,7 @@ function toRowFields(input: Partial<BrandProfileInput>): Record<string, unknown>
   if (input.brandIntro !== undefined) row.brand_intro = input.brandIntro || null;
   if (input.representativeImageUrl !== undefined) row.representative_image_url = input.representativeImageUrl || null;
   if (input.commonDescription !== undefined) row.common_description = input.commonDescription || null;
+  if (input.officialWebsite !== undefined) row.official_website = input.officialWebsite || null;
   return row;
 }
 

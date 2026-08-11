@@ -77,4 +77,15 @@ export interface PriceIntelligenceResult {
   testedMarketCodes: string[];
   /** originMarket을 KRW로 환산한 참고값. originMarket이 없으면 null. */
   convertedOriginToKrw: ConvertedPriceKrw | null;
+  /** N-3.6(개정 Part C/D) — 브랜드 본국 "공식 사이트"에서 실제로 확인한 원본가격
+   * (originMarket과는 다른 개념 — originMarket은 상품이 실제로 팔리는 그 사이트의
+   * market 중 브랜드 국가와 일치하는 것을 고른 것뿐이라, 브랜드가 아예 다른
+   * 사이트를 통해 팔리고 있으면 브랜드 본국 가격 자체를 절대 볼 수 없다). null이면
+   * BrandProfile.officialWebsite가 없거나, 있어도 상품을 확인 못한 것 —
+   * brandOriginPriceStatus/Reason으로 이유를 설명한다. */
+  brandOriginPrice: { amount: number; currency: string; sourceUrl: string } | null;
+  brandOriginPriceStatus: "READY" | "MISSING" | "BLOCKED";
+  brandOriginPriceReason: string;
+  /** brandOriginPrice를 KRW로 환산한 참고값. brandOriginPrice가 없으면 null. */
+  convertedBrandOriginToKrw: ConvertedPriceKrw | null;
 }

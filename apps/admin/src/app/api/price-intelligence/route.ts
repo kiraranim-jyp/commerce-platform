@@ -3,6 +3,7 @@ import {
   EXPAND_CANDIDATE_MARKET_CODES,
   probeAdditionalMarkets,
   probeOriginAndKrMarkets,
+  resolveBrandOriginPrice,
   type ShopifyMarketProbeResult,
 } from "@commerce/crawler";
 import { convertToKrw } from "@commerce/pricing";
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
   const { searchParams } = new URL(request.url);
   const expand = searchParams.get("expand") === "true";
 
-  const body = (await request.json().catch(() => null)) as { sourceUrl?: string; brand?: string } | null;
+  const body = (await request.json().catch(() => null)) as { sourceUrl?: string; brand?: string; title?: string } | null;
   if (!body?.sourceUrl) {
     const result: PriceIntelligenceResult = {
       status: "FETCH_FAILED",
@@ -84,6 +85,10 @@ export async function POST(request: Request) {
       additionalMarkets: [],
       testedMarketCodes: [],
       convertedOriginToKrw: null,
+      brandOriginPrice: null,
+      brandOriginPriceStatus: "MISSING",
+      brandOriginPriceReason: "sourceUrl이 없어 확인하지 않았습니다.",
+      convertedBrandOriginToKrw: null,
     };
     return NextResponse.json(result, { status: 400 });
   }
@@ -100,6 +105,10 @@ export async function POST(request: Request) {
       additionalMarkets: [],
       testedMarketCodes: [],
       convertedOriginToKrw: null,
+      brandOriginPrice: null,
+      brandOriginPriceStatus: "MISSING",
+      brandOriginPriceReason: "원본 사이트가 Shopify 형식이 아니어서 확인하지 않았습니다.",
+      convertedBrandOriginToKrw: null,
     };
     return NextResponse.json(result);
   }
@@ -108,6 +117,16 @@ export async function POST(request: Request) {
   // 강제하지 않는다(CPO 지시: 브랜드 국가 ≠ 가격 시장).
   const brandProfile = body.brand ? await findBrandProfileByName(body.brand) : null;
   const brandCountry = brandProfile?.countryOfOrigin || null;
+
+  // N-3.6(개정 Part C/D) — 브랜드 본국 "공식 사이트"에서 실제 원본가격을 확인한다.
+  // title이 없으면(호출부가 아직 안 넘겼거나) 검색 자체가 불가능하므로 MISSING.
+  const brandOriginResult = body.title
+    ? await resolveBrandOriginPrice(brandProfile?.officialWebsite ?? null, body.title, brandProfile?.name ?? body.brand ?? null)
+    : {
+        status: "MISSING" as const,
+        price: null,
+        reason: "상품명이 없어 브랜드 공식 사이트 검색을 시도하지 않았습니다.",
+      };
 
   const originObservation = basic.origin ? toPriceObservation(basic.origin) : null;
   const krObservation = basic.kr ? toPriceObservation(basic.kr) : null;
@@ -145,6 +164,22 @@ export async function POST(request: Request) {
 
   const testedMarketCodes = ["", "en-kr", ...(expand ? EXPAND_CANDIDATE_MARKET_CODES : [])];
 
+  // N-3.6(개정 Part E) — brandOriginPrice와 convertedOriginToKrw는 완전히 별도
+  // 계산이다(같은 rates 객체를 굳이 재조회하지 않고 재사용한다).
+  let convertedBrandOriginToKrw: ConvertedPriceKrw | null = null;
+  if (brandOriginResult.price && brandOriginResult.price.currency !== "KRW") {
+    const rates = await fetchLiveExchangeRates();
+    const converted = convertToKrw(brandOriginResult.price.amount, brandOriginResult.price.currency, rates.rates);
+    convertedBrandOriginToKrw = {
+      amount: converted.amountKrw,
+      currency: "KRW",
+      exchangeRate: rates.rates[brandOriginResult.price.currency.toUpperCase()] ?? 0,
+      rateSource: rates.source,
+      calculatedAt: rates.fetchedAt,
+      confidence: "CALCULATED",
+    };
+  }
+
   const result: PriceIntelligenceResult = {
     status: "OK",
     brandCountry,
@@ -154,6 +189,10 @@ export async function POST(request: Request) {
     additionalMarkets,
     testedMarketCodes,
     convertedOriginToKrw,
+    brandOriginPrice: brandOriginResult.price,
+    brandOriginPriceStatus: brandOriginResult.status,
+    brandOriginPriceReason: brandOriginResult.reason,
+    convertedBrandOriginToKrw,
   };
   return NextResponse.json(result);
 }

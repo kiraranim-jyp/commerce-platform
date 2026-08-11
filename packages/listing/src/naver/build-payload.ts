@@ -16,13 +16,18 @@ import type {
  * 흉내내지 않는다"고 명시돼 있어서 실제 스키마 변환에는 재사용할 수 없었다
  * (N-2.1 조사 결과). 이 파일이 실제 스키마를 대상으로 하는 첫 구현이다.
  *
- * N-2.8에서 optionCombinations/originAreaInfo 필드명이 GitHub #241 원문
- * 코드 예제로 추가 확인되어 값을 채우기 시작했다. N-3.4에서 originAreaCode
- * enum은 GET /v1/product-origin-areas 실측으로 100% 확인됐다(더 이상
- * BLOCKED 아님) — 다만 optionCombinations.price의 의미(절대가/추가금액)는
- * 여전히 미확인이라 validate-payload.ts가 항상 BLOCKED로 남긴다(추측 값을
- * 신뢰해서 등록에 쓰지 말라는 신호). 택배사 코드(deliveryCompany enum)는
- * 조회 API 자체가 없어서(N-2.5) 여전히 채우지 않는다.
+ * N-2.8에서 optionCombinations/originAreaInfo 필드명을 채우기 시작했다 —
+ * 필드명 자체는 공식 OpenAPI 스펙으로 확인됨(N-3.6 정정: 과거 "GitHub #241
+ * 원문 코드 예제로 확인"이라고 적었던 근거는 사실 한 사용자의 잘못된 요청을
+ * 메인테이너가 지적한 스레드였다 — 공식 확인이 아니었다. 다행히 필드명/구조는
+ * N-3.3/N-3.4에서 공식 OpenAPI 스펙으로 별도 재확인돼 있어 값 자체는
+ * 문제없었다). N-3.4에서 originAreaCode enum은 GET /v1/product-origin-areas
+ * 실측으로 100% 확인됐다(더 이상 BLOCKED 아님) — 다만 optionCombinations.price의
+ * 의미(절대가/추가금액)는 N-3.6 재조사에서도 공식 근거를 찾지 못해 여전히
+ * 미확인이라 validate-payload.ts가 항상 BLOCKED로 남긴다(추측 값을 신뢰해서
+ * 등록에 쓰지 말라는 신호). 택배사 코드(deliveryCompany enum)도 N-3.6에서
+ * 배송 관련 스키마(묶음배송/희망일배송/반품택배사)를 전부 재확인했지만 출고
+ * 택배사 조회 API 자체가 없어서(N-2.5) 여전히 채우지 않는다.
  */
 
 export interface NaverPayloadInput {
@@ -70,12 +75,20 @@ export interface NaverPayloadInput {
   /** N-3.4 — originAreaCode가 04(직접입력)로 폴백된 경우에만 true. 이때만
    * content가 스펙상 필수라서 이 값이 true일 때만 content를 채운다. */
   originAreaRequiresContent: boolean;
+  /** N-3.6(개정 Part A) — 출고 택배사 조회 API는 여전히 없다(확인 유지).
+   * SellerProfile.naverDeliveryCompanyCode에 판매자가 직접 입력한 값이 있으면
+   * 그 값을 그대로 채운다(Coupang deliveryCompanyCode와 같은 수동 입력 패턴) —
+   * 없으면(undefined/null) 지금까지처럼 비운다. 기존 테스트/호출부가 이 필드를
+   * 몰라도 되도록 optional로 둔다. */
+  deliveryCompany?: string | null;
 }
 
-/** N-2.8 — 옵션 조합(optionCombinations) 필드명은 GitHub #241 원문 코드
- * 예제로 확인됐다(id/optionName1-4/stockQuantity/price/sellerManagerCode/
- * usable). price 필드의 의미(절대 판매가인지 salePrice 대비 추가금액인지)는
- * 여전히 실제 등록 성공 전까지 확인된 적이 없다 — 여기서는 "price =
+/** N-2.8 — 옵션 조합(optionCombinations) 필드명은 공식 OpenAPI 스펙으로
+ * 확인됐다(id/optionName1-4/stockQuantity/price/sellerManagerCode/
+ * usable, ExternalApiOptionCombinationVo.product). price 필드의 의미(절대
+ * 판매가인지 salePrice 대비 추가금액인지)는 N-3.6 재조사(공식 OpenAPI/GitHub
+ * Discussion 검색)에서도 명확한 근거를 찾지 못해 여전히 확인된 적이 없다 —
+ * 여기서는 "price =
  * variant.price가 있으면 salePrice와의 차액(추가금액), 없으면 0"으로
  * 가정한다(대부분의 국내 마켓플레이스가 조합형 옵션에 추가금액 방식을 쓰는
  * 관행을 따른 것 — 확정된 사실이 아니라 관행 기반 가정임을 validate-payload.ts가
@@ -130,6 +143,7 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
     categoryRequiresChildCertification,
     originAreaCode,
     originAreaRequiresContent,
+    deliveryCompany,
   } = input;
 
   const representativeUrl = listing.representativeImage;
@@ -149,7 +163,9 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
       salePrice: listing.priceKrw,
       stockQuantity: product.stockQuantity.value || 1,
       deliveryInfo: {
-        // deliveryCompany: 확인됨(공식 OpenAPI)이나 조회 API가 없어 채우지 않는다.
+        // N-3.6(개정 Part A) — 조회 API는 없지만(확인 유지) 판매자가 Settings에서
+        // 직접 입력한 값이 있으면 채운다(Coupang과 같은 수동 입력 패턴).
+        deliveryCompany: deliveryCompany ?? undefined,
         deliveryFee: {
           deliveryFeeType: "FREE",
           baseFee: 0,

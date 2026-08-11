@@ -47,7 +47,9 @@ interface NaverResolveResponse {
     hierarchy: CommerceCategoryPathResult | null;
   } | null;
   address: { releaseAddressBookNo: number | null; refundAddressBookNo: number | null };
-  courier: { available: boolean; reason: string };
+  // N-3.6(개정 Part A) — value는 Settings(SellerProfile.naverDeliveryCompanyCode)에
+  // 판매자가 직접 입력한 값. 공식 조회 API는 여전히 없다(reason은 available=false일 때만).
+  courier: { available: boolean; value: string | null; source: "SELLER_PROFILE" | null; reason?: string };
   // N-3.3 — 반품 택배사/반품·교환 배송비. 출고 택배사(courier 위)는 별개로
   // 여전히 조회 API가 없어 BLOCKED 고정이다.
   delivery: {
@@ -248,6 +250,9 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
   const originAreaCode = originMatch.code;
   const originAreaRequiresContent = originMatch.status === "OTHER_MANUAL";
   const originAreaRequiresImporter = originMatch.requiresImporter;
+  // N-3.6(개정 Part A) — Settings에 판매자가 직접 입력한 값(공식 조회 API는
+  // 없음, resolve route가 SellerProfile.naverDeliveryCompanyCode를 그대로 전달).
+  const deliveryCompany = resolved?.courier?.value ?? null;
 
   const payload = useMemo(
     () =>
@@ -264,6 +269,7 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
         categoryRequiresChildCertification,
         originAreaCode,
         originAreaRequiresContent,
+        deliveryCompany,
       }),
     [
       product,
@@ -278,6 +284,7 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
       categoryRequiresChildCertification,
       originAreaCode,
       originAreaRequiresContent,
+      deliveryCompany,
     ],
   );
 
@@ -296,6 +303,7 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
           childCertificationInfoId,
           originAreaCode,
           originAreaRequiresImporter,
+          deliveryCompany,
         },
         categoryRequiresChildCertification,
       ),
@@ -310,6 +318,7 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
       returnCompaniesFetchFailed,
       childCertificationInfoId,
       categoryRequiresChildCertification,
+      deliveryCompany,
       originAreaCode,
       originAreaRequiresImporter,
     ],
@@ -647,7 +656,11 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
         />
         <Row
           label="출고 택배사"
-          value={`BLOCKED — ${resolved?.courier.reason ?? "택배사 코드 조회 API 미확인(N-2.5)"}`}
+          value={
+            resolved?.courier?.value
+              ? `✓ ${resolved.courier.value}(Settings 수동 입력, 공식 조회 API는 없음)`
+              : `MISSING — ${resolved?.courier?.reason ?? "Settings의 배송 프로필에서 네이버 택배사를 입력하면 해결됩니다(공식 조회 API 없음)."}`
+          }
         />
         <Row
           label="반품 택배사"

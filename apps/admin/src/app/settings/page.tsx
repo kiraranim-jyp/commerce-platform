@@ -46,6 +46,7 @@ interface SellerProfile {
   name: string;
   isDefault: boolean;
   deliveryCompanyCode: string;
+  naverDeliveryCompanyCode: string;
   returnCenterCode: string;
   returnChargeName: string;
   companyContactNumber: string;
@@ -80,6 +81,7 @@ interface BrandProfile {
   brandIntro: string;
   representativeImageUrl: string | null;
   commonDescription: string;
+  officialWebsite: string | null;
 }
 
 interface DescriptionTemplate {
@@ -467,6 +469,10 @@ function SellerProfileEditor({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [deliveryCompanyCode, setDeliveryCompanyCode] = useState("");
+  // N-3.6(개정 Part A) — Naver는 출고 택배사 조회/enum API가 없다(공식 스펙 확인,
+  // "택배사" 필드가 그냥 자유 문자열). Coupang의 코드 목록과 달리 정해진 값이
+  // 없어 select가 아니라 텍스트 입력이다.
+  const [naverDeliveryCompanyCode, setNaverDeliveryCompanyCode] = useState("");
   const [returnCenterCode, setReturnCenterCode] = useState("");
   const [returnChargeName, setReturnChargeName] = useState("");
   const [companyContactNumber, setCompanyContactNumber] = useState("");
@@ -510,6 +516,7 @@ function SellerProfileEditor({
     setEditingId(null);
     setName("");
     setDeliveryCompanyCode("");
+    setNaverDeliveryCompanyCode("");
     setReturnCenterCode("");
     setReturnChargeName("");
     setCompanyContactNumber("");
@@ -540,6 +547,7 @@ function SellerProfileEditor({
   function fillForm(p: SellerProfile) {
     setName(p.name);
     setDeliveryCompanyCode(p.deliveryCompanyCode);
+    setNaverDeliveryCompanyCode(p.naverDeliveryCompanyCode);
     setReturnCenterCode(p.returnCenterCode);
     setReturnChargeName(p.returnChargeName);
     setCompanyContactNumber(p.companyContactNumber);
@@ -668,6 +676,7 @@ function SellerProfileEditor({
       const body = {
         name: name || "기본",
         deliveryCompanyCode: deliveryCompanyCode || undefined,
+        naverDeliveryCompanyCode: naverDeliveryCompanyCode || undefined,
         returnCenterCode: returnCenterCode || undefined,
         returnChargeName: returnChargeName || undefined,
         companyContactNumber: companyContactNumber || undefined,
@@ -761,6 +770,8 @@ function SellerProfileEditor({
           onOutboundShippingPlaceCodeChange={setOutboundShippingPlaceCode}
           deliveryCompanyCode={deliveryCompanyCode}
           onDeliveryCompanyCodeChange={setDeliveryCompanyCode}
+          naverDeliveryCompanyCode={naverDeliveryCompanyCode}
+          onNaverDeliveryCompanyCodeChange={setNaverDeliveryCompanyCode}
           deliveryMethod={deliveryMethod}
           onDeliveryMethodChange={setDeliveryMethod}
           deliveryCharge={deliveryCharge}
@@ -886,6 +897,8 @@ function ShippingSection({
   onOutboundShippingPlaceCodeChange,
   deliveryCompanyCode,
   onDeliveryCompanyCodeChange,
+  naverDeliveryCompanyCode,
+  onNaverDeliveryCompanyCodeChange,
   deliveryMethod,
   onDeliveryMethodChange,
   deliveryCharge,
@@ -928,6 +941,8 @@ function ShippingSection({
   onFetchLookups: () => void;
   outboundShippingPlaceCode: string;
   onOutboundShippingPlaceCodeChange: (v: string) => void;
+  naverDeliveryCompanyCode: string;
+  onNaverDeliveryCompanyCodeChange: (v: string) => void;
   deliveryCompanyCode: string;
   onDeliveryCompanyCodeChange: (v: string) => void;
   deliveryMethod: string;
@@ -1098,6 +1113,19 @@ function ShippingSection({
                 value={deliveryCompanyCode}
                 onChange={(e) => onDeliveryCompanyCodeChange(e.target.value)}
                 placeholder="목록에 없으면 코드 직접 입력"
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+
+            <Field
+              label="네이버 택배사"
+              hint="네이버 공식 API에는 택배사 조회 기능이 없어(확인됨) 직접 입력이 필요합니다 — 예: CJ대한통운"
+            >
+              <input
+                type="text"
+                value={naverDeliveryCompanyCode}
+                onChange={(e) => onNaverDeliveryCompanyCodeChange(e.target.value)}
+                placeholder="예: CJ대한통운"
                 className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
               />
             </Field>
@@ -1472,6 +1500,9 @@ function BrandProfileSection({
   const [brandIntro, setBrandIntro] = useState("");
   const [representativeImageUrl, setRepresentativeImageUrl] = useState<string | null>(null);
   const [commonDescription, setCommonDescription] = useState("");
+  // N-3.6(개정 Part C/D) — 브랜드 본국 공식 사이트. Brand Origin Price
+  // Resolver가 이 값이 있을 때만 동작한다(없으면 추측하지 않고 MISSING).
+  const [officialWebsite, setOfficialWebsite] = useState("");
   const [imageUploading, setImageUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -1483,6 +1514,7 @@ function BrandProfileSection({
     setBrandIntro("");
     setRepresentativeImageUrl(null);
     setCommonDescription("");
+    setOfficialWebsite("");
   }
 
   function startEdit(p: BrandProfile) {
@@ -1493,6 +1525,7 @@ function BrandProfileSection({
     setBrandIntro(p.brandIntro);
     setRepresentativeImageUrl(p.representativeImageUrl);
     setCommonDescription(p.commonDescription);
+    setOfficialWebsite(p.officialWebsite ?? "");
     setFormOpen(true);
   }
 
@@ -1520,6 +1553,7 @@ function BrandProfileSection({
         brandIntro: brandIntro || undefined,
         representativeImageUrl,
         commonDescription: commonDescription || undefined,
+        officialWebsite: officialWebsite || undefined,
       };
       const res = await fetch(
         editingId ? `/api/settings/coupang/brand-profiles/${editingId}` : "/api/settings/coupang/brand-profiles",
@@ -1613,6 +1647,18 @@ function BrandProfileSection({
               value={manufacturer}
               onChange={(e) => setManufacturer(e.target.value)}
               placeholder="예: Apolina Ltd."
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field
+            label="브랜드 공식 사이트"
+            hint="브랜드 본국 원본가격을 이 사이트에서 실제로 조회합니다(Shopify 사이트만 지원) — 비워두면 원본가격을 확인하지 않습니다"
+          >
+            <input
+              type="text"
+              value={officialWebsite}
+              onChange={(e) => setOfficialWebsite(e.target.value)}
+              placeholder="예: https://kongessloejd.com"
               className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
             />
           </Field>
