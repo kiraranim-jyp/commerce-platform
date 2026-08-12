@@ -471,8 +471,13 @@ export function NaverPayloadPreview({
   // 상태 하나만 배지로 보여준다. 이 화면이 새로 계산하지 않고 Final
   // Validator가 이미 낸 결과만 집계한다(N-3.5 원칙 유지 — "Preview에서
   // 별도 판단 로직을 만들지 않는다").
+  // N-3.13 Part I — advisory 필드(등록 가능 여부와 무관, CPO 결정)는 여기서도
+  // 뺀다. 안 빼면 다른 모든 값이 채워진 상품도 이 그룹만 영원히 🟡로 남아
+  // Registration Gate(🟢)와 섹션 배지가 서로 다른 그림을 보여주는 모순이
+  // 생긴다 — Gate와 같은 기준을 쓴다는 원칙(I-3)을 섹션 요약에도 그대로
+  // 적용한다.
   const sectionSummary = SECTION_GROUP_ORDER.map((group) => {
-    const groupFields = validation.fields.filter((f) => resolveFieldMeta(f.field)?.group === group);
+    const groupFields = validation.fields.filter((f) => resolveFieldMeta(f.field)?.group === group && !f.advisory);
     const status = groupFields.some((f) => f.status === "BLOCKED")
       ? "BLOCKED"
       : groupFields.some((f) => f.status === "MISSING")
@@ -571,6 +576,24 @@ export function NaverPayloadPreview({
                   >
                     <span className="font-medium text-text-primary">{issue.field}</span> — {issue.reason}
                   </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {/* N-3.13 Part I(CPO 결정, 2026-08-12) — 등록 가능 여부와는 무관하지만
+         * 판매자가 알아야 하는 참고 정보. "차단"이나 "입력 필요" 목록에 섞이면
+         * 등록을 막는 원인처럼 오해할 수 있어 별도 블록으로 분리한다. */}
+        {validation.advisoryNotes.length > 0 && (
+          <div className="mt-2">
+            <p className="text-[11px] font-semibold text-text-tertiary">참고(등록 가능 여부와 무관)</p>
+            <ul className="mt-1 space-y-1">
+              {validation.advisoryNotes.map((note, i) => (
+                <li key={`advisory-${note.field}-${i}`} className="flex items-start gap-1.5 text-[11px]">
+                  <span className="text-text-tertiary">ℹ️</span>
+                  <span className="min-w-0 flex-1 text-text-secondary">
+                    <span className="font-medium text-text-primary">{note.field}</span> — {note.reason}
+                  </span>
                 </li>
               ))}
             </ul>

@@ -777,7 +777,12 @@ describe("N-3.5: smartstoreChannelProduct 스키마 재검증", () => {
     expect(payload.smartstoreChannelProduct.channelProductDisplayStatusType).not.toBe("WAIT");
   });
 
-  it("naverShoppingRegistration은 채우지 않고(근거 없음) 항상 MISSING으로 표시한다", () => {
+  // N-3.13 Part I(CPO 결정, 2026-08-12) — 이 필드는 등록 자체를 막는 요건이
+  // 아니라 CartPilot 밖의 계정 상태(네이버쇼핑 광고주 여부)라 Gate 판단에서
+  // 제외하기로 확정했다. 값을 채우지 않는다는 사실(추측 금지)은 그대로지만,
+  // 더 이상 result.issues(등록 차단 목록)에는 안 들어가고 advisoryNotes로만
+  // 나온다 — "등록을 막는다" ≠ "판매자가 알아야 한다"를 분리한 것.
+  it("naverShoppingRegistration은 채우지 않고(근거 없음) advisory로만 표시한다 — Gate 판단(issues)에는 안 들어간다", () => {
     const product = makeMinimalProduct();
     const listing = makeMinimalListing(product);
     const payload = buildNaverProductPayload({
@@ -792,8 +797,11 @@ describe("N-3.5: smartstoreChannelProduct 스키마 재검증", () => {
       false,
     );
     expect(
-      result.issues.some(
-        (i) => i.field === "smartstoreChannelProduct.naverShoppingRegistration" && i.severity === "MISSING",
+      result.issues.some((i) => i.field === "smartstoreChannelProduct.naverShoppingRegistration"),
+    ).toBe(false);
+    expect(
+      result.advisoryNotes.some(
+        (f) => f.field === "smartstoreChannelProduct.naverShoppingRegistration" && f.status === "MISSING",
       ),
     ).toBe(true);
   });
@@ -833,10 +841,13 @@ describe("N-3.5: Final Validator — readyCount/missingCount/blockedCount", () =
       false,
     );
     expect(result.fields.some((f) => f.field.startsWith("detailAttribute.optionInfo"))).toBe(false);
-    expect(result.readyCount + result.missingCount + result.blockedCount).toBe(result.fields.length);
+    // N-3.13 Part I — advisory 필드(naverShoppingRegistration)는 fields에는
+    // 남아있지만 readyCount/missingCount/blockedCount 집계에서는 빠진다.
+    expect(result.readyCount + result.missingCount + result.blockedCount).toBe(
+      result.fields.length - result.advisoryNotes.length,
+    );
     // N-3.6(개정) — deliveryCompany는 이제 BLOCKED가 아니라 MISSING(Settings에서
-    // 입력하면 해결됨)이다. naverShoppingRegistration은 여전히 항상 MISSING —
-    // 완전 READY는 불가능하다. 옵션/인증 관련 BLOCKED가 없는 이 케이스에서는
+    // 입력하면 해결됨)이다. 옵션/인증 관련 BLOCKED가 없는 이 케이스에서는
     // blockedCount가 0이어도 정상이다.
     expect(result.blockedCount).toBe(0);
     expect(result.missingCount).toBeGreaterThan(0);
@@ -954,9 +965,56 @@ describe("N-3.5: Final Validator — readyCount/missingCount/blockedCount", () =
       },
       false,
     );
-    expect(result.readyCount + result.missingCount + result.blockedCount).toBe(result.fields.length);
+    // N-3.13 Part I — advisory 필드는 집계에서 빠진다(위 Case A와 동일 이유).
+    expect(result.readyCount + result.missingCount + result.blockedCount).toBe(
+      result.fields.length - result.advisoryNotes.length,
+    );
     expect(result.missingCount).toBeGreaterThanOrEqual(8); // leafCategoryId/name(비었진 않음)/detailContent/salePrice(있음)/stock/... 등 다수
     expect(result.ok).toBe(false);
+  });
+
+  // N-3.13 Part I(I-10 Test A 재확인, CPO 결정 2026-08-12 반영) —
+  // naverShoppingRegistration을 advisory로 뺐지만, 완전 READY는 여전히
+  // 불가능하다는 걸 이번에 다시 확인했다: `${noticePrefix}.size`(치수)가
+  // WEAR/KIDS 공통으로 항상 `check(fields, ..., false, ...)`(무조건 MISSING)
+  // 처리돼 있다 — CartPilot에 사이즈 값을 채울 입력 경로가 아직 없기
+  // 때문이다(naverShoppingRegistration과는 다른 이유: 이건 "CartPilot이
+  // 몰라서"가 아니라 "입력 UI가 아직 없어서"다). 이 필드는 이번 CPO 결정
+  // 범위(naverShoppingRegistration)에 포함되지 않았으므로 advisory로 임의
+  // 편입하지 않는다 — 대신 실제 남은 이유를 그대로 고정해 둔다.
+  it("Case F(신규) — deliveryCompany/warrantyPolicy/afterServiceDirector를 채워도 size(치수) 입력 경로가 없어 여전히 MISSING 1건 남는다", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+      deliveryCompany: "CJGLS",
+      warrantyPolicy: "구매일로부터 1년",
+      afterServiceDirector: "고객센터 1544-0000",
+    });
+    const result = validateNaverPayload(
+      payload,
+      {
+        ...baseValidateInput(product),
+        childCertificationInfoId: null,
+        deliveryCompany: "CJGLS",
+        warrantyPolicy: "구매일로부터 1년",
+        afterServiceDirector: "고객센터 1544-0000",
+      },
+      false,
+    );
+    expect(result.blockedCount).toBe(0);
+    expect(result.missingCount).toBe(1);
+    expect(
+      result.issues.some((i) => i.field === "productInfoProvidedNotice(WEAR).size" && i.severity === "MISSING"),
+    ).toBe(true);
+    expect(result.ok).toBe(false);
+    // advisory는 여전히 fields에는 남아있다(섹션 요약에서 보여야 하니까) — 다만
+    // 카운트/ok에는 영향을 주지 않는다는 걸 같이 확인한다.
+    expect(
+      result.advisoryNotes.some((f) => f.field === "smartstoreChannelProduct.naverShoppingRegistration"),
+    ).toBe(true);
   });
 });
 

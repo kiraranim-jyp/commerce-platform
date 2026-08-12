@@ -30,6 +30,15 @@ export interface NaverPayloadFieldCheck {
   status: "READY" | "MISSING" | "BLOCKED";
   /** READY가 아닐 때만 채운다. */
   reason?: string;
+  /** N-3.13 Part I(CPO 결정, 2026-08-12) — CartPilot이 절대 채울 수 없는(추측
+   * 금지) 외부 상태값이라 등록 Gate 판단(ok/readyCount/missingCount/
+   * blockedCount)에서 제외하고 참고 정보로만 보여준다. 지금은
+   * naverShoppingRegistration(네이버쇼핑 광고주 전용 설정 — 광고주가
+   * 아니면 무엇을 보내든 서버가 강제로 false 처리) 하나뿐이다. MISSING을
+   * BLOCKED/READY로 바꿔치기하는 게 아니라 "이건 등록 가능 여부와 무관한
+   * 별도 상태"라고 명시하는 것 — CPO 지시: "Gate에서 제외, 별도 표시로
+   * 분리". */
+  advisory?: boolean;
 }
 
 export interface NaverPayloadValidationResult {
@@ -38,11 +47,19 @@ export interface NaverPayloadValidationResult {
   missingCount: number;
   blockedCount: number;
   /** 이 상품/카테고리에서 실제로 검사한 모든 필드(문제없는 것 포함) — 옵션/
-   * 인증/수입사명처럼 상품마다 있고 없고가 달라지는 항목은 해당될 때만 담긴다. */
+   * 인증/수입사명처럼 상품마다 있고 없고가 달라지는 항목은 해당될 때만 담긴다.
+   * advisory:true인 항목도 포함된다(섹션 요약에서는 보이되 Gate 판단에는
+   * 반영되지 않는다). */
   fields: NaverPayloadFieldCheck[];
-  /** fields 중 READY가 아닌 것만 골라 기존 UI(클릭 시 섹션 이동 등)와 호환되는
-   * 모양으로 다시 담은 배열 — 하위호환을 위해 유지한다. */
+  /** fields 중 advisory가 아니면서 READY가 아닌 것만 골라 기존 UI(클릭 시
+   * 섹션 이동 등)와 호환되는 모양으로 다시 담은 배열 — 하위호환을 위해
+   * 유지한다. advisory 항목은 여기 안 들어간다(등록 차단 목록에 섞이면
+   * "이거 때문에 등록이 막혔다"는 오해를 준다 — CPO 지시로 분리). */
   issues: NaverPayloadValidationIssue[];
+  /** N-3.13 Part I — advisory:true인 항목만 모은 목록. Registration Gate와는
+   * 무관하지만 판매자가 알아야 하는 참고 정보(예: 등록 후 Wing에서 네이버쇼핑
+   * 광고주 여부 별도 확인)를 UI가 따로 보여줄 때 쓴다. */
+  advisoryNotes: NaverPayloadFieldCheck[];
 }
 
 function check(
@@ -344,21 +361,40 @@ export function validateNaverPayload(
   // 광고주 여부"에 따라 서버가 강제로 false 처리하는 경우도 있다고 스펙에
   // 적혀 있어(광고주가 아니면 무엇을 보내든 false로 저장됨) CartPilot이
   // 임의로 true/false를 정할 근거가 없다 — 항상 MISSING으로 표시한다.
-  check(
-    fields,
-    "smartstoreChannelProduct.naverShoppingRegistration",
-    false,
-    "MISSING",
-    "네이버쇼핑 등록 여부(광고주 전용 설정)를 CartPilot이 알 수 없습니다 — 값을 임의로 정하지 않습니다.",
-  );
+  // N-3.13 Part I(CPO 결정, 2026-08-12) — 이 필드는 등록 자체를 막는 조건이
+  // 아니라 "네이버쇼핑 광고주인지" 라는 CartPilot 밖의 계정 상태다(광고주가
+  // 아니면 서버가 무조건 false로 저장한다고 스펙에 명시돼 있다). 그래서
+  // Gate 판단(readyCount/missingCount/blockedCount/ok)에서 제외하고
+  // advisory로만 남긴다 — READY로 바꿔치기하는 게 아니라 "판단 대상에서
+  // 뺀다"는 뜻이다.
+  fields.push({
+    field: "smartstoreChannelProduct.naverShoppingRegistration",
+    status: "MISSING",
+    reason: "네이버쇼핑 등록 여부(광고주 전용 설정)를 CartPilot이 알 수 없습니다 — 등록 후 Wing에서 별도 확인이 필요합니다.",
+    advisory: true,
+  });
 
-  const issues: NaverPayloadValidationIssue[] = fields
+  // N-3.13 Part I — advisory 필드는 Gate 판단(카운트/issues/ok)에서 전부
+  // 제외한다. fields 배열 자체에는 그대로 남아있어 섹션 요약에서는 보인다.
+  const gateFields = fields.filter((f) => !f.advisory);
+
+  const issues: NaverPayloadValidationIssue[] = gateFields
     .filter((f): f is NaverPayloadFieldCheck & { status: "MISSING" | "BLOCKED"; reason: string } => f.status !== "READY")
     .map((f) => ({ field: f.field, reason: f.reason, severity: f.status }));
 
-  const readyCount = fields.filter((f) => f.status === "READY").length;
-  const missingCount = fields.filter((f) => f.status === "MISSING").length;
-  const blockedCount = fields.filter((f) => f.status === "BLOCKED").length;
+  const advisoryNotes = fields.filter((f) => f.advisory);
 
-  return { ok: blockedCount === 0 && missingCount === 0, readyCount, missingCount, blockedCount, fields, issues };
+  const readyCount = gateFields.filter((f) => f.status === "READY").length;
+  const missingCount = gateFields.filter((f) => f.status === "MISSING").length;
+  const blockedCount = gateFields.filter((f) => f.status === "BLOCKED").length;
+
+  return {
+    ok: blockedCount === 0 && missingCount === 0,
+    readyCount,
+    missingCount,
+    blockedCount,
+    fields,
+    issues,
+    advisoryNotes,
+  };
 }
