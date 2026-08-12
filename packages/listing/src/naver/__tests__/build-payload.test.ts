@@ -959,3 +959,99 @@ describe("N-3.5: Final Validator — readyCount/missingCount/blockedCount", () =
     expect(result.ok).toBe(false);
   });
 });
+
+/**
+ * N-3.13 Part J(J-6 — CPO 지시: "텍스트/이미지/공통이미지 3개 왕복 테스트 —
+ * 이 3개가 모두 실제 JSON에서 확인되어야 한다") — detailBlocks가 있을 때
+ * detailContent가 Coupang과 같은 assembleContentsFromBlocks 조립 결과를
+ * 그대로 반영하는지 검증한다. 브라우저로 직접 확인한 production 실측
+ * (/api/naver/resolve의 detailPage가 실제 DescriptionTemplate/SellerProfile
+ * 공통이미지를 반환하는 것)과 이 단위 테스트를 합쳐서 "텍스트 블록 →
+ * <p>", "PRODUCT_IMAGES 블록 → <img>", "공통이미지 ON → <img> 포함/OFF →
+ * 미포함"까지 왕복 확인한다.
+ */
+describe("buildNaverProductPayload — detailBlocks → detailContent 조립(Part J)", () => {
+  const COMMON_IMAGE_ON = {
+    topCommonImageUrl: "https://example.com/top-common.jpg",
+    topCommonImageEnabled: true,
+    bottomCommonImageUrl: "https://example.com/bottom-common.jpg",
+    bottomCommonImageEnabled: true,
+  };
+
+  function buildWithBlocks(detailBlocks: Parameters<typeof buildNaverProductPayload>[0]["detailBlocks"], overrides: Partial<Parameters<typeof buildNaverProductPayload>[0]> = {}) {
+    const product = makeMinimalProduct();
+    product.images.push({
+      id: "img-2",
+      originalUrl: "https://example.com/images/tshirt-detail.jpg",
+      selectedVariant: "ORIGINAL",
+      isRepresentative: false,
+      useInProductGallery: false,
+      useInDescription: true,
+      classification: "PRODUCT",
+    });
+    const listing = makeMinimalListing(product);
+    return buildNaverProductPayload({
+      product,
+      listing,
+      leafCategoryId: LEAF_CATEGORY_ID,
+      releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+      refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+      childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
+      categoryRequiresChildCertification: true,
+      originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+      originAreaRequiresContent: false,
+      detailBlocks,
+      ...overrides,
+    });
+  }
+
+  it("Test A(텍스트) — AI_DESCRIPTION 블록이 <p> 문단으로 조립된다", () => {
+    const payload = buildWithBlocks([{ id: "b1", kind: "AI_DESCRIPTION", enabled: true }]);
+    expect(payload.originProduct.detailContent).toBe("<p>아동용 반팔 티셔츠입니다.</p>");
+  });
+
+  it("Test B(이미지) — PRODUCT_IMAGES 블록이 각각 <img> 태그로 조립된다", () => {
+    const payload = buildWithBlocks([{ id: "b1", kind: "PRODUCT_IMAGES", enabled: true }]);
+    expect(payload.originProduct.detailContent).toBe(
+      '<img src="https://example.com/images/tshirt-detail.jpg" style="max-width:100%;">',
+    );
+  });
+
+  it("Test C(공통이미지 ON) — COMMON_IMAGE 블록이 ON이면 <img>가 포함된다", () => {
+    const payload = buildWithBlocks(
+      [{ id: "b1", kind: "COMMON_IMAGE", position: "top", enabled: true }],
+      { commonImages: COMMON_IMAGE_ON },
+    );
+    expect(payload.originProduct.detailContent).toContain('<img src="https://example.com/top-common.jpg"');
+  });
+
+  it("Test C(공통이미지 OFF) — Settings에서 OFF면 같은 블록이 있어도 detailContent에서 빠진다", () => {
+    const payload = buildWithBlocks(
+      [{ id: "b1", kind: "COMMON_IMAGE", position: "top", enabled: true }],
+      { commonImages: { ...COMMON_IMAGE_ON, topCommonImageEnabled: false } },
+    );
+    expect(payload.originProduct.detailContent).toBe("");
+  });
+
+  it("3개 블록이 한 번에 있으면 순서대로 모두 조립된다(텍스트 → 이미지 → 공통이미지)", () => {
+    const payload = buildWithBlocks(
+      [
+        { id: "b1", kind: "AI_DESCRIPTION", enabled: true },
+        { id: "b2", kind: "PRODUCT_IMAGES", enabled: true },
+        { id: "b3", kind: "COMMON_IMAGE", position: "bottom", enabled: true },
+      ],
+      { commonImages: COMMON_IMAGE_ON },
+    );
+    expect(payload.originProduct.detailContent).toBe(
+      '<p>아동용 반팔 티셔츠입니다.</p>\n<img src="https://example.com/images/tshirt-detail.jpg" style="max-width:100%;">\n<img src="https://example.com/bottom-common.jpg" style="max-width:100%;">',
+    );
+  });
+
+  it("detailBlocks가 없으면(에디터를 안 연 세션) 기존처럼 listing.description을 그대로 쓴다(회귀 없음)", () => {
+    const payload = buildWithBlocks(undefined);
+    expect(payload.originProduct.detailContent).toBe("아동용 반팔 티셔츠입니다.");
+  });
+});
