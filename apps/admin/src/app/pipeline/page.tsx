@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { CanonicalProduct } from "@commerce/shared";
+import type { CanonicalProduct, PlatformId } from "@commerce/shared";
+import type { CategorySelection } from "@commerce/category";
 import { defaultDetailBlocks, type DetailPageBlock } from "@commerce/listing";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -74,6 +75,10 @@ export default function PipelinePage() {
   // defaultDetailBlocks()로, 사용자가 에디터를 안 열면 기존 하드코딩 조립
   // 순서와 100% 동일하게 동작한다.
   const [detailBlocks, setDetailBlocks] = useState<DetailPageBlock[]>(() => defaultDetailBlocks());
+  // N-3.12 Phase 2 P0① — CommerceWorkspace가 mirror-up(onCategoryMappingsChange)으로
+  // 알려주는 카테고리 선택 상태. null이면 "아직 CommerceWorkspace가 마운트 전"이거나
+  // "복원할 저장값이 없음" — 이 경우 CommerceWorkspace가 자체 기본값을 쓴다.
+  const [categoryMappings, setCategoryMappings] = useState<Record<PlatformId, CategorySelection> | null>(null);
 
   /** items에는 상세/원본/누끼후보 3장 분량의 base64 data URI가 다 들어있어서
    * (1500x2000 JPG 기준 장당 수백 KB~1MB대) 5장만 있어도 sessionStorage
@@ -119,6 +124,7 @@ export default function PipelinePage() {
             setRepresentativeId(ws.representativeId);
             setExcludedIds(new Set(ws.excludedIds));
             setDetailBlocks(ws.detailBlocks ?? defaultDetailBlocks());
+            setCategoryMappings(ws.categoryMappings ?? null);
             setHydrated(true);
             return;
           }
@@ -139,6 +145,7 @@ export default function PipelinePage() {
             representativeId?: string | null;
             excludedIds?: string[];
             detailBlocks?: DetailPageBlock[];
+            categoryMappings?: Record<PlatformId, CategorySelection>;
           };
           if (saved.result && saved.product) {
             setUrl(saved.url ?? "");
@@ -149,6 +156,7 @@ export default function PipelinePage() {
             setRepresentativeId(saved.representativeId ?? null);
             setExcludedIds(new Set(saved.excludedIds ?? []));
             setDetailBlocks(saved.detailBlocks ?? defaultDetailBlocks());
+            setCategoryMappings(saved.categoryMappings ?? null);
           }
         }
       } catch {
@@ -178,6 +186,7 @@ export default function PipelinePage() {
             representativeId,
             excludedIds: [...excludedIds],
             detailBlocks,
+            categoryMappings,
           }),
         );
       } else {
@@ -188,7 +197,7 @@ export default function PipelinePage() {
       // 영향 없게 조용히 무시한다.
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated, url, result, product, items, thumbnails, representativeId, excludedIds, detailBlocks]);
+  }, [hydrated, url, result, product, items, thumbnails, representativeId, excludedIds, detailBlocks, categoryMappings]);
 
   async function saveSnapshotToServer() {
     if (!result || !product) return;
@@ -214,6 +223,7 @@ export default function PipelinePage() {
             developerMode,
             platformSettings: {},
             detailBlocks,
+            categoryMappings: categoryMappings ?? undefined,
           },
         }),
       });
@@ -237,7 +247,7 @@ export default function PipelinePage() {
     }, 2000);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated, url, result, product, items, representativeId, excludedIds, detailBlocks]);
+  }, [hydrated, url, result, product, items, representativeId, excludedIds, detailBlocks, categoryMappings]);
 
   async function precomputeThumbnails(newItems: WorkspaceItem[]) {
     const entries = await Promise.all(
@@ -606,6 +616,8 @@ export default function PipelinePage() {
             snapshotId={snapshotId}
             detailBlocks={detailBlocks}
             onDetailBlocksChange={setDetailBlocks}
+            initialCategoryMappings={categoryMappings ?? undefined}
+            onCategoryMappingsChange={setCategoryMappings}
           />
 
           {/* P0-UI Epic 1 — JSON/ZIP/원본 URL/처리 리포트 등은 판매자가 매일 볼

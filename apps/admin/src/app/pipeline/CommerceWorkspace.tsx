@@ -97,6 +97,8 @@ export function CommerceWorkspace({
   snapshotId,
   detailBlocks,
   onDetailBlocksChange,
+  initialCategoryMappings,
+  onCategoryMappingsChange,
 }: {
   product: CanonicalProduct;
   onUpdateProduct: (updater: (prev: CanonicalProduct) => CanonicalProduct) => void;
@@ -123,6 +125,14 @@ export function CommerceWorkspace({
    * 소유하지 않는다. */
   detailBlocks: DetailPageBlock[];
   onDetailBlocksChange: (blocks: DetailPageBlock[]) => void;
+  /** N-3.12 Phase 2 P0① — 카테고리 선택은 그동안 이 컴포넌트의 로컬 state로만
+   * 살아있었다(새로고침/재오픈 시 초기화되는 실제 버그의 원인). detailBlocks와
+   * 같은 방식(mirror-up)으로 page.tsx가 값을 미러링해 스냅샷에 저장하고,
+   * 재오픈 시 이 초기값으로 되돌려준다 — product처럼 완전히 controlled로
+   * 끌어올리진 않는다(이 컴포넌트 내부에서 매우 자주 갱신되는 값이라 상위로
+   * 완전히 옮기면 변경 범위가 커진다). */
+  initialCategoryMappings?: Record<PlatformId, CategorySelection>;
+  onCategoryMappingsChange?: (mappings: Record<PlatformId, CategorySelection>) => void;
 }) {
   // P0-UI Epic 1 — "이미지" 영역을 대표이미지+장수 요약 카드로 줄이고, 기존
   // ImageRoleGrid(대표/상품/상세 역할 지정 그리드)는 이 카드를 눌렀을 때만 여는
@@ -159,7 +169,14 @@ export function CommerceWorkspace({
       // 저장 실패해도 이번 세션 안에서는 정상 동작한다 — 복원만 안 될 뿐이다.
     }
   }, [tab]);
-  const [categoryMappings, setCategoryMappings] = useState(INITIAL_CATEGORY_MAPPINGS);
+  const [categoryMappings, setCategoryMappings] = useState(
+    () => initialCategoryMappings ?? INITIAL_CATEGORY_MAPPINGS,
+  );
+  // N-3.12 Phase 2 P0① — page.tsx로 미러링해서 스냅샷에 저장한다(위 props 주석 참고).
+  useEffect(() => {
+    onCategoryMappingsChange?.(categoryMappings);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryMappings]);
   const [listingStates, setListingStates] = useState(INITIAL_LISTING_STATES);
   const [listingResults, setListingResults] = useState(INITIAL_LISTING_RESULTS);
   const [confirmingPlatform, setConfirmingPlatform] = useState<PlatformId | null>(null);

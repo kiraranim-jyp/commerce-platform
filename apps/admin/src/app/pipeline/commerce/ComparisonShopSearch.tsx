@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { countryToFlagEmoji } from "@commerce/shared";
 import { CollapsibleSection } from "./CollapsibleSection";
 
 type MatchLevel = "very_high" | "high" | "medium" | "low";
@@ -33,12 +34,6 @@ const MATCH_LEVEL_ICON: Record<MatchLevel, string> = {
   medium: "🟡",
   low: "⚪",
 };
-
-function flagFor(country: string | null | undefined): string {
-  if (!country) return "🌐";
-  const codePoints = [...country.toUpperCase()].map((c) => 127397 + c.charCodeAt(0));
-  return String.fromCodePoint(...codePoints);
-}
 
 interface Candidate {
   title: string;
@@ -142,7 +137,7 @@ export function ComparisonShopSearch({
           {results.map((r) => (
             <div key={r.shopId} className="rounded-md border border-border p-2">
               <div className="text-xs font-medium text-text-primary">
-                {flagFor(r.shopCountry)} {r.shopName}
+                {countryToFlagEmoji(r.shopCountry) ?? "🌐"} {r.shopName}
                 {!r.shopCountry && (
                   <span className="ml-1 text-[10px] font-normal text-text-tertiary">(원본 국가 확인 불가)</span>
                 )}

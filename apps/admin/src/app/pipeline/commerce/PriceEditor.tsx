@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { CanonicalProduct } from "@commerce/shared";
+import { countryToFlagEmoji } from "@commerce/shared";
 import {
   computePriceBreakdown,
   DEFAULT_PRICE_BREAKDOWN_INPUT,
@@ -11,12 +12,6 @@ import {
 } from "@commerce/pricing";
 import type { PriceIntelligenceResult } from "@commerce/pricing";
 import { EditableText } from "./EditableField";
-
-function flagFor(country: string | null): string {
-  if (!country) return "🌐";
-  const codePoints = [...country.toUpperCase()].map((c) => 127397 + c.charCodeAt(0));
-  return String.fromCodePoint(...codePoints);
-}
 
 /**
  * Sprint N-3.8/N-3.9(가격 계산 모델 통일 — CPO 지시) — 예전에는 화면 상단
@@ -261,7 +256,7 @@ export function PriceEditor({
             {sellerIntel.sellerOriginPrice ? (
               <>
                 판매처 원본가격{sellerIntel.seller.name ? ` — ${sellerIntel.seller.name}` : ""}:{" "}
-                {flagFor(sellerIntel.seller.country)}{" "}
+                {countryToFlagEmoji(sellerIntel.seller.country) ?? "🌐"}{" "}
                 {formatOriginalPrice(sellerIntel.sellerOriginPrice.amount, sellerIntel.sellerOriginPrice.currency)}
                 {sellerIntel.convertedSellerOriginToKrw && (
                   <> (약 {formatKrw(sellerIntel.convertedSellerOriginToKrw.amount)})</>
