@@ -6,7 +6,6 @@ import type { ListingModel } from "@commerce/marketplace";
 import type { NaverCategoryCandidate } from "@commerce/listing";
 import type { CanonicalProduct, CommerceCategoryPathResult } from "@commerce/shared";
 import { formatKrw } from "@commerce/pricing";
-import { PriceIntelligencePanel } from "./PriceIntelligencePanel";
 import { PriceEditor } from "./PriceEditor";
 import { CategoryTreeBrowser } from "./CategoryTreeBrowser";
 import { fetchNaverCategoryTree } from "./category-tree-adapters";
@@ -451,10 +450,6 @@ export function NaverPayloadPreview({
           exchangeRatesLoading={exchangeRatesLoading}
           onRefreshExchangeRates={onRefreshExchangeRates}
         />
-      </Section>
-
-      <Section id="naver-section-price-intelligence" title="해외 가격 정보 (참고 — 위 판매가격과 별개)">
-        <PriceIntelligencePanel product={product} />
       </Section>
 
       <Section id="naver-section-category" title="카테고리">
