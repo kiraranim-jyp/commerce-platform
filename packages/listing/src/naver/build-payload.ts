@@ -202,6 +202,19 @@ function toImageRef(url: string): NaverImageRef {
 }
 
 /**
+ * N-3.13 R2 Part 9 — productInfoProvidedNotice.size는 CartPilot에 별도 입력
+ * 경로가 없어 항상 MISSING이었다. product.optionGroups에 이미 실제 SIZE 옵션
+ * 값이 있으면(예: "Size": ["4-5 Years", "6-7 Years"]) 이걸 재사용한다 — 새
+ * 입력 UI를 만들지 않는다(CPO 지시). SIZE 옵션이 없으면 undefined를 반환해서
+ * validate-payload.ts가 지금처럼 MISSING으로 남기게 한다(임의값 금지).
+ */
+export function resolveSizeFromOptions(product: CanonicalProduct): string | undefined {
+  const sizeGroup = product.optionGroups.find((g) => /size|사이즈/i.test(g.name));
+  if (!sizeGroup || sizeGroup.values.length === 0) return undefined;
+  return sizeGroup.values.join(", ");
+}
+
+/**
  * DRY_RUN 전용 — 실제 POST를 호출하지 않는다. 확인 안 된 필드(deliveryCompany,
  * originAreaInfo, optionCombinations 등)는 채우지 않고 undefined로 남긴다 —
  * validate-payload.ts가 이걸 근거로 BLOCKED 사유를 만든다.
@@ -303,6 +316,7 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
               productInfoProvidedNoticeType: "KIDS",
               material: product.material.value || undefined,
               color: product.color.value || undefined,
+              size: resolveSizeFromOptions(product),
               manufacturer: product.manufacturer.value || undefined,
               caution: product.careInstructions.value || undefined,
               recommendedAge: product.recommendedAge.value || undefined,
@@ -313,6 +327,7 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
               productInfoProvidedNoticeType: "WEAR",
               material: product.material.value || undefined,
               color: product.color.value || undefined,
+              size: resolveSizeFromOptions(product),
               manufacturer: product.manufacturer.value || undefined,
               caution: product.careInstructions.value || undefined,
               warrantyPolicy: warrantyPolicy || undefined,

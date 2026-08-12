@@ -1,4 +1,5 @@
 import type { CanonicalProduct } from "@commerce/shared";
+import { resolveSizeFromOptions } from "./build-payload";
 import type { NaverPayloadInput } from "./build-payload";
 import type { NaverProductRegistrationPayload } from "./types";
 
@@ -236,10 +237,11 @@ export function validateNaverPayload(
   //    콘텐츠다. material/color/manufacturer/caution/recommendedAge는
   //    product 필드에서, warrantyPolicy/afterServiceDirector는
   //    SellerProfile.qualityGuarantee/asContactNumber에서 채워지면 READY —
-  //    size/certificationType/itemName/modelName/weight는 CartPilot에 소스
-  //    자체가 없어(사이즈 옵션값을 고시 필드에 억지로 매핑하지 않는다) 항상
-  //    MISSING이다(임의 값 금지, 향후 실제 입력 필드가 생기면 그때 READY로
-  //    바뀐다).
+  //    size는 N-3.13 R2(CPO 지시)부터 product.optionGroups의 실제 SIZE 옵션
+  //    값을 재사용한다(resolveSizeFromOptions — 옵션이 없으면 그대로 MISSING,
+  //    임의 값을 만들지 않는다). certificationType/itemName/modelName/weight는
+  //    여전히 CartPilot에 입력 경로가 없어 항상 MISSING이다(향후 실제 입력
+  //    필드가 생기면 그때 READY로 바뀐다).
   const notice = categoryRequiresChildCertification ? "kids" : "wear";
   const noticePrefix = notice === "kids" ? "productInfoProvidedNotice(KIDS)" : "productInfoProvidedNotice(WEAR)";
   for (const field of [
@@ -293,7 +295,13 @@ export function validateNaverPayload(
     "MISSING",
     "A/S 책임자와 전화번호가 없습니다 — Settings의 판매자 정보 탭에서 \"A/S 연락처\"를 입력하면 해결됩니다.",
   );
-  check(fields, `${noticePrefix}.size`, false, "MISSING", "치수(사이즈) 정보가 없습니다 — CartPilot에 아직 입력 경로가 없습니다.");
+  check(
+    fields,
+    `${noticePrefix}.size`,
+    Boolean(resolveSizeFromOptions(input.product)),
+    "MISSING",
+    "치수(사이즈) 정보가 없습니다 — 상품에 SIZE 옵션이 있으면 자동으로 채워집니다.",
+  );
   if (notice === "kids") {
     check(
       fields,

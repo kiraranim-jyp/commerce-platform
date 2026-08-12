@@ -306,6 +306,7 @@ export default function SettingsPage() {
                 handleSaveAccount={handleSaveAccount}
                 accountSaving={accountSaving}
               />
+              <MultiCommerceAccountsSection />
             </div>
 
             {/* N-3.13 Part C(CPO 지시: "스마트스토어가 실제 지원되는지조차 불명확함") —
@@ -2291,6 +2292,343 @@ function CommerceAccountsSection({
       <div className="rounded-lg border border-dashed border-border bg-background px-4 py-3 text-sm text-text-tertiary">
         <p className="font-medium text-text-secondary">⚪ 새로운 Commerce</p>
         <p className="mt-0.5 text-xs">아직 연결되지 않음 — 11번가, G마켓 등은 향후 추가될 예정입니다.</p>
+      </div>
+    </div>
+  );
+}
+
+interface CommerceAccountRecord {
+  id: string;
+  platform: "naver" | "coupang";
+  label: string;
+  isDefault: boolean;
+  accessKeyMasked: string | null;
+  secretKeySaved: boolean;
+  vendorId: string | null;
+  vendorUserId: string | null;
+  clientIdMasked: string | null;
+  clientSecretSaved: boolean;
+}
+
+/** N-3.13 R2 Part 12(CPO 지시, 2026-08-12 확정) — 네이버/쿠팡 각각 여러
+ * 계정을 아코디언으로 추가/수정/삭제/연결테스트한다. 위 CommerceAccountsSection
+ * (기존 단일 계정 카드, 실제 등록 파이프라인이 지금 쓰는 소스)은 그대로 두고
+ * 이 섹션을 추가한다 — 안전조건(CPO 지시: "기존 구조를 무리하게 깨지 않는다")
+ * 에 따라 이번 라운드는 새 다중 계정 저장소의 CRUD+연결테스트까지만 완성하고,
+ * "이 중 어떤 계정을 실제 등록에 쓸지" 배선은 다음 단계로 남긴다. */
+function MultiCommerceAccountsSection() {
+  const [accounts, setAccounts] = useState<CommerceAccountRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [openPlatform, setOpenPlatform] = useState<"naver" | "coupang" | null>(null);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/settings/commerce-accounts");
+      const data = (await res.json()) as { accounts?: CommerceAccountRecord[] };
+      setAccounts(data.accounts ?? []);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  return (
+    <div className="mt-4 space-y-3">
+      <SectionHeader
+        title="커머스 계정 관리 (다중 계정)"
+        description="네이버/쿠팡 각각 여러 계정을 등록해두고 관리할 수 있습니다 — 실제 상품 등록에 어떤 계정을 쓸지 연결하는 기능은 다음 업데이트에서 제공됩니다."
+      />
+      {loading ? (
+        <p className="text-sm text-text-tertiary">불러오는 중…</p>
+      ) : (
+        (["naver", "coupang"] as const).map((platform) => (
+          <PlatformAccountAccordion
+            key={platform}
+            platform={platform}
+            accounts={accounts.filter((a) => a.platform === platform)}
+            open={openPlatform === platform}
+            onToggle={() => setOpenPlatform((p) => (p === platform ? null : platform))}
+            onChanged={load}
+          />
+        ))
+      )}
+    </div>
+  );
+}
+
+function PlatformAccountAccordion({
+  platform,
+  accounts,
+  open,
+  onToggle,
+  onChanged,
+}: {
+  platform: "naver" | "coupang";
+  accounts: CommerceAccountRecord[];
+  open: boolean;
+  onToggle: () => void;
+  onChanged: () => void;
+}) {
+  const [addingOpen, setAddingOpen] = useState(false);
+  const label = platform === "naver" ? "네이버 스마트스토어" : "쿠팡";
+
+  return (
+    <div className="rounded-lg border border-border bg-surface">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-text-primary"
+      >
+        <span>
+          {open ? "▼" : "▶"} {label}
+          <span className="ml-2 text-xs font-normal text-text-tertiary">계정 {accounts.length}개</span>
+        </span>
+      </button>
+      {open && (
+        <div className="space-y-2 border-t border-border px-4 py-3">
+          {accounts.length === 0 && <p className="text-xs text-text-tertiary">등록된 계정이 없습니다.</p>}
+          {accounts.map((account) => (
+            <CommerceAccountRow key={account.id} account={account} onChanged={onChanged} />
+          ))}
+          {addingOpen ? (
+            <CommerceAccountForm
+              platform={platform}
+              onDone={() => {
+                setAddingOpen(false);
+                onChanged();
+              }}
+              onCancel={() => setAddingOpen(false)}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAddingOpen(true)}
+              className="rounded-md border border-dashed border-border px-3 py-1.5 text-xs font-medium text-primary hover:bg-background"
+            >
+              + 커머스 계정 추가
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CommerceAccountRow({ account, onChanged }: { account: CommerceAccountRecord; onChanged: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ status: string; message: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleTest() {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await fetch(`/api/settings/commerce-accounts/${account.id}/test`, { method: "POST" });
+      const data = (await res.json()) as { status: string; message: string };
+      setTestResult(data);
+    } catch {
+      setTestResult({ status: "AUTH_FAILED", message: "연결 테스트 중 오류가 발생했습니다." });
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!window.confirm(`"${account.label}" 계정을 삭제할까요?`)) return;
+    setDeleting(true);
+    try {
+      await fetch(`/api/settings/commerce-accounts/${account.id}`, { method: "DELETE" });
+      onChanged();
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  const summary =
+    account.platform === "coupang"
+      ? account.accessKeyMasked
+        ? `Access Key ${account.accessKeyMasked}${account.vendorId ? ` · Vendor ${account.vendorId}` : ""}`
+        : "미저장"
+      : account.clientIdMasked
+        ? `Client ID ${account.clientIdMasked}`
+        : "미저장";
+
+  return (
+    <div className="rounded-md border border-border bg-background px-3 py-2 text-xs">
+      <div className="flex items-center justify-between">
+        <div>
+          <span className="font-medium text-text-primary">{account.label}</span>
+          {account.isDefault && (
+            <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">기본</span>
+          )}
+          <p className="mt-0.5 text-text-tertiary">{summary}</p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <button type="button" onClick={() => void handleTest()} disabled={testing} className="text-primary hover:underline disabled:opacity-50">
+            {testing ? "확인 중…" : "연결 테스트"}
+          </button>
+          <button type="button" onClick={() => setEditing((v) => !v)} className="text-text-secondary hover:underline">
+            {editing ? "닫기" : "수정"}
+          </button>
+          <button type="button" onClick={() => void handleDelete()} disabled={deleting} className="text-error hover:underline disabled:opacity-50">
+            삭제
+          </button>
+        </div>
+      </div>
+      {testResult && (
+        <p className={`mt-1.5 ${testResult.status === "CONNECTED" ? "text-success" : "text-error"}`}>
+          {testResult.status === "CONNECTED" ? "✓" : "✗"} {testResult.message}
+        </p>
+      )}
+      {editing && (
+        <div className="mt-2 border-t border-border pt-2">
+          <CommerceAccountForm
+            platform={account.platform}
+            accountId={account.id}
+            initialLabel={account.label}
+            onDone={() => {
+              setEditing(false);
+              onChanged();
+            }}
+            onCancel={() => setEditing(false)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CommerceAccountForm({
+  platform,
+  accountId,
+  initialLabel,
+  onDone,
+  onCancel,
+}: {
+  platform: "naver" | "coupang";
+  accountId?: string;
+  initialLabel?: string;
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const [label, setLabel] = useState(initialLabel ?? "");
+  const [accessKey, setAccessKey] = useState("");
+  const [secretKey, setSecretKey] = useState("");
+  const [vendorId, setVendorId] = useState("");
+  const [vendorUserId, setVendorUserId] = useState("");
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit() {
+    setSaving(true);
+    try {
+      const body =
+        platform === "coupang"
+          ? { platform, label, accessKey, secretKey, vendorId, vendorUserId }
+          : { platform, label, clientId, clientSecret };
+      const res = await fetch(
+        accountId ? `/api/settings/commerce-accounts/${accountId}` : "/api/settings/commerce-accounts",
+        {
+          method: accountId ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        },
+      );
+      const data = (await res.json()) as { ok: boolean };
+      if (data.ok) onDone();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="mt-2 space-y-2 rounded-md border border-border bg-surface p-3">
+      <Field label="계정 이름">
+        <input
+          type="text"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="예: 본계정"
+          className="w-full rounded-md border border-border px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
+        />
+      </Field>
+      {platform === "coupang" ? (
+        <>
+          <Field label="Access Key">
+            <input
+              type="password"
+              value={accessKey}
+              onChange={(e) => setAccessKey(e.target.value)}
+              placeholder="새 값을 입력하지 않으면 기존 값 유지"
+              className="w-full rounded-md border border-border px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="Secret Key">
+            <input
+              type="password"
+              value={secretKey}
+              onChange={(e) => setSecretKey(e.target.value)}
+              placeholder="새 값을 입력하지 않으면 기존 값 유지"
+              className="w-full rounded-md border border-border px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="Vendor ID">
+            <input
+              type="text"
+              value={vendorId}
+              onChange={(e) => setVendorId(e.target.value)}
+              className="w-full rounded-md border border-border px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="Wing 계정 ID">
+            <input
+              type="text"
+              value={vendorUserId}
+              onChange={(e) => setVendorUserId(e.target.value)}
+              className="w-full rounded-md border border-border px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
+            />
+          </Field>
+        </>
+      ) : (
+        <>
+          <Field label="Client ID">
+            <input
+              type="password"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              placeholder="새 값을 입력하지 않으면 기존 값 유지"
+              className="w-full rounded-md border border-border px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <Field label="Client Secret">
+            <input
+              type="password"
+              value={clientSecret}
+              onChange={(e) => setClientSecret(e.target.value)}
+              placeholder="새 값을 입력하지 않으면 기존 값 유지"
+              className="w-full rounded-md border border-border px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
+            />
+          </Field>
+        </>
+      )}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => void handleSubmit()}
+          disabled={saving || !label}
+          className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-hover disabled:opacity-50"
+        >
+          {saving ? "저장 중…" : "저장"}
+        </button>
+        <button type="button" onClick={onCancel} className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background">
+          취소
+        </button>
       </div>
     </div>
   );
