@@ -11,7 +11,6 @@ import { CoupangConnectionPanel } from "../pipeline/commerce/CoupangConnectionPa
 
 const TAB_KEYS = [
   "accounts",
-  "coupang",
   "shipping",
   "seller",
   "pricing",
@@ -150,7 +149,7 @@ export default function SettingsPage() {
   // "use client"로 완전히 클라이언트 렌더되는 이 페이지에서는 window.location을 직접
   // 읽는 쪽이 더 단순하다. 탭 전환 시 언마운트하지 않고 hidden 클래스로만 감춰서 폼
   // 입력 중이던 값이 탭을 오가도 유지되게 한다.
-  const [activeTab, setActiveTabState] = useState<SettingsTabKey>("coupang");
+  const [activeTab, setActiveTabState] = useState<SettingsTabKey>("accounts");
   useEffect(() => {
     const tab = new URLSearchParams(window.location.search).get("tab");
     if (tab && (TAB_KEYS as readonly string[]).includes(tab)) {
@@ -237,7 +236,7 @@ export default function SettingsPage() {
     return (
       <>
         <PageHeader title="설정" subtitle="쿠팡/스마트스토어 판매에 필요한 정보를 관리합니다." />
-        <PageContainer size="lg">
+        <PageContainer size="xl">
           <p className="text-sm text-text-secondary">불러오는 중...</p>
         </PageContainer>
       </>
@@ -247,26 +246,31 @@ export default function SettingsPage() {
   return (
     <>
       <PageHeader title="설정" subtitle="쿠팡/스마트스토어 판매에 필요한 정보를 관리합니다." />
-      <PageContainer size="lg">
-        <div className="mx-auto max-w-2xl">
-          <div
-            className={`rounded-md p-3 text-sm ${
-              configured ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
-            }`}
-          >
-            {configured
-              ? "✓ 쿠팡 등록에 필요한 설정이 모두 준비되어 있습니다."
-              : `⚠ 아직 준비되지 않은 항목: ${missing.join(", ")}`}
-          </div>
-          {saveMessage && <p className="mt-2 text-xs text-text-secondary">{saveMessage}</p>}
+      {/* N-3.10(Part A) — 예전엔 폭을 max-w-2xl(672px)로 고정해서 메뉴가 9개로
+          늘어나자 가로 탭 글자가 줄바꿈되며 깨졌다. size="xl"(최대 1800px)
+          + 왼쪽 세로 nav(Tabs orientation="vertical") 구조로 바꿔서, 메뉴가
+          더 늘어나도(향후 Commerce 추가 등) 세로로만 길어질 뿐 레이아웃이
+          깨지지 않는다. */}
+      <PageContainer size="xl">
+        <div
+          className={`rounded-md p-3 text-sm ${
+            configured ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
+          }`}
+        >
+          {configured
+            ? "✓ 쿠팡 등록에 필요한 설정이 모두 준비되어 있습니다."
+            : `⚠ 아직 준비되지 않은 항목: ${missing.join(", ")}`}
+        </div>
+        {saveMessage && <p className="mt-2 text-xs text-text-secondary">{saveMessage}</p>}
 
+        <div className="mt-6 flex flex-col gap-6 lg:flex-row">
           <Tabs
-            className="mt-6"
+            orientation="vertical"
+            className="lg:w-56 lg:shrink-0"
             value={activeTab}
             onChange={setActiveTab}
             items={[
               { value: "accounts", label: "커머스 계정 관리" },
-              { value: "coupang", label: "쿠팡 계정" },
               { value: "shipping", label: "배송 프로필" },
               { value: "seller", label: "판매자 정보" },
               { value: "pricing", label: "가격 정책" },
@@ -277,66 +281,30 @@ export default function SettingsPage() {
             ]}
           />
 
-          <div className={activeTab === "accounts" ? "mt-5" : "hidden"}>
-            <SectionHeader
-              title="커머스 계정 관리"
-              description="플랫폼별 연결 상태를 한 곳에서 확인합니다. 향후 추가되는 커머스도 같은 방식으로 관리됩니다."
-              className="mb-3"
-            />
-            <CommerceAccountsSection account={account} onGoToCoupangSettings={() => setActiveTab("coupang")} onAccountCleared={loadAll} />
-          </div>
+          <div className="min-w-0 max-w-3xl flex-1">
+            <div className={activeTab === "accounts" ? "" : "hidden"}>
+              <SectionHeader
+                title="커머스 계정 관리"
+                description="플랫폼별 연결 상태를 한 곳에서 확인합니다. 향후 추가되는 커머스도 같은 방식으로 관리됩니다."
+                className="mb-3"
+              />
+              <CommerceAccountsSection
+                account={account}
+                onAccountCleared={loadAll}
+                accessKey={accessKey}
+                setAccessKey={setAccessKey}
+                secretKey={secretKey}
+                setSecretKey={setSecretKey}
+                vendorId={vendorId}
+                setVendorId={setVendorId}
+                vendorUserId={vendorUserId}
+                setVendorUserId={setVendorUserId}
+                handleSaveAccount={handleSaveAccount}
+                accountSaving={accountSaving}
+              />
+            </div>
 
-          <div className={activeTab === "coupang" ? "mt-5" : "hidden"}>
-            <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
-              <h2 className="text-base font-semibold text-text-primary">쿠팡 계정</h2>
-              <div className="mt-3 space-y-3 text-sm">
-                <Field label="Access Key" hint={account.accessKeyMasked ? `저장됨 (${account.accessKeyMasked})` : "미저장"}>
-                  <input
-                    type="password"
-                    value={accessKey}
-                    onChange={(e) => setAccessKey(e.target.value)}
-                    placeholder={account.accessKeyMasked ?? "새 값을 입력하지 않으면 기존 값 유지"}
-                    className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-                  />
-                </Field>
-                <Field label="Secret Key" hint={account.secretKeySaved ? "저장됨" : "미저장"}>
-                  <input
-                    type="password"
-                    value={secretKey}
-                    onChange={(e) => setSecretKey(e.target.value)}
-                    placeholder={account.secretKeySaved ? "•••• (변경하려면 새 값 입력)" : "새 값을 입력하지 않으면 기존 값 유지"}
-                    className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-                  />
-                </Field>
-                <Field label="Vendor ID">
-                  <input
-                    type="text"
-                    value={vendorId}
-                    onChange={(e) => setVendorId(e.target.value)}
-                    className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-                  />
-                </Field>
-                <Field label="Wing 계정 ID" hint="Wing 로그인 ID — API로 조회할 수 없어 직접 입력해야 합니다">
-                  <input
-                    type="text"
-                    value={vendorUserId}
-                    onChange={(e) => setVendorUserId(e.target.value)}
-                    className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-                  />
-                </Field>
-                <button
-                  type="button"
-                  onClick={handleSaveAccount}
-                  disabled={accountSaving}
-                  className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
-                >
-                  {accountSaving ? "저장 중…" : "계정 저장"}
-                </button>
-              </div>
-            </section>
-          </div>
-
-          {/* 배송 프로필/판매자 정보/가격 정책/상세페이지(공통이미지) 4개 탭이
+            {/* 배송 프로필/판매자 정보/가격 정책/상세페이지(공통이미지) 4개 탭이
               전부 하나의 SellerProfile 저장 단위를 공유하므로, 인스턴스를
               하나만 마운트하고 내부에서 activeTab에 따라 어느 섹션을 보여줄지
               결정한다(탭을 오갈 때 상태가 유지되어야 하므로 언마운트 금지 —
@@ -368,7 +336,8 @@ export default function SettingsPage() {
             </p>
           )}
 
-          <DeveloperModeSection />
+            <DeveloperModeSection />
+          </div>
         </div>
       </PageContainer>
     </>
@@ -2039,17 +2008,39 @@ interface ComparisonShop {
  */
 function CommerceAccountsSection({
   account,
-  onGoToCoupangSettings,
   onAccountCleared,
+  accessKey,
+  setAccessKey,
+  secretKey,
+  setSecretKey,
+  vendorId,
+  setVendorId,
+  vendorUserId,
+  setVendorUserId,
+  handleSaveAccount,
+  accountSaving,
 }: {
   account: AccountValues;
-  onGoToCoupangSettings: () => void;
   onAccountCleared: () => void;
+  accessKey: string;
+  setAccessKey: (v: string) => void;
+  secretKey: string;
+  setSecretKey: (v: string) => void;
+  vendorId: string;
+  setVendorId: (v: string) => void;
+  vendorUserId: string;
+  setVendorUserId: (v: string) => void;
+  handleSaveAccount: () => void;
+  accountSaving: boolean;
 }) {
   const [coupangStatus, setCoupangStatus] = useState<PlatformConnectionStatus>("UNKNOWN");
   const [coupangChecking, setCoupangChecking] = useState(false);
   const [coupangCheckedAt, setCoupangCheckedAt] = useState<string | null>(null);
   const [clearing, setClearing] = useState(false);
+  // N-3.10(Part B) — 예전엔 "계정 설정"을 누르면 별도 "쿠팡 계정" 탭으로
+  // 이동했다. 이제 그 탭 자체를 없앴으므로(커머스별 Settings 탭을 늘리지
+  // 않는다는 원칙), 같은 폼을 이 카드 안에서 펼쳐서 보여준다.
+  const [coupangFormOpen, setCoupangFormOpen] = useState(false);
 
   const [naverStatus, setNaverStatus] = useState<PlatformConnectionStatus>("UNKNOWN");
   const [naverChecking, setNaverChecking] = useState(false);
@@ -2114,8 +2105,12 @@ function CommerceAccountsSection({
       <div className="rounded-lg border border-border bg-surface px-4 pb-3 pt-0 text-xs text-text-secondary">
         <p>판매자 계정: {coupangAccountLabel}</p>
         <div className="mt-2 flex gap-3">
-          <button type="button" onClick={onGoToCoupangSettings} className="font-medium text-primary hover:underline">
-            계정 설정
+          <button
+            type="button"
+            onClick={() => setCoupangFormOpen((v) => !v)}
+            className="font-medium text-primary hover:underline"
+          >
+            {coupangFormOpen ? "계정 설정 닫기" : "계정 설정"}
           </button>
           <button
             type="button"
@@ -2130,6 +2125,52 @@ function CommerceAccountsSection({
           &ldquo;연결 해제&rdquo;는 이 화면에 저장된 값만 지웁니다 — 배포 환경 변수로도 설정돼 있다면 계속 연결됨으로 표시될 수
           있습니다.
         </p>
+        {coupangFormOpen && (
+          <div className="mt-3 space-y-3 border-t border-border pt-3 text-sm">
+            <Field label="Access Key" hint={account.accessKeyMasked ? `저장됨 (${account.accessKeyMasked})` : "미저장"}>
+              <input
+                type="password"
+                value={accessKey}
+                onChange={(e) => setAccessKey(e.target.value)}
+                placeholder={account.accessKeyMasked ?? "새 값을 입력하지 않으면 기존 값 유지"}
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+            <Field label="Secret Key" hint={account.secretKeySaved ? "저장됨" : "미저장"}>
+              <input
+                type="password"
+                value={secretKey}
+                onChange={(e) => setSecretKey(e.target.value)}
+                placeholder={account.secretKeySaved ? "•••• (변경하려면 새 값 입력)" : "새 값을 입력하지 않으면 기존 값 유지"}
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+            <Field label="Vendor ID">
+              <input
+                type="text"
+                value={vendorId}
+                onChange={(e) => setVendorId(e.target.value)}
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+            <Field label="Wing 계정 ID" hint="Wing 로그인 ID — API로 조회할 수 없어 직접 입력해야 합니다">
+              <input
+                type="text"
+                value={vendorUserId}
+                onChange={(e) => setVendorUserId(e.target.value)}
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+              />
+            </Field>
+            <button
+              type="button"
+              onClick={handleSaveAccount}
+              disabled={accountSaving}
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+            >
+              {accountSaving ? "저장 중…" : "계정 저장"}
+            </button>
+          </div>
+        )}
       </div>
 
       <CoupangConnectionPanel
