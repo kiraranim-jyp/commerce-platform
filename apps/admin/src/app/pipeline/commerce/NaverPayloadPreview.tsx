@@ -102,25 +102,44 @@ function CategoryHierarchyLine({
   return <span className="text-text-tertiary">상위 경로 조회 중...</span>;
 }
 
-const FIELD_SECTION: Record<string, string> = {
-  "originProduct.leafCategoryId": "naver-section-category",
-  "originProduct.name": "naver-section-basic",
-  "originProduct.images.representativeImage": "naver-section-images",
-  "originProduct.salePrice": "naver-section-pricing",
-  "originProduct.stockQuantity": "naver-section-pricing",
-  "claimDeliveryInfo.shippingAddressId": "naver-section-shipping",
-  "claimDeliveryInfo.returnAddressId": "naver-section-shipping",
-  "deliveryInfo.deliveryCompany": "naver-section-shipping",
-  "claimDeliveryInfo.returnDeliveryCompanyPriorityType": "naver-section-shipping",
-  "claimDeliveryInfo.returnDeliveryFee": "naver-section-shipping",
-  "claimDeliveryInfo.exchangeDeliveryFee": "naver-section-shipping",
-  productCertificationInfos: "naver-section-certification",
-  "productCertificationInfos[].certificationNumber": "naver-section-certification",
-  "detailAttribute.optionInfo": "naver-section-options",
-  "detailAttribute.optionInfo.optionCombinations[].optionName": "naver-section-options",
-  "detailAttribute.originAreaInfo.originAreaCode": "naver-section-origin",
-  "detailAttribute.originAreaInfo.importer": "naver-section-origin",
+/**
+ * N-3.13 Part E-10(CPO 지시: "Naver 등록 준비 상태를 섹션별로 한눈에") — 이 맵을
+ * scroll target(sectionId)뿐 아니라 사람이 읽는 그룹 라벨까지 함께 들고 있게
+ * 확장했다. 기존엔 "naver-section-pricing"으로 잘못 적혀 있어(실제 DOM id는
+ * "naver-section-price") 가격 관련 이슈를 클릭해도 스크롤이 전혀 안 되는
+ * 버그가 있었다 — 이번에 같이 고쳤다. detailContent/naverShoppingRegistration은
+ * 이 파일에 전용 섹션이 없어(전자는 Naver 상세페이지 에디터 자체가 아직
+ * 없음 — Part J로 분리) 가장 가까운 "기본 상품정보" 섹션으로 보낸다(추측으로
+ * 새 섹션을 만들지 않는다).
+ */
+const FIELD_SECTION: Record<string, { sectionId: string; group: string }> = {
+  "originProduct.leafCategoryId": { sectionId: "naver-section-category", group: "카테고리" },
+  "originProduct.name": { sectionId: "naver-section-basic", group: "상품정보" },
+  "originProduct.detailContent": { sectionId: "naver-section-basic", group: "상세페이지" },
+  "originProduct.images.representativeImage": { sectionId: "naver-section-images", group: "이미지" },
+  "originProduct.salePrice": { sectionId: "naver-section-price", group: "가격" },
+  "originProduct.stockQuantity": { sectionId: "naver-section-price", group: "가격" },
+  "claimDeliveryInfo.shippingAddressId": { sectionId: "naver-section-shipping", group: "배송/반품" },
+  "claimDeliveryInfo.returnAddressId": { sectionId: "naver-section-shipping", group: "배송/반품" },
+  "deliveryInfo.deliveryCompany": { sectionId: "naver-section-shipping", group: "배송/반품" },
+  "claimDeliveryInfo.returnDeliveryCompanyPriorityType": { sectionId: "naver-section-shipping", group: "배송/반품" },
+  "claimDeliveryInfo.returnDeliveryFee": { sectionId: "naver-section-shipping", group: "배송/반품" },
+  "claimDeliveryInfo.exchangeDeliveryFee": { sectionId: "naver-section-shipping", group: "배송/반품" },
+  productCertificationInfos: { sectionId: "naver-section-certification", group: "인증(KC)" },
+  "productCertificationInfos[].certificationNumber": { sectionId: "naver-section-certification", group: "인증(KC)" },
+  "detailAttribute.optionInfo": { sectionId: "naver-section-options", group: "옵션" },
+  "detailAttribute.optionInfo.optionCombinations[].optionName": { sectionId: "naver-section-options", group: "옵션" },
+  "detailAttribute.originAreaInfo.originAreaCode": { sectionId: "naver-section-origin", group: "원산지" },
+  "detailAttribute.originAreaInfo.importer": { sectionId: "naver-section-origin", group: "원산지" },
+  "smartstoreChannelProduct.naverShoppingRegistration": { sectionId: "naver-section-basic", group: "상품정보" },
 };
+
+/** Part E-10 요약 배지 순서 — 카테고리부터 원산지까지, 실제로 validate-payload.ts가
+ * 검사하는 그룹만 나열한다(검사하지 않는 "고시정보"는 넣지 않는다 — 아직 이
+ * validator가 productInfoProvidedNotice 하위 필드 완성도를 검사하지 않기
+ * 때문에 여기 넣으면 항상 거짓으로 🟢라고 말하는 셈이 된다. 이 gap은 CPO에게
+ * 별도 보고). */
+const SECTION_GROUP_ORDER = ["카테고리", "상품정보", "가격", "옵션", "이미지", "상세페이지", "배송/반품", "인증(KC)", "원산지"];
 
 function payloadReplacer(_key: string, value: unknown): unknown {
   if (typeof value === "string" && value.startsWith("data:") && value.length > 80) {
@@ -363,10 +382,27 @@ export function NaverPayloadPreview({
   const optionalImages = payload.originProduct.images.optionalImages ?? [];
 
   function goToSection(field: string) {
-    const sectionId = FIELD_SECTION[field];
+    const sectionId = FIELD_SECTION[field]?.sectionId;
     if (!sectionId) return;
     document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
+
+  // N-3.13 Part E-10(CPO 지시: "Naver 등록 준비 상태를 섹션별로 한눈에 —
+  // [카테고리] 🟢 [상품정보] 🟢 ... 형태") — validate-payload.ts가 검사한
+  // 모든 필드(validation.fields, READY 포함)를 그룹별로 묶어 그룹당 최악
+  // 상태 하나만 배지로 보여준다. 이 화면이 새로 계산하지 않고 Final
+  // Validator가 이미 낸 결과만 집계한다(N-3.5 원칙 유지 — "Preview에서
+  // 별도 판단 로직을 만들지 않는다").
+  const sectionSummary = SECTION_GROUP_ORDER.map((group) => {
+    const groupFields = validation.fields.filter((f) => FIELD_SECTION[f.field]?.group === group);
+    const status = groupFields.some((f) => f.status === "BLOCKED")
+      ? "BLOCKED"
+      : groupFields.some((f) => f.status === "MISSING")
+        ? "MISSING"
+        : "READY";
+    return { group, status, checked: groupFields.length > 0 };
+  }).filter((s) => s.checked);
+  const SECTION_STATUS_ICON: Record<string, string> = { READY: "🟢", MISSING: "🟡", BLOCKED: "🔴" };
 
   return (
     <div className="space-y-3 rounded-lg border border-border bg-surface p-4 shadow-subtle">
@@ -390,6 +426,13 @@ export function NaverPayloadPreview({
         <p className="mt-1.5 text-sm font-medium text-text-primary">
           등록 가능 여부: {overallIcon} {overallState}
         </p>
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-text-secondary">
+          {sectionSummary.map((s) => (
+            <span key={s.group}>
+              [{s.group}] {SECTION_STATUS_ICON[s.status]}
+            </span>
+          ))}
+        </div>
         {blockedIssues.length > 0 && (
           <div className="mt-2">
             <p className="text-[11px] font-semibold text-error">BLOCKED</p>
