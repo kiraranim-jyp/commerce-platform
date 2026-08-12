@@ -1113,9 +1113,13 @@ function buildCoupangItem(args: {
 
   // variant.price가 있으면(옵션마다 가격이 다른 매장) 그 옵션의 실제 가격을
   // 원화로 환산해서 쓴다 — 없으면 listing.priceKrw(상품 전체 대표가)로 폴백한다.
-  const priceKrw = variant?.price
-    ? convertToKrw(variant.price.amount, variant.price.currency).amountKrw
-    : listing.priceKrw;
+  // 단, 사용자가 확정한 priceOverrideKrw가 있으면 variant 원본가로 조용히
+  // 되돌아가지 않도록 항상 우선한다(실측 중 확정가 무시 사고 확인).
+  const priceKrw = product.priceOverrideKrw
+    ? listing.priceKrw
+    : variant?.price
+      ? convertToKrw(variant.price.amount, variant.price.currency).amountKrw
+      : listing.priceKrw;
 
   const item: CoupangItem = {
     itemName,
