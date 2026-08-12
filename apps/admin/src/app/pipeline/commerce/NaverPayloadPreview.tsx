@@ -221,6 +221,9 @@ export function NaverPayloadPreview({
   const [candidatesLoading, setCandidatesLoading] = useState(false);
   const [candidatesFetched, setCandidatesFetched] = useState(false);
   const [autoFilledFromCandidate, setAutoFilledFromCandidate] = useState(false);
+  // N-3.13 Part I — 등록 버튼을 눌렀을 때 "테스트 모드" 안내만 보여준다(실제
+  // 등록 API는 호출하지 않는다). 서버 요청이 전혀 없는 순수 UI 상태다.
+  const [showTestModeNotice, setShowTestModeNotice] = useState(false);
 
   // N-2.9 — 상품이 바뀌면 후보를 한 번 새로 가져온다(카테고리 ID 입력값과는
   // 무관 — 후보 생성은 product 신호만 쓰지 입력값을 안 본다). settings/page.tsx와
@@ -443,7 +446,13 @@ export function NaverPayloadPreview({
   const blockedIssues = validation.issues.filter((i) => i.severity === "BLOCKED");
   const missingIssues = validation.issues.filter((i) => i.severity === "MISSING");
 
-  const overallState = blockedCount > 0 || missingCount > 0 ? "등록 불가" : "등록 가능";
+  // N-3.13 Part I(CPO 지시: "Validator와 등록 Gate에서 서로 다른 판단을
+  // 만들지 않는다") — validateNaverPayload()가 이미 계산해 둔 ok(=blockedCount
+  // === 0 && missingCount === 0)를 그대로 읽는다. 여기서 blockedCount/
+  // missingCount로 다시 판정하면 두 판단이 갈라질 수 있는 이중 로직이 된다
+  // (registrationAllowed를 별도 변수로 새로 계산하지 않는 이유).
+  const registrationAllowed = validation.ok;
+  const overallState = registrationAllowed ? "등록 가능" : "등록 불가";
   const overallIcon = blockedCount > 0 ? "🔴" : missingCount > 0 ? "🟡" : "🟢";
 
   const notice = payload.originProduct.detailAttribute?.productInfoProvidedNotice;
@@ -495,6 +504,33 @@ export function NaverPayloadPreview({
         <p className="mt-1.5 text-sm font-medium text-text-primary">
           등록 가능 여부: {overallIcon} {overallState}
         </p>
+        {/* N-3.13 Part I(CPO 지시: "Validator와 등록 Gate에서 서로 다른 판단을
+         * 만들지 않는다") — 버튼의 활성/비활성은 오직 registrationAllowed
+         * (=validation.ok) 하나로만 정한다. 이번 Sprint 안전 원칙은 그대로
+         * 유지 — 버튼을 눌러도 실제 POST /v2/products는 절대 호출하지
+         * 않고, 테스트 모드 안내만 보여준다. */}
+        <div className="mt-2 flex items-center gap-2">
+          <button
+            type="button"
+            disabled={!registrationAllowed}
+            onClick={() => setShowTestModeNotice(true)}
+            className="rounded-[var(--radius-md)] bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors duration-[var(--transition-fast)] disabled:cursor-not-allowed disabled:bg-border disabled:text-text-tertiary"
+          >
+            등록하기
+          </button>
+          {!registrationAllowed && (
+            <span className="text-[11px] text-text-tertiary">
+              {blockedCount > 0
+                ? `등록 차단 ${blockedCount}건을 먼저 해결하세요`
+                : `입력 필요 ${missingCount}건을 먼저 채우세요`}
+            </span>
+          )}
+        </div>
+        {showTestModeNotice && registrationAllowed && (
+          <p className="mt-1.5 rounded-[var(--radius-md)] bg-warning-soft px-2 py-1.5 text-[11px] text-warning">
+            현재는 테스트 모드입니다. 실제 상품 등록 API 호출은 비활성화되어 있습니다.
+          </p>
+        )}
         <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-text-secondary">
           {sectionSummary.map((s) => (
             <span key={s.group}>
