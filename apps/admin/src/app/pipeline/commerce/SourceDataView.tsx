@@ -63,7 +63,7 @@ export function SourceDataView({
             <Row label="가격" field={product.price}>
               <div className="flex items-center gap-2">
                 <EditableText
-                  value={String(product.price.value.amount)}
+                  value={Number(product.price.value.amount).toFixed(2)}
                   onCommit={(v) => onUpdatePrice(Number(v) || 0, product.price.value.currency)}
                   className="w-24 rounded border border-transparent bg-transparent px-1 py-0.5 text-sm hover:border-border focus:border-primary focus:bg-surface focus:outline-none"
                 />

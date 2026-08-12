@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { countryToFlagEmoji } from "@commerce/shared";
 import { CollapsibleSection } from "./CollapsibleSection";
 
@@ -82,6 +82,12 @@ export function ComparisonShopSearch({
   const [error, setError] = useState<string | null>(null);
   const [krwRates, setKrwRates] = useState<Record<string, number> | null>(null);
   const [queriedAt, setQueriedAt] = useState<string | null>(null);
+  // N-3.13 P0 — CPO 지시: "해외가격비교가 하나도 없음이면 기능 구현 완료로 인정하지
+  // 않는다." 원인은 버그가 아니라 UX였다 — 이 섹션은 기본 접힘(defaultOpen=false)이고
+  // 검색도 버튼을 눌러야만 실행됐다(useState(null)만 있고 자동 실행 트리거가 없었음).
+  // CEO가 상세 화면을 열어도 "빈 화면"처럼 보였던 이유. title이 준비되면 마운트 시
+  // 한 번 자동 검색한다(수동 재검색 버튼은 그대로 남겨 재조회 가능하게 한다).
+  const autoSearchedRef = useRef(false);
 
   async function runSearch() {
     setLoading(true);
@@ -116,8 +122,15 @@ export function ComparisonShopSearch({
     }
   }
 
+  useEffect(() => {
+    if (autoSearchedRef.current || !title) return;
+    autoSearchedRef.current = true;
+    void runSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title]);
+
   return (
-    <CollapsibleSection title="해외 가격비교 (베타)">
+    <CollapsibleSection title="해외 가격비교 (베타)" defaultOpen>
       <p className="text-xs text-text-tertiary">
         활성화된 해외 편집샵에서 유사 상품을 검색합니다 — 참고용 조회이며, 어떤 가격도 자동으로 원본가격/판매가에
         반영되지 않습니다.
