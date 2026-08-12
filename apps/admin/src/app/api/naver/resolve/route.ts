@@ -165,5 +165,15 @@ export async function GET(request: Request) {
       resolvedCountryText,
       match: originMatch,
     },
+    // N-3.13 Part E-12 — 공식 OpenAPI 스펙(ExternalApiWearInfoProvidedNoticeVo/
+    // ExternalApiKidsInfoProvidedNoticeVo.product) required 배열 확인 결과
+    // warrantyPolicy(품질 보증 기준)/afterServiceDirector(A/S 책임자와 전화번호)가
+    // 두 타입 모두 필수다. Naver 전용 입력 필드가 없어 Coupang용으로 이미 있는
+    // SellerProfile.qualityGuarantee/asContactNumber(판매자 정보 탭)를 그대로
+    // 재사용한다 — returnDeliveryFee/exchangeDeliveryFee와 같은 패턴.
+    notice: {
+      warrantyPolicy: sellerProfile?.qualityGuarantee || null,
+      afterServiceDirector: sellerProfile?.asContactNumber || null,
+    },
   });
 }

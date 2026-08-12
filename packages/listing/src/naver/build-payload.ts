@@ -81,6 +81,16 @@ export interface NaverPayloadInput {
    * 없으면(undefined/null) 지금까지처럼 비운다. 기존 테스트/호출부가 이 필드를
    * 몰라도 되도록 optional로 둔다. */
   deliveryCompany?: string | null;
+  /** N-3.13 Part E-12 — 공식 OpenAPI 스펙(ExternalApiWearInfoProvidedNoticeVo.product/
+   * ExternalApiKidsInfoProvidedNoticeVo.product) required 배열에서 warrantyPolicy
+   * (품질 보증 기준)가 확인됐다. Naver 전용 입력 필드가 따로 없어 Coupang용으로
+   * 이미 있는 SellerProfile.qualityGuarantee(판매자 정보 탭 "품질보증기준")를
+   * 재사용한다 — returnDeliveryFee/exchangeDeliveryFee와 같은 패턴, 새 DB 컬럼
+   * 만들지 않는다. */
+  warrantyPolicy?: string | null;
+  /** N-3.13 Part E-12 — 같은 스펙에서 확인된 afterServiceDirector(A/S 책임자와
+   * 전화번호). SellerProfile.asContactNumber(판매자 정보 탭 "A/S 연락처") 재사용. */
+  afterServiceDirector?: string | null;
 }
 
 /** N-2.8 — 옵션 조합(optionCombinations) 필드명은 공식 OpenAPI 스펙으로
@@ -144,6 +154,8 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
     originAreaCode,
     originAreaRequiresContent,
     deliveryCompany,
+    warrantyPolicy,
+    afterServiceDirector,
   } = input;
 
   const representativeUrl = listing.representativeImage;
@@ -185,6 +197,11 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
       detailAttribute: {
         // 고시 의무는 인증서 보유 여부와 무관하게 항상 존재한다 — 카테고리가
         // CHILD_CERTIFICATION 대상이면 KIDS, 아니면 일반 의류(WEAR) 타입을 쓴다.
+        // N-3.13 Part E-12 — 공식 OpenAPI 스펙(ExternalApiWearInfoProvidedNoticeVo/
+        // ExternalApiKidsInfoProvidedNoticeVo.product)의 required 배열을 직접
+        // 확인했다. warrantyPolicy/afterServiceDirector도 두 타입 모두 필수라
+        // SellerProfile 재사용 값을 채운다(추측 아님 — 스펙 원문 확인, 아래
+        // validate-payload.ts에 근거 주석).
         productInfoProvidedNotice: categoryRequiresChildCertification
           ? {
               productInfoProvidedNoticeType: "KIDS",
@@ -193,6 +210,8 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
               manufacturer: product.manufacturer.value || undefined,
               caution: product.careInstructions.value || undefined,
               recommendedAge: product.recommendedAge.value || undefined,
+              warrantyPolicy: warrantyPolicy || undefined,
+              afterServiceDirector: afterServiceDirector || undefined,
             }
           : {
               productInfoProvidedNoticeType: "WEAR",
@@ -200,6 +219,8 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
               color: product.color.value || undefined,
               manufacturer: product.manufacturer.value || undefined,
               caution: product.careInstructions.value || undefined,
+              warrantyPolicy: warrantyPolicy || undefined,
+              afterServiceDirector: afterServiceDirector || undefined,
             },
         // N-3.4 — originAreaCode는 GET /v1/product-origin-areas로 실측 확인한
         // 535개 코드 중 resolveNaverOriginArea가 매칭한 값을 그대로 쓴다(이

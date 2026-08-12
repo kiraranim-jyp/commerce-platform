@@ -77,6 +77,8 @@ export function validateNaverPayload(
     | "childCertificationInfoId"
     | "originAreaCode"
     | "deliveryCompany"
+    | "warrantyPolicy"
+    | "afterServiceDirector"
   > & {
     /** N-3.3 — 반품 택배사 목록 조회 자체가 실패했는지(계정/네트워크 문제 등).
      * 실패와 "택배사 미등록"은 서로 다른 사유라 구분한다. */
@@ -194,6 +196,102 @@ export function validateNaverPayload(
         fields,
         "productCertificationInfos[].certificationNumber",
         "실제 인증서 번호/업체명/취득일자는 판매자가 직접 입력해야 합니다(임의 생성 금지).",
+      );
+    }
+  }
+
+  // N-3.13 Part E-12(CPO 지시: "고시정보를 절대 임의로 🟢 처리하지 않는다") —
+  // build-payload.ts는 productInfoProvidedNotice(WEAR/KIDS)를 항상 만들지만,
+  // 이 파일은 지금까지 그 안의 개별 필드가 실제로 채워졌는지 전혀 검사하지
+  // 않았다(재검증 중 발견 — 항상 거짓 READY였던 gap). 공식 OpenAPI 스펙
+  // (ExternalApiWearInfoProvidedNoticeVo.product / ExternalApiKidsInfoProvidedNoticeVo.product)
+  // 의 required 배열을 직접 확인해 두 그룹으로 나눴다:
+  //
+  // 1) returnCostReason/noRefundReason/qualityAssuranceStandard/
+  //    compensationProcedure/troubleShootingContents — 스펙 설명에 "미입력 시
+  //    상품상세 참조로 입력됩니다"라고 명시돼 있다(Naver 서버가 값이 없으면
+  //    자동으로 상품상세 참조 문구를 채운다). CartPilot이 이 값을 만들지
+  //    않아도 등록이 막히지 않는다는 뜻이라 임의 판단이 아니라 스펙 근거로
+  //    READY 처리한다.
+  // 2) material/color/manufacturer/caution/size/warrantyPolicy/
+  //    afterServiceDirector(+KIDS 전용 certificationType/itemName/modelName/
+  //    recommendedAge/weight) — 이런 자동 기본값 설명이 없는 진짜 필수
+  //    콘텐츠다. material/color/manufacturer/caution/recommendedAge는
+  //    product 필드에서, warrantyPolicy/afterServiceDirector는
+  //    SellerProfile.qualityGuarantee/asContactNumber에서 채워지면 READY —
+  //    size/certificationType/itemName/modelName/weight는 CartPilot에 소스
+  //    자체가 없어(사이즈 옵션값을 고시 필드에 억지로 매핑하지 않는다) 항상
+  //    MISSING이다(임의 값 금지, 향후 실제 입력 필드가 생기면 그때 READY로
+  //    바뀐다).
+  const notice = categoryRequiresChildCertification ? "kids" : "wear";
+  const noticePrefix = notice === "kids" ? "productInfoProvidedNotice(KIDS)" : "productInfoProvidedNotice(WEAR)";
+  for (const field of [
+    "returnCostReason",
+    "noRefundReason",
+    "qualityAssuranceStandard",
+    "compensationProcedure",
+    "troubleShootingContents",
+  ]) {
+    fields.push({ field: `${noticePrefix}.${field}`, status: "READY" });
+  }
+  check(
+    fields,
+    `${noticePrefix}.material`,
+    Boolean(input.product.material.value),
+    "MISSING",
+    "제품 소재가 없습니다 — 상품 원본/상세설명에서 확인되지 않았습니다.",
+  );
+  check(
+    fields,
+    `${noticePrefix}.color`,
+    Boolean(input.product.color.value),
+    "MISSING",
+    "색상이 없습니다 — 상품 원본/상세설명에서 확인되지 않았습니다.",
+  );
+  check(
+    fields,
+    `${noticePrefix}.manufacturer`,
+    Boolean(input.product.manufacturer.value),
+    "MISSING",
+    "제조자(사)가 없습니다 — 판매자 정보 기본값(Settings)에도 없습니다.",
+  );
+  check(
+    fields,
+    `${noticePrefix}.caution`,
+    Boolean(input.product.careInstructions.value),
+    "MISSING",
+    "세탁 방법 및 취급 시 주의사항이 없습니다.",
+  );
+  check(
+    fields,
+    `${noticePrefix}.warrantyPolicy`,
+    Boolean(input.warrantyPolicy),
+    "MISSING",
+    "품질 보증 기준이 없습니다 — Settings의 판매자 정보 탭에서 \"품질보증기준\"을 입력하면 해결됩니다.",
+  );
+  check(
+    fields,
+    `${noticePrefix}.afterServiceDirector`,
+    Boolean(input.afterServiceDirector),
+    "MISSING",
+    "A/S 책임자와 전화번호가 없습니다 — Settings의 판매자 정보 탭에서 \"A/S 연락처\"를 입력하면 해결됩니다.",
+  );
+  check(fields, `${noticePrefix}.size`, false, "MISSING", "치수(사이즈) 정보가 없습니다 — CartPilot에 아직 입력 경로가 없습니다.");
+  if (notice === "kids") {
+    check(
+      fields,
+      "productInfoProvidedNotice(KIDS).recommendedAge",
+      Boolean(input.product.recommendedAge.value),
+      "MISSING",
+      "사용연령이 없습니다 — 상품 원본/상세설명에서 확인되지 않았습니다.",
+    );
+    for (const field of ["certificationType", "itemName", "modelName", "weight"]) {
+      check(
+        fields,
+        `productInfoProvidedNotice(KIDS).${field}`,
+        false,
+        "MISSING",
+        "CartPilot에 아직 이 값을 채울 입력 경로가 없습니다(임의 값 금지).",
       );
     }
   }

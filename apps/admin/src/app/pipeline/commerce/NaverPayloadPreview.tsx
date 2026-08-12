@@ -67,6 +67,9 @@ interface NaverResolveResponse {
     resolvedCountryText: string | null;
     match: NaverOriginAreaMatch;
   };
+  // N-3.13 Part E-12 — SellerProfile.qualityGuarantee/asContactNumber 재사용
+  // (Coupang "판매자 정보" 탭과 같은 값).
+  notice: { warrantyPolicy: string | null; afterServiceDirector: string | null };
 }
 
 /** N-3.1 — leaf 이름 하나가 아니라 전체 경로(root→leaf)를 보여준다. hierarchy를
@@ -134,12 +137,31 @@ const FIELD_SECTION: Record<string, { sectionId: string; group: string }> = {
   "smartstoreChannelProduct.naverShoppingRegistration": { sectionId: "naver-section-basic", group: "상품정보" },
 };
 
-/** Part E-10 요약 배지 순서 — 카테고리부터 원산지까지, 실제로 validate-payload.ts가
- * 검사하는 그룹만 나열한다(검사하지 않는 "고시정보"는 넣지 않는다 — 아직 이
- * validator가 productInfoProvidedNotice 하위 필드 완성도를 검사하지 않기
- * 때문에 여기 넣으면 항상 거짓으로 🟢라고 말하는 셈이 된다. 이 gap은 CPO에게
- * 별도 보고). */
-const SECTION_GROUP_ORDER = ["카테고리", "상품정보", "가격", "옵션", "이미지", "상세페이지", "배송/반품", "인증(KC)", "원산지"];
+/** N-3.13 Part E-12 — productInfoProvidedNotice(KIDS)/productInfoProvidedNotice(WEAR)
+ * 두 타입 이름이 붙어서 field 문자열이 동적이라(예: "productInfoProvidedNotice(WEAR).material")
+ * FIELD_SECTION에 KIDS/WEAR 조합마다 따로 넣는 대신 접두어로 매칭한다 —
+ * 두 타입 모두 같은 "naver-section-notice" 섹션/"고시정보" 그룹으로 간다. */
+function resolveFieldMeta(field: string): { sectionId: string; group: string } | undefined {
+  if (field.startsWith("productInfoProvidedNotice")) {
+    return { sectionId: "naver-section-notice", group: "고시정보" };
+  }
+  return FIELD_SECTION[field];
+}
+
+/** Part E-10 요약 배지 순서 — E-12에서 고시정보 완성도 검증이 추가되어 이제
+ * 실제로 검사되는 그룹이라 목록에 넣는다(이전엔 검사 안 해서 뺐었다). */
+const SECTION_GROUP_ORDER = [
+  "카테고리",
+  "상품정보",
+  "가격",
+  "옵션",
+  "이미지",
+  "상세페이지",
+  "배송/반품",
+  "인증(KC)",
+  "원산지",
+  "고시정보",
+];
 
 function payloadReplacer(_key: string, value: unknown): unknown {
   if (typeof value === "string" && value.startsWith("data:") && value.length > 80) {
@@ -295,6 +317,10 @@ export function NaverPayloadPreview({
   // N-3.6(개정 Part A) — Settings에 판매자가 직접 입력한 값(공식 조회 API는
   // 없음, resolve route가 SellerProfile.naverDeliveryCompanyCode를 그대로 전달).
   const deliveryCompany = resolved?.courier?.value ?? null;
+  // N-3.13 Part E-12 — resolve route가 SellerProfile.qualityGuarantee/
+  // asContactNumber를 그대로 전달(Preview에서 재조회하지 않는다).
+  const warrantyPolicy = resolved?.notice?.warrantyPolicy ?? null;
+  const afterServiceDirector = resolved?.notice?.afterServiceDirector ?? null;
 
   const payload = useMemo(
     () =>
@@ -312,6 +338,8 @@ export function NaverPayloadPreview({
         originAreaCode,
         originAreaRequiresContent,
         deliveryCompany,
+        warrantyPolicy,
+        afterServiceDirector,
       }),
     [
       product,
@@ -327,6 +355,8 @@ export function NaverPayloadPreview({
       originAreaCode,
       originAreaRequiresContent,
       deliveryCompany,
+      warrantyPolicy,
+      afterServiceDirector,
     ],
   );
 
@@ -346,6 +376,8 @@ export function NaverPayloadPreview({
           originAreaCode,
           originAreaRequiresImporter,
           deliveryCompany,
+          warrantyPolicy,
+          afterServiceDirector,
         },
         categoryRequiresChildCertification,
       ),
@@ -363,6 +395,8 @@ export function NaverPayloadPreview({
       deliveryCompany,
       originAreaCode,
       originAreaRequiresImporter,
+      warrantyPolicy,
+      afterServiceDirector,
     ],
   );
 
@@ -382,7 +416,7 @@ export function NaverPayloadPreview({
   const optionalImages = payload.originProduct.images.optionalImages ?? [];
 
   function goToSection(field: string) {
-    const sectionId = FIELD_SECTION[field]?.sectionId;
+    const sectionId = resolveFieldMeta(field)?.sectionId;
     if (!sectionId) return;
     document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -394,7 +428,7 @@ export function NaverPayloadPreview({
   // Validator가 이미 낸 결과만 집계한다(N-3.5 원칙 유지 — "Preview에서
   // 별도 판단 로직을 만들지 않는다").
   const sectionSummary = SECTION_GROUP_ORDER.map((group) => {
-    const groupFields = validation.fields.filter((f) => FIELD_SECTION[f.field]?.group === group);
+    const groupFields = validation.fields.filter((f) => resolveFieldMeta(f.field)?.group === group);
     const status = groupFields.some((f) => f.status === "BLOCKED")
       ? "BLOCKED"
       : groupFields.some((f) => f.status === "MISSING")
@@ -699,6 +733,26 @@ export function NaverPayloadPreview({
             <Row label="주의사항" value={notice.caution || "MISSING"} />
             {notice.productInfoProvidedNoticeType === "KIDS" && (
               <Row label="권장연령" value={notice.recommendedAge || "MISSING"} />
+            )}
+            {/* N-3.13 Part E-12 — 공식 스펙 required 필드로 새로 확인됨.
+                SellerProfile.qualityGuarantee/asContactNumber 재사용(Settings
+                "판매자 정보" 탭과 동일 값). */}
+            <Row
+              label="품질보증기준"
+              value={notice.warrantyPolicy || "MISSING — Settings 판매자 정보 탭에서 입력 필요"}
+            />
+            <Row
+              label="A/S 책임자·전화번호"
+              value={notice.afterServiceDirector || "MISSING — Settings 판매자 정보 탭에서 입력 필요"}
+            />
+            {notice.productInfoProvidedNoticeType === "KIDS" && (
+              <p className="text-[11px] text-text-tertiary">
+                이 외 치수/모델명/품목명/중량/인증유형은 CartPilot에 아직 입력 경로가 없어 항상 MISSING입니다(임의 값
+                금지).
+              </p>
+            )}
+            {notice.productInfoProvidedNoticeType === "WEAR" && (
+              <p className="text-[11px] text-text-tertiary">치수(사이즈)는 CartPilot에 아직 입력 경로가 없어 항상 MISSING입니다.</p>
             )}
           </>
         ) : (
