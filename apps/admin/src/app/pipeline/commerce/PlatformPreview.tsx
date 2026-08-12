@@ -18,7 +18,7 @@ import type { CanonicalProduct, CanonicalProductOptionGroup, FieldSource } from 
 import type { WorkspaceItem } from "../types";
 import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
 import { CategoryRequirementsEditor } from "./CategoryRequirementsEditor";
-import { CollapsibleSection } from "./CollapsibleSection";
+import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { ComplianceBreakdown } from "./ComplianceBreakdown";
 import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
 import { DetailPageEditor } from "./DetailPageEditor";

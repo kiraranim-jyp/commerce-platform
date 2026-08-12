@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { countryToFlagEmoji } from "@commerce/shared";
-import { CollapsibleSection } from "./CollapsibleSection";
+import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 
 type MatchLevel = "very_high" | "high" | "medium" | "low";
 

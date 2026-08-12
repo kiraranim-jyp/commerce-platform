@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { ImagePicker } from "@/components/ui/ImagePicker";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Tabs } from "@/components/ui/Tabs";
@@ -787,36 +788,62 @@ function SellerProfileEditor({
         />
       </div>
 
+      {/* N-3.13 Part A-2(CPO 지시: "설정값은 기본 접힘, 핵심 상태는 요약
+          카드로") — 판매자정보/가격정책/상세페이지 3개 탭은 필드 몇 개짜리
+          단일 폼이라 별도 목록+토글이 없었고, 그래서 탭에 들어가면 항상 폼
+          전체가 펼쳐진 채로 보였다. CollapsibleSection으로 감싸고 badge에
+          현재 저장된 핵심 값을 요약해서, 접힌 상태에서도 "지금 뭐가 설정돼
+          있는지"는 보이게 한다(값을 고치고 싶을 때만 펼친다). */}
       <div className={activeTab === "seller" ? "mt-5" : "hidden"}>
-        <SellerInfoSection
-          manufacturer={manufacturer}
-          onManufacturerChange={setManufacturer}
-          asContactNumber={asContactNumber}
-          onAsContactNumberChange={setAsContactNumber}
-          qualityGuarantee={qualityGuarantee}
-          onQualityGuaranteeChange={setQualityGuarantee}
-          kcExemptionText={kcExemptionText}
-          onKcExemptionTextChange={setKcExemptionText}
-          defaultCountryOfOrigin={defaultCountryOfOrigin}
-          onDefaultCountryOfOriginChange={setDefaultCountryOfOrigin}
-          onSave={handleSave}
-          saving={saving}
-          saveButtonLabel={saveButtonLabel}
-        />
+        <CollapsibleSection
+          title="판매자 정보"
+          defaultOpen={false}
+          badge={
+            <span className="text-xs font-normal text-text-tertiary">
+              {manufacturer ? `제조자: ${manufacturer}` : "미설정"}
+            </span>
+          }
+        >
+          <SellerInfoSection
+            manufacturer={manufacturer}
+            onManufacturerChange={setManufacturer}
+            asContactNumber={asContactNumber}
+            onAsContactNumberChange={setAsContactNumber}
+            qualityGuarantee={qualityGuarantee}
+            onQualityGuaranteeChange={setQualityGuarantee}
+            kcExemptionText={kcExemptionText}
+            onKcExemptionTextChange={setKcExemptionText}
+            defaultCountryOfOrigin={defaultCountryOfOrigin}
+            onDefaultCountryOfOriginChange={setDefaultCountryOfOrigin}
+            onSave={handleSave}
+            saving={saving}
+            saveButtonLabel={saveButtonLabel}
+          />
+        </CollapsibleSection>
       </div>
 
       <div className={activeTab === "pricing" ? "mt-5" : "hidden"}>
-        <PricingSection
-          defaultMarginPercent={defaultMarginPercent}
-          onDefaultMarginPercentChange={setDefaultMarginPercent}
-          includeShippingInPrice={includeShippingInPrice}
-          onIncludeShippingInPriceChange={setIncludeShippingInPrice}
-          priceRoundingUnit={priceRoundingUnit}
-          onPriceRoundingUnitChange={setPriceRoundingUnit}
-          onSave={handleSave}
-          saving={saving}
-          saveButtonLabel={saveButtonLabel}
-        />
+        <CollapsibleSection
+          title="가격 정책"
+          defaultOpen={false}
+          badge={
+            <span className="text-xs font-normal text-text-tertiary">
+              마진 {defaultMarginPercent || "22"}% · {priceRoundingUnit}원 단위 반올림
+            </span>
+          }
+        >
+          <PricingSection
+            defaultMarginPercent={defaultMarginPercent}
+            onDefaultMarginPercentChange={setDefaultMarginPercent}
+            includeShippingInPrice={includeShippingInPrice}
+            onIncludeShippingInPriceChange={setIncludeShippingInPrice}
+            priceRoundingUnit={priceRoundingUnit}
+            onPriceRoundingUnitChange={setPriceRoundingUnit}
+            onSave={handleSave}
+            saving={saving}
+            saveButtonLabel={saveButtonLabel}
+          />
+        </CollapsibleSection>
       </div>
 
       {/* N-3.11 Part E — 예전에는 이 카드가 "공통 이미지"라는 별도 SectionHeader를
@@ -826,29 +853,39 @@ function SellerProfileEditor({
           템플릿"의 일부(상단/하단 공통 이미지)로만 라벨링한다 — 저장 대상 테이블/
           상태는 그대로(SellerProfile), 시각적 소속만 명확히 했다. */}
       <div className={activeTab === "detail" ? "mt-5" : "hidden"}>
-        <p className="mb-3 text-xs font-medium text-text-tertiary">상세페이지 템플릿 — 공통 상단/하단 이미지</p>
-        <CommonImagesSection
-          topCommonImageUrl={topCommonImageUrl}
-          topCommonImageEnabled={topCommonImageEnabled}
-          onTopCommonImageEnabledChange={setTopCommonImageEnabled}
-          bottomCommonImageUrl={bottomCommonImageUrl}
-          bottomCommonImageEnabled={bottomCommonImageEnabled}
-          onBottomCommonImageEnabledChange={setBottomCommonImageEnabled}
-          imageUploading={imageUploading}
-          onUploadTop={(file) => uploadCommonImage("top", file)}
-          onUploadBottom={(file) => uploadCommonImage("bottom", file)}
-          onSelectTopExisting={(asset) => {
-            setTopCommonImageUrl(asset.url);
-            setTopCommonImageEnabled(true);
-          }}
-          onSelectBottomExisting={(asset) => {
-            setBottomCommonImageUrl(asset.url);
-            setBottomCommonImageEnabled(true);
-          }}
-          onSave={handleSave}
-          saving={saving}
-          saveButtonLabel={saveButtonLabel}
-        />
+        <CollapsibleSection
+          title="상세페이지 템플릿 — 공통 상단/하단 이미지"
+          defaultOpen={false}
+          badge={
+            <span className="text-xs font-normal text-text-tertiary">
+              {[topCommonImageEnabled && "상단 ON", bottomCommonImageEnabled && "하단 ON"].filter(Boolean).join(" · ") ||
+                "미설정"}
+            </span>
+          }
+        >
+          <CommonImagesSection
+            topCommonImageUrl={topCommonImageUrl}
+            topCommonImageEnabled={topCommonImageEnabled}
+            onTopCommonImageEnabledChange={setTopCommonImageEnabled}
+            bottomCommonImageUrl={bottomCommonImageUrl}
+            bottomCommonImageEnabled={bottomCommonImageEnabled}
+            onBottomCommonImageEnabledChange={setBottomCommonImageEnabled}
+            imageUploading={imageUploading}
+            onUploadTop={(file) => uploadCommonImage("top", file)}
+            onUploadBottom={(file) => uploadCommonImage("bottom", file)}
+            onSelectTopExisting={(asset) => {
+              setTopCommonImageUrl(asset.url);
+              setTopCommonImageEnabled(true);
+            }}
+            onSelectBottomExisting={(asset) => {
+              setBottomCommonImageUrl(asset.url);
+              setBottomCommonImageEnabled(true);
+            }}
+            onSave={handleSave}
+            saving={saving}
+            saveButtonLabel={saveButtonLabel}
+          />
+        </CollapsibleSection>
       </div>
     </>
   );
@@ -1269,10 +1306,9 @@ function SellerInfoSection({
   saveButtonLabel: string;
 }) {
   return (
-    <section className="mt-4 rounded-lg border border-border bg-surface p-5 shadow-subtle">
-      <h2 className="text-base font-semibold text-text-primary">판매자 정보</h2>
-      <p className="mt-1 text-xs text-text-secondary">사업자/인증/원산지 — 상품마다 자동 채워집니다.</p>
-      <div className="mt-4 space-y-3 text-sm">
+    <>
+      <p className="text-xs text-text-secondary">사업자/인증/원산지 — 상품마다 자동 채워집니다.</p>
+      <div className="mt-3 space-y-3 text-sm">
         <Field label="제조자(수입자)" hint="Sprint A-7 실측 1위 블로커 — 여기 입력하면 상품마다 자동 채워집니다">
           <input
             type="text"
@@ -1327,7 +1363,7 @@ function SellerInfoSection({
         </Field>
         <SaveButton onSave={onSave} saving={saving} label={saveButtonLabel} />
       </div>
-    </section>
+    </>
   );
 }
 
@@ -1356,10 +1392,9 @@ function PricingSection({
   saveButtonLabel: string;
 }) {
   return (
-    <section className="mt-4 rounded-lg border border-border bg-surface p-5 shadow-subtle">
-      <h2 className="text-base font-semibold text-text-primary">가격 정책</h2>
-      <p className="mt-1 text-xs text-text-secondary">마진율 · 반올림 단위 — 판매가 자동계산 기준.</p>
-      <div className="mt-4 space-y-3 text-sm">
+    <>
+      <p className="text-xs text-text-secondary">마진율 · 반올림 단위 — 판매가 자동계산 기준.</p>
+      <div className="mt-3 space-y-3 text-sm">
         <Field label="기본 마진율(%)" hint="비워두면 22%를 씁니다">
           <input
             type="number"
@@ -1393,7 +1428,7 @@ function PricingSection({
         </Field>
         <SaveButton onSave={onSave} saving={saving} label={saveButtonLabel} />
       </div>
-    </section>
+    </>
   );
 }
 
@@ -1433,7 +1468,7 @@ function CommonImagesSection({
   saveButtonLabel: string;
 }) {
   return (
-    <section className="mt-4 rounded-lg border border-border bg-surface p-5 shadow-subtle">
+    <>
       <div className="space-y-3">
         <ImagePicker
           label="상단 공통 이미지"
@@ -1457,7 +1492,7 @@ function CommonImagesSection({
         />
         <SaveButton onSave={onSave} saving={saving} label={saveButtonLabel} />
       </div>
-    </section>
+    </>
   );
 }
 

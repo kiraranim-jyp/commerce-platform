@@ -13,7 +13,7 @@ import type {
 import { buildRegistrationReport } from "@commerce/listing";
 import type { PlatformId } from "@commerce/shared";
 import { APP_VERSION } from "@/lib/app-version";
-import { CollapsibleSection } from "./CollapsibleSection";
+import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { ComplianceBreakdown } from "./ComplianceBreakdown";
 import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
 import { PayloadInspector } from "./PayloadInspector";

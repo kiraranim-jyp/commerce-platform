@@ -3,11 +3,12 @@
 import { useState } from "react";
 
 /**
- * P0-UI Epic 4(Accordion 구조) — "추가정보"(AI/상품고시/Compliance/Developer)를
- * 전부 이 컴포넌트로 감싼다. 기존 코드 곳곳에 있던 개별 useState(boolean) +
- * "펼치기 ▼/접기 ▲" 토글 패턴(ImageCard/page.tsx/StageStepper/
- * CategoryRecommendationPanel)을 하나로 통일한 것 — 새 Accordion 하나 추가할 때마다
- * 매번 같은 토글 로직을 새로 짜지 않는다.
+ * P0-UI Epic 4(Accordion 구조) — 개별 useState(boolean) + "펼치기 ▼/접기 ▲" 토글
+ * 패턴을 하나로 통일한 컴포넌트. N-3.13 Part A-2에서 pipeline/commerce 전용
+ * 위치(app/pipeline/commerce/CollapsibleSection.tsx)에서 components/ui로 승격했다
+ * — Settings 페이지도 동일한 아코디언 패턴을 써야 하는데, 페이지 전용 폴더 밑
+ * 컴포넌트를 다른 라우트에서 import하는 건 "페이지는 UI를 소유하지 않는다"
+ * 원칙에 어긋나기 때문이다.
  */
 export function CollapsibleSection({
   title,
