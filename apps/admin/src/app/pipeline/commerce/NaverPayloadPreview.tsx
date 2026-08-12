@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { buildNaverProductPayload, validateNaverPayload } from "@commerce/listing";
 import type { ListingModel } from "@commerce/marketplace";
-import type { NaverCategoryCandidate } from "@commerce/listing";
+import type { CoupangDescriptionTemplate, DetailPageBlock, NaverCategoryCandidate } from "@commerce/listing";
 import type { CanonicalProduct, CommerceCategoryPathResult } from "@commerce/shared";
 import { formatKrw } from "@commerce/pricing";
 import { PriceEditor } from "./PriceEditor";
@@ -70,6 +70,20 @@ interface NaverResolveResponse {
   // N-3.13 Part E-12 — SellerProfile.qualityGuarantee/asContactNumber 재사용
   // (Coupang "판매자 정보" 탭과 같은 값).
   notice: { warrantyPolicy: string | null; afterServiceDirector: string | null };
+  // N-3.13 Part J — detailBlocks(에디터 상태, 클라이언트가 이미 들고 있음) →
+  // detailContent 조립에 필요한 나머지 재료. Coupang용으로 이미 있는
+  // DescriptionTemplate/SellerProfile 공통이미지/BrandProfile.brandIntro를
+  // 그대로 재사용한다(Naver 전용 템플릿을 새로 만들지 않는다).
+  detailPage: {
+    descriptionTemplate: CoupangDescriptionTemplate | null;
+    commonImages: {
+      topCommonImageUrl: string | null;
+      topCommonImageEnabled: boolean;
+      bottomCommonImageUrl: string | null;
+      bottomCommonImageEnabled: boolean;
+    };
+    brandIntro: string | null;
+  };
 }
 
 /** N-3.1 — leaf 이름 하나가 아니라 전체 경로(root→leaf)를 보여준다. hierarchy를
@@ -173,6 +187,7 @@ function payloadReplacer(_key: string, value: unknown): unknown {
 export function NaverPayloadPreview({
   product,
   listing,
+  detailBlocks,
   onUpdateSalePriceKrw,
   onUpdateOriginalPrice,
   onUpdatePriceBreakdown,
@@ -181,6 +196,11 @@ export function NaverPayloadPreview({
   onRefreshExchangeRates,
 }: {
   product: CanonicalProduct;
+  /** N-3.13 Part J — DetailPageEditor(Coupang 탭에서 편집)가 만드는 블록 순서.
+   * page.tsx의 단일 상태를 그대로 받는다(플랫폼별로 따로 관리하지 않는다 —
+   * 같은 상품의 같은 상세페이지다). 없으면(에디터를 한 번도 안 연 세션)
+   * buildNaverProductPayload가 지금까지처럼 listing.description으로 폴백한다. */
+  detailBlocks?: DetailPageBlock[];
   listing: ListingModel;
   /** N-3.9(Part G — CPO 지시: "Naver/Coupang 동일 구조") — Coupang의
    * PlatformPreview가 이미 갖고 있는 가격 계산 핸들러를 그대로 받아서
@@ -321,6 +341,13 @@ export function NaverPayloadPreview({
   // asContactNumber를 그대로 전달(Preview에서 재조회하지 않는다).
   const warrantyPolicy = resolved?.notice?.warrantyPolicy ?? null;
   const afterServiceDirector = resolved?.notice?.afterServiceDirector ?? null;
+  // N-3.13 Part J — resolve route가 내려준 재료(Coupang과 동일 소스)로
+  // detailBlocks가 있을 때만 assembleContentsFromBlocks를 태운다. resolved가
+  // 아직 없으면(초기 로딩) 안내문구/공통이미지 없이 조립하되, listing.description
+  // 폴백은 detailBlocks 자체가 없을 때만 쓰이므로 로딩 중에도 값이 사라지지 않는다.
+  const descriptionTemplate = resolved?.detailPage?.descriptionTemplate ?? null;
+  const commonImages = resolved?.detailPage?.commonImages;
+  const brandIntro = resolved?.detailPage?.brandIntro ?? null;
 
   const payload = useMemo(
     () =>
@@ -340,6 +367,10 @@ export function NaverPayloadPreview({
         deliveryCompany,
         warrantyPolicy,
         afterServiceDirector,
+        detailBlocks,
+        descriptionTemplate,
+        commonImages,
+        brandIntro,
       }),
     [
       product,
@@ -357,6 +388,10 @@ export function NaverPayloadPreview({
       deliveryCompany,
       warrantyPolicy,
       afterServiceDirector,
+      detailBlocks,
+      descriptionTemplate,
+      commonImages,
+      brandIntro,
     ],
   );
 

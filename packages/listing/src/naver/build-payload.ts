@@ -1,6 +1,8 @@
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
+import { assembleContentsFromBlocks, BLANK_COUPANG_SELLER_CONFIG } from "../coupang/build-payload";
+import type { CoupangDescriptionTemplate, CoupangSellerConfig, DetailPageBlock } from "../coupang/build-payload";
 import type {
   NaverClaimDeliveryInfo,
   NaverImageRef,
@@ -91,6 +93,71 @@ export interface NaverPayloadInput {
   /** N-3.13 Part E-12 — 같은 스펙에서 확인된 afterServiceDirector(A/S 책임자와
    * 전화번호). SellerProfile.asContactNumber(판매자 정보 탭 "A/S 연락처") 재사용. */
   afterServiceDirector?: string | null;
+  /** N-3.13 Part J — Detail Page Editor(2026-08-04)가 만드는 블록 순서. 있으면
+   * 이 순서로 상세페이지를 조립한다(assembleContentsFromBlocks — Coupang과
+   * 완전히 같은 블록 해석 로직을 재사용한다, 플랫폼마다 규칙이 갈라지면 안
+   * 된다). 없으면(에디터를 한 번도 안 연 세션) 지금까지처럼 listing.description을
+   * 그대로 쓴다 — 회귀 없음이 목적이다. */
+  detailBlocks?: DetailPageBlock[];
+  /** N-3.13 Part J — 안내 문구 템플릿. Naver 전용 템플릿이 따로 없어 Coupang용
+   * DescriptionTemplate을 그대로 재사용한다(SellerProfile 필드 재사용과 같은
+   * 패턴 — 판매자가 같은 배송/반품 안내를 두 번 입력하지 않게 한다). */
+  descriptionTemplate?: CoupangDescriptionTemplate | null;
+  /** N-3.13 Part J — 상세페이지 공통이미지(상단/하단) ON/OFF·URL. SellerProfile
+   * 재사용(Coupang과 동일 값 — 같은 판매자의 같은 정책이라 플랫폼별로 따로
+   * 관리하지 않는다). */
+  commonImages?: Pick<
+    CoupangSellerConfig,
+    "topCommonImageUrl" | "topCommonImageEnabled" | "bottomCommonImageUrl" | "bottomCommonImageEnabled"
+  >;
+  /** N-3.13 Part J — 브랜드 소개(BrandProfile.brandIntro), Coupang과 동일 소스. */
+  brandIntro?: string | null;
+}
+
+function escapeHtmlText(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** N-3.13 Part J — assembleContentsFromBlocks(Coupang/Naver 공통, 블록 →
+ * TEXT/IMAGE 순서 배열)가 만든 결과를 Naver의 detailContent(공식 스펙 "상품
+ * 상세 정보", 단일 문자열 필드)로 합친다. Coupang은 그 배열 자체가 최종
+ * payload 형태지만 Naver는 한 문자열이라 여기서만 변환한다 — 블록을 실제로
+ * 해석하는 로직(템플릿 섹션/공통이미지 on-off/사이즈표 분리 등)은 두 번
+ * 만들지 않고 그대로 재사용한다. */
+export function assembleNaverDetailContent(
+  blocks: DetailPageBlock[],
+  ctx: {
+    aiDescription: string;
+    template: CoupangDescriptionTemplate | null | undefined;
+    commonImages: Pick<
+      CoupangSellerConfig,
+      "topCommonImageUrl" | "topCommonImageEnabled" | "bottomCommonImageUrl" | "bottomCommonImageEnabled"
+    >;
+    productImageUrls: string[];
+    sizeChartImageUrls: string[];
+    brandIntro?: string | null;
+  },
+): string {
+  const contents = assembleContentsFromBlocks(blocks, {
+    aiDescription: ctx.aiDescription,
+    template: ctx.template,
+    sellerConfig: { ...BLANK_COUPANG_SELLER_CONFIG, ...ctx.commonImages },
+    productImageUrls: ctx.productImageUrls,
+    sizeChartImageUrls: ctx.sizeChartImageUrls,
+    brandIntro: ctx.brandIntro,
+  });
+
+  const parts: string[] = [];
+  for (const content of contents) {
+    for (const detail of content.contentDetails) {
+      if (detail.detailType === "TEXT") {
+        parts.push(`<p>${escapeHtmlText(detail.content).replace(/\n/g, "<br>")}</p>`);
+      } else {
+        parts.push(`<img src="${detail.content}" style="max-width:100%;">`);
+      }
+    }
+  }
+  return parts.join("\n");
 }
 
 /** N-2.8 — 옵션 조합(optionCombinations) 필드명은 공식 OpenAPI 스펙으로
@@ -156,10 +223,39 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
     deliveryCompany,
     warrantyPolicy,
     afterServiceDirector,
+    detailBlocks,
+    descriptionTemplate,
+    commonImages,
+    brandIntro,
   } = input;
 
   const representativeUrl = listing.representativeImage;
   const optionalUrls = listing.additionalImages;
+
+  // N-3.13 Part J — detailBlocks가 있으면(에디터를 연 세션) 그 순서로 조립한
+  // HTML을, 없으면(회귀 방지) 지금까지처럼 listing.description을 그대로 쓴다.
+  const productImageUrls = product.images
+    .filter((img) => img.useInDescription && img.classification !== "SIZE_CHART")
+    .map((img) => getSelectedImageUrl(img));
+  const sizeChartImageUrls = product.images
+    .filter((img) => img.useInDescription && img.classification === "SIZE_CHART")
+    .map((img) => getSelectedImageUrl(img));
+  const detailContent =
+    detailBlocks && detailBlocks.length > 0
+      ? assembleNaverDetailContent(detailBlocks, {
+          aiDescription: listing.description,
+          template: descriptionTemplate,
+          commonImages: commonImages ?? {
+            topCommonImageUrl: null,
+            topCommonImageEnabled: false,
+            bottomCommonImageUrl: null,
+            bottomCommonImageEnabled: false,
+          },
+          productImageUrls,
+          sizeChartImageUrls,
+          brandIntro,
+        })
+      : listing.description;
 
   return {
     originProduct: {
@@ -171,7 +267,7 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
         representativeImage: representativeUrl ? toImageRef(representativeUrl) : { url: "" },
         optionalImages: optionalUrls.length > 0 ? optionalUrls.map(toImageRef) : undefined,
       },
-      detailContent: listing.description,
+      detailContent,
       salePrice: listing.priceKrw,
       stockQuantity: product.stockQuantity.value || 1,
       deliveryInfo: {

@@ -7,6 +7,7 @@ import { fetchNaverReturnDeliveryCompanies, resolvePrimaryReturnCompany } from "
 import { fetchNaverOriginAreas } from "../_lib/origin";
 import { getDefaultSellerProfile } from "../../coupang/_lib/seller-profile";
 import { findBrandProfileByName } from "../../coupang/_lib/brand-profile";
+import { getDefaultDescriptionTemplate } from "../../coupang/_lib/description-template";
 
 /**
  * Sprint N-2.8 — NaverPayloadPreview에 필요한 실제 read-only 데이터를 한 번에
@@ -122,11 +123,12 @@ export async function GET(request: Request) {
     refundAddressBookNo = addressBooks.find((a) => a.addressType === "REFUND_OR_EXCHANGE")?.addressBookNo ?? null;
   }
 
-  const [returnCompanies, sellerProfile, originAreas, brandProfile] = await Promise.all([
+  const [returnCompanies, sellerProfile, originAreas, brandProfile, descriptionTemplate] = await Promise.all([
     fetchNaverReturnDeliveryCompanies(accessToken),
     getDefaultSellerProfile(),
     fetchNaverOriginAreas(accessToken),
     brandName ? findBrandProfileByName(brandName) : Promise.resolve(null),
+    getDefaultDescriptionTemplate(),
   ]);
   const primaryReturnCompany = returnCompanies ? resolvePrimaryReturnCompany(returnCompanies) : null;
 
@@ -174,6 +176,21 @@ export async function GET(request: Request) {
     notice: {
       warrantyPolicy: sellerProfile?.qualityGuarantee || null,
       afterServiceDirector: sellerProfile?.asContactNumber || null,
+    },
+    // N-3.13 Part J — Naver Payload Preview가 Coupang과 같은 assembleContentsFromBlocks
+    // 조립 로직으로 detailContent를 만들 때 필요한 원본 재료. detailBlocks 자체는
+    // 클라이언트 상태(에디터)라 여기서 만들지 않는다 — 이 라우트는 Coupang용으로
+    // 이미 있는 DescriptionTemplate/SellerProfile 공통이미지/BrandProfile.brandIntro를
+    // 그대로 내려주기만 한다(새 Naver 전용 템플릿/설정을 만들지 않는다).
+    detailPage: {
+      descriptionTemplate: descriptionTemplate ?? null,
+      commonImages: {
+        topCommonImageUrl: sellerProfile?.topCommonImageUrl ?? null,
+        topCommonImageEnabled: sellerProfile?.topCommonImageEnabled ?? false,
+        bottomCommonImageUrl: sellerProfile?.bottomCommonImageUrl ?? null,
+        bottomCommonImageEnabled: sellerProfile?.bottomCommonImageEnabled ?? false,
+      },
+      brandIntro: brandProfile?.brandIntro ?? null,
     },
   });
 }

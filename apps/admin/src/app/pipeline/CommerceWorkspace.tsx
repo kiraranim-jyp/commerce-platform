@@ -1168,7 +1168,13 @@ export function CommerceWorkspace({
           items={items}
           thumbnails={thumbnails}
           onOpenGallery={() => setGalleryOpen(true)}
-          detailBlocks={tab === "coupang" ? detailBlocks : undefined}
+          // N-3.13 Part J — detailBlocks는 상품 하나당 하나뿐인 상세페이지 상태다
+          // (쿠팡 탭에서 편집하지만 플랫폼별로 따로 관리하지 않는다). Naver
+          // Payload Preview도 같은 값을 읽어 detailContent를 조립해야 해서
+          // 항상 내려준다 — 실제로 에디터 UI가 보이는지는
+          // capabilities.hasDetailPageEditor가 이미 쿠팡으로 막아준다.
+          // onDetailBlocksChange(쓰기)는 쿠팡 탭에서만 필요하므로 그대로 둔다.
+          detailBlocks={detailBlocks}
           onDetailBlocksChange={tab === "coupang" ? onDetailBlocksChange : undefined}
         />
       )}

@@ -315,6 +315,7 @@ export function PlatformPreview({
           <NaverPayloadPreview
             product={product}
             listing={listing}
+            detailBlocks={detailBlocks}
             onUpdateSalePriceKrw={onUpdateSalePriceKrw}
             onUpdateOriginalPrice={onUpdateOriginalPrice}
             onUpdatePriceBreakdown={onUpdatePriceBreakdown}
