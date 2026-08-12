@@ -145,84 +145,128 @@ export function ComparisonShopSearch({
       </button>
       {error && <p className="text-xs text-error">{error}</p>}
       {queriedAt && <p className="text-[10px] text-text-tertiary">조회 시점: {queriedAt}</p>}
-      {results && (
-        <div className="space-y-3">
-          {results.map((r) => (
-            <div key={r.shopId} className="rounded-md border border-border p-2">
-              <div className="text-xs font-medium text-text-primary">
-                {countryToFlagEmoji(r.shopCountry) ?? "🌐"} {r.shopName}
-                {!r.shopCountry && (
-                  <span className="ml-1 text-[10px] font-normal text-text-tertiary">(원본 국가 확인 불가)</span>
-                )}
-              </div>
-              {r.status === "unsupported" && (
-                <p className="text-[11px] text-text-tertiary">지원되지 않는 사이트입니다.</p>
-              )}
-              {r.status === "error" && <p className="text-[11px] text-error">검색 실패: {r.error}</p>}
-              {r.status === "ok" && r.candidates.length === 0 && (
-                <p className="text-[11px] text-text-tertiary">일치하는 후보가 없습니다.</p>
-              )}
-              {r.status === "ok" && r.candidates.length > 0 && (
-                <ul className="mt-1 space-y-1">
-                  {r.candidates.map((c) => {
-                    const krwRate = c.price ? krwRates?.[c.price.currency] : undefined;
-                    const krwAmount = c.price && krwRate ? Math.round(c.price.amount * krwRate) : null;
-                    return (
-                      <li key={c.url} className="flex items-center gap-2 text-[11px]">
-                        {c.imageUrl && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={c.imageUrl} alt="" className="h-8 w-8 rounded object-cover" />
-                        )}
-                        <a
-                          href={c.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex-1 truncate text-text-primary underline"
-                        >
-                          {c.title}
-                        </a>
-                        {c.price && (
-                          <span className="text-text-secondary">
-                            {c.price.amount.toFixed(2)} {c.price.currency}
-                            {krwAmount != null && (
-                              <span className="ml-1 text-text-tertiary">(약 ₩{krwAmount.toLocaleString("ko-KR")})</span>
-                            )}
-                            {c.priceSource === "detail" && (
-                              <span className="ml-1 text-[10px] text-success" title="상품 상세 페이지에서 확인한 가격">
-                                ✓ 상품 상세 확인
-                              </span>
-                            )}
-                            {c.priceSource === "search" && (
-                              <span className="ml-1 text-[10px] text-text-tertiary" title="검색 결과에서 가져온 가격(참고용)">
-                                검색 결과 가격
-                              </span>
-                            )}
-                          </span>
-                        )}
-                        {c.matchLevel && (
-                          <span
-                            className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_LEVEL_BADGE_CLASS[c.matchLevel]}`}
-                            title={`신뢰도 ${Math.round(c.confidence * 100)}%${c.matchReasons?.length ? " — " + c.matchReasons.join(", ") : ""}`}
-                          >
-                            {MATCH_LEVEL_ICON[c.matchLevel]}{" "}
-                            {c.matchLevel === "very_high" || c.matchLevel === "high"
-                              ? "동일상품"
-                              : c.matchLevel === "medium"
-                                ? "유사상품"
-                                : "매칭 불확실"}
-                            {" · "}
-                            {MATCH_LEVEL_LABEL[c.matchLevel]}
-                          </span>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      {results && <ResultBreakdown results={results} />}
+      {results && <ResultTable results={results} krwRates={krwRates} />}
     </CollapsibleSection>
+  );
+}
+
+/** N-3.13 P0(CPO 지시) — "0건이면 결과 없음이라고만 하지 말고, 검색이 아예
+ * 안 된 건지/사이트가 미지원인지/후보가 없는 건지/매칭에 실패한 건지 구분해서
+ * 보여준다." curl로 백엔드가 동작하는 걸 이미 여러 번 확인한 것과 "CEO가 화면
+ * 보고 뭐가 문제인지 알 수 있는 것"은 다른 문제라는 지적을 반영 — 신규 API 호출
+ * 없이 기존 results 배열만으로 5개 지표를 계산한다. */
+function ResultBreakdown({ results }: { results: SearchResult[] }) {
+  const total = results.length;
+  const ok = results.filter((r) => r.status === "ok").length;
+  const unsupported = results.filter((r) => r.status === "unsupported").length;
+  const errored = results.filter((r) => r.status === "error").length;
+  const noCandidates = results.filter((r) => r.status === "ok" && r.candidates.length === 0).length;
+  const matched = results.reduce(
+    (sum, r) => sum + r.candidates.filter((c) => c.matchLevel === "very_high" || c.matchLevel === "high").length,
+    0,
+  );
+  return (
+    <div className="grid grid-cols-2 gap-2 rounded-md border border-border bg-background p-2 text-[11px] sm:grid-cols-5">
+      <Stat label="검색한 사이트" value={total} />
+      <Stat label="정상 응답" value={ok} />
+      <Stat label="미지원/오류" value={unsupported + errored} />
+      <Stat label="후보 없음" value={noCandidates} />
+      <Stat label="매칭 성공(🟢)" value={matched} highlight={matched > 0} />
+    </div>
+  );
+}
+
+function Stat({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
+  return (
+    <div>
+      <div className={`text-sm font-semibold ${highlight ? "text-success" : "text-text-primary"}`}>{value}</div>
+      <div className="text-text-tertiary">{label}</div>
+    </div>
+  );
+}
+
+/** N-3.13 P0(CPO 지시) — "판매처/국가/상품/원본가격/통화/KRW/매칭상태" 컬럼의
+ * 표로 재구성. 이전엔 사이트별 카드+리스트였는데, 여러 사이트 결과를 한눈에
+ * 비교하기 어렵다는 지적을 반영해 후보 단위 한 행으로 펼친다(사이트에 후보가
+ * 없거나 미지원/오류여도 그 사유가 보이는 한 행을 남긴다 — 조용히 사라지지 않게). */
+function ResultTable({ results, krwRates }: { results: SearchResult[]; krwRates: Record<string, number> | null }) {
+  type Row = { shopId: string; shopName: string; shopCountry?: string | null; candidate: Candidate | null; note?: string };
+  const rows: Row[] = [];
+  for (const r of results) {
+    if (r.status === "unsupported") {
+      rows.push({ shopId: r.shopId, shopName: r.shopName, shopCountry: r.shopCountry, candidate: null, note: "지원되지 않는 사이트" });
+    } else if (r.status === "error") {
+      rows.push({ shopId: r.shopId, shopName: r.shopName, shopCountry: r.shopCountry, candidate: null, note: `검색 실패: ${r.error ?? ""}` });
+    } else if (r.candidates.length === 0) {
+      rows.push({ shopId: r.shopId, shopName: r.shopName, shopCountry: r.shopCountry, candidate: null, note: "일치하는 후보 없음" });
+    } else {
+      for (const c of r.candidates) {
+        rows.push({ shopId: r.shopId, shopName: r.shopName, shopCountry: r.shopCountry, candidate: c });
+      }
+    }
+  }
+  return (
+    <div className="overflow-x-auto rounded-md border border-border">
+      <table className="w-full min-w-[640px] border-collapse text-left text-[11px]">
+        <thead>
+          <tr className="border-b border-border bg-background text-text-secondary">
+            <th className="px-2 py-1.5 font-medium">판매처</th>
+            <th className="px-2 py-1.5 font-medium">국가</th>
+            <th className="px-2 py-1.5 font-medium">상품</th>
+            <th className="px-2 py-1.5 font-medium">원본가격</th>
+            <th className="px-2 py-1.5 font-medium">KRW 환산</th>
+            <th className="px-2 py-1.5 font-medium">매칭상태</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => {
+            const c = row.candidate;
+            const krwRate = c?.price ? krwRates?.[c.price.currency] : undefined;
+            const krwAmount = c?.price && krwRate ? Math.round(c.price.amount * krwRate) : null;
+            return (
+              <tr key={`${row.shopId}-${i}`} className="border-b border-border align-top last:border-b-0">
+                <td className="px-2 py-1.5 text-text-primary">
+                  {countryToFlagEmoji(row.shopCountry) ?? "🌐"} {row.shopName}
+                </td>
+                <td className="px-2 py-1.5 text-text-secondary">{row.shopCountry ?? "확인 불가"}</td>
+                <td className="px-2 py-1.5">
+                  {c ? (
+                    <a href={c.url} target="_blank" rel="noreferrer" className="text-text-primary underline">
+                      {c.title}
+                    </a>
+                  ) : (
+                    <span className="text-text-tertiary">{row.note}</span>
+                  )}
+                </td>
+                <td className="px-2 py-1.5 whitespace-nowrap text-text-secondary">
+                  {c?.price ? `${c.price.amount.toFixed(2)} ${c.price.currency}` : "—"}
+                </td>
+                <td className="px-2 py-1.5 whitespace-nowrap text-text-secondary">
+                  {krwAmount != null ? `약 ₩${krwAmount.toLocaleString("ko-KR")}` : "—"}
+                </td>
+                <td className="px-2 py-1.5">
+                  {c?.matchLevel ? (
+                    <span
+                      className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_LEVEL_BADGE_CLASS[c.matchLevel]}`}
+                      title={`신뢰도 ${Math.round(c.confidence * 100)}%${c.matchReasons?.length ? " — " + c.matchReasons.join(", ") : ""}`}
+                    >
+                      {MATCH_LEVEL_ICON[c.matchLevel]}{" "}
+                      {c.matchLevel === "very_high" || c.matchLevel === "high"
+                        ? "동일상품"
+                        : c.matchLevel === "medium"
+                          ? "유사상품"
+                          : "매칭 불확실"}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
