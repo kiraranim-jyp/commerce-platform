@@ -12,6 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { AppHeader } from "./AppHeader";
+import { Footer } from "./Footer";
 import { Badge } from "../ui/Badge";
 
 type NavigationItem = {
@@ -81,6 +82,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
         <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
       </div>
+      <Footer />
     </div>
   );
 }
