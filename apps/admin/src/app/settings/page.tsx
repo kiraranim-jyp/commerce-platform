@@ -246,11 +246,13 @@ export default function SettingsPage() {
   return (
     <>
       <PageHeader title="설정" subtitle="쿠팡/스마트스토어 판매에 필요한 정보를 관리합니다." />
-      {/* N-3.10(Part A) — 예전엔 폭을 max-w-2xl(672px)로 고정해서 메뉴가 9개로
-          늘어나자 가로 탭 글자가 줄바꿈되며 깨졌다. size="xl"(최대 1800px)
-          + 왼쪽 세로 nav(Tabs orientation="vertical") 구조로 바꿔서, 메뉴가
-          더 늘어나도(향후 Commerce 추가 등) 세로로만 길어질 뿐 레이아웃이
-          깨지지 않는다. */}
+      {/* N-3.13 P0(CPO 지시) — N-3.10에서 세로 사이드바로 바꿨던 것을 되돌린다.
+          왼쪽 글로벌 메뉴(Dashboard/상품등록/최근 작업/이미지/설정) 옆에 이 세로
+          nav가 또 생기면서 "이중 좌측 메뉴"로 보였다 — 실사용 관점에서는 화면
+          공간을 불필요하게 잡아먹는 문제였다. 상단 가로 탭으로 되돌리되, N-3.10이
+          우려했던 "탭 8개가 좁은 화면에서 줄바꿈되며 깨지는" 문제는 줄바꿈 대신
+          가로 스크롤(overflow-x-auto + whitespace-nowrap)로 해결한다 — 탭 개수가
+          늘어나도 레이아웃이 깨지지 않고 옆으로 스크롤될 뿐이다. */}
       <PageContainer size="xl">
         <div
           className={`rounded-md p-3 text-sm ${
@@ -263,25 +265,26 @@ export default function SettingsPage() {
         </div>
         {saveMessage && <p className="mt-2 text-xs text-text-secondary">{saveMessage}</p>}
 
-        <div className="mt-6 flex flex-col gap-6 lg:flex-row">
-          <Tabs
-            orientation="vertical"
-            className="lg:w-56 lg:shrink-0"
-            value={activeTab}
-            onChange={setActiveTab}
-            items={[
-              { value: "accounts", label: "커머스 계정 관리" },
-              { value: "shipping", label: "배송 프로필" },
-              { value: "seller", label: "판매자 정보" },
-              { value: "pricing", label: "가격 정책" },
-              { value: "brand", label: "브랜드 관리" },
-              { value: "detail", label: "상세페이지 관리" },
-              { value: "comparisonShops", label: "해외 편집샵" },
-              { value: "smartstore", label: "스마트스토어", badge: "Soon", disabled: true },
-            ]}
-          />
+        <div className="mt-6">
+          <div className="overflow-x-auto">
+            <Tabs
+              className="flex-nowrap whitespace-nowrap"
+              value={activeTab}
+              onChange={setActiveTab}
+              items={[
+                { value: "accounts", label: "커머스 계정 관리" },
+                { value: "shipping", label: "배송 프로필" },
+                { value: "seller", label: "판매자 정보" },
+                { value: "pricing", label: "가격 정책" },
+                { value: "brand", label: "브랜드 관리" },
+                { value: "detail", label: "상세페이지 관리" },
+                { value: "comparisonShops", label: "해외 편집샵" },
+                { value: "smartstore", label: "스마트스토어", badge: "Soon", disabled: true },
+              ]}
+            />
+          </div>
 
-          <div className="min-w-0 max-w-3xl flex-1">
+          <div className="mt-6 min-w-0 max-w-3xl">
             <div className={activeTab === "accounts" ? "" : "hidden"}>
               <SectionHeader
                 title="커머스 계정 관리"
