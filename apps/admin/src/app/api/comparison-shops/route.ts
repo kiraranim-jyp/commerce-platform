@@ -7,10 +7,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => null)) as { url?: string; name?: string } | null;
+  const body = (await request.json().catch(() => null)) as
+    | { url?: string; name?: string; isActive?: boolean; country?: string | null; currency?: string | null }
+    | null;
   if (!body?.url) {
     return NextResponse.json({ ok: false, error: "URL이 필요합니다." }, { status: 400 });
   }
-  const result = await createComparisonShop(body.url, body.name);
+  const result = await createComparisonShop(body.url, body.name, body.isActive, body.country, body.currency);
   return NextResponse.json(result);
 }

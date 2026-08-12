@@ -96,7 +96,15 @@ export interface MatchResult {
 
 /** 규칙 기반 동일상품 판별(AI 미사용). "검색으로 찾음"이 아니라 "동일상품일 가능성"을
  * 표현하는 것이 목표 — 브랜드/모델명/색상/SKU/URL slug 순으로 확인 가능한 신호만
- * 사용하고, 신호가 없으면 점수를 올리지도 내리지도 않는다(추측 금지). */
+ * 사용하고, 신호가 없으면 점수를 올리지도 내리지도 않는다(추측 금지).
+ *
+ * N-3.11 Part C-2 — CPO가 요구한 우선순위(GTIN/EAN/UPC → SKU/ProductID → 브랜드+
+ * 정확한 상품명 → 브랜드+모델명 → 이미지/상품명 보조)와 이 함수의 대응 관계:
+ * GTIN/EAN/UPC는 현재 comparison_shops/ComparisonCandidate 어디에도 그런 필드가
+ * 없어(추출한 적도 없음) 사용할 수 없다 — 억지로 필드를 만들지 않고 BLOCKED로
+ * 보고한다. 그다음 순위인 SKU는 이미 최우선 신호로 반영돼 있다(아래 2번, 일치 시
+ * 0.97 강제). 브랜드+모델명은 모델명 Jaccard(기본 점수)에 브랜드 게이트(4번,
+ * 최종 승수)를 곱하는 구조로 이미 결합돼 있다. */
 export function scoreCandidateMatch(query: ComparisonQuery, candidate: ComparisonCandidate): MatchResult {
   const reasons: string[] = [];
   const candidateBrandGuess = candidate.brand;

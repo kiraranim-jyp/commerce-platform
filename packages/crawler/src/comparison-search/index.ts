@@ -53,12 +53,26 @@ export async function enrichCandidatePrices(
   return withDefaultSource;
 }
 
+/** N-3.11 Part A — 실제로 /search/suggest.json이 표준 Shopify 응답 구조({resources:
+ * {results:{products:[...]}}})를 준다고 직접 fetch로 확인한 도메인만 여기 추가한다
+ * (NICKIS/Isola Bella Kids/Petite Maison Kids/Piccoli & Co, 2026-08-12 실측 확인 —
+ * 4곳 모두 확인 없이 짐작으로 추가하지 않았다). searchShopifySuggest는 도메인에
+ * 종속되지 않으므로 새 파서를 만들 필요가 없다 — 이미 junioredition.com에 쓰던
+ * 함수를 그대로 재사용한다(토큰 절약 원칙). */
+const SHOPIFY_SUGGEST_DOMAINS = new Set([
+  "junioredition.com",
+  "nickis.com",
+  "isolabellakids.com",
+  "petitemaisonkids.com",
+  "shoppiccoliandco.com",
+]);
+
 /** 이 Phase에서 실제 파서가 있는 도메인만 여기 등록한다 — comparison_shops의 나머지 활성
  * 사이트는 자동으로 "unsupported"가 된다(하드코딩된 사이트 "허용 목록"이 아니라, 파서 존재 여부). */
 async function searchOneShop(shop: ComparisonShopRef, query: ComparisonQuery): Promise<ComparisonSearchResult> {
   const base = { shopId: shop.id, shopName: shop.name, domain: shop.domain };
   try {
-    if (shop.domain === "junioredition.com") {
+    if (SHOPIFY_SUGGEST_DOMAINS.has(shop.domain)) {
       const candidates = await searchShopifySuggest(shop.domain, shop.currency, query.title);
       const scored = withConfidence(query, candidates);
       const enriched = await enrichCandidatePrices(scored, shop.domain, query.sourceUrl);

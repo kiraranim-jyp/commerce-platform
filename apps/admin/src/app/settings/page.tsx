@@ -317,7 +317,7 @@ export default function SettingsPage() {
           <div className={activeTab === "detail" ? "mt-5" : "hidden"}>
             <SectionHeader
               title="상세페이지 템플릿"
-              description="상품 설명 템플릿을 관리합니다."
+              description="상품 설명 템플릿과 상단/하단 공통 이미지를 함께 관리합니다."
               className="mb-3"
             />
             <DescriptionTemplateSection templates={templates} onChanged={loadAll} />
@@ -816,12 +816,14 @@ function SellerProfileEditor({
         />
       </div>
 
+      {/* N-3.11 Part E — 예전에는 이 카드가 "공통 이미지"라는 별도 SectionHeader를
+          달고 있어서, 사용자가 아래(DOM 순서상 뒤에 렌더되는) "상세페이지 템플릿"
+          카드와 서로 다른 설정 메뉴로 오해했다(CPO 지시: "별도 설정 메뉴가 아니라
+          상세페이지 템플릿 안에서 함께 관리"). 이제 독립된 헤더 없이 "상세페이지
+          템플릿"의 일부(상단/하단 공통 이미지)로만 라벨링한다 — 저장 대상 테이블/
+          상태는 그대로(SellerProfile), 시각적 소속만 명확히 했다. */}
       <div className={activeTab === "detail" ? "mt-5" : "hidden"}>
-        <SectionHeader
-          title="공통 이미지"
-          description="상세페이지 상단/하단에 자동 삽입됩니다."
-          className="mb-3"
-        />
+        <p className="mb-3 text-xs font-medium text-text-tertiary">상세페이지 템플릿 — 공통 상단/하단 이미지</p>
         <CommonImagesSection
           topCommonImageUrl={topCommonImageUrl}
           topCommonImageEnabled={topCommonImageEnabled}

@@ -78,9 +78,16 @@ function parseShopUrl(raw: string): { url: string; domain: string } | null {
   return null;
 }
 
+/** N-3.11 Part A/B — country/currency는 선택 입력이다(둘 다 없으면 이전처럼
+ * null로 저장 — "확인 못하면 MISSING" 원칙, 추측으로 채우지 않는다). 호출하는
+ * 쪽(관리자 API)이 실제 사이트 조사(footer 등록정보 등)로 확인한 값만 넘겨야
+ * 한다 — 이 함수는 그 값을 검증 없이 그대로 저장만 한다. */
 export async function createComparisonShop(
   urlInput: string,
   nameInput?: string,
+  isActiveInput?: boolean,
+  countryInput?: string | null,
+  currencyInput?: string | null,
 ): Promise<{ ok: true; shop: ComparisonShop } | { ok: false; error: string }> {
   const parsed = parseShopUrl(urlInput);
   if (!parsed) {
@@ -106,7 +113,9 @@ export async function createComparisonShop(
       domain: parsed.domain,
       url: parsed.url,
       source: "USER",
-      is_active: true,
+      is_active: isActiveInput ?? true,
+      country: countryInput ?? null,
+      currency: currencyInput ?? null,
     })
     .select()
     .single();
@@ -123,6 +132,24 @@ export async function setComparisonShopActive(
   const { error } = await supabase
     .from("comparison_shops")
     .update({ is_active: isActive, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+/** N-3.11 Part B — 실제 판매처 등록정보(footer/Terms/Companies House 등)로 확인한
+ * country/currency만 여기로 갱신한다 — 이 함수 자체는 검증하지 않으므로 호출하는
+ * 쪽이 "확인 못하면 null(MISSING)"을 지켜야 한다. */
+export async function updateComparisonShopCountry(
+  id: string,
+  country: string | null,
+  currency: string | null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return { ok: false, error: "Supabase가 설정되어 있지 않습니다." };
+  const { error } = await supabase
+    .from("comparison_shops")
+    .update({ country, currency, updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) return { ok: false, error: error.message };
   return { ok: true };

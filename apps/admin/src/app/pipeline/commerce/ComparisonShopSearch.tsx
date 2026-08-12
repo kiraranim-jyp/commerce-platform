@@ -9,19 +9,29 @@ const MATCH_LEVEL_LABEL: Record<MatchLevel, string> = {
   very_high: "동일상품 가능성 매우 높음",
   high: "동일상품 가능성 높음",
   medium: "유사상품 · 확인 필요",
-  low: "관련상품 · 매칭 불확실",
+  low: "매칭 불확실",
 };
 
-/** N-3.10 Part K — "상품명만 같다고 동일상품 태그 금지" 원칙에 따라, high 이상만
- * "동일상품"으로 부르고 medium/low는 "유사상품"/"참고"로만 표시한다(색상도 다르게
- * 구분 — 초록=동일상품, 노랑=유사상품, 회색=참고). matchLevel 자체는 packages/
- * crawler의 match.ts(브랜드/모델명/SKU/URL slug 신호 기반 규칙 스코어러, AI 아님)가
- * 이미 계산해서 내려준다 — 이 컴포넌트는 등급을 색으로 옮기기만 한다. */
+/** N-3.10/N-3.11 Part C — "상품명만 같다고 동일상품 태그 금지" 원칙에 따라, high
+ * 이상만 "동일상품"으로 부르고 medium은 "유사상품", low는 "매칭 불확실"로만
+ * 표시한다(색상도 다르게 구분 — 초록=동일상품, 노랑=유사상품, 회색=매칭불확실).
+ * 확정할 수 없으면 확정 표현을 쓰지 않는다는 CPO 지시를 그대로 반영한 것 —
+ * "관련상품"처럼 관계를 확정하는 단어 대신 "불확실"이라고만 말한다. matchLevel
+ * 자체는 packages/crawler의 match.ts(브랜드/모델명/SKU/URL slug 신호 기반 규칙
+ * 스코어러, AI 아님)가 이미 계산해서 내려준다 — 이 컴포넌트는 등급을 배지로
+ * 옮기기만 한다. */
 const MATCH_LEVEL_BADGE_CLASS: Record<MatchLevel, string> = {
   very_high: "bg-success-soft text-success",
   high: "bg-success-soft text-success",
   medium: "bg-warning-soft text-warning",
   low: "bg-background text-text-tertiary",
+};
+
+const MATCH_LEVEL_ICON: Record<MatchLevel, string> = {
+  very_high: "🟢",
+  high: "🟢",
+  medium: "🟡",
+  low: "⚪",
 };
 
 function flagFor(country: string | null | undefined): string {
@@ -37,6 +47,9 @@ interface Candidate {
   imageUrl: string | null;
   confidence: number;
   matchLevel?: MatchLevel;
+  /** N-3.11 Part C — 왜 이 등급인지(브랜드/모델명/SKU/URL slug 신호) 사람이 읽는 근거.
+   * match.ts가 이미 계산해서 내려준다 — 여기서는 title에만 노출한다(확정 표현 남발 방지). */
+  matchReasons?: string[];
   priceSource?: "detail" | "search" | null;
 }
 
@@ -181,9 +194,14 @@ export function ComparisonShopSearch({
                         {c.matchLevel && (
                           <span
                             className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_LEVEL_BADGE_CLASS[c.matchLevel]}`}
-                            title={`신뢰도 ${Math.round(c.confidence * 100)}%`}
+                            title={`신뢰도 ${Math.round(c.confidence * 100)}%${c.matchReasons?.length ? " — " + c.matchReasons.join(", ") : ""}`}
                           >
-                            {c.matchLevel === "very_high" || c.matchLevel === "high" ? "🟢 동일상품" : c.matchLevel === "medium" ? "🟡 유사상품" : "참고"}
+                            {MATCH_LEVEL_ICON[c.matchLevel]}{" "}
+                            {c.matchLevel === "very_high" || c.matchLevel === "high"
+                              ? "동일상품"
+                              : c.matchLevel === "medium"
+                                ? "유사상품"
+                                : "매칭 불확실"}
                             {" · "}
                             {MATCH_LEVEL_LABEL[c.matchLevel]}
                           </span>
