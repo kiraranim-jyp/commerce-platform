@@ -8,6 +8,8 @@ import type { CanonicalProduct, CommerceCategoryPathResult } from "@commerce/sha
 import { formatKrw } from "@commerce/pricing";
 import { PriceIntelligencePanel } from "./PriceIntelligencePanel";
 import { PriceEditor } from "./PriceEditor";
+import { CategoryTreeBrowser } from "./CategoryTreeBrowser";
+import { fetchNaverCategoryTree } from "./category-tree-adapters";
 
 /**
  * Sprint N-2.7/N-2.8 — 네이버 v2 상품등록 payload를 실제 POST 없이 미리 보여준다.
@@ -517,6 +519,16 @@ export function NaverPayloadPreview({
             className="mt-0.5 w-full rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
           />
         </div>
+
+        {/* N-3.10 Part C — 추천 후보가 안 맞을 때 쿠팡과 동일한 CategoryTreeBrowser로
+            대분류부터 직접 찾는다(Naver 전용 트리 UI를 새로 만들지 않는다). */}
+        <CategoryTreeBrowser
+          platform="smartstore"
+          platformLabel="네이버"
+          fetchTree={fetchNaverCategoryTree}
+          onSelect={(candidate) => selectCandidate(candidate.id)}
+        />
+
         {resolving && <p className="text-[11px] text-text-tertiary">네이버 카테고리 조회 중...</p>}
         {resolveError && <p className="text-[11px] text-error">{resolveError}</p>}
         {leafCategoryId ? (

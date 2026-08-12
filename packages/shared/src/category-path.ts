@@ -39,3 +39,23 @@ export type CommerceCategoryPathResult = CommerceCategoryPath | CommerceCategory
 export function formatCommerceCategoryFullPath(nodes: Pick<CommerceCategoryNode, "name">[]): string {
   return nodes.map((n) => n.name).join(" > ");
 }
+
+/**
+ * N-3.10 Part C — 카테고리 "직접 선택"(트리 드릴다운) 공통 타입. 쿠팡의
+ * displayItemCategoryCode/child, 네이버의 id/wholeCategoryName처럼 플랫폼마다
+ * 원본 트리 모양이 다르므로, 각 플랫폼 API 라우트가 이 공통 모양으로 변환해서
+ * 돌려준다 — UI(CategoryTreeBrowser)는 이 타입 하나만 그린다(플랫폼별 트리
+ * UI를 각각 만들지 않는다).
+ */
+export interface CommerceCategoryTreeNode {
+  id: string;
+  name: string;
+  /** 자식이 없으면(undefined) leaf — 선택 가능한 노드. */
+  children?: CommerceCategoryTreeNode[];
+}
+
+export interface CommerceCategoryTreeResult {
+  status: "OK" | string;
+  tree?: CommerceCategoryTreeNode;
+  error?: string;
+}

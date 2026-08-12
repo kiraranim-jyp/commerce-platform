@@ -2,40 +2,49 @@
 
 import { useState } from "react";
 import type { CategoryCandidate } from "@commerce/category";
+import type { CommerceCategoryTreeNode, CommerceCategoryTreeResult } from "@commerce/shared";
+import type { PlatformId } from "@commerce/shared";
 
 /** CEO 지시(2026-08-03) — "추천 카테고리 없을시, 쿠팡의 카테고리 검색이 아닌,
  * 목록을 제공해 주면 어때? 검색했더니 안맞는 데이터가 존재 함." predict API
  * 기반 검색은 흔한 검색어 하나만 넣으면(예: "원피스") 관련 없는 카테고리를
  * 낮은 신뢰도로 주는 경우가 실측 확인됐다 — Wing이 쓰는 대분류→소분류 트리
- * 드릴다운이 검색보다 확실하다. /api/coupang/category-tree(display-categories
- * Open API)가 반환하는 원본 트리를 그대로 컬럼별로 탐색한다 — 서버는 가공 없이
- * 그대로 전달하므로 이 컴포넌트가 유일한 판단 지점이다. */
-interface TreeNode {
-  displayItemCategoryCode: number;
-  name: string;
-  status: "ACTIVE" | "READY" | "DISABLED";
-  child?: TreeNode[];
-}
-
-/** CEO 피드백(2026-08-07) — "AI 추천이 어려우면 직접 선택하면 되는데 너무
- * 맞추는 노력이 없다." 트리 드릴다운만 있으면 "kids"/"baby" 같은 키워드를
- * 알아도 대분류부터 몇 단계를 직접 눌러야만 도달할 수 있었다 — 이미 받아온
- * 트리(위 fetch 결과) 전체를 평탄화해서 이름에 검색어가 포함된 노드를 찾고,
- * 클릭하면 그 노드까지의 전체 경로(대분류→...→해당 노드)로 바로 이동한다.
- * 새 API 호출 없이 클라이언트에서만 처리 — 이미 트리를 통째로 갖고 있다. */
-function flattenTree(node: TreeNode, ancestors: TreeNode[] = []): { node: TreeNode; path: TreeNode[] }[] {
+ * 드릴다운이 검색보다 확실하다.
+ *
+ * N-3.10 Part C — 원래 이 컴포넌트는 쿠팡 전용(원본 트리 모양을 그대로 받아
+ * displayItemCategoryCode 필드로 탐색)이었다. CPO 지시("Naver/Coupang 별도
+ * 구현 금지, CommerceCategoryTree 같은 공통 SDK")에 따라 CommerceCategoryTreeNode
+ * 공통 모양만 알도록 일반화했다 — 트리를 실제로 가져오는 방법(fetchTree)과
+ * 선택 결과에 붙일 platform은 호출하는 쪽(Coupang/Naver 각 Preview)이 넘긴다.
+ * 서버 쪽 변환은 각 플랫폼 API 라우트(/api/coupang/category-tree,
+ * /api/naver/category-tree)가 담당한다. */
+function flattenTree(
+  node: CommerceCategoryTreeNode,
+  ancestors: CommerceCategoryTreeNode[] = [],
+): { node: CommerceCategoryTreeNode; path: CommerceCategoryTreeNode[] }[] {
   const path = [...ancestors, node];
-  const own = node.status !== "DISABLED" ? [{ node, path }] : [];
-  const children = (node.child ?? []).flatMap((child) => flattenTree(child, path));
+  const own = (node.children?.length ?? 0) === 0 ? [{ node, path }] : [];
+  const children = (node.children ?? []).flatMap((child) => flattenTree(child, path));
   return [...own, ...children];
 }
 
-export function CategoryTreeBrowser({ onSelect }: { onSelect: (candidate: CategoryCandidate) => void }) {
+export function CategoryTreeBrowser({
+  platform,
+  platformLabel,
+  fetchTree,
+  onSelect,
+}: {
+  platform: PlatformId;
+  /** "쿠팡" / "네이버" 등 — 선택 확정 메시지에만 쓴다. */
+  platformLabel: string;
+  fetchTree: () => Promise<CommerceCategoryTreeResult>;
+  onSelect: (candidate: CategoryCandidate) => void;
+}) {
   const [open, setOpen] = useState(false);
-  const [tree, setTree] = useState<TreeNode | null>(null);
+  const [tree, setTree] = useState<CommerceCategoryTreeNode | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [path, setPath] = useState<TreeNode[]>([]);
+  const [path, setPath] = useState<CommerceCategoryTreeNode[]>([]);
   const [treeSearch, setTreeSearch] = useState("");
 
   async function handleOpen() {
@@ -44,13 +53,12 @@ export function CategoryTreeBrowser({ onSelect }: { onSelect: (candidate: Catego
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/coupang/category-tree");
-      const data = await res.json();
-      if (data.status !== "OK" || !data.tree) {
-        setError(data.error || "카테고리 목록을 불러오지 못했습니다.");
+      const result = await fetchTree();
+      if (result.status !== "OK" || !result.tree) {
+        setError(result.error || "카테고리 목록을 불러오지 못했습니다.");
         return;
       }
-      setTree(data.tree as TreeNode);
+      setTree(result.tree);
     } catch {
       setError("카테고리 목록을 불러오지 못했습니다 — 네트워크를 확인해주세요.");
     } finally {
@@ -58,19 +66,19 @@ export function CategoryTreeBrowser({ onSelect }: { onSelect: (candidate: Catego
     }
   }
 
-  function handlePick(node: TreeNode, columnIndex: number) {
+  function handlePick(node: CommerceCategoryTreeNode, columnIndex: number) {
     setPath((prev) => [...prev.slice(0, columnIndex), node]);
   }
 
-  const columns: TreeNode[][] = [];
+  const columns: CommerceCategoryTreeNode[][] = [];
   if (tree) {
-    columns.push((tree.child ?? []).filter((n) => n.status !== "DISABLED"));
+    columns.push(tree.children ?? []);
     for (const node of path) {
-      if (!node.child || node.child.length === 0) break;
-      columns.push(node.child.filter((n) => n.status !== "DISABLED"));
+      if (!node.children || node.children.length === 0) break;
+      columns.push(node.children);
     }
   }
-  const leaf = path.length > 0 && path[path.length - 1] && !(path[path.length - 1].child?.length);
+  const leaf = path.length > 0 && !(path[path.length - 1].children?.length);
 
   const trimmedSearch = treeSearch.trim().toLowerCase();
   const searchResults =
@@ -124,7 +132,7 @@ export function CategoryTreeBrowser({ onSelect }: { onSelect: (candidate: Catego
                 <li className="px-2 py-1.5 text-xs text-text-tertiary">일치하는 카테고리가 없습니다.</li>
               ) : (
                 searchResults.map(({ node, path: nodePath }) => (
-                  <li key={node.displayItemCategoryCode}>
+                  <li key={node.id}>
                     <button
                       type="button"
                       onClick={() => {
@@ -134,7 +142,7 @@ export function CategoryTreeBrowser({ onSelect }: { onSelect: (candidate: Catego
                       className="flex w-full items-center justify-between gap-1 px-2 py-1.5 text-left text-xs transition-colors hover:bg-background"
                     >
                       <span className="truncate">{nodePath.map((n) => n.name).join(" > ")}</span>
-                      {(node.child?.length ?? 0) === 0 && (
+                      {(node.children?.length ?? 0) === 0 && (
                         <span className="shrink-0 text-[10px] text-selected-border">선택 가능</span>
                       )}
                     </button>
@@ -152,10 +160,10 @@ export function CategoryTreeBrowser({ onSelect }: { onSelect: (candidate: Catego
                   className="max-h-64 w-40 shrink-0 overflow-y-auto rounded border border-border bg-white"
                 >
                   {column.map((node) => {
-                    const selected = path[columnIndex]?.displayItemCategoryCode === node.displayItemCategoryCode;
-                    const hasChildren = (node.child?.length ?? 0) > 0;
+                    const selected = path[columnIndex]?.id === node.id;
+                    const hasChildren = (node.children?.length ?? 0) > 0;
                     return (
-                      <li key={node.displayItemCategoryCode}>
+                      <li key={node.id}>
                         <button
                           type="button"
                           onClick={() => handlePick(node, columnIndex)}
@@ -181,12 +189,12 @@ export function CategoryTreeBrowser({ onSelect }: { onSelect: (candidate: Catego
                 type="button"
                 onClick={() =>
                   onSelect({
-                    id: String(path[path.length - 1].displayItemCategoryCode),
+                    id: path[path.length - 1].id,
                     name: path[path.length - 1].name,
                     path: path.map((n) => n.name),
-                    platform: "coupang",
+                    platform,
                     confidence: 1,
-                    reason: ["✓ 카테고리 목록에서 직접 선택한 실제 쿠팡 카테고리입니다."],
+                    reason: [`✓ 카테고리 목록에서 직접 선택한 실제 ${platformLabel} 카테고리입니다.`],
                     source: "rule",
                     isVerifiedPlatformCode: true,
                   })
