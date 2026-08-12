@@ -280,7 +280,7 @@ export default function SettingsPage() {
                 { value: "brand", label: "브랜드 관리" },
                 { value: "detail", label: "상세페이지 관리" },
                 { value: "comparisonShops", label: "해외 편집샵" },
-                { value: "smartstore", label: "스마트스토어", badge: "Soon", disabled: true },
+                { value: "smartstore", label: "스마트스토어" },
               ]}
             />
           </div>
@@ -308,12 +308,53 @@ export default function SettingsPage() {
               />
             </div>
 
+            {/* N-3.13 Part C(CPO 지시: "스마트스토어가 실제 지원되는지조차 불명확함") —
+                이 탭은 예전엔 disabled+"Soon" 배지가 붙은 죽은 자리표시자였다. 하지만
+                네이버는 이미 실제로 동작한다: 연결 테스트(auth-test API), 카테고리/
+                가격/옵션/배송/고시정보/KC Preview + Final Validator(N-3.5, readyCount/
+                missingCount/blockedCount)가 상품등록 화면의 "스마트스토어" 플랫폼
+                탭에서 전부 실동작 중이다. 문제는 기능이 없는 게 아니라, 그 사실이
+                Settings 화면에서 전혀 보이지 않았다는 것 — "커머스 계정 관리"에
+                네이버 연결 카드가 있고, "배송 프로필"에 네이버 택배사 입력이 있고,
+                정작 "스마트스토어"라는 이름의 탭은 죽어 있었다. 이 탭을 계정 수준
+                설정(연결/연결테스트/등록 기본정보)의 실제 허브로 만들고, 상품별
+                설정(카테고리/가격/옵션/상세페이지/등록준비상태)은 상품마다 다르므로
+                여기서 복제하지 않고 상품등록 화면으로 명확히 안내한다 — 두 화면이
+                서로 다른 기능처럼 보이지 않게, 이 탭이 "여기 없는 건 저기 있다"를
+                직접 알려준다. */}
+            <div className={activeTab === "smartstore" ? "space-y-4" : "hidden"}>
+              <SectionHeader
+                title="스마트스토어(네이버)"
+                description="계정 연결과 등록 기본정보를 관리합니다. 상품별 카테고리·가격·옵션·상세페이지는 상품등록 화면에서 설정합니다."
+                className="mb-3"
+              />
+              <SmartStoreAccountCard />
+              {/* 네이버 택배사 입력 필드는 SellerProfileEditor(아래에 마운트됨,
+                  activeTab==="smartstore"일 때 자체적으로 이 필드를 렌더링) 안에
+                  있다 — 배송 프로필 탭과 동일한 SellerProfile 저장 단위를 그대로
+                  재사용하기 위해 새 state를 만들지 않고 기존 컴포넌트에 탭 케이스만
+                  추가했다. */}
+            </div>
+
             {/* 배송 프로필/판매자 정보/가격 정책/상세페이지(공통이미지) 4개 탭이
               전부 하나의 SellerProfile 저장 단위를 공유하므로, 인스턴스를
               하나만 마운트하고 내부에서 activeTab에 따라 어느 섹션을 보여줄지
               결정한다(탭을 오갈 때 상태가 유지되어야 하므로 언마운트 금지 —
               최상위 탭과 같은 CSS-hidden 패턴을 컴포넌트 내부에 적용). */}
           <SellerProfileEditor profiles={profiles} onChanged={loadAll} activeTab={activeTab} />
+
+          <div className={activeTab === "smartstore" ? "mt-4" : "hidden"}>
+            <div className="rounded-lg border border-dashed border-border bg-background px-4 py-3 text-sm text-text-tertiary">
+              <p className="font-medium text-text-secondary">카테고리 · 상품정보 · 가격 · 옵션 · 상세페이지 · 등록 준비상태</p>
+              <p className="mt-1 text-xs">
+                상품마다 다른 값이라 여기서 관리하지 않습니다 — 상품등록 화면의 &ldquo;스마트스토어&rdquo; 탭에서
+                카테고리 선택부터 등록 준비상태(Final Validator)까지 실시간으로 확인할 수 있습니다.
+              </p>
+              <a href="/pipeline" className="mt-2 inline-block text-xs font-medium text-primary hover:underline">
+                상품등록 화면으로 이동 →
+              </a>
+            </div>
+          </div>
 
           <div className={activeTab === "brand" ? "mt-5" : "hidden"}>
             <BrandProfileSection profiles={brandProfiles} onChanged={loadAll} />
@@ -334,11 +375,6 @@ export default function SettingsPage() {
             />
             <ComparisonShopsSection />
           </div>
-          {activeTab === "smartstore" && (
-            <p className="mt-5 rounded-md border border-dashed border-border p-4 text-sm text-text-tertiary">
-              스마트스토어 설정은 준비 중입니다.
-            </p>
-          )}
 
             <DeveloperModeSection />
           </div>
@@ -885,6 +921,33 @@ function SellerProfileEditor({
             saving={saving}
             saveButtonLabel={saveButtonLabel}
           />
+        </CollapsibleSection>
+      </div>
+
+      {/* N-3.13 Part C — "스마트스토어" 탭의 "등록 기본정보"(네이버 택배사).
+          배송 프로필 탭의 같은 필드와 완전히 동일한 state(naverDeliveryCompanyCode)를
+          공유한다 — 새 저장 단위를 만들지 않고 값을 두 곳에서 보여주기만 한다. */}
+      <div className={activeTab === "smartstore" ? "mt-5" : "hidden"}>
+        <CollapsibleSection
+          title="등록 기본정보 — 네이버 택배사"
+          defaultOpen={false}
+          badge={
+            <span className="text-xs font-normal text-text-tertiary">{naverDeliveryCompanyCode || "미설정"}</span>
+          }
+        >
+          <Field
+            label="네이버 택배사"
+            hint="네이버 공식 API에는 택배사 조회 기능이 없어(확인됨) 직접 입력이 필요합니다 — 예: CJ대한통운. 배송 프로필 탭과 같은 값입니다."
+          >
+            <input
+              type="text"
+              value={naverDeliveryCompanyCode}
+              onChange={(e) => setNaverDeliveryCompanyCode(e.target.value)}
+              placeholder="예: CJ대한통운"
+              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+            />
+          </Field>
+          <SaveButton onSave={handleSave} saving={saving} label={saveButtonLabel} />
         </CollapsibleSection>
       </div>
     </>
@@ -2229,6 +2292,49 @@ function CommerceAccountsSection({
         <p className="font-medium text-text-secondary">⚪ 새로운 Commerce</p>
         <p className="mt-0.5 text-xs">아직 연결되지 않음 — 11번가, G마켓 등은 향후 추가될 예정입니다.</p>
       </div>
+    </div>
+  );
+}
+
+/** N-3.13 Part C — "스마트스토어" 탭 전용 연결 카드. CommerceAccountsSection
+ * 안의 네이버 카드와 로직은 동일(같은 auth-test API, 같은 CoupangConnectionPanel)
+ * 이지만 상태를 공유하지 않고 각자 독립적으로 조회한다 — "커머스 계정 관리"는
+ * 여러 플랫폼을 한눈에 보는 대시보드 용도이고, 이 카드는 "스마트스토어 탭 하나만
+ * 봐도 연결 여부를 알 수 있어야 한다"는 목적이 달라서 상태를 억지로 끌어올려
+ * 공유하지 않았다(불필요한 props drilling 방지, 두 카드가 같은 세션 내에서
+ * 다른 시점에 "다시 확인"을 눌러도 서로 간섭하지 않는다). */
+function SmartStoreAccountCard() {
+  const [status, setStatus] = useState<PlatformConnectionStatus>("UNKNOWN");
+  const [checking, setChecking] = useState(false);
+  const [checkedAt, setCheckedAt] = useState<string | null>(null);
+
+  async function check() {
+    setChecking(true);
+    try {
+      const res = await fetch("/api/naver/auth-test", { method: "POST" });
+      const data = (await res.json()) as { status?: PlatformConnectionStatus };
+      setStatus(data.status ?? "AUTH_FAILED");
+    } catch {
+      setStatus("AUTH_FAILED");
+    } finally {
+      setCheckedAt(new Date().toISOString());
+      setChecking(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <CoupangConnectionPanel
+        platformLabel="스마트스토어(네이버) 연결"
+        status={status}
+        checking={checking}
+        checkedAt={checkedAt}
+        onCheck={() => void check()}
+      />
+      <p className="rounded-lg border border-border bg-surface px-4 py-3 text-[11px] text-text-tertiary">
+        네이버 계정은 배포 환경변수(SMARTSTORE_CLIENT_ID/SMARTSTORE_CLIENT_SECRET)로만 설정됩니다 — 이 화면에서
+        수정하거나 해제할 수 없습니다.
+      </p>
     </div>
   );
 }
