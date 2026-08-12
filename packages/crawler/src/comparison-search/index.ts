@@ -53,11 +53,12 @@ export async function enrichCandidatePrices(
   return withDefaultSource;
 }
 
-/** N-3.11 Part A — 실제로 /search/suggest.json이 표준 Shopify 응답 구조({resources:
+/** N-3.11/N-3.12 Part A — 실제로 /search/suggest.json이 표준 Shopify 응답 구조({resources:
  * {results:{products:[...]}}})를 준다고 직접 fetch로 확인한 도메인만 여기 추가한다
- * (NICKIS/Isola Bella Kids/Petite Maison Kids/Piccoli & Co, 2026-08-12 실측 확인 —
- * 4곳 모두 확인 없이 짐작으로 추가하지 않았다). searchShopifySuggest는 도메인에
- * 종속되지 않으므로 새 파서를 만들 필요가 없다 — 이미 junioredition.com에 쓰던
+ * (N-3.11: NICKIS/Isola Bella Kids/Petite Maison Kids/Piccoli & Co, N-3.12: Kidswear
+ * Collective/Kids Atelier/Designer Kids Wear/Kid Biz/Village Kids/Folk Berlin —
+ * 2026-08-12 실측 확인, /cart.json의 currency 필드까지 직접 fetch로 재확인). searchShopifySuggest는
+ * 도메인에 종속되지 않으므로 새 파서를 만들 필요가 없다 — 이미 junioredition.com에 쓰던
  * 함수를 그대로 재사용한다(토큰 절약 원칙). */
 const SHOPIFY_SUGGEST_DOMAINS = new Set([
   "junioredition.com",
@@ -65,6 +66,12 @@ const SHOPIFY_SUGGEST_DOMAINS = new Set([
   "isolabellakids.com",
   "petitemaisonkids.com",
   "shoppiccoliandco.com",
+  "kidswearcollective.com",
+  "kidsatelier.com",
+  "designerkidswear.com",
+  "kidbizkid.com",
+  "villagekids.co.uk",
+  "folkberlin.com",
 ]);
 
 /** 이 Phase에서 실제 파서가 있는 도메인만 여기 등록한다 — comparison_shops의 나머지 활성
