@@ -7,6 +7,7 @@ import type { NaverCategoryCandidate } from "@commerce/listing";
 import type { CanonicalProduct, CommerceCategoryPathResult } from "@commerce/shared";
 import { formatKrw } from "@commerce/pricing";
 import { PriceIntelligencePanel } from "./PriceIntelligencePanel";
+import { PriceEditor } from "./PriceEditor";
 
 /**
  * Sprint N-2.7/N-2.8 — 네이버 v2 상품등록 payload를 실제 POST 없이 미리 보여준다.
@@ -127,7 +128,28 @@ function payloadReplacer(_key: string, value: unknown): unknown {
   return value;
 }
 
-export function NaverPayloadPreview({ product, listing }: { product: CanonicalProduct; listing: ListingModel }) {
+export function NaverPayloadPreview({
+  product,
+  listing,
+  onUpdateSalePriceKrw,
+  onUpdateOriginalPrice,
+  onUpdatePriceBreakdown,
+  exchangeRates,
+  exchangeRatesLoading,
+  onRefreshExchangeRates,
+}: {
+  product: CanonicalProduct;
+  listing: ListingModel;
+  /** N-3.9(Part G — CPO 지시: "Naver/Coupang 동일 구조") — Coupang의
+   * PlatformPreview가 이미 갖고 있는 가격 계산 핸들러를 그대로 받아서
+   * PriceEditor를 재사용한다. 새 Naver 전용 가격 계산기를 만들지 않는다. */
+  onUpdateSalePriceKrw: (amountKrw: number) => void;
+  onUpdateOriginalPrice?: (patch: Partial<{ amount: number; currency: string }>) => void;
+  onUpdatePriceBreakdown: (breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) => void;
+  exchangeRates: { rates: Record<string, number>; fetchedAt: string; source: "frankfurter" | "fallback" } | null;
+  exchangeRatesLoading: boolean;
+  onRefreshExchangeRates: () => void;
+}) {
   const [showJson, setShowJson] = useState(false);
   const [categoryIdInput, setCategoryIdInput] = useState("");
   const [resolved, setResolved] = useState<NaverResolveResponse | null>(null);
@@ -409,9 +431,24 @@ export function NaverPayloadPreview({ product, listing }: { product: CanonicalPr
 
       <Section id="naver-section-basic" title="기본 상품정보">
         <Row label="상품명" value={payload.originProduct.name || "MISSING"} />
-        <Row label="판매가격" value={formatKrw(payload.originProduct.salePrice)} />
         <Row label="재고" value={`${payload.originProduct.stockQuantity}개`} />
         <Row label="판매상태" value={payload.originProduct.statusType} />
+      </Section>
+
+      {/* N-3.9(Part G) — Coupang과 완전히 같은 PriceEditor 컴포넌트/계산 모델을
+          쓴다. 등록 payload가 읽는 salePrice(listing.priceKrw)는 이 컴포넌트가
+          onUpdateSalePriceKrw로 갱신하는 product.priceOverrideKrw를 그대로
+          따라간다 — 별도로 다시 표시하지 않는다(CP001류 이중 판정 방지). */}
+      <Section id="naver-section-price" title="판매가격">
+        <PriceEditor
+          product={product}
+          onUpdateSalePriceKrw={onUpdateSalePriceKrw}
+          onUpdateOriginalPrice={onUpdateOriginalPrice}
+          onUpdatePriceBreakdown={onUpdatePriceBreakdown}
+          exchangeRates={exchangeRates}
+          exchangeRatesLoading={exchangeRatesLoading}
+          onRefreshExchangeRates={onRefreshExchangeRates}
+        />
       </Section>
 
       <Section id="naver-section-price-intelligence" title="해외 가격 정보 (참고 — 위 판매가격과 별개)">

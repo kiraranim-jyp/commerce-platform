@@ -32,7 +32,13 @@ export interface PriceBreakdown extends PriceBreakdownInput {
   suggestedPriceKrw: number;
 }
 
-export function computePriceBreakdown(input: PriceBreakdownInput, liveRates?: Record<string, number>): PriceBreakdown {
+/** roundingUnit(기본 1 = 반올림 없음) — 쿠팡처럼 10원 단위 입력만 허용하는
+ * 플랫폼에서 권장 판매가격을 그 단위로 맞출 때 쓴다(roundToUnit 재사용). */
+export function computePriceBreakdown(
+  input: PriceBreakdownInput,
+  liveRates?: Record<string, number>,
+  roundingUnit = 1,
+): PriceBreakdown {
   const { originalAmount, originalCurrency, shippingKrw, feePercent, marginPercent } = input;
   const converted = convertToKrw(originalAmount, originalCurrency, liveRates);
   const rate = originalAmount === 0 ? 0 : converted.amountKrw / originalAmount;
@@ -40,7 +46,7 @@ export function computePriceBreakdown(input: PriceBreakdownInput, liveRates?: Re
   const landedCostKrw = costKrw + shippingKrw;
   const retainedRatio = 1 - (feePercent + marginPercent) / 100;
   const suggestedPriceKrw =
-    retainedRatio > 0 ? Math.round(landedCostKrw / retainedRatio) : Math.round(landedCostKrw);
+    retainedRatio > 0 ? roundToUnit(landedCostKrw / retainedRatio, roundingUnit) : roundToUnit(landedCostKrw, roundingUnit);
 
   return {
     originalAmount,
@@ -62,13 +68,16 @@ export const DEFAULT_PRICE_BREAKDOWN_INPUT: Pick<PriceBreakdownInput, "shippingK
   marginPercent: 20,
 };
 
-/** Sprint A-11(작업1 — CPO 지시: "판매가 = 환율변환가격 × (1+기본마진)") — 위
- * computePriceBreakdown()의 배송비/수수료까지 역산하는 계산은 "가격 계산
- * Breakdown"(펼쳐서 보는 상세 계산기)에서 계속 쓴다. 이 함수는 그 대신 화면
- * 최상단에 항상 보이는 "원가 → 환율 → 마진 → 최종 판매가" 5줄의 기본
- * 자동계산이다 — 배송비/수수료 없이 마진만 적용한 단순 계산이라야 CPO가 준
- * 예시(₩161,538 × 1.22 ≈ ₩197,080)와 맞는다. */
-export const DEFAULT_MARGIN_PERCENT = 22;
+/** Sprint N-3.8(가격 계산 모델 통일 — CPO 지시) — 예전에는 화면 상단 요약이
+ * "환율변환가 × (1+마진%)"(마크업) 공식을, 아래 Breakdown이 "판매가 = 랜디드
+ * 원가 / (1-수수료%-마진%)"(마진율) 공식을 각각 따로 써서 같은 "마진 20%"라는
+ * 라벨로 서로 다른 숫자가 나오는 버그가 있었다(computeMarginPrice가 그 마크업
+ * 공식이었다 — 이제 삭제). 이제는 computePriceBreakdown() 하나만 화면 전체
+ * (요약 + Breakdown)에서 공유하고, "마진"은 항상 "판매가 기준으로 남기고 싶은
+ * 비율"(마크업이 아니라 진짜 margin)로만 계산한다. DEFAULT_MARGIN_PERCENT도
+ * DEFAULT_PRICE_BREAKDOWN_INPUT.marginPercent와 같은 값으로 맞췄다(전에는
+ * 22%/20%로 서로 달라서 그 자체가 또 다른 불일치 원인이었다). */
+export const DEFAULT_MARGIN_PERCENT = DEFAULT_PRICE_BREAKDOWN_INPUT.marginPercent;
 export const DEFAULT_PRICE_ROUNDING_UNIT = 10;
 
 /** 25,303 → 25,300 / 25,305 → 25,310 (CPO 예시 그대로) — 반올림 단위 기본
@@ -76,11 +85,4 @@ export const DEFAULT_PRICE_ROUNDING_UNIT = 10;
 export function roundToUnit(amountKrw: number, unit: number): number {
   if (unit <= 0) return Math.round(amountKrw);
   return Math.round(amountKrw / unit) * unit;
-}
-
-/** 환율변환가격(costKrw)에 마진율을 곱해 최종 판매가를 낸다 — 쿠팡 10원 단위
- * 규칙을 항상 만족하도록 roundingUnit으로 반올림까지 한 번에 처리한다. */
-export function computeMarginPrice(convertedKrw: number, marginPercent: number, roundingUnit: number): number {
-  const raw = convertedKrw * (1 + marginPercent / 100);
-  return roundToUnit(raw, roundingUnit);
 }

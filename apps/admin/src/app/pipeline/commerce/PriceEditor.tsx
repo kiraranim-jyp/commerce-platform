@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { CanonicalProduct } from "@commerce/shared";
 import {
-  computeMarginPrice,
   computePriceBreakdown,
-  DEFAULT_MARGIN_PERCENT,
   DEFAULT_PRICE_BREAKDOWN_INPUT,
   DEFAULT_PRICE_ROUNDING_UNIT,
   formatKrw,
@@ -14,24 +12,22 @@ import {
 import { EditableText } from "./EditableField";
 
 /**
- * P0-1(가격 계산 투명화) — "원가 → 최종 판매가"만 보여주던 걸 원본가격→환율→
- * 상품원가→배송비→수수료→마진→제안가 단계별로 전부 노출한다(CPO가 실측에서
- * "가격 계산 과정이 전혀 안 보인다"고 지적한 문제). 계산기(배송비/수수료율/
- * 마진율)와 실제 등록에 쓰이는 "판매가격"은 분리돼 있다 — "적용" 버튼을 눌러야만
- * 제안가가 판매가격에 반영된다. "원본 가격"(product.price)은 절대 건드리지
- * 않는다.
+ * Sprint N-3.8/N-3.9(가격 계산 모델 통일 — CPO 지시) — 예전에는 화면 상단
+ * 요약("최종 판매가")과 아래 "가격 계산 Breakdown"이 서로 다른 공식을 썼다
+ * (요약은 마크업 cost×(1+마진%), Breakdown은 마진율 역산 landedCost/(1-fee%-
+ * margin%)) — 같은 "마진 20%" 라벨인데 숫자가 달라지는 버그였다. 이제는
+ * computePriceBreakdown() 하나만 화면 전체에서 쓰고, Naver/Coupang도 이
+ * 컴포넌트를 그대로 재사용한다(NaverPayloadPreview.tsx도 이 컴포넌트를
+ * import — Commerce별로 다른 가격 컴포넌트를 만들지 않는다).
  *
- * Sprint A-11(작업1 — CPO 지시: "판매가 = 환율변환가격 × (1+기본마진)") — 위
- * 상세 Breakdown과는 별개로, 화면 최상단에는 항상 "원가 → 환율 → 마진 → 최종
- * 판매가" 자동계산이 보인다. 마진율은 SellerProfile 기본값(Settings에서 설정)
- * 으로 시작하고, 사용자가 마진율을 고치면 판매가가 즉시 재계산된다 — 판매가
- * 입력칸을 직접 고치면 그 순간부터는(linkedRef=false) 마진 재계산이 판매가를
- * 덮어쓰지 않는다("자동계산 해제"). 최종값은 항상 SellerProfile의 반올림
- * 단위(기본 10원)로 맞춘다 — 쿠팡이 1원 단위 입력을 거부하기 때문이다(실제
- * LIVE 등록에서 확인된 제약).
+ * "자동 적용 금지"(CPO 지시) — 예전에는 마진/환율이 바뀔 때마다 useEffect가
+ * 조용히 product.priceOverrideKrw를 덮어썼다. 이제는 사용자가 "최종
+ * 판매가격" 입력칸을 직접 고치거나 "최종 판매가격에 적용" 버튼을 눌러야만
+ * 실제 등록에 쓰이는 값이 바뀐다 — 권장 판매가격은 항상 최신 계산값을
+ * 보여주기만 하고, 아무것도 자동으로 쓰지 않는다(coupang.adapter.ts가
+ * priceOverrideKrw==null일 때 이미 자체 환율 추정치로 안전하게 폴백하므로,
+ * 초기 부트스트랩도 필요 없다).
  */
-/** exchange-rates API가 실제로 추적하는 통화 목록과 맞춘다(apps/admin/src/app/api/exchange-rates/route.ts) —
- * 여기 없는 통화를 고르면 환율 계산이 고정 폴백표로 넘어가 부정확해진다. */
 const SELECTABLE_CURRENCIES = ["USD", "EUR", "JPY", "GBP", "SEK", "CNY", "HKD", "KRW"];
 
 export function PriceEditor({
@@ -45,10 +41,6 @@ export function PriceEditor({
 }: {
   product: CanonicalProduct;
   onUpdateSalePriceKrw: (amountKrw: number) => void;
-  /** CEO 실측 리포트(2026-08-03) — Shopify Markets 스토어는 요청 지역에 따라
-   * 공개 상품 JSON의 가격/통화가 달라질 수 있어(presentment pricing), 자동
-   * 감지가 실제와 다를 때 직접 고칠 수 있어야 한다. 고치는 즉시 아래 환율
-   * 계산이 새 값 기준으로 다시 돈다. */
   onUpdateOriginalPrice?: (patch: Partial<{ amount: number; currency: string }>) => void;
   onUpdatePriceBreakdown: (breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) => void;
   exchangeRates: { rates: Record<string, number>; fetchedAt: string; source: "frankfurter" | "fallback" } | null;
@@ -56,22 +48,13 @@ export function PriceEditor({
   onRefreshExchangeRates: () => void;
 }) {
   const breakdownInput = product.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT;
-  const liveRates = exchangeRates?.rates;
-  const breakdown = computePriceBreakdown(
-    {
-      originalAmount: product.price.value.amount,
-      originalCurrency: product.price.value.currency,
-      ...breakdownInput,
-    },
-    liveRates,
-  );
 
-  // Sprint A-11(작업1/2) — Settings의 "가격 정책"(기본 마진율/배송비 포함여부/
-  // 반올림 단위)을 읽어온다. SellerProfileSummaryCard와 같은 이유로(CP001류
-  // 중복 판정 방지) 여기서도 자체 fetch로만 읽고 수정은 Settings 한 곳에서만.
+  // Sprint A-11/N-3.9(Part I) — Settings의 "가격 정책"(기본 마진율/반올림
+  // 단위)을 초기값으로만 쓴다. 상품별로 사용자가 breakdownInput.marginPercent를
+  // 고치면 이 상품의 priceBreakdown에만 저장되고 Settings 기본값 자체는
+  // 바뀌지 않는다(다른 상품에 영향 없음).
   const [sellerDefaults, setSellerDefaults] = useState<{
     defaultMarginPercent: number | null;
-    includeShippingInPrice: boolean;
     priceRoundingUnit: number;
   } | null>(null);
   useEffect(() => {
@@ -80,27 +63,16 @@ export function PriceEditor({
       .then((res) => res.json())
       .then(
         (data: {
-          profiles?: Array<{
-            isDefault: boolean;
-            defaultMarginPercent: number | null;
-            includeShippingInPrice: boolean;
-            priceRoundingUnit: number;
-          }>;
+          profiles?: Array<{ isDefault: boolean; defaultMarginPercent: number | null; priceRoundingUnit: number }>;
         }) => {
           if (cancelled) return;
           const list = data.profiles ?? [];
           const p = list.find((x) => x.isDefault) ?? list[0] ?? null;
-          if (p) {
-            setSellerDefaults({
-              defaultMarginPercent: p.defaultMarginPercent,
-              includeShippingInPrice: p.includeShippingInPrice,
-              priceRoundingUnit: p.priceRoundingUnit,
-            });
-          }
+          if (p) setSellerDefaults({ defaultMarginPercent: p.defaultMarginPercent, priceRoundingUnit: p.priceRoundingUnit });
         },
       )
       .catch(() => {
-        // 조회 실패해도 아래에서 전역 기본값(22%, 10원)으로 폴백하므로 조용히 무시한다.
+        // 조회 실패해도 아래에서 packages/pricing의 전역 기본값으로 폴백하므로 조용히 무시한다.
       });
     return () => {
       cancelled = true;
@@ -108,57 +80,75 @@ export function PriceEditor({
   }, []);
 
   const roundingUnit = sellerDefaults?.priceRoundingUnit ?? DEFAULT_PRICE_ROUNDING_UNIT;
-  const includeShipping = sellerDefaults?.includeShippingInPrice ?? false;
 
-  const [marginPercent, setMarginPercent] = useState(DEFAULT_MARGIN_PERCENT);
-  const marginTouchedRef = useRef(false);
+  // 이 상품에 아직 가격 설정이 저장돼 있지 않을 때만(product.priceBreakdown ==
+  // null) Settings 기본 마진율을 1회 반영한다 — 이미 저장된 값(상품별 수정분
+  // 포함)은 절대 덮어쓰지 않는다.
   useEffect(() => {
-    if (!marginTouchedRef.current && sellerDefaults?.defaultMarginPercent != null) {
-      setMarginPercent(sellerDefaults.defaultMarginPercent);
-    }
-  }, [sellerDefaults]);
-
-  const costBasis = includeShipping ? breakdown.costKrw + breakdownInput.shippingKrw : breakdown.costKrw;
-  const autoPriceKrw = computeMarginPrice(costBasis, marginPercent, roundingUnit);
-
-  // linked=true인 동안은 마진/환율/반올림 단위가 바뀔 때마다 판매가를 자동
-  // 재계산해서 priceOverrideKrw에 그대로 반영한다(등록 Payload가 읽는 값은
-  // 항상 priceOverrideKrw 하나뿐이므로 — CP001류 이중 판정 방지). 판매가
-  // 입력칸을 사용자가 직접 고치면 linked를 끊어 더 이상 덮어쓰지 않는다.
-  // (useState로 관리 — ref는 렌더 중 읽을 수 없어 "자동계산으로 되돌리기"
-  // 버튼의 조건부 렌더링에 못 쓴다.)
-  const [isLinked, setIsLinked] = useState(true);
-  useEffect(() => {
-    if (isLinked && product.priceOverrideKrw?.value !== autoPriceKrw) {
-      onUpdateSalePriceKrw(autoPriceKrw);
+    if (product.priceBreakdown == null && sellerDefaults?.defaultMarginPercent != null) {
+      onUpdatePriceBreakdown({ ...DEFAULT_PRICE_BREAKDOWN_INPUT, marginPercent: sellerDefaults.defaultMarginPercent });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoPriceKrw, isLinked]);
+  }, [sellerDefaults]);
 
-  const salePriceKrw = product.priceOverrideKrw?.value ?? autoPriceKrw;
-  // Sprint A-12(작업1 — CPO 지시: "쿠팡 수수료 예상 / 예상 순이익까지 항상
-  // 보여야 한다") — 기존 상세 Breakdown의 feePercent(product.priceBreakdown)를
-  // 그대로 재사용한다(새 필드를 또 만들면 두 계산기가 서로 다른 수수료율을
-  // 갖는 CP001류 불일치가 생긴다).
-  const feeAmountKrw = Math.round((salePriceKrw * breakdownInput.feePercent) / 100);
-  const netProfitKrw = salePriceKrw - costBasis - feeAmountKrw;
+  const liveRates = exchangeRates?.rates;
+  const breakdown = computePriceBreakdown(
+    { originalAmount: product.price.value.amount, originalCurrency: product.price.value.currency, ...breakdownInput },
+    liveRates,
+    roundingUnit,
+  );
 
   function commitBreakdown(patch: Partial<typeof breakdownInput>) {
     onUpdatePriceBreakdown({ ...breakdownInput, ...patch });
   }
 
+  // 최종 판매가격 표시값 — 사용자가 아직 아무것도 커밋하지 않았으면(product.
+  // priceOverrideKrw == null) 권장 판매가격을 그대로 미리 보여주기만 한다(자동
+  // 커밋 아님, 입력칸을 고치거나 "적용" 버튼을 눌러야 실제로 저장된다).
+  const finalPriceKrw = product.priceOverrideKrw?.value ?? breakdown.suggestedPriceKrw;
+  const feeAmountKrw = Math.round((finalPriceKrw * breakdownInput.feePercent) / 100);
+  const netProfitKrw = finalPriceKrw - breakdown.landedCostKrw - feeAmountKrw;
+
   return (
     <section className="rounded-lg border border-border p-4 text-sm">
       <h3 className="text-base font-medium">판매가격</h3>
 
-      {/* Sprint A-10(작업4 — CEO 지시: "가격 계산 과정이 한눈에 보여야 한다,
-          보는 위치가 너무 깊다") — A-9까지는 환율/자동계산이 "환율" 한 항목 안에
-          문단으로 뭉쳐 있었다. 원본/실시간 환율/자동 계산/판매가를 각각 독립된
-          행으로 분리해서 Breakdown을 펼치지 않아도 4줄만 보면 계산 과정 전체가
-          보이게 한다. */}
+      {/* PART C — 결과 중심 상단: 권장 판매가격 + 직접 수정 가능한 최종
+          판매가격 + 명시적 적용 버튼(자동 적용 없음). */}
+      <div className="mt-3 rounded-md bg-background p-3">
+        <p className="text-xs text-text-secondary">권장 판매가격</p>
+        <p className="mt-0.5 text-lg font-semibold text-text-primary">{formatKrw(breakdown.suggestedPriceKrw)}</p>
+
+        <div className="mt-2.5 border-t border-border pt-2.5">
+          <label className="text-xs text-text-secondary">최종 판매가격</label>
+          <div className="mt-0.5 flex items-center gap-2">
+            <span className="text-sm text-text-secondary">₩</span>
+            <EditableText
+              value={String(finalPriceKrw)}
+              onCommit={(v) => onUpdateSalePriceKrw(Math.max(0, Number(v) || 0))}
+              className="w-32 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => onUpdateSalePriceKrw(breakdown.suggestedPriceKrw)}
+              className="rounded border border-primary px-2 py-1 text-[11px] font-medium text-primary hover:bg-primary/10"
+            >
+              최종 판매가격에 적용
+            </button>
+          </div>
+          <p className="mt-0.5 text-[11px] text-text-tertiary">
+            {product.priceOverrideKrw
+              ? "직접 저장된 값입니다 — 아래 가격 설정을 고쳐도 자동으로 바뀌지 않습니다. 다시 계산하려면 버튼을 누르세요."
+              : "아직 저장된 값이 없어 권장 판매가격을 보여주고 있습니다 — 입력하거나 버튼을 눌러야 저장됩니다."}
+          </p>
+        </div>
+      </div>
+
+      {/* PART C ② 가격 설정 — 수수료/마진을 고치면 위 권장 판매가격이 즉시
+          재계산된다(단, 최종 판매가격은 자동으로 바뀌지 않는다). */}
       <div className="mt-3 space-y-2.5">
         <div>
-          <p className="text-xs text-text-secondary">원본</p>
+          <p className="text-xs text-text-secondary">원본 가격</p>
           {onUpdateOriginalPrice ? (
             <div className="mt-0.5 flex items-center gap-1.5">
               <EditableText
@@ -183,14 +173,11 @@ export function PriceEditor({
               {formatOriginalPrice(product.price.value.amount, product.price.value.currency)}
             </p>
           )}
-          <p className="mt-0.5 text-[11px] text-text-tertiary">
-            사이트에서 자동으로 가져온 값 — 실제 판매 통화/가격과 다르면 직접 고쳐주세요.
-          </p>
         </div>
 
         <div>
           <div className="flex items-center justify-between">
-            <p className="text-xs text-text-secondary">실시간 환율</p>
+            <p className="text-xs text-text-secondary">환율 적용</p>
             <button
               type="button"
               onClick={onRefreshExchangeRates}
@@ -201,84 +188,35 @@ export function PriceEditor({
             </button>
           </div>
           <p className="mt-0.5 text-sm font-medium text-text-primary">
-            1 {product.price.value.currency} = {Math.round(breakdown.exchangeRate).toLocaleString("ko-KR")}원
+            1 {breakdown.originalCurrency} = ₩{Math.round(breakdown.exchangeRate).toLocaleString("ko-KR")}
             {breakdown.isRateEstimate
               ? " (추정 고정환율)"
               : exchangeRates?.source === "frankfurter"
                 ? " (출처: ECB)"
                 : ""}
           </p>
-          {exchangeRates && !breakdown.isRateEstimate && (
-            <p className="mt-0.5 text-[11px] text-text-tertiary">
-              {new Date(exchangeRates.fetchedAt).toLocaleString("ko-KR")} 기준
-            </p>
-          )}
+          <p className="mt-0.5 text-[11px] text-text-tertiary">→ 상품 원가 {formatKrw(breakdown.costKrw)}</p>
         </div>
 
         <div>
-          <p className="text-xs text-text-secondary">환율 적용 가격</p>
-          <p className="mt-0.5 text-sm font-medium text-text-primary">≈ {formatKrw(breakdown.costKrw)}</p>
-          <p className="mt-0.5 text-[11px] text-text-tertiary">
-            {product.price.value.amount} {product.price.value.currency} × {breakdown.exchangeRate.toFixed(2)}
-            {includeShipping ? ` + 배송비 ${formatKrw(breakdownInput.shippingKrw)}` : ""}
-          </p>
-        </div>
-
-        <div>
-          <p className="text-xs text-text-secondary">마진</p>
+          <p className="text-xs text-text-secondary">예상 배송비</p>
           <div className="mt-0.5 flex items-center gap-1">
-            <EditableText
-              value={String(marginPercent)}
-              onCommit={(v) => {
-                marginTouchedRef.current = true;
-                setMarginPercent(Math.max(0, Number(v) || 0));
-              }}
-              className="w-14 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
-            />
-            <span className="text-sm text-text-secondary">%</span>
-            <span className="ml-1 text-[11px] text-text-tertiary">
-              (설정의 기본 마진율 — <a href="/settings" className="text-primary hover:underline">Settings에서 변경</a>)
-            </span>
-          </div>
-        </div>
-
-        <div className="border-t border-border pt-2.5">
-          <div className="flex items-center justify-between">
-            <label className="text-xs text-text-secondary">최종 판매가</label>
-            {!isLinked && (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsLinked(true);
-                  onUpdateSalePriceKrw(autoPriceKrw);
-                }}
-                className="text-[11px] text-primary hover:underline"
-              >
-                자동계산으로 되돌리기
-              </button>
-            )}
-          </div>
-          <div className="mt-0.5 flex items-center gap-2">
             <span className="text-sm text-text-secondary">₩</span>
             <EditableText
-              value={String(salePriceKrw)}
-              onCommit={(v) => {
-                setIsLinked(false);
-                onUpdateSalePriceKrw(Number(v) || 0);
-              }}
-              className="w-32 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+              value={String(breakdownInput.shippingKrw)}
+              onCommit={(v) => commitBreakdown({ shippingKrw: Math.max(0, Number(v) || 0) })}
+              className="w-24 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
             />
-            <span className="text-xs text-text-secondary">{formatKrw(salePriceKrw)}</span>
           </div>
-          <p className="mt-0.5 text-[11px] text-text-tertiary">
-            {isLinked
-              ? `환율 적용 가격 × (1+${marginPercent}%), ${roundingUnit}원 단위로 반올림 — 마진을 고치면 자동으로 다시 계산됩니다`
-              : "직접 입력한 값입니다 — 마진을 고쳐도 이 값은 바뀌지 않습니다"}
-          </p>
         </div>
 
         <div>
-          <p className="text-xs text-text-secondary">쿠팡 수수료 예상</p>
+          <p className="text-xs text-text-secondary">랜드드 코스트(원가+배송비)</p>
+          <p className="mt-0.5 text-sm font-medium text-text-primary">{formatKrw(breakdown.landedCostKrw)}</p>
+        </div>
+
+        <div>
+          <p className="text-xs text-text-secondary">수수료</p>
           <div className="mt-0.5 flex items-center gap-1">
             <EditableText
               value={String(breakdownInput.feePercent)}
@@ -286,25 +224,30 @@ export function PriceEditor({
               className="w-14 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
             />
             <span className="text-sm text-text-secondary">%</span>
-            <span className="ml-1 text-xs text-text-tertiary">≈ {formatKrw(feeAmountKrw)}</span>
           </div>
-          <p className="mt-0.5 text-[11px] text-text-tertiary">
-            실제 카테고리별 수수료율은 쿠팡 정산 화면에서 확인 가능 — 여기서는 판매가 기준 추정치
-          </p>
         </div>
 
         <div>
-          <p className="text-xs text-text-secondary">예상 순이익(판매가 − 환율적용가 − 쿠팡수수료)</p>
-          <p className={`mt-0.5 text-sm font-medium ${netProfitKrw >= 0 ? "text-success" : "text-error"}`}>
-            {netProfitKrw >= 0 ? "+" : ""}
-            {formatKrw(netProfitKrw)}
-          </p>
+          <p className="text-xs text-text-secondary">목표 마진</p>
+          <div className="mt-0.5 flex items-center gap-1">
+            <EditableText
+              value={String(breakdownInput.marginPercent)}
+              onCommit={(v) => commitBreakdown({ marginPercent: Math.min(99, Math.max(0, Number(v) || 0)) })}
+              className="w-14 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+            />
+            <span className="text-sm text-text-secondary">%</span>
+            <span className="ml-1 text-[11px] text-text-tertiary">
+              (판매가 기준 목표 이익률 — <a href="/settings" className="text-primary hover:underline">Settings에서 기본값 변경</a>)
+            </span>
+          </div>
         </div>
       </div>
 
+      {/* PART D — 기본적으로 접혀 있는 Breakdown. 위와 같은 계산 결과를
+          "왜 이 금액인지"로 다시 보여준다(편집은 위에서만, 여기는 읽기전용). */}
       <details className="mt-4 border-t border-border pt-3">
         <summary className="cursor-pointer text-xs font-medium text-text-secondary hover:text-text-primary">
-          가격 계산 Breakdown — 왜 이 금액인지 보기
+          가격 계산 Breakdown
         </summary>
         <div className="mt-3 space-y-2 text-xs">
           <BreakdownRow label="원본 가격">
@@ -315,41 +258,28 @@ export function PriceEditor({
             {breakdown.isRateEstimate ? " (추정 고정환율)" : ""}
           </BreakdownRow>
           <BreakdownRow label="상품 원가">{formatKrw(breakdown.costKrw)}</BreakdownRow>
-          <BreakdownRow label="예상 국제배송비">
-            <EditableAmount
-              valueKrw={breakdownInput.shippingKrw}
-              onCommit={(v) => commitBreakdown({ shippingKrw: v })}
-            />
-          </BreakdownRow>
-          <BreakdownRow label="랜디드 원가(원가+배송비)">{formatKrw(breakdown.landedCostKrw)}</BreakdownRow>
-          <BreakdownRow label="예상 수수료">
-            <EditablePercent
-              valuePercent={breakdownInput.feePercent}
-              onCommit={(v) => commitBreakdown({ feePercent: v })}
-            />
-          </BreakdownRow>
-          <BreakdownRow label="목표 마진">
-            <EditablePercent
-              valuePercent={breakdownInput.marginPercent}
-              onCommit={(v) => commitBreakdown({ marginPercent: v })}
-            />
-          </BreakdownRow>
+          <BreakdownRow label="예상 배송비">{formatKrw(breakdownInput.shippingKrw)}</BreakdownRow>
           <div className="flex items-center justify-between border-t border-border pt-2">
-            <span className="font-medium text-text-primary">제안 판매가</span>
-            <span className="flex items-center gap-2">
-              <span className="font-medium text-text-primary">{formatKrw(breakdown.suggestedPriceKrw)}</span>
-              <button
-                type="button"
-                onClick={() => onUpdateSalePriceKrw(breakdown.suggestedPriceKrw)}
-                className="rounded border border-primary px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-primary/10"
-              >
-                판매가격에 적용
-              </button>
+            <span className="font-medium text-text-primary">랜드드 코스트</span>
+            <span className="font-medium text-text-primary">{formatKrw(breakdown.landedCostKrw)}</span>
+          </div>
+          <BreakdownRow label="예상 수수료">{breakdownInput.feePercent}%</BreakdownRow>
+          <BreakdownRow label="목표 마진">{breakdownInput.marginPercent}%</BreakdownRow>
+          <div className="flex items-center justify-between border-t border-border pt-2">
+            <span className="font-medium text-text-primary">권장 판매가격</span>
+            <span className="font-medium text-text-primary">{formatKrw(breakdown.suggestedPriceKrw)}</span>
+          </div>
+          <BreakdownRow label="예상 수수료 금액">{formatKrw(feeAmountKrw)}</BreakdownRow>
+          <div className="flex items-center justify-between border-t border-border pt-2">
+            <span className="font-medium text-text-primary">예상 이익(최종 판매가격 기준)</span>
+            <span className={`font-medium ${netProfitKrw >= 0 ? "text-success" : "text-error"}`}>
+              {netProfitKrw >= 0 ? "+" : ""}
+              {formatKrw(netProfitKrw)}
             </span>
           </div>
           <p className="pt-1 text-[11px] text-text-tertiary">
-            배송비/수수료율/마진율은 실제 물류·정산 데이터가 없어 추정치입니다 — 직접 아는 값으로 고쳐서 다시 계산할 수
-            있습니다.
+            배송비/수수료율/마진율은 실제 물류·정산 데이터가 없어 추정치입니다 — 위 &ldquo;가격 설정&rdquo;에서 직접 아는 값으로
+            고쳐서 다시 계산할 수 있습니다.
           </p>
         </div>
       </details>
@@ -363,31 +293,5 @@ function BreakdownRow({ label, children }: { label: string; children: React.Reac
       <span className="text-text-secondary">{label}</span>
       <span className="text-text-primary">{children}</span>
     </div>
-  );
-}
-
-function EditableAmount({ valueKrw, onCommit }: { valueKrw: number; onCommit: (v: number) => void }) {
-  return (
-    <span className="inline-flex items-center gap-1">
-      ₩
-      <EditableText
-        value={String(valueKrw)}
-        onCommit={(v) => onCommit(Math.max(0, Number(v) || 0))}
-        className="w-20 rounded border border-border px-1 py-0.5 text-right text-xs focus:border-primary focus:outline-none"
-      />
-    </span>
-  );
-}
-
-function EditablePercent({ valuePercent, onCommit }: { valuePercent: number; onCommit: (v: number) => void }) {
-  return (
-    <span className="inline-flex items-center gap-1">
-      <EditableText
-        value={String(valuePercent)}
-        onCommit={(v) => onCommit(Math.min(99, Math.max(0, Number(v) || 0)))}
-        className="w-12 rounded border border-border px-1 py-0.5 text-right text-xs focus:border-primary focus:outline-none"
-      />
-      %
-    </span>
   );
 }
