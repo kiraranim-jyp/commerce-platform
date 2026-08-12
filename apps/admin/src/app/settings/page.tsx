@@ -6,9 +6,11 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { ImagePicker } from "@/components/ui/ImagePicker";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Tabs } from "@/components/ui/Tabs";
-import type { TemplateSectionBlock } from "@commerce/listing";
+import type { PlatformConnectionStatus, TemplateSectionBlock } from "@commerce/listing";
+import { CoupangConnectionPanel } from "../pipeline/commerce/CoupangConnectionPanel";
 
 const TAB_KEYS = [
+  "accounts",
   "coupang",
   "shipping",
   "seller",
@@ -263,6 +265,7 @@ export default function SettingsPage() {
             value={activeTab}
             onChange={setActiveTab}
             items={[
+              { value: "accounts", label: "커머스 계정 관리" },
               { value: "coupang", label: "쿠팡 계정" },
               { value: "shipping", label: "배송 프로필" },
               { value: "seller", label: "판매자 정보" },
@@ -273,6 +276,15 @@ export default function SettingsPage() {
               { value: "smartstore", label: "스마트스토어", badge: "Soon", disabled: true },
             ]}
           />
+
+          <div className={activeTab === "accounts" ? "mt-5" : "hidden"}>
+            <SectionHeader
+              title="커머스 계정 관리"
+              description="플랫폼별 연결 상태를 한 곳에서 확인합니다. 향후 추가되는 커머스도 같은 방식으로 관리됩니다."
+              className="mb-3"
+            />
+            <CommerceAccountsSection account={account} onGoToCoupangSettings={() => setActiveTab("coupang")} onAccountCleared={loadAll} />
+          </div>
 
           <div className={activeTab === "coupang" ? "mt-5" : "hidden"}>
             <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
@@ -2014,6 +2026,133 @@ interface ComparisonShop {
 }
 
 /**
+ * Sprint N-3.8 — "쿠팡 계정"/"스마트스토어(Soon)" 탭에 흩어져 있던 연결 상태를
+ * 한 화면에 모은다. Naver/Coupang을 서로 다른 제품처럼 만들지 않는다는 원칙에
+ * 따라 CoupangConnectionPanel(이제 platformLabel prop으로 일반화됨)을 그대로
+ * 재사용하고, 새 컴포넌트를 따로 만들지 않았다.
+ *
+ * Coupang 계정은 Settings의 coupang 탭에서 편집(DB 저장), Naver는 환경변수
+ * (SMARTSTORE_CLIENT_ID/SECRET)로만 설정되고 이 화면에서 수정할 수 없다 — 없는
+ * 기능을 있는 것처럼 보이게 만들지 않는다("연결 해제" 버튼도 Naver에는 없다).
+ * "연결 해제"는 DB에 저장된 값만 지운다 — 환경변수로도 설정돼 있으면 계속
+ * 연결됨으로 표시될 수 있다는 한계를 캡션으로 명시한다(추측 금지 원칙).
+ */
+function CommerceAccountsSection({
+  account,
+  onGoToCoupangSettings,
+  onAccountCleared,
+}: {
+  account: AccountValues;
+  onGoToCoupangSettings: () => void;
+  onAccountCleared: () => void;
+}) {
+  const [coupangStatus, setCoupangStatus] = useState<PlatformConnectionStatus>("UNKNOWN");
+  const [coupangChecking, setCoupangChecking] = useState(false);
+  const [coupangCheckedAt, setCoupangCheckedAt] = useState<string | null>(null);
+  const [clearing, setClearing] = useState(false);
+
+  const [naverStatus, setNaverStatus] = useState<PlatformConnectionStatus>("UNKNOWN");
+  const [naverChecking, setNaverChecking] = useState(false);
+  const [naverCheckedAt, setNaverCheckedAt] = useState<string | null>(null);
+
+  async function checkCoupang() {
+    setCoupangChecking(true);
+    try {
+      const res = await fetch("/api/coupang/auth-test", { method: "POST" });
+      const data = (await res.json()) as { status?: PlatformConnectionStatus };
+      setCoupangStatus(data.status ?? "AUTH_FAILED");
+    } catch {
+      setCoupangStatus("AUTH_FAILED");
+    } finally {
+      setCoupangCheckedAt(new Date().toISOString());
+      setCoupangChecking(false);
+    }
+  }
+
+  async function checkNaver() {
+    setNaverChecking(true);
+    try {
+      const res = await fetch("/api/naver/auth-test", { method: "POST" });
+      const data = (await res.json()) as { status?: PlatformConnectionStatus };
+      setNaverStatus(data.status ?? "AUTH_FAILED");
+    } catch {
+      setNaverStatus("AUTH_FAILED");
+    } finally {
+      setNaverCheckedAt(new Date().toISOString());
+      setNaverChecking(false);
+    }
+  }
+
+  async function handleClearCoupang() {
+    if (!window.confirm("쿠팡 계정에 저장된 Access/Secret Key, Vendor ID, Wing 계정 ID를 초기화할까요?")) return;
+    setClearing(true);
+    try {
+      await fetch("/api/settings/coupang", { method: "DELETE" });
+      onAccountCleared();
+      setCoupangStatus("UNKNOWN");
+      setCoupangCheckedAt(null);
+    } finally {
+      setClearing(false);
+    }
+  }
+
+  const coupangAccountLabel = account.vendorId
+    ? `Vendor ID ${account.vendorId}`
+    : account.accessKeyMasked
+      ? `Access Key ${account.accessKeyMasked}`
+      : "저장된 계정 없음";
+
+  return (
+    <div className="space-y-3">
+      <CoupangConnectionPanel
+        platformLabel="쿠팡"
+        status={coupangStatus}
+        checking={coupangChecking}
+        checkedAt={coupangCheckedAt}
+        onCheck={() => void checkCoupang()}
+      />
+      <div className="rounded-lg border border-border bg-surface px-4 pb-3 pt-0 text-xs text-text-secondary">
+        <p>판매자 계정: {coupangAccountLabel}</p>
+        <div className="mt-2 flex gap-3">
+          <button type="button" onClick={onGoToCoupangSettings} className="font-medium text-primary hover:underline">
+            계정 설정
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleClearCoupang()}
+            disabled={clearing}
+            className="font-medium text-error hover:underline disabled:opacity-50"
+          >
+            {clearing ? "초기화 중…" : "연결 해제"}
+          </button>
+        </div>
+        <p className="mt-1 text-[11px] text-text-tertiary">
+          &ldquo;연결 해제&rdquo;는 이 화면에 저장된 값만 지웁니다 — 배포 환경 변수로도 설정돼 있다면 계속 연결됨으로 표시될 수
+          있습니다.
+        </p>
+      </div>
+
+      <CoupangConnectionPanel
+        platformLabel="스마트스토어(네이버)"
+        status={naverStatus}
+        checking={naverChecking}
+        checkedAt={naverCheckedAt}
+        onCheck={() => void checkNaver()}
+      />
+      <p className="rounded-lg border border-border bg-surface px-4 py-3 text-[11px] text-text-tertiary">
+        네이버 계정은 배포 환경변수(SMARTSTORE_CLIENT_ID/SMARTSTORE_CLIENT_SECRET)로만 설정됩니다 — 이 화면에서
+        수정하거나 해제할 수 없습니다.
+      </p>
+
+      <div className="rounded-lg border border-dashed border-border bg-background px-4 py-3 text-sm text-text-tertiary">
+        <p className="font-medium text-text-secondary">⚪ 새로운 Commerce</p>
+        <p className="mt-0.5 text-xs">아직 연결되지 않음 — 11번가, G마켓 등은 향후 추가될 예정입니다.</p>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Sprint B-0(CPO 지시, 2026-08-09) — 향후 가격 비교 기능(B-1+)의 기반. 이번
  * 스프린트는 크롤링/파싱 없이 "어떤 해외 편집샵을 비교 대상으로 쓸지"만
  * 관리한다. SYSTEM(추천 seed)은 활성/비활성만, USER(직접 추가)는 삭제도
@@ -2081,9 +2220,13 @@ function ComparisonShopsSection() {
 
   return (
     <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
-      <h2 className="text-base font-semibold text-text-primary">편집샵 목록</h2>
+      <h2 className="text-base font-semibold text-text-primary">편집샵(Seller) 목록</h2>
       <p className="mt-1 text-xs text-text-secondary">
-        체크된 사이트만 향후 가격 비교 대상이 됩니다. 추천 사이트는 삭제 대신 비활성화할 수 있습니다.
+        체크된 사이트만 가격 비교 대상이 됩니다. 추천 사이트는 삭제 대신 비활성화할 수 있습니다.
+      </p>
+      <p className="mt-1 text-xs text-text-tertiary">
+        아래 국가/통화는 참고 표시값입니다 — 실제 원본가격을 조회할 때는 이 값을 그대로 신뢰하지 않고 매번 그
+        판매처의 공식 사이트 데이터로 다시 확인합니다.
       </p>
 
       {loading ? (

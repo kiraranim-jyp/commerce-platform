@@ -108,6 +108,33 @@ export async function saveCoupangAccountSettings(
   return { ok: true };
 }
 
+/** N-3.8 — 커머스 계정 관리 화면의 "연결 해제"용. saveCoupangAccountSettings와
+ * 달리 빈 값을 "변경 안 함"으로 취급하지 않고 4개 필드를 전부 명시적으로 null로
+ * 만든다. 주의: getCoupangCredentials/getCoupangAccountSettingsForDisplay는 DB
+ * 값이 없으면 환경변수(COUPANG_ACCESS_KEY 등)로 폴백하므로, 배포 환경에 그
+ * 환경변수가 설정돼 있으면 이 호출 후에도 "연결됨"으로 계속 표시될 수 있다 —
+ * 이 함수는 DB에 저장된 값만 지울 수 있다(추측으로 "완전히 해제됨"이라고
+ * 말하지 않는다, 호출부 UI에서 이 한계를 명시한다). */
+export async function clearCoupangAccountSettings(): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) {
+    return {
+      ok: false,
+      error: "Supabase가 설정되지 않았습니다(NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 확인 필요).",
+    };
+  }
+  const { error } = await supabase.from("coupang_seller_settings").upsert({
+    id: SETTINGS_ROW_ID,
+    access_key: null,
+    secret_key: null,
+    vendor_id: null,
+    vendor_user_id: null,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
 /** 설정 페이지가 폼을 미리 채울 때 쓴다 — 시크릿(secretKey)은 절대 평문으로 다시
  * 내려주지 않고, "저장돼 있는지" 여부만 알려준다(마지막 4자리만 참고용으로 노출). */
 export async function getCoupangAccountSettingsForDisplay(): Promise<{

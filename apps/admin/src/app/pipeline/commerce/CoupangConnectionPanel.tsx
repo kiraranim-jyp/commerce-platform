@@ -21,21 +21,27 @@ function formatRelativeTime(iso: string): string {
 }
 
 /**
- * 페이지 로딩/탭 진입마다 쿠팡 API를 자동 호출하지 않는다 — 사용자가 [연결 다시
+ * 페이지 로딩/탭 진입마다 커머스 API를 자동 호출하지 않는다 — 사용자가 [연결 다시
  * 확인]을 눌렀을 때만 실제 인증 요청이 나간다(불필요한 API 호출 방지 + 사용자가
  * "지금 확인 중"임을 명확히 인지하게 하기 위해). 등록 직전에는 CommerceWorkspace가
  * 이 컴포넌트와 별개로 한 번 더 자동 재확인한다.
+ *
+ * N-3.8 — "Naver/Coupang을 서로 다른 제품처럼 만들지 않는다" 원칙에 따라, 원래
+ * 쿠팡 전용이던 이 컴포넌트를 platformLabel prop으로 일반화해서 네이버 연결
+ * 상태 표시(커머스 계정 관리)에도 그대로 재사용한다 — 새 컴포넌트를 만들지 않았다.
  */
 export function CoupangConnectionPanel({
   status,
   checking,
   checkedAt,
   onCheck,
+  platformLabel = "쿠팡",
 }: {
   status: PlatformConnectionStatus;
   checking: boolean;
   checkedAt: string | null;
   onCheck: () => void;
+  platformLabel?: string;
 }) {
   const display = STATUS_DISPLAY[status];
 
@@ -43,7 +49,7 @@ export function CoupangConnectionPanel({
     <section className="rounded-lg border border-border bg-surface p-4 text-sm shadow-subtle">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="font-medium text-text-primary">쿠팡 연결</p>
+          <p className="font-medium text-text-primary">{platformLabel} 연결</p>
           <p className={`mt-0.5 text-sm font-medium ${display.className}`}>
             {checking ? "확인 중…" : display.label}
           </p>
