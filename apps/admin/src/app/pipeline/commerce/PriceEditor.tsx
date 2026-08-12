@@ -5,8 +5,10 @@ import type { CanonicalProduct } from "@commerce/shared";
 import { countryToFlagEmoji } from "@commerce/shared";
 import {
   computePriceBreakdown,
+  convertToKrw,
   DEFAULT_PRICE_BREAKDOWN_INPUT,
   DEFAULT_PRICE_ROUNDING_UNIT,
+  FIXED_RATES_TO_KRW,
   formatKrw,
   formatOriginalPrice,
 } from "@commerce/pricing";
@@ -159,6 +161,30 @@ export function PriceEditor({
     };
   }, [product.sourceUrl]);
 
+  // N-3.13 Part H(CPO 지시) — "원본 사이트가 실제 제공하는 국가별 가격"과
+  // "CartPilot이 환산한 가격"을 절대 섞지 않는다. 기본 조회(위 useEffect)는
+  // 비용 때문에 origin+KR 2곳만 가져온다 — 나머지 후보 시장(US/GB/FR/DE/JP/
+  // AU/CA)은 사용자가 버튼을 눌렀을 때만 추가로 조회한다(N-3.2 원래 설계
+  // "국가별 가격 전체 조회는 펼쳤을 때만"을 그대로 따른다 — 자동 전체조회
+  // 안 함). 이미 결과가 있으면 다시 조회하지 않는다(중복 호출 방지).
+  const [expandedIntel, setExpandedIntel] = useState<PriceIntelligenceResult | null>(null);
+  const [expandLoading, setExpandLoading] = useState(false);
+  function loadExpandedMarkets() {
+    if (expandedIntel || expandLoading) return;
+    setExpandLoading(true);
+    fetch("/api/price-intelligence?expand=true", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sourceUrl: product.sourceUrl }),
+    })
+      .then((res) => res.json())
+      .then((json: PriceIntelligenceResult) => setExpandedIntel(json))
+      .catch(() => {
+        // 조회 실패해도 기존 원본가격 표시는 그대로 유지 — 조용히 무시.
+      })
+      .finally(() => setExpandLoading(false));
+  }
+
   // 이 상품에 아직 가격 설정이 저장돼 있지 않을 때만(product.priceBreakdown ==
   // null) Settings 기본 마진율을 1회 반영한다 — 이미 저장된 값(상품별 수정분
   // 포함)은 절대 덮어쓰지 않는다.
@@ -287,6 +313,23 @@ export function PriceEditor({
           </p>
         )}
 
+        {sellerIntel?.status === "OK" && sellerIntel.sellerOriginPrice && (
+          <div className="pl-[calc(6rem+0.5rem)]">
+            {!expandedIntel ? (
+              <button
+                type="button"
+                onClick={loadExpandedMarkets}
+                disabled={expandLoading}
+                className="text-[11px] text-primary hover:underline disabled:opacity-50"
+              >
+                {expandLoading ? "국가별 원본가격 조회 중..." : "국가별 원본가격 비교 보기 (추가 조회)"}
+              </button>
+            ) : (
+              <CountryPriceTable intel={expandedIntel} liveRates={liveRates} />
+            )}
+          </div>
+        )}
+
         <Row label="환율">
           <div className="flex items-center gap-2">
             <span className="font-medium text-text-primary">
@@ -412,6 +455,130 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     <div className="flex items-start justify-between gap-3">
       <span className="w-24 shrink-0 pt-1.5 text-text-secondary">{label}</span>
       <div className="min-w-0 flex-1 text-right">{children}</div>
+    </div>
+  );
+}
+
+/** N-3.13 Part H(CPO 지시) — "원본 사이트가 실제 제공하는 국가별 가격"과
+ * "CartPilot이 환산한 가격"을 표로 분리해서 보여준다. sellerOriginPrice/
+ * krMarket/additionalMarkets는 전부 실제로 fetch에 성공한 관측값(PriceObservation,
+ * confidence:"HIGH")만 들어있다 — 이 컴포넌트는 새 값을 추측하거나 다른
+ * 국가 가격을 복제하지 않고, API가 준 값을 그대로 나열만 한다. `≈`는
+ * CartPilot 환산 열에만 붙이고 원본 가격 열에는 절대 붙이지 않는다(CPO
+ * 지시). testedMarketCodes에는 있지만 additionalMarkets에 없는 코드는
+ * "조회했지만 이 시장에서 가격을 제공하지 않음"으로 명시한다(추측으로
+ * 빈 칸을 만들지 않는다). */
+function CountryPriceTable({
+  intel,
+  liveRates,
+}: {
+  intel: PriceIntelligenceResult;
+  liveRates?: Record<string, number>;
+}) {
+  interface Row {
+    label: string;
+    flag: string;
+    observation: { amount: number; currency: string } | null;
+    note: string;
+  }
+
+  const rows: Row[] = [];
+  if (intel.sellerOriginPrice) {
+    rows.push({
+      label: intel.seller.country ?? "확인 불가",
+      flag: countryToFlagEmoji(intel.seller.country) ?? "🌐",
+      observation: intel.sellerOriginPrice,
+      note: `원본 제공${intel.seller.name ? ` (${intel.seller.name})` : ""}`,
+    });
+  }
+  if (intel.krMarket) {
+    rows.push({ label: "KR", flag: countryToFlagEmoji("KR") ?? "🇰🇷", observation: intel.krMarket, note: "원본 제공" });
+  }
+  for (const m of intel.additionalMarkets) {
+    rows.push({
+      label: m.country ?? m.marketCode,
+      flag: countryToFlagEmoji(m.country) ?? "🌐",
+      observation: m,
+      note: "원본 제공",
+    });
+  }
+  // 실제로 조회했지만(testedMarketCodes) 값을 못 받은(additionalMarkets에 없는) 시장 —
+  // "제공하지 않음"으로 명시한다. sellerOriginPrice/krMarket에 해당하는 ""/"en-kr"은
+  // 위에서 이미 다뤘으니 제외한다. 국가 코드(label) 기준으로도 중복 제거한다 —
+  // 판매처 원본 마켓("")과 명시적 en-gb 프로브가 같은 나라를 가리키는 경우
+  // "실제 값"과 "원본 미제공"이 같은 나라로 동시에 뜨면 안 되기 때문이다.
+  const returnedCodes = new Set([
+    ...(intel.sellerOriginPrice ? [intel.sellerOriginPrice.marketCode] : []),
+    ...(intel.krMarket ? [intel.krMarket.marketCode] : []),
+    ...intel.additionalMarkets.map((m) => m.marketCode),
+  ]);
+  const returnedCountryLabels = new Set(rows.map((r) => r.label));
+  for (const code of intel.testedMarketCodes) {
+    if (code === "" || code === "en-kr" || returnedCodes.has(code)) continue;
+    const match = /^[a-z]{2}-([a-z]{2})$/i.exec(code);
+    const countryCode = match ? match[1].toUpperCase() : null;
+    if (countryCode && returnedCountryLabels.has(countryCode)) continue;
+    rows.push({
+      label: countryCode ?? code,
+      flag: countryToFlagEmoji(countryCode) ?? "🌐",
+      observation: null,
+      note: "원본 미제공",
+    });
+  }
+
+  if (rows.length === 0) {
+    return <p className="mt-1.5 text-[11px] text-text-tertiary">조회된 국가별 가격이 없습니다.</p>;
+  }
+
+  return (
+    <div className="mt-1.5 overflow-x-auto">
+      <table className="w-full min-w-[420px] border-collapse text-left text-[11px]">
+        <thead>
+          <tr className="border-b border-border text-text-tertiary">
+            <th className="py-1 pr-2 font-medium">국가/지역</th>
+            <th className="py-1 pr-2 font-medium">원본 가격</th>
+            <th className="py-1 pr-2 font-medium">원본 통화</th>
+            <th className="py-1 pr-2 font-medium">CartPilot 환산</th>
+            <th className="py-1 font-medium">근거</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => {
+            const currencyCode = row.observation?.currency.toUpperCase();
+            // 알려진 환율(liveRates 또는 고정 폴백표)이 없는 통화는 절대 변환하지 않는다 —
+            // convertToKrw는 모르는 통화를 금액 그대로 KRW 취급해 돌려주는데(추정치로
+            // 표시하기 위한 최후 폴백), 이 표에서 그대로 쓰면 "80 AUD ≈ ₩80" 같은 조작된
+            // 값처럼 보인다(CPO 지시 — 원본과 계산값을 절대 혼동시키지 않는다). 이 표에서는
+            // 실제 환율을 아는 통화만 환산하고, 모르면 "환율 정보 없음"으로 명시한다.
+            const hasKnownRate =
+              currencyCode != null &&
+              (currencyCode === "KRW" || liveRates?.[currencyCode] != null || FIXED_RATES_TO_KRW[currencyCode] != null);
+            const krw = row.observation && currencyCode !== "KRW" && hasKnownRate
+              ? convertToKrw(row.observation.amount, row.observation.currency, liveRates)
+              : null;
+            const convertedCell = row.observation == null
+              ? "—"
+              : currencyCode === "KRW"
+                ? "—"
+                : hasKnownRate && krw
+                  ? `≈ ${formatKrw(krw.amountKrw)}`
+                  : "환율 정보 없음";
+            return (
+              <tr key={`${row.label}-${i}`} className="border-b border-border last:border-b-0">
+                <td className="py-1 pr-2 text-text-primary">
+                  {row.flag} {row.label}
+                </td>
+                <td className="py-1 pr-2 text-text-primary">
+                  {row.observation ? row.observation.amount.toLocaleString("en-US") : "—"}
+                </td>
+                <td className="py-1 pr-2 text-text-secondary">{row.observation?.currency ?? "—"}</td>
+                <td className="py-1 pr-2 text-text-secondary">{convertedCell}</td>
+                <td className="py-1 text-text-tertiary">{row.note}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
