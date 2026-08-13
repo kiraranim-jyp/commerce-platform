@@ -43,7 +43,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen flex-col">
       <AppHeader />
       <div className="flex min-h-0 flex-1">
-        <nav className="flex w-[220px] shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-border bg-surface p-3">
+        <nav className="flex w-[220px] shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-brand-navy-800 bg-brand-navy-900 p-3">
           {NAV_ITEMS.filter((item) => item.visible !== false).map((item) => {
             const active = pathname === item.href.split("?")[0];
             const Icon = item.icon;
@@ -62,8 +62,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             const className = [
               "flex items-center gap-2 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium transition-colors duration-[var(--transition-fast)]",
               active
-                ? "bg-primary/10 text-primary"
-                : "text-text-secondary hover:bg-background hover:text-text-primary",
+                ? "bg-brand-green-500/15 text-brand-green-400"
+                : "text-white/65 hover:bg-white/5 hover:text-white",
             ].join(" ");
 
             if (item.soon) {

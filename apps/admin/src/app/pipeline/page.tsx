@@ -506,7 +506,7 @@ export default function PipelinePage() {
               (960~1040px 권장 범위)로 별도 고정한다. */}
           <div className="mx-auto max-w-[1000px] py-8 text-center">
             <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-              AI Commerce Copilot
+              원가부터 마진까지, 꼼꼼하게 따져드립니다
             </p>
             <h2 className="mt-4 text-3xl font-bold leading-tight tracking-tight text-text-primary md:text-4xl">
               해외 상품을 판매 가능한 상품으로
@@ -514,7 +514,7 @@ export default function PipelinePage() {
               가장 빠르게 준비하는 방법
             </h2>
             <p className="mx-auto mt-4 max-w-[720px] text-sm leading-relaxed text-text-secondary">
-              URL 하나를 입력하면 CartPilot AI가 상품 정보, 이미지, 카테고리, 콘텐츠를 분석하고
+              URL 하나를 입력하면 따져 AI가 상품 정보, 이미지, 카테고리, 콘텐츠를 분석하고
               국내 판매 등록을 준비합니다.
             </p>
 
@@ -546,7 +546,7 @@ export default function PipelinePage() {
 
           <div className="mx-auto mt-10 max-w-[1000px] border-t border-border pt-6">
             <p className="text-xs font-medium text-text-tertiary">
-              CartPilot이 자동으로 처리합니다
+              따져가 자동으로 처리합니다
             </p>
             <ul className="mt-3 grid grid-cols-1 gap-2 text-left text-sm text-text-secondary sm:grid-cols-2 lg:grid-cols-3">
               {[

@@ -5,8 +5,9 @@
  * CPO 지시로 표시하지 않는다(신고증 소재지까지만).
  */
 export const BUSINESS_INFO = {
-  serviceName: "CartPilot",
-  serviceDescription: "AI Commerce Copilot",
+  serviceName: "따져",
+  serviceNameEn: "TTAEJYO",
+  serviceDescription: "원가부터 마진까지, 꼼꼼하게 따져드립니다.",
   businessName: "규하맘샵",
   representative: "신주연",
   address: "경기도 하남시 미사강변한강로 326",

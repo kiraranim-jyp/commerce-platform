@@ -76,7 +76,7 @@ export function SupportInquiryButton({ bundle }: { bundle: DiagnosticBundle }) {
     }
 
     if (SUPPORT_EMAIL) {
-      const subject = encodeURIComponent(`[CartPilot] 등록 실패 문의 (${bundle.errorCode ?? "미분류"})`);
+      const subject = encodeURIComponent(`[따져] 등록 실패 문의 (${bundle.errorCode ?? "미분류"})`);
       const body = encodeURIComponent(note ? `${text}\n\n메모: ${note}` : text);
       window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
     }

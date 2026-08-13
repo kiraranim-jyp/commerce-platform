@@ -1156,7 +1156,7 @@ function ShippingSection({
               />
             </Field>
 
-            <Field label="배송방법" hint="현재 CartPilot은 해외구매대행으로만 등록합니다">
+            <Field label="배송방법" hint="현재 따져는 해외구매대행으로만 등록합니다">
               <input
                 type="text"
                 value={deliveryMethod}
