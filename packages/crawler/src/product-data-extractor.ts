@@ -48,6 +48,20 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   "kr": "SEK",
 };
 
+/** N-3.17(CPO 지시: "27.200000 문제 — 데이터 계층부터 확인") — 사이트가 내려주는
+ * 원본 가격 문자열/숫자를 그대로 저장하면 사이트 자체의 통화 변환기(멀티커런시
+ * 앱 등)가 남긴 부동소수점 오차가 그대로 들어온다(실측: 27.2로 표시되는 상품의
+ * 원본 값이 27.200000000000003이었다 — 27.2를 의도한 값이 아니라 계산 잔여
+ * 오차다). 모든 통화의 소수부는 실무상 2자리를 넘지 않으므로, 추출 시점에 2자리로
+ * 반올림해 이 잔여 오차를 제거한다 — 이건 "의미 있는 정밀도를 임의로 버리는 것"이
+ * 아니라 애초에 의미 없는 부동소수점 잡음을 정리하는 것이다(사용자가 실제로 입력/
+ * 확정한 값은 이 함수를 거치지 않는다 — CommerceWorkspace.updateOriginalPrice는
+ * 별도 경로).
+ */
+function roundPriceAmount(amount: number): number {
+  return Math.round(amount * 100) / 100;
+}
+
 /**
  * explicitCurrency는 schema.org Offer의 형제 필드(priceCurrency)에서 온 값이다 —
  * price 자체는 "2450"처럼 통화 기호 없는 순수 숫자인 경우가 흔해서, 있으면 이걸
@@ -58,11 +72,11 @@ function parsePrice(
   explicitCurrency?: string,
 ): { amount: number; currency: string } | undefined {
   if (raw == null) return undefined;
-  if (typeof raw === "number") return { amount: raw, currency: explicitCurrency ?? "" };
+  if (typeof raw === "number") return { amount: roundPriceAmount(raw), currency: explicitCurrency ?? "" };
   if (typeof raw !== "string") return undefined;
   const numMatch = /[\d.,]+/.exec(raw);
   if (!numMatch) return undefined;
-  const amount = Number(numMatch[0].replace(/,/g, ""));
+  const amount = roundPriceAmount(Number(numMatch[0].replace(/,/g, "")));
   if (!Number.isFinite(amount)) return undefined;
   if (explicitCurrency) return { amount, currency: explicitCurrency.toUpperCase() };
   for (const [symbol, code] of Object.entries(CURRENCY_SYMBOLS)) {
@@ -187,7 +201,7 @@ export function extractFromOpenGraph(html: string): Partial<ExtractedProductData
     brand,
     price:
       priceAmount != null
-        ? { amount: Number(priceAmount), currency: priceCurrency ?? "" }
+        ? { amount: roundPriceAmount(Number(priceAmount)), currency: priceCurrency ?? "" }
         : undefined,
   };
 }

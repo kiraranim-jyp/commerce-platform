@@ -132,21 +132,6 @@ function resolveFieldMeta(field: string): { sectionId: string; group: string } |
   return FIELD_SECTION[field];
 }
 
-/** Part E-10 요약 배지 순서 — E-12에서 고시정보 완성도 검증이 추가되어 이제
- * 실제로 검사되는 그룹이라 목록에 넣는다(이전엔 검사 안 해서 뺐었다). */
-const SECTION_GROUP_ORDER = [
-  "카테고리",
-  "상품정보",
-  "가격",
-  "옵션",
-  "이미지",
-  "상세페이지",
-  "배송/반품",
-  "인증(KC)",
-  "원산지",
-  "고시정보",
-];
-
 function payloadReplacer(_key: string, value: unknown): unknown {
   if (typeof value === "string" && value.startsWith("data:") && value.length > 80) {
     return `${value.slice(0, 40)}…(${value.length}자)`;
@@ -175,9 +160,6 @@ export function NaverPayloadPreview({
   const [resolved, setResolved] = useState<NaverResolveResponse | null>(null);
   const [resolving, setResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
-  // N-3.13 Part I — 등록 버튼을 눌렀을 때 "테스트 모드" 안내만 보여준다(실제
-  // 등록 API는 호출하지 않는다). 서버 요청이 전혀 없는 순수 UI 상태다.
-  const [showTestModeNotice, setShowTestModeNotice] = useState(false);
   // N-3.15 Phase 3(STEP 2-C) — 예전엔 이 컴포넌트가 자기만의 categoryIdInput
   // state로 카테고리를 관리했다(별도 후보 검색+선택 UI 포함). 이제 카테고리
   // 선택은 공유 Accordion("카테고리" 섹션, PlatformPreview)에서만 이뤄지고,
@@ -360,15 +342,6 @@ export function NaverPayloadPreview({
   const blockedIssues = validation.issues.filter((i) => i.severity === "BLOCKED");
   const missingIssues = validation.issues.filter((i) => i.severity === "MISSING");
 
-  // N-3.13 Part I(CPO 지시: "Validator와 등록 Gate에서 서로 다른 판단을
-  // 만들지 않는다") — validateNaverPayload()가 이미 계산해 둔 ok(=blockedCount
-  // === 0 && missingCount === 0)를 그대로 읽는다. 여기서 blockedCount/
-  // missingCount로 다시 판정하면 두 판단이 갈라질 수 있는 이중 로직이 된다
-  // (registrationAllowed를 별도 변수로 새로 계산하지 않는 이유).
-  const registrationAllowed = validation.ok;
-  const overallState = registrationAllowed ? "등록 가능" : "등록 불가";
-  const overallIcon = blockedCount > 0 ? "🔴" : missingCount > 0 ? "🟡" : "🟢";
-
   const notice = payload.originProduct.detailAttribute?.productInfoProvidedNotice;
   const representative = payload.originProduct.images.representativeImage.url;
   const optionalImages = payload.originProduct.images.optionalImages ?? [];
@@ -390,139 +363,86 @@ export function NaverPayloadPreview({
   // Registration Gate(🟢)와 섹션 배지가 서로 다른 그림을 보여주는 모순이
   // 생긴다 — Gate와 같은 기준을 쓴다는 원칙(I-3)을 섹션 요약에도 그대로
   // 적용한다.
-  const sectionSummary = SECTION_GROUP_ORDER.map((group) => {
-    const groupFields = validation.fields.filter((f) => resolveFieldMeta(f.field)?.group === group && !f.advisory);
-    const status = groupFields.some((f) => f.status === "BLOCKED")
-      ? "BLOCKED"
-      : groupFields.some((f) => f.status === "MISSING")
-        ? "MISSING"
-        : "READY";
-    return { group, status, checked: groupFields.length > 0 };
-  }).filter((s) => s.checked);
-  const SECTION_STATUS_ICON: Record<string, string> = { READY: "🟢", MISSING: "🟡", BLOCKED: "🔴" };
 
+  // N-3.17(CPO 지시: "SmartStore Preview/Workspace 중복 제거 — 등록 가능
+  // 여부/등록 버튼은 우측 RegistrationReadinessCard 하나로만 판단한다") —
+  // 예전엔 이 컴포넌트가 자기만의 "등록 가능 여부 + 등록하기 버튼 +
+  // [카테고리]🟢 요약"을 화면 맨 위에 따로 그렸다. 우측에 이미 같은 질문("등록
+  // 가능한가?")에 답하는 RegistrationReadinessCard가 있어서, 두 판정이 서로
+  // 다른 계산식(validateNaverPayload vs computeReadinessScoreSummary)에서
+  // 나오면 두 곳이 다른 답을 보여줄 위험이 있다(CP001과 같은 종류) — 화면에
+  // 등록 CTA/상태를 하나만 남기고, 이 컴포넌트는 "고급 검증 정보"(payload
+  // 필드 단위 상세, 우측 카드가 안 보여주는 정보)만 담당한다.
   return (
-    <div className="space-y-3 rounded-lg border border-border bg-surface p-4 shadow-subtle">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-text-primary">네이버 상품등록 미리보기</h3>
-        <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-medium text-warning">
-          Preview 전용 — 실제 등록 API는 호출하지 않습니다
-        </span>
-      </div>
-
-      {/* N-3.15 Phase 2(CPO 지시: "Raw Validator 기본 숨김") — 등록 가능 여부/CTA/
-       * 섹션 요약(sectionSummary, 이미 [카테고리]🟢 형태의 사람이 읽는 문구)은
-       * 기본으로 보이고, claimDeliveryInfo.xxx 같은 원본 필드 경로가 그대로
-       * 나오는 BLOCKED/MISSING 상세 목록만 "고급 검증 정보"로 접어 숨긴다.
-       * READY/MISSING/BLOCKED 판정 로직 자체는 그대로(validateNaverPayload) —
-       * 노출 위치만 바뀐다. */}
-      <div className="rounded-md bg-background p-3">
-        <p className="text-sm font-medium text-text-primary">
-          등록 가능 여부: {overallIcon} {overallState}
-        </p>
-        {/* N-3.13 Part I(CPO 지시: "Validator와 등록 Gate에서 서로 다른 판단을
-         * 만들지 않는다") — 버튼의 활성/비활성은 오직 registrationAllowed
-         * (=validation.ok) 하나로만 정한다. 이번 Sprint 안전 원칙은 그대로
-         * 유지 — 버튼을 눌러도 실제 POST /v2/products는 절대 호출하지
-         * 않고, 테스트 모드 안내만 보여준다. */}
-        <div className="mt-2 flex items-center gap-2">
-          <button
-            type="button"
-            disabled={!registrationAllowed}
-            onClick={() => setShowTestModeNotice(true)}
-            className="rounded-[var(--radius-md)] bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors duration-[var(--transition-fast)] disabled:cursor-not-allowed disabled:bg-border disabled:text-text-tertiary"
-          >
-            등록하기
-          </button>
-          {!registrationAllowed && (
-            <span className="text-[11px] text-text-tertiary">
-              {blockedCount > 0
-                ? `등록 차단 ${blockedCount}건을 먼저 해결하세요`
-                : `입력 필요 ${missingCount}건을 먼저 채우세요`}
-            </span>
-          )}
-        </div>
-        {showTestModeNotice && registrationAllowed && (
-          <p className="mt-1.5 rounded-[var(--radius-md)] bg-warning-soft px-2 py-1.5 text-[11px] text-warning">
-            현재는 테스트 모드입니다. 실제 상품 등록 API 호출은 비활성화되어 있습니다.
-          </p>
-        )}
-        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-text-secondary">
-          {sectionSummary.map((s) => (
-            <span key={s.group}>
-              [{s.group}] {SECTION_STATUS_ICON[s.status]}
-            </span>
-          ))}
-        </div>
-
-        {(blockedIssues.length > 0 || missingIssues.length > 0) && (
-          <div className="mt-3">
-          <CollapsibleSection title="고급 검증 정보">
-            <div className="flex flex-wrap items-center gap-3 text-xs">
-              <span className="text-success">🟢 READY {readyCount}</span>
-              <span className="text-warning">🟡 MISSING {missingCount}</span>
-              <span className="text-error">🔴 BLOCKED {blockedCount}</span>
+    <CollapsibleSection
+      title="SmartStore 등록 상세 확인"
+      summary="원산지 · 고시정보 · KC · 배송/반품 등 SmartStore 전용 항목입니다. 등록 가능 여부는 우측 등록 준비도 카드를 확인하세요."
+    >
+      {(blockedIssues.length > 0 || missingIssues.length > 0) && (
+        <CollapsibleSection title="고급 검증 정보(필드 단위)">
+          <div className="flex flex-wrap items-center gap-3 text-xs">
+            <span className="text-success">🟢 READY {readyCount}</span>
+            <span className="text-warning">🟡 MISSING {missingCount}</span>
+            <span className="text-error">🔴 BLOCKED {blockedCount}</span>
+          </div>
+          {blockedIssues.length > 0 && (
+            <div className="mt-2">
+              <p className="text-[11px] font-semibold text-error">BLOCKED</p>
+              <ul className="mt-1 space-y-1">
+                {blockedIssues.map((issue, i) => (
+                  <li key={`blocked-${issue.field}-${i}`} className="flex items-start gap-1.5 text-[11px]">
+                    <span className="text-error">🔴</span>
+                    <button
+                      type="button"
+                      onClick={() => goToSection(issue.field)}
+                      className="min-w-0 flex-1 text-left text-text-secondary hover:text-text-primary hover:underline"
+                    >
+                      <span className="font-medium text-text-primary">{issue.field}</span> — {issue.reason}
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
-            {blockedIssues.length > 0 && (
-              <div className="mt-2">
-                <p className="text-[11px] font-semibold text-error">BLOCKED</p>
-                <ul className="mt-1 space-y-1">
-                  {blockedIssues.map((issue, i) => (
-                    <li key={`blocked-${issue.field}-${i}`} className="flex items-start gap-1.5 text-[11px]">
-                      <span className="text-error">🔴</span>
-                      <button
-                        type="button"
-                        onClick={() => goToSection(issue.field)}
-                        className="min-w-0 flex-1 text-left text-text-secondary hover:text-text-primary hover:underline"
-                      >
-                        <span className="font-medium text-text-primary">{issue.field}</span> — {issue.reason}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {missingIssues.length > 0 && (
-              <div className="mt-2">
-                <p className="text-[11px] font-semibold text-warning">MISSING</p>
-                <ul className="mt-1 space-y-1">
-                  {missingIssues.map((issue, i) => (
-                    <li key={`missing-${issue.field}-${i}`} className="flex items-start gap-1.5 text-[11px]">
-                      <span className="text-warning">🟡</span>
-                      <button
-                        type="button"
-                        onClick={() => goToSection(issue.field)}
-                        className="min-w-0 flex-1 text-left text-text-secondary hover:text-text-primary hover:underline"
-                      >
-                        <span className="font-medium text-text-primary">{issue.field}</span> — {issue.reason}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </CollapsibleSection>
-          </div>
-        )}
-        {/* N-3.13 Part I(CPO 결정, 2026-08-12) — 등록 가능 여부와는 무관하지만
-         * 판매자가 알아야 하는 참고 정보. "차단"이나 "입력 필요" 목록에 섞이면
-         * 등록을 막는 원인처럼 오해할 수 있어 별도 블록으로 분리한다. */}
-        {validation.advisoryNotes.length > 0 && (
-          <div className="mt-2">
-            <p className="text-[11px] font-semibold text-text-tertiary">참고(등록 가능 여부와 무관)</p>
-            <ul className="mt-1 space-y-1">
-              {validation.advisoryNotes.map((note, i) => (
-                <li key={`advisory-${note.field}-${i}`} className="flex items-start gap-1.5 text-[11px]">
-                  <span className="text-text-tertiary">ℹ️</span>
-                  <span className="min-w-0 flex-1 text-text-secondary">
-                    <span className="font-medium text-text-primary">{note.field}</span> — {note.reason}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
+          )}
+          {missingIssues.length > 0 && (
+            <div className="mt-2">
+              <p className="text-[11px] font-semibold text-warning">MISSING</p>
+              <ul className="mt-1 space-y-1">
+                {missingIssues.map((issue, i) => (
+                  <li key={`missing-${issue.field}-${i}`} className="flex items-start gap-1.5 text-[11px]">
+                    <span className="text-warning">🟡</span>
+                    <button
+                      type="button"
+                      onClick={() => goToSection(issue.field)}
+                      className="min-w-0 flex-1 text-left text-text-secondary hover:text-text-primary hover:underline"
+                    >
+                      <span className="font-medium text-text-primary">{issue.field}</span> — {issue.reason}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </CollapsibleSection>
+      )}
+      {/* N-3.13 Part I(CPO 결정, 2026-08-12) — 등록 가능 여부와는 무관하지만
+       * 판매자가 알아야 하는 참고 정보. "차단"이나 "입력 필요" 목록에 섞이면
+       * 등록을 막는 원인처럼 오해할 수 있어 별도 블록으로 분리한다. */}
+      {validation.advisoryNotes.length > 0 && (
+        <div className="rounded-md bg-background p-3">
+          <p className="text-[11px] font-semibold text-text-tertiary">참고(등록 가능 여부와 무관)</p>
+          <ul className="mt-1 space-y-1">
+            {validation.advisoryNotes.map((note, i) => (
+              <li key={`advisory-${note.field}-${i}`} className="flex items-start gap-1.5 text-[11px]">
+                <span className="text-text-tertiary">ℹ️</span>
+                <span className="min-w-0 flex-1 text-text-secondary">
+                  <span className="font-medium text-text-primary">{note.field}</span> — {note.reason}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* N-3.15 Phase 3(STEP 2-B/2-C) — 기본정보/카테고리/가격은 더 이상 여기서
        * 따로 그리지 않는다. PlatformPreview의 공유 Accordion("기본정보"/
@@ -760,7 +680,7 @@ export function NaverPayloadPreview({
           {JSON.stringify(payload, payloadReplacer, 2)}
         </pre>
       )}
-    </div>
+    </CollapsibleSection>
   );
 }
 

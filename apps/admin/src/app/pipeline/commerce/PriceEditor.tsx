@@ -214,11 +214,19 @@ export function PriceEditor({
     setDraftInput(breakdownInput);
   }
 
-  const [draftOriginalAmount, setDraftOriginalAmount] = useState(product.price.value.amount);
-  const [syncedAmount, setSyncedAmount] = useState(product.price.value.amount);
-  if (product.price.value.amount !== syncedAmount) {
-    setSyncedAmount(product.price.value.amount);
-    setDraftOriginalAmount(product.price.value.amount);
+  // N-3.17(CPO 지시: "27.200000 문제 — UI에서 덮지 말고 데이터 계층부터") —
+  // 크롤링 시점 반올림(product-data-extractor.ts의 roundPriceAmount)은 새로
+  // 추출하는 상품에만 적용된다. 이미 저장된 스냅샷 중에는 수정 전 크롤러가
+  // 만든 부동소수점 잔여 오차(예: 27.200000000000003)가 남아있을 수 있어,
+  // 이 화면에서 편집 가능한 원본값으로 읽어들일 때도 한 번 더 정리한다 —
+  // product.price.value.amount 자체를 고치는 게 아니라(원본 데이터 변형
+  // 금지), "사용자가 직접 고치지 않는 한" 표시/편집에 쓰는 로컬 값만 정리한다.
+  const cleanOriginalAmount = Math.round(product.price.value.amount * 100) / 100;
+  const [draftOriginalAmount, setDraftOriginalAmount] = useState(cleanOriginalAmount);
+  const [syncedAmount, setSyncedAmount] = useState(cleanOriginalAmount);
+  if (cleanOriginalAmount !== syncedAmount) {
+    setSyncedAmount(cleanOriginalAmount);
+    setDraftOriginalAmount(cleanOriginalAmount);
   }
 
   function liveUpdateBreakdown(patch: Partial<typeof breakdownInput>) {
