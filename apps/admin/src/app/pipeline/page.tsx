@@ -497,7 +497,7 @@ export default function PipelinePage() {
           통일하고, 랜딩의 좁은 폭은 안쪽 섹션(max-w-xl)에서만 준다. */}
       <PageContainer size="xl" className="min-w-0 py-10">
       {!started ? (
-        <section className="mx-auto mt-16 max-w-2xl text-center">
+        <section className="mx-auto mt-16 max-w-5xl text-center">
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">
             AI Commerce Copilot
           </p>

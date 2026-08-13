@@ -10,7 +10,6 @@ export function Footer() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="leading-relaxed">
           <div className="text-xs font-semibold text-text-secondary">{BUSINESS_INFO.serviceName}</div>
-          <div>{BUSINESS_INFO.serviceDescription}</div>
           <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
             <span>상호: {BUSINESS_INFO.businessName}</span>
             <span className="hidden sm:inline">·</span>
