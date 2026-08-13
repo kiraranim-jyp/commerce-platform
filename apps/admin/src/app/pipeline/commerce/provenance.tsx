@@ -8,10 +8,14 @@ const STATUS_STYLES: Record<FieldSource, string> = {
   REQUIRED: "bg-error-soft text-error border border-error/20",
 };
 
+// N-3.16(CPO 지시: "ValueBadge 실제 적용") — 가격 화면의 원본/AI 추천/사용자
+// 확정 문구와 같은 언어로 맞춘다. 기존에는 이 배지만 "AI 생성"/"수정됨"을
+// 썼는데, 화면마다 같은 개념을 다른 단어로 부르면 사용자가 매번 다시
+// 학습해야 한다.
 const STATUS_LABELS: Record<FieldSource, string> = {
   ORIGINAL: "원본",
-  USER_EDITED: "수정됨",
-  AI_GENERATED: "AI 생성",
+  USER_EDITED: "사용자 확정",
+  AI_GENERATED: "AI 추천",
   DEFAULT: "기본값",
   REQUIRED: "입력 필요",
 };

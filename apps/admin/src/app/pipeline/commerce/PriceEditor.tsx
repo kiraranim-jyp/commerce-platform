@@ -14,6 +14,7 @@ import {
 } from "@commerce/pricing";
 import type { PriceIntelligenceResult } from "@commerce/pricing";
 import { EditableText } from "./EditableField";
+import { ValueBadge } from "@/components/ui/ValueBadge";
 
 /**
  * Sprint N-3.8/N-3.9(가격 계산 모델 통일 — CPO 지시) — 예전에는 화면 상단
@@ -247,7 +248,7 @@ export function PriceEditor({
       </p>
 
       <div className="mt-3 space-y-2.5 text-xs">
-        <Row label="원본 가격">
+        <Row label="원본 가격" badge={<ValueBadge kind="original" />}>
           {onUpdateOriginalPrice ? (
             <div className="flex items-center gap-1.5">
               <LiveNumberField
@@ -402,11 +403,14 @@ export function PriceEditor({
         </Row>
 
         <div className="flex items-center justify-between border-t border-border pt-2.5">
-          <span className="font-medium text-text-primary">권장 판매가격</span>
+          <span className="flex items-center gap-1.5 font-medium text-text-primary">
+            권장 판매가격
+            <ValueBadge kind="aiSuggested" />
+          </span>
           <span className="text-base font-semibold text-text-primary">{formatKrw(breakdown.suggestedPriceKrw)}</span>
         </div>
 
-        <Row label="최종 판매가격">
+        <Row label="최종 판매가격" badge={product.priceOverrideKrw ? <ValueBadge kind="userConfirmed" /> : undefined}>
           <div className="flex items-center gap-2">
             <span className="text-text-secondary">₩</span>
             <EditableText
@@ -450,10 +454,25 @@ export function PriceEditor({
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+/** N-3.16(CPO 지시: "ValueBadge 실제 연결") — 원본/AI추천/사용자확정 값이
+ * 섞이기 쉬운 가격 화면에서, 어느 값이 지금 실제 등록에 쓰이는지 라벨 옆
+ * ValueBadge로 표시한다. badge가 없으면(대부분의 Row) 기존과 동일하게 그린다 —
+ * 이 Row 컴포넌트를 쓰는 다른 모든 곳(환율/원가/배송비 등)은 변경 없음. */
+function Row({
+  label,
+  badge,
+  children,
+}: {
+  label: string;
+  badge?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex items-start justify-between gap-3">
-      <span className="w-24 shrink-0 pt-1.5 text-text-secondary">{label}</span>
+      <span className="w-24 shrink-0 pt-1.5 text-text-secondary">
+        {label}
+        {badge && <span className="ml-1.5">{badge}</span>}
+      </span>
       <div className="min-w-0 flex-1 text-right">{children}</div>
     </div>
   );
