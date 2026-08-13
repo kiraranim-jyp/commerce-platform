@@ -53,7 +53,14 @@ export const MARKETPLACE_DESCRIPTORS: Record<PlatformId, MarketplaceDescriptor> 
       hasSellerProfileSummary: false,
       hasPayloadInspector: false,
       hasNaverPreview: true,
-      registrationEnabled: false,
+      // N-3.26(CPO 지시, 2026-08-13) — 서버 register route(N-3.25)가 완성되고
+      // 첫 실등록 검증 단계로 넘어가면서 최소 범위로 켠다. Coupang/11번가는
+      // 영향받지 않는다(플랫폼별 독립 항목). 이 값이 true여도 실제 등록
+      // 버튼은 RegistrationReadinessCard의 Readiness=PASS 판정을 여전히
+      // 통과해야 눌리고, register route도 validateNaverPayload가 ok가
+      // 아니면 실제 API 호출 전에 막는다 — "버튼이 보인다"가 "등록이
+      // 항상 성공한다"를 뜻하지 않는다.
+      registrationEnabled: true,
     },
   },
   elevenst: {
