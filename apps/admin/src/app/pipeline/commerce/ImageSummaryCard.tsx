@@ -26,6 +26,11 @@ export function ImageSummaryCard({
   const representative = product.images.find((img) => img.isRepresentative);
   const representativeItem = representative ? items.find((i) => i.id === representative.id) : undefined;
   const thumbUrl = representativeItem ? thumbnails[representativeItem.id] : undefined;
+  // N-3.19 — 여기 숫자도 실제 등록 payload가 쓰는 기준(isRepresentative ||
+  // useInProductGallery)과 같아야 한다. 예전엔 items.length(원본 전체 장수)만
+  // 보여줘서 "등록에서 제외"한 이미지까지 등록되는 것처럼 보였다.
+  const registeredCount = product.images.filter((img) => img.isRepresentative || img.useInProductGallery).length;
+  const excludedCount = product.images.length - registeredCount;
 
   return (
     <section className="rounded-lg border border-border bg-surface p-4 shadow-subtle">
@@ -48,7 +53,10 @@ export function ImageSummaryCard({
         </div>
         <div>
           <p className="text-sm font-medium text-text-primary">이미지</p>
-          <p className="mt-0.5 text-xs text-text-secondary">총 이미지 {items.length}장</p>
+          <p className="mt-0.5 text-xs text-text-secondary">
+            원본 {product.images.length}장 · 등록 {registeredCount}장
+            {excludedCount > 0 && ` · 제외 ${excludedCount}장`}
+          </p>
           <p className="mt-1 text-xs font-medium text-primary">이미지 관리 →</p>
         </div>
       </button>

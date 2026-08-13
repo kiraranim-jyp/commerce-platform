@@ -93,12 +93,11 @@ export function CommerceWorkspace({
   items,
   thumbnails,
   representativeId,
-  excludedIds,
   onPreviewImage,
   onSetRepresentative,
   onToggleGalleryUsage,
   onToggleDescriptionUsage,
-  onToggleExclude,
+  onMoveImage,
   developerMode,
   analysisStartedAt,
   snapshotId,
@@ -112,12 +111,11 @@ export function CommerceWorkspace({
   items: WorkspaceItem[];
   thumbnails: Record<string, string>;
   representativeId: string | null;
-  excludedIds: Set<string>;
   onPreviewImage: (id: string) => void;
   onSetRepresentative: (id: string) => void;
   onToggleGalleryUsage: (id: string) => void;
   onToggleDescriptionUsage: (id: string) => void;
-  onToggleExclude: (id: string) => void;
+  onMoveImage: (id: string, direction: "up" | "down") => void;
   /** P0-UI Epic 1/4 — Payload JSON/개발 로그 등은 이 값이 true일 때만 보여준다. */
   developerMode: boolean;
   /** Sprint A-6(작업4 — 등록 소요시간 측정) — page.tsx가 URL 제출 시점에 잰
@@ -1272,12 +1270,11 @@ export function CommerceWorkspace({
           items={items}
           thumbnails={thumbnails}
           representativeId={representativeId}
-          excludedIds={excludedIds}
           onPreview={onPreviewImage}
           onSetRepresentative={onSetRepresentative}
           onToggleGalleryUsage={onToggleGalleryUsage}
           onToggleDescriptionUsage={onToggleDescriptionUsage}
-          onToggleExclude={onToggleExclude}
+          onMoveImage={onMoveImage}
           onClose={() => setGalleryOpen(false)}
         />
       )}

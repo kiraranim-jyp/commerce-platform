@@ -32,7 +32,6 @@ export default function PipelinePage() {
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<TabKey>("original");
   const [representativeId, setRepresentativeId] = useState<string | null>(null);
-  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [retryingIds, setRetryingIds] = useState<Set<string>>(new Set());
@@ -122,7 +121,6 @@ export default function PipelinePage() {
             setItems(ws.items);
             setThumbnails(ws.thumbnails ?? {});
             setRepresentativeId(ws.representativeId);
-            setExcludedIds(new Set(ws.excludedIds));
             setDetailBlocks(ws.detailBlocks ?? defaultDetailBlocks());
             setCategoryMappings(ws.categoryMappings ?? null);
             setHydrated(true);
@@ -143,7 +141,6 @@ export default function PipelinePage() {
             items?: WorkspaceItem[];
             thumbnails?: Record<string, string>;
             representativeId?: string | null;
-            excludedIds?: string[];
             detailBlocks?: DetailPageBlock[];
             categoryMappings?: Record<PlatformId, CategorySelection>;
           };
@@ -154,7 +151,6 @@ export default function PipelinePage() {
             setItems(saved.items ?? []);
             setThumbnails(saved.thumbnails ?? {});
             setRepresentativeId(saved.representativeId ?? null);
-            setExcludedIds(new Set(saved.excludedIds ?? []));
             setDetailBlocks(saved.detailBlocks ?? defaultDetailBlocks());
             setCategoryMappings(saved.categoryMappings ?? null);
           }
@@ -184,7 +180,6 @@ export default function PipelinePage() {
             items: stripHeavyDataUrls(items),
             thumbnails,
             representativeId,
-            excludedIds: [...excludedIds],
             detailBlocks,
             categoryMappings,
           }),
@@ -197,7 +192,7 @@ export default function PipelinePage() {
       // 영향 없게 조용히 무시한다.
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated, url, result, product, items, thumbnails, representativeId, excludedIds, detailBlocks, categoryMappings]);
+  }, [hydrated, url, result, product, items, thumbnails, representativeId, detailBlocks, categoryMappings]);
 
   async function saveSnapshotToServer() {
     if (!result || !product) return;
@@ -218,7 +213,6 @@ export default function PipelinePage() {
             items: stripHeavyDataUrls(items),
             thumbnails,
             representativeId,
-            excludedIds: [...excludedIds],
             activeTab: "source",
             developerMode,
             platformSettings: {},
@@ -247,7 +241,7 @@ export default function PipelinePage() {
     }, 2000);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated, url, result, product, items, representativeId, excludedIds, detailBlocks, categoryMappings]);
+  }, [hydrated, url, result, product, items, representativeId, detailBlocks, categoryMappings]);
 
   async function precomputeThumbnails(newItems: WorkspaceItem[]) {
     const entries = await Promise.all(
@@ -269,7 +263,6 @@ export default function PipelinePage() {
     setItems([]);
     setThumbnails({});
     setRepresentativeId(null);
-    setExcludedIds(new Set());
     setPreviewId(null);
     setSelectedId(null);
     setRetryCounts({});
@@ -377,7 +370,6 @@ export default function PipelinePage() {
     setItems([]);
     setThumbnails({});
     setRepresentativeId(null);
-    setExcludedIds(new Set());
     setPreviewId(null);
     setSelectedId(null);
     setRetryingIds(new Set());
@@ -415,15 +407,20 @@ export default function PipelinePage() {
     }));
   }
 
-  function toggleExclude(id: string) {
-    setExcludedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
+  /** N-3.19(CPO 지시: "삭제 = 상품 등록에서 제외") — 예전엔 별도 excludedIds
+   * Set이 있어서 카드에 회색 처리만 하고 실제 등록 payload(product.images의
+   * useInProductGallery)는 전혀 안 바뀌는 버그가 있었다("삭제했는데 실제
+   * 등록에는 들어간다"). source-of-truth를 하나로 합친다 — 이 토글이 바로
+   * useInProductGallery를 뒤집는다. */
+  function moveImage(id: string, direction: "up" | "down") {
+    updateProduct((prev) => {
+      const idx = prev.images.findIndex((img) => img.id === id);
+      if (idx === -1) return prev;
+      const swapWith = direction === "up" ? idx - 1 : idx + 1;
+      if (swapWith < 0 || swapWith >= prev.images.length) return prev;
+      const nextImages = [...prev.images];
+      [nextImages[idx], nextImages[swapWith]] = [nextImages[swapWith], nextImages[idx]];
+      return { ...prev, images: nextImages };
     });
   }
 
@@ -612,7 +609,6 @@ export default function PipelinePage() {
             items={items}
             thumbnails={thumbnails}
             representativeId={representativeId}
-            excludedIds={excludedIds}
             onPreviewImage={(id) => {
               setSelectedId(id);
               setPreviewId(id);
@@ -620,7 +616,7 @@ export default function PipelinePage() {
             onSetRepresentative={setRepresentative}
             onToggleGalleryUsage={(id) => toggleImageUsage(id, "useInProductGallery")}
             onToggleDescriptionUsage={(id) => toggleImageUsage(id, "useInDescription")}
-            onToggleExclude={toggleExclude}
+            onMoveImage={moveImage}
             developerMode={developerMode}
             analysisStartedAt={analysisStartedAt}
             snapshotId={snapshotId}
@@ -653,18 +649,18 @@ export default function PipelinePage() {
                 {product && <ImageUsageTable product={product} items={items} />}
 
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                  {items.map((item) => {
-                    const imageUsage = product?.images.find((img) => img.id === item.id);
+                  {(product?.images ?? []).map((image, index) => {
+                    const item = items.find((existing) => existing.id === image.id);
+                    if (!item) return null;
                     return (
                       <ImageCard
                         key={item.id}
                         item={item}
                         tab={activeTab}
                         thumbnailDataUrl={thumbnails[item.id]}
-                        isExcluded={excludedIds.has(item.id)}
                         isRepresentative={representativeId === item.id}
-                        useInProductGallery={imageUsage?.useInProductGallery}
-                        useInDescription={imageUsage?.useInDescription}
+                        useInProductGallery={image.useInProductGallery}
+                        useInDescription={image.useInDescription}
                         isSelected={selectedId === item.id}
                         retrying={retryingIds.has(item.id)}
                         retryCount={retryCounts[item.id] ?? 0}
@@ -676,7 +672,8 @@ export default function PipelinePage() {
                         onSetRepresentative={() => setRepresentative(item.id)}
                         onToggleGalleryUsage={() => toggleImageUsage(item.id, "useInProductGallery")}
                         onToggleDescriptionUsage={() => toggleImageUsage(item.id, "useInDescription")}
-                        onToggleExclude={() => toggleExclude(item.id)}
+                        onMoveUp={index > 0 ? () => moveImage(item.id, "up") : undefined}
+                        onMoveDown={index < (product?.images.length ?? 0) - 1 ? () => moveImage(item.id, "down") : undefined}
                         onSwapVariant={item.alternateDataUrl ? () => swapVariant(item.id) : undefined}
                       />
                     );
@@ -686,7 +683,13 @@ export default function PipelinePage() {
                 <div>
                   <button
                     onClick={() =>
-                      result && downloadWorkspaceZip(items, excludedIds, result.metadata, result.report)
+                      result &&
+                      downloadWorkspaceZip(
+                        items,
+                        new Set((product?.images ?? []).filter((img) => !img.useInProductGallery).map((img) => img.id)),
+                        result.metadata,
+                        result.report,
+                      )
                     }
                     disabled={!canDownload}
                     className="rounded-md border border-border px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-background disabled:opacity-40"

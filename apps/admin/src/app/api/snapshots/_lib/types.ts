@@ -35,7 +35,11 @@ export interface SnapshotWorkspaceState {
    * URL로 치환된 뒤라 재계산이 애매해진다 — 애초에 필요 없다). */
   thumbnails: Record<string, string>;
   representativeId: string | null;
-  excludedIds: string[];
+  /** N-3.19(CPO 지시: "삭제 = 상품 등록에서 제외") — canonicalProduct.images[].
+   * useInProductGallery로 source-of-truth를 통일하면서 더는 쓰지 않는다.
+   * 과거에 저장된 스냅샷 JSON에는 남아있을 수 있어 읽을 때 깨지지 않도록
+   * 타입만 optional로 유지한다(새로 저장할 때는 채우지 않는다). */
+  excludedIds?: string[];
   activeTab: "source" | "content" | PlatformId;
   developerMode: boolean;
   /** Detail Page Editor(2026-08-04) — 없으면(레거시 세션) defaultDetailBlocks()로

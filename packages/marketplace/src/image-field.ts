@@ -21,7 +21,12 @@ function isJpegOrPngUrl(url: string): boolean {
 }
 
 export function imageFormatFieldRule(product: CanonicalProduct): FieldRule {
-  const images = product.images;
+  // N-3.19(CPO 지시: "Readiness도 반드시 동일 source 사용" — product.images.filter(
+  // useInProductGallery)) — 대표 이미지는 useInProductGallery와 별개 필드라 항상
+  // 포함하고, 나머지는 실제로 등록 갤러리에 쓰일 이미지만 본다. 사용자가 "등록에서
+  // 제외"한 이미지의 포맷 문제로 등록 자체가 막히면 안 된다 — 그 이미지는 애초에
+  // payload에 안 들어가기 때문이다.
+  const images = product.images.filter((img) => img.isRepresentative || img.useInProductGallery);
   const allValidFormat =
     images.length > 0 && images.every((img) => isJpegOrPngUrl(getSelectedImageUrl(img)));
 

@@ -339,6 +339,16 @@ export function PlatformPreview({
         ? `직접 입력 — ${listing.options.length}개`
         : "옵션 없음 — 단일 상품으로 등록됩니다";
 
+  // N-3.19(CPO 지시: "요약에는 최소 원본 N장 · 등록 M장 · 대표 1장 표시") —
+  // 옵션 요약과 같은 원칙: 이미 실제 등록 payload가 쓰는 기준(useInProductGallery/
+  // isRepresentative, packages/marketplace의 어댑터와 동일)을 그대로 요약에도
+  // 쓴다. 새 판정 기준을 만들지 않는다.
+  const imageOriginalCount = product.images.length;
+  const imageRegisteredCount = product.images.filter((img) => img.isRepresentative || img.useInProductGallery).length;
+  const imageHasRepresentative = product.images.some((img) => img.isRepresentative);
+  const imageSummary = `원본 ${imageOriginalCount}장 · 등록 ${imageRegisteredCount}장 · 대표 ${imageHasRepresentative ? "1장" : "미지정"}`;
+  const imageNeedsCheck = imageOriginalCount === 0 || imageRegisteredCount === 0 || !imageHasRepresentative;
+
   const fix = onFixTextField;
 
   return (
@@ -521,11 +531,11 @@ export function PlatformPreview({
         <CollapsibleSection
           title="이미지"
           badge={
-            <>
-              {sectionCompletionBadge("section-images")}
-              <span className="text-xs text-text-tertiary">{items.length}장</span>
-            </>
+            sectionCompletionBadge("section-images") ?? (
+              <StatusBadge status={imageNeedsCheck ? "needsCheck" : "success"} label={imageNeedsCheck ? "확인 필요" : "준비됨"} />
+            )
           }
+          summary={imageSummary}
           {...sectionProps("section-images")}
         >
           <ImageSummaryCard product={product} items={items} thumbnails={thumbnails} onOpen={onOpenGallery} />

@@ -22,7 +22,6 @@ interface ImageCardProps {
   item: WorkspaceItem;
   tab: TabKey;
   thumbnailDataUrl?: string;
-  isExcluded: boolean;
   isRepresentative: boolean;
   /** product.images에 아직 반영 안 됐으면(예: 처리 실패한 이미지) undefined —
    * 그 경우 용도 선택 컨트롤 자체를 숨긴다(등록에 쓰일 수 없는 이미지이므로). */
@@ -34,9 +33,17 @@ interface ImageCardProps {
   onPreview: () => void;
   onRetry: () => void;
   onSetRepresentative: () => void;
+  /** N-3.19(CPO 지시: "삭제 = 상품 등록에서 제외") — 이 하나의 토글이
+   * product.images[].useInProductGallery를 직접 뒤집는다. 예전 excludedIds
+   * (카드만 회색 처리하고 payload는 안 바뀌던 별도 state)를 없애고 이걸로
+   * 통일했다 — "제외"를 눌렀는데 실제 등록엔 계속 들어가는 이중 상태를 막는다. */
   onToggleGalleryUsage: () => void;
   onToggleDescriptionUsage: () => void;
-  onToggleExclude: () => void;
+  /** 순서 변경 — product.images[] 배열 자체가 canonical order라 별도
+   * imageOrder 필드 없이 이 두 콜백이 배열의 인접 원소를 swap한다. 맨
+   * 앞/뒤 이미지는 해당 방향 콜백이 undefined로 넘어와 버튼이 안 보인다. */
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
   /** PRODUCT는 원본/배경제거 후보 둘 다 만들어진다 — 이 카드가 지금 어느 쪽을 쓸지
    * 전환한다(alternateDataUrl이 있을 때만 호출 가능). */
   onSwapVariant?: () => void;
@@ -51,7 +58,6 @@ export function ImageCard({
   item,
   tab,
   thumbnailDataUrl,
-  isExcluded,
   isRepresentative,
   useInProductGallery,
   useInDescription,
@@ -63,9 +69,11 @@ export function ImageCard({
   onSetRepresentative,
   onToggleGalleryUsage,
   onToggleDescriptionUsage,
-  onToggleExclude,
+  onMoveUp,
+  onMoveDown,
   onSwapVariant,
 }: ImageCardProps) {
+  const isExcluded = useInProductGallery === false;
   const [detailsOpen, setDetailsOpen] = useState(false);
   const previewSrc =
     tab === "original"
@@ -182,10 +190,6 @@ export function ImageCard({
               대표 이미지
             </label>
             <label className="flex items-center gap-1.5">
-              <input type="checkbox" checked={useInProductGallery} onChange={onToggleGalleryUsage} />
-              상품 이미지
-            </label>
-            <label className="flex items-center gap-1.5">
               <input type="checkbox" checked={useInDescription} onChange={onToggleDescriptionUsage} />
               상세페이지
             </label>
@@ -193,10 +197,36 @@ export function ImageCard({
         )}
 
         <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-          <label className="flex items-center gap-1 text-text-secondary">
-            <input type="checkbox" checked={isExcluded} onChange={onToggleExclude} />
-            제외
-          </label>
+          <div className="flex items-center gap-1.5">
+            {(onMoveUp || onMoveDown) && (
+              <span className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={onMoveUp}
+                  disabled={!onMoveUp}
+                  title="순서 위로"
+                  className="rounded border border-border px-1 py-0.5 text-text-secondary hover:bg-background disabled:opacity-30"
+                >
+                  ▲
+                </button>
+                <button
+                  type="button"
+                  onClick={onMoveDown}
+                  disabled={!onMoveDown}
+                  title="순서 아래로"
+                  className="rounded border border-border px-1 py-0.5 text-text-secondary hover:bg-background disabled:opacity-30"
+                >
+                  ▼
+                </button>
+              </span>
+            )}
+            {useInProductGallery != null && (
+              <label className="flex items-center gap-1 text-text-secondary">
+                <input type="checkbox" checked={isExcluded} onChange={onToggleGalleryUsage} />
+                {isExcluded ? "등록에서 제외됨" : "등록에서 제외"}
+              </label>
+            )}
+          </div>
 
           <div className="flex items-center gap-2">
             {item.alternateDataUrl && onSwapVariant && (
