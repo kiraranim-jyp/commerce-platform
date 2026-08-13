@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
+import { StatusBadge, type StatusBadgeStatus } from "@/components/ui/StatusBadge";
 import { ImagePicker } from "@/components/ui/ImagePicker";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Tabs } from "@/components/ui/Tabs";
@@ -2058,17 +2059,16 @@ interface ConnectionCheckResult {
   nextAction?: string;
 }
 
-/** N-3.14(CPO 지시: "커머스 계정 관리 통합") — 아코디언 헤더에서 펼치지 않아도
- * 보이는 상태 배지. 기존 PlatformConnectionStatus(UNKNOWN/CHECKING/
- * NOT_CONFIGURED/CONNECTED/AUTH_FAILED) 그대로 재사용한다 — 새 상태 값을
- * 만들지 않는다. CPO 문구(🟢 연결됨/○ 미연결/🟠 확인 필요/🔴 연결 실패)에
- * 맞춰 라벨만 다시 입힌다. */
-const ACCORDION_STATUS_BADGE: Record<PlatformConnectionStatus, { icon: string; label: string; className: string }> = {
-  NOT_CONFIGURED: { icon: "○", label: "미연결", className: "text-text-tertiary" },
-  UNKNOWN: { icon: "🟠", label: "확인 필요", className: "text-warning" },
-  CHECKING: { icon: "🟠", label: "확인 중…", className: "text-warning" },
-  CONNECTED: { icon: "🟢", label: "연결됨", className: "text-success" },
-  AUTH_FAILED: { icon: "🔴", label: "연결 실패", className: "text-error" },
+/** N-3.15 Phase 2(CPO 지시: "공통 StatusBadge") — 기존 PlatformConnectionStatus
+ * (UNKNOWN/CHECKING/NOT_CONFIGURED/CONNECTED/AUTH_FAILED) 그대로 재사용하고,
+ * 공통 StatusBadge 컴포넌트가 쓰는 5종 상태(success/warning/needsCheck/error/
+ * neutral)로만 매핑한다 — 이 화면에서 이모지/색상을 다시 정의하지 않는다. */
+const CONNECTION_STATUS_MAP: Record<PlatformConnectionStatus, { status: StatusBadgeStatus; label: string }> = {
+  NOT_CONFIGURED: { status: "neutral", label: "미연결" },
+  UNKNOWN: { status: "needsCheck", label: "확인 필요" },
+  CHECKING: { status: "needsCheck", label: "확인 중…" },
+  CONNECTED: { status: "success", label: "연결됨" },
+  AUTH_FAILED: { status: "error", label: "연결 실패" },
 };
 
 /** CPO 지시 15~24 — 실패 사유를 6종 공통 타입(ConnectionErrorType)으로 분류해
@@ -2079,12 +2079,10 @@ function ConnectionErrorNotice({ result }: { result: ConnectionCheckResult | nul
   if (!result || result.status === "CONNECTED" || result.status === "UNKNOWN" || result.status === "CHECKING") {
     return null;
   }
-  const badge = ACCORDION_STATUS_BADGE[result.status];
+  const { status, label } = CONNECTION_STATUS_MAP[result.status];
   return (
     <div className="mt-2 rounded-md border border-border bg-background px-3 py-2 text-xs">
-      <p className={`font-medium ${badge.className}`}>
-        {badge.icon} {badge.label}
-      </p>
+      <StatusBadge status={status} label={label} />
       <p className="mt-1 text-text-secondary">{result.userMessage ?? result.message}</p>
       {result.nextAction && <p className="mt-1 text-text-tertiary">{result.nextAction}</p>}
     </div>
@@ -2395,6 +2393,12 @@ function classifyNetworkErrorClient(): { errorType: ConnectionErrorType; userMes
  * 시각이 보여야 한다(CPO 지시: "Accordion을 닫아도 현재 연결 상태를 확인할
  * 수 있다"). 실제 데이터가 있을 때만 "마지막 확인" 문구를 보여준다(가짜 시간
  * 표시 금지). */
+/** N-3.15 Phase 2(CPO 지시: "공통 Accordion") — N-3.14에서 이 카드만을 위해
+ * 만들었던 자체 아코디언 구현을 걷어내고, Coupang 탭/Settings 다른 섹션이
+ * 이미 쓰고 있는 공통 CollapsibleSection(components/ui)으로 바꾼다. 겉보기
+ * 동작은 동일하다(펼침 상태를 부모가 제어 — CollapsibleSection의 controlled
+ * 모드) — 화면/기능 변경이 아니라 같은 아코디언 패턴을 하나로 합치는
+ * 리팩터다. */
 function CommerceAccordionShell({
   label,
   status,
@@ -2410,28 +2414,22 @@ function CommerceAccordionShell({
   onToggle: () => void;
   children: React.ReactNode;
 }) {
-  const badge = ACCORDION_STATUS_BADGE[status];
+  const { status: badgeStatus, label: badgeLabel } = CONNECTION_STATUS_MAP[status];
   return (
-    <div className="rounded-lg border border-border bg-surface">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-text-primary"
-      >
-        <span>
-          {open ? "▼" : "▶"} {label}
-        </span>
-        <span className={`text-xs font-medium ${badge.className}`}>
-          {badge.icon} {badge.label}
-          {checkedAt && status !== "CHECKING" && (
-            <span className="ml-1.5 font-normal text-text-tertiary">
-              (마지막 확인: {formatCheckedAtRelative(checkedAt)})
-            </span>
-          )}
-        </span>
-      </button>
-      {open && <div className="space-y-2 border-t border-border px-4 py-3">{children}</div>}
-    </div>
+    <CollapsibleSection
+      title={label}
+      open={open}
+      onToggle={onToggle}
+      badge={
+        <StatusBadge
+          status={badgeStatus}
+          label={badgeLabel}
+          caption={checkedAt && status !== "CHECKING" ? `(마지막 확인: ${formatCheckedAtRelative(checkedAt)})` : undefined}
+        />
+      }
+    >
+      {children}
+    </CollapsibleSection>
   );
 }
 

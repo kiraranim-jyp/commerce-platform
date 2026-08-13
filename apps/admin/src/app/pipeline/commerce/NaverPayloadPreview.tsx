@@ -9,6 +9,7 @@ import { formatKrw } from "@commerce/pricing";
 import { PriceEditor } from "./PriceEditor";
 import { CategoryTreeBrowser } from "./CategoryTreeBrowser";
 import { fetchNaverCategoryTree } from "./category-tree-adapters";
+import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 
 /**
  * Sprint N-2.7/N-2.8 — 네이버 v2 상품등록 payload를 실제 POST 없이 미리 보여준다.
@@ -496,17 +497,14 @@ export function NaverPayloadPreview({
         </span>
       </div>
 
-      {/* Naver Payload Validation — N-3.5 Final Validator 결과를 그대로 표시한다. */}
+      {/* N-3.15 Phase 2(CPO 지시: "Raw Validator 기본 숨김") — 등록 가능 여부/CTA/
+       * 섹션 요약(sectionSummary, 이미 [카테고리]🟢 형태의 사람이 읽는 문구)은
+       * 기본으로 보이고, claimDeliveryInfo.xxx 같은 원본 필드 경로가 그대로
+       * 나오는 BLOCKED/MISSING 상세 목록만 "고급 검증 정보"로 접어 숨긴다.
+       * READY/MISSING/BLOCKED 판정 로직 자체는 그대로(validateNaverPayload) —
+       * 노출 위치만 바뀐다. */}
       <div className="rounded-md bg-background p-3">
-        <h4 className="text-[11px] font-medium uppercase tracking-wide text-text-tertiary">
-          Naver Payload Validation
-        </h4>
-        <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs">
-          <span className="text-success">🟢 READY {readyCount}</span>
-          <span className="text-warning">🟡 MISSING {missingCount}</span>
-          <span className="text-error">🔴 BLOCKED {blockedCount}</span>
-        </div>
-        <p className="mt-1.5 text-sm font-medium text-text-primary">
+        <p className="text-sm font-medium text-text-primary">
           등록 가능 여부: {overallIcon} {overallState}
         </p>
         {/* N-3.13 Part I(CPO 지시: "Validator와 등록 Gate에서 서로 다른 판단을
@@ -543,42 +541,54 @@ export function NaverPayloadPreview({
             </span>
           ))}
         </div>
-        {blockedIssues.length > 0 && (
-          <div className="mt-2">
-            <p className="text-[11px] font-semibold text-error">BLOCKED</p>
-            <ul className="mt-1 space-y-1">
-              {blockedIssues.map((issue, i) => (
-                <li key={`blocked-${issue.field}-${i}`} className="flex items-start gap-1.5 text-[11px]">
-                  <span className="text-error">🔴</span>
-                  <button
-                    type="button"
-                    onClick={() => goToSection(issue.field)}
-                    className="min-w-0 flex-1 text-left text-text-secondary hover:text-text-primary hover:underline"
-                  >
-                    <span className="font-medium text-text-primary">{issue.field}</span> — {issue.reason}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {missingIssues.length > 0 && (
-          <div className="mt-2">
-            <p className="text-[11px] font-semibold text-warning">MISSING</p>
-            <ul className="mt-1 space-y-1">
-              {missingIssues.map((issue, i) => (
-                <li key={`missing-${issue.field}-${i}`} className="flex items-start gap-1.5 text-[11px]">
-                  <span className="text-warning">🟡</span>
-                  <button
-                    type="button"
-                    onClick={() => goToSection(issue.field)}
-                    className="min-w-0 flex-1 text-left text-text-secondary hover:text-text-primary hover:underline"
-                  >
-                    <span className="font-medium text-text-primary">{issue.field}</span> — {issue.reason}
-                  </button>
-                </li>
-              ))}
-            </ul>
+
+        {(blockedIssues.length > 0 || missingIssues.length > 0) && (
+          <div className="mt-3">
+          <CollapsibleSection title="고급 검증 정보">
+            <div className="flex flex-wrap items-center gap-3 text-xs">
+              <span className="text-success">🟢 READY {readyCount}</span>
+              <span className="text-warning">🟡 MISSING {missingCount}</span>
+              <span className="text-error">🔴 BLOCKED {blockedCount}</span>
+            </div>
+            {blockedIssues.length > 0 && (
+              <div className="mt-2">
+                <p className="text-[11px] font-semibold text-error">BLOCKED</p>
+                <ul className="mt-1 space-y-1">
+                  {blockedIssues.map((issue, i) => (
+                    <li key={`blocked-${issue.field}-${i}`} className="flex items-start gap-1.5 text-[11px]">
+                      <span className="text-error">🔴</span>
+                      <button
+                        type="button"
+                        onClick={() => goToSection(issue.field)}
+                        className="min-w-0 flex-1 text-left text-text-secondary hover:text-text-primary hover:underline"
+                      >
+                        <span className="font-medium text-text-primary">{issue.field}</span> — {issue.reason}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {missingIssues.length > 0 && (
+              <div className="mt-2">
+                <p className="text-[11px] font-semibold text-warning">MISSING</p>
+                <ul className="mt-1 space-y-1">
+                  {missingIssues.map((issue, i) => (
+                    <li key={`missing-${issue.field}-${i}`} className="flex items-start gap-1.5 text-[11px]">
+                      <span className="text-warning">🟡</span>
+                      <button
+                        type="button"
+                        onClick={() => goToSection(issue.field)}
+                        className="min-w-0 flex-1 text-left text-text-secondary hover:text-text-primary hover:underline"
+                      >
+                        <span className="font-medium text-text-primary">{issue.field}</span> — {issue.reason}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CollapsibleSection>
           </div>
         )}
         {/* N-3.13 Part I(CPO 결정, 2026-08-12) — 등록 가능 여부와는 무관하지만
