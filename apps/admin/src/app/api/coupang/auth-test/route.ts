@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { PlatformConnectionStatus } from "@commerce/listing";
 import { getCoupangCredentials } from "../_lib/env";
 import { callCoupangApi } from "../_lib/client";
+import { classifyHttpStatus, classifyNetworkError, missingFieldError } from "@/lib/connection-error";
 
 /**
  * "쿠팡 연결 상태" 배지용 — 실제 상품을 등록/조회하지 않고 서명이 통과하는지만
@@ -20,19 +21,23 @@ export async function POST() {
     return NextResponse.json({
       status,
       message: "쿠팡 인증 정보가 설정되어 있지 않습니다 — 설정 페이지에서 Access Key/Secret Key/Vendor ID를 입력해주세요.",
+      ...missingFieldError("Access Key / Secret Key / Vendor ID"),
     });
   }
 
   try {
     const response = await callCoupangApi(credentials, { method: "GET", path: AUTH_TEST_PATH });
-    if (response.status === 401 || response.status === 403) {
+    const classified = classifyHttpStatus(response.status, "쿠팡");
+    if (classified) {
       const status: PlatformConnectionStatus = "AUTH_FAILED";
       return NextResponse.json({
         status,
         message: "쿠팡이 인증 정보를 거부했습니다 — access key/secret key를 다시 확인해주세요.",
+        ...classified,
         // 시크릿 값 자체는 절대 내려보내지 않는다 — 길이/공백 여부 같은 "복붙 실수
         // 있었는지" 힌트와, 쿠팡 응답 원문(서명 오류 vs 키 미등록 vs 승인 대기 등
-        // 구체적 사유)만 진단용으로 함께 내려준다.
+        // 구체적 사유)만 진단용으로 함께 내려준다(서버 로그/개발자 debug 전용,
+        // 사용자에게는 위 userMessage/nextAction만 노출한다).
         debug: {
           httpStatus: response.status,
           coupangResponse: response.body,
@@ -52,9 +57,11 @@ export async function POST() {
     });
   } catch (error) {
     const status: PlatformConnectionStatus = "AUTH_FAILED";
+    console.error("[coupang/auth-test] 연결 확인 중 예외:", error);
     return NextResponse.json({
       status,
       message: error instanceof Error ? `쿠팡 서버에 연결할 수 없습니다: ${error.message}` : "쿠팡 서버에 연결할 수 없습니다.",
+      ...classifyNetworkError(error),
     });
   }
 }

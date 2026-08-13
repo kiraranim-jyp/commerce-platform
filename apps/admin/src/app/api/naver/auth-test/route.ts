@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getNaverCredentials, getNaverSellerIdForDisplay } from "../_lib/env";
 import { callNaverApi, getFixieOutboundIp, issueNaverAccessToken } from "../_lib/client";
+import { classifyHttpStatus, classifyNetworkError, missingFieldError } from "@/lib/connection-error";
 
 /**
  * "네이버 커머스 API 연결 상태" 확인용 — Sprint N-1.0 범위는 "인증되고 API를
@@ -23,19 +24,22 @@ export async function POST() {
       status: "NOT_CONFIGURED",
       message: "네이버 인증 정보가 설정되어 있지 않습니다 — SMARTSTORE_CLIENT_ID/SMARTSTORE_CLIENT_SECRET 확인 필요.",
       debug: { step: "ENV_MISSING" },
+      ...missingFieldError("Client ID / Client Secret"),
     });
   }
 
   const tokenResult = await issueNaverAccessToken(credentials);
   if (!tokenResult.ok) {
+    const httpStatus = "httpStatus" in tokenResult ? tokenResult.httpStatus : undefined;
     return NextResponse.json({
       status: "AUTH_FAILED",
       message: tokenResult.message,
+      ...(classifyHttpStatus(httpStatus, "네이버") ?? classifyNetworkError(new Error(tokenResult.message))),
       // client_secret/access token 값 자체는 절대 포함하지 않는다 — 실패
       // 단계(step)와 HTTP 상태, 네이버 응답 원문(시크릿 아님)만 진단용으로 내려준다.
       debug: {
         step: tokenResult.step,
-        httpStatus: "httpStatus" in tokenResult ? tokenResult.httpStatus : undefined,
+        httpStatus,
         naverResponse: "body" in tokenResult ? tokenResult.body : undefined,
         fixieConfigured: Boolean(process.env.FIXIE_URL),
       },
@@ -47,6 +51,7 @@ export async function POST() {
     return NextResponse.json({
       status: "AUTH_FAILED",
       message: apiResult.message,
+      ...classifyNetworkError(new Error(apiResult.message)),
       debug: { step: apiResult.step, fixieConfigured: Boolean(process.env.FIXIE_URL) },
     });
   }
@@ -55,6 +60,7 @@ export async function POST() {
     return NextResponse.json({
       status: "AUTH_FAILED",
       message: "네이버가 API 호출을 거부했습니다 — 토큰은 발급됐지만 이 API에 대한 권한이 없거나 IP가 허용목록에 없을 수 있습니다.",
+      ...(classifyHttpStatus(apiResult.status, "네이버") ?? classifyNetworkError(new Error("permission or IP"))),
       debug: {
         step: "API_PERMISSION_OR_IP",
         httpStatus: apiResult.status,

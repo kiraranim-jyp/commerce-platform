@@ -9,6 +9,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Tabs } from "@/components/ui/Tabs";
 import type { PlatformConnectionStatus, TemplateSectionBlock } from "@commerce/listing";
 import { CoupangConnectionPanel } from "../pipeline/commerce/CoupangConnectionPanel";
+import type { ConnectionErrorType } from "@/lib/connection-error";
 
 const TAB_KEYS = [
   "accounts",
@@ -18,7 +19,6 @@ const TAB_KEYS = [
   "brand",
   "detail",
   "comparisonShops",
-  "smartstore",
 ] as const;
 type SettingsTabKey = (typeof TAB_KEYS)[number];
 
@@ -280,19 +280,26 @@ export default function SettingsPage() {
                 { value: "brand", label: "브랜드 관리" },
                 { value: "detail", label: "상세페이지 관리" },
                 { value: "comparisonShops", label: "해외 편집샵" },
-                { value: "smartstore", label: "스마트스토어" },
               ]}
             />
           </div>
 
           <div className="mt-6 min-w-0 max-w-5xl">
+            {/* N-3.14(CPO 지시: "커머스 계정 관리 통합") — 예전엔 이 화면 하나에
+                (1) 상단 CommerceAccountsSection(레거시 단일 계정 카드),
+                (2) 하단 MultiCommerceAccountsSection(다중 계정, 별도 SectionHeader),
+                (3) 완전히 별개인 "스마트스토어" 탭(SmartStoreAccountCard)까지
+                커머스 연결 관리가 3곳으로 흩어져 있었다. 실제 저장 데이터/API는
+                하나도 새로 만들지 않고(기존 coupang_seller_settings 싱글톤,
+                환경변수 기반 Naver, commerce_accounts 다중 계정 테이블 그대로
+                재사용) 화면만 커머스별 Accordion 하나로 합친다. */}
             <div className={activeTab === "accounts" ? "" : "hidden"}>
               <SectionHeader
                 title="커머스 계정 관리"
-                description="플랫폼별 연결 상태를 한 곳에서 확인합니다. 향후 추가되는 커머스도 같은 방식으로 관리됩니다."
+                description="연결된 커머스의 계정 정보와 연결 상태를 관리합니다."
                 className="mb-3"
               />
-              <CommerceAccountsSection
+              <CommerceAccountManager
                 account={account}
                 onAccountCleared={loadAll}
                 accessKey={accessKey}
@@ -306,35 +313,6 @@ export default function SettingsPage() {
                 handleSaveAccount={handleSaveAccount}
                 accountSaving={accountSaving}
               />
-              <MultiCommerceAccountsSection />
-            </div>
-
-            {/* N-3.13 Part C(CPO 지시: "스마트스토어가 실제 지원되는지조차 불명확함") —
-                이 탭은 예전엔 disabled+"Soon" 배지가 붙은 죽은 자리표시자였다. 하지만
-                네이버는 이미 실제로 동작한다: 연결 테스트(auth-test API), 카테고리/
-                가격/옵션/배송/고시정보/KC Preview + Final Validator(N-3.5, readyCount/
-                missingCount/blockedCount)가 상품등록 화면의 "스마트스토어" 플랫폼
-                탭에서 전부 실동작 중이다. 문제는 기능이 없는 게 아니라, 그 사실이
-                Settings 화면에서 전혀 보이지 않았다는 것 — "커머스 계정 관리"에
-                네이버 연결 카드가 있고, "배송 프로필"에 네이버 택배사 입력이 있고,
-                정작 "스마트스토어"라는 이름의 탭은 죽어 있었다. 이 탭을 계정 수준
-                설정(연결/연결테스트/등록 기본정보)의 실제 허브로 만들고, 상품별
-                설정(카테고리/가격/옵션/상세페이지/등록준비상태)은 상품마다 다르므로
-                여기서 복제하지 않고 상품등록 화면으로 명확히 안내한다 — 두 화면이
-                서로 다른 기능처럼 보이지 않게, 이 탭이 "여기 없는 건 저기 있다"를
-                직접 알려준다. */}
-            <div className={activeTab === "smartstore" ? "space-y-4" : "hidden"}>
-              <SectionHeader
-                title="스마트스토어(네이버)"
-                description="계정 연결과 등록 기본정보를 관리합니다. 상품별 카테고리·가격·옵션·상세페이지는 상품등록 화면에서 설정합니다."
-                className="mb-3"
-              />
-              <SmartStoreAccountCard />
-              {/* 네이버 택배사 입력 필드는 SellerProfileEditor(아래에 마운트됨,
-                  activeTab==="smartstore"일 때 자체적으로 이 필드를 렌더링) 안에
-                  있다 — 배송 프로필 탭과 동일한 SellerProfile 저장 단위를 그대로
-                  재사용하기 위해 새 state를 만들지 않고 기존 컴포넌트에 탭 케이스만
-                  추가했다. */}
             </div>
 
             {/* 배송 프로필/판매자 정보/가격 정책/상세페이지(공통이미지) 4개 탭이
@@ -343,19 +321,6 @@ export default function SettingsPage() {
               결정한다(탭을 오갈 때 상태가 유지되어야 하므로 언마운트 금지 —
               최상위 탭과 같은 CSS-hidden 패턴을 컴포넌트 내부에 적용). */}
           <SellerProfileEditor profiles={profiles} onChanged={loadAll} activeTab={activeTab} />
-
-          <div className={activeTab === "smartstore" ? "mt-4" : "hidden"}>
-            <div className="rounded-lg border border-dashed border-border bg-background px-4 py-3 text-sm text-text-tertiary">
-              <p className="font-medium text-text-secondary">카테고리 · 상품정보 · 가격 · 옵션 · 상세페이지 · 등록 준비상태</p>
-              <p className="mt-1 text-xs">
-                상품마다 다른 값이라 여기서 관리하지 않습니다 — 상품등록 화면의 &ldquo;스마트스토어&rdquo; 탭에서
-                카테고리 선택부터 등록 준비상태(Final Validator)까지 실시간으로 확인할 수 있습니다.
-              </p>
-              <a href="/pipeline" className="mt-2 inline-block text-xs font-medium text-primary hover:underline">
-                상품등록 화면으로 이동 →
-              </a>
-            </div>
-          </div>
 
           <div className={activeTab === "brand" ? "mt-5" : "hidden"}>
             <BrandProfileSection profiles={brandProfiles} onChanged={loadAll} />
@@ -925,32 +890,6 @@ function SellerProfileEditor({
         </CollapsibleSection>
       </div>
 
-      {/* N-3.13 Part C — "스마트스토어" 탭의 "등록 기본정보"(네이버 택배사).
-          배송 프로필 탭의 같은 필드와 완전히 동일한 state(naverDeliveryCompanyCode)를
-          공유한다 — 새 저장 단위를 만들지 않고 값을 두 곳에서 보여주기만 한다. */}
-      <div className={activeTab === "smartstore" ? "mt-5" : "hidden"}>
-        <CollapsibleSection
-          title="등록 기본정보 — 네이버 택배사"
-          defaultOpen={false}
-          badge={
-            <span className="text-xs font-normal text-text-tertiary">{naverDeliveryCompanyCode || "미설정"}</span>
-          }
-        >
-          <Field
-            label="네이버 택배사"
-            hint="네이버 공식 API에는 택배사 조회 기능이 없어(확인됨) 직접 입력이 필요합니다 — 예: CJ대한통운. 배송 프로필 탭과 같은 값입니다."
-          >
-            <input
-              type="text"
-              value={naverDeliveryCompanyCode}
-              onChange={(e) => setNaverDeliveryCompanyCode(e.target.value)}
-              placeholder="예: CJ대한통운"
-              className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <SaveButton onSave={handleSave} saving={saving} label={saveButtonLabel} />
-        </CollapsibleSection>
-      </div>
     </>
   );
 }
@@ -2098,19 +2037,69 @@ interface ComparisonShop {
   isActive: boolean;
 }
 
-/**
- * Sprint N-3.8 — "쿠팡 계정"/"스마트스토어(Soon)" 탭에 흩어져 있던 연결 상태를
- * 한 화면에 모은다. Naver/Coupang을 서로 다른 제품처럼 만들지 않는다는 원칙에
- * 따라 CoupangConnectionPanel(이제 platformLabel prop으로 일반화됨)을 그대로
- * 재사용하고, 새 컴포넌트를 따로 만들지 않았다.
- *
- * Coupang 계정은 Settings의 coupang 탭에서 편집(DB 저장), Naver는 환경변수
- * (SMARTSTORE_CLIENT_ID/SECRET)로만 설정되고 이 화면에서 수정할 수 없다 — 없는
- * 기능을 있는 것처럼 보이게 만들지 않는다("연결 해제" 버튼도 Naver에는 없다).
- * "연결 해제"는 DB에 저장된 값만 지운다 — 환경변수로도 설정돼 있으면 계속
- * 연결됨으로 표시될 수 있다는 한계를 캡션으로 명시한다(추측 금지 원칙).
- */
-function CommerceAccountsSection({
+interface CommerceAccountRecord {
+  id: string;
+  platform: "naver" | "coupang";
+  label: string;
+  isDefault: boolean;
+  accessKeyMasked: string | null;
+  secretKeySaved: boolean;
+  vendorId: string | null;
+  vendorUserId: string | null;
+  clientIdMasked: string | null;
+  clientSecretSaved: boolean;
+}
+
+interface ConnectionCheckResult {
+  status: PlatformConnectionStatus;
+  message?: string;
+  errorType?: ConnectionErrorType;
+  userMessage?: string;
+  nextAction?: string;
+}
+
+/** N-3.14(CPO 지시: "커머스 계정 관리 통합") — 아코디언 헤더에서 펼치지 않아도
+ * 보이는 상태 배지. 기존 PlatformConnectionStatus(UNKNOWN/CHECKING/
+ * NOT_CONFIGURED/CONNECTED/AUTH_FAILED) 그대로 재사용한다 — 새 상태 값을
+ * 만들지 않는다. CPO 문구(🟢 연결됨/○ 미연결/🟠 확인 필요/🔴 연결 실패)에
+ * 맞춰 라벨만 다시 입힌다. */
+const ACCORDION_STATUS_BADGE: Record<PlatformConnectionStatus, { icon: string; label: string; className: string }> = {
+  NOT_CONFIGURED: { icon: "○", label: "미연결", className: "text-text-tertiary" },
+  UNKNOWN: { icon: "🟠", label: "확인 필요", className: "text-warning" },
+  CHECKING: { icon: "🟠", label: "확인 중…", className: "text-warning" },
+  CONNECTED: { icon: "🟢", label: "연결됨", className: "text-success" },
+  AUTH_FAILED: { icon: "🔴", label: "연결 실패", className: "text-error" },
+};
+
+/** CPO 지시 15~24 — 실패 사유를 6종 공통 타입(ConnectionErrorType)으로 분류해
+ * 항상 같은 형태(무엇이 문제인지 + 다음에 뭘 하면 되는지)로 보여준다. 원본
+ * 에러(HTTP status, stack 등)는 서버 로그/디버그 필드에만 남고 여기 노출하지
+ * 않는다. */
+function ConnectionErrorNotice({ result }: { result: ConnectionCheckResult | null }) {
+  if (!result || result.status === "CONNECTED" || result.status === "UNKNOWN" || result.status === "CHECKING") {
+    return null;
+  }
+  const badge = ACCORDION_STATUS_BADGE[result.status];
+  return (
+    <div className="mt-2 rounded-md border border-border bg-background px-3 py-2 text-xs">
+      <p className={`font-medium ${badge.className}`}>
+        {badge.icon} {badge.label}
+      </p>
+      <p className="mt-1 text-text-secondary">{result.userMessage ?? result.message}</p>
+      {result.nextAction && <p className="mt-1 text-text-tertiary">{result.nextAction}</p>}
+    </div>
+  );
+}
+
+/** N-3.14(CPO 지시: "커머스 계정 관리 통합") — 설정 화면에 흩어져 있던
+ * (1) 상단 단일 계정 카드(레거시 coupang_seller_settings 싱글톤 + Naver
+ * 환경변수), (2) 별도 "스마트스토어" 탭(SmartStoreAccountCard), (3) 하단
+ * "다중 계정" 섹션(commerce_accounts 테이블)을 커머스별 Accordion 하나로
+ * 합친다. 저장 데이터/API는 하나도 새로 만들지 않는다 — 기존 3개 데이터
+ * 소스를 그대로 두고 화면 구조만 통합한다(CPO 지시: "기존 데이터 삭제 금지",
+ * "기존 API/DB 최대한 재사용"). 11번가/G마켓은 실제 연동이 없으므로 연결
+ * 가능한 것처럼 보이지 않는 정적 행으로만 보여준다. */
+function CommerceAccountManager({
   account,
   onAccountCleared,
   accessKey,
@@ -2137,27 +2126,55 @@ function CommerceAccountsSection({
   handleSaveAccount: () => void;
   accountSaving: boolean;
 }) {
-  const [coupangStatus, setCoupangStatus] = useState<PlatformConnectionStatus>("UNKNOWN");
+  const [multiAccounts, setMultiAccounts] = useState<CommerceAccountRecord[]>([]);
+  const [multiLoading, setMultiLoading] = useState(true);
+  const [openCommerce, setOpenCommerce] = useState<"coupang" | "naver" | null>(null);
+
+  async function loadMultiAccounts() {
+    setMultiLoading(true);
+    try {
+      const res = await fetch("/api/settings/commerce-accounts");
+      const data = (await res.json()) as { accounts?: CommerceAccountRecord[] };
+      setMultiAccounts(data.accounts ?? []);
+    } finally {
+      setMultiLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadMultiAccounts();
+  }, []);
+
+  // 쿠팡은 저장된 계정 정보(account prop)만으로 "미연결 vs 확인 필요"를
+  // 네트워크 호출 없이 판단할 수 있다 — Naver는 환경변수 기반이라 클라이언트가
+  // 값을 알 수 없으므로, 실제로 연결 확인을 눌러보기 전에는 항상 "확인 필요"로
+  // 둔다(가짜 상태 표시 금지 원칙).
+  const coupangConfigured = Boolean(account.accessKeyMasked || account.vendorId);
+  const [coupangCheck, setCoupangCheck] = useState<ConnectionCheckResult | null>(null);
   const [coupangChecking, setCoupangChecking] = useState(false);
   const [coupangCheckedAt, setCoupangCheckedAt] = useState<string | null>(null);
-  const [clearing, setClearing] = useState(false);
-  // N-3.10(Part B) — 예전엔 "계정 설정"을 누르면 별도 "쿠팡 계정" 탭으로
-  // 이동했다. 이제 그 탭 자체를 없앴으므로(커머스별 Settings 탭을 늘리지
-  // 않는다는 원칙), 같은 폼을 이 카드 안에서 펼쳐서 보여준다.
   const [coupangFormOpen, setCoupangFormOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
-  const [naverStatus, setNaverStatus] = useState<PlatformConnectionStatus>("UNKNOWN");
+  const [naverCheck, setNaverCheck] = useState<ConnectionCheckResult | null>(null);
   const [naverChecking, setNaverChecking] = useState(false);
   const [naverCheckedAt, setNaverCheckedAt] = useState<string | null>(null);
+
+  const coupangHeaderStatus: PlatformConnectionStatus = coupangCheck
+    ? coupangCheck.status
+    : coupangConfigured
+      ? "UNKNOWN"
+      : "NOT_CONFIGURED";
+  const naverHeaderStatus: PlatformConnectionStatus = naverCheck ? naverCheck.status : "UNKNOWN";
 
   async function checkCoupang() {
     setCoupangChecking(true);
     try {
       const res = await fetch("/api/coupang/auth-test", { method: "POST" });
-      const data = (await res.json()) as { status?: PlatformConnectionStatus };
-      setCoupangStatus(data.status ?? "AUTH_FAILED");
+      const data = (await res.json()) as ConnectionCheckResult;
+      setCoupangCheck(data);
     } catch {
-      setCoupangStatus("AUTH_FAILED");
+      setCoupangCheck({ status: "AUTH_FAILED", ...classifyNetworkErrorClient() });
     } finally {
       setCoupangCheckedAt(new Date().toISOString());
       setCoupangChecking(false);
@@ -2168,10 +2185,10 @@ function CommerceAccountsSection({
     setNaverChecking(true);
     try {
       const res = await fetch("/api/naver/auth-test", { method: "POST" });
-      const data = (await res.json()) as { status?: PlatformConnectionStatus };
-      setNaverStatus(data.status ?? "AUTH_FAILED");
+      const data = (await res.json()) as ConnectionCheckResult;
+      setNaverCheck(data);
     } catch {
-      setNaverStatus("AUTH_FAILED");
+      setNaverCheck({ status: "AUTH_FAILED", ...classifyNetworkErrorClient() });
     } finally {
       setNaverCheckedAt(new Date().toISOString());
       setNaverChecking(false);
@@ -2179,12 +2196,12 @@ function CommerceAccountsSection({
   }
 
   async function handleClearCoupang() {
-    if (!window.confirm("쿠팡 계정에 저장된 Access/Secret Key, Vendor ID, Wing 계정 ID를 초기화할까요?")) return;
+    if (!window.confirm("쿠팡 연결 정보를 삭제하시겠습니까?\n저장된 API 연결 정보가 삭제됩니다.")) return;
     setClearing(true);
     try {
       await fetch("/api/settings/coupang", { method: "DELETE" });
       onAccountCleared();
-      setCoupangStatus("UNKNOWN");
+      setCoupangCheck(null);
       setCoupangCheckedAt(null);
     } finally {
       setClearing(false);
@@ -2197,185 +2214,203 @@ function CommerceAccountsSection({
       ? `Access Key ${account.accessKeyMasked}`
       : "저장된 계정 없음";
 
+  const coupangMultiAccounts = multiAccounts.filter((a) => a.platform === "coupang");
+  const naverMultiAccounts = multiAccounts.filter((a) => a.platform === "naver");
+
   return (
-    <div className="space-y-3">
-      <CoupangConnectionPanel
-        platformLabel="쿠팡"
-        status={coupangStatus}
-        checking={coupangChecking}
+    <div className="space-y-2">
+      {/* 쿠팡 */}
+      <CommerceAccordionShell
+        label="쿠팡"
+        status={coupangHeaderStatus}
         checkedAt={coupangCheckedAt}
-        onCheck={() => void checkCoupang()}
-      />
-      <div className="rounded-lg border border-border bg-surface px-4 pb-3 pt-0 text-xs text-text-secondary">
-        <p>판매자 계정: {coupangAccountLabel}</p>
-        <div className="mt-2 flex gap-3">
-          <button
-            type="button"
-            onClick={() => setCoupangFormOpen((v) => !v)}
-            className="font-medium text-primary hover:underline"
-          >
-            {coupangFormOpen ? "계정 설정 닫기" : "계정 설정"}
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleClearCoupang()}
-            disabled={clearing}
-            className="font-medium text-error hover:underline disabled:opacity-50"
-          >
-            {clearing ? "초기화 중…" : "연결 해제"}
-          </button>
-        </div>
-        <p className="mt-1 text-[11px] text-text-tertiary">
-          &ldquo;연결 해제&rdquo;는 이 화면에 저장된 값만 지웁니다 — 배포 환경 변수로도 설정돼 있다면 계속 연결됨으로 표시될 수
-          있습니다.
-        </p>
-        {coupangFormOpen && (
-          <div className="mt-3 space-y-3 border-t border-border pt-3 text-sm">
-            <Field label="Access Key" hint={account.accessKeyMasked ? `저장됨 (${account.accessKeyMasked})` : "미저장"}>
-              <input
-                type="password"
-                value={accessKey}
-                onChange={(e) => setAccessKey(e.target.value)}
-                placeholder={account.accessKeyMasked ?? "새 값을 입력하지 않으면 기존 값 유지"}
-                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-              />
-            </Field>
-            <Field label="Secret Key" hint={account.secretKeySaved ? "저장됨" : "미저장"}>
-              <input
-                type="password"
-                value={secretKey}
-                onChange={(e) => setSecretKey(e.target.value)}
-                placeholder={account.secretKeySaved ? "•••• (변경하려면 새 값 입력)" : "새 값을 입력하지 않으면 기존 값 유지"}
-                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-              />
-            </Field>
-            <Field label="Vendor ID">
-              <input
-                type="text"
-                value={vendorId}
-                onChange={(e) => setVendorId(e.target.value)}
-                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-              />
-            </Field>
-            <Field label="Wing 계정 ID" hint="Wing 로그인 ID — API로 조회할 수 없어 직접 입력해야 합니다">
-              <input
-                type="text"
-                value={vendorUserId}
-                onChange={(e) => setVendorUserId(e.target.value)}
-                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-              />
-            </Field>
-            <button
-              type="button"
-              onClick={handleSaveAccount}
-              disabled={accountSaving}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
-            >
-              {accountSaving ? "저장 중…" : "계정 저장"}
-            </button>
-          </div>
-        )}
-      </div>
-
-      <CoupangConnectionPanel
-        platformLabel="스마트스토어(네이버)"
-        status={naverStatus}
-        checking={naverChecking}
-        checkedAt={naverCheckedAt}
-        onCheck={() => void checkNaver()}
-      />
-      <p className="rounded-lg border border-border bg-surface px-4 py-3 text-[11px] text-text-tertiary">
-        네이버 계정은 배포 환경변수(SMARTSTORE_CLIENT_ID/SMARTSTORE_CLIENT_SECRET)로만 설정됩니다 — 이 화면에서
-        수정하거나 해제할 수 없습니다.
-      </p>
-
-      <div className="rounded-lg border border-dashed border-border bg-background px-4 py-3 text-sm text-text-tertiary">
-        <p className="font-medium text-text-secondary">⚪ 새로운 Commerce</p>
-        <p className="mt-0.5 text-xs">아직 연결되지 않음 — 11번가, G마켓 등은 향후 추가될 예정입니다.</p>
-      </div>
-    </div>
-  );
-}
-
-interface CommerceAccountRecord {
-  id: string;
-  platform: "naver" | "coupang";
-  label: string;
-  isDefault: boolean;
-  accessKeyMasked: string | null;
-  secretKeySaved: boolean;
-  vendorId: string | null;
-  vendorUserId: string | null;
-  clientIdMasked: string | null;
-  clientSecretSaved: boolean;
-}
-
-/** N-3.13 R2 Part 12(CPO 지시, 2026-08-12 확정) — 네이버/쿠팡 각각 여러
- * 계정을 아코디언으로 추가/수정/삭제/연결테스트한다. 위 CommerceAccountsSection
- * (기존 단일 계정 카드, 실제 등록 파이프라인이 지금 쓰는 소스)은 그대로 두고
- * 이 섹션을 추가한다 — 안전조건(CPO 지시: "기존 구조를 무리하게 깨지 않는다")
- * 에 따라 이번 라운드는 새 다중 계정 저장소의 CRUD+연결테스트까지만 완성하고,
- * "이 중 어떤 계정을 실제 등록에 쓸지" 배선은 다음 단계로 남긴다. */
-function MultiCommerceAccountsSection() {
-  const [accounts, setAccounts] = useState<CommerceAccountRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [openPlatform, setOpenPlatform] = useState<"naver" | "coupang" | null>(null);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/settings/commerce-accounts");
-      const data = (await res.json()) as { accounts?: CommerceAccountRecord[] };
-      setAccounts(data.accounts ?? []);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void load();
-  }, []);
-
-  return (
-    <div className="mt-4 space-y-3">
-      <SectionHeader
-        title="커머스 계정 관리 (다중 계정)"
-        description="네이버/쿠팡 각각 여러 계정을 등록해두고 관리할 수 있습니다 — 실제 상품 등록에 어떤 계정을 쓸지 연결하는 기능은 다음 업데이트에서 제공됩니다."
-      />
-      {loading ? (
-        <p className="text-sm text-text-tertiary">불러오는 중…</p>
-      ) : (
-        (["naver", "coupang"] as const).map((platform) => (
-          <PlatformAccountAccordion
-            key={platform}
-            platform={platform}
-            accounts={accounts.filter((a) => a.platform === platform)}
-            open={openPlatform === platform}
-            onToggle={() => setOpenPlatform((p) => (p === platform ? null : platform))}
-            onChanged={load}
+        open={openCommerce === "coupang"}
+        onToggle={() => setOpenCommerce((p) => (p === "coupang" ? null : "coupang"))}
+      >
+        <div className="space-y-3">
+          <CoupangConnectionPanel
+            platformLabel="쿠팡"
+            status={coupangChecking ? "CHECKING" : coupangHeaderStatus}
+            checking={coupangChecking}
+            checkedAt={coupangCheckedAt}
+            onCheck={() => void checkCoupang()}
           />
-        ))
-      )}
+          <ConnectionErrorNotice result={coupangCheck} />
+          <div className="rounded-lg border border-border bg-surface px-4 pb-3 pt-3 text-xs text-text-secondary">
+            <p>판매자 계정: {coupangAccountLabel}</p>
+            <div className="mt-2 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setCoupangFormOpen((v) => !v)}
+                className="font-medium text-primary hover:underline"
+              >
+                {coupangFormOpen ? "정보 수정 닫기" : "정보 수정"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleClearCoupang()}
+                disabled={clearing}
+                className="font-medium text-error hover:underline disabled:opacity-50"
+              >
+                {clearing ? "삭제 중…" : "연결 정보 삭제"}
+              </button>
+            </div>
+            <p className="mt-1 text-[11px] text-text-tertiary">
+              &ldquo;연결 정보 삭제&rdquo;는 이 화면에 저장된 값만 지웁니다 — 배포 환경 변수로도 설정돼 있다면 계속
+              연결됨으로 표시될 수 있습니다.
+            </p>
+            {coupangFormOpen && (
+              <div className="mt-3 space-y-3 border-t border-border pt-3 text-sm">
+                <Field label="Access Key" hint={account.accessKeyMasked ? `저장됨 (${account.accessKeyMasked})` : "미저장"}>
+                  <input
+                    type="password"
+                    value={accessKey}
+                    onChange={(e) => setAccessKey(e.target.value)}
+                    placeholder={account.accessKeyMasked ?? "새 값을 입력하지 않으면 기존 값 유지"}
+                    className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+                  />
+                </Field>
+                <Field label="Secret Key" hint={account.secretKeySaved ? "저장됨" : "미저장"}>
+                  <input
+                    type="password"
+                    value={secretKey}
+                    onChange={(e) => setSecretKey(e.target.value)}
+                    placeholder={
+                      account.secretKeySaved ? "•••• (변경하려면 새 값 입력)" : "새 값을 입력하지 않으면 기존 값 유지"
+                    }
+                    className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+                  />
+                </Field>
+                <Field label="Vendor ID">
+                  <input
+                    type="text"
+                    value={vendorId}
+                    onChange={(e) => setVendorId(e.target.value)}
+                    className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+                  />
+                </Field>
+                <Field label="Wing 계정 ID" hint="Wing 로그인 ID — API로 조회할 수 없어 직접 입력해야 합니다">
+                  <input
+                    type="text"
+                    value={vendorUserId}
+                    onChange={(e) => setVendorUserId(e.target.value)}
+                    className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+                  />
+                </Field>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSaveAccount}
+                    disabled={accountSaving}
+                    className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+                  >
+                    {accountSaving ? "저장 중…" : "저장"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void checkCoupang()}
+                    disabled={coupangChecking}
+                    className="rounded-md border border-border px-4 py-2 text-sm font-medium text-text-secondary hover:bg-background disabled:opacity-50"
+                  >
+                    {coupangChecking ? "확인 중…" : "연결 확인"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <MultiAccountList
+            platform="coupang"
+            accounts={coupangMultiAccounts}
+            loading={multiLoading}
+            onChanged={loadMultiAccounts}
+          />
+        </div>
+      </CommerceAccordionShell>
+
+      {/* 네이버 스마트스토어 */}
+      <CommerceAccordionShell
+        label="네이버 스마트스토어"
+        status={naverHeaderStatus}
+        checkedAt={naverCheckedAt}
+        open={openCommerce === "naver"}
+        onToggle={() => setOpenCommerce((p) => (p === "naver" ? null : "naver"))}
+      >
+        <div className="space-y-3">
+          <CoupangConnectionPanel
+            platformLabel="스마트스토어(네이버)"
+            status={naverChecking ? "CHECKING" : naverHeaderStatus}
+            checking={naverChecking}
+            checkedAt={naverCheckedAt}
+            onCheck={() => void checkNaver()}
+          />
+          <ConnectionErrorNotice result={naverCheck} />
+          <p className="rounded-lg border border-border bg-surface px-4 py-3 text-[11px] text-text-tertiary">
+            네이버 계정은 배포 환경변수(SMARTSTORE_CLIENT_ID/SMARTSTORE_CLIENT_SECRET)로만 설정됩니다 — 이 화면에서
+            수정하거나 해제할 수 없습니다.
+          </p>
+
+          <MultiAccountList
+            platform="naver"
+            accounts={naverMultiAccounts}
+            loading={multiLoading}
+            onChanged={loadMultiAccounts}
+          />
+        </div>
+      </CommerceAccordionShell>
+
+      {/* 11번가 / G마켓 — 실제 API 연동이 없으므로 연결 가능한 것처럼 보이지
+          않는 정적 행으로만 보여준다(CPO 지시: "실제 연동이 구현되어 있지 않은
+          커머스는 연결 가능한 것처럼 표시하지 않는다"). */}
+      {[
+        { id: "elevenst", label: "11번가" },
+        { id: "gmarket", label: "G마켓" },
+      ].map((commerce) => (
+        <div key={commerce.id} className="rounded-lg border border-border bg-surface px-4 py-3">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-semibold text-text-primary">{commerce.label}</span>
+            <span className="text-xs font-medium text-text-tertiary">○ 미연결</span>
+          </div>
+          <p className="mt-1 text-xs text-text-tertiary">
+            아직 지원되지 않습니다 — 실제 API 연동이 준비되면 이 화면에서 관리할 수 있습니다.
+          </p>
+        </div>
+      ))}
     </div>
   );
 }
 
-function PlatformAccountAccordion({
-  platform,
-  accounts,
+/** fetch 자체가 실패(네트워크 예외)한 경우 클라이언트에서 최소한의 사용자
+ * 메시지를 만든다 — 서버가 이미 계산해서 내려주는 것과 같은 문구를 쓰되,
+ * 서버 응답조차 못 받았을 때만 쓰는 폴백이다. */
+function classifyNetworkErrorClient(): { errorType: ConnectionErrorType; userMessage: string; nextAction: string } {
+  return {
+    errorType: "NETWORK_ERROR",
+    userMessage: "커머스 서버에 연결할 수 없습니다.",
+    nextAction: "커머스 서비스의 일시적인 장애일 수 있습니다. 잠시 후 다시 시도해 주세요.",
+  };
+}
+
+/** 커머스 하나의 Accordion 틀 — 접힌 상태에서도 상태 배지 + 마지막 확인
+ * 시각이 보여야 한다(CPO 지시: "Accordion을 닫아도 현재 연결 상태를 확인할
+ * 수 있다"). 실제 데이터가 있을 때만 "마지막 확인" 문구를 보여준다(가짜 시간
+ * 표시 금지). */
+function CommerceAccordionShell({
+  label,
+  status,
+  checkedAt,
   open,
   onToggle,
-  onChanged,
+  children,
 }: {
-  platform: "naver" | "coupang";
-  accounts: CommerceAccountRecord[];
+  label: string;
+  status: PlatformConnectionStatus;
+  checkedAt: string | null;
   open: boolean;
   onToggle: () => void;
-  onChanged: () => void;
+  children: React.ReactNode;
 }) {
-  const [addingOpen, setAddingOpen] = useState(false);
-  const label = platform === "naver" ? "네이버 스마트스토어" : "쿠팡";
-
+  const badge = ACCORDION_STATUS_BADGE[status];
   return (
     <div className="rounded-lg border border-border bg-surface">
       <button
@@ -2385,12 +2420,54 @@ function PlatformAccountAccordion({
       >
         <span>
           {open ? "▼" : "▶"} {label}
-          <span className="ml-2 text-xs font-normal text-text-tertiary">계정 {accounts.length}개</span>
+        </span>
+        <span className={`text-xs font-medium ${badge.className}`}>
+          {badge.icon} {badge.label}
+          {checkedAt && status !== "CHECKING" && (
+            <span className="ml-1.5 font-normal text-text-tertiary">
+              (마지막 확인: {formatCheckedAtRelative(checkedAt)})
+            </span>
+          )}
         </span>
       </button>
-      {open && (
-        <div className="space-y-2 border-t border-border px-4 py-3">
-          {accounts.length === 0 && <p className="text-xs text-text-tertiary">등록된 계정이 없습니다.</p>}
+      {open && <div className="space-y-2 border-t border-border px-4 py-3">{children}</div>}
+    </div>
+  );
+}
+
+function formatCheckedAtRelative(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "방금 전";
+  if (diffMin < 60) return `${diffMin}분 전`;
+  return `${Math.floor(diffMin / 60)}시간 전`;
+}
+
+/** 커머스 하나의 Accordion 안에 있는 "추가 계정"(commerce_accounts 다중 계정)
+ * 목록 — 예전 PlatformAccountAccordion의 내용물을 그대로 재사용하되, 이제
+ * 자체 아코디언 토글 없이 부모(CommerceAccordionShell)가 펼쳐졌을 때만
+ * 보인다. */
+function MultiAccountList({
+  platform,
+  accounts,
+  loading,
+  onChanged,
+}: {
+  platform: "naver" | "coupang";
+  accounts: CommerceAccountRecord[];
+  loading: boolean;
+  onChanged: () => void;
+}) {
+  const [addingOpen, setAddingOpen] = useState(false);
+
+  return (
+    <div className="border-t border-border pt-3">
+      <p className="text-xs font-medium text-text-tertiary">추가 계정</p>
+      {loading ? (
+        <p className="mt-2 text-xs text-text-tertiary">불러오는 중…</p>
+      ) : (
+        <div className="mt-2 space-y-2">
+          {accounts.length === 0 && <p className="text-xs text-text-tertiary">등록된 추가 계정이 없습니다.</p>}
           {accounts.map((account) => (
             <CommerceAccountRow key={account.id} account={account} onChanged={onChanged} />
           ))}
@@ -2630,49 +2707,6 @@ function CommerceAccountForm({
           취소
         </button>
       </div>
-    </div>
-  );
-}
-
-/** N-3.13 Part C — "스마트스토어" 탭 전용 연결 카드. CommerceAccountsSection
- * 안의 네이버 카드와 로직은 동일(같은 auth-test API, 같은 CoupangConnectionPanel)
- * 이지만 상태를 공유하지 않고 각자 독립적으로 조회한다 — "커머스 계정 관리"는
- * 여러 플랫폼을 한눈에 보는 대시보드 용도이고, 이 카드는 "스마트스토어 탭 하나만
- * 봐도 연결 여부를 알 수 있어야 한다"는 목적이 달라서 상태를 억지로 끌어올려
- * 공유하지 않았다(불필요한 props drilling 방지, 두 카드가 같은 세션 내에서
- * 다른 시점에 "다시 확인"을 눌러도 서로 간섭하지 않는다). */
-function SmartStoreAccountCard() {
-  const [status, setStatus] = useState<PlatformConnectionStatus>("UNKNOWN");
-  const [checking, setChecking] = useState(false);
-  const [checkedAt, setCheckedAt] = useState<string | null>(null);
-
-  async function check() {
-    setChecking(true);
-    try {
-      const res = await fetch("/api/naver/auth-test", { method: "POST" });
-      const data = (await res.json()) as { status?: PlatformConnectionStatus };
-      setStatus(data.status ?? "AUTH_FAILED");
-    } catch {
-      setStatus("AUTH_FAILED");
-    } finally {
-      setCheckedAt(new Date().toISOString());
-      setChecking(false);
-    }
-  }
-
-  return (
-    <div className="space-y-2">
-      <CoupangConnectionPanel
-        platformLabel="스마트스토어(네이버) 연결"
-        status={status}
-        checking={checking}
-        checkedAt={checkedAt}
-        onCheck={() => void check()}
-      />
-      <p className="rounded-lg border border-border bg-surface px-4 py-3 text-[11px] text-text-tertiary">
-        네이버 계정은 배포 환경변수(SMARTSTORE_CLIENT_ID/SMARTSTORE_CLIENT_SECRET)로만 설정됩니다 — 이 화면에서
-        수정하거나 해제할 수 없습니다.
-      </p>
     </div>
   );
 }
