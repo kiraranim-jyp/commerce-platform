@@ -61,7 +61,13 @@ export function ImageInlineEditor({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      {/* N-3.21 — 예전 ImageGalleryModal은 max-w-5xl(1024px) 모달 안에서 xl:5열까지
+       * 썼다. Inline으로 옮긴 뒤에는 SmartStore/Coupang 아코디언이 우측 sticky
+       * 요약 카드와 폭을 나눠 쓰는 좁은 컬럼(~605px)이라, 같은 5열 기준을 그대로
+       * 쓰면 카드 폭이 100px대로 눌려 정보가 과밀해진다. 4열로 낮춰 두 컨텍스트
+       * (원본 탭의 넓은 폭, 플랫폼 탭의 좁은 폭) 모두에서 카드가 읽을 수 있는
+       * 폭을 유지하게 한다. */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {product.images.map((image, index) => {
           const item = items.find((existing) => existing.id === image.id);
           if (!item) return null;
