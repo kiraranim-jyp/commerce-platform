@@ -490,14 +490,14 @@ export default function PipelinePage() {
           ) : undefined
         }
       />
-      {/* Sprint A-9(작업1 — CEO 실측 피드백: "노트북 기준으로도 답답합니다,
-          쿠팡 Wing처럼 거의 전체화면을 쓰고 싶다") — Editor(started)는 필드가
-          많은 폼이라 넓은 폭이 필요해 size="xl"을 그대로 유지한다(재검토
-          대상 아님). 랜딩(!started)은 size="md"(1200px)를 쓴다 — "업무 시작
-          화면"이지 마케팅 랜딩이 아니므로 넓은 xl 폭을 그대로 쓰면 좌우
-          여백만 커지고 정보 밀도가 낮아진다(CPO 실측 피드백: "가운데 작은
-          섬 하나가 넓은 화면에 떠 있는 느낌"). */}
-      <PageContainer size={started ? "xl" : "md"} className="min-w-0 py-10">
+      {/* N-3.16 잔여3(CPO 지시: "실제 /pipeline에 1360px 기준 적용 — 단, 전체
+          화면을 무조건 1360px로 강제하지 말고 브라우저가 넓어질 때 좌우
+          여백이 자연스럽게 생기는 구조로") — 예전 A-9 지시("Wing처럼 거의
+          전체화면")로 xl(1800px)까지 넓혔던 걸 되돌린다. PageContainer는
+          이미 mx-auto + max-w라 이 값을 넘으면 자동으로 좌우 여백이 생기고,
+          그 아래에서는 화면 폭에 맞춰 줄어든다(강제 고정 아님). 랜딩(!started)은
+          기존과 동일하게 size="md"(1200px) 유지. */}
+      <PageContainer size={started ? "editor" : "md"} className="min-w-0 py-10">
       {!started ? (
         <>
           {/* CPO 2차 재실측 지시 — Hero 메인 문구(eyebrow/headline/description)를

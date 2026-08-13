@@ -32,6 +32,7 @@ import { computeChecklistReadiness, computeReadinessScoreSummary } from "./readi
 import { RegistrationReadinessCard } from "./RegistrationReadinessCard";
 import { SellerProfileSummaryCard } from "./SellerProfileSummaryCard";
 import { extractionSourceLabel, ProvenanceBadge } from "./provenance";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 /** Sprint A-3(작업1 — 모든 항목 Editable, 작업8 — Resolver Trace) 필드 라벨 행.
  * SourceDataView가 이미 쓰던 "라벨 + 값 + Source + Confidence" 패턴을 accordion
@@ -300,11 +301,27 @@ export function PlatformPreview({
     if (relevant.length === 0) return null;
     const hasRequiredFail = relevant.some((i) => i.required && !i.passed);
     return (
-      <span aria-label={hasRequiredFail ? "확인 필요" : "완료"} className="text-xs">
-        {hasRequiredFail ? "⚠️" : "✅"}
-      </span>
+      <StatusBadge status={hasRequiredFail ? "needsCheck" : "success"} label={hasRequiredFail ? "확인 필요" : "준비됨"} />
     );
   }
+
+  // N-3.16 잔여3(CPO 지시: "섹션 제목 → 상태 → 요약 → 펼침" — 기본정보 섹션은
+  // 접혀 있어도 "지금 뭘 확인해야 하는지"를 한 줄로 보여준다) — REQUIRED는
+  // FieldRow가 "입력 필요" ProvenanceBadge로 그리는 것과 같은 판정(값이 비어
+  // 있고 사용자 입력이 필요함)이라 여기서도 그 기준을 그대로 쓴다. 새 규칙을
+  // 만들지 않는다.
+  const BASIC_INFO_PROVENANCE_FIELDS = [
+    product.title,
+    product.brand,
+    product.sku,
+    product.manufacturer,
+    product.material,
+    product.color,
+    product.recommendedAge,
+  ];
+  const basicInfoNeedsCheck = BASIC_INFO_PROVENANCE_FIELDS.filter((f) => f.source === "REQUIRED").length;
+  const basicInfoAutoFilled = BASIC_INFO_PROVENANCE_FIELDS.length - basicInfoNeedsCheck;
+  const basicInfoSummary = `자동 입력 ${basicInfoAutoFilled}개 · 확인 필요 ${basicInfoNeedsCheck}개`;
 
   const fix = onFixTextField;
 
@@ -315,7 +332,12 @@ export function PlatformPreview({
           <NaverPayloadPreview product={product} listing={listing} detailBlocks={detailBlocks} />
         )}
 
-        <CollapsibleSection title="기본정보" badge={sectionCompletionBadge("section-basic")} {...sectionProps("section-basic")}>
+        <CollapsibleSection
+          title="기본정보"
+          badge={sectionCompletionBadge("section-basic")}
+          summary={basicInfoSummary}
+          {...sectionProps("section-basic")}
+        >
           <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 xl:grid-cols-3">
             <FieldRow label="상품명" field={product.title} required>
               <EditableText
@@ -465,9 +487,15 @@ export function PlatformPreview({
           )}
         </CollapsibleSection>
 
-        <CollapsibleSection title="가격" badge={sectionCompletionBadge("section-price")} {...sectionProps("section-price")}>
+        <CollapsibleSection
+          title="가격"
+          badge={sectionCompletionBadge("section-price")}
+          alwaysRenderChildren
+          {...sectionProps("section-price")}
+        >
           <PriceEditor
             product={product}
+            open={openSections["section-price"] ?? false}
             onUpdateSalePriceKrw={onUpdateSalePriceKrw}
             onUpdateOriginalPrice={onUpdateOriginalPrice}
             onUpdatePriceBreakdown={onUpdatePriceBreakdown}

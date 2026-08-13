@@ -88,6 +88,7 @@ function LiveNumberField({
 
 export function PriceEditor({
   product,
+  open,
   onUpdateSalePriceKrw,
   onUpdateOriginalPrice,
   onUpdatePriceBreakdown,
@@ -96,6 +97,13 @@ export function PriceEditor({
   onRefreshExchangeRates,
 }: {
   product: CanonicalProduct;
+  /** N-3.16 잔여3(CPO 지시: "가격 계산 Breakdown은 기본 접힘, 최종 판매가가
+   * 가장 강하게 보여야 함") — 바깥 "가격" Accordion의 펼침 상태를 그대로
+   * 받는다. 이 컴포넌트는 항상 마운트되어 있고(계산은 한 곳에서만 일어남),
+   * open=false면 요약 한 줄만, open=true면 편집 UI 전체를 그린다 — 접혀
+   * 있을 때 보이는 숫자와 펼쳤을 때 보이는 숫자가 서로 다른 계산에서 나올
+   * 위험이 없다. */
+  open: boolean;
   onUpdateSalePriceKrw: (amountKrw: number) => void;
   onUpdateOriginalPrice?: (patch: Partial<{ amount: number; currency: string }>) => void;
   onUpdatePriceBreakdown: (breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) => void;
@@ -239,6 +247,16 @@ export function PriceEditor({
   const feeAmountKrw = Math.round((finalPriceKrw * draftInput.feePercent) / 100);
   const netProfitKrw = finalPriceKrw - breakdown.landedCostKrw - feeAmountKrw;
 
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  // N-3.16 잔여3 — 바깥 "가격" Accordion이 접혀 있을 때는 배송비/수수료/마진
+  // 편집 UI 전체를 그리지 않고, 지금 등록에 쓰일 숫자만 한눈에 보여준다.
+  // finalPriceKrw/breakdown은 위에서 이미 계산이 끝난 값이라 펼쳤을 때와
+  // 다른 숫자가 나올 수 없다.
+  if (!open) {
+    return <PriceSummaryStrip product={product} breakdown={breakdown} finalPriceKrw={finalPriceKrw} />;
+  }
+
   return (
     <section className="rounded-lg border border-border p-4 text-sm">
       <h3 className="text-base font-medium">가격 계산</h3>
@@ -247,6 +265,51 @@ export function PriceEditor({
         &ldquo;적용&rdquo; 버튼을 눌러야만 바뀝니다.
       </p>
 
+      <div className="mt-3">
+        <PriceSummaryStrip product={product} breakdown={breakdown} finalPriceKrw={finalPriceKrw} />
+      </div>
+
+      {/* N-3.16 잔여3(CPO 지시: "최종 판매가가 가장 강하게 보여야 함") — 편집
+          컨트롤 중 최종 판매가격만 Breakdown 상세 밖으로 꺼내 가장 먼저,
+          가장 크게 보여준다. */}
+      <div className="mt-3 rounded-md border border-border bg-background p-3">
+        <div className="flex items-center justify-between gap-3">
+          <span className="flex items-center gap-1.5 text-sm font-medium text-text-primary">
+            최종 판매가격
+            {product.priceOverrideKrw && <ValueBadge kind="userConfirmed" />}
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-text-secondary">₩</span>
+            <EditableText
+              value={String(finalPriceKrw)}
+              onCommit={(v) => onUpdateSalePriceKrw(Math.max(0, Number(v) || 0))}
+              className="w-32 rounded border border-border px-2 py-1 text-base font-semibold focus:border-primary focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => onUpdateSalePriceKrw(breakdown.suggestedPriceKrw)}
+              className="rounded border border-primary px-2 py-1 text-[11px] font-medium text-primary hover:bg-primary/10"
+            >
+              최종 판매가격에 적용
+            </button>
+          </div>
+        </div>
+        <p className="mt-1 text-[11px] text-text-tertiary">
+          {product.priceOverrideKrw
+            ? "직접 저장된 값입니다 — 아래 계산 값을 고쳐도 자동으로 바뀌지 않습니다. 다시 계산하려면 버튼을 누르세요."
+            : "아직 저장된 값이 없어 권장 판매가격을 보여주고 있습니다 — 입력하거나 버튼을 눌러야 저장됩니다."}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setDetailOpen((v) => !v)}
+        className="mt-3 text-xs font-medium text-primary hover:underline"
+      >
+        {detailOpen ? "▾ 가격 계산 상세 접기" : "▸ 가격 계산 상세 보기"}
+      </button>
+
+      {detailOpen && (
       <div className="mt-3 space-y-2.5 text-xs">
         <Row label="원본 가격" badge={<ValueBadge kind="original" />}>
           {onUpdateOriginalPrice ? (
@@ -410,29 +473,6 @@ export function PriceEditor({
           <span className="text-base font-semibold text-text-primary">{formatKrw(breakdown.suggestedPriceKrw)}</span>
         </div>
 
-        <Row label="최종 판매가격" badge={product.priceOverrideKrw ? <ValueBadge kind="userConfirmed" /> : undefined}>
-          <div className="flex items-center gap-2">
-            <span className="text-text-secondary">₩</span>
-            <EditableText
-              value={String(finalPriceKrw)}
-              onCommit={(v) => onUpdateSalePriceKrw(Math.max(0, Number(v) || 0))}
-              className="w-32 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
-            />
-            <button
-              type="button"
-              onClick={() => onUpdateSalePriceKrw(breakdown.suggestedPriceKrw)}
-              className="rounded border border-primary px-2 py-1 text-[11px] font-medium text-primary hover:bg-primary/10"
-            >
-              최종 판매가격에 적용
-            </button>
-          </div>
-        </Row>
-        <p className="-mt-1.5 pl-[calc(6rem+0.5rem)] text-[11px] text-text-tertiary">
-          {product.priceOverrideKrw
-            ? "직접 저장된 값입니다 — 위 값을 고쳐도 자동으로 바뀌지 않습니다. 다시 계산하려면 버튼을 누르세요."
-            : "아직 저장된 값이 없어 권장 판매가격을 보여주고 있습니다 — 입력하거나 버튼을 눌러야 저장됩니다."}
-        </p>
-
         <Row label="예상 수수료 금액">
           <span className="font-medium text-text-primary">{formatKrw(feeAmountKrw)}</span>
         </Row>
@@ -450,7 +490,47 @@ export function PriceEditor({
           있습니다.
         </p>
       </div>
+      )}
     </section>
+  );
+}
+
+/** N-3.16 잔여3(CPO 지시: "최종 판매가 ₩235,300 / 원본 ₩109,620 · AI 추천
+ * ₩235,300 · 사용자 확정 ₩235,300"과 같은 요약을 접힌 상태에서도 보여준다") —
+ * 바깥 가격 Accordion이 접혀 있을 때 이 컴포넌트 하나만 그려지고, 펼쳐져
+ * 있을 때는 상세 편집 UI 맨 위에 다시 한번 그려진다 — 두 경우 모두 호출부에서
+ * 넘겨준 동일한 breakdown/finalPriceKrw를 그대로 표시만 하므로 숫자가 갈릴
+ * 일이 없다. */
+function PriceSummaryStrip({
+  product,
+  breakdown,
+  finalPriceKrw,
+}: {
+  product: CanonicalProduct;
+  breakdown: ReturnType<typeof computePriceBreakdown>;
+  finalPriceKrw: number;
+}) {
+  return (
+    <div className="space-y-1 text-xs">
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-text-secondary">최종 판매가</span>
+        <span className="text-base font-semibold text-text-primary">{formatKrw(finalPriceKrw)}</span>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-text-tertiary">
+        <span className="inline-flex items-center gap-1">
+          <ValueBadge kind="original" />
+          {formatOriginalPrice(product.price.value.amount, product.price.value.currency)}
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <ValueBadge kind="aiSuggested" />
+          {formatKrw(breakdown.suggestedPriceKrw)}
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <ValueBadge kind="userConfirmed" />
+          {product.priceOverrideKrw ? formatKrw(product.priceOverrideKrw.value) : "미확정"}
+        </span>
+      </div>
+    </div>
   );
 }
 
