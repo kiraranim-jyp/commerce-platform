@@ -183,15 +183,23 @@ export async function getFixieOutboundIp(): Promise<string | null> {
   }
 }
 
-/** Access Token으로 실제 Commerce API를 호출한다 — Coupang callCoupangApi와 동일한 역할. */
+/** Access Token으로 실제 Commerce API를 호출한다 — Coupang callCoupangApi와 동일한 역할.
+ * N-3.25(STEP 3) — POST /v2/products(실제 등록)를 이 함수로 호출하려면 body를
+ * 보낼 수 있어야 해서 Coupang callCoupangApi와 같은 모양(body?: unknown, 있으면
+ * JSON.stringify + Content-Type 헤더)으로 확장한다. GET 전용 호출부(auth-test,
+ * resolve route 등)는 body를 안 넘기므로 동작이 그대로 유지된다. */
 export async function callNaverApi(
   accessToken: string,
-  { method, path }: { method: "GET" | "POST"; path: string },
+  { method, path, body }: { method: "GET" | "POST"; path: string; body?: unknown },
 ): Promise<NaverApiResponse | NaverApiError> {
   try {
     const res = await naverFetch(`${NAVER_API_BASE}${path}`, {
       method,
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(NAVER_REQUEST_TIMEOUT_MS),
       dispatcher: naverProxyDispatcher,
     });

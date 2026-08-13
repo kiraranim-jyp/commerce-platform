@@ -782,7 +782,7 @@ describe("N-3.5: smartstoreChannelProduct 스키마 재검증", () => {
   // 제외하기로 확정했다. 값을 채우지 않는다는 사실(추측 금지)은 그대로지만,
   // 더 이상 result.issues(등록 차단 목록)에는 안 들어가고 advisoryNotes로만
   // 나온다 — "등록을 막는다" ≠ "판매자가 알아야 한다"를 분리한 것.
-  it("naverShoppingRegistration은 채우지 않고(근거 없음) advisory로만 표시한다 — Gate 판단(issues)에는 안 들어간다", () => {
+  it("naverShoppingRegistration은 false로 명시 전송하고 advisory로만 표시한다 — Gate 판단(issues)에는 안 들어간다(N-3.25 STEP 2)", () => {
     const product = makeMinimalProduct();
     const listing = makeMinimalListing(product);
     const payload = buildNaverProductPayload({
@@ -790,7 +790,7 @@ describe("N-3.5: smartstoreChannelProduct 스키마 재검증", () => {
       childCertificationInfoId: null,
       categoryRequiresChildCertification: false,
     });
-    expect(payload.smartstoreChannelProduct.naverShoppingRegistration).toBeUndefined();
+    expect(payload.smartstoreChannelProduct.naverShoppingRegistration).toBe(false);
     const result = validateNaverPayload(
       payload,
       { ...baseValidateInput(product), childCertificationInfoId: null },
@@ -801,7 +801,7 @@ describe("N-3.5: smartstoreChannelProduct 스키마 재검증", () => {
     ).toBe(false);
     expect(
       result.advisoryNotes.some(
-        (f) => f.field === "smartstoreChannelProduct.naverShoppingRegistration" && f.status === "MISSING",
+        (f) => f.field === "smartstoreChannelProduct.naverShoppingRegistration" && f.status === "READY",
       ),
     ).toBe(true);
   });

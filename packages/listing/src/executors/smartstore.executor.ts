@@ -55,42 +55,39 @@ export const smartstoreExecutor: ListingExecutor = {
       };
     }
 
-    // LIVE — 실제 등록 API 연동은 이번 Mission 범위 밖이다. 인증 정보를 먼저
-    // 확인하고, 없으면(지금은 항상 없다) 네트워크 요청을 시도조차 하지 않는다.
-    // 브라우저에서 이 코드가 실행되더라도 SMARTSTORE_CLIENT_SECRET은 서버
-    // 전용 환경변수라 클라이언트 번들에는 애초에 존재하지 않는다 — 값이 없으면
-    // 이 분기가 항상 막아준다는 뜻이다. 실제 연동 시에는 이 블록 전체를
-    // 서버 API 라우트로 옮겨야 한다(시크릿은 브라우저에서 절대 다루지 않는다).
-    const hasCredentials = Boolean(
-      process.env.SMARTSTORE_CLIENT_ID && process.env.SMARTSTORE_CLIENT_SECRET,
-    );
-    if (!hasCredentials) {
+    // N-3.25(STEP 4) — LIVE는 Coupang executor와 완전히 같은 원칙: 이 파일은
+    // "use client" 컴포넌트 트리에서 실행되는 얇은 클라이언트일 뿐이고, 실제
+    // OAuth 토큰 발급/서명/POST /v2/products 호출은 전부 서버 전용 라우트
+    // (/api/smartstore/register)에서 일어난다. SMARTSTORE_CLIENT_SECRET은
+    // 서버 전용 환경변수라 이 파일이 실행되는 브라우저 번들에는 애초에
+    // 존재하지 않는다 — 이 executor 자체에는 인증 로직이 없다(새로 만들지
+    // 않는다, CPO 지시).
+    //
+    // UI에서 이 경로를 실제로 탈 수 있는지는 이 함수가 결정하지 않는다 —
+    // capabilities.ts의 registrationEnabled(smartstore: false, N-3.25 STEP 4
+    // 지시로 그대로 유지)가 RegistrationReadinessCard에서 등록 버튼 자체를
+    // 막는다. "구현됨"과 "실사용 가능"을 의도적으로 분리한다.
+    try {
+      const response = await fetch("/api/smartstore/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product, listing }),
+      });
+      const result = (await response.json()) as ListingResult;
+      return result;
+    } catch (error) {
       return {
         status: "FAILED",
         platform: "smartstore",
         mode,
-        retryable: false,
+        retryable: true,
         payload,
         error: {
-          step: "AUTHENTICATION",
-          message: "SmartStore 인증이 필요합니다.",
-          retryable: false,
-          resolution: "다시 로그인하거나 인증 정보를 확인해주세요.",
+          step: "NETWORK",
+          message: error instanceof Error ? error.message : "등록 서버에 연결할 수 없습니다.",
+          retryable: true,
         },
       };
     }
-
-    return {
-      status: "FAILED",
-      platform: "smartstore",
-      mode,
-      retryable: false,
-      payload,
-      error: {
-        step: "NOT_IMPLEMENTED",
-        message: "실제 SmartStore 등록 API 연동은 아직 구현되지 않았습니다.",
-        retryable: false,
-      },
-    };
   },
 };

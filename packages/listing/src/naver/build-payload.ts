@@ -375,9 +375,14 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
       // 없음). 새 상품을 등록 즉시 노출시키지 않는 게 안전하므로 유효한
       // 값 중 SUSPENSION(전시 중지)을 기본값으로 쓴다.
       channelProductDisplayStatusType: "SUSPENSION",
-      // naverShoppingRegistration은 required 필드이지만 CartPilot이 임의로
-      // 정할 근거가 없어 값을 채우지 않는다 — validate-payload.ts가 항상
-      // MISSING으로 표시한다.
+      // N-3.25(STEP 2) — 스펙 재확인 결과: "네이버쇼핑 광고주가 아니면 무엇을
+      // 보내든 서버가 강제로 false로 저장한다"고 명시되어 있어, false를 명시
+      // 전송하는 것이 광고주가 아닌 절대다수 계정의 실제 결과와 정확히 같고
+      // (판단 불필요), 광고주인 계정에도 자동 등록 흐름에서는 "미연동"이 더
+      // 안전한 기본값이다(연동은 등록 후 Wing에서 판매자가 직접 선택 가능).
+      // required 필드를 비워 보내는 것보다(스키마 필수값 누락으로 거부될 위험)
+      // 명시적으로 안전한 값을 채우는 쪽을 택한다.
+      naverShoppingRegistration: false,
     },
   };
 }

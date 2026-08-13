@@ -375,10 +375,15 @@ export function validateNaverPayload(
   // Gate 판단(readyCount/missingCount/blockedCount/ok)에서 제외하고
   // advisory로만 남긴다 — READY로 바꿔치기하는 게 아니라 "판단 대상에서
   // 뺀다"는 뜻이다.
+  // N-3.25(STEP 2) — build-payload.ts가 이제 false를 명시 전송한다(광고주가
+  // 아니면 서버가 어차피 강제로 false 처리, 광고주라도 자동 등록 흐름에서는
+  // 미연동이 안전한 기본값). 값은 채워졌지만 "네이버쇼핑 광고주 여부"라는
+  // CartPilot 밖의 계정 상태와 여전히 무관하므로 advisory는 유지하되
+  // status를 READY로, 문구를 실제 동작에 맞게 갱신한다.
   fields.push({
     field: "smartstoreChannelProduct.naverShoppingRegistration",
-    status: "MISSING",
-    reason: "네이버쇼핑 등록 여부(광고주 전용 설정)를 CartPilot이 알 수 없습니다 — 등록 후 Wing에서 별도 확인이 필요합니다.",
+    status: "READY",
+    reason: "false로 명시 전송됩니다 — 네이버쇼핑 광고주가 아니면 서버가 어차피 강제하는 값과 동일하며, 광고주라면 등록 후 Wing에서 직접 연동할 수 있습니다.",
     advisory: true,
   });
 
