@@ -491,63 +491,53 @@ export default function PipelinePage() {
         }
       />
       {/* Sprint A-9(작업1 — CEO 실측 피드백: "노트북 기준으로도 답답합니다,
-          쿠팡 Wing처럼 거의 전체화면을 쓰고 싶다") — 랜딩(!started)은 마케팅
-          카피라 좁은 폭이 오히려 읽기 좋지만, Editor(started)는 필드가 많은
-          폼이라 넓은 폭이 필요하다. 바깥 컨테이너는 PageContainer size="xl"로
-          통일하고, 랜딩의 좁은 폭은 안쪽 섹션(max-w-xl)에서만 준다. */}
-      <PageContainer size="xl" className="min-w-0 py-10">
+          쿠팡 Wing처럼 거의 전체화면을 쓰고 싶다") — Editor(started)는 필드가
+          많은 폼이라 넓은 폭이 필요해 size="xl"을 그대로 유지한다(재검토
+          대상 아님). 랜딩(!started)은 size="md"(1200px)를 쓴다 — "업무 시작
+          화면"이지 마케팅 랜딩이 아니므로 넓은 xl 폭을 그대로 쓰면 좌우
+          여백만 커지고 정보 밀도가 낮아진다(CPO 실측 피드백: "가운데 작은
+          섬 하나가 넓은 화면에 떠 있는 느낌"). */}
+      <PageContainer size={started ? "xl" : "md"} className="min-w-0 py-10">
       {!started ? (
-        <section className="mx-auto mt-16 max-w-5xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-            AI Commerce Copilot
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-text-primary">
-            해외 상품을 판매 가능한 상품으로
-            <br />
-            바꾸는 가장 빠른 방법
-          </h1>
-          <p className="mt-3 text-sm leading-relaxed text-text-secondary">
-            URL 하나를 입력하면 CartPilot AI가 상품 정보, 이미지, 카테고리, 콘텐츠를 분석하고
-            국내 판매 등록을 준비합니다.
-          </p>
-
+        <>
           {/* Sprint A-9(작업7 — CEO 지시: "이제 쿠팡 연결 테스트는 끝났습니다.
               랜딩에서는 삭제해주세요. 실제 등록 시 등록 버튼에서만 체크하면
               됩니다.") — 여기서 하던 연결 확인은 삭제한다. CommerceWorkspace가
               쿠팡 탭에서 등록 직전(confirmListing)에 이미 독립적으로 다시
               확인한다(등록 직전 최종 재확인이 이 화면의 사전 확인보다 더
               정확하다 — 그 사이에 토큰이 만료될 수도 있으므로). */}
-
-          <div className="mt-8 flex flex-col gap-2 sm:flex-row">
-            <input
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://example.com/product/123"
-              aria-label="상품 URL"
-              disabled={loading}
-              className="flex-1 rounded-md border border-border bg-surface px-3 py-2.5 text-sm text-text-primary shadow-subtle focus:border-primary focus:outline-none disabled:opacity-60"
-            />
-            <button
-              onClick={runPipeline}
-              disabled={loading || !url}
-              className="flex items-center justify-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-white shadow-subtle transition-colors hover:bg-primary-hover disabled:opacity-40"
-            >
-              상품 분석 시작
-            </button>
+          <div className="max-w-[960px]">
+            <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-2 shadow-subtle sm:flex-row sm:items-center">
+              <input
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://example.com/product/123"
+                aria-label="상품 URL"
+                disabled={loading}
+                className="flex-1 rounded-md border-0 bg-transparent px-3 py-3 text-sm text-text-primary focus:outline-none disabled:opacity-60"
+              />
+              <button
+                onClick={runPipeline}
+                disabled={loading || !url}
+                className="flex items-center justify-center gap-2 rounded-md bg-primary px-5 py-3 text-sm font-medium text-white shadow-subtle transition-colors hover:bg-primary-hover disabled:opacity-40"
+              >
+                상품 분석 →
+              </button>
+            </div>
           </div>
 
-          <div className="mt-12 border-t border-border pt-8">
+          <div className="mt-10 border-t border-border pt-6">
             <p className="text-xs font-medium text-text-tertiary">
               CartPilot이 자동으로 처리합니다
             </p>
-            <ul className="mt-3 grid grid-cols-1 gap-2 text-left text-sm text-text-secondary sm:grid-cols-2">
+            <ul className="mt-3 grid grid-cols-1 gap-2 text-left text-sm text-text-secondary sm:grid-cols-2 lg:grid-cols-3">
               {[
                 "상품 정보 추출",
+                "카테고리 분석",
                 "이미지 최적화 (JPG 표준화)",
-                "상품 카테고리 추천",
-                "AI 상품명/설명 생성",
-                "국내 커머스 등록 준비",
+                "상품명·설명 생성",
+                "국내 판매 정보 준비",
               ].map((feature) => (
                 <li key={feature} className="flex items-center gap-2">
                   <span className="text-success">✓</span>
@@ -557,9 +547,9 @@ export default function PipelinePage() {
             </ul>
           </div>
 
-          <div className="mt-8 border-t border-border pt-6">
+          <div className="mt-6 border-t border-border pt-6">
             <p className="text-xs font-medium text-text-tertiary">지원 플랫폼</p>
-            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               {["스마트스토어", "쿠팡", "11번가"].map((platform) => (
                 <span
                   key={platform}
@@ -570,7 +560,7 @@ export default function PipelinePage() {
               ))}
             </div>
           </div>
-        </section>
+        </>
       ) : (
         <>
           {loading && (

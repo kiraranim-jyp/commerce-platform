@@ -1,6 +1,7 @@
 import type { HTMLAttributes } from "react";
 
 const SIZE_CLASS = {
+  md: "max-w-[1200px]",
   lg: "max-w-[1400px]",
   xl: "max-w-[1800px]",
   "2xl": "max-w-[1920px]",
