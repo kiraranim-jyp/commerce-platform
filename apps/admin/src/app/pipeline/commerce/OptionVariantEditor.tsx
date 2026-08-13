@@ -1,7 +1,19 @@
 "use client";
 
-import type { CanonicalProductVariant } from "@commerce/shared";
+import type { CanonicalProductVariant, FieldSource } from "@commerce/shared";
+import { ValueBadge, type ValueBadgeKind } from "@/components/ui/ValueBadge";
 import { EditableText } from "./EditableField";
+
+// N-3.18(CPO 지시: "가격/재고/SKU/사용자가 수정할 수 있는 값에는 적극적으로 표시한다") —
+// variant의 skuSource/priceSource/stockQuantitySource는 "ORIGINAL"/"USER_EDITED" 둘만
+// 쓴다(AI가 채우는 경로가 없음, 타입 주석 참고). undefined면(마이그레이션 이전 데이터)
+// 출처를 모른다는 뜻이라 배지를 아예 그리지 않는다 — 추측 금지.
+function variantSourceBadge(source: FieldSource | undefined) {
+  if (!source) return null;
+  const kind: ValueBadgeKind | null = source === "ORIGINAL" ? "original" : source === "USER_EDITED" ? "userConfirmed" : null;
+  if (!kind) return null;
+  return <ValueBadge kind={kind} className="mt-0.5" />;
+}
 
 /**
  * Sprint A-12(작업6 — CPO 지시: "옵션 품질 개선 — SKU 자동/재고 자동/가격추가
@@ -71,7 +83,7 @@ function VariantRow({
   return (
     <tr className="border-b border-border/60">
       <td className="py-1.5 pr-2 text-text-primary">{combo}</td>
-      <td className="py-1.5 pr-2">
+      <td className="py-1.5 pr-2 align-top">
         <div className="flex items-center gap-1">
           <EditableText
             value={variant.sku ?? ""}
@@ -85,8 +97,9 @@ function VariantRow({
             </button>
           )}
         </div>
+        {variantSourceBadge(variant.skuSource)}
       </td>
-      <td className="py-1.5 pr-2">
+      <td className="py-1.5 pr-2 align-top">
         <EditableText
           value={variant.stockQuantity != null ? String(variant.stockQuantity) : ""}
           onCommit={(v) => {
@@ -96,8 +109,9 @@ function VariantRow({
           placeholder="기본값"
           className="w-16 rounded border border-border px-1.5 py-1 focus:border-primary focus:outline-none"
         />
+        {variantSourceBadge(variant.stockQuantitySource)}
       </td>
-      <td className="py-1.5">
+      <td className="py-1.5 align-top">
         <div className="flex items-center gap-1">
           <EditableText
             value={variant.price ? String(variant.price.amount) : ""}
@@ -113,6 +127,7 @@ function VariantRow({
           />
           {variant.price && <span className="text-[11px] text-text-tertiary">{variant.price.currency}</span>}
         </div>
+        {variantSourceBadge(variant.priceSource)}
       </td>
     </tr>
   );

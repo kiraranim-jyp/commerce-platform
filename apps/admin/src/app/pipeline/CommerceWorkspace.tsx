@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CanonicalProduct, CommerceCategoryPathResult, FieldSource, PlatformId } from "@commerce/shared";
+import type {
+  CanonicalProduct,
+  CanonicalProductVariant,
+  CommerceCategoryPathResult,
+  FieldSource,
+  PlatformId,
+} from "@commerce/shared";
 import {
   buildResolverBiasedQuery,
   resolveProductSignals,
@@ -440,9 +446,18 @@ export function CommerceWorkspace({
     variantId: string,
     patch: Partial<{ sku: string; stockQuantity: number; price: { amount: number; currency: string } | undefined }>,
   ) {
+    // N-3.18(CPO 지시: "옵션별 가격/재고/SKU의 출처(Provenance)를 확인") — 사용자가
+    // OptionVariantEditor에서 직접 고친 필드만 "USER_EDITED"로 태그한다. patch에
+    // 없는 필드는 기존 *Source를 그대로 둔다(건드리지 않은 필드의 출처를 잘못 덮어쓰지 않기 위함).
+    const sourcePatch: Partial<
+      Pick<CanonicalProductVariant, "skuSource" | "priceSource" | "stockQuantitySource">
+    > = {};
+    if ("sku" in patch) sourcePatch.skuSource = "USER_EDITED" as FieldSource;
+    if ("price" in patch) sourcePatch.priceSource = "USER_EDITED" as FieldSource;
+    if ("stockQuantity" in patch) sourcePatch.stockQuantitySource = "USER_EDITED" as FieldSource;
     setProduct((prev) => ({
       ...prev,
-      variants: prev.variants.map((v) => (v.id === variantId ? { ...v, ...patch } : v)),
+      variants: prev.variants.map((v) => (v.id === variantId ? { ...v, ...patch, ...sourcePatch } : v)),
     }));
   }
 

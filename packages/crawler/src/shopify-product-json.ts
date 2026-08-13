@@ -245,6 +245,7 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
           id: String(v.id),
           optionValues: buildOptionValues(v, optionNames),
           sku: v.sku || undefined,
+          skuSource: v.sku ? "ORIGINAL" : undefined,
           price:
             v.price != null
               ? {
@@ -255,9 +256,11 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
                       : (shopCurrency ?? (v.price_currency ?? "").toUpperCase()),
                 }
               : undefined,
+          priceSource: v.price != null ? "ORIGINAL" : undefined,
           // inventory_management가 없으면(재고 추적 꺼진 매장) 숫자를 신뢰할 수
           // 없어서 채우지 않는다 — "모른다"를 "0개"로 잘못 전달하지 않기 위함.
           stockQuantity: v.inventory_management ? v.inventory_quantity : undefined,
+          stockQuantitySource: v.inventory_management ? "ORIGINAL" : undefined,
           // TODO(P1-6): image_id는 Shopify 내부 이미지 id라 파이프라인이 다운로드 후
           // 새로 부여하는 CanonicalProductImage.id와 다르다 — URL 기준 매칭이
           // 필요하다(canonical-product.ts가 원본 URL을 알고 있을 때만 가능).

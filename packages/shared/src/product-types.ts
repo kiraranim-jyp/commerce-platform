@@ -87,6 +87,16 @@ export interface CanonicalProductVariant {
   /** 이 조합 전용 이미지(색상별 대표컷 등) — CanonicalProductImage.id를 가리킨다.
    * 원본 사이트가 실제로 옵션-이미지를 연결해뒀을 때만 있다. */
   imageId?: string;
+  /** N-3.18(CPO 지시: "옵션별 가격/재고/SKU의 출처(Provenance)를 확인") —
+   * sku/price/stockQuantity는 원래 출처 표시가 없었다(값만 있고 어디서 왔는지
+   * 구분 불가). 이 필드들은 실제로 AI가 채우는 경로가 없으므로(오직 원본
+   * 사이트 추출 또는 사용자가 OptionVariantEditor에서 직접 입력, 둘 중 하나)
+   * FieldSource 전체 중 "ORIGINAL"/"USER_EDITED" 둘만 쓴다 — 없는 AI_GENERATED
+   * 경로를 있는 것처럼 꾸미지 않는다. undefined면(마이그레이션 이전 데이터)
+   * 출처를 모른다는 뜻이라 UI가 배지를 아예 안 그린다(추측 금지). */
+  skuSource?: FieldSource;
+  priceSource?: FieldSource;
+  stockQuantitySource?: FieldSource;
 }
 
 export function getSelectedImageUrl(image: CanonicalProductImage): string {

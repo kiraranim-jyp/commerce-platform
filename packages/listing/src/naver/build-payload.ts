@@ -1,6 +1,7 @@
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
+import { convertToKrw } from "@commerce/pricing";
 import { assembleContentsFromBlocks, BLANK_COUPANG_SELLER_CONFIG } from "../coupang/build-payload";
 import type { CoupangDescriptionTemplate, CoupangSellerConfig, DetailPageBlock } from "../coupang/build-payload";
 import type {
@@ -182,7 +183,16 @@ function buildOptionCombinations(product: CanonicalProduct, salePrice: number): 
   const groupNames = product.optionGroups.map((g) => g.name);
   return product.variants.map((variant) => {
     const values = groupNames.map((name) => variant.optionValues[name] ?? "");
-    const priceDelta = variant.price ? variant.price.amount - salePrice : 0;
+    // N-3.18(CPO 지시: "variant 가격 Provenance/우선순위 재검증") — variant.price는
+    // 원본 사이트 통화(예: USD) 그대로다. salePrice(KRW)와 통화 단위를 맞추지
+    // 않고 그냥 빼면(옛날 코드: variant.price.amount - salePrice) 숫자 단위가
+    // 안 맞는 값이 나온다(예: 27.20 - 64500). Coupang의 buildCoupangItem이 이미
+    // convertToKrw로 원화 환산 후 계산하는 것과 같은 방식으로 맞춘다 — 절대
+    // 판매가 vs 추가금액 여부 자체는 여전히 미확인(N-3.6)이라 이 필드는 계속
+    // BLOCKED로 남지만, 그 안의 숫자 계산은 최소한 통화 단위가 맞아야 한다.
+    const priceDelta = variant.price
+      ? convertToKrw(variant.price.amount, variant.price.currency).amountKrw - salePrice
+      : 0;
     const combo: NaverOptionCombination = {
       stockQuantity: variant.stockQuantity ?? product.stockQuantity.value ?? 0,
       price: priceDelta,
