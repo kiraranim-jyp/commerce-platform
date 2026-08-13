@@ -3,12 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { buildNaverProductPayload, validateNaverPayload } from "@commerce/listing";
 import type { ListingModel } from "@commerce/marketplace";
-import type { CoupangDescriptionTemplate, DetailPageBlock, NaverCategoryCandidate } from "@commerce/listing";
+import type { CoupangDescriptionTemplate, DetailPageBlock } from "@commerce/listing";
 import type { CanonicalProduct, CommerceCategoryPathResult } from "@commerce/shared";
 import { formatKrw } from "@commerce/pricing";
-import { PriceEditor } from "./PriceEditor";
-import { CategoryTreeBrowser } from "./CategoryTreeBrowser";
-import { fetchNaverCategoryTree } from "./category-tree-adapters";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 
 /**
@@ -87,39 +84,6 @@ interface NaverResolveResponse {
   };
 }
 
-/** N-3.1 — leaf 이름 하나가 아니라 전체 경로(root→leaf)를 보여준다. hierarchy를
- * 아직 못 구했으면(로딩 중이거나 API가 조상 id를 못 준 경우) leaf 이름만이라도
- * 보여주되 "상위 경로 조회 중/불가"를 명확히 표시한다 — 추측으로 채우지 않는다. */
-function CategoryHierarchyLine({
-  hierarchy,
-  fallbackPath,
-}: {
-  hierarchy: CommerceCategoryPathResult | null | undefined;
-  fallbackPath?: string[];
-}) {
-  if (hierarchy?.resolved) {
-    return (
-      <span className="text-text-primary">
-        {hierarchy.nodes.map((n, i) => (
-          <span key={n.id}>
-            {i > 0 && <span className="text-text-tertiary"> {">"} </span>}
-            <span className={i === hierarchy.nodes.length - 1 ? "font-medium" : "text-text-secondary"}>{n.name}</span>
-          </span>
-        ))}
-      </span>
-    );
-  }
-  if (fallbackPath && fallbackPath.length > 0) {
-    return (
-      <span className="text-text-primary">
-        {fallbackPath.join(" > ")}
-        <span className="ml-1 text-[10px] text-text-tertiary">(상위 경로 id 조회 불가)</span>
-      </span>
-    );
-  }
-  return <span className="text-text-tertiary">상위 경로 조회 중...</span>;
-}
-
 /**
  * N-3.13 Part E-10(CPO 지시: "Naver 등록 준비 상태를 섹션별로 한눈에") — 이 맵을
  * scroll target(sectionId)뿐 아니라 사람이 읽는 그룹 라벨까지 함께 들고 있게
@@ -131,12 +95,17 @@ function CategoryHierarchyLine({
  * 새 섹션을 만들지 않는다).
  */
 const FIELD_SECTION: Record<string, { sectionId: string; group: string }> = {
-  "originProduct.leafCategoryId": { sectionId: "naver-section-category", group: "카테고리" },
-  "originProduct.name": { sectionId: "naver-section-basic", group: "상품정보" },
-  "originProduct.detailContent": { sectionId: "naver-section-basic", group: "상세페이지" },
+  // N-3.15 Phase 3(STEP 2-B/2-C) — 기본정보/카테고리/가격/상세설명은 이제
+  // NaverPayloadPreview 전용 섹션이 없다 — PlatformPreview 공유 Accordion의
+  // section id(section-basic/section-category/section-price/section-shipping/
+  // section-description)로 스크롤한다(같은 상품에 두 개의 "카테고리" 섹션이
+  // 있던 예전 구조와 다르다).
+  "originProduct.leafCategoryId": { sectionId: "section-category", group: "카테고리" },
+  "originProduct.name": { sectionId: "section-basic", group: "상품정보" },
+  "originProduct.detailContent": { sectionId: "section-description", group: "상세페이지" },
   "originProduct.images.representativeImage": { sectionId: "naver-section-images", group: "이미지" },
-  "originProduct.salePrice": { sectionId: "naver-section-price", group: "가격" },
-  "originProduct.stockQuantity": { sectionId: "naver-section-price", group: "가격" },
+  "originProduct.salePrice": { sectionId: "section-price", group: "가격" },
+  "originProduct.stockQuantity": { sectionId: "section-shipping", group: "가격" },
   "claimDeliveryInfo.shippingAddressId": { sectionId: "naver-section-shipping", group: "배송/반품" },
   "claimDeliveryInfo.returnAddressId": { sectionId: "naver-section-shipping", group: "배송/반품" },
   "deliveryInfo.deliveryCompany": { sectionId: "naver-section-shipping", group: "배송/반품" },
@@ -149,7 +118,7 @@ const FIELD_SECTION: Record<string, { sectionId: string; group: string }> = {
   "detailAttribute.optionInfo.optionCombinations[].optionName": { sectionId: "naver-section-options", group: "옵션" },
   "detailAttribute.originAreaInfo.originAreaCode": { sectionId: "naver-section-origin", group: "원산지" },
   "detailAttribute.originAreaInfo.importer": { sectionId: "naver-section-origin", group: "원산지" },
-  "smartstoreChannelProduct.naverShoppingRegistration": { sectionId: "naver-section-basic", group: "상품정보" },
+  "smartstoreChannelProduct.naverShoppingRegistration": { sectionId: "section-basic", group: "상품정보" },
 };
 
 /** N-3.13 Part E-12 — productInfoProvidedNotice(KIDS)/productInfoProvidedNotice(WEAR)
@@ -189,12 +158,6 @@ export function NaverPayloadPreview({
   product,
   listing,
   detailBlocks,
-  onUpdateSalePriceKrw,
-  onUpdateOriginalPrice,
-  onUpdatePriceBreakdown,
-  exchangeRates,
-  exchangeRatesLoading,
-  onRefreshExchangeRates,
 }: {
   product: CanonicalProduct;
   /** N-3.13 Part J — DetailPageEditor(Coupang 탭에서 편집)가 만드는 블록 순서.
@@ -202,91 +165,42 @@ export function NaverPayloadPreview({
    * 같은 상품의 같은 상세페이지다). 없으면(에디터를 한 번도 안 연 세션)
    * buildNaverProductPayload가 지금까지처럼 listing.description으로 폴백한다. */
   detailBlocks?: DetailPageBlock[];
+  /** N-3.15 Phase 3(STEP 2-B/2-C) — 기본정보/카테고리/가격 편집은 이제
+   * PlatformPreview의 공유 Accordion에서만 일어난다(같은 listing을 읽는다).
+   * 그래서 이 컴포넌트는 더 이상 가격 계산 핸들러(onUpdateSalePriceKrw 등)를
+   * 받지 않는다 — PriceEditor를 여기서 또 그리지 않는다. */
   listing: ListingModel;
-  /** N-3.9(Part G — CPO 지시: "Naver/Coupang 동일 구조") — Coupang의
-   * PlatformPreview가 이미 갖고 있는 가격 계산 핸들러를 그대로 받아서
-   * PriceEditor를 재사용한다. 새 Naver 전용 가격 계산기를 만들지 않는다. */
-  onUpdateSalePriceKrw: (amountKrw: number) => void;
-  onUpdateOriginalPrice?: (patch: Partial<{ amount: number; currency: string }>) => void;
-  onUpdatePriceBreakdown: (breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) => void;
-  exchangeRates: { rates: Record<string, number>; fetchedAt: string; source: "frankfurter" | "fallback" } | null;
-  exchangeRatesLoading: boolean;
-  onRefreshExchangeRates: () => void;
 }) {
   const [showJson, setShowJson] = useState(false);
-  const [categoryIdInput, setCategoryIdInput] = useState("");
   const [resolved, setResolved] = useState<NaverResolveResponse | null>(null);
   const [resolving, setResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
-  const [candidates, setCandidates] = useState<NaverCategoryCandidate[]>([]);
-  const [candidatesLoading, setCandidatesLoading] = useState(false);
-  const [candidatesFetched, setCandidatesFetched] = useState(false);
-  const [autoFilledFromCandidate, setAutoFilledFromCandidate] = useState(false);
   // N-3.13 Part I — 등록 버튼을 눌렀을 때 "테스트 모드" 안내만 보여준다(실제
   // 등록 API는 호출하지 않는다). 서버 요청이 전혀 없는 순수 UI 상태다.
   const [showTestModeNotice, setShowTestModeNotice] = useState(false);
+  // N-3.15 Phase 3(STEP 2-C) — 예전엔 이 컴포넌트가 자기만의 categoryIdInput
+  // state로 카테고리를 관리했다(별도 후보 검색+선택 UI 포함). 이제 카테고리
+  // 선택은 공유 Accordion("카테고리" 섹션, PlatformPreview)에서만 이뤄지고,
+  // 여기는 그 결과(listing.category)를 읽기만 한다 — 같은 상품에 카테고리가
+  // 두 군데서 서로 다르게 보이는 버그(카테고리 선택했는데 미선택 판정)의
+  // 원인이었다. isVerifiedPlatformCode가 true인 candidate만 실제 Naver leaf
+  // category id로 인정한다(CP001과 같은 종류의 버그 방지 — category-field.ts와
+  // 동일 기준).
+  const leafCategoryId =
+    listing.category.candidate?.isVerifiedPlatformCode && listing.category.candidate.platform === "smartstore"
+      ? listing.category.candidate.id
+      : "";
 
-  // N-2.9 — 상품이 바뀌면 후보를 한 번 새로 가져온다(카테고리 ID 입력값과는
-  // 무관 — 후보 생성은 product 신호만 쓰지 입력값을 안 본다). settings/page.tsx와
-  // 같은 이유로 async IIFE로 감싼다 — setState를 effect 본문에 직접 두면
-  // react-hooks/set-state-in-effect에 걸린다.
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      setCandidatesLoading(true);
-      setCandidatesFetched(false);
-      try {
-        const res = await fetch("/api/naver/category-search", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(product),
-        });
-        const data = (await res.json()) as { status: string; candidates?: NaverCategoryCandidate[] };
-        if (cancelled) return;
-        setCandidates(data.status === "OK" ? (data.candidates ?? []) : []);
-      } catch {
-        if (!cancelled) setCandidates([]);
-      } finally {
-        if (!cancelled) {
-          setCandidatesLoading(false);
-          setCandidatesFetched(true);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [product]);
-
-  // HIGH 후보가 있고 사용자가 아직 아무것도 입력/선택하지 않았으면 자동으로
-  // 채운다 — 그래도 근거는 후보 목록에 항상 그대로 보여준다(자동 채움 =
-  // 근거를 숨기는 게 아니다, CPO 지시).
-  useEffect(() => {
-    void (async () => {
-      if (autoFilledFromCandidate || categoryIdInput.trim()) return;
-      const topHigh = candidates.find((c) => c.confidence === "HIGH");
-      if (topHigh) {
-        setCategoryIdInput(topHigh.categoryId);
-        setAutoFilledFromCandidate(true);
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [candidates]);
-
-  function selectCandidate(categoryId: string) {
-    setCategoryIdInput(categoryId);
-    setAutoFilledFromCandidate(true);
-  }
-
-  // N-2.8 — 카테고리 ID는 수동 입력 또는 위 후보 자동/수동 선택, 나머지는 실시간 조회.
-  // 500ms 디바운스로 입력 중 매 키 입력마다 호출하지 않는다.
+  // N-2.8 — leafCategoryId(공유 Accordion "카테고리" 섹션에서 확정된 값)가
+  // 바뀔 때마다 나머지 필드를 실시간 조회한다. 500ms 디바운스로 짧은 시간에
+  // 여러 번 바뀌어도 매번 호출하지 않는다.
   useEffect(() => {
     let cancelled = false;
     const timer = window.setTimeout(() => {
       setResolving(true);
       setResolveError(null);
       const params = new URLSearchParams();
-      if (categoryIdInput.trim()) params.set("categoryId", categoryIdInput.trim());
+      if (leafCategoryId) params.set("categoryId", leafCategoryId);
       // N-3.4 — 상품추출 원산지 텍스트/브랜드명을 넘겨서 서버가 A-12-3과 동일한
       // 우선순위(상품추출 > 브랜드기본값 > Seller기본값)로 원산지 코드를 매칭한다.
       if (product.countryOfOrigin.value) params.set("countryOfOrigin", product.countryOfOrigin.value);
@@ -318,9 +232,8 @@ export function NaverPayloadPreview({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [categoryIdInput, product.countryOfOrigin.value, product.brand.value]);
+  }, [leafCategoryId, product.countryOfOrigin.value, product.brand.value]);
 
-  const leafCategoryId = categoryIdInput.trim();
   const releaseAddressBookNo = resolved?.address.releaseAddressBookNo ?? null;
   const refundAddressBookNo = resolved?.address.refundAddressBookNo ?? null;
   const childCertificationInfoId = resolved?.category?.childCertificationInfoId ?? null;
@@ -611,119 +524,16 @@ export function NaverPayloadPreview({
         )}
       </div>
 
-      <Section id="naver-section-basic" title="기본 상품정보">
-        <Row label="상품명" value={payload.originProduct.name || "MISSING"} />
-        <Row label="재고" value={`${payload.originProduct.stockQuantity}개`} />
-        <Row label="판매상태" value={payload.originProduct.statusType} />
-      </Section>
+      {/* N-3.15 Phase 3(STEP 2-B/2-C) — 기본정보/카테고리/가격은 더 이상 여기서
+       * 따로 그리지 않는다. PlatformPreview의 공유 Accordion("기본정보"/
+       * "카테고리"/"가격" 섹션)이 스마트스토어/쿠팡 양쪽에 이미 동일하게
+       * 렌더링되고 있고, 카테고리는 이제 이 파일이 아니라 CommerceWorkspace의
+       * categoryCandidates/onSelectCategory를 통해서만 확정된다(leafCategoryId는
+       * 그 결과를 읽기만 한다) — 여기서 또 그리면 "같은 상품인데 두 군데서 다른
+       * 카테고리/가격이 보이는" 예전 버그가 재발한다. */}
 
-      {/* N-3.9(Part G) — Coupang과 완전히 같은 PriceEditor 컴포넌트/계산 모델을
-          쓴다. 등록 payload가 읽는 salePrice(listing.priceKrw)는 이 컴포넌트가
-          onUpdateSalePriceKrw로 갱신하는 product.priceOverrideKrw를 그대로
-          따라간다 — 별도로 다시 표시하지 않는다(CP001류 이중 판정 방지). */}
-      <Section id="naver-section-price" title="판매가격">
-        <PriceEditor
-          product={product}
-          onUpdateSalePriceKrw={onUpdateSalePriceKrw}
-          onUpdateOriginalPrice={onUpdateOriginalPrice}
-          onUpdatePriceBreakdown={onUpdatePriceBreakdown}
-          exchangeRates={exchangeRates}
-          exchangeRatesLoading={exchangeRatesLoading}
-          onRefreshExchangeRates={onRefreshExchangeRates}
-        />
-      </Section>
-
-      <Section id="naver-section-category" title="카테고리">
-        {candidatesLoading && <p className="text-[11px] text-text-tertiary">추천 카테고리 조회 중...</p>}
-        {!candidatesLoading && candidatesFetched && candidates.length === 0 && (
-          <p className="text-[11px] text-text-tertiary">
-            자동 매칭 후보 없음 — 상품유형을 특정하지 못했거나 대조 기준이 아직 없는 유형입니다. 아래에 직접
-            입력하세요.
-          </p>
-        )}
-        {candidates.length > 0 && (
-          <div className="space-y-1">
-            <p className="text-xs text-text-secondary">추천 카테고리</p>
-            <ul className="space-y-1">
-              {candidates.map((c) => {
-                const badgeClass =
-                  c.confidence === "HIGH"
-                    ? "bg-success-soft text-success"
-                    : c.confidence === "MEDIUM"
-                      ? "bg-warning-soft text-warning"
-                      : "bg-error-soft text-error";
-                const isSelected = categoryIdInput.trim() === c.categoryId;
-                return (
-                  <li key={c.categoryId}>
-                    <button
-                      type="button"
-                      onClick={() => selectCandidate(c.categoryId)}
-                      className={`w-full rounded border px-2 py-1.5 text-left text-xs transition-colors ${
-                        isSelected ? "border-primary bg-primary/5" : "border-border hover:bg-background"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs">
-                          <CategoryHierarchyLine hierarchy={c.hierarchy} fallbackPath={c.categoryPath} />
-                        </span>
-                        <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${badgeClass}`}>
-                          {c.confidence} {c.score}
-                        </span>
-                      </div>
-                      <p className="mt-0.5 text-[11px] text-text-tertiary">{c.reason}</p>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
-
-        <div>
-          <label className="text-xs text-text-secondary" htmlFor="naver-category-id-input">
-            네이버 카테고리 ID(위 추천에서 선택하거나 직접 입력)
-          </label>
-          <input
-            id="naver-category-id-input"
-            type="text"
-            value={categoryIdInput}
-            onChange={(e) => {
-              setCategoryIdInput(e.target.value);
-              setAutoFilledFromCandidate(true);
-            }}
-            placeholder="예: 50000535"
-            className="mt-0.5 w-full rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
-          />
-        </div>
-
-        {/* N-3.10 Part C — 추천 후보가 안 맞을 때 쿠팡과 동일한 CategoryTreeBrowser로
-            대분류부터 직접 찾는다(Naver 전용 트리 UI를 새로 만들지 않는다). */}
-        <CategoryTreeBrowser
-          platform="smartstore"
-          platformLabel="네이버"
-          fetchTree={fetchNaverCategoryTree}
-          onSelect={(candidate) => selectCandidate(candidate.id)}
-        />
-
-        {resolving && <p className="text-[11px] text-text-tertiary">네이버 카테고리 조회 중...</p>}
-        {resolveError && <p className="text-[11px] text-error">{resolveError}</p>}
-        {leafCategoryId ? (
-          <div className="flex items-start gap-2 text-xs">
-            <dt className="w-20 shrink-0 text-text-secondary">선택된 카테고리</dt>
-            <dd>
-              <CategoryHierarchyLine hierarchy={resolved?.category?.hierarchy} />
-            </dd>
-          </div>
-        ) : (
-          <Row label="네이버 카테고리" value="미확정 — 위 추천에서 선택하거나 직접 입력하세요" />
-        )}
-        {resolved?.category && (
-          <Row
-            label="어린이제품 인증"
-            value={resolved.category.requiresChildCertification ? "필요(CHILD_CERTIFICATION)" : "불필요"}
-          />
-        )}
-      </Section>
+      {resolving && <p className="text-[11px] text-text-tertiary">네이버 카테고리 조회 중...</p>}
+      {resolveError && <p className="text-[11px] text-error">{resolveError}</p>}
 
       <Section id="naver-section-images" title="이미지">
         <div className="flex flex-wrap gap-2">

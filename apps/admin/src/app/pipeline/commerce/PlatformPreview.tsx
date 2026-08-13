@@ -312,17 +312,7 @@ export function PlatformPreview({
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="space-y-3">
         {capabilities.hasNaverPreview && (
-          <NaverPayloadPreview
-            product={product}
-            listing={listing}
-            detailBlocks={detailBlocks}
-            onUpdateSalePriceKrw={onUpdateSalePriceKrw}
-            onUpdateOriginalPrice={onUpdateOriginalPrice}
-            onUpdatePriceBreakdown={onUpdatePriceBreakdown}
-            exchangeRates={exchangeRates}
-            exchangeRatesLoading={exchangeRatesLoading}
-            onRefreshExchangeRates={onRefreshExchangeRates}
-          />
+          <NaverPayloadPreview product={product} listing={listing} detailBlocks={detailBlocks} />
         )}
 
         <CollapsibleSection title="기본정보" badge={sectionCompletionBadge("section-basic")} {...sectionProps("section-basic")}>

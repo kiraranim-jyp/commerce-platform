@@ -24,6 +24,7 @@ import {
   type ExecutionMode,
   type ListingResult,
   type ListingStatus,
+  type NaverCategoryCandidate,
   type PlatformConnectionStatus,
   type RegistrationHistoryEntry,
 } from "@commerce/listing";
@@ -227,6 +228,16 @@ export function CommerceWorkspace({
   } | null>(null);
   const [coupangCategoryFetching, setCoupangCategoryFetching] = useState(false);
   const [coupangSettingsMissing, setCoupangSettingsMissing] = useState<string[] | null>(null);
+  /** N-3.15 Phase 3(STEP 2-C) — 예전엔 NaverPayloadPreview가 /api/naver/category-search를
+   * 직접 호출해서 자기만의 로컬 state(categoryIdInput)로 관리했다. 그 결과 이
+   * 화면(PlatformPreview의 공유 "카테고리" Accordion, listing.category 기반
+   * readiness 카드)이 보는 카테고리와 실제로 다를 수 있었다 — 사용자가 위에서
+   * 고른 카테고리가 화면 하단 "등록 가능성" 카드에서는 "선택되지 않음"으로
+   * 보이는 버그의 원인이었다. Coupang이 이미 하는 방식(coupangApiCandidates)과
+   * 완전히 같은 패턴으로 통일한다 — 실제 Naver 카테고리 트리(4999건) 대조 결과를
+   * categoryCandidates 공유 state로 흘려보내고, onSelectCategory 한 곳으로만
+   * 확정한다. */
+  const [naverApiCandidates, setNaverApiCandidates] = useState<CategoryCandidate[]>([]);
   /** Sprint A-11(작업8) — 없어도 등록은 되지만 채워두면 좋은 판매자 설정 목록. */
   const [coupangSettingsRecommended, setCoupangSettingsRecommended] = useState<string[] | null>(null);
   /** P0(Category Resolver 추적) — "추천 → 검증 → 선택"이 실제로 어떻게 이어졌는지
@@ -526,17 +537,61 @@ export function CommerceWorkspace({
     });
   }
 
+  // N-3.15 Phase 3(STEP 2-C) — Naver 리프 카테고리 4999건과 실제로 대조한
+  // 결과(generateNaverCategoryCandidates, packages/listing)를 CategoryCandidate로
+  // 변환해서 공유 state로 흘린다. score는 0~100 스케일(scoreCategoryCandidate)이라
+  // confidence(0~1)로 나눠 담는다. isVerifiedPlatformCode: true — categoryId가
+  // CartPilot 내부 추측이 아니라 Naver가 실제로 갖고 있는 leaf 카테고리 id이기
+  // 때문이다(coupangApiCandidates와 동일한 근거).
+  useEffect(() => {
+    if (tab !== "smartstore") return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/naver/category-search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(product),
+        });
+        const data = (await res.json()) as { status: string; candidates?: NaverCategoryCandidate[] };
+        if (cancelled) return;
+        const converted: CategoryCandidate[] = (data.status === "OK" ? (data.candidates ?? []) : []).map((c) => ({
+          id: c.categoryId,
+          name: c.categoryPath[c.categoryPath.length - 1] ?? c.categoryId,
+          path: c.categoryPath,
+          platform: "smartstore",
+          confidence: c.score / 100,
+          reason: [c.reason],
+          source: "rule",
+          isVerifiedPlatformCode: true,
+          hierarchy: c.hierarchy,
+        }));
+        setNaverApiCandidates(converted);
+      } catch {
+        if (!cancelled) setNaverApiCandidates([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, product]);
+
   const categoryCandidates = useMemo(() => {
     if (tab === "source" || tab === "content") return [];
     const ruleBased = ruleBasedCategoryProvider.recommendCategory(product, tab);
     // CEO 피드백(2026-08-04) — "AI 추정 카테고리"(CartPilot 내부 rule-based
     // 추측)가 실제 쿠팡 코드가 아니고 선택해도 등록에 못 쓰여 혼란만 준다는
     // 지적. 쿠팡 탭은 실제 쿠팡 API가 돌려준 candidates(coupangApiCandidates)만
-    // 보여주고, rule-based는 더 이상 섞지 않는다. 다른 플랫폼(스마트스토어 등,
-    // 아직 검증 API가 없음)은 rule-based가 유일한 추천 소스라 그대로 둔다.
+    // 보여주고, rule-based는 더 이상 섞지 않는다. 스마트스토어 탭도 이제 같은
+    // 원칙 — 실제 Naver 카테고리 트리와 대조한 candidates(naverApiCandidates)만
+    // 보여준다(N-3.15 Phase 3 — 예전엔 이 rule-based 추측이 화면에 보이고,
+    // NaverPayloadPreview는 별도로 실제 API 후보를 썼다 — 두 후보 목록이 서로
+    // 달라서 "선택했는데 미선택으로 보이는" 버그의 원인이었다). 11번가 등
+    // 아직 검증 API가 없는 플랫폼만 rule-based를 유지한다.
     if (tab === "coupang") return coupangApiCandidates;
+    if (tab === "smartstore") return naverApiCandidates;
     return ruleBased;
-  }, [tab, product, coupangApiCandidates]);
+  }, [tab, product, coupangApiCandidates, naverApiCandidates]);
 
   /** A-12.3-P0-3 — resolveCategoryV3의 "Rule" 입력 소스로 쓸 이름 목록.
    * ruleBasedCategoryProvider가 이미 매칭한 카테고리 이름을 predict 질의로
