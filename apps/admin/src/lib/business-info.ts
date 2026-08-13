@@ -6,7 +6,7 @@
  */
 export const BUSINESS_INFO = {
   serviceName: "CartPilot",
-  serviceDescription: "AI Commerce Automation",
+  serviceDescription: "AI Commerce Copilot",
   businessName: "규하맘샵",
   representative: "신주연",
   address: "경기도 하남시 미사강변한강로 326",

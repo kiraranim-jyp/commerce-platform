@@ -481,7 +481,7 @@ export default function PipelinePage() {
     <>
       <PageHeader
         title="상품 등록"
-        subtitle="AI가 해외 상품을 분석하고 쿠팡 등록까지 자동으로 준비합니다."
+        subtitle="AI가 해외 상품 정보를 분석하고 국내 판매에 필요한 정보를 준비합니다."
         actions={
           started ? (
             <Button variant="secondary" size="sm" onClick={resetWorkspace} disabled={loading}>
@@ -497,7 +497,7 @@ export default function PipelinePage() {
           통일하고, 랜딩의 좁은 폭은 안쪽 섹션(max-w-xl)에서만 준다. */}
       <PageContainer size="xl" className="min-w-0 py-10">
       {!started ? (
-        <section className="mx-auto mt-16 max-w-xl text-center">
+        <section className="mx-auto mt-16 max-w-2xl text-center">
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">
             AI Commerce Copilot
           </p>

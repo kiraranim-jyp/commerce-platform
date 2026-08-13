@@ -237,7 +237,7 @@ export default function SettingsPage() {
     return (
       <>
         <PageHeader title="설정" subtitle="쿠팡/스마트스토어 판매에 필요한 정보를 관리합니다." />
-        <PageContainer size="xl">
+        <PageContainer size="lg">
           <p className="text-sm text-text-secondary">불러오는 중...</p>
         </PageContainer>
       </>
@@ -254,7 +254,7 @@ export default function SettingsPage() {
           우려했던 "탭 8개가 좁은 화면에서 줄바꿈되며 깨지는" 문제는 줄바꿈 대신
           가로 스크롤(overflow-x-auto + whitespace-nowrap)로 해결한다 — 탭 개수가
           늘어나도 레이아웃이 깨지지 않고 옆으로 스크롤될 뿐이다. */}
-      <PageContainer size="xl">
+      <PageContainer size="lg">
         <div
           className={`rounded-md p-3 text-sm ${
             configured ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
@@ -285,7 +285,7 @@ export default function SettingsPage() {
             />
           </div>
 
-          <div className="mt-6 min-w-0 max-w-3xl">
+          <div className="mt-6 min-w-0 max-w-5xl">
             <div className={activeTab === "accounts" ? "" : "hidden"}>
               <SectionHeader
                 title="커머스 계정 관리"

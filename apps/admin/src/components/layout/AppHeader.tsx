@@ -1,3 +1,5 @@
+import { BUSINESS_INFO } from "@/lib/business-info";
+
 export function AppHeader() {
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-surface px-4">
@@ -12,8 +14,8 @@ export function AppHeader() {
           />
         </svg>
         <div className="leading-tight">
-          <div className="text-sm font-semibold tracking-tight text-text-primary">CartPilot</div>
-          <div className="text-[10px] font-medium text-text-tertiary">AI Commerce Automation</div>
+          <div className="text-sm font-semibold tracking-tight text-text-primary">{BUSINESS_INFO.serviceName}</div>
+          <div className="text-[10px] font-medium text-text-tertiary">{BUSINESS_INFO.serviceDescription}</div>
         </div>
       </div>
       {/* 버전/알림/사용자 메뉴 예약 자리 — 이번 스프린트는 기능 없음 */}
