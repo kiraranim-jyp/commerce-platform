@@ -500,14 +500,34 @@ export default function PipelinePage() {
       <PageContainer size={started ? "xl" : "md"} className="min-w-0 py-10">
       {!started ? (
         <>
-          {/* Sprint A-9(작업7 — CEO 지시: "이제 쿠팡 연결 테스트는 끝났습니다.
-              랜딩에서는 삭제해주세요. 실제 등록 시 등록 버튼에서만 체크하면
-              됩니다.") — 여기서 하던 연결 확인은 삭제한다. CommerceWorkspace가
-              쿠팡 탭에서 등록 직전(confirmListing)에 이미 독립적으로 다시
-              확인한다(등록 직전 최종 재확인이 이 화면의 사전 확인보다 더
-              정확하다 — 그 사이에 토큰이 만료될 수도 있으므로). */}
-          <div className="max-w-[960px]">
-            <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-2 shadow-subtle sm:flex-row sm:items-center">
+          {/* CPO 2차 재실측 지시 — Hero 메인 문구(eyebrow/headline/description)를
+              완전히 없애는 방식으로 width 문제를 풀면 안 된다: 상품등록은
+              "무엇을 해야 하는지"를 3초 안에 알려줘야 하는 진입 화면이다.
+              PageHeader("상품 등록" + 기능 위치 안내)와 이 Hero(가치 제안 +
+              무엇을 입력해야 하는지)는 역할이 다르므로 병합하지 않는다.
+              Hero 콘텐츠 전체는 넓어진 xl App 폭과 무관하게 max-w-[1000px]
+              (960~1040px 권장 범위)로 별도 고정한다. */}
+          <div className="mx-auto max-w-[1000px] py-8 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+              AI Commerce Copilot
+            </p>
+            <h2 className="mt-4 text-3xl font-bold leading-tight tracking-tight text-text-primary md:text-4xl">
+              해외 상품을 판매 가능한 상품으로
+              <br />
+              가장 빠르게 준비하는 방법
+            </h2>
+            <p className="mx-auto mt-4 max-w-[720px] text-sm leading-relaxed text-text-secondary">
+              URL 하나를 입력하면 CartPilot AI가 상품 정보, 이미지, 카테고리, 콘텐츠를 분석하고
+              국내 판매 등록을 준비합니다.
+            </p>
+
+            {/* Sprint A-9(작업7 — CEO 지시: "이제 쿠팡 연결 테스트는 끝났습니다.
+                랜딩에서는 삭제해주세요. 실제 등록 시 등록 버튼에서만 체크하면
+                됩니다.") — 여기서 하던 연결 확인은 삭제한다. CommerceWorkspace가
+                쿠팡 탭에서 등록 직전(confirmListing)에 이미 독립적으로 다시
+                확인한다(등록 직전 최종 재확인이 이 화면의 사전 확인보다 더
+                정확하다 — 그 사이에 토큰이 만료될 수도 있으므로). */}
+            <div className="mx-auto mt-8 flex max-w-[960px] flex-col gap-2 rounded-xl border border-border bg-surface p-2 shadow-subtle sm:flex-row sm:items-center">
               <input
                 type="url"
                 value={url}
@@ -515,19 +535,19 @@ export default function PipelinePage() {
                 placeholder="https://example.com/product/123"
                 aria-label="상품 URL"
                 disabled={loading}
-                className="flex-1 rounded-md border-0 bg-transparent px-3 py-3 text-sm text-text-primary focus:outline-none disabled:opacity-60"
+                className="flex-1 rounded-md border-0 bg-transparent px-4 py-3.5 text-sm text-text-primary focus:outline-none disabled:opacity-60"
               />
               <button
                 onClick={runPipeline}
                 disabled={loading || !url}
-                className="flex items-center justify-center gap-2 rounded-md bg-primary px-5 py-3 text-sm font-medium text-white shadow-subtle transition-colors hover:bg-primary-hover disabled:opacity-40"
+                className="flex items-center justify-center gap-2 rounded-md bg-primary px-5 py-3.5 text-sm font-medium text-white shadow-subtle transition-colors hover:bg-primary-hover disabled:opacity-40"
               >
                 상품 분석 →
               </button>
             </div>
           </div>
 
-          <div className="mt-10 border-t border-border pt-6">
+          <div className="mx-auto mt-10 max-w-[1000px] border-t border-border pt-6">
             <p className="text-xs font-medium text-text-tertiary">
               CartPilot이 자동으로 처리합니다
             </p>
@@ -547,7 +567,7 @@ export default function PipelinePage() {
             </ul>
           </div>
 
-          <div className="mt-6 border-t border-border pt-6">
+          <div className="mx-auto mt-6 max-w-[1000px] border-t border-border pt-6">
             <p className="text-xs font-medium text-text-tertiary">지원 플랫폼</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {["스마트스토어", "쿠팡", "11번가"].map((platform) => (
