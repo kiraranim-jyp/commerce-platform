@@ -33,6 +33,7 @@ import { RegistrationReadinessCard } from "./RegistrationReadinessCard";
 import { SellerProfileSummaryCard } from "./SellerProfileSummaryCard";
 import { extractionSourceLabel, ProvenanceBadge } from "./provenance";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { ValueBadge } from "@/components/ui/ValueBadge";
 
 /** Sprint A-3(작업1 — 모든 항목 Editable, 작업8 — Resolver Trace) 필드 라벨 행.
  * SourceDataView가 이미 쓰던 "라벨 + 값 + Source + Confidence" 패턴을 accordion
@@ -323,6 +324,21 @@ export function PlatformPreview({
   const basicInfoAutoFilled = BASIC_INFO_PROVENANCE_FIELDS.length - basicInfoNeedsCheck;
   const basicInfoSummary = `자동 입력 ${basicInfoAutoFilled}개 · 확인 필요 ${basicInfoNeedsCheck}개`;
 
+  // Phase 3-D(CPO 지시: "공통 상품 Editor + 채널별 필드 확장" — 기본정보/가격과
+  // 같은 "제목 → 상태 → 요약 → 펼침" 골격을 옵션에도 그대로 적용) — 옵션은
+  // 7개 텍스트 필드처럼 개별 FieldSource가 없는 대신, 원본 사이트에서 실제
+  // 옵션그룹 구조를 찾았는지(productOptionGroups) 여부로 "자동 추출" vs
+  // "직접 입력 필요"를 구분한다 — 새 판정 기준을 만들지 않고 이미 옵션 섹션
+  // 본문이 쓰는 조건(productOptionGroups.length > 0)을 요약에도 그대로 쓴다.
+  const optionGroupCount = productOptionGroups?.length ?? 0;
+  const optionValueCount = productOptionGroups?.reduce((sum, g) => sum + g.values.length, 0) ?? 0;
+  const optionSummary =
+    optionGroupCount > 0
+      ? `자동 추출 — 옵션그룹 ${optionGroupCount}개 · 값 ${optionValueCount}개`
+      : listing.options.length > 0
+        ? `직접 입력 — ${listing.options.length}개`
+        : "옵션 없음 — 단일 상품으로 등록됩니다";
+
   const fix = onFixTextField;
 
   return (
@@ -434,17 +450,14 @@ export function PlatformPreview({
 
         <CollapsibleSection
           title="옵션"
-          badge={
-            <>
-              {sectionCompletionBadge("section-options")}
-              <span className="text-xs text-text-tertiary">{listing.options.length}개</span>
-            </>
-          }
+          badge={sectionCompletionBadge("section-options")}
+          summary={optionSummary}
           {...sectionProps("section-options")}
         >
           {productOptionGroups && productOptionGroups.length > 0 ? (
             <>
-              <p className="text-xs text-text-tertiary">
+              <p className="flex flex-wrap items-center gap-1.5 text-xs text-text-tertiary">
+                <ValueBadge kind="original" />
                 원본 사이트의 옵션 구조(사이즈/색상 등 옵션그룹 {productOptionGroups.length}개)가
                 품목별 가격/재고에 그대로 반영됩니다. 값 목록은 아래에서 확인할 수 있습니다.
               </p>
