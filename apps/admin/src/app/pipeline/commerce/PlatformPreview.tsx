@@ -23,7 +23,7 @@ import { ComplianceBreakdown } from "./ComplianceBreakdown";
 import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
 import { DetailPageEditor } from "./DetailPageEditor";
 import { EditableText, EditableTextarea } from "./EditableField";
-import { ImageSummaryCard } from "./ImageSummaryCard";
+import { ImageInlineEditor } from "../ImageInlineEditor";
 import { ListingSection } from "./ListingSection";
 import { NaverPayloadPreview } from "./NaverPayloadPreview";
 import { OptionVariantEditor } from "./OptionVariantEditor";
@@ -113,7 +113,12 @@ export function PlatformPreview({
   developerMode,
   items,
   thumbnails,
-  onOpenGallery,
+  representativeId,
+  onPreviewImage,
+  onSetRepresentative,
+  onToggleGalleryUsage,
+  onToggleDescriptionUsage,
+  onMoveImage,
   payloadPreview,
   payloadPreviewUnavailableReason,
   detailBlocks,
@@ -210,12 +215,17 @@ export function PlatformPreview({
   settingsRecommended?: string[];
   /** P0-UI Epic 1/4 — Developer Mode가 꺼져 있으면 Payload/개발 로그를 숨긴다. */
   developerMode: boolean;
-  /** Sprint A-3(작업1 — 이미지도 Accordion 안에서) — "source" 탭 전용이던 이미지
-   * 갤러리를 플랫폼 탭 안에서도 열 수 있게 한다. 모달 자체는 CommerceWorkspace가
-   * 한 곳에서만 렌더한다(중복 마운트 방지). */
+  /** N-3.20(CPO 지시: "세 화면이 동일한 ImageInlineEditor를 사용") — 이미지
+   * Accordion을 펼치면 Modal 없이 여기서 바로 편집한다. 핸들러는
+   * CommerceWorkspace가 이미 갖고 있던 것을 그대로 전달받는다(새 상태 없음). */
   items: WorkspaceItem[];
   thumbnails: Record<string, string>;
-  onOpenGallery: () => void;
+  representativeId: string | null;
+  onPreviewImage: (id: string) => void;
+  onSetRepresentative: (id: string) => void;
+  onToggleGalleryUsage: (id: string) => void;
+  onToggleDescriptionUsage: (id: string) => void;
+  onMoveImage: (id: string, direction: "up" | "down") => void;
   /** Sprint A-3(작업6 — Payload Preview) — 카테고리가 확정되면 CommerceWorkspace가
    * 디바운스로 미리 계산해둔 실제 쿠팡 payload. 등록 버튼을 누르기 전에도 항상
    * 최신 상태를 보여준다. */
@@ -538,7 +548,17 @@ export function PlatformPreview({
           summary={imageSummary}
           {...sectionProps("section-images")}
         >
-          <ImageSummaryCard product={product} items={items} thumbnails={thumbnails} onOpen={onOpenGallery} />
+          <ImageInlineEditor
+            product={product}
+            items={items}
+            thumbnails={thumbnails}
+            representativeId={representativeId}
+            onPreview={onPreviewImage}
+            onSetRepresentative={onSetRepresentative}
+            onToggleGalleryUsage={onToggleGalleryUsage}
+            onToggleDescriptionUsage={onToggleDescriptionUsage}
+            onMoveImage={onMoveImage}
+          />
         </CollapsibleSection>
 
         <CollapsibleSection title="배송" badge={sectionCompletionBadge("section-shipping")} {...sectionProps("section-shipping")}>

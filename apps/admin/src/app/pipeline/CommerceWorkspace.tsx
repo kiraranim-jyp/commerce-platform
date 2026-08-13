@@ -39,8 +39,7 @@ import { AIContentPanel } from "./commerce/AIContentPanel";
 import { BacklogPanel } from "./commerce/BacklogPanel";
 import { ComparisonShopSearch } from "./commerce/ComparisonShopSearch";
 import { CoupangConnectionPanel } from "./commerce/CoupangConnectionPanel";
-import { ImageGalleryModal } from "./commerce/ImageGalleryModal";
-import { ImageSummaryCard } from "./commerce/ImageSummaryCard";
+import { ImageInlineEditor } from "./ImageInlineEditor";
 import { ListingConfirmationModal } from "./commerce/ListingConfirmationModal";
 import { PlatformPreview } from "./commerce/PlatformPreview";
 import { RegistrationHistoryPanel } from "./commerce/RegistrationHistoryPanel";
@@ -139,10 +138,6 @@ export function CommerceWorkspace({
   initialCategoryMappings?: Record<PlatformId, CategorySelection>;
   onCategoryMappingsChange?: (mappings: Record<PlatformId, CategorySelection>) => void;
 }) {
-  // P0-UI Epic 1 — "이미지" 영역을 대표이미지+장수 요약 카드로 줄이고, 기존
-  // ImageRoleGrid(대표/상품/상세 역할 지정 그리드)는 이 카드를 눌렀을 때만 여는
-  // 모달로 옮긴다. 데이터/핸들러는 전부 이 컴포넌트가 이미 갖고 있던 그대로 재사용한다.
-  const [galleryOpen, setGalleryOpen] = useState(false);
   // Sprint A-6(작업4) — 이 컴포넌트가 처음 마운트되는 시점 = AI 분석이 끝나고
   // Registration Editor가 실제로 뜬 시점이다. useState 초기화 함수는 최초
   // 렌더에서 딱 한 번만 실행되므로 재렌더마다 값이 바뀌지 않는다.
@@ -1150,12 +1145,20 @@ export function CommerceWorkspace({
 
       {tab === "source" && (
         <>
-          <ImageSummaryCard
-            product={product}
-            items={items}
-            thumbnails={thumbnails}
-            onOpen={() => setGalleryOpen(true)}
-          />
+          <section className="rounded-lg border border-border bg-surface p-4 shadow-subtle">
+            <p className="mb-3 text-sm font-medium text-text-primary">이미지</p>
+            <ImageInlineEditor
+              product={product}
+              items={items}
+              thumbnails={thumbnails}
+              representativeId={representativeId}
+              onPreview={onPreviewImage}
+              onSetRepresentative={onSetRepresentative}
+              onToggleGalleryUsage={onToggleGalleryUsage}
+              onToggleDescriptionUsage={onToggleDescriptionUsage}
+              onMoveImage={onMoveImage}
+            />
+          </section>
           <SourceDataView
             product={product}
             onUpdateField={updateField}
@@ -1235,7 +1238,12 @@ export function CommerceWorkspace({
           developerMode={developerMode}
           items={items}
           thumbnails={thumbnails}
-          onOpenGallery={() => setGalleryOpen(true)}
+          representativeId={representativeId}
+          onPreviewImage={onPreviewImage}
+          onSetRepresentative={onSetRepresentative}
+          onToggleGalleryUsage={onToggleGalleryUsage}
+          onToggleDescriptionUsage={onToggleDescriptionUsage}
+          onMoveImage={onMoveImage}
           // N-3.13 Part J — detailBlocks는 상품 하나당 하나뿐인 상세페이지 상태다
           // (쿠팡 탭에서 편집하지만 플랫폼별로 따로 관리하지 않는다). Naver
           // Payload Preview도 같은 값을 읽어 detailContent를 조립해야 해서
@@ -1261,21 +1269,6 @@ export function CommerceWorkspace({
           complianceReport={confirmingPlatform === "coupang" ? complianceReportPreview : null}
           onCancel={cancelListingModal}
           onConfirm={confirmListing}
-        />
-      )}
-
-      {galleryOpen && (
-        <ImageGalleryModal
-          product={product}
-          items={items}
-          thumbnails={thumbnails}
-          representativeId={representativeId}
-          onPreview={onPreviewImage}
-          onSetRepresentative={onSetRepresentative}
-          onToggleGalleryUsage={onToggleGalleryUsage}
-          onToggleDescriptionUsage={onToggleDescriptionUsage}
-          onMoveImage={onMoveImage}
-          onClose={() => setGalleryOpen(false)}
         />
       )}
     </section>

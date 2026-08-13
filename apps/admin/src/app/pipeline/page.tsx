@@ -629,8 +629,8 @@ export default function PipelinePage() {
           {/* P0-UI Epic 1 — JSON/ZIP/원본 URL/처리 리포트 등은 판매자가 매일 볼
            * 필요가 없는 개발자 정보다. Developer Mode를 껐으면 이 섹션 자체가
            * 화면에 없다(토글 버튼도 안 보인다) — 대표이미지 관리는 이미
-           * ImageSummaryCard→갤러리 모달로 옮겨졌으니 여기 안 보여도 기능 손실이
-           * 없다. */}
+           * "원본" 탭의 ImageInlineEditor로 옮겨졌으니 여기 안 보여도 기능
+           * 손실이 없다. */}
           {developerMode && (
           <section className="rounded-lg border border-border bg-surface shadow-subtle">
             <button
