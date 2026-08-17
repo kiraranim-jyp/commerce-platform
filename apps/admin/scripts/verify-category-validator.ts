@@ -47,6 +47,12 @@ const product: CanonicalProduct = {
   shippingFee: { value: 0, source: "DEFAULT", confidence: 0.5 },
   stockQuantity: { value: 999, source: "DEFAULT", confidence: 0.5 },
   certification: { value: "", source: "DEFAULT", confidence: 1 },
+  importer: { value: "", source: "REQUIRED", confidence: 0 },
+  childCertification: { value: null, source: "REQUIRED", confidence: 0 },
+  itemName: { value: "", source: "REQUIRED", confidence: 0 },
+  modelName: { value: "", source: "REQUIRED", confidence: 0 },
+  weight: { value: "", source: "REQUIRED", confidence: 0 },
+  certificationType: { value: "", source: "REQUIRED", confidence: 0 },
 };
 
 // CommerceWorkspace의 CartPilot 내부 AI 추천(ruleBasedCategoryProvider)이 만드는

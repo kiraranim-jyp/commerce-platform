@@ -8,8 +8,10 @@ import type {
   NaverClaimDeliveryInfo,
   NaverImageRef,
   NaverOptionCombination,
+  NaverOptionCombinationGroupNames,
   NaverProductRegistrationPayload,
 } from "./types";
+import { resolveNoticeFieldValue } from "../notice/reference-eligibility";
 
 /**
  * Sprint N-2.6 — CartPilot canonical product → Naver v2 payload 변환.
@@ -58,9 +60,11 @@ export interface NaverPayloadInput {
   /** N-3.3 — SellerProfile.exchangeDeliveryCharge 재사용. */
   exchangeDeliveryFee: number | null;
   /** N-2.4 확인 — 카테고리 detail의 certificationInfos 중 kindTypes에
-   * CHILD_CERTIFICATION이 포함된 항목의 id. 실제 인증서 정보(번호/업체명/일자)는
-   * 판매자가 실제로 취득한 인증이 있어야만 채울 수 있어 여기서는 다루지 않는다
-   * (validate-payload.ts가 인증 필요 카테고리인데 이 값이 없으면 BLOCKED 처리). */
+   * CHILD_CERTIFICATION이 포함된 항목의 id. N-3.29부터 실제 인증서 정보
+   * (번호/업체명/일자)는 product.childCertification에 판매자가 직접 입력한
+   * 값이 있으면 그대로 payload에 채운다 — 값이 없으면 이 id만으로 자리표시자를
+   * 만들고, validate-payload.ts가 인증 필요 카테고리인데 실제 값이 없으면
+   * BLOCKED 처리한다(임의 값 생성은 여전히 금지). */
   childCertificationInfoId: number | null;
   /** N-2.7 추가 — 카테고리 detail의 exceptionalCategories에 CHILD_CERTIFICATION이
    * 있는지(호출부 판단, 이 함수는 카테고리 API를 다시 호출하지 않는다). 상품정보
@@ -163,14 +167,12 @@ export function assembleNaverDetailContent(
 
 /** N-2.8 — 옵션 조합(optionCombinations) 필드명은 공식 OpenAPI 스펙으로
  * 확인됐다(id/optionName1-4/stockQuantity/price/sellerManagerCode/
- * usable, ExternalApiOptionCombinationVo.product). price 필드의 의미(절대
- * 판매가인지 salePrice 대비 추가금액인지)는 N-3.6 재조사(공식 OpenAPI/GitHub
- * Discussion 검색)에서도 명확한 근거를 찾지 못해 여전히 확인된 적이 없다 —
- * 여기서는 "price =
- * variant.price가 있으면 salePrice와의 차액(추가금액), 없으면 0"으로
- * 가정한다(대부분의 국내 마켓플레이스가 조합형 옵션에 추가금액 방식을 쓰는
- * 관행을 따른 것 — 확정된 사실이 아니라 관행 기반 가정임을 validate-payload.ts가
- * 항상 BLOCKED로 상기시킨다).
+ * usable, ExternalApiOptionCombinationVo.product). N-3.47(CPO 지시)에서
+ * price 필드의 의미(절대 판매가 vs salePrice 대비 추가금액)가 Naver 공식
+ * 계정 답변(GitHub Discussion #2312, 2025-02-17, packages/listing/src/naver/
+ * types.ts의 NaverOptionCombination 주석 참고)으로 확정됐다 — "옵션가"는
+ * salePrice 대비 추가금액(delta)이다. 아래 계산("price = variant.price가
+ * 있으면 salePrice와의 차액, 없으면 0")은 이 확정된 의미와 정확히 일치한다.
  *
  * N-3.4 — id 필드는 공식 OpenAPI 스펙으로 "옵션 ID 입력 시 기존 옵션 수정"임이
  * 확인됐다(ExternalApiOptionCombinationVo.product). N-2.8까지는 여기에
@@ -187,9 +189,8 @@ function buildOptionCombinations(product: CanonicalProduct, salePrice: number): 
     // 원본 사이트 통화(예: USD) 그대로다. salePrice(KRW)와 통화 단위를 맞추지
     // 않고 그냥 빼면(옛날 코드: variant.price.amount - salePrice) 숫자 단위가
     // 안 맞는 값이 나온다(예: 27.20 - 64500). Coupang의 buildCoupangItem이 이미
-    // convertToKrw로 원화 환산 후 계산하는 것과 같은 방식으로 맞춘다 — 절대
-    // 판매가 vs 추가금액 여부 자체는 여전히 미확인(N-3.6)이라 이 필드는 계속
-    // BLOCKED로 남지만, 그 안의 숫자 계산은 최소한 통화 단위가 맞아야 한다.
+    // convertToKrw로 원화 환산 후 계산하는 것과 같은 방식으로 맞춘다. N-3.47에서
+    // 이 delta 계산 자체가 Naver 공식 답변과 일치함이 확인됐다(위 함수 주석).
     const priceDelta = variant.price
       ? convertToKrw(variant.price.amount, variant.price.currency).amountKrw - salePrice
       : 0;
@@ -207,8 +208,52 @@ function buildOptionCombinations(product: CanonicalProduct, salePrice: number): 
   });
 }
 
+/** N-3.49(실제 등록 시도로 확인, 2026-08-17) — optionCombinationGroupNames는
+ * 배열이 아니라 optionGroupName1..4 키를 가진 객체다(types.ts의
+ * NaverOptionCombinationGroupNames 주석 참고 — 실제 HTTP 400으로 발견). 최대
+ * 3개까지만 허용된다는 스마트스토어 정책(공식 커뮤니티 확인)이라 4번째부터는
+ * 채우지 않는다. */
+function buildOptionCombinationGroupNames(
+  optionGroups: CanonicalProduct["optionGroups"],
+): NaverOptionCombinationGroupNames {
+  const names = optionGroups.map((g) => g.name);
+  const result: NaverOptionCombinationGroupNames = {};
+  if (names[0]) result.optionGroupName1 = names[0];
+  if (names[1]) result.optionGroupName2 = names[1];
+  if (names[2]) result.optionGroupName3 = names[2];
+  return result;
+}
+
 function toImageRef(url: string): NaverImageRef {
   return { url };
+}
+
+/**
+ * N-3.32(CPO 지시) — Shopify는 매장이 옵션을 전혀 안 쓰는 진짜 단일 SKU
+ * 상품도 원본 JSON에 항상 `{name:"Title", values:["Default Title"]}` 하나를
+ * 채워서 준다(Shopify 자체 스펙). shopify-product-json.ts는 이걸 이미
+ * "옵션 없음"으로 취급해 variants는 비우지만(hasRealOptions 로컬 판정),
+ * optionGroups 배열 자체는 그대로 통과시킨다 — 그래서 validate-payload.ts가
+ * `optionGroups.length > 0`만 보면 이 placeholder 하나 때문에 실제 옵션이
+ * 없는 상품도 무조건 optionInfo BLOCKED로 오판했다(N-3.31에서 발견).
+ *
+ * build-payload.ts와 validate-payload.ts가 "옵션 있음"을 서로 다른 기준으로
+ * 판정하지 않도록 이 함수 하나로 통일한다. 판정 기준:
+ *   - optionGroups가 2개 이상이거나, 1개뿐이어도 값이 2개 이상이면 → 실제 옵션
+ *   - variants에 실제 레코드가 있으면(값이 비어도 레코드 자체가 있으면) → 실제
+ *     옵션(원본 파싱이 일부만 성공한 경우까지 "옵션 없음"으로 지워버리지 않기
+ *     위함 — N-3.4 "옵션값 비어있음" 케이스와 충돌하면 안 된다)
+ *   - 그 외(단일 그룹+단일 값, variants 없음)만 "옵션 없음"
+ * variants.length > 0을 안전장치로 두는 이유: `{사이즈:["100"]}`처럼 겉모양은
+ * placeholder와 같아도(그룹 1개, 값 1개) 실제 variant 레코드(SKU/재고 포함)가
+ * 있으면 그건 진짜 옵션 상품이지 Shopify의 무옵션 기본상태가 아니다 — 이 둘을
+ * 구조만 보고 섞으면 안 된다는 게 이번 작업의 핵심 전제(CPO 지시 Case C).
+ */
+export function hasRealProductOptions(product: CanonicalProduct): boolean {
+  const hasMultipleGroupsOrValues =
+    product.optionGroups.length > 1 ||
+    (product.optionGroups.length === 1 && product.optionGroups[0].values.length > 1);
+  return hasMultipleGroupsOrValues || product.variants.length > 0;
 }
 
 /**
@@ -294,6 +339,14 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
       salePrice: listing.priceKrw,
       stockQuantity: product.stockQuantity.value || 1,
       deliveryInfo: {
+        // N-3.49(2026-08-17, 실제 등록 3차 시도로 발견) — deliveryType/
+        // deliveryAttributeType이 NotValidEnum으로 거부됐다(둘 다 한 번도
+        // payload에 채워진 적이 없었음). CartPilot은 해외구매대행 상품을
+        // 전부 국내 택배(EPOST 등)로 재배송하므로 DELIVERY(직접배송/화물이
+        // 아님) + NORMAL(오늘출발/새벽배송 등 특수 옵션 없음) 고정값이다 —
+        // 상품마다 달라질 여지가 없어 입력 필드로 만들지 않는다.
+        deliveryType: "DELIVERY",
+        deliveryAttributeType: "NORMAL",
         // N-3.6(개정 Part A) — 조회 API는 없지만(확인 유지) 판매자가 Settings에서
         // 직접 입력한 값이 있으면 채운다(Coupang과 같은 수동 입력 패턴).
         deliveryCompany: deliveryCompany ?? undefined,
@@ -321,25 +374,38 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
         // 확인했다. warrantyPolicy/afterServiceDirector도 두 타입 모두 필수라
         // SellerProfile 재사용 값을 채운다(추측 아님 — 스펙 원문 확인, 아래
         // validate-payload.ts에 근거 주석).
+        // N-3.45(CPO 지시: "상품정보제공고시 공통 관리") — material/color/
+        // manufacturer/caution(careInstructions)/recommendedAge/itemName/
+        // modelName/weight는 이제 실제 값이 없어도 사용자가 "상세페이지 참조"를
+        // 선택했으면(product.X.source === DETAIL_PAGE_REFERENCE) 참조 문구로
+        // 채운다 — resolveNoticeFieldValue가 화이트리스트(reference-eligibility.ts)
+        // 기준으로 판단한다. certificationType은 이 화이트리스트에 없어(KC 관련,
+        // STEP10 영구 제외) 여기서는 여전히 실제 값만 채운다.
         productInfoProvidedNotice: categoryRequiresChildCertification
           ? {
               productInfoProvidedNoticeType: "KIDS",
-              material: product.material.value || undefined,
-              color: product.color.value || undefined,
+              material: resolveNoticeFieldValue("material", product.material),
+              color: resolveNoticeFieldValue("color", product.color),
               size: resolveSizeFromOptions(product),
-              manufacturer: product.manufacturer.value || undefined,
-              caution: product.careInstructions.value || undefined,
-              recommendedAge: product.recommendedAge.value || undefined,
+              manufacturer: resolveNoticeFieldValue("manufacturer", product.manufacturer),
+              caution: resolveNoticeFieldValue("careInstructions", product.careInstructions),
+              recommendedAge: resolveNoticeFieldValue("recommendedAge", product.recommendedAge),
               warrantyPolicy: warrantyPolicy || undefined,
               afterServiceDirector: afterServiceDirector || undefined,
+              itemName: resolveNoticeFieldValue("itemName", product.itemName),
+              modelName: resolveNoticeFieldValue("modelName", product.modelName),
+              weight: resolveNoticeFieldValue("weight", product.weight),
+              // KC 인증정보 설명 텍스트 — N-3.45 STEP10(CPO 지시)에 따라 절대
+              // "상세페이지 참조"로 대체하지 않는다. 실제 값만 채운다.
+              certificationType: product.certificationType?.value || undefined,
             }
           : {
               productInfoProvidedNoticeType: "WEAR",
-              material: product.material.value || undefined,
-              color: product.color.value || undefined,
+              material: resolveNoticeFieldValue("material", product.material),
+              color: resolveNoticeFieldValue("color", product.color),
               size: resolveSizeFromOptions(product),
-              manufacturer: product.manufacturer.value || undefined,
-              caution: product.careInstructions.value || undefined,
+              manufacturer: resolveNoticeFieldValue("manufacturer", product.manufacturer),
+              caution: resolveNoticeFieldValue("careInstructions", product.careInstructions),
               warrantyPolicy: warrantyPolicy || undefined,
               afterServiceDirector: afterServiceDirector || undefined,
             },
@@ -347,25 +413,70 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
         // 535개 코드 중 resolveNaverOriginArea가 매칭한 값을 그대로 쓴다(이
         // 함수는 매칭을 다시 하지 않는다 — Resolver → Payload 단방향 원칙).
         // content는 04(직접입력)로 폴백된 경우에만 스펙상 필수라 그때만 채운다.
-        // importer(수입사명)는 CartPilot에 소스가 없어 항상 undefined —
-        // validate-payload.ts가 수입산(02) 코드일 때 MISSING으로 표시한다.
+        // N-3.29(CPO 지시) — importer(수입사명)는 CartPilot.product.importer에
+        // 사용자가 직접 입력한 값이 있으면 그대로 채운다(다른 필드에서 추론하지
+        // 않는다). 값이 없으면 여전히 undefined — validate-payload.ts가 수입산
+        // (02) 코드일 때만 MISSING으로 표시한다.
+        // N-3.45 STEP8(CPO 지시) — "구매대행이라고 해서 판매자가 법적으로
+        // 수입자인 것은 아니다"(CPO가 내 이전 오판을 직접 정정). 판매자의
+        // 수입자 지위가 실제로 확인되지 않았으면 자동 추정하지 않고, 사용자가
+        // "상세페이지 참조"를 선택했을 때만 참조 문구로 채운다(resolveNoticeFieldValue).
         originAreaInfo: originAreaCode
           ? {
               originAreaCode,
               content: originAreaRequiresContent ? product.countryOfOrigin.value || undefined : undefined,
+              importer: resolveNoticeFieldValue("importer", product.importer),
             }
           : undefined,
         optionInfo:
-          product.optionGroups.length > 0
+          hasRealProductOptions(product)
             ? {
                 useStockManagement: true,
-                optionCombinationGroupNames: product.optionGroups.map((g) => g.name),
+                // N-3.49(실측 확인) — optionGroupName1..4 필드를 가진 객체다,
+                // 배열이 아니다(types.ts의 NaverOptionCombinationGroupNames 주석
+                // 참고 — 실제 등록 시도에서 HTTP 400으로 확인된 버그).
+                optionCombinationGroupNames: buildOptionCombinationGroupNames(product.optionGroups),
                 optionCombinations: buildOptionCombinations(product, listing.priceKrw),
               }
             : undefined,
+        // N-3.49(2026-08-17, 실제 등록 3차 시도로 발견) — minorPurchasable이
+        // NotNull로 거부됐다. CartPilot은 성인전용(주류/담배/유해물건 등)
+        // 카테고리를 취급하지 않으므로 항상 true(미성년자 구매 가능) —
+        // 카테고리별로 달라질 여지가 생기면 그때 입력값으로 분리한다.
+        minorPurchasable: true,
+        // N-3.49(2026-08-17, 실제 등록 3차 시도로 발견) — afterServiceInfo가
+        // NotNull로 거부됐다. productInfoProvidedNotice.afterServiceDirector와
+        // 같은 SellerProfile.asContactNumber 값을 재사용한다(이 판매자가 실제로
+        // 입력해둔 값이 "해외 구매대행으로 A/S 불가"라는 문구이고, 이미 Coupang
+        // 실등록에서 "소비자상담 관련 전화번호" 자리에 동일하게 쓰여 왔다 — 새로
+        // 지어내는 값이 아니다).
+        afterServiceInfo: afterServiceDirector
+          ? {
+              afterServiceTelephoneNumber: afterServiceDirector,
+              afterServiceGuideContent: afterServiceDirector,
+            }
+          : undefined,
       },
+      // N-3.29(CPO 지시) — 판매자가 실제로 취득한 인증정보를 product.childCertification에
+      // 직접 입력했으면(Editor) 그 값을 그대로 채운다. 값이 없으면(대부분의 경우)
+      // 지금까지처럼 certificationInfoId만 있는 자리표시자를 만든다 —
+      // validate-payload.ts가 certificationNumber/companyName/certificationDate가
+      // 전부 채워졌을 때만 READY로 판정한다(임의 값 생성 없음, CPO 지시).
       productCertificationInfos:
-        childCertificationInfoId !== null ? [{ certificationInfoId: childCertificationInfoId }] : undefined,
+        childCertificationInfoId !== null
+          ? [
+              {
+                certificationInfoId: childCertificationInfoId,
+                ...(product.childCertification?.value
+                  ? {
+                      certificationNumber: product.childCertification.value.certificationNumber || undefined,
+                      companyName: product.childCertification.value.companyName || undefined,
+                      certificationDate: product.childCertification.value.certificationDate || undefined,
+                    }
+                  : {}),
+              },
+            ]
+          : undefined,
     },
     smartstoreChannelProduct: {
       channelProductName: listing.title,

@@ -13,8 +13,16 @@ import type { ImageType } from "./image-types";
  *   위험할 수 있어서 WARNING으로 표시한다 — REQUIRED와 다르다(REQUIRED는 값 자체가
  *   없다).
  * REQUIRED: 값이 아직 없고, 등록 전에 반드시 채워야 한다(예: 원산지). ERROR로 막는다.
+ * DETAIL_PAGE_REFERENCE: N-3.45(CPO 지시) — 사용자가 "이 필드는 상품 상세페이지에
+ *   이미 나와 있으니 별도 구조화 입력 없이 참조 처리해도 된다"고 명시적으로 선택한
+ *   상태. value는 빈 문자열로 둔다(값을 지어내지 않는다) — 플랫폼 어댑터가 등록
+ *   payload를 만들 때만 "상품 상세페이지 참조" 같은 문구로 치환한다(원본 데이터는
+ *   그대로 "참조"라는 사실만 기록). 어떤 필드가 이 상태를 실제로 허용하는지는
+ *   packages/listing/src/notice/reference-eligibility.ts가 화이트리스트로 관리한다 —
+ *   KC 인증정보(childCertification/certificationType)는 CPO가 영구 제외를 지시해서
+ *   그 화이트리스트에 절대 들어가지 않는다(실제 구조화된 값만 허용).
  */
-export type FieldSource = "ORIGINAL" | "AI_GENERATED" | "USER_EDITED" | "DEFAULT" | "REQUIRED";
+export type FieldSource = "ORIGINAL" | "AI_GENERATED" | "USER_EDITED" | "DEFAULT" | "REQUIRED" | "DETAIL_PAGE_REFERENCE";
 
 export interface ProvenanceField<T> {
   value: T;
@@ -226,6 +234,43 @@ export interface CanonicalProduct {
   stockQuantity: ProvenanceField<number>;
   /** 대부분의 카테고리는 필요 없다 — 있으면 참고 정보로만 쓰고 등록을 막지 않는다. */
   certification: ProvenanceField<string>;
+  /** N-3.29(CPO 지시) — "수입사명". 원산지가 수입산으로 확정됐을 때만 스펙상
+   * 필수(originAreaInfo.importer). manufacturer(제조자)/브랜드/원산지 어떤
+   * 필드와도 개념이 다르고 원본 사이트에 나오는 정보가 아니라, 항상 사용자가
+   * Editor에서 직접 입력해야 한다 — 다른 필드에서 자동 추론하지 않는다(CPO
+   * 지시: "임의 필드 재활용 금지"). */
+  importer: ProvenanceField<string>;
+  /** N-3.29(CPO 지시) — 어린이제품(CHILD_CERTIFICATION) 인증 카테고리에서만
+   * 의미가 있다. CartPilot은 실제 인증 취득 여부를 알 수 없어 항상 사용자가
+   * 직접 입력해야 하고(임의 값/면제 추정 금지), 값이 없으면 null이다. */
+  childCertification: ProvenanceField<CanonicalProductCertification | null>;
+  /** N-3.44 — Naver KIDS 고시정보(공식 스펙, docs/naver-provided-notice-types-raw.json
+   * 확인) 필수 필드 중 N-3.43까지 CartPilot에 입력 경로가 없던 4개. 상품
+   * 원문에 실제로 있으면 추출하고, 없으면 등록 화면에서 사용자가 직접 입력한다
+   * (임의 값 금지 — 다른 필드에서 추론하지 않는다). Coupang 등 KIDS 고시정보가
+   * 없는 커머스에서는 그냥 빈 값으로 둔다(등록을 막지 않음). */
+  /** 품명(Naver: itemName) — brand/title과 다른 개념. 상품 자체의 품목명. */
+  itemName: ProvenanceField<string>;
+  /** 모델명(Naver: modelName). */
+  modelName: ProvenanceField<string>;
+  /** 중량(Naver: weight) — 섬유제품은 치수 정보로 대체 가능(스펙 명시)이라
+   * size로 채워져 있으면 이 필드가 비어 있어도 등록 자체는 막지 않는다. */
+  weight: ProvenanceField<string>;
+  /** KC 인증정보 설명 텍스트(Naver: certificationType, 예: "공급자적합성확인
+   * 대상"). childCertification(실제 인증서 번호/업체명/취득일자)과는 다른
+   * 필드다 — 스펙상 별도로 존재한다. */
+  certificationType: ProvenanceField<string>;
+}
+
+/** N-3.29 — Naver productCertificationInfos(공식 OpenAPI 확인됨,
+ * packages/listing/src/naver/types.ts의 NaverProductCertificationInfo 참고)
+ * 중 CartPilot이 실제로 입력받을 수 있는 최소 하위 집합. certificationInfoId
+ * (카테고리별 인증 유형 카탈로그 id)는 카테고리 API가 결정하는 값이라 여기 넣지
+ * 않는다 — 이건 상품이 아니라 카테고리에 속한 값이다. */
+export interface CanonicalProductCertification {
+  certificationNumber: string;
+  companyName: string;
+  certificationDate: string;
 }
 
 /**

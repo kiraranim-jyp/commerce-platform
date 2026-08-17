@@ -52,6 +52,12 @@ function makeMockProduct(): CanonicalProduct {
     shippingFee: field(0, "DEFAULT"),
     stockQuantity: field(999, "DEFAULT"),
     certification: field(""),
+    importer: field(""),
+    childCertification: field(null),
+    itemName: field(""),
+    modelName: field(""),
+    weight: field(""),
+    certificationType: field(""),
   };
 }
 

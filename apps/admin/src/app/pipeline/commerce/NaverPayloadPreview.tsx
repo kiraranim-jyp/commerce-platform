@@ -37,7 +37,10 @@ interface NaverOriginAreaMatch {
   requiresImporter: boolean;
 }
 
-interface NaverResolveResponse {
+/** N-3.27 — CommerceWorkspace가 RegistrationReadinessCard용 validateNaverPayload를
+ * 이 컴포넌트와 똑같은 입력으로 계산하기 위해 이 응답 shape를 그대로 재사용한다
+ * (export만 추가, 이 파일의 나머지 로직은 그대로 둔다). */
+export interface NaverResolveResponse {
   status: string;
   category: {
     categoryId: string;
@@ -566,7 +569,16 @@ export function NaverPayloadPreview({
             <Row label="제조자" value={notice.manufacturer || "MISSING"} />
             <Row label="주의사항" value={notice.caution || "MISSING"} />
             {notice.productInfoProvidedNoticeType === "KIDS" && (
-              <Row label="권장연령" value={notice.recommendedAge || "MISSING"} />
+              <>
+                <Row label="권장연령" value={notice.recommendedAge || "MISSING"} />
+                {/* N-3.44(CPO 지시) — 이전엔 항상 MISSING이라는 안내 문구만
+                    보여줬다. 이제 상품 정보 편집 화면에 입력 경로가 생겨서
+                    실제 payload 값을 그대로 보여준다(추측/기본값 없음). */}
+                <Row label="품명" value={notice.itemName || "MISSING"} />
+                <Row label="모델명" value={notice.modelName || "MISSING"} />
+                <Row label="중량" value={notice.weight || "MISSING"} />
+                <Row label="KC 인증정보(대상 여부)" value={notice.certificationType || "MISSING"} />
+              </>
             )}
             {/* N-3.13 Part E-12 — 공식 스펙 required 필드로 새로 확인됨.
                 SellerProfile.qualityGuarantee/asContactNumber 재사용(Settings
@@ -579,12 +591,6 @@ export function NaverPayloadPreview({
               label="A/S 책임자·전화번호"
               value={notice.afterServiceDirector || "MISSING — Settings 판매자 정보 탭에서 입력 필요"}
             />
-            {notice.productInfoProvidedNoticeType === "KIDS" && (
-              <p className="text-[11px] text-text-tertiary">
-                이 외 치수/모델명/품목명/중량/인증유형은 CartPilot에 아직 입력 경로가 없어 항상 MISSING입니다(임의 값
-                금지).
-              </p>
-            )}
             {notice.productInfoProvidedNoticeType === "WEAR" && (
               <p className="text-[11px] text-text-tertiary">치수(사이즈)는 CartPilot에 아직 입력 경로가 없어 항상 MISSING입니다.</p>
             )}
@@ -599,9 +605,12 @@ export function NaverPayloadPreview({
           <>
             <p className="text-xs font-medium text-warning">⚠ 어린이제품 인증 필요</p>
             <Row label="인증종류" value="CHILD_CERTIFICATION" />
-            <Row label="인증번호" value="MISSING" />
-            <Row label="인증기관" value="MISSING" />
-            <Row label="인증일자" value="MISSING" />
+            {/* N-3.44 — 이전엔 항상 "MISSING" 텍스트만 하드코딩돼 있었다(사용자가
+                이미 인증정보를 입력해도 반영 안 됨). buildNaverProductPayload가
+                실제로 만든 payload 값을 그대로 보여준다. */}
+            <Row label="인증번호" value={payload.originProduct.productCertificationInfos?.[0]?.certificationNumber || "MISSING"} />
+            <Row label="인증기관" value={payload.originProduct.productCertificationInfos?.[0]?.companyName || "MISSING"} />
+            <Row label="인증일자" value={payload.originProduct.productCertificationInfos?.[0]?.certificationDate || "MISSING"} />
           </>
         ) : resolved?.category ? (
           <p className="text-xs text-text-tertiary">이 카테고리는 어린이제품 인증(CHILD_CERTIFICATION) 대상이 아닙니다.</p>

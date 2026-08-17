@@ -144,10 +144,18 @@ const PRODUCT_TYPE_KEYWORDS: { type: string; terms: string[] }[] = [
       "robe",
       "curtain",
       "rug",
-      "candle",
       "cookware",
     ],
   },
+  // N-3.33 — pfcandleco.com 실측(Blonde Hinoki HI-FI Candle, shopifyProductType:
+  // "HI-FI Candle")으로 발견: "candle"이 기존엔 "홈/리빙"에 섞여 있어서
+  // DOMAIN_PROFILES["홈/리빙"]의 침구/수건 계열 expect 키워드(홈웨어/쿠션/수건
+  // 등)와 뒤섞여 실제로는 무관한 카테고리(여성언더웨어/잠옷, 신발용품 보호쿠션,
+  // 손수건)가 후보로 나왔다(실측 재현 확인). 네이버 실제 카테고리 트리를
+  // 전수조사(fetchNaverAllCategories, 4999개)한 결과 캔들은 침구류와 전혀 다른
+  // 별도 브랜치("가구/인테리어 > 인테리어소품 > 아로마/캔들용품")에 있어서,
+  // 침구류와 같은 productType으로 묶으면 안 된다 — 별도 타입으로 분리한다.
+  { type: "캔들", terms: ["candle", "candles", "scented candle", "diffuser"] },
   {
     type: "뷰티",
     terms: [

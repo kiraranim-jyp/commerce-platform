@@ -18,7 +18,7 @@ import { classifyHttpStatus, classifyNetworkError, missingFieldError } from "@/l
 const SELLER_ACCOUNT_PATH = "/v1/seller/account";
 
 export async function POST() {
-  const credentials = getNaverCredentials();
+  const credentials = await getNaverCredentials();
   if (!credentials) {
     return NextResponse.json({
       status: "NOT_CONFIGURED",

@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ status: "INVALID_BODY", message: "요청 본문이 올바른 JSON이 아닙니다." }, { status: 400 });
   }
 
-  const credentials = getNaverCredentials();
+  const credentials = await getNaverCredentials();
   if (!credentials) {
     return NextResponse.json({ status: "NOT_CONFIGURED", message: "네이버 인증 정보가 설정되어 있지 않습니다." });
   }

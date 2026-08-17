@@ -6,6 +6,10 @@ const STATUS_STYLES: Record<FieldSource, string> = {
   AI_GENERATED: "bg-ai-soft text-ai border border-ai/20",
   DEFAULT: "bg-warning-soft text-warning border border-warning/20",
   REQUIRED: "bg-error-soft text-error border border-error/20",
+  // N-3.45(CPO 지시) — 점선 테두리로 "다른 곳(상세페이지)을 가리킨다"는 뉘앙스를
+  // USER_EDITED와 시각적으로 구분한다(색은 같은 selected 계열 — 사용자가 명시적으로
+  // 선택한 상태라는 점은 USER_EDITED와 같다).
+  DETAIL_PAGE_REFERENCE: "bg-selected-soft text-selected border border-dashed border-selected-border",
 };
 
 // N-3.16(CPO 지시: "ValueBadge 실제 적용") — 가격 화면의 원본/AI 추천/사용자
@@ -18,6 +22,7 @@ const STATUS_LABELS: Record<FieldSource, string> = {
   AI_GENERATED: "AI 추천",
   DEFAULT: "기본값",
   REQUIRED: "입력 필요",
+  DETAIL_PAGE_REFERENCE: "상세페이지 참조",
 };
 
 export function ProvenanceBadge({ source }: { source: FieldSource }) {
@@ -39,6 +44,7 @@ export function extractionSourceLabel(field: { source: FieldSource; confidence: 
   if (field.source === "USER_EDITED") return "사용자 입력";
   if (field.source === "DEFAULT") return "기본값";
   if (field.source === "REQUIRED") return "—";
+  if (field.source === "DETAIL_PAGE_REFERENCE") return "참조 처리";
   if (field.confidence >= 0.9) return "JSON-LD";
   if (field.confidence >= 0.7) return "OpenGraph";
   if (field.confidence >= 0.4) return "DOM";

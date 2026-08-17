@@ -47,6 +47,12 @@ const DOMAIN_PROFILES: Record<string, DomainProfile> = {
     conflict: FOOD_KEYWORDS,
   },
   뷰티: { expect: ["화장품", "뷰티", "스킨케어", "메이크업", "향수"], conflict: [...FOOD_KEYWORDS, "가전", "침구"] },
+  // N-3.33 — 실제 Naver 카테고리 트리 전수조사(fetchNaverAllCategories, 4999개
+  // leaf)로 확인한 문자열만 쓴다("아로마"/"방향"은 "아로마테라피"(바디케어)/
+  // "차량용방향제"/"방향지시등" 등과 겹쳐 오탐 위험이 커서 제외했다 — 실측
+  // 확인: 캔들: ["캔들","향초","디퓨저"]로 좁히면 가구/인테리어 > 인테리어소품 >
+  // 아로마/캔들용품 하위 8개 leaf만 정확히 매칭되고 오탐 0건).
+  캔들: { expect: ["캔들", "향초", "디퓨저"], conflict: [...FOOD_KEYWORDS, "가전", "의류", "신발", "가방"] },
 };
 
 /** CPO 지시(2026-08-07, kids hat 실측 사례) — category-resolver-v3.ts가

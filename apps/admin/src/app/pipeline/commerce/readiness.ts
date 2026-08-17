@@ -1,5 +1,5 @@
 import type { CategorySelection } from "@commerce/category";
-import type { ComplianceReport, ReadinessReport } from "@commerce/listing";
+import type { ComplianceReport, NaverPayloadValidationResult, ReadinessReport } from "@commerce/listing";
 import { isVerifiedCategorySelected, type ValidationResult } from "@commerce/marketplace";
 
 /** Sprint A-6(개선4 — CPO 요구사항: "사용자는 왜 이것을 내가 입력해야 하지를
@@ -192,9 +192,14 @@ export function computeChecklistReadiness(
   return summarize(items);
 }
 
-/** SmartStore 전용 — validateSmartStoreListing이 이미 계산한 report.score를 그대로
- * 쓴다(그 함수 자체가 이미 필드별 가중치를 반영한 신뢰할 수 있는 계산이라 여기서
- * 다시 계산하지 않는다). 체크리스트 항목만 이 화면 형식에 맞게 변환한다. */
+/** N-3.13 R2까지 SmartStore "상세 체크리스트"(ListingSection/ReadinessScorePanel,
+ * 필드별 인라인 수정 CTA)가 계속 쓰는 legacy 계산 — validateSmartStoreListing이
+ * 만든 report.score를 그대로 옮겨 보여준다. N-3.27(CPO 지시)부터 이 함수의
+ * 결과는 더 이상 "등록 가능성"(RegistrationReadinessCard의 % / 등록 버튼 게이트)
+ * 판정에 쓰지 않는다 — 그건 아래 computeNaverPayloadReadiness가 대신한다. 이
+ * 함수는 ReadinessScorePanel의 인라인 수정 UI(countryOfOrigin/returnPolicy/
+ * shippingFee/stockQuantity fix 버튼)를 위해서만 남겨둔다(CPO 지시: "바로
+ * 삭제하지 않는다 — 다른 용도로 쓰이고 있을 수 있다"). */
 export function computeReadinessScoreSummary(report: ReadinessReport): ReadinessSummary {
   const items: ReadinessItem[] = report.fields.map((f) => ({
     label: f.label,
@@ -203,4 +208,157 @@ export function computeReadinessScoreSummary(report: ReadinessReport): Readiness
     hint: f.status !== "VALID" ? (f.resolution ?? f.message) : undefined,
   }));
   return { ...summarize(items), percent: report.score };
+}
+
+/** N-3.27(CPO 지시: "Readiness ↔ 실제 Payload Validation 단일화") — register
+ * route가 실제 POST 직전 최종 게이트로 쓰는 validateNaverPayload(를 그대로 재사용,
+ * 여기서 새 규칙을 만들지 않는다)의 결과를 RegistrationReadinessCard가 이해하는
+ * ReadinessItem[]로 옮겨 담기만 하는 얇은 adapter. READY가 아닌 필드는(MISSING이든
+ * BLOCKED이든) 전부 required:true로 취급한다 — summarize()의 allRequiredPassed는
+ * 그래서 자동으로 "missingCount===0 && blockedCount===0"(=validation.ok)과 정확히
+ * 같은 뜻이 된다. BLOCKED만 별도로 reasonCode:"CRITICAL"/group:"LEGAL"을 붙여
+ * "자동입력 불가 · 법적 필수정보" 배지(기존 UI 어휘, RegistrationReadinessCard.tsx
+ * 참고)로 보이게 한다 — MISSING과 시각적으로 구분되지만 둘 다 등록을 막는다는
+ * 점은 동일하다. */
+export function computeNaverPayloadReadiness(validation: NaverPayloadValidationResult | null): ReadinessSummary {
+  if (!validation) {
+    // 조회 전(초기 로딩/카테고리 미확정) — "등록 가능"으로 낙관적으로 보이면
+    // 안 되므로(안전 기본값), required 미통과 항목 하나로 percent를 0%에
+    // 묶어둔다. 로딩이 끝나면 실제 validation 결과로 곧바로 대체된다.
+    return summarize([
+      {
+        label: "Payload 검증 결과 확인 중",
+        passed: false,
+        required: true,
+        group: "PRODUCT_INFO",
+      },
+    ]);
+  }
+  const items: ReadinessItem[] = validation.fields
+    .filter((f) => !f.advisory)
+    .map((f) => ({
+      label: naverFieldLabel(f.field),
+      passed: f.status === "READY",
+      required: true,
+      hint: f.status !== "READY" ? f.reason : undefined,
+      reasonCode: f.status === "BLOCKED" ? ("CRITICAL" as const) : undefined,
+      group: (f.status === "BLOCKED"
+        ? "LEGAL"
+        : NAVER_SETTINGS_FIELD_PREFIXES.some((p) => f.field.startsWith(p))
+          ? "BUSINESS_SETTINGS"
+          : "PRODUCT_INFO") as ReadinessGroup,
+      sourceStatus: f.status === "READY" ? undefined : ("MANUAL_REQUIRED" as const),
+      externalHref: naverFieldExternalHref(f.field),
+      // N-3.29 — "다음 입력하기" 자동 스크롤(A-10.1-②)이 SmartStore에서도
+      // 동작하도록 PlatformPreview accordion의 실제 DOM id로 보낸다.
+      sectionId: naverFieldSectionId(f.field),
+    }));
+  return summarize(items);
+}
+
+/** claimDeliveryInfo/deliveryInfo로 시작하는 필드는 출고지/반품지/택배사/반품·교환배송비 —
+ * 전부 Settings(SellerProfile/주소록)에서 한 번 채우면 되는 값이라 BUSINESS_SETTINGS로
+ * 분류한다(validate-payload.ts의 필드 의미 그대로, 새 판정 기준이 아니다). */
+const NAVER_SETTINGS_FIELD_PREFIXES = ["claimDeliveryInfo", "deliveryInfo"];
+
+/** validateNaverPayload가 쓰는 field 문자열(예: "originProduct.salePrice")을
+ * 사람이 읽는 라벨로만 바꾼다 — validate-payload.ts 각 필드의 reason 주석에 이미
+ * 적힌 의미를 그대로 옮긴 것이라 새 판정 기준이 아니다. */
+const NAVER_FIELD_LABEL: Record<string, string> = {
+  "originProduct.leafCategoryId": "카테고리",
+  "originProduct.name": "상품명",
+  "originProduct.detailContent": "상세설명",
+  "originProduct.images.representativeImage": "대표이미지",
+  "originProduct.salePrice": "판매가",
+  "originProduct.stockQuantity": "재고",
+  "claimDeliveryInfo.shippingAddressId": "출고지 주소",
+  "claimDeliveryInfo.returnAddressId": "반품지 주소",
+  "deliveryInfo.deliveryCompany": "출고 택배사",
+  "claimDeliveryInfo.returnDeliveryCompanyPriorityType": "반품 택배사",
+  "claimDeliveryInfo.returnDeliveryFee": "반품 배송비",
+  "claimDeliveryInfo.exchangeDeliveryFee": "교환 배송비",
+  productCertificationInfos: "인증정보(KC)",
+  "productCertificationInfos[].certificationNumber": "인증서 번호(KC)",
+  "detailAttribute.optionInfo": "옵션 정보",
+  "detailAttribute.optionInfo.optionCombinations[].optionName": "옵션 값",
+  "detailAttribute.originAreaInfo.originAreaCode": "원산지",
+  "detailAttribute.originAreaInfo.importer": "수입사명",
+  "smartstoreChannelProduct.naverShoppingRegistration": "네이버쇼핑 연동",
+};
+
+const NAVER_NOTICE_FIELD_LABEL: Record<string, string> = {
+  returnCostReason: "반품비용 부담 안내",
+  noRefundReason: "환불 불가 사유",
+  qualityAssuranceStandard: "품질보증기준(고시)",
+  compensationProcedure: "피해보상 절차",
+  troubleShootingContents: "분쟁해결 기준",
+  material: "소재",
+  color: "색상",
+  manufacturer: "제조자",
+  caution: "세탁방법 및 취급시 주의사항",
+  warrantyPolicy: "품질보증기준",
+  afterServiceDirector: "A/S 책임자 및 전화번호",
+  size: "치수(사이즈)",
+  recommendedAge: "사용연령",
+  certificationType: "인증구분",
+  itemName: "품명",
+  modelName: "모델명",
+  weight: "중량",
+};
+
+function naverFieldLabel(field: string): string {
+  if (field.startsWith("productInfoProvidedNotice")) {
+    const suffix = field.split(".").pop() ?? field;
+    return NAVER_NOTICE_FIELD_LABEL[suffix] ?? suffix;
+  }
+  return NAVER_FIELD_LABEL[field] ?? field;
+}
+
+/** N-3.29 — "다음 입력하기"(A-10.1-②) 클릭 시 스크롤할 실제 DOM id. 이번
+ * 스프린트에서 새로 만든 두 섹션(Importer는 "고시정보"=section-notice 안에,
+ * KC 인증정보는 새 "section-kc")만 정확히 안다고 확신할 수 있어 그것만
+ * 매핑한다 — 나머지 기존 필드는 실제 위치를 재검증하지 않은 채 추측으로
+ * 연결하면 엉뚱한 곳으로 스크롤될 위험이 있어 그대로 undefined(클릭 불가)로
+ * 둔다(기존에도 sectionId가 없었으므로 회귀가 아니다).
+ *
+ * N-3.38 — CPO 지시("우측 요약정보에서 대상 선택하면 해당 위치로 이동") 대응.
+ * PlatformPreview.tsx를 실제로 다시 읽어 각 필드가 어느 CollapsibleSection
+ * 안에 있는지 확인한 뒤에만 추가한다(추측 금지 원칙 유지) —
+ * material/color/manufacturer는 "section-basic"(423-446줄), caution은
+ * "section-notice"(641줄)에 실제로 있는 EditableText를 확인했다. */
+const NAVER_NOTICE_FIELD_SECTION: Record<string, string> = {
+  material: "section-basic",
+  color: "section-basic",
+  manufacturer: "section-basic",
+  recommendedAge: "section-basic",
+  caution: "section-notice",
+};
+
+function naverFieldSectionId(field: string): string | undefined {
+  if (field === "detailAttribute.originAreaInfo.importer") return "section-notice";
+  if (field.startsWith("productCertificationInfos")) return "section-kc";
+  if (field.startsWith("productInfoProvidedNotice")) {
+    const suffix = field.split(".").pop() ?? field;
+    return NAVER_NOTICE_FIELD_SECTION[suffix];
+  }
+  return undefined;
+}
+
+/** N-3.38 — warrantyPolicy/afterServiceDirector는 PlatformPreview 안에 입력
+ * UI가 없다(SellerProfile.qualityGuarantee/asContactNumber를 Settings에서만
+ * 입력받는다, N-3.13 Part E-12) — 실제로 PlatformPreview.tsx를 grep해서
+ * 확인했다(0건). sectionId 대신 /settings로 보낸다(claimDeliveryInfo/
+ * deliveryInfo와 같은 패턴, NAVER_SETTINGS_FIELD_PREFIXES 참고). */
+const NAVER_NOTICE_FIELD_EXTERNAL_HREF: Record<string, string> = {
+  warrantyPolicy: "/settings",
+  afterServiceDirector: "/settings",
+};
+
+function naverFieldExternalHref(field: string): string | undefined {
+  if (NAVER_SETTINGS_FIELD_PREFIXES.some((p) => field.startsWith(p))) return "/settings";
+  if (field.startsWith("productInfoProvidedNotice")) {
+    const suffix = field.split(".").pop() ?? field;
+    return NAVER_NOTICE_FIELD_EXTERNAL_HREF[suffix];
+  }
+  return undefined;
 }

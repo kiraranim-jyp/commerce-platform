@@ -1,0 +1,40 @@
+{
+  "fixtureType": "NEGATIVE_KC_MISSING",
+  "purpose": "KC 인증정보가 없는 KIDS 상품이 영구적으로 BLOCKED 상태를 유지하는지 확인하는 회귀 기준점. N-3.45 STEP10(CPO 지시)에서 만든 영구 가드(DETAIL_PAGE_REFERENCE로 KC를 우회할 수 없음, packages/listing/src/naver/__tests__/kc-certification-guard.test.ts)와 함께 본다.",
+  "sourceUrl": "https://www.junioredition.com/en-kr/collections/the-animals-observatory/products/hamster-kid-cap-in-brown-by-the-animals-observatory",
+  "productTitle": "Hamster Kid Cap in Brown by The Animals Observatory",
+  "snapshotId": "50a42e49-e9e7-4e3b-9b8b-66bea6a50f89",
+  "category": {
+    "leafCategoryId": "50000349",
+    "path": "출산/육아 > 유아동잡화 > 모자",
+    "matchMethod": "실제 POST /api/naver/category-search 응답 1위 후보(score 100)",
+    "categoryRequiresChildCertification": true,
+    "verifiedVia": "실제 GET /v1/categories/50000349, exceptionalCategories에 CHILD_CERTIFICATION 포함(실측)"
+  },
+  "childCertificationInfoId": 1042,
+  "originAreaCode": "0200037",
+  "originAreaLabel": "수입산:아시아>중국",
+  "kcInfoStatus": "MISSING — certificationNumber/companyName/certificationDate 전부 미확보. CPO 지시(N-3.46/N-3.49)에 따라 실제 원문 확인 전까지 임의로 채우지 않는다.",
+  "validationResult": {
+    "ok": false,
+    "readyCount": 32,
+    "missingCount": 1,
+    "blockedCount": 1,
+    "blockedFields": [
+      {
+        "field": "productCertificationInfos[].certificationNumber",
+        "code": "KC_CERTIFICATION_REQUIRED",
+        "reason": "KC 인증번호가 없습니다. DETAIL_PAGE_REFERENCE로 대체 불가(영구 가드)."
+      }
+    ],
+    "missingFields": [
+      {
+        "field": "productInfoProvidedNotice(KIDS).certificationType",
+        "code": "KC_CERTIFICATION_REQUIRED"
+      }
+    ]
+  },
+  "postAttempted": false,
+  "postCount": 0,
+  "note": "이 상품은 한 번도 실제 POST /v2/products를 시도하지 않았다(로컬 게이트에서 validation.ok=false로 정상 차단됨). N-3.46에서 'POST 0회는 실패가 아니라 게이트가 의도대로 작동한 것'으로 CPO 확인됨. 참고: verify-hamster-cap-e2e.ts 스크립트로 언제든 재확인 가능."
+}

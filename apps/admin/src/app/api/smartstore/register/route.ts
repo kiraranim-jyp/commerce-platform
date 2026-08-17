@@ -11,7 +11,7 @@ import {
 } from "@commerce/listing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getNaverCredentials } from "../../naver/_lib/env";
-import { issueNaverAccessToken, callNaverApi } from "../../naver/_lib/client";
+import { issueNaverAccessToken, callNaverApi, uploadNaverProductImages } from "../../naver/_lib/client";
 import { fetchNaverReturnDeliveryCompanies, resolvePrimaryReturnCompany } from "../../naver/_lib/delivery";
 import { fetchNaverOriginAreas } from "../../naver/_lib/origin";
 import { getDefaultSellerProfile } from "../../coupang/_lib/seller-profile";
@@ -114,7 +114,7 @@ export async function POST(request: Request) {
     payload,
   });
 
-  const credentials = getNaverCredentials();
+  const credentials = await getNaverCredentials();
   if (!credentials) {
     logStep("인증 확인", "failed", "네이버 인증 정보가 설정되어 있지 않습니다.");
     const result = withMeta({
@@ -242,9 +242,43 @@ export async function POST(request: Request) {
     afterServiceDirector: sellerProfile?.asContactNumber || null,
   };
 
+  // N-3.49(2026-08-17, 실제 등록 4차 시도로 발견) — 상품 등록 API는 외부 URL
+  // (지금까지 여기 쓰던 Supabase Storage 공개 URL)을 대표/추가 이미지에
+  // 직접 받지 않는다("올바른 이미지 파일이 아닙니다"로 거부됨, 실제 확인됨).
+  // 반드시 "상품 이미지 다건 등록" API로 먼저 업로드하고 그 응답 url을
+  // 써야 한다(WebSearch로 확인한 commerce-api-naver 공식 커뮤니티 설명 +
+  // 진단 라우트로 실제 응답 구조 {images:[{url}]} 확인 완료).
+  const sourceImageUrls = [listing.representativeImage, ...listing.additionalImages].filter(
+    (u): u is string => Boolean(u),
+  );
+  let uploadedRepresentativeUrl = listing.representativeImage;
+  let uploadedAdditionalUrls = listing.additionalImages;
+  if (sourceImageUrls.length > 0) {
+    const uploadResult = await uploadNaverProductImages(accessToken, sourceImageUrls);
+    if (!uploadResult.ok) {
+      logStep("이미지 업로드", "failed", uploadResult.message);
+      const result = withMeta({
+        status: "FAILED",
+        platform: "smartstore",
+        mode: "LIVE",
+        retryable: true,
+        error: {
+          step: "IMAGE",
+          message: `네이버 이미지 업로드에 실패했습니다: ${uploadResult.message}`,
+          retryable: true,
+          resolution: "이미지 URL이 실제로 접근 가능한지 확인 후 다시 시도해주세요.",
+        },
+      });
+      await logRegistrationAttempt(result, uploadResult.raw, snapshotId);
+      return NextResponse.json(result);
+    }
+    logStep("이미지 업로드", "success", `${uploadResult.urls.length}개 이미지를 네이버에 업로드했습니다.`);
+    [uploadedRepresentativeUrl, ...uploadedAdditionalUrls] = uploadResult.urls;
+  }
+
   payload = buildNaverProductPayload({
     product,
-    listing,
+    listing: { ...listing, representativeImage: uploadedRepresentativeUrl, additionalImages: uploadedAdditionalUrls },
     leafCategoryId,
     ...payloadInputCommon,
     categoryRequiresChildCertification,

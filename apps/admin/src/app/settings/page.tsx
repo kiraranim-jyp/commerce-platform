@@ -9,7 +9,6 @@ import { ImagePicker } from "@/components/ui/ImagePicker";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Tabs } from "@/components/ui/Tabs";
 import type { PlatformConnectionStatus, TemplateSectionBlock } from "@commerce/listing";
-import { CoupangConnectionPanel } from "../pipeline/commerce/CoupangConnectionPanel";
 import type { ConnectionErrorType } from "@/lib/connection-error";
 
 const TAB_KEYS = [
@@ -42,6 +41,11 @@ interface AccountValues {
   secretKeySaved: boolean;
   vendorId: string | null;
   vendorUserId: string | null;
+}
+
+interface NaverAccountValues {
+  clientIdMasked: string | null;
+  clientSecretSaved: boolean;
 }
 
 interface SellerProfile {
@@ -142,6 +146,14 @@ export default function SettingsPage() {
   const [vendorUserId, setVendorUserId] = useState("");
   const [accountSaving, setAccountSaving] = useState(false);
 
+  const [naverAccount, setNaverAccount] = useState<NaverAccountValues>({
+    clientIdMasked: null,
+    clientSecretSaved: false,
+  });
+  const [naverClientId, setNaverClientId] = useState("");
+  const [naverClientSecret, setNaverClientSecret] = useState("");
+  const [naverAccountSaving, setNaverAccountSaving] = useState(false);
+
   const [profiles, setProfiles] = useState<SellerProfile[]>([]);
   const [brandProfiles, setBrandProfiles] = useState<BrandProfile[]>([]);
   const [templates, setTemplates] = useState<DescriptionTemplate[]>([]);
@@ -166,11 +178,12 @@ export default function SettingsPage() {
   }
 
   async function loadAll() {
-    const [accountRes, profilesRes, brandProfilesRes, templatesRes] = await Promise.all([
+    const [accountRes, profilesRes, brandProfilesRes, templatesRes, naverAccountRes] = await Promise.all([
       fetch("/api/settings/coupang"),
       fetch("/api/settings/coupang/profiles"),
       fetch("/api/settings/coupang/brand-profiles"),
       fetch("/api/settings/coupang/templates"),
+      fetch("/api/settings/naver"),
     ]);
     const accountData = (await accountRes.json()) as {
       configured: boolean;
@@ -180,6 +193,7 @@ export default function SettingsPage() {
     const profilesData = (await profilesRes.json()) as { profiles: SellerProfile[] };
     const brandProfilesData = (await brandProfilesRes.json()) as { profiles: BrandProfile[] };
     const templatesData = (await templatesRes.json()) as { templates: DescriptionTemplate[] };
+    const naverAccountData = (await naverAccountRes.json()) as { values: NaverAccountValues };
 
     setConfigured(accountData.configured);
     setMissing(accountData.missing);
@@ -189,6 +203,7 @@ export default function SettingsPage() {
     setProfiles(profilesData.profiles ?? []);
     setBrandProfiles(brandProfilesData.profiles ?? []);
     setTemplates(templatesData.templates ?? []);
+    setNaverAccount(naverAccountData.values);
   }
 
   // loadAll()을 effect 콜백에서 직접 호출하면 setState가 effect 본문 내에서
@@ -231,6 +246,32 @@ export default function SettingsPage() {
       await loadAll();
     } finally {
       setAccountSaving(false);
+    }
+  }
+
+  async function handleSaveNaverAccount() {
+    setNaverAccountSaving(true);
+    setSaveMessage(null);
+    try {
+      const res = await fetch("/api/settings/naver", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: naverClientId || undefined,
+          clientSecret: naverClientSecret || undefined,
+        }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (!data.ok) {
+        setSaveMessage(`네이버 계정 저장 실패: ${data.error}`);
+        return;
+      }
+      setSaveMessage("네이버 계정 정보가 저장되었습니다.");
+      setNaverClientId("");
+      setNaverClientSecret("");
+      await loadAll();
+    } finally {
+      setNaverAccountSaving(false);
     }
   }
 
@@ -313,6 +354,14 @@ export default function SettingsPage() {
                 setVendorUserId={setVendorUserId}
                 handleSaveAccount={handleSaveAccount}
                 accountSaving={accountSaving}
+                naverAccount={naverAccount}
+                naverClientId={naverClientId}
+                setNaverClientId={setNaverClientId}
+                naverClientSecret={naverClientSecret}
+                setNaverClientSecret={setNaverClientSecret}
+                handleSaveNaverAccount={handleSaveNaverAccount}
+                naverAccountSaving={naverAccountSaving}
+                onNaverAccountCleared={loadAll}
               />
             </div>
 
@@ -2038,19 +2087,6 @@ interface ComparisonShop {
   isActive: boolean;
 }
 
-interface CommerceAccountRecord {
-  id: string;
-  platform: "naver" | "coupang";
-  label: string;
-  isDefault: boolean;
-  accessKeyMasked: string | null;
-  secretKeySaved: boolean;
-  vendorId: string | null;
-  vendorUserId: string | null;
-  clientIdMasked: string | null;
-  clientSecretSaved: boolean;
-}
-
 interface ConnectionCheckResult {
   status: PlatformConnectionStatus;
   message?: string;
@@ -2110,6 +2146,14 @@ function CommerceAccountManager({
   setVendorUserId,
   handleSaveAccount,
   accountSaving,
+  naverAccount,
+  naverClientId,
+  setNaverClientId,
+  naverClientSecret,
+  setNaverClientSecret,
+  handleSaveNaverAccount,
+  naverAccountSaving,
+  onNaverAccountCleared,
 }: {
   account: AccountValues;
   onAccountCleared: () => void;
@@ -2123,35 +2167,27 @@ function CommerceAccountManager({
   setVendorUserId: (v: string) => void;
   handleSaveAccount: () => void;
   accountSaving: boolean;
+  naverAccount: NaverAccountValues;
+  naverClientId: string;
+  setNaverClientId: (v: string) => void;
+  naverClientSecret: string;
+  setNaverClientSecret: (v: string) => void;
+  handleSaveNaverAccount: () => void;
+  naverAccountSaving: boolean;
+  onNaverAccountCleared: () => void;
 }) {
-  const [multiAccounts, setMultiAccounts] = useState<CommerceAccountRecord[]>([]);
-  const [multiLoading, setMultiLoading] = useState(true);
   const [openCommerce, setOpenCommerce] = useState<"coupang" | "naver" | null>(null);
-
-  async function loadMultiAccounts() {
-    setMultiLoading(true);
-    try {
-      const res = await fetch("/api/settings/commerce-accounts");
-      const data = (await res.json()) as { accounts?: CommerceAccountRecord[] };
-      setMultiAccounts(data.accounts ?? []);
-    } finally {
-      setMultiLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void loadMultiAccounts();
-  }, []);
+  const [naverClearing, setNaverClearing] = useState(false);
 
   // 쿠팡은 저장된 계정 정보(account prop)만으로 "미연결 vs 확인 필요"를
-  // 네트워크 호출 없이 판단할 수 있다 — Naver는 환경변수 기반이라 클라이언트가
-  // 값을 알 수 없으므로, 실제로 연결 확인을 눌러보기 전에는 항상 "확인 필요"로
-  // 둔다(가짜 상태 표시 금지 원칙).
+  // 네트워크 호출 없이 판단할 수 있다 — Naver도 N-3.42부터 DB(commerce_accounts)에
+  // 저장된 값이 있으면 같은 방식으로 판단한다(가짜 상태 표시 금지 원칙 — 값이
+  // env var로만 설정된 경우는 클라이언트가 알 수 없어 여전히 "확인 필요"로 둔다).
   const coupangConfigured = Boolean(account.accessKeyMasked || account.vendorId);
+  const naverConfigured = Boolean(naverAccount.clientIdMasked);
   const [coupangCheck, setCoupangCheck] = useState<ConnectionCheckResult | null>(null);
   const [coupangChecking, setCoupangChecking] = useState(false);
   const [coupangCheckedAt, setCoupangCheckedAt] = useState<string | null>(null);
-  const [coupangFormOpen, setCoupangFormOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
 
   const [naverCheck, setNaverCheck] = useState<ConnectionCheckResult | null>(null);
@@ -2163,7 +2199,11 @@ function CommerceAccountManager({
     : coupangConfigured
       ? "UNKNOWN"
       : "NOT_CONFIGURED";
-  const naverHeaderStatus: PlatformConnectionStatus = naverCheck ? naverCheck.status : "UNKNOWN";
+  const naverHeaderStatus: PlatformConnectionStatus = naverCheck
+    ? naverCheck.status
+    : naverConfigured
+      ? "UNKNOWN"
+      : "NOT_CONFIGURED";
 
   async function checkCoupang() {
     setCoupangChecking(true);
@@ -2206,14 +2246,19 @@ function CommerceAccountManager({
     }
   }
 
-  const coupangAccountLabel = account.vendorId
-    ? `Vendor ID ${account.vendorId}`
-    : account.accessKeyMasked
-      ? `Access Key ${account.accessKeyMasked}`
-      : "저장된 계정 없음";
-
-  const coupangMultiAccounts = multiAccounts.filter((a) => a.platform === "coupang");
-  const naverMultiAccounts = multiAccounts.filter((a) => a.platform === "naver");
+  async function handleClearNaverAccount() {
+    if (!window.confirm("네이버 스마트스토어 연결 정보를 삭제하시겠습니까?\n저장된 Client ID/Secret이 삭제됩니다."))
+      return;
+    setNaverClearing(true);
+    try {
+      await fetch("/api/settings/naver", { method: "DELETE" });
+      onNaverAccountCleared();
+      setNaverCheck(null);
+      setNaverCheckedAt(null);
+    } finally {
+      setNaverClearing(false);
+    }
+  }
 
   return (
     <div className="space-y-2">
@@ -2226,103 +2271,84 @@ function CommerceAccountManager({
         onToggle={() => setOpenCommerce((p) => (p === "coupang" ? null : "coupang"))}
       >
         <div className="space-y-3">
-          <CoupangConnectionPanel
-            platformLabel="쿠팡"
-            status={coupangChecking ? "CHECKING" : coupangHeaderStatus}
-            checking={coupangChecking}
-            checkedAt={coupangCheckedAt}
-            onCheck={() => void checkCoupang()}
-          />
           <ConnectionErrorNotice result={coupangCheck} />
-          <div className="rounded-lg border border-border bg-surface px-4 pb-3 pt-3 text-xs text-text-secondary">
-            <p>판매자 계정: {coupangAccountLabel}</p>
-            <div className="mt-2 flex gap-3">
-              <button
-                type="button"
-                onClick={() => setCoupangFormOpen((v) => !v)}
-                className="font-medium text-primary hover:underline"
-              >
-                {coupangFormOpen ? "정보 수정 닫기" : "정보 수정"}
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleClearCoupang()}
-                disabled={clearing}
-                className="font-medium text-error hover:underline disabled:opacity-50"
-              >
-                {clearing ? "삭제 중…" : "연결 정보 삭제"}
-              </button>
-            </div>
-            <p className="mt-1 text-[11px] text-text-tertiary">
-              &ldquo;연결 정보 삭제&rdquo;는 이 화면에 저장된 값만 지웁니다 — 배포 환경 변수로도 설정돼 있다면 계속
-              연결됨으로 표시될 수 있습니다.
-            </p>
-            {coupangFormOpen && (
-              <div className="mt-3 space-y-3 border-t border-border pt-3 text-sm">
-                <Field label="Access Key" hint={account.accessKeyMasked ? `저장됨 (${account.accessKeyMasked})` : "미저장"}>
-                  <input
-                    type="password"
-                    value={accessKey}
-                    onChange={(e) => setAccessKey(e.target.value)}
-                    placeholder={account.accessKeyMasked ?? "새 값을 입력하지 않으면 기존 값 유지"}
-                    className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-                  />
-                </Field>
-                <Field label="Secret Key" hint={account.secretKeySaved ? "저장됨" : "미저장"}>
-                  <input
-                    type="password"
-                    value={secretKey}
-                    onChange={(e) => setSecretKey(e.target.value)}
-                    placeholder={
-                      account.secretKeySaved ? "•••• (변경하려면 새 값 입력)" : "새 값을 입력하지 않으면 기존 값 유지"
-                    }
-                    className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-                  />
-                </Field>
-                <Field label="Vendor ID">
-                  <input
-                    type="text"
-                    value={vendorId}
-                    onChange={(e) => setVendorId(e.target.value)}
-                    className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-                  />
-                </Field>
-                <Field label="Wing 계정 ID" hint="Wing 로그인 ID — API로 조회할 수 없어 직접 입력해야 합니다">
-                  <input
-                    type="text"
-                    value={vendorUserId}
-                    onChange={(e) => setVendorUserId(e.target.value)}
-                    className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-                  />
-                </Field>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleSaveAccount}
-                    disabled={accountSaving}
-                    className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
-                  >
-                    {accountSaving ? "저장 중…" : "저장"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void checkCoupang()}
-                    disabled={coupangChecking}
-                    className="rounded-md border border-border px-4 py-2 text-sm font-medium text-text-secondary hover:bg-background disabled:opacity-50"
-                  >
-                    {coupangChecking ? "확인 중…" : "연결 확인"}
-                  </button>
-                </div>
+          {/* N-3.41(CPO 지시: "별도 연결 상태 카드를 만들지 않는다 — 상태는
+              아코디언 제목의 배지 하나로만 보여준다") — 이전에는 CoupangConnectionPanel
+              상태 카드 + "판매자 계정" 요약줄 + 토글형 수정 폼, 이렇게 3단계로
+              나뉘어 있었다. 이제 연결 정보 입력 필드를 토글 없이 항상 보여주는
+              평평한 폼 하나로 합친다(상태는 CommerceAccordionShell 헤더의
+              StatusBadge가 전담). */}
+          <div className="rounded-lg border border-border bg-surface px-4 py-3">
+            <p className="mb-3 text-xs font-semibold text-text-secondary">연결 정보</p>
+            <div className="space-y-3 text-sm">
+              <Field label="Access Key" hint={account.accessKeyMasked ? `저장됨 (${account.accessKeyMasked})` : "미저장"}>
+                <input
+                  type="password"
+                  value={accessKey}
+                  onChange={(e) => setAccessKey(e.target.value)}
+                  placeholder={account.accessKeyMasked ?? "새 값을 입력하지 않으면 기존 값 유지"}
+                  className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+                />
+              </Field>
+              <Field label="Secret Key" hint={account.secretKeySaved ? "저장됨" : "미저장"}>
+                <input
+                  type="password"
+                  value={secretKey}
+                  onChange={(e) => setSecretKey(e.target.value)}
+                  placeholder={
+                    account.secretKeySaved ? "•••• (변경하려면 새 값 입력)" : "새 값을 입력하지 않으면 기존 값 유지"
+                  }
+                  className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+                />
+              </Field>
+              <Field label="Vendor ID">
+                <input
+                  type="text"
+                  value={vendorId}
+                  onChange={(e) => setVendorId(e.target.value)}
+                  className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+                />
+              </Field>
+              <Field label="Wing 계정 ID" hint="Wing 로그인 ID — API로 조회할 수 없어 직접 입력해야 합니다">
+                <input
+                  type="text"
+                  value={vendorUserId}
+                  onChange={(e) => setVendorUserId(e.target.value)}
+                  className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+                />
+              </Field>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleSaveAccount}
+                  disabled={accountSaving}
+                  className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+                >
+                  {accountSaving ? "저장 중…" : "저장"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void checkCoupang()}
+                  disabled={coupangChecking}
+                  className="rounded-md border border-border px-4 py-2 text-sm font-medium text-text-secondary hover:bg-background disabled:opacity-50"
+                >
+                  {coupangChecking ? "확인 중…" : "연결 테스트"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleClearCoupang()}
+                  disabled={clearing}
+                  className="rounded-md border border-error px-4 py-2 text-sm font-medium text-error hover:bg-error/5 disabled:opacity-50"
+                >
+                  {clearing ? "삭제 중…" : "연결 정보 삭제"}
+                </button>
               </div>
-            )}
+              <p className="text-[11px] text-text-tertiary">
+                &ldquo;연결 정보 삭제&rdquo;는 이 화면에 저장된 값만 지웁니다 — 배포 환경 변수로도 설정돼 있다면 계속
+                연결됨으로 표시될 수 있습니다.
+              </p>
+            </div>
           </div>
-
-          <MultiAccountList
-            platform="coupang"
-            accounts={coupangMultiAccounts}
-            loading={multiLoading}
-            onChanged={loadMultiAccounts}
-          />
         </div>
       </CommerceAccordionShell>
 
@@ -2335,25 +2361,71 @@ function CommerceAccountManager({
         onToggle={() => setOpenCommerce((p) => (p === "naver" ? null : "naver"))}
       >
         <div className="space-y-3">
-          <CoupangConnectionPanel
-            platformLabel="스마트스토어(네이버)"
-            status={naverChecking ? "CHECKING" : naverHeaderStatus}
-            checking={naverChecking}
-            checkedAt={naverCheckedAt}
-            onCheck={() => void checkNaver()}
-          />
           <ConnectionErrorNotice result={naverCheck} />
-          <p className="rounded-lg border border-border bg-surface px-4 py-3 text-[11px] text-text-tertiary">
-            네이버 계정은 배포 환경변수(SMARTSTORE_CLIENT_ID/SMARTSTORE_CLIENT_SECRET)로만 설정됩니다 — 이 화면에서
-            수정하거나 해제할 수 없습니다.
-          </p>
-
-          <MultiAccountList
-            platform="naver"
-            accounts={naverMultiAccounts}
-            loading={multiLoading}
-            onChanged={loadMultiAccounts}
-          />
+          {/* N-3.42 STEP5(CPO 지시, B안 채택) — N-3.41에서는 DB 저장이 없어
+              배포 환경변수 전용 안내문만 보여줬다. commerce_accounts
+              (platform='naver')를 싱글톤으로 연결해 Coupang과 동일한 입력형
+              폼으로 바꿨다 — getNaverCredentials()가 이 값을 우선 쓰고, 값이
+              없으면 여전히 환경변수로 폴백한다(아래 안내문 그대로 유지). */}
+          <div className="rounded-lg border border-border bg-surface px-4 py-3">
+            <p className="mb-3 text-xs font-semibold text-text-secondary">연결 정보</p>
+            <div className="space-y-3 text-sm">
+              <Field
+                label="Client ID"
+                hint={naverAccount.clientIdMasked ? `저장됨 (${naverAccount.clientIdMasked})` : "미저장"}
+              >
+                <input
+                  type="password"
+                  value={naverClientId}
+                  onChange={(e) => setNaverClientId(e.target.value)}
+                  placeholder={naverAccount.clientIdMasked ?? "새 값을 입력하지 않으면 기존 값 유지"}
+                  className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+                />
+              </Field>
+              <Field label="Client Secret" hint={naverAccount.clientSecretSaved ? "저장됨" : "미저장"}>
+                <input
+                  type="password"
+                  value={naverClientSecret}
+                  onChange={(e) => setNaverClientSecret(e.target.value)}
+                  placeholder={
+                    naverAccount.clientSecretSaved ? "•••• (변경하려면 새 값 입력)" : "새 값을 입력하지 않으면 기존 값 유지"
+                  }
+                  className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+                />
+              </Field>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleSaveNaverAccount}
+                  disabled={naverAccountSaving}
+                  className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+                >
+                  {naverAccountSaving ? "저장 중…" : "저장"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void checkNaver()}
+                  disabled={naverChecking}
+                  className="rounded-md border border-border px-4 py-2 text-sm font-medium text-text-secondary hover:bg-background disabled:opacity-50"
+                >
+                  {naverChecking ? "확인 중…" : "연결 테스트"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleClearNaverAccount()}
+                  disabled={naverClearing}
+                  className="rounded-md border border-error px-4 py-2 text-sm font-medium text-error hover:bg-error/5 disabled:opacity-50"
+                >
+                  {naverClearing ? "삭제 중…" : "연결 정보 삭제"}
+                </button>
+              </div>
+              <p className="text-[11px] text-text-tertiary">
+                네이버 계정은 배포 환경변수(SMARTSTORE_CLIENT_ID/SMARTSTORE_CLIENT_SECRET)로도 설정될 수 있습니다 —
+                &ldquo;연결 정보 삭제&rdquo;는 이 화면에 저장된 값만 지웁니다. 환경 변수가 설정돼 있다면 삭제 후에도 계속
+                연결됨으로 표시될 수 있습니다.
+              </p>
+            </div>
+          </div>
         </div>
       </CommerceAccordionShell>
 
@@ -2441,273 +2513,13 @@ function formatCheckedAtRelative(iso: string): string {
   return `${Math.floor(diffMin / 60)}시간 전`;
 }
 
-/** 커머스 하나의 Accordion 안에 있는 "추가 계정"(commerce_accounts 다중 계정)
- * 목록 — 예전 PlatformAccountAccordion의 내용물을 그대로 재사용하되, 이제
- * 자체 아코디언 토글 없이 부모(CommerceAccordionShell)가 펼쳐졌을 때만
- * 보인다. */
-function MultiAccountList({
-  platform,
-  accounts,
-  loading,
-  onChanged,
-}: {
-  platform: "naver" | "coupang";
-  accounts: CommerceAccountRecord[];
-  loading: boolean;
-  onChanged: () => void;
-}) {
-  const [addingOpen, setAddingOpen] = useState(false);
-
-  return (
-    <div className="border-t border-border pt-3">
-      <p className="text-xs font-medium text-text-tertiary">추가 계정</p>
-      {loading ? (
-        <p className="mt-2 text-xs text-text-tertiary">불러오는 중…</p>
-      ) : (
-        <div className="mt-2 space-y-2">
-          {accounts.length === 0 && <p className="text-xs text-text-tertiary">등록된 추가 계정이 없습니다.</p>}
-          {accounts.map((account) => (
-            <CommerceAccountRow key={account.id} account={account} onChanged={onChanged} />
-          ))}
-          {addingOpen ? (
-            <CommerceAccountForm
-              platform={platform}
-              onDone={() => {
-                setAddingOpen(false);
-                onChanged();
-              }}
-              onCancel={() => setAddingOpen(false)}
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={() => setAddingOpen(true)}
-              className="rounded-md border border-dashed border-border px-3 py-1.5 text-xs font-medium text-primary hover:bg-background"
-            >
-              + 커머스 계정 추가
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CommerceAccountRow({ account, onChanged }: { account: CommerceAccountRecord; onChanged: () => void }) {
-  const [editing, setEditing] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ status: string; message: string } | null>(null);
-  const [deleting, setDeleting] = useState(false);
-
-  async function handleTest() {
-    setTesting(true);
-    setTestResult(null);
-    try {
-      const res = await fetch(`/api/settings/commerce-accounts/${account.id}/test`, { method: "POST" });
-      const data = (await res.json()) as { status: string; message: string };
-      setTestResult(data);
-    } catch {
-      setTestResult({ status: "AUTH_FAILED", message: "연결 테스트 중 오류가 발생했습니다." });
-    } finally {
-      setTesting(false);
-    }
-  }
-
-  async function handleDelete() {
-    if (!window.confirm(`"${account.label}" 계정을 삭제할까요?`)) return;
-    setDeleting(true);
-    try {
-      await fetch(`/api/settings/commerce-accounts/${account.id}`, { method: "DELETE" });
-      onChanged();
-    } finally {
-      setDeleting(false);
-    }
-  }
-
-  const summary =
-    account.platform === "coupang"
-      ? account.accessKeyMasked
-        ? `Access Key ${account.accessKeyMasked}${account.vendorId ? ` · Vendor ${account.vendorId}` : ""}`
-        : "미저장"
-      : account.clientIdMasked
-        ? `Client ID ${account.clientIdMasked}`
-        : "미저장";
-
-  return (
-    <div className="rounded-md border border-border bg-background px-3 py-2 text-xs">
-      <div className="flex items-center justify-between">
-        <div>
-          <span className="font-medium text-text-primary">{account.label}</span>
-          {account.isDefault && (
-            <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">기본</span>
-          )}
-          <p className="mt-0.5 text-text-tertiary">{summary}</p>
-        </div>
-        <div className="flex shrink-0 gap-2">
-          <button type="button" onClick={() => void handleTest()} disabled={testing} className="text-primary hover:underline disabled:opacity-50">
-            {testing ? "확인 중…" : "연결 테스트"}
-          </button>
-          <button type="button" onClick={() => setEditing((v) => !v)} className="text-text-secondary hover:underline">
-            {editing ? "닫기" : "수정"}
-          </button>
-          <button type="button" onClick={() => void handleDelete()} disabled={deleting} className="text-error hover:underline disabled:opacity-50">
-            삭제
-          </button>
-        </div>
-      </div>
-      {testResult && (
-        <p className={`mt-1.5 ${testResult.status === "CONNECTED" ? "text-success" : "text-error"}`}>
-          {testResult.status === "CONNECTED" ? "✓" : "✗"} {testResult.message}
-        </p>
-      )}
-      {editing && (
-        <div className="mt-2 border-t border-border pt-2">
-          <CommerceAccountForm
-            platform={account.platform}
-            accountId={account.id}
-            initialLabel={account.label}
-            onDone={() => {
-              setEditing(false);
-              onChanged();
-            }}
-            onCancel={() => setEditing(false)}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CommerceAccountForm({
-  platform,
-  accountId,
-  initialLabel,
-  onDone,
-  onCancel,
-}: {
-  platform: "naver" | "coupang";
-  accountId?: string;
-  initialLabel?: string;
-  onDone: () => void;
-  onCancel: () => void;
-}) {
-  const [label, setLabel] = useState(initialLabel ?? "");
-  const [accessKey, setAccessKey] = useState("");
-  const [secretKey, setSecretKey] = useState("");
-  const [vendorId, setVendorId] = useState("");
-  const [vendorUserId, setVendorUserId] = useState("");
-  const [clientId, setClientId] = useState("");
-  const [clientSecret, setClientSecret] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  async function handleSubmit() {
-    setSaving(true);
-    try {
-      const body =
-        platform === "coupang"
-          ? { platform, label, accessKey, secretKey, vendorId, vendorUserId }
-          : { platform, label, clientId, clientSecret };
-      const res = await fetch(
-        accountId ? `/api/settings/commerce-accounts/${accountId}` : "/api/settings/commerce-accounts",
-        {
-          method: accountId ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        },
-      );
-      const data = (await res.json()) as { ok: boolean };
-      if (data.ok) onDone();
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="mt-2 space-y-2 rounded-md border border-border bg-surface p-3">
-      <Field label="계정 이름">
-        <input
-          type="text"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          placeholder="예: 본계정"
-          className="w-full rounded-md border border-border px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
-        />
-      </Field>
-      {platform === "coupang" ? (
-        <>
-          <Field label="Access Key">
-            <input
-              type="password"
-              value={accessKey}
-              onChange={(e) => setAccessKey(e.target.value)}
-              placeholder="새 값을 입력하지 않으면 기존 값 유지"
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="Secret Key">
-            <input
-              type="password"
-              value={secretKey}
-              onChange={(e) => setSecretKey(e.target.value)}
-              placeholder="새 값을 입력하지 않으면 기존 값 유지"
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="Vendor ID">
-            <input
-              type="text"
-              value={vendorId}
-              onChange={(e) => setVendorId(e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="Wing 계정 ID">
-            <input
-              type="text"
-              value={vendorUserId}
-              onChange={(e) => setVendorUserId(e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
-            />
-          </Field>
-        </>
-      ) : (
-        <>
-          <Field label="Client ID">
-            <input
-              type="password"
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-              placeholder="새 값을 입력하지 않으면 기존 값 유지"
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
-            />
-          </Field>
-          <Field label="Client Secret">
-            <input
-              type="password"
-              value={clientSecret}
-              onChange={(e) => setClientSecret(e.target.value)}
-              placeholder="새 값을 입력하지 않으면 기존 값 유지"
-              className="w-full rounded-md border border-border px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
-            />
-          </Field>
-        </>
-      )}
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => void handleSubmit()}
-          disabled={saving || !label}
-          className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-hover disabled:opacity-50"
-        >
-          {saving ? "저장 중…" : "저장"}
-        </button>
-        <button type="button" onClick={onCancel} className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background">
-          취소
-        </button>
-      </div>
-    </div>
-  );
-}
+/** N-3.40(CPO 지시: "커머스 계정 Settings 단일 계정 구조 정리") — 커머스당
+ * 연결 계정은 1개만 있다는 원칙으로 "추가 계정" UI(commerce_accounts 다중
+ * 계정 목록/추가/수정/삭제)를 화면에서 제거했다. commerce_accounts 테이블/
+ * API 자체는 그대로 남아 있다(CPO 지시: "먼저 UI만 정리, DB/API 마이그레이션
+ * 금지") — 기본 계정(coupang_seller_settings 싱글톤 / Naver 환경변수)은 이
+ * 다중 계정 데이터를 전혀 참조하지 않으므로 제거해도 안전하다(N-3.40 STEP1
+ * 확인). */
 
 /**
  * Sprint B-0(CPO 지시, 2026-08-09) — 향후 가격 비교 기능(B-1+)의 기반. 이번

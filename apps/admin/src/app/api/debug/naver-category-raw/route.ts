@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const categoryId = searchParams.get("id") ?? "50000349";
 
-  const credentials = getNaverCredentials();
+  const credentials = await getNaverCredentials();
   if (!credentials) {
     return NextResponse.json({ error: "NOT_CONFIGURED" }, { status: 200 });
   }

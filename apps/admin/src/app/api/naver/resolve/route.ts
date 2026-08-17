@@ -68,7 +68,7 @@ export async function GET(request: Request) {
   const extractedCountryOfOrigin = searchParams.get("countryOfOrigin");
   const brandName = searchParams.get("brand");
 
-  const credentials = getNaverCredentials();
+  const credentials = await getNaverCredentials();
   if (!credentials) {
     return NextResponse.json(
       { status: "NOT_CONFIGURED", message: "네이버 인증 정보가 설정되어 있지 않습니다." },

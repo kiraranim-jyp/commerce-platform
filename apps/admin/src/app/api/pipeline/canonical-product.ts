@@ -183,5 +183,16 @@ export function buildCanonicalProduct(
     shippingFee: { value: 0, source: "DEFAULT", confidence: 0.5 },
     stockQuantity: { value: 999, source: "DEFAULT", confidence: 0.5 },
     certification: { value: "", source: "DEFAULT", confidence: 1 },
+    // N-3.29 — 수입사명/어린이제품 인증정보는 원본 사이트에 나오는 정보가
+    // 아니라 항상 사용자가 Editor에서 직접 입력해야 한다(추출 소스 없음).
+    importer: { value: "", source: "REQUIRED", confidence: 0 },
+    childCertification: { value: null, source: "REQUIRED", confidence: 0 },
+    // N-3.44 — Naver KIDS 고시정보 필수 필드 4개(품명/모델명/중량/KC 인증
+    // 유형). importer/childCertification과 동일하게 원본 사이트에서 신뢰성
+    // 있게 뽑아낼 방법이 없어 항상 사용자가 Editor에서 직접 입력해야 한다.
+    itemName: { value: "", source: "REQUIRED", confidence: 0 },
+    modelName: { value: "", source: "REQUIRED", confidence: 0 },
+    weight: { value: "", source: "REQUIRED", confidence: 0 },
+    certificationType: { value: "", source: "REQUIRED", confidence: 0 },
   };
 }

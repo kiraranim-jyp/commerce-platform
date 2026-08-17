@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { fetch as naverFetch, ProxyAgent } from "undici";
+import { fetch as naverFetch, ProxyAgent, FormData as UndiciFormData } from "undici";
 import type { NaverCredentials } from "./env";
 
 const NAVER_OAUTH_TOKEN_URL = "https://api.commerce.naver.com/external/v1/oauth2/token";
@@ -149,6 +149,103 @@ export async function issueNaverAccessToken(
     expiresIn: typeof expiresIn === "number" ? expiresIn : null,
     raw: parsed,
   };
+}
+
+/** N-3.49(2026-08-17, 실제 등록 4차 시도로 발견) — 상품 등록 API는 외부
+ * URL(예: Supabase Storage)을 representativeImage.url/optionalImages[].url에
+ * 직접 받지 않는다("올바른 이미지 파일이 아닙니다"로 거부됨). WebSearch로
+ * 확인한 공식 커뮤니티 설명(commerce-api-naver discussions) — 반드시 이
+ * "상품 이미지 다건 등록" API(POST /v1/product-images/upload)로 먼저
+ * 업로드하고, 그 응답의 url을 등록 payload에 써야 한다. multipart/form-data,
+ * 폼 필드명은 파일이 여러 개여도 항상 "imageFiles"(반복). */
+export interface NaverImageUploadResult {
+  ok: true;
+  urls: string[];
+  raw: unknown;
+}
+export interface NaverImageUploadError {
+  ok: false;
+  step: "FETCH_SOURCE_FAILED" | "API_REQUEST_FAILED" | "RESPONSE_PARSE_FAILED" | "NETWORK_ERROR";
+  message: string;
+  raw?: unknown;
+}
+
+export async function uploadNaverProductImages(
+  accessToken: string,
+  sourceImageUrls: string[],
+): Promise<NaverImageUploadResult | NaverImageUploadError> {
+  const formData = new UndiciFormData();
+  for (const [index, sourceUrl] of sourceImageUrls.entries()) {
+    let fetched: Response;
+    try {
+      fetched = await fetch(sourceUrl, { signal: AbortSignal.timeout(NAVER_REQUEST_TIMEOUT_MS) });
+    } catch (error) {
+      return {
+        ok: false,
+        step: "FETCH_SOURCE_FAILED",
+        message: `원본 이미지(${sourceUrl})를 가져오지 못했습니다: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+    if (!fetched.ok) {
+      return {
+        ok: false,
+        step: "FETCH_SOURCE_FAILED",
+        message: `원본 이미지(${sourceUrl}) 응답이 실패했습니다(HTTP ${fetched.status}).`,
+      };
+    }
+    const contentType = fetched.headers.get("content-type") || "image/jpeg";
+    const bytes = await fetched.arrayBuffer();
+    const extension = contentType.includes("png") ? "png" : "jpg";
+    formData.append("imageFiles", new Blob([bytes], { type: contentType }), `image-${index}.${extension}`);
+  }
+
+  try {
+    const res = await naverFetch(`${NAVER_API_BASE}/v1/product-images/upload`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: formData,
+      signal: AbortSignal.timeout(NAVER_REQUEST_TIMEOUT_MS),
+      dispatcher: naverProxyDispatcher,
+    });
+    let parsedBody: unknown = null;
+    try {
+      parsedBody = await res.json();
+    } catch {
+      parsedBody = null;
+    }
+    if (!res.ok) {
+      return {
+        ok: false,
+        step: "API_REQUEST_FAILED",
+        message: `네이버 이미지 업로드 API가 거부했습니다(HTTP ${res.status}).`,
+        raw: parsedBody,
+      };
+    }
+    // 실제 응답 키 구조가 공식 문서 원문으로 확정되지 않아(커뮤니티 설명상
+    // "images" 목록만 확인됨), 흔히 쓰이는 후보 경로를 순서대로 시도한다 —
+    // 어느 것도 안 맞으면 raw를 그대로 실어 호출부가 진단할 수 있게 한다.
+    const body = parsedBody as Record<string, unknown> | null;
+    const imageList =
+      (body?.images as Array<Record<string, unknown>> | undefined) ??
+      (body?.data as Array<Record<string, unknown>> | undefined) ??
+      null;
+    const urls = imageList?.map((entry) => entry?.url).filter((u): u is string => typeof u === "string") ?? [];
+    if (urls.length !== sourceImageUrls.length) {
+      return {
+        ok: false,
+        step: "RESPONSE_PARSE_FAILED",
+        message: `이미지 업로드 응답에서 url을 예상한 개수만큼 파싱하지 못했습니다(기대 ${sourceImageUrls.length}, 파싱 ${urls.length}).`,
+        raw: parsedBody,
+      };
+    }
+    return { ok: true, urls, raw: parsedBody };
+  } catch (error) {
+    return {
+      ok: false,
+      step: "NETWORK_ERROR",
+      message: error instanceof Error ? error.message : "네이버 이미지 업로드 API에 연결할 수 없습니다.",
+    };
+  }
 }
 
 export interface NaverApiResponse {

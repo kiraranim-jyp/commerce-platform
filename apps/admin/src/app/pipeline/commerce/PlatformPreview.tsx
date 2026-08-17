@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { CategoryCandidate } from "@commerce/category";
 import type {
   ComplianceFieldSource,
@@ -10,11 +10,12 @@ import type {
   DetailPageBlock,
   ListingResult,
   ListingStatus,
+  NaverPayloadValidationResult,
   ReadinessReport,
 } from "@commerce/listing";
 import { isVerifiedCategorySelected, MARKETPLACE_DESCRIPTORS } from "@commerce/marketplace";
 import type { ListingModel } from "@commerce/marketplace";
-import type { CanonicalProduct, CanonicalProductOptionGroup, FieldSource } from "@commerce/shared";
+import type { CanonicalProduct, CanonicalProductCertification, CanonicalProductOptionGroup, FieldSource } from "@commerce/shared";
 import type { WorkspaceItem } from "../types";
 import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
 import { CategoryRequirementsEditor } from "./CategoryRequirementsEditor";
@@ -28,7 +29,7 @@ import { ListingSection } from "./ListingSection";
 import { NaverPayloadPreview } from "./NaverPayloadPreview";
 import { OptionVariantEditor } from "./OptionVariantEditor";
 import { PriceEditor } from "./PriceEditor";
-import { computeChecklistReadiness, computeReadinessScoreSummary } from "./readiness";
+import { computeChecklistReadiness, computeNaverPayloadReadiness } from "./readiness";
 import { RegistrationReadinessCard } from "./RegistrationReadinessCard";
 import { SellerProfileSummaryCard } from "./SellerProfileSummaryCard";
 import { extractionSourceLabel, ProvenanceBadge } from "./provenance";
@@ -72,6 +73,193 @@ function FieldRow({
 const FIELD_INPUT_CLASS =
   "w-full rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none";
 
+/** N-3.45(CPO 지시) — 상품정보제공고시 필드 중 reference-eligibility.ts 화이트리스트에
+ * 있는 필드용 FieldRow. "상세페이지 참조"를 선택하면 입력창 대신 참조 상태 배지를
+ * 보여주고, 다시 직접입력으로 되돌릴 수 있다. KC 필드(certificationType 등)는 이
+ * 컴포넌트를 쓰지 않는다 — 항상 일반 FieldRow+EditableText만 쓴다(참조 불가 원칙). */
+function ReferenceEligibleFieldRow({
+  label,
+  field,
+  onCommit,
+  onSetReference,
+  placeholder,
+  required,
+}: {
+  label: string;
+  field: { value: string; source: FieldSource; confidence: number };
+  onCommit: (v: string) => void;
+  onSetReference?: (referenced: boolean) => void;
+  placeholder?: string;
+  required?: boolean;
+}) {
+  const isReferenced = field.source === "DETAIL_PAGE_REFERENCE";
+  return (
+    <FieldRow label={label} field={field} required={required}>
+      {isReferenced ? (
+        <div className="flex items-center justify-between gap-2 rounded border border-dashed border-selected-border bg-selected-soft px-2 py-1 text-sm text-selected">
+          <span>상세페이지 참조로 등록됩니다</span>
+          {onSetReference && (
+            <button
+              type="button"
+              className="shrink-0 text-[11px] underline"
+              onClick={() => onSetReference(false)}
+            >
+              직접 입력으로 전환
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-1">
+          <EditableText value={field.value} onCommit={onCommit} placeholder={placeholder} className={FIELD_INPUT_CLASS} />
+          {onSetReference && (
+            <button
+              type="button"
+              className="text-[11px] text-text-tertiary underline hover:text-text-secondary"
+              onClick={() => onSetReference(true)}
+            >
+              상세페이지 참조로 등록
+            </button>
+          )}
+        </div>
+      )}
+    </FieldRow>
+  );
+}
+
+/** N-3.48(CPO 지시: "KC 인증정보 확보 UX") — KC 관련 4개 필드(대상 여부/번호/
+ * 업체명/취득일자)를 한 곳에 모으고, 실제로 등록을 막고 있을 때(naverValidation에
+ * KC_CERTIFICATION_REQUIRED code가 있을 때)만 전용 경고 배너를 보여준다.
+ * 이 컴포넌트는 ReferenceEligibleFieldRow를 쓰지 않는다 — "상세페이지 참조로
+ * 등록" 버튼이 KC 필드에 절대 노출되지 않는다는 걸 코드 구조로 고정한다
+ * (STEP10 영구 가드, packages/listing/src/notice/reference-eligibility.ts와
+ * 동일한 원칙을 UI 레벨에서도 반복). */
+function KcCertificationBlock({
+  product,
+  naverValidation,
+  fix,
+  onUpdateChildCertification,
+  onGoToSection,
+}: {
+  product: CanonicalProduct;
+  naverValidation: NaverPayloadValidationResult | null | undefined;
+  fix?: (field: "certificationType", value: string) => void;
+  onUpdateChildCertification: (patch: Partial<CanonicalProductCertification>) => void;
+  onGoToSection: () => void;
+}) {
+  const [showUploadNote, setShowUploadNote] = useState(false);
+  const [requestCopied, setRequestCopied] = useState(false);
+
+  const kcIssues = (naverValidation?.fields ?? []).filter(
+    (f) => f.code === "KC_CERTIFICATION_REQUIRED" && f.status !== "READY",
+  );
+  const isBlocked = kcIssues.length > 0;
+
+  async function copyRequestText() {
+    const productName = product.title.value || "(상품명 미확인)";
+    const text = [
+      "KC 인증정보 요청",
+      "",
+      `상품명: ${productName}`,
+      "",
+      "필요 정보:",
+      "- 인증 대상 여부",
+      "- 인증 유형",
+      "- 인증번호",
+      "- 인증 업체명",
+      "- 취득/인증 일자",
+    ].join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      setRequestCopied(true);
+      window.setTimeout(() => setRequestCopied(false), 2000);
+    } catch {
+      // 클립보드 권한이 없는 환경(HTTP 등) — 조용히 무시한다, 별도 에러 UI를
+      // 만들 정도로 중요한 실패는 아니다(사용자가 텍스트를 직접 선택할 수 있음).
+    }
+  }
+
+  return (
+    <div className="mt-3 space-y-3 rounded-md border border-border bg-background p-3">
+      {isBlocked && (
+        <div className="space-y-2 rounded-md border border-error/30 bg-error-soft p-3">
+          <p className="text-sm font-semibold text-error">⚠ KC 인증정보 확인 필요</p>
+          <p className="text-xs text-text-secondary">
+            이 상품은 KC 인증정보가 확인되지 않았습니다. 상세페이지에 정보가 없으므로
+            &ldquo;상품 상세페이지 참조&rdquo;로 등록할 수 없습니다 — 실제 인증정보를 직접
+            입력해야 합니다.
+          </p>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onGoToSection}
+              className="rounded border border-primary px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10"
+            >
+              인증정보 직접 입력
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowUploadNote((v) => !v)}
+              className="rounded border border-border px-2 py-1 text-xs font-medium text-text-secondary hover:bg-surface"
+            >
+              인증자료 업로드
+            </button>
+            <button
+              type="button"
+              onClick={copyRequestText}
+              className="rounded border border-border px-2 py-1 text-xs font-medium text-text-secondary hover:bg-surface"
+            >
+              {requestCopied ? "복사됨" : "판매자에게 확인 요청"}
+            </button>
+          </div>
+          {showUploadNote && (
+            <p className="rounded bg-background px-2 py-1 text-[11px] text-text-tertiary">
+              인증자료 업로드(파일 첨부 + 확인)는 다음 스프린트에서 지원될 예정입니다 —
+              지금은 아래 필드에 실제 인증정보를 직접 입력해주세요.
+            </p>
+          )}
+        </div>
+      )}
+      <p className="text-xs font-medium text-text-secondary">
+        실제로 취득한 인증서 값만 입력해주세요 — 값이 없으면 비워둡니다(임의 값 금지).
+      </p>
+      <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+        <FieldRow label="인증 대상 여부/유형" field={product.certificationType}>
+          <EditableText
+            value={product.certificationType.value}
+            onCommit={(v) => fix?.("certificationType", v)}
+            placeholder="예: 공급자적합성확인대상 어린이제품"
+            className={FIELD_INPUT_CLASS}
+          />
+        </FieldRow>
+        <FieldRow label="인증번호">
+          <EditableText
+            value={product.childCertification.value?.certificationNumber ?? ""}
+            onCommit={(v) => onUpdateChildCertification({ certificationNumber: v })}
+            placeholder="예: 123456-01-0001"
+            className={FIELD_INPUT_CLASS}
+          />
+        </FieldRow>
+        <FieldRow label="발급업체">
+          <EditableText
+            value={product.childCertification.value?.companyName ?? ""}
+            onCommit={(v) => onUpdateChildCertification({ companyName: v })}
+            placeholder="예: OO시험연구원"
+            className={FIELD_INPUT_CLASS}
+          />
+        </FieldRow>
+        <FieldRow label="취득일자">
+          <EditableText
+            value={product.childCertification.value?.certificationDate ?? ""}
+            onCommit={(v) => onUpdateChildCertification({ certificationDate: v })}
+            placeholder="예: 2026-01-15"
+            className={FIELD_INPUT_CLASS}
+          />
+        </FieldRow>
+      </div>
+    </div>
+  );
+}
+
 export function PlatformPreview({
   product,
   listing,
@@ -79,6 +267,7 @@ export function PlatformPreview({
   listingStatus,
   listingResult,
   readiness,
+  naverValidation,
   compliancePreview,
   onUpdateField,
   onUpdateSalePriceKrw,
@@ -89,7 +278,9 @@ export function PlatformPreview({
   onRefreshExchangeRates,
   onSelectCategory,
   onFixTextField,
+  onSetFieldReference,
   onFixNumberField,
+  onUpdateChildCertification,
   onUpdateOptions,
   onUpdateVariant,
   onOpenListingModal,
@@ -129,8 +320,16 @@ export function PlatformPreview({
   categoryCandidates: CategoryCandidate[];
   listingStatus: ListingStatus;
   listingResult: ListingResult | null;
-  /** SmartStore에서만 넘어온다 — 등록 준비도 패널을 대신 보여줄지 판단하는 신호. */
+  /** SmartStore에서만 넘어온다 — ListingSection의 "상세 체크리스트"(필드별
+   * 인라인 수정 CTA) 전용이다. N-3.27부터 "등록 가능성"(%, 등록 버튼 게이트)
+   * 판정에는 이 값을 쓰지 않는다 — 아래 naverValidation을 쓴다. */
   readiness?: ReadinessReport;
+  /** N-3.27(CPO 지시: "Readiness ↔ 실제 Payload Validation 단일화") —
+   * CommerceWorkspace가 register route와 완전히 같은 validateNaverPayload를
+   * 호출해서 계산해둔 결과. SmartStore RegistrationReadinessCard의 %/등록
+   * 버튼 활성화 여부는 이제 이 값 하나로만 정해진다(레거시 readiness는 더 이상
+   * 관여하지 않는다). */
+  naverValidation?: NaverPayloadValidationResult | null;
   /** Sprint A-3(작업8 — Resolver Trace) — CommerceWorkspace가 이미 등록 전에 계산해둔
    * buildCoupangCompliance() 결과를 그대로 받는다. register 라우트가 등록 시점에
    * 또 계산하는 것과 다른 결과를 보여주면 CP001과 같은 신뢰 문제가 재발하므로,
@@ -158,10 +357,35 @@ export function PlatformPreview({
       | "material"
       | "color"
       | "recommendedAge"
-      | "careInstructions",
+      | "careInstructions"
+      | "importer"
+      | "itemName"
+      | "modelName"
+      | "weight"
+      | "certificationType",
     value: string,
   ) => void;
+  /** N-3.45(CPO 지시: "상품정보제공고시 공통 관리") — "이 필드는 상세페이지 참조로
+   * 등록해도 된다"는 사용자 선택. packages/listing/src/notice/reference-eligibility.ts
+   * 화이트리스트에 있는 필드만 이 버튼을 보여준다(KC 관련 필드는 절대 여기 없다). */
+  onSetFieldReference?: (
+    field:
+      | "itemName"
+      | "modelName"
+      | "weight"
+      | "material"
+      | "color"
+      | "manufacturer"
+      | "careInstructions"
+      | "recommendedAge"
+      | "importer",
+    referenced: boolean,
+  ) => void;
   onFixNumberField?: (field: "shippingFee" | "stockQuantity", value: number) => void;
+  /** N-3.29(CPO 지시) — 어린이제품 인증정보(번호/업체명/취득일자) 부분 수정.
+   * 문자열 필드(onFixTextField)와 달리 3개 하위 값을 한 번에 patch로 받는다 —
+   * 값이 없으면 null(임의 값 생성 없음). */
+  onUpdateChildCertification?: (patch: Partial<CanonicalProductCertification>) => void;
   /** Sprint A-3(작업1 — 옵션도 Editable) */
   onUpdateOptions?: (raw: string) => void;
   /** Sprint A-12(작업6) — 옵션 조합별 SKU/재고/가격 편집. */
@@ -247,8 +471,14 @@ export function PlatformPreview({
   const capabilities = MARKETPLACE_DESCRIPTORS[listing.platform].capabilities;
 
   // P0-UI Epic 2 — 등록 준비 카드와 상세 체크리스트(ListingSection 안의
-  // ReadinessScorePanel)가 반드시 같은 판정을 봐야 한다. readiness가 있으면
-  // (SmartStore) 그 계산을, 없으면(쿠팡/11번가) validations+category+compliance
+  // ReadinessScorePanel)가 반드시 같은 판정을 봐야 한다.
+  // N-3.27(CPO 지시: "Readiness ↔ 실제 Payload Validation 단일화") — SmartStore
+  // (hasNaverPreview)는 register route가 실제 POST 직전 게이트로 쓰는 것과
+  // 완전히 같은 validateNaverPayload 결과(naverValidation)를 쓴다. 예전엔
+  // readiness prop(레거시 validateSmartStoreListing)이 이 자리를 채웠는데, 그
+  // 검증기는 KC 인증/원산지 수입사명/배송 프로필 등을 전혀 보지 않아서
+  // "카드는 100%인데 register route는 FAIL" 하는 구조적 신뢰 문제가 있었다
+  // (N-3.26 실측으로 확인). 쿠팡/11번가는 그대로 validations+category+compliance
   // 계산을 쓴다 — 계산 로직 자체는 commerce/readiness.ts 한 곳뿐이다.
   // A-12.3-P0(CPO 지시: "품질점수는 Payload 기준으로 — Brand Profile/Seller
   // Profile로 채워질 수 있으면 100%") — compliancePreview(클라이언트에서
@@ -257,8 +487,8 @@ export function PlatformPreview({
   // buildCoupangPayload(브랜드 프로필 → Seller 기본값 우선순위까지 적용)가 낸
   // 결과라 이게 있으면 항상 이걸 우선한다 — 두 계산이 다른 결과를 보여주면
   // CP001과 같은 신뢰 문제가 재발한다.
-  const readinessSummary = readiness
-    ? computeReadinessScoreSummary(readiness)
+  const readinessSummary = capabilities.hasNaverPreview
+    ? computeNaverPayloadReadiness(naverValidation ?? null)
     : computeChecklistReadiness(
         listing.validations,
         listing.category,
@@ -398,38 +628,64 @@ export function PlatformPreview({
                 className={FIELD_INPUT_CLASS}
               />
             </FieldRow>
-            <FieldRow label="제조사" field={product.manufacturer}>
-              <EditableText
-                value={product.manufacturer.value}
-                onCommit={(v) => fix?.("manufacturer", v)}
-                placeholder="제조사 미확인"
-                className={FIELD_INPUT_CLASS}
-              />
-            </FieldRow>
-            <FieldRow label="소재" field={product.material}>
-              <EditableText
-                value={product.material.value}
-                onCommit={(v) => fix?.("material", v)}
-                placeholder="소재 미확인"
-                className={FIELD_INPUT_CLASS}
-              />
-            </FieldRow>
-            <FieldRow label="색상" field={product.color}>
-              <EditableText
-                value={product.color.value}
-                onCommit={(v) => fix?.("color", v)}
-                placeholder="색상 미확인"
-                className={FIELD_INPUT_CLASS}
-              />
-            </FieldRow>
-            <FieldRow label="사용연령" field={product.recommendedAge}>
-              <EditableText
-                value={product.recommendedAge.value}
-                onCommit={(v) => fix?.("recommendedAge", v)}
-                placeholder="예: 36개월 이상"
-                className={FIELD_INPUT_CLASS}
-              />
-            </FieldRow>
+            <ReferenceEligibleFieldRow
+              label="제조사"
+              field={product.manufacturer}
+              onCommit={(v) => fix?.("manufacturer", v)}
+              onSetReference={(r) => onSetFieldReference?.("manufacturer", r)}
+              placeholder="제조사 미확인"
+            />
+            <ReferenceEligibleFieldRow
+              label="소재"
+              field={product.material}
+              onCommit={(v) => fix?.("material", v)}
+              onSetReference={(r) => onSetFieldReference?.("material", r)}
+              placeholder="소재 미확인"
+            />
+            <ReferenceEligibleFieldRow
+              label="색상"
+              field={product.color}
+              onCommit={(v) => fix?.("color", v)}
+              onSetReference={(r) => onSetFieldReference?.("color", r)}
+              placeholder="색상 미확인"
+            />
+            <ReferenceEligibleFieldRow
+              label="사용연령"
+              field={product.recommendedAge}
+              onCommit={(v) => fix?.("recommendedAge", v)}
+              onSetReference={(r) => onSetFieldReference?.("recommendedAge", r)}
+              placeholder="예: 36개월 이상"
+            />
+            {/* N-3.44(CPO 지시) — Naver KIDS 고시정보 필수 필드 중 N-3.43에서
+                "CartPilot에 입력 경로가 없다"고 확인된 4개 중 3개(품명/모델명/중량).
+                Naver 전용 탭이 아니라 커머스 공통 상품 데이터로 여기(기본정보)에
+                둔다 — 다른 커머스 Adapter가 필요해지면 그대로 재사용할 수 있어야
+                한다는 CPO 지시. N-3.45(CPO 지시) — 이 3개는 "상세페이지 참조"로도
+                등록 가능해졌다(ReferenceEligibleFieldRow). 나머지 하나
+                certificationType(KC 대상 여부)은 N-3.48부터 아래 "KC" 섹션으로
+                옮겼다 — KC 관련 필드(certificationType/childCertification)는
+                절대 참조 버튼 없이 한 곳에 모아 실제 값만 입력받는다(CPO 지시). */}
+            <ReferenceEligibleFieldRow
+              label="품명"
+              field={product.itemName}
+              onCommit={(v) => fix?.("itemName", v)}
+              onSetReference={(r) => onSetFieldReference?.("itemName", r)}
+              placeholder="품명 미확인"
+            />
+            <ReferenceEligibleFieldRow
+              label="모델명"
+              field={product.modelName}
+              onCommit={(v) => fix?.("modelName", v)}
+              onSetReference={(r) => onSetFieldReference?.("modelName", r)}
+              placeholder="모델명 미확인"
+            />
+            <ReferenceEligibleFieldRow
+              label="중량"
+              field={product.weight}
+              onCommit={(v) => fix?.("weight", v)}
+              onSetReference={(r) => onSetFieldReference?.("weight", r)}
+              placeholder="예: 120g (섬유제품은 사이즈로 대체 가능)"
+            />
           </div>
         </CollapsibleSection>
 
@@ -616,14 +872,32 @@ export function PlatformPreview({
                 className={FIELD_INPUT_CLASS}
               />
             </FieldRow>
-            <FieldRow label="세탁방법/취급주의" field={product.careInstructions}>
-              <EditableText
-                value={product.careInstructions.value}
-                onCommit={(v) => fix?.("careInstructions", v)}
-                placeholder="세탁방법 미확인"
-                className={FIELD_INPUT_CLASS}
+            <ReferenceEligibleFieldRow
+              label="세탁방법/취급주의"
+              field={product.careInstructions}
+              onCommit={(v) => fix?.("careInstructions", v)}
+              onSetReference={(r) => onSetFieldReference?.("careInstructions", r)}
+              placeholder="세탁방법 미확인"
+            />
+            {/* N-3.29(CPO 지시) — 원산지가 수입산으로 확정됐을 때만(=
+                naverValidation.fields에 이 필드가 있을 때만) 보여준다. 국내산이면
+                이 필드 자체가 검증 결과에 없어서 자동으로 숨겨진다 — "언제
+                보여줄지"를 여기서 새로 판단하지 않고 validateNaverPayload가
+                이미 계산한 결과를 그대로 관찰만 한다(단일 소스 원칙).
+                N-3.45 STEP8(CPO 지시) — "구매대행이라고 해서 판매자가 법적으로
+                수입자인 것은 아니다"(CPO가 이전 오판을 직접 정정). 실제 수입자
+                지위가 확인되지 않았으면 자동 추정하지 않고, 상세페이지 참조로도
+                등록할 수 있게 한다. */}
+            {naverValidation?.fields.some((f) => f.field === "detailAttribute.originAreaInfo.importer") && (
+              <ReferenceEligibleFieldRow
+                label="수입사명"
+                field={product.importer}
+                onCommit={(v) => fix?.("importer", v)}
+                onSetReference={(r) => onSetFieldReference?.("importer", r)}
+                placeholder="원산지가 수입산으로 확인되어 입력이 필요합니다"
+                required
               />
-            </FieldRow>
+            )}
           </div>
           {onUpdateCategoryFieldOverride && (categoryMeta || categoryMetaLoading || categoryMetaError) && (
             <CategoryRequirementsEditor
@@ -649,6 +923,26 @@ export function PlatformPreview({
               className={FIELD_INPUT_CLASS}
             />
           </FieldRow>
+          {/* N-3.29(CPO 지시) — SmartStore가 실제로 어린이제품 인증
+              (CHILD_CERTIFICATION)을 요구하는 카테고리일 때만(=naverValidation에
+              productCertificationInfos 필드가 있을 때만) 보여준다. 실제 인증
+              취득 여부를 CartPilot이 알 수 없으므로 값은 항상 사용자가 직접
+              입력한다 — 가짜 값/기본값/면제 추정 금지(CPO 지시).
+              N-3.48(CPO 지시) — certificationType(대상 여부)도 이 블록으로
+              옮겨서 KC 관련 4개 필드(대상 여부/번호/업체명/취득일자)를 한
+              곳에 모았다 — 전부 같은 categoryRequiresChildCertification
+              조건에서만 검사되는 필드라 조건도 그대로 재사용한다. */}
+          {capabilities.hasNaverPreview &&
+            naverValidation?.fields.some((f) => f.field.startsWith("productCertificationInfos")) &&
+            onUpdateChildCertification && (
+              <KcCertificationBlock
+                product={product}
+                naverValidation={naverValidation}
+                fix={fix}
+                onUpdateChildCertification={onUpdateChildCertification}
+                onGoToSection={() => goToSection("section-kc")}
+              />
+            )}
           <p className="text-xs text-text-tertiary">
             어린이제품/전기용품 등 KC 인증이 필요한 카테고리는 인증번호를 반드시
             입력해야 승인됩니다. 해당 없는 카테고리는 비워두면 됩니다.

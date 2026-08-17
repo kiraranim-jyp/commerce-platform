@@ -1,7 +1,8 @@
 import type { CanonicalProduct } from "@commerce/shared";
-import { resolveSizeFromOptions } from "./build-payload";
+import { hasRealProductOptions, resolveSizeFromOptions } from "./build-payload";
 import type { NaverPayloadInput } from "./build-payload";
 import type { NaverProductRegistrationPayload } from "./types";
+import { isNoticeFieldSatisfied } from "../notice/reference-eligibility";
 
 /**
  * Sprint N-2.6 — 실제 POST 없이 payload가 등록 가능한 수준인지 검증한다.
@@ -17,6 +18,17 @@ import type { NaverProductRegistrationPayload } from "./types";
  * 별도로 재계산하지 않는다(CPO 지시, "Preview에서 별도 판단 로직을 만들지
  * 않는다").
  */
+/**
+ * N-3.48(CPO 지시: "reason을 구조화한다") — 지금까지 issue/field의 유일한
+ * 실패 정보는 사람이 읽는 한국어 reason 문자열뿐이었다. UI가 "이 필드가 왜
+ * 막혔는지"에 따라 다른 동작(예: KC는 참조 버튼 자체를 안 보여주고 전용
+ * 경고+입력 폼을 띄운다)을 해야 할 때 문자열을 파싱해서 판단하면 문구가
+ *바뀔 때마다 UI가 깨진다. code는 그런 "필드가 왜 막혔는지"의 안정적인
+ * 식별자다 — 아직은 KC 하나뿐이지만(다른 필드는 문자열 reason만으로 충분),
+ * 필요해지면 여기에 값을 추가한다.
+ */
+export type NaverPayloadBlockCode = "KC_CERTIFICATION_REQUIRED";
+
 export interface NaverPayloadValidationIssue {
   field: string;
   reason: string;
@@ -24,6 +36,7 @@ export interface NaverPayloadValidationIssue {
    * 정보 등)이라 이 상태로는 등록 시도조차 하면 안 된다.
    * MISSING: 값을 확인/입력하면 채울 수 있는 일반 필수값 누락. */
   severity: "BLOCKED" | "MISSING";
+  code?: NaverPayloadBlockCode;
 }
 
 export interface NaverPayloadFieldCheck {
@@ -31,6 +44,8 @@ export interface NaverPayloadFieldCheck {
   status: "READY" | "MISSING" | "BLOCKED";
   /** READY가 아닐 때만 채운다. */
   reason?: string;
+  /** READY가 아닐 때만, code가 정의된 필드에만 채운다(위 NaverPayloadBlockCode 참고). */
+  code?: NaverPayloadBlockCode;
   /** N-3.13 Part I(CPO 결정, 2026-08-12) — CartPilot이 절대 채울 수 없는(추측
    * 금지) 외부 상태값이라 등록 Gate 판단(ok/readyCount/missingCount/
    * blockedCount)에서 제외하고 참고 정보로만 보여준다. 지금은
@@ -69,12 +84,13 @@ function check(
   ok: boolean,
   severity: "MISSING" | "BLOCKED",
   reason: string,
+  code?: NaverPayloadBlockCode,
 ): void {
-  fields.push(ok ? { field, status: "READY" } : { field, status: severity, reason });
+  fields.push(ok ? { field, status: "READY" } : { field, status: severity, reason, code });
 }
 
-function blocked(fields: NaverPayloadFieldCheck[], field: string, reason: string): void {
-  fields.push({ field, status: "BLOCKED", reason });
+function blocked(fields: NaverPayloadFieldCheck[], field: string, reason: string, code?: NaverPayloadBlockCode): void {
+  fields.push({ field, status: "BLOCKED", reason, code });
 }
 
 /**
@@ -206,15 +222,25 @@ export function validateNaverPayload(
 
   if (categoryRequiresChildCertification) {
     if (input.childCertificationInfoId === null) {
-      blocked(fields, "productCertificationInfos", "이 카테고리는 어린이제품 인증(CHILD_CERTIFICATION)이 필요하지만 실제 인증정보가 없습니다.");
+      blocked(fields, "productCertificationInfos", "이 카테고리는 어린이제품 인증(CHILD_CERTIFICATION)이 필요하지만 카테고리 인증 유형 정보를 확인하지 못했습니다.");
     } else {
-      // certificationInfoId는 있지만, 실제 인증서 번호/업체명/취득일자는 CartPilot이
-      // 만들어낼 수 없는 값이라 payload에 아예 넣지 않았다 — 이것도 항상 BLOCKED.
-      blocked(
-        fields,
-        "productCertificationInfos[].certificationNumber",
-        "실제 인증서 번호/업체명/취득일자는 판매자가 직접 입력해야 합니다(임의 생성 금지).",
-      );
+      // N-3.29(CPO 지시) — 이제 product.childCertification에 판매자가 직접
+      // 입력할 수 있는 경로가 생겼다(Editor). 세 값(번호/업체명/취득일자)이
+      // 전부 채워졌을 때만 READY — 하나라도 비어있으면 여전히 BLOCKED다(CPO
+      // STEP7 지시: "인증정보 없음 → BLOCKED"). CartPilot이 값을 대신
+      // 만들어내지는 않는다 — 사용자가 실제로 입력한 값만 통과시킨다.
+      const cert = input.product.childCertification?.value;
+      const hasFullCert = Boolean(cert?.certificationNumber && cert?.companyName && cert?.certificationDate);
+      if (hasFullCert) {
+        fields.push({ field: "productCertificationInfos[].certificationNumber", status: "READY" });
+      } else {
+        blocked(
+          fields,
+          "productCertificationInfos[].certificationNumber",
+          "실제 인증서 번호/발급업체/취득일자를 입력해야 합니다 — 등록 화면에서 직접 입력할 수 있습니다.",
+          "KC_CERTIFICATION_REQUIRED",
+        );
+      }
     }
   }
 
@@ -253,33 +279,37 @@ export function validateNaverPayload(
   ]) {
     fields.push({ field: `${noticePrefix}.${field}`, status: "READY" });
   }
+  // N-3.45(CPO 지시) — material/color/manufacturer/caution은 이제 실제 값이
+  // 없어도 사용자가 "상세페이지 참조"를 선택했으면(product.X.source ===
+  // DETAIL_PAGE_REFERENCE) READY다 — isNoticeFieldSatisfied가 화이트리스트
+  // 기준으로 판단한다(KC 필드는 이 화이트리스트에 없어 영향받지 않는다).
   check(
     fields,
     `${noticePrefix}.material`,
-    Boolean(input.product.material.value),
+    isNoticeFieldSatisfied("material", input.product.material),
     "MISSING",
-    "제품 소재가 없습니다 — 상품 원본/상세설명에서 확인되지 않았습니다.",
+    "제품 소재가 없습니다 — 상품 원본/상세설명에서 확인되지 않았습니다. 상세페이지에 이미 나와 있으면 \"상세페이지 참조\"로 대체할 수 있습니다.",
   );
   check(
     fields,
     `${noticePrefix}.color`,
-    Boolean(input.product.color.value),
+    isNoticeFieldSatisfied("color", input.product.color),
     "MISSING",
-    "색상이 없습니다 — 상품 원본/상세설명에서 확인되지 않았습니다.",
+    "색상이 없습니다 — 상품 원본/상세설명에서 확인되지 않았습니다. 상세페이지에 이미 나와 있으면 \"상세페이지 참조\"로 대체할 수 있습니다.",
   );
   check(
     fields,
     `${noticePrefix}.manufacturer`,
-    Boolean(input.product.manufacturer.value),
+    isNoticeFieldSatisfied("manufacturer", input.product.manufacturer),
     "MISSING",
-    "제조자(사)가 없습니다 — 판매자 정보 기본값(Settings)에도 없습니다.",
+    "제조자(사)가 없습니다 — 판매자 정보 기본값(Settings)에도 없습니다. 상세페이지에 이미 나와 있으면 \"상세페이지 참조\"로 대체할 수 있습니다.",
   );
   check(
     fields,
     `${noticePrefix}.caution`,
-    Boolean(input.product.careInstructions.value),
+    isNoticeFieldSatisfied("careInstructions", input.product.careInstructions),
     "MISSING",
-    "세탁 방법 및 취급 시 주의사항이 없습니다.",
+    "세탁 방법 및 취급 시 주의사항이 없습니다. 상세페이지에 이미 나와 있으면 \"상세페이지 참조\"로 대체할 수 있습니다.",
   );
   check(
     fields,
@@ -306,34 +336,74 @@ export function validateNaverPayload(
     check(
       fields,
       "productInfoProvidedNotice(KIDS).recommendedAge",
-      Boolean(input.product.recommendedAge.value),
+      isNoticeFieldSatisfied("recommendedAge", input.product.recommendedAge),
       "MISSING",
-      "사용연령이 없습니다 — 상품 원본/상세설명에서 확인되지 않았습니다.",
+      "사용연령이 없습니다 — 상품 원본/상세설명에서 확인되지 않았습니다. 상세페이지에 이미 나와 있으면 \"상세페이지 참조\"로 대체할 수 있습니다.",
     );
-    for (const field of ["certificationType", "itemName", "modelName", "weight"]) {
-      check(
-        fields,
-        `productInfoProvidedNotice(KIDS).${field}`,
-        false,
-        "MISSING",
-        "CartPilot에 아직 이 값을 채울 입력 경로가 없습니다(임의 값 금지).",
-      );
-    }
+    // N-3.45 STEP10(CPO 지시, 영구 가드) — certificationType(KC 인증정보 대상
+    // 여부/유형 설명 텍스트)은 reference-eligibility.ts 화이트리스트에 절대
+    // 넣지 않는다 — "상세페이지 참조"로 대체하면 실제 인증 여부를 확인 안 한
+    // 채 등록될 위험이 있어, 여기서도 항상 실제 값만 READY로 인정한다.
+    check(
+      fields,
+      "productInfoProvidedNotice(KIDS).certificationType",
+      Boolean(input.product.certificationType?.value),
+      "MISSING",
+      "KC 인증정보(대상 여부)가 없습니다 — 실제 값을 직접 입력해야 합니다(\"상세페이지 참조\"로 대체할 수 없습니다).",
+      "KC_CERTIFICATION_REQUIRED",
+    );
+    // N-3.45(CPO 지시) — itemName/modelName은 실제 값이 없어도 "상세페이지
+    // 참조"를 선택했으면 READY다.
+    check(
+      fields,
+      "productInfoProvidedNotice(KIDS).itemName",
+      isNoticeFieldSatisfied("itemName", input.product.itemName),
+      "MISSING",
+      "품명이 없습니다 — 상품 정보 편집 화면에서 직접 입력하거나 \"상세페이지 참조\"로 대체할 수 있습니다.",
+    );
+    check(
+      fields,
+      "productInfoProvidedNotice(KIDS).modelName",
+      isNoticeFieldSatisfied("modelName", input.product.modelName),
+      "MISSING",
+      "모델명이 없습니다 — 상품 정보 편집 화면에서 직접 입력하거나 \"상세페이지 참조\"로 대체할 수 있습니다.",
+    );
+    check(
+      fields,
+      "productInfoProvidedNotice(KIDS).weight",
+      isNoticeFieldSatisfied("weight", input.product.weight) || Boolean(resolveSizeFromOptions(input.product)),
+      "MISSING",
+      "중량이 없습니다 — 섬유제품은 치수(사이즈)로 대체 가능하고, 그마저 없으면 \"상세페이지 참조\"로도 대체할 수 있습니다.",
+    );
   }
 
   // N-2.8/N-3.4 — optionCombinations 필드명/각 필드 설명은 공식 OpenAPI로
   // 확인됐다(id는 "기존 옵션 수정용"이라 신규 등록엔 항상 비움, N-3.4에서
-  // 수정된 실제 버그). 다만 price가 절대가/추가금액인지는 여전히 실제 등록
-  // 성공 전까지 확인 안 됐다 — 이 값을 신뢰해서 그대로 등록에 쓰면 안 된다는
-  // 걸 항상 상기시킨다.
+  // 수정된 실제 버그). N-3.47(CPO 지시) — price 필드의 의미(절대가 vs
+  // salePrice 대비 추가금액)는 Naver 공식 계정 답변(GitHub Discussion #2312,
+  // 2025-02-17, types.ts의 NaverOptionCombination 주석에 원문 인용)으로
+  // 확정됐다 — "옵션가"는 추가금액(delta)이다. build-payload.ts의 계산은 이미
+  // 이 의미와 일치하므로 더 이상 "확인 안 된 값이라 신뢰 못 함"으로 BLOCKED
+  // 처리하지 않는다. 대신 Naver 자신이 명시한 실제 제약(옵션 선택 시 최종
+  // 판매가가 0원 미만이 되면 안 됨)을 직접 계산해서 검사한다 — 이건 추측이
+  // 아니라 공식 답변에 나온 검증 규칙 그대로다.
   const product = input.product as CanonicalProduct;
-  const hasOptions = product.optionGroups.length > 0;
+  // N-3.32(CPO 지시) — build-payload.ts와 동일한 hasRealProductOptions 기준을
+  // 쓴다. Shopify의 단일 SKU placeholder({name:"Title",values:["Default
+  // Title"]}, variants=[])는 이제 여기서도 "옵션 없음"으로 정확히 판정된다.
+  const hasOptions = hasRealProductOptions(product);
   if (hasOptions) {
-    blocked(
-      fields,
-      "detailAttribute.optionInfo",
-      "optionCombinations 필드명/구조는 확인됨(공식 OpenAPI)이나 price 필드가 절대가인지 추가금액인지는 미확인 — 실제 등록 성공 검증 전까지 이 값을 신뢰할 수 없습니다.",
-    );
+    const combos = originProduct.detailAttribute?.optionInfo?.optionCombinations ?? [];
+    const negativeFinalPriceCombos = combos.filter((c) => originProduct.salePrice + c.price < 0);
+    if (negativeFinalPriceCombos.length > 0) {
+      blocked(
+        fields,
+        "detailAttribute.optionInfo.optionCombinations[].price",
+        `옵션 선택 시 최종 판매가가 0원 미만이 되는 옵션 조합이 ${negativeFinalPriceCombos.length}개 있습니다 — 옵션가(추가금액)를 다시 확인해야 합니다(Naver 공식 정책상 등록 자체가 거부됩니다).`,
+      );
+    } else {
+      fields.push({ field: "detailAttribute.optionInfo", status: "READY" });
+    }
     // N-3.4 — 옵션명은 있는데 특정 조합의 옵션값이 비어 있으면(원본 페이지
     // 파싱이 일부만 성공한 경우) price 의미와 무관하게 별도로 알려준다.
     const groupNames = product.optionGroups.map((g) => g.name);
@@ -349,8 +419,7 @@ export function validateNaverPayload(
 
   // N-3.4 — originAreaCode는 GET /v1/product-origin-areas(535개 실제 코드)로
   // 확인됐다(더 이상 BLOCKED 아님). 원산지 텍스트 자체가 없으면 MISSING,
-  // 수입산(02) 계열로 매칭됐으면 importer(수입사명)가 스펙상 필수인데
-  // CartPilot에 소스가 없어 별도 MISSING으로 알린다.
+  // 수입산(02) 계열로 매칭됐으면 importer(수입사명)가 스펙상 필수다.
   check(
     fields,
     "detailAttribute.originAreaInfo.originAreaCode",
@@ -358,8 +427,21 @@ export function validateNaverPayload(
     "MISSING",
     "원산지 텍스트를 확인하지 못했습니다 — 상품 원본/브랜드 설정/판매자 기본값 중 어느 것도 없습니다.",
   );
+  // N-3.29(CPO 지시) — product.importer에 사용자가 Editor에서 직접 입력한
+  // 값이 있으면 READY. 다른 필드(manufacturer/브랜드/원산지)에서 자동 추론하지
+  // 않는다(임의 필드 재활용 금지).
   if (input.originAreaCode !== null && input.originAreaRequiresImporter) {
-    check(fields, "detailAttribute.originAreaInfo.importer", false, "MISSING", "원산지가 수입산으로 확인되어 수입사명이 필수이지만 CartPilot에 이 값의 소스가 없습니다.");
+    // N-3.45 STEP8(CPO 지시) — "구매대행이라고 해서 판매자가 법적으로 수입자인
+    // 것은 아니다"(CPO가 이전 오판을 직접 정정). 판매자의 수입자 지위가 실제로
+    // 확인되지 않았으면 CartPilot이 자동으로 추정하지 않고, 사용자가 직접 입력
+    // 하거나 "상세페이지 참조"를 선택했을 때만 READY로 인정한다.
+    check(
+      fields,
+      "detailAttribute.originAreaInfo.importer",
+      isNoticeFieldSatisfied("importer", input.product.importer),
+      "MISSING",
+      "원산지가 수입산으로 확인되어 수입사명이 필수입니다 — 등록 화면에서 직접 입력하거나 \"상세페이지 참조\"로 대체할 수 있습니다.",
+    );
   }
 
   // N-3.5 — smartstoreChannelProduct.naverShoppingRegistration은 공식
@@ -393,7 +475,7 @@ export function validateNaverPayload(
 
   const issues: NaverPayloadValidationIssue[] = gateFields
     .filter((f): f is NaverPayloadFieldCheck & { status: "MISSING" | "BLOCKED"; reason: string } => f.status !== "READY")
-    .map((f) => ({ field: f.field, reason: f.reason, severity: f.status }));
+    .map((f) => ({ field: f.field, reason: f.reason, severity: f.status, code: f.code }));
 
   const advisoryNotes = fields.filter((f) => f.advisory);
 

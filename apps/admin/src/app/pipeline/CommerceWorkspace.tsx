@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   CanonicalProduct,
+  CanonicalProductCertification,
   CanonicalProductVariant,
   CommerceCategoryPathResult,
   FieldSource,
@@ -20,7 +21,9 @@ import { mockProductContentProvider } from "@commerce/content";
 import {
   buildComplianceReport,
   buildCoupangCompliance,
+  buildNaverProductPayload,
   LISTING_EXECUTORS,
+  validateNaverPayload,
   validateSmartStoreListing,
   type ComplianceFieldSource,
   type ComplianceReport,
@@ -31,6 +34,7 @@ import {
   type ListingResult,
   type ListingStatus,
   type NaverCategoryCandidate,
+  type NaverPayloadValidationResult,
   type PlatformConnectionStatus,
   type RegistrationHistoryEntry,
 } from "@commerce/listing";
@@ -41,6 +45,7 @@ import { ComparisonShopSearch } from "./commerce/ComparisonShopSearch";
 import { CoupangConnectionPanel } from "./commerce/CoupangConnectionPanel";
 import { ImageInlineEditor } from "./ImageInlineEditor";
 import { ListingConfirmationModal } from "./commerce/ListingConfirmationModal";
+import type { NaverResolveResponse } from "./commerce/NaverPayloadPreview";
 import { PlatformPreview } from "./commerce/PlatformPreview";
 import { RegistrationHistoryPanel } from "./commerce/RegistrationHistoryPanel";
 import { StageStepper } from "./commerce/StageStepper";
@@ -415,13 +420,58 @@ export function CommerceWorkspace({
       | "certification"
       | "careInstructions"
       | "color"
-      | "recommendedAge",
+      | "recommendedAge"
+      | "importer"
+      | "itemName"
+      | "modelName"
+      | "weight"
+      | "certificationType",
     value: string,
   ) {
     setProduct((prev) => ({
       ...prev,
       [key]: { value, source: "USER_EDITED" as FieldSource, confidence: 1 },
     }));
+  }
+
+  /** N-3.45(CPO 지시: "상품정보제공고시 공통 관리") — 상세페이지 참조 토글.
+   * referenced=true면 값은 비우고 source만 DETAIL_PAGE_REFERENCE로 바꾼다(값을
+   * 지어내지 않는다 — 실제 문구는 등록 시점에 어댑터가 채운다,
+   * packages/listing/src/notice/reference-eligibility.ts). referenced=false로
+   * 되돌리면(직접입력으로 전환) REQUIRED로 리셋한다 — 이전에 입력했던 값을
+   * 복원하는 되돌리기 기능은 없다(단순한 두 상태 전환, undo 스택을 만들지 않는다). */
+  function setFieldReference(
+    key: "itemName" | "modelName" | "weight" | "material" | "color" | "manufacturer" | "careInstructions" | "recommendedAge" | "importer",
+    referenced: boolean,
+  ) {
+    setProduct((prev) => ({
+      ...prev,
+      [key]: referenced
+        ? { value: "", source: "DETAIL_PAGE_REFERENCE" as FieldSource, confidence: 1 }
+        : { value: "", source: "REQUIRED" as FieldSource, confidence: 0 },
+    }));
+  }
+
+  /** N-3.29(CPO 지시) — 어린이제품 인증정보는 문자열 하나가 아니라 3개
+   * 하위값(번호/업체명/취득일자)이라 updateField의 단순 string 패턴과
+   * 다르게 patch 형태로 부분 수정한다. 값을 전혀 만들어내지 않는다 — 사용자가
+   * 입력한 값만 그대로 저장한다. */
+  function updateChildCertification(patch: Partial<CanonicalProductCertification>) {
+    setProduct((prev) => {
+      const current = prev.childCertification.value ?? {
+        certificationNumber: "",
+        companyName: "",
+        certificationDate: "",
+      };
+      return {
+        ...prev,
+        childCertification: {
+          value: { ...current, ...patch },
+          source: "USER_EDITED" as FieldSource,
+          confidence: 1,
+        },
+      };
+    });
   }
 
   function updateNumberField(key: "shippingFee" | "stockQuantity", value: number) {
@@ -949,6 +999,13 @@ export function CommerceWorkspace({
    * SmartStore에서만 계산한다 — 원산지/반품정보/배송비/재고 같은 등록 직전
    * 필드는 CanonicalProduct에만 있고 ListingModel에는 없어서, product와 listing을
    * 둘 다 받는 이 함수로 합쳐야 한다(STEP 1의 3단 분리 원칙).
+   *
+   * N-3.27(CPO 지시) — 이 값은 이제 "등록 가능성" 판정에는 쓰이지 않는다
+   * (아래 smartStoreValidation이 대신한다). ListingSection의 "상세
+   * 체크리스트"(ReadinessScorePanel, countryOfOrigin/returnPolicy/shippingFee/
+   * stockQuantity 인라인 수정 CTA) 전용으로만 남긴다 — 이 패널은 register
+   * route가 안 보는 필드까지 인라인으로 고칠 수 있게 해주는 별도 목적의 UI라
+   * 삭제하지 않는다(CPO 지시: "바로 삭제하지 않는다").
    */
   const smartStoreReadiness = useMemo(() => {
     if (tab !== "smartstore" || !listing) return undefined;
@@ -956,10 +1013,117 @@ export function CommerceWorkspace({
   }, [tab, listing, product]);
 
   /**
+   * N-3.27(CPO 지시: "Readiness ↔ 실제 Payload Validation 단일화") — SmartStore
+   * register route(/api/smartstore/register)가 실제 POST 직전 최종 게이트로
+   * 쓰는 것과 완전히 같은 buildNaverProductPayload + validateNaverPayload를
+   * 여기서도 호출한다. NaverPayloadPreview.tsx가 자기 화면(Payload Preview/
+   * Final Validation 섹션)을 위해 이미 하는 것과 같은 조회(/api/naver/resolve)+
+   * 계산이다 — 새 검증 규칙을 만들지 않고, 같은 함수를 RegistrationReadinessCard
+   * 몫으로 한 번 더 호출할 뿐이다(두 곳 다 순수함수라 같은 입력이면 항상 같은
+   * 결과를 낸다 — 계산이 어긋날 위험이 없다). 카테고리가 아직 확정 안 됐어도
+   * leafCategoryId=""로 조회해서(카테고리 외 필드 상태라도) 결과를 보여준다.
+   */
+  const [smartStoreValidation, setSmartStoreValidation] = useState<NaverPayloadValidationResult | null>(null);
+  // Coupang payloadPreview effect(위)와 같은 이유로 이 조건일 때 effect 본문
+  // 안에서 곧바로 setState하지 않는다(react-hooks/set-state-in-effect 경고,
+  // cascading render 방지) — 대신 아래 렌더 시점에 같은 조건으로 null을
+  // 넘긴다("언제 숨길지"는 파생 값 계산이지 effect의 일이 아니다).
+  const smartStoreValidationEligible = tab === "smartstore" && !!listing;
+  useEffect(() => {
+    if (!smartStoreValidationEligible || !listing) return;
+    const leafCategoryId =
+      listing.category.candidate?.isVerifiedPlatformCode && listing.category.candidate.platform === "smartstore"
+        ? listing.category.candidate.id
+        : "";
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams();
+      if (leafCategoryId) params.set("categoryId", leafCategoryId);
+      if (product.countryOfOrigin.value) params.set("countryOfOrigin", product.countryOfOrigin.value);
+      if (product.brand.value) params.set("brand", product.brand.value);
+      const query = params.toString() ? `?${params.toString()}` : "";
+      fetch(`/api/naver/resolve${query}`, { signal: controller.signal })
+        .then((res) => res.json())
+        .then((data: NaverResolveResponse) => {
+          if (data.status !== "OK") {
+            setSmartStoreValidation(null);
+            return;
+          }
+          const releaseAddressBookNo = data.address.releaseAddressBookNo;
+          const refundAddressBookNo = data.address.refundAddressBookNo;
+          const childCertificationInfoId = data.category?.childCertificationInfoId ?? null;
+          const categoryRequiresChildCertification = data.category?.requiresChildCertification ?? false;
+          const primaryReturnDeliveryCompanyPriorityType = data.delivery.primaryReturnCompany?.priorityType ?? null;
+          const returnDeliveryFee = data.delivery.returnDeliveryFee;
+          const exchangeDeliveryFee = data.delivery.exchangeDeliveryFee;
+          const originAreaCode = data.origin.match.code;
+          const originAreaRequiresContent = data.origin.match.status === "OTHER_MANUAL";
+          const deliveryCompany = data.courier.value;
+          const warrantyPolicy = data.notice.warrantyPolicy;
+          const afterServiceDirector = data.notice.afterServiceDirector;
+          const payload = buildNaverProductPayload({
+            product,
+            listing,
+            leafCategoryId,
+            releaseAddressBookNo,
+            refundAddressBookNo,
+            primaryReturnDeliveryCompanyPriorityType,
+            returnDeliveryFee,
+            exchangeDeliveryFee,
+            childCertificationInfoId,
+            categoryRequiresChildCertification,
+            originAreaCode,
+            originAreaRequiresContent,
+            deliveryCompany,
+            warrantyPolicy,
+            afterServiceDirector,
+            detailBlocks,
+            descriptionTemplate: data.detailPage.descriptionTemplate,
+            commonImages: data.detailPage.commonImages,
+            brandIntro: data.detailPage.brandIntro,
+          });
+          const validation = validateNaverPayload(
+            payload,
+            {
+              product,
+              releaseAddressBookNo,
+              refundAddressBookNo,
+              primaryReturnDeliveryCompanyPriorityType,
+              returnDeliveryFee,
+              exchangeDeliveryFee,
+              returnCompaniesFetchFailed: data.delivery.returnCompaniesFetchFailed,
+              childCertificationInfoId,
+              originAreaCode,
+              originAreaRequiresImporter: data.origin.match.requiresImporter,
+              deliveryCompany,
+              warrantyPolicy,
+              afterServiceDirector,
+            },
+            categoryRequiresChildCertification,
+          );
+          setSmartStoreValidation(validation);
+        })
+        .catch(() => {
+          // AbortError(디바운스가 이전 요청을 취소)는 조용히 무시한다 — Coupang
+          // payloadPreview effect와 같은 패턴.
+        });
+    }, 500);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [smartStoreValidationEligible, listing, product, detailBlocks]);
+
+  /**
    * DRAFT인데 ERROR급 validation이 하나도 없으면 화면에는 READY로 보여준다 —
    * 카테고리의 RECOMMENDED와 같은 패턴으로, 실제 state는 사용자가 등록 버튼을
-   * 눌러야만(USER_CONFIRMED로) 바뀐다. SmartStore는 원산지/반품정보 누락도
-   * ERROR로 잡아야 하므로 readiness.errorCount도 함께 확인한다.
+   * 눌러야만(USER_CONFIRMED로) 바뀐다.
+   *
+   * N-3.27 — noReadinessErrors 판단도 legacy smartStoreReadiness.errorCount가
+   * 아니라 smartStoreValidation.ok로 바꾼다(등록 가능성의 단일 기준). 아직
+   * 조회 전이면(null) 이전과 같이 permissive(true)로 둔다 — 실제 등록 가능
+   * 여부는 어차피 RegistrationReadinessCard의 allRequiredPassed(같은
+   * smartStoreValidation 기반)가 별도로 막는다.
    *
    * 카테고리는 marketplace validation에서 WARNING으로만 잡힌다(추천이 떠 있는
    * 상태와 사용자가 실제로 확정한 상태를 구분해야 해서 ERROR로 못 올린다 — WARNING
@@ -972,7 +1136,8 @@ export function CommerceWorkspace({
     const stored = listingStates[tab];
     if (stored !== "DRAFT") return stored;
     const noMarketplaceErrors = listing.validations.every((v) => v.status !== "ERROR");
-    const noReadinessErrors = smartStoreReadiness ? smartStoreReadiness.errorCount === 0 : true;
+    const noReadinessErrors =
+      tab === "smartstore" ? (smartStoreValidation ? smartStoreValidation.ok : true) : true;
     // isVerifiedPlatformCode까지 확인해야 한다 — state만 보면 이 화면이
     // READY로 잘못 판정해 등록 버튼을 열어주고 register API가 CP001로
     // 거부하는 버그가 재발한다(같은 실수가 StageStepper/PlatformPreview에도
@@ -982,7 +1147,7 @@ export function CommerceWorkspace({
     return noMarketplaceErrors && noReadinessErrors && (!requiresCategory || categoryConfirmed)
       ? "READY"
       : "DRAFT";
-  }, [tab, listing, listingStates, smartStoreReadiness]);
+  }, [tab, listing, listingStates, smartStoreValidation]);
 
   function openListingModal() {
     if (tab === "source" || tab === "content") return;
@@ -1202,6 +1367,7 @@ export function CommerceWorkspace({
           listingStatus={effectiveListingStatus}
           listingResult={listingResults[tab]}
           readiness={smartStoreReadiness}
+          naverValidation={smartStoreValidationEligible ? smartStoreValidation : null}
           compliancePreview={complianceReportPreview}
           payloadPreview={payloadPreviewEligible ? payloadPreview : null}
           payloadPreviewUnavailableReason={payloadPreviewEligible ? payloadPreviewUnavailableReason : null}
@@ -1214,6 +1380,8 @@ export function CommerceWorkspace({
           onRefreshExchangeRates={fetchExchangeRates}
           onSelectCategory={(candidate) => selectCategory(tab, candidate)}
           onFixTextField={updateField}
+          onSetFieldReference={setFieldReference}
+          onUpdateChildCertification={updateChildCertification}
           onFixNumberField={updateNumberField}
           onUpdateOptions={updateOptions}
           onUpdateVariant={updateVariant}
@@ -1255,7 +1423,16 @@ export function CommerceWorkspace({
         />
       )}
 
-      <RegistrationHistoryPanel history={registrationHistory} />
+      {/* N-3.38 — 플랫폼 탭에는 그 플랫폼 이력만 보인다(예: SmartStore 탭에
+          Coupang 등록 이력이 섞여 보이던 문제 수정). source/content 탭은 특정
+          플랫폼이 아니라 전체를 보여준다(기존 동작 유지). */}
+      <RegistrationHistoryPanel
+        history={
+          tab !== "source" && tab !== "content"
+            ? registrationHistory.filter((entry) => entry.platform === tab)
+            : registrationHistory
+        }
+      />
 
       {confirmingPlatform && listing && (
         <ListingConfirmationModal

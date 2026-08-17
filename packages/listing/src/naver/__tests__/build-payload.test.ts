@@ -52,6 +52,12 @@ function makeMinimalProduct(): CanonicalProduct {
     shippingFee: field(0),
     stockQuantity: field(1),
     certification: field(""),
+    importer: field(""),
+    childCertification: field(null),
+    itemName: field(""),
+    modelName: field(""),
+    weight: field(""),
+    certificationType: field(""),
   };
 }
 
@@ -340,6 +346,37 @@ describe("buildNaverProductPayload", () => {
     expect(combos?.[0].id).toBeUndefined();
     expect(combos?.[1].id).toBeUndefined();
   });
+
+  it("N-3.49(실제 등록 시도로 발견한 버그 회귀 방지) — optionCombinationGroupNames는 배열이 아니라 optionGroupName1..3 객체다", () => {
+    // 2026-08-17 Voyage Dress 실등록 시도에서 배열(string[])을 보냈다가 Naver
+    // 실제 API가 HTTP 400으로 거부했다: "Cannot deserialize value of type
+    // `KrExternalApiOptionCombinationNamesVo` from Array value". 이 테스트는
+    // 그 버그가 다시 생기지 않도록 실제 확인된 객체 구조를 고정한다.
+    const product = makeMinimalProduct();
+    product.optionGroups = [
+      { name: "색상", values: ["Navy"] },
+      { name: "사이즈", values: ["S"] },
+    ];
+    product.variants = [{ id: "v1", optionValues: { 색상: "Navy", 사이즈: "S" }, sku: "SKU-1", stockQuantity: 5 }];
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      product,
+      listing,
+      leafCategoryId: LEAF_CATEGORY_ID,
+      releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
+      refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+      originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
+      originAreaRequiresContent: false,
+    });
+    const groupNames = payload.originProduct.detailAttribute?.optionInfo?.optionCombinationGroupNames;
+    expect(Array.isArray(groupNames)).toBe(false);
+    expect(groupNames).toEqual({ optionGroupName1: "색상", optionGroupName2: "사이즈" });
+  });
 });
 
 describe("validateNaverPayload", () => {
@@ -554,7 +591,7 @@ describe("validateNaverPayload", () => {
     ).toBe(true);
   });
 
-  it("옵션이 있는 상품은 옵션 스키마 미확인(price 의미)으로 BLOCKED", () => {
+  it("N-3.47(옵션가 delta 의미 공식 확인) — 옵션이 있고 최종 판매가가 0원 미만이 되지 않으면 optionInfo는 READY다", () => {
     const product = makeMinimalProduct();
     product.optionGroups = [{ name: "사이즈", values: ["90", "100"] }];
     product.variants = [
@@ -591,7 +628,7 @@ describe("validateNaverPayload", () => {
       },
       true,
     );
-    expect(result.issues.some((i) => i.field === "detailAttribute.optionInfo" && i.severity === "BLOCKED")).toBe(true);
+    expect(result.fields.some((f) => f.field === "detailAttribute.optionInfo" && f.status === "READY")).toBe(true);
     // 이 케이스는 모든 옵션값이 채워져 있으니 완전성 이슈는 없어야 한다.
     expect(
       result.issues.some((i) => i.field === "detailAttribute.optionInfo.optionCombinations[].optionName"),
@@ -854,7 +891,7 @@ describe("N-3.5: Final Validator — readyCount/missingCount/blockedCount", () =
     expect(result.ok).toBe(false);
   });
 
-  it("Case B: Color × Size 2중 옵션 상품 — 4개 조합 모두 optionCombinations로 변환되고 옵션 관련 필드가 검사에 포함된다", () => {
+  it("Case B: Color × Size 2중 옵션 상품 — 4개 조합 모두 optionCombinations로 변환되고 옵션가(0원, delta 없음)로 READY 처리된다", () => {
     const product = makeMinimalProduct();
     product.optionGroups = [
       { name: "색상", values: ["Navy", "White"] },
@@ -881,7 +918,7 @@ describe("N-3.5: Final Validator — readyCount/missingCount/blockedCount", () =
       { ...baseValidateInput(product), childCertificationInfoId: null },
       false,
     );
-    expect(result.fields.some((f) => f.field === "detailAttribute.optionInfo" && f.status === "BLOCKED")).toBe(true);
+    expect(result.fields.some((f) => f.field === "detailAttribute.optionInfo" && f.status === "READY")).toBe(true);
   });
 
   it("Case D: 아동 인증 대상 상품 — 고시정보는 항상 존재하고, 인증서 항목만 BLOCKED로 분리된다(고시/인증 독립성 회귀)", () => {
@@ -1015,6 +1052,128 @@ describe("N-3.5: Final Validator — readyCount/missingCount/blockedCount", () =
     expect(
       result.advisoryNotes.some((f) => f.field === "smartstoreChannelProduct.naverShoppingRegistration"),
     ).toBe(true);
+  });
+});
+
+describe("N-3.32: 단일 SKU 옵션 판정 정합성(hasRealProductOptions)", () => {
+  it("Test A — Shopify 단일 SKU(Default Title placeholder) → optionInfo BLOCKED 없음", () => {
+    const product = makeMinimalProduct();
+    // shopify-product-json.ts가 실제로 만드는 모양 그대로: 단일 그룹/단일 값,
+    // variants는 이미 비어 있음(hasRealOptions=false 판정 후 extractor가 비움).
+    product.optionGroups = [{ name: "Title", values: ["Default Title"] }];
+    product.variants = [];
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.originProduct.detailAttribute?.optionInfo).toBeUndefined();
+    const result = validateNaverPayload(
+      payload,
+      { ...baseValidateInput(product), childCertificationInfoId: null },
+      false,
+    );
+    expect(result.fields.some((f) => f.field.startsWith("detailAttribute.optionInfo"))).toBe(false);
+    expect(result.blockedCount).toBe(0);
+  });
+
+  it("Test B — 실제 Color × Size 옵션(variant 2개 이상) → optionInfo READY(N-3.47 옵션가 delta 의미 확정 후)", () => {
+    const product = makeMinimalProduct();
+    product.optionGroups = [
+      { name: "색상", values: ["Navy", "White"] },
+      { name: "사이즈", values: ["S", "M"] },
+    ];
+    product.variants = [
+      { id: "v1", optionValues: { 색상: "Navy", 사이즈: "S" }, sku: "SKU-NAVY-S", stockQuantity: 2 },
+      { id: "v2", optionValues: { 색상: "White", 사이즈: "M" }, sku: "SKU-WHITE-M", stockQuantity: 4 },
+    ];
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.originProduct.detailAttribute?.optionInfo).toBeDefined();
+    const result = validateNaverPayload(
+      payload,
+      { ...baseValidateInput(product), childCertificationInfoId: null },
+      false,
+    );
+    expect(result.fields.some((f) => f.field === "detailAttribute.optionInfo" && f.status === "READY")).toBe(
+      true,
+    );
+  });
+
+  it("Test C — N-3.28 회귀: 옵션 상품은 optionInfo도 size도 함께 READY로 유지된다(N-3.47 이후)", () => {
+    const product = makeMinimalProduct();
+    product.optionGroups = [{ name: "사이즈", values: ["100", "110"] }];
+    product.variants = [
+      { id: "v1", optionValues: { 사이즈: "100" }, sku: "SKU-100", stockQuantity: 5 },
+      { id: "v2", optionValues: { 사이즈: "110" }, sku: "SKU-110", stockQuantity: 3 },
+    ];
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.originProduct.detailAttribute?.productInfoProvidedNotice?.size).toBe("100, 110");
+    const result = validateNaverPayload(
+      payload,
+      { ...baseValidateInput(product), childCertificationInfoId: null },
+      false,
+    );
+    expect(result.fields.some((f) => f.field === "detailAttribute.optionInfo" && f.status === "READY")).toBe(
+      true,
+    );
+    expect(
+      result.issues.some((i) => i.field === "productInfoProvidedNotice(WEAR).size" && i.severity === "MISSING"),
+    ).toBe(false);
+  });
+
+  it("Test D — 옵션 없음(WEAR/KIDS) → optionInfo N/A, size는 여전히 MISSING", () => {
+    const product = makeMinimalProduct();
+    // makeMinimalProduct 기본값 그대로: optionGroups=[], variants=[].
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.originProduct.detailAttribute?.optionInfo).toBeUndefined();
+    const result = validateNaverPayload(
+      payload,
+      { ...baseValidateInput(product), childCertificationInfoId: null },
+      false,
+    );
+    expect(result.fields.some((f) => f.field.startsWith("detailAttribute.optionInfo"))).toBe(false);
+    expect(
+      result.issues.some((i) => i.field === "productInfoProvidedNotice(WEAR).size" && i.severity === "MISSING"),
+    ).toBe(true);
+  });
+
+  it("Case C(이상 데이터) — Default Title 모양이어도 실제 variant 레코드가 있으면 옵션 있음으로 판정하고 optionInfo를 검사 대상에 포함한다(N-3.47 이후 READY)", () => {
+    const product = makeMinimalProduct();
+    // 겉모양은 placeholder(그룹 1개, 값 1개)와 같지만 variants에 실제 레코드가
+    // 있는 비정상 조합 — CPO 지시(Case C): 추측해서 옵션 없음으로 지우지 않는다.
+    product.optionGroups = [{ name: "Title", values: ["Default Title"] }];
+    product.variants = [{ id: "v1", optionValues: {}, sku: "SKU-1", stockQuantity: 5 }];
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.originProduct.detailAttribute?.optionInfo).toBeDefined();
+    const result = validateNaverPayload(
+      payload,
+      { ...baseValidateInput(product), childCertificationInfoId: null },
+      false,
+    );
+    expect(result.fields.some((f) => f.field === "detailAttribute.optionInfo" && f.status === "READY")).toBe(
+      true,
+    );
   });
 });
 

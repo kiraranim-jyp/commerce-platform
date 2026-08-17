@@ -16,7 +16,7 @@ import { fetchNaverAllCategories } from "../_lib/category";
  * 컴포넌트로 이 트리를 그린다(플랫폼별 트리 UI를 따로 만들지 않는다).
  */
 export async function GET() {
-  const credentials = getNaverCredentials();
+  const credentials = await getNaverCredentials();
   if (!credentials) {
     return NextResponse.json({ status: "NOT_CONFIGURED", error: "네이버 인증 정보가 설정되어 있지 않습니다." });
   }

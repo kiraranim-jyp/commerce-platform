@@ -182,10 +182,19 @@ export interface NaverProductAttributeValue {
  *   채우지 않는다 — CartPilot의 SKU를 여기 넣으면 "이 SKU가 곧 기존 네이버
  *   옵션 ID"라는 잘못된 값이 되어 수정 요청으로 오인될 위험이 있다(N-2.8 때
  *   실제로 이 버그가 있었다 — id에 variant.sku를 넣고 있었음, N-3.4에서 수정).
- * - price(int32, "옵션가", "미입력 시 0원"): 절대 판매가인지 salePrice 대비
- *   추가금액인지는 스펙 문구만으로 100% 단정할 수 없다(기본값 0원이 "추가금액
- *   없음"과는 자연스럽게 맞지만 "절대가 0원"일 수도 있어 실제 등록 성공 전까지
- *   확정하지 않는다) — validate-payload.ts가 여전히 BLOCKED 처리.
+ * - price(int32, "옵션가", "미입력 시 0원"): N-3.47(CPO 지시)에서 공식 확인됨 —
+ *   Naver Commerce API 공식 계정(commerce-api-naver)이 GitHub Discussion #2312
+ *   (2025-02-17)에서 "'옵션가'는 상품 판매 가격에 따라 설정할 수 있는 범위가
+ *   다르며 음수로 설정할 수도 있습니다. 따라서 옵션 선택 시, 실제 상품 판매
+ *   가격이 0원 미만으로 설정되는 것을 방지하기 위하여 '옵션가' 필드가 요청
+ *   데이터 내에 포함된 경우, '상품 판매 가격' 필드도 필수로 입력받고 있습니다"
+ *   라고 직접 답변했다 — salePrice 대비 추가금액(delta)이 아니면 "옵션 선택 시
+ *   실제 판매가가 0원 미만이 될 수 있다"는 설명 자체가 성립하지 않는다(절대가라면
+ *   price 자체만 음수 여부를 확인하면 되고 salePrice와 비교할 이유가 없다).
+ *   build-payload.ts의 priceDelta 계산(variant.price 있으면 salePrice와의
+ *   차액, 없으면 0)은 이 의미와 정확히 일치 — validate-payload.ts는 더 이상
+ *   이 필드를 관행 기반 BLOCKED로 취급하지 않고, 실제로 계산 가능한 제약
+ *   (옵션 선택 시 최종 판매가가 0원 미만이 되지 않는지)만 검사한다.
  * - sellerManagerCode(string, "판매자 관리 코드"): CartPilot의 SKU는 여기
  *   넣는다(id와 달리 "기존 옵션 수정"이라는 부작용이 없는 순수 식별용 필드).
  * - usable(boolean, 기본값 true). */
@@ -202,10 +211,28 @@ export interface NaverOptionCombination {
   usable?: boolean;
 }
 
+/** N-3.49(실제 등록 시도로 확인, 2026-08-17) — optionCombinationGroupNames를
+ * 배열(`string[]`)로 보냈더니 실제 Naver API가 HTTP 400으로 거부했다:
+ * "Cannot deserialize value of type `KrExternalApiOptionCombinationNamesVo`
+ * from Array value" — 이 클래스명 자체가 배열이 아니라 명명된 필드를 가진
+ * 객체(Value Object)라는 뜻이다. 웹 검색으로 공식 커뮤니티 설명 재확인:
+ * "optionCombinationGroupNames는 optionGroupName1, optionGroupName2,
+ * optionGroupName3, optionGroupName4로 구성되며" — NaverOptionCombination의
+ * optionName1-4와 정확히 대칭되는 구조다. 배열 버전은 한 번도 실제 등록에
+ * 성공한 적이 없었다(옵션이 있는 상품은 전부 KC/기타 사유로 이 단계 전에
+ * 막혀 있었다 — 이번이 옵션 있는 상품이 처음으로 실제 POST까지 도달한
+ * 케이스). */
+export interface NaverOptionCombinationGroupNames {
+  optionGroupName1?: string;
+  optionGroupName2?: string;
+  optionGroupName3?: string;
+  optionGroupName4?: string;
+}
+
 /** 확인됨(공식 OpenAPI 스펙) — 조합형 옵션 컨테이너. */
 export interface NaverOptionInfo {
   useStockManagement?: boolean;
-  optionCombinationGroupNames?: string[];
+  optionCombinationGroupNames?: NaverOptionCombinationGroupNames;
   optionCombinations?: NaverOptionCombination[];
 }
 
@@ -230,12 +257,26 @@ export interface NaverOriginAreaInfo {
   plural?: string;
 }
 
+/** N-3.49(2026-08-17, 실제 등록 3차 시도로 발견) — Voyage Dress가 옵션
+ * 스키마 수정 후 처음으로 Naver의 실제 비즈니스 검증 단계까지 도달했고,
+ * 거기서 이 필드가 NotNull로 거부됐다("데이터를 입력해 주세요"). WebSearch로
+ * 확인한 공식 커뮤니티 예시 payload 기준 — productInfoProvidedNotice.
+ * afterServiceDirector(고시용 자유 텍스트, 예: "해외 구매대행으로 A/S
+ * 불가")와는 별개의 필드다. */
+export interface NaverAfterServiceInfo {
+  afterServiceTelephoneNumber?: string;
+  afterServiceGuideContent?: string;
+}
+
 export interface NaverDetailAttribute {
   productInfoProvidedNotice?: NaverProductInfoProvidedNotice;
   originAreaInfo?: NaverOriginAreaInfo;
   optionInfo?: NaverOptionInfo;
   naverShoppingSearchInfo?: unknown;
-  afterServiceInfo?: unknown;
+  afterServiceInfo?: NaverAfterServiceInfo;
+  /** N-3.49(2026-08-17, 실제 등록 3차 시도로 발견) — "미성년자 구매 가능
+   * 여부"(NotNull). 성인용/연령제한 카테고리가 아닌 한 true. */
+  minorPurchasable?: boolean;
 }
 
 export interface NaverOriginProduct {

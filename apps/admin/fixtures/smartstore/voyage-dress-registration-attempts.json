@@ -1,0 +1,76 @@
+{
+  "fixtureType": "REAL_POST_ATTEMPT_LOG",
+  "purpose": "N-3.49 STEP5에서 실제로 5회 POST한 유일한 상품(다른 4개 후보는 KC 미확보로 로컬 게이트에서 차단되어 한 번도 POST되지 않음). 매 시도가 서로 다른 실제 Naver 거부 사유였고, 그중 3건은 실제 코드 버그였다(수정+배포 완료). 이 기록은 향후 같은 실수를 반복하지 않기 위한 회귀 참고 자료다.",
+  "sourceUrl": "https://www.junioredition.com/en-kr/collections/misha-and-puff-sale/products/voyage-dress-in-bright-sky-blossom-plaid-by-misha-puff",
+  "productTitle": "Voyage Dress in Bright Sky Blossom Plaid by Misha & Puff",
+  "snapshotId": "28cf88cf-2b47-4716-8a08-9f47106829ee",
+  "category": {
+    "leafCategoryId": "50021299",
+    "categoryRequiresChildCertification": false,
+    "note": "이번 세션에서 처음 발견한 KC 불필요 KIDS 카테고리 — 옵션이 있는 상품이 KC보다 먼저 실제 POST 단계까지 도달한 첫 케이스였다."
+  },
+  "totalRealPostCount": 5,
+  "finalStatus": "여전히 미등록(HTTP 400) — 그러나 매 시도마다 실제 원인이 달랐고 3건은 실제 버그로 확인되어 코드 수정됨",
+  "attempts": [
+    {
+      "attemptNumber": "1-2",
+      "note": "같은 진단 단계에서 의도치 않게 2번 연속 실행됨(스크립트 출력을 다시 보려고 재실행하다 실제 POST가 한 번 더 나감 — 프로세스 실수, work order의 'POST 반복 금지' 원칙을 어긴 것으로 CPO에 투명하게 보고함).",
+      "httpStatus": 400,
+      "realErrorSource": "response.originProduct.detailAttribute.optionInfo.optionCombinationGroupNames deserialize 실패",
+      "namedField": "originProduct.detailAttribute.optionInfo.optionCombinationGroupNames",
+      "errorClass": "KrExternalApiOptionCombinationNamesVo를 Array 값으로 역직렬화할 수 없음",
+      "rootCause": "코드가 optionCombinationGroupNames를 string[](배열)로 보내고 있었다 — 실제 스키마는 {optionGroupName1, optionGroupName2, ...} 객체.",
+      "fixed": true,
+      "fixLocation": "packages/listing/src/naver/types.ts(NaverOptionCombinationGroupNames 신설), build-payload.ts(buildOptionCombinationGroupNames 함수)"
+    },
+    {
+      "attemptNumber": 3,
+      "note": "버그 1 수정 후 재시도.",
+      "httpStatus": 400,
+      "realErrorSource": "response.invalidInputs (4건)",
+      "namedFields": [
+        "originProduct.deliveryInfo.deliveryType",
+        "originProduct.deliveryInfo.deliveryAttributeType",
+        "originProduct.detailAttribute.minorPurchasable",
+        "originProduct.detailAttribute.afterServiceInfo"
+      ],
+      "rootCause": "4개 필드 모두 지금까지 payload에 아예 채워진 적이 없었다(타입 정의는 있었으나 build-payload.ts가 실제로 채우지 않음).",
+      "fixed": true,
+      "fixLocation": "build-payload.ts — deliveryType/deliveryAttributeType 고정값(DELIVERY/NORMAL), minorPurchasable=true, afterServiceInfo(SellerProfile.asContactNumber 재사용)"
+    },
+    {
+      "attemptNumber": 4,
+      "note": "버그 2 수정 후 재시도.",
+      "httpStatus": 400,
+      "realErrorSource": "response.message",
+      "errorMessage": "올바른 이미지 파일이 아닙니다.",
+      "rootCause": "네이버 상품 등록 API는 외부 URL(Supabase Storage 공개 URL)을 representativeImage.url/optionalImages[].url에 직접 받지 않는다. 반드시 '상품 이미지 다건 등록 API'(POST /v1/product-images/upload, multipart/form-data, 폼 필드명 imageFiles)로 먼저 업로드하고 그 응답(shop-phinf.pstatic.net URL)을 써야 한다.",
+      "verifiedVia": "WebSearch(commerce-api-naver 공식 커뮤니티) + 자체 진단 라우트(/api/debug/naver-image-upload-raw, 토큰 게이팅)로 실제 응답 구조 {images:[{url}]} 확인",
+      "fixed": true,
+      "fixLocation": "apps/admin/src/app/api/naver/_lib/client.ts(uploadNaverProductImages 신설), register/route.ts(등록 전 이미지 업로드 단계 추가)"
+    },
+    {
+      "attemptNumber": 5,
+      "note": "버그 3 수정 후 재시도. 대표/추가 이미지가 실제로 shop-phinf.pstatic.net URL로 교체된 것까지 확인됨(이미지 버그는 완전히 해결).",
+      "httpStatus": 400,
+      "realErrorSource": "response.invalidInputs (2건)",
+      "unresolvedFindings": [
+        {
+          "field": "originProduct.detailAttribute.productInfoProvidedNotice.wear",
+          "errorType": "NotEmpty",
+          "status": "구조적 재설계 필요, 아직 미수정",
+          "note": "productInfoProvidedNotice는 material/color/size 등을 평평하게 담는 게 아니라 타입별 중첩 객체(wear:{...}, 아마 kids:{...}도 동일)로 감싸야 하는 것으로 보인다(WebSearch로 wear.qualityAssuranceStandard 필드 존재 확인, 전체 wear/kids 하위 필드 목록은 미확인). WEAR/KIDS 두 타입 모두, 옵션 있는 상품 전체에 영향을 주는 변경이라 전수조사 없이 추측 수정하지 않기로 CPO와 합의."
+        },
+        {
+          "field": "originProduct.detailAttribute.afterServiceInfo.afterServiceTelephoneNumber",
+          "errorType": "AfterServicePhoneNumber",
+          "errorMessage": "A/S전화번호는 숫자, -, +만 입력 가능합니다.",
+          "status": "코드 버그 아님 — 실제 판매자 전화번호 데이터 공백",
+          "note": "SellerProfile.asContactNumber에 저장된 유일한 값('해외 구매대행으로 A/S 불가')은 자유 텍스트라 이 필드(엄격한 전화번호 포맷)에는 쓸 수 없다. KC 인증정보처럼 지어낼 수 없는 값 — 실제 연락처 확보 또는 '전화 A/S 미제공'을 이 필드 포맷 안에서 표현할 방법에 대한 CPO/판매자 결정이 필요하다."
+        }
+      ],
+      "fixed": false
+    }
+  ],
+  "cpoDecision": "2026-08-17/18 — 5차 POST까지 진행 후 남은 2건(wear/kids 중첩 구조, A/S 전화번호 데이터 공백)은 여기서 마무리하고 STEP6(회귀 fixture+최종보고)로 넘어가기로 확정. wear/kids 구조 전수조사와 실전화번호 확보는 별도 후속 스프린트 과제."
+}
