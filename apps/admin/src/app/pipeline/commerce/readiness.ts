@@ -331,6 +331,13 @@ const NAVER_NOTICE_FIELD_SECTION: Record<string, string> = {
 };
 
 function naverFieldSectionId(field: string): string | undefined {
+  // CEO 지시(2026-08-19: "스마트스토어 원산지는 입력할 곳이 없는데 원산지
+  // 에러로 등록이 안 됨") — originAreaCode는 자유입력 필드가 아니라
+  // product.countryOfOrigin(기본정보 Accordion의 "원산지" FieldRow, 이미
+  // 입력 UI 존재)을 Naver의 535개 원산지 코드와 매칭한 결과다. 이 필드에는
+  // sectionId가 아예 없어서 "다음 입력하기"를 눌러도 아무 데도 이동하지
+  // 않았다 — 실제 입력칸(countryOfOrigin)이 있는 기본정보 섹션으로 보낸다.
+  if (field === "detailAttribute.originAreaInfo.originAreaCode") return "section-basic";
   if (field === "detailAttribute.originAreaInfo.importer") return "section-notice";
   if (field.startsWith("productCertificationInfos")) return "section-kc";
   // N-3.55(CPO 지시: "먼저 해결할 항목 ① 가격 확인") — 판매가 필드는 지금까지

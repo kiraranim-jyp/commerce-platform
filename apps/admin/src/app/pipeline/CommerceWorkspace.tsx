@@ -247,6 +247,11 @@ export function CommerceWorkspace({
    * categoryCandidates 공유 state로 흘려보내고, onSelectCategory 한 곳으로만
    * 확정한다. */
   const [naverApiCandidates, setNaverApiCandidates] = useState<CategoryCandidate[]>([]);
+  /** CEO 지시(2026-08-19: "탭 전환 시 로딩 화면") — 스마트스토어 탭 진입 시
+   * /api/naver/category-search가 끝나기 전까지는 카테고리 후보가 빈 배열이라
+   * "카테고리가 아예 없다"처럼 보였다. coupangCategoryFetching과 같은 패턴으로
+   * 로딩 상태를 노출한다. */
+  const [naverCategoryLoading, setNaverCategoryLoading] = useState(false);
   /** Sprint A-11(작업8) — 없어도 등록은 되지만 채워두면 좋은 판매자 설정 목록. */
   const [coupangSettingsRecommended, setCoupangSettingsRecommended] = useState<string[] | null>(null);
   /** P0(Category Resolver 추적) — "추천 → 검증 → 선택"이 실제로 어떻게 이어졌는지
@@ -624,6 +629,7 @@ export function CommerceWorkspace({
   useEffect(() => {
     if (tab !== "smartstore") return;
     let cancelled = false;
+    setNaverCategoryLoading(true);
     void (async () => {
       try {
         const res = await fetch("/api/naver/category-search", {
@@ -647,6 +653,8 @@ export function CommerceWorkspace({
         setNaverApiCandidates(converted);
       } catch {
         if (!cancelled) setNaverApiCandidates([]);
+      } finally {
+        if (!cancelled) setNaverCategoryLoading(false);
       }
     })();
     return () => {
@@ -1424,6 +1432,7 @@ export function CommerceWorkspace({
           onRetryListing={retryListing}
           onFetchCoupangCategory={tab === "coupang" ? fetchCoupangCategoryRecommendation : undefined}
           coupangCategoryFetching={coupangCategoryFetching}
+          naverCategoryLoading={naverCategoryLoading}
           coupangSearchCandidates={tab === "coupang" ? coupangSearchCandidates : undefined}
           coupangSearchAttempted={coupangSearchAttempted}
           coupangRecommendAttempted={coupangRecommendAttempted}

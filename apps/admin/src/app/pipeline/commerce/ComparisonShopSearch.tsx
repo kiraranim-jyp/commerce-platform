@@ -248,19 +248,15 @@ function ResultTable({ results, krwRates }: { results: SearchResult[]; krwRates:
     }
   }
   const highConfidenceRows = allRows.filter((row) => (row.candidate?.confidence ?? 0) >= 0.9);
+  // CEO 지시(2026-08-19: "매칭성공 0이면 조회를 하지마") — 90% 이상 매칭이 하나도
+  // 없으면 "90% 미만 N건 보기" 토글 자체를 그리지 않는다. 위 ResultHeadline이
+  // 이미 "비교 가능한 상품을 찾지 못했습니다"로 안내하는데, 바로 아래 이 토글이
+  // "그래도 27건 보러가기"처럼 보여 상세 통계(기본 접힘)와 다른 신호를 줬다 —
+  // 매칭 안 된 후보/미지원/오류 나열은 상세 통계 안에서만 사유를 확인하면
+  // 된다(N-3.13 P0 "조용히 사라지지 않게" 원칙은 상세 통계로 이미 충족).
+  if (highConfidenceRows.length === 0) return null;
   const rows = showAll ? allRows : highConfidenceRows;
   const hiddenCount = allRows.length - highConfidenceRows.length;
-  if (rows.length === 0 && !showAll) {
-    return hiddenCount > 0 ? (
-      <button
-        type="button"
-        onClick={() => setShowAll(true)}
-        className="text-xs text-primary underline hover:text-primary-hover"
-      >
-        90% 미만 매칭/미지원/오류 {hiddenCount}건 보기
-      </button>
-    ) : null;
-  }
   return (
     <div className="space-y-1.5">
       {hiddenCount > 0 && (

@@ -288,6 +288,7 @@ export function PlatformPreview({
   onRetryListing,
   onFetchCoupangCategory,
   coupangCategoryFetching,
+  naverCategoryLoading,
   coupangSearchCandidates,
   coupangSearchAttempted,
   coupangRecommendAttempted,
@@ -396,6 +397,9 @@ export function PlatformPreview({
   /** 쿠팡 탭에서만 넘어온다 — 있으면 카테고리 추천 패널에 "쿠팡 API로 확인"/검색 UI가 보인다. */
   onFetchCoupangCategory?: (query?: string) => void;
   coupangCategoryFetching?: boolean;
+  /** CEO 지시(2026-08-19: "탭 전환 시 로딩 화면") — 스마트스토어 탭 진입 시
+   * /api/naver/category-search 응답 전까지 true. */
+  naverCategoryLoading?: boolean;
   /** A-12.3-P0-4(CPO 3차 지시 — regression 수정: "추천과 검색은 항상 동시에
    * 존재해야 한다") — 검색 결과는 AI 추천(categoryCandidates)과 완전히 분리된
    * 목록이라 별도로 내려받는다. */
@@ -605,8 +609,25 @@ export function PlatformPreview({
 
   const fix = onFixTextField;
 
+  // CEO 지시(2026-08-19: "탭 전환 시 로딩 화면 — 대상정보를 확인중입니다") —
+  // 스마트스토어/쿠팡 탭에 들어오면 카테고리 후보를 실제 API로 조회하는 동안
+  // (naverCategoryLoading/coupangCategoryFetching) 화면이 빈 상태로 보여서
+  // 응답이 느려 보였다. 새 판정을 만들지 않고 이미 있는 두 로딩 플래그를
+  // 플랫폼에 맞게 그대로 보여준다.
+  const tabDataLoading =
+    listing.platform === "smartstore" ? Boolean(naverCategoryLoading) : listing.platform === "coupang" ? Boolean(coupangCategoryFetching) : false;
+
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+      {tabDataLoading && (
+        <div className="order-0 col-span-full flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-3 text-sm text-text-secondary">
+          <span
+            aria-hidden
+            className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
+          />
+          대상정보를 확인중입니다...
+        </div>
+      )}
       {/* N-3.58 STEP1(CPO 지시: "판매 전 체크를 가장 먼저 보여주기") — 이
        * grid의 DOM 순서 자체는 그대로 두되(오른쪽 sticky 컬럼이라는 기존
        * 구조를 다시 만들지 않는다), order 유틸리티만으로 모바일(lg 미만,
