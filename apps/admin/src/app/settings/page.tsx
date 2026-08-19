@@ -46,6 +46,8 @@ interface AccountValues {
 interface NaverAccountValues {
   clientIdMasked: string | null;
   clientSecretSaved: boolean;
+  /** Sprint C-8 — API 인증에는 쓰이지 않는 표시/추적용 정보. */
+  sellerId: string | null;
 }
 
 interface SellerProfile {
@@ -149,9 +151,11 @@ export default function SettingsPage() {
   const [naverAccount, setNaverAccount] = useState<NaverAccountValues>({
     clientIdMasked: null,
     clientSecretSaved: false,
+    sellerId: null,
   });
   const [naverClientId, setNaverClientId] = useState("");
   const [naverClientSecret, setNaverClientSecret] = useState("");
+  const [naverSellerId, setNaverSellerId] = useState("");
   const [naverAccountSaving, setNaverAccountSaving] = useState(false);
 
   const [profiles, setProfiles] = useState<SellerProfile[]>([]);
@@ -204,6 +208,7 @@ export default function SettingsPage() {
     setBrandProfiles(brandProfilesData.profiles ?? []);
     setTemplates(templatesData.templates ?? []);
     setNaverAccount(naverAccountData.values);
+    setNaverSellerId(naverAccountData.values.sellerId ?? "");
   }
 
   // loadAll()을 effect 콜백에서 직접 호출하면 setState가 effect 본문 내에서
@@ -259,6 +264,7 @@ export default function SettingsPage() {
         body: JSON.stringify({
           clientId: naverClientId || undefined,
           clientSecret: naverClientSecret || undefined,
+          sellerId: naverSellerId || undefined,
         }),
       });
       const data = (await res.json()) as { ok: boolean; error?: string };
@@ -359,6 +365,8 @@ export default function SettingsPage() {
                 setNaverClientId={setNaverClientId}
                 naverClientSecret={naverClientSecret}
                 setNaverClientSecret={setNaverClientSecret}
+                naverSellerId={naverSellerId}
+                setNaverSellerId={setNaverSellerId}
                 handleSaveNaverAccount={handleSaveNaverAccount}
                 naverAccountSaving={naverAccountSaving}
                 onNaverAccountCleared={loadAll}
@@ -2151,6 +2159,8 @@ function CommerceAccountManager({
   setNaverClientId,
   naverClientSecret,
   setNaverClientSecret,
+  naverSellerId,
+  setNaverSellerId,
   handleSaveNaverAccount,
   naverAccountSaving,
   onNaverAccountCleared,
@@ -2172,6 +2182,8 @@ function CommerceAccountManager({
   setNaverClientId: (v: string) => void;
   naverClientSecret: string;
   setNaverClientSecret: (v: string) => void;
+  naverSellerId: string;
+  setNaverSellerId: (v: string) => void;
   handleSaveNaverAccount: () => void;
   naverAccountSaving: boolean;
   onNaverAccountCleared: () => void;
@@ -2444,6 +2456,24 @@ function CommerceAccountManager({
                 &ldquo;연결 정보 삭제&rdquo;는 이 화면에 저장된 값만 지웁니다. 환경 변수가 설정돼 있다면 삭제 후에도 계속
                 연결됨으로 표시될 수 있습니다.
               </p>
+            </div>
+          </div>
+          {/* Sprint C-8(CPO 지시) — Coupang의 "API 연결 정보"/"상품 등록에
+           * 필요한 판매자 정보" 분리와 같은 패턴. Seller ID는 공식 문서
+           * 조사(3개 독립 출처 교차검증, env.ts 주석)로 OAuth 토큰 발급
+           * 파라미터가 아님이 확인됐다 — 연결 테스트/등록 게이트 어디에도
+           * 쓰지 않는다. 순수 표시/추적용이라 "필수" 딱지를 붙이지 않는다. */}
+          <div className="rounded-lg border border-border bg-surface px-4 py-3">
+            <p className="mb-3 text-xs font-semibold text-text-secondary">판매자 정보</p>
+            <div className="space-y-3 text-sm">
+              <Field label="Seller ID" hint="선택 · 표시/추적용 정보이며 API 인증에는 사용되지 않습니다">
+                <input
+                  type="text"
+                  value={naverSellerId}
+                  onChange={(e) => setNaverSellerId(e.target.value)}
+                  className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+                />
+              </Field>
             </div>
           </div>
         </div>

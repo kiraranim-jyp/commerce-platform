@@ -80,7 +80,7 @@ export async function POST() {
       fixieConfigured: Boolean(process.env.FIXIE_URL),
       fixieOutboundIp: outboundIp,
       // seller ID는 이번 Sprint에서 API 요청에 쓰지 않았다 — 참고용으로만 표시.
-      sellerIdEnvPresent: Boolean(getNaverSellerIdForDisplay()),
+      sellerIdEnvPresent: Boolean(await getNaverSellerIdForDisplay()),
     },
   });
 }

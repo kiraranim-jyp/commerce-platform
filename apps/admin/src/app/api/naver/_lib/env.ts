@@ -29,7 +29,11 @@ export async function getNaverCredentials(): Promise<NaverCredentials | null> {
   return { clientId, clientSecret };
 }
 
-/** 참고용으로만 노출 — 위 설명대로 API 요청 파라미터에는 쓰지 않는다. */
-export function getNaverSellerIdForDisplay(): string | null {
-  return process.env.SMARTSTORE_SELLER_ID || null;
+/** 참고용으로만 노출 — 위 설명대로 API 요청 파라미터에는 쓰지 않는다.
+ * Sprint C-8(CPO 지시) — DB(commerce_accounts.seller_id, Settings에서 입력)를
+ * 우선 읽고, 없으면 기존 env var로 폴백한다("표시용"이라는 기존 계약은 그대로
+ * 유지 — getNaverCredentials처럼 DB 우선 + env 폴백 패턴만 가져온다). */
+export async function getNaverSellerIdForDisplay(): Promise<string | null> {
+  const row = await loadNaverAccountRow();
+  return row?.seller_id || process.env.SMARTSTORE_SELLER_ID || null;
 }

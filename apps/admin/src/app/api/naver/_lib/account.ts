@@ -14,6 +14,10 @@ interface NaverAccountRow {
   id: string;
   client_id: string | null;
   client_secret: string | null;
+  /** Sprint C-8(CPO 지시) — env.ts의 getNaverSellerIdForDisplay 주석 그대로:
+   * API 인증(OAuth 토큰 발급)에는 전혀 쓰이지 않는다 — "표시/추적용" 정보라
+   * 등록 게이트(missing 체크)에 절대 넣지 않는다. */
+  seller_id: string | null;
 }
 
 export async function loadNaverAccountRow(): Promise<NaverAccountRow | null> {
@@ -21,7 +25,7 @@ export async function loadNaverAccountRow(): Promise<NaverAccountRow | null> {
   if (!supabase) return null;
   const { data, error } = await supabase
     .from("commerce_accounts")
-    .select("id, client_id, client_secret")
+    .select("id, client_id, client_secret, seller_id")
     .eq("platform", "naver")
     .order("created_at", { ascending: true })
     .limit(1)
@@ -39,6 +43,8 @@ export async function loadNaverAccountRow(): Promise<NaverAccountRow | null> {
 export interface NaverAccountSettingsInput {
   clientId?: string;
   clientSecret?: string;
+  /** Sprint C-8 — 표시/추적용 값, API 요청에는 쓰이지 않는다. */
+  sellerId?: string;
 }
 
 /** 빈 문자열/undefined인 필드는 "변경 안 함"으로 취급하고 기존 저장값을 그대로
@@ -57,11 +63,13 @@ export async function saveNaverAccountSettings(
   const clientId = input.clientId && input.clientId.trim().length > 0 ? input.clientId.trim() : (existing?.client_id ?? null);
   const clientSecret =
     input.clientSecret && input.clientSecret.trim().length > 0 ? input.clientSecret.trim() : (existing?.client_secret ?? null);
+  const sellerId =
+    input.sellerId && input.sellerId.trim().length > 0 ? input.sellerId.trim() : (existing?.seller_id ?? null);
 
   if (existing) {
     const { error } = await supabase
       .from("commerce_accounts")
-      .update({ client_id: clientId, client_secret: clientSecret, updated_at: new Date().toISOString() })
+      .update({ client_id: clientId, client_secret: clientSecret, seller_id: sellerId, updated_at: new Date().toISOString() })
       .eq("id", existing.id);
     if (error) return { ok: false, error: error.message };
     return { ok: true };
@@ -73,6 +81,7 @@ export async function saveNaverAccountSettings(
     is_default: true,
     client_id: clientId,
     client_secret: clientSecret,
+    seller_id: sellerId,
   });
   if (error) return { ok: false, error: error.message };
   return { ok: true };
@@ -97,15 +106,19 @@ export async function clearNaverAccountSettings(): Promise<{ ok: true } | { ok: 
 }
 
 /** 설정 페이지가 폼을 미리 채울 때 쓴다 — Client Secret은 절대 평문으로 다시
- * 내려주지 않는다(Coupang getCoupangAccountSettingsForDisplay와 동일한 원칙). */
+ * 내려주지 않는다(Coupang getCoupangAccountSettingsForDisplay와 동일한 원칙).
+ * sellerId는 시크릿이 아니라 그대로 평문으로 내려준다(Coupang의 vendorUserId
+ * 표시 방식과 동일). */
 export async function getNaverAccountSettingsForDisplay(): Promise<{
   clientIdMasked: string | null;
   clientSecretSaved: boolean;
+  sellerId: string | null;
 }> {
   const row = await loadNaverAccountRow();
   const clientId = row?.client_id || null;
   return {
     clientIdMasked: clientId ? `${"•".repeat(Math.max(clientId.length - 4, 0))}${clientId.slice(-4)}` : null,
     clientSecretSaved: Boolean(row?.client_secret),
+    sellerId: row?.seller_id || null,
   };
 }
