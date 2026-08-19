@@ -497,24 +497,38 @@ export function NaverPayloadPreview({
                           {k}
                         </th>
                       ))}
-                      <th className="pb-1 pr-3 font-medium">가격</th>
+                      <th className="pb-1 pr-3 font-medium">최종판매가</th>
                       <th className="pb-1 font-medium">재고</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {product.variants.map((v) => (
-                      <tr key={v.id} className="border-t border-border">
-                        {Object.values(v.optionValues).map((val, i) => (
-                          <td key={i} className="py-1 pr-3 text-text-primary">
-                            {val}
+                    {product.variants.map((v, i) => {
+                      // N-3.27/N-3.47(CPO 지시: "Preview와 실제 Register가 서로
+                      // 다른 값을 계산하지 않도록") — 여기서 가격을 다시 계산하지
+                      // 않는다. build-payload.ts가 실제로 만든 optionCombinations
+                      // (index가 product.variants와 1:1 대응 — buildOptionCombinations의
+                      // product.variants.map 순서 그대로)의 price(salePrice 대비
+                      // 추가금액, N-3.47 공식 확인)를 그대로 읽어 salePrice에 더한
+                      // "이 옵션이 실제로 등록될 최종가"만 보여준다. 예전엔 여기서
+                      // variant.price(원본 통화, 대부분 비어 있어 "—"로만 보였다)를
+                      // 직접 찍어서 옵션 Accordion(OptionVariantEditor)의 최종판매가
+                      // 열과 다른 값(공백)을 보여주는 불일치가 있었다.
+                      const combo = payload.originProduct.detailAttribute?.optionInfo?.optionCombinations?.[i];
+                      const finalPriceKrw = combo ? payload.originProduct.salePrice + combo.price : null;
+                      return (
+                        <tr key={v.id} className="border-t border-border">
+                          {Object.values(v.optionValues).map((val, idx) => (
+                            <td key={idx} className="py-1 pr-3 text-text-primary">
+                              {val}
+                            </td>
+                          ))}
+                          <td className="py-1 pr-3 text-text-primary">
+                            {finalPriceKrw != null ? formatKrw(finalPriceKrw) : "—"}
                           </td>
-                        ))}
-                        <td className="py-1 pr-3 text-text-primary">
-                          {v.price ? formatKrw(v.price.amount) : "—"}
-                        </td>
-                        <td className="py-1 text-text-primary">{v.stockQuantity ?? "—"}</td>
-                      </tr>
-                    ))}
+                          <td className="py-1 text-text-primary">{v.stockQuantity ?? "—"}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
