@@ -246,6 +246,29 @@ describe("N-3.29 STEP7: Importer/KC 입력 경로", () => {
     expect(validation.fields.some((f) => f.field === "detailAttribute.optionInfo")).toBe(false);
   });
 
+  // CPO 지시(2026-08-19) — "97%인데도 등록 버튼이 안 바뀌는 문제" 체인 추적 중
+  // 발견: SIZE 옵션이 원래 없는 상품(가방/액세서리 등, 바로 위 테스트와 같은
+  // 픽스처)에서 실제로 validation.ok가 true가 되는지는 지금까지 이 파일
+  // 어디서도 검증한 적이 없었다(missingCount/blockedCount만 개별 필드
+  // 단위로 확인됐을 뿐, "전체 게이트가 실제로 열리는가"라는 최종 질문에
+  // 답하는 테스트가 없었다). Sprint P0(치수 optional 처리)가 실제로 이
+  // 시나리오를 해결하는지 여기서 고정한다 — 이 테스트가 실패하면 등록
+  // 게이트 회귀다.
+  it("SIZE 옵션 없는 상품(가방/액세서리 등) — size가 MISSING이어도 optional이라 전체 게이트는 ok:true", () => {
+    const product = makeMinimalProduct(); // optionGroups: [] → resolveSizeFromOptions가 null
+    const { validation } = buildAndValidate(product, {
+      categoryRequiresChildCertification: false,
+      originAreaCode: DOMESTIC_ORIGIN_AREA_CODE,
+      originAreaRequiresImporter: false,
+      childCertificationInfoId: null,
+    });
+    const sizeField = validation.fields.find((f) => f.field === "productInfoProvidedNotice(WEAR).size");
+    expect(sizeField?.status).toBe("MISSING");
+    expect(sizeField?.optional).toBe(true);
+    expect(validation.ok).toBe(true);
+    expect(validation.blockedCount).toBe(0);
+  });
+
   it("옵션 있음 + 옵션가(추가금액) 미설정(delta 0) → optionInfo READY(N-3.47: 옵션가 delta 의미 확정 후)", () => {
     const product = makeMinimalProduct();
     product.optionGroups = [{ name: "사이즈", values: ["S", "M"] }];
