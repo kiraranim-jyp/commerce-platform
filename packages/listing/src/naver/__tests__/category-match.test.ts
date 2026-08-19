@@ -72,13 +72,37 @@ describe("generateNaverCategoryCandidates", () => {
     expect(kidsCandidate!.score).toBeGreaterThan(adultCandidate!.score);
   });
 
-  it("DOMAIN_PROFILES에 없는 상품유형(전자제품)은 임의 후보 대신 빈 배열을 반환한다", () => {
+  it("전자제품(무선 이어버즈)은 SmartStore 플로우 개선 STEP1 이후 가전/디지털 카테고리로 정확히 매칭된다", () => {
+    // SmartStore 플로우 개선(CPO 지시 — "카테고리 추천 실패 원인 분석") 실측
+    // 발견: "전자제품"류는 product-resolver.ts PRODUCT_TYPE_KEYWORDS에 항목이
+    // 아예 없어 productType이 항상 null로 떨어졌고, generateNaverCategoryCandidates가
+    // 그 즉시 빈 배열을 반환했다 — 이 테스트는 원래 그 gap을 문서화하던
+    // 테스트였다. "가전/디지털" productType을 추가한 뒤에는 이 상품이 실제
+    // Naver 리프 카테고리(가전디지털>이어폰>블루투스이어폰)로 정확히 매칭되는
+    // 게 올바른 동작이다 — 빈 배열을 기대하는 건 더 이상 맞지 않다.
     const product = makeProduct({
       sourceUrl: "https://example.com/products/premium-wireless-earbuds-pro",
       title: field("Premium Wireless Earbuds Pro"),
       brand: field("SoundCo"),
       description: field("High quality bluetooth earbuds"),
       breadcrumbPath: ["Electronics", "Audio"],
+      shopifyTags: "",
+      shopifyProductType: "",
+    });
+    const candidates = generateNaverCategoryCandidates(product, LEAF_CATEGORIES, 5);
+    expect(candidates.length).toBeGreaterThan(0);
+    expect(candidates[0].categoryId).toBe("50000002");
+    expect(candidates[0].confidence).toBe("HIGH");
+    expect(candidates.some((c) => c.categoryId === "50000001")).toBe(false);
+  });
+
+  it("DOMAIN_PROFILES에 정말로 없는 상품유형(도자기 꽃병)은 여전히 임의 후보 대신 빈 배열을 반환한다", () => {
+    const product = makeProduct({
+      sourceUrl: "https://example.com/products/ceramic-vase",
+      title: field("Handmade Ceramic Vase in Sand"),
+      brand: field("Clayware Studio"),
+      description: field("A beautiful handmade ceramic vase for your living room."),
+      breadcrumbPath: [],
       shopifyTags: "",
       shopifyProductType: "",
     });

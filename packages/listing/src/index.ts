@@ -15,6 +15,7 @@ export * from "./registration-report";
 export * from "./naver/types";
 export * from "./naver/build-payload";
 export * from "./naver/validate-payload";
+export * from "./naver/compliance";
 export * from "./naver/category-match";
 export * from "./naver/category-hierarchy";
 export * from "./naver/origin-match";

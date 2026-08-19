@@ -13,8 +13,8 @@
 import type { CanonicalProduct, FieldSource, ProvenanceField } from "@commerce/shared";
 import type { ListingModel } from "@commerce/marketplace";
 import { UNRESOLVED_CATEGORY } from "@commerce/category";
-import { buildNaverProductPayload, validateNaverPayload, type ReadinessReport } from "@commerce/listing";
-import { computeNaverPayloadReadiness, computeReadinessScoreSummary } from "../src/app/pipeline/commerce/readiness";
+import { buildNaverProductPayload, validateNaverPayload } from "@commerce/listing";
+import { computeNaverPayloadReadiness } from "../src/app/pipeline/commerce/readiness";
 
 function field<T>(value: T, source: FieldSource = "ORIGINAL"): ProvenanceField<T> {
   return { value, source, confidence: source === "ORIGINAL" ? 0.9 : 1 };
@@ -26,6 +26,7 @@ function makeFullProduct(overrides: Partial<CanonicalProduct> = {}): CanonicalPr
     title: field("아동용 반팔 티셔츠"),
     brand: field("TestBrand"),
     price: field({ amount: 10000, currency: "KRW" }),
+    priceValidity: "VALID",
     sku: field("KIDS-TSHIRT-1"),
     description: field("아동용 반팔 티셔츠입니다."),
     material: field("면 100%"),
@@ -135,6 +136,7 @@ function report(name: string, pass: boolean, detail: string) {
     ],
     issues: [],
     advisoryNotes: [],
+    kcStatus: "NOT_APPLICABLE" as const,
   };
   const summary = computeNaverPayloadReadiness(syntheticOkValidation);
   report(
@@ -220,59 +222,20 @@ function report(name: string, pass: boolean, detail: string) {
   );
 }
 
-// ── Test D: legacy validateSmartStoreListing이 100%(PASS)라고 말해도 새 어댑터는
-//    그 값을 아예 입력으로 받지 않는다 — Test C의 실제 실패 결과가 그대로 유지되는지 확인 ──
-{
-  const fakeLegacyPassReport: ReadinessReport = {
-    fields: [{ field: "countryOfOrigin", label: "원산지", status: "VALID" }],
-    score: 100,
-    requiredTotal: 1,
-    requiredPassed: 1,
-    warningCount: 0,
-    errorCount: 0,
-  };
-  const legacySummary = computeReadinessScoreSummary(fakeLegacyPassReport);
-
-  const product = makeFullProduct();
-  const listing = makeListing(product);
-  const commonInput = {
-    releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
-    refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
-    primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
-    returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
-    exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
-    childCertificationInfoId: 1041,
-    originAreaCode: "00",
-    deliveryCompany: "CJGLS",
-    warrantyPolicy: "구매일로부터 1년",
-    afterServiceDirector: "홍길동 02-1234-5678",
-  };
-  const payload = buildNaverProductPayload({
-    product,
-    listing,
-    leafCategoryId: LEAF_CATEGORY_ID,
-    ...commonInput,
-    categoryRequiresChildCertification: true,
-    originAreaRequiresContent: false,
-  });
-  const realValidation = validateNaverPayload(
-    payload,
-    { product, ...commonInput, returnCompaniesFetchFailed: false, originAreaRequiresImporter: false },
-    true,
-  );
-  const realSummary = computeNaverPayloadReadiness(realValidation);
-
-  report(
-    "Test D (legacy 100% ≠ 실제 등록 가능성)",
-    legacySummary.allRequiredPassed === true && realSummary.allRequiredPassed === false,
-    `legacy(가짜 PASS report).allRequiredPassed=${legacySummary.allRequiredPassed} vs computeNaverPayloadReadiness(실제 BLOCKED validation).allRequiredPassed=${realSummary.allRequiredPassed} — RegistrationReadinessCard는 이제 후자만 본다(PlatformPreview.tsx: capabilities.hasNaverPreview ? computeNaverPayloadReadiness(naverValidation) : ...)`,
-  );
-}
+// ── Test D는 Sprint P1(CPO 지시, 2026-08-19: "불필요한 상세 체크리스트
+//    제거")에서 제거됐다 — 예전엔 legacy computeReadinessScoreSummary(가짜
+//    PASS report)가 새 어댑터(computeNaverPayloadReadiness)와 다른 답을
+//    낼 위험을 검증했지만, 그 legacy 함수 자체(와 그걸 쓰던 유일한 소비처
+//    ReadinessScorePanel/ListingSection "상세 체크리스트")를 코드베이스에서
+//    완전히 제거했다 — 이제 SmartStore 등록 가능성 판정 경로가
+//    computeNaverPayloadReadiness 하나뿐이라 "두 계산이 어긋날 위험" 자체가
+//    구조적으로 사라졌다(테스트할 대상이 없어진 것이지, 위험이 남았는데
+//    안 보는 게 아니다).
 
 console.log();
 console.log(
   failures === 0
-    ? `모두 PASS (4/4) — computeNaverPayloadReadiness가 validateNaverPayload 결과만으로 정확히 판정한다.`
+    ? `모두 PASS (3/3) — computeNaverPayloadReadiness가 validateNaverPayload 결과만으로 정확히 판정한다.`
     : `${failures}건 FAIL — 확인 필요.`,
 );
 process.exit(failures === 0 ? 0 : 1);

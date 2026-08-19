@@ -257,6 +257,11 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
                 }
               : undefined,
           priceSource: v.price != null ? "ORIGINAL" : undefined,
+          // Sprint A-4(CPO 지시: "값이 있으면 어떤 의미인지 명시한다") — Shopify
+          // variants[].price는 Shopify 스키마상 항상 그 variant의 절대 판매가다
+          // (차액 필드가 아니다). computeVariantFinalPriceKrw의 암묵적 기본값에
+          // 기대지 않고 여기서 직접 명시한다.
+          priceMode: v.price != null ? "ABSOLUTE" : undefined,
           // inventory_management가 없으면(재고 추적 꺼진 매장) 숫자를 신뢰할 수
           // 없어서 채우지 않는다 — "모른다"를 "0개"로 잘못 전달하지 않기 위함.
           stockQuantity: v.inventory_management ? v.inventory_quantity : undefined,

@@ -1,0 +1,110 @@
+{
+  "fixtureType": "REAL_LIVE_SUCCESS",
+  "purpose": "N-3.51의 핵심 목표 — 실제 해외 구매대행 상품 1건을 SmartStore에 성공적으로 등록하고, 실제 등록 결과까지 검증한 첫 사례. 이후 스프린트에서 '등록이 실제로 작동하는가'를 재확인할 때 이 fixture를 기준으로 회귀를 판단한다.",
+  "sourceUrl": "https://www.junioredition.com/en-kr/collections/misha-and-puff-sale/products/voyage-dress-in-bright-sky-blossom-plaid-by-misha-puff",
+  "productTitle": "Voyage Dress in Bright Sky Blossom Plaid by Misha & Puff",
+  "snapshotId": "28cf88cf-2b47-4716-8a08-9f47106829ee",
+  "category": {
+    "leafCategoryId": "50021299",
+    "categoryRequiresChildCertification": false,
+    "note": "WEAR 카테고리, KC 인증 불필요"
+  },
+  "registrationSequence": {
+    "totalRealPostAttempts": 8,
+    "note": "N-3.49 STEP5(5회) + N-3.51 STEP6(3회)에 걸쳐 매 시도마다 서로 다른 실제 Naver 거부 사유를 발견하고 수정했다 — 상세 이력은 voyage-dress-registration-attempts.json 참고. 8번째 시도에서 최초로 HTTP 200 SUBMITTED를 받았다."
+  },
+  "bugsFixedToReachSuccess": [
+    {
+      "attempt": "1-2",
+      "bug": "optionCombinationGroupNames를 배열로 전송(실제는 {optionGroupName1..3} 객체)",
+      "fixLocation": "packages/listing/src/naver/types.ts, build-payload.ts(buildOptionCombinationGroupNames)"
+    },
+    {
+      "attempt": 3,
+      "bug": "deliveryType/deliveryAttributeType/minorPurchasable/afterServiceInfo 4개 필드가 payload에 전혀 채워지지 않음",
+      "fixLocation": "build-payload.ts"
+    },
+    {
+      "attempt": 4,
+      "bug": "대표/추가 이미지에 외부 URL(Supabase Storage)을 직접 전송 — Naver는 자체 업로드 API(POST /v1/product-images/upload)를 거친 shop-phinf.pstatic.net URL만 허용",
+      "fixLocation": "apps/admin/src/app/api/naver/_lib/client.ts(uploadNaverProductImages), register/route.ts"
+    },
+    {
+      "attempt": 5,
+      "bug": "productInfoProvidedNotice가 material/color/size 등을 평평하게(flat) 담고 있었음 — 실제로는 wear:{...}/kids:{...} 하위 객체로 감싸야 함",
+      "fixLocation": "N-3.51 STEP1 — types.ts(NaverWearNoticeFields/NaverKidsNoticeFields), build-payload.ts",
+      "verifiedVia": "5차 시도 실제 NotEmpty 거부 + GitHub Discussion #241/#516(공식 commerce-api-naver 계정) 2개 독립 출처"
+    },
+    {
+      "attempt": "5(같은 시도)",
+      "bug": "afterServiceInfo.afterServiceTelephoneNumber에 afterServiceDirector(자유 텍스트 고시 문구)를 재사용 — 실제로는 엄격한 전화번호 포맷(숫자/-/+)만 허용하는 별개 필드",
+      "fixLocation": "N-3.51 STEP2 — build-payload.ts/types.ts(afterServiceTelephoneNumber 파라미터 분리), register/route.ts(SellerProfile.companyContactNumber 배선)"
+    },
+    {
+      "attempt": 6,
+      "bug": "productInfoProvidedNotice.wear.packDate(YearMonth, 제조연월)가 NotEmpty로 거부 — CartPilot은 개별 상품의 실제 제조연월을 알 방법이 없음",
+      "fixLocation": "N-3.51 STEP1 계속 — build-payload.ts에서 packDate 대신 자유 텍스트 대체 필드 packDateText를 상세페이지 참조 관용구로 채움(공식 스펙 docs/naver-provided-notice-types-raw.json에서 packDateText='제조연월 직접 입력'으로 확인)"
+    },
+    {
+      "attempt": 7,
+      "bug": "detailAttribute.customsTaxType(관부가세 부과 여부)가 NotNull로 거부 — 출고지가 해외 주소인 경우 필수",
+      "fixLocation": "N-3.51 STEP6 — types.ts/build-payload.ts/validate-payload.ts에 customsTaxType 추가, 값은 'INCLUDED'(CartPilot 판매가가 이미 원가+마진+수수료를 반영한 단일 최종가라 체크아웃에서 관부가세를 별도 청구하지 않는 기존 가격 구조와 일치)",
+      "verifiedVia": "GitHub Discussion #3569(공식 commerce-api-naver 계정, 그룹상품 관부가세 필드 변경 공지)에서 실제 enum 값(NOT_APPLICABLE/INCLUDED/EXCLUDED) 확인"
+    },
+    {
+      "attempt": 8,
+      "result": "SUCCESS — HTTP 200, status=SUBMITTED"
+    }
+  ],
+  "successResult": {
+    "httpStatus": 200,
+    "status": "SUBMITTED",
+    "originProductNo": 13664004406,
+    "smartstoreChannelProductNo": 13724445046,
+    "traceId": "ae85beda-9ab5-4fa7-9094-582152fc9112",
+    "durationMs": 8205
+  },
+  "postSuccessVerification": {
+    "method": "실제 Naver GET /v2/products/origin-products/{originProductNo} 호출(POST 응답만 신뢰하지 않는다는 work order 원칙)",
+    "verifiedVia": "새 진단 라우트 apps/admin/src/app/api/debug/naver-product-get-raw/route.ts(기존 naver-image-upload-raw와 동일한 토큰 게이팅 패턴, read-only GET이라 스토어에 부작용 없음)",
+    "result": "HTTP 200 — originProduct.statusType='SALE', name/salePrice/이미지/옵션/customsTaxType/productInfoProvidedNotice 등 제출한 payload와 정확히 일치하는 데이터가 실제로 Naver 서버에 존재함을 확인",
+    "note": "smartstoreChannelProduct.channelProductDisplayStatusType='SUSPENSION' — API 신규 등록 후 판매자센터(Wing) 검토 대기 상태로 보이며(등록 자체의 실패가 아님), 실제 노출/판매 전환 여부는 Wing에서 판매자가 직접 확인해야 한다(CartPilot이 대신 활성화하지 않는다)."
+  },
+  "finalPayload": {
+    "salePrice": 153120,
+    "stockQuantity": 5,
+    "leafCategoryId": "50021299",
+    "customsTaxType": "INCLUDED",
+    "minorPurchasable": true,
+    "afterServiceInfo": {
+      "afterServiceTelephoneNumber": "+821046458306",
+      "afterServiceGuideContent": "해외 구매대행으로 A/S 불가"
+    },
+    "productInfoProvidedNotice": {
+      "productInfoProvidedNoticeType": "WEAR",
+      "wear": {
+        "material": "100% Organic Cotton",
+        "color": "Bright Sky Blossom Plaid",
+        "size": "3 Years, 4 Years, 5 Years, 6 Years, 8 Years, 10 Years",
+        "manufacturer": "상품 상세페이지 참조",
+        "caution": "상품 상세페이지 참조",
+        "packDateText": "상품 상세페이지 참조",
+        "warrantyPolicy": "상품 상세페이지에 기재된 품질보증기준 및 소비자분쟁해결기준에 따릅니다.",
+        "afterServiceDirector": "해외 구매대행으로 A/S 불가"
+      }
+    },
+    "optionInfo": {
+      "optionCombinationGroupNames": { "optionGroupName1": "Size" },
+      "optionCombinations": [
+        { "optionName1": "3 Years", "price": 0, "stockQuantity": 5 },
+        { "optionName1": "4 Years", "price": 0, "stockQuantity": 5 },
+        { "optionName1": "5 Years", "price": 0, "stockQuantity": 5 },
+        { "optionName1": "6 Years", "price": 0, "stockQuantity": 5 },
+        { "optionName1": "8 Years", "price": 0, "stockQuantity": 5 },
+        { "optionName1": "10 Years", "price": 0, "stockQuantity": 5 }
+      ]
+    }
+  },
+  "regressionCoverage": "위 8개 bugfix 전부 packages/listing/src/naver/__tests__/에 회귀 테스트로 고정됨(option-name-contract.test.ts, validate-payload.test.ts N-3.50/N-3.51 STEP3 describe block, kc-certification-guard.test.ts, build-payload.test.ts) — 88/88 통과, 이번 sprint에서 KC guard(Hamster Cap 32/1/1)와 4-candidate negative fixture는 코드 변경 없이 그대로 유지됨.",
+  "excludedFromFixture": "Naver client_id/client_secret, DEBUG_NAVER_PROBE_TOKEN 등 자격증명 값은 포함하지 않음."
+}

@@ -1,5 +1,6 @@
 import type { Page } from "playwright-core";
 import type { CanonicalProductOptionGroup, CanonicalProductVariant } from "@commerce/shared";
+import { resolveSourcePrice, type PriceValidity } from "@commerce/pricing";
 
 export type ProductDataSource = "json-ld" | "microdata" | "open-graph" | "dom" | "shopify-json";
 
@@ -7,6 +8,17 @@ export interface ExtractedProductData {
   title?: string;
   brand?: string;
   price?: { amount: number; currency: string };
+  /** N-3.54(CPO 지시: "원본 가격을 못 읽었으면 가격을 계산하지 말고") — price가
+   * undefined인 이유를 구분한다. MISSING은 가격 필드 자체를 못 찾은 경우,
+   * INVALID는 가격 텍스트/값은 찾았지만 숫자로 해석 불가하거나 0 이하인
+   * 경우다(예: "가격 확인 필요" 같은 텍스트, 또는 price:"0") — 화면이 "원본
+   * 가격을 확인할 수 없습니다" 경고를 보여줄 때 이 구분으로 근거를 남긴다.
+   * price가 정의돼 있으면 항상 VALID다. */
+  priceValidity?: PriceValidity;
+  /** priceValidity가 INVALID일 때만 채운다 — 파싱에 실패한 원본 텍스트
+   * 그대로(지어내지 않는다, UI가 "이 텍스트를 찾았지만 인식하지 못했습니다"로
+   * 보여줄 수 있게). */
+  priceRawText?: string;
   sku?: string;
   description?: string;
   /** @deprecated optionGroups[].name으로 대체됐다 — Shopify처럼 값 목록/Variant까지
@@ -41,49 +53,27 @@ export interface ExtractedProductData {
   shopifyProductType?: string;
 }
 
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  "€": "EUR",
-  "$": "USD",
-  "£": "GBP",
-  "kr": "SEK",
-};
-
-/** N-3.17(CPO 지시: "27.200000 문제 — 데이터 계층부터 확인") — 사이트가 내려주는
- * 원본 가격 문자열/숫자를 그대로 저장하면 사이트 자체의 통화 변환기(멀티커런시
- * 앱 등)가 남긴 부동소수점 오차가 그대로 들어온다(실측: 27.2로 표시되는 상품의
- * 원본 값이 27.200000000000003이었다 — 27.2를 의도한 값이 아니라 계산 잔여
- * 오차다). 모든 통화의 소수부는 실무상 2자리를 넘지 않으므로, 추출 시점에 2자리로
- * 반올림해 이 잔여 오차를 제거한다 — 이건 "의미 있는 정밀도를 임의로 버리는 것"이
- * 아니라 애초에 의미 없는 부동소수점 잡음을 정리하는 것이다(사용자가 실제로 입력/
- * 확정한 값은 이 함수를 거치지 않는다 — CommerceWorkspace.updateOriginalPrice는
- * 별도 경로).
- */
-function roundPriceAmount(amount: number): number {
-  return Math.round(amount * 100) / 100;
-}
-
 /**
- * explicitCurrency는 schema.org Offer의 형제 필드(priceCurrency)에서 온 값이다 —
- * price 자체는 "2450"처럼 통화 기호 없는 순수 숫자인 경우가 흔해서, 있으면 이걸
- * 최우선으로 신뢰한다. 없을 때만 문자열 안의 기호/통화코드 추측으로 폴백한다.
- */
-function parsePrice(
+ * N-3.17(CPO 지시: "27.200000 문제") + N-3.54(CPO 지시: "원본 가격을 못
+ * 읽었으면 가격을 계산하지 말고, 계산했으면 그 가격의 근거가 무엇인지
+ * 보여줘야 한다") — 실제 파싱/반올림/통화 추측/유럽식 콤마 소수점 처리는
+ * packages/pricing의 resolveSourcePrice() 하나로 통일한다(크롤러 파싱과
+ * canonical-product.ts 조립, PriceEditor.tsx 등록 게이트가 전부 같은 함수를
+ * 쓴다 — 여기서만 다른 규칙을 쓰지 않는다). explicitCurrency는 schema.org
+ * Offer의 형제 필드(priceCurrency)에서 온 값이다 — price 자체는 "2450"처럼
+ * 통화 기호 없는 순수 숫자인 경우가 흔해서, 있으면 이걸 최우선으로 신뢰한다.
+ * VALID/INVALID/MISSING 전체 판정을 돌려준다 — extractProductData()가 price
+ * 소스 여러 개(json-ld/microdata/open-graph) 중 VALID를 우선하고, 전부
+ * 실패하면 INVALID(원문 있음) vs MISSING(원문 자체 없음)을 구분해서 고를 때
+ * 쓴다. */
+function resolvePriceField(
   raw: unknown,
   explicitCurrency?: string,
-): { amount: number; currency: string } | undefined {
-  if (raw == null) return undefined;
-  if (typeof raw === "number") return { amount: roundPriceAmount(raw), currency: explicitCurrency ?? "" };
-  if (typeof raw !== "string") return undefined;
-  const numMatch = /[\d.,]+/.exec(raw);
-  if (!numMatch) return undefined;
-  const amount = roundPriceAmount(Number(numMatch[0].replace(/,/g, "")));
-  if (!Number.isFinite(amount)) return undefined;
-  if (explicitCurrency) return { amount, currency: explicitCurrency.toUpperCase() };
-  for (const [symbol, code] of Object.entries(CURRENCY_SYMBOLS)) {
-    if (raw.includes(symbol)) return { amount, currency: code };
+): ReturnType<typeof resolveSourcePrice> {
+  if (raw != null && typeof raw !== "number" && typeof raw !== "string") {
+    return { validity: "MISSING", amount: null, currency: null };
   }
-  const codeMatch = /\b([A-Z]{3})\b/.exec(raw);
-  return { amount, currency: codeMatch?.[1] ?? "" };
+  return resolveSourcePrice(raw as number | string | null | undefined, explicitCurrency);
 }
 
 /** JSON-LD Product 노드에서 name/brand/offers/sku/description을 뽑는다.
@@ -111,15 +101,21 @@ export function extractFromJsonLd(html: string): ExtractedProductData | null {
           const offers = Array.isArray(product.offers) ? product.offers[0] : product.offers;
           const brand = typeof product.brand === "string" ? product.brand : product.brand?.name;
           const offerCurrency = offers?.priceCurrency ?? offers?.priceSpecification?.priceCurrency;
+          const priceResolution = offers
+            ? resolvePriceField(
+                offers.price ?? offers.priceSpecification?.price,
+                typeof offerCurrency === "string" ? offerCurrency : undefined,
+              )
+            : { validity: "MISSING" as const, amount: null, currency: null };
           productResult = {
             title: typeof product.name === "string" ? product.name : undefined,
             brand: typeof brand === "string" ? brand : undefined,
-            price: offers
-              ? parsePrice(
-                  offers.price ?? offers.priceSpecification?.price,
-                  typeof offerCurrency === "string" ? offerCurrency : undefined,
-                )
-              : undefined,
+            price:
+              priceResolution.validity === "VALID"
+                ? { amount: priceResolution.amount as number, currency: priceResolution.currency as string }
+                : undefined,
+            priceValidity: priceResolution.validity,
+            priceRawText: priceResolution.rawText,
             sku: typeof product.sku === "string" ? product.sku : undefined,
             description: typeof product.description === "string" ? product.description : undefined,
             options: [],
@@ -139,6 +135,140 @@ export function extractFromJsonLd(html: string): ExtractedProductData | null {
   return breadcrumbPath ? { ...productResult, breadcrumbPath } : productResult;
 }
 
+/**
+ * SmartStore 플로우 개선 STEP3(CPO 지시 — "ProductGroup/hasVariant 구조를 옵션
+ * extractor가 놓치고 있지 않은지 확인") — findProductNode()는 ProductGroup을
+ * 찾으면 offers가 있는 variant 하나만 뽑아 가격 계산에만 썼다(N-3.54).
+ * hasVariant[] 안의 나머지 variant들(색상/사이즈별 개별 Product, 각자
+ * color/size/offers를 가짐)은 그동안 완전히 버려졌다 — 옵션이 실제로 여러
+ * 개인 상품(예: Smallable의 색상+사이즈 조합)에서 optionGroups/variants가
+ * 항상 비어 있던 근본 원인이다. 여기서는 하나만 고르지 않고 hasVariant
+ * 전체를 순회해서 실제 옵션축(색상/사이즈)과 조합별 실제 가격/SKU/재고를
+ * 그대로 옮긴다 — 축 이름이 없는 값은 절대 지어내지 않는다(값이 없으면
+ * 그 축 자체를 만들지 않는다).
+ */
+function findProductGroupNode(node: unknown): Record<string, any> | null {
+  if (!node || typeof node !== "object") return null;
+  const obj = node as Record<string, any>;
+  if (Array.isArray(obj["@graph"])) {
+    for (const child of obj["@graph"]) {
+      const found = findProductGroupNode(child);
+      if (found) return found;
+    }
+    return null;
+  }
+  const type = obj["@type"];
+  const isProductGroup = type === "ProductGroup" || (Array.isArray(type) && type.includes("ProductGroup"));
+  if (isProductGroup && Array.isArray(obj.hasVariant)) return obj;
+  return null;
+}
+
+/** additionalProperty는 schema.org의 PropertyValue[] 형태(name/value)로 색상/
+ * 사이즈 외 임의 축을 표현하는 표준 방식이다 — 사이트가 실제로 이 형식을 쓸
+ * 때만 읽는다(형식이 다르면 그 축은 그냥 비운다, 추측하지 않는다). */
+function readAdditionalProperties(obj: Record<string, any>): Record<string, string> {
+  const result: Record<string, string> = {};
+  const props = Array.isArray(obj.additionalProperty) ? obj.additionalProperty : [];
+  for (const p of props) {
+    const name = typeof p?.name === "string" ? p.name.trim() : "";
+    const value = typeof p?.value === "string" ? p.value.trim() : typeof p?.value === "number" ? String(p.value) : "";
+    if (name && value) result[name] = value;
+  }
+  return result;
+}
+
+export function extractProductGroupOptions(
+  html: string,
+): { optionGroups: CanonicalProductOptionGroup[]; variants: CanonicalProductVariant[] } | null {
+  const scriptRe = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let groupNode: Record<string, any> | null = null;
+  for (const match of html.matchAll(scriptRe)) {
+    const raw = match[1]?.trim();
+    if (!raw) continue;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      continue;
+    }
+    const nodes = Array.isArray(parsed) ? parsed : [parsed];
+    for (const node of nodes) {
+      groupNode = findProductGroupNode(node);
+      if (groupNode) break;
+    }
+    if (groupNode) break;
+  }
+  if (!groupNode) return null;
+
+  // 각 variant Product에서 축(color/size/additionalProperty)을 그대로 읽는다 —
+  // 값을 정규화/추론하지 않고 원문 그대로 보존한다.
+  type RawVariant = { axes: Record<string, string>; sku?: string; price?: { amount: number; currency: string }; availability?: string };
+  const rawVariants: RawVariant[] = [];
+  for (const variant of groupNode.hasVariant) {
+    if (!variant || typeof variant !== "object") continue;
+    const v = variant as Record<string, any>;
+    const axes: Record<string, string> = {};
+    if (typeof v.color === "string" && v.color.trim()) axes["Color"] = v.color.trim();
+    if (typeof v.size === "string" && v.size.trim()) axes["Size"] = v.size.trim();
+    Object.assign(axes, readAdditionalProperties(v));
+    if (Object.keys(axes).length === 0) continue; // 축을 하나도 못 찾으면 이 variant는 옵션 조합에 못 쓴다 — 건너뛴다(지어내지 않는다).
+
+    const offers = Array.isArray(v.offers) ? v.offers[0] : v.offers;
+    const offerCurrency = offers?.priceCurrency ?? offers?.priceSpecification?.priceCurrency;
+    const priceResolution = offers
+      ? resolvePriceField(offers.price ?? offers.priceSpecification?.price, typeof offerCurrency === "string" ? offerCurrency : undefined)
+      : null;
+    const availabilityRaw = typeof offers?.availability === "string" ? offers.availability : undefined;
+    // "https://schema.org/InStock" → "InStock" (원문 마지막 세그먼트만, 지어내지 않는다).
+    const availability = availabilityRaw ? availabilityRaw.split("/").pop() : undefined;
+
+    rawVariants.push({
+      axes,
+      sku: typeof v.sku === "string" ? v.sku : undefined,
+      price: priceResolution?.validity === "VALID" ? { amount: priceResolution.amount as number, currency: priceResolution.currency as string } : undefined,
+      availability,
+    });
+  }
+  if (rawVariants.length === 0) return null;
+
+  // 축 이름별로 실제 등장한 값만 순서대로 모은다(중복 제거) — 등장하지 않은
+  // 조합을 채워넣지 않는다.
+  const axisNames: string[] = [];
+  const axisValues = new Map<string, string[]>();
+  for (const rv of rawVariants) {
+    for (const [axisName, value] of Object.entries(rv.axes)) {
+      if (!axisValues.has(axisName)) {
+        axisValues.set(axisName, []);
+        axisNames.push(axisName);
+      }
+      const values = axisValues.get(axisName)!;
+      if (!values.includes(value)) values.push(value);
+    }
+  }
+  const optionGroups: CanonicalProductOptionGroup[] = axisNames.map((name) => ({
+    name,
+    values: axisValues.get(name)!,
+  }));
+
+  const variants: CanonicalProductVariant[] = rawVariants.map((rv, i) => ({
+    id: `variant-${i}`,
+    optionValues: rv.axes,
+    sku: rv.sku,
+    price: rv.price,
+    // Sprint A-4(CPO 지시: "값이 있으면 어떤 의미인지 명시한다") — 여기서
+    // 읽는 offers.price는 schema.org 표준상 항상 그 variant의 절대 판매가다
+    // (기본가 대비 차액을 표현하는 필드가 아니다). computeVariantFinalPriceKrw의
+    // `mode ?? "ABSOLUTE"` 기본값에 암묵적으로 기대지 않고 이 추출 지점에서
+    // 직접 명시한다.
+    priceMode: rv.price ? "ABSOLUTE" : undefined,
+    stockQuantity: rv.availability === "InStock" ? undefined : rv.availability === "OutOfStock" ? 0 : undefined,
+    skuSource: rv.sku ? "ORIGINAL" : undefined,
+    priceSource: rv.price ? "ORIGINAL" : undefined,
+  }));
+
+  return { optionGroups, variants };
+}
+
 function findProductNode(node: unknown): Record<string, any> | null {
   if (!node || typeof node !== "object") return null;
   const obj = node as Record<string, any>;
@@ -151,7 +281,27 @@ function findProductNode(node: unknown): Record<string, any> | null {
   }
   const type = obj["@type"];
   const isProduct = type === "Product" || (Array.isArray(type) && type.includes("Product"));
-  return isProduct ? obj : null;
+  if (isProduct) return obj;
+  // N-3.54 STEP1(CPO 지시, 실측: Smallable) — 다색상/다변형 상품은 최상위
+  // JSON-LD 노드가 schema.org 표준 패턴대로 ProductGroup이고, 실제 가격은
+  // 그 노드 자체가 아니라 hasVariant[] 안의 개별 Product(각자 offers를
+  // 가짐)에 있다. 지금까지 이 함수가 ProductGroup을 전혀 인식하지 못해
+  // extractFromJsonLd()가 페이지 전체에서 null을 반환했다 — "가격이
+  // 0.00"이 아니라 "JSON-LD를 아예 못 읽었다"가 진짜 원인이었다. offers가
+  // 있는(=실제 가격 정보가 있는) variant를 우선하고, 없으면 이름/설명이라도
+  // 쓸 수 있게 첫 Product 후보로 폴백한다.
+  const isProductGroup = type === "ProductGroup" || (Array.isArray(type) && type.includes("ProductGroup"));
+  if (isProductGroup && Array.isArray(obj.hasVariant)) {
+    let fallback: Record<string, any> | null = null;
+    for (const variant of obj.hasVariant) {
+      const found = findProductNode(variant);
+      if (!found) continue;
+      if (found.offers) return found;
+      if (!fallback) fallback = found;
+    }
+    if (fallback) return fallback;
+  }
+  return null;
 }
 
 /** schema.org BreadcrumbList — itemListElement를 position 순으로 정렬해서
@@ -195,14 +345,15 @@ export function extractFromOpenGraph(html: string): Partial<ExtractedProductData
   const priceCurrency = get("product:price:currency") ?? get("og:price:currency");
   const brand = get("product:brand") ?? get("og:brand");
 
+  const priceResolution = resolvePriceField(priceAmount, priceCurrency);
+
   return {
     title,
     description,
     brand,
-    price:
-      priceAmount != null
-        ? { amount: roundPriceAmount(Number(priceAmount)), currency: priceCurrency ?? "" }
-        : undefined,
+    price: priceResolution.validity === "VALID" ? { amount: priceResolution.amount as number, currency: priceResolution.currency as string } : undefined,
+    priceValidity: priceAmount != null ? priceResolution.validity : undefined,
+    priceRawText: priceResolution.rawText,
   };
 }
 
@@ -239,11 +390,17 @@ async function extractFromMicrodata(page: Page): Promise<Partial<ExtractedProduc
     };
   });
 
+  const priceResolution = raw.priceRaw
+    ? resolvePriceField(raw.priceRaw, raw.currency)
+    : ({ validity: "MISSING" as const, amount: null, currency: null });
+
   return {
     title: raw.title,
     brand: raw.brand,
     sku: raw.sku,
-    price: raw.priceRaw ? parsePrice(raw.priceRaw, raw.currency) : undefined,
+    price: priceResolution.validity === "VALID" ? { amount: priceResolution.amount as number, currency: priceResolution.currency as string } : undefined,
+    priceValidity: raw.priceRaw ? priceResolution.validity : undefined,
+    priceRawText: priceResolution.rawText,
   };
 }
 
@@ -269,7 +426,14 @@ async function extractFromDom(page: Page): Promise<Partial<ExtractedProductData>
  * select를 옵션으로 잘못 채우는 오탐을 막는다. */
 async function extractOptionsFromDom(page: Page): Promise<CanonicalProductOptionGroup[]> {
   return page.evaluate(() => {
-    const SIZE_KEYWORD_PATTERN = /size|사이즈|taille|größe|grösse|misura|maat|talla|tamanho/i;
+    // SmartStore 플로우 개선 STEP3(CPO 지시 — "Color 옵션도 원인 조사에 포함")
+    // 실측 확인: 이 함수는 "사이즈"류 키워드만 인식했고 색상 select는 전혀
+    // 잡히지 않았다(COLOR_KEYWORD_PATTERN 자체가 없었다) — Color 단일 축
+    // 상품에서 옵션이 통째로 비어있던 근본 원인 중 하나다.
+    const AXIS_PATTERNS: { name: string; pattern: RegExp }[] = [
+      { name: "사이즈", pattern: /size|사이즈|taille|größe|grösse|misura|maat|talla|tamanho/i },
+      { name: "색상", pattern: /colou?r|색상|couleur|farbe|colore|kleur|色/i },
+    ];
     const PLACEHOLDER_PATTERN = /^(select|choose|please|선택|고르|--|—|-)/i;
     // 실측(lojadada.com "8-9Y - Sold Out"): 재고 상태 표시가 select option 텍스트에
     // 그대로 붙어나오는 사이트가 있다 — 사이즈 값 자체("8-9Y")는 진짜 원문이니
@@ -293,14 +457,16 @@ async function extractOptionsFromDom(page: Page): Promise<CanonicalProductOption
     const groups: { name: string; values: string[] }[] = [];
     document.querySelectorAll("select").forEach((select) => {
       const label = labelFor(select);
-      if (!SIZE_KEYWORD_PATTERN.test(label)) return;
+      const axis = AXIS_PATTERNS.find((a) => a.pattern.test(label));
+      if (!axis) return;
+      if (groups.some((g) => g.name === axis.name)) return; // 같은 축을 두 번 채택하지 않는다(중복 select 방지).
       const values = Array.from(select.querySelectorAll("option"))
         .map((opt) => (opt.textContent?.trim() ?? "").replace(SOLD_OUT_SUFFIX_PATTERN, "").trim())
         .filter((v) => v.length > 0 && !PLACEHOLDER_PATTERN.test(v));
       // 값이 하나도 안 남거나 딱 1개뿐이면(선택지가 아니라 사실상 고정값) 굳이
       // "옵션"으로 만들 필요가 없다 — 진짜 여러 값 중 고르는 select만 채택한다.
       if (values.length < 2) return;
-      groups.push({ name: "사이즈", values });
+      groups.push({ name: axis.name, values });
     });
     return groups;
   });
@@ -373,9 +539,14 @@ export async function extractProductData(
   const microdata = await extractFromMicrodata(page);
   const og = extractFromOpenGraph(html);
   const dom = await extractFromDom(page);
-  const domOptionGroups = await extractOptionsFromDom(page);
-  const textOptionGroups = domOptionGroups.length === 0 ? await extractOptionsFromDescriptionText(page) : [];
-  const resolvedOptionGroups = domOptionGroups.length > 0 ? domOptionGroups : textOptionGroups;
+  // SmartStore 플로우 개선 STEP3 — ProductGroup/hasVariant가 있으면 조합별
+  // 실제 색상/사이즈/가격/SKU까지 나온다(DOM select 스캔보다 훨씬 정확한
+  // 소스라 있으면 최우선). 없으면 기존 DOM select → 본문 텍스트 순으로
+  // 폴백한다(회귀 없음, 우선순위만 추가).
+  const productGroupOptions = extractProductGroupOptions(html);
+  const domOptionGroups = productGroupOptions ? [] : await extractOptionsFromDom(page);
+  const textOptionGroups = domOptionGroups.length === 0 && !productGroupOptions ? await extractOptionsFromDescriptionText(page) : [];
+  const resolvedOptionGroups = productGroupOptions?.optionGroups ?? (domOptionGroups.length > 0 ? domOptionGroups : textOptionGroups);
 
   const sources: Record<string, ProductDataSource> = {};
   const pick = <K extends keyof ExtractedProductData>(
@@ -400,10 +571,32 @@ export async function extractProductData(
     return undefined;
   };
 
+  // N-3.54(CPO 지시) — price는 일반 pick()과 다른 규칙이 필요하다: 소스가
+  // "값 없음"(undefined)이 아니라 "값은 찾았는데 파싱 실패"(priceValidity:
+  // INVALID)일 수도 있기 때문이다. json-ld → microdata → open-graph 순으로
+  // VALID를 우선 채택하고, VALID가 하나도 없으면 원문이라도 있는 첫 INVALID를
+  // 채택해(UI에 원문을 보여주기 위해) MISSING과 구분한다.
+  const priceCandidates: Array<{
+    source: ProductDataSource;
+    price?: { amount: number; currency: string };
+    priceValidity?: PriceValidity;
+    priceRawText?: string;
+  }> = [
+    { source: "json-ld", price: jsonLd?.price, priceValidity: jsonLd?.priceValidity, priceRawText: jsonLd?.priceRawText },
+    { source: "microdata", price: microdata.price, priceValidity: microdata.priceValidity, priceRawText: microdata.priceRawText },
+    { source: "open-graph", price: og.price, priceValidity: og.priceValidity, priceRawText: og.priceRawText },
+  ];
+  const validPriceCandidate = priceCandidates.find((c) => c.price != null);
+  const invalidPriceCandidate = priceCandidates.find((c) => c.priceValidity === "INVALID");
+  if (validPriceCandidate) sources.price = validPriceCandidate.source;
+  else if (invalidPriceCandidate) sources.price = invalidPriceCandidate.source;
+
   const data: ExtractedProductData = {
     title: pick("title"),
     brand: pick("brand"),
-    price: pick("price"),
+    price: validPriceCandidate?.price,
+    priceValidity: validPriceCandidate ? "VALID" : invalidPriceCandidate ? "INVALID" : "MISSING",
+    priceRawText: validPriceCandidate ? undefined : invalidPriceCandidate?.priceRawText,
     sku: pick("sku"),
     description: pick("description"),
     material: pick("material"),
@@ -414,10 +607,16 @@ export async function extractProductData(
     // Sprint A-10(작업3) — select가 없으면 상세설명 본문 텍스트 스캔(textOptionGroups)으로
     // 폴백한다.
     optionGroups: resolvedOptionGroups,
+    // SmartStore 플로우 개선 STEP3 — DOM select 스캔은 이름/값만 알 뿐 조합별
+    // 가격/SKU는 절대 모른다(그런 정보가 select 옵션 텍스트에 없다) — variants는
+    // ProductGroup/hasVariant처럼 실제 조합별 데이터가 있을 때만 채운다. 없으면
+    // 빈 배열로 둔다(CanonicalProductVariant 주석의 "옵션은 있는데 조합 정보를
+    // 못 가져옴" 상태 — 임의로 만들어내지 않는다).
+    variants: productGroupOptions?.variants ?? [],
     breadcrumbPath: jsonLd?.breadcrumbPath,
     jsonLdCategory: jsonLd?.jsonLdCategory,
   };
-  if (resolvedOptionGroups.length > 0) sources.optionGroups = "dom";
+  if (resolvedOptionGroups.length > 0) sources.optionGroups = productGroupOptions ? "json-ld" : "dom";
 
   return { data, sources };
 }

@@ -145,9 +145,39 @@ export function ComparisonShopSearch({
       </button>
       {error && <p className="text-xs text-error">{error}</p>}
       {queriedAt && <p className="text-[10px] text-text-tertiary">조회 시점: {queriedAt}</p>}
-      {results && <ResultBreakdown results={results} />}
+      {results && <ResultHeadline results={results} />}
       {results && <ResultTable results={results} krwRates={krwRates} />}
+      {results && <ResultBreakdown results={results} />}
     </CollapsibleSection>
+  );
+}
+
+/** Sprint P2(CPO 지시, 2026-08-19: "검색 사이트 12 / 정상 12 / 후보 없음 7 /
+ * 매칭 성공 0" 같은 raw count가 셀러에게 의미 없다 — 결과중심 메시지로") —
+ * "몇 개 사이트를 뒤졌는지"가 아니라 "비교할 만한 상품을 찾았는지"만 먼저
+ * 보여준다. 임계값은 CPO 지시(90% 이상만 노출) 그대로 confidence>=0.9를
+ * 쓴다 — matchLevel 버킷(0.95/0.8/0.6)과는 다른 값이라 별도로 필터링한다.
+ * confidence 자체(match.ts scoreCandidateMatch)는 이미 모델명/색상/SKU/
+ * URL slug/브랜드 다중 신호를 결합한 composite score다 — 카테고리/이미지/
+ * 옵션/가격 신호는 아직 candidate 데이터 자체에 없어(추출한 적 없음) 이번
+ * UI 정리 범위에서는 추가하지 않는다(새 데이터 추출 파이프라인이 필요한
+ * 별도 스코프 — CPO 확인 필요, 임의로 추측 신호를 넣지 않는다는 이 파일의
+ * 기존 원칙과 같은 이유). */
+function ResultHeadline({ results }: { results: SearchResult[] }) {
+  const highConfidence = results.flatMap((r) =>
+    r.candidates.filter((c) => c.confidence >= 0.9).map((c) => ({ ...c, shopName: r.shopName })),
+  );
+  if (highConfidence.length === 0) {
+    return (
+      <p className="rounded-md border border-border bg-background px-3 py-2 text-xs text-text-secondary">
+        비교 가능한 동일/유사 상품을 찾지 못했습니다 — 아래 상세 통계에서 사이트별 상태를 확인할 수 있습니다.
+      </p>
+    );
+  }
+  return (
+    <p className="rounded-md border border-success/30 bg-success-soft px-3 py-2 text-xs text-success">
+      비교 가능한 동일/유사 상품이 {highConfidence.length}건 발견되었습니다 (매칭 신뢰도 90% 이상).
+    </p>
   );
 }
 
@@ -155,7 +185,11 @@ export function ComparisonShopSearch({
  * 안 된 건지/사이트가 미지원인지/후보가 없는 건지/매칭에 실패한 건지 구분해서
  * 보여준다." curl로 백엔드가 동작하는 걸 이미 여러 번 확인한 것과 "CEO가 화면
  * 보고 뭐가 문제인지 알 수 있는 것"은 다른 문제라는 지적을 반영 — 신규 API 호출
- * 없이 기존 results 배열만으로 5개 지표를 계산한다. */
+ * 없이 기존 results 배열만으로 5개 지표를 계산한다.
+ * Sprint P2(CPO 지시, 2026-08-19) — 이 raw count 자체가 "셀러에게 의미
+ * 없다"는 지적을 받아 기본 화면에서는 숨기고, 접었다 펼 수 있는 "상세 통계"로
+ * 내렸다(완전히 지우지는 않는다 — 검색이 왜 0건이었는지 진단할 때는 여전히
+ * 필요한 정보라 N-3.13 P0의 원래 목적은 유지). */
 function ResultBreakdown({ results }: { results: SearchResult[] }) {
   const total = results.length;
   const ok = results.filter((r) => r.status === "ok").length;
@@ -167,13 +201,15 @@ function ResultBreakdown({ results }: { results: SearchResult[] }) {
     0,
   );
   return (
-    <div className="grid grid-cols-2 gap-2 rounded-md border border-border bg-background p-2 text-[11px] sm:grid-cols-5">
-      <Stat label="검색한 사이트" value={total} />
-      <Stat label="정상 응답" value={ok} />
-      <Stat label="미지원/오류" value={unsupported + errored} />
-      <Stat label="후보 없음" value={noCandidates} />
-      <Stat label="매칭 성공(🟢)" value={matched} highlight={matched > 0} />
-    </div>
+    <CollapsibleSection title="상세 통계" defaultOpen={false}>
+      <div className="grid grid-cols-2 gap-2 rounded-md border border-border bg-background p-2 text-[11px] sm:grid-cols-5">
+        <Stat label="검색한 사이트" value={total} />
+        <Stat label="정상 응답" value={ok} />
+        <Stat label="미지원/오류" value={unsupported + errored} />
+        <Stat label="후보 없음" value={noCandidates} />
+        <Stat label="매칭 성공(🟢)" value={matched} highlight={matched > 0} />
+      </div>
+    </CollapsibleSection>
   );
 }
 
@@ -189,24 +225,53 @@ function Stat({ label, value, highlight }: { label: string; value: number; highl
 /** N-3.13 P0(CPO 지시) — "판매처/국가/상품/원본가격/통화/KRW/매칭상태" 컬럼의
  * 표로 재구성. 이전엔 사이트별 카드+리스트였는데, 여러 사이트 결과를 한눈에
  * 비교하기 어렵다는 지적을 반영해 후보 단위 한 행으로 펼친다(사이트에 후보가
- * 없거나 미지원/오류여도 그 사유가 보이는 한 행을 남긴다 — 조용히 사라지지 않게). */
+ * 없거나 미지원/오류여도 그 사유가 보이는 한 행을 남긴다 — 조용히 사라지지 않게).
+ * Sprint P2(CPO 지시, 2026-08-19: "90% 미만은 숨긴다") — 기본값은 confidence
+ * >= 0.9인 행만 보여준다. 미지원/오류/후보없음/저매칭 행은 "전체 보기"를
+ * 눌러야 보인다 — 완전히 삭제하지 않는다(N-3.13 P0가 이미 "조용히 사라지지
+ * 않게"를 요구했었다, 그 원칙과 이번 CPO 지시를 둘 다 만족시키는 절충). */
 function ResultTable({ results, krwRates }: { results: SearchResult[]; krwRates: Record<string, number> | null }) {
+  const [showAll, setShowAll] = useState(false);
   type Row = { shopId: string; shopName: string; shopCountry?: string | null; candidate: Candidate | null; note?: string };
-  const rows: Row[] = [];
+  const allRows: Row[] = [];
   for (const r of results) {
     if (r.status === "unsupported") {
-      rows.push({ shopId: r.shopId, shopName: r.shopName, shopCountry: r.shopCountry, candidate: null, note: "지원되지 않는 사이트" });
+      allRows.push({ shopId: r.shopId, shopName: r.shopName, shopCountry: r.shopCountry, candidate: null, note: "지원되지 않는 사이트" });
     } else if (r.status === "error") {
-      rows.push({ shopId: r.shopId, shopName: r.shopName, shopCountry: r.shopCountry, candidate: null, note: `검색 실패: ${r.error ?? ""}` });
+      allRows.push({ shopId: r.shopId, shopName: r.shopName, shopCountry: r.shopCountry, candidate: null, note: `검색 실패: ${r.error ?? ""}` });
     } else if (r.candidates.length === 0) {
-      rows.push({ shopId: r.shopId, shopName: r.shopName, shopCountry: r.shopCountry, candidate: null, note: "일치하는 후보 없음" });
+      allRows.push({ shopId: r.shopId, shopName: r.shopName, shopCountry: r.shopCountry, candidate: null, note: "일치하는 후보 없음" });
     } else {
       for (const c of r.candidates) {
-        rows.push({ shopId: r.shopId, shopName: r.shopName, shopCountry: r.shopCountry, candidate: c });
+        allRows.push({ shopId: r.shopId, shopName: r.shopName, shopCountry: r.shopCountry, candidate: c });
       }
     }
   }
+  const highConfidenceRows = allRows.filter((row) => (row.candidate?.confidence ?? 0) >= 0.9);
+  const rows = showAll ? allRows : highConfidenceRows;
+  const hiddenCount = allRows.length - highConfidenceRows.length;
+  if (rows.length === 0 && !showAll) {
+    return hiddenCount > 0 ? (
+      <button
+        type="button"
+        onClick={() => setShowAll(true)}
+        className="text-xs text-primary underline hover:text-primary-hover"
+      >
+        90% 미만 매칭/미지원/오류 {hiddenCount}건 보기
+      </button>
+    ) : null;
+  }
   return (
+    <div className="space-y-1.5">
+      {hiddenCount > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          className="text-xs text-primary underline hover:text-primary-hover"
+        >
+          {showAll ? "90% 이상만 보기" : `90% 미만 매칭/미지원/오류 ${hiddenCount}건 더 보기`}
+        </button>
+      )}
     <div className="overflow-x-auto rounded-md border border-border">
       <table className="w-full min-w-[640px] border-collapse text-left text-[11px]">
         <thead>
@@ -267,6 +332,7 @@ function ResultTable({ results, krwRates }: { results: SearchResult[]; krwRates:
           })}
         </tbody>
       </table>
+    </div>
     </div>
   );
 }

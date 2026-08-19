@@ -2279,7 +2279,10 @@ function CommerceAccountManager({
               평평한 폼 하나로 합친다(상태는 CommerceAccordionShell 헤더의
               StatusBadge가 전담). */}
           <div className="rounded-lg border border-border bg-surface px-4 py-3">
-            <p className="mb-3 text-xs font-semibold text-text-secondary">연결 정보</p>
+            <p className="mb-3 text-xs font-semibold text-text-secondary">API 연결 정보</p>
+            <p className="mb-3 -mt-2 text-[11px] text-text-tertiary">
+              쿠팡 Open API 인증(서명)에 쓰이는 값입니다 — 이 3개만 있으면 연결 테스트가 통과합니다.
+            </p>
             <div className="space-y-3 text-sm">
               <Field label="Access Key" hint={account.accessKeyMasked ? `저장됨 (${account.accessKeyMasked})` : "미저장"}>
                 <input
@@ -2309,6 +2312,21 @@ function CommerceAccountManager({
                   className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
                 />
               </Field>
+            </div>
+          </div>
+          {/* C-1-A(CPO 지시: "API 연결 정보와 판매자 등록정보 UI 분리") —
+           * vendor_user_id(Wing 계정 ID)는 HMAC 서명/연결 테스트에는 전혀 쓰이지
+           * 않지만(build-payload.ts의 CoupangPayload.vendorUserId), 실제 상품
+           * 등록 시 쿠팡 API가 요구하는 필수값이라 삭제하면 LIVE 등록이 막힌다
+           * (register/route.ts missingSellerConfigFields → CP005). 값은 그대로
+           * 두고 "연결 정보" 카드에서만 분리해 오해를 없앤다. */}
+          <div className="rounded-lg border border-border bg-surface px-4 py-3">
+            <p className="mb-3 text-xs font-semibold text-text-secondary">상품 등록에 필요한 판매자 정보</p>
+            <p className="mb-3 -mt-2 text-[11px] text-text-tertiary">
+              API 연결(인증)에는 쓰이지 않지만, 실제 상품을 등록할 때 쿠팡이 요구하는 값입니다 — 비어 있으면 등록이
+              차단됩니다.
+            </p>
+            <div className="space-y-3 text-sm">
               <Field label="Wing 계정 ID" hint="Wing 로그인 ID — API로 조회할 수 없어 직접 입력해야 합니다">
                 <input
                   type="text"
@@ -2317,37 +2335,39 @@ function CommerceAccountManager({
                   className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
                 />
               </Field>
-              <div className="flex flex-wrap gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={handleSaveAccount}
-                  disabled={accountSaving}
-                  className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
-                >
-                  {accountSaving ? "저장 중…" : "저장"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void checkCoupang()}
-                  disabled={coupangChecking}
-                  className="rounded-md border border-border px-4 py-2 text-sm font-medium text-text-secondary hover:bg-background disabled:opacity-50"
-                >
-                  {coupangChecking ? "확인 중…" : "연결 테스트"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleClearCoupang()}
-                  disabled={clearing}
-                  className="rounded-md border border-error px-4 py-2 text-sm font-medium text-error hover:bg-error/5 disabled:opacity-50"
-                >
-                  {clearing ? "삭제 중…" : "연결 정보 삭제"}
-                </button>
-              </div>
-              <p className="text-[11px] text-text-tertiary">
-                &ldquo;연결 정보 삭제&rdquo;는 이 화면에 저장된 값만 지웁니다 — 배포 환경 변수로도 설정돼 있다면 계속
-                연결됨으로 표시될 수 있습니다.
-              </p>
             </div>
+          </div>
+          <div className="rounded-lg border border-border bg-surface px-4 py-3">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleSaveAccount}
+                disabled={accountSaving}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+              >
+                {accountSaving ? "저장 중…" : "저장"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void checkCoupang()}
+                disabled={coupangChecking}
+                className="rounded-md border border-border px-4 py-2 text-sm font-medium text-text-secondary hover:bg-background disabled:opacity-50"
+              >
+                {coupangChecking ? "확인 중…" : "연결 테스트"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleClearCoupang()}
+                disabled={clearing}
+                className="rounded-md border border-error px-4 py-2 text-sm font-medium text-error hover:bg-error/5 disabled:opacity-50"
+              >
+                {clearing ? "삭제 중…" : "연결 정보 삭제"}
+              </button>
+            </div>
+            <p className="mt-2 text-[11px] text-text-tertiary">
+              저장은 위 두 카드의 값을 한 번에 저장합니다. &ldquo;연결 정보 삭제&rdquo;는 이 화면에 저장된 값만
+              지웁니다 — 배포 환경 변수로도 설정돼 있다면 계속 연결됨으로 표시될 수 있습니다.
+            </p>
           </div>
         </div>
       </CommerceAccordionShell>

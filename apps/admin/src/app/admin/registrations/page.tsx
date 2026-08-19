@@ -1,7 +1,8 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { ComplianceReport } from "@commerce/listing";
 import type { RegistrationAttemptRecord } from "@/app/api/admin/registrations/route";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -48,11 +49,67 @@ function formatJson(value: unknown): string {
   return JSON.stringify(value, null, 2);
 }
 
+type DetailContentItem = { kind: "text"; text: string } | { kind: "image"; url: string };
+
+/**
+ * B-3(CPO 지시: "이미 등록된 상품을 다시 보기 → 현재 설정과 실제 등록 이력을
+ * 구분해서 표시") — registration_attempts.payload는 등록 시점에 이미 완전히
+ * resolve된 상세페이지 내용을 담고 있다(공통이미지 URL 포함, DB 마이그레이션
+ * 불필요 — B-3 조사에서 확인). 여기서는 그걸 사람이 읽을 수 있게만 풀어준다.
+ * Coupang(items[0].contents 배열)과 SmartStore(originProduct.detailContent
+ * HTML 문자열)는 저장 형태가 달라 플랫폼별로 파싱한다.
+ */
+function extractDetailContent(platform: string, payload: unknown): DetailContentItem[] {
+  if (!payload || typeof payload !== "object") return [];
+
+  if (platform === "coupang") {
+    const items = (payload as { items?: unknown }).items;
+    if (!Array.isArray(items) || !items[0]) return [];
+    const contents = (items[0] as { contents?: unknown }).contents;
+    if (!Array.isArray(contents)) return [];
+    const result: DetailContentItem[] = [];
+    for (const block of contents) {
+      const details = (block as { contentDetails?: unknown }).contentDetails;
+      if (!Array.isArray(details)) continue;
+      for (const detail of details) {
+        const d = detail as { detailType?: string; content?: string };
+        if (!d.content) continue;
+        result.push(d.detailType === "IMAGE" ? { kind: "image", url: d.content } : { kind: "text", text: d.content });
+      }
+    }
+    return result;
+  }
+
+  if (platform === "smartstore") {
+    const originProduct = (payload as { originProduct?: unknown }).originProduct;
+    const html = originProduct && typeof originProduct === "object" ? (originProduct as { detailContent?: unknown }).detailContent : undefined;
+    if (typeof html !== "string" || !html) return [];
+    const result: DetailContentItem[] = [];
+    const tagPattern = /<p>([\s\S]*?)<\/p>|<img src="([^"]*)"/g;
+    let match: RegExpExecArray | null;
+    while ((match = tagPattern.exec(html)) !== null) {
+      if (match[1] !== undefined) {
+        const text = match[1].replace(/<br\s*\/?>/g, "\n").trim();
+        if (text) result.push({ kind: "text", text });
+      } else if (match[2]) {
+        result.push({ kind: "image", url: match[2] });
+      }
+    }
+    return result;
+  }
+
+  return [];
+}
+
 /**
  * 등록 이력 — "같은 URL 3회 연속 성공" 같은 회귀 확인, 실패 원인 추적(Payload/
  * Response/ErrorCode/TraceId) 둘 다 이 화면 하나로 한다.
+ * B-3(CPO 지시) — ?snapshotId= 가 있으면 그 상품의 이력만 보여준다(상품 등록
+ * 화면에서 "실제 등록 이력 보기" 링크로 들어올 때 쓴다).
  */
-export default function AdminRegistrationsPage() {
+function AdminRegistrationsPageInner() {
+  const searchParams = useSearchParams();
+  const snapshotId = searchParams.get("snapshotId");
   const [registrations, setRegistrations] = useState<RegistrationAttemptRecord[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,7 +117,8 @@ export default function AdminRegistrationsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/admin/registrations")
+    const url = snapshotId ? `/api/admin/registrations?snapshotId=${encodeURIComponent(snapshotId)}` : "/api/admin/registrations";
+    fetch(url)
       .then(async (res) => {
         if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "불러오기 실패");
         return res.json() as Promise<{ registrations: RegistrationAttemptRecord[] }>;
@@ -79,13 +137,17 @@ export default function AdminRegistrationsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [snapshotId]);
 
   return (
     <>
       <PageHeader
-        title="등록 이력"
-        subtitle="모든 LIVE 등록 시도(성공/실패)를 시간 역순으로 보여줍니다. 행을 클릭하면 Payload/Response 상세를 볼 수 있습니다."
+        title={snapshotId ? "등록 이력 (이 상품만)" : "등록 이력"}
+        subtitle={
+          snapshotId
+            ? "이 상품의 등록 시도만 보여줍니다. 아래 Payload는 그 시도 당시 실제로 제출된 값입니다 — 지금 설정과 다를 수 있습니다."
+            : "모든 LIVE 등록 시도(성공/실패)를 시간 역순으로 보여줍니다. 행을 클릭하면 Payload/Response 상세를 볼 수 있습니다."
+        }
         actions={
           <Link
             href="/admin/dashboard"
@@ -117,6 +179,7 @@ export default function AdminRegistrationsPage() {
             {registrations.map((r) => {
               const compliance = r.compliance_report as ComplianceReport | null;
               const brandResolution = r.brand_resolution as BrandResolutionRecord | null;
+              const detailContent = expandedId === r.id ? extractDetailContent(r.platform, r.payload) : [];
               return (
               <Fragment key={r.id}>
                 <tr
@@ -141,6 +204,7 @@ export default function AdminRegistrationsPage() {
                 {expandedId === r.id && (
                   <tr className="border-t border-border bg-background">
                     <td colSpan={8} className="px-3 py-3">
+                      <p className="text-xs text-text-secondary">Job Key: {r.job_key ?? "—"}</p>
                       <p className="text-xs text-text-secondary">TraceId: {r.trace_id ?? "—"}</p>
                       {compliance && (
                         <div className="mt-2 rounded border border-border bg-surface p-2">
@@ -231,6 +295,34 @@ export default function AdminRegistrationsPage() {
                           </p>
                         </div>
                       )}
+                      {detailContent.length > 0 && (
+                        <div className="mt-2 rounded border border-border bg-surface p-2">
+                          <p className="text-xs font-medium text-text-secondary">
+                            이 등록 시도에 실제 제출된 상세페이지 내용
+                          </p>
+                          <p className="mt-0.5 text-[10px] text-text-tertiary">
+                            현재 설정(공통 이미지/템플릿)이 바뀌었더라도 아래 내용은 이 등록 시도 당시 실제로
+                            제출된 값 그대로입니다.
+                          </p>
+                          <div className="mt-2 space-y-2">
+                            {detailContent.map((item, i) =>
+                              item.kind === "image" ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  key={i}
+                                  src={item.url}
+                                  alt="등록 시 제출된 상세페이지 이미지"
+                                  className="max-h-40 rounded border border-border"
+                                />
+                              ) : (
+                                <p key={i} className="whitespace-pre-wrap text-[11px] text-text-secondary">
+                                  {item.text}
+                                </p>
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      )}
                       <div className="mt-2 grid grid-cols-2 gap-3">
                         <div>
                           <p className="text-xs font-medium text-text-secondary">Payload</p>
@@ -259,5 +351,14 @@ export default function AdminRegistrationsPage() {
       </div>
       </PageContainer>
     </>
+  );
+}
+
+/** useSearchParams는 Suspense 경계 안에서만 쓸 수 있다(Next.js App Router 요구사항). */
+export default function AdminRegistrationsPage() {
+  return (
+    <Suspense fallback={<PageContainer size="xl" className="text-sm" />}>
+      <AdminRegistrationsPageInner />
+    </Suspense>
   );
 }

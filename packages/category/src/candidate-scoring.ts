@@ -53,6 +53,15 @@ const DOMAIN_PROFILES: Record<string, DomainProfile> = {
   // 확인: 캔들: ["캔들","향초","디퓨저"]로 좁히면 가구/인테리어 > 인테리어소품 >
   // 아로마/캔들용품 하위 8개 leaf만 정확히 매칭되고 오탐 0건).
   캔들: { expect: ["캔들", "향초", "디퓨저"], conflict: [...FOOD_KEYWORDS, "가전", "의류", "신발", "가방"] },
+  // SmartStore 플로우 개선 STEP1 — product-resolver.ts에 새로 추가한 4개
+  // productType의 대응 항목. expect 문자열은 실제 Naver leaf category 4999개
+  // 전수조사(fetchNaverAllCategories)로 확인된 것만 썼다(캔들 항목과 같은
+  // 원칙) — 예: "가구" 356개, "디지털" 693개, "반려동물" 121개, "문구" 151개
+  // leaf에서 실제로 등장함을 확인.
+  가구: { expect: ["가구"], conflict: [...FOOD_KEYWORDS, "의류", "신발", "가방", "완구"] },
+  "가전/디지털": { expect: ["디지털", "가전"], conflict: [...FOOD_KEYWORDS, "의류", "신발", "가방", "완구", "가구"] },
+  반려동물용품: { expect: ["반려동물"], conflict: [...FOOD_KEYWORDS.filter((k) => k !== "간식"), "의류", "신발", "가방"] },
+  "문구/사무용품": { expect: ["문구"], conflict: [...FOOD_KEYWORDS, "의류", "신발", "가방", "완구"] },
 };
 
 /** CPO 지시(2026-08-07, kids hat 실측 사례) — category-resolver-v3.ts가

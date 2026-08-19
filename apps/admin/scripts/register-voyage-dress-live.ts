@@ -26,6 +26,7 @@ const product: CanonicalProduct = {
   title: field("Voyage Dress in Bright Sky Blossom Plaid by Misha & Puff", "shopify-json" as FieldSource),
   brand: field("Misha & Puff", "shopify-json" as FieldSource),
   price: field({ amount: 88, currency: "GBP" }, "shopify-json" as FieldSource),
+  priceValidity: "VALID",
   sku: field(""),
   description: field(
     "Voyage Dress by Misha & Puff. A dress in lightweight organic cotton plaid, with a woven textured design, rounded collar, elbow-length sleeves, gathered waist, ruffle trim with edge detail, and a double-breasted corozo button closure. Lined in cotton voile and finished with French seams.",
@@ -142,6 +143,11 @@ async function main() {
     deliveryCompany: "EPOST",
     warrantyPolicy: "상품 상세페이지에 기재된 품질보증기준 및 소비자분쟁해결기준에 따릅니다.",
     afterServiceDirector: "해외 구매대행으로 A/S 불가",
+    // N-3.51 STEP2 — afterServiceDirector(고시용 자유 텍스트)와 별개 필드.
+    // register route가 실제로 쓸 SellerProfile.companyContactNumber(GET
+    // /api/settings/coupang/profiles로 실측 확인한 값)를 여기도 넣어야
+    // 로컬 게이트가 실제 서버 판정과 일치한다.
+    afterServiceTelephoneNumber: "+821046458306",
   });
   const localValidation = validateNaverPayload(
     localPayload,
@@ -162,6 +168,7 @@ async function main() {
       deliveryCompany: "EPOST",
       warrantyPolicy: "상품 상세페이지에 기재된 품질보증기준 및 소비자분쟁해결기준에 따릅니다.",
       afterServiceDirector: "해외 구매대행으로 A/S 불가",
+      afterServiceTelephoneNumber: "+821046458306",
     },
     false,
   );

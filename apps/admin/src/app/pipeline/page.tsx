@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { CanonicalProduct, PlatformId } from "@commerce/shared";
+import Link from "next/link";
+import { backfillCanonicalProduct, type CanonicalProduct, type PlatformId } from "@commerce/shared";
 import type { CategorySelection } from "@commerce/category";
 import { defaultDetailBlocks, type DetailPageBlock } from "@commerce/listing";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -69,6 +70,15 @@ export default function PipelinePage() {
   // id가 없으면(첫 저장 전) POST가 insert, 있으면 update로 동작한다(upsert 패턴 —
   // api/snapshots/_lib/snapshot.ts 참고).
   const [snapshotId, setSnapshotId] = useState<string | null>(null);
+  // Sprint B-1(CPO 지시) — 스냅샷과 1:1로 생기는 사람이 읽을 수 있는 작업번호
+  // ("JOB-260819-001"). 스냅샷 최초 저장(insert) 응답에서만 받고, 이후
+  // 업데이트에서는 서버가 그대로 유지한다(재발급 없음).
+  const [jobKey, setJobKey] = useState<string | null>(null);
+  /** B-3(CPO 지시: "이미 등록된 상품을 다시 보기 → 현재 설정과 실제 등록
+   * 이력을 구분해서 표시") — REGISTERED 상태면 아래 미리보기가 "현재 설정"
+   * 기준 재계산이라는 걸 알리고, 실제 등록 시 제출된 값(registration_attempts)
+   * 을 보러 갈 수 있는 링크를 보여준다. */
+  const [snapshotStatus, setSnapshotStatus] = useState<"IN_PROGRESS" | "REGISTERED" | null>(null);
   // Detail Page Editor(2026-08-04) — product/items와 같은 이유로 여기서 소유한다
   // (controlled, CommerceWorkspace에 그대로 내려준다). 기본값은
   // defaultDetailBlocks()로, 사용자가 에디터를 안 열면 기존 하드코딩 조립
@@ -109,6 +119,8 @@ export default function PipelinePage() {
           if (data.ok && data.snapshot) {
             const ws = data.snapshot.workspace;
             setSnapshotId(data.snapshot.id);
+            setJobKey(data.snapshot.jobKey ?? null);
+            setSnapshotStatus(data.snapshot.status);
             setUrl(ws.url);
             setResult({
               metadata: ws.pipelineResponse.metadata,
@@ -117,7 +129,7 @@ export default function PipelinePage() {
               storageNote: ws.pipelineResponse.storageNote,
               canonicalProduct: ws.canonicalProduct,
             });
-            setProduct(ws.canonicalProduct);
+            setProduct(backfillCanonicalProduct(ws.canonicalProduct));
             setItems(ws.items);
             setThumbnails(ws.thumbnails ?? {});
             setRepresentativeId(ws.representativeId);
@@ -147,7 +159,7 @@ export default function PipelinePage() {
           if (saved.result && saved.product) {
             setUrl(saved.url ?? "");
             setResult(saved.result);
-            setProduct(saved.product);
+            setProduct(backfillCanonicalProduct(saved.product));
             setItems(saved.items ?? []);
             setThumbnails(saved.thumbnails ?? {});
             setRepresentativeId(saved.representativeId ?? null);
@@ -221,9 +233,14 @@ export default function PipelinePage() {
           },
         }),
       });
-      const data = (await res.json()) as { ok: boolean; snapshot?: { id: string } };
+      const data = (await res.json()) as { ok: boolean; snapshot?: { id: string; jobKey?: string | null } };
       if (data.ok && data.snapshot && !snapshotId) {
         setSnapshotId(data.snapshot.id);
+        // Sprint B-1 — 최초 insert 응답에만 새 job_key가 실려 온다(서버가 그
+        // 시점에 한 번만 채번한다) — 이후 update 응답에도 같은 값이 오지만
+        // 여기서는 최초 1회만 세팅하면 충분하다(같은 snapshotId로 계속
+        // upsert되므로 값이 바뀌지 않는다).
+        setJobKey(data.snapshot.jobKey ?? null);
       }
     } catch {
       // 저장 실패해도 화면 동작에는 영향 없다 — sessionStorage가 로컬 캐시로
@@ -362,6 +379,8 @@ export default function PipelinePage() {
       // no-op — 세션 스토리지가 막혀있어도 리셋 자체는 계속 진행한다.
     }
     setSnapshotId(null);
+    setJobKey(null);
+    setSnapshotStatus(null);
     setUrl("");
     setLoading(false);
     setError(null);
@@ -481,9 +500,20 @@ export default function PipelinePage() {
         subtitle="AI가 해외 상품 정보를 분석하고 국내 판매에 필요한 정보를 준비합니다."
         actions={
           started ? (
-            <Button variant="secondary" size="sm" onClick={resetWorkspace} disabled={loading}>
-              새 상품 분석
-            </Button>
+            <div className="flex items-center gap-3">
+              {/* Sprint B-1(CPO 지시) — "에러 발생 시 Job Key 하나만 전달하면
+               * 전체 흐름을 찾을 수 있게" — 작업 화면 어디서든 항상 보이는
+               * 위치에 둔다. 아직 저장 전(분석 직후, 2초 debounce 이전)에는
+               * null이라 표시하지 않는다 — 지어내지 않는다. */}
+              {jobKey && (
+                <span className="rounded-full bg-surface px-3 py-1 text-xs font-mono text-text-tertiary shadow-subtle">
+                  {jobKey}
+                </span>
+              )}
+              <Button variant="secondary" size="sm" onClick={resetWorkspace} disabled={loading}>
+                새 상품 분석
+              </Button>
+            </div>
           ) : undefined
         }
       />
@@ -495,6 +525,25 @@ export default function PipelinePage() {
           그 아래에서는 화면 폭에 맞춰 줄어든다(강제 고정 아님). 랜딩(!started)은
           기존과 동일하게 size="md"(1200px) 유지. */}
       <PageContainer size={started ? "editor" : "md"} className="min-w-0 py-10">
+      {/* B-3(CPO 지시: "이미 등록된 상품을 다시 보기 → 현재 설정과 실제 등록
+       * 이력을 구분해서 표시") — 아래 미리보기는 항상 "지금 설정" 기준으로
+       * 다시 계산된다(등록 당시 값이 얼려져 있지 않음). 등록 완료 상품을
+       * 다시 열었을 때만 이 사실을 알리고, 실제 제출된 값은 등록 이력에서
+       * 확인하게 한다. */}
+      {started && snapshotStatus === "REGISTERED" && snapshotId && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning-soft px-4 py-3 text-sm text-warning">
+          <p>
+            이 상품은 이미 등록 완료 상태입니다. 아래 미리보기는 <b>현재 설정</b> 기준으로 다시 계산된
+            내용이며, 실제 등록 시 제출된 내용과 다를 수 있습니다.
+          </p>
+          <Link
+            href={`/admin/registrations?snapshotId=${snapshotId}`}
+            className="shrink-0 rounded-md border border-warning/40 bg-surface px-3 py-1.5 text-xs font-medium text-warning hover:bg-warning-soft"
+          >
+            실제 등록 이력 보기 →
+          </Link>
+        </div>
+      )}
       {!started ? (
         <>
           {/* CPO 2차 재실측 지시 — Hero 메인 문구(eyebrow/headline/description)를
@@ -620,6 +669,7 @@ export default function PipelinePage() {
             developerMode={developerMode}
             analysisStartedAt={analysisStartedAt}
             snapshotId={snapshotId}
+            jobKey={jobKey}
             detailBlocks={detailBlocks}
             onDetailBlocksChange={setDetailBlocks}
             initialCategoryMappings={categoryMappings ?? undefined}

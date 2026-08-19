@@ -36,6 +36,7 @@ async function logRegistrationAttempt(
   result: ListingResult,
   apiResponseBody?: unknown,
   snapshotId?: string | null,
+  jobKey?: string | null,
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return;
@@ -57,15 +58,21 @@ async function logRegistrationAttempt(
     price_breakdown: result.priceBreakdown ?? null,
     category_resolver_kpi: result.categoryResolverKpi ?? null,
     snapshot_id: snapshotId ?? null,
+    // Sprint B-1(CPO 지시: "등록 시도까지 동일 Job Key로 추적") — snapshot_id로도
+    // 이미 product_snapshots까지 조인해서 찾을 수 있지만, "Job Key 하나만
+    // 전달하면"(고객 문의 시나리오) 조인 없이 바로 이 테이블에서 검색할 수
+    // 있도록 그대로 복제해둔다.
+    job_key: jobKey ?? null,
   };
   // snapshot_id는 마이그레이션 016을 실행해야 생기는 컬럼이다 — 다른 optional
   // 컬럼(brand_resolution 등)과 같은 이유로 없으면 제거하고 재시도 목록에 포함한다.
   // brand_resolution/price_breakdown/category_resolver_kpi 컬럼은 각각 수동
-  // 마이그레이션(009/010/011)을 실행해야 생긴다(구조적으로 여기서 직접 실행
-  // 불가) — 마이그레이션 전에는 컬럼이 없어 insert 전체가 실패한다.
-  // payload/response/compliance 등 나머지 데이터까지 통째로 유실되는 걸 막기
-  // 위해, 아직 없는 컬럼이 뭔지 모르는 채로 하나씩 제외해가며 재시도한다.
-  const optionalColumns = ["brand_resolution", "price_breakdown", "category_resolver_kpi", "snapshot_id"];
+  // 마이그레이션(009/010/011)을, job_key는 025를 실행해야 생긴다(구조적으로
+  // 여기서 직접 실행 불가) — 마이그레이션 전에는 컬럼이 없어 insert 전체가
+  // 실패한다. payload/response/compliance 등 나머지 데이터까지 통째로
+  // 유실되는 걸 막기 위해, 아직 없는 컬럼이 뭔지 모르는 채로 하나씩
+  // 제외해가며 재시도한다.
+  const optionalColumns = ["brand_resolution", "price_breakdown", "category_resolver_kpi", "snapshot_id", "job_key"];
   for (let attempt = 0; attempt <= optionalColumns.length; attempt++) {
     const { error } = await supabase.from("registration_attempts").insert(row);
     if (!error) return;
@@ -178,6 +185,7 @@ export async function POST(request: Request) {
     product?: CanonicalProduct;
     listing?: ListingModel;
     snapshotId?: string;
+    jobKey?: string;
     detailBlocks?: DetailPageBlock[];
   } | null;
 
@@ -189,6 +197,10 @@ export async function POST(request: Request) {
   // 이전 흐름이거나 스냅샷 저장을 안 한 경우) registration_attempts.snapshot_id는
   // null로 남는다(감사 로그 자체는 스냅샷 없이도 항상 남는다).
   const snapshotId = body.snapshotId ?? null;
+  // Sprint B-1 — snapshotId와 함께 클라이언트가 이미 들고 있는 값을 그대로
+  // 받는다(서버에서 snapshotId로 다시 조회하지 않는다 — pipeline/page.tsx가
+  // 스냅샷 저장 응답에서 이미 job_key를 받아 상태로 갖고 있다).
+  const jobKey = body.jobKey ?? null;
 
   // P0-1(가격 계산 투명화) — 이 등록 시도 시점의 배송비/수수료율/마진율 입력값을
   // 스냅샷으로 남긴다(product.priceBreakdown은 사용자가 나중에 또 바꿀 수 있어서
@@ -229,7 +241,7 @@ export async function POST(request: Request) {
         resolution: "설정 페이지에서 Access Key/Secret Key/Vendor ID를 입력해주세요.",
       },
     });
-    await logRegistrationAttempt(result, undefined, snapshotId);
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
     return NextResponse.json(result);
   }
   logStep("인증 확인", "success", "쿠팡 인증 정보 확인 완료");
@@ -255,7 +267,7 @@ export async function POST(request: Request) {
         resolution: "설정 페이지에서 배송 프로필을 먼저 만들어주세요(최초 1회).",
       },
     });
-    await logRegistrationAttempt(result, undefined, snapshotId);
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
     return NextResponse.json(result);
   }
   logStep("배송 프로필 확인", "success", `프로필 "${sellerProfile.name}" 사용`);
@@ -454,7 +466,7 @@ export async function POST(request: Request) {
         resolution: "등록 화면에서 해당 항목(KC/인증 등)을 직접 입력한 뒤 다시 시도해주세요.",
       },
     });
-    await logRegistrationAttempt(result, undefined, snapshotId);
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
     return NextResponse.json(result);
   }
 
@@ -475,7 +487,7 @@ export async function POST(request: Request) {
         resolution: "설정 페이지에서 쿠팡 배송 설정을 채운 뒤 다시 시도해주세요.",
       },
     });
-    await logRegistrationAttempt(result, undefined, snapshotId);
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
     return NextResponse.json(result);
   }
   logStep("설정 확인", "success", "카테고리/배송/반품 설정 확인 완료");
@@ -484,7 +496,7 @@ export async function POST(request: Request) {
   // 가격 제약(10원 단위, 반품배송비 상한)을 API 호출 전에 한 번 더 막는다.
   // build-payload.ts의 validateCoupangPricing()이 유일한 판정 로직이다(CP001류
   // 중복 방지) — 여기서는 그 결과만 보고 FAILED로 응답한다.
-  const pricingIssues = validateCoupangPricing(payload);
+  const pricingIssues = validateCoupangPricing(payload, product);
   if (pricingIssues.length > 0) {
     const message = pricingIssues.map((i) => i.message).join(" ");
     logStep("가격 사전 검증", "failed", message);
@@ -502,7 +514,7 @@ export async function POST(request: Request) {
         resolution: "판매가/반품배송비를 등록 화면에서 고친 뒤 다시 시도해주세요.",
       },
     });
-    await logRegistrationAttempt(result, undefined, snapshotId);
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
     return NextResponse.json(result);
   }
   logStep("가격 사전 검증", "success", "판매가 10원 단위 · 반품배송비 상한 확인 완료");
@@ -532,7 +544,7 @@ export async function POST(request: Request) {
           resolution: "access key/secret key를 다시 확인해주세요.",
         },
       });
-      await logRegistrationAttempt(result, response.body, snapshotId);
+      await logRegistrationAttempt(result, response.body, snapshotId, jobKey);
       return NextResponse.json(result);
     }
 
@@ -551,7 +563,7 @@ export async function POST(request: Request) {
         externalProductId: parsed.data != null ? String(parsed.data) : undefined,
         submittedAt: new Date().toISOString(),
       });
-      await logRegistrationAttempt(result, response.body, snapshotId);
+      await logRegistrationAttempt(result, response.body, snapshotId, jobKey);
       if (snapshotId) await markSnapshotRegistered(snapshotId);
       return NextResponse.json(result);
     }
@@ -580,7 +592,7 @@ export async function POST(request: Request) {
         resolution: "표시된 원인을 확인하고 데이터를 고친 뒤 다시 시도해주세요.",
       },
     });
-    await logRegistrationAttempt(result, response.body, snapshotId);
+    await logRegistrationAttempt(result, response.body, snapshotId, jobKey);
     return NextResponse.json(result);
   } catch (error) {
     logStep(
@@ -601,7 +613,7 @@ export async function POST(request: Request) {
         retryable: true,
       },
     });
-    await logRegistrationAttempt(result, undefined, snapshotId);
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
     return NextResponse.json(result);
   }
 }

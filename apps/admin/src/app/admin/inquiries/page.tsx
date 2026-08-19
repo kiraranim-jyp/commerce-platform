@@ -191,6 +191,8 @@ export default function AdminInquiriesPage() {
                   <tr key={`${inquiry.id}-detail`} className="border-t border-border bg-background">
                     <td colSpan={6} className="px-3 py-3">
                       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                        <dt className="text-text-secondary">Job Key</dt>
+                        <dd className="font-mono text-text-primary">{inquiry.job_key ?? "—"}</dd>
                         <dt className="text-text-secondary">TraceId</dt>
                         <dd className="font-mono text-text-primary">{inquiry.trace_id ?? "—"}</dd>
                         <dt className="text-text-secondary">URL</dt>

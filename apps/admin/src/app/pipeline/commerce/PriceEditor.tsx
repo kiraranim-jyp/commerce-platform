@@ -245,6 +245,13 @@ export function PriceEditor({
     roundingUnit,
   );
 
+  // N-3.54(CPO 지시: "원본 가격을 못 읽었으면 가격을 계산하지 말고") —
+  // product.priceValidity가 VALID가 아니면 위 breakdown.suggestedPriceKrw는
+  // 배송비 등 나머지 입력값만으로 계산된 숫자라 진짜 가격이 아니다. 이 화면
+  // 전체가 그 숫자를 "권장 판매가격"처럼 보여주지 않고, 대신 원본 가격을
+  // 직접 확인/입력하라는 경고로 대체한다.
+  const priceUnresolved = product.priceValidity !== "VALID";
+
   // 최종 판매가격 표시값 — 사용자가 아직 아무것도 커밋하지 않았으면(product.
   // priceOverrideKrw == null) 권장 판매가격을 그대로 미리 보여주기만 한다(자동
   // 커밋 아님, 입력칸을 고치거나 "적용" 버튼을 눌러야 실제로 저장된다). 위
@@ -262,7 +269,54 @@ export function PriceEditor({
   // finalPriceKrw/breakdown은 위에서 이미 계산이 끝난 값이라 펼쳤을 때와
   // 다른 숫자가 나올 수 없다.
   if (!open) {
-    return <PriceSummaryStrip product={product} breakdown={breakdown} finalPriceKrw={finalPriceKrw} />;
+    return priceUnresolved ? (
+      <PriceUnresolvedBanner product={product} compact />
+    ) : (
+      <PriceSummaryStrip product={product} breakdown={breakdown} finalPriceKrw={finalPriceKrw} />
+    );
+  }
+
+  if (priceUnresolved) {
+    return (
+      <section className="rounded-lg border border-border p-4 text-sm">
+        <h3 className="text-base font-medium">가격 계산</h3>
+        <div className="mt-3">
+          <PriceUnresolvedBanner product={product} />
+        </div>
+        {onUpdateOriginalPrice && (
+          <div className="mt-3 rounded-md border border-border bg-background p-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-text-primary">원본 가격 직접 입력</span>
+              <div className="flex items-center gap-1.5">
+                <LiveNumberField
+                  value={draftOriginalAmount}
+                  onLiveChange={setDraftOriginalAmount}
+                  onCommit={(n) => {
+                    setDraftOriginalAmount(n);
+                    onUpdateOriginalPrice({ amount: n });
+                  }}
+                />
+                <select
+                  value={product.price.value.currency}
+                  onChange={(e) => onUpdateOriginalPrice({ currency: e.target.value })}
+                  className="rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+                >
+                  <option value="">통화 선택</option>
+                  {SELECTABLE_CURRENCIES.map((code) => (
+                    <option key={code} value={code}>
+                      {code}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <p className="mt-1 text-[11px] text-text-tertiary">
+              원본 가격과 통화를 모두 정확히 입력하면(0보다 큰 값) 자동으로 가격 계산이 다시 시작됩니다.
+            </p>
+          </div>
+        )}
+      </section>
+    );
   }
 
   return (
@@ -284,7 +338,11 @@ export function PriceEditor({
         <div className="flex items-center justify-between gap-3">
           <span className="flex items-center gap-1.5 text-sm font-medium text-text-primary">
             최종 판매가격
-            {product.priceOverrideKrw && <ValueBadge kind="userConfirmed" />}
+            {product.priceOverrideKrw && (
+              <span className="inline-flex items-center gap-0.5 rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+                ✎ 수정됨
+              </span>
+            )}
           </span>
           <div className="flex items-center gap-2">
             <span className="text-text-secondary">₩</span>
@@ -503,6 +561,41 @@ export function PriceEditor({
   );
 }
 
+/** N-3.54(CPO 지시: "원본 가격을 못 읽었으면 가격을 계산하지 말고, 계산했으면
+ * 그 가격의 근거가 무엇인지 보여줘야 한다") — product.priceValidity가 VALID가
+ * 아닐 때만 렌더된다. CPO가 지정한 문구/버튼 2개를 그대로 쓴다 — MISSING/
+ * INVALID/UNRESOLVED를 화면에서 굳이 구분해 보여주지 않는다(내부 판정은
+ * 구분하되, 사용자에게는 "원본 가격을 확인할 수 없다"는 동일한 다음 행동을
+ * 요구하기 때문). priceRawText(INVALID일 때만 있음)가 있으면 원문을 그대로
+ * 보여준다 — 값을 지어내지 않는다. */
+function PriceUnresolvedBanner({ product, compact }: { product: CanonicalProduct; compact?: boolean }) {
+  return (
+    <div className={`rounded-md border border-warning bg-warning-soft p-3 text-warning ${compact ? "text-xs" : "text-sm"}`}>
+      <p className="font-medium">⚠️ 원본 상품 가격을 확인할 수 없습니다. 해외 사이트의 가격을 확인한 후 등록할 수 있습니다.</p>
+      {product.priceRawText && (
+        <p className="mt-1 text-[11px] opacity-80">
+          원본에서 찾은 텍스트: &ldquo;{product.priceRawText}&rdquo; — 숫자로 인식하지 못했습니다.
+        </p>
+      )}
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        <a
+          href={product.sourceUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="rounded border border-warning px-2 py-1 text-[11px] font-medium hover:bg-warning/10"
+        >
+          원본 페이지 다시 확인
+        </a>
+        {!compact && (
+          <span className="rounded border border-warning px-2 py-1 text-[11px] font-medium">
+            가격 직접 확인 — 아래 &ldquo;원본 가격 직접 입력&rdquo;에서 바로 수정할 수 있습니다.
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /** N-3.16 잔여3(CPO 지시: "최종 판매가 ₩235,300 / 원본 ₩109,620 · AI 추천
  * ₩235,300 · 사용자 확정 ₩235,300"과 같은 요약을 접힌 상태에서도 보여준다") —
  * 바깥 가격 Accordion이 접혀 있을 때 이 컴포넌트 하나만 그려지고, 펼쳐져
@@ -645,7 +738,7 @@ function CountryPriceTable({
             <th className="py-1 pr-2 font-medium">국가/지역</th>
             <th className="py-1 pr-2 font-medium">원본 가격</th>
             <th className="py-1 pr-2 font-medium">원본 통화</th>
-            <th className="py-1 pr-2 font-medium">CartPilot 환산</th>
+            <th className="py-1 pr-2 font-medium">TTAEJYO 환산</th>
             <th className="py-1 font-medium">근거</th>
           </tr>
         </thead>

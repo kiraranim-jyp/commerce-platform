@@ -69,9 +69,18 @@ export const coupangAdapter: PlatformAdapter = {
       {
         field: "price",
         label: "판매가격",
-        check: () => amountKrw > 0,
+        // N-3.55(CPO 지시: "필드가 몇 개 MISSING인가보다 사장님이 지금 무엇을
+        // 하면 되는가") — amountKrw>0만 보면 register/route.ts의 실제 게이트
+        // (validateCoupangPricing, N-3.54에서 priceValidity로 이미 고쳐짐)와
+        // 어긋날 수 있다 — 화면 체크리스트는 100%인데 등록 버튼을 누르면
+        // PRICE_UNRESOLVED로 막히는 CP001류 신뢰 불일치를 막기 위해 이 화면도
+        // 같은 판정(priceValidity)을 본다.
+        check: () => amountKrw > 0 && product.priceValidity === "VALID",
         onFail: "ERROR",
-        message: "판매가격을 확인할 수 없습니다.",
+        message:
+          product.priceValidity === "VALID"
+            ? "판매가격을 확인할 수 없습니다."
+            : "원본 상품 가격을 확인할 수 없습니다 — 해외 사이트의 가격을 확인한 후 등록할 수 있습니다.",
       },
       {
         field: "options",

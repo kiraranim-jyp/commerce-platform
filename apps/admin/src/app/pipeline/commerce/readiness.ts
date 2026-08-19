@@ -1,5 +1,5 @@
 import type { CategorySelection } from "@commerce/category";
-import type { ComplianceReport, NaverPayloadValidationResult, ReadinessReport } from "@commerce/listing";
+import type { ComplianceReport, NaverPayloadValidationResult } from "@commerce/listing";
 import { isVerifiedCategorySelected, type ValidationResult } from "@commerce/marketplace";
 
 /** Sprint A-6(개선4 — CPO 요구사항: "사용자는 왜 이것을 내가 입력해야 하지를
@@ -192,24 +192,6 @@ export function computeChecklistReadiness(
   return summarize(items);
 }
 
-/** N-3.13 R2까지 SmartStore "상세 체크리스트"(ListingSection/ReadinessScorePanel,
- * 필드별 인라인 수정 CTA)가 계속 쓰는 legacy 계산 — validateSmartStoreListing이
- * 만든 report.score를 그대로 옮겨 보여준다. N-3.27(CPO 지시)부터 이 함수의
- * 결과는 더 이상 "등록 가능성"(RegistrationReadinessCard의 % / 등록 버튼 게이트)
- * 판정에 쓰지 않는다 — 그건 아래 computeNaverPayloadReadiness가 대신한다. 이
- * 함수는 ReadinessScorePanel의 인라인 수정 UI(countryOfOrigin/returnPolicy/
- * shippingFee/stockQuantity fix 버튼)를 위해서만 남겨둔다(CPO 지시: "바로
- * 삭제하지 않는다 — 다른 용도로 쓰이고 있을 수 있다"). */
-export function computeReadinessScoreSummary(report: ReadinessReport): ReadinessSummary {
-  const items: ReadinessItem[] = report.fields.map((f) => ({
-    label: f.label,
-    passed: f.status === "VALID",
-    required: f.status !== "WARNING",
-    hint: f.status !== "VALID" ? (f.resolution ?? f.message) : undefined,
-  }));
-  return { ...summarize(items), percent: report.score };
-}
-
 /** N-3.27(CPO 지시: "Readiness ↔ 실제 Payload Validation 단일화") — register
  * route가 실제 POST 직전 최종 게이트로 쓰는 validateNaverPayload(를 그대로 재사용,
  * 여기서 새 규칙을 만들지 않는다)의 결과를 RegistrationReadinessCard가 이해하는
@@ -239,7 +221,13 @@ export function computeNaverPayloadReadiness(validation: NaverPayloadValidationR
     .map((f) => ({
       label: naverFieldLabel(f.field),
       passed: f.status === "READY",
-      required: true,
+      // Sprint P0(CPO 지시, 2026-08-19: "필수값과 선택값을 분리해야 합니다") —
+      // 이전엔 advisory만 아니면 무조건 required:true였다(치수처럼 옵션이
+      // 없으면 절대 채워질 수 없는 필드까지 등록을 영원히 막는 원인). 이제
+      // validateNaverPayload가 표시한 f.optional을 그대로 따른다 —
+      // validation.ok 계산(blockingMissingCount)과 반드시 같은 기준이어야
+      // 화면 게이트와 서버 게이트가 일치한다(CP001 재발 방지).
+      required: !f.optional,
       hint: f.status !== "READY" ? f.reason : undefined,
       reasonCode: f.status === "BLOCKED" ? ("CRITICAL" as const) : undefined,
       group: (f.status === "BLOCKED"
@@ -332,11 +320,24 @@ const NAVER_NOTICE_FIELD_SECTION: Record<string, string> = {
   manufacturer: "section-basic",
   recommendedAge: "section-basic",
   caution: "section-notice",
+  // Sprint P2(CEO 지시, 2026-08-19: "치수(사이즈) 눌러도 이동이 안됨") —
+  // size는 PlatformPreview에 전용 입력 필드가 없다(resolveSizeFromOptions가
+  // product.optionGroups의 SIZE 옵션값을 그대로 재사용할 뿐 별도 텍스트
+  // 입력 UI를 만들지 않았다, N-3.13 R2 지시). 값을 채우려면 사용자가 실제로
+  // 할 수 있는 유일한 일은 "옵션" 섹션에서 SIZE 옵션을 추가/수정하는
+  // 것이므로 거기로 보낸다(실제로 PlatformPreview.tsx의 "section-options"
+  // CollapsibleSection을 확인했다 — 추측이 아니다).
+  size: "section-options",
 };
 
 function naverFieldSectionId(field: string): string | undefined {
   if (field === "detailAttribute.originAreaInfo.importer") return "section-notice";
   if (field.startsWith("productCertificationInfos")) return "section-kc";
+  // N-3.55(CPO 지시: "먼저 해결할 항목 ① 가격 확인") — 판매가 필드는 지금까지
+  // sectionId가 없어 "다음 입력하기"/가이드 모달에서 클릭해도 이동하지
+  // 않았다. computeChecklistReadiness(coupang/11번가)가 이미 쓰는 것과 같은
+  // DOM id("section-price", PlatformPreview.tsx에 실제로 존재 확인)로 통일한다.
+  if (field === "originProduct.salePrice") return "section-price";
   if (field.startsWith("productInfoProvidedNotice")) {
     const suffix = field.split(".").pop() ?? field;
     return NAVER_NOTICE_FIELD_SECTION[suffix];

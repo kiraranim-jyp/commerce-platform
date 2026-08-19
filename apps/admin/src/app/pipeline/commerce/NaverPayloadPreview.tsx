@@ -70,7 +70,10 @@ export interface NaverResolveResponse {
   };
   // N-3.13 Part E-12 — SellerProfile.qualityGuarantee/asContactNumber 재사용
   // (Coupang "판매자 정보" 탭과 같은 값).
-  notice: { warrantyPolicy: string | null; afterServiceDirector: string | null };
+  // N-3.51 STEP2 — companyContactNumber는 afterServiceDirector(고시용
+  // 자유 텍스트)와 별개로, afterServiceInfo.afterServiceTelephoneNumber
+  // (엄격한 전화번호 포맷)에 쓰인다.
+  notice: { warrantyPolicy: string | null; afterServiceDirector: string | null; companyContactNumber: string | null };
   // N-3.13 Part J — detailBlocks(에디터 상태, 클라이언트가 이미 들고 있음) →
   // detailContent 조립에 필요한 나머지 재료. Coupang용으로 이미 있는
   // DescriptionTemplate/SellerProfile 공통이미지/BrandProfile.brandIntro를
@@ -243,6 +246,11 @@ export function NaverPayloadPreview({
   // asContactNumber를 그대로 전달(Preview에서 재조회하지 않는다).
   const warrantyPolicy = resolved?.notice?.warrantyPolicy ?? null;
   const afterServiceDirector = resolved?.notice?.afterServiceDirector ?? null;
+  // N-3.51 STEP2 — afterServiceDirector(고시용 자유 텍스트)와 다른 실제
+  // 소스(SellerProfile.companyContactNumber, 이미 Coupang에서 쓰던 실제
+  // 전화번호)를 쓴다 — afterServiceInfo.afterServiceTelephoneNumber는
+  // 엄격한 전화번호 포맷만 허용한다(실제 등록 5차 시도로 확인).
+  const afterServiceTelephoneNumber = resolved?.notice?.companyContactNumber ?? null;
   // N-3.13 Part J — resolve route가 내려준 재료(Coupang과 동일 소스)로
   // detailBlocks가 있을 때만 assembleContentsFromBlocks를 태운다. resolved가
   // 아직 없으면(초기 로딩) 안내문구/공통이미지 없이 조립하되, listing.description
@@ -269,6 +277,7 @@ export function NaverPayloadPreview({
         deliveryCompany,
         warrantyPolicy,
         afterServiceDirector,
+        afterServiceTelephoneNumber,
         detailBlocks,
         descriptionTemplate,
         commonImages,
@@ -290,6 +299,7 @@ export function NaverPayloadPreview({
       deliveryCompany,
       warrantyPolicy,
       afterServiceDirector,
+      afterServiceTelephoneNumber,
       detailBlocks,
       descriptionTemplate,
       commonImages,
@@ -315,6 +325,7 @@ export function NaverPayloadPreview({
           deliveryCompany,
           warrantyPolicy,
           afterServiceDirector,
+          afterServiceTelephoneNumber,
         },
         categoryRequiresChildCertification,
       ),
@@ -334,6 +345,7 @@ export function NaverPayloadPreview({
       originAreaRequiresImporter,
       warrantyPolicy,
       afterServiceDirector,
+      afterServiceTelephoneNumber,
     ],
   );
 
@@ -549,7 +561,7 @@ export function NaverPayloadPreview({
           label="수입사명"
           value={
             originMatch.requiresImporter
-              ? "MISSING — CartPilot에 소스 없음(수입산 필수 항목)"
+              ? "MISSING — TTAEJYO에 소스 없음(수입산 필수 항목)"
               : "해당없음(수입산 아님)"
           }
         />
@@ -563,36 +575,53 @@ export function NaverPayloadPreview({
       <Section id="naver-section-notice" title="상품정보제공고시">
         {notice ? (
           <>
+            {/* N-3.51 STEP1 — material/color 등은 WEAR/KIDS 타입에 따라
+                notice.wear / notice.kids 하위 객체에 들어있다(실제 Naver 응답
+                구조, types.ts 주석 참고) — 더 이상 notice에 직접 붙어있지
+                않는다. */}
             <Row label="상품군" value={notice.productInfoProvidedNoticeType} />
-            <Row label="재질" value={notice.material || "MISSING"} />
-            <Row label="색상" value={notice.color || "MISSING"} />
-            <Row label="제조자" value={notice.manufacturer || "MISSING"} />
-            <Row label="주의사항" value={notice.caution || "MISSING"} />
-            {notice.productInfoProvidedNoticeType === "KIDS" && (
+            {"wear" in notice ? (
               <>
-                <Row label="권장연령" value={notice.recommendedAge || "MISSING"} />
+                <Row label="재질" value={notice.wear.material || "MISSING"} />
+                <Row label="색상" value={notice.wear.color || "MISSING"} />
+                <Row label="제조자" value={notice.wear.manufacturer || "MISSING"} />
+                <Row label="주의사항" value={notice.wear.caution || "MISSING"} />
+                {/* N-3.13 Part E-12 — 공식 스펙 required 필드로 새로 확인됨.
+                    SellerProfile.qualityGuarantee/asContactNumber 재사용(Settings
+                    "판매자 정보" 탭과 동일 값). */}
+                <Row
+                  label="품질보증기준"
+                  value={notice.wear.warrantyPolicy || "MISSING — Settings 판매자 정보 탭에서 입력 필요"}
+                />
+                <Row
+                  label="A/S 책임자·전화번호"
+                  value={notice.wear.afterServiceDirector || "MISSING — Settings 판매자 정보 탭에서 입력 필요"}
+                />
+                <p className="text-[11px] text-text-tertiary">치수(사이즈)는 TTAEJYO에 아직 입력 경로가 없어 항상 MISSING입니다.</p>
+              </>
+            ) : (
+              <>
+                <Row label="재질" value={notice.kids.material || "MISSING"} />
+                <Row label="색상" value={notice.kids.color || "MISSING"} />
+                <Row label="제조자" value={notice.kids.manufacturer || "MISSING"} />
+                <Row label="주의사항" value={notice.kids.caution || "MISSING"} />
+                <Row label="권장연령" value={notice.kids.recommendedAge || "MISSING"} />
                 {/* N-3.44(CPO 지시) — 이전엔 항상 MISSING이라는 안내 문구만
                     보여줬다. 이제 상품 정보 편집 화면에 입력 경로가 생겨서
                     실제 payload 값을 그대로 보여준다(추측/기본값 없음). */}
-                <Row label="품명" value={notice.itemName || "MISSING"} />
-                <Row label="모델명" value={notice.modelName || "MISSING"} />
-                <Row label="중량" value={notice.weight || "MISSING"} />
-                <Row label="KC 인증정보(대상 여부)" value={notice.certificationType || "MISSING"} />
+                <Row label="품명" value={notice.kids.itemName || "MISSING"} />
+                <Row label="모델명" value={notice.kids.modelName || "MISSING"} />
+                <Row label="중량" value={notice.kids.weight || "MISSING"} />
+                <Row label="KC 인증정보(대상 여부)" value={notice.kids.certificationType || "MISSING"} />
+                <Row
+                  label="품질보증기준"
+                  value={notice.kids.warrantyPolicy || "MISSING — Settings 판매자 정보 탭에서 입력 필요"}
+                />
+                <Row
+                  label="A/S 책임자·전화번호"
+                  value={notice.kids.afterServiceDirector || "MISSING — Settings 판매자 정보 탭에서 입력 필요"}
+                />
               </>
-            )}
-            {/* N-3.13 Part E-12 — 공식 스펙 required 필드로 새로 확인됨.
-                SellerProfile.qualityGuarantee/asContactNumber 재사용(Settings
-                "판매자 정보" 탭과 동일 값). */}
-            <Row
-              label="품질보증기준"
-              value={notice.warrantyPolicy || "MISSING — Settings 판매자 정보 탭에서 입력 필요"}
-            />
-            <Row
-              label="A/S 책임자·전화번호"
-              value={notice.afterServiceDirector || "MISSING — Settings 판매자 정보 탭에서 입력 필요"}
-            />
-            {notice.productInfoProvidedNoticeType === "WEAR" && (
-              <p className="text-[11px] text-text-tertiary">치수(사이즈)는 CartPilot에 아직 입력 경로가 없어 항상 MISSING입니다.</p>
             )}
           </>
         ) : (
@@ -677,13 +706,26 @@ export function NaverPayloadPreview({
         </p>
       </Section>
 
-      <button
-        type="button"
-        onClick={() => setShowJson((v) => !v)}
-        className="text-xs font-medium text-text-secondary underline decoration-border hover:text-text-primary"
-      >
-        {showJson ? "Naver v2 Request Payload 닫기" : "▶ Naver v2 Request Payload"}
-      </button>
+      {/* Sprint P1(CPO 지시, 2026-08-19: "SmartStore도 실제 등록 payload를
+          확인할 수 있는 마지막 검증 지점이 필요") — Coupang의 별도
+          "Payload Preview" 아코디언과 성격이 같다(같은 payload 상태를
+          그대로 JSON.stringify — 여기서 새로 계산하지 않는다). SmartStore는
+          이미 이 컴포넌트가 필드별 상세 + Raw Payload를 함께 보여주고
+          있었으므로 새 섹션을 만들지 않고, Coupang과 같은 설명 문구로
+          맞춰 "이게 그 마지막 확인 지점"이라는 걸 명확히 한다. */}
+      <div className="space-y-1.5">
+        <p className="text-xs text-text-tertiary">
+          실제로 SmartStore에 전송될 데이터입니다 — 등록 버튼을 누르기 전에도 항상 최신 상태로
+          계산되어 있습니다.
+        </p>
+        <button
+          type="button"
+          onClick={() => setShowJson((v) => !v)}
+          className="text-xs font-medium text-text-secondary underline decoration-border hover:text-text-primary"
+        >
+          {showJson ? "Payload Preview 닫기" : "▶ Payload Preview (Naver v2 Request)"}
+        </button>
+      </div>
       {showJson && (
         <pre className="max-h-96 overflow-auto rounded-md bg-background p-2 text-[11px] text-text-secondary">
           {JSON.stringify(payload, payloadReplacer, 2)}

@@ -21,6 +21,7 @@ function makeProduct(overrides: Partial<CanonicalProduct> = {}): CanonicalProduc
     title: field("KC Guard Test Product"),
     brand: field("TestBrand"),
     price: field({ amount: 30000, currency: "KRW" }),
+    priceValidity: "VALID",
     sku: field("KC-GUARD-1"),
     description: field("KC 가드 테스트용 상품."),
     material: field("면 100%"),
@@ -90,10 +91,15 @@ const COMMON_INPUT = {
   originAreaCode: "00",
   deliveryCompany: "CJGLS",
   warrantyPolicy: "구매일로부터 1년",
-  afterServiceDirector: "홍길동 02-1234-5678",
+  afterServiceDirector: "02-1234-5678",
+  afterServiceTelephoneNumber: "+821012345678",
 };
 
-function buildAndValidate(product: CanonicalProduct, childCertificationInfoId: number | null) {
+function buildAndValidate(
+  product: CanonicalProduct,
+  childCertificationInfoId: number | null,
+  complianceContext?: Parameters<typeof validateNaverPayload>[3],
+) {
   const listing = makeListing(product);
   const payload = buildNaverProductPayload({
     product,
@@ -114,21 +120,73 @@ function buildAndValidate(product: CanonicalProduct, childCertificationInfoId: n
       originAreaRequiresImporter: false,
     },
     true,
+    complianceContext,
   );
   return { payload, validation };
 }
 
-describe("N-3.48 STEP9: KC 인증정보 영구 차단 가드", () => {
-  it("1) KC 값 없음 → BLOCKED(code: KC_CERTIFICATION_REQUIRED)", () => {
+describe("N-3.48/N-3.53 STEP9: KC 인증정보 영구 차단 가드", () => {
+  it("1) KC 값 없음, 판매자 확인 기록도 없음 → BLOCKED(code: SELLER_SAFETY_CONFIRMATION_REQUIRED, N-3.53)", () => {
+    // N-3.52/N-3.53(CPO 지시) — 아직 판매자가 "판매 전 최종 확인"을 한 번도
+    // 하지 않은 초기 상태(kcStatus=SELLER_REVIEW_REQUIRED)는 "카테고리를
+    // 몰라서 판단 자체가 불가능한 상태"(BLOCKED)와 다르다 — TTAEJYO가
+    // "KC가 필요한지 아닌지"까지는 알지만 판매자가 아직 확인하지 않았을
+    // 뿐이라 SELLER_SAFETY_CONFIRMATION_REQUIRED로 구분한다.
     const product = makeProduct();
     const { validation } = buildAndValidate(product, 1042);
     const certField = validation.fields.find((f) => f.field === "productCertificationInfos[].certificationNumber");
     expect(certField?.status).toBe("BLOCKED");
-    expect(certField?.code).toBe("KC_CERTIFICATION_REQUIRED");
+    expect(certField?.code).toBe("SELLER_SAFETY_CONFIRMATION_REQUIRED");
+    expect(validation.kcStatus).toBe("SELLER_REVIEW_REQUIRED");
     const typeField = validation.fields.find((f) => f.field === "productInfoProvidedNotice(KIDS).certificationType");
     expect(typeField?.status).toBe("MISSING");
     expect(typeField?.code).toBe("KC_CERTIFICATION_REQUIRED");
     expect(validation.ok).toBe(false);
+  });
+
+  it("1b) 판매자가 '판매 가능 여부를 확인했다'고 남긴 기록이 있고 정책 버전이 일치 → READY(N-3.53)", () => {
+    // TTAEJYO가 자동으로 KC를 면제하는 게 아니다 — 판매자가 직접 남긴
+    // SellerComplianceConfirmation이 현재 policyVersion/카테고리와 일치할
+    // 때만 이 경로로 통과한다(compliance.ts COMPLIANCE_POLICY_VERSION).
+    const product = makeProduct();
+    const { validation } = buildAndValidate(product, 1042, {
+      categoryVerified: true,
+      sellerComplianceConfirmation: {
+        confirmed: true,
+        kcStatus: "SELLER_REVIEW_REQUIRED",
+        policyVersion: "2026-08-19",
+        categoryCode: "50000535",
+      },
+    });
+    const certField = validation.fields.find((f) => f.field === "productCertificationInfos[].certificationNumber");
+    expect(certField?.status).toBe("READY");
+    expect(validation.kcStatus).toBe("SELLER_REVIEW_REQUIRED");
+  });
+
+  it("1d) 판매자 확인 기록이 있지만 정책 버전이 오래됨 → 신뢰하지 않고 다시 SELLER_SAFETY_CONFIRMATION_REQUIRED(N-3.53 STEP9)", () => {
+    const product = makeProduct();
+    const { validation } = buildAndValidate(product, 1042, {
+      categoryVerified: true,
+      sellerComplianceConfirmation: {
+        confirmed: true,
+        kcStatus: "SELLER_REVIEW_REQUIRED",
+        policyVersion: "2025-01-01",
+        categoryCode: "50000535",
+      },
+    });
+    const certField = validation.fields.find((f) => f.field === "productCertificationInfos[].certificationNumber");
+    expect(certField?.status).toBe("BLOCKED");
+    expect(certField?.code).toBe("SELLER_SAFETY_CONFIRMATION_REQUIRED");
+    expect(validation.kcStatus).toBe("SELLER_REVIEW_REQUIRED");
+  });
+
+  it("1e) 카테고리가 아직 확정되지 않음 → kcStatus BLOCKED, 판매자 확인으로도 우회 불가(N-3.53)", () => {
+    const product = makeProduct();
+    const { validation } = buildAndValidate(product, 1042, { categoryVerified: false });
+    expect(validation.kcStatus).toBe("BLOCKED");
+    const certField = validation.fields.find((f) => f.field === "productCertificationInfos[].certificationNumber");
+    expect(certField?.status).toBe("BLOCKED");
+    expect(certField?.code).toBe("KC_CERTIFICATION_REQUIRED");
   });
 
   it("2) KC 값 없음 + DETAIL_PAGE_REFERENCE로 우회 시도 → 여전히 BLOCKED(영구 가드)", () => {
@@ -145,7 +203,7 @@ describe("N-3.48 STEP9: KC 인증정보 영구 차단 가드", () => {
     // payload에도 참조 문구("상품 상세페이지 참조")가 절대 들어가지 않는다 — KC는
     // resolveNoticeFieldValue를 거치지 않고 항상 실제 값(product.X.value)만 읽는다.
     const notice = payload.originProduct.detailAttribute?.productInfoProvidedNotice;
-    expect(notice && "certificationType" in notice ? notice.certificationType : undefined).toBeUndefined();
+    expect(notice && "kids" in notice ? notice.kids.certificationType : undefined).toBeUndefined();
     expect(payload.originProduct.productCertificationInfos?.[0]?.certificationNumber).toBeUndefined();
   });
 

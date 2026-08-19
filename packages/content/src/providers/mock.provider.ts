@@ -99,12 +99,12 @@ function generateSeo(product: CanonicalProduct): {
   const top = topType(product);
   const koreanType = top ? KOREAN_TYPE_LABELS[top.type] : undefined;
 
-  const seoTitle = truncate(`${titleField.value} | CartPilot`, 60);
+  const seoTitle = truncate(`${titleField.value} | TTAEJYO`, 60);
 
   const summaryParts = [brand, koreanType].filter(Boolean) as string[];
   const seoDescriptionValue =
     summaryParts.length > 0
-      ? truncate(`${summaryParts.join(" ")} — CartPilot에서 확인하세요.`, 150)
+      ? truncate(`${summaryParts.join(" ")} — TTAEJYO에서 확인하세요.`, 150)
       : "";
 
   return {

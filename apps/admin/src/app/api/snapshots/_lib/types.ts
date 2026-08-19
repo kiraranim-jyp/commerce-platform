@@ -67,6 +67,11 @@ export interface ProductSnapshot {
   createdAt: string;
   updatedAt: string;
   lastOpenedAt: string;
+  /** Sprint B-1(CPO 지시: "최근 작업마다 사람이 읽을 수 있는 작업번호 부여") —
+   * "JOB-260819-001" 형식. 스냅샷이 처음 만들어질 때 한 번만 채번되고 이후
+   * 절대 바뀌지 않는다. 마이그레이션 025 실행 전이거나 채번이 실패했던
+   * 레거시 스냅샷은 null일 수 있다 — 지어내지 않는다. */
+  jobKey: string | null;
 }
 
 /** 목록 화면(최근 작업)은 workspace 전체를 안 내려준다 — 카드 하나에 대표
@@ -81,4 +86,11 @@ export interface ProductSnapshotSummary {
   createdAt: string;
   updatedAt: string;
   lastOpenedAt: string;
+  jobKey: string | null;
+  /** Sprint B-2 — /api/snapshots GET이 registration_attempts를 집계해서
+   * 채워준다(스냅샷 저장 시점에는 아직 알 수 없으므로 saveSnapshot()에는
+   * 없다 — 목록 조회 전용 필드). */
+  registeredPlatforms?: PlatformId[];
+  hasRegistrationError?: boolean;
+  lastAttemptAt?: string | null;
 }

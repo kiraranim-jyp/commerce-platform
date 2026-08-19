@@ -44,9 +44,9 @@ export function SourceDataView({
             <tr className="border-b border-border text-xs text-text-secondary">
               <th className="w-24 py-2 pr-2 font-medium">필드</th>
               <th className="py-2 pr-2 font-medium">값</th>
-              <th className="w-24 py-2 pr-2 font-medium">Source</th>
-              <th className="w-20 py-2 pr-2 font-medium">Confidence</th>
-              <th className="w-20 py-2 font-medium">Status</th>
+              <th className="w-28 py-2 pr-2 font-medium">출처</th>
+              <th className="w-20 py-2 pr-2 font-medium">신뢰도</th>
+              <th className="w-20 py-2 font-medium">상태</th>
             </tr>
           </thead>
           <tbody>
@@ -73,12 +73,24 @@ export function SourceDataView({
                   placeholder="통화"
                   className="w-16 rounded border border-transparent bg-transparent px-1 py-0.5 text-sm hover:border-border focus:border-primary focus:bg-surface focus:outline-none"
                 />
-                {product.price.value.currency.toUpperCase() !== "KRW" && (
-                  <span className="text-xs text-text-tertiary">
-                    ≈ {formatKrw(krw.amountKrw)}
-                    {krw.isEstimate ? " (추정 환율)" : " (실시간 환율)"} — 배송비/마진 포함 계산은
-                    플랫폼 탭의 &ldquo;가격&rdquo; 섹션에서
+                {product.priceValidity !== "VALID" ? (
+                  // N-3.54(CPO 지시: "원본 가격을 못 읽었으면 가격을 계산하지
+                  // 말고") — 원본 가격을 못 읽은 상태에서 "≈ ₩0"을 보여주면
+                  // 진짜 0원 상품처럼 보인다(이 화면이 바로 그 혼란의
+                  // 진원지였다: Source Data 가격=0.00인데 아래 가격 계산은
+                  // 배송비만으로 다른 숫자를 만들어냈다). 계산값 대신 경고를
+                  // 보여준다.
+                  <span className="text-xs font-medium text-warning">
+                    ⚠️ 원본 가격을 확인할 수 없습니다 — 위에서 직접 입력하면 자동으로 계산이 시작됩니다.
                   </span>
+                ) : (
+                  product.price.value.currency.toUpperCase() !== "KRW" && (
+                    <span className="text-xs text-text-tertiary">
+                      ≈ {formatKrw(krw.amountKrw)}
+                      {krw.isEstimate ? " (추정 환율)" : " (실시간 환율)"} — 배송비/마진 포함 계산은
+                      플랫폼 탭의 &ldquo;가격&rdquo; 섹션에서
+                    </span>
+                  )
                 )}
               </div>
             </Row>

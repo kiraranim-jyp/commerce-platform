@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  ClipboardList,
   Clock,
   HelpCircle,
   Home,
@@ -29,6 +30,7 @@ type NavigationItem = {
 
 const NAV_ITEMS: NavigationItem[] = [
   { id: "dashboard", title: "Dashboard", href: "/admin/dashboard", icon: Home },
+  { id: "today", title: "오늘의 등록", href: "/today", icon: ClipboardList },
   { id: "pipeline", title: "상품등록", href: "/pipeline", icon: Package },
   { id: "recent", title: "최근 작업", href: "/snapshots", icon: Clock },
   { id: "images", title: "이미지", href: "/assets", icon: ImageIcon },

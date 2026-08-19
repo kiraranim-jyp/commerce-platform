@@ -41,6 +41,13 @@ export interface CategoryCandidate {
    * 값만). path(이름 배열)와 별개로, UI가 root→leaf 트리를 id까지 신뢰하고
    * 보여줄 수 있는 경우에만 채운다 — 없으면 path만으로 표시한다. */
   hierarchy?: CommerceCategoryPathResult;
+  /** SmartStore 플로우 개선(CPO 지시 — "수동 선택 후에는 '✎ 판매자 선택' 상태
+   * 표시") — CategoryTreeBrowser에서 카테고리 목록을 직접 훑어 고른
+   * candidate에만 true를 준다. AI 추천 카드를 클릭해 확정한 candidate는
+   * provenance가 이미 USER_SELECTED가 되지만(모든 확정이 클릭을 거친다) 그건
+   * "추천을 승인함"이지 "추천 없이 직접 찾음"과는 다르다 — 이 필드가 그 차이를
+   * 구분한다. */
+  manuallySelected?: boolean;
 }
 
 export interface CategorySelection {

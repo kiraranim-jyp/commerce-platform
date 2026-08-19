@@ -1,7 +1,7 @@
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
-import { convertToKrw } from "@commerce/pricing";
+import { computeVariantFinalPriceKrw } from "@commerce/pricing";
 import { assembleContentsFromBlocks, BLANK_COUPANG_SELLER_CONFIG } from "../coupang/build-payload";
 import type { CoupangDescriptionTemplate, CoupangSellerConfig, DetailPageBlock } from "../coupang/build-payload";
 import type {
@@ -11,7 +11,7 @@ import type {
   NaverOptionCombinationGroupNames,
   NaverProductRegistrationPayload,
 } from "./types";
-import { resolveNoticeFieldValue } from "../notice/reference-eligibility";
+import { resolveNoticeFieldValue, DETAIL_PAGE_REFERENCE_TEXT } from "../notice/reference-eligibility";
 
 /**
  * Sprint N-2.6 — CartPilot canonical product → Naver v2 payload 변환.
@@ -98,6 +98,16 @@ export interface NaverPayloadInput {
   /** N-3.13 Part E-12 — 같은 스펙에서 확인된 afterServiceDirector(A/S 책임자와
    * 전화번호). SellerProfile.asContactNumber(판매자 정보 탭 "A/S 연락처") 재사용. */
   afterServiceDirector?: string | null;
+  /** N-3.51 STEP2(CPO 지시, 실제 등록 실패 원인 조사) — detailAttribute.
+   * afterServiceInfo.afterServiceTelephoneNumber는 afterServiceDirector와
+   * 다른 필드다: 후자는 자유 텍스트를 허용하는 고시용 항목("해외 구매대행으로
+   * A/S 불가" 같은 문구가 실제로 통과)이지만, 전자는 네이버가 실제로 숫자/-/+
+   * 만 허용하는 엄격한 전화번호 포맷(N-3.49 5차 실등록 시도에서 실측 확인)이라
+   * 같은 소스를 재사용할 수 없다. SellerProfile.companyContactNumber(Coupang
+   * 쪽에서 이미 실제 전화번호로 채워져 있던 필드, 예: "+821046458306")를
+   * 재사용한다 — 임의 전화번호를 지어내지 않는다(CPO 지시). 값이 없으면
+   * undefined로 두고 validate-payload.ts가 MISSING으로 표시한다. */
+  afterServiceTelephoneNumber?: string | null;
   /** N-3.13 Part J — Detail Page Editor(2026-08-04)가 만드는 블록 순서. 있으면
    * 이 순서로 상세페이지를 조립한다(assembleContentsFromBlocks — Coupang과
    * 완전히 같은 블록 해석 로직을 재사용한다, 플랫폼마다 규칙이 갈라지면 안
@@ -185,25 +195,36 @@ function buildOptionCombinations(product: CanonicalProduct, salePrice: number): 
   const groupNames = product.optionGroups.map((g) => g.name);
   return product.variants.map((variant) => {
     const values = groupNames.map((name) => variant.optionValues[name] ?? "");
-    // N-3.18(CPO 지시: "variant 가격 Provenance/우선순위 재검증") — variant.price는
-    // 원본 사이트 통화(예: USD) 그대로다. salePrice(KRW)와 통화 단위를 맞추지
-    // 않고 그냥 빼면(옛날 코드: variant.price.amount - salePrice) 숫자 단위가
-    // 안 맞는 값이 나온다(예: 27.20 - 64500). Coupang의 buildCoupangItem이 이미
-    // convertToKrw로 원화 환산 후 계산하는 것과 같은 방식으로 맞춘다. N-3.47에서
-    // 이 delta 계산 자체가 Naver 공식 답변과 일치함이 확인됐다(위 함수 주석).
-    const priceDelta = variant.price
-      ? convertToKrw(variant.price.amount, variant.price.currency).amountKrw - salePrice
-      : 0;
+    // Sprint A-4(CPO 지시 — 발견된 버그 수정) — 여기 있던 이전 계산
+    // (`convertToKrw(variant.price) - salePrice`)은 마진/수수료가 이미 적용된
+    // salePrice에서 마진 없는 원본 환산값을 빼는 것이라, 마진이 0이 아닌 한
+    // (기본값 20%+수수료 10%) 실제와 다른(대개 부호가 뒤집힌) 델타가 나왔다
+    // — 기본 $77(최종 ₩165,640)에 옵션 Red $82(기본보다 비쌈)를 넣으면
+    // convertToKrw(82)-165,640 ≈ -55,000으로 "더 싸다"는 반대 결과가 나왔다.
+    // computeVariantFinalPriceKrw는 원본 통화 단계에서 먼저 차액을 구하고
+    // 그 차액만 환산해서(마진 재적용 없음) 기본 최종가에 더한다 — Naver
+    // optionCombinations.price 필드 자체가 "기본 salePrice 대비 차액"이라는
+    // 사실(N-3.47에서 공식 확인)은 그대로 유지하면서 계산만 바로잡는다.
+    const variantResult = variant.price
+      ? computeVariantFinalPriceKrw(
+          { amount: product.price.value.amount, currency: product.price.value.currency, finalKrw: salePrice },
+          { amount: variant.price.amount, currency: variant.price.currency, mode: variant.priceMode },
+        )
+      : { finalKrw: salePrice, applied: false };
+    const priceDelta = variantResult.finalKrw - salePrice;
     const combo: NaverOptionCombination = {
       stockQuantity: variant.stockQuantity ?? product.stockQuantity.value ?? 0,
       price: priceDelta,
       usable: true,
     };
     if (variant.sku) combo.sellerManagerCode = variant.sku;
+    // N-3.50(STEP1/2 재검토) — optionGroupName은 최대 3개까지만 채워지는데
+    // (buildOptionCombinationGroupNames), 여기는 4번째까지(optionName4) 채우고
+    // 있었다 — 짝이 없는 optionName4가 생기는 불일치였다. 두 함수가 항상 같은
+    // 상한(3)을 쓰도록 맞춘다(4번째 옵션 그룹은 애초에 Naver가 지원하지 않음).
     if (values[0]) combo.optionName1 = values[0];
     if (values[1]) combo.optionName2 = values[1];
     if (values[2]) combo.optionName3 = values[2];
-    if (values[3]) combo.optionName4 = values[3];
     return combo;
   });
 }
@@ -291,6 +312,7 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
     deliveryCompany,
     warrantyPolicy,
     afterServiceDirector,
+    afterServiceTelephoneNumber,
     detailBlocks,
     descriptionTemplate,
     commonImages,
@@ -381,33 +403,58 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
         // 채운다 — resolveNoticeFieldValue가 화이트리스트(reference-eligibility.ts)
         // 기준으로 판단한다. certificationType은 이 화이트리스트에 없어(KC 관련,
         // STEP10 영구 제외) 여기서는 여전히 실제 값만 채운다.
+        // N-3.51 STEP1 — material/color/size 등은 productInfoProvidedNoticeType과
+        // 나란히(flat) 놓이지 않는다. wear/kids 하위 객체로 한 번 더 감싸야
+        // 한다(types.ts의 NaverProductInfoProvidedNoticeWear/Kids 주석 참고 —
+        // 5차 실등록 시도의 실제 NotEmpty 거부 + 공식 GitHub Discussion
+        // #241/#516 2개 독립 출처로 확인).
         productInfoProvidedNotice: categoryRequiresChildCertification
           ? {
               productInfoProvidedNoticeType: "KIDS",
-              material: resolveNoticeFieldValue("material", product.material),
-              color: resolveNoticeFieldValue("color", product.color),
-              size: resolveSizeFromOptions(product),
-              manufacturer: resolveNoticeFieldValue("manufacturer", product.manufacturer),
-              caution: resolveNoticeFieldValue("careInstructions", product.careInstructions),
-              recommendedAge: resolveNoticeFieldValue("recommendedAge", product.recommendedAge),
-              warrantyPolicy: warrantyPolicy || undefined,
-              afterServiceDirector: afterServiceDirector || undefined,
-              itemName: resolveNoticeFieldValue("itemName", product.itemName),
-              modelName: resolveNoticeFieldValue("modelName", product.modelName),
-              weight: resolveNoticeFieldValue("weight", product.weight),
-              // KC 인증정보 설명 텍스트 — N-3.45 STEP10(CPO 지시)에 따라 절대
-              // "상세페이지 참조"로 대체하지 않는다. 실제 값만 채운다.
-              certificationType: product.certificationType?.value || undefined,
+              kids: {
+                material: resolveNoticeFieldValue("material", product.material),
+                color: resolveNoticeFieldValue("color", product.color),
+                size: resolveSizeFromOptions(product),
+                manufacturer: resolveNoticeFieldValue("manufacturer", product.manufacturer),
+                caution: resolveNoticeFieldValue("careInstructions", product.careInstructions),
+                recommendedAge: resolveNoticeFieldValue("recommendedAge", product.recommendedAge),
+                warrantyPolicy: warrantyPolicy || undefined,
+                afterServiceDirector: afterServiceDirector || undefined,
+                itemName: resolveNoticeFieldValue("itemName", product.itemName),
+                modelName: resolveNoticeFieldValue("modelName", product.modelName),
+                weight: resolveNoticeFieldValue("weight", product.weight),
+                // KC 인증정보 설명 텍스트 — N-3.45 STEP10(CPO 지시)에 따라 절대
+                // "상세페이지 참조"로 대체하지 않는다. 실제 값만 채운다.
+                certificationType: product.certificationType?.value || undefined,
+                // N-3.51 STEP1(6차 실등록 시도로 발견) — releaseDate(YearMonth,
+                // 구조화된 출시연월)는 CartPilot이 알 방법이 없다(크롤러가
+                // 추출하지 않음, 임의 날짜를 지어내지 않는다는 원칙 유지).
+                // 공식 스펙에 releaseDateText("동일 모델 출시연월 직접 입력",
+                // fieldType String)가 releaseDate의 자유 텍스트 대체 필드로
+                // 존재해, material/color처럼 상세페이지 참조 관용구를 쓴다.
+                releaseDateText: DETAIL_PAGE_REFERENCE_TEXT,
+              },
             }
           : {
               productInfoProvidedNoticeType: "WEAR",
-              material: resolveNoticeFieldValue("material", product.material),
-              color: resolveNoticeFieldValue("color", product.color),
-              size: resolveSizeFromOptions(product),
-              manufacturer: resolveNoticeFieldValue("manufacturer", product.manufacturer),
-              caution: resolveNoticeFieldValue("careInstructions", product.careInstructions),
-              warrantyPolicy: warrantyPolicy || undefined,
-              afterServiceDirector: afterServiceDirector || undefined,
+              wear: {
+                material: resolveNoticeFieldValue("material", product.material),
+                color: resolveNoticeFieldValue("color", product.color),
+                size: resolveSizeFromOptions(product),
+                manufacturer: resolveNoticeFieldValue("manufacturer", product.manufacturer),
+                caution: resolveNoticeFieldValue("careInstructions", product.careInstructions),
+                warrantyPolicy: warrantyPolicy || undefined,
+                afterServiceDirector: afterServiceDirector || undefined,
+                // N-3.51 STEP1(6차 실등록 시도의 실제 NotEmpty 거부로 발견) —
+                // packDate(YearMonth, 구조화된 제조연월)는 CartPilot이 알 방법이
+                // 없다(해외 구매대행 특성상 개별 상품의 제조연월을 크롤러가
+                // 얻을 수 없고, 임의 날짜를 지어내지 않는다는 원칙 유지).
+                // 공식 스펙에 packDateText("제조연월 직접 입력", fieldType
+                // String)가 packDate의 자유 텍스트 대체 필드로 존재해,
+                // material/color처럼 상세페이지 참조 관용구를 쓴다
+                // (docs/naver-provided-notice-types-raw.json 실측 확인).
+                packDateText: DETAIL_PAGE_REFERENCE_TEXT,
+              },
             },
         // N-3.4 — originAreaCode는 GET /v1/product-origin-areas로 실측 확인한
         // 535개 코드 중 resolveNaverOriginArea가 매칭한 값을 그대로 쓴다(이
@@ -444,16 +491,28 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
         // 카테고리를 취급하지 않으므로 항상 true(미성년자 구매 가능) —
         // 카테고리별로 달라질 여지가 생기면 그때 입력값으로 분리한다.
         minorPurchasable: true,
-        // N-3.49(2026-08-17, 실제 등록 3차 시도로 발견) — afterServiceInfo가
-        // NotNull로 거부됐다. productInfoProvidedNotice.afterServiceDirector와
-        // 같은 SellerProfile.asContactNumber 값을 재사용한다(이 판매자가 실제로
-        // 입력해둔 값이 "해외 구매대행으로 A/S 불가"라는 문구이고, 이미 Coupang
-        // 실등록에서 "소비자상담 관련 전화번호" 자리에 동일하게 쓰여 왔다 — 새로
-        // 지어내는 값이 아니다).
-        afterServiceInfo: afterServiceDirector
+        // N-3.51 STEP6(7차 실등록 시도로 발견) — 출고지가 해외 주소인 경우
+        // NotNull("customsTaxType.required.overseas"). CartPilot은 항상
+        // 해외구매대행이라 출고지가 항상 해외 주소다(deliveryType/
+        // minorPurchasable과 같은 사업모델 전체 고정값). "INCLUDED"(관부가세
+        // 포함) 근거는 types.ts의 NaverDetailAttribute.customsTaxType 주석
+        // 참고 — CartPilot 판매가가 이미 원가+마진+수수료를 반영한 단일
+        // 최종가라 체크아웃에서 관부가세를 별도로 청구하지 않는 기존 가격
+        // 구조와 일치시킨 값이다.
+        customsTaxType: "INCLUDED",
+        // N-3.51 STEP2(CPO 지시, 실제 등록 5차 시도 실패 원인 재조사) —
+        // afterServiceTelephoneNumber는 afterServiceDirector(자유 텍스트,
+        // "해외 구매대행으로 A/S 불가" 같은 문구도 통과하는 고시용 필드)를
+        // 더 이상 재사용하지 않는다 — 실제 등록에서 "A/S전화번호는 숫자, -, +만
+        // 입력 가능합니다"로 거부됐다(N-3.49 5차 시도 실측). 대신
+        // SellerProfile.companyContactNumber(Coupang 쪽에서 이미 실제 전화번호
+        // 형식으로 채워져 있는 필드, 예: "+821046458306")를 쓴다 — 임의
+        // 전화번호를 만들지 않는다(CPO 지시). afterServiceGuideContent는
+        // 안내문이라 자유 텍스트인 afterServiceDirector를 그대로 쓴다.
+        afterServiceInfo: afterServiceTelephoneNumber
           ? {
-              afterServiceTelephoneNumber: afterServiceDirector,
-              afterServiceGuideContent: afterServiceDirector,
+              afterServiceTelephoneNumber,
+              afterServiceGuideContent: afterServiceDirector || undefined,
             }
           : undefined,
       },

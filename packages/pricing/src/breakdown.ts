@@ -62,6 +62,52 @@ export function computePriceBreakdown(
   };
 }
 
+export type VariantPriceMode = "ABSOLUTE" | "DELTA" | "UNKNOWN";
+
+export interface VariantFinalPriceResult {
+  /** 이 옵션 조합에 실제로 적용해야 할 최종 판매가(KRW). */
+  finalKrw: number;
+  /** false면 옵션 원본가를 반영하지 못해(통화 불일치/UNKNOWN/값 없음)
+   * 기본 상품의 최종가를 그대로 썼다는 뜻 — 화면이 "옵션가 미확인"으로
+   * 구분해서 보여줄 수 있게 한다. */
+  applied: boolean;
+}
+
+/**
+ * Sprint A-4(CPO 지시: "옵션마다 환율/마진을 다시 독립적으로 계산하지 않는다,
+ * 기본 상품의 최종 판매가 기준으로 옵션 가격 차이만 반영한다") —
+ *
+ * 발견된 버그(수정 대상): 기존 로직(packages/listing의 buildOptionCombinations)은
+ * `convertToKrw(variant.price) - salePrice`를 그대로 옵션 가격차로 썼다.
+ * salePrice는 이미 마진/수수료가 적용된 최종 판매가인데 variant.price는
+ * 마진 없는 원본 환산값이라, 마진이 0이 아닌 한(기본값 20%+수수료 10%)
+ * 항상 실제와 다른(대개 음수로 뒤집힌) 델타가 나왔다 — 예: 기본 $77→최종
+ * ₩165,640(마진 포함)인데 옵션 Red $82(기본보다 비쌈)가
+ * convertToKrw(82)-165,640 ≈ -55,000으로 계산돼 "옵션이 더 싸다"는 반대
+ * 결과가 나왔다. 이 함수가 그 자리를 대체한다: 원본 통화 단계에서 먼저
+ * 차액을 구하고, 그 차액만 환율로 환산해서(마진 재적용 없이) 기본
+ * 최종가에 더한다.
+ */
+export function computeVariantFinalPriceKrw(
+  base: { amount: number; currency: string; finalKrw: number },
+  variant: { amount: number; currency: string; mode?: VariantPriceMode } | undefined,
+  liveRates?: Record<string, number>,
+): VariantFinalPriceResult {
+  if (!variant) return { finalKrw: base.finalKrw, applied: false };
+  const mode: VariantPriceMode = variant.mode ?? "ABSOLUTE";
+  if (mode === "UNKNOWN") return { finalKrw: base.finalKrw, applied: false };
+  if (variant.currency.toUpperCase() !== base.currency.toUpperCase()) {
+    // 케이스 7(CPO 지시: "옵션별 통화가 서로 다른 경우 → UNRESOLVED") — 서로
+    // 다른 통화의 절대값을 빼면 의미 없는 숫자가 나온다. 값을 지어내지 않고
+    // 기본 상품가로 폴백한다.
+    return { finalKrw: base.finalKrw, applied: false };
+  }
+  const deltaSourceAmount = mode === "DELTA" ? variant.amount : variant.amount - base.amount;
+  if (deltaSourceAmount === 0) return { finalKrw: base.finalKrw, applied: true };
+  const deltaKrw = convertToKrw(deltaSourceAmount, variant.currency, liveRates).amountKrw;
+  return { finalKrw: base.finalKrw + deltaKrw, applied: true };
+}
+
 export const DEFAULT_PRICE_BREAKDOWN_INPUT: Pick<PriceBreakdownInput, "shippingKrw" | "feePercent" | "marginPercent"> = {
   shippingKrw: 12000,
   feePercent: 10,

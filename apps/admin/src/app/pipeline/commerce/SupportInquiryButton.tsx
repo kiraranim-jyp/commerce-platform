@@ -10,6 +10,11 @@ export interface DiagnosticBundle {
   errorCode?: string;
   errorMessage: string;
   traceId?: string;
+  /** Sprint B-1(CPO 지시: "작업번호가 어떻게 되세요?" 하나로 전체 흐름을
+   * 추적할 수 있게) — traceId(이 API 호출 1건)보다 상위 개념이라, 판매자가
+   * 셀프로 읽고 불러줄 수 있는 값은 이거 하나면 충분하다. traceId는 개발자
+   * 디버깅용으로 계속 남긴다. */
+  jobKey?: string;
   registeredAt: string;
   appVersion: string;
   stepLog?: RegistrationStepLog[];
@@ -17,6 +22,7 @@ export interface DiagnosticBundle {
 
 function formatBundle(bundle: DiagnosticBundle): string {
   return [
+    `Job Key: ${bundle.jobKey ?? "-"}`,
     `URL: ${bundle.url}`,
     `Site: ${bundle.site}`,
     `Platform: ${bundle.platform}`,
@@ -57,6 +63,7 @@ export function SupportInquiryButton({ bundle }: { bundle: DiagnosticBundle }) {
         errorCode: bundle.errorCode,
         errorMessage: bundle.errorMessage,
         traceId: bundle.traceId,
+        jobKey: bundle.jobKey,
         url: bundle.url,
         platform: bundle.platform,
         site: bundle.site,

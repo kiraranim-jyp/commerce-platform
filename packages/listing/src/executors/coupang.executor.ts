@@ -31,7 +31,7 @@ export const coupangExecutor: ListingExecutor = {
     product: CanonicalProduct,
     listing: ListingModel,
     mode: ExecutionMode,
-    context?: { snapshotId?: string; detailBlocks?: DetailPageBlock[] },
+    context?: { snapshotId?: string; jobKey?: string; detailBlocks?: DetailPageBlock[] },
   ): Promise<ListingResult> {
     const errors = listing.validations.filter((v) => v.status === "ERROR");
     if (errors.length > 0) {
@@ -80,6 +80,7 @@ export const coupangExecutor: ListingExecutor = {
           product,
           listing,
           snapshotId: context?.snapshotId,
+          jobKey: context?.jobKey,
           detailBlocks: context?.detailBlocks,
         }),
       });

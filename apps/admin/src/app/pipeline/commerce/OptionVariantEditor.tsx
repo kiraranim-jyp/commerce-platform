@@ -1,6 +1,7 @@
 "use client";
 
 import type { CanonicalProductVariant, FieldSource } from "@commerce/shared";
+import { computeVariantFinalPriceKrw } from "@commerce/pricing";
 import { ValueBadge, type ValueBadgeKind } from "@/components/ui/ValueBadge";
 import { EditableText } from "./EditableField";
 
@@ -23,16 +24,29 @@ function variantSourceBadge(source: FieldSource | undefined) {
  * 노출·편집한다(CP001류 중복 모델 방지). 값이 비어 있으면 등록 시점에
  * build-payload.ts가 상품 대표값(SKU 없음/재고 기본치/상품 기본가)으로
  * 자동 폴백하므로, 이 표는 "다르게 하고 싶을 때만" 채우면 된다.
+ *
+ * Sprint A-4(CPO 지시: "옵션별 가격 표는 옵션 | 원본가격 | 가격차이 |
+ * 최종판매가로 보여준다") — "가격차이"/"최종판매가" 두 열은 실제 등록
+ * payload가 쓰는 것과 동일한 함수(computeVariantFinalPriceKrw)로 미리
+ * 계산해서 보여준다 — 화면에 보이는 값과 실제 등록되는 값이 다른 계산식을
+ * 쓰면 안 된다는 원칙(CP001과 같은 종류의 재발 방지). build-payload.ts와
+ * 마찬가지로 liveRates 없이(고정 환율) 계산한다 — 실제 등록 시점 계산과
+ * 동일해야 미리보기가 의미 있다.
  */
 export function OptionVariantEditor({
   variants,
   onUpdateVariant,
+  baseProduct,
 }: {
   variants: CanonicalProductVariant[];
   onUpdateVariant: (
     variantId: string,
     patch: Partial<{ sku: string; stockQuantity: number; price: { amount: number; currency: string } | undefined }>,
   ) => void;
+  /** 등록 payload가 실제로 쓰는 기본 상품 원본가/최종 판매가(KRW) — 옵션별
+   * "가격차이"/"최종판매가" 열을 계산하는 기준. 없으면 그 두 열을 그리지
+   * 않는다(값을 지어내지 않는다). */
+  baseProduct?: { amount: number; currency: string; finalKrw: number };
 }) {
   if (variants.length === 0) return null;
 
@@ -45,12 +59,18 @@ export function OptionVariantEditor({
             <th className="py-1.5 pr-2 font-medium">옵션 조합</th>
             <th className="py-1.5 pr-2 font-medium">SKU</th>
             <th className="py-1.5 pr-2 font-medium">재고</th>
-            <th className="py-1.5 font-medium">가격(비워두면 상품 기본가)</th>
+            <th className="py-1.5 pr-2 font-medium">원본가격(비워두면 상품 기본가)</th>
+            {baseProduct && (
+              <>
+                <th className="py-1.5 pr-2 font-medium">가격차이</th>
+                <th className="py-1.5 font-medium">최종판매가</th>
+              </>
+            )}
           </tr>
         </thead>
         <tbody>
           {variants.map((v) => (
-            <VariantRow key={v.id} variant={v} onUpdateVariant={onUpdateVariant} />
+            <VariantRow key={v.id} variant={v} onUpdateVariant={onUpdateVariant} baseProduct={baseProduct} />
           ))}
         </tbody>
       </table>
@@ -61,14 +81,20 @@ export function OptionVariantEditor({
 function VariantRow({
   variant,
   onUpdateVariant,
+  baseProduct,
 }: {
   variant: CanonicalProductVariant;
   onUpdateVariant: (
     variantId: string,
     patch: Partial<{ sku: string; stockQuantity: number; price: { amount: number; currency: string } | undefined }>,
   ) => void;
+  baseProduct?: { amount: number; currency: string; finalKrw: number };
 }) {
   const combo = Object.values(variant.optionValues).join(" / ") || "-";
+  const priceResult =
+    baseProduct && variant.price
+      ? computeVariantFinalPriceKrw(baseProduct, { amount: variant.price.amount, currency: variant.price.currency, mode: variant.priceMode })
+      : null;
 
   function autoSku() {
     // 결정론적 생성 — 옵션값을 그대로 슬러그화한다(무작위/AI 추측이 아니라
@@ -129,6 +155,20 @@ function VariantRow({
         </div>
         {variantSourceBadge(variant.priceSource)}
       </td>
+      {baseProduct && (
+        <>
+          <td className="py-1.5 pr-2 align-top text-text-primary">
+            {priceResult
+              ? priceResult.applied
+                ? `${priceResult.finalKrw - baseProduct.finalKrw >= 0 ? "+" : ""}${(priceResult.finalKrw - baseProduct.finalKrw).toLocaleString()}원`
+                : "옵션가 통화 불일치 — 기본가 적용"
+              : "옵션가 없음 — 기본가 적용"}
+          </td>
+          <td className="py-1.5 align-top font-medium text-text-primary">
+            {(priceResult ? priceResult.finalKrw : baseProduct.finalKrw).toLocaleString()}원
+          </td>
+        </>
+      )}
     </tr>
   );
 }

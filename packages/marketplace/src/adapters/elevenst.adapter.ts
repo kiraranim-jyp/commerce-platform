@@ -52,9 +52,14 @@ export const elevenstAdapter: PlatformAdapter = {
       {
         field: "price",
         label: "판매가격",
-        check: () => amountKrw > 0,
+        // N-3.55 — coupang.adapter.ts와 동일 이유(priceValidity 미반영 시
+        // 화면 체크리스트와 실제 등록 게이트가 어긋날 수 있음).
+        check: () => amountKrw > 0 && product.priceValidity === "VALID",
         onFail: "ERROR",
-        message: "판매가격을 확인할 수 없습니다.",
+        message:
+          product.priceValidity === "VALID"
+            ? "판매가격을 확인할 수 없습니다."
+            : "원본 상품 가격을 확인할 수 없습니다 — 해외 사이트의 가격을 확인한 후 등록할 수 있습니다.",
       },
       categoryFieldRule(categorySelection),
       {

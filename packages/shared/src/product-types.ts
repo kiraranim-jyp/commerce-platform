@@ -79,6 +79,17 @@ export interface CanonicalProductOptionGroup {
 }
 
 /**
+ * Sprint A-4(CPO 지시: "옵션 가격이 절대가인지 차액인지 명시하지 않으면
+ * 추정하지 않는다") — 원본 사이트가 옵션마다 절대가격을 주는지(schema.org
+ * offers.price가 흔히 이 형태), 기본가 대비 차액만 주는지 구분한다.
+ * ABSOLUTE/DELTA 둘 다 CartPilot이 실제로 원본에서 읽은 값이고, UNKNOWN은
+ * "값은 있지만 어떤 의미인지 원본이 명시하지 않아 CartPilot이 판단하지
+ * 않은" 상태다(추정 금지 원칙 — packages/pricing의 computeVariantFinalPriceKrw가
+ * UNKNOWN이면 옵션가를 아예 반영하지 않고 기본 상품가로 폴백한다).
+ */
+export type VariantPriceMode = "ABSOLUTE" | "DELTA" | "UNKNOWN";
+
+/**
  * 옵션 값 조합 하나(예: {Size: "48cm", Colour: "Red"})에 대응하는 실제 판매
  * 단위 — 마켓플레이스에 등록되는 최소 단위(vendorItem/variant)와 1:1로 대응한다.
  * price/stockQuantity가 없으면(옵션마다 가격/재고가 다르지 않은 매장) 어댑터가
@@ -90,7 +101,13 @@ export interface CanonicalProductVariant {
   /** CanonicalProduct.optionGroups[].name과 일치해야 한다. */
   optionValues: Record<string, string>;
   sku?: string;
+  /** Layer 1(Source Price) — 원본 통화 그대로. 환율/마진을 여기서 절대
+   * 적용하지 않는다(Layer 2는 packages/pricing이 별도로 계산한다). */
   price?: { amount: number; currency: string };
+  /** price가 있을 때만 의미가 있다. price는 있는데 priceMode가 없으면(과거
+   * 데이터) ABSOLUTE로 취급한다 — 지금까지 이 필드를 채워온 모든 경로
+   * (Shopify variants[], ProductGroup/hasVariant)가 실제로 절대가만 줬었다. */
+  priceMode?: VariantPriceMode;
   stockQuantity?: number;
   /** 이 조합 전용 이미지(색상별 대표컷 등) — CanonicalProductImage.id를 가리킨다.
    * 원본 사이트가 실제로 옵션-이미지를 연결해뒀을 때만 있다. */
@@ -141,6 +158,22 @@ export interface CanonicalProduct {
    * 않는다. */
   brandResolution?: { raw: string; ruleApplied: string[]; confidence: "HIGH" | "LOW" };
   price: ProvenanceField<{ amount: number; currency: string }>;
+  /** N-3.54(CPO 지시: "원본 가격을 못 읽었으면 가격을 계산하지 말고, 계산했으면
+   * 그 가격의 근거가 무엇인지 보여줘야 한다") — price.value가 {amount:0,
+   * currency:""}처럼 보여도 그게 "정말 0원짜리 상품"인지 "원본 가격을 못
+   * 읽었다"인지 이 필드 없이는 구분할 방법이 없었다(canonical-product.ts가
+   * 그냥 조용히 0/빈문자열로 기본값을 채워왔다 — 이게 근본 버그였다).
+   * MISSING(원본에서 가격 필드 자체를 못 찾음) / INVALID(원문은 찾았지만
+   * 숫자로 해석 불가하거나 0 이하) / VALID(정상) / UNRESOLVED(파싱은 됐지만
+   * 환율을 못 구해 KRW 환산 불가 — 크롤링 시점엔 절대 세팅되지 않고
+   * PriceEditor가 환율 조회 후에만 계산한다) 4단계. 등록 게이트가 VALID가
+   * 아니면 등록을 막는다 — "판매가가 0보다 크다"는 기존 체크만으로는 원본을
+   * 못 읽어 로직상 우연히 0보다 큰 값이 계산된 경우(배송비만으로 계산된
+   * 권장가 등)를 잡지 못했다. */
+  priceValidity: "VALID" | "MISSING" | "INVALID" | "UNRESOLVED";
+  /** priceValidity가 INVALID일 때만(원본 텍스트는 찾았지만 파싱 실패) 채운다 —
+   * 값을 지어내지 않고 원문 그대로 보여주기 위함. */
+  priceRawText?: string;
   /** 사용자가 직접 입력한 "실제 판매가"(KRW) — price(원본 통화 원가)를 덮어쓰지
    * 않는다. 있으면 어댑터가 환율 변환값 대신 이 값을 쓴다. 없으면(아직 입력 전)
    * 환율 추정값을 그대로 쓴다 — packages/pricing의 convertToKrw() 참고. */
@@ -260,6 +293,59 @@ export interface CanonicalProduct {
    * 대상"). childCertification(실제 인증서 번호/업체명/취득일자)과는 다른
    * 필드다 — 스펙상 별도로 존재한다. */
   certificationType: ProvenanceField<string>;
+}
+
+function emptyField<T>(value: T): ProvenanceField<T> {
+  return { value, source: "REQUIRED", confidence: 0 };
+}
+
+/**
+ * N-3.52 QA에서 발견 — 신규 필드가 추가되기 전에 저장된 스냅샷(product_snapshots의
+ * workspace.canonicalProduct JSON)을 복원하면 그 필드가 실제로 undefined라
+ * PlatformPreview의 ReferenceEligibleFieldRow 등이 field.source를 읽다가
+ * 그대로 크래시했다(예: itemName/modelName/weight는 N-3.44, importer는
+ * N-3.29, certificationType은 N-3.48에 추가돼 그 이전 스냅샷엔 아예 키가 없다).
+ * 스냅샷을 화면에 다시 로드하는 지점(apps/admin/src/app/pipeline/page.tsx)에서
+ * 이 함수를 거치면, 스키마가 앞으로 또 늘어도 과거 스냅샷이 안전하게 열린다 —
+ * 값을 지어내지 않고 REQUIRED(또는 빈 배열)로만 채운다.
+ */
+/** N-3.54 — priceValidity가 없던 과거 스냅샷(이 필드 도입 이전 저장분)은 이미
+ * 저장된 price.value(amount/currency)로부터 같은 규칙(resolveSourcePrice와
+ * 동일 판정: 통화 없으면 MISSING, 금액 0 이하면 INVALID, 그 외 VALID)을
+ * 역산해 채운다 — 새 값을 지어내는 게 아니라 이미 있던 값을 그대로 재해석할
+ * 뿐이다. */
+function inferLegacyPriceValidity(price: { amount: number; currency: string }): "VALID" | "MISSING" | "INVALID" {
+  if (!price.currency) return "MISSING";
+  if (!Number.isFinite(price.amount) || price.amount <= 0) return "INVALID";
+  return "VALID";
+}
+
+export function backfillCanonicalProduct(raw: CanonicalProduct): CanonicalProduct {
+  return {
+    ...raw,
+    priceValidity: raw.priceValidity ?? inferLegacyPriceValidity(raw.price.value),
+    careInstructions: raw.careInstructions ?? emptyField(""),
+    options: raw.options ?? emptyField([]),
+    optionGroups: raw.optionGroups ?? [],
+    variants: raw.variants ?? [],
+    images: raw.images ?? [],
+    titleKo: raw.titleKo ?? emptyField(""),
+    descriptionKo: raw.descriptionKo ?? emptyField(""),
+    keywords: raw.keywords ?? emptyField([]),
+    seoTitle: raw.seoTitle ?? emptyField(""),
+    seoDescription: raw.seoDescription ?? emptyField(""),
+    countryOfOrigin: raw.countryOfOrigin ?? emptyField(""),
+    returnPolicy: raw.returnPolicy ?? emptyField(""),
+    shippingFee: raw.shippingFee ?? emptyField(0),
+    stockQuantity: raw.stockQuantity ?? emptyField(0),
+    certification: raw.certification ?? emptyField(""),
+    importer: raw.importer ?? emptyField(""),
+    childCertification: raw.childCertification ?? emptyField(null),
+    itemName: raw.itemName ?? emptyField(""),
+    modelName: raw.modelName ?? emptyField(""),
+    weight: raw.weight ?? emptyField(""),
+    certificationType: raw.certificationType ?? emptyField(""),
+  };
 }
 
 /** N-3.29 — Naver productCertificationInfos(공식 OpenAPI 확인됨,

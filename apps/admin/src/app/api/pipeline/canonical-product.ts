@@ -122,11 +122,20 @@ export function buildCanonicalProduct(
             confidence: brandResolution.confidence,
           }
         : undefined,
+    // N-3.54(CPO 지시: "원본 가격을 못 읽었으면 가격을 계산하지 말고") — 예전엔
+    // productData.price가 없으면 조용히 {amount:0,currency:""}로 채웠다 —
+    // 이게 "Source Data 가격=0.00인데 아래 가격 계산은 배송비만으로 ₩15,400을
+    // 만들어내는" 모순의 근본 원인이었다(0을 "진짜 0원"과 구분할 방법이 없어
+    // 하위 computePriceBreakdown이 그대로 계산을 진행했다). 이제 값이 없으면
+    // 0을 지어내지 않고, priceValidity로 그 이유(MISSING/INVALID)를 남긴다 —
+    // PriceEditor/등록 게이트가 이 필드로 "계산해도 되는 값인지"를 판단한다.
     price: field(
       productData.price ?? { amount: 0, currency: "" },
       "price",
       sources,
     ),
+    priceValidity: productData.priceValidity ?? (productData.price ? "VALID" : "MISSING"),
+    priceRawText: productData.priceRawText,
     sku: field(productData.sku ?? "", "sku", sources),
     description: field(productData.description ?? "", "description", sources),
     // Sprint C(Compliance Resolver) — 크롤러가 구조화된 material을 안 주면(대부분의

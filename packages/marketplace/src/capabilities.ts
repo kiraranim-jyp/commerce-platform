@@ -49,8 +49,19 @@ export const MARKETPLACE_DESCRIPTORS: Record<PlatformId, MarketplaceDescriptor> 
     id: "smartstore",
     label: "스마트스토어",
     capabilities: {
-      hasDetailPageEditor: false,
-      hasSellerProfileSummary: false,
+      // Sprint P1(CPO 지시, 2026-08-19: "SmartStore도 Coupang 수준으로") —
+      // detailBlocks 데이터 모델/조립 로직(assembleNaverDetailContent, Naver
+      // build-payload.ts)은 이미 Coupang과 같은 블록을 공유하도록 만들어져
+      // 있었다(N-3.13 Part J) — UI 노출만 꺼져 있었다. register API/executor도
+      // 이번 스프린트에서 같이 배선했다(CommerceWorkspace.tsx/
+      // smartstore.executor.ts/api/smartstore/register/route.ts).
+      hasDetailPageEditor: true,
+      // Sprint P1(CPO 지시, 2026-08-19: "배송정책·반품/교환 카드 추가") —
+      // Coupang의 SellerProfileSummaryCard는 그대로 못 쓴다(Coupang 출고지
+      // API로만 이름을 조회하는 값이 섞여 있다). PlatformPreview.tsx는 이
+      // 플래그가 true면 platform에 따라 다른 컴포넌트(NaverSellerProfileSummaryCard)
+      // 를 렌더한다.
+      hasSellerProfileSummary: true,
       hasPayloadInspector: false,
       hasNaverPreview: true,
       // N-3.26(CPO 지시, 2026-08-13) — 서버 register route(N-3.25)가 완성되고

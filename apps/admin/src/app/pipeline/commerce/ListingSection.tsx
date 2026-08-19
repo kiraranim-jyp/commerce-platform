@@ -6,7 +6,6 @@ import type {
   ListingErrorStep,
   ListingResult,
   ListingStatus,
-  ReadinessReport,
   RegistrationStepLog,
   SmartStorePayload,
 } from "@commerce/listing";
@@ -17,7 +16,6 @@ import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { ComplianceBreakdown } from "./ComplianceBreakdown";
 import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
 import { PayloadInspector } from "./PayloadInspector";
-import { ReadinessScorePanel } from "./ReadinessScorePanel";
 import { SupportInquiryButton } from "./SupportInquiryButton";
 
 const WING_URL = "https://wing.coupang.com";
@@ -29,6 +27,9 @@ const STATUS_LABELS: Record<ListingStatus, string> = {
   SUBMITTING: "등록 중",
   SUBMITTED: "등록 완료",
   FAILED: "등록 실패",
+  // N-3.50 STEP7 — 응답을 못 받았을 뿐 실제로는 등록됐을 수 있어("FAILED"와
+  // 구분) Wing에서 직접 확인하라고 안내한다.
+  UNKNOWN: "등록 결과 확인 필요(Wing에서 확인해주세요)",
 };
 
 /** ListingError.step -> "실패 단계" 사용자용 문구. */
@@ -112,46 +113,37 @@ export function ListingSection({
   platformLabel,
   status,
   result,
-  readiness,
-  onFixTextField,
-  onFixNumberField,
   onRetry,
   sourceUrl,
   developerMode,
+  jobKey,
 }: {
   platformId: PlatformId;
   platformLabel: string;
   status: ListingStatus;
   result: ListingResult | null;
-  /** SmartStore에서만 넘어온다 — 있으면 점수/체크리스트/보완 UI를 보여준다. */
-  readiness?: ReadinessReport;
-  onFixTextField?: (field: "countryOfOrigin" | "returnPolicy", value: string) => void;
-  onFixNumberField?: (field: "shippingFee" | "stockQuantity", value: number) => void;
   onRetry: () => void;
   /** 문의하기 진단 번들의 URL/Site 필드용 — 원본 상품 URL. */
   sourceUrl?: string;
   /** P0-UI Epic 1/4 — Payload JSON 등 개발자용 상세는 이 값이 true일 때만 보여준다. */
   developerMode: boolean;
+  /** Sprint B-1(CPO 지시: "에러 발생 시 Job Key 하나만 전달하면 전체 흐름을
+   * 찾을 수 있게") — 문의하기 진단 번들에 실린다. 스냅샷이 아직 한 번도
+   * 저장되지 않았으면(분석 직후, 저장 debounce 전) undefined일 수 있다. */
+  jobKey?: string | null;
 }) {
   // Sprint A-3(Registration Editor) — 등록 준비 카드(Sticky Summary)가 필수/선택
   // 분리 + 클릭 시 해당 accordion 섹션으로 이동까지 다 하므로, 쿠팡은 더 이상
   // 별도의 "상세 체크리스트"(PreflightChecklist)를 중복으로 보여주지 않는다 —
   // 같은 판정을 두 곳에서 보여주면 그 자체로 CP001과 같은 종류의 혼란이 된다.
-  // SmartStore는 ReadinessScorePanel이 체크리스트 이상의 것(필드별 인라인 수정
-  // CTA)을 하므로 그대로 남긴다.
+  // Sprint P1(CPO 지시, 2026-08-19: "불필요한 상세 체크리스트 제거/축소") —
+  // SmartStore도 예전엔 ReadinessScorePanel을 "필드별 인라인 수정 CTA"라는
+  // 이유로 남겨뒀지만, 그 4개 필드(원산지/반품·교환안내/배송비/재고)는
+  // 이미 PlatformPreview.tsx의 기본정보/배송 섹션에서 직접 편집 가능하다
+  // (원산지: FieldRow "원산지" 940번째 줄 / 나머지 3개: "배송" 섹션 892-919
+  // 줄) — 더 이상 이 패널만의 고유 기능이 없다. 이제 Coupang과 동일하게
+  // 항상 null(중복 표시 없음).
   if (status === "DRAFT" || status === "READY") {
-    if (readiness && onFixTextField && onFixNumberField) {
-      return (
-        <CollapsibleSection title="상세 체크리스트">
-          <ReadinessScorePanel
-            report={readiness}
-            onFixTextField={onFixTextField}
-            onFixNumberField={onFixNumberField}
-          />
-        </CollapsibleSection>
-      );
-    }
-
     return null;
   }
 
@@ -285,6 +277,7 @@ export function ListingSection({
       errorCode: code,
       errorMessage: result.error.message,
       traceId: result.traceId,
+      jobKey: jobKey ?? undefined,
       registeredAt: new Date().toISOString(),
       appVersion: APP_VERSION,
       stepLog: result.steps,
@@ -324,6 +317,49 @@ export function ListingSection({
           </button>
         )}
         <SupportInquiryButton bundle={bundle} />
+      </section>
+    );
+  }
+
+  // N-3.57 STEP7(CPO 지시: "N-3.50에서 만든 UNKNOWN 상태를 살린다") —
+  // ListingSection이 지금까지 UNKNOWN 상태를 처리하는 분기 자체가 없어서
+  // 응답을 못 받았을 때 이 카드가 통째로 안 보이는 실제 공백이 있었다(FAILED
+  // 여도 결과가 없으면 결국 return null). 여기서는 새 등록 로직을 만들지
+  // 않는다 — 이미 계산된 status/result를 사람이 읽는 문구로만 옮긴다. 무조건
+  // 재시도 버튼을 주지 않는다(CPO 지시) — 중복 등록 위험이 있으므로 "결과
+  // 확인"/"판매자센터에서 확인"만 제공한다.
+  if (status === "UNKNOWN") {
+    return (
+      <section className="rounded-lg border border-warning/30 bg-warning-soft p-4 text-sm">
+        <p className="font-medium text-warning">⚠ 등록 결과를 확인하지 못했습니다</p>
+        <p className="mt-1 text-xs text-text-secondary">
+          {platformLabel}에 등록 요청은 전달되었지만 응답을 받지 못했습니다. 중복 등록을 방지하기
+          위해 먼저 등록 여부를 확인해주세요.
+        </p>
+        {developerMode && result?.steps && result.steps.length > 0 && (
+          <CollapsibleSection title="개발 로그">
+            <StepLogList steps={result.steps} />
+          </CollapsibleSection>
+        )}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onRetry}
+            className="rounded-md border border-primary px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+          >
+            등록 결과 확인
+          </button>
+          {platformId === "coupang" && (
+            <a
+              href={WING_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-background"
+            >
+              판매자센터에서 확인
+            </a>
+          )}
+        </div>
       </section>
     );
   }

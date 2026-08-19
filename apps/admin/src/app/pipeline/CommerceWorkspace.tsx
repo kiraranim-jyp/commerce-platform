@@ -24,7 +24,6 @@ import {
   buildNaverProductPayload,
   LISTING_EXECUTORS,
   validateNaverPayload,
-  validateSmartStoreListing,
   type ComplianceFieldSource,
   type ComplianceReport,
   type CoupangCategoryMeta,
@@ -39,6 +38,7 @@ import {
   type RegistrationHistoryEntry,
 } from "@commerce/listing";
 import { PLATFORM_ADAPTERS, PLATFORM_ORDER, isVerifiedCategorySelected } from "@commerce/marketplace";
+import { resolveSourcePrice } from "@commerce/pricing";
 import { AIContentPanel } from "./commerce/AIContentPanel";
 import { BacklogPanel } from "./commerce/BacklogPanel";
 import { ComparisonShopSearch } from "./commerce/ComparisonShopSearch";
@@ -105,6 +105,7 @@ export function CommerceWorkspace({
   developerMode,
   analysisStartedAt,
   snapshotId,
+  jobKey,
   detailBlocks,
   onDetailBlocksChange,
   initialCategoryMappings,
@@ -129,6 +130,10 @@ export function CommerceWorkspace({
   /** "최근 작업" 스냅샷에서 이어서 등록하는 경우 저장된 스냅샷 id — LIVE 등록
    * 시 그대로 executor에 넘겨 registration_attempts.snapshot_id로 남긴다. */
   snapshotId?: string | null;
+  /** Sprint B-1(CPO 지시) — snapshotId와 함께 첫 스냅샷 저장 시점에 서버가
+   * 채번해서 내려준 사람이 읽을 수 있는 작업번호("JOB-260819-001"). 아직
+   * 한 번도 저장 안 됐으면(분석 직후) null. */
+  jobKey?: string | null;
   /** Detail Page Editor(2026-08-04) — product와 같은 이유로 controlled다.
    * page.tsx가 스냅샷 저장/복원 대상에 포함해야 하므로 이 컴포넌트가 상태를
    * 소유하지 않는다. */
@@ -505,9 +510,15 @@ export function CommerceWorkspace({
   }
 
   function updatePrice(amount: number, currency: string) {
+    // N-3.54(CPO 지시) — SourceDataView의 "가격" 필드도 PriceEditor의
+    // updateOriginalPrice와 같은 규칙으로 priceValidity를 재판정한다(두 곳이
+    // 서로 다른 판정 로직을 쓰면 한쪽에서는 등록 가능한데 다른 쪽 화면은
+    // 여전히 경고를 보여주는 불일치가 생긴다).
+    const resolved = resolveSourcePrice(amount, currency);
     setProduct((prev) => ({
       ...prev,
       price: { value: { amount, currency }, source: "USER_EDITED" as FieldSource, confidence: 1 },
+      priceValidity: resolved.validity === "UNRESOLVED" ? "VALID" : resolved.validity,
     }));
   }
 
@@ -530,10 +541,19 @@ export function CommerceWorkspace({
    * PriceEditor의 환율 계산이 새 통화 기준으로 그대로 다시 돈다(별도 재계산
    * 로직 불필요 — computePriceBreakdown이 product.price.value를 그대로 읽는다). */
   function updateOriginalPrice(patch: Partial<{ amount: number; currency: string }>) {
-    setProduct((prev) => ({
-      ...prev,
-      price: { value: { ...prev.price.value, ...patch }, source: "USER_EDITED" as FieldSource, confidence: 1 },
-    }));
+    setProduct((prev) => {
+      const nextValue = { ...prev.price.value, ...patch };
+      // N-3.54(CPO 지시) — 사용자가 여기서 직접 값을 입력하는 게 PRICE_UNRESOLVED
+      // 상태를 벗어나는 유일한 경로다. 값을 저장만 하고 priceValidity를 그대로
+      // 두면 등록 게이트가 여전히 막혀 있어 사용자가 고칠 방법이 없어 보인다 —
+      // 사용자가 실제로 입력한 값 기준으로 즉시 재판정한다(자동 추측 아님).
+      const resolved = resolveSourcePrice(nextValue.amount, nextValue.currency);
+      return {
+        ...prev,
+        price: { value: nextValue, source: "USER_EDITED" as FieldSource, confidence: 1 },
+        priceValidity: resolved.validity === "UNRESOLVED" ? "VALID" : resolved.validity,
+      };
+    });
   }
 
   /** P0-1(가격 계산 투명화) — 배송비/수수료율/마진율 입력값을 저장한다.
@@ -996,23 +1016,6 @@ export function CommerceWorkspace({
   }, [tab, listing, product.sourceUrl]);
 
   /**
-   * SmartStore에서만 계산한다 — 원산지/반품정보/배송비/재고 같은 등록 직전
-   * 필드는 CanonicalProduct에만 있고 ListingModel에는 없어서, product와 listing을
-   * 둘 다 받는 이 함수로 합쳐야 한다(STEP 1의 3단 분리 원칙).
-   *
-   * N-3.27(CPO 지시) — 이 값은 이제 "등록 가능성" 판정에는 쓰이지 않는다
-   * (아래 smartStoreValidation이 대신한다). ListingSection의 "상세
-   * 체크리스트"(ReadinessScorePanel, countryOfOrigin/returnPolicy/shippingFee/
-   * stockQuantity 인라인 수정 CTA) 전용으로만 남긴다 — 이 패널은 register
-   * route가 안 보는 필드까지 인라인으로 고칠 수 있게 해주는 별도 목적의 UI라
-   * 삭제하지 않는다(CPO 지시: "바로 삭제하지 않는다").
-   */
-  const smartStoreReadiness = useMemo(() => {
-    if (tab !== "smartstore" || !listing) return undefined;
-    return validateSmartStoreListing(product, listing);
-  }, [tab, listing, product]);
-
-  /**
    * N-3.27(CPO 지시: "Readiness ↔ 실제 Payload Validation 단일화") — SmartStore
    * register route(/api/smartstore/register)가 실제 POST 직전 최종 게이트로
    * 쓰는 것과 완전히 같은 buildNaverProductPayload + validateNaverPayload를
@@ -1061,6 +1064,9 @@ export function CommerceWorkspace({
           const deliveryCompany = data.courier.value;
           const warrantyPolicy = data.notice.warrantyPolicy;
           const afterServiceDirector = data.notice.afterServiceDirector;
+          // N-3.51 STEP2 — afterServiceDirector(고시용 자유 텍스트)와 다른
+          // 실제 소스(SellerProfile.companyContactNumber)를 쓴다.
+          const afterServiceTelephoneNumber = data.notice.companyContactNumber;
           const payload = buildNaverProductPayload({
             product,
             listing,
@@ -1077,6 +1083,7 @@ export function CommerceWorkspace({
             deliveryCompany,
             warrantyPolicy,
             afterServiceDirector,
+            afterServiceTelephoneNumber,
             detailBlocks,
             descriptionTemplate: data.detailPage.descriptionTemplate,
             commonImages: data.detailPage.commonImages,
@@ -1098,6 +1105,7 @@ export function CommerceWorkspace({
               deliveryCompany,
               warrantyPolicy,
               afterServiceDirector,
+              afterServiceTelephoneNumber,
             },
             categoryRequiresChildCertification,
           );
@@ -1119,8 +1127,11 @@ export function CommerceWorkspace({
    * 카테고리의 RECOMMENDED와 같은 패턴으로, 실제 state는 사용자가 등록 버튼을
    * 눌러야만(USER_CONFIRMED로) 바뀐다.
    *
-   * N-3.27 — noReadinessErrors 판단도 legacy smartStoreReadiness.errorCount가
-   * 아니라 smartStoreValidation.ok로 바꾼다(등록 가능성의 단일 기준). 아직
+   * N-3.27 — noReadinessErrors 판단은 legacy validateSmartStoreListing(errorCount)이
+   * 아니라 smartStoreValidation.ok를 쓴다(등록 가능성의 단일 기준 — Sprint
+   * P1에서 legacy 계산의 유일한 UI 소비처였던 ReadinessScorePanel도 함께
+   * 제거해 이제 validateSmartStoreListing은 smartstoreExecutor의 등록 직전
+   * 가드로만 쓰인다). 아직
    * 조회 전이면(null) 이전과 같이 permissive(true)로 둔다 — 실제 등록 가능
    * 여부는 어차피 RegistrationReadinessCard의 allRequiredPassed(같은
    * smartStoreValidation 기반)가 별도로 막는다.
@@ -1151,6 +1162,15 @@ export function CommerceWorkspace({
 
   function openListingModal() {
     if (tab === "source" || tab === "content") return;
+    // N-3.60 실측에서 발견 — KcSellerStatusBanner의 "판매 가능 상품으로 확인"
+    // 버튼은 RegistrationReadinessCard의 canRegister(allRequiredPassed) 게이트를
+    // 거치지 않고 이 함수를 직접 호출해서, 필수 항목이 아직 9개 남은 상태에서도
+    // "판매 전 최종 확인" 모달이 열렸다(실제 등록은 서버 validateNaverPayload가
+    // 막아 사고로 이어지진 않지만, 셀러가 등록 가능하다고 착각하게 만드는 실제
+    // 사용성 버그였다). 판정 로직을 버튼마다 복제하지 않고 이 공용 진입점
+    // 하나에서만 게이트한다 — effectiveListingStatus가 이미 RegistrationReadinessCard의
+    // canRegister와 같은 신호(필수 항목 통과 + 카테고리 확정)를 담고 있다.
+    if (effectiveListingStatus === "DRAFT") return;
     if (wasEditingDraftFieldRef.current) {
       wasEditingDraftFieldRef.current = false;
       const proceed = window.confirm(
@@ -1213,7 +1233,12 @@ export function CommerceWorkspace({
     setListingStates((prev) => ({ ...prev, [platform]: "SUBMITTING" }));
     const result = await LISTING_EXECUTORS[platform].execute(product, listing, mode, {
       snapshotId: snapshotId ?? undefined,
-      detailBlocks: platform === "coupang" ? detailBlocks : undefined,
+      jobKey: jobKey ?? undefined,
+      // Sprint P1(CPO 지시, 2026-08-19) — smartstoreExecutor도 이제
+      // context.detailBlocks를 실제로 읽어 /api/smartstore/register에
+      // 전달한다(build-payload.ts는 이미 지원했지만 여기서 항상 undefined로
+      // 넘겨 죽은 경로였다).
+      detailBlocks: platform === "coupang" || platform === "smartstore" ? detailBlocks : undefined,
     });
     setListingResults((prev) => ({ ...prev, [platform]: result }));
     const finishedAt = Date.now();
@@ -1366,7 +1391,6 @@ export function CommerceWorkspace({
           categoryCandidates={categoryCandidates}
           listingStatus={effectiveListingStatus}
           listingResult={listingResults[tab]}
-          readiness={smartStoreReadiness}
           naverValidation={smartStoreValidationEligible ? smartStoreValidation : null}
           compliancePreview={complianceReportPreview}
           payloadPreview={payloadPreviewEligible ? payloadPreview : null}
@@ -1404,6 +1428,7 @@ export function CommerceWorkspace({
           settingsMissing={tab === "coupang" ? (coupangSettingsMissing ?? undefined) : undefined}
           settingsRecommended={tab === "coupang" ? (coupangSettingsRecommended ?? undefined) : undefined}
           developerMode={developerMode}
+          jobKey={jobKey}
           items={items}
           thumbnails={thumbnails}
           representativeId={representativeId}
@@ -1413,13 +1438,15 @@ export function CommerceWorkspace({
           onToggleDescriptionUsage={onToggleDescriptionUsage}
           onMoveImage={onMoveImage}
           // N-3.13 Part J — detailBlocks는 상품 하나당 하나뿐인 상세페이지 상태다
-          // (쿠팡 탭에서 편집하지만 플랫폼별로 따로 관리하지 않는다). Naver
-          // Payload Preview도 같은 값을 읽어 detailContent를 조립해야 해서
-          // 항상 내려준다 — 실제로 에디터 UI가 보이는지는
-          // capabilities.hasDetailPageEditor가 이미 쿠팡으로 막아준다.
-          // onDetailBlocksChange(쓰기)는 쿠팡 탭에서만 필요하므로 그대로 둔다.
+          // (플랫폼별로 따로 관리하지 않는다). Naver Payload Preview도 같은
+          // 값을 읽어 detailContent를 조립해야 해서 항상 내려준다.
+          // Sprint P1(CPO 지시, 2026-08-19) — 에디터 UI 노출 여부는
+          // capabilities.hasDetailPageEditor(이제 coupang/smartstore 둘 다
+          // true)가 결정하므로, 쓰기 핸들러도 두 탭 모두에서 필요하다(11번가는
+          // capabilities가 false라 여전히 안 보인다 — 이 삼항연산자가 막아줄
+          // 필요 없이 PlatformPreview의 capability 체크가 이미 막는다).
           detailBlocks={detailBlocks}
-          onDetailBlocksChange={tab === "coupang" ? onDetailBlocksChange : undefined}
+          onDetailBlocksChange={tab === "coupang" || tab === "smartstore" ? onDetailBlocksChange : undefined}
         />
       )}
 
@@ -1438,12 +1465,17 @@ export function CommerceWorkspace({
         <ListingConfirmationModal
           listing={listing}
           mode={resolveExecutionMode(confirmingPlatform)}
-          connectionStatus={confirmingPlatform === "coupang" ? coupangConnection : undefined}
-          descriptionImageCount={product.images.filter((img) => img.useInDescription).length}
-          selectedGalleryCount={
-            product.images.filter((img) => img.useInProductGallery && !img.isRepresentative).length
+          smartstoreKcStatus={confirmingPlatform === "smartstore" ? (smartStoreValidation?.kcStatus ?? null) : undefined}
+          smartstoreCategoryCode={
+            confirmingPlatform === "smartstore"
+              ? (listing.category.candidate?.isVerifiedPlatformCode &&
+                  listing.category.candidate.platform === "smartstore"
+                  ? listing.category.candidate.id
+                  : null)
+              : undefined
           }
-          complianceReport={confirmingPlatform === "coupang" ? complianceReportPreview : null}
+          snapshotId={snapshotId ?? null}
+          jobKey={jobKey ?? null}
           onCancel={cancelListingModal}
           onConfirm={confirmListing}
         />

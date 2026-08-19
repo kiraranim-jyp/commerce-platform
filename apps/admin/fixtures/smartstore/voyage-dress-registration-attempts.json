@@ -58,19 +58,23 @@
         {
           "field": "originProduct.detailAttribute.productInfoProvidedNotice.wear",
           "errorType": "NotEmpty",
-          "status": "구조적 재설계 필요, 아직 미수정",
-          "note": "productInfoProvidedNotice는 material/color/size 등을 평평하게 담는 게 아니라 타입별 중첩 객체(wear:{...}, 아마 kids:{...}도 동일)로 감싸야 하는 것으로 보인다(WebSearch로 wear.qualityAssuranceStandard 필드 존재 확인, 전체 wear/kids 하위 필드 목록은 미확인). WEAR/KIDS 두 타입 모두, 옵션 있는 상품 전체에 영향을 주는 변경이라 전수조사 없이 추측 수정하지 않기로 CPO와 합의."
+          "status": "N-3.51 STEP1에서 수정 완료",
+          "note": "productInfoProvidedNotice는 material/color/size 등을 평평하게 담는 게 아니라 타입별 중첩 객체(wear:{...}/kids:{...})로 감싸야 한다 — 이번 5차 시도의 실제 NotEmpty 거부 + GitHub Discussion #241/#516(공식 commerce-api-naver 계정) 2개 독립 출처로 wear/kids 하위 필드 전체 목록까지 확인 완료.",
+          "fixed": true,
+          "fixLocation": "packages/listing/src/naver/types.ts(NaverWearNoticeFields/NaverKidsNoticeFields 신설 + wear/kids 중첩 구조), build-payload.ts(productInfoProvidedNotice 구성부 wear:{...}/kids:{...}로 재구성), NaverPayloadPreview.tsx(중첩 구조 반영)"
         },
         {
           "field": "originProduct.detailAttribute.afterServiceInfo.afterServiceTelephoneNumber",
           "errorType": "AfterServicePhoneNumber",
           "errorMessage": "A/S전화번호는 숫자, -, +만 입력 가능합니다.",
-          "status": "코드 버그 아님 — 실제 판매자 전화번호 데이터 공백",
-          "note": "SellerProfile.asContactNumber에 저장된 유일한 값('해외 구매대행으로 A/S 불가')은 자유 텍스트라 이 필드(엄격한 전화번호 포맷)에는 쓸 수 없다. KC 인증정보처럼 지어낼 수 없는 값 — 실제 연락처 확보 또는 '전화 A/S 미제공'을 이 필드 포맷 안에서 표현할 방법에 대한 CPO/판매자 결정이 필요하다."
+          "status": "N-3.51 STEP2에서 수정 완료",
+          "note": "SellerProfile.asContactNumber('해외 구매대행으로 A/S 불가')는 자유 텍스트 고시용 필드고, 이 전화번호 포맷 필드는 실제로는 SellerProfile.companyContactNumber('+821046458306', 이미 Coupang에서 쓰던 실제 유효 전화번호)를 재사용해야 하는 별개 필드였다 — 데이터 공백이 아니라 필드 혼동이었음.",
+          "fixed": true,
+          "fixLocation": "packages/listing/src/naver/build-payload.ts/types.ts(afterServiceTelephoneNumber 별도 파라미터 분리), register/route.ts(sellerProfile.companyContactNumber 배선)"
         }
       ],
-      "fixed": false
+      "fixed": true
     }
   ],
-  "cpoDecision": "2026-08-17/18 — 5차 POST까지 진행 후 남은 2건(wear/kids 중첩 구조, A/S 전화번호 데이터 공백)은 여기서 마무리하고 STEP6(회귀 fixture+최종보고)로 넘어가기로 확정. wear/kids 구조 전수조사와 실전화번호 확보는 별도 후속 스프린트 과제."
+  "cpoDecision": "2026-08-17/18 — 5차 POST까지 진행 후 남은 2건(wear/kids 중첩 구조, A/S 전화번호 데이터 공백)은 STEP6(회귀 fixture+최종보고)로 넘어가기로 확정. 이후 N-3.50/N-3.51에서 두 건 모두 실제 코드 수정으로 해결됨(wear/kids 구조 = N-3.51 STEP1, A/S 전화번호 = N-3.51 STEP2) — 다음 실등록 시도는 이 두 필드로는 더 이상 막히지 않을 것으로 예상되나, 아직 실제 POST로 검증되지 않았다(N-3.51 STEP6 대상)."
 }

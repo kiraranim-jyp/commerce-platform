@@ -2,7 +2,7 @@ import type { ListingModel } from "@commerce/marketplace";
 import type { CategorySelection } from "@commerce/category";
 import type { CanonicalProduct, CanonicalProductOptionGroup, CanonicalProductVariant } from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
-import { convertToKrw } from "@commerce/pricing";
+import { computeVariantFinalPriceKrw } from "@commerce/pricing";
 
 /**
  * 쿠팡 Open API "상품 생성"(POST .../v1/marketplace/seller-products) 요청 바디를
@@ -1111,15 +1111,22 @@ function buildCoupangItem(args: {
   const optionSuffix = variant ? Object.values(variant.optionValues).join(", ") : "";
   const itemName = optionSuffix ? `${listing.title} - ${optionSuffix}` : listing.title;
 
-  // variant.price가 있으면(옵션마다 가격이 다른 매장) 그 옵션의 실제 가격을
-  // 원화로 환산해서 쓴다 — 없으면 listing.priceKrw(상품 전체 대표가)로 폴백한다.
-  // 단, 사용자가 확정한 priceOverrideKrw가 있으면 variant 원본가로 조용히
-  // 되돌아가지 않도록 항상 우선한다(실측 중 확정가 무시 사고 확인).
-  const priceKrw = product.priceOverrideKrw
-    ? listing.priceKrw
-    : variant?.price
-      ? convertToKrw(variant.price.amount, variant.price.currency).amountKrw
-      : listing.priceKrw;
+  // Sprint A-4(CPO 지시 — 발견된 버그 수정) — 이전 로직은 두 가지로 갈라져
+  // 둘 다 틀렸다: (1) priceOverrideKrw가 없을 때는 variant 원본가를 마진
+  // 없이 그냥 환산해서 썼고(사용자가 나중에 확정할 마진/수수료가 반영 안
+  // 됨), (2) priceOverrideKrw가 있을 때는 반대로 variant 가격 차이를 통째로
+  // 무시하고 모든 옵션에 똑같은 salePrice를 넣었다(옵션별 가격 차별화가
+  // 완전히 사라짐). computeVariantFinalPriceKrw 하나로 통일한다 — 항상
+  // listing.priceKrw(이미 priceOverrideKrw ?? 추정 마진판매가로 정해진 값)를
+  // 기준으로, variant 원본가 차이만 환산해서 더한다(마진 재적용 없음,
+  // Naver build-payload.ts와 동일한 계산).
+  const variantPriceResult = variant?.price
+    ? computeVariantFinalPriceKrw(
+        { amount: product.price.value.amount, currency: product.price.value.currency, finalKrw: listing.priceKrw },
+        { amount: variant.price.amount, currency: variant.price.currency, mode: variant.priceMode },
+      )
+    : { finalKrw: listing.priceKrw, applied: false };
+  const priceKrw = variantPriceResult.finalKrw;
 
   const item: CoupangItem = {
     itemName,
@@ -1334,10 +1341,27 @@ export function buildCoupangPayload(
 export interface CoupangPricingIssue {
   field: "salePrice" | "returnCharge";
   message: string;
+  /** N-3.54(CPO 지시) — PRICE_UNRESOLVED만 안정적인 code를 준다(UI가 이 코드로
+   * 전용 경고 배너를 분기해야 하므로). 10원단위/반품배송비 상한은 문자열
+   * message만으로 충분해 code를 붙이지 않는다(기존 동작 유지). */
+  code?: "PRICE_UNRESOLVED";
 }
 
-export function validateCoupangPricing(payload: CoupangPayload): CoupangPricingIssue[] {
+/** N-3.54(CPO 지시: "원본 가격을 못 읽었으면 가격을 계산하지 말고") —
+ * payload.items[].salePrice(최종 KRW 가격)가 얼마든 상관없이, 원본
+ * product.priceValidity가 VALID가 아니면(원본 가격을 못 읽었거나 파싱
+ * 실패) 등록을 막는다. 기존 10원단위/반품배송비 체크는 salePrice의
+ * "형식"만 보고 "이 값의 근거가 실재하는지"는 보지 않았다 — Naver
+ * validate-payload.ts와 동일한 게이트를 Coupang에도 그대로 적용한다. */
+export function validateCoupangPricing(payload: CoupangPayload, product: CanonicalProduct): CoupangPricingIssue[] {
   const issues: CoupangPricingIssue[] = [];
+  if (product.priceValidity !== "VALID") {
+    issues.push({
+      field: "salePrice",
+      message: "원본 상품 가격을 확인할 수 없습니다 — 해외 사이트의 가격을 확인한 후 등록할 수 있습니다.",
+      code: "PRICE_UNRESOLVED",
+    });
+  }
   const nonRoundItems = payload.items.filter((item) => item.salePrice % 10 !== 0);
   if (nonRoundItems.length > 0) {
     issues.push({

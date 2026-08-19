@@ -21,6 +21,7 @@ function makeMinimalProduct(): CanonicalProduct {
     title: field("아동용 반팔 티셔츠"),
     brand: field("TestBrand"),
     price: field({ amount: 10000, currency: "KRW" }),
+    priceValidity: "VALID",
     sku: field("KIDS-TSHIRT-1"),
     description: field("아동용 반팔 티셔츠입니다."),
     material: field("면 100%"),
@@ -1010,16 +1011,18 @@ describe("N-3.5: Final Validator — readyCount/missingCount/blockedCount", () =
     expect(result.ok).toBe(false);
   });
 
-  // N-3.13 Part I(I-10 Test A 재확인, CPO 결정 2026-08-12 반영) —
-  // naverShoppingRegistration을 advisory로 뺐지만, 완전 READY는 여전히
-  // 불가능하다는 걸 이번에 다시 확인했다: `${noticePrefix}.size`(치수)가
-  // WEAR/KIDS 공통으로 항상 `check(fields, ..., false, ...)`(무조건 MISSING)
-  // 처리돼 있다 — CartPilot에 사이즈 값을 채울 입력 경로가 아직 없기
-  // 때문이다(naverShoppingRegistration과는 다른 이유: 이건 "CartPilot이
-  // 몰라서"가 아니라 "입력 UI가 아직 없어서"다). 이 필드는 이번 CPO 결정
-  // 범위(naverShoppingRegistration)에 포함되지 않았으므로 advisory로 임의
-  // 편입하지 않는다 — 대신 실제 남은 이유를 그대로 고정해 둔다.
-  it("Case F(신규) — deliveryCompany/warrantyPolicy/afterServiceDirector를 채워도 size(치수) 입력 경로가 없어 여전히 MISSING 1건 남는다", () => {
+  // Sprint P0(CPO 지시, 2026-08-19: "필수값과 선택값을 분리해야 합니다" —
+  // "97%인데 등록이 안 되는 문제") — 이 테스트는 원래 "size 입력 경로가
+  // 없으면 영원히 ok:false"를 정상 동작으로 고정해뒀었다. 그게 정확히
+  // CPO가 신고한 버그였다: SIZE 옵션이 없는 상품(가방/액세서리 등)은
+  // resolveSizeFromOptions가 절대 값을 만들어낼 수 없는데, 이 필드
+  // 하나가 다른 필수 정보를 다 채운 상품의 등록까지 영원히 막았다. 이제
+  // size는 optional:true로 표시돼 여전히 MISSING(issues에는 남아 "선택
+  // 정보"로 보임)이지만 ok/등록 Gate는 막지 않는다 — naverShoppingRegistration
+  // (advisory)과는 성격이 다르다: advisory는 "등록 가능 여부와 아예
+  // 무관"이라 화면에서도 빠지지만, size는 "채우면 좋지만 없어도 등록은
+  // 되는" 필드라 여전히 이슈 목록/선택 입력 카운트에는 보인다.
+  it("Case F — deliveryCompany/warrantyPolicy/afterServiceDirector를 채우면 size(치수)만 선택 정보로 남고 ok:true다", () => {
     const product = makeMinimalProduct();
     const listing = makeMinimalListing(product);
     const payload = buildNaverProductPayload({
@@ -1028,7 +1031,8 @@ describe("N-3.5: Final Validator — readyCount/missingCount/blockedCount", () =
       categoryRequiresChildCertification: false,
       deliveryCompany: "CJGLS",
       warrantyPolicy: "구매일로부터 1년",
-      afterServiceDirector: "고객센터 1544-0000",
+      afterServiceDirector: "1544-0000",
+      afterServiceTelephoneNumber: "1544-0000",
     });
     const result = validateNaverPayload(
       payload,
@@ -1037,7 +1041,8 @@ describe("N-3.5: Final Validator — readyCount/missingCount/blockedCount", () =
         childCertificationInfoId: null,
         deliveryCompany: "CJGLS",
         warrantyPolicy: "구매일로부터 1년",
-        afterServiceDirector: "고객센터 1544-0000",
+        afterServiceDirector: "1544-0000",
+        afterServiceTelephoneNumber: "1544-0000",
       },
       false,
     );
@@ -1046,12 +1051,78 @@ describe("N-3.5: Final Validator — readyCount/missingCount/blockedCount", () =
     expect(
       result.issues.some((i) => i.field === "productInfoProvidedNotice(WEAR).size" && i.severity === "MISSING"),
     ).toBe(true);
-    expect(result.ok).toBe(false);
+    const sizeField = result.fields.find((f) => f.field === "productInfoProvidedNotice(WEAR).size");
+    expect(sizeField?.optional).toBe(true);
+    // 핵심 회귀 대상 — size 하나만 MISSING이어도(optional:true) 등록을
+    // 막지 않는다. blockedCount=0이고 missingCount=1(size)뿐인데 ok가
+    // false로 남으면 P0 버그가 재발한 것이다.
+    expect(result.ok).toBe(true);
     // advisory는 여전히 fields에는 남아있다(섹션 요약에서 보여야 하니까) — 다만
     // 카운트/ok에는 영향을 주지 않는다는 걸 같이 확인한다.
     expect(
       result.advisoryNotes.some((f) => f.field === "smartstoreChannelProduct.naverShoppingRegistration"),
     ).toBe(true);
+  });
+
+  // Sprint P0 확장(CEO 지시, 2026-08-19: "치수뿐 아니라 필수가 아닌 값은
+  // 전부 optional로 — 필수만 다 입력되면 등록 가능해야 한다") — Case F는
+  // deliveryCompany/warrantyPolicy/afterServiceDirector를 미리 채운
+  // 픽스처였다. 이 케이스는 그 반대: 소재/색상/제조자/세탁방법/품질보증/
+  // AS연락처/사용연령/품명/모델명/중량/치수를 전부 비운 상태에서도(핵심
+  // 필수값 — 카테고리/상품명/이미지/상세설명/가격/재고/배송지/택배사/원산지
+  // 만 채움) ok:true인지 확인한다. 하나라도 여전히 required로 남아있으면
+  // 여기서 실패한다.
+  it("Case G(신규) — 소재/색상/제조자/세탁방법/품질보증/AS연락처/치수 등 부가정보를 전부 비워도 핵심 필수값만 있으면 ok:true다", () => {
+    const product = makeMinimalProduct();
+    // 부가정보(고시 텍스트)를 전부 비운다 — 소재/색상/제조자/세탁방법.
+    product.material = field("");
+    product.color = field("");
+    product.manufacturer = field("");
+    product.careInstructions = field("");
+    // KIDS 노티스 전용 부가정보도 비운다 — 사용연령/품명/모델명/중량
+    // (certificationType은 KC라 이 테스트에서 categoryRequiresChildCertification:false로
+    // 아예 검사 대상에서 빠진다).
+    product.recommendedAge = field("");
+    product.itemName = field("");
+    product.modelName = field("");
+    product.weight = field("");
+    // 옵션 자체가 없으므로 치수(사이즈)도 자연히 MISSING+optional이 된다.
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+      deliveryCompany: "CJGLS",
+      // warrantyPolicy/afterServiceDirector/afterServiceTelephoneNumber도
+      // 비운다 — Settings 미설정 상태를 재현한다.
+      warrantyPolicy: "",
+      afterServiceDirector: "",
+      afterServiceTelephoneNumber: "",
+    });
+    const result = validateNaverPayload(
+      payload,
+      {
+        ...baseValidateInput(product),
+        childCertificationInfoId: null,
+        deliveryCompany: "CJGLS",
+        warrantyPolicy: "",
+        afterServiceDirector: "",
+        afterServiceTelephoneNumber: "",
+      },
+      false,
+    );
+    expect(result.blockedCount).toBe(0);
+    // material/color/manufacturer/caution/size/warrantyPolicy/
+    // afterServiceDirector/afterServiceTelephoneNumber = 8개가 전부
+    // MISSING이어야 한다(missingCount는 그대로 "전체 MISSING 개수" 의미를
+    // 유지 — optional이어도 이 카운트에서는 빠지지 않는다).
+    expect(result.missingCount).toBeGreaterThanOrEqual(8);
+    const optionalMissingFields = result.fields.filter((f) => f.status === "MISSING" && f.optional);
+    expect(optionalMissingFields.length).toBeGreaterThanOrEqual(8);
+    // 핵심 회귀 대상 — 부가정보가 전부 비어 있어도(전부 optional) 등록을
+    // 막지 않는다. blockedCount=0인데 ok가 false로 남으면 CEO가 지시한
+    // "필수만 다 입력되면 등록 가능" 확장이 깨진 것이다.
+    expect(result.ok).toBe(true);
   });
 });
 
@@ -1118,7 +1189,8 @@ describe("N-3.32: 단일 SKU 옵션 판정 정합성(hasRealProductOptions)", ()
       childCertificationInfoId: null,
       categoryRequiresChildCertification: false,
     });
-    expect(payload.originProduct.detailAttribute?.productInfoProvidedNotice?.size).toBe("100, 110");
+    const noticeC = payload.originProduct.detailAttribute?.productInfoProvidedNotice;
+    expect(noticeC && "wear" in noticeC ? noticeC.wear.size : undefined).toBe("100, 110");
     const result = validateNaverPayload(
       payload,
       { ...baseValidateInput(product), childCertificationInfoId: null },

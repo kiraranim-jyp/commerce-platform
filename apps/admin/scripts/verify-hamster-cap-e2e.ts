@@ -36,6 +36,7 @@ const product: CanonicalProduct = {
   title: field("Hamster Kid Cap in Brown by The Animals Observatory", "shopify-json" as FieldSource),
   brand: field("The Animals Observatory", "shopify-json" as FieldSource),
   price: field({ amount: 74, currency: "GBP" }, "shopify-json" as FieldSource),
+  priceValidity: "VALID",
   sku: field(""),
   description: field(
     "Hamster kid cap in brown by The Animals Observatory. Made of 100% cotton.",

@@ -16,6 +16,7 @@ const product: CanonicalProduct = {
   title: { value: "Test Baby Dress", source: "ORIGINAL", confidence: 1 },
   brand: { value: "Apolina", source: "ORIGINAL", confidence: 1 },
   price: { value: { amount: 30, currency: "GBP" }, source: "ORIGINAL", confidence: 1 },
+  priceValidity: "VALID",
   sku: { value: "", source: "ORIGINAL", confidence: 0 },
   description: { value: "A dress", source: "ORIGINAL", confidence: 1 },
   material: { value: "", source: "ORIGINAL", confidence: 0 },

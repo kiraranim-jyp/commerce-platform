@@ -56,11 +56,20 @@ export function DetailPageEditor({
   blocks,
   onChange,
   payloadPreview,
+  platformLabel = "쿠팡",
 }: {
   product: CanonicalProduct;
   blocks: DetailPageBlock[];
   onChange: (blocks: DetailPageBlock[]) => void;
   payloadPreview?: { payload: CoupangPayload } | null;
+  /** Sprint P1(CPO 지시, 2026-08-19) — SmartStore 탭에서도 이 에디터를 쓰게
+   * 되면서 "쿠팡에 등록됩니다" 문구가 고정 텍스트로는 틀린 말이 된다.
+   * payloadPreview는 여전히 CoupangPayload 모양만 받는다(Naver 쪽 실제
+   * 조립 결과 미리보기는 NaverPayloadPreview가 별도로 이미 보여주고 있어
+   * 여기서 새 미리보기 렌더링을 만들지 않는다 — SmartStore 탭에서는
+   * payloadPreview가 항상 null/undefined로 넘어와 이 블록만 조용히
+   * 생략된다). */
+  platformLabel?: string;
 }) {
   const presentKinds = new Set(blocks.map((b) => b.kind));
   const addableOptions = ADDABLE_KINDS.filter((kind) => !presentKinds.has(kind) || kind === "CUSTOM_TEXT");
@@ -78,7 +87,7 @@ export function DetailPageEditor({
     <div className="space-y-4">
       <p className="text-xs text-text-tertiary">
         상세페이지에 들어갈 블록의 순서와 노출 여부를 정합니다 — 여기서 끄지 않으면 아래 순서
-        그대로 쿠팡에 등록됩니다.
+        그대로 {platformLabel}에 등록됩니다.
       </p>
 
       <ol className="space-y-2">

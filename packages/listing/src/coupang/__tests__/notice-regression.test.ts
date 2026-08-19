@@ -24,6 +24,7 @@ function makeMockProduct(overrides: Partial<CanonicalProduct> = {}): CanonicalPr
     title: field("Test Item"),
     brand: field("TestBrand"),
     price: field({ amount: 10000, currency: "KRW" }),
+    priceValidity: "VALID",
     sku: field("TEST-SKU-1"),
     description: field("A test product for regression tests."),
     material: field(""),

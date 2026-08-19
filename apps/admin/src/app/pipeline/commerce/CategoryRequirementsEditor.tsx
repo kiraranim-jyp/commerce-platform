@@ -96,7 +96,7 @@ export function CategoryRequirementsEditor({
         </span>
       </div>
       <p className="mt-1 text-xs text-text-secondary">
-        브랜드/제조국/색상/소재처럼 CartPilot이 이미 아는 값은 자동으로 채워집니다 — KC 인증 같은 항목만 직접
+        브랜드/제조국/색상/소재처럼 TTAEJYO가 이미 아는 값은 자동으로 채워집니다 — KC 인증 같은 항목만 직접
         입력해주세요.
       </p>
 
@@ -155,7 +155,7 @@ const SOURCE_LABELS: Record<ComplianceFieldSource, string> = {
   USER_INPUT: "직접 입력함",
   OPTION_MATCH: "선택한 옵션에서",
   PRODUCT_FIELD: "상품 정보에서 추출",
-  KNOWN_VALUE: "CartPilot이 확인한 값",
+  KNOWN_VALUE: "TTAEJYO가 확인한 값",
   DETERMINISTIC: "카테고리 규칙 기본값",
   DEFAULT_VALUE: "업계 관용 기본값 자동 적용",
   PLACEHOLDER: "",

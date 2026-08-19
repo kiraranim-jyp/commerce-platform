@@ -156,6 +156,89 @@ const PRODUCT_TYPE_KEYWORDS: { type: string; terms: string[] }[] = [
   // 별도 브랜치("가구/인테리어 > 인테리어소품 > 아로마/캔들용품")에 있어서,
   // 침구류와 같은 productType으로 묶으면 안 된다 — 별도 타입으로 분리한다.
   { type: "캔들", terms: ["candle", "candles", "scented candle", "diffuser"] },
+  // SmartStore 플로우 개선 STEP1(CPO 지시 — "카테고리 추천 실패 원인 분석")
+  // 실측 확인: PRODUCT_TYPE_KEYWORDS에 없는 상품유형(가구/전자기기/반려동물
+  // 용품/문구)은 productType이 항상 null로 떨어지고, generateNaverCategoryCandidates
+  // (packages/listing/category-match.ts)가 그 즉시 빈 배열을 반환해 SmartStore
+  // 후보가 0개가 된다 — Coupang은 predict API가 낮은 신뢰도로라도 뭔가는 주는
+  // 반면 SmartStore는 이 닫힌 키워드 목록 밖이면 트리 탐색 자체를 시도하지
+  // 않는다는 게 실제 원인이었다(verify-category-null-productType.ts로 검증).
+  // 자주 나올 만한 4개 유형을 우선 추가한다 — candidate-scoring.ts의
+  // DOMAIN_PROFILES에도 같은 이름으로 대응 항목을 추가해야 한다(두 표가
+  // 어긋나면 조용히 실패한다, 위 주석 원칙과 동일).
+  {
+    type: "가구",
+    terms: [
+      "furniture",
+      "chair",
+      "table",
+      "desk",
+      "sofa",
+      "couch",
+      "bookshelf",
+      "shelf",
+      "cabinet",
+      "drawer",
+      "bed frame",
+      "ottoman",
+      "stool",
+      "bench",
+      "wardrobe",
+      "nightstand",
+    ],
+  },
+  {
+    type: "가전/디지털",
+    terms: [
+      "mouse",
+      "keyboard",
+      "laptop",
+      "headphone",
+      "headphones",
+      "earphone",
+      "earphones",
+      "earbuds",
+      "speaker",
+      "charger",
+      "monitor",
+      "webcam",
+      "microwave",
+      "blender",
+      "vacuum cleaner",
+      "air purifier",
+      "humidifier",
+    ],
+  },
+  {
+    type: "반려동물용품",
+    terms: [
+      "dog leash",
+      "dog collar",
+      "pet bed",
+      "pet food",
+      "cat litter",
+      "aquarium",
+      "pet carrier",
+      "dog bowl",
+      "cat toy",
+      "dog toy",
+    ],
+  },
+  {
+    type: "문구/사무용품",
+    terms: [
+      "notepad",
+      "spiral notebook",
+      "stationery",
+      "sticky note",
+      "planner",
+      "desk organizer",
+      "pencil case",
+      "highlighter",
+      "fountain pen",
+      "ballpoint pen",
+    ],
+  },
   {
     type: "뷰티",
     terms: [

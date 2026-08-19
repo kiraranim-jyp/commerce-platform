@@ -29,6 +29,7 @@ function makeProduct(overrides: Partial<CanonicalProduct> = {}): CanonicalProduc
     title: field("Option Price Contract Test Product"),
     brand: field("TestBrand"),
     price: field({ amount: 70100, currency: "KRW" }),
+    priceValidity: "VALID",
     sku: field("OPT-PRICE-1"),
     description: field("옵션가 계약 테스트용 상품."),
     material: field("면 100%"),
@@ -99,7 +100,8 @@ const COMMON_INPUT = {
   originAreaCode: "00",
   deliveryCompany: "CJGLS",
   warrantyPolicy: "구매일로부터 1년",
-  afterServiceDirector: "홍길동 02-1234-5678",
+  afterServiceDirector: "02-1234-5678",
+  afterServiceTelephoneNumber: "+821012345678",
 };
 
 function buildAndValidate(product: CanonicalProduct) {
@@ -208,6 +210,38 @@ describe("N-3.47: SmartStore 옵션가격 계약 테스트(salePrice 70100 기�
       ),
     ).toBe(true);
     expect(validation.ok).toBe(false);
+  });
+
+  it("Case 5 — 원본 통화가 KRW가 아니고 마진이 걸린 실제 상황(Sprint A-4 회귀 방지, 이전 계약 테스트는 이 케이스를 놓쳤다)", () => {
+    // 기존 4개 Case는 product.price가 이미 KRW이고 listing.priceKrw가
+    // product.price.value.amount와 정확히 같아서(마진 0) 옛 버그
+    // (convertToKrw(variant)-salePrice)가 우연히 올바른 값과 같아졌다 —
+    // 이 케이스는 원본 통화(USD)와 마진(salePrice > 원본 환산가)이 실제
+    // 크롤링 상황처럼 걸려 있어야 버그를 재현/방지할 수 있다.
+    const product = makeProduct({
+      price: field({ amount: 44, currency: "USD" }),
+      variants: [
+        { id: "v1", optionValues: { 사이즈: "A" }, sku: "SKU-A", stockQuantity: 5, price: { amount: 44, currency: "USD" } },
+        { id: "v2", optionValues: { 사이즈: "B" }, sku: "SKU-B", stockQuantity: 5, price: { amount: 49, currency: "USD" } },
+      ],
+    });
+    const listing = makeListing(product);
+    listing.priceKrw = 105674; // CPO 참조 케이스(breakdown.test.ts) — $44, 수수료10%+마진20% 적용된 실제 최종가.
+    const payload = buildNaverProductPayload({
+      product,
+      listing,
+      leafCategoryId: "50000535",
+      ...COMMON_INPUT,
+      categoryRequiresChildCertification: false,
+      originAreaRequiresContent: false,
+    });
+    const combos = payload.originProduct.detailAttribute?.optionInfo?.optionCombinations ?? [];
+    // A는 기본과 동일가 → delta 0. B는 $5 비쌈 → +7042(5*1408.45 반올림,
+    // liveRates 없이 FIXED_RATES_TO_KRW.USD=1380 사용 — 이 파일은 liveRates를
+    // 안 넘기므로 고정환율 기준이다: 5*1380=6900).
+    expect(combos[0].price).toBe(0);
+    expect(combos[1].price).toBe(6900);
+    expect(combos[1].price).toBeGreaterThan(0); // 옛 버그였다면 음수(반대 부호)가 나왔을 것 — 부호 회귀 방지.
   });
 
   it("절대가격만 제공되는 원본 사이트 → ABSOLUTE(수집값) → DELTA(payload) 변환이 정확하다(Case 2와 동일 값, 관점만 다름)", () => {

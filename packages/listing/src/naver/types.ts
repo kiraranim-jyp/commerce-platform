@@ -31,13 +31,36 @@ export interface NaverImages {
   optionalImages?: NaverImageRef[];
 }
 
+/** N-3.51 STEP1(CPO 지시, 실제 등록 5차 시도 실패 원인 재조사) — 지금까지
+ * productInfoProvidedNoticeType과 같은 레벨에 material/color/size 등을
+ * 평평하게(flat) 담고 있었는데, 실제 Naver API는 이 값들을 productInfoProvidedNoticeType과
+ * 같은 값을 소문자로 쓴 하위 키(wear/kids)로 한 번 더 감싼 객체를 요구한다
+ * (실제 등록 시도에서 "productInfoProvidedNotice.wear" NotEmpty로 거부 확인,
+ * 이후 WebSearch로 commerce-api-naver 공식 GitHub Discussion #241/#516에서
+ * "productInfoProvidedNoticeType을 WEAR로 설정하면 productInfoProvidedNotice
+ * 필드는 wear를 자식 노드로만 가져야 한다"는 설명과 실제 payload 예시를
+ * 2개 독립 출처로 재확인했다). 필드 목록 자체는 이전과 같다(docs/
+ * naver-provided-notice-types-raw.json 실측 GET 응답 기준) — 감싸는 껍데기만
+ * 바뀐다.
+ */
+export interface NaverWearNoticeFields {
+  material?: string;
+  color?: string;
+  size?: string;
+  manufacturer?: string;
+  caution?: string;
+  packDate?: string;
+  packDateText?: string;
+  warrantyPolicy?: string;
+  afterServiceDirector?: string;
+}
+
 /** 확인됨(production GET, N-2.4) — KIDS 고시유형(어린이제품)의 실제 필드.
  * 아동복 대상 카테고리(exceptionalCategories에 CHILD_CERTIFICATION 포함)는
  * WEAR(의류) 대신 KIDS를 쓰는 게 맞다고 판단했다 — 다만 이건 CartPilot의 판단이지
  * 네이버가 "이 카테고리는 반드시 KIDS를 써야 한다"고 명시한 건 아니라서
  * mapper에서 이 가정을 주석으로 남긴다. */
-export interface NaverProductInfoProvidedNoticeKids {
-  productInfoProvidedNoticeType: "KIDS";
+export interface NaverKidsNoticeFields {
   itemName?: string;
   modelName?: string;
   certificationType?: string;
@@ -55,18 +78,14 @@ export interface NaverProductInfoProvidedNoticeKids {
   numberLimit?: string;
 }
 
-/** 확인됨(production GET, N-2.4) — 일반 의류용. */
+export interface NaverProductInfoProvidedNoticeKids {
+  productInfoProvidedNoticeType: "KIDS";
+  kids: NaverKidsNoticeFields;
+}
+
 export interface NaverProductInfoProvidedNoticeWear {
   productInfoProvidedNoticeType: "WEAR";
-  material?: string;
-  color?: string;
-  size?: string;
-  manufacturer?: string;
-  caution?: string;
-  packDate?: string;
-  packDateText?: string;
-  warrantyPolicy?: string;
-  afterServiceDirector?: string;
+  wear: NaverWearNoticeFields;
 }
 
 export type NaverProductInfoProvidedNotice =
@@ -277,6 +296,18 @@ export interface NaverDetailAttribute {
   /** N-3.49(2026-08-17, 실제 등록 3차 시도로 발견) — "미성년자 구매 가능
    * 여부"(NotNull). 성인용/연령제한 카테고리가 아닌 한 true. */
   minorPurchasable?: boolean;
+  /** N-3.51 STEP6(2026-08-17, 실제 등록 7차 시도로 발견) — 출고지가 해외
+   * 주소인 경우 필수("customsTaxType.required.overseas"). 공식 GitHub
+   * Discussion #3569(commerce-api-naver 계정, 그룹상품 관부가세 필드
+   * 변경 공지)에서 실제 enum 값 확인:
+   * "NOT_APPLICABLE"(관부가세 부과 대상 아님) / "INCLUDED"(관부가세 포함,
+   * 상품 가격에 이미 포함) / "EXCLUDED"(관부가세 미포함, 구매자가 결제
+   * 시점 이후 별도 부담). CartPilot의 판매가(salePrice)는 이미 원가+마진+
+   * 수수료를 반영한 단일 최종가로 계산되고(packages/pricing) 체크아웃에서
+   * 관부가세를 별도 항목으로 청구하는 흐름이 없으므로 "INCLUDED"가 실제
+   * 가격 구조와 일치하는 값이다 — 임의 추측이 아니라 기존 가격 모델과의
+   * 일관성에 근거한 선택. */
+  customsTaxType?: "NOT_APPLICABLE" | "INCLUDED" | "EXCLUDED";
 }
 
 export interface NaverOriginProduct {

@@ -197,6 +197,7 @@ export function CategoryTreeBrowser({
                     reason: [`✓ 카테고리 목록에서 직접 선택한 실제 ${platformLabel} 카테고리입니다.`],
                     source: "rule",
                     isVerifiedPlatformCode: true,
+                    manuallySelected: true,
                   })
                 }
                 className="shrink-0 rounded border border-selected-border bg-white px-3 py-1 text-xs font-medium text-selected-border hover:bg-selected-soft"

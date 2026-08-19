@@ -1,5 +1,6 @@
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
+import type { DetailPageBlock } from "../coupang/build-payload";
 import type { ListingExecutor } from "../executor";
 import { buildSmartStorePayload } from "../smartstore/build-payload";
 import { validateSmartStoreListing } from "../smartstore/validate-listing";
@@ -19,6 +20,15 @@ export const smartstoreExecutor: ListingExecutor = {
     product: CanonicalProduct,
     listing: ListingModel,
     mode: ExecutionMode,
+    // Sprint B-1(CPO 지시) — 이 executor는 그동안 context 파라미터 자체를
+    // 선언하지 않아서 snapshotId/jobKey가 조용히 버려졌다(TS는 인터페이스보다
+    // 적은 파라미터로 구현하는 걸 허용한다 — 실제로 CommerceWorkspace는 항상
+    // context를 넘겼지만 여기서 받지도 않았다). registration_attempts.snapshot_id가
+    // SmartStore LIVE 시도에서는 항상 null이었던 원인이라 이번에 같이 고친다.
+    // Sprint P1(CPO 지시, 2026-08-19) — detailBlocks도 같은 이유로 추가한다:
+    // executor.ts 인터페이스에는 처음부터 있었지만 이 구현체가 안 받아서
+    // CommerceWorkspace가 항상 undefined로 넘기게 만든 원인이었다.
+    context?: { snapshotId?: string; jobKey?: string; detailBlocks?: DetailPageBlock[] },
   ): Promise<ListingResult> {
     const readiness = validateSmartStoreListing(product, listing);
     if (readiness.errorCount > 0) {
@@ -71,7 +81,13 @@ export const smartstoreExecutor: ListingExecutor = {
       const response = await fetch("/api/smartstore/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product, listing }),
+        body: JSON.stringify({
+          product,
+          listing,
+          snapshotId: context?.snapshotId,
+          jobKey: context?.jobKey,
+          detailBlocks: context?.detailBlocks,
+        }),
       });
       const result = (await response.json()) as ListingResult;
       return result;

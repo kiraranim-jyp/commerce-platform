@@ -6,6 +6,7 @@ interface InquiryBody {
   errorCode?: string;
   errorMessage: string;
   traceId?: string;
+  jobKey?: string;
   url?: string;
   platform?: string;
   site?: string;
@@ -33,10 +34,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ stored: false, reason: "SUPABASE_NOT_CONFIGURED" });
   }
 
-  const { error } = await supabase.from("support_inquiries").insert({
+  const row: Record<string, unknown> = {
     error_code: body.errorCode ?? null,
     error_message: body.errorMessage,
     trace_id: body.traceId ?? null,
+    // Sprint B-1 — 문의 게시판에서도 Job Key로 바로 필터/검색할 수 있게.
+    job_key: body.jobKey ?? null,
     url: body.url ?? null,
     platform: body.platform ?? null,
     site: body.site ?? null,
@@ -44,7 +47,13 @@ export async function POST(request: Request) {
     occurred_at: body.occurredAt,
     user_note: body.userNote ?? null,
     step_log: body.stepLog ?? null,
-  });
+  };
+  let { error } = await supabase.from("support_inquiries").insert(row);
+  // 마이그레이션 025 미실행 환경 대비 — job_key 컬럼이 없으면 그 필드만 빼고 재시도한다.
+  if (error && "job_key" in row) {
+    delete row.job_key;
+    ({ error } = await supabase.from("support_inquiries").insert(row));
+  }
 
   if (error) {
     console.warn("[support/inquiries] 저장 실패:", error.message);

@@ -22,6 +22,7 @@ const product: CanonicalProduct = {
   title: field("Blonde Hinoki – HI-FI Candle", "shopify-json" as FieldSource),
   brand: field("P.F. Candle Co.", "shopify-json" as FieldSource),
   price: field({ amount: 44, currency: "USD" }, "shopify-json" as FieldSource),
+  priceValidity: "VALID",
   sku: field(""),
   description: field(
     "Clean and warm, inspired by the light woods used to house records in a hi-fi listening bar. Golden cypress, green petitgrain, elemi resin.",

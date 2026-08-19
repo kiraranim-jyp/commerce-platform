@@ -19,6 +19,7 @@ const product: CanonicalProduct = {
   title: field("Voyage Dress in Bright Sky Blossom Plaid by Misha & Puff", "shopify-json" as FieldSource),
   brand: field("Misha & Puff", "shopify-json" as FieldSource),
   price: field({ amount: 88, currency: "GBP" }, "shopify-json" as FieldSource),
+  priceValidity: "VALID",
   sku: field(""),
   description: field(
     "Voyage Dress by Misha & Puff. A dress in lightweight organic cotton plaid, with a woven textured design, rounded collar, elbow-length sleeves, gathered waist, ruffle trim with edge detail, and a double-breasted corozo button closure. Lined in cotton voile and finished with French seams.",

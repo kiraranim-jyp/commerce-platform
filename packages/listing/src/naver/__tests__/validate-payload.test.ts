@@ -21,6 +21,7 @@ function makeMinimalProduct(): CanonicalProduct {
     title: field("아동용 반팔 티셔츠"),
     brand: field("TestBrand"),
     price: field({ amount: 10000, currency: "KRW" }),
+    priceValidity: "VALID",
     sku: field("KIDS-TSHIRT-1"),
     description: field("아동용 반팔 티셔츠입니다."),
     material: field("면 100%"),
@@ -110,7 +111,11 @@ function buildAndValidate(
     originAreaCode: opts.originAreaCode,
     deliveryCompany: "CJGLS",
     warrantyPolicy: "구매일로부터 1년",
-    afterServiceDirector: "홍길동 02-1234-5678",
+    afterServiceDirector: "02-1234-5678",
+    // N-3.51 STEP2 — afterServiceInfo.afterServiceTelephoneNumber는 이제
+    // afterServiceDirector와 별개 소스다(실제 SellerProfile.companyContactNumber
+    // 형식 재현).
+    afterServiceTelephoneNumber: "+821012345678",
   };
   const payload = buildNaverProductPayload({
     product,
@@ -339,9 +344,9 @@ describe("N-3.45: 상품정보제공고시 공통 관리 — '상세페이지 �
       expect(check?.status, `${f} should be READY via 상세페이지 참조`).toBe("READY");
     }
     const notice = payload.originProduct.detailAttribute?.productInfoProvidedNotice;
-    expect(notice && "itemName" in notice ? notice.itemName : undefined).toBe("상품 상세페이지 참조");
-    expect(notice && "modelName" in notice ? notice.modelName : undefined).toBe("상품 상세페이지 참조");
-    expect(notice && "weight" in notice ? notice.weight : undefined).toBe("상품 상세페이지 참조");
+    expect(notice && "kids" in notice ? notice.kids.itemName : undefined).toBe("상품 상세페이지 참조");
+    expect(notice && "kids" in notice ? notice.kids.modelName : undefined).toBe("상품 상세페이지 참조");
+    expect(notice && "kids" in notice ? notice.kids.weight : undefined).toBe("상품 상세페이지 참조");
   });
 
   it("KC 인증정보(certificationType)는 '상세페이지 참조'를 선택해도 절대 READY로 바뀌지 않는다(영구 제외 가드)", () => {
@@ -359,7 +364,7 @@ describe("N-3.45: 상품정보제공고시 공통 관리 — '상세페이지 �
     const check = validation.fields.find((f) => f.field === "productInfoProvidedNotice(KIDS).certificationType");
     expect(check?.status).toBe("MISSING");
     const notice = payload.originProduct.detailAttribute?.productInfoProvidedNotice;
-    expect(notice && "certificationType" in notice ? notice.certificationType : undefined).toBeUndefined();
+    expect(notice && "kids" in notice ? notice.kids.certificationType : undefined).toBeUndefined();
   });
 
   it("일반 필드(material/color/manufacturer/careInstructions/recommendedAge)도 '상세페이지 참조'로 READY 전환된다", () => {
@@ -379,5 +384,84 @@ describe("N-3.45: 상품정보제공고시 공통 관리 — '상세페이지 �
       const check = validation.fields.find((x) => x.field === `productInfoProvidedNotice(KIDS).${f}`);
       expect(check?.status, `${f} should be READY via 상세페이지 참조`).toBe("READY");
     }
+  });
+});
+
+describe("N-3.50/N-3.51 STEP3: deliveryType/deliveryAttributeType/minorPurchasable/afterServiceInfo", () => {
+  // N-3.51 STEP2 — afterServiceTelephoneNumber는 afterServiceDirector와 다른
+  // 실제 소스(SellerProfile.companyContactNumber)라 별도 파라미터로 바꾼다.
+  // afterServiceDirector는 고시용 자유 텍스트라 항상 정상값으로 고정한다.
+  function buildAndValidateWithAfterServiceTelephoneNumber(afterServiceTelephoneNumber: string | null) {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    const commonInput = {
+      releaseAddressBookNo: RELEASE_ADDRESS,
+      refundAddressBookNo: REFUND_ADDRESS,
+      primaryReturnDeliveryCompanyPriorityType: RETURN_COMPANY_PRIORITY_TYPE,
+      returnDeliveryFee: RETURN_DELIVERY_FEE,
+      exchangeDeliveryFee: EXCHANGE_DELIVERY_FEE,
+      childCertificationInfoId: null,
+      originAreaCode: DOMESTIC_ORIGIN_AREA_CODE,
+      deliveryCompany: "CJGLS",
+      warrantyPolicy: "구매일로부터 1년",
+      afterServiceDirector: "해외 구매대행으로 A/S 불가",
+      afterServiceTelephoneNumber,
+    };
+    const payload = buildNaverProductPayload({
+      product,
+      listing,
+      leafCategoryId: LEAF_CATEGORY_ID,
+      ...commonInput,
+      categoryRequiresChildCertification: false,
+      originAreaRequiresContent: false,
+    });
+    const validation = validateNaverPayload(
+      payload,
+      { product, ...commonInput, returnCompaniesFetchFailed: false, originAreaRequiresImporter: false },
+      false,
+    );
+    return { payload, validation };
+  }
+
+  it("deliveryType/deliveryAttributeType/minorPurchasable/customsTaxType — 상품과 무관하게 항상 READY(사업모델 전체에 적용되는 고정값)", () => {
+    const { payload, validation } = buildAndValidateWithAfterServiceTelephoneNumber("+821012345678");
+    for (const f of [
+      "deliveryInfo.deliveryType",
+      "deliveryInfo.deliveryAttributeType",
+      "detailAttribute.minorPurchasable",
+      "detailAttribute.customsTaxType",
+    ]) {
+      const check = validation.fields.find((x) => x.field === f);
+      expect(check?.status, `${f} should always be READY`).toBe("READY");
+    }
+    // N-3.51 STEP6(7차 실등록 시도로 발견) — CartPilot은 항상 해외구매대행이라
+    // customsTaxType은 항상 "INCLUDED"(관부가세가 이미 판매가에 포함)로
+    // 고정된다 — packages/pricing이 원가+마진+수수료를 반영한 단일 최종가를
+    // 계산하고, 체크아웃에서 관부가세를 별도 청구하는 흐름이 없다.
+    expect(payload.originProduct.detailAttribute?.customsTaxType).toBe("INCLUDED");
+  });
+
+  it("afterServiceInfo.afterServiceTelephoneNumber — SellerProfile 값이 없으면 MISSING(임의값 생성 금지)", () => {
+    const { validation } = buildAndValidateWithAfterServiceTelephoneNumber(null);
+    const check = validation.fields.find(
+      (x) => x.field === "detailAttribute.afterServiceInfo.afterServiceTelephoneNumber",
+    );
+    expect(check?.status).toBe("MISSING");
+  });
+
+  it("afterServiceInfo.afterServiceTelephoneNumber — 값은 있지만 전화번호 형식이 아니면 BLOCKED(N-3.49 5차 실등록에서 실제 확인된 제약: 숫자/-/+만 허용)", () => {
+    const { validation } = buildAndValidateWithAfterServiceTelephoneNumber("해외 구매대행으로 A/S 불가");
+    const check = validation.fields.find(
+      (x) => x.field === "detailAttribute.afterServiceInfo.afterServiceTelephoneNumber",
+    );
+    expect(check?.status).toBe("BLOCKED");
+  });
+
+  it("afterServiceInfo.afterServiceTelephoneNumber — 숫자/-/+로만 구성되면 READY", () => {
+    const { validation } = buildAndValidateWithAfterServiceTelephoneNumber("+82-2-1234-5678");
+    const check = validation.fields.find(
+      (x) => x.field === "detailAttribute.afterServiceInfo.afterServiceTelephoneNumber",
+    );
+    expect(check?.status).toBe("READY");
   });
 });

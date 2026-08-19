@@ -5,6 +5,8 @@ import {
   buildNaverProductPayload,
   validateNaverPayload,
   resolveNaverOriginArea,
+  COMPLIANCE_POLICY_VERSION,
+  type DetailPageBlock,
   type NaverProductRegistrationPayload,
   type RegistrationStepLog,
   type ListingResult,
@@ -18,6 +20,7 @@ import { getDefaultSellerProfile } from "../../coupang/_lib/seller-profile";
 import { findBrandProfileByName } from "../../coupang/_lib/brand-profile";
 import { getDefaultDescriptionTemplate } from "../../coupang/_lib/description-template";
 import { markSnapshotRegistered } from "../../snapshots/_lib/snapshot";
+import { getLatestSellerComplianceConfirmation } from "../_lib/seller-compliance";
 
 /**
  * N-3.25(STEP 3) — SmartStore 실제 등록. HMAC 대신 OAuth 토큰이지만 원칙은
@@ -54,6 +57,7 @@ async function logRegistrationAttempt(
   result: ListingResult,
   apiResponseBody?: unknown,
   snapshotId?: string | null,
+  jobKey?: string | null,
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return;
@@ -67,16 +71,20 @@ async function logRegistrationAttempt(
     payload: result.payload ?? null,
     response: apiResponseBody ?? null,
     snapshot_id: snapshotId ?? null,
+    // Sprint B-1 — Coupang register route와 동일한 이유(고객 문의 시 조인 없이
+    // 바로 검색).
+    job_key: jobKey ?? null,
   };
-  // Coupang register route와 같은 이유(마이그레이션 016 미실행 환경 대비) —
-  // snapshot_id 컬럼이 없으면 그 필드만 제외하고 재시도한다.
-  const { error } = await supabase.from("registration_attempts").insert(row);
-  if (error && "snapshot_id" in row) {
-    delete row.snapshot_id;
-    const retry = await supabase.from("registration_attempts").insert(row);
-    if (retry.error) console.warn("[smartstore/register] registration_attempts 기록 실패:", retry.error.message);
-  } else if (error) {
-    console.warn("[smartstore/register] registration_attempts 기록 실패:", error.message);
+  // Coupang register route와 같은 이유(마이그레이션 016/025 미실행 환경 대비) —
+  // snapshot_id/job_key 컬럼이 없으면 그 필드만 제외하고 재시도한다.
+  const optionalColumns = ["snapshot_id", "job_key"];
+  for (let attempt = 0; attempt <= optionalColumns.length; attempt++) {
+    const { error } = await supabase.from("registration_attempts").insert(row);
+    if (!error) return;
+    console.warn(`[smartstore/register] registration_attempts 기록 실패(시도 ${attempt + 1}):`, error.message);
+    const nextColumn = optionalColumns[attempt];
+    if (!nextColumn || !(nextColumn in row)) break;
+    delete row[nextColumn];
   }
 }
 
@@ -98,13 +106,20 @@ export async function POST(request: Request) {
     listing?: ListingModel;
     categoryId?: string;
     snapshotId?: string;
+    jobKey?: string;
+    // Sprint P1(CPO 지시, 2026-08-19) — smartstoreExecutor가 이제
+    // context.detailBlocks를 그대로 전달한다(build-payload.ts는 이미
+    // 지원했지만 이 라우트가 받지 않아 항상 listing.description 폴백만
+    // 쓰던 상태였다).
+    detailBlocks?: DetailPageBlock[];
   } | null;
 
   if (!body?.product || !body?.listing) {
     return NextResponse.json({ error: "product와 listing이 필요합니다." }, { status: 400 });
   }
-  const { product, listing } = body;
+  const { product, listing, detailBlocks } = body;
   const snapshotId = body.snapshotId ?? null;
+  const jobKey = body.jobKey ?? null;
 
   const withMeta = (result: ListingResult): ListingResult => ({
     ...result,
@@ -129,7 +144,7 @@ export async function POST(request: Request) {
         resolution: "SMARTSTORE_CLIENT_ID/SMARTSTORE_CLIENT_SECRET 환경변수를 확인해주세요.",
       },
     });
-    await logRegistrationAttempt(result, undefined, snapshotId);
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
     return NextResponse.json(result);
   }
 
@@ -148,7 +163,7 @@ export async function POST(request: Request) {
         resolution: "네이버 커머스 API 인증 정보를 다시 확인해주세요.",
       },
     });
-    await logRegistrationAttempt(result, undefined, snapshotId);
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
     return NextResponse.json(result);
   }
   logStep("인증 확인", "success", "네이버 커머스 API 토큰 발급 완료");
@@ -173,7 +188,7 @@ export async function POST(request: Request) {
         resolution: "등록 화면에서 카테고리를 먼저 확정해주세요.",
       },
     });
-    await logRegistrationAttempt(result, undefined, snapshotId);
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
     return NextResponse.json(result);
   }
   logStep("카테고리 확인", "success", `leafCategoryId=${leafCategoryId}`);
@@ -192,6 +207,45 @@ export async function POST(request: Request) {
     c.kindTypes?.includes("CHILD_CERTIFICATION"),
   );
   const childCertificationInfoId = childCert?.id ?? null;
+
+  // N-3.52(CPO 지시 STEP14) — "API 등록 가능"과 "판매 가능"을 분리한다.
+  // 판매자가 "판매 전 최종 확인" 화면에서 남긴 가장 최근 확인 기록을 여기서
+  // 다시 조회한다(클라이언트가 보내는 값을 신뢰하지 않는다 — 이 라우트의
+  // 다른 모든 조회와 같은 원칙). validateNaverPayload가 이 기록의
+  // policyVersion/categoryCode가 지금과 일치할 때만 KC 게이트를 통과시킨다.
+  const sellerComplianceConfirmationRow = await getLatestSellerComplianceConfirmation(snapshotId);
+  const sellerConfirmationValid =
+    sellerComplianceConfirmationRow?.confirmed === true &&
+    sellerComplianceConfirmationRow.policyVersion === COMPLIANCE_POLICY_VERSION &&
+    sellerComplianceConfirmationRow.categoryCode === leafCategoryId;
+  logStep(
+    "판매 전 확인",
+    sellerConfirmationValid ? "success" : "failed",
+    sellerConfirmationValid
+      ? `판매자가 확인함(kcStatus=${sellerComplianceConfirmationRow!.kcStatus}, policyVersion=${sellerComplianceConfirmationRow!.policyVersion})`
+      : "판매자가 아직 이 상품/카테고리에 대해 '판매 전 최종 확인'을 하지 않았습니다.",
+  );
+  // N-3.52(CPO 지시 STEP1/14) — DATA_READY + PLATFORM_READY만으로는 등록을
+  // 허용하지 않는다. SELLER_CONFIRMED(판매자가 "판매 전 최종 확인" 화면에서
+  // 실제로 확인 버튼을 눌렀는지)를 모든 카테고리(KIDS 여부와 무관하게)에
+  // 대해 서버에서 다시 검증한다 — 클라이언트가 보낸 상태를 신뢰하지 않는다
+  // (이 라우트의 다른 모든 조회와 같은 원칙).
+  if (!sellerConfirmationValid) {
+    const result = withMeta({
+      status: "FAILED",
+      platform: "smartstore",
+      mode: "LIVE",
+      retryable: true,
+      error: {
+        step: "VALIDATION",
+        message: "판매자가 '판매 전 최종 확인'을 아직 하지 않았습니다.",
+        retryable: true,
+        resolution: "등록 화면에서 '판매 전 최종 확인'을 먼저 진행해주세요.",
+      },
+    });
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+    return NextResponse.json(result);
+  }
 
   let releaseAddressBookNo: number | null = null;
   let refundAddressBookNo: number | null = null;
@@ -240,6 +294,11 @@ export async function POST(request: Request) {
     deliveryCompany: sellerProfile?.naverDeliveryCompanyCode ?? null,
     warrantyPolicy: sellerProfile?.qualityGuarantee || null,
     afterServiceDirector: sellerProfile?.asContactNumber || null,
+    // N-3.51 STEP2 — afterServiceInfo.afterServiceTelephoneNumber 전용 실제
+    // 전화번호 소스. asContactNumber("해외 구매대행으로 A/S 불가" 같은 자유
+    // 텍스트)와 달리 companyContactNumber는 Coupang 쪽에서 이미 실제 전화번호
+    // 형식으로 채워져 있는 필드다(예: "+821046458306").
+    afterServiceTelephoneNumber: sellerProfile?.companyContactNumber || null,
   };
 
   // N-3.49(2026-08-17, 실제 등록 4차 시도로 발견) — 상품 등록 API는 외부 URL
@@ -248,6 +307,15 @@ export async function POST(request: Request) {
   // 반드시 "상품 이미지 다건 등록" API로 먼저 업로드하고 그 응답 url을
   // 써야 한다(WebSearch로 확인한 commerce-api-naver 공식 커뮤니티 설명 +
   // 진단 라우트로 실제 응답 구조 {images:[{url}]} 확인 완료).
+  // N-3.50 STEP5(조사+범위 결정, CPO 지시로 "저장 구조 없으면 이번엔 범위만
+  // 결정") — source URL → 업로드된 Naver URL 매핑을 영구 저장할 인프라가
+  // 현재 없다(image_assets 테이블은 파이프라인 자체 처리 이미지용이라 스키마가
+  // 안 맞음). 이번 등록 요청 "안에서"는 각 이미지가 정확히 1번씩만 업로드되므로
+  // (재시도 루프 없음) 요청 내 중복은 이미 없다. 남은 위험은 사용자가 실패한
+  // 등록을 수동으로 다시 시도할 때 이미지가 다시 업로드되는 것(낭비지만 상품
+  // 데이터 손상 위험은 없음 — 새 호스팅 URL이 또 생길 뿐). 영구 매핑 테이블은
+  // 이번 스프린트 범위 밖으로 남기고, 다음 스프린트에서 실제 재시도 빈도를
+  // 관찰한 뒤 필요성을 재판단한다.
   const sourceImageUrls = [listing.representativeImage, ...listing.additionalImages].filter(
     (u): u is string => Boolean(u),
   );
@@ -269,7 +337,7 @@ export async function POST(request: Request) {
           resolution: "이미지 URL이 실제로 접근 가능한지 확인 후 다시 시도해주세요.",
         },
       });
-      await logRegistrationAttempt(result, uploadResult.raw, snapshotId);
+      await logRegistrationAttempt(result, uploadResult.raw, snapshotId, jobKey);
       return NextResponse.json(result);
     }
     logStep("이미지 업로드", "success", `${uploadResult.urls.length}개 이미지를 네이버에 업로드했습니다.`);
@@ -284,6 +352,7 @@ export async function POST(request: Request) {
     categoryRequiresChildCertification,
     originAreaRequiresContent: originMatch.status === "OTHER_MANUAL",
     descriptionTemplate: descriptionTemplate ?? null,
+    detailBlocks,
     commonImages: sellerProfile
       ? {
           topCommonImageUrl: sellerProfile.topCommonImageUrl,
@@ -308,6 +377,20 @@ export async function POST(request: Request) {
       originAreaRequiresImporter: originMatch.requiresImporter,
     },
     categoryRequiresChildCertification,
+    {
+      // N-3.52(CPO 지시) — 카테고리 확인 자체는 이 라우트가 이미
+      // leafCategoryId를 실제로 확정한 뒤에만 여기까지 도달하므로 항상 true다
+      // (카테고리 미확정이면 위에서 이미 CATEGORY 단계에서 FAILED 반환).
+      categoryVerified: true,
+      sellerComplianceConfirmation: sellerComplianceConfirmationRow
+        ? {
+            confirmed: sellerComplianceConfirmationRow.confirmed,
+            kcStatus: sellerComplianceConfirmationRow.kcStatus,
+            policyVersion: sellerComplianceConfirmationRow.policyVersion,
+            categoryCode: sellerComplianceConfirmationRow.categoryCode,
+          }
+        : null,
+    },
   );
   logStep(
     "Payload 검증",
@@ -329,7 +412,7 @@ export async function POST(request: Request) {
         resolution: "등록 화면 또는 설정 페이지에서 부족한 항목을 채운 뒤 다시 시도해주세요.",
       },
     });
-    await logRegistrationAttempt(result, undefined, snapshotId);
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
     return NextResponse.json(result);
   }
 
@@ -347,7 +430,11 @@ export async function POST(request: Request) {
       const message = response.message;
       logStep("API 호출", "failed", message);
       const result = withMeta({
-        status: "FAILED",
+        // N-3.50 STEP7 — 타임아웃/연결오류는 네이버가 실제로 요청을 받았는지
+        // 알 수 없다(AbortSignal.timeout()이 응답 대기 중 끊길 수도 있다).
+        // FAILED로 단정하지 않고 UNKNOWN으로 남겨 "확인 먼저, 재시도는 나중"을
+        // 강제한다.
+        status: "UNKNOWN",
         platform: "smartstore",
         mode: "LIVE",
         retryable: true,
@@ -356,9 +443,15 @@ export async function POST(request: Request) {
           step: "NETWORK",
           message,
           retryable: true,
+          // N-3.50 STEP6(CPO 지시) — 타임아웃/네트워크 오류는 가장 위험한
+          // 케이스다: 네이버 서버에 실제로는 상품이 생성됐는데 응답만 유실됐을
+          // 수 있다. "무조건 재시도"하면 중복 상품이 생길 위험이 있어, 재시도
+          // 전에 먼저 등록 이력/Wing에서 실제 생성 여부를 확인하라고 안내한다.
+          resolution:
+            "네이버 서버 응답을 받지 못했습니다 — 재시도 전에 Wing 또는 등록 이력에서 상품이 실제로 생성됐는지 먼저 확인해주세요(생성됐다면 재시도 시 중복 등록됩니다).",
         },
       });
-      await logRegistrationAttempt(result, "body" in response ? response.body : undefined, snapshotId);
+      await logRegistrationAttempt(result, "body" in response ? response.body : undefined, snapshotId, jobKey);
       return NextResponse.json(result);
     }
 
@@ -377,7 +470,7 @@ export async function POST(request: Request) {
           resolution: "Client ID/Client Secret을 다시 확인해주세요.",
         },
       });
-      await logRegistrationAttempt(result, response.body, snapshotId);
+      await logRegistrationAttempt(result, response.body, snapshotId, jobKey);
       return NextResponse.json(result);
     }
 
@@ -396,11 +489,17 @@ export async function POST(request: Request) {
         payload,
         submittedAt: new Date().toISOString(),
       });
-      await logRegistrationAttempt(result, response.body, snapshotId);
+      await logRegistrationAttempt(result, response.body, snapshotId, jobKey);
       if (snapshotId) await markSnapshotRegistered(snapshotId);
       return NextResponse.json(result);
     }
 
+    // N-3.50 STEP6(CPO 지시) — "명확한 validation error(4xx) → 수정 후
+    // 재시도" vs "5xx → idempotency/중복 여부 확인 후 제한적 재시도"를 각각
+    // 다른 안내 문구로 구분한다. 4xx는 payload 자체가 잘못됐다는 뜻이라
+    // "고치지 않고 재시도"는 항상 같은 결과를 반복할 뿐이다(retryable:false).
+    // 5xx는 네이버 서버 문제일 수 있어 재시도 여지가 있지만, 타임아웃과
+    // 마찬가지로 실제로 생성됐을 가능성을 먼저 배제해야 한다.
     logStep("API 호출", "failed", `네이버가 등록 요청을 거부했습니다(HTTP ${response.status}).`);
     const result = withMeta({
       status: "FAILED",
@@ -412,15 +511,20 @@ export async function POST(request: Request) {
         step: "NETWORK",
         message: `네이버가 등록 요청을 거부했습니다(HTTP ${response.status}).`,
         retryable: response.status >= 500,
-        resolution: "표시된 원인을 확인하고 데이터를 고친 뒤 다시 시도해주세요.",
+        resolution:
+          response.status >= 500
+            ? "네이버 서버 오류입니다 — 재시도 전에 Wing 또는 등록 이력에서 상품이 실제로 생성되지 않았는지 먼저 확인해주세요."
+            : "표시된 원인을 확인하고 데이터를 고친 뒤 다시 시도해주세요(수정 없이 재시도하면 같은 오류가 반복됩니다).",
       },
     });
-    await logRegistrationAttempt(result, response.body, snapshotId);
+    await logRegistrationAttempt(result, response.body, snapshotId, jobKey);
     return NextResponse.json(result);
   } catch (error) {
     logStep("API 호출", "failed", error instanceof Error ? error.message : "네이버 서버에 연결할 수 없습니다.");
     const result = withMeta({
-      status: "FAILED",
+      // N-3.50 STEP7 — 위와 같은 이유(요청이 실제로 도달했는지 확인 불가)로
+      // FAILED가 아니라 UNKNOWN.
+      status: "UNKNOWN",
       platform: "smartstore",
       mode: "LIVE",
       retryable: true,
@@ -429,9 +533,11 @@ export async function POST(request: Request) {
         step: "NETWORK",
         message: error instanceof Error ? error.message : "네이버 서버에 연결할 수 없습니다.",
         retryable: true,
+        resolution:
+          "네이버 서버에 연결하지 못했습니다 — 재시도 전에 Wing 또는 등록 이력에서 상품이 실제로 생성됐는지 먼저 확인해주세요(생성됐다면 재시도 시 중복 등록됩니다).",
       },
     });
-    await logRegistrationAttempt(result, undefined, snapshotId);
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
     return NextResponse.json(result);
   }
 }

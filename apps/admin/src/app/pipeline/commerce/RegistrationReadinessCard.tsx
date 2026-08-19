@@ -2,6 +2,7 @@
 
 import type { ListingStatus } from "@commerce/listing";
 import type { ReadinessItem } from "./readiness";
+import type { RegistrationReadinessState } from "./readiness-state";
 
 const BUTTON_LABEL: Record<ListingStatus, string> = {
   DRAFT: "필수 항목을 채워주세요",
@@ -10,6 +11,24 @@ const BUTTON_LABEL: Record<ListingStatus, string> = {
   SUBMITTING: "등록 중...",
   SUBMITTED: "등록 완료 ✓",
   FAILED: "등록 실패 — 아래에서 다시 시도",
+  // N-3.50 STEP7 — Wing 확인 없이 바로 재시도 버튼을 누르면 중복 등록 위험이
+  // 있어 문구로 먼저 막는다.
+  UNKNOWN: "등록 결과 확인 필요 — Wing에서 먼저 확인해주세요",
+};
+
+/** N-3.57 STEP6(CPO 지시: "등록 버튼 상태를 의미 있게 변경 — 왜 버튼을 못
+ * 누르는지 바로 이해") — status(ListingStatus, 등록 API 호출 자체의 진행
+ * 상태: DRAFT/READY/SUBMITTING/...)와 registrationReadinessState(N-3.55/56이
+ * 이미 계산해둔 등록 "가능성" 4단계: BLOCKED/NEEDS_REVIEW/SELLER_REVIEW/READY)는
+ * 서로 다른 축이다. status가 아직 클릭 전(DRAFT/READY)일 때만
+ * registrationReadinessState로 문구를 세분화하고, 이미 클릭했거나(USER_CONFIRMED)
+ * API 응답을 기다리는/받은 상태는 기존 BUTTON_LABEL을 그대로 쓴다(그 흐름은
+ * 이번 스텝 범위가 아니다 — STEP7이 그 결과 화면을 다룬다). */
+const READINESS_BUTTON_LABEL: Record<RegistrationReadinessState, string> = {
+  BLOCKED: "🔴 등록 불가",
+  NEEDS_REVIEW: "⚠ 부족한 정보 해결하기",
+  SELLER_REVIEW: "🟠 판매 가능 여부 확인하기",
+  READY: "판매 전 최종 확인",
 };
 
 /**
@@ -37,6 +56,7 @@ export function RegistrationReadinessCard({
   settingsMissing,
   autoFillStats,
   registrationEnabled = true,
+  registrationReadinessState,
 }: {
   percent: number;
   required: ReadinessItem[];
@@ -56,6 +76,9 @@ export function RegistrationReadinessCard({
    * 숫자." Compliance Report의 autoResolvedCount/userRequiredCount를 그대로
    * 옮겨온 값이라 이 카드가 다시 계산하지 않는다(판정 로직 중복 방지 원칙). */
   autoFillStats?: { total: number; autoFilled: number; userInput: number };
+  /** N-3.57 STEP6 — 없으면(Coupang/11번가처럼 이 4-state 모델을 아직 안 쓰는
+   * 플랫폼) 기존 BUTTON_LABEL[status] 문구를 그대로 쓴다(회귀 없음). */
+  registrationReadinessState?: RegistrationReadinessState;
 }) {
   const scoreClassName = percent >= 90 ? "text-success" : percent >= 60 ? "text-warning" : "text-error";
   const barClassName = percent >= 90 ? "bg-success" : percent >= 60 ? "bg-warning" : "bg-error";
@@ -67,6 +90,11 @@ export function RegistrationReadinessCard({
   // UX 버그가 있었다. 필수 미완료만 남은 작업으로 센다 — recommended는 여전히
   // "선택 입력" 목록에는 그대로 보여준다(있으면 좋다는 안내는 유지, 압박감만 제거).
   const remaining = required.filter((i) => !i.passed).length;
+  // Sprint P0(CPO 지시, 2026-08-19: "97% + 선택값 부족 → 등록 가능, 문구로
+  // 명확히") — 필수 항목을 다 채웠는데도 선택 항목(치수 등)이 비어 있으면
+  // "등록은 되지만 이런 선택 정보가 비어 있다"는 걸 한 줄로 알려준다.
+  // DEFAULT_VALUE는 이미 값이 채워진(passed:true) 상태라 여기서 제외한다.
+  const emptyOptionalCount = recommended.filter((i) => !i.passed).length;
   // A-10.1-②(CEO 지시: "남은 항목 N개 → 다음 입력하기 → 를 누르면 자동으로
   // 해당 Accordion이 열리고 포커스") — 필수 항목을 먼저, 그다음 선택 항목
   // 순서로 훑어서 아직 안 채워졌고 이동할 섹션이 있는 첫 항목을 다음 목표로
@@ -97,6 +125,11 @@ export function RegistrationReadinessCard({
             style={{ width: `${percent}%` }}
           />
         </div>
+        {allRequiredPassed && emptyOptionalCount > 0 && (
+          <p className="mt-1.5 text-[11px] text-text-tertiary">
+            선택 정보 {emptyOptionalCount}건이 비어 있습니다 — 없어도 등록할 수 있습니다.
+          </p>
+        )}
         {/* Sprint A-6(개선3) — "대표님이 가장 궁금한 숫자"를 한눈에 — 자동입력/
             사용자입력 둘 다 %와 (N/M)을 같이 보여준다. */}
         {autoFillStats && autoFillStats.total > 0 && (
@@ -126,7 +159,7 @@ export function RegistrationReadinessCard({
       <div className="space-y-3">
         {legalItems.length > 0 && (
           <div className="space-y-1">
-            <p className="text-xs font-medium text-text-tertiary">법적 필수 — CartPilot이 대신 채울 수 없음</p>
+            <p className="text-xs font-medium text-text-tertiary">법적 필수 — TTAEJYO가 대신 채울 수 없음</p>
             <ItemList items={legalItems} onItemClick={onItemClick} />
           </div>
         )}
@@ -199,9 +232,11 @@ export function RegistrationReadinessCard({
       >
         {!registrationEnabled
           ? "미리보기 전용 — 등록 기능은 준비 중입니다"
-          : status === "READY"
-            ? `${platformLabel}에 등록`
-            : BUTTON_LABEL[status]}
+          : (status === "DRAFT" || status === "READY") && registrationReadinessState
+            ? READINESS_BUTTON_LABEL[registrationReadinessState]
+            : status === "READY"
+              ? `${platformLabel}에 등록`
+              : BUTTON_LABEL[status]}
       </button>
     </aside>
   );

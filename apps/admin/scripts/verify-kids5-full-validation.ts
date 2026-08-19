@@ -177,6 +177,7 @@ function buildCanonicalProduct(spec: ProductSpec): CanonicalProduct {
     title: field(spec.title, "shopify-json" as FieldSource),
     brand: field(spec.brand, "shopify-json" as FieldSource),
     price: field(spec.price, "shopify-json" as FieldSource),
+    priceValidity: "VALID",
     sku: field(""),
     description: field(spec.title + " — 실제 원문 설명(요약)", "shopify-json" as FieldSource),
     material: field(spec.material, "shopify-json" as FieldSource),

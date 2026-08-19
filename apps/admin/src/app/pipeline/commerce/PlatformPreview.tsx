@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { CategoryCandidate } from "@commerce/category";
 import type {
   ComplianceFieldSource,
@@ -11,7 +11,6 @@ import type {
   ListingResult,
   ListingStatus,
   NaverPayloadValidationResult,
-  ReadinessReport,
 } from "@commerce/listing";
 import { isVerifiedCategorySelected, MARKETPLACE_DESCRIPTORS } from "@commerce/marketplace";
 import type { ListingModel } from "@commerce/marketplace";
@@ -23,15 +22,19 @@ import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { ComplianceBreakdown } from "./ComplianceBreakdown";
 import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
 import { DetailPageEditor } from "./DetailPageEditor";
-import { EditableText, EditableTextarea } from "./EditableField";
+import { EditableDate, EditableText, EditableTextarea } from "./EditableField";
+import { GuidedResolutionModal } from "./GuidedResolutionModal";
 import { ImageInlineEditor } from "../ImageInlineEditor";
+import { KcSellerStatusBanner } from "./KcSellerStatusBanner";
 import { ListingSection } from "./ListingSection";
 import { NaverPayloadPreview } from "./NaverPayloadPreview";
 import { OptionVariantEditor } from "./OptionVariantEditor";
 import { PriceEditor } from "./PriceEditor";
 import { computeChecklistReadiness, computeNaverPayloadReadiness } from "./readiness";
 import { RegistrationReadinessCard } from "./RegistrationReadinessCard";
+import { buildPriorityItems, resolveRegistrationReadinessState, RegistrationStatusBanner } from "./RegistrationStatusBanner";
 import { SellerProfileSummaryCard } from "./SellerProfileSummaryCard";
+import { NaverSellerProfileSummaryCard } from "./NaverSellerProfileSummaryCard";
 import { extractionSourceLabel, ProvenanceBadge } from "./provenance";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ValueBadge } from "@/components/ui/ValueBadge";
@@ -248,10 +251,9 @@ function KcCertificationBlock({
           />
         </FieldRow>
         <FieldRow label="취득일자">
-          <EditableText
+          <EditableDate
             value={product.childCertification.value?.certificationDate ?? ""}
             onCommit={(v) => onUpdateChildCertification({ certificationDate: v })}
-            placeholder="예: 2026-01-15"
             className={FIELD_INPUT_CLASS}
           />
         </FieldRow>
@@ -266,7 +268,6 @@ export function PlatformPreview({
   categoryCandidates,
   listingStatus,
   listingResult,
-  readiness,
   naverValidation,
   compliancePreview,
   onUpdateField,
@@ -302,6 +303,7 @@ export function PlatformPreview({
   settingsMissing,
   settingsRecommended,
   developerMode,
+  jobKey,
   items,
   thumbnails,
   representativeId,
@@ -320,10 +322,6 @@ export function PlatformPreview({
   categoryCandidates: CategoryCandidate[];
   listingStatus: ListingStatus;
   listingResult: ListingResult | null;
-  /** SmartStore에서만 넘어온다 — ListingSection의 "상세 체크리스트"(필드별
-   * 인라인 수정 CTA) 전용이다. N-3.27부터 "등록 가능성"(%, 등록 버튼 게이트)
-   * 판정에는 이 값을 쓰지 않는다 — 아래 naverValidation을 쓴다. */
-  readiness?: ReadinessReport;
   /** N-3.27(CPO 지시: "Readiness ↔ 실제 Payload Validation 단일화") —
    * CommerceWorkspace가 register route와 완전히 같은 validateNaverPayload를
    * 호출해서 계산해둔 결과. SmartStore RegistrationReadinessCard의 %/등록
@@ -439,6 +437,8 @@ export function PlatformPreview({
   settingsRecommended?: string[];
   /** P0-UI Epic 1/4 — Developer Mode가 꺼져 있으면 Payload/개발 로그를 숨긴다. */
   developerMode: boolean;
+  /** Sprint B-1(CPO 지시) — ListingSection의 문의하기 진단 번들에 실린다. */
+  jobKey?: string | null;
   /** N-3.20(CPO 지시: "세 화면이 동일한 ImageInlineEditor를 사용") — 이미지
    * Accordion을 펼치면 Modal 없이 여기서 바로 편집한다. 핸들러는
    * CommerceWorkspace가 이미 갖고 있던 것을 그대로 전달받는다(새 상태 없음). */
@@ -496,6 +496,20 @@ export function PlatformPreview({
         payloadPreview?.complianceReport ?? compliancePreview ?? undefined,
         settingsRecommended,
       );
+
+  // N-3.55(CPO 지시: "67~71%라는 점수와 오른쪽의 수십 개 MISSING 항목이
+  // 셀러에게 무엇을 먼저 해야 하는지 알려주지 못한다") — 새 판정을 만들지
+  // 않는다. readinessSummary(위에서 이미 계산)와 N-3.54의 priceValidity,
+  // N-3.52의 kcStatus를 그대로 재조합해 4단계 상태 + 우선순위 목록만
+  // 만든다(RegistrationStatusBanner.tsx).
+  const priceValid = product.priceValidity === "VALID";
+  const registrationState = resolveRegistrationReadinessState(
+    readinessSummary,
+    priceValid,
+    naverValidation?.kcStatus,
+  );
+  const priorityItems = buildPriorityItems(readinessSummary, priceValid, "section-price");
+  const [guideOpen, setGuideOpen] = useState(false);
 
   // Sprint A-3(작업2 — Accordion, 작업4 — Auto Scroll) — 어떤 섹션이 펼쳐져 있는지
   // 여기서 관리한다(controlled). Summary에서 항목을 클릭하면 해당 섹션을 펼치고
@@ -593,7 +607,46 @@ export function PlatformPreview({
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="space-y-3">
+      {/* N-3.58 STEP1(CPO 지시: "판매 전 체크를 가장 먼저 보여주기") — 이
+       * grid의 DOM 순서 자체는 그대로 두되(오른쪽 sticky 컬럼이라는 기존
+       * 구조를 다시 만들지 않는다), order 유틸리티만으로 모바일(lg 미만,
+       * grid-cols가 1열로 접혀 DOM 순서대로 세로 스택된다)에서는 이 배너+카드
+       * 컬럼이 화면 맨 위에 먼저 오도록 시각적 순서만 바꾼다. 데스크톱(lg+)은
+       * order-lg 클래스로 기존 좌/우 배치를 그대로 유지한다 — 레이아웃 자체를
+       * 새로 설계하지 않는다. */}
+      <div className="order-1 space-y-4 lg:order-2">
+        <RegistrationStatusBanner
+          state={registrationState}
+          priorityItems={priorityItems}
+          onItemClick={(item) => item.sectionId && goToSection(item.sectionId)}
+          onOpenGuide={priorityItems.length > 0 ? () => setGuideOpen(true) : undefined}
+        />
+
+        <RegistrationReadinessCard
+          percent={readinessSummary.percent}
+          required={readinessSummary.required}
+          recommended={readinessSummary.recommended}
+          allRequiredPassed={readinessSummary.allRequiredPassed}
+          platformLabel={listing.platformLabel}
+          status={listingStatus}
+          registrationEnabled={capabilities.registrationEnabled}
+          registrationReadinessState={registrationState}
+          onRegister={onOpenListingModal}
+          onItemClick={goToSection}
+          settingsMissing={settingsMissing}
+          autoFillStats={
+            compliancePreview
+              ? {
+                  total: compliancePreview.autoResolvedCount + compliancePreview.userRequiredCount,
+                  autoFilled: compliancePreview.autoResolvedCount,
+                  userInput: compliancePreview.userRequiredCount,
+                }
+              : undefined
+          }
+        />
+      </div>
+
+      <div className="order-2 space-y-3 lg:order-1">
         {capabilities.hasNaverPreview && (
           <NaverPayloadPreview product={product} listing={listing} detailBlocks={detailBlocks} />
         )}
@@ -696,6 +749,11 @@ export function PlatformPreview({
             {isCategoryConfirmed && listing.category.candidate
               ? listing.category.candidate.path.join(" > ")
               : "미지정 — 아래에서 카테고리를 선택해주세요."}
+            {/* SmartStore 플로우 개선(CPO 지시) — 카테고리 목록에서 직접 찾은
+                선택은 AI 추천을 승인한 것과 다르다는 걸 보여준다. */}
+            {isCategoryConfirmed && listing.category.candidate?.manuallySelected && (
+              <span className="ml-1.5 text-xs font-medium text-selected-border">✎ 판매자 선택</span>
+            )}
           </p>
           <CategoryRecommendationPanel
             candidates={categoryCandidates}
@@ -758,7 +816,13 @@ export function PlatformPreview({
               </div>
             </>
           ) : null}
-          {onUpdateVariant && <OptionVariantEditor variants={product.variants} onUpdateVariant={onUpdateVariant} />}
+          {onUpdateVariant && (
+            <OptionVariantEditor
+              variants={product.variants}
+              onUpdateVariant={onUpdateVariant}
+              baseProduct={{ amount: product.price.value.amount, currency: product.price.value.currency, finalKrw: listing.priceKrw }}
+            />
+          )}
           <EditableText
             value={product.options.value.join(", ")}
             onCommit={(v) => onUpdateOptions?.(v)}
@@ -859,8 +923,10 @@ export function PlatformPreview({
         {/* Sprint A-8(작업1/3) — 상품마다 다시 입력하지 않는 배송/반품/교환/
             제조자 정보를 판매자 기본값(SellerProfile)에서 자동으로 불러와
             보여준다. 실제 수정은 Settings 페이지에서만(CP001 방지 — 판정/편집
-            로직을 두 곳에 두지 않는다). */}
-        {capabilities.hasSellerProfileSummary && <SellerProfileSummaryCard />}
+            로직을 두 곳에 두지 않는다). Sprint P1(2026-08-19) — SmartStore는
+            Coupang과 필드 구성이 달라(출고지 개념이 다름) 별도 카드를 쓴다. */}
+        {capabilities.hasSellerProfileSummary &&
+          (listing.platform === "coupang" ? <SellerProfileSummaryCard /> : <NaverSellerProfileSummaryCard />)}
 
         <CollapsibleSection title="고시정보" badge={sectionCompletionBadge("section-notice")} {...sectionProps("section-notice")}>
           <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
@@ -915,6 +981,20 @@ export function PlatformPreview({
         </CollapsibleSection>
 
         <CollapsibleSection title="KC (어린이제품 등 인증정보)" badge={sectionCompletionBadge("section-kc")} {...sectionProps("section-kc")}>
+          {/* N-3.57 STEP1(CPO 지시: "KC 4-State를 Seller가 이해할 수 있는
+              언어로 전환") — SmartStore에서 kcStatus가 계산된 경우에만 보여준다
+              (Coupang/11번가는 이 4-state 모델을 아직 쓰지 않는다, N-3.56
+              compute-readiness.ts 주석 참고). */}
+          {capabilities.hasNaverPreview && naverValidation?.kcStatus && (
+            <KcSellerStatusBanner
+              kcStatus={naverValidation.kcStatus}
+              childCertification={product.childCertification.value}
+              onFinalConfirm={onOpenListingModal}
+              onConfirmSellable={onOpenListingModal}
+              onEnterKcInfo={() => goToSection("section-kc")}
+              onGoToCategory={() => goToSection("section-category")}
+            />
+          )}
           <FieldRow label="인증정보(KC 등)" field={product.certification}>
             <EditableText
               value={product.certification.value}
@@ -968,6 +1048,7 @@ export function PlatformPreview({
               blocks={detailBlocks}
               onChange={onDetailBlocksChange}
               payloadPreview={payloadPreview}
+              platformLabel={listing.platformLabel}
             />
           </CollapsibleSection>
         )}
@@ -994,36 +1075,23 @@ export function PlatformPreview({
           platformLabel={listing.platformLabel}
           status={listingStatus}
           result={listingResult}
-          readiness={readiness}
-          onFixTextField={onFixTextField}
-          onFixNumberField={onFixNumberField}
           onRetry={onRetryListing}
           sourceUrl={product.sourceUrl}
           developerMode={developerMode}
+          jobKey={jobKey}
         />
       </div>
 
-      <RegistrationReadinessCard
-        percent={readinessSummary.percent}
-        required={readinessSummary.required}
-        recommended={readinessSummary.recommended}
-        allRequiredPassed={readinessSummary.allRequiredPassed}
-        platformLabel={listing.platformLabel}
-        status={listingStatus}
-        registrationEnabled={capabilities.registrationEnabled}
-        onRegister={onOpenListingModal}
-        onItemClick={goToSection}
-        settingsMissing={settingsMissing}
-        autoFillStats={
-          compliancePreview
-            ? {
-                total: compliancePreview.autoResolvedCount + compliancePreview.userRequiredCount,
-                autoFilled: compliancePreview.autoResolvedCount,
-                userInput: compliancePreview.userRequiredCount,
-              }
-            : undefined
-        }
-      />
+      {guideOpen && (
+        <GuidedResolutionModal
+          items={priorityItems}
+          onClose={() => setGuideOpen(false)}
+          onGoToItem={(item) => {
+            if (item.sectionId) goToSection(item.sectionId);
+            setGuideOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

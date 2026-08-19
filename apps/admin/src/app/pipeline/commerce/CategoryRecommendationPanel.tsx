@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { CategoryCandidate, CategorySelection } from "@commerce/category";
 import { CategoryTreeBrowser } from "./CategoryTreeBrowser";
-import { fetchCoupangCategoryTree } from "./category-tree-adapters";
+import { fetchCoupangCategoryTree, fetchNaverCategoryTree } from "./category-tree-adapters";
 
 /** Sprint A-10(작업2/8 — CEO 지시: "★★★★★ 쿠팡 추천 / ★★★★ 추천 후보 / ★★ 유사
  * 카테고리"처럼 등급을 별점으로") — 실제 쿠팡 API가 검증한 코드(isVerifiedPlatformCode)는
@@ -75,8 +75,20 @@ export function CategoryRecommendationPanel({
   // coupangApiCandidates만 내려주므로(rule-based 제거), verified/recommended/
   // similar로 다시 나눌 이유가 없다(CPO 지적) — 아래 3분할은 스마트스토어 등
   // rule-based만 존재하는 비-쿠팡 탭에서만 쓴다.
-  const verifiedCandidates = candidates.filter((c) => c.isVerifiedPlatformCode);
-  const unverified = candidates.filter((c) => !c.isVerifiedPlatformCode);
+  // Sprint P2(CEO 지시, 2026-08-19: "카테고리 추천은 가장 높은 3개만 —
+  // 지금 너무 많다") — verified(쿠팡 API가 확인한 코드)를 항상 최우선으로
+  // 남기고, 그다음 confidence 내림차순으로 최대 3개까지만 보여준다. 정렬만
+  // 다시 하고 점수 자체는 그대로 쓴다(새 판정 로직 아님) — "직접 검색"
+  // 결과(searchCandidates)는 사용자가 명시적으로 검색한 결과라 이 상한
+  // 대상이 아니다(그대로 둔다).
+  const topCandidates = [...candidates]
+    .sort((a, b) => {
+      if (a.isVerifiedPlatformCode !== b.isVerifiedPlatformCode) return a.isVerifiedPlatformCode ? -1 : 1;
+      return b.confidence - a.confidence;
+    })
+    .slice(0, 3);
+  const verifiedCandidates = topCandidates.filter((c) => c.isVerifiedPlatformCode);
+  const unverified = topCandidates.filter((c) => !c.isVerifiedPlatformCode);
   const recommendedCandidates = unverified.filter((c) => c.confidence >= 0.6);
   const similarCandidates = unverified.filter((c) => c.confidence < 0.6);
 
@@ -153,9 +165,9 @@ export function CategoryRecommendationPanel({
                 스마트스토어 등 rule-based만 있는 탭은 기존 ①②③ 등급 표시를
                 그대로 쓴다. */}
             {isCoupang ? (
-              candidates.length > 0 && (
+              topCandidates.length > 0 && (
                 <ol className="mt-2 space-y-2">
-                  {candidates.map((candidate) => (
+                  {topCandidates.map((candidate) => (
                     <CandidateCard
                       key={candidate.id}
                       candidate={candidate}
@@ -222,13 +234,34 @@ export function CategoryRecommendationPanel({
             {/* A-12.3-P0-4 — 후보가 진짜 0개일 때 빈 화면 대신 명시적 안내를
                 보여준다(CPO 지시: "추천이 없으면 빈화면이 아니라 '추천 결과가
                 없습니다. 검색을 이용해주세요.'를 보여주세요"). 아직 첫 시도
-                전이거나 로딩 중이면 빈 화면 대신 진행 상태를 보여준다. */}
+                전이거나 로딩 중이면 빈 화면 대신 진행 상태를 보여준다.
+                SmartStore 플로우 개선 STEP2(CPO 지시: "자동 추천 실패 시 카테고리를 직접
+                선택하는 fallback을 제공") — 스마트스토어(비-쿠팡)는 검색
+                UI가 없으므로 "검색을 이용해주세요" 대신 아래 카테고리 목록
+                브라우저를 가리킨다. */}
             {recommendEmpty && (
               <p className="mt-2 rounded-md bg-background p-2.5 text-xs text-text-tertiary">
                 {recommendLoading || (isCoupang && !recommendAttempted)
                   ? "AI 추천을 불러오는 중…"
-                  : "추천 결과가 없습니다. 검색을 이용해주세요."}
+                  : isCoupang
+                    ? "추천 결과가 없습니다. 검색을 이용해주세요."
+                    : "⚠️ 카테고리를 자동으로 결정하지 못했습니다. 아래에서 카테고리를 직접 선택해주세요."}
               </p>
+            )}
+
+            {/* SmartStore 플로우 개선 STEP2 — 자동 추천(AI)을 대체하는 게 아니라, 실패했을 때도
+                항상 손닿는 곳에 있는 안전한 fallback이다(Coupang이 이미 검색+
+                트리 브라우저를 이렇게 항상 노출해왔다 — 같은 패턴). 스마트스토어
+                전용 트리는 /api/naver/category-tree(fetchNaverCategoryTree,
+                N-3.10에서 이미 만들어져 있었지만 이 화면에 연결된 적이 없었다)를
+                그대로 재사용한다 — 새 API 없음. */}
+            {!isCoupang && (
+              <CategoryTreeBrowser
+                platform="smartstore"
+                platformLabel="스마트스토어"
+                fetchTree={fetchNaverCategoryTree}
+                onSelect={onSelect}
+              />
             )}
           </div>
 

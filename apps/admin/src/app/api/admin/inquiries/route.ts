@@ -6,6 +6,8 @@ export interface InquiryRecord {
   error_code: string | null;
   error_message: string;
   trace_id: string | null;
+  /** Sprint B-1 — 마이그레이션 025 실행 전 저장된 레거시 문의는 null. */
+  job_key: string | null;
   url: string | null;
   platform: string | null;
   site: string | null;

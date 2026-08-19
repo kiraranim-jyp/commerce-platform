@@ -13,7 +13,14 @@ export type ListingStatus =
   | "USER_CONFIRMED"
   | "SUBMITTING"
   | "SUBMITTED"
-  | "FAILED";
+  | "FAILED"
+  /** N-3.50 STEP7(CPO 지시: "POST 응답을 받지 못했다고 FAILED로 단정하면
+   * 중복 등록 위험이 있다") — 네이버 서버로 실제 POST는 보냈지만 응답을
+   * 받지 못한 경우(타임아웃/네트워크 오류) 전용 상태다. 이 상태는 "재시도해도
+   * 안전하다"는 뜻이 아니라 "먼저 실제 생성 여부를 확인해야 한다"는 뜻이다
+   * — FAILED와 구분해야 UI/운영자가 무심코 재시도해서 중복 상품을 만드는 걸
+   * 막을 수 있다. */
+  | "UNKNOWN";
 
 /**
  * DRY_RUN: 실제 등록하지 않고 payload만 만들고 validation을 통과하는지 확인한다.

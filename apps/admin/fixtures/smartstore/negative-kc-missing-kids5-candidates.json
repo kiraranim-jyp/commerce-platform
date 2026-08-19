@@ -1,0 +1,48 @@
+{
+  "fixtureType": "NEGATIVE_KC_MISSING_BATCH",
+  "purpose": "N-3.49 STEP4에서 실측한 나머지 4개 해외 KIDS 후보의 회귀 기준점. 전부 KC 정보 없음으로 정상 BLOCKED된 케이스이고, 한 번도 실POST하지 않았다(로컬 게이트에서 정상 차단). Hamster Cap(negative-kc-missing-hamster-cap.json)과 같은 성격의 negative fixture를 4건으로 확대한 것 — N-3.50 STEP9(CPO 지시: 'N-3.49의 다른 상품들도 negative fixture로 보존한다').",
+  "sourceUrlBase": "https://www.junioredition.com",
+  "candidates": [
+    {
+      "productTitle": "Bobo Choses Sweatshirt",
+      "leafCategoryId": "50000535",
+      "categoryRequiresChildCertification": true,
+      "originAreaCode": "0201025",
+      "originAreaLabel": "수입산:유럽>스페인",
+      "validationResult": { "ok": false, "readyCount": 32, "missingCount": 1, "blockedCount": 1 },
+      "blockedReason": "KC 인증정보 없음(certificationNumber/companyName/certificationDate 미확보)",
+      "postAttempted": false
+    },
+    {
+      "productTitle": "Jody Teddy Onesie",
+      "leafCategoryId": "50000535",
+      "categoryRequiresChildCertification": true,
+      "originAreaCode": "0200037",
+      "originAreaLabel": "수입산:아시아>중국",
+      "validationResult": { "ok": false, "readyCount": 32, "missingCount": 1, "blockedCount": 1 },
+      "blockedReason": "KC 인증정보 없음",
+      "postAttempted": false
+    },
+    {
+      "productTitle": "Lemon Teether",
+      "leafCategoryId": "50004425",
+      "categoryRequiresChildCertification": true,
+      "originAreaCode": "0200037",
+      "originAreaLabel": "수입산:아시아>중국",
+      "validationResult": { "ok": false, "readyCount": 29, "missingCount": 2, "blockedCount": 1 },
+      "blockedReason": "KC 인증정보 없음 + Size 옵션이 없어 productInfoProvidedNotice.size도 MISSING(resolveSizeFromOptions가 대체할 옵션 자체가 없는 실제 케이스)",
+      "postAttempted": false
+    },
+    {
+      "productTitle": "Lucy Cut Out Sandals",
+      "leafCategoryId": "50004039",
+      "categoryRequiresChildCertification": true,
+      "originAreaCode": "0201038",
+      "originAreaLabel": "수입산:유럽>이탈리아",
+      "validationResult": { "ok": false, "readyCount": 32, "missingCount": 1, "blockedCount": 1 },
+      "blockedReason": "KC 인증정보 없음. 참고: 이 상품은 실제 사이즈별 가격이 다른 케이스(210/215/225 GBP)라 optionCombinations[].price(delta) 계산이 실제로 검증된 유일한 후보다 — 옵션 관련 항목은 전부 READY.",
+      "postAttempted": false
+    }
+  ],
+  "note": "이 4건 + Hamster Cap(별도 fixture)까지 총 5건이 N-3.49에서 실측한 'KC 없는 해외 KIDS 상품' 전체 세트다. Voyage Dress만 KC 비대상(WEAR)이라 READY였고, N-3.49/3.50에서 실POST 5회를 전부 그 상품에 썼다(register-voyage-dress-live.ts, voyage-dress-registration-attempts.json 참고)."
+}
