@@ -346,6 +346,15 @@ function naverFieldSectionId(field: string): string | undefined {
   if (field === "detailAttribute.originAreaInfo.originAreaCode") return "section-basic";
   if (field === "detailAttribute.originAreaInfo.importer") return "section-notice";
   if (field.startsWith("productCertificationInfos")) return "section-kc";
+  // N-3.66(회귀 테스트로 발견 — "required면 반드시 sectionId/externalHref가
+  // 있어야 한다" 계약 검증 중 확인) — leafCategoryId/name도 같은 유형의
+  // 누락이었다. PlatformPreview.tsx에 "section-category"/"section-basic"이
+  // 이미 존재하고(766줄/679줄), computeChecklistReadiness(Coupang/11번가
+  // 쪽 LABEL_TO_SECTION)는 이미 "카테고리"→"section-category", "상품명"→
+  // "section-basic"으로 매핑돼 있었다 — SmartStore 쪽만 빠졌던 것이라
+  // 같은 DOM id로 통일한다(추측이 아니라 같은 파일 안 기존 사용처 확인).
+  if (field === "originProduct.leafCategoryId") return "section-category";
+  if (field === "originProduct.name") return "section-basic";
   // N-3.55(CPO 지시: "먼저 해결할 항목 ① 가격 확인") — 판매가 필드는 지금까지
   // sectionId가 없어 "다음 입력하기"/가이드 모달에서 클릭해도 이동하지
   // 않았다. computeChecklistReadiness(coupang/11번가)가 이미 쓰는 것과 같은
