@@ -63,8 +63,12 @@ export async function saveNaverAccountSettings(
   const clientId = input.clientId && input.clientId.trim().length > 0 ? input.clientId.trim() : (existing?.client_id ?? null);
   const clientSecret =
     input.clientSecret && input.clientSecret.trim().length > 0 ? input.clientSecret.trim() : (existing?.client_secret ?? null);
-  const sellerId =
-    input.sellerId && input.sellerId.trim().length > 0 ? input.sellerId.trim() : (existing?.seller_id ?? null);
+  // Sprint C-8 — clientId/clientSecret과 다르게 sellerId는 시크릿이 아니라
+  // 화면에 항상 평문으로 보인다(마스킹 없음) — "빈 값 = 변경 안 함"으로
+  // 취급하면 셀러가 값을 지우고 저장해도 절대 지워지지 않는 버그가 된다.
+  // input.sellerId가 전달됐는지(undefined 아님) 자체로 "명시적으로 지정함"을
+  // 판단하고, 빈 문자열이면 그대로 null로 지운다.
+  const sellerId = input.sellerId !== undefined ? input.sellerId.trim() || null : (existing?.seller_id ?? null);
 
   if (existing) {
     const { error } = await supabase

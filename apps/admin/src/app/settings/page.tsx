@@ -264,7 +264,12 @@ export default function SettingsPage() {
         body: JSON.stringify({
           clientId: naverClientId || undefined,
           clientSecret: naverClientSecret || undefined,
-          sellerId: naverSellerId || undefined,
+          // sellerId는 clientId/clientSecret과 달리 시크릿이 아니라 항상
+          // 평문으로 보이는 값이라, 입력칸을 비우고 저장하면 실제로 지워져야
+          // 한다 — `|| undefined`로 감싸면 "빈 값 = 변경 안 함"이 돼버려서
+          // 절대 지울 수 없는 버그가 된다(account.ts saveNaverAccountSettings
+          // 참고).
+          sellerId: naverSellerId,
         }),
       });
       const data = (await res.json()) as { ok: boolean; error?: string };
