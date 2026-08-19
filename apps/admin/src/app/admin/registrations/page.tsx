@@ -302,7 +302,9 @@ function AdminRegistrationsPageInner() {
                           </p>
                           <p className="mt-0.5 text-[10px] text-text-tertiary">
                             현재 설정(공통 이미지/템플릿)이 바뀌었더라도 아래 내용은 이 등록 시도 당시 실제로
-                            제출된 값 그대로입니다.
+                            제출된 값 그대로입니다. 상단/하단 공통 이미지가 켜져 있었다면 각각 맨 앞/맨 뒤
+                            항목으로 이 목록에 포함됩니다(블록 순서를 직접 바꾼 경우는 다를 수 있습니다 — 항목별로
+                            "이게 공통 이미지다"라고 단정하지 않고, 실제 제출 순서 그대로만 보여드립니다).
                           </p>
                           <div className="mt-2 space-y-2">
                             {detailContent.map((item, i) =>
