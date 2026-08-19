@@ -14,11 +14,7 @@ import {
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getNaverCredentials } from "../../naver/_lib/env";
 import { issueNaverAccessToken, callNaverApi, uploadNaverProductImages } from "../../naver/_lib/client";
-import { fetchNaverReturnDeliveryCompanies, resolvePrimaryReturnCompany } from "../../naver/_lib/delivery";
-import { fetchNaverOriginAreas } from "../../naver/_lib/origin";
-import { getDefaultSellerProfile } from "../../coupang/_lib/seller-profile";
-import { findBrandProfileByName } from "../../coupang/_lib/brand-profile";
-import { getDefaultDescriptionTemplate } from "../../coupang/_lib/description-template";
+import { resolveNaverContext } from "../../naver/_lib/resolve-context";
 import { markSnapshotRegistered } from "../../snapshots/_lib/snapshot";
 import { getLatestSellerComplianceConfirmation } from "../_lib/seller-compliance";
 
@@ -28,30 +24,15 @@ import { getLatestSellerComplianceConfirmation } from "../_lib/seller-compliance
  * smartstoreExecutor(클라이언트, "use client" 트리)는 이 라우트를 fetch()로
  * 호출만 한다. 클라이언트는 category 확정 여부까지만 판단해서 categoryId를
  * 넘기고, 그 외 서버가 필요로 하는 모든 값(주소록/반품택배사/원산지/판매자
- * 프로필)은 /api/naver/resolve와 완전히 같은 방식으로 이 라우트가 직접
- * 조회한다 — 클라이언트가 들고 있는 오래된 캐시값을 신뢰하지 않는다(Coupang
- * register route가 출고지/브랜드/카테고리 메타를 매번 새로 조회하는 것과
- * 같은 이유).
+ * 프로필)은 resolveNaverContext()(Sprint B-7부터 /api/naver/resolve와
+ * 물리적으로 같은 함수)를 그대로 호출해서 얻는다 — 클라이언트가 들고 있는
+ * 오래된 캐시값을 신뢰하지 않는다(Coupang register route가 출고지/브랜드/
+ * 카테고리 메타를 매번 새로 조회하는 것과 같은 이유).
  *
  * "여러 상품 일괄 등록" 방지: 이 라우트는 상품 1개만 받는다(배열 인터페이스
  * 자체를 만들지 않음) — Coupang register route와 동일 원칙.
  */
 const CREATE_PRODUCT_PATH = "/v2/products";
-
-interface NaverCertificationInfo {
-  id: number;
-  kindTypes?: string[];
-}
-
-interface NaverCategoryDetail {
-  exceptionalCategories?: string[];
-  certificationInfos?: NaverCertificationInfo[];
-}
-
-interface NaverAddressBookEntry {
-  addressBookNo: number;
-  addressType?: string;
-}
 
 async function logRegistrationAttempt(
   result: ListingResult,
@@ -193,20 +174,33 @@ export async function POST(request: Request) {
   }
   logStep("카테고리 확인", "success", `leafCategoryId=${leafCategoryId}`);
 
-  // 이하 /api/naver/resolve GET route와 완전히 같은 조회 로직 — 결과 shape를
-  // 두 곳에서 따로 만들지 않기 위해 같은 헬퍼 함수(fetchNaverReturnDeliveryCompanies
-  // 등)를 그대로 재사용한다. resolve route는 UI 미리보기용, 이 라우트는 실제
-  // 등록 직전 최신값 재조회용 — 목적은 다르지만 "무엇을 조회하는가"는 같아야
-  // Payload Preview에서 본 값과 실제 등록 결과가 어긋나지 않는다.
-  const detailResult = await callNaverApi(accessToken, { method: "GET", path: `/v1/categories/${leafCategoryId}` });
-  const categoryDetail =
-    detailResult.ok && detailResult.status === 200 ? (detailResult.body as NaverCategoryDetail) : null;
-  const exceptionalCategories = categoryDetail?.exceptionalCategories ?? [];
-  const categoryRequiresChildCertification = exceptionalCategories.includes("CHILD_CERTIFICATION");
-  const childCert = (categoryDetail?.certificationInfos ?? []).find((c) =>
-    c.kindTypes?.includes("CHILD_CERTIFICATION"),
-  );
-  const childCertificationInfoId = childCert?.id ?? null;
+  // Sprint B-7(CPO 지시: "Preview와 실제 Register가 서로 다른 값을 계산하지
+  // 않도록 동일 resolver를 사용") — 이전에는 이 라우트가 /api/naver/resolve
+  // GET route와 "같은 로직"을 복붙해서 따로 유지했다(주석으로 "같아야 한다"고만
+  // 적어뒀을 뿐, 실제로 같은 함수를 호출하진 않았다). 물리적으로 같은 함수를
+  // 공유하지 않으면 한쪽만 고치고 다른 쪽을 놓치는 드리프트 위험이 있다(오늘
+  // registration-report.ts에서 실제로 같은 종류의 버그가 있었다). 이미 발급된
+  // accessToken을 그대로 넘겨 불필요한 재발급 API 호출은 만들지 않는다.
+  const context = await resolveNaverContext({
+    categoryId: leafCategoryId,
+    countryOfOrigin: product.countryOfOrigin.value || null,
+    brand: product.brand.value || null,
+    accessToken,
+  });
+  if (context.status !== "OK") {
+    logStep("컨텍스트 조회", "failed", context.message);
+    const result = withMeta({
+      status: "FAILED",
+      platform: "smartstore",
+      mode: "LIVE",
+      retryable: false,
+      error: { step: "AUTHENTICATION", message: context.message, retryable: false },
+    });
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+    return NextResponse.json(result);
+  }
+  const categoryRequiresChildCertification = context.category?.requiresChildCertification ?? false;
+  const childCertificationInfoId = context.category?.childCertificationInfoId ?? null;
 
   // N-3.52(CPO 지시 STEP14) — "API 등록 가능"과 "판매 가능"을 분리한다.
   // 판매자가 "판매 전 최종 확인" 화면에서 남긴 가장 최근 확인 기록을 여기서
@@ -247,58 +241,33 @@ export async function POST(request: Request) {
     return NextResponse.json(result);
   }
 
-  let releaseAddressBookNo: number | null = null;
-  let refundAddressBookNo: number | null = null;
-  const addressResult = await callNaverApi(accessToken, {
-    method: "GET",
-    path: "/v1/seller/addressbooks-for-page?page=1",
-  });
-  if (addressResult.ok && addressResult.status === 200) {
-    const addressBody = addressResult.body as { addressBooks?: NaverAddressBookEntry[] };
-    const addressBooks = addressBody.addressBooks ?? [];
-    releaseAddressBookNo = addressBooks.find((a) => a.addressType === "RELEASE")?.addressBookNo ?? null;
-    refundAddressBookNo = addressBooks.find((a) => a.addressType === "REFUND_OR_EXCHANGE")?.addressBookNo ?? null;
-  }
+  const { releaseAddressBookNo, refundAddressBookNo } = context.address;
   logStep(
     "주소록 조회",
     releaseAddressBookNo != null && refundAddressBookNo != null ? "success" : "failed",
     `출고지=${releaseAddressBookNo ?? "없음"}, 반품지=${refundAddressBookNo ?? "없음"}`,
   );
 
-  const [returnCompanies, sellerProfile, originAreas, brandProfile, descriptionTemplate] = await Promise.all([
-    fetchNaverReturnDeliveryCompanies(accessToken),
-    getDefaultSellerProfile(),
-    fetchNaverOriginAreas(accessToken),
-    product.brand.value ? findBrandProfileByName(product.brand.value) : Promise.resolve(null),
-    getDefaultDescriptionTemplate(),
-  ]);
-  const primaryReturnCompany = returnCompanies ? resolvePrimaryReturnCompany(returnCompanies) : null;
-
-  const resolvedCountryText =
-    product.countryOfOrigin.value || brandProfile?.countryOfOrigin || sellerProfile?.defaultCountryOfOrigin || null;
-  const originMatch = originAreas
-    ? resolveNaverOriginArea(resolvedCountryText, originAreas)
-    : { status: "NO_INPUT" as const, code: null, matchedDisplayName: null, requiresImporter: false };
-
   // buildNaverProductPayload/validateNaverPayload가 같은 근원 데이터를 보게
   // 한다 — NaverPayloadPreview.tsx가 클라이언트에서 하는 것과 동일한 원칙
-  // (Resolver → Payload 단방향, 두 곳에서 따로 계산하지 않는다).
+  // (Resolver → Payload 단방향, 두 곳에서 따로 계산하지 않는다). 이 값들은
+  // 전부 resolveNaverContext()가 이미 계산해준 것을 그대로 옮긴다.
   const payloadInputCommon = {
     releaseAddressBookNo,
     refundAddressBookNo,
-    primaryReturnDeliveryCompanyPriorityType: primaryReturnCompany?.priorityType ?? null,
-    returnDeliveryFee: sellerProfile?.returnDeliveryCharge ?? null,
-    exchangeDeliveryFee: sellerProfile?.exchangeDeliveryCharge ?? null,
+    primaryReturnDeliveryCompanyPriorityType: context.delivery.primaryReturnCompany?.priorityType ?? null,
+    returnDeliveryFee: context.delivery.returnDeliveryFee,
+    exchangeDeliveryFee: context.delivery.exchangeDeliveryFee,
     childCertificationInfoId,
-    originAreaCode: originMatch.code,
-    deliveryCompany: sellerProfile?.naverDeliveryCompanyCode ?? null,
-    warrantyPolicy: sellerProfile?.qualityGuarantee || null,
-    afterServiceDirector: sellerProfile?.asContactNumber || null,
+    originAreaCode: context.origin.match.code,
+    deliveryCompany: context.courier.value,
+    warrantyPolicy: context.notice.warrantyPolicy,
+    afterServiceDirector: context.notice.afterServiceDirector,
     // N-3.51 STEP2 — afterServiceInfo.afterServiceTelephoneNumber 전용 실제
-    // 전화번호 소스. asContactNumber("해외 구매대행으로 A/S 불가" 같은 자유
-    // 텍스트)와 달리 companyContactNumber는 Coupang 쪽에서 이미 실제 전화번호
-    // 형식으로 채워져 있는 필드다(예: "+821046458306").
-    afterServiceTelephoneNumber: sellerProfile?.companyContactNumber || null,
+    // 전화번호 소스. afterServiceDirector("해외 구매대행으로 A/S 불가" 같은
+    // 자유 텍스트)와 달리 companyContactNumber는 이미 실제 전화번호 형식으로
+    // 채워져 있는 필드다(예: "+821046458306").
+    afterServiceTelephoneNumber: context.notice.companyContactNumber,
   };
 
   // N-3.49(2026-08-17, 실제 등록 4차 시도로 발견) — 상품 등록 API는 외부 URL
@@ -350,18 +319,11 @@ export async function POST(request: Request) {
     leafCategoryId,
     ...payloadInputCommon,
     categoryRequiresChildCertification,
-    originAreaRequiresContent: originMatch.status === "OTHER_MANUAL",
-    descriptionTemplate: descriptionTemplate ?? null,
+    originAreaRequiresContent: context.origin.match.status === "OTHER_MANUAL",
+    descriptionTemplate: context.detailPage.descriptionTemplate,
     detailBlocks,
-    commonImages: sellerProfile
-      ? {
-          topCommonImageUrl: sellerProfile.topCommonImageUrl,
-          topCommonImageEnabled: sellerProfile.topCommonImageEnabled,
-          bottomCommonImageUrl: sellerProfile.bottomCommonImageUrl,
-          bottomCommonImageEnabled: sellerProfile.bottomCommonImageEnabled,
-        }
-      : undefined,
-    brandIntro: brandProfile?.brandIntro ?? null,
+    commonImages: context.detailPage.commonImages,
+    brandIntro: context.detailPage.brandIntro,
   });
 
   // STEP 5(Readiness Gate) — Payload validation을 API 호출 전 마지막 방어선으로
@@ -373,8 +335,8 @@ export async function POST(request: Request) {
     {
       product,
       ...payloadInputCommon,
-      returnCompaniesFetchFailed: returnCompanies === null,
-      originAreaRequiresImporter: originMatch.requiresImporter,
+      returnCompaniesFetchFailed: context.delivery.returnCompaniesFetchFailed,
+      originAreaRequiresImporter: context.origin.match.requiresImporter,
     },
     categoryRequiresChildCertification,
     {

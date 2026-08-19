@@ -40,19 +40,30 @@ export async function resolveNaverContext(params: {
   categoryId: string | null;
   countryOfOrigin: string | null;
   brand: string | null;
+  /** Sprint B-7(CPO 지시: "Preview와 실제 Register가 서로 다른 값을 계산하지
+   * 않도록 동일 resolver를 사용") — register/route.ts는 이미지 업로드 등
+   * 다른 API 호출을 위해 토큰을 자체 발급받아 갖고 있다. 여기서 또 발급받으면
+   * 불필요한 Naver API 호출이 늘어나므로, 이미 발급된 토큰이 있으면 그대로
+   * 재사용한다(없으면 기존처럼 이 함수가 직접 발급한다 — /api/naver/resolve
+   * route처럼 토큰이 아직 없는 호출부는 그대로 동작). */
+  accessToken?: string;
 }): Promise<NaverResolveResult> {
-  const { categoryId, countryOfOrigin: extractedCountryOfOrigin, brand: brandName } = params;
+  const { categoryId, countryOfOrigin: extractedCountryOfOrigin, brand: brandName, accessToken: providedAccessToken } = params;
 
-  const credentials = await getNaverCredentials();
-  if (!credentials) {
-    return { status: "NOT_CONFIGURED", message: "네이버 인증 정보가 설정되어 있지 않습니다." };
+  let accessToken: string;
+  if (providedAccessToken) {
+    accessToken = providedAccessToken;
+  } else {
+    const credentials = await getNaverCredentials();
+    if (!credentials) {
+      return { status: "NOT_CONFIGURED", message: "네이버 인증 정보가 설정되어 있지 않습니다." };
+    }
+    const tokenResult = await issueNaverAccessToken(credentials);
+    if (!tokenResult.ok) {
+      return { status: "AUTH_FAILED", message: tokenResult.message, debug: { step: tokenResult.step } };
+    }
+    accessToken = tokenResult.accessToken;
   }
-
-  const tokenResult = await issueNaverAccessToken(credentials);
-  if (!tokenResult.ok) {
-    return { status: "AUTH_FAILED", message: tokenResult.message, debug: { step: tokenResult.step } };
-  }
-  const accessToken = tokenResult.accessToken;
 
   let category: NaverResolveResponse["category"] = null;
 
