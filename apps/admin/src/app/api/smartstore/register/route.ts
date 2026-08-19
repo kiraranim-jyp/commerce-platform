@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { ListingModel } from "@commerce/marketplace";
+import { isVerifiedCategorySelected } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
 import {
   buildNaverProductPayload,
@@ -152,9 +153,14 @@ export async function POST(request: Request) {
 
   // categoryId 확정 여부 — Coupang register route의 resolveVerifiedCategoryCode와
   // 같은 의미(isVerifiedPlatformCode까지 확인, state만 보고 판단하지 않는다).
+  // N-3.65 — 위 주석과 달리 실제로는 state(SELECTED/CONFIRMED) 체크가 빠져있었다
+  // (isVerifiedPlatformCode만 확인). AI가 추천만 하고 사용자가 아직 확인하지
+  // 않은 카테고리(state: RECOMMENDED)도 여기를 통과해 실제 등록 API까지
+  // 도달했다 — isVerifiedCategorySelected()로 통일해 이 파일의 원래 의도(주석)와
+  // 실제 코드를 일치시킨다.
   const candidate = listing.category.candidate;
   const leafCategoryId =
-    candidate?.isVerifiedPlatformCode && candidate.platform === "smartstore" ? candidate.id : null;
+    isVerifiedCategorySelected(listing.category) && candidate?.platform === "smartstore" ? candidate.id : null;
   if (!leafCategoryId) {
     logStep("카테고리 확인", "failed", "확정된 네이버 카테고리가 없습니다.");
     const result = withMeta({

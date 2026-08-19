@@ -1042,8 +1042,14 @@ export function CommerceWorkspace({
   const smartStoreValidationEligible = tab === "smartstore" && !!listing;
   useEffect(() => {
     if (!smartStoreValidationEligible || !listing) return;
+    // N-3.65(CPO 경고 재발 — category-field.ts 주석의 "SaaS-UX 개편 때 3곳에서
+    // 재발" 다음 사례) — isVerifiedPlatformCode만 보고 state(SELECTED/CONFIRMED)를
+    // 빼먹으면 AI가 추천만 하고 사용자가 아직 확인하지 않은 카테고리로도
+    // Readiness가 100%를 보여준다("등록 준비 완료"인데 실제로는 카테고리조차
+    // 확정 안 된 상태) — isVerifiedCategorySelected()로 통일한다.
     const leafCategoryId =
-      listing.category.candidate?.isVerifiedPlatformCode && listing.category.candidate.platform === "smartstore"
+      isVerifiedCategorySelected(listing.category) &&
+      listing.category.candidate?.platform === "smartstore"
         ? listing.category.candidate.id
         : "";
     const controller = new AbortController();
@@ -1488,8 +1494,8 @@ export function CommerceWorkspace({
           smartstoreKcStatus={confirmingPlatform === "smartstore" ? (smartStoreValidation?.kcStatus ?? null) : undefined}
           smartstoreCategoryCode={
             confirmingPlatform === "smartstore"
-              ? (listing.category.candidate?.isVerifiedPlatformCode &&
-                  listing.category.candidate.platform === "smartstore"
+              ? (isVerifiedCategorySelected(listing.category) &&
+                  listing.category.candidate?.platform === "smartstore"
                   ? listing.category.candidate.id
                   : null)
               : undefined
