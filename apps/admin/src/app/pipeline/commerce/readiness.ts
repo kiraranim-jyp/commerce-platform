@@ -320,6 +320,12 @@ const NAVER_NOTICE_FIELD_SECTION: Record<string, string> = {
   manufacturer: "section-basic",
   recommendedAge: "section-basic",
   caution: "section-notice",
+  // N-3.66(CTO 실측 — job004 KIDS 카테고리 확정 후 검증) — certificationType
+  // ("인증 대상 여부/유형")은 PlatformPreview.tsx의 KC 섹션에 이미 입력 UI가
+  // 있다(N-3.48부터 그 섹션으로 옮김, PlatformPreview.tsx:229-232 FieldRow).
+  // 하지만 이 맵에 없어서 "다음 입력하기"를 눌러도 이동하지 않았다 — 원산지와
+  // 정확히 같은 유형의 버그(입력 UI는 있는데 sectionId 연결이 빠짐).
+  certificationType: "section-kc",
   // Sprint P2(CEO 지시, 2026-08-19: "치수(사이즈) 눌러도 이동이 안됨") —
   // size는 PlatformPreview에 전용 입력 필드가 없다(resolveSizeFromOptions가
   // product.optionGroups의 SIZE 옵션값을 그대로 재사용할 뿐 별도 텍스트
