@@ -74,9 +74,9 @@ export const smartstoreExecutor: ListingExecutor = {
     // 않는다, CPO 지시).
     //
     // UI에서 이 경로를 실제로 탈 수 있는지는 이 함수가 결정하지 않는다 —
-    // capabilities.ts의 registrationEnabled(smartstore: false, N-3.25 STEP 4
-    // 지시로 그대로 유지)가 RegistrationReadinessCard에서 등록 버튼 자체를
-    // 막는다. "구현됨"과 "실사용 가능"을 의도적으로 분리한다.
+    // capabilities.ts의 registrationEnabled(smartstore: true, N-3.26 STEP 5부터
+    // 활성화)와 CommerceWorkspace.tsx의 resolveExecutionMode가 LIVE/DRY_RUN을
+    // 결정한다. "구현됨"과 "실사용 가능"을 의도적으로 분리한다.
     try {
       const response = await fetch("/api/smartstore/register", {
         method: "POST",

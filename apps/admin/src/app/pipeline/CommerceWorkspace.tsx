@@ -1189,18 +1189,29 @@ export function CommerceWorkspace({
     setConfirmingPlatform(null);
   }
 
-  /** 쿠팡 + 연결됨 상태일 때만 LIVE를 시도한다 — 그 외(SmartStore/11번가, 또는
-   * 쿠팡이지만 인증 안 됨)는 항상 DRY_RUN이다. 아직 SmartStore/11번가는 이번
-   * Mission 범위 밖이라 LIVE 경로 자체가 없다(executor가 NOT_IMPLEMENTED로
-   * 막는다 — 여기서 미리 걸러도 되지만 executor가 이미 안전하므로 그대로 둔다).
-   * connectionOverride: confirmListing이 방금 재확인한 "지금 이 순간의" 상태를
-   * 넘겨줄 때 쓴다 — 안 넘기면 화면에 표시 중인(마지막으로 확인된) 상태를 쓴다. */
+  /** 쿠팡은 연결됨 상태일 때만 LIVE를 시도한다(별도 인증 확인 버튼이 있어
+   * 클릭 시점의 "지금 이 순간의" 상태를 확인할 수 있다). 11번가는 여전히
+   * capabilities.registrationEnabled가 false라 LIVE 경로 자체가 없다.
+   *
+   * Sprint P2 버그 수정(2026-08-19, CEO 실측 보고: "치수 옵션으로 등록은
+   * 가능하나 스마트스토어 등록이 안됨") — 이 함수가 SmartStore를 무조건
+   * DRY_RUN으로 고정하고 있었다. 주석은 "SmartStore는 이번 Mission 범위 밖이라
+   * LIVE 경로가 없다"고 적혀 있었지만 이미 오래전에 사실이 아니게 됐다 —
+   * smartstoreExecutor.execute()는 LIVE일 때 실제로 /api/smartstore/register를
+   * POST하고, N-3.49/N-3.51에서 이미 실제 등록 성공(originProductNo=13664004406)
+   * 사례가 있으며, capabilities.ts의 smartstore.registrationEnabled도 true다.
+   * SmartStore는 쿠팡처럼 별도 "연결 확인" 버튼이 없어(Client ID/Secret은
+   * Settings에 저장돼 있고 서버가 등록 시점에 검증한다) 클라이언트에서 미리
+   * 걸러줄 신호가 없다 — 항상 LIVE를 시도하고, 자격증명/KC/가격 등 실제 차단
+   * 사유는 서버(validateNaverPayload)가 이미 안전하게 막는다(그 결과는
+   * FAILED로 돌아와 기존 실패 UI가 그대로 처리한다). */
   function resolveExecutionMode(
     platform: PlatformId,
     connectionOverride?: PlatformConnectionStatus,
   ): ExecutionMode {
     const connection = connectionOverride ?? coupangConnection;
-    if (platform === "coupang" && connection === "CONNECTED") return "LIVE";
+    if (platform === "coupang") return connection === "CONNECTED" ? "LIVE" : "DRY_RUN";
+    if (platform === "smartstore") return "LIVE";
     return "DRY_RUN";
   }
 
