@@ -32,16 +32,23 @@ const STATUS_LABELS: Record<ListingStatus, string> = {
   UNKNOWN: "등록 결과 확인 필요(Wing에서 확인해주세요)",
 };
 
-/** ListingError.step -> "실패 단계" 사용자용 문구. */
-const ERROR_STEP_LABELS: Record<ListingErrorStep, string> = {
-  VALIDATION: "상품 정보 확인",
-  CATEGORY: "카테고리 확인",
-  AUTHENTICATION: "쿠팡 연결 확인",
-  NETWORK: "쿠팡 서버 연결",
-  IMAGE: "이미지 처리",
-  COUPANG_API: "상품 등록 요청",
-  NOT_IMPLEMENTED: "상품 등록 요청",
-};
+/** ListingError.step -> "실패 단계" 사용자용 문구. AUTHENTICATION/NETWORK은
+ * SmartStore register route(apps/admin/src/app/api/smartstore/register/route.ts)도
+ * 실제로 쓰는 공용 step이라(쿠팡 전용이 아님) 플랫폼 이름을 하드코딩하면
+ * SmartStore 실패에도 "쿠팡 연결 확인"이 뜨는 오해를 준다 — platformLabel을
+ * 그대로 끼워 넣는다(이 파일이 이미 다른 곳에서 쓰는 패턴과 동일). */
+function errorStepLabel(step: ListingErrorStep, platformLabel: string): string {
+  const labels: Record<ListingErrorStep, string> = {
+    VALIDATION: "상품 정보 확인",
+    CATEGORY: "카테고리 확인",
+    AUTHENTICATION: `${platformLabel} 연결 확인`,
+    NETWORK: `${platformLabel} 서버 연결`,
+    IMAGE: "이미지 처리",
+    COUPANG_API: "상품 등록 요청",
+    NOT_IMPLEMENTED: "상품 등록 요청",
+  };
+  return labels[step];
+}
 
 /** 이미지가 data URL(base64)로 들어있으면 그대로 JSON.stringify하면 payload
  * 미리보기가 base64 덩어리로 뒤덮인다 — 표시용으로만 줄여서 보여준다. */
@@ -293,7 +300,7 @@ export function ListingSection({
           )}
         </div>
         <p className="mt-2 text-xs text-text-secondary">
-          실패 단계: {ERROR_STEP_LABELS[result.error.step]}
+          실패 단계: {errorStepLabel(result.error.step, platformLabel)}
         </p>
         <p className="mt-1 text-xs text-text-secondary">원인: {result.error.message}</p>
         {result.error.resolution && (
