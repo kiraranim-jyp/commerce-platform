@@ -554,14 +554,26 @@ export function PlatformPreview({
    * 있다(readiness.ts, RegistrationReadinessCard와 같은 계산). 그 섹션에 매핑된
    * 필수 항목이 하나라도 안 채워졌으면 ⚠️, 다 채워졌으면(또는 이 섹션에 필수
    * 항목이 없으면) ✅ — "등록 가능성" 퍼센트(#306에서 고친 필수 항목 기준)와
-   * 같은 기준이라 서로 다른 판정을 보여줄 일이 없다. */
+   * 같은 기준이라 서로 다른 판정을 보여줄 일이 없다.
+   *
+   * Sprint E-3(CPO 지시: "missing이라고 해서 무조건 🔴가 아니다") — 이전에는
+   * required 항목만 봐서 선택 항목이 비어 있어도 "준비됨"으로만 보였다(선택
+   * 항목이 비었다는 사실 자체가 안 보임). required 미충족은 그대로 needsCheck
+   * (🟠, 등록을 막는 상태)로 두고, optional 미충족은 새로 warning(🟡, 셀러가
+   * 판단해서 넘어갈 수 있는 상태)으로 구분한다 — 판정 기준(required/passed)은
+   * readiness.ts 그대로, 여기서 새 규칙을 만들지 않는다. */
   function sectionCompletionBadge(sectionId: string) {
     const relevant = readinessSummary.items.filter((i) => i.sectionId === sectionId);
     if (relevant.length === 0) return null;
     const hasRequiredFail = relevant.some((i) => i.required && !i.passed);
-    return (
-      <StatusBadge status={hasRequiredFail ? "needsCheck" : "success"} label={hasRequiredFail ? "확인 필요" : "준비됨"} />
-    );
+    if (hasRequiredFail) {
+      return <StatusBadge status="needsCheck" label="확인 필요" />;
+    }
+    const hasOptionalFail = relevant.some((i) => !i.required && !i.passed);
+    if (hasOptionalFail) {
+      return <StatusBadge status="warning" label="선택 입력 가능" />;
+    }
+    return <StatusBadge status="success" label="준비됨" />;
   }
 
   // N-3.16 잔여3(CPO 지시: "섹션 제목 → 상태 → 요약 → 펼침" — 기본정보 섹션은
@@ -668,10 +680,6 @@ export function PlatformPreview({
       </div>
 
       <div className="order-2 space-y-3 lg:order-1">
-        {capabilities.hasNaverPreview && (
-          <NaverPayloadPreview product={product} listing={listing} detailBlocks={detailBlocks} />
-        )}
-
         <CollapsibleSection
           title="기본정보"
           badge={sectionCompletionBadge("section-basic")}
@@ -1089,6 +1097,10 @@ export function PlatformPreview({
               </p>
             )}
           </CollapsibleSection>
+        )}
+
+        {capabilities.hasNaverPreview && (
+          <NaverPayloadPreview product={product} listing={listing} detailBlocks={detailBlocks} />
         )}
 
         <ListingSection

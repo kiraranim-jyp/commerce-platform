@@ -390,7 +390,7 @@ export function NaverPayloadPreview({
   // 필드 단위 상세, 우측 카드가 안 보여주는 정보)만 담당한다.
   return (
     <CollapsibleSection
-      title="SmartStore 등록 상세 확인"
+      title="Payload Preview"
       summary="원산지 · 고시정보 · KC · 배송/반품 등 SmartStore 전용 항목입니다. 등록 가능 여부는 우측 등록 준비도 카드를 확인하세요."
     >
       {(blockedIssues.length > 0 || missingIssues.length > 0) && (

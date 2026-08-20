@@ -21,6 +21,10 @@ export const ELEVENST_CATEGORIES: PlatformCategoryTable = {
     primary: { name: "원피스", path: ["패션의류", "아동/주니어", "원피스"] },
     alternate: { name: "원피스", path: ["패션의류", "여성의류", "원피스"] },
   },
+  Skirt: {
+    primary: { name: "스커트", path: ["패션의류", "아동/주니어", "스커트"] },
+    alternate: { name: "스커트", path: ["패션의류", "여성의류", "스커트"] },
+  },
   Jacket: {
     primary: { name: "아우터", path: ["패션의류", "아동/주니어", "아우터"] },
     alternate: { name: "자켓", path: ["패션의류", "남성의류", "자켓"] },

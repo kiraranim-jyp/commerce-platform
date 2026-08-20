@@ -4,6 +4,7 @@ export type ProductType =
   | "Pants"
   | "Leggings"
   | "Dress"
+  | "Skirt"
   | "Jacket"
   | "Hoodie"
   | "Hat"
@@ -17,6 +18,7 @@ export const PRODUCT_TYPES: ProductType[] = [
   "Pants",
   "Leggings",
   "Dress",
+  "Skirt",
   "Jacket",
   "Hoodie",
   "Hat",
@@ -39,6 +41,11 @@ export const KEYWORDS: Record<ProductType, string[]> = {
   Pants: ["pants", "trousers", "jeans", "denim", "바지", "팬츠", "청바지"],
   Leggings: ["leggings", "레깅스"],
   Dress: ["dress", "원피스", "드레스"],
+  // N-E7(CEO 실측 버그 — "Emile et Ida / Iris Ecru Skirt"가 티셔츠로 오분류됨)
+  // — Skirt가 ProductType enum에 아예 없어서 제목에 "skirt"가 있어도 후보
+  // 생성 단계에서 무시됐다. 프랑스 브랜드 원본 데이터 대응을 위해 "jupe"(불어)도
+  // 함께 추가한다(다른 타입들도 en/ko 혼용이라 같은 패턴).
+  Skirt: ["skirt", "skirts", "jupe", "jupes", "스커트"],
   Jacket: ["jacket", "coat", "outerwear", "재킷", "자켓", "코트", "아우터"],
   Hoodie: ["hoodie", "sweatshirt", "후드", "맨투맨", "후드티"],
   Hat: ["hat", "cap", "beanie", "bucket hat", "모자", "버킷햇", "비니", "캡"],

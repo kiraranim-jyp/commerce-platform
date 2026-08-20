@@ -6,6 +6,7 @@ export const KOREAN_TYPE_LABELS: Record<ProductType, string> = {
   Pants: "바지",
   Leggings: "레깅스",
   Dress: "원피스",
+  Skirt: "스커트",
   Jacket: "아우터",
   Hoodie: "후드티",
   Hat: "모자",

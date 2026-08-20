@@ -21,6 +21,10 @@ export const COUPANG_CATEGORIES: PlatformCategoryTable = {
     primary: { name: "원피스", path: ["패션의류/잡화", "유아동의류", "원피스"] },
     alternate: { name: "원피스", path: ["패션의류/잡화", "여성의류", "원피스"] },
   },
+  Skirt: {
+    primary: { name: "스커트", path: ["패션의류/잡화", "유아동의류", "하의", "스커트"] },
+    alternate: { name: "스커트", path: ["패션의류/잡화", "여성의류", "스커트"] },
+  },
   Jacket: {
     primary: { name: "아우터", path: ["패션의류/잡화", "유아동의류", "아우터"] },
     alternate: { name: "자켓/코트", path: ["패션의류/잡화", "남성의류", "자켓/코트"] },

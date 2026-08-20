@@ -42,7 +42,6 @@ import { resolveSourcePrice } from "@commerce/pricing";
 import { AIContentPanel } from "./commerce/AIContentPanel";
 import { BacklogPanel } from "./commerce/BacklogPanel";
 import { ComparisonShopSearch } from "./commerce/ComparisonShopSearch";
-import { CoupangConnectionPanel } from "./commerce/CoupangConnectionPanel";
 import { ImageInlineEditor } from "./ImageInlineEditor";
 import { ListingConfirmationModal } from "./commerce/ListingConfirmationModal";
 import type { NaverResolveResponse } from "./commerce/NaverPayloadPreview";
@@ -392,11 +391,13 @@ export function CommerceWorkspace({
     };
   }, [tab]);
 
-  /** 페이지/탭 진입 시 자동으로 호출하지 않는다 — 사용자가 [연결 다시 확인]을
-   * 누르거나(CoupangConnectionPanel), 등록 직전(confirmListing)에만 실제 쿠팡
-   * API가 호출된다. 반환값을 그대로 쓸 수 있게 해서, confirmListing이 방금 setState한
-   * "다음 렌더의" coupangConnection이 아니라 "지금 이 순간의" 상태를 즉시 판단할 수
-   * 있게 한다(React state는 비동기라 setState 직후 값을 바로 읽을 수 없다). */
+  /** 페이지/탭 진입 시 자동으로 호출하지 않는다 — 등록 직전(confirmListing)에만
+   * 실제 쿠팡 API가 호출된다(E-5: 탭 상단의 "쿠팡 연결" 표시는 제거했지만, 이
+   * 재확인 로직 자체는 그대로 유지 — 등록 버튼을 눌렀을 때 만료된 인증으로
+   * LIVE를 시도하지 않기 위함이다). 반환값을 그대로 쓸 수 있게 해서,
+   * confirmListing이 방금 setState한 "다음 렌더의" coupangConnection이 아니라
+   * "지금 이 순간의" 상태를 즉시 판단할 수 있게 한다(React state는 비동기라
+   * setState 직후 값을 바로 읽을 수 없다). */
   async function checkCoupangConnection(): Promise<PlatformConnectionStatus> {
     setCoupangConnectionChecking(true);
     let status: PlatformConnectionStatus = "AUTH_FAILED";
@@ -1397,15 +1398,6 @@ export function CommerceWorkspace({
           onGenerate={generateContent}
           onUpdateField={updateField}
           onUpdateKeywords={updateKeywords}
-        />
-      )}
-
-      {tab === "coupang" && (
-        <CoupangConnectionPanel
-          status={coupangConnection}
-          checking={coupangConnectionChecking}
-          checkedAt={coupangConnectionCheckedAt}
-          onCheck={checkCoupangConnection}
         />
       )}
 

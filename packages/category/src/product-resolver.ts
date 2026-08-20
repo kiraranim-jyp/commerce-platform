@@ -116,7 +116,10 @@ const PRODUCT_TYPE_KEYWORDS: { type: string; terms: string[] }[] = [
   { type: "아우터", terms: ["jacket", "coat", "parka", "outerwear"] },
   { type: "니트", terms: ["sweater", "jumper", "knit", "cardigan", "sweatshirt"] },
   { type: "바지", terms: ["pants", "trousers", "jeans", "leggings", "denim"] },
-  { type: "스커트", terms: ["skirt"] },
+  // N-E7(CEO 실측 버그) — 영어 "skirt"만 있어서 프랑스 브랜드 원본 데이터의
+  // "jupe"(불어 스커트)를 놓쳤다. keyword-rules.ts의 Skirt 타입과 같은 이유로
+  // 함께 추가한다.
+  { type: "스커트", terms: ["skirt", "skirts", "jupe", "jupes"] },
   { type: "수영복", terms: ["swimwear", "swimsuit", "bikini"] },
   // Sprint A-2.6(Resolver Accuracy Validation) — CPO의 Golden Dataset에 Toy/Home/
   // Beauty가 포함되면서 실측으로 발견: 이 세 카테고리는 키워드 테이블에 항목이
