@@ -182,7 +182,7 @@ export function CategoryRecommendationPanel({
               <>
                 {verifiedCandidates.length > 0 && (
                   <div className="mt-2">
-                    <p className="text-xs font-medium text-text-secondary">① 쿠팡 API 추천 — 바로 등록 가능</p>
+                    <p className="text-xs font-medium text-text-secondary">① 검증된 카테고리 — 바로 등록 가능</p>
                     <ol className="mt-1.5 space-y-2">
                       {verifiedCandidates.map((candidate) => (
                         <CandidateCard

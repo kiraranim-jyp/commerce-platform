@@ -23,8 +23,28 @@ interface DomainProfile {
  * 어디에도 식품 카테고리가 정답일 수 없다. */
 const FOOD_KEYWORDS = ["식품", "커피", "차류", "음료", "과자", "라면", "주류", "건강식품", "시리얼", "분유", "간식"];
 
-const APPAREL_EXPECT = ["의류", "티셔츠", "니트", "원피스", "아우터", "바지", "스커트", "수영복", "맨투맨", "자켓"];
 const APPAREL_CONFLICT = [...FOOD_KEYWORDS, "가전", "침구", "완구", "신발", "가방"];
+
+/** N-E7-2(CEO/CPO 실측 버그 — "Jupe Iris"(스커트)가 니트 카테고리로 추천됨)
+ * — 이 7개 의류 하위유형이 전부 같은 넓은 목록(구 APPAREL_EXPECT: "의류",
+ * "니트", "원피스" 등 서로의 키워드를 전부 포함)을 expect로 공유했었다.
+ * scoreCategoryCandidate 단독 호출(Coupang predict API 후보 1개를 검증)에서는
+ * 후보가 이미 predict API가 골라준 것이라 크게 티가 안 났지만,
+ * category-match.ts의 generateNaverCategoryCandidates()가 이 expect 목록을
+ * "네이버 카테고리 트리 4999개 전체를 훑는 1차 필터"로도 재사용하면서
+ * 문제가 드러났다 — productType이 "스커트"여도 expect에 "니트"가 들어있어
+ * 니트 카테고리가 전부 후보로 통과했다. 각 하위유형은 자기 자신을 가리키는
+ * 좁은 키워드만 갖는다(smartstore/coupang.categories.ts의 실제 leaf 이름과
+ * 맞춘 것 — 새 판단 기준이 아니라 이미 존재하는 카테고리 이름을 그대로 옮김).
+ * conflict(식품/가전 등 명백히 다른 도메인)는 계속 공유한다 — 이건 원래도
+ * 정확했다. */
+const T_SHIRT_EXPECT = ["티셔츠"];
+const DRESS_EXPECT = ["원피스"];
+const OUTER_EXPECT = ["아우터", "자켓", "코트"];
+const KNIT_EXPECT = ["니트", "가디건", "맨투맨", "스웨트", "후드"];
+const PANTS_EXPECT = ["바지", "팬츠", "청바지", "레깅스"];
+const SKIRT_EXPECT = ["스커트"];
+const SWIMWEAR_EXPECT = ["수영복"];
 
 /** product-resolver.ts의 PRODUCT_TYPE_KEYWORDS가 만들어내는 productType
  * 문자열(예: "신발", "홈/리빙")을 이 표의 키로 그대로 쓴다 — 두 표가 어긋나면
@@ -34,13 +54,13 @@ const DOMAIN_PROFILES: Record<string, DomainProfile> = {
   신발: { expect: ["신발", "스니커즈", "운동화", "부츠", "샌들", "로퍼"], conflict: [...FOOD_KEYWORDS, "가전", "침구", "완구"] },
   가방: { expect: ["가방", "백팩", "숄더백", "크로스백", "파우치", "지갑"], conflict: [...FOOD_KEYWORDS, "가전", "침구", "완구", "신발"] },
   모자: { expect: ["모자", "캡", "비니"], conflict: [...FOOD_KEYWORDS, "가전", "침구", "완구"] },
-  원피스: { expect: APPAREL_EXPECT, conflict: APPAREL_CONFLICT },
-  티셔츠: { expect: APPAREL_EXPECT, conflict: APPAREL_CONFLICT },
-  아우터: { expect: APPAREL_EXPECT, conflict: APPAREL_CONFLICT },
-  니트: { expect: APPAREL_EXPECT, conflict: APPAREL_CONFLICT },
-  바지: { expect: APPAREL_EXPECT, conflict: APPAREL_CONFLICT },
-  스커트: { expect: APPAREL_EXPECT, conflict: APPAREL_CONFLICT },
-  수영복: { expect: APPAREL_EXPECT, conflict: APPAREL_CONFLICT },
+  원피스: { expect: DRESS_EXPECT, conflict: APPAREL_CONFLICT },
+  티셔츠: { expect: T_SHIRT_EXPECT, conflict: APPAREL_CONFLICT },
+  아우터: { expect: OUTER_EXPECT, conflict: APPAREL_CONFLICT },
+  니트: { expect: KNIT_EXPECT, conflict: APPAREL_CONFLICT },
+  바지: { expect: PANTS_EXPECT, conflict: APPAREL_CONFLICT },
+  스커트: { expect: SKIRT_EXPECT, conflict: APPAREL_CONFLICT },
+  수영복: { expect: SWIMWEAR_EXPECT, conflict: APPAREL_CONFLICT },
   완구: { expect: ["완구", "장난감", "인형", "블록", "퍼즐"], conflict: [...FOOD_KEYWORDS, "의류", "가전"] },
   "홈/리빙": {
     expect: ["침구", "홈웨어", "생활", "리빙", "수건", "커튼", "쿠션", "이불", "베개", "매트"],
