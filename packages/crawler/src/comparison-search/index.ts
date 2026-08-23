@@ -1,9 +1,17 @@
 import { extractShopifyHandle, extractShopifyLocalePrefix, fetchShopifyProductJson } from "../shopify-product-json";
+import { searchBoboChosesKorea } from "./bobochoses-kr";
 import { searchChildrensalon } from "./childrensalon";
+import { fetchLooxlooProductPrice, searchLooxloo } from "./looxloo";
 import { withConfidence } from "./match";
 import { selectCandidatesForDetailConfirmation } from "./price-confirmation";
 import { searchShopifySuggest } from "./shopify-suggest";
-import type { ComparisonCandidate, ComparisonQuery, ComparisonSearchResult, ComparisonShopRef } from "./types";
+import type {
+  ComparisonCandidate,
+  ComparisonQuery,
+  ComparisonSearchResult,
+  ComparisonShopRef,
+  DomesticSourceRef,
+} from "./types";
 
 export * from "./types";
 export { scoreCandidate } from "./match";
@@ -121,4 +129,92 @@ export async function searchComparisonShops(
           error: "검색 실패",
         },
   );
+}
+
+/** N-4.07 — domestic_price_sources 중 실제 파서가 있는 도메인만 여기 등록한다(원칙은
+ * searchOneShop과 동일 — 하드코딩 "허용 목록"이 아니라 파서 존재 여부). collectionStrategy가
+ * MANUAL/NOT_AVAILABLE인 소스는 실제 요청을 보내지 않고 "unsupported"로 응답한다. */
+async function searchOneDomesticShop(
+  source: DomesticSourceRef,
+  query: ComparisonQuery,
+): Promise<ComparisonSearchResult> {
+  const base = { shopId: source.id, shopName: source.name, domain: source.domain };
+  if (source.collectionStrategy !== "AUTO_API" && source.collectionStrategy !== "AUTO_SCRAPE") {
+    return { ...base, status: "unsupported", candidates: [] };
+  }
+  try {
+    if (source.domain === "looxloo.com") {
+      const candidates = await searchLooxloo(query.title);
+      return { ...base, status: "ok", candidates: withConfidence(query, candidates) };
+    }
+    if (source.domain === "bobochoses.com") {
+      const candidates = await searchBoboChosesKorea(query.title);
+      const scored = withConfidence(query, candidates).map((c) => ({ ...c, priceSource: "detail" as const }));
+      return { ...base, status: "ok", candidates: scored };
+    }
+    return { ...base, status: "unsupported", candidates: [] };
+  } catch (error) {
+    return {
+      ...base,
+      status: "error",
+      candidates: [],
+      error: error instanceof Error ? error.message : "알 수 없는 오류",
+    };
+  }
+}
+
+/** 활성 국내 편집샵 목록을 대상으로 병렬 검색. searchComparisonShops(해외)와 같은 격리
+ * 원칙(Promise.allSettled) — 국내/해외를 하나의 함수로 합치지 않는다(Ref 타입 자체가
+ * 다른 테이블 스키마를 반영하므로 억지로 합치면 오히려 타입이 흐려진다). */
+export async function searchDomesticShops(
+  query: ComparisonQuery,
+  sources: DomesticSourceRef[],
+): Promise<ComparisonSearchResult[]> {
+  const settled = await Promise.allSettled(sources.map((source) => searchOneDomesticShop(source, query)));
+  return settled.map((result, i) =>
+    result.status === "fulfilled"
+      ? result.value
+      : {
+          shopId: sources[i].id,
+          shopName: sources[i].name,
+          domain: sources[i].domain,
+          status: "error" as const,
+          candidates: [],
+          error: "검색 실패",
+        },
+  );
+}
+
+export interface DomesticPriceRefreshResult {
+  status: "OK" | "UNAVAILABLE" | "UNSUPPORTED" | "ERROR";
+  price: { amount: number; currency: string } | null;
+  error?: string;
+}
+
+/** N-4.07 2차 — domestic_product_links로 이미 매칭이 확정된 특정 상품 1건의 "지금"
+ * 가격만 다시 조회한다(검색이 아니라 단일 URL 재확인). daily cron이 이 함수로
+ * 매일 가격을 갱신한다 — searchDomesticShops(후보 발견용)와 역할이 다르다. */
+export async function refreshDomesticProductPrice(
+  domain: string,
+  externalUrl: string,
+): Promise<DomesticPriceRefreshResult> {
+  try {
+    if (domain === "looxloo.com") {
+      const result = await fetchLooxlooProductPrice(externalUrl);
+      return result.available && result.price
+        ? { status: "OK", price: result.price }
+        : { status: "UNAVAILABLE", price: null };
+    }
+    if (domain === "bobochoses.com") {
+      const handle = extractShopifyHandle(externalUrl);
+      if (!handle) return { status: "ERROR", price: null, error: "상품 handle을 URL에서 찾을 수 없음" };
+      const detail = await fetchShopifyProductJson(`https://bobochoses.com/ko-kr/products/${handle}`);
+      return detail?.productData.price
+        ? { status: "OK", price: detail.productData.price }
+        : { status: "UNAVAILABLE", price: null };
+    }
+    return { status: "UNSUPPORTED", price: null };
+  } catch (error) {
+    return { status: "ERROR", price: null, error: error instanceof Error ? error.message : "알 수 없는 오류" };
+  }
 }

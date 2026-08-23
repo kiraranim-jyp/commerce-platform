@@ -23,7 +23,12 @@ function makeProduct(overrides: Partial<CanonicalProduct> = {}): CanonicalProduc
     price: field({ amount: 30000, currency: "KRW" }),
     priceValidity: "VALID",
     sku: field("KC-GUARD-1"),
-    description: field("KC 가드 테스트용 상품."),
+    // N-3.71 — naverShoppingSearchInfo.modelName(KIDS 카테고리 필수, 실제
+    // 등록에서 확인)이 resolveModelNameFromDescription으로 원문의
+    // "Product code XXXX" 패턴을 읽으므로, 이 테스트 파일의 모든 KIDS
+    // 시나리오가 그 패턴을 갖도록 기본값에 포함한다(개별 테스트가 KC
+    // 필드 자체와 무관한 이유로 BLOCKED 되는 걸 막는다).
+    description: field("KC 가드 테스트용 상품. Product code MODEL-1."),
     material: field("면 100%"),
     color: field("Navy"),
     recommendedAge: field("3세"),
@@ -106,6 +111,7 @@ function buildAndValidate(
     listing,
     leafCategoryId: "50000535",
     ...COMMON_INPUT,
+    sellerDeliveryFee: null,
     childCertificationInfoId,
     categoryRequiresChildCertification: true,
     originAreaRequiresContent: false,
@@ -204,7 +210,7 @@ describe("N-3.48/N-3.53 STEP9: KC 인증정보 영구 차단 가드", () => {
     // resolveNoticeFieldValue를 거치지 않고 항상 실제 값(product.X.value)만 읽는다.
     const notice = payload.originProduct.detailAttribute?.productInfoProvidedNotice;
     expect(notice && "kids" in notice ? notice.kids.certificationType : undefined).toBeUndefined();
-    expect(payload.originProduct.productCertificationInfos?.[0]?.certificationNumber).toBeUndefined();
+    expect(payload.originProduct.detailAttribute?.productCertificationInfos?.[0]?.certificationNumber).toBeUndefined();
   });
 
   it("3) KC 실제 값 존재 → KC 관련 validation 통과(READY)", () => {

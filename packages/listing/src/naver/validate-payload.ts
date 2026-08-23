@@ -1,5 +1,5 @@
 import type { CanonicalProduct } from "@commerce/shared";
-import { hasRealProductOptions, resolveSizeFromOptions } from "./build-payload";
+import { hasRealProductOptions } from "./build-payload";
 import type { NaverPayloadInput } from "./build-payload";
 import type { NaverProductRegistrationPayload } from "./types";
 import { isNoticeFieldSatisfied } from "../notice/reference-eligibility";
@@ -62,24 +62,29 @@ export interface NaverPayloadFieldCheck {
    * 별도 상태"라고 명시하는 것 — CPO 지시: "Gate에서 제외, 별도 표시로
    * 분리". */
   advisory?: boolean;
-  /** Sprint P0(CPO 지시, 2026-08-19: "필수값과 선택값을 분리해야 합니다") —
-   * advisory와 다르다: advisory는 "등록 가능 여부와 아예 무관한 계정 상태"라
-   * 화면 요약(readiness.ts computeNaverPayloadReadiness)에서 완전히
-   * 빠지지만, optional은 "CartPilot이 채울 방법이 있으면 좋은 값이지만
-   * 없다고 등록을 막을 이유는 없는" MISSING 필드다 — 여전히 "선택 입력"
-   * 목록에는 보여서 사용자가 원하면 채울 수 있다. 등록 Gate(ok/register
-   * route 차단)와 readiness required 판정 둘 다에서 "MISSING인데 안 막는다"로
-   * 일관되게 취급해야 한다(하나만 바꾸면 CP001과 같은 UI↔서버 불일치 재발).
-   * 처음엔 치수(사이즈) 하나만 optional이었지만(SIZE 옵션이 없는 상품은
-   * 애초에 이 값의 출처 자체가 없다), CEO 지시(2026-08-19)로 "필수가 아닌
-   * 값은 전부 이 취급"으로 확장했다 — material/color/manufacturer/caution/
-   * recommendedAge/itemName/modelName/weight(고시 부가정보, 전부
-   * "상세페이지 참조" 텍스트 대체가 이미 공식으로 허용된 필드들)와
-   * warrantyPolicy/afterServiceDirector/afterServiceTelephoneNumber
-   * (Settings에서 한 번만 채우면 되는 판매자 정보)가 여기 해당한다. KC
-   * 관련 필드(productCertificationInfos/certificationType)는 CPO 원본
-   * 분류표상 "조건부 필수"라 절대 포함하지 않는다 — 상품명/가격/카테고리/
-   * 재고/이미지/상세설명/배송정보/KC는 여전히 required로 남는다. */
+  /** Sprint P0(CPO 지시, 2026-08-19) → N-3.71(CPO 지시, 2026-08-21)로 범위가
+   * 축소됐다. advisory와 다르다: advisory는 "등록 가능 여부와 아예 무관한
+   * 계정 상태"라 화면 요약에서 완전히 빠지지만, optional은 "CartPilot이
+   * 채울 방법이 있으면 좋은 값이지만 없다고 등록을 막을 이유는 없는" MISSING
+   * 필드다. 등록 Gate(ok/register route 차단)와 readiness required 판정
+   * 둘 다에서 반드시 같은 기준을 써야 한다(하나만 바꾸면 CP001과 같은
+   * UI↔서버 불일치 재발).
+   *
+   * 2026-08-19 CEO 지시로 material/color/manufacturer/caution/
+   * recommendedAge/itemName/modelName/weight/warrantyPolicy/
+   * afterServiceDirector/afterServiceTelephoneNumber까지 전부 optional:true로
+   * 확장했었지만, N-3.71(2026-08-21)에서 실제 프로덕션 등록 1건이 정확히
+   * 이 필드들(치수 제외 9개) 때문에 Naver로부터 HTTP 400을 받으면서 그
+   * 확장이 잘못됐다는 게 드러났다 — "상세페이지 참조 대체가 공식으로
+   * 허용된다"는 전제는 맞지만, 그 대체는 셀러가 실제로 그 소스를
+   * 선택했을 때만 적용되지 필드를 아예 안 건드린 기본 상태까지 자동으로
+   * 통과시켜주지 않는다. N-3.71부터 optional:true는 다시 size(치수) 하나만
+   * 쓴다 — 다만 size는 이제 build-payload.ts가 SIZE 옵션이 없을 때 항상
+   * "상세페이지 참조"로 자동 대체하므로(위 size 필드 주석 참고) 실제로는
+   * MISSING 상태 자체가 발생하지 않는다(optional:true를 쓸 일이 없다).
+   * KC 관련 필드(productCertificationInfos/certificationType)는 처음부터
+   * 지금까지 한 번도 이 목록에 포함된 적이 없다 — 상품명/가격/카테고리/
+   * 재고/이미지/상세설명/배송정보/KC는 항상 required로 남는다. */
   optional?: boolean;
 }
 
@@ -307,6 +312,26 @@ export function validateNaverPayload(
       // 실제로 남긴 SellerComplianceConfirmation(현재 policyVersion 기준)이
       // 있을 때만 true를 돌려준다.
       fields.push({ field: "productCertificationInfos[].certificationNumber", status: "READY" });
+      // N-3.71 STEP8(실제 프로덕션 등록 시도로 발견) — certificationNumber/
+      // companyName/certificationDate 세 값만 채워졌어도 Naver가
+      // "productCertificationInfos[0].name: 인증기관 항목을 입력해 주세요"로
+      // 거부했다. product-types.ts N-3.67 주석에 이미 근거가 있었다 —
+      // name(인증 기관명, companyName과는 다른 개념)은 어린이제품 인증
+      // "공급자적합성"(certificationInfoId=1042)에서만 비필수 예외이고,
+      // "안전확인/안전인증"(1041/1040, resolve-context.ts가 실제로 우선
+      // 선택하는 값)에서는 필수다 — 이 사실이 build-payload.ts/types.ts에는
+      // 반영돼 있었지만(name?: string 필드, N-3.67 회귀 테스트) 정작
+      // validator가 한 번도 검사하지 않아서 "READY라고 나왔는데 실제
+      // Naver는 거부"하는 이번 스프린트의 바로 그 문제 패턴이 KC 필드에도
+      // 그대로 있었다.
+      if (input.childCertificationInfoId !== 1042 && !input.product.childCertification.value?.name) {
+        blocked(
+          fields,
+          "productCertificationInfos[].name",
+          "인증 기관명(name)이 없습니다 — 실제 KC 인증서에 기재된 발급 기관명을 직접 입력해야 합니다(\"상세페이지 참조\"로 대체할 수 없습니다).",
+          "KC_CERTIFICATION_REQUIRED",
+        );
+      }
     } else if (kcStatus === "BLOCKED") {
       blocked(
         fields,
@@ -364,27 +389,31 @@ export function validateNaverPayload(
   ]) {
     fields.push({ field: `${noticePrefix}.${field}`, status: "READY" });
   }
-  // Sprint P0 확장(CEO 지시, 2026-08-19: "치수뿐 아니라 필수가 아닌 값은
-  // 전부 optional로 — 셀러는 체크만 하고, 필수만 다 채워지면 등록 가능해야
-  // 한다") — 아래 material/color/manufacturer/caution/recommendedAge/
-  // itemName/modelName/weight/warrantyPolicy/afterServiceDirector는 전부
-  // "값이 있으면 더 정확한 고시정보가 되지만, CartPilot이 등록 자체를 막을
-  // 만큼 법적/기능적으로 절대적인 값은 아닌" 항목이다(재확인 방법: 이미
-  // 전부 isNoticeFieldSatisfied 화이트리스트에 있어 "상세페이지 참조"라는
-  // 텍스트 대체 경로가 공식으로 허용돼 있다 — Naver 스펙 자체가 "이 필드는
-  // 정확한 구조화값이 아니어도 통과시킨다"고 이미 인정한 필드들이다).
-  // KC 관련 필드(certificationType/productCertificationInfos)는 이 목록에
-  // 절대 포함하지 않는다(N-3.45 STEP10 가드 유지 — 아래에서도 그대로
-  // required로 남긴다). optional:true라도 이슈 목록/"선택 입력" 카운트에는
-  // 그대로 남아 셀러가 원하면 채울 수 있다 — 조용히 사라지는 게 아니다.
+  // N-3.71(CPO 지시, 2026-08-21: "등록 가능성 100%는 PASS가 아니다 — Naver가
+  // 실제 originProductNo를 반환해야 PASS다") — 위 2026-08-19 CEO 지시로
+  // optional:true를 붙였던 material/color/manufacturer/caution/
+  // recommendedAge/itemName/modelName/weight/warrantyPolicy/
+  // afterServiceDirector가, 실제 프로덕션 등록 1건에서 정확히 이 필드들
+  // 때문에 Naver로부터 HTTP 400을 받았다(originProduct.detailAttribute.
+  // productInfoProvidedNotice.kids.{...}: "데이터를 입력해 주세요.").
+  // "상세페이지 참조 텍스트 대체가 공식으로 허용된다"는 전제 자체는 맞지만,
+  // 그 대체는 셀러가 실제로 DETAIL_PAGE_REFERENCE를 선택했을 때만
+  // 적용된다(isNoticeFieldSatisfied 참고) — 필드를 아예 건드리지 않은
+  // 기본 상태(source: "REQUIRED")까지 "선택 입력이라 등록을 막지 않는다"로
+  // 취급한 게 이 버그의 원인이었다. optional:true를 제거해 진짜 빈값(실제값도
+  // 없고 상세페이지 참조도 선택 안 한 상태)은 다시 등록을 막고, 실제값이
+  // 있거나 DETAIL_PAGE_REFERENCE를 선택한 경우는 isNoticeFieldSatisfied가
+  // 이미 true를 반환하므로 READY로 그대로 통과한다(동작 변화 없음) — "UI가
+  // 100%라고 보여준 상태와 실제 Naver 계약이 항상 같아야 한다"는 N-3.71
+  // 원칙에 맞춘 것이다. KC 관련 필드(certificationType/
+  // productCertificationInfos)는 원래도 이 목록에 없었다(N-3.45 STEP10
+  // 가드, 계속 유지).
   check(
     fields,
     `${noticePrefix}.material`,
     isNoticeFieldSatisfied("material", input.product.material),
     "MISSING",
     "제품 소재가 없습니다 — 상품 원본/상세설명에서 확인되지 않았습니다. 상세페이지에 이미 나와 있으면 \"상세페이지 참조\"로 대체할 수 있습니다.",
-    undefined,
-    true,
   );
   check(
     fields,
@@ -392,8 +421,6 @@ export function validateNaverPayload(
     isNoticeFieldSatisfied("color", input.product.color),
     "MISSING",
     "색상이 없습니다 — 상품 원본/상세설명에서 확인되지 않았습니다. 상세페이지에 이미 나와 있으면 \"상세페이지 참조\"로 대체할 수 있습니다.",
-    undefined,
-    true,
   );
   check(
     fields,
@@ -401,8 +428,6 @@ export function validateNaverPayload(
     isNoticeFieldSatisfied("manufacturer", input.product.manufacturer),
     "MISSING",
     "제조자(사)가 없습니다 — 판매자 정보 기본값(Settings)에도 없습니다. 상세페이지에 이미 나와 있으면 \"상세페이지 참조\"로 대체할 수 있습니다.",
-    undefined,
-    true,
   );
   check(
     fields,
@@ -410,20 +435,19 @@ export function validateNaverPayload(
     isNoticeFieldSatisfied("careInstructions", input.product.careInstructions),
     "MISSING",
     "세탁 방법 및 취급 시 주의사항이 없습니다. 상세페이지에 이미 나와 있으면 \"상세페이지 참조\"로 대체할 수 있습니다.",
-    undefined,
-    true,
   );
   // 품질보증기준/AS 연락처는 Settings의 판매자 정보 탭에서 "한 번만" 채워두면
   // 이후 모든 상품에 자동 적용되는 값이다(Coupang 쪽 settingsRecommended와
-  // 같은 성격 — A-11 작업8) — 상품 등록 자체를 막을 이유가 없다.
+  // 같은 성격 — A-11 작업8). Naver 실등록에서 이 두 값은 이미 정상 전송되고
+  // 있었지만(실패 사유 9개에 포함되지 않았음), optional:true로 두면 셀러가
+  // Settings를 아예 설정하지 않은 채로도 "등록 가능 100%"라고 잘못 표시될 수
+  // 있어 다른 8개 필드와 동일하게 실제 필수로 되돌린다.
   check(
     fields,
     `${noticePrefix}.warrantyPolicy`,
     Boolean(input.warrantyPolicy),
     "MISSING",
     "품질 보증 기준이 없습니다 — Settings의 판매자 정보 탭에서 \"품질보증기준\"을 입력하면 해결됩니다.",
-    undefined,
-    true,
   );
   check(
     fields,
@@ -431,27 +455,14 @@ export function validateNaverPayload(
     Boolean(input.afterServiceDirector),
     "MISSING",
     "A/S 책임자와 전화번호가 없습니다 — Settings의 판매자 정보 탭에서 \"A/S 연락처\"를 입력하면 해결됩니다.",
-    undefined,
-    true,
   );
-  // Sprint P0(CPO 지시, 2026-08-19: "치수 같은 선택값 때문에 등록이 막히는
-  // 버그 수정") — 이전에는 이 필드가 다른 필수 고시정보와 똑같이
-  // required:true로 취급돼, SIZE 옵션이 원래 없는 상품(가방/액세서리 등)은
-  // 영원히 이 필드 하나 때문에 등록이 막혔다. resolveSizeFromOptions는
-  // 옵션에서만 값을 가져오고 임의로 만들어내지 않으므로, 값이 없다는 것
-  // 자체가 "데이터를 놓쳤다"가 아니라 "이 상품엔 애초에 사이즈 옵션이
-  // 없다"인 경우가 흔하다 — optional:true로 표시해 등록은 막지 않되
-  // "선택 입력" 목록에는 남겨 SIZE 옵션이 실제로 있는데 못 읽은 경우를
-  // 사용자가 알아챌 수 있게 한다.
-  check(
-    fields,
-    `${noticePrefix}.size`,
-    Boolean(resolveSizeFromOptions(input.product)),
-    "MISSING",
-    "치수(사이즈) 정보가 없습니다 — 상품에 SIZE 옵션이 있으면 자동으로 채워집니다. 이 상품에 사이즈 구분이 없다면 비워둔 채로 등록할 수 있습니다.",
-    undefined,
-    true,
-  );
+  // N-3.71 — build-payload.ts가 이제 SIZE 옵션이 없을 때도 "상세페이지
+  // 참조" 문구로 자동 대체한다(위 size 필드 주석 참고) — payload는 항상
+  // 값을 갖게 됐으므로 이 체크도 그에 맞춰 항상 READY다("실제 페이로드
+  // 기준으로 판정한다"는 N-3.71 STEP4/5 원칙 — 여기서 optional:true로 남겨
+  // 두면 payload는 값이 있는데 validator만 "선택 입력 비어있음"이라고
+  // 잘못 보고하는 새 불일치가 생긴다).
+  fields.push({ field: `${noticePrefix}.size`, status: "READY" });
   if (notice === "kids") {
     check(
       fields,
@@ -459,8 +470,6 @@ export function validateNaverPayload(
       isNoticeFieldSatisfied("recommendedAge", input.product.recommendedAge),
       "MISSING",
       "사용연령이 없습니다 — 상품 원본/상세설명에서 확인되지 않았습니다. 상세페이지에 이미 나와 있으면 \"상세페이지 참조\"로 대체할 수 있습니다.",
-      undefined,
-      true,
     );
     // N-3.45 STEP10(CPO 지시, 영구 가드) — certificationType(KC 인증정보 대상
     // 여부/유형 설명 텍스트)은 reference-eligibility.ts 화이트리스트에 절대
@@ -484,8 +493,6 @@ export function validateNaverPayload(
       isNoticeFieldSatisfied("itemName", input.product.itemName),
       "MISSING",
       "품명이 없습니다 — 상품 정보 편집 화면에서 직접 입력하거나 \"상세페이지 참조\"로 대체할 수 있습니다.",
-      undefined,
-      true,
     );
     check(
       fields,
@@ -493,18 +500,43 @@ export function validateNaverPayload(
       isNoticeFieldSatisfied("modelName", input.product.modelName),
       "MISSING",
       "모델명이 없습니다 — 상품 정보 편집 화면에서 직접 입력하거나 \"상세페이지 참조\"로 대체할 수 있습니다.",
-      undefined,
-      true,
     );
+    // N-3.71 — 이전에는 size 옵션만 있어도(실제 weight 값도, DETAIL_PAGE_
+    // REFERENCE 선택도 없이) weight를 READY로 표시했지만, build-payload.ts는
+    // weight 필드에 size 값을 넣지 않는다(resolveNoticeFieldValue("weight", ...)
+    // 만 사용) — validator는 READY라 말하는데 실제 payload엔 값이 비어 있는
+    // UI/payload 불일치였다(정확히 이번 실패 9개 필드 중 하나). 다른 8개
+    // 필드와 동일하게 isNoticeFieldSatisfied만으로 판정한다 — 실제값이
+    // 없으면 DETAIL_PAGE_REFERENCE를 선택해야 READY가 되고, 그 값이 그대로
+    // payload에 들어간다.
     check(
       fields,
       "productInfoProvidedNotice(KIDS).weight",
-      isNoticeFieldSatisfied("weight", input.product.weight) || Boolean(resolveSizeFromOptions(input.product)),
+      isNoticeFieldSatisfied("weight", input.product.weight),
       "MISSING",
-      "중량이 없습니다 — 섬유제품은 치수(사이즈)로 대체 가능하고, 그마저 없으면 \"상세페이지 참조\"로도 대체할 수 있습니다.",
-      undefined,
-      true,
+      "중량이 없습니다 — 상품 원본/상세설명에서 확인되지 않았습니다. 상세페이지에 이미 나와 있으면 \"상세페이지 참조\"로 대체할 수 있습니다.",
     );
+    // N-3.71 STEP8(실제 프로덕션 등록 시도로 발견) — naverShoppingSearchInfo.
+    // modelName은 productInfoProvidedNotice(KIDS).modelName과는 완전히 다른
+    // 별도 필드다(N-3.65부터 build-payload.ts가 resolveModelNameFromDescription
+    // 으로 상품 원문의 "Product code XXXX" 패턴만 채운다 — 패턴이 없으면
+    // 필드 자체를 만들지 않는다, 임의 값 금지). 지금까지 이 필드를 검사하는
+    // 로직이 한 번도 없어서, 원문에 그 패턴이 없는 상품은 validator가
+    // READY라고 보고해도 Naver가 "어린이인증 대상 카테고리 상품은 카탈로그
+    // 입력이 필수입니다"로 거부했다 — 정확히 이번 스프린트가 없애려는 바로
+    // 그 UI/payload 불일치 패턴이다. 이 값은 "상세페이지 참조"로 대체할 수
+    // 있다는 근거가 없어(다른 8개 고시필드와 다른 카탈로그 매칭용 필드라
+    // 텍스트 대체가 통할지 불명확) 자동으로 채우지 않고 BLOCK한다 — 원문에
+    // 실제 모델 코드가 없으면 사용자가 상품 정보 편집 화면에서 직접
+    // 입력해야 한다.
+    if (!originProduct.detailAttribute?.naverShoppingSearchInfo?.modelName) {
+      blocked(
+        fields,
+        "naverShoppingSearchInfo.modelName",
+        "네이버 쇼핑 카탈로그용 모델명이 없습니다 — 상품 원문에 'Product code' 표기가 없어 자동으로 추출하지 못했습니다. 상품 정보 편집 화면에서 모델명을 직접 입력해야 합니다.",
+        "KC_CERTIFICATION_REQUIRED",
+      );
+    }
   }
 
   // N-3.50 STEP3(CPO 지시: "API가 요구함"과 "모든 상품에 의미 있는 값이
@@ -527,6 +559,18 @@ export function validateNaverPayload(
     "MISSING",
     "배송 속성(deliveryAttributeType)이 없습니다.",
   );
+  // N-3.71 STEP8(실제 프로덕션 등록 시도로 발견) — deliveryFeeType이 PAID인데
+  // deliveryFeePayType이 없으면 Naver가 거부한다(위 build-payload.ts 주석
+  // 참고). FREE일 때는 Naver가 이 필드를 요구하지 않으므로 검사하지 않는다.
+  if (originProduct.deliveryInfo?.deliveryFee?.deliveryFeeType === "PAID") {
+    check(
+      fields,
+      "deliveryInfo.deliveryFee.deliveryFeePayType",
+      Boolean(originProduct.deliveryInfo?.deliveryFee?.deliveryFeePayType),
+      "MISSING",
+      "배송비 결제방식(deliveryFeePayType)이 없습니다.",
+    );
+  }
   check(
     fields,
     "detailAttribute.minorPurchasable",
@@ -552,18 +596,17 @@ export function validateNaverPayload(
   // 확인했다. 임의 전화번호로 바꿔치기하지 않는다(CPO 지시).
   const AFTER_SERVICE_PHONE_PATTERN = /^[0-9+-]+$/;
   if (!input.afterServiceTelephoneNumber) {
-    // Sprint P0 확장(CEO 지시) — warrantyPolicy/afterServiceDirector와 같은
-    // 성격(Settings에서 한 번만 채우면 되는 판매자 정보)이라 optional:true.
-    // 값을 넣었는데 형식이 틀린 경우(아래 else if)는 별개다 — "안 채웠다"가
-    // 아니라 "잘못 채웠다"라 여전히 BLOCKED로 남긴다.
+    // N-3.71 — warrantyPolicy/afterServiceDirector와 같은 이유로 optional:true를
+    // 제거한다(위 두 필드 주석 참고) — Settings 미설정 상태를 "등록 가능
+    // 100%"로 잘못 보여주지 않기 위해 다른 Settings 기반 필드와 동일하게
+    // 다룬다. 값을 넣었는데 형식이 틀린 경우(아래 else if)는 별개다 —
+    // "안 채웠다"가 아니라 "잘못 채웠다"라 여전히 BLOCKED로 남긴다.
     check(
       fields,
       "detailAttribute.afterServiceInfo.afterServiceTelephoneNumber",
       false,
       "MISSING",
       "A/S 전화번호가 없습니다 — Settings의 판매자 정보 탭에서 실제 전화번호 형식(숫자, -, + 만 가능)으로 입력하면 해결됩니다.",
-      undefined,
-      true,
     );
   } else if (!AFTER_SERVICE_PHONE_PATTERN.test(input.afterServiceTelephoneNumber)) {
     blocked(
@@ -663,7 +706,7 @@ export function validateNaverPayload(
   fields.push({
     field: "smartstoreChannelProduct.naverShoppingRegistration",
     status: "READY",
-    reason: "false로 명시 전송됩니다 — 네이버쇼핑 광고주가 아니면 서버가 어차피 강제하는 값과 동일하며, 광고주라면 등록 후 Wing에서 직접 연동할 수 있습니다.",
+    reason: "true로 명시 전송됩니다 — 네이버쇼핑 광고주가 아니면 서버가 어차피 false로 강제 저장하고, 광고주라면 등록 즉시 노출 신청이 반영됩니다.",
     advisory: true,
   });
 

@@ -1,0 +1,43 @@
+{
+  "fixtureType": "REAL_LIVE_SUCCESS",
+  "purpose": "N-3.75(Fixie → OCI Tinyproxy 임시 전환) 목표 — Vercel 프로덕션에서 OCI_PROXY_URL(공통 outbound-proxy 리졸버, FIXIE_URL 대신 우선 사용) 경로로 실제 Naver Commerce API 등록까지 완주되는지 실물로 증명한 fixture. golden-success-03-n371.json과 같은 후보(같은 데이터)를 재사용했지만, 이번엔 발신 프록시가 Fixie가 아니라 Oracle OCI Tinyproxy(161.33.39.233:8888)라는 점만 다르다.",
+  "sourceUrl": "Bobo Choses 26fw Hug Hairy Monster T-Shirt (snapshot 저장 시점 원본, golden-success-03-n371.json과 동일 스냅샷)",
+  "productTitle": "[TEST] 보보쇼즈 26fw 티셔츠 Hug Hairy Monster T-Shirt by Bobo Choses",
+  "snapshotId": "ca0e1f9d-89cb-4708-a387-a6a8de8b0e73",
+  "proxyContext": {
+    "provider": "OCI",
+    "host": "161.33.39.233",
+    "port": "8888",
+    "note": "Fixie Commuter 사용량 한도로 2026-08-21 임시 전환. FIXIE_URL은 Vercel Production env에서 삭제하지 않고 그대로 보존 — 9/3 이후 OCI_PROXY_URL만 제거하면 코드 변경 없이 Fixie로 자동 복귀(src/lib/outbound-proxy.ts 우선순위: OCI_PROXY_URL → FIXIE_URL → NONE).",
+    "rootCauseChainDuringDebug": [
+      "1차: OCI_PROXY_URL 설정 직후에도 ConnectTimeoutError(UND_ERR_CONNECT_TIMEOUT, 10s) — Vercel에서 161.33.39.233:8888로 TCP 연결 자체가 안 됨. Oracle 서버 로컬(127.0.0.1) curl 테스트는 이 계층(VCN Security List/OS 방화벽)을 거치지 않아 이 문제를 못 잡아냈다.",
+      "2차: OCI VCN Security List 8888 인그레스 개방 + 서버 방화벽 수정 후 — Vercel→OCI 연결은 성공했지만 Naver가 HTTP 403 GW.IP_NOT_ALLOWED(\"호출이 허용되지 않은 IP입니다\") 반환. 새 발신 IP(161.33.39.233)가 Naver 커머스 API센터의 IP 화이트리스트에 없었음.",
+      "3차: Naver/Coupang 양쪽 API센터에 161.33.39.233 IP 등록 후 — Naver Auth PASS, Coupang Auth PASS(HTTP 200 CONNECTED), 실제 등록까지 성공."
+    ]
+  },
+  "registrationSequence": {
+    "totalRealPostAttempts": 1,
+    "note": "precheck-n371-candidate.ts로 사전 검증(READY=40 MISSING=0 BLOCKED=0)까지 마친 뒤 register-test-candidate-n371-v3.ts로 정확히 1회 실제 등록. golden-success-03-n371.json과 동일 스냅샷/페이로드 로직을 재사용했으므로 원산지/KC/옵션가/고시정보 등 데이터 정합성은 이미 N-3.71에서 검증된 것 그대로다 — 이번 fixture의 목적은 payload 정합성이 아니라 '새 프록시 경로로도 등록이 되는가'를 증명하는 것."
+  },
+  "successResult": {
+    "httpStatus": 200,
+    "status": "SUBMITTED",
+    "originProductNo": 13669115052,
+    "traceId": "757deb40-b345-4ff4-ba61-18c6161512b2",
+    "durationMs": 9612,
+    "steps": [
+      "인증 확인 — 네이버 커머스 API 토큰 발급 완료(OCI 프록시 경유)",
+      "카테고리 확인 — leafCategoryId=50000535",
+      "판매 전 확인 — kcStatus=CERTIFIED_REFERENCE, policyVersion=2026-08-19",
+      "주소록 조회 — 출고지=105633179, 반품지=104809732",
+      "이미지 업로드 — 2개 이미지를 네이버에 업로드",
+      "Payload 검증 — READY 40 / MISSING 0 / BLOCKED 0",
+      "API 호출 — HTTP 200, originProductNo=13669115052"
+    ]
+  },
+  "postSuccessVerification": {
+    "method": "register/route.ts 응답의 externalProductId를 스크립트가 그대로 출력해 확인.",
+    "note": "channelProductDisplayStatusType='SUSPENSION' — golden-success-01/02/03.json과 동일하게 신규 등록 후 노출 전 상태(의도된 안전장치, 실패 아님). 이 상품은 golden-success-03-n371.json이 이미 등록한 것과 동일 데이터의 두 번째 등록(originProductNo만 다름) — Wing에 중복 리스팅이 생겼으니 정리가 필요하면 대표님 확인 요망."
+  },
+  "excludedFromFixture": "OCI 프록시 인증정보(있다면)는 포함하지 않음. Naver client_id/client_secret 등 자격증명 값도 포함하지 않음. certificationNumber/companyName/name/certificationDate는 golden-success-03과 동일하게 [TEST] 라벨링된 flow-test 값."
+}

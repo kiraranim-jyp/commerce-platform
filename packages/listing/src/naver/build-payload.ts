@@ -2,6 +2,7 @@ import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
 import { computeVariantFinalPriceKrw } from "@commerce/pricing";
+import { resolveProductSignals } from "@commerce/category";
 import { assembleContentsFromBlocks, BLANK_COUPANG_SELLER_CONFIG } from "../coupang/build-payload";
 import type { CoupangDescriptionTemplate, CoupangSellerConfig, DetailPageBlock } from "../coupang/build-payload";
 import type {
@@ -54,6 +55,16 @@ export interface NaverPayloadInput {
    * "PRIMARY"라는 값 자체는 확인됐지만 실제로 그 택배사가 존재하는지는
    * 이 값으로 판단한다). */
   primaryReturnDeliveryCompanyPriorityType: string | null;
+  /** N-3.69(CPO 지시, "Seller 공통 설정 통합" STEP1) — 지금까지 이 payload는
+   * product.shippingFee/SellerProfile.deliveryCharge를 전혀 읽지 않고
+   * deliveryFee를 항상 FREE/0으로 고정했다(Coupang은 이미
+   * sellerConfig.deliveryCharge를 올바르게 읽고 있었음 — 실제 발견된
+   * "DB에는 있지만 SmartStore가 안 읽는" 갭). product.shippingFee가 사용자가
+   * 실제로 편집한 값(DEFAULT가 아님)이면 그 값을 쓰고, 아직 기본값(DEFAULT)일
+   * 때만 SellerProfile.deliveryCharge를 쓴다(Coupang build-payload.ts의
+   * deliveryCharge 계산과 동일한 우선순위). null이면(SellerProfile 미설정)
+   * 기존처럼 FREE로 남는다 — 임의 배송비를 지어내지 않는다. */
+  sellerDeliveryFee: number | null;
   /** N-3.3 — Naver 전용 설정이 따로 없어 Coupang용 SellerProfile.
    * returnDeliveryCharge(판매자의 실제 반품 배송비 정책)를 재사용한다. */
   returnDeliveryFee: number | null;
@@ -127,6 +138,26 @@ export interface NaverPayloadInput {
   >;
   /** N-3.13 Part J — 브랜드 소개(BrandProfile.brandIntro), Coupang과 동일 소스. */
   brandIntro?: string | null;
+  /** N-3.83(CPO 지시, "SmartStore 기본정보 완성" 감사에서 발견한 실제 갭) —
+   * Coupang은 이미 build-payload.ts:1102에서 `product.manufacturer.value ||
+   * brandProfile?.manufacturer || sellerConfig.manufacturer`(상품추출>브랜드
+   * 기본값>Seller기본값, Sprint A-12 작업4) 3단계 폴백을 쓰고 있었는데, Naver
+   * 쪽은 이 파일이 BrandProfile/SellerProfile을 전혀 몰라 product.manufacturer만
+   * 봤다 — 크롤러가 제조사를 못 찾으면(흔한 경우) 무조건 빈칸이었다. 이 필드는
+   * 호출부(resolve-context.ts)가 이미 계산해 둔 브랜드/Seller 기본값 폴백
+   * 결과를 그대로 받는다(이 함수는 DB를 조회하지 않는다는 기존 원칙 유지 —
+   * originAreaCode/deliveryCompany와 같은 패턴). product.manufacturer.value가
+   * 있으면(실제 원문 추출값) 그게 항상 우선이고, 없을 때만 이 값으로 보충한다. */
+  resolvedManufacturer?: string | null;
+  /** N-4.00 A-2(대표님 지시, N-3.87 설계 확정 후 구현) — resolveNaverProductAttributes()
+   * 가 이미 계산해 둔 결과(attributeSeq/attributeValueSeq 쌍)를 그대로 받는다
+   * (이 함수는 카테고리 속성 메타데이터를 조회하거나 매칭 로직을 다시 하지
+   * 않는다 — Resolver → Payload 단방향 원칙, originAreaCode와 동일 패턴). 값이
+   * 없으면(빈 배열/undefined) N-3.85에서 공식 스펙으로 확인된 필드 경로이지만
+   * detailAttribute.productAttributes 자체를 생략한다(임의로 빈 배열을 보내지
+   * 않는다 — Naver가 빈 배열과 필드 누락을 다르게 처리할 수 있어 안전하게
+   * 아예 생략). */
+  resolvedAttributes?: { attributeSeq: number; attributeValueSeq: number }[];
 }
 
 function escapeHtmlText(text: string): string {
@@ -271,6 +302,16 @@ function toImageRef(url: string): NaverImageRef {
  * 구조만 보고 섞으면 안 된다는 게 이번 작업의 핵심 전제(CPO 지시 Case C).
  */
 export function hasRealProductOptions(product: CanonicalProduct): boolean {
+  // N-3.82(CPO 지시, N-3.78 STEP2에서 발견한 Case E 처리 방침 확정) —
+  // optionGroups만 보고 "실제 옵션 있음"으로 판단하면, variants가 비어 있을
+  // 때(예: 원본 파싱이 절반만 성공해 실제 SKU 조합을 못 만든 경우) "옵션
+  // 그룹 이름은 선언했는데 조합은 0개"인 깨진 payload가 그대로 나간다
+  // (buildOptionCombinations는 product.variants를 순회해서 조합을 만들기
+  // 때문에 그룹만 있고 variants가 없으면 결과가 항상 빈 배열이다). variants가
+  // 하나도 없으면 optionGroups 내용과 무관하게 "옵션 없음"으로 판정해
+  // optionInfo 블록 자체를 생략한다 — 빈 조합을 가진 채 보내느니 옵션
+  // 섹션을 아예 안 보내는 게 안전하다는 CPO 지시.
+  if (product.variants.length === 0) return false;
   const hasMultipleGroupsOrValues =
     product.optionGroups.length > 1 ||
     (product.optionGroups.length === 1 && product.optionGroups[0].values.length > 1);
@@ -291,6 +332,112 @@ export function resolveSizeFromOptions(product: CanonicalProduct): string | unde
 }
 
 /**
+ * N-3.65(2026-08-20, 실제 등록으로 발견) — 어린이인증 대상 카테고리는
+ * naverShoppingSearchInfo.modelName이 NotEmpty로 요구된다. 이 값을 CartPilot이
+ * 지어내지 않고, 상품 원문 설명에 실제로 적힌 "Product code XXXX" 같은 문구가
+ * 있을 때만 그 실제 코드를 그대로 추출한다(편집샵 상세설명에 흔한 관용구 —
+ * 예: "Product code B126AC050 SS26 Made in Spain."). 패턴이 없으면 undefined를
+ * 돌려주고 build-payload.ts는 그 필드를 아예 채우지 않는다(임의 값 금지).
+ */
+export function resolveModelNameFromDescription(description: string | undefined): string | undefined {
+  if (!description) return undefined;
+  const match = description.match(/product code:?\s+([A-Za-z0-9][A-Za-z0-9-]*(?:\s+[A-Za-z0-9-]+){0,2}?)(?=\s+made in\b|[.,]|$)/i);
+  const code = match?.[1]?.trim();
+  return code ? code : undefined;
+}
+
+/** N-3.77 STEP1(CPO 지시: "원문에 없는 정보는 만들지 않는다") — "시즌"은
+ * CanonicalProduct에 별도 필드가 없다. 편집샵 상세설명의 "Product code B126AC050
+ * SS26" 같은 관용구에 시즌+연도 코드가 실제로 적혀 있을 때만(resolveModelNameFromDescription과
+ * 같은 원문 소스) 뽑아낸다 — 없으면 undefined(추정 금지). "SS26"/"26SS"/"FW26"/
+ * "26FW"/"AW26" 등 순서와 상관없이 매칭하고, 출력은 "연도+계절"(예: "26FW")
+ * 순서로 통일한다. */
+export function resolveSeasonFromText(text: string | undefined): string | undefined {
+  if (!text) return undefined;
+  const seasonCodes = "SS|FW|AW|SU|WI";
+  const yearFirst = new RegExp(`\\b(\\d{2})[\\s-]?(${seasonCodes})\\b`, "i");
+  const codeFirst = new RegExp(`\\b(${seasonCodes})[\\s-]?(\\d{2})\\b`, "i");
+  const m1 = text.match(yearFirst);
+  if (m1) return `${m1[1]}${m1[2].toUpperCase()}`;
+  const m2 = text.match(codeFirst);
+  if (m2) return `${m2[2]}${m2[1].toUpperCase()}`;
+  return undefined;
+}
+
+/** N-3.77 STEP1(CPO 지시) — ageGroup/gender를 "키즈"/"베이비"/"여성"/"남성" 같은
+ * 상품명용 타겟 단어로 바꾼다. resolveProductSignals()가 이미 원문(breadcrumb/
+ * URL/JSON-LD/키워드/recommendedAge)에서 근거를 갖고 판정한 값만 쓴다 — 여기서
+ * 새로 추측하지 않는다. unisex/unknown은 상품명에 굳이 넣지 않는다(불확실한
+ * 값을 단정적으로 표시하지 않기 위함). girl/boy는 이미 ageGroup이 kids/baby일
+ * 때가 대부분이라 성별 단어를 또 붙이면 "키즈 여아"처럼 중복돼 보여서, 상품명
+ * 목적으로는 age 우선(더 넓고 확실한 신호)만 쓴다. */
+function targetLabelFromSignals(ageGroup: string, gender: string): string {
+  if (ageGroup === "baby") return "베이비";
+  if (ageGroup === "kids") return "키즈";
+  if (ageGroup === "teen") return "틴즈";
+  if (ageGroup === "adult") {
+    if (gender === "women") return "여성";
+    if (gender === "men") return "남성";
+  }
+  return "";
+}
+
+/** N-3.77 STEP2(CPO 작업지시서 N-3.77) — SmartStore SEO 상품명 생성기.
+ *
+ * 구성: 브랜드 → 시즌(원문에 있을 때만) → 타겟(연령/성별 Resolver가 확신할
+ * 때만) → 핵심 상품명(원문 title에서 브랜드 중복만 제거, 번역하지 않음).
+ * 브랜드 한글 표기(예: "보보쇼즈")는 시스템 어디에도 매핑 데이터가 없어서
+ * (BrandProfile에도 없고 실제 AI 번역 Provider도 연결 안 돼 있음) 임의로
+ * 음차 변환하지 않는다 — 대표님 확인(2026-08-22): 원문 브랜드명(예: "Bobo
+ * Choses")을 그대로 쓰기로 결정. 카탈로그명/모델코드는 상품명에 강제로
+ * 넣지 않는다(CPO 지시). 중복 단어 제거 + 공백 정리 + 네이버 상품명 길이
+ * 제한(100자, 공식 문서 기준)을 넘으면 단어 단위로 뒤에서부터 잘라낸다(글자
+ * 중간에서 끊지 않는다). */
+const NAVER_PRODUCT_NAME_MAX_LENGTH = 100;
+
+export function generateSmartStoreProductName(product: CanonicalProduct): string {
+  const brand = product.brand.value.trim();
+  const season = resolveSeasonFromText(`${product.title.value} ${product.description.value}`);
+  const signals = resolveProductSignals(product);
+  const target = targetLabelFromSignals(signals.ageGroup, signals.gender);
+
+  let coreName = product.title.value.trim();
+  // "by <Brand>"가 제목 끝에 중복돼 붙는 편집샵 관용구(예: "... by Bobo Choses")
+  // — 브랜드가 접두부에 이미 들어가므로 뒤쪽 중복만 먼저 제거한다.
+  if (brand) {
+    const escapedBrand = brand.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const byBrandSuffix = new RegExp(`\\s*[-–—]?\\s*by\\s+${escapedBrand}\\s*$`, "i");
+    coreName = coreName.replace(byBrandSuffix, "").trim();
+    // 브랜드 전체 구문(여러 단어)이 핵심명 어디에 있든(맨 앞이든 "[TEST]" 같은
+    // 태그 뒤든) 그 통구문만 제거한다 — "Cap ... Baseball Cap"처럼 단어
+    //하나(예: "Cap")만 우연히 겹치는 자연스러운 반복은 여기서 안 건드린다.
+    // brand가 여러 단어(예: "Bobo Choses")일 때만 유의미하게 동작하도록
+    // 단어 경계(\b)로 정확히 매칭한다.
+    const brandPhrase = new RegExp(`\\b${escapedBrand}\\b`, "gi");
+    coreName = coreName.replace(brandPhrase, " ").replace(/\s{2,}/g, " ").trim();
+  }
+  coreName = coreName.replace(/^[-–—:,\s]+|[-–—:,\s]+$/g, "");
+
+  const prefixParts = [brand, season, target].filter((p): p is string => Boolean(p && p.trim()));
+  const coreWords = coreName.split(/\s+/).filter(Boolean);
+  const words = [...prefixParts.flatMap((p) => p.split(/\s+/)), ...coreWords].filter(Boolean);
+
+  let name = words.join(" ").replace(/\s{2,}/g, " ").trim();
+  if (name.length > NAVER_PRODUCT_NAME_MAX_LENGTH) {
+    const kept: string[] = [];
+    let length = 0;
+    for (const word of words) {
+      const nextLength = length + (kept.length > 0 ? 1 : 0) + word.length;
+      if (nextLength > NAVER_PRODUCT_NAME_MAX_LENGTH) break;
+      kept.push(word);
+      length = nextLength;
+    }
+    name = kept.join(" ");
+  }
+  return name;
+}
+
+/**
  * DRY_RUN 전용 — 실제 POST를 호출하지 않는다. 확인 안 된 필드(deliveryCompany,
  * originAreaInfo, optionCombinations 등)는 채우지 않고 undefined로 남긴다 —
  * validate-payload.ts가 이걸 근거로 BLOCKED 사유를 만든다.
@@ -303,6 +450,7 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
     releaseAddressBookNo,
     refundAddressBookNo,
     primaryReturnDeliveryCompanyPriorityType,
+    sellerDeliveryFee,
     returnDeliveryFee,
     exchangeDeliveryFee,
     childCertificationInfoId,
@@ -317,7 +465,13 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
     descriptionTemplate,
     commonImages,
     brandIntro,
+    resolvedManufacturer,
+    resolvedAttributes,
   } = input;
+
+  // N-3.83 — product.manufacturer.value(실제 원문 추출값)가 항상 우선이고,
+  // 없을 때만 호출부가 이미 계산해 둔 브랜드/Seller 기본값 폴백으로 보충한다.
+  const manufacturerValue = product.manufacturer.value.trim() || resolvedManufacturer?.trim() || "";
 
   const representativeUrl = listing.representativeImage;
   const optionalUrls = listing.additionalImages;
@@ -347,12 +501,26 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
         })
       : listing.description;
 
+  // N-3.69 — Coupang build-payload.ts의 deliveryCharge 계산과 동일한 우선순위:
+  // 사용자가 실제로 편집한 배송비(DEFAULT가 아님)가 있으면 그 값, 아직
+  // 기본값이면 SellerProfile.deliveryCharge, 둘 다 없으면 undefined(기존
+  // FREE/0 동작 유지 — 임의 배송비를 지어내지 않는다).
+  const resolvedDeliveryFee =
+    product.shippingFee.source !== "DEFAULT"
+      ? product.shippingFee.value
+      : (sellerDeliveryFee ?? product.shippingFee.value);
+
+  // N-3.77 STEP2 — SEO 상품명 생성이 실패하거나 빈 문자열을 돌려주는 예외적인
+  // 경우(원문 title 자체가 비어있는 등)에는 지금까지처럼 listing.title로
+  // 폴백한다(회귀 방지).
+  const smartStoreProductName = generateSmartStoreProductName(product) || listing.title;
+
   return {
     originProduct: {
       statusType: "SALE",
       saleType: "NEW",
       leafCategoryId,
-      name: listing.title,
+      name: smartStoreProductName,
       images: {
         representativeImage: representativeUrl ? toImageRef(representativeUrl) : { url: "" },
         optionalImages: optionalUrls.length > 0 ? optionalUrls.map(toImageRef) : undefined,
@@ -360,6 +528,11 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
       detailContent,
       salePrice: listing.priceKrw,
       stockQuantity: product.stockQuantity.value || 1,
+      // 대표님 지시(N-3.84, 실등록 화면 대조로 발견) — "판매자상품코드"가
+      // 지금까지 아예 채워지지 않았다. 임의 코드를 만들지 않고, 원본 페이지에서
+      // 실제 추출된 product.sku가 있을 때만 채운다(없으면 생략 — 다른 모든
+      // 필드와 동일한 "값 지어내기 금지" 원칙).
+      sellerManagementCode: product.sku.value || undefined,
       deliveryInfo: {
         // N-3.49(2026-08-17, 실제 등록 3차 시도로 발견) — deliveryType/
         // deliveryAttributeType이 NotValidEnum으로 거부됐다(둘 다 한 번도
@@ -372,9 +545,25 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
         // N-3.6(개정 Part A) — 조회 API는 없지만(확인 유지) 판매자가 Settings에서
         // 직접 입력한 값이 있으면 채운다(Coupang과 같은 수동 입력 패턴).
         deliveryCompany: deliveryCompany ?? undefined,
+        // 대표님 지시(N-3.85 STEP5: "묶음배송 = 항상 사용", 공식 OpenAPI 스펙으로
+        // 확인됨) — 그룹 코드를 null로 두면 Naver 기본 묶음배송 그룹으로
+        // 저장된다("묶음배송 가능이 true이고 그룹 코드가 null이면 기본 그룹으로
+        // 저장됩니다" — 스펙 원문). 판매자가 Wing에서 커스텀 그룹을 만들지
+        // 않는 이상 CartPilot이 그룹 ID를 추측해서 넣지 않는다.
+        deliveryBundleGroupUsable: true,
+        deliveryBundleGroupId: null,
         deliveryFee: {
-          deliveryFeeType: "FREE",
-          baseFee: 0,
+          deliveryFeeType: resolvedDeliveryFee > 0 ? "PAID" : "FREE",
+          baseFee: resolvedDeliveryFee > 0 ? resolvedDeliveryFee : 0,
+          // N-3.71 STEP8(실제 프로덕션 등록 시도로 발견) — deliveryFeeType이
+          // PAID일 때 Naver가 "originProduct.deliveryInfo.deliveryFee.
+          // deliveryFeePayType: 결제방식 항목을 입력해 주세요"로 거부했다 —
+          // 이 필드는 types.ts에 이미 정의돼 있었지만 한 번도 채운 적이
+          // 없었다. CartPilot은 항상 마켓플레이스 체결 시점에 배송비를 함께
+          // 선결제 받는 모델이라(착불/화물 배송 없음) PAID일 때 항상
+          // "PREPAID"로 고정한다 — FREE일 때는 Naver가 이 필드를 요구하지
+          // 않아 생략한다(임의 값 추가 금지).
+          deliveryFeePayType: resolvedDeliveryFee > 0 ? "PREPAID" : undefined,
         },
         claimDeliveryInfo: {
           // N-3.3 — 출고지는 이 필드 하나다(deliveryInfo.outboundLocationId는
@@ -414,8 +603,22 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
               kids: {
                 material: resolveNoticeFieldValue("material", product.material),
                 color: resolveNoticeFieldValue("color", product.color),
-                size: resolveSizeFromOptions(product),
-                manufacturer: resolveNoticeFieldValue("manufacturer", product.manufacturer),
+                // N-3.71 — size는 reference-eligibility.ts 화이트리스트에 없어
+                // (사용자가 선택할 소스 토글 자체가 없다) resolveSizeFromOptions가
+                // undefined면 이전까지 필드 자체가 비어 payload에서 통째로
+                // 빠졌다 — 이게 실제 등록에서 Naver가 거부한 9개 필드 중
+                // 하나였다. size는 같은 productInfoProvidedNotice 안의 다른
+                // 자유텍스트 필드(material/color 등)와 완전히 동일한 스펙
+                // 타입이라 "상세페이지 참조" 대체가 동일하게 허용된다(9개
+                // 필드가 전부 같은 방식으로 거부됐다는 사실 자체가 근거) —
+                // releaseDateText/packDateText와 같은 이유로 실제 SIZE 옵션이
+                // 없을 때는 무조건 참조 문구로 채운다(임의 사이즈 값을
+                // 지어내는 게 아니라 "상세페이지를 보라"는 안전한 대체).
+                size: resolveSizeFromOptions(product) ?? DETAIL_PAGE_REFERENCE_TEXT,
+                manufacturer: resolveNoticeFieldValue(
+                  "manufacturer",
+                  manufacturerValue ? { ...product.manufacturer, value: manufacturerValue } : product.manufacturer,
+                ),
                 caution: resolveNoticeFieldValue("careInstructions", product.careInstructions),
                 recommendedAge: resolveNoticeFieldValue("recommendedAge", product.recommendedAge),
                 warrantyPolicy: warrantyPolicy || undefined,
@@ -440,8 +643,22 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
               wear: {
                 material: resolveNoticeFieldValue("material", product.material),
                 color: resolveNoticeFieldValue("color", product.color),
-                size: resolveSizeFromOptions(product),
-                manufacturer: resolveNoticeFieldValue("manufacturer", product.manufacturer),
+                // N-3.71 — size는 reference-eligibility.ts 화이트리스트에 없어
+                // (사용자가 선택할 소스 토글 자체가 없다) resolveSizeFromOptions가
+                // undefined면 이전까지 필드 자체가 비어 payload에서 통째로
+                // 빠졌다 — 이게 실제 등록에서 Naver가 거부한 9개 필드 중
+                // 하나였다. size는 같은 productInfoProvidedNotice 안의 다른
+                // 자유텍스트 필드(material/color 등)와 완전히 동일한 스펙
+                // 타입이라 "상세페이지 참조" 대체가 동일하게 허용된다(9개
+                // 필드가 전부 같은 방식으로 거부됐다는 사실 자체가 근거) —
+                // releaseDateText/packDateText와 같은 이유로 실제 SIZE 옵션이
+                // 없을 때는 무조건 참조 문구로 채운다(임의 사이즈 값을
+                // 지어내는 게 아니라 "상세페이지를 보라"는 안전한 대체).
+                size: resolveSizeFromOptions(product) ?? DETAIL_PAGE_REFERENCE_TEXT,
+                manufacturer: resolveNoticeFieldValue(
+                  "manufacturer",
+                  manufacturerValue ? { ...product.manufacturer, value: manufacturerValue } : product.manufacturer,
+                ),
                 caution: resolveNoticeFieldValue("careInstructions", product.careInstructions),
                 warrantyPolicy: warrantyPolicy || undefined,
                 afterServiceDirector: afterServiceDirector || undefined,
@@ -515,44 +732,87 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
               afterServiceGuideContent: afterServiceDirector || undefined,
             }
           : undefined,
+        // N-3.65 — 실제 원문에 "Product code XXXX" 같은 문구가 있을 때만 채운다
+        // (resolveModelNameFromDescription 참고, 임의 값 금지). modelId(네이버
+        // 카탈로그 상품 ID)는 CartPilot이 알 수 없어 채우지 않는다.
+        // N-3.76(2차, CPO 지시) — manufacturerName/brandName은 product.manufacturer/
+        // product.brand가 이미 갖고 있는 값을 그대로 연결한 것뿐이다(새 Resolver
+        // 아님, 임의 값 생성 아님) — 지금까지 이 객체에 modelName만 채우고 이
+        // 두 필드는 아예 빠져 있었던 게 스마트스토어센터의 "제조사명/브랜드명 -"
+        // 표시의 원인이었다. 셋 다 없으면(모델명도 못 찾고 브랜드/제조사도
+        // 없으면) undefined로 필드 자체를 생략한다(기존 규칙 유지).
+        naverShoppingSearchInfo: (() => {
+          const modelName = resolveModelNameFromDescription(product.description.value);
+          const manufacturerName = manufacturerValue || undefined;
+          const brandName = product.brand.value.trim() || undefined;
+          return modelName || manufacturerName || brandName
+            ? { modelName, manufacturerName, brandName }
+            : undefined;
+        })(),
+        // N-3.29(CPO 지시) — 판매자가 실제로 취득한 인증정보를 product.childCertification에
+        // 직접 입력했으면(Editor) 그 값을 그대로 채운다. 값이 없으면(대부분의 경우)
+        // 지금까지처럼 certificationInfoId만 있는 자리표시자를 만든다 —
+        // validate-payload.ts가 certificationNumber/companyName/certificationDate가
+        // 전부 채워졌을 때만 READY로 판정한다(임의 값 생성 없음, CPO 지시).
+        //
+        // N-3.66(CEO 승인 2026-08-20) — 실측/공식 문서로 확인한 사실: (1) Naver는
+        // 어린이제품(CHILD_CERTIFICATION) 카테고리에 구매대행 면제(kindType=OVERSEAS)를
+        // 제공하지 않는다 — 우리가 캐시해둔 실제 카테고리 인증 카탈로그에서
+        // 어린이제품 인증 3종(id 1040/1041/1042)의 kindTypes는 전부
+        // ["ETC","CHILD_CERTIFICATION","KC_CERTIFICATION"]뿐, OVERSEAS는 생활용품/
+        // 전기용품류에만 있다(구조적 확인, 추측 아님). (2) 공식 GitHub Discussion
+        // #704 예시로 productCertificationInfos에 certificationKindType이 항상
+        // 필요함을 확인했다 — 실제 인증정보(childCertification)가 있으면 그
+        // 인증 카탈로그 자체가 대표하는 종류인 CHILD_CERTIFICATION을 선택한다
+        // (id=1042가 실제로 대표하는 kindTypes 중 하나 — 지어낸 값이 아니다).
+        //
+        // N-3.67(2026-08-20, 5연속 동일 거부 후 정적 스키마 재추적 — 진짜 원인) —
+        // 공식 OpenAPI의 ExternalApiBaseProductDetailAttributeVo.product 스키마를
+        // 직접 열어서 확인한 결과 productCertificationInfos는 detailAttribute의
+        // 자식 필드다(NaverOriginProduct의 형제 필드가 아니다). 지금까지 5차
+        // 실측 전부 이 필드를 originProduct 최상위에 넣고 있었다 — Naver가
+        // detailAttribute 안쪽을 봤을 때 이 필드가 항상 "존재하지 않는" 상태였고,
+        // 그래서 id/kindType/데이터를 5번 다르게 바꿔도 정확히 같은
+        // "Empty...kindType" 오류가 반복됐다(값 문제가 아니라 위치 문제였다).
+        // 실패 응답의 invalidInputs[0].name이 매번
+        // "originProduct.detailAttribute.productCertificationInfos"였는데, 이
+        // 경로를 문자 그대로 신뢰하지 않은 게 반복 실패의 진짜 원인이었다.
+        // 공식 OpenAPI의 ExternalApiProductCertificationInfoVo.product는
+        // required:[certificationInfoId, certificationNumber, name]이고, 이 중
+        // `name`("인증 기관명" — 인증서 발급 기관명, companyName"인증 상호명"과는
+        // 다른 필드)의 비필수 예외는 공급자적합성 유형(id=1042)에만 적용된다 —
+        // 위치 수정과 별개로 이 필드도 함께 채운다.
+        productCertificationInfos:
+          childCertificationInfoId !== null && product.childCertification?.value
+            ? [
+                {
+                  certificationInfoId: childCertificationInfoId,
+                  certificationKindType: "CHILD_CERTIFICATION" as const,
+                  name: product.childCertification.value.name || undefined,
+                  certificationNumber: product.childCertification.value.certificationNumber || undefined,
+                  companyName: product.childCertification.value.companyName || undefined,
+                  certificationDate: product.childCertification.value.certificationDate || undefined,
+                },
+              ]
+            : undefined,
+        productAttributes: resolvedAttributes && resolvedAttributes.length > 0 ? resolvedAttributes : undefined,
       },
-      // N-3.29(CPO 지시) — 판매자가 실제로 취득한 인증정보를 product.childCertification에
-      // 직접 입력했으면(Editor) 그 값을 그대로 채운다. 값이 없으면(대부분의 경우)
-      // 지금까지처럼 certificationInfoId만 있는 자리표시자를 만든다 —
-      // validate-payload.ts가 certificationNumber/companyName/certificationDate가
-      // 전부 채워졌을 때만 READY로 판정한다(임의 값 생성 없음, CPO 지시).
-      productCertificationInfos:
-        childCertificationInfoId !== null
-          ? [
-              {
-                certificationInfoId: childCertificationInfoId,
-                ...(product.childCertification?.value
-                  ? {
-                      certificationNumber: product.childCertification.value.certificationNumber || undefined,
-                      companyName: product.childCertification.value.companyName || undefined,
-                      certificationDate: product.childCertification.value.certificationDate || undefined,
-                    }
-                  : {}),
-              },
-            ]
-          : undefined,
     },
     smartstoreChannelProduct: {
-      channelProductName: listing.title,
+      channelProductName: smartStoreProductName,
       // N-3.5 — 공식 OpenAPI 스펙 재검증 중 발견: "ON, SUSPENSION만 입력
       // 가능합니다"라고 명시돼 있어 WAIT는 실제로 입력 불가능한 값이었다
       // (지금까지 여기 있던 버그 — DRY_RUN이라 실제 POST로 드러난 적은
       // 없음). 새 상품을 등록 즉시 노출시키지 않는 게 안전하므로 유효한
       // 값 중 SUSPENSION(전시 중지)을 기본값으로 쓴다.
       channelProductDisplayStatusType: "SUSPENSION",
-      // N-3.25(STEP 2) — 스펙 재확인 결과: "네이버쇼핑 광고주가 아니면 무엇을
-      // 보내든 서버가 강제로 false로 저장한다"고 명시되어 있어, false를 명시
-      // 전송하는 것이 광고주가 아닌 절대다수 계정의 실제 결과와 정확히 같고
-      // (판단 불필요), 광고주인 계정에도 자동 등록 흐름에서는 "미연동"이 더
-      // 안전한 기본값이다(연동은 등록 후 Wing에서 판매자가 직접 선택 가능).
-      // required 필드를 비워 보내는 것보다(스키마 필수값 누락으로 거부될 위험)
-      // 명시적으로 안전한 값을 채우는 쪽을 택한다.
-      naverShoppingRegistration: false,
+      // N-3.25(STEP 2)에서는 false를 기본값으로 택했지만, 대표님 지시(N-3.84,
+      // 실등록 화면 대조로 발견 — "네이버쇼핑 등록(N) -> Y 필요")로 true로
+      // 뒤집는다. 스펙상 "네이버쇼핑 광고주가 아니면 무엇을 보내든 서버가
+      // 강제로 false로 저장한다"는 동작은 그대로이므로 true를 보내도 광고주가
+      // 아닌 계정은 결과가 달라지지 않고, 광고주인 계정만 실제로 켜진다 —
+      // true 전송 자체에는 리스크가 없다(서버가 최종 결정권을 가진다).
+      naverShoppingRegistration: true,
     },
   };
 }

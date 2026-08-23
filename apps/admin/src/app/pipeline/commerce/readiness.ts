@@ -385,3 +385,42 @@ function naverFieldExternalHref(field: string): string | undefined {
   }
   return undefined;
 }
+
+/**
+ * N-4.02 Part E/B-1(대표님 지시) — 모든 마켓플레이스가 공유하는 GREEN/YELLOW/RED
+ * 표시 모델. 새 판정 로직을 만들지 않는다 — computeNaverPayloadReadiness /
+ * computeChecklistReadiness가 이미 계산한 ReadinessSummary(단일 소스, CP001
+ * 버그의 교훈)를 그대로 세 단계로 다시 이름 붙일 뿐이다.
+ *
+ * GREEN(passed=true) — 자동입력 가능 + 근거 있음(통과한 항목).
+ * YELLOW(passed=false, required=false) — 등록은 막지 않지만 판매자가 확인해야
+ *   하는 정보(권장 항목, WARNING).
+ * RED(passed=false, required=true) — 등록을 막아야 하는 정보(필수 항목 미충족,
+ *   MISSING/BLOCKED). allRequiredPassed가 false가 되는 것과 정확히 같은 조건이라
+ *   여기서 새로 판단하지 않는다.
+ */
+export type ReadinessLevel = "GREEN" | "YELLOW" | "RED";
+
+export interface FieldReadinessLevel {
+  field: string;
+  level: ReadinessLevel;
+  reason?: string;
+  group?: ReadinessGroup;
+}
+
+export function deriveReadinessLevels(summary: ReadinessSummary): FieldReadinessLevel[] {
+  return summary.items.map((item) => ({
+    field: item.label,
+    level: item.passed ? "GREEN" : item.required ? "RED" : "YELLOW",
+    reason: item.passed ? undefined : item.hint,
+    group: item.group,
+  }));
+}
+
+/** 하나라도 RED면 RED, 아니면 하나라도 YELLOW면 YELLOW, 전부 GREEN이면 GREEN.
+ * summary.allRequiredPassed와 정확히 같은 뜻(overall !== "RED" ⇔ allRequiredPassed). */
+export function overallReadinessLevel(levels: FieldReadinessLevel[]): ReadinessLevel {
+  if (levels.some((l) => l.level === "RED")) return "RED";
+  if (levels.some((l) => l.level === "YELLOW")) return "YELLOW";
+  return "GREEN";
+}

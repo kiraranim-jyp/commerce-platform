@@ -28,6 +28,7 @@ import { ImageInlineEditor } from "../ImageInlineEditor";
 import { KcSellerStatusBanner } from "./KcSellerStatusBanner";
 import { ListingSection } from "./ListingSection";
 import { NaverPayloadPreview } from "./NaverPayloadPreview";
+import type { NaverResolveResponse } from "./NaverPayloadPreview";
 import { OptionVariantEditor } from "./OptionVariantEditor";
 import { PriceEditor } from "./PriceEditor";
 import { computeChecklistReadiness, computeNaverPayloadReadiness } from "./readiness";
@@ -250,6 +251,14 @@ function KcCertificationBlock({
             className={FIELD_INPUT_CLASS}
           />
         </FieldRow>
+        <FieldRow label="인증기관명">
+          <EditableText
+            value={product.childCertification.value?.name ?? ""}
+            onCommit={(v) => onUpdateChildCertification({ name: v })}
+            placeholder="예: 한국건설생활환경시험연구원(발급업체와 다를 수 있음)"
+            className={FIELD_INPUT_CLASS}
+          />
+        </FieldRow>
         <FieldRow label="취득일자">
           <EditableDate
             value={product.childCertification.value?.certificationDate ?? ""}
@@ -269,6 +278,10 @@ export function PlatformPreview({
   listingStatus,
   listingResult,
   naverValidation,
+  naverValidationLoading,
+  naverValidationError,
+  onRetryNaverValidation,
+  naverResolved,
   compliancePreview,
   onUpdateField,
   onUpdateSalePriceKrw,
@@ -329,6 +342,25 @@ export function PlatformPreview({
    * 버튼 활성화 여부는 이제 이 값 하나로만 정해진다(레거시 readiness는 더 이상
    * 관여하지 않는다). */
   naverValidation?: NaverPayloadValidationResult | null;
+  /** N-3.72(사용자 지시: "계산 중과 실패를 구분하라") — naverValidation이
+   * null인 두 가지 이유(아직 첫 조회가 안 끝났다 / 조회는 끝났는데 실패했다)를
+   * 구분해서 카드가 "계산 중"과 "0%"를 다르게 보여줄 수 있게 한다. readiness.ts의
+   * 판정 로직 자체는 바꾸지 않는다 — 이 값이 true인 동안은 그 판정 결과를
+   * 아예 안 쓰고 카드를 로딩 상태로 대체한다. */
+  naverValidationLoading?: boolean;
+  /** N-3.73 STEP1/2(사용자 지시: "ERROR를 0%로 표현하지 않는다") — data.status
+   * !== "OK"(AUTH_FAILED 등, 지금 실제로 Fixie 프록시 장애로 재현됨) 또는
+   * catch의 진짜 예외 때문에 naverValidationLoading이 꺼졌는데도 naverValidation이
+   * 여전히 null인 경우의 사유 메시지. 있으면 카드가 퍼센트/BLOCKED 대신
+   * "등록 가능성 확인 실패 + 다시 확인" 전용 화면을 보여준다. */
+  naverValidationError?: string | null;
+  /** N-3.73 STEP2 — ERROR 화면의 "다시 확인" 버튼이 호출한다. */
+  onRetryNaverValidation?: () => void;
+  /** N-3.73 STEP7 — CommerceWorkspace가 이미 fetch한 /api/naver/resolve 결과.
+   * NaverPayloadPreview에 그대로 전달해서 그 컴포넌트가 같은 데이터를 또
+   * 조회하지 않게 한다(undefined는 "이 탭에서는 아직 해당 없음", null은
+   * "조회는 시도했지만 아직 결과 없음"). */
+  naverResolved?: NaverResolveResponse | null;
   /** Sprint A-3(작업8 — Resolver Trace) — CommerceWorkspace가 이미 등록 전에 계산해둔
    * buildCoupangCompliance() 결과를 그대로 받는다. register 라우트가 등록 시점에
    * 또 계산하는 것과 다른 결과를 보여주면 CP001과 같은 신뢰 문제가 재발하므로,
@@ -626,8 +658,17 @@ export function PlatformPreview({
   // (naverCategoryLoading/coupangCategoryFetching) 화면이 빈 상태로 보여서
   // 응답이 느려 보였다. 새 판정을 만들지 않고 이미 있는 두 로딩 플래그를
   // 플랫폼에 맞게 그대로 보여준다.
+  // N-3.72 — SmartStore는 카테고리 조회(naverCategoryLoading)뿐 아니라
+  // payload validation 조회(naverValidationLoading)도 같은 "대상정보를
+  // 확인중입니다" 배너로 보여준다 — 이게 끝나기 전에 readinessSummary가
+  // null validation을 "확인 안 됨"으로 잘못 읽어 0%를 보여주던 게 이번에
+  // 고치는 버그의 핵심이다.
   const tabDataLoading =
-    listing.platform === "smartstore" ? Boolean(naverCategoryLoading) : listing.platform === "coupang" ? Boolean(coupangCategoryFetching) : false;
+    listing.platform === "smartstore"
+      ? Boolean(naverCategoryLoading) || Boolean(naverValidationLoading)
+      : listing.platform === "coupang"
+        ? Boolean(coupangCategoryFetching)
+        : false;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -656,6 +697,9 @@ export function PlatformPreview({
         />
 
         <RegistrationReadinessCard
+          isCalculating={capabilities.hasNaverPreview && Boolean(naverValidationLoading)}
+          errorMessage={capabilities.hasNaverPreview ? naverValidationError : null}
+          onRetry={onRetryNaverValidation}
           percent={readinessSummary.percent}
           required={readinessSummary.required}
           recommended={readinessSummary.recommended}
@@ -717,6 +761,20 @@ export function PlatformPreview({
               onSetReference={(r) => onSetFieldReference?.("manufacturer", r)}
               placeholder="제조사 미확인"
             />
+            {/* N-3.85 STEP1(대표님 지시) — 제조사가 null일 때 그냥 빈 칸을
+                보여주지 않는다. 원문→브랜드 기본값→판매자 기본값 순서로
+                이미 다 확인했지만 셋 다 값이 없다는 사실과, 실제 입력 위치를
+                명시한다(값을 지어내지 않는다는 원칙은 그대로 — 안내 문구만
+                추가). naverResolved.notice.manufacturer는 register 라우트와
+                동일한 resolveNaverContext() 결과라 payload에 실제로 들어갈
+                값과 항상 같다(별도 판정 로직 없음). */}
+            {!product.manufacturer.value && !naverResolved?.notice?.manufacturer && (
+              <p className="col-span-2 -mt-1 rounded bg-warning-soft px-2 py-1.5 text-[11px] text-warning">
+                ⚠ 제조사 정보가 없습니다 — 자동 입력 순서(상품 원문 → 브랜드 기본값 → 판매자 기본정보)를 모두
+                확인했지만 입력 가능한 값이 없습니다. 위 입력창에 직접 입력하거나, Settings의 판매자 정보
+                탭에서 기본 제조사를 등록해주세요(이후 등록되는 모든 상품에 자동 적용됩니다).
+              </p>
+            )}
             <ReferenceEligibleFieldRow
               label="소재"
               field={product.material}
@@ -947,6 +1005,16 @@ export function PlatformPreview({
               비워두면 판매자 기본값(아래 "배송 정책 · 반품/교환" 카드)이 자동 적용됩니다.
             </p>
           )}
+          {/* N-3.85 STEP6(대표님 지시, 확인 완료) — 배송비는 상품 수량과
+              무관하게 고정 배송비 하나만 전송한다(위 EditableText가 그대로
+              Naver deliveryFeeType=PAID의 baseFee가 된다). 여러 개를 함께
+              구매하는 경우의 배송비 정산은 CartPilot이 자동 계산하지 않고
+              판매자가 Wing에서 직접 확인하도록 안내만 한다 — 임의로 수량별
+              할인/할증 로직을 만들지 않는다. */}
+          <p className="rounded bg-background px-2 py-1.5 text-[11px] text-text-tertiary">
+            ℹ️ 배송비는 수량과 무관하게 위 금액 하나로 고정 전송됩니다. 한 구매자가 여러 개를 함께 주문한
+            경우의 배송비 정산은 자동 계산하지 않으니 Wing에서 직접 확인해주세요.
+          </p>
         </CollapsibleSection>
 
         {/* Sprint A-8(작업1/3) — 상품마다 다시 입력하지 않는 배송/반품/교환/
@@ -1024,14 +1092,16 @@ export function PlatformPreview({
               onGoToCategory={() => goToSection("section-category")}
             />
           )}
-          <FieldRow label="인증정보(KC 등)" field={product.certification}>
-            <EditableText
-              value={product.certification.value}
-              onCommit={(v) => fix?.("certification", v)}
-              placeholder="해당 없음"
-              className={FIELD_INPUT_CLASS}
-            />
-          </FieldRow>
+          {/* N-3.73(사용자 지시: "KC 상세정보 입력 → 사용자 확정 → 다시 입력하라고
+              하지 않음") — 여기 있던 `product.certification`(범용 문자열 필드) 기반
+              FieldRow를 제거했다. 이 필드는 KcCertificationBlock/KcSellerStatusBanner/
+              validateNaverPayload가 실제로 읽는 product.childCertification과 완전히
+              별개의, 조사해보니 실제 등록 파이프라인 어디서도 읽지 않는 죽은 필드였다
+              (packages/listing/src/smartstore/build-payload.ts라는, 어떤 라우트에서도
+              호출되지 않는 레거시 모듈 1곳에서만 참조). 사용자가 아래 KcCertificationBlock에
+              KC 정보를 입력/확정해도 이 필드는 절대 동기화되지 않아 "또 입력하라는
+              것처럼" 보였다 — 실제 값이 저장되는 단일 소스(childCertification)만
+              남기고 이 중복 표시를 삭제한다. */}
           {/* N-3.29(CPO 지시) — SmartStore가 실제로 어린이제품 인증
               (CHILD_CERTIFICATION)을 요구하는 카테고리일 때만(=naverValidation에
               productCertificationInfos 필드가 있을 때만) 보여준다. 실제 인증
@@ -1100,7 +1170,15 @@ export function PlatformPreview({
         )}
 
         {capabilities.hasNaverPreview && (
-          <NaverPayloadPreview product={product} listing={listing} detailBlocks={detailBlocks} />
+          <NaverPayloadPreview
+            product={product}
+            listing={listing}
+            detailBlocks={detailBlocks}
+            sharedResolved={naverResolved}
+            sharedResolving={naverValidationLoading}
+            sharedResolveError={naverValidationError}
+            sharedValidation={naverValidation}
+          />
         )}
 
         <ListingSection

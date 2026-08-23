@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
-import { fetch as naverFetch, ProxyAgent, FormData as UndiciFormData } from "undici";
+import { fetch as naverFetch, FormData as UndiciFormData } from "undici";
 import type { NaverCredentials } from "./env";
+import { createOutboundProxyDispatcher, describeErrorCauseChain } from "@/lib/outbound-proxy";
 
 const NAVER_OAUTH_TOKEN_URL = "https://api.commerce.naver.com/external/v1/oauth2/token";
 const NAVER_API_BASE = "https://api.commerce.naver.com/external";
@@ -31,15 +32,16 @@ export function buildClientSecretSign(clientId: string, clientSecret: string, ti
 
 /**
  * Coupang(apps/admin/src/app/api/coupang/_lib/client.ts)과 동일한 패턴 —
- * FIXIE_URL이 있을 때만 이 전용 fetch 함수의 dispatcher로 프록시를 건다.
+ * 프록시가 있을 때만 이 전용 fetch 함수의 dispatcher로 프록시를 건다.
  * setGlobalDispatcher()는 쓰지 않는다(다른 fetch 호출과 완전히 분리된 풀).
- * Coupang과 Naver가 같은 FIXIE_URL 값을 공유해도 되는 이유는 각자 독립된
+ * Coupang과 Naver가 같은 프록시 값을 공유해도 되는 이유는 각자 독립된
  * ProxyAgent 인스턴스를 만들기 때문 — 서로 영향을 주지 않는다.
  *
+ * N-3.75(사용자 지시) — 여기서 직접 FIXIE_URL을 읽지 않고 공통 리졸버
+ * (src/lib/outbound-proxy.ts, OCI_PROXY_URL 우선/FIXIE_URL 폴백)를 쓴다.
  * 프록시 URL 자체(사용자/비밀번호 포함 가능)는 절대 로그로 남기지 않는다.
  */
-const fixieUrl = process.env.FIXIE_URL;
-const naverProxyDispatcher = fixieUrl ? new ProxyAgent(fixieUrl) : undefined;
+const naverProxyDispatcher = createOutboundProxyDispatcher();
 
 const NAVER_REQUEST_TIMEOUT_MS = 20_000;
 
@@ -55,6 +57,10 @@ export interface NaverTokenError {
   step: "SIGNATURE_GENERATION_FAILED" | "TOKEN_REQUEST_FAILED" | "TOKEN_RESPONSE_INVALID" | "NETWORK_ERROR";
   httpStatus?: number;
   message: string;
+  /** N-3.75 — NETWORK_ERROR일 때만 채워진다. error.cause 체인(호스트/포트/
+   * 에러코드만 포함, 자격증명 없음)을 그대로 노출해 "fetch failed"보다 구체적인
+   * 원인(예: 프록시 CONNECT 거부/타임아웃)을 진단할 수 있게 한다. */
+  causeChain?: string[];
   body?: unknown;
 }
 
@@ -104,6 +110,7 @@ export async function issueNaverAccessToken(
       ok: false,
       step: "NETWORK_ERROR",
       message: error instanceof Error ? error.message : "네이버 인증 서버에 연결할 수 없습니다.",
+      causeChain: describeErrorCauseChain(error),
     };
   }
 
@@ -262,9 +269,12 @@ export interface NaverApiError {
 
 /**
  * work order 9번 — "FIXIE_URL이 존재한다"는 성공 조건이 아니라 실제 요청이
- * Fixie를 거쳐 나가는지 확인해야 한다. ipify.org(공개 IP 에코 서비스)를 이
+ * 프록시를 거쳐 나가는지 확인해야 한다. ipify.org(공개 IP 에코 서비스)를 이
  * 파일과 동일한 dispatcher로 호출해서 실제 outbound IP를 알아낸다 — IP 값
  * 자체는 코드에 하드코딩하지 않고 응답에서 그대로 읽는다.
+ *
+ * N-3.75 — 이름은 유지 이력상 "Fixie"지만 이제 OCI_PROXY_URL이 설정돼 있으면
+ * 그 프록시를 거쳐 나가는 IP를 알아낸다(naverProxyDispatcher가 공통 리졸버 결과다).
  */
 export async function getFixieOutboundIp(): Promise<string | null> {
   if (!naverProxyDispatcher) return null;

@@ -18,3 +18,10 @@ logs/
 
 .vercel
 .env*
+
+# Private keys — never belong in this repo (see N-3.76 SSH key incident)
+*.key
+*.pem
+id_rsa
+id_ed25519
+ssh-key-*

@@ -19,4 +19,7 @@ export * from "./naver/compliance";
 export * from "./naver/category-match";
 export * from "./naver/category-hierarchy";
 export * from "./naver/origin-match";
+export * from "./naver/attribute-resolver";
+export * from "./naver/attribute-coverage";
+export * from "./naver/attribute-metadata/index";
 export * from "./notice/reference-eligibility";

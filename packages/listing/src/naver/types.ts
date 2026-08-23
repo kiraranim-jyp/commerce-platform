@@ -127,6 +127,20 @@ export interface NaverDeliveryFee {
   baseFee?: number;
   /** 배송비 유형이 CONDITIONAL_FREE일 때만 입력. 최대 999,999,990. */
   freeConditionalAmount?: number;
+  /** 확인됨(공식 OpenAPI, N-3.85 STEP6) — "반복 수량. 배송비 유형이 '수량별
+   * 부과 - 반복 구간'일 경우 입력합니다." deliveryFeeType이
+   * UNIT_QUANTITY_PAID일 때 baseFee를 이 수량 단위로 반복 부과한다(구간별
+   * 추가금액이 아니라 "N개마다 기본 배송비를 다시 부과"하는 구조 — 2단계
+   * 요금 모델과 다르다). */
+  repeatQuantity?: number;
+  /** 확인됨(공식 OpenAPI, N-3.85 STEP6) — deliveryFeeType이
+   * RANGE_QUANTITY_PAID(구간별 직접 설정)일 때 사용하는 2/3구간 최소 수량 및
+   * 초과 시 추가 배송비. "첫 N개는 기본가, 그 이후 M개당 얼마씩 추가"라는
+   * 흔한 요금 구조는 UNIT_QUANTITY_PAID가 아니라 이 필드들로 표현한다. */
+  secondBaseQuantity?: number;
+  secondExtraFee?: number;
+  thirdBaseQuantity?: number;
+  thirdExtraFee?: number;
   /** COLLECT(착불) | PREPAID(선결제) | COLLECT_OR_PREPAID(착불 또는 선결제). */
   deliveryFeePayType?: "COLLECT" | "PREPAID" | "COLLECT_OR_PREPAID";
   deliveryFeeByArea?: NaverDeliveryFeeByArea;
@@ -184,6 +198,18 @@ export interface NaverDeliveryInfo {
    * 조회 API(return-delivery-companies)는 있지만 출고 택배사 전용 API는
    * 없다). 값을 임의로 채우지 않는다 — BLOCKED로 유지. */
   deliveryCompany?: string;
+  /** 확인됨(공식 OpenAPI, ExternalApiDeliveryInfoVo.product, N-3.85 STEP5 —
+   * commerce-api-naver/commerce-api docs/2.0.0-RC.js 원문 스펙으로 직접 확인) —
+   * "묶음배송 가능 여부. 묶음배송 그룹 코드가 존재하는 경우 자동으로 true로
+   * 설정됩니다." 대표님 지시(N-3.85: "묶음배송 = 항상 사용")로 고정값 true를
+   * 보낸다. */
+  deliveryBundleGroupUsable?: boolean;
+  /** 확인됨(공식 OpenAPI) — "묶음배송 가능이 true이고 묶음배송 그룹 코드가
+   * null이면 기본 그룹으로 저장됩니다." 판매자가 Wing에서 커스텀 묶음배송
+   * 그룹(예: MIN/MAX 배송비 계산 방식이 다른 여러 그룹)을 만들지 않는 한
+   * null로 두면 Naver 기본 그룹을 그대로 쓴다 — CartPilot이 묶음배송 그룹을
+   * 새로 만들거나 추측으로 특정 그룹 ID를 넣지 않는다. */
+  deliveryBundleGroupId?: number | null;
   deliveryFee?: NaverDeliveryFee;
   claimDeliveryInfo?: NaverClaimDeliveryInfo;
 }
@@ -287,12 +313,48 @@ export interface NaverAfterServiceInfo {
   afterServiceGuideContent?: string;
 }
 
+/** N-3.65(2026-08-20, 실제 등록으로 발견) — 어린이인증 대상 카테고리는
+ * naverShoppingSearchInfo.modelName이 NotEmpty로 요구된다("카탈로그 입력이
+ * 필수입니다"). 공식 스펙 확인 결과 modelId(네이버 카탈로그 상품 ID, 선택)와
+ * modelName(자유 텍스트 모델명, 문자열)은 별개 필드 — modelName은 카탈로그
+ * 매칭을 강제하지 않는다. modelId는 CartPilot이 알 수 없으므로 채우지 않는다
+ * (임의 값 금지). */
+/** N-3.76(2차, CPO 지시: "제조사명/브랜드명이 스마트스토어센터에 - 로 표시된다")
+ * — manufacturerName/brandName은 공식 스펙상 이 객체(originProduct.detailAttribute.
+ * naverShoppingSearchInfo)에 속한 필드인데, modelName만 구현하고 이 둘은 아예
+ * 빠져 있었다(버그가 아니라 미구현). CanonicalProduct.brand/manufacturer는 이미
+ * 있는 값이라 build-payload.ts에서 그대로 연결한다. */
+export interface NaverShoppingSearchInfo {
+  modelName?: string;
+  manufacturerName?: string;
+  brandName?: string;
+}
+
 export interface NaverDetailAttribute {
   productInfoProvidedNotice?: NaverProductInfoProvidedNotice;
   originAreaInfo?: NaverOriginAreaInfo;
   optionInfo?: NaverOptionInfo;
-  naverShoppingSearchInfo?: unknown;
+  naverShoppingSearchInfo?: NaverShoppingSearchInfo;
   afterServiceInfo?: NaverAfterServiceInfo;
+  /** 확인됨(공식 OpenAPI, ExternalApiBaseProductDetailAttributeVo.product,
+   * N-4.00 A-2에서 실제 스펙 파일로 재확인) — 필수 아님(required 배열에 없음).
+   * NaverProductAttributeValue({attributeSeq, attributeValueSeq})가 정확한
+   * 형태다. resolveNaverProductAttributes()가 계산한 결과만 여기 채운다. */
+  productAttributes?: NaverProductAttributeValue[];
+  /** N-3.67(2026-08-20, 5연속 동일 거부 후 공식 OpenAPI 스키마 재확인) —
+   * ExternalApiBaseProductDetailAttributeVo.product의 실제 property 목록을
+   * 직접 열어서 확인한 결과, productCertificationInfos/
+   * certificationTargetExcludeContent는 originProduct의 형제(sibling)가
+   * 아니라 detailAttribute의 자식이다. 지금까지 5차 실측 전부 이 필드를
+   * originProduct 최상위(NaverOriginProduct)에 넣고 있었다 — 그 결과 실제
+   * 요청에서 detailAttribute 안쪽은 "정말로 비어 있는 상태"였고, Naver가
+   * 매번 정확히 같은 "Empty...kindType"으로 거부한 이유였다(값/id/kindType을
+   * 5번 바꿔도 위치 자체가 틀려서 Naver 파서가 아예 보지 못했다). 실제
+   * 실패 응답의 invalidInputs[0].name도 항상
+   * "originProduct.detailAttribute.productCertificationInfos"였다 — 이 경로를
+   * 문자 그대로 신뢰하지 않고 무시했던 게 5차 반복 실패의 진짜 원인이다. */
+  productCertificationInfos?: NaverProductCertificationInfo[];
+  certificationTargetExcludeContent?: NaverCertificationTargetExcludeContent;
   /** N-3.49(2026-08-17, 실제 등록 3차 시도로 발견) — "미성년자 구매 가능
    * 여부"(NotNull). 성인용/연령제한 카테고리가 아닌 한 true. */
   minorPurchasable?: boolean;
@@ -310,6 +372,22 @@ export interface NaverDetailAttribute {
   customsTaxType?: "NOT_APPLICABLE" | "INCLUDED" | "EXCLUDED";
 }
 
+/** N-3.66(2026-08-20, CEO 승인 사업 정책 실험) — 공식 스펙(ExternalApiCertificationTargetExcludeContentVo.product)
+ * 확인 결과, "어린이제품 인증 대상" 카테고리 상품이 실제 인증서가 없을 때
+ * 무조건 등록 불가가 아니라, 해외구매대행/병행수입/안전기준준수 같은 정당한
+ * 사유가 있으면 이 구조로 면제를 신고할 수 있다. TTAEJYO는 실제로 100%
+ * 해외구매대행 사업(이미 payload 전역에서 이 사실을 전제로 함 —
+ * afterServiceGuideContent/customsTaxType 등)이라 kcExemptionType:"OVERSEAS"는
+ * 상품마다 새로 판단하는 값이 아니라 사업 모델 자체를 있는 그대로 신고하는
+ * 것이다(임의 KC 인증정보 생성이 아님). CEO 승인(2026-08-20) 하 최소 1회
+ * 실제 Naver 응답으로 이 필드 조합이 맞는지 검증 중 — 틀리면 raw
+ * invalidInputs 원문 기준으로만 수정한다(추측 금지). */
+export interface NaverCertificationTargetExcludeContent {
+  childCertifiedProductExclusionYn?: boolean;
+  kcCertifiedProductExclusionYn?: "TRUE" | "FALSE" | "KC_EXEMPTION_OBJECT";
+  kcExemptionType?: "OVERSEAS" | "SAFE_CRITERION" | "PARALLEL_IMPORT";
+}
+
 export interface NaverOriginProduct {
   statusType: "SALE" | "WAIT" | string;
   saleType?: "NEW" | string;
@@ -321,7 +399,12 @@ export interface NaverOriginProduct {
   stockQuantity: number;
   deliveryInfo?: NaverDeliveryInfo;
   detailAttribute?: NaverDetailAttribute;
-  productCertificationInfos?: NaverProductCertificationInfo[];
+  /** 확인됨(공식 OpenAPI, ExternalApiOriginProductVo.product) — "판매자 상품코드"
+   * (Seller Center 상품목록의 "판매자상품코드" 컬럼). 옵션별 sellerManagerCode와
+   * 달리 상품 전체를 가리키는 단일 값이다. CartPilot이 임의로 만들지 않고
+   * 원본 페이지에서 실제 추출된 product.sku가 있을 때만 채운다(없으면 생략 —
+   * 값 지어내기 금지 원칙 유지). */
+  sellerManagementCode?: string;
 }
 
 /** 확인됨(공식 OpenAPI 스펙, ExternalApiSmartstoreChannelProductVo.product,

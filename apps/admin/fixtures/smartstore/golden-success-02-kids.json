@@ -1,0 +1,106 @@
+{
+  "fixtureType": "REAL_LIVE_SUCCESS",
+  "purpose": "N-3.67의 핵심 목표 — CHILD_CERTIFICATION(어린이제품 KC 인증) 대상 KIDS 카테고리 상품을 SmartStore에 실제로 등록 성공한 첫 사례. golden-success-01.json(WEAR 카테고리)은 categoryRequiresChildCertification=false라 productCertificationInfos 자체가 payload에 없었다 — 이 fixture가 KC 인증 필드를 포함한 등록의 유일한 실제 성공 근거다.",
+  "sourceUrl": "https://www.jupeiris.com (Bobo Choses Color Block Zipped Sweatshirt, snapshot 저장 시점 원본)",
+  "productTitle": "Bobo Choses 티셔츠",
+  "snapshotId": "d1fd1f7d-6396-458b-855c-91c62515df6f",
+  "category": {
+    "leafCategoryId": "50000535",
+    "categoryRequiresChildCertification": true,
+    "note": "KIDS 카테고리(출산/육아>유아동의류>티셔츠), CHILD_CERTIFICATION 대상 — productCertificationInfos 필수"
+  },
+  "registrationSequence": {
+    "totalRealPostAttempts": 7,
+    "note": "N-3.66~3.67에 걸쳐 5회 연속 정확히 동일한 'Empty...kindType' 거부를 받았다(값/id/kindType을 다르게 바꿔도 동일) — 이는 위치 자체가 틀렸다는 신호였다. STEP1 정적 스키마 재추적(공식 OpenAPI ExternalApiBaseProductDetailAttributeVo.product 직접 확인)으로 productCertificationInfos가 originProduct의 형제가 아니라 detailAttribute의 자식 필드임을 확정하고서야 6/7번째 시도에서 최초로 HTTP 200 SUBMITTED를 받았다."
+  },
+  "bugsFixedToReachSuccess": [
+    {
+      "attempt": "1-5",
+      "bug": "productCertificationInfos를 NaverOriginProduct의 최상위(sibling of detailAttribute)에 넣고 있었음 — 실제로는 detailAttribute의 자식이다. Naver가 detailAttribute 안쪽을 봤을 때 이 필드가 항상 '존재하지 않는' 상태였고, id/kindType/데이터를 5번 다르게 바꿔도 정확히 같은 'Empty.product.detailAttribute.certificationInfos.kindType' 오류가 반복됐다.",
+      "fixLocation": "packages/listing/src/naver/types.ts(NaverDetailAttribute에 productCertificationInfos/certificationTargetExcludeContent 이동), build-payload.ts(construction을 detailAttribute 객체 내부로 이동)",
+      "verifiedVia": "공식 OpenAPI 캐시(naver-openapi.json)의 ExternalApiBaseProductDetailAttributeVo.product properties 목록에서 productCertificationInfos 확인 + 5차 실패 응답의 invalidInputs[0].name이 매번 'originProduct.detailAttribute.productCertificationInfos'였던 것을 문자 그대로 재해석"
+    },
+    {
+      "attempt": "1-5(같은 근본원인)",
+      "bug": "productCertificationInfos.name('인증 기관명')이 한 번도 채워지지 않음 — 공식 OpenAPI ExternalApiProductCertificationInfoVo.product의 required:[certificationInfoId, certificationNumber, name] 중 name의 비필수 예외는 공급자적합성 유형(id=1042)에만 적용되고, 실제 사용한 id=1041(안전확인)에는 적용되지 않는다.",
+      "fixLocation": "packages/shared/src/product-types.ts(CanonicalProductCertification.name 필드 추가), build-payload.ts(productCertificationInfos[].name 배선)",
+      "note": "위치 버그가 근본원인이라 name 필드만 추가했어도 여전히 실패했을 것 — 두 수정이 함께 필요했다."
+    },
+    {
+      "attempt": "6-7",
+      "result": "SUCCESS — HTTP 200, status=SUBMITTED, 2회 연속(재현성 확인)"
+    }
+  ],
+  "successResult": {
+    "httpStatus": 200,
+    "status": "SUBMITTED",
+    "originProductNo": 13667626779,
+    "smartstoreChannelProductNo": 13728102468,
+    "traceId": "da935cbc-c8f8-444c-933c-dde394cb8355",
+    "durationMs": 7537,
+    "secondAttempt": {
+      "note": "동일 수정으로 재현성 확인 목적 재실행(같은 스냅샷) — 별개의 신규 상품으로 다시 성공",
+      "originProductNo": 13667627489,
+      "smartstoreChannelProductNo": 13728103191,
+      "traceId": "962136c1-2c33-4951-a5b0-98d6cddf04cb"
+    }
+  },
+  "postSuccessVerification": {
+    "method": "registration_attempts DB 레코드의 실제 response 컬럼(=Naver가 실제로 반환한 raw HTTP 응답 body) 직접 확인",
+    "verifiedVia": "GET /api/admin/registrations?snapshotId=d1fd1f7d-6396-458b-855c-91c62515df6f (read-only admin 인증 조회, 신규 Naver 호출 아님)",
+    "result": "response.originProductNo=13667626779(및 13667627489), response.originProduct.detailAttribute.productCertificationInfos에 certificationInfoId=1041/certificationKindType=CHILD_CERTIFICATION/name/certificationNumber/companyName/certificationDate가 Naver가 실제로 저장한 값으로 그대로 반환됨(Naver가 발급한 옵션 id 등 서버측 값도 함께 포함) — 코드 레벨 validation.ok뿐 아니라 실제 Naver 서버 저장까지 확인.",
+    "note": "channelProductDisplayStatusType='SUSPENSION' — golden-success-01.json과 동일하게 신규 등록 후 노출 전 상태(CartPilot의 의도적 안전장치, 실패 아님)."
+  },
+  "finalPayload": {
+    "salePrice": 109620,
+    "stockQuantity": 3,
+    "leafCategoryId": "50000535",
+    "customsTaxType": "INCLUDED",
+    "minorPurchasable": true,
+    "afterServiceInfo": {
+      "afterServiceTelephoneNumber": "+821046458306",
+      "afterServiceGuideContent": "해외 구매대행으로 A/S 불가"
+    },
+    "naverShoppingSearchInfo": { "modelName": "B126AC050 SS26" },
+    "productCertificationInfos": [
+      {
+        "certificationInfoId": 1041,
+        "certificationKindType": "CHILD_CERTIFICATION",
+        "name": "TEST인증기관",
+        "certificationNumber": "TEST010101",
+        "companyName": "TEST검사소",
+        "certificationDate": "2026-08-20"
+      }
+    ],
+    "productInfoProvidedNotice": {
+      "productInfoProvidedNoticeType": "KIDS",
+      "kids": {
+        "material": "상품 상세페이지 참조",
+        "color": "Multi",
+        "size": "4-5 Years, 6-7 Years, 8-9 Years, 10-11 Years, 12-13 Years",
+        "manufacturer": "상품 상세페이지 참조",
+        "caution": "상품 상세페이지 참조",
+        "recommendedAge": "상품 상세페이지 참조",
+        "warrantyPolicy": "상품 상세페이지에 기재된 품질보증기준 및 소비자분쟁해결기준에 따릅니다.",
+        "afterServiceDirector": "해외 구매대행으로 A/S 불가",
+        "itemName": "상품 상세페이지 참조",
+        "modelName": "상품 상세페이지 참조",
+        "weight": "상품 상세페이지 참조",
+        "certificationType": "[TEST] KC 테스트 데이터 — 실제 인증정보 아님. E2E 플로우 검증 목적, CEO 승인(2026-08-20).",
+        "releaseDateText": "상품 상세페이지 참조"
+      }
+    },
+    "optionInfo": {
+      "optionCombinationGroupNames": { "optionGroupName1": "Size" },
+      "optionCombinations": [
+        { "optionName1": "4-5 Years", "price": 0, "stockQuantity": 0 },
+        { "optionName1": "6-7 Years", "price": 0, "stockQuantity": 1 },
+        { "optionName1": "8-9 Years", "price": 0, "stockQuantity": 0 },
+        { "optionName1": "10-11 Years", "price": 0, "stockQuantity": 0 },
+        { "optionName1": "12-13 Years", "price": 0, "stockQuantity": 2 }
+      ]
+    }
+  },
+  "regressionCoverage": "productCertificationInfos 위치 이동 + name 필드 추가는 packages/listing/src/naver/__tests__/build-payload.test.ts(N-3.67 describe block, 2개 신규 테스트: name이 있을 때/없을 때), validate-payload.test.ts, kc-certification-guard.test.ts에 회귀 테스트로 고정됨 — 117/117 통과. NaverOriginProduct 타입에서 productCertificationInfos/certificationTargetExcludeContent를 완전히 제거했기 때문에(sibling 위치 자체가 더 이상 존재하지 않음) 이 버그로의 회귀는 타입 에러로 즉시 드러난다.",
+  "excludedFromFixture": "Naver client_id/client_secret 등 자격증명 값은 포함하지 않음. certificationNumber/companyName/name/certificationDate는 CEO 승인 하 [TEST] 라벨링된 flow-test 값이며 실제 KC 인증정보가 아니다."
+}

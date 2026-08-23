@@ -45,6 +45,9 @@ const READINESS_BUTTON_LABEL: Record<RegistrationReadinessState, string> = {
  * 로직이 여러 곳에 있으면 CP001 버그(카드는 100%인데 실제 등록은 실패)가 재발한다.
  */
 export function RegistrationReadinessCard({
+  isCalculating = false,
+  errorMessage = null,
+  onRetry,
   percent,
   required,
   recommended,
@@ -58,6 +61,23 @@ export function RegistrationReadinessCard({
   registrationEnabled = true,
   registrationReadinessState,
 }: {
+  /** N-3.72(사용자 지시, 2026-08-21: "0%는 값이 없어서가 아니라 검증이 아직
+   * 안 끝나서인 경우가 있다 — 계산 중과 실패를 구분하라") — 실제 프로덕션
+   * 화면에서 SmartStore 탭이 payload validation을 아직 조회하는 중일 때도
+   * (naverValidation===null) 다른 required 필드가 다 채워졌다는 걸 UI가
+   * 근거 없이 "🔴 0%"로 보여주는 버그가 있었다. true인 동안은 percent/버튼
+   * 계산 자체를 무시하고 "계산 중" 상태만 보여준다 — 판정 로직은 그대로 두고
+   * 카드가 그 결과를 아예 쓰지 않게만 한다. */
+  isCalculating?: boolean;
+  /** N-3.73 STEP1/2(사용자 지시: "ERROR를 0%로 표현하지 않는다") — 계산이
+   * 끝났는데(isCalculating=false) naverValidation이 null인 이유가 "아직
+   * 카테고리를 안 골랐다" 같은 정상적인 MISSING이 아니라, 네이버 연결 자체가
+   * 실패했기 때문(AUTH_FAILED — 지금 실제로 Fixie 프록시 장애로 재현됨)일 때만
+   * 채워진다. 있으면 퍼센트/BLOCKED 목록 대신 전용 실패 화면을 보여준다 —
+   * "필수 정보가 없다"와 "확인 자체가 안 됐다"를 같은 0%로 뭉치지 않는다. */
+  errorMessage?: string | null;
+  /** ERROR 화면의 "다시 확인" 버튼. 없으면 버튼을 숨긴다. */
+  onRetry?: () => void;
   percent: number;
   required: ReadinessItem[];
   recommended: ReadinessItem[];
@@ -114,10 +134,71 @@ export function RegistrationReadinessCard({
   const businessItems = required.filter((i) => i.group === "BUSINESS_SETTINGS");
   const productInfoItems = required.filter((i) => i.group !== "LEGAL" && i.group !== "BUSINESS_SETTINGS");
 
+  // N-3.72 — 계산 중일 때는 percent/required 등 아래 값을 아예 안 쓴다(이미
+  // 계산된 값이라 해도 이번 렌더에서는 신뢰할 수 없는 스냅샷이다 — payload
+  // validation이 다시 돌고 있는 이유가 카테고리/가격/KC 중 하나가 막 바뀌어서인
+  // 경우가 흔하다). "🔴 0%"처럼 확정적으로 보이는 상태 대신 중립적인 로딩
+  // 표시로 대체한다.
+  if (isCalculating) {
+    return (
+      <aside className="space-y-3 rounded-lg border border-border bg-surface p-4 text-sm shadow-elevated lg:sticky lg:top-4 lg:self-start">
+        <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">등록 가능성</p>
+        <p className="inline-flex items-center gap-1.5 text-base font-medium text-warning">
+          <span
+            aria-hidden
+            className="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-warning-soft border-t-warning"
+          />
+          🟡 등록 가능성 계산 중…
+        </p>
+        <p className="text-xs text-text-tertiary">
+          가격/카테고리/인증정보 등 방금 입력한 값을 다시 확인하고 있습니다. 잠시 후 결과가 반영됩니다.
+        </p>
+      </aside>
+    );
+  }
+
+  // N-3.73 STEP1/2 — LOADING 다음으로, "계산은 끝났지만 실패했다"를 확정
+  // 판정(BLOCKED/MISSING/READY)과 분리한다. required/percent가 이 시점에는
+  // 신뢰할 수 없는 값(카테고리 미확정 등과 구분 안 되는 null-fallback)이라
+  // 아예 쓰지 않는다.
+  if (errorMessage) {
+    return (
+      <aside className="space-y-3 rounded-lg border border-error/30 bg-error-soft p-4 text-sm shadow-elevated lg:sticky lg:top-4 lg:self-start">
+        <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">등록 가능성</p>
+        <p className="text-base font-medium text-error">🔴 등록 가능성 확인 실패</p>
+        <p className="text-xs text-text-secondary">{errorMessage}</p>
+        <p className="text-xs text-text-tertiary">
+          SmartStore 연결 상태를 확인하는 중입니다. 잠시 후 다시 시도해주세요.
+        </p>
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="w-full rounded-md border border-error/40 px-3 py-1.5 text-xs font-medium text-error transition-colors hover:bg-error-soft"
+          >
+            다시 확인
+          </button>
+        )}
+      </aside>
+    );
+  }
+
   return (
     <aside className="space-y-4 rounded-lg border border-border bg-surface p-4 text-sm shadow-elevated lg:sticky lg:top-4 lg:self-start">
       <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">등록 가능성</p>
+        {/* Sprint N-3.69(CPO 지시, "Seller 공통 설정 통합" STEP6) — "등록 가능성
+            100%"와 "선택 정보 N건이 비어 있습니다"가 한 화면에 같이 보이면
+            모순처럼 읽힌다("100%인데 왜 안 채워진 게 있지?"). 필수 조건 충족
+            여부(등록 가능/불가)와 완성도 퍼센트는 서로 다른 신호라 분리해서
+            보여준다 — 필수 충족이면 초록 배지로 먼저 "등록 가능"을 명확히
+            말하고, 퍼센트는 그 아래 보조 지표로만 둔다. */}
+        {allRequiredPassed ? (
+          <p className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-1 text-xs font-medium text-success">
+            🟢 필수 항목 충족 — 등록 가능
+          </p>
+        ) : (
+          <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">등록 가능성</p>
+        )}
         <p className={`mt-1 text-3xl font-semibold tabular-nums ${scoreClassName}`}>{percent}%</p>
         <div className="mt-2 h-2 w-full overflow-hidden rounded bg-background">
           <div
@@ -126,8 +207,8 @@ export function RegistrationReadinessCard({
           />
         </div>
         {allRequiredPassed && emptyOptionalCount > 0 && (
-          <p className="mt-1.5 text-[11px] text-text-tertiary">
-            선택 정보 {emptyOptionalCount}건이 비어 있습니다 — 없어도 등록할 수 있습니다.
+          <p className="mt-1.5 rounded-md bg-background px-2 py-1 text-[11px] text-text-tertiary">
+            참고로, 선택 입력 {emptyOptionalCount}건이 비어 있습니다 — 등록에는 영향 없습니다.
           </p>
         )}
         {/* Sprint A-6(개선3) — "대표님이 가장 궁금한 숫자"를 한눈에 — 자동입력/

@@ -19,6 +19,8 @@ const TAB_KEYS = [
   "brand",
   "detail",
   "comparisonShops",
+  "domesticPriceSources",
+  "platformStatus",
 ] as const;
 type SettingsTabKey = (typeof TAB_KEYS)[number];
 
@@ -333,6 +335,8 @@ export default function SettingsPage() {
                 { value: "brand", label: "브랜드 관리" },
                 { value: "detail", label: "상세페이지 관리" },
                 { value: "comparisonShops", label: "해외 편집샵" },
+                { value: "domesticPriceSources", label: "국내 가격비교" },
+                { value: "platformStatus", label: "플랫폼 지원 현황" },
               ]}
             />
           </div>
@@ -403,6 +407,22 @@ export default function SettingsPage() {
               className="mb-3"
             />
             <ComparisonShopsSection />
+          </div>
+          <div className={activeTab === "domesticPriceSources" ? "mt-5" : "hidden"}>
+            <SectionHeader
+              title="국내 가격비교 Source"
+              description="TTAEJYO 국내 가격비교의 Primary Source(사전 등록된 국내 편집샵) 후보를 관리합니다."
+              className="mb-3"
+            />
+            <DomesticPriceSourcesSection />
+          </div>
+          <div className={activeTab === "platformStatus" ? "mt-5" : "hidden"}>
+            <SectionHeader
+              title="플랫폼 지원 현황"
+              description="필드별로 SmartStore/Coupang/11번가/ESM에서 실제 지원되는 범위와, 11번가·ESM(SOON) 연동 준비 상태를 보여줍니다."
+              className="mb-3"
+            />
+            <PlatformStatusSection />
           </div>
 
             <DeveloperModeSection />
@@ -1158,7 +1178,11 @@ function ShippingSection({
           </div>
           {lookupError && <p className="text-xs text-warning">{lookupError}</p>}
 
-          <SettingsSubSection title="출고지 · 배송" hint="상품이 출발하는 곳과 어떻게 보낼지" defaultOpen>
+          <SettingsSubSection
+            title="배송 정책 (SmartStore · Coupang 공통)"
+            hint="배송비/출고 소요일은 두 플랫폼에 동일하게 적용됩니다 — 택배사만 플랫폼별로 따로 관리"
+            defaultOpen
+          >
             <Field label="출고지">
               {shippingPlaces.length > 0 && (
                 <select
@@ -1183,7 +1207,7 @@ function ShippingSection({
               />
             </Field>
 
-            <Field label="택배사">
+            <Field label="택배사 (Coupang)" hint="쿠팡 API가 요구하는 코드로 저장됩니다 — 아래 SmartStore 택배사와는 별도 관리">
               <select
                 value={deliveryCompanyCode}
                 onChange={(e) => onDeliveryCompanyCodeChange(e.target.value)}
@@ -1206,8 +1230,8 @@ function ShippingSection({
             </Field>
 
             <Field
-              label="네이버 택배사"
-              hint="네이버 공식 API에는 택배사 조회 기능이 없어(확인됨) 직접 입력이 필요합니다 — 예: CJ대한통운"
+              label="택배사 (SmartStore)"
+              hint="네이버 공식 API에는 택배사 조회 기능이 없어(확인됨) 직접 입력이 필요합니다 — 예: CJ대한통운. 플랫폼별로 요구하는 코드 체계가 달라 위 쿠팡 택배사와 별도로 저장됩니다"
             >
               <input
                 type="text"
@@ -1246,7 +1270,10 @@ function ShippingSection({
             </Field>
           </SettingsSubSection>
 
-          <SettingsSubSection title="반품 · 교환" hint="반품/교환 요청이 왔을 때 쓰는 정보">
+          <SettingsSubSection
+            title="반품/교환 정책 (SmartStore · Coupang 공통)"
+            hint="반품배송비는 두 플랫폼 등록에 동일하게 적용됩니다"
+          >
             <Field label="반품지">
               {returnCenters.length > 0 && (
                 <select
@@ -1373,7 +1400,10 @@ function SellerInfoSection({
 }) {
   return (
     <>
-      <p className="text-xs text-text-secondary">사업자/인증/원산지 — 상품마다 자동 채워집니다.</p>
+      <p className="text-xs text-text-secondary">
+        사업자/인증/원산지 — 여기서 한 번만 입력하면{" "}
+        <span className="font-medium text-primary">SmartStore·Coupang 등록 모두</span>에 자동으로 적용됩니다.
+      </p>
       <div className="mt-3 space-y-3 text-sm">
         <Field label="제조자(수입자)" hint="Sprint A-7 실측 1위 블로커 — 여기 입력하면 상품마다 자동 채워집니다">
           <input
@@ -2100,12 +2130,32 @@ interface ComparisonShop {
   isActive: boolean;
 }
 
+interface DomesticPriceSource {
+  id: string;
+  name: string;
+  domain: string;
+  url: string;
+  currency: string;
+  categoryScope: string[];
+  priority: "P0" | "P1" | "P2";
+  collectionStrategy: "AUTO_API" | "AUTO_SCRAPE" | "MANUAL" | "NOT_AVAILABLE";
+  status: "ACTIVE" | "PAUSED" | "NOT_AVAILABLE" | "ERROR";
+  lastErrorMessage: string | null;
+  lastCheckedAt: string | null;
+  lastSuccessAt: string | null;
+  source: "SYSTEM" | "USER";
+  enabled: boolean;
+}
+
 interface ConnectionCheckResult {
   status: PlatformConnectionStatus;
   message?: string;
   errorType?: ConnectionErrorType;
   userMessage?: string;
   nextAction?: string;
+  /** N-3.75 STEP12(사용자 지시) — auth-test 라우트가 이미 계산해둔 값을
+   * 그대로 보여주기만 한다(여기서 새로 판단하지 않는다). "OCI"/"FIXIE"/"NONE". */
+  proxyProvider?: "OCI" | "FIXIE" | "NONE";
 }
 
 /** N-3.15 Phase 2(CPO 지시: "공통 StatusBadge") — 기존 PlatformConnectionStatus
@@ -2125,7 +2175,19 @@ const CONNECTION_STATUS_MAP: Record<PlatformConnectionStatus, { status: StatusBa
  * 에러(HTTP status, stack 등)는 서버 로그/디버그 필드에만 남고 여기 노출하지
  * 않는다. */
 function ConnectionErrorNotice({ result }: { result: ConnectionCheckResult | null }) {
-  if (!result || result.status === "CONNECTED" || result.status === "UNKNOWN" || result.status === "CHECKING") {
+  // N-3.75 STEP12(사용자 지시: "Naver ● 연결됨 / Proxy: OCI"처럼 성공 시에도
+  // 어떤 프록시를 거쳤는지 보여준다") — CONNECTED일 때는 에러 배지 없이
+  // proxyProvider 한 줄만 보여준다. IP/포트/자격증명은 노출하지 않는다
+  // (proxyProvider 자체가 이미 host/port 없는 라벨만 담고 있다).
+  if (result?.status === "CONNECTED") {
+    if (!result.proxyProvider || result.proxyProvider === "NONE") return null;
+    return (
+      <p className="mt-2 text-[11px] text-text-tertiary">
+        Proxy: {result.proxyProvider === "OCI" ? "OCI" : "Fixie"}
+      </p>
+    );
+  }
+  if (!result || result.status === "UNKNOWN" || result.status === "CHECKING") {
     return null;
   }
   const { status, label } = CONNECTION_STATUS_MAP[result.status];
@@ -2134,6 +2196,9 @@ function ConnectionErrorNotice({ result }: { result: ConnectionCheckResult | nul
       <StatusBadge status={status} label={label} />
       <p className="mt-1 text-text-secondary">{result.userMessage ?? result.message}</p>
       {result.nextAction && <p className="mt-1 text-text-tertiary">{result.nextAction}</p>}
+      {result.proxyProvider && result.proxyProvider !== "NONE" && (
+        <p className="mt-1 text-text-tertiary">Proxy: {result.proxyProvider === "OCI" ? "OCI" : "Fixie"}</p>
+      )}
     </div>
   );
 }
@@ -2726,5 +2791,369 @@ function ComparisonShopsSection() {
         </button>
       </div>
     </section>
+  );
+}
+
+const DOMESTIC_PRIORITY_LABEL: Record<DomesticPriceSource["priority"], string> = {
+  P0: "P0",
+  P1: "P1",
+  P2: "P2",
+};
+const DOMESTIC_STRATEGY_LABEL: Record<DomesticPriceSource["collectionStrategy"], string> = {
+  AUTO_API: "자동(API)",
+  AUTO_SCRAPE: "자동(스크랩)",
+  MANUAL: "수동",
+  NOT_AVAILABLE: "수집 불가",
+};
+
+/**
+ * N-4.07(대표님 지시: "후보군 리스트는 추가로 관리할수 있게 해줘") —
+ * ComparisonShopsSection과 완전히 같은 구조(SYSTEM=조사 완료 후보는
+ * 비활성화만, USER=직접 추가는 삭제도 가능)를 그대로 따른다. 추가로
+ * priority/collectionStrategy는 관리자가 조사 결과에 맞춰 직접 조정할 수
+ * 있게 드롭다운을 둔다 — 이 화면 자체는 실제 수집을 하지 않는다(메타데이터
+ * CRUD만).
+ */
+function DomesticPriceSourcesSection() {
+  const [sources, setSources] = useState<DomesticPriceSource[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [urlInput, setUrlInput] = useState("");
+  const [nameInput, setNameInput] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/domestic-price-sources");
+      const data = (await res.json()) as { sources?: DomesticPriceSource[] };
+      setSources(data.sources ?? []);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  async function handleAdd() {
+    if (!urlInput.trim()) return;
+    setAdding(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/domestic-price-sources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: urlInput, name: nameInput || undefined }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (data.ok) {
+        setUrlInput("");
+        setNameInput("");
+        await load();
+      } else {
+        setError(data.error ?? "추가에 실패했습니다.");
+      }
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function handleToggleEnabled(source: DomesticPriceSource) {
+    await fetch(`/api/domestic-price-sources/${source.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: !source.enabled }),
+    });
+    await load();
+  }
+
+  async function handlePriorityChange(source: DomesticPriceSource, priority: DomesticPriceSource["priority"]) {
+    await fetch(`/api/domestic-price-sources/${source.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ priority }),
+    });
+    await load();
+  }
+
+  async function handleStrategyChange(
+    source: DomesticPriceSource,
+    collectionStrategy: DomesticPriceSource["collectionStrategy"],
+  ) {
+    await fetch(`/api/domestic-price-sources/${source.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ collectionStrategy }),
+    });
+    await load();
+  }
+
+  async function handleDelete(id: string) {
+    await fetch(`/api/domestic-price-sources/${id}`, { method: "DELETE" });
+    await load();
+  }
+
+  return (
+    <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
+      <h2 className="text-base font-semibold text-text-primary">국내 편집샵 후보 목록</h2>
+      <p className="mt-1 text-xs text-text-secondary">
+        체크된 사이트만 국내 가격비교 Primary Source로 사용됩니다. 조사 완료 후보는 삭제 대신 비활성화할 수
+        있습니다.
+      </p>
+      <p className="mt-1 text-xs text-text-tertiary">
+        collectionStrategy는 실제 사이트 구조를 조사한 결과입니다 — 확인되지 않은 사이트를 임의로
+        &quot;자동&quot;으로 표시하지 않습니다(N-4.06/N-4.07 원칙).
+      </p>
+
+      {loading ? (
+        <p className="mt-3 text-xs text-text-tertiary">불러오는 중…</p>
+      ) : sources.length === 0 ? (
+        <p className="mt-3 text-xs text-text-tertiary">등록된 편집샵이 없습니다.</p>
+      ) : (
+        <ul className="mt-3 divide-y divide-border text-sm">
+          {sources.map((source) => (
+            <li key={source.id} className="flex items-center justify-between gap-3 py-2">
+              <label className="flex flex-1 items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={source.enabled}
+                  onChange={() => void handleToggleEnabled(source)}
+                  className="h-4 w-4 rounded border-border accent-primary"
+                />
+                <div>
+                  <span className="font-medium text-text-primary">{source.name}</span>
+                  {source.source === "SYSTEM" && (
+                    <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                      조사완료
+                    </span>
+                  )}
+                  <p className="text-xs text-text-secondary">
+                    {source.domain} · {source.currency}
+                    {source.categoryScope.length > 0 ? ` · ${source.categoryScope.join(", ")}` : ""}
+                  </p>
+                  <p className="text-xs text-text-tertiary">
+                    {source.collectionStrategy === "AUTO_API" || source.collectionStrategy === "AUTO_SCRAPE" ? "🟢" : "🟡"}{" "}
+                    {DOMESTIC_STRATEGY_LABEL[source.collectionStrategy]} · 마지막 확인{" "}
+                    {source.lastCheckedAt ? new Date(source.lastCheckedAt).toLocaleString("ko-KR") : "-"}
+                  </p>
+                  {source.lastErrorMessage && (
+                    <p className="text-xs text-error">최근 오류: {source.lastErrorMessage}</p>
+                  )}
+                </div>
+              </label>
+              <select
+                value={source.priority}
+                onChange={(e) => void handlePriorityChange(source, e.target.value as DomesticPriceSource["priority"])}
+                className="rounded-md border border-border px-2 py-1 text-xs"
+              >
+                {(Object.keys(DOMESTIC_PRIORITY_LABEL) as DomesticPriceSource["priority"][]).map((p) => (
+                  <option key={p} value={p}>
+                    {DOMESTIC_PRIORITY_LABEL[p]}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={source.collectionStrategy}
+                onChange={(e) =>
+                  void handleStrategyChange(source, e.target.value as DomesticPriceSource["collectionStrategy"])
+                }
+                className="rounded-md border border-border px-2 py-1 text-xs"
+              >
+                {(Object.keys(DOMESTIC_STRATEGY_LABEL) as DomesticPriceSource["collectionStrategy"][]).map((s) => (
+                  <option key={s} value={s}>
+                    {DOMESTIC_STRATEGY_LABEL[s]}
+                  </option>
+                ))}
+              </select>
+              {source.source === "USER" && (
+                <button
+                  type="button"
+                  onClick={() => void handleDelete(source.id)}
+                  className="text-xs text-error hover:underline"
+                >
+                  삭제
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="mt-4 space-y-3 border-t border-border pt-4 text-sm">
+        <Field label="사이트 이름" hint="비워두면 도메인이 이름으로 사용됩니다">
+          <input
+            type="text"
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            placeholder="예: 룩스루"
+            className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+          />
+        </Field>
+        <Field label="사이트 URL">
+          <input
+            type="text"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            placeholder="https://example-shop.co.kr"
+            className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+          />
+        </Field>
+        {error && <p className="text-xs text-error">{error}</p>}
+        <button
+          type="button"
+          onClick={() => void handleAdd()}
+          disabled={adding || !urlInput.trim()}
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+        >
+          {adding ? "추가 중…" : "편집샵 추가"}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+type CapabilityLevel = "SUPPORTED" | "PARTIAL" | "NOT_APPLICABLE" | "SOON";
+type FieldOwnership = "COMMON" | "MAPPED" | "SMARTSTORE_ONLY" | "COUPANG_ONLY";
+
+interface FieldCapabilityRow {
+  field: string;
+  label: string;
+  ownership: FieldOwnership;
+  smartstore: CapabilityLevel;
+  coupang: CapabilityLevel;
+  elevenst: CapabilityLevel;
+  esm: CapabilityLevel;
+  note: string;
+}
+
+type SoonConnectionStatus = "NOT_CONFIGURED" | "READY_FOR_CONNECTION" | "NOT_AVAILABLE";
+
+interface SoonStatusEntry {
+  id: string;
+  label: string;
+  status: SoonConnectionStatus;
+}
+
+interface PlatformStatusResponse {
+  ok: boolean;
+  capabilityMatrix: FieldCapabilityRow[];
+  soon: SoonStatusEntry[];
+}
+
+const CAPABILITY_LEVEL_LABEL: Record<CapabilityLevel, string> = {
+  SUPPORTED: "🟢 지원",
+  PARTIAL: "🟡 부분지원",
+  NOT_APPLICABLE: "— 해당없음",
+  SOON: "⏳ 준비중",
+};
+
+const OWNERSHIP_LABEL: Record<FieldOwnership, string> = {
+  COMMON: "공통 필드",
+  MAPPED: "매핑됨(구조 다름)",
+  SMARTSTORE_ONLY: "SmartStore 전용",
+  COUPANG_ONLY: "Coupang 전용",
+};
+
+const SOON_STATUS_LABEL: Record<SoonConnectionStatus, string> = {
+  NOT_CONFIGURED: "🟡 인증정보 미설정",
+  READY_FOR_CONNECTION: "🟢 연결 준비완료",
+  NOT_AVAILABLE: "⚪ 공식 API 스펙 미확보(연동 불가)",
+};
+
+function capabilityCellClass(level: CapabilityLevel): string {
+  if (level === "SUPPORTED") return "text-success";
+  if (level === "PARTIAL") return "text-warning";
+  return "text-text-tertiary";
+}
+
+/**
+ * N-4.08-6/7(대표님 지시) — FIELD_CAPABILITY_MATRIX(코드 검증 기반, 12개
+ * 필드×4마켓)와 11번가/ESM SOON 연결 상태를 그대로 보여준다. 이 화면 자체는
+ * 읽기 전용이며 11번가/ESM에 실제 API를 호출하지 않는다 — /api/platform-status가
+ * 반환하는 값도 두 어댑터의 하드코딩된 API_SPEC_CONFIRMED=false로 인해 항상
+ * NOT_AVAILABLE이다(공식 스펙 확보 전까지는 정직하게 이 상태를 유지).
+ */
+function PlatformStatusSection() {
+  const [data, setData] = useState<PlatformStatusResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/platform-status");
+        const json = (await res.json()) as PlatformStatusResponse;
+        setData(json);
+      } finally {
+        setLoading(false);
+      }
+    }
+    void load();
+  }, []);
+
+  if (loading) return <p className="text-xs text-text-tertiary">불러오는 중…</p>;
+  if (!data) return <p className="text-xs text-error">불러오지 못했습니다.</p>;
+
+  return (
+    <div className="space-y-6">
+      <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
+        <h2 className="text-base font-semibold text-text-primary">11번가 / G마켓·옥션(ESM) 연결 준비</h2>
+        <p className="mt-1 text-xs text-text-secondary">
+          두 마켓 모두 공식 API 스펙 문서를 아직 확보하지 못해 실제 등록 연동은 하지 않습니다 — 이 화면은
+          상태 표시 전용이며 실제 API를 호출하지 않습니다.
+        </p>
+        <ul className="mt-3 divide-y divide-border text-sm">
+          {data.soon.map((entry) => (
+            <li key={entry.id} className="flex items-center justify-between py-2">
+              <span className="font-medium text-text-primary">{entry.label}</span>
+              <span className="text-xs text-text-secondary">{SOON_STATUS_LABEL[entry.status]}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
+        <h2 className="text-base font-semibold text-text-primary">필드별 마켓 지원 현황</h2>
+        <p className="mt-1 text-xs text-text-secondary">
+          실제 등록 Payload 빌더 코드를 기준으로 분류했습니다(추정 아님).
+        </p>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-xs">
+            <thead>
+              <tr className="border-b border-border text-text-tertiary">
+                <th className="py-2 pr-3 font-medium">필드</th>
+                <th className="py-2 pr-3 font-medium">분류</th>
+                <th className="py-2 pr-3 font-medium">SmartStore</th>
+                <th className="py-2 pr-3 font-medium">Coupang</th>
+                <th className="py-2 pr-3 font-medium">11번가</th>
+                <th className="py-2 pr-3 font-medium">ESM</th>
+                <th className="py-2 font-medium">비고</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {data.capabilityMatrix.map((row) => (
+                <tr key={row.field}>
+                  <td className="py-2 pr-3 font-medium text-text-primary">{row.label}</td>
+                  <td className="py-2 pr-3 text-text-secondary">{OWNERSHIP_LABEL[row.ownership]}</td>
+                  <td className={`py-2 pr-3 ${capabilityCellClass(row.smartstore)}`}>
+                    {CAPABILITY_LEVEL_LABEL[row.smartstore]}
+                  </td>
+                  <td className={`py-2 pr-3 ${capabilityCellClass(row.coupang)}`}>
+                    {CAPABILITY_LEVEL_LABEL[row.coupang]}
+                  </td>
+                  <td className={`py-2 pr-3 ${capabilityCellClass(row.elevenst)}`}>
+                    {CAPABILITY_LEVEL_LABEL[row.elevenst]}
+                  </td>
+                  <td className={`py-2 pr-3 ${capabilityCellClass(row.esm)}`}>{CAPABILITY_LEVEL_LABEL[row.esm]}</td>
+                  <td className="py-2 text-text-tertiary">{row.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
   );
 }

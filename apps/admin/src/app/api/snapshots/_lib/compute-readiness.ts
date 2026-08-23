@@ -98,6 +98,7 @@ async function computeSmartstoreReadiness(
   const childCertificationInfoId = context.category?.childCertificationInfoId ?? null;
   const categoryRequiresChildCertification = context.category?.requiresChildCertification ?? false;
   const primaryReturnDeliveryCompanyPriorityType = context.delivery.primaryReturnCompany?.priorityType ?? null;
+  const sellerDeliveryFee = context.delivery.deliveryFee;
   const returnDeliveryFee = context.delivery.returnDeliveryFee;
   const exchangeDeliveryFee = context.delivery.exchangeDeliveryFee;
   const originAreaCode = context.origin.match.code;
@@ -115,6 +116,7 @@ async function computeSmartstoreReadiness(
     releaseAddressBookNo,
     refundAddressBookNo,
     primaryReturnDeliveryCompanyPriorityType,
+    sellerDeliveryFee,
     returnDeliveryFee,
     exchangeDeliveryFee,
     childCertificationInfoId,

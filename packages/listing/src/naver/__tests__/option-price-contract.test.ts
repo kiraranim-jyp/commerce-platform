@@ -111,6 +111,7 @@ function buildAndValidate(product: CanonicalProduct) {
     listing,
     leafCategoryId: "50000535",
     ...COMMON_INPUT,
+    sellerDeliveryFee: null,
     categoryRequiresChildCertification: false,
     originAreaRequiresContent: false,
   });
@@ -192,6 +193,7 @@ describe("N-3.47: SmartStore 옵션가격 계약 테스트(salePrice 70100 기�
       listing,
       leafCategoryId: "50000535",
       ...COMMON_INPUT,
+    sellerDeliveryFee: null,
       categoryRequiresChildCertification: false,
       originAreaRequiresContent: false,
     });
@@ -232,6 +234,7 @@ describe("N-3.47: SmartStore 옵션가격 계약 테스트(salePrice 70100 기�
       listing,
       leafCategoryId: "50000535",
       ...COMMON_INPUT,
+    sellerDeliveryFee: null,
       categoryRequiresChildCertification: false,
       originAreaRequiresContent: false,
     });

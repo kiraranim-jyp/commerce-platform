@@ -357,6 +357,15 @@ export interface CanonicalProductCertification {
   certificationNumber: string;
   companyName: string;
   certificationDate: string;
+  /** N-3.67(2026-08-20, 정적 스키마 재추적으로 확인) — Naver 공식 스펙의
+   * ExternalApiProductCertificationInfoVo.product는 required 배열에
+   * `name`("인증 기관명" — 인증서를 발급한 기관/업체명, `companyName`
+   * "인증 상호명"과는 다른 개념)을 포함하고, 이 요구사항은 어린이제품
+   * "공급자적합성" 유형(certificationInfoId=1042)에서만 비필수로 예외
+   * 처리된다. 이전까지 이 필드를 아예 채운 적이 없었다 — 지금까지 실측
+   * 시도에서 kindType이 안전확인/안전인증(1041/1040, 예외 대상 아님)일 때
+   * 이 필드가 빠진 게 원인일 가능성이 있어 추가한다. */
+  name?: string;
 }
 
 /**

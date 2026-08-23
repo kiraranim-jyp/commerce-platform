@@ -42,6 +42,9 @@ import { resolveSourcePrice } from "@commerce/pricing";
 import { AIContentPanel } from "./commerce/AIContentPanel";
 import { BacklogPanel } from "./commerce/BacklogPanel";
 import { ComparisonShopSearch } from "./commerce/ComparisonShopSearch";
+import { DomesticPriceIntelligencePanel } from "./commerce/DomesticPriceIntelligencePanel";
+import { AuditLogPanel } from "./commerce/AuditLogPanel";
+import { DomesticShopSearch } from "./commerce/DomesticShopSearch";
 import { ImageInlineEditor } from "./ImageInlineEditor";
 import { ListingConfirmationModal } from "./commerce/ListingConfirmationModal";
 import type { NaverResolveResponse } from "./commerce/NaverPayloadPreview";
@@ -1036,6 +1039,42 @@ export function CommerceWorkspace({
    * leafCategoryId=""로 조회해서(카테고리 외 필드 상태라도) 결과를 보여준다.
    */
   const [smartStoreValidation, setSmartStoreValidation] = useState<NaverPayloadValidationResult | null>(null);
+  // N-3.73 STEP7(사용자 지시: "Payload Preview가 별도의 임의 BLOCKED 판정을
+  // 만들지 못하게 한다") — NaverPayloadPreview.tsx가 지금까지 이 effect와는
+  // 완전히 별개로 자기만의 /api/naver/resolve를 또 호출하고 있었다(같은
+  // validateNaverPayload 함수를 쓰지만, 입력 데이터 자체가 서로 다른 네트워크
+  // 왕복에서 나온다 — Fixie 프록시처럼 외부 요인이 한쪽만 실패하면 두 화면이
+  // 진짜로 다른 결과를 보여줄 수 있었다). 게다가 NaverPayloadPreview는
+  // leafCategoryId를 isVerifiedPlatformCode만으로 판정해(isVerifiedCategorySelected
+  // 미적용) — AI가 추천만 하고 사용자가 아직 확정하지 않은 카테고리도 "확정됨"으로
+  // 취급하는, N-3.65가 이미 경고했던 것과 같은 종류의 버그가 있었다. 이제
+  // resolve 결과(data)를 여기 하나에만 저장하고 NaverPayloadPreview는 이 값을
+  // prop으로 받기만 한다 — fetch 지점이 하나면 입력 데이터가 갈라질 수 없다.
+  const [smartStoreResolved, setSmartStoreResolved] = useState<NaverResolveResponse | null>(null);
+  // N-3.72(CEO/사용자 지시: "0%는 값이 없어서가 아니라 검증이 아직 안 끝나서인
+  // 경우가 있다 — 계산 중과 실패를 구분하라") — 이전에는 이 effect가 값을
+  // 계산하기 전까지 smartStoreValidation이 계속 null이었고, readiness.ts의
+  // computeNaverPayloadReadiness(null)은 그 null을 "확인 안 됨"으로 취급해
+  // 곧바로 0%/BLOCKED처럼 보이는 필수항목 하나로 채웠다 — "아직 계산 중"과
+  // "계산했는데 정말 막혔다"가 화면에서 구분이 안 됐다. 이 플래그로 그 둘을
+  // 분리한다(readiness.ts의 판정 로직 자체는 바꾸지 않는다 — 카드가 loading일
+  // 때는 그 판정 결과를 아예 보여주지 않고 "계산 중"으로 대체한다).
+  const [smartStoreValidationLoading, setSmartStoreValidationLoading] = useState(false);
+  // N-3.73 STEP1/2(사용자 지시: "0%가 A.아직 안 끝남/B.실패/C.진짜 0% 중
+  // 어느 것인지 분리하라, ERROR를 0%로 표현하지 않는다") — N-3.72는 로딩과
+  // "계산된 결과"만 구분했다. 그런데 data.status !== "OK"(예: AUTH_FAILED —
+  // 지금 실제로 Fixie 프록시 장애 때 재현됨) 또는 catch의 진짜 예외도 결국
+  // smartStoreValidation=null로 귀결돼 readiness.ts가 이걸 "카테고리 미확정"
+  // 같은 진짜 MISSING 상태와 구분 없이 똑같은 0%/"Payload 검증 결과 확인
+  // 중"으로 보여줬다 — 로딩은 끝났는데 사실은 실패였다는 걸 사용자가 알 방법이
+  // 없었다. 이 메시지가 있으면(loading=false && error 있음) 카드가 아예 다른
+  // ERROR 화면(퍼센트 없이 "확인 실패" + 다시 확인 버튼)을 보여준다.
+  const [smartStoreValidationError, setSmartStoreValidationError] = useState<string | null>(null);
+  // "다시 확인" 버튼이 이 값을 증가시켜 effect를 재실행시킨다 — product/listing이
+  // 안 바뀌어도 사용자가 재시도를 요청할 수 있어야 한다(외부 요인 — 지금의
+  // Fixie 프록시 장애 같은 — 은 코드 상태가 아니라 시간이 지나야 풀린다).
+  const [smartStoreValidationRetryTick, setSmartStoreValidationRetryTick] = useState(0);
+  const retrySmartStoreValidation = () => setSmartStoreValidationRetryTick((t) => t + 1);
   // Coupang payloadPreview effect(위)와 같은 이유로 이 조건일 때 effect 본문
   // 안에서 곧바로 setState하지 않는다(react-hooks/set-state-in-effect 경고,
   // cascading render 방지) — 대신 아래 렌더 시점에 같은 조건으로 null을
@@ -1043,6 +1082,8 @@ export function CommerceWorkspace({
   const smartStoreValidationEligible = tab === "smartstore" && !!listing;
   useEffect(() => {
     if (!smartStoreValidationEligible || !listing) return;
+    setSmartStoreValidationLoading(true);
+    setSmartStoreValidationError(null);
     // N-3.65(CPO 경고 재발 — category-field.ts 주석의 "SaaS-UX 개편 때 3곳에서
     // 재발" 다음 사례) — isVerifiedPlatformCode만 보고 state(SELECTED/CONFIRMED)를
     // 빼먹으면 AI가 추천만 하고 사용자가 아직 확인하지 않은 카테고리로도
@@ -1062,9 +1103,34 @@ export function CommerceWorkspace({
       const query = params.toString() ? `?${params.toString()}` : "";
       fetch(`/api/naver/resolve${query}`, { signal: controller.signal })
         .then((res) => res.json())
-        .then((data: NaverResolveResponse) => {
+        .then((raw: unknown) => {
+          // N-3.73 STEP1 — status!=="OK" 응답(NOT_CONFIGURED/AUTH_FAILED)은
+          // NaverResolveResponse(OK 전용 shape)와 구조가 다르다(message
+          // 필드가 그때만 존재) — 런타임에서 안전하게 좁혀 쓴다.
+          const data = raw as NaverResolveResponse & { message?: string };
           if (data.status !== "OK") {
+            // N-3.72 — 여기서도 조회 자체는 끝났다(로딩은 아니다) — 그저
+            // 결과가 없을 뿐이다. loading을 꺼야 카드가 "계산 중"이 아니라
+            // 실제 이유(카테고리 미확정 등, readiness.ts가 null을 그렇게
+            // 취급한다)를 보여준다.
+            //
+            // N-3.73 STEP1(사용자 지시: "ERROR를 0%로 표현하지 않는다") —
+            // 다만 AUTH_FAILED(네이버 연결 자체가 실패 — 지금 Fixie 프록시
+            // 장애로 실제 재현됨)는 "카테고리를 아직 안 골랐다"와 근본적으로
+            // 다르다. 후자는 사용자가 뭔가 더 입력하면 스스로 풀리지만,
+            // 전자는 사용자가 아무리 값을 채워도 절대 안 풀린다(외부 인프라
+            // 문제라서). 이 둘을 구분해서 AUTH_FAILED일 때만 별도 ERROR
+            // 문구를 보여준다 — NOT_CONFIGURED(네이버 계정 자체 미설정)는
+            // 기존처럼 "아직 값이 없다"로 두고 별도 경고를 얹지 않는다(이미
+            // Settings 게이트가 그 경우를 안내한다).
             setSmartStoreValidation(null);
+            setSmartStoreResolved(null);
+            setSmartStoreValidationError(
+              data.status === "AUTH_FAILED"
+                ? `네이버 연결에 실패했습니다: ${data.message}`
+                : null,
+            );
+            setSmartStoreValidationLoading(false);
             return;
           }
           const releaseAddressBookNo = data.address.releaseAddressBookNo;
@@ -1072,6 +1138,7 @@ export function CommerceWorkspace({
           const childCertificationInfoId = data.category?.childCertificationInfoId ?? null;
           const categoryRequiresChildCertification = data.category?.requiresChildCertification ?? false;
           const primaryReturnDeliveryCompanyPriorityType = data.delivery.primaryReturnCompany?.priorityType ?? null;
+          const sellerDeliveryFee = data.delivery.deliveryFee;
           const returnDeliveryFee = data.delivery.returnDeliveryFee;
           const exchangeDeliveryFee = data.delivery.exchangeDeliveryFee;
           const originAreaCode = data.origin.match.code;
@@ -1089,6 +1156,7 @@ export function CommerceWorkspace({
             releaseAddressBookNo,
             refundAddressBookNo,
             primaryReturnDeliveryCompanyPriorityType,
+            sellerDeliveryFee,
             returnDeliveryFee,
             exchangeDeliveryFee,
             childCertificationInfoId,
@@ -1125,17 +1193,32 @@ export function CommerceWorkspace({
             categoryRequiresChildCertification,
           );
           setSmartStoreValidation(validation);
+          setSmartStoreResolved(data);
+          setSmartStoreValidationLoading(false);
         })
-        .catch(() => {
-          // AbortError(디바운스가 이전 요청을 취소)는 조용히 무시한다 — Coupang
-          // payloadPreview effect와 같은 패턴.
+        .catch((err: unknown) => {
+          // N-3.72(실제 프로덕션 화면에서 확인된 버그) — 이전엔 여기서 어떤
+          // 에러든(AbortError든, buildNaverProductPayload/validateNaverPayload가
+          // 실제로 던진 예외든) 전부 조용히 무시했다. AbortError(디바운스가
+          // 이전 요청을 취소한 것 — 정상 동작)는 그대로 무시해야 하지만,
+          // 그 외의 진짜 에러까지 같이 삼키면 smartStoreValidation이 null에
+          // 멈춘 채로 "왜 멈췄는지" 콘솔에서조차 알 수 없다 — 화면은 계속
+          // "Payload 검증 결과 확인 중"(readiness.ts)에 갇혀 있는데 사실은
+          // 다시 계산될 일이 없는 상태였다. 진짜 에러는 콘솔에 남긴다.
+          if (err instanceof DOMException && err.name === "AbortError") return;
+          console.error("[SmartStore] payload validation 계산 실패:", err);
+          setSmartStoreValidationError(
+            err instanceof Error ? `등록 가능성 계산 중 오류가 발생했습니다: ${err.message}` : "등록 가능성 계산 중 알 수 없는 오류가 발생했습니다.",
+          );
+          setSmartStoreValidationLoading(false);
         });
     }, 500);
     return () => {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [smartStoreValidationEligible, listing, product, detailBlocks]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- smartStoreValidationRetryTick은 "다시 확인" 버튼이 같은 입력으로 재실행을 강제하기 위한 트리거 전용이다.
+  }, [smartStoreValidationEligible, listing, product, detailBlocks, smartStoreValidationRetryTick]);
 
   /**
    * DRAFT인데 ERROR급 validation이 하나도 없으면 화면에는 READY로 보여준다 —
@@ -1388,6 +1471,14 @@ export function CommerceWorkspace({
             sourceUrl={product.sourceUrl}
             sku={product.sku.value || undefined}
           />
+          <DomesticShopSearch
+            title={product.title.value}
+            brand={product.brand.value}
+            sourceUrl={product.sourceUrl}
+            sku={product.sku.value || undefined}
+          />
+          {snapshotId && <DomesticPriceIntelligencePanel snapshotId={snapshotId} />}
+          {snapshotId && <AuditLogPanel snapshotId={snapshotId} />}
           <BacklogPanel />
         </>
       )}
@@ -1409,6 +1500,10 @@ export function CommerceWorkspace({
           listingStatus={effectiveListingStatus}
           listingResult={listingResults[tab]}
           naverValidation={smartStoreValidationEligible ? smartStoreValidation : null}
+          naverValidationLoading={smartStoreValidationEligible ? smartStoreValidationLoading : false}
+          naverValidationError={smartStoreValidationEligible ? smartStoreValidationError : null}
+          onRetryNaverValidation={retrySmartStoreValidation}
+          naverResolved={smartStoreValidationEligible ? smartStoreResolved : undefined}
           compliancePreview={complianceReportPreview}
           payloadPreview={payloadPreviewEligible ? payloadPreview : null}
           payloadPreviewUnavailableReason={payloadPreviewEligible ? payloadPreviewUnavailableReason : null}

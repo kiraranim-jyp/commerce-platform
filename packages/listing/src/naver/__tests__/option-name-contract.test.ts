@@ -98,6 +98,7 @@ function buildPayloadFor(product: CanonicalProduct) {
     releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
     refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
     primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
     returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
     exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
     childCertificationInfoId: null,

@@ -1,13 +1,6 @@
 import type { ListingModel, ValidationResult } from "@commerce/marketplace";
-import type { CanonicalProduct, FieldSource } from "@commerce/shared";
 import type { ReadinessField, ReadinessFieldStatus, ReadinessReport } from "../types";
 import { isCategoryConfirmed } from "../validation";
-
-function statusFromSource(source: FieldSource): ReadinessFieldStatus {
-  if (source === "REQUIRED") return "ERROR";
-  if (source === "DEFAULT") return "WARNING";
-  return "VALID";
-}
 
 function statusFromMarketplace(status: ValidationResult["status"]): ReadinessFieldStatus {
   return status === "PASS" ? "VALID" : status;
@@ -21,16 +14,26 @@ function scoreFields(fields: ReadinessField[]): number {
 }
 
 /**
- * PM의 3단 이름 중 두 번째 단계. listing.validations(어댑터가 이미 계산한
- * 상품명/대표이미지/판매가격/옵션/상세설명/카테고리)에 이번 Mission에서 새로
- * 추가한 등록 직전 필드(원산지/반품정보/배송비/재고/인증정보)를 더해서 하나의
- * "등록 준비도" 리포트로 합친다. product를 따로 받는 이유는 이 필드들이
- * ListingModel(플랫폼 Preview 모양)에는 없고 CanonicalProduct에만 있기 때문이다.
+ * smartstoreExecutor.execute()의 등록 직전 가드(유일한 남은 소비처 — 예전엔
+ * ReadinessScorePanel도 이 값을 보여줬지만 Sprint P1에서 제거됐다). N-3.68(CPO
+ * 지시, "판매자 공통 설정 통합" 작업지시서 STEP①) — 이전에는 여기서
+ * countryOfOrigin/returnPolicy/shippingFee/stockQuantity/certification 5개를
+ * product(CanonicalProduct)에서 직접 읽어 추가로 검사했다. 이 필드들은
+ * SellerProfile(판매자 공통 설정)과 전혀 연결돼 있지 않다 — 특히
+ * returnPolicy는 canonical-product.ts에서 생성 시점에 항상
+ * `{value:"",source:"REQUIRED"}`로 고정되고, 사용자가 PlatformPreview의
+ * "반품/교환 안내" 입력창에 직접 타이핑하지 않는 한 절대 바뀌지 않는다 —
+ * 즉 Settings(SellerProfile)에 실제 반품배송비/반품지/택배사가 이미 있어도
+ * 이 게이트는 항상 ERROR로 판정해 "교환/반품 정보가 없습니다"로 등록 자체를
+ * 막았다(실제 버그, 실측 확인 — /api/smartstore/register가 호출되기도 전에
+ * 여기서 차단됨). 실제 원산지/반품/배송/재고/인증 판정은 이미
+ * validateNaverPayload(서버, SellerProfile+resolver 기반, N-3.67 KIDS 실등록
+ * 성공으로 정확성 증명됨)가 정확하게 수행한다 — 여기서 중복으로, 게다가 틀리게
+ * 재검사할 필요가 없다. 이제 이 함수는 어댑터가 이미 계산한 마켓플레이스
+ * 공통 필드(상품명/대표이미지/판매가격/옵션/상세설명/카테고리)만 그대로
+ * 전달한다.
  */
-export function validateSmartStoreListing(
-  product: CanonicalProduct,
-  listing: ListingModel,
-): ReadinessReport {
+export function validateSmartStoreListing(listing: ListingModel): ReadinessReport {
   const fields: ReadinessField[] = listing.validations.map((v) => ({
     field: v.field,
     label: v.label,
@@ -39,55 +42,6 @@ export function validateSmartStoreListing(
     resolution:
       v.field === "category" && !isCategoryConfirmed(listing) ? "카테고리 선택" : undefined,
   }));
-
-  fields.push({
-    field: "countryOfOrigin",
-    label: "원산지",
-    status: statusFromSource(product.countryOfOrigin.source),
-    message: product.countryOfOrigin.source === "REQUIRED" ? "원산지 정보가 없습니다." : undefined,
-    resolution: product.countryOfOrigin.source === "REQUIRED" ? "원산지 입력" : undefined,
-  });
-
-  fields.push({
-    field: "returnPolicy",
-    label: "교환/반품 정보",
-    status: statusFromSource(product.returnPolicy.source),
-    message:
-      product.returnPolicy.source === "REQUIRED" ? "교환/반품 정보가 없습니다." : undefined,
-    resolution: product.returnPolicy.source === "REQUIRED" ? "반품 정책 입력" : undefined,
-  });
-
-  fields.push({
-    field: "shippingFee",
-    label: "배송비",
-    status: statusFromSource(product.shippingFee.source),
-    message:
-      product.shippingFee.source === "DEFAULT"
-        ? "기본값(무료배송)으로 설정되어 있습니다 — 확인해주세요."
-        : undefined,
-    resolution: product.shippingFee.source === "DEFAULT" ? "배송 정책 설정" : undefined,
-  });
-
-  fields.push({
-    field: "stockQuantity",
-    label: "재고",
-    status: statusFromSource(product.stockQuantity.source),
-    message:
-      product.stockQuantity.source === "DEFAULT"
-        ? "기본값(999개)으로 설정되어 있습니다 — 확인해주세요."
-        : undefined,
-    resolution: product.stockQuantity.source === "DEFAULT" ? "재고 수량 확인" : undefined,
-  });
-
-  // 대부분의 카테고리는 인증정보가 필요 없다 — 값이 없어도 등록을 막지 않는다.
-  fields.push({
-    field: "certification",
-    label: "인증정보",
-    status: "VALID",
-    message: product.certification.value
-      ? undefined
-      : "해당 없음 — 대부분 카테고리는 인증정보가 필요하지 않습니다.",
-  });
 
   return {
     fields,

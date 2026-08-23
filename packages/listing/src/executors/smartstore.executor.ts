@@ -30,7 +30,7 @@ export const smartstoreExecutor: ListingExecutor = {
     // CommerceWorkspace가 항상 undefined로 넘기게 만든 원인이었다.
     context?: { snapshotId?: string; jobKey?: string; detailBlocks?: DetailPageBlock[] },
   ): Promise<ListingResult> {
-    const readiness = validateSmartStoreListing(product, listing);
+    const readiness = validateSmartStoreListing(listing);
     if (readiness.errorCount > 0) {
       const errorFields = readiness.fields.filter((f) => f.status === "ERROR");
       const first = errorFields[0];

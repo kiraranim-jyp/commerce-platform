@@ -71,8 +71,13 @@ export function RegistrationHistoryPanel({ history }: { history: RegistrationHis
               {entry.result.status === "FAILED" && entry.result.error && (
                 <p className="mt-0.5 text-error">{entry.result.error.message}</p>
               )}
+              {/* N-3.70 STEP7 — 위 ListingSection.tsx와 같은 이유로 플랫폼별
+               * 라벨을 분기한다(등록 이력에서도 SmartStore 건에 "쿠팡 상품
+               * ID"가 뜨던 버그). */}
               {entry.result.externalProductId && (
-                <p className="mt-0.5 text-text-secondary">쿠팡 상품 ID: {entry.result.externalProductId}</p>
+                <p className="mt-0.5 text-text-secondary">
+                  {entry.platform === "coupang" ? "쿠팡 상품 ID" : "네이버 상품번호"}: {entry.result.externalProductId}
+                </p>
               )}
               {entry.result.externalUrl && (
                 <p className="mt-0.5 text-text-secondary">{entry.result.externalUrl}</p>

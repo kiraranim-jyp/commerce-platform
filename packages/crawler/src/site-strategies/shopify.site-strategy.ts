@@ -1,12 +1,36 @@
 import { extractFromJsonLd, extractFromOpenGraph } from "../product-data-extractor";
 import {
   extractShopifyHandle,
+  extractShopifyLocalePrefix,
   fetchPlainHtml,
   fetchShopifyProductJs,
   fetchShopifyProductJson,
   type ShopifyProductResult,
 } from "../shopify-product-json";
 import type { SiteStrategy, SiteStrategyResult } from "./types";
+
+/** N-3.76(2차, CPO 지시: "원본 통화와 판매가격 통화를 절대로 같은 필드로 처리하지
+ * 않는다" / "en-kr URL → 한국 상품 → KRW 금지") — 사용자가 입력한 sourceUrl에
+ * 로케일 프리픽스(/en-kr/ 등)가 붙어 있으면(예: 한국 로케일로 브라우징하다 복사한
+ * 링크) fetchShopifyProductJson이 그 로케일의 presentment 가격(방문자 로케일에
+ * 맞춰 변환된 표시가, 실제 매장 통화가 아님)을 그대로 돌려준다 — 이게 Junior
+ * Edition(shopMeta.country=GB, shopMeta.currency=GBP)인데도 원본 가격이 ₩로
+ * 표시되던 버그의 root cause였다(실측 확인: en-kr 요청은 GBP 90짜리 상품을
+ * KRW로 반환). CanonicalProduct의 "원본 가격/원본 통화"는 매장의 실제 기준
+ * 통화여야 하므로, 이 파일(extract())은 항상 로케일 프리픽스를 벗긴 URL로만
+ * 요청한다 — handle은 매장 전체에서 유일해서 로케일을 빼도 항상 같은 상품을
+ * 정확히 찾는다. shopify-market-probe.ts(여러 market 가격 비교)와
+ * comparison-search(해외 가격비교, 같은 로케일끼리 비교)는 의도적으로 로케일
+ * 프리픽스를 그대로 쓰는 별개 기능이라 건드리지 않는다. */
+function stripShopifyLocalePrefix(url: string): string {
+  const localePrefix = extractShopifyLocalePrefix(url);
+  if (!localePrefix) return url;
+  const parsed = new URL(url);
+  if (parsed.pathname.startsWith(localePrefix)) {
+    parsed.pathname = parsed.pathname.slice(localePrefix.length) || "/";
+  }
+  return parsed.toString();
+}
 
 /** .json/.js 둘 다 통화 정보가 없을 때만(.json은 보통 variants[].price_currency로
  * 있음 — 드문 경우) plain fetch로 HTML을 한 번 더 가져와 JSON-LD/OpenGraph 메타에서
@@ -48,9 +72,10 @@ export const shopifySiteStrategy: SiteStrategy = {
   },
 
   async extract(url) {
-    const result = await fetchShopifyProductJson(url);
+    const sourceUrl = stripShopifyLocalePrefix(url);
+    const result = await fetchShopifyProductJson(sourceUrl);
     if (!result) return null;
-    return fillMissingCurrency(result, url);
+    return fillMissingCurrency(result, sourceUrl);
   },
 
   async fallback(url) {

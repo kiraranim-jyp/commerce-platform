@@ -173,7 +173,15 @@ export function extractShopifyLocalePrefix(url: string): string {
 
 /** Shopify 공개 REST 엔드포인트 — 인증 불필요, 모든 스토어에서 동작한다.
  * .json은 variants[].price_currency까지 포함해서 통화까지 한 번에 확정할 수 있어
- * 1순위로 쓴다(.js는 가격이 센트 단위 정수로만 있고 통화 코드가 없다). */
+ * 1순위로 쓴다(.js는 가격이 센트 단위 정수로만 있고 통화 코드가 없다).
+ *
+ * 이 함수는 "요청받은 URL 그대로"를 신뢰한다(로케일 프리픽스가 있으면 그 로케일의
+ * presentment 가격을 그대로 돌려준다) — shopify-market-probe.ts(N-3.2, 여러
+ * market의 실제 표시가를 비교하는 기능)와 comparison-search(해외 가격비교, 같은
+ * 로케일끼리 비교)가 의도적으로 이 동작에 의존한다. "원본 가격"(CanonicalProduct
+ * 추출) 목적으로 호출하는 곳(shopify.site-strategy.ts)은 호출 전에 로케일
+ * 프리픽스를 직접 벗겨서 넘겨야 한다 — 그 이유는 그 파일의 주석 참고
+ * (N-3.76 2차, en-kr URL이 실제 통화를 KRW로 잘못 표시한 버그). */
 export async function fetchShopifyProductJson(url: string): Promise<ShopifyProductResult | null> {
   const handle = extractShopifyHandle(url);
   if (!handle) return null;

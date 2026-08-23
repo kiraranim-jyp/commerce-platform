@@ -92,6 +92,7 @@ const payload = buildNaverProductPayload({
   releaseAddressBookNo: 900000001,
   refundAddressBookNo: 900000002,
   primaryReturnDeliveryCompanyPriorityType: "PRIMARY",
+  sellerDeliveryFee: null,
   returnDeliveryFee: 3000,
   exchangeDeliveryFee: 5000,
   childCertificationInfoId: null,

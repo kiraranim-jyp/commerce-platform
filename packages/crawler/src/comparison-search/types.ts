@@ -45,3 +45,14 @@ export interface ComparisonShopRef {
   domain: string;
   currency: string | null;
 }
+
+/** N-4.07 — domestic_price_sources 테이블 행의 최소 부분집합. collectionStrategy가
+ * AUTO_API/AUTO_SCRAPE인 것만 실제로 검색을 시도한다(MANUAL/NOT_AVAILABLE은 아직
+ * 실제 파서가 없다는 뜻이라 "unsupported"로 응답한다 — 추정 파서를 만들지 않는다). */
+export interface DomesticSourceRef {
+  id: string;
+  name: string;
+  domain: string;
+  currency: string;
+  collectionStrategy: "AUTO_API" | "AUTO_SCRAPE" | "MANUAL" | "NOT_AVAILABLE";
+}

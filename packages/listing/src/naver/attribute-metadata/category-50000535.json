@@ -1,0 +1,169 @@
+{
+  "categoryId": "50000535",
+  "wholeCategoryName": "출산/육아>유아동의류>티셔츠",
+  "fetchedAt": "2026-08-23",
+  "source": "GET /v1/product-attributes/attributes, /v1/product-attributes/attribute-values (production, N-4.00 A-2 실측)",
+  "attributes": [
+    {
+      "attributeSeq": 10012917,
+      "attributeName": "성별",
+      "attributeClassificationType": "SINGLE_SELECT",
+      "attributeValueMaxMatchingCount": 0,
+      "values": [
+        { "attributeValueSeq": 10588420, "value": "남아용" },
+        { "attributeValueSeq": 10588421, "value": "여아용" },
+        { "attributeValueSeq": 10500182, "value": "공용" }
+      ]
+    },
+    {
+      "attributeSeq": 10012918,
+      "attributeName": "연령",
+      "attributeClassificationType": "MULTI_SELECT",
+      "attributeValueMaxMatchingCount": 0,
+      "values": [
+        { "attributeValueSeq": 10696235, "value": "1세" },
+        { "attributeValueSeq": 10696236, "value": "2세" },
+        { "attributeValueSeq": 10696237, "value": "3세" },
+        { "attributeValueSeq": 10603070, "value": "4세" },
+        { "attributeValueSeq": 10603071, "value": "5세" },
+        { "attributeValueSeq": 10603072, "value": "6세" },
+        { "attributeValueSeq": 10604072, "value": "7세이상" }
+      ]
+    },
+    {
+      "attributeSeq": 10019124,
+      "attributeName": "주요소재",
+      "attributeClassificationType": "MULTI_SELECT",
+      "attributeValueMaxMatchingCount": 5,
+      "values": [
+        { "attributeValueSeq": 10614292, "value": "데님" },
+        { "attributeValueSeq": 10614291, "value": "시폰" },
+        { "attributeValueSeq": 10574774, "value": "면" },
+        { "attributeValueSeq": 10574775, "value": "폴리에스테르" },
+        { "attributeValueSeq": 10258043, "value": "기모" },
+        { "attributeValueSeq": 10574779, "value": "폴리우레탄" },
+        { "attributeValueSeq": 10574780, "value": "아크릴" },
+        { "attributeValueSeq": 10030853, "value": "나일론" },
+        { "attributeValueSeq": 10904505, "value": "울/모" },
+        { "attributeValueSeq": 10574784, "value": "스판덱스" },
+        { "attributeValueSeq": 10197460, "value": "가죽" },
+        { "attributeValueSeq": 10768449, "value": "레이온/인견" },
+        { "attributeValueSeq": 10583957, "value": "캐시미어" },
+        { "attributeValueSeq": 10574792, "value": "토끼털" },
+        { "attributeValueSeq": 10765793, "value": "마/리넨" }
+      ]
+    },
+    {
+      "attributeSeq": 10019140,
+      "attributeName": "소매기장",
+      "attributeClassificationType": "SINGLE_SELECT",
+      "attributeValueMaxMatchingCount": 0,
+      "values": [
+        { "attributeValueSeq": 10032139, "value": "스트랩" },
+        { "attributeValueSeq": 10588283, "value": "민소매" },
+        { "attributeValueSeq": 10669979, "value": "캡소매" },
+        { "attributeValueSeq": 10574793, "value": "반팔" },
+        { "attributeValueSeq": 10732758, "value": "5부" },
+        { "attributeValueSeq": 10574794, "value": "7부" },
+        { "attributeValueSeq": 10574795, "value": "긴팔" }
+      ]
+    },
+    {
+      "attributeSeq": 10019132,
+      "attributeName": "패턴",
+      "attributeClassificationType": "SINGLE_SELECT",
+      "attributeValueMaxMatchingCount": 0,
+      "values": [
+        { "attributeValueSeq": 10040049, "value": "무지" },
+        { "attributeValueSeq": 10574836, "value": "체크" },
+        { "attributeValueSeq": 10040089, "value": "프린트" },
+        { "attributeValueSeq": 10040086, "value": "도트" },
+        { "attributeValueSeq": 10040050, "value": "스트라이프" },
+        { "attributeValueSeq": 10040928, "value": "플라워" },
+        { "attributeValueSeq": 10264433, "value": "레오파드" },
+        { "attributeValueSeq": 10553086, "value": "지브라" },
+        { "attributeValueSeq": 10731153, "value": "카모플라쥬" },
+        { "attributeValueSeq": 10722415, "value": "기하학" },
+        { "attributeValueSeq": 10040057, "value": "로고" },
+        { "attributeValueSeq": 10040055, "value": "캐릭터" },
+        { "attributeValueSeq": 10731157, "value": "레터링" },
+        { "attributeValueSeq": 10773537, "value": "아가일" },
+        { "attributeValueSeq": 10846063, "value": "헤링본" },
+        { "attributeValueSeq": 10759955, "value": "페이즐리" },
+        { "attributeValueSeq": 10759934, "value": "퀄팅" },
+        { "attributeValueSeq": 11051996, "value": "쉐브론" },
+        { "attributeValueSeq": 10030656, "value": "기타" },
+        { "attributeValueSeq": 10688395, "value": "하운드투스" }
+      ]
+    },
+    {
+      "attributeSeq": 10019141,
+      "attributeName": "네크라인",
+      "attributeClassificationType": "SINGLE_SELECT",
+      "attributeValueMaxMatchingCount": 0,
+      "values": [
+        { "attributeValueSeq": 10040041, "value": "라운드넥" },
+        { "attributeValueSeq": 10040039, "value": "V넥" },
+        { "attributeValueSeq": 10040040, "value": "U넥" },
+        { "attributeValueSeq": 10040043, "value": "칼라넥" },
+        { "attributeValueSeq": 10726808, "value": "터틀넥" },
+        { "attributeValueSeq": 10040038, "value": "오프숄더넥" },
+        { "attributeValueSeq": 10588352, "value": "숄칼라" },
+        { "attributeValueSeq": 10040044, "value": "후드넥" },
+        { "attributeValueSeq": 10729057, "value": "반집업칼라" },
+        { "attributeValueSeq": 10731791, "value": "스텐드/차이나칼라" },
+        { "attributeValueSeq": 10765710, "value": "스퀘어넥" },
+        { "attributeValueSeq": 10765711, "value": "보트/입술넥" },
+        { "attributeValueSeq": 10669058, "value": "홀터넥" },
+        { "attributeValueSeq": 10714679, "value": "헨리넥" },
+        { "attributeValueSeq": 10846520, "value": "슬릿넥" }
+      ]
+    },
+    {
+      "attributeSeq": 10019136,
+      "attributeName": "총기장",
+      "attributeClassificationType": "SINGLE_SELECT",
+      "attributeValueMaxMatchingCount": 0,
+      "values": [
+        { "attributeValueSeq": 10557683, "value": "숏" },
+        { "attributeValueSeq": 10904496, "value": "기본/하프" },
+        { "attributeValueSeq": 10557685, "value": "롱" },
+        { "attributeValueSeq": 11304391, "value": "크롭" }
+      ]
+    },
+    {
+      "attributeSeq": 10019134,
+      "attributeName": "핏",
+      "attributeClassificationType": "SINGLE_SELECT",
+      "attributeValueMaxMatchingCount": 0,
+      "values": [
+        { "attributeValueSeq": 10040058, "value": "슬림핏" },
+        { "attributeValueSeq": 10040059, "value": "기본핏" },
+        { "attributeValueSeq": 10904155, "value": "루즈핏/오버핏" }
+      ]
+    },
+    {
+      "attributeSeq": 10019133,
+      "attributeName": "안감",
+      "attributeClassificationType": "SINGLE_SELECT",
+      "attributeValueMaxMatchingCount": 0,
+      "values": [
+        { "attributeValueSeq": 10258043, "value": "기모" },
+        { "attributeValueSeq": 10583641, "value": "양털" },
+        { "attributeValueSeq": 10729222, "value": "보아털" }
+      ]
+    },
+    {
+      "attributeSeq": 10019137,
+      "attributeName": "타켓연령",
+      "attributeClassificationType": "SINGLE_SELECT",
+      "attributeValueMaxMatchingCount": 0,
+      "values": [
+        { "attributeValueSeq": 10030132, "value": "베이비" },
+        { "attributeValueSeq": 11273821, "value": "토들러" },
+        { "attributeValueSeq": 10773858, "value": "키즈" },
+        { "attributeValueSeq": 10816587, "value": "주니어" }
+      ]
+    }
+  ]
+}

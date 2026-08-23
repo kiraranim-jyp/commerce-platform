@@ -2,10 +2,13 @@ import { NextResponse } from "next/server";
 import type { ListingModel } from "@commerce/marketplace";
 import { isVerifiedCategorySelected } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
+import { resolveProductSignals } from "@commerce/category";
 import {
   buildNaverProductPayload,
   validateNaverPayload,
   resolveNaverOriginArea,
+  resolveNaverProductAttributes,
+  getNaverCategoryAttributeMeta,
   COMPLIANCE_POLICY_VERSION,
   type DetailPageBlock,
   type NaverProductRegistrationPayload,
@@ -13,6 +16,7 @@ import {
   type ListingResult,
 } from "@commerce/listing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { recordAuditLog } from "@/lib/audit-log";
 import { getNaverCredentials } from "../../naver/_lib/env";
 import { issueNaverAccessToken, callNaverApi, uploadNaverProductImages } from "../../naver/_lib/client";
 import { resolveNaverContext } from "../../naver/_lib/resolve-context";
@@ -34,6 +38,33 @@ import { getLatestSellerComplianceConfirmation } from "../_lib/seller-compliance
  * 자체를 만들지 않음) — Coupang register route와 동일 원칙.
  */
 const CREATE_PRODUCT_PATH = "/v2/products";
+
+/** N-3.70 STEP8 — Naver 에러 응답 필드명이 공식 문서로 확인된 적이 없어
+ * 여러 후보를 순서대로 시도한다(추측 파싱, 실측되면 좁힌다). invalidInputs
+ * 배열은 필드별 사유를 합쳐서 보여준다. */
+function extractNaverErrorReason(body: unknown): string | null {
+  if (body == null || typeof body !== "object") return null;
+  const obj = body as Record<string, unknown>;
+  const invalidInputs = obj.invalidInputs;
+  if (Array.isArray(invalidInputs) && invalidInputs.length > 0) {
+    const parts = invalidInputs
+      .map((item) => {
+        if (item == null || typeof item !== "object") return String(item);
+        const i = item as Record<string, unknown>;
+        const name = i.name ?? i.field ?? "";
+        const msg = i.message ?? i.reason ?? JSON.stringify(i);
+        return name ? `${name}: ${msg}` : String(msg);
+      })
+      .join(" / ");
+    return parts;
+  }
+  const direct = obj.message ?? obj.errorMessage ?? obj.error;
+  if (typeof direct === "string" && direct.trim()) return direct;
+  if (direct != null && typeof direct === "object") return JSON.stringify(direct).slice(0, 500);
+  // 알려진 필드가 하나도 없으면 원문을 그대로 잘라 보여준다.
+  const raw = JSON.stringify(obj);
+  return raw && raw !== "{}" ? raw.slice(0, 500) : null;
+}
 
 async function logRegistrationAttempt(
   result: ListingResult,
@@ -180,6 +211,24 @@ export async function POST(request: Request) {
   }
   logStep("카테고리 확인", "success", `leafCategoryId=${leafCategoryId}`);
 
+  // N-4.00 A-2(대표님 지시) — 카테고리 상품속성(성별/타켓연령/연령/주요소재)을
+  // 이 라우트가 실제로 계산해서 payload에 실어 보낸다. getNaverCategoryAttributeMeta가
+  // 실측하지 않은 카테고리(null)면 그냥 건너뛴다 — 속성 매핑이 없다고 등록
+  // 자체를 막지 않는다(하드코딩 추정 금지 원칙, attribute-resolver.ts와 동일).
+  const categoryAttributeMeta = getNaverCategoryAttributeMeta(leafCategoryId);
+  const attributeResolution = categoryAttributeMeta
+    ? resolveNaverProductAttributes(product, resolveProductSignals(product), categoryAttributeMeta)
+    : null;
+  if (attributeResolution) {
+    logStep(
+      "상품속성 매핑",
+      "success",
+      `${attributeResolution.attributes.length}개 속성 자동매핑(${attributeResolution.results.map((r) => `${r.attributeName}:${r.status}`).join(", ")})`,
+    );
+  } else {
+    logStep("상품속성 매핑", "success", `이 카테고리(${leafCategoryId})는 아직 속성 메타데이터가 없어 건너뜁니다.`);
+  }
+
   // Sprint B-7(CPO 지시: "Preview와 실제 Register가 서로 다른 값을 계산하지
   // 않도록 동일 resolver를 사용") — 이전에는 이 라우트가 /api/naver/resolve
   // GET route와 "같은 로직"을 복붙해서 따로 유지했다(주석으로 "같아야 한다"고만
@@ -262,6 +311,7 @@ export async function POST(request: Request) {
     releaseAddressBookNo,
     refundAddressBookNo,
     primaryReturnDeliveryCompanyPriorityType: context.delivery.primaryReturnCompany?.priorityType ?? null,
+    sellerDeliveryFee: context.delivery.deliveryFee,
     returnDeliveryFee: context.delivery.returnDeliveryFee,
     exchangeDeliveryFee: context.delivery.exchangeDeliveryFee,
     childCertificationInfoId,
@@ -330,6 +380,8 @@ export async function POST(request: Request) {
     detailBlocks,
     commonImages: context.detailPage.commonImages,
     brandIntro: context.detailPage.brandIntro,
+    resolvedManufacturer: context.notice.manufacturer,
+    resolvedAttributes: attributeResolution?.attributes,
   });
 
   // STEP 5(Readiness Gate) — Payload validation을 API 호출 전 마지막 방어선으로
@@ -442,13 +494,26 @@ export async function POST(request: Request) {
       return NextResponse.json(result);
     }
 
-    // 성공 판정은 HTTP 2xx만 본다 — 실제 응답 body 필드명(예: originProductNo)은
-    // 공식 스펙 문서로 확인된 적이 없고(N-3.25 STEP 10이 최초 실제 호출) 추측해서
-    // 파싱하지 않는다(CPO 반복 지시: 추측 구현 금지). 응답 원문은 그대로
-    // registration_attempts.response에 남겨서, STEP 10 실제 등록 성공 시 필드명을
-    // 실측으로 확인한 뒤 이 부분만 후속 스프린트에서 좁혀 넣는다.
+    // N-3.70(Sprint N-3.70 STEP7) — 필드명은 더 이상 미확인이 아니다: N-3.49/
+    // N-3.51/N-3.68에서 이미 3건의 실제 등록(originProductNo=13664004406,
+    // 13667626779, 13667627489)으로 response.originProductNo가 최상위에 오는
+    // 것을 확인했고(golden-success-01.json/golden-success-02-kids.json에
+    // 그대로 기록돼 있다), GET /v2/products/origin-products/{originProductNo}로
+    // 실제 존재까지 검증했다. 그런데도 이 라우트는 그 값을
+    // result.externalProductId로 옮기지 않아서, logRegistrationAttempt가 이미
+    // 읽으려 하는 result.externalProductId(아래)와 registration_attempts.
+    // external_product_id 컬럼이 성공 케이스에서도 항상 null이었다 — "등록
+    // 완료"라고만 나오고 실제 Naver 상품번호를 어디서도 보여줄 수 없었던
+    // 원인. 응답 형태가 예상과 다르면(둘 다 없으면) 억지로 지어내지 않고
+    // undefined로 남긴다.
     if (response.status >= 200 && response.status < 300) {
-      logStep("API 호출", "success", `네이버가 등록 요청을 수락했습니다(HTTP ${response.status}).`);
+      const responseBody = response.body as { originProductNo?: number | string } | null;
+      const originProductNo = responseBody?.originProductNo;
+      logStep(
+        "API 호출",
+        "success",
+        `네이버가 등록 요청을 수락했습니다(HTTP ${response.status}${originProductNo != null ? `, originProductNo=${originProductNo}` : ""}).`,
+      );
       const result = withMeta({
         status: "SUBMITTED",
         platform: "smartstore",
@@ -456,9 +521,17 @@ export async function POST(request: Request) {
         retryable: false,
         payload,
         submittedAt: new Date().toISOString(),
+        externalProductId: originProductNo != null ? String(originProductNo) : undefined,
       });
       await logRegistrationAttempt(result, response.body, snapshotId, jobKey);
       if (snapshotId) await markSnapshotRegistered(snapshotId);
+      await recordAuditLog({
+        eventType: "MARKETPLACE_REGISTERED",
+        snapshotId,
+        marketplace: "smartstore",
+        afterValue: { originProductNo, status: response.status },
+        reason: `네이버가 등록 요청을 수락했습니다(HTTP ${response.status}).`,
+      });
       return NextResponse.json(result);
     }
 
@@ -468,7 +541,20 @@ export async function POST(request: Request) {
     // "고치지 않고 재시도"는 항상 같은 결과를 반복할 뿐이다(retryable:false).
     // 5xx는 네이버 서버 문제일 수 있어 재시도 여지가 있지만, 타임아웃과
     // 마찬가지로 실제로 생성됐을 가능성을 먼저 배제해야 한다.
-    logStep("API 호출", "failed", `네이버가 등록 요청을 거부했습니다(HTTP ${response.status}).`);
+    //
+    // N-3.70 STEP8(CPO 지시: "Naver가 등록을 거부했습니다. 필드: ... 사유:
+    // ...를 구조화해서 표시") — 지금까지는 HTTP status만 보여주고 실제
+    // response.body(Naver가 돌려준 진짜 거부 사유)는 registration_attempts.
+    // response 컬럼에만 저장되고 클라이언트에는 전달되지 않았다. 실제 필드명은
+    // 공식 문서로 확인된 적 없어 여러 후보(message/errorMessage/invalidInputs)를
+    // 순서대로 시도하고, 전부 없으면 원문 JSON을 그대로 잘라 보여준다(추측으로
+    // 필드를 지어내지 않는다 — 실측되면 이 파싱을 좁힌다).
+    const naverReason = extractNaverErrorReason(response.body);
+    logStep(
+      "API 호출",
+      "failed",
+      `네이버가 등록 요청을 거부했습니다(HTTP ${response.status}).${naverReason ? ` 사유: ${naverReason}` : ""}`,
+    );
     const result = withMeta({
       status: "FAILED",
       platform: "smartstore",
@@ -477,7 +563,9 @@ export async function POST(request: Request) {
       payload,
       error: {
         step: "NETWORK",
-        message: `네이버가 등록 요청을 거부했습니다(HTTP ${response.status}).`,
+        message: naverReason
+          ? `네이버가 등록 요청을 거부했습니다(HTTP ${response.status}). 사유: ${naverReason}`
+          : `네이버가 등록 요청을 거부했습니다(HTTP ${response.status}).`,
         retryable: response.status >= 500,
         resolution:
           response.status >= 500
@@ -486,6 +574,12 @@ export async function POST(request: Request) {
       },
     });
     await logRegistrationAttempt(result, response.body, snapshotId, jobKey);
+    await recordAuditLog({
+      eventType: "MARKETPLACE_FAILED",
+      snapshotId,
+      marketplace: "smartstore",
+      reason: result.error?.message ?? `네이버가 등록 요청을 거부했습니다(HTTP ${response.status}).`,
+    });
     return NextResponse.json(result);
   } catch (error) {
     logStep("API 호출", "failed", error instanceof Error ? error.message : "네이버 서버에 연결할 수 없습니다.");

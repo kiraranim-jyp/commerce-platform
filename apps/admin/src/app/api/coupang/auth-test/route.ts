@@ -3,6 +3,7 @@ import type { PlatformConnectionStatus } from "@commerce/listing";
 import { getCoupangCredentials } from "../_lib/env";
 import { callCoupangApi } from "../_lib/client";
 import { classifyHttpStatus, classifyNetworkError, missingFieldError } from "@/lib/connection-error";
+import { getOutboundProxyDiagnostics, describeErrorCauseChain } from "@/lib/outbound-proxy";
 
 /**
  * "쿠팡 연결 상태" 배지용 — 실제 상품을 등록/조회하지 않고 서명이 통과하는지만
@@ -33,6 +34,7 @@ export async function POST() {
       return NextResponse.json({
         status,
         message: "쿠팡이 인증 정보를 거부했습니다 — access key/secret key를 다시 확인해주세요.",
+        proxyProvider: getOutboundProxyDiagnostics().provider,
         ...classified,
         // 시크릿 값 자체는 절대 내려보내지 않는다 — 길이/공백 여부 같은 "복붙 실수
         // 있었는지" 힌트와, 쿠팡 응답 원문(서명 오류 vs 키 미등록 vs 승인 대기 등
@@ -53,6 +55,7 @@ export async function POST() {
     return NextResponse.json({
       status,
       message: "쿠팡 API 인증에 성공했습니다.",
+      proxyProvider: getOutboundProxyDiagnostics().provider,
       debug: { httpStatus: response.status },
     });
   } catch (error) {
@@ -61,7 +64,9 @@ export async function POST() {
     return NextResponse.json({
       status,
       message: error instanceof Error ? `쿠팡 서버에 연결할 수 없습니다: ${error.message}` : "쿠팡 서버에 연결할 수 없습니다.",
+      proxyProvider: getOutboundProxyDiagnostics().provider,
       ...classifyNetworkError(error),
+      debug: { causeChain: describeErrorCauseChain(error) },
     });
   }
 }

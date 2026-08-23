@@ -167,6 +167,7 @@ function report(name: string, pass: boolean, detail: string) {
     listing,
     leafCategoryId: LEAF_CATEGORY_ID,
     ...commonInput,
+    sellerDeliveryFee: null,
     categoryRequiresChildCertification: false,
     originAreaRequiresContent: false,
   });
@@ -205,6 +206,7 @@ function report(name: string, pass: boolean, detail: string) {
     listing,
     leafCategoryId: LEAF_CATEGORY_ID,
     ...commonInput,
+    sellerDeliveryFee: null,
     categoryRequiresChildCertification: true,
     originAreaRequiresContent: false,
   });

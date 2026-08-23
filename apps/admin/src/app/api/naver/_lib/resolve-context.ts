@@ -19,6 +19,14 @@ import type { NaverResolveResponse } from "../../../pipeline/commerce/NaverPaylo
 interface NaverCertificationInfo {
   id: number;
   kindTypes?: string[];
+  /** N-3.67(2026-08-20, CPO 지시로 확인) — 실제 카테고리 인증 카탈로그를
+   * 캐시해서 대조한 결과, 어린이제품 인증 3종의 nonEssential 값이 서로
+   * 다르다: id=1042([어린이제품]공급자적합성확인)만 nonEssential:true, id=1041/1040
+   * ([어린이제품]안전확인/안전인증)은 nonEssential:false다. 기존 코드는
+   * kindTypes만 보고 배열 순서상 첫 매치(1042)를 골라서 실제로는 "선택적/
+   * 보조적" 인증 유형을 필수 인증 유형처럼 사용하고 있었다 — Naver가
+   * "인증 종류를 선택해야 한다"고 거부한 원인일 가능성이 높다. */
+  nonEssential?: boolean;
 }
 
 interface NaverCategoryDetail {
@@ -73,7 +81,15 @@ export async function resolveNaverContext(params: {
       const detail = detailResult.body as NaverCategoryDetail;
       const exceptionalCategories = detail.exceptionalCategories ?? [];
       const requiresChildCertification = exceptionalCategories.includes("CHILD_CERTIFICATION");
-      const childCert = (detail.certificationInfos ?? []).find((c) => c.kindTypes?.includes("CHILD_CERTIFICATION"));
+      // N-3.67 — nonEssential:false(필수) 항목을 nonEssential:true(선택/보조)
+      // 항목보다 우선한다. 실측(Bobo Choses)에서 nonEssential:true인 1042만
+      // 골랐을 때 완전한 payload(certificationKindType 포함)를 보내도 Naver가
+      // "인증 종류를 선택해야 한다"고 거부했다 — 배열 순서만으로 고르던 기존
+      // 로직의 구조적 결함으로 보고 수정한다(임의 선택이 아니라 실제
+      // nonEssential 메타데이터 기반 우선순위).
+      const childCertCandidates = (detail.certificationInfos ?? []).filter((c) => c.kindTypes?.includes("CHILD_CERTIFICATION"));
+      const childCert =
+        childCertCandidates.find((c) => c.nonEssential === false) ?? childCertCandidates[0];
       const allCategories = await fetchNaverAllCategories(accessToken);
       category = {
         categoryId,
@@ -126,6 +142,10 @@ export async function resolveNaverContext(params: {
       returnCompanies: returnCompanies ?? [],
       returnCompaniesFetchFailed: returnCompanies === null,
       primaryReturnCompany,
+      // N-3.69(CPO 지시, "Seller 공통 설정 통합" STEP1) — 실제 발견된 갭:
+      // Coupang은 이미 sellerConfig.deliveryCharge를 읽고 있었는데 Naver
+      // payload는 이 값을 아예 읽지 않고 항상 FREE/0으로 고정돼 있었다.
+      deliveryFee: sellerProfile?.deliveryCharge ?? null,
       returnDeliveryFee: sellerProfile?.returnDeliveryCharge ?? null,
       exchangeDeliveryFee: sellerProfile?.exchangeDeliveryCharge ?? null,
     },
@@ -138,6 +158,14 @@ export async function resolveNaverContext(params: {
       warrantyPolicy: sellerProfile?.qualityGuarantee || null,
       afterServiceDirector: sellerProfile?.asContactNumber || null,
       companyContactNumber: sellerProfile?.companyContactNumber || null,
+      // N-3.83(CPO 지시, "SmartStore 기본정보 완성" 감사에서 발견) — Coupang은
+      // register/route.ts:413-417에서 이미 brandProfile.manufacturer/
+      // sellerProfile.manufacturer(Sprint A-12 3단계 우선순위)를 넘기고 있었는데,
+      // 여기(Naver resolve)는 brandProfile을 countryOfOrigin/brandIntro에만
+      // 쓰고 manufacturer는 아예 읽지 않았다 — 크롤러가 제조사를 못 찾은
+      // 상품(흔한 경우)은 항상 빈칸이었던 원인. brandProfile은 이미 위에서
+      // brand 파라미터로 조회해 둔 값을 그대로 재사용한다(추가 DB 조회 없음).
+      manufacturer: brandProfile?.manufacturer || sellerProfile?.manufacturer || null,
     },
     detailPage: {
       descriptionTemplate: descriptionTemplate ?? null,

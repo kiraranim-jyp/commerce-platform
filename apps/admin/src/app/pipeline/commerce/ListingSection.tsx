@@ -6,6 +6,7 @@ import type {
   ListingErrorStep,
   ListingResult,
   ListingStatus,
+  NaverProductRegistrationPayload,
   RegistrationStepLog,
   SmartStorePayload,
 } from "@commerce/listing";
@@ -69,6 +70,18 @@ function isCoupangPayload(payload: unknown): payload is CoupangPayload {
     payload !== null &&
     "sellerProductName" in payload &&
     "items" in payload
+  );
+}
+
+/** N-3.76 STEP4 — SUSPENSION(비공개) 배너용. 실제 Naver 등록 payload 구조는
+ * originProduct/smartstoreChannelProduct이지 isSmartStorePayload()가 보는
+ * legacy product/shipping 구조가 아니다(이 파일 상단 comment 참고, 별개 이슈). */
+function isNaverPayload(payload: unknown): payload is NaverProductRegistrationPayload {
+  return (
+    typeof payload === "object" &&
+    payload !== null &&
+    "originProduct" in payload &&
+    "smartstoreChannelProduct" in payload
   );
 }
 
@@ -174,6 +187,14 @@ export function ListingSection({
 
   if (status === "SUBMITTED") {
     const report = result ? buildRegistrationReport(result) : null;
+    // N-3.76 STEP4(CPO 지시: "비공개/SUSPENSION 여부를 대표님이 별도로 DB나
+    // 로그를 확인할 필요 없이 화면에서 봐야 한다") — 개발자 모드 payload
+    // 아코디언 안에만 있던 정보를 항상 보이는 배너로 끌어올린다.
+    const isSuspended =
+      platformId === "smartstore" &&
+      result?.payload != null &&
+      isNaverPayload(result.payload) &&
+      result.payload.smartstoreChannelProduct?.channelProductDisplayStatusType === "SUSPENSION";
     return (
       <section className="rounded-lg border border-success/30 bg-success-soft p-4 text-sm">
         <p className="font-medium text-success">✓ 등록 완료</p>
@@ -182,9 +203,24 @@ export function ListingSection({
             미리보기 모드 — 실제로 등록되지 않았습니다. 등록될 데이터만 검증하고 생성했습니다.
           </p>
         )}
+        {/* N-3.70(Sprint N-3.70 STEP7) — 이 문구가 플랫폼과 무관하게 항상
+         * "쿠팡 상품 ID"였다(externalProductId 자체는 result.mode==="LIVE"만
+         * 확인해서 플랫폼 구분이 없었음). SmartStore 실등록 성공 시에도 같은
+         * 문구가 떠서 "쿠팡에 등록됐다"고 오해하게 만들던 버그 — platformId로
+         * 분기해 실제 발급된 값(Naver는 originProductNo)임을 정확히 안내한다. */}
         {result?.mode === "LIVE" && result.externalProductId && (
           <p className="mt-1 text-xs text-success">
-            실제로 등록되었습니다 — 쿠팡 상품 ID: {result.externalProductId}. Wing에서 최종 확인해주세요.
+            실제로 등록되었습니다 —{" "}
+            {platformId === "coupang"
+              ? `쿠팡 상품 ID: ${result.externalProductId}. Wing에서 최종 확인해주세요.`
+              : `네이버 상품번호: ${result.externalProductId}. 스마트스토어 센터에서 최종 확인해주세요.`}
+          </p>
+        )}
+        {isSuspended && (
+          <p className="mt-1 text-xs text-warning">
+            ⚠ 등록은 완료됐지만 네이버 기본 설정상 상품이 비공개(판매대기, SUSPENSION) 상태입니다
+            — 스마트스토어 센터(Wing)에서 공개 처리해야 실제 구매자에게 노출됩니다. (신규 등록
+            상품을 바로 노출시키지 않는 네이버의 기본 안전장치이며, 등록 실패가 아닙니다.)
           </p>
         )}
         {report?.outcome === "SUCCESS" && (
@@ -205,6 +241,14 @@ export function ListingSection({
               <>
                 <dt className="text-text-secondary">소요시간</dt>
                 <dd className="text-text-primary">{(report.durationMs / 1000).toFixed(1)}초</dd>
+              </>
+            )}
+            {result?.submittedAt && (
+              <>
+                <dt className="text-text-secondary">등록 시각</dt>
+                <dd className="text-text-primary">
+                  {new Date(result.submittedAt).toLocaleString("ko-KR")}
+                </dd>
               </>
             )}
           </dl>

@@ -134,6 +134,7 @@ async function main() {
     releaseAddressBookNo: 105633179,
     refundAddressBookNo: 104809732,
     primaryReturnDeliveryCompanyPriorityType: "PRIMARY",
+    sellerDeliveryFee: null,
     returnDeliveryFee: 25000,
     exchangeDeliveryFee: 50000,
     childCertificationInfoId: 1042,

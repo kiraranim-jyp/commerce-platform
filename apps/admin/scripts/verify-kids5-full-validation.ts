@@ -260,6 +260,7 @@ async function runOne(spec: ProductSpec) {
     listing,
     leafCategoryId: spec.leafCategoryId,
     ...commonInput,
+    sellerDeliveryFee: null,
     categoryRequiresChildCertification: spec.categoryRequiresChildCertification,
     originAreaRequiresContent: false,
   });

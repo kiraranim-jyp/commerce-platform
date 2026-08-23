@@ -23,7 +23,11 @@ function makeMinimalProduct(): CanonicalProduct {
     price: field({ amount: 10000, currency: "KRW" }),
     priceValidity: "VALID",
     sku: field("KIDS-TSHIRT-1"),
-    description: field("아동용 반팔 티셔츠입니다."),
+    // N-3.71 — naverShoppingSearchInfo.modelName(KIDS 카테고리 필수, 실제
+    // 등록에서 확인)이 이 원문의 "Product code XXXX" 패턴에서 자동 추출된다
+    // (resolveModelNameFromDescription) — 이 패턴이 없으면 KIDS 시나리오
+    // 테스트가 이 필드와 무관한 이유로 BLOCKED된다.
+    description: field("아동용 반팔 티셔츠입니다. Product code KIDS-TSHIRT-1."),
     material: field("면 100%"),
     color: field("화이트"),
     recommendedAge: field("3세"),
@@ -105,6 +109,7 @@ function buildAndValidate(
     releaseAddressBookNo: RELEASE_ADDRESS,
     refundAddressBookNo: REFUND_ADDRESS,
     primaryReturnDeliveryCompanyPriorityType: RETURN_COMPANY_PRIORITY_TYPE,
+    sellerDeliveryFee: null,
     returnDeliveryFee: RETURN_DELIVERY_FEE,
     exchangeDeliveryFee: EXCHANGE_DELIVERY_FEE,
     childCertificationInfoId: opts.childCertificationInfoId,
@@ -125,11 +130,12 @@ function buildAndValidate(
     categoryRequiresChildCertification: opts.categoryRequiresChildCertification,
     originAreaRequiresContent: false,
   });
+  const { sellerDeliveryFee: _sellerDeliveryFee, ...validateCommonInput } = commonInput;
   const validation = validateNaverPayload(
     payload,
     {
       product,
-      ...commonInput,
+      ...validateCommonInput,
       returnCompaniesFetchFailed: false,
       originAreaRequiresImporter: opts.originAreaRequiresImporter,
     },
@@ -209,6 +215,10 @@ describe("N-3.29 STEP7: Importer/KC 입력 경로", () => {
         certificationNumber: "KC-2026-000123",
         companyName: "테스트인증원",
         certificationDate: "2026-01-15",
+        // N-3.71 — name(인증 기관명)은 certificationInfoId가 1042(공급자적합성,
+        // 비필수 예외)가 아닌 이상 필수다. 여기서 쓰는
+        // CHILD_CERTIFICATION_CATALOG_ID=1041(안전확인)은 예외 대상이 아니다.
+        name: "테스트인증기관",
       },
       "USER_EDITED",
     );
@@ -220,7 +230,7 @@ describe("N-3.29 STEP7: Importer/KC 입력 경로", () => {
     });
     const certField = validation.fields.find((f) => f.field === "productCertificationInfos[].certificationNumber");
     expect(certField?.status).toBe("READY");
-    expect(payload.originProduct.productCertificationInfos?.[0]).toMatchObject({
+    expect(payload.originProduct.detailAttribute?.productCertificationInfos?.[0]).toMatchObject({
       certificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
       certificationNumber: "KC-2026-000123",
       companyName: "테스트인증원",
@@ -246,25 +256,26 @@ describe("N-3.29 STEP7: Importer/KC 입력 경로", () => {
     expect(validation.fields.some((f) => f.field === "detailAttribute.optionInfo")).toBe(false);
   });
 
-  // CPO 지시(2026-08-19) — "97%인데도 등록 버튼이 안 바뀌는 문제" 체인 추적 중
-  // 발견: SIZE 옵션이 원래 없는 상품(가방/액세서리 등, 바로 위 테스트와 같은
-  // 픽스처)에서 실제로 validation.ok가 true가 되는지는 지금까지 이 파일
-  // 어디서도 검증한 적이 없었다(missingCount/blockedCount만 개별 필드
-  // 단위로 확인됐을 뿐, "전체 게이트가 실제로 열리는가"라는 최종 질문에
-  // 답하는 테스트가 없었다). Sprint P0(치수 optional 처리)가 실제로 이
-  // 시나리오를 해결하는지 여기서 고정한다 — 이 테스트가 실패하면 등록
-  // 게이트 회귀다.
-  it("SIZE 옵션 없는 상품(가방/액세서리 등) — size가 MISSING이어도 optional이라 전체 게이트는 ok:true", () => {
+  // N-3.71 — 이전에는 SIZE 옵션이 없으면 size가 MISSING+optional:true라
+  // "채워지지 않았지만 등록은 막지 않는다"는 상태였다. 실제 등록에서 Naver가
+  // 정확히 이 필드를 포함한 9개를 "데이터를 입력해 주세요"로 거부한 뒤,
+  // size에는 다른 8개 필드와 달리 DETAIL_PAGE_REFERENCE 선택 경로 자체가
+  // 없다는 게 드러나 build-payload.ts가 SIZE 옵션이 없을 때 자동으로
+  // "상품 상세페이지 참조" 문구를 채우도록 바뀌었다 — payload에 실제로 값이
+  // 들어가므로 validator도 이제 조건부 optional이 아니라 항상 READY다.
+  it("SIZE 옵션 없는 상품(가방/액세서리 등) — 자동으로 '상세페이지 참조'가 채워져 READY, 전체 게이트는 ok:true", () => {
     const product = makeMinimalProduct(); // optionGroups: [] → resolveSizeFromOptions가 null
-    const { validation } = buildAndValidate(product, {
+    const { payload, validation } = buildAndValidate(product, {
       categoryRequiresChildCertification: false,
       originAreaCode: DOMESTIC_ORIGIN_AREA_CODE,
       originAreaRequiresImporter: false,
       childCertificationInfoId: null,
     });
     const sizeField = validation.fields.find((f) => f.field === "productInfoProvidedNotice(WEAR).size");
-    expect(sizeField?.status).toBe("MISSING");
-    expect(sizeField?.optional).toBe(true);
+    expect(sizeField?.status).toBe("READY");
+    expect(sizeField?.optional).toBeUndefined();
+    const notice = payload.originProduct.detailAttribute?.productInfoProvidedNotice;
+    expect(notice && "wear" in notice ? notice.wear.size : undefined).toBe("상품 상세페이지 참조");
     expect(validation.ok).toBe(true);
     expect(validation.blockedCount).toBe(0);
   });
@@ -435,6 +446,7 @@ describe("N-3.50/N-3.51 STEP3: deliveryType/deliveryAttributeType/minorPurchasab
       listing,
       leafCategoryId: LEAF_CATEGORY_ID,
       ...commonInput,
+      sellerDeliveryFee: null,
       categoryRequiresChildCertification: false,
       originAreaRequiresContent: false,
     });
@@ -486,5 +498,144 @@ describe("N-3.50/N-3.51 STEP3: deliveryType/deliveryAttributeType/minorPurchasab
       (x) => x.field === "detailAttribute.afterServiceInfo.afterServiceTelephoneNumber",
     );
     expect(check?.status).toBe("READY");
+  });
+});
+
+/**
+ * N-3.71 STEP7(CPO 지시) — 실제 프로덕션 등록에서 9개 KIDS 고시필드가
+ * optional:true로 잘못 표시돼 있던 걸 되돌린 회귀를 6개 케이스로 고정한다.
+ * Case B(DETAIL_PAGE_REFERENCE → READY)와 Case F(WEAR — productCertificationInfos
+ * 없음)는 이미 위 "N-3.45" describe와 "인증 불필요 카테고리(WEAR)" 테스트가
+ * 커버한다 — 여기서는 A/C/D/E만 새로 추가한다.
+ */
+describe("N-3.71 STEP7: REQUIRED+빈값 차단 회귀(9개 KIDS 고시필드)", () => {
+  it("Case A — 9개 필드 전부 실제값 → 전부 READY, payload에 실제값이 그대로 전달된다", () => {
+    const product = makeMinimalProduct();
+    // material/color/manufacturer/careInstructions/recommendedAge는
+    // makeMinimalProduct에 이미 실제값이 있다 — itemName/modelName/weight/
+    // certificationType만 실제값으로 채운다.
+    product.itemName = field("아동용 반팔 티셔츠");
+    product.modelName = field("B126AC050");
+    product.weight = field("150g");
+    product.certificationType = field("어린이제품 안전 확인대상");
+    product.childCertification = field(
+      {
+        certificationNumber: "KC-2026-000123",
+        companyName: "테스트인증원",
+        certificationDate: "2026-01-15",
+        name: "테스트인증기관",
+      },
+      "USER_EDITED",
+    );
+    const { payload, validation } = buildAndValidate(product, {
+      categoryRequiresChildCertification: true,
+      originAreaCode: DOMESTIC_ORIGIN_AREA_CODE,
+      originAreaRequiresImporter: false,
+      childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
+    });
+    for (const f of ["material", "color", "manufacturer", "caution", "recommendedAge", "itemName", "modelName", "weight"]) {
+      const check = validation.fields.find((x) => x.field === `productInfoProvidedNotice(KIDS).${f}`);
+      expect(check?.status, `${f} should be READY`).toBe("READY");
+    }
+    const notice = payload.originProduct.detailAttribute?.productInfoProvidedNotice;
+    const kids = notice && "kids" in notice ? notice.kids : undefined;
+    expect(kids?.itemName).toBe("아동용 반팔 티셔츠");
+    expect(kids?.modelName).toBe("B126AC050");
+    expect(kids?.weight).toBe("150g");
+    expect(validation.blockedCount).toBe(0);
+    expect(validation.ok).toBe(true);
+  });
+
+  it("Case C — 실제값도 없고 상세페이지 참조도 선택 안 한 REQUIRED+빈값은 등록을 차단한다(ok:false)", () => {
+    const product = makeMinimalProduct();
+    product.material = field("", "REQUIRED");
+    const { validation } = buildAndValidate(product, {
+      categoryRequiresChildCertification: false,
+      originAreaCode: DOMESTIC_ORIGIN_AREA_CODE,
+      originAreaRequiresImporter: false,
+      childCertificationInfoId: null,
+    });
+    const materialField = validation.fields.find((f) => f.field === "productInfoProvidedNotice(WEAR).material");
+    expect(materialField?.status).toBe("MISSING");
+    expect(materialField?.optional).toBeUndefined();
+    expect(validation.ok).toBe(false);
+  });
+
+  it("Case D — UI/payload 양방향 일치: 필드 하나를 READY↔MISSING으로 뒤집으면 validation.ok도 그대로 뒤집힌다", () => {
+    const readyProduct = makeMinimalProduct(); // material/color/manufacturer/careInstructions/recommendedAge 전부 실제값
+    const { validation: readyValidation } = buildAndValidate(readyProduct, {
+      categoryRequiresChildCertification: false,
+      originAreaCode: DOMESTIC_ORIGIN_AREA_CODE,
+      originAreaRequiresImporter: false,
+      childCertificationInfoId: null,
+    });
+    expect(readyValidation.ok).toBe(true);
+
+    const brokenProduct = makeMinimalProduct();
+    brokenProduct.material = field("", "REQUIRED"); // 필드 하나만 REQUIRED+빈값으로 뒤집는다
+    const { validation: brokenValidation } = buildAndValidate(brokenProduct, {
+      categoryRequiresChildCertification: false,
+      originAreaCode: DOMESTIC_ORIGIN_AREA_CODE,
+      originAreaRequiresImporter: false,
+      childCertificationInfoId: null,
+    });
+    // UI가 100%(ok:true)라고 보여줬다가 이 필드 하나 때문에 실제 Naver가
+    // 거부하는 일이 없어야 한다 — validator가 이미 ok:false로 정확히
+    // 반영해야 한다.
+    expect(brokenValidation.ok).toBe(false);
+    const materialField = brokenValidation.fields.find((f) => f.field === "productInfoProvidedNotice(WEAR).material");
+    expect(materialField?.status).toBe("MISSING");
+  });
+
+  // N-3.67 golden-success-02-kids.json(originProductNo=13667626779, 실제
+  // Naver 등록 성공)의 finalPayload.productInfoProvidedNotice.kids 그대로
+  // 재구성한다 — material/manufacturer/caution/recommendedAge/itemName/
+  // modelName/weight는 전부 "상세페이지 참조"(DETAIL_PAGE_REFERENCE)였고
+  // color/size만 실제값이었다. 이 조합은 N-3.71 수정 전후로 동일하게
+  // READY/ok:true여야 한다 — 다르면 실제 성공했던 등록을 이 수정이 깨는
+  // 것이다.
+  it("Case E — golden-success-02-kids.json 재구성(실제 등록 성공 조합) — 수정 후에도 ok:true", () => {
+    const product = makeMinimalProduct();
+    product.color = field("Multi");
+    product.optionGroups = [{ name: "Size", values: ["4-5 Years", "6-7 Years", "8-9 Years", "10-11 Years", "12-13 Years"] }];
+    product.variants = [
+      { id: "v1", optionValues: { Size: "4-5 Years" }, sku: "SKU-1", stockQuantity: 0 },
+      { id: "v2", optionValues: { Size: "6-7 Years" }, sku: "SKU-2", stockQuantity: 1 },
+    ];
+    product.material = field("", "DETAIL_PAGE_REFERENCE");
+    product.manufacturer = field("", "DETAIL_PAGE_REFERENCE");
+    product.careInstructions = field("", "DETAIL_PAGE_REFERENCE");
+    product.recommendedAge = field("", "DETAIL_PAGE_REFERENCE");
+    product.itemName = field("", "DETAIL_PAGE_REFERENCE");
+    product.modelName = field("", "DETAIL_PAGE_REFERENCE");
+    product.weight = field("", "DETAIL_PAGE_REFERENCE");
+    product.certificationType = field("[TEST] KC 테스트 데이터 — 실제 인증정보 아님. E2E 플로우 검증 목적, CEO 승인(2026-08-20).");
+    product.childCertification = field(
+      {
+        certificationNumber: "TEST010101",
+        companyName: "TEST검사소",
+        certificationDate: "2026-08-20",
+        name: "TEST인증기관",
+      },
+      "USER_EDITED",
+    );
+    const { payload, validation } = buildAndValidate(product, {
+      categoryRequiresChildCertification: true,
+      originAreaCode: DOMESTIC_ORIGIN_AREA_CODE,
+      originAreaRequiresImporter: false,
+      childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
+    });
+    const notice = payload.originProduct.detailAttribute?.productInfoProvidedNotice;
+    const kids = notice && "kids" in notice ? notice.kids : undefined;
+    expect(kids?.material).toBe("상품 상세페이지 참조");
+    expect(kids?.color).toBe("Multi");
+    expect(kids?.manufacturer).toBe("상품 상세페이지 참조");
+    expect(kids?.caution).toBe("상품 상세페이지 참조");
+    expect(kids?.recommendedAge).toBe("상품 상세페이지 참조");
+    expect(kids?.itemName).toBe("상품 상세페이지 참조");
+    expect(kids?.modelName).toBe("상품 상세페이지 참조");
+    expect(kids?.weight).toBe("상품 상세페이지 참조");
+    expect(validation.blockedCount).toBe(0);
+    expect(validation.ok).toBe(true);
   });
 });

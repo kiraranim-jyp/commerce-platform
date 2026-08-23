@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { buildNaverProductPayload, validateNaverPayload } from "@commerce/listing";
+import { isVerifiedCategorySelected } from "@commerce/marketplace";
 import type { ListingModel } from "@commerce/marketplace";
-import type { CoupangDescriptionTemplate, DetailPageBlock } from "@commerce/listing";
+import type { CoupangDescriptionTemplate, DetailPageBlock, NaverPayloadValidationResult } from "@commerce/listing";
 import type { CanonicalProduct, CommerceCategoryPathResult } from "@commerce/shared";
 import { formatKrw } from "@commerce/pricing";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
@@ -59,6 +60,7 @@ export interface NaverResolveResponse {
     returnCompanies: NaverReturnDeliveryCompany[];
     returnCompaniesFetchFailed: boolean;
     primaryReturnCompany: NaverReturnDeliveryCompany | null;
+    deliveryFee: number | null;
     returnDeliveryFee: number | null;
     exchangeDeliveryFee: number | null;
   };
@@ -73,7 +75,16 @@ export interface NaverResolveResponse {
   // N-3.51 STEP2 — companyContactNumber는 afterServiceDirector(고시용
   // 자유 텍스트)와 별개로, afterServiceInfo.afterServiceTelephoneNumber
   // (엄격한 전화번호 포맷)에 쓰인다.
-  notice: { warrantyPolicy: string | null; afterServiceDirector: string | null; companyContactNumber: string | null };
+  // N-3.83 — brandProfile.manufacturer/sellerProfile.manufacturer 3단계
+  // 우선순위 폴백 결과(Coupang register/route.ts와 동일 소스). product.
+  // manufacturer.value(원문 추출)가 있으면 그게 항상 우선이고, 없을 때만
+  // build-payload.ts가 이 값으로 보충한다.
+  notice: {
+    warrantyPolicy: string | null;
+    afterServiceDirector: string | null;
+    companyContactNumber: string | null;
+    manufacturer: string | null;
+  };
   // N-3.13 Part J — detailBlocks(에디터 상태, 클라이언트가 이미 들고 있음) →
   // detailContent 조립에 필요한 나머지 재료. Coupang용으로 이미 있는
   // DescriptionTemplate/SellerProfile 공통이미지/BrandProfile.brandIntro를
@@ -149,6 +160,10 @@ export function NaverPayloadPreview({
   product,
   listing,
   detailBlocks,
+  sharedResolved,
+  sharedResolving,
+  sharedResolveError,
+  sharedValidation,
 }: {
   product: CanonicalProduct;
   /** N-3.13 Part J — DetailPageEditor(Coupang 탭에서 편집)가 만드는 블록 순서.
@@ -161,32 +176,62 @@ export function NaverPayloadPreview({
    * 그래서 이 컴포넌트는 더 이상 가격 계산 핸들러(onUpdateSalePriceKrw 등)를
    * 받지 않는다 — PriceEditor를 여기서 또 그리지 않는다. */
   listing: ListingModel;
+  /** N-3.73 STEP7(사용자 지시: "Payload Preview가 별도의 임의 BLOCKED 판정을
+   * 만들지 못하게 한다") — CommerceWorkspace가 RegistrationReadinessCard용으로
+   * 이미 fetch/계산해둔 결과. 이 3개 prop이 주어지면(undefined가 아니면) 이
+   * 컴포넌트는 자기만의 /api/naver/resolve를 또 호출하지 않고 이 값만 쓴다 —
+   * 두 화면이 서로 다른 네트워크 왕복에서 나온 데이터로 다른 판정을 보여줄 수
+   * 없게 fetch 지점 자체를 하나로 합친다. undefined면(단독 사용/테스트 등)
+   * 예전처럼 자체 fetch로 동작한다(하위 호환). */
+  sharedResolved?: NaverResolveResponse | null;
+  sharedResolving?: boolean;
+  sharedResolveError?: string | null;
+  /** validation 계산 자체도 같은 이유로 부모 값을 그대로 쓴다 — payload는
+   * 여전히 이 컴포넌트가 만들지만(대표이미지/고시정보 등 표시용), 등록
+   * 가능/불가 판정 숫자(READY/MISSING/BLOCKED)는 부모가 준 값이 있으면
+   * 그것만 보여준다. */
+  sharedValidation?: NaverPayloadValidationResult | null;
 }) {
   const [showJson, setShowJson] = useState(false);
-  const [resolved, setResolved] = useState<NaverResolveResponse | null>(null);
-  const [resolving, setResolving] = useState(false);
-  const [resolveError, setResolveError] = useState<string | null>(null);
+  const controlledByParent = sharedResolved !== undefined;
+  const [localResolved, setLocalResolved] = useState<NaverResolveResponse | null>(null);
+  const [localResolving, setLocalResolving] = useState(false);
+  const [localResolveError, setLocalResolveError] = useState<string | null>(null);
   // N-3.15 Phase 3(STEP 2-C) — 예전엔 이 컴포넌트가 자기만의 categoryIdInput
   // state로 카테고리를 관리했다(별도 후보 검색+선택 UI 포함). 이제 카테고리
   // 선택은 공유 Accordion("카테고리" 섹션, PlatformPreview)에서만 이뤄지고,
   // 여기는 그 결과(listing.category)를 읽기만 한다 — 같은 상품에 카테고리가
   // 두 군데서 서로 다르게 보이는 버그(카테고리 선택했는데 미선택 판정)의
-  // 원인이었다. isVerifiedPlatformCode가 true인 candidate만 실제 Naver leaf
-  // category id로 인정한다(CP001과 같은 종류의 버그 방지 — category-field.ts와
-  // 동일 기준).
+  // 원인이었다.
+  //
+  // N-3.73 STEP7(실제 코드에서 발견) — 이 줄이 지금까지 `isVerifiedPlatformCode`
+  // 만 보고 있었다. AI가 추천만 했지 사용자가 "선택"을 누르지 않은 카테고리도
+  // isVerifiedPlatformCode=true일 수 있어서(추천 자체가 검증된 Naver leaf
+  // category id를 준다는 뜻이지, 사용자가 확정했다는 뜻이 아니다), 이
+  // 컴포넌트만 카테고리를 "확정됨"으로 오판하고 우측 Readiness 카드는 "미확정"
+  // 으로 보여주는 split-brain이 가능했다 — N-3.65가 CommerceWorkspace에서
+  // 이미 고쳤던 것과 똑같은 버그 패턴이 여기 남아 있었다. isVerifiedCategorySelected()
+  // 로 통일한다(CommerceWorkspace.tsx의 계산과 완전히 동일한 기준).
   const leafCategoryId =
-    listing.category.candidate?.isVerifiedPlatformCode && listing.category.candidate.platform === "smartstore"
+    isVerifiedCategorySelected(listing.category) && listing.category.candidate?.platform === "smartstore"
       ? listing.category.candidate.id
       : "";
 
   // N-2.8 — leafCategoryId(공유 Accordion "카테고리" 섹션에서 확정된 값)가
   // 바뀔 때마다 나머지 필드를 실시간 조회한다. 500ms 디바운스로 짧은 시간에
   // 여러 번 바뀌어도 매번 호출하지 않는다.
+  //
+  // N-3.73 STEP7 — controlledByParent(부모가 이미 같은 조회를 해서 넘겨줬다)면
+  // 이 fetch 자체를 건너뛴다. 두 번째 fetch가 존재하는 한, 그 결과가 어쩌다
+  // 한 번이라도 부모와 달라질 가능성(Fixie 같은 외부 프록시가 두 요청 중 하나만
+  // 실패하는 경우 등)을 완전히 없앨 수 없다 — fetch를 하나로 줄이는 것만이
+  // 근본적인 해결책이다.
   useEffect(() => {
+    if (controlledByParent) return;
     let cancelled = false;
     const timer = window.setTimeout(() => {
-      setResolving(true);
-      setResolveError(null);
+      setLocalResolving(true);
+      setLocalResolveError(null);
       const params = new URLSearchParams();
       if (leafCategoryId) params.set("categoryId", leafCategoryId);
       // N-3.4 — 상품추출 원산지 텍스트/브랜드명을 넘겨서 서버가 A-12-3과 동일한
@@ -199,28 +244,32 @@ export function NaverPayloadPreview({
         .then((data: NaverResolveResponse) => {
           if (cancelled) return;
           if (data.status !== "OK") {
-            setResolveError(
+            setLocalResolveError(
               data.status === "NOT_CONFIGURED"
                 ? "네이버 인증 정보가 설정되어 있지 않습니다."
                 : "네이버 API 조회에 실패했습니다.",
             );
-            setResolved(null);
+            setLocalResolved(null);
             return;
           }
-          setResolved(data);
+          setLocalResolved(data);
         })
         .catch(() => {
-          if (!cancelled) setResolveError("리졸버 호출 중 오류가 발생했습니다.");
+          if (!cancelled) setLocalResolveError("리졸버 호출 중 오류가 발생했습니다.");
         })
         .finally(() => {
-          if (!cancelled) setResolving(false);
+          if (!cancelled) setLocalResolving(false);
         });
     }, 500);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [leafCategoryId, product.countryOfOrigin.value, product.brand.value]);
+  }, [controlledByParent, leafCategoryId, product.countryOfOrigin.value, product.brand.value]);
+
+  const resolved = controlledByParent ? (sharedResolved ?? null) : localResolved;
+  const resolving = controlledByParent ? Boolean(sharedResolving) : localResolving;
+  const resolveError = controlledByParent ? (sharedResolveError ?? null) : localResolveError;
 
   const releaseAddressBookNo = resolved?.address.releaseAddressBookNo ?? null;
   const refundAddressBookNo = resolved?.address.refundAddressBookNo ?? null;
@@ -232,6 +281,7 @@ export function NaverPayloadPreview({
   // MISSING 취급하지 않는다.
   const returnCompaniesFetchFailed = resolved?.delivery?.returnCompaniesFetchFailed ?? true;
   const primaryReturnDeliveryCompanyPriorityType = resolved?.delivery?.primaryReturnCompany?.priorityType ?? null;
+  const sellerDeliveryFee = resolved?.delivery?.deliveryFee ?? null;
   const returnDeliveryFee = resolved?.delivery?.returnDeliveryFee ?? null;
   const exchangeDeliveryFee = resolved?.delivery?.exchangeDeliveryFee ?? null;
   // N-3.4 — resolve API의 origin 섹션을 그대로 쓴다(Preview에서 재매칭하지 않는다).
@@ -251,6 +301,8 @@ export function NaverPayloadPreview({
   // 전화번호)를 쓴다 — afterServiceInfo.afterServiceTelephoneNumber는
   // 엄격한 전화번호 포맷만 허용한다(실제 등록 5차 시도로 확인).
   const afterServiceTelephoneNumber = resolved?.notice?.companyContactNumber ?? null;
+  // N-3.83 — brandProfile/sellerProfile manufacturer 3단계 폴백(Coupang과 동일 소스).
+  const resolvedManufacturer = resolved?.notice?.manufacturer ?? null;
   // N-3.13 Part J — resolve route가 내려준 재료(Coupang과 동일 소스)로
   // detailBlocks가 있을 때만 assembleContentsFromBlocks를 태운다. resolved가
   // 아직 없으면(초기 로딩) 안내문구/공통이미지 없이 조립하되, listing.description
@@ -268,6 +320,7 @@ export function NaverPayloadPreview({
         releaseAddressBookNo,
         refundAddressBookNo,
         primaryReturnDeliveryCompanyPriorityType,
+        sellerDeliveryFee,
         returnDeliveryFee,
         exchangeDeliveryFee,
         childCertificationInfoId,
@@ -282,6 +335,7 @@ export function NaverPayloadPreview({
         descriptionTemplate,
         commonImages,
         brandIntro,
+        resolvedManufacturer,
       }),
     [
       product,
@@ -290,6 +344,7 @@ export function NaverPayloadPreview({
       releaseAddressBookNo,
       refundAddressBookNo,
       primaryReturnDeliveryCompanyPriorityType,
+      sellerDeliveryFee,
       returnDeliveryFee,
       exchangeDeliveryFee,
       childCertificationInfoId,
@@ -304,10 +359,11 @@ export function NaverPayloadPreview({
       descriptionTemplate,
       commonImages,
       brandIntro,
+      resolvedManufacturer,
     ],
   );
 
-  const validation = useMemo(
+  const locallyComputedValidation = useMemo(
     () =>
       validateNaverPayload(
         payload,
@@ -348,6 +404,11 @@ export function NaverPayloadPreview({
       afterServiceTelephoneNumber,
     ],
   );
+  // N-3.73 STEP7 — sharedValidation(부모, CommerceWorkspace가 이미 계산한 값)이
+  // 있으면 그걸 그대로 쓴다. 여기서 다시 계산한 locallyComputedValidation은
+  // sharedValidation이 없을 때(단독 사용/테스트)만 폴백으로 쓰인다 — "같은
+  // 함수를 부르지만 서로 다른 계산에서 나온 값"이라는 위험을 없앤다.
+  const validation = sharedValidation ?? locallyComputedValidation;
 
   const hasOptions = product.optionGroups.length > 0;
   // N-3.5 — READY/MISSING/BLOCKED 개수는 validateNaverPayload()가 직접 계산해서
@@ -535,10 +596,28 @@ export function NaverPayloadPreview({
             ) : (
               <p className="text-xs text-text-tertiary">옵션 그룹은 있으나 조합(variant) 정보가 없습니다.</p>
             )}
-            <p className="rounded bg-error-soft px-2 py-1 text-[11px] text-error">
-              🔴 BLOCKED — optionCombinations 필드명/구조는 확인됐지만(공식 OpenAPI) price 필드가 절대가인지
-              추가금액인지는 실제 등록 성공 검증 전까지 확인되지 않았습니다.
-            </p>
+            {/* N-3.72(사용자 지시: "실제로는 안 막는데 화면이 계속 BLOCKED라고
+             * 말한다") — 이 배너는 N-3.47에서 옵션가(price)가 salePrice 대비
+             * 추가금액(delta)이라는 게 Naver 공식 계정 답변(GitHub Discussion
+             * #2312)으로 이미 확정된 뒤에도 그대로 하드코딩돼 남아 있었다 —
+             * validation 결과와 무관하게 항상 떠서, 실제로는 READY인 상품도
+             * "🔴 BLOCKED"로 보이게 만들었다(이번 스프린트에서 실제로 옵션
+             * 있는 상품을 여러 번 실등록 성공시켰는데도 이 배너만 그대로
+             * 남아 있었던 게 그 증거). 진짜 BLOCKED 사유(최종가가 0원 미만이
+             * 되는 조합)만 validate-payload.ts의 실제 판정(validation.issues)을
+             * 그대로 보여준다 — 새 판정을 만들지 않는다. */}
+            {validation.issues.some(
+              (i) => i.field === "detailAttribute.optionInfo.optionCombinations[].price",
+            ) && (
+              <p className="rounded bg-error-soft px-2 py-1 text-[11px] text-error">
+                🔴 BLOCKED —{" "}
+                {
+                  validation.issues.find(
+                    (i) => i.field === "detailAttribute.optionInfo.optionCombinations[].price",
+                  )?.reason
+                }
+              </p>
+            )}
             {validation.issues.some(
               (i) => i.field === "detailAttribute.optionInfo.optionCombinations[].optionName",
             ) && (
@@ -651,9 +730,9 @@ export function NaverPayloadPreview({
             {/* N-3.44 — 이전엔 항상 "MISSING" 텍스트만 하드코딩돼 있었다(사용자가
                 이미 인증정보를 입력해도 반영 안 됨). buildNaverProductPayload가
                 실제로 만든 payload 값을 그대로 보여준다. */}
-            <Row label="인증번호" value={payload.originProduct.productCertificationInfos?.[0]?.certificationNumber || "MISSING"} />
-            <Row label="인증기관" value={payload.originProduct.productCertificationInfos?.[0]?.companyName || "MISSING"} />
-            <Row label="인증일자" value={payload.originProduct.productCertificationInfos?.[0]?.certificationDate || "MISSING"} />
+            <Row label="인증번호" value={payload.originProduct.detailAttribute?.productCertificationInfos?.[0]?.certificationNumber || "MISSING"} />
+            <Row label="인증기관" value={payload.originProduct.detailAttribute?.productCertificationInfos?.[0]?.companyName || "MISSING"} />
+            <Row label="인증일자" value={payload.originProduct.detailAttribute?.productCertificationInfos?.[0]?.certificationDate || "MISSING"} />
           </>
         ) : resolved?.category ? (
           <p className="text-xs text-text-tertiary">이 카테고리는 어린이제품 인증(CHILD_CERTIFICATION) 대상이 아닙니다.</p>

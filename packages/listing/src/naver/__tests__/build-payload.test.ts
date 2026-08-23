@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { CanonicalProduct, FieldSource, ProvenanceField } from "@commerce/shared";
 import type { ListingModel } from "@commerce/marketplace";
 import { UNRESOLVED_CATEGORY } from "@commerce/category";
-import { buildNaverProductPayload } from "../build-payload";
+import {
+  buildNaverProductPayload,
+  resolveModelNameFromDescription,
+  generateSmartStoreProductName,
+  resolveSeasonFromText,
+} from "../build-payload";
 import { validateNaverPayload } from "../validate-payload";
 
 /**
@@ -108,6 +113,7 @@ describe("buildNaverProductPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
@@ -129,6 +135,7 @@ describe("buildNaverProductPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
@@ -151,6 +158,7 @@ describe("buildNaverProductPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
@@ -171,6 +179,7 @@ describe("buildNaverProductPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
@@ -210,6 +219,7 @@ describe("buildNaverProductPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
@@ -238,6 +248,7 @@ describe("buildNaverProductPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
@@ -257,6 +268,7 @@ describe("buildNaverProductPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
@@ -279,6 +291,7 @@ describe("buildNaverProductPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
@@ -300,6 +313,7 @@ describe("buildNaverProductPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
@@ -326,6 +340,7 @@ describe("buildNaverProductPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
@@ -367,6 +382,7 @@ describe("buildNaverProductPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
@@ -391,6 +407,7 @@ describe("validateNaverPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
@@ -439,6 +456,7 @@ describe("validateNaverPayload", () => {
       releaseAddressBookNo: null,
       refundAddressBookNo: null,
       primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
@@ -481,6 +499,7 @@ describe("validateNaverPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: null,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
@@ -521,6 +540,7 @@ describe("validateNaverPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: null,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
@@ -561,6 +581,7 @@ describe("validateNaverPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
       returnDeliveryFee: null,
       exchangeDeliveryFee: null,
       childCertificationInfoId: null,
@@ -606,6 +627,7 @@ describe("validateNaverPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
@@ -649,6 +671,7 @@ describe("validateNaverPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
@@ -690,6 +713,7 @@ describe("validateNaverPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
@@ -732,6 +756,7 @@ describe("validateNaverPayload", () => {
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: null,
@@ -780,6 +805,7 @@ function baseInput(product: CanonicalProduct, listing: ListingModel) {
     releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
     refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
     primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+    sellerDeliveryFee: null,
     returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
     exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
     originAreaCode: PLACEHOLDER_ORIGIN_AREA_CODE,
@@ -820,7 +846,7 @@ describe("N-3.5: smartstoreChannelProduct 스키마 재검증", () => {
   // 제외하기로 확정했다. 값을 채우지 않는다는 사실(추측 금지)은 그대로지만,
   // 더 이상 result.issues(등록 차단 목록)에는 안 들어가고 advisoryNotes로만
   // 나온다 — "등록을 막는다" ≠ "판매자가 알아야 한다"를 분리한 것.
-  it("naverShoppingRegistration은 false로 명시 전송하고 advisory로만 표시한다 — Gate 판단(issues)에는 안 들어간다(N-3.25 STEP 2)", () => {
+  it("naverShoppingRegistration은 true로 명시 전송하고 advisory로만 표시한다 — Gate 판단(issues)에는 안 들어간다(N-3.84, 서버가 광고주 아니면 어차피 false로 강제 저장)", () => {
     const product = makeMinimalProduct();
     const listing = makeMinimalListing(product);
     const payload = buildNaverProductPayload({
@@ -828,7 +854,7 @@ describe("N-3.5: smartstoreChannelProduct 스키마 재검증", () => {
       childCertificationInfoId: null,
       categoryRequiresChildCertification: false,
     });
-    expect(payload.smartstoreChannelProduct.naverShoppingRegistration).toBe(false);
+    expect(payload.smartstoreChannelProduct.naverShoppingRegistration).toBe(true);
     const result = validateNaverPayload(
       payload,
       { ...baseValidateInput(product), childCertificationInfoId: null },
@@ -980,6 +1006,7 @@ describe("N-3.5: Final Validator — readyCount/missingCount/blockedCount", () =
       releaseAddressBookNo: null,
       refundAddressBookNo: null,
       primaryReturnDeliveryCompanyPriorityType: null,
+      sellerDeliveryFee: null,
       returnDeliveryFee: null,
       exchangeDeliveryFee: null,
       childCertificationInfoId: null,
@@ -1011,18 +1038,14 @@ describe("N-3.5: Final Validator — readyCount/missingCount/blockedCount", () =
     expect(result.ok).toBe(false);
   });
 
-  // Sprint P0(CPO 지시, 2026-08-19: "필수값과 선택값을 분리해야 합니다" —
-  // "97%인데 등록이 안 되는 문제") — 이 테스트는 원래 "size 입력 경로가
-  // 없으면 영원히 ok:false"를 정상 동작으로 고정해뒀었다. 그게 정확히
-  // CPO가 신고한 버그였다: SIZE 옵션이 없는 상품(가방/액세서리 등)은
-  // resolveSizeFromOptions가 절대 값을 만들어낼 수 없는데, 이 필드
-  // 하나가 다른 필수 정보를 다 채운 상품의 등록까지 영원히 막았다. 이제
-  // size는 optional:true로 표시돼 여전히 MISSING(issues에는 남아 "선택
-  // 정보"로 보임)이지만 ok/등록 Gate는 막지 않는다 — naverShoppingRegistration
-  // (advisory)과는 성격이 다르다: advisory는 "등록 가능 여부와 아예
-  // 무관"이라 화면에서도 빠지지만, size는 "채우면 좋지만 없어도 등록은
-  // 되는" 필드라 여전히 이슈 목록/선택 입력 카운트에는 보인다.
-  it("Case F — deliveryCompany/warrantyPolicy/afterServiceDirector를 채우면 size(치수)만 선택 정보로 남고 ok:true다", () => {
+  // N-3.71 — 이전에는 SIZE 옵션이 없는 상품(가방/액세서리 등)에서 size가
+  // MISSING+optional:true로 표시돼도 ok:true였다. size는 이제 build-payload.ts가
+  // SIZE 옵션이 없을 때 자동으로 "상세페이지 참조"를 채우므로(위 size 필드
+  // 주석 참고) MISSING 자체가 발생하지 않는다 — material/color/manufacturer/
+  // caution도 makeMinimalProduct에 이미 실제값이 있고, warrantyPolicy/
+  // afterServiceDirector/afterServiceTelephoneNumber를 채우면 이 상품은
+  // 고시정보 필드가 전부 READY라 missingCount는 0이어야 한다.
+  it("Case F — deliveryCompany/warrantyPolicy/afterServiceDirector를 채우면 size(치수)도 자동 대체돼 고시정보 필드가 전부 READY, ok:true다", () => {
     const product = makeMinimalProduct();
     const listing = makeMinimalListing(product);
     const payload = buildNaverProductPayload({
@@ -1047,15 +1070,17 @@ describe("N-3.5: Final Validator — readyCount/missingCount/blockedCount", () =
       false,
     );
     expect(result.blockedCount).toBe(0);
-    expect(result.missingCount).toBe(1);
     expect(
       result.issues.some((i) => i.field === "productInfoProvidedNotice(WEAR).size" && i.severity === "MISSING"),
-    ).toBe(true);
+    ).toBe(false);
     const sizeField = result.fields.find((f) => f.field === "productInfoProvidedNotice(WEAR).size");
-    expect(sizeField?.optional).toBe(true);
-    // 핵심 회귀 대상 — size 하나만 MISSING이어도(optional:true) 등록을
-    // 막지 않는다. blockedCount=0이고 missingCount=1(size)뿐인데 ok가
-    // false로 남으면 P0 버그가 재발한 것이다.
+    expect(sizeField?.status).toBe("READY");
+    expect(payload.originProduct.detailAttribute?.productInfoProvidedNotice).toMatchObject({
+      wear: { size: "상품 상세페이지 참조" },
+    });
+    // 핵심 회귀 대상 — 필수/부가정보를 전부 채운 상품은 missingCount=0,
+    // blockedCount=0, ok:true여야 한다.
+    expect(result.missingCount).toBe(0);
     expect(result.ok).toBe(true);
     // advisory는 여전히 fields에는 남아있다(섹션 요약에서 보여야 하니까) — 다만
     // 카운트/ok에는 영향을 주지 않는다는 걸 같이 확인한다.
@@ -1064,15 +1089,16 @@ describe("N-3.5: Final Validator — readyCount/missingCount/blockedCount", () =
     ).toBe(true);
   });
 
-  // Sprint P0 확장(CEO 지시, 2026-08-19: "치수뿐 아니라 필수가 아닌 값은
-  // 전부 optional로 — 필수만 다 입력되면 등록 가능해야 한다") — Case F는
-  // deliveryCompany/warrantyPolicy/afterServiceDirector를 미리 채운
-  // 픽스처였다. 이 케이스는 그 반대: 소재/색상/제조자/세탁방법/품질보증/
-  // AS연락처/사용연령/품명/모델명/중량/치수를 전부 비운 상태에서도(핵심
-  // 필수값 — 카테고리/상품명/이미지/상세설명/가격/재고/배송지/택배사/원산지
-  // 만 채움) ok:true인지 확인한다. 하나라도 여전히 required로 남아있으면
-  // 여기서 실패한다.
-  it("Case G(신규) — 소재/색상/제조자/세탁방법/품질보증/AS연락처/치수 등 부가정보를 전부 비워도 핵심 필수값만 있으면 ok:true다", () => {
+  // N-3.71(CPO 지시, 2026-08-21) — 이 테스트는 원래 2026-08-19 CEO 지시("치수
+  // 뿐 아니라 필수가 아닌 값은 전부 optional로")를 코드로 고정해뒀었다. 그
+  // 확장이 실제 프로덕션 등록에서 정확히 이 필드들(치수 제외 9개) 때문에
+  // Naver HTTP 400을 유발한 원인이었다 — "상세페이지 참조 대체가 허용된다"는
+  // 전제는 맞지만 필드를 아예 안 건드린 기본 상태(REQUIRED)까지 자동으로
+  // 통과시켜서는 안 됐다. 이제 이 시나리오(소재/색상/제조자/세탁방법/
+  // 품질보증/AS연락처/사용연령/품명/모델명/중량을 전부 비운 상태)는 반대로
+  // ok:false여야 한다 — size만 예외로 자동 대체돼 READY가 된다(build-payload.ts
+  // 폴백).
+  it("Case G — 소재/색상/제조자/세탁방법/품질보증/AS연락처 등 고시 부가정보를 실제로 비우면(REQUIRED 상태, 상세페이지 참조 미선택) 등록을 막는다(ok:false) — size만 자동 대체로 예외", () => {
     const product = makeMinimalProduct();
     // 부가정보(고시 텍스트)를 전부 비운다 — 소재/색상/제조자/세탁방법.
     product.material = field("");
@@ -1086,7 +1112,8 @@ describe("N-3.5: Final Validator — readyCount/missingCount/blockedCount", () =
     product.itemName = field("");
     product.modelName = field("");
     product.weight = field("");
-    // 옵션 자체가 없으므로 치수(사이즈)도 자연히 MISSING+optional이 된다.
+    // 옵션 자체가 없다 — size는 build-payload.ts가 자동으로 "상세페이지
+    // 참조"를 채우므로 이 필드만 예외적으로 READY가 된다.
     const listing = makeMinimalListing(product);
     const payload = buildNaverProductPayload({
       ...baseInput(product, listing),
@@ -1112,17 +1139,17 @@ describe("N-3.5: Final Validator — readyCount/missingCount/blockedCount", () =
       false,
     );
     expect(result.blockedCount).toBe(0);
-    // material/color/manufacturer/caution/size/warrantyPolicy/
-    // afterServiceDirector/afterServiceTelephoneNumber = 8개가 전부
-    // MISSING이어야 한다(missingCount는 그대로 "전체 MISSING 개수" 의미를
-    // 유지 — optional이어도 이 카운트에서는 빠지지 않는다).
-    expect(result.missingCount).toBeGreaterThanOrEqual(8);
+    // material/color/manufacturer/caution/warrantyPolicy/afterServiceDirector/
+    // afterServiceTelephoneNumber = 7개가 MISSING이어야 한다(size는 자동 대체돼
+    // 빠진다).
+    expect(result.missingCount).toBeGreaterThanOrEqual(7);
+    // 핵심 회귀 대상 — N-3.71부터 optional:true인 MISSING 필드는 size뿐이다.
+    // 나머지는 실제로 등록을 막아야 한다.
     const optionalMissingFields = result.fields.filter((f) => f.status === "MISSING" && f.optional);
-    expect(optionalMissingFields.length).toBeGreaterThanOrEqual(8);
-    // 핵심 회귀 대상 — 부가정보가 전부 비어 있어도(전부 optional) 등록을
-    // 막지 않는다. blockedCount=0인데 ok가 false로 남으면 CEO가 지시한
-    // "필수만 다 입력되면 등록 가능" 확장이 깨진 것이다.
-    expect(result.ok).toBe(true);
+    expect(optionalMissingFields.length).toBe(0);
+    const sizeField = result.fields.find((f) => f.field === "productInfoProvidedNotice(WEAR).size");
+    expect(sizeField?.status).toBe("READY");
+    expect(result.ok).toBe(false);
   });
 });
 
@@ -1204,7 +1231,7 @@ describe("N-3.32: 단일 SKU 옵션 판정 정합성(hasRealProductOptions)", ()
     ).toBe(false);
   });
 
-  it("Test D — 옵션 없음(WEAR/KIDS) → optionInfo N/A, size는 여전히 MISSING", () => {
+  it("Test D — 옵션 없음(WEAR/KIDS) → optionInfo N/A, size는 자동으로 '상세페이지 참조'가 채워져 READY(N-3.71)", () => {
     const product = makeMinimalProduct();
     // makeMinimalProduct 기본값 그대로: optionGroups=[], variants=[].
     const listing = makeMinimalListing(product);
@@ -1214,6 +1241,8 @@ describe("N-3.32: 단일 SKU 옵션 판정 정합성(hasRealProductOptions)", ()
       categoryRequiresChildCertification: false,
     });
     expect(payload.originProduct.detailAttribute?.optionInfo).toBeUndefined();
+    const notice = payload.originProduct.detailAttribute?.productInfoProvidedNotice;
+    expect(notice && "wear" in notice ? notice.wear.size : undefined).toBe("상품 상세페이지 참조");
     const result = validateNaverPayload(
       payload,
       { ...baseValidateInput(product), childCertificationInfoId: null },
@@ -1222,7 +1251,7 @@ describe("N-3.32: 단일 SKU 옵션 판정 정합성(hasRealProductOptions)", ()
     expect(result.fields.some((f) => f.field.startsWith("detailAttribute.optionInfo"))).toBe(false);
     expect(
       result.issues.some((i) => i.field === "productInfoProvidedNotice(WEAR).size" && i.severity === "MISSING"),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("Case C(이상 데이터) — Default Title 모양이어도 실제 variant 레코드가 있으면 옵션 있음으로 판정하고 optionInfo를 검사 대상에 포함한다(N-3.47 이후 READY)", () => {
@@ -1246,6 +1275,288 @@ describe("N-3.32: 단일 SKU 옵션 판정 정합성(hasRealProductOptions)", ()
     expect(result.fields.some((f) => f.field === "detailAttribute.optionInfo" && f.status === "READY")).toBe(
       true,
     );
+  });
+});
+
+/**
+ * N-3.78 STEP2(CPO 지시, 2026-08-22, 골든 E2E 기준상품 13730591182) — Color+Size
+ * 복합 옵션 검증. Case A(Size 단일)는 이미 "N-3.4"(위, 328행)와 "Test C"(1206행)가
+ * 커버하므로 여기서 다시 만들지 않는다(CPO 지시: 테스트 개수를 억지로 맞추지
+ * 않는다). 여기서는 아직 존재하지 않던 케이스만 추가한다: Color 단일축(B),
+ * Color+Size 2축 가격/재고/SKU 완전 독립성(C, CPO 지정 스펙), 3축(D)과 4축
+ * 상한(D-확장), 그리고 세 가지 예외 케이스(E/F/G, "판단만 하고 임의로 고치지
+ * 않는다"는 지시에 따라 현재 동작을 고정하는 회귀 테스트로만 작성)와 중복
+ * 조합(H).
+ */
+describe("N-3.78 STEP2 — Color + Size 복합 옵션 검증", () => {
+  it("Case B — Color 단일 옵션(3값)은 optionName1에만 채워지고 optionName2/3는 비어 있다", () => {
+    const product = makeMinimalProduct();
+    product.optionGroups = [{ name: "Color", values: ["Red", "Blue", "Green"] }];
+    product.variants = [
+      { id: "v1", optionValues: { Color: "Red" }, sku: "SKU-RED", stockQuantity: 7 },
+      { id: "v2", optionValues: { Color: "Blue" }, sku: "SKU-BLUE", stockQuantity: 3 },
+      { id: "v3", optionValues: { Color: "Green" }, sku: "SKU-GREEN", stockQuantity: 5 },
+    ];
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    const groupNames = payload.originProduct.detailAttribute?.optionInfo?.optionCombinationGroupNames;
+    expect(groupNames).toEqual({ optionGroupName1: "Color" });
+    const combos = payload.originProduct.detailAttribute?.optionInfo?.optionCombinations;
+    expect(combos).toHaveLength(3);
+    expect(combos?.[0]).toMatchObject({ optionName1: "Red", sellerManagerCode: "SKU-RED", stockQuantity: 7 });
+    expect(combos?.[0].optionName2).toBeUndefined();
+    expect(combos?.[2]).toMatchObject({ optionName1: "Green", sellerManagerCode: "SKU-GREEN", stockQuantity: 5 });
+  });
+
+  it("Case C — Color × Size 2축(4개 조합)의 가격/재고/SKU가 조합별로 완전히 독립적으로 보존된다(CPO 지정 스펙)", () => {
+    const product = makeMinimalProduct();
+    product.price = field({ amount: 10000, currency: "KRW" });
+    product.optionGroups = [
+      { name: "Color", values: ["Red", "Blue"] },
+      { name: "Size", values: ["S", "M"] },
+    ];
+    product.variants = [
+      {
+        id: "v1",
+        optionValues: { Color: "Red", Size: "S" },
+        sku: "RED-S",
+        stockQuantity: 10,
+        price: { amount: 10000, currency: "KRW" },
+      },
+      {
+        id: "v2",
+        optionValues: { Color: "Red", Size: "M" },
+        sku: "RED-M",
+        stockQuantity: 20,
+        price: { amount: 11000, currency: "KRW" },
+      },
+      {
+        id: "v3",
+        optionValues: { Color: "Blue", Size: "S" },
+        sku: "BLUE-S",
+        stockQuantity: 15,
+        price: { amount: 10000, currency: "KRW" },
+      },
+      {
+        id: "v4",
+        optionValues: { Color: "Blue", Size: "M" },
+        sku: "BLUE-M",
+        stockQuantity: 5,
+        price: { amount: 11000, currency: "KRW" },
+      },
+    ];
+    // listing.priceKrw(makeMinimalListing 기본값 10000)를 product.price(10000)와
+    // 일치시켜 delta 계산의 기준(base)을 명확히 한다 — M 사이즈(11000)는
+    // +1000, S 사이즈(10000)는 +0이 되어야 한다.
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    const groupNames = payload.originProduct.detailAttribute?.optionInfo?.optionCombinationGroupNames;
+    expect(groupNames).toEqual({ optionGroupName1: "Color", optionGroupName2: "Size" });
+    const combos = payload.originProduct.detailAttribute?.optionInfo?.optionCombinations;
+    expect(combos).toHaveLength(4);
+    expect(combos?.[0]).toMatchObject({
+      optionName1: "Red",
+      optionName2: "S",
+      sellerManagerCode: "RED-S",
+      stockQuantity: 10,
+      price: 0,
+    });
+    expect(combos?.[1]).toMatchObject({
+      optionName1: "Red",
+      optionName2: "M",
+      sellerManagerCode: "RED-M",
+      stockQuantity: 20,
+      price: 1000,
+    });
+    expect(combos?.[2]).toMatchObject({
+      optionName1: "Blue",
+      optionName2: "S",
+      sellerManagerCode: "BLUE-S",
+      stockQuantity: 15,
+      price: 0,
+    });
+    expect(combos?.[3]).toMatchObject({
+      optionName1: "Blue",
+      optionName2: "M",
+      sellerManagerCode: "BLUE-M",
+      stockQuantity: 5,
+      price: 1000,
+    });
+  });
+
+  it("Case D — Color × Size × Material 3축(8개 조합) → optionName1/2/3 모두 정확히 매핑된다", () => {
+    const product = makeMinimalProduct();
+    product.optionGroups = [
+      { name: "Color", values: ["Red", "Blue"] },
+      { name: "Size", values: ["S", "M"] },
+      { name: "Material", values: ["Cotton", "Wool"] },
+    ];
+    product.variants = [
+      { id: "v1", optionValues: { Color: "Red", Size: "S", Material: "Cotton" }, sku: "R-S-C", stockQuantity: 1 },
+      { id: "v2", optionValues: { Color: "Red", Size: "S", Material: "Wool" }, sku: "R-S-W", stockQuantity: 2 },
+      { id: "v3", optionValues: { Color: "Red", Size: "M", Material: "Cotton" }, sku: "R-M-C", stockQuantity: 3 },
+      { id: "v4", optionValues: { Color: "Red", Size: "M", Material: "Wool" }, sku: "R-M-W", stockQuantity: 4 },
+      { id: "v5", optionValues: { Color: "Blue", Size: "S", Material: "Cotton" }, sku: "B-S-C", stockQuantity: 5 },
+      { id: "v6", optionValues: { Color: "Blue", Size: "S", Material: "Wool" }, sku: "B-S-W", stockQuantity: 6 },
+      { id: "v7", optionValues: { Color: "Blue", Size: "M", Material: "Cotton" }, sku: "B-M-C", stockQuantity: 7 },
+      { id: "v8", optionValues: { Color: "Blue", Size: "M", Material: "Wool" }, sku: "B-M-W", stockQuantity: 8 },
+    ];
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    const groupNames = payload.originProduct.detailAttribute?.optionInfo?.optionCombinationGroupNames;
+    expect(groupNames).toEqual({ optionGroupName1: "Color", optionGroupName2: "Size", optionGroupName3: "Material" });
+    const combos = payload.originProduct.detailAttribute?.optionInfo?.optionCombinations;
+    expect(combos).toHaveLength(8);
+    expect(combos?.[0]).toMatchObject({
+      optionName1: "Red",
+      optionName2: "S",
+      optionName3: "Cotton",
+      sellerManagerCode: "R-S-C",
+      stockQuantity: 1,
+    });
+    expect(combos?.[7]).toMatchObject({
+      optionName1: "Blue",
+      optionName2: "M",
+      optionName3: "Wool",
+      sellerManagerCode: "B-M-W",
+      stockQuantity: 8,
+    });
+  });
+
+  it("Case D-확장(4축 시도) — 4번째 optionGroup은 에러 없이 조용히 무시된다(Naver 3축 상한, N-3.50 회귀 확인)", () => {
+    const product = makeMinimalProduct();
+    product.optionGroups = [
+      { name: "Color", values: ["Red"] },
+      { name: "Size", values: ["S"] },
+      { name: "Material", values: ["Cotton"] },
+      { name: "Season", values: ["Winter"] },
+    ];
+    product.variants = [
+      {
+        id: "v1",
+        optionValues: { Color: "Red", Size: "S", Material: "Cotton", Season: "Winter" },
+        sku: "SKU-1",
+        stockQuantity: 1,
+      },
+    ];
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    const groupNames = payload.originProduct.detailAttribute?.optionInfo?.optionCombinationGroupNames;
+    expect(groupNames).toEqual({ optionGroupName1: "Color", optionGroupName2: "Size", optionGroupName3: "Material" });
+    expect(Object.keys(groupNames ?? {})).toHaveLength(3);
+    const combo = payload.originProduct.detailAttribute?.optionInfo?.optionCombinations?.[0];
+    expect(combo).toMatchObject({ optionName1: "Red", optionName2: "S", optionName3: "Cotton" });
+    expect((combo as unknown as Record<string, unknown>).optionName4).toBeUndefined();
+  });
+
+  it("Case E(예외, N-3.82에서 수정) — optionGroups는 있는데 variants가 비어 있으면 optionInfo 자체를 생략한다", () => {
+    const product = makeMinimalProduct();
+    product.optionGroups = [{ name: "Size", values: ["S", "M", "L"] }];
+    product.variants = [];
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    // N-3.82(CPO 지시) — N-3.78 STEP2에서 발견한 버그 수정: variants가 비어
+    // 있으면 optionGroups 내용과 무관하게 "옵션 없음"으로 판정한다. 예전엔
+    // optionCombinationGroupNames만 채워지고 optionCombinations는 빈 배열인
+    // 깨진 모양이 나갔는데, 이제는 optionInfo 블록 자체를 생략한다(빈 옵션을
+    // 보내느니 옵션 섹션을 아예 안 보내는 게 안전).
+    expect(payload.originProduct.detailAttribute?.optionInfo).toBeUndefined();
+  });
+
+  it("Case F(예외) — optionGroups가 비어 있고 variants만 있으면 optionInfo는 생성되지만 optionName1/2/3이 전부 없는 조합이 나온다", () => {
+    const product = makeMinimalProduct();
+    product.optionGroups = [];
+    product.variants = [
+      { id: "v1", optionValues: {}, sku: "SKU-1", stockQuantity: 5 },
+      { id: "v2", optionValues: {}, sku: "SKU-2", stockQuantity: 3 },
+    ];
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.originProduct.detailAttribute?.optionInfo).toBeDefined();
+    expect(payload.originProduct.detailAttribute?.optionInfo?.optionCombinationGroupNames).toEqual({});
+    const combos = payload.originProduct.detailAttribute?.optionInfo?.optionCombinations;
+    expect(combos).toHaveLength(2);
+    expect(combos?.[0].optionName1).toBeUndefined();
+    expect(combos?.[0].optionName2).toBeUndefined();
+    expect(combos?.[0].optionName3).toBeUndefined();
+    expect(combos?.[0]).toMatchObject({ sellerManagerCode: "SKU-1", stockQuantity: 5 });
+  });
+
+  it("Case G(예외) — optionGroups 이름과 variant.optionValues 키가 서로 다르면 에러 없이 빈 값으로 채워진다(오조합 침묵 처리)", () => {
+    const product = makeMinimalProduct();
+    product.optionGroups = [{ name: "색상", values: ["Navy", "White"] }];
+    // variant.optionValues 키가 "색상"이 아니라 영문 "Color"로 저장된 이상
+    // 케이스(원본 파싱 단계에서 그룹명과 variant 키가 어긋난 경우를 재현).
+    product.variants = [
+      { id: "v1", optionValues: { Color: "Navy" }, sku: "SKU-1", stockQuantity: 5 },
+      { id: "v2", optionValues: { Color: "White" }, sku: "SKU-2", stockQuantity: 3 },
+    ];
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    // groupNames.map(name => variant.optionValues[name] ?? "")는 키가 없으면
+    // 조용히 빈 문자열로 대체한다 — BLOCKED나 에러가 아니라 optionName1이
+    // 그냥 없는 채로(빈 문자열은 falsy라 if(values[0])에서 걸러짐) 조합만
+    // 남는다.
+    const combos = payload.originProduct.detailAttribute?.optionInfo?.optionCombinations;
+    expect(combos).toHaveLength(2);
+    expect(combos?.[0].optionName1).toBeUndefined();
+    expect(combos?.[0]).toMatchObject({ sellerManagerCode: "SKU-1", stockQuantity: 5 });
+    // groupNames 자체는 optionGroups 기준이라 정상적으로 "색상"이 채워진다 —
+    // payload는 "색상"이라는 축 이름은 선언하지만 실제 조합에는 그 축의 값이
+    // 하나도 없는 불일치 상태가 된다(Case E와 유사한 패턴).
+    expect(payload.originProduct.detailAttribute?.optionInfo?.optionCombinationGroupNames).toEqual({
+      optionGroupName1: "색상",
+    });
+  });
+
+  it("Case H(예외) — 동일한 옵션조합을 가진 variant가 2개면 중복 제거 없이 그대로 2개 조합이 생성된다(dedup 로직 없음 확인)", () => {
+    const product = makeMinimalProduct();
+    product.optionGroups = [{ name: "Size", values: ["S"] }];
+    product.variants = [
+      { id: "v1", optionValues: { Size: "S" }, sku: "SKU-DUP-1", stockQuantity: 5 },
+      { id: "v2", optionValues: { Size: "S" }, sku: "SKU-DUP-2", stockQuantity: 3 },
+    ];
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    // buildOptionCombinations는 variants.map()으로 1:1 변환만 하고 중복 병합
+    // 로직이 없다 — 같은 "S" 조합이 판매자관리코드만 다른 채 2개 그대로
+    // 나간다.
+    const combos = payload.originProduct.detailAttribute?.optionInfo?.optionCombinations;
+    expect(combos).toHaveLength(2);
+    expect(combos?.[0]).toMatchObject({ optionName1: "S", sellerManagerCode: "SKU-DUP-1" });
+    expect(combos?.[1]).toMatchObject({ optionName1: "S", sellerManagerCode: "SKU-DUP-2" });
   });
 });
 
@@ -1286,6 +1597,7 @@ describe("buildNaverProductPayload — detailBlocks → detailContent 조립(Par
       releaseAddressBookNo: PLACEHOLDER_RELEASE_ADDRESS,
       refundAddressBookNo: PLACEHOLDER_REFUND_ADDRESS,
       primaryReturnDeliveryCompanyPriorityType: PLACEHOLDER_RETURN_COMPANY_PRIORITY_TYPE,
+      sellerDeliveryFee: null,
       returnDeliveryFee: PLACEHOLDER_RETURN_DELIVERY_FEE,
       exchangeDeliveryFee: PLACEHOLDER_EXCHANGE_DELIVERY_FEE,
       childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
@@ -1342,5 +1654,587 @@ describe("buildNaverProductPayload — detailBlocks → detailContent 조립(Par
   it("detailBlocks가 없으면(에디터를 안 연 세션) 기존처럼 listing.description을 그대로 쓴다(회귀 없음)", () => {
     const payload = buildWithBlocks(undefined);
     expect(payload.originProduct.detailContent).toBe("아동용 반팔 티셔츠입니다.");
+  });
+});
+
+/**
+ * N-3.65(2026-08-20, CPO 지시: "modelName은 지금 바로 수정") — 실제 등록에서
+ * naverShoppingSearchInfo.modelName이 NotEmpty로 거부됐다("어린이인증 대상
+ * 카테고리 상품은 카탈로그 입력이 필수입니다"). 원문 설명에 실제로 "Product
+ * code XXXX" 문구가 있을 때만(임의 값 금지) 그 코드를 추출해 이 필드에
+ * 채운다 — Bobo Choses 실측(2026-08-20)에서 확인한 실제 문구 형태를 그대로
+ * 픽스처로 쓴다.
+ */
+describe("resolveModelNameFromDescription", () => {
+  it("실제 원문에 'Product code XXXX'가 있으면 그 코드만 추출한다(실측 문구 그대로)", () => {
+    expect(
+      resolveModelNameFromDescription(
+        "Bobo Choses Color Block Zipped Sweatshirt. 72% Organic Cotton, 28% Recycled Polyester. Product code B126AC050 SS26 Made in Spain.",
+      ),
+    ).toBe("B126AC050 SS26");
+  });
+
+  it("'Product code' 뒤에 코드 하나만 있고 바로 마침표로 끝나도 정상 추출한다", () => {
+    expect(resolveModelNameFromDescription("Some description. Product code AB123.")).toBe("AB123");
+  });
+
+  it("원문에 'Product code' 문구 자체가 없으면 undefined를 돌려준다(임의 값 생성 금지)", () => {
+    expect(resolveModelNameFromDescription("그냥 평범한 상품 설명입니다.")).toBeUndefined();
+  });
+
+  it("설명 자체가 없으면(undefined) undefined를 돌려준다", () => {
+    expect(resolveModelNameFromDescription(undefined)).toBeUndefined();
+  });
+});
+
+describe("buildNaverProductPayload — naverShoppingSearchInfo.modelName 연결(N-3.65)", () => {
+  it("실제 원문에 Product code가 있으면 naverShoppingSearchInfo.modelName에 그대로 들어간다", () => {
+    const product = makeMinimalProduct();
+    product.description = field(
+      "Bobo Choses Color Block Zipped Sweatshirt. Product code B126AC050 SS26 Made in Spain.",
+    );
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    // N-3.76(2차) — manufacturerName/brandName도 이제 이 필드로 함께 연결된다
+    // (makeMinimalProduct의 기본 브랜드/제조사 값 그대로).
+    expect(payload.originProduct.detailAttribute?.naverShoppingSearchInfo).toEqual({
+      modelName: "B126AC050 SS26",
+      manufacturerName: "Test Manufacturer",
+      brandName: "TestBrand",
+    });
+  });
+
+  it("원문에 Product code가 없어도 브랜드/제조사가 있으면 naverShoppingSearchInfo가 그 값으로 채워진다(N-3.76 2차)", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.originProduct.detailAttribute?.naverShoppingSearchInfo).toEqual({
+      modelName: undefined,
+      manufacturerName: "Test Manufacturer",
+      brandName: "TestBrand",
+    });
+  });
+
+  it("브랜드/제조사/Product code 전부 없으면 naverShoppingSearchInfo 자체를 만들지 않는다(임의 값 금지)", () => {
+    const product = makeMinimalProduct();
+    product.brand = field("");
+    product.manufacturer = field("");
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.originProduct.detailAttribute?.naverShoppingSearchInfo).toBeUndefined();
+  });
+});
+
+/**
+ * N-3.83(CPO 지시, "SmartStore 기본정보 완성" 감사에서 발견) — Coupang은
+ * build-payload.ts:1102에서 이미 product.manufacturer.value || brandProfile?.
+ * manufacturer || sellerConfig.manufacturer 3단계 폴백을 쓰고 있었는데, Naver
+ * 쪽은 이 파일이 resolvedManufacturer를 몰라 product.manufacturer만 봤다 —
+ * 크롤러가 제조사를 못 찾은 상품(흔한 경우)은 항상 빈칸이었다. resolve-context.ts
+ * 가 brandProfile/sellerProfile에서 미리 계산해 이 필드로 넘겨주는 값을
+ * 폴백으로 쓰도록 고쳤다(호출부가 이미 계산한 값을 그대로 받는다는 기존
+ * 원칙 유지 — 이 파일은 DB를 조회하지 않는다).
+ */
+describe("buildNaverProductPayload — manufacturer 3단계 폴백(N-3.83)", () => {
+  it("product.manufacturer.value(원문 추출값)가 있으면 resolvedManufacturer가 있어도 원문값이 항상 우선한다", () => {
+    const product = makeMinimalProduct();
+    // makeMinimalProduct 기본값 "Test Manufacturer" 그대로(원문 추출값).
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+      resolvedManufacturer: "브랜드기본값 제조사",
+    });
+    expect(payload.originProduct.detailAttribute?.naverShoppingSearchInfo?.manufacturerName).toBe(
+      "Test Manufacturer",
+    );
+    const notice = payload.originProduct.detailAttribute?.productInfoProvidedNotice;
+    expect(notice && "wear" in notice ? notice.wear.manufacturer : undefined).toBe("Test Manufacturer");
+  });
+
+  it("product.manufacturer.value가 비어 있으면 resolvedManufacturer(브랜드/Seller 기본값)로 보충한다", () => {
+    const product = makeMinimalProduct();
+    product.manufacturer = field("");
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+      resolvedManufacturer: "브랜드기본값 제조사",
+    });
+    expect(payload.originProduct.detailAttribute?.naverShoppingSearchInfo?.manufacturerName).toBe(
+      "브랜드기본값 제조사",
+    );
+    const notice = payload.originProduct.detailAttribute?.productInfoProvidedNotice;
+    expect(notice && "wear" in notice ? notice.wear.manufacturer : undefined).toBe("브랜드기본값 제조사");
+  });
+
+  it("product.manufacturer.value도 resolvedManufacturer도 둘 다 없으면 임의 값을 만들지 않는다", () => {
+    const product = makeMinimalProduct();
+    product.manufacturer = field("");
+    product.brand = field("");
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+      resolvedManufacturer: null,
+    });
+    // brand도 비었으므로 modelName/manufacturerName/brandName 전부 없어
+    // naverShoppingSearchInfo 자체가 undefined다(기존 "임의 값 금지" 규칙 유지).
+    expect(payload.originProduct.detailAttribute?.naverShoppingSearchInfo).toBeUndefined();
+    const notice = payload.originProduct.detailAttribute?.productInfoProvidedNotice;
+    expect(notice && "wear" in notice ? notice.wear.manufacturer : undefined).toBeUndefined();
+  });
+
+  it("resolvedManufacturer를 아예 안 넘겨도(undefined) 기존처럼 product.manufacturer.value만으로 동작한다(회귀 없음)", () => {
+    const product = makeMinimalProduct();
+    // makeMinimalProduct 기본값 "Test Manufacturer" 그대로.
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.originProduct.detailAttribute?.naverShoppingSearchInfo?.manufacturerName).toBe(
+      "Test Manufacturer",
+    );
+  });
+});
+
+describe("buildNaverProductPayload — sellerManagementCode 연결(N-3.84)", () => {
+  it("product.sku.value(원본 페이지에서 실제 추출된 값)가 있으면 그대로 들어간다", () => {
+    const product = makeMinimalProduct();
+    // makeMinimalProduct 기본값 sku="KIDS-TSHIRT-1".
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.originProduct.sellerManagementCode).toBe("KIDS-TSHIRT-1");
+  });
+
+  it("product.sku.value가 비어 있으면 임의 코드를 만들지 않고 생략한다", () => {
+    const product = makeMinimalProduct();
+    product.sku = field("");
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.originProduct.sellerManagementCode).toBeUndefined();
+  });
+});
+
+describe("buildNaverProductPayload — 묶음배송 고정 정책(N-3.85 STEP5)", () => {
+  it("모든 상품에 deliveryBundleGroupUsable=true, deliveryBundleGroupId=null을 고정 전송한다", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.originProduct.deliveryInfo?.deliveryBundleGroupUsable).toBe(true);
+    expect(payload.originProduct.deliveryInfo?.deliveryBundleGroupId).toBeNull();
+  });
+});
+
+describe("buildNaverProductPayload — resolvedAttributes 연결(N-4.00 A-2)", () => {
+  it("resolvedAttributes가 있으면 detailAttribute.productAttributes에 그대로 들어간다", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+      resolvedAttributes: [{ attributeSeq: 10012917, attributeValueSeq: 10500182 }],
+    });
+    expect(payload.originProduct.detailAttribute?.productAttributes).toEqual([
+      { attributeSeq: 10012917, attributeValueSeq: 10500182 },
+    ]);
+  });
+
+  it("resolvedAttributes가 빈 배열이거나 없으면 productAttributes 자체를 생략한다(임의 빈 배열 전송 금지)", () => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    const payloadWithoutField = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payloadWithoutField.originProduct.detailAttribute?.productAttributes).toBeUndefined();
+
+    const payloadWithEmpty = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+      resolvedAttributes: [],
+    });
+    expect(payloadWithEmpty.originProduct.detailAttribute?.productAttributes).toBeUndefined();
+  });
+});
+
+describe("buildNaverProductPayload — productCertificationInfos.name 연결(N-3.67)", () => {
+  it("childCertification.value.name이 있으면 productCertificationInfos[0].name에 그대로 들어간다", () => {
+    const product = makeMinimalProduct();
+    product.childCertification = field({
+      name: "한국의류시험연구원",
+      certificationNumber: "CB123456",
+      companyName: "테스트컴퍼니",
+      certificationDate: "2024-01-01",
+    });
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
+      categoryRequiresChildCertification: true,
+    });
+    expect(payload.originProduct.detailAttribute?.productCertificationInfos).toEqual([
+      {
+        certificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
+        certificationKindType: "CHILD_CERTIFICATION",
+        name: "한국의류시험연구원",
+        certificationNumber: "CB123456",
+        companyName: "테스트컴퍼니",
+        certificationDate: "2024-01-01",
+      },
+    ]);
+  });
+
+  it("childCertification.value.name이 없으면(빈 값) name 필드 자체를 만들지 않는다(임의 값 금지)", () => {
+    const product = makeMinimalProduct();
+    product.childCertification = field({
+      name: "",
+      certificationNumber: "CB123456",
+      companyName: "테스트컴퍼니",
+      certificationDate: "2024-01-01",
+    });
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: CHILD_CERTIFICATION_CATALOG_ID,
+      categoryRequiresChildCertification: true,
+    });
+    expect(payload.originProduct.detailAttribute?.productCertificationInfos?.[0].name).toBeUndefined();
+  });
+});
+
+/**
+ * N-3.69(CPO 지시, "Seller 공통 설정 통합" work order STEP1/STEP9) — Coupang은
+ * 이미 sellerConfig.deliveryCharge를 읽는데 Naver는 deliveryFee를 항상 FREE/0로
+ * 고정해뒀던 갭을 막는 회귀 테스트. SellerProfile 공통 배송비가 실제로 SmartStore
+ * payload에 반영되는지, 그리고 미설정 시 기존(Golden Fixture) FREE 동작이
+ * 그대로 유지되는지를 확인한다.
+ */
+describe("buildNaverProductPayload — deliveryFee (SellerProfile.deliveryCharge 연동, N-3.69)", () => {
+  it("product.shippingFee가 아직 DEFAULT이고 sellerDeliveryFee가 있으면 PAID/baseFee로 반영한다", () => {
+    const product = makeMinimalProduct();
+    product.shippingFee = field(0, "DEFAULT");
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      sellerDeliveryFee: 3500,
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.originProduct.deliveryInfo?.deliveryFee).toEqual({
+      deliveryFeeType: "PAID",
+      baseFee: 3500,
+      deliveryFeePayType: "PREPAID",
+    });
+  });
+
+  it("sellerDeliveryFee가 null이면(SellerProfile 미설정) 기존과 동일하게 FREE/0을 유지한다(Golden Fixture 보호)", () => {
+    const product = makeMinimalProduct();
+    product.shippingFee = field(0, "DEFAULT");
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      sellerDeliveryFee: null,
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.originProduct.deliveryInfo?.deliveryFee).toEqual({
+      deliveryFeeType: "FREE",
+      baseFee: 0,
+    });
+  });
+
+  it("product.shippingFee가 사용자 편집값(DEFAULT 아님)이면 sellerDeliveryFee보다 우선한다", () => {
+    const product = makeMinimalProduct();
+    product.shippingFee = field(5000, "USER_EDITED");
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      sellerDeliveryFee: 3500,
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.originProduct.deliveryInfo?.deliveryFee).toEqual({
+      deliveryFeeType: "PAID",
+      baseFee: 5000,
+      deliveryFeePayType: "PREPAID",
+    });
+  });
+});
+
+/**
+ * N-3.77 STEP2/3(CPO 작업지시서 N-3.77) — SmartStore SEO 상품명 생성기 검증.
+ * STEP3의 "최소 5개 상품 Dry Run" 요구를 실제 네트워크 호출 없이(vitest,
+ * buildNaverProductPayload/validateNaverPayload는 순수 함수라 API를 호출하지
+ * 않는다) 5개 시나리오로 재현한다 — KIDS 의류/KIDS 모자(시즌 포함)/옵션
+ * 여러 개/색상+사이즈/옵션 없음. "기존 성공 상품과 비교"(golden-success-02-kids.json,
+ * 실제 originProductNo=13667626779/13667627489)의 원문 조건(Bobo Choses,
+ * jupeiris.com, KIDS 카테고리)을 최대한 그대로 재현해 새 Resolver가 만든
+ * 이름을 확인한다 — 그 fixture는 최종 payload만 저장돼 있어 원문 input을
+ * 1:1로 복원할 수는 없지만, 같은 브랜드/카테고리/연령대 신호로 구성했다.
+ */
+describe("generateSmartStoreProductName — N-3.77 STEP2", () => {
+  it("resolveSeasonFromText: 'SS26'처럼 원문에 실제로 있는 시즌 코드만 추출한다(연도+계절 순서로 정규화)", () => {
+    expect(resolveSeasonFromText("Product code B126AC050 SS26 Made in Spain.")).toBe("26SS");
+    expect(resolveSeasonFromText("26FW 신상 컬렉션")).toBe("26FW");
+    expect(resolveSeasonFromText("FW26 collection")).toBe("26FW");
+  });
+
+  it("resolveSeasonFromText: 시즌 코드가 원문에 없으면 undefined(추정 금지)", () => {
+    expect(resolveSeasonFromText("그냥 평범한 설명입니다.")).toBeUndefined();
+    expect(resolveSeasonFromText(undefined)).toBeUndefined();
+  });
+
+  it("KIDS 의류(연령대 신호=recommendedAge) — 브랜드+키즈+핵심명으로 구성되고 원문에 없는 시즌은 넣지 않는다", () => {
+    const product = makeMinimalProduct();
+    product.brand = field("Bobo Choses");
+    product.title = field("Stamp Bloom All Over Denim Pants");
+    product.description = field("Stamp Bloom All Over Denim Pants. 72% Organic Cotton, 28% Recycled Polyester.");
+    product.recommendedAge = field("3-4 Years");
+    const name = generateSmartStoreProductName(product);
+    expect(name).toContain("Bobo Choses");
+    expect(name).toContain("키즈");
+    expect(name).toContain("Stamp Bloom All Over Denim Pants");
+    expect(name).not.toMatch(/\d{2}(SS|FW|AW)/); // 원문에 시즌 코드가 없으므로 만들어내지 않는다
+  });
+
+  it("KIDS 모자(시즌 코드가 원문에 실제로 있는 경우) — golden-success-02-kids.json과 같은 브랜드/카테고리 조건", () => {
+    const product = makeMinimalProduct();
+    product.brand = field("Bobo Choses");
+    product.title = field("Wool Blend Cap B Logo Baseball Cap");
+    product.description = field(
+      "Wool Blend Cap B Logo Baseball Cap. Product code B126AC050 26FW Made in Spain.",
+    );
+    product.recommendedAge = field("4-5 Years, 6-7 Years, 8-9 Years");
+    const name = generateSmartStoreProductName(product);
+    expect(name).toContain("Bobo Choses");
+    expect(name).toContain("26FW");
+    expect(name).toContain("키즈");
+    expect(name).toContain("Wool Blend Cap B Logo Baseball Cap");
+    // 기존(수정 전) 상품명은 listing.title 그대로였다 — 브랜드/시즌/타겟이 없었다.
+    const listing = makeMinimalListing(product);
+    expect(name).not.toBe(listing.title);
+  });
+
+  it("옵션이 여러 개인 상품 — 옵션 구성과 무관하게 상품명 생성기는 정상 동작한다(중복 단어 없음, 100자 이내)", () => {
+    const product = makeMinimalProduct();
+    product.brand = field("TestBrand");
+    product.title = field("TestBrand Color Block Zip Hoodie");
+    product.optionGroups = [
+      { name: "Size", values: ["4-5Y", "6-7Y", "8-9Y"] },
+      { name: "Color", values: ["Navy", "Beige"] },
+    ];
+    const name = generateSmartStoreProductName(product);
+    const words = name.split(" ");
+    expect(new Set(words.map((w) => w.toLowerCase())).size).toBe(words.length); // 단어 중복 없음
+    expect(name.length).toBeLessThanOrEqual(100);
+  });
+
+  it("색상+사이즈 옵션 상품 — 성인 여성 신호(gender=women)면 '여성'을 타겟으로 붙인다", () => {
+    const product = makeMinimalProduct();
+    // makeMinimalProduct()의 기본 sourceUrl("/products/kids-tshirt")은 URL
+    // 세그먼트 자체가 나이 신호라 이 케이스(성인)에는 맞지 않는다 — 덮어쓴다.
+    product.sourceUrl = "https://example.com/products/womens-wool-coat-adult";
+    product.brand = field("TestBrand");
+    product.title = field("Women's Wool Coat");
+    product.recommendedAge = field(""); // 성인 — 연령대 신호 없음
+    product.description = field("A women's wool coat for the winter season.");
+    const name = generateSmartStoreProductName(product);
+    expect(name).toContain("TestBrand");
+    expect(name).toContain("여성");
+  });
+
+  it("옵션이 없는 상품(성인, 성별/연령 신호 모두 unknown) — 타겟 단어 없이 브랜드+핵심명만 조합한다", () => {
+    const product = makeMinimalProduct();
+    product.sourceUrl = "https://example.com/products/ceramic-mug-adult";
+    product.brand = field("TestBrand");
+    product.title = field("Ceramic Coffee Mug");
+    product.recommendedAge = field("");
+    product.description = field("A simple ceramic coffee mug.");
+    product.optionGroups = [];
+    const name = generateSmartStoreProductName(product);
+    expect(name).toBe("TestBrand Ceramic Coffee Mug");
+  });
+
+  it("100자 제한 — 넘으면 단어 단위로 뒤에서부터 잘라낸다(글자 중간 절단 금지)", () => {
+    const product = makeMinimalProduct();
+    product.sourceUrl = "https://example.com/products/long-title-adult";
+    product.recommendedAge = field("");
+    product.brand = field("VeryLongBrandNameForTestingPurposesOnly");
+    product.title = field(
+      "An Extremely Long Product Title That Should Definitely Exceed The Naver Product Name Character Limit Of One Hundred",
+    );
+    const name = generateSmartStoreProductName(product);
+    expect(name.length).toBeLessThanOrEqual(100);
+    expect(name.endsWith(" ")).toBe(false);
+    for (const word of name.split(" ")) {
+      expect(product.title.value + " " + product.brand.value).toContain(word);
+    }
+  });
+
+  it("buildNaverProductPayload 5개 시나리오 — MISSING/BLOCKED 카운트가 상품명 교체로 늘어나지 않는다(회귀 확인)", () => {
+    const scenarios: CanonicalProduct[] = [
+      (() => {
+        const p = makeMinimalProduct();
+        p.brand = field("Bobo Choses");
+        p.title = field("Stamp Bloom All Over Denim Pants");
+        return p;
+      })(),
+      (() => {
+        const p = makeMinimalProduct();
+        p.brand = field("Bobo Choses");
+        p.title = field("Wool Blend Cap B Logo Baseball Cap");
+        p.description = field("Product code B126AC050 26FW Made in Spain.");
+        return p;
+      })(),
+      (() => {
+        const p = makeMinimalProduct();
+        p.optionGroups = [
+          { name: "Size", values: ["S", "M", "L"] },
+          { name: "Color", values: ["Black", "White"] },
+        ];
+        return p;
+      })(),
+      (() => {
+        const p = makeMinimalProduct();
+        p.optionGroups = [{ name: "Color", values: ["Red"] }];
+        return p;
+      })(),
+      makeMinimalProduct(),
+    ];
+
+    for (const product of scenarios) {
+      const listing = makeMinimalListing(product);
+      const payload = buildNaverProductPayload({
+        ...baseInput(product, listing),
+        childCertificationInfoId: null,
+        categoryRequiresChildCertification: false,
+      });
+      const validation = validateNaverPayload(
+        payload,
+        { ...baseValidateInput(product), childCertificationInfoId: null },
+        false,
+        {
+          categoryVerified: true,
+          sellerComplianceConfirmation: null,
+        },
+      );
+      // 상품명 교체가 KC/고시정보/가격 등 다른 필드의 BLOCKED 사유를 새로
+      // 만들어내지 않았는지만 확인한다(이 fixture 조합에서 원래도 BLOCKED였던
+      // 항목은 그대로 BLOCKED — 상품명 Resolver의 책임 범위 밖이다).
+      const nameRelatedIssues = validation.issues.filter((i) => i.field === "originProduct.name");
+      expect(nameRelatedIssues).toEqual([]);
+      expect(payload.originProduct.name.length).toBeGreaterThan(0);
+      expect(payload.originProduct.name.length).toBeLessThanOrEqual(100);
+    }
+  });
+
+  // N-4.01 Part A-1(대표님 지시 fixture 10종 중 기존 커버 안 된 6종 보강) —
+  // 브랜드+시즌+여성/남성, 브랜드 없음, 브랜드가 title 중간/후반 위치, 브랜드
+  // 중복 등장, 원문 상품명이 이미 한글인 케이스.
+  it("브랜드+시즌+여성 — 성인 여성 신호와 원문 시즌 코드가 함께 있으면 둘 다 반영한다", () => {
+    const product = makeMinimalProduct();
+    product.sourceUrl = "https://example.com/products/womens-wool-coat-adult";
+    product.brand = field("TestBrand");
+    product.title = field("Women's Wool Coat");
+    product.recommendedAge = field("");
+    product.description = field("A women's wool coat. 26FW collection for the winter season.");
+    const name = generateSmartStoreProductName(product);
+    expect(name).toContain("TestBrand");
+    expect(name).toContain("26FW");
+    expect(name).toContain("여성");
+  });
+
+  it("브랜드+시즌+남성 — 성인 남성 신호와 원문 시즌 코드가 함께 있으면 둘 다 반영한다", () => {
+    const product = makeMinimalProduct();
+    product.sourceUrl = "https://example.com/products/mens-wool-coat-adult";
+    product.brand = field("TestBrand");
+    product.title = field("Men's Wool Coat");
+    product.recommendedAge = field("");
+    product.description = field("A men's wool coat. Product code M100 SS26 collection.");
+    const name = generateSmartStoreProductName(product);
+    expect(name).toContain("TestBrand");
+    expect(name).toContain("26SS");
+    expect(name).toContain("남성");
+  });
+
+  it("브랜드 없음 — 브랜드 필드가 비어 있으면 접두부 없이 핵심명만 사용한다(빈 문자열을 임의로 채우지 않는다)", () => {
+    const product = makeMinimalProduct();
+    product.sourceUrl = "https://example.com/products/ceramic-mug-adult";
+    product.brand = field("");
+    product.title = field("Ceramic Coffee Mug");
+    product.recommendedAge = field("");
+    product.description = field("A simple ceramic coffee mug.");
+    product.optionGroups = [];
+    const name = generateSmartStoreProductName(product);
+    expect(name).toBe("Ceramic Coffee Mug");
+    expect(name).not.toMatch(/^\s/);
+  });
+
+  it("브랜드가 title 중간/후반에 있는 경우 — 접두부로 한 번만 앞에 붙이고 핵심명에서는 중복 문구를 제거한다", () => {
+    const product = makeMinimalProduct();
+    product.brand = field("Bobo Choses");
+    product.title = field("Kids Denim Overall Pants by Bobo Choses");
+    product.recommendedAge = field("3-4 Years");
+    const name = generateSmartStoreProductName(product);
+    expect(name).toContain("Bobo Choses");
+    expect(name).toContain("키즈");
+    expect(name).toContain("Kids Denim Overall Pants");
+    // "by Bobo Choses" 접미부는 브랜드 중복이라 핵심명에서 제거되고, 브랜드는
+    // 맨 앞 접두부로만 한 번 등장해야 한다.
+    expect(name.match(/Bobo Choses/g)?.length).toBe(1);
+  });
+
+  it("브랜드가 title에 여러 번 등장하는 경우 — 접두부 1회만 남기고 핵심명 쪽 중복은 모두 제거한다", () => {
+    const product = makeMinimalProduct();
+    product.brand = field("Bobo Choses");
+    product.title = field("Bobo Choses Denim Pants Bobo Choses Kids Collection");
+    product.recommendedAge = field("3-4 Years");
+    const name = generateSmartStoreProductName(product);
+    expect(name.match(/Bobo Choses/g)?.length).toBe(1);
+    expect(name).toContain("Denim Pants");
+  });
+
+  it("원문 상품명이 이미 한글인 경우 — 번역하지 않고 그대로 핵심명으로 사용한다", () => {
+    const product = makeMinimalProduct();
+    product.brand = field("TestBrand");
+    product.title = field("아동용 반팔 티셔츠");
+    product.recommendedAge = field("3세");
+    const name = generateSmartStoreProductName(product);
+    expect(name).toContain("TestBrand");
+    expect(name).toContain("아동용 반팔 티셔츠");
+    expect(name).toContain("키즈");
   });
 });

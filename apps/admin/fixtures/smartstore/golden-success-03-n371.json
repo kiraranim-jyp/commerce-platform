@@ -1,0 +1,80 @@
+{
+  "fixtureType": "REAL_LIVE_SUCCESS",
+  "purpose": "N-3.71의 핵심 목표 — '등록 가능성 100% ⟺ 실제 Naver 등록 성공'을 실제 프로덕션 등록으로 증명한 fixture. 직전 sprint(N-3.70)에서 발견된 버그(9개 KIDS 고시필드가 optional:true로 잘못 표시돼, UI/validator는 READY라고 했지만 실제 Naver는 HTTP 400으로 거부)를 수정한 뒤, 같은 패턴의 회귀가 다시 나오지 않는지 실제 등록으로 검증했다.",
+  "sourceUrl": "Bobo Choses 26fw Hug Hairy Monster T-Shirt (snapshot 저장 시점 원본)",
+  "productTitle": "[TEST] 보보쇼즈 26fw 티셔츠 Hug Hairy Monster T-Shirt by Bobo Choses",
+  "snapshotId": "ca0e1f9d-89cb-4708-a387-a6a8de8b0e73",
+  "category": {
+    "leafCategoryId": "50000535",
+    "categoryRequiresChildCertification": true,
+    "note": "KIDS 카테고리(출산/육아>유아동의류>티셔츠), CHILD_CERTIFICATION 대상"
+  },
+  "bugFixedBeforeThisAttempt": {
+    "n370Finding": "9개 KIDS 고시필드(material/color/manufacturer/caution/recommendedAge/itemName/modelName/weight + size)가 validate-payload.ts에서 optional:true로 표시돼 있어, REQUIRED 소스에 실제값이 없어도(=상세페이지 참조를 선택하지 않아도) UI가 '등록 가능 100%'라고 보여줬다. 실제 등록 시 Naver가 이 9개 필드 전부를 'productInfoProvidedNotice.kids.X: 데이터를 입력해 주세요'로 거부했다(HTTP 400).",
+    "n371Fix": "8개 필드(material/color/manufacturer/caution/recommendedAge/itemName/modelName/weight)의 optional:true를 제거해 isNoticeFieldSatisfied(실제값 또는 명시적 DETAIL_PAGE_REFERENCE 선택)만으로 READY 판정하도록 되돌렸다. size는 reference-eligibility 화이트리스트에 원래 없던 필드라 build-payload.ts에서 SIZE 옵션이 없을 때 자동으로 '상세페이지 참조'를 채우도록 별도로 고쳤다.",
+    "additionalGapsFoundViaLiveCall": [
+      "deliveryInfo.deliveryFee.deliveryFeePayType — PAID인데 이 필드가 아예 채워진 적이 없어 Naver가 거부. build-payload.ts에서 PAID일 때 항상 PREPAID로 고정.",
+      "productCertificationInfos[].name — certificationInfoId 1041/1040(안전확인/안전인증)에서는 필수인데 검사 로직이 아예 없었음. validate-payload.ts에 1042(공급자적합성) 예외만 남기고 나머지는 필수로 검사 추가.",
+      "detailAttribute.naverShoppingSearchInfo.modelName — CHILD_CERTIFICATION 카테고리는 필수인데 검사 로직이 없었음(build-payload.ts는 이미 원문 'Product code' 패턴에서만 채우고 있었지만 validator가 이를 검사하지 않아 값이 없어도 READY로 잘못 표시됨). validate-payload.ts에 BLOCKED 검사 추가(임의 생성 금지, 원문에 실제 패턴이 없으면 등록 자체를 막는다)."
+    ]
+  },
+  "registrationSequence": {
+    "totalRealPostAttempts": 2,
+    "note": "1차(snapshot 871a5081, Max Hearts Swimsuit): 9개 필드 버그는 사라졌지만 위 3개 신규 gap 중 naverShoppingSearchInfo.modelName이 원문에 Product code 표기가 없어 등록 전 게이트에서 정상적으로 BLOCKED(Naver 호출 자체가 발생하지 않음 — 이전처럼 거부당하는 게 아니라 우리 쪽이 미리 막음, 의도된 동작). 사용자 지시로 '억지로 채우지 말고 실제 Product code가 있는 다른 후보를 DB에서 찾으라'는 방향을 받아 2차(snapshot ca0e1f9d, 이 fixture)로 전환 — 정확히 1회 실제 POST로 HTTP 200 성공."
+  },
+  "candidateSelectionMethod": "POST 전 반드시 사전 검증(스크립트: precheck-n371-candidate.ts)으로 MISSING=0/BLOCKED=0을 먼저 확인한 뒤에만 실제 등록을 시도했다 — register/route.ts와 물리적으로 같은 buildNaverProductPayload/validateNaverPayload를 로컬에서 그대로 호출(Naver에 아무것도 쓰지 않는 읽기 전용 GET /api/naver/resolve만 사용).",
+  "successResult": {
+    "httpStatus": 200,
+    "status": "SUBMITTED",
+    "originProductNo": 13668016862,
+    "traceId": "eb3d2434-3410-4c26-bba5-d2449bb62ae9",
+    "durationMs": 10491
+  },
+  "finalPayload": {
+    "salePrice": 99500,
+    "stockQuantity": 10,
+    "leafCategoryId": "50000535",
+    "customsTaxType": "INCLUDED",
+    "minorPurchasable": true,
+    "deliveryFee": {
+      "deliveryFeeType": "PAID",
+      "baseFee": 19800,
+      "deliveryFeePayType": "PREPAID"
+    },
+    "naverShoppingSearchInfo": { "modelName": "B226AC009 AW26" },
+    "productCertificationInfos": [
+      {
+        "certificationInfoId": 1041,
+        "certificationKindType": "CHILD_CERTIFICATION",
+        "name": "[TEST] KC 테스트 인증기관 — 실제 인증정보 아님",
+        "certificationNumber": "TEST-0000000000",
+        "companyName": "[TEST] KC 테스트 검사기관 — 실제 인증정보 아님",
+        "certificationDate": "2026-08-21"
+      }
+    ],
+    "productInfoProvidedNotice": {
+      "productInfoProvidedNoticeType": "KIDS",
+      "kids": {
+        "material": "상품 상세페이지 참조",
+        "color": "Light Blue",
+        "size": "2-3 Years, 4-5 Years, 6-7 Years, 8-9 Years, 10-11 Years, 12-13 Years",
+        "manufacturer": "Bobo Choses",
+        "caution": "상품 상세페이지 참조",
+        "recommendedAge": "36개월 이상",
+        "warrantyPolicy": "상품 상세페이지에 기재된 품질보증기준 및 소비자분쟁해결기준에 따릅니다.",
+        "afterServiceDirector": "해외 구매대행으로 A/S 불가",
+        "itemName": "상품 상세페이지 참조",
+        "modelName": "상품 상세페이지 참조",
+        "weight": "상품 상세페이지 참조",
+        "certificationType": "[TEST] 안전확인대상 어린이제품 — 실제 인증정보 아님",
+        "releaseDateText": "상품 상세페이지 참조"
+      }
+    }
+  },
+  "postSuccessVerification": {
+    "method": "register/route.ts 응답의 externalProductId(=originProductNo, N-3.70에서 고친 파싱 로직)를 스크립트가 그대로 출력해 확인.",
+    "note": "channelProductDisplayStatusType='SUSPENSION' — golden-success-01/02.json과 동일하게 신규 등록 후 노출 전 상태(CartPilot의 의도적 안전장치, 실패 아님). KC certificationNumber/companyName/name은 실제 서류가 없는 후보라 [TEST] 라벨 placeholder를 썼다(golden-success-02-kids.json과 같은 선례, 이번에는 CEO가 아니라 CTO/사용자가 직접 승인한 경로 — AskUserQuestion으로 확인)."
+  },
+  "regressionCoverage": "9개 필드 optional 버그 되돌림 + size 자동 보완 + weight payload/validator 불일치 수정은 packages/listing/src/naver/__tests__/validate-payload.test.ts(N-3.71 STEP7 describe block, Case A/C/D/E)와 build-payload.test.ts(Case F/G 재작성, Test D 재작성)에 회귀 테스트로 고정됨 — 128/128 통과. deliveryFeePayType/KC name/naverShoppingSearchInfo.modelName 3개 신규 검사는 이번 실제 등록으로 발견 즉시 코드+테스트에 반영됨(같은 파일, kc-certification-guard.test.ts 포함).",
+  "excludedFromFixture": "Naver client_id/client_secret 등 자격증명 값은 포함하지 않음. certificationNumber/companyName/name/certificationDate는 명시적으로 [TEST] 라벨링된 flow-test 값이며 실제 KC 인증정보가 아니다."
+}
