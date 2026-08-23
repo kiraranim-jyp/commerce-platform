@@ -265,6 +265,48 @@ export function mergeCoupangDescription(
   return aiDescription.trim().length > 0 ? `${aiDescription.trim()}\n\n${templateText}` : templateText;
 }
 
+/** N-4.08 후속(CPO 지시, 2026-08-21) — 고객 상세페이지에 "메세지 1" 같은
+ * 개발용 placeholder 문구가 그대로 노출된 사고(placeholder 템플릿이
+ * isDefault=true로 잘못 지정됨)의 재발 방지. 정규식 하나로 완벽히 잡을 수는
+ * 없으므로 "차단"이 아니라 "경고"다 — Settings PATCH 라우트가 이 함수의
+ * 결과를 응답에 실어 보내고, 실제 기본 지정은 그대로 진행한다(판매자가
+ * placeholder인 걸 알고도 지정하고 싶을 수 있다 — 예: 임시로 비워두는 경우). */
+const PLACEHOLDER_PATTERN = /메세지\s*\d+|메시지\s*\d+|텍스트\s*\d+|lorem ipsum|test\s*\d*$/i;
+
+const PLACEHOLDER_FIELD_LABELS: Record<keyof CoupangDescriptionTemplate & string, string> = {
+  shippingInfo: "배송안내",
+  exchangeInfo: "교환안내",
+  returnInfo: "반품안내",
+  agentBuyInfo: "구매대행 안내",
+  asInfo: "A/S 안내",
+  shippingBlocks: "배송안내",
+  exchangeBlocks: "교환안내",
+  returnBlocks: "반품안내",
+  agentBuyBlocks: "구매대행 안내",
+  asBlocks: "A/S 안내",
+};
+
+/** placeholder처럼 보이는 문구가 들어있는 섹션의 사람이 읽는 라벨 목록을
+ * 반환한다. 빈 배열이면 placeholder 의심 없음. */
+export function findPlaceholderFields(
+  template: Pick<
+    CoupangDescriptionTemplate,
+    "shippingInfo" | "exchangeInfo" | "returnInfo" | "agentBuyInfo" | "asInfo"
+  >,
+): string[] {
+  const fields: Array<[keyof CoupangDescriptionTemplate & string, string | undefined]> = [
+    ["shippingInfo", template.shippingInfo],
+    ["exchangeInfo", template.exchangeInfo],
+    ["returnInfo", template.returnInfo],
+    ["agentBuyInfo", template.agentBuyInfo],
+    ["asInfo", template.asInfo],
+  ];
+  const labels = fields
+    .filter(([, value]) => value != null && PLACEHOLDER_PATTERN.test(value))
+    .map(([key]) => PLACEHOLDER_FIELD_LABELS[key]);
+  return Array.from(new Set(labels));
+}
+
 /** Detail Page Editor(2026-08-04, CEO 지시 — 백로그 A-12-5) 도메인 모델.
  *
  * 쿠팡 상세페이지(contents 배열)는 지금까지 mergeCoupangDescription +

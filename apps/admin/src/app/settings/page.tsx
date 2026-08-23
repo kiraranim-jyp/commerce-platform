@@ -405,6 +405,13 @@ export default function SettingsPage() {
               description="상품 설명 템플릿과 상단/하단 공통 이미지를 함께 관리합니다."
               className="mb-3"
             />
+            {/* N-3.86 STEP3 검증(CPO 지시: "이 설정이 쿠팡과 스마트스토어 모두에
+                적용된다는 것을 판매자가 명확하게 알 수 있어야 한다") — 상품별
+                개별 편집 UI가 없어졌으니, 이 탭이 유일한 관리 지점이라는 사실을
+                작은 안내로 짚어준다. 실제 판정/조립 로직은 건드리지 않는다. */}
+            <p className="mb-4 rounded-md bg-primary-soft px-3 py-2 text-xs text-primary">
+              이 설정은 쿠팡·스마트스토어 상품 등록 시 공통으로 적용됩니다. 상품별 개별 수정은 지원하지 않습니다.
+            </p>
             <DescriptionTemplateSection templates={templates} onChanged={loadAll} />
           </div>
           <div className={activeTab === "comparisonShops" ? "mt-5" : "hidden"}>
@@ -2060,6 +2067,7 @@ function DescriptionTemplateSection({
   const [asBlocks, setAsBlocks] = useState<TemplateSectionBlock[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleteBlockedId, setDeleteBlockedId] = useState<string | null>(null);
+  const [placeholderWarning, setPlaceholderWarning] = useState<string | null>(null);
 
   function resetForm() {
     setEditingId(null);
@@ -2118,11 +2126,13 @@ function DescriptionTemplateSection({
   }
 
   async function handleSetDefault(id: string) {
-    await fetch(`/api/settings/coupang/templates/${id}`, {
+    const res = await fetch(`/api/settings/coupang/templates/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isDefault: true }),
     });
+    const data = (await res.json().catch(() => null)) as { placeholderWarning?: string | null } | null;
+    setPlaceholderWarning(data?.placeholderWarning ?? null);
     await onChanged();
   }
 
@@ -2154,6 +2164,10 @@ function DescriptionTemplateSection({
       <p className="mt-1 text-xs text-text-secondary">
         없어도 등록은 됩니다(AI 생성 설명만 사용) — 있으면 배송/교환/반품/구매대행/A·S 안내가 자동으로 붙습니다.
       </p>
+
+      {placeholderWarning && (
+        <p className="mt-3 rounded-md bg-warning-soft px-3 py-2 text-xs text-warning">{placeholderWarning}</p>
+      )}
 
       {templates.length > 0 && (
         <ul className="mt-3 divide-y divide-border text-sm">
