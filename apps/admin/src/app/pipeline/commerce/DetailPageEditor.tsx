@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import type { CanonicalProduct } from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
 import type { CoupangPayload, DetailPageBlock } from "@commerce/listing";
-import { detailBlockLabel } from "@commerce/listing";
+import { defaultDetailBlocks, detailBlockLabel } from "@commerce/listing";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { blocksMatchDefault } from "./detail-block-compare";
 
 /** 아직 블록 리스트에 없는 옵트인 블록만 "블록 추가"에서 고를 수 있다 —
  * AI_DESCRIPTION/TEMPLATE_SECTION×5/COMMON_IMAGE×2/PRODUCT_IMAGES는
@@ -57,6 +59,7 @@ export function DetailPageEditor({
   onChange,
   payloadPreview,
   platformLabel = "쿠팡",
+  defaultBlocks,
 }: {
   product: CanonicalProduct;
   blocks: DetailPageBlock[];
@@ -70,6 +73,11 @@ export function DetailPageEditor({
    * payloadPreview가 항상 null/undefined로 넘어와 이 블록만 조용히
    * 생략된다). */
   platformLabel?: string;
+  /** N-4.08 P1-1(대표님 지시) — Settings에서 관리하는 셀러 기본값
+   * (SellerProfile.defaultDetailBlocks). null/빈 배열이면(한 번도 설정 안 함)
+   * 코드 상수 defaultDetailBlocks()로 폴백한다 — page.tsx의 신규 상품 배정
+   * 로직과 동일한 계약이다. */
+  defaultBlocks?: DetailPageBlock[] | null;
 }) {
   const presentKinds = new Set(blocks.map((b) => b.kind));
   const addableOptions = ADDABLE_KINDS.filter((kind) => !presentKinds.has(kind) || kind === "CUSTOM_TEXT");
@@ -83,12 +91,64 @@ export function DetailPageEditor({
 
   const previewContents = payloadPreview?.payload.items[0]?.contents ?? [];
 
+  const effectiveDefaultBlocks = defaultBlocks && defaultBlocks.length > 0 ? defaultBlocks : defaultDetailBlocks();
+  const isUsingDefault = blocksMatchDefault(blocks, effectiveDefaultBlocks);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
   return (
     <div className="space-y-4">
-      <p className="text-xs text-text-tertiary">
-        상세페이지에 들어갈 블록의 순서와 노출 여부를 정합니다 — 여기서 끄지 않으면 아래 순서
-        그대로 {platformLabel}에 등록됩니다.
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-xs text-text-tertiary">
+          상세페이지에 들어갈 블록의 순서와 노출 여부를 정합니다 — 여기서 끄지 않으면 아래 순서
+          그대로 {platformLabel}에 등록됩니다.
+        </p>
+        <Badge variant={isUsingDefault ? "default" : "warning"} size="sm" className="shrink-0">
+          {isUsingDefault ? "기본 설정 사용 중" : "이 상품만 변경됨"}
+        </Badge>
+      </div>
+
+      {!isUsingDefault && (
+        <Button type="button" variant="secondary" size="sm" onClick={() => setShowResetConfirm(true)}>
+          기본 설정 다시 적용
+        </Button>
+      )}
+
+      {showResetConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setShowResetConfirm(false)}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-sm rounded-lg bg-surface p-5 shadow-elevated"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <h3 className="text-base font-semibold text-text-primary">기본 설정으로 되돌릴까요?</h3>
+            <p className="mt-2 text-sm text-text-secondary">
+              이 상품의 상세페이지 구성만 현재 Settings 기본값으로 교체합니다. 다른 상품이나
+              Settings 자체는 바뀌지 않습니다.
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setShowResetConfirm(false)}>
+                취소
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  onChange(effectiveDefaultBlocks.map((b) => ({ ...b })));
+                  setShowResetConfirm(false);
+                }}
+              >
+                기본 설정 적용
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ol className="space-y-2">
         {blocks.map((block, index) => (

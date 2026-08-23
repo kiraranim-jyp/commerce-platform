@@ -110,6 +110,7 @@ export function CommerceWorkspace({
   jobKey,
   detailBlocks,
   onDetailBlocksChange,
+  sellerDefaultDetailBlocks,
   initialCategoryMappings,
   onCategoryMappingsChange,
 }: {
@@ -141,6 +142,12 @@ export function CommerceWorkspace({
    * 소유하지 않는다. */
   detailBlocks: DetailPageBlock[];
   onDetailBlocksChange: (blocks: DetailPageBlock[]) => void;
+  /** N-4.08 P1-1(대표님 지시: "상품별 예외 UX") — Settings에서 관리하는 셀러
+   * 기본값. DetailPageEditor가 "이 상품이 기본값과 같은지" 비교하고 "[기본
+   * 설정 다시 적용]"의 복원 대상으로 쓴다. null이면(fetch 전/실패/셀러가
+   * 아직 설정 안 함) DetailPageEditor 내부에서 코드 상수 defaultDetailBlocks()로
+   * 폴백한다 — page.tsx의 신규 상품 배정 로직과 동일한 폴백 계약이다. */
+  sellerDefaultDetailBlocks: DetailPageBlock[] | null;
   /** N-3.12 Phase 2 P0① — 카테고리 선택은 그동안 이 컴포넌트의 로컬 state로만
    * 살아있었다(새로고침/재오픈 시 초기화되는 실제 버그의 원인). detailBlocks와
    * 같은 방식(mirror-up)으로 page.tsx가 값을 미러링해 스냅샷에 저장하고,
@@ -1560,6 +1567,7 @@ export function CommerceWorkspace({
           // 필요 없이 PlatformPreview의 capability 체크가 이미 막는다).
           detailBlocks={detailBlocks}
           onDetailBlocksChange={tab === "coupang" || tab === "smartstore" ? onDetailBlocksChange : undefined}
+          sellerDefaultDetailBlocks={sellerDefaultDetailBlocks}
         />
       )}
 

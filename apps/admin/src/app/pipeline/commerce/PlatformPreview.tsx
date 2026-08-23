@@ -330,6 +330,7 @@ export function PlatformPreview({
   payloadPreviewUnavailableReason,
   detailBlocks,
   onDetailBlocksChange,
+  sellerDefaultDetailBlocks,
 }: {
   product: CanonicalProduct;
   listing: ListingModel;
@@ -495,6 +496,8 @@ export function PlatformPreview({
    * 플랫폼) 에디터 섹션 자체를 안 그린다. */
   detailBlocks?: DetailPageBlock[];
   onDetailBlocksChange?: (blocks: DetailPageBlock[]) => void;
+  /** N-4.08 P1-1 — DetailPageEditor의 "기본 설정 사용 중" 비교/복원 대상. */
+  sellerDefaultDetailBlocks?: DetailPageBlock[] | null;
 }) {
   // isVerifiedPlatformCode까지 확인해야 한다 — state만 보면 미리보기가
   // "선택 완료"로 보이는데 실제 등록은 CP001로 거부되는 버그가 재발한다.
@@ -1148,6 +1151,7 @@ export function PlatformPreview({
               onChange={onDetailBlocksChange}
               payloadPreview={payloadPreview}
               platformLabel={listing.platformLabel}
+              defaultBlocks={sellerDefaultDetailBlocks}
             />
           </CollapsibleSection>
         )}

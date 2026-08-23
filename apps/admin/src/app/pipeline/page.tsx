@@ -90,8 +90,14 @@ export default function PipelinePage() {
    * (한 번도 설정 안 한 셀러도 항상 동작해야 한다). ref로 두는 이유: 이 값은
    * "새 상품을 시작하는 순간"(runPipeline/resetWorkspace)에만 읽으면 되고
    * 그 자체가 리렌더를 유발할 필요는 없다 — state로 두면 fetch 완료 시점에
-   * 불필요한 재렌더가 생긴다. */
+   * 불필요한 재렌더가 생긴다.
+   *
+   * N-4.08 P1-1(대표님 지시: "상품별 예외 UX") — 위 ref와 별개로 같은 값을
+   * state로도 들고 있는다. DetailPageEditor가 "이 상품 detailBlocks가 지금
+   * Settings 기본값과 같은가"를 렌더링 시점마다 비교해야 하므로, 그 UI는
+   * 리렌더가 필요하다(ref만으로는 fetch 완료 후 배지가 갱신되지 않는다). */
   const sellerDefaultDetailBlocksRef = useRef<DetailPageBlock[] | null>(null);
+  const [sellerDefaultDetailBlocks, setSellerDefaultDetailBlocks] = useState<DetailPageBlock[] | null>(null);
   useEffect(() => {
     fetch("/api/settings/coupang/profiles")
       .then((res) => res.json())
@@ -100,12 +106,13 @@ export default function PipelinePage() {
         const target = profiles.find((p) => p.isDefault) ?? profiles[0];
         if (target?.defaultDetailBlocks && target.defaultDetailBlocks.length > 0) {
           sellerDefaultDetailBlocksRef.current = target.defaultDetailBlocks;
+          setSellerDefaultDetailBlocks(target.defaultDetailBlocks);
         }
       })
       .catch(() => {
-        // 실패해도 sellerDefaultDetailBlocksRef는 null로 남고, 이후 코드 상수
-        // defaultDetailBlocks()로 정상 폴백한다 — 이 fetch는 편의 기능이지
-        // 등록 흐름의 필수 경로가 아니다.
+        // 실패해도 sellerDefaultDetailBlocksRef/sellerDefaultDetailBlocks는 null로
+        // 남고, 이후 코드 상수 defaultDetailBlocks()로 정상 폴백한다 — 이 fetch는
+        // 편의 기능이지 등록 흐름의 필수 경로가 아니다.
       });
   }, []);
   // N-3.12 Phase 2 P0① — CommerceWorkspace가 mirror-up(onCategoryMappingsChange)으로
@@ -696,6 +703,7 @@ export default function PipelinePage() {
             jobKey={jobKey}
             detailBlocks={detailBlocks}
             onDetailBlocksChange={setDetailBlocks}
+            sellerDefaultDetailBlocks={sellerDefaultDetailBlocks}
             initialCategoryMappings={categoryMappings ?? undefined}
             onCategoryMappingsChange={setCategoryMappings}
           />
