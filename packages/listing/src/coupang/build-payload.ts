@@ -319,23 +319,34 @@ export function detailBlockLabel(block: DetailPageBlock): string {
   return DETAIL_BLOCK_LABELS[block.kind];
 }
 
-/** 사용자가 에디터를 한 번도 안 열었을 때 쓰는 기본값 — 지금까지의 하드코딩
- * 순서(mergeCoupangDescription + buildCoupangPayload의 contents 조립)와
- * 완전히 동일하다. BRAND_INTRO/SIZE_CHART_IMAGES/CUSTOM_TEXT는 옵트인이라
- * 기본값에는 없다 — 회귀 없이 오늘과 100% 같은 결과를 내는 것이 목적. */
+/** 사용자가 에디터를 한 번도 안 열었을 때 쓰는 기본값.
+ *
+ * N-4.09(대표님 지시, 긴급 고객 피드백 2026-08-24) — 이전 기본 순서(AI_DESCRIPTION →
+ * 배송/교환/반품/구매대행/AS → 상단 공통 이미지 → 상품 이미지 → 하단 공통 이미지)가
+ * 실제 고객 화면에서 "설명이 맨 위, 안내문구가 그대로 노출"로 나타나는 문제로
+ * 이어져 다음 순서로 바꾼다: 상품 이미지 → 상품 상세 설명(마지막 사진 바로 아래) →
+ * 하단 공통 이미지 → 배송/교환/반품/구매대행/AS(기본 비노출).
+ *
+ * 안내 문구 5종은 삭제가 아니라 enabled:false로만 바꾼다 — 에디터에서 셀러가
+ * 원하면 다시 켤 수 있어야 한다(고객 지시 3번). 상단 공통 이미지도 마찬가지로
+ * 블록 자체는 남기고 enabled:false로 둔다 — "상단/하단 공통 이미지 설정 기능은
+ * 기존 그대로 사용"(고객 지시 4번) 원칙상, 상단 이미지가 필요한 특정 상품에서는
+ * 여전히 이 블록을 다시 켜서 쓸 수 있어야 하기 때문이다(COMMON_IMAGE는
+ * DetailPageEditor의 ADDABLE_KINDS에 없어 기본값에서 아예 빠지면 다시 추가할
+ * 방법이 없어진다). */
 export function defaultDetailBlocks(): DetailPageBlock[] {
   let seq = 0;
   const id = () => `default-${seq++}`;
   return [
-    { id: id(), kind: "AI_DESCRIPTION", enabled: true },
-    { id: id(), kind: "TEMPLATE_SECTION", section: "shipping", enabled: true },
-    { id: id(), kind: "TEMPLATE_SECTION", section: "exchange", enabled: true },
-    { id: id(), kind: "TEMPLATE_SECTION", section: "return", enabled: true },
-    { id: id(), kind: "TEMPLATE_SECTION", section: "agentBuy", enabled: true },
-    { id: id(), kind: "TEMPLATE_SECTION", section: "as", enabled: true },
-    { id: id(), kind: "COMMON_IMAGE", position: "top", enabled: true },
+    { id: id(), kind: "COMMON_IMAGE", position: "top", enabled: false },
     { id: id(), kind: "PRODUCT_IMAGES", enabled: true },
+    { id: id(), kind: "AI_DESCRIPTION", enabled: true },
     { id: id(), kind: "COMMON_IMAGE", position: "bottom", enabled: true },
+    { id: id(), kind: "TEMPLATE_SECTION", section: "shipping", enabled: false },
+    { id: id(), kind: "TEMPLATE_SECTION", section: "exchange", enabled: false },
+    { id: id(), kind: "TEMPLATE_SECTION", section: "return", enabled: false },
+    { id: id(), kind: "TEMPLATE_SECTION", section: "agentBuy", enabled: false },
+    { id: id(), kind: "TEMPLATE_SECTION", section: "as", enabled: false },
   ];
 }
 
