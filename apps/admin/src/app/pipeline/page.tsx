@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { backfillCanonicalProduct, type CanonicalProduct, type PlatformId } from "@commerce/shared";
 import type { CategorySelection } from "@commerce/category";
@@ -84,6 +84,30 @@ export default function PipelinePage() {
   // defaultDetailBlocks()로, 사용자가 에디터를 안 열면 기존 하드코딩 조립
   // 순서와 100% 동일하게 동작한다.
   const [detailBlocks, setDetailBlocks] = useState<DetailPageBlock[]>(() => defaultDetailBlocks());
+  /** N-4.08-DetailPage(대표님 지시: "상세페이지 관리 구조 개선") — 신규 상품에
+   * 적용할 기본 블록 구성을 설정 → 상세페이지 관리에서 셀러가 관리할 수 있게
+   * 승격한다. 코드 상수 defaultDetailBlocks()는 그대로 최종 폴백으로 남긴다
+   * (한 번도 설정 안 한 셀러도 항상 동작해야 한다). ref로 두는 이유: 이 값은
+   * "새 상품을 시작하는 순간"(runPipeline/resetWorkspace)에만 읽으면 되고
+   * 그 자체가 리렌더를 유발할 필요는 없다 — state로 두면 fetch 완료 시점에
+   * 불필요한 재렌더가 생긴다. */
+  const sellerDefaultDetailBlocksRef = useRef<DetailPageBlock[] | null>(null);
+  useEffect(() => {
+    fetch("/api/settings/coupang/profiles")
+      .then((res) => res.json())
+      .then((data: { profiles?: { isDefault: boolean; defaultDetailBlocks: DetailPageBlock[] | null }[] }) => {
+        const profiles = data.profiles ?? [];
+        const target = profiles.find((p) => p.isDefault) ?? profiles[0];
+        if (target?.defaultDetailBlocks && target.defaultDetailBlocks.length > 0) {
+          sellerDefaultDetailBlocksRef.current = target.defaultDetailBlocks;
+        }
+      })
+      .catch(() => {
+        // 실패해도 sellerDefaultDetailBlocksRef는 null로 남고, 이후 코드 상수
+        // defaultDetailBlocks()로 정상 폴백한다 — 이 fetch는 편의 기능이지
+        // 등록 흐름의 필수 경로가 아니다.
+      });
+  }, []);
   // N-3.12 Phase 2 P0① — CommerceWorkspace가 mirror-up(onCategoryMappingsChange)으로
   // 알려주는 카테고리 선택 상태. null이면 "아직 CommerceWorkspace가 마운트 전"이거나
   // "복원할 저장값이 없음" — 이 경우 CommerceWorkspace가 자체 기본값을 쓴다.
@@ -286,7 +310,7 @@ export default function PipelinePage() {
     setCurrentProgress(null);
     setProgressLog([]);
     setDetailsExpanded(false);
-    setDetailBlocks(defaultDetailBlocks());
+    setDetailBlocks(sellerDefaultDetailBlocksRef.current ?? defaultDetailBlocks());
 
     try {
       const response = await fetch("/api/pipeline", {
@@ -396,7 +420,7 @@ export default function PipelinePage() {
     setCurrentProgress(null);
     setProgressLog([]);
     setDetailsExpanded(false);
-    setDetailBlocks(defaultDetailBlocks());
+    setDetailBlocks(sellerDefaultDetailBlocksRef.current ?? defaultDetailBlocks());
   }
 
   /** CommerceWorkspace는 product가 항상 있다고 가정하고 업데이터를 호출한다(그 컴포넌트가

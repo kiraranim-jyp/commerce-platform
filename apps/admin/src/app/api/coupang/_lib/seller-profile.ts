@@ -1,3 +1,4 @@
+import type { DetailPageBlock } from "@commerce/listing";
 import { getSupabaseAdmin } from "../../../../lib/supabase-admin";
 import { loadSettingsRow } from "./env";
 
@@ -70,6 +71,13 @@ export interface SellerProfile {
    * 사용자가 직접 확인해야 함")이다. build-payload.ts의 buildCoupangCompliance
    * 참고 주석에 이 필드를 켰을 때의 컴플라이언스 책임 소재가 적혀 있다. */
   kcExemptionText: string;
+  /** N-4.08-DetailPage(대표님 지시) — 신규 상품에 적용할 상세페이지 기본 블록
+   * 구성(순서+노출여부). null이면 한 번도 설정 안 한 것 — 이때는 코드 상수
+   * defaultDetailBlocks()(packages/listing)가 그대로 폴백으로 쓰인다. 이미
+   * detailBlocks를 저장한 기존 상품에는 절대 영향을 주지 않는다(그 상품은
+   * 자기 snapshot의 detailBlocks를 그대로 쓴다 — saved.detailBlocks ??
+   * (sellerDefaultDetailBlocks ?? defaultDetailBlocks()) 계약). */
+  defaultDetailBlocks: DetailPageBlock[] | null;
 }
 
 interface SellerProfileRow {
@@ -102,6 +110,7 @@ interface SellerProfileRow {
   bottom_common_image_url: string | null;
   bottom_common_image_enabled: boolean | null;
   kc_exemption_text: string | null;
+  default_detail_blocks: DetailPageBlock[] | null;
 }
 
 function toProfile(row: SellerProfileRow): SellerProfile {
@@ -135,6 +144,7 @@ function toProfile(row: SellerProfileRow): SellerProfile {
     bottomCommonImageUrl: row.bottom_common_image_url,
     bottomCommonImageEnabled: row.bottom_common_image_enabled ?? false,
     kcExemptionText: row.kc_exemption_text ?? "",
+    defaultDetailBlocks: row.default_detail_blocks ?? null,
   };
 }
 
@@ -180,6 +190,7 @@ export interface SellerProfileInput {
   bottomCommonImageUrl?: string | null;
   bottomCommonImageEnabled?: boolean;
   kcExemptionText?: string;
+  defaultDetailBlocks?: DetailPageBlock[] | null;
 }
 
 /** insert/update가 같은 컬럼 매핑을 쓰므로 한 곳에서만 관리한다(CP001류 중복
@@ -216,6 +227,7 @@ function toRowFields(input: Partial<SellerProfileInput>): Record<string, unknown
   if (input.bottomCommonImageUrl !== undefined) row.bottom_common_image_url = input.bottomCommonImageUrl || null;
   if (input.bottomCommonImageEnabled !== undefined) row.bottom_common_image_enabled = input.bottomCommonImageEnabled;
   if (input.kcExemptionText !== undefined) row.kc_exemption_text = input.kcExemptionText || null;
+  if (input.defaultDetailBlocks !== undefined) row.default_detail_blocks = input.defaultDetailBlocks;
   return row;
 }
 

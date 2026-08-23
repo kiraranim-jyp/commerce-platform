@@ -8,7 +8,13 @@ import { StatusBadge, type StatusBadgeStatus } from "@/components/ui/StatusBadge
 import { ImagePicker } from "@/components/ui/ImagePicker";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Tabs } from "@/components/ui/Tabs";
-import type { PlatformConnectionStatus, TemplateSectionBlock } from "@commerce/listing";
+import {
+  defaultDetailBlocks,
+  detailBlockLabel,
+  type DetailPageBlock,
+  type PlatformConnectionStatus,
+  type TemplateSectionBlock,
+} from "@commerce/listing";
 import type { ConnectionErrorType } from "@/lib/connection-error";
 
 const TAB_KEYS = [
@@ -82,6 +88,7 @@ interface SellerProfile {
   bottomCommonImageUrl: string | null;
   bottomCommonImageEnabled: boolean;
   kcExemptionText: string;
+  defaultDetailBlocks: DetailPageBlock[] | null;
 }
 
 interface BrandProfile {
@@ -574,6 +581,10 @@ function SellerProfileEditor({
   const [bottomCommonImageUrl, setBottomCommonImageUrl] = useState<string | null>(null);
   const [bottomCommonImageEnabled, setBottomCommonImageEnabled] = useState(false);
   const [imageUploading, setImageUploading] = useState<"top" | "bottom" | null>(null);
+  // N-4.08-DetailPage(대표님 지시) — 신규 상품에 적용할 상세페이지 기본 블록
+  // 구성(순서+노출여부). 코드 상수 defaultDetailBlocks()를 초기값으로 쓰되,
+  // 저장된 프로필 값이 있으면 그걸로 덮어쓴다(fillForm).
+  const [detailBlocksDefault, setDetailBlocksDefault] = useState<DetailPageBlock[]>(() => defaultDetailBlocks());
 
   const [shippingPlaces, setShippingPlaces] = useState<ShippingPlaceOption[]>([]);
   const [returnCenters, setReturnCenters] = useState<ReturnCenterOption[]>([]);
@@ -609,6 +620,7 @@ function SellerProfileEditor({
     setTopCommonImageEnabled(false);
     setBottomCommonImageUrl(null);
     setBottomCommonImageEnabled(false);
+    setDetailBlocksDefault(defaultDetailBlocks());
   }
 
   // startEdit(수동 "수정" 클릭)과 아래 자동 채움 effect가 공유하는 필드
@@ -641,6 +653,9 @@ function SellerProfileEditor({
     setTopCommonImageEnabled(p.topCommonImageEnabled);
     setBottomCommonImageUrl(p.bottomCommonImageUrl);
     setBottomCommonImageEnabled(p.bottomCommonImageEnabled);
+    setDetailBlocksDefault(
+      p.defaultDetailBlocks && p.defaultDetailBlocks.length > 0 ? p.defaultDetailBlocks : defaultDetailBlocks(),
+    );
   }
 
   function startEdit(p: SellerProfile) {
@@ -770,6 +785,7 @@ function SellerProfileEditor({
         topCommonImageEnabled,
         bottomCommonImageUrl,
         bottomCommonImageEnabled,
+        defaultDetailBlocks: detailBlocksDefault,
       };
       const res = await fetch(
         editingId ? `/api/settings/coupang/profiles/${editingId}` : "/api/settings/coupang/profiles",
@@ -937,6 +953,26 @@ function SellerProfileEditor({
           상세페이지 템플릿 안에서 함께 관리"). 이제 독립된 헤더 없이 "상세페이지
           템플릿"의 일부(상단/하단 공통 이미지)로만 라벨링한다 — 저장 대상 테이블/
           상태는 그대로(SellerProfile), 시각적 소속만 명확히 했다. */}
+      <div className={activeTab === "detail" ? "mt-5" : "hidden"}>
+        <CollapsibleSection
+          title="상세페이지 기본 구성"
+          defaultOpen={false}
+          badge={
+            <span className="text-xs font-normal text-text-tertiary">
+              {detailBlocksDefault.filter((b) => b.enabled).length}/{detailBlocksDefault.length}개 노출
+            </span>
+          }
+        >
+          <DefaultDetailBlocksSection
+            blocks={detailBlocksDefault}
+            onChange={setDetailBlocksDefault}
+            onSave={handleSave}
+            saving={saving}
+            saveButtonLabel={saveButtonLabel}
+          />
+        </CollapsibleSection>
+      </div>
+
       <div className={activeTab === "detail" ? "mt-5" : "hidden"}>
         <CollapsibleSection
           title="상세페이지 템플릿 — 공통 상단/하단 이미지"
@@ -1457,6 +1493,89 @@ function SellerInfoSection({
             className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
           />
         </Field>
+        <SaveButton onSave={onSave} saving={saving} label={saveButtonLabel} />
+      </div>
+    </>
+  );
+}
+
+/** N-4.08-DetailPage(대표님 지시: "상세페이지 관리 구조 개선") — defaultDetailBlocks()에
+ * 하드코딩돼 있던 신규 상품 기본 블록 구성을 셀러가 여기서 직접 관리한다. 순서/on-off만
+ * 다루고(DetailPageEditor.tsx와 동일 패턴), 이미지 장수 등 상품 종속 정보는 없다 — 여기엔
+ * 바인딩된 상품이 없다. 저장은 detailBlocksDefault를 그대로 SellerProfile.defaultDetailBlocks에
+ * 넣어 handleSave()가 나머지 필드와 함께 보낸다(이 컴포넌트 자체는 저장 로직을 모른다). */
+function DefaultDetailBlocksSection({
+  blocks,
+  onChange,
+  onSave,
+  saving,
+  saveButtonLabel,
+}: {
+  blocks: DetailPageBlock[];
+  onChange: (blocks: DetailPageBlock[]) => void;
+  onSave: () => void;
+  saving: boolean;
+  saveButtonLabel: string;
+}) {
+  function moveBlock(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= blocks.length) return;
+    const next = [...blocks];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange(next);
+  }
+
+  return (
+    <>
+      <p className="text-xs text-text-secondary">
+        새 상품을 분석할 때 상세페이지에 기본으로 들어갈 블록의 순서와 노출 여부입니다. 상품 등록
+        화면에서 이 상품만 다르게 바꿀 수도 있습니다(여기 기본값은 바뀌지 않습니다).
+      </p>
+      <ol className="mt-3 space-y-2 text-sm">
+        {blocks.map((block, index) => (
+          <li
+            key={block.id}
+            className={`flex items-center justify-between gap-2 rounded-md border p-2.5 ${block.enabled ? "border-border" : "border-border bg-background opacity-60"}`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded bg-background text-xs font-medium text-text-tertiary">
+                {index + 1}
+              </span>
+              <span className="font-medium text-text-primary">{detailBlockLabel(block)}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                disabled={index === 0}
+                onClick={() => moveBlock(index, -1)}
+                className="rounded px-2 py-1 text-xs text-text-secondary hover:bg-background disabled:opacity-30"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                disabled={index === blocks.length - 1}
+                onClick={() => moveBlock(index, 1)}
+                className="rounded px-2 py-1 text-xs text-text-secondary hover:bg-background disabled:opacity-30"
+              >
+                ↓
+              </button>
+              <label className="ml-1 flex items-center gap-1.5 text-xs text-text-secondary">
+                <input
+                  type="checkbox"
+                  checked={block.enabled}
+                  onChange={(e) =>
+                    onChange(blocks.map((b) => (b.id === block.id ? { ...b, enabled: e.target.checked } : b)))
+                  }
+                  className="h-3.5 w-3.5 accent-primary"
+                />
+                기본 사용
+              </label>
+            </div>
+          </li>
+        ))}
+      </ol>
+      <div className="mt-3">
         <SaveButton onSave={onSave} saving={saving} label={saveButtonLabel} />
       </div>
     </>
