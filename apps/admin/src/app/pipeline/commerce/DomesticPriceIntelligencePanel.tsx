@@ -34,13 +34,22 @@ interface Recommendation {
   recommendedPrice: number;
 }
 
+interface PriceHistoryRecord {
+  checkedAt: string;
+  priceKrw: number;
+}
+
+interface PriceTrend {
+  changeRate: number | null;
+}
+
 interface PriceHistoryResponse {
   ok: boolean;
   product: { title: string; brand: string; sourceUrl: string };
   currentPrice: { sellingPriceKrw: number | null; costPriceKrw: number | null };
   domesticCompetition: DomesticCompetition;
   priceHistory: {
-    domesticShop: { trend7d: { changeRate: number | null } | null };
+    domesticShop: { records: PriceHistoryRecord[]; trend7d: PriceTrend | null; trend30d: PriceTrend | null };
   };
   fx: { rate: number; isEstimate: boolean } | null;
   cost: { originalAmount: number; originalCurrency: string; landedCostKrw: number } | null;
@@ -48,11 +57,40 @@ interface PriceHistoryResponse {
   recommendation: Recommendation | null;
 }
 
-const VERDICT_LABEL: Record<Decision["verdict"], { icon: string; label: string; className: string }> = {
-  MAINTAIN: { icon: "🟢", label: "유지", className: "bg-success-soft text-success" },
-  CONSIDER_LOWER: { icon: "🟡", label: "조정 검토", className: "bg-warning-soft text-warning" },
-  MARGIN_RISK: { icon: "🔴", label: "마진 위험", className: "bg-error-soft text-error" },
+const VERDICT_LABEL: Record<Decision["verdict"], { icon: string; label: string; className: string; title: string; action: string }> = {
+  MAINTAIN: {
+    icon: "🟢",
+    label: "유지",
+    className: "bg-success-soft text-success",
+    title: "적정 가격입니다",
+    action: "→ 현재 가격 유지",
+  },
+  CONSIDER_LOWER: {
+    icon: "🟡",
+    label: "조정 검토",
+    className: "bg-warning-soft text-warning",
+    title: "국내 최저가 대비 판매가가 높습니다",
+    action: "→ 가격 조정 검토",
+  },
+  MARGIN_RISK: {
+    icon: "🔴",
+    label: "마진 위험",
+    className: "bg-error-soft text-error",
+    title: "예상 마진이 낮습니다",
+    action: "→ 원가/판매가 재검토 필요",
+  },
 };
+
+function TrendBadge({ label, trend }: { label: string; trend: PriceTrend | null }) {
+  if (!trend || trend.changeRate == null) return null;
+  const rate = trend.changeRate;
+  return (
+    <span className={rate < 0 ? "text-success" : rate > 0 ? "text-error" : "text-text-tertiary"}>
+      {label} {rate > 0 ? "▲" : rate < 0 ? "▼" : ""}
+      {Math.abs(rate)}%
+    </span>
+  );
+}
 
 /** N-4.07 2차(대표님 지시: "해외 원가 → 환율 → 국내 경쟁가 → 내 판매가 → 예상 마진을
  * 한 번에 판단") — /api/price-history/[snapshotId]가 이미 계산해둔 값(cost/
@@ -65,6 +103,7 @@ const VERDICT_LABEL: Record<Decision["verdict"], { icon: string; label: string; 
 export function DomesticPriceIntelligencePanel({ snapshotId }: { snapshotId: string }) {
   const [data, setData] = useState<PriceHistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,7 +128,10 @@ export function DomesticPriceIntelligencePanel({ snapshotId }: { snapshotId: str
   if (!data) return null;
 
   const { domesticCompetition, currentPrice, cost, fx, decision, recommendation } = data;
-  const trend7d = data.priceHistory?.domesticShop?.trend7d ?? null;
+  const domesticShopHistory = data.priceHistory?.domesticShop ?? null;
+  const trend7d = domesticShopHistory?.trend7d ?? null;
+  const trend30d = domesticShopHistory?.trend30d ?? null;
+  const historyRecords = domesticShopHistory?.records ?? [];
 
   const hasAnyData =
     domesticCompetition.tier !== "NONE" || currentPrice.sellingPriceKrw != null || cost != null;
@@ -120,12 +162,10 @@ export function DomesticPriceIntelligencePanel({ snapshotId }: { snapshotId: str
                 국내 동일상품 ({domesticCompetition.sellerCount}곳
                 {domesticCompetition.tier === "SECONDARY" ? " · 참고가격(검증 전)" : ""})
               </span>
-              {trend7d?.changeRate != null && (
-                <span className={trend7d.changeRate < 0 ? "text-success" : trend7d.changeRate > 0 ? "text-error" : "text-text-tertiary"}>
-                  최근 7일 {trend7d.changeRate > 0 ? "▲" : trend7d.changeRate < 0 ? "▼" : ""}
-                  {Math.abs(trend7d.changeRate)}%
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                <TrendBadge label="7일" trend={trend7d} />
+                <TrendBadge label="30일" trend={trend30d} />
+              </div>
             </div>
             <ul className="space-y-0.5">
               {domesticCompetition.sampleListings.slice(0, 5).map((listing, i) => (
@@ -154,10 +194,31 @@ export function DomesticPriceIntelligencePanel({ snapshotId }: { snapshotId: str
                 마지막 확인 {new Date(domesticCompetition.checkedAt).toLocaleString("ko-KR")}
               </p>
             )}
+            {historyRecords.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowHistory((v) => !v)}
+                  className="mt-1.5 text-[11px] text-primary hover:underline"
+                >
+                  {showHistory ? "가격 변동 이력 접기" : `가격 변동 이력 보기 (${historyRecords.length}건)`}
+                </button>
+                {showHistory && (
+                  <ul className="mt-1.5 space-y-0.5 border-t border-border pt-1.5">
+                    {historyRecords.slice(0, 30).map((r, i) => (
+                      <li key={i} className="flex items-center justify-between text-text-secondary">
+                        <span>{new Date(r.checkedAt).toLocaleDateString("ko-KR")}</span>
+                        <span className="text-text-primary">₩{r.priceKrw.toLocaleString()}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
           </div>
         )}
 
-        {currentPrice.sellingPriceKrw != null && (
+        {!decision && currentPrice.sellingPriceKrw != null && (
           <div className="flex items-center justify-between">
             <span className="text-text-secondary">내 판매가</span>
             <span className="font-medium text-text-primary">₩{currentPrice.sellingPriceKrw.toLocaleString()}</span>
@@ -172,16 +233,21 @@ export function DomesticPriceIntelligencePanel({ snapshotId }: { snapshotId: str
         )}
 
         {decision && (
-          <div className="rounded-md border border-border p-2">
-            <div className="mb-1 flex items-center gap-1.5">
-              <span
-                className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ${VERDICT_LABEL[decision.verdict].className}`}
-              >
-                {VERDICT_LABEL[decision.verdict].icon} {VERDICT_LABEL[decision.verdict].label}
-              </span>
-              <span className="text-text-tertiary">예상 마진 {decision.marginPercent}%</span>
-            </div>
-            <p className="text-text-secondary">{decision.reason}</p>
+          <div className={`rounded-md border border-border p-2.5 ${VERDICT_LABEL[decision.verdict].className}`}>
+            <p className="font-medium">
+              {VERDICT_LABEL[decision.verdict].icon} {VERDICT_LABEL[decision.verdict].title}
+            </p>
+            <ul className="mt-1.5 space-y-0.5 text-text-secondary">
+              {domesticCompetition.lowestPriceKrw != null && (
+                <li>현재 국내 최저가 ₩{domesticCompetition.lowestPriceKrw.toLocaleString()}</li>
+              )}
+              {currentPrice.sellingPriceKrw != null && (
+                <li>내 판매가 ₩{currentPrice.sellingPriceKrw.toLocaleString()}</li>
+              )}
+              <li>예상 마진 {decision.marginPercent}%</li>
+            </ul>
+            <p className="mt-1.5 font-medium">{VERDICT_LABEL[decision.verdict].action}</p>
+            <p className="mt-1 text-[11px] text-text-tertiary">{decision.reason}</p>
           </div>
         )}
 
