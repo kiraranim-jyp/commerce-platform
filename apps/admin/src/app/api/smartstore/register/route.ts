@@ -10,7 +10,6 @@ import {
   resolveNaverProductAttributes,
   getNaverCategoryAttributeMeta,
   COMPLIANCE_POLICY_VERSION,
-  type DetailPageBlock,
   type NaverProductRegistrationPayload,
   type RegistrationStepLog,
   type ListingResult,
@@ -120,17 +119,12 @@ export async function POST(request: Request) {
     categoryId?: string;
     snapshotId?: string;
     jobKey?: string;
-    // Sprint P1(CPO 지시, 2026-08-19) — smartstoreExecutor가 이제
-    // context.detailBlocks를 그대로 전달한다(build-payload.ts는 이미
-    // 지원했지만 이 라우트가 받지 않아 항상 listing.description 폴백만
-    // 쓰던 상태였다).
-    detailBlocks?: DetailPageBlock[];
   } | null;
 
   if (!body?.product || !body?.listing) {
     return NextResponse.json({ error: "product와 listing이 필요합니다." }, { status: 400 });
   }
-  const { product, listing, detailBlocks } = body;
+  const { product, listing } = body;
   const snapshotId = body.snapshotId ?? null;
   const jobKey = body.jobKey ?? null;
 
@@ -377,7 +371,10 @@ export async function POST(request: Request) {
     categoryRequiresChildCertification,
     originAreaRequiresContent: context.origin.match.status === "OTHER_MANUAL",
     descriptionTemplate: context.detailPage.descriptionTemplate,
-    detailBlocks,
+    // N-3.86 STEP3(대표님 지시) — 클라이언트가 보낸 detailBlocks는 더 이상
+    // 읽지 않는다. resolveNaverContext()가 이미 resolveDetailBlocks()로
+    // 계산해서 내려준 값(context.detailPage.detailBlocks)만 쓴다.
+    detailBlocks: context.detailPage.detailBlocks,
     commonImages: context.detailPage.commonImages,
     brandIntro: context.detailPage.brandIntro,
     resolvedManufacturer: context.notice.manufacturer,

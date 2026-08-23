@@ -4,11 +4,11 @@ import type { CanonicalProduct, ErrorCode } from "@commerce/shared";
 import {
   buildComplianceReport,
   buildCoupangPayload,
+  resolveDetailBlocks,
   resolveVerifiedCategoryCode,
   validateCoupangPricing,
   type ComplianceReport,
   type CoupangPayload,
-  type DetailPageBlock,
 } from "@commerce/listing";
 import type { ListingResult, RegistrationStepLog } from "@commerce/listing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -186,13 +186,12 @@ export async function POST(request: Request) {
     listing?: ListingModel;
     snapshotId?: string;
     jobKey?: string;
-    detailBlocks?: DetailPageBlock[];
   } | null;
 
   if (!body?.product || !body?.listing) {
     return NextResponse.json({ error: "product와 listing이 필요합니다." }, { status: 400 });
   }
-  const { product, listing, detailBlocks } = body;
+  const { product, listing } = body;
   // "최근 작업" 스냅샷에서 이어서 등록한 경우에만 있다 — 없으면(스냅샷 기능
   // 이전 흐름이거나 스냅샷 저장을 안 한 경우) registration_attempts.snapshot_id는
   // null로 남는다(감사 로그 자체는 스냅샷 없이도 항상 남는다).
@@ -271,6 +270,11 @@ export async function POST(request: Request) {
     return NextResponse.json(result);
   }
   logStep("배송 프로필 확인", "success", `프로필 "${sellerProfile.name}" 사용`);
+
+  // N-3.86 STEP3(대표님 지시: "설정이 공통 상세페이지의 유일한 기준") —
+  // 클라이언트가 POST한 detailBlocks는 더 이상 읽지 않는다. 서버가 방금 조회한
+  // sellerProfile.defaultDetailBlocks만으로 조립 순서를 결정한다.
+  const resolvedDetailBlocks = resolveDetailBlocks(sellerProfile.defaultDetailBlocks);
 
   const descriptionTemplate = await getDefaultDescriptionTemplate();
   logStep(
@@ -417,7 +421,7 @@ export async function POST(request: Request) {
           brandIntro: brandProfile.brandIntro,
         }
       : null,
-    detailBlocks,
+    detailBlocks: resolvedDetailBlocks,
   });
 
   // Sprint B(Product Compliance Engine) — "등록됐다"가 아니라 "얼마나 실제

@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { backfillCanonicalProduct, type CanonicalProduct, type PlatformId } from "@commerce/shared";
 import type { CategorySelection } from "@commerce/category";
-import { defaultDetailBlocks, type DetailPageBlock } from "@commerce/listing";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -79,72 +78,6 @@ export default function PipelinePage() {
    * 기준 재계산이라는 걸 알리고, 실제 등록 시 제출된 값(registration_attempts)
    * 을 보러 갈 수 있는 링크를 보여준다. */
   const [snapshotStatus, setSnapshotStatus] = useState<"IN_PROGRESS" | "REGISTERED" | null>(null);
-  // Detail Page Editor(2026-08-04) — product/items와 같은 이유로 여기서 소유한다
-  // (controlled, CommerceWorkspace에 그대로 내려준다). 기본값은
-  // defaultDetailBlocks()로, 사용자가 에디터를 안 열면 기존 하드코딩 조립
-  // 순서와 100% 동일하게 동작한다.
-  const [detailBlocks, setDetailBlocks] = useState<DetailPageBlock[]>(() => defaultDetailBlocks());
-  /** N-4.08-DetailPage(대표님 지시: "상세페이지 관리 구조 개선") — 신규 상품에
-   * 적용할 기본 블록 구성을 설정 → 상세페이지 관리에서 셀러가 관리할 수 있게
-   * 승격한다. 코드 상수 defaultDetailBlocks()는 그대로 최종 폴백으로 남긴다
-   * (한 번도 설정 안 한 셀러도 항상 동작해야 한다). ref로 두는 이유: 이 값은
-   * "새 상품을 시작하는 순간"(runPipeline/resetWorkspace)에만 읽으면 되고
-   * 그 자체가 리렌더를 유발할 필요는 없다 — state로 두면 fetch 완료 시점에
-   * 불필요한 재렌더가 생긴다.
-   *
-   * N-4.08 P1-1(대표님 지시: "상품별 예외 UX") — 위 ref와 별개로 같은 값을
-   * state로도 들고 있는다. DetailPageEditor가 "이 상품 detailBlocks가 지금
-   * Settings 기본값과 같은가"를 렌더링 시점마다 비교해야 하므로, 그 UI는
-   * 리렌더가 필요하다(ref만으로는 fetch 완료 후 배지가 갱신되지 않는다). */
-  const sellerDefaultDetailBlocksRef = useRef<DetailPageBlock[] | null>(null);
-  const [sellerDefaultDetailBlocks, setSellerDefaultDetailBlocks] = useState<DetailPageBlock[] | null>(null);
-  /** N-4.08 P1-3(대표님 지시: "이중 게이트 UX 개선") — 위와 같은 fetch 응답에
-   * 이미 들어있는 공통 상단/하단 이미지 URL·ON/OFF를 같이 뽑아둔다(A-11-3에서
-   * 이미 SellerProfile 컬럼으로 존재 — 새 API 호출 아님). DetailPageEditor가
-   * "Settings ON + 상품 ON = 노출"이라는 실제 게이트 조건을 셀러가 읽을 수
-   * 있는 문구로 보여주는 데만 쓰고, 판정 로직 자체는 건드리지 않는다. */
-  const [sellerCommonImages, setSellerCommonImages] = useState<{
-    topUrl: string | null;
-    topEnabled: boolean;
-    bottomUrl: string | null;
-    bottomEnabled: boolean;
-  } | null>(null);
-  useEffect(() => {
-    fetch("/api/settings/coupang/profiles")
-      .then((res) => res.json())
-      .then(
-        (data: {
-          profiles?: {
-            isDefault: boolean;
-            defaultDetailBlocks: DetailPageBlock[] | null;
-            topCommonImageUrl: string | null;
-            topCommonImageEnabled: boolean;
-            bottomCommonImageUrl: string | null;
-            bottomCommonImageEnabled: boolean;
-          }[];
-        }) => {
-          const profiles = data.profiles ?? [];
-          const target = profiles.find((p) => p.isDefault) ?? profiles[0];
-          if (target?.defaultDetailBlocks && target.defaultDetailBlocks.length > 0) {
-            sellerDefaultDetailBlocksRef.current = target.defaultDetailBlocks;
-            setSellerDefaultDetailBlocks(target.defaultDetailBlocks);
-          }
-          if (target) {
-            setSellerCommonImages({
-              topUrl: target.topCommonImageUrl ?? null,
-              topEnabled: target.topCommonImageEnabled ?? false,
-              bottomUrl: target.bottomCommonImageUrl ?? null,
-              bottomEnabled: target.bottomCommonImageEnabled ?? false,
-            });
-          }
-        },
-      )
-      .catch(() => {
-        // 실패해도 sellerDefaultDetailBlocksRef/sellerDefaultDetailBlocks/
-        // sellerCommonImages는 null로 남고, 이후 코드 상수 defaultDetailBlocks()로
-        // 정상 폴백한다 — 이 fetch는 편의 기능이지 등록 흐름의 필수 경로가 아니다.
-      });
-  }, []);
   // N-3.12 Phase 2 P0① — CommerceWorkspace가 mirror-up(onCategoryMappingsChange)으로
   // 알려주는 카테고리 선택 상태. null이면 "아직 CommerceWorkspace가 마운트 전"이거나
   // "복원할 저장값이 없음" — 이 경우 CommerceWorkspace가 자체 기본값을 쓴다.
@@ -194,7 +127,6 @@ export default function PipelinePage() {
             setItems(ws.items);
             setThumbnails(ws.thumbnails ?? {});
             setRepresentativeId(ws.representativeId);
-            setDetailBlocks(ws.detailBlocks ?? defaultDetailBlocks());
             setCategoryMappings(ws.categoryMappings ?? null);
             setHydrated(true);
             return;
@@ -214,7 +146,6 @@ export default function PipelinePage() {
             items?: WorkspaceItem[];
             thumbnails?: Record<string, string>;
             representativeId?: string | null;
-            detailBlocks?: DetailPageBlock[];
             categoryMappings?: Record<PlatformId, CategorySelection>;
           };
           if (saved.result && saved.product) {
@@ -224,7 +155,6 @@ export default function PipelinePage() {
             setItems(saved.items ?? []);
             setThumbnails(saved.thumbnails ?? {});
             setRepresentativeId(saved.representativeId ?? null);
-            setDetailBlocks(saved.detailBlocks ?? defaultDetailBlocks());
             setCategoryMappings(saved.categoryMappings ?? null);
           }
         }
@@ -253,7 +183,6 @@ export default function PipelinePage() {
             items: stripHeavyDataUrls(items),
             thumbnails,
             representativeId,
-            detailBlocks,
             categoryMappings,
           }),
         );
@@ -265,7 +194,7 @@ export default function PipelinePage() {
       // 영향 없게 조용히 무시한다.
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated, url, result, product, items, thumbnails, representativeId, detailBlocks, categoryMappings]);
+  }, [hydrated, url, result, product, items, thumbnails, representativeId, categoryMappings]);
 
   async function saveSnapshotToServer() {
     if (!result || !product) return;
@@ -289,7 +218,6 @@ export default function PipelinePage() {
             activeTab: "source",
             developerMode,
             platformSettings: {},
-            detailBlocks,
             categoryMappings: categoryMappings ?? undefined,
           },
         }),
@@ -319,7 +247,7 @@ export default function PipelinePage() {
     }, 2000);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated, url, result, product, items, representativeId, detailBlocks, categoryMappings]);
+  }, [hydrated, url, result, product, items, representativeId, categoryMappings]);
 
   async function precomputeThumbnails(newItems: WorkspaceItem[]) {
     const entries = await Promise.all(
@@ -347,7 +275,6 @@ export default function PipelinePage() {
     setCurrentProgress(null);
     setProgressLog([]);
     setDetailsExpanded(false);
-    setDetailBlocks(sellerDefaultDetailBlocksRef.current ?? defaultDetailBlocks());
 
     try {
       const response = await fetch("/api/pipeline", {
@@ -457,7 +384,6 @@ export default function PipelinePage() {
     setCurrentProgress(null);
     setProgressLog([]);
     setDetailsExpanded(false);
-    setDetailBlocks(sellerDefaultDetailBlocksRef.current ?? defaultDetailBlocks());
   }
 
   /** CommerceWorkspace는 product가 항상 있다고 가정하고 업데이터를 호출한다(그 컴포넌트가
@@ -731,10 +657,6 @@ export default function PipelinePage() {
             analysisStartedAt={analysisStartedAt}
             snapshotId={snapshotId}
             jobKey={jobKey}
-            detailBlocks={detailBlocks}
-            onDetailBlocksChange={setDetailBlocks}
-            sellerDefaultDetailBlocks={sellerDefaultDetailBlocks}
-            sellerCommonImages={sellerCommonImages}
             initialCategoryMappings={categoryMappings ?? undefined}
             onCategoryMappingsChange={setCategoryMappings}
           />

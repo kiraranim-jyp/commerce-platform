@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
-import type { DetailPageBlock } from "@commerce/listing";
-import { buildComplianceReport, buildCoupangPayload, resolveVerifiedCategoryCode } from "@commerce/listing";
+import { buildComplianceReport, buildCoupangPayload, resolveDetailBlocks, resolveVerifiedCategoryCode } from "@commerce/listing";
 import { getCoupangCredentials, getVendorUserId } from "../_lib/env";
 import { getDefaultDescriptionTemplate } from "../_lib/description-template";
 import { getDefaultSellerProfile } from "../_lib/seller-profile";
@@ -25,13 +24,12 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
     product?: CanonicalProduct;
     listing?: ListingModel;
-    detailBlocks?: DetailPageBlock[];
   } | null;
 
   if (!body?.product || !body?.listing) {
     return NextResponse.json({ error: "product와 listing이 필요합니다." }, { status: 400 });
   }
-  const { product, listing, detailBlocks } = body;
+  const { product, listing } = body;
 
   const credentials = await getCoupangCredentials();
   if (!credentials) {
@@ -94,7 +92,10 @@ export async function POST(request: Request) {
           brandIntro: brandProfile.brandIntro,
         }
       : null,
-    detailBlocks,
+    // N-3.86 STEP3(대표님 지시) — 클라이언트가 보낸 detailBlocks는 더 이상
+    // 읽지 않는다. register/route.ts와 동일하게 resolveDetailBlocks()로
+    // sellerProfile.defaultDetailBlocks를 직접 조회해서 조립한다.
+    detailBlocks: resolveDetailBlocks(sellerProfile.defaultDetailBlocks),
   });
 
   const attributeResults = payload.complianceFieldResults.filter((r) => r.kind === "ATTRIBUTE");

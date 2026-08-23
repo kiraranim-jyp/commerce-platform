@@ -1,4 +1,4 @@
-import { buildNaverCategoryPath, resolveNaverOriginArea } from "@commerce/listing";
+import { buildNaverCategoryPath, resolveDetailBlocks, resolveNaverOriginArea } from "@commerce/listing";
 import { getNaverCredentials } from "./env";
 import { callNaverApi, issueNaverAccessToken } from "./client";
 import { fetchNaverAllCategories } from "./category";
@@ -176,6 +176,12 @@ export async function resolveNaverContext(params: {
         bottomCommonImageEnabled: sellerProfile?.bottomCommonImageEnabled ?? false,
       },
       brandIntro: brandProfile?.brandIntro ?? null,
+      // N-3.86 STEP3(대표님 지시: "설정이 공통 상세페이지의 유일한 기준") —
+      // Preview(/api/naver/resolve)/실제등록(smartstore/register)/대시보드
+      // readiness(compute-readiness.ts) 세 곳 모두 이 함수 하나를 거치므로,
+      // 여기 한 곳에서만 resolveDetailBlocks()를 호출하면 세 곳 모두 항상
+      // 동일한 값을 쓰게 된다 — 클라이언트가 보낸 detailBlocks는 더 이상 읽지 않는다.
+      detailBlocks: resolveDetailBlocks(sellerProfile?.defaultDetailBlocks),
     },
   };
 }

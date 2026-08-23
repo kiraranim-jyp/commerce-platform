@@ -152,7 +152,8 @@ describe("기존 저장 상품 보호(saved.detailBlocks ?? defaultDetailBlocks(
   });
 
   it("저장된 blocks가 없는(undefined) 세션만 새 defaultDetailBlocks()를 받는다", () => {
-    const resolved = (undefined as DetailPageBlock[] | undefined) ?? defaultDetailBlocks();
+    const undefinedBlocks: DetailPageBlock[] | undefined = undefined;
+    const resolved = undefinedBlocks ?? defaultDetailBlocks();
     expect(resolved[0].kind).toBe("COMMON_IMAGE");
     expect(resolved[1].kind).toBe("PRODUCT_IMAGES");
   });

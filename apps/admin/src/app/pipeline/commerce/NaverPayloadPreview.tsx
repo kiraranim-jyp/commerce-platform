@@ -85,10 +85,12 @@ export interface NaverResolveResponse {
     companyContactNumber: string | null;
     manufacturer: string | null;
   };
-  // N-3.13 Part J — detailBlocks(에디터 상태, 클라이언트가 이미 들고 있음) →
-  // detailContent 조립에 필요한 나머지 재료. Coupang용으로 이미 있는
+  // N-3.13 Part J — detailContent 조립에 필요한 재료. Coupang용으로 이미 있는
   // DescriptionTemplate/SellerProfile 공통이미지/BrandProfile.brandIntro를
   // 그대로 재사용한다(Naver 전용 템플릿을 새로 만들지 않는다).
+  // N-3.86 STEP3(대표님 지시: "Preview와 실제 등록이 동일 소스") — detailBlocks도
+  // 이제 서버(resolve-context.ts)가 resolveDetailBlocks()로 계산해서 내려준다.
+  // 클라이언트는 더 이상 자기만의 detailBlocks 상태를 갖지 않는다.
   detailPage: {
     descriptionTemplate: CoupangDescriptionTemplate | null;
     commonImages: {
@@ -98,6 +100,7 @@ export interface NaverResolveResponse {
       bottomCommonImageEnabled: boolean;
     };
     brandIntro: string | null;
+    detailBlocks: DetailPageBlock[];
   };
 }
 
@@ -159,18 +162,12 @@ function payloadReplacer(_key: string, value: unknown): unknown {
 export function NaverPayloadPreview({
   product,
   listing,
-  detailBlocks,
   sharedResolved,
   sharedResolving,
   sharedResolveError,
   sharedValidation,
 }: {
   product: CanonicalProduct;
-  /** N-3.13 Part J — DetailPageEditor(Coupang 탭에서 편집)가 만드는 블록 순서.
-   * page.tsx의 단일 상태를 그대로 받는다(플랫폼별로 따로 관리하지 않는다 —
-   * 같은 상품의 같은 상세페이지다). 없으면(에디터를 한 번도 안 연 세션)
-   * buildNaverProductPayload가 지금까지처럼 listing.description으로 폴백한다. */
-  detailBlocks?: DetailPageBlock[];
   /** N-3.15 Phase 3(STEP 2-B/2-C) — 기본정보/카테고리/가격 편집은 이제
    * PlatformPreview의 공유 Accordion에서만 일어난다(같은 listing을 읽는다).
    * 그래서 이 컴포넌트는 더 이상 가격 계산 핸들러(onUpdateSalePriceKrw 등)를
@@ -310,6 +307,9 @@ export function NaverPayloadPreview({
   const descriptionTemplate = resolved?.detailPage?.descriptionTemplate ?? null;
   const commonImages = resolved?.detailPage?.commonImages;
   const brandIntro = resolved?.detailPage?.brandIntro ?? null;
+  // N-3.86 STEP3 — 더 이상 부모 컴포넌트의 detailBlocks state를 받지 않는다.
+  // 서버(resolve-context.ts)가 resolveDetailBlocks()로 계산해서 내려준 값만 쓴다.
+  const detailBlocks = resolved?.detailPage?.detailBlocks;
 
   const payload = useMemo(
     () =>

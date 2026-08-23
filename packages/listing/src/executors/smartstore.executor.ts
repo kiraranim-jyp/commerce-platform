@@ -1,6 +1,5 @@
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
-import type { DetailPageBlock } from "../coupang/build-payload";
 import type { ListingExecutor } from "../executor";
 import { buildSmartStorePayload } from "../smartstore/build-payload";
 import { validateSmartStoreListing } from "../smartstore/validate-listing";
@@ -25,10 +24,7 @@ export const smartstoreExecutor: ListingExecutor = {
     // 적은 파라미터로 구현하는 걸 허용한다 — 실제로 CommerceWorkspace는 항상
     // context를 넘겼지만 여기서 받지도 않았다). registration_attempts.snapshot_id가
     // SmartStore LIVE 시도에서는 항상 null이었던 원인이라 이번에 같이 고친다.
-    // Sprint P1(CPO 지시, 2026-08-19) — detailBlocks도 같은 이유로 추가한다:
-    // executor.ts 인터페이스에는 처음부터 있었지만 이 구현체가 안 받아서
-    // CommerceWorkspace가 항상 undefined로 넘기게 만든 원인이었다.
-    context?: { snapshotId?: string; jobKey?: string; detailBlocks?: DetailPageBlock[] },
+    context?: { snapshotId?: string; jobKey?: string },
   ): Promise<ListingResult> {
     const readiness = validateSmartStoreListing(listing);
     if (readiness.errorCount > 0) {
@@ -86,7 +82,6 @@ export const smartstoreExecutor: ListingExecutor = {
           listing,
           snapshotId: context?.snapshotId,
           jobKey: context?.jobKey,
-          detailBlocks: context?.detailBlocks,
         }),
       });
       const result = (await response.json()) as ListingResult;

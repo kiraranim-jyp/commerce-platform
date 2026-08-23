@@ -28,7 +28,6 @@ import {
   type ComplianceReport,
   type CoupangCategoryMeta,
   type CoupangPayload,
-  type DetailPageBlock,
   type ExecutionMode,
   type ListingResult,
   type ListingStatus,
@@ -108,10 +107,6 @@ export function CommerceWorkspace({
   analysisStartedAt,
   snapshotId,
   jobKey,
-  detailBlocks,
-  onDetailBlocksChange,
-  sellerDefaultDetailBlocks,
-  sellerCommonImages,
   initialCategoryMappings,
   onCategoryMappingsChange,
 }: {
@@ -138,28 +133,9 @@ export function CommerceWorkspace({
    * 채번해서 내려준 사람이 읽을 수 있는 작업번호("JOB-260819-001"). 아직
    * 한 번도 저장 안 됐으면(분석 직후) null. */
   jobKey?: string | null;
-  /** Detail Page Editor(2026-08-04) — product와 같은 이유로 controlled다.
-   * page.tsx가 스냅샷 저장/복원 대상에 포함해야 하므로 이 컴포넌트가 상태를
-   * 소유하지 않는다. */
-  detailBlocks: DetailPageBlock[];
-  onDetailBlocksChange: (blocks: DetailPageBlock[]) => void;
-  /** N-4.08 P1-1(대표님 지시: "상품별 예외 UX") — Settings에서 관리하는 셀러
-   * 기본값. DetailPageEditor가 "이 상품이 기본값과 같은지" 비교하고 "[기본
-   * 설정 다시 적용]"의 복원 대상으로 쓴다. null이면(fetch 전/실패/셀러가
-   * 아직 설정 안 함) DetailPageEditor 내부에서 코드 상수 defaultDetailBlocks()로
-   * 폴백한다 — page.tsx의 신규 상품 배정 로직과 동일한 폴백 계약이다. */
-  sellerDefaultDetailBlocks: DetailPageBlock[] | null;
-  /** N-4.08 P1-3(대표님 지시: "이중 게이트 UX 개선") — Settings 공통 상단/하단
-   * 이미지 URL·ON/OFF. DetailPageEditor의 이중 게이트 상태 표시용. */
-  sellerCommonImages: {
-    topUrl: string | null;
-    topEnabled: boolean;
-    bottomUrl: string | null;
-    bottomEnabled: boolean;
-  } | null;
   /** N-3.12 Phase 2 P0① — 카테고리 선택은 그동안 이 컴포넌트의 로컬 state로만
-   * 살아있었다(새로고침/재오픈 시 초기화되는 실제 버그의 원인). detailBlocks와
-   * 같은 방식(mirror-up)으로 page.tsx가 값을 미러링해 스냅샷에 저장하고,
+   * 살아있었다(새로고침/재오픈 시 초기화되는 실제 버그의 원인). mirror-up
+   * 방식으로 page.tsx가 값을 미러링해 스냅샷에 저장하고,
    * 재오픈 시 이 초기값으로 되돌려준다 — product처럼 완전히 controlled로
    * 끌어올리진 않는다(이 컴포넌트 내부에서 매우 자주 갱신되는 값이라 상위로
    * 완전히 옮기면 변경 범위가 커진다). */
@@ -834,7 +810,7 @@ export function CommerceWorkspace({
       fetch("/api/coupang/payload-preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product, listing, detailBlocks }),
+        body: JSON.stringify({ product, listing }),
         signal: controller.signal,
       })
         .then((res) => res.json())
@@ -869,7 +845,7 @@ export function CommerceWorkspace({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [payloadPreviewEligible, product, listing, detailBlocks]);
+  }, [payloadPreviewEligible, product, listing]);
 
   /** 쿠팡 카테고리 추천(자동매칭) API를 호출해서 실제 쿠팡 숫자 코드를 후보로
    * 보여준다 — CartPilot 내부 AI 추천(categoryCandidates)과는 완전히 다른 코드
@@ -1183,7 +1159,7 @@ export function CommerceWorkspace({
             warrantyPolicy,
             afterServiceDirector,
             afterServiceTelephoneNumber,
-            detailBlocks,
+            detailBlocks: data.detailPage.detailBlocks,
             descriptionTemplate: data.detailPage.descriptionTemplate,
             commonImages: data.detailPage.commonImages,
             brandIntro: data.detailPage.brandIntro,
@@ -1234,7 +1210,7 @@ export function CommerceWorkspace({
       controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- smartStoreValidationRetryTick은 "다시 확인" 버튼이 같은 입력으로 재실행을 강제하기 위한 트리거 전용이다.
-  }, [smartStoreValidationEligible, listing, product, detailBlocks, smartStoreValidationRetryTick]);
+  }, [smartStoreValidationEligible, listing, product, smartStoreValidationRetryTick]);
 
   /**
    * DRAFT인데 ERROR급 validation이 하나도 없으면 화면에는 READY로 보여준다 —
@@ -1359,11 +1335,9 @@ export function CommerceWorkspace({
     const result = await LISTING_EXECUTORS[platform].execute(product, listing, mode, {
       snapshotId: snapshotId ?? undefined,
       jobKey: jobKey ?? undefined,
-      // Sprint P1(CPO 지시, 2026-08-19) — smartstoreExecutor도 이제
-      // context.detailBlocks를 실제로 읽어 /api/smartstore/register에
-      // 전달한다(build-payload.ts는 이미 지원했지만 여기서 항상 undefined로
-      // 넘겨 죽은 경로였다).
-      detailBlocks: platform === "coupang" || platform === "smartstore" ? detailBlocks : undefined,
+      // N-3.86 STEP3(대표님 지시) — register route는 이제 client가 보낸
+      // detailBlocks를 아예 읽지 않는다(sellerProfile을 직접 조회해서
+      // resolveDetailBlocks()로 계산한다) — 더 이상 여기서 넘길 필요가 없다.
     });
     setListingResults((prev) => ({ ...prev, [platform]: result }));
     const finishedAt = Date.now();
@@ -1566,18 +1540,6 @@ export function CommerceWorkspace({
           onToggleGalleryUsage={onToggleGalleryUsage}
           onToggleDescriptionUsage={onToggleDescriptionUsage}
           onMoveImage={onMoveImage}
-          // N-3.13 Part J — detailBlocks는 상품 하나당 하나뿐인 상세페이지 상태다
-          // (플랫폼별로 따로 관리하지 않는다). Naver Payload Preview도 같은
-          // 값을 읽어 detailContent를 조립해야 해서 항상 내려준다.
-          // Sprint P1(CPO 지시, 2026-08-19) — 에디터 UI 노출 여부는
-          // capabilities.hasDetailPageEditor(이제 coupang/smartstore 둘 다
-          // true)가 결정하므로, 쓰기 핸들러도 두 탭 모두에서 필요하다(11번가는
-          // capabilities가 false라 여전히 안 보인다 — 이 삼항연산자가 막아줄
-          // 필요 없이 PlatformPreview의 capability 체크가 이미 막는다).
-          detailBlocks={detailBlocks}
-          onDetailBlocksChange={tab === "coupang" || tab === "smartstore" ? onDetailBlocksChange : undefined}
-          sellerDefaultDetailBlocks={sellerDefaultDetailBlocks}
-          sellerCommonImages={sellerCommonImages}
         />
       )}
 

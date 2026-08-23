@@ -350,6 +350,22 @@ export function defaultDetailBlocks(): DetailPageBlock[] {
   ];
 }
 
+/** N-3.86 STEP3(대표님 지시: "설정이 공통 상세페이지의 유일한 기준") — 서버가
+ * detailBlocks를 결정할 때 항상 이 함수 하나만 거치게 한다: 셀러가 Settings에서
+ * 저장한 값이 있으면 그걸 쓰고, 없으면(한 번도 설정 안 함) 코드 상수로
+ * 폴백한다. 클라이언트가 무엇을 보내든(과거 detailBlocks를 여전히 POST하는
+ * 오래된 클라이언트 포함) 이 함수를 거치지 않은 값은 실제 등록에 쓰이지
+ * 않는다 — register/payload-preview/resolve 라우트가 전부 SellerProfile을
+ * 직접 조회해서 이 함수에 넣는다(클라이언트 POST body의 detailBlocks는 더 이상
+ * 읽지 않는다). undefined를 그대로 넘기면 build-payload.ts/naver/build-payload.ts의
+ * "에디터를 한 번도 안 연 세션" 레거시 하드코딩 경로로 빠지므로, 이 함수는
+ * 절대 undefined/빈 배열을 반환하지 않는다. */
+export function resolveDetailBlocks(sellerDefaultDetailBlocks?: DetailPageBlock[] | null): DetailPageBlock[] {
+  return sellerDefaultDetailBlocks && sellerDefaultDetailBlocks.length > 0
+    ? sellerDefaultDetailBlocks
+    : defaultDetailBlocks();
+}
+
 /** DetailPageBlock[] → 실제 contents 배열. 같은 종류가 연속으로 여러 개면
  * TEXT 블록은 하나의 TEXT content로 합치고(쿠팡 API가 빈 TEXT content를
  * 거부하므로 블록 사이 개행만 넣고 이어붙임), IMAGE 블록은 각각 개별 IMAGE

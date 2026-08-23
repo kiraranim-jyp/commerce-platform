@@ -7,7 +7,6 @@ import type {
   ComplianceReport,
   CoupangCategoryMeta,
   CoupangPayload,
-  DetailPageBlock,
   ListingResult,
   ListingStatus,
   NaverPayloadValidationResult,
@@ -21,7 +20,6 @@ import { CategoryRequirementsEditor } from "./CategoryRequirementsEditor";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { ComplianceBreakdown } from "./ComplianceBreakdown";
 import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
-import { DetailPageEditor } from "./DetailPageEditor";
 import { EditableDate, EditableText, EditableTextarea } from "./EditableField";
 import { GuidedResolutionModal } from "./GuidedResolutionModal";
 import { ImageInlineEditor } from "../ImageInlineEditor";
@@ -328,10 +326,6 @@ export function PlatformPreview({
   onMoveImage,
   payloadPreview,
   payloadPreviewUnavailableReason,
-  detailBlocks,
-  onDetailBlocksChange,
-  sellerDefaultDetailBlocks,
-  sellerCommonImages,
 }: {
   product: CanonicalProduct;
   listing: ListingModel;
@@ -493,19 +487,6 @@ export function PlatformPreview({
    * 최신 상태를 보여준다. */
   payloadPreview?: { payload: CoupangPayload; complianceReport: ComplianceReport } | null;
   payloadPreviewUnavailableReason?: string | null;
-  /** Detail Page Editor(2026-08-04) — 쿠팡 탭에서만 넘어온다. 없으면(다른
-   * 플랫폼) 에디터 섹션 자체를 안 그린다. */
-  detailBlocks?: DetailPageBlock[];
-  onDetailBlocksChange?: (blocks: DetailPageBlock[]) => void;
-  /** N-4.08 P1-1 — DetailPageEditor의 "기본 설정 사용 중" 비교/복원 대상. */
-  sellerDefaultDetailBlocks?: DetailPageBlock[] | null;
-  /** N-4.08 P1-3 — DetailPageEditor의 공통 이미지 이중 게이트 상태 표시용. */
-  sellerCommonImages?: {
-    topUrl: string | null;
-    topEnabled: boolean;
-    bottomUrl: string | null;
-    bottomEnabled: boolean;
-  } | null;
 }) {
   // isVerifiedPlatformCode까지 확인해야 한다 — state만 보면 미리보기가
   // "선택 완료"로 보이는데 실제 등록은 CP001로 거부되는 버그가 재발한다.
@@ -1151,20 +1132,6 @@ export function PlatformPreview({
           </FieldRow>
         </CollapsibleSection>
 
-        {capabilities.hasDetailPageEditor && detailBlocks && onDetailBlocksChange && (
-          <CollapsibleSection title="상세페이지 에디터" {...sectionProps("section-detail-editor")}>
-            <DetailPageEditor
-              product={product}
-              blocks={detailBlocks}
-              onChange={onDetailBlocksChange}
-              payloadPreview={payloadPreview}
-              platformLabel={listing.platformLabel}
-              defaultBlocks={sellerDefaultDetailBlocks}
-              sellerCommonImages={sellerCommonImages}
-            />
-          </CollapsibleSection>
-        )}
-
         {capabilities.hasPayloadInspector && (
           <CollapsibleSection title="Payload Preview" {...sectionProps("section-payload")}>
             <p className="text-xs text-text-tertiary">
@@ -1186,7 +1153,6 @@ export function PlatformPreview({
           <NaverPayloadPreview
             product={product}
             listing={listing}
-            detailBlocks={detailBlocks}
             sharedResolved={naverResolved}
             sharedResolving={naverValidationLoading}
             sharedResolveError={naverValidationError}

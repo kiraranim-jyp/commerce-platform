@@ -1,6 +1,5 @@
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
-import type { DetailPageBlock } from "./coupang/build-payload";
 import type { ExecutionMode, ListingResult } from "./types";
 
 /**
@@ -31,10 +30,6 @@ export interface ListingExecutor {
        * registration_attempts.job_key에 남긴다(감사 로그를 조인 없이 검색하기
        * 위한 복제값 — snapshotId가 구조적 연결의 원본이다). */
       jobKey?: string;
-      /** Detail Page Editor(2026-08-04, Sprint P1에서 smartstoreExecutor도
-       * 사용하도록 확장, 2026-08-19) — 있으면 그대로 register API에 전달해서
-       * 이 순서로 상세페이지 contents를 조립한다. */
-      detailBlocks?: DetailPageBlock[];
     },
   ): Promise<ListingResult>;
 }

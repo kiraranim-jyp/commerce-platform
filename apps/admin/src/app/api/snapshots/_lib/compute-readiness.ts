@@ -1,6 +1,6 @@
 import { PLATFORM_ADAPTERS, isVerifiedCategorySelected } from "@commerce/marketplace";
 import { UNRESOLVED_CATEGORY, type CategorySelection } from "@commerce/category";
-import { buildNaverProductPayload, defaultDetailBlocks, validateNaverPayload, type DetailPageBlock } from "@commerce/listing";
+import { buildNaverProductPayload, validateNaverPayload } from "@commerce/listing";
 import type { CanonicalProduct, PlatformId } from "@commerce/shared";
 import { resolveNaverContext } from "../../naver/_lib/resolve-context";
 import { getRegisteredPlatforms } from "./registration-status";
@@ -61,7 +61,6 @@ const SUPPORTED_PLATFORMS: PlatformId[] = ["smartstore", "coupang", "elevenst"];
 async function computeSmartstoreReadiness(
   product: CanonicalProduct,
   category: CategorySelection,
-  detailBlocks: DetailPageBlock[],
   registered: boolean,
 ): Promise<PlatformReadiness> {
   const categoryConfirmed = isVerifiedCategorySelected(category);
@@ -127,7 +126,7 @@ async function computeSmartstoreReadiness(
     warrantyPolicy,
     afterServiceDirector,
     afterServiceTelephoneNumber,
-    detailBlocks,
+    detailBlocks: context.detailPage.detailBlocks,
     descriptionTemplate: context.detailPage.descriptionTemplate,
     commonImages: context.detailPage.commonImages,
     brandIntro: context.detailPage.brandIntro,
@@ -194,9 +193,7 @@ export async function computeSnapshotReadiness(
   snapshotId: string,
   product: CanonicalProduct,
   categoryMappings: Partial<Record<PlatformId, CategorySelection>> | undefined,
-  detailBlocks: DetailPageBlock[] | undefined,
 ): Promise<SnapshotReadiness> {
-  const blocks = detailBlocks && detailBlocks.length > 0 ? detailBlocks : defaultDetailBlocks();
   const priceValid = product.priceValidity === "VALID";
   const registeredPlatforms = await getRegisteredPlatforms(snapshotId);
 
@@ -205,7 +202,7 @@ export async function computeSnapshotReadiness(
       const category = categoryMappings?.[platform] ?? UNRESOLVED_CATEGORY;
       const registered = registeredPlatforms.has(platform);
       if (platform === "smartstore") {
-        return computeSmartstoreReadiness(product, category, blocks, registered);
+        return computeSmartstoreReadiness(product, category, registered);
       }
       return computeMarketplaceReadiness(product, category, platform, registered);
     }),

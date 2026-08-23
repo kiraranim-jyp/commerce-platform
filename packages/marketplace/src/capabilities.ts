@@ -9,9 +9,6 @@ import type { PlatformId } from "@commerce/shared";
  * 기존 분기와 정확히 동일하게 맞춘다(coupang만 true, 나머지는 전부 false).
  */
 export interface MarketplaceCapabilities {
-  /** Detail Page Editor(상세페이지 블록 에디터) 노출 여부 — 지금은 Coupang만
-   * DetailPageBlock 모델을 갖고 있다. */
-  hasDetailPageEditor: boolean;
   /** SellerProfileSummaryCard(배송 정책·반품/교환 요약 카드) 노출 여부 — 지금은
    * Coupang만 SellerProfile과 연동되어 있다. */
   hasSellerProfileSummary: boolean;
@@ -38,7 +35,6 @@ export const MARKETPLACE_DESCRIPTORS: Record<PlatformId, MarketplaceDescriptor> 
     id: "coupang",
     label: "쿠팡",
     capabilities: {
-      hasDetailPageEditor: true,
       hasSellerProfileSummary: true,
       hasPayloadInspector: true,
       hasNaverPreview: false,
@@ -55,7 +51,6 @@ export const MARKETPLACE_DESCRIPTORS: Record<PlatformId, MarketplaceDescriptor> 
       // 있었다(N-3.13 Part J) — UI 노출만 꺼져 있었다. register API/executor도
       // 이번 스프린트에서 같이 배선했다(CommerceWorkspace.tsx/
       // smartstore.executor.ts/api/smartstore/register/route.ts).
-      hasDetailPageEditor: true,
       // Sprint P1(CPO 지시, 2026-08-19: "배송정책·반품/교환 카드 추가") —
       // Coupang의 SellerProfileSummaryCard는 그대로 못 쓴다(Coupang 출고지
       // API로만 이름을 조회하는 값이 섞여 있다). PlatformPreview.tsx는 이
@@ -78,7 +73,6 @@ export const MARKETPLACE_DESCRIPTORS: Record<PlatformId, MarketplaceDescriptor> 
     id: "elevenst",
     label: "11번가",
     capabilities: {
-      hasDetailPageEditor: false,
       hasSellerProfileSummary: false,
       hasPayloadInspector: false,
       hasNaverPreview: false,
