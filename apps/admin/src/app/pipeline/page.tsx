@@ -98,21 +98,51 @@ export default function PipelinePage() {
    * 리렌더가 필요하다(ref만으로는 fetch 완료 후 배지가 갱신되지 않는다). */
   const sellerDefaultDetailBlocksRef = useRef<DetailPageBlock[] | null>(null);
   const [sellerDefaultDetailBlocks, setSellerDefaultDetailBlocks] = useState<DetailPageBlock[] | null>(null);
+  /** N-4.08 P1-3(대표님 지시: "이중 게이트 UX 개선") — 위와 같은 fetch 응답에
+   * 이미 들어있는 공통 상단/하단 이미지 URL·ON/OFF를 같이 뽑아둔다(A-11-3에서
+   * 이미 SellerProfile 컬럼으로 존재 — 새 API 호출 아님). DetailPageEditor가
+   * "Settings ON + 상품 ON = 노출"이라는 실제 게이트 조건을 셀러가 읽을 수
+   * 있는 문구로 보여주는 데만 쓰고, 판정 로직 자체는 건드리지 않는다. */
+  const [sellerCommonImages, setSellerCommonImages] = useState<{
+    topUrl: string | null;
+    topEnabled: boolean;
+    bottomUrl: string | null;
+    bottomEnabled: boolean;
+  } | null>(null);
   useEffect(() => {
     fetch("/api/settings/coupang/profiles")
       .then((res) => res.json())
-      .then((data: { profiles?: { isDefault: boolean; defaultDetailBlocks: DetailPageBlock[] | null }[] }) => {
-        const profiles = data.profiles ?? [];
-        const target = profiles.find((p) => p.isDefault) ?? profiles[0];
-        if (target?.defaultDetailBlocks && target.defaultDetailBlocks.length > 0) {
-          sellerDefaultDetailBlocksRef.current = target.defaultDetailBlocks;
-          setSellerDefaultDetailBlocks(target.defaultDetailBlocks);
-        }
-      })
+      .then(
+        (data: {
+          profiles?: {
+            isDefault: boolean;
+            defaultDetailBlocks: DetailPageBlock[] | null;
+            topCommonImageUrl: string | null;
+            topCommonImageEnabled: boolean;
+            bottomCommonImageUrl: string | null;
+            bottomCommonImageEnabled: boolean;
+          }[];
+        }) => {
+          const profiles = data.profiles ?? [];
+          const target = profiles.find((p) => p.isDefault) ?? profiles[0];
+          if (target?.defaultDetailBlocks && target.defaultDetailBlocks.length > 0) {
+            sellerDefaultDetailBlocksRef.current = target.defaultDetailBlocks;
+            setSellerDefaultDetailBlocks(target.defaultDetailBlocks);
+          }
+          if (target) {
+            setSellerCommonImages({
+              topUrl: target.topCommonImageUrl ?? null,
+              topEnabled: target.topCommonImageEnabled ?? false,
+              bottomUrl: target.bottomCommonImageUrl ?? null,
+              bottomEnabled: target.bottomCommonImageEnabled ?? false,
+            });
+          }
+        },
+      )
       .catch(() => {
-        // 실패해도 sellerDefaultDetailBlocksRef/sellerDefaultDetailBlocks는 null로
-        // 남고, 이후 코드 상수 defaultDetailBlocks()로 정상 폴백한다 — 이 fetch는
-        // 편의 기능이지 등록 흐름의 필수 경로가 아니다.
+        // 실패해도 sellerDefaultDetailBlocksRef/sellerDefaultDetailBlocks/
+        // sellerCommonImages는 null로 남고, 이후 코드 상수 defaultDetailBlocks()로
+        // 정상 폴백한다 — 이 fetch는 편의 기능이지 등록 흐름의 필수 경로가 아니다.
       });
   }, []);
   // N-3.12 Phase 2 P0① — CommerceWorkspace가 mirror-up(onCategoryMappingsChange)으로
@@ -704,6 +734,7 @@ export default function PipelinePage() {
             detailBlocks={detailBlocks}
             onDetailBlocksChange={setDetailBlocks}
             sellerDefaultDetailBlocks={sellerDefaultDetailBlocks}
+            sellerCommonImages={sellerCommonImages}
             initialCategoryMappings={categoryMappings ?? undefined}
             onCategoryMappingsChange={setCategoryMappings}
           />

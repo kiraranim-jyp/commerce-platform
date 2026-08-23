@@ -8,6 +8,7 @@ import { defaultDetailBlocks, detailBlockLabel } from "@commerce/listing";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { blocksMatchDefault } from "./detail-block-compare";
+import { deriveCommonImageGateStatus } from "./common-image-gate";
 
 /** 아직 블록 리스트에 없는 옵트인 블록만 "블록 추가"에서 고를 수 있다 —
  * AI_DESCRIPTION/TEMPLATE_SECTION×5/COMMON_IMAGE×2/PRODUCT_IMAGES는
@@ -44,6 +45,31 @@ function moveBlock(blocks: DetailPageBlock[], index: number, direction: -1 | 1):
   return next;
 }
 
+/** N-4.08 P1-3(대표님 지시: "이중 게이트 UX 개선") — deriveCommonImageGateStatus()가
+ * 낸 5가지 상태를 셀러 언어 문구/색으로 매핑한다. */
+const COMMON_IMAGE_GATE_COPY: Record<
+  ReturnType<typeof deriveCommonImageGateStatus>,
+  { icon: string; text: string; className: string }
+> = {
+  VISIBLE: { icon: "✓", text: "상세페이지에 표시됩니다", className: "bg-success-soft text-success" },
+  PRODUCT_OFF: { icon: "⚠", text: "이 상품에서는 표시되지 않습니다", className: "bg-warning-soft text-warning" },
+  SELLER_OFF: {
+    icon: "⚠",
+    text: "기본 설정이 OFF라 상세페이지에는 표시되지 않습니다",
+    className: "bg-warning-soft text-warning",
+  },
+  BOTH_OFF: {
+    icon: "–",
+    text: "기본 설정과 이 상품 모두 사용 안 함이라 표시되지 않습니다",
+    className: "bg-background text-text-tertiary",
+  },
+  NOT_CONFIGURED: {
+    icon: "–",
+    text: "공통 이미지가 설정되지 않았습니다",
+    className: "bg-background text-text-tertiary",
+  },
+};
+
 /**
  * Detail Page Editor(2026-08-04, CEO 지시 — 백로그 A-12-5) — 쿠팡 상세페이지
  * contents 조립을 블록 단위로 켜고 끄고 순서를 바꾼다. 실제 조립은 서버
@@ -60,6 +86,7 @@ export function DetailPageEditor({
   payloadPreview,
   platformLabel = "쿠팡",
   defaultBlocks,
+  sellerCommonImages,
 }: {
   product: CanonicalProduct;
   blocks: DetailPageBlock[];
@@ -78,6 +105,18 @@ export function DetailPageEditor({
    * 코드 상수 defaultDetailBlocks()로 폴백한다 — page.tsx의 신규 상품 배정
    * 로직과 동일한 계약이다. */
   defaultBlocks?: DetailPageBlock[] | null;
+  /** N-4.08 P1-3(대표님 지시: "이중 게이트 UX 개선") — Settings의 공통
+   * 상단/하단 이미지 URL·ON/OFF(SellerProfile.top/bottomCommonImageUrl/Enabled).
+   * COMMON_IMAGE 블록 행에서 "왜 안 보이는지" 셀러에게 바로 보여주는 용도로만
+   * 쓴다 — 실제 payload 조립 판정(assembleContentsFromBlocks)은 그대로 서버가
+   * 한다. null이면(fetch 전/실패) 상태 표시를 생략한다(체크박스 자체는 항상
+   * 그대로 동작한다). */
+  sellerCommonImages?: {
+    topUrl: string | null;
+    topEnabled: boolean;
+    bottomUrl: string | null;
+    bottomEnabled: boolean;
+  } | null;
 }) {
   const presentKinds = new Set(blocks.map((b) => b.kind));
   const addableOptions = ADDABLE_KINDS.filter((kind) => !presentKinds.has(kind) || kind === "CUSTOM_TEXT");
@@ -211,6 +250,46 @@ export function DetailPageEditor({
                 )}
               </div>
             </div>
+
+            {block.kind === "COMMON_IMAGE" &&
+              sellerCommonImages &&
+              (() => {
+                const sellerUrl = block.position === "top" ? sellerCommonImages.topUrl : sellerCommonImages.bottomUrl;
+                const sellerEnabled =
+                  block.position === "top" ? sellerCommonImages.topEnabled : sellerCommonImages.bottomEnabled;
+                const status = deriveCommonImageGateStatus({
+                  sellerImageUrl: sellerUrl,
+                  sellerEnabled,
+                  productEnabled: block.enabled,
+                });
+                const copy = COMMON_IMAGE_GATE_COPY[status];
+                return (
+                  <div className={`mt-2 space-y-1.5 rounded-md p-2 text-xs ${copy.className}`}>
+                    <p>
+                      기본 설정: {sellerEnabled ? "사용" : "사용 안 함"} · 현재 상품:{" "}
+                      {block.enabled ? "사용" : "사용 안 함"}
+                    </p>
+                    <p className="font-medium">
+                      {copy.icon} {copy.text}
+                    </p>
+                    {status === "PRODUCT_OFF" && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setShowResetConfirm(true)}>
+                        기본 설정으로 복원
+                      </Button>
+                    )}
+                    {(status === "SELLER_OFF" || status === "NOT_CONFIGURED") && (
+                      <a
+                        href="/settings?tab=detail"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-block text-xs font-medium text-primary hover:underline"
+                      >
+                        {status === "NOT_CONFIGURED" ? "상세페이지 설정으로 이동" : "설정에서 변경"} →
+                      </a>
+                    )}
+                  </div>
+                );
+              })()}
 
             {block.kind === "CUSTOM_TEXT" && (
               <textarea

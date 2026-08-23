@@ -331,6 +331,7 @@ export function PlatformPreview({
   detailBlocks,
   onDetailBlocksChange,
   sellerDefaultDetailBlocks,
+  sellerCommonImages,
 }: {
   product: CanonicalProduct;
   listing: ListingModel;
@@ -498,6 +499,13 @@ export function PlatformPreview({
   onDetailBlocksChange?: (blocks: DetailPageBlock[]) => void;
   /** N-4.08 P1-1 — DetailPageEditor의 "기본 설정 사용 중" 비교/복원 대상. */
   sellerDefaultDetailBlocks?: DetailPageBlock[] | null;
+  /** N-4.08 P1-3 — DetailPageEditor의 공통 이미지 이중 게이트 상태 표시용. */
+  sellerCommonImages?: {
+    topUrl: string | null;
+    topEnabled: boolean;
+    bottomUrl: string | null;
+    bottomEnabled: boolean;
+  } | null;
 }) {
   // isVerifiedPlatformCode까지 확인해야 한다 — state만 보면 미리보기가
   // "선택 완료"로 보이는데 실제 등록은 CP001로 거부되는 버그가 재발한다.
@@ -1152,6 +1160,7 @@ export function PlatformPreview({
               payloadPreview={payloadPreview}
               platformLabel={listing.platformLabel}
               defaultBlocks={sellerDefaultDetailBlocks}
+              sellerCommonImages={sellerCommonImages}
             />
           </CollapsibleSection>
         )}

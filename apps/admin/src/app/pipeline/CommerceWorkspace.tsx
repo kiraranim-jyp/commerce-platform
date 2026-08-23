@@ -111,6 +111,7 @@ export function CommerceWorkspace({
   detailBlocks,
   onDetailBlocksChange,
   sellerDefaultDetailBlocks,
+  sellerCommonImages,
   initialCategoryMappings,
   onCategoryMappingsChange,
 }: {
@@ -148,6 +149,14 @@ export function CommerceWorkspace({
    * 아직 설정 안 함) DetailPageEditor 내부에서 코드 상수 defaultDetailBlocks()로
    * 폴백한다 — page.tsx의 신규 상품 배정 로직과 동일한 폴백 계약이다. */
   sellerDefaultDetailBlocks: DetailPageBlock[] | null;
+  /** N-4.08 P1-3(대표님 지시: "이중 게이트 UX 개선") — Settings 공통 상단/하단
+   * 이미지 URL·ON/OFF. DetailPageEditor의 이중 게이트 상태 표시용. */
+  sellerCommonImages: {
+    topUrl: string | null;
+    topEnabled: boolean;
+    bottomUrl: string | null;
+    bottomEnabled: boolean;
+  } | null;
   /** N-3.12 Phase 2 P0① — 카테고리 선택은 그동안 이 컴포넌트의 로컬 state로만
    * 살아있었다(새로고침/재오픈 시 초기화되는 실제 버그의 원인). detailBlocks와
    * 같은 방식(mirror-up)으로 page.tsx가 값을 미러링해 스냅샷에 저장하고,
@@ -1568,6 +1577,7 @@ export function CommerceWorkspace({
           detailBlocks={detailBlocks}
           onDetailBlocksChange={tab === "coupang" || tab === "smartstore" ? onDetailBlocksChange : undefined}
           sellerDefaultDetailBlocks={sellerDefaultDetailBlocks}
+          sellerCommonImages={sellerCommonImages}
         />
       )}
 
