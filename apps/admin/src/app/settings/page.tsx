@@ -686,6 +686,35 @@ function SellerProfileEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profiles]);
 
+  // N-4.08 긴급 P0(CPO 지시, 2026-08-24) — "상단/하단 공통 이미지가 간헐적으로
+  // 반영 안 됨" 근본 원인: topCommonImageEnabled/bottomCommonImageEnabled(이
+  // 카드의 ON/OFF)와 detailBlocksDefault[]의 COMMON_IMAGE 블록 자체의 enabled
+  // (바로 위 "상세페이지 기본 구성" 카드의 "기본 사용" 체크박스)가 서로 다른
+  // state라 둘 중 하나만 켜면 assembleContentsFromBlocks가 실제로는 이미지를
+  // 빼버린다(build-payload.ts:492-495 — block.enabled AND sellerConfig.xxxEnabled
+  // 둘 다 true여야 함). 사용자에게는 이게 하나의 "ON/OFF"로 보이므로, 이 카드
+  // 쪽 상태를 바꿀 때 그 블록의 enabled도 항상 같이 맞춘다 — 반대 방향(블록
+  // 카드에서 토글)도 handleDetailBlocksChange에서 동일하게 맞춘다.
+  function setTopCommonImageEnabledSynced(v: boolean) {
+    setTopCommonImageEnabled(v);
+    setDetailBlocksDefault((prev) =>
+      prev.map((b) => (b.kind === "COMMON_IMAGE" && b.position === "top" ? { ...b, enabled: v } : b)),
+    );
+  }
+  function setBottomCommonImageEnabledSynced(v: boolean) {
+    setBottomCommonImageEnabled(v);
+    setDetailBlocksDefault((prev) =>
+      prev.map((b) => (b.kind === "COMMON_IMAGE" && b.position === "bottom" ? { ...b, enabled: v } : b)),
+    );
+  }
+  function handleDetailBlocksChange(next: DetailPageBlock[]) {
+    setDetailBlocksDefault(next);
+    const top = next.find((b) => b.kind === "COMMON_IMAGE" && b.position === "top");
+    const bottom = next.find((b) => b.kind === "COMMON_IMAGE" && b.position === "bottom");
+    if (top) setTopCommonImageEnabled(top.enabled);
+    if (bottom) setBottomCommonImageEnabled(bottom.enabled);
+  }
+
   async function uploadCommonImage(position: "top" | "bottom", file: File) {
     setImageUploading(position);
     try {
@@ -701,10 +730,10 @@ function SellerProfileEditor({
         // 체크박스로 끌 수 있다 — 기본 동작만 "업로드 = 사용"으로 바꾼다.
         if (position === "top") {
           setTopCommonImageUrl(data.url);
-          setTopCommonImageEnabled(true);
+          setTopCommonImageEnabledSynced(true);
         } else {
           setBottomCommonImageUrl(data.url);
-          setBottomCommonImageEnabled(true);
+          setBottomCommonImageEnabledSynced(true);
         }
       } else {
         setLookupError(data.error ?? "이미지 업로드에 실패했습니다.");
@@ -840,9 +869,32 @@ function SellerProfileEditor({
   }
 
   const saveButtonLabel = saving ? "저장 중…" : editingId ? "수정 저장" : "프로필 저장";
+  const editingProfile = profiles.find((p) => p.id === editingId);
 
   return (
     <>
+      {/* N-4.08 긴급 P0(CPO 지시, 2026-08-24) — 프로덕션에 "기본" 이름이 겹치는
+          프로필이 여러 개 있어(테스트 중 실수로 만들어진 것으로 추정) 사용자가
+          "배송 프로필" 탭 목록에서 잘못된(기본 아닌) 프로필의 "수정"을 눌러도
+          이후 모든 탭(상세페이지 관리 포함)이 그 프로필을 계속 편집하게 된다.
+          여기서 저장은 100% 성공하지만(직접 10회 반복 검증 완료) isDefault가
+          아니므로 실제 등록/미리보기에는 전혀 반영되지 않아 "저장은 되는데
+          반영이 안 된다"는 정확히 이 증상으로 나타난다. 4개 탭 전부에서 지금
+          편집 중인 프로필이 기본 프로필인지 항상 보이게 해서 재발을 막는다. */}
+      {profiles.length > 1 && editingProfile && (
+        <p className="mt-3 rounded-md bg-background px-3 py-2 text-xs text-text-secondary">
+          지금 편집 중: <span className="font-medium text-text-primary">{editingProfile.name}</span>
+          {editingProfile.isDefault ? (
+            <span className="ml-1.5 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+              기본 — 실제 등록에 사용됨
+            </span>
+          ) : (
+            <span className="ml-1.5 rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-medium text-warning">
+              기본 아님 — 여기 저장해도 등록에는 반영되지 않습니다
+            </span>
+          )}
+        </p>
+      )}
       <div className={activeTab === "shipping" ? "mt-5" : "hidden"}>
         <ShippingSection
           profiles={profiles}
@@ -972,7 +1024,7 @@ function SellerProfileEditor({
         >
           <DefaultDetailBlocksSection
             blocks={detailBlocksDefault}
-            onChange={setDetailBlocksDefault}
+            onChange={handleDetailBlocksChange}
             onSave={handleSave}
             saving={saving}
             saveButtonLabel={saveButtonLabel}
@@ -994,20 +1046,20 @@ function SellerProfileEditor({
           <CommonImagesSection
             topCommonImageUrl={topCommonImageUrl}
             topCommonImageEnabled={topCommonImageEnabled}
-            onTopCommonImageEnabledChange={setTopCommonImageEnabled}
+            onTopCommonImageEnabledChange={setTopCommonImageEnabledSynced}
             bottomCommonImageUrl={bottomCommonImageUrl}
             bottomCommonImageEnabled={bottomCommonImageEnabled}
-            onBottomCommonImageEnabledChange={setBottomCommonImageEnabled}
+            onBottomCommonImageEnabledChange={setBottomCommonImageEnabledSynced}
             imageUploading={imageUploading}
             onUploadTop={(file) => uploadCommonImage("top", file)}
             onUploadBottom={(file) => uploadCommonImage("bottom", file)}
             onSelectTopExisting={(asset) => {
               setTopCommonImageUrl(asset.url);
-              setTopCommonImageEnabled(true);
+              setTopCommonImageEnabledSynced(true);
             }}
             onSelectBottomExisting={(asset) => {
               setBottomCommonImageUrl(asset.url);
-              setBottomCommonImageEnabled(true);
+              setBottomCommonImageEnabledSynced(true);
             }}
             onSave={handleSave}
             saving={saving}
