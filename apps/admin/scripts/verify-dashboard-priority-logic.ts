@@ -29,6 +29,7 @@ function readiness(
       currentSellingPriceKrw: null,
       domesticLowestPriceKrw: null,
       lastCheckedAt: null,
+      reason: "테스트 픽스처",
     },
     platforms: states.map((state, i) => ({
       platform: "smartstore" as const,

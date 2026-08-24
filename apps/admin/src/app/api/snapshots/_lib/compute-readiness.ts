@@ -63,6 +63,11 @@ export interface SnapshotPriceSummary {
   currentSellingPriceKrw: number | null;
   domesticLowestPriceKrw: number | null;
   lastCheckedAt: string | null;
+  /** N-4.17 STEP1(대표님 지시: "가격데이터없음/매칭실패/매칭확인필요/오래됨/정상이
+   * ⚪ 하나로 뭉쳐 있지 않은지") — computePriceDecision()의 reason 문장을 그대로
+   * 옮긴다(새 판정 문구를 만들지 않는다). UNKNOWN일 때는 판매가 미설정과 원가
+   * 데이터 없음을 구분한다 — 둘 다 지금까지 "⚪ 가격 판단 불가"로만 보였다. */
+  reason: string;
 }
 
 export interface SnapshotReadiness {
@@ -86,6 +91,7 @@ const EMPTY_PRICE_SUMMARY: SnapshotPriceSummary = {
   currentSellingPriceKrw: null,
   domesticLowestPriceKrw: null,
   lastCheckedAt: null,
+  reason: "판매가가 아직 설정되지 않았습니다.",
 };
 
 async function computePriceSummaryForSnapshot(
@@ -100,7 +106,13 @@ async function computePriceSummaryForSnapshot(
     getPriceHistory(snapshotId, "NAVER_SHOPPING"),
   ]);
   const costPriceKrw = originHistory[0]?.priceKrw ?? null;
-  if (costPriceKrw == null) return { ...EMPTY_PRICE_SUMMARY, currentSellingPriceKrw };
+  if (costPriceKrw == null) {
+    return {
+      ...EMPTY_PRICE_SUMMARY,
+      currentSellingPriceKrw,
+      reason: "원가 데이터가 아직 확인되지 않았습니다(가격 확인을 실행해주세요).",
+    };
+  }
   const domesticRecords = [...domesticShopHistory, ...naverShoppingHistory];
   const domesticSummary = summarizeDomesticMarket(domesticRecords);
   const decision = computePriceDecision({
@@ -119,6 +131,7 @@ async function computePriceSummaryForSnapshot(
     currentSellingPriceKrw,
     domesticLowestPriceKrw: domesticSummary.lowestPriceKrw,
     lastCheckedAt,
+    reason: decision.reason,
   };
 }
 

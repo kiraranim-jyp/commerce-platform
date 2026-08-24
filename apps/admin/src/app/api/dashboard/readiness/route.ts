@@ -85,6 +85,7 @@ export async function GET(request: Request) {
                 currentSellingPriceKrw: null,
                 domesticLowestPriceKrw: null,
                 lastCheckedAt: null,
+                reason: "이 상품의 준비 상태 계산에 실패했습니다.",
               },
               platforms: [],
             },

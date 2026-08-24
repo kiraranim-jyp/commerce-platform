@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PLATFORM_ADAPTERS } from "@commerce/marketplace";
+import { priceAgeTier } from "@commerce/pricing";
 import type { PlatformId } from "@commerce/shared";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -49,6 +50,7 @@ interface DashboardProduct {
       currentSellingPriceKrw: number | null;
       domesticLowestPriceKrw: number | null;
       lastCheckedAt: string | null;
+      reason: string;
     };
     platforms: DashboardPlatform[];
   };
@@ -364,9 +366,17 @@ export default function TodayPage() {
                       })}
                       {(() => {
                         const priceMeta = PRICE_LEVEL_META[product.readiness.priceLevel ?? "UNKNOWN"];
+                        const price = product.readiness.price;
+                        const ageTier = price?.lastCheckedAt ? priceAgeTier(price.lastCheckedAt) : null;
+                        const isStale = ageTier === "STALE" || ageTier === "VERY_STALE";
                         return (
-                          <span className="text-text-secondary">
+                          <span className="flex items-center gap-1 text-text-secondary" title={price?.reason}>
                             가격 {priceMeta.icon} {priceMeta.label}
+                            {isStale && (
+                              <span className="rounded bg-warning-soft px-1 py-0.5 text-[10px] font-medium text-warning">
+                                ⚠️ 오래된 가격
+                              </span>
+                            )}
                           </span>
                         );
                       })()}
