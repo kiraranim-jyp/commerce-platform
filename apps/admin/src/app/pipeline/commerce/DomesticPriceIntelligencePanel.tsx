@@ -39,36 +39,36 @@ interface RecheckResult {
   message: string;
 }
 
-/** N-4.11 STEP2 — /api/price-history/check 응답(run-price-check.ts의
- * PriceCheckPipelineStatus + run-domestic-price-check.ts 결과)을 판매자가
- * 이해할 수 있는 한 줄로 요약한다. */
+/** N-4.11 STEP2 / N-4.18-C(대표님 지시, 2026-08-25) — /api/price-history/check
+ * 응답을 판매자가 이해할 수 있는 한 줄로 요약한다. run-price-check.ts는
+ * 이제 해외 원가(SELLER_ORIGIN)만 담당하고, 국내가격비교는 domesticShop
+ * 필드(국내 편집샵 domestic_price_sources 기반 runDomesticPriceCheck)가
+ * 전담한다 — 둘을 합쳐서 하나의 문장으로 만든다(네이버 쇼핑 검색 경로
+ * 제거로 PARTIAL/NOT_CONFIGURED 상태 자체가 더 이상 나오지 않는다). */
 function summarizeRecheckResult(json: {
   status?: string;
   savedCount?: number;
-  domesticStatus?: string;
-  domesticListingCount?: number;
   errors?: string[];
-  domesticShop?: { pricesRecorded: number; sourceErrors: string[] };
+  domesticShop?: { pricesRecorded: number; linksCreatedOrUpdated: number; sourceErrors: string[] };
 }): RecheckResult {
   const domesticSaved = json.domesticShop?.pricesRecorded ?? 0;
-  const totalSaved = (json.savedCount ?? 0) + domesticSaved;
+  const domesticLinks = json.domesticShop?.linksCreatedOrUpdated ?? 0;
 
-  if (json.status === "SUCCESS") {
-    return { icon: "🟢", message: `가격을 확인해 ${totalSaved}건 저장했습니다.` };
+  if (json.status !== "SUCCESS" && json.status !== "NO_RESULT") {
+    return { icon: "🔴", message: json.errors?.[0] ?? "원가 확인 중 오류가 발생했습니다." };
   }
-  if (json.status === "PARTIAL") {
-    if (json.domesticStatus === "NO_RESULTS" || (totalSaved > 0 && json.domesticListingCount === 0)) {
-      return { icon: "🟡", message: "원가는 확인했지만, 일치하는 국내 판매처를 찾지 못했습니다(매칭 실패)." };
-    }
-    return { icon: "🟡", message: `일부만 확인됐습니다(${totalSaved}건 저장) — 나머지는 아래 이유로 실패했습니다.` };
+
+  const originMessage = json.status === "SUCCESS" ? "원가를 확인했습니다" : "원가를 확인하지 못했습니다";
+  if (domesticSaved > 0) {
+    return { icon: "🟢", message: `${originMessage}. 국내 편집샵 ${domesticSaved}건의 가격도 확인했습니다.` };
   }
-  if (json.status === "NOT_CONFIGURED") {
-    return { icon: "⚪", message: "국내 가격 검색 설정이 아직 안 되어 있어 확인하지 못했습니다." };
+  if (domesticLinks > 0) {
+    return {
+      icon: "🟡",
+      message: `${originMessage}. 국내 편집샵에서 비슷한 상품 후보는 찾았지만, 아직 검증된 가격은 없습니다.`,
+    };
   }
-  if (json.status === "NO_RESULT") {
-    return { icon: "⚪", message: "일치하는 가격 정보를 찾지 못했습니다(가격 없음)." };
-  }
-  return { icon: "🔴", message: json.errors?.[0] ?? "가격 확인 중 오류가 발생했습니다." };
+  return { icon: "⚪", message: `${originMessage}. 일치하는 국내 편집샵 판매처는 아직 찾지 못했습니다.` };
 }
 
 interface DomesticCompetition {
@@ -219,10 +219,10 @@ export function DomesticPriceIntelligencePanel({
    *
    * N-4.11 STEP2(대표님 지시: "검색→매칭→저장을 판매자가 알 수 있게, 성공/
    * 실패/가격없음/매칭실패를 구분") — run-price-check.ts/run-domestic-
-   * price-check.ts가 이미 계산해 돌려주는 status/domesticStatus/savedCount/
-   * domesticListingCount를 그대로 문장으로 옮긴다. 새 판정을 만들지 않는다 —
-   * 서버가 이미 낸 결론을 화면에 정직하게 보여주기만 한다(가짜 진행률 애니
-   * 메이션을 만들지 않는다 — 실제로는 서버가 한 번에 처리하는 요청이다). */
+   * price-check.ts가 이미 계산해 돌려주는 status/savedCount/domesticShop을
+   * 그대로 문장으로 옮긴다. 새 판정을 만들지 않는다 — 서버가 이미 낸 결론을
+   * 화면에 정직하게 보여주기만 한다(가짜 진행률 애니메이션을 만들지 않는다
+   * — 실제로는 서버가 한 번에 처리하는 요청이다). */
   async function recheckNow() {
     if (rechecking) return; // 중복 클릭 방지 — 버튼도 disabled지만 방어적으로 한 번 더 막는다.
     setRechecking(true);
@@ -239,10 +239,8 @@ export function DomesticPriceIntelligencePanel({
         const json = (await res.json()) as {
           status?: string;
           savedCount?: number;
-          domesticStatus?: string;
-          domesticListingCount?: number;
           errors?: string[];
-          domesticShop?: { pricesRecorded: number; sourceErrors: string[] };
+          domesticShop?: { pricesRecorded: number; linksCreatedOrUpdated: number; sourceErrors: string[] };
         };
         setRecheckResult(summarizeRecheckResult(json));
       }
