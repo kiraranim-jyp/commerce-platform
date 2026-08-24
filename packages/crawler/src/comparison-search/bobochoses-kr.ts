@@ -28,7 +28,7 @@ function stripBrandPrefix(query: string): string {
  * 이미 로케일 프리픽스를 그대로 신뢰하는 계약이라(shopify-product-json.ts 주석 참고)
  * 검색으로 후보를 찾은 뒤 상세만 /ko-kr/ 강제로 다시 조회해서 실제 판매가를 확정한다. */
 export async function searchBoboChosesKorea(query: string): Promise<ComparisonCandidate[]> {
-  const searchCandidates = await searchShopifySuggest(DOMAIN, null, query);
+  const searchCandidates = await searchShopifySuggest(DOMAIN, null, stripBrandPrefix(query));
   const top = searchCandidates.slice(0, MAX_DETAIL_LOOKUPS);
 
   const enriched = await Promise.all(
