@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildProductIdentityDna } from "../product-identity-dna";
+import { buildDomesticShopQuery, buildProductIdentityDna } from "../product-identity-dna";
 import type { CanonicalProduct, ProvenanceField } from "../product-types";
 
 function field<T>(value: T): ProvenanceField<T> {
@@ -127,5 +127,29 @@ describe("buildProductIdentityDna", () => {
   it("대표 이미지가 없으면 null이다", () => {
     const dna = buildProductIdentityDna(baseProduct());
     expect(dna.representativeImageUrl).toBeNull();
+  });
+});
+
+describe("buildDomesticShopQuery", () => {
+  it("SKU가 있으면 브랜드 없이 SKU만 단독으로 검색어로 쓴다", () => {
+    const dna = buildProductIdentityDna(baseProduct({ sku: field("B126AC050") }));
+    expect(buildDomesticShopQuery(dna)).toBe("B126AC050");
+  });
+
+  it("SKU 없이 modelName만 있으면 브랜드+모델명을 검색어로 쓴다", () => {
+    const dna = buildProductIdentityDna(baseProduct({ modelName: field("B126AC050") }));
+    expect(buildDomesticShopQuery(dna)).toBe("Bobo Choses B126AC050");
+  });
+
+  it("식별자가 전혀 없으면 브랜드+핵심 상품명 토큰으로 검색어를 만든다", () => {
+    const dna = buildProductIdentityDna(
+      baseProduct({ title: field("Bobo Choses Denim Pants Blue 8Y SS26"), color: field("Blue") }),
+    );
+    expect(buildDomesticShopQuery(dna)).toBe("Bobo Choses denim pants");
+  });
+
+  it("브랜드도 identifier도 없으면 원본 title로 폴백한다(지어내지 않는다)", () => {
+    const dna = buildProductIdentityDna(baseProduct({ brand: field(""), title: field("") }));
+    expect(buildDomesticShopQuery(dna)).toBe("");
   });
 });

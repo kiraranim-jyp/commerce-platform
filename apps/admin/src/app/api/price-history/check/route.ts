@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { backfillCanonicalProduct } from "@commerce/shared";
+import { backfillCanonicalProduct, buildProductIdentityDna } from "@commerce/shared";
 import { getSnapshot } from "../../snapshots/_lib/snapshot";
 import { runDomesticPriceCheck } from "../_lib/run-domestic-price-check";
 import { runPriceCheck } from "../_lib/run-price-check";
@@ -36,10 +36,7 @@ export async function POST(request: Request) {
   try {
     domesticShop = await runDomesticPriceCheck({
       snapshotId,
-      title: product.title.value,
-      brand: product.brand.value,
-      sourceUrl: snapshot.workspace.canonicalProduct.sourceUrl,
-      sku: product.sku?.value || undefined,
+      dna: buildProductIdentityDna(product),
     });
   } catch (error) {
     domesticShop = {

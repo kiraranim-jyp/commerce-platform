@@ -5,6 +5,20 @@ import type { ComparisonCandidate } from "./types";
 const DOMAIN = "bobochoses.com";
 const MAX_DETAIL_LOOKUPS = 3;
 
+/** N-4.18-C STEP3/4(실측 확인, 2026-08-25) — bobochoses.com은 단일 브랜드
+ * 스토어라 상품 title에 "Bobo Choses"가 아예 없다(예: 실제 상품 title은
+ * "Stamp Bloom all over denim pants"). curl로 직접 확인: suggest.json은
+ * "stamp bloom denim pants"(브랜드 없음)로는 정상 매칭하지만, 앞에
+ * "Bobo Choses"만 붙여도("Bobo Choses stamp bloom") 토큰 수와 무관하게
+ * 전부 0건이 된다(AND 토큰 매칭으로 추정 — 이 사전버그는 STEP3 도입 이전
+ * 코드도 동일했다, 즉 이번에 새로 생긴 회귀가 아니라 원래 있던 gap이다).
+ * 다른 스토어(LOOXLOO 등)는 브랜드가 실제로 title/필드에 나오므로 이 처리를
+ * 하지 않는다 — 이 스토어에서만 브랜드 접두어를 제거한다. */
+function stripBrandPrefix(query: string): string {
+  const stripped = query.replace(/^\s*bobo\s+choses\s+/i, "").trim();
+  return stripped || query;
+}
+
 /** N-4.07 — 실측 확인(2026-08-23, curl): bobochoses.com은 /ko-kr/search/suggest.json이
  * 417 "Unsupported buyer locale"을 반환한다(이 스토어는 검색 제안 API에서 로케일
  * 프리픽스를 지원하지 않음) — 검색은 로케일 없는 기본 엔드포인트로만 가능하고, 이

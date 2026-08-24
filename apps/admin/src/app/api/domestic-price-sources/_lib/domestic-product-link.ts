@@ -9,18 +9,30 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 export type DomesticMatchType = "EXACT" | "HIGH_CONFIDENCE" | "REVIEW_REQUIRED" | "NOT_MATCHED";
 
 /** match.ts의 classifyMatchLevel(very_high/high/medium/low)을 그대로 재사용한
- * matchLevel을 이 테이블의 어휘로 옮긴다. EXACT/HIGH_CONFIDENCE는 verified=true로
- * 자동 확정한다(신호 자체가 이미 SKU 일치 또는 매우 높은 종합 confidence라
- * 사람이 다시 볼 이유가 적다) — REVIEW_REQUIRED만 관리자 승인 전까지
- * verified=false로 남는다(migration 029 주석의 "검증 안 된 매칭을 가격 판단에
- * 쓰지 않는다" 원칙). low(NOT_MATCHED)는 링크 자체를 만들지 않는다(호출부에서
- * 필터링). */
+ * matchLevel을 이 테이블의 어휘로 옮긴다.
+ *
+ * N-4.18-C STEP6(대표님 지시, 2026-08-25: "95% 이상일 때만 가격비교 대상으로
+ * 확정한다" / "85~94%는 후보로 표시하지만 자동 가격 경쟁력 계산에는 사용하지
+ * 않는다") — 이전에는 very_high/high 둘 다 autoVerified:true였다(0.80~0.94
+ * confidence도 자동으로 가격 계산에 들어갔다는 뜻). 이번 지시로 **95% 이상
+ * (very_high)만** 자동 검증한다 — high(0.80~0.94)/medium(0.60~0.79)은 후보로는
+ * 계속 링크를 만들어 화면에 보여주되(migration 029 "후보를 안 버린다" 원칙),
+ * verified=false로 남아 실제 가격 비교/경쟁력 계산에는 쓰이지 않는다(STEP2에서
+ * verified&&ACTIVE 링크만 가격을 재조회하므로, 여기서 autoVerified:false면
+ * 자동으로 가격 계산 대상에서 빠진다). low(NOT_MATCHED)는 여전히 링크 자체를
+ * 만들지 않는다(호출부에서 필터링).
+ *
+ * 참고: classifyMatchLevel의 구간 경계(95/80/60)는 대표님이 이번에 제시한
+ * 정확한 경계(95/85/70)와 완전히 같지 않다 — 이 구간 자체(B-1 해외 가격비교와
+ * 공유하는 전역 임계값)를 재조정하는 건 실제 Golden Dataset 검증이 필요한
+ * 별도 작업(STEP13)이라 이번엔 손대지 않았다. 지금 고친 것은 "95% 미만은
+ * 절대 자동 가격비교에 안 쓴다"는 gate 하나뿐이다. */
 export function toDomesticMatchType(matchLevel: "very_high" | "high" | "medium" | "low"): {
   matchType: DomesticMatchType;
   autoVerified: boolean;
 } {
   if (matchLevel === "very_high") return { matchType: "EXACT", autoVerified: true };
-  if (matchLevel === "high") return { matchType: "HIGH_CONFIDENCE", autoVerified: true };
+  if (matchLevel === "high") return { matchType: "HIGH_CONFIDENCE", autoVerified: false };
   if (matchLevel === "medium") return { matchType: "REVIEW_REQUIRED", autoVerified: false };
   return { matchType: "NOT_MATCHED", autoVerified: false };
 }

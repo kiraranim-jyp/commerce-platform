@@ -1,4 +1,5 @@
 import { refreshDomesticProductPrice, searchDomesticShops } from "@commerce/crawler";
+import { buildDomesticShopQuery, type ProductIdentityDna } from "@commerce/shared";
 import { listDomesticPriceSources, recordDomesticSourceCheckAttempt } from "../../domestic-price-sources/_lib/domestic-price-source";
 import {
   listDomesticProductLinks,
@@ -10,19 +11,24 @@ import { hasObservationToday, recordPriceObservations } from "./price-observatio
 /**
  * N-4.07 2차(대표님 지시: "동일상품 매칭 → 검증 → 가격관측 → 일자별 이력 →
  * 가격변동/마진 판단") — 국내 편집샵 파이프라인 전체를 한 함수로 묶는다.
- * runPriceCheck(해외 원가+네이버)와 나란히 존재하며 daily cron/수동 "지금 확인"이
+ * runPriceCheck(해외 원가)와 나란히 존재하며 daily cron/수동 "지금 확인"이
  * 둘 다 호출한다.
  *
  * 절대 금지(migration 029 주석, 작업지시서 Part 2) — 검색으로 후보를 찾았다고
  * 바로 가격에 반영하지 않는다. STEP 1(매칭)에서 만든 링크가 verified=true인
  * 것만 STEP 2(가격 관측)에서 실제로 조회한다.
+ *
+ * N-4.18-C STEP3(대표님 지시: "등록상품의 Product DNA를 기준으로 최소한의
+ * 후보만 찾는다") — 입력을 title/brand/sourceUrl/sku 개별 필드가 아니라
+ * ProductIdentityDna 하나로 받는다. 검색 API에 보낼 검색어(searchTerm)는
+ * buildDomesticShopQuery로 DNA 우선순위(SKU 단독 > 브랜드+모델명 > 브랜드+
+ * 핵심 상품명)로 최소화하고, 동일상품 판정(scoreCandidateMatch)에 쓰는
+ * title/brand/sku는 기존과 동일하게 원본 값을 그대로 넘긴다 — 검색어를
+ * 좁히는 것과 매칭 신호를 넓게 쓰는 것은 별개 관심사다.
  */
 export interface DomesticPriceCheckInput {
   snapshotId: string;
-  title: string;
-  brand?: string;
-  sourceUrl?: string;
-  sku?: string;
+  dna: ProductIdentityDna;
   skipIfCheckedToday?: boolean;
 }
 
@@ -52,13 +58,21 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     : false;
   if (alreadyChecked) return { linksCreatedOrUpdated: 0, pricesRecorded: 0, sourceErrors: [] };
 
-  const searchTitle = stripLeadingDevTag(input.title);
+  const searchTitle = stripLeadingDevTag(input.dna.title);
+  const searchTerm = stripLeadingDevTag(buildDomesticShopQuery(input.dna));
+  const sku = input.dna.identifier?.tier === "SKU" ? input.dna.identifier.value : undefined;
 
   // STEP 1 — 활성 소스 대상으로 검색해서 동일상품 후보를 찾고, 신뢰도에 따라
   // domestic_product_links를 만들거나 갱신한다(NOT_MATCHED는 링크를 만들지 않는다).
   const sources = (await listDomesticPriceSources()).filter((s) => s.enabled && s.status === "ACTIVE");
   const searchResults = await searchDomesticShops(
-    { title: searchTitle, brand: input.brand, sourceUrl: input.sourceUrl, sku: input.sku },
+    {
+      title: searchTitle,
+      brand: input.dna.brand.value || undefined,
+      sourceUrl: input.dna.sourceUrl,
+      sku,
+      searchTerm,
+    },
     sources.map((s) => ({ id: s.id, name: s.name, domain: s.domain, currency: s.currency, collectionStrategy: s.collectionStrategy })),
   );
 

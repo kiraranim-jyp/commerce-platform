@@ -142,13 +142,14 @@ async function searchOneDomesticShop(
   if (source.collectionStrategy !== "AUTO_API" && source.collectionStrategy !== "AUTO_SCRAPE") {
     return { ...base, status: "unsupported", candidates: [] };
   }
+  const searchTerm = query.searchTerm ?? query.title;
   try {
     if (source.domain === "looxloo.com") {
-      const candidates = await searchLooxloo(query.title);
+      const candidates = await searchLooxloo(searchTerm);
       return { ...base, status: "ok", candidates: withConfidence(query, candidates) };
     }
     if (source.domain === "bobochoses.com") {
-      const candidates = await searchBoboChosesKorea(query.title);
+      const candidates = await searchBoboChosesKorea(searchTerm);
       const scored = withConfidence(query, candidates).map((c) => ({ ...c, priceSource: "detail" as const }));
       return { ...base, status: "ok", candidates: scored };
     }

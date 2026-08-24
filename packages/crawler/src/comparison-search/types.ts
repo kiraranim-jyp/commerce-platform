@@ -35,6 +35,14 @@ export interface ComparisonQuery {
   sourceUrl?: string;
   /** 원본 상품에서 확인된 SKU/article code(있으면). */
   sku?: string;
+  /** N-4.18-C STEP3(대표님 지시: "검색 횟수보다 매칭 정확도를 우선한다") — 실제
+   * 검색 API/키워드 파라미터에 보낼 최소화된 검색어(packages/shared의
+   * buildDomesticShopQuery, SKU 단독 > 브랜드+모델명 > 브랜드+핵심 상품명
+   * 순). 없으면 title을 그대로 검색어로 쓴다(하위호환 — B-1 해외 가격비교
+   * 등 아직 이 필드를 안 채우는 호출부는 기존 동작 그대로 유지). title
+   * 자체는 매칭 스코어링(scoreCandidateMatch)에 계속 그대로 쓰인다 —
+   * 검색어를 좁히는 것과 동일상품 판정 신호를 넓게 쓰는 것은 별개다. */
+  searchTerm?: string;
 }
 
 /** comparison_shops 테이블 행의 최소 부분집합 — packages/crawler는 apps/admin에 의존하지 않으므로

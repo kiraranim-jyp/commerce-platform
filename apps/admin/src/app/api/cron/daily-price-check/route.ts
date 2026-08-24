@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { backfillCanonicalProduct } from "@commerce/shared";
+import { backfillCanonicalProduct, buildProductIdentityDna } from "@commerce/shared";
 import { listRecentSnapshotsFull } from "../../snapshots/_lib/snapshot";
 import { runDomesticPriceCheck } from "../../price-history/_lib/run-domestic-price-check";
 import { runPriceCheck } from "../../price-history/_lib/run-price-check";
@@ -78,10 +78,7 @@ export async function GET(request: Request) {
       const product = backfillCanonicalProduct(snapshot.workspace.canonicalProduct);
       await runDomesticPriceCheck({
         snapshotId: snapshot.id,
-        title: product.title.value,
-        brand: product.brand.value,
-        sourceUrl: snapshot.workspace.canonicalProduct.sourceUrl,
-        sku: product.sku?.value || undefined,
+        dna: buildProductIdentityDna(product),
         skipIfCheckedToday: true,
       });
     } catch (err) {

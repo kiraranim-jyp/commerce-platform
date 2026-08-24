@@ -127,3 +127,31 @@ export function buildProductIdentityDna(product: CanonicalProduct): ProductIdent
     representativeImageUrl: representative ? getSelectedImageUrl(representative) : null,
   };
 }
+
+/** N-4.18-C STEP3(대표님 지시) — "검색 횟수보다 매칭 정확도를 우선한다." 국내
+ * 편집샵 검색 1회에 보낼 검색어 하나를 DNA 우선순위로 고른다(SKU/Style Code
+ * 단독 → 브랜드+모델명 → 브랜드+핵심 상품명 → 핵심 상품명 단독). 이 함수가
+ * 리턴하는 문자열은 "검색 API에 보낼 키워드"일 뿐이다 — 동일상품 판정(매칭
+ * 스코어링)은 여전히 원본 title/brand/sku를 그대로 쓴다(둘을 섞으면 매칭
+ * 정확도가 오히려 떨어진다 — 검색어는 좁게, 매칭 신호는 넓게).
+ *
+ * SKU가 있으면 브랜드 없이 SKU만 보낸다 — 대표님 예시("B126AC050" 단독
+ * 검색이 1순위) 그대로다. coreTitleTokens는 이미 브랜드/색상/사이즈·시즌
+ * 토큰을 제거한 상태라 추가 정제 없이 그대로 쓴다(토큰 6개로 제한 — 검색
+ * 사이트 키워드 파라미터가 너무 길어지면 오히려 결과가 0건이 되는 경우가
+ * 실측으로 확인됨, LOOXLOO/CHOCO.EL 등 Cafe24 계열 공통). */
+const MAX_CORE_TITLE_TOKENS_IN_QUERY = 6;
+
+export function buildDomesticShopQuery(dna: ProductIdentityDna): string {
+  if (dna.identifier?.tier === "SKU") {
+    return dna.identifier.value;
+  }
+  if (dna.identifier?.tier === "MODEL_NAME") {
+    return dna.brand.value ? `${dna.brand.value} ${dna.identifier.value}` : dna.identifier.value;
+  }
+  const coreTitle = dna.coreTitleTokens.slice(0, MAX_CORE_TITLE_TOKENS_IN_QUERY).join(" ");
+  if (dna.brand.value && coreTitle) return `${dna.brand.value} ${coreTitle}`;
+  if (coreTitle) return coreTitle;
+  if (dna.brand.value) return dna.brand.value;
+  return dna.title;
+}
