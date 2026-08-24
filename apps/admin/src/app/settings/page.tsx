@@ -587,7 +587,17 @@ function SellerProfileEditor({
   const [topCommonImageEnabled, setTopCommonImageEnabled] = useState(false);
   const [bottomCommonImageUrl, setBottomCommonImageUrl] = useState<string | null>(null);
   const [bottomCommonImageEnabled, setBottomCommonImageEnabled] = useState(false);
-  const [imageUploading, setImageUploading] = useState<"top" | "bottom" | null>(null);
+  // N-4.13-P0(대표님 지시: "상단+하단 동시 변경" 테스트 필수) — 실제 조사
+  // 결과, 예전엔 이 값이 "top"|"bottom"|null 단일 문자열이라 상단 업로드가
+  // 끝나기 전에 하단 업로드를 시작하면(둘 다 input이 서로를 막지 않으므로
+  // 가능) 둘 중 먼저 끝난 쪽의 finally가 값을 null로 덮어써서, 아직 진행
+  // 중인 다른 쪽의 "업로드 중" 표시가 사라지는 버그가 있었다(같은 값 하나로
+  // 두 개의 동시 상태를 표현할 수 없다는 게 근본 원인) — 저장 버튼이 그
+  // 사라진 표시를 보고 활성화돼서, 아직 안 끝난 업로드의 결과를 기다리지
+  // 않고 저장이 눌릴 수 있었다. top/bottom을 각각 독립된 boolean으로 바꿔서
+  // 동시 업로드가 서로의 상태를 지우지 않게 한다.
+  const [topImageUploading, setTopImageUploading] = useState(false);
+  const [bottomImageUploading, setBottomImageUploading] = useState(false);
   // N-4.08-DetailPage(대표님 지시) — 신규 상품에 적용할 상세페이지 기본 블록
   // 구성(순서+노출여부). 코드 상수 defaultDetailBlocks()를 초기값으로 쓰되,
   // 저장된 프로필 값이 있으면 그걸로 덮어쓴다(fillForm).
@@ -716,7 +726,8 @@ function SellerProfileEditor({
   }
 
   async function uploadCommonImage(position: "top" | "bottom", file: File) {
-    setImageUploading(position);
+    const setUploading = position === "top" ? setTopImageUploading : setBottomImageUploading;
+    setUploading(true);
     try {
       const body = new FormData();
       body.append("file", file);
@@ -741,7 +752,7 @@ function SellerProfileEditor({
     } catch (err) {
       setLookupError(err instanceof Error ? err.message : "이미지 업로드에 실패했습니다.");
     } finally {
-      setImageUploading(null);
+      setUploading(false);
     }
   }
 
@@ -1050,7 +1061,8 @@ function SellerProfileEditor({
             bottomCommonImageUrl={bottomCommonImageUrl}
             bottomCommonImageEnabled={bottomCommonImageEnabled}
             onBottomCommonImageEnabledChange={setBottomCommonImageEnabledSynced}
-            imageUploading={imageUploading}
+            topImageUploading={topImageUploading}
+            bottomImageUploading={bottomImageUploading}
             onUploadTop={(file) => uploadCommonImage("top", file)}
             onUploadBottom={(file) => uploadCommonImage("bottom", file)}
             onSelectTopExisting={(asset) => {
@@ -1062,8 +1074,21 @@ function SellerProfileEditor({
               setBottomCommonImageEnabledSynced(true);
             }}
             onSave={handleSave}
-            saving={saving}
-            saveButtonLabel={saveButtonLabel}
+            // N-4.13-P0(대표님 지시: "파일 선택 → 저장 → 새로고침해도 반영
+            // 안 됨" 원인 추적) — 실제 조사 결과 업로드→PATCH→DB→GET 경로
+            // 자체는 실측(curl로 실제 이미지 업로드+저장+새로고침 재현)에서
+            // 전부 정상이었다. 대신 코드에서 실제로 확인된 문제 두 가지:
+            // (1) 업로드는 비동기(fetch)라 완료까지 수백 ms가 걸리는데,
+            // 그동안 저장 버튼은 계속 눌러졌다(disabled={saving}만 검사,
+            // 업로드 중 여부는 검사하지 않음) — 완료 전에 저장을 누르면
+            // "업로드 시작 직전"의 이전 URL이 그대로 저장된다.
+            // (2) 상단/하단 업로드 상태를 하나의 값으로 표현했었는데(P0-9
+            // 동시 변경 시나리오), 둘 중 하나가 먼저 끝나면 아직 진행 중인
+            // 다른 쪽의 "업로드 중" 표시까지 같이 사라졌다. 위에서 top/bottom
+            // 독립 boolean으로 분리했으니, 여기서는 그 두 값을 OR로 합쳐
+            // "둘 중 하나라도 업로드 중이면" 저장을 막는다.
+            saving={saving || topImageUploading || bottomImageUploading}
+            saveButtonLabel={topImageUploading || bottomImageUploading ? "이미지 업로드 중…" : saveButtonLabel}
           />
         </CollapsibleSection>
       </div>
@@ -1717,7 +1742,8 @@ function CommonImagesSection({
   bottomCommonImageUrl,
   bottomCommonImageEnabled,
   onBottomCommonImageEnabledChange,
-  imageUploading,
+  topImageUploading,
+  bottomImageUploading,
   onUploadTop,
   onUploadBottom,
   onSelectTopExisting,
@@ -1732,7 +1758,8 @@ function CommonImagesSection({
   bottomCommonImageUrl: string | null;
   bottomCommonImageEnabled: boolean;
   onBottomCommonImageEnabledChange: (v: boolean) => void;
-  imageUploading: "top" | "bottom" | null;
+  topImageUploading: boolean;
+  bottomImageUploading: boolean;
   onUploadTop: (file: File) => void;
   onUploadBottom: (file: File) => void;
   onSelectTopExisting: (asset: { url: string }) => void;
@@ -1749,7 +1776,7 @@ function CommonImagesSection({
           hint="상세설명 이미지의 맨 앞/맨 뒤에 자동으로 붙습니다"
           imageUrl={topCommonImageUrl}
           enabled={topCommonImageEnabled}
-          uploading={imageUploading === "top"}
+          uploading={topImageUploading}
           onEnabledChange={onTopCommonImageEnabledChange}
           onUpload={onUploadTop}
           onSelectExisting={onSelectTopExisting}
@@ -1759,7 +1786,7 @@ function CommonImagesSection({
           hint="상세설명 이미지의 맨 앞/맨 뒤에 자동으로 붙습니다"
           imageUrl={bottomCommonImageUrl}
           enabled={bottomCommonImageEnabled}
-          uploading={imageUploading === "bottom"}
+          uploading={bottomImageUploading}
           onEnabledChange={onBottomCommonImageEnabledChange}
           onUpload={onUploadBottom}
           onSelectExisting={onSelectBottomExisting}
