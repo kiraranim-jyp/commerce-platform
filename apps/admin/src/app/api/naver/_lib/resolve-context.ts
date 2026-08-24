@@ -153,6 +153,21 @@ export async function resolveNaverContext(params: {
       areaListFetchFailed: originAreas === null,
       resolvedCountryText,
       match: originMatch,
+      // N-4.12후속 P1-1(대표님 지시: "원산지도 제조사와 동일한 UX — 단,
+      // 먼저 실제 resolver를 확인하고 구현한다") — 위 resolvedCountryText
+      // 계산(줄 123-124)과 정확히 같은 3단계를 그대로 다시 읽어서 어느
+      // 단계가 채웠는지만 추가로 알려준다(새 판정 아님, manufacturerSource와
+      // 동일 패턴). extractedCountryOfOrigin은 상품 원문에서 추출된 값이라
+      // "브랜드/판매자 기본값"이 아니다 — PRODUCT_FIELD로 표시하고, UI는
+      // product.countryOfOrigin.value 자체로 이미 이 경우를 판단할 수 있으니
+      // 여기서는 폴백 두 단계(브랜드/판매자)만 구분한다(manufacturer와 동일).
+      resolvedCountryTextSource: extractedCountryOfOrigin
+        ? ("PRODUCT_FIELD" as const)
+        : brandProfile?.countryOfOrigin
+          ? ("BRAND_DEFAULT" as const)
+          : sellerProfile?.defaultCountryOfOrigin
+            ? ("SELLER_DEFAULT" as const)
+            : ("NONE" as const),
     },
     notice: {
       warrantyPolicy: sellerProfile?.qualityGuarantee || null,

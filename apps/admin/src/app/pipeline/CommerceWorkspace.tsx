@@ -1534,7 +1534,7 @@ export function CommerceWorkspace({
                   <button
                     type="button"
                     onClick={() => setTab(platformId)}
-                    className="flex items-center gap-1.5 text-left hover:underline"
+                    className="flex flex-wrap items-center gap-1.5 text-left hover:underline"
                   >
                     <ReadinessLevelDot level={readinessStateToLevel(r.state)} />
                     <span className="font-medium text-text-primary">{PLATFORM_ADAPTERS[platformId].label}</span>
@@ -1543,6 +1543,12 @@ export function CommerceWorkspace({
                         — {r.priorityItems.map((item) => item.label).join(", ")}
                       </span>
                     )}
+                    {/* N-4.12 STEP3 P0-4(대표님 지시: "[스마트스토어에서 확인하기]로
+                     * 이동" — 정확한 CTA 문구) — 클릭 대상은 이미 이 버튼 전체(위
+                     * onClick)라 새 동작을 추가하지 않는다, 문구만 명시한다. */}
+                    <span className="text-xs font-medium text-primary">
+                      {PLATFORM_ADAPTERS[platformId].label}에서 확인하기 →
+                    </span>
                   </button>
                 </li>
               ))}

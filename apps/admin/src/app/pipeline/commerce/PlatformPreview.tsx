@@ -744,6 +744,19 @@ export function PlatformPreview({
           summary={basicInfoSummary}
           {...sectionProps("section-basic")}
         >
+          {/* N-4.12 STEP3(대표님 지시: "이 정보는 어디서 수정하지?라는 질문이
+              없어야 함") — 이 아래 필드들은 새 값을 갖지 않는다. 상품정보 탭의
+              SourceDataView가 같은 product.title/brand/material/options에
+              같은 onUpdateField/updateOptions setter로 값을 쓰고, 여기서도
+              동일 setter를 그대로 호출한다(값이 두 곳에 따로 저장되는 구조가
+              아니다) — 그래서 어느 탭에서 고쳐도 항상 같은 결과가 된다는 걸
+              문구로 명시한다. 새 read-only 처리는 하지 않는다 — 등록 화면을
+              보면서 바로 고칠 수 있는 게 실제로 더 편하다는 게 여러 스프린트
+              동안 검증된 이 UI의 설계이고, 값이 갈라지는 문제가 없으므로
+              막을 이유가 없다. */}
+          <p className="mb-2 rounded bg-selected-soft px-2 py-1.5 text-[11px] text-selected">
+            🔵 이 정보는 상품정보 탭과 공유됩니다 — 어느 탭에서 고쳐도 모든 커머스에 동일하게 적용됩니다.
+          </p>
           <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 xl:grid-cols-3">
             <FieldRow label="상품명" field={product.title} required>
               <EditableText
@@ -1040,6 +1053,9 @@ export function PlatformPreview({
           (listing.platform === "coupang" ? <SellerProfileSummaryCard /> : <NaverSellerProfileSummaryCard />)}
 
         <CollapsibleSection title="고시정보" badge={sectionCompletionBadge("section-notice")} {...sectionProps("section-notice")}>
+          <p className="mb-2 rounded bg-selected-soft px-2 py-1.5 text-[11px] text-selected">
+            🔵 원산지·세탁방법은 상품정보 탭과 공유됩니다 — 어느 탭에서 고쳐도 모든 커머스에 동일하게 적용됩니다.
+          </p>
           <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
             <FieldRow label="원산지" field={product.countryOfOrigin} required>
               <EditableText

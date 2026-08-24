@@ -69,6 +69,8 @@ export interface NaverResolveResponse {
     areaListFetchFailed: boolean;
     resolvedCountryText: string | null;
     match: NaverOriginAreaMatch;
+    /** N-4.12후속 P1-1 — resolve-context.ts 주석 참고, 새 판정이 아니라 표시용. */
+    resolvedCountryTextSource: "PRODUCT_FIELD" | "BRAND_DEFAULT" | "SELLER_DEFAULT" | "NONE";
   };
   // N-3.13 Part E-12 — SellerProfile.qualityGuarantee/asContactNumber 재사용
   // (Coupang "판매자 정보" 탭과 같은 값).
@@ -650,6 +652,15 @@ export function NaverPayloadPreview({
           value={
             resolved?.origin?.resolvedCountryText ??
             "MISSING — 상품 원본/브랜드 설정/판매자 기본값 중 어느 것도 없음"
+          }
+          hint={
+            resolved?.origin?.resolvedCountryText
+              ? resolved.origin.resolvedCountryTextSource === "BRAND_DEFAULT"
+                ? "브랜드 기본값"
+                : resolved.origin.resolvedCountryTextSource === "SELLER_DEFAULT"
+                  ? "판매자 기본값"
+                  : "상품 원본에서 추출"
+              : null
           }
         />
         <Row

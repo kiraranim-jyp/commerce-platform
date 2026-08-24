@@ -272,6 +272,17 @@ function RequirementField({
           출처: {SOURCE_LABELS[resolved.source]} · 신뢰도 {confidenceLabel(resolved.confidence)}
         </p>
       )}
+      {/* N-4.12 STEP3 P0-3(대표님 지시: "MAPPED 필드를 커머스 탭에서 또
+       * 수정할 수 있다면 어느 값이 최종값인지 혼란이 발생") — 여기 override는
+       * payload가 공식으로 지원하는 카테고리별 재정의라 입력 자체는 막지
+       * 않는다(기존 동작 유지). 대신 재정의 중일 때 원래 상품정보 값이
+       * 뭐였는지를 숨기지 않는다 — 값이 두 곳에서 갈라졌다는 사실 자체를
+       * 사용자가 항상 볼 수 있어야 나중에 "왜 다르지?" 혼란이 없다. */}
+      {override && resolved && resolved.source !== "PLACEHOLDER" && resolved.value !== override && (
+        <p className="mt-0.5 text-[11px] text-text-tertiary">
+          상품정보 기본값: {resolved.value} · 이 카테고리에서만 다른 값으로 재정의함
+        </p>
+      )}
     </div>
   );
 }
