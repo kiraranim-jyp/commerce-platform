@@ -424,8 +424,8 @@ export default function SettingsPage() {
           </div>
           <div className={activeTab === "domesticPriceSources" ? "mt-5" : "hidden"}>
             <SectionHeader
-              title="국내 가격비교 Source"
-              description="TTAEJYO 국내 가격비교의 Primary Source(사전 등록된 국내 편집샵) 후보를 관리합니다."
+              title="국내 전문 편집샵 가격비교"
+              description="등록상품과 동일한 상품을 국내 수입 키즈 전문 편집샵에서 찾아 가격을 비교합니다. 동일상품 신뢰도가 충분히 높은 상품만 가격 분석에 사용합니다."
               className="mb-3"
             />
             <DomesticPriceSourcesSection />
