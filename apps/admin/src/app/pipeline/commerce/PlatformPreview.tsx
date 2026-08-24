@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CategoryCandidate } from "@commerce/category";
 import type {
   ComplianceFieldSource,
@@ -32,6 +32,7 @@ import { PriceEditor } from "./PriceEditor";
 import { computeChecklistReadiness, computeNaverPayloadReadiness } from "./readiness";
 import { RegistrationReadinessCard } from "./RegistrationReadinessCard";
 import { buildPriorityItems, resolveRegistrationReadinessState, RegistrationStatusBanner } from "./RegistrationStatusBanner";
+import type { PriorityItem, RegistrationReadinessState } from "./readiness-state";
 import { SellerProfileSummaryCard } from "./SellerProfileSummaryCard";
 import { NaverSellerProfileSummaryCard } from "./NaverSellerProfileSummaryCard";
 import { extractionSourceLabel, ProvenanceBadge } from "./provenance";
@@ -326,6 +327,7 @@ export function PlatformPreview({
   onMoveImage,
   payloadPreview,
   payloadPreviewUnavailableReason,
+  onReadinessChange,
 }: {
   product: CanonicalProduct;
   listing: ListingModel;
@@ -487,6 +489,15 @@ export function PlatformPreview({
    * 최신 상태를 보여준다. */
   payloadPreview?: { payload: CoupangPayload; complianceReport: ComplianceReport } | null;
   payloadPreviewUnavailableReason?: string | null;
+  /** N-4.08 STEP6-4(CPO 지시: "상단 커머스 탭에 상태를 표시") — 이 탭이 방금
+   * 계산한 4-state(READY/NEEDS_REVIEW/SELLER_REVIEW/BLOCKED)를 CommerceWorkspace로
+   * 올려보낸다. 새 판정을 만들지 않는다 — 바로 아래(약 40줄 뒤)서 이미 계산해둔
+   * registrationState/priorityItems를 그대로 보고하기만 한다. CommerceWorkspace는
+   * 이 값을 캐싱해뒀다가 탭 바 배지에 쓴다(탭이 바뀌어도 마지막 계산값이 남아있게
+   * 하기 위함 — payloadPreview/naverValidation 자체는 지금도 활성 탭에서만
+   * 계산되므로, 두 플랫폼을 동시에 강제로 미리 계산하는 구조 변경 없이도 한 번
+   * 방문한 탭의 상태는 계속 보인다). */
+  onReadinessChange?: (state: RegistrationReadinessState, priorityItems: PriorityItem[]) => void;
 }) {
   // isVerifiedPlatformCode까지 확인해야 한다 — state만 보면 미리보기가
   // "선택 완료"로 보이는데 실제 등록은 CP001로 거부되는 버그가 재발한다.
@@ -537,6 +548,17 @@ export function PlatformPreview({
     naverValidation?.kcStatus,
   );
   const priorityItems = buildPriorityItems(readinessSummary, priceValid, "section-price");
+
+  // N-4.08 STEP6-4 — 위에서 계산한 것과 정확히 같은 값을 그대로 부모에 보고한다
+  // (새 계산 없음). registrationState/priorityItems가 실제로 바뀔 때만 부모
+  // setState를 유발하도록 참조가 아니라 상태 문자열/우선순위 라벨로 비교해도
+  // 되지만, 이 값들은 매 렌더마다 새로 만들어지는 배열/객체라 참조가 항상
+  // 달라진다 — 부모(CommerceWorkspace)가 setState 안에서 얕은 비교로 방어한다.
+  useEffect(() => {
+    onReadinessChange?.(registrationState, priorityItems);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registrationState, priorityItems]);
+
   const [guideOpen, setGuideOpen] = useState(false);
 
   // Sprint A-3(작업2 — Accordion, 작업4 — Auto Scroll) — 어떤 섹션이 펼쳐져 있는지

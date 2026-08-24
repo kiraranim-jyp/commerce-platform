@@ -14,6 +14,26 @@ import type { ReadinessItem, ReadinessSummary } from "./readiness";
  */
 export type RegistrationReadinessState = "BLOCKED" | "SELLER_REVIEW" | "NEEDS_REVIEW" | "READY";
 
+/** N-4.08 STEP6-2(CPO 지시: "내부 검증 정밀도는 유지하고 UI는 단순화") — 탭
+ * 배지처럼 한눈에 보여줄 자리에는 4단계가 아니라 3단계(🟢🟡🔴)만 필요하다.
+ * 새 판정을 만들지 않는다 — RegistrationReadinessState(이미 실제 화면에서
+ * 쓰는 유일한 4-state) 하나만 입력으로 받아 이름만 다시 붙인다.
+ *
+ * SELLER_REVIEW를 YELLOW로 묶는 이유: 이 상태의 실제 의미는 "TTAEJYO가
+ * 임의로 판단하지 않고 판매자의 확인을 기다리는 중"이다(validate-payload.ts
+ * SELLER_SAFETY_CONFIRMATION_REQUIRED 참고) — 데이터가 없어서 막힌 BLOCKED와
+ * 성격이 다르다. 탭 배지는 "어디를 봐야 하는지"를 알려주는 내비게이션
+ * 신호일 뿐이고, 실제 등록 가능 여부의 정확한 이유(판매자 확인 필요 vs
+ * 데이터 누락)는 탭 안의 RegistrationStatusBanner(4-state 그대로 유지)가
+ * 계속 보여준다 — 이 매핑이 register API 게이트를 대신하지 않는다. */
+export type ReadinessLevel = "GREEN" | "YELLOW" | "RED";
+
+export function readinessStateToLevel(state: RegistrationReadinessState): ReadinessLevel {
+  if (state === "READY") return "GREEN";
+  if (state === "BLOCKED") return "RED";
+  return "YELLOW"; // NEEDS_REVIEW | SELLER_REVIEW
+}
+
 export function resolveRegistrationReadinessState(
   summary: ReadinessSummary,
   priceValid: boolean,

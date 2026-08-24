@@ -48,6 +48,8 @@ import { ImageInlineEditor } from "./ImageInlineEditor";
 import { ListingConfirmationModal } from "./commerce/ListingConfirmationModal";
 import type { NaverResolveResponse } from "./commerce/NaverPayloadPreview";
 import { PlatformPreview } from "./commerce/PlatformPreview";
+import { readinessStateToLevel } from "./commerce/readiness-state";
+import type { PriorityItem, ReadinessLevel, RegistrationReadinessState } from "./commerce/readiness-state";
 import { RegistrationHistoryPanel } from "./commerce/RegistrationHistoryPanel";
 import { StageStepper } from "./commerce/StageStepper";
 import { SourceDataView } from "./commerce/SourceDataView";
@@ -166,6 +168,24 @@ export function CommerceWorkspace({
     }
     return "source";
   });
+
+  // N-4.08 STEP6-4(CPO 지시: "상단 커머스 탭에 상태를 표시") — PlatformPreview가
+  // (그 탭이 활성화되어 있는 동안) 계산해서 보고해주는 4-state를 플랫폼별로
+  // 캐싱한다. payloadPreview/naverValidation 자체는 지금도 활성 탭에서만
+  // 계산되므로(회귀 위험이 큰 "두 플랫폼 항상 동시 계산" 구조 변경은 이번
+  // STEP 범위에서 하지 않는다), 한 번도 연 적 없는 탭은 배지가 비어있다 — 탭을
+  // 한 번 열면 그 이후로는 다른 탭에 가 있어도 마지막 계산값이 남는다.
+  const [platformReadiness, setPlatformReadiness] = useState<
+    Partial<Record<PlatformId, { state: RegistrationReadinessState; priorityItems: PriorityItem[] }>>
+  >({});
+  function handleReadinessChange(platformId: PlatformId, state: RegistrationReadinessState, priorityItems: PriorityItem[]) {
+    setPlatformReadiness((prev) => {
+      const existing = prev[platformId];
+      if (existing && existing.state === state && existing.priorityItems.length === priorityItems.length) return prev;
+      return { ...prev, [platformId]: { state, priorityItems } };
+    });
+  }
+
   useEffect(() => {
     try {
       sessionStorage.setItem(TAB_STORAGE_KEY, tab);
@@ -737,6 +757,23 @@ export function CommerceWorkspace({
     if (tab === "source" || tab === "content") return null;
     return PLATFORM_ADAPTERS[tab].toListingModel(product, effectiveCategorySelection);
   }, [tab, product, effectiveCategorySelection]);
+
+  // N-4.08 STEP6-3/6-4(CPO 지시: "상품정보 = 공통 정보 관리") — "상품정보" 탭
+  // 배지용 가벼운 집계. 새 등록 게이트가 아니다 — 실제 등록 차단 여부는 여전히
+  // 각 플랫폼의 validate-payload/buildCoupangCompliance가 결정한다. 여기서는
+  // 이미 다른 곳에서 검증된 신호(priceValidity — N-3.54, title/images/brand/
+  // description 존재 여부)를 재사용해 "커머스 탭에 가기 전에 상품정보 자체가
+  // 얼마나 준비됐는지"만 대략 보여준다.
+  const commonInfoLevel: ReadinessLevel = useMemo(() => {
+    const hasTitle = Boolean(product.title.value.trim());
+    const hasImages = product.images.length > 0;
+    const priceValid = product.priceValidity === "VALID";
+    if (!hasTitle || !hasImages || !priceValid) return "RED";
+    const hasBrand = Boolean(product.brand.value.trim());
+    const hasDescription = Boolean(product.description.value.trim() || product.descriptionKo.value.trim());
+    if (!hasBrand || !hasDescription) return "YELLOW";
+    return "GREEN";
+  }, [product]);
 
   /** Sprint A-2(Auto Fill) — register 라우트가 등록 시점에만 돌리던
    * buildCoupangCompliance()를 여기서도 그대로 호출해서 "이미 자동으로 채워질
@@ -1405,6 +1442,7 @@ export function CommerceWorkspace({
       <div className="flex gap-1 overflow-x-auto border-b border-border">
         <TabButton active={tab === "source"} onClick={() => setTab("source")}>
           {TAB_LABELS.source}
+          <ReadinessLevelDot level={commonInfoLevel} />
         </TabButton>
         <TabButton active={tab === "content"} disabled onClick={() => setTab("content")}>
           {TAB_LABELS.content}
@@ -1417,6 +1455,7 @@ export function CommerceWorkspace({
           // 두고(등록 버튼 자체가 registrationEnabled=false로 막혀 있어 무관하다),
           // 탭 클릭 가능 여부/배지만 smartstore를 예외 처리한다.
           const previewOnly = platformId === "smartstore";
+          const readiness = platformReadiness[platformId];
           return (
             <TabButton
               key={platformId}
@@ -1425,12 +1464,57 @@ export function CommerceWorkspace({
               onClick={() => setTab(platformId)}
             >
               {PLATFORM_ADAPTERS[platformId].label}
+              {readiness && <ReadinessLevelDot level={readinessStateToLevel(readiness.state)} />}
               {previewOnly && <PreviewBadge />}
               {soon && !previewOnly && <SoonBadge />}
             </TabButton>
           );
         })}
       </div>
+
+      {/* N-4.08 STEP6-4(CPO 지시: "부족한 항목을 한눈에") — 방문한 적 있는 탭
+          중 아직 등록 가능(READY)이 아닌 것만 모아 보여준다. 새 계산이 아니라
+          PlatformPreview가 이미 만들어둔 priorityItems(RegistrationStatusBanner와
+          완전히 같은 데이터)를 재사용한다. */}
+      {Object.entries(platformReadiness).some(([, r]) => r.state !== "READY") && (
+        <div className="rounded-lg border border-border bg-surface p-3 text-sm">
+          <p className="mb-2 text-xs font-medium text-text-tertiary">등록 준비 상태</p>
+          <ul className="space-y-2">
+            {commonInfoLevel !== "GREEN" && (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setTab("source")}
+                  className="flex items-center gap-1.5 text-left hover:underline"
+                >
+                  <ReadinessLevelDot level={commonInfoLevel} />
+                  <span className="font-medium text-text-primary">상품정보</span>
+                  <span className="text-xs text-text-tertiary">— 상품명/이미지/가격을 확인해주세요</span>
+                </button>
+              </li>
+            )}
+            {(Object.entries(platformReadiness) as [PlatformId, { state: RegistrationReadinessState; priorityItems: PriorityItem[] }][])
+              .filter(([, r]) => r.state !== "READY")
+              .map(([platformId, r]) => (
+                <li key={platformId}>
+                  <button
+                    type="button"
+                    onClick={() => setTab(platformId)}
+                    className="flex items-center gap-1.5 text-left hover:underline"
+                  >
+                    <ReadinessLevelDot level={readinessStateToLevel(r.state)} />
+                    <span className="font-medium text-text-primary">{PLATFORM_ADAPTERS[platformId].label}</span>
+                    {r.priorityItems.length > 0 && (
+                      <span className="text-xs text-text-tertiary">
+                        — {r.priorityItems.map((item) => item.label).join(", ")}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              ))}
+          </ul>
+        </div>
+      )}
 
       {tab === "source" && (
         <>
@@ -1497,6 +1581,7 @@ export function CommerceWorkspace({
           compliancePreview={complianceReportPreview}
           payloadPreview={payloadPreviewEligible ? payloadPreview : null}
           payloadPreviewUnavailableReason={payloadPreviewEligible ? payloadPreviewUnavailableReason : null}
+          onReadinessChange={(state, priorityItems) => handleReadinessChange(tab, state, priorityItems)}
           onUpdateField={updateField}
           onUpdateSalePriceKrw={updateSalePriceKrw}
           onUpdateOriginalPrice={updateOriginalPrice}
@@ -1624,4 +1709,12 @@ function PreviewBadge() {
       PREVIEW
     </span>
   );
+}
+
+/** N-4.08 STEP6-4 — 탭 옆에 붙는 🟢🟡🔴 점. RegistrationStatusBanner(탭 안,
+ * 자세한 4-state)와 다른 판정을 새로 만들지 않는다 — readinessStateToLevel()이
+ * 그 4-state를 3단계로 이름만 바꾼 값을 그대로 받아 그린다. */
+function ReadinessLevelDot({ level }: { level: ReadinessLevel }) {
+  const color = level === "GREEN" ? "bg-success" : level === "YELLOW" ? "bg-warning" : "bg-error";
+  return <span className={`inline-block h-2 w-2 rounded-full ${color}`} aria-label={level} />;
 }
