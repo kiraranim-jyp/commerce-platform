@@ -56,9 +56,21 @@ export interface DomesticMarketSummary {
   highestPriceKrw: number | null;
   averagePriceKrw: number | null;
   sellerCount: number;
-  /** "대표 경쟁상품" — 최저가 리스팅 상위 몇 개. */
-  sampleListings: { mallName: string | null; priceKrw: number; productUrl: string | null }[];
+  /** "대표 경쟁상품" — 최저가 리스팅 상위 몇 개. N-4.07 Sprint(대표님 지시:
+   * "출처 + 가격 + 확인시간을 보여준다") — checkedAt을 추가한다(이전엔 요약
+   * 전체의 checkedAt만 있고 리스팅별로는 없었다). */
+  sampleListings: { mallName: string | null; priceKrw: number; productUrl: string | null; checkedAt: string }[];
   checkedAt: string | null;
+}
+
+/** N-4.07 Sprint(대표님 지시: "오래된 가격은 🟡 오래된 가격 표시") — 이 값보다
+ * 오래된 관측치는 "여전히 최신 데이터인 것처럼" 보여주지 않는다. cron이 매일
+ * 도는 게 정상이니 7일이면 이미 여러 번 갱신 실패가 이어졌다는 뜻이다. */
+export const STALE_PRICE_DAYS = 7;
+
+export function isPriceStale(checkedAt: string, now: Date = new Date()): boolean {
+  const ageMs = now.getTime() - new Date(checkedAt).getTime();
+  return ageMs > STALE_PRICE_DAYS * 24 * 60 * 60 * 1000;
 }
 
 function summarizeFrom(records: PriceObservationRecord[], tier: DomesticMarketTier): DomesticMarketSummary {
@@ -78,6 +90,7 @@ function summarizeFrom(records: PriceObservationRecord[], tier: DomesticMarketTi
       mallName: r.sourceLabel,
       priceKrw: r.priceKrw,
       productUrl: r.sourceProductUrl,
+      checkedAt: r.checkedAt,
     })),
     checkedAt,
   };

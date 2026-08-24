@@ -22,6 +22,7 @@ function readiness(
 ): SnapshotReadiness {
   return {
     priceValid: true,
+    priceLevel: "UNKNOWN",
     platforms: states.map((state, i) => ({
       platform: "smartstore" as const,
       supported: true,

@@ -31,6 +31,8 @@ interface DashboardPlatform {
   registered: boolean;
 }
 
+type PriceLevel = "GREEN" | "YELLOW" | "RED" | "UNKNOWN";
+
 interface DashboardProduct {
   id: string;
   sourceUrl: string;
@@ -38,7 +40,7 @@ interface DashboardProduct {
   thumbnailUrl: string | null;
   status: "IN_PROGRESS" | "REGISTERED";
   priorityTier: 1 | 2 | 3 | 4 | 5;
-  readiness: { priceValid: boolean; platforms: DashboardPlatform[] };
+  readiness: { priceValid: boolean; priceLevel?: PriceLevel; platforms: DashboardPlatform[] };
   /** Sprint B-2(CPO 지시: "/today와도 연결해서 해당 작업을 추적할 수 있게") —
    * 마이그레이션 025 미실행/레거시 스냅샷은 null. */
   jobKey: string | null;
@@ -60,6 +62,15 @@ const PLATFORM_STATE_META: Record<RegistrationReadinessState, { icon: string; la
   READY: { icon: "🟢", label: "등록 가능" },
 };
 
+/** N-4.07 Sprint(대표님 지시: "가격 데이터가 없다고 등록이 불가능한 게 아니다") —
+ * UNKNOWN은 "확인 필요" 목록에 안 올린다(아래 필터 참고), 배지만 회색으로 둔다. */
+const PRICE_LEVEL_META: Record<PriceLevel, { icon: string; label: string }> = {
+  GREEN: { icon: "🟢", label: "가격 경쟁력 있음" },
+  YELLOW: { icon: "🟡", label: "가격 확인 필요" },
+  RED: { icon: "🔴", label: "마진 위험" },
+  UNKNOWN: { icon: "⚪", label: "가격 판단 불가" },
+};
+
 function sourceSiteName(url: string): string {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
@@ -73,6 +84,8 @@ export default function TodayPage() {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [errored, setErrored] = useState(false);
+  const [bulkChecking, setBulkChecking] = useState(false);
+  const [bulkCheckProgress, setBulkCheckProgress] = useState<{ done: number; total: number } | null>(null);
 
   async function load() {
     setLoading(true);
@@ -92,6 +105,38 @@ export default function TodayPage() {
   useEffect(() => {
     void load();
   }, []);
+
+  /** N-4.07 Sprint(대표님 지시: "대시보드 [가격 일괄 확인]") — 화면에 보이는
+   * 상품 전부에 대해 /api/price-history/check를 순차 배치(동시성 3)로 호출한다
+   * — /api/dashboard/readiness가 이미 쓰는 것과 같은 동시성 값이다(서버가
+   * 이미 그 값으로 안전하다고 판단한 값을 클라이언트에서 또 다른 값으로
+   * 새로 만들지 않는다). */
+  async function bulkRecheck() {
+    if (!data) return;
+    const ids = data.products.filter((p) => p.status !== "REGISTERED").map((p) => p.id);
+    if (ids.length === 0) return;
+    setBulkChecking(true);
+    setBulkCheckProgress({ done: 0, total: ids.length });
+    const concurrency = 3;
+    let done = 0;
+    for (let i = 0; i < ids.length; i += concurrency) {
+      const chunk = ids.slice(i, i + concurrency);
+      await Promise.all(
+        chunk.map((snapshotId) =>
+          fetch("/api/price-history/check", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ snapshotId }),
+          }).catch(() => null),
+        ),
+      );
+      done += chunk.length;
+      setBulkCheckProgress({ done, total: ids.length });
+    }
+    setBulkChecking(false);
+    setBulkCheckProgress(null);
+    await load();
+  }
 
   return (
     <>
@@ -116,7 +161,14 @@ export default function TodayPage() {
         ) : (
           <>
             <Card padding="md" className="mb-4">
-              <p className="text-base font-semibold text-text-primary">{data.headline}</p>
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-base font-semibold text-text-primary">{data.headline}</p>
+                <Button variant="secondary" size="sm" onClick={() => void bulkRecheck()} disabled={bulkChecking}>
+                  {bulkChecking
+                    ? `가격 확인 중... (${bulkCheckProgress?.done ?? 0}/${bulkCheckProgress?.total ?? 0})`
+                    : "가격 일괄 확인"}
+                </Button>
+              </div>
               <div className="mt-3 flex flex-wrap gap-3 text-sm">
                 {(["1", "2", "3", "4", "5"] as const).map((tier) => {
                   const meta = data.tierMeta[tier];
@@ -131,6 +183,20 @@ export default function TodayPage() {
                     </span>
                   );
                 })}
+                {/* N-4.07 Sprint(대표님 지시: "가격 확인 필요 N개") — 새 판정이
+                    아니라 각 카드가 이미 갖고 있는 priceLevel을 그냥 센다. */}
+                {(() => {
+                  const priceAttentionCount = data.products.filter(
+                    (p) => p.readiness.priceLevel === "YELLOW" || p.readiness.priceLevel === "RED",
+                  ).length;
+                  if (priceAttentionCount === 0) return null;
+                  return (
+                    <span className="flex items-center gap-1 text-text-secondary">
+                      <span>🟡</span>
+                      <span>가격 확인 필요 {priceAttentionCount}개</span>
+                    </span>
+                  );
+                })()}
               </div>
             </Card>
 
@@ -185,6 +251,14 @@ export default function TodayPage() {
                           </span>
                         );
                       })}
+                      {(() => {
+                        const priceMeta = PRICE_LEVEL_META[product.readiness.priceLevel ?? "UNKNOWN"];
+                        return (
+                          <span className="text-text-secondary">
+                            가격 {priceMeta.icon} {priceMeta.label}
+                          </span>
+                        );
+                      })()}
                       {product.error && <span className="text-error">계산 실패: {product.error}</span>}
                     </div>
                   </div>

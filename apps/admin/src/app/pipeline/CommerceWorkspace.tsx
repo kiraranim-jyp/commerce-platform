@@ -42,6 +42,7 @@ import { AIContentPanel } from "./commerce/AIContentPanel";
 import { BacklogPanel } from "./commerce/BacklogPanel";
 import { ComparisonShopSearch } from "./commerce/ComparisonShopSearch";
 import { DomesticPriceIntelligencePanel } from "./commerce/DomesticPriceIntelligencePanel";
+import type { PriceLevel } from "./commerce/DomesticPriceIntelligencePanel";
 import { AuditLogPanel } from "./commerce/AuditLogPanel";
 import { DomesticShopSearch } from "./commerce/DomesticShopSearch";
 import { ImageInlineEditor } from "./ImageInlineEditor";
@@ -184,6 +185,15 @@ export function CommerceWorkspace({
       if (existing && existing.state === state && existing.priorityItems.length === priorityItems.length) return prev;
       return { ...prev, [platformId]: { state, priorityItems } };
     });
+  }
+
+  /** N-4.07 Sprint(대표님 지시: "가격경쟁력을 상품정보/스마트스토어/쿠팡과 나란히
+   * 4번째 차원으로") — DomesticPriceIntelligencePanel(상품정보 탭 안에서만
+   * 마운트됨)이 보고하는 값을 캐싱한다. 그 탭을 아직 안 열었으면 UNKNOWN으로
+   * 남는다 — platformReadiness와 같은 "sticky visited" 원칙. */
+  const [priceLevel, setPriceLevel] = useState<PriceLevel>("UNKNOWN");
+  function handlePriceLevelChange(level: PriceLevel) {
+    setPriceLevel((prev) => (prev === level ? prev : level));
   }
 
   useEffect(() => {
@@ -1472,11 +1482,35 @@ export function CommerceWorkspace({
         })}
       </div>
 
+      {/* N-4.07 Sprint(대표님 지시: "상품정보 🟢 · 스마트스토어 🟢 · 쿠팡 🟡 · 가격 🟢
+          처럼 한눈에") — 새 판정이 아니라 이미 계산된 값(commonInfoLevel/
+          platformReadiness/priceLevel)을 한 줄로 나열만 한다. 방문한 적 있는
+          항목만 표시한다(sticky visited — 위 탭 배지와 같은 원칙). */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary">
+        <span className="flex items-center gap-1">
+          <ReadinessLevelDot level={commonInfoLevel} /> 상품정보
+        </span>
+        {PLATFORM_ORDER.filter((platformId) => platformReadiness[platformId]).map((platformId) => (
+          <span key={platformId} className="flex items-center gap-1">
+            <ReadinessLevelDot level={readinessStateToLevel(platformReadiness[platformId]!.state)} />{" "}
+            {PLATFORM_ADAPTERS[platformId].label}
+          </span>
+        ))}
+        <span className="flex items-center gap-1">
+          <PriceLevelDot level={priceLevel} /> 가격경쟁력
+        </span>
+      </div>
+
       {/* N-4.08 STEP6-4(CPO 지시: "부족한 항목을 한눈에") — 방문한 적 있는 탭
           중 아직 등록 가능(READY)이 아닌 것만 모아 보여준다. 새 계산이 아니라
           PlatformPreview가 이미 만들어둔 priorityItems(RegistrationStatusBanner와
-          완전히 같은 데이터)를 재사용한다. */}
-      {Object.entries(platformReadiness).some(([, r]) => r.state !== "READY") && (
+          완전히 같은 데이터)를 재사용한다. N-4.07 Sprint — 가격경쟁력도 같은
+          원칙으로 추가한다(단, priceLevel==="UNKNOWN"은 "부족"이 아니라 "아직
+          모름"이라 여기 목록에는 올리지 않는다 — 대표님 지시: "가격 데이터가
+          없다고 등록이 불가능한 게 아니다"). */}
+      {(Object.entries(platformReadiness).some(([, r]) => r.state !== "READY") ||
+        priceLevel === "YELLOW" ||
+        priceLevel === "RED") && (
         <div className="rounded-lg border border-border bg-surface p-3 text-sm">
           <p className="mb-2 text-xs font-medium text-text-tertiary">등록 준비 상태</p>
           <ul className="space-y-2">
@@ -1512,6 +1546,21 @@ export function CommerceWorkspace({
                   </button>
                 </li>
               ))}
+            {(priceLevel === "YELLOW" || priceLevel === "RED") && (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setTab("source")}
+                  className="flex items-center gap-1.5 text-left hover:underline"
+                >
+                  <PriceLevelDot level={priceLevel} />
+                  <span className="font-medium text-text-primary">가격경쟁력</span>
+                  <span className="text-xs text-text-tertiary">
+                    — {priceLevel === "RED" ? "예상 마진이 낮습니다" : "국내 평균가보다 판매가가 높습니다"}
+                  </span>
+                </button>
+              </li>
+            )}
           </ul>
         </div>
       )}
@@ -1551,7 +1600,9 @@ export function CommerceWorkspace({
             sourceUrl={product.sourceUrl}
             sku={product.sku.value || undefined}
           />
-          {snapshotId && <DomesticPriceIntelligencePanel snapshotId={snapshotId} />}
+          {snapshotId && (
+            <DomesticPriceIntelligencePanel snapshotId={snapshotId} onPriceLevelChange={handlePriceLevelChange} />
+          )}
           {snapshotId && <AuditLogPanel snapshotId={snapshotId} />}
           <BacklogPanel />
         </>
@@ -1716,5 +1767,15 @@ function PreviewBadge() {
  * 그 4-state를 3단계로 이름만 바꾼 값을 그대로 받아 그린다. */
 function ReadinessLevelDot({ level }: { level: ReadinessLevel }) {
   const color = level === "GREEN" ? "bg-success" : level === "YELLOW" ? "bg-warning" : "bg-error";
+  return <span className={`inline-block h-2 w-2 rounded-full ${color}`} aria-label={level} />;
+}
+
+/** N-4.07 Sprint(대표님 지시: "가격 데이터가 없다고 🔴로 처리하면 안 된다 —
+ * ⚪ 판단불가를 별도로 둔다") — ReadinessLevelDot과 같은 모양이지만 UNKNOWN(회색)
+ * 한 단계가 더 있다. 등록 3-state(GREEN/YELLOW/RED)에는 이 값이 없다 — 가격
+ * 데이터 부재가 등록 차단과 무관하기 때문에 억지로 그 타입에 끼워넣지 않는다. */
+function PriceLevelDot({ level }: { level: PriceLevel }) {
+  const color =
+    level === "GREEN" ? "bg-success" : level === "YELLOW" ? "bg-warning" : level === "RED" ? "bg-error" : "bg-border";
   return <span className={`inline-block h-2 w-2 rounded-full ${color}`} aria-label={level} />;
 }

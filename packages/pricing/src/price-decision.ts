@@ -95,3 +95,17 @@ export function computePriceDecision(input: PriceDecisionInput): PriceDecisionRe
     reason: `현재 판매가: ₩${currentSellingPriceKrw.toLocaleString()}, 국내 평균: ₩${domesticAveragePriceKrw!.toLocaleString()}, 예상 마진: ${marginPercent}% — 가격 경쟁력이 있어 유지를 권장합니다.`,
   };
 }
+
+/** N-4.07 Sprint(대표님 지시: "전체 등록상태/대시보드에 가격경쟁력을 🟢🟡🔴로,
+ * 단 데이터가 없으면 🔴가 아니라 ⚪ 판단불가로") — verdict 3-state에 "아직 계산
+ * 못함"을 더한 4번째 값. 서버(대시보드 API)와 클라이언트(패널 UI) 양쪽에서
+ * 같은 매핑을 쓰기 위해 packages/pricing에 둔다 — 두 곳에 각자 새로 만들지
+ * 않는다. */
+export type PriceLevel = "GREEN" | "YELLOW" | "RED" | "UNKNOWN";
+
+export function priceLevelFromVerdict(verdict: PriceDecisionVerdict | null): PriceLevel {
+  if (!verdict) return "UNKNOWN";
+  if (verdict === "MAINTAIN") return "GREEN";
+  if (verdict === "CONSIDER_LOWER") return "YELLOW";
+  return "RED";
+}
