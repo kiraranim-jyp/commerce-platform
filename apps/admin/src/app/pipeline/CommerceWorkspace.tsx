@@ -1557,6 +1557,7 @@ export function CommerceWorkspace({
                   <span className="font-medium text-text-primary">가격경쟁력</span>
                   <span className="text-xs text-text-tertiary">
                     — {priceLevel === "RED" ? "예상 마진이 낮습니다" : "국내 평균가보다 판매가가 높습니다"}
+                    {" "}(⚠️ 등록 자체는 가능합니다)
                   </span>
                 </button>
               </li>

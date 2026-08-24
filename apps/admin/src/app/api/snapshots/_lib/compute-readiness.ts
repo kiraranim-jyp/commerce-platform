@@ -53,6 +53,18 @@ export interface PlatformReadiness {
   registered: boolean;
 }
 
+/** N-4.11 STEP3(대표님 지시: "대시보드에서 마진율/판매가/최저가/확인시간으로
+ * 정렬") — priceLevel 하나만으로는 정렬이 안 돼서 값 자체를 같이 내려준다.
+ * 새 계산이 아니다 — computePriceDecision/summarizeDomesticMarket이 이미 낸
+ * 숫자를 그대로 옮긴다. */
+export interface SnapshotPriceSummary {
+  level: PriceLevel;
+  marginPercent: number | null;
+  currentSellingPriceKrw: number | null;
+  domesticLowestPriceKrw: number | null;
+  lastCheckedAt: string | null;
+}
+
 export interface SnapshotReadiness {
   priceValid: boolean;
   /** N-4.07 Sprint(대표님 지시: "대시보드에서도 가격경쟁력을 컬럼으로") —
@@ -62,29 +74,52 @@ export interface SnapshotReadiness {
    * 없고, 상품 최대 30개를 매번 외부 환율 API까지 불러 계산하면 대시보드가
    * 느려진다(이 파일 상단 주석과 같은 비용 판단). */
   priceLevel: PriceLevel;
+  price: SnapshotPriceSummary;
   platforms: PlatformReadiness[];
 }
 
 const SUPPORTED_PLATFORMS: PlatformId[] = ["smartstore", "coupang", "elevenst"];
 
-async function computePriceLevelForSnapshot(snapshotId: string, product: CanonicalProduct): Promise<PriceLevel> {
+const EMPTY_PRICE_SUMMARY: SnapshotPriceSummary = {
+  level: "UNKNOWN",
+  marginPercent: null,
+  currentSellingPriceKrw: null,
+  domesticLowestPriceKrw: null,
+  lastCheckedAt: null,
+};
+
+async function computePriceSummaryForSnapshot(
+  snapshotId: string,
+  product: CanonicalProduct,
+): Promise<SnapshotPriceSummary> {
   const currentSellingPriceKrw = product.priceOverrideKrw?.value ?? null;
-  if (currentSellingPriceKrw == null) return "UNKNOWN";
+  if (currentSellingPriceKrw == null) return EMPTY_PRICE_SUMMARY;
   const [originHistory, domesticShopHistory, naverShoppingHistory] = await Promise.all([
     getPriceHistory(snapshotId, "SELLER_ORIGIN"),
     getPriceHistory(snapshotId, "DOMESTIC_SHOP"),
     getPriceHistory(snapshotId, "NAVER_SHOPPING"),
   ]);
   const costPriceKrw = originHistory[0]?.priceKrw ?? null;
-  if (costPriceKrw == null) return "UNKNOWN";
-  const domesticSummary = summarizeDomesticMarket([...domesticShopHistory, ...naverShoppingHistory]);
+  if (costPriceKrw == null) return { ...EMPTY_PRICE_SUMMARY, currentSellingPriceKrw };
+  const domesticRecords = [...domesticShopHistory, ...naverShoppingHistory];
+  const domesticSummary = summarizeDomesticMarket(domesticRecords);
   const decision = computePriceDecision({
     costPriceKrw,
     currentSellingPriceKrw,
     domesticAveragePriceKrw: domesticSummary.averagePriceKrw,
     domesticLowestPriceKrw: domesticSummary.lowestPriceKrw,
   });
-  return priceLevelFromVerdict(decision.verdict);
+  const lastCheckedAt = [...originHistory, ...domesticRecords].reduce<string | null>(
+    (latest, r) => (!latest || r.checkedAt > latest ? r.checkedAt : latest),
+    null,
+  );
+  return {
+    level: priceLevelFromVerdict(decision.verdict),
+    marginPercent: decision.marginPercent,
+    currentSellingPriceKrw,
+    domesticLowestPriceKrw: domesticSummary.lowestPriceKrw,
+    lastCheckedAt,
+  };
 }
 
 async function computeSmartstoreReadiness(
@@ -224,9 +259,9 @@ export async function computeSnapshotReadiness(
   categoryMappings: Partial<Record<PlatformId, CategorySelection>> | undefined,
 ): Promise<SnapshotReadiness> {
   const priceValid = product.priceValidity === "VALID";
-  const [registeredPlatforms, priceLevel] = await Promise.all([
+  const [registeredPlatforms, price] = await Promise.all([
     getRegisteredPlatforms(snapshotId),
-    computePriceLevelForSnapshot(snapshotId, product),
+    computePriceSummaryForSnapshot(snapshotId, product),
   ]);
 
   const platforms = await Promise.all(
@@ -240,5 +275,5 @@ export async function computeSnapshotReadiness(
     }),
   );
 
-  return { priceValid, priceLevel, platforms };
+  return { priceValid, priceLevel: price.level, price, platforms };
 }

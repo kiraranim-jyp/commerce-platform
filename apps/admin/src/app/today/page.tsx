@@ -40,7 +40,18 @@ interface DashboardProduct {
   thumbnailUrl: string | null;
   status: "IN_PROGRESS" | "REGISTERED";
   priorityTier: 1 | 2 | 3 | 4 | 5;
-  readiness: { priceValid: boolean; priceLevel?: PriceLevel; platforms: DashboardPlatform[] };
+  readiness: {
+    priceValid: boolean;
+    priceLevel?: PriceLevel;
+    price?: {
+      level: PriceLevel;
+      marginPercent: number | null;
+      currentSellingPriceKrw: number | null;
+      domesticLowestPriceKrw: number | null;
+      lastCheckedAt: string | null;
+    };
+    platforms: DashboardPlatform[];
+  };
   /** Sprint B-2(CPO 지시: "/today와도 연결해서 해당 작업을 추적할 수 있게") —
    * 마이그레이션 025 미실행/레거시 스냅샷은 null. */
   jobKey: string | null;
@@ -86,6 +97,13 @@ export default function TodayPage() {
   const [errored, setErrored] = useState(false);
   const [bulkChecking, setBulkChecking] = useState(false);
   const [bulkCheckProgress, setBulkCheckProgress] = useState<{ done: number; total: number } | null>(null);
+  /** N-4.11 STEP3(대표님 지시: "오늘 어떤 상품 가격부터 손봐야 하는지 바로
+   * 알 수 있어야 한다") — 새 판정이 아니라 이미 계산된 priceLevel/price 값을
+   * 클라이언트에서 필터링/정렬만 한다(서버 재계산 없음, /api 재호출 없음). */
+  const [priceFilter, setPriceFilter] = useState<PriceLevel | "ALL">("ALL");
+  const [priceSort, setPriceSort] = useState<
+    "NONE" | "RISK" | "MARGIN" | "SELLING_PRICE" | "LOWEST_PRICE" | "LAST_CHECKED"
+  >("NONE");
 
   async function load() {
     setLoading(true);
@@ -137,6 +155,39 @@ export default function TodayPage() {
     setBulkCheckProgress(null);
     await load();
   }
+
+  const RISK_ORDER: Record<PriceLevel, number> = { RED: 0, YELLOW: 1, UNKNOWN: 2, GREEN: 3 };
+  const visibleProducts = (data?.products ?? [])
+    .filter((p) => priceFilter === "ALL" || (p.readiness.priceLevel ?? "UNKNOWN") === priceFilter)
+    .slice()
+    .sort((a, b) => {
+      if (priceSort === "NONE") return 0;
+      const pa = a.readiness.price;
+      const pb = b.readiness.price;
+      if (priceSort === "RISK") {
+        return RISK_ORDER[a.readiness.priceLevel ?? "UNKNOWN"] - RISK_ORDER[b.readiness.priceLevel ?? "UNKNOWN"];
+      }
+      if (priceSort === "MARGIN") {
+        // 마진율 오름차순(위험한 것부터) — null(계산 불가)은 맨 뒤로.
+        if (pa?.marginPercent == null) return 1;
+        if (pb?.marginPercent == null) return -1;
+        return pa.marginPercent - pb.marginPercent;
+      }
+      if (priceSort === "SELLING_PRICE") {
+        if (pa?.currentSellingPriceKrw == null) return 1;
+        if (pb?.currentSellingPriceKrw == null) return -1;
+        return pb.currentSellingPriceKrw - pa.currentSellingPriceKrw;
+      }
+      if (priceSort === "LOWEST_PRICE") {
+        if (pa?.domesticLowestPriceKrw == null) return 1;
+        if (pb?.domesticLowestPriceKrw == null) return -1;
+        return pa.domesticLowestPriceKrw - pb.domesticLowestPriceKrw;
+      }
+      // LAST_CHECKED — 오래된 것부터(먼저 확인해야 할 것을 위로).
+      if (!pa?.lastCheckedAt) return -1;
+      if (!pb?.lastCheckedAt) return 1;
+      return pa.lastCheckedAt < pb.lastCheckedAt ? -1 : 1;
+    });
 
   return (
     <>
@@ -200,8 +251,48 @@ export default function TodayPage() {
               </div>
             </Card>
 
+            <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="text-text-tertiary">가격 필터</span>
+                {(["ALL", "GREEN", "YELLOW", "RED", "UNKNOWN"] as const).map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setPriceFilter(level)}
+                    className={`rounded-full border px-2 py-1 font-medium ${
+                      priceFilter === level
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-text-secondary hover:bg-background"
+                    }`}
+                  >
+                    {level === "ALL" ? "전체" : `${PRICE_LEVEL_META[level].icon} ${PRICE_LEVEL_META[level].label}`}
+                  </button>
+                ))}
+              </div>
+              <label className="flex items-center gap-1.5 text-text-tertiary">
+                정렬
+                <select
+                  value={priceSort}
+                  onChange={(e) => setPriceSort(e.target.value as typeof priceSort)}
+                  className="rounded-md border border-border bg-surface px-2 py-1 text-text-secondary"
+                >
+                  <option value="NONE">기본(우선순위)</option>
+                  <option value="RISK">가격 위험도</option>
+                  <option value="MARGIN">마진율 낮은 순</option>
+                  <option value="SELLING_PRICE">내 판매가 높은 순</option>
+                  <option value="LOWEST_PRICE">국내 최저가 낮은 순</option>
+                  <option value="LAST_CHECKED">확인시간 오래된 순</option>
+                </select>
+              </label>
+              {visibleProducts.length !== data.products.length && (
+                <span className="text-text-tertiary">
+                  {visibleProducts.length}/{data.products.length}개 표시 중
+                </span>
+              )}
+            </div>
+
             <div className="space-y-3">
-              {data.products.map((product) => (
+              {visibleProducts.map((product) => (
                 <Card key={product.id} padding="md" className="flex items-center gap-4">
                   {product.thumbnailUrl ? (
                     <img

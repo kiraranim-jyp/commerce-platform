@@ -200,10 +200,10 @@ function ResultTable({ results }: { results: SearchResult[] }) {
                       >
                         {MATCH_LEVEL_ICON[c.matchLevel]}{" "}
                         {c.matchLevel === "very_high" || c.matchLevel === "high"
-                          ? "동일상품"
+                          ? "동일상품 확정"
                           : c.matchLevel === "medium"
-                            ? "유사상품"
-                            : "매칭 불확실"}
+                            ? "동일상품 가능성 높음"
+                            : "확인 필요"}
                       </span>
                     ) : (
                       "—"

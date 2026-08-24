@@ -1735,6 +1735,53 @@ describe("buildNaverProductPayload — naverShoppingSearchInfo.modelName 연결(
     });
     expect(payload.originProduct.detailAttribute?.naverShoppingSearchInfo).toBeUndefined();
   });
+
+  // N-4.11 STEP7(대표님 지시: "product.modelName vs naverShoppingSearchInfo.
+  // modelName 필드 충돌 정리") — 원문에 Product code 패턴이 없어 자동추출이
+  // 실패했을 때, validate-payload.ts의 BLOCKED 안내("상품 정보 편집 화면에서
+  // 모델명을 직접 입력해야 합니다")가 실제로 통하는지 고정한다. 사용자가
+  // product.modelName을 직접 입력(USER_EDITED)하면 이 필드에도 반영돼야 한다
+  // — 고치기 전에는 아무리 입력해도 이 필드가 계속 undefined였다(실제 버그).
+  it("원문에 Product code가 없어도 사용자가 modelName을 직접 입력했으면 그 값을 쓴다(N-4.11 버그 수정)", () => {
+    const product = makeMinimalProduct();
+    product.brand = field("");
+    product.manufacturer = field("");
+    product.modelName = { value: "SS26-CUSTOM-001", source: "USER_EDITED", confidence: 1 };
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.originProduct.detailAttribute?.naverShoppingSearchInfo?.modelName).toBe("SS26-CUSTOM-001");
+  });
+
+  it("원문 Product code 자동추출이 사용자 입력 modelName보다 우선한다", () => {
+    const product = makeMinimalProduct();
+    product.description = field("Some item. Product code AB123.");
+    product.modelName = { value: "USER-TYPED-CODE", source: "USER_EDITED", confidence: 1 };
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.originProduct.detailAttribute?.naverShoppingSearchInfo?.modelName).toBe("AB123");
+  });
+
+  it("modelName이 REQUIRED(사용자 입력 아님) source면 자동추출 실패 시에도 쓰지 않는다(임의 값 금지)", () => {
+    const product = makeMinimalProduct();
+    product.brand = field("");
+    product.manufacturer = field("");
+    // makeMinimalProduct 기본값 그대로(REQUIRED 등 USER_EDITED가 아닌 source) 사용.
+    const listing = makeMinimalListing(product);
+    const payload = buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+    });
+    expect(payload.originProduct.detailAttribute?.naverShoppingSearchInfo).toBeUndefined();
+  });
 });
 
 /**

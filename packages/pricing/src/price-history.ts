@@ -73,6 +73,21 @@ export function isPriceStale(checkedAt: string, now: Date = new Date()): boolean
   return ageMs > STALE_PRICE_DAYS * 24 * 60 * 60 * 1000;
 }
 
+/** N-4.11 STEP1(대표님 지시: "오늘 확인/1~6일/7~30일/30일+/가격 없음을 명확하게") —
+ * isPriceStale()의 단순 boolean보다 세분화된 단계. 새 신뢰도 판정이 아니라
+ * "확인한 지 얼마나 됐는지"만 보여주는 표시용 값 — STALE/VERY_STALE 둘 다
+ * isPriceStale()==true 구간과 정확히 겹친다(7일 경계를 두 곳에서 서로 다르게
+ * 재정의하지 않는다). */
+export type PriceAgeTier = "TODAY" | "RECENT" | "STALE" | "VERY_STALE";
+
+export function priceAgeTier(checkedAt: string, now: Date = new Date()): PriceAgeTier {
+  const ageDays = (now.getTime() - new Date(checkedAt).getTime()) / (24 * 60 * 60 * 1000);
+  if (ageDays < 1) return "TODAY";
+  if (ageDays < STALE_PRICE_DAYS) return "RECENT";
+  if (ageDays < 30) return "STALE";
+  return "VERY_STALE";
+}
+
 function summarizeFrom(records: PriceObservationRecord[], tier: DomesticMarketTier): DomesticMarketSummary {
   const prices = records.map((r) => r.priceKrw);
   const lowestPriceKrw = Math.min(...prices);

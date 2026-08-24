@@ -23,6 +23,13 @@ function readiness(
   return {
     priceValid: true,
     priceLevel: "UNKNOWN",
+    price: {
+      level: "UNKNOWN",
+      marginPercent: null,
+      currentSellingPriceKrw: null,
+      domesticLowestPriceKrw: null,
+      lastCheckedAt: null,
+    },
     platforms: states.map((state, i) => ({
       platform: "smartstore" as const,
       supported: true,

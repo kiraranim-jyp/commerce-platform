@@ -245,3 +245,32 @@ const FAILURE_BUCKET_BY_CODE: Record<ErrorCode, FailureBucket> = {
 export function classifyFailureBucket(code: ErrorCode): FailureBucket {
   return FAILURE_BUCKET_BY_CODE[code];
 }
+
+/**
+ * N-4.11 STEP12(대표님 지시: "커머스가 늘어나기 전에 공통 결과 형태를 확정한다,
+ * 판매자에게는 기술 에러 대신 '쿠팡 카테고리가 필요합니다'처럼 보여야 한다") —
+ * 조사 결과, 요청하신 형태는 이미 이 파일에 구현돼 있다:
+ *
+ *   등록 성공/실패     → ListingResult.status(packages/listing/src/types.ts)
+ *   인증 실패          → API001/API002
+ *   카테고리 오류       → AI001/CP001
+ *   필수정보 누락       → CP005(일반)/CP002·CP003(배송·반품지)/CP004(옵션)
+ *   가격 오류           → EXT003/CP008
+ *   재고 오류           → 전용 코드 없음(쿠팡 API가 실제로 이 사유로 거부한
+ *                          사례를 아직 실측하지 못했다 — 발생하면 API005
+ *                          "쿠팡이 등록 요청을 거부했습니다"로 잡히고 있다.
+ *                          실제 사례 확인 전에는 재고 전용 코드를 새로 만들지
+ *                          않는다, 추측 코드 금지 원칙)
+ *   배송정보 오류       → CP002/CP003
+ *   커머스 API 오류     → API003/API004/API006
+ *
+ * 이 구조는 현재 Coupang(CP·API 코드) 전용으로 채워져 있지만 prefix 체계
+ * (IMG/EXT/AI/CP/API) 자체는 플랫폼에 종속되지 않는다 — SmartStore/향후
+ * Kakao가 등록 시점에 실패 사유를 이 표현으로 매핑하려면, 새 prefix(예: NV
+ * for Naver, KK for Kakao)를 여기 ErrorCode 유니언에 추가하고
+ * FAILURE_BUCKET_BY_CODE에 버킷만 매핑하면 된다 — 새 구조를 만들 필요 없다.
+ * SmartStore는 지금 이 코드 체계 대신 필드별 READY/MISSING/BLOCKED
+ * (validate-payload.ts)를 쓰는데, 그건 "등록 전 무엇이 부족한지"를 보여주는
+ * 다른 층위의 문제라 여기서 통합하지 않는다(등록 실행 자체의 실패 사유
+ * 분류가 이 파일의 역할).
+ */

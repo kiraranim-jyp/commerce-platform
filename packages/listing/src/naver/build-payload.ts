@@ -742,7 +742,19 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
         // 표시의 원인이었다. 셋 다 없으면(모델명도 못 찾고 브랜드/제조사도
         // 없으면) undefined로 필드 자체를 생략한다(기존 규칙 유지).
         naverShoppingSearchInfo: (() => {
-          const modelName = resolveModelNameFromDescription(product.description.value);
+          // N-4.11 STEP7(대표님 지시: "product.modelName vs naverShoppingSearchInfo.
+          // modelName 필드 충돌 정리") — validate-payload.ts가 이 필드 BLOCKED 시
+          // "상품 정보 편집 화면에서 모델명을 직접 입력해야 합니다"라고 안내하지만,
+          // 지금까지 product.modelName(그 편집 화면의 유일한 모델명 입력창)은 이
+          // 필드에 전혀 연결돼 있지 않았다 — 사용자가 안내대로 입력해도 BLOCKED가
+          // 풀리지 않는 실제 버그였다. 원문 자동추출(resolveModelNameFromDescription)을
+          // 여전히 1순위로 두고(더 신뢰도 높은 실제 원문 근거), 패턴이 없을 때만
+          // 사용자가 직접 입력한 값(USER_EDITED)을 대신 쓴다 — 임의 값을 새로
+          // 만드는 게 아니라 사용자가 이미 명시적으로 입력한 값을 그대로 연결하는
+          // 것뿐이다(원산지/제조사 등 기존 필드들과 같은 원칙).
+          const modelName =
+            resolveModelNameFromDescription(product.description.value) ||
+            (product.modelName.source === "USER_EDITED" ? product.modelName.value.trim() || undefined : undefined);
           const manufacturerName = manufacturerValue || undefined;
           const brandName = product.brand.value.trim() || undefined;
           return modelName || manufacturerName || brandName

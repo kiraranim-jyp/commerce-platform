@@ -2266,6 +2266,26 @@ function DescriptionTemplateSection({
 
       {formOpen && (
         <div className="mt-4 space-y-3 border-t border-border pt-4 text-sm">
+          {/* N-4.11 STEP9(대표님 지시: "저장했는데 실제 사용하는 프로필이
+              아니어서 반영되지 않은" 문제를 다른 Settings에서도 확인) —
+              SellerProfileEditor에서 같은 문제를 겪었다: 기본이 아닌 항목을
+              편집해서 저장해도 실제 등록(build-payload)은 isDefault:true인
+              템플릿만 쓴다. templates.length>1일 때만 보여준다(하나뿐이면
+              혼동할 다른 대상이 없다). */}
+          {editingId && templates.length > 1 && (
+            <p
+              className={`rounded-md px-3 py-2 text-xs ${
+                templates.find((t) => t.id === editingId)?.isDefault
+                  ? "bg-primary/10 text-primary"
+                  : "bg-warning-soft text-warning"
+              }`}
+            >
+              지금 편집 중: <span className="font-medium">{name || "(이름 없음)"}</span>{" "}
+              {templates.find((t) => t.id === editingId)?.isDefault
+                ? "(기본 — 실제 등록에 사용됨)"
+                : "(기본 아님 — 여기 저장해도 등록에는 반영되지 않습니다)"}
+            </p>
+          )}
           <Field label="템플릿 이름">
             <input
               type="text"
@@ -3241,6 +3261,16 @@ const OWNERSHIP_LABEL: Record<FieldOwnership, string> = {
   COUPANG_ONLY: "Coupang 전용",
 };
 
+/** N-4.11 STEP10(대표님 지시: "국내 커머스 API 우선순위는 변경하지 않는다 —
+ * 카카오→SSG→롯데ON→G마켓→11번가") — 순서 고정. 11번가/G마켓(ESM)은 이미
+ * 아래 SOON_STATUS_LABEL 섹션에서 실제 연결상태(NOT_CONFIGURED/NOT_AVAILABLE)를
+ * 보여주므로 여기서는 "아직 조사도 시작 안 한" 나머지 3곳만 정적으로 보여준다. */
+const UPCOMING_COMMERCE_PLATFORMS = [
+  { name: "카카오", status: "연결 준비 중" },
+  { name: "SSG", status: "연결 준비 중" },
+  { name: "롯데ON", status: "연결 준비 중" },
+] as const;
+
 const SOON_STATUS_LABEL: Record<SoonConnectionStatus, string> = {
   NOT_CONFIGURED: "🟡 인증정보 미설정",
   READY_FOR_CONNECTION: "🟢 연결 준비완료",
@@ -3283,6 +3313,25 @@ function PlatformStatusSection() {
 
   return (
     <div className="space-y-6">
+      {/* N-4.11 STEP10(대표님 지시: "미연결 커머스를 오류처럼 보이지 않게, 우선순위:
+          카카오→SSG→롯데ON→G마켓→11번가") — 아직 API 조사/연동을 전혀 시작하지 않은
+          3곳(카카오/SSG/롯데ON)은 정적 목록으로만 표시한다. 실제 어댑터/API 호출은
+          만들지 않는다(STEP11 원칙과 동일) — 순서만 정직하게 보여준다. */}
+      <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
+        <h2 className="text-base font-semibold text-text-primary">연결 예정 커머스</h2>
+        <p className="mt-1 text-xs text-text-secondary">
+          아래 순서대로 API 승인/연동을 진행할 예정입니다 — 아직 준비 중일 뿐, 오류가 아닙니다.
+        </p>
+        <ul className="mt-3 divide-y divide-border text-sm">
+          {UPCOMING_COMMERCE_PLATFORMS.map((entry) => (
+            <li key={entry.name} className="flex items-center justify-between py-2">
+              <span className="font-medium text-text-primary">{entry.name}</span>
+              <span className="text-xs text-text-secondary">⚪ {entry.status}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
         <h2 className="text-base font-semibold text-text-primary">11번가 / G마켓·옥션(ESM) 연결 준비</h2>
         <p className="mt-1 text-xs text-text-secondary">

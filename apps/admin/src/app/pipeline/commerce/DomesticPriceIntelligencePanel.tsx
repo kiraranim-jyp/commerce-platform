@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { isPriceStale, priceLevelFromVerdict, type PriceLevel } from "@commerce/pricing";
+import { priceAgeTier, priceLevelFromVerdict, type PriceAgeTier, type PriceLevel } from "@commerce/pricing";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 
 interface SampleListing {
@@ -23,6 +23,52 @@ function relativeTimeFromNow(iso: string, now: Date = new Date()): string {
   if (hours < 24) return `${hours}시간 전`;
   const days = Math.floor(hours / 24);
   return `${days}일 전`;
+}
+
+/** N-4.11 STEP1(대표님 지시: "오늘 확인/1~6일/7~30일/30일+를 명확하게") — packages/pricing의
+ * priceAgeTier(계산)를 화면 문구로만 옮긴다(새 판정 없음). */
+const PRICE_AGE_LABEL: Record<PriceAgeTier, string> = {
+  TODAY: "오늘 확인",
+  RECENT: "최근 확인",
+  STALE: "7일 이상 경과",
+  VERY_STALE: "30일 이상 경과",
+};
+
+interface RecheckResult {
+  icon: string;
+  message: string;
+}
+
+/** N-4.11 STEP2 — /api/price-history/check 응답(run-price-check.ts의
+ * PriceCheckPipelineStatus + run-domestic-price-check.ts 결과)을 판매자가
+ * 이해할 수 있는 한 줄로 요약한다. */
+function summarizeRecheckResult(json: {
+  status?: string;
+  savedCount?: number;
+  domesticStatus?: string;
+  domesticListingCount?: number;
+  errors?: string[];
+  domesticShop?: { pricesRecorded: number; sourceErrors: string[] };
+}): RecheckResult {
+  const domesticSaved = json.domesticShop?.pricesRecorded ?? 0;
+  const totalSaved = (json.savedCount ?? 0) + domesticSaved;
+
+  if (json.status === "SUCCESS") {
+    return { icon: "🟢", message: `가격을 확인해 ${totalSaved}건 저장했습니다.` };
+  }
+  if (json.status === "PARTIAL") {
+    if (json.domesticStatus === "NO_RESULTS" || (totalSaved > 0 && json.domesticListingCount === 0)) {
+      return { icon: "🟡", message: "원가는 확인했지만, 일치하는 국내 판매처를 찾지 못했습니다(매칭 실패)." };
+    }
+    return { icon: "🟡", message: `일부만 확인됐습니다(${totalSaved}건 저장) — 나머지는 아래 이유로 실패했습니다.` };
+  }
+  if (json.status === "NOT_CONFIGURED") {
+    return { icon: "⚪", message: "국내 가격 검색 설정이 아직 안 되어 있어 확인하지 못했습니다." };
+  }
+  if (json.status === "NO_RESULT") {
+    return { icon: "⚪", message: "일치하는 가격 정보를 찾지 못했습니다(가격 없음)." };
+  }
+  return { icon: "🔴", message: json.errors?.[0] ?? "가격 확인 중 오류가 발생했습니다." };
 }
 
 interface DomesticCompetition {
@@ -141,6 +187,7 @@ export function DomesticPriceIntelligencePanel({
   const [loading, setLoading] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
   const [rechecking, setRechecking] = useState(false);
+  const [recheckResult, setRecheckResult] = useState<RecheckResult | null>(null);
 
   function loadPriceHistory(): Promise<void> {
     return fetch(`/api/price-history/${snapshotId}`)
@@ -168,16 +215,40 @@ export function DomesticPriceIntelligencePanel({
   /** N-4.07 Sprint(대표님 지시: "상품 화면 [가격 다시 확인] 버튼") —
    * /api/price-history/check(기존, UI 연결처 없었음)를 그대로 호출한다.
    * skipIfCheckedToday는 이 경로에서는 안 준다 — 사용자가 명시적으로 "지금
-   * 확인"을 눌렀으므로 오늘 이미 확인했어도 다시 시도하는 게 맞다. */
+   * 확인"을 눌렀으므로 오늘 이미 확인했어도 다시 시도하는 게 맞다.
+   *
+   * N-4.11 STEP2(대표님 지시: "검색→매칭→저장을 판매자가 알 수 있게, 성공/
+   * 실패/가격없음/매칭실패를 구분") — run-price-check.ts/run-domestic-
+   * price-check.ts가 이미 계산해 돌려주는 status/domesticStatus/savedCount/
+   * domesticListingCount를 그대로 문장으로 옮긴다. 새 판정을 만들지 않는다 —
+   * 서버가 이미 낸 결론을 화면에 정직하게 보여주기만 한다(가짜 진행률 애니
+   * 메이션을 만들지 않는다 — 실제로는 서버가 한 번에 처리하는 요청이다). */
   async function recheckNow() {
+    if (rechecking) return; // 중복 클릭 방지 — 버튼도 disabled지만 방어적으로 한 번 더 막는다.
     setRechecking(true);
+    setRecheckResult(null);
     try {
-      await fetch("/api/price-history/check", {
+      const res = await fetch("/api/price-history/check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ snapshotId }),
       });
+      if (!res.ok) {
+        setRecheckResult({ icon: "🔴", message: "가격 확인 요청이 실패했습니다(서버 오류)." });
+      } else {
+        const json = (await res.json()) as {
+          status?: string;
+          savedCount?: number;
+          domesticStatus?: string;
+          domesticListingCount?: number;
+          errors?: string[];
+          domesticShop?: { pricesRecorded: number; sourceErrors: string[] };
+        };
+        setRecheckResult(summarizeRecheckResult(json));
+      }
       await loadPriceHistory();
+    } catch {
+      setRecheckResult({ icon: "🔴", message: "가격 확인 요청이 실패했습니다(네트워크 오류)." });
     } finally {
       setRechecking(false);
     }
@@ -209,6 +280,11 @@ export function DomesticPriceIntelligencePanel({
             {rechecking ? "확인 중..." : "가격 다시 확인"}
           </button>
         </div>
+        {recheckResult && (
+          <p className="rounded-md border border-border bg-background px-2 py-1 text-[11px] text-text-secondary">
+            {recheckResult.icon} {recheckResult.message}
+          </p>
+        )}
         {!hasAnyData && (
           <p className="text-[10px] text-text-tertiary">
             원본 사이트/등록된 국내 편집샵에서 가격을 조회합니다 — 몇 초 걸릴 수 있습니다.
@@ -291,14 +367,14 @@ export function DomesticPriceIntelligencePanel({
             </div>
             <ul className="space-y-0.5">
               {domesticCompetition.sampleListings.slice(0, 5).map((listing, i) => {
-                const stale = isPriceStale(listing.checkedAt);
+                const tier = priceAgeTier(listing.checkedAt);
                 return (
                   <li key={i} className="flex items-center justify-between text-text-secondary">
                     <span className="flex items-center gap-1">
                       {listing.mallName ?? "알 수 없음"}
-                      {stale && (
+                      {(tier === "STALE" || tier === "VERY_STALE") && (
                         <span className="rounded bg-warning-soft px-1 py-0.5 text-[9px] font-medium text-warning">
-                          🟡 오래된 가격
+                          🟡 {PRICE_AGE_LABEL[tier]}
                         </span>
                       )}
                     </span>
@@ -324,11 +400,23 @@ export function DomesticPriceIntelligencePanel({
                 <span>국내 평균가 ₩{Math.round(domesticCompetition.averagePriceKrw).toLocaleString()}</span>
               )}
             </div>
-            {domesticCompetition.checkedAt && (
-              <p className="mt-1 text-[10px] text-text-tertiary">
-                마지막 확인 {new Date(domesticCompetition.checkedAt).toLocaleString("ko-KR")}
-              </p>
-            )}
+            {domesticCompetition.checkedAt &&
+              (() => {
+                const overallTier = priceAgeTier(domesticCompetition.checkedAt);
+                return (
+                  <>
+                    <p className="mt-1 text-[10px] text-text-tertiary">
+                      마지막 확인 {new Date(domesticCompetition.checkedAt).toLocaleString("ko-KR")} (
+                      {PRICE_AGE_LABEL[overallTier]})
+                    </p>
+                    {(overallTier === "STALE" || overallTier === "VERY_STALE") && (
+                      <p className="mt-1 rounded-md bg-warning-soft px-2 py-1 text-[11px] font-medium text-warning">
+                        ⚠️ 최근 가격이 아닙니다. 다시 확인하세요.
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
             {historyRecords.length > 1 && (
               <>
                 <button
@@ -380,7 +468,8 @@ export function DomesticPriceIntelligencePanel({
         )}
 
         <p className="text-[10px] text-text-tertiary">
-          참고용 판단입니다 — 판매가는 자동으로 변경되지 않으며, 최종 결정은 직접 내려야 합니다.
+          참고용 판단입니다 — 판매가는 자동으로 변경되지 않으며, 최종 결정은 직접 내려야 합니다. 가격경쟁력은
+          등록 가능 여부와 무관합니다 — 마진이 낮거나 가격이 높아도 등록 자체는 막히지 않습니다.
         </p>
       </div>
     </CollapsibleSection>

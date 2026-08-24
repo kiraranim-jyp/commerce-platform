@@ -76,7 +76,18 @@ export async function GET(request: Request) {
             thumbnailUrl: snapshot.thumbnailUrl,
             status: snapshot.status,
             priorityTier: 4,
-            readiness: { priceValid: false, priceLevel: "UNKNOWN", platforms: [] },
+            readiness: {
+              priceValid: false,
+              priceLevel: "UNKNOWN",
+              price: {
+                level: "UNKNOWN",
+                marginPercent: null,
+                currentSellingPriceKrw: null,
+                domesticLowestPriceKrw: null,
+                lastCheckedAt: null,
+              },
+              platforms: [],
+            },
             jobKey: snapshot.jobKey,
             error: error instanceof Error ? error.message : String(error),
           };
