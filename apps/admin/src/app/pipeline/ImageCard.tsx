@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatBytes, formatDimensions } from "./format";
 import type { TabKey, WorkspaceItem } from "./types";
 
@@ -47,6 +50,11 @@ interface ImageCardProps {
   /** PRODUCT는 원본/배경제거 후보 둘 다 만들어진다 — 이 카드가 지금 어느 쪽을 쓸지
    * 전환한다(alternateDataUrl이 있을 때만 호출 가능). */
   onSwapVariant?: () => void;
+  /** CEO 지시(2026-08-24): "이미지는 내가 추가/제거 할 수 있어야 해 — 각 이미지별
+   * 제거 버튼". 기존 "등록에서 제외"(useInProductGallery 토글, N-3.19)는 되돌릴 수
+   * 있는 소프트 제외였고, 이건 완전히 별개로 배열에서 실제로 빼는 하드 삭제다.
+   * 없으면(예: 처리 실패해서 product.images에 아직 없는 카드) 버튼 자체를 숨긴다. */
+  onRemove?: () => void;
 }
 
 /**
@@ -72,6 +80,7 @@ export function ImageCard({
   onMoveUp,
   onMoveDown,
   onSwapVariant,
+  onRemove,
 }: ImageCardProps) {
   const isExcluded = useInProductGallery === false;
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -86,9 +95,10 @@ export function ImageCard({
   const downloadFileName = downloadNameFor(item.fileName, previewSrc);
 
   return (
-    <div
-      className={`flex h-[420px] flex-col overflow-hidden rounded-lg border bg-surface transition-opacity ${
-        isSelected ? "border-primary ring-2 ring-primary" : "border-border"
+    <Card
+      padding="none"
+      className={`flex h-[420px] flex-col overflow-hidden transition-opacity ${
+        isSelected ? "ring-2 ring-primary" : ""
       } ${isExcluded ? "opacity-40" : ""}`}
     >
       <button
@@ -116,22 +126,25 @@ export function ImageCard({
               onSetRepresentative();
             }}
             title="대표 이미지로 지정"
-            className="absolute right-1.5 top-1.5 text-xl leading-none drop-shadow"
+            className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full text-sm shadow-[var(--shadow-subtle)] transition-colors ${
+              isRepresentative
+                ? "bg-primary text-white"
+                : "bg-white/90 text-text-tertiary hover:text-warning"
+            }`}
           >
-            {isRepresentative ? "⭐" : "☆"}
+            {isRepresentative ? "★" : "☆"}
           </span>
         )}
       </button>
 
-      <div className="flex flex-1 flex-col gap-0.5 p-3 text-xs">
+      <div className="flex flex-1 flex-col gap-1 p-3 text-xs">
         <p className="truncate font-medium text-text-primary" title={item.fileName}>
           {item.fileName}
         </p>
-        <p>
-          {status === "success" && <span>🟢 Success</span>}
-          {status === "processing" && <span>🟡 Processing</span>}
-          {status === "failed" && <span>🔴 Failed</span>}
-        </p>
+        <StatusBadge
+          status={status === "success" ? "success" : status === "processing" ? "warning" : "error"}
+          label={status === "success" ? "완료" : status === "processing" ? "처리 중" : "실패"}
+        />
         {status === "failed" && item.failureReason && (
           <p className="line-clamp-2 text-error" title={item.failureReason}>
             {item.failureReason}
@@ -143,11 +156,11 @@ export function ImageCard({
           onClick={() => setDetailsOpen((v) => !v)}
           className="mt-0.5 self-start text-text-tertiary underline-offset-2 hover:underline"
         >
-          처리 정보 {detailsOpen ? "숨기기 ▲" : "보기 ▼"}
+          처리 정보 {detailsOpen ? "접기 ▲" : "펼치기 ▼"}
         </button>
 
         {detailsOpen && (
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-0.5 rounded-[var(--radius-sm)] bg-background p-2">
             <p className="text-text-secondary">Type: {item.type}</p>
             <p className="text-text-secondary">
               Original: {formatDimensions(item.originalWidth, item.originalHeight)} ({originalFormat})
@@ -179,33 +192,42 @@ export function ImageCard({
         )}
 
         {useInProductGallery != null && useInDescription != null && (
-          <div className="mt-1 flex flex-col gap-0.5 border-t border-border pt-1.5 text-[11px]">
-            <label className="flex items-center gap-1.5">
-              <input
-                type="radio"
-                name={`representative-${item.id}`}
-                checked={isRepresentative}
-                onChange={onSetRepresentative}
-              />
-              대표 이미지
-            </label>
-            <label className="flex items-center gap-1.5">
-              <input type="checkbox" checked={useInDescription} onChange={onToggleDescriptionUsage} />
-              상세페이지
-            </label>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 border-t border-border pt-2">
+            <button
+              type="button"
+              onClick={onSetRepresentative}
+              className={`rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                isRepresentative
+                  ? "bg-primary-soft text-primary"
+                  : "bg-background text-text-tertiary hover:text-text-secondary"
+              }`}
+            >
+              {isRepresentative ? "★ 대표 이미지" : "대표로 설정"}
+            </button>
+            <button
+              type="button"
+              onClick={onToggleDescriptionUsage}
+              className={`rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                useInDescription
+                  ? "bg-primary-soft text-primary"
+                  : "bg-background text-text-tertiary hover:text-text-secondary"
+              }`}
+            >
+              상세페이지 {useInDescription ? "사용" : "미사용"}
+            </button>
           </div>
         )}
 
-        <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-          <div className="flex items-center gap-1.5">
+        <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-2">
+          <div className="flex items-center gap-1">
             {(onMoveUp || onMoveDown) && (
-              <span className="flex items-center gap-0.5">
+              <>
                 <button
                   type="button"
                   onClick={onMoveUp}
                   disabled={!onMoveUp}
                   title="순서 위로"
-                  className="rounded border border-border px-1 py-0.5 text-text-secondary hover:bg-background disabled:opacity-30"
+                  className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-text-secondary transition-colors hover:bg-background disabled:opacity-30"
                 >
                   ▲
                 </button>
@@ -214,57 +236,80 @@ export function ImageCard({
                   onClick={onMoveDown}
                   disabled={!onMoveDown}
                   title="순서 아래로"
-                  className="rounded border border-border px-1 py-0.5 text-text-secondary hover:bg-background disabled:opacity-30"
+                  className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-text-secondary transition-colors hover:bg-background disabled:opacity-30"
                 >
                   ▼
                 </button>
-              </span>
+              </>
             )}
             {useInProductGallery != null && (
-              <label className="flex items-center gap-1 text-text-secondary">
-                <input type="checkbox" checked={isExcluded} onChange={onToggleGalleryUsage} />
-                {isExcluded ? "등록에서 제외됨" : "등록에서 제외"}
-              </label>
+              <button
+                type="button"
+                onClick={onToggleGalleryUsage}
+                className={`rounded-full px-2 py-1 text-[11px] font-medium transition-colors ${
+                  isExcluded
+                    ? "bg-error-soft text-error"
+                    : "text-text-tertiary hover:bg-background"
+                }`}
+              >
+                {isExcluded ? "제외됨" : "제외"}
+              </button>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {item.alternateDataUrl && onSwapVariant && (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={onSwapVariant}
                 title={
                   item.alternateKind === "PROCESSED"
                     ? "배경제거 후보로 전환"
                     : "원본으로 전환"
                 }
-                className="rounded border border-border px-2 py-1 font-medium text-text-primary hover:bg-background"
+                className="px-2 text-[11px]"
               >
-                {item.alternateKind === "PROCESSED" ? "⇄ 누끼 후보" : "⇄ 원본"}
-              </button>
+                {item.alternateKind === "PROCESSED" ? "누끼 후보" : "원본"}
+              </Button>
             )}
             {previewSrc && (
               <a
                 href={previewSrc}
                 download={downloadFileName}
-                className="rounded border border-border px-2 py-1 font-medium text-text-primary hover:bg-background"
+                className="inline-flex h-8 items-center justify-center rounded-[var(--radius-md)] px-2 text-[11px] font-medium text-text-secondary transition-colors hover:bg-background hover:text-text-primary"
               >
-                ⬇ Download
+                다운로드
               </a>
             )}
             {status === "failed" && (
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="sm"
                 onClick={onRetry}
                 disabled={retrying}
-                className="rounded border border-border px-2 py-1 font-medium text-text-primary hover:bg-background disabled:opacity-50"
+                className="px-2 text-[11px]"
               >
-                {retrying ? "재실행 중..." : retryCount > 0 ? `재실행 (${retryCount}회)` : "재실행"}
-              </button>
+                {retrying ? "재실행 중…" : retryCount > 0 ? `재실행 (${retryCount}회)` : "재실행"}
+              </Button>
+            )}
+            {onRemove && (
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                onClick={onRemove}
+                title="이미지 삭제"
+                className="px-2 text-[11px]"
+              >
+                삭제
+              </Button>
             )}
           </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

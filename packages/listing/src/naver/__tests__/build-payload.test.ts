@@ -1617,7 +1617,7 @@ describe("buildNaverProductPayload — detailBlocks → detailContent 조립(Par
   it("Test B(이미지) — PRODUCT_IMAGES 블록이 각각 <img> 태그로 조립된다", () => {
     const payload = buildWithBlocks([{ id: "b1", kind: "PRODUCT_IMAGES", enabled: true }]);
     expect(payload.originProduct.detailContent).toBe(
-      '<img src="https://example.com/images/tshirt-detail.jpg" style="max-width:100%;">',
+      '<img src="https://example.com/images/tshirt-detail.jpg" style="max-width:100%;">\n<br><br><br>',
     );
   });
 
@@ -1647,7 +1647,7 @@ describe("buildNaverProductPayload — detailBlocks → detailContent 조립(Par
       { commonImages: COMMON_IMAGE_ON },
     );
     expect(payload.originProduct.detailContent).toBe(
-      '<p>아동용 반팔 티셔츠입니다.</p>\n<img src="https://example.com/images/tshirt-detail.jpg" style="max-width:100%;">\n<img src="https://example.com/bottom-common.jpg" style="max-width:100%;">',
+      '<p>아동용 반팔 티셔츠입니다.</p>\n<img src="https://example.com/images/tshirt-detail.jpg" style="max-width:100%;">\n<br><br><br>\n<img src="https://example.com/bottom-common.jpg" style="max-width:100%;">\n<br><br><br>',
     );
   });
 

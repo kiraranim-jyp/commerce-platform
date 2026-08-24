@@ -598,6 +598,12 @@ function SellerProfileEditor({
   // 동시 업로드가 서로의 상태를 지우지 않게 한다.
   const [topImageUploading, setTopImageUploading] = useState(false);
   const [bottomImageUploading, setBottomImageUploading] = useState(false);
+  // N-4.13-P0-REOPEN(대표님 실측 재현) — 업로드 실패 시 기존엔 공용
+  // lookupError에만 담겼는데, 그 값은 "배송 프로필" 탭에서만 렌더링됐다.
+  // 사용자는 "상세페이지 관리" 탭에서 업로드하므로 실패해도 아무 메시지도
+  // 못 보고 "업로드 중"만 사라지는 것으로 보였다 — 전용 상태로 분리해
+  // 업로드 버튼 바로 아래에 표시한다.
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   // N-4.08-DetailPage(대표님 지시) — 신규 상품에 적용할 상세페이지 기본 블록
   // 구성(순서+노출여부). 코드 상수 defaultDetailBlocks()를 초기값으로 쓰되,
   // 저장된 프로필 값이 있으면 그걸로 덮어쓴다(fillForm).
@@ -728,6 +734,7 @@ function SellerProfileEditor({
   async function uploadCommonImage(position: "top" | "bottom", file: File) {
     const setUploading = position === "top" ? setTopImageUploading : setBottomImageUploading;
     setUploading(true);
+    setImageUploadError(null);
     try {
       const body = new FormData();
       body.append("file", file);
@@ -747,10 +754,10 @@ function SellerProfileEditor({
           setBottomCommonImageEnabledSynced(true);
         }
       } else {
-        setLookupError(data.error ?? "이미지 업로드에 실패했습니다.");
+        setImageUploadError(data.error ?? "이미지 업로드에 실패했습니다.");
       }
     } catch (err) {
-      setLookupError(err instanceof Error ? err.message : "이미지 업로드에 실패했습니다.");
+      setImageUploadError(err instanceof Error ? err.message : "이미지 업로드에 실패했습니다.");
     } finally {
       setUploading(false);
     }
@@ -1054,6 +1061,9 @@ function SellerProfileEditor({
             </span>
           }
         >
+          {imageUploadError && (
+            <p className="mb-3 rounded-md bg-error-soft px-3 py-2 text-xs text-error">{imageUploadError}</p>
+          )}
           <CommonImagesSection
             topCommonImageUrl={topCommonImageUrl}
             topCommonImageEnabled={topCommonImageEnabled}

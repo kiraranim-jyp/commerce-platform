@@ -250,6 +250,46 @@ export async function createSellerProfile(
   return { ok: true, profile: toProfile(data as SellerProfileRow) };
 }
 
+/** N-4.16 P0-5(CEO 지시) — top/bottomCommonImageEnabled(카드 ON/OFF)와
+ * defaultDetailBlocks[]의 COMMON_IMAGE 블록 enabled는 실제 등록 payload에
+ * 둘 다 true여야만 이미지가 들어가는 AND 게이트(build-payload.ts:491-495)인데,
+ * 지금까지는 프론트(settings/page.tsx의 xxxSynced 함수)만 두 값을 맞춰줬고
+ * API 자체는 한쪽만 오는 PATCH를 그대로 허용해서 불일치가 재발할 수 있었다.
+ * 정책: 플래그가 이번 요청에 명시적으로 왔으면 플래그가 이기고(블록도 그 값으로
+ * 맞춤), 플래그 없이 blocks만 왔으면 blocks의 COMMON_IMAGE.enabled로 플래그를
+ * 역산한다 — 어느 쪽만 PATCH해도 저장된 두 값은 항상 같다. 이미지 URL
+ * (topCommonImageUrl/bottomCommonImageUrl)은 이 동기화 대상이 아니다. */
+function syncCommonImageFlags(
+  input: Partial<SellerProfileInput>,
+  currentBlocks: DetailPageBlock[] | null,
+): { blocks: DetailPageBlock[] | null; topEnabled?: boolean; bottomEnabled?: boolean } {
+  const touchesTop = input.topCommonImageEnabled !== undefined;
+  const touchesBottom = input.bottomCommonImageEnabled !== undefined;
+  const touchesBlocks = input.defaultDetailBlocks !== undefined;
+  if (!touchesTop && !touchesBottom && !touchesBlocks) return { blocks: null };
+
+  let blocks = touchesBlocks ? input.defaultDetailBlocks : currentBlocks;
+  if (!blocks) return { blocks: null };
+
+  blocks = blocks.map((b) => {
+    if (b.kind !== "COMMON_IMAGE") return b;
+    if (b.position === "top" && touchesTop) return { ...b, enabled: input.topCommonImageEnabled! };
+    if (b.position === "bottom" && touchesBottom) return { ...b, enabled: input.bottomCommonImageEnabled! };
+    return b;
+  });
+
+  const result: { blocks: DetailPageBlock[] | null; topEnabled?: boolean; bottomEnabled?: boolean } = { blocks };
+  if (!touchesTop) {
+    const topBlock = blocks.find((b) => b.kind === "COMMON_IMAGE" && b.position === "top");
+    if (topBlock) result.topEnabled = topBlock.enabled;
+  }
+  if (!touchesBottom) {
+    const bottomBlock = blocks.find((b) => b.kind === "COMMON_IMAGE" && b.position === "bottom");
+    if (bottomBlock) result.bottomEnabled = bottomBlock.enabled;
+  }
+  return result;
+}
+
 /** Sprint A-8(작업2/4 — "출고지 수정"/"반품주소 수정" 모달) — 지금까지는
  * create/setDefault/delete만 있고 "기존 프로필의 필드를 고친다"가 없었다.
  * 부분 업데이트(Partial)라 name을 안 보내도 다른 필드만 바꿀 수 있다. */
@@ -260,9 +300,31 @@ export async function updateSellerProfile(
   const supabase = getSupabaseAdmin();
   if (!supabase) return { ok: false, error: "Supabase가 설정되어 있지 않습니다." };
 
+  const fields = toRowFields(input);
+
+  const touchesCommonImageState =
+    input.topCommonImageEnabled !== undefined ||
+    input.bottomCommonImageEnabled !== undefined ||
+    input.defaultDetailBlocks !== undefined;
+  if (touchesCommonImageState) {
+    let currentBlocks: DetailPageBlock[] | null = null;
+    if (input.defaultDetailBlocks === undefined) {
+      const { data: current } = await supabase
+        .from("coupang_seller_profiles")
+        .select("default_detail_blocks")
+        .eq("id", id)
+        .single();
+      currentBlocks = (current?.default_detail_blocks as DetailPageBlock[] | null) ?? null;
+    }
+    const synced = syncCommonImageFlags(input, currentBlocks);
+    if (synced.blocks) fields.default_detail_blocks = synced.blocks;
+    if (synced.topEnabled !== undefined) fields.top_common_image_enabled = synced.topEnabled;
+    if (synced.bottomEnabled !== undefined) fields.bottom_common_image_enabled = synced.bottomEnabled;
+  }
+
   const { data, error } = await supabase
     .from("coupang_seller_profiles")
-    .update({ ...toRowFields(input), updated_at: new Date().toISOString() })
+    .update({ ...fields, updated_at: new Date().toISOString() })
     .eq("id", id)
     .select()
     .single();

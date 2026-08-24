@@ -193,6 +193,13 @@ export function assembleNaverDetailContent(
     brandIntro: ctx.brandIntro,
   });
 
+  // N-4.13-P1(대표님 지시: "기존은 에디터에서 셀러가 직접 올렸는데 자동등록은
+  // HTML로 올라간다 — 이미지 사이마다 고정 줄바꿈 3줄 정도") — 셀러가 에디터에서
+  // 직접 이미지를 하나씩 넣을 땐 에디터가 자연스러운 여백을 줬지만, 자동등록은
+  // <img> 태그를 그대로 이어붙이는 HTML이라 이미지끼리 다닥다닥 붙어 보였다.
+  // 임의의 빈 이미지 파일이 아니라 표준 HTML 줄바꿈(<br>) 3개로 고정 간격을
+  // 준다 — Coupang/Naver 콘텐츠 API 스펙 조사 없이도 항상 동작하는 방식.
+  const IMAGE_GAP = "<br><br><br>";
   const parts: string[] = [];
   for (const content of contents) {
     for (const detail of content.contentDetails) {
@@ -200,6 +207,7 @@ export function assembleNaverDetailContent(
         parts.push(`<p>${escapeHtmlText(detail.content).replace(/\n/g, "<br>")}</p>`);
       } else {
         parts.push(`<img src="${detail.content}" style="max-width:100%;">`);
+        parts.push(IMAGE_GAP);
       }
     }
   }

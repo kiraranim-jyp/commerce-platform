@@ -430,6 +430,106 @@ export default function PipelinePage() {
     });
   }
 
+  const [addingImage, setAddingImage] = useState(false);
+
+  /** CEO 지시(2026-08-24, CPO 부재중): "이미지는 내가 추가/제거 할 수 있어야
+   * 해". 크롤링이 못 가져온 이미지를 상품정보 탭에서 바로 올린다 — 배경제거/
+   * JPG 표준화 같은 파이프라인 처리는 거치지 않고, 업로드된 원본 URL을 그대로
+   * originalUrl/detailPublicUrl 양쪽에 쓴다(마켓플레이스 payload가 실제로 읽는
+   * 값이 detailPublicUrl이므로 반드시 공개 URL이어야 한다 — data URI 아님). */
+  async function addImage(file: File) {
+    setAddingImage(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch("/api/pipeline/upload-image", { method: "POST", body });
+      const data = (await res.json()) as { ok: boolean; url?: string; error?: string };
+      if (!data.ok || !data.url) {
+        alert(data.error ?? "이미지 업로드에 실패했습니다.");
+        return;
+      }
+      const url = data.url;
+      const dims = await new Promise<{ width: number; height: number }>((resolve) => {
+        const img = new window.Image();
+        img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        img.onerror = () => resolve({ width: 0, height: 0 });
+        img.src = url;
+      });
+      const id = crypto.randomUUID();
+      const newItem: WorkspaceItem = {
+        id,
+        fileName: file.name,
+        type: "PRODUCT",
+        status: "success",
+        originalDataUrl: url,
+        originalWidth: dims.width,
+        originalHeight: dims.height,
+        originalBytes: file.size,
+        detailDataUrl: url,
+        detailPublicUrl: url,
+        outputWidth: dims.width,
+        outputHeight: dims.height,
+        fileSize: file.size,
+        isRepresentative: false,
+        isJPEG: file.type === "image/jpeg",
+        processingTimeSec: 0,
+      };
+      const wasEmpty = (product?.images.length ?? 0) === 0;
+      setItems((prev) => [...prev, newItem]);
+      setThumbnails((prev) => ({ ...prev, [id]: url }));
+      updateProduct((prev) => ({
+        ...prev,
+        images: [
+          ...prev.images,
+          {
+            id,
+            originalUrl: url,
+            selectedVariant: "ORIGINAL",
+            isRepresentative: wasEmpty,
+            useInProductGallery: true,
+            useInDescription: true,
+            classification: "PRODUCT",
+          },
+        ],
+      }));
+      if (wasEmpty) setRepresentativeId(id);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "이미지 업로드에 실패했습니다.");
+    } finally {
+      setAddingImage(false);
+    }
+  }
+
+  /** 위 addImage와 짝 — 완전히 배열에서 빼는 하드 삭제다(N-3.19의 "등록에서
+   * 제외" 토글과 별개). 대표 이미지를 지우면 남은 첫 이미지를 새 대표로
+   * 승격한다(대표가 아예 없는 상태로 남지 않도록). */
+  function removeImage(id: string) {
+    if (!product) return;
+    if (!window.confirm("이 이미지를 삭제하시겠습니까?")) return;
+    const wasRepresentative = product.images.find((img) => img.id === id)?.isRepresentative ?? false;
+    const remaining = product.images.filter((img) => img.id !== id);
+    const newRepresentativeId = wasRepresentative ? (remaining[0]?.id ?? null) : representativeId;
+    setItems((prev) => prev.filter((item) => item.id !== id));
+    setThumbnails((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setProduct((prev) =>
+      prev
+        ? {
+            ...prev,
+            images: prev.images
+              .filter((img) => img.id !== id)
+              .map((img) =>
+                wasRepresentative && img.id === newRepresentativeId ? { ...img, isRepresentative: true } : img,
+              ),
+          }
+        : prev,
+    );
+    setRepresentativeId(newRepresentativeId);
+  }
+
   /** PRODUCT는 원본/배경제거 후보 두 변형을 함께 갖고 있다 — detailDataUrl과
    * alternateDataUrl을 맞바꿔서 이 카드가 어느 쪽을 대표로 쓸지 사용자가 고를 수 있게 한다.
    * 카드 표시(items)만 바꾸고 끝나면 안 된다 — product.images의 selectedVariant도
@@ -653,6 +753,9 @@ export default function PipelinePage() {
             onToggleGalleryUsage={(id) => toggleImageUsage(id, "useInProductGallery")}
             onToggleDescriptionUsage={(id) => toggleImageUsage(id, "useInDescription")}
             onMoveImage={moveImage}
+            onAddImage={addImage}
+            onRemoveImage={removeImage}
+            addingImage={addingImage}
             developerMode={developerMode}
             analysisStartedAt={analysisStartedAt}
             snapshotId={snapshotId}

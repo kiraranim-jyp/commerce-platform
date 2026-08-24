@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "./Button";
 
 export interface ImageAssetOption {
@@ -41,6 +41,25 @@ export function ImagePicker({
   const [browsing, setBrowsing] = useState(false);
   const [assets, setAssets] = useState<ImageAssetOption[]>([]);
   const [loadingAssets, setLoadingAssets] = useState(false);
+  // N-4.13-P0-REOPEN(대표님 실측: "업로드중...이 없어지고 나서 1~2초 뒤에야
+  // 이미지가 바뀐다") — 원인은 상태 타이밍이 아니라 실제 브라우저 렌더링
+  // 지연이었다. uploading은 fetch(POST) 완료 시점에 꺼지는데, 그 시점의
+  // imageUrl은 이미 새 URL이지만 <img>가 그 URL의 실제 바이트를 아직
+  // 네트워크로 받아오지 못한 상태 — 그래서 "완료"처럼 보이는 순간과 화면이
+  // 실제로 바뀌는 순간 사이에 체감 지연이 생겼다. 임의의 타이머로 흉내내는
+  // 대신, <img>가 실제로 로드를 마칠 때까지("onLoad") "업로드 중…" 표시를
+  // 유지한다 — 네트워크가 빠르면 짧게, 느리면 길게, 항상 실제 상태와 일치.
+  const [imgLoaded, setImgLoaded] = useState(true);
+  // 최초 마운트 시(이미 저장된 이미지를 불러오는 경우)는 "업로드 중"을
+  // 보여줄 필요가 없다 — imageUrl이 이전 값에서 실제로 바뀔 때만 발동.
+  const prevUrlRef = useRef(imageUrl);
+  useEffect(() => {
+    if (imageUrl !== prevUrlRef.current) {
+      setImgLoaded(false);
+      prevUrlRef.current = imageUrl;
+    }
+  }, [imageUrl]);
+  const showUploading = uploading || (!!imageUrl && !imgLoaded);
 
   async function openBrowser() {
     setBrowsing((prev) => !prev);
@@ -63,7 +82,13 @@ export function ImagePicker({
       </div>
       <div className="mt-1 flex items-center gap-3">
         {imageUrl ? (
-          <img src={imageUrl} alt={label} className="h-16 w-16 rounded border border-border object-cover" />
+          <img
+            src={imageUrl}
+            alt={label}
+            onLoad={() => setImgLoaded(true)}
+            onError={() => setImgLoaded(true)}
+            className="h-16 w-16 rounded border border-border object-cover"
+          />
         ) : (
           <div className="flex h-16 w-16 items-center justify-center rounded border border-dashed border-border text-[10px] text-text-tertiary">
             없음
@@ -74,7 +99,7 @@ export function ImagePicker({
             <input
               type="file"
               accept="image/*"
-              disabled={uploading}
+              disabled={showUploading}
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) onUpload(file);
@@ -88,7 +113,7 @@ export function ImagePicker({
               </Button>
             )}
           </div>
-          {uploading && <span className="text-[11px] text-text-tertiary">업로드 중…</span>}
+          {showUploading && <span className="text-[11px] text-text-tertiary">업로드 중…</span>}
           {enabled !== undefined && onEnabledChange && (
             <label className="flex items-center gap-2 text-xs text-text-secondary">
               <input

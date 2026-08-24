@@ -106,6 +106,9 @@ export function CommerceWorkspace({
   onToggleGalleryUsage,
   onToggleDescriptionUsage,
   onMoveImage,
+  onAddImage,
+  onRemoveImage,
+  addingImage,
   developerMode,
   analysisStartedAt,
   snapshotId,
@@ -123,6 +126,13 @@ export function CommerceWorkspace({
   onToggleGalleryUsage: (id: string) => void;
   onToggleDescriptionUsage: (id: string) => void;
   onMoveImage: (id: string, direction: "up" | "down") => void;
+  /** CEO 지시(2026-08-24, CPO 부재중): "각 커머스별 이미지는 제거하고 공통인
+   * 상품정보에서만 관리". 이 두 콜백은 아래 "source" 탭의 ImageInlineEditor
+   * 에게만 넘긴다 — PlatformPreview(커머스 탭)에는 더 이상 이미지 섹션 자체가
+   * 없다. */
+  onAddImage: (file: File) => void;
+  onRemoveImage: (id: string) => void;
+  addingImage: boolean;
   /** P0-UI Epic 1/4 — Payload JSON/개발 로그 등은 이 값이 true일 때만 보여준다. */
   developerMode: boolean;
   /** Sprint A-6(작업4 — 등록 소요시간 측정) — page.tsx가 URL 제출 시점에 잰
@@ -1586,6 +1596,9 @@ export function CommerceWorkspace({
               onToggleGalleryUsage={onToggleGalleryUsage}
               onToggleDescriptionUsage={onToggleDescriptionUsage}
               onMoveImage={onMoveImage}
+              onAddImage={onAddImage}
+              onRemoveImage={onRemoveImage}
+              addingImage={addingImage}
             />
           </section>
           <SourceDataView
@@ -1675,14 +1688,6 @@ export function CommerceWorkspace({
           settingsRecommended={tab === "coupang" ? (coupangSettingsRecommended ?? undefined) : undefined}
           developerMode={developerMode}
           jobKey={jobKey}
-          items={items}
-          thumbnails={thumbnails}
-          representativeId={representativeId}
-          onPreviewImage={onPreviewImage}
-          onSetRepresentative={onSetRepresentative}
-          onToggleGalleryUsage={onToggleGalleryUsage}
-          onToggleDescriptionUsage={onToggleDescriptionUsage}
-          onMoveImage={onMoveImage}
         />
       )}
 

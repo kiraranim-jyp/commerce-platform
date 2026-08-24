@@ -30,6 +30,25 @@ async function ensureBucket(): Promise<void> {
   bucketEnsured = true;
 }
 
+/**
+ * N-4.13-P0-REOPEN(대표님 실측 재현: "파일선택 -> 업로드중 -> 이미지 그대로")
+ * 근본 원인 — 한글/공백 외 특수문자가 포함된 원본 파일명(카카오톡/다운로드로
+ * 저장된 실제 파일 다수가 이런 이름)이 그대로 Supabase Storage 키에 들어가면
+ * 스토리지가 업로드 자체를 거부한다(실측: "반품교환안내.png" 500 실패,
+ * "kakao_image_2026.png"는 성공). 확장자만 보존하고 나머지는 ASCII로
+ * 정규화한다 — 어차피 키 앞에 randomUUID가 붙어 충돌 걱정은 없다.
+ */
+function sanitizeStorageFileName(fileName: string): string {
+  const dotIndex = fileName.lastIndexOf(".");
+  const ext = dotIndex > 0 ? fileName.slice(dotIndex + 1).replace(/[^a-zA-Z0-9]/g, "").toLowerCase() : "";
+  const base = (dotIndex > 0 ? fileName.slice(0, dotIndex) : fileName)
+    .replace(/[^a-zA-Z0-9._-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  const safeBase = base || "image";
+  return ext ? `${safeBase}.${ext}` : safeBase;
+}
+
 export async function uploadPublicImage(
   buffer: Buffer,
   fileName: string,
@@ -39,7 +58,7 @@ export async function uploadPublicImage(
   if (!supabase) return null;
   try {
     await ensureBucket();
-    const key = `${crypto.randomUUID()}-${fileName}`;
+    const key = `${crypto.randomUUID()}-${sanitizeStorageFileName(fileName)}`;
     const { error } = await supabase.storage
       .from(BUCKET)
       .upload(key, buffer, { contentType, upsert: false });

@@ -1,6 +1,7 @@
 "use client";
 
 import type { CanonicalProduct } from "@commerce/shared";
+import { Card } from "@/components/ui/Card";
 import { ImageCard } from "./ImageCard";
 import type { WorkspaceItem } from "./types";
 
@@ -21,6 +22,9 @@ export function ImageInlineEditor({
   onToggleGalleryUsage,
   onToggleDescriptionUsage,
   onMoveImage,
+  onAddImage,
+  onRemoveImage,
+  addingImage,
 }: {
   product: CanonicalProduct;
   items: WorkspaceItem[];
@@ -31,8 +35,18 @@ export function ImageInlineEditor({
   onToggleGalleryUsage: (id: string) => void;
   onToggleDescriptionUsage: (id: string) => void;
   onMoveImage: (id: string, direction: "up" | "down") => void;
+  /** CEO 지시(2026-08-24): "이미지는 내가 추가/제거 할 수 있어야 해". 커머스별
+   * 탭에는 더 이상 이미지 섹션이 없다 — 상품정보(source) 탭 하나에서만 이 두
+   * 콜백을 넘긴다(PlatformPreview는 이 프로퍼티를 받지 않는다). */
+  onAddImage?: (file: File) => void;
+  onRemoveImage?: (id: string) => void;
+  addingImage?: boolean;
 }) {
-  if (items.length === 0) return null;
+  // N-4.13-이미지공통화(대표님 지시) — 예전엔 items.length===0이면 컴포넌트
+  // 전체가 안 그려져서, 크롤링이 이미지를 하나도 못 가져온 상품은 "이미지
+  // 추가" 버튼조차 보일 수 없었다. onAddImage가 있는 화면(상품정보 탭)에서는
+  // 항상 추가 버튼만은 그려야 한다.
+  if (items.length === 0 && !onAddImage) return null;
 
   const representative = product.images.find((img) => img.isRepresentative);
   const representativeItem = representative ? items.find((i) => i.id === representative.id) : undefined;
@@ -42,24 +56,24 @@ export function ImageInlineEditor({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3">
-        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md border border-border bg-background">
+      <Card padding="sm" className="flex items-center gap-3">
+        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-[var(--radius-md)] border border-border bg-background">
           {representativeThumbUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={representativeThumbUrl} alt="대표 이미지" className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full items-center justify-center text-center text-[10px] text-text-tertiary">
+            <div className="flex h-full items-center justify-center text-center text-[10px] leading-tight text-text-tertiary">
               대표이미지
               <br />
               미선택
             </div>
           )}
         </div>
-        <div className="text-xs text-text-secondary">
-          <p className="text-sm font-medium text-text-primary">대표 이미지</p>
-          <p className="mt-0.5">그리드에서 ⭐를 눌러 변경할 수 있습니다.</p>
+        <div className="text-xs">
+          <p className="text-sm font-semibold text-text-primary">대표 이미지</p>
+          <p className="mt-0.5 text-text-secondary">아래 그리드에서 ★을 눌러 변경할 수 있습니다.</p>
         </div>
-      </div>
+      </Card>
 
       {/* N-3.21 — 예전 ImageGalleryModal은 max-w-5xl(1024px) 모달 안에서 xl:5열까지
        * 썼다. Inline으로 옮긴 뒤에는 SmartStore/Coupang 아코디언이 우측 sticky
@@ -90,14 +104,33 @@ export function ImageInlineEditor({
               onToggleDescriptionUsage={() => onToggleDescriptionUsage(item.id)}
               onMoveUp={index > 0 ? () => onMoveImage(item.id, "up") : undefined}
               onMoveDown={index < product.images.length - 1 ? () => onMoveImage(item.id, "down") : undefined}
+              onRemove={onRemoveImage ? () => onRemoveImage(item.id) : undefined}
             />
           );
         })}
       </div>
 
-      <p className="text-xs text-text-secondary">
-        등록 {registeredCount}장{excludedCount > 0 && ` · 제외 ${excludedCount}장`}
-      </p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-text-secondary">
+          등록 {registeredCount}장{excludedCount > 0 && ` · 제외 ${excludedCount}장`}
+        </p>
+        {onAddImage && (
+          <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-[var(--radius-md)] border border-dashed border-border-strong px-3 text-xs font-medium text-text-secondary transition-colors hover:border-primary hover:bg-primary-soft hover:text-primary">
+            {addingImage ? "업로드 중…" : "+ 이미지 추가"}
+            <input
+              type="file"
+              accept="image/*"
+              disabled={addingImage}
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onAddImage(file);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        )}
+      </div>
     </div>
   );
 }

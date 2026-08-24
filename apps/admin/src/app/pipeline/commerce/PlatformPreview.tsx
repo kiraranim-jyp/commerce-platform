@@ -14,7 +14,6 @@ import type {
 import { isVerifiedCategorySelected, MARKETPLACE_DESCRIPTORS } from "@commerce/marketplace";
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct, CanonicalProductCertification, CanonicalProductOptionGroup, FieldSource } from "@commerce/shared";
-import type { WorkspaceItem } from "../types";
 import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
 import { CategoryRequirementsEditor } from "./CategoryRequirementsEditor";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
@@ -22,7 +21,6 @@ import { ComplianceBreakdown } from "./ComplianceBreakdown";
 import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
 import { EditableDate, EditableText, EditableTextarea } from "./EditableField";
 import { GuidedResolutionModal } from "./GuidedResolutionModal";
-import { ImageInlineEditor } from "../ImageInlineEditor";
 import { KcSellerStatusBanner } from "./KcSellerStatusBanner";
 import { ListingSection } from "./ListingSection";
 import { NaverPayloadPreview } from "./NaverPayloadPreview";
@@ -317,14 +315,6 @@ export function PlatformPreview({
   settingsRecommended,
   developerMode,
   jobKey,
-  items,
-  thumbnails,
-  representativeId,
-  onPreviewImage,
-  onSetRepresentative,
-  onToggleGalleryUsage,
-  onToggleDescriptionUsage,
-  onMoveImage,
   payloadPreview,
   payloadPreviewUnavailableReason,
   onReadinessChange,
@@ -473,17 +463,6 @@ export function PlatformPreview({
   developerMode: boolean;
   /** Sprint B-1(CPO 지시) — ListingSection의 문의하기 진단 번들에 실린다. */
   jobKey?: string | null;
-  /** N-3.20(CPO 지시: "세 화면이 동일한 ImageInlineEditor를 사용") — 이미지
-   * Accordion을 펼치면 Modal 없이 여기서 바로 편집한다. 핸들러는
-   * CommerceWorkspace가 이미 갖고 있던 것을 그대로 전달받는다(새 상태 없음). */
-  items: WorkspaceItem[];
-  thumbnails: Record<string, string>;
-  representativeId: string | null;
-  onPreviewImage: (id: string) => void;
-  onSetRepresentative: (id: string) => void;
-  onToggleGalleryUsage: (id: string) => void;
-  onToggleDescriptionUsage: (id: string) => void;
-  onMoveImage: (id: string, direction: "up" | "down") => void;
   /** Sprint A-3(작업6 — Payload Preview) — 카테고리가 확정되면 CommerceWorkspace가
    * 디바운스로 미리 계산해둔 실제 쿠팡 payload. 등록 버튼을 누르기 전에도 항상
    * 최신 상태를 보여준다. */
@@ -654,16 +633,6 @@ export function PlatformPreview({
       : listing.options.length > 0
         ? `직접 입력 — ${listing.options.length}개`
         : "옵션 없음 — 단일 상품으로 등록됩니다";
-
-  // N-3.19(CPO 지시: "요약에는 최소 원본 N장 · 등록 M장 · 대표 1장 표시") —
-  // 옵션 요약과 같은 원칙: 이미 실제 등록 payload가 쓰는 기준(useInProductGallery/
-  // isRepresentative, packages/marketplace의 어댑터와 동일)을 그대로 요약에도
-  // 쓴다. 새 판정 기준을 만들지 않는다.
-  const imageOriginalCount = product.images.length;
-  const imageRegisteredCount = product.images.filter((img) => img.isRepresentative || img.useInProductGallery).length;
-  const imageHasRepresentative = product.images.some((img) => img.isRepresentative);
-  const imageSummary = `원본 ${imageOriginalCount}장 · 등록 ${imageRegisteredCount}장 · 대표 ${imageHasRepresentative ? "1장" : "미지정"}`;
-  const imageNeedsCheck = imageOriginalCount === 0 || imageRegisteredCount === 0 || !imageHasRepresentative;
 
   const fix = onFixTextField;
 
@@ -972,28 +941,11 @@ export function PlatformPreview({
           />
         </CollapsibleSection>
 
-        <CollapsibleSection
-          title="이미지"
-          badge={
-            sectionCompletionBadge("section-images") ?? (
-              <StatusBadge status={imageNeedsCheck ? "needsCheck" : "success"} label={imageNeedsCheck ? "확인 필요" : "준비됨"} />
-            )
-          }
-          summary={imageSummary}
-          {...sectionProps("section-images")}
-        >
-          <ImageInlineEditor
-            product={product}
-            items={items}
-            thumbnails={thumbnails}
-            representativeId={representativeId}
-            onPreview={onPreviewImage}
-            onSetRepresentative={onSetRepresentative}
-            onToggleGalleryUsage={onToggleGalleryUsage}
-            onToggleDescriptionUsage={onToggleDescriptionUsage}
-            onMoveImage={onMoveImage}
-          />
-        </CollapsibleSection>
+        {/* CEO 지시(2026-08-24, CPO 부재중): "각 커머스별 이미지는 제거하고
+         * 공통인 상품정보에서만 관리" — 이미지 Accordion은 이제 "상품정보"
+         * (source) 탭 하나에만 있다(CommerceWorkspace.tsx). 여기 있던
+         * ImageInlineEditor는 완전히 제거했다 — 중복 관리 지점을 없애는 게
+         * 목적이라 숨기지 않고 아예 뺐다. */}
 
         <CollapsibleSection title="배송" badge={sectionCompletionBadge("section-shipping")} {...sectionProps("section-shipping")}>
           <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 xl:grid-cols-3">
