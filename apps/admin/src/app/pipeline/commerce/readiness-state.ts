@@ -53,6 +53,24 @@ export interface PriorityItem {
   sectionId?: string;
   externalHref?: string;
   sourceItems: ReadinessItem[];
+  /** N-4.12 STEP1/STEP9(대표님 지시: "데이터 오류와 API 오류를 절대 같은
+   * 방식으로 보여주지 않는다") — true면 사용자가 고쳐야 할 데이터 문제가
+   * 아니라 일시적 조회 실패(타임아웃/네트워크)다. 기본값은 false(데이터
+   * 문제) — 명시적으로 표시하는 곳만 true를 넘긴다. */
+  retryable?: boolean;
+}
+
+/** N-4.12 STEP2(대표님 지시: "무엇을 고쳐야 하는지 구체적으로 보여준다" —
+ * 예시: "스마트스토어 3개 항목 확인 필요: •원산지 •KC인증정보 •모델명") —
+ * "N개 입력"처럼 개수만 보여주면 사용자가 아코디언을 다 열어봐야 한다.
+ * 새 라벨 체계를 만들지 않는다 — ReadinessItem.label(이미 사람이 읽는
+ * 한국어, readiness.ts NAVER_FIELD_LABEL 등)을 그대로 나열만 한다. */
+function summarizeItemLabels(items: ReadinessItem[], maxShown = 3): string {
+  const labels = items.map((i) => i.label);
+  const shown = labels.slice(0, maxShown);
+  const rest = labels.length - shown.length;
+  const suffix = rest > 0 ? ` 외 ${rest}개` : "";
+  return `${shown.join(" · ")}${suffix}`;
 }
 
 export function buildPriorityItems(
@@ -86,7 +104,7 @@ export function buildPriorityItems(
     const [first] = legalItems;
     items.push({
       key: "legal",
-      label: legalItems.length === 1 ? first.label : "KC/판매 가능 여부 확인",
+      label: legalItems.length === 1 ? first.label : `법적 필수정보 ${legalItems.length}개 확인: ${summarizeItemLabels(legalItems)}`,
       detail: first.hint,
       sectionId: first.sectionId,
       externalHref: first.externalHref,
@@ -97,7 +115,10 @@ export function buildPriorityItems(
   if (restItems.length > 0) {
     items.push({
       key: "product-info",
-      label: `필수 상품정보 ${restItems.length}개 입력`,
+      label:
+        restItems.length === 1
+          ? `${restItems[0].label} 확인`
+          : `필수 상품정보 ${restItems.length}개 확인: ${summarizeItemLabels(restItems)}`,
       sectionId: restItems[0].sectionId,
       externalHref: restItems[0].externalHref,
       sourceItems: restItems,

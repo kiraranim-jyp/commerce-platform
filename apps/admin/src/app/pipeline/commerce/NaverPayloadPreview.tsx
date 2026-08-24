@@ -84,6 +84,8 @@ export interface NaverResolveResponse {
     afterServiceDirector: string | null;
     companyContactNumber: string | null;
     manufacturer: string | null;
+    /** N-4.12 STEP4 — resolve-context.ts 주석 참고, 새 판정이 아니라 표시용. */
+    manufacturerSource: "BRAND_DEFAULT" | "SELLER_DEFAULT" | "NONE";
   };
   // N-3.13 Part J — detailContent 조립에 필요한 재료. Coupang용으로 이미 있는
   // DescriptionTemplate/SellerProfile 공통이미지/BrandProfile.brandIntro를
@@ -300,6 +302,16 @@ export function NaverPayloadPreview({
   const afterServiceTelephoneNumber = resolved?.notice?.companyContactNumber ?? null;
   // N-3.83 — brandProfile/sellerProfile manufacturer 3단계 폴백(Coupang과 동일 소스).
   const resolvedManufacturer = resolved?.notice?.manufacturer ?? null;
+  // N-4.12 STEP4 — build-payload.ts와 같은 우선순위(상품 원문이 항상 최우선)를
+  // 여기서는 표시 문구로만 다시 판단한다(값 자체는 이미 payload가 정확히
+  // 계산해서 아래 notice.wear/kids.manufacturer로 내려온다 — 새 계산 아님).
+  const manufacturerSourceLabel = product.manufacturer.value.trim()
+    ? "상품 원본에서 추출"
+    : resolved?.notice?.manufacturerSource === "BRAND_DEFAULT"
+      ? "브랜드 기본값"
+      : resolved?.notice?.manufacturerSource === "SELLER_DEFAULT"
+        ? "판매자 기본값"
+        : null;
   // N-3.13 Part J — resolve route가 내려준 재료(Coupang과 동일 소스)로
   // detailBlocks가 있을 때만 assembleContentsFromBlocks를 태운다. resolved가
   // 아직 없으면(초기 로딩) 안내문구/공통이미지 없이 조립하되, listing.description
@@ -677,7 +689,11 @@ export function NaverPayloadPreview({
               <>
                 <Row label="재질" value={notice.wear.material || "MISSING"} />
                 <Row label="색상" value={notice.wear.color || "MISSING"} />
-                <Row label="제조자" value={notice.wear.manufacturer || "MISSING"} />
+                <Row
+                  label="제조자"
+                  value={notice.wear.manufacturer || "MISSING"}
+                  hint={notice.wear.manufacturer ? manufacturerSourceLabel : null}
+                />
                 <Row label="주의사항" value={notice.wear.caution || "MISSING"} />
                 {/* N-3.13 Part E-12 — 공식 스펙 required 필드로 새로 확인됨.
                     SellerProfile.qualityGuarantee/asContactNumber 재사용(Settings
@@ -696,7 +712,11 @@ export function NaverPayloadPreview({
               <>
                 <Row label="재질" value={notice.kids.material || "MISSING"} />
                 <Row label="색상" value={notice.kids.color || "MISSING"} />
-                <Row label="제조자" value={notice.kids.manufacturer || "MISSING"} />
+                <Row
+                  label="제조자"
+                  value={notice.kids.manufacturer || "MISSING"}
+                  hint={notice.kids.manufacturer ? manufacturerSourceLabel : null}
+                />
                 <Row label="주의사항" value={notice.kids.caution || "MISSING"} />
                 <Row label="권장연령" value={notice.kids.recommendedAge || "MISSING"} />
                 {/* N-3.44(CPO 지시) — 이전엔 항상 MISSING이라는 안내 문구만
@@ -837,12 +857,16 @@ function Section({ id, title, children }: { id: string; title: string; children:
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value, hint }: { label: string; value: string; hint?: string | null }) {
   const isProblem = value === "MISSING" || value.startsWith("BLOCKED") || value === "미확정";
   return (
     <div className="flex items-start gap-2 text-xs">
       <dt className="w-20 shrink-0 text-text-secondary">{label}</dt>
-      <dd className={isProblem ? "text-warning" : "text-text-primary"}>{value}</dd>
+      <dd className={isProblem ? "text-warning" : "text-text-primary"}>
+        {value}
+        {/* N-4.12 STEP4 — 값 옆에 출처를 그대로 노출한다(CPO 예시: "브랜드 기본값"). */}
+        {hint && <span className="ml-1.5 text-text-tertiary">({hint})</span>}
+      </dd>
     </div>
   );
 }

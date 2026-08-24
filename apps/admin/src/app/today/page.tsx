@@ -221,6 +221,13 @@ export default function TodayPage() {
                 </Button>
               </div>
               <div className="mt-3 flex flex-wrap gap-3 text-sm">
+                {/* N-4.12 STEP8(대표님 지시: "전체N / 등록불가N / 확인필요N /
+                    등록가능N / 가격위험N을 한눈에") — 새 집계가 아니라
+                    data.totalCount(이미 API가 계산)와 아래 tierCounts 루프를
+                    "전체" 항목 하나로만 앞에 추가한다. */}
+                <span className="flex items-center gap-1 text-text-secondary">
+                  <span>전체 {data.totalCount}개</span>
+                </span>
                 {(["1", "2", "3", "4", "5"] as const).map((tier) => {
                   const meta = data.tierMeta[tier];
                   const count = data.tierCounts[tier] ?? 0;
@@ -245,6 +252,19 @@ export default function TodayPage() {
                     <span className="flex items-center gap-1 text-text-secondary">
                       <span>🟡</span>
                       <span>가격 확인 필요 {priceAttentionCount}개</span>
+                    </span>
+                  );
+                })()}
+                {/* N-4.12 STEP8 — 마진위험(RED)만 따로 센다. 등록불가와 겹쳐도
+                    이중집계 경고가 아니라 "이 상품은 등록도 막혀있고 가격도
+                    위험하다"는 두 가지 별개 신호를 그대로 둘 다 보여준다. */}
+                {(() => {
+                  const priceRiskCount = data.products.filter((p) => p.readiness.priceLevel === "RED").length;
+                  if (priceRiskCount === 0) return null;
+                  return (
+                    <span className="flex items-center gap-1 text-text-secondary">
+                      <span>🔴</span>
+                      <span>가격위험 {priceRiskCount}개</span>
                     </span>
                   );
                 })()}

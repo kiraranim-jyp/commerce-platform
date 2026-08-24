@@ -189,7 +189,16 @@ function AdminRegistrationsPageInner() {
                   <td className="px-3 py-2 text-text-secondary">{formatDateTime(r.created_at)}</td>
                   <td className={`px-3 py-2 font-medium ${STATUS_CLASS[r.status]}`}>{STATUS_LABEL[r.status]}</td>
                   <td className="max-w-xs truncate px-3 py-2 text-text-primary">{r.product_name ?? "—"}</td>
-                  <td className="px-3 py-2 text-text-secondary">{r.external_product_id ?? "—"}</td>
+                  <td className="px-3 py-2 text-text-secondary">
+                    {r.external_product_id ?? (
+                      /* N-4.12 STEP10 — SUBMITTED인데 상품 ID가 없는 애매한 상태를
+                       * "—"로 조용히 숨기지 않는다(RegistrationHistoryPanel.tsx와
+                       * 같은 이유). */
+                      <span className={r.status === "SUBMITTED" ? "text-warning" : undefined}>
+                        {r.status === "SUBMITTED" ? "⚠️ 확인 필요" : "—"}
+                      </span>
+                    )}
+                  </td>
                   <td className={`px-3 py-2 font-medium ${complianceScoreClass(r.compliance_score)}`}>
                     {r.compliance_score != null ? `${r.compliance_score}점` : "—"}
                   </td>

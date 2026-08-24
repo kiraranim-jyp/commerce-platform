@@ -88,7 +88,7 @@ export function RegistrationStatusBanner({
                     </a>
                   ) : (
                     <span className="flex items-start gap-1.5 px-1 py-0.5">
-                      <span className="shrink-0 font-medium text-text-tertiary">{index + 1}.</span>
+                      <span className="shrink-0 font-medium text-text-tertiary">{item.retryable ? "⚠️" : `${index + 1}.`}</span>
                       <span>
                         <span className="font-medium text-text-primary">{item.label}</span>
                         {item.detail && <span className="block text-[11px] text-text-tertiary">{item.detail}</span>}

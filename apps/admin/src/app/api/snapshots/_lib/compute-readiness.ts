@@ -137,8 +137,15 @@ async function computeSmartstoreReadiness(
   });
 
   if (context.status !== "OK") {
-    // Naver 인증정보 미설정/토큰 실패 — 이 상품만의 문제가 아니라 계정
-    // 설정 문제이므로 BLOCKED로 표시하고 이유를 우선순위 항목에 남긴다.
+    // N-4.12 STEP1 실측(대표님 지시: "Preview=Validation=Register 동일 소스인지
+    // 실제 E2E로 확인") — 실제 프로덕션 대시보드 호출에서 NOT_CONFIGURED(계정
+    // 설정 자체가 안 됨)와 AUTH_FAILED(토큰 발급 중 타임아웃 등 일시적 실패)가
+    // 똑같이 "네이버 계정 연결 확인"으로 뭉뚱그려져 나오는 걸 실측으로 확인했다
+    // — 사용자가 계정을 재연결해야 하는 것처럼 보이지만 실제로는 잠시 후
+    // 다시 시도하면 해결될 수도 있는 문제라 원인이 다르다(STEP9 "데이터오류
+    // vs API오류" 구분과 동일한 문제). NOT_CONFIGURED만 진짜 설정 문제이고,
+    // AUTH_FAILED는 재시도 가능한 일시적 실패로 구분한다.
+    const notConfigured = context.status === "NOT_CONFIGURED";
     return {
       platform: "smartstore",
       supported: true,
@@ -147,9 +154,12 @@ async function computeSmartstoreReadiness(
       priorityItems: [
         {
           key: "naver-account",
-          label: "네이버 계정 연결 확인",
-          detail: context.status === "NOT_CONFIGURED" ? context.message : context.message,
+          label: notConfigured ? "네이버 계정 연결 확인" : "네이버 서버 응답 확인",
+          detail: notConfigured
+            ? context.message
+            : "네이버 서버 응답이 없어 일시적으로 확인할 수 없습니다 — 상품 정보에는 문제가 없습니다. 잠시 후 다시 시도해주세요.",
           sourceItems: [],
+          retryable: !notConfigured,
         },
       ],
       registered,

@@ -79,6 +79,19 @@ export function RegistrationHistoryPanel({ history }: { history: RegistrationHis
                   {entry.platform === "coupang" ? "쿠팡 상품 ID" : "네이버 상품번호"}: {entry.result.externalProductId}
                 </p>
               )}
+              {/* N-4.12 STEP10(대표님 지시: "등록 성공인데 실제 상품 ID가 없는
+               * 애매한 상태가 없는지 확인") — 실제 코드 조사 결과, 쿠팡/네이버
+               * 등록 API가 SUCCESS를 반환해도 응답 바디에 상품 ID가 없는
+               * 경우(register/route.ts: `parsed.data != null ? ... : undefined`)
+               * SUBMITTED로 저장되면서 상품 ID만 조용히 비어있었다 — 새 상태를
+               * 만들지 않고, 바로 이 화면에서 그 애매함을 숨기지 않고 그대로
+               * 보여준다. */}
+              {entry.result.status === "SUBMITTED" && !entry.result.externalProductId && (
+                <p className="mt-0.5 text-warning">
+                  ⚠️ {PLATFORM_ADAPTERS[entry.platform].label}이 등록을 수락했지만 상품 ID를 돌려받지 못했습니다 —
+                  {entry.platform === "coupang" ? " Wing" : " 스마트스토어 센터"}에서 실제 등록 여부를 직접 확인해주세요.
+                </p>
+              )}
               {entry.result.externalUrl && (
                 <p className="mt-0.5 text-text-secondary">{entry.result.externalUrl}</p>
               )}
