@@ -31,6 +31,7 @@ export async function POST(request: Request) {
     title: product.title.value,
     brand: product.brand.value,
     modelName: product.modelName.value,
+    color: product.color.value || undefined,
     originalPriceAmount: product.price.value.amount,
     originalCurrency: product.price.value.currency,
   });

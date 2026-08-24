@@ -31,6 +31,9 @@ export interface PriceCheckInput {
   title: string;
   brand: string;
   modelName: string;
+  /** N-4.18 P1-PRICE-SEARCH STEP4 — 있으면 classifyListingMatch의 색상
+   * 불일치 감점 신호로 쓴다(없으면 그 신호를 그냥 안 쓴다, 추측 금지). */
+  color?: string;
   originalPriceAmount: number;
   originalCurrency: string;
   /** N-4.03 Part 22 — true면 오늘 이미 저장된 소스(SELLER_ORIGIN/NAVER_SHOPPING)는
@@ -119,7 +122,7 @@ export async function runPriceCheck(input: PriceCheckInput): Promise<PriceCheckR
     // status === "OK" — 매칭 신뢰도로 다시 거른다.
     const matched = result.listings
       .map((listing) => ({ listing, match: classifyListingMatch(
-        { brand: input.brand, modelName: input.modelName, title: input.title },
+        { brand: input.brand, modelName: input.modelName, title: input.title, color: input.color },
         { title: listing.title },
       ) }))
       .filter(({ match }) => isUsableForCompetitionPrice(match.level));

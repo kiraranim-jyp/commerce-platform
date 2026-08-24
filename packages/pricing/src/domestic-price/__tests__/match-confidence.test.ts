@@ -32,10 +32,26 @@ describe("classifyListingMatch", () => {
     expect(result.level).not.toBe("MATCH");
   });
 
-  it("isUsableForCompetitionPrice — REJECT만 false, 나머지는 true", () => {
+  it("isUsableForCompetitionPrice — MATCH/LIKELY_MATCH만 true(N-4.18: WEAK_MATCH는 경쟁가격 계산에서 제외)", () => {
     expect(isUsableForCompetitionPrice("MATCH")).toBe(true);
     expect(isUsableForCompetitionPrice("LIKELY_MATCH")).toBe(true);
-    expect(isUsableForCompetitionPrice("WEAK_MATCH")).toBe(true);
+    expect(isUsableForCompetitionPrice("WEAK_MATCH")).toBe(false);
     expect(isUsableForCompetitionPrice("REJECT")).toBe(false);
+  });
+
+  it("색상이 둘 다 명시되고 다르면 감점된다(같은 모델이라도 다른 옵션)", () => {
+    const withColor = { ...product, color: "네이비" };
+    const sameColor = classifyListingMatch(withColor, { title: "보보쇼즈 Bobo Choses B126AC050 네이비 스웨트셔츠" });
+    const diffColor = classifyListingMatch(withColor, { title: "보보쇼즈 Bobo Choses B126AC050 블랙 스웨트셔츠" });
+    expect(diffColor.score).toBeLessThan(sameColor.score);
+    expect(diffColor.reasons).toContain("색상 불일치 — 다른 옵션일 수 있음");
+    expect(sameColor.reasons).toContain("색상 일치");
+  });
+
+  it("리스팅 제목에 색상 단어가 없으면 색상 신호를 쓰지 않는다(추측 금지)", () => {
+    const withColor = { ...product, color: "네이비" };
+    const noColorInListing = classifyListingMatch(withColor, { title: "보보쇼즈 Bobo Choses B126AC050 스웨트셔츠" });
+    const withoutColorField = classifyListingMatch(product, { title: "보보쇼즈 Bobo Choses B126AC050 스웨트셔츠" });
+    expect(noColorInListing.score).toBe(withoutColorField.score);
   });
 });
