@@ -106,6 +106,12 @@ export default function TodayPage() {
   const [priceSort, setPriceSort] = useState<
     "NONE" | "RISK" | "MARGIN" | "SELLING_PRICE" | "LOWEST_PRICE" | "LAST_CHECKED"
   >("NONE");
+  /** N-4.18-K STEP K-6(대표님 지시, 2026-08-26: "🔴 즉시 확인 N / 🟡 검토
+   * 필요 N / 🔵 참고 N 정도의 요약만 제공") — price_alerts가 없으면(마이그레이션
+   * 039 미실행) 전부 0으로 온다, 에러 아님. */
+  const [alertCounts, setAlertCounts] = useState<{ ACTION_REQUIRED: number; REVIEW: number; INFO: number } | null>(
+    null,
+  );
 
   async function load() {
     setLoading(true);
@@ -124,6 +130,10 @@ export default function TodayPage() {
 
   useEffect(() => {
     void load();
+    fetch("/api/price-alerts/summary")
+      .then((res) => res.json())
+      .then((json) => setAlertCounts(json.ok ? json.counts : null))
+      .catch(() => setAlertCounts(null));
   }, []);
 
   /** N-4.07 Sprint(대표님 지시: "대시보드 [가격 일괄 확인]") — 화면에 보이는
@@ -272,6 +282,19 @@ export default function TodayPage() {
                 })()}
               </div>
             </Card>
+
+            {alertCounts && (alertCounts.ACTION_REQUIRED > 0 || alertCounts.REVIEW > 0 || alertCounts.INFO > 0) && (
+              <Card padding="md" className="mb-4">
+                <p className="text-xs font-medium text-text-tertiary">Market Intelligence</p>
+                <div className="mt-1.5 flex flex-wrap gap-4 text-sm">
+                  {alertCounts.ACTION_REQUIRED > 0 && (
+                    <span className="text-error">🔴 즉시 확인 {alertCounts.ACTION_REQUIRED}</span>
+                  )}
+                  {alertCounts.REVIEW > 0 && <span className="text-warning">🟡 검토 필요 {alertCounts.REVIEW}</span>}
+                  {alertCounts.INFO > 0 && <span className="text-text-secondary">🔵 참고 {alertCounts.INFO}</span>}
+                </div>
+              </Card>
+            )}
 
             <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
               <div className="flex items-center gap-1.5">

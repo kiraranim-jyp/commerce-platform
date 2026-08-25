@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { backfillCanonicalProduct, buildProductIdentityDna } from "@commerce/shared";
+import { computeMarketAlert, type AlertCategory } from "@commerce/pricing";
 import { getSnapshot } from "../../snapshots/_lib/snapshot";
+import { computeMarketIntelligence } from "../_lib/market-intelligence";
+import { openAlertIfNotActive, resolveAlertsNotIn } from "../_lib/price-alerts";
 import { runDomesticPriceCheck } from "../_lib/run-domestic-price-check";
 import { runPriceCheck } from "../_lib/run-price-check";
 
@@ -44,6 +47,38 @@ export async function POST(request: Request) {
       pricesRecorded: 0,
       sourceErrors: [error instanceof Error ? error.message : "국내 가격비교 확인 실패"],
     };
+  }
+
+  // N-4.18-K STEP K-2/K-4/K-9(대표님 지시, 2026-08-26: "알림을 만들기 위해
+  // 다시 전체 검색하지 않는다", "같은 상태가 유지되는 동안은 최초 1회만") —
+  // 이 라우트(수동 "지금 확인" 또는 daily cron)가 실제로 가격을 재조회한
+  // 시점에만 알림을 갱신한다. 새 검색을 추가로 하지 않고, 방금 계산한
+  // computeMarketIntelligence()의 sellerAction/변화값을 그대로 재사용한다.
+  // price_alerts 테이블이 아직 없으면(마이그레이션 039 미실행) openAlertIfNotActive/
+  // resolveAlertsNotIn이 조용히 no-op이므로 이 블록이 실패해도 위 result는
+  // 그대로 반환된다.
+  try {
+    const intelligence = await computeMarketIntelligence(snapshotId);
+    if (intelligence) {
+      const alert = computeMarketAlert({
+        sellerAction: intelligence.sellerAction,
+        domesticChange: intelligence._alertInputs.domesticChange,
+        originChange: intelligence._alertInputs.originChange,
+      });
+      const stillActive: AlertCategory[] = alert ? [alert.category] : [];
+      if (alert) {
+        await openAlertIfNotActive({
+          snapshotId,
+          category: alert.category,
+          severity: alert.severity,
+          title: alert.title,
+          detail: alert.detail,
+        });
+      }
+      await resolveAlertsNotIn(snapshotId, stillActive);
+    }
+  } catch {
+    // 알림 갱신 실패가 가격 확인 자체의 성공/실패를 뒤집지 않는다(PART U 원칙).
   }
 
   return NextResponse.json({ ...result, domesticShop });

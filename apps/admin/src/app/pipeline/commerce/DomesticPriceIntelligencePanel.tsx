@@ -181,6 +181,32 @@ interface SellerAction {
   opportunity: SellerActionSignal | null;
 }
 
+/** N-4.18-K STEP K-3/K-5(대표님 지시, 2026-08-26) — price_alerts에 저장된
+ * "확인 가치가 있는 변화"만 여기 표시한다. sellerAction(위)은 항상 최신
+ * 계산값을 보여주지만, 이 목록은 "언제부터 이 상태였는지"(K-4 중복방지로
+ * 최초 1회만 열림)를 셀러가 확인/해소 여부와 함께 볼 수 있게 한다. */
+interface PriceAlert {
+  id: string;
+  category: "PRICE_GAP" | "OPPORTUNITY" | "ORIGIN_TREND";
+  severity: "ACTION_REQUIRED" | "REVIEW" | "INFO";
+  title: string;
+  detail: string;
+  status: "OPEN" | "ACKNOWLEDGED" | "RESOLVED";
+  openedAt: string;
+}
+
+const ALERT_SEVERITY_ICON: Record<PriceAlert["severity"], string> = {
+  ACTION_REQUIRED: "🔴",
+  REVIEW: "🟡",
+  INFO: "🔵",
+};
+
+const ALERT_SEVERITY_STYLE: Record<PriceAlert["severity"], string> = {
+  ACTION_REQUIRED: "border-error/30 bg-error-soft text-error",
+  REVIEW: "border-warning/30 bg-warning-soft text-warning",
+  INFO: "border-border bg-background text-text-secondary",
+};
+
 const SELLER_ACTION_STYLE: Record<SellerAction["status"], string> = {
   PRICE_KEEP: "border-border bg-success-soft text-success",
   PRICE_REVIEW: "border-border bg-warning-soft text-warning",
@@ -264,6 +290,8 @@ export function DomesticPriceIntelligencePanel({
   const [recheckResult, setRecheckResult] = useState<RecheckResult | null>(null);
   const [candidates, setCandidates] = useState<DomesticCandidate[]>([]);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [alerts, setAlerts] = useState<PriceAlert[]>([]);
+  const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
 
   function loadPriceHistory(): Promise<void> {
     return fetch(`/api/price-history/${snapshotId}`)
@@ -287,11 +315,40 @@ export function DomesticPriceIntelligencePanel({
       });
   }
 
+  /** N-4.18-K STEP K-5/K-6 — price_alerts(마이그레이션 039 대기 중)가 아직
+   * 없으면 API가 빈 배열을 돌려주므로 이 블록은 조용히 아무것도 보여주지
+   * 않는다(에러 아님). */
+  function loadAlerts(): Promise<void> {
+    return fetch(`/api/price-history/${snapshotId}/alerts`)
+      .then((res) => res.json())
+      .then((json) => {
+        setAlerts(json.ok ? json.alerts : []);
+      })
+      .catch(() => {
+        setAlerts([]);
+      });
+  }
+
   useEffect(() => {
     setLoading(true);
-    void Promise.all([loadPriceHistory(), loadCandidates()]).finally(() => setLoading(false));
+    void Promise.all([loadPriceHistory(), loadCandidates(), loadAlerts()]).finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshotId]);
+
+  async function acknowledgeAlert(id: string) {
+    if (acknowledgingId) return;
+    setAcknowledgingId(id);
+    try {
+      await fetch(`/api/price-history/${snapshotId}/alerts`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alertId: id }),
+      });
+      await loadAlerts();
+    } finally {
+      setAcknowledgingId(null);
+    }
+  }
 
   useEffect(() => {
     if (loading) return;
@@ -331,7 +388,7 @@ export function DomesticPriceIntelligencePanel({
         };
         setRecheckResult(summarizeRecheckResult(json));
       }
-      await loadPriceHistory();
+      await Promise.all([loadPriceHistory(), loadAlerts()]);
     } catch {
       setRecheckResult({ icon: "🔴", message: "가격 확인 요청이 실패했습니다(네트워크 오류)." });
     } finally {
@@ -449,6 +506,31 @@ export function DomesticPriceIntelligencePanel({
             </dl>
           </div>
         )}
+
+        {/* N-4.18-K STEP K-3/K-5/K-6 — 활성 알림(확인/해소 전). price_alerts가
+            비어있으면(마이그레이션 대기 또는 변화 없음) 아무것도 표시하지
+            않는다 — "변화 없음 → Alert 생성 안 됨"이 UI에도 그대로 반영된다. */}
+        {alerts.map((a) => (
+          <div key={a.id} className={`rounded-md border p-2.5 ${ALERT_SEVERITY_STYLE[a.severity]}`}>
+            <p className="font-medium">
+              {ALERT_SEVERITY_ICON[a.severity]} {a.title}
+            </p>
+            <p className="mt-1 text-text-secondary">{a.detail}</p>
+            <div className="mt-2 flex items-center gap-2">
+              {a.status === "OPEN" && (
+                <button
+                  type="button"
+                  onClick={() => void acknowledgeAlert(a.id)}
+                  disabled={acknowledgingId === a.id}
+                  className="rounded-md border border-current px-2 py-1 text-[11px] font-medium hover:opacity-80 disabled:opacity-50"
+                >
+                  {acknowledgingId === a.id ? "처리 중..." : "확인함"}
+                </button>
+              )}
+              {a.status === "ACKNOWLEDGED" && <span className="text-[10px] text-text-tertiary">✓ 확인함</span>}
+            </div>
+          </div>
+        ))}
 
         {/* STEP J-6 — "🌎 해외" 블록. cost/fx는 기존 computePriceBreakdown 값
             그대로, 원가 변화(▼/▲%)는 이미 서버가 계산한 priceHistory.origin.change를
