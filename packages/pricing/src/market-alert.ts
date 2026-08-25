@@ -51,22 +51,32 @@ export interface MarketAlertInput {
 }
 
 /**
- * N-4.18-K STEP K-2/K-3(대표님 지시: "새로운 가격판정 엔진을 만들지 않는다",
- * "가격 변화 자체가 아니라 셀러에게 어떤 의미인가를 판단") — H-2/J에서 이미
- * 계산한 sellerAction(status/opportunity/reasons)을 그대로 재사용해서
- * 3단계 우선순위로만 재분류한다. 여기서 새 가격 판정을 하지 않는다.
+ * N-4.18-K STEP K-2/K-3, N-4.18-L STEP L-6(대표님 지시: "Seller Action과
+ * Alert가 서로 모순되면 안 된다") — H-2/J에서 이미 계산한 sellerAction
+ * (status/opportunity/reasons)을 그대로 재사용해서 재분류한다. 여기서 새
+ * 가격 판정을 하지 않는다.
+ *
+ * L-6 실측(2026-08-26)에서 발견한 버그: 원래 구현은 PRICE_REVIEW일 때만
+ * domesticChange(7일 추세, 관측 2건 필요)의 K-1 threshold 통과를 요구했다
+ * — 그런데 K-1 실측에서 이미 확인했듯 이 시점엔 7일 추세 자체가 존재하는
+ * 경우가 거의 없어(관측이 아직 한 번씩만 있음) REVIEW 알림이 사실상 전혀
+ * 생성되지 않았다(실제 상품 5개로 재현 확인). 반면 PRICE_ADJUST는 조건
+ * 없이 바로 발생해 같은 sellerAction 매트릭스 안에서 일관성이 깨져 있었다.
+ * 대표님이 주신 L-6 매트릭스(PRICE_KEEP→INFO 또는 없음 / PRICE_REVIEW→
+ * REVIEW / PRICE_ADJUST→ACTION_REQUIRED / INSUFFICIENT_DATA→없음) 그대로
+ * status 하나로만 판정하도록 단순화한다 — "같은 상태 반복 시 알림 안 만듦"은
+ * severity 판정이 아니라 price_alerts의 partial unique index(K-4)가 이미
+ * DB 레벨에서 보장하므로, 여기서 또 막을 필요가 없다(오히려 막으면 이번에
+ * 발견한 버그처럼 정당한 알림까지 사라진다).
  *
  * 우선순위:
- * 1) 🔴 ACTION_REQUIRED — status가 PRICE_ADJUST(가격이 최저가보다 유의미하게
- *    높음)이거나, opportunity(J의 "기회" 신호, 예: 경쟁상품 품절)가 있을 때.
- * 2) 🟡 REVIEW — status가 PRICE_REVIEW이고 실제로 유효한 변화(K-1 threshold)가
- *    있을 때만(단순히 "판매가 > 최저가" 상태가 계속 유지되는 것만으로는
- *    반복 알림을 만들지 않는다 — 그건 K-4 중복방지가 상태 전환으로 이미
- *    처리한다. 여기서는 "알림을 낼 가치가 있는가"만 판단한다).
- * 3) 🔵 INFO — 위 두 경우에 해당하지 않지만 해외 원가만 유효하게 변했을 때.
- *
- * 변화가 없거나(데이터 부족 포함) 위 어디에도 해당하지 않으면 null을
- * 반환한다 — "변화 없음 → Alert 생성 안 됨"(K-8 필수 검증 항목).
+ * 1) 🔴 ACTION_REQUIRED — status PRICE_ADJUST, 또는 opportunity(J의 "기회"
+ *    신호) 존재.
+ * 2) 🟡 REVIEW — status PRICE_REVIEW.
+ * 3) 🔵 INFO — status가 PRICE_KEEP/INSUFFICIENT_DATA이지만 해외 원가만
+ *    유효하게(K-1 threshold) 변했을 때(참고 정보 — 급하지 않음).
+ * 4) 그 외(PRICE_KEEP/INSUFFICIENT_DATA + 변화 없음)는 null — "변화 없음 →
+ *    Alert 생성 안 됨"(K-8/L-2 필수 검증 항목).
  */
 export function computeMarketAlert(input: MarketAlertInput): MarketAlert | null {
   const { sellerAction } = input;
@@ -89,7 +99,7 @@ export function computeMarketAlert(input: MarketAlertInput): MarketAlert | null 
     };
   }
 
-  if (sellerAction.status === "PRICE_REVIEW" && isValidChange(input.domesticChange)) {
+  if (sellerAction.status === "PRICE_REVIEW") {
     return {
       severity: "REVIEW",
       category: "PRICE_GAP",

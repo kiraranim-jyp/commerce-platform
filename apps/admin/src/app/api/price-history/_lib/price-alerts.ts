@@ -60,16 +60,36 @@ export async function listActiveAlerts(snapshotId: string): Promise<PriceAlertRo
   return data.map(toRow);
 }
 
-/** 대시보드 요약(K-6: "🔴 즉시 확인 3 / 🟡 검토 필요 7 / 🔵 참고 12")용 —
- * snapshot 전체가 아니라 전체 활성 알림의 severity별 개수만 센다. */
-export async function countActiveAlertsBySeverity(): Promise<Record<AlertSeverity, number>> {
-  const empty: Record<AlertSeverity, number> = { ACTION_REQUIRED: 0, REVIEW: 0, INFO: 0 };
+export interface AlertCountSummary {
+  ACTION_REQUIRED: number;
+  REVIEW: number;
+  INFO: number;
+  /** N-4.18-L STEP L-10(대표님 지시, 2026-08-26: "🔴 3 가격 검토 필요, 💡 2
+   * 판매 기회처럼 분리해서 보여준다") — OPPORTUNITY 카테고리는 severity상
+   * ACTION_REQUIRED와 같지만 "위험 신호"가 아니라 "기회 신호"라 화면에서는
+   * 별도 아이콘(💡)으로 분리해서 보여준다. 새 severity를 만들지 않고 이미
+   * 있는 category로만 구분한다. */
+  OPPORTUNITY: number;
+}
+
+/** 대시보드 요약(K-6/L-10: "🔴 즉시 확인 3 / 🟡 검토 필요 7 / 💡 2 판매 기회 /
+ * 🔵 참고 12")용 — snapshot 전체가 아니라 전체 활성 알림의 severity+category별
+ * 개수만 센다. */
+export async function countActiveAlertsBySeverity(): Promise<AlertCountSummary> {
+  const empty: AlertCountSummary = { ACTION_REQUIRED: 0, REVIEW: 0, INFO: 0, OPPORTUNITY: 0 };
   const supabase = getSupabaseAdmin();
   if (!supabase) return empty;
-  const { data, error } = await supabase.from("price_alerts").select("severity").in("status", ["OPEN", "ACKNOWLEDGED"]);
+  const { data, error } = await supabase
+    .from("price_alerts")
+    .select("severity, category")
+    .in("status", ["OPEN", "ACKNOWLEDGED"]);
   if (error || !data) return empty;
-  for (const row of data as { severity: AlertSeverity }[]) {
-    if (row.severity in empty) empty[row.severity] += 1;
+  for (const row of data as { severity: AlertSeverity; category: AlertCategory }[]) {
+    if (row.category === "OPPORTUNITY") {
+      empty.OPPORTUNITY += 1;
+    } else if (row.severity in empty) {
+      empty[row.severity as "ACTION_REQUIRED" | "REVIEW" | "INFO"] += 1;
+    }
   }
   return empty;
 }

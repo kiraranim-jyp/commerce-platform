@@ -528,6 +528,18 @@ export function DomesticPriceIntelligencePanel({
                 </button>
               )}
               {a.status === "ACKNOWLEDGED" && <span className="text-[10px] text-text-tertiary">✓ 확인함</span>}
+              {/* N-4.18-L STEP L-9(대표님 지시, 2026-08-26: "Alert에서 바로
+                  행동할 수 있어야 함") — 자동 가격변경은 절대 하지 않는다.
+                  기존 handleRequestPriceReview(J-9)와 같은 이동만 한다. */}
+              {onRequestPriceReview && (
+                <button
+                  type="button"
+                  onClick={onRequestPriceReview}
+                  className="rounded-md border border-current px-2 py-1 text-[11px] font-medium hover:opacity-80"
+                >
+                  가격/마진 확인
+                </button>
+              )}
             </div>
           </div>
         ))}

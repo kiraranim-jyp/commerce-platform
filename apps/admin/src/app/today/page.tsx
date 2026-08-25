@@ -106,12 +106,12 @@ export default function TodayPage() {
   const [priceSort, setPriceSort] = useState<
     "NONE" | "RISK" | "MARGIN" | "SELLING_PRICE" | "LOWEST_PRICE" | "LAST_CHECKED"
   >("NONE");
-  /** N-4.18-K STEP K-6(대표님 지시, 2026-08-26: "🔴 즉시 확인 N / 🟡 검토
-   * 필요 N / 🔵 참고 N 정도의 요약만 제공") — price_alerts가 없으면(마이그레이션
-   * 039 미실행) 전부 0으로 온다, 에러 아님. */
-  const [alertCounts, setAlertCounts] = useState<{ ACTION_REQUIRED: number; REVIEW: number; INFO: number } | null>(
-    null,
-  );
+  /** N-4.18-K STEP K-6/N-4.18-L STEP L-10(대표님 지시, 2026-08-26: "🔴 3 /
+   * 🟡 7 / 💡 2 판매 기회 / 🔵 12 정도의 요약 + 우선순위 정렬") —
+   * price_alerts가 없으면(마이그레이션 039 미실행) 전부 0으로 온다, 에러 아님. */
+  const [alertCounts, setAlertCounts] = useState<
+    { ACTION_REQUIRED: number; REVIEW: number; INFO: number; OPPORTUNITY: number } | null
+  >(null);
 
   async function load() {
     setLoading(true);
@@ -283,18 +283,27 @@ export default function TodayPage() {
               </div>
             </Card>
 
-            {alertCounts && (alertCounts.ACTION_REQUIRED > 0 || alertCounts.REVIEW > 0 || alertCounts.INFO > 0) && (
-              <Card padding="md" className="mb-4">
-                <p className="text-xs font-medium text-text-tertiary">Market Intelligence</p>
-                <div className="mt-1.5 flex flex-wrap gap-4 text-sm">
-                  {alertCounts.ACTION_REQUIRED > 0 && (
-                    <span className="text-error">🔴 즉시 확인 {alertCounts.ACTION_REQUIRED}</span>
-                  )}
-                  {alertCounts.REVIEW > 0 && <span className="text-warning">🟡 검토 필요 {alertCounts.REVIEW}</span>}
-                  {alertCounts.INFO > 0 && <span className="text-text-secondary">🔵 참고 {alertCounts.INFO}</span>}
-                </div>
-              </Card>
-            )}
+            {alertCounts &&
+              (alertCounts.ACTION_REQUIRED > 0 ||
+                alertCounts.OPPORTUNITY > 0 ||
+                alertCounts.REVIEW > 0 ||
+                alertCounts.INFO > 0) && (
+                <Card padding="md" className="mb-4">
+                  <p className="text-xs font-medium text-text-tertiary">Market Intelligence</p>
+                  {/* STEP L-10 — "셀러가 오늘 무엇부터 봐야 하는지" 우선순위
+                      그대로 나열 순서를 고정한다(🔴 → 💡 → 🟡 → 🔵). */}
+                  <div className="mt-1.5 flex flex-wrap gap-4 text-sm">
+                    {alertCounts.ACTION_REQUIRED > 0 && (
+                      <span className="text-error">🔴 가격 검토 필요 {alertCounts.ACTION_REQUIRED}</span>
+                    )}
+                    {alertCounts.OPPORTUNITY > 0 && (
+                      <span className="text-success">💡 판매 기회 {alertCounts.OPPORTUNITY}</span>
+                    )}
+                    {alertCounts.REVIEW > 0 && <span className="text-warning">🟡 확인 필요 {alertCounts.REVIEW}</span>}
+                    {alertCounts.INFO > 0 && <span className="text-text-secondary">🔵 참고 {alertCounts.INFO}</span>}
+                  </div>
+                </Card>
+              )}
 
             <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
               <div className="flex items-center gap-1.5">

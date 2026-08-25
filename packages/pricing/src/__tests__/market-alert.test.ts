@@ -107,14 +107,16 @@ describe("computeMarketAlert — N-4.18-K STEP K-8(대표님 지시, 2026-08-26:
     expect(result).toBeNull();
   });
 
-  it("8-B) 변화 없음: PRICE_REVIEW 상태여도 유효한 변화가 전혀 없으면 알림을 만들지 않는다", () => {
+  it("L-6 회귀) PRICE_REVIEW는 domesticChange가 없어도(7일 추세 미형성) REVIEW를 낸다 — " +
+    "실제 production 5개 상품 재현: 7일 추세는 관측이 2건 이상 쌓여야 생기는데, K-1 실측대로 " +
+    "아직 반복 관측 자체가 드물어 이 게이트가 있으면 PRICE_REVIEW 알림이 사실상 전혀 안 만들어짐", () => {
     const result = computeMarketAlert(
       baseInput({
         sellerAction: sellerAction({ status: "PRICE_REVIEW", title: "가격 조정 검토" }),
-        domesticChange: { amountKrw: 200, ratePercent: 0.1 },
+        domesticChange: null,
       }),
     );
-    expect(result).toBeNull();
+    expect(result?.severity).toBe("REVIEW");
   });
 
   it("9) 데이터 부족(INSUFFICIENT_DATA) → 알림 생성 안 됨(판단 보류, 경쟁력 없음으로 해석 안 함)", () => {
