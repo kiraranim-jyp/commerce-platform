@@ -49,6 +49,13 @@ export interface SellerActionResult {
   /** STEP H-2-6 — "왜 이 추천이 나왔는지"(matchReasons와 동일한 패턴,
    * 실제 값이 있는 항목만 나열). */
   reasons: string[];
+  /** N-4.18-J STEP J-10(대표님 지시, 2026-08-25: "단순히 가격이 비싼지
+   * 알려주는 것보다 더 가치 있게") — "지금 무엇을 조심해야 하는가"(signals)와
+   * 별개로 "지금 유리한 점이 있는가"를 한 건만 골라 보여준다. 새 데이터를
+   * 수집하지 않고 이미 위에서 계산한 domesticDir/origin/soldOutCount만
+   * 재사용한다 — 대표님이 예시로 준 2개 케이스만 판정한다(그 외 조합은
+   * 지어내지 않는다, STEP H-2-4와 같은 원칙). */
+  opportunity: SellerActionSignal | null;
 }
 
 export interface SellerActionDomesticInput {
@@ -173,11 +180,30 @@ export function computeSellerAction(input: SellerActionInput): SellerActionResul
   if (domesticTrend?.trend === "DOWN") reasons.push("최근 가격 하락 확인");
   if (domesticTrend?.trend === "UP") reasons.push("최근 가격 상승 확인");
 
+  // STEP J-10 — 대표님 예시 2건만 판정한다. 원가↓+국내↓ 조합을 먼저 본다
+  // (해외 원가/국내 시세가 함께 유리하게 움직이는, 더 구체적인 근거) — 둘 다
+  // 해당하면 이쪽을 우선한다. 그 다음 "경쟁상품 품절 + 아직 급하지 않음".
+  let opportunity: SellerActionSignal | null = null;
+  if (origin === "DOWN" && domesticDir === "DOWN" && input.origin.change) {
+    opportunity = {
+      icon: "💡",
+      title: "가격 인하 기회",
+      detail: `해외 원가가 ${Math.abs(input.origin.change.changeRatePercent)}% 하락했고 국내 동일상품 가격도 하락 추세입니다. 마진을 유지하면서 판매가를 재검토할 수 있습니다.`,
+    };
+  } else if (input.domestic.soldOutCount > 0 && status !== "PRICE_ADJUST") {
+    opportunity = {
+      icon: "💡",
+      title: "판매 기회",
+      detail: `국내 동일상품 판매처 중 ${input.domestic.soldOutCount}곳이 품절 상태입니다. 경쟁 판매처가 줄어든 만큼, 가격을 급격히 낮출 필요가 없습니다.`,
+    };
+  }
+
   return {
     status,
     icon: STATUS_ICON[status],
     title: STATUS_TITLE[status],
     signals,
     reasons,
+    opportunity,
   };
 }

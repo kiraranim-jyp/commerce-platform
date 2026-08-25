@@ -246,6 +246,77 @@ describe("computeSellerAction — N-4.18-H-2 STEP H-2-1(상태) + H-2-8(8개 케
     expect(combined!.detail).not.toContain("올리");
   });
 
+  it("J-10) 원가↓ + 국내↓ → 💡 가격 인하 기회(opportunity)", () => {
+    const result = computeSellerAction(
+      baseInput({
+        priceLevel: "GREEN",
+        domestic: {
+          lowestPriceKrw: 109000,
+          averagePriceKrw: 112000,
+          sellerCount: 2,
+          priceGapVsLowestPercent: -5,
+          priceGapVsAveragePercent: -5,
+          trend: { current: 109000, previous: 119000, change: -10000, changeRate: -8.4, trend: "DOWN" },
+          soldOutCount: 0,
+        },
+        origin: {
+          change: {
+            oldPriceKrw: 139000,
+            newPriceKrw: 128000,
+            changeAmountKrw: -11000,
+            changeRatePercent: -7.9,
+            oldCheckedAt: "2026-08-18T00:00:00.000Z",
+            newCheckedAt: "2026-08-25T00:00:00.000Z",
+          },
+        },
+      }),
+    );
+    expect(result.opportunity?.title).toBe("가격 인하 기회");
+    expect(result.opportunity?.detail).toContain("7.9%");
+  });
+
+  it("J-10) 경쟁상품 품절 + 아직 PRICE_ADJUST 아님 → 💡 판매 기회(opportunity)", () => {
+    const result = computeSellerAction(
+      baseInput({
+        priceLevel: "YELLOW",
+        domestic: {
+          lowestPriceKrw: 230000,
+          averagePriceKrw: 235000,
+          sellerCount: 3,
+          priceGapVsLowestPercent: 4.2,
+          priceGapVsAveragePercent: 2,
+          trend: null,
+          soldOutCount: 2,
+        },
+      }),
+    );
+    expect(result.opportunity?.title).toBe("판매 기회");
+    expect(result.opportunity?.detail).toContain("2곳");
+  });
+
+  it("J-10) PRICE_ADJUST 상태에서는 품절만으로 기회를 지어내지 않는다", () => {
+    const result = computeSellerAction(
+      baseInput({
+        priceLevel: "RED",
+        domestic: {
+          lowestPriceKrw: 200000,
+          averagePriceKrw: 205000,
+          sellerCount: 3,
+          priceGapVsLowestPercent: 25,
+          priceGapVsAveragePercent: 20,
+          trend: null,
+          soldOutCount: 1,
+        },
+      }),
+    );
+    expect(result.opportunity).toBeNull();
+  });
+
+  it("J-10) 조건이 없으면 opportunity는 null(지어내지 않는다)", () => {
+    const result = computeSellerAction(baseInput({ priceLevel: "GREEN", currentSellingPriceKrw: 100000 }));
+    expect(result.opportunity).toBeNull();
+  });
+
   it("변화가 없으면(UNCHANGED) 국내/해외 변화 신호를 지어내지 않는다", () => {
     const result = computeSellerAction(
       baseInput({

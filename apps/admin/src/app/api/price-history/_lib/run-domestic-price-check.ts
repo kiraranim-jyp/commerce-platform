@@ -64,17 +64,36 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
 
   // STEP 1 — 활성 소스 대상으로 검색해서 동일상품 후보를 찾고, 신뢰도에 따라
   // domestic_product_links를 만들거나 갱신한다(NOT_MATCHED는 링크를 만들지 않는다).
-  const sources = (await listDomesticPriceSources()).filter((s) => s.enabled && s.status === "ACTIVE");
-  const searchResults = await searchDomesticShops(
-    {
-      title: searchTitle,
-      brand: input.dna.brand.value || undefined,
-      sourceUrl: input.dna.sourceUrl,
-      sku,
-      searchTerm,
-    },
-    sources.map((s) => ({ id: s.id, name: s.name, domain: s.domain, currency: s.currency, collectionStrategy: s.collectionStrategy })),
-  );
+  //
+  // N-4.18-J STEP J-4/J-13(대표님 지시, 2026-08-25: "P0 우선 검색 → 95% 후보
+  // 발견 → P1 검색 중단 가능", "검색 요청량/비용이 불필요하게 증가하지 않게") —
+  // P0 소스를 먼저 검색하고, very_high(95%+) 매칭이 하나라도 나오면 P1/P2
+  // 소스는 검색하지 않는다(사이트별 실제 HTTP 요청 자체를 절약). P0에서 확실한
+  // 동일상품을 못 찾았을 때만 나머지 소스까지 검색한다 — recall(후보를 최대한
+  // 놓치지 않는다) 원칙은 그대로 유지하면서, 이미 충분한 경우에만 비용을 아낀다.
+  const allSources = (await listDomesticPriceSources()).filter((s) => s.enabled && s.status === "ACTIVE");
+  const p0Sources = allSources.filter((s) => s.priority === "P0");
+  const otherSources = allSources.filter((s) => s.priority !== "P0");
+  const query = {
+    title: searchTitle,
+    brand: input.dna.brand.value || undefined,
+    sourceUrl: input.dna.sourceUrl,
+    sku,
+    searchTerm,
+  };
+  const toRef = (s: (typeof allSources)[number]) => ({
+    id: s.id,
+    name: s.name,
+    domain: s.domain,
+    currency: s.currency,
+    collectionStrategy: s.collectionStrategy,
+  });
+
+  const p0Results = await searchDomesticShops(query, p0Sources.map(toRef));
+  const foundVeryHighInP0 = p0Results.some((r) => r.candidates.some((c) => c.matchLevel === "very_high"));
+  const otherResults =
+    otherSources.length > 0 && !foundVeryHighInP0 ? await searchDomesticShops(query, otherSources.map(toRef)) : [];
+  const searchResults = [...p0Results, ...otherResults];
 
   for (const result of searchResults) {
     if (result.status === "error") {
@@ -110,7 +129,7 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
   const links = (await listDomesticProductLinks(input.snapshotId)).filter(
     (l) => l.verified && l.status === "ACTIVE",
   );
-  const sourceById = new Map(sources.map((s) => [s.id, s]));
+  const sourceById = new Map(allSources.map((s) => [s.id, s]));
   const observations: Parameters<typeof recordPriceObservations>[0] = [];
 
   for (const link of links) {
