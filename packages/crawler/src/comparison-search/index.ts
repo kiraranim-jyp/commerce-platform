@@ -4,6 +4,7 @@ import { searchChildrensalon } from "./childrensalon";
 import { fetchLooxlooProductPrice, searchLooxloo } from "./looxloo";
 import { withConfidence } from "./match";
 import { selectCandidatesForDetailConfirmation } from "./price-confirmation";
+import { fetchRuliiProductPrice, searchRulii } from "./rulii";
 import { searchShopifySuggest } from "./shopify-suggest";
 import type {
   ComparisonCandidate,
@@ -153,6 +154,10 @@ async function searchOneDomesticShop(
       const scored = withConfidence(query, candidates).map((c) => ({ ...c, priceSource: "detail" as const }));
       return { ...base, status: "ok", candidates: scored };
     }
+    if (source.domain === "rulii.co.kr") {
+      const candidates = await searchRulii(searchTerm);
+      return { ...base, status: "ok", candidates: withConfidence(query, candidates) };
+    }
     return { ...base, status: "unsupported", candidates: [] };
   } catch (error) {
     return {
@@ -212,6 +217,12 @@ export async function refreshDomesticProductPrice(
       const detail = await fetchShopifyProductJson(`https://bobochoses.com/ko-kr/products/${handle}`);
       return detail?.productData.price
         ? { status: "OK", price: detail.productData.price }
+        : { status: "UNAVAILABLE", price: null };
+    }
+    if (domain === "rulii.co.kr") {
+      const result = await fetchRuliiProductPrice(externalUrl);
+      return result.available && result.price
+        ? { status: "OK", price: result.price }
         : { status: "UNAVAILABLE", price: null };
     }
     return { status: "UNSUPPORTED", price: null };
