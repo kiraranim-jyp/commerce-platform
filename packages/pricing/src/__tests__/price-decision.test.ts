@@ -24,6 +24,29 @@ describe("computePriceDecision", () => {
     expect(result.priceGapVsAveragePercent).toBeGreaterThan(5);
   });
 
+  it("N-4.18-H: CONSIDER_LOWER는 priceGapVsLowestPercent를 함께 계산하고 reason에 최저가를 우선 언급한다", () => {
+    const result = computePriceDecision({
+      costPriceKrw: 150000,
+      currentSellingPriceKrw: 239000,
+      domesticAveragePriceKrw: 219000,
+      domesticLowestPriceKrw: 202000,
+    });
+    expect(result.verdict).toBe("CONSIDER_LOWER");
+    expect(result.priceGapVsLowestPercent).toBeCloseTo(18.3, 0);
+    expect(result.reason).toContain("최저가");
+  });
+
+  it("N-4.18-H: MAINTAIN도 priceGapVsLowestPercent를 계산한다(음수=최저가보다 저렴)", () => {
+    const result = computePriceDecision({
+      costPriceKrw: 142000,
+      currentSellingPriceKrw: 199000,
+      domesticAveragePriceKrw: 214000,
+      domesticLowestPriceKrw: 220000,
+    });
+    expect(result.verdict).toBe("MAINTAIN");
+    expect(result.priceGapVsLowestPercent).toBeLessThan(0);
+  });
+
   it("🔴 MARGIN_RISK — 마진이 최소 기준 미만이면 국내가와 무관하게 위험", () => {
     const result = computePriceDecision({
       costPriceKrw: 205000,

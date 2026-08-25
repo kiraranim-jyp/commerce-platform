@@ -100,5 +100,68 @@ test("Test 6: Junior Edition 회귀 상품 -> 기존 60%보다 명확히 높은 
   assert.equal(result.level, "very_high");
 });
 
+// N-4.18-I STEP I-6(대표님 지시, 2026-08-25) — 카테고리 신호의 5개 방어 케이스.
+// 실측 결과(RULII/LOOXLOO/DEUXBEBE breadcrumb는 상품유형이 아니라 프로모션/
+// 브랜드 그룹이라 못 씀 — match.ts 주석 참고)에 따라 카테고리는 제목 텍스트의
+// 실제 상품유형 단어(원피스/바지/셔츠 등)로만 판단한다.
+
+// Case A: 같은 SKU + 같은 색상 + PANTS -> 매우 높은 점수
+test("STEP I-6 Case A: 같은 SKU+색상+카테고리(PANTS) -> 매우 높은 점수", () => {
+  const query = { title: "Bobo Choses Denim Pants in Blue", brand: "Bobo Choses", sku: "B126AC050" };
+  const result = scoreCandidateMatch(
+    query,
+    candidate({ title: "Bobo Choses Denim Trousers in Blue", brand: "Bobo Choses", sku: "B126AC050" }),
+  );
+  assert.ok(result.confidence >= 0.95, `expected >= 0.95, got ${result.confidence}`);
+});
+
+// Case B: 같은 브랜드 + 다른 SKU + PANTS -> SKU 불일치로 감점(카테고리 일치가 구제하지 않음)
+test("STEP I-6 Case B: 같은 브랜드, 다른 SKU, 같은 카테고리 -> SKU 불일치로 낮은 점수", () => {
+  const query = { title: "Bobo Choses Denim Pants in Blue", brand: "Bobo Choses", sku: "B126AC050" };
+  const result = scoreCandidateMatch(
+    query,
+    candidate({ title: "Bobo Choses Denim Pants in Blue", brand: "Bobo Choses", sku: "B126AC999" }),
+  );
+  assert.ok(result.confidence < 0.7, `SKU mismatch should stay low despite same category, got ${result.confidence}`);
+});
+
+// Case C: 같은 모델 + 같은 색상 + TOP vs PANTS -> 카테고리 불일치로 강한 감점
+test("STEP I-6 Case C: 같은 모델+색상, TOP vs PANTS -> 카테고리 불일치 강한 감점", () => {
+  const query = { title: "Bobo Choses Stripe Shirt in Blue", brand: "Bobo Choses" };
+  const withoutCategory = scoreCandidateMatch(
+    query,
+    candidate({ title: "Bobo Choses Stripe Top in Blue", brand: "Bobo Choses" }),
+  );
+  const mismatchCategory = scoreCandidateMatch(
+    query,
+    candidate({ title: "Bobo Choses Stripe Pants in Blue", brand: "Bobo Choses" }),
+  );
+  assert.ok(
+    mismatchCategory.confidence < withoutCategory.confidence,
+    `TOP vs PANTS should score lower than TOP vs TOP, got ${mismatchCategory.confidence} vs ${withoutCategory.confidence}`,
+  );
+  assert.ok(mismatchCategory.reasons.includes("카테고리 불일치"), "reasons should include 카테고리 불일치");
+});
+
+// Case D: 같은 모델 + 같은 색상 + 카테고리 정보 없음(둘 다 상품유형 단어 없음) -> 감점하지 않음
+test("STEP I-6 Case D: 카테고리 정보 없음(양쪽 다) -> 카테고리로 감점하지 않는다", () => {
+  const query = { title: "Bobo Choses Signature Piece in Blue", brand: "Bobo Choses" };
+  const result = scoreCandidateMatch(
+    query,
+    candidate({ title: "Bobo Choses Signature Piece in Blue", brand: "Bobo Choses" }),
+  );
+  assert.ok(!result.reasons.includes("카테고리 불일치"), "no category info on either side must not be MISMATCH");
+});
+
+// Case E: 카테고리만 같고 브랜드/모델/SKU 전부 다름 -> 절대 동일상품 판정 금지
+test("STEP I-6 Case E: 카테고리만 동일, 나머지 전부 불일치 -> 동일상품 아님", () => {
+  const query = { title: "Bobo Choses Denim Pants in Blue", brand: "Bobo Choses", sku: "B126AC050" };
+  const result = scoreCandidateMatch(
+    query,
+    candidate({ title: "Completely Unrelated Denim Pants in Red", brand: "Totally Different Brand", sku: "XYZ999" }),
+  );
+  assert.ok(result.level === "low", `category-only match must stay 'low', got ${result.level}`);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

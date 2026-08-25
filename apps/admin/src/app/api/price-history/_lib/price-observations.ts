@@ -24,6 +24,11 @@ interface PriceObservationRow {
   tax_amount: number | null;
   exchange_rate: number | null;
   price_krw: number;
+  /** N-4.18-G STEP G-1 — 마이그레이션 038에서 추가. source_ref_id와 같은
+   * 이유로 optional(스키마 캐시 지연 세션에서도 크래시 방지). */
+  sale_price_krw?: number | null;
+  original_price_krw?: number | null;
+  sold_out?: boolean | null;
   checked_at: string;
 }
 
@@ -41,6 +46,9 @@ function toRecord(row: PriceObservationRow): PriceObservationRecord {
     taxAmount: row.tax_amount,
     exchangeRate: row.exchange_rate,
     priceKrw: row.price_krw,
+    salePriceKrw: row.sale_price_krw ?? null,
+    originalPriceKrw: row.original_price_krw ?? null,
+    soldOut: row.sold_out ?? null,
     checkedAt: row.checked_at,
   };
 }
@@ -58,36 +66,68 @@ export interface NewPriceObservation {
   taxAmount?: number | null;
   exchangeRate?: number | null;
   priceKrw: number;
+  /** N-4.18-G STEP G-1 — 실측된 사이트(RULII 등)만 채운다, 없으면 undefined→null. */
+  salePriceKrw?: number | null;
+  originalPriceKrw?: number | null;
+  soldOut?: boolean | null;
 }
 
 /** 한 번의 확인(수동 "지금 확인" 또는 daily cron)에서 나온 관측치 여러 개를
  * 한 번에 append한다 — 국내 시장가는 리스팅마다 1행이라 배치 insert가 기본. */
+function toBaseRow(o: NewPriceObservation) {
+  return {
+    snapshot_id: o.snapshotId,
+    source: o.source,
+    source_label: o.sourceLabel ?? null,
+    source_product_url: o.sourceProductUrl ?? null,
+    source_ref_id: o.sourceRefId ?? null,
+    currency: o.currency,
+    price_amount: o.priceAmount,
+    shipping_cost_amount: o.shippingCostAmount ?? null,
+    tax_amount: o.taxAmount ?? null,
+    exchange_rate: o.exchangeRate ?? null,
+    price_krw: o.priceKrw,
+  };
+}
+
+/** N-4.18-G STEP G-1(대표님 명시: "기존 가격비교/마진 계산 회귀가 발생하면
+ * 안 됩니다") — 마이그레이션 038(sale_price_krw/original_price_krw/sold_out)이
+ * 아직 반영 안 된 세션에서는 이 3개 컬럼을 포함한 insert가 "column not
+ * found" 에러로 통째로 실패한다 — RULII뿐 아니라 모든 소스의 가격 저장이
+ * 막히는 회귀였다(2026-08-25 프로덕션에서 실측 확인). 그 에러를 감지하면
+ * 새 컬럼 없이 base row로 즉시 재시도해 기존 동작을 보존한다 — 마이그레이션
+ * 013/014/017과 같은 "코드는 우아하게 저하, 마이그레이션 실행 전까지 새
+ * 필드만 비어있음" 원칙. */
+function isMissingColumnError(message: string): boolean {
+  return /schema cache|column .* does not exist|could not find the .* column/i.test(message);
+}
+
 export async function recordPriceObservations(
   observations: NewPriceObservation[],
 ): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
   if (observations.length === 0) return { ok: true, count: 0 };
   const supabase = getSupabaseAdmin();
   if (!supabase) return { ok: false, error: "Supabase가 설정되어 있지 않습니다." };
+
   const { error, count } = await supabase
     .from("price_observations")
     .insert(
       observations.map((o) => ({
-        snapshot_id: o.snapshotId,
-        source: o.source,
-        source_label: o.sourceLabel ?? null,
-        source_product_url: o.sourceProductUrl ?? null,
-        source_ref_id: o.sourceRefId ?? null,
-        currency: o.currency,
-        price_amount: o.priceAmount,
-        shipping_cost_amount: o.shippingCostAmount ?? null,
-        tax_amount: o.taxAmount ?? null,
-        exchange_rate: o.exchangeRate ?? null,
-        price_krw: o.priceKrw,
+        ...toBaseRow(o),
+        sale_price_krw: o.salePriceKrw ?? null,
+        original_price_krw: o.originalPriceKrw ?? null,
+        sold_out: o.soldOut ?? null,
       })),
       { count: "exact" },
     );
-  if (error) return { ok: false, error: error.message };
-  return { ok: true, count: count ?? observations.length };
+  if (!error) return { ok: true, count: count ?? observations.length };
+  if (!isMissingColumnError(error.message)) return { ok: false, error: error.message };
+
+  const retry = await supabase
+    .from("price_observations")
+    .insert(observations.map(toBaseRow), { count: "exact" });
+  if (retry.error) return { ok: false, error: retry.error.message };
+  return { ok: true, count: retry.count ?? observations.length };
 }
 
 /** N-4.03 Part 22(대표님 지시) — daily cron이 같은 날 재실행(재시도/재배포 등)돼도

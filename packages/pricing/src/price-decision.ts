@@ -23,6 +23,10 @@ export interface PriceDecisionResult {
   marginPercent: number;
   /** 국내 평균가 대비 현재 판매가 차이(%). 양수=더 비쌈. 국내 시세 없으면 null. */
   priceGapVsAveragePercent: number | null;
+  /** N-4.18-H(대표님 지시, 2026-08-25: "🔴일 때는 최저가 대비로, 🟢일 때는
+   * 평균가 대비로 보여줘야 경각심/안심 둘 다 정확히 전달된다") — 국내 최저가
+   * 대비 현재 판매가 차이(%). 양수=더 비쌈. 최저가 데이터 없으면 null. */
+  priceGapVsLowestPercent: number | null;
   reason: string;
 }
 
@@ -51,6 +55,10 @@ export function computePriceDecision(input: PriceDecisionInput): PriceDecisionRe
     domesticAveragePriceKrw && domesticAveragePriceKrw > 0
       ? Number((((currentSellingPriceKrw - domesticAveragePriceKrw) / domesticAveragePriceKrw) * 100).toFixed(1))
       : null;
+  const priceGapVsLowestPercent =
+    domesticLowestPriceKrw && domesticLowestPriceKrw > 0
+      ? Number((((currentSellingPriceKrw - domesticLowestPriceKrw) / domesticLowestPriceKrw) * 100).toFixed(1))
+      : null;
 
   // 마진 자체가 바닥 미만이면 경쟁력과 무관하게 무조건 위험 — 국내 시세가
   // 아무리 낮아도 손해를 보면서 유지/인하를 권할 수 없다.
@@ -59,6 +67,7 @@ export function computePriceDecision(input: PriceDecisionInput): PriceDecisionRe
       verdict: "MARGIN_RISK",
       marginPercent,
       priceGapVsAveragePercent,
+      priceGapVsLowestPercent,
       reason:
         marginPercent < 0
           ? `현재 판매가(₩${currentSellingPriceKrw.toLocaleString()})가 원가(₩${costPriceKrw.toLocaleString()})보다 낮습니다 — 판매할수록 손해입니다.`
@@ -73,25 +82,27 @@ export function computePriceDecision(input: PriceDecisionInput): PriceDecisionRe
       verdict: "MAINTAIN",
       marginPercent,
       priceGapVsAveragePercent: null,
+      priceGapVsLowestPercent: null,
       reason: `예상 마진 ${marginPercent}%로 기준을 충족합니다(국내 가격 비교 데이터 없음 — 마진 기준으로만 판단).`,
     };
   }
 
+  // N-4.18-H(대표님 지시: "🔴일 때는 최저가 대비로 경각심을, 🟢일 때는 평균가
+  // 대비로 안심을 정확히 전달") — CONSIDER_LOWER는 최저가 대비 문구를
+  // 우선한다(최저가 데이터 있을 때만, 없으면 평균가 문구로 폴백 — 지어내지 않음).
   if (priceGapVsAveragePercent > competitiveGapPercent) {
-    return {
-      verdict: "CONSIDER_LOWER",
-      marginPercent,
-      priceGapVsAveragePercent,
-      reason: `현재 판매가가 국내 평균(₩${domesticAveragePriceKrw!.toLocaleString()})보다 ${priceGapVsAveragePercent}% 높습니다(마진 ${marginPercent}%는 충분) — 가격 인하를 검토해보세요.${
-        domesticLowestPriceKrw != null ? ` 국내 최저가는 ₩${domesticLowestPriceKrw.toLocaleString()}입니다.` : ""
-      }`,
-    };
+    const reason =
+      priceGapVsLowestPercent != null
+        ? `현재 판매가가 국내 최저가(₩${domesticLowestPriceKrw!.toLocaleString()})보다 ${priceGapVsLowestPercent}% 높습니다(마진 ${marginPercent}%는 충분) — 가격 인하를 검토해보세요. 국내 평균가는 ₩${domesticAveragePriceKrw!.toLocaleString()}입니다.`
+        : `현재 판매가가 국내 평균(₩${domesticAveragePriceKrw!.toLocaleString()})보다 ${priceGapVsAveragePercent}% 높습니다(마진 ${marginPercent}%는 충분) — 가격 인하를 검토해보세요.`;
+    return { verdict: "CONSIDER_LOWER", marginPercent, priceGapVsAveragePercent, priceGapVsLowestPercent, reason };
   }
 
   return {
     verdict: "MAINTAIN",
     marginPercent,
     priceGapVsAveragePercent,
+    priceGapVsLowestPercent,
     reason: `현재 판매가: ₩${currentSellingPriceKrw.toLocaleString()}, 국내 평균: ₩${domesticAveragePriceKrw!.toLocaleString()}, 예상 마진: ${marginPercent}% — 가격 경쟁력이 있어 유지를 권장합니다.`,
   };
 }

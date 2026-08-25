@@ -9,6 +9,16 @@ interface SampleListing {
   priceKrw: number;
   productUrl: string | null;
   checkedAt: string;
+  /** N-4.18-G STEP G-4(대표님 지시, 2026-08-25) — 실측된 사이트(RULII)만 값이
+   * 있다, 나머지는 null(정가/할인가 구분 미지원). */
+  salePriceKrw: number | null;
+  originalPriceKrw: number | null;
+}
+
+interface SoldOutListing {
+  mallName: string | null;
+  productUrl: string | null;
+  checkedAt: string;
 }
 
 /** N-4.07 Sprint(대표님 지시: "출처 + 가격 + 확인시간을 보여준다") — "2시간 전"/
@@ -37,6 +47,64 @@ const PRICE_AGE_LABEL: Record<PriceAgeTier, string> = {
 interface RecheckResult {
   icon: string;
   message: string;
+}
+
+/** N-4.18-F STEP1(대표님 지시, 2026-08-25: "95%가 나왔다고 단순히 배지만 보여주지
+ * 말고 왜 같은 상품인지 근거를 보여줘야 한다") — /api/domestic-price-sources/links가
+ * 이제 EXACT(95%+, 이미 자동확정)까지 포함해 전부 돌려준다. 세 등급을 같은 시각
+ * 패턴으로 보여준다: 🟢 동일상품(95~100%, 가격비교 자동반영) / 🟡 동일상품 후보
+ * (85~94%, 셀러 확인 필요) / ⚪ 유사상품(70~84%, 가격비교 미반영). */
+interface DomesticCandidate {
+  id: string;
+  matchType: "EXACT" | "HIGH_CONFIDENCE" | "REVIEW_REQUIRED";
+  matchConfidence: number;
+  matchedTitle: string | null;
+  matchedBrand: string | null;
+  matchReasons: string[];
+  verified: boolean;
+  externalUrl: string;
+}
+
+const CANDIDATE_LABEL: Record<DomesticCandidate["matchType"], { icon: string; text: string; note: string }> = {
+  EXACT: { icon: "🟢", text: "동일상품", note: "→ 가격비교에 자동 반영" },
+  HIGH_CONFIDENCE: { icon: "🟡", text: "동일상품 후보", note: "→ 확인하면 가격비교에 반영됩니다" },
+  REVIEW_REQUIRED: { icon: "⚪", text: "유사상품", note: "가격비교에는 반영하지 않습니다" },
+};
+
+/** match.ts(scoreCandidateMatch)가 이미 낸 matchReasons 문자열을 그대로 화면에
+ * 옮긴다 — 새 판정 로직을 만들지 않는다. "불일치"가 포함되면 ✕, "모델명 유사도"는
+ * 퍼센트가 50% 이상이면 ✓ 아니면 △, 그 외(일치류)는 ✓. */
+function reasonIcon(reason: string): "✓" | "✕" | "△" {
+  if (reason.includes("불일치")) return "✕";
+  if (reason.startsWith("모델명 유사도")) {
+    const pct = Number(/(\d+)%/.exec(reason)?.[1] ?? 0);
+    return pct >= 50 ? "✓" : "△";
+  }
+  return "✓";
+}
+
+/** 서버 문구를 그대로 쓰되, CEO 예시 문구("상품명 유사")에 맞춰 "모델명"만
+ * "상품명"으로 표기를 통일한다(값 자체는 안 바꿈, 라벨만). */
+function reasonLabel(reason: string): string {
+  return reason.replace("모델명 유사도", "상품명 유사도").replace(/^SKU /, "SKU/품번 ");
+}
+
+/** N-4.18-F STEP2(대표님 지시: "정보 없음은 감점하지 않되, 없다는 사실 자체는
+ * 보여준다") — matchReasons에 해당 신호가 아예 언급되지 않았다면(둘 중 한쪽에
+ * 정보가 없어 애초에 채점되지 않은 것) "정보 없음"으로 표시한다.
+ *
+ * N-4.18-I STEP I-7(대표님 지시, 2026-08-25) — 카테고리 신호가 이제 실제로
+ * 존재한다(match.ts extractCategoryTaxon, 실측된 제목 텍스트 상품유형 단어
+ * 기반). "카테고리 일치"/"카테고리 불일치" reason이 실제로 있으면(즉 양쪽 다
+ * taxon이 확인됐으면) 더는 "정보 없음"이라고 지어내지 않는다 — reasons에
+ * 언급이 전혀 없을 때만(한쪽이라도 상품유형 단어가 없어 판정 자체를 못한
+ * 경우) "카테고리 정보 없음"을 보여준다. */
+function missingSignalNotes(reasons: string[]): string[] {
+  const notes: string[] = [];
+  if (!reasons.some((r) => r.includes("SKU"))) notes.push("품번 정보 없음");
+  if (!reasons.some((r) => r.includes("색상"))) notes.push("색상 정보 없음");
+  if (!reasons.some((r) => r.includes("카테고리"))) notes.push("카테고리 정보 없음");
+  return notes;
 }
 
 /** N-4.11 STEP2 / N-4.18-C(대표님 지시, 2026-08-25) — /api/price-history/check
@@ -78,6 +146,9 @@ interface DomesticCompetition {
   averagePriceKrw: number | null;
   sellerCount: number;
   sampleListings: SampleListing[];
+  /** N-4.18-G STEP G-4 — 최저/평균/최고가 계산에서 제외된, 실제 품절 확인된
+   * 리스팅. 가격표에는 안 넣고 별도로 보여준다. */
+  soldOutListings: SoldOutListing[];
   checkedAt: string | null;
 }
 
@@ -85,8 +156,35 @@ interface Decision {
   verdict: "MAINTAIN" | "CONSIDER_LOWER" | "MARGIN_RISK";
   marginPercent: number;
   priceGapVsAveragePercent: number | null;
+  /** N-4.18-H(대표님 지시, 2026-08-25) — computePriceDecision()이 이제 최저가
+   * 대비 gap도 함께 낸다. */
+  priceGapVsLowestPercent: number | null;
   reason: string;
 }
+
+/** N-4.18-H-2(대표님 지시, 2026-08-25) — "그래서 지금 무엇을 해야 하는가"를
+ * 상품 단위로 제안하는 값. 서버(computeSellerAction)가 이미 계산해 돌려주는
+ * status/title/signals/reasons를 그대로 옮긴다 — 여기서 새 판정을 하지 않는다. */
+interface SellerActionSignal {
+  icon: string;
+  title: string;
+  detail: string;
+}
+
+interface SellerAction {
+  status: "PRICE_KEEP" | "PRICE_REVIEW" | "PRICE_ADJUST" | "INSUFFICIENT_DATA";
+  icon: string;
+  title: string;
+  signals: SellerActionSignal[];
+  reasons: string[];
+}
+
+const SELLER_ACTION_STYLE: Record<SellerAction["status"], string> = {
+  PRICE_KEEP: "border-border bg-success-soft text-success",
+  PRICE_REVIEW: "border-border bg-warning-soft text-warning",
+  PRICE_ADJUST: "border-border bg-error-soft text-error",
+  INSUFFICIENT_DATA: "border-border bg-background text-text-secondary",
+};
 
 interface Recommendation {
   minimumPrice: number;
@@ -116,41 +214,58 @@ interface PriceHistoryResponse {
   cost: { originalAmount: number; originalCurrency: string; landedCostKrw: number } | null;
   decision: Decision | null;
   recommendation: Recommendation | null;
+  sellerAction: SellerAction;
 }
 
-const VERDICT_LABEL: Record<Decision["verdict"], { icon: string; label: string; className: string; title: string; action: string }> = {
+const VERDICT_LABEL: Record<Decision["verdict"], { icon: string; label: string; className: string; action: string }> = {
   MAINTAIN: {
     icon: "🟢",
     label: "유지",
     className: "bg-success-soft text-success",
-    title: "적정 가격입니다",
     action: "→ 현재 가격 유지",
   },
   CONSIDER_LOWER: {
     icon: "🟡",
     label: "조정 검토",
     className: "bg-warning-soft text-warning",
-    title: "국내 최저가 대비 판매가가 높습니다",
     action: "→ 가격 조정 검토",
   },
   MARGIN_RISK: {
     icon: "🔴",
     label: "마진 위험",
     className: "bg-error-soft text-error",
-    title: "예상 마진이 낮습니다",
     action: "→ 원가/판매가 재검토 필요",
   },
 };
 
+/** N-4.18-H(대표님 지시, 2026-08-25: "🔴/🟡일 때는 최저가 대비로 경각심을,
+ * 🟢일 때는 평균가 대비로 안심을 정확히 전달") — computePriceDecision()이 이미
+ * 낸 verdict/priceGapVsLowestPercent/priceGapVsAveragePercent를 CEO 예시
+ * 문구("시장 최저가보다 18.3% 높음" / "시장 평균보다 6.1% 낮음") 그대로
+ * 옮긴다 — 새 판정 로직 없음, 색/아이콘은 기존 3-state 배색을 그대로 쓴다
+ * (N-4.07 STEP4에서 대시보드 전역에 이미 고정된 🟢🟡🔴ancy 배색과의 일관성을
+ * 위해 CONSIDER_LOWER를 🔴로 바꾸지 않는다). */
+function verdictTitle(decision: Decision): string {
+  if (decision.verdict === "MARGIN_RISK") return "예상 마진이 낮습니다";
+  if (decision.verdict === "CONSIDER_LOWER") {
+    return decision.priceGapVsLowestPercent != null
+      ? `시장 최저가보다 ${decision.priceGapVsLowestPercent}% 높음`
+      : decision.priceGapVsAveragePercent != null
+        ? `시장 평균보다 ${decision.priceGapVsAveragePercent}% 높음`
+        : "국내 시세보다 판매가가 높습니다";
+  }
+  if (decision.priceGapVsAveragePercent != null && decision.priceGapVsAveragePercent < 0) {
+    return `시장 평균보다 ${Math.abs(decision.priceGapVsAveragePercent)}% 낮음`;
+  }
+  return decision.priceGapVsAveragePercent != null ? "현재 가격 경쟁력 양호" : "적정 마진";
+}
+
 /** N-4.07 Sprint(대표님 지시: "가격 위치 🟡 다소 높음"처럼 요약표 한 줄로) —
- * 새 판정을 만들지 않는다. computePriceDecision()이 이미 낸 verdict/gap을
- * 짧은 한 줄로만 다시 표현한다(자세한 문장은 decision.reason이 이미 있다). */
+ * 새 판정을 만들지 않는다. verdictTitle()과 같은 gap 값을 재사용해 요약표
+ * 한 줄에도 동일한 최저가/평균가 기준을 일관되게 적용한다. */
 function priceLevelSummary(decision: Decision): string {
   if (decision.verdict === "MARGIN_RISK") return "🔴 마진 위험";
-  if (decision.verdict === "CONSIDER_LOWER") {
-    return `🟡 국내 평균보다 ${decision.priceGapVsAveragePercent}% 높음`;
-  }
-  return decision.priceGapVsAveragePercent != null ? "🟢 경쟁력 있음" : "🟢 적정 마진";
+  return `${VERDICT_LABEL[decision.verdict].icon} ${verdictTitle(decision)}`;
 }
 
 function TrendBadge({ label, trend }: { label: string; trend: PriceTrend | null }) {
@@ -177,17 +292,24 @@ export type { PriceLevel };
 export function DomesticPriceIntelligencePanel({
   snapshotId,
   onPriceLevelChange,
+  onRequestPriceReview,
 }: {
   snapshotId: string;
   /** N-4.08 STEP6-4와 같은 패턴(onReadinessChange) — 이 패널이 계산한 값을
    * CommerceWorkspace가 탭 배지/상태 요약에 캐싱해서 쓸 수 있게 보고한다. */
   onPriceLevelChange?: (level: PriceLevel) => void;
+  /** N-4.18-H-2 STEP H-2-5 — "[가격/마진 확인]" 버튼. 이 패널은 상품정보
+   * 탭에서만 마운트되고 PriceEditor는 커머스 플랫폼 탭에만 있어(서로 다른
+   * 탭), 실제 이동은 CommerceWorkspace가 탭 전환+스크롤로 처리한다. */
+  onRequestPriceReview?: () => void;
 }) {
   const [data, setData] = useState<PriceHistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
   const [rechecking, setRechecking] = useState(false);
   const [recheckResult, setRecheckResult] = useState<RecheckResult | null>(null);
+  const [candidates, setCandidates] = useState<DomesticCandidate[]>([]);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   function loadPriceHistory(): Promise<void> {
     return fetch(`/api/price-history/${snapshotId}`)
@@ -200,9 +322,20 @@ export function DomesticPriceIntelligencePanel({
       });
   }
 
+  function loadCandidates(): Promise<void> {
+    return fetch(`/api/domestic-price-sources/links?snapshotId=${snapshotId}`)
+      .then((res) => res.json())
+      .then((json) => {
+        setCandidates(json.ok ? json.candidates : []);
+      })
+      .catch(() => {
+        setCandidates([]);
+      });
+  }
+
   useEffect(() => {
     setLoading(true);
-    void loadPriceHistory().finally(() => setLoading(false));
+    void Promise.all([loadPriceHistory(), loadCandidates()]).finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshotId]);
 
@@ -252,10 +385,28 @@ export function DomesticPriceIntelligencePanel({
     }
   }
 
+  /** N-4.18-F STEP4(대표님 지시: "85~94% [동일상품으로 확인] 클릭 시 REVIEW_REQUIRED
+   * → VERIFIED로 승격. 기존 승인/검증 상태 구조를 재사용") — updateDomesticProductLink
+   * 를 그대로 호출하는 PATCH 라우트를 부르기만 한다. 새 상태값을 만들지 않는다. */
+  async function confirmSameProduct(id: string) {
+    if (confirmingId) return;
+    setConfirmingId(id);
+    try {
+      await fetch(`/api/domestic-price-sources/links/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ verified: true }),
+      });
+      await Promise.all([loadCandidates(), loadPriceHistory()]);
+    } finally {
+      setConfirmingId(null);
+    }
+  }
+
   if (loading) return null;
   if (!data) return null;
 
-  const { domesticCompetition, currentPrice, cost, fx, decision, recommendation } = data;
+  const { domesticCompetition, currentPrice, cost, fx, decision, recommendation, sellerAction } = data;
   const domesticShopHistory = data.priceHistory?.domesticShop ?? null;
   const trend7d = domesticShopHistory?.trend7d ?? null;
   const trend30d = domesticShopHistory?.trend30d ?? null;
@@ -288,6 +439,54 @@ export function DomesticPriceIntelligencePanel({
             원본 사이트/등록된 국내 편집샵에서 가격을 조회합니다 — 몇 초 걸릴 수 있습니다.
           </p>
         )}
+
+        {/* N-4.18-H-2(대표님 지시, 2026-08-25: "가격 비교에서 끝내지 않고
+            지금 무엇을 해야 하는가를 제안한다") — 서버(computeSellerAction)가
+            이미 낸 status/signals/reasons를 그대로 옮긴다. 이 패널 안의 다른
+            블록(국내 동일상품/해외원가)과 값을 새로 계산하지 않는다 — 새
+            판정 없음, 자동 가격변경 없음. */}
+        {hasAnyData && (
+          <div className={`rounded-md border p-2.5 ${SELLER_ACTION_STYLE[sellerAction.status]}`}>
+            <p className="font-medium">
+              Market Intelligence
+            </p>
+            <p className="mt-1 font-medium">
+              {sellerAction.icon} {sellerAction.title}
+            </p>
+            {sellerAction.signals.length > 0 && (
+              <ul className="mt-1.5 space-y-1 text-text-secondary">
+                {sellerAction.signals.map((signal, i) => (
+                  <li key={i}>
+                    <span className="font-medium text-text-primary">
+                      {signal.icon} {signal.title}
+                    </span>
+                    <span className="ml-1">{signal.detail}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {sellerAction.reasons.length > 0 && (
+              <div className="mt-1.5 border-t border-border pt-1.5">
+                <p className="text-[10px] font-medium text-text-tertiary">추천 이유</p>
+                <ul className="mt-0.5 space-y-0.5 text-text-secondary">
+                  {sellerAction.reasons.map((reason, i) => (
+                    <li key={i}>✓ {reason}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {onRequestPriceReview && (
+              <button
+                type="button"
+                onClick={onRequestPriceReview}
+                className="mt-2 rounded-md border border-current px-2 py-1 text-[11px] font-medium hover:opacity-80"
+              >
+                가격/마진 확인
+              </button>
+            )}
+          </div>
+        )}
+
         {cost && fx && (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-text-secondary">
             <span>
@@ -366,30 +565,55 @@ export function DomesticPriceIntelligencePanel({
             <ul className="space-y-0.5">
               {domesticCompetition.sampleListings.slice(0, 5).map((listing, i) => {
                 const tier = priceAgeTier(listing.checkedAt);
+                // N-4.18-G STEP G-4(대표님 예시: "포레포레 ₩109,000 → ₩99,000 ↓
+                // 10,000원 가격 하락") — 실측된 사이트(RULII)만 정가/할인가가
+                // 둘 다 있고 서로 다를 때만 이 줄을 보여준다. 지어내지 않는다.
+                const hasDiscount =
+                  listing.salePriceKrw != null &&
+                  listing.originalPriceKrw != null &&
+                  listing.originalPriceKrw > listing.salePriceKrw;
                 return (
-                  <li key={i} className="flex items-center justify-between text-text-secondary">
-                    <span className="flex items-center gap-1">
-                      {listing.mallName ?? "알 수 없음"}
-                      {(tier === "STALE" || tier === "VERY_STALE") && (
-                        <span className="rounded bg-warning-soft px-1 py-0.5 text-[9px] font-medium text-warning">
-                          🟡 {PRICE_AGE_LABEL[tier]}
-                        </span>
-                      )}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      {listing.productUrl ? (
-                        <a href={listing.productUrl} target="_blank" rel="noreferrer" className="text-text-primary underline">
-                          ₩{listing.priceKrw.toLocaleString()}
-                        </a>
-                      ) : (
-                        <span className="text-text-primary">₩{listing.priceKrw.toLocaleString()}</span>
-                      )}
-                      <span className="text-[10px] text-text-tertiary">· {relativeTimeFromNow(listing.checkedAt)}</span>
-                    </span>
+                  <li key={i} className="text-text-secondary">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        {listing.mallName ?? "알 수 없음"}
+                        {(tier === "STALE" || tier === "VERY_STALE") && (
+                          <span className="rounded bg-warning-soft px-1 py-0.5 text-[9px] font-medium text-warning">
+                            🟡 {PRICE_AGE_LABEL[tier]}
+                          </span>
+                        )}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        {listing.productUrl ? (
+                          <a href={listing.productUrl} target="_blank" rel="noreferrer" className="text-text-primary underline">
+                            ₩{listing.priceKrw.toLocaleString()}
+                          </a>
+                        ) : (
+                          <span className="text-text-primary">₩{listing.priceKrw.toLocaleString()}</span>
+                        )}
+                        <span className="text-[10px] text-text-tertiary">· {relativeTimeFromNow(listing.checkedAt)}</span>
+                      </span>
+                    </div>
+                    {hasDiscount && (
+                      <p className="text-right text-[10px] text-success">
+                        ₩{listing.originalPriceKrw!.toLocaleString()} → ₩{listing.salePriceKrw!.toLocaleString()} ↓{" "}
+                        {(listing.originalPriceKrw! - listing.salePriceKrw!).toLocaleString()}원 가격 하락
+                      </p>
+                    )}
                   </li>
                 );
               })}
             </ul>
+            {domesticCompetition.soldOutListings.length > 0 && (
+              <ul className="mt-1.5 space-y-0.5 border-t border-border pt-1.5">
+                {domesticCompetition.soldOutListings.map((listing, i) => (
+                  <li key={i} className="flex items-center justify-between text-text-tertiary">
+                    <span>{listing.mallName ?? "알 수 없음"}</span>
+                    <span>품절 · 가격비교 제외 · {relativeTimeFromNow(listing.checkedAt)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
             <div className="mt-1.5 flex gap-3 border-t border-border pt-1.5 text-text-secondary">
               {domesticCompetition.lowestPriceKrw != null && (
                 <span>국내 최저가 ₩{domesticCompetition.lowestPriceKrw.toLocaleString()}</span>
@@ -439,6 +663,64 @@ export function DomesticPriceIntelligencePanel({
           </div>
         )}
 
+        {/* N-4.18-F STEP1/2/4(대표님 지시, 2026-08-25: "95%가 나왔다고 단순히 배지만
+            보여주지 말고 왜 같은 상품인지 근거를 보여줘야 한다") — 서버의 기존
+            matchReasons를 그대로 체크리스트로 옮긴다(새 판정 로직 없음). EXACT는
+            가격비교에 이미 반영됨을, HIGH_CONFIDENCE는 확인 버튼을, REVIEW_REQUIRED는
+            미반영 문구를 보여준다 — 확정 가격(위)과는 별도 블록으로 명확히 구분한다. */}
+        {candidates.length > 0 && (
+          <div className="rounded-md border border-dashed border-border bg-background p-2">
+            <span className="font-medium text-text-primary">동일상품 매칭 근거 ({candidates.length}건)</span>
+            <ul className="mt-1.5 space-y-2">
+              {candidates.slice(0, 8).map((c) => {
+                const label = CANDIDATE_LABEL[c.matchType];
+                const pct = Math.round(c.matchConfidence * 100);
+                return (
+                  <li key={c.id} className="rounded-md border border-border bg-surface p-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-text-primary">
+                        {label.icon} {label.text} {pct}%
+                      </span>
+                      <a href={c.externalUrl} target="_blank" rel="noreferrer" className="text-[10px] text-primary underline">
+                        상품 보기
+                      </a>
+                    </div>
+                    {(c.matchedBrand || c.matchedTitle) && (
+                      <p className="mt-0.5 truncate text-text-secondary">
+                        {c.matchedBrand ? `${c.matchedBrand} · ` : ""}
+                        {c.matchedTitle ?? ""}
+                      </p>
+                    )}
+                    <ul className="mt-1 space-y-0.5">
+                      {c.matchReasons.map((reason, i) => (
+                        <li key={i} className="text-[11px] text-text-secondary">
+                          {reasonIcon(reason)} {reasonLabel(reason)}
+                        </li>
+                      ))}
+                      {missingSignalNotes(c.matchReasons).map((note, i) => (
+                        <li key={`missing-${i}`} className="text-[11px] text-text-tertiary">
+                          ⚠ {note}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-1 text-[10px] text-text-tertiary">{label.note}</p>
+                    {c.matchType === "HIGH_CONFIDENCE" && !c.verified && (
+                      <button
+                        type="button"
+                        onClick={() => void confirmSameProduct(c.id)}
+                        disabled={confirmingId === c.id}
+                        className="mt-1.5 rounded-md border border-primary px-2 py-1 text-[11px] font-medium text-primary hover:bg-primary-soft disabled:opacity-50"
+                      >
+                        {confirmingId === c.id ? "확인 중..." : "동일상품으로 확인"}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
         {recommendation && (
           <div className="flex items-center justify-between text-text-secondary">
             <span>추천 판매가(참고용)</span>
@@ -449,11 +731,14 @@ export function DomesticPriceIntelligencePanel({
         {decision && (
           <div className={`rounded-md border border-border p-2.5 ${VERDICT_LABEL[decision.verdict].className}`}>
             <p className="font-medium">
-              {VERDICT_LABEL[decision.verdict].icon} {VERDICT_LABEL[decision.verdict].title}
+              {VERDICT_LABEL[decision.verdict].icon} {verdictTitle(decision)}
             </p>
             <ul className="mt-1.5 space-y-0.5 text-text-secondary">
               {domesticCompetition.lowestPriceKrw != null && (
-                <li>현재 국내 최저가 ₩{domesticCompetition.lowestPriceKrw.toLocaleString()}</li>
+                <li>국내 최저가 ₩{domesticCompetition.lowestPriceKrw.toLocaleString()}</li>
+              )}
+              {domesticCompetition.averagePriceKrw != null && (
+                <li>국내 평균가 ₩{Math.round(domesticCompetition.averagePriceKrw).toLocaleString()}</li>
               )}
               {currentPrice.sellingPriceKrw != null && (
                 <li>내 판매가 ₩{currentPrice.sellingPriceKrw.toLocaleString()}</li>

@@ -206,6 +206,20 @@ export function CommerceWorkspace({
     setPriceLevel((prev) => (prev === level ? prev : level));
   }
 
+  /** N-4.18-H-2 STEP H-2-5(대표님 지시: "[가격/마진 확인]" 버튼) —
+   * DomesticPriceIntelligencePanel(상품정보 탭)과 PriceEditor(커머스 플랫폼
+   * 탭)는 서로 다른 탭에 있다(리서치로 확인됨) — 자동 가격변경 없이, 판매가
+   * 확인 화면으로 탭 전환+스크롤만 해준다. */
+  function handleRequestPriceReview() {
+    const targetTab = PLATFORM_ORDER.find((id) => !SOON_PLATFORMS.has(id)) ?? PLATFORM_ORDER[0];
+    setTab(targetTab);
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        document.getElementById("section-price")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
+    });
+  }
+
   useEffect(() => {
     try {
       sessionStorage.setItem(TAB_STORAGE_KEY, tab);
@@ -1621,7 +1635,11 @@ export function CommerceWorkspace({
             sku={product.sku.value || undefined}
           />
           {snapshotId && (
-            <DomesticPriceIntelligencePanel snapshotId={snapshotId} onPriceLevelChange={handlePriceLevelChange} />
+            <DomesticPriceIntelligencePanel
+              snapshotId={snapshotId}
+              onPriceLevelChange={handlePriceLevelChange}
+              onRequestPriceReview={handleRequestPriceReview}
+            />
           )}
           {snapshotId && <AuditLogPanel snapshotId={snapshotId} />}
           <BacklogPanel />

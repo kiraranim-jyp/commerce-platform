@@ -9,6 +9,8 @@ import {
   summarizeDomesticMarket,
   DEFAULT_PRICE_BREAKDOWN_INPUT,
   computePriceBreakdown,
+  computeSellerAction,
+  priceLevelFromVerdict,
 } from "@commerce/pricing";
 import { fetchLiveExchangeRates } from "@/lib/exchange-rates";
 import { getSnapshot } from "../../snapshots/_lib/snapshot";
@@ -99,12 +101,31 @@ export async function GET(_request: Request, { params }: { params: Promise<{ sna
     }
   }
 
+  // N-4.18-H-2(대표님 지시, 2026-08-25) — 새 가격판정 엔진을 만들지 않는다.
+  // 이미 계산된 decision.verdict(priceLevelFromVerdict)와 domesticSummary/
+  // originChange/domesticShopTrend7d를 그대로 조합만 한다.
+  const sellerAction = computeSellerAction({
+    priceLevel: priceLevelFromVerdict(decision?.verdict ?? null),
+    currentSellingPriceKrw,
+    domestic: {
+      lowestPriceKrw: domesticSummary.lowestPriceKrw,
+      averagePriceKrw: domesticSummary.averagePriceKrw,
+      sellerCount: domesticSummary.sellerCount,
+      priceGapVsLowestPercent: decision?.priceGapVsLowestPercent ?? null,
+      priceGapVsAveragePercent: decision?.priceGapVsAveragePercent ?? null,
+      trend: domesticShopTrend7d,
+      soldOutCount: domesticSummary.soldOutListings.length,
+    },
+    origin: { change: originChange },
+  });
+
   return NextResponse.json({
     ok: true,
     snapshotId,
     product: { title: product.title.value, brand: product.brand.value, sourceUrl: product.sourceUrl },
     currentPrice: { sellingPriceKrw: currentSellingPriceKrw, costPriceKrw },
     domesticCompetition: domesticSummary,
+    sellerAction,
     priceHistory: {
       origin: { records: originHistory, change: originChange, trend7d: originTrend7d, trend30d: originTrend30d },
       domestic: { records: domesticHistory, trend7d: domesticTrend7d, trend30d: domesticTrend30d },

@@ -35,6 +35,17 @@ export interface PriceObservationRecord {
   taxAmount: number | null;
   exchangeRate: number | null;
   priceKrw: number;
+  /** N-4.18-G STEP G-1(대표님 지시, 2026-08-25) — priceKrw(실제 판매가, 할인가
+   * 있으면 할인가)의 의미는 그대로 두고, 할인/정가/품절 여부를 별도 필드로
+   * 추가한다. 실측되지 않았거나(사이트가 정가/할인가를 구분해 보여주지
+   * 않음) 아직 그 사이트용 파서를 만들지 않았으면 null — 0원/false를
+   * 지어내지 않는다. */
+  salePriceKrw: number | null;
+  originalPriceKrw: number | null;
+  /** null=판정 불가(그 사이트 품절 감지 미구현/판단 불가), true=실제 품절
+   * 확인, false=실제 판매 가능 확인 — "정보 없음"과 "판매중"을 같은 값으로
+   * 취급하지 않는다(대표님 명시 원칙). */
+  soldOut: boolean | null;
   checkedAt: string;
 }
 
@@ -59,7 +70,19 @@ export interface DomesticMarketSummary {
   /** "대표 경쟁상품" — 최저가 리스팅 상위 몇 개. N-4.07 Sprint(대표님 지시:
    * "출처 + 가격 + 확인시간을 보여준다") — checkedAt을 추가한다(이전엔 요약
    * 전체의 checkedAt만 있고 리스팅별로는 없었다). */
-  sampleListings: { mallName: string | null; priceKrw: number; productUrl: string | null; checkedAt: string }[];
+  sampleListings: {
+    mallName: string | null;
+    priceKrw: number;
+    productUrl: string | null;
+    checkedAt: string;
+    salePriceKrw: number | null;
+    originalPriceKrw: number | null;
+  }[];
+  /** N-4.18-G STEP G-4(대표님 지시: "품절 상품을 최저가 계산에 포함시키면
+   * 안 됩니다") — soldOut===true로 확인된 리스팅은 위 lowest/highest/average/
+   * sellerCount 계산에서 제외하고 여기 따로 담는다(화면에는 보여주되 가격
+   * 계산에는 안 쓴다). */
+  soldOutListings: { mallName: string | null; productUrl: string | null; checkedAt: string }[];
   checkedAt: string | null;
 }
 
@@ -88,25 +111,55 @@ export function priceAgeTier(checkedAt: string, now: Date = new Date()): PriceAg
   return "VERY_STALE";
 }
 
+/** N-4.18-G STEP G-4(대표님 지시: "VERIFIED + ACTIVE + 현재 판매 가능 →
+ * 가격 경쟁력 계산", "품절 상품을 최저가 계산에 포함시키면 안 됩니다") —
+ * soldOut===true인 관측치만 최저/평균/최고가·sellerCount 계산에서 뺀다.
+ * soldOut===false 또는 null(그 사이트 품절 감지 미구현)은 기존과 동일하게
+ * 포함한다 — RULII 외 사이트는 항상 soldOut=null이라 이 변경으로 기존
+ * 가격비교 결과가 달라지지 않는다(회귀 없음). */
 function summarizeFrom(records: PriceObservationRecord[], tier: DomesticMarketTier): DomesticMarketSummary {
-  const prices = records.map((r) => r.priceKrw);
+  const activeRecords = records.filter((r) => r.soldOut !== true);
+  const soldOutRecords = records.filter((r) => r.soldOut === true);
+  const checkedAt = records.reduce((latest, r) => (r.checkedAt > latest ? r.checkedAt : latest), records[0].checkedAt);
+  const soldOutListings = soldOutRecords.map((r) => ({
+    mallName: r.sourceLabel,
+    productUrl: r.sourceProductUrl,
+    checkedAt: r.checkedAt,
+  }));
+
+  if (activeRecords.length === 0) {
+    return {
+      tier,
+      lowestPriceKrw: null,
+      highestPriceKrw: null,
+      averagePriceKrw: null,
+      sellerCount: 0,
+      sampleListings: [],
+      soldOutListings,
+      checkedAt,
+    };
+  }
+
+  const prices = activeRecords.map((r) => r.priceKrw);
   const lowestPriceKrw = Math.min(...prices);
   const highestPriceKrw = Math.max(...prices);
   const averagePriceKrw = Math.round(prices.reduce((sum, p) => sum + p, 0) / prices.length);
-  const sorted = [...records].sort((a, b) => a.priceKrw - b.priceKrw);
-  const checkedAt = records.reduce((latest, r) => (r.checkedAt > latest ? r.checkedAt : latest), records[0].checkedAt);
+  const sorted = [...activeRecords].sort((a, b) => a.priceKrw - b.priceKrw);
   return {
     tier,
     lowestPriceKrw,
     highestPriceKrw,
     averagePriceKrw,
-    sellerCount: records.length,
+    sellerCount: activeRecords.length,
     sampleListings: sorted.slice(0, 5).map((r) => ({
       mallName: r.sourceLabel,
       priceKrw: r.priceKrw,
       productUrl: r.sourceProductUrl,
       checkedAt: r.checkedAt,
+      salePriceKrw: r.salePriceKrw,
+      originalPriceKrw: r.originalPriceKrw,
     })),
+    soldOutListings,
     checkedAt,
   };
 }
@@ -118,6 +171,7 @@ const EMPTY_SUMMARY: DomesticMarketSummary = {
   averagePriceKrw: null,
   sellerCount: 0,
   sampleListings: [],
+  soldOutListings: [],
   checkedAt: null,
 };
 

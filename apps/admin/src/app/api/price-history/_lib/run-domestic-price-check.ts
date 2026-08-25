@@ -127,6 +127,11 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
         currency: priceResult.price.currency,
         priceAmount: priceResult.price.amount,
         priceKrw: priceResult.price.amount, // domestic_price_sources.currency는 항상 KRW
+        // N-4.18-G STEP G-1/G-3(대표님 지시, 2026-08-25) — 실측된 사이트(RULII)만
+        // 값이 있고, 나머지는 undefined→null로 저장된다(추측 없음).
+        salePriceKrw: priceResult.salePriceKrw ?? null,
+        originalPriceKrw: priceResult.originalPriceKrw ?? null,
+        soldOut: priceResult.soldOut ?? null,
       });
     } else if (priceResult.status === "ERROR") {
       sourceErrors.push(`${source.name} 가격 재조회 실패: ${priceResult.error ?? "알 수 없는 오류"}`);

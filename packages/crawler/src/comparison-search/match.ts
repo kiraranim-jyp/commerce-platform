@@ -79,12 +79,57 @@ function brandsMatch(a: string, b: string): boolean {
   return na === nb || na.includes(nb) || nb.includes(na);
 }
 
+/**
+ * N-4.18-I STEP I-1(대표님 지시, 2026-08-25) — 실측 결과: RULII/LOOXLOO/DEUXBEBE
+ * 3곳 모두 실제 breadcrumb/category 마크업이 존재는 하지만("xans-product-
+ * headcategory", 실측 확인) 값 자체가 상품유형(PANTS/TOP 등)이 아니라
+ * 프로모션성/브랜드성 분류였다 — 실측 예: RULII는 breadcrumb 자체가 없음(메뉴만
+ * 있고 링크가 비어있음), LOOXLOO는 "아울렛"(할인전용관)/"래핑차일드"(브랜드
+ * 하위계열), DEUXBEBE는 "Brand > karisako 카리사코"(브랜드 트리). 이 값들을
+ * "카테고리 신호"로 쓰면 브랜드 신호와 중복되거나(같은 정보를 두 번 세는 꼴) 완전히
+ * 무관한 프로모션 구획을 "카테고리 불일치"로 오판하게 된다 — 대표님이 금지한
+ * "추측 기반 신호"가 되어버린다.
+ *
+ * 대신 실제 관측된 제목 텍스트에 등장하는 상품유형 단어(대표님이 STEP I-3에서
+ * 직접 예시로 준 pants/trousers/바지/팬츠/shirt/shirts/셔츠/blouse, + 이번
+ * 실측에서 RULII/LOOXLOO/DEUXBEBE 실제 제목에 그대로 등장한 단어: "청바지"(RULII
+ * AE099), "원피스"(LOOXLOO 다수), "셔츠"(DEUXBEBE "로히트 셔츠"))만으로 최소
+ * taxonomy를 만든다 — breadcrumb가 아니라 상품명 자체에 실제로 쓰인 단어이므로
+ * 추측이 아니다. 매핑에 없는 단어는 전부 null(정보 없음) — 감점하지 않는다. */
+export type CategoryTaxon = "TOP" | "PANTS" | "DRESS";
+
+const CATEGORY_TAXON_WORDS: Record<CategoryTaxon, string[]> = {
+  TOP: ["shirt", "shirts", "blouse", "티셔츠", "셔츠"],
+  PANTS: ["pants", "trousers", "jeans", "바지", "팬츠", "청바지"],
+  DRESS: ["dress", "원피스"],
+};
+
+/** 제목 텍스트에서 상품유형 단어를 찾는다 — 정규화(normalizeText)한 문자열에
+ * 단어가 부분 포함되는지만 본다(형태소 분석 없음, 실제 관측 단어와의 단순
+ * 매칭). 여러 taxon 단어가 동시에 매칭되면(드묾) 첫 번째로 찾은 것을 쓴다 —
+ * 완벽한 분류기가 아니라 "명백히 다른 상품유형"을 걸러내는 보조 신호이므로
+ * 이 정도 단순함이 목표에 맞다. */
+export function extractCategoryTaxon(text: string): CategoryTaxon | null {
+  const normalized = normalizeText(text);
+  if (!normalized) return null;
+  for (const [taxon, words] of Object.entries(CATEGORY_TAXON_WORDS) as [CategoryTaxon, string[]][]) {
+    if (words.some((w) => normalized.includes(w))) return taxon;
+  }
+  return null;
+}
+
 export type MatchLevel = "very_high" | "high" | "medium" | "low";
 
+/** N-4.18-D(대표님 지시, 2026-08-25: "95% 이상만 동일상품 확정, 85~94%는 유사상품으로
+ * 별도 표시, 70~84%는 참고용, 70% 미만은 버린다") — 이전 경계(95/80/60)를 대표님이
+ * 확정한 정확한 경계(95/85/70)로 교체한다. 이 경계는 domestic-product-link.ts의
+ * toDomesticMatchType()이 그대로 이어받아 EXACT(자동 가격반영)/HIGH_CONFIDENCE(후보
+ * 표시, 가격 미반영)/REVIEW_REQUIRED(참고용 표시, 가격 미반영)/NOT_MATCHED(버림)로
+ * 매핑한다 — 전역 임계값이므로 두 곳에서 따로 정의하지 않고 이 함수 하나만 바꾼다. */
 export function classifyMatchLevel(confidence: number): MatchLevel {
   if (confidence >= 0.95) return "very_high";
-  if (confidence >= 0.8) return "high";
-  if (confidence >= 0.6) return "medium";
+  if (confidence >= 0.85) return "high";
+  if (confidence >= 0.7) return "medium";
   return "low";
 }
 
@@ -128,6 +173,28 @@ export function scoreCandidateMatch(query: ComparisonQuery, candidate: Compariso
     } else {
       score = score * 0.65;
       reasons.push("색상 불일치");
+    }
+  }
+
+  // N-4.18-I STEP I-4/I-6(대표님 지시: "카테고리는 강력한 보조 검증 신호로 쓴다,
+  // SKU/모델보다 우선하면 안 된다") — SKU 신호(다음 단계, Math.max로 최종 override
+  // 가능)보다 먼저 적용해 "SKU가 실제로 일치하면 카테고리 감점을 다시 끌어올릴 수
+  // 있게" 순서를 둔다(대표님이 "품번이 같은데 카테고리가 다른 특수 상황은 별도
+  // 검토 대상"이라고 명시한 것과 일치 — 여기서 억지로 해결하지 않고 SKU가 최종
+  // 우선하도록만 순서를 잡는다). 둘 다 taxon이 확인될 때만 적용 — 한쪽이라도
+  // 모르면(taxon=null) UNKNOWN이지 MISMATCH가 아니므로 감점하지 않는다.
+  const queryTaxon = extractCategoryTaxon(query.title);
+  const candidateTaxon = extractCategoryTaxon(candidate.title);
+  if (queryTaxon && candidateTaxon) {
+    if (queryTaxon === candidateTaxon) {
+      // "의류 vs 의류"류 약한 보조 신호(대표님 예시) — 이미 확보된 점수를 크게
+      // 흔들지 않을 정도로만 소폭 보정한다.
+      score = score + (1 - score) * 0.1;
+      reasons.push("카테고리 일치");
+    } else {
+      // "상의 vs 바지"류 강한 감점(대표님 예시 Case C).
+      score = score * 0.3;
+      reasons.push("카테고리 불일치");
     }
   }
 

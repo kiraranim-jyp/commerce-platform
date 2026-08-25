@@ -18,6 +18,9 @@ function record(daysAgoFromNow: number, priceKrw: number): PriceObservationRecor
     taxAmount: null,
     exchangeRate: null,
     priceKrw,
+    salePriceKrw: null,
+    originalPriceKrw: null,
+    soldOut: null,
     checkedAt,
   };
 }

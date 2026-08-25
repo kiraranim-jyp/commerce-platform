@@ -15,6 +15,9 @@ function record(overrides: Partial<PriceObservationRecord>): PriceObservationRec
     taxAmount: null,
     exchangeRate: null,
     priceKrw: 10000,
+    salePriceKrw: null,
+    originalPriceKrw: null,
+    soldOut: null,
     checkedAt: "2026-08-23T01:00:00.000Z",
     ...overrides,
   };
@@ -67,6 +70,37 @@ describe("summarizeDomesticMarket", () => {
 
   it("아무 소스도 없으면 tier는 NONE", () => {
     expect(summarizeDomesticMarket([]).tier).toBe("NONE");
+  });
+
+  it("N-4.18-G STEP G-4: soldOut===true인 리스팅은 최저/평균/최고가 계산에서 제외하고 soldOutListings로 따로 담는다", () => {
+    const records = [
+      record({ id: "a", source: "DOMESTIC_SHOP", priceKrw: 20000, sourceLabel: "판매중몰", soldOut: false }),
+      record({ id: "b", source: "DOMESTIC_SHOP", priceKrw: 5000, sourceLabel: "품절몰", soldOut: true }),
+    ];
+    const summary = summarizeDomesticMarket(records);
+    expect(summary.sellerCount).toBe(1);
+    expect(summary.lowestPriceKrw).toBe(20000); // 품절(5000원)이 포함됐다면 5000이 나왔을 것
+    expect(summary.soldOutListings).toHaveLength(1);
+    expect(summary.soldOutListings[0].mallName).toBe("품절몰");
+  });
+
+  it("N-4.18-G STEP G-4: soldOut===null(그 사이트 품절 감지 미구현)은 기존과 동일하게 가격 계산에 포함한다 — 회귀 없음", () => {
+    const records = [
+      record({ id: "a", source: "DOMESTIC_SHOP", priceKrw: 30000, sourceLabel: "A몰", soldOut: null }),
+      record({ id: "b", source: "DOMESTIC_SHOP", priceKrw: 20000, sourceLabel: "B몰", soldOut: null }),
+    ];
+    const summary = summarizeDomesticMarket(records);
+    expect(summary.sellerCount).toBe(2);
+    expect(summary.lowestPriceKrw).toBe(20000);
+    expect(summary.soldOutListings).toHaveLength(0);
+  });
+
+  it("N-4.18-G STEP G-4: 전량 품절이면 가격 필드는 null(0원을 지어내지 않는다), soldOutListings에는 남는다", () => {
+    const records = [record({ id: "a", source: "DOMESTIC_SHOP", priceKrw: 5000, sourceLabel: "품절몰", soldOut: true })];
+    const summary = summarizeDomesticMarket(records);
+    expect(summary.sellerCount).toBe(0);
+    expect(summary.lowestPriceKrw).toBeNull();
+    expect(summary.soldOutListings).toHaveLength(1);
   });
 });
 

@@ -1,6 +1,7 @@
 import { extractShopifyHandle, extractShopifyLocalePrefix, fetchShopifyProductJson } from "../shopify-product-json";
 import { searchBoboChosesKorea } from "./bobochoses-kr";
 import { searchChildrensalon } from "./childrensalon";
+import { fetchDeuxbebeProductPrice, searchDeuxbebe } from "./deuxbebe";
 import { fetchLooxlooProductPrice, searchLooxloo } from "./looxloo";
 import { withConfidence } from "./match";
 import { selectCandidatesForDetailConfirmation } from "./price-confirmation";
@@ -158,6 +159,10 @@ async function searchOneDomesticShop(
       const candidates = await searchRulii(searchTerm);
       return { ...base, status: "ok", candidates: withConfidence(query, candidates) };
     }
+    if (source.domain === "deuxbebe.com") {
+      const candidates = await searchDeuxbebe(searchTerm);
+      return { ...base, status: "ok", candidates: withConfidence(query, candidates) };
+    }
     return { ...base, status: "unsupported", candidates: [] };
   } catch (error) {
     return {
@@ -195,6 +200,12 @@ export interface DomesticPriceRefreshResult {
   status: "OK" | "UNAVAILABLE" | "UNSUPPORTED" | "ERROR";
   price: { amount: number; currency: string } | null;
   error?: string;
+  /** N-4.18-G STEP G-2/G-3(대표님 지시, 2026-08-25) — 실측된 사이트(RULII)만
+   * 채운다. 나머지 사이트는 그 사이트용 판별 로직을 만들기 전까지 항상
+   * undefined/null — "정보 없음"과 "판매중"을 같은 값으로 취급하지 않는다. */
+  salePriceKrw?: number | null;
+  originalPriceKrw?: number | null;
+  soldOut?: boolean | null;
 }
 
 /** N-4.07 2차 — domestic_product_links로 이미 매칭이 확정된 특정 상품 1건의 "지금"
@@ -221,6 +232,18 @@ export async function refreshDomesticProductPrice(
     }
     if (domain === "rulii.co.kr") {
       const result = await fetchRuliiProductPrice(externalUrl);
+      return result.available && result.price
+        ? {
+            status: "OK",
+            price: result.price,
+            salePriceKrw: result.salePriceKrw,
+            originalPriceKrw: result.originalPriceKrw,
+            soldOut: result.soldOut,
+          }
+        : { status: "UNAVAILABLE", price: null, soldOut: result.soldOut };
+    }
+    if (domain === "deuxbebe.com") {
+      const result = await fetchDeuxbebeProductPrice(externalUrl);
       return result.available && result.price
         ? { status: "OK", price: result.price }
         : { status: "UNAVAILABLE", price: null };
