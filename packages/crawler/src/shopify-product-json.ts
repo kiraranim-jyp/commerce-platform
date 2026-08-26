@@ -233,21 +233,39 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
   const origin = new URL(url).origin;
   const localePrefix = extractShopifyLocalePrefix(url);
 
+  // N-4.19(대표님 지시, 2026-08-26: "원본 가격이 £37.00인데 가격도 잘못가져와") —
+  // 실측으로 확인(junioredition.com, Booty Ghosts T-Shirt): 로케일 프리픽스가
+  // 없는 기본 요청은 Vercel 서버리스 IP가 Shopify에 의해 실제와 다른 국가로
+  // 지오로케이션되면(예: US로 추정) 그 국가 통화로 자동환산된 "숫자" 자체가
+  // 돌아온다 — `?currency=USD`로 직접 요청하면 63.00 USD가 나오는데, 이게 바로
+  // Vercel이 지오프리픽스 없이 요청했을 때 그대로 받던 숫자였다(실제 정가는
+  // 37.00 GBP). 기존 코드는 통화 "라벨"만 shopMeta.currency로 강제 교정했지만
+  // 숫자 자체는 손대지 않아서, 환산된 숫자에 잘못된 원래 라벨(GBP)을 붙이는
+  // 결과가 됐다 — 라벨은 맞는데 값은 틀린, 더 위험한 형태의 오류.
+  // `?currency=<매장 기준통화>` 쿼리파라미터는 실측 확인(2026-08-26): 요청자
+  // 지오로케이션과 무관하게 그 통화로 고정된 숫자를 돌려준다(`?currency=GBP` →
+  // 항상 37.00 GBP). 그래서 shopMeta(기준통화)를 먼저 가져와 쿼리파라미터로
+  // 강제한 뒤에만 상품 JSON을 요청한다 — 병렬(Promise.all)에서 순차로 바꾼
+  // 이유가 바로 이 순서 의존성이다. 로케일 프리픽스가 있는 요청(/en-kr/ 등)은
+  // 이미 그 자체로 지오로케이션 무관하게 고정된 가격을 돌려주는 것으로 실측
+  // 확인되어 있어(위 함수 설명 참고) currency 파라미터를 붙이지 않는다.
+  const shopMeta = await fetchShopifyShopMeta(origin);
+  const shopCurrency = shopMeta?.currency ?? null;
+  const currencyParam = !localePrefix && shopCurrency ? `?currency=${shopCurrency}` : "";
+
   let response: Response;
-  let shopMeta: ShopifyShopMeta | null;
   try {
-    [response, shopMeta] = await Promise.all([
-      fetchWithDomainRateLimit(`${origin}${localePrefix}/products/${handle}.json`, {
+    response = await fetchWithDomainRateLimit(
+      `${origin}${localePrefix}/products/${handle}.json${currencyParam}`,
+      {
         headers: { Accept: "application/json", "User-Agent": CHROME_UA },
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      }),
-      fetchShopifyShopMeta(origin),
-    ]);
+      },
+    );
   } catch {
     return null;
   }
   if (!response.ok) return null;
-  const shopCurrency = shopMeta?.currency ?? null;
 
   let product: ShopifyJsonProduct | undefined;
   try {
@@ -358,21 +376,25 @@ export async function fetchShopifyProductJs(url: string): Promise<ShopifyProduct
   if (!handle) return null;
   const origin = new URL(url).origin;
 
+  // N-4.19 — .json 경로와 같은 이유(위 fetchShopifyProductJson 주석 참고)로
+  // shopMeta를 먼저 가져와 `?currency=` 쿼리파라미터로 강제한다. .js는 통화
+  // 코드 필드 자체가 없어서(주석대로) 지오 기반 환산 여부를 사후 검증할 방법이
+  // 아예 없다 — 그래서 요청 시점에 확정하는 이 방식이 .json보다 오히려 더
+  // 필요하다.
+  const shopMeta = await fetchShopifyShopMeta(origin);
+  const shopCurrency = shopMeta?.currency ?? null;
+  const currencyParam = shopCurrency ? `?currency=${shopCurrency}` : "";
+
   let response: Response;
-  let shopMeta: ShopifyShopMeta | null;
   try {
-    [response, shopMeta] = await Promise.all([
-      fetchWithDomainRateLimit(`${origin}/products/${handle}.js`, {
-        headers: { Accept: "application/json", "User-Agent": CHROME_UA },
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      }),
-      fetchShopifyShopMeta(origin),
-    ]);
+    response = await fetchWithDomainRateLimit(`${origin}/products/${handle}.js${currencyParam}`, {
+      headers: { Accept: "application/json", "User-Agent": CHROME_UA },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
   } catch {
     return null;
   }
   if (!response.ok) return null;
-  const shopCurrency = shopMeta?.currency ?? null;
 
   let product: ShopifyJsProduct;
   try {
