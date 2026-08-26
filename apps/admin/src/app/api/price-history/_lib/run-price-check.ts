@@ -1,4 +1,5 @@
 import { convertToKrw } from "@commerce/pricing";
+import { probeOriginAndKrMarkets } from "@commerce/crawler";
 import { fetchLiveExchangeRates } from "@/lib/exchange-rates";
 import { recordPriceObservations, hasObservationToday, type NewPriceObservation } from "./price-observations";
 
@@ -22,6 +23,10 @@ import { recordPriceObservations, hasObservationToday, type NewPriceObservation 
  */
 export interface PriceCheckInput {
   snapshotId: string;
+  /** N-4.18-Q3 P0-2(대표님 지시, 2026-08-26: "한국 IP 실제 구매가격을 우선
+   * 원가로 써야 한다") — Shopify 상품이면 이 URL로 실제 한국 로케일(en-kr)
+   * 표시가를 확인해 origin×환율 환산가보다 우선한다. */
+  sourceUrl: string;
   originalPriceAmount: number;
   originalCurrency: string;
   /** N-4.03 Part 22 — true면 오늘 이미 저장된 SELLER_ORIGIN 관측은 재조회/재저장을
@@ -52,15 +57,31 @@ export async function runPriceCheck(input: PriceCheckInput): Promise<PriceCheckR
   if (originAlreadyChecked) {
     originSaved = true; // 오늘 이미 저장돼 있음 — 상태 계산상 "저장됨"으로 취급.
   } else if (input.originalPriceAmount > 0 && input.originalCurrency) {
+    // N-4.18-Q3 P0-2(대표님 지시: "£200×환율보다 실제 한국 표시가가 더 정확한
+    // 원가") — 실측 확인(2026-08-26, PèPè 사례): £200×환율=₩377,400인데 실제
+    // 한국 로케일(en-kr) 표시가는 ₩234,800이었다(차이 ₩142,600). Shopify
+    // 상품이고 en-kr 시장이 KRW로 직접 표시되면 그 값을 원가로 쓴다 — 통화
+    // 변환 오차/마진 없이 실제 한국에서 결제되는 금액에 더 가깝다. 실패하면
+    // (Shopify가 아니거나 en-kr 시장이 없으면) 기존 원문 통화×환율 그대로 폴백.
+    const marketProbe = await probeOriginAndKrMarkets(input.sourceUrl).catch(() => null);
+    const krPrice = marketProbe?.kr;
+    const useKrMarket = krPrice != null && krPrice.currency === "KRW" && krPrice.amount > 0;
+
+    const priceAmount = useKrMarket ? krPrice.amount : input.originalPriceAmount;
+    const currency = useKrMarket ? "KRW" : input.originalCurrency;
     const exchangeRates = await fetchLiveExchangeRates();
-    const converted = convertToKrw(input.originalPriceAmount, input.originalCurrency, exchangeRates.rates);
+    const converted = convertToKrw(priceAmount, currency, exchangeRates.rates);
     observations.push({
       snapshotId: input.snapshotId,
       source: "SELLER_ORIGIN",
-      currency: input.originalCurrency,
-      priceAmount: input.originalPriceAmount,
-      exchangeRate: exchangeRates.rates[input.originalCurrency.toUpperCase()] ?? null,
+      currency,
+      priceAmount,
+      exchangeRate: useKrMarket ? null : (exchangeRates.rates[currency.toUpperCase()] ?? null),
       priceKrw: converted.amountKrw,
+      // N-4.18-Q3 — sourceLabel은 SELLER_ORIGIN에서 지금까지 안 쓰이던
+      // 필드라(DOMESTIC_SHOP만 상점명으로 사용) 마이그레이션 없이 원가
+      // 근거(KR_MARKET/ORIGIN_FX)를 그대로 재사용한다.
+      sourceLabel: useKrMarket ? "KR_MARKET" : "ORIGIN_FX",
     });
     originSaved = true;
   }

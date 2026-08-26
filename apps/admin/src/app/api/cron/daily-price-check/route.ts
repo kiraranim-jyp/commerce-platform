@@ -51,6 +51,7 @@ export async function GET(request: Request) {
       const product = backfillCanonicalProduct(snapshot.workspace.canonicalProduct);
       const result = await runPriceCheck({
         snapshotId: snapshot.id,
+        sourceUrl: product.sourceUrl,
         originalPriceAmount: product.price.value.amount,
         originalCurrency: product.price.value.currency,
         skipIfCheckedToday: true,

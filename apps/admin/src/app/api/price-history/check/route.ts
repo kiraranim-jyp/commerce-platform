@@ -31,6 +31,7 @@ export async function POST(request: Request) {
   const product = backfillCanonicalProduct(snapshot.workspace.canonicalProduct);
   const result = await runPriceCheck({
     snapshotId,
+    sourceUrl: product.sourceUrl,
     originalPriceAmount: product.price.value.amount,
     originalCurrency: product.price.value.currency,
   });

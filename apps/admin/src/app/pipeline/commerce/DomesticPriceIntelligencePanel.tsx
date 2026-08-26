@@ -214,6 +214,23 @@ const SELLER_ACTION_STYLE: Record<SellerAction["status"], string> = {
   INSUFFICIENT_DATA: "border-border bg-background text-text-secondary",
 };
 
+/** N-4.18-Q3(대표님 지시, 2026-08-26) — "이 상품을 등록해도 되는가?"를
+ * SELLER_ACTION_STYLE과 같은 색 규칙으로 표시한다(RED만 새로 추가 — 마진이
+ * 안 남으면 그때는 정말 위험이라 SELLER_ACTION의 error 톤을 그대로 쓴다). */
+const SELLABILITY_STYLE: Record<Sellability["level"], string> = {
+  GREEN: "border-border bg-success-soft text-success",
+  YELLOW: "border-border bg-warning-soft text-warning",
+  RED: "border-border bg-error-soft text-error",
+  UNKNOWN: "border-border bg-background text-text-secondary",
+};
+
+const SELLABILITY_ICON: Record<Sellability["level"], string> = {
+  GREEN: "🟢",
+  YELLOW: "🟡",
+  RED: "🔴",
+  UNKNOWN: "⚪",
+};
+
 interface Recommendation {
   minimumPrice: number;
   targetPrice: number;
@@ -230,10 +247,26 @@ interface PriceTrend {
   changeRate: number | null;
 }
 
+/** N-4.18-Q3(대표님 지시) — computeSellability()가 낸 "등록해도 되는가" 판단.
+ * sellerAction(가격 유지/조정 판단)과 별개 — 이건 판매가가 아직 없는 상품도
+ * 다룬다(국내 평균가를 잠정 기준가로만 참고). */
+interface Sellability {
+  level: "GREEN" | "YELLOW" | "RED" | "UNKNOWN";
+  title: string;
+  reason: string;
+  estimatedMarginPercent: number | null;
+}
+
 interface PriceHistoryResponse {
   ok: boolean;
   product: { title: string; brand: string; sourceUrl: string };
-  currentPrice: { sellingPriceKrw: number | null; costPriceKrw: number | null };
+  currentPrice: {
+    sellingPriceKrw: number | null;
+    costPriceKrw: number | null;
+    /** N-4.18-Q3 P0-2 — "KR_MARKET"(실제 한국 표시가 우선) / "ORIGIN_FX"(원문
+     * 통화×환율 폴백) / null(이 필드 도입 이전 관측). */
+    costBasis: "KR_MARKET" | "ORIGIN_FX" | null;
+  };
   domesticCompetition: DomesticCompetition;
   priceHistory: {
     /** N-4.18-J STEP J-6 — "🌎 해외" 블록에 원가 변화(▼/▲%)를 보여주기 위해
@@ -246,6 +279,7 @@ interface PriceHistoryResponse {
   decision: Decision | null;
   recommendation: Recommendation | null;
   sellerAction: SellerAction;
+  sellability: Sellability;
 }
 
 function TrendBadge({ label, trend }: { label: string; trend: PriceTrend | null }) {
@@ -417,7 +451,7 @@ export function DomesticPriceIntelligencePanel({
   if (loading) return null;
   if (!data) return null;
 
-  const { domesticCompetition, currentPrice, cost, fx, decision, recommendation, sellerAction } = data;
+  const { domesticCompetition, currentPrice, cost, fx, decision, recommendation, sellerAction, sellability } = data;
   const domesticShopHistory = data.priceHistory?.domesticShop ?? null;
   const trend7d = domesticShopHistory?.trend7d ?? null;
   const trend30d = domesticShopHistory?.trend30d ?? null;
@@ -450,6 +484,23 @@ export function DomesticPriceIntelligencePanel({
           <p className="text-[10px] text-text-tertiary">
             원본 사이트/등록된 국내 편집샵에서 가격을 조회합니다 — 몇 초 걸릴 수 있습니다.
           </p>
+        )}
+
+        {/* N-4.18-Q3(대표님 지시, 2026-08-26: "이 상품을 등록해도 되는가?") —
+            sellerAction(가격 유지/조정)보다 먼저 보여준다. 아직 판매가가 없는
+            상품도(등록 전) 국내 평균가를 잠정 기준으로 등록 가능성을 판단한다.
+            국내 동일상품을 못 찾았으면 🟡로 "확인 필요"만 정직하게 알린다 —
+            없는 국내 판매가를 지어내지 않는다(PèPè 실측 사례가 근거). */}
+        {hasAnyData && (
+          <div className={`rounded-md border p-2.5 ${SELLABILITY_STYLE[sellability.level]}`}>
+            <p className="font-medium">
+              {SELLABILITY_ICON[sellability.level]} {sellability.title}
+            </p>
+            <p className="mt-1 text-text-secondary">{sellability.reason}</p>
+            {sellability.estimatedMarginPercent != null && (
+              <p className="mt-1 text-[10px] text-text-tertiary">예상 마진 {sellability.estimatedMarginPercent}%</p>
+            )}
+          </div>
         )}
 
         {/* N-4.18-J STEP J-1/J-6/J-14(대표님 지시, 2026-08-25: "가격만 보여주는
