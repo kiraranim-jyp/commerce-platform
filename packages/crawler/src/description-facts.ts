@@ -198,3 +198,20 @@ export function extractCareInstructions(description: string | undefined): string
   );
   return [...new Set(deduped)].join(", ");
 }
+
+/** N-4.19(대표님 지시, 2026-08-26: "매칭상태의 계산이 아직도 너무 안맞아") —
+ * 이 파일 맨 위 주석에 원래부터 근거로 인용돼 있던 "Product code B126AH013
+ * SS26 Made in China." 패턴을 실제로 추출하는 함수가 없었다(country만 뽑고
+ * 코드 자체는 버려짐). 실측 확인(2026-08-26): junioredition.com/bobochoses.com
+ * 등 여러 Shopify 키즈패션 스토어가 이 라벨로 내부 품번을 설명문에 그대로
+ * 노출하고(예: "Product code B226AC010 AW26 Made in Portugal."), 그 품번이
+ * bobochoses.com 공식몰의 상품 URL handle에도 그대로 포함된다
+ * (b226ac010-booty-ghosts-t-shirt) — 국내/해외 비교검색 매칭(match.ts)의
+ * SKU 최우선 신호가 이 품번을 못 받아 "동일상품"을 확실히 구분 못 하고 있었다. */
+const PRODUCT_CODE_PATTERN = /\bproduct\s+code\s+([A-Za-z0-9]{4,20})\b/i;
+
+export function extractProductCode(description: string | undefined): string | undefined {
+  if (!description) return undefined;
+  const match = PRODUCT_CODE_PATTERN.exec(description);
+  return match?.[1]?.trim();
+}

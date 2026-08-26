@@ -220,6 +220,23 @@ export function scoreCandidateMatch(query: ComparisonQuery, candidate: Compariso
     }
   }
 
+  // N-4.19(대표님 지시, 2026-08-26) — 설명문에서 뽑은 품번(extractProductCode,
+  // 예: "Product code B226AC010")이 후보 URL slug 안에 그대로 포함돼 있으면
+  // 실측으로 확인된 강한 동일상품 신호다. bobochoses.com 공식몰 실측 확인:
+  // handle 자체가 "b226ac010-booty-ghosts-t-shirt"처럼 품번을 포함하는데,
+  // 검색 API(search/suggest.json)의 body 텍스트에는 그 품번이 안 나와서(실측
+  // 확인 — "Light heather grey t-shirt. Organic Cotton 100%..." 뿐) 기존
+  // SKU exact-match 신호(candidate.sku 필요)는 못 잡는다. 4자 미만처럼 너무
+  // 짧은 값은 우연히 slug에 포함될 위험이 커서 제외한다.
+  if (query.sku && query.sku.length >= 4) {
+    const candidateSlug = extractSlug(candidate.url);
+    const normalizedSku = normalizeText(query.sku);
+    if (candidateSlug && normalizedSku && candidateSlug.includes(normalizedSku)) {
+      score = Math.max(score, 0.95);
+      reasons.push("품번이 URL에 포함됨");
+    }
+  }
+
   // 4. 브랜드 — 마지막에 최종 게이트로 적용한다(다른 신호가 이미 올려둔 점수를
   // "확실히 다른 브랜드"라는 강한 반증이 다시 깎을 수 있어야 하기 때문에 순서가
   // 중요하다 — 앞에 두면 색상/SKU 보너스가 브랜드 불일치 페널티를 덮어써버린다).

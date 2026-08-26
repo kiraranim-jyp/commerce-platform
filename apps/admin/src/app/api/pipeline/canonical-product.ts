@@ -6,6 +6,7 @@ import {
   extractCountryOfOrigin,
   extractManufacturer,
   extractMaterial,
+  extractProductCode,
   resolveBrandName,
 } from "@commerce/crawler";
 import type { ExtractedProductData, ProductDataSource } from "@commerce/crawler";
@@ -140,7 +141,11 @@ export function buildCanonicalProduct(
     // 그대로 전달한다(지어내지 않음, field()로 감싸지 않는 이유는 이 값이
     // provenance 추적/사용자 수정 대상이 아니라 원본 참고 정보이기 때문).
     regularPrice: productData.regularPrice ?? null,
-    sku: field(productData.sku ?? "", "sku", sources),
+    // N-4.19 — 크롤러가 sku를 안 주면(대부분의 Shopify 상품은 variant별 sku만
+    // 있고 대표 품번이 없다) 설명문의 "Product code XXX" 패턴에서 찾아본다
+    // (extractMaterial/extractManufacturer 등과 같은 폴백 원칙 — 원문에 실제로
+    // 있는 값만, 못 찾으면 빈 값).
+    sku: field(productData.sku || extractProductCode(productData.description) || "", "sku", sources),
     description: field(productData.description ?? "", "description", sources),
     // Sprint C(Compliance Resolver) — 크롤러가 구조화된 material을 안 주면(대부분의
     // 경우) 상품 설명 원문에서 "88% Polyester, 12% Elastane" 같은 표준 표기를

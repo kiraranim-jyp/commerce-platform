@@ -163,5 +163,57 @@ test("STEP I-6 Case E: 카테고리만 동일, 나머지 전부 불일치 -> 동
   assert.ok(result.level === "low", `category-only match must stay 'low', got ${result.level}`);
 });
 
+// N-4.19(대표님 지시, 2026-08-26 실측) — Bobo Choses "Booty Ghosts Long Sleeve
+// T-Shirt" 실측 재현: bobochoses.com 공식몰 검색은 body 텍스트에 품번이 없어
+// candidate.sku가 비어 있지만(실측 확인), handle 자체("b226ac010-booty-ghosts-t-shirt")에
+// 품번이 그대로 들어있다. query.sku(설명문 "Product code B226AC010"에서 추출)가
+// 후보 URL에 포함돼 있으면 very_high로 올라가야 한다 — 실제 프로덕션에서
+// confidence 0.64/low로 잘못 판정되던 버그.
+test("N-4.19: 품번이 후보 URL slug에 포함 -> very_high(실측 재현, candidate.sku 없이도)", () => {
+  const query = {
+    title: "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+    brand: "Bobo Choses AW26 Drop 1",
+    sku: "B226AC010",
+  };
+  const result = scoreCandidateMatch(
+    query,
+    candidate({
+      title: "Booty Ghosts T-shirt",
+      url: "https://bobochoses.com/products/b226ac010-booty-ghosts-t-shirt",
+      // sku 필드 자체는 비어있다 — 실측 그대로(검색 API가 품번을 안 줌).
+    }),
+  );
+  assert.ok(result.level === "very_high", `expected very_high, got ${result.level} (${result.confidence})`);
+  assert.ok(result.reasons.includes("품번이 URL에 포함됨"), "reasons should include 품번이 URL에 포함됨");
+});
+
+// N-4.19 — 품번이 후보 URL과 무관하면(다른 상품) 이 신호가 잘못 발동하면 안 된다.
+test("N-4.19: 품번이 후보 URL에 없음 -> 신호 발동 안 함(오탐 방지)", () => {
+  const query = {
+    title: "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+    brand: "Bobo Choses AW26 Drop 1",
+    sku: "B226AC010",
+  };
+  const result = scoreCandidateMatch(
+    query,
+    candidate({
+      title: "Completely Unrelated Sweatshirt",
+      url: "https://bobochoses.com/products/b999xy000-unrelated-item",
+      brand: "Bobo Choses",
+    }),
+  );
+  assert.ok(!result.reasons.includes("품번이 URL에 포함됨"), "unrelated URL must not trigger the product-code signal");
+});
+
+// N-4.19 — 3자 이하 품번은 우연히 URL에 포함될 위험이 커서 신호를 발동하지 않는다.
+test("N-4.19: 품번이 너무 짧으면(3자 이하) 신호 발동 안 함", () => {
+  const query = { title: "Some Item", brand: "Brand", sku: "A12" };
+  const result = scoreCandidateMatch(
+    query,
+    candidate({ title: "Some Item", url: "https://example.com/products/a12-some-item", brand: "Brand" }),
+  );
+  assert.ok(!result.reasons.includes("품번이 URL에 포함됨"), "short sku must not trigger the product-code signal");
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
