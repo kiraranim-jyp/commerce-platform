@@ -1,6 +1,7 @@
 import { extractShopifyHandle, extractShopifyLocalePrefix, fetchShopifyProductJson } from "../shopify-product-json";
 import { searchBoboChosesKorea } from "./bobochoses-kr";
 import { searchChildrensalon } from "./childrensalon";
+import { fetchChocoelProductPrice, searchChocoel } from "./chocoel";
 import { fetchDeuxbebeProductPrice, searchDeuxbebe } from "./deuxbebe";
 import { fetchLooxlooProductPrice, searchLooxloo } from "./looxloo";
 import { withConfidence } from "./match";
@@ -163,6 +164,10 @@ async function searchOneDomesticShop(
       const candidates = await searchDeuxbebe(searchTerm);
       return { ...base, status: "ok", candidates: withConfidence(query, candidates) };
     }
+    if (source.domain === "chocoel.co.kr") {
+      const candidates = await searchChocoel(searchTerm);
+      return { ...base, status: "ok", candidates: withConfidence(query, candidates) };
+    }
     return { ...base, status: "unsupported", candidates: [] };
   } catch (error) {
     return {
@@ -246,6 +251,18 @@ export async function refreshDomesticProductPrice(
       const result = await fetchDeuxbebeProductPrice(externalUrl);
       return result.available && result.price
         ? { status: "OK", price: result.price }
+        : { status: "UNAVAILABLE", price: null };
+    }
+    if (domain === "chocoel.co.kr") {
+      const result = await fetchChocoelProductPrice(externalUrl);
+      return result.available && result.price
+        ? {
+            status: "OK",
+            price: result.price,
+            salePriceKrw: result.salePriceKrw,
+            originalPriceKrw: result.originalPriceKrw,
+            soldOut: result.soldOut,
+          }
         : { status: "UNAVAILABLE", price: null };
     }
     return { status: "UNSUPPORTED", price: null };
