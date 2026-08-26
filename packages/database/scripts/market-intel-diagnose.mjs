@@ -111,6 +111,37 @@ async function main() {
     }
   }
 
+  heading("N-6. 가격 데이터 품질(변동 유무 vs 관측 부족 구분)");
+  const obsQuality = await prisma.$queryRawUnsafe(`
+    SELECT
+      snapshot_id,
+      source,
+      count(*)::int AS observation_count,
+      count(DISTINCT price_krw)::int AS unique_price_count,
+      count(sale_price_krw)::int AS sale_price_present_count,
+      count(original_price_krw)::int AS original_price_present_count,
+      count(sold_out)::int AS sold_out_observed_count,
+      max(checked_at) AS last_observed_at
+    FROM price_observations
+    GROUP BY snapshot_id, source
+    ORDER BY observation_count DESC
+    LIMIT 15
+  `);
+  console.log("(상위 15건 — 전체는 " + obsQuality.length + "건 중 일부, observation_count 내림차순)");
+  for (const row of obsQuality) {
+    console.log(
+      `  ${row.snapshot_id.slice(0, 8)}.../${row.source}: 관측 ${row.observation_count}건, ` +
+        `고유가격 ${row.unique_price_count}종, sale_price 있음 ${row.sale_price_present_count}건, ` +
+        `original_price 있음 ${row.original_price_present_count}건, sold_out 관측 ${row.sold_out_observed_count}건, ` +
+        `최근 관측 ${row.last_observed_at}`,
+    );
+  }
+  console.log(
+    "\n판단 기준: unique_price_count가 1이고 observation_count가 여러 건이면 " +
+      "'가격이 안 변한 것'(반복 관측했지만 값이 동일), observation_count가 1건뿐이면 " +
+      "'아직 충분히 관측 못한 것'(반복 관측 자체가 없음)으로 구분해서 읽는다.",
+  );
+
   heading("M-11. Today Dashboard 지표 정합성");
   const [totalSnaps, verifiedLinkedSnaps, obsSnaps, alertSnaps] = await Promise.all([
     prisma.$queryRawUnsafe(`SELECT count(*)::int as c FROM product_snapshots`),
