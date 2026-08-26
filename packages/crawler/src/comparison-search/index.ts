@@ -1,5 +1,6 @@
 import { extractShopifyHandle, extractShopifyLocalePrefix, fetchShopifyProductJson } from "../shopify-product-json";
 import { searchBoboChosesKorea } from "./bobochoses-kr";
+import { lookupBrandAlias } from "./brand-alias";
 import { searchChildrensalon } from "./childrensalon";
 import { fetchChocoelProductPrice, searchChocoel } from "./chocoel";
 import { fetchDeuxbebeProductPrice, searchDeuxbebe } from "./deuxbebe";
@@ -136,7 +137,24 @@ export async function searchComparisonShops(
 
 /** N-4.07 — domestic_price_sources 중 실제 파서가 있는 도메인만 여기 등록한다(원칙은
  * searchOneShop과 동일 — 하드코딩 "허용 목록"이 아니라 파서 존재 여부). collectionStrategy가
- * MANUAL/NOT_AVAILABLE인 소스는 실제 요청을 보내지 않고 "unsupported"로 응답한다. */
+ * MANUAL/NOT_AVAILABLE인 소스는 실제 요청을 보내지 않고 "unsupported"로 응답한다.
+ *
+ * bobochoses.com만 priceSource를 "detail"로 강제한다(검색 결과 자체가 상세 가격이므로 —
+ * 다른 도메인은 검색 목록 가격을 그대로 쓰므로 이 필드를 건드리지 않는다). 이 규칙은
+ * 검색어가 원문이든 alias든(아래 참고) 동일하게 적용돼야 하므로 도메인 분기 자체를
+ * 검색어와 분리된 헬퍼로 뺀다. */
+async function searchDomesticShopCandidates(domain: string, term: string): Promise<ComparisonCandidate[] | null> {
+  if (domain === "looxloo.com") return searchLooxloo(term);
+  if (domain === "bobochoses.com") {
+    const candidates = await searchBoboChosesKorea(term);
+    return candidates.map((c) => ({ ...c, priceSource: "detail" as const }));
+  }
+  if (domain === "rulii.co.kr") return searchRulii(term);
+  if (domain === "deuxbebe.com") return searchDeuxbebe(term);
+  if (domain === "chocoel.co.kr") return searchChocoel(term);
+  return null;
+}
+
 async function searchOneDomesticShop(
   source: DomesticSourceRef,
   query: ComparisonQuery,
@@ -147,28 +165,27 @@ async function searchOneDomesticShop(
   }
   const searchTerm = query.searchTerm ?? query.title;
   try {
-    if (source.domain === "looxloo.com") {
-      const candidates = await searchLooxloo(searchTerm);
-      return { ...base, status: "ok", candidates: withConfidence(query, candidates) };
-    }
-    if (source.domain === "bobochoses.com") {
-      const candidates = await searchBoboChosesKorea(searchTerm);
-      const scored = withConfidence(query, candidates).map((c) => ({ ...c, priceSource: "detail" as const }));
-      return { ...base, status: "ok", candidates: scored };
-    }
-    if (source.domain === "rulii.co.kr") {
-      const candidates = await searchRulii(searchTerm);
-      return { ...base, status: "ok", candidates: withConfidence(query, candidates) };
-    }
-    if (source.domain === "deuxbebe.com") {
-      const candidates = await searchDeuxbebe(searchTerm);
-      return { ...base, status: "ok", candidates: withConfidence(query, candidates) };
-    }
-    if (source.domain === "chocoel.co.kr") {
-      const candidates = await searchChocoel(searchTerm);
-      return { ...base, status: "ok", candidates: withConfidence(query, candidates) };
-    }
-    return { ...base, status: "unsupported", candidates: [] };
+    const primary = await searchDomesticShopCandidates(source.domain, searchTerm);
+    if (primary === null) return { ...base, status: "unsupported", candidates: [] };
+    const primaryScored = withConfidence(query, primary);
+    if (primaryScored.length > 0) return { ...base, status: "ok", candidates: primaryScored };
+
+    // N-4.18-P-4 STEP P-4-2/3(대표님 지시, 2026-08-26) — 원문 검색이 NO_RESULT일
+    // 때만, 실측 확인된 브랜드 한글 alias 1개로 딱 1회만 재검색한다(brand-alias.ts에
+    // 없는 브랜드는 그대로 빈 결과 유지 — 폴백을 시도하지 않는다). 재검색 결과도
+    // 기존 withConfidence/scoreCandidateMatch를 그대로 통과시켜 판정 기준을 원문
+    // 검색과 완전히 동일하게 유지한다(별도 판정 로직 없음 — STEP P-4-5).
+    const alias = lookupBrandAlias(query.brand);
+    if (!alias) return { ...base, status: "ok", candidates: [] };
+    const fallback = await searchDomesticShopCandidates(source.domain, alias);
+    if (fallback === null || fallback.length === 0) return { ...base, status: "ok", candidates: [] };
+    const fallbackScored = withConfidence(query, fallback);
+    return {
+      ...base,
+      status: "ok",
+      candidates: fallbackScored,
+      ...(fallbackScored.length > 0 ? { querySource: "brand_alias" as const } : {}),
+    };
   } catch (error) {
     return {
       ...base,

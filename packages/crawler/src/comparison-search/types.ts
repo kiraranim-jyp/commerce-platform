@@ -26,6 +26,10 @@ export interface ComparisonSearchResult {
   status: "ok" | "unsupported" | "error";
   candidates: ComparisonCandidate[];
   error?: string;
+  /** N-4.18-P-4 STEP P-4-2 — 원문 검색(searchTerm/title)이 0건이라 브랜드 한글
+   * alias(brand-alias.ts)로 재검색해서 얻은 결과일 때만 채워진다. 없으면(undefined)
+   * 원문 검색 결과라는 뜻 — 하위호환(기존 호출부는 이 필드를 몰라도 됨). */
+  querySource?: "brand_alias";
 }
 
 export interface ComparisonQuery {
