@@ -113,6 +113,7 @@ async function tryFastPath(
     title: siteResult.productData.title,
     brand: siteResult.productData.brand,
     price: siteResult.productData.price,
+    regularPrice: siteResult.productData.regularPrice,
     sku: siteResult.productData.sku,
     description: siteResult.productData.description,
     material: siteResult.productData.material,
