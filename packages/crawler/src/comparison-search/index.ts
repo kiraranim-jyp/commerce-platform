@@ -4,6 +4,7 @@ import { lookupBrandAlias } from "./brand-alias";
 import { searchChildrensalon } from "./childrensalon";
 import { fetchChocoelProductPrice, searchChocoel } from "./chocoel";
 import { fetchDeuxbebeProductPrice, searchDeuxbebe } from "./deuxbebe";
+import { searchForetforet } from "./foretforet";
 import { fetchLooxlooProductPrice, searchLooxloo } from "./looxloo";
 import { withConfidence } from "./match";
 import { selectCandidatesForDetailConfirmation } from "./price-confirmation";
@@ -152,6 +153,7 @@ async function searchDomesticShopCandidates(domain: string, term: string): Promi
   if (domain === "rulii.co.kr") return searchRulii(term);
   if (domain === "deuxbebe.com") return searchDeuxbebe(term);
   if (domain === "chocoel.co.kr") return searchChocoel(term);
+  if (domain === "foretforet.com") return searchForetforet(term);
   return null;
 }
 
