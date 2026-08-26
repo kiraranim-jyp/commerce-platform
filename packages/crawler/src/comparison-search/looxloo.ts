@@ -1,4 +1,5 @@
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
+import { decodeHtmlEntities } from "./html-entities";
 import type { ComparisonCandidate } from "./types";
 
 const FETCH_TIMEOUT_MS = 10000;
@@ -28,7 +29,7 @@ function extractLastSpanText(html: string): string | null {
     const text = match[1].trim();
     if (text) last = text;
   }
-  return last;
+  return last ? decodeHtmlEntities(last) : null;
 }
 
 /** rel="{라벨}" 다음, 그 다음 rel="..." 필드가 시작되기 전까지만 슬라이스한다 —

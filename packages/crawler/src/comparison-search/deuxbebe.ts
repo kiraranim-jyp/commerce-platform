@@ -1,4 +1,5 @@
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
+import { decodeHtmlEntities } from "./html-entities";
 import type { ComparisonCandidate } from "./types";
 
 const FETCH_TIMEOUT_MS = 10000;
@@ -31,7 +32,7 @@ const FIRST_FIELD_RE = /xans-search-listitem xans-record-"><span class="item_con
 function extractField(block: string, rel: string): string | null {
   const match = new RegExp(`rel="${rel}"><span[^>]*>([^<]*)`).exec(block);
   const text = match?.[1]?.trim();
-  return text || null;
+  return text ? decodeHtmlEntities(text) : null;
 }
 
 function parsePrice(raw: string | null): number | null {
@@ -79,10 +80,11 @@ export async function searchDeuxbebe(query: string): Promise<ComparisonCandidate
     const nameMatch = NAME_RE.exec(block);
     if (!nameMatch) continue;
     const href = nameMatch[1];
-    const title = nameMatch[2].trim();
+    const title = decodeHtmlEntities(nameMatch[2].trim());
     if (!title) continue;
 
-    const brand = FIRST_FIELD_RE.exec(block)?.[1]?.trim() || undefined;
+    const rawBrand = FIRST_FIELD_RE.exec(block)?.[1]?.trim();
+    const brand = rawBrand ? decodeHtmlEntities(rawBrand) : undefined;
     const salePrice = parsePrice(extractField(block, "할인판매가"));
     const regularPrice = parsePrice(extractField(block, "판매가"));
     const amount = salePrice ?? regularPrice;

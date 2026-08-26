@@ -1,4 +1,5 @@
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
+import { decodeHtmlEntities } from "./html-entities";
 import type { ComparisonCandidate } from "./types";
 
 const FETCH_TIMEOUT_MS = 10000;
@@ -98,7 +99,8 @@ export async function searchChocoel(query: string): Promise<ComparisonCandidate[
     if (!nameBlockMatch) continue;
     const nameBlock = nameBlockMatch[1];
     const hrefMatch = NAME_HREF_RE.exec(nameBlock);
-    const title = NAME_SPAN_RE.exec(nameBlock)?.[1]?.trim();
+    const rawTitle = NAME_SPAN_RE.exec(nameBlock)?.[1]?.trim();
+    const title = rawTitle ? decodeHtmlEntities(rawTitle) : undefined;
     if (!title || !hrefMatch) continue;
     const href = hrefMatch[1];
 

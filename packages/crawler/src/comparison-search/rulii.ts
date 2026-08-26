@@ -1,4 +1,5 @@
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
+import { decodeHtmlEntities } from "./html-entities";
 import type { ComparisonCandidate } from "./types";
 
 const FETCH_TIMEOUT_MS = 10000;
@@ -26,7 +27,7 @@ function extractLastSpanText(html: string): string | null {
     const text = match[1].trim();
     if (text) last = text;
   }
-  return last;
+  return last ? decodeHtmlEntities(last) : null;
 }
 
 /** LOOXLOO의 extractField와 동일한 방식(rel="라벨" 다음, 다음 rel 필드 시작
