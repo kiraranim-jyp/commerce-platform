@@ -163,11 +163,18 @@ export function ComparisonShopSearch({
  * UI 정리 범위에서는 추가하지 않는다(새 데이터 추출 파이프라인이 필요한
  * 별도 스코프 — CPO 확인 필요, 임의로 추측 신호를 넣지 않는다는 이 파일의
  * 기존 원칙과 같은 이유). */
+/** N-4.21(대표님 지시, 2026-08-26: "유사 상품까진 인정(긴팔과 반팔 차이였어)") —
+ * 기존엔 confidence>=0.9만 "찾음"으로 쳤는데, match.ts의 classifyMatchLevel이
+ * 이미 CPO 승인 기준(N-4.18-D)으로 70%(medium) 이상을 "참고 가능한 유사상품"
+ * 으로 분류해두고 있었다. 이 화면의 노출 기준(0.9)이 그 기준보다 더 엄격해서,
+ * 실제로는 진짜 유사상품(소매 길이만 다른 같은 라인 상품 등)까지 90% 미만이면
+ * 숨겨버리는 불일치가 있었다 — 새 기준은 matchLevel이 "low"가 아닌 것(=이미
+ * 확정된 70% 경계)만 기본 노출로 바꿔서 별도 새 임계값을 만들지 않는다. */
 function ResultHeadline({ results }: { results: SearchResult[] }) {
-  const highConfidence = results.flatMap((r) =>
-    r.candidates.filter((c) => c.confidence >= 0.9).map((c) => ({ ...c, shopName: r.shopName })),
+  const acceptable = results.flatMap((r) =>
+    r.candidates.filter((c) => c.matchLevel && c.matchLevel !== "low").map((c) => ({ ...c, shopName: r.shopName })),
   );
-  if (highConfidence.length === 0) {
+  if (acceptable.length === 0) {
     return (
       <p className="rounded-md border border-border bg-background px-3 py-2 text-xs text-text-secondary">
         비교 가능한 동일/유사 상품을 찾지 못했습니다 — 아래 상세 통계에서 사이트별 상태를 확인할 수 있습니다.
@@ -176,7 +183,7 @@ function ResultHeadline({ results }: { results: SearchResult[] }) {
   }
   return (
     <p className="rounded-md border border-success/30 bg-success-soft px-3 py-2 text-xs text-success">
-      비교 가능한 동일/유사 상품이 {highConfidence.length}건 발견되었습니다 (매칭 신뢰도 90% 이상).
+      비교 가능한 동일/유사 상품이 {acceptable.length}건 발견되었습니다 (매칭 신뢰도 70% 이상).
     </p>
   );
 }
@@ -226,10 +233,13 @@ function Stat({ label, value, highlight }: { label: string; value: number; highl
  * 표로 재구성. 이전엔 사이트별 카드+리스트였는데, 여러 사이트 결과를 한눈에
  * 비교하기 어렵다는 지적을 반영해 후보 단위 한 행으로 펼친다(사이트에 후보가
  * 없거나 미지원/오류여도 그 사유가 보이는 한 행을 남긴다 — 조용히 사라지지 않게).
- * Sprint P2(CPO 지시, 2026-08-19: "90% 미만은 숨긴다") — 기본값은 confidence
- * >= 0.9인 행만 보여준다. 미지원/오류/후보없음/저매칭 행은 "전체 보기"를
- * 눌러야 보인다 — 완전히 삭제하지 않는다(N-3.13 P0가 이미 "조용히 사라지지
- * 않게"를 요구했었다, 그 원칙과 이번 CPO 지시를 둘 다 만족시키는 절충). */
+ * N-4.21(대표님 지시, 2026-08-26) — Sprint P2(2026-08-19)가 confidence>=0.9로
+ * 정했던 기본 노출 기준을 matchLevel!=="low"(=70% 경계, match.ts의 이미 승인된
+ * 4단계 기준과 동일)로 낮춘다. 소매 길이만 다른 같은 라인 상품처럼 실제로 참고
+ * 가치가 있는 medium(70~84%) 등급이 90% 기준 때문에 전부 숨겨져 있었다 —
+ * "동일상품 확정"만 90%로 좁게 잡고 "유사상품까지는 인정"이라는 대표님 지시를
+ * 그대로 반영한 것. 완전히 무관한 후보(low, brand 불일치 등)는 여전히 기본
+ * 숨김 유지. */
 function ResultTable({ results, krwRates }: { results: SearchResult[]; krwRates: Record<string, number> | null }) {
   const [showAll, setShowAll] = useState(false);
   type Row = { shopId: string; shopName: string; shopCountry?: string | null; candidate: Candidate | null; note?: string };
@@ -247,16 +257,14 @@ function ResultTable({ results, krwRates }: { results: SearchResult[]; krwRates:
       }
     }
   }
-  const highConfidenceRows = allRows.filter((row) => (row.candidate?.confidence ?? 0) >= 0.9);
-  // CEO 지시(2026-08-19: "매칭성공 0이면 조회를 하지마") — 90% 이상 매칭이 하나도
-  // 없으면 "90% 미만 N건 보기" 토글 자체를 그리지 않는다. 위 ResultHeadline이
-  // 이미 "비교 가능한 상품을 찾지 못했습니다"로 안내하는데, 바로 아래 이 토글이
-  // "그래도 27건 보러가기"처럼 보여 상세 통계(기본 접힘)와 다른 신호를 줬다 —
-  // 매칭 안 된 후보/미지원/오류 나열은 상세 통계 안에서만 사유를 확인하면
-  // 된다(N-3.13 P0 "조용히 사라지지 않게" 원칙은 상세 통계로 이미 충족).
-  if (highConfidenceRows.length === 0) return null;
-  const rows = showAll ? allRows : highConfidenceRows;
-  const hiddenCount = allRows.length - highConfidenceRows.length;
+  const acceptableRows = allRows.filter((row) => row.candidate?.matchLevel && row.candidate.matchLevel !== "low");
+  // CEO 지시(2026-08-19: "매칭성공 0이면 조회를 하지마") — 참고 가능한 매칭이
+  // 하나도 없으면 "더 보기" 토글 자체를 그리지 않는다(위 ResultHeadline이 이미
+  // "찾지 못했습니다"로 안내 — 아래 토글이 "그래도 27건 보러가기"처럼 보이는
+  // 것을 막는다는 기존 원칙은 유지).
+  if (acceptableRows.length === 0) return null;
+  const rows = showAll ? allRows : acceptableRows;
+  const hiddenCount = allRows.length - acceptableRows.length;
   return (
     <div className="space-y-1.5">
       {hiddenCount > 0 && (
@@ -265,7 +273,7 @@ function ResultTable({ results, krwRates }: { results: SearchResult[]; krwRates:
           onClick={() => setShowAll((v) => !v)}
           className="text-xs text-primary underline hover:text-primary-hover"
         >
-          {showAll ? "90% 이상만 보기" : `90% 미만 매칭/미지원/오류 ${hiddenCount}건 더 보기`}
+          {showAll ? "매칭 불확실 항목 접기" : `매칭 불확실/미지원/오류 ${hiddenCount}건 더 보기`}
         </button>
       )}
     <div className="overflow-x-auto rounded-md border border-border">
@@ -310,14 +318,15 @@ function ResultTable({ results, krwRates }: { results: SearchResult[]; krwRates:
                   {c?.matchLevel ? (
                     <span
                       className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_LEVEL_BADGE_CLASS[c.matchLevel]}`}
-                      title={`신뢰도 ${Math.round(c.confidence * 100)}%${c.matchReasons?.length ? " — " + c.matchReasons.join(", ") : ""}`}
+                      title={c.matchReasons?.length ? c.matchReasons.join(", ") : undefined}
                     >
                       {MATCH_LEVEL_ICON[c.matchLevel]}{" "}
                       {c.matchLevel === "very_high" || c.matchLevel === "high"
                         ? "동일상품"
                         : c.matchLevel === "medium"
                           ? "유사상품"
-                          : "매칭 불확실"}
+                          : "매칭 불확실"}{" "}
+                      {Math.round(c.confidence * 100)}%
                     </span>
                   ) : (
                     "—"

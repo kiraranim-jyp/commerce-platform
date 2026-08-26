@@ -40,7 +40,7 @@ interface SearchResult {
 
 /** N-4.07(대표님 지시: "국내 키즈의류 수입아동복 편집샵 사이트를 기본 등록해서 비교해줘") —
  * ComparisonShopSearch(해외)와 완전히 같은 UX 패턴(자동 1회 검색 + 재검색 버튼 + 매칭등급
- * 배지 + 90% 미만 접기)을 그대로 따른다. 국내 소스는 이미 KRW로만 표시되므로 환율 변환
+ * 배지 + 매칭 불확실(70% 미만) 접기)을 그대로 따른다. 국내 소스는 이미 KRW로만 표시되므로 환율 변환
  * 컬럼이 없다는 것만 다르다. 여기도 "가장 싼 가격을 자동으로 원본가격에 반영" 금지 원칙은
  * 동일하게 적용 — 읽기 전용 조회다. */
 export function DomesticShopSearch({
@@ -113,11 +113,14 @@ export function DomesticShopSearch({
   );
 }
 
+/** N-4.21(대표님 지시, 2026-08-26: "유사 상품까진 인정") — ComparisonShopSearch(해외)와
+ * 같은 이유로 기본 노출 기준을 confidence>=0.9에서 matchLevel!=="low"(70% 경계,
+ * match.ts 기존 승인 기준)로 낮춘다. */
 function ResultHeadline({ results }: { results: SearchResult[] }) {
-  const highConfidence = results.flatMap((r) =>
-    r.candidates.filter((c) => c.confidence >= 0.9).map((c) => ({ ...c, shopName: r.shopName })),
+  const acceptable = results.flatMap((r) =>
+    r.candidates.filter((c) => c.matchLevel && c.matchLevel !== "low").map((c) => ({ ...c, shopName: r.shopName })),
   );
-  if (highConfidence.length === 0) {
+  if (acceptable.length === 0) {
     return (
       <p className="rounded-md border border-border bg-background px-3 py-2 text-xs text-text-secondary">
         비교 가능한 동일/유사 상품을 국내 편집샵에서 찾지 못했습니다.
@@ -126,7 +129,7 @@ function ResultHeadline({ results }: { results: SearchResult[] }) {
   }
   return (
     <p className="rounded-md border border-success/30 bg-success-soft px-3 py-2 text-xs text-success">
-      국내 편집샵에서 비교 가능한 동일/유사 상품이 {highConfidence.length}건 발견되었습니다 (매칭 신뢰도 90%
+      국내 편집샵에서 비교 가능한 동일/유사 상품이 {acceptable.length}건 발견되었습니다 (매칭 신뢰도 70%
       이상).
     </p>
   );
@@ -149,10 +152,10 @@ function ResultTable({ results }: { results: SearchResult[] }) {
       }
     }
   }
-  const highConfidenceRows = allRows.filter((row) => (row.candidate?.confidence ?? 0) >= 0.9);
-  if (highConfidenceRows.length === 0) return null;
-  const rows = showAll ? allRows : highConfidenceRows;
-  const hiddenCount = allRows.length - highConfidenceRows.length;
+  const acceptableRows = allRows.filter((row) => row.candidate?.matchLevel && row.candidate.matchLevel !== "low");
+  if (acceptableRows.length === 0) return null;
+  const rows = showAll ? allRows : acceptableRows;
+  const hiddenCount = allRows.length - acceptableRows.length;
   return (
     <div className="space-y-1.5">
       {hiddenCount > 0 && (
@@ -161,7 +164,7 @@ function ResultTable({ results }: { results: SearchResult[] }) {
           onClick={() => setShowAll((v) => !v)}
           className="text-xs text-primary underline hover:text-primary-hover"
         >
-          {showAll ? "90% 이상만 보기" : `90% 미만 매칭/미지원/오류 ${hiddenCount}건 더 보기`}
+          {showAll ? "매칭 불확실 항목 접기" : `매칭 불확실/미지원/오류 ${hiddenCount}건 더 보기`}
         </button>
       )}
       <div className="overflow-x-auto rounded-md border border-border">
@@ -196,14 +199,15 @@ function ResultTable({ results }: { results: SearchResult[] }) {
                     {c?.matchLevel ? (
                       <span
                         className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_LEVEL_BADGE_CLASS[c.matchLevel]}`}
-                        title={`신뢰도 ${Math.round(c.confidence * 100)}%${c.matchReasons?.length ? " — " + c.matchReasons.join(", ") : ""}`}
+                        title={c.matchReasons?.length ? c.matchReasons.join(", ") : undefined}
                       >
                         {MATCH_LEVEL_ICON[c.matchLevel]}{" "}
                         {c.matchLevel === "very_high" || c.matchLevel === "high"
-                          ? "동일상품 확정"
+                          ? "동일상품"
                           : c.matchLevel === "medium"
-                            ? "동일상품 가능성 높음"
-                            : "확인 필요"}
+                            ? "유사상품"
+                            : "매칭 불확실"}{" "}
+                        {Math.round(c.confidence * 100)}%
                       </span>
                     ) : (
                       "—"
