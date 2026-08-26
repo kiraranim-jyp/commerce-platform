@@ -205,17 +205,41 @@ export async function deleteDomesticPriceSource(id: string): Promise<{ ok: true 
   return { ok: true };
 }
 
-/** N-4.07 2차 — daily cron/수동 확인이 이 소스로 실제 조회를 "시도"할 때마다
- * 호출한다. success=true면 last_success_at도 같이 갱신 — 실패해도
- * last_checked_at은 항상 갱신해서 "확인은 했지만 실패했다"를 "아예 확인 안
- * 했다"와 구분한다. 실패해도 throw하지 않는다(가격 수집 자체가 이 갱신
- * 실패로 막히면 안 된다는 이 프로젝트의 반복 원칙). */
-export async function recordDomesticSourceCheckAttempt(sourceId: string, success: boolean): Promise<void> {
+/** N-4.18-M STEP M-8(대표님 지시, 2026-08-26: "실제로 구분 가능한 상태만 추가.
+ * 현재 구분할 수 없다면 새로운 status를 추측해서 만들지 않는다") — last_error_code/
+ * last_error_message 컬럼은 마이그레이션 032부터 있었지만 이 함수가 한 번도
+ * 값을 쓴 적이 없어(success: boolean만 받음) 항상 null이었다(Settings 화면의
+ * "최근 오류" 표시가 계속 비어있던 이유). 지금 코드가 실제로 구분할 수 있는
+ * 상태만 기록한다:
+ *  - "OK": 검색이 성공하고 후보를 찾음
+ *  - "NO_RESULT": 검색 요청 자체는 성공했지만 후보가 0건(에러 아님 — 검색은 됐다)
+ *  - { code, message }: 검색 중 실제 예외 발생(현재 코드는 fetch 실패와 parser
+ *    실패를 같은 try/catch로 묶어서 서로 구분 못 한다 — CEO가 예시로 든
+ *    FETCH_FAILED/PARSER_EMPTY/SOURCE_BLOCKED/INVALID_URL로 세분화하려면 파서마다
+ *    별도 에러 타입을 던지게 고쳐야 하는데, 이건 "모니터링 스프린트"의 범위를
+ *    넘는 구조 변경이라 하지 않는다 — 대신 실제 예외 메시지를 그대로 저장해서
+ *    최소한 "왜"는 사람이 읽을 수 있게 한다). */
+export type DomesticSourceCheckOutcome = "OK" | "NO_RESULT" | { code: string; message: string };
+
+export async function recordDomesticSourceCheckAttempt(
+  sourceId: string,
+  outcome: DomesticSourceCheckOutcome,
+): Promise<void> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return;
   const now = new Date().toISOString();
   const patch: Record<string, unknown> = { last_checked_at: now };
-  if (success) patch.last_success_at = now;
+  if (outcome === "OK") {
+    patch.last_success_at = now;
+    patch.last_error_code = null;
+    patch.last_error_message = null;
+  } else if (outcome === "NO_RESULT") {
+    patch.last_error_code = "NO_RESULT";
+    patch.last_error_message = null;
+  } else {
+    patch.last_error_code = outcome.code;
+    patch.last_error_message = outcome.message;
+  }
   const { error } = await supabase.from("domestic_price_sources").update(patch).eq("id", sourceId);
   if (error) console.warn("[domestic-price-source] 확인 시각 갱신 실패:", error.message);
 }

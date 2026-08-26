@@ -98,12 +98,18 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
   for (const result of searchResults) {
     if (result.status === "error") {
       sourceErrors.push(`${result.shopName}: ${result.error ?? "검색 실패"}`);
-      void recordDomesticSourceCheckAttempt(result.shopId, false);
+      // N-4.18-M STEP M-8 — fetch/parser 예외를 같은 catch로 묶어 던지므로 더
+      // 세분화된 코드(FETCH_FAILED 등)를 추측하지 않고 실제 예외 메시지만 남긴다.
+      void recordDomesticSourceCheckAttempt(result.shopId, { code: "SEARCH_ERROR", message: result.error ?? "검색 실패" });
       continue;
     }
-    if (result.status === "unsupported" || result.candidates.length === 0) continue;
+    if (result.status === "unsupported") continue; // 파서 자체가 없음 — 실제 요청을 보내지 않았으므로 "확인"으로 기록하지 않는다
+    if (result.candidates.length === 0) {
+      void recordDomesticSourceCheckAttempt(result.shopId, "NO_RESULT");
+      continue;
+    }
 
-    void recordDomesticSourceCheckAttempt(result.shopId, true);
+    void recordDomesticSourceCheckAttempt(result.shopId, "OK");
     const best = result.candidates[0]; // withConfidence가 이미 confidence 내림차순 정렬
     const { matchType, autoVerified } = toDomesticMatchType(best.matchLevel ?? "low");
     if (matchType === "NOT_MATCHED") continue;

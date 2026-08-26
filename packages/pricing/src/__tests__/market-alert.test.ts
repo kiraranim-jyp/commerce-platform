@@ -156,4 +156,22 @@ describe("computeMarketAlert — N-4.18-K STEP K-8(대표님 지시, 2026-08-26:
     // 이 함수 레벨에서도 방어적으로 우선순위를 명시한다.
     expect(result?.category).toBe("PRICE_GAP");
   });
+
+  it("M-12 회귀) Seller Action 4개 상태 × Alert 정책 매트릭스 — L-6 같은 재발 방지, " +
+    "대표님 표: PRICE_KEEP→없음 / PRICE_REVIEW→REVIEW / PRICE_ADJUST→ACTION_REQUIRED / " +
+    "INSUFFICIENT_DATA→없음(단, opportunity/originChange가 별도로 있으면 그 신호가 우선한다)", () => {
+    const matrix: Array<{
+      status: "PRICE_KEEP" | "PRICE_REVIEW" | "PRICE_ADJUST" | "INSUFFICIENT_DATA";
+      expectedSeverity: "ACTION_REQUIRED" | "REVIEW" | null;
+    }> = [
+      { status: "PRICE_KEEP", expectedSeverity: null },
+      { status: "PRICE_REVIEW", expectedSeverity: "REVIEW" },
+      { status: "PRICE_ADJUST", expectedSeverity: "ACTION_REQUIRED" },
+      { status: "INSUFFICIENT_DATA", expectedSeverity: null },
+    ];
+    for (const { status, expectedSeverity } of matrix) {
+      const result = computeMarketAlert(baseInput({ sellerAction: sellerAction({ status }) }));
+      expect(result?.severity ?? null).toBe(expectedSeverity);
+    }
+  });
 });
