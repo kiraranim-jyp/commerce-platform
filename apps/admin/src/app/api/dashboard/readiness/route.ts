@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { backfillCanonicalProduct } from "@commerce/shared";
 import { listRecentSnapshotsFull } from "../../snapshots/_lib/snapshot";
-import { computeSnapshotReadiness, type SnapshotReadiness } from "../../snapshots/_lib/compute-readiness";
+import {
+  computeSnapshotReadiness,
+  UNKNOWN_SELLABILITY,
+  type SnapshotReadiness,
+} from "../../snapshots/_lib/compute-readiness";
 import { classifyPriorityTier, buildHeadline, tierMeta, type DashboardPriorityTier } from "./_lib/priority";
 
 export const runtime = "nodejs";
@@ -86,6 +90,7 @@ export async function GET(request: Request) {
                 domesticLowestPriceKrw: null,
                 lastCheckedAt: null,
                 reason: "이 상품의 준비 상태 계산에 실패했습니다.",
+                sellability: UNKNOWN_SELLABILITY,
               },
               platforms: [],
             },

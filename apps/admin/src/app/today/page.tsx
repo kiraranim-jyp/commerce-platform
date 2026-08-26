@@ -51,6 +51,8 @@ interface DashboardProduct {
       domesticLowestPriceKrw: number | null;
       lastCheckedAt: string | null;
       reason: string;
+      /** N-4.18-Q3 — "이 상품을 등록해도 되는가?"(판매가 미설정 상품도 계산됨). */
+      sellability?: { level: PriceLevel; title: string; reason: string; estimatedMarginPercent: number | null };
     };
     platforms: DashboardPlatform[];
   };
@@ -82,6 +84,16 @@ const PRICE_LEVEL_META: Record<PriceLevel, { icon: string; label: string }> = {
   YELLOW: { icon: "🟡", label: "가격 확인 필요" },
   RED: { icon: "🔴", label: "마진 위험" },
   UNKNOWN: { icon: "⚪", label: "가격 판단 불가" },
+};
+
+/** N-4.18-Q3(대표님 지시, 2026-08-26: "이 상품을 등록해도 되는가?") — 위
+ * PRICE_LEVEL_META(가격 유지/조정 판단)와 별개로, 판매가가 아직 없는(대부분의
+ * 미등록 상품) 상태에서도 "등록해도 되는가"를 목록에서 바로 보여준다. */
+const SELLABILITY_LEVEL_META: Record<"GREEN" | "YELLOW" | "RED" | "UNKNOWN", { icon: string; label: string }> = {
+  GREEN: { icon: "🟢", label: "판매 추천" },
+  YELLOW: { icon: "🟡", label: "확인 필요" },
+  RED: { icon: "🔴", label: "판매 비추천" },
+  UNKNOWN: { icon: "⚪", label: "원가 확인 필요" },
 };
 
 function sourceSiteName(url: string): string {
@@ -409,6 +421,16 @@ export default function TodayPage() {
                                 ⚠️ 오래된 가격
                               </span>
                             )}
+                          </span>
+                        );
+                      })()}
+                      {(() => {
+                        const sellability = product.readiness.price?.sellability;
+                        if (!sellability) return null;
+                        const meta = SELLABILITY_LEVEL_META[sellability.level];
+                        return (
+                          <span className="text-text-secondary" title={sellability.reason}>
+                            판매판단 {meta.icon} {meta.label}
                           </span>
                         );
                       })()}

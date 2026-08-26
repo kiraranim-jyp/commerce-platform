@@ -1,5 +1,5 @@
 import { classifyPriorityTier, buildHeadline, type DashboardPriorityTier } from "../src/app/api/dashboard/readiness/_lib/priority";
-import type { SnapshotReadiness } from "../src/app/api/snapshots/_lib/compute-readiness";
+import { UNKNOWN_SELLABILITY, type SnapshotReadiness } from "../src/app/api/snapshots/_lib/compute-readiness";
 import type { RegistrationReadinessState } from "../src/app/pipeline/commerce/readiness-state";
 
 /**
@@ -30,6 +30,7 @@ function readiness(
       domesticLowestPriceKrw: null,
       lastCheckedAt: null,
       reason: "테스트 픽스처",
+      sellability: UNKNOWN_SELLABILITY,
     },
     platforms: states.map((state, i) => ({
       platform: "smartstore" as const,

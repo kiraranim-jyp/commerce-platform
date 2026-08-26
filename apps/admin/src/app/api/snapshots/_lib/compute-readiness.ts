@@ -2,7 +2,14 @@ import { PLATFORM_ADAPTERS, isVerifiedCategorySelected } from "@commerce/marketp
 import { UNRESOLVED_CATEGORY, type CategorySelection } from "@commerce/category";
 import { buildNaverProductPayload, validateNaverPayload } from "@commerce/listing";
 import type { CanonicalProduct, PlatformId } from "@commerce/shared";
-import { computePriceDecision, priceLevelFromVerdict, summarizeDomesticMarket, type PriceLevel } from "@commerce/pricing";
+import {
+  computePriceDecision,
+  computeSellability,
+  priceLevelFromVerdict,
+  summarizeDomesticMarket,
+  type PriceLevel,
+  type SellabilityResult,
+} from "@commerce/pricing";
 import { resolveNaverContext } from "../../naver/_lib/resolve-context";
 import { getRegisteredPlatforms } from "./registration-status";
 import { getPriceHistory } from "../../price-history/_lib/price-observations";
@@ -68,6 +75,11 @@ export interface SnapshotPriceSummary {
    * 옮긴다(새 판정 문구를 만들지 않는다). UNKNOWN일 때는 판매가 미설정과 원가
    * 데이터 없음을 구분한다 — 둘 다 지금까지 "⚪ 가격 판단 불가"로만 보였다. */
   reason: string;
+  /** N-4.18-Q3(대표님 지시, 2026-08-26: "이 상품을 등록해도 되는가?") — "가격
+   * 유지/조정" 판단(level/reason 위)과 별개로, 판매가가 아직 없는(등록 전)
+   * 상품도 다룬다. computeSellability()가 이미 낸 값을 그대로 옮긴다(새 판정
+   * 없음) — DomesticPriceIntelligencePanel의 "🧠 판매 판단" 카드와 같은 값. */
+  sellability: SellabilityResult;
 }
 
 export interface SnapshotReadiness {
@@ -85,6 +97,13 @@ export interface SnapshotReadiness {
 
 const SUPPORTED_PLATFORMS: PlatformId[] = ["smartstore", "coupang", "elevenst"];
 
+export const UNKNOWN_SELLABILITY: SellabilityResult = {
+  level: "UNKNOWN",
+  title: "원가 확인 필요",
+  reason: "실제 구매 가능 가격을 아직 확인하지 못했습니다.",
+  estimatedMarginPercent: null,
+};
+
 const EMPTY_PRICE_SUMMARY: SnapshotPriceSummary = {
   level: "UNKNOWN",
   marginPercent: null,
@@ -92,6 +111,7 @@ const EMPTY_PRICE_SUMMARY: SnapshotPriceSummary = {
   domesticLowestPriceKrw: null,
   lastCheckedAt: null,
   reason: "판매가가 아직 설정되지 않았습니다.",
+  sellability: UNKNOWN_SELLABILITY,
 };
 
 async function computePriceSummaryForSnapshot(
@@ -99,22 +119,32 @@ async function computePriceSummaryForSnapshot(
   product: CanonicalProduct,
 ): Promise<SnapshotPriceSummary> {
   const currentSellingPriceKrw = product.priceOverrideKrw?.value ?? null;
-  if (currentSellingPriceKrw == null) return EMPTY_PRICE_SUMMARY;
   const [originHistory, domesticShopHistory, naverShoppingHistory] = await Promise.all([
     getPriceHistory(snapshotId, "SELLER_ORIGIN"),
     getPriceHistory(snapshotId, "DOMESTIC_SHOP"),
     getPriceHistory(snapshotId, "NAVER_SHOPPING"),
   ]);
   const costPriceKrw = originHistory[0]?.priceKrw ?? null;
+  const domesticRecords = [...domesticShopHistory, ...naverShoppingHistory];
+  const domesticSummary = summarizeDomesticMarket(domesticRecords);
+  // N-4.18-Q3(대표님 지시: "등록 전 상품도 판매 가능성을 판단해야 한다") — 판매가
+  // (priceOverrideKrw)가 아직 없는 상품(대부분의 미등록 상품)도 sellability는
+  // 계산한다 — 아래 level(가격 유지/조정 판단)과 달리 sellability는 판매가
+  // 설정 여부와 무관하게 원가+국내동일상품만으로 판단 가능하다.
+  const sellability = computeSellability({
+    costPriceKrw,
+    domestic: { matched: domesticSummary.sellerCount > 0, averagePriceKrw: domesticSummary.averagePriceKrw },
+  });
+
+  if (currentSellingPriceKrw == null) return { ...EMPTY_PRICE_SUMMARY, sellability };
   if (costPriceKrw == null) {
     return {
       ...EMPTY_PRICE_SUMMARY,
       currentSellingPriceKrw,
       reason: "원가 데이터가 아직 확인되지 않았습니다(가격 확인을 실행해주세요).",
+      sellability,
     };
   }
-  const domesticRecords = [...domesticShopHistory, ...naverShoppingHistory];
-  const domesticSummary = summarizeDomesticMarket(domesticRecords);
   const decision = computePriceDecision({
     costPriceKrw,
     currentSellingPriceKrw,
@@ -132,6 +162,7 @@ async function computePriceSummaryForSnapshot(
     domesticLowestPriceKrw: domesticSummary.lowestPriceKrw,
     lastCheckedAt,
     reason: decision.reason,
+    sellability,
   };
 }
 
