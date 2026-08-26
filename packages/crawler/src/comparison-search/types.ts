@@ -2,6 +2,11 @@ export interface ComparisonCandidate {
   title: string;
   url: string;
   price: { amount: number; currency: string } | null;
+  /** N-4.18-Q2 P0-4(대표님 지시, 2026-08-26: "정상가와 현재가를 뭉개지 않는다") —
+   * 검색 목록에서 할인판매가(price)와 별도로 정가가 확인될 때만 채운다(실제
+   * 할인이 있을 때만, 즉 정가 > 판매가일 때만). 사이트가 정가/할인가를 구분해서
+   * 주지 않으면(또는 할인이 없으면) null — 지어내지 않는다. */
+  regularPrice?: { amount: number; currency: string } | null;
   imageUrl: string | null;
   confidence: number;
   /** 사이트에서 브랜드가 별도 필드로 확인되는 경우(Shopify vendor, Childrensalon

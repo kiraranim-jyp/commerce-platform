@@ -37,6 +37,13 @@ interface ShopifyJsonVariant {
   title?: string;
   price?: string;
   price_currency?: string;
+  /** N-4.18-Q2 P0-1(대표님 지시, 2026-08-26) — 실측 확인(2026-08-26, curl로
+   * `/products/{handle}.json` 직접 조회): 할인 없는 상품은 빈 문자열("")
+   * — null/undefined가 아니다 —, 실제 할인 상품(60s Headband by Ketiketa,
+   * junioredition.com)은 할인 전 정가 문자열("29600", 현재가는
+   * "8900")이 그대로 들어있다. */
+  compare_at_price?: string;
+  compare_at_price_currency?: string;
   sku?: string;
   option1?: string | null;
   option2?: string | null;
@@ -46,7 +53,45 @@ interface ShopifyJsonVariant {
    * inventory_quantity 숫자를 신뢰할 수 없다 — 이 경우 stockQuantity를 채우지
    * 않는다("모른다"를 "0이다"로 취급하지 않는다). */
   inventory_management?: string | null;
+  /** N-4.18-Q2 P0-3 — 실측 확인(2026-08-26): `/products/{handle}.json`
+   * (이 파일이 실제로 호출하는 엔드포인트)에는 `available` 불리언이 없다
+   * (컬렉션 목록 `/collections/{handle}/products.json`에만 있음 — 다른
+   * 엔드포인트, 혼동 금지). "재고 추적 안 함(inventory_management=null)이면
+   * 항상 구매 가능", "inventory_policy=continue면 품절이어도 계속 판매",
+   * 그 외엔 inventory_quantity>0"이라는 Shopify 공식 판매 가능 여부 공식을
+   * 그대로 쓴다(추측이 아니라 위 inventory_management 주석과 동일 전제). */
+  inventory_policy?: string | null;
   image_id?: number | null;
+}
+
+/** N-4.18-Q2 P0-3 — Shopify 공식 "구매 가능" 판정 공식(위 inventory_policy 주석
+ * 참고): 재고추적 안 함 또는 backorder 허용 또는 실재고>0. */
+function isVariantAvailable(variant: ShopifyJsonVariant): boolean {
+  if (!variant.inventory_management) return true;
+  if (variant.inventory_policy === "continue") return true;
+  return (variant.inventory_quantity ?? 0) > 0;
+}
+
+/** N-4.18-Q2 P0-1(대표님 지시: "정상가와 현재 판매가가 같으면 중복 표시 안 함") —
+ * compare_at_price가 있어도 현재가보다 크지 않으면(할인이 실제로 없으면) null.
+ * 통화는 로케일 프리픽스가 있으면 compare_at_price_currency를, 없으면 매장
+ * 고정통화(shopCurrency)를 price와 동일한 규칙으로 우선한다. */
+function resolveRegularPrice(
+  variant: ShopifyJsonVariant,
+  currentAmount: number | undefined,
+  localePrefix: string,
+  shopCurrency: string | null,
+): { amount: number; currency: string } | undefined {
+  const raw = variant.compare_at_price;
+  if (!raw) return undefined;
+  const amount = Number(raw);
+  if (!Number.isFinite(amount) || amount <= 0) return undefined;
+  if (currentAmount != null && amount <= currentAmount) return undefined;
+  const currency =
+    localePrefix && variant.compare_at_price_currency
+      ? variant.compare_at_price_currency.toUpperCase()
+      : (shopCurrency ?? (variant.compare_at_price_currency ?? "").toUpperCase());
+  return { amount, currency };
 }
 interface ShopifyJsonOption {
   name?: string;
@@ -226,7 +271,12 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
   // price_currency를 그대로 믿는다. 로케일이 없는 기본 요청만 shopCurrency
   // 오버라이드를 쓴다(요청 서버 위치에 따라 presentment currency가 흔들리는
   // 문제를 막기 위한 기존 처리, 로케일이 명시된 요청에는 적용 대상이 아니다).
-  const variant = product.variants?.[0];
+  // N-4.18-Q2 P0-3(대표님 지시: "판매 가능한 variant 우선 → 그 variant의 현재
+  // 판매가 사용") — 첫 variant를 무조건 쓰지 않고, 구매 가능한 첫 variant를
+  // 우선한다(전부 품절이면 기존처럼 variants[0]로 폴백 — 그래도 가격 자체는
+  // 보여줘야 한다).
+  const availableVariant = product.variants?.find(isVariantAvailable);
+  const variant = availableVariant ?? product.variants?.[0];
   const price =
     variant?.price != null
       ? {
@@ -237,6 +287,7 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
               : (shopCurrency ?? (variant.price_currency ?? "").toUpperCase()),
         }
       : undefined;
+  const regularPrice = variant ? resolveRegularPrice(variant, price?.amount, localePrefix, shopCurrency) : undefined;
 
   const optionNames = (product.options ?? []).map((o) => o.name).filter((n): n is string => Boolean(n));
   const optionGroups: CanonicalProductOptionGroup[] = (product.options ?? [])
@@ -289,6 +340,7 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
       brand: product.vendor,
       description: product.body_html ? stripHtmlTags(product.body_html) : undefined,
       price,
+      regularPrice,
       options: optionNames,
       optionGroups,
       variants,

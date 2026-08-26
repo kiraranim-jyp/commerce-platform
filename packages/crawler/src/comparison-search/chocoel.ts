@@ -113,6 +113,11 @@ export async function searchChocoel(query: string): Promise<ComparisonCandidate[
       title,
       url: href.startsWith("http") ? href : `https://${DOMAIN}${href}`,
       price: amount ? { amount, currency: "KRW" } : null,
+      // N-4.18-Q2 P0-4 — 할인판매가/정가가 둘 다 있고 정가가 더 클 때만 노출.
+      regularPrice:
+        salePrice && regularPrice && regularPrice > salePrice
+          ? { amount: regularPrice, currency: "KRW" }
+          : null,
       imageUrl: img ? (img.startsWith("//") ? `https:${img}` : img) : null,
       confidence: 0,
       // 실측 확인: 목록 마크업에 브랜드/SKU 필드 자체가 없음(undefined 유지).

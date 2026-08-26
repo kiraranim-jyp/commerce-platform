@@ -136,6 +136,10 @@ export function buildCanonicalProduct(
     ),
     priceValidity: productData.priceValidity ?? (productData.price ? "VALID" : "MISSING"),
     priceRawText: productData.priceRawText,
+    // N-4.18-Q2 P0-1 — 크롤러가 실제로 정가(compare_at_price)를 찾았을 때만
+    // 그대로 전달한다(지어내지 않음, field()로 감싸지 않는 이유는 이 값이
+    // provenance 추적/사용자 수정 대상이 아니라 원본 참고 정보이기 때문).
+    regularPrice: productData.regularPrice ?? null,
     sku: field(productData.sku ?? "", "sku", sources),
     description: field(productData.description ?? "", "description", sources),
     // Sprint C(Compliance Resolver) — 크롤러가 구조화된 material을 안 주면(대부분의

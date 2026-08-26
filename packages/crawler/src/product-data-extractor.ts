@@ -8,6 +8,13 @@ export interface ExtractedProductData {
   title?: string;
   brand?: string;
   price?: { amount: number; currency: string };
+  /** N-4.18-Q2 P0-1(대표님 지시, 2026-08-26: "정상가와 할인가를 분리한다") —
+   * Shopify variants[].compare_at_price(할인 전 정가)에서만 채워진다(실측
+   * 확인: junioredition.com). price보다 클 때만 값이 있다(같거나 작으면
+   * "실제 할인 아님"으로 보고 undefined) — 지어내지 않는다. Shopify가 아닌
+   * 소스(json-ld/microdata/open-graph/dom)는 정가/할인가 분리 마크업을 아직
+   * 실측 확인하지 못해 항상 undefined다. */
+  regularPrice?: { amount: number; currency: string };
   /** N-3.54(CPO 지시: "원본 가격을 못 읽었으면 가격을 계산하지 말고") — price가
    * undefined인 이유를 구분한다. MISSING은 가격 필드 자체를 못 찾은 경우,
    * INVALID는 가격 텍스트/값은 찾았지만 숫자로 해석 불가하거나 0 이하인

@@ -158,6 +158,14 @@ export interface CanonicalProduct {
    * 않는다. */
   brandResolution?: { raw: string; ruleApplied: string[]; confidence: "HIGH" | "LOW" };
   price: ProvenanceField<{ amount: number; currency: string }>;
+  /** N-4.18-Q2 P0-1(대표님 지시, 2026-08-26: "정상가와 할인가를 분리한다") —
+   * price(현재 실제 구매 가능한 가격)와 별개로, 원본 사이트가 할인 전 정가를
+   * 명시적으로 제공할 때만 채운다(현재는 Shopify compare_at_price만 실측
+   * 확인됨 — 다른 소스는 항상 undefined). price보다 크지 않으면(진짜 할인이
+   * 아니면) 채우지 않는다 — "정상가와 현재 판매가가 같으면 중복 표시 안
+   * 함" 원칙. 가격비교/등록 계산은 여전히 price(현재가)만 기준으로 한다 —
+   * 이 필드를 비교 로직에 끌어쓰지 않는다. */
+  regularPrice?: { amount: number; currency: string } | null;
   /** N-3.54(CPO 지시: "원본 가격을 못 읽었으면 가격을 계산하지 말고, 계산했으면
    * 그 가격의 근거가 무엇인지 보여줘야 한다") — price.value가 {amount:0,
    * currency:""}처럼 보여도 그게 "정말 0원짜리 상품"인지 "원본 가격을 못

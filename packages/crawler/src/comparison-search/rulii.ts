@@ -144,6 +144,12 @@ export async function searchRulii(query: string): Promise<ComparisonCandidate[]>
       title,
       url: href.startsWith("http") ? href : `https://${DOMAIN}${href}`,
       price: amount ? { amount, currency: "KRW" } : null,
+      // N-4.18-Q2 P0-4 — 할인판매가와 정가가 둘 다 있고 정가가 더 클 때만
+      // "실제 할인"으로 본다(둘이 같으면 표시상 중복이라 null 유지).
+      regularPrice:
+        salePrice && regularPrice && regularPrice > salePrice
+          ? { amount: regularPrice, currency: "KRW" }
+          : null,
       imageUrl: img ? (img.startsWith("//") ? `https:${img}` : img) : null,
       confidence: 0,
       brand,
