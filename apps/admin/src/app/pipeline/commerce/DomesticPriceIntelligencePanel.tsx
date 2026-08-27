@@ -275,7 +275,11 @@ interface PriceHistoryResponse {
     domesticShop: { records: PriceHistoryRecord[]; trend7d: PriceTrend | null; trend30d: PriceTrend | null };
   };
   fx: { rate: number; isEstimate: boolean } | null;
-  cost: { originalAmount: number; originalCurrency: string; landedCostKrw: number } | null;
+  /** N-4.18-Q3 PART F-1/F-2(대표님 지시, 2026-08-27) — costKrw(원본가×환율,
+   * 마크업 없음)는 computePriceBreakdown이 이미 계산해 API가 항상 돌려주던
+   * 값인데 이 화면이 지금까지 landedCostKrw(배송비 포함)만 쓰고 costKrw는
+   * 읽지 않았다 — 새 계산이 아니라 이미 있던 값을 추가로 노출하는 것뿐이다. */
+  cost: { originalAmount: number; originalCurrency: string; costKrw: number; landedCostKrw: number } | null;
   decision: Decision | null;
   recommendation: Recommendation | null;
   sellerAction: SellerAction;
@@ -597,13 +601,25 @@ export function DomesticPriceIntelligencePanel({
 
         {/* STEP J-6 — "🌎 해외" 블록. cost/fx는 기존 computePriceBreakdown 값
             그대로, 원가 변화(▼/▲%)는 이미 서버가 계산한 priceHistory.origin.change를
-            그대로 읽는다(새 계산 없음). */}
+            그대로 읽는다(새 계산 없음).
+
+            N-4.18-Q3 PART F-1~F-4(대표님 지시, 2026-08-27: "£200×환율과 실제
+            한국向 표시가를 혼동하면 안 된다") — 실측 확인(PèPè 골든케이스,
+            production): 해외원본가 £200 → 환율환산 ₩377,358(마크업 없음) →
+            착지원가 ₩389,358(+배송비, 기존 표시) → 한국向 실제표시가
+            ₩234,800(KR_MARKET). 이 넷은 전부 다른 숫자인데 지금까지 이
+            화면은 "착지원가"만 보여주고, 정작 위쪽 🟢🟡🔴 판매가능성/가격
+            판단(sellability/sellerAction/decision)이 실제로 쓰는 값(currentPrice.
+            costPriceKrw — 한국向 표시가 있으면 그 값, 없으면 환율환산가)은
+            화면 어디에도 안 보였다 — "판단은 보이는 숫자와 다른 숫자로
+            내려지는" 상태였다. 새 계산 없이 이미 API가 주던 cost.costKrw와
+            currentPrice.costPriceKrw/costBasis를 추가로 노출만 한다. */}
         {cost && fx && (
           <div className="rounded-md border border-border bg-background p-2">
             <p className="mb-1 font-medium text-text-primary">🌎 해외</p>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-text-secondary">
               <span>
-                해외 원가 {cost.originalAmount.toLocaleString()} {cost.originalCurrency}
+                🌍 해외 원본가 {cost.originalAmount.toLocaleString()} {cost.originalCurrency}
               </span>
               {originChangeRatePercent != null && originChangeRatePercent !== 0 && (
                 <span className={originChangeRatePercent < 0 ? "text-success" : "text-error"}>
@@ -616,9 +632,26 @@ export function DomesticPriceIntelligencePanel({
                 환율 ₩{Math.round(fx.rate).toLocaleString()}
                 {fx.isEstimate ? "(추정)" : ""}
               </span>
-              <span>·</span>
-              <span>착지원가 ₩{Math.round(cost.landedCostKrw).toLocaleString()}</span>
             </div>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-text-secondary">
+              <span>💱 환율 환산 ≈ ₩{Math.round(cost.costKrw).toLocaleString()}</span>
+              <span>·</span>
+              <span>착지원가(배송비 포함) ₩{Math.round(cost.landedCostKrw).toLocaleString()}</span>
+            </div>
+            {currentPrice.costBasis === "KR_MARKET" && currentPrice.costPriceKrw != null && (
+              <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-text-secondary">
+                <span className="font-medium text-text-primary">
+                  🇰🇷 한국向 표시가 ₩{currentPrice.costPriceKrw.toLocaleString()}
+                </span>
+                <span className="text-[10px] text-text-tertiary">(실제 확인됨 — 위 판매가능성 판단은 이 값 기준)</span>
+              </div>
+            )}
+            {currentPrice.costBasis === "ORIGIN_FX" && (
+              <p className="mt-1 text-[10px] text-text-tertiary">
+                ⚪ 한국向 실제 표시가는 확인되지 않아, 위 판매가능성 판단은 환율 환산가(₩
+                {Math.round(cost.costKrw).toLocaleString()}) 기준입니다.
+              </p>
+            )}
           </div>
         )}
 
