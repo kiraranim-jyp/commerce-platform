@@ -21,6 +21,9 @@ import type {
 export * from "./types";
 export { scoreCandidate } from "./match";
 export { MAX_DETAIL_CONFIRMATIONS_PER_SHOP, selectCandidatesForDetailConfirmation } from "./price-confirmation";
+/** N-4.18-Q3 PART H-3-1 — 동일상품 판별 증거 데이터 계약(타입만, 아직 어떤
+ * 추출 로직도 이 타입을 사용하지 않는다 — H-3-2부터 실제 연결). */
+export * from "./evidence";
 
 /** Sprint B-1.5/B-1.8 — search-suggest.json의 가격은 신뢰하지 않는다(B-1.4에서 확인: Vercel에서
  * 로케일 프리픽스를 줘도 기본 통화 숫자가 그대로 돌아옴). 검색은 "후보 발견"까지만 담당하고,
