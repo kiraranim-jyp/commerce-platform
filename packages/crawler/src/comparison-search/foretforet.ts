@@ -121,6 +121,25 @@ export async function fetchForetforetProductPrice(url: string): Promise<Foretfor
     : { price: null, available: false, soldOut };
 }
 
+/** N-4.18-Q3 PART H-3-6(대표님 지시, 2026-08-27) — domestic_product_links 연결
+ * 단계에서 실제 후보의 modelCode 증거를 확보하기 위한 단독 fetch. 기존
+ * fetchForetforetProductPrice(가격/품절)와 별도 요청이다 — 그 함수의 반환
+ * 계약을 바꾸지 않는다(이미 daily cron 등 기존 호출부가 의존 중이므로). 실패
+ * 시 null — 추정하지 않는다. */
+export async function fetchForetforetModelCode(url: string): Promise<string | null> {
+  try {
+    const response = await fetchWithDomainRateLimit(url, {
+      headers: { Accept: "text/html", "User-Agent": CHROME_UA },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+    if (!response.ok) return null;
+    const html = await response.text();
+    return extractForetforetModelCode(html);
+  } catch {
+    return null;
+  }
+}
+
 export async function searchForetforet(query: string): Promise<ComparisonCandidate[]> {
   const url = `https://${DOMAIN}/shop/product_list.action.html?action_mode=get_list&page=1&category=&sort=&search=${encodeURIComponent(query)}&viewtype=&sp_search_type=&add_check=`;
   const response = await fetchWithDomainRateLimit(url, {

@@ -81,6 +81,7 @@ export async function GET(request: Request) {
         snapshotId: snapshot.id,
         dna: buildProductIdentityDna(product),
         skipIfCheckedToday: true,
+        description: product.description.value || undefined,
       });
     } catch (err) {
       console.error(`[daily-price-check] 스냅샷 ${snapshot.id} 국내 가격비교 실패:`, err);

@@ -26,7 +26,7 @@ export * from "./evidence";
 /** N-4.18-Q3 PART H-3-2 — FORETFORET mpn 추출 + modelCode 비교(exact/partial/
  * unavailable/conflict). 아직 confidence/matchLevel 계산에는 연결하지 않는다
  * (H-3-5에서 연결 예정). */
-export { extractForetforetModelCode } from "./foretforet";
+export { extractForetforetModelCode, fetchForetforetModelCode } from "./foretforet";
 export { compareModelCode, extractForeignModelCode } from "./model-code";
 /** N-4.18-Q3 PART H-3-3 — Cafe24 3개 사이트(RULII/LOOXLOO/DEUXBEBE) JSON-LD offers[]
  * 추출. 아직 옵션 유사도 판정/confidence/matchLevel에는 연결하지 않는다(다음 단계). */
@@ -41,6 +41,7 @@ export { classifyImageEvidence, computeMinImageDistance, hashImageUrl } from "./
  * 참조만 한다. domestic_product_links 자동확정 흐름과는 아직 연결하지
  * 않는다(대표님 지시: 그다음 단계). */
 export { decideCandidateEvidence } from "./decision";
+export type { AutoDecision, CandidateEvidenceDecision, CandidateEvidenceInput } from "./decision";
 
 /** Sprint B-1.5/B-1.8 — search-suggest.json의 가격은 신뢰하지 않는다(B-1.4에서 확인: Vercel에서
  * 로케일 프리픽스를 줘도 기본 통화 숫자가 그대로 돌아옴). 검색은 "후보 발견"까지만 담당하고,

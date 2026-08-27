@@ -1,4 +1,12 @@
-import { refreshDomesticProductPrice, searchDomesticShops } from "@commerce/crawler";
+import {
+  compareModelCode,
+  decideCandidateEvidence,
+  extractForeignModelCode,
+  fetchForetforetModelCode,
+  refreshDomesticProductPrice,
+  searchDomesticShops,
+  type CandidateEvidenceDecision,
+} from "@commerce/crawler";
 import { buildDomesticShopQuery, type ProductIdentityDna } from "@commerce/shared";
 import { listDomesticPriceSources, recordDomesticSourceCheckAttempt } from "../../domestic-price-sources/_lib/domestic-price-source";
 import {
@@ -30,6 +38,12 @@ export interface DomesticPriceCheckInput {
   snapshotId: string;
   dna: ProductIdentityDna;
   skipIfCheckedToday?: boolean;
+  /** N-4.18-Q3 PART H-3-6(대표님 지시, 2026-08-27) — modelCode 증거(H-3-2)의
+   * 해외측 원문 소스. ProductIdentityDna에는 없는 필드라(설계 원칙: "이미
+   * 확보한 값만으로 DNA를 만든다") 이 함수 입력에만 선택적으로 추가한다 —
+   * 없으면(undefined) modelCode 증거는 그냥 unavailable로 정직하게 처리되고
+   * 기존 동작이 그대로 유지된다(호출부를 안 고쳐도 회귀 없음). */
+  description?: string;
 }
 
 export interface DomesticPriceCheckResult {
@@ -47,6 +61,31 @@ export interface DomesticPriceCheckResult {
  * 괄호는 실제 모델 정보일 수 있어 손대지 않는다). */
 function stripLeadingDevTag(title: string): string {
   return title.replace(/^\s*\[[^\]]*\]\s*/, "").trim();
+}
+
+/** N-4.18-Q3 PART H-3-6(대표님 지시, 2026-08-27) — decideCandidateEvidence의
+ * 3단계 결정을 실제 링크 필드(verified/matchReasons)에 반영하는 안전장치.
+ * matchType(EXACT/HIGH_CONFIDENCE/REVIEW_REQUIRED/NOT_MATCHED) 라벨 자체는
+ * 여전히 toDomesticMatchType(기존 matchLevel 기반)이 그대로 정한다 — 여기서
+ * 바꾸는 건 verified 플래그뿐이다("자동확정 가능/금지"는 결국 verified가
+ * true여야만 STEP 2 가격 관측 대상이 되므로, 이 필드 하나로 대표님이 요청한
+ * "자동확정 가능/금지"가 실제 기능으로 연결된다).
+ *
+ * decision==="unchanged"일 때는 baseAutoVerified/baseReasons를 그대로
+ * 돌려준다 — 이 순수 함수를 독립적으로 테스트할 수 있어 회귀(특히 "unchanged가
+ * 절대 기존 결과를 안 바꾼다")를 실제 코드로 고정할 수 있다. */
+export function applyEvidenceDecision(
+  baseAutoVerified: boolean,
+  baseReasons: string[],
+  decision: CandidateEvidenceDecision,
+): { verified: boolean; matchReasons: string[] } {
+  if (decision.decision === "auto_confirm") {
+    return { verified: true, matchReasons: [...baseReasons, ...decision.reasons] };
+  }
+  if (decision.decision === "review_required") {
+    return { verified: false, matchReasons: [...baseReasons, ...decision.reasons] };
+  }
+  return { verified: baseAutoVerified, matchReasons: baseReasons };
 }
 
 export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Promise<DomesticPriceCheckResult> {
@@ -114,6 +153,32 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     const { matchType, autoVerified } = toDomesticMatchType(best.matchLevel ?? "low");
     if (matchType === "NOT_MATCHED") continue;
 
+    // N-4.18-Q3 PART H-3-6(대표님 지시, 2026-08-27) — Evidence Decision을
+    // 기존 matchType/matchConfidence/threshold 계산과 완전히 분리된 안전장치로
+    // 얹는다. modelCode만 실제로 연결한다(options/image는 이 흐름에 아직
+    // 배선되지 않았으므로 unavailable로 정직하게 둔다 — H-3-4 실측대로
+    // unavailable/weak_or_no_evidence는 아래에서 verified를 절대 바꾸지 않는다).
+    // 현재 실제 modelCode 추출이 확인된 사이트는 FORETFORET뿐이다(H-3-2) —
+    // 다른 도메인은 domesticModelCode가 항상 null이라 compareModelCode가
+    // "unavailable"을 반환하고, decideCandidateEvidence는 그 경우 항상
+    // "unchanged"이므로 기존 동작과 완전히 동일하다.
+    const foreignModelCode = extractForeignModelCode(input.description);
+    const domesticModelCode =
+      result.domain === "foretforet.com" ? await fetchForetforetModelCode(best.url) : null;
+    const modelCodeEvidence = compareModelCode(foreignModelCode, domesticModelCode);
+    const evidenceDecision = decideCandidateEvidence({
+      match: { confidence: best.confidence, level: best.matchLevel ?? "low", reasons: best.matchReasons ?? [] },
+      modelCode: modelCodeEvidence,
+      options: "unavailable",
+      image: "unavailable",
+    });
+
+    const { verified: finalVerified, matchReasons: finalMatchReasons } = applyEvidenceDecision(
+      autoVerified,
+      best.matchReasons ?? [],
+      evidenceDecision,
+    );
+
     const upsertResult = await upsertDomesticProductLink({
       snapshotId: input.snapshotId,
       sourceId: result.shopId,
@@ -124,8 +189,8 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       matchedModelName: null,
       matchType,
       matchConfidence: best.confidence,
-      matchReasons: best.matchReasons ?? [],
-      verified: autoVerified,
+      matchReasons: finalMatchReasons,
+      verified: finalVerified,
     });
     if (upsertResult.ok) linksCreatedOrUpdated += 1;
     else sourceErrors.push(`${result.shopName}: 링크 저장 실패 — ${upsertResult.error}`);

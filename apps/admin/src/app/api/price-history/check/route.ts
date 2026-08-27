@@ -41,6 +41,7 @@ export async function POST(request: Request) {
     domesticShop = await runDomesticPriceCheck({
       snapshotId,
       dna: buildProductIdentityDna(product),
+      description: product.description.value || undefined,
     });
   } catch (error) {
     domesticShop = {
