@@ -1,4 +1,5 @@
 import type { ComparisonCandidate, ComparisonQuery } from "./types";
+import { normalizeMatchingTitle } from "./title-normalize";
 
 const STOPWORDS = new Set(["the", "a", "an", "for", "and", "with", "by", "in", "of"]);
 
@@ -314,10 +315,18 @@ export function scoreCandidate(query: ComparisonQuery, candidate: ComparisonCand
   return scoreCandidateMatch(query, candidate).confidence;
 }
 
+/** N-4.18-Q3 PART H-3-8(대표님 지시, 2026-08-27) — scoreCandidateMatch() 계산식/
+ * threshold는 그대로 두고, 그 직전 입력 title만 title-normalize.ts로 정제한다.
+ * candidate.title도 같은 함수로 정제한다(대칭 처리 — 지금은 실측된 노이즈 패턴이
+ * 해외 title에서만 발견됐지만, 국내 후보 title에 같은 패턴이 나타나도 대응
+ * 가능하도록). 결과 객체(c)는 원본 title을 그대로 유지한다 — 정제본은 오직
+ * scoreCandidateMatch 계산 입력으로만 쓰인다. */
 export function withConfidence(query: ComparisonQuery, candidates: ComparisonCandidate[]): ComparisonCandidate[] {
+  const normalizedQuery: ComparisonQuery = { ...query, title: normalizeMatchingTitle(query.title) };
   return candidates
     .map((c) => {
-      const { confidence, level, reasons } = scoreCandidateMatch(query, c);
+      const normalizedCandidate: ComparisonCandidate = { ...c, title: normalizeMatchingTitle(c.title) };
+      const { confidence, level, reasons } = scoreCandidateMatch(normalizedQuery, normalizedCandidate);
       return { ...c, confidence, matchLevel: level, matchReasons: reasons };
     })
     .sort((a, b) => b.confidence - a.confidence);
