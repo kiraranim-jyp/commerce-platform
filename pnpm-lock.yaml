@@ -160,6 +160,9 @@ importers:
 
   packages/crawler:
     dependencies:
+      '@commerce/image':
+        specifier: workspace:*
+        version: link:../image
       '@commerce/pricing':
         specifier: workspace:*
         version: link:../pricing

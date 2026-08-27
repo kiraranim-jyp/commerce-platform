@@ -38,9 +38,23 @@ export type OptionEvidenceResult = "strong_overlap" | "partial_overlap" | "unava
 
 /** N-4.18-Q3 PART H-3(대표님 지시) — dHash 불일치는 "다른 상품"이 아니라 "이미지로는
  * 판단할 근거가 없다"는 뜻이다(판매처가 자체 촬영 사진을 쓸 수 있으므로). 그래서
- * 2단계(strong_match / weak_or_no_evidence)만 두고, "mismatch"라는 이름을 쓰지
- * 않는다 — 이름 자체가 판정 방향을 오해하게 만들지 않도록. */
-export type ImageEvidenceResult = "strong_match" | "weak_or_no_evidence" | "unavailable";
+ * "mismatch"라는 이름을 쓰지 않는다 — 이름 자체가 판정 방향을 오해하게 만들지
+ * 않도록.
+ *
+ * N-4.18-Q3 PART H-3-4(대표님 지시, 2026-08-27) — possible_match를 3번째
+ * 단계로 추가한다(대표님이 요청한 계약 모양). 다만 실측(image-evidence.ts
+ * 참고: 동일상품 distance=86, 완전-다른상품 distance=107, 유사-다른상품
+ * distance=119 — 3개 실제 상품 쌍을 실제로 다운로드해 측정)에서는 세 값이
+ * 기존 임계값(<=10)을 전부 넘고 순서도 실제 동일성과 단조적으로 대응하지
+ * 않았다 — "중간대"를 채울 신뢰할 수 있는 근거가 없다. 그래서 이 타입에는
+ * 값을 만들어두되, 지금 시점의 classifyImageEvidence()는 possible_match를
+ * 반환하지 않는다(실제 사례가 더 쌓이기 전까지 임계값을 지어내지 않는다 —
+ * 이 프로젝트 전체의 "추측 금지" 원칙). unavailable은 별개 상태: "비교를
+ * 시도조차 못함"(이미지가 한쪽 또는 양쪽에 아예 없음)을 뜻하고,
+ * weak_or_no_evidence는 "비교는 했지만 강한 근거가 아님"을 뜻한다 — 둘을
+ * 구분해야 나중에 "왜 이미지 증거가 없는지"를
+ * 설명할 수 있다. */
+export type ImageEvidenceResult = "strong_match" | "possible_match" | "weak_or_no_evidence" | "unavailable";
 
 /** 옵션 조합 하나(예: RULII "24", LOOXLOO "BLACK-FREE", DEUXBEBE "22(140mm)").
  * name은 사이트 원문 표기를 그대로 둔다 — 색상/사이즈로 억지로 분리 파싱하지
