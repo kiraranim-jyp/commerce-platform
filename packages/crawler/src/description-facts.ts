@@ -207,8 +207,16 @@ export function extractCareInstructions(description: string | undefined): string
  * 노출하고(예: "Product code B226AC010 AW26 Made in Portugal."), 그 품번이
  * bobochoses.com 공식몰의 상품 URL handle에도 그대로 포함된다
  * (b226ac010-booty-ghosts-t-shirt) — 국내/해외 비교검색 매칭(match.ts)의
- * SKU 최우선 신호가 이 품번을 못 받아 "동일상품"을 확실히 구분 못 하고 있었다. */
-const PRODUCT_CODE_PATTERN = /\bproduct\s+code\s+([A-Za-z0-9]{4,20})\b/i;
+ * SKU 최우선 신호가 이 품번을 못 받아 "동일상품"을 확실히 구분 못 하고 있었다.
+ *
+ * N-4.18-Q3 PART H-3-2(대표님 지시, 2026-08-27) — "Article code" 라벨도
+ * 실측 확인(junioredition.com PèPè "Lulu T Bar Shoes" 실제 설명문: "Article
+ * code: 01195-VERNICE-NERO."). "Product code"와 같은 종류의 정보(브랜드
+ * 자체 품번)라 같은 함수에서 라벨만 추가한다. 값에 하이픈이 포함되는 실제
+ * 사례(01195-VERNICE-NERO)가 있어 문자 클래스에 `-`를 추가했다 — 기존
+ * "Product code B226AC010" 같은 하이픈 없는 케이스는 공백에서 그대로
+ * 멈추므로 영향 없다(회귀 테스트로 확인). */
+const PRODUCT_CODE_PATTERN = /\b(?:product|article)\s+code[:\s]+([A-Za-z0-9][A-Za-z0-9-]{2,29})\b/i;
 
 export function extractProductCode(description: string | undefined): string | undefined {
   if (!description) return undefined;

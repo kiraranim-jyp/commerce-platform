@@ -85,6 +85,28 @@ function detectSoldOut(html: string): boolean | null {
   return states.every((s) => s === "SOLDOUT");
 }
 
+/** N-4.18-Q3 PART H-3-2(대표님 지시, 2026-08-27) — 상세페이지 JSON-LD(schema.org/
+ * Product)의 `mpn`(Manufacturer Part Number)을 실측 확인(PèPè 골든케이스:
+ * `"mpn":"PP24KASHE1195NER"`, `"@type":"Offer"`가 배열이 아니라 단일 객체 —
+ * RULII/LOOXLOO/DEUXBEBE(Cafe24, offers[] 배열)와 다른 MakeShop 플랫폼 구조).
+ * mpn이 없으면 null — 다른 필드로 추정하지 않는다. */
+const JSON_LD_RE = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g;
+
+export function extractForetforetModelCode(html: string): string | null {
+  for (const match of html.matchAll(JSON_LD_RE)) {
+    try {
+      const data = JSON.parse(match[1]) as { "@type"?: string; mpn?: string };
+      if (data["@type"] === "Product" && typeof data.mpn === "string" && data.mpn.trim()) {
+        return data.mpn.trim();
+      }
+    } catch {
+      // 이 <script> 블록이 유효한 JSON이 아니면 건너뛴다(예: FORETFORET의 두 번째
+      // JSON-LD 블록은 홑따옴표를 쓰는 비표준 형식이라 실측 확인상 파싱 실패함).
+    }
+  }
+  return null;
+}
+
 export async function fetchForetforetProductPrice(url: string): Promise<ForetforetProductPrice> {
   const response = await fetchWithDomainRateLimit(url, {
     headers: { Accept: "text/html", "User-Agent": CHROME_UA },
