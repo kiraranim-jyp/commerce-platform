@@ -1,4 +1,5 @@
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
+import type { ProductOption } from "./evidence";
 import { decodeHtmlEntities } from "./html-entities";
 import type { ComparisonCandidate } from "./types";
 
@@ -65,6 +66,53 @@ const LISTING_SOLDOUT_RE = /class="soldout_area\s*(displaynone)?"/;
  * fetchWithDomainRateLimit로 다시 받아 직접 찾아서 수정). 이 버튼 class 자체가
  * 없으면(마크업이 달라졌거나 예외 상황) 판정 불가로 null — 지어내지 않는다. */
 const DETAIL_SOLDOUT_RE = /class="ec-base-button gColumn soldout\s*(displaynone)?\s*"/;
+
+/** N-4.18-Q3 PART H-3-3(대표님 지시, 2026-08-27) — 실측 확인(2026-08-27, product_no=18052
+ * "완전 품절" 실사례 + product_no=18047 "일부 품절" 실사례): RULII/LOOXLOO와 동일하게
+ * JSON-LD Product.offers가 옵션(사이즈)별 배열이고, 각 원소가 name/price/
+ * availability(InStock|OutOfStock)/url(?item_code=P000BASI000A 쿼리파라미터)을 담는다.
+ * 18052는 6개 옵션 전부 OutOfStock — 기존 LISTING_SOLDOUT_RE/DETAIL_SOLDOUT_RE도 이
+ * 상품을 true(품절)로 판정해 모순 없음. 18047은 7개 중 3개만 OutOfStock — 기존 판정도
+ * false(전체 품절 아님)라 역시 모순 없음. offers가 없거나 배열이 아니면 null(옵션
+ * 정보를 못 가져온 것 — 빈 배열과 구분, evidence.ts ProductOption 계약). */
+const JSON_LD_RE = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g;
+const ITEM_CODE_RE = /[?&]item_code=([A-Za-z0-9]+)/;
+
+interface JsonLdOffer {
+  name?: unknown;
+  price?: unknown;
+  availability?: unknown;
+  url?: unknown;
+}
+
+function toProductOption(offer: JsonLdOffer): ProductOption {
+  const name = typeof offer.name === "string" ? offer.name : "";
+  const price = typeof offer.price === "number" ? offer.price : null;
+  const availability =
+    typeof offer.availability === "string"
+      ? offer.availability.includes("InStock")
+        ? true
+        : offer.availability.includes("OutOfStock")
+          ? false
+          : null
+      : null;
+  const itemCode = typeof offer.url === "string" ? (ITEM_CODE_RE.exec(offer.url)?.[1] ?? undefined) : undefined;
+  return { name, price, availability, itemCode };
+}
+
+export function extractDeuxbebeOptions(html: string): ProductOption[] | null {
+  for (const match of html.matchAll(JSON_LD_RE)) {
+    try {
+      const data = JSON.parse(match[1]) as { "@type"?: string; offers?: unknown };
+      if (data["@type"] === "Product" && Array.isArray(data.offers)) {
+        return (data.offers as JsonLdOffer[]).map(toProductOption);
+      }
+    } catch {
+      // 유효 JSON이 아닌 블록은 건너뜀
+    }
+  }
+  return null;
+}
 
 export interface DeuxbebeProductPrice {
   price: { amount: number; currency: "KRW" } | null;

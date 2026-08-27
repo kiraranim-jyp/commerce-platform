@@ -28,6 +28,11 @@ export * from "./evidence";
  * (H-3-5에서 연결 예정). */
 export { extractForetforetModelCode } from "./foretforet";
 export { compareModelCode, extractForeignModelCode } from "./model-code";
+/** N-4.18-Q3 PART H-3-3 — Cafe24 3개 사이트(RULII/LOOXLOO/DEUXBEBE) JSON-LD offers[]
+ * 추출. 아직 옵션 유사도 판정/confidence/matchLevel에는 연결하지 않는다(다음 단계). */
+export { extractRuliiOptions } from "./rulii";
+export { extractLooxlooOptions } from "./looxloo";
+export { extractDeuxbebeOptions } from "./deuxbebe";
 
 /** Sprint B-1.5/B-1.8 — search-suggest.json의 가격은 신뢰하지 않는다(B-1.4에서 확인: Vercel에서
  * 로케일 프리픽스를 줘도 기본 통화 숫자가 그대로 돌아옴). 검색은 "후보 발견"까지만 담당하고,

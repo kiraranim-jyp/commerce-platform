@@ -10,6 +10,7 @@
     "test:sites": "node scripts/test-sites.mjs",
     "test:match": "node scripts/test-match.mjs",
     "test:model-code": "tsx scripts/test-model-code.mjs",
+    "test:cafe24-options": "tsx scripts/test-cafe24-options.mjs",
     "test:price": "node scripts/test-price-confirmation.mjs",
     "test:brand-alias": "node scripts/test-brand-alias.mjs",
     "test:brand-alias-regression": "tsx scripts/test-brand-alias-regression.mts",

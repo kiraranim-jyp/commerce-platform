@@ -1,4 +1,5 @@
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
+import type { ProductOption } from "./evidence";
 import { decodeHtmlEntities } from "./html-entities";
 import type { ComparisonCandidate } from "./types";
 
@@ -58,6 +59,53 @@ function parsePrice(raw: string | null): number | null {
 function extractModelCode(title: string): string | undefined {
   const match = /\[([A-Z0-9-]{3,20})\]/.exec(title);
   return match ? match[1] : undefined;
+}
+
+/** N-4.18-Q3 PART H-3-3(대표님 지시, 2026-08-27) — 실측 확인(2026-08-27, product_no=3360
+ * 실제 상세페이지): JSON-LD Product.offers가 옵션(사이즈)별 배열이고, 각 원소가
+ * name(예: "...1235. FGI/VLC Souffle Milk 24")/price/availability(InStock|OutOfStock)/
+ * url(?item_code=P0000EZG000A 쿼리파라미터)을 담는다. 실측 케이스: 8개 옵션 중 1개만
+ * InStock(일부 품절 실사례) — 기존 DETAIL_SOLDOUT_RE(전체 품절 판정)와 대조해도
+ * 모순 없음(전체는 false, 옵션 중 1개는 실제로 판매 가능하므로 일치).
+ * offers가 없거나 배열이 아니면 null(옵션 정보를 못 가져온 것 — 빈 배열과 구분,
+ * evidence.ts ProductOption 계약). */
+const JSON_LD_RE = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g;
+const ITEM_CODE_RE = /[?&]item_code=([A-Za-z0-9]+)/;
+
+interface JsonLdOffer {
+  name?: unknown;
+  price?: unknown;
+  availability?: unknown;
+  url?: unknown;
+}
+
+function toProductOption(offer: JsonLdOffer): ProductOption {
+  const name = typeof offer.name === "string" ? offer.name : "";
+  const price = typeof offer.price === "number" ? offer.price : null;
+  const availability =
+    typeof offer.availability === "string"
+      ? offer.availability.includes("InStock")
+        ? true
+        : offer.availability.includes("OutOfStock")
+          ? false
+          : null
+      : null;
+  const itemCode = typeof offer.url === "string" ? (ITEM_CODE_RE.exec(offer.url)?.[1] ?? undefined) : undefined;
+  return { name, price, availability, itemCode };
+}
+
+export function extractRuliiOptions(html: string): ProductOption[] | null {
+  for (const match of html.matchAll(JSON_LD_RE)) {
+    try {
+      const data = JSON.parse(match[1]) as { "@type"?: string; offers?: unknown };
+      if (data["@type"] === "Product" && Array.isArray(data.offers)) {
+        return (data.offers as JsonLdOffer[]).map(toProductOption);
+      }
+    } catch {
+      // 유효 JSON이 아닌 블록은 건너뜀
+    }
+  }
+  return null;
 }
 
 const DETAIL_SALE_PRICE_RE = /id="span_product_price_sale"[^>]*>\s*([0-9,]+)/;
