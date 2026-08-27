@@ -6,6 +6,8 @@ import {
   refreshDomesticProductPrice,
   searchDomesticShops,
   type CandidateEvidenceDecision,
+  type ComparisonCandidate,
+  type ModelEvidenceResult,
 } from "@commerce/crawler";
 import { buildDomesticShopQuery, type ProductIdentityDna } from "@commerce/shared";
 import { listDomesticPriceSources, recordDomesticSourceCheckAttempt } from "../../domestic-price-sources/_lib/domestic-price-source";
@@ -88,6 +90,55 @@ export function applyEvidenceDecision(
   return { verified: baseAutoVerified, matchReasons: baseReasons };
 }
 
+/** N-4.18-Q3 PART H-3-9(대표님 지시, 2026-08-27) — H-3-7 실측(PèPè golden case)에서
+ * 확인된 문제: 텍스트 confidence 1위 후보가 실제로는 다른 상품(modelCode conflict)인
+ * 경우, 진짜 동일상품(3위, modelCode partial)이 evidence 평가 기회조차 얻지 못하고
+ * DB에는 틀린 1위만 저장됐다. 이 함수는 confidence 순위 자체는 전혀 건드리지
+ * 않는다(scoreCandidateMatch/classifyMatchLevel/threshold 재계산 없음, candidates는
+ * withConfidence가 이미 정렬해 온 그대로 사용) — 그 순서 안에서 "conflict로 확인된
+ * 후보를 최종 대표 후보에서만 제외"하는 안전장치를 얹는다.
+ *
+ * FORETFORET 외 사이트는 지금도 modelCode 추출이 없으므로(H-3-2) 최상위 후보 1건만
+ * 즉시 반환한다 — 기존 top-1 동작과 100% 동일하고, 불필요한 evaluated 루프/함수
+ * 호출도 만들지 않는다.
+ *
+ * FORETFORET는 상위 MAX_EVIDENCE_CANDIDATES(3)개까지만 순서대로 modelCode를
+ * 평가해서, conflict가 아닌 첫 번째 후보(=남은 후보 중 confidence 최고, 배열이 이미
+ * 정렬돼 있으므로)를 최종 후보로 고른다. 전부 conflict면 evaluated[0](=candidates[0],
+ * 기존 top-1과 동일)을 그대로 반환한다 — "전부 conflict → 기존 1위를 REVIEW_REQUIRED로
+ * 유지"라는 대표님 정책은 여기서 강제로 만들지 않고, 그 후보의 modelCode=conflict가
+ * 그대로 decideCandidateEvidence로 흘러가 기존 review_required/verified=false 규칙이
+ * 자연히 적용되게 둔다(새 상태값을 만들지 않는다).
+ *
+ * fetchModelCode 실패(네트워크 오류 등)는 fetchForetforetModelCode 자체가 이미
+ * null을 반환하도록 설계돼 있고(H-3-2), compareModelCode(x, null)은 "unavailable"이며
+ * "unavailable"은 conflict가 아니므로 이 필터를 그대로 통과한다 — 네트워크 오류 때문에
+ * 정상 후보가 부당하게 탈락하는 경로가 없다(실측 확인, H-3-9 STEP 3). */
+const MAX_EVIDENCE_CANDIDATES = 3;
+
+export interface CandidateSelection {
+  candidate: ComparisonCandidate;
+  modelCodeEvidence: ModelEvidenceResult;
+}
+
+export async function selectDomesticCandidate(
+  candidates: ComparisonCandidate[],
+  domain: string,
+  foreignModelCode: string | null,
+  fetchModelCode: (url: string) => Promise<string | null>,
+): Promise<CandidateSelection> {
+  if (domain !== "foretforet.com") {
+    return { candidate: candidates[0], modelCodeEvidence: compareModelCode(foreignModelCode, null) };
+  }
+
+  const evaluated: CandidateSelection[] = [];
+  for (const candidate of candidates.slice(0, MAX_EVIDENCE_CANDIDATES)) {
+    const domesticModelCode = await fetchModelCode(candidate.url);
+    evaluated.push({ candidate, modelCodeEvidence: compareModelCode(foreignModelCode, domesticModelCode) });
+  }
+  return evaluated.find((e) => e.modelCodeEvidence !== "conflict") ?? evaluated[0];
+}
+
 export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Promise<DomesticPriceCheckResult> {
   const sourceErrors: string[] = [];
   let linksCreatedOrUpdated = 0;
@@ -133,6 +184,9 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
   const otherResults =
     otherSources.length > 0 && !foundVeryHighInP0 ? await searchDomesticShops(query, otherSources.map(toRef)) : [];
   const searchResults = [...p0Results, ...otherResults];
+  // H-3-6에서 루프 안에서 매 반복 재계산하던 것을 H-3-9에서 loop 밖으로 뺐다 — result에
+  // 의존하지 않는 순수 파생값이라 동작은 동일하다(성능/가독성 정리).
+  const foreignModelCode = extractForeignModelCode(input.description);
 
   for (const result of searchResults) {
     if (result.status === "error") {
@@ -149,7 +203,18 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     }
 
     void recordDomesticSourceCheckAttempt(result.shopId, "OK");
-    const best = result.candidates[0]; // withConfidence가 이미 confidence 내림차순 정렬
+
+    // N-4.18-Q3 PART H-3-9(대표님 지시, 2026-08-27) — 기존엔 candidates[0](confidence
+    // 1위)만 무조건 대표 후보로 썼다. H-3-7 실측(PèPè)에서 1위가 실제로는 다른
+    // 상품(modelCode conflict)이고 진짜 동일상품은 3위였던 사례가 확인돼, FORETFORET에
+    // 한해 상위 3개까지 modelCode를 평가하고 conflict가 아닌 후보를 대표로 고른다
+    // (selectDomesticCandidate 주석 참고 — confidence 정렬/threshold는 안 건드림).
+    const { candidate: best, modelCodeEvidence } = await selectDomesticCandidate(
+      result.candidates,
+      result.domain,
+      foreignModelCode,
+      fetchForetforetModelCode,
+    );
     const { matchType, autoVerified } = toDomesticMatchType(best.matchLevel ?? "low");
     if (matchType === "NOT_MATCHED") continue;
 
@@ -158,14 +223,6 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     // 얹는다. modelCode만 실제로 연결한다(options/image는 이 흐름에 아직
     // 배선되지 않았으므로 unavailable로 정직하게 둔다 — H-3-4 실측대로
     // unavailable/weak_or_no_evidence는 아래에서 verified를 절대 바꾸지 않는다).
-    // 현재 실제 modelCode 추출이 확인된 사이트는 FORETFORET뿐이다(H-3-2) —
-    // 다른 도메인은 domesticModelCode가 항상 null이라 compareModelCode가
-    // "unavailable"을 반환하고, decideCandidateEvidence는 그 경우 항상
-    // "unchanged"이므로 기존 동작과 완전히 동일하다.
-    const foreignModelCode = extractForeignModelCode(input.description);
-    const domesticModelCode =
-      result.domain === "foretforet.com" ? await fetchForetforetModelCode(best.url) : null;
-    const modelCodeEvidence = compareModelCode(foreignModelCode, domesticModelCode);
     const evidenceDecision = decideCandidateEvidence({
       match: { confidence: best.confidence, level: best.matchLevel ?? "low", reasons: best.matchReasons ?? [] },
       modelCode: modelCodeEvidence,
