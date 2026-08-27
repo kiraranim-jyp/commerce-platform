@@ -35,7 +35,13 @@ describe("H-3-6: Evidence Decision → domestic_product_links 연결", () => {
 
     const result = applyEvidenceDecision(autoVerified, ["모델명 유사도 22%", "브랜드 일치"], decision);
     expect(result.verified).toBe(false); // 기존과 동일 — 강등도 승격도 없음
-    expect(result.matchReasons).toEqual(["모델명 유사도 22%", "브랜드 일치"]); // evidence reasons 추가 없음
+    // N-4.18-Q3 UI 후속(2026-08-27) — verified는 안 바뀌지만, "왜 REVIEW_REQUIRED인지"를
+    // 화면에서 보여주기 위해 partial 사실 자체는 이제 matchReasons에 남는다.
+    expect(result.matchReasons).toEqual([
+      "모델명 유사도 22%",
+      "브랜드 일치",
+      "modelCode 부분 일치 — 보조 근거로만 사용, 기존 판단 유지",
+    ]);
   });
 
   it("2) Bobo Choses Golden Case: very_high + evidence 전부 unavailable → 기존 자동확정 흐름 그대로 유지", () => {

@@ -42,6 +42,9 @@ describe("H-3-9 STEP 4: Top-N conflict 제외 후보 선택", () => {
     const selection = await selectDomesticCandidate(candidates, "foretforet.com", "01195-VERNICE-NERO", fetchModelCode);
     expect(selection.candidate.url).toContain("10226592");
     expect(selection.modelCodeEvidence).toBe("partial");
+    // N-4.18-Q3 UI 후속 — 2건(Top-1/Top-2)을 건너뛰고 3번째(index 2)를 선택했다는
+    // 것을 화면이 문장으로 보여줄 수 있어야 한다.
+    expect(selection.skippedConflictCount).toBe(2);
 
     const { matchType, autoVerified } = toDomesticMatchType(selection.candidate.matchLevel ?? "low");
     const decision = decideCandidateEvidence({
@@ -53,6 +56,9 @@ describe("H-3-9 STEP 4: Top-N conflict 제외 후보 선택", () => {
     const result = applyEvidenceDecision(autoVerified, [], decision);
     expect(matchType).toBe("REVIEW_REQUIRED");
     expect(result.verified).toBe(false);
+    // decision===unchanged이지만(partial은 auto_confirm 대상 아님) UI 후속으로
+    // modelCode partial 사실 자체는 이제 matchReasons에 남는다.
+    expect(result.matchReasons).toContain("modelCode 부분 일치 — 보조 근거로만 사용, 기존 판단 유지");
   });
 
   it("2) Top-1 evidence unavailable(비FORETFORET) → 기존 Top-1 그대로, fetch 호출 없음", async () => {
@@ -65,6 +71,7 @@ describe("H-3-9 STEP 4: Top-N conflict 제외 후보 선택", () => {
     const selection = await selectDomesticCandidate(candidates, "deuxbebe.com", "01195-VERNICE-NERO", fetchModelCode);
     expect(selection.candidate.url).toBe(candidates[0].url);
     expect(selection.modelCodeEvidence).toBe("unavailable");
+    expect(selection.skippedConflictCount).toBe(0); // top-1 그대로라 "왜 이 후보" 문구도 안 붙는다
     expect(fetchModelCode).not.toHaveBeenCalled();
   });
 
@@ -82,6 +89,7 @@ describe("H-3-9 STEP 4: Top-N conflict 제외 후보 선택", () => {
     const selection = await selectDomesticCandidate(candidates, "foretforet.com", "01195-VERNICE-NERO", fetchModelCode);
     expect(selection.candidate.url).toContain("branduid=2");
     expect(selection.modelCodeEvidence).toBe("partial");
+    expect(selection.skippedConflictCount).toBe(1); // Top-1 하나를 건너뛰고 선택
   });
 
   it("4) Top-3 전부 conflict → confidence 최고인 기존 Top-1 유지, REVIEW_REQUIRED/verified=false", async () => {

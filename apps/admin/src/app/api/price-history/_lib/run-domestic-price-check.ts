@@ -73,9 +73,19 @@ function stripLeadingDevTag(title: string): string {
  * true여야만 STEP 2 가격 관측 대상이 되므로, 이 필드 하나로 대표님이 요청한
  * "자동확정 가능/금지"가 실제 기능으로 연결된다).
  *
- * decision==="unchanged"일 때는 baseAutoVerified/baseReasons를 그대로
- * 돌려준다 — 이 순수 함수를 독립적으로 테스트할 수 있어 회귀(특히 "unchanged가
- * 절대 기존 결과를 안 바꾼다")를 실제 코드로 고정할 수 있다. */
+ * decision==="unchanged"일 때는 verified는 baseAutoVerified를 그대로 돌려준다
+ * (자동확정 여부는 절대 안 바뀐다) — 이 순수 함수를 독립적으로 테스트할 수 있어
+ * 회귀(특히 "unchanged가 절대 기존 verified를 안 바꾼다")를 실제 코드로 고정할
+ * 수 있다.
+ *
+ * N-4.18-Q3 UI 후속(대표님 지시, 2026-08-27: "왜 REVIEW_REQUIRED인지, modelCode
+ * partial/conflict을 화면에서 보여줘야 한다") — matchReasons는 unchanged일 때도
+ * decision.reasons를 덧붙인다. decideCandidateEvidence()는 partial/exact(승격
+ * 안 됨)/strong_overlap/possible_match 같은 경우에도 이미 설명용 reasons를
+ * 만들어 두고 있었는데(decision.ts), 지금까지는 verified/matchType을 안 바꾸는
+ * "unchanged"일 때 이 reasons를 통째로 버렸다 — 그래서 modelCode가 partial로
+ * 확인됐어도 화면 어디에도 그 사실이 안 보였다. verified/matchType 계산에는
+ * 전혀 관여하지 않고, 오직 "왜 이 판단인지" 설명 텍스트만 추가한다. */
 export function applyEvidenceDecision(
   baseAutoVerified: boolean,
   baseReasons: string[],
@@ -87,7 +97,7 @@ export function applyEvidenceDecision(
   if (decision.decision === "review_required") {
     return { verified: false, matchReasons: [...baseReasons, ...decision.reasons] };
   }
-  return { verified: baseAutoVerified, matchReasons: baseReasons };
+  return { verified: baseAutoVerified, matchReasons: [...baseReasons, ...decision.reasons] };
 }
 
 /** N-4.18-Q3 PART H-3-9(대표님 지시, 2026-08-27) — H-3-7 실측(PèPè golden case)에서
@@ -119,6 +129,12 @@ const MAX_EVIDENCE_CANDIDATES = 3;
 export interface CandidateSelection {
   candidate: ComparisonCandidate;
   modelCodeEvidence: ModelEvidenceResult;
+  /** N-4.18-Q3 UI 후속(대표님 지시, 2026-08-27: "왜 이 후보가 선택됐는지 보여줘야
+   * 한다") — 대표 후보보다 앞선 순위에서 modelCode conflict로 건너뛴 후보 수.
+   * 0이면 원래도 top-1이 그대로 선택된 것(H-3-9 이전과 동일 결과) — UI가 이 값으로
+   * "1위가 아니라 이 후보를 왜 골랐는지"를 문장으로 보여줄 수 있다. 판정 로직에는
+   * 전혀 쓰이지 않는 순수 설명용 값이다. */
+  skippedConflictCount: number;
 }
 
 export async function selectDomesticCandidate(
@@ -128,15 +144,17 @@ export async function selectDomesticCandidate(
   fetchModelCode: (url: string) => Promise<string | null>,
 ): Promise<CandidateSelection> {
   if (domain !== "foretforet.com") {
-    return { candidate: candidates[0], modelCodeEvidence: compareModelCode(foreignModelCode, null) };
+    return { candidate: candidates[0], modelCodeEvidence: compareModelCode(foreignModelCode, null), skippedConflictCount: 0 };
   }
 
-  const evaluated: CandidateSelection[] = [];
+  const evaluated: { candidate: ComparisonCandidate; modelCodeEvidence: ModelEvidenceResult }[] = [];
   for (const candidate of candidates.slice(0, MAX_EVIDENCE_CANDIDATES)) {
     const domesticModelCode = await fetchModelCode(candidate.url);
     evaluated.push({ candidate, modelCodeEvidence: compareModelCode(foreignModelCode, domesticModelCode) });
   }
-  return evaluated.find((e) => e.modelCodeEvidence !== "conflict") ?? evaluated[0];
+  const winnerIndex = evaluated.findIndex((e) => e.modelCodeEvidence !== "conflict");
+  if (winnerIndex === -1) return { ...evaluated[0], skippedConflictCount: 0 };
+  return { ...evaluated[winnerIndex], skippedConflictCount: winnerIndex };
 }
 
 export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Promise<DomesticPriceCheckResult> {
@@ -209,7 +227,7 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     // 상품(modelCode conflict)이고 진짜 동일상품은 3위였던 사례가 확인돼, FORETFORET에
     // 한해 상위 3개까지 modelCode를 평가하고 conflict가 아닌 후보를 대표로 고른다
     // (selectDomesticCandidate 주석 참고 — confidence 정렬/threshold는 안 건드림).
-    const { candidate: best, modelCodeEvidence } = await selectDomesticCandidate(
+    const { candidate: best, modelCodeEvidence, skippedConflictCount } = await selectDomesticCandidate(
       result.candidates,
       result.domain,
       foreignModelCode,
@@ -230,11 +248,19 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       image: "unavailable",
     });
 
-    const { verified: finalVerified, matchReasons: finalMatchReasons } = applyEvidenceDecision(
+    const { verified: finalVerified, matchReasons: evidenceMatchReasons } = applyEvidenceDecision(
       autoVerified,
       best.matchReasons ?? [],
       evidenceDecision,
     );
+    // N-4.18-Q3 UI 후속(대표님 지시, 2026-08-27) — selectDomesticCandidate()가
+    // top-1이 아닌 후보를 골랐을 때만("왜 이 후보인지") 설명을 덧붙인다.
+    // skippedConflictCount===0(원래도 top-1)이면 아무것도 추가하지 않는다 —
+    // H-3-9 이전과 화면이 달라 보이면 안 되는 대다수 케이스에서 회귀가 없다.
+    const finalMatchReasons =
+      skippedConflictCount > 0
+        ? [...evidenceMatchReasons, `텍스트 유사도 상위 ${skippedConflictCount}건은 modelCode 충돌로 제외하고 이 후보를 선택함`]
+        : evidenceMatchReasons;
 
     const upsertResult = await upsertDomesticProductLink({
       snapshotId: input.snapshotId,

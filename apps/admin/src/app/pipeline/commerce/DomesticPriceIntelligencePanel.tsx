@@ -73,9 +73,19 @@ const CANDIDATE_LABEL: Record<DomesticCandidate["matchType"], { icon: string; te
 
 /** match.ts(scoreCandidateMatch)가 이미 낸 matchReasons 문자열을 그대로 화면에
  * 옮긴다 — 새 판정 로직을 만들지 않는다. "불일치"가 포함되면 ✕, "모델명 유사도"는
- * 퍼센트가 50% 이상이면 ✓ 아니면 △, 그 외(일치류)는 ✓. */
+ * 퍼센트가 50% 이상이면 ✓ 아니면 △, 그 외(일치류)는 ✓.
+ *
+ * N-4.18-Q3 UI 후속(대표님 지시, 2026-08-27) — H-3-6 Evidence Decision이
+ * 이제 unchanged일 때도 matchReasons에 modelCode/options/image 문구를 남긴다
+ * (run-domestic-price-check.ts applyEvidenceDecision 참고). 이 문구들은 기존
+ * "불일치"/"모델명 유사도" 패턴과 다른 어휘를 쓰므로("충돌", "완전 일치", "부분
+ * 일치", "강하게 일치", "약한 긍정") 그대로 두면 전부 기본값 ✓로 렌더링돼
+ * "modelCode 충돌"(사실은 경고)까지 체크마크로 보이는 오표시가 있었다 — 실제
+ * H-3-9 프로덕션 데이터(PèPè)로 확인. */
 function reasonIcon(reason: string): "✓" | "✕" | "△" {
-  if (reason.includes("불일치")) return "✕";
+  if (reason.includes("불일치") || reason.includes("충돌")) return "✕";
+  if (reason.includes("부분 일치") || reason.includes("약한 긍정")) return "△";
+  if (reason.includes("완전 일치") || reason.includes("강하게 일치")) return "✓";
   if (reason.startsWith("모델명 유사도")) {
     const pct = Number(/(\d+)%/.exec(reason)?.[1] ?? 0);
     return pct >= 50 ? "✓" : "△";
