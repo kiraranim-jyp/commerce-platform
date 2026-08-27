@@ -44,23 +44,52 @@ function parsePrice(raw: string | null): number | null {
 
 const DETAIL_PRICE_RE = /id="span_product_price_text"[^>]*>\s*([0-9]+)/;
 
+/** N-4.18-Q3 PART E-2 — 실측 확인(2026-08-27, 실제 검색결과 HTML 바이트 단위
+ * 재확인): 검색 목록 각 상품 블록 안에 `<div class="soldout_area ..."` 마커가
+ * 상세페이지 재조회 없이 이미 들어있다. 품절 상품(product_no=18052)은
+ * `class="soldout_area "`(trailing space, displaynone 없음), 판매중 상품
+ * (product_no=18047)은 `class="soldout_area displaynone"` — 두 실측 사례가
+ * 정확히 반대로 나와 신뢰할 수 있음을 재확인했다. 블록 분리 지점(다음
+ * anchorBoxId까지의 거리)보다 이 마커까지의 거리가 항상 짧아 같은 상품
+ * 블록 안에 있다는 것도 바이트 오프셋으로 확인했다. */
+const LISTING_SOLDOUT_RE = /class="soldout_area\s*(displaynone)?"/;
+
+/** N-4.18-Q3 PART E-2(대표님 지시, 2026-08-27) — 실측 확인(2026-08-27, 실제
+ * fetchWithDomainRateLimit 응답으로 재검증): 상세 페이지에 구매 버튼 하나가
+ * 항상 `class="ec-base-button gColumn soldout ..."` 형태로 존재하는데, 품절이
+ * 아니면 뒤에 "displaynone"이 붙어 숨겨지고(구매 가능한 실제 상품,
+ * product_no=18047에서 확인: `soldout displaynone`), 진짜 품절이면 displaynone
+ * 없이 트레일링 공백만 남은 채 노출된다(product_no=18052 — DEUXBEBE 검색결과
+ * 목록에 뜬 실제 "SOLD OUT" 배지 상품, 실측 재확인: `soldout "` — 첫 raw curl
+ * 확인 때는 이 트레일링 공백을 놓쳐서 정규식이 매칭 안 되는 버그가 있었다,
+ * fetchWithDomainRateLimit로 다시 받아 직접 찾아서 수정). 이 버튼 class 자체가
+ * 없으면(마크업이 달라졌거나 예외 상황) 판정 불가로 null — 지어내지 않는다. */
+const DETAIL_SOLDOUT_RE = /class="ec-base-button gColumn soldout\s*(displaynone)?\s*"/;
+
 export interface DeuxbebeProductPrice {
   price: { amount: number; currency: "KRW" } | null;
   available: boolean;
+  /** null=판정 불가, true=실제 품절 확인, false=실제 판매 가능 확인. */
+  soldOut: boolean | null;
 }
 
 /** N-4.18-C STEP4 — domestic_product_links로 이미 연결된 상품의 "지금" 가격을 재조회할
  * 때 쓴다. 실측 확인(2026-08-25): 상세 페이지는 검색결과와 달리 콤마 없는 raw 숫자를
- * span_product_price_text에 담는다(RULII/LOOXLOO는 콤마 포함 — 이 도메인만 다름). */
+ * span_product_price_text에 담는다(RULII/LOOXLOO는 콤마 포함 — 이 도메인만 다름).
+ *
+ * N-4.18-Q3 PART E-2 — 품절이어도 가격 자체는 그대로 표시되는 걸 실측으로 확인해서
+ * (rulii.ts와 동일 원칙), price/available은 soldOut과 별개로 계속 채운다. */
 export async function fetchDeuxbebeProductPrice(url: string): Promise<DeuxbebeProductPrice> {
   const response = await fetchWithDomainRateLimit(url, {
     headers: { Accept: "text/html", "User-Agent": CHROME_UA },
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
-  if (!response.ok) return { price: null, available: false };
+  if (!response.ok) return { price: null, available: false, soldOut: null };
   const html = await response.text();
   const amount = parsePrice(DETAIL_PRICE_RE.exec(html)?.[1] ?? null);
-  return amount ? { price: { amount, currency: "KRW" }, available: true } : { price: null, available: false };
+  const soldoutMatch = DETAIL_SOLDOUT_RE.exec(html);
+  const soldOut = soldoutMatch ? !soldoutMatch[1] : null;
+  return amount ? { price: { amount, currency: "KRW" }, available: true, soldOut } : { price: null, available: false, soldOut };
 }
 
 export async function searchDeuxbebe(query: string): Promise<ComparisonCandidate[]> {
@@ -90,6 +119,8 @@ export async function searchDeuxbebe(query: string): Promise<ComparisonCandidate
     const amount = salePrice ?? regularPrice;
     const img = IMG_RE.exec(block)?.[1];
     const sku = extractField(block, "자체 상품코드") ?? undefined;
+    const soldoutMatch = LISTING_SOLDOUT_RE.exec(block);
+    const soldOut = soldoutMatch ? !soldoutMatch[1] : null;
 
     candidates.push({
       title,
@@ -104,6 +135,7 @@ export async function searchDeuxbebe(query: string): Promise<ComparisonCandidate
       confidence: 0,
       brand,
       sku,
+      soldOut,
     });
   }
 

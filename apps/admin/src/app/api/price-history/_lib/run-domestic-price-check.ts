@@ -142,16 +142,28 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     const source = sourceById.get(link.sourceId);
     if (!source) continue;
     const priceResult = await refreshDomesticProductPrice(source.domain, link.externalUrl);
-    if (priceResult.status === "OK" && priceResult.price) {
+    // N-4.18-Q3 PART E-1(대표님 지시, 2026-08-27: "price=null + soldOut=true도
+    // price_observations에 기록") — 이전엔 priceResult.price가 있을 때만
+    // 관측치를 저장해서, RULII가 "완전 품절이라 가격조차 없음"(price=null,
+    // soldOut=true, status="UNAVAILABLE")을 정확히 판정해도 그 정보 자체가
+    // DB에 통째로 버려지는 실제 버그가 있었다(운영상 "동일상품은 존재하지만
+    // 지금은 품절"이라는 중요한 정보). status가 OK든 UNAVAILABLE이든, 가격이
+    // 있거나 soldOut===true로 확인됐으면 저장한다 — 둘 다 없으면(예: ERROR,
+    // 또는 UNAVAILABLE인데 soldOut도 null) 저장할 실체가 없으므로 스킵한다.
+    const hasPrice = priceResult.status === "OK" && Boolean(priceResult.price);
+    const hasConfirmedSoldOut = priceResult.soldOut === true;
+    if (hasPrice || hasConfirmedSoldOut) {
       observations.push({
         snapshotId: input.snapshotId,
         source: "DOMESTIC_SHOP",
         sourceLabel: source.name,
         sourceProductUrl: link.externalUrl,
         sourceRefId: source.id,
-        currency: priceResult.price.currency,
-        priceAmount: priceResult.price.amount,
-        priceKrw: priceResult.price.amount, // domestic_price_sources.currency는 항상 KRW
+        // domestic_price_sources.currency는 항상 KRW — 가격을 못 찾았어도
+        // 통화 자체는 안다(국내 소스이므로).
+        currency: priceResult.price?.currency ?? source.currency,
+        priceAmount: priceResult.price?.amount ?? null,
+        priceKrw: priceResult.price?.amount ?? null,
         // N-4.18-G STEP G-1/G-3(대표님 지시, 2026-08-25) — 실측된 사이트(RULII)만
         // 값이 있고, 나머지는 undefined→null로 저장된다(추측 없음).
         salePriceKrw: priceResult.salePriceKrw ?? null,

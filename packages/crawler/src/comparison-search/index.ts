@@ -4,9 +4,9 @@ import { lookupBrandAlias } from "./brand-alias";
 import { searchChildrensalon } from "./childrensalon";
 import { fetchChocoelProductPrice, searchChocoel } from "./chocoel";
 import { fetchDeuxbebeProductPrice, searchDeuxbebe } from "./deuxbebe";
-import { searchForetforet } from "./foretforet";
+import { fetchForetforetProductPrice, searchForetforet } from "./foretforet";
 import { fetchLooxlooProductPrice, searchLooxloo } from "./looxloo";
-import { withConfidence } from "./match";
+import { splitModelColor, withConfidence } from "./match";
 import { selectCandidatesForDetailConfirmation } from "./price-confirmation";
 import { fetchRuliiProductPrice, searchRulii } from "./rulii";
 import { searchShopifySuggest } from "./shopify-suggest";
@@ -157,6 +157,43 @@ async function searchDomesticShopCandidates(domain: string, term: string): Promi
   return null;
 }
 
+/** N-4.18-Q3 PART E-2/E-10(대표님 지시, 2026-08-27) — RULII/FORETFORET 둘 다 검색
+ * 목록 HTML/AJAX 응답 자체에는 품절 신호가 없다(실측 확인: RULII "원피스" 검색결과에
+ * soldout/품절 문자열 0건, FORETFORET product_list.action.html 응답에 sto_state
+ * 0건). 반면 상세페이지에는 각자 실측 검증된 soldOut 신호가 있다(rulii.ts의
+ * DETAIL_SOLDOUT_RE, foretforet.ts의 sto_state). 그래서 매칭 신뢰도가 높은
+ * (very_high/high) 후보만, Sprint B-1.8과 같은 상한(MAX_DETAIL_CONFIRMATIONS_PER_SHOP)
+ * 으로 상세페이지를 재확인해 soldOut을 채운다 — 검색 결과 전체를 상세 조회하지
+ * 않는다(비용 제한). 실패해도 매칭 결과 자체는 지우지 않고 soldOut만 비워둔다
+ * (추측 금지). 두 사이트가 fetchDetail 함수 시그니처만 다르므로 제네릭 헬퍼로 공유한다. */
+async function enrichSoldOutViaDetail(
+  candidates: ComparisonCandidate[],
+  fetchDetail: (url: string) => Promise<{ soldOut: boolean | null }>,
+): Promise<ComparisonCandidate[]> {
+  const eligible = selectCandidatesForDetailConfirmation(candidates);
+  if (eligible.length === 0) return candidates;
+  const result = [...candidates];
+  await Promise.all(
+    eligible.map(async (i) => {
+      try {
+        const detail = await fetchDetail(candidates[i].url);
+        result[i] = { ...candidates[i], soldOut: detail.soldOut };
+      } catch {
+        // soldOut 미채움 유지 — 검색 매칭 결과 자체는 그대로 둔다
+      }
+    }),
+  );
+  return result;
+}
+
+/** 검색-시점 soldOut 상세확인을 지원하는 사이트만 여기 등록한다(파서 존재 여부와
+ * 같은 원칙 — 하드코딩 허용목록이 아니라 실측 검증된 것만). */
+function soldOutDetailFetcher(domain: string): ((url: string) => Promise<{ soldOut: boolean | null }>) | null {
+  if (domain === "rulii.co.kr") return fetchRuliiProductPrice;
+  if (domain === "foretforet.com") return fetchForetforetProductPrice;
+  return null;
+}
+
 async function searchOneDomesticShop(
   source: DomesticSourceRef,
   query: ComparisonQuery,
@@ -170,23 +207,49 @@ async function searchOneDomesticShop(
     const primary = await searchDomesticShopCandidates(source.domain, searchTerm);
     if (primary === null) return { ...base, status: "unsupported", candidates: [] };
     const primaryScored = withConfidence(query, primary);
-    if (primaryScored.length > 0) return { ...base, status: "ok", candidates: primaryScored };
+    if (primaryScored.length > 0) {
+      const fetcher = soldOutDetailFetcher(source.domain);
+      const enriched = fetcher ? await enrichSoldOutViaDetail(primaryScored, fetcher) : primaryScored;
+      return { ...base, status: "ok", candidates: enriched };
+    }
 
-    // N-4.18-P-4 STEP P-4-2/3(대표님 지시, 2026-08-26) — 원문 검색이 NO_RESULT일
-    // 때만, 실측 확인된 브랜드 한글 alias 1개로 딱 1회만 재검색한다(brand-alias.ts에
-    // 없는 브랜드는 그대로 빈 결과 유지 — 폴백을 시도하지 않는다). 재검색 결과도
-    // 기존 withConfidence/scoreCandidateMatch를 그대로 통과시켜 판정 기준을 원문
-    // 검색과 완전히 동일하게 유지한다(별도 판정 로직 없음 — STEP P-4-5).
+    // N-4.18-P-4 STEP P-4-2/3(대표님 지시, 2026-08-25) — 원문 검색이 NO_RESULT일
+    // 때만, 실측 확인된 브랜드 한글 alias로 재검색한다(brand-alias.ts에 없는 브랜드는
+    // 그대로 빈 결과 유지 — 폴백을 시도하지 않는다). 재검색 결과도 기존
+    // withConfidence/scoreCandidateMatch를 그대로 통과시켜 판정 기준을 원문 검색과
+    // 완전히 동일하게 유지한다(별도 판정 로직 없음 — STEP P-4-5).
+    //
+    // N-4.18-Q3 PART G/K(대표님 실측 골든케이스, 2026-08-26) — alias 단독 재검색은
+    // 실측에서 실패로 확인됐다: PèPè "Lulu T-Bar Shoes in Vernice Nero" 검색 시
+    // "페페" 단독 재검색은 실제로 100건(브랜드 전체 상품)을 반환하는데,
+    // searchDomesticShopCandidates가 사이트별 상위 5건까지만 반환하므로(각 파서의
+    // 실측 확인된 한도) 목표 상품이 상위 5건 밖으로 밀려나 사실상 못 찾는다. 실측
+    // 확인(curl): "페페 Vernice Nero"처럼 alias에 원문 제목에서 분리한 색상/스타일
+    // 단어를 덧붙이면 foretforet.com에서 정확히 3건으로 좁혀지고 목표 상품이 그
+    // 안에 포함된다 — alias 단독보다 "alias + 색상"이 실제로 더 좁고 정확한 결과를
+    // 낸다(추측이 아니라 실측 재현). 색상이 분리되지 않는 제목(원문에 "in X by Y"
+    // 패턴이 없는 경우)은 기존처럼 alias 단독만 시도한다 — 억지로 지어내지 않는다.
     const alias = lookupBrandAlias(query.brand);
     if (!alias) return { ...base, status: "ok", candidates: [] };
-    const fallback = await searchDomesticShopCandidates(source.domain, alias);
-    if (fallback === null || fallback.length === 0) return { ...base, status: "ok", candidates: [] };
-    const fallbackScored = withConfidence(query, fallback);
+    const { color } = splitModelColor(query.title);
+    const aliasQuery = color ? `${alias} ${color}` : alias;
+    const fallback = await searchDomesticShopCandidates(source.domain, aliasQuery);
+    const fallbackHasResults = fallback !== null && fallback.length > 0;
+    // 색상을 붙인 쿼리가 결과 0건이면(사이트 검색이 AND 매칭이라 너무 좁아졌을 수
+    // 있음) alias 단독으로 한 번 더 시도한다 — 이것도 실패하면 빈 결과 유지.
+    const finalFallback =
+      fallbackHasResults || !color ? fallback : await searchDomesticShopCandidates(source.domain, alias);
+    if (finalFallback === null || finalFallback.length === 0) return { ...base, status: "ok", candidates: [] };
+    const fallbackScored = withConfidence(query, finalFallback);
+    const fallbackFetcher = soldOutDetailFetcher(source.domain);
+    const enrichedFallback = fallbackFetcher
+      ? await enrichSoldOutViaDetail(fallbackScored, fallbackFetcher)
+      : fallbackScored;
     return {
       ...base,
       status: "ok",
-      candidates: fallbackScored,
-      ...(fallbackScored.length > 0 ? { querySource: "brand_alias" as const } : {}),
+      candidates: enrichedFallback,
+      ...(enrichedFallback.length > 0 ? { querySource: "brand_alias" as const } : {}),
     };
   } catch (error) {
     return {
@@ -268,12 +331,19 @@ export async function refreshDomesticProductPrice(
     }
     if (domain === "deuxbebe.com") {
       const result = await fetchDeuxbebeProductPrice(externalUrl);
+      // N-4.18-Q3 PART E-2 — RULII와 동일 원칙(index.ts:275-285): soldOut은
+      // price 유무와 별개로 항상 전달한다(가격을 못 찾아도 품절 확인은
+      // 그대로 남겨야 한다 — E-1에서 고친 파이프라인 버그가 이 신호도 살린다).
       return result.available && result.price
-        ? { status: "OK", price: result.price }
-        : { status: "UNAVAILABLE", price: null };
+        ? { status: "OK", price: result.price, soldOut: result.soldOut }
+        : { status: "UNAVAILABLE", price: null, soldOut: result.soldOut };
     }
     if (domain === "chocoel.co.kr") {
       const result = await fetchChocoelProductPrice(externalUrl);
+      // N-4.18-Q3 PART E-2 — RULII/DEUXBEBE와 동일하게 UNAVAILABLE 분기에서도
+      // soldOut을 전달한다(chocoel은 실측에서 신호를 못 찾아 항상 null이지만,
+      // 세 사이트의 처리 방식을 통일해둔다 — 나중에 chocoel용 신호를 찾으면
+      // 이 분기를 또 고칠 필요가 없다).
       return result.available && result.price
         ? {
             status: "OK",
@@ -282,7 +352,16 @@ export async function refreshDomesticProductPrice(
             originalPriceKrw: result.originalPriceKrw,
             soldOut: result.soldOut,
           }
-        : { status: "UNAVAILABLE", price: null };
+        : { status: "UNAVAILABLE", price: null, soldOut: result.soldOut };
+    }
+    if (domain === "foretforet.com") {
+      const result = await fetchForetforetProductPrice(externalUrl);
+      // N-4.18-Q3 PART E-10 — 다른 3개 사이트와 동일 원칙: soldOut은 price 유무와
+      // 별개로 항상 전달한다(changeOpt2value는 죽은 코드였고, 실제 신호는
+      // sto_state — foretforet.ts 실측 주석 참고).
+      return result.available && result.price
+        ? { status: "OK", price: result.price, soldOut: result.soldOut }
+        : { status: "UNAVAILABLE", price: null, soldOut: result.soldOut };
     }
     return { status: "UNSUPPORTED", price: null };
   } catch (error) {

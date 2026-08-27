@@ -30,11 +30,14 @@ export interface PriceObservationRecord {
    * 이 필드로 한다). */
   sourceRefId: string | null;
   currency: string;
-  priceAmount: number;
+  /** N-4.18-Q3 PART E-1(대표님 지시, 2026-08-27: "가격이 없어도 품절이라는
+   * 중요한 운영 정보는 보존") — 완전 품절이라 가격 자체를 못 찾은 경우
+   * (soldOut===true && 가격 없음) null. 0원을 지어내지 않는다. */
+  priceAmount: number | null;
   shippingCostAmount: number | null;
   taxAmount: number | null;
   exchangeRate: number | null;
-  priceKrw: number;
+  priceKrw: number | null;
   /** N-4.18-G STEP G-1(대표님 지시, 2026-08-25) — priceKrw(실제 판매가, 할인가
    * 있으면 할인가)의 의미는 그대로 두고, 할인/정가/품절 여부를 별도 필드로
    * 추가한다. 실측되지 않았거나(사이트가 정가/할인가를 구분해 보여주지
@@ -118,7 +121,12 @@ export function priceAgeTier(checkedAt: string, now: Date = new Date()): PriceAg
  * 포함한다 — RULII 외 사이트는 항상 soldOut=null이라 이 변경으로 기존
  * 가격비교 결과가 달라지지 않는다(회귀 없음). */
 function summarizeFrom(records: PriceObservationRecord[], tier: DomesticMarketTier): DomesticMarketSummary {
-  const activeRecords = records.filter((r) => r.soldOut !== true);
+  // N-4.18-Q3 PART E-1 — priceKrw가 null인 행(완전 품절, 가격 자체를 못 찾음)은
+  // soldOut!==true인 경우에도 최저/평균/최고가 계산에서 제외한다(가격이 없는데
+  // 계산에 넣을 수 없다 — 0원을 지어내지 않는다는 원칙과 동일선상).
+  const activeRecords = records.filter(
+    (r): r is PriceObservationRecord & { priceKrw: number } => r.soldOut !== true && r.priceKrw != null,
+  );
   const soldOutRecords = records.filter((r) => r.soldOut === true);
   const checkedAt = records.reduce((latest, r) => (r.checkedAt > latest ? r.checkedAt : latest), records[0].checkedAt);
   const soldOutListings = soldOutRecords.map((r) => ({
@@ -199,8 +207,11 @@ export interface PriceChange {
 export function computePriceChange(
   recordsForSource: PriceObservationRecord[],
 ): PriceChange | null {
-  if (recordsForSource.length < 2) return null;
-  const sorted = [...recordsForSource].sort((a, b) => (a.checkedAt < b.checkedAt ? 1 : -1));
+  // N-4.18-Q3 PART E-1 — priceKrw가 없는 관측치(완전 품절)는 가격 변화 비교
+  // 대상에서 제외한다(비교할 가격 자체가 없다 — 0으로 대체하지 않는다).
+  const priced = recordsForSource.filter((r): r is PriceObservationRecord & { priceKrw: number } => r.priceKrw != null);
+  if (priced.length < 2) return null;
+  const sorted = [...priced].sort((a, b) => (a.checkedAt < b.checkedAt ? 1 : -1));
   const [latest, previous] = sorted;
   const changeAmountKrw = latest.priceKrw - previous.priceKrw;
   const changeRatePercent =
@@ -231,10 +242,7 @@ export interface PriceTrendResult {
   trend: PriceTrend;
 }
 
-function closestObservationAtOrBefore(
-  sorted: PriceObservationRecord[],
-  targetIso: string,
-): PriceObservationRecord | null {
+function closestObservationAtOrBefore<T extends PriceObservationRecord>(sorted: T[], targetIso: string): T | null {
   // sorted는 checkedAt 내림차순(최신 먼저)이라고 가정 — target 이하인 것 중 첫 번째(=가장 최신).
   return sorted.find((r) => r.checkedAt <= targetIso) ?? null;
 }
@@ -244,7 +252,9 @@ export function computePriceTrend(
   daysAgo: number,
   now: Date = new Date(),
 ): PriceTrendResult {
-  const sorted = [...recordsForSource].sort((a, b) => (a.checkedAt < b.checkedAt ? 1 : -1));
+  // N-4.18-Q3 PART E-1 — priceKrw가 없는 관측치(완전 품절)는 추세 계산에서 제외한다.
+  const priced = recordsForSource.filter((r): r is PriceObservationRecord & { priceKrw: number } => r.priceKrw != null);
+  const sorted = [...priced].sort((a, b) => (a.checkedAt < b.checkedAt ? 1 : -1));
   const current = sorted[0]?.priceKrw ?? null;
   if (current == null) {
     return { current: null, previous: null, change: null, changeRate: null, trend: "NEW" };

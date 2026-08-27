@@ -23,10 +23,54 @@ interface Candidate {
   title: string;
   url: string;
   price: { amount: number; currency: string } | null;
+  regularPrice?: { amount: number; currency: string } | null;
   imageUrl: string | null;
   confidence: number;
   matchLevel?: MatchLevel;
   matchReasons?: string[];
+  /** N-4.18-Q3 PART E-2 — 매칭 신뢰도와 완전히 분리된 축. true=품절 확인,
+   * false=판매중 확인, null/undefined=그 사이트에서 확인할 방법이 없음(임의로
+   * 판매중/품절 어느 쪽으로도 해석하지 않는다). */
+  soldOut?: boolean | null;
+}
+
+/** N-4.18-Q3 PART E-4 — 재고 상태는 매칭 배지와 완전히 별도의 배지로 표시한다
+ * (하나로 합치지 않는다). null/undefined는 "확인불가"이지 "판매중"이 아니다. */
+function StockBadge({ soldOut }: { soldOut?: boolean | null }) {
+  if (soldOut === true) {
+    return (
+      <span className="inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-error-soft text-error">
+        🔴 품절
+      </span>
+    );
+  }
+  if (soldOut === false) {
+    return (
+      <span className="inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-success-soft text-success">
+        🟢 판매중
+      </span>
+    );
+  }
+  return (
+    <span className="inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-background text-text-tertiary">
+      ⚪ 재고 확인불가
+    </span>
+  );
+}
+
+/** N-4.18-Q3 PART E-5 — 할인이 있을 때만(정가 > 현재가) 정상가/현재가를 둘 다
+ * 보여준다. 할인이 없으면 "판매가" 한 줄만 — 정상가를 중복 표시하지 않는다. */
+function PriceCell({ candidate }: { candidate: Candidate }) {
+  if (!candidate.price) return <span className="text-text-tertiary">—</span>;
+  if (candidate.regularPrice && candidate.regularPrice.amount > candidate.price.amount) {
+    return (
+      <div className="space-y-0.5">
+        <div className="text-text-tertiary line-through">₩{candidate.regularPrice.amount.toLocaleString("ko-KR")}</div>
+        <div className="font-medium text-text-primary">₩{candidate.price.amount.toLocaleString("ko-KR")}</div>
+      </div>
+    );
+  }
+  return <div>₩{candidate.price.amount.toLocaleString("ko-KR")}</div>;
 }
 
 interface SearchResult {
@@ -174,6 +218,7 @@ function ResultTable({ results }: { results: SearchResult[] }) {
               <th className="px-2 py-1.5 font-medium">판매처</th>
               <th className="px-2 py-1.5 font-medium">상품</th>
               <th className="px-2 py-1.5 font-medium">가격</th>
+              <th className="px-2 py-1.5 font-medium">재고</th>
               <th className="px-2 py-1.5 font-medium">매칭상태</th>
             </tr>
           </thead>
@@ -192,9 +237,8 @@ function ResultTable({ results }: { results: SearchResult[] }) {
                       <span className="text-text-tertiary">{row.note}</span>
                     )}
                   </td>
-                  <td className="px-2 py-1.5 whitespace-nowrap text-text-secondary">
-                    {c?.price ? `₩${c.price.amount.toLocaleString("ko-KR")}` : "—"}
-                  </td>
+                  <td className="px-2 py-1.5 whitespace-nowrap text-text-secondary">{c ? <PriceCell candidate={c} /> : "—"}</td>
+                  <td className="px-2 py-1.5">{c ? <StockBadge soldOut={c.soldOut} /> : "—"}</td>
                   <td className="px-2 py-1.5">
                     {c?.matchLevel ? (
                       <span

@@ -47,7 +47,7 @@ function stripBrandWords(text: string, brand: string | undefined): string {
 /** "{모델명} in {색상} by {브랜드}" 형태(Junior Edition 등)에서 모델명/색상을 분리한다.
  * 패턴이 없으면(예: Childrensalon처럼 다른 제목 형식) 전체 텍스트를 모델명으로,
  * 색상은 "정보 없음"으로 돌려준다 — 추론하지 않는다. */
-function splitModelColor(title: string): { model: string; color: string | null } {
+export function splitModelColor(title: string): { model: string; color: string | null } {
   const byMatch = /\bby\b/i.exec(title);
   const withoutBrandSuffix = byMatch ? title.slice(0, byMatch.index) : title;
   const inMatch = /\bin\b/i.exec(withoutBrandSuffix);
@@ -162,8 +162,25 @@ export function scoreCandidateMatch(query: ComparisonQuery, candidate: Compariso
     tokenize(stripBrandWords(queryModel, brandForStrip)),
     tokenize(stripBrandWords(candidateModel, brandForStrip)),
   );
-  let score = modelScore;
-  reasons.push(`모델명 유사도 ${Math.round(modelScore * 100)}%`);
+
+  // N-4.18-Q3 PART K/H(대표님 실측 골든케이스, 2026-08-26) — 실측으로 확인된 버그:
+  // "Lulu T-Bar Shoes in Vernice Nero by PèPè"는 "by"/"in" 패턴이 있어 모델("Lulu
+  // T-Bar Shoes")과 색상("Vernice Nero")이 분리되는데, 대응하는 국내 후보
+  // "AW26 RE[페페슈즈]VERNICE NERO T-스트랩 슈즈"는 이 영문 패턴이 없어 "Vernice
+  // Nero"가 그대로 모델명 안에 남는다 — 그 결과 모델명끼리만 비교하면 색상 단어가
+  // 한쪽에만 들어있어 겹치는 토큰이 0개가 된다(실측: 258,000원 정가로 정확히 일치하는
+  // 진짜 동일상품인데도 모델명 유사도 0%로 매칭 실패). "in"/"by"로 분리되지 않은
+  // 쪽은 색상 정보가 애초에 모델명에 섞여있을 수 있으므로, 분리 전 원문 전체(브랜드
+  // 단어만 제거) 토큰 비교를 보조 신호로 추가해 더 높은 쪽을 쓴다 — 분리가 정확히
+  // 대칭인 경우(둘 다 색상이 분리됨)는 fullTitleScore가 modelScore보다 낮거나
+  // 같으므로 기존 동작에 영향 없다(Math.max이므로 오직 개선 방향으로만 작용).
+  const fullTitleScore = jaccard(
+    tokenize(stripBrandWords(query.title, brandForStrip)),
+    tokenize(stripBrandWords(candidate.title, brandForStrip)),
+  );
+
+  let score = Math.max(modelScore, fullTitleScore);
+  reasons.push(`모델명 유사도 ${Math.round(score * 100)}%`);
 
   // 1. 색상 — 둘 다 명시적으로 확인된 경우만 사용(추측 금지)
   if (queryColor && candidateColor) {
@@ -173,6 +190,19 @@ export function scoreCandidateMatch(query: ComparisonQuery, candidate: Compariso
     } else {
       score = score * 0.65;
       reasons.push("색상 불일치");
+    }
+  } else if (queryColor && queryColor.trim().length >= 4) {
+    // N-4.18-Q3 PART K(대표님 실측 골든케이스) — 후보 쪽 제목엔 "in X by Y" 패턴이
+    // 없어 candidateColor가 null인 경우가 실제로 흔하다(국내 편집샵 제목은 대부분
+    // 이 영문 패턴을 안 쓴다). 이때도 후보 제목 원문에 색상명(예: "Vernice Nero")이
+    // 그대로 포함돼 있으면(실측 확인: FORETFORET 제목에 "VERNICE NERO"가 그대로
+    // 노출) 이는 추측이 아니라 실제 텍스트 일치이므로 색상 신호로 인정한다 —
+    // "불일치" 판정은 하지 않는다(후보 쪽에 색상 정보가 아예 없을 수도 있어서 —
+    // 없는 걸 다르다고 단정하지 않는다, 4번 브랜드 신호와 동일한 원칙).
+    const candidateTitleNorm = normalizeText(stripBrandWords(candidate.title, brandForStrip));
+    if (candidateTitleNorm.includes(normalizeText(queryColor))) {
+      score = score + (1 - score) * 0.4;
+      reasons.push("색상 일치(제목 내 확인)");
     }
   }
 

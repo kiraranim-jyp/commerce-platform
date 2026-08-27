@@ -22,6 +22,11 @@ export interface ComparisonCandidate {
    * 검색 결과에 딸려온 값을 그대로 쓴 것(참고용). 매칭(동일상품 여부)과 가격확인은 별개
    * 단계이므로, 이 필드로 "이 가격을 얼마나 믿어도 되는지"를 구분한다. */
   priceSource?: "detail" | "search" | null;
+  /** N-4.18-Q3 PART E-2 — 매칭 신뢰도(confidence/matchLevel)와 완전히 분리된 축.
+   * true=품절이라고 실측 확인됨, false=판매중이라고 실측 확인됨, null/undefined=그
+   * 사이트에서 재고 상태를 확인할 방법이 없거나 실측 근거가 없음(추측 금지 — null이
+   * 기본값이며 "판매중"으로 임의 해석하지 않는다). */
+  soldOut?: boolean | null;
 }
 
 export interface ComparisonSearchResult {

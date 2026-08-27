@@ -408,39 +408,75 @@ export function PriceEditor({
           )}
         </Row>
         {sellerIntel?.status === "OK" && (
-          <p className="-mt-1.5 pl-[calc(6rem+0.5rem)] text-[11px] text-text-tertiary">
+          <div className="-mt-1.5 space-y-1 pl-[calc(6rem+0.5rem)] text-[11px] text-text-tertiary">
             {sellerIntel.sellerOriginPrice ? (
               <>
-                판매처 원본가격{sellerIntel.seller.name ? ` — ${sellerIntel.seller.name}` : ""}:{" "}
-                {countryToFlagEmoji(sellerIntel.seller.country) ?? "🌐"}{" "}
-                {formatOriginalPrice(sellerIntel.sellerOriginPrice.amount, sellerIntel.sellerOriginPrice.currency)}
+                <p>
+                  🌍 해외 원본가{sellerIntel.seller.name ? ` — ${sellerIntel.seller.name}` : ""}:{" "}
+                  {countryToFlagEmoji(sellerIntel.seller.country) ?? "🌐"}{" "}
+                  <span className="font-medium text-text-secondary">
+                    {formatOriginalPrice(sellerIntel.sellerOriginPrice.amount, sellerIntel.sellerOriginPrice.currency)}
+                  </span>
+                  {onUpdateOriginalPrice && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdateOriginalPrice({
+                          amount: sellerIntel.sellerOriginPrice!.amount,
+                          currency: sellerIntel.sellerOriginPrice!.currency,
+                        })
+                      }
+                      className="ml-1.5 text-primary hover:underline"
+                    >
+                      이 값을 원본가격으로 적용
+                    </button>
+                  )}
+                </p>
                 {sellerIntel.convertedSellerOriginToKrw && (
-                  <> (약 {formatKrw(sellerIntel.convertedSellerOriginToKrw.amount)})</>
+                  <p>
+                    💱 원화 환산가(1 {sellerIntel.sellerOriginPrice.currency} = ₩
+                    {Math.round(sellerIntel.convertedSellerOriginToKrw.exchangeRate).toLocaleString("ko-KR")}):{" "}
+                    <span className="font-medium text-text-secondary">
+                      ≈ {formatKrw(sellerIntel.convertedSellerOriginToKrw.amount)}
+                    </span>
+                  </p>
                 )}
-                {onUpdateOriginalPrice && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onUpdateOriginalPrice({
-                        amount: sellerIntel.sellerOriginPrice!.amount,
-                        currency: sellerIntel.sellerOriginPrice!.currency,
-                      })
-                    }
-                    className="ml-1.5 text-primary hover:underline"
-                  >
-                    이 값을 원본가격으로 적용
-                  </button>
+                {/* N-4.18-Q3 PART C/D(대표님 실측 지시, 2026-08-26: "해외 원가 200
+                    GBP 환산 ₩389,358인데 실제 한국 접속가는 ₩234,800 — 이걸 섞으면
+                    안 된다") — probeOriginAndKrMarkets가 이미 이 판매처 사이트의
+                    /en-kr/ 시장 가격(원문 제공, 실측 확인)을 가져오고 있었지만,
+                    지금까지는 "국가별 원본가격 비교 보기"를 클릭해야만 나오는 표
+                    안에만 있어서 기본 화면에서 원본가/환산가와 혼동되거나 아예
+                    안 보였다(실제 버그). 원본가/환산가 바로 아래, 항상 보이는 위치로
+                    옮기고 "이 값이 무엇인지"(=이 판매처가 한국 방문자에게 실제로
+                    보여주는 가격, 환율 계산이 아니라 원문 그대로)를 명시한다. 왜
+                    원본×환율과 다른지는 아직 확인된 원인이 없으므로(VAT/지역별
+                    가격정책 등) 추측해서 설명하지 않는다 — PART E에서 별도로 다룬다. */}
+                {sellerIntel.krMarket ? (
+                  <p>
+                    🇰🇷 한국向 표시가(이 판매처가 한국 방문자에게 실제로 보여주는 가격, 환율 계산 아님):{" "}
+                    <span className="font-medium text-text-secondary">{formatKrw(sellerIntel.krMarket.amount)}</span>
+                    {sellerIntel.convertedSellerOriginToKrw &&
+                      Math.abs(sellerIntel.krMarket.amount - sellerIntel.convertedSellerOriginToKrw.amount) >
+                        sellerIntel.convertedSellerOriginToKrw.amount * 0.05 && (
+                        <span className="ml-1 text-warning">
+                          (원화 환산가와 {sellerIntel.krMarket.amount > sellerIntel.convertedSellerOriginToKrw.amount ? "다릅니다" : "다릅니다"} — 원인 미확인)
+                        </span>
+                      )}
+                  </p>
+                ) : (
+                  <p>🇰🇷 한국向 표시가: 이 판매처는 한국向 별도 가격을 제공하지 않습니다(원본가만 존재).</p>
                 )}
               </>
             ) : (
-              <>
+              <p>
                 ⚠{" "}
                 {sellerIntel.seller.country
                   ? "판매처 원본가격을 확인하지 못했습니다."
                   : "편집샵 원본 국가를 확인할 수 없어 원본가격을 조회하지 못했습니다."}
-              </>
+              </p>
             )}
-          </p>
+          </div>
         )}
 
         {sellerIntel?.status === "OK" && sellerIntel.sellerOriginPrice && (

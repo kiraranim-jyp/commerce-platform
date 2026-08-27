@@ -19,11 +19,12 @@ interface PriceObservationRow {
    * 받는다 — 없으면 null로 취급한다(크래시 방지). */
   source_ref_id?: string | null;
   currency: string;
-  price_amount: number;
+  /** N-4.18-Q3 PART E-1 — migration 040 이후 nullable(완전 품절+가격없음). */
+  price_amount: number | null;
   shipping_cost_amount: number | null;
   tax_amount: number | null;
   exchange_rate: number | null;
-  price_krw: number;
+  price_krw: number | null;
   /** N-4.18-G STEP G-1 — 마이그레이션 038에서 추가. source_ref_id와 같은
    * 이유로 optional(스키마 캐시 지연 세션에서도 크래시 방지). */
   sale_price_krw?: number | null;
@@ -61,11 +62,13 @@ export interface NewPriceObservation {
   /** N-4.06 — DOMESTIC_SHOP일 때 domestic_price_sources.id. */
   sourceRefId?: string | null;
   currency: string;
-  priceAmount: number;
+  /** N-4.18-Q3 PART E-1(대표님 지시, 2026-08-27) — 완전 품절이라 가격 자체를
+   * 못 찾았을 때(soldOut===true) null. 0원을 지어내지 않는다. */
+  priceAmount: number | null;
   shippingCostAmount?: number | null;
   taxAmount?: number | null;
   exchangeRate?: number | null;
-  priceKrw: number;
+  priceKrw: number | null;
   /** N-4.18-G STEP G-1 — 실측된 사이트(RULII 등)만 채운다, 없으면 undefined→null. */
   salePriceKrw?: number | null;
   originalPriceKrw?: number | null;

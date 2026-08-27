@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { summarizeDomesticMarket, computePriceChange, type PriceObservationRecord } from "../price-history";
+import { summarizeDomesticMarket, computePriceChange, computePriceTrend, type PriceObservationRecord } from "../price-history";
 
 function record(overrides: Partial<PriceObservationRecord>): PriceObservationRecord {
   return {
@@ -102,6 +102,25 @@ describe("summarizeDomesticMarket", () => {
     expect(summary.lowestPriceKrw).toBeNull();
     expect(summary.soldOutListings).toHaveLength(1);
   });
+
+  it("N-4.18-Q3 PART E-1: price=null + soldOut=true(완전 품절, 가격 자체가 없음)도 soldOutListings에 담기고 가격 계산에서 제외된다", () => {
+    const records = [
+      record({ id: "a", source: "DOMESTIC_SHOP", priceKrw: 20000, priceAmount: 20000, sourceLabel: "판매중몰", soldOut: false }),
+      record({
+        id: "b",
+        source: "DOMESTIC_SHOP",
+        priceKrw: null,
+        priceAmount: null,
+        sourceLabel: "완전품절몰",
+        soldOut: true,
+      }),
+    ];
+    const summary = summarizeDomesticMarket(records);
+    expect(summary.sellerCount).toBe(1);
+    expect(summary.lowestPriceKrw).toBe(20000);
+    expect(summary.soldOutListings).toHaveLength(1);
+    expect(summary.soldOutListings[0].mallName).toBe("완전품절몰");
+  });
 });
 
 describe("computePriceChange", () => {
@@ -132,5 +151,28 @@ describe("computePriceChange", () => {
     const change = computePriceChange(records);
     expect(change!.oldPriceKrw).toBe(189000);
     expect(change!.newPriceKrw).toBe(179000);
+  });
+
+  it("N-4.18-Q3 PART E-1: priceKrw=null(완전 품절) 관측치는 가격 변화 비교에서 제외한다", () => {
+    const records = [
+      record({ id: "priced-old", priceKrw: 189000, checkedAt: "2026-08-21T16:00:00.000Z" }),
+      record({ id: "soldout", priceKrw: null, checkedAt: "2026-08-22T16:00:00.000Z", soldOut: true }),
+      record({ id: "priced-new", priceKrw: 179000, checkedAt: "2026-08-23T16:00:00.000Z" }),
+    ];
+    const change = computePriceChange(records);
+    // soldout(가격 null) 관측치를 건너뛰고 실제 가격이 있는 두 관측치끼리만 비교한다.
+    expect(change!.oldPriceKrw).toBe(189000);
+    expect(change!.newPriceKrw).toBe(179000);
+  });
+});
+
+describe("computePriceTrend", () => {
+  it("N-4.18-Q3 PART E-1: 최신 관측치가 priceKrw=null(완전 품절)이면 그 이전의 실제 가격을 current로 쓴다", () => {
+    const records = [
+      record({ id: "priced", priceKrw: 179000, checkedAt: "2026-08-20T16:00:00.000Z" }),
+      record({ id: "soldout", priceKrw: null, checkedAt: "2026-08-23T16:00:00.000Z", soldOut: true }),
+    ];
+    const trend = computePriceTrend(records, 0);
+    expect(trend.current).toBe(179000);
   });
 });

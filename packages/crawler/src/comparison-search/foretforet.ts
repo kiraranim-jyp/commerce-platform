@@ -42,6 +42,63 @@ function parsePrice(raw: string): number | null {
   return Number.isFinite(amount) && amount > 0 ? amount : null;
 }
 
+export interface ForetforetProductPrice {
+  price: { amount: number; currency: "KRW" } | null;
+  available: boolean;
+  soldOut: boolean | null;
+}
+
+/** N-4.18-Q3 PART S(대표님 지시, 2026-08-26) — domestic_product_links로 이미 연결된
+ * 상품의 "지금" 가격을 재조회할 때 쓴다(Daily Watch cron이 매일 호출). 실측 확인
+ * (2026-08-26, curl shopdetail.html): 상세 페이지 JS에 `var product_price = '258000';`
+ * 형태로 최종 판매가(할인 적용 후)가 그대로 담겨 있다 — 검색결과 카드의 price/strike
+ * 구조와 달리 상세 페이지는 이 변수 하나만 확인됨. */
+const DETAIL_PRICE_RE = /var product_price = '(\d+)'/;
+
+/** N-4.18-Q3 PART E-10(대표님 지시, 2026-08-27) — 이전 세션에서 changeOpt2value의
+ * `num` 배열 출처를 찾지 못했던 이유를 실측으로 규명: 이 함수는 옵션이 구형
+ * spcode/spcode2 구조(`document.getElementById('option_type')`가 없는 경우)일 때만
+ * 실행되는데, 실제 골든케이스(VERNICE NERO T-스트랩 슈즈, branduid=10226592)를
+ * 포함해 실측한 20개 이상의 상품 전부가 `id="option_type" value="PS"` 히든
+ * 인풋을 갖고 있어(신형 통합옵션 구조) 이 조건이 항상 거짓이 된다 — 즉
+ * changeOpt2value는 죽은 코드이고 옵션별 재고는 다른 경로로 내려온다.
+ *
+ * 실제 재고 신호는 두 가지 형태로 존재한다(둘 다 20개 이상 실측 확인):
+ * 1) 단일 옵션(사이즈만 등) 상품 — `<select name="optionlist[]">` 안의 각
+ *    `<option ... sto_state="SALE|SOLDOUT">`에 HTML 속성으로 직접 노출된다
+ *    (골든케이스 실측: NER,23=SOLDOUT / NER,24~27=SALE / NER,28~30=SOLDOUT).
+ * 2) 다차원 옵션(사이즈+색상처럼 select가 2개 이상) 상품 — 개별 `<option>`
+ *    태그에는 `sto_id="0"` 플레이스홀더만 있고, 실제 조합별 재고는 별도 JS
+ *    변수 `var optionJsonData = {...}`의 각 조합 객체마다 홑따옴표
+ *    `sto_state:'SALE'` 형태로 들어있다(20개 상품 실측: 전부 이 형태였고 값은
+ *    전부 SALE — 완전품절 실사례는 이번 조사에서 찾지 못했다).
+ * 두 형태 모두 "조합 하나하나의 재고 상태"를 그대로 나열한 것이므로, 형태와
+ * 무관하게 같은 규칙을 적용할 수 있다: 신호가 하나도 없으면 null(확인불가),
+ * 하나라도 SALE이면 전체 soldOut=false(옵션 일부만 품절이어도 구매 가능),
+ * 전부 SOLDOUT이면 soldOut=true. 검색 목록 AJAX 응답(product_list.action.html)에는
+ * 이 신호가 전혀 없다(실측 확인) — 상세 페이지를 반드시 거쳐야 한다. */
+const STO_STATE_RE = /sto_state(?:="([A-Z]+)"|:'([A-Z]+)')/g;
+
+function detectSoldOut(html: string): boolean | null {
+  const states = [...html.matchAll(STO_STATE_RE)].map((m) => m[1] ?? m[2]);
+  if (states.length === 0) return null;
+  return states.every((s) => s === "SOLDOUT");
+}
+
+export async function fetchForetforetProductPrice(url: string): Promise<ForetforetProductPrice> {
+  const response = await fetchWithDomainRateLimit(url, {
+    headers: { Accept: "text/html", "User-Agent": CHROME_UA },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
+  if (!response.ok) return { price: null, available: false, soldOut: null };
+  const html = await response.text();
+  const amount = parsePrice(DETAIL_PRICE_RE.exec(html)?.[1] ?? "");
+  const soldOut = detectSoldOut(html);
+  return amount
+    ? { price: { amount, currency: "KRW" }, available: true, soldOut }
+    : { price: null, available: false, soldOut };
+}
+
 export async function searchForetforet(query: string): Promise<ComparisonCandidate[]> {
   const url = `https://${DOMAIN}/shop/product_list.action.html?action_mode=get_list&page=1&category=&sort=&search=${encodeURIComponent(query)}&viewtype=&sp_search_type=&add_check=`;
   const response = await fetchWithDomainRateLimit(url, {
