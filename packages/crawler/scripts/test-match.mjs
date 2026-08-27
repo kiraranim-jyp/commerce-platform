@@ -215,5 +215,63 @@ test("N-4.19: 품번이 너무 짧으면(3자 이하) 신호 발동 안 함", ()
   assert.ok(!result.reasons.includes("품번이 URL에 포함됨"), "short sku must not trigger the product-code signal");
 });
 
+// N-4.18-Q3 PART G-16(대표님 실측 Golden Case, 2026-08-27) — production
+// /api/domestic-price-sources/search 실측 재현: 정확한 동일상품이 FORETFORET
+// 결과에 이미 있는데(branduid=10226592, PP24KASHE1195NER, ₩258,000 — 대표님이
+// 직접 확인한 그 상품) confidence 0.67로 계산되어 medium 기준(0.70) 바로
+// 아래에서 걸러진다. 원인: query.title "Lulu T-Bar Shoes..."는 영문 "Shoes"를
+// 포함하고 candidate.title "...T-스트랩 슈즈..."는 한글 "슈즈"를 포함하는데,
+// extractCategoryTaxon()의 taxon 사전에 TOP/PANTS/DRESS만 있고 SHOES가 없어서
+// 이 실제 관측 신호(둘 다 "신발"이라는 것)를 전혀 못 쓰고 있었다. SKU는 이
+// 케이스에서 쓸 수 없다(실측 확인: junioredition variant sku="KA1-2"는
+// FORETFORET의 "PP24KASHE1195NER"와 무관한 사이트 자체 내부 코드 — G-9 "근거가
+// 있을 때만" 조건 미충족, 억지로 매칭하지 않는다).
+test("PART G-16 Golden Case: FORETFORET VERNICE NERO 실측 재현 -> medium 이상", () => {
+  const query = {
+    title: "Lulu T Bar Shoes in Vernice Nero by PèPè",
+    brand: "Pèpè Shoes",
+    sourceUrl:
+      "https://www.junioredition.com/en-kr/collections/pepe-shoes/products/lulu-t-bar-shoes-in-vernice-nero-by-pepe",
+  };
+  const result = scoreCandidateMatch(
+    query,
+    candidate({
+      title: "AW26 RE[페페슈즈]VERNICE NERO T-스트랩 슈즈-PP24KASHE1195NER",
+      url: "https://www.foretforet.com/shop/shopdetail.html?branduid=10226592",
+      brand: "PEPE SHOES",
+      sku: "PP24KASHE1195NER",
+    }),
+  );
+  assert.ok(
+    result.confidence >= 0.7,
+    `실제 동일상품인데 threshold 미달, got ${result.confidence} (${result.level})`,
+  );
+  assert.notEqual(result.level, "low", `실제 동일상품이 low로 걸러지면 안 됨, got ${result.level}`);
+});
+
+// PART G-18 오탐 방지 — SHOES taxon을 추가해도 무관 브랜드는 여전히 낮은 점수여야 한다.
+test("PART G-18: SHOES taxon 추가 후에도 무관 브랜드(Hugo Boss)는 낮은 confidence 유지", () => {
+  const query = {
+    title: "Lulu T Bar Shoes in Vernice Nero by PèPè",
+    brand: "Pèpè Shoes",
+  };
+  const result = scoreCandidateMatch(
+    query,
+    candidate({ title: "Hugo Boss T-스트랩 슈즈 블랙", brand: "Hugo Boss" }),
+  );
+  assert.ok(result.confidence < 0.5, `무관 브랜드는 낮은 점수 유지, got ${result.confidence}`);
+  assert.equal(result.level, "low", `무관 브랜드는 low 유지, got ${result.level}`);
+});
+
+// PART G-16 근본원인 회귀 고정 — NFKD 정규화가 한글 taxon 단어를 자모로
+// 분해해 "바지"/"원피스"/"셔츠" 매칭이 등록 이래 전부 무효였던 버그(이번 세션
+// 발견). 순수 한글 제목끼리 카테고리 일치 신호가 실제로 발동하는지 직접 확인한다
+// — 이게 다시 깨지면 이 signal 전체가 조용히 죽는다.
+test("PART G-16 근본원인: 순수 한글 제목도 카테고리 일치 신호가 발동해야 한다", () => {
+  const query = { title: "Bobo Choses Denim Pants", brand: "Bobo Choses" };
+  const result = scoreCandidateMatch(query, candidate({ title: "보보쇼즈 청바지", brand: "Bobo Choses" }));
+  assert.ok(result.reasons.includes("카테고리 일치"), `한글 카테고리 신호가 죽어있음, reasons: ${result.reasons}`);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

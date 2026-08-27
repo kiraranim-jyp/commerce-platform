@@ -96,13 +96,31 @@ function brandsMatch(a: string, b: string): boolean {
  * AE099), "원피스"(LOOXLOO 다수), "셔츠"(DEUXBEBE "로히트 셔츠"))만으로 최소
  * taxonomy를 만든다 — breadcrumb가 아니라 상품명 자체에 실제로 쓰인 단어이므로
  * 추측이 아니다. 매핑에 없는 단어는 전부 null(정보 없음) — 감점하지 않는다. */
-export type CategoryTaxon = "TOP" | "PANTS" | "DRESS";
+export type CategoryTaxon = "TOP" | "PANTS" | "DRESS" | "SHOES";
 
+// N-4.18-Q3 PART G-16(대표님 실측 골든케이스, 2026-08-27) — SHOES는 두 실제
+// 제목에서 그대로 관측된 단어만 등록한다(junioredition "Lulu T Bar Shoes...",
+// FORETFORET "...T-스트랩 슈즈..." — 둘 다 이 세션 실측으로 직접 확인). breadcrumb나
+// 번역사전이 아니라 위 TOP/PANTS/DRESS와 동일한 원칙(제목에 실제로 쓰인 단어).
 const CATEGORY_TAXON_WORDS: Record<CategoryTaxon, string[]> = {
   TOP: ["shirt", "shirts", "blouse", "티셔츠", "셔츠"],
   PANTS: ["pants", "trousers", "jeans", "바지", "팬츠", "청바지"],
   DRESS: ["dress", "원피스"],
+  SHOES: ["shoes", "슈즈"],
 };
+
+// N-4.18-Q3 PART G-16 근본 원인(대표님 실측 골든케이스, 2026-08-27) — 이 taxon
+// 단어 목록은 여태 등록 이래로 한글 항목이 전부 죽어있었다. normalizeText()가
+// NFKD 정규화를 쓰는데, NFKD는 완성형 한글 음절("슈즈")을 개별 자모로 분해한다
+// (실측 확인: "슈즈".normalize("NFKD").length는 2가 아니라 4). 반면 이 배열의
+// 한글 단어는 일반 완성형 그대로 저장돼 있어서, normalizeText(title).includes(w)가
+// 한글 단어에 대해서는 절대 참이 될 수 없었다(SHOES뿐 아니라 기존 TOP/PANTS/
+// DRESS의 바지/원피스/셔츠 전부 동일하게 무효). 단어 쪽도 정규화 함수를 그대로
+// 통과시켜 비교 대상과 같은 형태(분해된 자모)로 맞춘다 — 새 로직이 아니라 기존
+// normalizeText를 양쪽에 일관되게 적용하는 수정.
+const NORMALIZED_CATEGORY_TAXON_WORDS: Record<CategoryTaxon, string[]> = Object.fromEntries(
+  Object.entries(CATEGORY_TAXON_WORDS).map(([taxon, words]) => [taxon, words.map((w) => normalizeText(w))]),
+) as Record<CategoryTaxon, string[]>;
 
 /** 제목 텍스트에서 상품유형 단어를 찾는다 — 정규화(normalizeText)한 문자열에
  * 단어가 부분 포함되는지만 본다(형태소 분석 없음, 실제 관측 단어와의 단순
@@ -112,7 +130,7 @@ const CATEGORY_TAXON_WORDS: Record<CategoryTaxon, string[]> = {
 export function extractCategoryTaxon(text: string): CategoryTaxon | null {
   const normalized = normalizeText(text);
   if (!normalized) return null;
-  for (const [taxon, words] of Object.entries(CATEGORY_TAXON_WORDS) as [CategoryTaxon, string[]][]) {
+  for (const [taxon, words] of Object.entries(NORMALIZED_CATEGORY_TAXON_WORDS) as [CategoryTaxon, string[]][]) {
     if (words.some((w) => normalized.includes(w))) return taxon;
   }
   return null;
