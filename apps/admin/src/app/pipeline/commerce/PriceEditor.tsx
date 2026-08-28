@@ -92,6 +92,7 @@ export function PriceEditor({
   onUpdateSalePriceKrw,
   onUpdateOriginalPrice,
   onUpdatePriceBreakdown,
+  onUpdateCustomsCost,
   exchangeRates,
   exchangeRatesLoading,
   onRefreshExchangeRates,
@@ -107,6 +108,7 @@ export function PriceEditor({
   onUpdateSalePriceKrw: (amountKrw: number) => void;
   onUpdateOriginalPrice?: (patch: Partial<{ amount: number; currency: string }>) => void;
   onUpdatePriceBreakdown: (breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) => void;
+  onUpdateCustomsCost: (patch: Partial<{ customsDutyKrw: number | null; customsVatKrw: number | null }>) => void;
   exchangeRates: { rates: Record<string, number>; fetchedAt: string; source: "frankfurter" | "fallback" } | null;
   exchangeRatesLoading: boolean;
   onRefreshExchangeRates: () => void;
@@ -120,6 +122,11 @@ export function PriceEditor({
   const [sellerDefaults, setSellerDefaults] = useState<{
     defaultMarginPercent: number | null;
     priceRoundingUnit: number;
+    /** P-3-2(대표님 지시, 2026-08-28) — Settings에 저장된 국내 배송원가
+     * 기본값. PriceEditor는 이 값을 읽기전용으로 보여주기만 한다(수정은
+     * Settings에서만 — SellerProfile 필드라 상품별로 다르게 저장할 곳이
+     * 없다, P-3-1에서 확정한 설계). */
+    domesticShippingCostKrw: number | null;
   } | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -127,12 +134,22 @@ export function PriceEditor({
       .then((res) => res.json())
       .then(
         (data: {
-          profiles?: Array<{ isDefault: boolean; defaultMarginPercent: number | null; priceRoundingUnit: number }>;
+          profiles?: Array<{
+            isDefault: boolean;
+            defaultMarginPercent: number | null;
+            priceRoundingUnit: number;
+            domesticShippingCostKrw: number | null;
+          }>;
         }) => {
           if (cancelled) return;
           const list = data.profiles ?? [];
           const p = list.find((x) => x.isDefault) ?? list[0] ?? null;
-          if (p) setSellerDefaults({ defaultMarginPercent: p.defaultMarginPercent, priceRoundingUnit: p.priceRoundingUnit });
+          if (p)
+            setSellerDefaults({
+              defaultMarginPercent: p.defaultMarginPercent,
+              priceRoundingUnit: p.priceRoundingUnit,
+              domesticShippingCostKrw: p.domesticShippingCostKrw,
+            });
         },
       )
       .catch(() => {
@@ -591,9 +608,108 @@ export function PriceEditor({
           배송비/수수료율/마진율은 실제 물류·정산 데이터가 없어 추정치입니다 — 위에서 직접 아는 값으로 고쳐서 다시 계산할 수
           있습니다.
         </p>
+
+        <CustomsCostSection
+          domesticShippingCostKrw={sellerDefaults?.domesticShippingCostKrw ?? null}
+          customsDutyKrw={product.customsDutyKrw?.value ?? null}
+          customsVatKrw={product.customsVatKrw?.value ?? null}
+          onUpdateCustomsCost={onUpdateCustomsCost}
+        />
       </div>
       )}
     </section>
+  );
+}
+
+/** P-3-2(대표님 지시, 2026-08-28) — 위 "가격 계산 Breakdown"(computePriceBreakdown,
+ * 권장 판매가격 공식)과 완전히 별개다. 이 값들은 Market Intelligence의
+ * computeUnifiedPriceDecision()에만 쓰이고, 권장 판매가격/예상 이익(위 계산)에는
+ * 전혀 영향을 주지 않는다 — 기존 계산식을 건드리지 않는다는 원칙을 그대로
+ * 지킨다. 국내 배송원가는 Settings에서만 고칠 수 있는 판매자 공통 기본값이라
+ * 여기서는 읽기전용으로만 보여준다(P-3-1에서 확정: 국내배송원가=Settings
+ * 기본값, 관세/부가세=상품별). */
+function CustomsCostSection({
+  domesticShippingCostKrw,
+  customsDutyKrw,
+  customsVatKrw,
+  onUpdateCustomsCost,
+}: {
+  domesticShippingCostKrw: number | null;
+  customsDutyKrw: number | null;
+  customsVatKrw: number | null;
+  onUpdateCustomsCost: (patch: Partial<{ customsDutyKrw: number | null; customsVatKrw: number | null }>) => void;
+}) {
+  const [dutyDraft, setDutyDraft] = useState(customsDutyKrw != null ? String(customsDutyKrw) : "");
+  const [vatDraft, setVatDraft] = useState(customsVatKrw != null ? String(customsVatKrw) : "");
+  // LiveNumberField와 같은 패턴 — 외부에서(스냅샷 전환 등) product.customsDutyKrw/
+  // customsVatKrw가 바뀌면 로컬 draft를 다시 동기화한다.
+  const [syncedDuty, setSyncedDuty] = useState(customsDutyKrw);
+  const [syncedVat, setSyncedVat] = useState(customsVatKrw);
+  if (customsDutyKrw !== syncedDuty) {
+    setSyncedDuty(customsDutyKrw);
+    setDutyDraft(customsDutyKrw != null ? String(customsDutyKrw) : "");
+  }
+  if (customsVatKrw !== syncedVat) {
+    setSyncedVat(customsVatKrw);
+    setVatDraft(customsVatKrw != null ? String(customsVatKrw) : "");
+  }
+
+  function commitDuty() {
+    const n = dutyDraft.trim() === "" ? null : Number(dutyDraft);
+    onUpdateCustomsCost({ customsDutyKrw: n != null && Number.isFinite(n) ? n : null });
+  }
+  function commitVat() {
+    const n = vatDraft.trim() === "" ? null : Number(vatDraft);
+    onUpdateCustomsCost({ customsVatKrw: n != null && Number.isFinite(n) ? n : null });
+  }
+
+  return (
+    <div className="mt-3 space-y-2.5 border-t border-border pt-3 text-sm">
+      <p className="text-xs font-medium text-text-primary">예상 구매 비용(Market Intelligence 판단용)</p>
+      <p className="text-[11px] text-text-tertiary">
+        위 권장 판매가격 계산에는 반영되지 않습니다 — 아래 "Market Intelligence"의 예상 마진/판매 판단에만 쓰입니다.
+      </p>
+      <Row label="국내 배송원가">
+        {domesticShippingCostKrw != null ? (
+          <span className="font-medium text-text-primary">{formatKrw(domesticShippingCostKrw)} (Settings 기본값)</span>
+        ) : (
+          <span className="text-text-tertiary">
+            미확인 —{" "}
+            <a href="/settings" className="text-primary hover:underline">
+              Settings에서 입력
+            </a>
+          </span>
+        )}
+      </Row>
+      <Row label="관세">
+        <div className="flex items-center gap-1">
+          <span className="text-text-secondary">₩</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={dutyDraft}
+            placeholder="미확인"
+            onChange={(e) => setDutyDraft(e.target.value)}
+            onBlur={commitDuty}
+            className="w-24 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+          />
+        </div>
+      </Row>
+      <Row label="부가세">
+        <div className="flex items-center gap-1">
+          <span className="text-text-secondary">₩</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={vatDraft}
+            placeholder="미확인"
+            onChange={(e) => setVatDraft(e.target.value)}
+            onBlur={commitVat}
+            className="w-24 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+          />
+        </div>
+      </Row>
+    </div>
   );
 }
 

@@ -32,6 +32,13 @@ export interface SellerProfile {
    * 없을 때만(build-payload.ts) 이 기본값을 쓴다. */
   deliveryCharge: number | null;
   returnDeliveryCharge: number | null;
+  /** P-3-2(대표님 지시, 2026-08-28) — deliveryCharge(고객 청구 배송비)와
+   * 완전히 다른 값: 판매자가 해외 상품을 사입해서 국내로 들여오는 데 실제로
+   * 드는 배송비다(P-1-3/P-3-1에서 확인: 지금까지 이 값을 저장하는 곳이
+   * 전혀 없어 computeUnifiedPriceDecision()이 항상 unknown으로 받았다).
+   * 상품마다 다시 입력하지 않는 판매자 기본값 — null이면(미설정) 그대로
+   * unknown으로 전달된다(0으로 대체하지 않는다). */
+  domesticShippingCostKrw: number | null;
   /** 쿠팡 등록 Payload 실제 스키마에는 "교환배송비" 필드가 없다(확인됨) —
    * 지금은 판매자 정보 화면에 참고용으로만 저장/표시하고 Payload에는 매핑하지
    * 않는다(없는 필드를 지어내지 않는다는 원칙). */
@@ -95,6 +102,9 @@ interface SellerProfileRow {
   outbound_shipping_place_code: number | null;
   delivery_charge: number | null;
   return_delivery_charge: number | null;
+  /** P-3-2 — 마이그레이션 041 실행 전 세션에서도 select("*")가 이 필드를
+   * undefined로 주므로 optional로 받는다(다른 신규 컬럼들과 같은 패턴). */
+  domestic_shipping_cost_krw?: number | null;
   exchange_delivery_charge: number | null;
   outbound_lead_time_days: number | null;
   delivery_method: string | null;
@@ -129,6 +139,7 @@ function toProfile(row: SellerProfileRow): SellerProfile {
     outboundShippingPlaceCode: row.outbound_shipping_place_code,
     deliveryCharge: row.delivery_charge,
     returnDeliveryCharge: row.return_delivery_charge,
+    domesticShippingCostKrw: row.domestic_shipping_cost_krw ?? null,
     exchangeDeliveryCharge: row.exchange_delivery_charge,
     outboundLeadTimeDays: row.outbound_lead_time_days,
     deliveryMethod: row.delivery_method ?? "",
@@ -175,6 +186,7 @@ export interface SellerProfileInput {
   outboundShippingPlaceCode?: number | null;
   deliveryCharge?: number | null;
   returnDeliveryCharge?: number | null;
+  domesticShippingCostKrw?: number | null;
   exchangeDeliveryCharge?: number | null;
   outboundLeadTimeDays?: number | null;
   deliveryMethod?: string;
@@ -212,6 +224,7 @@ function toRowFields(input: Partial<SellerProfileInput>): Record<string, unknown
   if (input.outboundShippingPlaceCode !== undefined) row.outbound_shipping_place_code = input.outboundShippingPlaceCode;
   if (input.deliveryCharge !== undefined) row.delivery_charge = input.deliveryCharge;
   if (input.returnDeliveryCharge !== undefined) row.return_delivery_charge = input.returnDeliveryCharge;
+  if (input.domesticShippingCostKrw !== undefined) row.domestic_shipping_cost_krw = input.domesticShippingCostKrw;
   if (input.exchangeDeliveryCharge !== undefined) row.exchange_delivery_charge = input.exchangeDeliveryCharge;
   if (input.outboundLeadTimeDays !== undefined) row.outbound_lead_time_days = input.outboundLeadTimeDays;
   if (input.deliveryMethod !== undefined) row.delivery_method = input.deliveryMethod || null;

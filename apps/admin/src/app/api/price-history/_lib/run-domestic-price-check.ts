@@ -52,6 +52,12 @@ export interface DomesticPriceCheckResult {
   linksCreatedOrUpdated: number;
   pricesRecorded: number;
   sourceErrors: string[];
+  /** N-4.18-Q3 PART H-3-11 STEP 7(대표님 지시, 2026-08-27: "실제로 네트워크
+   * 요청이 생략됐는지 확인한다") — 이번 호출에서 실제로 발생한 FORETFORET
+   * modelCode HTTP fetch 총 횟수. isEvidenceEvaluationWorthwhile 가드가
+   * 판단 결과에는 영향을 주지 않으면서 이 값만 줄이는지를 응답값으로
+   * 직접 확인할 수 있게 하는 관측용 필드다. */
+  foretforetModelCodeFetchCount: number;
 }
 
 /** N-4.07 3차(실측 발견, 2026-08-23) — 개발/테스트용으로 제목 앞에 붙는
@@ -126,6 +132,21 @@ export function applyEvidenceDecision(
  * 정상 후보가 부당하게 탈락하는 경로가 없다(실측 확인, H-3-9 STEP 3). */
 const MAX_EVIDENCE_CANDIDATES = 3;
 
+/** N-4.18-Q3 PART H-3-11(대표님 지시, 2026-08-27) — H-3-10 실측(Konges Sløjd/
+ * Emile et Ida)에서 발견: confidence 1위 후보가 이미 matchLevel="low"면 이
+ * 검색결과 안의 모든 후보가 low다(withConfidence가 이미 confidence 내림차순
+ * 정렬해 뒀고, matchLevel은 confidence의 단조 계단함수라 1위보다 순위가 낮은
+ * 후보의 confidence는 1위 이하일 수밖에 없다 — classifyMatchLevel/threshold를
+ * 재계산하지 않고 이미 계산된 결과의 성질만 이용한다). toDomesticMatchType("low")는
+ * 항상 NOT_MATCHED이므로 Top-N 중 어떤 후보를 고르든 결과는 절대 안 바뀐다 —
+ * 그런데도 지금까지는 FORETFORET modelCode HTTP fetch(최대 3건)를 먼저 실행하고서야
+ * 이 사실을 알았다. 이 함수는 selectDomesticCandidate 호출 여부를 결정하는
+ * 순서 최적화일 뿐, 새 매칭 판단이 아니다(confidence/threshold/ranking/Top-N/
+ * modelCode 판정 규칙 전부 미변경). */
+export function isEvidenceEvaluationWorthwhile(candidates: ComparisonCandidate[]): boolean {
+  return candidates.length > 0 && candidates[0].matchLevel !== "low";
+}
+
 export interface CandidateSelection {
   candidate: ComparisonCandidate;
   modelCodeEvidence: ModelEvidenceResult;
@@ -149,6 +170,11 @@ export async function selectDomesticCandidate(
 
   const evaluated: { candidate: ComparisonCandidate; modelCodeEvidence: ModelEvidenceResult }[] = [];
   for (const candidate of candidates.slice(0, MAX_EVIDENCE_CANDIDATES)) {
+    // N-4.18-Q3 PART H-3-11 STEP 7(대표님 지시, 2026-08-27: "실제로 네트워크
+    // 요청이 생략됐는지 확인한다") — isEvidenceEvaluationWorthwhile 가드가
+    // 실제로 이 fetch 자체를 막는지 Vercel 로그로 관측할 수 있게 하는 관측용
+    // 로그 한 줄. 판정 로직에는 전혀 관여하지 않는다.
+    console.log(`[H-3-11] FORETFORET modelCode fetch: ${candidate.url}`);
     const domesticModelCode = await fetchModelCode(candidate.url);
     evaluated.push({ candidate, modelCodeEvidence: compareModelCode(foreignModelCode, domesticModelCode) });
   }
@@ -160,11 +186,19 @@ export async function selectDomesticCandidate(
 export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Promise<DomesticPriceCheckResult> {
   const sourceErrors: string[] = [];
   let linksCreatedOrUpdated = 0;
+  // N-4.18-Q3 PART H-3-11 STEP 7 — 아래 fetchForetforetModelCode 호출을 감싸는
+  // 카운터 하나만 잰다(판정 로직에는 관여하지 않음).
+  let foretforetModelCodeFetchCount = 0;
+  const countedFetchForetforetModelCode = (url: string) => {
+    foretforetModelCodeFetchCount += 1;
+    return fetchForetforetModelCode(url);
+  };
 
   const alreadyChecked = input.skipIfCheckedToday
     ? await hasObservationToday(input.snapshotId, "DOMESTIC_SHOP")
     : false;
-  if (alreadyChecked) return { linksCreatedOrUpdated: 0, pricesRecorded: 0, sourceErrors: [] };
+  if (alreadyChecked)
+    return { linksCreatedOrUpdated: 0, pricesRecorded: 0, sourceErrors: [], foretforetModelCodeFetchCount: 0 };
 
   const searchTitle = stripLeadingDevTag(input.dna.title);
   const searchTerm = stripLeadingDevTag(buildDomesticShopQuery(input.dna));
@@ -222,6 +256,10 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
 
     void recordDomesticSourceCheckAttempt(result.shopId, "OK");
 
+    // N-4.18-Q3 PART H-3-11 — 어차피 NOT_MATCHED로 끝날 검색결과는 Evidence
+    // HTTP 비용을 쓰지 않는다(isEvidenceEvaluationWorthwhile 주석 참고).
+    if (!isEvidenceEvaluationWorthwhile(result.candidates)) continue;
+
     // N-4.18-Q3 PART H-3-9(대표님 지시, 2026-08-27) — 기존엔 candidates[0](confidence
     // 1위)만 무조건 대표 후보로 썼다. H-3-7 실측(PèPè)에서 1위가 실제로는 다른
     // 상품(modelCode conflict)이고 진짜 동일상품은 3위였던 사례가 확인돼, FORETFORET에
@@ -231,7 +269,7 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       result.candidates,
       result.domain,
       foreignModelCode,
-      fetchForetforetModelCode,
+      countedFetchForetforetModelCode,
     );
     const { matchType, autoVerified } = toDomesticMatchType(best.matchLevel ?? "low");
     if (matchType === "NOT_MATCHED") continue;
@@ -330,5 +368,6 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     linksCreatedOrUpdated,
     pricesRecorded: saveResult.ok ? saveResult.count : 0,
     sourceErrors,
+    foretforetModelCodeFetchCount,
   };
 }

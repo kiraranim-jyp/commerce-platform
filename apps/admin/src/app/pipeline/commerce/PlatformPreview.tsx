@@ -284,6 +284,7 @@ export function PlatformPreview({
   onUpdateSalePriceKrw,
   onUpdateOriginalPrice,
   onUpdatePriceBreakdown,
+  onUpdateCustomsCost,
   exchangeRates,
   exchangeRatesLoading,
   onRefreshExchangeRates,
@@ -361,6 +362,7 @@ export function PlatformPreview({
    * 있게 한다. */
   onUpdateOriginalPrice?: (patch: Partial<{ amount: number; currency: string }>) => void;
   onUpdatePriceBreakdown: (breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) => void;
+  onUpdateCustomsCost: (patch: Partial<{ customsDutyKrw: number | null; customsVatKrw: number | null }>) => void;
   exchangeRates: { rates: Record<string, number>; fetchedAt: string; source: "frankfurter" | "fallback" } | null;
   exchangeRatesLoading: boolean;
   onRefreshExchangeRates: () => void;
@@ -935,6 +937,7 @@ export function PlatformPreview({
             onUpdateSalePriceKrw={onUpdateSalePriceKrw}
             onUpdateOriginalPrice={onUpdateOriginalPrice}
             onUpdatePriceBreakdown={onUpdatePriceBreakdown}
+            onUpdateCustomsCost={onUpdateCustomsCost}
             exchangeRates={exchangeRates}
             exchangeRatesLoading={exchangeRatesLoading}
             onRefreshExchangeRates={onRefreshExchangeRates}

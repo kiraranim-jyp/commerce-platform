@@ -11,8 +11,11 @@ import {
   computeSellerAction,
   priceLevelFromVerdict,
   computeSellability,
+  computeUnifiedPriceDecision,
+  type UnifiedPriceDecision,
 } from "@commerce/pricing";
 import { fetchLiveExchangeRates } from "@/lib/exchange-rates";
+import { getDefaultSellerProfile } from "@/app/api/coupang/_lib/seller-profile";
 import { getSnapshot } from "../../snapshots/_lib/snapshot";
 import { getPriceHistory } from "./price-observations";
 
@@ -67,6 +70,13 @@ export async function computeMarketIntelligence(snapshotId: string) {
       })
     : null;
 
+  // P-3-2(대표님 지시, 2026-08-28) — P-3-1에서 확정한 설계: 국내 배송원가는
+  // 상품마다 다시 입력하지 않는 판매자 기본값(SellerProfile), 관세/부가세는
+  // 카테고리마다 달라 상품별 입력(CanonicalProduct)이다. 둘 다 값이 없으면
+  // 여전히 unknown으로 전달된다 — 이 조회가 실패하거나 프로필이 없어도
+  // 기존과 완전히 동일하게(unknown) 동작한다.
+  const sellerProfile = await getDefaultSellerProfile();
+
   let cost: ReturnType<typeof computePriceBreakdown> | null = null;
   let recommendation: ReturnType<typeof computePriceRecommendation> | null = null;
   const originalAmount = product.price.value.amount;
@@ -86,6 +96,53 @@ export async function computeMarketIntelligence(snapshotId: string) {
       });
     }
   }
+
+  // P-1-3 STEP 6/7(대표님 지시, 2026-08-28) — "PriceEditor와 Market Intelligence가
+  // 서로 다른 마진을 계산한다"는 P-1-2 실측 문제를 여기서 고친다. 기존
+  // computePriceDecision(costPriceKrw=해외원가만) 호출은 그대로 두고(회귀 보존,
+  // decision/margin 필드도 그대로 반환), computeUnifiedPriceDecision()으로 배송비/
+  // 수수료까지 포함한 "진짜 원가" 기준 판단을 별도 필드(unifiedDecision)로 추가
+  // 제공한다.
+  //
+  // P-3-2(대표님 지시, 2026-08-28) — P-3-1 조사 이전에는 sellerDomesticShippingCostKrw/
+  // customerChargedShippingKrw/customsDutyKrw/customsVatKrw 4개가 전부 하드코딩된
+  // unknown이었다(추적하는 곳이 없었다). 이제 국내 배송원가는 SellerProfile
+  // 기본값, 관세/부가세는 상품별 입력(product.customsDutyKrw/customsVatKrw)에서
+  // 실제로 채워진 값만 "actual"로 전달한다 — 값이 없으면(아직 입력 전) 여전히
+  // unknown이다(0으로 지어내지 않는다). customerChargedShippingKrw는
+  // SellerProfile.deliveryCharge(고객 청구 배송비)를 그대로 통과시킨다 —
+  // computeUnifiedPriceDecision()의 LANDED_COST_PARTS에 포함되지 않는 정보용
+  // 필드라(unified-price-decision.ts 참고) 원가 합산에는 전혀 영향이 없다.
+  const unifiedDecision: UnifiedPriceDecision | null =
+    cost != null && currentSellingPriceKrw != null
+      ? computeUnifiedPriceDecision({
+          sourceProductPriceKrw: { value: cost.costKrw, status: cost.isRateEstimate ? "estimated" : "actual" },
+          exchangeRate: { value: cost.exchangeRate, status: cost.isRateEstimate ? "estimated" : "actual" },
+          internationalShippingKrw: { value: cost.shippingKrw, status: "estimated", source: "seller_default" },
+          sellerDomesticShippingCostKrw:
+            sellerProfile?.domesticShippingCostKrw != null
+              ? { value: sellerProfile.domesticShippingCostKrw, status: "estimated", source: "SellerProfile.domesticShippingCostKrw" }
+              : { value: null, status: "unknown" },
+          customerChargedShippingKrw:
+            sellerProfile?.deliveryCharge != null
+              ? { value: sellerProfile.deliveryCharge, status: "actual", source: "SellerProfile.deliveryCharge" }
+              : { value: null, status: "unknown" },
+          customsDutyKrw:
+            product.customsDutyKrw?.value != null
+              ? { value: product.customsDutyKrw.value, status: "actual", source: "product.customsDutyKrw" }
+              : { value: null, status: "unknown" },
+          customsVatKrw:
+            product.customsVatKrw?.value != null
+              ? { value: product.customsVatKrw.value, status: "actual", source: "product.customsVatKrw" }
+              : { value: null, status: "unknown" },
+          platformFeeRate: { value: cost.feePercent, status: "estimated", source: "default" },
+          currentSellingPriceKrw: { value: currentSellingPriceKrw, status: "actual" },
+          domesticCompetitivePrice: {
+            lowest: domesticSummary.lowestPriceKrw,
+            average: domesticSummary.averagePriceKrw,
+          },
+        })
+      : null;
 
   const sellerAction = computeSellerAction({
     priceLevel: priceLevelFromVerdict(decision?.verdict ?? null),
@@ -145,6 +202,7 @@ export async function computeMarketIntelligence(snapshotId: string) {
     cost,
     margin: decision ? { percent: decision.marginPercent } : null,
     decision,
+    unifiedDecision,
     recommendation,
     alertSignal,
     /** K-1 threshold 판정에 쓸 원재료(가격 알림 저장 로직에서만 사용, GET

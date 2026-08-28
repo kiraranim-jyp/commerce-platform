@@ -191,6 +191,14 @@ export interface CanonicalProduct {
    * 남아서 등록 이력에서 재구성할 수 없었다 — 이 필드가 그 계산 근거다.
    * priceOverrideKrw 없이(자동 환율값 그대로 등록) 이 필드만 있을 수도 있다. */
   priceBreakdown?: { shippingKrw: number; feePercent: number; marginPercent: number };
+  /** P-3-2(대표님 지시, 2026-08-28) — 관세/부가세는 판매자 공통 기본값이
+   * 아니라 카테고리/HS코드마다 달라 상품별로 직접 입력한다(국내 배송원가와
+   * 반대로 SellerProfile이 아니라 여기 CanonicalProduct에 둔다 — P-3-1
+   * 조사에서 확정한 설계). 사용자가 입력하기 전까지는 없다(0으로 지어내지
+   * 않는다) — computeUnifiedPriceDecision()이 이 필드가 없으면 그대로
+   * unknown으로 받는다. */
+  customsDutyKrw?: ProvenanceField<number>;
+  customsVatKrw?: ProvenanceField<number>;
   /** P0(Category Meta -> 동적 입력폼) — 카테고리 확정 후 사용자가 화면에서
    * 직접 채운 쿠팡 구매옵션(attribute)/고시정보(notice) 값. 키는
    * attributeTypeName 또는 noticeCategoryDetailName 원문 그대로(쿠팡 카테고리

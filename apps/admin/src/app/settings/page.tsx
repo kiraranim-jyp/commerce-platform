@@ -80,6 +80,9 @@ interface SellerProfile {
   asContactNumber: string;
   qualityGuarantee: string;
   defaultMarginPercent: number | null;
+  /** P-3-2(대표님 지시, 2026-08-28) — 판매자가 실제로 부담하는 국내
+   * 배송원가 기본값(고객 청구 배송비인 deliveryCharge와 다른 값). */
+  domesticShippingCostKrw: number | null;
   includeShippingInPrice: boolean;
   priceRoundingUnit: number;
   defaultCountryOfOrigin: string;
@@ -579,6 +582,10 @@ function SellerProfileEditor({
   // "가격 반올림 단위", "원산지 기본값") — 상품마다 다시 입력하지 않는 가격
   // 정책/원산지 기본값도 위 배송/판매자 기본정보와 같은 패턴으로 저장한다.
   const [defaultMarginPercent, setDefaultMarginPercent] = useState("");
+  // P-3-2(대표님 지시, 2026-08-28) — 판매자가 실제로 부담하는 국내 배송원가
+  // 기본값. 상품마다 다시 입력하지 않고, computeUnifiedPriceDecision()의
+  // sellerDomesticShippingCostKrw로 그대로 흘러간다(빈 값이면 여전히 unknown).
+  const [domesticShippingCostKrw, setDomesticShippingCostKrw] = useState("");
   const [includeShippingInPrice, setIncludeShippingInPrice] = useState(false);
   const [priceRoundingUnit, setPriceRoundingUnit] = useState("10");
   const [defaultCountryOfOrigin, setDefaultCountryOfOrigin] = useState("");
@@ -636,6 +643,7 @@ function SellerProfileEditor({
     setAsContactNumber("");
     setQualityGuarantee("");
     setDefaultMarginPercent("");
+    setDomesticShippingCostKrw("");
     setIncludeShippingInPrice(false);
     setPriceRoundingUnit("10");
     setDefaultCountryOfOrigin("");
@@ -669,6 +677,7 @@ function SellerProfileEditor({
     setQualityGuarantee(p.qualityGuarantee);
     setKcExemptionText(p.kcExemptionText);
     setDefaultMarginPercent(p.defaultMarginPercent != null ? String(p.defaultMarginPercent) : "");
+    setDomesticShippingCostKrw(p.domesticShippingCostKrw != null ? String(p.domesticShippingCostKrw) : "");
     setIncludeShippingInPrice(p.includeShippingInPrice);
     setPriceRoundingUnit(p.priceRoundingUnit != null ? String(p.priceRoundingUnit) : "10");
     setDefaultCountryOfOrigin(p.defaultCountryOfOrigin);
@@ -832,6 +841,7 @@ function SellerProfileEditor({
         qualityGuarantee: qualityGuarantee || undefined,
         kcExemptionText: kcExemptionText || undefined,
         defaultMarginPercent: defaultMarginPercent ? Number(defaultMarginPercent) : undefined,
+        domesticShippingCostKrw: domesticShippingCostKrw ? Number(domesticShippingCostKrw) : undefined,
         includeShippingInPrice,
         priceRoundingUnit: priceRoundingUnit ? Number(priceRoundingUnit) : undefined,
         defaultCountryOfOrigin: defaultCountryOfOrigin || undefined,
@@ -1013,6 +1023,8 @@ function SellerProfileEditor({
           <PricingSection
             defaultMarginPercent={defaultMarginPercent}
             onDefaultMarginPercentChange={setDefaultMarginPercent}
+            domesticShippingCostKrw={domesticShippingCostKrw}
+            onDomesticShippingCostKrwChange={setDomesticShippingCostKrw}
             includeShippingInPrice={includeShippingInPrice}
             onIncludeShippingInPriceChange={setIncludeShippingInPrice}
             priceRoundingUnit={priceRoundingUnit}
@@ -1682,6 +1694,8 @@ function DefaultDetailBlocksSection({
 function PricingSection({
   defaultMarginPercent,
   onDefaultMarginPercentChange,
+  domesticShippingCostKrw,
+  onDomesticShippingCostKrwChange,
   includeShippingInPrice,
   onIncludeShippingInPriceChange,
   priceRoundingUnit,
@@ -1692,6 +1706,8 @@ function PricingSection({
 }: {
   defaultMarginPercent: string;
   onDefaultMarginPercentChange: (v: string) => void;
+  domesticShippingCostKrw: string;
+  onDomesticShippingCostKrwChange: (v: string) => void;
   includeShippingInPrice: boolean;
   onIncludeShippingInPriceChange: (v: boolean) => void;
   priceRoundingUnit: string;
@@ -1710,6 +1726,18 @@ function PricingSection({
             value={defaultMarginPercent}
             onChange={(e) => onDefaultMarginPercentChange(e.target.value)}
             placeholder="예: 22"
+            className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+          />
+        </Field>
+        <Field
+          label="국내 배송원가(원)"
+          hint="해외 상품을 사입해서 국내로 들여오는 데 실제로 드는 배송비 — 고객에게 받는 배송비(위 배송정책의 배송비)와는 다른 값입니다. 비워두면 '비용 확인 필요' 상태로 표시됩니다"
+        >
+          <input
+            type="number"
+            value={domesticShippingCostKrw}
+            onChange={(e) => onDomesticShippingCostKrwChange(e.target.value)}
+            placeholder="예: 3000"
             className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
           />
         </Field>
