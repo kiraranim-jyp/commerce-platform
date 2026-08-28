@@ -71,13 +71,13 @@
     "note": "smartstoreChannelProduct.channelProductDisplayStatusType='SUSPENSION' — API 신규 등록 후 판매자센터(Wing) 검토 대기 상태로 보이며(등록 자체의 실패가 아님), 실제 노출/판매 전환 여부는 Wing에서 판매자가 직접 확인해야 한다(CartPilot이 대신 활성화하지 않는다)."
   },
   "priceCorrection": {
-    "note": "P-4-H1-2-2(대표님 지시, 2026-08-28) — 이 fixture는 원래 priceOverrideKrw 없이 실등록된 값(₩153,120 = 88 GBP × 1740, 마진 0%)을 그대로 '성공'으로 박제하고 있었다. 이는 실제 버그(등록 어댑터가 override 없을 때 원본가를 마진 0%로 그냥 환산해서 쓰던 것)의 산물이었다 — resolveListingPrice() 도입 후 동일 입력(88 GBP, priceBreakdown={shippingKrw:12000,feePercent:10,marginPercent:12}, 실제 DB 값 확인 완료)으로 재계산한 올바른 값으로 finalPayload.salePrice를 갱신한다.",
-    "computation": "costKrw=88*1740=153120 -> landedCostKrw=153120+12000=165120 -> retainedRatio=1-(10+12)/100=0.78 -> suggestedPriceKrw=roundToUnit(165120/0.78, 10)=211690",
+    "note": "P-4-H1-2-2(대표님 지시, 2026-08-28) — 이 fixture는 원래 priceOverrideKrw 없이 실등록된 값(₩153,120 = 88 GBP × 1740, 마진 0%)을 그대로 '성공'으로 박제하고 있었다. 이는 실제 버그(등록 어댑터가 override 없을 때 원본가를 마진 0%로 그냥 환산해서 쓰던 것)의 산물이었다 — resolveListingPrice() 도입 후 동일 입력(88 GBP, priceBreakdown={shippingKrw:12000,feePercent:10,marginPercent:12}, 실제 DB 값 확인 완료)으로 재계산한 올바른 값으로 finalPayload.salePrice를 갱신한다. 반올림 단위는 고정 100원(실제 프로덕션 기본 SellerProfile.priceRoundingUnit=100 값, DB 직접 확인)을 쓴다 — packages/pricing의 DEFAULT_PRICE_ROUNDING_UNIT(10)은 그 값을 못 불러왔을 때의 코드 폴백일 뿐, 실제 셀러 설정이 아니다.",
+    "computation": "고정환율표 기준(이 fixture는 정적 회귀 참고자료라 매일 바뀌는 실시간 환율이 아니라 packages/pricing의 고정 환율표 GBP=1740을 쓴다 — 실제 프로덕션 브라우저는 그날의 실시간 환율을 쓰므로 다른 숫자가 나올 수 있다. 2026-08-27 실측: 실시간 GBP≈1886.79 적용 시 PriceEditor/Payload Preview 모두 ₩228,300으로 일치 확인, P-4-H1-2-2 CPO 검토 STEP2 참고): costKrw=88*1740=153120 -> landedCostKrw=153120+12000=165120 -> retainedRatio=1-(10+12)/100=0.78 -> suggestedPriceKrw=roundToUnit(165120/0.78, 100)=roundToUnit(211692.3, 100)=211700",
     "oldValue": 153120,
-    "newValue": 211690
+    "newValue": 211700
   },
   "finalPayload": {
-    "salePrice": 211690,
+    "salePrice": 211700,
     "stockQuantity": 5,
     "leafCategoryId": "50021299",
     "customsTaxType": "INCLUDED",
