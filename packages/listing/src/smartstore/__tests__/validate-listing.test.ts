@@ -29,6 +29,7 @@ function makeMinimalListing(validations: ValidationResult[]): ListingModel {
     brand: "TestBrand",
     priceKrw: 10000,
     priceIsEstimate: false,
+    priceSource: "SELLER_OVERRIDE",
     options: [],
     shippingInfo: "해외배송",
     description: "설명",

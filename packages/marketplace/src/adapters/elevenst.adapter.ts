@@ -1,12 +1,12 @@
 import type { CanonicalProduct } from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
 import { UNRESOLVED_CATEGORY, type CategorySelection } from "@commerce/category";
-import { convertToKrw } from "@commerce/pricing";
+import { resolveListingPrice } from "@commerce/pricing";
 import { categoryFieldRule } from "../category-field";
 import { effectiveDescription, effectiveTitle } from "../content-field";
 import { imageFormatFieldRule } from "../image-field";
 import { runValidation, scoreValidations, type FieldRule } from "../validation";
-import type { ListingModel, PlatformAdapter } from "../types";
+import type { ListingModel, ListingPricingContext, PlatformAdapter } from "../types";
 
 /** 11번가 실제 등록 한도 — 대표 1장 + 추가 최대 20장. product.images에는 커머스별
  * 제한을 저장하지 않는다 — 이 어댑터가 등록 시점에만 적용한다. */
@@ -18,6 +18,7 @@ export const elevenstAdapter: PlatformAdapter = {
   toListingModel(
     product: CanonicalProduct,
     categorySelection: CategorySelection = UNRESOLVED_CATEGORY,
+    pricingContext?: ListingPricingContext,
   ): ListingModel {
     const representativeImageEntry = product.images.find((img) => img.isRepresentative);
     const representativeImage = representativeImageEntry
@@ -27,9 +28,20 @@ export const elevenstAdapter: PlatformAdapter = {
       .filter((img) => !img.isRepresentative && img.useInProductGallery)
       .map((img) => getSelectedImageUrl(img))
       .slice(0, MAX_ADDITIONAL_IMAGES);
-    const estimated = convertToKrw(product.price.value.amount, product.price.value.currency);
-    const amountKrw = product.priceOverrideKrw?.value ?? estimated.amountKrw;
-    const isEstimate = product.priceOverrideKrw ? false : estimated.isEstimate;
+    // P-4-H1-2-2 — coupang/smartstore 어댑터와 동일한 resolveListingPrice().
+    const resolution = resolveListingPrice(
+      {
+        priceOverrideKrw: product.priceOverrideKrw?.value,
+        originalAmount: product.price.value.amount,
+        originalCurrency: product.price.value.currency,
+        priceBreakdown: product.priceBreakdown,
+        priceValidity: product.priceValidity,
+      },
+      pricingContext?.liveRates,
+      pricingContext?.roundingUnit,
+    );
+    const amountKrw = resolution.priceKrw ?? 0;
+    const isEstimate = resolution.isEstimate;
     const title = effectiveTitle(product);
     const description = effectiveDescription(product);
 
@@ -52,14 +64,10 @@ export const elevenstAdapter: PlatformAdapter = {
       {
         field: "price",
         label: "판매가격",
-        // N-3.55 — coupang.adapter.ts와 동일 이유(priceValidity 미반영 시
-        // 화면 체크리스트와 실제 등록 게이트가 어긋날 수 있음).
-        check: () => amountKrw > 0 && product.priceValidity === "VALID",
+        // P-4-H1-2-2 STEP 5 — override 없음 자체는 막지 않는다, UNRESOLVED만 막는다.
+        check: () => resolution.source !== "UNRESOLVED" && amountKrw > 0,
         onFail: "ERROR",
-        message:
-          product.priceValidity === "VALID"
-            ? "판매가격을 확인할 수 없습니다."
-            : "원본 상품 가격을 확인할 수 없습니다 — 해외 사이트의 가격을 확인한 후 등록할 수 있습니다.",
+        message: resolution.reason ?? "판매가격을 확인할 수 없습니다.",
       },
       categoryFieldRule(categorySelection),
       {
@@ -94,6 +102,7 @@ export const elevenstAdapter: PlatformAdapter = {
       brand: product.brand.value || undefined,
       priceKrw: amountKrw,
       priceIsEstimate: isEstimate,
+      priceSource: resolution.source,
       options: product.options.value,
       shippingInfo: "해외배송",
       description,

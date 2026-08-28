@@ -76,6 +76,7 @@ function makeListing(product: CanonicalProduct): ListingModel {
     brand: product.brand.value,
     priceKrw: 10000,
     priceIsEstimate: false,
+    priceSource: "SELLER_OVERRIDE",
     options: [],
     shippingInfo: "",
     description: product.description.value,

@@ -1,4 +1,4 @@
-import { convertToKrw } from "@commerce/pricing";
+import { resolveListingPrice } from "@commerce/pricing";
 import type { CanonicalProduct } from "@commerce/shared";
 import type { PayloadBuildResult, PayloadIssue } from "./types";
 
@@ -30,7 +30,16 @@ export function buildSoonPayload(product: CanonicalProduct): PayloadBuildResult<
   if (!priceAmount || priceAmount <= 0) {
     issues.push({ field: "priceKrw", severity: "BLOCKED", reason: "판매가격을 확인할 수 없습니다." });
   }
-  const priceKrw = product.priceOverrideKrw?.value ?? convertToKrw(priceAmount, priceCurrency).amountKrw;
+  // P-4-H1-2-2 — 다른 어댑터와 동일한 resolveListingPrice() 사용(override 없을 때
+  // 원본가를 마진 0%로 그냥 환산하지 않는다).
+  const priceKrw =
+    resolveListingPrice({
+      priceOverrideKrw: product.priceOverrideKrw?.value,
+      originalAmount: priceAmount,
+      originalCurrency: priceCurrency,
+      priceBreakdown: product.priceBreakdown,
+      priceValidity: product.priceValidity,
+    }).priceKrw ?? 0;
 
   const representativeImageEntry = product.images.find((img) => img.isRepresentative);
   if (!representativeImageEntry) {

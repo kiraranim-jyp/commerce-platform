@@ -75,6 +75,7 @@ const listing: ListingModel = {
   brand: product.brand.value,
   priceKrw: 60000,
   priceIsEstimate: false,
+  priceSource: "SELLER_OVERRIDE",
   options: [],
   shippingInfo: "",
   description: product.description.value,

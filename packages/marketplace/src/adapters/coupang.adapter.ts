@@ -1,12 +1,12 @@
 import type { CanonicalProduct } from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
 import { UNRESOLVED_CATEGORY, type CategorySelection } from "@commerce/category";
-import { convertToKrw } from "@commerce/pricing";
+import { resolveListingPrice } from "@commerce/pricing";
 import { categoryFieldRule } from "../category-field";
 import { effectiveDescription, effectiveTitle } from "../content-field";
 import { imageFormatFieldRule } from "../image-field";
 import { runValidation, scoreValidations, type FieldRule } from "../validation";
-import type { ListingModel, PlatformAdapter } from "../types";
+import type { ListingModel, ListingPricingContext, PlatformAdapter } from "../types";
 
 /** 쿠팡 실제 등록 한도 — 대표 1장 + 추가 최대 9장(총 10장). product.images에는
  * 커머스별 제한을 저장하지 않는다 — 사용자가 몇 장을 선택했든 이 어댑터가 등록
@@ -25,6 +25,7 @@ export const coupangAdapter: PlatformAdapter = {
   toListingModel(
     product: CanonicalProduct,
     categorySelection: CategorySelection = UNRESOLVED_CATEGORY,
+    pricingContext?: ListingPricingContext,
   ): ListingModel {
     const representativeImageEntry = product.images.find((img) => img.isRepresentative);
     const representativeImage = representativeImageEntry
@@ -34,11 +35,22 @@ export const coupangAdapter: PlatformAdapter = {
       .filter((img) => !img.isRepresentative && img.useInProductGallery)
       .map((img) => getSelectedImageUrl(img))
       .slice(0, MAX_ADDITIONAL_IMAGES);
-    const estimated = convertToKrw(product.price.value.amount, product.price.value.currency);
-    // priceOverrideKrw가 있으면(사용자가 판매가를 직접 입력함) 환율 추정값 대신
-    // 그 값을 쓴다 — 더 이상 "추정"이 아니라 사용자가 확정한 값이므로 isEstimate도 false.
-    const amountKrw = product.priceOverrideKrw?.value ?? estimated.amountKrw;
-    const isEstimate = product.priceOverrideKrw ? false : estimated.isEstimate;
+    // P-4-H1-2-2(대표님 지시) — override가 없을 때 원본가를 마진 0%로 그냥
+    // 환산해서 쓰던 버그를 고친 지점. resolveListingPrice() 하나로 통일한다
+    // (스마트스토어 어댑터도 동일하게 이 함수를 쓴다 — 각자 계산하지 않는다).
+    const resolution = resolveListingPrice(
+      {
+        priceOverrideKrw: product.priceOverrideKrw?.value,
+        originalAmount: product.price.value.amount,
+        originalCurrency: product.price.value.currency,
+        priceBreakdown: product.priceBreakdown,
+        priceValidity: product.priceValidity,
+      },
+      pricingContext?.liveRates,
+      pricingContext?.roundingUnit,
+    );
+    const amountKrw = resolution.priceKrw ?? 0;
+    const isEstimate = resolution.isEstimate;
     const title = effectiveTitle(product);
     const description = effectiveDescription(product);
 
@@ -75,12 +87,11 @@ export const coupangAdapter: PlatformAdapter = {
         // 어긋날 수 있다 — 화면 체크리스트는 100%인데 등록 버튼을 누르면
         // PRICE_UNRESOLVED로 막히는 CP001류 신뢰 불일치를 막기 위해 이 화면도
         // 같은 판정(priceValidity)을 본다.
-        check: () => amountKrw > 0 && product.priceValidity === "VALID",
+        // P-4-H1-2-2 STEP 5(대표님 지시: "override 없음 ≠ 가격 없음") — resolution.source가
+        // SELLER_OVERRIDE든 SYSTEM_SUGGESTED든 값이 있으면 통과시킨다. UNRESOLVED일 때만 막는다.
+        check: () => resolution.source !== "UNRESOLVED" && amountKrw > 0,
         onFail: "ERROR",
-        message:
-          product.priceValidity === "VALID"
-            ? "판매가격을 확인할 수 없습니다."
-            : "원본 상품 가격을 확인할 수 없습니다 — 해외 사이트의 가격을 확인한 후 등록할 수 있습니다.",
+        message: resolution.reason ?? "판매가격을 확인할 수 없습니다.",
       },
       {
         field: "options",
@@ -114,6 +125,7 @@ export const coupangAdapter: PlatformAdapter = {
       brand: product.brand.value || undefined,
       priceKrw: amountKrw,
       priceIsEstimate: isEstimate,
+      priceSource: resolution.source,
       options: product.options.value,
       shippingInfo: "해외배송",
       description,

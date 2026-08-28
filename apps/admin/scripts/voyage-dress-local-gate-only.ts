@@ -91,6 +91,7 @@ const payload = buildNaverProductPayload({
     brand: product.brand.value,
     priceKrw: 153120, // 88 GBP * 1740 (FIXED_RATES_TO_KRW와 동일 기준, delta=0 유도)
     priceIsEstimate: false,
+    priceSource: "SELLER_OVERRIDE",
     options: ["Size"],
     shippingInfo: "",
     description: product.description.value,

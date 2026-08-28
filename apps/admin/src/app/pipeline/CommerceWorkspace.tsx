@@ -328,6 +328,10 @@ export function CommerceWorkspace({
    * 똑같이 동작하게 하려면 이 값이 필요하다(없으면 그 두 필드만 실제로는
    * 자동 채워지는데도 화면에서 "입력 필요"로 잘못 보인다). */
   const [defaultContactNumber, setDefaultContactNumber] = useState("");
+  /** P-4-H1-2-2(대표님 지시) — PriceEditor가 실제로 쓰는 반올림 단위를 여기서도
+   * 같이 읽어서 resolveListingPrice()에 넘긴다 — 그래야 화면에 보인 "권장
+   * 판매가격"과 등록에 쓰이는 listing.priceKrw가 정확히 같은 숫자가 된다. */
+  const [priceRoundingUnit, setPriceRoundingUnit] = useState<number | null>(null);
 
   /** P0(환율 시스템) — 고정 환율표 대신 실제 환율을 보여준다. 컴포넌트 마운트
    * 시 한 번 불러오고, 이후엔 "새로고침" 버튼으로만 다시 부른다(CPO 요구사항:
@@ -396,23 +400,28 @@ export function CommerceWorkspace({
    * 미비 여부는 아래 별도 effect가 이미 확인한다). 쿠팡 탭 진입 시 한 번만
    * 조회한다 — 자주 안 바뀌는 값이라 카테고리 선택마다 다시 부를 이유가 없다. */
   useEffect(() => {
-    if (tab !== "coupang") return;
     let cancelled = false;
     fetch("/api/settings/coupang/profiles")
       .then((res) => res.json())
-      .then((data: { profiles?: { isDefault: boolean; companyContactNumber: string }[] }) => {
+      .then((data: { profiles?: { isDefault: boolean; companyContactNumber: string; priceRoundingUnit?: number }[] }) => {
         if (cancelled) return;
         const profiles = data.profiles ?? [];
         const defaultProfile = profiles.find((p) => p.isDefault) ?? profiles[0];
         setDefaultContactNumber(defaultProfile?.companyContactNumber ?? "");
+        // P-4-H1-2-2 — 이 프로필은 플랫폼 공통 설정이라(N-3.69) coupang 탭이
+        // 아니어도 항상 읽는다. 이전에는 tab==="coupang"일 때만 조회했다.
+        setPriceRoundingUnit(defaultProfile?.priceRoundingUnit ?? null);
       })
       .catch(() => {
-        if (!cancelled) setDefaultContactNumber("");
+        if (!cancelled) {
+          setDefaultContactNumber("");
+          setPriceRoundingUnit(null);
+        }
       });
     return () => {
       cancelled = true;
     };
-  }, [tab]);
+  }, []);
 
   /** 쿠팡 탭에 들어올 때마다 저장된 판매자 설정이 등록에 필요한 항목을 모두
    * 채웠는지 확인한다 — 실제 쿠팡 API를 호출하지 않는 단순 DB/env 조회라 자동으로
@@ -619,6 +628,28 @@ export function CommerceWorkspace({
     setProduct((prev) => ({ ...prev, priceBreakdown: breakdown }));
   }
 
+  /** P-3-2(대표님 지시, 2026-08-28) — 관세/부가세는 카테고리마다 달라 상품별로
+   * 직접 입력한다(국내 배송원가와 반대로 SellerProfile이 아니라 상품에 저장 —
+   * P-3-1에서 확정한 설계). null을 넘기면(입력값 지움) 다시 unknown으로
+   * 돌아간다 — 0으로 저장하지 않는다. */
+  function updateCustomsCost(patch: Partial<{ customsDutyKrw: number | null; customsVatKrw: number | null }>) {
+    setProduct((prev) => ({
+      ...prev,
+      ...(patch.customsDutyKrw !== undefined && {
+        customsDutyKrw:
+          patch.customsDutyKrw == null
+            ? undefined
+            : { value: patch.customsDutyKrw, source: "USER_EDITED" as FieldSource, confidence: 1 },
+      }),
+      ...(patch.customsVatKrw !== undefined && {
+        customsVatKrw:
+          patch.customsVatKrw == null
+            ? undefined
+            : { value: patch.customsVatKrw, source: "USER_EDITED" as FieldSource, confidence: 1 },
+      }),
+    }));
+  }
+
   /** Sprint A #1 — CategoryRequirementsEditor에서 입력한 값을 저장한다. 빈
    * 문자열로 지우면 다시 자동 매칭/임시값 경로로 돌아간다(build-payload.ts가
    * falsy 값은 override로 취급하지 않는다). */
@@ -789,8 +820,15 @@ export function CommerceWorkspace({
 
   const listing = useMemo(() => {
     if (tab === "source" || tab === "content") return null;
-    return PLATFORM_ADAPTERS[tab].toListingModel(product, effectiveCategorySelection);
-  }, [tab, product, effectiveCategorySelection]);
+    // P-4-H1-2-2(대표님 지시) — PriceEditor가 쓰는 것과 동일한 liveRates/
+    // roundingUnit을 넘겨서 resolveListingPrice()가 화면에 보인 "권장
+    // 판매가격"과 정확히 같은 숫자를 내도록 한다(등록에 실제로 쓰이는
+    // listing이 이 useMemo 하나이므로, 여기서만 맞추면 전체가 맞는다).
+    return PLATFORM_ADAPTERS[tab].toListingModel(product, effectiveCategorySelection, {
+      liveRates: exchangeRates?.rates,
+      roundingUnit: priceRoundingUnit ?? undefined,
+    });
+  }, [tab, product, effectiveCategorySelection, exchangeRates, priceRoundingUnit]);
 
   // N-4.08 STEP6-3/6-4(CPO 지시: "상품정보 = 공통 정보 관리") — "상품정보" 탭
   // 배지용 가벼운 집계. 새 등록 게이트가 아니다 — 실제 등록 차단 여부는 여전히
@@ -1675,6 +1713,7 @@ export function CommerceWorkspace({
           onUpdateSalePriceKrw={updateSalePriceKrw}
           onUpdateOriginalPrice={updateOriginalPrice}
           onUpdatePriceBreakdown={updatePriceBreakdown}
+          onUpdateCustomsCost={updateCustomsCost}
           exchangeRates={exchangeRates}
           exchangeRatesLoading={exchangeRatesLoading}
           onRefreshExchangeRates={fetchExchangeRates}

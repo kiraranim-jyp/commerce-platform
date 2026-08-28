@@ -241,6 +241,7 @@ async function runOne(spec: ProductSpec) {
     // 자리수만 맞춰 사용한다(0 이하만 아니면 salePrice>0 체크에는 영향 없음).
     priceKrw: spec.price.currency === "KRW" ? spec.price.amount : Math.round(spec.price.amount * 1900),
     priceIsEstimate: spec.price.currency !== "KRW",
+    priceSource: "SELLER_OVERRIDE",
     options: [],
     shippingInfo: "",
     description: product.description.value,

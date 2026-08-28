@@ -3,6 +3,18 @@
 import { useState } from "react";
 import type { ExecutionMode, KcStatus } from "@commerce/listing";
 import type { ListingModel } from "@commerce/marketplace";
+import { formatKrw } from "@commerce/pricing";
+
+/** P-4-H1-2-2 STEP 6(대표님 지시: "판매자가 실제로 등록될 가격을 이 화면에서
+ * 볼 수 있어야 한다") — listing.priceSource를 그대로 문구로 옮긴다. 새 판정을
+ * 만들지 않는다(어댑터가 이미 정한 값을 표시만 한다). 경고 톤이 아니라
+ * 정보 전달 톤으로 — SYSTEM_SUGGESTED가 잘못된 게 아니라 정상적인 자동계산
+ * 결과라는 걸 분명히 한다. */
+const PRICE_SOURCE_LABEL: Record<ListingModel["priceSource"], string> = {
+  SELLER_OVERRIDE: "직접 설정한 최종 판매가격입니다.",
+  SYSTEM_SUGGESTED: "가격 계산에서 자동 산출된 권장 판매가격입니다(직접 확정한 값 아님).",
+  UNRESOLVED: "판매가격을 계산할 수 없습니다.",
+};
 
 /** N-3.52/N-3.53(CPO 지시) — "판매 전 최종 확인" 화면에서 KC 상태별로
  * 보여줄 문구/색상을 한 곳에서만 정의한다(RegistrationReadinessCard의
@@ -160,6 +172,15 @@ export function ListingConfirmationModal({
             )}
           </div>
         )}
+
+        {/* P-4-H1-2-2 STEP 6 — 이 값은 listing.priceKrw(어댑터가 resolveListingPrice()로
+            이미 계산한 값)를 그대로 표시만 한다 — 실제 payload의 salePrice와 동일한
+            값이다(둘 다 같은 listing에서 나온다). */}
+        <div className="mt-4 rounded-md border border-border bg-background p-3">
+          <p className="text-xs font-medium text-text-tertiary">💰 판매가격</p>
+          <p className="mt-1 text-base font-semibold text-text-primary">{formatKrw(listing.priceKrw)}</p>
+          <p className="mt-1 text-xs text-text-secondary">{PRICE_SOURCE_LABEL[listing.priceSource]}</p>
+        </div>
 
         <div className="mt-4 space-y-2">
           <label className="flex items-start gap-2 text-xs text-text-secondary">

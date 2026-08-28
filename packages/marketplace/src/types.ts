@@ -1,5 +1,6 @@
 import type { CanonicalProduct, PlatformId } from "@commerce/shared";
 import type { CategorySelection } from "@commerce/category";
+import type { ListingPriceSource } from "@commerce/pricing";
 
 export type { PlatformId } from "@commerce/shared";
 
@@ -25,6 +26,10 @@ export interface ListingModel {
   brand?: string;
   priceKrw: number;
   priceIsEstimate: boolean;
+  /** P-4-H1-2-2(대표님 지시) — resolveListingPrice()의 판정 결과를 그대로 옮긴다.
+   * UNRESOLVED면 priceKrw는 0이다(원본가로 지어낸 값이 아니라 "계산 자체를
+   * 못 했다"는 뜻) — "판매가격" 검증 규칙이 이 상태를 ERROR로 잡는다. */
+  priceSource: ListingPriceSource;
   options: string[];
   shippingInfo: string;
   description: string;
@@ -63,8 +68,22 @@ export interface ListingModel {
  * 파일 하나씩을 만들고 PLATFORM_ADAPTERS(여기)와 LISTING_EXECUTORS(executor.ts)
  * 레지스트리에 등록하는 것 — 지금 SmartStore/Coupang이 이미 그렇게 돼 있다.
  */
+/** P-4-H1-2-2 — PriceEditor가 실제로 쓰는 liveRates/roundingUnit을 그대로 넘기면
+ * (CommerceWorkspace.tsx가 실제 등록 화면에서 그렇게 한다) resolveListingPrice()가
+ * 화면에 보인 "권장 판매가격"과 정확히 같은 숫자를 낸다. 서버 전용 read-only
+ * 호출부(대시보드 등)는 생략해도 되고, 그러면 고정 환율표/기본 반올림 단위로
+ * 폴백한다(기존 convertToKrw의 isEstimate 관례와 동일). */
+export interface ListingPricingContext {
+  liveRates?: Record<string, number>;
+  roundingUnit?: number;
+}
+
 export interface PlatformAdapter {
   platform: PlatformId;
   label: string;
-  toListingModel(product: CanonicalProduct, categorySelection?: CategorySelection): ListingModel;
+  toListingModel(
+    product: CanonicalProduct,
+    categorySelection?: CategorySelection,
+    pricingContext?: ListingPricingContext,
+  ): ListingModel;
 }

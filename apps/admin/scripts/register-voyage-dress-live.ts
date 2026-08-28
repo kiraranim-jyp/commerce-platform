@@ -102,6 +102,7 @@ const listing: ListingModel = {
   // 고정환율(1740)로 맞춰 delta=0(전 사이즈 88 GBP 균일가)이 되도록 수정.
   priceKrw: 153120, // 88 GBP * 1740 (FIXED_RATES_TO_KRW와 동일 기준)
   priceIsEstimate: false,
+  priceSource: "SELLER_OVERRIDE",
   options: ["Size"],
   shippingInfo: "",
   description: product.description.value,
