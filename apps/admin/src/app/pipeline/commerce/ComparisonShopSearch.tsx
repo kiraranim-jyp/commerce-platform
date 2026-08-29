@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { countryToFlagEmoji } from "@commerce/shared";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
+import { deriveComparisonResultState, getComparisonResultHeadline } from "@/lib/comparison-result-status";
 import { computeFxLine, computeKrwAmount, isOnSale, isPriceDisplayable } from "@/lib/price-truth";
 
 type MatchLevel = "very_high" | "high" | "medium" | "low";
@@ -248,42 +249,30 @@ function SourceVerificationCard({
   );
 }
 
+const RESULT_TONE_CLASS: Record<"success" | "warning" | "neutral", string> = {
+  success: "border-success/30 bg-success-soft text-success",
+  warning: "border-warning/30 bg-warning-soft text-warning",
+  neutral: "border-border bg-background text-text-secondary",
+};
+
 /** Sprint P2(CPO 지시, 2026-08-19) — "몇 개 사이트를 뒤졌는지"가 아니라 "비교할
  * 만한 상품을 찾았는지"만 먼저 보여준다. N-4.21(대표님 지시) — matchLevel이
  * "low"가 아닌 것(70% 경계)만 기본 노출.
  *
- * P-4-DATA-4(CPO 지시) — "찾지 못함"과 "검색 서비스가 막혀서 확인 못함"을 절대
- * 같은 문구로 묶지 않는다. 전체 결과가 전부 RATE_LIMITED/TEMPORARY_ERROR면
- * "찾지 못했습니다"가 아니라 그 사실 그대로 알린다. */
+ * P-4-DATA-8(CPO 지시, 2026-08-29) — 상태 판단(deriveComparisonResultState)과
+ * 문구(getComparisonResultHeadline)를 이 컴포넌트 밖으로 뽑았다. F4(429가
+ * "찾지 못함"과 구분 없이 보였던 사고) 재발 방지가 목적 — RATE_LIMITED/ERROR/
+ * PARTIAL_FAILURE/NO_RESULTS를 코드 레벨에서 구분해서 강제한다(comparison-
+ * result-status.ts의 6개 불변조건 테스트 참고). 이 컴포넌트는 이제 상태를
+ * 판단하지 않고 렌더링만 한다. */
 function ResultHeadline({ results }: { results: SearchResult[] }) {
-  const acceptable = results.flatMap((r) =>
-    r.candidates
-      .filter((c) => c.matchLevel && c.matchLevel !== "low")
-      .map((c) => ({ ...c, shopName: r.shopName })),
+  const acceptableCount = results.reduce(
+    (sum, r) => sum + r.candidates.filter((c) => c.matchLevel && c.matchLevel !== "low").length,
+    0,
   );
-  if (acceptable.length > 0) {
-    return (
-      <p className="rounded-md border border-success/30 bg-success-soft px-3 py-2 text-xs text-success">
-        비교 가능한 동일/유사 상품이 {acceptable.length}건 발견되었습니다 (매칭 신뢰도 70% 이상).
-      </p>
-    );
-  }
-  const okResults = results.filter((r) => r.status !== "unsupported");
-  const rateLimited = okResults.filter((r) => r.status === "error" && r.errorKind === "RATE_LIMITED");
-  // 전체(지원되는 사이트 전부)가 429면 "찾지 못함"이 아니라 "지금은 확인 못함"이다.
-  if (okResults.length > 0 && rateLimited.length === okResults.length) {
-    return (
-      <p className="rounded-md border border-warning/30 bg-warning-soft px-3 py-2 text-xs text-warning">
-        현재 가격 비교 요청이 많아 검색하지 못했습니다 — 잠시 후 다시 시도해주세요.
-      </p>
-    );
-  }
-  return (
-    <p className="rounded-md border border-border bg-background px-3 py-2 text-xs text-text-secondary">
-      현재 비교 가능한 해외 판매처를 찾지 못했습니다.
-      <br />※ 해외에서 판매되지 않는다는 의미는 아닙니다.
-    </p>
-  );
+  const state = deriveComparisonResultState(results);
+  const { tone, message } = getComparisonResultHeadline(state, acceptableCount);
+  return <p className={`rounded-md border px-3 py-2 text-xs ${RESULT_TONE_CLASS[tone]}`}>{message}</p>;
 }
 
 /** N-3.13 P0(CPO 지시) — "판매처/국가/상품/원본가격/통화/KRW/매칭상태" 컬럼의
