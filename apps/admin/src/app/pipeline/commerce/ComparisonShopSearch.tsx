@@ -3,8 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { countryToFlagEmoji } from "@commerce/shared";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
-import { deriveComparisonResultState, getComparisonResultHeadline } from "@/lib/comparison-result-status";
+import { deriveComparisonResultState, getComparisonResultHeadline, type ComparisonResultState } from "@/lib/comparison-result-status";
 import { computeFxLine, computeKrwAmount, isOnSale, isPriceDisplayable } from "@/lib/price-truth";
+import {
+  computePriceDifference,
+  deriveSellerDecisionState,
+  pickBestAcceptableCandidate,
+  SELLER_DECISION_LABEL,
+} from "@/lib/seller-decision";
 
 type MatchLevel = "very_high" | "high" | "medium" | "low";
 
@@ -96,11 +102,17 @@ export function ComparisonShopSearch({
   brand,
   sourceUrl,
   sku,
+  onRequestPriceReview,
 }: {
   title: string;
   brand?: string;
   sourceUrl?: string;
   sku?: string;
+  /** P-5(CPO 지시, 2026-08-29) — 판단 카드의 "가격 재검토" 버튼이 누를 때 쓴다.
+   * CommerceWorkspace.tsx가 DomesticPriceIntelligencePanel에 이미 쓰고 있는
+   * handleRequestPriceReview를 그대로 전달받는다(탭 전환 + 스크롤만 하는 안전한
+   * 함수 — 여기서 새 네비게이션 로직을 만들지 않는다). */
+  onRequestPriceReview?: () => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchResult[] | null>(null);
@@ -189,6 +201,14 @@ export function ComparisonShopSearch({
       {sourceVerification && (
         <SourceVerificationCard verification={sourceVerification} krwRates={krwRates} fxSource={fxSource} />
       )}
+      {results && (
+        <SellerDecisionCard
+          sourceVerification={sourceVerification}
+          results={results}
+          krwRates={krwRates}
+          onRequestPriceReview={onRequestPriceReview}
+        />
+      )}
       {results && <ResultHeadline results={results} />}
       {results && <ResultTable results={results} krwRates={krwRates} fxSource={fxSource} />}
     </CollapsibleSection>
@@ -254,6 +274,93 @@ const RESULT_TONE_CLASS: Record<"success" | "warning" | "neutral", string> = {
   warning: "border-warning/30 bg-warning-soft text-warning",
   neutral: "border-border bg-background text-text-secondary",
 };
+
+const SELLER_DECISION_CARD_CLASS: Record<"READY_TO_LIST" | "REVIEW_PRICE" | "NEEDS_RECHECK" | "HOLD", string> = {
+  READY_TO_LIST: "border-success/30 bg-success-soft",
+  REVIEW_PRICE: "border-warning/30 bg-warning-soft",
+  NEEDS_RECHECK: "border-warning/30 bg-warning-soft",
+  HOLD: "border-error/30 bg-error/5",
+};
+
+/** P-5(CPO 지시, 2026-08-29 STEP6) — "카드 = 판단, 표 = 근거" 구조. 이 카드는
+ * 아래 ResultTable(표)이 이미 보여주는 원자료를 다시 나열하지 않는다 — 그 자료를
+ * 종합해서 "그래서 지금 무엇을 해야 하는가" 하나만 요약한다.
+ *
+ * STEP7 하드 경계(CPO 지시, 절대 금지) — 이 카드는 어떤 가격도, 등록 상태도
+ * 자동으로 바꾸지 않는다. "가격 재검토" 버튼은 CommerceWorkspace.tsx의 기존
+ * handleRequestPriceReview(탭 전환 + 스크롤만 함, 가격 미변경)를 그대로 호출할
+ * 뿐이다. "등록 진행" 액션 버튼은 의도적으로 넣지 않았다 — 이 화면에는 이미
+ * 등록을 트리거하는 별도 버튼(ListingConfirmationModal 경로)이 있고, 여기서
+ * 중복 등록 트리거를 새로 만들면 이중 클릭/이중 등록 위험만 늘어난다(P-5 완료
+ * 보고서에서 이 설계 판단을 명시적으로 알린다). */
+function SellerDecisionCard({
+  sourceVerification,
+  results,
+  krwRates,
+  onRequestPriceReview,
+}: {
+  sourceVerification: SourceVerification | null;
+  results: SearchResult[];
+  krwRates: Record<string, number> | null;
+  onRequestPriceReview?: () => void;
+}) {
+  const searchState: ComparisonResultState = deriveComparisonResultState(results);
+  const acceptableCandidates = results.flatMap((r) => r.candidates.filter((c) => c.matchLevel && c.matchLevel !== "low"));
+  const sameProductCount = acceptableCandidates.filter((c) => c.matchLevel === "very_high" || c.matchLevel === "high").length;
+  const sourceVerificationStatus = sourceVerification?.status ?? "NOT_APPLICABLE";
+
+  const decision = deriveSellerDecisionState({
+    sourceVerificationStatus,
+    searchState,
+    candidates: acceptableCandidates.map((c) => ({ matchLevel: c.matchLevel, priceStatus: c.priceStatus })),
+  });
+
+  const bestCandidate = pickBestAcceptableCandidate(acceptableCandidates);
+  const priceDiff = computePriceDifference(
+    sourceVerification
+      ? { status: sourceVerification.status === "VERIFIED_CURRENT" ? "VERIFIED_CURRENT" : "PRICE_UNAVAILABLE", price: sourceVerification.price }
+      : null,
+    bestCandidate ? { status: bestCandidate.priceStatus, price: bestCandidate.price } : null,
+    krwRates,
+  );
+
+  const { icon, title: stateTitle } = SELLER_DECISION_LABEL[decision.state];
+
+  return (
+    <div className={`space-y-1.5 rounded-md border px-3 py-2.5 text-xs ${SELLER_DECISION_CARD_CLASS[decision.state]}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 font-semibold text-text-primary">
+          <span>{icon}</span>
+          <span>{stateTitle}</span>
+        </div>
+        {onRequestPriceReview && decision.state !== "READY_TO_LIST" && (
+          <button
+            type="button"
+            onClick={onRequestPriceReview}
+            className="rounded-md border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-text-primary hover:bg-background"
+          >
+            가격 재검토
+          </button>
+        )}
+      </div>
+      <p className="text-text-secondary">{decision.reason}</p>
+      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-text-secondary">
+        <span>
+          원본 확인가:{" "}
+          {sourceVerification?.status === "VERIFIED_CURRENT" && sourceVerification.price
+            ? `${sourceVerification.price.amount.toFixed(2)} ${sourceVerification.price.currency}`
+            : "확인 안 됨"}
+        </span>
+        <span>비교 가능한 동일상품: {sameProductCount}건</span>
+      </div>
+      <p className="text-text-tertiary">
+        {priceDiff.status === "COMPUTED"
+          ? `가격 차이: 약 ₩${Math.abs(priceDiff.diffKrw!).toLocaleString("ko-KR")}(${priceDiff.diffPercent! >= 0 ? "+" : ""}${priceDiff.diffPercent!.toFixed(1)}%)`
+          : `가격 차이 계산 불가 — ${priceDiff.reason}`}
+      </p>
+    </div>
+  );
+}
 
 /** Sprint P2(CPO 지시, 2026-08-19) — "몇 개 사이트를 뒤졌는지"가 아니라 "비교할
  * 만한 상품을 찾았는지"만 먼저 보여준다. N-4.21(대표님 지시) — matchLevel이
@@ -358,8 +465,16 @@ function ResultTable({
           <tbody>
             {rows.map((row, i) => {
               const c = row.candidate;
+              // P-5(CPO 지시, 2026-08-29 STEP5) — 동일상품(very_high/high)과
+              // 유사상품(medium)을 표에서도 시각적으로 분리한다. 유사상품 행은
+              // 옅은 배경을 줘서 "참고용"임을 표에서도 한 번 더 드러낸다(배지
+              // 색상만으로는 스캔할 때 놓치기 쉽다는 게 STEP5의 근거).
+              const isSimilarOnly = c?.matchLevel === "medium";
               return (
-                <tr key={`${row.shopId}-${i}`} className="border-b border-border align-top last:border-b-0">
+                <tr
+                  key={`${row.shopId}-${i}`}
+                  className={`border-b border-border align-top last:border-b-0 ${isSimilarOnly ? "bg-warning-soft/30" : ""}`}
+                >
                   <td className="px-2 py-1.5 text-text-primary">
                     {countryToFlagEmoji(row.shopCountry) ?? "🌐"} {row.shopName}
                   </td>
@@ -374,7 +489,7 @@ function ResultTable({
                     )}
                   </td>
                   <td className="px-2 py-1.5">
-                    <PriceCell candidate={c} krwRates={krwRates} fxSource={fxSource} />
+                    <PriceCell candidate={c} krwRates={krwRates} fxSource={fxSource} isSimilarOnly={isSimilarOnly} />
                   </td>
                   <td className="px-2 py-1.5">
                     {c?.matchLevel ? (
@@ -413,10 +528,15 @@ function PriceCell({
   candidate,
   krwRates,
   fxSource,
+  isSimilarOnly,
 }: {
   candidate: Candidate | null;
   krwRates: Record<string, number> | null;
   fxSource: "frankfurter" | "fallback" | null;
+  /** P-5 STEP5 — medium(유사상품) 매칭일 때만 true. 가격이 검증되었어도 "동일
+   * 상품이 아닐 수 있다"는 걸 가격 숫자 바로 옆에서 한 번 더 알려준다 — 매칭상태
+   * 열의 배지만으로는 표를 훑어볼 때 놓치기 쉽다는 게 이 파라미터를 추가한 이유. */
+  isSimilarOnly?: boolean;
 }) {
   if (!candidate) return <span className="text-text-tertiary">—</span>;
   const status = candidate.priceStatus ?? "UNVERIFIED_SEARCH";
@@ -447,6 +567,9 @@ function PriceCell({
         </div>
       )}
       <div className="text-[10px] text-success">✓ 현재 가격 확인됨</div>
+      {isSimilarOnly && (
+        <div className="text-[10px] text-warning">※ 동일 상품이 아닐 수 있습니다(참고용)</div>
+      )}
     </div>
   );
 }

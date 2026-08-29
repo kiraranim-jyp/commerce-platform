@@ -1665,6 +1665,7 @@ export function CommerceWorkspace({
             brand={product.brand.value}
             sourceUrl={product.sourceUrl}
             sku={product.sku.value || undefined}
+            onRequestPriceReview={handleRequestPriceReview}
           />
           <DomesticShopSearch
             title={product.title.value}
