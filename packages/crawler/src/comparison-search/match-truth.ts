@@ -56,16 +56,20 @@ const HIGH_OR_ABOVE: ReadonlySet<MatchLevel> = new Set(["high", "very_high"]);
  * 되어야 한다는 잘못된 결합이 생긴다.
  */
 export function deriveMatchTruth(level: MatchLevel, modelCode: ModelEvidenceResult): MatchTruth {
-  if (level === "low") return "INSUFFICIENT_EVIDENCE";
-
   if (modelCode === "conflict") return "CONFLICT";
 
+  // exact/partial(=식별자 증거가 있음)은 텍스트 등급이 low여도 승격한다 — CPO 지시
+  // 원문 "텍스트 점수가 낮아도(medium 이하) 식별자가 없는 후보보다 항상 위에 온다"의
+  // "이하"에는 low도 포함된다. 실측으로 확인된 케이스: 포레포레 정답 후보가 이
+  // 라이브 검색 라우트에서는 confidence 42%(low)로 나오는데도 SKU가 partial
+  // 일치한다 — 이걸 INSUFFICIENT_EVIDENCE로 깔아뭉개면 실제로는 다른 상품인
+  // 듀베베(SIMILAR)한테 다시 역전당한다(회귀 재현, 2026-08-29 production 실측).
   if (modelCode === "exact") {
     return HIGH_OR_ABOVE.has(level) ? "EXACT_IDENTIFIER" : "STRONG_IDENTIFIER";
   }
-
   if (modelCode === "partial") return "STRONG_IDENTIFIER";
 
   // modelCode === "unavailable" — 식별자 증거가 아예 없다. 텍스트 점수만으로 판단한다.
+  if (level === "low") return "INSUFFICIENT_EVIDENCE";
   return HIGH_OR_ABOVE.has(level) ? "TEXT_CONFIRMED" : "SIMILAR";
 }

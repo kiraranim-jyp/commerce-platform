@@ -86,8 +86,22 @@ describe("deriveMatchTruth — 나머지 규칙 조합(대표님 지시 표 그�
     expect(deriveMatchTruth("high", "unavailable")).toBe("TEXT_CONFIRMED");
   });
 
-  it("level=low면 modelCode와 무관하게 항상 INSUFFICIENT_EVIDENCE", () => {
-    expect(deriveMatchTruth("low", "exact")).toBe("INSUFFICIENT_EVIDENCE");
+  it("level=low + unavailable(식별자 증거 없음)이면 INSUFFICIENT_EVIDENCE", () => {
     expect(deriveMatchTruth("low", "unavailable")).toBe("INSUFFICIENT_EVIDENCE");
+  });
+
+  it("level=low여도 exact/partial(식별자 증거 있음)이면 승격한다 — 대표님 지시 원문 \"텍스트 점수가 낮아도(medium 이하)\"의 '이하'에는 low도 포함된다", () => {
+    expect(deriveMatchTruth("low", "exact")).toBe("STRONG_IDENTIFIER");
+    expect(deriveMatchTruth("low", "partial")).toBe("STRONG_IDENTIFIER");
+  });
+});
+
+describe("MT-01 실측 재확인(2026-08-29 production) — 이 라이브 검색 라우트에서는 포레포레 정답 후보의 텍스트 confidence가 42%(low)로 나온다", () => {
+  it("포레포레 정답(low+partial, STRONG_IDENTIFIER)이 듀베베 오답(medium+unavailable, SIMILAR)보다 항상 위여야 한다 — level=low 무조건 최하위 처리였다면 여기서 다시 뒤집혔을 것", () => {
+    const foretforetTruth = deriveMatchTruth("low", "partial");
+    const deuxbebeTruth = deriveMatchTruth("medium", "unavailable");
+    expect(foretforetTruth).toBe("STRONG_IDENTIFIER");
+    expect(deuxbebeTruth).toBe("SIMILAR");
+    expect(MATCH_TRUTH_RANK[foretforetTruth]).toBeGreaterThan(MATCH_TRUTH_RANK[deuxbebeTruth]);
   });
 });
