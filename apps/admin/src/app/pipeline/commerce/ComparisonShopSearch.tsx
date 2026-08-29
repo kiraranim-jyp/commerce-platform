@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { countryToFlagEmoji } from "@commerce/shared";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
+import { computeFxLine, computeKrwAmount, isOnSale, isPriceDisplayable } from "@/lib/price-truth";
 
 type MatchLevel = "very_high" | "high" | "medium" | "low";
 
@@ -193,22 +194,6 @@ export function ComparisonShopSearch({
   );
 }
 
-/** P-4-DATA-6 P0-3(CPO 지시, 2026-08-29) — "약 ₩64,820"이라는 숫자만 보여주면
- * 셀러 입장에서 이게 우리 앱의 환율인지 Shopify 자체 환산인지 구분할 방법이
- * 없다(F5의 근본 원인이 바로 이 불투명함이었다). KRW 환산이 나올 때는 항상
- * "기준 환율 1 GBP = ₩1,852" 형태로 어떤 환율을 썼는지 같이 보여준다 — /api/
- * exchange-rates(Frankfurter/ECB, PriceEditor와 동일 소스) 하나만 쓴다는 것도
- * 이 문구로 보증한다(P0-2로 Shopify locale 가격 경로 자체를 제거했으므로, 이제
- * 후보 price 필드에는 항상 원본 매장 통화만 들어온다 — KRW 환산은 이 한 곳에서만
- * 계산한다). rate가 없으면(환율 조회 자체가 실패) 문구를 아예 안 보여준다 —
- * 추측 환율을 만들지 않는다. */
-function formatFxLine(currency: string, krwRates: Record<string, number> | null, fxSource: "frankfurter" | "fallback" | null): string | null {
-  const rate = krwRates?.[currency];
-  if (!rate) return null;
-  const fallbackNote = fxSource === "fallback" ? " (실시간 조회 실패 — 고정 참고환율)" : "";
-  return `기준 환율 1 ${currency} = ₩${Math.round(rate).toLocaleString("ko-KR")}${fallbackNote}`;
-}
-
 /** P-4-DATA-4 STEP 4(CPO 지시, 2026-08-29) — 원본 sourceUrl 자체를 직접 재조회한
  * 결과. 다른 판매처 검색보다 신뢰도가 높은 1차 경로(P-4-DATA-3 실측: 적용 가능한
  * 60%에서 100% 성공)라 화면 맨 위에 별도로 보여준다 — 비교 검색 결과 표와 섞지
@@ -231,10 +216,9 @@ function SourceVerificationCard({
     );
   }
   const { price, regularPrice } = verification;
-  const krwRate = price ? krwRates?.[price.currency] : undefined;
-  const krwAmount = price && krwRate ? Math.round(price.amount * krwRate) : null;
-  const fxLine = price ? formatFxLine(price.currency, krwRates, fxSource) : null;
-  const onSale = regularPrice && price && regularPrice.amount > price.amount;
+  const krwAmount = price ? computeKrwAmount(price.amount, price.currency, krwRates) : null;
+  const fxLine = price ? computeFxLine(price.currency, krwRates, fxSource) : null;
+  const onSale = isOnSale(price, regularPrice);
   return (
     <div className="space-y-1 rounded-md border border-success/30 bg-success-soft px-3 py-2 text-xs">
       <div className="font-medium text-success">✓ 원본 상품 현재 판매가 확인됨</div>
@@ -447,21 +431,20 @@ function PriceCell({
 }) {
   if (!candidate) return <span className="text-text-tertiary">—</span>;
   const status = candidate.priceStatus ?? "UNVERIFIED_SEARCH";
-  if (status !== "VERIFIED_CURRENT" || !candidate.price) {
+  if (!isPriceDisplayable(status, candidate.price)) {
     return (
       <span className="text-text-tertiary" title={PRICE_STATUS_LABEL[status]}>
         {status === "PRICE_UNAVAILABLE" ? "가격 확인 실패" : "가격 확인 필요"}
       </span>
     );
   }
-  const krwRate = krwRates?.[candidate.price.currency];
-  const krwAmount = krwRate ? Math.round(candidate.price.amount * krwRate) : null;
-  const fxLine = formatFxLine(candidate.price.currency, krwRates, fxSource);
-  const onSale = candidate.regularPrice && candidate.regularPrice.amount > candidate.price.amount;
+  const krwAmount = computeKrwAmount(candidate.price!.amount, candidate.price!.currency, krwRates);
+  const fxLine = computeFxLine(candidate.price!.currency, krwRates, fxSource);
+  const onSale = isOnSale(candidate.price, candidate.regularPrice);
   return (
     <div className="whitespace-nowrap">
       <span className="text-text-primary">
-        {candidate.price.amount.toFixed(2)} {candidate.price.currency}
+        {candidate.price!.amount.toFixed(2)} {candidate.price!.currency}
       </span>
       {onSale && (
         <span className="ml-1 text-text-tertiary line-through">
