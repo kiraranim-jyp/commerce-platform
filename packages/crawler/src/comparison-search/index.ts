@@ -19,7 +19,7 @@ import type {
 } from "./types";
 
 export * from "./types";
-export { scoreCandidate } from "./match";
+export { scoreCandidate, withConfidence } from "./match";
 export { MAX_DETAIL_CONFIRMATIONS_PER_SHOP, selectCandidatesForDetailConfirmation } from "./price-confirmation";
 /** N-4.18-Q3 PART H-3-1 — 동일상품 판별 증거 데이터 계약. */
 export * from "./evidence";
@@ -64,13 +64,25 @@ export async function enrichCandidatePrices(
   shopDomain: string,
   sourceUrl: string | undefined,
 ): Promise<ComparisonCandidate[]> {
-  const withDefaultSource: ComparisonCandidate[] = candidates.map((c) => ({ ...c, priceSource: "search" }));
+  const withDefaultSource: ComparisonCandidate[] = candidates.map((c) => ({
+    ...c,
+    priceSource: "search",
+    priceStatus: "UNVERIFIED_SEARCH",
+    verificationAttempted: false,
+  }));
   const eligibleIndexes = selectCandidatesForDetailConfirmation(withDefaultSource);
   if (eligibleIndexes.length === 0) return withDefaultSource;
 
   const origin = `https://www.${shopDomain.replace(/^www\./, "")}`;
   const localePrefix = sourceUrl ? extractShopifyLocalePrefix(sourceUrl) : "";
 
+  // P-4-DATA-4(CPO 지시, 2026-08-29: "조용한 실패(silent failure)를 금지한다") — 이전엔
+  // catch{}가 에러를 그냥 삼키고 검증 전 search 값을 그대로 뒀다. 실측 확인된 실제 사고
+  // (Hug Hairy Monster: matchLevel=very_high인데 fetch 실패로 £62가 화면에 뜰 뻔함)가
+  // 바로 이 경로였다 — "검증 시도했으나 실패"와 "애초에 대상 아님"을 구분해야 하므로,
+  // 검증을 시도한 후보는 성공/실패 여부와 무관하게 verificationAttempted=true를 남긴다.
+  // 실패 시에는 price 필드를 건드리지 않는다(원 검색값이 남아있어도 priceStatus가
+  // PRICE_UNAVAILABLE이면 UI가 숫자를 절대 보여주지 않으므로 안전 — 원칙 1).
   await Promise.all(
     eligibleIndexes.map(async (i) => {
       const candidate = withDefaultSource[i];
@@ -79,10 +91,19 @@ export async function enrichCandidatePrices(
       try {
         const detail = await fetchShopifyProductJson(`${origin}${localePrefix}/products/${handle}`);
         if (detail?.productData.price) {
-          withDefaultSource[i] = { ...candidate, price: detail.productData.price, priceSource: "detail" };
+          withDefaultSource[i] = {
+            ...candidate,
+            price: detail.productData.price,
+            regularPrice: detail.productData.regularPrice ?? null,
+            priceSource: "detail",
+            priceStatus: "VERIFIED_CURRENT",
+            verificationAttempted: true,
+          };
+        } else {
+          withDefaultSource[i] = { ...candidate, priceStatus: "PRICE_UNAVAILABLE", verificationAttempted: true };
         }
       } catch {
-        // 검색 결과 가격 + priceSource="search" 그대로 유지
+        withDefaultSource[i] = { ...candidate, priceStatus: "PRICE_UNAVAILABLE", verificationAttempted: true };
       }
     }),
   );
@@ -123,20 +144,27 @@ async function searchOneShop(shop: ComparisonShopRef, query: ComparisonQuery): P
       return { ...base, status: "ok", candidates: enriched };
     }
     if (shop.domain === "childrensalon.com") {
-      // Childrensalon은 검색 HTML 자체에서 실제 판매가를 직접 파싱하므로(상세 페이지를 따로
-      // 조회하지 않음) priceSource는 항상 "search"다 — 값 자체는 실제 표시가다.
+      // Childrensalon은 검색 HTML 자체에서 실제 판매가를 직접 파싱한다(상세 페이지를 따로
+      // 조회하지 않음). P-4-DATA-4(CPO 지시) 이전에는 이 값을 "신뢰 가능"으로 취급해
+      // priceSource="search"인데도 화면에 그대로 노출했다 — 그러나 다른 사이트의 검색
+      // 결과 오염 사례(Booty Ghosts £59, Misha & Puff Mink £270)와 근본적으로 같은
+      // 구조(검색 시점 값을 상세 재확인 없이 신뢰)라, "검증되지 않은 가격 숫자는 어떤
+      // 경우에도 노출하지 않는다"는 새 원칙을 예외 없이 적용한다 — 별도의 상세 조회
+      // 경로가 이 사이트에 아직 없으므로 UNVERIFIED_SEARCH로 남는다(withConfidence의
+      // derivePriceStatus가 priceSource!=="detail"이면 자동으로 이렇게 분류한다).
       const candidates = await searchChildrensalon(shop.currency, query.title);
-      const scored = withConfidence(query, candidates).map((c) => ({ ...c, priceSource: "search" as const }));
+      const scored = withConfidence(query, candidates);
       return { ...base, status: "ok", candidates: scored };
     }
     return { ...base, status: "unsupported", candidates: [] };
   } catch (error) {
-    return {
-      ...base,
-      status: "error",
-      candidates: [],
-      error: error instanceof Error ? error.message : "알 수 없는 오류",
-    };
+    const message = error instanceof Error ? error.message : "알 수 없는 오류";
+    // P-4-DATA-4(CPO 지시) — 429는 "찾지 못했습니다"와 전혀 다른 셀러 문구가 필요하다.
+    // searchShopifySuggest가 던지는 에러 메시지에 상태코드가 그대로 포함되어 있어
+    // (`Shopify suggest API ${status}`) 여기서 문자열로 판별한다 — 별도 커스텀 에러
+    // 클래스를 새로 만들지 않고 기존 에러 메시지 포맷을 그대로 재사용.
+    const errorKind: "RATE_LIMITED" | "TEMPORARY_ERROR" = /\b429\b/.test(message) ? "RATE_LIMITED" : "TEMPORARY_ERROR";
+    return { ...base, status: "error", candidates: [], error: message, errorKind };
   }
 }
 
@@ -305,6 +333,36 @@ export async function searchDomesticShops(
           error: "검색 실패",
         },
   );
+}
+
+export interface SourcePriceVerification {
+  status: "VERIFIED_CURRENT" | "PRICE_UNAVAILABLE" | "NOT_APPLICABLE";
+  price: { amount: number; currency: string } | null;
+  regularPrice: { amount: number; currency: string } | null;
+}
+
+/** P-4-DATA-4 STEP 4(CPO 지시, 2026-08-29) — "비교 사이트 검색"과는 완전히 다른
+ * 목적이다: 셀러가 이미 갖고 있는 원본 상품 sourceUrl 자체가 Shopify 상품 페이지면,
+ * 다른 사이트를 검색할 필요 없이 그 URL을 직접 다시 조회해서 "지금 이 순간의 원본
+ * 판매가"를 확정한다. P-4-DATA-3 실측 조사(실제 상품 30개)에서 이 경로가 적용 가능한
+ * 18개(60%) 전부 정확한 가격을 100% 성공률로 반환했다 — 검색(search/suggest.json)
+ * 보다 훨씬 신뢰도가 높다. Shopify가 아니거나 handle을 못 뽑으면(나머지 40%,
+ * 실측상 전부 smallable.com 계열) NOT_APPLICABLE — 이 결과가 없다고 원본 상품이
+ * 없다는 뜻은 아니다(추측 금지, 그냥 이 경로로는 확인 못 했다는 뜻). */
+export async function verifySourcePriceDirect(sourceUrl: string): Promise<SourcePriceVerification> {
+  const handle = extractShopifyHandle(sourceUrl);
+  if (!handle) return { status: "NOT_APPLICABLE", price: null, regularPrice: null };
+  try {
+    const detail = await fetchShopifyProductJson(sourceUrl);
+    if (!detail?.productData.price) return { status: "PRICE_UNAVAILABLE", price: null, regularPrice: null };
+    return {
+      status: "VERIFIED_CURRENT",
+      price: detail.productData.price,
+      regularPrice: detail.productData.regularPrice ?? null,
+    };
+  } catch {
+    return { status: "PRICE_UNAVAILABLE", price: null, regularPrice: null };
+  }
 }
 
 export interface DomesticPriceRefreshResult {

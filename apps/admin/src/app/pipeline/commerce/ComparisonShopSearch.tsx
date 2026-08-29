@@ -35,10 +35,24 @@ const MATCH_LEVEL_ICON: Record<MatchLevel, string> = {
   low: "⚪",
 };
 
+type PriceStatus = "VERIFIED_CURRENT" | "UNVERIFIED_SEARCH" | "PRICE_UNAVAILABLE";
+
+/** P-4-DATA-4(CPO 지시, 2026-08-29, 원칙 1/2) — 매칭 신뢰도(matchLevel)와 가격
+ * 신뢰도(priceStatus)는 완전히 분리된 축이다. "동일상품 100%"라도 가격이
+ * VERIFIED_CURRENT가 아니면 숫자를 절대 보여주지 않는다 — 실측 확인된 사고
+ * 3건(Booty Ghosts £59→£35, Misha & Puff Mink £270→£159, Hug Hairy Monster
+ * £62→£37, 셋 다 이 원칙이 없어서 생겼다)의 재발을 코드 레벨에서 막는다. */
+const PRICE_STATUS_LABEL: Record<PriceStatus, string> = {
+  VERIFIED_CURRENT: "현재 가격 확인됨",
+  UNVERIFIED_SEARCH: "가격 확인 필요 — 상품 페이지에서 직접 확인",
+  PRICE_UNAVAILABLE: "현재 가격을 확인하지 못했습니다",
+};
+
 interface Candidate {
   title: string;
   url: string;
   price: { amount: number; currency: string } | null;
+  regularPrice?: { amount: number; currency: string } | null;
   imageUrl: string | null;
   confidence: number;
   matchLevel?: MatchLevel;
@@ -46,6 +60,8 @@ interface Candidate {
    * match.ts가 이미 계산해서 내려준다 — 여기서는 title에만 노출한다(확정 표현 남발 방지). */
   matchReasons?: string[];
   priceSource?: "detail" | "search" | null;
+  priceStatus?: PriceStatus;
+  verificationAttempted?: boolean;
 }
 
 interface SearchResult {
@@ -57,6 +73,13 @@ interface SearchResult {
   status: "ok" | "unsupported" | "error";
   candidates: Candidate[];
   error?: string;
+  errorKind?: "RATE_LIMITED" | "TEMPORARY_ERROR";
+}
+
+interface SourceVerification {
+  status: "VERIFIED_CURRENT" | "PRICE_UNAVAILABLE" | "NOT_APPLICABLE";
+  price: { amount: number; currency: string } | null;
+  regularPrice: { amount: number; currency: string } | null;
 }
 
 /** Sprint B-1 Phase 1 — 해외 편집샵 가격비교. 기존 등록 흐름과 완전히 분리된 추가 조회 기능이라
@@ -79,6 +102,7 @@ export function ComparisonShopSearch({
 }) {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchResult[] | null>(null);
+  const [sourceVerification, setSourceVerification] = useState<SourceVerification | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [krwRates, setKrwRates] = useState<Record<string, number> | null>(null);
   const [queriedAt, setQueriedAt] = useState<string | null>(null);
@@ -104,12 +128,18 @@ export function ComparisonShopSearch({
         // 환율 로직을 새로 만들지 않는다).
         fetch("/api/exchange-rates").catch(() => null),
       ]);
-      const data = (await searchRes.json()) as { ok: boolean; results?: SearchResult[]; error?: string };
+      const data = (await searchRes.json()) as {
+        ok: boolean;
+        results?: SearchResult[];
+        sourceVerification?: SourceVerification;
+        error?: string;
+      };
       if (!data.ok) {
         setError(data.error ?? "검색에 실패했습니다.");
         return;
       }
       setResults(data.results ?? []);
+      setSourceVerification(data.sourceVerification ?? null);
       setQueriedAt(new Date().toLocaleString("ko-KR"));
       if (ratesRes?.ok) {
         const ratesData = (await ratesRes.json()) as { rates?: Record<string, number> };
@@ -145,112 +175,139 @@ export function ComparisonShopSearch({
       </button>
       {error && <p className="text-xs text-error">{error}</p>}
       {queriedAt && <p className="text-[10px] text-text-tertiary">조회 시점: {queriedAt}</p>}
+      {sourceVerification && <SourceVerificationCard verification={sourceVerification} krwRates={krwRates} />}
       {results && <ResultHeadline results={results} />}
       {results && <ResultTable results={results} krwRates={krwRates} />}
-      {results && <ResultBreakdown results={results} />}
     </CollapsibleSection>
   );
 }
 
-/** Sprint P2(CPO 지시, 2026-08-19: "검색 사이트 12 / 정상 12 / 후보 없음 7 /
- * 매칭 성공 0" 같은 raw count가 셀러에게 의미 없다 — 결과중심 메시지로") —
- * "몇 개 사이트를 뒤졌는지"가 아니라 "비교할 만한 상품을 찾았는지"만 먼저
- * 보여준다. 임계값은 CPO 지시(90% 이상만 노출) 그대로 confidence>=0.9를
- * 쓴다 — matchLevel 버킷(0.95/0.8/0.6)과는 다른 값이라 별도로 필터링한다.
- * confidence 자체(match.ts scoreCandidateMatch)는 이미 모델명/색상/SKU/
- * URL slug/브랜드 다중 신호를 결합한 composite score다 — 카테고리/이미지/
- * 옵션/가격 신호는 아직 candidate 데이터 자체에 없어(추출한 적 없음) 이번
- * UI 정리 범위에서는 추가하지 않는다(새 데이터 추출 파이프라인이 필요한
- * 별도 스코프 — CPO 확인 필요, 임의로 추측 신호를 넣지 않는다는 이 파일의
- * 기존 원칙과 같은 이유). */
-/** N-4.21(대표님 지시, 2026-08-26: "유사 상품까진 인정(긴팔과 반팔 차이였어)") —
- * 기존엔 confidence>=0.9만 "찾음"으로 쳤는데, match.ts의 classifyMatchLevel이
- * 이미 CPO 승인 기준(N-4.18-D)으로 70%(medium) 이상을 "참고 가능한 유사상품"
- * 으로 분류해두고 있었다. 이 화면의 노출 기준(0.9)이 그 기준보다 더 엄격해서,
- * 실제로는 진짜 유사상품(소매 길이만 다른 같은 라인 상품 등)까지 90% 미만이면
- * 숨겨버리는 불일치가 있었다 — 새 기준은 matchLevel이 "low"가 아닌 것(=이미
- * 확정된 70% 경계)만 기본 노출로 바꿔서 별도 새 임계값을 만들지 않는다. */
-function ResultHeadline({ results }: { results: SearchResult[] }) {
-  const acceptable = results.flatMap((r) =>
-    r.candidates.filter((c) => c.matchLevel && c.matchLevel !== "low").map((c) => ({ ...c, shopName: r.shopName })),
-  );
-  if (acceptable.length === 0) {
+/** P-4-DATA-4 STEP 4(CPO 지시, 2026-08-29) — 원본 sourceUrl 자체를 직접 재조회한
+ * 결과. 다른 판매처 검색보다 신뢰도가 높은 1차 경로(P-4-DATA-3 실측: 적용 가능한
+ * 60%에서 100% 성공)라 화면 맨 위에 별도로 보여준다 — 비교 검색 결과 표와 섞지
+ * 않는다(원본 재확인과 "타 판매처 발견"은 목적이 다르다). */
+function SourceVerificationCard({
+  verification,
+  krwRates,
+}: {
+  verification: SourceVerification;
+  krwRates: Record<string, number> | null;
+}) {
+  if (verification.status === "NOT_APPLICABLE") return null;
+  if (verification.status === "PRICE_UNAVAILABLE") {
     return (
       <p className="rounded-md border border-border bg-background px-3 py-2 text-xs text-text-secondary">
-        비교 가능한 동일/유사 상품을 찾지 못했습니다 — 아래 상세 통계에서 사이트별 상태를 확인할 수 있습니다.
+        원본 상품 페이지에서 현재 가격을 확인하지 못했습니다.
       </p>
     );
   }
+  const { price, regularPrice } = verification;
+  const krwRate = price ? krwRates?.[price.currency] : undefined;
+  const krwAmount = price && krwRate ? Math.round(price.amount * krwRate) : null;
+  const onSale = regularPrice && price && regularPrice.amount > price.amount;
   return (
-    <p className="rounded-md border border-success/30 bg-success-soft px-3 py-2 text-xs text-success">
-      비교 가능한 동일/유사 상품이 {acceptable.length}건 발견되었습니다 (매칭 신뢰도 70% 이상).
-    </p>
-  );
-}
-
-/** N-3.13 P0(CPO 지시) — "0건이면 결과 없음이라고만 하지 말고, 검색이 아예
- * 안 된 건지/사이트가 미지원인지/후보가 없는 건지/매칭에 실패한 건지 구분해서
- * 보여준다." curl로 백엔드가 동작하는 걸 이미 여러 번 확인한 것과 "CEO가 화면
- * 보고 뭐가 문제인지 알 수 있는 것"은 다른 문제라는 지적을 반영 — 신규 API 호출
- * 없이 기존 results 배열만으로 5개 지표를 계산한다.
- * Sprint P2(CPO 지시, 2026-08-19) — 이 raw count 자체가 "셀러에게 의미
- * 없다"는 지적을 받아 기본 화면에서는 숨기고, 접었다 펼 수 있는 "상세 통계"로
- * 내렸다(완전히 지우지는 않는다 — 검색이 왜 0건이었는지 진단할 때는 여전히
- * 필요한 정보라 N-3.13 P0의 원래 목적은 유지). */
-function ResultBreakdown({ results }: { results: SearchResult[] }) {
-  const total = results.length;
-  const ok = results.filter((r) => r.status === "ok").length;
-  const unsupported = results.filter((r) => r.status === "unsupported").length;
-  const errored = results.filter((r) => r.status === "error").length;
-  const noCandidates = results.filter((r) => r.status === "ok" && r.candidates.length === 0).length;
-  const matched = results.reduce(
-    (sum, r) => sum + r.candidates.filter((c) => c.matchLevel === "very_high" || c.matchLevel === "high").length,
-    0,
-  );
-  return (
-    <CollapsibleSection title="상세 통계" defaultOpen={false}>
-      <div className="grid grid-cols-2 gap-2 rounded-md border border-border bg-background p-2 text-[11px] sm:grid-cols-5">
-        <Stat label="검색한 사이트" value={total} />
-        <Stat label="정상 응답" value={ok} />
-        <Stat label="미지원/오류" value={unsupported + errored} />
-        <Stat label="후보 없음" value={noCandidates} />
-        <Stat label="매칭 성공(🟢)" value={matched} highlight={matched > 0} />
+    <div className="space-y-1 rounded-md border border-success/30 bg-success-soft px-3 py-2 text-xs">
+      <div className="font-medium text-success">✓ 원본 상품 현재 판매가 확인됨</div>
+      <div className="flex flex-wrap items-baseline gap-x-2 text-text-primary">
+        <span className="font-semibold">
+          {price?.amount.toFixed(2)} {price?.currency}
+        </span>
+        {krwAmount != null && <span className="text-text-secondary">약 ₩{krwAmount.toLocaleString("ko-KR")}</span>}
+        {onSale && (
+          <>
+            <span className="text-text-tertiary line-through">
+              {regularPrice!.amount.toFixed(2)} {regularPrice!.currency}
+            </span>
+            <span className="rounded bg-warning-soft px-1.5 py-0.5 text-[10px] font-medium text-warning">
+              현재 할인 판매 중
+            </span>
+          </>
+        )}
       </div>
-    </CollapsibleSection>
-  );
-}
-
-function Stat({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
-  return (
-    <div>
-      <div className={`text-sm font-semibold ${highlight ? "text-success" : "text-text-primary"}`}>{value}</div>
-      <div className="text-text-tertiary">{label}</div>
+      {onSale && (
+        <p className="text-[10px] text-text-tertiary">
+          ⚠ 세일 가격은 일시적일 수 있습니다 — 가격 책정 기준으로 사용할 경우 정가도 함께 확인하세요.
+        </p>
+      )}
     </div>
   );
 }
 
+/** Sprint P2(CPO 지시, 2026-08-19) — "몇 개 사이트를 뒤졌는지"가 아니라 "비교할
+ * 만한 상품을 찾았는지"만 먼저 보여준다. N-4.21(대표님 지시) — matchLevel이
+ * "low"가 아닌 것(70% 경계)만 기본 노출.
+ *
+ * P-4-DATA-4(CPO 지시) — "찾지 못함"과 "검색 서비스가 막혀서 확인 못함"을 절대
+ * 같은 문구로 묶지 않는다. 전체 결과가 전부 RATE_LIMITED/TEMPORARY_ERROR면
+ * "찾지 못했습니다"가 아니라 그 사실 그대로 알린다. */
+function ResultHeadline({ results }: { results: SearchResult[] }) {
+  const acceptable = results.flatMap((r) =>
+    r.candidates
+      .filter((c) => c.matchLevel && c.matchLevel !== "low")
+      .map((c) => ({ ...c, shopName: r.shopName })),
+  );
+  if (acceptable.length > 0) {
+    return (
+      <p className="rounded-md border border-success/30 bg-success-soft px-3 py-2 text-xs text-success">
+        비교 가능한 동일/유사 상품이 {acceptable.length}건 발견되었습니다 (매칭 신뢰도 70% 이상).
+      </p>
+    );
+  }
+  const okResults = results.filter((r) => r.status !== "unsupported");
+  const rateLimited = okResults.filter((r) => r.status === "error" && r.errorKind === "RATE_LIMITED");
+  // 전체(지원되는 사이트 전부)가 429면 "찾지 못함"이 아니라 "지금은 확인 못함"이다.
+  if (okResults.length > 0 && rateLimited.length === okResults.length) {
+    return (
+      <p className="rounded-md border border-warning/30 bg-warning-soft px-3 py-2 text-xs text-warning">
+        현재 가격 비교 요청이 많아 검색하지 못했습니다 — 잠시 후 다시 시도해주세요.
+      </p>
+    );
+  }
+  return (
+    <p className="rounded-md border border-border bg-background px-3 py-2 text-xs text-text-secondary">
+      현재 비교 가능한 해외 판매처를 찾지 못했습니다.
+      <br />※ 해외에서 판매되지 않는다는 의미는 아닙니다.
+    </p>
+  );
+}
+
 /** N-3.13 P0(CPO 지시) — "판매처/국가/상품/원본가격/통화/KRW/매칭상태" 컬럼의
- * 표로 재구성. 이전엔 사이트별 카드+리스트였는데, 여러 사이트 결과를 한눈에
- * 비교하기 어렵다는 지적을 반영해 후보 단위 한 행으로 펼친다(사이트에 후보가
- * 없거나 미지원/오류여도 그 사유가 보이는 한 행을 남긴다 — 조용히 사라지지 않게).
- * N-4.21(대표님 지시, 2026-08-26) — Sprint P2(2026-08-19)가 confidence>=0.9로
- * 정했던 기본 노출 기준을 matchLevel!=="low"(=70% 경계, match.ts의 이미 승인된
- * 4단계 기준과 동일)로 낮춘다. 소매 길이만 다른 같은 라인 상품처럼 실제로 참고
- * 가치가 있는 medium(70~84%) 등급이 90% 기준 때문에 전부 숨겨져 있었다 —
- * "동일상품 확정"만 90%로 좁게 잡고 "유사상품까지는 인정"이라는 대표님 지시를
- * 그대로 반영한 것. 완전히 무관한 후보(low, brand 불일치 등)는 여전히 기본
- * 숨김 유지. */
+ * 표로 재구성. P-4-DATA-4(CPO 지시, 2026-08-29 STEP 7) — "매칭 불확실/미지원/오류
+ * N건 더보기" 같은 개발자용 raw count 문구를 셀러 화면에서 제거한다. 데이터
+ * 자체는 지우지 않는다(진단 목적으로는 여전히 필요) — 문구만 셀러 언어로 바꾼다. */
 function ResultTable({ results, krwRates }: { results: SearchResult[]; krwRates: Record<string, number> | null }) {
   const [showAll, setShowAll] = useState(false);
-  type Row = { shopId: string; shopName: string; shopCountry?: string | null; candidate: Candidate | null; note?: string };
+  type Row = {
+    shopId: string;
+    shopName: string;
+    shopCountry?: string | null;
+    candidate: Candidate | null;
+    note?: string;
+  };
   const allRows: Row[] = [];
   for (const r of results) {
     if (r.status === "unsupported") {
-      allRows.push({ shopId: r.shopId, shopName: r.shopName, shopCountry: r.shopCountry, candidate: null, note: "지원되지 않는 사이트" });
+      allRows.push({
+        shopId: r.shopId,
+        shopName: r.shopName,
+        shopCountry: r.shopCountry,
+        candidate: null,
+        note: "지원되지 않는 사이트",
+      });
     } else if (r.status === "error") {
-      allRows.push({ shopId: r.shopId, shopName: r.shopName, shopCountry: r.shopCountry, candidate: null, note: `검색 실패: ${r.error ?? ""}` });
+      const note =
+        r.errorKind === "RATE_LIMITED"
+          ? "요청이 많아 확인하지 못함 — 잠시 후 다시 시도"
+          : "일시적인 오류로 확인하지 못함";
+      allRows.push({ shopId: r.shopId, shopName: r.shopName, shopCountry: r.shopCountry, candidate: null, note });
     } else if (r.candidates.length === 0) {
-      allRows.push({ shopId: r.shopId, shopName: r.shopName, shopCountry: r.shopCountry, candidate: null, note: "일치하는 후보 없음" });
+      allRows.push({
+        shopId: r.shopId,
+        shopName: r.shopName,
+        shopCountry: r.shopCountry,
+        candidate: null,
+        note: "일치하는 후보 없음",
+      });
     } else {
       for (const c of r.candidates) {
         allRows.push({ shopId: r.shopId, shopName: r.shopName, shopCountry: r.shopCountry, candidate: c });
@@ -260,8 +317,7 @@ function ResultTable({ results, krwRates }: { results: SearchResult[]; krwRates:
   const acceptableRows = allRows.filter((row) => row.candidate?.matchLevel && row.candidate.matchLevel !== "low");
   // CEO 지시(2026-08-19: "매칭성공 0이면 조회를 하지마") — 참고 가능한 매칭이
   // 하나도 없으면 "더 보기" 토글 자체를 그리지 않는다(위 ResultHeadline이 이미
-  // "찾지 못했습니다"로 안내 — 아래 토글이 "그래도 27건 보러가기"처럼 보이는
-  // 것을 막는다는 기존 원칙은 유지).
+  // 안내 — 아래 토글이 "그래도 27건 보러가기"처럼 보이는 것을 막는다는 기존 원칙 유지).
   if (acceptableRows.length === 0) return null;
   const rows = showAll ? allRows : acceptableRows;
   const hiddenCount = allRows.length - acceptableRows.length;
@@ -273,71 +329,99 @@ function ResultTable({ results, krwRates }: { results: SearchResult[]; krwRates:
           onClick={() => setShowAll((v) => !v)}
           className="text-xs text-primary underline hover:text-primary-hover"
         >
-          {showAll ? "매칭 불확실 항목 접기" : `매칭 불확실/미지원/오류 ${hiddenCount}건 더 보기`}
+          {showAll ? "참고용 항목 접기" : "참고용 검색 결과 더 보기"}
         </button>
       )}
-    <div className="overflow-x-auto rounded-md border border-border">
-      <table className="w-full min-w-[640px] border-collapse text-left text-[11px]">
-        <thead>
-          <tr className="border-b border-border bg-background text-text-secondary">
-            <th className="px-2 py-1.5 font-medium">판매처</th>
-            <th className="px-2 py-1.5 font-medium">국가</th>
-            <th className="px-2 py-1.5 font-medium">상품</th>
-            <th className="px-2 py-1.5 font-medium">원본가격</th>
-            <th className="px-2 py-1.5 font-medium">KRW 환산</th>
-            <th className="px-2 py-1.5 font-medium">매칭상태</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => {
-            const c = row.candidate;
-            const krwRate = c?.price ? krwRates?.[c.price.currency] : undefined;
-            const krwAmount = c?.price && krwRate ? Math.round(c.price.amount * krwRate) : null;
-            return (
-              <tr key={`${row.shopId}-${i}`} className="border-b border-border align-top last:border-b-0">
-                <td className="px-2 py-1.5 text-text-primary">
-                  {countryToFlagEmoji(row.shopCountry) ?? "🌐"} {row.shopName}
-                </td>
-                <td className="px-2 py-1.5 text-text-secondary">{row.shopCountry ?? "확인 불가"}</td>
-                <td className="px-2 py-1.5">
-                  {c ? (
-                    <a href={c.url} target="_blank" rel="noreferrer" className="text-text-primary underline">
-                      {c.title}
-                    </a>
-                  ) : (
-                    <span className="text-text-tertiary">{row.note}</span>
-                  )}
-                </td>
-                <td className="px-2 py-1.5 whitespace-nowrap text-text-secondary">
-                  {c?.price ? `${c.price.amount.toFixed(2)} ${c.price.currency}` : "—"}
-                </td>
-                <td className="px-2 py-1.5 whitespace-nowrap text-text-secondary">
-                  {krwAmount != null ? `약 ₩${krwAmount.toLocaleString("ko-KR")}` : "—"}
-                </td>
-                <td className="px-2 py-1.5">
-                  {c?.matchLevel ? (
-                    <span
-                      className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_LEVEL_BADGE_CLASS[c.matchLevel]}`}
-                      title={c.matchReasons?.length ? c.matchReasons.join(", ") : undefined}
-                    >
-                      {MATCH_LEVEL_ICON[c.matchLevel]}{" "}
-                      {c.matchLevel === "very_high" || c.matchLevel === "high"
-                        ? "동일상품"
-                        : c.matchLevel === "medium"
-                          ? "유사상품"
-                          : "매칭 불확실"}{" "}
-                      {Math.round(c.confidence * 100)}%
-                    </span>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <div className="overflow-x-auto rounded-md border border-border">
+        <table className="w-full min-w-[640px] border-collapse text-left text-[11px]">
+          <thead>
+            <tr className="border-b border-border bg-background text-text-secondary">
+              <th className="px-2 py-1.5 font-medium">판매처</th>
+              <th className="px-2 py-1.5 font-medium">국가</th>
+              <th className="px-2 py-1.5 font-medium">상품</th>
+              <th className="px-2 py-1.5 font-medium">가격</th>
+              <th className="px-2 py-1.5 font-medium">매칭상태</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => {
+              const c = row.candidate;
+              return (
+                <tr key={`${row.shopId}-${i}`} className="border-b border-border align-top last:border-b-0">
+                  <td className="px-2 py-1.5 text-text-primary">
+                    {countryToFlagEmoji(row.shopCountry) ?? "🌐"} {row.shopName}
+                  </td>
+                  <td className="px-2 py-1.5 text-text-secondary">{row.shopCountry ?? "확인 불가"}</td>
+                  <td className="px-2 py-1.5">
+                    {c ? (
+                      <a href={c.url} target="_blank" rel="noreferrer" className="text-text-primary underline">
+                        {c.title}
+                      </a>
+                    ) : (
+                      <span className="text-text-tertiary">{row.note}</span>
+                    )}
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <PriceCell candidate={c} krwRates={krwRates} />
+                  </td>
+                  <td className="px-2 py-1.5">
+                    {c?.matchLevel ? (
+                      <span
+                        className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_LEVEL_BADGE_CLASS[c.matchLevel]}`}
+                        title={c.matchReasons?.length ? c.matchReasons.join(", ") : undefined}
+                      >
+                        {MATCH_LEVEL_ICON[c.matchLevel]}{" "}
+                        {c.matchLevel === "very_high" || c.matchLevel === "high"
+                          ? "동일상품"
+                          : c.matchLevel === "medium"
+                            ? "유사상품"
+                            : "매칭 불확실"}{" "}
+                        {Math.round(c.confidence * 100)}%
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
+  );
+}
+
+/** P-4-DATA-4(CPO 지시, 원칙 1) — priceStatus가 VERIFIED_CURRENT일 때만 숫자를
+ * 보여준다. UNVERIFIED_SEARCH/PRICE_UNAVAILABLE은 candidate.price 필드에 값이
+ * 있어도(검색 인덱스가 뭔가 반환했어도) 절대 숫자를 노출하지 않는다 — 매칭
+ * 신뢰도(matchLevel)와 무관하게 이 규칙은 예외 없이 적용된다("동일상품 100%"인
+ * Hug Hairy Monster도 검증 실패 시 이 셀에서 숫자가 빠진다). */
+function PriceCell({ candidate, krwRates }: { candidate: Candidate | null; krwRates: Record<string, number> | null }) {
+  if (!candidate) return <span className="text-text-tertiary">—</span>;
+  const status = candidate.priceStatus ?? "UNVERIFIED_SEARCH";
+  if (status !== "VERIFIED_CURRENT" || !candidate.price) {
+    return (
+      <span className="text-text-tertiary" title={PRICE_STATUS_LABEL[status]}>
+        {status === "PRICE_UNAVAILABLE" ? "가격 확인 실패" : "가격 확인 필요"}
+      </span>
+    );
+  }
+  const krwRate = krwRates?.[candidate.price.currency];
+  const krwAmount = krwRate ? Math.round(candidate.price.amount * krwRate) : null;
+  const onSale = candidate.regularPrice && candidate.regularPrice.amount > candidate.price.amount;
+  return (
+    <div className="whitespace-nowrap">
+      <span className="text-text-primary">
+        {candidate.price.amount.toFixed(2)} {candidate.price.currency}
+      </span>
+      {onSale && (
+        <span className="ml-1 text-text-tertiary line-through">
+          {candidate.regularPrice!.amount.toFixed(2)}
+        </span>
+      )}
+      {krwAmount != null && <div className="text-text-secondary">약 ₩{krwAmount.toLocaleString("ko-KR")}</div>}
+      <div className="text-[10px] text-success">✓ 현재 가격 확인됨</div>
     </div>
   );
 }

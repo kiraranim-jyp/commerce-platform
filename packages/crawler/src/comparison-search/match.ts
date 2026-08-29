@@ -315,6 +315,22 @@ export function scoreCandidate(query: ComparisonQuery, candidate: ComparisonCand
   return scoreCandidateMatch(query, candidate).confidence;
 }
 
+/** P-4-DATA-4(CPO 지시, 2026-08-29) — 이 시점(withConfidence)까지 priceSource가
+ * "detail"로 명시적으로 설정된 후보(bobochoses.com 국내 검색처럼 검색 자체가 상세
+ * 페이지를 조회하는 경우)만 VERIFIED_CURRENT다. 그 외 전부(shopify-suggest처럼 아직
+ * priceSource가 없는 경우, childrensalon/국내 스크래핑 파서처럼 검색 결과 HTML에서
+ * 바로 뽑은 값)는 일단 UNVERIFIED_SEARCH로 시작한다 — 이후 enrichCandidatePrices가
+ * 실제 상세 검증에 성공한 후보만 VERIFIED_CURRENT로 승격한다. 이 함수는 모든
+ * ComparisonCandidate 생성 경로(shopify-suggest.ts/childrensalon.ts/bobochoses-kr.ts/
+ * looxloo.ts/rulii.ts/deuxbebe.ts/chocoel.ts/foretforet.ts)가 공통으로 거치는 단일
+ * 지점이라, 개별 파서 8개를 각각 수정하지 않고 여기 한 곳에서 기본값을 강제한다. */
+function derivePriceStatus(candidate: ComparisonCandidate): Pick<ComparisonCandidate, "priceStatus" | "verificationAttempted"> {
+  if (candidate.priceSource === "detail") {
+    return { priceStatus: "VERIFIED_CURRENT", verificationAttempted: true };
+  }
+  return { priceStatus: "UNVERIFIED_SEARCH", verificationAttempted: false };
+}
+
 /** N-4.18-Q3 PART H-3-8(대표님 지시, 2026-08-27) — scoreCandidateMatch() 계산식/
  * threshold는 그대로 두고, 그 직전 입력 title만 title-normalize.ts로 정제한다.
  * candidate.title도 같은 함수로 정제한다(대칭 처리 — 지금은 실측된 노이즈 패턴이
@@ -327,7 +343,8 @@ export function withConfidence(query: ComparisonQuery, candidates: ComparisonCan
     .map((c) => {
       const normalizedCandidate: ComparisonCandidate = { ...c, title: normalizeMatchingTitle(c.title) };
       const { confidence, level, reasons } = scoreCandidateMatch(normalizedQuery, normalizedCandidate);
-      return { ...c, confidence, matchLevel: level, matchReasons: reasons };
+      const withMatch: ComparisonCandidate = { ...c, confidence, matchLevel: level, matchReasons: reasons };
+      return { ...withMatch, ...derivePriceStatus(withMatch) };
     })
     .sort((a, b) => b.confidence - a.confidence);
 }
