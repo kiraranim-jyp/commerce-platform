@@ -216,6 +216,23 @@ export function extractShopifyLocalePrefix(url: string): string {
   return match ? `/${match[1]}` : "";
 }
 
+/** P-4-DATA-6 P0-2(CPO 지시, 2026-08-29: "Shopify locale 가격을 일반 환산가로
+ * 혼용하지 않는다") — extractShopifyLocalePrefix()와 짝을 이루는 유일한 "벗기기"
+ * 구현. 원래 site-strategies/shopify.site-strategy.ts에만 있었지만(원본 가격
+ * 추출용), comparison-search도 실측으로 같은 문제를 겪었다(F5: 실제 저장된
+ * sourceUrl은 전부 /en-kr/ 프리픽스가 붙어 있고, 그 로케일로 후보 상세가를
+ * 재조회하면 Shopify Markets 자체 환산 KRW가 나와 우리 앱의 Frankfurter 환율과
+ * 최대 6% 어긋났다) — 중복 구현 대신 여기로 옮겨 두 호출부가 공유한다. */
+export function stripShopifyLocalePrefix(url: string): string {
+  const localePrefix = extractShopifyLocalePrefix(url);
+  if (!localePrefix) return url;
+  const parsed = new URL(url);
+  if (parsed.pathname.startsWith(localePrefix)) {
+    parsed.pathname = parsed.pathname.slice(localePrefix.length) || "/";
+  }
+  return parsed.toString();
+}
+
 /** Shopify 공개 REST 엔드포인트 — 인증 불필요, 모든 스토어에서 동작한다.
  * .json은 variants[].price_currency까지 포함해서 통화까지 한 번에 확정할 수 있어
  * 1순위로 쓴다(.js는 가격이 센트 단위 정수로만 있고 통화 코드가 없다).

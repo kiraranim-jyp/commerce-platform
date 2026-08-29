@@ -1,4 +1,4 @@
-import { extractShopifyHandle, extractShopifyLocalePrefix, fetchShopifyProductJson } from "../shopify-product-json";
+import { extractShopifyHandle, fetchShopifyProductJson, stripShopifyLocalePrefix } from "../shopify-product-json";
 import { searchBoboChosesKorea } from "./bobochoses-kr";
 import { lookupBrandAlias } from "./brand-alias";
 import { searchChildrensalon } from "./childrensalon";
@@ -57,12 +57,21 @@ export { normalizeMatchingTitle } from "./title-normalize";
  * 요청한다 — 검색 결과가 많다고 전부 호출하지 않는다. medium/low는 애초에 대상에서 제외한다
  * (동일상품인지도 불확실한데 가격까지 확인할 이유가 없다). 상세 확인이 실패하면(네트워크
  * 오류 등) 검색 결과 가격을 그대로 두고 priceSource="search"로 남긴다 — 매칭 결과 자체를
- * 지우지 않는다. 원본 상품의 sourceUrl에 로케일 프리픽스(/en-kr/ 등)가 있으면 그 로케일로
- * 상세를 조회해서 원본과 같은 로케일의 표시가를 맞춘다. */
+ * 지우지 않는다.
+ *
+ * P-4-DATA-6 P0-2(CPO 지시, 2026-08-29: "Shopify Markets 가격을 환율로 취급하면 안
+ * 된다") — 이전엔 원본 상품의 sourceUrl에 로케일 프리픽스(/en-kr/ 등)가 있으면 그
+ * 로케일로 후보 상세를 조회했다. 실측 확인(P-4-DATA-5): 이 경로는 Shopify Markets가
+ * 자체 판단한 KRW "지역 표시가"를 그대로 돌려주며, 우리 앱의 Frankfurter/ECB 환율과
+ * 최대 6% 차이가 났다(같은 상품, 같은 순간인데 £35 → ₩68,200 vs ₩64,820) — 셀러가
+ * 화면에서 구분할 방법이 없는 채로 두 값이 섞여 나왔다. 이제 candidate 상세조회는
+ * 항상 로케일 없는 기본 URL(=매장 기준통화, fetchShopifyProductJson이 /meta.json으로
+ * 강제하는 shopCurrency)만 쓴다 — KRW 참고환산은 언제나 UI가 /api/exchange-rates
+ * 하나로만 계산하도록(단일 FX 엔진), price 필드에는 절대 Shopify 자체 환산 통화가
+ * 섞이지 않는다. */
 export async function enrichCandidatePrices(
   candidates: ComparisonCandidate[],
   shopDomain: string,
-  sourceUrl: string | undefined,
 ): Promise<ComparisonCandidate[]> {
   const withDefaultSource: ComparisonCandidate[] = candidates.map((c) => ({
     ...c,
@@ -74,7 +83,6 @@ export async function enrichCandidatePrices(
   if (eligibleIndexes.length === 0) return withDefaultSource;
 
   const origin = `https://www.${shopDomain.replace(/^www\./, "")}`;
-  const localePrefix = sourceUrl ? extractShopifyLocalePrefix(sourceUrl) : "";
 
   // P-4-DATA-4(CPO 지시, 2026-08-29: "조용한 실패(silent failure)를 금지한다") — 이전엔
   // catch{}가 에러를 그냥 삼키고 검증 전 search 값을 그대로 뒀다. 실측 확인된 실제 사고
@@ -89,7 +97,7 @@ export async function enrichCandidatePrices(
       const handle = extractShopifyHandle(candidate.url);
       if (!handle) return;
       try {
-        const detail = await fetchShopifyProductJson(`${origin}${localePrefix}/products/${handle}`);
+        const detail = await fetchShopifyProductJson(`${origin}/products/${handle}`);
         if (detail?.productData.price) {
           withDefaultSource[i] = {
             ...candidate,
@@ -140,7 +148,7 @@ async function searchOneShop(shop: ComparisonShopRef, query: ComparisonQuery): P
     if (SHOPIFY_SUGGEST_DOMAINS.has(shop.domain)) {
       const candidates = await searchShopifySuggest(shop.domain, shop.currency, query.title);
       const scored = withConfidence(query, candidates);
-      const enriched = await enrichCandidatePrices(scored, shop.domain, query.sourceUrl);
+      const enriched = await enrichCandidatePrices(scored, shop.domain);
       return { ...base, status: "ok", candidates: enriched };
     }
     if (shop.domain === "childrensalon.com") {
@@ -348,12 +356,19 @@ export interface SourcePriceVerification {
  * 18개(60%) 전부 정확한 가격을 100% 성공률로 반환했다 — 검색(search/suggest.json)
  * 보다 훨씬 신뢰도가 높다. Shopify가 아니거나 handle을 못 뽑으면(나머지 40%,
  * 실측상 전부 smallable.com 계열) NOT_APPLICABLE — 이 결과가 없다고 원본 상품이
- * 없다는 뜻은 아니다(추측 금지, 그냥 이 경로로는 확인 못 했다는 뜻). */
+ * 없다는 뜻은 아니다(추측 금지, 그냥 이 경로로는 확인 못 했다는 뜻).
+ *
+ * P-4-DATA-6 P0-2(CPO 지시, 2026-08-29) — 실제 저장된 sourceUrl은 전부 /en-kr/
+ * 로케일 프리픽스가 붙어 있다(실측 확인, F5). 프리픽스를 그대로 두고 조회하면
+ * enrichCandidatePrices와 같은 문제(Shopify Markets 자체 환산 KRW가 "원본가격"
+ * 자리에 들어옴)가 여기서도 재현된다 — "원본 판매가 확정"이 이 함수의 목적이므로
+ * 항상 로케일을 벗긴 URL로만 조회한다(shopify.site-strategy.ts의 extract()와
+ * 동일한 방식, stripShopifyLocalePrefix 공유). */
 export async function verifySourcePriceDirect(sourceUrl: string): Promise<SourcePriceVerification> {
   const handle = extractShopifyHandle(sourceUrl);
   if (!handle) return { status: "NOT_APPLICABLE", price: null, regularPrice: null };
   try {
-    const detail = await fetchShopifyProductJson(sourceUrl);
+    const detail = await fetchShopifyProductJson(stripShopifyLocalePrefix(sourceUrl));
     if (!detail?.productData.price) return { status: "PRICE_UNAVAILABLE", price: null, regularPrice: null };
     return {
       status: "VERIFIED_CURRENT",

@@ -105,6 +105,11 @@ export function ComparisonShopSearch({
   const [sourceVerification, setSourceVerification] = useState<SourceVerification | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [krwRates, setKrwRates] = useState<Record<string, number> | null>(null);
+  // P-4-DATA-6 P0-3(CPO 지시, 2026-08-29) — "환율로 계산했다"고만 말하지 않고 어떤
+  // 환율을 썼는지 그대로 보여준다("기준 환율 1 GBP = ₩1,852 · frankfurter"). rate는
+  // 이 페이지가 표시할 후보들과 같은 순간에 딱 한 번 조회한 krwRates에서 그대로
+  // 가져온다 — 후보마다 다른 환율을 쓰지 않는다(P0-3: 단일 FX 엔진 원칙).
+  const [fxSource, setFxSource] = useState<"frankfurter" | "fallback" | null>(null);
   const [queriedAt, setQueriedAt] = useState<string | null>(null);
   // N-3.13 P0 — CPO 지시: "해외가격비교가 하나도 없음이면 기능 구현 완료로 인정하지
   // 않는다." 원인은 버그가 아니라 UX였다 — 이 섹션은 기본 접힘(defaultOpen=false)이고
@@ -142,8 +147,12 @@ export function ComparisonShopSearch({
       setSourceVerification(data.sourceVerification ?? null);
       setQueriedAt(new Date().toLocaleString("ko-KR"));
       if (ratesRes?.ok) {
-        const ratesData = (await ratesRes.json()) as { rates?: Record<string, number> };
+        const ratesData = (await ratesRes.json()) as {
+          rates?: Record<string, number>;
+          source?: "frankfurter" | "fallback";
+        };
         if (ratesData.rates) setKrwRates(ratesData.rates);
+        setFxSource(ratesData.source ?? null);
       }
     } catch {
       setError("검색 요청에 실패했습니다.");
@@ -175,11 +184,29 @@ export function ComparisonShopSearch({
       </button>
       {error && <p className="text-xs text-error">{error}</p>}
       {queriedAt && <p className="text-[10px] text-text-tertiary">조회 시점: {queriedAt}</p>}
-      {sourceVerification && <SourceVerificationCard verification={sourceVerification} krwRates={krwRates} />}
+      {sourceVerification && (
+        <SourceVerificationCard verification={sourceVerification} krwRates={krwRates} fxSource={fxSource} />
+      )}
       {results && <ResultHeadline results={results} />}
-      {results && <ResultTable results={results} krwRates={krwRates} />}
+      {results && <ResultTable results={results} krwRates={krwRates} fxSource={fxSource} />}
     </CollapsibleSection>
   );
+}
+
+/** P-4-DATA-6 P0-3(CPO 지시, 2026-08-29) — "약 ₩64,820"이라는 숫자만 보여주면
+ * 셀러 입장에서 이게 우리 앱의 환율인지 Shopify 자체 환산인지 구분할 방법이
+ * 없다(F5의 근본 원인이 바로 이 불투명함이었다). KRW 환산이 나올 때는 항상
+ * "기준 환율 1 GBP = ₩1,852" 형태로 어떤 환율을 썼는지 같이 보여준다 — /api/
+ * exchange-rates(Frankfurter/ECB, PriceEditor와 동일 소스) 하나만 쓴다는 것도
+ * 이 문구로 보증한다(P0-2로 Shopify locale 가격 경로 자체를 제거했으므로, 이제
+ * 후보 price 필드에는 항상 원본 매장 통화만 들어온다 — KRW 환산은 이 한 곳에서만
+ * 계산한다). rate가 없으면(환율 조회 자체가 실패) 문구를 아예 안 보여준다 —
+ * 추측 환율을 만들지 않는다. */
+function formatFxLine(currency: string, krwRates: Record<string, number> | null, fxSource: "frankfurter" | "fallback" | null): string | null {
+  const rate = krwRates?.[currency];
+  if (!rate) return null;
+  const fallbackNote = fxSource === "fallback" ? " (실시간 조회 실패 — 고정 참고환율)" : "";
+  return `기준 환율 1 ${currency} = ₩${Math.round(rate).toLocaleString("ko-KR")}${fallbackNote}`;
 }
 
 /** P-4-DATA-4 STEP 4(CPO 지시, 2026-08-29) — 원본 sourceUrl 자체를 직접 재조회한
@@ -189,9 +216,11 @@ export function ComparisonShopSearch({
 function SourceVerificationCard({
   verification,
   krwRates,
+  fxSource,
 }: {
   verification: SourceVerification;
   krwRates: Record<string, number> | null;
+  fxSource: "frankfurter" | "fallback" | null;
 }) {
   if (verification.status === "NOT_APPLICABLE") return null;
   if (verification.status === "PRICE_UNAVAILABLE") {
@@ -204,6 +233,7 @@ function SourceVerificationCard({
   const { price, regularPrice } = verification;
   const krwRate = price ? krwRates?.[price.currency] : undefined;
   const krwAmount = price && krwRate ? Math.round(price.amount * krwRate) : null;
+  const fxLine = price ? formatFxLine(price.currency, krwRates, fxSource) : null;
   const onSale = regularPrice && price && regularPrice.amount > price.amount;
   return (
     <div className="space-y-1 rounded-md border border-success/30 bg-success-soft px-3 py-2 text-xs">
@@ -224,6 +254,7 @@ function SourceVerificationCard({
           </>
         )}
       </div>
+      {fxLine && <p className="text-[10px] text-text-tertiary">{fxLine}</p>}
       {onSale && (
         <p className="text-[10px] text-text-tertiary">
           ⚠ 세일 가격은 일시적일 수 있습니다 — 가격 책정 기준으로 사용할 경우 정가도 함께 확인하세요.
@@ -275,7 +306,15 @@ function ResultHeadline({ results }: { results: SearchResult[] }) {
  * 표로 재구성. P-4-DATA-4(CPO 지시, 2026-08-29 STEP 7) — "매칭 불확실/미지원/오류
  * N건 더보기" 같은 개발자용 raw count 문구를 셀러 화면에서 제거한다. 데이터
  * 자체는 지우지 않는다(진단 목적으로는 여전히 필요) — 문구만 셀러 언어로 바꾼다. */
-function ResultTable({ results, krwRates }: { results: SearchResult[]; krwRates: Record<string, number> | null }) {
+function ResultTable({
+  results,
+  krwRates,
+  fxSource,
+}: {
+  results: SearchResult[];
+  krwRates: Record<string, number> | null;
+  fxSource: "frankfurter" | "fallback" | null;
+}) {
   const [showAll, setShowAll] = useState(false);
   type Row = {
     shopId: string;
@@ -362,7 +401,7 @@ function ResultTable({ results, krwRates }: { results: SearchResult[]; krwRates:
                     )}
                   </td>
                   <td className="px-2 py-1.5">
-                    <PriceCell candidate={c} krwRates={krwRates} />
+                    <PriceCell candidate={c} krwRates={krwRates} fxSource={fxSource} />
                   </td>
                   <td className="px-2 py-1.5">
                     {c?.matchLevel ? (
@@ -397,7 +436,15 @@ function ResultTable({ results, krwRates }: { results: SearchResult[]; krwRates:
  * 있어도(검색 인덱스가 뭔가 반환했어도) 절대 숫자를 노출하지 않는다 — 매칭
  * 신뢰도(matchLevel)와 무관하게 이 규칙은 예외 없이 적용된다("동일상품 100%"인
  * Hug Hairy Monster도 검증 실패 시 이 셀에서 숫자가 빠진다). */
-function PriceCell({ candidate, krwRates }: { candidate: Candidate | null; krwRates: Record<string, number> | null }) {
+function PriceCell({
+  candidate,
+  krwRates,
+  fxSource,
+}: {
+  candidate: Candidate | null;
+  krwRates: Record<string, number> | null;
+  fxSource: "frankfurter" | "fallback" | null;
+}) {
   if (!candidate) return <span className="text-text-tertiary">—</span>;
   const status = candidate.priceStatus ?? "UNVERIFIED_SEARCH";
   if (status !== "VERIFIED_CURRENT" || !candidate.price) {
@@ -409,6 +456,7 @@ function PriceCell({ candidate, krwRates }: { candidate: Candidate | null; krwRa
   }
   const krwRate = krwRates?.[candidate.price.currency];
   const krwAmount = krwRate ? Math.round(candidate.price.amount * krwRate) : null;
+  const fxLine = formatFxLine(candidate.price.currency, krwRates, fxSource);
   const onSale = candidate.regularPrice && candidate.regularPrice.amount > candidate.price.amount;
   return (
     <div className="whitespace-nowrap">
@@ -420,7 +468,12 @@ function PriceCell({ candidate, krwRates }: { candidate: Candidate | null; krwRa
           {candidate.regularPrice!.amount.toFixed(2)}
         </span>
       )}
-      {krwAmount != null && <div className="text-text-secondary">약 ₩{krwAmount.toLocaleString("ko-KR")}</div>}
+      {krwAmount != null && (
+        <div className="text-text-secondary">
+          약 ₩{krwAmount.toLocaleString("ko-KR")}
+          {fxLine && <span className="ml-1 text-[10px] text-text-tertiary">· {fxLine}</span>}
+        </div>
+      )}
       <div className="text-[10px] text-success">✓ 현재 가격 확인됨</div>
     </div>
   );

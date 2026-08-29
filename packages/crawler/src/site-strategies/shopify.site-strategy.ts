@@ -1,10 +1,10 @@
 import { extractFromJsonLd, extractFromOpenGraph } from "../product-data-extractor";
 import {
   extractShopifyHandle,
-  extractShopifyLocalePrefix,
   fetchPlainHtml,
   fetchShopifyProductJs,
   fetchShopifyProductJson,
+  stripShopifyLocalePrefix,
   type ShopifyProductResult,
 } from "../shopify-product-json";
 import type { SiteStrategy, SiteStrategyResult } from "./types";
@@ -19,18 +19,14 @@ import type { SiteStrategy, SiteStrategyResult } from "./types";
  * KRW로 반환). CanonicalProduct의 "원본 가격/원본 통화"는 매장의 실제 기준
  * 통화여야 하므로, 이 파일(extract())은 항상 로케일 프리픽스를 벗긴 URL로만
  * 요청한다 — handle은 매장 전체에서 유일해서 로케일을 빼도 항상 같은 상품을
- * 정확히 찾는다. shopify-market-probe.ts(여러 market 가격 비교)와
- * comparison-search(해외 가격비교, 같은 로케일끼리 비교)는 의도적으로 로케일
- * 프리픽스를 그대로 쓰는 별개 기능이라 건드리지 않는다. */
-function stripShopifyLocalePrefix(url: string): string {
-  const localePrefix = extractShopifyLocalePrefix(url);
-  if (!localePrefix) return url;
-  const parsed = new URL(url);
-  if (parsed.pathname.startsWith(localePrefix)) {
-    parsed.pathname = parsed.pathname.slice(localePrefix.length) || "/";
-  }
-  return parsed.toString();
-}
+ * 정확히 찾는다.
+ *
+ * P-4-DATA-6(2026-08-29) 정정 — 이 주석은 원래 "shopify-market-probe.ts와
+ * comparison-search는 의도적으로 로케일을 그대로 쓴다"고 적혀 있었으나 틀렸다.
+ * comparison-search도 실측으로 같은 문제(F5, 최대 6% 가격 불일치)를 겪었고
+ * 이제 여기(shopify-product-json.ts)로 옮긴 stripShopifyLocalePrefix export를
+ * 그대로 재사용해 동일하게 로케일을 벗긴다. shopify-market-probe.ts만 "여러
+ * market의 실제 표시가를 의도적으로 비교"하는 목적이라 로케일을 그대로 쓴다. */
 
 /** .json/.js 둘 다 통화 정보가 없을 때만(.json은 보통 variants[].price_currency로
  * 있음 — 드문 경우) plain fetch로 HTML을 한 번 더 가져와 JSON-LD/OpenGraph 메타에서
