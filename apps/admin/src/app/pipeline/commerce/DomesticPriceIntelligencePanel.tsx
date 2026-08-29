@@ -79,6 +79,21 @@ const CANDIDATE_LABEL: Record<DomesticCandidate["matchType"], { icon: string; te
   REVIEW_REQUIRED: { icon: "⚪", text: "유사상품", note: "가격비교에는 반영하지 않습니다" },
 };
 
+/** P-7-C STEP 2 후속 실측 발견(2026-08-29, 실제 브라우저 확인) — 이 배지는 지금까지
+ * matchType만 보고 정해졌다. P-7-C 이전에는 REVIEW_REQUIRED가 사실상 항상
+ * verified=false였으므로 문제가 없었다(예외: conflict조차 이미 false). 하지만
+ * P-7-C(deriveMatchTruth 통일)로 REVIEW_REQUIRED + verified=true(식별자 증거로
+ * 자동확정, 예: 포레포레 42%)가 실제로 생기면서, matchType만 보는 이 배지가 이미
+ * Market Intelligence에 반영된 후보를 "가격비교에는 반영하지 않습니다"로 잘못
+ * 보여주는 게 실제 프로덕션 데이터(PèPè)로 확인됐다. verified를 최우선으로 본다
+ * — 실제로 반영 여부를 결정하는 단일 필드는 matchType이 아니라 verified다
+ * (run-domestic-price-check.ts STEP 2: verified===true인 링크만 가격을 저장). */
+function candidateLabel(c: DomesticCandidate): { icon: string; text: string; note: string } {
+  if (c.verified) return { icon: "🟢", text: "동일상품", note: "→ 가격비교에 반영됨" };
+  if (c.matchType === "HIGH_CONFIDENCE") return CANDIDATE_LABEL.HIGH_CONFIDENCE;
+  return CANDIDATE_LABEL.REVIEW_REQUIRED;
+}
+
 /** match.ts(scoreCandidateMatch)가 이미 낸 matchReasons 문자열을 그대로 화면에
  * 옮긴다 — 새 판정 로직을 만들지 않는다. "불일치"가 포함되면 ✕, "모델명 유사도"는
  * 퍼센트가 50% 이상이면 ✓ 아니면 △, 그 외(일치류)는 ✓.
@@ -923,7 +938,7 @@ export function DomesticPriceIntelligencePanel({
             <span className="font-medium text-text-primary">동일상품 매칭 근거 ({candidates.length}건)</span>
             <ul className="mt-1.5 space-y-2">
               {candidates.slice(0, 8).map((c) => {
-                const label = CANDIDATE_LABEL[c.matchType];
+                const label = candidateLabel(c);
                 const pct = Math.round(c.matchConfidence * 100);
                 return (
                   <li key={c.id} className="rounded-md border border-border bg-surface p-1.5">
