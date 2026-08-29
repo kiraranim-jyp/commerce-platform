@@ -1690,6 +1690,7 @@ export function CommerceWorkspace({
             brand={product.brand.value}
             sourceUrl={product.sourceUrl}
             sku={product.sku.value || undefined}
+            description={product.description.value || undefined}
           />
           {snapshotId && (
             <DomesticPriceIntelligencePanel

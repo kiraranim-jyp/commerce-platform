@@ -18,6 +18,12 @@ export interface ComparisonCandidate {
   matchLevel?: "very_high" | "high" | "medium" | "low";
   /** 어떤 신호로 이 confidence가 나왔는지(디버그/설명용). */
   matchReasons?: string[];
+  /** P-7-B(CPO 지시, 2026-08-29) — match-truth.ts의 MatchTruth와 같은 값(순환
+   * import를 피하려고 여기서는 리터럴을 그대로 복제한다 — matchLevel과 동일한
+   * 기존 패턴). 채워지지 않으면(undefined) 이 후보에 대해 modelCode 증거 평가를
+   * 아직 시도하지 않았다는 뜻 — UI는 matchLevel만으로 기존 배지를 그대로
+   * 보여준다(하위호환, 회귀 없음). */
+  matchTruth?: "EXACT_IDENTIFIER" | "STRONG_IDENTIFIER" | "TEXT_CONFIRMED" | "SIMILAR" | "CONFLICT" | "INSUFFICIENT_EVIDENCE";
   /** Sprint B-1.8 — "detail"은 상품 상세 API로 실제 가격을 확인한 것(신뢰 가능), "search"는
    * 검색 결과에 딸려온 값을 그대로 쓴 것(참고용). 매칭(동일상품 여부)과 가격확인은 별개
    * 단계이므로, 이 필드로 "이 가격을 얼마나 믿어도 되는지"를 구분한다. */

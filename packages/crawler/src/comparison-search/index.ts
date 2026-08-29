@@ -45,6 +45,11 @@ export type { AutoDecision, CandidateEvidenceDecision, CandidateEvidenceInput } 
 /** N-4.18-Q3 PART H-3-8 — scoreCandidateMatch() 입력 title 정제(실측 확인된
  * 재고상태/가격 suffix만 제거). 계산식/threshold는 변경하지 않는다. */
 export { normalizeMatchingTitle } from "./title-normalize";
+/** P-7-B(CPO 지시, 2026-08-29) — "점수와 Match Truth 분리". decideCandidateEvidence와
+ * 같은 입력을 쓰지만 목적이 다르다(자동확정 여부가 아니라 화면 표시 신뢰 등급).
+ * scoreCandidateMatch/classifyMatchLevel/decideCandidateEvidence 전부 미변경. */
+export { deriveMatchTruth, MATCH_TRUTH_RANK } from "./match-truth";
+export type { MatchTruth } from "./match-truth";
 
 /** Sprint B-1.5/B-1.8 — search-suggest.json의 가격은 신뢰하지 않는다(B-1.4에서 확인: Vercel에서
  * 로케일 프리픽스를 줘도 기본 통화 숫자가 그대로 돌아옴). 검색은 "후보 발견"까지만 담당하고,

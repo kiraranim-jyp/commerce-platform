@@ -19,6 +19,32 @@ const MATCH_LEVEL_ICON: Record<MatchLevel, string> = {
   low: "⚪",
 };
 
+/** P-7-B(CPO 지시, 2026-08-29) — 실측 골든케이스(Pepe Shoes): 텍스트 유사도만으로는
+ * 진짜 동일상품(포레포레 71%)과 실제로는 다른 상품(듀베베 72%)이 똑같은 "유사상품"
+ * 배지로 보였다. matchTruth(상품코드/모델번호 증거로 보강된 판정)가 있으면 그걸
+ * 우선 배지로 쓰고, 없으면(구버전 응답 등) 기존 matchLevel 배지로 그대로 폴백한다 —
+ * 하위호환, 회귀 없음. */
+type MatchTruth = "EXACT_IDENTIFIER" | "STRONG_IDENTIFIER" | "TEXT_CONFIRMED" | "SIMILAR" | "CONFLICT" | "INSUFFICIENT_EVIDENCE";
+
+const MATCH_TRUTH_BADGE: Record<MatchTruth, { icon: string; label: string; className: string; disclaimer?: string }> = {
+  EXACT_IDENTIFIER: { icon: "🟢", label: "동일상품 확인", className: "bg-success-soft text-success" },
+  STRONG_IDENTIFIER: { icon: "🟢", label: "동일상품 확인", className: "bg-success-soft text-success" },
+  TEXT_CONFIRMED: { icon: "🟢", label: "동일상품 가능성 높음", className: "bg-success-soft text-success" },
+  SIMILAR: {
+    icon: "🟡",
+    label: "유사상품",
+    className: "bg-warning-soft text-warning",
+    disclaimer: "동일 상품이 아닐 수 있습니다 — 가격은 참고용으로만 사용하세요.",
+  },
+  CONFLICT: {
+    icon: "⚠️",
+    label: "다른 상품일 가능성",
+    className: "bg-error-soft text-error",
+    disclaimer: "상품코드가 원본과 일치하지 않습니다 — 동일상품이 아닐 가능성이 높습니다.",
+  },
+  INSUFFICIENT_EVIDENCE: { icon: "⚪", label: "매칭 불확실", className: "bg-background text-text-tertiary" },
+};
+
 interface Candidate {
   title: string;
   url: string;
@@ -28,6 +54,7 @@ interface Candidate {
   confidence: number;
   matchLevel?: MatchLevel;
   matchReasons?: string[];
+  matchTruth?: MatchTruth;
   /** N-4.18-Q3 PART E-2 — 매칭 신뢰도와 완전히 분리된 축. true=품절 확인,
    * false=판매중 확인, null/undefined=그 사이트에서 확인할 방법이 없음(임의로
    * 판매중/품절 어느 쪽으로도 해석하지 않는다). */
@@ -92,11 +119,16 @@ export function DomesticShopSearch({
   brand,
   sourceUrl,
   sku,
+  description,
 }: {
   title: string;
   brand?: string;
   sourceUrl?: string;
   sku?: string;
+  /** P-7-B(CPO 지시, 2026-08-29) — 설명문에서 뽑은 상품코드(예: "Article code:
+   * 01195-VERNICE-NERO")를 국내 후보의 modelCode와 비교해 matchTruth를 계산하는
+   * 데 쓴다. 없어도(undefined) 기존처럼 matchLevel 배지만 보여준다(하위호환). */
+  description?: string;
 }) {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchResult[] | null>(null);
@@ -111,7 +143,7 @@ export function DomesticShopSearch({
       const res = await fetch("/api/domestic-price-sources/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, brand, sourceUrl, sku }),
+        body: JSON.stringify({ title, brand, sourceUrl, sku, description }),
       });
       const data = (await res.json()) as { ok: boolean; results?: SearchResult[]; error?: string };
       if (!data.ok) {
@@ -240,7 +272,20 @@ function ResultTable({ results }: { results: SearchResult[] }) {
                   <td className="px-2 py-1.5 whitespace-nowrap text-text-secondary">{c ? <PriceCell candidate={c} /> : "—"}</td>
                   <td className="px-2 py-1.5">{c ? <StockBadge soldOut={c.soldOut} /> : "—"}</td>
                   <td className="px-2 py-1.5">
-                    {c?.matchLevel ? (
+                    {c?.matchTruth ? (
+                      <div className="space-y-0.5">
+                        <span
+                          className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_TRUTH_BADGE[c.matchTruth].className}`}
+                          title={c.matchReasons?.length ? c.matchReasons.join(", ") : undefined}
+                        >
+                          {MATCH_TRUTH_BADGE[c.matchTruth].icon} {MATCH_TRUTH_BADGE[c.matchTruth].label}{" "}
+                          {Math.round(c.confidence * 100)}%
+                        </span>
+                        {MATCH_TRUTH_BADGE[c.matchTruth].disclaimer && (
+                          <p className="text-[10px] text-text-tertiary">※ {MATCH_TRUTH_BADGE[c.matchTruth].disclaimer}</p>
+                        )}
+                      </div>
+                    ) : c?.matchLevel ? (
                       <span
                         className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_LEVEL_BADGE_CLASS[c.matchLevel]}`}
                         title={c.matchReasons?.length ? c.matchReasons.join(", ") : undefined}
