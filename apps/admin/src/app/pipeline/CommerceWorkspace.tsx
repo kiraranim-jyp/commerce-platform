@@ -33,6 +33,7 @@ import {
   type ListingStatus,
   type NaverCategoryCandidate,
   type NaverPayloadValidationResult,
+  type NoticeReferenceEligibleField,
   type PlatformConnectionStatus,
   type RegistrationHistoryEntry,
 } from "@commerce/listing";
@@ -47,6 +48,7 @@ import { AuditLogPanel } from "./commerce/AuditLogPanel";
 import { DomesticShopSearch } from "./commerce/DomesticShopSearch";
 import { ImageInlineEditor } from "./ImageInlineEditor";
 import { ListingConfirmationModal } from "./commerce/ListingConfirmationModal";
+import { MissingFieldsBulkPanel } from "./commerce/MissingFieldsBulkPanel";
 import type { NaverResolveResponse } from "./commerce/NaverPayloadPreview";
 import { PlatformPreview } from "./commerce/PlatformPreview";
 import { readinessStateToLevel } from "./commerce/readiness-state";
@@ -519,6 +521,21 @@ export function CommerceWorkspace({
         ? { value: "", source: "DETAIL_PAGE_REFERENCE" as FieldSource, confidence: 1 }
         : { value: "", source: "REQUIRED" as FieldSource, confidence: 0 },
     }));
+  }
+
+  /** P-6 P1(CEO 지시, 2026-08-29) — "기본정보" 탭의 MissingFieldsBulkPanel용.
+   * setFieldReference()를 여러 번 호출하는 대신 한 번의 setProduct로 묶어서
+   * 처리한다(리렌더 1회). 로직 자체(빈 값 + DETAIL_PAGE_REFERENCE로 전환)는
+   * setFieldReference와 완전히 동일 — 화이트리스트(NOTICE_REFERENCE_ELIGIBLE_FIELDS)
+   * 밖의 필드는 애초에 MissingFieldsBulkPanel이 넘겨주지 않는다. */
+  function bulkSetFieldReference(keys: NoticeReferenceEligibleField[]) {
+    setProduct((prev) => {
+      const next = { ...prev };
+      for (const key of keys) {
+        next[key] = { value: "", source: "DETAIL_PAGE_REFERENCE" as FieldSource, confidence: 1 };
+      }
+      return next;
+    });
   }
 
   /** N-3.29(CPO 지시) — 어린이제품 인증정보는 문자열 하나가 아니라 3개
@@ -1660,6 +1677,7 @@ export function CommerceWorkspace({
             onUpdateOptions={updateOptions}
             exchangeRates={exchangeRates}
           />
+          <MissingFieldsBulkPanel product={product} onBulkApply={bulkSetFieldReference} />
           <ComparisonShopSearch
             title={product.title.value}
             brand={product.brand.value}
