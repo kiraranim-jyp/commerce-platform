@@ -16,7 +16,7 @@ import { applyEvidenceDecision } from "../run-domestic-price-check";
  *   4. high + exact 케이스 — 실제 auto_confirm 링크 생성 확인
  */
 describe("H-3-6: Evidence Decision → domestic_product_links 연결", () => {
-  it("1) PèPè Golden Case: medium + modelCode partial → 기존 REVIEW_REQUIRED/verified=false 유지", () => {
+  it("1) PèPè Golden Case: medium + modelCode partial → P-7-C STEP 2(대표님 지시, 2026-08-29)로 auto_confirm/verified=true로 변경", () => {
     // 실측(H-3-2/H-3-5): "01195-VERNICE-NERO" vs "PP24KASHE1195NER" -> partial
     const modelCode = compareModelCode("01195-VERNICE-NERO", "PP24KASHE1195NER");
     expect(modelCode).toBe("partial");
@@ -25,23 +25,25 @@ describe("H-3-6: Evidence Decision → domestic_product_links 연결", () => {
     expect(matchType).toBe("REVIEW_REQUIRED");
     expect(autoVerified).toBe(false);
 
+    // P-7-C STEP 2(대표님 지시, 2026-08-29) — 이 테스트는 원래(H-3-6, 2026-08-27)
+    // "medium+partial → 기존 판단 유지(unchanged/verified=false)"를 검증했다.
+    // 실측(P-7-C STEP 1, production)으로 이 golden case가 실제로는 Market
+    // Intelligence에 전혀 반영되지 않는다는 게 드러났다 — deriveMatchTruth로
+    // 통일한 이후 STRONG_IDENTIFIER는 텍스트 level과 무관하게 auto_confirm이다
+    // ("텍스트 점수가 낮아도(medium 이하) 식별자가 없는 후보보다 항상 위에 온다").
     const decision = decideCandidateEvidence({
       match: { confidence: 0.71, level: "medium", reasons: ["모델명 유사도 22%", "브랜드 일치"] },
       modelCode,
       options: "unavailable",
       image: "unavailable",
     });
-    expect(decision.decision).toBe("unchanged");
+    expect(decision.decision).toBe("auto_confirm");
 
     const result = applyEvidenceDecision(autoVerified, ["모델명 유사도 22%", "브랜드 일치"], decision);
-    expect(result.verified).toBe(false); // 기존과 동일 — 강등도 승격도 없음
-    // N-4.18-Q3 UI 후속(2026-08-27) — verified는 안 바뀌지만, "왜 REVIEW_REQUIRED인지"를
-    // 화면에서 보여주기 위해 partial 사실 자체는 이제 matchReasons에 남는다.
-    expect(result.matchReasons).toEqual([
-      "모델명 유사도 22%",
-      "브랜드 일치",
-      "modelCode 부분 일치 — 보조 근거로만 사용, 기존 판단 유지",
-    ]);
+    expect(result.verified).toBe(true); // P-7-C STEP 2 — 식별자 증거로 자동확정(텍스트 confidence는 71%로 그대로 저장됨, 조작하지 않음)
+    expect(result.matchReasons).toContain("모델명 유사도 22%");
+    expect(result.matchReasons).toContain("브랜드 일치");
+    expect(result.matchReasons.some((r) => r.includes("부분 일치(식별자 근거)"))).toBe(true);
   });
 
   it("2) Bobo Choses Golden Case: very_high + evidence 전부 unavailable → 기존 자동확정 흐름 그대로 유지", () => {

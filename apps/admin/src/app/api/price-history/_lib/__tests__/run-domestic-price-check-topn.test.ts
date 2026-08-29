@@ -55,10 +55,13 @@ describe("H-3-9 STEP 4: Top-N conflict 제외 후보 선택", () => {
     });
     const result = applyEvidenceDecision(autoVerified, [], decision);
     expect(matchType).toBe("REVIEW_REQUIRED");
-    expect(result.verified).toBe(false);
-    // decision===unchanged이지만(partial은 auto_confirm 대상 아님) UI 후속으로
-    // modelCode partial 사실 자체는 이제 matchReasons에 남는다.
-    expect(result.matchReasons).toContain("modelCode 부분 일치 — 보조 근거로만 사용, 기존 판단 유지");
+    // P-7-C STEP 2(대표님 지시, 2026-08-29) — partial modelCode는 이제
+    // deriveMatchTruth 기준 STRONG_IDENTIFIER라 auto_confirm이다(H-3-6과
+    // 동일한 golden case, 정책만 바뀜 — run-domestic-price-check-evidence.test.ts
+    // 참고).
+    expect(decision.decision).toBe("auto_confirm");
+    expect(result.verified).toBe(true);
+    expect(result.matchReasons.some((r) => r.includes("부분 일치(식별자 근거)"))).toBe(true);
   });
 
   it("2) Top-1 evidence unavailable(비FORETFORET) → 기존 Top-1 그대로, fetch 호출 없음", async () => {

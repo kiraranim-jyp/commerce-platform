@@ -137,14 +137,27 @@ const MAX_EVIDENCE_CANDIDATES = 3;
  * 검색결과 안의 모든 후보가 low다(withConfidence가 이미 confidence 내림차순
  * 정렬해 뒀고, matchLevel은 confidence의 단조 계단함수라 1위보다 순위가 낮은
  * 후보의 confidence는 1위 이하일 수밖에 없다 — classifyMatchLevel/threshold를
- * 재계산하지 않고 이미 계산된 결과의 성질만 이용한다). toDomesticMatchType("low")는
- * 항상 NOT_MATCHED이므로 Top-N 중 어떤 후보를 고르든 결과는 절대 안 바뀐다 —
- * 그런데도 지금까지는 FORETFORET modelCode HTTP fetch(최대 3건)를 먼저 실행하고서야
- * 이 사실을 알았다. 이 함수는 selectDomesticCandidate 호출 여부를 결정하는
- * 순서 최적화일 뿐, 새 매칭 판단이 아니다(confidence/threshold/ranking/Top-N/
- * modelCode 판정 규칙 전부 미변경). */
-export function isEvidenceEvaluationWorthwhile(candidates: ComparisonCandidate[]): boolean {
-  return candidates.length > 0 && candidates[0].matchLevel !== "low";
+ * 재계산하지 않고 이미 계산된 결과의 성질만 이용한다).
+ *
+ * P-7-C STEP 2 P1(대표님 지시, 2026-08-29) — 이 가드의 원래 전제("low면 Top-N
+ * 중 뭘 고르든 결과가 NOT_MATCHED로 절대 안 바뀐다")가 P-7-B 이후로는 더 이상
+ * 참이 아니다. 실측(P-7-C STEP 1, production): 포레포레 정답 후보가 텍스트
+ * confidence 42%(low)인데 SKU는 partial 일치한다 — 식별자 증거가 있으면 low도
+ * 결과가 바뀔 수 있다(deriveMatchTruth). 따라서 "식별자를 비교할 가능성이
+ * 전혀 없는 경우"에만 원래 최적화(스킵)를 유지한다: foreignModelCode 자체가
+ * 없거나(해외측 원문에서 품번을 못 뽑았다), FORETFORET가 아닌 사이트다(H-3-2 —
+ * 지금 유일하게 국내측 modelCode 추출 기능이 있는 사이트). 이 두 조건이 아니면
+ * "무조건 살리는" 게 아니라 "평가라도 해본다" — 실제로 conflict/unavailable로
+ * 나오면 여전히 NOT_MATCHED로 끝난다(성능 비용은 MAX_EVIDENCE_CANDIDATES=3건
+ * fetch로 그대로 제한됨). */
+export function isEvidenceEvaluationWorthwhile(
+  candidates: ComparisonCandidate[],
+  foreignModelCode: string | null,
+  domain: string,
+): boolean {
+  if (candidates.length === 0) return false;
+  if (candidates[0].matchLevel !== "low") return true;
+  return foreignModelCode !== null && domain === "foretforet.com";
 }
 
 export interface CandidateSelection {
@@ -258,7 +271,7 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
 
     // N-4.18-Q3 PART H-3-11 — 어차피 NOT_MATCHED로 끝날 검색결과는 Evidence
     // HTTP 비용을 쓰지 않는다(isEvidenceEvaluationWorthwhile 주석 참고).
-    if (!isEvidenceEvaluationWorthwhile(result.candidates)) continue;
+    if (!isEvidenceEvaluationWorthwhile(result.candidates, foreignModelCode, result.domain)) continue;
 
     // N-4.18-Q3 PART H-3-9(대표님 지시, 2026-08-27) — 기존엔 candidates[0](confidence
     // 1위)만 무조건 대표 후보로 썼다. H-3-7 실측(PèPè)에서 1위가 실제로는 다른
@@ -271,7 +284,19 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       foreignModelCode,
       countedFetchForetforetModelCode,
     );
-    const { matchType, autoVerified } = toDomesticMatchType(best.matchLevel ?? "low");
+    const { matchType: initialMatchType, autoVerified } = toDomesticMatchType(best.matchLevel ?? "low");
+    let matchType = initialMatchType;
+    // P-7-C STEP 2 P1/P2(대표님 지시, 2026-08-29) — matchLevel=low는
+    // toDomesticMatchType 기준으로 항상 NOT_MATCHED다. 하지만 modelCode가
+    // exact/partial로 확인되면(=식별자 증거가 있으면) 텍스트 점수가 낮다는
+    // 이유만으로 후보 자체를 버리지 않는다 — REVIEW_REQUIRED로 살려서 아래
+    // decideCandidateEvidence(deriveMatchTruth 공통 기준)가 verified 여부를
+    // 식별자 증거로 판단하게 한다. matchConfidence는 여전히 best.confidence
+    // 그대로 저장된다(42%를 high로 승격하지 않는다 — P2) — REVIEW_REQUIRED는
+    // medium-tier 후보가 쓰는 것과 동일한 정직한 라벨일 뿐이다.
+    if (matchType === "NOT_MATCHED" && (modelCodeEvidence === "exact" || modelCodeEvidence === "partial")) {
+      matchType = "REVIEW_REQUIRED";
+    }
     if (matchType === "NOT_MATCHED") continue;
 
     // N-4.18-Q3 PART H-3-6(대표님 지시, 2026-08-27) — Evidence Decision을
