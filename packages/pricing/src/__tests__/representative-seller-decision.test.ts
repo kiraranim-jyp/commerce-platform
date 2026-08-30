@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 import { deriveRepresentativeSellerVerdict, type RepresentativeVerdictInput } from "../representative-seller-decision";
 
 /**
- * P-8(대표님 지시, 2026-08-30) — STEP 8이 요구한 UX-01~06을 그대로 옮긴다.
- * unifiedDecision/sellability는 이미 검증된 기존 엔진 결과를 흉내낸 입력일 뿐,
- * 이 테스트는 "그 결과를 대표 판단 1개로 어떻게 압축하는가"만 검증한다.
+ * P-8(2026-08-30) STEP 8이 요구한 UX-01~06을 그대로 옮긴다. unifiedDecision/
+ * sellability는 이미 검증된 기존 엔진 결과를 흉내낸 입력일 뿐, 이 테스트는
+ * "그 결과를 대표 판단 1개로 어떻게 압축하는가"만 검증한다.
+ *
+ * P-9-B(2026-08-30) — "국내 동일상품 없음"(YELLOW)과 "비용 정보 없음"(UNKNOWN)을
+ * 더 이상 같은 NEEDS_INFO로 뭉뚱그리지 않는다. YELLOW → MARKET_OPPORTUNITY로
+ * 갈라지면서 UX-02/UX-06의 기대값이 바뀌었다 — 이 변경은 P-9-B의 명시적 지시다.
  */
-describe("P-8 STEP 8: deriveRepresentativeSellerVerdict", () => {
+describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
   const base: RepresentativeVerdictInput = {
     unifiedDecision: null,
     sellability: { level: "UNKNOWN", estimatedMarginPercent: null, reason: "실제 구매 가능 가격을 아직 확인하지 못했습니다." },
@@ -28,7 +32,7 @@ describe("P-8 STEP 8: deriveRepresentativeSellerVerdict", () => {
     expect(result.reasons.some((r) => r.includes("10.1"))).toBe(true);
   });
 
-  it("UX-02) 국내 가격 없음(sellability YELLOW) → 🟠 NEEDS_INFO", () => {
+  it("UX-02/UX-C3) 국내 가격 없음 + 비용 정상(sellability YELLOW) → 🟣 MARKET_OPPORTUNITY(P-9-B), '판단 불가'로 끝나지 않음", () => {
     const result = deriveRepresentativeSellerVerdict({
       ...base,
       sellability: {
@@ -39,11 +43,14 @@ describe("P-8 STEP 8: deriveRepresentativeSellerVerdict", () => {
       domesticMatched: false,
       domesticSellerCount: 0,
     });
-    expect(result.code).toBe("NEEDS_INFO");
-    expect(result.icon).toBe("🟠");
+    expect(result.code).toBe("MARKET_OPPORTUNITY");
+    expect(result.icon).toBe("🟣");
+    // "독점 상품입니다"처럼 단정하지 않는다 — "확인하지 못했다"는 사실만 말한다.
+    expect(result.title).not.toContain("독점");
+    expect(result.reasons.some((r) => r.includes("확인하지 못했습니다"))).toBe(true);
   });
 
-  it("UX-03) 비용 정보 부족(sellability UNKNOWN, 원가 미확인) → 🟠 NEEDS_INFO — 참고 계산값이 있어도 대표 판단을 덮어쓰지 않음", () => {
+  it("UX-03/UX-C4) 비용 정보 부족(sellability UNKNOWN, 원가 미확인) → 🟠 NEEDS_INFO — 참고 계산값이 있어도 대표 판단을 덮어쓰지 않음", () => {
     const result = deriveRepresentativeSellerVerdict({
       ...base,
       sellability: { level: "UNKNOWN", estimatedMarginPercent: null, reason: "실제 구매 가능 가격을 아직 확인하지 못했습니다." },
@@ -52,7 +59,7 @@ describe("P-8 STEP 8: deriveRepresentativeSellerVerdict", () => {
     expect(result.icon).toBe("🟠");
   });
 
-  it("UX-04) 가격 재검토 필요(sellability RED, margin 0 이상~기준 미만) → 🟡 REVIEW_PRICE", () => {
+  it("UX-04/UX-C1) 가격 재검토 필요(sellability RED, margin 0 이상~기준 미만) → 🟡 REVIEW_PRICE", () => {
     const result = deriveRepresentativeSellerVerdict({
       ...base,
       sellability: { level: "RED", estimatedMarginPercent: 4.2, reason: "..." },
@@ -63,7 +70,7 @@ describe("P-8 STEP 8: deriveRepresentativeSellerVerdict", () => {
     expect(result.icon).toBe("🟡");
   });
 
-  it("UX-05) 수익성 부족(sellability RED, margin 음수) → 🔴 HOLD", () => {
+  it("UX-05/UX-C2) 수익성 부족(sellability RED, margin 음수) → 🔴 HOLD", () => {
     const result = deriveRepresentativeSellerVerdict({
       ...base,
       sellability: { level: "RED", estimatedMarginPercent: -5.3, reason: "..." },
@@ -137,6 +144,58 @@ describe("P-8 STEP 8: deriveRepresentativeSellerVerdict", () => {
         domesticSellerCount: 1,
       });
       expect(result.code).toBe("HOLD");
+    });
+  });
+
+  /**
+   * P-9 STEP 7(대표님 지시, 2026-08-30) — Case C(국내가격 있음+마진 부족) 실제
+   * 프로덕션 사례를 못 찾아서, 합성 fixture로 "대표 판단 로직의 깨지지 않는
+   * 계약"을 고정한다. UX-C1/C2는 위 UX-04/UX-05와 동일 로직 경로를 다른
+   * 각도(정확히 CPO가 지정한 margin 5%/-5%)로 한 번 더 고정한다.
+   */
+  describe("P-9 STEP 7: 합성 fixture UX-C1~C4", () => {
+    it("UX-C1) 국내 동일상품 있음 + 예상 마진 5%(목표 10% 미만) → 🟡 가격 전략 재검토", () => {
+      const result = deriveRepresentativeSellerVerdict({
+        ...base,
+        sellability: { level: "RED", estimatedMarginPercent: 5, reason: "..." },
+        domesticMatched: true,
+        domesticSellerCount: 1,
+      });
+      expect(result.code).toBe("REVIEW_PRICE");
+      expect(result.title).toBe("가격 전략 재검토 추천");
+    });
+
+    it("UX-C2) 국내 동일상품 있음 + 예상 마진 -5% → 🔴 판매 조건 재검토", () => {
+      const result = deriveRepresentativeSellerVerdict({
+        ...base,
+        sellability: { level: "RED", estimatedMarginPercent: -5, reason: "..." },
+        domesticMatched: true,
+        domesticSellerCount: 1,
+      });
+      expect(result.code).toBe("HOLD");
+      expect(result.title).toBe("판매 조건 재검토 필요");
+    });
+
+    it("UX-C3) 국내 동일상품 없음 + 비용 계산 가능 → 🟣 시장 진입 기회", () => {
+      const result = deriveRepresentativeSellerVerdict({
+        ...base,
+        sellability: { level: "YELLOW", estimatedMarginPercent: null, reason: "..." },
+        domesticMatched: false,
+        domesticSellerCount: 0,
+      });
+      expect(result.code).toBe("MARKET_OPPORTUNITY");
+      expect(result.title).toBe("시장 진입 기회");
+    });
+
+    it("UX-C4) 국내 동일상품 없음 + 비용 정보 부족 → 🟠 추가 정보 필요", () => {
+      const result = deriveRepresentativeSellerVerdict({
+        ...base,
+        sellability: { level: "UNKNOWN", estimatedMarginPercent: null, reason: "실제 구매 가능 가격을 아직 확인하지 못했습니다." },
+        domesticMatched: false,
+        domesticSellerCount: 0,
+      });
+      expect(result.code).toBe("NEEDS_INFO");
+      expect(result.title).toBe("추가 정보가 필요합니다");
     });
   });
 });

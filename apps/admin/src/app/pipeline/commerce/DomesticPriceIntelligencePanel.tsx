@@ -8,6 +8,11 @@ import {
   type PriceLevel,
   type UnifiedPriceDecision,
 } from "@commerce/pricing";
+// P-9-A(대표님 지시, 2026-08-30) — @commerce/crawler 루트 배럴(index.ts)은
+// playwright-core/browser-launcher를 함께 export한다. 클라이언트 컴포넌트에서
+// 루트로 import하면 Node 전용 모듈(tls/fs)이 브라우저 번들에 끌려 들어와
+// next build가 깨진다 — 순수 함수 파일만 직접 가리켜서 배럴을 우회한다.
+import { sortDomesticCandidatesByTrust } from "@commerce/crawler/src/comparison-search/display-priority";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 
 interface SampleListing {
@@ -288,9 +293,13 @@ interface Sellability {
  * deriveRepresentativeSellerVerdict(packages/pricing)가 unifiedDecision/
  * sellability를 재계산 없이 압축해 낸 단일 결과. 이 화면은 이 값을 그대로
  * 옮기기만 한다 — 새 판정을 만들지 않는다. */
+/** P-9-B(대표님 지시, 2026-08-30) — "국내 동일상품 없음 = 판단 불가"라는
+ * 철학을 버린다. MARKET_OPPORTUNITY(🟣)를 새 상태로 추가 — 국내 경쟁 데이터가
+ * 없어도(sellability=YELLOW, 비용은 이미 확인됨) "판단 불가"로 끝내지 않고
+ * "시장 진입 기회"로 안내한다. */
 interface RepresentativeVerdict {
-  code: "READY" | "REVIEW_PRICE" | "NEEDS_INFO" | "HOLD";
-  icon: "🟢" | "🟡" | "🟠" | "🔴";
+  code: "READY" | "REVIEW_PRICE" | "MARKET_OPPORTUNITY" | "NEEDS_INFO" | "HOLD";
+  icon: "🟢" | "🟡" | "🟣" | "🟠" | "🔴";
   title: string;
   description: string;
   reasons: string[];
@@ -299,18 +308,23 @@ interface RepresentativeVerdict {
 const REPRESENTATIVE_VERDICT_STYLE: Record<RepresentativeVerdict["code"], string> = {
   READY: "border-border bg-success-soft text-success",
   REVIEW_PRICE: "border-border bg-warning-soft text-warning",
+  MARKET_OPPORTUNITY: "border-border bg-primary-soft text-primary",
   NEEDS_INFO: "border-border bg-warning-soft text-warning",
   HOLD: "border-border bg-error-soft text-error",
 };
 
-/** P-8 STEP 5(대표님 지시, 2026-08-30) — "버튼을 누르기 전에 셀러가 무엇을
- * 확인하는지 알 수 있게 한다." 재조회 API/로직은 그대로(recheckNow만 호출),
- * 상태별로 버튼 위 안내 문구만 다르게 보여준다. */
+/** P-8 STEP 5 / P-9 STEP 5(대표님 지시, 2026-08-30) — "버튼을 누르기 전에
+ * 셀러가 무엇을 확인하는지 알 수 있게 한다." 새 등록/가격 엔드포인트를 만들지
+ * 않는다 — 전부 기존 onRequestPriceReview(가격/비용 탭 이동)로 연결한다. */
 const REPRESENTATIVE_VERDICT_CTA: Record<RepresentativeVerdict["code"], { label: string; hint: string }> = {
-  READY: { label: "가격 정보 다시 확인", hint: "" },
-  REVIEW_PRICE: { label: "가격 재검토", hint: "현재 판매가격과 국내 시장가격을 다시 비교합니다." },
-  NEEDS_INFO: { label: "국내 가격 다시 확인", hint: "국내 판매처에서 동일상품 가격을 다시 검색합니다." },
-  HOLD: { label: "가격 다시 검토", hint: "현재 판매가격과 국내 시장가격을 다시 비교합니다." },
+  READY: { label: "등록 진행", hint: "" },
+  REVIEW_PRICE: { label: "판매 가격 다시 설정", hint: "현재 판매가격과 국내 시장가격을 다시 비교합니다." },
+  MARKET_OPPORTUNITY: {
+    label: "추천 판매가격 검토",
+    hint: "국내 경쟁가격은 확인되지 않았습니다. 판매 가격을 설정하면 예상 수익성을 계산할 수 있습니다.",
+  },
+  NEEDS_INFO: { label: "비용 정보 입력", hint: "예상 수익 계산에 필요한 비용 정보를 입력하세요." },
+  HOLD: { label: "가격·매입 조건 재검토", hint: "현재 판매가격과 국내 시장가격을 다시 비교합니다." },
 };
 
 interface PriceHistoryResponse {
@@ -335,7 +349,17 @@ interface PriceHistoryResponse {
    * 마크업 없음)는 computePriceBreakdown이 이미 계산해 API가 항상 돌려주던
    * 값인데 이 화면이 지금까지 landedCostKrw(배송비 포함)만 쓰고 costKrw는
    * 읽지 않았다 — 새 계산이 아니라 이미 있던 값을 추가로 노출하는 것뿐이다. */
-  cost: { originalAmount: number; originalCurrency: string; costKrw: number; landedCostKrw: number } | null;
+  cost: {
+    originalAmount: number;
+    originalCurrency: string;
+    costKrw: number;
+    landedCostKrw: number;
+    /** P-9 STEP 6(대표님 지시, 2026-08-30) — 이미 computePriceBreakdown()이
+     * 판매가 유무와 무관하게 항상 계산해 돌려주던 값(packages/pricing/src/
+     * breakdown.ts). 새 추천가격 공식을 만들지 않는다 — 있던 값을 MARKET_
+     * OPPORTUNITY 카드에 추가로 노출하는 것뿐이다. */
+    suggestedPriceKrw: number;
+  } | null;
   decision: Decision | null;
   recommendation: Recommendation | null;
   sellerAction: SellerAction;
@@ -413,7 +437,7 @@ export function DomesticPriceIntelligencePanel({
     return fetch(`/api/domestic-price-sources/links?snapshotId=${snapshotId}`)
       .then((res) => res.json())
       .then((json) => {
-        setCandidates(json.ok ? json.candidates : []);
+        setCandidates(json.ok ? sortDomesticCandidatesByTrust(json.candidates) : []);
       })
       .catch(() => {
         setCandidates([]);
@@ -643,18 +667,33 @@ export function DomesticPriceIntelligencePanel({
             {!unifiedDecision && sellability.estimatedMarginPercent != null && (
               <p className="mt-2 text-[10px] text-text-tertiary">참고: {sellability.reason}</p>
             )}
+            {/* P-9 STEP 6(대표님 지시, 2026-08-30) — "숫자를 새로 지어내거나
+                가짜 추천가격을 만들면 안 된다." cost.suggestedPriceKrw는 이미
+                computePriceBreakdown()이 판매가 유무와 무관하게 늘 계산해
+                돌려주던 값이다(SellerProfile 기본 마진/수수료 기준) — 새 계산
+                없이 MARKET_OPPORTUNITY 카드에서만 추가로 보여준다. */}
+            {representativeVerdict.code === "MARKET_OPPORTUNITY" && cost && (
+              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-text-secondary">
+                <div>
+                  <dt className="text-[10px] text-text-tertiary">예상 비용(착지원가)</dt>
+                  <dd className="font-medium text-text-primary">₩{cost.landedCostKrw.toLocaleString()}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] text-text-tertiary">현재 설정 기준 목표 판매가</dt>
+                  <dd className="font-medium text-text-primary">₩{cost.suggestedPriceKrw.toLocaleString()}</dd>
+                </div>
+              </dl>
+            )}
             {(() => {
               const cta = REPRESENTATIVE_VERDICT_CTA[representativeVerdict.code];
-              const handler = representativeVerdict.code === "NEEDS_INFO" ? () => void recheckNow() : onRequestPriceReview;
-              if (!handler) return null;
+              if (!onRequestPriceReview) return null;
               return (
                 <>
                   {cta.hint && <p className="mt-2 text-[10px] text-text-tertiary">{cta.hint}</p>}
                   <button
                     type="button"
-                    onClick={handler}
-                    disabled={representativeVerdict.code === "NEEDS_INFO" && rechecking}
-                    className="mt-1.5 rounded-md border border-current px-2 py-1 text-[11px] font-medium hover:opacity-80 disabled:opacity-50"
+                    onClick={onRequestPriceReview}
+                    className="mt-1.5 rounded-md border border-current px-2 py-1 text-[11px] font-medium hover:opacity-80"
                   >
                     {cta.label}
                   </button>

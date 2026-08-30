@@ -50,6 +50,11 @@ export { normalizeMatchingTitle } from "./title-normalize";
  * scoreCandidateMatch/classifyMatchLevel/decideCandidateEvidence 전부 미변경. */
 export { deriveMatchTruth, MATCH_TRUTH_RANK } from "./match-truth";
 export type { MatchTruth } from "./match-truth";
+/** P-9-A(대표님 지시, 2026-08-30) — 국내 동일상품 후보를 verified 우선(그 안에서
+ * 식별자 근거 우선, 그다음 confidence)으로 화면에 보여준다. 새 판정 로직이 아니라
+ * 이미 API가 돌려주는 필드만으로 정렬 순서를 정하는 presentation-layer 함수. */
+export { compareDomesticCandidateTrust, sortDomesticCandidatesByTrust } from "./display-priority";
+export type { DomesticCandidateTrust } from "./display-priority";
 
 /** Sprint B-1.5/B-1.8 — search-suggest.json의 가격은 신뢰하지 않는다(B-1.4에서 확인: Vercel에서
  * 로케일 프리픽스를 줘도 기본 통화 숫자가 그대로 돌아옴). 검색은 "후보 발견"까지만 담당하고,
