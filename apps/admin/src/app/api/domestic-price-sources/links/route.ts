@@ -31,6 +31,7 @@ export async function GET(request: Request) {
       matchedTitle: l.matchedTitle,
       matchedBrand: l.matchedBrand,
       matchReasons: l.matchReasons,
+      matchTruth: l.matchTruth,
       verified: l.verified,
       externalUrl: l.externalUrl,
     }));

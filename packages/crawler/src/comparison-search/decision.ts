@@ -32,7 +32,7 @@
  */
 import type { MatchResult } from "./match";
 import type { ImageEvidenceResult, ModelEvidenceResult, OptionEvidenceResult } from "./evidence";
-import { deriveMatchTruth } from "./match-truth";
+import { deriveMatchTruth, type MatchTruth } from "./match-truth";
 
 export type AutoDecision = "auto_confirm" | "review_required" | "unchanged";
 
@@ -54,6 +54,11 @@ export interface CandidateEvidenceDecision {
    * "무슨 증거 때문에 이렇게 판정했는가"를 알 수 있어야 함, evidence.ts와 동일
    * 설계 원칙). */
   reasons: string[];
+  /** P-10 STEP 4(대표님/CPO 지시, 2026-08-30) — deriveMatchTruth()가 이미 계산하던
+   * 값을 밖으로 꺼내기만 한다(재계산 없음, 새 판정 로직 아님). 지금까지는 이
+   * 함수 안에서만 쓰이고 버려졌다 — 저장/API/UI가 matchReasons 문자열을 다시
+   * 파싱해서 우회 추론하던 근본 원인이었다. */
+  truth: MatchTruth;
 }
 
 export function decideCandidateEvidence(input: CandidateEvidenceInput): CandidateEvidenceDecision {
@@ -64,7 +69,7 @@ export function decideCandidateEvidence(input: CandidateEvidenceInput): Candidat
     reasons.push(
       `modelCode 충돌(기존 매칭 level=${input.match.level}) — 자동확정 금지, 검토 필요로 전환`,
     );
-    return { decision: "review_required", reasons };
+    return { decision: "review_required", reasons, truth };
   }
 
   if (truth === "EXACT_IDENTIFIER" || truth === "STRONG_IDENTIFIER") {
@@ -73,7 +78,7 @@ export function decideCandidateEvidence(input: CandidateEvidenceInput): Candidat
     );
     if (input.options === "strong_overlap") reasons.push("옵션 구성도 강하게 일치(보조 근거)");
     if (input.image === "strong_match") reasons.push("이미지도 강하게 일치(보조 근거)");
-    return { decision: "auto_confirm", reasons };
+    return { decision: "auto_confirm", reasons, truth };
   }
 
   // 이 아래는 전부 "기존 판단 유지"(truth는 TEXT_CONFIRMED/SIMILAR/
@@ -91,5 +96,5 @@ export function decideCandidateEvidence(input: CandidateEvidenceInput): Candidat
   // modelCode=unavailable: 전부 "영향 없음"이라 reasons에도 안 남긴다(정말
   // 아무 영향이 없다는 것 자체가 이 레이어의 안전장치이므로).
 
-  return { decision: "unchanged", reasons };
+  return { decision: "unchanged", reasons, truth };
 }

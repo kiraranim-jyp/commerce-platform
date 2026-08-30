@@ -13,6 +13,7 @@ import {
 // 루트로 import하면 Node 전용 모듈(tls/fs)이 브라우저 번들에 끌려 들어와
 // next build가 깨진다 — 순수 함수 파일만 직접 가리켜서 배럴을 우회한다.
 import { sortDomesticCandidatesByTrust } from "@commerce/crawler/src/comparison-search/display-priority";
+import type { MatchTruth } from "@commerce/crawler/src/comparison-search/match-truth";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 
 interface SampleListing {
@@ -72,6 +73,10 @@ interface DomesticCandidate {
   matchedTitle: string | null;
   matchedBrand: string | null;
   matchReasons: string[];
+  /** P-10 STEP 4/5(대표님/CPO 지시, 2026-08-30) — decideCandidateEvidence()가 이미
+   * 계산하던 값을 그대로 전달받는다(새 판정 없음). 마이그레이션 030 이전에 저장된
+   * 레거시 행은 null — legacy fallback으로 처리한다. */
+  matchTruth: MatchTruth | null;
   verified: boolean;
   externalUrl: string;
 }
@@ -97,7 +102,31 @@ const CANDIDATE_LABEL: Record<DomesticCandidate["matchType"], { icon: string; te
  * "그런데 왜 동일상품이지?"라는 혼란을 준다(Pepe Shoes 실측). % 자체는 지우지
  * 않고 아래 matchReasons 상세 목록(이미 "상품명 유사도 22%" 줄이 있음)으로만
  * 내려보낸다 — 새 판정을 하지 않고 표시 위치만 바꾼다. */
-function candidateLabel(c: DomesticCandidate): { icon: string; text: string; note: string } {
+/** P-10 STEP 6(대표님/CPO 지시, 2026-08-30) — matchTruth 6단계별 화면 문구.
+ * "동일상품 반영 여부"(note)는 여기서 새로 정하지 않고 항상 c.verified를 그대로
+ * 따른다 — matchTruth 카테고리별로 새 자동확정 규칙을 만들지 않는다는 STEP 0
+ * 절대 원칙 그대로. TEXT_CONFIRMED조차 verified=true가 될 수 있는 이유는
+ * toDomesticMatchType()의 기존 autoVerified(matchLevel=very_high) 판정
+ * 때문이며, 이 파일은 그 결과를 그대로 읽기만 한다. */
+const MATCH_TRUTH_DISPLAY: Record<MatchTruth, { icon: "🟢" | "⚪" | "🔴"; text: string }> = {
+  EXACT_IDENTIFIER: { icon: "🟢", text: "동일상품 확인됨 — 정확한 상품 식별자 일치" },
+  STRONG_IDENTIFIER: { icon: "🟢", text: "동일상품 확인됨(식별자 기반 검증)" },
+  TEXT_CONFIRMED: { icon: "🟢", text: "높은 상품명 일치 — 동일상품 가능성이 높음" },
+  SIMILAR: { icon: "⚪", text: "유사상품" },
+  INSUFFICIENT_EVIDENCE: { icon: "⚪", text: "판단 근거 부족 — 동일상품 여부를 확인하지 못했습니다" },
+  CONFLICT: { icon: "🔴", text: "다른 상품 가능성 높음 — 식별자 정보가 충돌합니다" },
+};
+
+export function candidateLabel(c: DomesticCandidate): { icon: string; text: string; note: string } {
+  if (c.matchTruth) {
+    const base = MATCH_TRUTH_DISPLAY[c.matchTruth];
+    if (c.matchTruth === "SIMILAR") {
+      const pct = Math.round(c.matchConfidence * 100);
+      return { ...base, note: `텍스트 유사도 ${pct}% · 가격비교에는 반영하지 않습니다` };
+    }
+    return { ...base, note: c.verified ? "→ 가격비교에 반영됨" : "가격비교에는 반영하지 않습니다" };
+  }
+  // 레거시 fallback(matchTruth=null, 마이그레이션 030 이전 저장된 행) — 예전 로직 그대로.
   if (c.verified) {
     const byIdentifier = c.matchReasons.some((r) => r.includes("식별자 근거"));
     return {

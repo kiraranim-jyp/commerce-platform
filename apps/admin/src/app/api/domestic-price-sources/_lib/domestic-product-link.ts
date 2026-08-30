@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import type { MatchTruth } from "@commerce/crawler";
 
 /**
  * N-4.07 2차(대표님 지시: "가격보다 동일상품 판별 정확도가 우선이다") —
@@ -48,6 +49,11 @@ export interface DomesticProductLink {
   matchType: DomesticMatchType;
   matchConfidence: number;
   matchReasons: string[];
+  /** P-10 STEP 4(대표님/CPO 지시, 2026-08-30) — decideCandidateEvidence()가 이미
+   * 계산하던 값을 저장/전달한다(재계산 없음). 마이그레이션 030 이전에 만들어진
+   * 행은 null이다 — "가격 다시 확인"으로 재검색되면 그때 채워진다(일괄 backfill
+   * 없음, STEP 3.5 결정). */
+  matchTruth: MatchTruth | null;
   verified: boolean;
   verifiedAt: string | null;
   status: "ACTIVE" | "PAUSED" | "BROKEN_LINK";
@@ -68,6 +74,7 @@ interface DomesticProductLinkRow {
   match_type: DomesticMatchType;
   match_confidence: number;
   match_reasons: string[];
+  match_truth: MatchTruth | null;
   verified: boolean;
   verified_at: string | null;
   status: "ACTIVE" | "PAUSED" | "BROKEN_LINK";
@@ -89,6 +96,7 @@ function toLink(row: DomesticProductLinkRow): DomesticProductLink {
     matchType: row.match_type,
     matchConfidence: Number(row.match_confidence),
     matchReasons: row.match_reasons ?? [],
+    matchTruth: row.match_truth ?? null,
     verified: row.verified,
     verifiedAt: row.verified_at,
     status: row.status,
@@ -124,6 +132,7 @@ export interface UpsertDomesticProductLinkInput {
   matchType: DomesticMatchType;
   matchConfidence: number;
   matchReasons: string[];
+  matchTruth: MatchTruth;
   verified: boolean;
 }
 
@@ -162,6 +171,7 @@ export async function upsertDomesticProductLink(
         match_type: input.matchType,
         match_confidence: input.matchConfidence,
         match_reasons: input.matchReasons,
+        match_truth: input.matchTruth,
         verified: keepVerified || input.verified,
         verified_at: keepVerified || input.verified ? new Date().toISOString() : null,
         status: "ACTIVE",

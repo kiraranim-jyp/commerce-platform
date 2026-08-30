@@ -337,6 +337,9 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       matchConfidence: best.confidence,
       matchReasons: finalMatchReasons,
       verified: finalVerified,
+      // P-10 STEP 4(대표님/CPO 지시, 2026-08-30) — decideCandidateEvidence()가
+      // 이미 계산한 값을 그대로 저장한다(재계산 없음).
+      matchTruth: evidenceDecision.truth,
     });
     if (upsertResult.ok) linksCreatedOrUpdated += 1;
     else sourceErrors.push(`${result.shopName}: 링크 저장 실패 — ${upsertResult.error}`);
