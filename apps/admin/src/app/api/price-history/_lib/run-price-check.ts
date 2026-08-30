@@ -71,6 +71,32 @@ export async function runPriceCheck(input: PriceCheckInput): Promise<PriceCheckR
     const currency = useKrMarket ? "KRW" : input.originalCurrency;
     const exchangeRates = await fetchLiveExchangeRates();
     const converted = convertToKrw(priceAmount, currency, exchangeRates.rates);
+
+    // P-12A(대표님/CPO 지시, 2026-08-31) — "실제 구매 가능한 가격"을 Market
+    // Intelligence까지 흘려보내려면 할인 여부/정가/품절 여부를 이 시점에
+    // 같이 저장해야 한다. useKrMarket으로 이미 고른 kr/origin probe 결과
+    // 하나에서만 파생한다(새 fetch 없음, marketProbe는 위에서 이미 받아온 것).
+    // price_krw의 기존 의미(실제 판매가)는 그대로 두고, sale_price_krw는
+    // "할인 중"이라는 상태 정보로만 쓴다(CPO 확정: price_krw==sale_price_krw여도
+    // 무방, 의미가 다르다).
+    const chosenProbe = useKrMarket ? krPrice : (marketProbe?.origin ?? null);
+    let salePriceKrw: number | null = null;
+    let originalPriceKrw: number | null = null;
+    let soldOut: boolean | null = null;
+    if (chosenProbe) {
+      soldOut = chosenProbe.available === false;
+      // regularPrice(할인 전 정가)가 있고 현재가보다 실제로 클 때만 "할인 중"이다
+      // — 같거나 작으면 할인이 아니다(정가=현재가인 상품을 할인 중으로 지어내지 않는다).
+      if (chosenProbe.regularPrice && chosenProbe.regularPrice.amount > chosenProbe.amount) {
+        salePriceKrw = converted.amountKrw;
+        originalPriceKrw = convertToKrw(
+          chosenProbe.regularPrice.amount,
+          chosenProbe.regularPrice.currency,
+          exchangeRates.rates,
+        ).amountKrw;
+      }
+    }
+
     observations.push({
       snapshotId: input.snapshotId,
       source: "SELLER_ORIGIN",
@@ -82,6 +108,9 @@ export async function runPriceCheck(input: PriceCheckInput): Promise<PriceCheckR
       // 필드라(DOMESTIC_SHOP만 상점명으로 사용) 마이그레이션 없이 원가
       // 근거(KR_MARKET/ORIGIN_FX)를 그대로 재사용한다.
       sourceLabel: useKrMarket ? "KR_MARKET" : "ORIGIN_FX",
+      salePriceKrw,
+      originalPriceKrw,
+      soldOut,
     });
     originSaved = true;
   }

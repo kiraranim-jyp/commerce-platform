@@ -356,6 +356,14 @@ const REPRESENTATIVE_VERDICT_CTA: Record<RepresentativeVerdict["code"], { label:
   HOLD: { label: "가격·매입 조건 재검토", hint: "현재 판매가격과 국내 시장가격을 다시 비교합니다." },
 };
 
+/** P-12B/D(대표님/CPO 지시, 2026-08-31) — "얼마에 살 수 있고"의 근거가 최신
+ * 실측값인지 과거 저장값인지 셀러가 구분할 수 있게 한다. */
+const COST_SOURCE_LABEL: Record<NonNullable<PriceHistoryResponse["costSource"]>, string> = {
+  LATEST_SALE: "최신 확인가 기준(할인 중)",
+  LATEST_PRICE: "최신 확인가 기준",
+  STATIC_SNAPSHOT: "저장된 가격 기준",
+};
+
 interface PriceHistoryResponse {
   ok: boolean;
   product: { title: string; brand: string; sourceUrl: string };
@@ -370,7 +378,12 @@ interface PriceHistoryResponse {
   priceHistory: {
     /** N-4.18-J STEP J-6 — "🌎 해외" 블록에 원가 변화(▼/▲%)를 보여주기 위해
      * 이미 서버가 계산해 돌려주는 값을 그대로 읽는다(새 계산 없음). */
-    origin: { change: { changeRatePercent: number } | null };
+    origin: {
+      change: { changeRatePercent: number } | null;
+      /** P-12D — costSource 배지("최신 확인가 기준 · N시간 전")에 쓸 시각.
+       * records[0]이 최신(서버가 이미 checked_at desc로 정렬해 돌려준다). */
+      records: PriceHistoryRecord[];
+    };
     domesticShop: { records: PriceHistoryRecord[]; trend7d: PriceTrend | null; trend30d: PriceTrend | null };
   };
   fx: { rate: number; isEstimate: boolean } | null;
@@ -389,6 +402,11 @@ interface PriceHistoryResponse {
      * OPPORTUNITY 카드에 추가로 노출하는 것뿐이다. */
     suggestedPriceKrw: number;
   } | null;
+  /** P-12B(대표님/CPO 지시, 2026-08-31) — cost가 실제로 어떤 기준으로
+   * 계산됐는지: LATEST_SALE(최신 확인된 할인가)/LATEST_PRICE(최신 확인가,
+   * 할인 아님)/STATIC_SNAPSHOT(가격 확인 이력이 없거나 품절이라 과거 저장된
+   * canonicalProduct.price로 폴백). cost가 null이면 이 값도 null. */
+  costSource: "LATEST_SALE" | "LATEST_PRICE" | "STATIC_SNAPSHOT" | null;
   decision: Decision | null;
   recommendation: Recommendation | null;
   sellerAction: SellerAction;
@@ -579,6 +597,7 @@ export function DomesticPriceIntelligencePanel({
     domesticCompetition,
     currentPrice,
     cost,
+    costSource,
     fx,
     decision,
     recommendation,
@@ -592,6 +611,7 @@ export function DomesticPriceIntelligencePanel({
   const trend30d = domesticShopHistory?.trend30d ?? null;
   const historyRecords = domesticShopHistory?.records ?? [];
   const originChangeRatePercent = data.priceHistory?.origin?.change?.changeRatePercent ?? null;
+  const originLatestCheckedAt = data.priceHistory?.origin?.records?.[0]?.checkedAt ?? null;
 
   const hasAnyData =
     domesticCompetition.tier !== "NONE" || currentPrice.sellingPriceKrw != null || cost != null;
@@ -635,45 +655,58 @@ export function DomesticPriceIntelligencePanel({
             <p className="font-medium">
               {representativeVerdict.icon} {representativeVerdict.title}
             </p>
-            <p className="mt-1 text-text-secondary">{representativeVerdict.description}</p>
+
+            {/* P-12D(대표님/CPO 지시, 2026-08-31) — "숫자 → 결론 → 이유 → 상세정보"
+                순서로 확정. 얼마에 사서/얼마가 들고/얼마에 팔지/얼마 남는지 4개
+                숫자를 결론 설명·판단근거보다 먼저 보여준다. 새 계산 없음 — cost/
+                recommendation/unifiedDecision은 기존에 이미 계산되던 값 그대로다. */}
+            {cost && (
+              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 rounded-md border border-current/20 bg-background/40 p-2 sm:grid-cols-4">
+                <div>
+                  <dt className="text-[10px] text-text-tertiary">💰 현재 구매가</dt>
+                  <dd className="text-sm font-semibold text-text-primary">₩{cost.costKrw.toLocaleString()}</dd>
+                  {costSource && (
+                    <p className="text-[10px] text-text-tertiary">
+                      {COST_SOURCE_LABEL[costSource]}
+                      {costSource !== "STATIC_SNAPSHOT" && originLatestCheckedAt
+                        ? ` · ${relativeTimeFromNow(originLatestCheckedAt)}`
+                        : ""}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <dt className="text-[10px] text-text-tertiary">📦 예상 착지원가</dt>
+                  <dd className="text-sm font-semibold text-text-primary">₩{cost.landedCostKrw.toLocaleString()}</dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] text-text-tertiary">🏷 추천 판매가</dt>
+                  <dd className="text-sm font-semibold text-text-primary">
+                    {recommendation && recommendation.minimumPrice < recommendation.recommendedPrice
+                      ? `₩${recommendation.minimumPrice.toLocaleString()} ~ ₩${recommendation.recommendedPrice.toLocaleString()}`
+                      : `₩${(recommendation?.recommendedPrice ?? cost.suggestedPriceKrw).toLocaleString()}`}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[10px] text-text-tertiary">📈 예상 수익</dt>
+                  <dd className="text-sm font-semibold text-text-primary">
+                    {unifiedDecision?.estimatedProfitKrw.value != null
+                      ? `₩${unifiedDecision.estimatedProfitKrw.value.toLocaleString()}`
+                      : "판매가 설정 필요"}
+                    {unifiedDecision?.marginPercent.value != null && (
+                      <span className="text-text-tertiary"> ({unifiedDecision.marginPercent.value}%)</span>
+                    )}
+                  </dd>
+                </div>
+              </dl>
+            )}
+
+            <p className="mt-2 text-text-secondary">{representativeVerdict.description}</p>
             {representativeVerdict.reasons.length > 0 && (
               <ul className="mt-1.5 space-y-0.5 text-text-secondary">
                 {representativeVerdict.reasons.map((reason, i) => (
                   <li key={i}>✓ {reason}</li>
                 ))}
               </ul>
-            )}
-            {unifiedDecision && (
-              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-text-secondary sm:grid-cols-4">
-                <div>
-                  <dt className="text-[10px] text-text-tertiary">현재 확인된 구매원가</dt>
-                  <dd className="font-medium text-text-primary">
-                    ₩{unifiedDecision.landedCostKrw.value.toLocaleString()}
-                  </dd>
-                </div>
-                {unifiedDecision.estimatedProfitKrw.value != null && (
-                  <div>
-                    <dt className="text-[10px] text-text-tertiary">예상 순이익</dt>
-                    <dd className="font-medium text-text-primary">
-                      ₩{unifiedDecision.estimatedProfitKrw.value.toLocaleString()}
-                    </dd>
-                  </div>
-                )}
-                {unifiedDecision.marginPercent.value != null && (
-                  <div>
-                    <dt className="text-[10px] text-text-tertiary">예상 마진율</dt>
-                    <dd className="font-medium text-text-primary">{unifiedDecision.marginPercent.value}%</dd>
-                  </div>
-                )}
-                {recommendation && (
-                  <div>
-                    <dt className="text-[10px] text-text-tertiary">권장 판매가(국내 시장 참고)</dt>
-                    <dd className="font-medium text-text-primary">
-                      ₩{recommendation.recommendedPrice.toLocaleString()}
-                    </dd>
-                  </div>
-                )}
-              </dl>
             )}
             {/* "unknown을 0원처럼 보여주면 안 된다"(대표님 명시) — 알려진
                 비용 기준 숫자는 그대로 보여주되, 무엇이 빠졌는지를 항상
@@ -695,23 +728,6 @@ export function DomesticPriceIntelligencePanel({
                 그 근거 문장을 "참고" 라벨을 붙여 작게 덧붙인다. */}
             {!unifiedDecision && sellability.estimatedMarginPercent != null && (
               <p className="mt-2 text-[10px] text-text-tertiary">참고: {sellability.reason}</p>
-            )}
-            {/* P-9 STEP 6(대표님 지시, 2026-08-30) — "숫자를 새로 지어내거나
-                가짜 추천가격을 만들면 안 된다." cost.suggestedPriceKrw는 이미
-                computePriceBreakdown()이 판매가 유무와 무관하게 늘 계산해
-                돌려주던 값이다(SellerProfile 기본 마진/수수료 기준) — 새 계산
-                없이 MARKET_OPPORTUNITY 카드에서만 추가로 보여준다. */}
-            {representativeVerdict.code === "MARKET_OPPORTUNITY" && cost && (
-              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-text-secondary">
-                <div>
-                  <dt className="text-[10px] text-text-tertiary">예상 비용(착지원가)</dt>
-                  <dd className="font-medium text-text-primary">₩{cost.landedCostKrw.toLocaleString()}</dd>
-                </div>
-                <div>
-                  <dt className="text-[10px] text-text-tertiary">현재 설정 기준 목표 판매가</dt>
-                  <dd className="font-medium text-text-primary">₩{cost.suggestedPriceKrw.toLocaleString()}</dd>
-                </div>
-              </dl>
             )}
             {(() => {
               const cta = REPRESENTATIVE_VERDICT_CTA[representativeVerdict.code];

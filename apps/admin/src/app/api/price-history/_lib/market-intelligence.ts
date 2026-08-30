@@ -78,14 +78,45 @@ export async function computeMarketIntelligence(snapshotId: string) {
   // 기존과 완전히 동일하게(unknown) 동작한다.
   const sellerProfile = await getDefaultSellerProfile();
 
+  // P-12B(대표님/CPO 지시, 2026-08-31) — 착지원가/추천판매가는 과거 크롤링
+  // 시점의 canonicalProduct.price(정적)가 아니라 최근 실제 확인된 구매가능
+  // 가격을 우선 사용한다. 우선순위: ①최신 observation.soldOut!==true &&
+  // salePriceKrw → LATEST_SALE, ②같은 조건 && priceKrw → LATEST_PRICE,
+  // ③최신 observation 없음/품절 → STATIC_SNAPSHOT(기존 동작 그대로). 품절
+  // observation은 최신이어도 원가 기준으로 승격하지 않는다(CPO 명시).
+  // originalPriceKrw(정가)는 이 우선순위 어디에도 없다 — 원가 계산에 사용 금지,
+  // 표시 전용(CPO 명시).
+  type CostSource = "LATEST_SALE" | "LATEST_PRICE" | "STATIC_SNAPSHOT";
+  const latestOrigin = originHistory[0] ?? null;
+  let costSource: CostSource = "STATIC_SNAPSHOT";
+  let resolvedOriginalAmount = product.price.value.amount;
+  let resolvedOriginalCurrency = product.price.value.currency;
+  if (latestOrigin && latestOrigin.soldOut !== true) {
+    if (latestOrigin.salePriceKrw != null) {
+      costSource = "LATEST_SALE";
+      resolvedOriginalAmount = latestOrigin.salePriceKrw;
+      resolvedOriginalCurrency = "KRW";
+    } else if (latestOrigin.priceKrw != null) {
+      costSource = "LATEST_PRICE";
+      resolvedOriginalAmount = latestOrigin.priceKrw;
+      resolvedOriginalCurrency = "KRW";
+    }
+  }
+
   let cost: ReturnType<typeof computePriceBreakdown> | null = null;
   let recommendation: ReturnType<typeof computePriceRecommendation> | null = null;
-  const originalAmount = product.price.value.amount;
-  const originalCurrency = product.price.value.currency;
-  if (product.priceValidity === "VALID" && originalAmount > 0 && originalCurrency) {
+  // STATIC_SNAPSHOT일 때만 기존 priceValidity 게이트를 그대로 유지한다(회귀
+  // 방지). LATEST_SALE/LATEST_PRICE는 이미 실측된 값이라 이 게이트와 무관하다.
+  const hasResolvedPrice = resolvedOriginalAmount > 0 && Boolean(resolvedOriginalCurrency);
+  const canComputeCost =
+    costSource !== "STATIC_SNAPSHOT" ? hasResolvedPrice : product.priceValidity === "VALID" && hasResolvedPrice;
+  if (canComputeCost) {
     const exchangeRates = await fetchLiveExchangeRates();
     const breakdownInput = product.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT;
-    cost = computePriceBreakdown({ originalAmount, originalCurrency, ...breakdownInput }, exchangeRates.rates);
+    cost = computePriceBreakdown(
+      { originalAmount: resolvedOriginalAmount, originalCurrency: resolvedOriginalCurrency, ...breakdownInput },
+      exchangeRates.rates,
+    );
     if (currentSellingPriceKrw != null) {
       recommendation = computePriceRecommendation({
         totalCostKrw: cost.landedCostKrw,
@@ -213,6 +244,9 @@ export async function computeMarketIntelligence(snapshotId: string) {
     },
     fx: cost ? { rate: cost.exchangeRate, isEstimate: cost.isRateEstimate } : null,
     cost,
+    // P-12B — cost가 실제로 어떤 기준으로 계산됐는지 UI까지 전달한다("최신
+    // 확인가 기준" vs "저장된 가격 기준" 구분 표시용).
+    costSource: cost ? costSource : null,
     margin: decision ? { percent: decision.marginPercent } : null,
     decision,
     unifiedDecision,

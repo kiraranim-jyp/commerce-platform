@@ -15,6 +15,11 @@ export interface ExtractedProductData {
    * 소스(json-ld/microdata/open-graph/dom)는 정가/할인가 분리 마크업을 아직
    * 실측 확인하지 못해 항상 undefined다. */
   regularPrice?: { amount: number; currency: string };
+  /** P-12A(대표님/CPO 지시, 2026-08-31) — Shopify variants[]의 공식 구매가능
+   * 판정(isVariantAvailable, inventory_management/policy/quantity 기준)을
+   * 그대로 노출한다. variants가 하나도 없으면(이론상 발생 안 함) undefined —
+   * "품절 아님"을 지어내지 않는다. Shopify가 아닌 소스는 항상 undefined. */
+  available?: boolean;
   /** N-3.54(CPO 지시: "원본 가격을 못 읽었으면 가격을 계산하지 말고") — price가
    * undefined인 이유를 구분한다. MISSING은 가격 필드 자체를 못 찾은 경우,
    * INVALID는 가격 텍스트/값은 찾았지만 숫자로 해석 불가하거나 0 이하인

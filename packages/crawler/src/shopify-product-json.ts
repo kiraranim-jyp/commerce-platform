@@ -323,6 +323,11 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
         }
       : undefined;
   const regularPrice = variant ? resolveRegularPrice(variant, price?.amount, localePrefix, shopCurrency) : undefined;
+  // P-12A(대표님/CPO 지시, 2026-08-31) — "구매 가능 variant가 하나라도 있으면
+  // 판매중"(availableVariant가 이미 이 기준으로 골라져 있다, 위 참고). variants가
+  // 아예 없으면(이론상 발생 안 하지만) undefined로 남긴다 — "판매중"을 지어내지
+  // 않는다.
+  const available = product.variants?.length ? availableVariant != null : undefined;
 
   const optionNames = (product.options ?? []).map((o) => o.name).filter((n): n is string => Boolean(n));
   const optionGroups: CanonicalProductOptionGroup[] = (product.options ?? [])
@@ -376,6 +381,7 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
       description: product.body_html ? stripHtmlTags(product.body_html) : undefined,
       price,
       regularPrice,
+      available,
       options: optionNames,
       optionGroups,
       variants,

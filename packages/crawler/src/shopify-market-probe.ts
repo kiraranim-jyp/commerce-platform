@@ -17,6 +17,11 @@ export interface ShopifyMarketProbeResult {
   /** N-3.7 — 이 요청이 내부적으로 이미 가져온 판매처 메타(/meta.json). 별도로
    * 다시 fetch하지 않고 fetchShopifyProductJson이 가져온 걸 그대로 넘긴다. */
   shopMeta: import("./shopify-product-json").ShopifyShopMeta | null;
+  /** P-12A(대표님/CPO 지시, 2026-08-31) — fetchShopifyProductJson이 이미
+   * 추출하던 productData.regularPrice/available을 그대로 노출한다(신규 fetch
+   * 없음). regularPrice가 amount보다 클 때만 "실제 할인 중"이다. */
+  regularPrice: { amount: number; currency: string } | null;
+  available: boolean | undefined;
 }
 
 async function probeMarket(origin: string, handle: string, marketCode: string): Promise<ShopifyMarketProbeResult | null> {
@@ -31,6 +36,8 @@ async function probeMarket(origin: string, handle: string, marketCode: string): 
     currency: price.currency,
     sourceUrl: `${url}.json`,
     shopMeta: result?.shopMeta ?? null,
+    regularPrice: result?.productData.regularPrice ?? null,
+    available: result?.productData.available,
   };
 }
 
