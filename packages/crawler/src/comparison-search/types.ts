@@ -24,6 +24,19 @@ export interface ComparisonCandidate {
    * 아직 시도하지 않았다는 뜻 — UI는 matchLevel만으로 기존 배지를 그대로
    * 보여준다(하위호환, 회귀 없음). */
   matchTruth?: "EXACT_IDENTIFIER" | "STRONG_IDENTIFIER" | "TEXT_CONFIRMED" | "SIMILAR" | "CONFLICT" | "INSUFFICIENT_EVIDENCE";
+  /** P-11 STEP 4(대표님/CPO 지시, 2026-08-30) — 해외 가격비교(comparison-search) 전용
+   * 판정. 위 matchTruth(도메스틱 modelCode 증거 계층, P-7-B)와는 별개 값 체계다 —
+   * product-identity.ts의 ProductMatchTruth와 같은 값을 리터럴로 복제한다(순환
+   * import 방지, matchTruth와 동일한 기존 패턴). 채워지지 않으면(undefined) 이
+   * 후보에 대해 identity 판정을 아직 시도하지 않았다는 뜻. */
+  productMatchTruth?:
+    | "EXACT_PRODUCT"
+    | "CONFIRMED_PRODUCT"
+    | "SAME_MODEL_VARIANT"
+    | "VERY_SIMILAR"
+    | "SIMILAR"
+    | "CONFLICT"
+    | "INSUFFICIENT_EVIDENCE";
   /** Sprint B-1.8 — "detail"은 상품 상세 API로 실제 가격을 확인한 것(신뢰 가능), "search"는
    * 검색 결과에 딸려온 값을 그대로 쓴 것(참고용). 매칭(동일상품 여부)과 가격확인은 별개
    * 단계이므로, 이 필드로 "이 가격을 얼마나 믿어도 되는지"를 구분한다. */
@@ -80,6 +93,12 @@ export interface ComparisonQuery {
   sourceUrl?: string;
   /** 원본 상품에서 확인된 SKU/article code(있으면). */
   sku?: string;
+  /** P-11 STEP 4(대표님/CPO 지시, 2026-08-30) — product-identity.ts가 sku가 비어있을
+   * 때 "Article code: XXX" 텍스트를 직접 뽑아내는 폴백 소스로 쓴다(STEP 1 실측:
+   * product.sku.value가 비어있어도 설명문에는 Article code가 그대로 있는 경우가
+   * 흔함). 없으면(undefined) 이 폴백을 시도하지 않는다 — 하위호환(기존 호출부는
+   * 이 필드를 몰라도 되고, 몰라도 동작이 바뀌지 않는다). */
+  description?: string;
   /** N-4.18-C STEP3(대표님 지시: "검색 횟수보다 매칭 정확도를 우선한다") — 실제
    * 검색 API/키워드 파라미터에 보낼 최소화된 검색어(packages/shared의
    * buildDomesticShopQuery, SKU 단독 > 브랜드+모델명 > 브랜드+핵심 상품명

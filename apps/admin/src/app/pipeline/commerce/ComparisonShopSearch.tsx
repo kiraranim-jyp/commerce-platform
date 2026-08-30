@@ -14,6 +14,37 @@ import {
 
 type MatchLevel = "very_high" | "high" | "medium" | "low";
 
+/** P-11 STEP 4(대표님/CPO 지시, 2026-08-30) — "동일상품 90%"류 오판정(Ezra가 Bruno와
+ * 다른 상품인데 confidence 90%만으로 동일상품 취급됨) 수정. matchLevel/confidence는
+ * 그대로 텍스트 유사도만 말하고, 이 값이 있으면(product-identity.ts가 판정) 실제
+ * "같은 상품인가"는 이 값이 결정한다 — 없으면(구버전 응답 등) 기존 matchLevel 로직으로
+ * 폴백한다(하위호환). */
+type ProductMatchTruth =
+  | "EXACT_PRODUCT"
+  | "CONFIRMED_PRODUCT"
+  | "SAME_MODEL_VARIANT"
+  | "VERY_SIMILAR"
+  | "SIMILAR"
+  | "CONFLICT"
+  | "INSUFFICIENT_EVIDENCE";
+
+const PRODUCT_MATCH_TRUTH_DISPLAY: Record<ProductMatchTruth, { icon: string; text: string; badgeClass: string }> = {
+  EXACT_PRODUCT: { icon: "🟢", text: "동일상품 확인", badgeClass: "bg-success-soft text-success" },
+  CONFIRMED_PRODUCT: { icon: "🟢", text: "동일상품 확인", badgeClass: "bg-success-soft text-success" },
+  SAME_MODEL_VARIANT: { icon: "🔵", text: "동일 모델 · 옵션 다름", badgeClass: "bg-primary/10 text-primary" },
+  VERY_SIMILAR: { icon: "🟡", text: "매우 유사한 상품", badgeClass: "bg-warning-soft text-warning" },
+  SIMILAR: { icon: "⚪", text: "유사상품", badgeClass: "bg-background text-text-tertiary" },
+  CONFLICT: { icon: "🔴", text: "다른 상품", badgeClass: "bg-error/10 text-error" },
+  INSUFFICIENT_EVIDENCE: { icon: "⚪", text: "매칭 불확실", badgeClass: "bg-background text-text-tertiary" },
+};
+
+/** 동일상품으로 간주해 "비교 가능한 동일상품" 카운트/가격비교 근거에 넣을 수 있는
+ * 등급. SAME_MODEL_VARIANT(같은 모델, 옵션만 다름)까지 포함 — CONFIRMED_PRODUCT와
+ * 달리 참고용이라는 건 화면 배지에서 별도로 표시한다(🔵, "동일 모델 · 옵션 다름"). */
+function isConfirmedSameProduct(truth: ProductMatchTruth): boolean {
+  return truth === "EXACT_PRODUCT" || truth === "CONFIRMED_PRODUCT" || truth === "SAME_MODEL_VARIANT";
+}
+
 const MATCH_LEVEL_LABEL: Record<MatchLevel, string> = {
   very_high: "동일상품 가능성 매우 높음",
   high: "동일상품 가능성 높음",
@@ -70,6 +101,8 @@ interface Candidate {
   priceSource?: "detail" | "search" | null;
   priceStatus?: PriceStatus;
   verificationAttempted?: boolean;
+  /** P-11 STEP 4 — 없으면(undefined) 구버전 응답이라는 뜻, 기존 matchLevel 배지로 폴백. */
+  productMatchTruth?: ProductMatchTruth;
 }
 
 interface SearchResult {
@@ -102,12 +135,17 @@ export function ComparisonShopSearch({
   brand,
   sourceUrl,
   sku,
+  description,
   onRequestPriceReview,
 }: {
   title: string;
   brand?: string;
   sourceUrl?: string;
   sku?: string;
+  /** P-11 STEP 4 — product-identity.ts가 sku가 비어있을 때 "Article code: XXX"
+   * 텍스트를 직접 뽑아내는 폴백 소스로 쓴다(STEP 1 실측: product.sku.value가
+   * 비어있어도 설명문에는 Article code가 그대로 있는 경우가 흔함). */
+  description?: string;
   /** P-5(CPO 지시, 2026-08-29) — 판단 카드의 "가격 재검토" 버튼이 누를 때 쓴다.
    * CommerceWorkspace.tsx가 DomesticPriceIntelligencePanel에 이미 쓰고 있는
    * handleRequestPriceReview를 그대로 전달받는다(탭 전환 + 스크롤만 하는 안전한
@@ -140,7 +178,7 @@ export function ComparisonShopSearch({
         fetch("/api/comparison/search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, brand, sourceUrl, sku }),
+          body: JSON.stringify({ title, brand, sourceUrl, sku, description }),
         }),
         // N-3.10 Part L — 원본가격 옆에 KRW 환산도 같이 보여준다. PriceEditor가
         // 이미 쓰는 것과 같은 /api/exchange-rates를 그대로 재사용한다(별도
@@ -306,7 +344,13 @@ function SellerDecisionCard({
 }) {
   const searchState: ComparisonResultState = deriveComparisonResultState(results);
   const acceptableCandidates = results.flatMap((r) => r.candidates.filter((c) => c.matchLevel && c.matchLevel !== "low"));
-  const sameProductCount = acceptableCandidates.filter((c) => c.matchLevel === "very_high" || c.matchLevel === "high").length;
+  // P-11 STEP 4(대표님/CPO 지시, 2026-08-30) — "비교 가능한 동일상품" 카운트가
+  // matchLevel(텍스트 유사도)만으로 세면 Ezra(confidence 90%, 실제로는 다른 상품)
+  // 같은 오판정이 그대로 카운트에 남는다. productMatchTruth가 있으면 그 값으로
+  // "진짜 동일상품"만 센다 — 없으면(구버전 응답) 기존 matchLevel 기준 유지.
+  const sameProductCount = acceptableCandidates.filter((c) =>
+    c.productMatchTruth ? isConfirmedSameProduct(c.productMatchTruth) : c.matchLevel === "very_high" || c.matchLevel === "high",
+  ).length;
   const sourceVerificationStatus = sourceVerification?.status ?? "NOT_APPLICABLE";
 
   const decision = deriveSellerDecisionState({
@@ -475,7 +519,12 @@ function ResultTable({
               // 유사상품(medium)을 표에서도 시각적으로 분리한다. 유사상품 행은
               // 옅은 배경을 줘서 "참고용"임을 표에서도 한 번 더 드러낸다(배지
               // 색상만으로는 스캔할 때 놓치기 쉽다는 게 STEP5의 근거).
-              const isSimilarOnly = c?.matchLevel === "medium";
+              // P-11 STEP 4 — productMatchTruth가 있으면 그 값으로 판단한다(Ezra처럼
+              // matchLevel="high"인데 실제로는 다른 상품인 행도 옅은 배경 + 가격 셀
+              // 주의 문구를 받아야 한다).
+              const isSimilarOnly = c?.productMatchTruth
+                ? !isConfirmedSameProduct(c.productMatchTruth)
+                : c?.matchLevel === "medium";
               return (
                 <tr
                   key={`${row.shopId}-${i}`}
@@ -498,22 +547,7 @@ function ResultTable({
                     <PriceCell candidate={c} krwRates={krwRates} fxSource={fxSource} isSimilarOnly={isSimilarOnly} />
                   </td>
                   <td className="px-2 py-1.5">
-                    {c?.matchLevel ? (
-                      <span
-                        className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_LEVEL_BADGE_CLASS[c.matchLevel]}`}
-                        title={c.matchReasons?.length ? c.matchReasons.join(", ") : undefined}
-                      >
-                        {MATCH_LEVEL_ICON[c.matchLevel]}{" "}
-                        {c.matchLevel === "very_high" || c.matchLevel === "high"
-                          ? "동일상품"
-                          : c.matchLevel === "medium"
-                            ? "유사상품"
-                            : "매칭 불확실"}{" "}
-                        {Math.round(c.confidence * 100)}%
-                      </span>
-                    ) : (
-                      "—"
-                    )}
+                    {c ? <MatchBadge candidate={c} /> : "—"}
                   </td>
                 </tr>
               );
@@ -522,6 +556,42 @@ function ResultTable({
         </table>
       </div>
     </div>
+  );
+}
+
+/** P-11 STEP 4(대표님/CPO 지시, 2026-08-30) — 매칭상태 열의 배지. productMatchTruth가
+ * 있으면 그 판정으로 표시한다("동일상품 90%" 같은, confidence만으로 동일상품이라고
+ * 잘못 읽히는 표현을 없앤다 — CONFLICT는 confidence를 "텍스트 유사도 XX%"로만
+ * 보여주고 "다른 상품"이라고 명시한다). 없으면(구버전 응답) 기존 matchLevel 배지로
+ * 폴백한다. */
+function MatchBadge({ candidate: c }: { candidate: Candidate }) {
+  if (c.productMatchTruth) {
+    const { icon, text, badgeClass } = PRODUCT_MATCH_TRUTH_DISPLAY[c.productMatchTruth];
+    const showConfidence = c.productMatchTruth !== "EXACT_PRODUCT" && c.productMatchTruth !== "CONFIRMED_PRODUCT";
+    return (
+      <span
+        className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${badgeClass}`}
+        title={c.matchReasons?.length ? c.matchReasons.join(", ") : undefined}
+      >
+        {icon} {text}
+        {showConfidence ? ` · 텍스트 유사도 ${Math.round(c.confidence * 100)}%` : ""}
+      </span>
+    );
+  }
+  if (!c.matchLevel) return <>—</>;
+  return (
+    <span
+      className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_LEVEL_BADGE_CLASS[c.matchLevel]}`}
+      title={c.matchReasons?.length ? c.matchReasons.join(", ") : undefined}
+    >
+      {MATCH_LEVEL_ICON[c.matchLevel]}{" "}
+      {c.matchLevel === "very_high" || c.matchLevel === "high"
+        ? "동일상품"
+        : c.matchLevel === "medium"
+          ? "유사상품"
+          : "매칭 불확실"}{" "}
+      {Math.round(c.confidence * 100)}%
+    </span>
   );
 }
 
