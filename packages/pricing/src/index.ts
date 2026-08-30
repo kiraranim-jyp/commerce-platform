@@ -13,3 +13,4 @@ export * from "./sellability";
 export * from "./unified-price-decision";
 export * from "./listing-price";
 export * from "./representative-seller-decision";
+export * from "./brand-market-profile";

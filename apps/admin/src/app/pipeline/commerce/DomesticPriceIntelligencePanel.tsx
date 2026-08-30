@@ -364,6 +364,14 @@ const COST_SOURCE_LABEL: Record<NonNullable<PriceHistoryResponse["costSource"]>,
   STATIC_SNAPSHOT: "저장된 가격 기준",
 };
 
+/** P-13A — 표본 수 기반 신뢰도를 셀러 언어로. 서버가 이미 INSUFFICIENT는
+ * null로 걸러서 보내므로 여기선 3단계만 다룬다. */
+const BRAND_MARKET_CONFIDENCE_LABEL: Record<"HIGH" | "MEDIUM" | "LOW", string> = {
+  HIGH: "🟢 신뢰도 높음",
+  MEDIUM: "🔵 신뢰도 보통",
+  LOW: "🟡 신뢰도 낮음",
+};
+
 interface PriceHistoryResponse {
   ok: boolean;
   product: { title: string; brand: string; sourceUrl: string };
@@ -407,6 +415,20 @@ interface PriceHistoryResponse {
    * 할인 아님)/STATIC_SNAPSHOT(가격 확인 이력이 없거나 품절이라 과거 저장된
    * canonicalProduct.price로 폴백). cost가 null이면 이 값도 null. */
   costSource: "LATEST_SALE" | "LATEST_PRICE" | "STATIC_SNAPSHOT" | null;
+  /** P-13A(대표님/CPO 지시, 2026-08-31) — 국내 동일상품이 없을 때(domesticCompetition.
+   * tier==="NONE") 서버가 계산해 돌려주는 브랜드 시장 근거. confidence가
+   * INSUFFICIENT(표본 1~2개)면 서버가 이미 null로 걸러서 보낸다 — 화면에서
+   * "null이 아니면 항상 쓸 만하다"로 취급해도 된다. */
+  brandMarketProfile: {
+    market: "KR";
+    sampleCount: number;
+    minPriceKrw: number;
+    p25PriceKrw: number;
+    medianPriceKrw: number;
+    p75PriceKrw: number;
+    maxPriceKrw: number;
+    confidence: "HIGH" | "MEDIUM" | "LOW";
+  } | null;
   decision: Decision | null;
   recommendation: Recommendation | null;
   sellerAction: SellerAction;
@@ -594,10 +616,12 @@ export function DomesticPriceIntelligencePanel({
   if (!data) return null;
 
   const {
+    product,
     domesticCompetition,
     currentPrice,
     cost,
     costSource,
+    brandMarketProfile,
     fx,
     decision,
     recommendation,
@@ -707,6 +731,42 @@ export function DomesticPriceIntelligencePanel({
                   <li key={i}>✓ {reason}</li>
                 ))}
               </ul>
+            )}
+            {/* P-13A(대표님/CPO 지시, 2026-08-31) — "국내 동일상품 없음"이
+                "시장 자체가 없음"과 같지 않다. 브랜드 시장 데이터가 있으면
+                "왜 이 가격인가"의 근거로 보여준다 — 새 판정 아님, 서버가 이미
+                계산한 분포를 그대로 노출한다. */}
+            {brandMarketProfile && (
+              <div className="mt-2 rounded-md border border-current/20 bg-background/40 p-2">
+                <p className="text-[10px] font-medium text-text-primary">
+                  💡 브랜드 시장 데이터 — {product.brand} 상품 {brandMarketProfile.sampleCount}개 분석
+                </p>
+                <div className="mt-1.5">
+                  <div className="relative h-1.5 rounded-full bg-border">
+                    <div
+                      className="absolute top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-primary"
+                      style={{
+                        left: `${
+                          ((brandMarketProfile.medianPriceKrw - brandMarketProfile.minPriceKrw) /
+                            Math.max(1, brandMarketProfile.maxPriceKrw - brandMarketProfile.minPriceKrw)) *
+                          100
+                        }%`,
+                      }}
+                    />
+                  </div>
+                  <div className="mt-1 flex justify-between text-[10px] text-text-tertiary">
+                    <span>₩{brandMarketProfile.minPriceKrw.toLocaleString()}</span>
+                    <span className="font-medium text-text-primary">
+                      중앙값 ₩{brandMarketProfile.medianPriceKrw.toLocaleString()}
+                    </span>
+                    <span>₩{brandMarketProfile.maxPriceKrw.toLocaleString()}</span>
+                  </div>
+                </div>
+                <p className="mt-1.5 text-[10px] text-text-tertiary">
+                  {BRAND_MARKET_CONFIDENCE_LABEL[brandMarketProfile.confidence]} · 추천 판매가는 이 브랜드 시장
+                  중앙가격 이하로 산정됩니다.
+                </p>
+              </div>
             )}
             {/* "unknown을 0원처럼 보여주면 안 된다"(대표님 명시) — 알려진
                 비용 기준 숫자는 그대로 보여주되, 무엇이 빠졌는지를 항상

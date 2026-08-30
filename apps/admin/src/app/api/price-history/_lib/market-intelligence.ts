@@ -19,6 +19,7 @@ import { fetchLiveExchangeRates } from "@/lib/exchange-rates";
 import { getDefaultSellerProfile } from "@/app/api/coupang/_lib/seller-profile";
 import { getSnapshot } from "../../snapshots/_lib/snapshot";
 import { getPriceHistory } from "./price-observations";
+import { computeBrandMarketProfileFor } from "./brand-market";
 
 /**
  * N-4.18-K STEP K-2(대표님 지시, 2026-08-26: "새로운 가격판정 엔진을 만들지
@@ -39,6 +40,17 @@ export async function computeMarketIntelligence(snapshotId: string) {
   ]);
 
   const domesticSummary = summarizeDomesticMarket([...domesticShopHistory, ...domesticHistory]);
+
+  // P-13A(대표님/CPO 지시, 2026-08-31) — 국내 동일상품 데이터가 없을 때만(Level 1
+  // 없음) 브랜드 시장 데이터를 2차 판단 근거로 계산한다. 동일상품 데이터가
+  // 있으면 항상 그게 우선이라 브랜드 시장은 계산할 필요가 없다(불필요한 조회
+  // 방지). confidence가 INSUFFICIENT(표본 1~2개)면 가격 추천에 쓰지 않는다
+  // (CPO 명시: "표본이 적으면 분석하지 않는다") — computePriceRecommendation에
+  // 넘기지 않고 UI 표시에서도 제외한다.
+  const brandMarketProfile =
+    domesticSummary.tier === "NONE" ? await computeBrandMarketProfileFor(product.brand.value).catch(() => null) : null;
+  const usableBrandMarketProfile =
+    brandMarketProfile && brandMarketProfile.confidence !== "INSUFFICIENT" ? brandMarketProfile : null;
   const originChange = computePriceChange(originHistory);
   const originTrend7d = computePriceTrend(originHistory, 7);
   const originTrend30d = computePriceTrend(originHistory, 30);
@@ -125,6 +137,9 @@ export async function computeMarketIntelligence(snapshotId: string) {
         domesticAveragePriceKrw: domesticSummary.averagePriceKrw,
         minimumMarginPercent: 10,
         targetMarginPercent: breakdownInput.marginPercent,
+        // P-13A — domesticLowestPriceKrw가 없을 때만 이 값이 실제로 쓰인다
+        // (computePriceRecommendation 내부에서 domesticLowestPriceKrw 우선).
+        brandMedianPriceKrw: usableBrandMarketProfile?.medianPriceKrw ?? null,
       });
     }
   }
@@ -247,6 +262,10 @@ export async function computeMarketIntelligence(snapshotId: string) {
     // P-12B — cost가 실제로 어떤 기준으로 계산됐는지 UI까지 전달한다("최신
     // 확인가 기준" vs "저장된 가격 기준" 구분 표시용).
     costSource: cost ? costSource : null,
+    // P-13A — 국내 동일상품이 없을 때 UI가 "왜 이 가격인가"에 쓸 브랜드 시장
+    // 근거. confidence=INSUFFICIENT면 null(가격 판단에 안 쓴다는 뜻과 동일 —
+    // usableBrandMarketProfile과 표시 여부를 일치시킨다).
+    brandMarketProfile: usableBrandMarketProfile,
     margin: decision ? { percent: decision.marginPercent } : null,
     decision,
     unifiedDecision,

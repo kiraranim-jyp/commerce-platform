@@ -44,7 +44,12 @@ export interface BrandResolution {
   matchedToken?: string;
 }
 
-const SEASON_CODE_PATTERN = /\b(?:SS|AW|FW|SU|WI)\d{2}\b/gi;
+/** P-13A(대표님/CPO 지시, 2026-08-31) — 실측 확인(2026-08-31): 약어 시즌코드만
+ * 잡던 기존 패턴이 풀어쓴 시즌명("Summer 26"/"Winter 25"/"Fall 26")을 놓쳐서
+ * 그 문자열이 그대로 브랜드명이 돼버리는 걸 확인했다(Konges Sløjd Summer 26
+ * Drop 1, Misha & Puff Winter 25 등). 결정론적 규칙 확장이지 AI 추측이
+ * 아니다 — 같은 SEASON_CODE 카테고리/HIGH 신뢰도를 유지한다. */
+const SEASON_CODE_PATTERN = /\b(?:SS|AW|FW|SU|WI)\d{2}\b|\b(?:Spring|Summer|Fall|Autumn|Winter)\s?\d{2}\b/gi;
 const MARKETING_SUFFIX_PATTERN =
   /\bsale\b|\bkids\b|\bbaby\b|\bofficial\b|\bnow\b|\bcollection\b|\bshop\b|\d{1,3}%\s*off\b/gi;
 const NEW_COOCCURRENCE_PATTERN = /\bnew\b/gi;
@@ -129,4 +134,53 @@ export function resolveBrandName(raw: string | undefined): BrandResolution | und
 
 export function cleanBrandName(raw: string | undefined): string | undefined {
   return resolveBrandName(raw)?.cleaned;
+}
+
+/** P-13A — Brand Market Profile 집계용 그룹핑 키. 표시용 브랜드명(displayBrand)은
+ * 절대 안 바꾼다("Konges Sløjd"는 화면에 그대로 보여준다) — 이 키는 비교/집계
+ * 전용이다. 두 단계:
+ * 1) NFD 정규화 + combining mark 제거 — "Pèpè"처럼 결합형 발음기호(e+`)는 이걸로
+ *    "Pepe"가 된다.
+ * 2) 결합형이 아닌 별개 문자(ø/æ/œ/ß 등, NFD로 안 풀리는 노르딕/유럽 문자) —
+ *    실측 확인(Konges Sløjd)된 것만 명시적 매핑. 새 문자를 발견하면 여기 추가한다
+ *    (추측 금지, 실제로 문제된 문자만).
+ * 3) 소문자화 + 공백 정리.
+ * "무리하게 합치지 않는다"(CPO 명시) — 이 함수는 철자/표기 차이만 접고, 시즌
+ * suffix 제거(resolveBrandName)는 이미 앞단에서 끝난 뒤의 값에만 적용한다. */
+const NON_COMBINING_DIACRITIC_MAP: Record<string, string> = {
+  ø: "o",
+  Ø: "O",
+  æ: "ae",
+  Æ: "AE",
+  œ: "oe",
+  Œ: "OE",
+  å: "a",
+  Å: "A",
+  ß: "ss",
+};
+
+export function normalizeBrandKey(displayBrand: string): string {
+  const withoutCombiningDiacritics = displayBrand.normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const withoutNonCombining = [...withoutCombiningDiacritics]
+    .map((ch) => NON_COMBINING_DIACRITIC_MAP[ch] ?? ch)
+    .join("");
+  return withoutNonCombining.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+export interface ResolvedBrand {
+  rawBrand: string;
+  /** 시즌/마케팅 문구만 제거한 표시용 브랜드명 — UI에 그대로 보여준다. */
+  displayBrand: string;
+  /** Brand Market Profile 집계·비교 전용 키. UI에 노출하지 않는다. */
+  normalizedBrandKey: string;
+}
+
+export function resolveBrand(raw: string | undefined): ResolvedBrand | undefined {
+  const resolution = resolveBrandName(raw);
+  if (!resolution) return undefined;
+  return {
+    rawBrand: resolution.raw,
+    displayBrand: resolution.cleaned,
+    normalizedBrandKey: normalizeBrandKey(resolution.cleaned),
+  };
 }
