@@ -11,3 +11,4 @@ export type { StrategySource } from "./strategies/types";
 export * from "./comparison-search";
 export * from "./shopify-market-probe";
 export { fetchShopifyShopMeta, stripShopifyLocalePrefix, type ShopifyShopMeta } from "./shopify-product-json";
+export { normalizeUrl } from "./utils/url.util";
