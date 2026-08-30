@@ -344,6 +344,12 @@ function SellerDecisionCard({
         )}
       </div>
       <p className="text-text-secondary">{decision.reason}</p>
+      {/* P-8 STEP 1-3(대표님 지시, 2026-08-30) — 이 카드가 "최종 등록 판단"으로
+          오해되지 않도록, 이 데이터의 역할이 근거(해외 가격/매칭 검증)라는 것을
+          명시한다. 최종 판단은 Market Intelligence의 대표 판단 카드 하나뿐이다. */}
+      <p className="text-[10px] text-text-tertiary">
+        해외 원본 상품과의 가격/매칭 검증 결과입니다 — 최종 등록 판단은 아래 국내 시장 분석을 따릅니다.
+      </p>
       <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-text-secondary">
         <span>
           원본 확인가:{" "}

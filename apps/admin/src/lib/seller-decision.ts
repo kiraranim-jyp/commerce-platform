@@ -14,8 +14,17 @@ import { computeKrwAmount } from "./price-truth";
 
 export type SellerDecisionState = "READY_TO_LIST" | "REVIEW_PRICE" | "NEEDS_RECHECK" | "HOLD";
 
+/**
+ * P-8 STEP 1-3(대표님 지시, 2026-08-30) — 이 카드는 "해외 원본 상품과의 가격/
+ * 매칭 검증 결과"이지 최종 등록 판단이 아니다. deriveSellerDecisionState()의
+ * 판정 로직(state 코드)은 그대로 유지하고(STEP 9: "판단 알고리즘 자체를
+ * 변경하지 않는다"), 화면에 보이는 제목 문구만 최종 승인으로 읽히던 표현에서
+ * "확인됨" 계열로 낮춘다 — 실측(Pepe Shoes, Bruno Cut Out Sandals)으로 확인된
+ * 문제: 이 카드가 "🟢 등록 진행 가능"이라고 말하는 동시에 Market Intelligence가
+ * "⚪ 판단 불가"라고 말해서 셀러가 어느 쪽을 믿어야 할지 모순됐다. 최종 대표
+ * 판단은 DomesticPriceIntelligencePanel의 representativeVerdict 하나뿐이다. */
 export const SELLER_DECISION_LABEL: Record<SellerDecisionState, { icon: string; title: string }> = {
-  READY_TO_LIST: { icon: "🟢", title: "등록 진행 가능" },
+  READY_TO_LIST: { icon: "🟢", title: "원본 가격/매칭 확인됨" },
   REVIEW_PRICE: { icon: "🟡", title: "가격 재검토 권장" },
   NEEDS_RECHECK: { icon: "🟠", title: "재확인 필요" },
   HOLD: { icon: "🔴", title: "보류 권장" },

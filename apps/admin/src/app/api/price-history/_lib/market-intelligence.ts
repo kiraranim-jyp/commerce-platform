@@ -12,6 +12,7 @@ import {
   priceLevelFromVerdict,
   computeSellability,
   computeUnifiedPriceDecision,
+  deriveRepresentativeSellerVerdict,
   type UnifiedPriceDecision,
 } from "@commerce/pricing";
 import { fetchLiveExchangeRates } from "@/lib/exchange-rates";
@@ -171,6 +172,17 @@ export async function computeMarketIntelligence(snapshotId: string) {
     },
   });
 
+  // P-8 STEP 2(대표님 지시, 2026-08-30) — "화면 최상단에 대표 판단 1개만 둔다."
+  // unifiedDecision/sellability를 재계산하지 않고, 이미 위에서 낸 결과를 그대로
+  // 단일 대표 상태로 압축한다(deriveRepresentativeSellerVerdict는 새 판정을
+  // 만들지 않는 presentation-layer 함수 — packages/pricing 참고).
+  const representativeVerdict = deriveRepresentativeSellerVerdict({
+    unifiedDecision,
+    sellability,
+    domesticMatched: domesticSummary.sellerCount > 0,
+    domesticSellerCount: domesticSummary.sellerCount,
+  });
+
   // N-4.18-K STEP K-1/K-2 — computeMarketAlert()에 넘길 "변화량"은 국내는
   // domesticShopTrend7d(이미 sellerAction에도 쓰는 값과 동일 소스), 해외는
   // originChange(SELLER_ORIGIN 최근 2건 비교)를 그대로 재사용한다. 새 변화
@@ -193,6 +205,7 @@ export async function computeMarketIntelligence(snapshotId: string) {
     domesticCompetition: domesticSummary,
     sellerAction,
     sellability,
+    representativeVerdict,
     priceHistory: {
       origin: { records: originHistory, change: originChange, trend7d: originTrend7d, trend30d: originTrend30d },
       domestic: { records: domesticHistory, trend7d: domesticTrend7d, trend30d: domesticTrend30d },

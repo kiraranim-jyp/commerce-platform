@@ -4,10 +4,8 @@ import { useEffect, useState } from "react";
 import {
   priceAgeTier,
   priceLevelFromVerdict,
-  sellerDecisionStateFromUnifiedDecision,
   type PriceAgeTier,
   type PriceLevel,
-  type SellerDecisionStateCode,
   type UnifiedPriceDecision,
 } from "@commerce/pricing";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
@@ -88,8 +86,21 @@ const CANDIDATE_LABEL: Record<DomesticCandidate["matchType"], { icon: string; te
  * 보여주는 게 실제 프로덕션 데이터(PèPè)로 확인됐다. verified를 최우선으로 본다
  * — 실제로 반영 여부를 결정하는 단일 필드는 matchType이 아니라 verified다
  * (run-domestic-price-check.ts STEP 2: verified===true인 링크만 가격을 저장). */
+/** P-8 STEP 3(대표님 지시, 2026-08-30) — "셀러에게 중요한 것은 '몇 % 닮았나'보다
+ * '실제로 가격 비교에 사용 가능한 검증 상품인가'이다." 검증된(verified=true)
+ * 후보의 헤드라인에서는 텍스트 유사도 %를 강조하지 않는다 — 42%처럼 낮은 숫자가
+ * "그런데 왜 동일상품이지?"라는 혼란을 준다(Pepe Shoes 실측). % 자체는 지우지
+ * 않고 아래 matchReasons 상세 목록(이미 "상품명 유사도 22%" 줄이 있음)으로만
+ * 내려보낸다 — 새 판정을 하지 않고 표시 위치만 바꾼다. */
 function candidateLabel(c: DomesticCandidate): { icon: string; text: string; note: string } {
-  if (c.verified) return { icon: "🟢", text: "동일상품", note: "→ 가격비교에 반영됨" };
+  if (c.verified) {
+    const byIdentifier = c.matchReasons.some((r) => r.includes("식별자 근거"));
+    return {
+      icon: "🟢",
+      text: byIdentifier ? "동일상품 확인됨(식별자 기반 검증)" : "동일상품 확인됨",
+      note: "→ 가격비교에 반영됨",
+    };
+  }
   if (c.matchType === "HIGH_CONFIDENCE") return CANDIDATE_LABEL.HIGH_CONFIDENCE;
   return CANDIDATE_LABEL.REVIEW_REQUIRED;
 }
@@ -247,30 +258,6 @@ const SELLER_ACTION_STYLE: Record<SellerAction["status"], string> = {
   INSUFFICIENT_DATA: "border-border bg-background text-text-secondary",
 };
 
-/** P-2-3(대표님 지시, 2026-08-28) — "① 최종 판단" 통합 카드의 색/문구.
- * sellerDecisionStateFromUnifiedDecision(packages/pricing)이 낸 5개 상태
- * 코드에 1:1로만 매핑한다 — 여기서 새 판정을 하지 않는다. */
-const SELLER_DECISION_STYLE: Record<SellerDecisionStateCode, string> = {
-  READY: "border-border bg-success-soft text-success",
-  ADJUST: "border-border bg-warning-soft text-warning",
-  NEEDS_COST_INFO: "border-border bg-warning-soft text-warning",
-  NOT_RECOMMENDED: "border-border bg-error-soft text-error",
-  UNKNOWN: "border-border bg-background text-text-secondary",
-};
-
-/** STEP 0-C 실측(대표님 지시) — recommendation.recommendedPrice를 직접
- * 적용하는 경로가 현재 없다(PriceEditor의 "최종 판매가격에 적용"만 유일한
- * 경로이고 그 값은 breakdown.suggestedPriceKrw다). 새 direct-apply를 만들지
- * 않고, 모든 CTA를 기존 onRequestPriceReview(탭 전환+스크롤, STEP 0-B 확인)
- * 로만 연결한다 — 실제 "적용" 클릭은 PriceEditor에서 그대로 한다. */
-const SELLER_DECISION_CTA: Record<SellerDecisionStateCode, string> = {
-  READY: "권장가 적용",
-  ADJUST: "권장가 적용",
-  NEEDS_COST_INFO: "가격/비용 설정 확인",
-  NOT_RECOMMENDED: "그래도 판매가 설정",
-  UNKNOWN: "가격 정보 다시 확인",
-};
-
 interface Recommendation {
   minimumPrice: number;
   targetPrice: number;
@@ -296,6 +283,35 @@ interface Sellability {
   reason: string;
   estimatedMarginPercent: number | null;
 }
+
+/** P-8 STEP 2(대표님 지시, 2026-08-30) — "화면 최상단에 대표 판단 1개만 둔다."
+ * deriveRepresentativeSellerVerdict(packages/pricing)가 unifiedDecision/
+ * sellability를 재계산 없이 압축해 낸 단일 결과. 이 화면은 이 값을 그대로
+ * 옮기기만 한다 — 새 판정을 만들지 않는다. */
+interface RepresentativeVerdict {
+  code: "READY" | "REVIEW_PRICE" | "NEEDS_INFO" | "HOLD";
+  icon: "🟢" | "🟡" | "🟠" | "🔴";
+  title: string;
+  description: string;
+  reasons: string[];
+}
+
+const REPRESENTATIVE_VERDICT_STYLE: Record<RepresentativeVerdict["code"], string> = {
+  READY: "border-border bg-success-soft text-success",
+  REVIEW_PRICE: "border-border bg-warning-soft text-warning",
+  NEEDS_INFO: "border-border bg-warning-soft text-warning",
+  HOLD: "border-border bg-error-soft text-error",
+};
+
+/** P-8 STEP 5(대표님 지시, 2026-08-30) — "버튼을 누르기 전에 셀러가 무엇을
+ * 확인하는지 알 수 있게 한다." 재조회 API/로직은 그대로(recheckNow만 호출),
+ * 상태별로 버튼 위 안내 문구만 다르게 보여준다. */
+const REPRESENTATIVE_VERDICT_CTA: Record<RepresentativeVerdict["code"], { label: string; hint: string }> = {
+  READY: { label: "가격 정보 다시 확인", hint: "" },
+  REVIEW_PRICE: { label: "가격 재검토", hint: "현재 판매가격과 국내 시장가격을 다시 비교합니다." },
+  NEEDS_INFO: { label: "국내 가격 다시 확인", hint: "국내 판매처에서 동일상품 가격을 다시 검색합니다." },
+  HOLD: { label: "가격 다시 검토", hint: "현재 판매가격과 국내 시장가격을 다시 비교합니다." },
+};
 
 interface PriceHistoryResponse {
   ok: boolean;
@@ -329,6 +345,7 @@ interface PriceHistoryResponse {
    * (P-1-3 STEP 6/7) 프론트 타입 선언이 없어 화면에서 못 읽고 있었다 — 새
    * 계산이 아니라 타입 노출만 추가한다. */
   unifiedDecision: UnifiedPriceDecision | null;
+  representativeVerdict: RepresentativeVerdict;
 }
 
 function TrendBadge({ label, trend }: { label: string; trend: PriceTrend | null }) {
@@ -505,8 +522,18 @@ export function DomesticPriceIntelligencePanel({
   if (loading) return null;
   if (!data) return null;
 
-  const { domesticCompetition, currentPrice, cost, fx, decision, recommendation, sellerAction, sellability, unifiedDecision } =
-    data;
+  const {
+    domesticCompetition,
+    currentPrice,
+    cost,
+    fx,
+    decision,
+    recommendation,
+    sellerAction,
+    sellability,
+    unifiedDecision,
+    representativeVerdict,
+  } = data;
   const domesticShopHistory = data.priceHistory?.domesticShop ?? null;
   const trend7d = domesticShopHistory?.trend7d ?? null;
   const trend30d = domesticShopHistory?.trend30d ?? null;
@@ -541,84 +568,101 @@ export function DomesticPriceIntelligencePanel({
           </p>
         )}
 
-        {/* P-2-3 ① 최종 판단(대표님 지시, 2026-08-28) — 기존 Sellability
-            블록과 SellerAction 헤드라인이 같은 판단을 두 번 보여주던 것을
-            하나로 합친다. 상태 판정은 sellerDecisionStateFromUnifiedDecision
-            (packages/pricing, P-1-3의 verdict/dataCompleteness를 그대로
-            읽기만 함)이 하고, 여기서는 새 판정을 만들지 않는다. 셀러가
-            "10초 안에" 답을 알아야 하는 4가지(팔아도 되는가/얼마에/실제
-            얼마 남는가/믿어도 되는가)를 이 카드 하나로 압축한다. */}
-        {hasAnyData &&
-          (() => {
-            const state = sellerDecisionStateFromUnifiedDecision(unifiedDecision);
-            return (
-              <div className={`rounded-md border p-2.5 ${SELLER_DECISION_STYLE[state.code]}`}>
-                <p className="font-medium">
-                  {state.icon} {state.title}
-                </p>
-                {unifiedDecision ? (
-                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-text-secondary sm:grid-cols-4">
-                    <div>
-                      <dt className="text-[10px] text-text-tertiary">현재 확인된 구매원가</dt>
-                      <dd className="font-medium text-text-primary">
-                        ₩{unifiedDecision.landedCostKrw.value.toLocaleString()}
-                      </dd>
-                    </div>
-                    {unifiedDecision.estimatedProfitKrw.value != null && (
-                      <div>
-                        <dt className="text-[10px] text-text-tertiary">예상 순이익</dt>
-                        <dd className="font-medium text-text-primary">
-                          ₩{unifiedDecision.estimatedProfitKrw.value.toLocaleString()}
-                        </dd>
-                      </div>
-                    )}
-                    {unifiedDecision.marginPercent.value != null && (
-                      <div>
-                        <dt className="text-[10px] text-text-tertiary">예상 마진율</dt>
-                        <dd className="font-medium text-text-primary">{unifiedDecision.marginPercent.value}%</dd>
-                      </div>
-                    )}
-                    {recommendation && (
-                      <div>
-                        <dt className="text-[10px] text-text-tertiary">권장 판매가(국내 시장 참고)</dt>
-                        <dd className="font-medium text-text-primary">
-                          ₩{recommendation.recommendedPrice.toLocaleString()}
-                        </dd>
-                      </div>
-                    )}
-                  </dl>
-                ) : (
-                  <p className="mt-1 text-text-secondary">{sellability.reason}</p>
-                )}
-                {/* "unknown을 0원처럼 보여주면 안 된다"(대표님 명시) — 알려진
-                    비용 기준 숫자는 그대로 보여주되, 무엇이 빠졌는지를 항상
-                    같이 알린다. */}
-                {unifiedDecision?.dataCompleteness === "INCOMPLETE" && unifiedDecision.missingComponents.length > 0 && (
-                  <div className="mt-2 rounded-md border border-current/30 bg-background/60 p-1.5">
-                    <p className="text-[10px] font-medium">아직 확인되지 않은 비용</p>
-                    <ul className="mt-0.5 space-y-0.5 text-[10px] text-text-secondary">
-                      {unifiedDecision.missingComponents.map((label) => (
-                        <li key={label}>• {label}</li>
-                      ))}
-                    </ul>
-                    <p className="mt-1 text-[10px] text-text-secondary">
-                      실제 마진은 위 표시값보다 낮아질 수 있습니다.
-                    </p>
+        {/* P-8 STEP 2/3/4(대표님 지시, 2026-08-30) — "화면 최상단에 대표 판단
+            1개만 둔다." 이전에는 이 카드가 unifiedDecision이 없으면(=판매가
+            미확정, 현재 프로덕션 대부분) "판단 불가" 헤드라인 아래에 곧바로
+            sellability.reason의 GREEN 문구("가격 경쟁력이 있습니다")를 붙여서
+            보여줬다 — 헤드라인과 본문이 반대 뉘앙스인 모순이었다(실측:
+            Pepe Shoes, Bruno Cut Out Sandals). representativeVerdict(서버가
+            unifiedDecision/sellability 중 더 신뢰할 수 있는 쪽을 골라 이미
+            압축해 낸 값)를 그대로 헤드라인으로 쓰고, "판단 근거"는 그
+            결론과 같은 방향의 사실만 나열한다 — 새 판정을 만들지 않는다. */}
+        {hasAnyData && (
+          <div className={`rounded-md border p-2.5 ${REPRESENTATIVE_VERDICT_STYLE[representativeVerdict.code]}`}>
+            <p className="font-medium">
+              {representativeVerdict.icon} {representativeVerdict.title}
+            </p>
+            <p className="mt-1 text-text-secondary">{representativeVerdict.description}</p>
+            {representativeVerdict.reasons.length > 0 && (
+              <ul className="mt-1.5 space-y-0.5 text-text-secondary">
+                {representativeVerdict.reasons.map((reason, i) => (
+                  <li key={i}>✓ {reason}</li>
+                ))}
+              </ul>
+            )}
+            {unifiedDecision && (
+              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-text-secondary sm:grid-cols-4">
+                <div>
+                  <dt className="text-[10px] text-text-tertiary">현재 확인된 구매원가</dt>
+                  <dd className="font-medium text-text-primary">
+                    ₩{unifiedDecision.landedCostKrw.value.toLocaleString()}
+                  </dd>
+                </div>
+                {unifiedDecision.estimatedProfitKrw.value != null && (
+                  <div>
+                    <dt className="text-[10px] text-text-tertiary">예상 순이익</dt>
+                    <dd className="font-medium text-text-primary">
+                      ₩{unifiedDecision.estimatedProfitKrw.value.toLocaleString()}
+                    </dd>
                   </div>
                 )}
-                {(onRequestPriceReview || state.code === "UNKNOWN") && (
+                {unifiedDecision.marginPercent.value != null && (
+                  <div>
+                    <dt className="text-[10px] text-text-tertiary">예상 마진율</dt>
+                    <dd className="font-medium text-text-primary">{unifiedDecision.marginPercent.value}%</dd>
+                  </div>
+                )}
+                {recommendation && (
+                  <div>
+                    <dt className="text-[10px] text-text-tertiary">권장 판매가(국내 시장 참고)</dt>
+                    <dd className="font-medium text-text-primary">
+                      ₩{recommendation.recommendedPrice.toLocaleString()}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            )}
+            {/* "unknown을 0원처럼 보여주면 안 된다"(대표님 명시) — 알려진
+                비용 기준 숫자는 그대로 보여주되, 무엇이 빠졌는지를 항상
+                같이 알린다. */}
+            {unifiedDecision?.dataCompleteness === "INCOMPLETE" && unifiedDecision.missingComponents.length > 0 && (
+              <div className="mt-2 rounded-md border border-current/30 bg-background/60 p-1.5">
+                <p className="text-[10px] font-medium">아직 확인되지 않은 비용</p>
+                <ul className="mt-0.5 space-y-0.5 text-[10px] text-text-secondary">
+                  {unifiedDecision.missingComponents.map((label) => (
+                    <li key={label}>• {label}</li>
+                  ))}
+                </ul>
+                <p className="mt-1 text-[10px] text-text-secondary">실제 마진은 위 표시값보다 낮아질 수 있습니다.</p>
+              </div>
+            )}
+            {/* P-8 STEP 4 — sellability 참고 계산값은 대표 판단과 같은
+                레벨의 결론처럼 보이면 안 된다("참고 계산값 ≠ 최종 판단").
+                unifiedDecision이 없어 위 판단이 sellability 기준일 때만,
+                그 근거 문장을 "참고" 라벨을 붙여 작게 덧붙인다. */}
+            {!unifiedDecision && sellability.estimatedMarginPercent != null && (
+              <p className="mt-2 text-[10px] text-text-tertiary">참고: {sellability.reason}</p>
+            )}
+            {(() => {
+              const cta = REPRESENTATIVE_VERDICT_CTA[representativeVerdict.code];
+              const handler = representativeVerdict.code === "NEEDS_INFO" ? () => void recheckNow() : onRequestPriceReview;
+              if (!handler) return null;
+              return (
+                <>
+                  {cta.hint && <p className="mt-2 text-[10px] text-text-tertiary">{cta.hint}</p>}
                   <button
                     type="button"
-                    onClick={state.code === "UNKNOWN" ? () => void recheckNow() : onRequestPriceReview}
-                    disabled={state.code === "UNKNOWN" && rechecking}
-                    className="mt-2 rounded-md border border-current px-2 py-1 text-[11px] font-medium hover:opacity-80 disabled:opacity-50"
+                    onClick={handler}
+                    disabled={representativeVerdict.code === "NEEDS_INFO" && rechecking}
+                    className="mt-1.5 rounded-md border border-current px-2 py-1 text-[11px] font-medium hover:opacity-80 disabled:opacity-50"
                   >
-                    {SELLER_DECISION_CTA[state.code]}
+                    {cta.label}
                   </button>
-                )}
-              </div>
-            );
-          })()}
+                </>
+              );
+            })()}
+          </div>
+        )}
 
         {/* P-2-3 ④ 국내 시장 가격(요약) — 기존 SellerAction 헤드라인의
             핵심 지표(내판매가/국내최저가/평균가/동일상품수/품절수)를 여기로
@@ -944,7 +988,8 @@ export function DomesticPriceIntelligencePanel({
                   <li key={c.id} className="rounded-md border border-border bg-surface p-1.5">
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-text-primary">
-                        {label.icon} {label.text} {pct}%
+                        {label.icon} {label.text}
+                        {!c.verified && ` ${pct}%`}
                       </span>
                       <a href={c.externalUrl} target="_blank" rel="noreferrer" className="text-[10px] text-primary underline">
                         상품 보기
