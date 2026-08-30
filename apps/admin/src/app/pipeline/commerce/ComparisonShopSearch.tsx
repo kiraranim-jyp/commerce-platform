@@ -38,11 +38,15 @@ const PRODUCT_MATCH_TRUTH_DISPLAY: Record<ProductMatchTruth, { icon: string; tex
   INSUFFICIENT_EVIDENCE: { icon: "⚪", text: "매칭 불확실", badgeClass: "bg-background text-text-tertiary" },
 };
 
-/** 동일상품으로 간주해 "비교 가능한 동일상품" 카운트/가격비교 근거에 넣을 수 있는
- * 등급. SAME_MODEL_VARIANT(같은 모델, 옵션만 다름)까지 포함 — CONFIRMED_PRODUCT와
- * 달리 참고용이라는 건 화면 배지에서 별도로 표시한다(🔵, "동일 모델 · 옵션 다름"). */
+/** P-11 CPO 2차 검증 지시(2026-08-30, 조건 2) — "EXACT_PRODUCT/CONFIRMED_PRODUCT만
+ * 실제 동일상품으로 집계", "SAME_MODEL_VARIANT는 직접 가격 반영이 아니라 참고
+ * 후보로 처리". 이전 버전은 SAME_MODEL_VARIANT까지 "동일상품 개수"에 포함시켜서
+ * 가격 반영 정책(STEP 3에서 확정한 표: EXACT/CONFIRMED만 직접반영, SAME_MODEL_
+ * VARIANT는 참고가격)과 어긋났다 — 여기서 EXACT_PRODUCT/CONFIRMED_PRODUCT만으로
+ * 좁힌다. SAME_MODEL_VARIANT는 이제 isSimilarOnly=true(참고용 취급/가격 캡션)로
+ * 넘어간다 — 배지 자체(🔵 "동일 모델 · 옵션 다름")는 그대로 별도 표시된다. */
 function isConfirmedSameProduct(truth: ProductMatchTruth): boolean {
-  return truth === "EXACT_PRODUCT" || truth === "CONFIRMED_PRODUCT" || truth === "SAME_MODEL_VARIANT";
+  return truth === "EXACT_PRODUCT" || truth === "CONFIRMED_PRODUCT";
 }
 
 const MATCH_LEVEL_LABEL: Record<MatchLevel, string> = {

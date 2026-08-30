@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { deriveProductMatchTruth } from "@commerce/crawler";
-import type { ComparisonCandidate, ComparisonQuery } from "@commerce/crawler";
+import { attachProductMatchTruth, deriveProductMatchTruth } from "@commerce/crawler";
+import type { ComparisonCandidate, ComparisonQuery, ComparisonSearchResult } from "@commerce/crawler";
 
 /**
  * P-11 STEP 4(대표님/CPO 지시, 2026-08-30) — T1~T11. T1/T2/T3/T6/T8/T9는 실제
@@ -126,6 +126,36 @@ describe("T9 — Two Con Me Crossover ↔ Open Clog: confidence가 매우 높아
     });
     // confidence를 일부러 매우 높게(0.97) 전달해도 결과가 바뀌면 안 된다.
     expect(deriveProductMatchTruth(query, openClog, 0.97)).toBe("CONFLICT");
+  });
+
+  it("CPO 2차 검증 조건 4 — 실제 API 경로(attachProductMatchTruth)를 통과해도 동일하게 CONFLICT 유지", () => {
+    // deriveProductMatchTruth()를 직접 부르는 게 아니라, /api/comparison/search가
+    // 실제로 호출하는 attachProductMatchTruth() 래퍼를 통과시킨다 — candidate.confidence
+    // 필드 자체를 0.97로 채워서, 이 값이 결과 truth에 어떤 방식으로도 개입하지 않는지 확인.
+    const query: ComparisonQuery = {
+      title: "Two Con Me Crossover Velcro Sandals in Cuoio Brown by PèPè",
+      brand: "Pèpè Shoes",
+      sku: "TWO/BK38-VAC",
+    };
+    const results: ComparisonSearchResult[] = [
+      {
+        shopId: "s1",
+        shopName: "Junior Edition",
+        domain: "junioredition.com",
+        status: "ok",
+        candidates: [
+          candidate({
+            title: "Two Con Me Open Clog Sandals in Cuoio Brown by PèPè",
+            url: "https://junioredition.com/products/two-con-me-open-clog-sandals-in-cuoio-brown-by-pepe",
+            sku: "TWO/BK40-VAC",
+            confidence: 0.97,
+            matchLevel: "very_high",
+          }),
+        ],
+      },
+    ];
+    const attached = attachProductMatchTruth(query, results);
+    expect(attached[0].candidates[0].productMatchTruth).toBe("CONFLICT");
   });
 });
 
