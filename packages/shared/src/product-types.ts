@@ -243,6 +243,39 @@ export interface CanonicalProduct {
     /** predictResult가 채택됐을 때 scoreCategoryCandidate가 매긴 0~100 유사도. */
     similarityScore?: number | null;
   };
+  /** P-13C-2 STEP3-B(2026-08-31) — 신규 상품 진입 시 시스템이 미리 확보해둔
+   * 쿠팡 카테고리 추천 결과의 임시 보존 캐시. categoryResolverKpi(사용자가 실제
+   * 확정한 기록)와 절대 혼합하지 않는다 — 이 필드는 "추천을 미리 조회해둠"이지
+   * "사용자가 확정함"이 아니다. 이 값만으로 등록/Category Market 등 어떤 신뢰
+   * 판단도 내리지 않는다. status(실행 상태)와 resolverDecision(Resolver 판단)은
+   * 서로 다른 축이다 — REJECT(정상 응답, 후보 없음)와 FAILED(API 자체 실패)를
+   * 절대 혼동하지 않는다. */
+  categoryRecommendationCache?: {
+    /** normalizeUrl+stripShopifyLocalePrefix(@commerce/crawler)로 정규화한
+     * sourceUrl. 현재 product.sourceUrl에서 같은 방식으로 계산한 값과
+     * 다르면(재크롤링/다른 상품 전환) 이 캐시 전체를 무효로 취급한다. */
+    sourceUrlKey: string;
+    /** PENDING은 단순 표시용이 아니라 동시 호출 방지 잠금 역할도 한다 —
+     * READY/PENDING이 확인되면 자동 Resolver 재호출을 하지 않는다. */
+    status: "PENDING" | "READY" | "FAILED";
+    /** status===READY일 때만. CommerceWorkspace가 CategoryCandidate[]로 그대로
+     * hydrate할 수 있는 최소 필드만 저장한다 — API 원본 응답 전체는 저장하지
+     * 않는다. */
+    candidates?: {
+      categoryCode: number;
+      categoryName: string;
+      path?: string[];
+      hierarchy?: CommerceCategoryPathResult;
+      score: number;
+      metaVerified?: boolean;
+    }[];
+    resolverDecision?: "AUTO_SELECT" | "RECOMMEND" | "REJECT" | null;
+    similarityScore?: number | null;
+    evidence?: string[];
+    /** status===FAILED일 때만 — 사용자에게 보여줄 사유(스택트레이스 아님). */
+    failureReason?: string;
+    resolvedAt?: string;
+  };
   sku: ProvenanceField<string>;
   description: ProvenanceField<string>;
   material: ProvenanceField<string>;

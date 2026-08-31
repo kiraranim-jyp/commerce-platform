@@ -230,6 +230,15 @@ export default function PipelinePage() {
         // 여기서는 최초 1회만 세팅하면 충분하다(같은 snapshotId로 계속
         // upsert되므로 값이 바뀌지 않는다).
         setJobKey(data.snapshot.jobKey ?? null);
+        // P-13C-2 STEP3-B(CPO 승인) — 스냅샷이 "처음" 생기는 이 순간에만 1회
+        // 호출한다. 이후 이미지/가격/상세페이지 수정으로 saveSnapshotToServer()가
+        // 다시 실행돼도(위 useEffect 의존성 배열 참고) snapshotId가 이미 있어
+        // 이 블록 자체를 다시 타지 않는다 — Resolver 재호출 원천 차단. 화면
+        // 렌더링을 막지 않도록 await하지 않는다(void).
+        void fetch(`/api/snapshots/${data.snapshot.id}/category-recommendation`, { method: "POST" }).catch(() => {
+          // 실패해도 화면에 영향 없음 — 사용자가 쿠팡 탭을 열면 기존 자동 fetch가
+          // 캐시 없음을 확인하고 평소대로 동작한다(P-13C-2 STEP3-B-4).
+        });
       }
     } catch {
       // 저장 실패해도 화면 동작에는 영향 없다 — sessionStorage가 로컬 캐시로

@@ -1144,9 +1144,55 @@ export function CommerceWorkspace({
     const key = product.sourceUrl;
     if (autoFetchedForRef.current === key) return;
     autoFetchedForRef.current = key;
+
+    // P-13C-2 STEP3-B-4(CPO 승인, 2026-08-31) — page.tsx가 스냅샷 최초 저장
+    // 시점에 이미 백그라운드로 확보해둔 categoryRecommendationCache가 있으면
+    // 그 값을 그대로 화면에 반영하고 API를 다시 호출하지 않는다. 이 캐시는
+    // product 객체 안에 있으므로 다른 상품으로 바뀌면(재크롤링으로 product가
+    // 완전히 새 객체로 교체됨) 자동으로 함께 사라진다 — 여기서 별도
+    // sourceUrlKey 비교가 필요 없다(신뢰 판단 자체는 서버의
+    // /api/snapshots/[id]/category-recommendation 라우트가 이미 정규화된
+    // 키로 검증해서 저장한 값이다).
+    const cache = product.categoryRecommendationCache;
+    if (cache?.status === "READY") {
+      setCoupangApiCandidates(
+        (cache.candidates ?? []).map((c) => ({
+          id: String(c.categoryCode),
+          name: c.categoryName,
+          path: c.path && c.path.length > 0 ? c.path : [c.categoryName],
+          hierarchy: c.hierarchy,
+          platform: "coupang" as const,
+          confidence: c.score / 100,
+          reason: cache.evidence ?? [],
+          source: "ai" as const,
+          isVerifiedPlatformCode: c.metaVerified === true,
+        })),
+      );
+      if (cache.resolverDecision) {
+        setCoupangResolverDecision({ decision: cache.resolverDecision, score: cache.similarityScore ?? 0 });
+      }
+      setCoupangRecommendAttempted(true);
+      setCategoryTraceLog((prev) => [...prev, "→ 사전 확보된 추천 결과를 재사용합니다(외부 API 재호출 없음)."]);
+      return;
+    }
+    if (cache?.status === "PENDING") {
+      // 백그라운드 조회가 아직 진행 중 — 자동 재호출하지 않는다(동시 호출 방지).
+      setCategoryTraceLog((prev) => [...prev, "→ 추천 결과를 확보하는 중입니다..."]);
+      return;
+    }
+    if (cache?.status === "FAILED") {
+      // 자동 재시도 금지 — 사용자가 아래에서 직접 검색해야 한다.
+      setCoupangRecommendAttempted(true);
+      setCategoryTraceLog((prev) => [
+        ...prev,
+        `→ 사전 확보 실패: ${cache.failureReason ?? "알 수 없는 오류"} — 아래에서 직접 검색해 주세요.`,
+      ]);
+      return;
+    }
+
     void fetchCoupangCategoryRecommendation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, listing, product.sourceUrl]);
+  }, [tab, listing, product.sourceUrl, product.categoryRecommendationCache]);
 
   /**
    * N-3.27(CPO 지시: "Readiness ↔ 실제 Payload Validation 단일화") — SmartStore

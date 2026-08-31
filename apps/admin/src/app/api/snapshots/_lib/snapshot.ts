@@ -99,6 +99,21 @@ export async function listRecentSnapshotsFull(limit = 30): Promise<ProductSnapsh
   return (data as SnapshotRow[]).map(toSnapshot);
 }
 
+/** P-13C-2 STEP3-B — getSnapshot()과 달리 last_opened_at을 갱신하지 않는다.
+ * Category Recommendation Cache 백그라운드 작업(사용자가 화면을 연 게 아니라
+ * 시스템이 스냅샷 생성 직후 자동으로 호출)이 "최근 작업" 정렬 순서를
+ * 건드리면 안 된다 — listRecentSnapshotsFull()과 같은 원칙. */
+export async function getSnapshotRaw(id: string): Promise<ProductSnapshot | null> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return null;
+  const { data, error } = await supabase.from("product_snapshots").select("*").eq("id", id).single();
+  if (error || !data) {
+    console.warn("[snapshot] 단건 조회(raw) 실패:", error?.message);
+    return null;
+  }
+  return toSnapshot(data as SnapshotRow);
+}
+
 /** 이어서 작업 진입 시 호출 — 조회와 동시에 last_opened_at을 갱신해 목록
  * 정렬(최근 열람순)에 바로 반영되게 한다. */
 export async function getSnapshot(id: string): Promise<ProductSnapshot | null> {
