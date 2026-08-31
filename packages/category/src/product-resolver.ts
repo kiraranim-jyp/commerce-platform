@@ -37,14 +37,21 @@ export interface ProductSignals {
  * 기본값으로 성인/여성 쪽에 치우치는 경향을 상쇄하는 방향이라 안전하다. */
 const AGE_KEYWORDS: { group: AgeGroup; terms: string[] }[] = [
   { group: "baby", terms: ["baby", "babies", "newborn", "infant", "베이비", "유아"] },
-  { group: "kids", terms: ["kids", "kid", "child", "children", "toddler", "아동", "키즈"] },
+  // P-13C-1(2026-08-31, 실측: Smallable "Mode Enfant" breadcrumb) — 프랑스어
+  // 사이트(Smallable)는 breadcrumb가 전부 불어라 기존 영어/한글 키워드로
+  // 연령대를 못 읽었다. "enfant"(아동)만 추가한다 — jupe→스커트와 같은 패턴.
+  { group: "kids", terms: ["kids", "kid", "child", "children", "toddler", "아동", "키즈", "enfant", "enfants"] },
   { group: "teen", terms: ["teen", "teenager", "junior", "youth", "틴"] },
-  { group: "adult", terms: ["adult", "women", "woman", "men", "man", "성인"] },
+  // P-13C-1 — 프랑스어 "femme"(여성)/"homme"(남성)도 성인 신호로 인식한다.
+  { group: "adult", terms: ["adult", "women", "woman", "men", "man", "성인", "femme", "homme"] },
 ];
 
 const GENDER_KEYWORDS: { gender: Gender; terms: string[] }[] = [
-  { gender: "girl", terms: ["girl", "girls", "여아"] },
-  { gender: "boy", terms: ["boy", "boys", "남아"] },
+  // P-13C-1 — 프랑스어 "fille"(여아) 추가.
+  { gender: "girl", terms: ["girl", "girls", "여아", "fille", "filles"] },
+  // P-13C-1(실측: Bermuda Denim Conrad breadcrumb "Garçon") — 프랑스어
+  // "garçon"(남아) 추가.
+  { gender: "boy", terms: ["boy", "boys", "남아", "garçon", "garçons"] },
   { gender: "women", terms: ["women", "woman", "女", "여성"] },
   { gender: "men", terms: ["men", "man", "남성"] },
   { gender: "unisex", terms: ["unisex"] },

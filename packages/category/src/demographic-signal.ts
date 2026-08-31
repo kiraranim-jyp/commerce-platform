@@ -34,6 +34,11 @@ export const KNOWN_KIDS_BRANDS = [
   "the new society",
   "tinycottons",
   "zara kids",
+  // P-13C-1(2026-08-31, 실측: STEP2/3에서 24개 null-category 상품 중 두
+  // 브랜드 모두 아동 전문 브랜드로 확인됨 — Misha & Puff는 성별/연령 신호
+  // 부재로 "여성 골프 원피스"까지 잘못 갔던 실제 사고 사례).
+  "misha & puff",
+  "the animals observatory",
 ];
 
 const KIDS_KEYWORDS = [
