@@ -50,8 +50,13 @@ export interface BrandResolution {
  * Drop 1, Misha & Puff Winter 25 등). 결정론적 규칙 확장이지 AI 추측이
  * 아니다 — 같은 SEASON_CODE 카테고리/HIGH 신뢰도를 유지한다. */
 const SEASON_CODE_PATTERN = /\b(?:SS|AW|FW|SU|WI)\d{2}\b|\b(?:Spring|Summer|Fall|Autumn|Winter)\s?\d{2}\b/gi;
+/** P-13B(대표님/CPO 지시, 2026-08-31) — 실측 확인: "Konges Slojd Clothing"/
+ * "Konges Sløjd Clothing"이 "Konges Sløjd Summer 26 Drop 1"(시즌명 제거 후
+ * "Konges Sløjd")과 다른 브랜드 키로 분리돼 있었다. "Clothing"이 브랜드명
+ * 뒤에 붙는 카테고리성 접미어인 경우가 있어 MARKETING_SUFFIX에 추가한다 —
+ * 결정론적 규칙 확장, alias/AI 추측 아님. */
 const MARKETING_SUFFIX_PATTERN =
-  /\bsale\b|\bkids\b|\bbaby\b|\bofficial\b|\bnow\b|\bcollection\b|\bshop\b|\d{1,3}%\s*off\b/gi;
+  /\bsale\b|\bkids\b|\bbaby\b|\bofficial\b|\bnow\b|\bcollection\b|\bshop\b|\bclothing\b|\d{1,3}%\s*off\b/gi;
 const NEW_COOCCURRENCE_PATTERN = /\bnew\b/gi;
 
 const RULE_ORDER: BrandResolverRule[] = ["SEASON_CODE", "MARKETING_SUFFIX", "NEW_COOCCURRENCE"];
