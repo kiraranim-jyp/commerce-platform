@@ -1,4 +1,5 @@
 export * from "./types";
+export * from "./resolution-status";
 export * from "./candidate-scoring";
 export * from "./classify";
 export * from "./demographic-signal";
