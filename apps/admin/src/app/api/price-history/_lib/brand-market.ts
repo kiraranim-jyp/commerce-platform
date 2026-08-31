@@ -31,7 +31,10 @@ interface PriceObservationRow {
   checked_at: string;
 }
 
-function productIdentityKey(sourceUrl: string | null, snapshotId: string): string {
+/** exported for direct unit testing (CPO 2차 검증 항목 1/2) — 재크롤링/로케일
+ * URL/쿼리스트링 변형이 같은 상품으로 묶이는지, 서로 다른 상품은 절대
+ * 합쳐지지 않는지를 실제 프로덕션 코드 경로로 검증한다. */
+export function productIdentityKey(sourceUrl: string | null, snapshotId: string): string {
   if (!sourceUrl) return `no-url:${snapshotId}`;
   try {
     return normalizeUrl(stripShopifyLocalePrefix(sourceUrl));

@@ -297,6 +297,9 @@ interface Recommendation {
   targetPrice: number;
   competitivePrice: number | null;
   recommendedPrice: number;
+  /** P-13A CPO 2차 검증 대응 — 이 값이 국내 동일상품 최저가에서 왔는지,
+   * 브랜드 시장 중앙값(참고용)에서 왔는지 화면에서 구분해야 한다. */
+  competitiveBasis?: "DOMESTIC_LOWEST" | "BRAND_MEDIAN" | null;
 }
 
 interface PriceHistoryRecord {
@@ -709,6 +712,11 @@ export function DomesticPriceIntelligencePanel({
                       ? `₩${recommendation.minimumPrice.toLocaleString()} ~ ₩${recommendation.recommendedPrice.toLocaleString()}`
                       : `₩${(recommendation?.recommendedPrice ?? cost.suggestedPriceKrw).toLocaleString()}`}
                   </dd>
+                  {recommendation?.competitiveBasis === "BRAND_MEDIAN" && (
+                    <p className="mt-0.5 text-[10px] text-text-tertiary">
+                      💡 국내 동일상품 없음 — 브랜드 시장 중앙값 기준 참고치
+                    </p>
+                  )}
                 </div>
                 <div>
                   <dt className="text-[10px] text-text-tertiary">📈 예상 수익</dt>
