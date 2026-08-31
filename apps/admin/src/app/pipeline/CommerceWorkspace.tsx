@@ -825,7 +825,10 @@ export function CommerceWorkspace({
         ...prev,
         categoryResolverKpi: {
           predictResult,
-          selectedResult: { code: Number(candidate.id) || 0, name: candidate.name },
+          // P-13C-2 STEP1 — candidate.hierarchy는 이 시점에 이미 채워져 있는 값을
+          // 그대로 옮기는 것뿐, 새 계산/API 호출 없음(CommerceWorkspace.tsx의
+          // Coupang candidate 변환부에서 API 응답의 hierarchy를 그대로 담아둔 것).
+          selectedResult: { code: Number(candidate.id) || 0, name: candidate.name, hierarchy: candidate.hierarchy },
           manualOverride,
           evidence: candidate.reason,
           resolverDecision: coupangResolverDecision?.decision ?? null,

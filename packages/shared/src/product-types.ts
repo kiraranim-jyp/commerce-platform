@@ -1,4 +1,5 @@
 import type { ImageType } from "./image-types";
+import type { CommerceCategoryPathResult } from "./category-path";
 
 /**
  * 필드 하나의 출처를 추적한다. Commerce Listing Preview Engine의 핵심 개념 —
@@ -227,7 +228,11 @@ export interface CanonicalProduct {
    * 함께 저장한다. */
   categoryResolverKpi?: {
     predictResult?: { code: number; name: string } | null;
-    selectedResult?: { code: number; name: string } | null;
+    /** P-13C-2 STEP1(2026-08-31) — hierarchy는 selectCategory() 시점에 candidate에
+     * 이미 있는 값을 그대로 옮겨 담는 것뿐이다(재계산/재조회 없음). 플랫폼
+     * 종속 원본 경로 보존 목적이라 Canonical Category가 아니다 — 다른
+     * 플랫폼과의 crosswalk에 쓰면 안 된다. */
+    selectedResult?: { code: number; name: string; hierarchy?: CommerceCategoryPathResult } | null;
     manualOverride: boolean;
     evidence: string[];
     /** Sprint A-5(Category Resolver 3.0) — predict 결과가 AUTO_SELECT(유사도
