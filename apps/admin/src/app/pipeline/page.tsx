@@ -235,10 +235,21 @@ export default function PipelinePage() {
         // 다시 실행돼도(위 useEffect 의존성 배열 참고) snapshotId가 이미 있어
         // 이 블록 자체를 다시 타지 않는다 — Resolver 재호출 원천 차단. 화면
         // 렌더링을 막지 않도록 await하지 않는다(void).
-        void fetch(`/api/snapshots/${data.snapshot.id}/category-recommendation`, { method: "POST" }).catch(() => {
-          // 실패해도 화면에 영향 없음 — 사용자가 쿠팡 탭을 열면 기존 자동 fetch가
-          // 캐시 없음을 확인하고 평소대로 동작한다(P-13C-2 STEP3-B-4).
-        });
+        // STEP3-B-UI 버그수정(2026-09-01) — DB에는 저장되지만 이 fetch의 응답이
+        // 그동안 버려지고 있어서, 같은 세션에서 쿠팡 탭을 열면 브라우저 메모리의
+        // product 상태가 방금 확보한 캐시를 전혀 모른 채 실시간 재조회를 또
+        // 시도했다. 응답의 cache를 setProduct로 반영해서 재조회를 막는다.
+        void fetch(`/api/snapshots/${data.snapshot.id}/category-recommendation`, { method: "POST" })
+          .then(async (res) => {
+            const body = (await res.json().catch(() => null)) as { cache?: CanonicalProduct["categoryRecommendationCache"] } | null;
+            if (body?.cache) {
+              setProduct((prev) => (prev ? { ...prev, categoryRecommendationCache: body.cache } : prev));
+            }
+          })
+          .catch(() => {
+            // 실패해도 화면에 영향 없음 — 사용자가 쿠팡 탭을 열면 기존 자동 fetch가
+            // 캐시 없음을 확인하고 평소대로 동작한다(P-13C-2 STEP3-B-4).
+          });
       }
     } catch {
       // 저장 실패해도 화면 동작에는 영향 없다 — sessionStorage가 로컬 캐시로

@@ -54,11 +54,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   // 그대로 복사한다. 외부 API를 다시 부르지 않는다(CPO 옵션 2 결정).
   const reusable = await findReadyCategoryRecommendationCache(sourceUrlKey, id);
   if (reusable) {
-    const saved = await persistCache(snapshot, {
-      ...product,
-      categoryRecommendationCache: { ...reusable, sourceUrlKey },
-    });
-    return NextResponse.json({ ok: saved.ok, status: "READY", reused: true });
+    const cache = { ...reusable, sourceUrlKey };
+    const saved = await persistCache(snapshot, { ...product, categoryRecommendationCache: cache });
+    return NextResponse.json({ ok: saved.ok, status: "READY", reused: true, cache });
   }
 
   // ③ — PENDING을 먼저 저장해서 잠근 뒤에만 외부 API를 부른다.
@@ -83,36 +81,32 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       product.brand.value || undefined,
       ruleBasedNames,
     );
-    const saved = await persistCache(snapshot, {
-      ...product,
-      categoryRecommendationCache: {
-        sourceUrlKey,
-        status: "READY",
-        candidates: result.candidates.map((c) => ({
-          categoryCode: c.categoryCode,
-          categoryName: c.categoryName,
-          path: c.path,
-          hierarchy: c.hierarchy,
-          score: c.score,
-          metaVerified: c.metaVerified,
-        })),
-        resolverDecision: result.decision,
-        similarityScore: result.best?.score ?? null,
-        evidence: [],
-        resolvedAt: new Date().toISOString(),
-      },
-    });
-    return NextResponse.json({ ok: saved.ok, status: "READY", reused: false });
+    const cache: NonNullable<CanonicalProduct["categoryRecommendationCache"]> = {
+      sourceUrlKey,
+      status: "READY",
+      candidates: result.candidates.map((c) => ({
+        categoryCode: c.categoryCode,
+        categoryName: c.categoryName,
+        path: c.path,
+        hierarchy: c.hierarchy,
+        score: c.score,
+        metaVerified: c.metaVerified,
+      })),
+      resolverDecision: result.decision,
+      similarityScore: result.best?.score ?? null,
+      evidence: [],
+      resolvedAt: new Date().toISOString(),
+    };
+    const saved = await persistCache(snapshot, { ...product, categoryRecommendationCache: cache });
+    return NextResponse.json({ ok: saved.ok, status: "READY", reused: false, cache });
   } catch (error) {
-    const saved = await persistCache(snapshot, {
-      ...product,
-      categoryRecommendationCache: {
-        sourceUrlKey,
-        status: "FAILED",
-        failureReason: error instanceof Error ? error.message : "쿠팡 서버에 연결할 수 없습니다.",
-        resolvedAt: new Date().toISOString(),
-      },
-    });
-    return NextResponse.json({ ok: saved.ok, status: "FAILED" });
+    const cache: NonNullable<CanonicalProduct["categoryRecommendationCache"]> = {
+      sourceUrlKey,
+      status: "FAILED",
+      failureReason: error instanceof Error ? error.message : "쿠팡 서버에 연결할 수 없습니다.",
+      resolvedAt: new Date().toISOString(),
+    };
+    const saved = await persistCache(snapshot, { ...product, categoryRecommendationCache: cache });
+    return NextResponse.json({ ok: saved.ok, status: "FAILED", cache });
   }
 }

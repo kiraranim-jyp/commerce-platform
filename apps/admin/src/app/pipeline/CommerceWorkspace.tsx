@@ -39,6 +39,7 @@ import {
 } from "@commerce/listing";
 import { PLATFORM_ADAPTERS, PLATFORM_ORDER, isVerifiedCategorySelected } from "@commerce/marketplace";
 import { resolveSourcePrice } from "@commerce/pricing";
+import { resolveCategoryCacheAction } from "./category-cache-hydrate";
 import { AIContentPanel } from "./commerce/AIContentPanel";
 import { BacklogPanel } from "./commerce/BacklogPanel";
 import { ComparisonShopSearch } from "./commerce/ComparisonShopSearch";
@@ -1153,40 +1154,25 @@ export function CommerceWorkspace({
     // sourceUrlKey 비교가 필요 없다(신뢰 판단 자체는 서버의
     // /api/snapshots/[id]/category-recommendation 라우트가 이미 정규화된
     // 키로 검증해서 저장한 값이다).
-    const cache = product.categoryRecommendationCache;
-    if (cache?.status === "READY") {
-      setCoupangApiCandidates(
-        (cache.candidates ?? []).map((c) => ({
-          id: String(c.categoryCode),
-          name: c.categoryName,
-          path: c.path && c.path.length > 0 ? c.path : [c.categoryName],
-          hierarchy: c.hierarchy,
-          platform: "coupang" as const,
-          confidence: c.score / 100,
-          reason: cache.evidence ?? [],
-          source: "ai" as const,
-          isVerifiedPlatformCode: c.metaVerified === true,
-        })),
-      );
-      if (cache.resolverDecision) {
-        setCoupangResolverDecision({ decision: cache.resolverDecision, score: cache.similarityScore ?? 0 });
+    const cacheAction = resolveCategoryCacheAction(product.categoryRecommendationCache);
+    if (cacheAction.kind === "hydrate") {
+      setCoupangApiCandidates(cacheAction.candidates);
+      if (cacheAction.resolverDecision) {
+        setCoupangResolverDecision(cacheAction.resolverDecision);
       }
       setCoupangRecommendAttempted(true);
-      setCategoryTraceLog((prev) => [...prev, "→ 사전 확보된 추천 결과를 재사용합니다(외부 API 재호출 없음)."]);
+      setCategoryTraceLog((prev) => [...prev, cacheAction.traceLine]);
       return;
     }
-    if (cache?.status === "PENDING") {
+    if (cacheAction.kind === "pending") {
       // 백그라운드 조회가 아직 진행 중 — 자동 재호출하지 않는다(동시 호출 방지).
-      setCategoryTraceLog((prev) => [...prev, "→ 추천 결과를 확보하는 중입니다..."]);
+      setCategoryTraceLog((prev) => [...prev, cacheAction.traceLine]);
       return;
     }
-    if (cache?.status === "FAILED") {
+    if (cacheAction.kind === "failed") {
       // 자동 재시도 금지 — 사용자가 아래에서 직접 검색해야 한다.
       setCoupangRecommendAttempted(true);
-      setCategoryTraceLog((prev) => [
-        ...prev,
-        `→ 사전 확보 실패: ${cache.failureReason ?? "알 수 없는 오류"} — 아래에서 직접 검색해 주세요.`,
-      ]);
+      setCategoryTraceLog((prev) => [...prev, cacheAction.traceLine]);
       return;
     }
 
