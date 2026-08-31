@@ -15,6 +15,7 @@ import { PreviewModal } from "./PreviewModal";
 import { ProcessingReportView } from "./ProcessingReport";
 import { ProgressPanel } from "./ProgressPanel";
 import { readPipelineSSEStream } from "./sse";
+import { isStaleSnapshotResponse, resolveSnapshotSaveAction } from "./snapshot-save-guard";
 import type { PipelineProgressEvent, PipelineResponse, TabKey, WorkspaceItem } from "./types";
 import { WorkspaceTabs } from "./WorkspaceTabs";
 import { downloadWorkspaceZip, resizeToSquare } from "./zip";
@@ -100,6 +101,16 @@ export default function PipelinePage() {
   // 새 시도를 큐에 넣고, 끝난 뒤 한 번만 재실행한다(누락 방지, 중복 insert 방지).
   const creatingSnapshotRef = useRef(false);
   const pendingSaveRetryRef = useRef(false);
+  // P-13C-2 NEXT Sprint 5-A(CPO 지시, 2026-09-01) — 위 세 방어장치는 "같은 상품
+  // 세션 안에서" 두 번째 insert가 겹치는 것만 막는다. "새 상품 분석"(resetWorkspace)
+  // 으로 상품 A에서 상품 B로 넘어가면 얘기가 다르다: A의 POST는 이미 네트워크에
+  // 나가 있어서 취소할 수 없다 — ref를 단순히 false/null로 되돌리는 것만으로는
+  // A의 응답이 "늦게" 도착했을 때 B의 snapshotId/categoryCachePriming을 덮어쓰거나,
+  // A의 finally가 stale closure로 (B가 아니라) A의 예전 product/items를 다시
+  // 저장하는 걸 막지 못한다. 세대 토큰으로 "이 요청이 시작될 때의 세션"과
+  // "지금 세션"이 같은지 확인해서, 다르면 응답 처리 전체(성공 반영 + finally
+  // 정리)를 완전히 건너뛴다 — A의 뒤늦은 완료는 B에 대해 아무 일도 하지 않는다.
+  const sessionGenerationRef = useRef(0);
   // Sprint B-1(CPO 지시) — 스냅샷과 1:1로 생기는 사람이 읽을 수 있는 작업번호
   // ("JOB-260819-001"). 스냅샷 최초 저장(insert) 응답에서만 받고, 이후
   // 업데이트에서는 서버가 그대로 유지한다(재발급 없음).
@@ -234,13 +245,20 @@ export default function PipelinePage() {
     // 공유한다). 이 값이 이 함수 실행 내내 "이번 호출이 insert인지 update인지"의
     // 유일한 기준이다 — 아래 finally에서도 같은 값을 그대로 재사용한다.
     const isFirstInsert = snapshotIdRef.current === null;
-    if (isFirstInsert) {
-      if (creatingSnapshotRef.current) {
-        // 다른 insert가 이미 진행 중 — 지금 트리거된 변경사항은 버리지 않고,
-        // 그 insert가 끝난 뒤 한 번 더 저장을 시도한다(아래 finally 참고).
-        pendingSaveRetryRef.current = true;
-        return;
-      }
+    // P-13C-2 NEXT Sprint 5-A(CPO 지시) — 이 호출이 시작되는 시점의 "세션"을
+    // 기록해둔다. 응답이 돌아왔을 때 resetWorkspace()로 세대가 바뀌어 있으면
+    // (사용자가 그 사이 "새 상품 분석"을 눌렀으면) 이 응답은 이제 화면에 있는
+    // 상품과 무관한 이전 상품(A)의 것이다 — 아래에서 이 값과 비교해 그런
+    // 경우 응답 처리 전체를 건너뛴다.
+    const startGeneration = sessionGenerationRef.current;
+    const saveAction = resolveSnapshotSaveAction(isFirstInsert, creatingSnapshotRef.current);
+    if (saveAction.kind === "queue-retry") {
+      // 다른 insert가 이미 진행 중 — 지금 트리거된 변경사항은 버리지 않고,
+      // 그 insert가 끝난 뒤 한 번 더 저장을 시도한다(아래 finally 참고).
+      pendingSaveRetryRef.current = true;
+      return;
+    }
+    if (saveAction.kind === "insert") {
       creatingSnapshotRef.current = true;
     }
     try {
@@ -268,6 +286,15 @@ export default function PipelinePage() {
         }),
       });
       const data = (await res.json()) as { ok: boolean; snapshot?: { id: string; jobKey?: string | null } };
+      if (isStaleSnapshotResponse(startGeneration, sessionGenerationRef.current)) {
+        // Sprint 5-A — 이 요청을 쏜 뒤 사용자가 "새 상품 분석"으로 넘어갔다.
+        // DB에는 이미 저장됐을 수 있지만(그건 되돌리지 않는다 — 삭제는 별도
+        // 문제다), 지금 화면(새 상품 B)의 snapshotId/캐시/priming 등 어떤
+        // 상태도 이 응답으로 건드리지 않는다. 아래 finally도 같은 이유로
+        // creatingSnapshotRef/pendingSaveRetryRef를 건드리지 않는다(그 refs는
+        // 이미 resetWorkspace()가 B를 위해 초기화해뒀다).
+        return;
+      }
       if (data.ok && data.snapshot && isFirstInsert) {
         // 응답이 도착한 이 순간 동기적으로 ref부터 채운다 — setSnapshotId(state)는
         // 다음 렌더까지 반영이 늦어질 수 있어서, 그 사이에 또 다른
@@ -328,7 +355,11 @@ export default function PipelinePage() {
       // 저장 실패해도 화면 동작에는 영향 없다 — sessionStorage가 로컬 캐시로
       // 계속 동작하고, 다음 변경 때 다시 저장을 시도한다.
     } finally {
-      if (isFirstInsert) {
+      // Sprint 5-A — 이 finally도 세대가 바뀌었으면(위 return과 같은 이유) A가
+      // B를 위해 이미 초기화된 refs를 다시 건드리지 않는다. false를 정직하게
+      // 대입하는 것조차 B의 진행 중인 상태를 잘못 끄는 부작용이 될 수 있다
+      // (B가 지금 막 자기 자신의 insert를 진행 중이라면).
+      if (isFirstInsert && !isStaleSnapshotResponse(startGeneration, sessionGenerationRef.current)) {
         creatingSnapshotRef.current = false;
         if (pendingSaveRetryRef.current) {
           // 이 insert가 진행되는 동안 큐에 쌓인 변경사항이 있었다 — 이제
@@ -471,6 +502,18 @@ export default function PipelinePage() {
     } catch {
       // no-op — 세션 스토리지가 막혀있어도 리셋 자체는 계속 진행한다.
     }
+    // P-13C-2 NEXT Sprint 5-A(CPO 지시, 2026-09-01) — 이전 상품(A)의
+    // saveSnapshotToServer() POST가 아직 네트워크에 떠 있을 수 있다(취소 불가).
+    // 세대를 올려서 그 응답이 나중에 도착해도 "다른 세션의 응답"으로 무시되게
+    // 만들고(saveSnapshotToServer의 startGeneration 비교), 지금 이 자리에서는
+    // 새 상품(B)이 곧바로 자기 몫의 insert를 시작할 수 있도록 A가 남긴 lock을
+    // 즉시 푼다 — 이 두 가지가 함께 있어야 "B가 A 때문에 영원히 대기"하는
+    // 교착과 "A의 뒤늦은 응답이 B를 덮어쓰는" 오염을 둘 다 막는다.
+    sessionGenerationRef.current += 1;
+    snapshotIdRef.current = null;
+    creatingSnapshotRef.current = false;
+    pendingSaveRetryRef.current = false;
+    setCategoryCachePriming(false);
     setSnapshotId(null);
     setJobKey(null);
     setSnapshotStatus(null);
