@@ -83,6 +83,23 @@ export default function PipelinePage() {
   // id가 없으면(첫 저장 전) POST가 insert, 있으면 update로 동작한다(upsert 패턴 —
   // api/snapshots/_lib/snapshot.ts 참고).
   const [snapshotId, setSnapshotId] = useState<string | null>(null);
+  // P-13C-2 NEXT P0 재조사(2026-09-01, 코드 추적으로 확인 — 실 API 호출 없이 발견) —
+  // saveSnapshotToServer()는 "최초 insert vs 이후 update"를 snapshotId state의
+  // 클로저 값으로 판단한다. 디바운스 effect가 2번째로 트리거되는 게(예: 배경
+  // category-recommendation fetch의 setProduct 호출) 첫 POST 응답이 snapshotId를
+  // 갱신하기 전이면, 두 번째 호출도 snapshotId를 여전히 null로 보고 또 insert를
+  // 시도한다 — 스냅샷 2개 생성 + 배경 category-recommendation도 2번 실행(실 API
+  // 중복 호출)로 이어진다. ref는 응답 받는 즉시 동기적으로 갱신해서 이 클로저
+  // 지연을 없앤다.
+  const snapshotIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    snapshotIdRef.current = snapshotId;
+  }, [snapshotId]);
+  // 위 ref만으로는 "두 호출이 동시에 아직 null을 보고 있는" 진짜 동시성 레이스는
+  // 못 막는다(둘 다 응답 전이므로 ref도 아직 null) — 그래서 insert 진행 중에는
+  // 새 시도를 큐에 넣고, 끝난 뒤 한 번만 재실행한다(누락 방지, 중복 insert 방지).
+  const creatingSnapshotRef = useRef(false);
+  const pendingSaveRetryRef = useRef(false);
   // Sprint B-1(CPO 지시) — 스냅샷과 1:1로 생기는 사람이 읽을 수 있는 작업번호
   // ("JOB-260819-001"). 스냅샷 최초 저장(insert) 응답에서만 받고, 이후
   // 업데이트에서는 서버가 그대로 유지한다(재발급 없음).
@@ -212,13 +229,27 @@ export default function PipelinePage() {
 
   async function saveSnapshotToServer() {
     if (!result || !product) return;
+    // P-13C-2 NEXT P0 재조사 — isFirstInsert는 함수 시작 시점에 ref에서 한 번만
+    // 읽는다(state가 아니라 ref라서 다른 진행 중인 호출과 동기적으로 최신값을
+    // 공유한다). 이 값이 이 함수 실행 내내 "이번 호출이 insert인지 update인지"의
+    // 유일한 기준이다 — 아래 finally에서도 같은 값을 그대로 재사용한다.
+    const isFirstInsert = snapshotIdRef.current === null;
+    if (isFirstInsert) {
+      if (creatingSnapshotRef.current) {
+        // 다른 insert가 이미 진행 중 — 지금 트리거된 변경사항은 버리지 않고,
+        // 그 insert가 끝난 뒤 한 번 더 저장을 시도한다(아래 finally 참고).
+        pendingSaveRetryRef.current = true;
+        return;
+      }
+      creatingSnapshotRef.current = true;
+    }
     try {
       const representative = items.find((item) => item.id === representativeId);
       const res = await fetch("/api/snapshots", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: snapshotId ?? undefined,
+          id: snapshotIdRef.current ?? undefined,
           sourceUrl: url,
           title: product.title.value || null,
           thumbnailUrl: representative?.detailPublicUrl ?? null,
@@ -237,7 +268,12 @@ export default function PipelinePage() {
         }),
       });
       const data = (await res.json()) as { ok: boolean; snapshot?: { id: string; jobKey?: string | null } };
-      if (data.ok && data.snapshot && !snapshotId) {
+      if (data.ok && data.snapshot && isFirstInsert) {
+        // 응답이 도착한 이 순간 동기적으로 ref부터 채운다 — setSnapshotId(state)는
+        // 다음 렌더까지 반영이 늦어질 수 있어서, 그 사이에 또 다른
+        // saveSnapshotToServer() 호출이 시작되면(아래 finally의 재시도 포함) 여전히
+        // null을 보고 두 번째 insert를 시도할 수 있다. ref는 지연이 없다.
+        snapshotIdRef.current = data.snapshot.id;
         setSnapshotId(data.snapshot.id);
         // Sprint B-1 — 최초 insert 응답에만 새 job_key가 실려 온다(서버가 그
         // 시점에 한 번만 채번한다) — 이후 update 응답에도 같은 값이 오지만
@@ -291,6 +327,18 @@ export default function PipelinePage() {
     } catch {
       // 저장 실패해도 화면 동작에는 영향 없다 — sessionStorage가 로컬 캐시로
       // 계속 동작하고, 다음 변경 때 다시 저장을 시도한다.
+    } finally {
+      if (isFirstInsert) {
+        creatingSnapshotRef.current = false;
+        if (pendingSaveRetryRef.current) {
+          // 이 insert가 진행되는 동안 큐에 쌓인 변경사항이 있었다 — 이제
+          // snapshotIdRef가 채워졌으니(성공 시) 이 재시도는 정상적으로 update로
+          // 처리된다(실패했다면 여전히 null이라 update가 아니라 insert 재시도가
+          // 되지만, creatingSnapshotRef가 이미 false라서 새 요청이 정상 진행된다).
+          pendingSaveRetryRef.current = false;
+          void saveSnapshotToServer();
+        }
+      }
     }
   }
 
