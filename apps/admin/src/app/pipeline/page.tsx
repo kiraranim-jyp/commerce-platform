@@ -28,6 +28,20 @@ export default function PipelinePage() {
   // 원본/누끼 후보 전환(swapVariant)이 등록 화면에도 그대로 반영되려면 두 UI가 같은
   // state를 공유해야 한다. CommerceWorkspace는 이 값을 그대로 받아 렌더링만 한다.
   const [product, setProduct] = useState<CanonicalProduct | null>(null);
+  // P-13C-2 NEXT Sprint 8(CPO 지시, 2026-09-01) — 백그라운드 캐시 확보 fetch의
+  // .then()/.finally()는 클로저라서 그 시점의 최신 product를 모른다(리액트
+  // state는 비동기 콜백 안에서 항상 "그 렌더 시점" 값으로 고정돼 있다).
+  // ref는 항상 최신값을 동기적으로 담고 있어서, "응답이 왔을 때 사용자가 이미
+  // 다른 상품으로 넘어갔는지"를 정확히 판단할 수 있다.
+  const productRef = useRef<CanonicalProduct | null>(null);
+  useEffect(() => {
+    productRef.current = product;
+  }, [product]);
+  // P-13C-2 NEXT Sprint 2(CPO 지시, 2026-09-01) — 백그라운드 categoryRecommendationCache
+  // 확보 요청이 아직 응답을 못 받은 동안 true. CommerceWorkspace의 쿠팡 탭
+  // 자동 하이드레이트 effect가 이 값을 보고, 캐시가 아직 도착 전인데 "캐시
+  // 없음"으로 오판해 실 API를 부르는 레이스를 막는다.
+  const [categoryCachePriming, setCategoryCachePriming] = useState(false);
   const [items, setItems] = useState<WorkspaceItem[]>([]);
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<TabKey>("original");
@@ -239,16 +253,39 @@ export default function PipelinePage() {
         // 그동안 버려지고 있어서, 같은 세션에서 쿠팡 탭을 열면 브라우저 메모리의
         // product 상태가 방금 확보한 캐시를 전혀 모른 채 실시간 재조회를 또
         // 시도했다. 응답의 cache를 setProduct로 반영해서 재조회를 막는다.
+        // P-13C-2 NEXT Sprint 2(CPO 지시) — 이 요청이 아직 안 끝난 동안
+        // categoryCachePriming을 true로 켜서, 사용자가 그 사이 쿠팡 탭을
+        // 열어도 CommerceWorkspace가 "캐시 없음"으로 오판해 실 API를
+        // 부르지 않고 기다리게 한다.
+        setCategoryCachePriming(true);
+        // P-13C-2 NEXT Sprint 8(CPO 지시) — 이 fetch가 떠 있는 동안 사용자가
+        // "새 상품 분석"으로 완전히 다른 상품으로 넘어가면, 이 응답이 늦게
+        // 도착했을 때 지금 화면의 새 product에 엉뚱한(이전 상품의) 캐시를
+        // 덮어씌우면 안 된다 — 그래서 이 요청을 쏜 시점의 sourceUrl을
+        // 캡처해뒀다가, 응답이 왔을 때 여전히 같은 상품인지 확인한다.
+        const requestedForSourceUrl = product.sourceUrl;
         void fetch(`/api/snapshots/${data.snapshot.id}/category-recommendation`, { method: "POST" })
           .then(async (res) => {
             const body = (await res.json().catch(() => null)) as { cache?: CanonicalProduct["categoryRecommendationCache"] } | null;
             if (body?.cache) {
-              setProduct((prev) => (prev ? { ...prev, categoryRecommendationCache: body.cache } : prev));
+              setProduct((prev) =>
+                prev && prev.sourceUrl === requestedForSourceUrl ? { ...prev, categoryRecommendationCache: body.cache } : prev,
+              );
             }
           })
           .catch(() => {
             // 실패해도 화면에 영향 없음 — 사용자가 쿠팡 탭을 열면 기존 자동 fetch가
             // 캐시 없음을 확인하고 평소대로 동작한다(P-13C-2 STEP3-B-4).
+          })
+          .finally(() => {
+            // Sprint 8 — priming 해제도 같은 이유로 상품이 이미 바뀌었으면 건너뛴다
+            // (건너뛰지 않으면 새 상품이 자기 자신의 priming 중인데 이전 상품의
+            // finally가 뒤늦게 false로 꺼버릴 수 있다). productRef는 최신 product를
+            // 항상 가리키는 ref다(아래 선언 참고) — 클로저 안에서 setState 콜백
+            // 없이 "지금 이 순간의 product"를 동기적으로 읽기 위해 필요하다.
+            if (productRef.current?.sourceUrl === requestedForSourceUrl) {
+              setCategoryCachePriming(false);
+            }
           });
       }
     } catch {
@@ -782,6 +819,7 @@ export default function PipelinePage() {
             jobKey={jobKey}
             initialCategoryMappings={categoryMappings ?? undefined}
             onCategoryMappingsChange={setCategoryMappings}
+            categoryCachePriming={categoryCachePriming}
           />
 
           {/* P0-UI Epic 1 — JSON/ZIP/원본 URL/처리 리포트 등은 판매자가 매일 볼

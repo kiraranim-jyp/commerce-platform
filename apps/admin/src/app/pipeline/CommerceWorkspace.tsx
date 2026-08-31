@@ -118,6 +118,7 @@ export function CommerceWorkspace({
   jobKey,
   initialCategoryMappings,
   onCategoryMappingsChange,
+  categoryCachePriming,
 }: {
   product: CanonicalProduct;
   onUpdateProduct: (updater: (prev: CanonicalProduct) => CanonicalProduct) => void;
@@ -157,6 +158,15 @@ export function CommerceWorkspace({
    * 완전히 옮기면 변경 범위가 커진다). */
   initialCategoryMappings?: Record<PlatformId, CategorySelection>;
   onCategoryMappingsChange?: (mappings: Record<PlatformId, CategorySelection>) => void;
+  /** P-13C-2 NEXT Sprint 2(CPO 지시, 2026-09-01) — page.tsx가 스냅샷 최초 저장
+   * 직후 백그라운드로 categoryRecommendationCache를 확보하는 중(fetch가 아직
+   * 안 끝남)에는 true다. 이 값이 true인 동안 쿠팡 탭 자동 하이드레이트
+   * effect는 "캐시 없음"으로 섣불리 판단하지 않고 기다린다 — 원래
+   * autoFetchedForRef가 sourceUrl 최초 진입 시점에 한 번 잠기기 때문에, 그
+   * 순간 캐시가 아직 도착 전이면 실시간 재조회가 발생하고 이후 캐시가
+   * 도착해도 절대 재평가되지 않는 레이스가 있었다(P-13C-2 NEXT STEP2에서
+   * 확정). */
+  categoryCachePriming?: boolean;
 }) {
   // Sprint A-6(작업4) — 이 컴포넌트가 처음 마운트되는 시점 = AI 분석이 끝나고
   // Registration Editor가 실제로 뜬 시점이다. useState 초기화 함수는 최초
@@ -1142,10 +1152,6 @@ export function CommerceWorkspace({
   const autoFetchedForRef = useRef<string | null>(null);
   useEffect(() => {
     if (tab !== "coupang" || !listing) return;
-    const key = product.sourceUrl;
-    if (autoFetchedForRef.current === key) return;
-    autoFetchedForRef.current = key;
-
     // P-13C-2 STEP3-B-4(CPO 승인, 2026-08-31) — page.tsx가 스냅샷 최초 저장
     // 시점에 이미 백그라운드로 확보해둔 categoryRecommendationCache가 있으면
     // 그 값을 그대로 화면에 반영하고 API를 다시 호출하지 않는다. 이 캐시는
@@ -1154,7 +1160,18 @@ export function CommerceWorkspace({
     // sourceUrlKey 비교가 필요 없다(신뢰 판단 자체는 서버의
     // /api/snapshots/[id]/category-recommendation 라우트가 이미 정규화된
     // 키로 검증해서 저장한 값이다).
-    const cacheAction = resolveCategoryCacheAction(product.categoryRecommendationCache);
+    const cacheAction = resolveCategoryCacheAction(product.categoryRecommendationCache, categoryCachePriming);
+    if (cacheAction.kind === "waiting") {
+      // P-13C-2 NEXT Sprint 2(CPO 지시, 2026-09-01) — page.tsx가 백그라운드로
+      // 캐시를 확보하는 중. 여기서 ref를 잠그면 안 된다 — 잠그면 캐시가 곧
+      // 도착해도 이 effect가 다시 평가되지 않아 "캐시 없음"으로 오판한 채
+      // 굳어버린다(실측 재현된 레이스 — STEP3-B-UI 1차 수정으로는 못 닫힘).
+      return;
+    }
+    const key = product.sourceUrl;
+    if (autoFetchedForRef.current === key) return;
+    autoFetchedForRef.current = key;
+
     if (cacheAction.kind === "hydrate") {
       setCoupangApiCandidates(cacheAction.candidates);
       if (cacheAction.resolverDecision) {
@@ -1178,7 +1195,7 @@ export function CommerceWorkspace({
 
     void fetchCoupangCategoryRecommendation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, listing, product.sourceUrl, product.categoryRecommendationCache]);
+  }, [tab, listing, product.sourceUrl, product.categoryRecommendationCache, categoryCachePriming]);
 
   /**
    * N-3.27(CPO 지시: "Readiness ↔ 실제 Payload Validation 단일화") — SmartStore

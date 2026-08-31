@@ -83,4 +83,38 @@ describe("resolveCategoryCacheAction", () => {
     const action = resolveCategoryCacheAction({ sourceUrlKey: "k", status: "PENDING" });
     expect(action.kind).toBe("pending");
   });
+
+  /**
+   * P-13C-2 NEXT Sprint 2(CPO 지시, 2026-09-01) — 야간 조사에서 실측 재현된
+   * 잔여 레이스: page.tsx의 백그라운드 캐시 확보 요청이 아직 안 끝난 상태를
+   * priming=true로 넘긴다. 이때는 cache가 undefined든 뭐든 무조건
+   * "waiting"이어야 한다 — "캐시 없음"(fetch)으로 오판하면 그 시점에 실
+   * API가 호출되고, 곧이어 캐시가 도착해도 CommerceWorkspace의 ref가 이미
+   * 잠겨서 다시는 재평가되지 않는다(D-8이 그 잠금 회피 계약을 검증한다).
+   */
+  it("D-7: priming=true — 캐시가 undefined여도 fetch로 오판하지 않고 waiting으로 기다린다", () => {
+    const action = resolveCategoryCacheAction(undefined, true);
+    expect(action.kind).toBe("waiting");
+  });
+
+  it("D-8: priming=true — 이미 READY 캐시가 있어도 우선 waiting을 반환한다(호출 측이 ref를 잠그지 않게)", () => {
+    const action = resolveCategoryCacheAction(
+      {
+        sourceUrlKey: "k",
+        status: "READY",
+        candidates: [{ categoryCode: 100, categoryName: "티셔츠", score: 98 }],
+        resolverDecision: "AUTO_SELECT",
+        similarityScore: 98,
+        evidence: [],
+        resolvedAt: "2026-09-01T00:00:00.000Z",
+      },
+      true,
+    );
+    expect(action.kind).toBe("waiting");
+  });
+
+  it("D-9: priming=false(기본값) — 기존 D-1~D-6과 동일하게 동작한다(회귀 없음)", () => {
+    const action = resolveCategoryCacheAction(undefined, false);
+    expect(action.kind).toBe("fetch");
+  });
 });

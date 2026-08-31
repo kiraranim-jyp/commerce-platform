@@ -47,7 +47,10 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   // 사용자가 명시적으로 재시도할 때만 다시 시도한다(자동 재시도 금지).
   const existing = product.categoryRecommendationCache;
   if (existing && existing.sourceUrlKey === sourceUrlKey) {
-    return NextResponse.json({ ok: true, skipped: `already-${existing.status.toLowerCase()}` });
+    // P-13C-2 NEXT Sprint 1(CPO 감사 지시) — 이 분기는 현재 page.tsx 배선상
+    // 실행되지 않는다(스냅샷당 이 라우트를 1회만 호출), 그래도 cache를
+    // 응답에 실어서 향후 재호출 경로가 생겨도 응답 계약이 항상 일관되게 한다.
+    return NextResponse.json({ ok: true, skipped: `already-${existing.status.toLowerCase()}`, cache: existing });
   }
 
   // ② — 동일 상품(정규화된 sourceUrl 동일)의 다른 스냅샷에 READY 캐시가 있으면

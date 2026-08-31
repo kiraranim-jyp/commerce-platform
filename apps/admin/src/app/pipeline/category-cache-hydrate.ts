@@ -19,11 +19,24 @@ export type CategoryCacheHydrateAction =
     }
   | { kind: "pending"; traceLine: string }
   | { kind: "failed"; traceLine: string }
-  | { kind: "fetch" };
+  | { kind: "fetch" }
+  | { kind: "waiting" };
 
+/**
+ * P-13C-2 NEXT Sprint 2(CPO 지시, 2026-09-01) — `priming`이 true면 캐시가
+ * 아직 `undefined`인지 "정말 없음"인지 알 수 없는 상태다(page.tsx의 백그라운드
+ * 확보 요청이 아직 안 끝남). 이때 "fetch"로 오판해서 실 API를 부르면, 곧
+ * 도착할 캐시를 무시하고 중복 호출을 만든다 — 실제로 이렇게 재현됐다
+ * (STEP3-B-UI 1차 수정만으로는 못 닫힌 잔여 레이스). `waiting`은 아무 것도
+ * 하지 않고 다음 렌더(priming이 false로 바뀌는 시점)를 기다리라는 신호다.
+ */
 export function resolveCategoryCacheAction(
   cache: CanonicalProduct["categoryRecommendationCache"] | undefined,
+  priming?: boolean,
 ): CategoryCacheHydrateAction {
+  if (priming) {
+    return { kind: "waiting" };
+  }
   if (cache?.status === "READY") {
     return {
       kind: "hydrate",
