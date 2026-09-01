@@ -16,6 +16,7 @@ import { shopifyStrategy } from "./strategies/shopify.strategy";
 import { nextDataStrategy } from "./strategies/next-data.strategy";
 import { domScanStrategy } from "./strategies/dom-scan.strategy";
 import type { ExtractionContext, ExtractionStrategy, ImageCandidate, StrategySource } from "./strategies/types";
+import { withTimeout } from "./with-timeout";
 
 const STRATEGIES: ExtractionStrategy[] = [
   jsonLdStrategy,
@@ -210,7 +211,11 @@ export async function universalExtract(
     } finally {
       releaseDomainSlot();
     }
-    await autoScroll(page, 1);
+    // autoScroll()은 document.body.scrollHeight가 안정될 때까지 페이지 내부에서
+    // 폴링하는데, Playwright의 page.evaluate()에는 자체 timeout이 없어서 스크롤
+    // 높이가 계속 늘어나는 사이트(무한 캐러셀/지연 로딩 등)에서는 영원히 안 끝날 수
+    // 있다. navigationTimeoutMs를 그대로 재사용해 같은 한도로 묶는다.
+    await withTimeout(autoScroll(page, 1), config.navigationTimeoutMs, "autoScroll(pass=1)");
     await page.waitForTimeout(500);
 
     let html = await page.content();
@@ -221,7 +226,7 @@ export async function universalExtract(
     // 후보가 있어도 전부 로고/추천상품/저해상도로 걸러져 최종 0장이면(예: 갤러리가 아직
     // 로드 안 된 경우) 스크롤/대기를 늘려 한 번만 재시도한다.
     if (images.length === 0) {
-      await autoScroll(page, 2);
+      await withTimeout(autoScroll(page, 2), config.navigationTimeoutMs, "autoScroll(pass=2)");
       await page.waitForTimeout(1500);
       html = await page.content();
       candidates = await runStrategies({ url, html, page });
@@ -231,9 +236,10 @@ export async function universalExtract(
 
     // 이미지 추출에 쓴 것과 같은 page/html을 재사용한다 — 상품 정보만 보려고
     // 페이지를 한 번 더 열 필요가 없다.
-    const { data: productData, sources: productDataSources } = await extractProductData(
-      html,
-      page,
+    const { data: productData, sources: productDataSources } = await withTimeout(
+      extractProductData(html, page),
+      config.navigationTimeoutMs,
+      "extractProductData",
     );
 
     return {
