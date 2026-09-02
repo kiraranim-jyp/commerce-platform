@@ -232,7 +232,7 @@ describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
       expect(facing.title).toBe("판매 추천");
     });
 
-    it("MARKET_OPPORTUNITY도 READY와 동일하게 🟢 판매 추천으로 합쳐진다", () => {
+    it("P-25 Sprint 8(CPO 지시, 2026-09-02) — MARKET_OPPORTUNITY는 더 이상 🟢 판매 추천으로 합쳐지지 않는다(국내 시장 데이터 자체가 없는데 자동 🟢 확정 금지)", () => {
       const verdict = deriveRepresentativeSellerVerdict({
         ...base,
         sellability: {
@@ -244,9 +244,11 @@ describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
         domesticSellerCount: 0,
       });
       expect(verdict.code).toBe("MARKET_OPPORTUNITY");
+      // 내부 판정(🟣 시장 진입 기회)은 그대로 유지된다 — 재계산 없음.
+      expect(verdict.icon).toBe("🟣");
       const facing = toSellerFacingVerdict(verdict);
-      expect(facing.code).toBe("RECOMMENDED");
-      expect(facing.icon).toBe("🟢");
+      expect(facing.code).toBe("CONDITIONAL");
+      expect(facing.icon).toBe("🟡");
     });
 
     it("T9) REVIEW_PRICE → 🟡 조건부 판매", () => {
@@ -486,6 +488,78 @@ describe("P-24: 추천 판매가가 국내 최저가보다 비싸면 READY(🟢)
       domesticBasis: "EXACT",
       recommendation: { recommendedPrice: 269333 },
       domesticLowestPriceKrw: 258000,
+    });
+    expect(result.code).toBe("REVIEW_PRICE");
+    expect(result.icon).toBe("🟡");
+  });
+});
+
+/**
+ * P-25 Sprint 4/6/7(CPO 지시, 2026-09-02) — CASE A/B/C 3단계를 그대로 고정한다.
+ * P-24는 recommendedPrice와 domesticLowestPriceKrw만 비교해 CASE A/B를
+ * 구분했지만, "시장가로 팔면 원가도 못 건지는" CASE C(landedCostKrw > 시장
+ * 최저가)는 아직 구분하지 않았다 — 여전히 🟡였다. landedCostKrw(순수 착지원가,
+ * 마진 0%)를 추가로 비교해 이 경우만 🔴로 낮춘다.
+ */
+describe("P-25 Sprint 4/6/7: CASE A/B/C — landedCostKrw까지 반영한 3단계 판정", () => {
+  const base: RepresentativeVerdictInput = {
+    unifiedDecision: null,
+    sellability: { level: "GREEN", estimatedMarginPercent: 10.7, reason: "..." },
+    domesticMatched: true,
+    domesticSellerCount: 1,
+    domesticBasis: "EXACT",
+  };
+
+  it("CASE A — 국내 최저가 ≥ 추천가 → 🟢 READY(회귀 확인, landedCostKrw를 줘도 영향 없음)", () => {
+    const result = deriveRepresentativeSellerVerdict({
+      ...base,
+      recommendation: { recommendedPrice: 255420 },
+      domesticLowestPriceKrw: 258000,
+      landedCostKrw: 242400,
+    });
+    expect(result.code).toBe("READY");
+    expect(result.icon).toBe("🟢");
+  });
+
+  it("CASE B — 국내 최저가 < 추천가지만 착지원가보다는 높음(시장가에 팔아도 손해는 아님) → 🟡 REVIEW_PRICE(실측 PèPè 재확인)", () => {
+    const result = deriveRepresentativeSellerVerdict({
+      ...base,
+      recommendation: { recommendedPrice: 269333 },
+      domesticLowestPriceKrw: 258000,
+      landedCostKrw: 242400,
+    });
+    expect(result.code).toBe("REVIEW_PRICE");
+    expect(result.icon).toBe("🟡");
+  });
+
+  it("CASE C — 국내 최저가 < 착지원가(0% 마진도 못 건짐) → 🔴 HOLD, 이유에 손해라는 사실이 명시된다", () => {
+    const result = deriveRepresentativeSellerVerdict({
+      ...base,
+      recommendation: { recommendedPrice: 269333 },
+      domesticLowestPriceKrw: 200000,
+      landedCostKrw: 242400,
+    });
+    expect(result.code).toBe("HOLD");
+    expect(result.icon).toBe("🔴");
+    expect(result.reasons.some((r) => r.includes("200,000") && r.includes("242,400") && r.includes("손해"))).toBe(true);
+  });
+
+  it("CASE C 경계값 — 국내 최저가 == 착지원가(정확히 0% 마진, 손해는 아님) → CASE B와 동일하게 🟡", () => {
+    const result = deriveRepresentativeSellerVerdict({
+      ...base,
+      recommendation: { recommendedPrice: 269333 },
+      domesticLowestPriceKrw: 242400,
+      landedCostKrw: 242400,
+    });
+    expect(result.code).toBe("REVIEW_PRICE");
+    expect(result.icon).toBe("🟡");
+  });
+
+  it("landedCostKrw가 없으면(구 호출부) CASE C 판정 없이 기존 CASE B 로직만 적용된다", () => {
+    const result = deriveRepresentativeSellerVerdict({
+      ...base,
+      recommendation: { recommendedPrice: 269333 },
+      domesticLowestPriceKrw: 50000, // CASE C 조건(landedCostKrw보다 낮음)이지만 landedCostKrw 자체가 없음
     });
     expect(result.code).toBe("REVIEW_PRICE");
     expect(result.icon).toBe("🟡");

@@ -272,6 +272,9 @@ export async function computeMarketIntelligence(snapshotId: string) {
     // 시장가보다 비싼 가격을 추천하고 있는지 최종 검사할 때만 쓰인다.
     recommendation: recommendation ? { recommendedPrice: recommendation.recommendedPrice } : null,
     domesticLowestPriceKrw: domesticSummary.lowestPriceKrw,
+    // P-25 Sprint 4/6(CPO 지시, 2026-09-02) — CASE C(시장가로 팔면 원가도
+    // 못 건짐) 판정에만 쓰인다. cost는 이미 위에서 계산된 값 그대로다.
+    landedCostKrw: cost?.landedCostKrw ?? null,
   });
   // P-19-B Sprint 8(CPO 지시, 2026-09-02) — 판매자에게 최종적으로 보여줄 화면은
   // 무조건 3단계(🟢 판매 추천/🟡 조건부 판매/🔴 판매 비추천)로 통합한다. 기존

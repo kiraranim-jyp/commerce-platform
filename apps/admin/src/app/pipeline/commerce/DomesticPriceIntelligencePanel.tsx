@@ -242,11 +242,15 @@ interface DomesticCompetition {
 }
 
 /** P-19-B Sprint 7(CPO 지시, 2026-09-02) — 서버가 이미 계산해 낸 우선순위 결과를
- * 그대로 옮기는 타입. basis만 화면 문구 선택에 쓴다(exact/comparison 원본
- * summary 자체는 이 패널에서 아직 별도 표시하지 않는다 — domesticCompetition이
- * 이미 우선순위 적용된 값이라 그걸 4칸 요약에 그대로 쓴다). */
+ * 그대로 옮기는 타입. P-25 Sprint 3(CPO 지시, 2026-09-02) — "EXACT와 COMPARISON
+ * 가격을 절대 하나의 가격으로 합치지 않는다"를 지키려면 basis(우선순위 결과)
+ * 뿐 아니라 exact/comparison 원본 summary도 그대로 필요하다 — market-
+ * intelligence.ts는 이미 이 두 값을 응답에 포함하고 있었다(summarizeDomesticMarketSplit
+ * 원본 반환값), 새 계산이 아니라 기존 값을 이 패널에서도 읽기만 한다. */
 interface DomesticMarketSplitInfo {
   basis: "EXACT" | "COMPARISON" | "NONE";
+  exact: DomesticCompetition;
+  comparison: DomesticCompetition;
 }
 
 interface Decision {
@@ -723,7 +727,6 @@ export function DomesticPriceIntelligencePanel({
     decision,
     recommendation,
     sellerAction,
-    sellability,
     unifiedDecision,
     representativeVerdict,
     sellerFacingVerdict,
@@ -816,8 +819,18 @@ export function DomesticPriceIntelligencePanel({
                 순서로 확정. 얼마에 사서/얼마가 들고/얼마에 팔지/얼마 남는지 4개
                 숫자를 결론 설명·판단근거보다 먼저 보여준다. 새 계산 없음 — cost/
                 recommendation/unifiedDecision은 기존에 이미 계산되던 값 그대로다. */}
+            {/* P-25 Sprint 3/5(CPO 지시, 2026-09-02) — "①원가기반 최소판매가
+                ②목표마진 판매가 ③국내시장가격 ④최종추천가"를 한 번에 보여준다.
+                minimumPrice/targetPrice는 P-24부터 이미 계산되고 있었지만
+                (packages/pricing/src/price-recommendation.ts) 화면에 라벨을
+                달고 보여주는 곳이 없었다 — 새 계산 없음, 기존 값을 노출만
+                추가한다. 이름은 CPO 제안(손익분기 최소판매가) 대신 "최소마진
+                확보 판매가"를 쓴다 — minimumPrice는 실제로 마진율 0%가 아니라
+                minimumMarginPercent(10%) 기준이라 "손익분기"라고 부르면 실제
+                계산과 다른 숫자를 말하는 셈이다(값을 지어내지 않는다는 이
+                프로젝트의 원칙과 동일한 이유). */}
             {cost && (
-              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 rounded-md border border-current/20 bg-background/40 p-2 sm:grid-cols-4">
+              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 rounded-md border border-current/20 bg-background/40 p-2 sm:grid-cols-3">
                 <div>
                   <dt className="text-[10px] text-text-tertiary">💰 현재 구매가</dt>
                   <dd className="text-sm font-semibold text-text-primary">₩{cost.costKrw.toLocaleString()}</dd>
@@ -831,21 +844,8 @@ export function DomesticPriceIntelligencePanel({
                   )}
                 </div>
                 <div>
-                  <dt className="text-[10px] text-text-tertiary">📦 예상 착지원가</dt>
+                  <dt className="text-[10px] text-text-tertiary">📦 착지원가</dt>
                   <dd className="text-sm font-semibold text-text-primary">₩{cost.landedCostKrw.toLocaleString()}</dd>
-                </div>
-                <div>
-                  <dt className="text-[10px] text-text-tertiary">🏷 추천 판매가</dt>
-                  <dd className="text-sm font-semibold text-text-primary">
-                    {recommendation && recommendation.minimumPrice < recommendation.recommendedPrice
-                      ? `₩${recommendation.minimumPrice.toLocaleString()} ~ ₩${recommendation.recommendedPrice.toLocaleString()}`
-                      : `₩${(recommendation?.recommendedPrice ?? cost.suggestedPriceKrw).toLocaleString()}`}
-                  </dd>
-                  {recommendation?.competitiveBasis === "BRAND_MEDIAN" && (
-                    <p className="mt-0.5 text-[10px] text-text-tertiary">
-                      💡 국내 동일상품 없음 — 브랜드 시장 중앙값 기준 참고치
-                    </p>
-                  )}
                 </div>
                 <div>
                   <dt className="text-[10px] text-text-tertiary">📈 예상 수익</dt>
@@ -858,6 +858,41 @@ export function DomesticPriceIntelligencePanel({
                     )}
                   </dd>
                 </div>
+                {recommendation && (
+                  <>
+                    <div>
+                      <dt className="text-[10px] text-text-tertiary">최소마진 확보 판매가</dt>
+                      <dd className="text-sm font-semibold text-text-primary">
+                        ₩{recommendation.minimumPrice.toLocaleString()}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[10px] text-text-tertiary">목표마진 판매가</dt>
+                      <dd className="text-sm font-semibold text-text-primary">
+                        ₩{recommendation.targetPrice.toLocaleString()}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[10px] text-text-tertiary">🏷 최종 추천 판매가</dt>
+                      <dd className="text-sm font-semibold text-text-primary">
+                        {recommendation.minimumPrice < recommendation.recommendedPrice
+                          ? `₩${recommendation.minimumPrice.toLocaleString()} ~ ₩${recommendation.recommendedPrice.toLocaleString()}`
+                          : `₩${recommendation.recommendedPrice.toLocaleString()}`}
+                      </dd>
+                      {recommendation.competitiveBasis === "BRAND_MEDIAN" && (
+                        <p className="mt-0.5 text-[10px] text-text-tertiary">
+                          💡 국내 동일상품 없음 — 브랜드 시장 중앙값 기준 참고치
+                        </p>
+                      )}
+                    </div>
+                  </>
+                )}
+                {!recommendation && (
+                  <div>
+                    <dt className="text-[10px] text-text-tertiary">🏷 추천 판매가</dt>
+                    <dd className="text-sm font-semibold text-text-primary">₩{cost.suggestedPriceKrw.toLocaleString()}</dd>
+                  </div>
+                )}
               </dl>
             )}
 
@@ -919,13 +954,15 @@ export function DomesticPriceIntelligencePanel({
                 <p className="mt-1 text-[10px] text-text-secondary">실제 마진은 위 표시값보다 낮아질 수 있습니다.</p>
               </div>
             )}
-            {/* P-8 STEP 4 — sellability 참고 계산값은 대표 판단과 같은
-                레벨의 결론처럼 보이면 안 된다("참고 계산값 ≠ 최종 판단").
-                unifiedDecision이 없어 위 판단이 sellability 기준일 때만,
-                그 근거 문장을 "참고" 라벨을 붙여 작게 덧붙인다. */}
-            {!unifiedDecision && sellability.estimatedMarginPercent != null && (
-              <p className="mt-2 text-[10px] text-text-tertiary">참고: {sellability.reason}</p>
-            )}
+            {/* P-25 Sprint 2(CPO 지시, 2026-09-02) — 이전에는 여기서
+                sellability.reason(원가 vs 시장평균가, 배송비/수수료 미포함)을
+                "참고" 캡션으로 그대로 출력했다. sellability는 recommendation/
+                applyMarketPriceGuard를 전혀 모르는 별도 계산이라, 헤드라인이
+                🟡(시장가 대비 마진 부족)인데 캡션은 "가격 경쟁력이 있습니다"라고
+                말하는 실측 모순(PèPè)이 있었다 — "화면 안에서 서로 반대되는
+                판매 조언이 없어야 한다"는 CPO 원칙에 따라 완전히 제거한다.
+                sellability 계산 자체(estimatedMarginPercent 등)는 그대로
+                유지한다(재계산 없음) — 화면 노출만 없앤다. */}
             {(() => {
               const cta = REPRESENTATIVE_VERDICT_CTA[representativeVerdict.code];
               if (!onRequestPriceReview) return null;
@@ -952,6 +989,40 @@ export function DomesticPriceIntelligencePanel({
         {hasAnyData && (domesticCompetition.tier !== "NONE" || currentPrice.sellingPriceKrw != null) && (
           <div className="rounded-md border border-border bg-background p-2">
             <p className="mb-1 font-medium text-text-primary">🇰🇷 국내 시장 가격</p>
+            {/* P-25 Sprint 3(CPO 지시, 2026-09-02) — "EXACT와 COMPARISON 가격을
+                절대 하나의 가격으로 합치지 않는다." 아래 요약 dl은 domesticCompetition
+                (이미 EXACT 우선 병합된 resolved 값)만 보여주므로, 실제로 둘 다
+                존재할 때(예: PèPè — EXACT 포레포레 + COMPARISON 듀베베) COMPARISON
+                가격이 화면 어디에도 안 보이는 문제가 있었다. domesticMarketSplit.
+                exact/comparison(market-intelligence.ts가 이미 계산해 응답에
+                포함하던 값 — 새 계산 없음)을 각각 별도 블록으로 명시한다. */}
+            {domesticMarketSplit.exact.sellerCount > 0 && (
+              <div className="mb-1.5 rounded-md border border-success/30 bg-success-soft p-1.5 text-success">
+                <p className="font-medium">🟢 동일상품 가격</p>
+                <p className="mt-0.5 text-text-secondary">
+                  최저가 ₩{domesticMarketSplit.exact.lowestPriceKrw?.toLocaleString() ?? "—"} · 평균가 ₩
+                  {domesticMarketSplit.exact.averagePriceKrw != null
+                    ? Math.round(domesticMarketSplit.exact.averagePriceKrw).toLocaleString()
+                    : "—"}{" "}
+                  · 판매처 {domesticMarketSplit.exact.sellerCount}곳
+                </p>
+              </div>
+            )}
+            {domesticMarketSplit.comparison.sellerCount > 0 && (
+              <div className="mb-1.5 rounded-md border border-warning/30 bg-warning-soft p-1.5 text-warning">
+                <p className="font-medium">🟡 비교상품 시장가격(참고용)</p>
+                <p className="mt-0.5 text-text-secondary">
+                  최저가 ₩{domesticMarketSplit.comparison.lowestPriceKrw?.toLocaleString() ?? "—"} · 평균가 ₩
+                  {domesticMarketSplit.comparison.averagePriceKrw != null
+                    ? Math.round(domesticMarketSplit.comparison.averagePriceKrw).toLocaleString()
+                    : "—"}{" "}
+                  · 판매처 {domesticMarketSplit.comparison.sellerCount}곳
+                </p>
+              </div>
+            )}
+            {domesticMarketSplit.exact.sellerCount === 0 && domesticMarketSplit.comparison.sellerCount === 0 && (
+              <p className="mb-1.5 text-[10px] text-text-tertiary">⚪ 국내 시장 데이터 부족</p>
+            )}
             <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-text-secondary sm:grid-cols-3">
               {currentPrice.sellingPriceKrw != null && (
                 <div>

@@ -75,6 +75,12 @@ export interface RepresentativeVerdictInput {
    * 그대로 통과). */
   recommendation?: { recommendedPrice: number } | null;
   domesticLowestPriceKrw?: number | null;
+  /** P-25 Sprint 4/6(CPO 지시, 2026-09-02) — CASE A/B/C를 구분하려면 "시장가로
+   * 팔면 아예 손해인가"(CASE C)도 봐야 한다. 이건 recommendedPrice(최소마진
+   * 10% 포함)가 아니라 순수 착지원가(마진 0%, computePriceBreakdown이 이미
+   * 계산해 돌려주는 cost.landedCostKrw)와 시장가를 비교해야 한다 — 새 손익분기
+   * 계산이 아니라 이미 있는 landedCostKrw를 그대로 재사용한다. */
+  landedCostKrw?: number | null;
 }
 
 const VERDICT_COPY: Record<RepresentativeVerdictCode, { icon: RepresentativeVerdict["icon"]; title: string; description: string }> = {
@@ -129,14 +135,33 @@ function reviewMatchDescription(basis: RepresentativeVerdictInput["domesticBasis
   return "국내 시장가격을 확인하지 못했습니다. 원가 기준으로만 계산된 예상값이니 등록 전 시장가격을 직접 확인하는 것을 권장합니다.";
 }
 
-/** P-24 Sprint 5-7 — 🟢로 확정되려는 판정(READY/MARKET_OPPORTUNITY)만 마지막에
- * 한 번 더 검사한다: 실제 "추천 판매가"가 국내 최저가보다 비싸면(=마진 최소
- * 기준을 지키는 순간 가격 경쟁력을 잃으면) 🟢로 내보내지 않는다. 두 값 중
- * 하나라도 없으면(비교 대상이 없으면) 기존 판정을 그대로 둔다. */
+/** P-24 Sprint 5-7 / P-25 Sprint 4/6(CPO 지시, 2026-09-02) — 🟢로 확정되려는
+ * 판정(READY/MARKET_OPPORTUNITY)만 마지막에 한 번 더 검사한다. CPO의 CASE
+ * A/B/C를 그대로 따른다 — 새 마진 계산 없이 이미 계산된 세 값(recommendedPrice/
+ * landedCostKrw/domesticLowestPriceKrw)만 비교한다:
+ *  - CASE A: 국내 최저가 ≥ 추천 판매가(최소마진 확보) → 그대로 🟢
+ *  - CASE B: 국내 최저가 < 추천 판매가지만 착지원가(0% 마진)보다는 높음
+ *    → 시장가에 팔아도 손해는 아니지만 목표 마진에 못 미침 → 🟡 REVIEW_PRICE
+ *  - CASE C: 국내 최저가 < 착지원가 → 시장가로 팔면 원가도 못 건짐 → 🔴 HOLD
+ * 비교에 필요한 값이 하나라도 없으면(비교 대상 자체가 없으면) 기존 판정을
+ * 그대로 둔다. */
 function applyMarketPriceGuard(verdict: RepresentativeVerdict, input: RepresentativeVerdictInput): RepresentativeVerdict {
   if (verdict.code !== "READY" && verdict.code !== "MARKET_OPPORTUNITY") return verdict;
   if (input.recommendation == null || input.domesticLowestPriceKrw == null) return verdict;
   if (input.recommendation.recommendedPrice <= input.domesticLowestPriceKrw) return verdict;
+
+  // CASE C — 착지원가 정보가 있고, 시장 최저가가 그보다도 낮으면(0% 마진도
+  // 못 건짐) 🟡가 아니라 🔴로 낮춘다.
+  if (input.landedCostKrw != null && input.domesticLowestPriceKrw < input.landedCostKrw) {
+    const lossReason = `국내 최저가 ₩${input.domesticLowestPriceKrw.toLocaleString()}가 착지원가 ₩${input.landedCostKrw.toLocaleString()}보다 낮아 시장가로 팔면 손해입니다`;
+    return {
+      ...VERDICT_COPY.HOLD,
+      code: "HOLD",
+      reasons: [...verdict.reasons, lossReason],
+    };
+  }
+
+  // CASE B — 손해는 아니지만 목표 마진(최소마진 확보 판매가)에 못 미친다.
   const gapReason = `국내 최저가 ₩${input.domesticLowestPriceKrw.toLocaleString()}보다 최소마진 확보 판매가 ₩${input.recommendation.recommendedPrice.toLocaleString()}이 더 높아 가격 경쟁력이 없습니다`;
   return {
     ...VERDICT_COPY.REVIEW_PRICE,
@@ -240,7 +265,14 @@ export interface SellerFacingVerdict {
 
 const SELLER_FACING_MAP: Record<RepresentativeVerdictCode, SellerFacingVerdictCode> = {
   READY: "RECOMMENDED",
-  MARKET_OPPORTUNITY: "RECOMMENDED",
+  // P-25 Sprint 8(CPO 지시, 2026-09-02) — P-9-B(2026-08-30)는 "국내 동일상품
+  // 없음=판단불가" 철학을 버리고 MARKET_OPPORTUNITY를 READY와 동일하게 🟢
+  // 판매 추천으로 묶었다. CPO가 이번에 명시적으로 그 매핑을 뒤집는다: "국내
+  // 동일상품과 비교상품 모두 없는 경우... 절대 🟢 판매 추천으로 자동 확정되면
+  // 안 된다." MARKET_OPPORTUNITY 내부 판정(🟣 시장 진입 기회, description/
+  // reasons)은 그대로 유지한다 — 판매자에게 보여줄 3단계 압축에서만 CONDITIONAL로
+  // 낮춘다(시장 데이터가 아예 없다는 사실을 헤드라인에서 놓치지 않게 한다).
+  MARKET_OPPORTUNITY: "CONDITIONAL",
   // P-23 — REVIEW_MATCH(동일상품 미검증 + 마진은 통과)는 "판매 추천"으로
   // 뭉뚱그리지 않는다. "조건부 판매"로 낮춰 판매자가 시장가격을 직접
   // 확인해야 한다는 사실을 화면에서 놓치지 않게 한다.
