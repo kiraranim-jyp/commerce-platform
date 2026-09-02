@@ -349,7 +349,7 @@ interface Sellability {
  * 없어도(sellability=YELLOW, 비용은 이미 확인됨) "판단 불가"로 끝내지 않고
  * "시장 진입 기회"로 안내한다. */
 interface RepresentativeVerdict {
-  code: "READY" | "REVIEW_PRICE" | "MARKET_OPPORTUNITY" | "NEEDS_INFO" | "HOLD";
+  code: "READY" | "REVIEW_MATCH" | "REVIEW_PRICE" | "MARKET_OPPORTUNITY" | "NEEDS_INFO" | "HOLD";
   icon: "🟢" | "🟡" | "🟣" | "🟠" | "🔴";
   title: string;
   description: string;
@@ -361,6 +361,10 @@ interface RepresentativeVerdict {
  * 않는다 — 전부 기존 onRequestPriceReview(가격/비용 탭 이동)로 연결한다. */
 const REPRESENTATIVE_VERDICT_CTA: Record<RepresentativeVerdict["code"], { label: string; hint: string }> = {
   READY: { label: "등록 진행", hint: "" },
+  REVIEW_MATCH: {
+    label: "국내 동일상품 다시 확인",
+    hint: "동일상품이 확인되지 않아 비교상품(참고용) 시장가격 기준으로 계산됐습니다. 등록 전 직접 확인을 권장합니다.",
+  },
   REVIEW_PRICE: { label: "판매 가격 다시 설정", hint: "현재 판매가격과 국내 시장가격을 다시 비교합니다." },
   MARKET_OPPORTUNITY: {
     label: "추천 판매가격 검토",

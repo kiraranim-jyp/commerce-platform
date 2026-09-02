@@ -28,7 +28,17 @@ import type { SellabilityResult } from "./sellability";
  * 것"을 시스템이 구분할 수 없다는 점은 문구에서 단정하지 않는다("독점
  * 상품입니다" 같은 표현 금지, "확인하지 못했습니다" 정도로만 표현).
  */
-export type RepresentativeVerdictCode = "READY" | "REVIEW_PRICE" | "MARKET_OPPORTUNITY" | "NEEDS_INFO" | "HOLD";
+/**
+ * P-23(CPO 지시, 2026-09-02) — P-22에서 "동일상품"/"비교상품" 문구는 basis에
+ * 따라 갈랐지만, 코드/아이콘(🟢 READY)은 그대로 두었다. CPO 지적: COMPARISON
+ * (식별자 없이 상품명만 유사) 기준으로도 마진만 맞으면 여전히 🟢 "판매
+ * 추천"으로 보인다 — "동일상품 검증 완료"와 "시장 참고가만 있음"의 신뢰도
+ * 차이를 화면이 구분하지 않는다. basis가 EXACT가 아니면(COMPARISON/NONE)
+ * READY로 확정하지 않고 REVIEW_MATCH(🟡)로 낮춘다 — 마진 계산 자체는
+ * 그대로 두고 "동일상품 근거가 약하다"는 사실만 등급에 반영한다(새 마진
+ * 판정 아님).
+ */
+export type RepresentativeVerdictCode = "READY" | "REVIEW_MATCH" | "REVIEW_PRICE" | "MARKET_OPPORTUNITY" | "NEEDS_INFO" | "HOLD";
 
 export interface RepresentativeVerdict {
   code: RepresentativeVerdictCode;
@@ -62,6 +72,11 @@ const VERDICT_COPY: Record<RepresentativeVerdictCode, { icon: RepresentativeVerd
     title: "판매 진행 추천",
     description: "국내 시장에서 동일상품 가격을 확인했습니다. 현재 비용 기준으로 예상 수익성이 확보됩니다.",
   },
+  REVIEW_MATCH: {
+    icon: "🟡",
+    title: "조건부 판매 검토",
+    description: "동일상품은 확인되지 않았습니다. 비교상품(참고용) 시장가격을 참고한 예상 판매가입니다.",
+  },
   REVIEW_PRICE: {
     icon: "🟡",
     title: "가격 전략 재검토 추천",
@@ -93,12 +108,14 @@ function domesticReason(input: RepresentativeVerdictInput): string {
   return `국내 동일상품은 확인되지 않음 — 비교상품(참고용) ${input.domesticSellerCount}곳 시장가격 기준`;
 }
 
-/** P-22 — VERDICT_COPY.READY의 고정 문구("동일상품 가격을 확인했습니다")도
- * domesticReason()과 같은 이유로 basis를 봐야 한다. READY 코드에서만 쓰인다
- * (다른 코드의 문구는 애초에 "동일상품"을 언급하지 않는다). */
-function readyDescription(basis: RepresentativeVerdictInput["domesticBasis"]): string {
-  if (basis === "EXACT") return VERDICT_COPY.READY.description;
-  return "국내 동일상품은 확인되지 않았습니다. 비교상품(참고용) 시장가격 기준으로 현재 비용 대비 수익성이 확보되는 것으로 보입니다.";
+/** P-23 — REVIEW_MATCH는 basis===EXACT가 아닐 때만 등장하므로(마진 자체는
+ * READY와 동일하게 통과) COMPARISON과 NONE을 구분해서 설명한다. NONE인데
+ * "비교상품(참고용)"이라고 말하면 존재하지 않는 비교가격을 있는 것처럼
+ * 말하는 것이므로(도메스틱 매칭이 아예 없는 경우) 절대 같은 문구를 쓰지
+ * 않는다. */
+function reviewMatchDescription(basis: RepresentativeVerdictInput["domesticBasis"]): string {
+  if (basis === "COMPARISON") return VERDICT_COPY.REVIEW_MATCH.description;
+  return "국내 시장가격을 확인하지 못했습니다. 원가 기준으로만 계산된 예상값이니 등록 전 시장가격을 직접 확인하는 것을 권장합니다.";
 }
 
 export function deriveRepresentativeSellerVerdict(input: RepresentativeVerdictInput): RepresentativeVerdict {
@@ -113,7 +130,7 @@ export function deriveRepresentativeSellerVerdict(input: RepresentativeVerdictIn
     if (input.unifiedDecision.dataCompleteness === "INCOMPLETE" && input.unifiedDecision.missingComponents.length > 0) {
       reasons.push(`확인되지 않은 비용: ${input.unifiedDecision.missingComponents.join(", ")}`);
     }
-    const code: RepresentativeVerdictCode =
+    let code: RepresentativeVerdictCode =
       state.code === "READY"
         ? "READY"
         : state.code === "ADJUST"
@@ -121,7 +138,10 @@ export function deriveRepresentativeSellerVerdict(input: RepresentativeVerdictIn
           : state.code === "NOT_RECOMMENDED"
             ? "HOLD"
             : "NEEDS_INFO"; // NEEDS_COST_INFO | UNKNOWN — 여기선 여전히 "비용 계산 자체가 불완전"이라는 뜻
-    const description = code === "READY" ? readyDescription(input.domesticBasis) : VERDICT_COPY[code].description;
+    // P-23 — 마진이 통과해도(READY) basis가 EXACT가 아니면 동일상품이
+    // 검증된 게 아니므로 REVIEW_MATCH로 낮춘다.
+    if (code === "READY" && input.domesticBasis !== "EXACT") code = "REVIEW_MATCH";
+    const description = code === "REVIEW_MATCH" ? reviewMatchDescription(input.domesticBasis) : VERDICT_COPY[code].description;
     return { ...VERDICT_COPY[code], description, code, reasons };
   }
 
@@ -130,7 +150,9 @@ export function deriveRepresentativeSellerVerdict(input: RepresentativeVerdictIn
   if (input.sellability.level === "GREEN") {
     const reasons = [domesticReason(input)];
     if (input.sellability.estimatedMarginPercent != null) reasons.push(`예상 마진 ${input.sellability.estimatedMarginPercent}%`);
-    return { ...VERDICT_COPY.READY, description: readyDescription(input.domesticBasis), code: "READY", reasons };
+    const code: RepresentativeVerdictCode = input.domesticBasis === "EXACT" ? "READY" : "REVIEW_MATCH";
+    const description = code === "REVIEW_MATCH" ? reviewMatchDescription(input.domesticBasis) : VERDICT_COPY.READY.description;
+    return { ...VERDICT_COPY[code], description, code, reasons };
   }
   if (input.sellability.level === "RED") {
     const reasons = [domesticReason(input)];
@@ -162,14 +184,19 @@ export function deriveRepresentativeSellerVerdict(input: RepresentativeVerdictIn
 }
 
 /**
- * P-19-B Sprint 8(CPO 지시, 2026-09-02) — 기존 5단계 내부 판정(READY/
- * MARKET_OPPORTUNITY/REVIEW_PRICE/NEEDS_INFO/HOLD)은 그대로 유지한다(재계산
- * 없음, 새 판정 로직 아님) — 판매자에게 최종적으로 보여주는 화면만 3단계로
- * 압축하는 순수 Presentation Layer. CPO가 확정한 매핑 그대로:
+ * P-19-B Sprint 8(CPO 지시, 2026-09-02) — 기존 내부 판정(READY/MARKET_OPPORTUNITY/
+ * REVIEW_PRICE/NEEDS_INFO/HOLD)은 그대로 유지한다(재계산 없음, 새 판정 로직
+ * 아님) — 판매자에게 최종적으로 보여주는 화면만 3단계로 압축하는 순수
+ * Presentation Layer. CPO가 확정한 매핑:
  * READY/MARKET_OPPORTUNITY → 🟢 판매 추천, REVIEW_PRICE/NEEDS_INFO → 🟡
- * 조건부 판매, HOLD → 🔴 판매 비추천. 내부 코드/5단계 용어는 화면에 노출하지
+ * 조건부 판매, HOLD → 🔴 판매 비추천. 내부 코드 용어는 화면에 노출하지
  * 않는다 — reasons는 deriveRepresentativeSellerVerdict()가 이미 만든 값을
  * 그대로 재사용한다.
+ *
+ * P-23(CPO 지시, 2026-09-02) — REVIEW_MATCH(신설, P-23 참고)도 여기 추가:
+ * 🟡 조건부 판매. "동일상품 미검증"이 곧 마진 문제인 REVIEW_PRICE와 원인은
+ * 다르지만, 판매자에게 "바로 등록해도 되는 상태가 아니다"를 전달한다는
+ * 목적은 같으므로 같은 3단계 CONDITIONAL로 묶는다(신규 4단계 노출 안 함).
  */
 export type SellerFacingVerdictCode = "RECOMMENDED" | "CONDITIONAL" | "NOT_RECOMMENDED";
 
@@ -183,6 +210,10 @@ export interface SellerFacingVerdict {
 const SELLER_FACING_MAP: Record<RepresentativeVerdictCode, SellerFacingVerdictCode> = {
   READY: "RECOMMENDED",
   MARKET_OPPORTUNITY: "RECOMMENDED",
+  // P-23 — REVIEW_MATCH(동일상품 미검증 + 마진은 통과)는 "판매 추천"으로
+  // 뭉뚱그리지 않는다. "조건부 판매"로 낮춰 판매자가 시장가격을 직접
+  // 확인해야 한다는 사실을 화면에서 놓치지 않게 한다.
+  REVIEW_MATCH: "CONDITIONAL",
   REVIEW_PRICE: "CONDITIONAL",
   NEEDS_INFO: "CONDITIONAL",
   HOLD: "NOT_RECOMMENDED",

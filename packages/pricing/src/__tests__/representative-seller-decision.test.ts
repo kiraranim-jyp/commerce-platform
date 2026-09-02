@@ -327,7 +327,9 @@ describe("P-22: domesticBasis에 따라 '동일상품'/'비교상품' 문구가 
 
   it("basis=COMPARISON(Bobo Choses 실측 재현) → '동일상품'이라고 단정하지 않고 '비교상품(참고용)'으로 명시한다", () => {
     const result = deriveRepresentativeSellerVerdict({ ...base, domesticBasis: "COMPARISON" });
-    expect(result.code).toBe("READY");
+    // P-23(CPO 지시, 2026-09-02)에서 code 자체도 READY→REVIEW_MATCH로
+    // 낮췄다 — 자세한 code/icon 회귀는 아래 "P-23" describe에서 고정한다.
+    // 여기서는 P-22가 고정한 "동일상품 단정 금지" 문구만 재확인한다.
     expect(result.description).not.toContain("동일상품을 확인");
     expect(result.reasons.some((r) => r.includes("비교상품"))).toBe(true);
     expect(result.reasons.some((r) => r.includes("동일상품") && !r.includes("확인되지 않음"))).toBe(false);
@@ -341,7 +343,78 @@ describe("P-22: domesticBasis에 따라 '동일상품'/'비교상품' 문구가 
       domesticSellerCount: 1,
       domesticBasis: "COMPARISON",
     });
-    expect(result.code).toBe("READY");
     expect(result.description).not.toContain("동일상품을 확인");
+  });
+});
+
+/**
+ * P-23(CPO 지시, 2026-09-02) — P-22는 문구(description/reasons)만 basis별로
+ * 갈랐지만 코드/아이콘(🟢 READY)은 그대로 두었다. CPO 지적: COMPARISON 기준
+ * 으로도 마진만 맞으면 여전히 🟢 "판매 추천"으로 보인다 — "동일상품 검증
+ * 완료"와 "시장 참고가만 있음"의 신뢰도 차이를 화면이 구분하지 않는다.
+ * basis!==EXACT면 READY로 확정하지 않고 REVIEW_MATCH(🟡)로 낮추고,
+ * 3단계 압축에서도 RECOMMENDED가 아닌 CONDITIONAL로 분류되는지 고정한다.
+ */
+describe("P-23: basis!==EXACT면 READY가 아니라 REVIEW_MATCH(🟡)로 낮춘다", () => {
+  const base: RepresentativeVerdictInput = {
+    unifiedDecision: null,
+    sellability: { level: "GREEN", estimatedMarginPercent: 18.5, reason: "..." },
+    domesticMatched: true,
+    domesticSellerCount: 1,
+    domesticBasis: "EXACT",
+  };
+
+  it("basis=EXACT + 마진 정상 → 그대로 READY(🟢)", () => {
+    const result = deriveRepresentativeSellerVerdict({ ...base, domesticBasis: "EXACT" });
+    expect(result.code).toBe("READY");
+    expect(result.icon).toBe("🟢");
+  });
+
+  it("basis=COMPARISON(Bobo Choses) + 마진 정상 → READY 아니라 REVIEW_MATCH(🟡)", () => {
+    const result = deriveRepresentativeSellerVerdict({ ...base, domesticBasis: "COMPARISON" });
+    expect(result.code).toBe("REVIEW_MATCH");
+    expect(result.icon).toBe("🟡");
+    expect(result.description).toContain("비교상품(참고용)");
+    expect(result.description).not.toContain("동일상품을 확인");
+  });
+
+  it("basis=NONE(도메스틱 매칭 자체 없음) + 마진 정상 → REVIEW_MATCH, '비교상품'이라는 존재하지 않는 데이터를 언급하지 않는다", () => {
+    const result = deriveRepresentativeSellerVerdict({
+      ...base,
+      domesticMatched: false,
+      domesticSellerCount: 0,
+      domesticBasis: "NONE",
+    });
+    expect(result.code).toBe("REVIEW_MATCH");
+    expect(result.icon).toBe("🟡");
+    expect(result.description).not.toContain("비교상품");
+    expect(result.description).not.toContain("동일상품을 확인");
+  });
+
+  it("Priority 1(unifiedDecision 경로) basis=COMPARISON → 마진 healthy(MAINTAIN)여도 REVIEW_MATCH로 낮춘다", () => {
+    const result = deriveRepresentativeSellerVerdict({
+      unifiedDecision: { verdict: "MAINTAIN", dataCompleteness: "COMPLETE", marginPercent: { value: 18.5, status: "estimated" }, missingComponents: [] },
+      sellability: { level: "GREEN", estimatedMarginPercent: 18.5, reason: "..." },
+      domesticMatched: true,
+      domesticSellerCount: 1,
+      domesticBasis: "COMPARISON",
+    });
+    expect(result.code).toBe("REVIEW_MATCH");
+    expect(result.icon).toBe("🟡");
+  });
+
+  it("toSellerFacingVerdict: REVIEW_MATCH는 RECOMMENDED가 아니라 CONDITIONAL(🟡 조건부 판매)로 압축된다", () => {
+    const verdict = deriveRepresentativeSellerVerdict({ ...base, domesticBasis: "COMPARISON" });
+    const facing = toSellerFacingVerdict(verdict);
+    expect(facing.code).toBe("CONDITIONAL");
+    expect(facing.icon).toBe("🟡");
+    expect(facing.title).toBe("조건부 판매");
+  });
+
+  it("toSellerFacingVerdict: basis=EXACT는 여전히 RECOMMENDED(🟢 판매 추천)로 유지된다(회귀 확인)", () => {
+    const verdict = deriveRepresentativeSellerVerdict({ ...base, domesticBasis: "EXACT" });
+    const facing = toSellerFacingVerdict(verdict);
+    expect(facing.code).toBe("RECOMMENDED");
+    expect(facing.icon).toBe("🟢");
   });
 });
