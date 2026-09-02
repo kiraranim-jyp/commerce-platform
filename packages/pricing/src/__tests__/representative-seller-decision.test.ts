@@ -418,3 +418,76 @@ describe("P-23: basis!==EXACT면 READY가 아니라 REVIEW_MATCH(🟡)로 낮춘
     expect(facing.icon).toBe("🟢");
   });
 });
+
+/**
+ * P-24 Sprint 5-7(CPO 지시, 2026-09-02) — 실측(PèPè) 잔여 모순: basis=EXACT +
+ * sellability GREEN이라 READY(🟢)까지는 P-23까지의 로직으로도 나오지만, 실제
+ * "추천 판매가"(computePriceRecommendation, 착지원가+최소마진 기준)는
+ * ₩269,333으로 국내 최저가 ₩258,000보다 비쌌다 — 마진 최소기준을 지키는
+ * 순간 가격 경쟁력을 잃는데도 헤드라인은 "판매 추천"이라고 말했다.
+ * recommendedPrice와 domesticLowestPriceKrw를 비교해서 이 경우만 🟡로
+ * 낮추는지 고정한다.
+ */
+describe("P-24: 추천 판매가가 국내 최저가보다 비싸면 READY(🟢)를 REVIEW_PRICE(🟡)로 낮춘다", () => {
+  const base: RepresentativeVerdictInput = {
+    unifiedDecision: null,
+    sellability: { level: "GREEN", estimatedMarginPercent: 10.7, reason: "..." },
+    domesticMatched: true,
+    domesticSellerCount: 1,
+    domesticBasis: "EXACT",
+  };
+
+  it("실측 재현 — 추천가 ₩269,333 > 국내 최저가 ₩258,000 → READY가 아니라 REVIEW_PRICE(🟡), 이유에 두 가격이 모두 나온다", () => {
+    const result = deriveRepresentativeSellerVerdict({
+      ...base,
+      recommendation: { recommendedPrice: 269333 },
+      domesticLowestPriceKrw: 258000,
+    });
+    expect(result.code).toBe("REVIEW_PRICE");
+    expect(result.icon).toBe("🟡");
+    expect(result.reasons.some((r) => r.includes("258,000") && r.includes("269,333"))).toBe(true);
+  });
+
+  it("추천가가 국내 최저가 이하(정상 CASE A) → 여전히 READY(🟢), 다운그레이드 안 됨", () => {
+    const result = deriveRepresentativeSellerVerdict({
+      ...base,
+      recommendation: { recommendedPrice: 255420 },
+      domesticLowestPriceKrw: 258000,
+    });
+    expect(result.code).toBe("READY");
+    expect(result.icon).toBe("🟢");
+  });
+
+  it("recommendation/domesticLowestPriceKrw 둘 다 없으면(P-24 이전 호출부) 기존 동작 그대로 READY", () => {
+    const result = deriveRepresentativeSellerVerdict({ ...base });
+    expect(result.code).toBe("READY");
+    expect(result.icon).toBe("🟢");
+  });
+
+  it("MARKET_OPPORTUNITY(🟣, 국내 매칭 자체 없음)도 같은 가드를 통과한다 — 원래 domesticLowestPriceKrw가 없어 다운그레이드되지 않음", () => {
+    const result = deriveRepresentativeSellerVerdict({
+      unifiedDecision: null,
+      sellability: { level: "YELLOW", estimatedMarginPercent: null, reason: "..." },
+      domesticMatched: false,
+      domesticSellerCount: 0,
+      domesticBasis: "NONE",
+      recommendation: { recommendedPrice: 999999 },
+      domesticLowestPriceKrw: null,
+    });
+    expect(result.code).toBe("MARKET_OPPORTUNITY");
+  });
+
+  it("Priority 1(unifiedDecision 경로, 판매가 확정) READY도 같은 가드가 적용된다", () => {
+    const result = deriveRepresentativeSellerVerdict({
+      unifiedDecision: { verdict: "MAINTAIN", dataCompleteness: "COMPLETE", marginPercent: { value: 15, status: "estimated" }, missingComponents: [] },
+      sellability: { level: "RED", estimatedMarginPercent: -1, reason: "..." },
+      domesticMatched: true,
+      domesticSellerCount: 1,
+      domesticBasis: "EXACT",
+      recommendation: { recommendedPrice: 269333 },
+      domesticLowestPriceKrw: 258000,
+    });
+    expect(result.code).toBe("REVIEW_PRICE");
+    expect(result.icon).toBe("🟡");
+  });
+});

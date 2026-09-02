@@ -64,6 +64,17 @@ export interface RepresentativeVerdictInput {
    * 보고 문구를 정하면 EXACT/COMPARISON을 구분하지 못한다. summarizeDomesticMarketSplit()이
    * 이미 계산한 basis를 그대로 받아 문구만 분기한다 — 새 판정 로직 아님. */
   domesticBasis: "EXACT" | "COMPARISON" | "NONE";
+  /** P-24 Sprint 5-7(CPO 지시, 2026-09-02) — 실측(PèPè)에서 발견된 잔여 모순:
+   * sellability(원가 vs 시장평균가, 배송비/수수료 미포함)는 GREEN이라 헤드라인이
+   * 🟢였지만, 실제 "추천 판매가"(computePriceRecommendation — 착지원가+최소마진
+   * 기준, 이미 시장가를 반영하는 기존 함수)는 ₩269,333으로 국내 최저가
+   * ₩258,000보다 높았다 — 판매자가 마진 최소기준을 지키려면 시장가보다 비싸게
+   * 팔아야 한다는 뜻인데도 화면은 "판매 추천"이라고 말했다. 새 마진 계산을
+   * 만들지 않고, 이미 계산된 recommendedPrice와 domesticLowestPriceKrw 두 값만
+   * 비교해서 헤드라인을 낮춘다(null이면 비교 대상 자체가 없으므로 기존 로직
+   * 그대로 통과). */
+  recommendation?: { recommendedPrice: number } | null;
+  domesticLowestPriceKrw?: number | null;
 }
 
 const VERDICT_COPY: Record<RepresentativeVerdictCode, { icon: RepresentativeVerdict["icon"]; title: string; description: string }> = {
@@ -118,7 +129,27 @@ function reviewMatchDescription(basis: RepresentativeVerdictInput["domesticBasis
   return "국내 시장가격을 확인하지 못했습니다. 원가 기준으로만 계산된 예상값이니 등록 전 시장가격을 직접 확인하는 것을 권장합니다.";
 }
 
+/** P-24 Sprint 5-7 — 🟢로 확정되려는 판정(READY/MARKET_OPPORTUNITY)만 마지막에
+ * 한 번 더 검사한다: 실제 "추천 판매가"가 국내 최저가보다 비싸면(=마진 최소
+ * 기준을 지키는 순간 가격 경쟁력을 잃으면) 🟢로 내보내지 않는다. 두 값 중
+ * 하나라도 없으면(비교 대상이 없으면) 기존 판정을 그대로 둔다. */
+function applyMarketPriceGuard(verdict: RepresentativeVerdict, input: RepresentativeVerdictInput): RepresentativeVerdict {
+  if (verdict.code !== "READY" && verdict.code !== "MARKET_OPPORTUNITY") return verdict;
+  if (input.recommendation == null || input.domesticLowestPriceKrw == null) return verdict;
+  if (input.recommendation.recommendedPrice <= input.domesticLowestPriceKrw) return verdict;
+  const gapReason = `국내 최저가 ₩${input.domesticLowestPriceKrw.toLocaleString()}보다 최소마진 확보 판매가 ₩${input.recommendation.recommendedPrice.toLocaleString()}이 더 높아 가격 경쟁력이 없습니다`;
+  return {
+    ...VERDICT_COPY.REVIEW_PRICE,
+    code: "REVIEW_PRICE",
+    reasons: [...verdict.reasons, gapReason],
+  };
+}
+
 export function deriveRepresentativeSellerVerdict(input: RepresentativeVerdictInput): RepresentativeVerdict {
+  return applyMarketPriceGuard(deriveBaseVerdict(input), input);
+}
+
+function deriveBaseVerdict(input: RepresentativeVerdictInput): RepresentativeVerdict {
   // Priority 1 — 판매가가 확정된 경우 sellerDecisionStateFromUnifiedDecision()의
   // 기존 5-state 판단을 그대로 옮긴다(재계산 없음).
   if (input.unifiedDecision?.verdict != null) {

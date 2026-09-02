@@ -267,6 +267,11 @@ export async function computeMarketIntelligence(snapshotId: string) {
     // EXACT에서 왔는지 COMPARISON에서 왔는지를 그대로 전달한다(새 판정 없음,
     // summarizeDomesticMarketSplit()이 이미 낸 값 재사용).
     domesticBasis: domesticMarketSplit.basis,
+    // P-24 Sprint 5-7(CPO 지시, 2026-09-02) — recommendation은 이미 위에서
+    // 시장가 반영해 계산됐다(새 계산 없음). 🟢로 확정되려는 판정이 실제로는
+    // 시장가보다 비싼 가격을 추천하고 있는지 최종 검사할 때만 쓰인다.
+    recommendation: recommendation ? { recommendedPrice: recommendation.recommendedPrice } : null,
+    domesticLowestPriceKrw: domesticSummary.lowestPriceKrw,
   });
   // P-19-B Sprint 8(CPO 지시, 2026-09-02) — 판매자에게 최종적으로 보여줄 화면은
   // 무조건 3단계(🟢 판매 추천/🟡 조건부 판매/🔴 판매 비추천)로 통합한다. 기존
