@@ -167,15 +167,18 @@ export async function computeMarketIntelligence(snapshotId: string) {
     // 있으면 그 값을, 없으면 cost.suggestedPriceKrw를 쓰도록 되어 있었으므로
     // (`recommendation?.recommendedPrice ?? cost.suggestedPriceKrw`) 이 한 곳만
     // 고치면 화면이 자동으로 시장가 기준 값을 보여준다.
+    // P-26 Sprint 1-2(CPO 지시, 2026-09-03) — domesticBasis(EXACT/COMPARISON/
+    // NONE)를 넘겨야 CASE A/B/C(시장경쟁 판단)와 CASE D(EXACT 아님, 판단 보류)를
+    // 구분할 수 있다. domesticMarketSplit.basis는 이미 위에서 계산된 값 그대로다.
     recommendation = computePriceRecommendation({
       totalCostKrw: cost.landedCostKrw,
       currentSellingPriceKrw: currentSellingPriceKrw ?? undefined,
       domesticLowestPriceKrw: domesticSummary.lowestPriceKrw,
       domesticAveragePriceKrw: domesticSummary.averagePriceKrw,
+      domesticBasis: domesticMarketSplit.basis,
       minimumMarginPercent: 10,
       targetMarginPercent: breakdownInput.marginPercent,
-      // P-13A — domesticLowestPriceKrw가 없을 때만 이 값이 실제로 쓰인다
-      // (computePriceRecommendation 내부에서 domesticLowestPriceKrw 우선).
+      // P-13A — EXACT 시장가가 없을 때(CASE D)만 이 값이 실제로 쓰인다.
       brandMedianPriceKrw: usableBrandMarketProfile?.medianPriceKrw ?? null,
     });
   }
@@ -267,13 +270,14 @@ export async function computeMarketIntelligence(snapshotId: string) {
     // EXACT에서 왔는지 COMPARISON에서 왔는지를 그대로 전달한다(새 판정 없음,
     // summarizeDomesticMarketSplit()이 이미 낸 값 재사용).
     domesticBasis: domesticMarketSplit.basis,
-    // P-24 Sprint 5-7(CPO 지시, 2026-09-02) — recommendation은 이미 위에서
-    // 시장가 반영해 계산됐다(새 계산 없음). 🟢로 확정되려는 판정이 실제로는
-    // 시장가보다 비싼 가격을 추천하고 있는지 최종 검사할 때만 쓰인다.
-    recommendation: recommendation ? { recommendedPrice: recommendation.recommendedPrice } : null,
+    // P-26(CPO 지시, 2026-09-03) — computePriceRecommendation()이 이미
+    // CASE A/B/C/D를 계산해 낸다(marketCase). 여기서 가격을 다시 비교하지
+    // 않고 그 결과를 그대로 전달한다(추천가 계산과 판매 판단 단일화).
+    marketCase: recommendation?.marketCase ?? null,
+    recommendation: recommendation
+      ? { recommendedPrice: recommendation.recommendedPrice, estimatedMarginPercent: recommendation.estimatedMarginPercent }
+      : null,
     domesticLowestPriceKrw: domesticSummary.lowestPriceKrw,
-    // P-25 Sprint 4/6(CPO 지시, 2026-09-02) — CASE C(시장가로 팔면 원가도
-    // 못 건짐) 판정에만 쓰인다. cost는 이미 위에서 계산된 값 그대로다.
     landedCostKrw: cost?.landedCostKrw ?? null,
   });
   // P-19-B Sprint 8(CPO 지시, 2026-09-02) — 판매자에게 최종적으로 보여줄 화면은

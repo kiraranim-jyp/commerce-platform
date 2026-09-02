@@ -64,22 +64,16 @@ export interface RepresentativeVerdictInput {
    * 보고 문구를 정하면 EXACT/COMPARISON을 구분하지 못한다. summarizeDomesticMarketSplit()이
    * 이미 계산한 basis를 그대로 받아 문구만 분기한다 — 새 판정 로직 아님. */
   domesticBasis: "EXACT" | "COMPARISON" | "NONE";
-  /** P-24 Sprint 5-7(CPO 지시, 2026-09-02) — 실측(PèPè)에서 발견된 잔여 모순:
-   * sellability(원가 vs 시장평균가, 배송비/수수료 미포함)는 GREEN이라 헤드라인이
-   * 🟢였지만, 실제 "추천 판매가"(computePriceRecommendation — 착지원가+최소마진
-   * 기준, 이미 시장가를 반영하는 기존 함수)는 ₩269,333으로 국내 최저가
-   * ₩258,000보다 높았다 — 판매자가 마진 최소기준을 지키려면 시장가보다 비싸게
-   * 팔아야 한다는 뜻인데도 화면은 "판매 추천"이라고 말했다. 새 마진 계산을
-   * 만들지 않고, 이미 계산된 recommendedPrice와 domesticLowestPriceKrw 두 값만
-   * 비교해서 헤드라인을 낮춘다(null이면 비교 대상 자체가 없으므로 기존 로직
-   * 그대로 통과). */
-  recommendation?: { recommendedPrice: number } | null;
+  /** P-26(CPO 지시, 2026-09-03) — computePriceRecommendation()이 이미 CASE
+   * A/B/C/D를 계산해 낸다(packages/pricing/src/price-recommendation.ts). 이
+   * 파일(대표 판단 압축 레이어)이 recommendedPrice/domesticLowestPriceKrw/
+   * landedCostKrw를 다시 비교해서 같은 판정을 중복 계산하지 않는다 — marketCase
+   * 하나만 받아서 그대로 신뢰한다("추천가와 컨설팅 문구 단일화", CPO Sprint 6). */
+  marketCase?: "A" | "B" | "C" | "D" | null;
+  /** 판정 이유 문장에 실제 숫자를 넣기 위한 값들 — 새 계산 없이 이미 계산된
+   * recommendation 결과와 원본 원가/시장가를 그대로 재사용한다. */
+  recommendation?: { recommendedPrice: number | null; estimatedMarginPercent: number | null } | null;
   domesticLowestPriceKrw?: number | null;
-  /** P-25 Sprint 4/6(CPO 지시, 2026-09-02) — CASE A/B/C를 구분하려면 "시장가로
-   * 팔면 아예 손해인가"(CASE C)도 봐야 한다. 이건 recommendedPrice(최소마진
-   * 10% 포함)가 아니라 순수 착지원가(마진 0%, computePriceBreakdown이 이미
-   * 계산해 돌려주는 cost.landedCostKrw)와 시장가를 비교해야 한다 — 새 손익분기
-   * 계산이 아니라 이미 있는 landedCostKrw를 그대로 재사용한다. */
   landedCostKrw?: number | null;
 }
 
@@ -135,25 +129,26 @@ function reviewMatchDescription(basis: RepresentativeVerdictInput["domesticBasis
   return "국내 시장가격을 확인하지 못했습니다. 원가 기준으로만 계산된 예상값이니 등록 전 시장가격을 직접 확인하는 것을 권장합니다.";
 }
 
-/** P-24 Sprint 5-7 / P-25 Sprint 4/6(CPO 지시, 2026-09-02) — 🟢로 확정되려는
- * 판정(READY/MARKET_OPPORTUNITY)만 마지막에 한 번 더 검사한다. CPO의 CASE
- * A/B/C를 그대로 따른다 — 새 마진 계산 없이 이미 계산된 세 값(recommendedPrice/
- * landedCostKrw/domesticLowestPriceKrw)만 비교한다:
- *  - CASE A: 국내 최저가 ≥ 추천 판매가(최소마진 확보) → 그대로 🟢
- *  - CASE B: 국내 최저가 < 추천 판매가지만 착지원가(0% 마진)보다는 높음
- *    → 시장가에 팔아도 손해는 아니지만 목표 마진에 못 미침 → 🟡 REVIEW_PRICE
- *  - CASE C: 국내 최저가 < 착지원가 → 시장가로 팔면 원가도 못 건짐 → 🔴 HOLD
- * 비교에 필요한 값이 하나라도 없으면(비교 대상 자체가 없으면) 기존 판정을
- * 그대로 둔다. */
-function applyMarketPriceGuard(verdict: RepresentativeVerdict, input: RepresentativeVerdictInput): RepresentativeVerdict {
+/** P-24 Sprint 5-7 / P-25 Sprint 4/6 / P-26(CPO 지시, 2026-09-03) — 🟢로
+ * 확정되려는 판정(READY/MARKET_OPPORTUNITY)만 마지막에 한 번 더 검사한다.
+ * computePriceRecommendation()이 이미 계산한 marketCase(A/B/C/D)를 그대로
+ * 신뢰한다 — 이 파일에서 가격을 다시 비교하지 않는다(P-26 핵심: 추천가
+ * 계산과 판매 판단이 서로 다른 곳에서 각자 판정을 내지 않게 단일화). */
+function applyMarketCaseGuard(verdict: RepresentativeVerdict, input: RepresentativeVerdictInput): RepresentativeVerdict {
   if (verdict.code !== "READY" && verdict.code !== "MARKET_OPPORTUNITY") return verdict;
-  if (input.recommendation == null || input.domesticLowestPriceKrw == null) return verdict;
-  if (input.recommendation.recommendedPrice <= input.domesticLowestPriceKrw) return verdict;
+  if (input.marketCase == null) return verdict;
 
-  // CASE C — 착지원가 정보가 있고, 시장 최저가가 그보다도 낮으면(0% 마진도
-  // 못 건짐) 🟡가 아니라 🔴로 낮춘다.
-  if (input.landedCostKrw != null && input.domesticLowestPriceKrw < input.landedCostKrw) {
-    const lossReason = `국내 최저가 ₩${input.domesticLowestPriceKrw.toLocaleString()}가 착지원가 ₩${input.landedCostKrw.toLocaleString()}보다 낮아 시장가로 팔면 손해입니다`;
+  // CASE A — 시장가에서도 목표마진 확보 가능. 그대로 🟢 유지.
+  // CASE D — EXACT 시장가 자체가 없다. 이 분기에 도달했다는 것 자체가 이미
+  // domesticBasis===EXACT(READY 경로)이거나 MARKET_OPPORTUNITY(NONE, 이미
+  // CONDITIONAL로 매핑됨)이므로 별도 처리가 필요 없다.
+  if (input.marketCase === "A" || input.marketCase === "D") return verdict;
+
+  if (input.marketCase === "C") {
+    const lossReason =
+      input.domesticLowestPriceKrw != null && input.landedCostKrw != null
+        ? `국내 최저가 ₩${input.domesticLowestPriceKrw.toLocaleString()}가 착지원가 ₩${input.landedCostKrw.toLocaleString()}보다 낮아 시장가로 팔면 손해입니다`
+        : "국내 시장가로 판매하면 착지원가를 회수하지 못합니다";
     return {
       ...VERDICT_COPY.HOLD,
       code: "HOLD",
@@ -161,8 +156,12 @@ function applyMarketPriceGuard(verdict: RepresentativeVerdict, input: Representa
     };
   }
 
-  // CASE B — 손해는 아니지만 목표 마진(최소마진 확보 판매가)에 못 미친다.
-  const gapReason = `국내 최저가 ₩${input.domesticLowestPriceKrw.toLocaleString()}보다 최소마진 확보 판매가 ₩${input.recommendation.recommendedPrice.toLocaleString()}이 더 높아 가격 경쟁력이 없습니다`;
+  // CASE B — 손해는 아니지만 목표마진에는 못 미친다. 시장가를 그대로
+  // 권장가로 쓰고(P-26 정책 변경), 실제 계산된 마진율을 그대로 알린다.
+  const marketPriceText = input.domesticLowestPriceKrw != null ? `₩${input.domesticLowestPriceKrw.toLocaleString()}` : "국내 시장가";
+  const marginText =
+    input.recommendation?.estimatedMarginPercent != null ? ` — 예상 마진 약 ${input.recommendation.estimatedMarginPercent}%` : "";
+  const gapReason = `국내 최저가 ${marketPriceText} 기준으로는 목표마진에 못 미치지만 손실 없이 판매 가능합니다${marginText}`;
   return {
     ...VERDICT_COPY.REVIEW_PRICE,
     code: "REVIEW_PRICE",
@@ -171,7 +170,7 @@ function applyMarketPriceGuard(verdict: RepresentativeVerdict, input: Representa
 }
 
 export function deriveRepresentativeSellerVerdict(input: RepresentativeVerdictInput): RepresentativeVerdict {
-  return applyMarketPriceGuard(deriveBaseVerdict(input), input);
+  return applyMarketCaseGuard(deriveBaseVerdict(input), input);
 }
 
 function deriveBaseVerdict(input: RepresentativeVerdictInput): RepresentativeVerdict {

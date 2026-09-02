@@ -315,14 +315,21 @@ const SELLER_ACTION_STYLE: Record<SellerAction["status"], string> = {
   INSUFFICIENT_DATA: "border-border bg-background text-text-secondary",
 };
 
+/** P-26(CPO 지시, 2026-09-03) — CASE A/B/C/D. C(시장가 손실)/D(EXACT 데이터
+ * 없음)는 recommendedPrice/estimatedMarginPercent가 null이다 — 억지 추천가를
+ * 만들지 않는다는 원칙 그대로 화면에서도 "없음"을 명시해야 한다. */
+type MarketCase = "A" | "B" | "C" | "D";
+
 interface Recommendation {
   minimumPrice: number;
   targetPrice: number;
-  competitivePrice: number | null;
-  recommendedPrice: number;
+  marketCase: MarketCase;
+  recommendedPrice: number | null;
+  estimatedMarginPercent: number | null;
   /** P-13A CPO 2차 검증 대응 — 이 값이 국내 동일상품 최저가에서 왔는지,
    * 브랜드 시장 중앙값(참고용)에서 왔는지 화면에서 구분해야 한다. */
   competitiveBasis?: "DOMESTIC_LOWEST" | "BRAND_MEDIAN" | null;
+  referencePriceKrw?: number | null;
 }
 
 interface PriceHistoryRecord {
@@ -858,31 +865,55 @@ export function DomesticPriceIntelligencePanel({
                     )}
                   </dd>
                 </div>
+                {/* P-26 Sprint 2/3(CPO 지시, 2026-09-03) — "10% 최소마진은 더
+                    이상 절대 하한선이 아니다"(CEO 승인 옵션 1). minimumPrice/
+                    targetPrice는 참고용 숫자로만 노출하고, 실제 권장가는
+                    computePriceRecommendation()의 CASE A/B/C/D 판정
+                    (marketCase)을 그대로 따른다 — 여기서 값을 다시 비교하지
+                    않는다. CASE C/D는 억지 추천가를 만들지 않으므로
+                    recommendedPrice가 null일 수 있다(화면도 "없음"을 명시). */}
                 {recommendation && (
                   <>
                     <div>
-                      <dt className="text-[10px] text-text-tertiary">최소마진 확보 판매가</dt>
+                      <dt className="text-[10px] text-text-tertiary">최소마진 확보가(참고)</dt>
                       <dd className="text-sm font-semibold text-text-primary">
                         ₩{recommendation.minimumPrice.toLocaleString()}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[10px] text-text-tertiary">목표마진 판매가</dt>
+                      <dt className="text-[10px] text-text-tertiary">목표마진 판매가(참고)</dt>
                       <dd className="text-sm font-semibold text-text-primary">
                         ₩{recommendation.targetPrice.toLocaleString()}
                       </dd>
                     </div>
                     <div>
                       <dt className="text-[10px] text-text-tertiary">🏷 최종 추천 판매가</dt>
-                      <dd className="text-sm font-semibold text-text-primary">
-                        {recommendation.minimumPrice < recommendation.recommendedPrice
-                          ? `₩${recommendation.minimumPrice.toLocaleString()} ~ ₩${recommendation.recommendedPrice.toLocaleString()}`
-                          : `₩${recommendation.recommendedPrice.toLocaleString()}`}
-                      </dd>
-                      {recommendation.competitiveBasis === "BRAND_MEDIAN" && (
-                        <p className="mt-0.5 text-[10px] text-text-tertiary">
-                          💡 국내 동일상품 없음 — 브랜드 시장 중앙값 기준 참고치
-                        </p>
+                      {recommendation.recommendedPrice != null ? (
+                        <>
+                          <dd className="text-sm font-semibold text-text-primary">
+                            ₩{recommendation.recommendedPrice.toLocaleString()}
+                          </dd>
+                          {recommendation.estimatedMarginPercent != null && (
+                            <p className="mt-0.5 text-[10px] text-text-tertiary">
+                              예상 마진 약 {recommendation.estimatedMarginPercent}%
+                              {recommendation.marketCase === "B" && " (목표마진 미달, 손실 아님)"}
+                            </p>
+                          )}
+                          {recommendation.competitiveBasis === "BRAND_MEDIAN" && (
+                            <p className="mt-0.5 text-[10px] text-text-tertiary">
+                              💡 국내 동일상품 없음 — 브랜드 시장 중앙값 기준 참고치
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <dd className="text-sm font-semibold text-text-tertiary">추천가 없음</dd>
+                          <p className="mt-0.5 text-[10px] text-text-tertiary">
+                            {recommendation.marketCase === "C"
+                              ? "국내 시장가로 팔면 착지원가도 회수하지 못합니다"
+                              : "국내 동일상품(EXACT) 시장가가 확인되지 않아 시장 경쟁력 기반 추천을 낼 수 없습니다"}
+                          </p>
+                        </>
                       )}
                     </div>
                   </>
