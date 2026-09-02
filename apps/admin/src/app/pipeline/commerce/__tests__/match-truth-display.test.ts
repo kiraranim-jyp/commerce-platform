@@ -27,16 +27,16 @@ describe("MT-01 — Pepe/ForetForet: confidence 낮음 + identifier partial → 
     const label = candidateLabel(candidate({ matchTruth: "STRONG_IDENTIFIER", matchConfidence: 0.42, verified: true }));
     expect(label.icon).toBe("🟢");
     expect(label.text).toBe("동일상품 확인됨(식별자 기반 검증)");
-    expect(label.note).toBe("→ 가격비교에 반영됨");
+    expect(label.note).toBe("→ 동일상품 가격으로 반영됨");
   });
 });
 
 describe("MT-02 — Pepe/Deuxbebe: confidence 72% + identifier unavailable → SIMILAR", () => {
-  it("⚪ 유사상품 · 텍스트 유사도 72%로 표시되고 가격비교에는 반영되지 않는다", () => {
+  it("🟡 비교상품 · 텍스트 유사도 72%로 표시되고 비교상품 시장가격(참고용)으로 반영된다", () => {
     const label = candidateLabel(candidate({ matchTruth: "SIMILAR", matchConfidence: 0.72, verified: false }));
-    expect(label.icon).toBe("⚪");
-    expect(label.text).toBe("유사상품");
-    expect(label.note).toBe("텍스트 유사도 72% · 가격비교에는 반영하지 않습니다");
+    expect(label.icon).toBe("🟡");
+    expect(label.text).toContain("비교상품");
+    expect(label.note).toBe("텍스트 유사도 72% · 비교상품 시장가격(참고용)으로 반영됨");
   });
 });
 
@@ -49,11 +49,11 @@ describe("MT-03 — 고 confidence + identifier conflict → CONFLICT", () => {
 });
 
 describe("MT-04 — Bobo Choses 실제 사례: confidence 매우 높음 + identifier unavailable → TEXT_CONFIRMED", () => {
-  it("🟢 높은 상품명 일치로 표시된다", () => {
-    const label = candidateLabel(candidate({ matchTruth: "TEXT_CONFIRMED", matchConfidence: 1, verified: true }));
-    expect(label.icon).toBe("🟢");
-    expect(label.text).toContain("높은 상품명 일치");
-    expect(label.note).toBe("→ 가격비교에 반영됨");
+  it("🟡 비교상품으로 표시되고 비교상품 시장가격(참고용)으로 반영된다 — 텍스트 유사도만으로는 동일상품(🟢)이 될 수 없다", () => {
+    const label = candidateLabel(candidate({ matchTruth: "TEXT_CONFIRMED", matchConfidence: 1, verified: false }));
+    expect(label.icon).toBe("🟡");
+    expect(label.text).toContain("비교상품");
+    expect(label.note).toBe("텍스트 유사도 100% · 비교상품 시장가격(참고용)으로 반영됨");
   });
 });
 

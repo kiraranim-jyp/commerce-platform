@@ -109,23 +109,33 @@ const CANDIDATE_LABEL: Record<DomesticCandidate["matchType"], { icon: string; te
  * 절대 원칙 그대로. TEXT_CONFIRMED조차 verified=true가 될 수 있는 이유는
  * toDomesticMatchType()의 기존 autoVerified(matchLevel=very_high) 판정
  * 때문이며, 이 파일은 그 결과를 그대로 읽기만 한다. */
-const MATCH_TRUTH_DISPLAY: Record<MatchTruth, { icon: "🟢" | "⚪" | "🔴"; text: string }> = {
+const MATCH_TRUTH_DISPLAY: Record<MatchTruth, { icon: "🟢" | "🟡" | "⚪" | "🔴"; text: string }> = {
   EXACT_IDENTIFIER: { icon: "🟢", text: "동일상품 확인됨 — 정확한 상품 식별자 일치" },
   STRONG_IDENTIFIER: { icon: "🟢", text: "동일상품 확인됨(식별자 기반 검증)" },
-  TEXT_CONFIRMED: { icon: "🟢", text: "높은 상품명 일치 — 동일상품 가능성이 높음" },
-  SIMILAR: { icon: "⚪", text: "유사상품" },
+  TEXT_CONFIRMED: { icon: "🟡", text: "비교상품 — 상품명은 유사하지만 식별자 근거 없음" },
+  SIMILAR: { icon: "🟡", text: "비교상품 — 상품명 유사도만 확인됨" },
   INSUFFICIENT_EVIDENCE: { icon: "⚪", text: "판단 근거 부족 — 동일상품 여부를 확인하지 못했습니다" },
   CONFLICT: { icon: "🔴", text: "다른 상품 가능성 높음 — 식별자 정보가 충돌합니다" },
 };
 
+/**
+ * P-20 Sprint 7(CPO 지시, 2026-09-02) — priceTierFromLink()가 TEXT_CONFIRMED/SIMILAR를
+ * COMPARISON(비교상품 시장가격, 참고용)으로 이미 반영한다(P-19-B Sprint 7). 이 함수는
+ * 그 이전(EXCLUDED와 동일하게 "가격비교에 전혀 반영 안 됨")으로 문구가 남아있던 것을
+ * 실제 데이터(PèPè + deuxbebe.com 실측)로 발견해 고친다 — priceTierFromLink()와
+ * 동일한 3-way 분기(EXACT/COMPARISON/EXCLUDED)를 그대로 따르고, 새 판정을 만들지
+ * 않는다. */
 export function candidateLabel(c: DomesticCandidate): { icon: string; text: string; note: string } {
   if (c.matchTruth) {
     const base = MATCH_TRUTH_DISPLAY[c.matchTruth];
-    if (c.matchTruth === "SIMILAR") {
+    if (c.matchTruth === "TEXT_CONFIRMED" || c.matchTruth === "SIMILAR") {
       const pct = Math.round(c.matchConfidence * 100);
-      return { ...base, note: `텍스트 유사도 ${pct}% · 가격비교에는 반영하지 않습니다` };
+      return { ...base, note: `텍스트 유사도 ${pct}% · 비교상품 시장가격(참고용)으로 반영됨` };
     }
-    return { ...base, note: c.verified ? "→ 가격비교에 반영됨" : "가격비교에는 반영하지 않습니다" };
+    if (c.matchTruth === "CONFLICT" || c.matchTruth === "INSUFFICIENT_EVIDENCE") {
+      return { ...base, note: "가격비교에는 반영하지 않습니다" };
+    }
+    return { ...base, note: "→ 동일상품 가격으로 반영됨" };
   }
   // 레거시 fallback(matchTruth=null, 마이그레이션 030 이전 저장된 행) — 예전 로직 그대로.
   if (c.verified) {
