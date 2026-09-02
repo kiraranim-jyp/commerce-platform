@@ -761,9 +761,17 @@ export function DomesticPriceIntelligencePanel({
             <SummaryStat label="국내 최저가" value={domesticCompetition.lowestPriceKrw} />
             <SummaryStat label="국내 평균가" value={domesticCompetition.averagePriceKrw} />
             <SummaryStat label="추천 판매가격" value={recommendation?.recommendedPrice ?? null} />
+            {/* P-26 후속(실측 발견, 2026-09-03) — 이 자리는 "추천 판매가격" 바로
+                옆이라 그 가격에서의 마진을 기대하게 된다. decision(판매가를
+                이미 설정한 뒤에만 존재하는 현재가 기준 마진)에 묶여 있었던 탓에
+                등록 전(대부분의 경우, 실측 PèPè 포함)에는 "—"만 보였다 — 바로
+                아래서 이미 정직하게 계산해 보여주는 recommendation.
+                estimatedMarginPercent(추천가 기준 마진, CASE A/B에서만 값 있음,
+                C/D는 여전히 null)이 있는데도 숨긴 셈이다. 새 계산 없음 — 값을
+                옮겨서 쓸 자리만 바꾼다. */}
             <SummaryStat
               label="예상 마진"
-              value={decision?.marginPercent ?? null}
+              value={recommendation?.estimatedMarginPercent ?? decision?.marginPercent ?? null}
               formatter={(v) => `${v.toFixed(1)}%`}
             />
           </div>
