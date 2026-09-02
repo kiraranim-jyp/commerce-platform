@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   summarizeDomesticMarket,
   summarizeDomesticMarketSplit,
+  summarizeFrom,
   computePriceChange,
   computePriceTrend,
   type PriceObservationRecord,
@@ -216,5 +217,58 @@ describe("summarizeDomesticMarketSplit", () => {
     expect(split.basis).toBe("NONE");
     expect(split.resolved.sellerCount).toBe(0);
     expect(split.resolved.lowestPriceKrw).toBeNull();
+  });
+});
+
+/**
+ * P-21(CPO 지시, 2026-09-02) — sellerCount는 "가격 관측 횟수"가 아니라 "실제
+ * 판매처 수"여야 한다. CPO 실측 사례: PèPè의 포레포레가 두 시점에 관측돼
+ * observation 2개가 쌓였는데도 sellerCount는 계속 1이어야 한다.
+ */
+describe("summarizeFrom — sellerCount는 observation 수가 아니라 unique 판매처 수", () => {
+  it("T1) 동일 판매처(같은 URL 호스트) 여러 observation → sellerCount = 1", () => {
+    const records = [
+      record({ id: "o1", priceKrw: 258000, sourceLabel: "포레포레", sourceProductUrl: "https://www.foretforet.com/shop/shopdetail.html?branduid=10226592", checkedAt: "2026-09-02T02:44:34.000Z" }),
+      record({ id: "o2", priceKrw: 258000, sourceLabel: "포레포레", sourceProductUrl: "https://www.foretforet.com/shop/shopdetail.html?branduid=10226592", checkedAt: "2026-09-02T03:16:14.000Z" }),
+      record({ id: "o3", priceKrw: 258000, sourceLabel: "포레포레", sourceProductUrl: "https://www.foretforet.com/shop/shopdetail.html?branduid=10226592", checkedAt: "2026-09-01T01:00:00.000Z" }),
+    ];
+    const summary = summarizeFrom(records, "PRIMARY");
+    expect(summary.sellerCount).toBe(1);
+  });
+
+  it("T2) 서로 다른 판매처(다른 호스트) → sellerCount = 2", () => {
+    const records = [
+      record({ id: "o1", priceKrw: 258000, sourceLabel: "포레포레", sourceProductUrl: "https://www.foretforet.com/shop/shopdetail.html?branduid=10226592" }),
+      record({ id: "o2", priceKrw: 234900, sourceLabel: "듀베베", sourceProductUrl: "https://www.deuxbebe.com/product/detail.html?product_no=8021" }),
+    ];
+    const summary = summarizeFrom(records, "PRIMARY");
+    expect(summary.sellerCount).toBe(2);
+  });
+
+  it("T3) EXACT/COMPARISON 버킷을 각각 독립적으로 판매처 수를 센다 — foretforet×3 observations → exactSellerCount=1, deuxbebe×2 observations → comparisonSellerCount=1", () => {
+    const exactRecords = [
+      record({ id: "e1", priceKrw: 258000, sourceProductUrl: "https://www.foretforet.com/shop/shopdetail.html?branduid=10226592" }),
+      record({ id: "e2", priceKrw: 258000, sourceProductUrl: "https://www.foretforet.com/shop/shopdetail.html?branduid=10226592" }),
+      record({ id: "e3", priceKrw: 258000, sourceProductUrl: "https://www.foretforet.com/shop/shopdetail.html?branduid=10226592" }),
+    ];
+    const comparisonRecords = [
+      record({ id: "c1", priceKrw: 234900, sourceProductUrl: "https://www.deuxbebe.com/product/detail.html?product_no=8021" }),
+      record({ id: "c2", priceKrw: 234900, sourceProductUrl: "https://www.deuxbebe.com/product/detail.html?product_no=8021" }),
+    ];
+    const split = summarizeDomesticMarketSplit(exactRecords, comparisonRecords);
+    expect(split.exact.sellerCount).toBe(1);
+    expect(split.comparison.sellerCount).toBe(1);
+  });
+
+  it("T4) sellerCount 계산 방식이 바뀌어도 lowestPriceKrw/averagePriceKrw는 회귀하지 않는다(observation 전부 반영)", () => {
+    const records = [
+      record({ id: "o1", priceKrw: 258000, sourceProductUrl: "https://www.foretforet.com/shop/shopdetail.html?branduid=10226592", checkedAt: "2026-09-02T02:44:34.000Z" }),
+      record({ id: "o2", priceKrw: 260000, sourceProductUrl: "https://www.foretforet.com/shop/shopdetail.html?branduid=10226592", checkedAt: "2026-09-02T03:16:14.000Z" }),
+    ];
+    const summary = summarizeFrom(records, "PRIMARY");
+    expect(summary.sellerCount).toBe(1);
+    // 가격 계산은 여전히 모든 observation을 그대로 쓴다 — sellerCount 수정과 무관.
+    expect(summary.lowestPriceKrw).toBe(258000);
+    expect(summary.averagePriceKrw).toBe(259000);
   });
 });

@@ -114,6 +114,26 @@ export function priceAgeTier(checkedAt: string, now: Date = new Date()): PriceAg
   return "VERY_STALE";
 }
 
+/**
+ * P-21(CPO 지시, 2026-09-02) — sellerCount는 "가격을 몇 번 관측했는가"가 아니라
+ * "실제 몇 개 쇼핑몰에서 판매하는가"여야 한다. sourceProductUrl의 hostname을
+ * 우선 식별자로 쓴다(같은 판매처를 서로 다른 시점에 여러 번 관측해도 URL의
+ * 호스트명은 그대로다 — CPO 실측 사례: 포레포레를 두 시점에 관측한 PèPè
+ * 케이스). URL이 없는(레거시/파싱 실패) 행만 sourceLabel(상호명)로 폴백한다
+ * — 그것도 없으면 record.id로 각자 별개 판매처 취급(과대축소 방지, "정보
+ * 없음"을 임의로 합치지 않는다는 기존 프로젝트 원칙과 동일선상). */
+function sellerIdentityKey(record: PriceObservationRecord): string {
+  if (record.sourceProductUrl) {
+    try {
+      return `host:${new URL(record.sourceProductUrl).hostname.replace(/^www\./, "").toLowerCase()}`;
+    } catch {
+      // URL 파싱 실패 — 아래 폴백으로.
+    }
+  }
+  if (record.sourceLabel) return `label:${record.sourceLabel.trim().toLowerCase()}`;
+  return `id:${record.id}`;
+}
+
 /** N-4.18-G STEP G-4(대표님 지시: "VERIFIED + ACTIVE + 현재 판매 가능 →
  * 가격 경쟁력 계산", "품절 상품을 최저가 계산에 포함시키면 안 됩니다") —
  * soldOut===true인 관측치만 최저/평균/최고가·sellerCount 계산에서 뺀다.
@@ -158,7 +178,7 @@ export function summarizeFrom(records: PriceObservationRecord[], tier: DomesticM
     lowestPriceKrw,
     highestPriceKrw,
     averagePriceKrw,
-    sellerCount: activeRecords.length,
+    sellerCount: new Set(activeRecords.map(sellerIdentityKey)).size,
     sampleListings: sorted.slice(0, 5).map((r) => ({
       mallName: r.sourceLabel,
       priceKrw: r.priceKrw,
