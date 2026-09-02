@@ -13,6 +13,7 @@ import { buildDomesticShopQuery, type ProductIdentityDna } from "@commerce/share
 import { listDomesticPriceSources, recordDomesticSourceCheckAttempt } from "../../domestic-price-sources/_lib/domestic-price-source";
 import {
   listDomesticProductLinks,
+  priceTierFromLink,
   toDomesticMatchType,
   upsertDomesticProductLink,
 } from "../../domestic-price-sources/_lib/domestic-product-link";
@@ -93,7 +94,6 @@ function stripLeadingDevTag(title: string): string {
  * 확인됐어도 화면 어디에도 그 사실이 안 보였다. verified/matchType 계산에는
  * 전혀 관여하지 않고, 오직 "왜 이 판단인지" 설명 텍스트만 추가한다. */
 export function applyEvidenceDecision(
-  baseAutoVerified: boolean,
   baseReasons: string[],
   decision: CandidateEvidenceDecision,
 ): { verified: boolean; matchReasons: string[] } {
@@ -103,7 +103,16 @@ export function applyEvidenceDecision(
   if (decision.decision === "review_required") {
     return { verified: false, matchReasons: [...baseReasons, ...decision.reasons] };
   }
-  return { verified: baseAutoVerified, matchReasons: [...baseReasons, ...decision.reasons] };
+  // P-19-B Sprint 6(CPO 지시, 2026-09-02: "SKU·모델코드·Article Code 등 식별자
+  // 근거 없이, 텍스트 유사도 95% 이상이라는 이유만으로 동일상품 확인/verified
+  // 처리 금지") — decision==="unchanged"는 modelCode가 "unavailable"이라는 뜻
+  // (식별자 증거 자체를 비교할 수 없음, truth는 TEXT_CONFIRMED/SIMILAR/
+  // INSUFFICIENT_EVIDENCE 중 하나). 과거(P-7-C 시절)엔 이 분기에서 텍스트-only
+  // autoVerified 값을 그대로 넘겨받아 verified=true가 될 수 있었다("Bobo Choses
+  // Golden Case") — 이번 지시로 그 경로를 막는다. 식별자 근거가 없으면 텍스트
+  // 점수가 아무리 높아도 항상 verified=false(=🟡 비교상품, 동일상품 가격에는
+  // 반영하지 않고 시장 참고가격으로만 사용 — priceTierFromLink 참고).
+  return { verified: false, matchReasons: [...baseReasons, ...decision.reasons] };
 }
 
 /** N-4.18-Q3 PART H-3-9(대표님 지시, 2026-08-27) — H-3-7 실측(PèPè golden case)에서
@@ -284,7 +293,7 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       foreignModelCode,
       countedFetchForetforetModelCode,
     );
-    const { matchType: initialMatchType, autoVerified } = toDomesticMatchType(best.matchLevel ?? "low");
+    const { matchType: initialMatchType } = toDomesticMatchType(best.matchLevel ?? "low");
     let matchType = initialMatchType;
     // P-7-C STEP 2 P1/P2(대표님 지시, 2026-08-29) — matchLevel=low는
     // toDomesticMatchType 기준으로 항상 NOT_MATCHED다. 하지만 modelCode가
@@ -312,7 +321,6 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     });
 
     const { verified: finalVerified, matchReasons: evidenceMatchReasons } = applyEvidenceDecision(
-      autoVerified,
       best.matchReasons ?? [],
       evidenceDecision,
     );
@@ -345,9 +353,15 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     else sourceErrors.push(`${result.shopName}: 링크 저장 실패 — ${upsertResult.error}`);
   }
 
-  // STEP 2 — verified && ACTIVE 링크만 실제 가격을 다시 조회해서 저장한다.
+  // STEP 2 — P-19-B Sprint 7(CPO 지시, 2026-09-02) — "🟢 동일상품 확인"뿐 아니라
+  // "🟡 비교상품"(식별자 없이 브랜드+텍스트만 강하게 유사)도 국내 유사 시장가격
+  // 참고용으로 가격을 재조회한다(이전에는 verified===true인 EXACT 링크만
+  // 대상이었다). CONFLICT/INSUFFICIENT_EVIDENCE(priceTierFromLink === "EXCLUDED")는
+  // 여전히 가격 데이터 어디에도 쓰지 않는다 — market-intelligence.ts가
+  // sourceRefId→priceTierFromLink(link) 매핑으로 EXACT/COMPARISON 두 버킷을
+  // 분리 집계한다(summarizeDomesticMarketSplit).
   const links = (await listDomesticProductLinks(input.snapshotId)).filter(
-    (l) => l.verified && l.status === "ACTIVE",
+    (l) => l.status === "ACTIVE" && priceTierFromLink(l) !== "EXCLUDED",
   );
   const sourceById = new Map(allSources.map((s) => [s.id, s]));
   const observations: Parameters<typeof recordPriceObservations>[0] = [];

@@ -46,14 +46,14 @@ describe("H-3-9 STEP 4: Top-N conflict 제외 후보 선택", () => {
     // 것을 화면이 문장으로 보여줄 수 있어야 한다.
     expect(selection.skippedConflictCount).toBe(2);
 
-    const { matchType, autoVerified } = toDomesticMatchType(selection.candidate.matchLevel ?? "low");
+    const { matchType } = toDomesticMatchType(selection.candidate.matchLevel ?? "low");
     const decision = decideCandidateEvidence({
       match: { confidence: selection.candidate.confidence, level: selection.candidate.matchLevel ?? "low", reasons: [] },
       modelCode: selection.modelCodeEvidence,
       options: "unavailable",
       image: "unavailable",
     });
-    const result = applyEvidenceDecision(autoVerified, [], decision);
+    const result = applyEvidenceDecision([], decision);
     expect(matchType).toBe("REVIEW_REQUIRED");
     // P-7-C STEP 2(대표님 지시, 2026-08-29) — partial modelCode는 이제
     // deriveMatchTruth 기준 STRONG_IDENTIFIER라 auto_confirm이다(H-3-6과
@@ -110,14 +110,14 @@ describe("H-3-9 STEP 4: Top-N conflict 제외 후보 선택", () => {
     expect(selection.candidate.url).toContain("branduid=1"); // 기존 top-1 그대로
     expect(selection.modelCodeEvidence).toBe("conflict");
 
-    const { matchType, autoVerified } = toDomesticMatchType(selection.candidate.matchLevel ?? "low");
+    const { matchType } = toDomesticMatchType(selection.candidate.matchLevel ?? "low");
     const decision = decideCandidateEvidence({
       match: { confidence: selection.candidate.confidence, level: selection.candidate.matchLevel ?? "low", reasons: [] },
       modelCode: selection.modelCodeEvidence,
       options: "unavailable",
       image: "unavailable",
     });
-    const result = applyEvidenceDecision(autoVerified, [], decision);
+    const result = applyEvidenceDecision([], decision);
     expect(matchType).toBe("REVIEW_REQUIRED");
     expect(result.verified).toBe(false);
   });
@@ -160,7 +160,7 @@ describe("H-3-9 STEP 4: Top-N conflict 제외 후보 선택", () => {
     });
     expect(decision.decision).toBe("auto_confirm");
 
-    const result = applyEvidenceDecision(autoVerified, [], decision);
+    const result = applyEvidenceDecision([], decision);
     expect(result.verified).toBe(true); // exact + high 구조화 증거로 자동확정
   });
 });

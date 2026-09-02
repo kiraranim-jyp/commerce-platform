@@ -119,6 +119,7 @@ export function CommerceWorkspace({
   initialCategoryMappings,
   onCategoryMappingsChange,
   categoryCachePriming,
+  priceCheckPriming,
 }: {
   product: CanonicalProduct;
   onUpdateProduct: (updater: (prev: CanonicalProduct) => CanonicalProduct) => void;
@@ -167,6 +168,11 @@ export function CommerceWorkspace({
    * 도착해도 절대 재평가되지 않는 레이스가 있었다(P-13C-2 NEXT STEP2에서
    * 확정). */
   categoryCachePriming?: boolean;
+  /** P-18(CPO 지시, 2026-09-01) — 최초 스냅샷 생성 직후 자동으로 쏘는 가격
+   * 확인(POST /api/price-history/check)이 아직 응답 전인 동안 true.
+   * DomesticPriceIntelligencePanel에 그대로 전달해 "확인 중" 로딩 상태를
+   * 보여주고, false로 바뀌면 패널이 자기 데이터를 다시 읽게 한다. */
+  priceCheckPriming?: boolean;
 }) {
   // Sprint A-6(작업4) — 이 컴포넌트가 처음 마운트되는 시점 = AI 분석이 끝나고
   // Registration Editor가 실제로 뜬 시점이다. useState 초기화 함수는 최초
@@ -1750,6 +1756,7 @@ export function CommerceWorkspace({
               snapshotId={snapshotId}
               onPriceLevelChange={handlePriceLevelChange}
               onRequestPriceReview={handleRequestPriceReview}
+              autoChecking={priceCheckPriming}
             />
           )}
           {snapshotId && <AuditLogPanel snapshotId={snapshotId} />}

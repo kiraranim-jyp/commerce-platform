@@ -563,39 +563,37 @@ function ResultTable({
   );
 }
 
-/** P-11 STEP 4(대표님/CPO 지시, 2026-08-30) — 매칭상태 열의 배지. productMatchTruth가
- * 있으면 그 판정으로 표시한다("동일상품 90%" 같은, confidence만으로 동일상품이라고
- * 잘못 읽히는 표현을 없앤다 — CONFLICT는 confidence를 "텍스트 유사도 XX%"로만
- * 보여주고 "다른 상품"이라고 명시한다). 없으면(구버전 응답) 기존 matchLevel 배지로
- * 폴백한다. */
+/** P-19-B Sprint 9(CPO 지시, 2026-09-02) — "42%/72%/95% 같은 raw score를 판매자
+ * 화면에서 전부 제거한다"에 따라 텍스트 유사도 %를 배지 어디에도 더 이상
+ * 붙이지 않는다(확정 여부와 무관하게 전면 제거 — 이전 P-11 버전은 비확정
+ * 케이스에만 남겨뒀었다). productMatchTruth가 있으면 그 판정 배지 + 근거
+ * 문구(matchReasons)로 표시하고, 없으면(구버전 응답) 기존 matchLevel 배지로
+ * 폴백한다. score는 내부 랭킹(정렬)에는 계속 쓰이지만 화면에는 노출하지 않는다. */
 function MatchBadge({ candidate: c }: { candidate: Candidate }) {
   if (c.productMatchTruth) {
     const { icon, text, badgeClass } = PRODUCT_MATCH_TRUTH_DISPLAY[c.productMatchTruth];
-    const showConfidence = c.productMatchTruth !== "EXACT_PRODUCT" && c.productMatchTruth !== "CONFIRMED_PRODUCT";
     return (
-      <span
-        className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${badgeClass}`}
-        title={c.matchReasons?.length ? c.matchReasons.join(", ") : undefined}
-      >
-        {icon} {text}
-        {showConfidence ? ` · 텍스트 유사도 ${Math.round(c.confidence * 100)}%` : ""}
-      </span>
+      <div className="space-y-0.5">
+        <span className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${badgeClass}`}>
+          {icon} {text}
+        </span>
+        {c.matchReasons?.length ? <p className="text-[10px] text-text-tertiary">근거: {c.matchReasons.join(" · ")}</p> : null}
+      </div>
     );
   }
   if (!c.matchLevel) return <>—</>;
   return (
-    <span
-      className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_LEVEL_BADGE_CLASS[c.matchLevel]}`}
-      title={c.matchReasons?.length ? c.matchReasons.join(", ") : undefined}
-    >
-      {MATCH_LEVEL_ICON[c.matchLevel]}{" "}
-      {c.matchLevel === "very_high" || c.matchLevel === "high"
-        ? "동일상품"
-        : c.matchLevel === "medium"
-          ? "유사상품"
-          : "매칭 불확실"}{" "}
-      {Math.round(c.confidence * 100)}%
-    </span>
+    <div className="space-y-0.5">
+      <span className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_LEVEL_BADGE_CLASS[c.matchLevel]}`}>
+        {MATCH_LEVEL_ICON[c.matchLevel]}{" "}
+        {c.matchLevel === "very_high" || c.matchLevel === "high"
+          ? "동일상품"
+          : c.matchLevel === "medium"
+            ? "비교상품"
+            : "매칭 불확실"}
+      </span>
+      {c.matchReasons?.length ? <p className="text-[10px] text-text-tertiary">근거: {c.matchReasons.join(" · ")}</p> : null}
+    </div>
   );
 }
 

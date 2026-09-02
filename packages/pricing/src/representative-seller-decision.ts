@@ -144,3 +144,41 @@ export function deriveRepresentativeSellerVerdict(input: RepresentativeVerdictIn
   // 그 문장을 그대로 쓴다(새 문구를 지어내지 않는다).
   return { ...VERDICT_COPY.NEEDS_INFO, code: "NEEDS_INFO", reasons: [input.sellability.reason] };
 }
+
+/**
+ * P-19-B Sprint 8(CPO 지시, 2026-09-02) — 기존 5단계 내부 판정(READY/
+ * MARKET_OPPORTUNITY/REVIEW_PRICE/NEEDS_INFO/HOLD)은 그대로 유지한다(재계산
+ * 없음, 새 판정 로직 아님) — 판매자에게 최종적으로 보여주는 화면만 3단계로
+ * 압축하는 순수 Presentation Layer. CPO가 확정한 매핑 그대로:
+ * READY/MARKET_OPPORTUNITY → 🟢 판매 추천, REVIEW_PRICE/NEEDS_INFO → 🟡
+ * 조건부 판매, HOLD → 🔴 판매 비추천. 내부 코드/5단계 용어는 화면에 노출하지
+ * 않는다 — reasons는 deriveRepresentativeSellerVerdict()가 이미 만든 값을
+ * 그대로 재사용한다.
+ */
+export type SellerFacingVerdictCode = "RECOMMENDED" | "CONDITIONAL" | "NOT_RECOMMENDED";
+
+export interface SellerFacingVerdict {
+  code: SellerFacingVerdictCode;
+  icon: "🟢" | "🟡" | "🔴";
+  title: string;
+  reasons: string[];
+}
+
+const SELLER_FACING_MAP: Record<RepresentativeVerdictCode, SellerFacingVerdictCode> = {
+  READY: "RECOMMENDED",
+  MARKET_OPPORTUNITY: "RECOMMENDED",
+  REVIEW_PRICE: "CONDITIONAL",
+  NEEDS_INFO: "CONDITIONAL",
+  HOLD: "NOT_RECOMMENDED",
+};
+
+const SELLER_FACING_COPY: Record<SellerFacingVerdictCode, { icon: SellerFacingVerdict["icon"]; title: string }> = {
+  RECOMMENDED: { icon: "🟢", title: "판매 추천" },
+  CONDITIONAL: { icon: "🟡", title: "조건부 판매" },
+  NOT_RECOMMENDED: { icon: "🔴", title: "판매 비추천" },
+};
+
+export function toSellerFacingVerdict(verdict: RepresentativeVerdict): SellerFacingVerdict {
+  const code = SELLER_FACING_MAP[verdict.code];
+  return { ...SELLER_FACING_COPY[code], code, reasons: verdict.reasons };
+}

@@ -19,26 +19,34 @@ const MATCH_LEVEL_ICON: Record<MatchLevel, string> = {
   low: "⚪",
 };
 
-/** P-7-B(CPO 지시, 2026-08-29) — 실측 골든케이스(Pepe Shoes): 텍스트 유사도만으로는
- * 진짜 동일상품(포레포레 71%)과 실제로는 다른 상품(듀베베 72%)이 똑같은 "유사상품"
- * 배지로 보였다. matchTruth(상품코드/모델번호 증거로 보강된 판정)가 있으면 그걸
- * 우선 배지로 쓰고, 없으면(구버전 응답 등) 기존 matchLevel 배지로 그대로 폴백한다 —
- * 하위호환, 회귀 없음. */
+/** P-19-B Sprint 6/9(CPO 지시, 2026-09-02) — "SKU·모델코드 등 식별자 근거 없이는
+ * 동일상품 확인이라고 부르지 않는다" 원칙을 배지 문구 자체에도 고정한다.
+ * TEXT_CONFIRMED/SIMILAR는 둘 다 식별자 증거가 없는(modelCode="unavailable")
+ * 경우이므로(match-truth.ts의 deriveMatchTruth 참고) 텍스트 점수가 아무리 높아도
+ * "동일상품"이라고 부르지 않고 동일하게 "비교상품"으로 표시한다 — 이전(P-7-B)
+ * 버전은 TEXT_CONFIRMED를 "동일상품 가능성 높음"으로 불러 정책과 문구가
+ * 어긋났다. matchTruth가 있으면 그걸 우선 배지로 쓰고, 없으면(구버전 응답 등)
+ * 기존 matchLevel 배지로 그대로 폴백한다 — 하위호환, 회귀 없음. */
 type MatchTruth = "EXACT_IDENTIFIER" | "STRONG_IDENTIFIER" | "TEXT_CONFIRMED" | "SIMILAR" | "CONFLICT" | "INSUFFICIENT_EVIDENCE";
 
 const MATCH_TRUTH_BADGE: Record<MatchTruth, { icon: string; label: string; className: string; disclaimer?: string }> = {
   EXACT_IDENTIFIER: { icon: "🟢", label: "동일상품 확인", className: "bg-success-soft text-success" },
   STRONG_IDENTIFIER: { icon: "🟢", label: "동일상품 확인", className: "bg-success-soft text-success" },
-  TEXT_CONFIRMED: { icon: "🟢", label: "동일상품 가능성 높음", className: "bg-success-soft text-success" },
+  TEXT_CONFIRMED: {
+    icon: "🟡",
+    label: "비교상품",
+    className: "bg-warning-soft text-warning",
+    disclaimer: "동일 모델 식별자가 확인되지 않았습니다 — 국내 유사 시장가격(참고용)으로만 사용됩니다.",
+  },
   SIMILAR: {
     icon: "🟡",
-    label: "유사상품",
+    label: "비교상품",
     className: "bg-warning-soft text-warning",
-    disclaimer: "동일 상품이 아닐 수 있습니다 — 가격은 참고용으로만 사용하세요.",
+    disclaimer: "동일 모델 식별자가 확인되지 않았습니다 — 국내 유사 시장가격(참고용)으로만 사용됩니다.",
   },
   CONFLICT: {
-    icon: "⚠️",
-    label: "다른 상품일 가능성",
+    icon: "🔴",
+    label: "다른상품 가능성",
     className: "bg-error-soft text-error",
     disclaimer: "상품코드가 원본과 일치하지 않습니다 — 동일상품이 아닐 가능성이 높습니다.",
   },
@@ -205,8 +213,7 @@ function ResultHeadline({ results }: { results: SearchResult[] }) {
   }
   return (
     <p className="rounded-md border border-success/30 bg-success-soft px-3 py-2 text-xs text-success">
-      국내 편집샵에서 비교 가능한 동일/유사 상품이 {acceptable.length}건 발견되었습니다 (매칭 신뢰도 70%
-      이상).
+      국내 편집샵에서 비교 가능한 동일/유사 상품이 {acceptable.length}건 발견되었습니다.
     </p>
   );
 }
@@ -276,28 +283,32 @@ function ResultTable({ results }: { results: SearchResult[] }) {
                       <div className="space-y-0.5">
                         <span
                           className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_TRUTH_BADGE[c.matchTruth].className}`}
-                          title={c.matchReasons?.length ? c.matchReasons.join(", ") : undefined}
                         >
-                          {MATCH_TRUTH_BADGE[c.matchTruth].icon} {MATCH_TRUTH_BADGE[c.matchTruth].label}{" "}
-                          {Math.round(c.confidence * 100)}%
+                          {MATCH_TRUTH_BADGE[c.matchTruth].icon} {MATCH_TRUTH_BADGE[c.matchTruth].label}
                         </span>
+                        {c.matchReasons?.length ? (
+                          <p className="text-[10px] text-text-tertiary">근거: {c.matchReasons.join(" · ")}</p>
+                        ) : null}
                         {MATCH_TRUTH_BADGE[c.matchTruth].disclaimer && (
                           <p className="text-[10px] text-text-tertiary">※ {MATCH_TRUTH_BADGE[c.matchTruth].disclaimer}</p>
                         )}
                       </div>
                     ) : c?.matchLevel ? (
-                      <span
-                        className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_LEVEL_BADGE_CLASS[c.matchLevel]}`}
-                        title={c.matchReasons?.length ? c.matchReasons.join(", ") : undefined}
-                      >
-                        {MATCH_LEVEL_ICON[c.matchLevel]}{" "}
-                        {c.matchLevel === "very_high" || c.matchLevel === "high"
-                          ? "동일상품"
-                          : c.matchLevel === "medium"
-                            ? "유사상품"
-                            : "매칭 불확실"}{" "}
-                        {Math.round(c.confidence * 100)}%
-                      </span>
+                      <div className="space-y-0.5">
+                        <span
+                          className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_LEVEL_BADGE_CLASS[c.matchLevel]}`}
+                        >
+                          {MATCH_LEVEL_ICON[c.matchLevel]}{" "}
+                          {c.matchLevel === "very_high" || c.matchLevel === "high"
+                            ? "동일상품"
+                            : c.matchLevel === "medium"
+                              ? "비교상품"
+                              : "매칭 불확실"}
+                        </span>
+                        {c.matchReasons?.length ? (
+                          <p className="text-[10px] text-text-tertiary">근거: {c.matchReasons.join(" · ")}</p>
+                        ) : null}
+                      </div>
                     ) : (
                       "—"
                     )}

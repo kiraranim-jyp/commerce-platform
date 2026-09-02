@@ -43,6 +43,14 @@ export default function PipelinePage() {
   // 자동 하이드레이트 effect가 이 값을 보고, 캐시가 아직 도착 전인데 "캐시
   // 없음"으로 오판해 실 API를 부르는 레이스를 막는다.
   const [categoryCachePriming, setCategoryCachePriming] = useState(false);
+  // P-18(CPO 지시, 2026-09-01) — 최초 스냅샷 생성 직후 자동으로 쏘는
+  // POST /api/price-history/check가 아직 응답 전인 동안 true. 위
+  // categoryCachePriming과 완전히 같은 목적/생명주기(같은 isFirstInsert
+  // 블록에서 true로 켜고, 같은 stale-guard로 false로 끈다) — 새 패턴을
+  // 만들지 않고 그대로 옆에 나란히 둔다. DomesticPriceIntelligencePanel이
+  // 이 값을 받아 "확인 중" 로딩 상태를 보여주고, false로 전환되면 자기
+  // 데이터를 다시 읽는다.
+  const [priceCheckPriming, setPriceCheckPriming] = useState(false);
   const [items, setItems] = useState<WorkspaceItem[]>([]);
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<TabKey>("original");
@@ -348,6 +356,28 @@ export default function PipelinePage() {
             // 없이 "지금 이 순간의 product"를 동기적으로 읽기 위해 필요하다.
             if (productRef.current?.sourceUrl === requestedForSourceUrl) {
               setCategoryCachePriming(false);
+            }
+          });
+        // P-18(CPO 지시, 2026-09-01) — "상품 하나 분석하면 최소 한 번은 가격
+        // 컨설팅 데이터가 자동으로 완성되어야 한다." 위 category-recommendation과
+        // 완전히 같은 위치(isFirstInsert 블록, 최초 스냅샷 생성 성공 시에만 1회)에
+        // 같은 stale-guard 패턴(requestedForSourceUrl)으로 건다 — 새 보호장치를
+        // 만들지 않고 이미 검증된 것을 그대로 재사용한다. 탭 이동/리렌더/새로고침은
+        // saveSnapshotToServer()의 isFirstInsert 블록 자체를 다시 타지 않으므로
+        // (snapshotIdRef가 이미 채워짐) 자동으로 재호출되지 않는다.
+        setPriceCheckPriming(true);
+        void fetch("/api/price-history/check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ snapshotId: data.snapshot.id }),
+        })
+          .catch(() => {
+            // 실패해도 화면 동작에는 영향 없음 — DomesticPriceIntelligencePanel의
+            // 기존 "재확인" 버튼으로 판매자가 수동 재시도할 수 있다.
+          })
+          .finally(() => {
+            if (productRef.current?.sourceUrl === requestedForSourceUrl) {
+              setPriceCheckPriming(false);
             }
           });
       }
@@ -911,6 +941,7 @@ export default function PipelinePage() {
             initialCategoryMappings={categoryMappings ?? undefined}
             onCategoryMappingsChange={setCategoryMappings}
             categoryCachePriming={categoryCachePriming}
+            priceCheckPriming={priceCheckPriming}
           />
 
           {/* P0-UI Epic 1 — JSON/ZIP/원본 URL/처리 리포트 등은 판매자가 매일 볼

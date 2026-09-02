@@ -27,3 +27,15 @@ export function resolveSnapshotSaveAction(isFirstInsert: boolean, insertInFlight
 export function isStaleSnapshotResponse(startGeneration: number, currentGeneration: number): boolean {
   return startGeneration !== currentGeneration;
 }
+
+/**
+ * P-18 Sprint 8(CPO 지시, 2026-09-01) — DomesticPriceIntelligencePanel이
+ * autoChecking prop의 true→false 전환(=page.tsx가 쏜 자동 가격 확인이 방금
+ * 끝남)에서만 데이터를 다시 읽어야 한다는 판단을 컴포넌트 밖으로 뽑았다.
+ * wasAutoChecking은 직전 렌더의 값, isAutoChecking은 이번 렌더의 값이다.
+ * 리렌더(false→false)나 탭 재진입(마운트 시 이미 false)에서는 refetch하지
+ * 않는다 — 오직 "실제로 진행 중이었다가 끝난" 경우만 true를 반환한다.
+ */
+export function shouldRefetchAfterAutoCheck(wasAutoChecking: boolean, isAutoChecking: boolean): boolean {
+  return wasAutoChecking && !isAutoChecking;
+}

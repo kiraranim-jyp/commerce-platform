@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   priceAgeTier,
   priceLevelFromVerdict,
@@ -15,6 +15,7 @@ import {
 import { sortDomesticCandidatesByTrust } from "@commerce/crawler/src/comparison-search/display-priority";
 import type { MatchTruth } from "@commerce/crawler/src/comparison-search/match-truth";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
+import { shouldRefetchAfterAutoCheck } from "../snapshot-save-guard";
 
 interface SampleListing {
   mallName: string | null;
@@ -230,6 +231,14 @@ interface DomesticCompetition {
   checkedAt: string | null;
 }
 
+/** P-19-B Sprint 7(CPO 지시, 2026-09-02) — 서버가 이미 계산해 낸 우선순위 결과를
+ * 그대로 옮기는 타입. basis만 화면 문구 선택에 쓴다(exact/comparison 원본
+ * summary 자체는 이 패널에서 아직 별도 표시하지 않는다 — domesticCompetition이
+ * 이미 우선순위 적용된 값이라 그걸 4칸 요약에 그대로 쓴다). */
+interface DomesticMarketSplitInfo {
+  basis: "EXACT" | "COMPARISON" | "NONE";
+}
+
 interface Decision {
   verdict: "MAINTAIN" | "CONSIDER_LOWER" | "MARGIN_RISK";
   marginPercent: number;
@@ -337,14 +346,6 @@ interface RepresentativeVerdict {
   reasons: string[];
 }
 
-const REPRESENTATIVE_VERDICT_STYLE: Record<RepresentativeVerdict["code"], string> = {
-  READY: "border-border bg-success-soft text-success",
-  REVIEW_PRICE: "border-border bg-warning-soft text-warning",
-  MARKET_OPPORTUNITY: "border-border bg-primary-soft text-primary",
-  NEEDS_INFO: "border-border bg-warning-soft text-warning",
-  HOLD: "border-border bg-error-soft text-error",
-};
-
 /** P-8 STEP 5 / P-9 STEP 5(대표님 지시, 2026-08-30) — "버튼을 누르기 전에
  * 셀러가 무엇을 확인하는지 알 수 있게 한다." 새 등록/가격 엔드포인트를 만들지
  * 않는다 — 전부 기존 onRequestPriceReview(가격/비용 탭 이동)로 연결한다. */
@@ -442,6 +443,47 @@ interface PriceHistoryResponse {
    * 계산이 아니라 타입 노출만 추가한다. */
   unifiedDecision: UnifiedPriceDecision | null;
   representativeVerdict: RepresentativeVerdict;
+  /** P-19-B Sprint 8(CPO 지시, 2026-09-02) — 판매자에게 최종적으로 보여줄 화면은
+   * 무조건 3단계(🟢 판매 추천/🟡 조건부 판매/🔴 판매 비추천)로 통합한다.
+   * representativeVerdict의 5단계 내부 판정은 그대로 유지하되(재계산 없음),
+   * 헤드라인 아이콘/타이틀/박스 색은 이 3단계 값만 쓴다 — description/reasons
+   * (설명 문장)는 기존 representativeVerdict 값을 그대로 재사용한다(내부 코드/
+   * 5단계 용어 자체를 노출하지 않는 것이 CPO 지시의 핵심이지, 설명 문장까지
+   * 지우라는 뜻은 아니다). */
+  sellerFacingVerdict: SellerFacingVerdict;
+  domesticMarketSplit: DomesticMarketSplitInfo;
+}
+
+interface SellerFacingVerdict {
+  code: "RECOMMENDED" | "CONDITIONAL" | "NOT_RECOMMENDED";
+  icon: "🟢" | "🟡" | "🔴";
+  title: string;
+  reasons: string[];
+}
+
+const SELLER_FACING_VERDICT_STYLE: Record<SellerFacingVerdict["code"], string> = {
+  RECOMMENDED: "border-border bg-success-soft text-success",
+  CONDITIONAL: "border-border bg-warning-soft text-warning",
+  NOT_RECOMMENDED: "border-border bg-error-soft text-error",
+};
+
+/** P-18 Sprint 6(CPO 지시, 2026-09-01) — 상단 4칸 요약 카드 한 칸. 값이 없으면
+ * (관측치 없음) 지어내지 않고 "—"만 보여준다. */
+function SummaryStat({
+  label,
+  value,
+  formatter = (v: number) => `₩${v.toLocaleString("ko-KR")}`,
+}: {
+  label: string;
+  value: number | null;
+  formatter?: (v: number) => string;
+}) {
+  return (
+    <div>
+      <div className="text-[10px] text-text-tertiary">{label}</div>
+      <div className="text-sm font-semibold text-text-primary">{value != null ? formatter(value) : "—"}</div>
+    </div>
+  );
 }
 
 function TrendBadge({ label, trend }: { label: string; trend: PriceTrend | null }) {
@@ -469,6 +511,7 @@ export function DomesticPriceIntelligencePanel({
   snapshotId,
   onPriceLevelChange,
   onRequestPriceReview,
+  autoChecking,
 }: {
   snapshotId: string;
   /** N-4.08 STEP6-4와 같은 패턴(onReadinessChange) — 이 패널이 계산한 값을
@@ -478,6 +521,12 @@ export function DomesticPriceIntelligencePanel({
    * 탭에서만 마운트되고 PriceEditor는 커머스 플랫폼 탭에만 있어(서로 다른
    * 탭), 실제 이동은 CommerceWorkspace가 탭 전환+스크롤로 처리한다. */
   onRequestPriceReview?: () => void;
+  /** P-18(CPO 지시, 2026-09-01) — page.tsx가 최초 스냅샷 생성 직후 자동으로
+   * 쏜 가격 확인(POST /api/price-history/check)이 아직 응답 전인 동안 true.
+   * true→false로 바뀌면(자동 확인 완료) 아래 useEffect가 데이터를 다시
+   * 읽는다 — 컴포넌트 mount 자체를 트리거로 쓰지 않는다는 원칙 그대로,
+   * 이 패널은 그 신호를 그냥 전달받아 반응만 한다. */
+  autoChecking?: boolean;
 }) {
   const [data, setData] = useState<PriceHistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -535,6 +584,22 @@ export function DomesticPriceIntelligencePanel({
     void Promise.all([loadPriceHistory(), loadCandidates(), loadAlerts()]).finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshotId]);
+
+  /** P-18(CPO 지시, 2026-09-01) — autoChecking이 true→false로 전환된 시점(=page.tsx가
+   * 쏜 자동 가격 확인이 방금 끝난 시점)에만 데이터를 다시 읽는다. wasAutoCheckingRef로
+   * "실제로 진행 중이었다가 끝났는지"를 직접 비교한다 — 단순히 [autoChecking]
+   * 의존성 배열만 쓰면 autoChecking이 처음부터 false/undefined인 일반적인 경우
+   * (기존 스냅샷 재방문 등)에도 mount 시 이 effect가 한 번 더 불필요하게 실행된다. */
+  const wasAutoCheckingRef = useRef(Boolean(autoChecking));
+  useEffect(() => {
+    const was = wasAutoCheckingRef.current;
+    wasAutoCheckingRef.current = Boolean(autoChecking);
+    if (shouldRefetchAfterAutoCheck(was, Boolean(autoChecking))) {
+      setLoading(true);
+      void Promise.all([loadPriceHistory(), loadCandidates(), loadAlerts()]).finally(() => setLoading(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoChecking]);
 
   async function acknowledgeAlert(id: string) {
     if (acknowledgingId) return;
@@ -615,6 +680,21 @@ export function DomesticPriceIntelligencePanel({
     }
   }
 
+  // P-18(CPO 지시, 2026-09-01) — 자동 가격 확인이 진행 중인 동안은 패널 자체가
+  // 사라지는(return null) 대신 "확인 중" 상태를 보여준다. P-14 timeout 정책 —
+  // 이 자동 확인은 page.tsx의 fetch("/api/price-history/check")가 언젠가는
+  // 반드시 resolve/reject되므로(무한 대기 아님) 별도 타임아웃을 새로 만들지
+  // 않는다(기존 정책 그대로 상속, 크롤러 timeout 로직 자체는 이번에 건드리지
+  // 않는다).
+  if (autoChecking) {
+    return (
+      <CollapsibleSection title="Market Intelligence" defaultOpen>
+        <p className="rounded-md border border-border bg-background px-3 py-2 text-xs text-text-secondary">
+          📊 국내외 시장 가격을 확인하고 있습니다. 잠시만 기다려주세요.
+        </p>
+      </CollapsibleSection>
+    );
+  }
   if (loading) return null;
   if (!data) return null;
 
@@ -632,6 +712,8 @@ export function DomesticPriceIntelligencePanel({
     sellability,
     unifiedDecision,
     representativeVerdict,
+    sellerFacingVerdict,
+    domesticMarketSplit,
   } = data;
   const domesticShopHistory = data.priceHistory?.domesticShop ?? null;
   const trend7d = domesticShopHistory?.trend7d ?? null;
@@ -646,6 +728,35 @@ export function DomesticPriceIntelligencePanel({
   return (
     <CollapsibleSection title="Market Intelligence" defaultOpen>
       <div className="space-y-2 text-xs">
+        {/* P-18 Sprint 6(CPO 지시, 2026-09-01) — "그래서 얼마에 팔라는 건지"를
+         * 판매자가 스크롤 없이 바로 보게 한다. 새 계산 없음 — 아래 다른 섹션들이
+         * 이미 쓰는 값(domesticCompetition/recommendation/decision)을 그대로
+         * 4칸에 요약만 한다. */}
+        {hasAnyData && (
+          <div className="grid grid-cols-2 gap-2 rounded-md border border-border bg-background p-3 sm:grid-cols-4">
+            <SummaryStat label="국내 최저가" value={domesticCompetition.lowestPriceKrw} />
+            <SummaryStat label="국내 평균가" value={domesticCompetition.averagePriceKrw} />
+            <SummaryStat label="추천 판매가격" value={recommendation?.recommendedPrice ?? null} />
+            <SummaryStat
+              label="예상 마진"
+              value={decision?.marginPercent ?? null}
+              formatter={(v) => `${v.toFixed(1)}%`}
+            />
+          </div>
+        )}
+        {/* P-19-B Sprint 7/9(CPO 지시, 2026-09-02) — 위 4칸 요약이 "🟢 동일상품
+            확인" 가격인지 "🟡 비교상품" 국내 유사 시장가격(참고용)인지 명확히
+            표시한다. 새 계산 없음 — market-intelligence.ts가 이미 우선순위(1순위
+            동일상품가격, 없으면 2순위 비교상품 시장가격)로 계산해 낸
+            domesticMarketSplit.basis만 그대로 문구로 옮긴다. */}
+        {domesticMarketSplit.basis === "EXACT" && (
+          <p className="text-[10px] text-success">🟢 동일상품 가격 기준입니다.</p>
+        )}
+        {domesticMarketSplit.basis === "COMPARISON" && (
+          <p className="text-[10px] text-warning">
+            🟡 동일상품은 확인되지 않았습니다 — 국내 비교상품 시장가격(참고용)을 기준으로 표시합니다.
+          </p>
+        )}
         <div className="flex items-center justify-between">
           <span className="text-text-tertiary">{hasAnyData ? "" : "아직 확인된 가격 정보가 없습니다."}</span>
           <button
@@ -678,9 +789,13 @@ export function DomesticPriceIntelligencePanel({
             압축해 낸 값)를 그대로 헤드라인으로 쓰고, "판단 근거"는 그
             결론과 같은 방향의 사실만 나열한다 — 새 판정을 만들지 않는다. */}
         {hasAnyData && (
-          <div className={`rounded-md border p-2.5 ${REPRESENTATIVE_VERDICT_STYLE[representativeVerdict.code]}`}>
+          <div className={`rounded-md border p-2.5 ${SELLER_FACING_VERDICT_STYLE[sellerFacingVerdict.code]}`}>
+            {/* P-19-B Sprint 8(CPO 지시, 2026-09-02) — 헤드라인 아이콘/타이틀/박스
+                색은 3단계(sellerFacingVerdict)만 쓴다. 내부 5단계 코드/용어는
+                화면 어디에도 노출하지 않는다 — 아래 설명 문장(description)만
+                기존 representativeVerdict 값을 그대로 재사용한다. */}
             <p className="font-medium">
-              {representativeVerdict.icon} {representativeVerdict.title}
+              {sellerFacingVerdict.icon} {sellerFacingVerdict.title}
             </p>
 
             {/* P-12D(대표님/CPO 지시, 2026-08-31) — "숫자 → 결론 → 이유 → 상세정보"

@@ -39,17 +39,24 @@ describe("H-3-6: Evidence Decision → domestic_product_links 연결", () => {
     });
     expect(decision.decision).toBe("auto_confirm");
 
-    const result = applyEvidenceDecision(autoVerified, ["모델명 유사도 22%", "브랜드 일치"], decision);
+    const result = applyEvidenceDecision(["모델명 유사도 22%", "브랜드 일치"], decision);
     expect(result.verified).toBe(true); // P-7-C STEP 2 — 식별자 증거로 자동확정(텍스트 confidence는 71%로 그대로 저장됨, 조작하지 않음)
     expect(result.matchReasons).toContain("모델명 유사도 22%");
     expect(result.matchReasons).toContain("브랜드 일치");
     expect(result.matchReasons.some((r) => r.includes("부분 일치(식별자 근거)"))).toBe(true);
   });
 
-  it("2) Bobo Choses Golden Case: very_high + evidence 전부 unavailable → 기존 자동확정 흐름 그대로 유지", () => {
-    const { matchType, autoVerified } = toDomesticMatchType("very_high");
-    expect(matchType).toBe("EXACT");
-    expect(autoVerified).toBe(true);
+  it("2) Bobo Choses Golden Case: very_high + evidence 전부 unavailable → P-19-B STEP6(CPO 지시, 2026-09-02)로 자동확정 금지 전환", () => {
+    // 이 테스트는 원래(H-3-6, 2026-08-27) "verified=true 기존 자동확정 그대로
+    // 유지"를 검증했다. P-19-B(CPO 지시, 2026-09-02) — "SKU·모델코드·Article
+    // Code 등 식별자 근거 없이, 텍스트 유사도 95% 이상이라는 이유만으로
+    // 동일상품 확인/verified 처리 금지"로 정책이 바뀌었다: modelCode가
+    // 전부 unavailable(식별자를 비교할 방법 자체가 없음)이면 텍스트가
+    // very_high(100%)여도 verified는 항상 false다 — 대신 🟡 비교상품으로
+    // 국내 유사 시장가격(참고용) 계산에는 계속 쓰인다(priceTierFromLink,
+    // run-domestic-price-check.ts STEP 2).
+    const { matchType } = toDomesticMatchType("very_high");
+    expect(matchType).toBe("EXACT"); // matchType 라벨 자체는 그대로(재계산 안 함)
 
     const decision = decideCandidateEvidence({
       match: { confidence: 1.0, level: "very_high", reasons: ["모델명 유사도 100%"] },
@@ -59,8 +66,8 @@ describe("H-3-6: Evidence Decision → domestic_product_links 연결", () => {
     });
     expect(decision.decision).toBe("unchanged");
 
-    const result = applyEvidenceDecision(autoVerified, ["모델명 유사도 100%"], decision);
-    expect(result.verified).toBe(true); // 기존 자동확정 그대로 — 회귀 없음
+    const result = applyEvidenceDecision(["모델명 유사도 100%"], decision);
+    expect(result.verified).toBe(false); // P-19-B — 식별자 근거 없이는 텍스트 100%여도 동일상품 확정 금지
   });
 
   it("3) 텍스트는 매우 유사하지만 modelCode conflict → 자동확정 차단(verified=false로 강제 전환)", () => {
@@ -80,7 +87,7 @@ describe("H-3-6: Evidence Decision → domestic_product_links 연결", () => {
     });
     expect(decision.decision).toBe("review_required");
 
-    const result = applyEvidenceDecision(autoVerified, ["모델명 유사도 98%", "브랜드 일치"], decision);
+    const result = applyEvidenceDecision(["모델명 유사도 98%", "브랜드 일치"], decision);
     expect(result.verified).toBe(false); // 잘못된 자동 링크 방지 — 원래 true였을 걸 강제로 false
     expect(result.matchReasons.some((r) => r.includes("충돌"))).toBe(true);
   });
@@ -102,7 +109,7 @@ describe("H-3-6: Evidence Decision → domestic_product_links 연결", () => {
     });
     expect(decision.decision).toBe("auto_confirm");
 
-    const result = applyEvidenceDecision(autoVerified, ["모델명 유사도 88%", "브랜드 일치"], decision);
+    const result = applyEvidenceDecision(["모델명 유사도 88%", "브랜드 일치"], decision);
     expect(result.verified).toBe(true); // 강한 구조화 증거로 자동확정 — 텍스트 점수 자체는 재계산 안 함
     expect(result.matchReasons.some((r) => r.includes("완전 일치"))).toBe(true);
   });

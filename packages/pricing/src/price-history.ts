@@ -120,7 +120,7 @@ export function priceAgeTier(checkedAt: string, now: Date = new Date()): PriceAg
  * soldOut===false 또는 null(그 사이트 품절 감지 미구현)은 기존과 동일하게
  * 포함한다 — RULII 외 사이트는 항상 soldOut=null이라 이 변경으로 기존
  * 가격비교 결과가 달라지지 않는다(회귀 없음). */
-function summarizeFrom(records: PriceObservationRecord[], tier: DomesticMarketTier): DomesticMarketSummary {
+export function summarizeFrom(records: PriceObservationRecord[], tier: DomesticMarketTier): DomesticMarketSummary {
   // N-4.18-Q3 PART E-1 — priceKrw가 null인 행(완전 품절, 가격 자체를 못 찾음)은
   // soldOut!==true인 경우에도 최저/평균/최고가 계산에서 제외한다(가격이 없는데
   // 계산에 넣을 수 없다 — 0원을 지어내지 않는다는 원칙과 동일선상).
@@ -189,6 +189,32 @@ export function summarizeDomesticMarket(records: PriceObservationRecord[]): Dome
   const candidates = records.filter((r) => r.source === "NAVER_SHOPPING");
   if (candidates.length > 0) return summarizeFrom(candidates, "SECONDARY");
   return EMPTY_SUMMARY;
+}
+
+/**
+ * P-19-B Sprint 7(CPO 지시, 2026-09-02) — "동일상품 가격"과 "비교상품 시장가격"을
+ * 완전히 분리된 두 버킷으로 집계한다. summarizeFrom()의 집계 수식(최저/평균/최고/
+ * sellerCount)은 그대로 재사용한다(새 계산식 없음) — 호출부(market-intelligence.ts)가
+ * domestic_product_links.matchTruth로 DOMESTIC_SHOP 레코드를 이미 두 배열로 나눠서
+ * 넘긴다. 우선순위(대표님 지시): 1순위 동일상품가격, 없으면 2순위 비교상품
+ * 시장가격, 둘 다 없으면 시장 데이터 부족(resolved=EMPTY, basis="NONE").
+ */
+export interface DomesticMarketSplit {
+  exact: DomesticMarketSummary;
+  comparison: DomesticMarketSummary;
+  resolved: DomesticMarketSummary;
+  basis: "EXACT" | "COMPARISON" | "NONE";
+}
+
+export function summarizeDomesticMarketSplit(
+  exactRecords: PriceObservationRecord[],
+  comparisonRecords: PriceObservationRecord[],
+): DomesticMarketSplit {
+  const exact = exactRecords.length > 0 ? summarizeFrom(exactRecords, "PRIMARY") : EMPTY_SUMMARY;
+  const comparison = comparisonRecords.length > 0 ? summarizeFrom(comparisonRecords, "SECONDARY") : EMPTY_SUMMARY;
+  if (exact.sellerCount > 0) return { exact, comparison, resolved: exact, basis: "EXACT" };
+  if (comparison.sellerCount > 0) return { exact, comparison, resolved: comparison, basis: "COMPARISON" };
+  return { exact, comparison, resolved: EMPTY_SUMMARY, basis: "NONE" };
 }
 
 /** PART I-1 — 전일 대비 가격 변화("8/22 189,000 → 8/23 179,000, -10,000/-5.29%").

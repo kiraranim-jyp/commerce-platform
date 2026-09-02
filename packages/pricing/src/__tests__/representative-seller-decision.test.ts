@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { deriveRepresentativeSellerVerdict, type RepresentativeVerdictInput } from "../representative-seller-decision";
+import {
+  deriveRepresentativeSellerVerdict,
+  toSellerFacingVerdict,
+  type RepresentativeVerdictInput,
+} from "../representative-seller-decision";
 
 /**
  * P-8(2026-08-30) STEP 8이 요구한 UX-01~06을 그대로 옮긴다. unifiedDecision/
@@ -196,6 +200,90 @@ describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
       });
       expect(result.code).toBe("NEEDS_INFO");
       expect(result.title).toBe("추가 정보가 필요합니다");
+    });
+  });
+
+  /**
+   * P-19-B Sprint 8/10(CPO 지시, 2026-09-02) — "판매자에게 보여주는 최종 결론은
+   * 무조건 3단계"의 매핑 계약을 고정한다. T8/T9/T10에 해당한다.
+   */
+  describe("P-19-B Sprint 8: toSellerFacingVerdict — 5단계 → 3단계 압축", () => {
+    it("T8) READY → 🟢 판매 추천", () => {
+      const verdict = deriveRepresentativeSellerVerdict({
+        ...base,
+        sellability: { level: "GREEN", estimatedMarginPercent: 24, reason: "..." },
+        domesticMatched: true,
+        domesticSellerCount: 1,
+      });
+      const facing = toSellerFacingVerdict(verdict);
+      expect(facing.code).toBe("RECOMMENDED");
+      expect(facing.icon).toBe("🟢");
+      expect(facing.title).toBe("판매 추천");
+    });
+
+    it("MARKET_OPPORTUNITY도 READY와 동일하게 🟢 판매 추천으로 합쳐진다", () => {
+      const verdict = deriveRepresentativeSellerVerdict({
+        ...base,
+        sellability: {
+          level: "YELLOW",
+          estimatedMarginPercent: null,
+          reason: "국내 동일상품을 자동으로 찾지 못했습니다 — 가격 기준을 확정할 수 없어 등록 전 직접 확인이 필요합니다.",
+        },
+        domesticMatched: false,
+        domesticSellerCount: 0,
+      });
+      expect(verdict.code).toBe("MARKET_OPPORTUNITY");
+      const facing = toSellerFacingVerdict(verdict);
+      expect(facing.code).toBe("RECOMMENDED");
+      expect(facing.icon).toBe("🟢");
+    });
+
+    it("T9) REVIEW_PRICE → 🟡 조건부 판매", () => {
+      const verdict = deriveRepresentativeSellerVerdict({
+        ...base,
+        sellability: { level: "RED", estimatedMarginPercent: 4.2, reason: "..." },
+        domesticMatched: true,
+        domesticSellerCount: 1,
+      });
+      const facing = toSellerFacingVerdict(verdict);
+      expect(facing.code).toBe("CONDITIONAL");
+      expect(facing.icon).toBe("🟡");
+      expect(facing.title).toBe("조건부 판매");
+    });
+
+    it("NEEDS_INFO도 REVIEW_PRICE와 동일하게 🟡 조건부 판매로 합쳐진다", () => {
+      const verdict = deriveRepresentativeSellerVerdict({
+        ...base,
+        sellability: { level: "UNKNOWN", estimatedMarginPercent: null, reason: "실제 구매 가능 가격을 아직 확인하지 못했습니다." },
+      });
+      expect(verdict.code).toBe("NEEDS_INFO");
+      const facing = toSellerFacingVerdict(verdict);
+      expect(facing.code).toBe("CONDITIONAL");
+      expect(facing.icon).toBe("🟡");
+    });
+
+    it("T10) HOLD → 🔴 판매 비추천", () => {
+      const verdict = deriveRepresentativeSellerVerdict({
+        ...base,
+        sellability: { level: "RED", estimatedMarginPercent: -5.3, reason: "..." },
+        domesticMatched: true,
+        domesticSellerCount: 1,
+      });
+      const facing = toSellerFacingVerdict(verdict);
+      expect(facing.code).toBe("NOT_RECOMMENDED");
+      expect(facing.icon).toBe("🔴");
+      expect(facing.title).toBe("판매 비추천");
+    });
+
+    it("reasons는 재계산 없이 representativeVerdict.reasons를 그대로 옮긴다", () => {
+      const verdict = deriveRepresentativeSellerVerdict({
+        ...base,
+        sellability: { level: "GREEN", estimatedMarginPercent: 24, reason: "..." },
+        domesticMatched: true,
+        domesticSellerCount: 1,
+      });
+      const facing = toSellerFacingVerdict(verdict);
+      expect(facing.reasons).toEqual(verdict.reasons);
     });
   });
 });

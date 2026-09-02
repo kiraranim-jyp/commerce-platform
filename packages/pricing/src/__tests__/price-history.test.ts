@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { summarizeDomesticMarket, computePriceChange, computePriceTrend, type PriceObservationRecord } from "../price-history";
+import {
+  summarizeDomesticMarket,
+  summarizeDomesticMarketSplit,
+  computePriceChange,
+  computePriceTrend,
+  type PriceObservationRecord,
+} from "../price-history";
 
 function record(overrides: Partial<PriceObservationRecord>): PriceObservationRecord {
   return {
@@ -174,5 +180,41 @@ describe("computePriceTrend", () => {
     ];
     const trend = computePriceTrend(records, 0);
     expect(trend.current).toBe(179000);
+  });
+});
+
+/**
+ * P-19-B Sprint 7/10(CPO 지시, 2026-09-02) — "동일상품 가격"과 "비교상품 시장가격"을
+ * 완전히 분리된 두 버킷으로 집계하고, 우선순위(1순위 동일상품가격, 없으면 2순위
+ * 비교상품 시장가격, 둘 다 없으면 시장 데이터 부족)를 정확히 지킨다. T5/T6/T7에
+ * 해당한다. 어떻게 두 배열로 나누는지는 호출부(market-intelligence.ts)의 책임이라
+ * 여기서는 이미 나뉜 배열만 받는다.
+ */
+describe("summarizeDomesticMarketSplit", () => {
+  it("T5) 동일상품 가격 + 비교상품 가격 동시 존재 → 동일상품 가격 우선(basis=EXACT)", () => {
+    const exact = [record({ id: "e1", priceKrw: 89000 })];
+    const comparison = [record({ id: "c1", priceKrw: 79000 }), record({ id: "c2", priceKrw: 109000 })];
+    const split = summarizeDomesticMarketSplit(exact, comparison);
+    expect(split.basis).toBe("EXACT");
+    expect(split.resolved.lowestPriceKrw).toBe(89000);
+    expect(split.exact.sellerCount).toBe(1);
+    expect(split.comparison.sellerCount).toBe(2);
+  });
+
+  it("T6) 비교상품만 존재 → 시장 참고가격 사용(basis=COMPARISON), 동일상품 가격으로 표시하지 않는다", () => {
+    const split = summarizeDomesticMarketSplit(
+      [],
+      [record({ id: "c1", priceKrw: 79000 }), record({ id: "c2", priceKrw: 109000 })],
+    );
+    expect(split.basis).toBe("COMPARISON");
+    expect(split.resolved.lowestPriceKrw).toBe(79000);
+    expect(split.exact.sellerCount).toBe(0);
+  });
+
+  it("T7) 매칭 데이터 없음(둘 다 빈 배열) → 시장 데이터 부족(basis=NONE)", () => {
+    const split = summarizeDomesticMarketSplit([], []);
+    expect(split.basis).toBe("NONE");
+    expect(split.resolved.sellerCount).toBe(0);
+    expect(split.resolved.lowestPriceKrw).toBeNull();
   });
 });

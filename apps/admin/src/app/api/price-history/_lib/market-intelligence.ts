@@ -5,7 +5,7 @@ import {
   computePriceTrend,
   computePriceRecommendation,
   computePriceAlertSignal,
-  summarizeDomesticMarket,
+  summarizeDomesticMarketSplit,
   DEFAULT_PRICE_BREAKDOWN_INPUT,
   computePriceBreakdown,
   computeSellerAction,
@@ -13,13 +13,16 @@ import {
   computeSellability,
   computeUnifiedPriceDecision,
   deriveRepresentativeSellerVerdict,
+  toSellerFacingVerdict,
   type UnifiedPriceDecision,
+  type PriceObservationRecord,
 } from "@commerce/pricing";
 import { fetchLiveExchangeRates } from "@/lib/exchange-rates";
 import { getDefaultSellerProfile } from "@/app/api/coupang/_lib/seller-profile";
 import { getSnapshot } from "../../snapshots/_lib/snapshot";
 import { getPriceHistory } from "./price-observations";
 import { computeBrandMarketProfileFor } from "./brand-market";
+import { listDomesticProductLinks, priceTierFromLink } from "../../domestic-price-sources/_lib/domestic-product-link";
 
 /**
  * N-4.18-K STEP K-2(대표님 지시, 2026-08-26: "새로운 가격판정 엔진을 만들지
@@ -39,7 +42,30 @@ export async function computeMarketIntelligence(snapshotId: string) {
     getPriceHistory(snapshotId, "DOMESTIC_SHOP"),
   ]);
 
-  const domesticSummary = summarizeDomesticMarket([...domesticShopHistory, ...domesticHistory]);
+  // P-19-B Sprint 7(CPO 지시, 2026-09-02) — "🟢 동일상품 확인" 가격과 "🟡 비교상품"
+  // 시장 참고가격을 완전히 분리된 두 버킷으로 집계한다. domestic_product_links의
+  // matchTruth(이미 계산된 값, P-10 STEP 4)로 DOMESTIC_SHOP 관측치를 sourceRefId
+  // 기준으로 나눈다 — 새 매칭 로직이 아니라 priceTierFromLink() 하나로 기존 판정을
+  // 재사용하는 분류다. NAVER_SHOPPING(동일상품 검증 없는 검색 후보)은 기존과
+  // 동일하게 비교상품 버킷에 포함한다(과거 tier="SECONDARY"와 같은 신뢰도 취급).
+  const domesticLinks = await listDomesticProductLinks(snapshotId);
+  const tierBySourceId = new Map(domesticLinks.map((l) => [l.sourceId, priceTierFromLink(l)]));
+  const exactShopRecords: PriceObservationRecord[] = [];
+  const comparisonShopRecords: PriceObservationRecord[] = [];
+  for (const record of domesticShopHistory) {
+    const tier = record.sourceRefId ? tierBySourceId.get(record.sourceRefId) : undefined;
+    if (tier === "EXACT") exactShopRecords.push(record);
+    else if (tier === "COMPARISON") comparisonShopRecords.push(record);
+    // tier === "EXCLUDED" 또는 매칭 링크를 못 찾은 레코드(레거시)는 어느
+    // 버킷에도 넣지 않는다 — 추측으로 분류하지 않는다.
+  }
+  const domesticMarketSplit = summarizeDomesticMarketSplit(exactShopRecords, [...comparisonShopRecords, ...domesticHistory]);
+  // 1순위 동일상품가격, 없으면 2순위 비교상품 시장가격(대표님 지시, Sprint 7
+  // 우선순위) — 아래 decision/unifiedDecision/sellerAction/sellability/
+  // representativeVerdict는 전부 이 하나의 변수만 받으므로, 우선순위 로직을
+  // 여기 한 곳에서만 바꾸면 전체에 일관되게 적용된다(재계산 없음, 새 판정
+  // 로직 추가 없음).
+  const domesticSummary = domesticMarketSplit.resolved;
 
   // P-13A(대표님/CPO 지시, 2026-08-31) — 국내 동일상품 데이터가 없을 때만(Level 1
   // 없음) 브랜드 시장 데이터를 2차 판단 근거로 계산한다. 동일상품 데이터가
@@ -228,6 +254,11 @@ export async function computeMarketIntelligence(snapshotId: string) {
     domesticMatched: domesticSummary.sellerCount > 0,
     domesticSellerCount: domesticSummary.sellerCount,
   });
+  // P-19-B Sprint 8(CPO 지시, 2026-09-02) — 판매자에게 최종적으로 보여줄 화면은
+  // 무조건 3단계(🟢 판매 추천/🟡 조건부 판매/🔴 판매 비추천)로 통합한다. 기존
+  // 5단계(representativeVerdict) 내부 판정은 그대로 유지한다(재계산 없음) —
+  // toSellerFacingVerdict()는 그 값을 화면용으로 압축만 하는 presentation layer.
+  const sellerFacingVerdict = toSellerFacingVerdict(representativeVerdict);
 
   // N-4.18-K STEP K-1/K-2 — computeMarketAlert()에 넘길 "변화량"은 국내는
   // domesticShopTrend7d(이미 sellerAction에도 쓰는 값과 동일 소스), 해외는
@@ -249,9 +280,14 @@ export async function computeMarketIntelligence(snapshotId: string) {
     product: { title: product.title.value, brand: product.brand.value, sourceUrl: product.sourceUrl },
     currentPrice: { sellingPriceKrw: currentSellingPriceKrw, costPriceKrw, costBasis },
     domesticCompetition: domesticSummary,
+    // P-19-B Sprint 7/9(CPO 지시, 2026-09-02) — UI가 "동일상품 가격"인지 "국내 유사
+    // 시장가격(참고용)"인지 문구를 구분해서 보여줄 수 있도록 두 버킷과 basis를
+    // 그대로 노출한다. domesticCompetition(=resolved)은 하위호환을 위해 그대로 둔다.
+    domesticMarketSplit,
     sellerAction,
     sellability,
     representativeVerdict,
+    sellerFacingVerdict,
     priceHistory: {
       origin: { records: originHistory, change: originChange, trend7d: originTrend7d, trend30d: originTrend30d },
       domestic: { records: domesticHistory, trend7d: domesticTrend7d, trend30d: domesticTrend30d },

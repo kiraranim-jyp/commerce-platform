@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isStaleSnapshotResponse, resolveSnapshotSaveAction } from "../snapshot-save-guard";
+import { isStaleSnapshotResponse, resolveSnapshotSaveAction, shouldRefetchAfterAutoCheck } from "../snapshot-save-guard";
 
 /**
  * P-13C-2 NEXT Sprint 6(CPO 지시, 2026-09-01) — page.tsx의 saveSnapshotToServer()
@@ -39,5 +39,32 @@ describe("isStaleSnapshotResponse", () => {
   it("여러 번 reset된 뒤에도(세대가 여러 번 올라가도) 정확히 비교한다", () => {
     expect(isStaleSnapshotResponse(0, 5)).toBe(true);
     expect(isStaleSnapshotResponse(5, 5)).toBe(false);
+  });
+});
+
+/**
+ * P-18 Sprint 8(CPO 지시, 2026-09-01) — DomesticPriceIntelligencePanel이
+ * autoChecking prop 전환을 보고 refetch 여부를 결정하는 순수 함수 검증.
+ * Sprint 2의 재호출 금지 케이스(B: 탭 진입, C: 리렌더)를 커버한다.
+ */
+describe("shouldRefetchAfterAutoCheck", () => {
+  it("false→false(리렌더, Case C) — 진행 중이었던 적이 없으므로 refetch 안 함", () => {
+    expect(shouldRefetchAfterAutoCheck(false, false)).toBe(false);
+  });
+
+  it("false→false(탭 재진입, Case B — 마운트 시 이미 완료 상태) — refetch 안 함", () => {
+    expect(shouldRefetchAfterAutoCheck(false, false)).toBe(false);
+  });
+
+  it("true→false(자동 확인이 방금 끝남) — 딱 이 전환에서만 refetch", () => {
+    expect(shouldRefetchAfterAutoCheck(true, false)).toBe(true);
+  });
+
+  it("true→true(아직 확인 진행 중) — refetch 안 함(중간에 끼어들지 않음)", () => {
+    expect(shouldRefetchAfterAutoCheck(true, true)).toBe(false);
+  });
+
+  it("false→true(방금 확인이 시작됨) — 완료 전환이 아니므로 refetch 안 함", () => {
+    expect(shouldRefetchAfterAutoCheck(false, true)).toBe(false);
   });
 });

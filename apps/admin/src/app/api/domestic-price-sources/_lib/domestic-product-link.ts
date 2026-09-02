@@ -36,6 +36,25 @@ export function toDomesticMatchType(matchLevel: "very_high" | "high" | "medium" 
   return { matchType: "NOT_MATCHED", autoVerified: false };
 }
 
+/**
+ * P-19-B Sprint 6/7(CPO 지시, 2026-09-02) — "동일상품 확인은 식별자(SKU/모델코드)
+ * 근거가 있어야만, 비교상품은 식별자 없이도 시장 참고가격으로만" 원칙을 이 함수
+ * 하나로 고정한다. matchTruth는 이미 decideCandidateEvidence()/deriveMatchTruth()가
+ * 계산해서 저장한 값(P-10 STEP 4)을 그대로 재사용한다 — 새 판정 로직이 아니다.
+ * EXCLUDED(CONFLICT/INSUFFICIENT_EVIDENCE)는 가격 재조회/시장가격 계산 어느
+ * 쪽에도 쓰지 않는다. matchTruth가 null인 행(마이그레이션 030 이전 레거시 —
+ * domestic-product-link.ts 기존 주석과 동일한 "일괄 backfill 없음" 원칙)은
+ * 기존 verified 플래그로만 EXACT/COMPARISON을 구분한다.
+ */
+export type DomesticPriceTier = "EXACT" | "COMPARISON" | "EXCLUDED";
+
+export function priceTierFromLink(link: Pick<DomesticProductLink, "matchTruth" | "verified">): DomesticPriceTier {
+  if (link.matchTruth === "EXACT_IDENTIFIER" || link.matchTruth === "STRONG_IDENTIFIER") return "EXACT";
+  if (link.matchTruth === "TEXT_CONFIRMED" || link.matchTruth === "SIMILAR") return "COMPARISON";
+  if (link.matchTruth === "CONFLICT" || link.matchTruth === "INSUFFICIENT_EVIDENCE") return "EXCLUDED";
+  return link.verified ? "EXACT" : "COMPARISON";
+}
+
 export interface DomesticProductLink {
   id: string;
   snapshotId: string;
