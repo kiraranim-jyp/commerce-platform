@@ -53,7 +53,27 @@ const MATCH_TRUTH_BADGE: Record<MatchTruth, { icon: string; label: string; class
   INSUFFICIENT_EVIDENCE: { icon: "⚪", label: "매칭 불확실", className: "bg-background text-text-tertiary" },
 };
 
-interface Candidate {
+/**
+ * P-24 Sprint 2(CPO 지시, 2026-09-02) — 실측(PèPè): 진짜 동일상품(포레포레,
+ * matchTruth=STRONG_IDENTIFIER, SKU 일치)의 confidence는 0.42(matchLevel="low")인
+ * 반면, 식별자 근거 없는 비교상품(듀베베, matchTruth=SIMILAR)은 confidence
+ * 0.72(matchLevel="medium")였다 — 텍스트 유사도 점수는 식별자 매칭보다 항상
+ * 낮게 나올 수 있다. 이 화면이 `matchLevel !== "low"`(구식 confidence 필터,
+ * matchTruth 도입 이전 로직)로 기본 노출을 걸러서, 진짜 동일상품이 "매칭
+ * 불확실 더보기" 뒤로 숨고 비교상품이 대표로 보이는 버그였다. priceTierFromLink()
+ * (domestic-product-link.ts)와 동일한 6분기 판정을 그대로 재사용한다 — 새 매칭
+ * 로직 아님, matchTruth가 없는(레거시) 응답만 기존 matchLevel 폴백을 쓴다. */
+export type PriceTier = "EXACT" | "COMPARISON" | "EXCLUDED";
+export function tierForCandidate(c: Pick<Candidate, "matchTruth" | "matchLevel">): PriceTier {
+  if (c.matchTruth === "EXACT_IDENTIFIER" || c.matchTruth === "STRONG_IDENTIFIER") return "EXACT";
+  if (c.matchTruth === "TEXT_CONFIRMED" || c.matchTruth === "SIMILAR") return "COMPARISON";
+  if (c.matchTruth === "CONFLICT" || c.matchTruth === "INSUFFICIENT_EVIDENCE") return "EXCLUDED";
+  if (c.matchLevel === "very_high" || c.matchLevel === "high") return "EXACT";
+  if (c.matchLevel === "medium") return "COMPARISON";
+  return "EXCLUDED";
+}
+
+export interface Candidate {
   title: string;
   url: string;
   price: { amount: number; currency: string } | null;
@@ -197,31 +217,118 @@ export function DomesticShopSearch({
   );
 }
 
-/** N-4.21(대표님 지시, 2026-08-26: "유사 상품까진 인정") — ComparisonShopSearch(해외)와
- * 같은 이유로 기본 노출 기준을 confidence>=0.9에서 matchLevel!=="low"(70% 경계,
- * match.ts 기존 승인 기준)로 낮춘다. */
+/** P-24 Sprint 2(CPO 지시, 2026-09-02) — "동일상품이 있으면 항상 대표"다.
+ * matchLevel(구식 confidence) 기준을 버리고 tierForCandidate()(matchTruth
+ * 우선)로 EXACT 존재 여부를 판단한다. */
 function ResultHeadline({ results }: { results: SearchResult[] }) {
-  const acceptable = results.flatMap((r) =>
-    r.candidates.filter((c) => c.matchLevel && c.matchLevel !== "low").map((c) => ({ ...c, shopName: r.shopName })),
-  );
-  if (acceptable.length === 0) {
+  const exactCount = results.reduce((n, r) => n + r.candidates.filter((c) => tierForCandidate(c) === "EXACT").length, 0);
+  const comparisonCount = results.reduce((n, r) => n + r.candidates.filter((c) => tierForCandidate(c) === "COMPARISON").length, 0);
+  if (exactCount === 0 && comparisonCount === 0) {
     return (
       <p className="rounded-md border border-border bg-background px-3 py-2 text-xs text-text-secondary">
         비교 가능한 동일/유사 상품을 국내 편집샵에서 찾지 못했습니다.
       </p>
     );
   }
+  if (exactCount > 0) {
+    return (
+      <p className="rounded-md border border-success/30 bg-success-soft px-3 py-2 text-xs text-success">
+        🟢 국내 편집샵에서 동일상품을 {exactCount}건 확인했습니다.
+      </p>
+    );
+  }
   return (
-    <p className="rounded-md border border-success/30 bg-success-soft px-3 py-2 text-xs text-success">
-      국내 편집샵에서 비교 가능한 동일/유사 상품이 {acceptable.length}건 발견되었습니다.
+    <p className="rounded-md border border-warning/30 bg-warning-soft px-3 py-2 text-xs text-warning">
+      🟡 동일상품은 확인되지 않았습니다 — 비교 가능한 유사상품이 {comparisonCount}건 발견되었습니다.
     </p>
   );
 }
 
+type CandidateRow = { shopId: string; shopName: string; candidate: Candidate | null; note?: string };
+
+function CandidateRowTable({ rows }: { rows: CandidateRow[] }) {
+  return (
+    <div className="overflow-x-auto rounded-md border border-border">
+      <table className="w-full min-w-[560px] border-collapse text-left text-[11px]">
+        <thead>
+          <tr className="border-b border-border bg-background text-text-secondary">
+            <th className="px-2 py-1.5 font-medium">판매처</th>
+            <th className="px-2 py-1.5 font-medium">상품</th>
+            <th className="px-2 py-1.5 font-medium">가격</th>
+            <th className="px-2 py-1.5 font-medium">재고</th>
+            <th className="px-2 py-1.5 font-medium">매칭상태</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => {
+            const c = row.candidate;
+            return (
+              <tr key={`${row.shopId}-${i}`} className="border-b border-border align-top last:border-b-0">
+                <td className="px-2 py-1.5 text-text-primary">🇰🇷 {row.shopName}</td>
+                <td className="px-2 py-1.5">
+                  {c ? (
+                    <a href={c.url} target="_blank" rel="noreferrer" className="text-text-primary underline">
+                      {c.title}
+                    </a>
+                  ) : (
+                    <span className="text-text-tertiary">{row.note}</span>
+                  )}
+                </td>
+                <td className="px-2 py-1.5 whitespace-nowrap text-text-secondary">{c ? <PriceCell candidate={c} /> : "—"}</td>
+                <td className="px-2 py-1.5">{c ? <StockBadge soldOut={c.soldOut} /> : "—"}</td>
+                <td className="px-2 py-1.5">
+                  {c?.matchTruth ? (
+                    <div className="space-y-0.5">
+                      <span
+                        className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_TRUTH_BADGE[c.matchTruth].className}`}
+                      >
+                        {MATCH_TRUTH_BADGE[c.matchTruth].icon} {MATCH_TRUTH_BADGE[c.matchTruth].label}
+                      </span>
+                      {c.matchReasons?.length ? (
+                        <p className="text-[10px] text-text-tertiary">근거: {c.matchReasons.join(" · ")}</p>
+                      ) : null}
+                      {MATCH_TRUTH_BADGE[c.matchTruth].disclaimer && (
+                        <p className="text-[10px] text-text-tertiary">※ {MATCH_TRUTH_BADGE[c.matchTruth].disclaimer}</p>
+                      )}
+                    </div>
+                  ) : c?.matchLevel ? (
+                    <div className="space-y-0.5">
+                      <span
+                        className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_LEVEL_BADGE_CLASS[c.matchLevel]}`}
+                      >
+                        {MATCH_LEVEL_ICON[c.matchLevel]}{" "}
+                        {c.matchLevel === "very_high" || c.matchLevel === "high"
+                          ? "동일상품"
+                          : c.matchLevel === "medium"
+                            ? "비교상품"
+                            : "매칭 불확실"}
+                      </span>
+                      {c.matchReasons?.length ? (
+                        <p className="text-[10px] text-text-tertiary">근거: {c.matchReasons.join(" · ")}</p>
+                      ) : null}
+                    </div>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** P-24 Sprint 2(CPO 지시, 2026-09-02) — 대표 노출 순서를 matchLevel(구식
+ * confidence)이 아니라 tierForCandidate()(matchTruth 우선)로 그룹화한다.
+ * EXACT 그룹을 항상 COMPARISON 그룹보다 먼저(위에) 렌더링한다 — "동일상품이
+ * 있으면 비교상품보다 항상 먼저 보인다"는 절대 원칙을 컴포넌트 구조 자체로
+ * 강제한다(정렬 순서에 기대지 않는다, CONFLICT/INSUFFICIENT_EVIDENCE/미지원/
+ * 오류/후보없음은 전부 "더보기" 뒤로). */
 function ResultTable({ results }: { results: SearchResult[] }) {
   const [showAll, setShowAll] = useState(false);
-  type Row = { shopId: string; shopName: string; candidate: Candidate | null; note?: string };
-  const allRows: Row[] = [];
+  const allRows: CandidateRow[] = [];
   for (const r of results) {
     if (r.status === "unsupported") {
       allRows.push({ shopId: r.shopId, shopName: r.shopName, candidate: null, note: "아직 자동 검색을 지원하지 않는 사이트(수동 확인 필요)" });
@@ -235,90 +342,37 @@ function ResultTable({ results }: { results: SearchResult[] }) {
       }
     }
   }
-  const acceptableRows = allRows.filter((row) => row.candidate?.matchLevel && row.candidate.matchLevel !== "low");
-  if (acceptableRows.length === 0) return null;
-  const rows = showAll ? allRows : acceptableRows;
-  const hiddenCount = allRows.length - acceptableRows.length;
+  const exactRows = allRows.filter((row) => row.candidate && tierForCandidate(row.candidate) === "EXACT");
+  const comparisonRows = allRows.filter((row) => row.candidate && tierForCandidate(row.candidate) === "COMPARISON");
+  const hiddenRows = allRows.filter((row) => !row.candidate || tierForCandidate(row.candidate) === "EXCLUDED");
+  if (exactRows.length === 0 && comparisonRows.length === 0) return null;
+  const hiddenCount = hiddenRows.length;
   return (
-    <div className="space-y-1.5">
-      {hiddenCount > 0 && (
-        <button
-          type="button"
-          onClick={() => setShowAll((v) => !v)}
-          className="text-xs text-primary underline hover:text-primary-hover"
-        >
-          {showAll ? "매칭 불확실 항목 접기" : `매칭 불확실/미지원/오류 ${hiddenCount}건 더 보기`}
-        </button>
+    <div className="space-y-2">
+      {exactRows.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium text-success">🟢 동일상품 확인</p>
+          <CandidateRowTable rows={exactRows} />
+        </div>
       )}
-      <div className="overflow-x-auto rounded-md border border-border">
-        <table className="w-full min-w-[560px] border-collapse text-left text-[11px]">
-          <thead>
-            <tr className="border-b border-border bg-background text-text-secondary">
-              <th className="px-2 py-1.5 font-medium">판매처</th>
-              <th className="px-2 py-1.5 font-medium">상품</th>
-              <th className="px-2 py-1.5 font-medium">가격</th>
-              <th className="px-2 py-1.5 font-medium">재고</th>
-              <th className="px-2 py-1.5 font-medium">매칭상태</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, i) => {
-              const c = row.candidate;
-              return (
-                <tr key={`${row.shopId}-${i}`} className="border-b border-border align-top last:border-b-0">
-                  <td className="px-2 py-1.5 text-text-primary">🇰🇷 {row.shopName}</td>
-                  <td className="px-2 py-1.5">
-                    {c ? (
-                      <a href={c.url} target="_blank" rel="noreferrer" className="text-text-primary underline">
-                        {c.title}
-                      </a>
-                    ) : (
-                      <span className="text-text-tertiary">{row.note}</span>
-                    )}
-                  </td>
-                  <td className="px-2 py-1.5 whitespace-nowrap text-text-secondary">{c ? <PriceCell candidate={c} /> : "—"}</td>
-                  <td className="px-2 py-1.5">{c ? <StockBadge soldOut={c.soldOut} /> : "—"}</td>
-                  <td className="px-2 py-1.5">
-                    {c?.matchTruth ? (
-                      <div className="space-y-0.5">
-                        <span
-                          className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_TRUTH_BADGE[c.matchTruth].className}`}
-                        >
-                          {MATCH_TRUTH_BADGE[c.matchTruth].icon} {MATCH_TRUTH_BADGE[c.matchTruth].label}
-                        </span>
-                        {c.matchReasons?.length ? (
-                          <p className="text-[10px] text-text-tertiary">근거: {c.matchReasons.join(" · ")}</p>
-                        ) : null}
-                        {MATCH_TRUTH_BADGE[c.matchTruth].disclaimer && (
-                          <p className="text-[10px] text-text-tertiary">※ {MATCH_TRUTH_BADGE[c.matchTruth].disclaimer}</p>
-                        )}
-                      </div>
-                    ) : c?.matchLevel ? (
-                      <div className="space-y-0.5">
-                        <span
-                          className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_LEVEL_BADGE_CLASS[c.matchLevel]}`}
-                        >
-                          {MATCH_LEVEL_ICON[c.matchLevel]}{" "}
-                          {c.matchLevel === "very_high" || c.matchLevel === "high"
-                            ? "동일상품"
-                            : c.matchLevel === "medium"
-                              ? "비교상품"
-                              : "매칭 불확실"}
-                        </span>
-                        {c.matchReasons?.length ? (
-                          <p className="text-[10px] text-text-tertiary">근거: {c.matchReasons.join(" · ")}</p>
-                        ) : null}
-                      </div>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {comparisonRows.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium text-warning">🟡 비교상품(참고용) — 식별자 근거 없이 상품명·브랜드만 유사</p>
+          <CandidateRowTable rows={comparisonRows} />
+        </div>
+      )}
+      {hiddenCount > 0 && (
+        <div className="space-y-1.5">
+          <button
+            type="button"
+            onClick={() => setShowAll((v) => !v)}
+            className="text-xs text-primary underline hover:text-primary-hover"
+          >
+            {showAll ? "매칭 불확실 항목 접기" : `매칭 불확실/미지원/오류 ${hiddenCount}건 더 보기`}
+          </button>
+          {showAll && <CandidateRowTable rows={hiddenRows} />}
+        </div>
+      )}
     </div>
   );
 }

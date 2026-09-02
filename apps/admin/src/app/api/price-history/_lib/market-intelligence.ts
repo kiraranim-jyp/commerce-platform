@@ -155,19 +155,29 @@ export async function computeMarketIntelligence(snapshotId: string) {
       { originalAmount: resolvedOriginalAmount, originalCurrency: resolvedOriginalCurrency, ...breakdownInput },
       exchangeRates.rates,
     );
-    if (currentSellingPriceKrw != null) {
-      recommendation = computePriceRecommendation({
-        totalCostKrw: cost.landedCostKrw,
-        currentSellingPriceKrw,
-        domesticLowestPriceKrw: domesticSummary.lowestPriceKrw,
-        domesticAveragePriceKrw: domesticSummary.averagePriceKrw,
-        minimumMarginPercent: 10,
-        targetMarginPercent: breakdownInput.marginPercent,
-        // P-13A — domesticLowestPriceKrw가 없을 때만 이 값이 실제로 쓰인다
-        // (computePriceRecommendation 내부에서 domesticLowestPriceKrw 우선).
-        brandMedianPriceKrw: usableBrandMarketProfile?.medianPriceKrw ?? null,
-      });
-    }
+    // P-24 Sprint 4(CPO 지시, 2026-09-02) — 실측(PèPè): 국내 EXACT 최저가
+    // ₩258,000이 있는데도 화면 "추천 판매가"는 cost.suggestedPriceKrw(원가×
+    // 목표마진, 시장가 무관 역산)인 ₩346,286을 그대로 보여줬다. 원인은 이
+    // 조건 — computePriceRecommendation()(시장가를 이미 우선 반영하는 기존
+    // 함수, 새로 만들지 않음)이 currentSellingPriceKrw!=null일 때만 호출됐는데,
+    // 실제 프로덕션에는 판매가가 확정된 스냅샷이 사실상 없다(P-12B 주석과
+    // 동일한 이유). currentSellingPriceKrw는 이 함수 내부에서 애초에 쓰이지
+    // 않는 값이라(price-recommendation.ts 참고) 게이트를 없애도 계산 자체는
+    // 그대로다 — DomesticPriceIntelligencePanel.tsx는 이미 recommendation이
+    // 있으면 그 값을, 없으면 cost.suggestedPriceKrw를 쓰도록 되어 있었으므로
+    // (`recommendation?.recommendedPrice ?? cost.suggestedPriceKrw`) 이 한 곳만
+    // 고치면 화면이 자동으로 시장가 기준 값을 보여준다.
+    recommendation = computePriceRecommendation({
+      totalCostKrw: cost.landedCostKrw,
+      currentSellingPriceKrw: currentSellingPriceKrw ?? undefined,
+      domesticLowestPriceKrw: domesticSummary.lowestPriceKrw,
+      domesticAveragePriceKrw: domesticSummary.averagePriceKrw,
+      minimumMarginPercent: 10,
+      targetMarginPercent: breakdownInput.marginPercent,
+      // P-13A — domesticLowestPriceKrw가 없을 때만 이 값이 실제로 쓰인다
+      // (computePriceRecommendation 내부에서 domesticLowestPriceKrw 우선).
+      brandMedianPriceKrw: usableBrandMarketProfile?.medianPriceKrw ?? null,
+    });
   }
 
   // P-1-3 STEP 6/7(대표님 지시, 2026-08-28) — "PriceEditor와 Market Intelligence가

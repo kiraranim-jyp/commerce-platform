@@ -6,7 +6,11 @@
  */
 export interface PriceRecommendationInput {
   totalCostKrw: number;
-  currentSellingPriceKrw: number;
+  /** P-24(CPO 지시, 2026-09-02) — 이 함수 본문 어디에서도 실제로 쓰이지 않는
+   * 필드였다(항상 파라미터로만 받고 계산에 반영된 적이 없다). 판매가가 아직
+   * 확정되지 않은 상품(대부분의 실제 스냅샷)에서도 시장가 기반 추천가를 낼 수
+   * 있도록 optional로 바꾼다 — 값을 넘기던 기존 호출부는 그대로 동작한다. */
+  currentSellingPriceKrw?: number;
   domesticLowestPriceKrw: number | null;
   domesticAveragePriceKrw: number | null;
   /** 최소 허용 마진율(%) — 이 아래로는 절대 추천하지 않는다. */
