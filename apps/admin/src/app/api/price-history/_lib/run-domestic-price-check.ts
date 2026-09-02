@@ -2,9 +2,10 @@ import {
   compareModelCode,
   decideCandidateEvidence,
   extractForeignModelCode,
-  fetchForetforetModelCode,
+  fetchDomesticModelCode,
   refreshDomesticProductPrice,
   searchDomesticShops,
+  supportsDomesticIdentifierExtraction,
   type CandidateEvidenceDecision,
   type ComparisonCandidate,
   type ModelEvidenceResult,
@@ -54,11 +55,14 @@ export interface DomesticPriceCheckResult {
   pricesRecorded: number;
   sourceErrors: string[];
   /** N-4.18-Q3 PART H-3-11 STEP 7(대표님 지시, 2026-08-27: "실제로 네트워크
-   * 요청이 생략됐는지 확인한다") — 이번 호출에서 실제로 발생한 FORETFORET
-   * modelCode HTTP fetch 총 횟수. isEvidenceEvaluationWorthwhile 가드가
+   * 요청이 생략됐는지 확인한다") — 이번 호출에서 실제로 발생한 국내 식별자
+   * (modelCode) 추출 시도 총 횟수. isEvidenceEvaluationWorthwhile 가드가
    * 판단 결과에는 영향을 주지 않으면서 이 값만 줄이는지를 응답값으로
-   * 직접 확인할 수 있게 하는 관측용 필드다. */
-  foretforetModelCodeFetchCount: number;
+   * 직접 확인할 수 있게 하는 관측용 필드다. P-28(2026-09-03)에서
+   * foretforetModelCodeFetchCount → domesticModelCodeFetchCount로 개명
+   * (foretforet.com 전용이 아니게 됐으므로 — bobochoses.com 등 URL 기반
+   * 추출은 실제 HTTP fetch가 없지만 "시도 횟수"라는 의미는 동일하다). */
+  domesticModelCodeFetchCount: number;
 }
 
 /** N-4.07 3차(실측 발견, 2026-08-23) — 개발/테스트용으로 제목 앞에 붙는
@@ -135,8 +139,9 @@ export function applyEvidenceDecision(
  * 그대로 decideCandidateEvidence로 흘러가 기존 review_required/verified=false 규칙이
  * 자연히 적용되게 둔다(새 상태값을 만들지 않는다).
  *
- * fetchModelCode 실패(네트워크 오류 등)는 fetchForetforetModelCode 자체가 이미
- * null을 반환하도록 설계돼 있고(H-3-2), compareModelCode(x, null)은 "unavailable"이며
+ * fetchModelCode 실패(네트워크 오류 등)는 각 도메인 추출기(fetchForetforetModelCode
+ * 등, domestic-identifiers.ts 레지스트리) 자체가 이미 null을 반환하도록 설계돼
+ * 있고(H-3-2), compareModelCode(x, null)은 "unavailable"이며
  * "unavailable"은 conflict가 아니므로 이 필터를 그대로 통과한다 — 네트워크 오류 때문에
  * 정상 후보가 부당하게 탈락하는 경로가 없다(실측 확인, H-3-9 STEP 3). */
 const MAX_EVIDENCE_CANDIDATES = 3;
@@ -154,8 +159,9 @@ const MAX_EVIDENCE_CANDIDATES = 3;
  * confidence 42%(low)인데 SKU는 partial 일치한다 — 식별자 증거가 있으면 low도
  * 결과가 바뀔 수 있다(deriveMatchTruth). 따라서 "식별자를 비교할 가능성이
  * 전혀 없는 경우"에만 원래 최적화(스킵)를 유지한다: foreignModelCode 자체가
- * 없거나(해외측 원문에서 품번을 못 뽑았다), FORETFORET가 아닌 사이트다(H-3-2 —
- * 지금 유일하게 국내측 modelCode 추출 기능이 있는 사이트). 이 두 조건이 아니면
+ * 없거나(해외측 원문에서 품번을 못 뽑았다), 국내측 modelCode 추출 기능이 아예
+ * 없는 사이트다(P-28 이전엔 FORETFORET만 있었다 — 이제
+ * supportsDomesticIdentifierExtraction()으로 일반화됨, 2026-09-03). 이 두 조건이 아니면
  * "무조건 살리는" 게 아니라 "평가라도 해본다" — 실제로 conflict/unavailable로
  * 나오면 여전히 NOT_MATCHED로 끝난다(성능 비용은 MAX_EVIDENCE_CANDIDATES=3건
  * fetch로 그대로 제한됨). */
@@ -186,7 +192,7 @@ export async function selectDomesticCandidate(
   foreignModelCode: string | null,
   fetchModelCode: (url: string) => Promise<string | null>,
 ): Promise<CandidateSelection> {
-  if (domain !== "foretforet.com") {
+  if (!supportsDomesticIdentifierExtraction(domain)) {
     return { candidate: candidates[0], modelCodeEvidence: compareModelCode(foreignModelCode, null), skippedConflictCount: 0 };
   }
 
@@ -196,7 +202,7 @@ export async function selectDomesticCandidate(
     // 요청이 생략됐는지 확인한다") — isEvidenceEvaluationWorthwhile 가드가
     // 실제로 이 fetch 자체를 막는지 Vercel 로그로 관측할 수 있게 하는 관측용
     // 로그 한 줄. 판정 로직에는 전혀 관여하지 않는다.
-    console.log(`[H-3-11] FORETFORET modelCode fetch: ${candidate.url}`);
+    console.log(`[H-3-11] domestic modelCode fetch (${domain}): ${candidate.url}`);
     const domesticModelCode = await fetchModelCode(candidate.url);
     evaluated.push({ candidate, modelCodeEvidence: compareModelCode(foreignModelCode, domesticModelCode) });
   }
@@ -208,19 +214,16 @@ export async function selectDomesticCandidate(
 export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Promise<DomesticPriceCheckResult> {
   const sourceErrors: string[] = [];
   let linksCreatedOrUpdated = 0;
-  // N-4.18-Q3 PART H-3-11 STEP 7 — 아래 fetchForetforetModelCode 호출을 감싸는
-  // 카운터 하나만 잰다(판정 로직에는 관여하지 않음).
-  let foretforetModelCodeFetchCount = 0;
-  const countedFetchForetforetModelCode = (url: string) => {
-    foretforetModelCodeFetchCount += 1;
-    return fetchForetforetModelCode(url);
-  };
+  // N-4.18-Q3 PART H-3-11 STEP 7 — 아래 fetchDomesticModelCode 호출을 감싸는
+  // 카운터 하나만 잰다(판정 로직에는 관여하지 않음). P-28(2026-09-03)에서
+  // foretforet.com 하드코딩을 걷어내고 도메인 무관 카운터로 일반화했다.
+  let domesticModelCodeFetchCount = 0;
 
   const alreadyChecked = input.skipIfCheckedToday
     ? await hasObservationToday(input.snapshotId, "DOMESTIC_SHOP")
     : false;
   if (alreadyChecked)
-    return { linksCreatedOrUpdated: 0, pricesRecorded: 0, sourceErrors: [], foretforetModelCodeFetchCount: 0 };
+    return { linksCreatedOrUpdated: 0, pricesRecorded: 0, sourceErrors: [], domesticModelCodeFetchCount: 0 };
 
   const searchTitle = stripLeadingDevTag(input.dna.title);
   const searchTerm = stripLeadingDevTag(buildDomesticShopQuery(input.dna));
@@ -284,14 +287,20 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
 
     // N-4.18-Q3 PART H-3-9(대표님 지시, 2026-08-27) — 기존엔 candidates[0](confidence
     // 1위)만 무조건 대표 후보로 썼다. H-3-7 실측(PèPè)에서 1위가 실제로는 다른
-    // 상품(modelCode conflict)이고 진짜 동일상품은 3위였던 사례가 확인돼, FORETFORET에
-    // 한해 상위 3개까지 modelCode를 평가하고 conflict가 아닌 후보를 대표로 고른다
+    // 상품(modelCode conflict)이고 진짜 동일상품은 3위였던 사례가 확인돼, 국내측
+    // 식별자 추출을 지원하는 도메인(supportsDomesticIdentifierExtraction)에 한해
+    // 상위 3개까지 modelCode를 평가하고 conflict가 아닌 후보를 대표로 고른다
     // (selectDomesticCandidate 주석 참고 — confidence 정렬/threshold는 안 건드림).
+    // P-28(2026-09-03) — fetchModelCode를 result.domain에 맞는 추출기로 위임한다
+    // (fetchDomesticModelCode 레지스트리, foretforet.com 하드코딩 제거).
     const { candidate: best, modelCodeEvidence, skippedConflictCount } = await selectDomesticCandidate(
       result.candidates,
       result.domain,
       foreignModelCode,
-      countedFetchForetforetModelCode,
+      (url) => {
+        domesticModelCodeFetchCount += 1;
+        return fetchDomesticModelCode(result.domain, url);
+      },
     );
     const { matchType: initialMatchType } = toDomesticMatchType(best.matchLevel ?? "low");
     let matchType = initialMatchType;
@@ -410,6 +419,6 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     linksCreatedOrUpdated,
     pricesRecorded: saveResult.ok ? saveResult.count : 0,
     sourceErrors,
-    foretforetModelCodeFetchCount,
+    domesticModelCodeFetchCount,
   };
 }

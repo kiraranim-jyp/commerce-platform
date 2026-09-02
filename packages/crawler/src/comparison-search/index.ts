@@ -28,6 +28,10 @@ export * from "./evidence";
  * (H-3-5에서 연결 예정). */
 export { extractForetforetModelCode, fetchForetforetModelCode } from "./foretforet";
 export { compareModelCode, extractForeignModelCode } from "./model-code";
+/** P-28(CPO 지시, 2026-09-03) — 도메인별 국내 식별자 추출기 레지스트리.
+ * fetchForetforetModelCode 하드코딩을 일반화한 것 — foretforet.com/
+ * bobochoses.com 둘 다 여기로 흡수된다. */
+export { extractBobochosesModelCode, fetchDomesticModelCode, supportsDomesticIdentifierExtraction } from "./domestic-identifiers";
 /** N-4.18-Q3 PART H-3-3 — Cafe24 3개 사이트(RULII/LOOXLOO/DEUXBEBE) JSON-LD offers[]
  * 추출. 아직 옵션 유사도 판정/confidence/matchLevel에는 연결하지 않는다(다음 단계). */
 export { extractRuliiOptions } from "./rulii";
