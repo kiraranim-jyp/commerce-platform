@@ -253,6 +253,10 @@ export async function computeMarketIntelligence(snapshotId: string) {
     sellability,
     domesticMatched: domesticSummary.sellerCount > 0,
     domesticSellerCount: domesticSummary.sellerCount,
+    // P-22(CPO 지시, 2026-09-02) — domesticSummary(=domesticMarketSplit.resolved)가
+    // EXACT에서 왔는지 COMPARISON에서 왔는지를 그대로 전달한다(새 판정 없음,
+    // summarizeDomesticMarketSplit()이 이미 낸 값 재사용).
+    domesticBasis: domesticMarketSplit.basis,
   });
   // P-19-B Sprint 8(CPO 지시, 2026-09-02) — 판매자에게 최종적으로 보여줄 화면은
   // 무조건 3단계(🟢 판매 추천/🟡 조건부 판매/🔴 판매 비추천)로 통합한다. 기존

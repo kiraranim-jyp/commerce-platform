@@ -49,6 +49,11 @@ export interface RepresentativeVerdictInput {
    * 새로 판정하지 않는다. */
   domesticMatched: boolean;
   domesticSellerCount: number;
+  /** P-22(CPO 지시, 2026-09-02) — 실측(Bobo Choses: COMPARISON만 있는데 화면
+   * 문구는 "동일상품 가격을 확인했다"고 표시되는 버그)으로 발견. domesticMatched만
+   * 보고 문구를 정하면 EXACT/COMPARISON을 구분하지 못한다. summarizeDomesticMarketSplit()이
+   * 이미 계산한 basis를 그대로 받아 문구만 분기한다 — 새 판정 로직 아님. */
+  domesticBasis: "EXACT" | "COMPARISON" | "NONE";
 }
 
 const VERDICT_COPY: Record<RepresentativeVerdictCode, { icon: RepresentativeVerdict["icon"]; title: string; description: string }> = {
@@ -81,9 +86,19 @@ const VERDICT_COPY: Record<RepresentativeVerdictCode, { icon: RepresentativeVerd
 };
 
 function domesticReason(input: RepresentativeVerdictInput): string {
-  return input.domesticMatched
-    ? `국내 동일상품 ${input.domesticSellerCount}곳에서 가격 확인됨`
-    : "국내 동일상품을 자동으로 찾지 못함";
+  if (!input.domesticMatched) return "국내 동일상품을 자동으로 찾지 못함";
+  if (input.domesticBasis === "EXACT") return `국내 동일상품 ${input.domesticSellerCount}곳에서 가격 확인됨`;
+  // COMPARISON(식별자 근거 없이 상품명/브랜드만 유사한 후보) 기준이면 "동일상품"이라고
+  // 말하지 않는다 — 참고용 시장가격이라는 사실을 그대로 전달한다.
+  return `국내 동일상품은 확인되지 않음 — 비교상품(참고용) ${input.domesticSellerCount}곳 시장가격 기준`;
+}
+
+/** P-22 — VERDICT_COPY.READY의 고정 문구("동일상품 가격을 확인했습니다")도
+ * domesticReason()과 같은 이유로 basis를 봐야 한다. READY 코드에서만 쓰인다
+ * (다른 코드의 문구는 애초에 "동일상품"을 언급하지 않는다). */
+function readyDescription(basis: RepresentativeVerdictInput["domesticBasis"]): string {
+  if (basis === "EXACT") return VERDICT_COPY.READY.description;
+  return "국내 동일상품은 확인되지 않았습니다. 비교상품(참고용) 시장가격 기준으로 현재 비용 대비 수익성이 확보되는 것으로 보입니다.";
 }
 
 export function deriveRepresentativeSellerVerdict(input: RepresentativeVerdictInput): RepresentativeVerdict {
@@ -106,7 +121,8 @@ export function deriveRepresentativeSellerVerdict(input: RepresentativeVerdictIn
           : state.code === "NOT_RECOMMENDED"
             ? "HOLD"
             : "NEEDS_INFO"; // NEEDS_COST_INFO | UNKNOWN — 여기선 여전히 "비용 계산 자체가 불완전"이라는 뜻
-    return { ...VERDICT_COPY[code], code, reasons };
+    const description = code === "READY" ? readyDescription(input.domesticBasis) : VERDICT_COPY[code].description;
+    return { ...VERDICT_COPY[code], description, code, reasons };
   }
 
   // Priority 2 — 판매가 미확정(현재 프로덕션 대부분) 시 computeSellability()의
@@ -114,7 +130,7 @@ export function deriveRepresentativeSellerVerdict(input: RepresentativeVerdictIn
   if (input.sellability.level === "GREEN") {
     const reasons = [domesticReason(input)];
     if (input.sellability.estimatedMarginPercent != null) reasons.push(`예상 마진 ${input.sellability.estimatedMarginPercent}%`);
-    return { ...VERDICT_COPY.READY, code: "READY", reasons };
+    return { ...VERDICT_COPY.READY, description: readyDescription(input.domesticBasis), code: "READY", reasons };
   }
   if (input.sellability.level === "RED") {
     const reasons = [domesticReason(input)];

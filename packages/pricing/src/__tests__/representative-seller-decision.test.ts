@@ -20,6 +20,7 @@ describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
     sellability: { level: "UNKNOWN", estimatedMarginPercent: null, reason: "실제 구매 가능 가격을 아직 확인하지 못했습니다." },
     domesticMatched: false,
     domesticSellerCount: 0,
+    domesticBasis: "NONE",
   };
 
   it("UX-01) 국내 검증 가격 존재 + 정상 수익성(sellability GREEN) → 🟢 READY, 이유 2개 이상", () => {
@@ -28,6 +29,7 @@ describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
       sellability: { level: "GREEN", estimatedMarginPercent: 10.1, reason: "..." },
       domesticMatched: true,
       domesticSellerCount: 1,
+      domesticBasis: "EXACT",
     });
     expect(result.code).toBe("READY");
     expect(result.icon).toBe("🟢");
@@ -69,6 +71,7 @@ describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
       sellability: { level: "RED", estimatedMarginPercent: 4.2, reason: "..." },
       domesticMatched: true,
       domesticSellerCount: 1,
+      domesticBasis: "EXACT",
     });
     expect(result.code).toBe("REVIEW_PRICE");
     expect(result.icon).toBe("🟡");
@@ -80,6 +83,7 @@ describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
       sellability: { level: "RED", estimatedMarginPercent: -5.3, reason: "..." },
       domesticMatched: true,
       domesticSellerCount: 1,
+      domesticBasis: "EXACT",
     });
     expect(result.code).toBe("HOLD");
     expect(result.icon).toBe("🔴");
@@ -110,6 +114,7 @@ describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
         sellability: { level: "RED", estimatedMarginPercent: -1, reason: "..." },
         domesticMatched: true,
         domesticSellerCount: 1,
+        domesticBasis: "EXACT",
       });
       expect(result.code).toBe("READY");
     });
@@ -125,6 +130,7 @@ describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
         sellability: { level: "GREEN", estimatedMarginPercent: 30, reason: "..." },
         domesticMatched: true,
         domesticSellerCount: 1,
+        domesticBasis: "EXACT",
       });
       expect(result.code).toBe("NEEDS_INFO");
       expect(result.reasons.some((r) => r.includes("국내 배송원가"))).toBe(true);
@@ -136,6 +142,7 @@ describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
         sellability: { level: "GREEN", estimatedMarginPercent: 30, reason: "..." },
         domesticMatched: true,
         domesticSellerCount: 1,
+        domesticBasis: "EXACT",
       });
       expect(result.code).toBe("REVIEW_PRICE");
     });
@@ -146,6 +153,7 @@ describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
         sellability: { level: "GREEN", estimatedMarginPercent: 30, reason: "..." },
         domesticMatched: true,
         domesticSellerCount: 1,
+        domesticBasis: "EXACT",
       });
       expect(result.code).toBe("HOLD");
     });
@@ -164,6 +172,7 @@ describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
         sellability: { level: "RED", estimatedMarginPercent: 5, reason: "..." },
         domesticMatched: true,
         domesticSellerCount: 1,
+        domesticBasis: "EXACT",
       });
       expect(result.code).toBe("REVIEW_PRICE");
       expect(result.title).toBe("가격 전략 재검토 추천");
@@ -175,6 +184,7 @@ describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
         sellability: { level: "RED", estimatedMarginPercent: -5, reason: "..." },
         domesticMatched: true,
         domesticSellerCount: 1,
+        domesticBasis: "EXACT",
       });
       expect(result.code).toBe("HOLD");
       expect(result.title).toBe("판매 조건 재검토 필요");
@@ -214,6 +224,7 @@ describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
         sellability: { level: "GREEN", estimatedMarginPercent: 24, reason: "..." },
         domesticMatched: true,
         domesticSellerCount: 1,
+        domesticBasis: "EXACT",
       });
       const facing = toSellerFacingVerdict(verdict);
       expect(facing.code).toBe("RECOMMENDED");
@@ -244,6 +255,7 @@ describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
         sellability: { level: "RED", estimatedMarginPercent: 4.2, reason: "..." },
         domesticMatched: true,
         domesticSellerCount: 1,
+        domesticBasis: "EXACT",
       });
       const facing = toSellerFacingVerdict(verdict);
       expect(facing.code).toBe("CONDITIONAL");
@@ -268,6 +280,7 @@ describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
         sellability: { level: "RED", estimatedMarginPercent: -5.3, reason: "..." },
         domesticMatched: true,
         domesticSellerCount: 1,
+        domesticBasis: "EXACT",
       });
       const facing = toSellerFacingVerdict(verdict);
       expect(facing.code).toBe("NOT_RECOMMENDED");
@@ -281,9 +294,54 @@ describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
         sellability: { level: "GREEN", estimatedMarginPercent: 24, reason: "..." },
         domesticMatched: true,
         domesticSellerCount: 1,
+        domesticBasis: "EXACT",
       });
       const facing = toSellerFacingVerdict(verdict);
       expect(facing.reasons).toEqual(verdict.reasons);
     });
+  });
+});
+
+/**
+ * P-22(CPO 지시, 2026-09-02) — 실제 Bobo Choses 프로덕션 데이터(COMPARISON만
+ * 존재, EXACT 없음)에서 발견된 P1 버그: domesticMatched만 보고 "동일상품"이라고
+ * 말해서, 실제로는 비교상품(참고용) 가격인데도 화면 문구가 동일상품 가격을
+ * 확인한 것처럼 나왔다. domesticBasis(EXACT/COMPARISON/NONE)를 반영해 문구가
+ * 갈라지는지 고정한다.
+ */
+describe("P-22: domesticBasis에 따라 '동일상품'/'비교상품' 문구가 갈라진다", () => {
+  const base: RepresentativeVerdictInput = {
+    unifiedDecision: null,
+    sellability: { level: "GREEN", estimatedMarginPercent: 18.5, reason: "..." },
+    domesticMatched: true,
+    domesticSellerCount: 1,
+    domesticBasis: "EXACT",
+  };
+
+  it("basis=EXACT → 대표 판단 문구가 '동일상품'을 그대로 말한다", () => {
+    const result = deriveRepresentativeSellerVerdict({ ...base, domesticBasis: "EXACT" });
+    expect(result.code).toBe("READY");
+    expect(result.description).toContain("동일상품");
+    expect(result.reasons.some((r) => r.includes("동일상품") && !r.includes("비교상품"))).toBe(true);
+  });
+
+  it("basis=COMPARISON(Bobo Choses 실측 재현) → '동일상품'이라고 단정하지 않고 '비교상품(참고용)'으로 명시한다", () => {
+    const result = deriveRepresentativeSellerVerdict({ ...base, domesticBasis: "COMPARISON" });
+    expect(result.code).toBe("READY");
+    expect(result.description).not.toContain("동일상품을 확인");
+    expect(result.reasons.some((r) => r.includes("비교상품"))).toBe(true);
+    expect(result.reasons.some((r) => r.includes("동일상품") && !r.includes("확인되지 않음"))).toBe(false);
+  });
+
+  it("Priority 1(unifiedDecision 경로)도 basis=COMPARISON이면 '동일상품 확정' 문구를 쓰지 않는다", () => {
+    const result = deriveRepresentativeSellerVerdict({
+      unifiedDecision: { verdict: "MAINTAIN", dataCompleteness: "COMPLETE", marginPercent: { value: 18.5, status: "estimated" }, missingComponents: [] },
+      sellability: { level: "GREEN", estimatedMarginPercent: 18.5, reason: "..." },
+      domesticMatched: true,
+      domesticSellerCount: 1,
+      domesticBasis: "COMPARISON",
+    });
+    expect(result.code).toBe("READY");
+    expect(result.description).not.toContain("동일상품을 확인");
   });
 });
