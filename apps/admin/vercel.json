@@ -1,13 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "functions": {
-    "src/app/api/pipeline/route.ts": {
-      "maxDuration": 300
-    },
-    "src/app/api/cron/daily-price-check/route.ts": {
-      "maxDuration": 300
-    }
-  },
   "crons": [
     {
       "path": "/api/cron/daily-price-check",

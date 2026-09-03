@@ -24,6 +24,16 @@ import { runPriceCheck } from "../../price-history/_lib/run-price-check";
  * 날 재실행(재배포/재시도)에도 SELLER_ORIGIN/NAVER_SHOPPING을 중복 저장하지
  * 않는다.
  */
+
+/** D-02(CPO 지시, 2026-09-04) — 실행 시간 상한은 vercel.json의 functions가
+ * 아니라 라우트 세그먼트 설정으로 둔다. 이 프로젝트의 다른 장시간 라우트
+ * 7개(pipeline/route.ts의 maxDuration=300 등)가 이미 전부 이 방식이고,
+ * vercel.json이 Root Directory와 어긋난 위치에 있으면 조용히 무시된다는 것이
+ * 이번에 실제로 확인됐다(그래서 이 크론이 한 번도 실행되지 않았다). 코드에
+ * 두면 설정 파일 위치와 무관하게 항상 적용된다 — vercel.json에는 코드로
+ * 표현할 수 없는 crons만 남긴다. */
+export const maxDuration = 300;
+
 const MAX_SNAPSHOTS_PER_RUN = 50;
 
 interface SnapshotCheckResult {
