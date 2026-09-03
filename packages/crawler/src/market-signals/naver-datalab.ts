@@ -57,13 +57,25 @@ export async function fetchNaverSearchTrendRatio(
       }),
       signal: controller.signal,
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // P-29 진단(2026-09-03) — 첫 실측 호출에서 ratio:null만 나오고 원인을
+      // 알 수 없었다(CEO 호출량 보호 정책상 재호출로 디버깅하지 않는다) —
+      // 다음 자연 호출(7일 캐시 만료 또는 CPO 승인 재확인)에서 원인이
+      // 바로 보이도록 상태코드/본문을 로그에 남긴다.
+      const bodyText = await res.text().catch(() => "");
+      console.error("[naver-datalab] API 오류", { status: res.status, body: bodyText.slice(0, 300) });
+      return null;
+    }
     const json = (await res.json()) as DataLabResponse;
     const series = json.results?.[0]?.data;
-    if (!series || series.length === 0) return null;
+    if (!series || series.length === 0) {
+      console.error("[naver-datalab] 결과 데이터 없음", { keyword, raw: JSON.stringify(json).slice(0, 300) });
+      return null;
+    }
     const latest = series[series.length - 1];
     return typeof latest.ratio === "number" ? Math.round(latest.ratio) : null;
-  } catch {
+  } catch (err) {
+    console.error("[naver-datalab] fetch 예외", { message: err instanceof Error ? err.message : String(err) });
     return null;
   } finally {
     clearTimeout(timer);
