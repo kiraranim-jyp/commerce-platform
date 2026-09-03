@@ -477,7 +477,39 @@ interface PriceHistoryResponse {
    * 지우라는 뜻은 아니다). */
   sellerFacingVerdict: SellerFacingVerdict;
   domesticMarketSplit: DomesticMarketSplitInfo;
+  /** P-29 Sprint 8(CPO 지시, 2026-09-03) — "가격이 좋아도 팔릴지"를 가격
+   * 판정(CASE A/B/C/D)과 완전히 분리해서 보여준다. marketSignals는 marketCase를
+   * 전혀 참조하지 않는 별도 계산(packages/pricing/market-signals.ts) — 이
+   * 화면도 두 값을 절대 섞지 않는다(신호가 좋다고 recommendation/marketCase를
+   * 다시 계산하거나 덮어쓰지 않음). */
+  marketSignals: MarketSignalsInfo;
+  sellingGuidance: string[];
 }
+
+interface MarketSignal {
+  key: "domesticPresence" | "searchInterest" | "seasonFit";
+  label: string;
+  level: "high" | "medium" | "low" | "unknown";
+  evidence: string;
+}
+
+interface MarketSignalsInfo {
+  signals: MarketSignal[];
+  confidence: "high" | "medium" | "limited";
+}
+
+const SIGNAL_LEVEL_BADGE: Record<MarketSignal["level"], string> = {
+  high: "🟢 높음",
+  medium: "🟡 보통",
+  low: "🔴 낮음",
+  unknown: "⚪ 확인 불가",
+};
+
+const SIGNAL_CONFIDENCE_BADGE: Record<MarketSignalsInfo["confidence"], string> = {
+  high: "🟢 높음",
+  medium: "🟡 보통",
+  limited: "⚪ 제한적",
+};
 
 interface SellerFacingVerdict {
   code: "RECOMMENDED" | "CONDITIONAL" | "NOT_RECOMMENDED";
@@ -738,6 +770,8 @@ export function DomesticPriceIntelligencePanel({
     representativeVerdict,
     sellerFacingVerdict,
     domesticMarketSplit,
+    marketSignals,
+    sellingGuidance,
   } = data;
   const domesticShopHistory = data.priceHistory?.domesticShop ?? null;
   const trend7d = domesticShopHistory?.trend7d ?? null;
@@ -1425,6 +1459,41 @@ export function DomesticPriceIntelligencePanel({
         {/* recommendation.recommendedPrice는 이제 ① 최종 판단 카드의 "권장
             판매가"로 승격됐다(P-2-3) — 여기서 다시 보여주면 같은 숫자를
             두 번 노출하게 되므로 제거한다(계산/필드 자체는 그대로 유지). */}
+
+        {/* P-29 Sprint 8(CPO 지시, 2026-09-03) — "가격이 좋아도 팔릴지"를 가격
+            판정(CASE A/B/C/D, 위 카드들)과 완전히 분리된 섹션으로 보여준다.
+            marketSignals/sellingGuidance는 marketCase를 다시 계산하지
+            않는다 — 신호가 좋아도 위 판매 판정(READY/HOLD 등)은 절대
+            바뀌지 않는다(CPO 절대 금지 3). */}
+        <div className="mt-3 rounded-md border border-border bg-surface-secondary p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <h4 className="text-xs font-semibold text-text-primary">📊 국내 시장 신호</h4>
+            <span className="text-[10px] text-text-tertiary">
+              신호 신뢰도 {SIGNAL_CONFIDENCE_BADGE[marketSignals.confidence]}
+            </span>
+          </div>
+          <dl className="grid grid-cols-2 gap-y-1 text-xs sm:grid-cols-3">
+            {marketSignals.signals.map((signal) => (
+              <div key={signal.key} className="flex items-center justify-between gap-2 pr-2" title={signal.evidence}>
+                <dt className="text-text-tertiary">{signal.label}</dt>
+                <dd className="font-medium text-text-primary">{SIGNAL_LEVEL_BADGE[signal.level]}</dd>
+              </div>
+            ))}
+          </dl>
+          {sellingGuidance.length > 0 && (
+            <div className="mt-3 border-t border-border pt-2">
+              <p className="mb-1 text-xs font-semibold text-text-primary">💡 판매 전략 가이드</p>
+              <ul className="space-y-0.5 text-[11px] text-text-secondary">
+                {sellingGuidance.map((g, i) => (
+                  <li key={i}>• {g}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <p className="mt-2 text-[10px] text-text-tertiary">
+            무료로 확인 가능한 신호를 근거와 함께 보여줍니다 — 실제 판매량 데이터는 포함되지 않습니다.
+          </p>
+        </div>
 
         <p className="text-[10px] text-text-tertiary">
           참고용 판단입니다 — 판매가는 자동으로 변경되지 않으며, 최종 결정은 직접 내려야 합니다. 가격경쟁력은

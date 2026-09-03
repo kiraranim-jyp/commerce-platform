@@ -14,10 +14,13 @@ import {
   computeUnifiedPriceDecision,
   deriveRepresentativeSellerVerdict,
   toSellerFacingVerdict,
+  deriveMarketSignals,
+  buildSellingGuidance,
   type UnifiedPriceDecision,
   type PriceObservationRecord,
 } from "@commerce/pricing";
 import { fetchLiveExchangeRates } from "@/lib/exchange-rates";
+import { getSearchInterestRatio } from "./market-signals-cache";
 import { getDefaultSellerProfile } from "@/app/api/coupang/_lib/seller-profile";
 import { getSnapshot } from "../../snapshots/_lib/snapshot";
 import { getPriceHistory } from "./price-observations";
@@ -301,6 +304,21 @@ export async function computeMarketIntelligence(snapshotId: string) {
     ? { amountKrw: originChange.changeAmountKrw, ratePercent: originChange.changeRatePercent }
     : null;
 
+  // P-29 Sprint 7(CPO 지시, 2026-09-03) — "가격이 좋아도 팔릴지"는 CASE
+  // A/B/C/D(가격 경쟁력)와 완전히 별개의 판단이다. deriveMarketSignals()는
+  // marketCase를 전혀 참조하지 않는 순수 함수이고(packages/pricing/
+  // market-signals.ts), 여기서도 가격 판정을 다시 계산하지 않는다 — 이미
+  // 계산된 domesticSummary.sellerCount를 재사용(신규 검색 없음), 검색 관심만
+  // Naver DataLab을 브랜드당 7일 캐시로 호출한다(CEO API 호출량 보호 정책).
+  const searchInterestRatio = await getSearchInterestRatio(product.brand.value);
+  const marketSignals = deriveMarketSignals({
+    domesticSellerCount: domesticSummary.sellerCount,
+    searchInterestRatio,
+    titleText: product.title.value,
+    nowMonth: new Date().getMonth() + 1,
+  });
+  const sellingGuidance = buildSellingGuidance(recommendation?.marketCase ?? null, marketSignals.signals);
+
   return {
     snapshotId,
     product: { title: product.title.value, brand: product.brand.value, sourceUrl: product.sourceUrl },
@@ -314,6 +332,8 @@ export async function computeMarketIntelligence(snapshotId: string) {
     sellability,
     representativeVerdict,
     sellerFacingVerdict,
+    marketSignals,
+    sellingGuidance,
     priceHistory: {
       origin: { records: originHistory, change: originChange, trend7d: originTrend7d, trend30d: originTrend30d },
       domestic: { records: domesticHistory, trend7d: domesticTrend7d, trend30d: domesticTrend30d },

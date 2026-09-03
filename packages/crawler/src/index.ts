@@ -13,3 +13,4 @@ export * from "./shopify-market-probe";
 export { fetchShopifyShopMeta, stripShopifyLocalePrefix, type ShopifyShopMeta } from "./shopify-product-json";
 export { normalizeUrl } from "./utils/url.util";
 export { withTimeout, ExtractionTimeoutError } from "./with-timeout";
+export { fetchNaverSearchTrendRatio, type NaverDataLabCredentials } from "./market-signals/naver-datalab";
