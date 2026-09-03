@@ -95,3 +95,51 @@ describe("buildSellingGuidance — marketCase는 문구 선택에만 쓰이고 �
     expect(guidance.length).toBeGreaterThan(0);
   });
 });
+
+/**
+ * P-30(CPO 지시, 2026-09-03) — "확인 불가"의 사유(데이터 없음/인증 실패/일시
+ * 오류/미설정)를 근거 문구로 구분한다. level 분류는 바뀌지 않는다 — ratio가
+ * 없으면 사유와 무관하게 항상 unknown이고, 절대 "낮음(0)"으로 보이지 않는다.
+ */
+describe("deriveMarketSignals — 검색 관심 확인 불가 사유 구분(P-30)", () => {
+  const findSearch = (status: Parameters<typeof deriveMarketSignals>[0]["searchInterestStatus"]) =>
+    deriveMarketSignals({
+      domesticSellerCount: 1,
+      searchInterestRatio: null,
+      searchInterestStatus: status,
+      titleText: "무관 상품",
+      nowMonth: 3,
+    }).signals.find((s) => s.key === "searchInterest")!;
+
+  it("사유가 달라도 level은 전부 unknown이다(낮음으로 강등되지 않는다)", () => {
+    for (const status of ["NO_DATA", "AUTH_ERROR", "REQUEST_ERROR", "TRANSIENT_ERROR", "NOT_CONFIGURED"] as const) {
+      expect(findSearch(status).level).toBe("unknown");
+    }
+  });
+
+  it("사유별로 서로 다른 근거 문구를 보여준다", () => {
+    const evidences = (["NO_DATA", "AUTH_ERROR", "TRANSIENT_ERROR", "NOT_CONFIGURED"] as const).map(
+      (s) => findSearch(s).evidence,
+    );
+    expect(new Set(evidences).size).toBe(evidences.length);
+    expect(findSearch("AUTH_ERROR").evidence).toContain("인증");
+    expect(findSearch("TRANSIENT_ERROR").evidence).toContain("일시적");
+  });
+
+  it("어떤 사유에서도 절대 수치(검색량 N건)로 오인될 표현을 쓰지 않는다", () => {
+    for (const status of ["NO_DATA", "AUTH_ERROR", "REQUEST_ERROR", "TRANSIENT_ERROR", "NOT_CONFIGURED"] as const) {
+      expect(findSearch(status).evidence).not.toMatch(/검색량|건\b/);
+    }
+  });
+
+  it("status를 생략해도 기존 동작 그대로다(하위 호환)", () => {
+    const legacy = deriveMarketSignals({
+      domesticSellerCount: 1,
+      searchInterestRatio: null,
+      titleText: "무관 상품",
+      nowMonth: 3,
+    }).signals.find((s) => s.key === "searchInterest")!;
+    expect(legacy.level).toBe("unknown");
+    expect(legacy.evidence).toBe("네이버 검색 데이터를 확인하지 못했습니다");
+  });
+});

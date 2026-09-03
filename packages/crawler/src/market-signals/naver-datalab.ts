@@ -18,8 +18,47 @@ export interface NaverDataLabCredentials {
   clientSecret: string;
 }
 
+/**
+ * P-30(CPO 지시, 2026-09-03) — 기존에는 성공/실패/데이터없음이 전부 `null`
+ * 하나로 뭉개져서, 호출부가 "정상적으로 조회했는데 검색 데이터가 없음"과
+ * "인증 실패"를 구분할 수 없었다. 그 결과 실패까지 정상 데이터와 똑같이
+ * 7일 캐싱되어 일시적 오류가 일주일간 고정되는 문제가 있었다.
+ * 상태를 명시적으로 구분해 호출부가 캐시 TTL을 다르게 줄 수 있게 한다.
+ *  - OK             정상 조회(ratio 존재)
+ *  - NO_DATA        API는 정상(200)인데 해당 키워드 집계 결과가 없음
+ *  - NOT_CONFIGURED 자격증명/키워드 미설정 — 외부 호출 자체를 하지 않았다
+ *  - AUTH_ERROR     401/403 — 설정을 고치기 전에는 재시도해도 똑같다
+ *  - REQUEST_ERROR  그 외 4xx — 요청 형식 문제, 역시 자체 회복되지 않는다
+ *  - TRANSIENT_ERROR 429/5xx/네트워크/타임아웃 — 시간이 지나면 회복될 수 있다
+ */
+export type SearchTrendStatus =
+  | "OK"
+  | "NO_DATA"
+  | "NOT_CONFIGURED"
+  | "AUTH_ERROR"
+  | "REQUEST_ERROR"
+  | "TRANSIENT_ERROR";
+
+export interface SearchTrendOutcome {
+  status: SearchTrendStatus;
+  /** OK일 때만 숫자. 그 외에는 항상 null — "낮음(0)"으로 오인되면 안 된다. */
+  ratio: number | null;
+  /** 네트워크 실패처럼 상태코드 자체가 없으면 null. */
+  httpStatus: number | null;
+}
+
 interface DataLabResponse {
   results: { title: string; data: { period: string; ratio: number }[] }[];
+}
+
+/** HTTP 상태코드를 "재시도가 의미 있는가" 기준으로 분류한다. 429/5xx는
+ * 시간이 지나면 회복될 수 있으므로 TRANSIENT, 401/403은 설정을 고치기 전에는
+ * 똑같이 실패하므로 AUTH로 분리한다(호출부에서 TTL을 다르게 준다). */
+function classifyHttpStatus(status: number): SearchTrendStatus {
+  if (status === 401 || status === 403) return "AUTH_ERROR";
+  if (status === 429 || status >= 500) return "TRANSIENT_ERROR";
+  if (status >= 400) return "REQUEST_ERROR";
+  return "TRANSIENT_ERROR";
 }
 
 function formatDate(d: Date): string {
@@ -27,13 +66,17 @@ function formatDate(d: Date): string {
 }
 
 /** 최근 3개월(월 단위) 검색어트렌드 상대지수 중 가장 최근 구간 값을
- * 반환한다. 자격증명 미설정/API 오류/네트워크 실패는 전부 null — "확인 불가"로
- * 정직하게 처리하고, 낮음(0)으로 오인되지 않게 한다. */
+ * 반환한다. 실패는 어떤 경우에도 ratio를 채우지 않는다 — "확인 불가"로
+ * 정직하게 처리하고, 낮음(0)으로 오인되지 않게 한다. P-30부터는 실패 원인을
+ * status로 구분해 돌려준다(호출부가 캐시 TTL을 다르게 주기 위해). 재시도는
+ * 하지 않는다 — CEO API 호출량 보호 정책상 1회 시도만 한다. */
 export async function fetchNaverSearchTrendRatio(
   credentials: NaverDataLabCredentials,
   keyword: string,
-): Promise<number | null> {
-  if (!credentials.clientId || !credentials.clientSecret || !keyword.trim()) return null;
+): Promise<SearchTrendOutcome> {
+  if (!credentials.clientId || !credentials.clientSecret || !keyword.trim()) {
+    return { status: "NOT_CONFIGURED", ratio: null, httpStatus: null };
+  }
 
   const endDate = new Date();
   const startDate = new Date(endDate);
@@ -64,19 +107,25 @@ export async function fetchNaverSearchTrendRatio(
       // 바로 보이도록 상태코드/본문을 로그에 남긴다.
       const bodyText = await res.text().catch(() => "");
       console.error("[naver-datalab] API 오류", { status: res.status, body: bodyText.slice(0, 300) });
-      return null;
+      return { status: classifyHttpStatus(res.status), ratio: null, httpStatus: res.status };
     }
     const json = (await res.json()) as DataLabResponse;
     const series = json.results?.[0]?.data;
     if (!series || series.length === 0) {
       console.error("[naver-datalab] 결과 데이터 없음", { keyword, raw: JSON.stringify(json).slice(0, 300) });
-      return null;
+      return { status: "NO_DATA", ratio: null, httpStatus: res.status };
     }
     const latest = series[series.length - 1];
-    return typeof latest.ratio === "number" ? Math.round(latest.ratio) : null;
+    // 200이어도 ratio가 숫자가 아니면 값을 지어내지 않고 NO_DATA로 둔다.
+    if (typeof latest.ratio !== "number") {
+      return { status: "NO_DATA", ratio: null, httpStatus: res.status };
+    }
+    return { status: "OK", ratio: Math.round(latest.ratio), httpStatus: res.status };
   } catch (err) {
+    // 타임아웃(abort)/네트워크 실패 — 시간이 지나면 회복될 수 있으므로
+    // 영구 실패(AUTH/REQUEST)와 같은 TTL로 굳히지 않는다.
     console.error("[naver-datalab] fetch 예외", { message: err instanceof Error ? err.message : String(err) });
-    return null;
+    return { status: "TRANSIENT_ERROR", ratio: null, httpStatus: null };
   } finally {
     clearTimeout(timer);
   }

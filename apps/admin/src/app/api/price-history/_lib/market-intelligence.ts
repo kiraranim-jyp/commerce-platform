@@ -309,11 +309,13 @@ export async function computeMarketIntelligence(snapshotId: string) {
   // marketCase를 전혀 참조하지 않는 순수 함수이고(packages/pricing/
   // market-signals.ts), 여기서도 가격 판정을 다시 계산하지 않는다 — 이미
   // 계산된 domesticSummary.sellerCount를 재사용(신규 검색 없음), 검색 관심만
-  // Naver DataLab을 브랜드당 7일 캐시로 호출한다(CEO API 호출량 보호 정책).
-  const searchInterestRatio = await getSearchInterestRatio(product.brand.value);
+  // Naver DataLab을 브랜드당 캐시로 호출한다(CEO API 호출량 보호 정책 —
+  // P-30부터 TTL이 결과 상태별로 다르다, market-signals-cache.ts 참조).
+  const searchInterest = await getSearchInterestRatio(product.brand.value);
   const marketSignals = deriveMarketSignals({
     domesticSellerCount: domesticSummary.sellerCount,
-    searchInterestRatio,
+    searchInterestRatio: searchInterest.ratio,
+    searchInterestStatus: searchInterest.status,
     titleText: product.title.value,
     nowMonth: new Date().getMonth() + 1,
   });

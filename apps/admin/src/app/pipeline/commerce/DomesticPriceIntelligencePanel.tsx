@@ -505,6 +505,20 @@ const SIGNAL_LEVEL_BADGE: Record<MarketSignal["level"], string> = {
   unknown: "⚪ 확인 불가",
 };
 
+/** P-30(CPO 지시, 2026-09-03) — 검색 관심만 관심도 추세임이 드러나는 배지를
+ * 쓴다("높음/낮음"은 국내 판매처 수·시즌 적합성과 같은 척도로 오해된다).
+ * 여전히 상대적 관심 수준일 뿐이므로 절대 수치(검색량 N건)는 쓰지 않는다. */
+const SEARCH_INTEREST_LEVEL_BADGE: Record<MarketSignal["level"], string> = {
+  high: "📈 관심 상승",
+  medium: "➡️ 보통",
+  low: "📉 낮음",
+  unknown: "⚪ 확인 불가",
+};
+
+function signalBadge(signal: MarketSignal): string {
+  return signal.key === "searchInterest" ? SEARCH_INTEREST_LEVEL_BADGE[signal.level] : SIGNAL_LEVEL_BADGE[signal.level];
+}
+
 const SIGNAL_CONFIDENCE_BADGE: Record<MarketSignalsInfo["confidence"], string> = {
   high: "🟢 높음",
   medium: "🟡 보통",
@@ -1476,7 +1490,7 @@ export function DomesticPriceIntelligencePanel({
             {marketSignals.signals.map((signal) => (
               <div key={signal.key} className="flex items-center justify-between gap-2 pr-2" title={signal.evidence}>
                 <dt className="text-text-tertiary">{signal.label}</dt>
-                <dd className="font-medium text-text-primary">{SIGNAL_LEVEL_BADGE[signal.level]}</dd>
+                <dd className="font-medium text-text-primary">{signalBadge(signal)}</dd>
               </div>
             ))}
           </dl>

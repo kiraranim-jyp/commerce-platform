@@ -62,6 +62,27 @@ function searchInterestLevel(ratio: number | null): MarketSignalLevel {
   return "low";
 }
 
+/** P-30 — 검색 관심이 왜 "확인 불가"인지 구분하기 위한 상태값. 순수 함수를
+ * 유지하기 위해 packages/crawler를 import하지 않고 문자열 유니온만 받는다
+ * (값은 crawler의 SearchTrendStatus와 동일하게 맞춘다). */
+export type SearchInterestStatus =
+  | "OK"
+  | "NO_DATA"
+  | "NOT_CONFIGURED"
+  | "AUTH_ERROR"
+  | "REQUEST_ERROR"
+  | "TRANSIENT_ERROR";
+
+/** 확인 불가 사유별 문구 — 어떤 경우에도 "검색량"이라는 절대 수치 표현을
+ * 쓰지 않는다(CPO 절대 금지 1). */
+const SEARCH_INTEREST_UNKNOWN_EVIDENCE: Record<Exclude<SearchInterestStatus, "OK">, string> = {
+  NO_DATA: "네이버에서 집계된 검색 관심 데이터가 없는 키워드입니다",
+  NOT_CONFIGURED: "네이버 검색 데이터 연동이 설정되지 않았습니다",
+  AUTH_ERROR: "네이버 검색 API 인증에 실패했습니다(설정 확인 필요)",
+  REQUEST_ERROR: "네이버 검색 API 요청이 거부되었습니다(설정 확인 필요)",
+  TRANSIENT_ERROR: "네이버 검색 데이터를 일시적으로 확인하지 못했습니다",
+};
+
 export interface DeriveMarketSignalsInput {
   /** market-intelligence.ts가 이미 계산한 domesticMarketSplit.resolved.sellerCount
    * 를 그대로 받는다 — 새 검색을 하지 않는다. */
@@ -69,6 +90,10 @@ export interface DeriveMarketSignalsInput {
   /** Naver DataLab 검색어트렌드 상대지수(0~100) — null이면 미설정/조회실패,
    * "낮음"이 아니라 "확인 불가"로 정직하게 표시한다. */
   searchInterestRatio: number | null;
+  /** P-30 — ratio가 null일 때 그 사유를 근거 문구로 구분한다. 생략하면 기존과
+   * 동일하게 뭉뚱그린 문구를 쓴다(하위 호환). level 분류에는 영향을 주지
+   * 않는다 — ratio가 없으면 사유와 무관하게 항상 "확인 불가"다. */
+  searchInterestStatus?: SearchInterestStatus;
   titleText: string;
   nowMonth: number;
 }
@@ -94,7 +119,9 @@ export function deriveMarketSignals(input: DeriveMarketSignalsInput): MarketSign
       level: searchLevel,
       evidence:
         input.searchInterestRatio == null
-          ? "네이버 검색 데이터를 확인하지 못했습니다"
+          ? input.searchInterestStatus && input.searchInterestStatus !== "OK"
+            ? SEARCH_INTEREST_UNKNOWN_EVIDENCE[input.searchInterestStatus]
+            : "네이버 검색 데이터를 확인하지 못했습니다"
           : `네이버 검색 상대지수 ${input.searchInterestRatio}(최근 구간 내 상대값)`,
     },
     { key: "seasonFit", label: "시즌 적합성", level: seasonFit.level, evidence: seasonFit.evidence },
