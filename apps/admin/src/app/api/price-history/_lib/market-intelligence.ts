@@ -16,6 +16,7 @@ import {
   toSellerFacingVerdict,
   deriveMarketSignals,
   buildSellingGuidance,
+  buildSellerDecision,
   type UnifiedPriceDecision,
   type PriceObservationRecord,
 } from "@commerce/pricing";
@@ -314,12 +315,26 @@ export async function computeMarketIntelligence(snapshotId: string) {
   const searchInterest = await getSearchInterestRatio(product.brand.value);
   const marketSignals = deriveMarketSignals({
     domesticSellerCount: domesticSummary.sellerCount,
+    // P-31 — 국내 가격 확인 자체를 못 한 상태(tier NONE + 판매처 0)에서는
+    // "판매처 0곳(낮음)"이 아니라 "확인 불가"다. 데이터 부족을 시장 평가로
+    // 둔갑시키지 않는다.
+    domesticSellerCountKnown: domesticSummary.sellerCount > 0 || domesticSummary.tier !== "NONE",
     searchInterestRatio: searchInterest.ratio,
     searchInterestStatus: searchInterest.status,
     titleText: product.title.value,
     nowMonth: new Date().getMonth() + 1,
   });
   const sellingGuidance = buildSellingGuidance(recommendation?.marketCase ?? null, marketSignals.signals);
+
+  // P-31 — PRICE REALITY → CASE → MARKET SIGNAL → SELLER GUIDANCE 순서.
+  // sellerFacingVerdict(가격/매칭 레이어)가 최종 판정의 단일 소스이고,
+  // buildSellerDecision()은 그것을 시장 신호로 "강등만" 할 수 있다.
+  const sellerDecision = buildSellerDecision({
+    priceVerdict: sellerFacingVerdict.code,
+    marketCase: recommendation?.marketCase ?? null,
+    estimatedMarginPercent: recommendation?.estimatedMarginPercent ?? null,
+    signals: marketSignals.signals,
+  });
 
   return {
     snapshotId,
@@ -336,6 +351,7 @@ export async function computeMarketIntelligence(snapshotId: string) {
     sellerFacingVerdict,
     marketSignals,
     sellingGuidance,
+    sellerDecision,
     priceHistory: {
       origin: { records: originHistory, change: originChange, trend7d: originTrend7d, trend30d: originTrend30d },
       domestic: { records: domesticHistory, trend7d: domesticTrend7d, trend30d: domesticTrend30d },

@@ -49,7 +49,12 @@ export function computeSeasonFit(titleText: string, nowMonth: number): { level: 
   return { level: "medium", evidence: "특정 시즌에 한정되지 않는 상품입니다" };
 }
 
-function domesticPresenceLevel(sellerCount: number): MarketSignalLevel {
+/** P-31 — "0곳"은 두 가지 뜻이 될 수 있다: ① 실제로 찾아봤는데 국내 판매처가
+ * 없다(= 경쟁 없음, 신호로서 의미 있음) ② 애초에 국내 가격 확인을 못 했다
+ * (= 확인 불가). 후자를 "낮음"으로 표시하면 데이터 부족이 시장 평가로
+ * 둔갑한다 — CPO 지시("데이터 없음 ≠ 시장 약함")에 따라 구분한다. */
+function domesticPresenceLevel(sellerCount: number, known: boolean): MarketSignalLevel {
+  if (!known) return "unknown";
   if (sellerCount >= 3) return "high";
   if (sellerCount >= 1) return "medium";
   return "low";
@@ -94,13 +99,18 @@ export interface DeriveMarketSignalsInput {
    * 동일하게 뭉뚱그린 문구를 쓴다(하위 호환). level 분류에는 영향을 주지
    * 않는다 — ratio가 없으면 사유와 무관하게 항상 "확인 불가"다. */
   searchInterestStatus?: SearchInterestStatus;
+  /** P-31 — 국내 판매처 수를 실제로 확인했는지. false면 sellerCount 0을
+   * "낮음"이 아니라 "확인 불가"로 표시한다. 생략하면 기존과 동일하게
+   * 확인된 것으로 본다(하위 호환). */
+  domesticSellerCountKnown?: boolean;
   titleText: string;
   nowMonth: number;
 }
 
 export function deriveMarketSignals(input: DeriveMarketSignalsInput): MarketSignalsResult {
   const seasonFit = computeSeasonFit(input.titleText, input.nowMonth);
-  const domesticLevel = domesticPresenceLevel(input.domesticSellerCount);
+  const domesticKnown = input.domesticSellerCountKnown ?? true;
+  const domesticLevel = domesticPresenceLevel(input.domesticSellerCount, domesticKnown);
   const searchLevel = searchInterestLevel(input.searchInterestRatio);
 
   const signals: MarketSignal[] = [
@@ -108,8 +118,9 @@ export function deriveMarketSignals(input: DeriveMarketSignalsInput): MarketSign
       key: "domesticPresence",
       label: "국내 판매처",
       level: domesticLevel,
-      evidence:
-        input.domesticSellerCount > 0
+      evidence: !domesticKnown
+        ? "국내 판매처를 아직 확인하지 못했습니다"
+        : input.domesticSellerCount > 0
           ? `국내 편집샵 ${input.domesticSellerCount}곳에서 확인됨`
           : "등록된 국내 편집샵에서 확인되지 않음",
     },

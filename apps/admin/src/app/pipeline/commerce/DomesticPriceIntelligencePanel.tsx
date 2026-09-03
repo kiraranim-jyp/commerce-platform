@@ -484,6 +484,27 @@ interface PriceHistoryResponse {
    * 다시 계산하거나 덮어쓰지 않음). */
   marketSignals: MarketSignalsInfo;
   sellingGuidance: string[];
+  /** P-31 — 종합 시장 상태 + 구조화된 판단 근거. finalVerdict는
+   * sellerFacingVerdict를 시장 신호로 강등만 한 값이다(승격 없음). */
+  sellerDecision: SellerDecisionInfo;
+}
+
+interface DecisionFactor {
+  key: "priceProfitability" | "domesticPrice" | "marketInterest" | "sellerCompetition" | "seasonFit";
+  label: string;
+  level: "high" | "medium" | "low" | "unknown";
+  detail: string;
+}
+
+interface SellerDecisionInfo {
+  finalVerdict: "RECOMMENDED" | "CONDITIONAL" | "NOT_RECOMMENDED";
+  priceVerdict: "RECOMMENDED" | "CONDITIONAL" | "NOT_RECOMMENDED";
+  downgradedByMarket: boolean;
+  outlook: "GOOD" | "WATCH" | "WEAK" | "UNKNOWN";
+  outlookSummary: string;
+  knownSignalCount: number;
+  factors: DecisionFactor[];
+  reasons: string[];
 }
 
 interface MarketSignal {
@@ -518,6 +539,33 @@ const SEARCH_INTEREST_LEVEL_BADGE: Record<MarketSignal["level"], string> = {
 function signalBadge(signal: MarketSignal): string {
   return signal.key === "searchInterest" ? SEARCH_INTEREST_LEVEL_BADGE[signal.level] : SIGNAL_LEVEL_BADGE[signal.level];
 }
+
+/** P-31 — 종합 시장 상태. 가격 판정(CASE A/B/C/D)과 다른 어휘를 써서 두
+ * 레이어가 화면에서 섞이지 않게 한다. */
+const MARKET_OUTLOOK_BADGE: Record<SellerDecisionInfo["outlook"], string> = {
+  GOOD: "🟢 양호",
+  WATCH: "🟡 확인 필요",
+  WEAK: "🔴 불리",
+  UNKNOWN: "⚪ 확인 불가",
+};
+
+/** 판단 근거 표에서 쓰는 아이콘 — "확인 불가"를 나쁨(🔴)과 절대 같은 기호로
+ * 쓰지 않는다(CPO UNKNOWN 정책: 데이터 없음 ≠ 시장 약함). */
+/** 최종 판정 3단계 문구 — 서버의 SELLER_FACING_COPY와 동일하게 유지한다
+ * (강등된 경우 서버가 보낸 sellerFacingVerdict.title과 달라지므로 코드에서
+ * 다시 고른다). */
+const FINAL_VERDICT_COPY: Record<SellerDecisionInfo["finalVerdict"], { icon: string; title: string }> = {
+  RECOMMENDED: { icon: "🟢", title: "판매 추천" },
+  CONDITIONAL: { icon: "🟡", title: "조건부 판매" },
+  NOT_RECOMMENDED: { icon: "🔴", title: "판매 비추천" },
+};
+
+const FACTOR_LEVEL_ICON: Record<DecisionFactor["level"], string> = {
+  high: "🟢",
+  medium: "🟡",
+  low: "🔴",
+  unknown: "⚪",
+};
 
 const SIGNAL_CONFIDENCE_BADGE: Record<MarketSignalsInfo["confidence"], string> = {
   high: "🟢 높음",
@@ -782,10 +830,13 @@ export function DomesticPriceIntelligencePanel({
     sellerAction,
     unifiedDecision,
     representativeVerdict,
-    sellerFacingVerdict,
+    // P-31 — sellerFacingVerdict(가격/매칭 레이어 판정)는 이제 화면에서 직접
+    // 쓰지 않는다. 서버가 그 값을 sellerDecision.priceVerdict로 넘겨주고,
+    // 헤드라인은 sellerDecision.finalVerdict 하나만 본다(판정 단일 소스).
     domesticMarketSplit,
     marketSignals,
     sellingGuidance,
+    sellerDecision,
   } = data;
   const domesticShopHistory = data.priceHistory?.domesticShop ?? null;
   const trend7d = domesticShopHistory?.trend7d ?? null;
@@ -869,14 +920,24 @@ export function DomesticPriceIntelligencePanel({
             압축해 낸 값)를 그대로 헤드라인으로 쓰고, "판단 근거"는 그
             결론과 같은 방향의 사실만 나열한다 — 새 판정을 만들지 않는다. */}
         {hasAnyData && (
-          <div className={`rounded-md border p-2.5 ${SELLER_FACING_VERDICT_STYLE[sellerFacingVerdict.code]}`}>
+          <div className={`rounded-md border p-2.5 ${SELLER_FACING_VERDICT_STYLE[sellerDecision.finalVerdict]}`}>
             {/* P-19-B Sprint 8(CPO 지시, 2026-09-02) — 헤드라인 아이콘/타이틀/박스
                 색은 3단계(sellerFacingVerdict)만 쓴다. 내부 5단계 코드/용어는
                 화면 어디에도 노출하지 않는다 — 아래 설명 문장(description)만
-                기존 representativeVerdict 값을 그대로 재사용한다. */}
+                기존 representativeVerdict 값을 그대로 재사용한다.
+                P-31 — 헤드라인은 sellerDecision.finalVerdict 하나만 본다.
+                finalVerdict는 sellerFacingVerdict를 시장 신호로 강등만 한
+                값이므로(승격 없음) 두 값이 서로 다른 결론을 낼 수 없다 —
+                화면에 상반된 판정이 둘 뜨는 것을 구조로 막는다. */}
             <p className="font-medium">
-              {sellerFacingVerdict.icon} {sellerFacingVerdict.title}
+              {FINAL_VERDICT_COPY[sellerDecision.finalVerdict].icon} {FINAL_VERDICT_COPY[sellerDecision.finalVerdict].title}
             </p>
+            {sellerDecision.downgradedByMarket && (
+              <p className="mt-0.5 text-[10px] text-text-tertiary">
+                가격 경쟁력은 {FINAL_VERDICT_COPY[sellerDecision.priceVerdict].title} 수준이지만, 종합 시장 신호가 불리해
+                한 단계 낮췄습니다
+              </p>
+            )}
 
             {/* P-12D(대표님/CPO 지시, 2026-08-31) — "숫자 → 결론 → 이유 → 상세정보"
                 순서로 확정. 얼마에 사서/얼마가 들고/얼마에 팔지/얼마 남는지 4개
@@ -1486,6 +1547,21 @@ export function DomesticPriceIntelligencePanel({
               신호 신뢰도 {SIGNAL_CONFIDENCE_BADGE[marketSignals.confidence]}
             </span>
           </div>
+
+          {/* P-31 — 개별 신호를 종합한 시장 상태. 가격 경쟁력(CASE A/B/C/D)과
+              별개 레이어임이 드러나도록 "시장 상태"라고만 부르고, 판매
+              추천/비추천 같은 판정 어휘를 쓰지 않는다. */}
+          <div className="mb-2 flex items-center justify-between rounded border border-border bg-background px-2 py-1.5">
+            <span className="text-[11px] text-text-secondary">종합 시장 상태</span>
+            <span className="text-xs font-semibold text-text-primary">
+              {MARKET_OUTLOOK_BADGE[sellerDecision.outlook]}
+            </span>
+          </div>
+          <p className="mb-2 text-[10px] text-text-tertiary">
+            {sellerDecision.outlookSummary}
+            {sellerDecision.outlook === "UNKNOWN" &&
+              ` (확인된 신호 ${sellerDecision.knownSignalCount}개 — 데이터가 부족한 것이지 시장이 나쁘다는 뜻이 아닙니다)`}
+          </p>
           <dl className="grid grid-cols-2 gap-y-1 text-xs sm:grid-cols-3">
             {marketSignals.signals.map((signal) => (
               <div key={signal.key} className="flex items-center justify-between gap-2 pr-2" title={signal.evidence}>
@@ -1494,6 +1570,24 @@ export function DomesticPriceIntelligencePanel({
               </div>
             ))}
           </dl>
+          {/* P-31 — "왜 이런 판단인가"를 문장 나열이 아니라 구조화된 표로
+              보여준다. 순서는 CPO 지정 우선순위(가격 수익성 → 동일상품 국내
+              가격 → 시장 관심 → 경쟁 판매처 → 시즌성)로 서버에서 이미 고정돼
+              오므로 여기서 다시 정렬하지 않는다. */}
+          <div className="mt-3 border-t border-border pt-2">
+            <p className="mb-1 text-xs font-semibold text-text-primary">🧾 왜 이런 판단인가</p>
+            <dl className="space-y-0.5 text-[11px]">
+              {sellerDecision.factors.map((factor) => (
+                <div key={factor.key} className="flex items-start justify-between gap-2">
+                  <dt className="shrink-0 text-text-tertiary">
+                    {FACTOR_LEVEL_ICON[factor.level]} {factor.label}
+                  </dt>
+                  <dd className="text-right text-text-secondary">{factor.detail}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+
           {sellingGuidance.length > 0 && (
             <div className="mt-3 border-t border-border pt-2">
               <p className="mb-1 text-xs font-semibold text-text-primary">💡 판매 전략 가이드</p>
