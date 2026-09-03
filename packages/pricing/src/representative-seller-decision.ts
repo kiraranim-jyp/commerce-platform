@@ -204,14 +204,25 @@ function deriveBaseVerdict(input: RepresentativeVerdictInput): RepresentativeVer
   // 국내 평균가 잠정 기준 판단을 그대로 옮긴다.
   if (input.sellability.level === "GREEN") {
     const reasons = [domesticReason(input)];
-    if (input.sellability.estimatedMarginPercent != null) reasons.push(`예상 마진 ${input.sellability.estimatedMarginPercent}%`);
+    // P-29(CPO 지시, 2026-09-03) — "예상 마진" 표시는 recommendation.estimatedMarginPercent
+    // 하나만 쓴다. sellability.estimatedMarginPercent(국내 평균가 기준, 국제배송비
+    // 미포함)를 그대로 노출하면 같은 화면의 Market Intelligence 카드(recommendation
+    // 기준, 배송비 포함)와 서로 다른 "예상 마진" 숫자가 동시에 보이는 실측 버그가
+    // 있었다(Curious Turnip: 30.6% vs 46.6%). recommendation이 없거나 marketCase가
+    // C/D면 computePriceRecommendation()이 이미 estimatedMarginPercent:null을
+    // 돌려주므로 여기서 마진 숫자를 별도로 만들어내지 않는다(자동으로 안전).
+    if (input.recommendation?.estimatedMarginPercent != null) reasons.push(`예상 마진 ${input.recommendation.estimatedMarginPercent}%`);
     const code: RepresentativeVerdictCode = input.domesticBasis === "EXACT" ? "READY" : "REVIEW_MATCH";
     const description = code === "REVIEW_MATCH" ? reviewMatchDescription(input.domesticBasis) : VERDICT_COPY.READY.description;
     return { ...VERDICT_COPY[code], description, code, reasons };
   }
   if (input.sellability.level === "RED") {
     const reasons = [domesticReason(input)];
-    if (input.sellability.estimatedMarginPercent != null) reasons.push(`예상 마진 ${input.sellability.estimatedMarginPercent}%`);
+    // P-29 — 위 GREEN 분기와 동일 원칙(recommendation 단일 소스, sellability의
+    // 숫자를 화면에 노출하지 않음). RED 여부 자체(sellability.level)와 code
+    // 분기(HOLD/REVIEW_PRICE) 판정은 기존 그대로 sellability를 쓴다 — 이번
+    // 작업은 "표시되는 숫자"만 단일화하는 것이지 판정 로직 자체를 바꾸지 않는다.
+    if (input.recommendation?.estimatedMarginPercent != null) reasons.push(`예상 마진 ${input.recommendation.estimatedMarginPercent}%`);
     // sellability.ts가 이미 계산해 돌려준 estimatedMarginPercent의 부호만 본다
     // (새 마진 계산 없음) — 음수(원가가 판매가보다 높음)는 가격을 아무리
     // 조정해도 구조적으로 회복 불가능하므로 보류, 0 이상~기준(10%) 미만은

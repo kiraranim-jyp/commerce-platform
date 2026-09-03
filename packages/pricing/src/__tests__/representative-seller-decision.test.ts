@@ -24,12 +24,15 @@ describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
   };
 
   it("UX-01) 국내 검증 가격 존재 + 정상 수익성(sellability GREEN) → 🟢 READY, 이유 2개 이상", () => {
+    // P-29(CPO 지시, 2026-09-03) — reasons에 나오는 "예상 마진" 숫자는 이제
+    // sellability가 아니라 recommendation.estimatedMarginPercent 단일 소스다.
     const result = deriveRepresentativeSellerVerdict({
       ...base,
       sellability: { level: "GREEN", estimatedMarginPercent: 10.1, reason: "..." },
       domesticMatched: true,
       domesticSellerCount: 1,
       domesticBasis: "EXACT",
+      recommendation: { recommendedPrice: 100000, estimatedMarginPercent: 10.1 },
     });
     expect(result.code).toBe("READY");
     expect(result.icon).toBe("🟢");
@@ -514,5 +517,61 @@ describe("P-26: marketCase(A/B/C/D)를 그대로 신뢰해서 대표 판단을 �
     });
     expect(result.code).toBe("REVIEW_PRICE");
     expect(result.icon).toBe("🟡");
+  });
+});
+
+/**
+ * P-29(CPO 지시, 2026-09-03) — 실측(Curious Turnip): 같은 화면에 "예상 마진"이
+ * recommendation 기준 30.6%와 sellability 기준 46.6% 두 개로 동시에 노출되는
+ * 버그가 있었다(원인: sellability.estimatedMarginPercent는 국제배송비 미포함
+ * 원가 + 국내 평균가 기준이라 recommendation의 착지원가+추천가 기준과 다른
+ * 값을 낸다). 이제 reasons에 나오는 "예상 마진" 숫자는 recommendation 단일
+ * 소스만 쓴다 — sellability의 숫자는 화면에 노출되지 않는다(계산 함수 자체는
+ * 삭제하지 않음, level 기반 분기 로직만 그대로 재사용).
+ */
+describe("P-29: 마진 표시는 recommendation.estimatedMarginPercent 단일 소스", () => {
+  it("실측 재현(Curious Turnip) — sellability 46.6%가 있어도 reasons엔 recommendation의 30.6%만 나온다", () => {
+    const result = deriveRepresentativeSellerVerdict({
+      unifiedDecision: null,
+      sellability: { level: "GREEN", estimatedMarginPercent: 46.6, reason: "..." },
+      domesticMatched: true,
+      domesticSellerCount: 1,
+      domesticBasis: "EXACT",
+      marketCase: "A",
+      recommendation: { recommendedPrice: 77616, estimatedMarginPercent: 30.6 },
+      domesticLowestPriceKrw: 78400,
+      landedCostKrw: 53900,
+    });
+    expect(result.code).toBe("READY");
+    expect(result.reasons.some((r) => r.includes("30.6"))).toBe(true);
+    expect(result.reasons.some((r) => r.includes("46.6"))).toBe(false);
+  });
+
+  it("marketCase C — sellability가 GREEN이어도(다른 기준) 확정 마진 숫자를 만들어내지 않는다(recommendation.estimatedMarginPercent가 null)", () => {
+    const result = deriveRepresentativeSellerVerdict({
+      unifiedDecision: null,
+      sellability: { level: "GREEN", estimatedMarginPercent: 12, reason: "..." },
+      domesticMatched: true,
+      domesticSellerCount: 1,
+      domesticBasis: "EXACT",
+      marketCase: "C",
+      recommendation: { recommendedPrice: null, estimatedMarginPercent: null },
+      domesticLowestPriceKrw: 200000,
+      landedCostKrw: 242400,
+    });
+    expect(result.code).toBe("HOLD");
+    expect(result.reasons.some((r) => /예상 마진 \d/.test(r))).toBe(false);
+  });
+
+  it("recommendation이 아예 없으면(구 호출부/계산 불가) 확정 마진 숫자를 만들어내지 않는다", () => {
+    const result = deriveRepresentativeSellerVerdict({
+      unifiedDecision: null,
+      sellability: { level: "GREEN", estimatedMarginPercent: 20, reason: "..." },
+      domesticMatched: true,
+      domesticSellerCount: 1,
+      domesticBasis: "EXACT",
+    });
+    expect(result.code).toBe("READY");
+    expect(result.reasons.some((r) => /예상 마진 \d/.test(r))).toBe(false);
   });
 });
