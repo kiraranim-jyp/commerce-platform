@@ -1,8 +1,5 @@
 {
-  "framework": "nextjs",
-  "buildCommand": "pnpm --filter @commerce/admin build",
-  "installCommand": "pnpm install",
-  "outputDirectory": ".next",
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "src/app/api/pipeline/route.ts": {
       "maxDuration": 300
