@@ -629,10 +629,15 @@ export type { PriceLevel };
 export function DomesticPriceIntelligencePanel({
   snapshotId,
   onPriceLevelChange,
+  onSellerVerdictChange,
   onRequestPriceReview,
   autoChecking,
 }: {
   snapshotId: string;
+  /** P-32 — "팔 만한가?"의 답(판매 판정)을 상위로 보고한다. CommerceWorkspace가
+   * 이 값과 등록 준비 상태를 한 화면에 나란히 놓기 위해 쓴다. 두 값을 합쳐
+   * 새 판정을 만들지는 않는다(registration-readiness-outcome.ts 참고). */
+  onSellerVerdictChange?: (verdict: SellerDecisionInfo["finalVerdict"] | null) => void;
   /** N-4.08 STEP6-4와 같은 패턴(onReadinessChange) — 이 패널이 계산한 값을
    * CommerceWorkspace가 탭 배지/상태 요약에 캐싱해서 쓸 수 있게 보고한다. */
   onPriceLevelChange?: (level: PriceLevel) => void;
@@ -738,6 +743,10 @@ export function DomesticPriceIntelligencePanel({
   useEffect(() => {
     if (loading) return;
     onPriceLevelChange?.(priceLevelFromVerdict(data?.decision?.verdict ?? null));
+    // P-32 — 판매 판정을 CommerceWorkspace로 올려보낸다(onPriceLevelChange와
+    // 같은 패턴). 여기서 새 판정을 만들지 않고 서버가 이미 낸
+    // sellerDecision.finalVerdict를 그대로 보고만 한다.
+    onSellerVerdictChange?.(data?.sellerDecision?.finalVerdict ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, data]);
 

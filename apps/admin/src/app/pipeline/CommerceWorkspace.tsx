@@ -53,6 +53,20 @@ import { MissingFieldsBulkPanel } from "./commerce/MissingFieldsBulkPanel";
 import type { NaverResolveResponse } from "./commerce/NaverPayloadPreview";
 import { PlatformPreview } from "./commerce/PlatformPreview";
 import { readinessStateToLevel } from "./commerce/readiness-state";
+import {
+  buildSellAndRegisterView,
+  computeRegistrationReadiness,
+  REGISTRATION_OUTCOME_COPY,
+} from "./commerce/registration-readiness-outcome";
+import type { SellerFacingVerdictCode } from "@commerce/pricing";
+
+/** P-32 — 판매 판정 3단계 문구. 서버(representative-seller-decision.ts)와
+ * 같은 어휘를 쓴다 — 새 판정 체계를 만들지 않는다. */
+const SELL_VERDICT_COPY: Record<SellerFacingVerdictCode, string> = {
+  RECOMMENDED: "🟢 판매 추천",
+  CONDITIONAL: "🟡 조건부 판매",
+  NOT_RECOMMENDED: "🔴 판매 비추천",
+};
 import type { PriorityItem, ReadinessLevel, RegistrationReadinessState } from "./commerce/readiness-state";
 import { RegistrationHistoryPanel } from "./commerce/RegistrationHistoryPanel";
 import { StageStepper } from "./commerce/StageStepper";
@@ -224,6 +238,30 @@ export function CommerceWorkspace({
   function handlePriceLevelChange(level: PriceLevel) {
     setPriceLevel((prev) => (prev === level ? prev : level));
   }
+
+  /** P-32(CPO 지시, 2026-09-03) — "팔 만한가?"의 답. priceLevel과 같은
+   * sticky-visited 패턴으로 DomesticPriceIntelligencePanel이 보고한다.
+   * 등록 준비(platformReadiness)와 나란히 보여주기 위한 값일 뿐, 두 값을
+   * 곱해 새 판정을 만들지 않는다. */
+  const [sellVerdict, setSellVerdict] = useState<SellerFacingVerdictCode | null>(null);
+  function handleSellerVerdictChange(verdict: SellerFacingVerdictCode | null) {
+    setSellVerdict((prev) => (prev === verdict ? prev : verdict));
+  }
+
+  /** P-32 — 이미 계산된 두 축(판매 판정 / 플랫폼별 등록 준비)을 한 곳에
+   * 모으기만 한다. 집계 규칙은 registration-readiness-outcome.ts에 있고
+   * 여기서는 재계산하지 않는다. */
+  const sellAndRegister = buildSellAndRegisterView(
+    sellVerdict,
+    computeRegistrationReadiness(
+      PLATFORM_ORDER.map((platformId) => ({
+        platformId,
+        label: PLATFORM_ADAPTERS[platformId].label,
+        state: platformReadiness[platformId]?.state ?? null,
+        priorityItems: platformReadiness[platformId]?.priorityItems ?? [],
+      })),
+    ),
+  );
 
   /** N-4.18-H-2 STEP H-2-5(대표님 지시: "[가격/마진 확인]" 버튼) —
    * DomesticPriceIntelligencePanel(상품정보 탭)과 PriceEditor(커머스 플랫폼
@@ -1638,6 +1676,55 @@ export function CommerceWorkspace({
         </span>
       </div>
 
+      {/* P-32(CPO 지시, 2026-09-03) — "이 상품은 팔 만한가?"와 "그렇다면 지금
+          등록할 수 있는가?"는 다른 질문이다. 지금까지 두 답이 서로 다른
+          화면(상품정보 탭의 판매 판정 / 플랫폼 탭의 등록 준비)에 흩어져 있어
+          한 번에 볼 수 없었다. 두 축을 나란히 놓기만 한다 — 곱해서 새 종합
+          판정을 만들지 않는다(판매 추천이어도 등록이 막힐 수 있고, 등록
+          가능해도 팔지 말아야 할 수 있다). */}
+      {(sellVerdict != null || sellAndRegister.registration.knownPlatformCount > 0) && (
+        <div className="rounded-lg border border-border bg-surface p-3 text-sm">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-text-tertiary">판매 판단</span>
+              <span className="font-medium text-text-primary">
+                {sellVerdict ? SELL_VERDICT_COPY[sellVerdict] : "⚪ 확인 전"}
+              </span>
+            </div>
+            <span className="text-text-tertiary">→</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-text-tertiary">등록 준비</span>
+              <span className="font-medium text-text-primary">
+                {REGISTRATION_OUTCOME_COPY[sellAndRegister.registration.overall].icon}{" "}
+                {REGISTRATION_OUTCOME_COPY[sellAndRegister.registration.overall].title}
+              </span>
+            </div>
+          </div>
+          <p className="mt-1.5 text-xs text-text-secondary">{sellAndRegister.nextAction}</p>
+          {/* 보완 항목은 "무엇이 / 왜 / 무엇을"로 나눠 보여준다 — 단순히
+              "등록 불가"라고 끝내지 않는다. 문구는 readiness가 이미 만든
+              라벨/힌트를 그대로 쓴다(새로 지어내지 않는다). */}
+          {sellAndRegister.registration.platforms
+            .filter((p) => p.actionItems.length > 0)
+            .map((p) => (
+              <div key={p.platformId} className="mt-2 border-t border-border pt-2">
+                <p className="text-xs font-medium text-text-primary">
+                  {REGISTRATION_OUTCOME_COPY[p.outcome].icon} {p.label}
+                </p>
+                <ul className="mt-1 space-y-1">
+                  {p.actionItems.map((item) => (
+                    <li key={item.key} className="text-xs">
+                      <span className="font-medium text-text-primary">{item.what}</span>
+                      {item.why && <span className="text-text-tertiary"> — {item.why}</span>}
+                      <span className="block text-[11px] text-text-secondary">→ {item.action}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+        </div>
+      )}
+
       {/* N-4.08 STEP6-4(CPO 지시: "부족한 항목을 한눈에") — 방문한 적 있는 탭
           중 아직 등록 가능(READY)이 아닌 것만 모아 보여준다. 새 계산이 아니라
           PlatformPreview가 이미 만들어둔 priorityItems(RegistrationStatusBanner와
@@ -1755,6 +1842,7 @@ export function CommerceWorkspace({
             <DomesticPriceIntelligencePanel
               snapshotId={snapshotId}
               onPriceLevelChange={handlePriceLevelChange}
+              onSellerVerdictChange={handleSellerVerdictChange}
               onRequestPriceReview={handleRequestPriceReview}
               autoChecking={priceCheckPriming}
             />
