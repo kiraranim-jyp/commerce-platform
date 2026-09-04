@@ -60,9 +60,27 @@ export async function getSearchInterestRatio(brand: string): Promise<SearchInter
     }
   }
 
-  const clientId = process.env.NAVER_DATALAB_CLIENT_ID;
-  const clientSecret = process.env.NAVER_DATALAB_CLIENT_SECRET;
+  // Beta-P2(2026-09-04) — 실측에서 DataLab이 HTTP 401을 돌려줬다
+  // (errorCode 024 "NID AUTH Result Invalid"). 헤더 이름/요청 형식은 Naver
+  // OpenAPI 규격과 일치하므로, 남는 흔한 원인은 대시보드에서 값을 붙여넣을 때
+  // 섞여 들어간 앞뒤 공백/개행이다. 값이 깨끗하면 아무 것도 바뀌지 않고,
+  // 공백이 섞여 있었다면 그것만으로 인증이 통과한다 — 위험 없는 방어 조치다.
+  const rawId = process.env.NAVER_DATALAB_CLIENT_ID;
+  const rawSecret = process.env.NAVER_DATALAB_CLIENT_SECRET;
+  const clientId = rawId?.trim();
+  const clientSecret = rawSecret?.trim();
   if (!clientId || !clientSecret) return { ratio: null, status: "NOT_CONFIGURED" };
+
+  // 값은 절대 남기지 않는다 — trim으로 길이가 변했는지(=공백 혼입 여부)만
+  // 기록해서 다음 자연 호출 때 401 원인을 값 노출 없이 확정할 수 있게 한다.
+  const idTrimmed = rawId!.length !== clientId.length;
+  const secretTrimmed = rawSecret!.length !== clientSecret.length;
+  if (idTrimmed || secretTrimmed) {
+    console.warn("[market-signals] DataLab 자격증명에 공백/개행이 포함돼 있었다(trim 적용)", {
+      idTrimmed,
+      secretTrimmed,
+    });
+  }
 
   const outcome = await fetchNaverSearchTrendRatio({ clientId, clientSecret }, brand);
   // CEO 호출량 보호 정책(2026-09-03) — 실제 외부 API 호출마다 로그를 남겨
