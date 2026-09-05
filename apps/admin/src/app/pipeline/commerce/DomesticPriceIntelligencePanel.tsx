@@ -50,6 +50,13 @@ function relativeTimeFromNow(iso: string, now: Date = new Date()): string {
 
 /** N-4.11 STEP1(대표님 지시: "오늘 확인/1~6일/7~30일/30일+를 명확하게") — packages/pricing의
  * priceAgeTier(계산)를 화면 문구로만 옮긴다(새 판정 없음). */
+/**
+ * UX-2(CEO 지시, 2026-09-05) — 판단 패널에서 "가격비교 원본 보기"를 눌렀을 때
+ * 스크롤할 대상. 판단(이 패널)과 그 근거(해외/국내 가격비교 섹션)는 서로 다른
+ * 컴포넌트에 있으므로 앵커 id를 한 곳에서 정의해 양쪽이 같은 값을 쓰게 한다.
+ */
+export const PRICE_COMPARISON_ANCHOR_ID = "price-comparison-source";
+
 const PRICE_AGE_LABEL: Record<PriceAgeTier, string> = {
   TODAY: "오늘 확인",
   RECENT: "최근 확인",
@@ -673,8 +680,13 @@ export function DomesticPriceIntelligencePanel({
   //   L1 결론      : 판정 · 추천 판매가 · 예상 이익/마진율 · 한 줄 이유
   //   L2 왜 그런가 : representativeVerdict.reasons (판정 엔진이 낸 근거 문장)
   //   L3 어떻게 계산: 구매가 · 착지원가 · 최소마진/목표마진 참고가 · 브랜드 프로파일
-  const [showWhyVerdict, setShowWhyVerdict] = useState(false);
-  const [showCalcDetail, setShowCalcDetail] = useState(false);
+  // UX-2(CEO 지시, 2026-09-05) — "이건 노출되도 될 것 같아". UX-1C가 판단
+  // 근거(왜 이 판단인가)와 원가 숫자(구매가·착지원가·참고 기준가)를 접었는데,
+  // CEO 실사용 판단은 "이 정도는 첫 화면에 보여도 된다"였다. 접는 기능은
+  // 그대로 두고 초기 상태만 펼침으로 바꾼다 — 셀러가 결론과 그 근거를 한
+  // 화면에서 같이 보게 하는 것이 이 패널의 목적이기 때문이다.
+  const [showWhyVerdict, setShowWhyVerdict] = useState(true);
+  const [showCalcDetail, setShowCalcDetail] = useState(true);
   // UX-1D — 국내 가격 비교 + 해외 구매 비용을 "가격 전략" 한 단위로 묶는 토글.
   const [showPriceStrategy, setShowPriceStrategy] = useState(false);
   const [rechecking, setRechecking] = useState(false);
@@ -1213,6 +1225,108 @@ export function DomesticPriceIntelligencePanel({
             })()}
           </div>
         )}
+        {/* P-29 Sprint 8(CPO 지시, 2026-09-03) — "가격이 좋아도 팔릴지"를 가격
+            판정(CASE A/B/C/D, 위 카드들)과 완전히 분리된 섹션으로 보여준다.
+            marketSignals/sellingGuidance는 marketCase를 다시 계산하지
+            않는다 — 신호가 좋아도 위 판매 판정(READY/HOLD 등)은 절대
+            바뀌지 않는다(CPO 절대 금지 3). */}
+        <div className="mt-3 rounded-md border border-border bg-surface-secondary p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <h4 className="text-xs font-semibold text-text-primary">📊 국내 시장 신호</h4>
+            <span className="text-[10px] text-text-tertiary">
+              신호 신뢰도 {SIGNAL_CONFIDENCE_BADGE[marketSignals.confidence]}
+            </span>
+          </div>
+
+          {/* P-31 — 개별 신호를 종합한 시장 상태. 가격 경쟁력(CASE A/B/C/D)과
+              별개 레이어임이 드러나도록 "시장 상태"라고만 부르고, 판매
+              추천/비추천 같은 판정 어휘를 쓰지 않는다. */}
+          <div className="mb-2 flex items-center justify-between rounded border border-border bg-background px-2 py-1.5">
+            <span className="text-[11px] text-text-secondary">종합 시장 상태</span>
+            <span className="text-xs font-semibold text-text-primary">
+              {MARKET_OUTLOOK_BADGE[sellerDecision.outlook]}
+            </span>
+          </div>
+          <p className="mb-2 text-[10px] text-text-tertiary">
+            {sellerDecision.outlookSummary}
+            {sellerDecision.outlook === "UNKNOWN" &&
+              ` (확인된 신호 ${sellerDecision.knownSignalCount}개 — 데이터가 부족한 것이지 시장이 나쁘다는 뜻이 아닙니다)`}
+          </p>
+          <dl className="grid grid-cols-2 gap-y-1 text-xs sm:grid-cols-3">
+            {marketSignals.signals.map((signal) => (
+              <div key={signal.key} className="flex items-center justify-between gap-2 pr-2" title={signal.evidence}>
+                <dt className="text-text-tertiary">{signal.label}</dt>
+                <dd className="font-medium text-text-primary">{signalBadge(signal)}</dd>
+              </div>
+            ))}
+          </dl>
+          {/* UX-1 — 여기부터는 "왜 그렇게 판단했는가"의 근거다. 기본 화면에서는
+              위의 종합 상태 + 3개 신호까지만 보여주고, 근거 표와 전략 가이드는
+              사용자가 요청할 때만 펼친다. 데이터/계산은 그대로이고 노출 계층만
+              바뀐다. */}
+          <button
+            type="button"
+            onClick={() => setShowMarketDetail((v) => !v)}
+            className="mt-3 w-full border-t border-border pt-2 text-left text-[11px] text-primary hover:underline"
+          >
+            {showMarketDetail ? "상세 분석 접기 ▲" : "상세 분석 보기 ▼"}
+          </button>
+
+          {showMarketDetail && (
+            <>
+              {/* P-31 — "왜 이런 판단인가"를 문장 나열이 아니라 구조화된 표로
+                  보여준다. 순서는 CPO 지정 우선순위(가격 수익성 → 동일상품 국내
+                  가격 → 시장 관심 → 경쟁 판매처 → 시즌성)로 서버에서 이미 고정돼
+                  오므로 여기서 다시 정렬하지 않는다. */}
+              <div className="mt-2">
+                <p className="mb-1 text-xs font-semibold text-text-primary">🧾 왜 이런 판단인가</p>
+                <dl className="space-y-0.5 text-[11px]">
+                  {sellerDecision.factors.map((factor) => (
+                    <div key={factor.key} className="flex items-start justify-between gap-2">
+                      <dt className="shrink-0 text-text-tertiary">
+                        {FACTOR_LEVEL_ICON[factor.level]} {factor.label}
+                      </dt>
+                      <dd className="text-right text-text-secondary">{factor.detail}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+
+              {sellingGuidance.length > 0 && (
+                <div className="mt-3 border-t border-border pt-2">
+                  <p className="mb-1 text-xs font-semibold text-text-primary">💡 판매 전략 가이드</p>
+                  <ul className="space-y-0.5 text-[11px] text-text-secondary">
+                    {sellingGuidance.map((g, i) => (
+                      <li key={i}>• {g}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p className="mt-2 text-[10px] text-text-tertiary">
+                무료로 확인 가능한 신호를 근거와 함께 보여줍니다 — 실제 판매량 데이터는 포함되지 않습니다.
+              </p>
+            </>
+          )}
+
+          {/* UX-2(CEO 지시, 2026-09-05) — "상세보기 하면 아래 탭쪽으로 이동이
+              되어 국내/해외 비교 및 결론 내용 참고할 수 있게". 판단의 원본
+              근거인 해외/국내 가격비교 섹션은 같은 탭 아래쪽에 이미 있는데,
+              판단 패널이 최상단으로 올라오면서 거리가 멀어졌다. 새 화면을
+              만들지 않고 기존 섹션으로 스크롤만 연결한다 — 셀러가 "이 판단의
+              근거를 직접 보고 싶다"고 할 때 한 번에 도달하게 하기 위함이다.
+              앵커가 없으면(탭 전환 등) 아무 일도 하지 않는다. */}
+          <button
+            type="button"
+            onClick={() =>
+              document
+                .getElementById(PRICE_COMPARISON_ANCHOR_ID)
+                ?.scrollIntoView({ behavior: "smooth", block: "start" })
+            }
+            className="mt-2 w-full rounded border border-border bg-background px-2 py-1.5 text-[11px] font-medium text-primary hover:underline"
+          >
+            🔎 해외·국내 가격비교 원본 보기 ↓
+          </button>
+        </div>
 
         {/* P-2-3 ④ 국내 시장 가격(요약) — 기존 SellerAction 헤드라인의
             핵심 지표(내판매가/국내최저가/평균가/동일상품수/품절수)를 여기로
@@ -1679,89 +1793,6 @@ export function DomesticPriceIntelligencePanel({
             판매가"로 승격됐다(P-2-3) — 여기서 다시 보여주면 같은 숫자를
             두 번 노출하게 되므로 제거한다(계산/필드 자체는 그대로 유지). */}
 
-        {/* P-29 Sprint 8(CPO 지시, 2026-09-03) — "가격이 좋아도 팔릴지"를 가격
-            판정(CASE A/B/C/D, 위 카드들)과 완전히 분리된 섹션으로 보여준다.
-            marketSignals/sellingGuidance는 marketCase를 다시 계산하지
-            않는다 — 신호가 좋아도 위 판매 판정(READY/HOLD 등)은 절대
-            바뀌지 않는다(CPO 절대 금지 3). */}
-        <div className="mt-3 rounded-md border border-border bg-surface-secondary p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <h4 className="text-xs font-semibold text-text-primary">📊 국내 시장 신호</h4>
-            <span className="text-[10px] text-text-tertiary">
-              신호 신뢰도 {SIGNAL_CONFIDENCE_BADGE[marketSignals.confidence]}
-            </span>
-          </div>
-
-          {/* P-31 — 개별 신호를 종합한 시장 상태. 가격 경쟁력(CASE A/B/C/D)과
-              별개 레이어임이 드러나도록 "시장 상태"라고만 부르고, 판매
-              추천/비추천 같은 판정 어휘를 쓰지 않는다. */}
-          <div className="mb-2 flex items-center justify-between rounded border border-border bg-background px-2 py-1.5">
-            <span className="text-[11px] text-text-secondary">종합 시장 상태</span>
-            <span className="text-xs font-semibold text-text-primary">
-              {MARKET_OUTLOOK_BADGE[sellerDecision.outlook]}
-            </span>
-          </div>
-          <p className="mb-2 text-[10px] text-text-tertiary">
-            {sellerDecision.outlookSummary}
-            {sellerDecision.outlook === "UNKNOWN" &&
-              ` (확인된 신호 ${sellerDecision.knownSignalCount}개 — 데이터가 부족한 것이지 시장이 나쁘다는 뜻이 아닙니다)`}
-          </p>
-          <dl className="grid grid-cols-2 gap-y-1 text-xs sm:grid-cols-3">
-            {marketSignals.signals.map((signal) => (
-              <div key={signal.key} className="flex items-center justify-between gap-2 pr-2" title={signal.evidence}>
-                <dt className="text-text-tertiary">{signal.label}</dt>
-                <dd className="font-medium text-text-primary">{signalBadge(signal)}</dd>
-              </div>
-            ))}
-          </dl>
-          {/* UX-1 — 여기부터는 "왜 그렇게 판단했는가"의 근거다. 기본 화면에서는
-              위의 종합 상태 + 3개 신호까지만 보여주고, 근거 표와 전략 가이드는
-              사용자가 요청할 때만 펼친다. 데이터/계산은 그대로이고 노출 계층만
-              바뀐다. */}
-          <button
-            type="button"
-            onClick={() => setShowMarketDetail((v) => !v)}
-            className="mt-3 w-full border-t border-border pt-2 text-left text-[11px] text-primary hover:underline"
-          >
-            {showMarketDetail ? "상세 분석 접기 ▲" : "상세 분석 보기 ▼"}
-          </button>
-
-          {showMarketDetail && (
-            <>
-              {/* P-31 — "왜 이런 판단인가"를 문장 나열이 아니라 구조화된 표로
-                  보여준다. 순서는 CPO 지정 우선순위(가격 수익성 → 동일상품 국내
-                  가격 → 시장 관심 → 경쟁 판매처 → 시즌성)로 서버에서 이미 고정돼
-                  오므로 여기서 다시 정렬하지 않는다. */}
-              <div className="mt-2">
-                <p className="mb-1 text-xs font-semibold text-text-primary">🧾 왜 이런 판단인가</p>
-                <dl className="space-y-0.5 text-[11px]">
-                  {sellerDecision.factors.map((factor) => (
-                    <div key={factor.key} className="flex items-start justify-between gap-2">
-                      <dt className="shrink-0 text-text-tertiary">
-                        {FACTOR_LEVEL_ICON[factor.level]} {factor.label}
-                      </dt>
-                      <dd className="text-right text-text-secondary">{factor.detail}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-
-              {sellingGuidance.length > 0 && (
-                <div className="mt-3 border-t border-border pt-2">
-                  <p className="mb-1 text-xs font-semibold text-text-primary">💡 판매 전략 가이드</p>
-                  <ul className="space-y-0.5 text-[11px] text-text-secondary">
-                    {sellingGuidance.map((g, i) => (
-                      <li key={i}>• {g}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              <p className="mt-2 text-[10px] text-text-tertiary">
-                무료로 확인 가능한 신호를 근거와 함께 보여줍니다 — 실제 판매량 데이터는 포함되지 않습니다.
-              </p>
-            </>
-          )}
-        </div>
 
         {/* Beta RC(CPO 지시, 2026-09-05) — "판매 추천/조건부/비추천"이라는 표현이
             상표권·지식재산권·브랜드 판매 권한까지 검토된 결과로 오해될 수 있다.

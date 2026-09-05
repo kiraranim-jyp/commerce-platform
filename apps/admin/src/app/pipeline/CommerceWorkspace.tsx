@@ -43,7 +43,10 @@ import { resolveCategoryCacheAction } from "./category-cache-hydrate";
 import { AIContentPanel } from "./commerce/AIContentPanel";
 import { BacklogPanel } from "./commerce/BacklogPanel";
 import { ComparisonShopSearch } from "./commerce/ComparisonShopSearch";
-import { DomesticPriceIntelligencePanel } from "./commerce/DomesticPriceIntelligencePanel";
+import {
+  DomesticPriceIntelligencePanel,
+  PRICE_COMPARISON_ANCHOR_ID,
+} from "./commerce/DomesticPriceIntelligencePanel";
 import type { PriceLevel } from "./commerce/DomesticPriceIntelligencePanel";
 import { AuditLogPanel } from "./commerce/AuditLogPanel";
 import { DomesticShopSearch } from "./commerce/DomesticShopSearch";
@@ -1837,21 +1840,26 @@ export function CommerceWorkspace({
             exchangeRates={exchangeRates}
           />
           <MissingFieldsBulkPanel product={product} onBulkApply={bulkSetFieldReference} />
-          <ComparisonShopSearch
-            title={product.title.value}
-            brand={product.brand.value}
-            sourceUrl={product.sourceUrl}
-            sku={product.sku.value || undefined}
-            description={product.description.value || undefined}
-            onRequestPriceReview={handleRequestPriceReview}
-          />
-          <DomesticShopSearch
-            title={product.title.value}
-            brand={product.brand.value}
-            sourceUrl={product.sourceUrl}
-            sku={product.sku.value || undefined}
-            description={product.description.value || undefined}
-          />
+          {/* UX-2(CEO 지시, 2026-09-05) — 최상단 판단 패널의 "가격비교 원본
+              보기" 버튼이 스크롤할 지점. 해외/국내 비교는 같은 판단의 근거이므로
+              하나의 앵커로 묶는다. 렌더 내용/순서는 변경하지 않는다. */}
+          <div id={PRICE_COMPARISON_ANCHOR_ID} className="scroll-mt-4 space-y-4">
+            <ComparisonShopSearch
+              title={product.title.value}
+              brand={product.brand.value}
+              sourceUrl={product.sourceUrl}
+              sku={product.sku.value || undefined}
+              description={product.description.value || undefined}
+              onRequestPriceReview={handleRequestPriceReview}
+            />
+            <DomesticShopSearch
+              title={product.title.value}
+              brand={product.brand.value}
+              sourceUrl={product.sourceUrl}
+              sku={product.sku.value || undefined}
+              description={product.description.value || undefined}
+            />
+          </div>
           {/* UX-1E — 판단 패널은 위 최상단으로 이동했다(중복 렌더 방지). */}
           {snapshotId && <AuditLogPanel snapshotId={snapshotId} />}
           <BacklogPanel />
