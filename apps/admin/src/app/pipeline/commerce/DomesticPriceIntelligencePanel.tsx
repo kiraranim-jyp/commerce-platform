@@ -675,6 +675,8 @@ export function DomesticPriceIntelligencePanel({
   //   L3 어떻게 계산: 구매가 · 착지원가 · 최소마진/목표마진 참고가 · 브랜드 프로파일
   const [showWhyVerdict, setShowWhyVerdict] = useState(false);
   const [showCalcDetail, setShowCalcDetail] = useState(false);
+  // UX-1D — 국내 가격 비교 + 해외 구매 비용을 "가격 전략" 한 단위로 묶는 토글.
+  const [showPriceStrategy, setShowPriceStrategy] = useState(false);
   const [rechecking, setRechecking] = useState(false);
   const [recheckResult, setRecheckResult] = useState<RecheckResult | null>(null);
   const [candidates, setCandidates] = useState<DomesticCandidate[]>([]);
@@ -871,6 +873,17 @@ export function DomesticPriceIntelligencePanel({
 
   const hasAnyData =
     domesticCompetition.tier !== "NONE" || currentPrice.sellingPriceKrw != null || cost != null;
+
+  /** UX-1D — "가격 전략" 요약에 쓸 대표 국내 가격. 새로 계산하지 않는다.
+   * 서버가 이미 낸 domesticMarketSplit의 평균가를 우선순위대로 고르기만 한다:
+   * ① 동일상품(EXACT) 평균 → ② 비교상품(COMPARISON) 평균 → ③ 표시 안 함.
+   * 최저가는 이상치일 수 있어 대표값으로 쓰지 않는다(CPO 지시). */
+  const exactAvg = domesticMarketSplit.exact.averagePriceKrw;
+  const comparisonAvg = domesticMarketSplit.comparison.averagePriceKrw;
+  const representativeDomesticPrice =
+    exactAvg != null ? Math.round(exactAvg) : comparisonAvg != null ? Math.round(comparisonAvg) : null;
+  const representativeDomesticLabel =
+    exactAvg != null ? "국내 동일상품 평균가" : "국내 비교상품 평균가";
 
   return (
     <CollapsibleSection title="Market Intelligence" defaultOpen>
@@ -1205,7 +1218,49 @@ export function DomesticPriceIntelligencePanel({
             핵심 지표(내판매가/국내최저가/평균가/동일상품수/품절수)를 여기로
             옮긴다. "그래서 시장에서 얼마에 팔리는가?"가 이 블록의 유일한
             질문이다 — 판매 판단(위 ①)과는 별개 관심사로 분리한다. */}
+        {/* UX-1D(CPO 지시, 2026-09-05) — 가격 관련 정보가 "국내 시장 가격"과
+            "해외 구매 비용" 두 블록으로 흩어져 있었다. 하나의 "가격 전략"
+            정보 단위로 묶고, L1에는 결정에 쓰는 값만 남긴다.
+            대표 국내 가격은 새로 계산하지 않는다 — 서버가 이미 낸
+            domesticMarketSplit.exact/comparison 평균가를 우선순위대로
+            골라 쓰기만 한다(동일상품 평균 → 비교상품 평균 → 표시 안 함). */}
         {hasAnyData && (domesticCompetition.tier !== "NONE" || currentPrice.sellingPriceKrw != null) && (
+          <div className="rounded-md border border-border bg-background p-2">
+            <div className="mb-1 flex items-center justify-between">
+              <p className="font-medium text-text-primary">💰 가격 전략</p>
+              <button
+                type="button"
+                onClick={() => setShowPriceStrategy((v) => !v)}
+                className="text-[11px] text-primary hover:underline"
+              >
+                {showPriceStrategy ? "접기 ▲" : "상세 보기 ▼"}
+              </button>
+            </div>
+            {/* UX-1D — 추천 판매가는 위 최종 판단 카드 L1에 이미 있으므로 여기
+                다시 넣지 않는다(숫자 중복 금지). 이 블록은 "시장이 얼마인가"만
+                답하고, "얼마에 팔지"는 판단 카드가 답한다. */}
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-text-secondary sm:grid-cols-3">
+              {representativeDomesticPrice != null && (
+                <div>
+                  <dt className="text-[10px] text-text-tertiary">{representativeDomesticLabel}</dt>
+                  <dd className="font-medium text-text-primary">
+                    ₩{representativeDomesticPrice.toLocaleString()}
+                  </dd>
+                </div>
+              )}
+              <div>
+                <dt className="text-[10px] text-text-tertiary">국내 시장</dt>
+                <dd className="font-medium text-text-primary">
+                  {SIGNAL_LEVEL_BADGE[
+                    marketSignals.signals.find((s) => s.key === "domesticPresence")?.level ?? "unknown"
+                  ]}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        )}
+
+        {showPriceStrategy && hasAnyData && (domesticCompetition.tier !== "NONE" || currentPrice.sellingPriceKrw != null) && (
           <div className="rounded-md border border-border bg-background p-2">
             <p className="mb-1 font-medium text-text-primary">🇰🇷 국내 시장 가격</p>
             {/* P-25 Sprint 3(CPO 지시, 2026-09-02) — "EXACT와 COMPARISON 가격을
@@ -1323,7 +1378,9 @@ export function DomesticPriceIntelligencePanel({
             숫자의 차이일 뿐, 새 필드가 아니다). 총 구매원가는 unifiedDecision.
             landedCostKrw(관세/부가세/국내배송원가까지 반영 시도)가 있으면
             그 값을, 없으면 기존 cost.landedCostKrw로 폴백한다. */}
-        {cost && fx && (
+        {/* UX-1D — 해외 구매 비용은 "가격 전략"의 하위 Evidence다. 가격 전략을
+            펼쳤을 때만 보이고, 그 안에서 다시 상세를 펼친다(L2 → L3). */}
+        {showPriceStrategy && cost && fx && (
           <div className="rounded-md border border-border bg-background p-2">
             {/* UX-1B — 헤더를 토글로 바꾼다. 원가 구성은 Evidence이므로 기본
                 접힘이고, 판단에 쓰는 구매원가·추천가·마진은 위 최종 판단
