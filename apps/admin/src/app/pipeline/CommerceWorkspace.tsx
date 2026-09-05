@@ -1798,6 +1798,20 @@ export function CommerceWorkspace({
 
       {tab === "source" && (
         <>
+          {/* UX-1E(CEO 지시, 2026-09-05) — 셀러의 첫 질문은 "이 해외 상품을
+              국내에 팔아도 되나?"인데, 기존 순서는 이미지 → Source Data →
+              플랫폼 항목 → 가격비교를 지나야 판단이 나왔다(8개 중 6번째).
+              등록 준비보다 판매 판단이 먼저 와야 한다 — 판단을 최상단으로
+              올린다. 컴포넌트/로직 변경 없이 렌더 위치만 바꾼다. */}
+          {snapshotId && (
+            <DomesticPriceIntelligencePanel
+              snapshotId={snapshotId}
+              onPriceLevelChange={handlePriceLevelChange}
+              onSellerVerdictChange={handleSellerVerdictChange}
+              onRequestPriceReview={handleRequestPriceReview}
+              autoChecking={priceCheckPriming}
+            />
+          )}
           <section className="rounded-lg border border-border bg-surface p-4 shadow-subtle">
             <p className="mb-3 text-sm font-medium text-text-primary">이미지</p>
             <ImageInlineEditor
@@ -1838,15 +1852,7 @@ export function CommerceWorkspace({
             sku={product.sku.value || undefined}
             description={product.description.value || undefined}
           />
-          {snapshotId && (
-            <DomesticPriceIntelligencePanel
-              snapshotId={snapshotId}
-              onPriceLevelChange={handlePriceLevelChange}
-              onSellerVerdictChange={handleSellerVerdictChange}
-              onRequestPriceReview={handleRequestPriceReview}
-              autoChecking={priceCheckPriming}
-            />
-          )}
+          {/* UX-1E — 판단 패널은 위 최상단으로 이동했다(중복 렌더 방지). */}
           {snapshotId && <AuditLogPanel snapshotId={snapshotId} />}
           <BacklogPanel />
         </>
