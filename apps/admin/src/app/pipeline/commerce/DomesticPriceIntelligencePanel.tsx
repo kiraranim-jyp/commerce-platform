@@ -664,6 +664,11 @@ export function DomesticPriceIntelligencePanel({
   // 기본 노출하고, 판단 근거 표와 전략 가이드는 상세로 내린다. 사용자가 먼저
   // 봐야 하는 건 "팔아도 되는가"이지 근거 전체가 아니다(기능 제거가 아니라 계층화).
   const [showMarketDetail, setShowMarketDetail] = useState(false);
+  // UX-1B(CPO 지시, 2026-09-05) — 해외 원가 구성(상품가/환율/환산/국제배송비/
+  // 구매원가 산출 근거)은 "왜 이 원가가 나왔는가"를 확인하는 Evidence다.
+  // 판매 결정에 쓰는 숫자(구매원가·추천가·마진)는 위 최종 판단 카드에 이미
+  // 있으므로, 이 블록을 접어도 기본 화면에서 잃는 판단 정보가 없다.
+  const [showOverseasCost, setShowOverseasCost] = useState(false);
   const [rechecking, setRechecking] = useState(false);
   const [recheckResult, setRecheckResult] = useState<RecheckResult | null>(null);
   const [candidates, setCandidates] = useState<DomesticCandidate[]>([]);
@@ -1267,8 +1272,22 @@ export function DomesticPriceIntelligencePanel({
             그 값을, 없으면 기존 cost.landedCostKrw로 폴백한다. */}
         {cost && fx && (
           <div className="rounded-md border border-border bg-background p-2">
-            <p className="mb-1 font-medium text-text-primary">🌎 해외 구매 비용</p>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-text-secondary">
+            {/* UX-1B — 헤더를 토글로 바꾼다. 원가 구성은 Evidence이므로 기본
+                접힘이고, 판단에 쓰는 구매원가·추천가·마진은 위 최종 판단
+                카드에 이미 있어 기본 화면에서 잃는 정보가 없다. */}
+            <button
+              type="button"
+              onClick={() => setShowOverseasCost((v) => !v)}
+              className="flex w-full items-center justify-between text-left font-medium text-text-primary"
+            >
+              <span>🌎 해외 구매 비용</span>
+              <span className="text-[11px] font-normal text-primary">
+                {showOverseasCost ? "접기 ▲" : "상세 보기 ▼"}
+              </span>
+            </button>
+            {showOverseasCost && (
+            <>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-text-secondary">
               <span>
                 🌍 상품 가격 {cost.originalAmount.toLocaleString()} {cost.originalCurrency}
               </span>
@@ -1311,6 +1330,8 @@ export function DomesticPriceIntelligencePanel({
                 ⚪ 한국向 실제 표시가는 확인되지 않아, 위 판단은 환율 환산가(₩
                 {Math.round(cost.costKrw).toLocaleString()}) 기준입니다.
               </p>
+            )}
+            </>
             )}
           </div>
         )}
