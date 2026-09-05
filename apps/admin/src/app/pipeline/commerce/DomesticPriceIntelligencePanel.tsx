@@ -660,6 +660,23 @@ export function DomesticPriceIntelligencePanel({
   const [showDomesticDetail, setShowDomesticDetail] = useState(false);
   // P-2-3 ⑤(대표님 지시, 2026-08-28) — "왜 이런 판단인가"는 기본적으로 접어둔다.
   const [showReasonDetail, setShowReasonDetail] = useState(false);
+  // UX-1(CPO 지시, 2026-09-05) — 시장 신호 블록은 "종합 상태 + 3개 신호"까지만
+  // 기본 노출하고, 판단 근거 표와 전략 가이드는 상세로 내린다. 사용자가 먼저
+  // 봐야 하는 건 "팔아도 되는가"이지 근거 전체가 아니다(기능 제거가 아니라 계층화).
+  const [showMarketDetail, setShowMarketDetail] = useState(false);
+  // UX-1B(CPO 지시, 2026-09-05) — 해외 원가 구성(상품가/환율/환산/국제배송비/
+  // 구매원가 산출 근거)은 "왜 이 원가가 나왔는가"를 확인하는 Evidence다.
+  // 판매 결정에 쓰는 숫자(구매원가·추천가·마진)는 위 최종 판단 카드에 이미
+  // 있으므로, 이 블록을 접어도 기본 화면에서 잃는 판단 정보가 없다.
+  const [showOverseasCost, setShowOverseasCost] = useState(false);
+  // UX-1C(CPO 지시, 2026-09-05) — 최종 판단 카드를 3단계로 나눈다.
+  //   L1 결론      : 판정 · 추천 판매가 · 예상 이익/마진율 · 한 줄 이유
+  //   L2 왜 그런가 : representativeVerdict.reasons (판정 엔진이 낸 근거 문장)
+  //   L3 어떻게 계산: 구매가 · 착지원가 · 최소마진/목표마진 참고가 · 브랜드 프로파일
+  const [showWhyVerdict, setShowWhyVerdict] = useState(false);
+  const [showCalcDetail, setShowCalcDetail] = useState(false);
+  // UX-1D — 국내 가격 비교 + 해외 구매 비용을 "가격 전략" 한 단위로 묶는 토글.
+  const [showPriceStrategy, setShowPriceStrategy] = useState(false);
   const [rechecking, setRechecking] = useState(false);
   const [recheckResult, setRecheckResult] = useState<RecheckResult | null>(null);
   const [candidates, setCandidates] = useState<DomesticCandidate[]>([]);
@@ -857,6 +874,17 @@ export function DomesticPriceIntelligencePanel({
   const hasAnyData =
     domesticCompetition.tier !== "NONE" || currentPrice.sellingPriceKrw != null || cost != null;
 
+  /** UX-1D — "가격 전략" 요약에 쓸 대표 국내 가격. 새로 계산하지 않는다.
+   * 서버가 이미 낸 domesticMarketSplit의 평균가를 우선순위대로 고르기만 한다:
+   * ① 동일상품(EXACT) 평균 → ② 비교상품(COMPARISON) 평균 → ③ 표시 안 함.
+   * 최저가는 이상치일 수 있어 대표값으로 쓰지 않는다(CPO 지시). */
+  const exactAvg = domesticMarketSplit.exact.averagePriceKrw;
+  const comparisonAvg = domesticMarketSplit.comparison.averagePriceKrw;
+  const representativeDomesticPrice =
+    exactAvg != null ? Math.round(exactAvg) : comparisonAvg != null ? Math.round(comparisonAvg) : null;
+  const representativeDomesticLabel =
+    exactAvg != null ? "국내 동일상품 평균가" : "국내 비교상품 평균가";
+
   return (
     <CollapsibleSection title="Market Intelligence" defaultOpen>
       <div className="space-y-2 text-xs">
@@ -964,22 +992,9 @@ export function DomesticPriceIntelligencePanel({
                 프로젝트의 원칙과 동일한 이유). */}
             {cost && (
               <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 rounded-md border border-current/20 bg-background/40 p-2 sm:grid-cols-3">
-                <div>
-                  <dt className="text-[10px] text-text-tertiary">💰 현재 구매가</dt>
-                  <dd className="text-sm font-semibold text-text-primary">₩{cost.costKrw.toLocaleString()}</dd>
-                  {costSource && (
-                    <p className="text-[10px] text-text-tertiary">
-                      {COST_SOURCE_LABEL[costSource]}
-                      {costSource !== "STATIC_SNAPSHOT" && originLatestCheckedAt
-                        ? ` · ${relativeTimeFromNow(originLatestCheckedAt)}`
-                        : ""}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <dt className="text-[10px] text-text-tertiary">📦 착지원가</dt>
-                  <dd className="text-sm font-semibold text-text-primary">₩{cost.landedCostKrw.toLocaleString()}</dd>
-                </div>
+                {/* UX-1C — 구매가/착지원가는 "이 숫자가 어떻게 나왔나"(L3)로
+                    내렸다. L1에는 판매 결정에 직접 쓰는 예상 이익·마진율과
+                    추천 판매가만 남긴다. 같은 숫자를 두 곳에 띄우지 않는다. */}
                 <div>
                   <dt className="text-[10px] text-text-tertiary">📈 예상 수익</dt>
                   <dd className="text-sm font-semibold text-text-primary">
@@ -1000,18 +1015,8 @@ export function DomesticPriceIntelligencePanel({
                     recommendedPrice가 null일 수 있다(화면도 "없음"을 명시). */}
                 {recommendation && (
                   <>
-                    <div>
-                      <dt className="text-[10px] text-text-tertiary">최소마진 확보가(참고)</dt>
-                      <dd className="text-sm font-semibold text-text-primary">
-                        ₩{recommendation.minimumPrice.toLocaleString()}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-[10px] text-text-tertiary">목표마진 판매가(참고)</dt>
-                      <dd className="text-sm font-semibold text-text-primary">
-                        ₩{recommendation.targetPrice.toLocaleString()}
-                      </dd>
-                    </div>
+                    {/* UX-1C — 최소마진/목표마진 참고가는 L3(상세 계산)로 이동.
+                        L1에는 실제로 "얼마에 팔지"인 최종 추천 판매가만 남긴다. */}
                     <div>
                       <dt className="text-[10px] text-text-tertiary">🏷 최종 추천 판매가</dt>
                       {recommendation.recommendedPrice != null ? (
@@ -1053,19 +1058,89 @@ export function DomesticPriceIntelligencePanel({
               </dl>
             )}
 
+            {/* UX-1C L1 — 한 줄 결론 설명은 항상 보인다. 숫자만 보고 "그래서 왜
+                추천인데?"가 되지 않게 하기 위함(CPO 지시). */}
             <p className="mt-2 text-text-secondary">{representativeVerdict.description}</p>
+
+            {/* UX-1C L2 — "왜 이 판단인가". 판정 엔진이 이미 낸 reasons를 그대로
+                쓴다(문구를 새로 지어내면 판정 의미를 바꾸는 셈이라 금지). */}
             {representativeVerdict.reasons.length > 0 && (
-              <ul className="mt-1.5 space-y-0.5 text-text-secondary">
-                {representativeVerdict.reasons.map((reason, i) => (
-                  <li key={i}>✓ {reason}</li>
-                ))}
-              </ul>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowWhyVerdict((v) => !v)}
+                  className="mt-2 text-[11px] text-primary hover:underline"
+                >
+                  {showWhyVerdict
+                    ? "왜 이 판단인가 접기 ▲"
+                    : `왜 ${FINAL_VERDICT_COPY[sellerDecision.finalVerdict].title}인가 ▼`}
+                </button>
+                {showWhyVerdict && (
+                  <ul className="mt-1.5 space-y-0.5 text-text-secondary">
+                    {representativeVerdict.reasons.map((reason, i) => (
+                      <li key={i}>✓ {reason}</li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+
+            {/* UX-1C L3 — "이 숫자가 어떻게 계산됐나". 구매원가·참고 기준가·브랜드
+                분포는 검증용 근거이지 첫 화면의 결정 정보가 아니다. */}
+            {cost && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowCalcDetail((v) => !v)}
+                  className="mt-2 block text-[11px] text-primary hover:underline"
+                >
+                  {showCalcDetail ? "상세 계산 접기 ▲" : "상세 계산 보기 ▼"}
+                </button>
+                {showCalcDetail && (
+                  <dl className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-2 rounded-md border border-current/20 bg-background/40 p-2 sm:grid-cols-3">
+                    <div>
+                      <dt className="text-[10px] text-text-tertiary">💰 현재 구매가</dt>
+                      <dd className="text-sm font-semibold text-text-primary">₩{cost.costKrw.toLocaleString()}</dd>
+                      {costSource && (
+                        <p className="text-[10px] text-text-tertiary">
+                          {COST_SOURCE_LABEL[costSource]}
+                          {costSource !== "STATIC_SNAPSHOT" && originLatestCheckedAt
+                            ? ` · ${relativeTimeFromNow(originLatestCheckedAt)}`
+                            : ""}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <dt className="text-[10px] text-text-tertiary">📦 착지원가</dt>
+                      <dd className="text-sm font-semibold text-text-primary">
+                        ₩{cost.landedCostKrw.toLocaleString()}
+                      </dd>
+                    </div>
+                    {recommendation && (
+                      <>
+                        <div>
+                          <dt className="text-[10px] text-text-tertiary">최소마진 확보가(참고)</dt>
+                          <dd className="text-sm font-semibold text-text-primary">
+                            ₩{recommendation.minimumPrice.toLocaleString()}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-[10px] text-text-tertiary">목표마진 판매가(참고)</dt>
+                          <dd className="text-sm font-semibold text-text-primary">
+                            ₩{recommendation.targetPrice.toLocaleString()}
+                          </dd>
+                        </div>
+                      </>
+                    )}
+                  </dl>
+                )}
+              </>
             )}
             {/* P-13A(대표님/CPO 지시, 2026-08-31) — "국내 동일상품 없음"이
                 "시장 자체가 없음"과 같지 않다. 브랜드 시장 데이터가 있으면
                 "왜 이 가격인가"의 근거로 보여준다 — 새 판정 아님, 서버가 이미
                 계산한 분포를 그대로 노출한다. */}
-            {brandMarketProfile && (
+            {showCalcDetail && brandMarketProfile && (
               <div className="mt-2 rounded-md border border-current/20 bg-background/40 p-2">
                 <p className="text-[10px] font-medium text-text-primary">
                   💡 브랜드 시장 데이터 — {product.brand} 상품 {brandMarketProfile.sampleCount}개 분석
@@ -1143,7 +1218,49 @@ export function DomesticPriceIntelligencePanel({
             핵심 지표(내판매가/국내최저가/평균가/동일상품수/품절수)를 여기로
             옮긴다. "그래서 시장에서 얼마에 팔리는가?"가 이 블록의 유일한
             질문이다 — 판매 판단(위 ①)과는 별개 관심사로 분리한다. */}
+        {/* UX-1D(CPO 지시, 2026-09-05) — 가격 관련 정보가 "국내 시장 가격"과
+            "해외 구매 비용" 두 블록으로 흩어져 있었다. 하나의 "가격 전략"
+            정보 단위로 묶고, L1에는 결정에 쓰는 값만 남긴다.
+            대표 국내 가격은 새로 계산하지 않는다 — 서버가 이미 낸
+            domesticMarketSplit.exact/comparison 평균가를 우선순위대로
+            골라 쓰기만 한다(동일상품 평균 → 비교상품 평균 → 표시 안 함). */}
         {hasAnyData && (domesticCompetition.tier !== "NONE" || currentPrice.sellingPriceKrw != null) && (
+          <div className="rounded-md border border-border bg-background p-2">
+            <div className="mb-1 flex items-center justify-between">
+              <p className="font-medium text-text-primary">💰 가격 전략</p>
+              <button
+                type="button"
+                onClick={() => setShowPriceStrategy((v) => !v)}
+                className="text-[11px] text-primary hover:underline"
+              >
+                {showPriceStrategy ? "접기 ▲" : "상세 보기 ▼"}
+              </button>
+            </div>
+            {/* UX-1D — 추천 판매가는 위 최종 판단 카드 L1에 이미 있으므로 여기
+                다시 넣지 않는다(숫자 중복 금지). 이 블록은 "시장이 얼마인가"만
+                답하고, "얼마에 팔지"는 판단 카드가 답한다. */}
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-text-secondary sm:grid-cols-3">
+              {representativeDomesticPrice != null && (
+                <div>
+                  <dt className="text-[10px] text-text-tertiary">{representativeDomesticLabel}</dt>
+                  <dd className="font-medium text-text-primary">
+                    ₩{representativeDomesticPrice.toLocaleString()}
+                  </dd>
+                </div>
+              )}
+              <div>
+                <dt className="text-[10px] text-text-tertiary">국내 시장</dt>
+                <dd className="font-medium text-text-primary">
+                  {SIGNAL_LEVEL_BADGE[
+                    marketSignals.signals.find((s) => s.key === "domesticPresence")?.level ?? "unknown"
+                  ]}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        )}
+
+        {showPriceStrategy && hasAnyData && (domesticCompetition.tier !== "NONE" || currentPrice.sellingPriceKrw != null) && (
           <div className="rounded-md border border-border bg-background p-2">
             <p className="mb-1 font-medium text-text-primary">🇰🇷 국내 시장 가격</p>
             {/* P-25 Sprint 3(CPO 지시, 2026-09-02) — "EXACT와 COMPARISON 가격을
@@ -1261,10 +1378,26 @@ export function DomesticPriceIntelligencePanel({
             숫자의 차이일 뿐, 새 필드가 아니다). 총 구매원가는 unifiedDecision.
             landedCostKrw(관세/부가세/국내배송원가까지 반영 시도)가 있으면
             그 값을, 없으면 기존 cost.landedCostKrw로 폴백한다. */}
-        {cost && fx && (
+        {/* UX-1D — 해외 구매 비용은 "가격 전략"의 하위 Evidence다. 가격 전략을
+            펼쳤을 때만 보이고, 그 안에서 다시 상세를 펼친다(L2 → L3). */}
+        {showPriceStrategy && cost && fx && (
           <div className="rounded-md border border-border bg-background p-2">
-            <p className="mb-1 font-medium text-text-primary">🌎 해외 구매 비용</p>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-text-secondary">
+            {/* UX-1B — 헤더를 토글로 바꾼다. 원가 구성은 Evidence이므로 기본
+                접힘이고, 판단에 쓰는 구매원가·추천가·마진은 위 최종 판단
+                카드에 이미 있어 기본 화면에서 잃는 정보가 없다. */}
+            <button
+              type="button"
+              onClick={() => setShowOverseasCost((v) => !v)}
+              className="flex w-full items-center justify-between text-left font-medium text-text-primary"
+            >
+              <span>🌎 해외 구매 비용</span>
+              <span className="text-[11px] font-normal text-primary">
+                {showOverseasCost ? "접기 ▲" : "상세 보기 ▼"}
+              </span>
+            </button>
+            {showOverseasCost && (
+            <>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-text-secondary">
               <span>
                 🌍 상품 가격 {cost.originalAmount.toLocaleString()} {cost.originalCurrency}
               </span>
@@ -1307,6 +1440,8 @@ export function DomesticPriceIntelligencePanel({
                 ⚪ 한국向 실제 표시가는 확인되지 않아, 위 판단은 환율 환산가(₩
                 {Math.round(cost.costKrw).toLocaleString()}) 기준입니다.
               </p>
+            )}
+            </>
             )}
           </div>
         )}
@@ -1579,37 +1714,53 @@ export function DomesticPriceIntelligencePanel({
               </div>
             ))}
           </dl>
-          {/* P-31 — "왜 이런 판단인가"를 문장 나열이 아니라 구조화된 표로
-              보여준다. 순서는 CPO 지정 우선순위(가격 수익성 → 동일상품 국내
-              가격 → 시장 관심 → 경쟁 판매처 → 시즌성)로 서버에서 이미 고정돼
-              오므로 여기서 다시 정렬하지 않는다. */}
-          <div className="mt-3 border-t border-border pt-2">
-            <p className="mb-1 text-xs font-semibold text-text-primary">🧾 왜 이런 판단인가</p>
-            <dl className="space-y-0.5 text-[11px]">
-              {sellerDecision.factors.map((factor) => (
-                <div key={factor.key} className="flex items-start justify-between gap-2">
-                  <dt className="shrink-0 text-text-tertiary">
-                    {FACTOR_LEVEL_ICON[factor.level]} {factor.label}
-                  </dt>
-                  <dd className="text-right text-text-secondary">{factor.detail}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
+          {/* UX-1 — 여기부터는 "왜 그렇게 판단했는가"의 근거다. 기본 화면에서는
+              위의 종합 상태 + 3개 신호까지만 보여주고, 근거 표와 전략 가이드는
+              사용자가 요청할 때만 펼친다. 데이터/계산은 그대로이고 노출 계층만
+              바뀐다. */}
+          <button
+            type="button"
+            onClick={() => setShowMarketDetail((v) => !v)}
+            className="mt-3 w-full border-t border-border pt-2 text-left text-[11px] text-primary hover:underline"
+          >
+            {showMarketDetail ? "상세 분석 접기 ▲" : "상세 분석 보기 ▼"}
+          </button>
 
-          {sellingGuidance.length > 0 && (
-            <div className="mt-3 border-t border-border pt-2">
-              <p className="mb-1 text-xs font-semibold text-text-primary">💡 판매 전략 가이드</p>
-              <ul className="space-y-0.5 text-[11px] text-text-secondary">
-                {sellingGuidance.map((g, i) => (
-                  <li key={i}>• {g}</li>
-                ))}
-              </ul>
-            </div>
+          {showMarketDetail && (
+            <>
+              {/* P-31 — "왜 이런 판단인가"를 문장 나열이 아니라 구조화된 표로
+                  보여준다. 순서는 CPO 지정 우선순위(가격 수익성 → 동일상품 국내
+                  가격 → 시장 관심 → 경쟁 판매처 → 시즌성)로 서버에서 이미 고정돼
+                  오므로 여기서 다시 정렬하지 않는다. */}
+              <div className="mt-2">
+                <p className="mb-1 text-xs font-semibold text-text-primary">🧾 왜 이런 판단인가</p>
+                <dl className="space-y-0.5 text-[11px]">
+                  {sellerDecision.factors.map((factor) => (
+                    <div key={factor.key} className="flex items-start justify-between gap-2">
+                      <dt className="shrink-0 text-text-tertiary">
+                        {FACTOR_LEVEL_ICON[factor.level]} {factor.label}
+                      </dt>
+                      <dd className="text-right text-text-secondary">{factor.detail}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+
+              {sellingGuidance.length > 0 && (
+                <div className="mt-3 border-t border-border pt-2">
+                  <p className="mb-1 text-xs font-semibold text-text-primary">💡 판매 전략 가이드</p>
+                  <ul className="space-y-0.5 text-[11px] text-text-secondary">
+                    {sellingGuidance.map((g, i) => (
+                      <li key={i}>• {g}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p className="mt-2 text-[10px] text-text-tertiary">
+                무료로 확인 가능한 신호를 근거와 함께 보여줍니다 — 실제 판매량 데이터는 포함되지 않습니다.
+              </p>
+            </>
           )}
-          <p className="mt-2 text-[10px] text-text-tertiary">
-            무료로 확인 가능한 신호를 근거와 함께 보여줍니다 — 실제 판매량 데이터는 포함되지 않습니다.
-          </p>
         </div>
 
         {/* Beta RC(CPO 지시, 2026-09-05) — "판매 추천/조건부/비추천"이라는 표현이
