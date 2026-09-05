@@ -660,6 +660,10 @@ export function DomesticPriceIntelligencePanel({
   const [showDomesticDetail, setShowDomesticDetail] = useState(false);
   // P-2-3 ⑤(대표님 지시, 2026-08-28) — "왜 이런 판단인가"는 기본적으로 접어둔다.
   const [showReasonDetail, setShowReasonDetail] = useState(false);
+  // UX-1(CPO 지시, 2026-09-05) — 시장 신호 블록은 "종합 상태 + 3개 신호"까지만
+  // 기본 노출하고, 판단 근거 표와 전략 가이드는 상세로 내린다. 사용자가 먼저
+  // 봐야 하는 건 "팔아도 되는가"이지 근거 전체가 아니다(기능 제거가 아니라 계층화).
+  const [showMarketDetail, setShowMarketDetail] = useState(false);
   const [rechecking, setRechecking] = useState(false);
   const [recheckResult, setRecheckResult] = useState<RecheckResult | null>(null);
   const [candidates, setCandidates] = useState<DomesticCandidate[]>([]);
@@ -1579,37 +1583,53 @@ export function DomesticPriceIntelligencePanel({
               </div>
             ))}
           </dl>
-          {/* P-31 — "왜 이런 판단인가"를 문장 나열이 아니라 구조화된 표로
-              보여준다. 순서는 CPO 지정 우선순위(가격 수익성 → 동일상품 국내
-              가격 → 시장 관심 → 경쟁 판매처 → 시즌성)로 서버에서 이미 고정돼
-              오므로 여기서 다시 정렬하지 않는다. */}
-          <div className="mt-3 border-t border-border pt-2">
-            <p className="mb-1 text-xs font-semibold text-text-primary">🧾 왜 이런 판단인가</p>
-            <dl className="space-y-0.5 text-[11px]">
-              {sellerDecision.factors.map((factor) => (
-                <div key={factor.key} className="flex items-start justify-between gap-2">
-                  <dt className="shrink-0 text-text-tertiary">
-                    {FACTOR_LEVEL_ICON[factor.level]} {factor.label}
-                  </dt>
-                  <dd className="text-right text-text-secondary">{factor.detail}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
+          {/* UX-1 — 여기부터는 "왜 그렇게 판단했는가"의 근거다. 기본 화면에서는
+              위의 종합 상태 + 3개 신호까지만 보여주고, 근거 표와 전략 가이드는
+              사용자가 요청할 때만 펼친다. 데이터/계산은 그대로이고 노출 계층만
+              바뀐다. */}
+          <button
+            type="button"
+            onClick={() => setShowMarketDetail((v) => !v)}
+            className="mt-3 w-full border-t border-border pt-2 text-left text-[11px] text-primary hover:underline"
+          >
+            {showMarketDetail ? "상세 분석 접기 ▲" : "상세 분석 보기 ▼"}
+          </button>
 
-          {sellingGuidance.length > 0 && (
-            <div className="mt-3 border-t border-border pt-2">
-              <p className="mb-1 text-xs font-semibold text-text-primary">💡 판매 전략 가이드</p>
-              <ul className="space-y-0.5 text-[11px] text-text-secondary">
-                {sellingGuidance.map((g, i) => (
-                  <li key={i}>• {g}</li>
-                ))}
-              </ul>
-            </div>
+          {showMarketDetail && (
+            <>
+              {/* P-31 — "왜 이런 판단인가"를 문장 나열이 아니라 구조화된 표로
+                  보여준다. 순서는 CPO 지정 우선순위(가격 수익성 → 동일상품 국내
+                  가격 → 시장 관심 → 경쟁 판매처 → 시즌성)로 서버에서 이미 고정돼
+                  오므로 여기서 다시 정렬하지 않는다. */}
+              <div className="mt-2">
+                <p className="mb-1 text-xs font-semibold text-text-primary">🧾 왜 이런 판단인가</p>
+                <dl className="space-y-0.5 text-[11px]">
+                  {sellerDecision.factors.map((factor) => (
+                    <div key={factor.key} className="flex items-start justify-between gap-2">
+                      <dt className="shrink-0 text-text-tertiary">
+                        {FACTOR_LEVEL_ICON[factor.level]} {factor.label}
+                      </dt>
+                      <dd className="text-right text-text-secondary">{factor.detail}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+
+              {sellingGuidance.length > 0 && (
+                <div className="mt-3 border-t border-border pt-2">
+                  <p className="mb-1 text-xs font-semibold text-text-primary">💡 판매 전략 가이드</p>
+                  <ul className="space-y-0.5 text-[11px] text-text-secondary">
+                    {sellingGuidance.map((g, i) => (
+                      <li key={i}>• {g}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p className="mt-2 text-[10px] text-text-tertiary">
+                무료로 확인 가능한 신호를 근거와 함께 보여줍니다 — 실제 판매량 데이터는 포함되지 않습니다.
+              </p>
+            </>
           )}
-          <p className="mt-2 text-[10px] text-text-tertiary">
-            무료로 확인 가능한 신호를 근거와 함께 보여줍니다 — 실제 판매량 데이터는 포함되지 않습니다.
-          </p>
         </div>
 
         {/* Beta RC(CPO 지시, 2026-09-05) — "판매 추천/조건부/비추천"이라는 표현이
