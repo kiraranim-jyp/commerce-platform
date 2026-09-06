@@ -790,10 +790,8 @@ export function DomesticPriceIntelligencePanel({
   // 봐야 하는 건 "팔아도 되는가"이지 근거 전체가 아니다(기능 제거가 아니라 계층화).
   const [showMarketDetail, setShowMarketDetail] = useState(false);
   // UX-1B(CPO 지시, 2026-09-05) — 해외 원가 구성(상품가/환율/환산/국제배송비/
-  // 구매원가 산출 근거)은 "왜 이 원가가 나왔는가"를 확인하는 Evidence다.
-  // 판매 결정에 쓰는 숫자(구매원가·추천가·마진)는 위 최종 판단 카드에 이미
-  // 있으므로, 이 블록을 접어도 기본 화면에서 잃는 판단 정보가 없다.
-  const [showOverseasCost, setShowOverseasCost] = useState(false);
+  // MI-UX-8 — 해외 구매 비용 블록을 제거하면서 이 토글도 쓰이지 않게 됐다.
+  // 원가 구성은 "해외 가격비교" 영역에서 확인한다.
   // UX-1C(CPO 지시, 2026-09-05) — 최종 판단 카드를 3단계로 나눈다.
   //   L1 결론      : 판정 · 추천 판매가 · 예상 이익/마진율 · 한 줄 이유
   //   L2 왜 그런가 : representativeVerdict.reasons (판정 엔진이 낸 근거 문장)
@@ -805,8 +803,7 @@ export function DomesticPriceIntelligencePanel({
   // 화면에서 같이 보게 하는 것이 이 패널의 목적이기 때문이다.
   const [showWhyVerdict, setShowWhyVerdict] = useState(true);
   const [showCalcDetail, setShowCalcDetail] = useState(true);
-  // UX-1D — 국내 가격 비교 + 해외 구매 비용을 "가격 전략" 한 단위로 묶는 토글.
-  const [showPriceStrategy, setShowPriceStrategy] = useState(false);
+  // MI-UX-8 — "가격 전략" 블록 제거로 이 토글도 함께 사라졌다.
   const [rechecking, setRechecking] = useState(false);
   const [recheckResult, setRecheckResult] = useState<RecheckResult | null>(null);
   const [candidates, setCandidates] = useState<DomesticCandidate[]>([]);
@@ -1065,12 +1062,9 @@ export function DomesticPriceIntelligencePanel({
    * 서버가 이미 낸 domesticMarketSplit의 평균가를 우선순위대로 고르기만 한다:
    * ① 동일상품(EXACT) 평균 → ② 비교상품(COMPARISON) 평균 → ③ 표시 안 함.
    * 최저가는 이상치일 수 있어 대표값으로 쓰지 않는다(CPO 지시). */
-  const exactAvg = domesticMarketSplit.exact.averagePriceKrw;
-  const comparisonAvg = domesticMarketSplit.comparison.averagePriceKrw;
-  const representativeDomesticPrice =
-    exactAvg != null ? Math.round(exactAvg) : comparisonAvg != null ? Math.round(comparisonAvg) : null;
-  const representativeDomesticLabel =
-    exactAvg != null ? "국내 동일상품 평균가" : "국내 비교상품 평균가";
+  // MI-UX-8 — 대표 국내 가격(동일상품 평균 → 비교상품 평균)은 "가격 전략"
+  // 블록에서만 쓰던 표시용 값이라 함께 제거했다. domesticMarketSplit 자체는
+  // 서버 계산 그대로 남아 있고 가격 판단에는 영향이 없다.
 
   return (
     <CollapsibleSection title="Market Intelligence" defaultOpen>
@@ -1575,233 +1569,19 @@ export function DomesticPriceIntelligencePanel({
             핵심 지표(내판매가/국내최저가/평균가/동일상품수/품절수)를 여기로
             옮긴다. "그래서 시장에서 얼마에 팔리는가?"가 이 블록의 유일한
             질문이다 — 판매 판단(위 ①)과는 별개 관심사로 분리한다. */}
-        {/* UX-1D(CPO 지시, 2026-09-05) — 가격 관련 정보가 "국내 시장 가격"과
-            "해외 구매 비용" 두 블록으로 흩어져 있었다. 하나의 "가격 전략"
-            정보 단위로 묶고, L1에는 결정에 쓰는 값만 남긴다.
-            대표 국내 가격은 새로 계산하지 않는다 — 서버가 이미 낸
-            domesticMarketSplit.exact/comparison 평균가를 우선순위대로
-            골라 쓰기만 한다(동일상품 평균 → 비교상품 평균 → 표시 안 함). */}
-        {hasAnyData && (domesticCompetition.tier !== "NONE" || currentPrice.sellingPriceKrw != null) && (
-          <div className="rounded-md border border-border bg-background p-2">
-            <div className="mb-1 flex items-center justify-between">
-              <p className="font-medium text-text-primary">💰 가격 전략</p>
-              <button
-                type="button"
-                onClick={() => setShowPriceStrategy((v) => !v)}
-                className="text-[11px] text-primary hover:underline"
-              >
-                {showPriceStrategy ? "접기 ▲" : "상세 보기 ▼"}
-              </button>
-            </div>
-            {/* UX-1D — 추천 판매가는 위 최종 판단 카드 L1에 이미 있으므로 여기
-                다시 넣지 않는다(숫자 중복 금지). 이 블록은 "시장이 얼마인가"만
-                답하고, "얼마에 팔지"는 판단 카드가 답한다. */}
-            <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-text-secondary sm:grid-cols-3">
-              {representativeDomesticPrice != null && (
-                <div>
-                  <dt className="text-[10px] text-text-tertiary">{representativeDomesticLabel}</dt>
-                  <dd className="font-medium text-text-primary">
-                    ₩{representativeDomesticPrice.toLocaleString()}
-                  </dd>
-                </div>
-              )}
-              <div>
-                <dt className="text-[10px] text-text-tertiary">국내 시장</dt>
-                <dd className="font-medium text-text-primary">
-                  {SIGNAL_LEVEL_BADGE[
-                    marketSignals.signals.find((s) => s.key === "domesticPresence")?.level ?? "unknown"
-                  ]}
-                </dd>
-              </div>
-            </dl>
-          </div>
-        )}
+        {/* MI-UX-8(CEO 실화면 테스트 → CPO 지시, 2026-09-06) — "💰 가격 전략"
+            대형 블록을 제거했다.
+            국내 동일상품 평균가/최저가/평균가/판매처 수, 해외 구매 비용 상세,
+            한국向 표시가는 전부 위의 판매 판단·국내 시장 신호와 아래 가격비교
+            영역에서 이미 확인할 수 있는 값의 반복이었다. 판단이 끝난 자리에
+            다시 긴 가격 분석을 놓으면 "그래서 얼마에 팔아?"의 답이 묻힌다.
 
-        {showPriceStrategy && hasAnyData && (domesticCompetition.tier !== "NONE" || currentPrice.sellingPriceKrw != null) && (
-          <div className="rounded-md border border-border bg-background p-2">
-            <p className="mb-1 font-medium text-text-primary">🇰🇷 국내 시장 가격</p>
-            {/* P-25 Sprint 3(CPO 지시, 2026-09-02) — "EXACT와 COMPARISON 가격을
-                절대 하나의 가격으로 합치지 않는다." 아래 요약 dl은 domesticCompetition
-                (이미 EXACT 우선 병합된 resolved 값)만 보여주므로, 실제로 둘 다
-                존재할 때(예: PèPè — EXACT 포레포레 + COMPARISON 듀베베) COMPARISON
-                가격이 화면 어디에도 안 보이는 문제가 있었다. domesticMarketSplit.
-                exact/comparison(market-intelligence.ts가 이미 계산해 응답에
-                포함하던 값 — 새 계산 없음)을 각각 별도 블록으로 명시한다. */}
-            {domesticMarketSplit.exact.sellerCount > 0 && (
-              <div className="mb-1.5 rounded-md border border-success/30 bg-success-soft p-1.5 text-success">
-                <p className="font-medium">🟢 동일상품 가격</p>
-                <p className="mt-0.5 text-text-secondary">
-                  최저가 ₩{domesticMarketSplit.exact.lowestPriceKrw?.toLocaleString() ?? "—"} · 평균가 ₩
-                  {domesticMarketSplit.exact.averagePriceKrw != null
-                    ? Math.round(domesticMarketSplit.exact.averagePriceKrw).toLocaleString()
-                    : "—"}{" "}
-                  · 판매처 {domesticMarketSplit.exact.sellerCount}곳
-                </p>
-              </div>
-            )}
-            {domesticMarketSplit.comparison.sellerCount > 0 && (
-              <div className="mb-1.5 rounded-md border border-warning/30 bg-warning-soft p-1.5 text-warning">
-                <p className="font-medium">🟡 비교상품 시장가격(참고용)</p>
-                <p className="mt-0.5 text-text-secondary">
-                  최저가 ₩{domesticMarketSplit.comparison.lowestPriceKrw?.toLocaleString() ?? "—"} · 평균가 ₩
-                  {domesticMarketSplit.comparison.averagePriceKrw != null
-                    ? Math.round(domesticMarketSplit.comparison.averagePriceKrw).toLocaleString()
-                    : "—"}{" "}
-                  · 판매처 {domesticMarketSplit.comparison.sellerCount}곳
-                </p>
-              </div>
-            )}
-            {domesticMarketSplit.exact.sellerCount === 0 && domesticMarketSplit.comparison.sellerCount === 0 && (
-              <p className="mb-1.5 text-[10px] text-text-tertiary">⚪ 국내 시장 데이터 부족</p>
-            )}
-            <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-text-secondary sm:grid-cols-3">
-              {currentPrice.sellingPriceKrw != null && (
-                <div>
-                  <dt className="text-[10px] text-text-tertiary">내 판매가</dt>
-                  <dd className="font-medium text-text-primary">₩{currentPrice.sellingPriceKrw.toLocaleString()}</dd>
-                </div>
-              )}
-              {domesticCompetition.lowestPriceKrw != null && (
-                <div>
-                  <dt className="text-[10px] text-text-tertiary">국내 최저가</dt>
-                  <dd className="font-medium text-text-primary">₩{domesticCompetition.lowestPriceKrw.toLocaleString()}</dd>
-                </div>
-              )}
-              {domesticCompetition.averagePriceKrw != null && (
-                <div>
-                  <dt className="text-[10px] text-text-tertiary">국내 평균가</dt>
-                  <dd className="font-medium text-text-primary">
-                    ₩{Math.round(domesticCompetition.averagePriceKrw).toLocaleString()}
-                  </dd>
-                </div>
-              )}
-              {domesticCompetition.tier !== "NONE" && (
-                <div>
-                  <dt className="text-[10px] text-text-tertiary">국내 동일상품</dt>
-                  <dd className="font-medium text-text-primary">{domesticCompetition.sellerCount}곳</dd>
-                </div>
-              )}
-              {domesticCompetition.soldOutListings.length > 0 && (
-                <div>
-                  <dt className="text-[10px] text-text-tertiary">품절</dt>
-                  <dd className="font-medium text-text-primary">{domesticCompetition.soldOutListings.length}곳</dd>
-                </div>
-              )}
-            </dl>
-          </div>
-        )}
+            제거한 것은 반복 UI뿐이다 — marketCase/recommendedPrice/targetPrice/
+            minimumPrice/landedCost/domesticLowestPrice/sellerCount/confidence
+            계산과 API 응답은 그대로다. 원본 수치는 "해외·국내 가격비교 원본
+            보기" 버튼으로 기존 비교 영역에서 확인한다.
+            MI = 판매 판단 / 가격비교 = 판단 근거 확인, 으로 역할을 나눈다. */}
 
-        {/* N-4.18-K STEP K-3/K-5/K-6 — 활성 알림(확인/해소 전). price_alerts가
-            비어있으면(마이그레이션 대기 또는 변화 없음) 아무것도 표시하지
-            않는다 — "변화 없음 → Alert 생성 안 됨"이 UI에도 그대로 반영된다. */}
-        {alerts.map((a) => (
-          <div key={a.id} className={`rounded-md border p-2.5 ${ALERT_SEVERITY_STYLE[a.severity]}`}>
-            <p className="font-medium">
-              {ALERT_SEVERITY_ICON[a.severity]} {a.title}
-            </p>
-            <p className="mt-1 text-text-secondary">{a.detail}</p>
-            <div className="mt-2 flex items-center gap-2">
-              {a.status === "OPEN" && (
-                <button
-                  type="button"
-                  onClick={() => void acknowledgeAlert(a.id)}
-                  disabled={acknowledgingId === a.id}
-                  className="rounded-md border border-current px-2 py-1 text-[11px] font-medium hover:opacity-80 disabled:opacity-50"
-                >
-                  {acknowledgingId === a.id ? "처리 중..." : "확인함"}
-                </button>
-              )}
-              {a.status === "ACKNOWLEDGED" && <span className="text-[10px] text-text-tertiary">✓ 확인함</span>}
-              {/* N-4.18-L STEP L-9(대표님 지시, 2026-08-26: "Alert에서 바로
-                  행동할 수 있어야 함") — 자동 가격변경은 절대 하지 않는다.
-                  기존 handleRequestPriceReview(J-9)와 같은 이동만 한다. */}
-              {onRequestPriceReview && (
-                <button
-                  type="button"
-                  onClick={onRequestPriceReview}
-                  className="rounded-md border border-current px-2 py-1 text-[11px] font-medium hover:opacity-80"
-                >
-                  가격/마진 확인
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-
-        {/* P-2-3 ③ 해외 구매 비용(대표님 지시, 2026-08-28) — "착지원가"라는
-            내부 계산 필드명을 UI 개념으로 노출하지 않는다. cost/fx는 기존
-            computePriceBreakdown 값 그대로(새 계산 없음), 국제배송비는
-            landedCostKrw-costKrw로 표시만 한다(cost 응답에 이미 있는 두
-            숫자의 차이일 뿐, 새 필드가 아니다). 총 구매원가는 unifiedDecision.
-            landedCostKrw(관세/부가세/국내배송원가까지 반영 시도)가 있으면
-            그 값을, 없으면 기존 cost.landedCostKrw로 폴백한다. */}
-        {/* UX-1D — 해외 구매 비용은 "가격 전략"의 하위 Evidence다. 가격 전략을
-            펼쳤을 때만 보이고, 그 안에서 다시 상세를 펼친다(L2 → L3). */}
-        {showPriceStrategy && cost && fx && (
-          <div className="rounded-md border border-border bg-background p-2">
-            {/* UX-1B — 헤더를 토글로 바꾼다. 원가 구성은 Evidence이므로 기본
-                접힘이고, 판단에 쓰는 구매원가·추천가·마진은 위 최종 판단
-                카드에 이미 있어 기본 화면에서 잃는 정보가 없다. */}
-            <button
-              type="button"
-              onClick={() => setShowOverseasCost((v) => !v)}
-              className="flex w-full items-center justify-between text-left font-medium text-text-primary"
-            >
-              <span>🌎 해외 구매 비용</span>
-              <span className="text-[11px] font-normal text-primary">
-                {showOverseasCost ? "접기 ▲" : "상세 보기 ▼"}
-              </span>
-            </button>
-            {showOverseasCost && (
-            <>
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-text-secondary">
-              <span>
-                🌍 상품 가격 {cost.originalAmount.toLocaleString()} {cost.originalCurrency}
-              </span>
-              {originChangeRatePercent != null && originChangeRatePercent !== 0 && (
-                <span className={originChangeRatePercent < 0 ? "text-success" : "text-error"}>
-                  원가 변화 {originChangeRatePercent < 0 ? "▼" : "▲"}
-                  {Math.abs(originChangeRatePercent)}%
-                </span>
-              )}
-              <span>·</span>
-              <span>
-                환율 ₩{Math.round(fx.rate).toLocaleString()}
-                {fx.isEstimate ? "(추정)" : "(실시간)"}
-              </span>
-            </div>
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-text-secondary">
-              <span>상품가 환산 ≈ ₩{Math.round(cost.costKrw).toLocaleString()}</span>
-              <span>·</span>
-              <span>
-                국제 배송비 ₩{Math.round(cost.landedCostKrw - cost.costKrw).toLocaleString()}
-                <span className="text-[10px] text-text-tertiary"> (추정)</span>
-              </span>
-            </div>
-            <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-border pt-1 text-text-secondary">
-              <span className="font-medium text-text-primary">
-                현재 확인된 구매원가 ₩
-                {Math.round(unifiedDecision?.landedCostKrw.value ?? cost.landedCostKrw).toLocaleString()}
-              </span>
-            </div>
-            {currentPrice.costBasis === "KR_MARKET" && currentPrice.costPriceKrw != null && (
-              <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-text-secondary">
-                <span className="font-medium text-text-primary">
-                  🇰🇷 한국向 표시가 ₩{currentPrice.costPriceKrw.toLocaleString()}
-                </span>
-                <span className="text-[10px] text-text-tertiary">(실제 확인됨 — 위 판단은 이 값 기준)</span>
-              </div>
-            )}
-            {currentPrice.costBasis === "ORIGIN_FX" && (
-              <p className="mt-1 text-[10px] text-text-tertiary">
-                ⚪ 한국向 실제 표시가는 확인되지 않아, 위 판단은 환율 환산가(₩
-                {Math.round(cost.costKrw).toLocaleString()}) 기준입니다.
-              </p>
-            )}
-            </>
-            )}
-          </div>
-        )}
 
         {/* STEP J-6/J-11 — "🇰🇷 국내" 블록. sampleListings는 verified 링크만
             가격이 저장되므로(run-domestic-price-check.ts STEP 2) 전부 동일상품
