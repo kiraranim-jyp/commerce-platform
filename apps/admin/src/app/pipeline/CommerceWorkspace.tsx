@@ -71,6 +71,10 @@ const SELL_VERDICT_COPY: Record<SellerFacingVerdictCode, string> = {
   NOT_RECOMMENDED: "🔴 판매 비추천",
 };
 import type { PriorityItem, ReadinessLevel, RegistrationReadinessState } from "./commerce/readiness-state";
+// REGISTRATION-UX-1 — 채널 탭을 열지 않아도 준비 상태를 계산하기 위해
+// PlatformPreview가 쓰는 것과 동일한 함수를 그대로 가져온다(새 판정 없음).
+import { computeChecklistReadiness } from "./commerce/readiness";
+import { buildPriorityItems, resolveRegistrationReadinessState } from "./commerce/RegistrationStatusBanner";
 import { RegistrationHistoryPanel } from "./commerce/RegistrationHistoryPanel";
 import { StageStepper } from "./commerce/StageStepper";
 import { SourceDataView } from "./commerce/SourceDataView";
@@ -895,6 +899,64 @@ export function CommerceWorkspace({
       }));
     }
   }
+
+  /**
+   * REGISTRATION-UX-1(CPO 지시, 2026-09-06) — 채널별 등록 준비 상태를 **탭을
+   * 열지 않아도** 알 수 있게 한다.
+   *
+   * 기존에는 PlatformPreview가 렌더될 때만 onReadinessChange로 값을 올려줘서,
+   * 쿠팡 탭을 한 번도 안 연 셀러에게는 쿠팡 상태가 아예 존재하지 않았다
+   * ("무엇이 부족한지"를 알려면 먼저 클릭해야 하는 구조).
+   *
+   * 새 판정 규칙을 만들지 않는다 — PlatformPreview가 쓰는 것과 **같은 함수**
+   * (toListingModel → computeChecklistReadiness → resolveRegistrationReadinessState
+   * → buildPriorityItems)를 탭 렌더링과 분리해 여기서 미리 한 번 돌린다.
+   * 전부 순수 함수라 API 호출이 0회다.
+   *
+   * 다만 탭을 실제로 열면 PlatformPreview가 비동기 값(네이버 payload 검증,
+   * 쿠팡 payloadPreview.complianceReport)까지 반영한 더 정확한 결과를 올려준다.
+   * 그래서 이 값은 **잠정치**이고, 방문한 탭은 항상 실제 값이 우선한다
+   * (아래 mergedReadiness). 잠정치를 확정처럼 보여주지 않기 위해 화면에서도
+   * 구분한다.
+   */
+  const provisionalReadiness = useMemo(() => {
+    const out: Partial<Record<PlatformId, { state: RegistrationReadinessState; priorityItems: PriorityItem[] }>> = {};
+    const priceValid = product.priceValidity === "VALID";
+    for (const platformId of PLATFORM_ORDER) {
+      try {
+        const model = PLATFORM_ADAPTERS[platformId].toListingModel(product, categoryMappings[platformId], {
+          liveRates: exchangeRates?.rates,
+          roundingUnit: priceRoundingUnit ?? undefined,
+        });
+        const summary = computeChecklistReadiness(model.validations, model.category);
+        out[platformId] = {
+          state: resolveRegistrationReadinessState(summary, priceValid),
+          priorityItems: buildPriorityItems(summary, priceValid, "section-price"),
+        };
+      } catch {
+        // 어댑터가 이 상품을 다룰 수 없으면 잠정치를 만들지 않는다 —
+        // 추측한 상태를 보여주느니 표시하지 않는 쪽이 낫다.
+      }
+    }
+    return out;
+  }, [product, categoryMappings, exchangeRates, priceRoundingUnit]);
+
+  /** 방문한 탭의 실제 값이 항상 우선하고, 없으면 잠정치를 쓴다. */
+  const mergedReadiness = useMemo(() => {
+    const out: Partial<
+      Record<PlatformId, { state: RegistrationReadinessState; priorityItems: PriorityItem[]; provisional: boolean }>
+    > = {};
+    for (const platformId of PLATFORM_ORDER) {
+      const actual = platformReadiness[platformId];
+      if (actual) {
+        out[platformId] = { ...actual, provisional: false };
+        continue;
+      }
+      const guess = provisionalReadiness[platformId];
+      if (guess) out[platformId] = { ...guess, provisional: true };
+    }
+    return out;
+  }, [platformReadiness, provisionalReadiness]);
 
   const listing = useMemo(() => {
     if (tab === "source" || tab === "content") return null;
@@ -1735,11 +1797,25 @@ export function CommerceWorkspace({
           원칙으로 추가한다(단, priceLevel==="UNKNOWN"은 "부족"이 아니라 "아직
           모름"이라 여기 목록에는 올리지 않는다 — 대표님 지시: "가격 데이터가
           없다고 등록이 불가능한 게 아니다"). */}
-      {(Object.entries(platformReadiness).some(([, r]) => r.state !== "READY") ||
-        priceLevel === "YELLOW" ||
-        priceLevel === "RED") && (
+      {/* REGISTRATION-UX-1(CPO 지시, 2026-09-06) — 조건부 렌더를 없앤다.
+          기존에는 하나라도 미완일 때만 이 블록이 나타나서, 전부 준비되면
+          블록 자체가 사라졌다. 셀러는 "등록해도 된다"는 확인을 받는 대신
+          아무것도 못 보게 된다. 이제 항상 결론을 보여준다. */}
+      {Object.keys(mergedReadiness).length > 0 && (
         <div className="rounded-lg border border-border bg-surface p-3 text-sm">
-          <p className="mb-2 text-xs font-medium text-text-tertiary">등록 준비 상태</p>
+          {(() => {
+            const entries = Object.values(mergedReadiness);
+            const allReady =
+              entries.length > 0 &&
+              entries.every((r) => r.state === "READY") &&
+              commonInfoLevel === "GREEN" &&
+              priceLevel !== "RED";
+            return (
+              <p className="mb-2 text-sm font-semibold text-text-primary">
+                {allReady ? "🟢 등록 가능" : "🟡 등록 전 확인 필요"}
+              </p>
+            );
+          })()}
           <ul className="space-y-2">
             {commonInfoLevel !== "GREEN" && (
               <li>
@@ -1754,9 +1830,17 @@ export function CommerceWorkspace({
                 </button>
               </li>
             )}
-            {(Object.entries(platformReadiness) as [PlatformId, { state: RegistrationReadinessState; priorityItems: PriorityItem[] }][])
-              .filter(([, r]) => r.state !== "READY")
-              .map(([platformId, r]) => (
+            {/* REGISTRATION-UX-1 — 방문한 탭만이 아니라 모든 채널을 보여준다.
+                준비된 채널도 ✓로 표시해야 "네이버는 되고 쿠팡은 뭐가 빠졌는지"가
+                한눈에 들어온다. 잠정치(탭 미방문)는 그렇다고 밝힌다 — 실제
+                등록 게이트는 여전히 각 채널의 검증이 결정하므로, 여기 값을
+                확정으로 읽게 하면 안 된다. */}
+            {(
+              Object.entries(mergedReadiness) as [
+                PlatformId,
+                { state: RegistrationReadinessState; priorityItems: PriorityItem[]; provisional: boolean },
+              ][]
+            ).map(([platformId, r]) => (
                 <li key={platformId}>
                   <button
                     type="button"
@@ -1765,11 +1849,15 @@ export function CommerceWorkspace({
                   >
                     <ReadinessLevelDot level={readinessStateToLevel(r.state)} />
                     <span className="font-medium text-text-primary">{PLATFORM_ADAPTERS[platformId].label}</span>
+                    {r.state === "READY" && r.priorityItems.length === 0 && (
+                      <span className="text-xs text-success">✓ 준비됨</span>
+                    )}
                     {r.priorityItems.length > 0 && (
                       <span className="text-xs text-text-tertiary">
-                        — {r.priorityItems.map((item) => item.label).join(", ")}
+                        — 필수정보 {r.priorityItems.length}개: {r.priorityItems.map((item) => item.label).join(", ")}
                       </span>
                     )}
+                    {r.provisional && <span className="text-[10px] text-text-tertiary">(사전 점검)</span>}
                     {/* N-4.12 STEP3 P0-4(대표님 지시: "[스마트스토어에서 확인하기]로
                      * 이동" — 정확한 CTA 문구) — 클릭 대상은 이미 이 버튼 전체(위
                      * onClick)라 새 동작을 추가하지 않는다, 문구만 명시한다. */}
