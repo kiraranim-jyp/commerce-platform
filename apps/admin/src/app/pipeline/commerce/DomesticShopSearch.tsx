@@ -252,11 +252,16 @@ function CandidateRowTable({ rows }: { rows: CandidateRow[] }) {
       <table className="w-full min-w-[560px] border-collapse text-left text-[11px]">
         <thead>
           <tr className="border-b border-border bg-background text-text-secondary">
-            <th className="px-2 py-1.5 font-medium">판매처</th>
+            {/* MI-REDEFINE-1 ⑥(CPO 지시, 2026-09-06) — 국내/해외 표의 정렬
+                체계를 통일한다. 가격은 자릿수를 눈으로 비교하는 값이라
+                우측 정렬해야 하는데 표 전체가 text-left라 좌측에 붙어 있었다.
+                컬럼 구성 자체(해외에는 재고 없음)는 데이터가 다르므로
+                억지로 맞추지 않는다 — 없는 재고를 만들지 않는다. */}
+            <th className="whitespace-nowrap px-2 py-1.5 font-medium">판매처</th>
             <th className="px-2 py-1.5 font-medium">상품</th>
-            <th className="px-2 py-1.5 font-medium">가격</th>
-            <th className="px-2 py-1.5 font-medium">재고</th>
-            <th className="px-2 py-1.5 font-medium">매칭상태</th>
+            <th className="whitespace-nowrap px-2 py-1.5 text-right font-medium">상품가격</th>
+            <th className="whitespace-nowrap px-2 py-1.5 font-medium">재고</th>
+            <th className="whitespace-nowrap px-2 py-1.5 font-medium">매칭상태</th>
           </tr>
         </thead>
         <tbody>
@@ -274,8 +279,10 @@ function CandidateRowTable({ rows }: { rows: CandidateRow[] }) {
                     <span className="text-text-tertiary">{row.note}</span>
                   )}
                 </td>
-                <td className="px-2 py-1.5 whitespace-nowrap text-text-secondary">{c ? <PriceCell candidate={c} /> : "—"}</td>
-                <td className="px-2 py-1.5">{c ? <StockBadge soldOut={c.soldOut} /> : "—"}</td>
+                <td className="whitespace-nowrap px-2 py-1.5 text-right tabular-nums text-text-secondary">
+                  {c ? <PriceCell candidate={c} /> : "—"}
+                </td>
+                <td className="whitespace-nowrap px-2 py-1.5">{c ? <StockBadge soldOut={c.soldOut} /> : "—"}</td>
                 <td className="px-2 py-1.5">
                   {c?.matchTruth ? (
                     <div className="space-y-0.5">

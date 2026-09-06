@@ -509,11 +509,14 @@ function ResultTable({
         <table className="w-full min-w-[640px] border-collapse text-left text-[11px]">
           <thead>
             <tr className="border-b border-border bg-background text-text-secondary">
-              <th className="px-2 py-1.5 font-medium">판매처</th>
-              <th className="px-2 py-1.5 font-medium">국가</th>
+              {/* MI-REDEFINE-1 ⑥ — 국내 표와 같은 정렬 규칙(가격 우측 정렬,
+                  헤더 줄바꿈 방지). 해외는 재고 데이터가 없으므로 재고 컬럼을
+                  만들지 않는다 — 컬럼 수를 맞추려고 빈 값을 넣지 않는다. */}
+              <th className="whitespace-nowrap px-2 py-1.5 font-medium">판매처</th>
+              <th className="whitespace-nowrap px-2 py-1.5 font-medium">국가</th>
               <th className="px-2 py-1.5 font-medium">상품</th>
-              <th className="px-2 py-1.5 font-medium">가격</th>
-              <th className="px-2 py-1.5 font-medium">매칭상태</th>
+              <th className="whitespace-nowrap px-2 py-1.5 text-right font-medium">상품가격</th>
+              <th className="whitespace-nowrap px-2 py-1.5 font-medium">매칭상태</th>
             </tr>
           </thead>
           <tbody>
@@ -547,7 +550,7 @@ function ResultTable({
                       <span className="text-text-tertiary">{row.note}</span>
                     )}
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td className="whitespace-nowrap px-2 py-1.5 text-right tabular-nums">
                     <PriceCell candidate={c} krwRates={krwRates} fxSource={fxSource} isSimilarOnly={isSimilarOnly} />
                   </td>
                   <td className="px-2 py-1.5">

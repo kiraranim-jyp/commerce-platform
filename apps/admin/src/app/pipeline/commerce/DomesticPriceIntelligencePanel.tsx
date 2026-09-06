@@ -1446,13 +1446,11 @@ export function DomesticPriceIntelligencePanel({
             </div>
           )}
 
-          {/* MI-CONFIDENCE-2 — 기본 화면의 유일한 신뢰도 표시. 한 줄이고,
-              자세한 항목별 내역은 아래 상세보기에 있다. */}
-          {confidenceBasis && (
-            <p className="text-[10px] text-text-tertiary">
-              판단 근거 {confidenceBasis.confirmedCount}/{confidenceBasis.totalCount} 확인
-            </p>
-          )}
+          {/* MI-REDEFINE-1 ⑧(CPO 지시, 2026-09-06) — 기본 화면에서 "판단 근거
+              4/4 확인"을 뺀다. 셀러가 첫 화면에서 원하는 답은 "팔아도 되나,
+              얼마에"이고 4/4는 그 결론이 아니다. 항목별 내역은 아래 상세보기의
+              "🔎 판단 근거"에 그대로 있다 — 삭제가 아니라 노출 계층 변경이고,
+              confidenceBasis 산식/데이터는 건드리지 않는다. */}
 
           <button
             type="button"
