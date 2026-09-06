@@ -5,6 +5,8 @@ import { countryToFlagEmoji } from "@commerce/shared";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { deriveComparisonResultState, getComparisonResultHeadline, type ComparisonResultState } from "@/lib/comparison-result-status";
 import { computeFxLine, computeKrwAmount, isOnSale, isPriceDisplayable } from "@/lib/price-truth";
+// MATCHING-UNIFY-1 — 국내/해외가 같은 문구를 쓰도록 라벨 매핑을 한 곳에서 가져온다.
+import { overseasMatchDisplay } from "./match-display";
 import {
   computePriceDifference,
   deriveSellerDecisionState,
@@ -28,15 +30,10 @@ type ProductMatchTruth =
   | "CONFLICT"
   | "INSUFFICIENT_EVIDENCE";
 
-const PRODUCT_MATCH_TRUTH_DISPLAY: Record<ProductMatchTruth, { icon: string; text: string; badgeClass: string }> = {
-  EXACT_PRODUCT: { icon: "🟢", text: "동일상품 확인", badgeClass: "bg-success-soft text-success" },
-  CONFIRMED_PRODUCT: { icon: "🟢", text: "동일상품 확인", badgeClass: "bg-success-soft text-success" },
-  SAME_MODEL_VARIANT: { icon: "🔵", text: "동일 모델 · 옵션 다름", badgeClass: "bg-primary/10 text-primary" },
-  VERY_SIMILAR: { icon: "🟡", text: "매우 유사한 상품", badgeClass: "bg-warning-soft text-warning" },
-  SIMILAR: { icon: "⚪", text: "유사상품", badgeClass: "bg-background text-text-tertiary" },
-  CONFLICT: { icon: "🔴", text: "다른 상품", badgeClass: "bg-error/10 text-error" },
-  INSUFFICIENT_EVIDENCE: { icon: "⚪", text: "매칭 불확실", badgeClass: "bg-background text-text-tertiary" },
-};
+/* MATCHING-UNIFY-1(CPO 지시, 2026-09-06) — 라벨 맵을 match-display.ts 하나로
+   합쳤다. 국내/해외가 각자 맵을 들고 있어 같은 뜻이 화면마다 다르게 보였다
+   (예: SIMILAR을 국내는 "🟡 비교상품", 해외는 "⚪ 유사상품"). 판정값과 가격
+   반영 정책은 그대로이고 표시 문구만 통일한다. */
 
 /** P-11 CPO 2차 검증 지시(2026-08-30, 조건 2) — "EXACT_PRODUCT/CONFIRMED_PRODUCT만
  * 실제 동일상품으로 집계", "SAME_MODEL_VARIANT는 직접 가격 반영이 아니라 참고
@@ -574,12 +571,13 @@ function ResultTable({
  * 폴백한다. score는 내부 랭킹(정렬)에는 계속 쓰이지만 화면에는 노출하지 않는다. */
 function MatchBadge({ candidate: c }: { candidate: Candidate }) {
   if (c.productMatchTruth) {
-    const { icon, text, badgeClass } = PRODUCT_MATCH_TRUTH_DISPLAY[c.productMatchTruth];
+    const { icon, label, note, className } = overseasMatchDisplay(c.productMatchTruth);
     return (
       <div className="space-y-0.5">
-        <span className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${badgeClass}`}>
-          {icon} {text}
+        <span className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${className}`}>
+          {icon} {label}
         </span>
+        <p className="text-[10px] text-text-tertiary">{note}</p>
         {c.matchReasons?.length ? <p className="text-[10px] text-text-tertiary">근거: {c.matchReasons.join(" · ")}</p> : null}
       </div>
     );

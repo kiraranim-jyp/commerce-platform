@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
+// MATCHING-UNIFY-1 — 해외와 같은 라벨을 쓰기 위한 공통 매핑.
+import { domesticMatchDisplay } from "./match-display";
 
 type MatchLevel = "very_high" | "high" | "medium" | "low";
 
@@ -29,29 +31,11 @@ const MATCH_LEVEL_ICON: Record<MatchLevel, string> = {
  * 기존 matchLevel 배지로 그대로 폴백한다 — 하위호환, 회귀 없음. */
 type MatchTruth = "EXACT_IDENTIFIER" | "STRONG_IDENTIFIER" | "TEXT_CONFIRMED" | "SIMILAR" | "CONFLICT" | "INSUFFICIENT_EVIDENCE";
 
-const MATCH_TRUTH_BADGE: Record<MatchTruth, { icon: string; label: string; className: string; disclaimer?: string }> = {
-  EXACT_IDENTIFIER: { icon: "🟢", label: "동일상품 확인", className: "bg-success-soft text-success" },
-  STRONG_IDENTIFIER: { icon: "🟢", label: "동일상품 확인", className: "bg-success-soft text-success" },
-  TEXT_CONFIRMED: {
-    icon: "🟡",
-    label: "비교상품",
-    className: "bg-warning-soft text-warning",
-    disclaimer: "동일 모델 식별자가 확인되지 않았습니다 — 국내 유사 시장가격(참고용)으로만 사용됩니다.",
-  },
-  SIMILAR: {
-    icon: "🟡",
-    label: "비교상품",
-    className: "bg-warning-soft text-warning",
-    disclaimer: "동일 모델 식별자가 확인되지 않았습니다 — 국내 유사 시장가격(참고용)으로만 사용됩니다.",
-  },
-  CONFLICT: {
-    icon: "🔴",
-    label: "다른상품 가능성",
-    className: "bg-error-soft text-error",
-    disclaimer: "상품코드가 원본과 일치하지 않습니다 — 동일상품이 아닐 가능성이 높습니다.",
-  },
-  INSUFFICIENT_EVIDENCE: { icon: "⚪", label: "매칭 불확실", className: "bg-background text-text-tertiary" },
-};
+/* MATCHING-UNIFY-1(CPO 지시, 2026-09-06) — 라벨 맵을 match-display.ts로
+   통합했다. 기존에는 국내가 SIMILAR을 "🟡 비교상품"으로, 해외가 "⚪ 유사상품"
+   으로 불러서 같은 판정이 화면마다 다른 신뢰도로 보였다. 판정값과 가격 반영
+   정책(EXACT/STRONG만 동일상품 가격)은 변경 없이 문구만 통일한다. */
+
 
 /**
  * P-24 Sprint 2(CPO 지시, 2026-09-02) — 실측(PèPè): 진짜 동일상품(포레포레,
@@ -285,19 +269,22 @@ function CandidateRowTable({ rows }: { rows: CandidateRow[] }) {
                 <td className="whitespace-nowrap px-2 py-1.5">{c ? <StockBadge soldOut={c.soldOut} /> : "—"}</td>
                 <td className="px-2 py-1.5">
                   {c?.matchTruth ? (
-                    <div className="space-y-0.5">
-                      <span
-                        className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${MATCH_TRUTH_BADGE[c.matchTruth].className}`}
-                      >
-                        {MATCH_TRUTH_BADGE[c.matchTruth].icon} {MATCH_TRUTH_BADGE[c.matchTruth].label}
-                      </span>
-                      {c.matchReasons?.length ? (
-                        <p className="text-[10px] text-text-tertiary">근거: {c.matchReasons.join(" · ")}</p>
-                      ) : null}
-                      {MATCH_TRUTH_BADGE[c.matchTruth].disclaimer && (
-                        <p className="text-[10px] text-text-tertiary">※ {MATCH_TRUTH_BADGE[c.matchTruth].disclaimer}</p>
-                      )}
-                    </div>
+                    (() => {
+                      const d = domesticMatchDisplay(c.matchTruth);
+                      return (
+                        <div className="space-y-0.5">
+                          <span
+                            className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${d.className}`}
+                          >
+                            {d.icon} {d.label}
+                          </span>
+                          <p className="text-[10px] text-text-tertiary">{d.note}</p>
+                          {c.matchReasons?.length ? (
+                            <p className="text-[10px] text-text-tertiary">근거: {c.matchReasons.join(" · ")}</p>
+                          ) : null}
+                        </div>
+                      );
+                    })()
                   ) : c?.matchLevel ? (
                     <div className="space-y-0.5">
                       <span

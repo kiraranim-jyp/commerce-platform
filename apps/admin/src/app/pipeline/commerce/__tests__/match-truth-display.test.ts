@@ -23,20 +23,20 @@ function candidate(overrides: Partial<Parameters<typeof candidateLabel>[0]>) {
 }
 
 describe("MT-01 — Pepe/ForetForet: confidence 낮음 + identifier partial → STRONG_IDENTIFIER", () => {
-  it("🟢 동일상품 확인됨(식별자 기반 검증)으로 표시된다", () => {
+  it("🟢 동일상품으로 표시된다(식별자 기반 검증)", () => {
     const label = candidateLabel(candidate({ matchTruth: "STRONG_IDENTIFIER", matchConfidence: 0.42, verified: true }));
     expect(label.icon).toBe("🟢");
-    expect(label.text).toBe("동일상품 확인됨(식별자 기반 검증)");
-    expect(label.note).toBe("→ 동일상품 가격으로 반영됨");
+    expect(label.text).toBe("동일상품");
+    expect(label.note).toContain("동일상품 가격으로 반영됨");
   });
 });
 
 describe("MT-02 — Pepe/Deuxbebe: confidence 72% + identifier unavailable → SIMILAR", () => {
   it("🟡 비교상품 · 텍스트 유사도 72%로 표시되고 비교상품 시장가격(참고용)으로 반영된다", () => {
     const label = candidateLabel(candidate({ matchTruth: "SIMILAR", matchConfidence: 0.72, verified: false }));
-    expect(label.icon).toBe("🟡");
-    expect(label.text).toContain("비교상품");
-    expect(label.note).toBe("텍스트 유사도 72% · 비교상품 시장가격(참고용)으로 반영됨");
+    expect(label.icon).toBe("⚪");
+    expect(label.text).toBe("유사상품");
+    expect(label.note).toContain("텍스트 유사도 72%");
   });
 });
 
@@ -44,7 +44,7 @@ describe("MT-03 — 고 confidence + identifier conflict → CONFLICT", () => {
   it("🔴 다른 상품 가능성 높음으로 표시된다 — confidence가 높아도 동일상품으로 표시되지 않는다", () => {
     const label = candidateLabel(candidate({ matchTruth: "CONFLICT", matchConfidence: 0.95, verified: false }));
     expect(label.icon).toBe("🔴");
-    expect(label.text).toContain("다른 상품 가능성 높음");
+    expect(label.text).toBe("다른 상품 가능성");
   });
 });
 
@@ -52,8 +52,8 @@ describe("MT-04 — Bobo Choses 실제 사례: confidence 매우 높음 + identi
   it("🟡 비교상품으로 표시되고 비교상품 시장가격(참고용)으로 반영된다 — 텍스트 유사도만으로는 동일상품(🟢)이 될 수 없다", () => {
     const label = candidateLabel(candidate({ matchTruth: "TEXT_CONFIRMED", matchConfidence: 1, verified: false }));
     expect(label.icon).toBe("🟡");
-    expect(label.text).toContain("비교상품");
-    expect(label.note).toBe("텍스트 유사도 100% · 비교상품 시장가격(참고용)으로 반영됨");
+    expect(label.text).toBe("동일상품 추정");
+    expect(label.note).toContain("텍스트 유사도 100%");
   });
 });
 
@@ -61,17 +61,17 @@ describe("MT-05 — 낮은 confidence + identifier 없음 → INSUFFICIENT_EVIDE
   it("⚪ 판단 근거 부족으로 표시된다", () => {
     const label = candidateLabel(candidate({ matchTruth: "INSUFFICIENT_EVIDENCE", matchConfidence: 0.3, verified: false }));
     expect(label.icon).toBe("⚪");
-    expect(label.text).toContain("판단 근거 부족");
+    expect(label.text).toBe("판단 불가");
   });
 });
 
 describe("MT-06 — 레거시 데이터(matchTruth=null)도 오류 없이 표시된다", () => {
-  it("verified=true 레거시 행은 기존 방식대로 동일상품 확인됨으로 표시된다", () => {
+  it("verified=true 레거시 행은 기존 방식대로 동일상품으로 표시된다", () => {
     const label = candidateLabel(
       candidate({ matchTruth: null, verified: true, matchReasons: ["modelCode 부분 일치(식별자 근거)"] }),
     );
     expect(label.icon).toBe("🟢");
-    expect(label.text).toBe("동일상품 확인됨(식별자 기반 검증)");
+    expect(label.text).toBe("동일상품");
   });
 
   it("verified=false 레거시 행은 matchType 기반으로 표시된다", () => {

@@ -15,6 +15,8 @@ import {
 import { sortDomesticCandidatesByTrust } from "@commerce/crawler/src/comparison-search/display-priority";
 import type { MatchTruth } from "@commerce/crawler/src/comparison-search/match-truth";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
+// MATCHING-UNIFY-1 — 국내 가격비교 표와 같은 라벨을 쓰기 위한 공통 매핑.
+import { domesticMatchDisplay } from "./match-display";
 import { shouldRefetchAfterAutoCheck } from "../snapshot-save-guard";
 
 interface SampleListing {
@@ -219,14 +221,10 @@ const CANDIDATE_LABEL: Record<DomesticCandidate["matchType"], { icon: string; te
  * 절대 원칙 그대로. TEXT_CONFIRMED조차 verified=true가 될 수 있는 이유는
  * toDomesticMatchType()의 기존 autoVerified(matchLevel=very_high) 판정
  * 때문이며, 이 파일은 그 결과를 그대로 읽기만 한다. */
-const MATCH_TRUTH_DISPLAY: Record<MatchTruth, { icon: "🟢" | "🟡" | "⚪" | "🔴"; text: string }> = {
-  EXACT_IDENTIFIER: { icon: "🟢", text: "동일상품 확인됨 — 정확한 상품 식별자 일치" },
-  STRONG_IDENTIFIER: { icon: "🟢", text: "동일상품 확인됨(식별자 기반 검증)" },
-  TEXT_CONFIRMED: { icon: "🟡", text: "비교상품 — 상품명은 유사하지만 식별자 근거 없음" },
-  SIMILAR: { icon: "🟡", text: "비교상품 — 상품명 유사도만 확인됨" },
-  INSUFFICIENT_EVIDENCE: { icon: "⚪", text: "판단 근거 부족 — 동일상품 여부를 확인하지 못했습니다" },
-  CONFLICT: { icon: "🔴", text: "다른 상품 가능성 높음 — 식별자 정보가 충돌합니다" },
-};
+/* MATCHING-UNIFY-1(CPO 지시, 2026-09-06) — 라벨을 match-display.ts로 통합했다.
+   같은 matchTruth가 이 패널과 국내 가격비교 표에서 다른 문구로 보이던 문제를
+   없앤다. 판정값·가격 반영 정책은 변경 없다. */
+
 
 /**
  * P-20 Sprint 7(CPO 지시, 2026-09-02) — priceTierFromLink()가 TEXT_CONFIRMED/SIMILAR를
@@ -237,23 +235,28 @@ const MATCH_TRUTH_DISPLAY: Record<MatchTruth, { icon: "🟢" | "🟡" | "⚪" | 
  * 않는다. */
 export function candidateLabel(c: DomesticCandidate): { icon: string; text: string; note: string } {
   if (c.matchTruth) {
-    const base = MATCH_TRUTH_DISPLAY[c.matchTruth];
+    const d = domesticMatchDisplay(c.matchTruth);
+    const base = { icon: d.icon, text: d.label };
+    // 가격 반영 여부는 판정이 아니라 기존 정책의 결과를 그대로 옮긴 문구다
+    // (EXACT/STRONG만 동일상품 가격, 나머지는 참고 또는 제외).
     if (c.matchTruth === "TEXT_CONFIRMED" || c.matchTruth === "SIMILAR") {
       const pct = Math.round(c.matchConfidence * 100);
-      return { ...base, note: `텍스트 유사도 ${pct}% · 비교상품 시장가격(참고용)으로 반영됨` };
+      return { ...base, note: `${d.note} · 텍스트 유사도 ${pct}%` };
     }
     if (c.matchTruth === "CONFLICT" || c.matchTruth === "INSUFFICIENT_EVIDENCE") {
-      return { ...base, note: "가격비교에는 반영하지 않습니다" };
+      return { ...base, note: `${d.note} — 가격비교에 반영하지 않습니다` };
     }
-    return { ...base, note: "→ 동일상품 가격으로 반영됨" };
+    return { ...base, note: `${d.note} → 동일상품 가격으로 반영됨` };
   }
   // 레거시 fallback(matchTruth=null, 마이그레이션 030 이전 저장된 행) — 예전 로직 그대로.
   if (c.verified) {
+    // MATCHING-UNIFY-1 — 레거시 경로도 같은 라벨을 쓴다. 마이그레이션 전
+    // 저장된 행이라는 이유로 다른 문구가 나오면 셀러에게는 다른 등급으로 보인다.
     const byIdentifier = c.matchReasons.some((r) => r.includes("식별자 근거"));
     return {
       icon: "🟢",
-      text: byIdentifier ? "동일상품 확인됨(식별자 기반 검증)" : "동일상품 확인됨",
-      note: "→ 가격비교에 반영됨",
+      text: "동일상품",
+      note: byIdentifier ? "식별자 근거로 확인됨 → 가격비교에 반영됨" : "→ 가격비교에 반영됨",
     };
   }
   if (c.matchType === "HIGH_CONFIDENCE") return CANDIDATE_LABEL.HIGH_CONFIDENCE;
