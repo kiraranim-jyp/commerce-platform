@@ -57,6 +57,100 @@ function relativeTimeFromNow(iso: string, now: Date = new Date()): string {
  */
 export const PRICE_COMPARISON_ANCHOR_ID = "price-comparison-source";
 
+/**
+ * MI-LOADING-1(CPO 지시, 2026-09-06) — Market Intelligence 분석 진행 화면.
+ *
+ * 설계 원칙은 하나다: **표시되는 단계는 전부 실제로 실행 중인 작업이다.**
+ *   상품 정보    이미 로드된 스냅샷 — 진입 시점에 실제로 완료된 상태
+ *   국내 시장가   page.tsx의 /api/price-history/check (autoChecking일 때만 표시)
+ *   원가·전략    /api/price-history/:id
+ *   경쟁 판매처   /api/domestic-price-sources/links
+ *   가격 알림    /api/price-history/:id/alerts
+ *
+ * 뒤 3개는 원래부터 병렬 요청이라 순차로 끝나지 않는다. 그래서 "3/5" 같은
+ * 가짜 순번이나 시간 기반 퍼센트를 쓰지 않고, 각 요청이 실제로 resolve될 때
+ * 그 항목만 체크한다. 진행률은 "실제로 끝난 항목 수 / 전체"로만 계산한다.
+ */
+type MiStepState = "running" | "done";
+interface MiStep {
+  label: string;
+  detail: string;
+  state: MiStepState;
+}
+
+function MarketIntelligenceProgress({ steps, completed }: { steps: MiStep[]; completed: boolean }) {
+  const doneCount = steps.filter((s) => s.state === "done").length;
+  const percent = Math.round((doneCount / Math.max(1, steps.length)) * 100);
+
+  return (
+    <div className="rounded-md border border-border bg-background p-4">
+      <div className="mb-1 flex items-center gap-2">
+        <span className="text-base">🤖</span>
+        <p className="text-sm font-semibold text-text-primary">AI Market Intelligence</p>
+      </div>
+      <p className="mb-3 text-xs text-text-secondary">
+        {completed ? "분석이 끝났습니다. 결과를 정리하고 있습니다." : "상품 데이터를 분석하고 있습니다."}
+      </p>
+
+      {/* MI-LOADING-1 STEP 3(CEO 요구: "상단에 기본 진행 스텝도 있고") —
+          같은 단계를 가로로 압축해 한눈에 보여준다. 아래 목록과 동일한 상태를
+          쓰므로 두 표시가 어긋날 수 없다(별도 상태를 만들지 않는다). */}
+      <ol className="mb-3 flex items-center gap-1">
+        {steps.map((step, i) => {
+          const done = completed || step.state === "done";
+          return (
+            <li key={step.label} className="flex flex-1 items-center gap-1">
+              <span
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold transition-colors duration-300 ${
+                  done
+                    ? "bg-primary text-white"
+                    : "animate-pulse border border-primary text-primary"
+                }`}
+              >
+                {done ? "✓" : i + 1}
+              </span>
+              {i < steps.length - 1 && (
+                <span className={`h-px flex-1 transition-colors duration-300 ${done ? "bg-primary" : "bg-border"}`} />
+              )}
+            </li>
+          );
+        })}
+      </ol>
+
+      <div className="mb-1 h-1.5 overflow-hidden rounded-full bg-border">
+        <div
+          className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
+          style={{ width: `${completed ? 100 : percent}%` }}
+        />
+      </div>
+      <p className="mb-3 text-right text-[10px] text-text-tertiary">
+        {completed ? steps.length : doneCount} / {steps.length}
+      </p>
+
+      <ul className="space-y-1.5">
+        {steps.map((step) => {
+          const done = completed || step.state === "done";
+          return (
+            <li key={step.label} className="flex items-start gap-2 text-xs transition-opacity duration-300">
+              <span className={done ? "text-success" : "animate-pulse text-primary"}>{done ? "✓" : "◉"}</span>
+              <span className="flex-1">
+                <span className={done ? "text-text-secondary" : "font-medium text-text-primary"}>{step.label}</span>
+                <span className="ml-1 text-[10px] text-text-tertiary">{step.detail}</span>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+
+      {!completed && (
+        <p className="mt-3 text-[10px] text-text-tertiary">
+          국내 시장 가격을 실제로 조회하므로 10~20초 정도 걸릴 수 있습니다.
+        </p>
+      )}
+    </div>
+  );
+}
+
 const PRICE_AGE_LABEL: Record<PriceAgeTier, string> = {
   TODAY: "오늘 확인",
   RECENT: "최근 확인",
@@ -696,6 +790,31 @@ export function DomesticPriceIntelligencePanel({
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
 
+  /**
+   * MI-LOADING-1(CPO 지시, 2026-09-06) — 분석 중에 화면이 비어 있어서(기존
+   * `if (loading) return null`) "AI가 지금 무엇을 하고 있는지"가 전혀 보이지
+   * 않았다. 진행 상태를 보여주되, 각 단계는 실제로 실행 중인 요청과 1:1로
+   * 대응한다 — 실제로 하지 않는 작업을 완료로 표시하지 않는다(CPO 금지).
+   * 세 요청은 원래대로 병렬 실행하고(네트워크 동작 변경 없음), 각자 끝나는
+   * 시점에 그 항목만 체크된다. 가짜 순차 진행이나 가짜 퍼센트는 만들지 않는다.
+   */
+  const [stepDone, setStepDone] = useState({ analysis: false, competitors: false, alerts: false });
+  /** 완료 직후 결과가 튀어나오지 않게 하는 짧은 전환 상태(추가 클릭 없음). */
+  const [justCompleted, setJustCompleted] = useState(false);
+
+  function runAnalysis(): void {
+    setLoading(true);
+    setStepDone({ analysis: false, competitors: false, alerts: false });
+    void Promise.all([
+      loadPriceHistory().finally(() => setStepDone((s) => ({ ...s, analysis: true }))),
+      loadCandidates().finally(() => setStepDone((s) => ({ ...s, competitors: true }))),
+      loadAlerts().finally(() => setStepDone((s) => ({ ...s, alerts: true }))),
+    ]).finally(() => {
+      setLoading(false);
+      setJustCompleted(true);
+    });
+  }
+
   function loadPriceHistory(): Promise<void> {
     return fetch(`/api/price-history/${snapshotId}`)
       .then((res) => res.json())
@@ -733,10 +852,17 @@ export function DomesticPriceIntelligencePanel({
   }
 
   useEffect(() => {
-    setLoading(true);
-    void Promise.all([loadPriceHistory(), loadCandidates(), loadAlerts()]).finally(() => setLoading(false));
+    runAnalysis();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshotId]);
+
+  /** MI-LOADING-1 — "분석 완료"는 잠깐만 보여주고 자동으로 결과로 넘어간다.
+   * 결과를 보려고 한 번 더 클릭하게 만들지 않는다(CPO 지시). */
+  useEffect(() => {
+    if (!justCompleted) return;
+    const t = setTimeout(() => setJustCompleted(false), 800);
+    return () => clearTimeout(t);
+  }, [justCompleted]);
 
   /** P-18(CPO 지시, 2026-09-01) — autoChecking이 true→false로 전환된 시점(=page.tsx가
    * 쏜 자동 가격 확인이 방금 끝난 시점)에만 데이터를 다시 읽는다. wasAutoCheckingRef로
@@ -748,8 +874,7 @@ export function DomesticPriceIntelligencePanel({
     const was = wasAutoCheckingRef.current;
     wasAutoCheckingRef.current = Boolean(autoChecking);
     if (shouldRefetchAfterAutoCheck(was, Boolean(autoChecking))) {
-      setLoading(true);
-      void Promise.all([loadPriceHistory(), loadCandidates(), loadAlerts()]).finally(() => setLoading(false));
+      runAnalysis();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoChecking]);
@@ -843,17 +968,41 @@ export function DomesticPriceIntelligencePanel({
   // 반드시 resolve/reject되므로(무한 대기 아님) 별도 타임아웃을 새로 만들지
   // 않는다(기존 정책 그대로 상속, 크롤러 timeout 로직 자체는 이번에 건드리지
   // 않는다).
-  if (autoChecking) {
+  // MI-LOADING-1 — 진행 단계는 실제 요청과 1:1이다. autoChecking 단계는 실제로
+  // 자동 가격 확인이 돌고 있을 때만 목록에 넣는다(안 돌면 아예 표시하지 않는다).
+  const miSteps: MiStep[] = [
+    { label: "상품 정보 확인", detail: "상품명 · 옵션 · 원가", state: "done" },
+    ...(autoChecking
+      ? [{ label: "국내 시장 가격 확인", detail: "동일상품 실시간 조회", state: "running" as MiStepState }]
+      : []),
+    {
+      label: "원가·마진 분석 및 판매 전략 생성",
+      detail: "착지원가 · 추천가 · 마진",
+      state: stepDone.analysis ? "done" : "running",
+    },
+    { label: "경쟁 판매처 조회", detail: "국내 판매처 후보", state: stepDone.competitors ? "done" : "running" },
+    { label: "가격 변동 알림 확인", detail: "최근 가격 변화", state: stepDone.alerts ? "done" : "running" },
+  ];
+
+  if (autoChecking || loading || justCompleted) {
+    return (
+      <CollapsibleSection title="Market Intelligence" defaultOpen>
+        <MarketIntelligenceProgress steps={miSteps} completed={!autoChecking && !loading && justCompleted} />
+      </CollapsibleSection>
+    );
+  }
+  // MI-LOADING-1 — 기존에는 결과가 없으면 패널이 통째로 사라져서 "분석이 실패한
+  // 건지 아직 안 한 건지" 알 수 없었다. 실패는 실패라고 말한다 — 없는 숫자를
+  // 만들지 않는다는 UX-3 원칙과 같은 이유다.
+  if (!data) {
     return (
       <CollapsibleSection title="Market Intelligence" defaultOpen>
         <p className="rounded-md border border-border bg-background px-3 py-2 text-xs text-text-secondary">
-          📊 국내외 시장 가격을 확인하고 있습니다. 잠시만 기다려주세요.
+          ⚠ 시장 분석 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.
         </p>
       </CollapsibleSection>
     );
   }
-  if (loading) return null;
-  if (!data) return null;
 
   const {
     product,
