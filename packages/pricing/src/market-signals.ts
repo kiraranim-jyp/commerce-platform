@@ -281,13 +281,32 @@ function competitionLines(sellerCount: number | null, supply: SupplyStatus): str
  * 시험해볼 근거다. "반드시 팔린다 / 가격을 올려라" 같은 확정형을 쓰지 않고
  * 가능성·테스트·반응 확인 수준으로만 말한다.
  */
-function supplyLines(supply: SupplyStatus, sellerCount: number | null, premiumGapKrw: number | null): string[] {
+function supplyLines(
+  supply: SupplyStatus,
+  sellerCount: number | null,
+  premiumGapKrw: number | null,
+  /**
+   * MI-VALIDATION-2(실데이터 검증, 2026-09-06) — "목표 마진 가격으로 등록하라"는
+   * 행동을 붙일지. CASE B(목표 마진 미달)에서만 참이다.
+   *
+   * 실제 상품에서 CASE A + 판매처 1곳 조합이 나왔는데, 기본 화면은 "추천가
+   * ₩77,616로 등록"이라고 하고 상세는 "목표 마진 가격으로 등록"이라고 했다.
+   * CASE A는 목표가(₩66,375)가 추천가보다 **낮으므로**, 이 조언은 가격을
+   * 내리라는 말이 되어 정반대다. A에서는 공급이 적다는 사실만 전하고 행동은
+   * 기본 화면의 추천가 하나로 유지한다.
+   */
+  suggestTargetPrice: boolean,
+): string[] {
   if (supply !== "SCARCE" && supply !== "LIMITED") return [];
   if (sellerCount == null) return [];
   const scarce = supply === "SCARCE";
   const lines = [
     `확인된 국내 판매처 ${sellerCount}곳 — 같은 상품을 파는 곳이 ${scarce ? "매우 적습니다" : "적습니다"}.`,
   ];
+  if (!suggestTargetPrice) {
+    lines.push("→ 경쟁 압력이 낮은 편이므로 급하게 가격을 내리지 마세요.");
+    return lines;
+  }
   if (premiumGapKrw != null && premiumGapKrw > 0) {
     lines.push(
       `목표 마진 가격은 ${LOWEST_PRICE_LABEL}보다 ${won(premiumGapKrw)} 높지만, 확인된 판매처가 적어 이 가격대를 시험해볼 여지가 있습니다.`,
@@ -319,7 +338,7 @@ function numericGuidance(marketCase: "A" | "B" | "C" | "D" | null, f: SellingGui
     lines.push("→ 추천가로 시작하고, 국내 가격 변동을 주기적으로 확인하세요.");
     // CASE A는 이미 목표 마진을 확보하는 구간이라 프리미엄 격차가 없다.
     // 공급 제한은 "경쟁 압력이 낮다"는 맥락으로만 덧붙인다.
-    return [...lines, ...supplyLines(supply, f.sellerCount, null), ...competitionLines(f.sellerCount, supply)];
+    return [...lines, ...supplyLines(supply, f.sellerCount, null, false), ...competitionLines(f.sellerCount, supply)];
   }
 
   if (marketCase === "B") {
@@ -349,7 +368,7 @@ function numericGuidance(marketCase: "A" | "B" | "C" | "D" | null, f: SellingGui
       f.targetPriceKrw != null && f.domesticLowestPriceKrw != null
         ? f.targetPriceKrw - f.domesticLowestPriceKrw
         : null;
-    const supplyB = supplyLines(supply, f.sellerCount, premiumGap);
+    const supplyB = supplyLines(supply, f.sellerCount, premiumGap, true);
     if (supplyB.length === 0) {
       lines.push("→ 가격 인상보다 매입가·배송비 절감이나 구성 변경을 먼저 검토하세요.");
     }

@@ -759,3 +759,55 @@ describe("buildSellingSummary — 기본 화면에서 같은 금액을 두 번 �
     });
   }
 });
+
+/**
+ * MI-VALIDATION-2(실데이터 검증, 2026-09-06) — 실제 상품(CASE A + 판매처 1곳)
+ * 에서 기본 화면은 "추천가로 등록", 상세는 "목표 마진 가격으로 등록"이라고
+ * 서로 다른 가격을 권했다. CASE A는 목표가가 추천가보다 낮을 수 있어 그
+ * 조언은 가격을 내리라는 말이 된다. 회귀하면 여기서 잡는다.
+ */
+describe("buildSellingGuidance — CASE A에서 공급 문구가 가격 조언을 뒤집지 않는다", () => {
+  const signals = deriveMarketSignals({
+    domesticSellerCount: 1,
+    searchInterestRatio: null,
+    titleText: "무관",
+    nowMonth: 3,
+  }).signals;
+
+  // 실제 상품 값(Curious Turnip Swim Cap): 목표가가 추천가보다 낮다.
+  const factsA = {
+    recommendedPriceKrw: 77_616,
+    targetPriceKrw: 66_375,
+    estimatedMarginPercent: 31.6,
+    targetMarginPercent: 20,
+    landedCostKrw: 53_100,
+    domesticLowestPriceKrw: 78_400,
+    brandMedianPriceKrw: null,
+    sellerCount: 1,
+    domesticBasis: "EXACT" as const,
+  };
+
+  it("★ 목표가 < 추천가인데 '목표 마진 가격으로 등록'을 권하지 않는다", () => {
+    const g = buildSellingGuidance("A", signals, factsA).join("\n");
+    expect(factsA.targetPriceKrw).toBeLessThan(factsA.recommendedPriceKrw);
+    expect(g).not.toContain("목표 마진 가격으로 등록");
+    expect(g).toContain("추천가로 시작하고");
+  });
+
+  it("공급이 적다는 사실 자체는 유지하되 가격을 내리지 말라고만 한다", () => {
+    const g = buildSellingGuidance("A", signals, factsA).join("\n");
+    expect(g).toContain("판매처 1곳");
+    expect(g).toContain("급하게 가격을 내리지 마세요");
+  });
+
+  it("CASE B에서는 목표 마진 가격 등록 조언이 그대로 유지된다", () => {
+    const g = buildSellingGuidance("B", signals, {
+      ...factsA,
+      recommendedPriceKrw: 202_000,
+      targetPriceKrw: 208_182,
+      domesticLowestPriceKrw: 202_000,
+      estimatedMarginPercent: 9.3,
+    }).join("\n");
+    expect(g).toContain("목표 마진 가격으로 등록");
+  });
+});
