@@ -426,8 +426,12 @@ describe("buildSellingSummary — 기본 화면은 결론·숫자2개·행동1�
     });
     expect(s.tone).toBe("STOP");
     expect(s.numbers).toBe("착지원가 ₩18,500 · 예상 손실 -₩1,600");
-    expect(`${s.headline} ${s.action}`).not.toContain("여지");
-    expect(`${s.headline} ${s.action}`).not.toContain("공급");
+    // 금지 대상은 "공급"이라는 단어 자체가 아니라 공급 부족을 가격 기회로
+    // 삼는 표현이다("다른 공급처를 확인하세요"는 소싱 조언이라 문제없다).
+    const text = `${s.headline} ${s.action}`;
+    for (const phrase of ["공급이 적어", "가격 여지", "시험", "테스트", "반응을 확인"]) {
+      expect(text).not.toContain(phrase);
+    }
   });
 
   it("★ basis가 EXACT가 아니면 판매처 수도 공급 문구도 나오지 않는다", () => {
@@ -446,7 +450,7 @@ describe("buildSellingSummary — 기본 화면은 결론·숫자2개·행동1�
     const s = buildSellingSummary("D", { ...base, domesticBasis: "NONE" });
     expect(s.tone).toBe("UNKNOWN");
     expect(s.numbers).toBeNull();
-    expect(s.action).toContain("충분히 확인하지 못했습니다");
+    expect(s.action).toContain("확인한 뒤 등록 가격을 정하세요");
   });
 
   it("숫자는 어떤 경우에도 2개를 넘지 않는다", () => {
@@ -497,5 +501,79 @@ describe("buildSellingSummary — 판매 판정 어휘를 쓰지 않는다(역�
         }
       }
     }
+  });
+});
+
+/**
+ * MI-ACTION-1(CPO 지시, 2026-09-06) — 셀러의 마지막 질문은 "그래서 얼마로
+ * 올려?"다. 판단을 등록 가격 하나로 닫되, 권하면 안 되는 상황에서는 절대
+ * 가격을 제시하지 않는다. 이 경계가 이 describe의 전부다.
+ */
+describe("buildSellingSummary — 등록 가격 제시 경계", () => {
+  const base = {
+    recommendedPriceKrw: null,
+    targetPriceKrw: null,
+    estimatedMarginPercent: null,
+    targetMarginPercent: null,
+    landedCostKrw: null,
+    domesticLowestPriceKrw: null,
+    brandMedianPriceKrw: null,
+    sellerCount: null,
+  };
+
+  it("A — 추천 판매가를 등록 가격으로 제시한다", () => {
+    const s = buildSellingSummary("A", { ...base, recommendedPriceKrw: 258_000, estimatedMarginPercent: 18.4 });
+    expect(s.actionPriceKrw).toBe(258_000);
+    expect(s.action).toContain("₩258,000로 등록");
+  });
+
+  it("A — 추천가가 없으면 금액 없는 문장으로 떨어진다(숫자를 만들지 않는다)", () => {
+    const s = buildSellingSummary("A", { ...base, estimatedMarginPercent: 18.4 });
+    expect(s.actionPriceKrw).toBeNull();
+    expect(s.action).not.toContain("₩");
+  });
+
+  it("B + 공급 제한 — 목표마진가를 등록 가격으로 제시한다", () => {
+    const s = buildSellingSummary("B", {
+      ...base,
+      targetPriceKrw: 270_795,
+      domesticLowestPriceKrw: 258_000,
+      sellerCount: 2,
+      domesticBasis: "EXACT",
+    });
+    expect(s.actionPriceKrw).toBe(270_795);
+    expect(s.action).toContain("₩270,795로 등록");
+  });
+
+  it("★ B + 공급 충분 — 등록 가격을 제시하지 않고 격차만 알려준다", () => {
+    const s = buildSellingSummary("B", {
+      ...base,
+      targetPriceKrw: 270_795,
+      domesticLowestPriceKrw: 258_000,
+      estimatedMarginPercent: 7.6,
+      sellerCount: 9,
+      domesticBasis: "EXACT",
+    });
+    expect(s.actionPriceKrw).toBeNull();
+    expect(s.action).toContain("₩12,795 차이");
+    expect(s.action).not.toContain("등록해");
+  });
+
+  it("★ C(손실) — 어떤 등록 가격도 제시하지 않는다", () => {
+    const s = buildSellingSummary("C", {
+      ...base,
+      landedCostKrw: 18_500,
+      domesticLowestPriceKrw: 16_900,
+      sellerCount: 1,
+      domesticBasis: "EXACT",
+    });
+    expect(s.actionPriceKrw).toBeNull();
+    expect(s.action).not.toContain("등록해");
+  });
+
+  it("★ D(국내 가격 미확인) — 등록 가격을 권하지 않는다", () => {
+    const s = buildSellingSummary("D", { ...base, brandMedianPriceKrw: 100_000, domesticBasis: "NONE" });
+    expect(s.actionPriceKrw).toBeNull();
+    expect(s.action).not.toContain("등록해");
   });
 });

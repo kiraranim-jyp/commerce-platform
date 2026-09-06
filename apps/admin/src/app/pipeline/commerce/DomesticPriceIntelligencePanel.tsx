@@ -601,6 +601,8 @@ interface PriceHistoryResponse {
     headline: string;
     numbers: string | null;
     action: string;
+    /** MI-ACTION-1 — 행동 문장이 제시하는 등록 가격. 없으면 null. */
+    actionPriceKrw?: number | null;
   } | null;
   /** P-31 — 종합 시장 상태 + 구조화된 판단 근거. finalVerdict는
    * sellerFacingVerdict를 시장 신호로 강등만 한 값이다(승격 없음). */
@@ -1419,7 +1421,19 @@ export function DomesticPriceIntelligencePanel({
               {sellingSummary.numbers && (
                 <p className="mt-1 text-sm font-semibold text-text-primary">{sellingSummary.numbers}</p>
               )}
-              <p className="mt-0.5 text-[11px] text-text-secondary">{sellingSummary.action}</p>
+              {/* MI-ACTION-1 — 등록 가격이 실제로 제시된 경우에만 행동 문장을
+                  강조한다. 가격이 없는 CASE(B+공급충분/C/D)에서는 기존과 같은
+                  보조 문장으로 남아 "지금 이 값으로 올리면 된다"는 오해를
+                  만들지 않는다. */}
+              <p
+                className={
+                  sellingSummary.actionPriceKrw != null
+                    ? "mt-1 text-[11px] font-medium text-text-primary"
+                    : "mt-0.5 text-[11px] text-text-secondary"
+                }
+              >
+                {sellingSummary.action}
+              </p>
             </div>
           )}
 

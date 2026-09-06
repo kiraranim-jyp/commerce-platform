@@ -390,6 +390,18 @@ export interface SellingSummary {
   numbers: string | null;
   /** 행동 한 문장. */
   action: string;
+  /**
+   * MI-ACTION-1(CPO 지시, 2026-09-06) — 행동 문장이 제시하는 "지금 등록할
+   * 가격". 셀러의 마지막 질문이 "그래서 얼마로 올려?"이므로 판단을 숫자
+   * 하나로 닫는다. 다만 아무 때나 가격을 제시하지 않는다:
+   *   A        추천 판매가
+   *   B+공급제한  목표마진가 (공급이 적어 시험해볼 근거가 있을 때만)
+   *   B+공급충분  null — 시장가가 낮은데 목표가를 권하면 안 팔릴 가격을 권하는 셈
+   *   C        null — 손실 구간에서 등록 가격을 권하지 않는다
+   *   D        null — 국내 가격을 모르는데 등록가를 권할 수 없다
+   * 값이 없으면 문장에서도 금액이 빠진다(없는 숫자를 만들지 않는다).
+   */
+  actionPriceKrw: number | null;
 }
 
 /** MI-UX-5 — 기본 화면 숫자는 최대 2개다. 더 보여주면 "무엇이 중요한지"가
@@ -418,11 +430,19 @@ export function buildSellingSummary(
         f.estimatedMarginPercent != null ? `예상 마진 ${pct(f.estimatedMarginPercent)}` : null,
         f.domesticLowestPriceKrw != null ? `시장 기준가 ${won(f.domesticLowestPriceKrw)}` : null,
       ]),
-      action: "국내 시장가보다 낮은 가격에서도 목표 마진이 확보됩니다.",
+      action:
+        f.recommendedPriceKrw != null
+          ? `→ 먼저 ${won(f.recommendedPriceKrw)}로 등록해 시장 반응을 확인하세요.`
+          : "국내 시장가보다 낮은 가격에서도 목표 마진이 확보됩니다.",
+      actionPriceKrw: f.recommendedPriceKrw,
     };
   }
 
   if (marketCase === "B") {
+    const gapToTarget =
+      f.targetPriceKrw != null && f.domesticLowestPriceKrw != null
+        ? f.targetPriceKrw - f.domesticLowestPriceKrw
+        : null;
     // MI-SUPPLY-ADVANTAGE-1 안전장치 유지 — supplyLimited는 basis === "EXACT"
     // 일 때만 참이 될 수 있다. 못 찾은 경우는 아래 일반 경쟁 분기로 간다.
     if (supplyLimited) {
@@ -433,7 +453,11 @@ export function buildSellingSummary(
           f.targetPriceKrw != null ? `목표마진가 ${won(f.targetPriceKrw)}` : null,
           sellerPart,
         ]),
-        action: "높은 가격으로 먼저 시장 반응을 확인해보세요.",
+        action:
+          f.targetPriceKrw != null
+            ? `→ 먼저 ${won(f.targetPriceKrw)}로 등록해 시장 반응을 확인하세요.`
+            : "높은 가격으로 먼저 시장 반응을 확인해보세요.",
+        actionPriceKrw: f.targetPriceKrw,
       };
     }
     return {
@@ -443,7 +467,13 @@ export function buildSellingSummary(
         f.domesticLowestPriceKrw != null ? `시장 기준가 ${won(f.domesticLowestPriceKrw)}` : null,
         f.estimatedMarginPercent != null ? `예상 마진 ${pct(f.estimatedMarginPercent)}` : null,
       ]),
-      action: "국내 경쟁 가격이 낮아 목표 마진을 확보하기 어렵습니다.",
+      action:
+        gapToTarget != null && gapToTarget > 0
+          ? `목표마진가와 ${won(gapToTarget)} 차이 — 매입가·배송비나 구성 조정을 먼저 검토하세요.`
+          : "국내 경쟁 가격이 낮아 목표 마진을 확보하기 어렵습니다.",
+      // 시장가가 목표가보다 낮은 상황에서 목표가를 등록가로 권하면 안 팔릴
+      // 가격을 권하는 셈이다 — 여기서는 가격을 제시하지 않는다.
+      actionPriceKrw: null,
     };
   }
 
@@ -465,7 +495,9 @@ export function buildSellingSummary(
             ? `시장 기준가 ${won(f.domesticLowestPriceKrw)}`
             : null,
       ]),
-      action: "국내 시장가가 착지원가보다 낮아 원가 회수가 되지 않습니다.",
+      action: "등록 전 매입가 절감이나 다른 공급처를 먼저 확인하세요.",
+      // 손실 구간에서는 어떤 등록 가격도 제시하지 않는다.
+      actionPriceKrw: null,
     };
   }
 
@@ -474,7 +506,9 @@ export function buildSellingSummary(
     tone: "UNKNOWN",
     headline: "국내 동일상품 시장 데이터 부족",
     numbers: f.brandMedianPriceKrw != null ? `비교 기준가 ${won(f.brandMedianPriceKrw)}` : null,
-    action: "국내 동일상품 가격 데이터를 충분히 확인하지 못했습니다.",
+    action: "국내 동일상품 가격을 확인한 뒤 등록 가격을 정하세요.",
+    // 국내 가격을 모르는 상태에서 등록가를 권하지 않는다.
+    actionPriceKrw: null,
   };
 }
 
