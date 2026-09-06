@@ -361,6 +361,82 @@ function numericGuidance(marketCase: "A" | "B" | "C" | "D" | null, f: SellingGui
   return [];
 }
 
+/**
+ * MI-UX-4(CPO 지시, 2026-09-06) — 기본 화면용 한 줄 요약.
+ *
+ * buildSellingGuidance()가 낸 전략 문구는 근거까지 담느라 길다. 셀러가 먼저
+ * 답을 원하는 질문은 "팔아? 말아? 얼마에?" 하나이므로, 같은 데이터에서
+ * 핵심 숫자 한 줄 + 판단 한 문장만 뽑는다. 상세 문구는 그대로 두고 상세보기
+ * 안에 남는다 — 정보를 줄이는 게 아니라 순서를 나누는 작업이다.
+ *
+ * 여기서도 새 계산은 하지 않고, 공급 판정 게이트(basis === "EXACT")도 동일한
+ * deriveSupplyStatus를 재사용한다 — 요약과 상세가 다른 말을 할 수 없다.
+ */
+export interface SellingSummary {
+  /** "국내 판매처 2곳 · 목표마진가 ₩270,795" — 없으면 null. */
+  numbers: string | null;
+  /** 판단 한 문장. */
+  verdict: string;
+}
+
+export function buildSellingSummary(
+  marketCase: "A" | "B" | "C" | "D" | null,
+  f: SellingGuidanceFacts,
+): SellingSummary | null {
+  const supply = deriveSupplyStatus({ sellerCount: f.sellerCount, domesticBasis: f.domesticBasis });
+  const supplyLimited = supply === "SCARCE" || supply === "LIMITED";
+  // sellerCount는 공급 판정이 성립할 때만 노출한다 — 확인 못 한 수치를
+  // 요약 첫 줄에 올리지 않는다(추정 문구 금지).
+  const sellerPart = supply !== "UNKNOWN" && f.sellerCount != null ? `국내 판매처 ${f.sellerCount}곳` : null;
+  const join = (parts: (string | null)[]) => {
+    const kept = parts.filter((p): p is string => p != null);
+    return kept.length > 0 ? kept.join(" · ") : null;
+  };
+
+  if (marketCase === "A") {
+    return {
+      numbers: join([
+        f.domesticLowestPriceKrw != null ? `시장가 ${won(f.domesticLowestPriceKrw)}` : null,
+        f.recommendedPriceKrw != null ? `추천가 ${won(f.recommendedPriceKrw)}` : null,
+        f.estimatedMarginPercent != null ? `예상 마진 ${pct(f.estimatedMarginPercent)}` : null,
+      ]),
+      verdict: "시장가보다 낮게 판매하면서 목표 마진을 확보할 수 있습니다.",
+    };
+  }
+
+  if (marketCase === "B") {
+    if (supplyLimited) {
+      return {
+        numbers: join([sellerPart, f.targetPriceKrw != null ? `목표마진가 ${won(f.targetPriceKrw)}` : null]),
+        verdict: "공급이 적어 목표 마진 가격으로 먼저 테스트해볼 수 있습니다.",
+      };
+    }
+    return {
+      numbers: join([
+        sellerPart,
+        f.estimatedMarginPercent != null ? `예상 마진 ${pct(f.estimatedMarginPercent)}` : null,
+      ]),
+      verdict: "경쟁 가격이 낮아 목표 마진 확보가 어렵습니다.",
+    };
+  }
+
+  if (marketCase === "C") {
+    return {
+      numbers: join([
+        f.domesticLowestPriceKrw != null ? `시장가 ${won(f.domesticLowestPriceKrw)}` : null,
+        f.landedCostKrw != null ? `착지원가 ${won(f.landedCostKrw)}` : null,
+      ]),
+      verdict: "현재 가격으로는 손실이 예상됩니다.",
+    };
+  }
+
+  // CASE D / 판정 없음 — 아는 척하지 않는다. 브랜드 중앙값이 있으면 참고치로만.
+  return {
+    numbers: f.brandMedianPriceKrw != null ? `브랜드 중앙값 ${won(f.brandMedianPriceKrw)}` : null,
+    verdict: "국내 동일상품 가격을 확인하지 못했습니다. 국내 판매가 확인 후 등록을 결정하세요.",
+  };
+}
+
 export function buildSellingGuidance(
   marketCase: "A" | "B" | "C" | "D" | null,
   signals: MarketSignal[],

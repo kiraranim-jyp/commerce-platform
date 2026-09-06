@@ -585,6 +585,9 @@ interface PriceHistoryResponse {
    * 다시 계산하거나 덮어쓰지 않음). */
   marketSignals: MarketSignalsInfo;
   sellingGuidance: string[];
+  /** MI-UX-4 — 기본 화면용 한 줄 요약. 서버가 sellingGuidance와 같은 facts로
+   * 만들므로 둘이 다른 숫자를 말할 수 없다. 구버전 응답에는 없다(optional). */
+  sellingSummary?: { numbers: string | null; verdict: string } | null;
   /** P-31 — 종합 시장 상태 + 구조화된 판단 근거. finalVerdict는
    * sellerFacingVerdict를 시장 신호로 강등만 한 값이다(승격 없음). */
   sellerDecision: SellerDecisionInfo;
@@ -1023,6 +1026,7 @@ export function DomesticPriceIntelligencePanel({
     domesticMarketSplit,
     marketSignals,
     sellingGuidance,
+    sellingSummary,
     sellerDecision,
   } = data;
   const domesticShopHistory = data.priceHistory?.domesticShop ?? null;
@@ -1401,14 +1405,19 @@ export function DomesticPriceIntelligencePanel({
             {sellerDecision.outlook === "UNKNOWN" &&
               ` (확인된 신호 ${sellerDecision.knownSignalCount}개 — 데이터가 부족한 것이지 시장이 나쁘다는 뜻이 아닙니다)`}
           </p>
-          <dl className="grid grid-cols-2 gap-y-1 text-xs sm:grid-cols-3">
-            {marketSignals.signals.map((signal) => (
-              <div key={signal.key} className="flex items-center justify-between gap-2 pr-2" title={signal.evidence}>
-                <dt className="text-text-tertiary">{signal.label}</dt>
-                <dd className="font-medium text-text-primary">{signalBadge(signal)}</dd>
-              </div>
-            ))}
-          </dl>
+          {/* MI-UX-4(CPO 지시, 2026-09-06) — 기본 화면은 "팔아? 말아? 얼마에?"에만
+              답한다. 핵심 숫자 한 줄 + 판단 한 문장이 전부이고, 근거(신호 3종,
+              판단 요인, 전략 상세)는 전부 아래 상세 토글로 내린다. 서버가
+              sellingGuidance와 같은 facts로 만든 값이라 두 곳의 숫자가 어긋날 수
+              없다. 구버전 응답(sellingSummary 없음)이면 아무것도 렌더하지 않는다. */}
+          {sellingSummary && (
+            <div className="mb-2 rounded border border-border bg-background px-2 py-2">
+              {sellingSummary.numbers && (
+                <p className="text-xs font-semibold text-text-primary">{sellingSummary.numbers}</p>
+              )}
+              <p className="mt-0.5 text-[11px] text-text-secondary">{sellingSummary.verdict}</p>
+            </div>
+          )}
           {/* UX-1 — 여기부터는 "왜 그렇게 판단했는가"의 근거다. 기본 화면에서는
               위의 종합 상태 + 3개 신호까지만 보여주고, 근거 표와 전략 가이드는
               사용자가 요청할 때만 펼친다. 데이터/계산은 그대로이고 노출 계층만
@@ -1427,7 +1436,21 @@ export function DomesticPriceIntelligencePanel({
                   보여준다. 순서는 CPO 지정 우선순위(가격 수익성 → 동일상품 국내
                   가격 → 시장 관심 → 경쟁 판매처 → 시즌성)로 서버에서 이미 고정돼
                   오므로 여기서 다시 정렬하지 않는다. */}
+              {/* MI-UX-4 — 신호 3종은 "왜 그렇게 봤나"의 근거이므로 상세로 내렸다.
+                  항목/판정은 그대로이고 노출 위치만 바뀐다. */}
               <div className="mt-2">
+                <p className="mb-1 text-xs font-semibold text-text-primary">📶 시장 신호</p>
+                <dl className="grid grid-cols-2 gap-y-1 text-xs sm:grid-cols-3">
+                  {marketSignals.signals.map((signal) => (
+                    <div key={signal.key} className="flex items-center justify-between gap-2 pr-2" title={signal.evidence}>
+                      <dt className="text-text-tertiary">{signal.label}</dt>
+                      <dd className="font-medium text-text-primary">{signalBadge(signal)}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+
+              <div className="mt-3">
                 <p className="mb-1 text-xs font-semibold text-text-primary">🧾 왜 이런 판단인가</p>
                 <dl className="space-y-0.5 text-[11px]">
                   {sellerDecision.factors.map((factor) => (

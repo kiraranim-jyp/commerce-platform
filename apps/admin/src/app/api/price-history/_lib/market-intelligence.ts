@@ -16,6 +16,7 @@ import {
   toSellerFacingVerdict,
   deriveMarketSignals,
   buildSellingGuidance,
+  buildSellingSummary,
   buildSellerDecision,
   type UnifiedPriceDecision,
   type PriceObservationRecord,
@@ -329,7 +330,9 @@ export async function computeMarketIntelligence(snapshotId: string) {
   // (recommendation은 computePriceRecommendation 결과, landedCost/최저가는
   // cost/domesticSummary 원본). 값이 없으면 null을 넘겨 "없는 숫자를 만들지
   // 않는다" 규칙을 함수 쪽에서 지키게 한다.
-  const sellingGuidance = buildSellingGuidance(recommendation?.marketCase ?? null, marketSignals.signals, {
+  // MI-UX-4(CPO 지시, 2026-09-06) — 요약(기본 화면)과 상세 가이드가 서로 다른
+  // 숫자를 말하면 안 되므로 facts를 한 번만 만들어 두 함수에 같이 넘긴다.
+  const guidanceFacts = {
     recommendedPriceKrw: recommendation?.recommendedPrice ?? null,
     targetPriceKrw: recommendation?.targetPrice ?? null,
     estimatedMarginPercent: recommendation?.estimatedMarginPercent ?? null,
@@ -349,7 +352,13 @@ export async function computeMarketIntelligence(snapshotId: string) {
     // MI-SUPPLY-ADVANTAGE-1 — 공급 판정의 게이트. computePriceRecommendation에
     // 넘긴 것과 같은 값이다(새 계산 없음). EXACT가 아니면 공급을 논하지 않는다.
     domesticBasis: domesticMarketSplit.basis,
-  });
+  };
+  const sellingGuidance = buildSellingGuidance(
+    recommendation?.marketCase ?? null,
+    marketSignals.signals,
+    guidanceFacts,
+  );
+  const sellingSummary = buildSellingSummary(recommendation?.marketCase ?? null, guidanceFacts);
 
   // P-31 — PRICE REALITY → CASE → MARKET SIGNAL → SELLER GUIDANCE 순서.
   // sellerFacingVerdict(가격/매칭 레이어)가 최종 판정의 단일 소스이고,
@@ -376,6 +385,8 @@ export async function computeMarketIntelligence(snapshotId: string) {
     sellerFacingVerdict,
     marketSignals,
     sellingGuidance,
+    // MI-UX-4 — 기본 화면용 한 줄 요약(상세 가이드는 sellingGuidance 그대로).
+    sellingSummary,
     sellerDecision,
     priceHistory: {
       origin: { records: originHistory, change: originChange, trend7d: originTrend7d, trend30d: originTrend30d },

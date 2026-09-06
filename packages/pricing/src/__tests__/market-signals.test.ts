@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeSeasonFit, deriveMarketSignals, buildSellingGuidance, deriveSupplyStatus } from "../market-signals";
+import { computeSeasonFit, deriveMarketSignals, buildSellingGuidance, deriveSupplyStatus, buildSellingSummary } from "../market-signals";
 
 /**
  * P-29 Sprint 8(CPO 지시, 2026-09-03) — 순수 함수 검증. 이 파일의 함수들은
@@ -356,5 +356,85 @@ describe("buildSellingGuidance — 공급 축이 가격 축과 결합되는 방�
     }).join("\n");
     expect(g).toContain("제한적");
     expect(g).not.toContain("차별화");
+  });
+});
+
+/**
+ * MI-UX-4(CPO 지시, 2026-09-06) — 기본 화면 요약. 상세 가이드와 같은 facts로
+ * 만들어지므로 두 곳이 다른 숫자를 말할 수 없어야 하고, 공급 안전장치도
+ * 동일하게 적용돼야 한다("판매처를 못 찾았다" ≠ "국내 재고가 없다").
+ */
+describe("buildSellingSummary — 기본 화면은 판단만, 근거는 상세로", () => {
+  const base = {
+    recommendedPriceKrw: null,
+    targetPriceKrw: null,
+    estimatedMarginPercent: null,
+    targetMarginPercent: null,
+    landedCostKrw: null,
+    domesticLowestPriceKrw: null,
+    brandMedianPriceKrw: null,
+    sellerCount: null,
+  };
+
+  it("A — 시장가·추천가·마진 한 줄 + 판단 한 문장", () => {
+    const s = buildSellingSummary("A", {
+      ...base,
+      domesticLowestPriceKrw: 260_000,
+      recommendedPriceKrw: 258_000,
+      estimatedMarginPercent: 18.4,
+    })!;
+    expect(s.numbers).toBe("시장가 ₩260,000 · 추천가 ₩258,000 · 예상 마진 18.4%");
+    expect(s.verdict).toContain("목표 마진을 확보할 수 있습니다");
+  });
+
+  it("B + 공급 제한 — 판매처와 목표마진가만 보여주고 테스트 가능성으로 말한다", () => {
+    const s = buildSellingSummary("B", {
+      ...base,
+      targetPriceKrw: 270_795,
+      domesticLowestPriceKrw: 258_000,
+      estimatedMarginPercent: 7.6,
+      sellerCount: 2,
+      domesticBasis: "EXACT",
+    })!;
+    expect(s.numbers).toBe("국내 판매처 2곳 · 목표마진가 ₩270,795");
+    expect(s.verdict).toContain("테스트해볼 수 있습니다");
+  });
+
+  it("B + 공급 충분 — 목표 마진 확보가 어렵다고 말한다", () => {
+    const s = buildSellingSummary("B", {
+      ...base,
+      estimatedMarginPercent: 7.6,
+      sellerCount: 9,
+      domesticBasis: "EXACT",
+    })!;
+    expect(s.numbers).toBe("국내 판매처 9곳 · 예상 마진 7.6%");
+    expect(s.verdict).toContain("어렵습니다");
+  });
+
+  it("C — 손실을 첫 화면에서 바로 말한다", () => {
+    const s = buildSellingSummary("C", {
+      ...base,
+      domesticLowestPriceKrw: 16_900,
+      landedCostKrw: 18_500,
+    })!;
+    expect(s.numbers).toBe("시장가 ₩16,900 · 착지원가 ₩18,500");
+    expect(s.verdict).toContain("손실이 예상됩니다");
+  });
+
+  it("★ basis가 EXACT가 아니면 판매처 수를 요약에 노출하지 않는다", () => {
+    const s = buildSellingSummary("B", {
+      ...base,
+      estimatedMarginPercent: 7.6,
+      sellerCount: 0,
+      domesticBasis: "NONE",
+    })!;
+    expect(s.numbers).not.toContain("판매처");
+    expect(s.verdict).not.toContain("공급");
+  });
+
+  it("D — 아는 척하지 않는다", () => {
+    const s = buildSellingSummary("D", { ...base, domesticBasis: "NONE" })!;
+    expect(s.numbers).toBeNull();
+    expect(s.verdict).toContain("확인하지 못했습니다");
   });
 });
