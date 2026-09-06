@@ -291,6 +291,7 @@ function numericGuidance(marketCase: "A" | "B" | "C" | "D" | null, f: SellingGui
   }
 
   if (marketCase === "B") {
+    const supplyLimitedForGuidance = supply === "SCARCE" || supply === "LIMITED";
     const numbers: string[] = [];
     if (f.estimatedMarginPercent != null) numbers.push(`예상 마진 ${pct(f.estimatedMarginPercent)}`);
     if (f.targetMarginPercent != null) numbers.push(`목표 마진 ${pct(f.targetMarginPercent)}`);
@@ -303,7 +304,9 @@ function numericGuidance(marketCase: "A" | "B" | "C" | "D" | null, f: SellingGui
       const gap = f.targetMarginPercent - f.estimatedMarginPercent;
       if (gap > 0) lines.push(`현재 시장가로 팔면 목표 마진보다 ${pct(gap)}p 부족합니다(손실은 아닙니다).`);
     }
-    if (f.targetPriceKrw != null && f.domesticLowestPriceKrw != null) {
+    // MI-VALIDATION-1 — 아래 공급 문구가 같은 격차 금액을 다시 말하므로,
+    // 공급 문구가 나오는 경우에는 이 줄을 내지 않는다(동일 사실 2회 금지).
+    if (!supplyLimitedForGuidance && f.targetPriceKrw != null && f.domesticLowestPriceKrw != null) {
       const diff = f.targetPriceKrw - f.domesticLowestPriceKrw;
       if (diff > 0) lines.push(`목표 마진을 채우려면 시장 기준가보다 ${won(diff)} 더 받아야 합니다.`);
     }
@@ -425,10 +428,13 @@ export function buildSellingSummary(
     return {
       tone: "GOOD",
       headline: "시장 가격 경쟁력 있음",
+      // MI-VALIDATION-1 — 추천가는 아래 행동 문장이 이미 말한다. 여기 또 쓰면
+      // 기본 화면에 같은 금액이 두 번 나온다(같은 가격 2회 반복 금지).
+      // 대신 "그 가격이 시장 대비 어디쯤인지"를 보여주는 값을 올린다.
       numbers: pickTwo([
-        f.recommendedPriceKrw != null ? `추천가 ${won(f.recommendedPriceKrw)}` : null,
+        f.domesticLowestPriceKrw != null ? `국내 최저가 ${won(f.domesticLowestPriceKrw)}` : null,
         f.estimatedMarginPercent != null ? `예상 마진 ${pct(f.estimatedMarginPercent)}` : null,
-        f.domesticLowestPriceKrw != null ? `시장 기준가 ${won(f.domesticLowestPriceKrw)}` : null,
+        f.recommendedPriceKrw == null ? null : `추천가 ${won(f.recommendedPriceKrw)}`,
       ]),
       action:
         f.recommendedPriceKrw != null
@@ -449,9 +455,12 @@ export function buildSellingSummary(
       return {
         tone: "CAUTION",
         headline: "국내 공급이 적어 가격 여지가 있습니다",
+        // MI-VALIDATION-1 — 목표마진가는 행동 문장이 말한다. 여기서는 "왜 그
+        // 가격을 시험해볼 만한가"의 근거인 판매처 수와 현재 시장가를 보여준다.
         numbers: pickTwo([
-          f.targetPriceKrw != null ? `목표마진가 ${won(f.targetPriceKrw)}` : null,
           sellerPart,
+          f.domesticLowestPriceKrw != null ? `시장 기준가 ${won(f.domesticLowestPriceKrw)}` : null,
+          f.targetPriceKrw != null && sellerPart == null ? `목표마진가 ${won(f.targetPriceKrw)}` : null,
         ]),
         action:
           f.targetPriceKrw != null

@@ -377,7 +377,7 @@ describe("buildSellingSummary — 기본 화면은 결론·숫자2개·행동1�
   };
   const numberCount = (n: string | null) => (n == null ? 0 : n.split(" · ").length);
 
-  it("A — 🟢 결론 + 추천가·예상 마진", () => {
+  it("A — 🟢 결론 + 시장 대비 위치(추천가는 행동 문장이 말한다)", () => {
     const s = buildSellingSummary("A", {
       ...base,
       recommendedPriceKrw: 258_000,
@@ -386,11 +386,11 @@ describe("buildSellingSummary — 기본 화면은 결론·숫자2개·행동1�
     });
     expect(s.tone).toBe("GOOD");
     expect(s.headline).toBe("시장 가격 경쟁력 있음");
-    expect(s.numbers).toBe("추천가 ₩258,000 · 예상 마진 18.4%");
+    expect(s.numbers).toBe("국내 최저가 ₩260,000 · 예상 마진 18.4%");
     expect(numberCount(s.numbers)).toBeLessThanOrEqual(2);
   });
 
-  it("B + 공급 제한 — 🟡 테스트 결론 + 목표마진가·판매처", () => {
+  it("B + 공급 제한 — 🟡 결론 + 가격 여지의 근거(목표마진가는 행동 문장)", () => {
     const s = buildSellingSummary("B", {
       ...base,
       targetPriceKrw: 270_795,
@@ -401,7 +401,7 @@ describe("buildSellingSummary — 기본 화면은 결론·숫자2개·행동1�
     });
     expect(s.tone).toBe("CAUTION");
     expect(s.headline).toBe("국내 공급이 적어 가격 여지가 있습니다");
-    expect(s.numbers).toBe("목표마진가 ₩270,795 · 국내 판매처 2곳");
+    expect(s.numbers).toBe("국내 판매처 2곳 · 시장 기준가 ₩258,000");
   });
 
   it("B + 공급 충분 — 🟡 조건부 + 시장 기준가·예상 마진", () => {
@@ -708,4 +708,102 @@ describe("buildConfidenceBasis — 상태 문구는 데이터 확보량만 말�
       }
     }
   });
+});
+
+/**
+ * MI-VALIDATION-1(CPO 지시, 2026-09-06) — 시나리오 A~E를 실제로 돌려보니
+ * 기본 화면에서 같은 금액이 [핵심 숫자]와 [행동] 두 줄에 반복되고 있었다
+ * (A: 추천가, B+공급제한: 목표마진가). 금액은 화면에 한 번만 나와야 한다.
+ * 회귀하면 여기서 잡는다.
+ */
+describe("buildSellingSummary — 기본 화면에서 같은 금액을 두 번 말하지 않는다", () => {
+  const scenarios = [
+    {
+      name: "A 경쟁력 확보",
+      mc: "A" as const,
+      f: {
+        recommendedPriceKrw: 258_000,
+        targetPriceKrw: 249_000,
+        estimatedMarginPercent: 18.4,
+        targetMarginPercent: 15,
+        landedCostKrw: 200_000,
+        domesticLowestPriceKrw: 260_000,
+        brandMedianPriceKrw: null,
+        sellerCount: 7,
+        domesticBasis: "EXACT" as const,
+      },
+    },
+    {
+      name: "B 마진부족+공급제한",
+      mc: "B" as const,
+      f: {
+        recommendedPriceKrw: 258_000,
+        targetPriceKrw: 270_795,
+        estimatedMarginPercent: 7.6,
+        targetMarginPercent: 20,
+        landedCostKrw: 238_300,
+        domesticLowestPriceKrw: 258_000,
+        brandMedianPriceKrw: null,
+        sellerCount: 2,
+        domesticBasis: "EXACT" as const,
+      },
+    },
+    {
+      name: "C 마진부족+경쟁충분",
+      mc: "B" as const,
+      f: {
+        recommendedPriceKrw: 258_000,
+        targetPriceKrw: 270_795,
+        estimatedMarginPercent: 7.6,
+        targetMarginPercent: 20,
+        landedCostKrw: 238_300,
+        domesticLowestPriceKrw: 258_000,
+        brandMedianPriceKrw: null,
+        sellerCount: 11,
+        domesticBasis: "EXACT" as const,
+      },
+    },
+    {
+      name: "D 손실구간",
+      mc: "C" as const,
+      f: {
+        recommendedPriceKrw: null,
+        targetPriceKrw: 22_000,
+        estimatedMarginPercent: null,
+        targetMarginPercent: 20,
+        landedCostKrw: 18_500,
+        domesticLowestPriceKrw: 16_900,
+        brandMedianPriceKrw: null,
+        sellerCount: 1,
+        domesticBasis: "EXACT" as const,
+      },
+    },
+    {
+      name: "E 국내데이터부족",
+      mc: "D" as const,
+      f: {
+        recommendedPriceKrw: null,
+        targetPriceKrw: 112_000,
+        estimatedMarginPercent: null,
+        targetMarginPercent: 20,
+        landedCostKrw: 89_600,
+        domesticLowestPriceKrw: null,
+        brandMedianPriceKrw: 100_000,
+        sellerCount: null,
+        domesticBasis: "NONE" as const,
+      },
+    },
+  ];
+
+  for (const { name, mc, f } of scenarios) {
+    it(`${name} — 핵심 숫자와 행동 문장에 같은 금액이 중복되지 않는다`, () => {
+      const s = buildSellingSummary(mc, f);
+      const amounts = (text: string) => (text.match(/₩[\d,]+/g) ?? []).map((a) => a.replace("-", ""));
+      const inNumbers = amounts(s.numbers ?? "");
+      const inAction = amounts(s.action);
+      for (const a of inAction) {
+        expect(inNumbers).not.toContain(a);
+      }
+    });
+  }
 });
