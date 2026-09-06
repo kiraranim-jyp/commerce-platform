@@ -176,6 +176,43 @@ export interface SellingGuidanceFacts {
    * null/0이면 경쟁 문구를 아예 만들지 않는다.
    */
   sellerCount: number | null;
+  /**
+   * MI-SUPPLY-ADVANTAGE-1 — 국내 동일상품 판별 근거. 공급 판정의 유일한
+   * 게이트다(아래 deriveSupplyStatus 주석 참조). 생략하면 UNKNOWN 취급.
+   */
+  domesticBasis?: "EXACT" | "COMPARISON" | "NONE";
+}
+
+/**
+ * MI-SUPPLY-ADVANTAGE-1(CPO 지시, 2026-09-06) — 국내 공급 상황.
+ *
+ * 셀러 인터뷰 가설: "국내에 동일상품 재고가 부족하면 국내 시장 최저가가
+ * 아니라 목표 마진 가격으로도 팔릴 수 있다." 이것을 판단하려면 가격 축
+ * (marketCase)과 별개인 공급 축이 필요하다.
+ *
+ * 이 함수의 가장 중요한 역할은 기회 탐지가 아니라 **오판 방지**다:
+ *   "검색 결과 없음"은 "국내 재고 없음"이 아니다.
+ * 크롤링 실패, 매칭 실패, 데이터 미수집도 전부 결과가 0으로 보인다. 이를
+ * SCARCE로 처리하면 "국내에 없으니 비싸게 팔아라"를 근거 없이 권하게 된다.
+ *
+ * 그래서 게이트를 basis === "EXACT" 하나로 둔다. summarizeDomesticMarketSplit
+ * 정의상 EXACT는 exact.sellerCount > 0일 때만 나온다(price-history.ts) —
+ * 즉 **실제로 찾아서 확인된 동일상품이 있을 때만** 공급을 논한다. 못 찾은
+ * 경우(COMPARISON/NONE)는 항상 UNKNOWN이며 절대 SCARCE가 되지 않는다.
+ */
+export type SupplyStatus = "SUFFICIENT" | "LIMITED" | "SCARCE" | "UNKNOWN";
+
+export function deriveSupplyStatus(input: {
+  sellerCount: number | null;
+  domesticBasis?: "EXACT" | "COMPARISON" | "NONE";
+}): SupplyStatus {
+  // 확인 자체를 못 했거나(null) 동일상품을 확정하지 못했으면 판단하지 않는다.
+  if (input.sellerCount == null) return "UNKNOWN";
+  if (input.domesticBasis !== "EXACT") return "UNKNOWN";
+  if (input.sellerCount <= 0) return "UNKNOWN";
+  if (input.sellerCount <= 2) return "SCARCE";
+  if (input.sellerCount <= 5) return "LIMITED";
+  return "SUFFICIENT";
 }
 
 function won(value: number): string {
@@ -192,12 +229,40 @@ function pct(value: number): string {
  * 실제로 확인됐을 때만 문구를 만들고, 없으면 빈 배열을 반환해 블록 자체가
  * 나오지 않게 한다. "경쟁이 심할 것으로 보입니다" 같은 추론은 금지.
  */
-function competitionLines(sellerCount: number | null): string[] {
+function competitionLines(sellerCount: number | null, supply: SupplyStatus): string[] {
   if (sellerCount == null || sellerCount <= 0) return [];
+  // MI-SUPPLY-ADVANTAGE-1 — 공급이 제한적인데 "경쟁이 치열하니 차별화하라"고
+  // 하면 아래 공급 문구와 정반대 조언이 된다. 경쟁 문구는 공급이 충분할
+  // 때만 낸다.
+  if (supply !== "SUFFICIENT") return [];
   return [
     `국내 판매처 ${sellerCount}곳 확인 — 같은 상품을 파는 곳이 이미 있습니다.`,
     "→ 최저가 경쟁보다 구성·옵션·배송 조건 차별화를 검토하세요.",
   ];
+}
+
+/**
+ * MI-SUPPLY-ADVANTAGE-1 — 공급 제한이 실제로 확인됐을 때만 나오는 기회 문구.
+ * SUFFICIENT/UNKNOWN이면 빈 배열이다.
+ *
+ * 표현 원칙(CPO 명시): 공급 부족은 "가격을 올려도 팔린다"는 보장이 아니라
+ * 시험해볼 근거다. "반드시 팔린다 / 가격을 올려라" 같은 확정형을 쓰지 않고
+ * 가능성·테스트·반응 확인 수준으로만 말한다.
+ */
+function supplyLines(supply: SupplyStatus, sellerCount: number | null, premiumGapKrw: number | null): string[] {
+  if (supply !== "SCARCE" && supply !== "LIMITED") return [];
+  if (sellerCount == null) return [];
+  const scarce = supply === "SCARCE";
+  const lines = [
+    `국내 동일상품 판매처 ${sellerCount}곳 — 국내 공급이 ${scarce ? "매우 제한적입니다" : "제한적입니다"}.`,
+  ];
+  if (premiumGapKrw != null && premiumGapKrw > 0) {
+    lines.push(
+      `목표 마진 가격은 시장 기준가보다 ${won(premiumGapKrw)} 높지만, 대체 상품이 적어 이 가격대를 시험해볼 여지가 있습니다.`,
+    );
+  }
+  lines.push("→ 처음부터 최저가로 내리기보다 목표 마진 가격으로 등록하고 클릭·판매 반응을 확인하세요.");
+  return lines;
 }
 
 /**
@@ -207,6 +272,9 @@ function competitionLines(sellerCount: number | null): string[] {
  */
 function numericGuidance(marketCase: "A" | "B" | "C" | "D" | null, f: SellingGuidanceFacts): string[] {
   const lines: string[] = [];
+  // MI-SUPPLY-ADVANTAGE-1 — 가격 축(marketCase)과 독립적으로 계산한다.
+  // marketCase를 여기서 다시 판정하거나 바꾸지 않는다.
+  const supply = deriveSupplyStatus({ sellerCount: f.sellerCount, domesticBasis: f.domesticBasis });
 
   if (marketCase === "A") {
     const numbers: string[] = [];
@@ -217,7 +285,9 @@ function numericGuidance(marketCase: "A" | "B" | "C" | "D" | null, f: SellingGui
     lines.push(numbers.join(" · "));
     lines.push("목표 마진을 확보하면서 국내 시장가보다 낮게 팔 수 있는 구간입니다.");
     lines.push("→ 추천가로 시작하고, 국내 가격 변동을 주기적으로 확인하세요.");
-    return [...lines, ...competitionLines(f.sellerCount)];
+    // CASE A는 이미 목표 마진을 확보하는 구간이라 프리미엄 격차가 없다.
+    // 공급 제한은 "경쟁 압력이 낮다"는 맥락으로만 덧붙인다.
+    return [...lines, ...supplyLines(supply, f.sellerCount, null), ...competitionLines(f.sellerCount, supply)];
   }
 
   if (marketCase === "B") {
@@ -237,8 +307,18 @@ function numericGuidance(marketCase: "A" | "B" | "C" | "D" | null, f: SellingGui
       const diff = f.targetPriceKrw - f.domesticLowestPriceKrw;
       if (diff > 0) lines.push(`목표 마진을 채우려면 시장 기준가보다 ${won(diff)} 더 받아야 합니다.`);
     }
-    lines.push("→ 가격 인상보다 매입가·배송비 절감이나 구성 변경을 먼저 검토하세요.");
-    return [...lines, ...competitionLines(f.sellerCount)];
+    // MI-SUPPLY-ADVANTAGE-1 — B(목표 마진 미달)에서 공급이 제한적이면
+    // "시장가에 맞춰라"가 유일한 답이 아니다. 목표 마진 가격을 시험해볼
+    // 여지를 격차 금액과 함께 제시한다(확정 표현 금지).
+    const premiumGap =
+      f.targetPriceKrw != null && f.domesticLowestPriceKrw != null
+        ? f.targetPriceKrw - f.domesticLowestPriceKrw
+        : null;
+    const supplyB = supplyLines(supply, f.sellerCount, premiumGap);
+    if (supplyB.length === 0) {
+      lines.push("→ 가격 인상보다 매입가·배송비 절감이나 구성 변경을 먼저 검토하세요.");
+    }
+    return [...lines, ...supplyB, ...competitionLines(f.sellerCount, supply)];
   }
 
   if (marketCase === "C") {

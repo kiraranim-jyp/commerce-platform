@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeSeasonFit, deriveMarketSignals, buildSellingGuidance } from "../market-signals";
+import { computeSeasonFit, deriveMarketSignals, buildSellingGuidance, deriveSupplyStatus } from "../market-signals";
 
 /**
  * P-29 Sprint 8(CPO 지시, 2026-09-03) — 순수 함수 검증. 이 파일의 함수들은
@@ -238,5 +238,123 @@ describe("buildSellingGuidance — UX-3 상품별 실제 숫자 기반 가이드
     expect(g.length).toBeGreaterThan(0);
     expect(g.join("\n")).not.toContain("₩");
     expect(g.join("\n")).not.toContain("NaN");
+  });
+});
+
+/**
+ * MI-SUPPLY-ADVANTAGE-1(CPO 지시, 2026-09-06) — 가격 축과 독립된 공급 축.
+ * 이 describe의 존재 이유는 기회 탐지가 아니라 오판 방지다:
+ * "검색 결과 없음"이 "국내 재고 없음"으로 둔갑하면 근거 없이 고가 판매를
+ * 권하게 된다. 그 경계를 코드로 고정한다.
+ */
+describe("deriveSupplyStatus — 데이터 없음과 공급 부족을 구분한다", () => {
+  it("EXACT 확정 + 판매처 1~2곳 → SCARCE", () => {
+    expect(deriveSupplyStatus({ sellerCount: 2, domesticBasis: "EXACT" })).toBe("SCARCE");
+  });
+
+  it("EXACT 확정 + 3~5곳 → LIMITED, 6곳 이상 → SUFFICIENT", () => {
+    expect(deriveSupplyStatus({ sellerCount: 4, domesticBasis: "EXACT" })).toBe("LIMITED");
+    expect(deriveSupplyStatus({ sellerCount: 9, domesticBasis: "EXACT" })).toBe("SUFFICIENT");
+  });
+
+  it("★ 검색 결과 없음(NONE)은 아무리 판매처가 0이어도 SCARCE가 아니다", () => {
+    expect(deriveSupplyStatus({ sellerCount: 0, domesticBasis: "NONE" })).toBe("UNKNOWN");
+    expect(deriveSupplyStatus({ sellerCount: null, domesticBasis: "NONE" })).toBe("UNKNOWN");
+  });
+
+  it("★ 유사상품만 찾은 경우(COMPARISON)도 공급을 판단하지 않는다", () => {
+    expect(deriveSupplyStatus({ sellerCount: 1, domesticBasis: "COMPARISON" })).toBe("UNKNOWN");
+  });
+
+  it("basis를 넘기지 않으면 UNKNOWN(하위 호환 — 공급 문구가 새로 생기지 않는다)", () => {
+    expect(deriveSupplyStatus({ sellerCount: 1 })).toBe("UNKNOWN");
+  });
+});
+
+describe("buildSellingGuidance — 공급 축이 가격 축과 결합되는 방식", () => {
+  const signals = deriveMarketSignals({
+    domesticSellerCount: 2,
+    searchInterestRatio: 40,
+    titleText: "무관",
+    nowMonth: 3,
+  }).signals;
+
+  const base = {
+    recommendedPriceKrw: null,
+    targetPriceKrw: null,
+    estimatedMarginPercent: null,
+    targetMarginPercent: null,
+    landedCostKrw: null,
+    domesticLowestPriceKrw: null,
+    brandMedianPriceKrw: null,
+    sellerCount: null,
+  };
+
+  it("B + 공급 부족 → 목표마진가와의 격차를 '시험해볼 여지'로 제시한다(확정 표현 금지)", () => {
+    const g = buildSellingGuidance("B", signals, {
+      ...base,
+      estimatedMarginPercent: 7.6,
+      targetMarginPercent: 20,
+      targetPriceKrw: 270_795,
+      domesticLowestPriceKrw: 258_000,
+      sellerCount: 2,
+      domesticBasis: "EXACT",
+    }).join("\n");
+    expect(g).toContain("공급이 매우 제한적입니다");
+    expect(g).toContain("₩12,795");
+    expect(g).toContain("시험해볼 여지");
+    expect(g).not.toContain("반드시");
+    expect(g).not.toContain("판매 가능합니다");
+  });
+
+  it("B + 공급 충분 → 공급 문구 없이 기존 원가 절감 전략과 경쟁 문구를 낸다", () => {
+    const g = buildSellingGuidance("B", signals, {
+      ...base,
+      estimatedMarginPercent: 7.6,
+      targetMarginPercent: 20,
+      targetPriceKrw: 270_795,
+      domesticLowestPriceKrw: 258_000,
+      sellerCount: 9,
+      domesticBasis: "EXACT",
+    }).join("\n");
+    expect(g).not.toContain("제한적");
+    expect(g).toContain("매입가·배송비 절감");
+    expect(g).toContain("차별화");
+  });
+
+  it("★ C(손실 구간) + 공급 부족 → 공급을 근거로 판매를 권하지 않는다", () => {
+    const g = buildSellingGuidance("C", signals, {
+      ...base,
+      landedCostKrw: 18_500,
+      domesticLowestPriceKrw: 16_900,
+      sellerCount: 1,
+      domesticBasis: "EXACT",
+    }).join("\n");
+    expect(g).toContain("권장하지 않습니다");
+    expect(g).not.toContain("제한적");
+    expect(g).not.toContain("시험해볼");
+  });
+
+  it("★ D(동일상품 미확인) → 공급 부족으로 오판하지 않는다", () => {
+    const g = buildSellingGuidance("D", signals, {
+      ...base,
+      brandMedianPriceKrw: 100_000,
+      targetPriceKrw: 112_000,
+      sellerCount: 0,
+      domesticBasis: "NONE",
+    }).join("\n");
+    expect(g).not.toContain("공급");
+    expect(g).toContain("확정하지 못해");
+  });
+
+  it("공급이 제한적이면 '경쟁이 있으니 차별화하라'는 반대 조언을 내지 않는다", () => {
+    const g = buildSellingGuidance("A", signals, {
+      ...base,
+      recommendedPriceKrw: 258_000,
+      sellerCount: 2,
+      domesticBasis: "EXACT",
+    }).join("\n");
+    expect(g).toContain("제한적");
+    expect(g).not.toContain("차별화");
   });
 });

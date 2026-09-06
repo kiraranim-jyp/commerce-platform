@@ -346,6 +346,9 @@ export async function computeMarketIntelligence(snapshotId: string) {
     // 없음"과 "확인 못 함"을 구분한다(deriveMarketSignals와 동일 기준).
     sellerCount:
       domesticSummary.sellerCount > 0 || domesticSummary.tier !== "NONE" ? domesticSummary.sellerCount : null,
+    // MI-SUPPLY-ADVANTAGE-1 — 공급 판정의 게이트. computePriceRecommendation에
+    // 넘긴 것과 같은 값이다(새 계산 없음). EXACT가 아니면 공급을 논하지 않는다.
+    domesticBasis: domesticMarketSplit.basis,
   });
 
   // P-31 — PRICE REALITY → CASE → MARKET SIGNAL → SELLER GUIDANCE 순서.
