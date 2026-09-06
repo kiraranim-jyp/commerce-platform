@@ -150,7 +150,150 @@ export function deriveMarketSignals(input: DeriveMarketSignalsInput): MarketSign
  * recommendedPrice/estimatedMarginPercent/marketCase 자체를 다시 계산하거나
  * 바꾸지 않는다 — 순수 문자열 조합 함수.
  */
-export function buildSellingGuidance(marketCase: "A" | "B" | "C" | "D" | null, signals: MarketSignal[]): string[] {
+/**
+ * UX-3(CPO 지시, 2026-09-06) — 전략 가이드에 쓸 "이미 계산된" 숫자들.
+ * 이 파일이 새로 계산하는 것은 차액(뺄셈)뿐이고 나머지는 전부
+ * computePriceRecommendation()과 국내 시장 요약이 이미 낸 값을 그대로 받는다.
+ * 값이 없으면 null — 없는 숫자를 만들거나 추정하지 않는다.
+ */
+export interface SellingGuidanceFacts {
+  /** CASE A/B의 최종 추천 판매가. CASE C/D는 null. */
+  recommendedPriceKrw: number | null;
+  /** 목표 마진율 기준 판매가(참고치). */
+  targetPriceKrw: number | null;
+  /** recommendedPrice 기준 실제 마진율(%). */
+  estimatedMarginPercent: number | null;
+  /** 목표 마진율(%). */
+  targetMarginPercent: number | null;
+  /** 착지원가(구매가 + 배송/수수료 포함). */
+  landedCostKrw: number | null;
+  /** 국내 동일상품 최저가 — CASE A/B/C의 "시장 기준가". */
+  domesticLowestPriceKrw: number | null;
+  /** CASE D에서만 참고치로 쓰는 브랜드 시장 중앙값. */
+  brandMedianPriceKrw: number | null;
+  /**
+   * 국내 판매처 수. 확인 자체를 못 했으면 null이다(0과 다르다) —
+   * null/0이면 경쟁 문구를 아예 만들지 않는다.
+   */
+  sellerCount: number | null;
+}
+
+function won(value: number): string {
+  return `₩${Math.round(value).toLocaleString("ko-KR")}`;
+}
+
+/** 소수 1자리까지만 — "8.0%p" 같은 군더더기를 피한다. */
+function pct(value: number): string {
+  return `${Math.round(value * 10) / 10}%`;
+}
+
+/**
+ * UX-3 — 경쟁 축은 가격 CASE와 완전히 독립이다(CPO 확정). sellerCount가
+ * 실제로 확인됐을 때만 문구를 만들고, 없으면 빈 배열을 반환해 블록 자체가
+ * 나오지 않게 한다. "경쟁이 심할 것으로 보입니다" 같은 추론은 금지.
+ */
+function competitionLines(sellerCount: number | null): string[] {
+  if (sellerCount == null || sellerCount <= 0) return [];
+  return [
+    `국내 판매처 ${sellerCount}곳 확인 — 같은 상품을 파는 곳이 이미 있습니다.`,
+    "→ 최저가 경쟁보다 구성·옵션·배송 조건 차별화를 검토하세요.",
+  ];
+}
+
+/**
+ * UX-3 — CASE별 "숫자 → 이유 → 행동" 가이드. 쓸 숫자가 하나도 없으면 빈
+ * 배열을 반환하고 호출부가 기존 정성 문구로 되돌아간다. marketCase는 여기서도
+ * 분기용으로만 쓴다 — 판정을 다시 계산하지 않는다.
+ */
+function numericGuidance(marketCase: "A" | "B" | "C" | "D" | null, f: SellingGuidanceFacts): string[] {
+  const lines: string[] = [];
+
+  if (marketCase === "A") {
+    const numbers: string[] = [];
+    if (f.recommendedPriceKrw != null) numbers.push(`추천 판매가 ${won(f.recommendedPriceKrw)}`);
+    if (f.domesticLowestPriceKrw != null) numbers.push(`국내 최저가 ${won(f.domesticLowestPriceKrw)}`);
+    if (f.estimatedMarginPercent != null) numbers.push(`예상 마진 ${pct(f.estimatedMarginPercent)}`);
+    if (numbers.length === 0) return [];
+    lines.push(numbers.join(" · "));
+    lines.push("목표 마진을 확보하면서 국내 시장가보다 낮게 팔 수 있는 구간입니다.");
+    lines.push("→ 추천가로 시작하고, 국내 가격 변동을 주기적으로 확인하세요.");
+    return [...lines, ...competitionLines(f.sellerCount)];
+  }
+
+  if (marketCase === "B") {
+    const numbers: string[] = [];
+    if (f.estimatedMarginPercent != null) numbers.push(`예상 마진 ${pct(f.estimatedMarginPercent)}`);
+    if (f.targetMarginPercent != null) numbers.push(`목표 마진 ${pct(f.targetMarginPercent)}`);
+    if (f.targetPriceKrw != null) numbers.push(`목표마진 판매가 ${won(f.targetPriceKrw)}`);
+    if (f.domesticLowestPriceKrw != null) numbers.push(`시장 기준가 ${won(f.domesticLowestPriceKrw)}`);
+    if (numbers.length === 0) return [];
+    lines.push(numbers.join(" · "));
+
+    if (f.estimatedMarginPercent != null && f.targetMarginPercent != null) {
+      const gap = f.targetMarginPercent - f.estimatedMarginPercent;
+      if (gap > 0) lines.push(`현재 시장가로 팔면 목표 마진보다 ${pct(gap)}p 부족합니다(손실은 아닙니다).`);
+    }
+    if (f.targetPriceKrw != null && f.domesticLowestPriceKrw != null) {
+      const diff = f.targetPriceKrw - f.domesticLowestPriceKrw;
+      if (diff > 0) lines.push(`목표 마진을 채우려면 시장 기준가보다 ${won(diff)} 더 받아야 합니다.`);
+    }
+    lines.push("→ 가격 인상보다 매입가·배송비 절감이나 구성 변경을 먼저 검토하세요.");
+    return [...lines, ...competitionLines(f.sellerCount)];
+  }
+
+  if (marketCase === "C") {
+    const numbers: string[] = [];
+    if (f.landedCostKrw != null) numbers.push(`착지원가 ${won(f.landedCostKrw)}`);
+    if (f.domesticLowestPriceKrw != null) numbers.push(`시장 기준가 ${won(f.domesticLowestPriceKrw)}`);
+    if (f.landedCostKrw != null && f.domesticLowestPriceKrw != null) {
+      const loss = f.landedCostKrw - f.domesticLowestPriceKrw;
+      if (loss > 0) numbers.push(`예상 차액 -${won(loss)}`);
+    }
+    if (numbers.length === 0) return [];
+    lines.push(numbers.join(" · "));
+    lines.push("국내 시장가로 팔면 착지원가도 회수하지 못합니다.");
+    lines.push("→ 단품 판매는 권장하지 않습니다. 매입가 절감이나 다른 공급처를 먼저 확인하세요.");
+    // 손실 구간에서는 경쟁 문구를 붙이지 않는다 — "차별화 전략"을 권하면
+    // 팔아도 된다는 신호로 읽힌다.
+    return lines;
+  }
+
+  // CASE D(또는 marketCase 없음) — 국내 동일상품을 확정하지 못한 상태다.
+  // 국내 최저가/판매처 수를 근거로 쓰지 않는다(CPO 명시 금지).
+  if (f.brandMedianPriceKrw != null) {
+    const numbers = [`브랜드 시장 중앙값 ${won(f.brandMedianPriceKrw)}`];
+    if (f.targetPriceKrw != null) numbers.push(`목표마진 판매가 ${won(f.targetPriceKrw)}`);
+    lines.push(numbers.join(" · "));
+    if (f.targetPriceKrw != null) {
+      const diff = f.targetPriceKrw - f.brandMedianPriceKrw;
+      if (diff !== 0) {
+        lines.push(
+          diff > 0
+            ? `목표마진 판매가가 브랜드 중앙값보다 ${won(diff)} 높습니다.`
+            : `목표마진 판매가가 브랜드 중앙값보다 ${won(-diff)} 낮습니다.`,
+        );
+      }
+    }
+    lines.push("국내 동일상품 가격을 확정하지 못해 브랜드 시장 데이터로만 비교했습니다.");
+    lines.push("→ 등록 전 동일상품의 국내 판매가를 직접 확인하세요.");
+    return lines;
+  }
+  return [];
+}
+
+export function buildSellingGuidance(
+  marketCase: "A" | "B" | "C" | "D" | null,
+  signals: MarketSignal[],
+  facts?: SellingGuidanceFacts,
+): string[] {
+  // UX-3 — 실제 숫자로 만들 수 있으면 그것을 쓴다. 쓸 숫자가 하나도 없을
+  // 때만 아래 정성 문구로 되돌아간다(없는 값을 지어내지 않기 위한 폴백이지
+  // 기본값이 아니다). facts가 없으면 기존 동작 그대로다.
+  if (facts) {
+    const numeric = numericGuidance(marketCase, facts);
+    if (numeric.length > 0) return numeric;
+  }
+
   const positiveCount = signals.filter((s) => s.level === "high").length;
   const hasSignal = positiveCount > 0;
 

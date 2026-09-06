@@ -324,7 +324,29 @@ export async function computeMarketIntelligence(snapshotId: string) {
     titleText: product.title.value,
     nowMonth: new Date().getMonth() + 1,
   });
-  const sellingGuidance = buildSellingGuidance(recommendation?.marketCase ?? null, marketSignals.signals);
+  // UX-3(CPO 지시, 2026-09-06) — 전략 가이드가 모든 상품에 같은 문구를 내던
+  // 문제를 고친다. 새 계산은 하지 않고, 위에서 이미 계산된 값만 그대로 넘긴다
+  // (recommendation은 computePriceRecommendation 결과, landedCost/최저가는
+  // cost/domesticSummary 원본). 값이 없으면 null을 넘겨 "없는 숫자를 만들지
+  // 않는다" 규칙을 함수 쪽에서 지키게 한다.
+  const sellingGuidance = buildSellingGuidance(recommendation?.marketCase ?? null, marketSignals.signals, {
+    recommendedPriceKrw: recommendation?.recommendedPrice ?? null,
+    targetPriceKrw: recommendation?.targetPrice ?? null,
+    estimatedMarginPercent: recommendation?.estimatedMarginPercent ?? null,
+    // breakdownInput은 위 `if (cost)` 블록 스코프라 여기서 쓸 수 없다.
+    // computePriceRecommendation에 넘긴 것과 정확히 같은 소스 표현을 쓴다
+    // (새 값이 아니라 동일 값 — 두 곳의 목표 마진율이 어긋나면 안 된다).
+    targetMarginPercent: (product.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT).marginPercent,
+    landedCostKrw: cost?.landedCostKrw ?? null,
+    // CASE A/B/C의 "시장 기준가"는 EXACT 동일상품 최저가다. CASE D에서는
+    // numericGuidance가 이 값을 쓰지 않는다(동일상품 미확정이므로).
+    domesticLowestPriceKrw: domesticSummary.lowestPriceKrw,
+    brandMedianPriceKrw: usableBrandMarketProfile?.medianPriceKrw ?? null,
+    // 확인 자체를 못 한 경우(tier NONE + 0곳)는 0이 아니라 null — "판매처
+    // 없음"과 "확인 못 함"을 구분한다(deriveMarketSignals와 동일 기준).
+    sellerCount:
+      domesticSummary.sellerCount > 0 || domesticSummary.tier !== "NONE" ? domesticSummary.sellerCount : null,
+  });
 
   // P-31 — PRICE REALITY → CASE → MARKET SIGNAL → SELLER GUIDANCE 순서.
   // sellerFacingVerdict(가격/매칭 레이어)가 최종 판정의 단일 소스이고,

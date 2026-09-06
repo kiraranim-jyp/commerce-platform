@@ -143,3 +143,100 @@ describe("deriveMarketSignals — 검색 관심 확인 불가 사유 구분(P-30
     expect(legacy.evidence).toBe("네이버 검색 데이터를 확인하지 못했습니다");
   });
 });
+
+/**
+ * UX-3(CPO 지시, 2026-09-06) — 전략 가이드가 모든 상품에 같은 문구를 내던
+ * 문제를 고친 뒤의 계약을 고정한다. 핵심은 두 가지다.
+ *  (1) 실제 계산된 숫자가 있으면 그 숫자가 문구에 나온다.
+ *  (2) 없는 숫자는 절대 만들지 않는다(sellerCount 없음 → 경쟁 문구 없음).
+ */
+describe("buildSellingGuidance — UX-3 상품별 실제 숫자 기반 가이드", () => {
+  const signals = deriveMarketSignals({
+    domesticSellerCount: 3,
+    searchInterestRatio: 40,
+    titleText: "무관",
+    nowMonth: 3,
+  }).signals;
+
+  const emptyFacts = {
+    recommendedPriceKrw: null,
+    targetPriceKrw: null,
+    estimatedMarginPercent: null,
+    targetMarginPercent: null,
+    landedCostKrw: null,
+    domesticLowestPriceKrw: null,
+    brandMedianPriceKrw: null,
+    sellerCount: null,
+  };
+
+  it("CASE A — 추천가/국내 최저가/예상 마진이 실제 숫자로 나온다", () => {
+    const g = buildSellingGuidance("A", signals, {
+      ...emptyFacts,
+      recommendedPriceKrw: 258_000,
+      domesticLowestPriceKrw: 260_000,
+      estimatedMarginPercent: 18.4,
+      sellerCount: 3,
+    }).join("\n");
+    expect(g).toContain("₩258,000");
+    expect(g).toContain("₩260,000");
+    expect(g).toContain("18.4%");
+  });
+
+  it("CASE B — 목표 마진과의 격차(%p)와 부족 금액을 계산해 보여준다", () => {
+    const g = buildSellingGuidance("B", signals, {
+      ...emptyFacts,
+      estimatedMarginPercent: 7.6,
+      targetMarginPercent: 20,
+      targetPriceKrw: 270_795,
+      domesticLowestPriceKrw: 258_000,
+      sellerCount: 1,
+    }).join("\n");
+    expect(g).toContain("12.4%p");
+    expect(g).toContain("₩12,795");
+    expect(g).toContain("손실은 아닙니다");
+  });
+
+  it("CASE C — 착지원가/시장가/음수 차액을 보여주고 판매를 권하지 않는다", () => {
+    const g = buildSellingGuidance("C", signals, {
+      ...emptyFacts,
+      landedCostKrw: 18_500,
+      domesticLowestPriceKrw: 16_900,
+      sellerCount: 12,
+    }).join("\n");
+    expect(g).toContain("-₩1,600");
+    expect(g).toContain("권장하지 않습니다");
+    // 손실 구간에서는 경쟁 차별화 문구를 붙이지 않는다(팔아도 된다는 신호가 됨).
+    expect(g).not.toContain("차별화");
+  });
+
+  it("CASE D — 국내 최저가/판매처 수를 근거로 쓰지 않고 브랜드 중앙값만 쓴다", () => {
+    const g = buildSellingGuidance("D", signals, {
+      ...emptyFacts,
+      brandMedianPriceKrw: 100_000,
+      targetPriceKrw: 112_000,
+      domesticLowestPriceKrw: 90_000,
+      sellerCount: 7,
+    }).join("\n");
+    expect(g).toContain("₩100,000");
+    expect(g).toContain("₩12,000");
+    expect(g).not.toContain("₩90,000");
+    expect(g).not.toContain("7곳");
+  });
+
+  it("sellerCount가 null이면 경쟁 문구를 아예 만들지 않는다", () => {
+    const g = buildSellingGuidance("A", signals, {
+      ...emptyFacts,
+      recommendedPriceKrw: 30_000,
+      sellerCount: null,
+    }).join("\n");
+    expect(g).not.toContain("판매처");
+    expect(g).not.toContain("경쟁");
+  });
+
+  it("숫자가 하나도 없으면 지어내지 않고 기존 정성 문구로 되돌아간다", () => {
+    const g = buildSellingGuidance("B", signals, emptyFacts);
+    expect(g.length).toBeGreaterThan(0);
+    expect(g.join("\n")).not.toContain("₩");
+    expect(g.join("\n")).not.toContain("NaN");
+  });
+});
