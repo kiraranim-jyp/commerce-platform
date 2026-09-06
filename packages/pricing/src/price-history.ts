@@ -70,6 +70,14 @@ export interface DomesticMarketSummary {
   highestPriceKrw: number | null;
   averagePriceKrw: number | null;
   sellerCount: number;
+  /**
+   * MI-DATA-FRESHNESS-1(CPO 지시, 2026-09-06) — lowestPriceKrw가 **언제 관측된
+   * 값인지**. getPriceHistory는 기간 필터 없이 최근 60건을 주므로 이 최저가는
+   * "지금 최저가"가 아니라 "보관된 관측 중 최저가"다. 화면이 현재가처럼
+   * 보여주지 않도록 시점을 함께 내보낸다. 집계 방식은 바꾸지 않는다 —
+   * 최저가를 만든 그 레코드의 checkedAt을 그대로 싣는다.
+   */
+  lowestPriceCheckedAt: string | null;
   /** "대표 경쟁상품" — 최저가 리스팅 상위 몇 개. N-4.07 Sprint(대표님 지시:
    * "출처 + 가격 + 확인시간을 보여준다") — checkedAt을 추가한다(이전엔 요약
    * 전체의 checkedAt만 있고 리스팅별로는 없었다). */
@@ -162,6 +170,7 @@ export function summarizeFrom(records: PriceObservationRecord[], tier: DomesticM
       highestPriceKrw: null,
       averagePriceKrw: null,
       sellerCount: 0,
+      lowestPriceCheckedAt: null,
       sampleListings: [],
       soldOutListings,
       checkedAt,
@@ -170,6 +179,11 @@ export function summarizeFrom(records: PriceObservationRecord[], tier: DomesticM
 
   const prices = activeRecords.map((r) => r.priceKrw);
   const lowestPriceKrw = Math.min(...prices);
+  // 같은 최저가가 여러 시점에 관측됐다면 가장 최근 관측을 쓴다 — 화면이
+  // 실제보다 오래됐다고 말하지 않게 하기 위함(보수적으로 최신 쪽).
+  const lowestPriceCheckedAt = activeRecords
+    .filter((r) => r.priceKrw === lowestPriceKrw)
+    .reduce<string | null>((latest, r) => (latest == null || r.checkedAt > latest ? r.checkedAt : latest), null);
   const highestPriceKrw = Math.max(...prices);
   const averagePriceKrw = Math.round(prices.reduce((sum, p) => sum + p, 0) / prices.length);
   const sorted = [...activeRecords].sort((a, b) => a.priceKrw - b.priceKrw);
@@ -179,6 +193,7 @@ export function summarizeFrom(records: PriceObservationRecord[], tier: DomesticM
     highestPriceKrw,
     averagePriceKrw,
     sellerCount: new Set(activeRecords.map(sellerIdentityKey)).size,
+    lowestPriceCheckedAt,
     sampleListings: sorted.slice(0, 5).map((r) => ({
       mallName: r.sourceLabel,
       priceKrw: r.priceKrw,
@@ -198,6 +213,7 @@ const EMPTY_SUMMARY: DomesticMarketSummary = {
   highestPriceKrw: null,
   averagePriceKrw: null,
   sellerCount: 0,
+  lowestPriceCheckedAt: null,
   sampleListings: [],
   soldOutListings: [],
   checkedAt: null,

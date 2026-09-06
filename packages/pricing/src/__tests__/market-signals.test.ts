@@ -300,7 +300,7 @@ describe("buildSellingGuidance — 공급 축이 가격 축과 결합되는 방�
       sellerCount: 2,
       domesticBasis: "EXACT",
     }).join("\n");
-    expect(g).toContain("공급이 매우 제한적입니다");
+    expect(g).toContain("같은 상품을 파는 곳이 매우 적습니다");
     expect(g).toContain("₩12,795");
     expect(g).toContain("시험해볼 여지");
     expect(g).not.toContain("반드시");
@@ -317,7 +317,7 @@ describe("buildSellingGuidance — 공급 축이 가격 축과 결합되는 방�
       sellerCount: 9,
       domesticBasis: "EXACT",
     }).join("\n");
-    expect(g).not.toContain("제한적");
+    expect(g).not.toContain("적습니다");
     expect(g).toContain("매입가·배송비 절감");
     expect(g).toContain("차별화");
   });
@@ -354,7 +354,7 @@ describe("buildSellingGuidance — 공급 축이 가격 축과 결합되는 방�
       sellerCount: 2,
       domesticBasis: "EXACT",
     }).join("\n");
-    expect(g).toContain("제한적");
+    expect(g).toContain("적습니다");
     expect(g).not.toContain("차별화");
   });
 });
@@ -386,7 +386,7 @@ describe("buildSellingSummary — 기본 화면은 결론·숫자2개·행동1�
     });
     expect(s.tone).toBe("GOOD");
     expect(s.headline).toBe("시장 가격 경쟁력 있음");
-    expect(s.numbers).toBe("국내 최저가 ₩260,000 · 예상 마진 18.4%");
+    expect(s.numbers).toBe("확인된 최저가 ₩260,000 · 예상 마진 18.4%");
     expect(numberCount(s.numbers)).toBeLessThanOrEqual(2);
   });
 
@@ -400,8 +400,8 @@ describe("buildSellingSummary — 기본 화면은 결론·숫자2개·행동1�
       domesticBasis: "EXACT",
     });
     expect(s.tone).toBe("CAUTION");
-    expect(s.headline).toBe("국내 공급이 적어 가격 여지가 있습니다");
-    expect(s.numbers).toBe("국내 판매처 2곳 · 시장 기준가 ₩258,000");
+    expect(s.headline).toBe("국내 판매처가 적어 가격 여지가 있습니다");
+    expect(s.numbers).toBe("국내 판매처 2곳 · 확인된 최저가 ₩258,000");
   });
 
   it("B + 공급 충분 — 🟡 조건부 + 시장 기준가·예상 마진", () => {
@@ -413,7 +413,7 @@ describe("buildSellingSummary — 기본 화면은 결론·숫자2개·행동1�
       domesticBasis: "EXACT",
     });
     expect(s.headline).toBe("시장 가격 경쟁력이 부족합니다");
-    expect(s.numbers).toBe("시장 기준가 ₩258,000 · 예상 마진 7.6%");
+    expect(s.numbers).toBe("확인된 최저가 ₩258,000 · 예상 마진 7.6%");
   });
 
   it("★ C — 🔴 손실. 공급이 부족해도 테스트 문구를 붙이지 않는다", () => {
@@ -542,7 +542,7 @@ describe("buildSellingSummary — 등록 가격 제시 경계", () => {
       domesticBasis: "EXACT",
     });
     expect(s.actionPriceKrw).toBe(270_795);
-    expect(s.action).toContain("시장가보다 높지만, ₩270,795로 먼저 등록");
+    expect(s.action).toContain("확인된 최저가보다 높지만, ₩270,795로 먼저 등록");
   });
 
   it("★ B + 공급 충분 — 등록 가격을 제시하지 않고 격차만 알려준다", () => {
@@ -601,17 +601,38 @@ describe("buildConfidenceBasis — 확보된 데이터만 센다", () => {
 
   it("모든 데이터가 있으면 5/5이고 미확인 사유가 없다", () => {
     const b = buildConfidenceBasis(full, signals(40));
-    expect(b.confirmedCount).toBe(5);
-    expect(b.totalCount).toBe(5);
+    expect(b.confirmedCount).toBe(4);
+    expect(b.totalCount).toBe(4);
     expect(b.items.every((i) => i.confirmed && i.note === null)).toBe(true);
   });
 
-  it("검색 관심을 못 받으면 그 항목만 미확인이 되고 사유가 붙는다", () => {
+  it("★ 검색 관심은 판단 근거가 아니다 — 항목에 없고 분모도 4다", () => {
     const b = buildConfidenceBasis(full, signals(null));
+    expect(b.totalCount).toBe(4);
     expect(b.confirmedCount).toBe(4);
-    const item = b.items.find((i) => i.label === "검색 관심 데이터")!;
-    expect(item.confirmed).toBe(false);
-    expect(item.note).toContain("확인하지 못했습니다");
+    expect(b.items.some((i) => i.label.includes("검색"))).toBe(false);
+  });
+
+  it("★ COMPARISON이면 동일상품 가격이 확인된 것처럼 표시되지 않는다", () => {
+    const b = buildConfidenceBasis({ ...full, domesticBasis: "COMPARISON" }, signals(40));
+    const price = b.items.find((i) => i.label.includes("가격"))!;
+    expect(price.label).toBe("국내 동일상품 가격 미확인");
+    expect(price.confirmed).toBe(false);
+    expect(price.note).toContain("비교상품 가격만");
+  });
+
+  it("★ 착지원가가 저장된 스냅샷 기준이면 그 사실을 밝힌다", () => {
+    const b = buildConfidenceBasis({ ...full, costSource: "STATIC_SNAPSHOT" }, signals(40));
+    const cost = b.items.find((i) => i.label.includes("착지원가"))!;
+    expect(cost.confirmed).toBe(true);
+    expect(cost.note).toBe("저장된 상품 가격 정보 기준");
+  });
+
+  it("최저가 관측 시점이 있으면 요약에 함께 나오고, 없으면 추정하지 않는다", () => {
+    const withAge = buildSellingSummary("B", { ...full, sellerCount: 9, domesticLowestAgeDays: 3 });
+    expect(withAge.numbers).toContain("(3일 전 확인)");
+    const noAge = buildSellingSummary("B", { ...full, sellerCount: 9 });
+    expect(noAge.numbers).not.toContain("확인)");
   });
 
   it("★ 동일상품 미확정이면 판매처 수도 확인됨으로 세지 않는다(공급 판정과 같은 게이트)", () => {

@@ -167,7 +167,7 @@ export interface SellingGuidanceFacts {
   targetMarginPercent: number | null;
   /** 착지원가(구매가 + 배송/수수료 포함). */
   landedCostKrw: number | null;
-  /** 국내 동일상품 최저가 — CASE A/B/C의 "시장 기준가". */
+  /** 국내 동일상품 최저가 — 화면 라벨은 LOWEST_PRICE_LABEL로 통일한다. */
   domesticLowestPriceKrw: number | null;
   /** CASE D에서만 참고치로 쓰는 브랜드 시장 중앙값. */
   brandMedianPriceKrw: number | null;
@@ -181,6 +181,38 @@ export interface SellingGuidanceFacts {
    * 게이트다(아래 deriveSupplyStatus 주석 참조). 생략하면 UNKNOWN 취급.
    */
   domesticBasis?: "EXACT" | "COMPARISON" | "NONE";
+  /**
+   * MI-DATA-FRESHNESS-1(CPO 지시, 2026-09-06) — domesticLowestPriceKrw가 며칠
+   * 전 관측인지. 호출부가 계산해 넘긴다(이 파일을 시간에 의존하지 않게 유지).
+   * null이면 시점을 표시하지 않는다 — 추정하지 않는다.
+   */
+  domesticLowestAgeDays?: number | null;
+  /**
+   * MI-DATA-FRESHNESS-1 — 착지원가의 근거가 실측 판매가인지 저장된 스냅샷
+   * 가격인지. "계산 가능"과 "최신 실측"을 같은 뜻으로 표시하지 않기 위함.
+   */
+  costSource?: "LATEST_SALE" | "LATEST_PRICE" | "STATIC_SNAPSHOT" | null;
+}
+
+/**
+ * MI-DATA-FRESHNESS-1 — 국내 최저가의 공식 라벨. 같은 값을 CASE마다
+ * "국내 최저가"/"시장 기준가"로 다르게 부르던 것을 하나로 통일한다.
+ * "시장 기준가"는 현재 시장 전체를 대표하는 값처럼 읽히지만, 실제로는
+ * **우리가 확인한 관측 중 최저가**다.
+ */
+const LOWEST_PRICE_LABEL = "확인된 최저가";
+
+/** 관측 시점 문구. 값이 없으면 아무 것도 붙이지 않는다(추정 금지). */
+function observedAt(ageDays: number | null | undefined): string {
+  if (ageDays == null || ageDays < 0) return "";
+  if (ageDays === 0) return " (오늘 확인)";
+  if (ageDays === 1) return " (어제 확인)";
+  return ` (${ageDays}일 전 확인)`;
+}
+
+function lowestPricePart(f: SellingGuidanceFacts): string | null {
+  if (f.domesticLowestPriceKrw == null) return null;
+  return `${LOWEST_PRICE_LABEL} ${won(f.domesticLowestPriceKrw)}${observedAt(f.domesticLowestAgeDays)}`;
 }
 
 /**
@@ -254,11 +286,11 @@ function supplyLines(supply: SupplyStatus, sellerCount: number | null, premiumGa
   if (sellerCount == null) return [];
   const scarce = supply === "SCARCE";
   const lines = [
-    `국내 동일상품 판매처 ${sellerCount}곳 — 국내 공급이 ${scarce ? "매우 제한적입니다" : "제한적입니다"}.`,
+    `확인된 국내 판매처 ${sellerCount}곳 — 같은 상품을 파는 곳이 ${scarce ? "매우 적습니다" : "적습니다"}.`,
   ];
   if (premiumGapKrw != null && premiumGapKrw > 0) {
     lines.push(
-      `목표 마진 가격은 시장 기준가보다 ${won(premiumGapKrw)} 높지만, 대체 상품이 적어 이 가격대를 시험해볼 여지가 있습니다.`,
+      `목표 마진 가격은 ${LOWEST_PRICE_LABEL}보다 ${won(premiumGapKrw)} 높지만, 확인된 판매처가 적어 이 가격대를 시험해볼 여지가 있습니다.`,
     );
   }
   lines.push("→ 처음부터 최저가로 내리기보다 목표 마진 가격으로 등록하고 클릭·판매 반응을 확인하세요.");
@@ -279,7 +311,7 @@ function numericGuidance(marketCase: "A" | "B" | "C" | "D" | null, f: SellingGui
   if (marketCase === "A") {
     const numbers: string[] = [];
     if (f.recommendedPriceKrw != null) numbers.push(`추천 판매가 ${won(f.recommendedPriceKrw)}`);
-    if (f.domesticLowestPriceKrw != null) numbers.push(`국내 최저가 ${won(f.domesticLowestPriceKrw)}`);
+    if (f.domesticLowestPriceKrw != null) numbers.push(`${LOWEST_PRICE_LABEL} ${won(f.domesticLowestPriceKrw)}`);
     if (f.estimatedMarginPercent != null) numbers.push(`예상 마진 ${pct(f.estimatedMarginPercent)}`);
     if (numbers.length === 0) return [];
     lines.push(numbers.join(" · "));
@@ -296,7 +328,7 @@ function numericGuidance(marketCase: "A" | "B" | "C" | "D" | null, f: SellingGui
     if (f.estimatedMarginPercent != null) numbers.push(`예상 마진 ${pct(f.estimatedMarginPercent)}`);
     if (f.targetMarginPercent != null) numbers.push(`목표 마진 ${pct(f.targetMarginPercent)}`);
     if (f.targetPriceKrw != null) numbers.push(`목표마진 판매가 ${won(f.targetPriceKrw)}`);
-    if (f.domesticLowestPriceKrw != null) numbers.push(`시장 기준가 ${won(f.domesticLowestPriceKrw)}`);
+    if (f.domesticLowestPriceKrw != null) numbers.push(`${LOWEST_PRICE_LABEL} ${won(f.domesticLowestPriceKrw)}`);
     if (numbers.length === 0) return [];
     lines.push(numbers.join(" · "));
 
@@ -308,7 +340,7 @@ function numericGuidance(marketCase: "A" | "B" | "C" | "D" | null, f: SellingGui
     // 공급 문구가 나오는 경우에는 이 줄을 내지 않는다(동일 사실 2회 금지).
     if (!supplyLimitedForGuidance && f.targetPriceKrw != null && f.domesticLowestPriceKrw != null) {
       const diff = f.targetPriceKrw - f.domesticLowestPriceKrw;
-      if (diff > 0) lines.push(`목표 마진을 채우려면 시장 기준가보다 ${won(diff)} 더 받아야 합니다.`);
+      if (diff > 0) lines.push(`목표 마진을 채우려면 ${LOWEST_PRICE_LABEL}보다 ${won(diff)} 더 받아야 합니다.`);
     }
     // MI-SUPPLY-ADVANTAGE-1 — B(목표 마진 미달)에서 공급이 제한적이면
     // "시장가에 맞춰라"가 유일한 답이 아니다. 목표 마진 가격을 시험해볼
@@ -327,14 +359,14 @@ function numericGuidance(marketCase: "A" | "B" | "C" | "D" | null, f: SellingGui
   if (marketCase === "C") {
     const numbers: string[] = [];
     if (f.landedCostKrw != null) numbers.push(`착지원가 ${won(f.landedCostKrw)}`);
-    if (f.domesticLowestPriceKrw != null) numbers.push(`시장 기준가 ${won(f.domesticLowestPriceKrw)}`);
+    if (f.domesticLowestPriceKrw != null) numbers.push(`${LOWEST_PRICE_LABEL} ${won(f.domesticLowestPriceKrw)}`);
     if (f.landedCostKrw != null && f.domesticLowestPriceKrw != null) {
       const loss = f.landedCostKrw - f.domesticLowestPriceKrw;
       if (loss > 0) numbers.push(`예상 차액 -${won(loss)}`);
     }
     if (numbers.length === 0) return [];
     lines.push(numbers.join(" · "));
-    lines.push("국내 시장가로 팔면 착지원가도 회수하지 못합니다.");
+    lines.push(`${LOWEST_PRICE_LABEL}로 팔면 착지원가도 회수하지 못합니다.`);
     lines.push("→ 단품 판매는 권장하지 않습니다. 매입가 절감이나 다른 공급처를 먼저 확인하세요.");
     // 손실 구간에서는 경쟁 문구를 붙이지 않는다 — "차별화 전략"을 권하면
     // 팔아도 된다는 신호로 읽힌다.
@@ -432,7 +464,7 @@ export function buildSellingSummary(
       // 기본 화면에 같은 금액이 두 번 나온다(같은 가격 2회 반복 금지).
       // 대신 "그 가격이 시장 대비 어디쯤인지"를 보여주는 값을 올린다.
       numbers: pickTwo([
-        f.domesticLowestPriceKrw != null ? `국내 최저가 ${won(f.domesticLowestPriceKrw)}` : null,
+        lowestPricePart(f),
         f.estimatedMarginPercent != null ? `예상 마진 ${pct(f.estimatedMarginPercent)}` : null,
         f.recommendedPriceKrw == null ? null : `추천가 ${won(f.recommendedPriceKrw)}`,
       ]),
@@ -454,22 +486,22 @@ export function buildSellingSummary(
     if (supplyLimited) {
       return {
         tone: "CAUTION",
-        headline: "국내 공급이 적어 가격 여지가 있습니다",
+        headline: "국내 판매처가 적어 가격 여지가 있습니다",
         // MI-VALIDATION-1 — 목표마진가는 행동 문장이 말한다. 여기서는 "왜 그
         // 가격을 시험해볼 만한가"의 근거인 판매처 수와 현재 시장가를 보여준다.
         numbers: pickTwo([
           sellerPart,
-          f.domesticLowestPriceKrw != null ? `시장 기준가 ${won(f.domesticLowestPriceKrw)}` : null,
+          lowestPricePart(f),
           f.targetPriceKrw != null && sellerPart == null ? `목표마진가 ${won(f.targetPriceKrw)}` : null,
         ]),
-        // MI-UX-7(CPO 지시, 2026-09-06) — 위 숫자 줄이 시장 기준가를 보여주는데
+        // MI-UX-7(CPO 지시, 2026-09-06) — 위 숫자 줄이 확인된 최저가를 보여주는데
         // 행동은 그보다 높은 가격을 제시한다. 셀러의 첫 반응은 "왜 비싸게?"이므로
         // 문장 첫머리에서 그 전제를 먼저 해소한다(근거는 상세보기에 있다).
         action:
           f.targetPriceKrw == null
             ? "높은 가격으로 먼저 시장 반응을 확인해보세요."
             : f.domesticLowestPriceKrw != null && f.targetPriceKrw > f.domesticLowestPriceKrw
-              ? `→ 시장가보다 높지만, ${won(f.targetPriceKrw)}로 먼저 등록해 반응을 확인하세요.`
+              ? `→ ${LOWEST_PRICE_LABEL}보다 높지만, ${won(f.targetPriceKrw)}로 먼저 등록해 반응을 확인하세요.`
               : `→ 먼저 ${won(f.targetPriceKrw)}로 등록해 시장 반응을 확인하세요.`,
         actionPriceKrw: f.targetPriceKrw,
       };
@@ -478,7 +510,7 @@ export function buildSellingSummary(
       tone: "CAUTION",
       headline: "시장 가격 경쟁력이 부족합니다",
       numbers: pickTwo([
-        f.domesticLowestPriceKrw != null ? `시장 기준가 ${won(f.domesticLowestPriceKrw)}` : null,
+        lowestPricePart(f),
         f.estimatedMarginPercent != null ? `예상 마진 ${pct(f.estimatedMarginPercent)}` : null,
       ]),
       action:
@@ -505,9 +537,7 @@ export function buildSellingSummary(
         f.landedCostKrw != null ? `착지원가 ${won(f.landedCostKrw)}` : null,
         loss != null && loss > 0
           ? `예상 손실 -${won(loss)}`
-          : f.domesticLowestPriceKrw != null
-            ? `시장 기준가 ${won(f.domesticLowestPriceKrw)}`
-            : null,
+          : lowestPricePart(f),
       ]),
       action: "등록 전 매입가 절감이나 다른 공급처를 먼저 확인하세요.",
       // 손실 구간에서는 어떤 등록 가격도 제시하지 않는다.
@@ -544,7 +574,7 @@ export function buildSellingGuidance(
 
   if (marketCase === "A") {
     return hasSignal
-      ? ["가격 경쟁력과 시장 신호가 모두 긍정적입니다.", "국내 최저가보다 소폭 낮은 가격으로 진입을 검토해보세요.", "초기 판매 반응을 본 뒤 가격을 조정하는 것을 권장합니다."]
+      ? ["가격 경쟁력과 시장 신호가 모두 긍정적입니다.", "확인된 최저가보다 소폭 낮은 가격으로 진입을 검토해보세요.", "초기 판매 반응을 본 뒤 가격을 조정하는 것을 권장합니다."]
       : ["가격 경쟁력은 확보되지만 시장 신호는 아직 뚜렷하지 않습니다.", "등록 후 초기 반응을 지켜보는 것을 권장합니다."];
   }
   if (marketCase === "B") {
@@ -593,22 +623,27 @@ export interface ConfidenceBasis {
   items: ConfidenceItem[];
 }
 
-export function buildConfidenceBasis(f: SellingGuidanceFacts, signals: MarketSignal[]): ConfidenceBasis {
-  const searchLevel = signals.find((s) => s.key === "searchInterest")?.level ?? "unknown";
+/**
+ * MI-DATA-FRESHNESS-1(CPO 지시, 2026-09-06) — 항목이 5개에서 4개가 됐다.
+ * 검색 관심 데이터는 요약·행동·가격·CASE 판정 어디에도 쓰이지 않는데
+ * "판단 근거"에 들어 있었다. 판단 근거와 시장 참고 신호는 다른 것이므로
+ * 검색 관심은 시장 신호 영역에만 남긴다(_signals는 하위 호환용 미사용 인자).
+ */
+export function buildConfidenceBasis(f: SellingGuidanceFacts, _signals: MarketSignal[]): ConfidenceBasis {
   // 판매처 수는 동일상품이 확정됐을 때만 "확인됨"으로 센다 — 공급 판정과
   // 같은 게이트를 쓴다(두 곳이 다른 기준을 쓰면 화면이 서로 모순된다).
   const supply = deriveSupplyStatus({ sellerCount: f.sellerCount, domesticBasis: f.domesticBasis });
+  const exact = f.domesticBasis === "EXACT";
 
   const items: ConfidenceItem[] = [
     {
       label: "국내 동일상품 확인",
-      confirmed: f.domesticBasis === "EXACT",
-      note:
-        f.domesticBasis === "EXACT"
-          ? null
-          : f.domesticBasis === "COMPARISON"
-            ? "유사상품만 확인돼 동일상품으로 확정하지 못했습니다"
-            : "국내에서 동일상품을 찾지 못했습니다",
+      confirmed: exact,
+      note: exact
+        ? null
+        : f.domesticBasis === "COMPARISON"
+          ? "유사상품만 확인돼 동일상품으로 확정하지 못했습니다"
+          : "국내에서 동일상품을 찾지 못했습니다",
     },
     {
       label: "국내 판매처 수 확인",
@@ -616,19 +651,32 @@ export function buildConfidenceBasis(f: SellingGuidanceFacts, signals: MarketSig
       note: supply !== "UNKNOWN" ? null : "동일상품이 확정되지 않아 판매처 수를 근거로 쓰지 않았습니다",
     },
     {
-      label: "국내 가격 데이터 확보",
-      confirmed: f.domesticLowestPriceKrw != null,
-      note: f.domesticLowestPriceKrw != null ? null : "비교할 국내 판매가를 확인하지 못했습니다",
+      // MI-DATA-FRESHNESS-1(CPO 지시, 2026-09-06) — 예전에는 가격 값이 있기만
+      // 하면 확인으로 셌다. 그러면 basis가 COMPARISON일 때(= 동일상품이 아닌
+      // 비교상품 가격) "국내 가격 확인 ✓"가 찍혀, CASE D인데 가격 근거는
+      // 확보된 것처럼 보이는 모순이 생긴다. basis를 함께 본다.
+      label: exact ? "국내 동일상품 가격 확인" : "국내 동일상품 가격 미확인",
+      confirmed: exact && f.domesticLowestPriceKrw != null,
+      note:
+        exact && f.domesticLowestPriceKrw != null
+          ? null
+          : f.domesticBasis === "COMPARISON"
+            ? "참고 가능한 비교상품 가격만 확인됐습니다"
+            : "국내 가격 데이터를 충분히 확인하지 못했습니다",
     },
     {
       label: "해외 원가·착지원가 계산",
       confirmed: f.landedCostKrw != null,
-      note: f.landedCostKrw != null ? null : "구매가가 확인되지 않아 원가를 계산하지 못했습니다",
-    },
-    {
-      label: "검색 관심 데이터",
-      confirmed: searchLevel !== "unknown",
-      note: searchLevel !== "unknown" ? null : "네이버 검색 관심 데이터를 확인하지 못했습니다",
+      note:
+        f.landedCostKrw == null
+          ? "구매가가 확인되지 않아 원가를 계산하지 못했습니다"
+          : // "계산 가능"과 "최신 실측"은 다르다. 저장된 스냅샷 가격으로
+            // 계산했다면 그렇다고 밝힌다.
+            f.costSource === "STATIC_SNAPSHOT"
+            ? "저장된 상품 가격 정보 기준"
+            : f.costSource == null
+              ? null
+              : "최근 확인된 판매 가격 기준",
     },
   ];
 

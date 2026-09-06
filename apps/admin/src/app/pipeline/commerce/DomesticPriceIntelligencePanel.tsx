@@ -1475,7 +1475,7 @@ export function DomesticPriceIntelligencePanel({
               {confidenceBasis && (
                 <div className="mt-2 rounded border border-border bg-background p-2">
                   <p className="mb-1 text-xs font-semibold text-text-primary">
-                    🔎 이 판단이 쓴 데이터 ({confidenceBasis.confirmedCount}/{confidenceBasis.totalCount} 확인)
+                    🔎 판단 근거 ({confidenceBasis.confirmedCount}/{confidenceBasis.totalCount} 확인)
                   </p>
                   <ul className="space-y-0.5 text-[11px]">
                     {confidenceBasis.items.map((item) => (

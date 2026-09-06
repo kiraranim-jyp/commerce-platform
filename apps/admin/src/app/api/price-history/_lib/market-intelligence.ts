@@ -353,6 +353,21 @@ export async function computeMarketIntelligence(snapshotId: string) {
     // MI-SUPPLY-ADVANTAGE-1 — 공급 판정의 게이트. computePriceRecommendation에
     // 넘긴 것과 같은 값이다(새 계산 없음). EXACT가 아니면 공급을 논하지 않는다.
     domesticBasis: domesticMarketSplit.basis,
+    // MI-DATA-FRESHNESS-1(CPO 지시, 2026-09-06) — 최저가가 언제 관측된
+    // 값인지. getPriceHistory는 기간 필터 없이 최근 60건을 주므로 이 값은
+    // "지금 최저가"가 아니다. 화면이 현재가처럼 보여주지 않도록 경과일을
+    // 함께 넘긴다. 관측 시점이 없으면 null — 추정하지 않는다.
+    domesticLowestAgeDays:
+      domesticSummary.lowestPriceCheckedAt != null
+        ? Math.max(
+            0,
+            Math.floor(
+              (Date.now() - new Date(domesticSummary.lowestPriceCheckedAt).getTime()) / (24 * 60 * 60 * 1000),
+            ),
+          )
+        : null,
+    // 착지원가가 실측 판매가 기준인지 저장된 스냅샷 가격 기준인지.
+    costSource: cost != null ? costSource : null,
   };
   const sellingGuidance = buildSellingGuidance(
     recommendation?.marketCase ?? null,
