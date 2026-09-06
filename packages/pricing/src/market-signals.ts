@@ -569,7 +569,24 @@ export interface ConfidenceItem {
 export interface ConfidenceBasis {
   confirmedCount: number;
   totalCount: number;
+  /**
+   * MI-CONFIDENCE-2(CPO 지시, 2026-09-06) — "4/5"만으로는 그게 좋은 건지
+   * 나쁜 건지 셀러가 알 수 없다. 숫자에 붙일 짧은 상태 문구.
+   *
+   * 이 값은 AI 예측 정확도가 아니라 **판단에 쓸 수 있었던 시장 데이터가
+   * 얼마나 확보됐는가**다. 그래서 "정확도 90%", "판매 성공 확률" 같은
+   * 표현을 쓰지 않는다(CPO 명시 금지 — 테스트로 고정).
+   * 새 점수/가중치도 만들지 않는다. confirmedCount 그대로만 본다.
+   */
+  label: string;
   items: ConfidenceItem[];
+}
+
+function confidenceLabel(confirmed: number, total: number): string {
+  if (total > 0 && confirmed >= total) return "데이터 충분";
+  if (confirmed >= 4) return "대부분 확인됨";
+  if (confirmed === 3) return "일부 데이터 부족";
+  return "확인된 데이터가 제한적";
 }
 
 export function buildConfidenceBasis(f: SellingGuidanceFacts, signals: MarketSignal[]): ConfidenceBasis {
@@ -611,5 +628,11 @@ export function buildConfidenceBasis(f: SellingGuidanceFacts, signals: MarketSig
     },
   ];
 
-  return { confirmedCount: items.filter((i) => i.confirmed).length, totalCount: items.length, items };
+  const confirmedCount = items.filter((i) => i.confirmed).length;
+  return {
+    confirmedCount,
+    totalCount: items.length,
+    label: confidenceLabel(confirmedCount, items.length),
+    items,
+  };
 }

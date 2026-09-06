@@ -608,6 +608,7 @@ interface PriceHistoryResponse {
   confidenceBasis?: {
     confirmedCount: number;
     totalCount: number;
+    label: string;
     items: { label: string; confirmed: boolean; note: string | null }[];
   } | null;
   /** P-31 — 종합 시장 상태 + 구조화된 판단 근거. finalVerdict는
@@ -693,11 +694,10 @@ const FACTOR_LEVEL_ICON: Record<DecisionFactor["level"], string> = {
   unknown: "⚪",
 };
 
-const SIGNAL_CONFIDENCE_BADGE: Record<MarketSignalsInfo["confidence"], string> = {
-  high: "🟢 높음",
-  medium: "🟡 보통",
-  limited: "⚪ 제한적",
-};
+// MI-CONFIDENCE-2 — 셀러 화면에서 "신호 신뢰도 ●●○" 노출을 없애면서 이 배지
+// 맵의 참조가 사라졌다. 미사용 상수를 남기면 다음 사람이 "어디서 쓰이나"를
+// 다시 확인해야 하므로 제거한다. marketSignals.confidence 값 자체는 계산과
+// API 응답에 그대로 있다(deriveMarketSignals 공개 계약, 테스트가 검증 중).
 
 interface SellerFacingVerdict {
   code: "RECOMMENDED" | "CONDITIONAL" | "NOT_RECOMMENDED";
@@ -1409,9 +1409,12 @@ export function DomesticPriceIntelligencePanel({
         <div className="mt-3 rounded-md border border-border bg-surface-secondary p-3">
           <div className="mb-2 flex items-center justify-between">
             <h4 className="text-xs font-semibold text-text-primary">📊 국내 시장 신호</h4>
-            <span className="text-[10px] text-text-tertiary">
-              신호 신뢰도 {SIGNAL_CONFIDENCE_BADGE[marketSignals.confidence]}
-            </span>
+            {/* MI-CONFIDENCE-2(CPO 지시, 2026-09-06) — 여기 있던 "신호 신뢰도
+                ●●○"를 제거했다. 아래 "판단 데이터 N/5"와 분모도 산정 기준도
+                달라서(신호 3종의 unknown 수 vs 판단에 쓸 데이터 확보 수)
+                둘 다 신뢰도처럼 보이면 셀러가 혼란스럽다. 셀러 화면의 신뢰도는
+                하나로 통일한다. marketSignals.confidence 계산과 API 필드는
+                그대로 유지한다(deriveMarketSignals 공개 계약 + 테스트 존재). */}
           </div>
 
           {/* MI-UX-5(CPO 지시, 2026-09-06) — 기본 화면은 3초 안에 "얼마에 팔아볼
@@ -1442,6 +1445,15 @@ export function DomesticPriceIntelligencePanel({
                 {sellingSummary.action}
               </p>
             </div>
+          )}
+
+          {/* MI-CONFIDENCE-2 — 기본 화면의 유일한 신뢰도 표시. 한 줄이고,
+              자세한 항목별 내역은 아래 상세보기에 있다. */}
+          {confidenceBasis && (
+            <p className="text-[10px] text-text-tertiary">
+              판단 데이터 {confidenceBasis.confirmedCount}/{confidenceBasis.totalCount} 확인 ·{" "}
+              {confidenceBasis.label}
+            </p>
           )}
 
           <button
