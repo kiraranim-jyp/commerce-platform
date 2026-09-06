@@ -385,7 +385,7 @@ describe("buildSellingSummary — 기본 화면은 결론·숫자2개·행동1�
       domesticLowestPriceKrw: 260_000,
     });
     expect(s.tone).toBe("GOOD");
-    expect(s.headline).toBe("판매해볼 만합니다");
+    expect(s.headline).toBe("시장 가격 경쟁력 있음");
     expect(s.numbers).toBe("추천가 ₩258,000 · 예상 마진 18.4%");
     expect(numberCount(s.numbers)).toBeLessThanOrEqual(2);
   });
@@ -400,7 +400,7 @@ describe("buildSellingSummary — 기본 화면은 결론·숫자2개·행동1�
       domesticBasis: "EXACT",
     });
     expect(s.tone).toBe("CAUTION");
-    expect(s.headline).toContain("테스트해볼 수 있습니다");
+    expect(s.headline).toBe("국내 공급이 적어 가격 여지가 있습니다");
     expect(s.numbers).toBe("목표마진가 ₩270,795 · 국내 판매처 2곳");
   });
 
@@ -412,7 +412,7 @@ describe("buildSellingSummary — 기본 화면은 결론·숫자2개·행동1�
       sellerCount: 9,
       domesticBasis: "EXACT",
     });
-    expect(s.headline).toBe("조건부로 판매를 검토하세요");
+    expect(s.headline).toBe("시장 가격 경쟁력이 부족합니다");
     expect(s.numbers).toBe("시장 기준가 ₩258,000 · 예상 마진 7.6%");
   });
 
@@ -426,7 +426,7 @@ describe("buildSellingSummary — 기본 화면은 결론·숫자2개·행동1�
     });
     expect(s.tone).toBe("STOP");
     expect(s.numbers).toBe("착지원가 ₩18,500 · 예상 손실 -₩1,600");
-    expect(`${s.headline} ${s.action}`).not.toContain("테스트");
+    expect(`${s.headline} ${s.action}`).not.toContain("여지");
     expect(`${s.headline} ${s.action}`).not.toContain("공급");
   });
 
@@ -463,6 +463,39 @@ describe("buildSellingSummary — 기본 화면은 결론·숫자2개·행동1�
         domesticBasis: "EXACT",
       });
       expect(numberCount(s.numbers)).toBeLessThanOrEqual(2);
+    }
+  });
+});
+
+/**
+ * MI-UX-6(CPO 지시, 2026-09-06) — 화면 상단 판매 판단 카드와 Market
+ * Intelligence 요약이 같은 결론을 두 번 말하지 않게 어휘를 분리했다.
+ * "팔아도 되는가"는 상단 카드 전용이고, 이 요약은 가격 전략만 말한다.
+ * 문구가 다시 판정 어휘로 되돌아가면 이 테스트가 깨진다.
+ */
+describe("buildSellingSummary — 판매 판정 어휘를 쓰지 않는다(역할 분리)", () => {
+  const FORBIDDEN = ["판매해볼", "조건부로 판매", "판매를 권장", "권장하지 않습니다", "판매 추천"];
+
+  it("모든 CASE에서 판매 판정 어휘가 나오지 않는다", () => {
+    const facts = {
+      recommendedPriceKrw: 258_000,
+      targetPriceKrw: 270_795,
+      estimatedMarginPercent: 7.6,
+      targetMarginPercent: 20,
+      landedCostKrw: 18_500,
+      domesticLowestPriceKrw: 16_900,
+      brandMedianPriceKrw: 100_000,
+      sellerCount: 2,
+      domesticBasis: "EXACT" as const,
+    };
+    for (const c of ["A", "B", "C", "D", null] as const) {
+      for (const count of [null, 2, 9]) {
+        const s = buildSellingSummary(c, { ...facts, sellerCount: count });
+        const text = `${s.headline} ${s.action}`;
+        for (const word of FORBIDDEN) {
+          expect(text).not.toContain(word);
+        }
+      }
     }
   });
 });

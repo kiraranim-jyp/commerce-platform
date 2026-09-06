@@ -372,6 +372,15 @@ function numericGuidance(marketCase: "A" | "B" | "C" | "D" | null, f: SellingGui
  * 여기서도 새 계산은 하지 않고, 공급 판정 게이트(basis === "EXACT")도 동일한
  * deriveSupplyStatus를 재사용한다 — 요약과 상세가 다른 말을 할 수 없다.
  */
+/**
+ * MI-UX-6(CPO 지시, 2026-09-06) — 이 요약은 "팔아도 되는가"에 답하지 않는다.
+ * 그 질문은 화면 상단의 판매 판단 카드가 이미 답하고 있어서, 여기서 같은
+ * 어휘를 쓰면 결론이 두 번 나온 것처럼 보인다. 이 영역이 답하는 질문은
+ * 하나다: **국내 시장에서 어떤 가격 전략을 쓸 수 있는가.**
+ * 문구는 가격 경쟁력 / 가격 여지 / 공급 상황 세 영역 안에서만 쓴다
+ * ("판매해볼 만합니다", "조건부로 판매하세요" 같은 판정 어휘 금지 —
+ * 테스트로 고정한다).
+ */
 export interface SellingSummary {
   /** 화면 색/아이콘 결정용. 새 판정이 아니라 marketCase + 공급 축의 표현이다. */
   tone: "GOOD" | "CAUTION" | "STOP" | "UNKNOWN";
@@ -403,13 +412,13 @@ export function buildSellingSummary(
   if (marketCase === "A") {
     return {
       tone: "GOOD",
-      headline: "판매해볼 만합니다",
+      headline: "시장 가격 경쟁력 있음",
       numbers: pickTwo([
         f.recommendedPriceKrw != null ? `추천가 ${won(f.recommendedPriceKrw)}` : null,
         f.estimatedMarginPercent != null ? `예상 마진 ${pct(f.estimatedMarginPercent)}` : null,
         f.domesticLowestPriceKrw != null ? `시장 기준가 ${won(f.domesticLowestPriceKrw)}` : null,
       ]),
-      action: "현재 시장 가격에서 목표 마진 확보가 가능합니다.",
+      action: "국내 시장가보다 낮은 가격에서도 목표 마진이 확보됩니다.",
     };
   }
 
@@ -419,22 +428,22 @@ export function buildSellingSummary(
     if (supplyLimited) {
       return {
         tone: "CAUTION",
-        headline: "목표 마진 가격으로 테스트해볼 수 있습니다",
+        headline: "국내 공급이 적어 가격 여지가 있습니다",
         numbers: pickTwo([
           f.targetPriceKrw != null ? `목표마진가 ${won(f.targetPriceKrw)}` : null,
           sellerPart,
         ]),
-        action: "국내 공급이 적어 높은 가격에서도 판매 반응을 확인해볼 수 있습니다.",
+        action: "높은 가격으로 먼저 시장 반응을 확인해보세요.",
       };
     }
     return {
       tone: "CAUTION",
-      headline: "조건부로 판매를 검토하세요",
+      headline: "시장 가격 경쟁력이 부족합니다",
       numbers: pickTwo([
         f.domesticLowestPriceKrw != null ? `시장 기준가 ${won(f.domesticLowestPriceKrw)}` : null,
         f.estimatedMarginPercent != null ? `예상 마진 ${pct(f.estimatedMarginPercent)}` : null,
       ]),
-      action: "목표 마진을 확보하려면 가격이나 원가 조정이 필요합니다.",
+      action: "국내 경쟁 가격이 낮아 목표 마진을 확보하기 어렵습니다.",
     };
   }
 
@@ -447,7 +456,7 @@ export function buildSellingSummary(
         : null;
     return {
       tone: "STOP",
-      headline: "일반 판매는 권장하지 않습니다",
+      headline: "현재 시장 가격에서는 수익성 부족",
       numbers: pickTwo([
         f.landedCostKrw != null ? `착지원가 ${won(f.landedCostKrw)}` : null,
         loss != null && loss > 0
@@ -456,14 +465,14 @@ export function buildSellingSummary(
             ? `시장 기준가 ${won(f.domesticLowestPriceKrw)}`
             : null,
       ]),
-      action: "현재 시장 가격으로 판매하면 원가 회수가 어렵습니다.",
+      action: "국내 시장가가 착지원가보다 낮아 원가 회수가 되지 않습니다.",
     };
   }
 
   // CASE D / 판정 없음 — 없는 판매처 수·최저가·공급 판단을 만들지 않는다.
   return {
     tone: "UNKNOWN",
-    headline: "시장 데이터 확인이 더 필요합니다",
+    headline: "국내 동일상품 시장 데이터 부족",
     numbers: f.brandMedianPriceKrw != null ? `비교 기준가 ${won(f.brandMedianPriceKrw)}` : null,
     action: "국내 동일상품 가격 데이터를 충분히 확인하지 못했습니다.",
   };

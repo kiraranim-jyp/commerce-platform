@@ -1468,7 +1468,7 @@ export function DomesticPriceIntelligencePanel({
               </div>
 
               <div className="mt-3">
-                <p className="mb-1 text-xs font-semibold text-text-primary">🧾 왜 이런 판단인가</p>
+                <p className="mb-1 text-xs font-semibold text-text-primary">🧾 왜 이런 시장 판단이 나왔는가</p>
                 <dl className="space-y-0.5 text-[11px]">
                   {sellerDecision.factors.map((factor) => (
                     <div key={factor.key} className="flex items-start justify-between gap-2">
@@ -1483,7 +1483,7 @@ export function DomesticPriceIntelligencePanel({
 
               {sellingGuidance.length > 0 && (
                 <div className="mt-3 border-t border-border pt-2">
-                  <p className="mb-1 text-xs font-semibold text-text-primary">💡 판매 전략 가이드</p>
+                  <p className="mb-1 text-xs font-semibold text-text-primary">💡 가격·판매 전략 가이드</p>
                   <ul className="space-y-0.5 text-[11px] text-text-secondary">
                     {sellingGuidance.map((g, i) => (
                       <li key={i}>• {g}</li>
