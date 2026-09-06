@@ -547,3 +547,69 @@ export function buildSellingGuidance(
     ? ["국내 동일상품 가격은 아직 확인되지 않았지만, 브랜드/카테고리 관심 신호는 확인됩니다.", "소량 테스트 등록으로 초기 반응을 확인해보는 것을 검토해보세요.", "판매가는 목표 마진 기준으로 별도 설정이 필요합니다."]
     : ["국내 동일상품 가격과 시장 신호 모두 아직 확인되지 않았습니다.", "등록 전 직접 시장 조사를 권장합니다."];
 }
+
+/**
+ * MI-CONFIDENCE-1(CPO 지시, 2026-09-06) — "신뢰도 ●●○"만 보여주면 셀러는
+ * "왜 ●●○인데?"를 묻게 된다. 이 함수는 그 답을 만든다.
+ *
+ * 중요한 제약이 둘 있다.
+ *  1. 새 점수나 임계값을 만들지 않는다. 공급 판정의 1~2/3~5/6+ 같은 근거
+ *     없는 숫자를 또 늘리지 않는다. 여기서 하는 일은 "이미 확보된 데이터가
+ *     있는가/없는가"를 항목별로 세는 것뿐이다.
+ *  2. 신뢰도가 낮다고 결과를 숨기지 않는다. 이 값은 "쓸 수 없음"이 아니라
+ *     "지금 판단이 어떤 데이터 위에 서 있는가"를 설명한다.
+ */
+export interface ConfidenceItem {
+  label: string;
+  confirmed: boolean;
+  /** 확인되지 않은 이유 — 확인된 항목은 null. */
+  note: string | null;
+}
+
+export interface ConfidenceBasis {
+  confirmedCount: number;
+  totalCount: number;
+  items: ConfidenceItem[];
+}
+
+export function buildConfidenceBasis(f: SellingGuidanceFacts, signals: MarketSignal[]): ConfidenceBasis {
+  const searchLevel = signals.find((s) => s.key === "searchInterest")?.level ?? "unknown";
+  // 판매처 수는 동일상품이 확정됐을 때만 "확인됨"으로 센다 — 공급 판정과
+  // 같은 게이트를 쓴다(두 곳이 다른 기준을 쓰면 화면이 서로 모순된다).
+  const supply = deriveSupplyStatus({ sellerCount: f.sellerCount, domesticBasis: f.domesticBasis });
+
+  const items: ConfidenceItem[] = [
+    {
+      label: "국내 동일상품 확인",
+      confirmed: f.domesticBasis === "EXACT",
+      note:
+        f.domesticBasis === "EXACT"
+          ? null
+          : f.domesticBasis === "COMPARISON"
+            ? "유사상품만 확인돼 동일상품으로 확정하지 못했습니다"
+            : "국내에서 동일상품을 찾지 못했습니다",
+    },
+    {
+      label: "국내 판매처 수 확인",
+      confirmed: supply !== "UNKNOWN" && f.sellerCount != null && f.sellerCount > 0,
+      note: supply !== "UNKNOWN" ? null : "동일상품이 확정되지 않아 판매처 수를 근거로 쓰지 않았습니다",
+    },
+    {
+      label: "국내 가격 데이터 확보",
+      confirmed: f.domesticLowestPriceKrw != null,
+      note: f.domesticLowestPriceKrw != null ? null : "비교할 국내 판매가를 확인하지 못했습니다",
+    },
+    {
+      label: "해외 원가·착지원가 계산",
+      confirmed: f.landedCostKrw != null,
+      note: f.landedCostKrw != null ? null : "구매가가 확인되지 않아 원가를 계산하지 못했습니다",
+    },
+    {
+      label: "검색 관심 데이터",
+      confirmed: searchLevel !== "unknown",
+      note: searchLevel !== "unknown" ? null : "네이버 검색 관심 데이터를 확인하지 못했습니다",
+    },
+  ];
+
+  return { confirmedCount: items.filter((i) => i.confirmed).length, totalCount: items.length, items };
+}

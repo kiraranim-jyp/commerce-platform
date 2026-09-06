@@ -17,6 +17,7 @@ import {
   deriveMarketSignals,
   buildSellingGuidance,
   buildSellingSummary,
+  buildConfidenceBasis,
   buildSellerDecision,
   type UnifiedPriceDecision,
   type PriceObservationRecord,
@@ -359,6 +360,8 @@ export async function computeMarketIntelligence(snapshotId: string) {
     guidanceFacts,
   );
   const sellingSummary = buildSellingSummary(recommendation?.marketCase ?? null, guidanceFacts);
+  // MI-CONFIDENCE-1 — 같은 facts에서 "무엇이 확인됐는가"만 집계한다(새 점수 없음).
+  const confidenceBasis = buildConfidenceBasis(guidanceFacts, marketSignals.signals);
 
   // P-31 — PRICE REALITY → CASE → MARKET SIGNAL → SELLER GUIDANCE 순서.
   // sellerFacingVerdict(가격/매칭 레이어)가 최종 판정의 단일 소스이고,
@@ -387,6 +390,7 @@ export async function computeMarketIntelligence(snapshotId: string) {
     sellingGuidance,
     // MI-UX-4 — 기본 화면용 한 줄 요약(상세 가이드는 sellingGuidance 그대로).
     sellingSummary,
+    confidenceBasis,
     sellerDecision,
     priceHistory: {
       origin: { records: originHistory, change: originChange, trend7d: originTrend7d, trend30d: originTrend30d },

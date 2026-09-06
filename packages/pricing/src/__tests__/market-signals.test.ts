@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeSeasonFit, deriveMarketSignals, buildSellingGuidance, deriveSupplyStatus, buildSellingSummary } from "../market-signals";
+import { computeSeasonFit, deriveMarketSignals, buildSellingGuidance, deriveSupplyStatus, buildSellingSummary, buildConfidenceBasis } from "../market-signals";
 
 /**
  * P-29 Sprint 8(CPO 지시, 2026-09-03) — 순수 함수 검증. 이 파일의 함수들은
@@ -575,5 +575,67 @@ describe("buildSellingSummary — 등록 가격 제시 경계", () => {
     const s = buildSellingSummary("D", { ...base, brandMedianPriceKrw: 100_000, domesticBasis: "NONE" });
     expect(s.actionPriceKrw).toBeNull();
     expect(s.action).not.toContain("등록해");
+  });
+});
+
+/**
+ * MI-CONFIDENCE-1(CPO 지시, 2026-09-06) — 신뢰도 근거는 새 점수가 아니라
+ * "이미 확보된 데이터가 있는가"의 집계여야 한다. 임의 임계값이 끼어들거나
+ * 공급 판정과 다른 기준을 쓰기 시작하면 이 테스트가 깨진다.
+ */
+describe("buildConfidenceBasis — 확보된 데이터만 센다", () => {
+  const signals = (ratio: number | null) =>
+    deriveMarketSignals({ domesticSellerCount: 2, searchInterestRatio: ratio, titleText: "무관", nowMonth: 3 }).signals;
+
+  const full = {
+    recommendedPriceKrw: 258_000,
+    targetPriceKrw: 270_795,
+    estimatedMarginPercent: 7.6,
+    targetMarginPercent: 20,
+    landedCostKrw: 238_300,
+    domesticLowestPriceKrw: 258_000,
+    brandMedianPriceKrw: null,
+    sellerCount: 2,
+    domesticBasis: "EXACT" as const,
+  };
+
+  it("모든 데이터가 있으면 5/5이고 미확인 사유가 없다", () => {
+    const b = buildConfidenceBasis(full, signals(40));
+    expect(b.confirmedCount).toBe(5);
+    expect(b.totalCount).toBe(5);
+    expect(b.items.every((i) => i.confirmed && i.note === null)).toBe(true);
+  });
+
+  it("검색 관심을 못 받으면 그 항목만 미확인이 되고 사유가 붙는다", () => {
+    const b = buildConfidenceBasis(full, signals(null));
+    expect(b.confirmedCount).toBe(4);
+    const item = b.items.find((i) => i.label === "검색 관심 데이터")!;
+    expect(item.confirmed).toBe(false);
+    expect(item.note).toContain("확인하지 못했습니다");
+  });
+
+  it("★ 동일상품 미확정이면 판매처 수도 확인됨으로 세지 않는다(공급 판정과 같은 게이트)", () => {
+    const b = buildConfidenceBasis({ ...full, domesticBasis: "COMPARISON" }, signals(40));
+    expect(b.items.find((i) => i.label === "국내 동일상품 확인")!.confirmed).toBe(false);
+    expect(b.items.find((i) => i.label === "국내 판매처 수 확인")!.confirmed).toBe(false);
+  });
+
+  it("데이터가 하나도 없으면 0/5이고, 항목마다 왜 없는지 설명한다", () => {
+    const b = buildConfidenceBasis(
+      {
+        recommendedPriceKrw: null,
+        targetPriceKrw: null,
+        estimatedMarginPercent: null,
+        targetMarginPercent: null,
+        landedCostKrw: null,
+        domesticLowestPriceKrw: null,
+        brandMedianPriceKrw: null,
+        sellerCount: null,
+        domesticBasis: "NONE",
+      },
+      signals(null),
+    );
+    expect(b.confirmedCount).toBe(0);
+    expect(b.items.every((i) => !i.confirmed && i.note != null)).toBe(true);
   });
 });

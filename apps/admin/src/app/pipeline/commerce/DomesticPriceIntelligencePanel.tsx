@@ -604,6 +604,12 @@ interface PriceHistoryResponse {
     /** MI-ACTION-1 — 행동 문장이 제시하는 등록 가격. 없으면 null. */
     actionPriceKrw?: number | null;
   } | null;
+  /** MI-CONFIDENCE-1 — 신뢰도가 어떤 데이터 위에 서 있는지. 구버전 응답에는 없다. */
+  confidenceBasis?: {
+    confirmedCount: number;
+    totalCount: number;
+    items: { label: string; confirmed: boolean; note: string | null }[];
+  } | null;
   /** P-31 — 종합 시장 상태 + 구조화된 판단 근거. finalVerdict는
    * sellerFacingVerdict를 시장 신호로 강등만 한 값이다(승격 없음). */
   sellerDecision: SellerDecisionInfo;
@@ -1043,6 +1049,7 @@ export function DomesticPriceIntelligencePanel({
     marketSignals,
     sellingGuidance,
     sellingSummary,
+    confidenceBasis,
     sellerDecision,
   } = data;
   const domesticShopHistory = data.priceHistory?.domesticShop ?? null;
@@ -1442,7 +1449,7 @@ export function DomesticPriceIntelligencePanel({
             onClick={() => setShowMarketDetail((v) => !v)}
             className="mt-3 w-full border-t border-border pt-2 text-left text-[11px] text-primary hover:underline"
           >
-            {showMarketDetail ? "상세 분석 접기 ▲" : "상세 분석 보기 ▼"}
+            {showMarketDetail ? "접기 ▲" : "왜 이렇게 판단했나요? ▼"}
           </button>
 
           {showMarketDetail && (
@@ -1451,6 +1458,31 @@ export function DomesticPriceIntelligencePanel({
                   보여준다. 순서는 CPO 지정 우선순위(가격 수익성 → 동일상품 국내
                   가격 → 시장 관심 → 경쟁 판매처 → 시즌성)로 서버에서 이미 고정돼
                   오므로 여기서 다시 정렬하지 않는다. */}
+              {/* MI-CONFIDENCE-1(CPO 지시, 2026-09-06) — "왜 ●●○인데?"에 답한다.
+                  새 점수를 만들지 않고 이미 확보된 데이터 항목의 확인 여부만
+                  나열한다. 확인되지 않은 항목은 사유까지 적어서, 낮은 신뢰도가
+                  "결과를 못 쓴다"가 아니라 "무엇이 빠졌는지"로 읽히게 한다. */}
+              {confidenceBasis && (
+                <div className="mt-2 rounded border border-border bg-background p-2">
+                  <p className="mb-1 text-xs font-semibold text-text-primary">
+                    🔎 이 판단이 쓴 데이터 ({confidenceBasis.confirmedCount}/{confidenceBasis.totalCount} 확인)
+                  </p>
+                  <ul className="space-y-0.5 text-[11px]">
+                    {confidenceBasis.items.map((item) => (
+                      <li key={item.label} className="flex items-start gap-1.5">
+                        <span className={item.confirmed ? "text-success" : "text-text-tertiary"}>
+                          {item.confirmed ? "✓" : "○"}
+                        </span>
+                        <span className={item.confirmed ? "text-text-secondary" : "text-text-tertiary"}>
+                          {item.label}
+                          {item.note && <span className="ml-1 text-[10px]">— {item.note}</span>}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* MI-UX-5 — 종합 시장 상태는 신호 3종을 합친 값이므로 신호 바로
                   위, 상세 영역 안에 둔다(기본 화면 결론과 중복 노출 방지).
                   P-31 원칙 유지: 가격 경쟁력과 별개 레이어이므로 "시장 상태"
