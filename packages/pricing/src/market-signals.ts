@@ -462,10 +462,15 @@ export function buildSellingSummary(
           f.domesticLowestPriceKrw != null ? `시장 기준가 ${won(f.domesticLowestPriceKrw)}` : null,
           f.targetPriceKrw != null && sellerPart == null ? `목표마진가 ${won(f.targetPriceKrw)}` : null,
         ]),
+        // MI-UX-7(CPO 지시, 2026-09-06) — 위 숫자 줄이 시장 기준가를 보여주는데
+        // 행동은 그보다 높은 가격을 제시한다. 셀러의 첫 반응은 "왜 비싸게?"이므로
+        // 문장 첫머리에서 그 전제를 먼저 해소한다(근거는 상세보기에 있다).
         action:
-          f.targetPriceKrw != null
-            ? `→ 먼저 ${won(f.targetPriceKrw)}로 등록해 시장 반응을 확인하세요.`
-            : "높은 가격으로 먼저 시장 반응을 확인해보세요.",
+          f.targetPriceKrw == null
+            ? "높은 가격으로 먼저 시장 반응을 확인해보세요."
+            : f.domesticLowestPriceKrw != null && f.targetPriceKrw > f.domesticLowestPriceKrw
+              ? `→ 시장가보다 높지만, ${won(f.targetPriceKrw)}로 먼저 등록해 반응을 확인하세요.`
+              : `→ 먼저 ${won(f.targetPriceKrw)}로 등록해 시장 반응을 확인하세요.`,
         actionPriceKrw: f.targetPriceKrw,
       };
     }
@@ -579,23 +584,13 @@ export interface ConfidenceBasis {
   confirmedCount: number;
   totalCount: number;
   /**
-   * MI-CONFIDENCE-2(CPO 지시, 2026-09-06) — "4/5"만으로는 그게 좋은 건지
-   * 나쁜 건지 셀러가 알 수 없다. 숫자에 붙일 짧은 상태 문구.
-   *
-   * 이 값은 AI 예측 정확도가 아니라 **판단에 쓸 수 있었던 시장 데이터가
-   * 얼마나 확보됐는가**다. 그래서 "정확도 90%", "판매 성공 확률" 같은
-   * 표현을 쓰지 않는다(CPO 명시 금지 — 테스트로 고정).
-   * 새 점수/가중치도 만들지 않는다. confirmedCount 그대로만 본다.
+   * MI-UX-7(CPO 지시, 2026-09-06) — MI-CONFIDENCE-2에서 "데이터 충분 /
+   * 대부분 확인됨" 같은 평가 문구를 붙였다가 제거했다. 손실 상품(🔴)인데
+   * "대부분 확인됨"이 붙으면 긍정적 결과처럼 읽힌다 — 데이터 확보량과
+   * 판단의 좋고 나쁨은 별개인데 화면에서는 섞여 보인다.
+   * 이제 셀러 화면은 "판단 근거 4/5 확인"만 말한다.
    */
-  label: string;
   items: ConfidenceItem[];
-}
-
-function confidenceLabel(confirmed: number, total: number): string {
-  if (total > 0 && confirmed >= total) return "데이터 충분";
-  if (confirmed >= 4) return "대부분 확인됨";
-  if (confirmed === 3) return "일부 데이터 부족";
-  return "확인된 데이터가 제한적";
 }
 
 export function buildConfidenceBasis(f: SellingGuidanceFacts, signals: MarketSignal[]): ConfidenceBasis {
@@ -637,11 +632,5 @@ export function buildConfidenceBasis(f: SellingGuidanceFacts, signals: MarketSig
     },
   ];
 
-  const confirmedCount = items.filter((i) => i.confirmed).length;
-  return {
-    confirmedCount,
-    totalCount: items.length,
-    label: confidenceLabel(confirmedCount, items.length),
-    items,
-  };
+  return { confirmedCount: items.filter((i) => i.confirmed).length, totalCount: items.length, items };
 }

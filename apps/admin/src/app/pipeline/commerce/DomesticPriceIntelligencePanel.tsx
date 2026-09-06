@@ -608,7 +608,6 @@ interface PriceHistoryResponse {
   confidenceBasis?: {
     confirmedCount: number;
     totalCount: number;
-    label: string;
     items: { label: string; confirmed: boolean; note: string | null }[];
   } | null;
   /** P-31 — 종합 시장 상태 + 구조화된 판단 근거. finalVerdict는
@@ -1451,8 +1450,7 @@ export function DomesticPriceIntelligencePanel({
               자세한 항목별 내역은 아래 상세보기에 있다. */}
           {confidenceBasis && (
             <p className="text-[10px] text-text-tertiary">
-              판단 데이터 {confidenceBasis.confirmedCount}/{confidenceBasis.totalCount} 확인 ·{" "}
-              {confidenceBasis.label}
+              판단 근거 {confidenceBasis.confirmedCount}/{confidenceBasis.totalCount} 확인
             </p>
           )}
 
@@ -1495,6 +1493,20 @@ export function DomesticPriceIntelligencePanel({
                 </div>
               )}
 
+              <div className="mt-3">
+                <p className="mb-1 text-xs font-semibold text-text-primary">🧾 왜 이런 시장 판단이 나왔는가</p>
+                <dl className="space-y-0.5 text-[11px]">
+                  {sellerDecision.factors.map((factor) => (
+                    <div key={factor.key} className="flex items-start justify-between gap-2">
+                      <dt className="shrink-0 text-text-tertiary">
+                        {FACTOR_LEVEL_ICON[factor.level]} {factor.label}
+                      </dt>
+                      <dd className="text-right text-text-secondary">{factor.detail}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+
               {/* MI-UX-5 — 종합 시장 상태는 신호 3종을 합친 값이므로 신호 바로
                   위, 상세 영역 안에 둔다(기본 화면 결론과 중복 노출 방지).
                   P-31 원칙 유지: 가격 경쟁력과 별개 레이어이므로 "시장 상태"
@@ -1520,20 +1532,6 @@ export function DomesticPriceIntelligencePanel({
                     <div key={signal.key} className="flex items-center justify-between gap-2 pr-2" title={signal.evidence}>
                       <dt className="text-text-tertiary">{signal.label}</dt>
                       <dd className="font-medium text-text-primary">{signalBadge(signal)}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-
-              <div className="mt-3">
-                <p className="mb-1 text-xs font-semibold text-text-primary">🧾 왜 이런 시장 판단이 나왔는가</p>
-                <dl className="space-y-0.5 text-[11px]">
-                  {sellerDecision.factors.map((factor) => (
-                    <div key={factor.key} className="flex items-start justify-between gap-2">
-                      <dt className="shrink-0 text-text-tertiary">
-                        {FACTOR_LEVEL_ICON[factor.level]} {factor.label}
-                      </dt>
-                      <dd className="text-right text-text-secondary">{factor.detail}</dd>
                     </div>
                   ))}
                 </dl>

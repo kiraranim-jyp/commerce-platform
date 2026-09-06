@@ -542,7 +542,7 @@ describe("buildSellingSummary — 등록 가격 제시 경계", () => {
       domesticBasis: "EXACT",
     });
     expect(s.actionPriceKrw).toBe(270_795);
-    expect(s.action).toContain("₩270,795로 등록");
+    expect(s.action).toContain("시장가보다 높지만, ₩270,795로 먼저 등록");
   });
 
   it("★ B + 공급 충분 — 등록 가격을 제시하지 않고 격차만 알려준다", () => {
@@ -640,75 +640,6 @@ describe("buildConfidenceBasis — 확보된 데이터만 센다", () => {
   });
 });
 
-/**
- * MI-CONFIDENCE-2(CPO 지시, 2026-09-06) — 셀러 화면의 신뢰도를 하나로
- * 통일하면서 "4/5"에 상태 문구를 붙였다. 이 값은 AI 정확도가 아니라
- * "판단에 쓸 수 있었던 데이터가 얼마나 확보됐는가"이므로, 정확도·확률
- * 어휘가 들어오면 테스트가 깨진다.
- */
-describe("buildConfidenceBasis — 상태 문구는 데이터 확보량만 말한다", () => {
-  const signals = (ratio: number | null) =>
-    deriveMarketSignals({ domesticSellerCount: 2, searchInterestRatio: ratio, titleText: "무관", nowMonth: 3 }).signals;
-  const full = {
-    recommendedPriceKrw: 258_000,
-    targetPriceKrw: 270_795,
-    estimatedMarginPercent: 7.6,
-    targetMarginPercent: 20,
-    landedCostKrw: 238_300,
-    domesticLowestPriceKrw: 258_000,
-    brandMedianPriceKrw: null,
-    sellerCount: 2,
-    domesticBasis: "EXACT" as const,
-  };
-
-  it("5/5 → 데이터 충분", () => {
-    expect(buildConfidenceBasis(full, signals(40)).label).toBe("데이터 충분");
-  });
-
-  it("4/5 → 대부분 확인됨", () => {
-    const b = buildConfidenceBasis(full, signals(null));
-    expect(b.confirmedCount).toBe(4);
-    expect(b.label).toBe("대부분 확인됨");
-  });
-
-  it("3/5 → 일부 데이터 부족", () => {
-    // 동일상품 미확정이면 동일상품·판매처 2개가 함께 빠진다.
-    const b = buildConfidenceBasis({ ...full, domesticBasis: "COMPARISON" }, signals(40));
-    expect(b.confirmedCount).toBe(3);
-    expect(b.label).toBe("일부 데이터 부족");
-  });
-
-  it("★ 0/5에서 '데이터 충분' 같은 과장 문구가 나오지 않는다", () => {
-    const b = buildConfidenceBasis(
-      {
-        recommendedPriceKrw: null,
-        targetPriceKrw: null,
-        estimatedMarginPercent: null,
-        targetMarginPercent: null,
-        landedCostKrw: null,
-        domesticLowestPriceKrw: null,
-        brandMedianPriceKrw: null,
-        sellerCount: null,
-        domesticBasis: "NONE",
-      },
-      signals(null),
-    );
-    expect(b.confirmedCount).toBe(0);
-    expect(b.label).toBe("확인된 데이터가 제한적");
-  });
-
-  it("★ 어떤 조합에서도 정확도·확률 어휘를 쓰지 않는다", () => {
-    const FORBIDDEN = ["정확", "확률", "성공", "%", "AI 신뢰도", "확실"];
-    for (const basis of ["EXACT", "COMPARISON", "NONE"] as const) {
-      for (const ratio of [40, null]) {
-        const b = buildConfidenceBasis({ ...full, domesticBasis: basis }, signals(ratio));
-        for (const word of FORBIDDEN) {
-          expect(b.label).not.toContain(word);
-        }
-      }
-    }
-  });
-});
 
 /**
  * MI-VALIDATION-1(CPO 지시, 2026-09-06) — 시나리오 A~E를 실제로 돌려보니
