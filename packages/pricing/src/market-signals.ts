@@ -373,67 +373,99 @@ function numericGuidance(marketCase: "A" | "B" | "C" | "D" | null, f: SellingGui
  * deriveSupplyStatus를 재사용한다 — 요약과 상세가 다른 말을 할 수 없다.
  */
 export interface SellingSummary {
-  /** "국내 판매처 2곳 · 목표마진가 ₩270,795" — 없으면 null. */
+  /** 화면 색/아이콘 결정용. 새 판정이 아니라 marketCase + 공급 축의 표현이다. */
+  tone: "GOOD" | "CAUTION" | "STOP" | "UNKNOWN";
+  /** 결론 한 줄 — "판매해볼 만합니다" 같은 셀러 언어. */
+  headline: string;
+  /** 핵심 숫자 최대 2개. 없으면 null. */
   numbers: string | null;
-  /** 판단 한 문장. */
-  verdict: string;
+  /** 행동 한 문장. */
+  action: string;
+}
+
+/** MI-UX-5 — 기본 화면 숫자는 최대 2개다. 더 보여주면 "무엇이 중요한지"가
+ * 사라진다. 값이 없는 항목은 자리를 차지하지 않고 다음 우선순위가 올라온다. */
+function pickTwo(parts: (string | null)[]): string | null {
+  const kept = parts.filter((p): p is string => p != null).slice(0, 2);
+  return kept.length > 0 ? kept.join(" · ") : null;
 }
 
 export function buildSellingSummary(
   marketCase: "A" | "B" | "C" | "D" | null,
   f: SellingGuidanceFacts,
-): SellingSummary | null {
+): SellingSummary {
   const supply = deriveSupplyStatus({ sellerCount: f.sellerCount, domesticBasis: f.domesticBasis });
   const supplyLimited = supply === "SCARCE" || supply === "LIMITED";
   // sellerCount는 공급 판정이 성립할 때만 노출한다 — 확인 못 한 수치를
-  // 요약 첫 줄에 올리지 않는다(추정 문구 금지).
+  // 첫 화면에 올리지 않는다(추정 문구 금지).
   const sellerPart = supply !== "UNKNOWN" && f.sellerCount != null ? `국내 판매처 ${f.sellerCount}곳` : null;
-  const join = (parts: (string | null)[]) => {
-    const kept = parts.filter((p): p is string => p != null);
-    return kept.length > 0 ? kept.join(" · ") : null;
-  };
 
   if (marketCase === "A") {
     return {
-      numbers: join([
-        f.domesticLowestPriceKrw != null ? `시장가 ${won(f.domesticLowestPriceKrw)}` : null,
+      tone: "GOOD",
+      headline: "판매해볼 만합니다",
+      numbers: pickTwo([
         f.recommendedPriceKrw != null ? `추천가 ${won(f.recommendedPriceKrw)}` : null,
         f.estimatedMarginPercent != null ? `예상 마진 ${pct(f.estimatedMarginPercent)}` : null,
+        f.domesticLowestPriceKrw != null ? `시장 기준가 ${won(f.domesticLowestPriceKrw)}` : null,
       ]),
-      verdict: "시장가보다 낮게 판매하면서 목표 마진을 확보할 수 있습니다.",
+      action: "현재 시장 가격에서 목표 마진 확보가 가능합니다.",
     };
   }
 
   if (marketCase === "B") {
+    // MI-SUPPLY-ADVANTAGE-1 안전장치 유지 — supplyLimited는 basis === "EXACT"
+    // 일 때만 참이 될 수 있다. 못 찾은 경우는 아래 일반 경쟁 분기로 간다.
     if (supplyLimited) {
       return {
-        numbers: join([sellerPart, f.targetPriceKrw != null ? `목표마진가 ${won(f.targetPriceKrw)}` : null]),
-        verdict: "공급이 적어 목표 마진 가격으로 먼저 테스트해볼 수 있습니다.",
+        tone: "CAUTION",
+        headline: "목표 마진 가격으로 테스트해볼 수 있습니다",
+        numbers: pickTwo([
+          f.targetPriceKrw != null ? `목표마진가 ${won(f.targetPriceKrw)}` : null,
+          sellerPart,
+        ]),
+        action: "국내 공급이 적어 높은 가격에서도 판매 반응을 확인해볼 수 있습니다.",
       };
     }
     return {
-      numbers: join([
-        sellerPart,
+      tone: "CAUTION",
+      headline: "조건부로 판매를 검토하세요",
+      numbers: pickTwo([
+        f.domesticLowestPriceKrw != null ? `시장 기준가 ${won(f.domesticLowestPriceKrw)}` : null,
         f.estimatedMarginPercent != null ? `예상 마진 ${pct(f.estimatedMarginPercent)}` : null,
       ]),
-      verdict: "경쟁 가격이 낮아 목표 마진 확보가 어렵습니다.",
+      action: "목표 마진을 확보하려면 가격이나 원가 조정이 필요합니다.",
     };
   }
 
   if (marketCase === "C") {
+    // 손실 구간에서는 공급이 부족해도 "테스트해볼 여지" 문구를 붙이지 않는다
+    // (supply를 참조하지 않는다) — 손실 회피가 최우선이다.
+    const loss =
+      f.landedCostKrw != null && f.domesticLowestPriceKrw != null
+        ? f.landedCostKrw - f.domesticLowestPriceKrw
+        : null;
     return {
-      numbers: join([
-        f.domesticLowestPriceKrw != null ? `시장가 ${won(f.domesticLowestPriceKrw)}` : null,
+      tone: "STOP",
+      headline: "일반 판매는 권장하지 않습니다",
+      numbers: pickTwo([
         f.landedCostKrw != null ? `착지원가 ${won(f.landedCostKrw)}` : null,
+        loss != null && loss > 0
+          ? `예상 손실 -${won(loss)}`
+          : f.domesticLowestPriceKrw != null
+            ? `시장 기준가 ${won(f.domesticLowestPriceKrw)}`
+            : null,
       ]),
-      verdict: "현재 가격으로는 손실이 예상됩니다.",
+      action: "현재 시장 가격으로 판매하면 원가 회수가 어렵습니다.",
     };
   }
 
-  // CASE D / 판정 없음 — 아는 척하지 않는다. 브랜드 중앙값이 있으면 참고치로만.
+  // CASE D / 판정 없음 — 없는 판매처 수·최저가·공급 판단을 만들지 않는다.
   return {
-    numbers: f.brandMedianPriceKrw != null ? `브랜드 중앙값 ${won(f.brandMedianPriceKrw)}` : null,
-    verdict: "국내 동일상품 가격을 확인하지 못했습니다. 국내 판매가 확인 후 등록을 결정하세요.",
+    tone: "UNKNOWN",
+    headline: "시장 데이터 확인이 더 필요합니다",
+    numbers: f.brandMedianPriceKrw != null ? `비교 기준가 ${won(f.brandMedianPriceKrw)}` : null,
+    action: "국내 동일상품 가격 데이터를 충분히 확인하지 못했습니다.",
   };
 }
 

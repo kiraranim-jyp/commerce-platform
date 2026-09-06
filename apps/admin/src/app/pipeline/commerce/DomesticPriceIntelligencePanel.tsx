@@ -55,6 +55,15 @@ function relativeTimeFromNow(iso: string, now: Date = new Date()): string {
  * 스크롤할 대상. 판단(이 패널)과 그 근거(해외/국내 가격비교 섹션)는 서로 다른
  * 컴포넌트에 있으므로 앵커 id를 한 곳에서 정의해 양쪽이 같은 값을 쓰게 한다.
  */
+/** MI-UX-5 — 요약 결론의 색/아이콘. tone은 서버가 marketCase + 공급 축으로
+ * 이미 정한 값이라 화면에서 다시 판정하지 않는다. */
+const MI_SUMMARY_TONE: Record<"GOOD" | "CAUTION" | "STOP" | "UNKNOWN", { icon: string; box: string; text: string }> = {
+  GOOD: { icon: "🟢", box: "border-success/40 bg-success-soft", text: "text-success" },
+  CAUTION: { icon: "🟡", box: "border-warning/40 bg-warning-soft", text: "text-warning" },
+  STOP: { icon: "🔴", box: "border-danger/40 bg-danger-soft", text: "text-danger" },
+  UNKNOWN: { icon: "⚪", box: "border-border bg-background", text: "text-text-secondary" },
+};
+
 export const PRICE_COMPARISON_ANCHOR_ID = "price-comparison-source";
 
 /**
@@ -587,7 +596,12 @@ interface PriceHistoryResponse {
   sellingGuidance: string[];
   /** MI-UX-4 — 기본 화면용 한 줄 요약. 서버가 sellingGuidance와 같은 facts로
    * 만들므로 둘이 다른 숫자를 말할 수 없다. 구버전 응답에는 없다(optional). */
-  sellingSummary?: { numbers: string | null; verdict: string } | null;
+  sellingSummary?: {
+    tone: "GOOD" | "CAUTION" | "STOP" | "UNKNOWN";
+    headline: string;
+    numbers: string | null;
+    action: string;
+  } | null;
   /** P-31 — 종합 시장 상태 + 구조화된 판단 근거. finalVerdict는
    * sellerFacingVerdict를 시장 신호로 강등만 한 값이다(승격 없음). */
   sellerDecision: SellerDecisionInfo;
@@ -1391,37 +1405,24 @@ export function DomesticPriceIntelligencePanel({
             </span>
           </div>
 
-          {/* P-31 — 개별 신호를 종합한 시장 상태. 가격 경쟁력(CASE A/B/C/D)과
-              별개 레이어임이 드러나도록 "시장 상태"라고만 부르고, 판매
-              추천/비추천 같은 판정 어휘를 쓰지 않는다. */}
-          <div className="mb-2 flex items-center justify-between rounded border border-border bg-background px-2 py-1.5">
-            <span className="text-[11px] text-text-secondary">종합 시장 상태</span>
-            <span className="text-xs font-semibold text-text-primary">
-              {MARKET_OUTLOOK_BADGE[sellerDecision.outlook]}
-            </span>
-          </div>
-          <p className="mb-2 text-[10px] text-text-tertiary">
-            {sellerDecision.outlookSummary}
-            {sellerDecision.outlook === "UNKNOWN" &&
-              ` (확인된 신호 ${sellerDecision.knownSignalCount}개 — 데이터가 부족한 것이지 시장이 나쁘다는 뜻이 아닙니다)`}
-          </p>
-          {/* MI-UX-4(CPO 지시, 2026-09-06) — 기본 화면은 "팔아? 말아? 얼마에?"에만
-              답한다. 핵심 숫자 한 줄 + 판단 한 문장이 전부이고, 근거(신호 3종,
-              판단 요인, 전략 상세)는 전부 아래 상세 토글로 내린다. 서버가
-              sellingGuidance와 같은 facts로 만든 값이라 두 곳의 숫자가 어긋날 수
-              없다. 구버전 응답(sellingSummary 없음)이면 아무것도 렌더하지 않는다. */}
+          {/* MI-UX-5(CPO 지시, 2026-09-06) — 기본 화면은 3초 안에 "얼마에 팔아볼
+              만한가, 왜"에 답한다: 결론 한 줄 → 핵심 숫자 최대 2개 → 행동 한
+              문장. 근거(종합 시장 상태, 신호 3종, 판단 요인, 전략 상세)는 전부
+              아래 상세 토글로 내렸다 — 삭제가 아니라 위치 이동이다.
+              서버가 sellingGuidance와 같은 facts로 만든 값이라 요약과 상세의
+              숫자가 어긋날 수 없다. 구버전 응답이면 렌더하지 않는다. */}
           {sellingSummary && (
-            <div className="mb-2 rounded border border-border bg-background px-2 py-2">
+            <div className={`mb-2 rounded border px-2.5 py-2 ${MI_SUMMARY_TONE[sellingSummary.tone].box}`}>
+              <p className={`text-xs font-semibold ${MI_SUMMARY_TONE[sellingSummary.tone].text}`}>
+                {MI_SUMMARY_TONE[sellingSummary.tone].icon} {sellingSummary.headline}
+              </p>
               {sellingSummary.numbers && (
-                <p className="text-xs font-semibold text-text-primary">{sellingSummary.numbers}</p>
+                <p className="mt-1 text-sm font-semibold text-text-primary">{sellingSummary.numbers}</p>
               )}
-              <p className="mt-0.5 text-[11px] text-text-secondary">{sellingSummary.verdict}</p>
+              <p className="mt-0.5 text-[11px] text-text-secondary">{sellingSummary.action}</p>
             </div>
           )}
-          {/* UX-1 — 여기부터는 "왜 그렇게 판단했는가"의 근거다. 기본 화면에서는
-              위의 종합 상태 + 3개 신호까지만 보여주고, 근거 표와 전략 가이드는
-              사용자가 요청할 때만 펼친다. 데이터/계산은 그대로이고 노출 계층만
-              바뀐다. */}
+
           <button
             type="button"
             onClick={() => setShowMarketDetail((v) => !v)}
@@ -1436,6 +1437,22 @@ export function DomesticPriceIntelligencePanel({
                   보여준다. 순서는 CPO 지정 우선순위(가격 수익성 → 동일상품 국내
                   가격 → 시장 관심 → 경쟁 판매처 → 시즌성)로 서버에서 이미 고정돼
                   오므로 여기서 다시 정렬하지 않는다. */}
+              {/* MI-UX-5 — 종합 시장 상태는 신호 3종을 합친 값이므로 신호 바로
+                  위, 상세 영역 안에 둔다(기본 화면 결론과 중복 노출 방지).
+                  P-31 원칙 유지: 가격 경쟁력과 별개 레이어이므로 "시장 상태"
+                  라고만 부르고 판매 추천/비추천 어휘를 쓰지 않는다. */}
+              <div className="mt-2 flex items-center justify-between rounded border border-border bg-background px-2 py-1.5">
+                <span className="text-[11px] text-text-secondary">종합 시장 상태</span>
+                <span className="text-xs font-semibold text-text-primary">
+                  {MARKET_OUTLOOK_BADGE[sellerDecision.outlook]}
+                </span>
+              </div>
+              <p className="mt-1 text-[10px] text-text-tertiary">
+                {sellerDecision.outlookSummary}
+                {sellerDecision.outlook === "UNKNOWN" &&
+                  ` (확인된 신호 ${sellerDecision.knownSignalCount}개 — 데이터가 부족한 것이지 시장이 나쁘다는 뜻이 아닙니다)`}
+              </p>
+
               {/* MI-UX-4 — 신호 3종은 "왜 그렇게 봤나"의 근거이므로 상세로 내렸다.
                   항목/판정은 그대로이고 노출 위치만 바뀐다. */}
               <div className="mt-2">

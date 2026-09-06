@@ -364,7 +364,7 @@ describe("buildSellingGuidance — 공급 축이 가격 축과 결합되는 방�
  * 만들어지므로 두 곳이 다른 숫자를 말할 수 없어야 하고, 공급 안전장치도
  * 동일하게 적용돼야 한다("판매처를 못 찾았다" ≠ "국내 재고가 없다").
  */
-describe("buildSellingSummary — 기본 화면은 판단만, 근거는 상세로", () => {
+describe("buildSellingSummary — 기본 화면은 결론·숫자2개·행동1줄", () => {
   const base = {
     recommendedPriceKrw: null,
     targetPriceKrw: null,
@@ -375,19 +375,22 @@ describe("buildSellingSummary — 기본 화면은 판단만, 근거는 상세�
     brandMedianPriceKrw: null,
     sellerCount: null,
   };
+  const numberCount = (n: string | null) => (n == null ? 0 : n.split(" · ").length);
 
-  it("A — 시장가·추천가·마진 한 줄 + 판단 한 문장", () => {
+  it("A — 🟢 결론 + 추천가·예상 마진", () => {
     const s = buildSellingSummary("A", {
       ...base,
-      domesticLowestPriceKrw: 260_000,
       recommendedPriceKrw: 258_000,
       estimatedMarginPercent: 18.4,
-    })!;
-    expect(s.numbers).toBe("시장가 ₩260,000 · 추천가 ₩258,000 · 예상 마진 18.4%");
-    expect(s.verdict).toContain("목표 마진을 확보할 수 있습니다");
+      domesticLowestPriceKrw: 260_000,
+    });
+    expect(s.tone).toBe("GOOD");
+    expect(s.headline).toBe("판매해볼 만합니다");
+    expect(s.numbers).toBe("추천가 ₩258,000 · 예상 마진 18.4%");
+    expect(numberCount(s.numbers)).toBeLessThanOrEqual(2);
   });
 
-  it("B + 공급 제한 — 판매처와 목표마진가만 보여주고 테스트 가능성으로 말한다", () => {
+  it("B + 공급 제한 — 🟡 테스트 결론 + 목표마진가·판매처", () => {
     const s = buildSellingSummary("B", {
       ...base,
       targetPriceKrw: 270_795,
@@ -395,46 +398,71 @@ describe("buildSellingSummary — 기본 화면은 판단만, 근거는 상세�
       estimatedMarginPercent: 7.6,
       sellerCount: 2,
       domesticBasis: "EXACT",
-    })!;
-    expect(s.numbers).toBe("국내 판매처 2곳 · 목표마진가 ₩270,795");
-    expect(s.verdict).toContain("테스트해볼 수 있습니다");
+    });
+    expect(s.tone).toBe("CAUTION");
+    expect(s.headline).toContain("테스트해볼 수 있습니다");
+    expect(s.numbers).toBe("목표마진가 ₩270,795 · 국내 판매처 2곳");
   });
 
-  it("B + 공급 충분 — 목표 마진 확보가 어렵다고 말한다", () => {
+  it("B + 공급 충분 — 🟡 조건부 + 시장 기준가·예상 마진", () => {
     const s = buildSellingSummary("B", {
       ...base,
+      domesticLowestPriceKrw: 258_000,
       estimatedMarginPercent: 7.6,
       sellerCount: 9,
       domesticBasis: "EXACT",
-    })!;
-    expect(s.numbers).toBe("국내 판매처 9곳 · 예상 마진 7.6%");
-    expect(s.verdict).toContain("어렵습니다");
+    });
+    expect(s.headline).toBe("조건부로 판매를 검토하세요");
+    expect(s.numbers).toBe("시장 기준가 ₩258,000 · 예상 마진 7.6%");
   });
 
-  it("C — 손실을 첫 화면에서 바로 말한다", () => {
+  it("★ C — 🔴 손실. 공급이 부족해도 테스트 문구를 붙이지 않는다", () => {
     const s = buildSellingSummary("C", {
       ...base,
-      domesticLowestPriceKrw: 16_900,
       landedCostKrw: 18_500,
-    })!;
-    expect(s.numbers).toBe("시장가 ₩16,900 · 착지원가 ₩18,500");
-    expect(s.verdict).toContain("손실이 예상됩니다");
+      domesticLowestPriceKrw: 16_900,
+      sellerCount: 1,
+      domesticBasis: "EXACT",
+    });
+    expect(s.tone).toBe("STOP");
+    expect(s.numbers).toBe("착지원가 ₩18,500 · 예상 손실 -₩1,600");
+    expect(`${s.headline} ${s.action}`).not.toContain("테스트");
+    expect(`${s.headline} ${s.action}`).not.toContain("공급");
   });
 
-  it("★ basis가 EXACT가 아니면 판매처 수를 요약에 노출하지 않는다", () => {
+  it("★ basis가 EXACT가 아니면 판매처 수도 공급 문구도 나오지 않는다", () => {
     const s = buildSellingSummary("B", {
       ...base,
+      domesticLowestPriceKrw: 258_000,
       estimatedMarginPercent: 7.6,
       sellerCount: 0,
       domesticBasis: "NONE",
-    })!;
-    expect(s.numbers).not.toContain("판매처");
-    expect(s.verdict).not.toContain("공급");
+    });
+    expect(`${s.numbers} ${s.action}`).not.toContain("판매처");
+    expect(`${s.headline} ${s.action}`).not.toContain("공급");
   });
 
-  it("D — 아는 척하지 않는다", () => {
-    const s = buildSellingSummary("D", { ...base, domesticBasis: "NONE" })!;
+  it("D — ⚪ 아는 척하지 않는다", () => {
+    const s = buildSellingSummary("D", { ...base, domesticBasis: "NONE" });
+    expect(s.tone).toBe("UNKNOWN");
     expect(s.numbers).toBeNull();
-    expect(s.verdict).toContain("확인하지 못했습니다");
+    expect(s.action).toContain("충분히 확인하지 못했습니다");
+  });
+
+  it("숫자는 어떤 경우에도 2개를 넘지 않는다", () => {
+    for (const c of ["A", "B", "C", "D"] as const) {
+      const s = buildSellingSummary(c, {
+        recommendedPriceKrw: 1000,
+        targetPriceKrw: 1100,
+        estimatedMarginPercent: 5,
+        targetMarginPercent: 20,
+        landedCostKrw: 900,
+        domesticLowestPriceKrw: 800,
+        brandMedianPriceKrw: 950,
+        sellerCount: 2,
+        domesticBasis: "EXACT",
+      });
+      expect(numberCount(s.numbers)).toBeLessThanOrEqual(2);
+    }
   });
 });
