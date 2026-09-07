@@ -21,12 +21,22 @@
 --
 -- 실행 전 선행 조건:
 --   Supabase 콘솔 > Authentication > Users 에서
---   kiraranim@gmail.com 계정을 먼저 생성해야 한다.
+--   detourdada@gmail.com 계정을 먼저 생성해야 한다.
 --
 -- 그 계정이 없으면 이 스크립트는 아무것도 바꾸지 않고 예외를 던지고 멈춘다.
 -- 소유자를 추측해서 임의의 UUID에 데이터를 귀속시키지 않는다(CPO 지시 §10).
 --
 -- 전체가 하나의 트랜잭션이다 — 중간에 실패하면 전부 롤백된다.
+--
+-- 실행 이력(2026-09-08): Production에 detourdada@gmail.com 기준으로 실행 완료.
+--   작성 당시 대상은 kiraranim@gmail.com이었으나, 실제 운영 계정이
+--   detourdada@gmail.com으로 확정되어(CEO-3/CEO-7) 그 기준으로 실행했다.
+--   이 파일은 실제로 실행된 내용과 일치시키기 위해 사후 정정한 것이다 —
+--   저장소와 DB가 어긋난 채로 남으면 나중에 누가 재실행했을 때 엉뚱한
+--   계정을 찾거나 workspace가 하나 더 생긴다.
+--
+--   재실행해도 안전하다: 테이블/컬럼은 if not exists이고, workspace는
+--   있으면 재사용하며, backfill은 workspace_id가 null인 행만 건드린다.
 -- ────────────────────────────────────────────────────────────────────────
 
 begin;
@@ -75,12 +85,12 @@ declare
 begin
   select id into v_user_id
   from auth.users
-  where email = 'kiraranim@gmail.com'
+  where email = 'detourdada@gmail.com'
   limit 1;
 
   if v_user_id is null then
     raise exception
-      'BETA-SECURITY-2 중단: kiraranim@gmail.com 계정이 없습니다. Supabase 콘솔 > Authentication > Users 에서 먼저 생성한 뒤 다시 실행하세요. (데이터는 변경되지 않았습니다)';
+      'BETA-SECURITY-2 중단: detourdada@gmail.com 계정이 없습니다. Supabase 콘솔 > Authentication > Users 에서 먼저 생성한 뒤 다시 실행하세요. (데이터는 변경되지 않았습니다)';
   end if;
 
   -- 이미 이 사용자의 workspace가 있으면 재사용한다 — 이 스크립트를 두 번

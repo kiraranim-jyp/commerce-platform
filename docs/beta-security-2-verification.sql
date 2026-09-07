@@ -24,7 +24,7 @@ where table_schema = 'public'
 -- 0행이면 043 미실행입니다.
 
 
--- ③ Auth 사용자 목록 — user1(kiraranim@gmail.com)이 있는가, 이메일이 확인됐는가
+-- ③ Auth 사용자 목록 — user1(detourdada@gmail.com)이 있는가, 이메일이 확인됐는가
 --    email_confirmed_at이 NULL이면 Google 로그인 시 별도 계정이 만들어질 수
 --    있습니다(그러면 기존 데이터가 안 보입니다). 계정 생성 시 "Auto Confirm
 --    User"를 켜야 하는 이유입니다.
@@ -54,7 +54,7 @@ from workspaces w
 join workspace_members m on m.workspace_id = w.id
 join auth.users u        on u.id = m.user_id
 order by w.created_at;
--- 기대(043 직후): 1행 — kiraranim@gmail.com / OWNER
+-- 기대(043 직후): 1행 — detourdada@gmail.com / OWNER
 
 
 -- ⑥ 가장 중요 — 기존 스냅샷이 전부 user1의 workspace에 귀속됐는가
@@ -69,7 +69,7 @@ left join workspace_members m on m.workspace_id = w.id
 left join auth.users u        on u.id = m.user_id
 group by u.email
 order by 스냅샷수 desc;
--- 기대: kiraranim@gmail.com 한 줄에 전체 건수가 몰려 있어야 합니다.
+-- 기대: detourdada@gmail.com 한 줄에 전체 건수가 몰려 있어야 합니다.
 -- 소유자가 NULL인 줄이 있으면 귀속되지 않은 데이터가 남아 있다는 뜻입니다.
 
 
