@@ -28,8 +28,19 @@ import { ADMIN_SESSION_COOKIE, verifySessionToken } from "@/lib/admin-auth";
  * 한쪽 로그인으로 다른 쪽에 들어갈 수 있으면 안 된다.
  */
 
-/** 로그인 없이 접근할 수 있는 Seller 경로. */
-const SELLER_PUBLIC_PATHS = new Set(["/login", "/terms", "/privacy", "/privacy-settings"]);
+/** 로그인 없이 접근할 수 있는 Seller 경로.
+ *
+ * /auth/callback이 반드시 여기 있어야 한다 — Google OAuth 콜백은 아직 세션이
+ * 없는 상태로 도착한다(그 코드를 세션으로 바꾸는 게 콜백의 일이다). 빼먹으면
+ * proxy가 콜백을 /login으로 돌려보내고, 로그인 → Google → 콜백 → /login이
+ * 무한히 도는 루프가 된다. */
+const SELLER_PUBLIC_PATHS = new Set([
+  "/login",
+  "/auth/callback",
+  "/terms",
+  "/privacy",
+  "/privacy-settings",
+]);
 
 function isAdminPath(pathname: string): boolean {
   return pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
