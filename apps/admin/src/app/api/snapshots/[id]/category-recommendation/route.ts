@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth/require-user";
 import { buildResolverBiasedQuery, resolveProductSignals, ruleBasedCategoryProvider } from "@commerce/category";
 import type { CanonicalProduct } from "@commerce/shared";
 import { getCoupangCredentials } from "../../../coupang/_lib/env";
@@ -19,19 +20,29 @@ import type { ProductSnapshot } from "../../_lib/types";
  * 신규 API 호출 없음 — /api/coupang/category-recommend가 이미 쓰는
  * resolveCategoryV3/getCoupangCredentials를 그대로 재사용한다.
  */
-async function persistCache(snapshot: ProductSnapshot, product: CanonicalProduct) {
+/** BETA-SECURITY-2 — 소유자는 이미 소유권 검사를 통과해 읽어온 snapshot에서
+ * 그대로 가져온다(새로 판단하지 않는다). */
+async function persistCache(snapshot: ProductSnapshot, product: CanonicalProduct, workspaceId: string) {
   return saveSnapshot({
     id: snapshot.id,
     sourceUrl: snapshot.sourceUrl,
     title: snapshot.title,
     thumbnailUrl: snapshot.thumbnailUrl,
     workspace: { ...snapshot.workspace, canonicalProduct: product },
+    workspaceId,
   });
 }
 
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  // BETA-SECURITY-2 §11/§12 — 이 라우트는 외부 카테고리 API를 호출하고 스냅샷을
+  // 갱신한다. 인증이 없으면 남의 스냅샷을 건드리는 쓰기 경로이자 비용 발생
+  // 경로가 된다.
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
+  const workspaceId = auth.user.workspaceId;
+
   const { id } = await params;
-  const snapshot = await getSnapshotRaw(id);
+  const snapshot = await getSnapshotRaw(id, workspaceId);
   if (!snapshot) {
     return NextResponse.json({ ok: false, error: "스냅샷을 찾을 수 없습니다." }, { status: 404 });
   }
@@ -58,18 +69,18 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   const reusable = await findReadyCategoryRecommendationCache(sourceUrlKey, id);
   if (reusable) {
     const cache = { ...reusable, sourceUrlKey };
-    const saved = await persistCache(snapshot, { ...product, categoryRecommendationCache: cache });
+    const saved = await persistCache(snapshot, { ...product, categoryRecommendationCache: cache }, workspaceId);
     return NextResponse.json({ ok: saved.ok, status: "READY", reused: true, cache });
   }
 
   // ③ — PENDING을 먼저 저장해서 잠근 뒤에만 외부 API를 부른다.
-  await persistCache(snapshot, { ...product, categoryRecommendationCache: { sourceUrlKey, status: "PENDING" } });
+  await persistCache(snapshot, { ...product, categoryRecommendationCache: { sourceUrlKey, status: "PENDING" } }, workspaceId);
 
   const credentials = await getCoupangCredentials();
   if (!credentials) {
     // 인증 정보 미설정은 API 실패가 아니라 아직 연결 전인 정상 상태다 — FAILED로
     // 기록하지 않고 캐시를 비워, 연결 완료 후 다음 시도가 자연스럽게 다시 시도되게 한다.
-    await persistCache(snapshot, { ...product, categoryRecommendationCache: undefined });
+    await persistCache(snapshot, { ...product, categoryRecommendationCache: undefined }, workspaceId);
     return NextResponse.json({ ok: true, skipped: "not-configured" });
   }
 
@@ -100,7 +111,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       evidence: [],
       resolvedAt: new Date().toISOString(),
     };
-    const saved = await persistCache(snapshot, { ...product, categoryRecommendationCache: cache });
+    const saved = await persistCache(snapshot, { ...product, categoryRecommendationCache: cache }, workspaceId);
     return NextResponse.json({ ok: saved.ok, status: "READY", reused: false, cache });
   } catch (error) {
     const cache: NonNullable<CanonicalProduct["categoryRecommendationCache"]> = {
@@ -109,7 +120,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       failureReason: error instanceof Error ? error.message : "쿠팡 서버에 연결할 수 없습니다.",
       resolvedAt: new Date().toISOString(),
     };
-    const saved = await persistCache(snapshot, { ...product, categoryRecommendationCache: cache });
+    const saved = await persistCache(snapshot, { ...product, categoryRecommendationCache: cache }, workspaceId);
     return NextResponse.json({ ok: saved.ok, status: "FAILED", cache });
   }
 }

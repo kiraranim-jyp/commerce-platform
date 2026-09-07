@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ClipboardList,
   Clock,
   HelpCircle,
   Home,
   Image as ImageIcon,
+  LogOut,
   Package,
   Settings,
   type LucideIcon,
@@ -37,6 +38,24 @@ const NAV_ITEMS: NavigationItem[] = [
   { id: "settings", title: "설정", href: "/settings", icon: Settings },
   { id: "help", title: "도움말", href: "#", icon: HelpCircle, soon: true },
 ];
+
+function LogoutButton() {
+  const router = useRouter();
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
+        router.replace("/login");
+        router.refresh();
+      }}
+      className="mt-auto flex items-center gap-2 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium text-white/65 transition-colors duration-[var(--transition-fast)] hover:bg-white/5 hover:text-white"
+    >
+      <LogOut size={16} className="shrink-0" />
+      <span className="flex-1 truncate text-left">로그아웃</span>
+    </button>
+  );
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -81,6 +100,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
+          {/* BETA-SECURITY-2 §19 — Seller 로그아웃. 관리자 로그아웃과 별개
+              경로(/api/auth/logout)를 쓴다. 서버에서 signOut을 호출해야
+              refresh 토큰까지 무효화된다. */}
+          <LogoutButton />
         </nav>
         <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
       </div>

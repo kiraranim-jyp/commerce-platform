@@ -72,6 +72,13 @@ export interface ProductSnapshot {
    * 절대 바뀌지 않는다. 마이그레이션 025 실행 전이거나 채번이 실패했던
    * 레거시 스냅샷은 null일 수 있다 — 지어내지 않는다. */
   jobKey: string | null;
+  /** BETA-SECURITY-2(CPO 지시, 2026-09-07) — 이 스냅샷을 소유한 workspace.
+   * 마이그레이션 043 실행 전 DB에서는 컬럼이 없어 null이 될 수 있다.
+   *
+   * 주의: 이 값을 권한 판단의 근거로 쓰지 않는다. 권한은 항상 세션에서 온
+   * workspaceId(requireUser)로 판단하고, 이 필드는 이미 소유권 검사를 통과해
+   * 읽어온 스냅샷을 다시 저장할 때 소유자를 유지하는 용도로만 쓴다. */
+  workspaceId: string | null;
 }
 
 /** 목록 화면(최근 작업)은 workspace 전체를 안 내려준다 — 카드 하나에 대표

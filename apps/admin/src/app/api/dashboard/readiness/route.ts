@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { backfillCanonicalProduct } from "@commerce/shared";
+import { requireUser } from "@/lib/auth/require-user";
 import { listRecentSnapshotsFull } from "../../snapshots/_lib/snapshot";
 import {
   computeSnapshotReadiness,
@@ -40,10 +41,15 @@ export interface DashboardProductCard {
 }
 
 export async function GET(request: Request) {
+  // BETA-SECURITY-2 §11 — 이 라우트도 product_snapshots를 그대로 노출한다.
+  // /api/snapshots만 막고 여기를 두면 같은 데이터를 우회로로 전부 읽을 수 있다.
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
+
   const { searchParams } = new URL(request.url);
   const limit = Math.min(Number(searchParams.get("limit")) || 20, 30);
 
-  const snapshots = await listRecentSnapshotsFull(limit);
+  const snapshots = await listRecentSnapshotsFull(auth.user.workspaceId, limit);
 
   const cards: DashboardProductCard[] = [];
   const concurrency = 3;

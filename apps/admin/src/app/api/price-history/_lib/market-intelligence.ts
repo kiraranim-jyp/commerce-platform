@@ -37,8 +37,8 @@ import { listDomesticProductLinks, priceTierFromLink } from "../../domestic-pric
  * 응답 둘 다 이 함수를 공유해야, "화면에 보이는 값"과 "알림을 만드는 기준값"이
  * 서로 다른 계산을 하는 사고가 나지 않는다.
  */
-export async function computeMarketIntelligence(snapshotId: string) {
-  const snapshot = await getSnapshot(snapshotId);
+export async function computeMarketIntelligence(snapshotId: string, workspaceId: string) {
+  const snapshot = await getSnapshot(snapshotId, workspaceId);
   if (!snapshot) return null;
   const product = backfillCanonicalProduct(snapshot.workspace.canonicalProduct);
 

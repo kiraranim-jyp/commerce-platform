@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth/require-user";
 import { uploadPublicImage } from "@/lib/image-storage";
 
 /**
@@ -9,6 +10,10 @@ import { uploadPublicImage } from "@/lib/image-storage";
  * uploadPublicImage()를 그대로 재사용한다 — 별도 버킷/로직을 새로 만들지 않는다.
  */
 export async function POST(request: Request) {
+  // BETA-SECURITY-2 §12 — 이미지 처리도 비용이 드는 경로다.
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
+
   const formData = await request.formData().catch(() => null);
   const file = formData?.get("file");
   if (!file || !(file instanceof File)) {

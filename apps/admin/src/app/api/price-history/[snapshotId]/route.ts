@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth/require-user";
 import { computeMarketIntelligence } from "../_lib/market-intelligence";
 
 /**
@@ -12,9 +13,13 @@ import { computeMarketIntelligence } from "../_lib/market-intelligence";
  * 판단 기준이 어긋나지 않는다.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ snapshotId: string }> }) {
+  // BETA-SECURITY-2 §11 — 남의 스냅샷 가격 이력을 읽을 수 없어야 한다.
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
+
   const { snapshotId } = await params;
 
-  const data = await computeMarketIntelligence(snapshotId);
+  const data = await computeMarketIntelligence(snapshotId, auth.user.workspaceId);
   if (!data) {
     return NextResponse.json({ ok: false, error: "스냅샷을 찾을 수 없습니다." }, { status: 404 });
   }

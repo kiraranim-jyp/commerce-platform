@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth/require-user";
 import { backfillCanonicalProduct, buildProductIdentityDna } from "@commerce/shared";
 import { computeMarketAlert, type AlertCategory } from "@commerce/pricing";
 import { getSnapshot } from "../../snapshots/_lib/snapshot";
@@ -17,13 +18,18 @@ import { runPriceCheck } from "../_lib/run-price-check";
  * 채워서 반환한다(전체 실패로 만들지 않는다 — PART U 원칙과 동일).
  */
 export async function POST(request: Request) {
+  // BETA-SECURITY-2 §11/§12 — 크롤러와 외부 API를 돌리는 경로다. 인증과
+  // 소유권 검사가 없으면 남의 스냅샷으로 비용을 발생시킬 수 있다.
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
+
   const body = (await request.json().catch(() => null)) as { snapshotId?: string } | null;
   const snapshotId = body?.snapshotId;
   if (!snapshotId) {
     return NextResponse.json({ ok: false, error: "snapshotId가 필요합니다." }, { status: 400 });
   }
 
-  const snapshot = await getSnapshot(snapshotId);
+  const snapshot = await getSnapshot(snapshotId, auth.user.workspaceId);
   if (!snapshot) {
     return NextResponse.json({ ok: false, error: "스냅샷을 찾을 수 없습니다." }, { status: 404 });
   }
@@ -60,7 +66,7 @@ export async function POST(request: Request) {
   // resolveAlertsNotIn이 조용히 no-op이므로 이 블록이 실패해도 위 result는
   // 그대로 반환된다.
   try {
-    const intelligence = await computeMarketIntelligence(snapshotId);
+    const intelligence = await computeMarketIntelligence(snapshotId, auth.user.workspaceId);
     if (intelligence) {
       const alert = computeMarketAlert({
         sellerAction: intelligence.sellerAction,

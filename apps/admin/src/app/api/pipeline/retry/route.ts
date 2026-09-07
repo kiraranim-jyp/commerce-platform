@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { requireUser } from "@/lib/auth/require-user";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import type { ImageType } from "@commerce/shared";
@@ -82,6 +83,10 @@ async function resolveAlternate(processed: ProcessedImageResult): Promise<{
 }
 
 export async function POST(request: Request) {
+  // BETA-SECURITY-2 §12 — 이미지 처리도 비용이 드는 경로다.
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
+
   const { dataUrl, fileName, type } = (await request.json()) as {
     dataUrl?: string;
     fileName?: string;

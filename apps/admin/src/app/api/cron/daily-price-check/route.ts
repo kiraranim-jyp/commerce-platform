@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { backfillCanonicalProduct, buildProductIdentityDna } from "@commerce/shared";
-import { listRecentSnapshotsFull } from "../../snapshots/_lib/snapshot";
+import { listAllSnapshotsForBatch } from "../../snapshots/_lib/snapshot";
 import { runDomesticPriceCheck } from "../../price-history/_lib/run-domestic-price-check";
 import { runPriceCheck } from "../../price-history/_lib/run-price-check";
 
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
     }
   }
 
-  const snapshots = await listRecentSnapshotsFull(MAX_SNAPSHOTS_PER_RUN);
+  const snapshots = await listAllSnapshotsForBatch(MAX_SNAPSHOTS_PER_RUN);
   const results: SnapshotCheckResult[] = [];
 
   for (const snapshot of snapshots) {

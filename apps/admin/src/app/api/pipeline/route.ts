@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { requireUser } from "@/lib/auth/require-user";
 import path from "node:path";
 import { resolveBrandName, universalExtract } from "@commerce/crawler";
 import {
@@ -103,6 +104,12 @@ async function resolveAlternate(processed: ProcessedImageResult): Promise<{
 }
 
 export async function POST(request: Request) {
+  // BETA-SECURITY-2 §12(CPO 지시, 2026-09-07) — 이 라우트는 단순 조회가 아니라
+  // AI 호출 + 크롤러 + 외부 API를 최대 300초 동안 돌린다. 인증 없이 열어두면
+  // 누구나 비용을 발생시킬 수 있다. 익명 요청은 401이어야 한다.
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
+
   const { url } = (await request.json()) as { url?: string };
   if (!url) {
     return NextResponse.json({ error: "url이 필요합니다." }, { status: 400 });
