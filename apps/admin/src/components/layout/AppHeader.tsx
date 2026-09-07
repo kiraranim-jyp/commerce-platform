@@ -1,5 +1,6 @@
 import { BUSINESS_INFO } from "@/lib/business-info";
 import { BrandMark } from "./BrandMark";
+import { UserMenu } from "./UserMenu";
 
 export function AppHeader() {
   return (
@@ -13,8 +14,11 @@ export function AppHeader() {
           </div>
         </div>
       </div>
-      {/* 버전/알림/사용자 메뉴 예약 자리 — 이번 스프린트는 기능 없음 */}
-      <div className="flex items-center gap-3" />
+      {/* CEO-9A-3 — 로그인 사용자 영역. 공통 헤더 한 곳에서만 그린다(§7):
+          페이지마다 따로 두면 계정 표시가 화면마다 어긋난다. */}
+      <div className="flex items-center gap-3">
+        <UserMenu />
+      </div>
     </header>
   );
 }
