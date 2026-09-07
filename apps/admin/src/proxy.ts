@@ -36,6 +36,9 @@ import { IMPERSONATION_COOKIE, verifyImpersonationToken } from "@/lib/auth/imper
  * proxy가 콜백을 /login으로 돌려보내고, 로그인 → Google → 콜백 → /login이
  * 무한히 도는 루프가 된다. */
 const SELLER_PUBLIC_PATHS = new Set([
+  // CEO-10 §6 — Landing은 공개다. 이전에는 "/"가 /pipeline으로 redirect되는
+  // 통로일 뿐이어서 보호 대상이었지만, 이제 서비스 소개 화면 자체다.
+  "/",
   "/login",
   "/auth/callback",
   "/terms",

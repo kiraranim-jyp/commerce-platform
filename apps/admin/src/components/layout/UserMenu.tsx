@@ -64,7 +64,9 @@ export function UserMenu() {
     setLoggingOut(true);
     try {
       await fetch("/api/auth/logout", { method: "POST" });
-      router.replace("/login");
+      // CEO-10 §5 — 로그아웃 후에는 Landing으로 간다. /login으로 보내면
+      // "방금 나왔는데 왜 또 로그인 화면인가"처럼 읽힌다.
+      router.replace("/");
       router.refresh();
     } catch {
       setLoggingOut(false);

@@ -1,7 +1,10 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { BUSINESS_INFO } from "@/lib/business-info";
+import { BrandMark } from "@/components/layout/BrandMark";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 /**
@@ -82,6 +85,14 @@ function LoginForm() {
 
   return (
     <div className="mx-auto flex min-h-[70vh] w-full max-w-sm flex-col justify-center gap-5 px-4">
+      {/* CEO-10 §3 — 로고를 누르면 Landing으로 돌아간다. 로그인 화면에서
+          나갈 길이 없으면 서비스 설명을 다시 볼 방법이 없다. */}
+      <Link href="/" className="flex items-center gap-2 self-start">
+        <BrandMark size={22} />
+        <span className="text-sm font-semibold tracking-tight text-text-primary">
+          {BUSINESS_INFO.serviceName}
+        </span>
+      </Link>
       <div className="space-y-1">
         <h1 className="text-xl font-semibold text-text-primary">따져 시작하기</h1>
         <p className="text-xs text-text-tertiary">해외 상품을 국내 판매용으로 준비합니다.</p>
