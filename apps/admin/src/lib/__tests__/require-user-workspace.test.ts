@@ -24,6 +24,14 @@ let memberRows: Array<{ workspace_id: string }> = [];
 let insertedWorkspaces: number;
 let insertedMembers: number;
 
+// requireUser()가 먼저 Admin 사용자 전환 여부를 확인한다(§3). 이 테스트는
+// 일반 Seller 로그인 경로를 보는 것이므로 쿠키를 비워 둔다 — 그러면
+// readImpersonation()이 Admin 세션 없음으로 판단해 null을 돌려주고,
+// 평소의 Supabase 세션 경로로 넘어간다.
+vi.mock("next/headers", () => ({
+  cookies: async () => ({ get: () => undefined }),
+}));
+
 vi.mock("@/lib/supabase-server", () => ({
   createSupabaseServerClient: async () => ({
     auth: {

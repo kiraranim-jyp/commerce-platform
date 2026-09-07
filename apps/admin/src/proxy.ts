@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { ADMIN_SESSION_COOKIE, verifySessionToken } from "@/lib/admin-auth";
+import { IMPERSONATION_COOKIE, verifyImpersonationToken } from "@/lib/auth/impersonation";
 
 // 이전 middleware.ts에는 `export const runtime = "nodejs"`가 있었다(admin-auth.ts가
 // node:crypto를 쓰기 때문). Next 16의 proxy는 항상 Node.js 런타임에서 돌고 route
@@ -66,6 +67,19 @@ export async function proxy(request: NextRequest) {
 
   // ── Seller 축 ─────────────────────────────────────────────────────────
   if (SELLER_PUBLIC_PATHS.has(pathname)) return NextResponse.next();
+
+  // BETA-SECURITY-2 FINAL §4 — Admin 사용자 전환 중에는 Supabase 세션이 없다.
+  // 발급하는 것이 대상 사용자의 세션이 아니라 서명된 전환 표식이기 때문이다
+  // (impersonation.ts 참고). 그래서 여기서 따로 통과시킨다.
+  //
+  // 조건은 requireUser()와 동일하게 둘 다다: 유효한 Admin 세션 + 유효한
+  // 서명 전환 쿠키. Admin 세션 검사를 빼면 서명 쿠키만 가진 사람이 아무
+  // 계정 화면이나 열 수 있게 된다.
+  const adminToken = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+  if (verifySessionToken(adminToken)) {
+    const impersonating = verifyImpersonationToken(request.cookies.get(IMPERSONATION_COOKIE)?.value);
+    if (impersonating) return NextResponse.next();
+  }
 
   // 세션 쿠키를 읽고, 만료가 임박했으면 갱신해서 응답 쿠키에 다시 써 넣는다.
   // 이 갱신을 proxy에서 하지 않으면 서버 컴포넌트(쿠키 쓰기 불가)에서 세션이

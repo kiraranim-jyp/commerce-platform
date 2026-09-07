@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ImpersonationBanner } from "./ImpersonationBanner";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ClipboardList,
@@ -62,6 +63,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen flex-col">
+      {/* BETA-SECURITY-2 FINAL §4 — 전환 중이면 최상단에 항상 보인다. */}
+      <ImpersonationBanner />
       <AppHeader />
       <div className="flex min-h-0 flex-1">
         <nav className="flex w-[220px] shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-brand-navy-800 bg-brand-navy-900 p-3">

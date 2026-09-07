@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { readImpersonation } from "./impersonation";
 
 /**
  * BETA-SECURITY-2 §5/§13 — 서버에서 "지금 누구인가"를 정하는 단 하나의 경로.
@@ -18,6 +19,12 @@ export interface AuthedUser {
   userId: string;
   email: string | null;
   workspaceId: string;
+  /** BETA-SECURITY-2 FINAL §5 — Admin 사용자 전환 중이면 true.
+   *
+   * 감사 로그가 "user3이 삭제했다"가 아니라 "admin이 user3 계정으로 전환해
+   * 삭제했다"로 남아야 하므로, 데이터 접근 주체(userId)와 실제 행위자를
+   * 구분해서 호출부에 넘긴다. */
+  impersonated: boolean;
 }
 
 /** 인증 실패를 라우트가 그대로 반환할 수 있는 형태로 돌려준다. 예외를
@@ -40,6 +47,23 @@ function unauthorized(): { ok: false; response: NextResponse } {
  * 조회로 보장한다. 로그인할 때마다 workspace가 새로 생기지 않는다.
  */
 export async function requireUser(): Promise<RequireUserResult> {
+  // BETA-SECURITY-2 FINAL §3 — Admin 사용자 전환을 먼저 확인한다.
+  // readImpersonation()은 유효한 Admin 세션이 함께 있을 때만 값을 돌려준다.
+  // 여기서 처리해야 인가 경로가 하나로 유지된다(§13) — 라우트마다 "전환
+  // 중인가?"를 따로 묻기 시작하면 빠뜨리는 곳이 반드시 생긴다.
+  const impersonation = await readImpersonation();
+  if (impersonation) {
+    const workspaceId = await resolveDefaultWorkspaceId(impersonation.targetUserId);
+    if (!workspaceId) {
+      return {
+        ok: false,
+        response: NextResponse.json({ ok: false, error: "대상 사용자의 워크스페이스를 찾지 못했습니다." }, { status: 404 }),
+      };
+    }
+    const email = await lookupUserEmail(impersonation.targetUserId);
+    return { ok: true, user: { userId: impersonation.targetUserId, email, workspaceId, impersonated: true } };
+  }
+
   const supabase = await createSupabaseServerClient();
   if (!supabase) return unauthorized();
 
@@ -59,7 +83,20 @@ export async function requireUser(): Promise<RequireUserResult> {
     };
   }
 
-  return { ok: true, user: { userId: data.user.id, email: data.user.email ?? null, workspaceId } };
+  return {
+    ok: true,
+    user: { userId: data.user.id, email: data.user.email ?? null, workspaceId, impersonated: false },
+  };
+}
+
+/** 전환 중일 때 화면 배너와 감사 로그에 쓸 대상 이메일. 실패해도 전환
+ * 자체를 막지 않는다(표시용 값이라 null이면 UUID로 대체된다). */
+async function lookupUserEmail(userId: string): Promise<string | null> {
+  const admin = getSupabaseAdmin();
+  if (!admin) return null;
+  const { data, error } = await admin.auth.admin.getUserById(userId);
+  if (error || !data.user) return null;
+  return data.user.email ?? null;
 }
 
 /** 사용자의 기본 workspace id. 없으면 생성한다(§7). */
