@@ -3,7 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 // MATCHING-UNIFY-1 — 해외와 같은 라벨을 쓰기 위한 공통 매핑.
-import { domesticMatchDisplay } from "./match-display";
+// MI-UX-9 — 기본 노출 등급/그룹 순서/유사상품 상한도 같은 곳에서 가져온다.
+import {
+  DEFAULT_TIER_ORDER,
+  defaultLimitForTier,
+  domesticMatchDisplay,
+  isDefaultVisibleTier,
+  tierGroupLabel,
+  type MatchDisplayTier,
+} from "./match-display";
+// MI-UX-9 §4 — 통화 표시를 한 곳에서. §10 — 검색 상태 5종 구분.
+import { formatMoney } from "@/lib/price-truth";
+import { searchSourceStatusDisplay } from "@/lib/search-source-status";
 
 type MatchLevel = "very_high" | "high" | "medium" | "low";
 
@@ -57,6 +68,19 @@ export function tierForCandidate(c: Pick<Candidate, "matchTruth" | "matchLevel">
   return "EXCLUDED";
 }
 
+/** MI-UX-9(CPO 지시, 2026-09-07 §5) — 표를 3분류(EXACT/COMPARISON/EXCLUDED)가
+ * 아니라 셀러가 실제로 보는 매칭 등급(동일상품 / 동일상품 추정 / 유사상품)으로
+ * 묶기 위한 매핑. tierForCandidate()는 "가격 반영 정책"을 말하는 축이라 그대로
+ * 두고(회귀 테스트가 있다), 여기서는 "화면에서 어느 그룹에 넣을지"만 정한다.
+ * 판정값 자체는 변환하지 않는다 — domesticMatchDisplay가 이미 하는 매핑을 쓴다. */
+function displayTierForCandidate(c: Pick<Candidate, "matchTruth" | "matchLevel">): MatchDisplayTier {
+  if (c.matchTruth) return domesticMatchDisplay(c.matchTruth).tier;
+  // 구버전 응답(matchTruth 없음) 폴백 — 기존 배지 폴백과 같은 기준을 쓴다.
+  if (c.matchLevel === "very_high" || c.matchLevel === "high") return "SAME";
+  if (c.matchLevel === "medium") return "PRESUMED_SAME";
+  return "UNKNOWN";
+}
+
 export interface Candidate {
   title: string;
   url: string;
@@ -104,12 +128,15 @@ function PriceCell({ candidate }: { candidate: Candidate }) {
   if (candidate.regularPrice && candidate.regularPrice.amount > candidate.price.amount) {
     return (
       <div className="space-y-0.5">
-        <div className="text-text-tertiary line-through">₩{candidate.regularPrice.amount.toLocaleString("ko-KR")}</div>
-        <div className="font-medium text-text-primary">₩{candidate.price.amount.toLocaleString("ko-KR")}</div>
+        {/* MI-UX-9 §4 — 통화 포맷은 formatMoney 하나만 거친다(₩ 하드코딩 제거). */}
+        <div className="text-text-tertiary line-through">
+          {formatMoney(candidate.regularPrice.amount, candidate.regularPrice.currency)}
+        </div>
+        <div className="font-medium text-text-primary">{formatMoney(candidate.price.amount, candidate.price.currency)}</div>
       </div>
     );
   }
-  return <div>₩{candidate.price.amount.toLocaleString("ko-KR")}</div>;
+  return <div>{formatMoney(candidate.price.amount, candidate.price.currency)}</div>;
 }
 
 interface SearchResult {
@@ -205,8 +232,11 @@ export function DomesticShopSearch({
  * matchLevel(구식 confidence) 기준을 버리고 tierForCandidate()(matchTruth
  * 우선)로 EXACT 존재 여부를 판단한다. */
 function ResultHeadline({ results }: { results: SearchResult[] }) {
-  const exactCount = results.reduce((n, r) => n + r.candidates.filter((c) => tierForCandidate(c) === "EXACT").length, 0);
-  const comparisonCount = results.reduce((n, r) => n + r.candidates.filter((c) => tierForCandidate(c) === "COMPARISON").length, 0);
+  // MI-UX-9 §14 — 부분/변형 응답에서 candidates가 없어도 화면이 죽지 않는다.
+  const countBy = (tier: PriceTier) =>
+    results.reduce((n, r) => n + (r.candidates ?? []).filter((c) => tierForCandidate(c) === tier).length, 0);
+  const exactCount = countBy("EXACT");
+  const comparisonCount = countBy("COMPARISON");
   if (exactCount === 0 && comparisonCount === 0) {
     return (
       <p className="rounded-md border border-border bg-background px-3 py-2 text-xs text-text-secondary">
@@ -279,9 +309,10 @@ function CandidateRowTable({ rows }: { rows: CandidateRow[] }) {
                             {d.icon} {d.label}
                           </span>
                           <p className="text-[10px] text-text-tertiary">{d.note}</p>
-                          {c.matchReasons?.length ? (
-                            <p className="text-[10px] text-text-tertiary">근거: {c.matchReasons.join(" · ")}</p>
-                          ) : null}
+                          {/* MI-UX-9 §13 — "근거: A · B · C" 줄은 상세 정보라 기본
+                              표에서 뺀다. 배지 + 한 줄 note까지가 기본, 상세 근거는
+                              Market Intelligence의 "왜 동일상품인가?" 영역에서 본다.
+                              matchReasons 데이터 자체는 응답에 그대로 남아 있다. */}
                         </div>
                       );
                     })()
@@ -297,9 +328,7 @@ function CandidateRowTable({ rows }: { rows: CandidateRow[] }) {
                             ? "비교상품"
                             : "매칭 불확실"}
                       </span>
-                      {c.matchReasons?.length ? (
-                        <p className="text-[10px] text-text-tertiary">근거: {c.matchReasons.join(" · ")}</p>
-                      ) : null}
+                      {/* MI-UX-9 §13 — 위 분기와 같은 이유로 상세 근거 줄 제거. */}
                     </div>
                   ) : (
                     "—"
@@ -324,47 +353,65 @@ function ResultTable({ results }: { results: SearchResult[] }) {
   const [showAll, setShowAll] = useState(false);
   const allRows: CandidateRow[] = [];
   for (const r of results) {
-    if (r.status === "unsupported") {
-      allRows.push({ shopId: r.shopId, shopName: r.shopName, candidate: null, note: "아직 자동 검색을 지원하지 않는 사이트(수동 확인 필요)" });
-    } else if (r.status === "error") {
-      allRows.push({ shopId: r.shopId, shopName: r.shopName, candidate: null, note: `검색 실패: ${r.error ?? ""}` });
-    } else if (r.candidates.length === 0) {
-      allRows.push({ shopId: r.shopId, shopName: r.shopName, candidate: null, note: "일치하는 후보 없음" });
-    } else {
+    // MI-UX-9 §14 — candidates가 배열이 아닌 응답(부분/변형 응답)에서도 죽지
+    // 않는다. searchSourceStatusDisplay가 그 경우를 "확인 불가"로 처리한다.
+    if (r.status === "ok" && Array.isArray(r.candidates) && r.candidates.length > 0) {
       for (const c of r.candidates) {
         allRows.push({ shopId: r.shopId, shopName: r.shopName, candidate: c });
       }
+      continue;
     }
+    // MI-UX-9 §10/§15 — 상태 문구를 여기서 만들지 않는다. 특히 이전 코드는
+    // `검색 실패: ${r.error}`로 서버 예외 원문을 셀러에게 그대로 노출했다.
+    allRows.push({ shopId: r.shopId, shopName: r.shopName, candidate: null, note: searchSourceStatusDisplay(r).note });
   }
-  const exactRows = allRows.filter((row) => row.candidate && tierForCandidate(row.candidate) === "EXACT");
-  const comparisonRows = allRows.filter((row) => row.candidate && tierForCandidate(row.candidate) === "COMPARISON");
-  const hiddenRows = allRows.filter((row) => !row.candidate || tierForCandidate(row.candidate) === "EXCLUDED");
-  if (exactRows.length === 0 && comparisonRows.length === 0) return null;
-  const hiddenCount = hiddenRows.length;
+
+  // MI-UX-9 §5/§6 — 기본 노출은 매칭 가능성이 있는 등급만. CONFLICT(다른 상품
+  // 가능성)와 UNKNOWN(근거 부족)은 가격 판단 근거가 될 수 없으므로 "더 보기" 뒤로.
+  const visibleRows = allRows.filter((row) => row.candidate && isDefaultVisibleTier(displayTierForCandidate(row.candidate)));
+  const hiddenRows = allRows.filter((row) => !row.candidate || !isDefaultVisibleTier(displayTierForCandidate(row.candidate)));
+  if (visibleRows.length === 0) return null;
+
+  // §7 — 등급별로 묶고, 유사상품만 상위 N건으로 자른다. 잘린 나머지는 버리지
+  // 않고 "더 보기" 묶음으로 넘어간다(데이터 삭제가 아니라 기본 노출량 제한).
+  const groups = DEFAULT_TIER_ORDER.map((tier) => {
+    const rows = visibleRows.filter((row) => displayTierForCandidate(row.candidate!) === tier);
+    const limit = defaultLimitForTier(tier);
+    return {
+      tier,
+      shown: limit == null ? rows : rows.slice(0, limit),
+      overflow: limit == null ? [] : rows.slice(limit),
+      total: rows.length,
+    };
+  }).filter((g) => g.total > 0);
+
+  const moreRows = [...groups.flatMap((g) => g.overflow), ...hiddenRows];
   return (
     <div className="space-y-2">
-      {exactRows.length > 0 && (
-        <div className="space-y-1">
-          <p className="text-[11px] font-medium text-success">🟢 동일상품 확인</p>
-          <CandidateRowTable rows={exactRows} />
+      {/* §7 — 기본 화면은 "무엇이 몇 건 있는지"를 한 줄로 먼저 보여준다. */}
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-text-secondary">
+        {groups.map((g) => (
+          <span key={g.tier}>
+            {tierGroupLabel(g.tier)} {g.total}건
+          </span>
+        ))}
+      </div>
+      {groups.map((g) => (
+        <div key={g.tier} className="space-y-1">
+          <p className="text-[11px] font-medium text-text-primary">{tierGroupLabel(g.tier)}</p>
+          <CandidateRowTable rows={g.shown} />
         </div>
-      )}
-      {comparisonRows.length > 0 && (
-        <div className="space-y-1">
-          <p className="text-[11px] font-medium text-warning">🟡 비교상품(참고용) — 식별자 근거 없이 상품명·브랜드만 유사</p>
-          <CandidateRowTable rows={comparisonRows} />
-        </div>
-      )}
-      {hiddenCount > 0 && (
+      ))}
+      {moreRows.length > 0 && (
         <div className="space-y-1.5">
           <button
             type="button"
             onClick={() => setShowAll((v) => !v)}
             className="text-xs text-primary underline hover:text-primary-hover"
           >
-            {showAll ? "매칭 불확실 항목 접기" : `매칭 불확실/미지원/오류 ${hiddenCount}건 더 보기`}
+            {showAll ? "접기" : `더 보기 (${moreRows.length}건)`}
           </button>
-          {showAll && <CandidateRowTable rows={hiddenRows} />}
+          {showAll && <CandidateRowTable rows={moreRows} />}
         </div>
       )}
     </div>

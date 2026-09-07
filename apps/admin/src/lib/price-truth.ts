@@ -40,3 +40,42 @@ export function computeFxLine(
 export function isOnSale(price: { amount: number } | null | undefined, regularPrice: { amount: number } | null | undefined): boolean {
   return !!(regularPrice && price && regularPrice.amount > price.amount);
 }
+
+/** MI-UX-9(CPO 지시, 2026-09-07 §3/§4) — 화면에 `177900.00 KRW`가 그대로 나오던
+ * 문제를 한 곳에서 막는다.
+ *
+ * 원인은 표시 코드가 `amount.toFixed(2) + " " + currency`를 직접 쓴 것이었다.
+ * 이 식은 통화별 소수 자릿수를 구분하지 않아 최소 단위가 1원인 KRW에도 `.00`을
+ * 붙이고, 천단위 구분이 없어 자릿수를 눈으로 셀 수 없었다. GBP/EUR에서는 소수
+ * 두 자리가 맞으므로 `toFixed(2)` 자체가 틀린 게 아니라 "통화를 보지 않는 것"이
+ * 틀렸다 — 그래서 통화별 분기를 이 함수 하나로 모은다.
+ *
+ * 계산에 쓰는 raw number는 건드리지 않는다. 이 함수는 표시 문자열만 만든다.
+ *
+ * 심볼을 모르는 통화는 심볼을 지어내지 않고 `1,234.00 SEK`처럼 코드를 뒤에
+ * 붙인다 — 모르는 것을 아는 척하지 않는다는 이 파일의 기존 원칙과 같다. */
+const CURRENCY_SYMBOL: Record<string, string> = {
+  KRW: "₩",
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+  JPY: "¥",
+};
+
+/** 최소 단위가 1인 통화 — 소수점을 붙이면 안 된다(`₩177,900.00` 같은 표기 금지). */
+const ZERO_DECIMAL_CURRENCIES = new Set(["KRW", "JPY"]);
+
+export function formatMoney(amount: number | null | undefined, currency: string | null | undefined): string {
+  // 값이 없거나 숫자가 아니면 0으로 떨어뜨리지 않는다 — "0원"과 "미확인"은 다르다.
+  if (amount == null || !Number.isFinite(amount)) return "—";
+  const code = (currency ?? "").toUpperCase();
+  const digits = ZERO_DECIMAL_CURRENCIES.has(code) ? 0 : 2;
+  const body = amount.toLocaleString("ko-KR", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+  const symbol = CURRENCY_SYMBOL[code];
+  if (symbol) return `${symbol}${body}`;
+  // 통화 코드조차 없으면 숫자만 — `1,234 UNDEFINED`를 만들지 않는다.
+  return code ? `${body} ${code}` : body;
+}

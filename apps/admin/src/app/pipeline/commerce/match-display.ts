@@ -84,6 +84,60 @@ const TIERS: Record<MatchDisplayTier, MatchDisplay> = {
   },
 };
 
+/**
+ * MI-UX-9(CPO 지시, 2026-09-07 §5/§6/§7) — 기본 가격비교 리스트에 무엇을 넣을지.
+ *
+ * MI의 목적은 "시장에 뭐가 얼마나 있는지 전부 보여주는 것"이 아니라 판매 판단
+ * 근거를 주는 것이다. 그래서 매칭 가능성이 있는 등급만 기본으로 보여주고,
+ * 판단 근거가 될 수 없는 등급은 "더 보기" 뒤로 보낸다.
+ *
+ * 기본 노출에서 빼는 두 가지:
+ *  - CONFLICT: 식별자가 실제로 충돌한다 — 가격 근거로 쓰면 안 되는 값이다.
+ *  - UNKNOWN(INSUFFICIENT_EVIDENCE): 판단 근거 자체가 부족하다.
+ * 둘 다 데이터를 지우는 게 아니라 기본 노출에서만 뺀다(진단용으로 계속 필요).
+ *
+ * SAME_MODEL_OPTION_DIFF(해외 SAME_MODEL_VARIANT)는 CPO 지시서의 ①②③ 목록에
+ * 명시되지 않았지만 기본 노출에 포함한다 — "같은 모델인데 옵션만 다름"은 충돌이
+ * 아니라 참고 가격으로서 SIMILAR보다 판단 가치가 높고, §8이 이 배지를 유지하라고
+ * 지시했기 때문이다. 가격 반영 정책은 그대로다(직접 반영 아님, 참고 가격).
+ */
+const DEFAULT_VISIBLE_TIERS = new Set<MatchDisplayTier>([
+  "SAME",
+  "SAME_MODEL_OPTION_DIFF",
+  "PRESUMED_SAME",
+  "SIMILAR",
+]);
+
+export function isDefaultVisibleTier(tier: MatchDisplayTier): boolean {
+  return DEFAULT_VISIBLE_TIERS.has(tier);
+}
+
+/** 기본 화면에서 그룹을 쌓는 순서. 판단 가치가 높은 등급이 항상 위에 온다 —
+ * 정렬 결과에 기대지 않고 렌더링 구조 자체로 순서를 고정한다(P-24 Sprint 2에서
+ * 국내 표에 적용했던 원칙을 국내/해외 공통으로 올린 것). */
+export const DEFAULT_TIER_ORDER: MatchDisplayTier[] = [
+  "SAME",
+  "SAME_MODEL_OPTION_DIFF",
+  "PRESUMED_SAME",
+  "SIMILAR",
+];
+
+/** 그룹 제목. 배지 라벨(TIERS[].label)과 같은 말을 쓴다 — 같은 판정을 그룹에서는
+ * 다르게 부르면 MATCHING-UNIFY-1이 없앤 문제가 그대로 돌아온다. */
+export function tierGroupLabel(tier: MatchDisplayTier): string {
+  return `${TIERS[tier].icon} ${TIERS[tier].label}`;
+}
+
+/** MI-UX-9 §7 — 유사상품은 가격 판단에 의미가 있는 상위 몇 건만 기본 노출하고
+ * 나머지는 "더 보기"로 넘긴다. 동일상품/추정은 건수가 많지 않고 판단에 직접
+ * 쓰이므로 자르지 않는다. 서버 정렬(랭킹 점수) 순서를 그대로 신뢰한다 — 여기서
+ * 새로 정렬하지 않는다. */
+export const SIMILAR_DEFAULT_LIMIT = 3;
+
+export function defaultLimitForTier(tier: MatchDisplayTier): number | null {
+  return tier === "SIMILAR" ? SIMILAR_DEFAULT_LIMIT : null;
+}
+
 /** 국내(matchTruth) → 공통 표시. 국내에는 옵션 차이 데이터가 없으므로
  * SAME_MODEL_OPTION_DIFF는 나올 수 없다. */
 export function domesticMatchDisplay(truth: MatchTruth): MatchDisplay {

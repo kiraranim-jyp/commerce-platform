@@ -4,9 +4,19 @@ import { useEffect, useRef, useState } from "react";
 import { countryToFlagEmoji } from "@commerce/shared";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { deriveComparisonResultState, getComparisonResultHeadline, type ComparisonResultState } from "@/lib/comparison-result-status";
-import { computeFxLine, computeKrwAmount, isOnSale, isPriceDisplayable } from "@/lib/price-truth";
+import { computeFxLine, computeKrwAmount, formatMoney, isOnSale, isPriceDisplayable } from "@/lib/price-truth";
 // MATCHING-UNIFY-1 — 국내/해외가 같은 문구를 쓰도록 라벨 매핑을 한 곳에서 가져온다.
-import { overseasMatchDisplay } from "./match-display";
+// MI-UX-9 — 기본 노출 등급/그룹 순서/유사상품 상한도 국내와 같은 곳에서 가져온다.
+import {
+  DEFAULT_TIER_ORDER,
+  defaultLimitForTier,
+  isDefaultVisibleTier,
+  overseasMatchDisplay,
+  tierGroupLabel,
+  type MatchDisplayTier,
+} from "./match-display";
+// MI-UX-9 §10 — 검색 상태 5종(자동지원/수동필요/검색실패/결과없음/확인불가) 구분.
+import { searchSourceStatusDisplay } from "@/lib/search-source-status";
 import {
   computePriceDifference,
   deriveSellerDecisionState,
@@ -44,6 +54,20 @@ type ProductMatchTruth =
  * 넘어간다 — 배지 자체(🔵 "동일 모델 · 옵션 다름")는 그대로 별도 표시된다. */
 function isConfirmedSameProduct(truth: ProductMatchTruth): boolean {
   return truth === "EXACT_PRODUCT" || truth === "CONFIRMED_PRODUCT";
+}
+
+/** MI-UX-9(CPO 지시, 2026-09-07 §5) — 국내와 같은 등급 축으로 표를 묶기 위한 매핑.
+ *
+ * 이전 기본 필터는 `matchLevel !== "low"`(텍스트 유사도)였다. 이건 P-11에서
+ * 이미 밝혀진 문제를 표 필터에 그대로 남겨둔 것이다 — productMatchTruth가
+ * CONFLICT("식별자가 실제로 다름")인 후보도 텍스트 점수만 높으면 기본 노출에
+ * 남았다. 여기서는 판정값(productMatchTruth)을 우선 기준으로 삼고, 없을 때만
+ * 기존 matchLevel로 폴백한다 — 판정 알고리즘은 그대로다. */
+function displayTierForCandidate(c: Pick<Candidate, "productMatchTruth" | "matchLevel">): MatchDisplayTier {
+  if (c.productMatchTruth) return overseasMatchDisplay(c.productMatchTruth).tier;
+  if (c.matchLevel === "very_high" || c.matchLevel === "high") return "SAME";
+  if (c.matchLevel === "medium") return "PRESUMED_SAME";
+  return "UNKNOWN";
 }
 
 const MATCH_LEVEL_LABEL: Record<MatchLevel, string> = {
@@ -283,14 +307,14 @@ function SourceVerificationCard({
     <div className="space-y-1 rounded-md border border-success/30 bg-success-soft px-3 py-2 text-xs">
       <div className="font-medium text-success">✓ 원본 상품 현재 판매가 확인됨</div>
       <div className="flex flex-wrap items-baseline gap-x-2 text-text-primary">
-        <span className="font-semibold">
-          {price?.amount.toFixed(2)} {price?.currency}
-        </span>
-        {krwAmount != null && <span className="text-text-secondary">약 ₩{krwAmount.toLocaleString("ko-KR")}</span>}
+        {/* MI-UX-9 §4 — `177900.00 KRW`를 만들던 자리. 통화별 소수 자릿수와
+            천단위 구분은 formatMoney가 전담한다. */}
+        <span className="font-semibold">{formatMoney(price?.amount, price?.currency)}</span>
+        {krwAmount != null && <span className="text-text-secondary">약 {formatMoney(krwAmount, "KRW")}</span>}
         {onSale && (
           <>
             <span className="text-text-tertiary line-through">
-              {regularPrice!.amount.toFixed(2)} {regularPrice!.currency}
+              {formatMoney(regularPrice!.amount, regularPrice!.currency)}
             </span>
             <span className="rounded bg-warning-soft px-1.5 py-0.5 text-[10px] font-medium text-warning">
               현재 할인 판매 중
@@ -399,7 +423,7 @@ function SellerDecisionCard({
         <span>
           원본 확인가:{" "}
           {sourceVerification?.status === "VERIFIED_CURRENT" && sourceVerification.price
-            ? `${sourceVerification.price.amount.toFixed(2)} ${sourceVerification.price.currency}`
+            ? formatMoney(sourceVerification.price.amount, sourceVerification.price.currency)
             : "확인 안 됨"}
         </span>
         <span>비교 가능한 동일상품: {sameProductCount}건</span>
@@ -447,61 +471,100 @@ function ResultTable({
   fxSource: "frankfurter" | "fallback" | null;
 }) {
   const [showAll, setShowAll] = useState(false);
-  type Row = {
-    shopId: string;
-    shopName: string;
-    shopCountry?: string | null;
-    candidate: Candidate | null;
-    note?: string;
-  };
-  const allRows: Row[] = [];
+  const allRows: OverseasRow[] = [];
   for (const r of results) {
-    if (r.status === "unsupported") {
-      allRows.push({
-        shopId: r.shopId,
-        shopName: r.shopName,
-        shopCountry: r.shopCountry,
-        candidate: null,
-        note: "지원되지 않는 사이트",
-      });
-    } else if (r.status === "error") {
-      const note =
-        r.errorKind === "RATE_LIMITED"
-          ? "요청이 많아 확인하지 못함 — 잠시 후 다시 시도"
-          : "일시적인 오류로 확인하지 못함";
-      allRows.push({ shopId: r.shopId, shopName: r.shopName, shopCountry: r.shopCountry, candidate: null, note });
-    } else if (r.candidates.length === 0) {
-      allRows.push({
-        shopId: r.shopId,
-        shopName: r.shopName,
-        shopCountry: r.shopCountry,
-        candidate: null,
-        note: "일치하는 후보 없음",
-      });
-    } else {
+    // MI-UX-9 §14 — candidates가 배열이 아닌 응답에서도 죽지 않는다.
+    if (r.status === "ok" && Array.isArray(r.candidates) && r.candidates.length > 0) {
       for (const c of r.candidates) {
         allRows.push({ shopId: r.shopId, shopName: r.shopName, shopCountry: r.shopCountry, candidate: c });
       }
+      continue;
     }
+    // MI-UX-9 §10 — "지원되지 않는 사이트"는 셀러에게 아무 행동도 알려주지 않는
+    // 개발자 문구였다. 국내와 같은 상태 helper를 써서 "수동 확인 필요 / 검색 실패 /
+    // 검색 결과 없음 / 확인 불가"를 구분한다.
+    allRows.push({
+      shopId: r.shopId,
+      shopName: r.shopName,
+      shopCountry: r.shopCountry,
+      candidate: null,
+      note: searchSourceStatusDisplay(r).note,
+    });
   }
-  const acceptableRows = allRows.filter((row) => row.candidate?.matchLevel && row.candidate.matchLevel !== "low");
+
+  // MI-UX-9 §5/§6 — 기본 노출은 판정값 기준. 이전 `matchLevel !== "low"` 필터는
+  // CONFLICT(식별자 충돌)도 텍스트 점수만 높으면 통과시켰다.
+  const visibleRows = allRows.filter((row) => row.candidate && isDefaultVisibleTier(displayTierForCandidate(row.candidate)));
+  const hiddenRows = allRows.filter((row) => !row.candidate || !isDefaultVisibleTier(displayTierForCandidate(row.candidate)));
   // CEO 지시(2026-08-19: "매칭성공 0이면 조회를 하지마") — 참고 가능한 매칭이
-  // 하나도 없으면 "더 보기" 토글 자체를 그리지 않는다(위 ResultHeadline이 이미
-  // 안내 — 아래 토글이 "그래도 27건 보러가기"처럼 보이는 것을 막는다는 기존 원칙 유지).
-  if (acceptableRows.length === 0) return null;
-  const rows = showAll ? allRows : acceptableRows;
-  const hiddenCount = allRows.length - acceptableRows.length;
+  // 하나도 없으면 표 자체를 그리지 않는다(위 ResultHeadline이 이미 안내).
+  if (visibleRows.length === 0) return null;
+
+  // §7 — 유사상품만 상위 N건으로 자르고, 나머지는 "더 보기"로 넘긴다.
+  const groups = DEFAULT_TIER_ORDER.map((tier) => {
+    const rows = visibleRows.filter((row) => displayTierForCandidate(row.candidate!) === tier);
+    const limit = defaultLimitForTier(tier);
+    return {
+      tier,
+      shown: limit == null ? rows : rows.slice(0, limit),
+      overflow: limit == null ? [] : rows.slice(limit),
+      total: rows.length,
+    };
+  }).filter((g) => g.total > 0);
+
+  const moreRows = [...groups.flatMap((g) => g.overflow), ...hiddenRows];
   return (
-    <div className="space-y-1.5">
-      {hiddenCount > 0 && (
-        <button
-          type="button"
-          onClick={() => setShowAll((v) => !v)}
-          className="text-xs text-primary underline hover:text-primary-hover"
-        >
-          {showAll ? "참고용 항목 접기" : "참고용 검색 결과 더 보기"}
-        </button>
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-text-secondary">
+        {groups.map((g) => (
+          <span key={g.tier}>
+            {tierGroupLabel(g.tier)} {g.total}건
+          </span>
+        ))}
+      </div>
+      {groups.map((g) => (
+        <div key={g.tier} className="space-y-1">
+          <p className="text-[11px] font-medium text-text-primary">{tierGroupLabel(g.tier)}</p>
+          <OverseasRowTable rows={g.shown} krwRates={krwRates} fxSource={fxSource} />
+        </div>
+      ))}
+      {moreRows.length > 0 && (
+        <div className="space-y-1.5">
+          <button
+            type="button"
+            onClick={() => setShowAll((v) => !v)}
+            className="text-xs text-primary underline hover:text-primary-hover"
+          >
+            {showAll ? "접기" : `더 보기 (${moreRows.length}건)`}
+          </button>
+          {showAll && <OverseasRowTable rows={moreRows} krwRates={krwRates} fxSource={fxSource} />}
+        </div>
       )}
+    </div>
+  );
+}
+
+type OverseasRow = {
+  shopId: string;
+  shopName: string;
+  shopCountry?: string | null;
+  candidate: Candidate | null;
+  note?: string;
+};
+
+/** MI-UX-9 §2/§12 — 국내(CandidateRowTable)와 같은 열 순서·정렬 규칙을 쓰는 표.
+ * 그룹마다 이 표를 반복해서 그리기 위해 ResultTable 안에 있던 JSX를 그대로
+ * 컴포넌트로 분리했다(마크업 변경 아님 — 감싸는 구조만 바뀐다). */
+function OverseasRowTable({
+  rows,
+  krwRates,
+  fxSource,
+}: {
+  rows: OverseasRow[];
+  krwRates: Record<string, number> | null;
+  fxSource: "frankfurter" | "fallback" | null;
+}) {
+  return (
       <div className="overflow-x-auto rounded-md border border-border">
         <table className="w-full min-w-[640px] border-collapse text-left text-[11px]">
           <thead>
@@ -559,7 +622,6 @@ function ResultTable({
           </tbody>
         </table>
       </div>
-    </div>
   );
 }
 
@@ -578,7 +640,8 @@ function MatchBadge({ candidate: c }: { candidate: Candidate }) {
           {icon} {label}
         </span>
         <p className="text-[10px] text-text-tertiary">{note}</p>
-        {c.matchReasons?.length ? <p className="text-[10px] text-text-tertiary">근거: {c.matchReasons.join(" · ")}</p> : null}
+        {/* MI-UX-9 §13 — 국내 표와 같은 이유로 "근거: A · B · C" 줄은 기본 표에서
+            뺀다(상세 근거는 상세 영역의 관심사). matchReasons 데이터는 그대로 남는다. */}
       </div>
     );
   }
@@ -593,7 +656,7 @@ function MatchBadge({ candidate: c }: { candidate: Candidate }) {
             ? "비교상품"
             : "매칭 불확실"}
       </span>
-      {c.matchReasons?.length ? <p className="text-[10px] text-text-tertiary">근거: {c.matchReasons.join(" · ")}</p> : null}
+      {/* MI-UX-9 §13 — 위 분기와 같은 이유로 상세 근거 줄 제거. */}
     </div>
   );
 }
@@ -631,17 +694,17 @@ function PriceCell({
   const onSale = isOnSale(candidate.price, candidate.regularPrice);
   return (
     <div className="whitespace-nowrap">
-      <span className="text-text-primary">
-        {candidate.price!.amount.toFixed(2)} {candidate.price!.currency}
-      </span>
+      {/* MI-UX-9 §4 — 표의 가격도 같은 포맷터를 쓴다(우측 정렬 + tabular-nums는
+          이 셀을 감싸는 td가 이미 적용). */}
+      <span className="text-text-primary">{formatMoney(candidate.price!.amount, candidate.price!.currency)}</span>
       {onSale && (
         <span className="ml-1 text-text-tertiary line-through">
-          {candidate.regularPrice!.amount.toFixed(2)}
+          {formatMoney(candidate.regularPrice!.amount, candidate.regularPrice!.currency)}
         </span>
       )}
       {krwAmount != null && (
         <div className="text-text-secondary">
-          약 ₩{krwAmount.toLocaleString("ko-KR")}
+          약 {formatMoney(krwAmount, "KRW")}
           {fxLine && <span className="ml-1 text-[10px] text-text-tertiary">· {fxLine}</span>}
         </div>
       )}

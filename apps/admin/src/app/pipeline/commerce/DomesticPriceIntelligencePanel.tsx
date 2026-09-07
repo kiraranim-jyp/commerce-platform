@@ -788,6 +788,8 @@ export function DomesticPriceIntelligencePanel({
   const [showDomesticDetail, setShowDomesticDetail] = useState(false);
   // P-2-3 ⑤(대표님 지시, 2026-08-28) — "왜 이런 판단인가"는 기본적으로 접어둔다.
   const [showReasonDetail, setShowReasonDetail] = useState(false);
+  /** MI-UX-9 §9 — "동일상품 매칭 근거"는 기본 숨김(상세 펼침에서만 확인). */
+  const [showMatchEvidence, setShowMatchEvidence] = useState(false);
   // UX-1(CPO 지시, 2026-09-05) — 시장 신호 블록은 "종합 상태 + 3개 신호"까지만
   // 기본 노출하고, 판단 근거 표와 전략 가이드는 상세로 내린다. 사용자가 먼저
   // 봐야 하는 건 "팔아도 되는가"이지 근거 전체가 아니다(기능 제거가 아니라 계층화).
@@ -1761,9 +1763,21 @@ export function DomesticPriceIntelligencePanel({
             matchReasons를 그대로 체크리스트로 옮긴다(새 판정 로직 없음). EXACT는
             가격비교에 이미 반영됨을, HIGH_CONFIDENCE는 확인 버튼을, REVIEW_REQUIRED는
             미반영 문구를 보여준다 — 확정 가격(위)과는 별도 블록으로 명확히 구분한다. */}
+        {/* MI-UX-9(CPO 지시, 2026-09-07 §9) — 이 블록을 기본 숨김으로 바꾼다.
+            셀러가 기본 화면에서 필요한 것은 "동일상품 / 가격 / 판매처"이지 매칭
+            알고리즘의 상세 근거가 아니다. 근거 데이터(matchReasons/신호 누락 표시/
+            "동일상품으로 확인" 버튼)는 하나도 지우지 않고 펼침 영역으로만 옮긴다 —
+            위 "왜 이런 판단인가?"와 같은 토글 패턴을 그대로 쓴다. */}
         {candidates.length > 0 && (
           <div className="rounded-md border border-dashed border-border bg-background p-2">
-            <span className="font-medium text-text-primary">동일상품 매칭 근거 ({candidates.length}건)</span>
+            <button
+              type="button"
+              onClick={() => setShowMatchEvidence((v) => !v)}
+              className="font-medium text-text-primary hover:underline"
+            >
+              {showMatchEvidence ? "▾" : "▸"} 왜 동일상품인가? ({candidates.length}건)
+            </button>
+            {showMatchEvidence && (
             <ul className="mt-1.5 space-y-2">
               {candidates.slice(0, 8).map((c) => {
                 const label = candidateLabel(c);
@@ -1812,6 +1826,7 @@ export function DomesticPriceIntelligencePanel({
                 );
               })}
             </ul>
+            )}
           </div>
         )}
 
