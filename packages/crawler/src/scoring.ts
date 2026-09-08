@@ -63,6 +63,9 @@ const GALLERY_CONTEXT_KEYWORDS = [
 const SOURCE_BASE_SCORE: Record<StrategySource, number> = {
   "json-ld": 90,
   shopify: 90,
+  // PrestaShop 전용 경로는 상품 페이지의 갤러리 이미지를 구조적으로 가져오므로
+  // shopify와 같은 신뢰도로 둔다 — 둘 다 플랫폼 마크업이 보장하는 상품 이미지다.
+  prestashop: 90,
   "next-data": 70,
   "open-graph": 60,
   "dom-scan": 50,

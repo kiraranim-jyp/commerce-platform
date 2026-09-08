@@ -74,6 +74,7 @@ function countBySource(candidates: ImageCandidate[]): Record<StrategySource, num
     shopify: 0,
     "next-data": 0,
     "dom-scan": 0,
+    prestashop: 0,
   };
   for (const candidate of candidates) counts[candidate.source]++;
   return counts;

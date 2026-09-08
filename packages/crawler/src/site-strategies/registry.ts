@@ -1,10 +1,13 @@
+import { prestashopSiteStrategy } from "./prestashop.site-strategy";
 import { shopifySiteStrategy } from "./shopify.site-strategy";
 import type { SiteStrategy, SiteStrategyResult } from "./types";
 
 /** 새 플랫폼(WooCommerce/Cafe24 등)을 추가하려면 SiteStrategy를 구현해서 이
  * 배열에 등록하기만 하면 된다 — 오케스트레이터(universal-extractor.ts)는 이 목록을
  * 순서대로 시도할 뿐 특정 플랫폼을 모른다. */
-const SITE_STRATEGIES: SiteStrategy[] = [shopifySiteStrategy];
+// Shopify를 먼저 둔다 — detect()가 URL의 `/products/{handle}`만 보는 정확한
+// 판별이라 PrestaShop URL 힌트(느슨함)보다 먼저 걸러지는 편이 안전하다.
+const SITE_STRATEGIES: SiteStrategy[] = [shopifySiteStrategy, prestashopSiteStrategy];
 
 /** 등록된 SiteStrategy를 순서대로 시도한다 — detect()가 맞으면 extract()를,
  * extract()가 이미지를 못 찾으면 fallback()을 시도하고, 그것도 실패하면 다음

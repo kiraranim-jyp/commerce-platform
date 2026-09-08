@@ -1,6 +1,6 @@
 import type { Page } from "playwright-core";
 
-export type StrategySource = "json-ld" | "open-graph" | "shopify" | "next-data" | "dom-scan";
+export type StrategySource = "json-ld" | "open-graph" | "shopify" | "next-data" | "dom-scan" | "prestashop";
 
 /** 한 페이지에서 발견한 이미지 후보 하나. 여러 Strategy가 같은 URL을 찾으면
  * universal-extractor가 병합해서 점수 보너스를 준다. */

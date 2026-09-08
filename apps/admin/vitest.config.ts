@@ -13,6 +13,13 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/__tests__/**/*.test.ts"],
+    // SITE-EXTENSION-IMPLEMENTATION-1(2026-09-08) — packages/crawler에는 테스트
+    // 러너가 없다(커스텀 node 스크립트만 있다). 사이트 전략처럼 순수 함수로
+    // 검증 가능한 코드는 이 프로젝트의 유일한 vitest에서 함께 돌린다 — 러너를
+    // 하나 더 만들면 "어디서 도는 테스트인지" 갈라져 빠뜨리기 쉽다.
+    include: [
+      "src/**/__tests__/**/*.test.ts",
+      "../../packages/crawler/src/**/__tests__/**/*.test.ts",
+    ],
   },
 });
