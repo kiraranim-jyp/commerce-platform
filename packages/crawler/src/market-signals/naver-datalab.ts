@@ -10,7 +10,20 @@
  * 판매량처럼 표현하지 말 것")에 따라, 호출부 어디에서도 "검색량 N건"처럼
  * 절대 수치로 재해석하지 않고 항상 "상대지수"로만 노출한다.
  */
-const DATALAB_ENDPOINT = "https://openapi.naver.com/v1/datalab/search";
+/**
+ * NAVER-API-HUB-RECOVERY-2(CPO 지시, 2026-09-08) — 구 개발자센터 엔드포인트
+ * (openapi.naver.com/v1/datalab/search)에서 NAVER API HUB로 이관한다.
+ *
+ * 검색어트렌드는 2026년 API HUB로 옮겨졌고, 구 엔드포인트는 더 이상 인증되지
+ * 않는다 — Production 실측에서 HTTP 401 / errorCode 024("NID AUTH Result
+ * Invalid")가 나온 원인이 자격증명이 아니라 여기였다.
+ *
+ * 바뀌는 것은 호스트와 인증 헤더 이름뿐이다. request body와 response 스키마
+ * (results[].data[].ratio)는 공식 문서상 동일해서 파싱 로직은 건드리지 않는다.
+ *
+ * 규격 출처: api.ncloud-docs.com/docs/naver-api-hub-search-trend
+ */
+const DATALAB_ENDPOINT = "https://naverapihub.apigw.ntruss.com/search-trend/v1/search";
 const FETCH_TIMEOUT_MS = 8000;
 
 export interface NaverDataLabCredentials {
@@ -89,8 +102,11 @@ export async function fetchNaverSearchTrendRatio(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Naver-Client-Id": credentials.clientId,
-        "X-Naver-Client-Secret": credentials.clientSecret,
+        // API HUB는 Application Client ID/Secret을 이 두 헤더로 받는다.
+        // 계정 단위 IAM 키(Access Key/Secret Key)나 HMAC 서명이 아니다 —
+        // 공식 문서가 요구하는 것은 Application Key다.
+        "X-NCP-APIGW-API-KEY-ID": credentials.clientId,
+        "X-NCP-APIGW-API-KEY": credentials.clientSecret,
       },
       body: JSON.stringify({
         startDate: formatDate(startDate),
