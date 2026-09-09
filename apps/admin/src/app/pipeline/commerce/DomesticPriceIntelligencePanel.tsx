@@ -805,12 +805,17 @@ export function DomesticPriceIntelligencePanel({
   //   L2 왜 그런가 : representativeVerdict.reasons (판정 엔진이 낸 근거 문장)
   //   L3 어떻게 계산: 구매가 · 착지원가 · 최소마진/목표마진 참고가 · 브랜드 프로파일
   // UX-2(CEO 지시, 2026-09-05) — "이건 노출되도 될 것 같아". UX-1C가 판단
-  // 근거(왜 이 판단인가)와 원가 숫자(구매가·착지원가·참고 기준가)를 접었는데,
-  // CEO 실사용 판단은 "이 정도는 첫 화면에 보여도 된다"였다. 접는 기능은
-  // 그대로 두고 초기 상태만 펼침으로 바꾼다 — 셀러가 결론과 그 근거를 한
-  // 화면에서 같이 보게 하는 것이 이 패널의 목적이기 때문이다.
-  const [showWhyVerdict, setShowWhyVerdict] = useState(true);
-  const [showCalcDetail, setShowCalcDetail] = useState(true);
+  // 근거와 원가 숫자를 접었는데, CEO 실사용 판단은 "이 정도는 첫 화면에
+  // 보여도 된다"여서 초기 상태를 펼침으로 바꿨었다.
+  //
+  // MI 2.0 PHASE 1.2(CPO 지시, 2026-09-09) — 그 결정을 되돌려 다시 접는다.
+  // ⚠️ 이건 위 CEO 지시를 뒤집는 변경이므로 근거를 남긴다: UX-2 시점에는
+  // 첫 화면에 결론 말고 보여줄 것이 이 블록들뿐이었다. 지금은 그 자리를
+  // 4축 레이더와 판단 요약이 채우고 있어서, 같은 근거를 두 번 펼쳐 두면
+  // 첫 화면이 다시 길어지고 "결론 → 근거" 계층이 무너진다.
+  // 접는 기능 자체와 내용은 그대로다 — 초기 상태만 바꾼다.
+  const [showWhyVerdict, setShowWhyVerdict] = useState(false);
+  const [showCalcDetail, setShowCalcDetail] = useState(false);
   // MI-UX-8 — "가격 전략" 블록 제거로 이 토글도 함께 사라졌다.
   const [rechecking, setRechecking] = useState(false);
   const [recheckResult, setRecheckResult] = useState<RecheckResult | null>(null);
