@@ -14,7 +14,7 @@ import {
 } from "./match-display";
 // MI-UX-9 §4 — 통화 표시를 한 곳에서. §10 — 검색 상태 5종 구분.
 import { formatMoney } from "@/lib/price-truth";
-import { searchSourceStatusDisplay } from "@/lib/search-source-status";
+import { deriveSearchSourceStatus, searchSourceStatusDisplay } from "@/lib/search-source-status";
 
 type MatchLevel = "very_high" | "high" | "medium" | "low";
 
@@ -238,19 +238,50 @@ function ResultHeadline({ results, title, brand }: { results: SearchResult[]; ti
   const exactCount = countBy("EXACT");
   const comparisonCount = countBy("COMPARISON");
   if (exactCount === 0 && comparisonCount === 0) {
-    // MI 2.0 PHASE 1.4(CPO 지시, 2026-09-09) — 0건을 "경쟁력 없음"이나 "판매
-    // 불가"로 읽히게 두지 않는다. 정확한 의미는 "비교 가능한 국내 가격 근거가
-    // 지금 없다"이고, 그 상태에서 셀러가 할 수 있는 다음 행동을 알려준다.
+    // MI-DOMESTIC-FIX-2 §A(CPO 지시, 2026-09-10) — 여기가 서로 다른 네 가지
+    // 사실을 한 문장으로 뭉개던 자리다. "찾지 못했습니다"는
+    //   ① 검색해봤는데 정말 없었다
+    //   ② 결과는 있었는데 동일상품이라고 부를 근거가 없었다
+    //   ③ 애초에 자동 검색을 지원하는 판매처가 없었다
+    //   ④ 이번 요청이 실패했다
+    // 를 전부 같은 말로 만들었다. 셀러가 해야 할 행동은 넷 다 다르다 —
+    // ③은 직접 사이트를 봐야 하고, ④는 잠시 후 다시 누르면 된다.
     //
+    // 판정 근거는 새로 만들지 않는다. deriveSearchSourceStatus가 이미 샵별로
+    // 같은 구분을 하고 있고(MI-UX-9 §10) 결과 표에서도 쓰고 있다 — 헤드라인만
+    // 그걸 안 보고 있었을 뿐이다. API 계약도 그대로다: 서버는 후보를 버리지
+    // 않고 다 보내므로 candidates.length가 곧 원시 검색 결과 수다.
+    const statuses = results.map((r) => deriveSearchSourceStatus(r));
+    const searchedCount = statuses.filter((s) => s === "AUTO_SUPPORTED" || s === "NO_RESULT").length;
+    const failedCount = statuses.filter((s) => s === "SEARCH_FAILED").length;
+    const rawCount = results.reduce((n, r) => n + (r.candidates?.length ?? 0), 0);
+
+    let headline: string;
+    let detail: string;
+    if (searchedCount === 0) {
+      headline = "⚪ 자동 검색을 지원하는 국내 판매처가 없습니다";
+      detail =
+        "연결된 판매처가 모두 자동 비교를 지원하지 않아 검색 자체를 하지 못했습니다 — 국내에 상품이 없다는 뜻이 아닙니다.";
+    } else if (rawCount > 0) {
+      headline = "🟡 검색 결과는 있었지만 동일상품으로 확인된 것은 없습니다";
+      detail = `국내 ${searchedCount}곳에서 ${rawCount}건을 찾았지만, 같은 상품이라고 볼 근거가 부족해 가격 비교에 쓰지 않았습니다.`;
+    } else {
+      headline = "⚪ 국내 검색 결과가 없습니다";
+      detail = `자동 검색을 지원하는 국내 ${searchedCount}곳에서 검색했고, 결과가 없었습니다.`;
+    }
+
     // 검색은 새로 만들지 않는다 — 아래는 네이버 검색 결과 페이지로 가는 평범한
     // 링크(anchor)일 뿐이고, API 호출도 크롤러도 없다.
     const query = [brand, title].filter(Boolean).join(" ").trim();
     return (
       <div className="space-y-1.5 rounded-md border border-border bg-background px-3 py-2.5 text-xs">
-        <p className="text-text-secondary">비교 가능한 동일/유사 상품을 국내 편집샵에서 찾지 못했습니다.</p>
-        <p className="text-[11px] text-text-tertiary">
-          현재 확보된 국내 비교 데이터가 없어 시장 가격을 직접 비교할 수 없습니다.
-        </p>
+        <p className="text-text-secondary">{headline}</p>
+        <p className="text-[11px] text-text-tertiary">{detail}</p>
+        {failedCount > 0 && (
+          <p className="text-[11px] text-text-tertiary">
+            {failedCount}곳은 이번 검색이 실패했습니다 — 다시 검색하면 결과가 달라질 수 있습니다.
+          </p>
+        )}
         {query && (
           <a
             href={`https://search.shopping.naver.com/search/all?query=${encodeURIComponent(query)}`}
