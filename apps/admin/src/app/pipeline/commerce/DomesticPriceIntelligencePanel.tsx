@@ -17,6 +17,9 @@ import type { MatchTruth } from "@commerce/crawler/src/comparison-search/match-t
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 // MATCHING-UNIFY-1 — 국내 가격비교 표와 같은 라벨을 쓰기 위한 공통 매핑.
 import { domesticMatchDisplay } from "./match-display";
+// MI 2.0 PHASE 1 — 판매 판단의 근거를 4축으로 분해해 보여준다(새 판정 아님).
+import { computeRadar, type RadarSearchTrendStatus, type RadarMatchTruth } from "@commerce/pricing";
+import { MiRadar, MiRadarSummary } from "./MiRadar";
 import { shouldRefetchAfterAutoCheck } from "../snapshot-save-guard";
 
 interface SampleListing {
@@ -1053,6 +1056,29 @@ export function DomesticPriceIntelligencePanel({
     confidenceBasis,
     sellerDecision,
   } = data;
+
+  // MI 2.0 PHASE 1 — 서버가 이미 낸 값들을 읽어 4축 상태로 옮긴다.
+  // 여기서 가격/판정을 다시 계산하지 않는다.
+  const searchSignal = marketSignals.signals.find((s) => s.key === "searchInterest");
+  const searchTrendStatus: RadarSearchTrendStatus =
+    searchSignal == null || searchSignal.level === "unknown" ? "AUTH_ERROR" : "OK";
+  const searchRatio =
+    searchSignal?.level === "high" ? 70 : searchSignal?.level === "medium" ? 35 : searchSignal?.level === "low" ? 5 : null;
+  const radar = computeRadar({
+    // recommendation이 없으면(가격 근거 자체가 없는 상태) CASE도 없다 —
+    // 없는 판정을 지어내지 않고 null을 넘겨 "확인 불가"로 떨어뜨린다.
+    marketCase: recommendation?.marketCase ?? null,
+    landedCostKrw: cost?.landedCostKrw ?? null,
+    recommendedPriceKrw: recommendation?.recommendedPrice ?? null,
+    domesticLowestPriceKrw: domesticCompetition.lowestPriceKrw,
+    domesticBasis: domesticMarketSplit.basis,
+    searchTrend: { status: searchTrendStatus, ratio: searchRatio },
+    bestMatchTruth: (candidates.find((c) => c.matchTruth)?.matchTruth ?? null) as RadarMatchTruth | null,
+  });
+  const radarNotes = [
+    recommendation?.estimatedMarginPercent != null ? `예상 마진 ${recommendation.estimatedMarginPercent}%` : null,
+    domesticCompetition.lowestPriceKrw != null ? `국내 최저가 ₩${domesticCompetition.lowestPriceKrw.toLocaleString()}` : null,
+  ].filter((v): v is string => v != null);
   const domesticShopHistory = data.priceHistory?.domesticShop ?? null;
   const trend7d = domesticShopHistory?.trend7d ?? null;
   const trend30d = domesticShopHistory?.trend30d ?? null;
@@ -1714,6 +1740,19 @@ export function DomesticPriceIntelligencePanel({
               {sellerAction.opportunity.icon} {sellerAction.opportunity.title}
             </p>
             <p className="mt-1">{sellerAction.opportunity.detail}</p>
+          </div>
+        )}
+
+        {/* MI 2.0 PHASE 1(CPO 지시, 2026-09-09) — 판매 판단(위)의 근거를 4축으로
+            분해한다. 레이더는 새 판정을 만들지 않는다 — 위 카드가 이미 낸
+            결론을 "왜 그런지" 방향별로 보여줄 뿐이라, 항상 판단 카드보다
+            아래·작게 배치한다. */}
+        {hasAnyData && radar.scoredCount > 0 && (
+          <div className="rounded-md border border-border bg-surface p-3">
+            <div className="grid gap-4 sm:grid-cols-[200px_1fr] sm:items-start">
+              <MiRadar radar={radar} />
+              <MiRadarSummary radar={radar} notes={radarNotes} />
+            </div>
           </div>
         )}
 

@@ -20,6 +20,7 @@ export default defineConfig({
     include: [
       "src/**/__tests__/**/*.test.ts",
       "../../packages/crawler/src/**/__tests__/**/*.test.ts",
+      "../../packages/pricing/src/**/__tests__/**/*.test.ts",
     ],
   },
 });
