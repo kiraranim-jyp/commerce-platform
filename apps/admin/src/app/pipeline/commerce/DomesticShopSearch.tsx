@@ -222,7 +222,7 @@ export function DomesticShopSearch({
       </button>
       {error && <p className="text-xs text-error">{error}</p>}
       {queriedAt && <p className="text-[10px] text-text-tertiary">조회 시점: {queriedAt}</p>}
-      {results && <ResultHeadline results={results} />}
+      {results && <ResultHeadline results={results} title={title} brand={brand} />}
       {results && <ResultTable results={results} />}
     </CollapsibleSection>
   );
@@ -231,17 +231,37 @@ export function DomesticShopSearch({
 /** P-24 Sprint 2(CPO 지시, 2026-09-02) — "동일상품이 있으면 항상 대표"다.
  * matchLevel(구식 confidence) 기준을 버리고 tierForCandidate()(matchTruth
  * 우선)로 EXACT 존재 여부를 판단한다. */
-function ResultHeadline({ results }: { results: SearchResult[] }) {
+function ResultHeadline({ results, title, brand }: { results: SearchResult[]; title: string; brand?: string }) {
   // MI-UX-9 §14 — 부분/변형 응답에서 candidates가 없어도 화면이 죽지 않는다.
   const countBy = (tier: PriceTier) =>
     results.reduce((n, r) => n + (r.candidates ?? []).filter((c) => tierForCandidate(c) === tier).length, 0);
   const exactCount = countBy("EXACT");
   const comparisonCount = countBy("COMPARISON");
   if (exactCount === 0 && comparisonCount === 0) {
+    // MI 2.0 PHASE 1.4(CPO 지시, 2026-09-09) — 0건을 "경쟁력 없음"이나 "판매
+    // 불가"로 읽히게 두지 않는다. 정확한 의미는 "비교 가능한 국내 가격 근거가
+    // 지금 없다"이고, 그 상태에서 셀러가 할 수 있는 다음 행동을 알려준다.
+    //
+    // 검색은 새로 만들지 않는다 — 아래는 네이버 검색 결과 페이지로 가는 평범한
+    // 링크(anchor)일 뿐이고, API 호출도 크롤러도 없다.
+    const query = [brand, title].filter(Boolean).join(" ").trim();
     return (
-      <p className="rounded-md border border-border bg-background px-3 py-2 text-xs text-text-secondary">
-        비교 가능한 동일/유사 상품을 국내 편집샵에서 찾지 못했습니다.
-      </p>
+      <div className="space-y-1.5 rounded-md border border-border bg-background px-3 py-2.5 text-xs">
+        <p className="text-text-secondary">비교 가능한 동일/유사 상품을 국내 편집샵에서 찾지 못했습니다.</p>
+        <p className="text-[11px] text-text-tertiary">
+          현재 확보된 국내 비교 데이터가 없어 시장 가격을 직접 비교할 수 없습니다.
+        </p>
+        {query && (
+          <a
+            href={`https://search.shopping.naver.com/search/all?query=${encodeURIComponent(query)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-block rounded-md border border-border bg-surface px-2.5 py-1.5 text-[11px] font-medium text-text-primary hover:bg-background"
+          >
+            네이버에서 상품명으로 확인 ↗
+          </a>
+        )}
+      </div>
     );
   }
   if (exactCount > 0) {
