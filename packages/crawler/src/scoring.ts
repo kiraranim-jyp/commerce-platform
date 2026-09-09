@@ -152,6 +152,57 @@ function collapseByCdnId(merged: MergedCandidate[]): MergedCandidate[] {
   return collapsed;
 }
 
+/** 파일명 토큰이 이 개수 이하일 때만 로고 키워드를 로고 근거로 인정한다.
+ * 사이트 로고 파일명은 "logo", "site-logo", "logo-header"처럼 짧다. 반면 상품
+ * 이미지 파일명은 상품 슬러그라서 토큰이 훨씬 많다. */
+const LOGO_FILENAME_MAX_TOKENS = 3;
+
+function pathTokens(value: string): string[] {
+  return value.split(/[^a-z0-9]+/).filter(Boolean);
+}
+
+/**
+ * MI-DOMESTIC-FIX-1 §2(CPO 지시, 2026-09-09) — 사이트 로고를 거르되 상품명에
+ * 들어있는 일반 단어를 로고 근거로 쓰지 않는다.
+ *
+ * 이전에는 LOGO_KEYWORDS를 URL/alt/context에 대해 단순 부분문자열로 검사했다.
+ * 그래서 "Halloween Logo Sweatshirt"처럼 상품명에 logo가 들어간 상품은 URL
+ * 슬러그와 alt 양쪽에서 매치돼 **모든 이미지가 사이트 로고로 오인되어 폐기**됐다
+ * (실측: childrensalon.com 633403). "Iconic"이 "icon"에 걸리는 것도 같은 원인이다.
+ *
+ * 판정을 두 가지로 좁힌다.
+ *  ① 디렉터리 이름이 통째로 로고류인 경우(/icons/..., /assets/logos/...)
+ *  ② 파일명이 짧고(토큰 3개 이하) 그 토큰 중 하나가 정확히 로고 키워드인 경우
+ * 둘 다 "경로가 UI 자산임을 말해주는 구조"지, 상품명에 그 단어가 있느냐가 아니다.
+ * 토큰 완전일치로 바꿨기 때문에 "iconic"은 "icon"에 더 이상 걸리지 않는다.
+ *
+ * alt/context는 아예 보지 않는다 — 거기 들어오는 건 상품명이라서, 로고 판정
+ * 근거로 쓰면 같은 오탐이 되풀이된다. 반면 추천/관련상품 영역 키워드
+ * (EXCLUDE_KEYWORDS)는 원래 "이 이미지가 어느 영역에 있는지"를 말하는 신호라
+ * context 검사를 그대로 유지한다.
+ */
+function isSiteChromeImage(rawUrl: string): boolean {
+  // 상대경로/프로토콜 상대 URL도 들어올 수 있다 — 파싱에 실패하면 원문을
+  // 그대로 경로처럼 다룬다(쿼리스트링은 아래 토큰화에서 자연히 떨어진다).
+  let pathname: string;
+  try {
+    pathname = new URL(toParsableUrl(rawUrl)).pathname;
+  } catch {
+    pathname = rawUrl.split("?")[0];
+  }
+  const segments = pathname.toLowerCase().split("/").filter(Boolean);
+  if (segments.length === 0) return false;
+
+  const fileSegment = segments[segments.length - 1];
+  for (const segment of segments.slice(0, -1)) {
+    if (LOGO_KEYWORDS.some((keyword) => segment === keyword || segment === `${keyword}s`)) return true;
+  }
+
+  const nameTokens = pathTokens(fileSegment.replace(/\.[a-z0-9]+$/, ""));
+  if (nameTokens.length === 0 || nameTokens.length > LOGO_FILENAME_MAX_TOKENS) return false;
+  return nameTokens.some((token) => LOGO_KEYWORDS.includes(token));
+}
+
 function scoreOne(
   candidate: MergedCandidate,
   config: Pick<CrawlerConfig, "minWidth" | "minHeight">,
@@ -160,11 +211,15 @@ function scoreOne(
   const lowerAlt = (candidate.alt ?? "").toLowerCase();
   const context = candidate.context.toLowerCase();
 
-  const isExcluded = [...EXCLUDE_KEYWORDS, ...LOGO_KEYWORDS].some(
+  const isExcluded = EXCLUDE_KEYWORDS.some(
     (keyword) => lowerUrl.includes(keyword) || context.includes(keyword) || lowerAlt.includes(keyword),
   );
   if (isExcluded) {
-    return { score: 0, included: false, reason: "추천상품/로고 키워드 매치" };
+    return { score: 0, included: false, reason: "추천상품 영역 키워드 매치" };
+  }
+
+  if (isSiteChromeImage(candidate.url)) {
+    return { score: 0, included: false, reason: "사이트 로고/UI 이미지 경로" };
   }
 
   const isTracker = TRACKER_HOSTS.some((host) => lowerUrl.includes(host));

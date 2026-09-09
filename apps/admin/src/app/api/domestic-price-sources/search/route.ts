@@ -7,6 +7,7 @@ import {
   supportsDomesticIdentifierExtraction,
   type ComparisonSearchResult,
 } from "@commerce/crawler";
+import { buildDomesticShopQueryFromFields } from "@commerce/shared";
 import { NextResponse } from "next/server";
 import { listDomesticPriceSources } from "../_lib/domestic-price-source";
 
@@ -70,6 +71,46 @@ async function attachMatchTruth(
   );
 }
 
+/**
+ * MI-DOMESTIC-FIX-1 §6(CPO 지시, 2026-09-09) — "국내에 정말 없는 것"과
+ * "검색은 됐는데 매칭에서 다 떨어진 것"을 구분할 수 있게 하는 최소 계측.
+ *
+ * 지금까지 API 응답에는 원시 검색 결과 수가 없어서, 0건 화면을 보고도 둘 중
+ * 어느 쪽인지 판단할 방법이 아예 없었다. 요청당 정확히 한 줄만 남긴다 —
+ * 후보별 로그를 남기면 Production 로그가 감당이 안 된다.
+ *
+ * 검색어는 길이를 잘라서 남기고(상품명 전문을 로그에 쌓지 않는다), 후보 URL·
+ * 상품명·upstream 원본 응답은 남기지 않는다.
+ */
+const DEBUG_QUERY_MAX_LEN = 80;
+
+function logDomesticFunnel(
+  searchTerm: string,
+  rawResults: { candidates?: unknown[] }[],
+  results: { candidates?: { price?: unknown; soldOut?: boolean | null; matchTruth?: string }[] }[],
+) {
+  const all = results.flatMap((r) => r.candidates ?? []);
+  const truth = (t: string) => all.filter((c) => c.matchTruth === t).length;
+  console.log("[MI-domestic-debug]", {
+    query: searchTerm.slice(0, DEBUG_QUERY_MAX_LEN),
+    queryLen: searchTerm.length,
+    shops: rawResults.length,
+    rawResults: rawResults.reduce((n, r) => n + (r.candidates?.length ?? 0), 0),
+    candidateResults: all.length,
+    priceAvailable: all.filter((c) => c.price != null).length,
+    // 재고 3분류는 반드시 따로 센다 — soldOut=null(확인 불가)이 판매중으로
+    // 뭉뚱그려지면 §4에서 요구한 재고불명 현황 파악이 불가능해진다.
+    stockOnSale: all.filter((c) => c.soldOut === false).length,
+    stockSoldOut: all.filter((c) => c.soldOut === true).length,
+    stockUnknown: all.filter((c) => c.soldOut == null).length,
+    exact: truth("EXACT_IDENTIFIER") + truth("STRONG_IDENTIFIER"),
+    textConfirmed: truth("TEXT_CONFIRMED"),
+    similar: truth("SIMILAR"),
+    conflict: truth("CONFLICT"),
+    insufficientEvidence: truth("INSUFFICIENT_EVIDENCE"),
+  });
+}
+
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as
     | { title?: string; brand?: string; sourceUrl?: string; sku?: string; description?: string }
@@ -79,12 +120,28 @@ export async function POST(request: Request) {
   }
 
   const sources = (await listDomesticPriceSources()).filter((s) => s.enabled && s.status === "ACTIVE");
+
+  // MI-DOMESTIC-FIX-1(CPO 지시, 2026-09-09) — 여기가 buildDomesticShopQuery를
+  // 우회하던 자리다. searchTerm을 비워두면 크롤러가 query.title로 폴백해서
+  // "Stella McCartney Kids Girls Black Cotton Halloween Logo Sweatshirt" 같은
+  // 원제목이 그대로 국내 편집샵 검색창에 들어갔고, 검색어가 길면 0건이 되는
+  // 것은 이미 실측으로 확인된 동작이었다(product-identity-dna.ts 주석 참고).
+  // 배치 경로와 같은 검색어 정책을 쓰도록 잇기만 한다 — title은 그대로 넘겨
+  // 매칭 스코어링 신호로는 계속 쓰인다(검색어는 좁게, 매칭 신호는 넓게).
+  const searchTerm = buildDomesticShopQueryFromFields({
+    title: body.title,
+    brand: body.brand,
+    sku: body.sku,
+    sourceUrl: body.sourceUrl,
+  });
   const rawResults = await searchDomesticShops(
-    { title: body.title, brand: body.brand, sourceUrl: body.sourceUrl, sku: body.sku },
+    { title: body.title, brand: body.brand, sourceUrl: body.sourceUrl, sku: body.sku, searchTerm },
     sources.map((s) => ({ id: s.id, name: s.name, domain: s.domain, currency: s.currency, collectionStrategy: s.collectionStrategy })),
   );
   const foreignModelCode = extractForeignModelCode(body.description);
   const results = await attachMatchTruth(rawResults, foreignModelCode);
+
+  logDomesticFunnel(searchTerm, rawResults, results);
 
   return NextResponse.json({ ok: true, results });
 }

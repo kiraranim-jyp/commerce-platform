@@ -21,6 +21,9 @@ export default defineConfig({
       "src/**/__tests__/**/*.test.ts",
       "../../packages/crawler/src/**/__tests__/**/*.test.ts",
       "../../packages/pricing/src/**/__tests__/**/*.test.ts",
+      // MI-DOMESTIC-FIX-1(2026-09-09) — shared는 그동안 한 번도 실행되지 않고
+      // 있었다. 검색어 생성 정책이 여기 살기 때문에 회귀를 여기서 잡아야 한다.
+      "../../packages/shared/src/**/__tests__/**/*.test.ts",
     ],
   },
 });

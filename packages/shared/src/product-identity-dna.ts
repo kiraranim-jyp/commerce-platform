@@ -155,3 +155,42 @@ export function buildDomesticShopQuery(dna: ProductIdentityDna): string {
   if (dna.brand.value) return dna.brand.value;
   return dna.title;
 }
+
+/**
+ * MI-DOMESTIC-FIX-1(CPO 지시, 2026-09-09) — 화면의 실시간 국내 검색이
+ * buildDomesticShopQuery를 우회하던 것을 잇는 어댑터.
+ *
+ * 배치(run-domestic-price-check)는 CanonicalProduct 전체가 있어서
+ * buildProductIdentityDna로 DNA를 만든 뒤 검색어를 뽑는데, 실시간 route는
+ * 화면이 보내주는 title/brand/sku/sourceUrl만 갖고 있어서 그 경로를 쓰지
+ * 못했다. 그 결과 10단어짜리 영문 원제목이 그대로 국내 편집샵 검색창에
+ * 들어가 0건이 나왔다 — 정작 이 파일의 MAX_CORE_TITLE_TOKENS_IN_QUERY
+ * 주석이 "검색어가 길면 0건이 된다"는 실측을 이미 기록하고 있었다.
+ *
+ * 검색어 정책은 새로 만들지 않는다. 있는 필드로 DNA를 채우고 기존
+ * buildDomesticShopQuery에 그대로 위임한다 — 그래서 배치와 실시간이
+ * 같은 우선순위(SKU 단독 > 브랜드+핵심 상품명 > ...)를 쓰게 된다.
+ *
+ * 배치 경로와 다른 점은 색상/모델명 신호가 없다는 것뿐이다(화면이 보내주지
+ * 않는다). 없는 값을 지어내지 않고 null로 두면 coreTitleTokensOf가 색상
+ * 토큰만 덜 걷어낼 뿐, 검색어가 원제목으로 되돌아가지는 않는다.
+ */
+export function buildDomesticShopQueryFromFields(input: {
+  title: string;
+  brand?: string;
+  sku?: string;
+  sourceUrl?: string;
+}): string {
+  const brandValue = (input.brand ?? "").trim();
+  const sku = input.sku?.trim();
+  return buildDomesticShopQuery({
+    sourceUrl: input.sourceUrl ?? "",
+    brand: { value: brandValue, confident: false },
+    identifier: sku ? { value: sku, tier: "SKU" } : null,
+    title: input.title,
+    coreTitleTokens: coreTitleTokensOf(input.title, brandValue, null),
+    color: null,
+    category: null,
+    representativeImageUrl: null,
+  });
+}

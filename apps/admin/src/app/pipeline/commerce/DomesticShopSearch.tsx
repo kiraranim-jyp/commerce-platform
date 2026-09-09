@@ -264,6 +264,21 @@ function ResultHeadline({ results, title, brand }: { results: SearchResult[]; ti
       </div>
     );
   }
+  // MI-DOMESTIC-FIX-1 §5(CPO 지시, 2026-09-09) — 여기서 "동일상품 확인"이라고만
+  // 말하면 가격 패널이 동시에 "국내 가격 확인 불가"를 띄우는 모순이 생긴다.
+  // tierForCandidate는 재고를 보지 않는 반면(그게 맞다 — 매칭 판정과 재고는
+  // 별개 축이다), 가격 집계는 품절을 빼기 때문이다(price-history.ts summarizeFrom).
+  // 그래서 찾은 게 전부 품절이면 그 사실을 그대로 말한다. 품절을 최저가에
+  // 넣어서 해결하지 않는다 — 팔 수 없는 가격은 경쟁가격이 아니다.
+  const matched = results.flatMap((r) => (r.candidates ?? []).filter((c) => tierForCandidate(c) !== "EXCLUDED"));
+  if (matched.length > 0 && matched.every((c) => c.soldOut === true)) {
+    return (
+      <p className="rounded-md border border-warning/30 bg-warning-soft px-3 py-2 text-xs text-text-primary">
+        ⚪ 국내에서 {matched.length}건을 확인했지만 모두 품절입니다 — 현재 판매중인 가격이 없어 국내 가격 비교는
+        할 수 없습니다.
+      </p>
+    );
+  }
   if (exactCount > 0) {
     return (
       <p className="rounded-md border border-success/30 bg-success-soft px-3 py-2 text-xs text-success">
