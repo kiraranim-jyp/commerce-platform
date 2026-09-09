@@ -2,33 +2,41 @@ import { describe, expect, it } from "vitest";
 import { resolveSearchTrendCredentials } from "../market-signals-cache";
 
 /**
- * PHASE 0-B(CPO 지시, 2026-09-09).
+ * NAVER-PHASE0-AUTH-FIX(CPO 지시, 2026-09-10).
  *
- * 이 테스트가 지키는 불변조건: **API HUB 엔드포인트에는 API HUB 키가 간다.**
- * NAVER-API-HUB-2가 endpoint/헤더만 옮기고 값의 출처는 구 DataLab에 남겨둔
- * 탓에 Production이 401을 반복했다. 우선순위가 다시 뒤집히면 같은 장애가
- * 조용히 재발하므로 여기서 고정한다.
+ * 이 테스트가 지키는 불변조건: **Search Trend에는 DATALAB pair만 간다.**
+ *
+ * 이름이 헷갈리지만 실증이 갈랐다 — Production에서 네 조합을 각각 호출한
+ * 결과 NAVER_DATALAB_CLIENT_ID + CLIENT_SECRET만 200/OK/ratio를 돌려줬고,
+ * NAVER_API_ACCESS_KEY가 들어간 조합은 교차 조합까지 셋 다 401이었다.
+ * "API_HUB라는 이름이 붙었으니 API HUB 키겠지"라는 추정이 401의 원인이었고,
+ * 그 추정이 다시 코드로 돌아오지 못하게 여기서 막는다.
  */
 const HUB = { NAVER_API_ACCESS_KEY: "hub-id", NAVER_API_SECRET_KEY: "hub-secret" };
-const LEGACY = { NAVER_DATALAB_CLIENT_ID: "legacy-id", NAVER_DATALAB_CLIENT_SECRET: "legacy-secret" };
+const LEGACY = { NAVER_DATALAB_CLIENT_ID: "datalab-id", NAVER_DATALAB_CLIENT_SECRET: "datalab-secret" };
 
-describe("credential 우선순위 — API HUB가 먼저다", () => {
-  it("핵심 회귀: 둘 다 있으면 API HUB 키를 쓴다", () => {
-    const r = resolveSearchTrendCredentials({ ...LEGACY, ...HUB });
-    expect(r).toMatchObject({ clientId: "hub-id", clientSecret: "hub-secret" });
+describe("credential 선택 — DATALAB pair가 정답이다", () => {
+  it("핵심 회귀: 둘 다 있어도 DATALAB pair를 쓴다", () => {
+    // 실증에서 401을 돌려준 것이 ACCESS_KEY 쪽이다. 이름에 끌려 그쪽을
+    // 우선하면 Production이 그대로 다시 죽는다.
+    expect(resolveSearchTrendCredentials({ ...HUB, ...LEGACY })).toMatchObject({
+      clientId: "datalab-id",
+      clientSecret: "datalab-secret",
+    });
   });
 
-  it("API HUB 키가 없으면 구 DataLab 키로 폴백한다 — 회귀 없이 동작만 유지", () => {
-    const r = resolveSearchTrendCredentials(LEGACY);
-    expect(r).toMatchObject({ clientId: "legacy-id", clientSecret: "legacy-secret" });
+  it("ACCESS_KEY/SECRET_KEY만 있으면 폴백하지 않는다 — 틀린 키로 조용히 넘어가지 않는다", () => {
+    // 폴백을 남기면 401이 원인 모르게 되풀이된다. 없으면 없다고 말한다.
+    expect(resolveSearchTrendCredentials(HUB)).toBeNull();
   });
 
-  it("id/secret은 각각 독립적으로 폴백하지 않는다 — 짝이 섞이면 인증이 깨진다", () => {
-    // ACCESS_KEY만 있고 SECRET_KEY가 없는 반쪽 설정. secret은 legacy로 채워지므로
-    // 두 체계의 키가 섞인다 — 이 조합 자체는 허용하되(설정 실수 구제),
-    // 어떤 값이 선택되는지는 명시적으로 고정해 둔다.
-    const r = resolveSearchTrendCredentials({ ...LEGACY, NAVER_API_ACCESS_KEY: "hub-id" });
-    expect(r).toMatchObject({ clientId: "hub-id", clientSecret: "legacy-secret" });
+  it("DATALAB pair만 있으면 그것을 쓴다", () => {
+    expect(resolveSearchTrendCredentials(LEGACY)).toMatchObject({ clientId: "datalab-id" });
+  });
+
+  it("한쪽만 있으면 NOT_CONFIGURED — 반쪽 짝으로 호출하지 않는다", () => {
+    expect(resolveSearchTrendCredentials({ NAVER_DATALAB_CLIENT_ID: "x" })).toBeNull();
+    expect(resolveSearchTrendCredentials({ NAVER_DATALAB_CLIENT_SECRET: "x" })).toBeNull();
   });
 });
 
@@ -38,51 +46,32 @@ describe("NOT_CONFIGURED 처리 유지", () => {
   });
 
   it("빈 문자열/공백만 있는 값은 설정된 것으로 치지 않는다", () => {
-    expect(resolveSearchTrendCredentials({ NAVER_API_ACCESS_KEY: "  ", NAVER_API_SECRET_KEY: "x" })).toBeNull();
-    expect(resolveSearchTrendCredentials({ NAVER_API_ACCESS_KEY: "x", NAVER_API_SECRET_KEY: "" })).toBeNull();
+    expect(resolveSearchTrendCredentials({ NAVER_DATALAB_CLIENT_ID: "  ", NAVER_DATALAB_CLIENT_SECRET: "x" })).toBeNull();
+    expect(resolveSearchTrendCredentials({ NAVER_DATALAB_CLIENT_ID: "x", NAVER_DATALAB_CLIENT_SECRET: "" })).toBeNull();
   });
 });
 
-describe("credentialSource — 로그로 GO/NO-GO를 가르는 필드(PHASE 0 §4)", () => {
-  it("API HUB 키를 골랐으면 API_HUB", () => {
-    expect(resolveSearchTrendCredentials({ ...LEGACY, ...HUB })).toMatchObject({
-      source: "API_HUB",
-      mixedPair: false,
-    });
+describe("credentialSource — 무음 경로를 만들지 않는다(PHASE 0 §5)", () => {
+  it("자격증명을 찾았으면 DATALAB", () => {
+    expect(resolveSearchTrendCredentials(LEGACY)).toMatchObject({ source: "DATALAB", mixedPair: false });
   });
 
-  it("폴백했으면 DATALAB_FALLBACK — 이게 안 보이면 '새 키가 틀림'과 '새 키가 없음'이 구분되지 않는다", () => {
-    expect(resolveSearchTrendCredentials(LEGACY)).toMatchObject({
-      source: "DATALAB_FALLBACK",
-      mixedPair: false,
-    });
-  });
-
-  it("반쪽 설정은 mixedPair로 드러난다 — 401 원인이 키 유효성이 아니라 설정임을 로그만으로 가려낸다", () => {
-    expect(resolveSearchTrendCredentials({ ...LEGACY, NAVER_API_ACCESS_KEY: "hub-id" })).toMatchObject({
-      source: "API_HUB",
-      mixedPair: true,
-    });
-  });
-
-  it("출처는 값이 아니라 env 정의 여부로 판정한다 — 빈 문자열은 폴백하지 않는다", () => {
-    // NAVER_API_ACCESS_KEY가 정의됐지만 비어 있으면 구 키로 넘어가지 않고
-    // NOT_CONFIGURED가 된다. 이 경로가 무음이면 배포 실패와 구분되지 않는다.
-    expect(resolveSearchTrendCredentials({ ...LEGACY, NAVER_API_ACCESS_KEY: "" })).toBeNull();
+  it("못 찾았으면 null — 호출부가 NONE으로 로그를 남긴다", () => {
+    expect(resolveSearchTrendCredentials({})).toBeNull();
   });
 });
 
 describe("값 노출 금지", () => {
   it("공백 혼입은 값이 아니라 boolean 플래그로만 알린다", () => {
     const r = resolveSearchTrendCredentials({
-      NAVER_API_ACCESS_KEY: " hub-id\n",
-      NAVER_API_SECRET_KEY: "hub-secret",
+      NAVER_DATALAB_CLIENT_ID: " datalab-id\n",
+      NAVER_DATALAB_CLIENT_SECRET: "datalab-secret",
     });
-    expect(r).toMatchObject({ clientId: "hub-id", idTrimmed: true, secretTrimmed: false });
+    expect(r).toMatchObject({ clientId: "datalab-id", idTrimmed: true, secretTrimmed: false });
   });
 
   it("trim 플래그는 원본 길이를 유추할 수 있는 형태가 아니다", () => {
-    const r = resolveSearchTrendCredentials(HUB)!;
+    const r = resolveSearchTrendCredentials(LEGACY)!;
     expect(typeof r.idTrimmed).toBe("boolean");
     expect(typeof r.secretTrimmed).toBe("boolean");
   });

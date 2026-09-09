@@ -40,7 +40,12 @@ interface CacheRow {
  * "어느 체계의 키를 골랐는가"다. NONE은 키가 하나도 없어 외부 호출 자체를
  * 하지 않은 경우이므로 resolve 결과에는 담기지 않고 호출부에서만 쓴다.
  */
-export type SearchTrendCredentialSource = "API_HUB" | "DATALAB_FALLBACK" | "NONE";
+/** NAVER-PHASE0-AUTH-FIX(2026-09-10) — 실증 후 후보가 하나로 줄었다.
+ * 이전에는 API_HUB/DATALAB_FALLBACK 중 어느 쪽을 골랐는지가 401 원인 추적의
+ * 핵심 단서였는데, 이제 정답이 확정돼 고를 것이 없다. 그래도 로그 필드는
+ * 남겨둔다 — "자격증명을 못 찾음(NONE)"과 "찾았음(DATALAB)"은 여전히 다른
+ * 상태이고, 그 구분이 무음이면 배포 실패와 env 누락을 가려낼 수 없다. */
+export type SearchTrendCredentialSource = "DATALAB" | "NONE";
 
 export interface ResolvedSearchTrendCredentials {
   clientId: string;
@@ -80,13 +85,17 @@ export interface ResolvedSearchTrendCredentials {
 export function resolveSearchTrendCredentials(
   env: Record<string, string | undefined>,
 ): ResolvedSearchTrendCredentials | null {
-  const rawId = env.NAVER_API_ACCESS_KEY ?? env.NAVER_DATALAB_CLIENT_ID;
-  const rawSecret = env.NAVER_API_SECRET_KEY ?? env.NAVER_DATALAB_CLIENT_SECRET;
-  // `??`는 빈 문자열을 폴백시키지 않는다 — env에 키가 "정의는 됐지만 비어 있는"
-  // 상태면 구 키로 넘어가지 않고 NOT_CONFIGURED가 된다(테스트에서 고정한 동작).
-  // 그래서 출처 판정도 값이 아니라 "그 env가 정의됐는가"로 한다.
-  const idSource = env.NAVER_API_ACCESS_KEY != null ? "API_HUB" : "DATALAB_FALLBACK";
-  const secretSource = env.NAVER_API_SECRET_KEY != null ? "API_HUB" : "DATALAB_FALLBACK";
+  // NAVER-PHASE0-AUTH-FIX(CPO 지시, 2026-09-10) — 네 조합을 Production에서
+  // 각각 실제 호출해 가른 결과다. NAVER_DATALAB_CLIENT_ID + CLIENT_SECRET만
+  // 200/OK/ratio를 돌려줬고, NAVER_API_ACCESS_KEY가 들어간 조합은 셋 다 401이었다
+  // (교차 조합 포함). 즉 ACCESS_KEY/SECRET_KEY는 Search Trend의 자격증명이
+  // 아니다 — 4d619fc가 그걸 우선하게 만든 것이 401의 직접 원인이었고, 그
+  // 우선순위는 실증이 아니라 추정에 기대고 있었다.
+  //
+  // 그래서 폴백을 두지 않는다. 어느 쪽이 맞는지 이제 알기 때문에, 틀린 키로
+  // 조용히 넘어가는 경로를 남겨두면 같은 401을 원인 모르게 되풀이할 뿐이다.
+  const rawId = env.NAVER_DATALAB_CLIENT_ID;
+  const rawSecret = env.NAVER_DATALAB_CLIENT_SECRET;
   const clientId = rawId?.trim();
   const clientSecret = rawSecret?.trim();
   if (!clientId || !clientSecret) return null;
@@ -95,8 +104,8 @@ export function resolveSearchTrendCredentials(
     clientSecret,
     idTrimmed: rawId!.length !== clientId.length,
     secretTrimmed: rawSecret!.length !== clientSecret.length,
-    source: idSource,
-    mixedPair: idSource !== secretSource,
+    source: "DATALAB",
+    mixedPair: false,
   };
 }
 
