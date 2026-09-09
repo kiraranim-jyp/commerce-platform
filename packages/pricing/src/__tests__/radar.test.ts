@@ -14,8 +14,9 @@ const BASE: RadarInput = {
   landedCostKrw: 55000,
   recommendedPriceKrw: 89000,
   domesticLowestPriceKrw: 95000,
+  domesticAveragePriceKrw: 110000,
   domesticBasis: "EXACT",
-  searchTrend: { status: "OK", ratio: 70 },
+  searchInterest: "high",
   bestMatchTruth: "EXACT_IDENTIFIER",
 };
 
@@ -60,24 +61,29 @@ describe("🏷️ 국내 가격 경쟁력 — 가격 위치만 본다", () => {
     expect(axis(computeRadar(BASE), "priceCompetitiveness")).toEqual({ status: "SCORED", level: "HIGH" });
   });
 
-  it("소폭 초과면 보통", () => {
-    const r = computeRadar({ ...BASE, recommendedPriceKrw: 100000, domesticLowestPriceKrw: 95000 });
+  it("최저가~평균가 사이면 보통 — 시장 분포가 경계다(임의 상수 없음)", () => {
+    const r = computeRadar({ ...BASE, recommendedPriceKrw: 100000, domesticLowestPriceKrw: 95000, domesticAveragePriceKrw: 110000 });
     expect(axis(r, "priceCompetitiveness")).toEqual({ status: "SCORED", level: "MEDIUM" });
   });
 
-  it("크게 초과하면 낮음", () => {
-    const r = computeRadar({ ...BASE, recommendedPriceKrw: 130000, domesticLowestPriceKrw: 95000 });
+  it("평균가를 넘으면 낮음", () => {
+    const r = computeRadar({ ...BASE, recommendedPriceKrw: 130000, domesticLowestPriceKrw: 95000, domesticAveragePriceKrw: 110000 });
     expect(axis(r, "priceCompetitiveness")).toEqual({ status: "SCORED", level: "LOW" });
   });
 
   it("국내 근거가 없으면(basis=NONE) 확인 불가 — 억지로 계산하지 않는다", () => {
-    const r = computeRadar({ ...BASE, domesticBasis: "NONE", domesticLowestPriceKrw: null });
+    const r = computeRadar({ ...BASE, domesticBasis: "NONE", domesticLowestPriceKrw: null, domesticAveragePriceKrw: null });
     expect(axis(r, "priceCompetitiveness").status).toBe("UNAVAILABLE");
   });
 
   it("권장가가 없으면(CASE C/D) 확인 불가", () => {
     const r = computeRadar({ ...BASE, marketCase: "C", recommendedPriceKrw: null });
     expect(axis(r, "priceCompetitiveness").status).toBe("UNAVAILABLE");
+  });
+
+  it("평균가가 없으면 최저가 기준 2단계로만 떨어진다 — 없는 경계를 만들지 않는다", () => {
+    const r = computeRadar({ ...BASE, recommendedPriceKrw: 100000, domesticLowestPriceKrw: 95000, domesticAveragePriceKrw: null });
+    expect(axis(r, "priceCompetitiveness")).toEqual({ status: "SCORED", level: "LOW" });
   });
 
   it("comparison 기준이어도 가격 점수에 신뢰도를 섞지 않는다", () => {
@@ -95,26 +101,23 @@ describe("🔎 시장 수요 — 상대지수를 절대 수요로 만들지 않�
   });
 
   it("낮은 ratio는 낮음", () => {
-    const r = computeRadar({ ...BASE, searchTrend: { status: "OK", ratio: 5 } });
+    const r = computeRadar({ ...BASE, searchInterest: "low" });
     expect(axis(r, "marketDemand")).toEqual({ status: "SCORED", level: "LOW" });
   });
 
   it("핵심 회귀: NO_DATA와 인증 실패는 서로 다른 상태다", () => {
-    const noData = axis(computeRadar({ ...BASE, searchTrend: { status: "NO_DATA", ratio: null } }), "marketDemand");
-    const authErr = axis(computeRadar({ ...BASE, searchTrend: { status: "AUTH_ERROR", ratio: null } }), "marketDemand");
+    const noData = axis(computeRadar({ ...BASE, searchInterest: "none" }), "marketDemand");
+    const authErr = axis(computeRadar({ ...BASE, searchInterest: "unknown" }), "marketDemand");
     expect(noData.status).toBe("NO_DATA");
     expect(authErr.status).toBe("UNAVAILABLE");
     expect(noData.status).not.toBe(authErr.status);
   });
 
-  it("인증 실패/미설정/일시오류는 사용자에게 같은 문구로 보인다", () => {
-    for (const s of ["AUTH_ERROR", "NOT_CONFIGURED", "TRANSIENT_ERROR", "REQUEST_ERROR"] as const) {
-      const state = axis(computeRadar({ ...BASE, searchTrend: { status: s, ratio: null } }), "marketDemand");
-      expect(state.status).toBe("UNAVAILABLE");
-      // 기술적 원인을 문구에 넣지 않는다.
-      if (state.status === "UNAVAILABLE") {
-        expect(state.reason).not.toMatch(/401|API|인증|errorCode/);
-      }
+  it("확인 실패는 기술적 원인을 문구에 노출하지 않는다", () => {
+    const state = axis(computeRadar({ ...BASE, searchInterest: "unknown" }), "marketDemand");
+    expect(state.status).toBe("UNAVAILABLE");
+    if (state.status === "UNAVAILABLE") {
+      expect(state.reason).not.toMatch(/401|API|인증|errorCode/);
     }
   });
 });
@@ -156,6 +159,7 @@ describe("결측 정책 — 0점으로 만들지 않는다", () => {
       marketCase: "D",
       domesticBasis: "NONE",
       domesticLowestPriceKrw: null,
+      domesticAveragePriceKrw: null,
       recommendedPriceKrw: null,
     });
     expect(axis(r, "profitability").status).toBe("UNAVAILABLE");
@@ -169,7 +173,8 @@ describe("결측 정책 — 0점으로 만들지 않는다", () => {
       landedCostKrw: null,
       domesticBasis: "NONE",
       domesticLowestPriceKrw: null,
-      searchTrend: { status: "AUTH_ERROR", ratio: null },
+      domesticAveragePriceKrw: null,
+      searchInterest: "unknown",
     });
     expect(r.axes).toHaveLength(4);
   });

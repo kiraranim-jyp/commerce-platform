@@ -18,7 +18,7 @@ import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 // MATCHING-UNIFY-1 — 국내 가격비교 표와 같은 라벨을 쓰기 위한 공통 매핑.
 import { domesticMatchDisplay } from "./match-display";
 // MI 2.0 PHASE 1 — 판매 판단의 근거를 4축으로 분해해 보여준다(새 판정 아님).
-import { computeRadar, type RadarSearchTrendStatus, type RadarMatchTruth } from "@commerce/pricing";
+import { computeRadar, type RadarSearchInterest, type RadarMatchTruth } from "@commerce/pricing";
 import { MiRadar, MiRadarSummary } from "./MiRadar";
 import { shouldRefetchAfterAutoCheck } from "../snapshot-save-guard";
 
@@ -1059,11 +1059,10 @@ export function DomesticPriceIntelligencePanel({
 
   // MI 2.0 PHASE 1 — 서버가 이미 낸 값들을 읽어 4축 상태로 옮긴다.
   // 여기서 가격/판정을 다시 계산하지 않는다.
+  // 서버가 이미 낸 신호 등급을 그대로 넘긴다 — 같은 신호를 두 곳에서 다르게
+  // 계산하지 않는다(레이더가 자체 임계값을 만들지 않는 이유).
   const searchSignal = marketSignals.signals.find((s) => s.key === "searchInterest");
-  const searchTrendStatus: RadarSearchTrendStatus =
-    searchSignal == null || searchSignal.level === "unknown" ? "AUTH_ERROR" : "OK";
-  const searchRatio =
-    searchSignal?.level === "high" ? 70 : searchSignal?.level === "medium" ? 35 : searchSignal?.level === "low" ? 5 : null;
+  const searchInterest: RadarSearchInterest = searchSignal?.level ?? "unknown";
   const radar = computeRadar({
     // recommendation이 없으면(가격 근거 자체가 없는 상태) CASE도 없다 —
     // 없는 판정을 지어내지 않고 null을 넘겨 "확인 불가"로 떨어뜨린다.
@@ -1071,8 +1070,9 @@ export function DomesticPriceIntelligencePanel({
     landedCostKrw: cost?.landedCostKrw ?? null,
     recommendedPriceKrw: recommendation?.recommendedPrice ?? null,
     domesticLowestPriceKrw: domesticCompetition.lowestPriceKrw,
+    domesticAveragePriceKrw: domesticCompetition.averagePriceKrw,
     domesticBasis: domesticMarketSplit.basis,
-    searchTrend: { status: searchTrendStatus, ratio: searchRatio },
+    searchInterest,
     bestMatchTruth: (candidates.find((c) => c.matchTruth)?.matchTruth ?? null) as RadarMatchTruth | null,
   });
   const radarNotes = [

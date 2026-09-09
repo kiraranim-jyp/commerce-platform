@@ -54,14 +54,9 @@ export interface RadarResult {
   contradiction: string | null;
 }
 
-/** DataLab 호출 결과 상태 — crawler의 SearchTrendStatus와 같은 값을 받는다. */
-export type RadarSearchTrendStatus =
-  | "OK"
-  | "NO_DATA"
-  | "AUTH_ERROR"
-  | "NOT_CONFIGURED"
-  | "REQUEST_ERROR"
-  | "TRANSIENT_ERROR";
+/** 검색 관심 신호 등급. marketSignals.searchInterest.level을 그대로 받고,
+ * 거기에 "정상 조회했으나 결과 없음"(none)을 하나 더 둔다. */
+export type RadarSearchInterest = "high" | "medium" | "low" | "none" | "unknown";
 
 /** matchTruth 계열 값(국내/해외 공통). 모르는 값이 와도 최하 등급으로 떨어진다. */
 export type RadarMatchTruth =
@@ -85,9 +80,14 @@ export interface RadarInput {
   recommendedPriceKrw: number | null;
   /** 국내 비교 기준가(최저가). basis가 NONE이면 null. */
   domesticLowestPriceKrw: number | null;
+  /** 국내 비교 평균가. 가격 구간의 상단 경계로 쓴다 — 새 상수를 만들지 않기
+   * 위해 시장이 만들어 준 값을 그대로 경계로 삼는다. 없으면 2단계로 떨어진다. */
+  domesticAveragePriceKrw: number | null;
   /** 국내 가격 근거의 출처. NONE이면 비교할 대상이 없다. */
   domesticBasis: "EXACT" | "COMPARISON" | "NONE";
-  searchTrend: { status: RadarSearchTrendStatus; ratio: number | null };
+  /** 서버가 이미 낸 검색 관심 등급. "none"은 정상 조회 후 결과 없음,
+   * "unknown"은 확인 실패다 — 둘을 화면에서 다르게 말하기 위해 구분한다. */
+  searchInterest: RadarSearchInterest;
   /** 가장 강한 후보의 판정. 후보가 하나도 없으면 null. */
   bestMatchTruth: RadarMatchTruth | null;
 }
@@ -118,19 +118,28 @@ function profitabilityAxis(input: RadarInput): RadarAxisState {
 }
 
 /**
- * 🏷️ 국내 가격 경쟁력 — 내 예상 판매가가 국내 기준가 대비 어디인가.
+ * 🏷️ 국내 가격 경쟁력 — 내 예상 판매가가 국내 가격대 안에서 어디인가.
  *
- * 경계값 근거: CASE A가 이미 `marketPrice * 0.99`를 권장가로 쓰고, CASE B는
- * 시장가를 그대로 쓴다. 즉 기존 정책상 "시장가 이하"가 경쟁 가능한 구간이다.
- * 그래서 1.00을 HIGH의 경계로 삼았다. MEDIUM 상한 1.10은 "시장가보다 10%
- * 이상 비싸면 가격으로는 경쟁이 어렵다"는 보수적 선이다.
+ * ── 임의의 임계값을 쓰지 않는다 ───────────────────────────────────────
+ * 처음에는 `가격/최저가` 비율에 1.0 / 1.1 경계를 뒀는데, 그 1.1은 근거가
+ * 없는 숫자였다(CPO 반려). 새 상수를 만들면 "왜 10%인가"에 답할 수 없고,
+ * 그런 숫자가 판단 근거로 굳어지는 것이 이 제품에서 가장 피해야 할 일이다.
+ *
+ * 그래서 경계를 **이미 시장이 만들어 준 값**으로 바꿨다. 국내 비교 결과에는
+ * 최저가와 평균가가 이미 계산돼 있으므로(DomesticCompetition), 그 두 값을
+ * 그대로 구간의 경계로 쓴다:
+ *
+ *   내 가격 ≤ 국내 최저가   → 가장 싼 축에 든다        HIGH
+ *   내 가격 ≤ 국내 평균가   → 가격대 안에 있다          MEDIUM
+ *   내 가격 >  국내 평균가   → 가격대보다 비싸다         LOW
+ *
+ * 새 상수가 하나도 없고, 상품마다 그 상품의 실제 시장 분포를 기준으로
+ * 판단한다. 평균가가 없으면(표본이 얇아 계산 못 함) 최저가 기준의 2단계로만
+ * 떨어진다 — 없는 경계를 지어내지 않는다.
  *
  * 여기에 exact/comparison 신뢰도를 섞지 않는다 — 그건 🎯 축이 따로 말한다.
  * 섞으면 같은 사실을 두 축에서 두 번 세게 된다(CPO 지시).
  */
-const PRICE_COMPETITIVE_RATIO = 1.0;
-const PRICE_ACCEPTABLE_RATIO = 1.1;
-
 function priceCompetitivenessAxis(input: RadarInput): RadarAxisState {
   if (input.domesticBasis === "NONE" || input.domesticLowestPriceKrw == null) {
     return { status: "UNAVAILABLE", reason: "국내 비교 가능한 상품을 찾지 못했습니다" };
@@ -140,38 +149,43 @@ function priceCompetitivenessAxis(input: RadarInput): RadarAxisState {
     // 위치를 계산하지 않는다.
     return { status: "UNAVAILABLE", reason: "등록 가격을 정하지 못했습니다" };
   }
-  const ratio = input.recommendedPriceKrw / input.domesticLowestPriceKrw;
-  if (ratio <= PRICE_COMPETITIVE_RATIO) return { status: "SCORED", level: "HIGH" };
-  if (ratio <= PRICE_ACCEPTABLE_RATIO) return { status: "SCORED", level: "MEDIUM" };
+  if (input.recommendedPriceKrw <= input.domesticLowestPriceKrw) {
+    return { status: "SCORED", level: "HIGH" };
+  }
+  if (input.domesticAveragePriceKrw != null && input.recommendedPriceKrw <= input.domesticAveragePriceKrw) {
+    return { status: "SCORED", level: "MEDIUM" };
+  }
   return { status: "SCORED", level: "LOW" };
 }
 
 /**
- * 🔎 시장 수요 — DataLab 검색 관심 신호.
+ * 🔎 시장 수요 — 검색 관심 신호.
  *
- * ratio는 "조회 구간 내 최고점=100"인 **상대지수**다. 절대 검색량도 판매량도
- * 아니다(crawler 주석의 CPO 절대 금지사항). 그래서 0~100을 그대로 비례
- * 변환하지 않고 3등급으로만 쓴다 — 정밀도를 지어내지 않기 위해서다.
+ * ── ratio를 여기서 등급으로 자르지 않는다 ─────────────────────────────
+ * 처음에는 DataLab ratio(0~100)에 60/20 경계를 뒀는데, 그것도 근거 없는
+ * 숫자였다(가격 축의 1.0/1.1과 같은 문제). ratio는 "조회 구간 내 최고점=100"인
+ * 상대지수라 절대 수요가 아니고, 어디부터 "높다"인지 말할 근거가 없다.
  *
- * NO_DATA는 UNAVAILABLE과 구분한다. 인증은 성공했고 그 브랜드의 검색이
- * 실제로 없었다는 뜻이라, "우리가 못 봤다"와는 다른 사실이다.
+ * 그래서 서버가 이미 계산해 둔 시장 신호 등급(marketSignals.searchInterest)을
+ * 그대로 받는다. 같은 신호를 두 곳에서 다르게 계산하지 않게 되는 이점도 있다.
+ *
+ * unknown은 "확인 못 함"이다 — 인증 실패든 미설정이든 사용자에게는 구분해
+ * 보여줄 이유가 없고, 기술적 원인은 서버 로그의 몫이다.
  */
-const DEMAND_HIGH_RATIO = 60;
-const DEMAND_MEDIUM_RATIO = 20;
-
 function marketDemandAxis(input: RadarInput): RadarAxisState {
-  const { status, ratio } = input.searchTrend;
-  if (status === "NO_DATA") {
-    return { status: "NO_DATA", reason: "검색 데이터가 없습니다" };
+  switch (input.searchInterest) {
+    case "high":
+      return { status: "SCORED", level: "HIGH" };
+    case "medium":
+      return { status: "SCORED", level: "MEDIUM" };
+    case "low":
+      return { status: "SCORED", level: "LOW" };
+    case "none":
+      // 정상 조회했는데 검색 자체가 없었다 — "우리가 못 봤다"와 다른 사실이다.
+      return { status: "NO_DATA", reason: "검색 데이터가 없습니다" };
+    default:
+      return { status: "UNAVAILABLE", reason: "검색 관심도를 확인하지 못했습니다" };
   }
-  if (status !== "OK" || ratio == null) {
-    // 인증 실패/미설정/일시 오류를 사용자에게 구분해 보여주지 않는다 —
-    // 기술적 원인은 서버 로그의 몫이고, 셀러에게는 "확인 못 함"이면 충분하다.
-    return { status: "UNAVAILABLE", reason: "검색 관심도를 확인하지 못했습니다" };
-  }
-  if (ratio >= DEMAND_HIGH_RATIO) return { status: "SCORED", level: "HIGH" };
-  if (ratio >= DEMAND_MEDIUM_RATIO) return { status: "SCORED", level: "MEDIUM" };
-  return { status: "SCORED", level: "LOW" };
 }
 
 /**
