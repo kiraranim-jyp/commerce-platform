@@ -18,18 +18,17 @@ import { NextResponse } from "next/server";
  * 가려서 원인을 못 보게 만드는 상황을 피하는 것이 이 라우트의 존재 이유다.
  * 캐시에 쓰지도 않는다(진단 결과가 정상 경로의 판단을 오염시키면 안 된다).
  *
- * 기존 debug/naver-* 라우트와 같은 게이팅을 쓴다 — 토큰이 없으면 404다(403이
- * 아니라 404인 이유는 이 경로의 존재 자체를 알리지 않기 위해서다).
+ * /api/admin 아래 두는 이유는 게이팅 때문이다. 처음에는 /api/debug에 두고
+ * DEBUG_NAVER_PROBE_TOKEN으로 막았는데, 그 토큰의 값을 아는 사람이 아무도
+ * 없었다 — 새로 발급하면 이번엔 그 값을 안전하게 전달할 방법이 필요해지고,
+ * 진단 하나 돌리자고 새 secret을 만들어 주고받는 것은 그 자체가 위험이다.
+ * /api/admin은 proxy가 admin 세션 쿠키로 이미 fail-closed로 막고 있으므로
+ * (proxy.ts isAdminPath — 세션 없으면 401), 공유할 비밀값을 새로 만들지 않고도
+ * 관리자만 실행할 수 있다. 관리자는 브라우저에서 이 URL을 열기만 하면 된다.
  */
 const ENDPOINT = "https://naverapihub.apigw.ntruss.com/search-trend/v1/search";
 const FETCH_TIMEOUT_MS = 10_000;
 const BODY_SNIPPET_MAX = 200;
-
-function isAuthorized(request: Request): boolean {
-  const expected = process.env.DEBUG_NAVER_PROBE_TOKEN;
-  if (!expected) return false;
-  return request.headers.get("x-debug-token") === expected;
-}
 
 async function probe(
   label: string,
@@ -82,11 +81,10 @@ async function probe(
   }
 }
 
-export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
+export async function GET() {
+  // 인증은 proxy가 admin 세션으로 이미 처리했다 — 여기 도달했다는 것은
+  // 관리자라는 뜻이다(세션이 없으면 proxy가 401로 끊는다).
+  //
   // 두 후보를 순서대로 각각 1회씩만 호출한다(재시도 없음 — 호출량 보호 정책).
   const apiHub = await probe("NAVER_API_ACCESS_KEY/SECRET_KEY", process.env.NAVER_API_ACCESS_KEY, process.env.NAVER_API_SECRET_KEY);
   const datalab = await probe(
