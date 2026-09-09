@@ -35,6 +35,48 @@ interface CacheRow {
   fetched_at: string;
 }
 
+export interface ResolvedSearchTrendCredentials {
+  clientId: string;
+  clientSecret: string;
+  /** 값 노출 없이 "공백/개행이 섞여 있었다"만 알리기 위한 플래그. */
+  idTrimmed: boolean;
+  secretTrimmed: boolean;
+}
+
+/**
+ * PHASE 0-B(CPO 지시, 2026-09-09) — NAVER API HUB 이관의 마지막 조각.
+ *
+ * NAVER-API-HUB-2에서 endpoint와 헤더 이름(X-NCP-APIGW-API-KEY-ID/KEY)은
+ * API HUB로 옮겼는데, 그 헤더에 넣을 **값**은 여전히 구 개발자센터 DataLab
+ * 자격증명(NAVER_DATALAB_CLIENT_ID/SECRET)에서 읽고 있었다. 두 키는 발급처가
+ * 다른 별개 체계라 인증이 통과할 수 없다 — 계속 잡히지 않던 401(errorCode
+ * 024 "NID AUTH Result Invalid")의 실제 원인이다. 그동안 헤더 이름, request
+ * schema, 공백 혼입까지 의심했지만 값의 출처가 틀려 있었다.
+ *
+ * 그래서 API HUB 키를 **우선** 쓰고, 구 DataLab 키는 fallback으로만 남긴다.
+ * fallback을 남기는 이유는 회귀 위험 제거다 — API HUB env가 어떤 환경에서
+ * 비어 있어도 이전과 똑같이 동작할 뿐 새로 깨지지 않는다.
+ *
+ * env 객체를 인자로 받는 순수 함수인 이유는 process.env를 건드리지 않고
+ * 우선순위를 테스트하기 위해서다. 반환값에 자격증명 **값**이 담기므로
+ * 이 결과를 로그/에러 메시지에 넣지 않는다.
+ */
+export function resolveSearchTrendCredentials(
+  env: Record<string, string | undefined>,
+): ResolvedSearchTrendCredentials | null {
+  const rawId = env.NAVER_API_ACCESS_KEY ?? env.NAVER_DATALAB_CLIENT_ID;
+  const rawSecret = env.NAVER_API_SECRET_KEY ?? env.NAVER_DATALAB_CLIENT_SECRET;
+  const clientId = rawId?.trim();
+  const clientSecret = rawSecret?.trim();
+  if (!clientId || !clientSecret) return null;
+  return {
+    clientId,
+    clientSecret,
+    idTrimmed: rawId!.length !== clientId.length,
+    secretTrimmed: rawSecret!.length !== clientSecret.length,
+  };
+}
+
 /** brand(정규화 키) 기준 검색 관심 상대지수를 상태와 함께 반환한다. 캐시가
  * 신선하면 DB만 읽고 API를 부르지 않는다 — DataLab 자격증명이 없으면(env
  * 미설정) 애초에 캐시 miss여도 API를 시도하지 않는다. */
@@ -65,16 +107,12 @@ export async function getSearchInterestRatio(brand: string): Promise<SearchInter
   // OpenAPI 규격과 일치하므로, 남는 흔한 원인은 대시보드에서 값을 붙여넣을 때
   // 섞여 들어간 앞뒤 공백/개행이다. 값이 깨끗하면 아무 것도 바뀌지 않고,
   // 공백이 섞여 있었다면 그것만으로 인증이 통과한다 — 위험 없는 방어 조치다.
-  const rawId = process.env.NAVER_DATALAB_CLIENT_ID;
-  const rawSecret = process.env.NAVER_DATALAB_CLIENT_SECRET;
-  const clientId = rawId?.trim();
-  const clientSecret = rawSecret?.trim();
-  if (!clientId || !clientSecret) return { ratio: null, status: "NOT_CONFIGURED" };
+  const resolved = resolveSearchTrendCredentials(process.env);
+  if (!resolved) return { ratio: null, status: "NOT_CONFIGURED" };
+  const { clientId, clientSecret, idTrimmed, secretTrimmed } = resolved;
 
   // 값은 절대 남기지 않는다 — trim으로 길이가 변했는지(=공백 혼입 여부)만
   // 기록해서 다음 자연 호출 때 401 원인을 값 노출 없이 확정할 수 있게 한다.
-  const idTrimmed = rawId!.length !== clientId.length;
-  const secretTrimmed = rawSecret!.length !== clientSecret.length;
   if (idTrimmed || secretTrimmed) {
     console.warn("[market-signals] DataLab 자격증명에 공백/개행이 포함돼 있었다(trim 적용)", {
       idTrimmed,
