@@ -35,12 +35,28 @@ interface CacheRow {
   fetched_at: string;
 }
 
+/**
+ * PHASE 0 §4(CPO 지시, 2026-09-09) — 로그에 남기는 것은 자격증명 "값"이 아니라
+ * "어느 체계의 키를 골랐는가"다. NONE은 키가 하나도 없어 외부 호출 자체를
+ * 하지 않은 경우이므로 resolve 결과에는 담기지 않고 호출부에서만 쓴다.
+ */
+export type SearchTrendCredentialSource = "API_HUB" | "DATALAB_FALLBACK" | "NONE";
+
 export interface ResolvedSearchTrendCredentials {
   clientId: string;
   clientSecret: string;
   /** 값 노출 없이 "공백/개행이 섞여 있었다"만 알리기 위한 플래그. */
   idTrimmed: boolean;
   secretTrimmed: boolean;
+  /** 로그·NO-GO 원인분류(§12 ①)용. key-id 헤더에 넣은 값의 출처 기준이다. */
+  source: Exclude<SearchTrendCredentialSource, "NONE">;
+  /**
+   * id와 secret이 서로 다른 체계에서 왔다. 두 키는 발급처가 다른 별개 체계라
+   * 짝이 섞이면 인증은 반드시 실패한다 — 이 조합 자체는 허용하되(설정 실수
+   * 구제, search-trend-credentials.test.ts에서 고정) 401의 원인이 자격증명
+   * 유효성이 아니라 "반쪽 설정"임을 로그만 보고 가려낼 수 있게 표시한다.
+   */
+  mixedPair: boolean;
 }
 
 /**
@@ -66,6 +82,11 @@ export function resolveSearchTrendCredentials(
 ): ResolvedSearchTrendCredentials | null {
   const rawId = env.NAVER_API_ACCESS_KEY ?? env.NAVER_DATALAB_CLIENT_ID;
   const rawSecret = env.NAVER_API_SECRET_KEY ?? env.NAVER_DATALAB_CLIENT_SECRET;
+  // `??`는 빈 문자열을 폴백시키지 않는다 — env에 키가 "정의는 됐지만 비어 있는"
+  // 상태면 구 키로 넘어가지 않고 NOT_CONFIGURED가 된다(테스트에서 고정한 동작).
+  // 그래서 출처 판정도 값이 아니라 "그 env가 정의됐는가"로 한다.
+  const idSource = env.NAVER_API_ACCESS_KEY != null ? "API_HUB" : "DATALAB_FALLBACK";
+  const secretSource = env.NAVER_API_SECRET_KEY != null ? "API_HUB" : "DATALAB_FALLBACK";
   const clientId = rawId?.trim();
   const clientSecret = rawSecret?.trim();
   if (!clientId || !clientSecret) return null;
@@ -74,7 +95,27 @@ export function resolveSearchTrendCredentials(
     clientSecret,
     idTrimmed: rawId!.length !== clientId.length,
     secretTrimmed: rawSecret!.length !== clientSecret.length,
+    source: idSource,
+    mixedPair: idSource !== secretSource,
   };
+}
+
+/** 외부 호출을 하지 않고 끝난 이유. "로그가 없다 = API 실패"로 오판할 수 없게
+ * 무음 경로를 전부 없앤다(PHASE 0 §5). 값은 어떤 필드에도 담지 않는다. */
+type NoCallReason = "EMPTY_BRAND" | "NO_SUPABASE" | "CACHE_HIT" | "NOT_CONFIGURED";
+
+function logNoCall(
+  brandKey: string,
+  reason: NoCallReason,
+  credentialSource: SearchTrendCredentialSource,
+  extra?: Record<string, unknown>,
+): void {
+  console.log("[market-signals] search-trend 외부 호출 안 함", {
+    brandKey,
+    reason,
+    credentialSource,
+    ...extra,
+  });
 }
 
 /** brand(정규화 키) 기준 검색 관심 상대지수를 상태와 함께 반환한다. 캐시가
@@ -82,10 +123,16 @@ export function resolveSearchTrendCredentials(
  * 미설정) 애초에 캐시 miss여도 API를 시도하지 않는다. */
 export async function getSearchInterestRatio(brand: string): Promise<SearchInterestResult> {
   const brandKey = normalizeBrandKey(brand);
-  if (!brandKey) return { ratio: null, status: "NOT_CONFIGURED" };
+  if (!brandKey) {
+    logNoCall(brandKey, "EMPTY_BRAND", "NONE");
+    return { ratio: null, status: "NOT_CONFIGURED" };
+  }
 
   const supabase = getSupabaseAdmin();
-  if (!supabase) return { ratio: null, status: "NOT_CONFIGURED" };
+  if (!supabase) {
+    logNoCall(brandKey, "NO_SUPABASE", "NONE");
+    return { ratio: null, status: "NOT_CONFIGURED" };
+  }
 
   const { data: cached, error: readErr } = await supabase
     .from("market_signal_cache")
@@ -98,6 +145,9 @@ export async function getSearchInterestRatio(brand: string): Promise<SearchInter
     const row = cached as CacheRow;
     const age = Date.now() - new Date(row.fetched_at).getTime();
     if (isSearchInterestCacheFresh(row.value_json, age)) {
+      // 캐시 HIT은 "API가 실패한 것"이 아니다. PHASE 0 실측에서 호출 로그가
+      // 안 보일 때 배포 실패와 구분하려면 이 줄이 있어야 한다(§5).
+      logNoCall(brandKey, "CACHE_HIT", "NONE", { cachedStatus: row.value_json.status ?? "OK" });
       return { ratio: row.value_json.ratio, status: row.value_json.status ?? "OK" };
     }
   }
@@ -108,8 +158,13 @@ export async function getSearchInterestRatio(brand: string): Promise<SearchInter
   // 섞여 들어간 앞뒤 공백/개행이다. 값이 깨끗하면 아무 것도 바뀌지 않고,
   // 공백이 섞여 있었다면 그것만으로 인증이 통과한다 — 위험 없는 방어 조치다.
   const resolved = resolveSearchTrendCredentials(process.env);
-  if (!resolved) return { ratio: null, status: "NOT_CONFIGURED" };
-  const { clientId, clientSecret, idTrimmed, secretTrimmed } = resolved;
+  if (!resolved) {
+    // §5 — 여기가 그동안 완전히 무음이던 경로다. env 미설정과 캐시 HIT가
+    // 둘 다 "로그 없음"으로 보여서 NO-GO 원인을 가릴 수 없었다.
+    logNoCall(brandKey, "NOT_CONFIGURED", "NONE");
+    return { ratio: null, status: "NOT_CONFIGURED" };
+  }
+  const { clientId, clientSecret, idTrimmed, secretTrimmed, source, mixedPair } = resolved;
 
   // 값은 절대 남기지 않는다 — trim으로 길이가 변했는지(=공백 혼입 여부)만
   // 기록해서 다음 자연 호출 때 401 원인을 값 노출 없이 확정할 수 있게 한다.
@@ -124,8 +179,13 @@ export async function getSearchInterestRatio(brand: string): Promise<SearchInter
   // CEO 호출량 보호 정책(2026-09-03) — 실제 외부 API 호출마다 로그를 남겨
   // 월 호출량을 나중에라도 Vercel 함수 로그에서 추적할 수 있게 한다.
   // P-30부터 status/httpStatus도 남긴다(ratio:null만으로는 원인 추적 불가).
+  // PHASE 0 §4 — credentialSource는 "값"이 아니라 "출처"다. fallback이 조용히
+  // 동작하면 "새 키가 틀림"과 "새 키가 아예 없음"이 로그상 구분되지 않아
+  // GO/NO-GO를 판정할 수 없다(§12 ①이 이 필드로 갈린다).
   console.log("[market-signals] Naver DataLab search-trend 호출", {
     brandKey,
+    credentialSource: source,
+    mixedPair,
     status: outcome.status,
     httpStatus: outcome.httpStatus,
     ratio: outcome.ratio,

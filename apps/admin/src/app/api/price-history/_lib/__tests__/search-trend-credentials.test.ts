@@ -43,6 +43,35 @@ describe("NOT_CONFIGURED 처리 유지", () => {
   });
 });
 
+describe("credentialSource — 로그로 GO/NO-GO를 가르는 필드(PHASE 0 §4)", () => {
+  it("API HUB 키를 골랐으면 API_HUB", () => {
+    expect(resolveSearchTrendCredentials({ ...LEGACY, ...HUB })).toMatchObject({
+      source: "API_HUB",
+      mixedPair: false,
+    });
+  });
+
+  it("폴백했으면 DATALAB_FALLBACK — 이게 안 보이면 '새 키가 틀림'과 '새 키가 없음'이 구분되지 않는다", () => {
+    expect(resolveSearchTrendCredentials(LEGACY)).toMatchObject({
+      source: "DATALAB_FALLBACK",
+      mixedPair: false,
+    });
+  });
+
+  it("반쪽 설정은 mixedPair로 드러난다 — 401 원인이 키 유효성이 아니라 설정임을 로그만으로 가려낸다", () => {
+    expect(resolveSearchTrendCredentials({ ...LEGACY, NAVER_API_ACCESS_KEY: "hub-id" })).toMatchObject({
+      source: "API_HUB",
+      mixedPair: true,
+    });
+  });
+
+  it("출처는 값이 아니라 env 정의 여부로 판정한다 — 빈 문자열은 폴백하지 않는다", () => {
+    // NAVER_API_ACCESS_KEY가 정의됐지만 비어 있으면 구 키로 넘어가지 않고
+    // NOT_CONFIGURED가 된다. 이 경로가 무음이면 배포 실패와 구분되지 않는다.
+    expect(resolveSearchTrendCredentials({ ...LEGACY, NAVER_API_ACCESS_KEY: "" })).toBeNull();
+  });
+});
+
 describe("값 노출 금지", () => {
   it("공백 혼입은 값이 아니라 boolean 플래그로만 알린다", () => {
     const r = resolveSearchTrendCredentials({
