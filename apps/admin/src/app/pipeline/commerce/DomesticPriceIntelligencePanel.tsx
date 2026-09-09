@@ -1247,9 +1247,13 @@ export function DomesticPriceIntelligencePanel({
                               {recommendation.marketCase === "B" && " (목표마진 미달, 손실 아님)"}
                             </p>
                           )}
+                          {/* MI 2.0 PHASE 1.3 — "브랜드 시장 중앙값"이라는 표현을
+                              뺀다(그 값은 국내 시장가가 아니라 해외 원본가 분포다).
+                              다만 이 가격이 국내 동일상품 근거 없이 나온 참고치라는
+                              사실 자체는 숨기지 않는다 — 근거의 강도는 알려야 한다. */}
                           {recommendation.competitiveBasis === "BRAND_MEDIAN" && (
                             <p className="mt-0.5 text-[10px] text-text-tertiary">
-                              💡 국내 동일상품 없음 — 브랜드 시장 중앙값 기준 참고치
+                              💡 국내 동일상품 가격이 확인되지 않아 참고 기준으로 산정된 값입니다
                             </p>
                           )}
                         </>
@@ -1353,42 +1357,18 @@ export function DomesticPriceIntelligencePanel({
                 )}
               </>
             )}
-            {/* P-13A(대표님/CPO 지시, 2026-08-31) — "국내 동일상품 없음"이
-                "시장 자체가 없음"과 같지 않다. 브랜드 시장 데이터가 있으면
-                "왜 이 가격인가"의 근거로 보여준다 — 새 판정 아님, 서버가 이미
-                계산한 분포를 그대로 노출한다. */}
-            {showCalcDetail && brandMarketProfile && (
-              <div className="mt-2 rounded-md border border-current/20 bg-background/40 p-2">
-                <p className="text-[10px] font-medium text-text-primary">
-                  💡 브랜드 시장 데이터 — {product.brand} 상품 {brandMarketProfile.sampleCount}개 분석
-                </p>
-                <div className="mt-1.5">
-                  <div className="relative h-1.5 rounded-full bg-border">
-                    <div
-                      className="absolute top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-primary"
-                      style={{
-                        left: `${
-                          ((brandMarketProfile.medianPriceKrw - brandMarketProfile.minPriceKrw) /
-                            Math.max(1, brandMarketProfile.maxPriceKrw - brandMarketProfile.minPriceKrw)) *
-                          100
-                        }%`,
-                      }}
-                    />
-                  </div>
-                  <div className="mt-1 flex justify-between text-[10px] text-text-tertiary">
-                    <span>₩{brandMarketProfile.minPriceKrw.toLocaleString()}</span>
-                    <span className="font-medium text-text-primary">
-                      중앙값 ₩{brandMarketProfile.medianPriceKrw.toLocaleString()}
-                    </span>
-                    <span>₩{brandMarketProfile.maxPriceKrw.toLocaleString()}</span>
-                  </div>
-                </div>
-                <p className="mt-1.5 text-[10px] text-text-tertiary">
-                  {BRAND_MARKET_CONFIDENCE_LABEL[brandMarketProfile.confidence]} · 추천 판매가는 이 브랜드 시장
-                  중앙가격 이하로 산정됩니다.
-                </p>
-              </div>
-            )}
+            {/* MI 2.0 PHASE 1.3(CPO 지시, 2026-09-09) — 브랜드 시장 중앙값 블록을
+                판매자 화면에서 제거했다.
+
+                이 값은 SELLER_ORIGIN 관측(해외 원본가를 환산한 값)의 분포라
+                국내 시장가가 아니다. 그런데 화면에서는 국내 가격 근처에
+                놓여 있어서 "국내 시장이 이 가격대"로 읽혔다 — 판매 판단에
+                도움이 되지 않으면서 오해만 만드는 숫자였다.
+
+                brandMarketProfile / brandMedianPriceKrw 계산과 CASE D의
+                referencePrice 산출은 그대로 둔다(서버 로직 무변경) — 노출만
+                제거한다. BRAND_MARKET_CONFIDENCE_LABEL도 다른 곳에서 쓰지
+                않으면 사용처가 없어지지만, 상수 자체는 남겨 둔다. */}
             {/* "unknown을 0원처럼 보여주면 안 된다"(대표님 명시) — 알려진
                 비용 기준 숫자는 그대로 보여주되, 무엇이 빠졌는지를 항상
                 같이 알린다. */}
