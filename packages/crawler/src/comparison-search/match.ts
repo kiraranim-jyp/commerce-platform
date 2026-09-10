@@ -222,7 +222,22 @@ export function scoreCandidateMatch(query: ComparisonQuery, candidate: Compariso
     tokenize(stripBrandWords(candidate.title, brandForStrip)),
   );
 
-  let score = Math.max(modelScore, fullTitleScore);
+  // MI-MATCH-FIX-3(CPO 지시, 2026-09-10) — fullTitleScore를 원래 만들어진 목적에만
+  // 쓴다. 이 보조 신호는 PART K에서 "한쪽만 색상이 분리돼 모델명 교집합이 0이 되는
+  // 비대칭"을 구제하려고 도입됐다. 그런데 Math.max로 항상 경쟁시키면, 모델명이
+  // 이미 정상 비교되는 경우에도 fullTitle이 색상 토큰을 주워 담아 더 높은 점수를
+  // 만든다. 그 색상은 아래에서 색상 신호로 **다시** 가산되므로 같은 근거가 두 번
+  // 점수가 된다.
+  //
+  // 실측(감사 24쌍): 최고 오답 65%가 정확히 이 경로였다 — 모델명 교집합은
+  // panel/sweatpants(둘 다 유형어)뿐인데 fullTitle이 grey를 더해 38%를 만들고,
+  // 그 뒤 "색상 일치(제목 내 확인)"가 grey로 또 가산했다. 반면 PART K는
+  // modelScore가 실제로 0이라 이 신호가 없으면 매칭 자체가 사라진다.
+  //
+  // 그래서 modelScore가 0일 때만 폴백한다 — 구제가 필요한 상황에서만 쓰고,
+  // 모델명이 이미 비교되고 있으면 그 결과를 색상으로 덮어쓰지 않는다.
+  // 새 상수나 가중치는 도입하지 않는다(선택 조건만 바꾼다).
+  let score = modelScore > 0 ? modelScore : fullTitleScore;
   reasons.push(`모델명 유사도 ${Math.round(score * 100)}%`);
 
   // 1. 색상 — 둘 다 명시적으로 확인된 경우만 사용(추측 금지)
