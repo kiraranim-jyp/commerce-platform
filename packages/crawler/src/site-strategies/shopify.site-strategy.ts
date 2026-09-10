@@ -68,8 +68,11 @@ export const shopifySiteStrategy: SiteStrategy = {
   },
 
   async extract(url) {
+    // PRICE-ACCURACY-REGRESSION-1.1 — 프리픽스를 "벗겨서" 넘기는 대신 매장 기준
+    // market으로 고정해서 받는다. 벗기기 정규식이 /en-int/를 놓쳐 International
+    // market 가격(€84.00)이 매장 기준가(€75.00) 대신 들어오던 경로를 없앤다.
     const sourceUrl = stripShopifyLocalePrefix(url);
-    const result = await fetchShopifyProductJson(sourceUrl);
+    const result = await fetchShopifyProductJson(url, { forceCanonicalMarket: true });
     if (!result) return null;
     return fillMissingCurrency(result, sourceUrl);
   },

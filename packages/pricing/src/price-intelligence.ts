@@ -60,7 +60,10 @@ export interface ConvertedPriceKrw {
   amount: number;
   currency: "KRW";
   exchangeRate: number;
-  rateSource: "frankfurter" | "fallback";
+  /** PRICE-ACCURACY-REGRESSION-1.1 — "last_known"은 공급원 조회에 실패해서 DB에
+   * 저장해 둔 마지막 정상 환율을 쓴 경우다. 화면은 이 값과 calculatedAt으로
+   * "언제 조회된 환율인지"를 밝혀야 한다("실시간"이라고 쓰지 않는다). */
+  rateSource: "frankfurter" | "last_known" | "fallback";
   calculatedAt: string;
   confidence: "CALCULATED";
 }

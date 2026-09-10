@@ -5,7 +5,7 @@ import {
   probeOriginAndKrMarkets,
   type ShopifyMarketProbeResult,
 } from "@commerce/crawler";
-import { convertToKrw } from "@commerce/pricing";
+import { convertToKrwStrict } from "@commerce/pricing";
 import type { ConvertedPriceKrw, PriceIntelligenceResult, PriceObservation, SellerInfo } from "@commerce/pricing";
 import { fetchLiveExchangeRates } from "../../../lib/exchange-rates";
 
@@ -41,7 +41,12 @@ function toPriceObservation(probe: ShopifyMarketProbeResult, countryOverride?: s
 async function convertToKrwResult(amount: number, currency: string): Promise<ConvertedPriceKrw | null> {
   if (currency === "KRW") return null;
   const rates = await fetchLiveExchangeRates();
-  const converted = convertToKrw(amount, currency, rates.rates);
+  // PRICE-ACCURACY-REGRESSION-1.1 — 환율을 모르는 통화는 환산하지 않고 null로 둔다.
+  // 예전엔 convertToKrw가 금액을 그대로 KRW로 돌려줘서 `499 DKK → ₩499`가 됐고,
+  // 거기에 exchangeRate 0 · confidence "CALCULATED"까지 붙어 "계산된 값"처럼 보였다.
+  // 원본가격(amount/currency)은 호출부가 그대로 들고 있으므로 버려지지 않는다.
+  const converted = convertToKrwStrict(amount, currency, rates.rates);
+  if (!converted) return null;
   return {
     amount: converted.amountKrw,
     currency: "KRW",

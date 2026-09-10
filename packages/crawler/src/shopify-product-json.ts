@@ -244,11 +244,23 @@ export function stripShopifyLocalePrefix(url: string): string {
  * 추출) 목적으로 호출하는 곳(shopify.site-strategy.ts)은 호출 전에 로케일
  * 프리픽스를 직접 벗겨서 넘겨야 한다 — 그 이유는 그 파일의 주석 참고
  * (N-3.76 2차, en-kr URL이 실제 통화를 KRW로 잘못 표시한 버그). */
-export async function fetchShopifyProductJson(url: string): Promise<ShopifyProductResult | null> {
+export async function fetchShopifyProductJson(
+  url: string,
+  options?: { forceCanonicalMarket?: boolean },
+): Promise<ShopifyProductResult | null> {
   const handle = extractShopifyHandle(url);
   if (!handle) return null;
   const origin = new URL(url).origin;
-  const localePrefix = extractShopifyLocalePrefix(url);
+  // PRICE-ACCURACY-REGRESSION-1.1(CPO 결정, 2026-09-11) — forceCanonicalMarket은
+  // "로케일을 벗긴다"가 아니라 "매장 기준 market으로 고정한다"는 뜻이다. 벗기기
+  // 방식(stripShopifyLocalePrefix)은 정규식이 /xx-xx/만 알아서 Shopify가 실제로
+  // 쓰는 다른 형태를 통과시킨다 — 실측(bobochoses.com, B226AC043): /en-int/는
+  // 지역이 3글자라 벗겨지지 않고, 그 market 가격 €84.00이 매장 기준가 €75.00
+  // 대신 나온다. 통화가 EUR 그대로라 "KRW면 버린다" 가드에도 걸리지 않는다.
+  // handle은 매장 전체에서 유일하므로 프리픽스를 아예 붙이지 않으면 어떤 형태든
+  // 안전하다(/en/, /es/, /en-eur/ 포함). 다른 호출부(comparison-search,
+  // shopify-market-probe)는 로케일 가격을 의도적으로 쓰므로 기본값은 그대로 둔다.
+  const localePrefix = options?.forceCanonicalMarket ? "" : extractShopifyLocalePrefix(url);
 
   // N-4.19(대표님 지시, 2026-08-26: "원본 가격이 £37.00인데 가격도 잘못가져와") —
   // 실측으로 확인(junioredition.com, Booty Ghosts T-Shirt): 로케일 프리픽스가
@@ -266,9 +278,33 @@ export async function fetchShopifyProductJson(url: string): Promise<ShopifyProdu
   // 이유가 바로 이 순서 의존성이다. 로케일 프리픽스가 있는 요청(/en-kr/ 등)은
   // 이미 그 자체로 지오로케이션 무관하게 고정된 가격을 돌려주는 것으로 실측
   // 확인되어 있어(위 함수 설명 참고) currency 파라미터를 붙이지 않는다.
+  //
+  // PRICE-ACCURACY-REGRESSION-1.1 정정(CPO 결정, 2026-09-11) — 위 N-4.19가 고른
+  // 축(`?currency=`)이 틀렸다. 그 파라미터는 "이 가격을 그 통화로 표시해 달라"가
+  // 아니라 **그 통화를 쓰는 market을 고르라**는 뜻이라, 같은 통화를 쓰는 market이
+  // 둘 이상이면 매장 기준 market이 아닌 쪽이 걸린다. 실측(bobochoses.com,
+  // B226AC043, /meta.json = {country: ES, currency: EUR}):
+  //
+  //     루트                →  €75.00   ← 매장(스페인) 기준가
+  //     루트?currency=EUR   →  €84.00   ← International market
+  //     루트?country=ES     →  €75.00
+  //
+  // 즉 €84는 사용자 URL(/en-kr/)에도 없고 원본 URL(루트)에도 없었다 — 우리가
+  // 붙인 `?currency=EUR`이 만들어낸 값이다. 통화가 EUR 그대로라 "KRW면 버린다"
+  // 가드도 통과했다. 그래서 축을 국가로 바꾼다: /meta.json의 country는 그 매장이
+  // 실제로 서 있는 나라이므로, 그 나라로 고정하면 매장 기준가가 나오고 요청자
+  // 지오로케이션과도 무관해진다(N-4.19가 원래 얻으려던 성질은 그대로 유지).
+  // junioredition(대표님 보호 지정)으로 회귀 없음을 확인했다 — 파라미터 없음/
+  // ?country=GB/?currency=GBP 세 경우 모두 33.00으로 동일하다.
   const shopMeta = await fetchShopifyShopMeta(origin);
+  const shopCountry = shopMeta?.country ?? null;
   const shopCurrency = shopMeta?.currency ?? null;
-  const currencyParam = !localePrefix && shopCurrency ? `?currency=${shopCurrency}` : "";
+  const marketParam = shopCountry
+    ? `?country=${shopCountry}`
+    : shopCurrency
+      ? `?currency=${shopCurrency}`
+      : "";
+  const currencyParam = !localePrefix ? marketParam : "";
 
   let response: Response;
   try {

@@ -1,4 +1,4 @@
-import { convertToKrw } from "@commerce/pricing";
+import { convertToKrwStrict } from "@commerce/pricing";
 import { probeOriginAndKrMarkets } from "@commerce/crawler";
 import { fetchLiveExchangeRates } from "@/lib/exchange-rates";
 import { recordPriceObservations, hasObservationToday, type NewPriceObservation } from "./price-observations";
@@ -70,7 +70,13 @@ export async function runPriceCheck(input: PriceCheckInput): Promise<PriceCheckR
     const priceAmount = useKrMarket ? krPrice.amount : input.originalPriceAmount;
     const currency = useKrMarket ? "KRW" : input.originalCurrency;
     const exchangeRates = await fetchLiveExchangeRates();
-    const converted = convertToKrw(priceAmount, currency, exchangeRates.rates);
+    // PRICE-ACCURACY-REGRESSION-1.1(CPO 결정, 2026-09-11) — price_history는 정의상
+    // KRW 시계열이라 환율을 모르면 넣을 값이 없다. 예전엔 convertToKrw가 금액을
+    // 그대로 KRW로 돌려줘서 `499 DKK`가 `₩499`로 저장됐고, 한 번 저장되면 마진·
+    // CASE 판정까지 그 값을 믿게 된다. 원본가격 자체는 product_snapshots에 통화와
+    // 함께 남아 있으므로 여기서 건너뛰어도 "원가를 버리는" 것이 아니다.
+    const converted = convertToKrwStrict(priceAmount, currency, exchangeRates.rates);
+    if (!converted) errors.push(`환율 정보 없음(${currency}) — 원화 환산 가격을 저장하지 않았습니다.`);
 
     // P-12A(대표님/CPO 지시, 2026-08-31) — "실제 구매 가능한 가격"을 Market
     // Intelligence까지 흘려보내려면 할인 여부/정가/품절 여부를 이 시점에
@@ -83,36 +89,41 @@ export async function runPriceCheck(input: PriceCheckInput): Promise<PriceCheckR
     let salePriceKrw: number | null = null;
     let originalPriceKrw: number | null = null;
     let soldOut: boolean | null = null;
-    if (chosenProbe) {
+    if (chosenProbe && converted) {
       soldOut = chosenProbe.available === false;
       // regularPrice(할인 전 정가)가 있고 현재가보다 실제로 클 때만 "할인 중"이다
       // — 같거나 작으면 할인이 아니다(정가=현재가인 상품을 할인 중으로 지어내지 않는다).
       if (chosenProbe.regularPrice && chosenProbe.regularPrice.amount > chosenProbe.amount) {
         salePriceKrw = converted.amountKrw;
-        originalPriceKrw = convertToKrw(
-          chosenProbe.regularPrice.amount,
-          chosenProbe.regularPrice.currency,
-          exchangeRates.rates,
-        ).amountKrw;
+        originalPriceKrw =
+          convertToKrwStrict(
+            chosenProbe.regularPrice.amount,
+            chosenProbe.regularPrice.currency,
+            exchangeRates.rates,
+          )?.amountKrw ?? null;
       }
     }
 
-    observations.push({
-      snapshotId: input.snapshotId,
-      source: "SELLER_ORIGIN",
-      currency,
-      priceAmount,
-      exchangeRate: useKrMarket ? null : (exchangeRates.rates[currency.toUpperCase()] ?? null),
-      priceKrw: converted.amountKrw,
-      // N-4.18-Q3 — sourceLabel은 SELLER_ORIGIN에서 지금까지 안 쓰이던
-      // 필드라(DOMESTIC_SHOP만 상점명으로 사용) 마이그레이션 없이 원가
-      // 근거(KR_MARKET/ORIGIN_FX)를 그대로 재사용한다.
-      sourceLabel: useKrMarket ? "KR_MARKET" : "ORIGIN_FX",
-      salePriceKrw,
-      originalPriceKrw,
-      soldOut,
-    });
-    originSaved = true;
+    if (converted) {
+      observations.push({
+        snapshotId: input.snapshotId,
+        source: "SELLER_ORIGIN",
+        currency,
+        priceAmount,
+        exchangeRate: useKrMarket ? null : (exchangeRates.rates[currency.toUpperCase()] ?? null),
+        priceKrw: converted.amountKrw,
+        // N-4.18-Q3 — sourceLabel은 SELLER_ORIGIN에서 지금까지 안 쓰이던
+        // 필드라(DOMESTIC_SHOP만 상점명으로 사용) 마이그레이션 없이 원가
+        // 근거(KR_MARKET/ORIGIN_FX)를 그대로 재사용한다.
+        sourceLabel: useKrMarket ? "KR_MARKET" : "ORIGIN_FX",
+        salePriceKrw,
+        originalPriceKrw,
+        soldOut,
+      });
+      // 환율을 몰라 아무것도 저장하지 않았는데 SUCCESS로 보고하면 안 된다 —
+      // 이 경우 status는 NO_RESULT가 되고 errors에 사유가 남는다.
+      originSaved = true;
+    }
   }
 
   const saveResult = await recordPriceObservations(observations);

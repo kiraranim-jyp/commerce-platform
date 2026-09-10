@@ -31,12 +31,12 @@ const rec = (priceKrw: number, soldOut: boolean | null | undefined, mall = "샵"
 
 describe("재고 3분류를 계산에 들어간 리스팅 기준으로 센다", () => {
   it("핵심 회귀: null은 unknown으로 세고 onSale에 넣지 않는다", () => {
-    const s = summarizeFrom([rec(10000, false), rec(20000, null), rec(30000, undefined)], "EXACT");
+    const s = summarizeFrom([rec(10000, false), rec(20000, null), rec(30000, undefined)], "PRIMARY");
     expect(s.stockCounts).toEqual({ onSale: 1, unknown: 2, soldOut: 0 });
   });
 
   it("품절은 계산에서 빠지고 soldOut으로만 잡힌다", () => {
-    const s = summarizeFrom([rec(10000, false), rec(5000, true)], "EXACT");
+    const s = summarizeFrom([rec(10000, false), rec(5000, true)], "PRIMARY");
     expect(s.stockCounts).toEqual({ onSale: 1, unknown: 0, soldOut: 1 });
     // 5,000원짜리 품절이 최저가가 되면 안 된다(기존 정책).
     expect(s.lowestPriceKrw).toBe(10000);
@@ -44,19 +44,19 @@ describe("재고 3분류를 계산에 들어간 리스팅 기준으로 센다", 
 
   it("핵심 회귀: 재고 불명이 섞여도 가격 계산 결과는 그대로다(C안 — B로 바꾸지 않음)", () => {
     // 재고 불명(8,000원)이 최저가가 되고 판매처로도 세어진다 — 계산에서 빼지 않는다.
-    const withUnknown = summarizeFrom([rec(10000, false, "A샵"), rec(8000, null, "B샵")], "EXACT");
+    const withUnknown = summarizeFrom([rec(10000, false, "A샵"), rec(8000, null, "B샵")], "PRIMARY");
     expect(withUnknown.lowestPriceKrw).toBe(8000);
     expect(withUnknown.sellerCount).toBe(2);
     expect(withUnknown.stockCounts.unknown).toBe(1);
   });
 
   it("가격이 없는 행은 어느 분류에도 들어가지 않는다", () => {
-    const s = summarizeFrom([rec(10000, false), { ...rec(0, null), priceKrw: null } as PriceObservationRecord], "EXACT");
+    const s = summarizeFrom([rec(10000, false), { ...rec(0, null), priceKrw: null } as PriceObservationRecord], "PRIMARY");
     expect(s.stockCounts).toEqual({ onSale: 1, unknown: 0, soldOut: 0 });
   });
 
   it("전부 품절이면 가격이 없고 soldOut만 남는다", () => {
-    const s = summarizeFrom([rec(10000, true), rec(20000, true)], "EXACT");
+    const s = summarizeFrom([rec(10000, true), rec(20000, true)], "PRIMARY");
     expect(s.lowestPriceKrw).toBeNull();
     expect(s.stockCounts).toEqual({ onSale: 0, unknown: 0, soldOut: 2 });
   });

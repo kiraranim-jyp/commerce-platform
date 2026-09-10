@@ -41,6 +41,34 @@ export function convertToKrw(amount: number, currency: string, liveRates?: Recor
   return { amountKrw: Math.round(amount * rate), isEstimate: true };
 }
 
+/** PRICE-ACCURACY-REGRESSION-1.1(CPO 결정, 2026-09-11) — 이 통화를 KRW로 바꿀
+ * 환율을 실제로 알고 있는가.
+ *
+ * convertToKrw는 모르는 통화를 "금액 그대로 KRW"로 돌려준다(위 주석의 최후 폴백).
+ * 화면/저장 경로가 그 값을 그대로 쓰면 `499 DKK → ₩499`가 되어 마진·CASE 판정까지
+ * 오염된다. 원본가격(499 DKK)은 정확히 가져온 것이므로 버리지 않고 **원화 환산만**
+ * "환율 정보 없음"으로 남기기 위해, 두 상태를 가르는 것이 이 함수다. */
+export function hasKnownRateToKrw(currency: string | null | undefined, liveRates?: Record<string, number>): boolean {
+  if (!currency) return false;
+  const code = currency.toUpperCase();
+  return code === "KRW" || liveRates?.[code] != null || FIXED_RATES_TO_KRW[code] != null;
+}
+
+/** 환율을 아는 통화만 환산하고, 모르면 null을 돌려준다 — 값을 지어내지 않는다.
+ *
+ * convertToKrw와 달리 "모르는 통화"와 "0원"을 구분할 수 있다. 원본가격은 그대로
+ * 보여주면서 환산만 비워야 하는 곳(MI 표시, 스냅샷 저장)은 전부 이쪽을 쓴다.
+ * 착지원가 계산(landed-cost)은 호출부가 환율을 확인한 뒤에만 들어오므로 기존
+ * convertToKrw를 그대로 둔다 — 계산식과 CASE 판정은 건드리지 않는다. */
+export function convertToKrwStrict(
+  amount: number,
+  currency: string,
+  liveRates?: Record<string, number>,
+): KrwPrice | null {
+  if (!hasKnownRateToKrw(currency, liveRates)) return null;
+  return convertToKrw(amount, currency, liveRates);
+}
+
 export function formatKrw(amountKrw: number): string {
   return `₩${amountKrw.toLocaleString("ko-KR")}`;
 }

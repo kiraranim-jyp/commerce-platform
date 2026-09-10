@@ -116,29 +116,17 @@ export async function listRecentSnapshotsFull(workspaceId: string, limit = 30): 
   return (data as SnapshotRow[]).map(toSnapshot);
 }
 
-/**
- * BETA-SECURITY-2 §11 — workspace 경계를 넘어 전체를 읽는 유일한 경로.
+/*
+ * PRICE-ACCURACY-REGRESSION-1.1(CEO 지시, 2026-09-11) — listAllSnapshotsForBatch 제거.
  *
- * 일 1회 가격 체크 배치(cron)는 본질적으로 전 사용자 스냅샷을 순회해야
- * 하므로 여기만 예외로 둔다. 사용자 요청 경로에서는 절대 부르지 않는다 —
- * 이름을 길고 분명하게 지은 이유이고, 호출부는 /api/cron 하나뿐이다.
+ * 이 함수는 BETA-SECURITY-2 §11에서 "workspace 경계를 넘어 전체를 읽는 유일한
+ * 경로"로 예외 허용된 것이었고, 호출부는 일 1회 가격 재확인 배치 하나뿐이었다.
+ * 그 배치를 없애면서(등록 여부와 무관하게 모든 스냅샷을 매일 재스캔하는 것은
+ * 실효 대비 비효율이라는 CEO 판단) 이 함수도 함께 지운다.
  *
- * 이 함수를 사용자 요청 라우트에서 쓰면 스냅샷 격리가 그대로 무너진다.
+ * 결과적으로 **이제 workspace 경계를 넘어 스냅샷을 읽는 코드가 없다.** 다시
+ * 필요해지면 이 함수를 되살리기 전에 그 예외가 정말 필요한지부터 따진다.
  */
-export async function listAllSnapshotsForBatch(limit = 30): Promise<ProductSnapshot[]> {
-  const supabase = getSupabaseAdmin();
-  if (!supabase) return [];
-  const { data, error } = await supabase
-    .from("product_snapshots")
-    .select("*")
-    .order("last_opened_at", { ascending: false })
-    .limit(limit);
-  if (error) {
-    console.warn("[snapshot] 배치 목록 조회 실패:", error.message);
-    return [];
-  }
-  return (data as SnapshotRow[]).map(toSnapshot);
-}
 
 /** P-13C-2 STEP3-B — getSnapshot()과 달리 last_opened_at을 갱신하지 않는다.
  * Category Recommendation Cache 백그라운드 작업(사용자가 화면을 연 게 아니라
