@@ -28,11 +28,24 @@ function axisPoint(index: number, total: number, ratio: number): { x: number; y:
 
 const LEVEL_LABEL: Record<string, string> = { HIGH: "높음", MEDIUM: "보통", LOW: "낮음" };
 
+/**
+ * MI-RADAR-REASON-1(CPO 지시, 2026-09-10) — 결측 축을 "확인 불가"라고만 쓰지 않는다.
+ *
+ * 같은 화면에 "📈 예상 수익 ₩34,000"이 찍혀 있는데 바로 아래 "💰 수익성 — 확인 불가"가
+ * 붙으면 둘 중 하나가 고장 난 것처럼 읽힌다. 실제로는 서로 다른 질문에 답하고 있다 —
+ * 예상 수익은 "내가 정한 판매가에서 얼마 남는가"라는 산술이고(국내 시세와 무관),
+ * 수익성 축은 "그게 시장 대비 좋은 수익인가"라는 판단이라 국내 가격을 모르면
+ * 계산 자체가 안 된다(CASE D).
+ *
+ * computeRadar는 이미 그 사유를 문장으로 갖고 있다. 계산이나 판정은 그대로 두고
+ * 이미 있는 reason을 축 줄에 그대로 보여준다 — 왜 모르는지가 보이면 모순으로 읽히지
+ * 않는다. 등급이 있는 축(A/B/C 정상 케이스)은 기존처럼 "높음/보통/낮음" 한 단어라
+ * 화면이 길어지지 않는다.
+ */
 function stateLabel(axis: RadarAxis): string {
   const s = axis.state;
   if (s.status === "SCORED") return LEVEL_LABEL[s.level];
-  if (s.status === "NO_DATA") return "데이터 없음";
-  return "확인 불가";
+  return s.reason;
 }
 
 export function MiRadar({ radar }: { radar: RadarResult }) {
@@ -129,7 +142,9 @@ export function MiRadar({ radar }: { radar: RadarResult }) {
               <span className={missing ? "text-text-tertiary" : "text-text-secondary"}>
                 {axis.icon} {axis.label}
               </span>
-              <span className={missing ? "text-text-tertiary" : "font-medium text-text-primary"}>
+              <span
+                className={`text-right ${missing ? "text-text-tertiary" : "font-medium text-text-primary"}`}
+              >
                 {stateLabel(axis)}
               </span>
             </li>
@@ -155,14 +170,13 @@ export function MiRadarSummary({ radar, notes }: { radar: RadarResult; notes: st
           ))}
         </ul>
       )}
+      {/* 사유는 위 축 목록이 이미 각 축 옆에 보여준다. 여기서 같은 문장을 한 번 더
+          쓰면 화면만 길어지고, 원래 이 블록은 축 이름 없이 사유만 나열해서 어느
+          축 얘기인지도 알 수 없었다. 이제 "무엇을 모르는지"만 축 이름으로 남긴다. */}
       {missing.length > 0 && (
-        <ul className="space-y-1 border-t border-border pt-2">
-          {missing.map((a) => (
-            <li key={a.key} className="text-text-tertiary">
-              ⚪ {a.state.status === "SCORED" ? "" : a.state.reason}
-            </li>
-          ))}
-        </ul>
+        <p className="border-t border-border pt-2 text-[11px] text-text-tertiary">
+          ⚪ 판단 근거가 없는 축: {missing.map((a) => `${a.icon} ${a.label}`).join(" · ")}
+        </p>
       )}
       {radar.contradiction && (
         <p className="rounded-md border border-warning/30 bg-warning-soft px-2.5 py-2 text-[11px] text-text-primary">
