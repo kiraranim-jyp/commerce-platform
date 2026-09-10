@@ -207,10 +207,14 @@ export function DomesticShopSearch({
 
   return (
     <CollapsibleSection title="국내 가격비교 (베타)" defaultOpen>
+      {/* MI-UI-1(CEO 지시, 2026-09-11: "글이 너무 많다") — 세 줄을 한 줄로 줄인다.
+          지우지 않고 남긴 두 가지는 셀러의 행동을 바꾸는 사실이다: ① 여기 가격이
+          판매가에 자동 반영되지 않는다(반영된다고 오해하면 가격을 안 정한다),
+          ② 검색 대상 사이트를 어디서 늘리는지(결과가 적을 때 할 일). 어느 샵을
+          뒤지는지는 아래 결과 표의 "판매처" 열이 이미 실제 이름으로 말한다. */}
       <p className="text-xs text-text-tertiary">
-        기본 등록된 국내 수입아동복 편집샵에서 유사 상품을 검색합니다 — 참고용 조회이며, 어떤 가격도 자동으로
-        원본가격/판매가에 반영되지 않습니다. 검색 대상 사이트는 설정 &gt; 국내 가격비교에서 추가 관리할 수
-        있습니다.
+        참고용 조회 — 어떤 가격도 원본가격/판매가에 자동 반영되지 않습니다. 검색 대상은 설정 &gt; 국내
+        가격비교에서 관리합니다.
       </p>
       <button
         type="button"
@@ -221,7 +225,9 @@ export function DomesticShopSearch({
         {loading ? "검색 중..." : "가격비교 검색"}
       </button>
       {error && <p className="text-xs text-error">{error}</p>}
-      {queriedAt && <p className="text-[10px] text-text-tertiary">조회 시점: {queriedAt}</p>}
+      {/* MI-UI-1 — "조회 시점:" 라벨은 🕒로 대신한다. 시각 값 자체는 그대로다
+          (가격이 언제 기준인지는 판단에 직접 쓰이는 정보라 줄이지 않는다). */}
+      {queriedAt && <p className="text-[10px] text-text-tertiary">🕒 {queriedAt}</p>}
       {results && <ResultHeadline results={results} title={title} brand={brand} />}
       {results && <ResultTable results={results} />}
     </CollapsibleSection>

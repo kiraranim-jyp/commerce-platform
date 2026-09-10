@@ -1,4 +1,4 @@
-import type { RadarAxis, RadarResult } from "@commerce/pricing";
+import type { RadarAxis, RadarLevel, RadarResult } from "@commerce/pricing";
 import { RADAR_LEVEL_SCORE } from "@commerce/pricing";
 
 /**
@@ -12,21 +12,47 @@ import { RADAR_LEVEL_SCORE } from "@commerce/pricing";
  *
  * 이 컴포넌트는 계산하지 않는다 — computeRadar()가 낸 결과를 그리기만 한다.
  */
-const SIZE = 200;
-const CENTER = SIZE / 2;
-const RADIUS = 66;
+/**
+ * MI-UI-1(CEO 지시, 2026-09-11) — 뷰박스를 정사각형(200×200)에서 가로로 넓힌다.
+ *
+ * 정사각형이었던 탓에 두 가지가 동시에 나빴다. ① 부모가 200px 고정 컬럼이라
+ * 넓은 화면에서 차트가 왼쪽에 몰려 붙어 있었고, ② 3시 방향 라벨("국내 가격
+ * 경쟁력")은 반지름 끝에서 textAnchor=middle로 그려져 오른쪽 절반이 뷰박스
+ * 밖으로 잘렸다. 가로를 넓히면 둘 다 사라진다 — 폴리곤 좌표 계산(반지름/등급
+ * 비율)은 그대로라 그림이 말하는 내용은 하나도 바뀌지 않는다.
+ */
+const VIEW_W = 300;
+const VIEW_H = 220;
+const CENTER_X = VIEW_W / 2;
+const CENTER_Y = 106;
+const RADIUS = 72;
 const MAX_SCORE = 3;
+/** 라벨은 축 끝보다 조금 바깥에 둔다(격자선과 글자가 겹치지 않는 최소 여백). */
+const LABEL_RATIO = 1.3;
 
 /** 12시 방향부터 시계방향. 축 순서는 computeRadar()가 준 배열 그대로다. */
 function axisPoint(index: number, total: number, ratio: number): { x: number; y: number } {
   const angle = (Math.PI * 2 * index) / total - Math.PI / 2;
   return {
-    x: CENTER + Math.cos(angle) * RADIUS * ratio,
-    y: CENTER + Math.sin(angle) * RADIUS * ratio,
+    x: CENTER_X + Math.cos(angle) * RADIUS * ratio,
+    y: CENTER_Y + Math.sin(angle) * RADIUS * ratio,
   };
 }
 
-const LEVEL_LABEL: Record<string, string> = { HIGH: "높음", MEDIUM: "보통", LOW: "낮음" };
+/**
+ * MI-UI-1(CEO 지시, 2026-09-11) — "수익성 · 국내 가격 경쟁력을 주식 시세처럼
+ * 한눈에 읽히게."
+ *
+ * 방향(▲/▼)은 좋다/나쁘다, 개수는 강도, 색은 그 둘을 한 번 더 확인시킨다.
+ * 등급 단어(높음/보통/낮음)는 지우지 않는다 — 화살표만 남기면 "▲가 몇 개면
+ * 높음인지"를 이 화면에서 배워야 하고, 스크린리더에서는 방향 자체가 사라진다.
+ * 등급 판정은 computeRadar()가 이미 낸 값 그대로다(여기서 다시 나누지 않는다).
+ */
+const LEVEL_TICKER: Record<RadarLevel, { mark: string; word: string; className: string }> = {
+  HIGH: { mark: "▲▲▲", word: "높음", className: "font-bold text-success" },
+  MEDIUM: { mark: "▲", word: "보통", className: "font-semibold text-warning" },
+  LOW: { mark: "▼▼▼", word: "낮음", className: "font-bold text-error" },
+};
 
 /**
  * MI-RADAR-REASON-1(CPO 지시, 2026-09-10) — 결측 축을 "확인 불가"라고만 쓰지 않는다.
@@ -42,10 +68,9 @@ const LEVEL_LABEL: Record<string, string> = { HIGH: "높음", MEDIUM: "보통", 
  * 않는다. 등급이 있는 축(A/B/C 정상 케이스)은 기존처럼 "높음/보통/낮음" 한 단어라
  * 화면이 길어지지 않는다.
  */
-function stateLabel(axis: RadarAxis): string {
+function missingReason(axis: RadarAxis): string | null {
   const s = axis.state;
-  if (s.status === "SCORED") return LEVEL_LABEL[s.level];
-  return s.reason;
+  return s.status === "SCORED" ? null : s.reason;
 }
 
 export function MiRadar({ radar }: { radar: RadarResult }) {
@@ -66,8 +91,16 @@ export function MiRadar({ radar }: { radar: RadarResult }) {
     .join(" ");
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="h-[200px] w-[200px] shrink-0" role="img" aria-label="판단 근거 4축">
+    <div className="flex w-full flex-col items-center gap-2">
+      {/* MI-UI-1 — 고정 200px 대신 부모 폭을 쓰되(w-full) 너무 커지지 않게만
+          막는다(max-w). 가운데 정렬은 부모가 아니라 여기서 보장한다 — 이
+          컴포넌트가 어디에 놓이든 차트가 왼쪽에 붙지 않아야 한다. */}
+      <svg
+        viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+        className="mx-auto h-auto w-full max-w-[300px]"
+        role="img"
+        aria-label="판단 근거 4축"
+      >
         {/* 격자 — 축이 몇 개든 항상 4각형 구조를 유지한다. 결측이 있어도
             도형 자체가 바뀌지 않아야 상품 간 비교가 가능하다. */}
         {[1, 2 / 3, 1 / 3].map((r) => (
@@ -91,8 +124,8 @@ export function MiRadar({ radar }: { radar: RadarResult }) {
           return (
             <line
               key={axis.key}
-              x1={CENTER}
-              y1={CENTER}
+              x1={CENTER_X}
+              y1={CENTER_Y}
               x2={p.x}
               y2={p.y}
               className="stroke-border"
@@ -114,7 +147,7 @@ export function MiRadar({ radar }: { radar: RadarResult }) {
 
         {/* 라벨 — 결측 축도 라벨을 남긴다(축이 사라지면 비교가 안 된다). */}
         {radar.axes.map((axis, i) => {
-          const p = axisPoint(i, total, 1.34);
+          const p = axisPoint(i, total, LABEL_RATIO);
           const missing = axis.state.status !== "SCORED";
           return (
             <text
@@ -136,17 +169,21 @@ export function MiRadar({ radar }: { radar: RadarResult }) {
           읽기 어렵고, 결측 이유는 그림으로 표현할 수 없다. */}
       <ul className="w-full space-y-0.5">
         {radar.axes.map((axis) => {
-          const missing = axis.state.status !== "SCORED";
+          const reason = missingReason(axis);
+          const ticker = axis.state.status === "SCORED" ? LEVEL_TICKER[axis.state.level] : null;
           return (
             <li key={axis.key} className="flex items-baseline justify-between gap-2 text-[11px]">
-              <span className={missing ? "text-text-tertiary" : "text-text-secondary"}>
+              <span className={reason ? "text-text-tertiary" : "text-text-secondary"}>
                 {axis.icon} {axis.label}
               </span>
-              <span
-                className={`text-right ${missing ? "text-text-tertiary" : "font-medium text-text-primary"}`}
-              >
-                {stateLabel(axis)}
-              </span>
+              {ticker ? (
+                <span className={`shrink-0 text-right ${ticker.className}`}>
+                  {/* 화살표를 붙여 써야 개수가 "강도"로 읽힌다 — 자간을 좁힌다. */}
+                  <span className="tracking-[-0.15em]">{ticker.mark}</span> {ticker.word}
+                </span>
+              ) : (
+                <span className="text-right text-text-tertiary">⚪ {reason}</span>
+              )}
             </li>
           );
         })}
@@ -157,7 +194,13 @@ export function MiRadar({ radar }: { radar: RadarResult }) {
 
 /** 레이더 옆 판단 요약. 확인된 것(✓)과 모르는 것(⚪)을 섞어 나열하지 않는다. */
 export function MiRadarSummary({ radar, notes }: { radar: RadarResult; notes: string[] }) {
-  const missing = radar.axes.filter((a) => a.state.status !== "SCORED");
+  /* MI-UI-1(CEO 지시, 2026-09-11: "글이 너무 많다") — "판단 근거가 없는 축"
+     한 줄을 지운다. 정보를 지우는 게 아니라 중복을 지우는 것이다: 같은 화면
+     바로 왼쪽 축 목록이 이미 결측 축마다 ⚪와 사유 문장까지 보여주고 있어서,
+     이 줄은 그 축 이름을 한 번 더 나열하기만 했다(사유는 여기 없었다 —
+     즉 덜 정확한 쪽이 중복이었다). 보여줄 것이 하나도 남지 않으면 빈 칸을
+     남기지 않고 아예 렌더하지 않는다 — 그래야 레이더가 폭을 다 쓴다. */
+  if (notes.length === 0 && !radar.contradiction) return null;
   return (
     <div className="space-y-2 text-xs">
       <p className="text-[11px] font-medium text-text-tertiary">판단 요약</p>
@@ -169,14 +212,6 @@ export function MiRadarSummary({ radar, notes }: { radar: RadarResult; notes: st
             </li>
           ))}
         </ul>
-      )}
-      {/* 사유는 위 축 목록이 이미 각 축 옆에 보여준다. 여기서 같은 문장을 한 번 더
-          쓰면 화면만 길어지고, 원래 이 블록은 축 이름 없이 사유만 나열해서 어느
-          축 얘기인지도 알 수 없었다. 이제 "무엇을 모르는지"만 축 이름으로 남긴다. */}
-      {missing.length > 0 && (
-        <p className="border-t border-border pt-2 text-[11px] text-text-tertiary">
-          ⚪ 판단 근거가 없는 축: {missing.map((a) => `${a.icon} ${a.label}`).join(" · ")}
-        </p>
       )}
       {radar.contradiction && (
         <p className="rounded-md border border-warning/30 bg-warning-soft px-2.5 py-2 text-[11px] text-text-primary">

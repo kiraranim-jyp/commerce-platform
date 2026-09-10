@@ -45,6 +45,7 @@ import { BacklogPanel } from "./commerce/BacklogPanel";
 import { ComparisonShopSearch } from "./commerce/ComparisonShopSearch";
 import {
   DomesticPriceIntelligencePanel,
+  MarketIntelligenceSkeleton,
   PRICE_COMPARISON_ANCHOR_ID,
 } from "./commerce/DomesticPriceIntelligencePanel";
 import type { PriceLevel } from "./commerce/DomesticPriceIntelligencePanel";
@@ -56,20 +57,6 @@ import { MissingFieldsBulkPanel } from "./commerce/MissingFieldsBulkPanel";
 import type { NaverResolveResponse } from "./commerce/NaverPayloadPreview";
 import { PlatformPreview } from "./commerce/PlatformPreview";
 import { readinessStateToLevel } from "./commerce/readiness-state";
-import {
-  buildSellAndRegisterView,
-  computeRegistrationReadiness,
-  REGISTRATION_OUTCOME_COPY,
-} from "./commerce/registration-readiness-outcome";
-import type { SellerFacingVerdictCode } from "@commerce/pricing";
-
-/** P-32 — 판매 판정 3단계 문구. 서버(representative-seller-decision.ts)와
- * 같은 어휘를 쓴다 — 새 판정 체계를 만들지 않는다. */
-const SELL_VERDICT_COPY: Record<SellerFacingVerdictCode, string> = {
-  RECOMMENDED: "🟢 판매 추천",
-  CONDITIONAL: "🟡 조건부 판매",
-  NOT_RECOMMENDED: "🔴 판매 비추천",
-};
 import type { PriorityItem, ReadinessLevel, RegistrationReadinessState } from "./commerce/readiness-state";
 // REGISTRATION-UX-1 — 채널 탭을 열지 않아도 준비 상태를 계산하기 위해
 // PlatformPreview가 쓰는 것과 동일한 함수를 그대로 가져온다(새 판정 없음).
@@ -246,30 +233,12 @@ export function CommerceWorkspace({
     setPriceLevel((prev) => (prev === level ? prev : level));
   }
 
-  /** P-32(CPO 지시, 2026-09-03) — "팔 만한가?"의 답. priceLevel과 같은
-   * sticky-visited 패턴으로 DomesticPriceIntelligencePanel이 보고한다.
-   * 등록 준비(platformReadiness)와 나란히 보여주기 위한 값일 뿐, 두 값을
-   * 곱해 새 판정을 만들지 않는다. */
-  const [sellVerdict, setSellVerdict] = useState<SellerFacingVerdictCode | null>(null);
-  function handleSellerVerdictChange(verdict: SellerFacingVerdictCode | null) {
-    setSellVerdict((prev) => (prev === verdict ? prev : verdict));
-  }
-
-  /** P-32 — 이미 계산된 두 축(판매 판정 / 플랫폼별 등록 준비)을 한 곳에
-   * 모으기만 한다. 집계 규칙은 registration-readiness-outcome.ts에 있고
-   * 여기서는 재계산하지 않는다. */
-  const sellAndRegister = buildSellAndRegisterView(
-    sellVerdict,
-    computeRegistrationReadiness(
-      PLATFORM_ORDER.map((platformId) => ({
-        platformId,
-        label: PLATFORM_ADAPTERS[platformId].label,
-        state: platformReadiness[platformId]?.state ?? null,
-        priorityItems: platformReadiness[platformId]?.priorityItems ?? [],
-      })),
-    ),
-  );
-
+  /* MI-UI-1(CEO 지시, 2026-09-11) — 최상단 "판매 판단 → 등록 준비" 카드를
+   * 지우면서 그 카드만 쓰던 sellVerdict state와 sellAndRegister 집계도 함께
+   * 뺀다. 남겨두면 화면에 나타나지 않는 값을 계속 계산하게 되고, 다음 사람이
+   * "이건 어디에 쓰이나"를 다시 확인해야 한다. 패널 쪽 보고 콜백
+   * (onSellerVerdictChange)은 optional prop이라 그대로 두고 넘기지만 않는다 —
+   * 판정 자체는 Market Intelligence 안에서 계속 계산·표시된다. */
   /** N-4.18-H-2 STEP H-2-5(대표님 지시: "[가격/마진 확인]" 버튼) —
    * DomesticPriceIntelligencePanel(상품정보 탭)과 PriceEditor(커머스 플랫폼
    * 탭)는 서로 다른 탭에 있다(리서치로 확인됨) — 자동 가격변경 없이, 판매가
@@ -1741,54 +1710,19 @@ export function CommerceWorkspace({
         </span>
       </div>
 
-      {/* P-32(CPO 지시, 2026-09-03) — "이 상품은 팔 만한가?"와 "그렇다면 지금
-          등록할 수 있는가?"는 다른 질문이다. 지금까지 두 답이 서로 다른
-          화면(상품정보 탭의 판매 판정 / 플랫폼 탭의 등록 준비)에 흩어져 있어
-          한 번에 볼 수 없었다. 두 축을 나란히 놓기만 한다 — 곱해서 새 종합
-          판정을 만들지 않는다(판매 추천이어도 등록이 막힐 수 있고, 등록
-          가능해도 팔지 말아야 할 수 있다). */}
-      {(sellVerdict != null || sellAndRegister.registration.knownPlatformCount > 0) && (
-        <div className="rounded-lg border border-border bg-surface p-3 text-sm">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-text-tertiary">판매 판단</span>
-              <span className="font-medium text-text-primary">
-                {sellVerdict ? SELL_VERDICT_COPY[sellVerdict] : "⚪ 확인 전"}
-              </span>
-            </div>
-            <span className="text-text-tertiary">→</span>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-text-tertiary">등록 준비</span>
-              <span className="font-medium text-text-primary">
-                {REGISTRATION_OUTCOME_COPY[sellAndRegister.registration.overall].icon}{" "}
-                {REGISTRATION_OUTCOME_COPY[sellAndRegister.registration.overall].title}
-              </span>
-            </div>
-          </div>
-          <p className="mt-1.5 text-xs text-text-secondary">{sellAndRegister.nextAction}</p>
-          {/* 보완 항목은 "무엇이 / 왜 / 무엇을"로 나눠 보여준다 — 단순히
-              "등록 불가"라고 끝내지 않는다. 문구는 readiness가 이미 만든
-              라벨/힌트를 그대로 쓴다(새로 지어내지 않는다). */}
-          {sellAndRegister.registration.platforms
-            .filter((p) => p.actionItems.length > 0)
-            .map((p) => (
-              <div key={p.platformId} className="mt-2 border-t border-border pt-2">
-                <p className="text-xs font-medium text-text-primary">
-                  {REGISTRATION_OUTCOME_COPY[p.outcome].icon} {p.label}
-                </p>
-                <ul className="mt-1 space-y-1">
-                  {p.actionItems.map((item) => (
-                    <li key={item.key} className="text-xs">
-                      <span className="font-medium text-text-primary">{item.what}</span>
-                      {item.why && <span className="text-text-tertiary"> — {item.why}</span>}
-                      <span className="block text-[11px] text-text-secondary">→ {item.action}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-        </div>
-      )}
+      {/* MI-UI-1(CEO 지시, 2026-09-11) — 최상단 "판매 판단 → 등록 준비" 카드를
+          없앤다(P-32, 2026-09-03). 지금은 Market Intelligence가 같은 질문에
+          더 정확하게 답한다: 판정 헤드라인 · 4축 레이더 · 판단 근거가 전부 그
+          안에 있고, 그 값들은 서버가 낸 원본이라 여기서 요약할수록 뉘앙스만
+          흐려진다. 등록 쪽 절반도 바로 아래 "등록 전 확인" 블록과 같은
+          platformReadiness를 읽고 있어서 같은 목록을 두 번 보여주고 있었다.
+          판정 로직/집계 함수(registration-readiness-outcome.ts)는 그대로 둔다 —
+          지운 것은 화면뿐이다.
+
+          ⚠️ 함께 사라진 것: 플랫폼별 보완 항목의 "왜 필요한지"(item.why) 힌트와
+          nextAction 안내 문장. 아래 블록은 같은 항목을 라벨로 나열하고 클릭하면
+          해당 탭으로 보내주므로 "무엇을/어디서"는 남지만, 힌트 문장은 그 탭의
+          RegistrationStatusBanner에서만 볼 수 있다. */}
 
       {/* N-4.08 STEP6-4(CPO 지시: "부족한 항목을 한눈에") — 방문한 적 있는 탭
           중 아직 등록 가능(READY)이 아닌 것만 모아 보여준다. 새 계산이 아니라
@@ -1894,14 +1828,21 @@ export function CommerceWorkspace({
               플랫폼 항목 → 가격비교를 지나야 판단이 나왔다(8개 중 6번째).
               등록 준비보다 판매 판단이 먼저 와야 한다 — 판단을 최상단으로
               올린다. 컴포넌트/로직 변경 없이 렌더 위치만 바꾼다. */}
-          {snapshotId && (
+          {/* MI-UI-1(CEO 지시, 2026-09-11) — snapshotId는 최초 스냅샷 저장 응답이
+              와야 채워진다. 그때까지 이 자리는 통째로 비어 있었고(조건부 렌더),
+              1~2초 뒤 패널이 나타나면서 아래 이미지/Source Data를 밀어냈다 —
+              셀러 입장에서는 "로딩 중인지 아닌지"조차 알 수 없었다. 자리를 미리
+              잡아두되 없는 값을 지어내지 않는다: 스켈레톤은 숫자 대신 회색
+              막대만 두고, 지금 무엇을 기다리는지 문장으로 밝힌다. */}
+          {snapshotId ? (
             <DomesticPriceIntelligencePanel
               snapshotId={snapshotId}
               onPriceLevelChange={handlePriceLevelChange}
-              onSellerVerdictChange={handleSellerVerdictChange}
               onRequestPriceReview={handleRequestPriceReview}
               autoChecking={priceCheckPriming}
             />
+          ) : (
+            <MarketIntelligenceSkeleton />
           )}
           <section className="rounded-lg border border-border bg-surface p-4 shadow-subtle">
             <p className="mb-3 text-sm font-medium text-text-primary">이미지</p>

@@ -71,6 +71,13 @@ const MI_SUMMARY_TONE: Record<"GOOD" | "CAUTION" | "STOP" | "UNKNOWN", { icon: s
 
 export const PRICE_COMPARISON_ANCHOR_ID = "price-comparison-source";
 
+/** MI-UI-1(CEO 지시, 2026-09-11) — 펼침 상태는 캐럿 하나로 말한다. 같은 화면에
+ * 접힘 블록이 여러 개라 규칙이 블록마다 다르면(▼ 고정 vs ▸/▾) 셀러가 어느 게
+ * 열려 있는지 매번 다시 읽어야 한다. */
+function caret(open: boolean): string {
+  return open ? "▾" : "▸";
+}
+
 /**
  * MI-LOADING-1(CPO 지시, 2026-09-06) — Market Intelligence 분석 진행 화면.
  *
@@ -92,12 +99,64 @@ interface MiStep {
   state: MiStepState;
 }
 
+/**
+ * MI-UI-1(CEO 지시, 2026-09-11) — 준비 화면과 진행 화면의 높이를 맞추기 위한
+ * 최소 높이. 두 화면이 차례로 나타나는데 높이가 다르면 그 사이에서 아래 섹션
+ * (이미지/Source Data)이 한 번 더 밀린다 — 자리를 미리 잡아두는 것이 이번
+ * 지시의 핵심이라 같은 값을 둘 다 쓴다.
+ */
+const MI_LOADING_MIN_HEIGHT = "min-h-[260px]";
+
+/**
+ * MI-UI-1(CEO 지시, 2026-09-11) — "URL을 넣으면 1~2초 뒤에 Market Intelligence가
+ * 갑자기 나타나서, 로딩 중인지 아닌지 알 수가 없다."
+ *
+ * 원인은 이 패널이 snapshotId가 생긴 뒤에야 마운트된다는 것이다(스냅샷 최초
+ * 저장 응답까지의 공백). 그동안 화면에는 이 섹션이 아예 없어서, 자리도 없고
+ * 로딩 표시도 없었다. 그 공백을 이 컴포넌트가 채운다.
+ *
+ * 여기서 데이터를 흉내 내지 않는다 — 숫자 자리에 회색 막대만 두고, 무엇을
+ * 기다리는 중인지 문장으로 말한다. 아직 요청조차 시작하지 않은 단계라
+ * MarketIntelligenceProgress의 단계 목록(실제 요청과 1:1)은 쓰지 않는다:
+ * 시작도 안 한 작업을 진행 중으로 표시하지 않는다는 MI-LOADING-1 원칙 그대로다.
+ */
+export function MarketIntelligenceSkeleton() {
+  return (
+    <CollapsibleSection title="Market Intelligence" defaultOpen>
+      <div className={`rounded-md border border-border bg-background p-4 ${MI_LOADING_MIN_HEIGHT}`}>
+        <div className="mb-1 flex items-center gap-2">
+          <span className="text-base">🤖</span>
+          <p className="text-sm font-semibold text-text-primary">AI Market Intelligence</p>
+        </div>
+        <p className="mb-4 text-xs text-text-secondary">
+          상품 정보를 저장하는 중입니다 — 저장이 끝나면 시장 분석을 시작합니다.
+        </p>
+        {/* 결과 화면의 4칸 요약이 들어올 자리. 라벨을 미리 쓰지 않는다 —
+            값이 없는데 "국내 최저가"라고 써두면 곧 숫자가 나올 자리인지
+            "확인 불가"로 끝날 자리인지 지금은 알 수 없기 때문이다. */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-hidden="true">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="space-y-1.5">
+              <div className="h-2 w-2/3 animate-pulse rounded bg-border" />
+              <div className="h-4 w-full animate-pulse rounded bg-border" />
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 space-y-2" aria-hidden="true">
+          <div className="h-3 w-5/6 animate-pulse rounded bg-border" />
+          <div className="h-3 w-3/5 animate-pulse rounded bg-border" />
+        </div>
+      </div>
+    </CollapsibleSection>
+  );
+}
+
 function MarketIntelligenceProgress({ steps, completed }: { steps: MiStep[]; completed: boolean }) {
   const doneCount = steps.filter((s) => s.state === "done").length;
   const percent = Math.round((doneCount / Math.max(1, steps.length)) * 100);
 
   return (
-    <div className="rounded-md border border-border bg-background p-4">
+    <div className={`rounded-md border border-border bg-background p-4 ${MI_LOADING_MIN_HEIGHT}`}>
       <div className="mb-1 flex items-center gap-2">
         <span className="text-base">🤖</span>
         <p className="text-sm font-semibold text-text-primary">AI Market Intelligence</p>
@@ -1150,13 +1209,14 @@ export function DomesticPriceIntelligencePanel({
             표시한다. 새 계산 없음 — market-intelligence.ts가 이미 우선순위(1순위
             동일상품가격, 없으면 2순위 비교상품 시장가격)로 계산해 낸
             domesticMarketSplit.basis만 그대로 문구로 옮긴다. */}
+        {/* MI-UI-1(CEO 지시, 2026-09-11: "글이 너무 많다") — 문장을 명사구로
+            줄인다. 어느 쪽 기준인지(동일상품/비교상품)와 참고용이라는 사실은
+            그대로 남긴다 — 이 두 가지가 위 숫자를 얼마나 믿을지를 가른다. */}
         {domesticMarketSplit.basis === "EXACT" && (
-          <p className="text-[10px] text-success">🟢 동일상품 가격 기준입니다.</p>
+          <p className="text-[10px] text-success">🟢 동일상품 가격 기준</p>
         )}
         {domesticMarketSplit.basis === "COMPARISON" && (
-          <p className="text-[10px] text-warning">
-            🟡 동일상품은 확인되지 않았습니다 — 국내 비교상품 시장가격(참고용)을 기준으로 표시합니다.
-          </p>
+          <p className="text-[10px] text-warning">🟡 동일상품 미확인 — 국내 비교상품 시장가격(참고용) 기준</p>
         )}
         <div className="flex items-center justify-between">
           <span className="text-text-tertiary">{hasAnyData ? "" : "아직 확인된 가격 정보가 없습니다."}</span>
@@ -1166,7 +1226,9 @@ export function DomesticPriceIntelligencePanel({
             disabled={rechecking}
             className="rounded-md border border-border px-2 py-1 text-[11px] font-medium text-text-secondary hover:bg-background disabled:opacity-50"
           >
-            {rechecking ? "확인 중..." : "가격 다시 확인"}
+            {/* MI-UI-1 — 아이콘이 "다시"를 말하므로 "가격"까지 반복하지 않는다.
+                진행 중 문구는 그대로 둔다(상태어를 아이콘으로 바꾸지 않는다). */}
+            {rechecking ? "확인 중..." : "🔄 다시 확인"}
           </button>
         </div>
         {recheckResult && (
@@ -1308,9 +1370,10 @@ export function DomesticPriceIntelligencePanel({
                   onClick={() => setShowWhyVerdict((v) => !v)}
                   className="mt-2 text-[11px] text-primary hover:underline"
                 >
-                  {showWhyVerdict
-                    ? "왜 이 판단인가 접기 ▲"
-                    : `왜 ${FINAL_VERDICT_COPY[sellerDecision.finalVerdict].title}인가 ▼`}
+                  {/* MI-UI-1 — 캐럿이 접힘/펼침을 말하므로 "접기/보기"를 문구에서
+                      뺀다. 판정 이름(추천/조건부/비추천)은 남긴다 — 그게 있어야
+                      "무엇에 대한 근거인지"가 접힌 상태에서도 읽힌다. */}
+                  {caret(showWhyVerdict)} 왜 {FINAL_VERDICT_COPY[sellerDecision.finalVerdict].title}인가
                 </button>
                 {showWhyVerdict && (
                   <ul className="mt-1.5 space-y-0.5 text-text-secondary">
@@ -1331,7 +1394,7 @@ export function DomesticPriceIntelligencePanel({
                   onClick={() => setShowCalcDetail((v) => !v)}
                   className="mt-2 block text-[11px] text-primary hover:underline"
                 >
-                  {showCalcDetail ? "상세 계산 접기 ▲" : "상세 계산 보기 ▼"}
+                  {caret(showCalcDetail)} 상세 계산
                 </button>
                 {showCalcDetail && (
                   <dl className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-2 rounded-md border border-current/20 bg-background/40 p-2 sm:grid-cols-3">
@@ -1483,7 +1546,7 @@ export function DomesticPriceIntelligencePanel({
             onClick={() => setShowMarketDetail((v) => !v)}
             className="mt-3 w-full border-t border-border pt-2 text-left text-[11px] text-primary hover:underline"
           >
-            {showMarketDetail ? "접기 ▲" : "왜 이렇게 판단했나요? ▼"}
+            {caret(showMarketDetail)} 왜 이렇게 판단했나요?
           </button>
 
           {showMarketDetail && (
@@ -1627,9 +1690,11 @@ export function DomesticPriceIntelligencePanel({
                 onClick={() => setShowDomesticDetail((v) => !v)}
                 className="font-medium text-text-primary hover:underline"
               >
-                🇰🇷 국내 가격 상세보기 ({domesticCompetition.sellerCount}곳
+                {/* MI-UI-1 — "상세보기 … 접기"를 캐럿으로 대신한다. 곳 수와
+                    "참고가격(검증 전)"은 그대로 둔다 — 앞은 숫자고 뒤는 그
+                    가격을 얼마나 믿어도 되는지를 가르는 상태 표시다. */}
+                {caret(showDomesticDetail)} 🇰🇷 국내 가격 ({domesticCompetition.sellerCount}곳
                 {domesticCompetition.tier === "SECONDARY" ? " · 참고가격(검증 전)" : ""})
-                {showDomesticDetail ? " 접기" : ""}
               </button>
               <div className="flex items-center gap-2">
                 <TrendBadge label="7일" trend={trend7d} />
@@ -1715,7 +1780,7 @@ export function DomesticPriceIntelligencePanel({
                   onClick={() => setShowHistory((v) => !v)}
                   className="mt-1.5 text-[11px] text-primary hover:underline"
                 >
-                  {showHistory ? "가격 변동 이력 접기" : `가격 변동 이력 보기 (${historyRecords.length}건)`}
+                  {caret(showHistory)} 가격 변동 이력 ({historyRecords.length}건)
                 </button>
                 {showHistory && (
                   <ul className="mt-1.5 space-y-0.5 border-t border-border pt-1.5">
@@ -1750,9 +1815,21 @@ export function DomesticPriceIntelligencePanel({
             아래·작게 배치한다. */}
         {hasAnyData && radar.scoredCount > 0 && (
           <div className="rounded-md border border-border bg-surface p-3">
-            <div className="grid gap-4 sm:grid-cols-[200px_1fr] sm:items-start">
-              <MiRadar radar={radar} />
-              <MiRadarSummary radar={radar} notes={radarNotes} />
+            {/* MI-UI-1(CEO 지시, 2026-09-11: "레이더가 왼쪽으로 쏠려 있다") —
+                레이더 칸을 200px로 고정해 두면 컨테이너가 넓어져도 차트는 그
+                자리에 남아 왼쪽에 붙는다. 고정폭 대신 남는 폭을 두 칸이 나눠
+                갖게 하고, 판단 요약이 비는 경우(보여줄 근거 문장이 하나도 없는
+                상품)에는 레이더가 폭 전체를 쓰며 가운데로 온다 — grid는 빈 칸을
+                그대로 남기므로 flex-wrap을 쓴다. */}
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <div className="min-w-[240px] flex-1 basis-[300px]">
+                <MiRadar radar={radar} />
+              </div>
+              {(radarNotes.length > 0 || radar.contradiction != null) && (
+                <div className="min-w-[200px] flex-1 basis-[240px]">
+                  <MiRadarSummary radar={radar} notes={radarNotes} />
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1767,7 +1844,10 @@ export function DomesticPriceIntelligencePanel({
               onClick={() => setShowReasonDetail((v) => !v)}
               className="font-medium hover:underline"
             >
-              ▼ 왜 이런 판단인가? {showReasonDetail ? "접기" : ""}
+              {/* MI-UI-1(CEO 지시, 2026-09-11) — 캐럿이 접힘/펼침과 무관하게
+                  항상 ▼여서 상태를 "접기"라는 단어로만 알 수 있었다. 아래
+                  "동일상품 근거"와 같은 ▸/▾ 규칙을 쓰면 단어가 필요 없다. */}
+              {caret(showReasonDetail)} 왜 이런 판단인가?
             </button>
             {showReasonDetail && (
               <>
@@ -1815,7 +1895,10 @@ export function DomesticPriceIntelligencePanel({
               onClick={() => setShowMatchEvidence((v) => !v)}
               className="font-medium text-text-primary hover:underline"
             >
-              {showMatchEvidence ? "▾" : "▸"} 왜 동일상품인가? ({candidates.length}건)
+              {/* MI-UI-1(CEO 지시, 2026-09-11) — 블록은 유지하되(근거를 아예 못
+                  보게 하지 않는다) 라벨만 줄인다. 접힌 줄에서 셀러가 알아야
+                  하는 건 "여기에 근거가 몇 건 있다"이고, 건수는 그대로 남긴다. */}
+              {caret(showMatchEvidence)} 동일상품 근거 ({candidates.length}건)
             </button>
             {showMatchEvidence && (
             <ul className="mt-1.5 space-y-2">
