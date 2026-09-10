@@ -218,9 +218,24 @@ export function scoreCandidateMatch(query: ComparisonQuery, candidate: Compariso
     // 노출) 이는 추측이 아니라 실제 텍스트 일치이므로 색상 신호로 인정한다 —
     // "불일치" 판정은 하지 않는다(후보 쪽에 색상 정보가 아예 없을 수도 있어서 —
     // 없는 걸 다르다고 단정하지 않는다, 4번 브랜드 신호와 동일한 원칙).
+    //
+    // MI-MATCH-FIX-1(CPO 지시, 2026-09-10) — 이 경로의 가산을 0.4에서 0.1로 낮춘다.
+    // 정답 2건/오답 21건을 대표님이 직접 판정한 감사에서, 점수 상위 오답 4건이
+    // **전부** 이 경로로 올라왔다(청바지↔반바지 70%, 스웨터↔양말 63% 등). 반면
+    // 이 경로로 가산을 받은 정답은 한 건도 없었다 — 이 표본에서 정밀도가 0이다.
+    //
+    // 원인은 근거의 성격이다. 위쪽 "색상 일치"는 양쪽 제목이 모두 "in X by Y"
+    // 구조로 색상을 분리해낸 경우라 구조적 증거인 반면, 여기는 질의의 색상 단어가
+    // 후보 제목 어딘가에 들어있기만 하면 성립한다. "off white", "black" 같은 흔한
+    // 색은 같은 브랜드 안에서 수십 개 상품에 걸쳐 우연히 겹친다.
+    //
+    // 신호를 없애지는 않는다 — PART K의 "Vernice Nero"처럼 색상명이 그대로 노출돼
+    // 실제로 동일상품을 가리키는 경우가 있기 때문이다. 대신 기존에 이미 약한 보조
+    // 신호로 쓰이는 카테고리 일치와 같은 크기(0.1)로 낮춰, 확보된 점수를 뒤집지는
+    // 못하고 소폭 보정만 하게 한다. 새 상수를 지어내지 않고 기존 약신호 눈금을 쓴다.
     const candidateTitleNorm = normalizeText(stripBrandWords(candidate.title, brandForStrip));
     if (candidateTitleNorm.includes(normalizeText(queryColor))) {
-      score = score + (1 - score) * 0.4;
+      score = score + (1 - score) * 0.1;
       reasons.push("색상 일치(제목 내 확인)");
     }
   }
