@@ -354,6 +354,9 @@ interface DomesticCompetition {
   /** N-4.18-G STEP G-4 — 최저/평균/최고가 계산에서 제외된, 실제 품절 확인된
    * 리스팅. 가격표에는 안 넣고 별도로 보여준다. */
   soldOutListings: SoldOutListing[];
+  /** MI-STOCK-CLARITY-1 — 위 가격 집계에 들어간 리스팅의 재고 3분류 개수.
+   * 구버전 응답에는 없을 수 있어 optional로 둔다(화면이 죽지 않게). */
+  stockCounts?: { onSale: number; unknown: number; soldOut: number };
   checkedAt: string | null;
 }
 
@@ -1128,6 +1131,19 @@ export function DomesticPriceIntelligencePanel({
               formatter={(v) => `${v.toFixed(1)}%`}
             />
           </div>
+        )}
+        {/* MI-STOCK-CLARITY-1(CPO 지시, 2026-09-10) — 위 최저가/평균가가 어떤 재고
+            상태 위에 세워졌는지 밝힌다. 국내 자동검색 6곳 중 재고 판정이 구현된 곳은
+            2곳뿐이라 "재고 불명"이 예외가 아니라 기본값인데, 집계 필터가
+            soldOut !== true라 불명이 판매중과 함께 계산에 들어간다. 계산 방식은
+            그대로 두고(가격 모집단을 사이트별 구현 수준에 맡기지 않는다) 확인되지
+            않았다는 사실만 드러낸다 — 불명을 "판매중"이라고 부르지 않는다. */}
+        {hasAnyData && (domesticCompetition.stockCounts?.unknown ?? 0) > 0 && (
+          <p className="text-[11px] text-text-tertiary">
+            위 가격은 재고 상태를 확인하지 못한 {domesticCompetition.stockCounts?.unknown}건을 포함합니다
+            {(domesticCompetition.stockCounts?.onSale ?? 0) > 0 && ` (판매중 확인 ${domesticCompetition.stockCounts?.onSale}건)`}
+            {(domesticCompetition.stockCounts?.soldOut ?? 0) > 0 && ` · 품절 ${domesticCompetition.stockCounts?.soldOut}건은 제외됨`}.
+          </p>
         )}
         {/* P-19-B Sprint 7/9(CPO 지시, 2026-09-02) — 위 4칸 요약이 "🟢 동일상품
             확인" 가격인지 "🟡 비교상품" 국내 유사 시장가격(참고용)인지 명확히

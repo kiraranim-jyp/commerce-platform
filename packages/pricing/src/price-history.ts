@@ -94,6 +94,21 @@ export interface DomesticMarketSummary {
    * sellerCount 계산에서 제외하고 여기 따로 담는다(화면에는 보여주되 가격
    * 계산에는 안 쓴다). */
   soldOutListings: { mallName: string | null; productUrl: string | null; checkedAt: string }[];
+  /**
+   * MI-STOCK-CLARITY-1(CPO 지시, 2026-09-10) — 위 가격 집계에 실제로 들어간
+   * 리스팅의 재고 상태를 셋으로 나눈 개수.
+   *
+   * soldOut은 세 가지 상태다: true=품절 확인, false=판매중 확인, null=재고를
+   * 확인할 방법이 없음. 그런데 국내 자동검색 6곳 중 재고 판정이 구현된 곳은
+   * 2곳뿐이라 null이 예외가 아니라 기본값이고, 집계 필터가 `soldOut !== true`라
+   * null이 판매중과 함께 계산에 들어간다.
+   *
+   * 계산 방식은 바꾸지 않는다(CPO가 B안을 보류했다 — 재고 판정 커버리지가
+   * 낮은 상태에서 null을 빼면 사이트별 구현 수준이 곧 가격 모집단이 된다).
+   * 대신 "확인되지 않았다"는 사실을 숨기지 않도록 개수를 함께 내보낸다.
+   * **null을 판매중으로 부르지 않는다.**
+   */
+  stockCounts: { onSale: number; unknown: number; soldOut: number };
   checkedAt: string | null;
 }
 
@@ -163,6 +178,14 @@ export function summarizeFrom(records: PriceObservationRecord[], tier: DomesticM
     checkedAt: r.checkedAt,
   }));
 
+  // 가격 집계에 실제로 들어간 리스팅만 센다 — 화면에 보이는 최저가/평균가가
+  // 어떤 재고 상태 위에 세워졌는지를 그대로 반영해야 한다.
+  const stockCounts = {
+    onSale: activeRecords.filter((r) => r.soldOut === false).length,
+    unknown: activeRecords.filter((r) => r.soldOut == null).length,
+    soldOut: soldOutRecords.length,
+  };
+
   if (activeRecords.length === 0) {
     return {
       tier,
@@ -173,6 +196,7 @@ export function summarizeFrom(records: PriceObservationRecord[], tier: DomesticM
       lowestPriceCheckedAt: null,
       sampleListings: [],
       soldOutListings,
+      stockCounts,
       checkedAt,
     };
   }
@@ -203,6 +227,7 @@ export function summarizeFrom(records: PriceObservationRecord[], tier: DomesticM
       originalPriceKrw: r.originalPriceKrw,
     })),
     soldOutListings,
+    stockCounts,
     checkedAt,
   };
 }
@@ -216,6 +241,7 @@ const EMPTY_SUMMARY: DomesticMarketSummary = {
   lowestPriceCheckedAt: null,
   sampleListings: [],
   soldOutListings: [],
+  stockCounts: { onSale: 0, unknown: 0, soldOut: 0 },
   checkedAt: null,
 };
 
