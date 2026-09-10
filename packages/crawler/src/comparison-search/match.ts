@@ -97,16 +97,40 @@ function brandsMatch(a: string, b: string): boolean {
  * AE099), "원피스"(LOOXLOO 다수), "셔츠"(DEUXBEBE "로히트 셔츠"))만으로 최소
  * taxonomy를 만든다 — breadcrumb가 아니라 상품명 자체에 실제로 쓰인 단어이므로
  * 추측이 아니다. 매핑에 없는 단어는 전부 null(정보 없음) — 감점하지 않는다. */
-export type CategoryTaxon = "TOP" | "PANTS" | "DRESS" | "SHOES";
+export type CategoryTaxon = "TOP" | "PANTS" | "DRESS" | "SKIRT" | "OUTER" | "ONE_PIECE" | "ACCESSORY" | "SHOES";
 
 // N-4.18-Q3 PART G-16(대표님 실측 골든케이스, 2026-08-27) — SHOES는 두 실제
 // 제목에서 그대로 관측된 단어만 등록한다(junioredition "Lulu T Bar Shoes...",
 // FORETFORET "...T-스트랩 슈즈..." — 둘 다 이 세션 실측으로 직접 확인). breadcrumb나
 // 번역사전이 아니라 위 TOP/PANTS/DRESS와 동일한 원칙(제목에 실제로 쓰인 단어).
+// MI-MATCH-FIX-2(CPO 지시, 2026-09-10) — 감사 23쌍에서 17쌍(74%)이 이 목록에
+// 없는 단어라 카테고리 신호가 아예 발화하지 않았다. 추출 로직과 감점 크기는
+// 정상이었고 어휘만 부족했다. 그래서 **그 감사에서 실제 제목에 등장한 단어만**
+// 추가한다 — 번역사전을 만들지 않는다는 기존 원칙 그대로다.
+//
+// taxon 신설은 기존 4종에 명백히 안 들어가는 것으로 제한했다. 양말/장갑은
+// SHOES(신발)와 다른 상품이고, 원피스형(onesie)·스커트·아우터도 상의/하의/
+// 드레스 어디에도 속하지 않는다. 반면 sweater/tee/hoodie는 전부 TOP에 넣는다 —
+// 해외와 국내가 같은 상품을 맨투맨/스웨트셔츠/티셔츠로 다르게 부르는 일이
+// 흔해서, 세분화하면 진짜 동일상품을 오히려 떨어뜨린다(CPO 지시로 보류).
+//
+// 처음에는 coat/코트/재킷/romper/맨투맨처럼 "있을 법한" 단어까지 넣었다가 전부
+// 뺐다. 이 매칭은 형태소 분석 없이 정규화 문자열의 부분포함만 보는데, normalizeText가
+// NFKD로 한글을 자모 분해하기 때문에 "코트"가 **"타이니코튼"(Tinycottons)의 부분
+// 문자열이 된다**. 실측에서 브랜드명 때문에 양말·반바지가 OUTER로 잡혔다 — 점수는
+// 좋아졌지만 틀린 이유로 좋아진 것이라 되돌렸다. 관측되지 않은 단어는 넣지 않는다.
+//
+// shorts도 뺐다. 감사 제목에 실제로 있던 표기는 "Flamingos short"(단수)인데,
+// "short"를 넣으면 "short sleeve" 같은 흔한 표현이 전부 PANTS가 된다. 그 결과
+// jeans↔shorts는 카테고리로 구분하지 못하는데, 이는 CPO가 명시적으로 수용했다.
 const CATEGORY_TAXON_WORDS: Record<CategoryTaxon, string[]> = {
-  TOP: ["shirt", "shirts", "blouse", "티셔츠", "셔츠"],
+  TOP: ["shirt", "shirts", "blouse", "sweater", "티셔츠", "셔츠", "후드"],
   PANTS: ["pants", "trousers", "jeans", "바지", "팬츠", "청바지"],
   DRESS: ["dress", "원피스"],
+  SKIRT: ["skirt", "스커트"],
+  OUTER: ["jacket", "자켓", "패딩"],
+  ONE_PIECE: ["onesie"],
+  ACCESSORY: ["socks", "glove", "양말"],
   SHOES: ["shoes", "슈즈"],
 };
 
