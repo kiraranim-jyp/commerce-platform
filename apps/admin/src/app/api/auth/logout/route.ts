@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { recordAuditLog } from "@/lib/audit-log";
 
 /**
  * BETA-SECURITY-2 §19/§21(CASE I) — Seller 로그아웃.
@@ -14,6 +15,16 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 export async function POST() {
   const supabase = await createSupabaseServerClient();
   if (supabase) {
+    // CS-OBSERVABILITY-1 — 누가 로그아웃했는지는 signOut() 전에만 알 수 있다.
+    const { data } = await supabase.auth.getUser();
+    if (data.user) {
+      await recordAuditLog({
+        eventType: "AUTH_LOGOUT",
+        actor: "seller",
+        targetUserId: data.user.id,
+        targetLabel: data.user.email ?? null,
+      });
+    }
     await supabase.auth.signOut();
   }
   return NextResponse.json({ ok: true });

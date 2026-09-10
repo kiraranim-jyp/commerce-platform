@@ -43,6 +43,8 @@ function LoginForm() {
     setError(null);
     try {
       const supabase = createSupabaseBrowserClient();
+      // 리다이렉트 전에 남긴다 — 떠난 뒤에는 기록할 기회가 없다.
+      await reportAuthEvent("google_start", "google");
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -51,6 +53,7 @@ function LoginForm() {
         },
       });
       if (oauthError) {
+        void reportAuthEvent("login_failure", "google");
         setError("Google 로그인을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.");
         setLoading(null);
       }
@@ -71,9 +74,11 @@ function LoginForm() {
       if (signInError) {
         // §18과 같은 원칙 — 이메일이 없는 건지 비밀번호가 틀린 건지 알려주면
         // 계정 존재 여부를 확인하는 도구가 된다.
+        void reportAuthEvent("login_failure", "email");
         setError("이메일 또는 비밀번호가 올바르지 않습니다.");
         return;
       }
+      await reportAuthEvent("login_success", "email");
       router.replace(nextPath);
       router.refresh();
     } catch {
@@ -190,6 +195,21 @@ function GoogleMark() {
       />
     </svg>
   );
+}
+
+/** CS-OBSERVABILITY-1 — 브라우저에서만 일어나는 인증 사건을 서버에 알린다.
+ * 기록 실패가 로그인을 막으면 안 되므로 조용히 무시한다(로그인이 우선이다).
+ * 비밀번호·토큰은 보내지 않는다 — 무슨 일이 있었는지만 알린다. */
+async function reportAuthEvent(event: "google_start" | "login_success" | "login_failure", provider: "google" | "email") {
+  try {
+    await fetch("/api/auth/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event, provider }),
+    });
+  } catch {
+    /* 기록 실패는 사용자에게 노출하지 않는다 */
+  }
 }
 
 export default function LoginPage() {

@@ -19,7 +19,19 @@ export type AuditEventType =
   | "IMPERSONATION_STARTED"
   | "IMPERSONATION_ENDED"
   | "USER_STATUS_CHANGED"
-  | "USER_PASSWORD_RESET";
+  | "USER_PASSWORD_RESET"
+  // CS-OBSERVABILITY-1(CPO 지시, 2026-09-10) — 로그인 이벤트. 지금까지 인증
+  // 이벤트가 한 건도 남지 않아서 "사장님이 언제 어떻게 로그인했는가"를 Admin에서
+  // 확인할 방법이 없었다. event_type이 DB에서 text라 값 추가에 마이그레이션이
+  // 필요 없다(위 IMPERSONATION_* 때와 같은 이유).
+  //
+  // 절대 기록하지 않는 것: 비밀번호, access/refresh/id token, Authorization
+  // 헤더, 쿠키 값, OAuth code. 남기는 것은 "누가/언제/어떤 방식으로"뿐이다.
+  | "AUTH_GOOGLE_START"
+  | "AUTH_GOOGLE_CALLBACK"
+  | "AUTH_LOGIN_SUCCESS"
+  | "AUTH_LOGIN_FAILURE"
+  | "AUTH_LOGOUT";
 
 export interface AuditLogEntry {
   eventType: AuditEventType;

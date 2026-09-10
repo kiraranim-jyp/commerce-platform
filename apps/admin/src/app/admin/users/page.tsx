@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useCallback, useEffect, useState } from "react";
 import type { AdminUserSummary } from "@/app/api/admin/users/route";
 
@@ -145,7 +147,11 @@ export default function AdminUsersPage() {
               {users.map((u) => (
                 <tr key={u.id} className="border-b border-border align-top last:border-b-0">
                   <td className="px-2 py-1.5 text-text-primary">
-                    {u.email ?? "—"}
+                    {/* CS-OBSERVABILITY-1 — 이메일을 상세로 들어가는 입구로 쓴다.
+                        CS는 여기서 최근 활동·최근 분석·원본 URL로 이어진다. */}
+                    <Link href={`/admin/users/${u.id}`} className="hover:underline">
+                      {u.email ?? "—"}
+                    </Link>
                     {!u.emailConfirmed && (
                       <span className="ml-1 rounded bg-warning-soft px-1.5 py-0.5 text-[10px] text-warning">
                         이메일 미확인
