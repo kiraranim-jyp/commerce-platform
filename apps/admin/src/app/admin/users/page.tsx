@@ -114,9 +114,15 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-4 p-6">
       <div>
-        <h1 className="text-lg font-semibold text-text-primary">계정관리</h1>
+        {/* CS-OBSERVABILITY-1.1 — 대시보드로 돌아가는 길. CS는 대시보드 →
+            사용자 조회 → 사용자 상세 → 원본 URL 순으로 오간다. */}
+        <Link href="/admin/dashboard" className="text-xs text-text-tertiary hover:underline">
+          ← 운영 대시보드
+        </Link>
+        <h1 className="mt-1 text-lg font-semibold text-text-primary">계정관리</h1>
         <p className="text-xs text-text-tertiary">
-          Beta 사용자 계정을 조회하고 상태를 관리합니다. 설정은 사용자 전환 후 기존 설정 화면에서 확인하세요.
+          이메일을 누르면 그 사용자의 최근 로그인·활동·분석과 <strong>원본 URL</strong>을 볼 수 있습니다 —
+          CS 문의 시 사용자에게 URL을 다시 묻지 않아도 됩니다.
         </p>
       </div>
 

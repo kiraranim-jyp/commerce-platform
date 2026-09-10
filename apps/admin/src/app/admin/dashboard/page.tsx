@@ -53,6 +53,16 @@ export default function AdminDashboardPage() {
         subtitle="오늘 등록 성공/실패 현황과 실패 원인을 한눈에 확인합니다."
         actions={
           <div className="flex items-center gap-2">
+            {/* CS-OBSERVABILITY-1.1(CPO QA 지적, 2026-09-10) — /admin/users 화면은
+                있었는데 대시보드에서 들어갈 링크가 없었다. 코드에 존재한다는 것과
+                관리자가 실제로 도달할 수 있다는 것은 다른 문제다.
+                CS 진입점이라 맨 앞에 두고 강조 스타일을 준다. */}
+            <Link
+              href="/admin/users"
+              className="rounded-md border border-primary/40 bg-primary/5 px-3 py-1.5 text-xs font-medium text-text-primary hover:bg-primary/10"
+            >
+              사용자 조회 (CS) →
+            </Link>
             <Link
               href="/admin/registrations"
               className="rounded-md border border-border px-3 py-1.5 text-xs text-text-secondary hover:bg-background"
