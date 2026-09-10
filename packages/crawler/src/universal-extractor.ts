@@ -191,6 +191,7 @@ export async function universalExtract(
     // 받아도 여태 아무도 확인하지 않았다. 오류 페이지를 정상 HTML처럼 파싱해서
     // 상품 정보가 통째로 비는데도 조용히 지나갔다(실측: smallable.com 403).
     let navigationStatus: number | null = null;
+    let usedDirectFallback = false;
     const releaseDomainSlot = await acquireDomainSlot(url);
     try {
       let response;
@@ -237,6 +238,7 @@ export async function universalExtract(
     if (navigationStatus !== null && (navigationStatus < 200 || navigationStatus >= 300)) {
       const direct = await fetchHtmlDirect(url);
       if (direct && direct.status >= 200 && direct.status < 300 && direct.html.length > html.length) {
+        usedDirectFallback = true;
         console.warn(
           `[universal-extractor] 브라우저 네비게이션 ${navigationStatus} → HTTP 폴백 사용: ${url} (${direct.html.length}자)`,
         );
@@ -268,6 +270,25 @@ export async function universalExtract(
       config.navigationTimeoutMs,
       "extractProductData",
     );
+
+    // OVERSEAS-PRICE-ORIGINAL-FALLBACK-1 후속(CEO 지시, 2026-09-10: "해외 원본가격은
+    // 원본 사이트 국가 기준으로 형성한다 — 이건 바뀌면 안 된다").
+    //
+    // 폴백은 서버에서 직접 HTTP 요청을 보내는데, 접속 IP로 통화를 바꾸는 사이트가
+    // 있다. 실측(smallable): 서울 리전에서 받으면 JSON-LD가 KRW 98,784를 준다.
+    // 이건 원본 국가 가격이 아니라 **한국 현지 판매가**라 이미 현지 세금/마진이
+    // 들어 있다. 그대로 원본가격으로 쓰면 착지원가에 수입비용을 이중으로 얹는다.
+    // 쿠키·로케일 경로로 원본 국가 통화를 강제하는 방법은 실측으로 없음을 확인했다.
+    //
+    // 그래서 폴백으로 받은 HTML에서 나온 가격이 KRW면 가격만 버린다. 제목·브랜드·
+    // SKU·이미지는 통화와 무관하므로 그대로 쓴다 — 지금까지는 이것들도 전부 없었다.
+    // 값을 지어내지 않고 "가격 확인 불가"로 남기는 쪽이 틀린 가격보다 낫다.
+    if (usedDirectFallback && productData.price?.currency === "KRW") {
+      console.warn(
+        `[universal-extractor] HTTP 폴백이 현지화된 KRW 가격을 반환해 가격만 버린다(원본 국가 가격 아님): ${url}`,
+      );
+      productData.price = undefined;
+    }
 
     return {
       images,
