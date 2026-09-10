@@ -10,6 +10,7 @@ import {
 import { acquireDomainSlot, recordRateLimitResponse } from "./rate-limit/domain-rate-limiter";
 import { scoreAndFilter, type ExtractionTrace } from "./scoring";
 import { fetchHtmlDirect } from "./utils/direct-html-fetch";
+import { expectedCurrencyFor, withSourceCurrency } from "./source-currency-policy";
 import { trySiteStrategies } from "./site-strategies/registry";
 import { jsonLdStrategy } from "./strategies/json-ld.strategy";
 import { openGraphStrategy } from "./strategies/open-graph.strategy";
@@ -192,11 +193,15 @@ export async function universalExtract(
     // 상품 정보가 통째로 비는데도 조용히 지나갔다(실측: smallable.com 403).
     let navigationStatus: number | null = null;
     let usedDirectFallback = false;
+    // OVERSEAS-CURRENCY-POLICY-1 — 등록된 source만 원본 통화를 요청하는 URL로 바꾼다.
+    // 등록되지 않은 사이트는 원본 URL 그대로다(모든 사이트에 파라미터를 붙이지 않는다).
+    // 저장/상대경로 해석에 쓰는 url은 건드리지 않고, 실제 가져오기에만 쓴다.
+    const fetchUrl = withSourceCurrency(url);
     const releaseDomainSlot = await acquireDomainSlot(url);
     try {
       let response;
       try {
-        response = await page.goto(url, {
+        response = await page.goto(fetchUrl, {
           waitUntil: "networkidle",
           timeout: config.navigationTimeoutMs,
         });
@@ -205,7 +210,7 @@ export async function universalExtract(
           `[universal-extractor] networkidle 대기 타임아웃, domcontentloaded로 재시도: ${url}`,
           error,
         );
-        response = await page.goto(url, {
+        response = await page.goto(fetchUrl, {
           waitUntil: "domcontentloaded",
           timeout: config.navigationTimeoutMs,
         });
@@ -236,7 +241,7 @@ export async function universalExtract(
     // 정상 응답(2xx)일 때는 절대 타지 않으므로 기존 사이트의 추출 결과는 바뀌지
     // 않는다 — 지금 아무것도 못 얻는 경우에만 값이 생긴다.
     if (navigationStatus !== null && (navigationStatus < 200 || navigationStatus >= 300)) {
-      const direct = await fetchHtmlDirect(url);
+      const direct = await fetchHtmlDirect(fetchUrl);
       if (direct && direct.status >= 200 && direct.status < 300 && direct.html.length > html.length) {
         usedDirectFallback = true;
         console.warn(
@@ -283,11 +288,28 @@ export async function universalExtract(
     // 그래서 폴백으로 받은 HTML에서 나온 가격이 KRW면 가격만 버린다. 제목·브랜드·
     // SKU·이미지는 통화와 무관하므로 그대로 쓴다 — 지금까지는 이것들도 전부 없었다.
     // 값을 지어내지 않고 "가격 확인 불가"로 남기는 쪽이 틀린 가격보다 낫다.
-    if (usedDirectFallback && productData.price?.currency === "KRW") {
-      console.warn(
-        `[universal-extractor] HTTP 폴백이 현지화된 KRW 가격을 반환해 가격만 버린다(원본 국가 가격 아님): ${url}`,
-      );
-      productData.price = undefined;
+    const expectedCurrency = expectedCurrencyFor(url);
+    if (productData.price) {
+      const got = productData.price.currency;
+      // ① 등록된 source인데 원본 통화가 아닌 값이 왔다 — smallable은 인식할 수 없는
+      //    파라미터를 받으면 조용히 지역 기본값으로 돌아가므로 응답을 반드시 확인한다.
+      // ② 등록되지 않은 source라도 해외 원상품 가격이 KRW로 오면 그건 사이트가 접속
+      //    지역을 보고 환산해 보여주는 값이지 원본 국가 가격이 아니다. 실측으로
+      //    smallable(KRW 98,784)뿐 아니라 Shopify 매장 JSON-LD에서도 확인됐다
+      //    (junioredition KRW 52,400 — fast path를 타면 meta.json 권위로 GBP 27.60이
+      //    나오지만, 이미지가 0장이면 fast path를 포기하고 이 경로로 내려온다).
+      //
+      // 어느 쪽이든 금액을 되돌릴 방법이 없으므로 가격만 버린다. 제목·브랜드·SKU·
+      // 이미지는 통화와 무관하니 그대로 쓴다. 값을 지어내지 않고 "가격 확인 불가"로
+      // 남기는 쪽이 틀린 금액보다 낫다.
+      const wrongForRegisteredSource = expectedCurrency !== null && got !== expectedCurrency;
+      const localizedToMarketplace = got === "KRW";
+      if (wrongForRegisteredSource || localizedToMarketplace) {
+        console.warn(
+          `[universal-extractor] 원본 국가 통화가 아니라 가격만 버린다: ${url} (받은 통화=${got}${expectedCurrency ? `, 기대=${expectedCurrency}` : ""}${usedDirectFallback ? ", HTTP 폴백" : ""})`,
+        );
+        productData.price = undefined;
+      }
     }
 
     return {
