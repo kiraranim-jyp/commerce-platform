@@ -35,6 +35,21 @@ import { listDomesticPriceSources } from "../_lib/domestic-price-source";
  * 자동 확인 파이프라인의 판정이 항상 일치하게 한다(단일 소스). */
 const MAX_MODEL_CODE_FETCH_PER_SHOP = 3;
 
+/** 원본 URL 자체에서 모델코드를 뽑는다 — 설명문에 코드 표기가 없는 자사몰용
+ * 폴백이다. 국내 후보에 쓰는 레지스트리를 그대로 재사용하므로, 지원 도메인이
+ * 늘어나면 이 경로도 함께 늘어난다(도메인 분기를 여기에 만들지 않는다). */
+async function extractModelCodeFromSourceUrl(sourceUrl: string | undefined): Promise<string | null> {
+  if (!sourceUrl) return null;
+  let domain: string;
+  try {
+    domain = new URL(sourceUrl).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+  if (!supportsDomesticIdentifierExtraction(domain)) return null;
+  return fetchDomesticModelCode(domain, sourceUrl).catch(() => null);
+}
+
 async function attachMatchTruth(
   results: ComparisonSearchResult[],
   foreignModelCode: string | null,
@@ -138,7 +153,19 @@ export async function POST(request: Request) {
     { title: body.title, brand: body.brand, sourceUrl: body.sourceUrl, sku: body.sku, searchTerm },
     sources.map((s) => ({ id: s.id, name: s.name, domain: s.domain, currency: s.currency, collectionStrategy: s.collectionStrategy })),
   );
-  const foreignModelCode = extractForeignModelCode(body.description);
+  // P-10-F(CEO 승인, 2026-09-11) — 원본 코드를 설명문에서만 찾던 것을 넓힌다.
+  //
+  // 실측(Bobo Choses, 대표님 제보): 원본 URL이
+  // /en-kr/products/b226ac043-mystery-bc-half-zipped-sweatshirt 인데 자사몰
+  // 설명문에는 "Product code" 표기가 없다(그 표기는 Junior Edition 같은 편집샵이
+  // 쓴다). 그래서 foreignModelCode가 null이 되고, compareModelCode(null, x)는
+  // "unavailable"이라 국내 후보가 코드를 갖고 있어도 비교조차 못 했다 — 색상만
+  // 다른 B226AC042가 정답 B226AC043과 같은 등급으로 나온 이유다.
+  //
+  // 코드는 그 URL 안에 이미 있었다. 국내 후보 URL을 파싱하는 바로 그 레지스트리가
+  // 원본 URL에도 그대로 통한다. 새 추출기를 만들지 않고 있는 것을 재사용한다.
+  const foreignModelCode =
+    extractForeignModelCode(body.description) ?? (await extractModelCodeFromSourceUrl(body.sourceUrl));
   const results = await attachMatchTruth(rawResults, foreignModelCode);
 
   logDomesticFunnel(searchTerm, rawResults, results);
