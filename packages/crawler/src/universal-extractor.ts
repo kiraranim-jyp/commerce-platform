@@ -9,6 +9,7 @@ import {
 } from "./product-data-extractor";
 import { acquireDomainSlot, recordRateLimitResponse } from "./rate-limit/domain-rate-limiter";
 import { scoreAndFilter, type ExtractionTrace } from "./scoring";
+import { fetchHtmlDirect } from "./utils/direct-html-fetch";
 import { trySiteStrategies } from "./site-strategies/registry";
 import { jsonLdStrategy } from "./strategies/json-ld.strategy";
 import { openGraphStrategy } from "./strategies/open-graph.strategy";
@@ -186,6 +187,10 @@ export async function universalExtract(
     // 429를 받으면 recordRateLimitResponse가 그 도메인을 blockedUntil까지 쉬게
     // 기록해서, 다음 요청(같은 URL의 재시도든 다른 이미지 다운로드든)이 곧바로
     // 같은 벽에 다시 부딪히지 않게 한다.
+    // OVERSEAS-PRICE-ORIGINAL-FALLBACK-1(CPO 지시, 2026-09-10) — page.goto가 4xx/5xx를
+    // 받아도 여태 아무도 확인하지 않았다. 오류 페이지를 정상 HTML처럼 파싱해서
+    // 상품 정보가 통째로 비는데도 조용히 지나갔다(실측: smallable.com 403).
+    let navigationStatus: number | null = null;
     const releaseDomainSlot = await acquireDomainSlot(url);
     try {
       let response;
@@ -208,6 +213,7 @@ export async function universalExtract(
       if (response) {
         const headers = await response.allHeaders().catch(() => ({}) as Record<string, string>);
         recordRateLimitResponse(url, response.status(), headers["retry-after"] ?? null);
+        navigationStatus = response.status();
       }
     } finally {
       releaseDomainSlot();
@@ -220,6 +226,26 @@ export async function universalExtract(
     await page.waitForTimeout(500);
 
     let html = await page.content();
+
+    // 차단당한 경우에만 평범한 HTTP 요청으로 한 번 더 시도한다. headless 브라우저는
+    // 막지만 일반 User-Agent 요청은 통과시키는 WAF가 실제로 있다(실측: smallable은
+    // Playwright에 403 + 923자 오류 페이지, 같은 URL을 HTTP로 받으면 200 + 668KB에
+    // JSON-LD로 상품명/브랜드/가격/SKU가 전부 들어 있다).
+    //
+    // 정상 응답(2xx)일 때는 절대 타지 않으므로 기존 사이트의 추출 결과는 바뀌지
+    // 않는다 — 지금 아무것도 못 얻는 경우에만 값이 생긴다.
+    if (navigationStatus !== null && (navigationStatus < 200 || navigationStatus >= 300)) {
+      const direct = await fetchHtmlDirect(url);
+      if (direct && direct.status >= 200 && direct.status < 300 && direct.html.length > html.length) {
+        console.warn(
+          `[universal-extractor] 브라우저 네비게이션 ${navigationStatus} → HTTP 폴백 사용: ${url} (${direct.html.length}자)`,
+        );
+        html = direct.html;
+      } else {
+        console.warn(`[universal-extractor] 브라우저 네비게이션 ${navigationStatus}, HTTP 폴백도 실패: ${url}`);
+      }
+    }
+
     let candidates = await runStrategies({ url, html, page });
     let strategyCounts = countBySource(candidates);
     let { images, trace } = scoreAndFilter(candidates, config);
