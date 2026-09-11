@@ -37,9 +37,28 @@ export interface StageSurfaces {
   source: React.ReactNode;
   /** 이미지 편집기. */
   images: React.ReactNode;
+  /**
+   * UX 2.5(CEO 지시, 2026-09-11) — 가격 계산기(PriceEditor).
+   *
+   * 이 자리에 **노드 하나**로 들어온다는 점이 중요하다. 아래에서 이 값은
+   * 두 위치(③ 체크리스트에서 펼친 자리 / "언제든 열어볼 수 있는 것"의 접힘)에
+   * 쓰이지만, 두 자리가 동시에 그려지지 않도록 서로 배타적으로 막혀 있고
+   * 실제 PriceEditor 엘리먼트는 CommerceWorkspace가 한 번만 만든다 — 화면에 계산기가
+   * 두 벌 생기면 같은 상품이 위아래에서 다른 판매가를 말한다.
+   */
+  price: React.ReactNode;
   /** 채널별 필수 정보 일괄 처리 패널. */
   required: React.ReactNode;
 }
+
+/**
+ * UX 2.5 — 가격 계산기로 데려갈 때 쓰는 스크롤 앵커.
+ *
+ * CommerceWorkspace가 surfaces.price 노드에 직접 붙이므로, 체크리스트에서
+ * 펼쳤든 아래 접힘에서 열었든 같은 id가 따라다닌다(자리마다 다른 앵커를 두면
+ * 어느 쪽이 열렸는지에 따라 스크롤이 조용히 실패한다).
+ */
+export const PRICE_SURFACE_ANCHOR_ID = "price-surface";
 
 export function StageBody({
   focus,
@@ -50,6 +69,7 @@ export function StageBody({
   channels,
   categoryVerified,
   onGoToChannel,
+  openPriceSurfaceRequest = 0,
 }: {
   focus: StageFocus;
   workflow: Workflow;
@@ -63,6 +83,14 @@ export function StageBody({
   /** 채널 화면으로 데려간다. 등록을 여기서 실행하지 않는다 — 등록 게이트는
    * 지금까지와 같이 그 화면 하나가 책임진다(ActionCenter와 같은 원칙). */
   onGoToChannel: (id: PlatformId) => void;
+  /**
+   * UX 2.5 — "가격을 보여달라"는 요청이 바깥에서 올 때마다 1씩 올라가는 값.
+   *
+   * 불리언이 아니라 카운터인 이유: 같은 요청이 두 번 올 수 있기 때문이다
+   * (판단 카드의 [가격/마진 확인]을 닫았다가 다시 누르는 경우). 불리언이면
+   * 두 번째 클릭에서 값이 그대로라 아무 일도 일어나지 않는다.
+   */
+  openPriceSurfaceRequest?: number;
 }) {
   /**
    * ③에서 지금 펼쳐 작업 중인 항목. **이 상태가 여기 있는 이유**는 아래 접힘
@@ -73,6 +101,26 @@ export function StageBody({
    * null이면 "손볼 것이 있는 첫 항목"이 펼쳐진다(workflow.ts가 정한 순서 그대로).
    */
   const [pickedKey, setPickedKey] = useState<string | null>(null);
+
+  /**
+   * UX 2.5 — 가격 계산기를 여는 길은 ③ 체크리스트 말고도 있다: ② 시장 판단
+   * 카드의 [가격/마진 확인], 해외 가격비교의 같은 버튼, 상단 Flow의 "판매가격"
+   * 항목. 그런데 현재 단계가 ③이 아니면 위 체크리스트 자체가 그려지지 않아
+   * pickedKey만으로는 열 방법이 없다 — 그때는 아래 "언제든 열어볼 수 있는 것"에
+   * 있는 같은 노드를 대신 펼친다. 두 경로 모두 결국 같은 편집기 하나를 연다.
+   *
+   * useEffect가 아니라 렌더 중 동기화인 이유는 이 저장소의 다른 파생 state
+   * (PriceEditor의 LiveNumberField 등)와 같다 — 한 번 더 그리는 대신 이번
+   * 렌더에서 바로 맞춘다.
+   */
+  const [priceOpen, setPriceOpen] = useState(false);
+  const [syncedPriceRequest, setSyncedPriceRequest] = useState(openPriceSurfaceRequest);
+  if (openPriceSurfaceRequest !== syncedPriceRequest) {
+    setSyncedPriceRequest(openPriceSurfaceRequest);
+    setPriceOpen(true);
+    setPickedKey("price");
+  }
+
   const prepareSubSteps = focus.main === "PREPARE" ? workflow.current.subSteps : [];
   const activePrepareKey =
     pickedKey != null && prepareSubSteps.some((s) => s.key === pickedKey)
@@ -117,6 +165,21 @@ export function StageBody({
         <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-text-tertiary">
           이 단계의 일은 아니지만 언제든 열어볼 수 있는 것
         </p>
+        {/* UX 2.5(CEO 지시, 2026-09-11) — 가격은 ③의 항목이지만, 어느 단계에서도
+            열 수 있어야 한다: 셀러가 가격을 다시 보고 싶어지는 순간은 대개 ②
+            판단 카드를 읽은 직후지 ③에 들어와 있을 때가 아니다. 위에서 이미
+            펼쳐 쓰고 있으면(expandedSurface === "PRICE") 여기 또 두지 않는다 —
+            이미지와 같은 규칙이고, 이유도 같다(계산기가 두 벌 뜨면 안 된다). */}
+        {expandedSurface !== "PRICE" && (
+          <CollapsibleSection
+            title={PREPARE_SURFACE_LABEL.PRICE}
+            summary="원본 가격 → 착지원가 → 권장 판매가격 · 여기서 정한 한 값이 모든 채널의 판매가가 됩니다"
+            open={priceOpen}
+            onToggle={setPriceOpen}
+          >
+            {surfaces.price}
+          </CollapsibleSection>
+        )}
         {/* UX 2.4.1(CEO 지시, 2026-09-11) — "가격 비교 근거"에서 "📊 시장 가격
             비교"로. 이 묶음이 실제로 들고 있는 것은 두 시장의 관측이다:
             국내 경쟁 판매자와 해외 판매처. 제목이 "비교 근거"라고만 하면
@@ -324,6 +387,9 @@ function PrepareWorkSurface({
 }) {
   const surface = prepareSurfaceOf(subStepKey);
   if (surface === "IMAGES") return <>{surfaces.images}</>;
+  // UX 2.5 — 가격은 여기서 "채널로 가세요" 안내를 하지 않는다. 카테고리와 달리
+  // 채널이 고를 것이 없기 때문이다(값이 하나뿐이다) — 계산기를 그대로 연다.
+  if (surface === "PRICE") return <>{surfaces.price}</>;
   if (surface === "REQUIRED") {
     return (
       <div className="space-y-3">

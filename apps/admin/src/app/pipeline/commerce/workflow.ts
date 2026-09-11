@@ -1,3 +1,4 @@
+import { formatKrw } from "@commerce/pricing";
 import type { PlatformId } from "@commerce/shared";
 
 /**
@@ -184,6 +185,17 @@ export interface PrepareSignal {
   imageCount: number;
   /** 상세 설명(원문 또는 한국어)이 있는가. */
   detailReady: boolean;
+  /**
+   * UX 2.5(CEO 지시, 2026-09-11) — 등록에 실제로 쓰일 판매가가 정해졌는가.
+   *
+   * 여기서 새 판정을 만들지 않는다. 호출부가 resolveListingPrice()(모든 채널
+   * 어댑터가 부르는 **그 함수 하나**)의 source !== "UNRESOLVED"를 그대로
+   * 넘긴다 — 채널 화면에 찍히는 listing.priceKrw와 이 항목이 다른 말을 할 수
+   * 없게 하려는 것이다.
+   */
+  priceResolved: boolean;
+  /** 그 판매가(KRW). 정해지지 않았으면 null — 0을 "가격"이라고 부르지 않는다. */
+  priceKrw: number | null;
   /** 실제로 등록 가능한 채널에서 아직 비어 있는 필수 항목 수. */
   requiredFieldBlockingCount: number;
 }
@@ -535,6 +547,25 @@ function buildRegistrationPreparing(signal: PrepareSignal, collectionDone: boole
       "확정됨",
       "등록할 카테고리를 확정해주세요",
       "smartstore",
+    ),
+    // UX 2.5(CEO 지시, 2026-09-11) — 판매가격이 카테고리 바로 다음에 오는 것은
+    // 배치 취향이 아니라 두 항목이 같은 성질이기 때문이다: 둘 다 등록 payload에
+    // 실제로 들어가는 값이고, 비면 register API가 거부한다(가격 쪽은
+    // resolveListingPrice()가 UNRESOLVED를 내는 순간 어댑터의 "판매가격" 검증이
+    // ERROR가 된다 — packages/marketplace의 각 adapter).
+    //
+    // 채널이 아니라 여기 있는 이유도 같다. 판매가는 채널마다 따로 정해지는 값이
+    // 아니라 resolveListingPrice()가 내는 **하나의 값**이고, 스마트스토어/쿠팡이
+    // 같은 숫자를 받는다는 사실은 listing-price-contract.test.ts가 이미 못박고
+    // 있다. 그 하나뿐인 값을 채널 화면마다 고치게 두면 "어느 채널에서 고친
+    // 가격이 진짜인가"라는, 데이터에는 존재하지도 않는 질문이 화면에서만 생긴다.
+    item(
+      "price",
+      "판매가격",
+      signal.priceResolved,
+      signal.priceKrw != null ? `${formatKrw(signal.priceKrw)} · 모든 채널 동일` : "확정됨",
+      "원본 가격을 확인할 수 없어 판매가격을 정하지 못했습니다",
+      "price",
     ),
     item(
       "product_info",

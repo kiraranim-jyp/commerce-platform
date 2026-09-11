@@ -12,6 +12,7 @@ import type {
   NaverPayloadValidationResult,
 } from "@commerce/listing";
 import { isVerifiedCategorySelected, MARKETPLACE_DESCRIPTORS } from "@commerce/marketplace";
+import { formatKrw } from "@commerce/pricing";
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct, CanonicalProductCertification, CanonicalProductOptionGroup, FieldSource } from "@commerce/shared";
 import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
@@ -26,7 +27,6 @@ import { ListingSection } from "./ListingSection";
 import { NaverPayloadPreview } from "./NaverPayloadPreview";
 import type { NaverResolveResponse } from "./NaverPayloadPreview";
 import { OptionVariantEditor } from "./OptionVariantEditor";
-import { PriceEditor } from "./PriceEditor";
 import { computeChecklistReadiness, computeNaverPayloadReadiness } from "./readiness";
 import { RegistrationReadinessCard } from "./RegistrationReadinessCard";
 import { buildPriorityItems, resolveRegistrationReadinessState, RegistrationStatusBanner } from "./RegistrationStatusBanner";
@@ -281,13 +281,7 @@ export function PlatformPreview({
   naverResolved,
   compliancePreview,
   onUpdateField,
-  onUpdateSalePriceKrw,
-  onUpdateOriginalPrice,
-  onUpdatePriceBreakdown,
-  onUpdateCustomsCost,
-  exchangeRates,
-  exchangeRatesLoading,
-  onRefreshExchangeRates,
+  onRequestPriceReview,
   onSelectCategory,
   onFixTextField,
   onSetFieldReference,
@@ -356,16 +350,19 @@ export function PlatformPreview({
    * 여기서 새로 계산하지 않고 그 값을 그대로 보여주기만 한다. */
   compliancePreview?: ComplianceReport | null;
   onUpdateField: (key: "title" | "brand" | "description", value: string) => void;
-  onUpdateSalePriceKrw: (amountKrw: number) => void;
-  /** CEO 지시(2026-08-03) — Shopify Markets 스토어의 presentment pricing 때문에
-   * 자동 감지된 원본 통화/금액이 실제와 다를 수 있어, 원본 가격을 직접 고칠 수
-   * 있게 한다. */
-  onUpdateOriginalPrice?: (patch: Partial<{ amount: number; currency: string }>) => void;
-  onUpdatePriceBreakdown: (breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) => void;
-  onUpdateCustomsCost: (patch: Partial<{ customsDutyKrw: number | null; customsVatKrw: number | null }>) => void;
-  exchangeRates: { rates: Record<string, number>; fetchedAt: string; source: "frankfurter" | "fallback" } | null;
-  exchangeRatesLoading: boolean;
-  onRefreshExchangeRates: () => void;
+  /**
+   * UX 2.5(CEO 지시, 2026-09-11) — 가격 편집기(PriceEditor)가 이 화면에서
+   * 내려간 자리에 남는 유일한 가격 관련 prop. 값을 고치는 setter가 아니라
+   * "가격을 관리하는 한 곳으로 데려가는" 이동이다 — 채널 화면은 이제
+   * 판매가를 **읽기만** 한다.
+   *
+   * 왜 가격 setter 넷(판매가 · 원본가 · 배송비/수수료/마진 · 관세)과 환율
+   * props를 통째로 지웠나: 남겨두면 "여기서도 고칠 수 있다"는 신호가 되어
+   * 언젠가 두 번째 편집 UI가 그 prop을 타고 되살아난다. 등록에 쓰이는
+   * 판매가는 resolveListingPrice()가 내는 값 하나뿐이고, 이 화면은 그
+   * 결과(listing.priceKrw)를 그대로 보여주기만 한다.
+   */
+  onRequestPriceReview?: () => void;
   onSelectCategory: (candidate: CategoryCandidate) => void;
   onFixTextField?: (
     field:
@@ -933,23 +930,54 @@ export function PlatformPreview({
           )}
         </CollapsibleSection>
 
+        {/* UX 2.5(CEO 지시, 2026-09-11) — 가격 편집기는 여기서 내려가고 결과만 남는다.
+         *
+         * 왜 옮겼나: 판매가는 처음부터 채널별 값이 아니었다. 모든 어댑터가
+         * resolveListingPrice() 하나를 부르고, 스마트스토어와 쿠팡이 같은 숫자를
+         * 받는다는 사실은 packages/marketplace/src/__tests__/
+         * listing-price-contract.test.ts가 못박고 있다. 그런데 편집기가 채널
+         * 화면마다 떠 있어서, 화면만 보면 "쿠팡 탭에서 고친 가격"과
+         * "스마트스토어 탭에서 고친 가격"이 따로 있는 것처럼 읽혔다 — 데이터에는
+         * 존재하지도 않는 구분이다. 이제 고치는 곳은 상품정보 ③ 등록 준비 하나다.
+         *
+         * 이 섹션을 통째로 없애지 않은 이유: id="section-price"가 살아 있어야 한다.
+         * readiness.ts의 LABEL_TO_SECTION["판매가격"]과 naverFieldSection(
+         * "originProduct.salePrice")이 이 id로 스크롤하고, readiness.test.ts는
+         * "required이고 READY가 아닌 항목은 갈 곳이 반드시 있다"를 계약으로
+         * 검사한다. 섹션을 지우면 그 경로가 조용히 끊긴다(기본정보 안내 문구와
+         * 같은 read-only 선례: 위 section-basic의 "이 정보는 상품정보 탭과
+         * 공유됩니다" 문구). */}
         <CollapsibleSection
           title="가격"
           badge={sectionCompletionBadge("section-price")}
           alwaysRenderChildren
           {...sectionProps("section-price")}
         >
-          <PriceEditor
-            product={product}
-            open={openSections["section-price"] ?? false}
-            onUpdateSalePriceKrw={onUpdateSalePriceKrw}
-            onUpdateOriginalPrice={onUpdateOriginalPrice}
-            onUpdatePriceBreakdown={onUpdatePriceBreakdown}
-            onUpdateCustomsCost={onUpdateCustomsCost}
-            exchangeRates={exchangeRates}
-            exchangeRatesLoading={exchangeRatesLoading}
-            onRefreshExchangeRates={onRefreshExchangeRates}
-          />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="flex items-baseline gap-1.5 text-sm text-text-secondary">
+                판매가격
+                <span className="text-base font-semibold text-text-primary">
+                  {listing.priceSource === "UNRESOLVED" ? "미확정" : formatKrw(listing.priceKrw)}
+                </span>
+              </p>
+              {/* 이 화면이 지금 보여주는 숫자가 바로 등록 payload에 들어갈 값이다
+                  (listing.priceKrw — 어댑터가 resolveListingPrice()로 만든 값).
+                  따로 계산하지 않으므로 상품정보에서 본 최종 판매가격과 갈릴 수 없다. */}
+              <p className="mt-0.5 text-[11px] text-text-tertiary">
+                가격은 상품정보에서 관리됩니다 — 여기서 정한 한 값이 모든 채널에 그대로 적용됩니다.
+              </p>
+            </div>
+            {onRequestPriceReview && (
+              <button
+                type="button"
+                onClick={onRequestPriceReview}
+                className="shrink-0 rounded-md border border-primary px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary-soft"
+              >
+                가격 수정하기 →
+              </button>
+            )}
+          </div>
         </CollapsibleSection>
 
         {/* CEO 지시(2026-08-24, CPO 부재중): "각 커머스별 이미지는 제거하고

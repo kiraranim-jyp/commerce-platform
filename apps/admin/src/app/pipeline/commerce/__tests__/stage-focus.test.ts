@@ -63,6 +63,9 @@ const PREPARED: PrepareSignal = {
   optionGroupCount: 2,
   imageCount: 8,
   detailReady: true,
+  // UX 2.5 — resolveListingPrice()가 값을 낸 상태(SELLER_OVERRIDE 또는 SYSTEM_SUGGESTED).
+  priceResolved: true,
+  priceKrw: 143500,
   requiredFieldBlockingCount: 0,
 };
 
@@ -216,6 +219,9 @@ describe("③ 체크리스트 항목 ↔ 작업면", () => {
     const prepareStep = resolveWorkflow(input()).steps[2];
     expect(prepareStep.subSteps.map((s) => s.key)).toEqual([
       "category",
+      // UX 2.5 — 판매가격이 카테고리 바로 뒤에 온다. 둘 다 등록 payload에 실제로
+      // 들어가는 값이고, 비면 등록 API가 거부한다.
+      "price",
       "product_info",
       "option",
       "image",
@@ -235,6 +241,9 @@ describe("③ 체크리스트 항목 ↔ 작업면", () => {
     expect(prepareSurfaceOf("required_fields")).toBe("REQUIRED");
     // 카테고리는 등록 payload에 들어가는 값이라 채널 화면에서만 확정한다.
     expect(prepareSurfaceOf("category")).toBe("CATEGORY");
+    // UX 2.5 — 가격은 정반대다: 채널이 고를 것이 없어서(값이 하나뿐) 편집기가
+    // 상품정보 쪽에만 있다.
+    expect(prepareSurfaceOf("price")).toBe("PRICE");
   });
 });
 

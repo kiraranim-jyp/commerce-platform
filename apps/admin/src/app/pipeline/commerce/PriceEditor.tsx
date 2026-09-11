@@ -14,6 +14,10 @@ import {
 } from "@commerce/pricing";
 import type { PriceIntelligenceResult } from "@commerce/pricing";
 import { EditableText } from "./EditableField";
+// UX 2.5 — 라벨 어휘는 판단 카드의 ④ 수익성 사슬과 같은 표에서 가져온다.
+// 같은 숫자를 두 화면이 다른 이름으로 부르던 것이 이 저장소가 반복해서 고쳐 온
+// 라벨 표류다(price-hierarchy.ts의 "의미 하나당 라벨 하나" 주석 참고).
+import { PRICE_LINE_LABEL } from "./price-hierarchy";
 import { ValueBadge } from "@/components/ui/ValueBadge";
 
 /**
@@ -21,9 +25,21 @@ import { ValueBadge } from "@/components/ui/ValueBadge";
  * 요약("최종 판매가")과 아래 "가격 계산 Breakdown"이 서로 다른 공식을 썼다
  * (요약은 마크업 cost×(1+마진%), Breakdown은 마진율 역산 landedCost/(1-fee%-
  * margin%)) — 같은 "마진 20%" 라벨인데 숫자가 달라지는 버그였다. 이제는
- * computePriceBreakdown() 하나만 화면 전체에서 쓰고, Naver/Coupang도 이
- * 컴포넌트를 그대로 재사용한다(NaverPayloadPreview.tsx도 이 컴포넌트를
- * import — Commerce별로 다른 가격 컴포넌트를 만들지 않는다).
+ * computePriceBreakdown() 하나만 화면 전체에서 쓴다 — Commerce별로 다른 가격
+ * 컴포넌트를 만들지 않는다.
+ *
+ * UX 2.5(CEO 지시, 2026-09-11) — 이 컴포넌트가 사는 곳이 바뀌었다. 예전에는
+ * 채널 화면(PlatformPreview)의 "가격" Accordion 안에 있어서 스마트스토어 탭과
+ * 쿠팡 탭에 각각 하나씩 떠 있었다. 그런데 등록에 쓰이는 판매가는 처음부터
+ * resolveListingPrice()가 내는 **하나의 값**이었고(모든 어댑터가 같은 함수를
+ * 부른다 — listing-price-contract.test.ts), 채널별 가격이라는 개념은 데이터에
+ * 존재한 적이 없다. 화면만 그렇게 보였을 뿐이다. 이제 편집기는 상품정보 ③
+ * 등록 준비 안에 하나만 있고, 채널 화면은 그 결과를 읽기전용으로 보여준다.
+ *
+ * 그래서 open prop도 없앴다 — 접기/펼치기는 이 카드를 담는 바깥 화면
+ * (StageBody의 CollapsibleSection, ③ 체크리스트의 펼침)이 맡는다. 계산기가
+ * 스스로 "요약만 그릴지"를 판단하던 분기가 사라지면서, 같은 숫자를 두 모양으로
+ * 그릴 위험 자체가 없어졌다.
  *
  * N-3.10 Part D-H(CPO 지시) — "상단 요약 / 가격 설정 / 접힌 Breakdown" 3분할이
  * "중복 가격 UI"로 지적됐다. 이제 하나의 리스트로 합쳤고, 수수료/마진/배송비/
@@ -88,7 +104,6 @@ function LiveNumberField({
 
 export function PriceEditor({
   product,
-  open,
   onUpdateSalePriceKrw,
   onUpdateOriginalPrice,
   onUpdatePriceBreakdown,
@@ -98,13 +113,6 @@ export function PriceEditor({
   onRefreshExchangeRates,
 }: {
   product: CanonicalProduct;
-  /** N-3.16 잔여3(CPO 지시: "가격 계산 Breakdown은 기본 접힘, 최종 판매가가
-   * 가장 강하게 보여야 함") — 바깥 "가격" Accordion의 펼침 상태를 그대로
-   * 받는다. 이 컴포넌트는 항상 마운트되어 있고(계산은 한 곳에서만 일어남),
-   * open=false면 요약 한 줄만, open=true면 편집 UI 전체를 그린다 — 접혀
-   * 있을 때 보이는 숫자와 펼쳤을 때 보이는 숫자가 서로 다른 계산에서 나올
-   * 위험이 없다. */
-  open: boolean;
   onUpdateSalePriceKrw: (amountKrw: number) => void;
   onUpdateOriginalPrice?: (patch: Partial<{ amount: number; currency: string }>) => void;
   onUpdatePriceBreakdown: (breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) => void;
@@ -115,12 +123,16 @@ export function PriceEditor({
 }) {
   const breakdownInput = product.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT;
 
-  // Sprint A-11/N-3.9(Part I) — Settings의 "가격 정책"(기본 마진율/반올림
-  // 단위)을 초기값으로만 쓴다. 상품별로 사용자가 breakdownInput.marginPercent를
-  // 고치면 이 상품의 priceBreakdown에만 저장되고 Settings 기본값 자체는
-  // 바뀌지 않는다(다른 상품에 영향 없음).
+  // Sprint A-11/N-3.9(Part I) — Settings의 "가격 정책"(반올림 단위) 등 판매자
+  // 공통 기본값. 상품별로 사용자가 breakdownInput을 고치면 이 상품의
+  // priceBreakdown에만 저장되고 Settings 기본값 자체는 바뀌지 않는다.
+  //
+  // UX 2.5 — "기본 마진율을 이 상품에 한 번 반영한다"는 일은 여기서 하지
+  // 않는다. 그 일은 CommerceWorkspace로 올라갔다: 편집기가 채널 화면에 항상
+  // 떠 있던 시절에는 여기 두어도 늘 실행됐지만, 이제는 셀러가 가격 화면을
+  // 펼쳐야만 이 컴포넌트가 마운트된다 — 화면을 옮겼다는 이유로 실제 등록가가
+  // 달라지면 안 된다(CommerceWorkspace의 해당 주석 참고).
   const [sellerDefaults, setSellerDefaults] = useState<{
-    defaultMarginPercent: number | null;
     priceRoundingUnit: number;
     /** P-3-2(대표님 지시, 2026-08-28) — Settings에 저장된 국내 배송원가
      * 기본값. PriceEditor는 이 값을 읽기전용으로 보여주기만 한다(수정은
@@ -136,7 +148,6 @@ export function PriceEditor({
         (data: {
           profiles?: Array<{
             isDefault: boolean;
-            defaultMarginPercent: number | null;
             priceRoundingUnit: number;
             domesticShippingCostKrw: number | null;
           }>;
@@ -146,7 +157,6 @@ export function PriceEditor({
           const p = list.find((x) => x.isDefault) ?? list[0] ?? null;
           if (p)
             setSellerDefaults({
-              defaultMarginPercent: p.defaultMarginPercent,
               priceRoundingUnit: p.priceRoundingUnit,
               domesticShippingCostKrw: p.domesticShippingCostKrw,
             });
@@ -211,16 +221,6 @@ export function PriceEditor({
       .finally(() => setExpandLoading(false));
   }
 
-  // 이 상품에 아직 가격 설정이 저장돼 있지 않을 때만(product.priceBreakdown ==
-  // null) Settings 기본 마진율을 1회 반영한다 — 이미 저장된 값(상품별 수정분
-  // 포함)은 절대 덮어쓰지 않는다.
-  useEffect(() => {
-    if (product.priceBreakdown == null && sellerDefaults?.defaultMarginPercent != null) {
-      onUpdatePriceBreakdown({ ...DEFAULT_PRICE_BREAKDOWN_INPUT, marginPercent: sellerDefaults.defaultMarginPercent });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sellerDefaults]);
-
   // 타이핑 중 즉시 재계산을 위한 로컬 draft — product.priceBreakdown/price가
   // 외부(탭 전환, Settings 기본값 반영)에서 바뀌면 다시 동기화한다.
   const [draftInput, setDraftInput] = useState(breakdownInput);
@@ -281,18 +281,6 @@ export function PriceEditor({
 
   const [detailOpen, setDetailOpen] = useState(false);
 
-  // N-3.16 잔여3 — 바깥 "가격" Accordion이 접혀 있을 때는 배송비/수수료/마진
-  // 편집 UI 전체를 그리지 않고, 지금 등록에 쓰일 숫자만 한눈에 보여준다.
-  // finalPriceKrw/breakdown은 위에서 이미 계산이 끝난 값이라 펼쳤을 때와
-  // 다른 숫자가 나올 수 없다.
-  if (!open) {
-    return priceUnresolved ? (
-      <PriceUnresolvedBanner product={product} compact />
-    ) : (
-      <PriceSummaryStrip product={product} breakdown={breakdown} finalPriceKrw={finalPriceKrw} />
-    );
-  }
-
   if (priceUnresolved) {
     return (
       <section className="rounded-lg border border-border p-4 text-sm">
@@ -340,63 +328,32 @@ export function PriceEditor({
     <section className="rounded-lg border border-border p-4 text-sm">
       <h3 className="text-base font-medium">가격 계산</h3>
       <p className="mt-0.5 text-[11px] text-text-tertiary">
-        배송비/수수료/마진/원본가격을 고치면 아래 값이 즉시 다시 계산됩니다 — 실제 등록에 쓰이는 최종 판매가격은 직접 입력하거나
-        &ldquo;적용&rdquo; 버튼을 눌러야만 바뀝니다.
+        원본 가격/국제배송비/마진율을 고치면 아래 값이 즉시 다시 계산됩니다 — 실제 등록에 쓰이는 최종 판매가격은 직접
+        입력하거나 &ldquo;적용&rdquo; 버튼을 눌러야만 바뀝니다.
       </p>
 
-      <div className="mt-3">
-        <PriceSummaryStrip product={product} breakdown={breakdown} finalPriceKrw={finalPriceKrw} />
-      </div>
-
-      {/* N-3.16 잔여3(CPO 지시: "최종 판매가가 가장 강하게 보여야 함") — 편집
-          컨트롤 중 최종 판매가격만 Breakdown 상세 밖으로 꺼내 가장 먼저,
-          가장 크게 보여준다. */}
-      <div className="mt-3 rounded-md border border-border bg-background p-3">
-        <div className="flex items-center justify-between gap-3">
-          <span className="flex items-center gap-1.5 text-sm font-medium text-text-primary">
-            최종 판매가격
-            {product.priceOverrideKrw && (
-              <span className="inline-flex items-center gap-0.5 rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
-                ✎ 수정됨
-              </span>
-            )}
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="text-text-secondary">₩</span>
-            <EditableText
-              value={String(finalPriceKrw)}
-              onCommit={(v) => onUpdateSalePriceKrw(Math.max(0, Number(v) || 0))}
-              className="w-32 rounded border border-border px-2 py-1 text-base font-semibold focus:border-primary focus:outline-none"
-            />
-            <button
-              type="button"
-              onClick={() => onUpdateSalePriceKrw(breakdown.suggestedPriceKrw)}
-              className="rounded border border-primary px-2 py-1 text-[11px] font-medium text-primary hover:bg-primary/10"
-            >
-              최종 판매가격에 적용
-            </button>
-          </div>
-        </div>
-        <p className="mt-1 text-[11px] text-text-tertiary">
-          {product.priceOverrideKrw
-            ? "직접 저장된 값입니다 — 아래 계산 값을 고쳐도 자동으로 바뀌지 않습니다. 다시 계산하려면 버튼을 누르세요."
-            : "아직 저장된 값이 없어 권장 판매가격을 보여주고 있습니다 — 입력하거나 버튼을 눌러야 저장됩니다."}
-        </p>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => setDetailOpen((v) => !v)}
-        className="mt-3 text-xs font-medium text-primary hover:underline"
-      >
-        {detailOpen ? "▾ 가격 계산 상세 접기" : "▸ 가격 계산 상세 보기"}
-      </button>
-
-      {detailOpen && (
+      {/* UX 2.5(CEO 지시, 2026-09-11) — 계산 사슬이 이 카드의 본문이다.
+       *
+       * 예전에는 사슬 전체가 "▸ 가격 계산 상세 보기" 뒤에 접혀 있었다. 가격
+       * 편집기가 채널 화면의 여러 Accordion 중 하나였을 때는 그게 맞았지만,
+       * 지금 셀러는 ③ 등록 준비에서 "판매가격"을 골라 **이 화면을 보러** 온
+       * 것이다 — 보러 온 것을 한 번 더 접어두지 않는다.
+       *
+       * 라벨은 price-hierarchy.ts의 어휘를 그대로 가져다 쓴다(원화 환산 ·
+       * 국제배송비 · 착지원가). 같은 숫자를 판단 카드의 ④ 수익성 사슬은
+       * "원화 환산"이라 부르고 이 화면은 "상품 원가"라고 부르던 것이 이
+       * 저장소가 반복해서 고쳐 온 라벨 표류다 — 계산은 한 줄도 바뀌지 않고
+       * 이름만 한 곳으로 모은다.
+       *
+       * 수수료(%)는 이 사슬에 올리지 않는다(CEO 지시). 지금 활성 채널이 둘인데
+       * "수수료 10%" 한 줄을 사슬 한가운데 두면 그게 어느 채널의 수수료인지
+       * 화면이 답할 수가 없다. 계산식에서 빼는 것이 아니라(공식은 여전히
+       * computePriceBreakdown 하나뿐이고 수수료율도 그대로 들어간다) 표시
+       * 위치만 아래 상세로 내린다. */}
       <div className="mt-3 space-y-2.5 text-xs">
         <Row label="원본 가격" badge={<ValueBadge kind="original" />}>
           {onUpdateOriginalPrice ? (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center justify-end gap-1.5">
               <LiveNumberField
                 value={draftOriginalAmount}
                 onLiveChange={setDraftOriginalAmount}
@@ -513,33 +470,33 @@ export function PriceEditor({
           </div>
         )}
 
-        <Row label="환율">
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-text-primary">
+        {/* 환율은 별도 줄이 아니라 "이 원화가 어디서 왔는지"를 밝히는 근거로
+            환산값 바로 아래 붙인다 — price-hierarchy.ts의 exchangeRateNote와
+            같은 취급이다(환율 자체는 가격이 아니다). */}
+        <Row label={PRICE_LINE_LABEL.SOURCE_PRICE_KRW}>
+          <div className="flex flex-col items-end gap-0.5">
+            <span className="font-medium text-text-primary">{formatKrw(breakdown.costKrw)}</span>
+            <span className="flex items-center gap-1.5 text-[11px] text-text-tertiary">
               1 {breakdown.originalCurrency} = ₩{Math.round(breakdown.exchangeRate).toLocaleString("ko-KR")}
               {breakdown.isRateEstimate
                 ? " (추정 고정환율)"
                 : exchangeRates?.source === "frankfurter"
                   ? " (출처: ECB)"
                   : ""}
+              <button
+                type="button"
+                onClick={onRefreshExchangeRates}
+                disabled={exchangeRatesLoading}
+                className="text-primary hover:underline disabled:opacity-50"
+              >
+                {exchangeRatesLoading ? "불러오는 중…" : "새로고침"}
+              </button>
             </span>
-            <button
-              type="button"
-              onClick={onRefreshExchangeRates}
-              disabled={exchangeRatesLoading}
-              className="text-[11px] text-primary hover:underline disabled:opacity-50"
-            >
-              {exchangeRatesLoading ? "불러오는 중…" : "새로고침"}
-            </button>
           </div>
         </Row>
 
-        <Row label="상품 원가">
-          <span className="font-medium text-text-primary">{formatKrw(breakdown.costKrw)}</span>
-        </Row>
-
-        <Row label="예상 배송비">
-          <div className="flex items-center gap-1">
+        <Row label={PRICE_LINE_LABEL.INTERNATIONAL_SHIPPING}>
+          <div className="flex items-center justify-end gap-1">
             <span className="text-text-secondary">₩</span>
             <LiveNumberField
               value={draftInput.shippingKrw}
@@ -551,25 +508,12 @@ export function PriceEditor({
         </Row>
 
         <div className="flex items-center justify-between border-t border-border pt-2.5">
-          <span className="font-medium text-text-primary">랜드드 코스트(원가+배송비)</span>
+          <span className="font-medium text-text-primary">{PRICE_LINE_LABEL.LANDED_COST}</span>
           <span className="font-medium text-text-primary">{formatKrw(breakdown.landedCostKrw)}</span>
         </div>
 
-        <Row label="예상 수수료">
-          <div className="flex items-center gap-1">
-            <LiveNumberField
-              value={draftInput.feePercent}
-              max={99}
-              onLiveChange={(n) => liveUpdateBreakdown({ feePercent: n })}
-              onCommit={(n) => commitBreakdown({ feePercent: n })}
-              className="w-14 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
-            />
-            <span className="text-text-secondary">%</span>
-          </div>
-        </Row>
-
-        <Row label="목표 마진">
-          <div className="flex items-center gap-1">
+        <Row label="기본 마진율">
+          <div className="flex items-center justify-end gap-1">
             <LiveNumberField
               value={draftInput.marginPercent}
               max={99}
@@ -583,6 +527,10 @@ export function PriceEditor({
             </span>
           </div>
         </Row>
+        <p className="pl-[calc(6rem+0.5rem)] text-[11px] text-text-tertiary">
+          채널 수수료는 이 사슬에 표시하지 않습니다 — 채널마다 요율이 달라 한 줄로 적으면 어느 채널 기준인지 알 수 없기
+          때문입니다. 지금 계산에 실제로 들어간 수수료율은 아래 &ldquo;가격 계산 상세&rdquo;에서 확인하고 고칠 수 있습니다.
+        </p>
 
         <div className="flex items-center justify-between border-t border-border pt-2.5">
           <span className="flex items-center gap-1.5 font-medium text-text-primary">
@@ -591,6 +539,76 @@ export function PriceEditor({
           </span>
           <span className="text-base font-semibold text-text-primary">{formatKrw(breakdown.suggestedPriceKrw)}</span>
         </div>
+      </div>
+
+      {/* N-3.16 잔여3(CPO 지시: "최종 판매가가 가장 강하게 보여야 함") — 사슬의
+          끝이자 실제 등록에 쓰이는 값. 권장 판매가격 바로 아래에 둔다(사슬을
+          읽어 내려온 눈이 그대로 도착하는 자리다). */}
+      <div className="mt-3 rounded-md border border-border bg-background p-3">
+        <div className="flex items-center justify-between gap-3">
+          <span className="flex items-center gap-1.5 text-sm font-medium text-text-primary">
+            최종 판매가격
+            {product.priceOverrideKrw && (
+              <span className="inline-flex items-center gap-0.5 rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+                ✎ 수정됨
+              </span>
+            )}
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-text-secondary">₩</span>
+            <EditableText
+              value={String(finalPriceKrw)}
+              onCommit={(v) => onUpdateSalePriceKrw(Math.max(0, Number(v) || 0))}
+              className="w-32 rounded border border-border px-2 py-1 text-base font-semibold focus:border-primary focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => onUpdateSalePriceKrw(breakdown.suggestedPriceKrw)}
+              className="rounded border border-primary px-2 py-1 text-[11px] font-medium text-primary hover:bg-primary/10"
+            >
+              최종 판매가격에 적용
+            </button>
+          </div>
+        </div>
+        <p className="mt-1 text-[11px] text-text-tertiary">
+          {product.priceOverrideKrw
+            ? "직접 저장된 값입니다 — 위 계산 값을 고쳐도 자동으로 바뀌지 않습니다. 다시 계산하려면 버튼을 누르세요."
+            : "아직 저장된 값이 없어 권장 판매가격을 보여주고 있습니다 — 입력하거나 버튼을 눌러야 저장됩니다."}
+        </p>
+        {/* UX 2.5 — 이 값 하나가 스마트스토어/쿠팡에 그대로 간다는 사실을 편집
+            지점에서 말한다. 채널 화면의 읽기전용 문구("가격은 상품정보에서
+            관리됩니다")와 짝이 되는 문장이다. */}
+        <p className="mt-1 text-[11px] text-text-tertiary">
+          이 값 하나가 등록하는 모든 채널의 판매가격이 됩니다 — 채널마다 따로 정하지 않습니다.
+        </p>
+        <PriceProvenanceRow product={product} breakdown={breakdown} />
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setDetailOpen((v) => !v)}
+        className="mt-3 text-xs font-medium text-primary hover:underline"
+      >
+        {detailOpen ? "▾ 가격 계산 상세 접기" : "▸ 가격 계산 상세 보기"}
+      </button>
+
+      {detailOpen && (
+      <div className="mt-3 space-y-2.5 text-xs">
+        {/* 수수료는 사슬에서 내려왔을 뿐 계산에서 빠진 것이 아니다 — 권장
+            판매가격 공식(landedCost/(1-fee%-margin%))에 그대로 들어간다. 여기서
+            고치면 위 사슬의 권장 판매가격이 즉시 다시 계산된다. */}
+        <Row label="예상 수수료">
+          <div className="flex items-center justify-end gap-1">
+            <LiveNumberField
+              value={draftInput.feePercent}
+              max={99}
+              onLiveChange={(n) => liveUpdateBreakdown({ feePercent: n })}
+              onCommit={(n) => commitBreakdown({ feePercent: n })}
+              className="w-14 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+            />
+            <span className="text-text-secondary">%</span>
+          </div>
+        </Row>
 
         <Row label="예상 수수료 금액">
           <span className="font-medium text-text-primary">{formatKrw(feeAmountKrw)}</span>
@@ -605,7 +623,7 @@ export function PriceEditor({
         </div>
 
         <p className="pt-1 text-[11px] text-text-tertiary">
-          배송비/수수료율/마진율은 실제 물류·정산 데이터가 없어 추정치입니다 — 위에서 직접 아는 값으로 고쳐서 다시 계산할 수
+          국제배송비/수수료율/마진율은 실제 물류·정산 데이터가 없어 추정치입니다 — 직접 아는 값으로 고쳐서 다시 계산할 수
           있습니다.
         </p>
 
@@ -720,9 +738,9 @@ function CustomsCostSection({
  * 구분하되, 사용자에게는 "원본 가격을 확인할 수 없다"는 동일한 다음 행동을
  * 요구하기 때문). priceRawText(INVALID일 때만 있음)가 있으면 원문을 그대로
  * 보여준다 — 값을 지어내지 않는다. */
-function PriceUnresolvedBanner({ product, compact }: { product: CanonicalProduct; compact?: boolean }) {
+function PriceUnresolvedBanner({ product }: { product: CanonicalProduct }) {
   return (
-    <div className={`rounded-md border border-warning bg-warning-soft p-3 text-warning ${compact ? "text-xs" : "text-sm"}`}>
+    <div className="rounded-md border border-warning bg-warning-soft p-3 text-sm text-warning">
       <p className="font-medium">⚠️ 원본 상품 가격을 확인할 수 없습니다. 해외 사이트의 가격을 확인한 후 등록할 수 있습니다.</p>
       {product.priceRawText && (
         <p className="mt-1 text-[11px] opacity-80">
@@ -738,51 +756,45 @@ function PriceUnresolvedBanner({ product, compact }: { product: CanonicalProduct
         >
           원본 페이지 다시 확인
         </a>
-        {!compact && (
-          <span className="rounded border border-warning px-2 py-1 text-[11px] font-medium">
-            가격 직접 확인 — 아래 &ldquo;원본 가격 직접 입력&rdquo;에서 바로 수정할 수 있습니다.
-          </span>
-        )}
+        <span className="rounded border border-warning px-2 py-1 text-[11px] font-medium">
+          가격 직접 확인 — 아래 &ldquo;원본 가격 직접 입력&rdquo;에서 바로 수정할 수 있습니다.
+        </span>
       </div>
     </div>
   );
 }
 
-/** N-3.16 잔여3(CPO 지시: "최종 판매가 ₩235,300 / 원본 ₩109,620 · AI 추천
- * ₩235,300 · 사용자 확정 ₩235,300"과 같은 요약을 접힌 상태에서도 보여준다") —
- * 바깥 가격 Accordion이 접혀 있을 때 이 컴포넌트 하나만 그려지고, 펼쳐져
- * 있을 때는 상세 편집 UI 맨 위에 다시 한번 그려진다 — 두 경우 모두 호출부에서
- * 넘겨준 동일한 breakdown/finalPriceKrw를 그대로 표시만 하므로 숫자가 갈릴
- * 일이 없다. */
-function PriceSummaryStrip({
+/**
+ * N-3.16 잔여3(CPO 지시: "원본 ₩109,620 · AI 추천 ₩235,300 · 사용자 확정
+ * ₩235,300"처럼 어느 값이 어디서 왔는지 배지로 보여준다) — 값의 출처 한 줄.
+ *
+ * UX 2.5 — 예전에는 이 줄 위에 "최종 판매가 ₩235,300" 헤드라인이 같이 붙어
+ * 있었고(PriceSummaryStrip), 그래서 같은 숫자가 카드 맨 위와 아래 입력칸에서
+ * 두 번 떴다. 이제 최종 판매가격은 입력칸 한 곳에서만 말하고, 이 줄은 출처만
+ * 남는다 — 숫자는 여전히 호출부가 이미 계산해둔 breakdown/product를 그대로
+ * 읽기만 하므로 갈릴 수가 없다.
+ */
+function PriceProvenanceRow({
   product,
   breakdown,
-  finalPriceKrw,
 }: {
   product: CanonicalProduct;
   breakdown: ReturnType<typeof computePriceBreakdown>;
-  finalPriceKrw: number;
 }) {
   return (
-    <div className="space-y-1 text-xs">
-      <div className="flex items-baseline gap-1.5">
-        <span className="text-text-secondary">최종 판매가</span>
-        <span className="text-base font-semibold text-text-primary">{formatKrw(finalPriceKrw)}</span>
-      </div>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-text-tertiary">
-        <span className="inline-flex items-center gap-1">
-          <ValueBadge kind="original" />
-          {formatOriginalPrice(product.price.value.amount, product.price.value.currency)}
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <ValueBadge kind="aiSuggested" />
-          {formatKrw(breakdown.suggestedPriceKrw)}
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <ValueBadge kind="userConfirmed" />
-          {product.priceOverrideKrw ? formatKrw(product.priceOverrideKrw.value) : "미확정"}
-        </span>
-      </div>
+    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 border-t border-border pt-2 text-[11px] text-text-tertiary">
+      <span className="inline-flex items-center gap-1">
+        <ValueBadge kind="original" />
+        {formatOriginalPrice(product.price.value.amount, product.price.value.currency)}
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <ValueBadge kind="aiSuggested" />
+        {formatKrw(breakdown.suggestedPriceKrw)}
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <ValueBadge kind="userConfirmed" />
+        {product.priceOverrideKrw ? formatKrw(product.priceOverrideKrw.value) : "미확정"}
+      </span>
     </div>
   );
 }

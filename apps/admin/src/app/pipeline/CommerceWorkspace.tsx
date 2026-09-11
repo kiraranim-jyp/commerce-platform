@@ -38,7 +38,7 @@ import {
   type RegistrationHistoryEntry,
 } from "@commerce/listing";
 import { PLATFORM_ADAPTERS, PLATFORM_ORDER, isVerifiedCategorySelected } from "@commerce/marketplace";
-import { resolveSourcePrice } from "@commerce/pricing";
+import { DEFAULT_PRICE_BREAKDOWN_INPUT, resolveListingPrice, resolveSourcePrice } from "@commerce/pricing";
 import { resolveCategoryCacheAction } from "./category-cache-hydrate";
 import { AIContentPanel } from "./commerce/AIContentPanel";
 import { BacklogPanel } from "./commerce/BacklogPanel";
@@ -67,7 +67,8 @@ import { computeChecklistReadiness } from "./commerce/readiness";
 import { buildPriorityItems, resolveRegistrationReadinessState } from "./commerce/RegistrationStatusBanner";
 import { RegistrationHistoryPanel } from "./commerce/RegistrationHistoryPanel";
 import { WorkflowPanel } from "./commerce/WorkflowPanel";
-import { StageBody } from "./commerce/StageBody";
+import { PRICE_SURFACE_ANCHOR_ID, StageBody } from "./commerce/StageBody";
+import { PriceEditor } from "./commerce/PriceEditor";
 import { buildRegistrationChannels } from "./commerce/registration-channels";
 import { resolveStageFocus, type WorkSurface } from "./commerce/stage-focus";
 import {
@@ -290,16 +291,26 @@ export function CommerceWorkspace({
     });
   }
 
-  /** N-4.18-H-2 STEP H-2-5(대표님 지시: "[가격/마진 확인]" 버튼) —
-   * DomesticPriceIntelligencePanel(상품정보 탭)과 PriceEditor(커머스 플랫폼
-   * 탭)는 서로 다른 탭에 있다(리서치로 확인됨) — 자동 가격변경 없이, 판매가
-   * 확인 화면으로 탭 전환+스크롤만 해준다. */
+  /**
+   * UX 2.5(CEO 지시, 2026-09-11) — [가격/마진 확인]은 이제 채널이 아니라
+   * 상품정보로 데려간다.
+   *
+   * N-4.18-H-2 시절 이 함수는 "첫 번째 등록 가능 채널 탭"을 골라서 열었다 —
+   * PriceEditor가 거기 있었기 때문이다. 그런데 그건 가격을 보러 온 셀러에게
+   * 아무 상관 없는 **채널 선택**을 시키는 일이었다(쿠팡 탭이 열리지만 가격은
+   * 쿠팡 값이 아니다). 판매가는 resolveListingPrice()가 내는 하나의 값이고,
+   * 이제 그 값을 고치는 화면도 상품정보 ③ 등록 준비 안에 하나뿐이다.
+   *
+   * 자동 가격변경이 없다는 원칙은 그대로다 — 탭 전환 + 해당 작업면 펼침 +
+   * 스크롤뿐이고, 여기서 어떤 가격도 계산하거나 저장하지 않는다.
+   */
+  const [priceSurfaceRequest, setPriceSurfaceRequest] = useState(0);
   function handleRequestPriceReview() {
-    const targetTab = PLATFORM_ORDER.find((id) => !SOON_PLATFORMS.has(id)) ?? PLATFORM_ORDER[0];
-    setTab(targetTab);
+    setTab("source");
+    setPriceSurfaceRequest((n) => n + 1);
     requestAnimationFrame(() => {
       setTimeout(() => {
-        document.getElementById("section-price")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        document.getElementById(PRICE_SURFACE_ANCHOR_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 50);
     });
   }
@@ -487,15 +498,44 @@ export function CommerceWorkspace({
     let cancelled = false;
     fetch("/api/settings/coupang/profiles")
       .then((res) => res.json())
-      .then((data: { profiles?: { isDefault: boolean; companyContactNumber: string; priceRoundingUnit?: number }[] }) => {
-        if (cancelled) return;
-        const profiles = data.profiles ?? [];
-        const defaultProfile = profiles.find((p) => p.isDefault) ?? profiles[0];
-        setDefaultContactNumber(defaultProfile?.companyContactNumber ?? "");
-        // P-4-H1-2-2 — 이 프로필은 플랫폼 공통 설정이라(N-3.69) coupang 탭이
-        // 아니어도 항상 읽는다. 이전에는 tab==="coupang"일 때만 조회했다.
-        setPriceRoundingUnit(defaultProfile?.priceRoundingUnit ?? null);
-      })
+      .then(
+        (data: {
+          profiles?: {
+            isDefault: boolean;
+            companyContactNumber: string;
+            priceRoundingUnit?: number;
+            defaultMarginPercent?: number | null;
+          }[];
+        }) => {
+          if (cancelled) return;
+          const profiles = data.profiles ?? [];
+          const defaultProfile = profiles.find((p) => p.isDefault) ?? profiles[0];
+          setDefaultContactNumber(defaultProfile?.companyContactNumber ?? "");
+          // P-4-H1-2-2 — 이 프로필은 플랫폼 공통 설정이라(N-3.69) coupang 탭이
+          // 아니어도 항상 읽는다. 이전에는 tab==="coupang"일 때만 조회했다.
+          setPriceRoundingUnit(defaultProfile?.priceRoundingUnit ?? null);
+
+          /* UX 2.5(CEO 지시, 2026-09-11) — Settings의 "기본 마진율"을 이 상품에
+             1회 반영한다. 상품별 저장값(priceBreakdown)이 이미 있으면 절대
+             덮어쓰지 않는다(Sprint A-11/N-3.9 Part I의 규칙 그대로).
+
+             이 일이 여기로 올라온 이유는 회귀 방지다. 원래는 PriceEditor 안에
+             있었는데, 그때는 편집기가 채널 화면마다 항상 마운트돼 있어서 셀러가
+             채널 탭을 열기만 하면 실행됐다. 이제 편집기는 상품정보의 가격 화면을
+             펼쳐야 마운트된다 — 같은 자리에 두면 가격 화면을 한 번도 열지 않은
+             셀러의 상품이 판매자 기본 마진율 대신 packages/pricing의 전역
+             기본값으로 등록된다. 화면을 옮겼을 뿐인데 실제 등록가가 달라지는
+             것은 이번 작업이 해서는 안 되는 일이다. */
+          const marginPercent = defaultProfile?.defaultMarginPercent;
+          if (marginPercent != null) {
+            setProduct((prev) =>
+              prev.priceBreakdown == null
+                ? { ...prev, priceBreakdown: { ...DEFAULT_PRICE_BREAKDOWN_INPUT, marginPercent } }
+                : prev,
+            );
+          }
+        },
+      )
       .catch(() => {
         if (!cancelled) {
           setDefaultContactNumber("");
@@ -505,6 +545,10 @@ export function CommerceWorkspace({
     return () => {
       cancelled = true;
     };
+    // setProduct는 page.tsx가 내려주는 prop(onUpdateProduct)이라 렌더마다 참조가
+    // 달라질 수 있다 — 의존성에 넣으면 판매자 프로필 조회가 렌더마다 다시 돈다.
+    // 이 effect는 마운트 시 한 번만 돌아야 한다(값이 자주 바뀌지 않는 설정이다).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /** 쿠팡 탭에 들어올 때마다 저장된 판매자 설정이 등록에 필요한 항목을 모두
@@ -990,6 +1034,33 @@ export function CommerceWorkspace({
     });
   }, [tab, product, effectiveCategorySelection, exchangeRates, priceRoundingUnit]);
 
+  /**
+   * UX 2.5(CEO 지시, 2026-09-11) — ③ 등록 준비의 "판매가격" 항목이 읽는 값.
+   *
+   * 새 규칙을 만들지 않는다. 위 listing이 부르는 어댑터가 부르는 바로 그 함수
+   * (resolveListingPrice)를 같은 입력·같은 liveRates/roundingUnit으로 한 번 더
+   * 부를 뿐이라, 채널 화면의 listing.priceKrw와 이 숫자가 갈릴 수 없다.
+   *
+   * 탭과 무관하게 계산하는 이유: 상품정보 탭에서는 listing이 null이라 거기서
+   * 값을 꺼낼 수가 없다. 그렇다고 "어차피 쿠팡 값이니까"라며 채널 하나를 골라
+   * 계산하면, 다시 "가격은 채널마다 다르다"는 없는 개념이 코드에 생긴다.
+   */
+  const listingPrice = useMemo(
+    () =>
+      resolveListingPrice(
+        {
+          priceOverrideKrw: product.priceOverrideKrw?.value,
+          originalAmount: product.price.value.amount,
+          originalCurrency: product.price.value.currency,
+          priceBreakdown: product.priceBreakdown,
+          priceValidity: product.priceValidity,
+        },
+        exchangeRates?.rates,
+        priceRoundingUnit ?? undefined,
+      ),
+    [product, exchangeRates, priceRoundingUnit],
+  );
+
   // N-4.08 STEP6-3/6-4(CPO 지시: "상품정보 = 공통 정보 관리") — "상품정보" 탭
   // 배지용 가벼운 집계. 새 등록 게이트가 아니다 — 실제 등록 차단 여부는 여전히
   // 각 플랫폼의 validate-payload/buildCoupangCompliance가 결정한다. 여기서는
@@ -1136,11 +1207,16 @@ export function CommerceWorkspace({
         optionGroupCount: product.optionGroups?.length ?? 0,
         imageCount: product.images.length,
         detailReady: Boolean(product.description.value.trim() || product.descriptionKo.value.trim()),
+        // UX 2.5 — 등록 게이트를 새로 만들지 않는다. UNRESOLVED는 이미 어댑터의
+        // "판매가격" 검증이 ERROR로 잡고 있는 상태이므로, ③이 ⚠로 보이는 시점과
+        // 실제로 등록이 막히는 시점이 정확히 같다(둘 다 같은 함수의 판정이다).
+        priceResolved: listingPrice.source !== "UNRESOLVED",
+        priceKrw: listingPrice.priceKrw,
         requiredFieldBlockingCount: registerableBlocking,
       },
       register: { channels },
     });
-  }, [product, items, categoryMappings, mergedReadiness, listingStates, marketSignal, snapshotId]);
+  }, [product, items, categoryMappings, mergedReadiness, listingStates, marketSignal, snapshotId, listingPrice]);
 
   /** 작업 Flow의 항목을 눌렀을 때의 이동. 탭 전환과 스크롤은 이미 있는 경로를 그대로 쓴다. */
   function navigateWorkflow(target: WorkflowNavTarget) {
@@ -2020,6 +2096,9 @@ export function CommerceWorkspace({
               channels={registrationChannels}
               categoryVerified={Object.values(categoryMappings).some(isVerifiedCategorySelected)}
               onGoToChannel={setTab}
+              /* UX 2.5 — 바깥(판단 카드·해외 가격비교·상단 Flow)에서 온 "가격 좀
+                 보자"는 요청. 카운터가 올라가면 StageBody가 가격 작업면을 펼친다. */
+              openPriceSurfaceRequest={priceSurfaceRequest}
               /* 국내(한국 시장)를 해외보다 먼저 둔다 — 판매 판단이 한국 기준이라
                  근거도 한국부터 읽혀야 한다. 컴포넌트도 데이터도 그대로다. */
               marketEvidence={
@@ -2067,6 +2146,34 @@ export function CommerceWorkspace({
                     addingImage={addingImage}
                   />
                 ),
+                /* UX 2.5(CEO 지시, 2026-09-11) — 화면 전체에서 **유일한**
+                   PriceEditor 마운트 지점. 예전엔 PlatformPreview(채널 화면)
+                   안에 있어서 스마트스토어/쿠팡 탭마다 편집기가 하나씩 떠 있었다 —
+                   실제로는 채널별 가격이라는 개념이 데이터에 없는데도(모든
+                   어댑터가 resolveListingPrice() 하나를 부른다) 화면만 그렇게
+                   보였다. 여기 한 번만 만들어서 ③ 체크리스트에서 펼치든 아래
+                   접힘에서 열든 같은 노드가 움직인다.
+
+                   접기/펼치기는 이제 바깥(StageBody의 CollapsibleSection, ③
+                   체크리스트의 펼침)이 맡는다 — 계산기 자신은 open 여부를
+                   판단하지 않는다.
+
+                   앵커 id를 노드 바깥에 붙이는 이유: 두 자리 중 어디에 놓이든
+                   같은 id가 따라와야 handleRequestPriceReview의 스크롤이 성립한다. */
+                price: (
+                  <div id={PRICE_SURFACE_ANCHOR_ID} className="scroll-mt-4">
+                    <PriceEditor
+                      product={product}
+                      onUpdateSalePriceKrw={updateSalePriceKrw}
+                      onUpdateOriginalPrice={updateOriginalPrice}
+                      onUpdatePriceBreakdown={updatePriceBreakdown}
+                      onUpdateCustomsCost={updateCustomsCost}
+                      exchangeRates={exchangeRates}
+                      exchangeRatesLoading={exchangeRatesLoading}
+                      onRefreshExchangeRates={fetchExchangeRates}
+                    />
+                  </div>
+                ),
                 required: <MissingFieldsBulkPanel product={product} onBulkApply={bulkSetFieldReference} />,
               }}
               archive={
@@ -2104,13 +2211,9 @@ export function CommerceWorkspace({
               payloadPreviewUnavailableReason={payloadPreviewEligible ? payloadPreviewUnavailableReason : null}
               onReadinessChange={(state, priorityItems) => handleReadinessChange(tab, state, priorityItems)}
               onUpdateField={updateField}
-              onUpdateSalePriceKrw={updateSalePriceKrw}
-              onUpdateOriginalPrice={updateOriginalPrice}
-              onUpdatePriceBreakdown={updatePriceBreakdown}
-              onUpdateCustomsCost={updateCustomsCost}
-              exchangeRates={exchangeRates}
-              exchangeRatesLoading={exchangeRatesLoading}
-              onRefreshExchangeRates={fetchExchangeRates}
+              /* UX 2.5 — 채널 화면은 판매가를 읽기만 한다. [가격 수정하기]가
+                 상품정보의 가격 계산으로 데려가는 것이 이 화면의 유일한 가격 행동이다. */
+              onRequestPriceReview={handleRequestPriceReview}
               onSelectCategory={(candidate) => selectCategory(tab, candidate)}
               onFixTextField={updateField}
               onSetFieldReference={setFieldReference}

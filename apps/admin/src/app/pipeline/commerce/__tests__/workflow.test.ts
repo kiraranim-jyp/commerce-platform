@@ -60,6 +60,9 @@ const PREPARED: PrepareSignal = {
   optionGroupCount: 2,
   imageCount: 8,
   detailReady: true,
+  // UX 2.5 — resolveListingPrice()가 값을 낸 상태(SELLER_OVERRIDE 또는 SYSTEM_SUGGESTED).
+  priceResolved: true,
+  priceKrw: 143500,
   requiredFieldBlockingCount: 0,
 };
 
@@ -254,6 +257,9 @@ describe("데이터 없음은 단계 실패가 아니다", () => {
           optionGroupCount: 0,
           imageCount: 0,
           detailReady: false,
+          // 원본 가격조차 못 읽은 최악의 입력 — 그래도 ⚠일 뿐 실패가 아니다.
+          priceResolved: false,
+          priceKrw: null,
           requiredFieldBlockingCount: 4,
         },
       }),

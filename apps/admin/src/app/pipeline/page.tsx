@@ -785,6 +785,11 @@ export default function PipelinePage() {
       optionGroupCount: 0,
       imageCount: 0,
       detailReady: false,
+      // 수집이 끝나기 전에는 원본 가격 자체가 아직 없다 — 판매가가 "정해졌다"고
+      // 말할 근거가 없으므로 없는 값을 지어내지 않는다(③ 전체가 어차피
+      // UPCOMING이라 이 값이 화면에 드러나지도 않는다).
+      priceResolved: false,
+      priceKrw: null,
       requiredFieldBlockingCount: 0,
     },
     register: { channels: [] },

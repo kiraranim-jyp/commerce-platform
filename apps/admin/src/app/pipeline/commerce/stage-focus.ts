@@ -83,6 +83,15 @@ export type PrepareSurface =
   | "IMAGES"
   /** 카테고리 — 실제 확정은 채널 화면에서만 가능하다(등록 payload에 들어가는 값). */
   | "CATEGORY"
+  /**
+   * UX 2.5(CEO 지시, 2026-09-11) — 가격 계산기(PriceEditor).
+   *
+   * 카테고리와 정반대다. 카테고리는 채널마다 코드가 달라서 채널 화면에서만
+   * 확정할 수 있지만, 판매가는 resolveListingPrice()가 내는 **하나의 값**이라
+   * 채널이 고를 것이 없다. 그래서 편집기는 여기 하나만 있고 채널 화면에는
+   * 그 결과를 읽기전용으로 보여준다.
+   */
+  | "PRICE"
   /** 채널별 필수 정보. */
   | "REQUIRED";
 
@@ -195,6 +204,8 @@ const PREPARE_SURFACE_BY_KEY: Record<string, PrepareSurface> = {
   // 카테고리 확정 UI는 채널 화면에만 있다(등록 payload의 leafCategoryId /
   // displayCategoryCode를 만드는 값이라 채널별 후보 목록이 필요하다).
   category: "CATEGORY",
+  // 가격은 채널별 후보가 없다 — 값이 하나뿐이라 편집기도 하나뿐이다(PRICE 주석 참고).
+  price: "PRICE",
   product_info: "SOURCE",
   option: "SOURCE",
   detail: "SOURCE",
@@ -217,5 +228,8 @@ export const PREPARE_SURFACE_LABEL: Record<PrepareSurface, string> = {
   SOURCE: "Source Data",
   IMAGES: "이미지",
   CATEGORY: "카테고리",
+  // PriceEditor가 자기 제목으로 쓰는 문구와 같은 말이다 — 접었을 때와 펼쳤을 때
+  // 이름이 달라지면 셀러는 둘을 다른 화면으로 읽는다.
+  PRICE: "가격 계산",
   REQUIRED: "필수 정보",
 };
