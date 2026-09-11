@@ -56,6 +56,18 @@ import { formatKrwAmount, formatOriginAmount } from "./mi-headline";
  * B와 C를 가르는 것이 이번 지시의 전부다. 둘 다 "🇰🇷 한국 · ₩" 모양이지만
  * B는 내가 살 값이고 C는 내가 경쟁할 값이다. 그래서 B는 아예 다른 파일에
  * 있고, buildMarketContext()는 시장 코드를 인자로조차 받지 않는다.
+ *
+ * ── UX 2.4.1(CEO 지시, 2026-09-11) — 판단은 원본에서 시작한다 ──────────────
+ * 실제 화면은 "원본 판매자 한국 표시가 ₩104,600"으로 열리고 있었다. 셀러는
+ * URL 하나를 붙여넣고 "이 상품이 원래 얼마지?"를 물었는데, 첫 줄이 원화라서
+ * 되돌아오는 질문이 "원본가격이 왜 한국 돈이지?"였다.
+ *
+ * 원인은 라벨이 아니라 **입력**이었다. market-intelligence.ts는 최근 실측
+ * 관측이 있으면 cost의 originalAmount/originalCurrency를 그 관측의 **원화값**
+ * 으로 접어서 넘긴다(costSource = LATEST_SALE / LATEST_PRICE). 그래서 원본
+ * 통화(£55)는 응답 안에 있으면서도 사슬의 첫 줄까지 오지 못했다. 아래
+ * observedOriginPrice가 그 관측 행이 통화 그대로 들고 있는 값을 따로 받는다 —
+ * 새로 계산하는 것은 없고, 이미 저장된 세 값(금액·통화·환율)을 고를 뿐이다.
  */
 
 /** 화면에 뜨는 여덟 가지 "가격". 새 값이 생기면 여기에 키를 더해야 한다. */
@@ -104,6 +116,27 @@ export const PRICE_LINE_LABEL: Record<PriceLineKey, string> = {
   ...PRICE_MEANING_LABEL,
   INTERNATIONAL_SHIPPING: "국제배송비",
 };
+
+/**
+ * UX 2.4.1(CEO 지시, 2026-09-11) — 가격 영역을 읽는 순서. 제목 자체에 번호를
+ * 박아 둔다.
+ *
+ * 이 순서는 취향이 아니라 판단의 순서다: ① 원래 얼마인가 → ② 이 판매처는
+ * 시장마다 얼마를 받나 → ③ 한국에서는 누가 얼마에 파나 → ④ 그래서 나는 얼마가
+ * 남나 → ⑤ 이 판단이 무엇 위에 서 있나. 번호를 화면에 적어 두면 누군가 블록
+ * 하나를 위로 올렸을 때 번호가 먼저 어긋나 보인다 — 배치 규칙을 화면이 스스로
+ * 감시하게 하는 장치다(테스트도 이 순서를 고정한다).
+ *
+ * ①이 반드시 원본 통화여야 하는 이유는 질문이 그것이기 때문이다. "원본 가격"
+ * 자리에 원화가 서면 그건 답이 아니라 환산이고, 환산은 비교가 아니다.
+ */
+export const PRICE_SECTION_TITLE = {
+  ORIGINAL: "① 원본 상품 가격",
+  SELLER_GLOBAL_MARKET: "② 🌎 판매자 글로벌 시장 가격",
+  DOMESTIC_COMPETITION: "③ 📊 한국 시장 경쟁가격",
+  PROFITABILITY: "④ 💰 수익성",
+  DECISION_EVIDENCE: "⑤ 🔎 판단 근거",
+} as const;
 
 /** 화면에 그대로 쓰는 한 줄. mi-headline.HeadlineNumber와 같은 모양이다 —
  * 값이 없을 때 빈 상태 어휘를 쓰는 규칙을 두 곳에서 다르게 만들지 않는다. */
@@ -162,9 +195,38 @@ export interface PriceChainRow extends PriceLine {
   tier: ChainTier;
 }
 
+/**
+ * UX 2.4.1(CEO 지시, 2026-09-11) — 원가 사슬의 출발점이 된 **관측 행**이 그
+ * 통화 그대로 들고 있는 값.
+ *
+ * cost.originalAmount로는 이 사실을 알 수 없다. 최근 실측 관측이 있으면
+ * market-intelligence.ts가 그 관측의 원화값을 originalAmount로, "KRW"를
+ * originalCurrency로 접어서 넘기기 때문이다(costSource = LATEST_SALE /
+ * LATEST_PRICE). 그래서 화면의 첫 줄이 "원본 판매가격 ₩99,928"이 됐다 —
+ * 값은 맞지만 질문("원래 얼마지?")에 대한 답은 아니다.
+ *
+ * 세 값을 한 행에서 통째로 받는 이유는 곱셈을 하지 않기 위해서다. 금액·통화·
+ * 환율이 같은 관측 행에서 나와야 amount × rate = krw가 우리 화면 밖에서 이미
+ * 성립한다. 여기서 환율을 다시 곱하는 순간 서버가 저장한 값과 화면이 말하는
+ * 값이 갈라지기 시작한다(이 저장소에서 반복된 버그다).
+ */
+export interface ObservedOriginPrice {
+  amount: number;
+  currency: string;
+  /** 그 관측 행에 함께 저장된 환율(price_observations.exchange_rate). 없으면 null. */
+  exchangeRate: number | null;
+}
+
 export interface PriceChainInput {
   /** cost.originalAmount / cost.originalCurrency — 착지원가 계산에 실제로 들어간 값. */
   originPrice: { amount: number; currency: string } | null;
+  /**
+   * 위 originPrice가 원화로 접히기 전의 원본 통화 값. 있으면 사슬의 첫 줄은
+   * 이것이 되고, 원화는 바로 다음 "원화 환산" 줄로 내려간다 — 원본과 환산이
+   * 한 줄에서 자리를 다투지 않는다. 없으면(구버전 응답·스냅샷 기준 계산)
+   * 지금까지와 완전히 같은 동작이다.
+   */
+  observedOriginPrice: ObservedOriginPrice | null;
   /** costSource 라벨("최신 확인가 기준" 등). 어느 시점 가격인지 숨기지 않는다. */
   originPriceBasis: string | null;
   /**
@@ -220,6 +282,32 @@ function krwLine(
 }
 
 /**
+ * "1 GBP = ₩1,817 · 가격 확인 시점 환율" 한 줄. 환산 줄과 ① 헤드라인이 같은
+ * 문자열을 쓰게 만드는 유일한 지점이다 — 두 곳이 각자 문장을 만들면 같은 환산에
+ * 서로 다른 기준이 적히는 날이 온다.
+ *
+ * 곱셈은 하지 않는다. 환율은 "이 원화가 어디서 왔는지"를 밝히는 근거 문장일
+ * 뿐이고, 원화값 자체는 서버가 낸 값을 그대로 쓴다.
+ */
+function exchangeRateNote(
+  currency: string | null,
+  rate: number | null,
+  source: "OBSERVED" | "LIVE",
+  isEstimate: boolean,
+): string {
+  if (rate == null || !currency) return "환율을 확인하지 못했습니다";
+  const basis =
+    source === "OBSERVED"
+      ? // 관측 행에 저장된 환율이다. "현재 환율"이라고 부르면 우리가 방금 조회한
+        // 값처럼 읽히는데, 실제로는 그 가격을 확인하던 시점의 환율이다.
+        " · 가격 확인 시점 환율"
+      : isEstimate
+        ? " · 실시간 조회 실패, 고정 참고환율"
+        : " · 현재 환율";
+  return `1 ${currency.toUpperCase()} = ₩${Math.round(rate).toLocaleString("ko-KR")}${basis}`;
+}
+
+/**
  * 원본가격 → 환산 → 국제배송 → 착지원가 → 내 판매가 → 예상 수익.
  *
  * 관계가 보이게 **순서대로** 돌려준다. 화면이 이 배열의 순서를 다시 정하지
@@ -250,31 +338,36 @@ export function buildPriceChain(input: PriceChainInput): PriceChainRow[] {
           : miEmptyState("UNVERIFIABLE", "한국 표시가를 읽지 못했습니다"),
     });
   } else {
+    // UX 2.4.1 — 사슬의 첫 줄은 **원본 통화**다. 관측 행이 통화 그대로의 값을
+    // 들고 있으면 그것이 원본이고, cost.originalAmount(이미 원화로 접힌 값)는
+    // 바로 아래 환산 줄이 받는다. 관측이 없으면(스냅샷 기준) 지금까지와 같다.
+    const origin = input.observedOriginPrice ?? input.originPrice;
     rows.push({
       key: "SOURCE_ORIGINAL_PRICE",
       role: "SOURCE",
       tier: TIER_BY_ROLE.SOURCE,
       label: PRICE_MEANING_LABEL.SOURCE_ORIGINAL_PRICE,
       basis: ["원본 판매자 페이지 기준", input.originPriceBasis].filter(Boolean).join(" · "),
-      value: input.originPrice
-        ? formatOriginAmount(input.originPrice.amount, input.originPrice.currency)
-        : null,
-      empty: input.originPrice
-        ? null
-        : miEmptyState("UNVERIFIABLE", "원본 상품 가격을 읽지 못했습니다"),
+      value: origin ? formatOriginAmount(origin.amount, origin.currency) : null,
+      empty: origin ? null : miEmptyState("UNVERIFIABLE", "원본 상품 가격을 읽지 못했습니다"),
     });
 
     // ② 환산 단계. 원본 통화가 이미 원화면 이 줄을 만들지 않는다 — 같은 숫자에
     //    라벨을 하나 더 붙이는 것일 뿐이고, 그게 바로 이번 지시가 없애려는
     //    "같은 값이 두 개의 가격으로 보이는" 화면이다.
-    const originIsKrw = input.originPrice?.currency.toUpperCase() === "KRW";
+    const originIsKrw = origin?.currency.toUpperCase() === "KRW";
     if (!originIsKrw) {
-      const rateNote =
-        input.exchangeRate != null && input.originPrice
-          ? `1 ${input.originPrice.currency.toUpperCase()} = ₩${Math.round(input.exchangeRate).toLocaleString("ko-KR")}${
-              input.exchangeRateIsEstimate ? " · 실시간 조회 실패, 고정 참고환율" : " · 현재 환율"
-            }`
-          : "환율을 확인하지 못했습니다";
+      // 환율은 원본 금액이 온 곳에서 같이 온 것을 쓴다. 관측 행의 금액에
+      // 서버가 방금 조회한 환율(fx.rate)을 붙이면 두 시점이 섞인다 — 게다가
+      // 그 fx.rate는 원가가 이미 원화로 접힌 경우 1이다("1 GBP = ₩1").
+      const rateNote = input.observedOriginPrice
+        ? exchangeRateNote(
+            input.observedOriginPrice.currency,
+            input.observedOriginPrice.exchangeRate,
+            "OBSERVED",
+            false,
+          )
+        : exchangeRateNote(origin?.currency ?? null, input.exchangeRate, "LIVE", input.exchangeRateIsEstimate);
       rows.push(
         krwLine(
           "SOURCE_PRICE_KRW",
@@ -360,6 +453,136 @@ export function buildPriceChain(input: PriceChainInput): PriceChainRow[] {
   });
 
   return rows;
+}
+
+/* ──────────────────────── ① 원본 상품 가격(헤드라인) ──────────────────────── */
+
+/**
+ * UX 2.4.1(CEO 지시, 2026-09-11) — 화면이 여는 첫 줄.
+ *
+ * ── 왜 사슬의 첫 줄을 그대로 쓰지 않는가 ─────────────────────────────────
+ * 대부분은 그대로 쓴다(아래 첫 분기). 다만 원가 기준이 "판매자의 한국 표시가"인
+ * 상품(costBasis = KR_MARKET)에서는 사슬의 첫 줄이 ₩104,600이다 — 그 값은
+ * **내가 치르는 돈**으로서는 맞지만 "이 상품이 원래 얼마인가"의 답은 아니다.
+ * 그래서 그때만 스냅샷에 저장된 원본 판매자 페이지 가격(통화 그대로)을 ①에
+ * 세우고, 한국 표시가는 ②의 🇰🇷 줄과 ④ 사슬에 그대로 남긴다. 지우지 않는다 —
+ * 자리를 바꿀 뿐이다. 두 값은 서로 다른 사실이라 같은 카드에서 겨루면 안 된다.
+ *
+ * ── 없는 환산을 만들지 않는다 ────────────────────────────────────────────
+ * 스냅샷 원본가를 쓰는 경우 그 금액에 대응하는 원화값이 응답에 없다. 환율을
+ * 곱해 만들어 낼 수는 있지만 그 순간 화면에만 존재하는 아홉 번째 숫자가 생기고,
+ * 그 숫자는 서버의 어떤 계산과도 일치하지 않는다. 그래서 converted는 null이 되고
+ * 화면은 환산 줄을 그리지 않는다.
+ */
+export interface OriginalPriceHeadline {
+  title: string;
+  /** 원본 통화 그대로의 한 줄. 값이 없어도 줄 자체는 존재한다. */
+  price: PriceLine;
+  /** 원화 환산 한 줄. 대응하는 원화값이 응답에 없으면 null이다(곱하지 않는다). */
+  converted: PriceLine | null;
+  /**
+   * 원본 통화 가격과 한국 표시가가 다른 사실이라는 것을 말하는 한 줄.
+   * 둘을 나란히 놓을 이유가 없는 상품에서는 null이다.
+   */
+  note: string | null;
+}
+
+export interface OriginalPriceHeadlineInput {
+  /** 사슬과 **같은 값**을 받는다. 두 곳이 서로 다른 원본을 말할 수 없게. */
+  observedOriginPrice: ObservedOriginPrice | null;
+  originPrice: { amount: number; currency: string } | null;
+  /** cost.costKrw — 위 원본 금액의 원화 짝. 사슬의 환산 줄과 같은 값이다. */
+  sourcePriceKrw: number | null;
+  exchangeRate: number | null;
+  exchangeRateIsEstimate: boolean;
+  originPriceBasis: string | null;
+  costBasisIsKrMarket: boolean;
+  /**
+   * 스냅샷(product_snapshots.canonicalProduct.price)에 저장된 원본 판매자 페이지
+   * 가격. 원가가 한국 표시가 기준일 때 "원래 얼마인가"에 답할 수 있는 유일한
+   * 값이다. 가격을 읽지 못한 스냅샷(priceValidity ≠ VALID)은 호출부가 null로
+   * 넘긴다 — 못 읽은 값을 원본가격이라고 부르지 않는다.
+   */
+  snapshotOriginPrice: { amount: number; currency: string } | null;
+}
+
+function isKrw(currency: string): boolean {
+  return currency.toUpperCase() === "KRW";
+}
+
+export function buildOriginalPriceHeadline(input: OriginalPriceHeadlineInput): OriginalPriceHeadline {
+  const title = PRICE_SECTION_TITLE.ORIGINAL;
+  // 원가가 한국 표시가 기준이면 그 원화값은 원본 통화 가격이 아니다 — 사슬의
+  // 첫 줄을 ①으로 올릴 수 없는 유일한 경우다.
+  const chainOrigin = input.costBasisIsKrMarket ? null : (input.observedOriginPrice ?? input.originPrice);
+
+  if (chainOrigin && !isKrw(chainOrigin.currency)) {
+    return {
+      title,
+      price: {
+        key: "SOURCE_ORIGINAL_PRICE",
+        label: PRICE_MEANING_LABEL.SOURCE_ORIGINAL_PRICE,
+        basis: ["원본 판매자 페이지 기준", input.originPriceBasis].filter(Boolean).join(" · "),
+        value: formatOriginAmount(chainOrigin.amount, chainOrigin.currency),
+        empty: null,
+      },
+      // 사슬의 환산 줄과 **같은 입력**에서 나온 같은 값이다(사본이 아니라 같은 사실).
+      converted: {
+        key: "SOURCE_PRICE_KRW",
+        label: PRICE_MEANING_LABEL.SOURCE_PRICE_KRW,
+        basis: input.observedOriginPrice
+          ? exchangeRateNote(input.observedOriginPrice.currency, input.observedOriginPrice.exchangeRate, "OBSERVED", false)
+          : exchangeRateNote(chainOrigin.currency, input.exchangeRate, "LIVE", input.exchangeRateIsEstimate),
+        value: input.sourcePriceKrw != null ? formatKrwAmount(input.sourcePriceKrw) : null,
+        empty:
+          input.sourcePriceKrw != null
+            ? null
+            : miEmptyState("UNVERIFIABLE", "환율을 확인하지 못해 환산할 수 없습니다"),
+      },
+      note: null,
+    };
+  }
+
+  if (input.snapshotOriginPrice && !isKrw(input.snapshotOriginPrice.currency)) {
+    return {
+      title,
+      price: {
+        key: "SOURCE_ORIGINAL_PRICE",
+        label: PRICE_MEANING_LABEL.SOURCE_ORIGINAL_PRICE,
+        // 언제 읽은 값인지 숨기지 않는다 — 최신 확인가가 아니라 스냅샷 값이다.
+        basis: "원본 판매자 페이지 기준 · 상품을 가져온 시점에 저장된 가격",
+        value: formatOriginAmount(input.snapshotOriginPrice.amount, input.snapshotOriginPrice.currency),
+        empty: null,
+      },
+      // 이 금액의 원화 짝이 응답에 없다. 환율을 곱해 만들지 않는다.
+      converted: null,
+      note: input.costBasisIsKrMarket
+        ? `${PRICE_MEANING_LABEL.KR_MARKET_PRICE}는 이 값과 다른 사실입니다 — 아래 ②·④에서 확인하세요.`
+        : null,
+    };
+  }
+
+  // 원본이 원화로만 확인된 경우. 없는 외화 가격을 지어내지 않고, 그 원화가
+  // 무엇인지(한국 표시가인지 원본 페이지 가격인지)를 라벨로 정확히 말한다.
+  const krwOnly = input.costBasisIsKrMarket
+    ? { key: "KR_MARKET_PRICE" as const, basis: "이 판매처가 한국 방문자에게 직접 보여주는 가격 · 환율 환산이 아닙니다" }
+    : { key: "SOURCE_ORIGINAL_PRICE" as const, basis: "원본 판매자 페이지 기준" };
+  const krw = input.costBasisIsKrMarket ? input.sourcePriceKrw : (chainOrigin?.amount ?? input.sourcePriceKrw);
+  return {
+    title,
+    price: {
+      key: krwOnly.key,
+      label: PRICE_MEANING_LABEL[krwOnly.key],
+      basis: [krwOnly.basis, input.originPriceBasis].filter(Boolean).join(" · "),
+      value: krw != null ? formatKrwAmount(krw) : null,
+      empty: krw != null ? null : miEmptyState("UNVERIFIABLE", "원본 상품 가격을 읽지 못했습니다"),
+    },
+    converted: null,
+    note:
+      krw != null && input.costBasisIsKrMarket
+        ? "이 판매처는 한국 방문자에게 원화로 직접 가격을 매깁니다 — 원본 통화 가격은 따로 확인되지 않았습니다."
+        : null,
+  };
 }
 
 /* ─────────────────────────── 시장 맥락(두 번째 축) ─────────────────────────── */

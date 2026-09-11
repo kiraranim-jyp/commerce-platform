@@ -1982,6 +1982,18 @@ export function CommerceWorkspace({
           {snapshotId ? (
             <DomesticPriceIntelligencePanel
               snapshotId={snapshotId}
+              /* UX 2.4.1(CEO 지시, 2026-09-11) — "① 원본 상품 가격"이 원본 통화로
+                 답할 수 있게 스냅샷의 원본 가격을 그대로 넘긴다. 서버 응답을
+                 늘리지 않고 이 화면이 이미 들고 있는 값을 쓴다 — Source Data가
+                 보여주는 원본 가격과 판단 카드의 ①이 같은 값이어야 하기 때문이다.
+                 가격을 못 읽은 스냅샷(priceValidity ≠ VALID)은 null로 넘긴다:
+                 canonical-product가 조용히 채운 0/빈 통화를 "원본 가격"이라고
+                 부르면 안 된다(N-3.54가 이 필드를 만든 이유 그대로). */
+              snapshotOriginPrice={
+                product.priceValidity === "VALID"
+                  ? { amount: product.price.value.amount, currency: product.price.value.currency }
+                  : null
+              }
               onPriceLevelChange={handlePriceLevelChange}
               onSellerVerdictChange={handleSellerVerdictChange}
               onMarketSignalChange={handleMarketSignalChange}

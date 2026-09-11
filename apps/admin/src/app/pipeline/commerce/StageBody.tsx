@@ -117,8 +117,16 @@ export function StageBody({
         <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-text-tertiary">
           이 단계의 일은 아니지만 언제든 열어볼 수 있는 것
         </p>
+        {/* UX 2.4.1(CEO 지시, 2026-09-11) — "가격 비교 근거"에서 "📊 시장 가격
+            비교"로. 이 묶음이 실제로 들고 있는 것은 두 시장의 관측이다:
+            국내 경쟁 판매자와 해외 판매처. 제목이 "비교 근거"라고만 하면
+            무엇과 무엇을 비교한 것인지 열어봐야 알 수 있고, 판단 카드 안의
+            ③ 한국 시장 경쟁가격과 이름으로 이어지지도 않는다. */}
         {focus.marketEvidence === "COLLAPSED" && (
-          <CollapsibleSection title="가격 비교 근거" summary="국내 편집샵 · 해외 판매처에서 관측된 가격">
+          <CollapsibleSection
+            title="📊 시장 가격 비교"
+            summary="🇰🇷 국내 경쟁 판매자 · 🌎 해외 판매처에서 관측된 가격"
+          >
             {marketEvidence}
           </CollapsibleSection>
         )}

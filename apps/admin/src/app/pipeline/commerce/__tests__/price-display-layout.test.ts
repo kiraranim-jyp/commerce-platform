@@ -26,13 +26,37 @@ function jsxUses(source: string, component: string): number {
 }
 
 describe("가격 계층은 화면에 한 벌만 있다", () => {
-  it("네 가격 그룹은 각각 한 번씩만 렌더된다", () => {
-    // UX 2.4 — A/D(사슬) · B(글로벌 시장) · C(한국 경쟁시장). 한 그룹이 두 번
-    // 그려지는 순간 둘 중 하나만 고쳐지는 날이 오고, 같은 상품이 화면 위아래에서
-    // 다른 값을 말한다.
+  it("다섯 가격 블록은 각각 한 번씩만 렌더된다", () => {
+    // UX 2.4.1 — ①(원본) · ②(글로벌 시장) · ③(한국 경쟁, VS) · ④(수익성 사슬).
+    // 한 그룹이 두 번 그려지는 순간 둘 중 하나만 고쳐지는 날이 오고, 같은 상품이
+    // 화면 위아래에서 다른 값을 말한다.
+    expect(jsxUses(panel, "OriginalPriceView")).toBe(1);
     expect(jsxUses(panel, "PriceChainView")).toBe(1);
     expect(jsxUses(panel, "GlobalMarketCardView")).toBe(1);
-    expect(jsxUses(panel, "MarketContextView")).toBe(1);
+    expect(jsxUses(panel, "MarketComparisonView")).toBe(1);
+  });
+
+  it("①은 사슬과 같은 입력에서 만들어진다 — 두 번째 원본가격이 생기지 않는다", () => {
+    // buildOriginalPriceHeadline과 buildPriceChain이 같은 observedOriginPrice /
+    // cost / fx를 받는다. 한쪽만 고쳐지면 ①의 £55와 ④ 첫 줄의 £55가 갈라진다.
+    expect(panel).toContain("buildOriginalPriceHeadline({");
+    const headlineAt = panel.indexOf("buildOriginalPriceHeadline({");
+    const headlineBlock = panel.slice(headlineAt, headlineAt + 900);
+    expect(headlineBlock).toContain("observedOriginPrice,");
+    expect(headlineBlock).toContain("sourcePriceKrw: cost?.costKrw ?? null,");
+    // 사슬도 같은 변수를 받는다 — 원본 통화를 고르는 규칙이 화면에 두 벌이 되지 않는다.
+    const chainAt = panel.indexOf("const priceChain = buildPriceChain({");
+    expect(panel.slice(chainAt, chainAt + 900)).toContain("observedOriginPrice,");
+  });
+
+  it("원본 판매자 한국 표시가는 지워지지 않았다 — 자리를 옮겼을 뿐이다", () => {
+    // 헤드라인에서 내려왔다고 해서 사실이 사라지면 안 된다. 그 값은 ④ 사슬의
+    // 출발점이자 ②의 🇰🇷 줄이고, ③의 왼쪽 칸이 그 라벨을 그대로 쓴다.
+    const hierarchy = read("../price-hierarchy.ts");
+    const comparison = read("../market-comparison.ts");
+    expect(hierarchy).toContain('KR_MARKET_PRICE: "원본 판매자 한국 표시가"');
+    expect(hierarchy).toContain('key: "KR_MARKET_PRICE"');
+    expect(comparison).toContain("PRICE_MEANING_LABEL.KR_MARKET_PRICE");
   });
 
   it("국내 편집샵 관측을 '해외 시장'이라고 부르던 블록이 없다", () => {
@@ -59,12 +83,11 @@ describe("가격 계층은 화면에 한 벌만 있다", () => {
     // 안다). 사본을 만들면 둘 중 하나만 고쳐지는 순간 추천가가 둘이 된다.
     expect((panel.match(/recommendation\.recommendedPrice\.toLocaleString\(\)/g) ?? []).length).toBe(1);
     const chainAt = panel.indexOf("<PriceChainView");
-    // 주석에도 같은 문구가 있어서 버튼 JSX 그대로를 찾는다.
-    const detailToggleAt = panel.indexOf("{caret(showMarketDetail)} 왜 이렇게 판단했나요?");
+    const evidenceAt = panel.indexOf("<MiAxisStars");
     const recommendedAt = panel.indexOf("🏷 최종 추천 판매가");
-    // 사슬 바로 아래 — 상세를 펼쳐야만 보이는 자리가 아니다.
+    // ④ 수익성 안, 사슬 바로 아래 — 상세를 펼쳐야만 보이는 자리가 아니다.
     expect(recommendedAt).toBeGreaterThan(chainAt);
-    expect(recommendedAt).toBeLessThan(detailToggleAt);
+    expect(recommendedAt).toBeLessThan(evidenceAt);
   });
 
   it("국내 비교상품 분포를 '한국 시장 가격'이라고 부르지 않는다", () => {
@@ -81,10 +104,10 @@ describe("③④는 요약만 보여준다", () => {
     // 것은 마지막(정상 데이터) 분기다.
     const summaryBranchAt = panel.lastIndexOf('if (presentation === "SUMMARY")');
     const chainAt = panel.indexOf("<PriceChainView");
-    const contextAt = panel.indexOf("<MarketContextView");
+    const comparisonAt = panel.indexOf("<MarketComparisonView");
     expect(summaryBranchAt).toBeGreaterThan(-1);
     expect(chainAt).toBeGreaterThan(summaryBranchAt);
-    expect(contextAt).toBeGreaterThan(summaryBranchAt);
+    expect(comparisonAt).toBeGreaterThan(summaryBranchAt);
   });
 
   it("요약 한 줄은 국내 비교상품 · 착지원가 · 예상 마진 세 숫자를 갖는다", () => {
@@ -120,26 +143,40 @@ describe("시장별 가격 한 줄은 시장·통화·환산을 모두 말한다
 });
 
 /**
- * UX 2.4(CEO 지시, 2026-09-11) — 판단 → 가격 → 글로벌 → 국내 경쟁 → 근거.
+ * UX 2.4.1(CEO 지시, 2026-09-11) — 판단 → ① 원본 → ② 글로벌 → ③ 한국 경쟁 →
+ * ④ 수익성 → ⑤ 근거.
  *
  * 읽는 순서는 계산 규칙이 아니라 배치 규칙이라 순수 함수로 표현할 수가 없다.
  * 그런데 깨지는 방식은 늘 같다: 누군가 블록 하나를 "여기가 더 잘 보이니까"
- * 위로 올린다. 그 순간 셀러는 국내 경쟁가를 먼저 읽고 그것을 판매자 가격으로
- * 착각한다 — 이번 지시의 출발점이 정확히 그 화면이다.
+ * 위로 올린다. UX 2.4에서는 사슬(④)이 맨 앞이었고, 그 첫 줄이 실측 관측 때문에
+ * 원화로 접혀 있어서 화면이 "원본 판매자 한국 표시가 ₩104,600"으로 열렸다 —
+ * 셀러의 첫 질문("이 상품이 원래 얼마지?")에 원화로 답하는 화면이다.
  */
 describe("가격 영역은 정해진 순서로 읽힌다", () => {
   const verdictAt = panel.indexOf("{FINAL_VERDICT_COPY[sellerDecision.finalVerdict].icon}");
-  const chainAt = panel.indexOf("<PriceChainView");
+  const originalAt = panel.indexOf("<OriginalPriceView");
   const globalAt = panel.indexOf("<GlobalMarketCardView");
-  const contextAt = panel.indexOf("<MarketContextView");
+  const comparisonAt = panel.indexOf("<MarketComparisonView");
+  const chainAt = panel.indexOf("<PriceChainView");
   const evidenceAt = panel.indexOf("<MiAxisStars");
 
-  it("판단 → 가격 → 글로벌 → 국내 경쟁 → 근거 순서로 배치된다", () => {
+  it("판단 → ① 원본 → ② 글로벌 → ③ 한국 경쟁 → ④ 수익성 → ⑤ 근거 순서다", () => {
     expect(verdictAt).toBeGreaterThan(-1);
-    expect(chainAt).toBeGreaterThan(verdictAt);
-    expect(globalAt).toBeGreaterThan(chainAt);
-    expect(contextAt).toBeGreaterThan(globalAt);
-    expect(evidenceAt).toBeGreaterThan(contextAt);
+    expect(originalAt).toBeGreaterThan(verdictAt);
+    expect(globalAt).toBeGreaterThan(originalAt);
+    expect(comparisonAt).toBeGreaterThan(globalAt);
+    expect(chainAt).toBeGreaterThan(comparisonAt);
+    expect(evidenceAt).toBeGreaterThan(chainAt);
+  });
+
+  it("각 블록이 몇 번인지 화면이 직접 말한다", () => {
+    // 제목에 번호가 없으면 순서가 깨져도 화면만 봐서는 알 수 없다.
+    const hierarchy = read("../price-hierarchy.ts");
+    for (const title of ["① 원본 상품 가격", "② 🌎 판매자 글로벌 시장 가격", "③ 📊 한국 시장 경쟁가격"]) {
+      expect(hierarchy).toContain(title);
+    }
+    expect(panel).toContain("PRICE_SECTION_TITLE.PROFITABILITY");
+    expect(panel).toContain("PRICE_SECTION_TITLE.DECISION_EVIDENCE");
   });
 
   it("글로벌 시장 카드는 사슬 안으로 접혀 들어가지 않는다", () => {
@@ -148,7 +185,36 @@ describe("가격 영역은 정해진 순서로 읽힌다", () => {
     // 원가 계산에 들어갔는지 읽을 수 없게 된다.
     expect(panel).toContain("<PriceChainView rows={priceChain}");
     expect(panel).not.toContain("globalMarketCard={priceChain");
-    expect(panel.indexOf("<GlobalMarketCardView")).toBeGreaterThan(panel.indexOf("<PriceChainView"));
+  });
+
+  it("비교는 ③ 한 곳에서만 일어난다", () => {
+    // ①은 원본과 그 환산뿐이고(환산은 비교가 아니다), ②는 시장별 관측을 나열만
+    // 하며, ④는 사슬이다. VS는 화면에 한 번뿐이어야 한다.
+    expect(jsxUses(panel, "ComparisonSideView")).toBe(2);
+    const comparison = read("../market-comparison.ts");
+    expect(comparison).toContain('versus: "VS"');
+    // ①은 한국에서 관측된 어떤 값도 들고 있지 않다.
+    const originalView = panel.slice(panel.indexOf("function OriginalPriceView"), panel.indexOf("function MarketComparisonView"));
+    expect(originalView).not.toContain("marketContext");
+    expect(originalView).not.toContain("domesticCompetition");
+  });
+});
+
+/**
+ * UX 2.4.1 — 오른쪽 Action Center는 결론만 갖는다.
+ *
+ * 가격 상세가 거기 한 줄이라도 들어오면 왼쪽 판단 카드와 오른쪽이 같은 숫자를
+ * 두 벌 들고, 한쪽만 고쳐지는 날 서로 다른 값을 말한다.
+ */
+describe("오른쪽 Action Center에는 가격 상세가 없다", () => {
+  const actionCenter = read("../ActionCenter.tsx");
+
+  it("판정 · 등록 준비 체크리스트 · 채널 버튼 셋뿐이다", () => {
+    expect(actionCenter).toContain("판매 판단");
+    expect(actionCenter).toContain("등록 전 확인");
+    for (const term of ["착지원가", "원본 판매가격", "국내 비교상품", "예상 마진", "₩"]) {
+      expect(actionCenter, `${term}이(가) Action Center에 있다`).not.toContain(term);
+    }
   });
 });
 

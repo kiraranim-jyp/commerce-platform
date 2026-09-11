@@ -1,6 +1,9 @@
 import { isTargetMarket, parseMarketRegion, KR_TARGET_MARKET, type TargetMarket } from "./market-target";
 import { miEmptyState, type MiEmptyState } from "./mi-empty-state";
 import { formatKrwAmount, formatOriginAmount } from "./mi-headline";
+// UX 2.4.1 — 제목(번호 포함)은 가격 계층 표 한 곳에서만 나온다. 이 카드가 자기
+// 제목을 따로 들고 있으면 읽는 순서를 두 파일이 각각 주장하게 된다.
+import { PRICE_SECTION_TITLE } from "./price-hierarchy";
 
 /**
  * UX 2.4(CEO 지시, 2026-09-11) — 판매자 글로벌 시장 가격.
@@ -217,7 +220,7 @@ export function buildGlobalMarketCard(
   });
 
   return {
-    title: "🌎 판매자 글로벌 시장 가격",
+    title: PRICE_SECTION_TITLE.SELLER_GLOBAL_MARKET,
     rows,
     // "각 시장에서 실제 관측된 판매가격"(CEO 지시문 그대로). 뒤 문장은 이 카드가
     // 국내 비교상품 카드와 절대 섞이지 않는다는 사실을 화면이 직접 말하게 한다.

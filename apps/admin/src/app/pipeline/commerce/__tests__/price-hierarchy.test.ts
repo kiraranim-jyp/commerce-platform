@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   buildMarketContext,
+  buildOriginalPriceHeadline,
   buildPriceChain,
   PRICE_LINE_LABEL,
   PRICE_MEANING_LABEL,
+  PRICE_SECTION_TITLE,
   type MarketContextInput,
+  type OriginalPriceHeadlineInput,
   type PriceChainInput,
 } from "../price-hierarchy";
 
@@ -23,6 +26,7 @@ import {
  */
 const CHAIN: PriceChainInput = {
   originPrice: { amount: 55, currency: "GBP" },
+  observedOriginPrice: null,
   originPriceBasis: "저장된 가격 기준",
   costBasisIsKrMarket: false,
   sourcePriceKrw: 99928,
@@ -246,3 +250,133 @@ describe("한국 경쟁시장 블록은 다른 시장의 가격을 들고 있을
     expect(context.competitivenessNote).toContain("원가·수익 계산은 그대로");
   });
 });
+
+/**
+ * UX 2.4.1(CEO 지시, 2026-09-11) — 판단은 원본에서 시작한다.
+ *
+ * 고정하려는 실제 화면: 프로덕션은 "원본 판매자 한국 표시가 ₩104,600"으로
+ * 열리고 있었다. 셀러는 URL 하나를 붙여넣고 "이 상품이 원래 얼마지?"를 물었는데
+ * 첫 줄이 원화였다 — 답이 아니라 환산이다.
+ *
+ * 원인은 라벨이 아니라 입력이었다: 최근 실측 관측이 있으면 서버가 cost의
+ * originalAmount/originalCurrency를 그 관측의 원화값으로 접어서 넘긴다.
+ */
+describe("① 원본 상품 가격은 언제나 원본 통화가 먼저다", () => {
+  /** 실측 관측이 있는 흔한 상태: cost는 이미 원화로 접혀 있다(costSource=LATEST_PRICE). */
+  const OBSERVED: PriceChainInput = {
+    ...CHAIN,
+    // 서버가 넘기는 값 그대로 — 원본 통화가 남아 있지 않다.
+    originPrice: { amount: 99928, currency: "KRW" },
+    observedOriginPrice: { amount: 55, currency: "GBP", exchangeRate: 1816.87 },
+    sourcePriceKrw: 99928,
+    // 원가가 이미 원화라 서버의 환율은 1이다 — 이 값을 그대로 쓰면 "1 GBP = ₩1"이 된다.
+    exchangeRate: 1,
+    originPriceBasis: "최신 확인가 기준 · 2시간 전",
+  };
+
+  it("원화로 접힌 원가에서도 사슬의 첫 줄은 £55다 — ₩99,928이 아니다", () => {
+    const head = buildPriceChain(OBSERVED)[0]!;
+    expect(head.key).toBe("SOURCE_ORIGINAL_PRICE");
+    expect(head.value).toContain("55");
+    expect(head.value).not.toContain("₩");
+  });
+
+  it("그 원화는 사라지지 않고 '원화 환산' 줄로 내려간다", () => {
+    const rows = buildPriceChain(OBSERVED);
+    const converted = rows.find((r) => r.key === "SOURCE_PRICE_KRW")!;
+    expect(converted.value).toBe("₩99,928");
+    // 환율은 그 금액이 온 관측 행에서 같이 온 것을 쓴다(서버가 방금 조회한 1이 아니라).
+    expect(converted.basis).toContain("1 GBP = ₩1,817");
+    expect(converted.basis).not.toContain("= ₩1 ");
+  });
+
+  it("①은 사슬과 같은 입력을 받아 같은 값을 말한다 — 사본이 아니다", () => {
+    const chain = buildPriceChain(OBSERVED);
+    const headline = buildOriginalPriceHeadline({ ...HEADLINE_FROM(OBSERVED), snapshotOriginPrice: null });
+    expect(headline.title).toBe(PRICE_SECTION_TITLE.ORIGINAL);
+    expect(headline.price.value).toBe(chain.find((r) => r.key === "SOURCE_ORIGINAL_PRICE")!.value);
+    expect(headline.converted?.value).toBe(chain.find((r) => r.key === "SOURCE_PRICE_KRW")!.value);
+  });
+
+  it("원본 통화 가격이 있으면 원화만 적힌 값을 '원본 판매가격'이라고 부르지 않는다", () => {
+    const headline = buildOriginalPriceHeadline({ ...HEADLINE_FROM(OBSERVED), snapshotOriginPrice: null });
+    expect(headline.price.label).toBe(PRICE_MEANING_LABEL.SOURCE_ORIGINAL_PRICE);
+    expect(headline.price.value).not.toContain("₩");
+  });
+
+  it("원가가 한국 표시가 기준이면 ①은 스냅샷의 원본 통화 가격으로 답한다", () => {
+    // 이 경우 응답 어디에도 원본 통화 가격이 없다 — 스냅샷이 유일한 근거다.
+    const krMarket: PriceChainInput = {
+      ...CHAIN,
+      costBasisIsKrMarket: true,
+      originPrice: { amount: 104600, currency: "KRW" },
+      observedOriginPrice: null,
+      sourcePriceKrw: 104600,
+    };
+    const headline = buildOriginalPriceHeadline({
+      ...HEADLINE_FROM(krMarket),
+      snapshotOriginPrice: { amount: 55, currency: "GBP" },
+    });
+    expect(headline.price.value).toContain("55");
+    expect(headline.price.value).not.toContain("₩");
+    // 환율을 곱해 만든 원화는 없다 — 응답에 대응하는 값이 없으면 만들지 않는다.
+    expect(headline.converted).toBeNull();
+    // 한국 표시가는 지워진 것이 아니라 자리를 옮겼다는 사실을 화면이 직접 말한다.
+    expect(headline.note).toContain(PRICE_MEANING_LABEL.KR_MARKET_PRICE);
+  });
+
+  it("한국 표시가는 ①에서 내려와도 ④ 사슬의 출발점으로 그대로 남는다", () => {
+    // 지우는 것이 아니라 옮기는 것이다 — 그 값은 내가 실제로 치르는 돈이다.
+    const rows = buildPriceChain({
+      ...CHAIN,
+      costBasisIsKrMarket: true,
+      observedOriginPrice: null,
+      sourcePriceKrw: 104600,
+    });
+    const head = rows[0]!;
+    expect(head.key).toBe("KR_MARKET_PRICE");
+    expect(head.label).toBe(PRICE_MEANING_LABEL.KR_MARKET_PRICE);
+    expect(head.value).toBe("₩104,600");
+  });
+
+  it("원본이 원화로만 확인되면 없는 외화 가격을 지어내지 않는다", () => {
+    const headline = buildOriginalPriceHeadline({
+      ...HEADLINE_FROM({
+        ...CHAIN,
+        costBasisIsKrMarket: true,
+        observedOriginPrice: null,
+        sourcePriceKrw: 104600,
+      }),
+      snapshotOriginPrice: null,
+    });
+    expect(headline.price.key).toBe("KR_MARKET_PRICE");
+    expect(headline.price.value).toBe("₩104,600");
+    expect(headline.converted).toBeNull();
+  });
+
+  it("읽는 순서는 ① 원본 → ② 글로벌 → ③ 한국 경쟁 → ④ 수익성 → ⑤ 근거다", () => {
+    // 순서가 제목 안에 적혀 있어야 누가 블록을 옮겼을 때 번호가 먼저 어긋난다.
+    expect(Object.values(PRICE_SECTION_TITLE)).toEqual([
+      "① 원본 상품 가격",
+      "② 🌎 판매자 글로벌 시장 가격",
+      "③ 📊 한국 시장 경쟁가격",
+      "④ 💰 수익성",
+      "⑤ 🔎 판단 근거",
+    ]);
+    // US/DE/FR는 **같은 판매자**의 시장이다 — 남의 해외 가격 비교가 아니다.
+    expect(PRICE_SECTION_TITLE.SELLER_GLOBAL_MARKET).not.toContain("해외 가격 비교");
+  });
+});
+
+/** 사슬과 ①이 같은 입력을 받는다는 것을 테스트에서도 한 곳에서만 쓴다. */
+function HEADLINE_FROM(chain: PriceChainInput): Omit<OriginalPriceHeadlineInput, "snapshotOriginPrice"> {
+  return {
+    observedOriginPrice: chain.observedOriginPrice,
+    originPrice: chain.originPrice,
+    sourcePriceKrw: chain.sourcePriceKrw,
+    exchangeRate: chain.exchangeRate,
+    exchangeRateIsEstimate: chain.exchangeRateIsEstimate,
+    originPriceBasis: chain.originPriceBasis,
+    costBasisIsKrMarket: chain.costBasisIsKrMarket,
+  };
+}
