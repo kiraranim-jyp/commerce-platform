@@ -1,7 +1,14 @@
 import { convertToKrwStrict } from "@commerce/pricing";
-import { probeOriginAndKrMarkets } from "@commerce/crawler";
+import { probeOriginAndKrMarkets, probeAdditionalMarkets, type ShopifyMarketProbeResult } from "@commerce/crawler";
 import { fetchLiveExchangeRates } from "@/lib/exchange-rates";
-import { recordPriceObservations, hasObservationToday, type NewPriceObservation } from "./price-observations";
+import {
+  recordPriceObservations,
+  hasObservationToday,
+  getObservedMarketKeysToday,
+  normalizeMarketKey,
+  MARKET_PROBE_SOURCE_LABEL,
+  type NewPriceObservation,
+} from "./price-observations";
 
 /**
  * N-4.01/N-4.03(대표님 지시) — 스냅샷 하나에 대해 "해외 원가" 관측을 저장한다.
@@ -43,6 +50,96 @@ export interface PriceCheckResult {
   status: PriceCheckPipelineStatus;
   savedCount: number;
   errors: string[];
+}
+
+/** probeOriginAndKrMarkets가 이미 확인하는 두 곳 — 확장 조회에서 다시 찌르지
+ * 않는다(price-intelligence route와 같은 제외 목록). */
+const BASIC_PROBE_MARKET_CODES = ["", "en-kr"];
+
+/**
+ * GLOBAL-MARKET ③(CPO 지시, 2026-09-11) — probeAdditionalMarkets가 "실제로
+ * 응답한 시장"만 돌려준 결과를 시장당 한 행씩 SELLER_ORIGIN 관측으로 바꾼다.
+ * 지금까지 이 값들은 화면(price-intelligence route)에서만 보이고 DB에는 한
+ * 번도 남지 않아서, 다음 날이 되면 "이 상품이 DE에서는 얼마였는지"가 사라졌다.
+ *
+ * 지켜야 할 것(전부 "관측한 사실만 적는다"의 변주다):
+ *  - marketCode    : 실제로 요청한 코드 그대로. 통화·URL·판매처 국가에서
+ *                    시장을 역추론하지 않는다(EUR→DE, KRW→KR, .kr→KR 전부 금지).
+ *                    "en-int"는 끝까지 국가로 바꾸지 않는다 — 실측상 국제
+ *                    배송용 시장이지 어느 나라도 아니다.
+ *  - marketCountry : 그 매장이 /meta.json에 스스로 적어 둔 기준 국가만
+ *                    (Bobo Choses는 모든 시장에서 country=ES다 — 즉 이 값은
+ *                    "시장의 국가"가 아니라 "판매처가 선언한 국가"다).
+ *  - ""/null       : "시장 미확인"이므로 추가 시장으로 저장하지 않는다. 저장하면
+ *                    원본(프리픽스 없는) 관측과 구분이 불가능해진다.
+ *  - 중복          : source+market_code가 같으면 저장하지 않는다. en-kr은 위
+ *                    origin/KR 관측(KR_MARKET)으로 이미 들어가 있는 경우가
+ *                    많다 — 같은 실행에서 두 번 쌓으면 안 된다.
+ *
+ * 순수 함수로 뽑아 둔 이유는 이 규칙들을 네트워크/DB 없이 그대로 테스트하기
+ * 위함이다(가격 판정 로직은 여기서 아무것도 하지 않는다 — 환산은 기존
+ * convertToKrwStrict 그대로다).
+ */
+export function buildAdditionalMarketObservations(params: {
+  snapshotId: string;
+  probes: ShopifyMarketProbeResult[];
+  rates: Record<string, number>;
+  /** 이미 저장돼 있거나 이번 실행에서 이미 담은 시장 키(normalizeMarketKey 결과). */
+  alreadyRecordedMarketKeys: Set<string>;
+}): { observations: NewPriceObservation[]; errors: string[] } {
+  const observations: NewPriceObservation[] = [];
+  const errors: string[] = [];
+  const seen = new Set(params.alreadyRecordedMarketKeys);
+
+  for (const probe of params.probes) {
+    const marketKey = normalizeMarketKey(probe.marketCode);
+    // ""(=null과 같은 "시장 미확인")는 추가 시장이 아니다 — 건너뛴다.
+    if (marketKey === "") continue;
+    // snapshot+source+market_code 단위 중복 방지(하루에 시장당 한 행).
+    if (seen.has(marketKey)) continue;
+    seen.add(marketKey);
+    if (!(probe.amount > 0) || !probe.currency) continue;
+
+    // PRICE-ACCURACY-REGRESSION-1.1과 같은 이유 — 환율을 모르면 KRW 시계열에
+    // 넣을 값이 없다. €84를 ₩84로 저장하느니 이 시장 행을 저장하지 않는다.
+    const converted = convertToKrwStrict(probe.amount, probe.currency, params.rates);
+    if (!converted) {
+      errors.push(`환율 정보 없음(${probe.currency}) — ${probe.marketCode} 시장 관측을 저장하지 않았습니다.`);
+      continue;
+    }
+
+    // P-12A와 동일한 규칙을 그대로 적용한다(새 판정 없음): regularPrice가
+    // 현재가보다 실제로 클 때만 "할인 중"이다.
+    let salePriceKrw: number | null = null;
+    let originalPriceKrw: number | null = null;
+    if (probe.regularPrice && probe.regularPrice.amount > probe.amount) {
+      salePriceKrw = converted.amountKrw;
+      originalPriceKrw =
+        convertToKrwStrict(probe.regularPrice.amount, probe.regularPrice.currency, params.rates)?.amountKrw ?? null;
+    }
+
+    observations.push({
+      snapshotId: params.snapshotId,
+      source: "SELLER_ORIGIN",
+      // 원가 근거(KR_MARKET/ORIGIN_FX)와 구분되는 라벨 — 원가/마진/CASE 판정이
+      // 이 행을 원가로 잘못 읽지 않도록 하는 유일한 표식이다.
+      sourceLabel: MARKET_PROBE_SOURCE_LABEL,
+      // probe가 실제로 가져온 URL 그대로(관측 근거).
+      sourceProductUrl: probe.sourceUrl,
+      marketCode: probe.marketCode,
+      marketCountry: probe.shopMeta?.country ?? null,
+      currency: probe.currency,
+      priceAmount: probe.amount,
+      exchangeRate:
+        probe.currency.toUpperCase() === "KRW" ? null : (params.rates[probe.currency.toUpperCase()] ?? null),
+      priceKrw: converted.amountKrw,
+      salePriceKrw,
+      originalPriceKrw,
+      soldOut: probe.available === false,
+    });
+  }
+
+  return { observations, errors };
 }
 
 export async function runPriceCheck(input: PriceCheckInput): Promise<PriceCheckResult> {
@@ -114,6 +211,15 @@ export async function runPriceCheck(input: PriceCheckInput): Promise<PriceCheckR
         // 그 매장이 /meta.json에 스스로 적어 둔 기준 국가다.
         marketCode: chosenProbe?.marketCode ?? null,
         marketCountry: chosenProbe?.shopMeta?.country ?? null,
+        // GLOBAL-MARKET ③(CPO 지시, 2026-09-11) — probe가 실제로 조회한 URL을
+        // 그대로 남긴다(지금까지 SELLER_ORIGIN은 이 칸이 비어 있었다). 이유는
+        // 판매처 식별이다: sellerIdentityKey는 호스트명을 우선 쓰고 없을 때만
+        // sourceLabel로 폴백하는데, 아래에서 추가되는 시장 행들은 라벨이
+        // MARKET_PROBE라 URL이 없으면 같은 Bobo Choses가 판매처 2곳으로 세어진다
+        // (실측 기준 KR/DE/INT는 전부 bobochoses.com 한 곳이다). 판정/계산에
+        // 쓰이는 값이 아니라 식별용 근거 URL이다. 비-Shopify(probe 실패)면
+        // 예전처럼 null 그대로다.
+        sourceProductUrl: chosenProbe?.sourceUrl ?? null,
         currency,
         priceAmount,
         exchangeRate: useKrMarket ? null : (exchangeRates.rates[currency.toUpperCase()] ?? null),
@@ -129,6 +235,37 @@ export async function runPriceCheck(input: PriceCheckInput): Promise<PriceCheckR
       // 환율을 몰라 아무것도 저장하지 않았는데 SUCCESS로 보고하면 안 된다 —
       // 이 경우 status는 NO_RESULT가 되고 errors에 사유가 남는다.
       originSaved = true;
+    }
+
+    // GLOBAL-MARKET ③(CPO 지시, 2026-09-11) — 여기까지는 origin("")과 en-kr
+    // 두 곳만 저장했다. 실측(Bobo Choses B226AC043, 2026-09-11): 같은 상품이
+    // /en-kr ₩162,000 · /en-de €75 · /en-int €84로 시장마다 다른 값을 내는데,
+    // 그 사실이 화면에서만 보이고 DB에는 남지 않아 시계열로 남지 않았다.
+    // marketProbe가 null이면 Shopify 상품 URL이 아니므로 확장 조회 자체를
+    // 하지 않는다(불필요한 HTTP 요청 금지 — PART H 비용 원칙).
+    //
+    // originAlreadyChecked(cron 재실행)일 때는 이 블록 자체에 도달하지 않는다 —
+    // 기존 "오늘 이미 확인했으면 아무것도 하지 않는다" 동작을 그대로 둔다.
+    if (marketProbe) {
+      const extraProbes = await probeAdditionalMarkets(input.sourceUrl, BASIC_PROBE_MARKET_CODES).catch(() => []);
+      if (extraProbes.length > 0) {
+        // 멱등성은 이제 시장까지 본다 — 같은 날 같은 snapshot+SELLER_ORIGIN에
+        // 이미 저장된 market_code는 다시 쌓지 않는다(snapshot+source+
+        // market_code+날짜 유일). 조회가 실패하면 빈 집합이라 기존처럼
+        // 수집은 계속된다.
+        const recordedKeys = await getObservedMarketKeysToday(input.snapshotId, "SELLER_ORIGIN");
+        // 이번 실행에서 방금 담은 origin/KR 관측도 같은 시장이면 중복이다 —
+        // en-kr은 보통 위 KR_MARKET 관측으로 이미 들어가 있다.
+        for (const already of observations) recordedKeys.add(normalizeMarketKey(already.marketCode));
+        const extra = buildAdditionalMarketObservations({
+          snapshotId: input.snapshotId,
+          probes: extraProbes,
+          rates: exchangeRates.rates,
+          alreadyRecordedMarketKeys: recordedKeys,
+        });
+        observations.push(...extra.observations);
+        errors.push(...extra.errors);
+      }
     }
   }
 

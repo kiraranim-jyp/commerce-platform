@@ -27,7 +27,7 @@ import { fetchLiveExchangeRates } from "@/lib/exchange-rates";
 import { getSearchInterestRatio } from "./market-signals-cache";
 import { getDefaultSellerProfile } from "@/app/api/coupang/_lib/seller-profile";
 import { getSnapshot } from "../../snapshots/_lib/snapshot";
-import { getPriceHistory } from "./price-observations";
+import { getPriceHistory, isCostBasisOriginObservation } from "./price-observations";
 import { computeBrandMarketProfileFor } from "./brand-market";
 import { listDomesticProductLinks, priceTierFromLink } from "../../domestic-price-sources/_lib/domestic-product-link";
 
@@ -43,11 +43,18 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
   if (!snapshot) return null;
   const product = backfillCanonicalProduct(snapshot.workspace.canonicalProduct);
 
-  const [originHistory, domesticHistory, domesticShopHistory] = await Promise.all([
+  const [originRecords, domesticHistory, domesticShopHistory] = await Promise.all([
     getPriceHistory(snapshotId, "SELLER_ORIGIN"),
     getPriceHistory(snapshotId, "NAVER_SHOPPING"),
     getPriceHistory(snapshotId, "DOMESTIC_SHOP"),
   ]);
+  // GLOBAL-MARKET ③(CPO 지시, 2026-09-11) — run-price-check가 이제 같은
+  // SELLER_ORIGIN 소스에 "확인만 해 둔 다른 시장"(en-de/en-int …) 행도 쌓는다.
+  // 아래 원가(costPriceKrw = originHistory[0])·원가추세·costBasis는 전부
+  // "최신 SELLER_ORIGIN 1건"을 그대로 읽으므로, 그 행이 섞이면 실측 기준
+  // 원가가 ₩162,000(en-kr)에서 €84(en-int) 환산값으로 바뀐다. 원가/마진/CASE
+  // 판정 로직은 한 줄도 건드리지 않고, 입력만 예전과 동일하게 유지한다.
+  const originHistory = originRecords.filter(isCostBasisOriginObservation);
 
   // P-19-B Sprint 7(CPO 지시, 2026-09-02) — "🟢 동일상품 확인" 가격과 "🟡 비교상품"
   // 시장 참고가격을 완전히 분리된 두 버킷으로 집계한다. domestic_product_links의

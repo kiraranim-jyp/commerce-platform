@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { resolveBrand, stripShopifyLocalePrefix, normalizeUrl } from "@commerce/crawler";
 import { computeBrandMarketProfile, type BrandMarketProfile } from "@commerce/pricing";
+import { isCostBasisOriginObservation } from "./price-observations";
 
 /**
  * P-13A(대표님/CPO 지시, 2026-08-31) — 국내 동일상품이 없을 때, 같은 브랜드로
@@ -28,6 +29,11 @@ interface PriceObservationRow {
   price_krw: number | null;
   sale_price_krw: number | null;
   sold_out: boolean | null;
+  /** GLOBAL-MARKET ③(CPO 지시, 2026-09-11) — 원가 근거 관측인지 구분하려고
+   * 추가로 select한다. 이 표본은 "상품당 최신 SELLER_ORIGIN 1건"이라, 추가
+   * 시장 행(en-de/en-int …)이 섞이면 같은 상품의 표본 가격이 실측 기준
+   * ₩162,000(en-kr)에서 €84(en-int) 환산값으로 조용히 바뀐다. */
+  source_label: string | null;
   checked_at: string;
 }
 
@@ -71,7 +77,7 @@ export async function computeBrandMarketProfileFor(brandRaw: string | undefined)
 
   const { data: observations, error: obsErr } = await supabase
     .from("price_observations")
-    .select("snapshot_id, price_krw, sale_price_krw, sold_out, checked_at")
+    .select("snapshot_id, price_krw, sale_price_krw, sold_out, source_label, checked_at")
     .in(
       "snapshot_id",
       matching.map((s) => s.id),
@@ -84,6 +90,10 @@ export async function computeBrandMarketProfileFor(brandRaw: string | undefined)
   // 먼저 만난 것이 최신이다.
   const latestPerSnapshot = new Map<string, PriceObservationRow>();
   for (const row of observations as PriceObservationRow[]) {
+    // GLOBAL-MARKET ③ — 원가 근거가 아닌 "추가 확인 시장" 행은 표본에서 뺀다.
+    // 예전에는 SELLER_ORIGIN 행이 곧 원가였으므로 이 필터는 기존 데이터의
+    // 결과를 바꾸지 않는다(과거 행의 source_label은 null 또는 KR_MARKET/ORIGIN_FX).
+    if (!isCostBasisOriginObservation({ sourceLabel: row.source_label ?? null })) continue;
     if (!latestPerSnapshot.has(row.snapshot_id)) latestPerSnapshot.set(row.snapshot_id, row);
   }
 

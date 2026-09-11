@@ -12,7 +12,7 @@ import {
 } from "@commerce/pricing";
 import { resolveNaverContext } from "../../naver/_lib/resolve-context";
 import { getRegisteredPlatforms } from "./registration-status";
-import { getPriceHistory } from "../../price-history/_lib/price-observations";
+import { getPriceHistory, isCostBasisOriginObservation } from "../../price-history/_lib/price-observations";
 import { computeChecklistReadiness, computeNaverPayloadReadiness } from "../../../pipeline/commerce/readiness";
 import {
   buildPriorityItems,
@@ -119,11 +119,16 @@ async function computePriceSummaryForSnapshot(
   product: CanonicalProduct,
 ): Promise<SnapshotPriceSummary> {
   const currentSellingPriceKrw = product.priceOverrideKrw?.value ?? null;
-  const [originHistory, domesticShopHistory, naverShoppingHistory] = await Promise.all([
+  const [originRecords, domesticShopHistory, naverShoppingHistory] = await Promise.all([
     getPriceHistory(snapshotId, "SELLER_ORIGIN"),
     getPriceHistory(snapshotId, "DOMESTIC_SHOP"),
     getPriceHistory(snapshotId, "NAVER_SHOPPING"),
   ]);
+  // GLOBAL-MARKET ③(CPO 지시, 2026-09-11) — market-intelligence.ts와 같은 이유.
+  // 원가는 여전히 "최신 원가 근거 관측 1건"이다. 추가로 확인만 해 둔 다른 시장
+  // (en-de €75 / en-int €84 …) 행이 여기 섞이면 readiness의 원가·마진·판정이
+  // 조용히 달라진다 — 입력을 예전과 동일하게 유지한다(판정 로직 변경 없음).
+  const originHistory = originRecords.filter(isCostBasisOriginObservation);
   const costPriceKrw = originHistory[0]?.priceKrw ?? null;
   const domesticRecords = [...domesticShopHistory, ...naverShoppingHistory];
   const domesticSummary = summarizeDomesticMarket(domesticRecords);

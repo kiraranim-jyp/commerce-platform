@@ -157,6 +157,71 @@ export async function recordPriceObservations(
   return { ok: true, count: retry.count ?? observations.length };
 }
 
+/** GLOBAL-MARKET ③(CPO 지시, 2026-09-11) — 한 SELLER_ORIGIN 소스 안에서 "원가
+ * 근거로 쓰는 관측"과 "추가로 확인만 해 둔 다른 시장 관측"을 구분하는 라벨.
+ *
+ * 왜 필요한가: 원가/마진/CASE 판정은 지금까지도 originHistory[0](= 최신
+ * SELLER_ORIGIN 관측 1건)을 그대로 원가로 읽는다(market-intelligence.ts,
+ * compute-readiness.ts). 여기에 다른 시장 행이 섞이면 실측(Bobo Choses
+ * B226AC043: /en-kr ₩162,000 · /en-de €75 · /en-int €84) 기준으로 원가가
+ * ₩162,000에서 €84 환산값으로 조용히 바뀐다 — 같은 배치로 insert되면
+ * checked_at까지 같아 어느 행이 [0]이 될지도 보장되지 않는다. 그래서 추가
+ * 시장 행에는 이 라벨을 박고, 원가를 읽는 쪽은 아래 필터로 기존 동작을
+ * 그대로 유지한다(판정 로직 자체는 한 줄도 바꾸지 않는다). */
+export const MARKET_PROBE_SOURCE_LABEL = "MARKET_PROBE";
+
+/** 원가 근거로 쓸 수 있는 SELLER_ORIGIN 관측인가. 과거 관측은 sourceLabel이
+ * null(=ORIGIN_FX였던 시절)이라 null을 제외하면 안 된다 — 새로 생긴 추가
+ * 시장 행만 정확히 걸러낸다. */
+export function isCostBasisOriginObservation(record: { sourceLabel: string | null }): boolean {
+  return record.sourceLabel !== MARKET_PROBE_SOURCE_LABEL;
+}
+
+/** market_code는 null과 ""(로케일 프리픽스 없는 기본 요청) 두 형태로 "시장
+ * 미확인"이 들어온다 — 둘을 같은 키 ""로 본다(집계 쪽 price-history.ts의
+ * marketKeyOf와 정확히 같은 규칙). ""를 어떤 시장으로 바꿔 적지 않는다. */
+export function normalizeMarketKey(marketCode: string | null | undefined): string {
+  return marketCode?.trim().toLowerCase() ?? "";
+}
+
+/** GLOBAL-MARKET ③ — 멱등성이 시장까지 알아야 한다. hasObservationToday는
+ * snapshot+source+날짜만 보므로 "한 소스에 시장이 여러 개"가 된 뒤로는
+ * "en-kr은 저장됐고 en-de는 아직"을 구분할 수 없다. 오늘 이미 저장된
+ * market_code 집합을 그대로 돌려줘서, 호출부가 snapshot+source+market_code+
+ * 날짜 단위로 중복을 막게 한다.
+ *
+ * hasObservationToday를 고치지 않고 함수를 따로 둔 이유: 기존 호출부
+ * (run-domestic-price-check.ts의 DOMESTIC_SHOP — 시장 개념이 없어 항상
+ * market_code=NULL이다)의 동작과 실패 시 폴백 의미를 건드리지 않기 위함이다.
+ *
+ * 조회 실패는 "오늘 저장된 시장 없음"(빈 집합)으로 취급한다 — 확인 실패가
+ * 정상적인 가격 수집을 막으면 안 된다(hasObservationToday와 같은 원칙). */
+export async function getObservedMarketKeysToday(
+  snapshotId: string,
+  source: PriceObservationSource,
+  now: Date = new Date(),
+): Promise<Set<string>> {
+  const keys = new Set<string>();
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return keys;
+  const startOfDay = new Date(now);
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const { data, error } = await supabase
+    .from("price_observations")
+    .select("market_code")
+    .eq("snapshot_id", snapshotId)
+    .eq("source", source)
+    .gte("checked_at", startOfDay.toISOString());
+  if (error) {
+    console.warn("[price-observations] 오늘자 시장별 관측 확인 실패:", error.message);
+    return keys;
+  }
+  for (const row of (data ?? []) as Array<{ market_code?: string | null }>) {
+    keys.add(normalizeMarketKey(row.market_code));
+  }
+  return keys;
+}
+
 /** N-4.03 Part 22(대표님 지시) — daily cron이 같은 날 재실행(재시도/재배포 등)돼도
  * 같은 snapshot+source에 대해 중복 관측치를 쌓지 않도록 하는 멱등성 체크.
  * 조회 자체가 실패하면 "오늘 아직 없음"으로 취급한다 — 확인 실패 때문에

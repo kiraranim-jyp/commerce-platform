@@ -68,8 +68,24 @@ export async function probeOriginAndKrMarkets(
  * 같은 GBP 74 — 우연이라기엔 너무 정확히 일치). 이걸 "실제 market"으로
  * 보여주면 실제로는 없는 프랑스/독일/스페인/일본 시장이 있는 것처럼
  * 오해를 준다(CPO 금지 원칙 위반) — 그래서 확인된 진짜 Shopify Markets
- * 프리픽스 형태("xx-yy", 예: "en-kr"/"en-au")만 후보로 남긴다. */
-export const EXPAND_CANDIDATE_MARKET_CODES = ["en-us", "en-gb", "en-fr", "en-de", "en-jp", "en-au", "en-ca"];
+ * 프리픽스 형태("xx-yy", 예: "en-kr"/"en-au")만 후보로 남긴다.
+ *
+ * GLOBAL-MARKET ③ 실측(Bobo Choses B226AC043, 2026-09-11) — "en-int"(국제
+ * 배송용 시장)를 후보에 추가한다. 위 "xx"(언어만) 케이스와 달리 실제로 기본
+ * 가격과 다른 값을 냈다: 루트/en-de는 €75.00인데 /en-int는 €84.00이었다 —
+ * 기본 가격을 되돌려주는 가짜 market이 아니라는 실증이다. 단, "int"는 국가가
+ * 아니므로 이 코드는 끝까지 어떤 국가로도 변환하지 않는다(집계/화면 쪽
+ * marketRegionOf 정규식이 2글자 지역만 인정해 자연히 null이 된다). */
+export const EXPAND_CANDIDATE_MARKET_CODES = [
+  "en-us",
+  "en-gb",
+  "en-fr",
+  "en-de",
+  "en-jp",
+  "en-au",
+  "en-ca",
+  "en-int",
+];
 
 export async function probeAdditionalMarkets(
   sourceUrl: string,
