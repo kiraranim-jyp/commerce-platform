@@ -43,6 +43,19 @@ import { formatKrwAmount, formatOriginAmount } from "./mi-headline";
  *
  * 그래서 buildPriceChain()과 buildMarketContext()가 서로의 입력을 받지 않는다 —
  * 한쪽이 비어도 다른 쪽이 절대 비지 않는다는 것을 타입으로 못박는 장치다.
+ *
+ * ── UX 2.4(CEO 지시, 2026-09-11) — 축이 넷으로 나뉜다 ─────────────────────
+ * 위 두 축에 "판매자가 각 시장에서 직접 파는 가격"이 더해진다. 화면의 가격은
+ * 이제 네 덩어리이고, 서로 절대 섞이지 않는다:
+ *
+ *   A 원본            buildPriceChain()의 첫 줄 (원본 판매가격 / 원화 환산)
+ *   B 판매자 글로벌 시장  global-market.ts  ← 이 판매처가 KR/US/FR/DE/INT에 파는 값
+ *   C 한국 경쟁시장     buildMarketContext()  ← **다른** 한국 판매자들이 파는 값
+ *   D 내 판매가격·수익   buildPriceChain()의 뒷부분
+ *
+ * B와 C를 가르는 것이 이번 지시의 전부다. 둘 다 "🇰🇷 한국 · ₩" 모양이지만
+ * B는 내가 살 값이고 C는 내가 경쟁할 값이다. 그래서 B는 아예 다른 파일에
+ * 있고, buildMarketContext()는 시장 코드를 인자로조차 받지 않는다.
  */
 
 /** 화면에 뜨는 여덟 가지 "가격". 새 값이 생기면 여기에 키를 더해야 한다. */
@@ -117,8 +130,36 @@ export interface PriceLine {
  */
 export type ChainRole = "SOURCE" | "CONVERT" | "ADD" | "TOTAL" | "PLAN" | "RESULT";
 
+/**
+ * UX 2.4(CEO 지시, 2026-09-11) — 접힌 화면에서 이 줄이 보이는가.
+ *
+ *   SUMMARY  원본 → 착지원가 → 내 판매가격 → 수익. 판단에 필요한 최소한.
+ *   DETAIL   그 사이의 과정(환율 환산 · 국제배송비). 펼쳤을 때만 본다.
+ *
+ * 두 배열로 나눠 돌려주지 않고 한 배열에 표식만 다는 이유가 중요하다. 나누면
+ * 화면이 두 목록을 이어 붙이는 순서를 스스로 정하게 되고, 그때부터 "착지원가가
+ * 국제배송비보다 위에 있는" 화면이 생길 수 있다. 순서는 여전히 계산 순서이고,
+ * 접힘은 그 순서 위에 씌우는 필터일 뿐이다.
+ *
+ * 무엇이 DETAIL인지는 "없어도 판단이 되는가"로 가른다. 환산가와 국제배송비는
+ * 착지원가 안에 이미 합쳐져 있어서(= 결과가 SUMMARY에 남아 있어서) 접어도
+ * 사실이 사라지지 않는다. 원본가격·착지원가·내 판매가·수익은 접는 순간 셀러가
+ * 답을 못 얻는다.
+ */
+export type ChainTier = "SUMMARY" | "DETAIL";
+
+const TIER_BY_ROLE: Record<ChainRole, ChainTier> = {
+  SOURCE: "SUMMARY",
+  CONVERT: "DETAIL",
+  ADD: "DETAIL",
+  TOTAL: "SUMMARY",
+  PLAN: "SUMMARY",
+  RESULT: "SUMMARY",
+};
+
 export interface PriceChainRow extends PriceLine {
   role: ChainRole;
+  tier: ChainTier;
 }
 
 export interface PriceChainInput {
@@ -170,6 +211,7 @@ function krwLine(
   return {
     key,
     role,
+    tier: TIER_BY_ROLE[role],
     label: PRICE_LINE_LABEL[key],
     basis,
     value: krw != null ? formatKrwAmount(krw) : null,
@@ -193,6 +235,7 @@ export function buildPriceChain(input: PriceChainInput): PriceChainRow[] {
     rows.push({
       key: "KR_MARKET_PRICE",
       role: "SOURCE",
+      tier: TIER_BY_ROLE.SOURCE,
       label: PRICE_MEANING_LABEL.KR_MARKET_PRICE,
       basis: [
         "이 판매처가 한국 방문자에게 직접 보여주는 가격 · 환율 환산이 아닙니다",
@@ -210,6 +253,7 @@ export function buildPriceChain(input: PriceChainInput): PriceChainRow[] {
     rows.push({
       key: "SOURCE_ORIGINAL_PRICE",
       role: "SOURCE",
+      tier: TIER_BY_ROLE.SOURCE,
       label: PRICE_MEANING_LABEL.SOURCE_ORIGINAL_PRICE,
       basis: ["원본 판매자 페이지 기준", input.originPriceBasis].filter(Boolean).join(" · "),
       value: input.originPrice
@@ -270,6 +314,7 @@ export function buildPriceChain(input: PriceChainInput): PriceChainRow[] {
   rows.push({
     key: "SELLER_PLANNED_PRICE",
     role: "PLAN",
+    tier: TIER_BY_ROLE.PLAN,
     label: PRICE_MEANING_LABEL.SELLER_PLANNED_PRICE,
     basis: "판매자가 정한 판매가",
     value: input.sellerPlannedPriceKrw != null ? formatKrwAmount(input.sellerPlannedPriceKrw) : null,
@@ -302,6 +347,7 @@ export function buildPriceChain(input: PriceChainInput): PriceChainRow[] {
   rows.push({
     key: "EXPECTED_MARGIN",
     role: "RESULT",
+    tier: TIER_BY_ROLE.RESULT,
     label: PRICE_MEANING_LABEL.EXPECTED_MARGIN,
     // 같은 "예상 마진"이라도 내 판매가 기준과 추천 판매가 기준은 다른 숫자다.
     // 기준을 적지 않으면 한 라벨이 두 사실을 가리키게 된다.
@@ -339,8 +385,22 @@ export interface MarketContextInput {
   domesticSellerCount: number;
   /** domesticCompetition.priceMarketBasis === "UNRESOLVED" */
   domesticUnresolved: boolean;
-  /** 관측된 한국 시장 밖의 판매처×시장 행 수. 가격은 여기에 담지 않는다. */
-  overseasMarketCount: number;
+  /**
+   * UX 2.4(CEO 지시, 2026-09-11) — 여기 있던 overseasMarketCount를 없앴다.
+   *
+   * UX 2.3에서는 "해외 시장 참고 N개"가 이 블록 안에 접혀 있었다. 두 가지가
+   * 틀렸다. ① 그 목록의 출처는 domesticCompetition.sellers, 즉 **국내 편집샵**
+   * 관측이다. DOMESTIC_SHOP은 market_code를 저장하지 않아 전부 null이고,
+   * splitByTargetMarket이 null을 "한국이 아님"으로 분류하는 바람에 국내
+   * 비교상품 판매처들이 "🌎 해외 시장 참고"라는 제목 아래 서 있었다 — 이번
+   * 지시가 없애라고 한 혼동을 화면이 스스로 만들고 있었다. ② 판매자가 실제로
+   * 여러 시장에 낸 가격(en-us/en-fr/en-de/en-int)은 애초에 이 블록에 들어온
+   * 적이 없다. 그건 SELLER_ORIGIN 관측이고, 이제 global-market.ts가 만드는
+   * 별도 카드가 책임진다.
+   *
+   * 그래서 이 타입에서 필드를 지운 것 자체가 장치다 — 이 블록(한국 경쟁시장)이
+   * 다른 시장 가격을 들고 있을 수 있는 자리를 없앤다.
+   */
 }
 
 export interface MarketContext {
@@ -350,7 +410,9 @@ export interface MarketContext {
   competitiveness: CompetitivenessState;
   /** "가격 경쟁력만 확인할 수 없다"는 사실을 그대로 말하는 한 줄. 비교 가능하면 null. */
   competitivenessNote: string | null;
-  overseas: { count: number; label: string; note: string };
+  /** 비교 대상 판매처 수(Source 단위). 가격이 아니라 근거의 두께다 — 값이
+   * 없어도 "0곳"이라고 말할 수 있는 유일한 숫자라 라벨과 함께 들고 다닌다. */
+  sellerCount: { count: number; label: string };
 }
 
 /**
@@ -416,12 +478,11 @@ export function buildMarketContext(
     comparable,
     competitiveness,
     competitivenessNote,
-    overseas: {
-      count: input.overseasMarketCount,
-      label: `🌎 해외 시장 참고 ${input.overseasMarketCount}개`,
-      // 해외 시장 가격은 매입처를 고를 때 쓰는 값이지 한국 경쟁가가 아니다.
-      // 이 문장이 블록 안에 항상 붙어 있어야 펼친 사람이 그 사실을 같이 읽는다.
-      note: `판매 판단은 ${market.label} 시장을 기준으로 합니다 — 아래 가격은 매입처 비교용 참고값이고, 국내 비교상품 가격으로 쓰지 않습니다.`,
+    // "비교 판매처 3곳"(CEO 지시문의 C 그룹 그대로). 0곳도 사실이므로 숨기지
+    // 않는다 — 값이 없는 것과 "찾아봤는데 0곳"은 셀러에게 다른 정보다.
+    sellerCount: {
+      count: input.domesticSellerCount,
+      label: `비교 판매처 ${input.domesticSellerCount}곳`,
     },
   };
 }

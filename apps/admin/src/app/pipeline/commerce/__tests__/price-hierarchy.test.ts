@@ -44,7 +44,6 @@ const MARKET: MarketContextInput = {
   domesticLowestPriceKrw: 109000,
   domesticSellerCount: 3,
   domesticUnresolved: false,
-  overseasMarketCount: 2,
 };
 
 describe("여덟 가지 가격은 한 라벨로 합쳐지지 않는다", () => {
@@ -117,6 +116,36 @@ describe("여덟 가지 가격은 한 라벨로 합쳐지지 않는다", () => {
     expect(recommended.basis).toBe("추천 판매가 기준");
   });
 
+  it("접힌 가격 판단은 원본 → 착지원가 → 내 판매가격 → 수익만 남는다", () => {
+    // UX 2.4(CEO 지시, 2026-09-11) — 환산가와 국제배송비는 착지원가 안에 이미
+    // 합쳐져 있어서 접어도 사실이 사라지지 않는다. 원본가격·착지원가·내 판매가·
+    // 수익은 접는 순간 셀러가 답을 못 얻는다.
+    const rows = buildPriceChain(CHAIN);
+    expect(rows.filter((r) => r.tier === "SUMMARY").map((r) => r.key)).toEqual([
+      "SOURCE_ORIGINAL_PRICE",
+      "LANDED_COST",
+      "SELLER_PLANNED_PRICE",
+      "EXPECTED_PROFIT",
+      "EXPECTED_MARGIN",
+    ]);
+    expect(rows.filter((r) => r.tier === "DETAIL").map((r) => r.key)).toEqual([
+      "SOURCE_PRICE_KRW",
+      "INTERNATIONAL_SHIPPING",
+    ]);
+  });
+
+  it("접힘은 순서를 다시 정하지 않는다 — 계산 순서가 곧 화면 순서다", () => {
+    const rows = buildPriceChain(CHAIN);
+    const summaryOnly = rows.filter((r) => r.tier === "SUMMARY");
+    // 접힌 목록은 전체 배열의 부분수열이다(자리를 바꾸지 않는다).
+    let cursor = -1;
+    for (const row of summaryOnly) {
+      const at = rows.indexOf(row);
+      expect(at).toBeGreaterThan(cursor);
+      cursor = at;
+    }
+  });
+
   it("예상 수익이 착지원가만 뺀 값이 아니라는 사실을 숨기지 않는다", () => {
     const profit = buildPriceChain(CHAIN).find((r) => r.key === "EXPECTED_PROFIT")!;
     expect(profit.basis).toContain("플랫폼 수수료");
@@ -155,7 +184,6 @@ describe("국내 검색 결과가 없어도 수익성 계산은 그대로다", (
     domesticLowestPriceKrw: null,
     domesticSellerCount: 0,
     domesticUnresolved: false,
-    overseasMarketCount: 4,
   });
 
   it("국내 비교상품은 '검색 데이터 없음'이다 — 판단 실패가 아니다", () => {
@@ -180,24 +208,27 @@ describe("국내 검색 결과가 없어도 수익성 계산은 그대로다", (
   });
 });
 
-describe("해외 시장 가격은 국내 경쟁가로 흘러들 수 없다", () => {
-  it("해외 관측이 아무리 많아도 국내 비교상품 칸을 채우지 않는다", () => {
-    const context = buildMarketContext({
-      domesticBasis: "NONE",
-      domesticAveragePriceKrw: null,
-      domesticLowestPriceKrw: null,
-      domesticSellerCount: 0,
-      domesticUnresolved: false,
-      overseasMarketCount: 12,
-    });
-    expect(context.comparable.value).toBeNull();
-    expect(context.overseas.count).toBe(12);
+describe("한국 경쟁시장 블록은 다른 시장의 가격을 들고 있을 수 없다", () => {
+  /**
+   * UX 2.4(CEO 지시, 2026-09-11) — UX 2.3에서는 이 블록 안에 "🌎 해외 시장 참고
+   * N개"가 접혀 있었다. 그 목록의 출처가 실제로는 국내 편집샵 관측이어서,
+   * 국내 비교상품 판매처가 "해외 시장"이라는 제목 아래 서 있었다. 이제는
+   * 그런 목록이 들어올 **자리 자체**가 없다 — 타입으로 막는다.
+   */
+  it("이 블록이 내놓는 가격은 국내 비교상품 하나뿐이다", () => {
+    const context = buildMarketContext(MARKET);
+    const carriers = Object.entries(context).filter(([, v]) => v != null && typeof v === "object" && "value" in v);
+    expect(carriers.map(([k]) => k)).toEqual(["comparable"]);
+    expect(context.comparable.key).toBe("DOMESTIC_COMPARABLE_PRICE");
   });
 
-  it("해외 블록은 그 값이 한국 경쟁가가 아니라는 사실을 항상 함께 말한다", () => {
+  it("비교 판매처 수는 가격이 아니라 근거의 두께로만 나온다", () => {
+    // CEO 지시문의 C 그룹: "국내 비교상품 ₩116,600 · 비교 판매처 N곳".
     const context = buildMarketContext(MARKET);
-    expect(context.overseas.label).toContain("해외 시장 참고");
-    expect(context.overseas.note).toContain("국내 비교상품 가격으로 쓰지 않습니다");
+    expect(context.sellerCount.count).toBe(3);
+    expect(context.sellerCount.label).toBe("비교 판매처 3곳");
+    // 개수는 원화 기호를 달고 나오지 않는다 — 숫자 모양이 같으면 가격으로 읽힌다.
+    expect(context.sellerCount.label).not.toContain("₩");
   });
 
   it("시장을 확정하지 못하면 아무 시장 가격이나 국내 비교상품이라고 부르지 않는다", () => {

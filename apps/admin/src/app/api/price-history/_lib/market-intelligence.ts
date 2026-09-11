@@ -6,6 +6,7 @@ import {
   computePriceRecommendation,
   computePriceAlertSignal,
   summarizeDomesticMarketSplit,
+  groupMarketObservations,
   DOMESTIC_ANALYSIS_MARKET_COUNTRY,
   DEFAULT_PRICE_BREAKDOWN_INPUT,
   computePriceBreakdown,
@@ -413,6 +414,19 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
     snapshotId,
     product: { title: product.title.value, brand: product.brand.value, sourceUrl: product.sourceUrl },
     currentPrice: { sellingPriceKrw: currentSellingPriceKrw, costPriceKrw, costBasis },
+    /**
+     * UX 2.4(CEO 지시, 2026-09-11) — "원래 얼마고, 이 판매자는 한국/미국/유럽에서
+     * 각각 얼마에 팔고 있지?"에 답할 값. GLOBAL-MARKET ②③이 en-kr/en-us/en-fr/
+     * en-de/en-int를 전부 price_observations에 저장해 왔는데, 응답이 들고 있는
+     * originHistory는 **원가 근거 행만 남긴 것**(MARKET_PROBE 제외)이라 그
+     * 시장들이 화면까지 오지 못했다 — DB에는 도착했는데 경험에서 사라진 값이다.
+     *
+     * 여기서 새로 계산하는 것은 없다. 필터링 전 originRecords를 시장별 최신
+     * 1건으로 고르기만 한다(groupMarketObservations). 원가/마진/CASE 판정이 읽는
+     * originHistory는 위 그대로라, 이 줄을 더해도 판정 입력은 한 글자도 바뀌지
+     * 않는다 — MARKET_PROBE 행은 여전히 원가 근거에서 빠져 있다.
+     */
+    sellerGlobalMarkets: groupMarketObservations(originRecords),
     domesticCompetition: domesticSummary,
     // P-19-B Sprint 7/9(CPO 지시, 2026-09-02) — UI가 "동일상품 가격"인지 "국내 유사
     // 시장가격(참고용)"인지 문구를 구분해서 보여줄 수 있도록 두 버킷과 basis를

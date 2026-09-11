@@ -104,6 +104,68 @@ export interface SellerMarketPrice {
   checkedAt: string;
 }
 
+/**
+ * UX 2.4(CEO 지시, 2026-09-11) — **한 판매처가 시장마다 낸 가격 한 줄**.
+ *
+ * SellerMarketPrice와 필드가 겹치지만 따로 두는 이유는 soldOut 하나다. 위
+ * SellerMarketPrice는 국내 비교상품 집계(summarizeFrom)가 이미 품절 행을
+ * 걸러낸 뒤에 만드는 값이라 재고 상태를 들고 다닐 이유가 없었다. 판매자
+ * 글로벌 시장 카드는 반대다 — "🇺🇸 미국 $53"이 지금 살 수 있는 가격인지
+ * 품절인지가 매입처를 고르는 판단 그 자체이고, 셋(판매중/품절/확인 불가)을
+ * 하나로 뭉개면 다시 "확인 못 한 것"이 "판매중"으로 읽힌다.
+ */
+export interface MarketObservation {
+  /** 관측된 market_code 그대로(trim/소문자 정규화만). */
+  marketCode: string;
+  /** 그 시장 관측들이 공통으로 선언한 판매자 신고 국가. 서로 다르면 null. */
+  marketCountry: string | null;
+  currency: string;
+  priceAmount: number | null;
+  priceKrw: number;
+  productUrl: string | null;
+  /** null=재고 판정 불가, true=품절 확인, false=판매중 확인. */
+  soldOut: boolean | null;
+  checkedAt: string;
+}
+
+/**
+ * UX 2.4(CEO 지시, 2026-09-11) — 관측 목록을 **시장별 최신 1건**으로 접는다.
+ *
+ * ── 계산하지 않는다 ─────────────────────────────────────────────────────
+ * 최저/평균/최고를 내지 않는다. 시장끼리 비교하거나 합치지도 않는다. 이미
+ * 저장된 행 중 시장마다 가장 최근 것을 고르고 순서만 정한다 — 여기서 평균을
+ * 내는 순간 "판매자 글로벌 평균가"라는, 어느 시장에도 존재하지 않는 아홉
+ * 번째 가격이 생긴다.
+ *
+ * ── market_code가 없는 행은 시장이 아니다 ────────────────────────────────
+ * ""/null은 "시장 미확인"이고(로케일 프리픽스 없는 기본 요청) 그 행은 곧
+ * 원본 판매자 페이지 관측 그 자체다 — 화면에서는 이미 "원본 판매가격"으로
+ * 한 번 나온다. 여기에 다시 담으면 같은 숫자가 두 카드에 뜬다. 그래서
+ * 걸러낸다: 통화·도메인·판매자 신고 국가로 시장을 지어내는 대신 아예 빼는 것이
+ * 이 파일이 지켜온 "관측된 사실만 적는다"의 같은 규칙이다.
+ *
+ * priceKrw가 없는 행(완전 품절이라 가격 자체를 못 찾음)도 빠진다 — 시장
+ * 가격을 말하는 줄인데 말할 가격이 없다(0원을 지어내지 않는다).
+ */
+export function groupMarketObservations(records: PriceObservationRecord[]): MarketObservation[] {
+  const priced = records.filter((r): r is PricedRecord => r.priceKrw != null && marketKeyOf(r) !== "");
+  return [...groupByKey(priced, marketKeyOf).entries()]
+    .sort(([a], [b]) => compareMarketKey(a, b))
+    .map(([marketKey, marketRecords]) => {
+      const latest = marketRecords.reduce((newest, r) => (r.checkedAt > newest.checkedAt ? r : newest));
+      return {
+        marketCode: marketKey,
+        marketCountry: declaredCountryOf(marketRecords),
+        currency: latest.currency,
+        priceAmount: latest.priceAmount,
+        priceKrw: latest.priceKrw,
+        productUrl: latest.sourceProductUrl,
+        soldOut: latest.soldOut,
+        checkedAt: latest.checkedAt,
+      };
+    });
+}
+
 /** 화면용 Source → Market 묶음. 판매처가 먼저고 시장이 그 아래다 — 한
  * 판매처가 세 시장에 있다고 판매처 셋으로 보이면 안 된다. */
 export interface SellerMarketGroup {

@@ -107,8 +107,16 @@ export function StageBody({
 
       {/* ── 이 단계에서 주인공이 아닌 것들 ──────────────────────────────
           전부 남아 있고 전부 한 번의 클릭으로 열린다. 제목에 무엇이 들어
-          있는지 한 줄로 적어서 "열어봐야 아는" 접힘을 만들지 않는다. */}
+          있는지 한 줄로 적어서 "열어봐야 아는" 접힘을 만들지 않는다.
+
+          UX 2.4(CEO 지시, 2026-09-11) — 이 묶음에 이름을 붙인다. 지금까지는
+          접힌 섹션들이 위 단계 패널과 아무 구분 없이 이어져서, 이미지·Source
+          Data가 "지금 해야 할 일"과 같은 층위로 보였다. 한 줄짜리 머리말이
+          "여기부터는 이 단계의 일이 아니다"를 말한다 — 접힘/내용은 그대로다. */}
       <div className="space-y-2">
+        <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-text-tertiary">
+          이 단계의 일은 아니지만 언제든 열어볼 수 있는 것
+        </p>
         {focus.marketEvidence === "COLLAPSED" && (
           <CollapsibleSection title="가격 비교 근거" summary="국내 편집샵 · 해외 판매처에서 관측된 가격">
             {marketEvidence}
@@ -188,15 +196,31 @@ function CollectionStage({ workflow, images }: { workflow: Workflow; images: Rea
  * 있다(CommerceWorkspace가 탭 분기 밖에서 한 번만 마운트한다 — 쿠팡 탭이
  * 복원된 세션에서도 분석이 돌아야 하기 때문이다). 여기서는 그 판단의 근거를
  * 이어서 놓는다: 국내 → 해외 가격비교. 이미지가 이 위로 올라오는 일은 없다.
+ *
+ * ── UX 2.4(CEO 지시, 2026-09-11) — 결론과 근거의 경계를 조인다 ────────────
+ * 지금까지 이 패널은 MI 카드와 **똑같은 껍데기**(같은 테두리·같은 "지금 단계"
+ * 머리말)를 쓰고 있었다. 그래서 국내 가격비교·해외 가격비교가 판단의 근거가
+ * 아니라 판단과 나란한 또 하나의 결론처럼 읽혔다 — 그 아래 이미지·Source Data
+ * 까지 같은 무게로 이어지면서 "결론이 어디였지?"가 다시 생긴다.
+ *
+ * 그래서 이 블록은 스스로를 근거라고 부르고(제목), 위 카드가 결론이라는 사실을
+ * 머리말에서 직접 말한다. 내용·컴포넌트·데이터는 한 줄도 바뀌지 않는다 —
+ * 바뀌는 것은 이 덩어리가 자기를 무엇이라고 소개하는가뿐이다.
  */
 function MarketStage({ marketEvidence }: { marketEvidence: React.ReactNode }) {
   return (
     <StagePanel
       index={2}
       title="시장 판단"
-      headline="위 판단이 어떤 가격 위에 세워졌는지 확인합니다"
+      headline="결론은 위 판단 카드 하나입니다 — 아래는 그 판단이 어떤 가격 위에 세워졌는지 보여주는 근거입니다"
+      badge="근거"
     >
-      {marketEvidence}
+      <div className="rounded-md border border-dashed border-border bg-background/40 p-2">
+        <p className="mb-2 text-[11px] text-text-tertiary">
+          🔎 판단 근거 — 여기 있는 가격은 결론이 아니라 위 판단이 읽은 원본입니다
+        </p>
+        {marketEvidence}
+      </div>
     </StagePanel>
   );
 }
