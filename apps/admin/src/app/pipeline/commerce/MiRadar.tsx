@@ -1,5 +1,6 @@
-import type { RadarAxis, RadarLevel, RadarResult } from "@commerce/pricing";
+import type { RadarLevel, RadarResult } from "@commerce/pricing";
 import { RADAR_LEVEL_SCORE } from "@commerce/pricing";
+import { emptyStateForAxis } from "./mi-empty-state";
 
 /**
  * MI 2.0 PHASE 1(CPO 지시, 2026-09-09) — 판매 판단의 근거를 4축으로 보여준다.
@@ -74,16 +75,47 @@ const LEVEL_STARS: Record<RadarLevel, { mark: string; word: string; className: s
  * 붙으면 둘 중 하나가 고장 난 것처럼 읽힌다. 실제로는 서로 다른 질문에 답하고 있다 —
  * 예상 수익은 "내가 정한 판매가에서 얼마 남는가"라는 산술이고(국내 시세와 무관),
  * 수익성 축은 "그게 시장 대비 좋은 수익인가"라는 판단이라 국내 가격을 모르면
- * 계산 자체가 안 된다(CASE D).
+ * 계산 자체가 안 된다.
  *
- * computeRadar는 이미 그 사유를 문장으로 갖고 있다. 계산이나 판정은 그대로 두고
- * 이미 있는 reason을 축 줄에 그대로 보여준다 — 왜 모르는지가 보이면 모순으로 읽히지
- * 않는다. 등급이 있는 축(A/B/C 정상 케이스)은 기존처럼 "높음/보통/낮음" 한 단어라
- * 화면이 길어지지 않는다.
+ * MI-FLOW-2(CEO 지시, 2026-09-11) — 여기에 한 겹을 더한다. 결측에도 종류가 있어서
+ * "정상 조회했는데 결과가 없음"과 "조회/계산 자체를 못 함"은 셀러가 할 일이 다르다.
+ * 그 구분은 mi-empty-state.ts 한 곳에서만 문구로 번역한다 — 판정이나 사유 문장은
+ * computeRadar가 낸 값 그대로다.
+ *
+ * ── 축 줄을 별도 컴포넌트로 뺀 이유 ─────────────────────────────────────
+ * 같은 4축 별점을 판단 헤드라인("판단 근거")과 접힘 상세(레이더 그림 옆)에서
+ * 둘 다 써야 한다. 두 곳에 같은 매핑을 복사하면 언젠가 한쪽만 고쳐져서 같은
+ * 상품이 화면 위아래에서 다른 등급으로 보인다 — 이 프로젝트에서 반복된 버그
+ * 유형이라 구조로 막는다.
  */
-function missingReason(axis: RadarAxis): string | null {
-  const s = axis.state;
-  return s.status === "SCORED" ? null : s.reason;
+export function MiAxisStars({ radar, className = "" }: { radar: RadarResult; className?: string }) {
+  return (
+    <ul className={`w-full space-y-0.5 ${className}`}>
+      {radar.axes.map((axis) => {
+        const empty = emptyStateForAxis(axis.state);
+        const stars = axis.state.status === "SCORED" ? LEVEL_STARS[axis.state.level] : null;
+        return (
+          <li key={axis.key} className="flex items-baseline justify-between gap-2 text-[11px]">
+            <span className={empty ? "text-text-tertiary" : "text-text-secondary"}>
+              {axis.icon} {axis.label}
+            </span>
+            {stars ? (
+              <span className={`shrink-0 text-right ${stars.className}`}>
+                {/* 별을 붙여 써야 채운 칸 수가 한 덩어리로 읽힌다 — 자간을 좁힌다. */}
+                <span className="tracking-[-0.1em]">{stars.mark}</span> {stars.word}
+              </span>
+            ) : (
+              // 모르는 축을 ☆☆☆☆☆로 그리면 "낮다"로 읽힌다 — 별점 대신 상태와 사유를 쓴다.
+              <span className="text-right text-text-tertiary">
+                — {empty?.chip}
+                {empty?.reason ? ` · ${empty.reason}` : ""}
+              </span>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
 }
 
 export function MiRadar({ radar }: { radar: RadarResult }) {
@@ -180,28 +212,7 @@ export function MiRadar({ radar }: { radar: RadarResult }) {
 
       {/* 축별 상태를 텍스트로도 준다 — 차트만으로는 스크린리더/모바일에서
           읽기 어렵고, 결측 이유는 그림으로 표현할 수 없다. */}
-      <ul className="w-full space-y-0.5">
-        {radar.axes.map((axis) => {
-          const reason = missingReason(axis);
-          const stars = axis.state.status === "SCORED" ? LEVEL_STARS[axis.state.level] : null;
-          return (
-            <li key={axis.key} className="flex items-baseline justify-between gap-2 text-[11px]">
-              <span className={reason ? "text-text-tertiary" : "text-text-secondary"}>
-                {axis.icon} {axis.label}
-              </span>
-              {stars ? (
-                <span className={`shrink-0 text-right ${stars.className}`}>
-                  {/* 별을 붙여 써야 채운 칸 수가 한 덩어리로 읽힌다 — 자간을 좁힌다. */}
-                  <span className="tracking-[-0.1em]">{stars.mark}</span> {stars.word}
-                </span>
-              ) : (
-                // 모르는 축을 ☆☆☆☆☆로 그리면 "낮다"로 읽힌다 — 별점 대신 사유를 쓴다.
-                <span className="text-right text-text-tertiary">— {reason}</span>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+      <MiAxisStars radar={radar} />
     </div>
   );
 }

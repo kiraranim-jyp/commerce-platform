@@ -19,8 +19,19 @@ import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { domesticMatchDisplay } from "./match-display";
 // MI 2.0 PHASE 1 — 판매 판단의 근거를 4축으로 분해해 보여준다(새 판정 아님).
 import { computeRadar, type RadarSearchInterest, type RadarMatchTruth } from "@commerce/pricing";
-import { MiRadar, MiRadarSummary } from "./MiRadar";
+import { MiAxisStars, MiRadar, MiRadarSummary } from "./MiRadar";
 import { shouldRefetchAfterAutoCheck } from "../snapshot-save-guard";
+// MI-FLOW-2(CEO 지시, 2026-09-11) — 판단 기준 시장 / 빈 상태 / 핵심 숫자 라벨은
+// 전부 순수 함수로 빼 두었다. 화면에서 시장을 다시 판별하거나 숫자를 다시
+// 계산하지 않기 위한 장치다(테스트가 그 규칙을 고정하고 있다).
+import {
+  KR_TARGET_MARKET,
+  SUPPORTED_TARGET_MARKETS,
+  splitByTargetMarket,
+  type TargetMarket,
+} from "./market-target";
+import { buildHeadlineNumbers } from "./mi-headline";
+import { miEmptyState } from "./mi-empty-state";
 
 interface SampleListing {
   mallName: string | null;
@@ -88,6 +99,56 @@ function formatMarketPrice(price: SellerMarketPriceInfo): string {
   }
 }
 
+/**
+ * GLOBAL-MARKET ② / MI-FLOW-2 — 판매처 한 곳의 한 시장 가격 한 줄.
+ *
+ * 한국 시장 목록과 해외 참고 목록이 같은 모양이어야 셀러가 두 번 배우지 않는다 —
+ * 그래서 컴포넌트를 하나만 둔다. 여기서 시장을 판별하지 않는다(호출부가 이미
+ * market_code로 갈라서 넘긴다).
+ *
+ * "기준 국가"라는 라벨을 쓰지 않는 이유가 중요하다. market_country는 *판매자가
+ * 신고한 국가*이고 market_code는 *실제로 관측된 시장*이다(예: 신고 국가 ES인
+ * 판매자가 en-kr 시장 페이지를 갖고 있을 수 있다). "기준 국가"라고 부르면 그
+ * 둘이 같은 것처럼 읽혀서, 화면에서 두 사실이 섞인다.
+ */
+function MarketPriceRow({
+  sellerLabel,
+  price,
+  isJudgingMarket,
+  judgingBasis,
+}: {
+  sellerLabel: string | null;
+  price: SellerMarketPriceInfo;
+  isJudgingMarket: boolean;
+  judgingBasis: "SINGLE" | "ANALYSIS" | "UNRESOLVED" | null;
+}) {
+  const label = marketLabel(price.marketCode);
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-1 text-text-secondary">
+      <span className="flex flex-wrap items-center gap-1">
+        <span className="text-text-primary">{sellerLabel ?? "알 수 없음"}</span>
+        <span>
+          {label.flag} {label.text}
+        </span>
+        {/* 판단 시장만 명시한다 — 나머지는 보여주되 판단에 쓰이지 않았다는 뜻이다. */}
+        {isJudgingMarket && judgingBasis === "ANALYSIS" && (
+          <span className="rounded bg-success-soft px-1 py-0.5 text-[9px] font-medium text-success">판단 기준</span>
+        )}
+        <span className="text-[10px] text-text-tertiary">
+          · 판매자 신고 국가 {price.marketCountry ?? "미확인"}
+        </span>
+      </span>
+      {price.productUrl ? (
+        <a href={price.productUrl} target="_blank" rel="noreferrer" className="text-text-primary underline">
+          {formatMarketPrice(price)}
+        </a>
+      ) : (
+        <span className="text-text-primary">{formatMarketPrice(price)}</span>
+      )}
+    </li>
+  );
+}
+
 /** N-4.07 Sprint(대표님 지시: "출처 + 가격 + 확인시간을 보여준다") — "2시간 전"/
  * "3일 전" 형태. 절대시각은 옆의 오래된 가격 배지/전체 마지막확인 문구가 이미
  * 보여주므로, 리스팅 한 줄에는 상대시간만 짧게 붙인다. */
@@ -119,6 +180,64 @@ const MI_SUMMARY_TONE: Record<"GOOD" | "CAUTION" | "STOP" | "UNKNOWN", { icon: s
 };
 
 export const PRICE_COMPARISON_ANCHOR_ID = "price-comparison-source";
+
+/**
+ * MI-FLOW-2(CEO 지시, 2026-09-11) — 판단 카드로 스크롤할 때 쓰는 앵커.
+ * 상단 진행바의 "⭐ 시장 판단"과 오른쪽 Action Center가 같은 곳을 가리켜야
+ * 한다 — id를 한 곳에서 정의해 두 진입점이 어긋날 수 없게 한다.
+ */
+export const MARKET_VERDICT_ANCHOR_ID = "market-verdict";
+
+/**
+ * MI-FLOW-2(CEO 지시, 2026-09-11) — "분석 기준 시장: 🇰🇷 대한민국"을 항상 띄운다.
+ *
+ * 판매 판단은 처음부터 한국 시장 관측(KR_MARKET)을 기준으로 계산돼 왔는데,
+ * 화면에는 그 사실이 어디에도 없었다. €75(DE)·€84(INT)·₩162,000(KR)이 같은
+ * 층위로 나열돼 있으니 "이 판단이 어느 시장 얘기인지"를 셀러가 역추적해야 했다.
+ *
+ * onChange를 받는 형태로 둔 것은 지금 필요해서가 아니라, 시장 선택기가 생길
+ * 자리를 비워 두기 위해서다 — 지원 시장이 하나뿐인 동안에는 고정 문구로
+ * 렌더된다(누를 수 없는 선택기를 그려서 "고를 수 있다"고 착각하게 만들지 않는다).
+ */
+function TargetMarketBanner({
+  market = KR_TARGET_MARKET,
+  onChange,
+}: {
+  market?: TargetMarket;
+  onChange?: (next: TargetMarket) => void;
+}) {
+  const selectable = onChange != null && SUPPORTED_TARGET_MARKETS.length > 1;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2">
+      <p className="text-[11px] text-text-secondary">
+        분석 기준 시장{" "}
+        <span className="ml-1 text-sm font-semibold text-text-primary">
+          {market.flag} {market.label}
+        </span>
+      </p>
+      {selectable ? (
+        <div className="flex items-center gap-1">
+          {SUPPORTED_TARGET_MARKETS.map((m) => (
+            <button
+              key={m.region}
+              type="button"
+              onClick={() => onChange(m)}
+              className={`rounded-full px-2 py-0.5 text-[11px] ${
+                m.region === market.region
+                  ? "bg-primary text-white"
+                  : "border border-border text-text-secondary hover:bg-surface"
+              }`}
+            >
+              {m.flag} {m.shortLabel}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <span className="text-[10px] text-text-tertiary">판매 판단은 한국 시장을 기준으로 합니다</span>
+      )}
+    </div>
+  );
+}
 
 /** MI-UI-1(CEO 지시, 2026-09-11) — 펼침 상태는 캐럿 하나로 말한다. 같은 화면에
  * 접힘 블록이 여러 개라 규칙이 블록마다 다르면(▼ 고정 vs ▸/▾) 셀러가 어느 게
@@ -802,10 +921,18 @@ const MARKET_OUTLOOK_BADGE: Record<SellerDecisionInfo["outlook"], string> = {
 /** 최종 판정 3단계 문구 — 서버의 SELLER_FACING_COPY와 동일하게 유지한다
  * (강등된 경우 서버가 보낸 sellerFacingVerdict.title과 달라지므로 코드에서
  * 다시 고른다). */
-const FINAL_VERDICT_COPY: Record<SellerDecisionInfo["finalVerdict"], { icon: string; title: string }> = {
-  RECOMMENDED: { icon: "🟢", title: "판매 추천" },
-  CONDITIONAL: { icon: "🟡", title: "조건부 판매" },
-  NOT_RECOMMENDED: { icon: "🔴", title: "판매 비추천" },
+/** MI-FLOW-2 — 오른쪽 Action Center도 같은 판정을 보여줘야 한다. 문구 맵을
+ * 그쪽에 복사하면 언젠가 한쪽만 바뀌어 같은 상품이 화면 좌우에서 다른 판정으로
+ * 보인다 — 타입과 맵을 여기서 내보내 한 벌만 유지한다. */
+export type SellerFinalVerdict = SellerDecisionInfo["finalVerdict"];
+
+export const FINAL_VERDICT_COPY: Record<
+  SellerFinalVerdict,
+  { icon: string; title: string; tone: "GOOD" | "CAUTION" | "STOP" }
+> = {
+  RECOMMENDED: { icon: "🟢", title: "판매 추천", tone: "GOOD" },
+  CONDITIONAL: { icon: "🟡", title: "조건부 판매", tone: "CAUTION" },
+  NOT_RECOMMENDED: { icon: "🔴", title: "판매 비추천", tone: "STOP" },
 };
 
 const FACTOR_LEVEL_ICON: Record<DecisionFactor["level"], string> = {
@@ -905,10 +1032,14 @@ export function DomesticPriceIntelligencePanel({
   // P-2-3 ④(대표님 지시, 2026-08-28) — "기본 화면에서 바로 10개 이상의 경쟁
   // 가격을 보여주지 않는다." 판매처별 개별 리스팅/추세/이력은 기본 접힘.
   const [showDomesticDetail, setShowDomesticDetail] = useState(false);
-  // P-2-3 ⑤(대표님 지시, 2026-08-28) — "왜 이런 판단인가"는 기본적으로 접어둔다.
-  const [showReasonDetail, setShowReasonDetail] = useState(false);
+  // MI-FLOW-2(CEO 지시, 2026-09-11) — "왜 이런 판단인가"(showReasonDetail)와
+  // "왜 추천인가"(showWhyVerdict) 토글을 없앴다. 같은 화면에서 같은 질문을
+  // 묻는 접힘이 넷이라, 근거 하나를 보려고 몇 번을 눌러야 하는지 알 수 없었다.
+  // 내용은 전부 showMarketDetail 하나 아래로 모았다(삭제 아님).
   /** MI-UX-9 §9 — "동일상품 매칭 근거"는 기본 숨김(상세 펼침에서만 확인). */
   const [showMatchEvidence, setShowMatchEvidence] = useState(false);
+  /** MI-FLOW-2 — 한국이 아닌 시장의 관측은 접어 둔다. 지우지 않는다(참고값으로 유효). */
+  const [showOverseasMarkets, setShowOverseasMarkets] = useState(false);
   // UX-1(CPO 지시, 2026-09-05) — 시장 신호 블록은 "종합 상태 + 3개 신호"까지만
   // 기본 노출하고, 판단 근거 표와 전략 가이드는 상세로 내린다. 사용자가 먼저
   // 봐야 하는 건 "팔아도 되는가"이지 근거 전체가 아니다(기능 제거가 아니라 계층화).
@@ -930,7 +1061,6 @@ export function DomesticPriceIntelligencePanel({
   // 4축 레이더와 판단 요약이 채우고 있어서, 같은 근거를 두 번 펼쳐 두면
   // 첫 화면이 다시 길어지고 "결론 → 근거" 계층이 무너진다.
   // 접는 기능 자체와 내용은 그대로다 — 초기 상태만 바꾼다.
-  const [showWhyVerdict, setShowWhyVerdict] = useState(false);
   const [showCalcDetail, setShowCalcDetail] = useState(false);
   // MI-UX-8 — "가격 전략" 블록 제거로 이 토글도 함께 사라졌다.
   const [rechecking, setRechecking] = useState(false);
@@ -1210,6 +1340,39 @@ export function DomesticPriceIntelligencePanel({
   const hasAnyData =
     domesticCompetition.tier !== "NONE" || currentPrice.sellingPriceKrw != null || cost != null;
 
+  /**
+   * MI-FLOW-2(CEO 지시, 2026-09-11) — 헤드라인 "핵심 숫자" 네 칸.
+   * 새 계산 없음 — cost / domesticCompetition / recommendation / decision을
+   * 고르고 기준 라벨만 붙인다(mi-headline.ts). 특히 원본 판매가격과 한국 시장
+   * 가격을 "≈"로 잇지 않는 것이 이 블록의 핵심이다: 둘은 같은 가격의 다른
+   * 표기가 아니라 서로 다른 시장의 서로 다른 사실이다.
+   */
+  const headlineNumbers = buildHeadlineNumbers({
+    originPrice: cost ? { amount: cost.originalAmount, currency: cost.originalCurrency } : null,
+    targetMarketAveragePriceKrw: domesticCompetition.averagePriceKrw,
+    targetMarketLowestPriceKrw: domesticCompetition.lowestPriceKrw,
+    targetMarketBasis: domesticMarketSplit.basis,
+    targetMarketUnresolved: domesticCompetition.priceMarketBasis === "UNRESOLVED",
+    landedCostKrw: cost?.landedCostKrw ?? null,
+    recommendedMarginPercent: recommendation?.estimatedMarginPercent ?? null,
+    currentMarginPercent: decision?.marginPercent ?? null,
+  });
+
+  /**
+   * MI-FLOW-2 — 판매처별 시장 관측을 "한국 시장"과 "그 외 참고 시장"으로 가른다.
+   * 판별 근거는 관측된 market_code 하나뿐이다 — 통화(EUR→독일)·도메인(.kr→한국)·
+   * 판매자 신고 국가(market_country=ES→스페인 시장)로 시장을 지어내지 않는다.
+   */
+  const sellerMarketRows = (domesticCompetition.sellers ?? []).flatMap((seller) =>
+    seller.markets.map((market) => ({
+      sellerKey: seller.sellerKey,
+      sellerLabel: seller.sellerLabel,
+      marketCode: market.marketCode,
+      price: market,
+    })),
+  );
+  const { target: koreanMarketRows, overseas: overseasMarketRows } = splitByTargetMarket(sellerMarketRows);
+
   /** UX-1D — "가격 전략" 요약에 쓸 대표 국내 가격. 새로 계산하지 않는다.
    * 서버가 이미 낸 domesticMarketSplit의 평균가를 우선순위대로 고르기만 한다:
    * ① 동일상품(EXACT) 평균 → ② 비교상품(COMPARISON) 평균 → ③ 표시 안 함.
@@ -1221,79 +1384,30 @@ export function DomesticPriceIntelligencePanel({
   return (
     <CollapsibleSection title="Market Intelligence" defaultOpen>
       <div className="space-y-2 text-xs">
-        {/* P-18 Sprint 6(CPO 지시, 2026-09-01) — "그래서 얼마에 팔라는 건지"를
-         * 판매자가 스크롤 없이 바로 보게 한다. 새 계산 없음 — 아래 다른 섹션들이
-         * 이미 쓰는 값(domesticCompetition/recommendation/decision)을 그대로
-         * 4칸에 요약만 한다. */}
-        {hasAnyData && (
-          <div className="grid grid-cols-2 gap-2 rounded-md border border-border bg-background p-3 sm:grid-cols-4">
-            <SummaryStat label="국내 최저가" value={domesticCompetition.lowestPriceKrw} />
-            <SummaryStat label="국내 평균가" value={domesticCompetition.averagePriceKrw} />
-            <SummaryStat label="추천 판매가격" value={recommendation?.recommendedPrice ?? null} />
-            {/* P-26 후속(실측 발견, 2026-09-03) — 이 자리는 "추천 판매가격" 바로
-                옆이라 그 가격에서의 마진을 기대하게 된다. decision(판매가를
-                이미 설정한 뒤에만 존재하는 현재가 기준 마진)에 묶여 있었던 탓에
-                등록 전(대부분의 경우, 실측 PèPè 포함)에는 "—"만 보였다 — 바로
-                아래서 이미 정직하게 계산해 보여주는 recommendation.
-                estimatedMarginPercent(추천가 기준 마진, CASE A/B에서만 값 있음,
-                C/D는 여전히 null)이 있는데도 숨긴 셈이다. 새 계산 없음 — 값을
-                옮겨서 쓸 자리만 바꾼다. */}
-            <SummaryStat
-              label="예상 마진"
-              value={recommendation?.estimatedMarginPercent ?? decision?.marginPercent ?? null}
-              formatter={(v) => `${v.toFixed(1)}%`}
-            />
-          </div>
-        )}
-        {/* MI-STOCK-CLARITY-1(CPO 지시, 2026-09-10) — 위 최저가/평균가가 어떤 재고
-            상태 위에 세워졌는지 밝힌다. 국내 자동검색 6곳 중 재고 판정이 구현된 곳은
-            2곳뿐이라 "재고 불명"이 예외가 아니라 기본값인데, 집계 필터가
-            soldOut !== true라 불명이 판매중과 함께 계산에 들어간다. 계산 방식은
-            그대로 두고(가격 모집단을 사이트별 구현 수준에 맡기지 않는다) 확인되지
-            않았다는 사실만 드러낸다 — 불명을 "판매중"이라고 부르지 않는다. */}
-        {hasAnyData && (domesticCompetition.stockCounts?.unknown ?? 0) > 0 && (
-          <p className="text-[11px] text-text-tertiary">
-            위 가격은 재고 상태를 확인하지 못한 {domesticCompetition.stockCounts?.unknown}건을 포함합니다
-            {(domesticCompetition.stockCounts?.onSale ?? 0) > 0 && ` (판매중 확인 ${domesticCompetition.stockCounts?.onSale}건)`}
-            {(domesticCompetition.stockCounts?.soldOut ?? 0) > 0 && ` · 품절 ${domesticCompetition.stockCounts?.soldOut}건은 제외됨`}.
-          </p>
-        )}
-        {/* P-19-B Sprint 7/9(CPO 지시, 2026-09-02) — 위 4칸 요약이 "🟢 동일상품
-            확인" 가격인지 "🟡 비교상품" 국내 유사 시장가격(참고용)인지 명확히
-            표시한다. 새 계산 없음 — market-intelligence.ts가 이미 우선순위(1순위
-            동일상품가격, 없으면 2순위 비교상품 시장가격)로 계산해 낸
-            domesticMarketSplit.basis만 그대로 문구로 옮긴다. */}
-        {/* MI-UI-1(CEO 지시, 2026-09-11: "글이 너무 많다") — 문장을 명사구로
-            줄인다. 어느 쪽 기준인지(동일상품/비교상품)와 참고용이라는 사실은
-            그대로 남긴다 — 이 두 가지가 위 숫자를 얼마나 믿을지를 가른다. */}
-        {domesticMarketSplit.basis === "EXACT" && (
-          <p className="text-[10px] text-success">🟢 동일상품 가격 기준</p>
-        )}
-        {domesticMarketSplit.basis === "COMPARISON" && (
-          <p className="text-[10px] text-warning">🟡 동일상품 미확인 — 국내 비교상품 시장가격(참고용) 기준</p>
-        )}
-        <div className="flex items-center justify-between">
-          <span className="text-text-tertiary">{hasAnyData ? "" : "아직 확인된 가격 정보가 없습니다."}</span>
-          <button
-            type="button"
-            onClick={() => void recheckNow()}
-            disabled={rechecking}
-            className="rounded-md border border-border px-2 py-1 text-[11px] font-medium text-text-secondary hover:bg-background disabled:opacity-50"
-          >
-            {/* MI-UI-1 — 아이콘이 "다시"를 말하므로 "가격"까지 반복하지 않는다.
-                진행 중 문구는 그대로 둔다(상태어를 아이콘으로 바꾸지 않는다). */}
-            {rechecking ? "확인 중..." : "🔄 다시 확인"}
-          </button>
-        </div>
-        {recheckResult && (
-          <p className="rounded-md border border-border bg-background px-2 py-1 text-[11px] text-text-secondary">
-            {recheckResult.icon} {recheckResult.message}
-          </p>
-        )}
+        {/* MI-FLOW-2(CEO 지시, 2026-09-11) — 무엇을 기준으로 한 판단인지부터
+            말한다. 이 한 줄이 없으면 아래 모든 숫자가 "어느 나라 얘기인지"
+            모르는 값이 된다. */}
+        <TargetMarketBanner />
+
+        {/* MI-FLOW-2 — 빈 상태를 세 가지로 구분한다. 여기는 그중 "판단 불가":
+            가격 근거가 하나도 없어서 아직 아무 말도 할 수 없는 상태다.
+            "비추천"이 아니다 — 나쁘다고 말하지 않는다. */}
         {!hasAnyData && (
-          <p className="text-[10px] text-text-tertiary">
-            원본 사이트/등록된 국내 편집샵에서 가격을 조회합니다 — 몇 초 걸릴 수 있습니다.
-          </p>
+          <div
+            id={MARKET_VERDICT_ANCHOR_ID}
+            className="scroll-mt-4 rounded-md border border-border bg-background p-3"
+          >
+            <p className="text-[11px] text-text-tertiary">
+              {KR_TARGET_MARKET.flag} {KR_TARGET_MARKET.label} 시장 기준
+            </p>
+            <p className="mt-1 text-base font-semibold text-text-secondary">
+              {miEmptyState("UNJUDGEABLE").chip}
+            </p>
+            <p className="mt-1 text-[11px] text-text-secondary">
+              아직 확인된 가격이 없습니다 — 원본 사이트와 등록된 국내 편집샵에서 가격을 조회하면 판단을 시작합니다
+              (몇 초 걸릴 수 있습니다).
+            </p>
+          </div>
         )}
 
         {/* P-8 STEP 2/3/4(대표님 지시, 2026-08-30) — "화면 최상단에 대표 판단
@@ -1306,7 +1420,17 @@ export function DomesticPriceIntelligencePanel({
             압축해 낸 값)를 그대로 헤드라인으로 쓰고, "판단 근거"는 그
             결론과 같은 방향의 사실만 나열한다 — 새 판정을 만들지 않는다. */}
         {hasAnyData && (
-          <div className={`rounded-md border p-2.5 ${SELLER_FACING_VERDICT_STYLE[sellerDecision.finalVerdict]}`}>
+          <div
+            id={MARKET_VERDICT_ANCHOR_ID}
+            className={`scroll-mt-4 rounded-md border p-3 ${SELLER_FACING_VERDICT_STYLE[sellerDecision.finalVerdict]}`}
+          >
+            {/* MI-FLOW-2(CEO 지시, 2026-09-11) — 이 카드 하나가 3초 안에 세 가지에
+                답해야 한다: ① 팔 만한가(판정) ② 왜 그런가(핵심 숫자·판단 근거)
+                ③ 다음에 뭘 하나(행동 한 줄 + CTA). 그 순서대로만 쌓고, 나머지는
+                전부 "왜 이렇게 판단했나요?" 하나로 접는다 — 기존에는 같은 판정이
+                이 카드와 "📊 국내 시장 신호" 카드에 두 번 떠 있었고, 근거는
+                국내 가격 목록·기회·레이더 사이에 흩어져 있었다. 지운 정보는
+                없다(전부 아래 상세로 내려갔다). 판정/계산은 서버 값 그대로다. */}
             {/* P-19-B Sprint 8(CPO 지시, 2026-09-02) — 헤드라인 아이콘/타이틀/박스
                 색은 3단계(sellerFacingVerdict)만 쓴다. 내부 5단계 코드/용어는
                 화면 어디에도 노출하지 않는다 — 아래 설명 문장(description)만
@@ -1315,9 +1439,17 @@ export function DomesticPriceIntelligencePanel({
                 finalVerdict는 sellerFacingVerdict를 시장 신호로 강등만 한
                 값이므로(승격 없음) 두 값이 서로 다른 결론을 낼 수 없다 —
                 화면에 상반된 판정이 둘 뜨는 것을 구조로 막는다. */}
-            <p className="font-medium">
+            <p className="text-[11px] opacity-70">
+              {KR_TARGET_MARKET.flag} {KR_TARGET_MARKET.label} 시장 기준
+            </p>
+            <p className="mt-0.5 text-lg font-bold">
               {FINAL_VERDICT_COPY[sellerDecision.finalVerdict].icon} {FINAL_VERDICT_COPY[sellerDecision.finalVerdict].title}
             </p>
+            {/* UX-1C L1 — 한 줄 결론 설명은 항상 보인다. 숫자만 보고 "그래서 왜
+                추천인데?"가 되지 않게 하기 위함(CPO 지시). MI-FLOW-2에서 판정
+                바로 아래로 올렸다 — 판정과 그 이유 사이에 숫자표가 끼어 있으면
+                두 문장이 한 덩어리로 읽히지 않는다. */}
+            <p className="mt-0.5 text-text-secondary">{representativeVerdict.description}</p>
             {sellerDecision.downgradedByMarket && (
               <p className="mt-0.5 text-[10px] text-text-tertiary">
                 가격 경쟁력은 {FINAL_VERDICT_COPY[sellerDecision.priceVerdict].title} 수준이지만, 종합 시장 신호가 불리해
@@ -1325,6 +1457,83 @@ export function DomesticPriceIntelligencePanel({
               </p>
             )}
 
+            {/* ② 핵심 숫자 — MI-FLOW-2(CEO 지시, 2026-09-11).
+                원본 판매가격과 한국 시장 가격을 "€37 ≈ ₩57,756"처럼 한 등식으로
+                잇지 않는다. 앞은 원본 판매자 페이지의 가격이고 뒤는 한국 시장에서
+                관측된 가격이라, 이으면 "한국에서도 5만 8천 원"이라는 없는 사실이
+                만들어진다. 값이 없으면 지어내지 않고 왜 없는지를 밝힌다. */}
+            <div className="mt-2.5">
+              <p className="mb-1 text-[11px] font-medium text-text-tertiary">핵심 숫자</p>
+              <dl className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-md border border-current/20 bg-background/40 p-2 sm:grid-cols-4">
+                {headlineNumbers.map((n) => (
+                  <div key={n.key}>
+                    <dt className="text-[10px] text-text-tertiary">{n.label}</dt>
+                    {n.value ? (
+                      <dd className="text-sm font-semibold text-text-primary">{n.value}</dd>
+                    ) : (
+                      <dd className="text-sm font-semibold text-text-tertiary">{n.empty?.chip}</dd>
+                    )}
+                    <p className="mt-0.5 text-[10px] text-text-tertiary">
+                      {n.value ? n.basis : (n.empty?.reason ?? n.basis)}
+                    </p>
+                  </div>
+                ))}
+              </dl>
+            </div>
+
+            {/* MI-STOCK-CLARITY-1(CPO 지시, 2026-09-10) — 위 한국 시장 가격이 어떤
+                재고 상태 위에 세워졌는지 밝힌다. 국내 자동검색 6곳 중 재고 판정이
+                구현된 곳은 2곳뿐이라 "재고 불명"이 예외가 아니라 기본값인데, 집계
+                필터가 soldOut !== true라 불명이 판매중과 함께 계산에 들어간다.
+                계산 방식은 그대로 두고 확인되지 않았다는 사실만 드러낸다. */}
+            {(domesticCompetition.stockCounts?.unknown ?? 0) > 0 && (
+              <p className="mt-1 text-[10px] text-text-tertiary">
+                한국 시장 가격은 재고 상태를 확인하지 못한 {domesticCompetition.stockCounts?.unknown}건을 포함합니다
+                {(domesticCompetition.stockCounts?.onSale ?? 0) > 0 && ` (판매중 확인 ${domesticCompetition.stockCounts?.onSale}건)`}
+                {(domesticCompetition.stockCounts?.soldOut ?? 0) > 0 && ` · 품절 ${domesticCompetition.stockCounts?.soldOut}건은 제외됨`}.
+              </p>
+            )}
+
+            {/* MI-ACTION-1 / MI-FLOW-2 — "다음에 무엇을 하면 되는가" 한 문장.
+                서버가 sellingGuidance와 같은 facts로 만든 값이라 아래 상세와
+                다른 숫자를 말할 수 없다. 구버전 응답이면 렌더하지 않는다. */}
+            {sellingSummary && (
+              <p
+                className={
+                  sellingSummary.actionPriceKrw != null
+                    ? "mt-2 rounded border border-current/20 bg-background/40 px-2 py-1.5 text-[11px] font-medium text-text-primary"
+                    : "mt-2 text-[11px] text-text-secondary"
+                }
+              >
+                👉 {sellingSummary.action}
+              </p>
+            )}
+
+            {/* ③ 판단 근거 — 레이더 그림은 상세로 내리고, 등급만 먼저 보여준다.
+                그림 없이도 네 방향의 결론은 그대로 읽히고(별 + 등급 단어),
+                결측 축은 ☆☆☆☆☆가 아니라 빈 상태 문구로 남는다. 별점 매핑은
+                MiRadar와 같은 컴포넌트를 쓴다 — 같은 상품이 화면 위아래에서
+                다른 등급으로 보이는 일이 구조적으로 불가능하게 만든다. */}
+            <div className="mt-2.5">
+              <p className="mb-1 text-[11px] font-medium text-text-tertiary">판단 근거</p>
+              <MiAxisStars radar={radar} />
+              {radar.contradiction && (
+                <p className="mt-1.5 rounded-md border border-warning/30 bg-warning-soft px-2 py-1.5 text-[11px] text-text-primary">
+                  ⚠ {radar.contradiction}
+                </p>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowMarketDetail((v) => !v)}
+              className="mt-2.5 w-full border-t border-current/20 pt-2 text-left text-[11px] text-primary hover:underline"
+            >
+              {caret(showMarketDetail)} 왜 이렇게 판단했나요?
+            </button>
+
+            {showMarketDetail && (
+              <>
             {/* P-12D(대표님/CPO 지시, 2026-08-31) — "숫자 → 결론 → 이유 → 상세정보"
                 순서로 확정. 얼마에 사서/얼마가 들고/얼마에 팔지/얼마 남는지 4개
                 숫자를 결론 설명·판단근거보다 먼저 보여준다. 새 계산 없음 — cost/
@@ -1395,7 +1604,10 @@ export function DomesticPriceIntelligencePanel({
                           <p className="mt-0.5 text-[10px] text-text-tertiary">
                             {recommendation.marketCase === "C"
                               ? "국내 시장가로 팔면 착지원가도 회수하지 못합니다"
-                              : "국내 동일상품(EXACT) 시장가가 확인되지 않아 시장 경쟁력 기반 추천을 낼 수 없습니다"}
+                              : // MI-FLOW-2 — 내부 판정명(EXACT)을 셀러 화면에서 뺀다.
+                                // 셀러에게 필요한 사실은 "동일상품 가격이 확인되지
+                                // 않았다"이지 우리 매칭 등급의 이름이 아니다.
+                                "국내 동일상품 가격이 확인되지 않아 시장 경쟁력 기반 추천을 낼 수 없습니다"}
                           </p>
                         </>
                       )}
@@ -1411,32 +1623,23 @@ export function DomesticPriceIntelligencePanel({
               </dl>
             )}
 
-            {/* UX-1C L1 — 한 줄 결론 설명은 항상 보인다. 숫자만 보고 "그래서 왜
-                추천인데?"가 되지 않게 하기 위함(CPO 지시). */}
-            <p className="mt-2 text-text-secondary">{representativeVerdict.description}</p>
-
             {/* UX-1C L2 — "왜 이 판단인가". 판정 엔진이 이미 낸 reasons를 그대로
-                쓴다(문구를 새로 지어내면 판정 의미를 바꾸는 셈이라 금지). */}
+                쓴다(문구를 새로 지어내면 판정 의미를 바꾸는 셈이라 금지).
+                MI-FLOW-2 — 자체 토글을 없앴다. 같은 화면에 "왜"를 묻는 접힘이
+                넷(왜 추천인가 / 왜 이렇게 판단했나요 / 왜 이런 판단인가 / 상세
+                계산)이나 있어서, 셀러가 근거 하나를 보려고 몇 번을 눌러야 하는지
+                알 수 없었다. 이제 바깥 토글 하나에 전부 들어간다. */}
             {representativeVerdict.reasons.length > 0 && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setShowWhyVerdict((v) => !v)}
-                  className="mt-2 text-[11px] text-primary hover:underline"
-                >
-                  {/* MI-UI-1 — 캐럿이 접힘/펼침을 말하므로 "접기/보기"를 문구에서
-                      뺀다. 판정 이름(추천/조건부/비추천)은 남긴다 — 그게 있어야
-                      "무엇에 대한 근거인지"가 접힌 상태에서도 읽힌다. */}
-                  {caret(showWhyVerdict)} 왜 {FINAL_VERDICT_COPY[sellerDecision.finalVerdict].title}인가
-                </button>
-                {showWhyVerdict && (
-                  <ul className="mt-1.5 space-y-0.5 text-text-secondary">
-                    {representativeVerdict.reasons.map((reason, i) => (
-                      <li key={i}>✓ {reason}</li>
-                    ))}
-                  </ul>
-                )}
-              </>
+              <div className="mt-2">
+                <p className="text-[11px] font-medium text-text-tertiary">
+                  왜 {FINAL_VERDICT_COPY[sellerDecision.finalVerdict].title}인가
+                </p>
+                <ul className="mt-1 space-y-0.5 text-text-secondary">
+                  {representativeVerdict.reasons.map((reason, i) => (
+                    <li key={i}>✓ {reason}</li>
+                  ))}
+                </ul>
+              </div>
             )}
 
             {/* UX-1C L3 — "이 숫자가 어떻게 계산됐나". 구매원가·참고 기준가·브랜드
@@ -1516,95 +1719,24 @@ export function DomesticPriceIntelligencePanel({
                 <p className="mt-1 text-[10px] text-text-secondary">실제 마진은 위 표시값보다 낮아질 수 있습니다.</p>
               </div>
             )}
-            {/* P-25 Sprint 2(CPO 지시, 2026-09-02) — 이전에는 여기서
-                sellability.reason(원가 vs 시장평균가, 배송비/수수료 미포함)을
-                "참고" 캡션으로 그대로 출력했다. sellability는 recommendation/
-                applyMarketPriceGuard를 전혀 모르는 별도 계산이라, 헤드라인이
-                🟡(시장가 대비 마진 부족)인데 캡션은 "가격 경쟁력이 있습니다"라고
-                말하는 실측 모순(PèPè)이 있었다 — "화면 안에서 서로 반대되는
-                판매 조언이 없어야 한다"는 CPO 원칙에 따라 완전히 제거한다.
-                sellability 계산 자체(estimatedMarginPercent 등)는 그대로
-                유지한다(재계산 없음) — 화면 노출만 없앤다. */}
-            {(() => {
-              const cta = REPRESENTATIVE_VERDICT_CTA[representativeVerdict.code];
-              if (!onRequestPriceReview) return null;
-              return (
-                <>
-                  {cta.hint && <p className="mt-2 text-[10px] text-text-tertiary">{cta.hint}</p>}
-                  <button
-                    type="button"
-                    onClick={onRequestPriceReview}
-                    className="mt-1.5 rounded-md border border-current px-2 py-1 text-[11px] font-medium hover:opacity-80"
-                  >
-                    {cta.label}
-                  </button>
-                </>
-              );
-            })()}
-          </div>
-        )}
-        {/* P-29 Sprint 8(CPO 지시, 2026-09-03) — "가격이 좋아도 팔릴지"를 가격
-            판정(CASE A/B/C/D, 위 카드들)과 완전히 분리된 섹션으로 보여준다.
-            marketSignals/sellingGuidance는 marketCase를 다시 계산하지
-            않는다 — 신호가 좋아도 위 판매 판정(READY/HOLD 등)은 절대
-            바뀌지 않는다(CPO 절대 금지 3). */}
-        <div className="mt-3 rounded-md border border-border bg-surface-secondary p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <h4 className="text-xs font-semibold text-text-primary">📊 국내 시장 신호</h4>
-            {/* MI-CONFIDENCE-2(CPO 지시, 2026-09-06) — 여기 있던 "신호 신뢰도
-                ●●○"를 제거했다. 아래 "판단 데이터 N/5"와 분모도 산정 기준도
-                달라서(신호 3종의 unknown 수 vs 판단에 쓸 데이터 확보 수)
-                둘 다 신뢰도처럼 보이면 셀러가 혼란스럽다. 셀러 화면의 신뢰도는
-                하나로 통일한다. marketSignals.confidence 계산과 API 필드는
-                그대로 유지한다(deriveMarketSignals 공개 계약 + 테스트 존재). */}
-          </div>
-
-          {/* MI-UX-5(CPO 지시, 2026-09-06) — 기본 화면은 3초 안에 "얼마에 팔아볼
-              만한가, 왜"에 답한다: 결론 한 줄 → 핵심 숫자 최대 2개 → 행동 한
-              문장. 근거(종합 시장 상태, 신호 3종, 판단 요인, 전략 상세)는 전부
-              아래 상세 토글로 내렸다 — 삭제가 아니라 위치 이동이다.
-              서버가 sellingGuidance와 같은 facts로 만든 값이라 요약과 상세의
-              숫자가 어긋날 수 없다. 구버전 응답이면 렌더하지 않는다. */}
-          {sellingSummary && (
-            <div className={`mb-2 rounded border px-2.5 py-2 ${MI_SUMMARY_TONE[sellingSummary.tone].box}`}>
-              <p className={`text-xs font-semibold ${MI_SUMMARY_TONE[sellingSummary.tone].text}`}>
-                {MI_SUMMARY_TONE[sellingSummary.tone].icon} {sellingSummary.headline}
-              </p>
-              {sellingSummary.numbers && (
-                <p className="mt-1 text-sm font-semibold text-text-primary">{sellingSummary.numbers}</p>
-              )}
-              {/* MI-ACTION-1 — 등록 가격이 실제로 제시된 경우에만 행동 문장을
-                  강조한다. 가격이 없는 CASE(B+공급충분/C/D)에서는 기존과 같은
-                  보조 문장으로 남아 "지금 이 값으로 올리면 된다"는 오해를
-                  만들지 않는다. */}
-              <p
-                className={
-                  sellingSummary.actionPriceKrw != null
-                    ? "mt-1 text-[11px] font-medium text-text-primary"
-                    : "mt-0.5 text-[11px] text-text-secondary"
-                }
-              >
-                {sellingSummary.action}
-              </p>
-            </div>
-          )}
-
-          {/* MI-REDEFINE-1 ⑧(CPO 지시, 2026-09-06) — 기본 화면에서 "판단 근거
-              4/4 확인"을 뺀다. 셀러가 첫 화면에서 원하는 답은 "팔아도 되나,
-              얼마에"이고 4/4는 그 결론이 아니다. 항목별 내역은 아래 상세보기의
-              "🔎 판단 근거"에 그대로 있다 — 삭제가 아니라 노출 계층 변경이고,
-              confidenceBasis 산식/데이터는 건드리지 않는다. */}
-
-          <button
-            type="button"
-            onClick={() => setShowMarketDetail((v) => !v)}
-            className="mt-3 w-full border-t border-border pt-2 text-left text-[11px] text-primary hover:underline"
-          >
-            {caret(showMarketDetail)} 왜 이렇게 판단했나요?
-          </button>
-
-          {showMarketDetail && (
-            <>
+                {/* MI-FLOW-2(CEO 지시, 2026-09-11) — 여기부터는 원래 "📊 국내 시장
+                    신호"라는 별도 카드에 있던 내용이다. 그 카드는 자기만의
+                    🟢/🟡/🔴 헤드라인(sellingSummary)을 한 번 더 갖고 있어서,
+                    같은 상품에 대한 판정이 한 화면에 두 개 떠 있었다 — 셀러가
+                    "어느 쪽이 결론이지?"에서 멈추는 지점이 정확히 여기였다.
+                    카드를 없애고 내용은 전부 이 상세 안으로 옮긴다(삭제 아님).
+                    P-29 원칙은 그대로다: 시장 신호는 marketCase를 다시 계산하지
+                    않고, 신호가 좋아도 위 판매 판정을 바꾸지 않는다. */}
+                {sellingSummary && (
+                  <div className={`mt-2 rounded border px-2.5 py-2 ${MI_SUMMARY_TONE[sellingSummary.tone].box}`}>
+                    <p className={`text-xs font-semibold ${MI_SUMMARY_TONE[sellingSummary.tone].text}`}>
+                      {MI_SUMMARY_TONE[sellingSummary.tone].icon} {sellingSummary.headline}
+                    </p>
+                    {sellingSummary.numbers && (
+                      <p className="mt-1 text-sm font-semibold text-text-primary">{sellingSummary.numbers}</p>
+                    )}
+                  </div>
+                )}
               {/* P-31 — "왜 이런 판단인가"를 문장 나열이 아니라 구조화된 표로
                   보여준다. 순서는 CPO 지정 우선순위(가격 수익성 → 동일상품 국내
                   가격 → 시장 관심 → 경쟁 판매처 → 시즌성)로 서버에서 이미 고정돼
@@ -1691,51 +1823,150 @@ export function DomesticPriceIntelligencePanel({
               <p className="mt-2 text-[10px] text-text-tertiary">
                 무료로 확인 가능한 신호를 근거와 함께 보여줍니다 — 실제 판매량 데이터는 포함되지 않습니다.
               </p>
-            </>
-          )}
 
-          {/* UX-2(CEO 지시, 2026-09-05) — "상세보기 하면 아래 탭쪽으로 이동이
-              되어 국내/해외 비교 및 결론 내용 참고할 수 있게". 판단의 원본
-              근거인 해외/국내 가격비교 섹션은 같은 탭 아래쪽에 이미 있는데,
-              판단 패널이 최상단으로 올라오면서 거리가 멀어졌다. 새 화면을
-              만들지 않고 기존 섹션으로 스크롤만 연결한다 — 셀러가 "이 판단의
-              근거를 직접 보고 싶다"고 할 때 한 번에 도달하게 하기 위함이다.
-              앵커가 없으면(탭 전환 등) 아무 일도 하지 않는다. */}
+                {/* MI 2.0 PHASE 1 — 판단 근거 4축을 그림으로도 준다. 위 "판단 근거"
+                    별점과 같은 computeRadar 결과라 두 표시가 어긋날 수 없다.
+                    MI-FLOW-2 — 기존에는 이 그림이 국내 가격 목록과 "기회" 카드
+                    아래, 판정에서 한참 떨어진 곳에 있었다. 근거는 결론 옆에 있어야
+                    근거로 읽힌다 — 위치만 옮기고 계산/그림은 그대로다. */}
+                {radar.scoredCount > 0 && (
+                  <div className="mt-3 rounded-md border border-border bg-surface p-3">
+                    <div className="flex flex-wrap items-center justify-center gap-4">
+                      <div className="min-w-[240px] flex-1 basis-[300px]">
+                        <MiRadar radar={radar} />
+                      </div>
+                      {(radarNotes.length > 0 || radar.contradiction != null) && (
+                        <div className="min-w-[200px] flex-1 basis-[240px]">
+                          <MiRadarSummary radar={radar} notes={radarNotes} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* P-2-3 ⑤(대표님 지시, 2026-08-28) — sellerAction의 signals/reasons.
+                    MI-FLOW-2 — 원래 "왜 이런 판단인가?"라는 자기 토글을 가진 별도
+                    카드였다. 바로 위 "왜 이렇게 판단했나요?"와 사실상 같은 질문이라
+                    셀러에게는 같은 버튼이 두 번 나온 셈이었다 — 토글만 없애고 내용은
+                    그대로 이 상세 안에 둔다. */}
+                {(sellerAction.signals.length > 0 || sellerAction.reasons.length > 0) && (
+                  <div className={`mt-3 rounded-md border p-2.5 ${SELLER_ACTION_STYLE[sellerAction.status]}`}>
+                    {sellerAction.signals.length > 0 && (
+                      <ul className="space-y-1 text-text-secondary">
+                        {sellerAction.signals.map((signal, i) => (
+                          <li key={i}>
+                            <span className="font-medium text-text-primary">
+                              {signal.icon} {signal.title}
+                            </span>
+                            <span className="ml-1">{signal.detail}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {sellerAction.reasons.length > 0 && (
+                      <div className="mt-1.5 border-t border-border pt-1.5">
+                        <p className="text-[10px] font-medium text-text-tertiary">추천 이유</p>
+                        <ul className="mt-0.5 space-y-0.5 text-text-secondary">
+                          {sellerAction.reasons.map((reason, i) => (
+                            <li key={i}>✓ {reason}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* UX-2(CEO 지시, 2026-09-05) — "상세보기 하면 아래 탭쪽으로 이동이
+                    되어 국내/해외 비교 및 결론 내용 참고할 수 있게". 판단의 원본
+                    근거인 국내/해외 가격비교 섹션은 같은 탭 아래쪽에 이미 있다.
+                    새 화면을 만들지 않고 기존 섹션으로 스크롤만 연결한다.
+                    앵커가 없으면(탭 전환 등) 아무 일도 하지 않는다. */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    document
+                      .getElementById(PRICE_COMPARISON_ANCHOR_ID)
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                  }
+                  className="mt-3 w-full rounded border border-current/20 bg-background/40 px-2 py-1.5 text-[11px] font-medium text-primary hover:underline"
+                >
+                  🔎 국내·해외 가격비교 원본 보기 ↓
+                </button>
+              </>
+            )}
+
+            {/* ③ 다음 행동 — 판정별 CTA는 접지 않는다. 셀러가 이 카드를 읽고
+                바로 할 수 있는 일이 이것이라, 상세를 펼쳐야만 보이면 의미가 없다.
+                새 등록/가격 엔드포인트를 만들지 않는다 — 기존 onRequestPriceReview
+                (가격/비용 화면으로 이동)로만 연결한다. */}
+            {(() => {
+              const cta = REPRESENTATIVE_VERDICT_CTA[representativeVerdict.code];
+              if (!onRequestPriceReview) return null;
+              return (
+                <>
+                  {cta.hint && <p className="mt-2 text-[10px] text-text-tertiary">{cta.hint}</p>}
+                  <button
+                    type="button"
+                    onClick={onRequestPriceReview}
+                    className="mt-1.5 rounded-md border border-current px-2 py-1 text-[11px] font-medium hover:opacity-80"
+                  >
+                    {cta.label}
+                  </button>
+                </>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* 가격 재조회 — 판단 카드 바로 아래. "다시 확인"은 판단을 갱신하는
+            행동이므로 판단 옆에 둔다(기존에는 카드 위에 있어서 판정보다 먼저
+            읽혔다). MI-UI-1 — 아이콘이 "다시"를 말하므로 "가격"까지 반복하지
+            않는다. 진행 중 문구는 그대로 둔다(상태어를 아이콘으로 바꾸지 않는다). */}
+        <div className="flex items-center justify-end">
           <button
             type="button"
-            onClick={() =>
-              document
-                .getElementById(PRICE_COMPARISON_ANCHOR_ID)
-                ?.scrollIntoView({ behavior: "smooth", block: "start" })
-            }
-            className="mt-2 w-full rounded border border-border bg-background px-2 py-1.5 text-[11px] font-medium text-primary hover:underline"
+            onClick={() => void recheckNow()}
+            disabled={rechecking}
+            className="rounded-md border border-border px-2 py-1 text-[11px] font-medium text-text-secondary hover:bg-background disabled:opacity-50"
           >
-            🔎 해외·국내 가격비교 원본 보기 ↓
+            {rechecking ? "확인 중..." : "🔄 다시 확인"}
           </button>
         </div>
+        {recheckResult && (
+          <p className="rounded-md border border-border bg-background px-2 py-1 text-[11px] text-text-secondary">
+            {recheckResult.icon} {recheckResult.message}
+          </p>
+        )}
 
-        {/* P-2-3 ④ 국내 시장 가격(요약) — 기존 SellerAction 헤드라인의
-            핵심 지표(내판매가/국내최저가/평균가/동일상품수/품절수)를 여기로
-            옮긴다. "그래서 시장에서 얼마에 팔리는가?"가 이 블록의 유일한
-            질문이다 — 판매 판단(위 ①)과는 별개 관심사로 분리한다. */}
-        {/* MI-UX-8(CEO 실화면 테스트 → CPO 지시, 2026-09-06) — "💰 가격 전략"
-            대형 블록을 제거했다.
-            국내 동일상품 평균가/최저가/평균가/판매처 수, 해외 구매 비용 상세,
-            한국向 표시가는 전부 위의 판매 판단·국내 시장 신호와 아래 가격비교
-            영역에서 이미 확인할 수 있는 값의 반복이었다. 판단이 끝난 자리에
-            다시 긴 가격 분석을 놓으면 "그래서 얼마에 팔아?"의 답이 묻힌다.
+        {/* STEP J-10 — "💡 기회"(있을 때만, computeSellerAction이 이미 계산).
+            MI-FLOW-2 — 판단 바로 아래로 올렸다. 이건 근거가 아니라 행동 제안이라
+            근거 목록(아래 한국 시장/해외 시장) 사이에 끼면 읽히지 않는다. */}
+        {sellerAction.opportunity && (
+          <div className="rounded-md border border-primary/30 bg-primary-soft p-2.5 text-text-secondary">
+            <p className="font-medium text-text-primary">
+              {sellerAction.opportunity.icon} {sellerAction.opportunity.title}
+            </p>
+            <p className="mt-1">{sellerAction.opportunity.detail}</p>
+          </div>
+        )}
 
-            제거한 것은 반복 UI뿐이다 — marketCase/recommendedPrice/targetPrice/
-            minimumPrice/landedCost/domesticLowestPrice/sellerCount/confidence
-            계산과 API 응답은 그대로다. 원본 수치는 "해외·국내 가격비교 원본
-            보기" 버튼으로 기존 비교 영역에서 확인한다.
-            MI = 판매 판단 / 가격비교 = 판단 근거 확인, 으로 역할을 나눈다. */}
+        {/* ── 여기부터는 판단의 근거다. MI-FLOW-2(CEO 지시, 2026-09-11)가 정한
+            순서: 🇰🇷 한국 시장(경쟁 상품·가격·매칭 상태) → 🌎 해외 시장(시장별
+            관측). 판매 판단이 한국 기준이므로 근거도 한국부터 읽혀야 하고,
+            한국이 아닌 관측을 같은 층위에 두지 않는다.
 
+            MI-UX-8(2026-09-06)에서 없앤 "💰 가격 전략" 대형 블록은 되살리지
+            않는다 — 그 값들은 아래 한국 시장 블록과 판단 카드 상세에 이미 있다.
+            계산과 API 응답은 그때도 지금도 그대로다(없앤 것은 반복 UI뿐). */}
 
-        {/* STEP J-6/J-11 — "🇰🇷 국내" 블록. sampleListings는 verified 링크만
+        {/* STEP J-6/J-11 — "🇰🇷 한국 시장" 블록. sampleListings는 verified 링크만
             가격이 저장되므로(run-domestic-price-check.ts STEP 2) 전부 동일상품
             확정건이다 — 행마다 ✓를 붙인다("몇 곳을 뒤졌는지"가 아니라 "검증된
-            가격 몇 건인지"를 보여준다, STEP J-11). */}
+            가격 몇 건인지"를 보여준다, STEP J-11).
+            MI-FLOW-2(CEO 지시, 2026-09-11) — 판단 다음에 오는 근거의 첫 번째는
+            항상 한국 시장이다(판매 판단이 한국 기준이므로). 최저/평균가를 여기로
+            내렸다 — 헤드라인은 대표값 하나("한국 시장 가격")만 말하고, 분포는
+            근거를 볼 때 본다. 새 계산 없음, 표시 위치만 바뀐다. */}
         {domesticCompetition.tier !== "NONE" && (
           <div className="rounded-md border border-border bg-background p-2">
             <div className="mb-1 flex items-center justify-between">
@@ -1747,7 +1978,8 @@ export function DomesticPriceIntelligencePanel({
                 {/* MI-UI-1 — "상세보기 … 접기"를 캐럿으로 대신한다. 곳 수와
                     "참고가격(검증 전)"은 그대로 둔다 — 앞은 숫자고 뒤는 그
                     가격을 얼마나 믿어도 되는지를 가르는 상태 표시다. */}
-                {caret(showDomesticDetail)} 🇰🇷 국내 가격 ({domesticCompetition.sellerCount}곳
+                {caret(showDomesticDetail)} {KR_TARGET_MARKET.flag} {KR_TARGET_MARKET.shortLabel} (
+                {domesticCompetition.sellerCount}곳
                 {domesticCompetition.tier === "SECONDARY" ? " · 참고가격(검증 전)" : ""})
               </button>
               <div className="flex items-center gap-2">
@@ -1757,6 +1989,20 @@ export function DomesticPriceIntelligencePanel({
             </div>
             {showDomesticDetail && (
               <>
+            {/* P-19-B Sprint 7/9(CPO 지시, 2026-09-02) — 이 가격들이 "🟢 동일상품
+                확인" 기준인지 "🟡 비교상품"(참고용) 기준인지 밝힌다. 새 계산 없음 —
+                market-intelligence.ts가 이미 우선순위로 낸 domesticMarketSplit.basis를
+                문구로 옮긴다. 이 한 줄이 위 숫자를 얼마나 믿을지를 가른다. */}
+            {domesticMarketSplit.basis === "EXACT" && (
+              <p className="mb-1 text-[10px] text-success">🟢 동일상품 가격 기준</p>
+            )}
+            {domesticMarketSplit.basis === "COMPARISON" && (
+              <p className="mb-1 text-[10px] text-warning">🟡 동일상품 미확인 — 국내 비교상품 시장가격(참고용) 기준</p>
+            )}
+            <div className="mb-1.5 grid grid-cols-2 gap-2 border-b border-border pb-1.5">
+              <SummaryStat label="한국 시장 최저가" value={domesticCompetition.lowestPriceKrw} />
+              <SummaryStat label="한국 시장 평균가" value={domesticCompetition.averagePriceKrw} />
+            </div>
             <ul className="space-y-0.5">
               {domesticCompetition.sampleListings.slice(0, 5).map((listing, i) => {
                 const tier = priceAgeTier(listing.checkedAt);
@@ -1807,73 +2053,31 @@ export function DomesticPriceIntelligencePanel({
                 가격이 없어진 것처럼 보이지 않게 여기 그대로 남긴다. 시장 정보가
                 없는 기존 데이터(market_code 전부 null)에서는 보탤 정보가 없으므로
                 이 블록 자체가 나타나지 않는다 — 화면이 예전과 같다. */}
-            {(() => {
-              const sellers = domesticCompetition.sellers ?? [];
-              const hasMarketDetail = sellers.some(
-                (s) => s.markets.length > 1 || s.markets.some((m) => m.marketCode != null),
-              );
-              if (!hasMarketDetail) return null;
-              return (
-                <div className="mt-1.5 border-t border-border pt-1.5">
-                  <p className="mb-1 text-[10px] text-text-tertiary">판매처별 시장 가격 · 시장끼리 합산하지 않습니다</p>
-                  <ul className="space-y-1">
-                    {sellers.map((seller) => (
-                      <li key={seller.sellerKey}>
-                        <p className="text-text-primary">{seller.sellerLabel ?? "알 수 없음"}</p>
-                        <ul className="ml-2 space-y-0.5">
-                          {seller.markets.map((market) => {
-                            const label = marketLabel(market.marketCode);
-                            const isJudgingMarket =
-                              (domesticCompetition.priceMarketCode ?? null) === market.marketCode;
-                            return (
-                              <li
-                                key={market.marketCode ?? "unknown"}
-                                className="flex items-center justify-between text-text-secondary"
-                              >
-                                <span className="flex items-center gap-1">
-                                  <span>
-                                    {label.flag} {label.text}
-                                  </span>
-                                  {/* 판단 시장만 명시한다 — 나머지는 보여주되 국내
-                                      판단에 쓰이지 않았다는 뜻이다. */}
-                                  {isJudgingMarket && domesticCompetition.priceMarketBasis === "ANALYSIS" && (
-                                    <span className="rounded bg-success-soft px-1 py-0.5 text-[9px] font-medium text-success">
-                                      국내 판단 기준
-                                    </span>
-                                  )}
-                                  <span className="text-[10px] text-text-tertiary">
-                                    · 기준 국가 {market.marketCountry ?? "미확인"}
-                                  </span>
-                                </span>
-                                {market.productUrl ? (
-                                  <a
-                                    href={market.productUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-text-primary underline"
-                                  >
-                                    {formatMarketPrice(market)}
-                                  </a>
-                                ) : (
-                                  <span className="text-text-primary">{formatMarketPrice(market)}</span>
-                                )}
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </li>
-                    ))}
-                  </ul>
-                  {/* 시장이 둘 이상인데 무엇이 이 분석의 시장인지 확정하지 못한
-                      경우. 아무 시장이나 골라 최저가라고 말하지 않는다. */}
-                  {domesticCompetition.priceMarketBasis === "UNRESOLVED" && (
-                    <p className="mt-1 rounded-md bg-warning-soft px-2 py-1 text-[10px] font-medium text-warning">
-                      시장이 여러 개라 국내 기준 가격을 확정하지 못했습니다 — 위 최저/평균가는 비워 둡니다.
-                    </p>
-                  )}
-                </div>
-              );
-            })()}
+            {koreanMarketRows.length > 0 && (
+              <div className="mt-1.5 border-t border-border pt-1.5">
+                <p className="mb-1 text-[10px] text-text-tertiary">
+                  판매처별 한국 시장 가격 · 시장끼리 합산하지 않습니다
+                </p>
+                <ul className="space-y-0.5">
+                  {koreanMarketRows.map((row) => (
+                    <MarketPriceRow
+                      key={`${row.sellerKey}-${row.marketCode ?? "unknown"}`}
+                      sellerLabel={row.sellerLabel}
+                      price={row.price}
+                      isJudgingMarket={(domesticCompetition.priceMarketCode ?? null) === row.marketCode}
+                      judgingBasis={domesticCompetition.priceMarketBasis ?? null}
+                    />
+                  ))}
+                </ul>
+                {/* 시장이 둘 이상인데 무엇이 이 분석의 시장인지 확정하지 못한
+                    경우. 아무 시장이나 골라 최저가라고 말하지 않는다. */}
+                {domesticCompetition.priceMarketBasis === "UNRESOLVED" && (
+                  <p className="mt-1 rounded-md bg-warning-soft px-2 py-1 text-[10px] font-medium text-warning">
+                    시장이 여러 개라 한국 기준 가격을 확정하지 못했습니다 — 위 최저/평균가는 비워 둡니다.
+                  </p>
+                )}
+              </div>
+            )}
             {domesticCompetition.soldOutListings.length > 0 && (
               <ul className="mt-1.5 space-y-0.5 border-t border-border pt-1.5">
                 {domesticCompetition.soldOutListings.map((listing, i) => (
@@ -1922,85 +2126,6 @@ export function DomesticPriceIntelligencePanel({
                 )}
               </>
             )}
-              </>
-            )}
-          </div>
-        )}
-
-        {/* STEP J-10 — "💡 기회"(있을 때만, computeSellerAction이 이미 계산). */}
-        {sellerAction.opportunity && (
-          <div className="rounded-md border border-primary/30 bg-primary-soft p-2.5 text-text-secondary">
-            <p className="font-medium text-text-primary">
-              {sellerAction.opportunity.icon} {sellerAction.opportunity.title}
-            </p>
-            <p className="mt-1">{sellerAction.opportunity.detail}</p>
-          </div>
-        )}
-
-        {/* MI 2.0 PHASE 1(CPO 지시, 2026-09-09) — 판매 판단(위)의 근거를 4축으로
-            분해한다. 레이더는 새 판정을 만들지 않는다 — 위 카드가 이미 낸
-            결론을 "왜 그런지" 방향별로 보여줄 뿐이라, 항상 판단 카드보다
-            아래·작게 배치한다. */}
-        {hasAnyData && radar.scoredCount > 0 && (
-          <div className="rounded-md border border-border bg-surface p-3">
-            {/* MI-UI-1(CEO 지시, 2026-09-11: "레이더가 왼쪽으로 쏠려 있다") —
-                레이더 칸을 200px로 고정해 두면 컨테이너가 넓어져도 차트는 그
-                자리에 남아 왼쪽에 붙는다. 고정폭 대신 남는 폭을 두 칸이 나눠
-                갖게 하고, 판단 요약이 비는 경우(보여줄 근거 문장이 하나도 없는
-                상품)에는 레이더가 폭 전체를 쓰며 가운데로 온다 — grid는 빈 칸을
-                그대로 남기므로 flex-wrap을 쓴다. */}
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <div className="min-w-[240px] flex-1 basis-[300px]">
-                <MiRadar radar={radar} />
-              </div>
-              {(radarNotes.length > 0 || radar.contradiction != null) && (
-                <div className="min-w-[200px] flex-1 basis-[240px]">
-                  <MiRadarSummary radar={radar} notes={radarNotes} />
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* P-2-3 ⑤ 왜 이런 판단인가(대표님 지시, 2026-08-28) — signals/reasons는
-            ① 최종 판단 카드의 근거 상세다. 기본 접힘, H-3 동일상품 매칭
-            근거(아래)와는 완전히 다른 관심사라 별도 블록으로 유지한다. */}
-        {hasAnyData && (sellerAction.signals.length > 0 || sellerAction.reasons.length > 0) && (
-          <div className={`rounded-md border p-2.5 ${SELLER_ACTION_STYLE[sellerAction.status]}`}>
-            <button
-              type="button"
-              onClick={() => setShowReasonDetail((v) => !v)}
-              className="font-medium hover:underline"
-            >
-              {/* MI-UI-1(CEO 지시, 2026-09-11) — 캐럿이 접힘/펼침과 무관하게
-                  항상 ▼여서 상태를 "접기"라는 단어로만 알 수 있었다. 아래
-                  "동일상품 근거"와 같은 ▸/▾ 규칙을 쓰면 단어가 필요 없다. */}
-              {caret(showReasonDetail)} 왜 이런 판단인가?
-            </button>
-            {showReasonDetail && (
-              <>
-                {sellerAction.signals.length > 0 && (
-                  <ul className="mt-1.5 space-y-1 text-text-secondary">
-                    {sellerAction.signals.map((signal, i) => (
-                      <li key={i}>
-                        <span className="font-medium text-text-primary">
-                          {signal.icon} {signal.title}
-                        </span>
-                        <span className="ml-1">{signal.detail}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {sellerAction.reasons.length > 0 && (
-                  <div className="mt-1.5 border-t border-border pt-1.5">
-                    <p className="text-[10px] font-medium text-text-tertiary">추천 이유</p>
-                    <ul className="mt-0.5 space-y-0.5 text-text-secondary">
-                      {sellerAction.reasons.map((reason, i) => (
-                        <li key={i}>✓ {reason}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
               </>
             )}
           </div>
@@ -2081,9 +2206,45 @@ export function DomesticPriceIntelligencePanel({
           </div>
         )}
 
-        {/* recommendation.recommendedPrice는 이제 ① 최종 판단 카드의 "권장
-            판매가"로 승격됐다(P-2-3) — 여기서 다시 보여주면 같은 숫자를
-            두 번 노출하게 되므로 제거한다(계산/필드 자체는 그대로 유지). */}
+        {/* MI-FLOW-2(CEO 지시, 2026-09-11) — 한국이 아닌 시장의 관측은 여기 모아
+            접어 둔다.
+
+            지우지 않는 이유: 같은 판매처가 /en-kr ₩162,000 · /en-de €75 ·
+            /en-int €84를 동시에 갖고 있는 경우가 실제로 있고(Bobo Choses 실측),
+            그 차이는 셀러가 매입처를 고를 때 쓰는 진짜 정보다.
+            접는 이유: 그 값들이 한국 시장 가격과 같은 층위로 나열돼 있으면
+            "한국에서 €75에 팔린다"로 읽힌다. 판매 판단은 한국 시장만 본다는
+            사실을 블록 제목과 안내 문장이 함께 말한다. */}
+        {overseasMarketRows.length > 0 && (
+          <div className="rounded-md border border-dashed border-border bg-background p-2">
+            <button
+              type="button"
+              onClick={() => setShowOverseasMarkets((v) => !v)}
+              className="font-medium text-text-primary hover:underline"
+            >
+              {caret(showOverseasMarkets)} 🌎 해외 시장 참고 {overseasMarketRows.length}개
+            </button>
+            {showOverseasMarkets && (
+              <>
+                <p className="mt-1 text-[10px] text-text-tertiary">
+                  판매 판단은 한국 시장을 기준으로 합니다 — 아래 가격은 매입처 비교용 참고값이고, 한국 시장
+                  가격과 합산하지 않습니다.
+                </p>
+                <ul className="mt-1 space-y-0.5">
+                  {overseasMarketRows.map((row) => (
+                    <MarketPriceRow
+                      key={`${row.sellerKey}-${row.marketCode ?? "unknown"}`}
+                      sellerLabel={row.sellerLabel}
+                      price={row.price}
+                      isJudgingMarket={false}
+                      judgingBasis={null}
+                    />
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        )}
 
 
         {/* Beta RC(CPO 지시, 2026-09-05) — "판매 추천/조건부/비추천"이라는 표현이

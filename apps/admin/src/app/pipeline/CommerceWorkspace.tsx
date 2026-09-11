@@ -45,10 +45,13 @@ import { BacklogPanel } from "./commerce/BacklogPanel";
 import { ComparisonShopSearch } from "./commerce/ComparisonShopSearch";
 import {
   DomesticPriceIntelligencePanel,
+  FINAL_VERDICT_COPY,
+  MARKET_VERDICT_ANCHOR_ID,
   MarketIntelligenceSkeleton,
   PRICE_COMPARISON_ANCHOR_ID,
 } from "./commerce/DomesticPriceIntelligencePanel";
-import type { PriceLevel } from "./commerce/DomesticPriceIntelligencePanel";
+import type { PriceLevel, SellerFinalVerdict } from "./commerce/DomesticPriceIntelligencePanel";
+import { ActionCenter, type ChecklistItem } from "./commerce/ActionCenter";
 import { AuditLogPanel } from "./commerce/AuditLogPanel";
 import { DomesticShopSearch } from "./commerce/DomesticShopSearch";
 import { ImageInlineEditor } from "./ImageInlineEditor";
@@ -233,12 +236,33 @@ export function CommerceWorkspace({
     setPriceLevel((prev) => (prev === level ? prev : level));
   }
 
-  /* MI-UI-1(CEO 지시, 2026-09-11) — 최상단 "판매 판단 → 등록 준비" 카드를
-   * 지우면서 그 카드만 쓰던 sellVerdict state와 sellAndRegister 집계도 함께
-   * 뺀다. 남겨두면 화면에 나타나지 않는 값을 계속 계산하게 되고, 다음 사람이
-   * "이건 어디에 쓰이나"를 다시 확인해야 한다. 패널 쪽 보고 콜백
-   * (onSellerVerdictChange)은 optional prop이라 그대로 두고 넘기지만 않는다 —
-   * 판정 자체는 Market Intelligence 안에서 계속 계산·표시된다. */
+  /* MI-FLOW-2(CEO 지시, 2026-09-11) — sellVerdict를 다시 받는다.
+   *
+   * MI-UI-1에서 이 값을 뺀 이유는 "최상단 요약 카드가 판단 카드와 같은 말을
+   * 두 번 한다"였다. 이번에는 쓰임이 다르다: 상단 진행바의 ② 시장 판단이
+   * "끝났는지 아닌지"를 알아야 하고, 오른쪽 Action Center가 "지금 결론이
+   * 무엇인지"를 한 줄로 보여줘야 한다. 둘 다 근거를 반복하지 않는다 —
+   * 결론 한 단어만 쓰고 누르면 판단 카드로 데려간다.
+   *
+   * 여기서 새 판정을 만들지 않는다. 패널이 서버 응답의
+   * sellerDecision.finalVerdict를 그대로 올려보내는 값을 받기만 한다. */
+  const [sellVerdict, setSellVerdict] = useState<SellerFinalVerdict | null>(null);
+  /** 판정이 아직 안 온 것과 "판단 불가"를 구분한다 — 패널이 한 번이라도 보고했는가. */
+  const [verdictReported, setVerdictReported] = useState(false);
+  function handleSellerVerdictChange(verdict: SellerFinalVerdict | null) {
+    setVerdictReported(true);
+    setSellVerdict((prev) => (prev === verdict ? prev : verdict));
+  }
+
+  /** MI-FLOW-2 — 상단 진행바/Action Center에서 판단 카드로 데려가는 단일 경로.
+   * 앵커가 없으면(아직 렌더 전) 아무 일도 하지 않는다. */
+  function focusMarketVerdict() {
+    setTab("source");
+    requestAnimationFrame(() => {
+      document.getElementById(MARKET_VERDICT_ANCHOR_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
   /** N-4.18-H-2 STEP H-2-5(대표님 지시: "[가격/마진 확인]" 버튼) —
    * DomesticPriceIntelligencePanel(상품정보 탭)과 PriceEditor(커머스 플랫폼
    * 탭)는 서로 다른 탭에 있다(리서치로 확인됨) — 자동 가격변경 없이, 판매가
@@ -956,6 +980,80 @@ export function CommerceWorkspace({
     return "GREEN";
   }, [product]);
 
+  /**
+   * MI-FLOW-2(CEO 지시, 2026-09-11) — 오른쪽 Action Center의 "등록 전 확인".
+   *
+   * 새 판정을 만들지 않는다. 화면 다른 곳이 이미 쓰고 있는 신호를 한 줄씩
+   * 옮길 뿐이다: 상품정보(commonInfoLevel과 같은 입력) · 이미지 · 가격
+   * (priceValidity, N-3.54) · 옵션 · 채널별 필수정보(mergedReadiness의
+   * priorityItems — PlatformPreview/RegistrationStatusBanner와 완전히 같은
+   * 데이터) · 가격경쟁력(priceLevel).
+   *
+   * 이 목록은 등록 게이트가 아니다. 실제 차단은 지금까지와 같이 각 채널의
+   * validate-payload/buildCoupangCompliance가 결정한다 — 여기 ✓가 떠 있어도
+   * 채널 화면에서 막힐 수 있고, 그 이유는 그 화면이 정확하게 말해준다.
+   */
+  const actionChecklist: ChecklistItem[] = (() => {
+    const items: ChecklistItem[] = [];
+    const hasTitle = Boolean(product.title.value.trim());
+    const hasBrand = Boolean(product.brand.value.trim());
+    const hasDescription = Boolean(product.description.value.trim() || product.descriptionKo.value.trim());
+    items.push({
+      key: "product-info",
+      label: "상품정보",
+      ok: hasTitle && hasBrand && hasDescription,
+      detail: !hasTitle ? "상품명 없음" : !hasBrand ? "브랜드 없음" : !hasDescription ? "상세설명 없음" : undefined,
+      onClick: () => setTab("source"),
+    });
+    items.push({
+      key: "images",
+      label: "이미지",
+      ok: product.images.length > 0,
+      detail: product.images.length > 0 ? `${product.images.length}장` : "이미지 없음",
+      onClick: () => setTab("source"),
+    });
+    items.push({
+      key: "price",
+      label: "가격",
+      ok: product.priceValidity === "VALID",
+      // N-3.54 — 원본 가격을 못 읽었으면 계산하지 않는다. 그 사실만 옮긴다.
+      detail: product.priceValidity === "VALID" ? undefined : "원본 가격을 확인할 수 없습니다",
+      onClick: handleRequestPriceReview,
+    });
+    // 옵션이 없는 것은 결함이 아니다 — 단일 상품으로 등록된다(PlatformPreview와
+    // 같은 문구). "없음"을 ⚠로 표시하면 고칠 것이 없는데 고치라고 하는 셈이다.
+    const optionGroupCount = product.optionGroups?.length ?? 0;
+    items.push({
+      key: "options",
+      label: "옵션",
+      ok: true,
+      detail: optionGroupCount > 0 ? `옵션그룹 ${optionGroupCount}개` : "단일 상품",
+      onClick: () => setTab("source"),
+    });
+    const blocking = Object.values(mergedReadiness).reduce((sum, r) => sum + (r?.priorityItems.length ?? 0), 0);
+    items.push({
+      key: "required",
+      label: "필수정보",
+      ok: blocking === 0,
+      detail: blocking === 0 ? "확인 완료" : `${blocking}건 확인 필요`,
+      onClick: () => setTab(PLATFORM_ORDER.find((id) => (mergedReadiness[id]?.priorityItems.length ?? 0) > 0) ?? "source"),
+    });
+    // N-4.07 — 가격경쟁력은 등록을 막지 않는다(대표님 지시). UNKNOWN은 "부족"이
+    // 아니라 "아직 모름"이라 경고로 올리지 않는다.
+    if (priceLevel === "YELLOW" || priceLevel === "RED") {
+      items.push({
+        key: "price-competitiveness",
+        label: "가격경쟁력",
+        ok: false,
+        detail:
+          (priceLevel === "RED" ? "예상 마진이 낮습니다" : "한국 시장 평균가보다 판매가가 높습니다") +
+          " (등록 자체는 가능합니다)",
+        onClick: focusMarketVerdict,
+      });
+    }
+    return items;
+  })();
+
   /** Sprint A-2(Auto Fill) — register 라우트가 등록 시점에만 돌리던
    * buildCoupangCompliance()를 여기서도 그대로 호출해서 "이미 자동으로 채워질
    * 값"을 등록 전에 미리 보여준다. 별도 매칭 로직을 새로 만들지 않는다 — 등록
@@ -1639,7 +1737,13 @@ export function CommerceWorkspace({
         wasEditingDraftFieldRef.current = isDraftFieldTarget(document.activeElement);
       }}
     >
-      <StageStepper product={product} categoryMappings={categoryMappings} onNavigate={setTab} />
+      <StageStepper
+        product={product}
+        categoryMappings={categoryMappings}
+        verdictKnown={sellVerdict != null}
+        onNavigate={setTab}
+        onFocusMarket={focusMarketVerdict}
+      />
 
       {isEditingDraftField && (
         <div className="flex w-fit items-center gap-2 rounded-md border border-warning/30 bg-warning-soft px-3 py-1.5 text-xs font-medium text-warning">
@@ -1710,189 +1814,111 @@ export function CommerceWorkspace({
         </span>
       </div>
 
-      {/* MI-UI-1(CEO 지시, 2026-09-11) — 최상단 "판매 판단 → 등록 준비" 카드를
-          없앤다(P-32, 2026-09-03). 지금은 Market Intelligence가 같은 질문에
-          더 정확하게 답한다: 판정 헤드라인 · 4축 레이더 · 판단 근거가 전부 그
-          안에 있고, 그 값들은 서버가 낸 원본이라 여기서 요약할수록 뉘앙스만
-          흐려진다. 등록 쪽 절반도 바로 아래 "등록 전 확인" 블록과 같은
-          platformReadiness를 읽고 있어서 같은 목록을 두 번 보여주고 있었다.
-          판정 로직/집계 함수(registration-readiness-outcome.ts)는 그대로 둔다 —
-          지운 것은 화면뿐이다.
+      {/* MI-FLOW-2(CEO 지시, 2026-09-11) — 본문 폭을 통째로 쓰던 "등록 전 확인"
+          블록을 오른쪽 Action Center로 옮겼다.
 
-          ⚠️ 함께 사라진 것: 플랫폼별 보완 항목의 "왜 필요한지"(item.why) 힌트와
-          nextAction 안내 문장. 아래 블록은 같은 항목을 라벨로 나열하고 클릭하면
-          해당 탭으로 보내주므로 "무엇을/어디서"는 남지만, 힌트 문장은 그 탭의
-          RegistrationStatusBanner에서만 볼 수 있다. */}
-
-      {/* N-4.08 STEP6-4(CPO 지시: "부족한 항목을 한눈에") — 방문한 적 있는 탭
-          중 아직 등록 가능(READY)이 아닌 것만 모아 보여준다. 새 계산이 아니라
-          PlatformPreview가 이미 만들어둔 priorityItems(RegistrationStatusBanner와
-          완전히 같은 데이터)를 재사용한다. N-4.07 Sprint — 가격경쟁력도 같은
-          원칙으로 추가한다(단, priceLevel==="UNKNOWN"은 "부족"이 아니라 "아직
-          모름"이라 여기 목록에는 올리지 않는다 — 대표님 지시: "가격 데이터가
-          없다고 등록이 불가능한 게 아니다"). */}
-      {/* REGISTRATION-UX-1(CPO 지시, 2026-09-06) — 조건부 렌더를 없앤다.
-          기존에는 하나라도 미완일 때만 이 블록이 나타나서, 전부 준비되면
-          블록 자체가 사라졌다. 셀러는 "등록해도 된다"는 확인을 받는 대신
-          아무것도 못 보게 된다. 이제 항상 결론을 보여준다. */}
-      {Object.keys(mergedReadiness).length > 0 && (
-        <div className="rounded-lg border border-border bg-surface p-3 text-sm">
-          {(() => {
-            const entries = Object.values(mergedReadiness);
-            const allReady =
-              entries.length > 0 &&
-              entries.every((r) => r.state === "READY") &&
-              commonInfoLevel === "GREEN" &&
-              priceLevel !== "RED";
-            return (
-              <p className="mb-2 text-sm font-semibold text-text-primary">
-                {allReady ? "🟢 등록 가능" : "🟡 등록 전 확인 필요"}
-              </p>
-            );
-          })()}
-          <ul className="space-y-2">
-            {commonInfoLevel !== "GREEN" && (
-              <li>
-                <button
-                  type="button"
-                  onClick={() => setTab("source")}
-                  className="flex items-center gap-1.5 text-left hover:underline"
-                >
-                  <ReadinessLevelDot level={commonInfoLevel} />
-                  <span className="font-medium text-text-primary">상품정보</span>
-                  <span className="text-xs text-text-tertiary">— 상품명/이미지/가격을 확인해주세요</span>
-                </button>
-              </li>
-            )}
-            {/* REGISTRATION-UX-1 — 방문한 탭만이 아니라 모든 채널을 보여준다.
-                준비된 채널도 ✓로 표시해야 "네이버는 되고 쿠팡은 뭐가 빠졌는지"가
-                한눈에 들어온다. 잠정치(탭 미방문)는 그렇다고 밝힌다 — 실제
-                등록 게이트는 여전히 각 채널의 검증이 결정하므로, 여기 값을
-                확정으로 읽게 하면 안 된다. */}
-            {(
-              Object.entries(mergedReadiness) as [
-                PlatformId,
-                { state: RegistrationReadinessState; priorityItems: PriorityItem[]; provisional: boolean },
-              ][]
-            ).map(([platformId, r]) => (
-                <li key={platformId}>
-                  <button
-                    type="button"
-                    onClick={() => setTab(platformId)}
-                    className="flex flex-wrap items-center gap-1.5 text-left hover:underline"
-                  >
-                    <ReadinessLevelDot level={readinessStateToLevel(r.state)} />
-                    <span className="font-medium text-text-primary">{PLATFORM_ADAPTERS[platformId].label}</span>
-                    {r.state === "READY" && r.priorityItems.length === 0 && (
-                      <span className="text-xs text-success">✓ 준비됨</span>
-                    )}
-                    {r.priorityItems.length > 0 && (
-                      <span className="text-xs text-text-tertiary">
-                        — 필수정보 {r.priorityItems.length}개: {r.priorityItems.map((item) => item.label).join(", ")}
-                      </span>
-                    )}
-                    {r.provisional && <span className="text-[10px] text-text-tertiary">(사전 점검)</span>}
-                    {/* N-4.12 STEP3 P0-4(대표님 지시: "[스마트스토어에서 확인하기]로
-                     * 이동" — 정확한 CTA 문구) — 클릭 대상은 이미 이 버튼 전체(위
-                     * onClick)라 새 동작을 추가하지 않는다, 문구만 명시한다. */}
-                    <span className="text-xs font-medium text-primary">
-                      {PLATFORM_ADAPTERS[platformId].label}에서 확인하기 →
-                    </span>
-                  </button>
-                </li>
-              ))}
-            {(priceLevel === "YELLOW" || priceLevel === "RED") && (
-              <li>
-                <button
-                  type="button"
-                  onClick={() => setTab("source")}
-                  className="flex items-center gap-1.5 text-left hover:underline"
-                >
-                  <PriceLevelDot level={priceLevel} />
-                  <span className="font-medium text-text-primary">가격경쟁력</span>
-                  <span className="text-xs text-text-tertiary">
-                    — {priceLevel === "RED" ? "예상 마진이 낮습니다" : "국내 평균가보다 판매가가 높습니다"}
-                    {" "}(⚠️ 등록 자체는 가능합니다)
-                  </span>
-                </button>
-              </li>
-            )}
-          </ul>
-        </div>
-      )}
+          이 블록은 REGISTRATION-UX-1에서 만든 좋은 정보였지만, 판단 카드 위에
+          가로로 누워 있어서 화면을 처음 열면 "🟡 등록 전 확인 필요"가 먼저
+          눈에 들어왔다 — 아직 팔지 말지도 정하지 않은 셀러에게 등록 준비 상태를
+          먼저 보여준 셈이다. 항목·판정·클릭 이동은 하나도 바뀌지 않는다
+          (mergedReadiness/commonInfoLevel/priceLevel 그대로) — 놓이는 자리만
+          본문 위에서 오른쪽 기둥으로 옮긴다. 함께 있던 채널별 "…에서 확인하기"
+          링크는 Action Center의 등록 버튼이 그대로 이어받는다. */}
 
       {tab === "source" && (
-        <>
-          {/* UX-1E(CEO 지시, 2026-09-05) — 셀러의 첫 질문은 "이 해외 상품을
-              국내에 팔아도 되나?"인데, 기존 순서는 이미지 → Source Data →
-              플랫폼 항목 → 가격비교를 지나야 판단이 나왔다(8개 중 6번째).
-              등록 준비보다 판매 판단이 먼저 와야 한다 — 판단을 최상단으로
-              올린다. 컴포넌트/로직 변경 없이 렌더 위치만 바꾼다. */}
-          {/* MI-UI-1(CEO 지시, 2026-09-11) — snapshotId는 최초 스냅샷 저장 응답이
-              와야 채워진다. 그때까지 이 자리는 통째로 비어 있었고(조건부 렌더),
-              1~2초 뒤 패널이 나타나면서 아래 이미지/Source Data를 밀어냈다 —
-              셀러 입장에서는 "로딩 중인지 아닌지"조차 알 수 없었다. 자리를 미리
-              잡아두되 없는 값을 지어내지 않는다: 스켈레톤은 숫자 대신 회색
-              막대만 두고, 지금 무엇을 기다리는지 문장으로 밝힌다. */}
-          {snapshotId ? (
-            <DomesticPriceIntelligencePanel
-              snapshotId={snapshotId}
-              onPriceLevelChange={handlePriceLevelChange}
-              onRequestPriceReview={handleRequestPriceReview}
-              autoChecking={priceCheckPriming}
-            />
-          ) : (
-            <MarketIntelligenceSkeleton />
-          )}
-          <section className="rounded-lg border border-border bg-surface p-4 shadow-subtle">
-            <p className="mb-3 text-sm font-medium text-text-primary">이미지</p>
-            <ImageInlineEditor
+        /* MI-FLOW-2(CEO 지시, 2026-09-11) — 상품정보 화면을 두 기둥으로 나눈다.
+           왼쪽은 "판단 → 근거", 오른쪽은 "지금 할 수 있는 일"(Action Center).
+           PlatformPreview가 이미 쓰고 있는 것과 같은 grid 패턴을 그대로 쓴다 —
+           새 레이아웃 언어를 만들지 않는다. lg 미만에서는 1열로 접히고,
+           order 유틸리티로 Action Center가 먼저 오게 한다(모바일에서 결론과
+           행동이 스크롤 아래에 묻히지 않도록). */
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="order-2 space-y-4 lg:order-1">
+            {/* UX-1E(CEO 지시, 2026-09-05) — 셀러의 첫 질문은 "이 해외 상품을
+                국내에 팔아도 되나?"다. 판단이 항상 맨 위에 온다.
+                MI-UI-1 — snapshotId는 최초 스냅샷 저장 응답이 와야 채워진다.
+                그때까지 자리를 미리 잡아두되 없는 값을 지어내지 않는다. */}
+            {snapshotId ? (
+              <DomesticPriceIntelligencePanel
+                snapshotId={snapshotId}
+                onPriceLevelChange={handlePriceLevelChange}
+                onSellerVerdictChange={handleSellerVerdictChange}
+                onRequestPriceReview={handleRequestPriceReview}
+                autoChecking={priceCheckPriming}
+              />
+            ) : (
+              <MarketIntelligenceSkeleton />
+            )}
+
+            {/* MI-FLOW-2 — 판단 다음은 근거다: 한국 시장 → 해외 시장 → 이미지 →
+                Source Data. 기존에는 이미지와 Source Data가 판단과 가격비교
+                사이에 끼어 있어서, 같은 질문("얼마에 팔리나")의 근거가 화면
+                두 곳으로 쪼개져 있었다. 렌더 순서만 바꾼다 — 컴포넌트도
+                데이터도 그대로다.
+                국내(한국 시장)를 해외보다 먼저 둔다 — 판매 판단이 한국 기준이라
+                근거도 한국부터 읽혀야 한다. */}
+            <div id={PRICE_COMPARISON_ANCHOR_ID} className="scroll-mt-4 space-y-4">
+              <DomesticShopSearch
+                title={product.title.value}
+                brand={product.brand.value}
+                sourceUrl={product.sourceUrl}
+                sku={product.sku.value || undefined}
+                description={product.description.value || undefined}
+              />
+              <ComparisonShopSearch
+                title={product.title.value}
+                brand={product.brand.value}
+                sourceUrl={product.sourceUrl}
+                sku={product.sku.value || undefined}
+                description={product.description.value || undefined}
+                onRequestPriceReview={handleRequestPriceReview}
+              />
+            </div>
+
+            <section className="rounded-lg border border-border bg-surface p-4 shadow-subtle">
+              <p className="mb-3 text-sm font-medium text-text-primary">이미지</p>
+              <ImageInlineEditor
+                product={product}
+                items={items}
+                thumbnails={thumbnails}
+                representativeId={representativeId}
+                onPreview={onPreviewImage}
+                onSetRepresentative={onSetRepresentative}
+                onToggleGalleryUsage={onToggleGalleryUsage}
+                onToggleDescriptionUsage={onToggleDescriptionUsage}
+                onMoveImage={onMoveImage}
+                onAddImage={onAddImage}
+                onRemoveImage={onRemoveImage}
+                addingImage={addingImage}
+              />
+            </section>
+            <SourceDataView
               product={product}
-              items={items}
-              thumbnails={thumbnails}
-              representativeId={representativeId}
-              onPreview={onPreviewImage}
-              onSetRepresentative={onSetRepresentative}
-              onToggleGalleryUsage={onToggleGalleryUsage}
-              onToggleDescriptionUsage={onToggleDescriptionUsage}
-              onMoveImage={onMoveImage}
-              onAddImage={onAddImage}
-              onRemoveImage={onRemoveImage}
-              addingImage={addingImage}
+              onUpdateField={updateField}
+              onUpdatePrice={updatePrice}
+              onUpdateOptions={updateOptions}
+              exchangeRates={exchangeRates}
             />
-          </section>
-          <SourceDataView
-            product={product}
-            onUpdateField={updateField}
-            onUpdatePrice={updatePrice}
-            onUpdateOptions={updateOptions}
-            exchangeRates={exchangeRates}
-          />
-          <MissingFieldsBulkPanel product={product} onBulkApply={bulkSetFieldReference} />
-          {/* UX-2(CEO 지시, 2026-09-05) — 최상단 판단 패널의 "가격비교 원본
-              보기" 버튼이 스크롤할 지점. 해외/국내 비교는 같은 판단의 근거이므로
-              하나의 앵커로 묶는다. 렌더 내용/순서는 변경하지 않는다. */}
-          <div id={PRICE_COMPARISON_ANCHOR_ID} className="scroll-mt-4 space-y-4">
-            <ComparisonShopSearch
-              title={product.title.value}
-              brand={product.brand.value}
-              sourceUrl={product.sourceUrl}
-              sku={product.sku.value || undefined}
-              description={product.description.value || undefined}
-              onRequestPriceReview={handleRequestPriceReview}
-            />
-            <DomesticShopSearch
-              title={product.title.value}
-              brand={product.brand.value}
-              sourceUrl={product.sourceUrl}
-              sku={product.sku.value || undefined}
-              description={product.description.value || undefined}
+            <MissingFieldsBulkPanel product={product} onBulkApply={bulkSetFieldReference} />
+            {snapshotId && <AuditLogPanel snapshotId={snapshotId} />}
+            <BacklogPanel />
+          </div>
+
+          <div className="order-1 lg:order-2">
+            <ActionCenter
+              verdict={sellVerdict ? FINAL_VERDICT_COPY[sellVerdict] : null}
+              verdictPending={!verdictReported}
+              checklist={actionChecklist}
+              channelOrder={PLATFORM_ORDER}
+              channelLabelOf={(id) => PLATFORM_ADAPTERS[id].label}
+              isComingSoon={(id) => SOON_PLATFORMS.has(id)}
+              isPreviewOnly={(id) => id === "smartstore"}
+              readiness={mergedReadiness}
+              onOpenVerdict={focusMarketVerdict}
+              onGoToChannel={setTab}
             />
           </div>
-          {/* UX-1E — 판단 패널은 위 최상단으로 이동했다(중복 렌더 방지). */}
-          {snapshotId && <AuditLogPanel snapshotId={snapshotId} />}
-          <BacklogPanel />
-        </>
+        </div>
       )}
 
       {tab === "content" && (
