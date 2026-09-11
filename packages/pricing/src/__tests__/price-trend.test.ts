@@ -21,6 +21,8 @@ function record(daysAgoFromNow: number, priceKrw: number): PriceObservationRecor
     salePriceKrw: null,
     originalPriceKrw: null,
     soldOut: null,
+    marketCode: null,
+    marketCountry: null,
     checkedAt,
   };
 }

@@ -6,6 +6,7 @@ import {
   computePriceRecommendation,
   computePriceAlertSignal,
   summarizeDomesticMarketSplit,
+  DOMESTIC_ANALYSIS_MARKET_COUNTRY,
   DEFAULT_PRICE_BREAKDOWN_INPUT,
   computePriceBreakdown,
   computeSellerAction,
@@ -65,7 +66,20 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
     // tier === "EXCLUDED" 또는 매칭 링크를 못 찾은 레코드(레거시)는 어느
     // 버킷에도 넣지 않는다 — 추측으로 분류하지 않는다.
   }
-  const domesticMarketSplit = summarizeDomesticMarketSplit(exactShopRecords, [...comparisonShopRecords, ...domesticHistory]);
+  // GLOBAL-MARKET ②(CPO 지시, 2026-09-11) — 한 판매처가 여러 시장에 동시에 있을
+  // 때(실측: Bobo Choses는 /en-kr ₩162,000 · /en-de €75 · /en-int €84를 동시에
+  // 낸다) 예전 집계는 이걸 판매처 3곳으로 세고 세 가격을 하나의 최저/평균으로
+  // 뭉갰다. 이 화면이 답하는 질문은 "국내(한국)에 팔 때"이므로 판단 시장을
+  // 한국으로 명시해서 넘긴다 — summarizeFrom이 그 시장의 가격만으로 최저/평균을
+  // 내고, 나머지 시장은 markets/sellers에 그대로 남는다(숨기지 않는다).
+  // market_code가 전부 null/""인 기존 데이터는 시장 그룹이 하나뿐이라 이 옵션이
+  // 있어도 예전과 결과가 같다(basis="SINGLE").
+  const marketOptions = { analysisMarketCountry: DOMESTIC_ANALYSIS_MARKET_COUNTRY };
+  const domesticMarketSplit = summarizeDomesticMarketSplit(
+    exactShopRecords,
+    [...comparisonShopRecords, ...domesticHistory],
+    marketOptions,
+  );
   // 1순위 동일상품가격, 없으면 2순위 비교상품 시장가격(대표님 지시, Sprint 7
   // 우선순위) — 아래 decision/unifiedDecision/sellerAction/sellability/
   // representativeVerdict는 전부 이 하나의 변수만 받으므로, 우선순위 로직을

@@ -5,6 +5,7 @@ import {
   summarizeFrom,
   computePriceChange,
   computePriceTrend,
+  DOMESTIC_ANALYSIS_MARKET_COUNTRY,
   type PriceObservationRecord,
 } from "../price-history";
 
@@ -25,6 +26,10 @@ function record(overrides: Partial<PriceObservationRecord>): PriceObservationRec
     salePriceKrw: null,
     originalPriceKrw: null,
     soldOut: null,
+    // 기존 데이터는 전부 market_code/market_country가 null이다(046 마이그레이션은
+    // backfill하지 않는다) — 이 기본값이 곧 "예전 동작 그대로"의 기준선이다.
+    marketCode: null,
+    marketCountry: null,
     checkedAt: "2026-08-23T01:00:00.000Z",
     ...overrides,
   };
@@ -270,5 +275,171 @@ describe("summarizeFrom — sellerCount는 observation 수가 아니라 unique �
     // 가격 계산은 여전히 모든 observation을 그대로 쓴다 — sellerCount 수정과 무관.
     expect(summary.lowestPriceKrw).toBe(258000);
     expect(summary.averagePriceKrw).toBe(259000);
+  });
+});
+
+/**
+ * GLOBAL-MARKET ②(CPO 지시, 2026-09-11) — 한 GLOBAL 판매처의 여러 시장 관측이
+ * 집계를 오염시키지 않아야 한다. 실측(Bobo Choses, B226AC043): 같은 상품이
+ * /en-kr ₩162,000 · /en-de €75 · /en-int €84로 시장마다 다른 가격을 낸다.
+ * €75(DE)와 €84(INT)는 통화까지 같아서 "통화가 같으면 같은 시장"이 성립하지
+ * 않는다는 근거이기도 하다.
+ *
+ * 지켜야 할 두 줄:
+ *   가격        = Source + Market 단위 (시장끼리 합산·비교하지 않는다)
+ *   sellerCount = Source 단위 distinct (한 판매처는 N개 시장에 있어도 한 곳)
+ */
+describe("summarizeFrom — GLOBAL Source 1개 × Market 3개(KR/DE/INT)", () => {
+  const BOBO = "https://bobochoses.com";
+  // 세 관측 모두 같은 판매처(호스트가 같다)이고, 다른 것은 시장뿐이다.
+  const globalRecords = [
+    record({
+      id: "kr",
+      source: "DOMESTIC_SHOP",
+      sourceLabel: "Bobo Choses",
+      sourceProductUrl: `${BOBO}/en-kr/products/b226ac043`,
+      sourceRefId: "bobo",
+      marketCode: "en-kr",
+      marketCountry: "ES",
+      currency: "KRW",
+      priceAmount: 162000,
+      priceKrw: 162000,
+    }),
+    record({
+      id: "de",
+      source: "DOMESTIC_SHOP",
+      sourceLabel: "Bobo Choses",
+      sourceProductUrl: `${BOBO}/en-de/products/b226ac043`,
+      sourceRefId: "bobo",
+      marketCode: "en-de",
+      marketCountry: "ES",
+      currency: "EUR",
+      priceAmount: 75,
+      priceKrw: 117000,
+    }),
+    record({
+      id: "int",
+      source: "DOMESTIC_SHOP",
+      sourceLabel: "Bobo Choses",
+      sourceProductUrl: `${BOBO}/en-int/products/b226ac043`,
+      sourceRefId: "bobo",
+      marketCode: "en-int",
+      marketCountry: "ES",
+      currency: "EUR",
+      priceAmount: 84,
+      priceKrw: 131000,
+    }),
+  ];
+
+  const summary = summarizeFrom(globalRecords, "PRIMARY", {
+    analysisMarketCountry: DOMESTIC_ANALYSIS_MARKET_COUNTRY,
+  });
+
+  it("sellerCount === 1 — 시장이 셋이어도 판매처는 한 곳이다", () => {
+    expect(summary.sellerCount).toBe(1);
+    expect(summary.sellers).toHaveLength(1);
+    expect(summary.sellers[0].markets).toHaveLength(3);
+  });
+
+  it("가격은 market별로 독립 — 셋이 합산·혼합되지 않는다", () => {
+    const byCode = new Map(summary.markets.map((m) => [m.marketCode, m]));
+    expect(summary.markets).toHaveLength(3);
+    expect(byCode.get("en-kr")!.lowestPriceKrw).toBe(162000);
+    expect(byCode.get("en-de")!.lowestPriceKrw).toBe(117000);
+    expect(byCode.get("en-int")!.lowestPriceKrw).toBe(131000);
+    // 각 시장의 평균은 그 시장 가격 자신이다(다른 시장이 섞였다면 달라졌을 것).
+    expect(byCode.get("en-de")!.averagePriceKrw).toBe(117000);
+    // 시장별로도 판매처는 한 곳씩이다.
+    for (const market of summary.markets) expect(market.sellerCount).toBe(1);
+  });
+
+  it("KR 가격이 EU 최저가를 대체하지 않는다 — DE 시장 최저가는 여전히 €75(₩117,000)", () => {
+    const de = summary.markets.find((m) => m.marketCode === "en-de")!;
+    expect(de.lowestPriceKrw).toBe(117000);
+    expect(de.highestPriceKrw).toBe(117000);
+    // KR(₩162,000)이 DE 집계로 흘러들어갔다면 highest가 162000이 됐을 것이다.
+    expect(de.highestPriceKrw).not.toBe(162000);
+  });
+
+  it("EU 가격이 KR 가격 판단에 들어가지 않는다 — 국내 판단가는 ₩162,000 하나뿐", () => {
+    expect(summary.priceMarketBasis).toBe("ANALYSIS");
+    expect(summary.priceMarketCode).toBe("en-kr");
+    expect(summary.lowestPriceKrw).toBe(162000);
+    expect(summary.averagePriceKrw).toBe(162000);
+    expect(summary.highestPriceKrw).toBe(162000);
+    // 예전 집계라면 min(162000, 117000, 131000)=117000, 평균 136667이 나왔다.
+    expect(summary.lowestPriceKrw).not.toBe(117000);
+    expect(summary.averagePriceKrw).not.toBe(136667);
+    // 화면에 뿌릴 리스팅도 판단 시장의 것만 남는다.
+    expect(summary.sampleListings).toHaveLength(1);
+    expect(summary.sampleListings[0].priceKrw).toBe(162000);
+  });
+
+  it("판단 시장을 모르면(옵션 없음) 아무 시장이나 고르지 않고 판단 불가로 둔다 — 시장 데이터 자체는 남긴다", () => {
+    const unresolved = summarizeFrom(globalRecords, "PRIMARY");
+    expect(unresolved.priceMarketBasis).toBe("UNRESOLVED");
+    expect(unresolved.priceMarketCode).toBeNull();
+    expect(unresolved.lowestPriceKrw).toBeNull();
+    expect(unresolved.averagePriceKrw).toBeNull();
+    // 행을 숨기거나 버리지 않는다 — 판매처/시장은 그대로 보인다.
+    expect(unresolved.sellerCount).toBe(1);
+    expect(unresolved.markets).toHaveLength(3);
+  });
+
+  it("market_code가 null이거나 \"\"면 시장 미확인 한 그룹으로 묶고 추측하지 않는다", () => {
+    const summaryUnknownMarket = summarizeFrom(
+      [
+        record({ id: "n", priceKrw: 30000, sourceProductUrl: "https://a.example/p", marketCode: null }),
+        record({ id: "e", priceKrw: 20000, sourceProductUrl: "https://b.example/p", marketCode: "" }),
+      ],
+      "PRIMARY",
+      { analysisMarketCountry: DOMESTIC_ANALYSIS_MARKET_COUNTRY },
+    );
+    expect(summaryUnknownMarket.markets).toHaveLength(1);
+    expect(summaryUnknownMarket.markets[0].marketCode).toBeNull();
+    expect(summaryUnknownMarket.markets[0].marketCountry).toBeNull();
+    // 시장이 하나뿐이라 예전과 동일하게 전부 집계에 들어간다(회귀 없음).
+    expect(summaryUnknownMarket.priceMarketBasis).toBe("SINGLE");
+    expect(summaryUnknownMarket.lowestPriceKrw).toBe(20000);
+    expect(summaryUnknownMarket.averagePriceKrw).toBe(25000);
+    expect(summaryUnknownMarket.sellerCount).toBe(2);
+  });
+
+  it("기존 동작 보존 — market_code가 전부 null인 단일 시장 데이터는 예전과 같은 결과를 낸다", () => {
+    const legacy = [
+      record({ id: "a", priceKrw: 30000, sourceLabel: "A몰", sourceProductUrl: "https://a.example/p" }),
+      record({ id: "b", priceKrw: 20000, sourceLabel: "B몰", sourceProductUrl: "https://b.example/p" }),
+      record({ id: "c", priceKrw: 40000, sourceLabel: "C몰", sourceProductUrl: "https://c.example/p" }),
+    ];
+    const withOption = summarizeFrom(legacy, "PRIMARY", {
+      analysisMarketCountry: DOMESTIC_ANALYSIS_MARKET_COUNTRY,
+    });
+    const withoutOption = summarizeFrom(legacy, "PRIMARY");
+    expect(withOption.lowestPriceKrw).toBe(20000);
+    expect(withOption.highestPriceKrw).toBe(40000);
+    expect(withOption.averagePriceKrw).toBe(30000);
+    expect(withOption.sellerCount).toBe(3);
+    expect(withOption.sampleListings).toHaveLength(3);
+    expect(withOption.stockCounts).toEqual({ onSale: 0, unknown: 3, soldOut: 0 });
+    // 분석 시장 옵션의 유무가 단일 시장 데이터의 결과를 바꾸지 않는다.
+    expect(withoutOption).toEqual(withOption);
+  });
+
+  it("GLOBAL 판매처가 섞여 있어도 다른 국내 판매처의 KR 가격과는 같은 시장에서 비교된다", () => {
+    // 국내 편집샵은 market_code가 없다(시장 미확인). Bobo의 en-kr과 같은
+    // 시장이라고 단정할 수 없으므로 서로 다른 그룹으로 남는다 — 그 결과
+    // 판단 시장(en-kr)에는 Bobo의 ₩162,000만 들어간다. 없는 사실을 만들어
+    // 두 그룹을 합치지 않는다.
+    const mixed = [
+      ...globalRecords,
+      record({ id: "shop", source: "DOMESTIC_SHOP", priceKrw: 149000, sourceProductUrl: "https://kidsshop.example/p" }),
+    ];
+    const summaryMixed = summarizeFrom(mixed, "PRIMARY", {
+      analysisMarketCountry: DOMESTIC_ANALYSIS_MARKET_COUNTRY,
+    });
+    expect(summaryMixed.sellerCount).toBe(2);
+    expect(summaryMixed.priceMarketCode).toBe("en-kr");
+    expect(summaryMixed.lowestPriceKrw).toBe(162000);
+    expect(summaryMixed.markets.find((m) => m.marketCode === null)!.lowestPriceKrw).toBe(149000);
   });
 });

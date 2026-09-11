@@ -30,6 +30,12 @@ interface PriceObservationRow {
   sale_price_krw?: number | null;
   original_price_krw?: number | null;
   sold_out?: boolean | null;
+  /** GLOBAL-MARKET ②(CPO 지시, 2026-09-11) — 마이그레이션 046에서 추가. 지금까지
+   * 쓰기만 하고 한 번도 읽지 않던 컬럼이라 집계가 시장을 구분할 수 없었다.
+   * source_ref_id와 같은 이유로 optional(스키마 캐시 지연 세션 크래시 방지) —
+   * 없으면 null, 즉 "시장 미확인"이다(기존 행은 전부 null이고 backfill하지 않는다). */
+  market_code?: string | null;
+  market_country?: string | null;
   checked_at: string;
 }
 
@@ -50,6 +56,10 @@ function toRecord(row: PriceObservationRow): PriceObservationRecord {
     salePriceKrw: row.sale_price_krw ?? null,
     originalPriceKrw: row.original_price_krw ?? null,
     soldOut: row.sold_out ?? null,
+    // 저장된 관측 근거를 해석 없이 그대로 올린다 — ""(로케일 없는 기본 요청)도
+    // ""로 둔다. 어떤 시장/국가로 바꿔 적는 일은 여기서도 하지 않는다.
+    marketCode: row.market_code ?? null,
+    marketCountry: row.market_country ?? null,
     checkedAt: row.checked_at,
   };
 }

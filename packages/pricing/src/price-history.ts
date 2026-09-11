@@ -49,8 +49,95 @@ export interface PriceObservationRecord {
    * 확인, false=실제 판매 가능 확인 — "정보 없음"과 "판매중"을 같은 값으로
    * 취급하지 않는다(대표님 명시 원칙). */
   soldOut: boolean | null;
+  /**
+   * GLOBAL-MARKET ②(CPO 지시, 2026-09-11) — 마이그레이션 046이 저장해 두기만
+   * 하던 관측 근거를 여기서 처음으로 읽는다. 실측(Bobo Choses B226AC043):
+   * /en-kr ₩162,000 · /en-de €75 · /en-int €84 — 같은 판매처인데 시장마다
+   * 가격이 다르고, €75와 €84는 통화까지 같다. "통화가 같으면 같은 시장"이
+   * 성립하지 않는다는 뜻이라, 관측 당시 실제로 요청/확인된 코드를 그대로
+   * 들고 다녀야 집계가 서로 다른 시장의 가격을 섞지 않는다.
+   *
+   *  marketCode    : 요청/확인된 시장 코드 그대로("", en-kr, en-int …). null
+   *                  이거나 ""면 "시장 미확인"이다 — 어떤 시장으로도 바꿔
+   *                  적지 않는다(기존 행은 전부 null이고 backfill하지 않는다).
+   *  marketCountry : source가 스스로 선언한 기준 국가(/meta.json의 country 등).
+   *                  null이면 "기준 국가 미확인" — 통화나 도메인에서 지어내지
+   *                  않고, 반대로 이 값으로 시장을 역추론하지도 않는다.
+   */
+  marketCode: string | null;
+  marketCountry: string | null;
   checkedAt: string;
 }
+
+/** 화면이 빈 값을 "어떤 시장"처럼 보여주지 않도록 문구를 한 곳에 둔다 —
+ * 행을 숨기거나 추측으로 채우는 대신 모른다고 적는다(CPO 지시). */
+export const UNKNOWN_MARKET_LABEL = "시장 미확인";
+export const UNKNOWN_MARKET_COUNTRY_LABEL = "기준 국가 미확인";
+
+/** 시장별 독립 집계 1건. markets끼리는 절대 합산하거나 서로 비교하지 않는다 —
+ * €75(DE)와 €84(INT)를 하나의 "유럽 가격"으로 묶는 순간 둘 다 사실이 아니게
+ * 된다(실측 근거는 PriceObservationRecord.marketCode 주석 참조). */
+export interface MarketPriceSummary {
+  /** 관측된 market_code 그대로(trim/소문자 정규화만). null = 시장 미확인. */
+  marketCode: string | null;
+  /** 이 시장의 관측들이 공통으로 선언한 기준 국가. 서로 다르면 null —
+   * 하나로 단정하지 않는다. */
+  marketCountry: string | null;
+  lowestPriceKrw: number;
+  highestPriceKrw: number;
+  averagePriceKrw: number;
+  /** 이 시장 안에서 본 판매처 수(Source 단위 distinct). */
+  sellerCount: number;
+  lowestPriceCheckedAt: string;
+}
+
+/** 한 판매처가 시장별로 낸 가격 1건. 원본 통화/금액을 함께 보존한다 —
+ * 화면이 "🇩🇪 DE €75"처럼 관측된 그대로 보여줄 수 있어야 하고, 원화 환산값만
+ * 남기면 시장이 다르다는 사실이 다시 사라진다. */
+export interface SellerMarketPrice {
+  marketCode: string | null;
+  marketCountry: string | null;
+  currency: string;
+  priceAmount: number | null;
+  priceKrw: number;
+  productUrl: string | null;
+  checkedAt: string;
+}
+
+/** 화면용 Source → Market 묶음. 판매처가 먼저고 시장이 그 아래다 — 한
+ * 판매처가 세 시장에 있다고 판매처 셋으로 보이면 안 된다. */
+export interface SellerMarketGroup {
+  /** sellerIdentityKey 결과(호스트명 우선). 화면 key 용도이자 "한 판매처"의
+   * 정의 그 자체다. */
+  sellerKey: string;
+  sellerLabel: string | null;
+  markets: SellerMarketPrice[];
+}
+
+/** 요약 상단의 최저/평균/최고가가 "어느 시장의 가격인지"를 어떻게 정했는지.
+ *  SINGLE     — 관측된 시장이 하나뿐이었다(market_code가 전부 null/""인 기존
+ *               데이터가 여기 해당한다 — 예전과 완전히 같은 결과).
+ *  ANALYSIS   — 이 분석이 판단하는 시장(실제로 팔 시장)과 일치하는 시장을 골랐다.
+ *  UNRESOLVED — 시장이 둘 이상인데 무엇이 이 분석의 시장인지 모른다 → 판단 불가.
+ *               아무거나 고르거나 섞어서 숫자를 만들지 않는다. */
+export type MarketResolutionBasis = "SINGLE" | "ANALYSIS" | "UNRESOLVED";
+
+/** 집계가 "어느 시장을 판단 대상으로 보는지"를 호출부가 명시한다. 우선순위
+ * (CPO 확정): ①이번 분석에서 명시적으로 요청/확인된 시장 ②이 상품을 실제로
+ * 팔 시장 ③source가 선언한 기본 시장 ④판단 불가. 이 옵션을 주지 않으면
+ * 시장이 둘 이상일 때 ④로 간다 — 여기서 추론해서 고르지 않는다. */
+export interface MarketAggregationOptions {
+  /** ②에 해당하는 국가 코드(예: "KR"). market_code 안에 적힌 지역과만
+   * 대조한다 — marketCountry나 통화에서 시장을 역추론하지 않는다. */
+  analysisMarketCountry?: string | null;
+}
+
+/** MI 국내 집계가 판단하는 시장은 언제나 한국이다 — 우선순위 ②("이 상품을
+ * 실제로 팔 시장")에 해당한다. 국가나 통화에서 시장을 추론한 값이 아니라
+ * 분석의 전제다: "국내 가격"이라는 질문에 독일 시장 가격을 답으로 내놓을 수는
+ * 없다. 실측(Bobo Choses)에서 /en-kr ₩162,000과 /en-de €75가 같이 관측되는데,
+ * 국내 판매 판단에 들어가야 하는 것은 ₩162,000 하나뿐이다. */
+export const DOMESTIC_ANALYSIS_MARKET_COUNTRY = "KR";
 
 /** PART G(N-4.06으로 갱신) — 국내 시장 요약. 저장하지 않고 조회 시점에 계산한다
  * (파생값 중복 저장 금지 원칙). 리스팅이 하나도 없으면 null 필드로 정직하게
@@ -109,6 +196,20 @@ export interface DomesticMarketSummary {
    * **null을 판매중으로 부르지 않는다.**
    */
   stockCounts: { onSale: number; unknown: number; soldOut: number };
+  /**
+   * GLOBAL-MARKET ②(CPO 지시, 2026-09-11) — 시장별로 따로 집계한 가격. 위의
+   * lowestPriceKrw/averagePriceKrw는 이 중 **한 시장**(priceMarketCode)의
+   * 값이고, 나머지 시장은 여기에만 남는다. 화면이 다른 시장 가격을 숨기지
+   * 않으면서도 판단은 한 시장으로만 하도록 하기 위한 분리다.
+   */
+  markets: MarketPriceSummary[];
+  /** 같은 값을 Source → Market 순서로 묶은 것(화면 표시용). sellerCount와
+   * 이 배열의 길이는 항상 일치한다 — 시장이 늘어도 판매처는 늘지 않는다. */
+  sellers: SellerMarketGroup[];
+  /** 위 lowest/highest/average/sampleListings가 실제로 어느 시장에서 나온
+   * 값인지. null이면 시장 미확인 그룹이거나(레거시 데이터) 판단 불가다. */
+  priceMarketCode: string | null;
+  priceMarketBasis: MarketResolutionBasis;
   checkedAt: string | null;
 }
 
@@ -157,18 +258,141 @@ function sellerIdentityKey(record: PriceObservationRecord): string {
   return `id:${record.id}`;
 }
 
+type PricedRecord = PriceObservationRecord & { priceKrw: number };
+
+/** GLOBAL-MARKET ②(CPO 지시, 2026-09-11) — market_code는 null과 "" 두 가지
+ * 형태로 "모름"이 들어온다(046 마이그레이션이 로케일 없는 기본 요청의 ""를
+ * 그대로 저장하기 때문). 둘을 같은 한 그룹으로 묶되 어떤 시장인지 채우지
+ * 않는다 — 키 ""가 곧 "시장 미확인"이다. */
+function marketKeyOf(record: PriceObservationRecord): string {
+  return record.marketCode?.trim().toLowerCase() ?? "";
+}
+
+function marketCodeFromKey(key: string): string | null {
+  return key === "" ? null : key;
+}
+
+/** 시장 코드가 스스로 가리키는 지역. Shopify Markets 프리픽스는 실측상
+ * "xx-yy"(en-kr) 형태이고 지역만 적힌 경우도 있다(shopify-market-probe.ts의
+ * EXPAND_CANDIDATE_MARKET_CODES 주석과 같은 근거). 코드 **안에 적힌 글자**를
+ * 읽을 뿐이고, marketCountry나 통화에서 시장을 역추론하지 않는다. "en-int"
+ * 처럼 국가가 아닌 코드는 null — 어느 나라로도 단정하지 않는다. */
+function marketRegionOf(marketKey: string): string | null {
+  const matched = /^(?:[a-z]{2}-)?([a-z]{2})$/.exec(marketKey);
+  return matched ? matched[1].toUpperCase() : null;
+}
+
+/** 시장 미확인("")은 항상 마지막 — 아는 시장을 먼저 보여준다. */
+function compareMarketKey(a: string, b: string): number {
+  if (a === b) return 0;
+  if (a === "") return 1;
+  if (b === "") return -1;
+  return a < b ? -1 : 1;
+}
+
+function groupByKey<T>(items: T[], keyOf: (item: T) => string): Map<string, T[]> {
+  const map = new Map<string, T[]>();
+  for (const item of items) {
+    const key = keyOf(item);
+    const bucket = map.get(key);
+    if (bucket) bucket.push(item);
+    else map.set(key, [item]);
+  }
+  return map;
+}
+
+/** 같은 시장 안의 관측들이 전부 같은 기준 국가를 선언했을 때만 그 국가를
+ * 쓴다. 서로 다르면 null — 하나를 골라 적으면 화면에 없는 국가가 그려진다. */
+function declaredCountryOf(records: PriceObservationRecord[]): string | null {
+  const countries = new Set(
+    records.map((r) => r.marketCountry?.trim().toUpperCase()).filter((c): c is string => Boolean(c)),
+  );
+  return countries.size === 1 ? [...countries][0] : null;
+}
+
+function summarizeMarketGroup(key: string, records: PricedRecord[]): MarketPriceSummary {
+  const prices = records.map((r) => r.priceKrw);
+  const lowestPriceKrw = Math.min(...prices);
+  return {
+    marketCode: marketCodeFromKey(key),
+    marketCountry: declaredCountryOf(records),
+    lowestPriceKrw,
+    highestPriceKrw: Math.max(...prices),
+    averagePriceKrw: Math.round(prices.reduce((sum, p) => sum + p, 0) / prices.length),
+    // 시장 안에서도 판매처는 Source 단위로 센다(위 summarizeFrom과 같은 기준).
+    sellerCount: new Set(records.map(sellerIdentityKey)).size,
+    lowestPriceCheckedAt: records
+      .filter((r) => r.priceKrw === lowestPriceKrw)
+      .reduce((latest, r) => (r.checkedAt > latest ? r.checkedAt : latest), ""),
+  };
+}
+
+/** 우선순위(CPO 확정) ①이번 분석에서 명시적으로 요청/확인된 시장 ②실제로 팔
+ * 시장 ③source가 선언한 기본 시장 ④판단 불가. 지금 호출부가 줄 수 있는 것은
+ * ②뿐이라 ②만 구현한다 — ①/③이 생기기 전까지는 나머지를 ④로 남긴다.
+ * 시장이 하나뿐이면 고를 것이 없으므로 그대로 쓴다(기존 데이터 = 전부 이 경로). */
+function resolvePriceMarketKey(
+  keys: string[],
+  analysisMarketCountry: string | null | undefined,
+): { key: string; basis: "SINGLE" | "ANALYSIS" } | null {
+  if (keys.length === 1) return { key: keys[0], basis: "SINGLE" };
+  const target = analysisMarketCountry?.trim().toUpperCase();
+  if (!target) return null;
+  const matched = keys.filter((key) => marketRegionOf(key) === target);
+  // 정확히 하나일 때만 확정한다. 둘 이상 매칭되면(예: "kr"과 "en-kr"이 함께
+  // 관측됨) 어느 쪽이 이 분석의 시장인지 우리가 모르는 것이라 고르지 않는다.
+  return matched.length === 1 ? { key: matched[0], basis: "ANALYSIS" } : null;
+}
+
+/** 화면용 Source → Market 묶음. 시장별로 가장 최근 관측 1건만 남긴다 — 한
+ * 시장의 시계열을 여기서 합치거나 평균내지 않는다(그건 markets/trend의 일). */
+function groupSellersByMarket(records: PricedRecord[]): SellerMarketGroup[] {
+  return [...groupByKey(records, sellerIdentityKey).entries()].map(([sellerKey, sellerRecords]) => ({
+    sellerKey,
+    sellerLabel: sellerRecords.find((r) => r.sourceLabel)?.sourceLabel ?? null,
+    markets: [...groupByKey(sellerRecords, marketKeyOf).entries()]
+      .sort(([a], [b]) => compareMarketKey(a, b))
+      .map(([marketKey, marketRecords]) => {
+        const latest = marketRecords.reduce((newest, r) => (r.checkedAt > newest.checkedAt ? r : newest));
+        return {
+          marketCode: marketCodeFromKey(marketKey),
+          marketCountry: declaredCountryOf(marketRecords),
+          currency: latest.currency,
+          priceAmount: latest.priceAmount,
+          priceKrw: latest.priceKrw,
+          productUrl: latest.sourceProductUrl,
+          checkedAt: latest.checkedAt,
+        };
+      }),
+  }));
+}
+
 /** N-4.18-G STEP G-4(대표님 지시: "VERIFIED + ACTIVE + 현재 판매 가능 →
  * 가격 경쟁력 계산", "품절 상품을 최저가 계산에 포함시키면 안 됩니다") —
  * soldOut===true인 관측치만 최저/평균/최고가·sellerCount 계산에서 뺀다.
  * soldOut===false 또는 null(그 사이트 품절 감지 미구현)은 기존과 동일하게
  * 포함한다 — RULII 외 사이트는 항상 soldOut=null이라 이 변경으로 기존
- * 가격비교 결과가 달라지지 않는다(회귀 없음). */
-export function summarizeFrom(records: PriceObservationRecord[], tier: DomesticMarketTier): DomesticMarketSummary {
+ * 가격비교 결과가 달라지지 않는다(회귀 없음).
+ *
+ * GLOBAL-MARKET ②(CPO 지시, 2026-09-11) — 여기에 시장 분리를 더한다. 원칙은
+ * 두 줄이다:
+ *   가격        = Source + Market 단위 (시장끼리 합산·비교하지 않는다)
+ *   sellerCount = Source 단위 distinct (한 판매처는 N개 시장에 있어도 한 곳)
+ * 실측(Bobo Choses)에서 한 판매처가 KR/DE/INT 세 시장에 동시에 있었고, 예전
+ * 집계는 이걸 판매처 3곳으로 세면서 ₩162,000·€75·€84를 하나의 최저/평균으로
+ * 뭉갰다. 최저/평균/최고가는 이제 **한 시장**(priceMarketCode)에서만 나온다.
+ * market_code가 전부 null/""인 기존 데이터는 시장 그룹이 하나라 예전과 결과가
+ * 완전히 같다(basis="SINGLE"). */
+export function summarizeFrom(
+  records: PriceObservationRecord[],
+  tier: DomesticMarketTier,
+  options: MarketAggregationOptions = {},
+): DomesticMarketSummary {
   // N-4.18-Q3 PART E-1 — priceKrw가 null인 행(완전 품절, 가격 자체를 못 찾음)은
   // soldOut!==true인 경우에도 최저/평균/최고가 계산에서 제외한다(가격이 없는데
   // 계산에 넣을 수 없다 — 0원을 지어내지 않는다는 원칙과 동일선상).
   const activeRecords = records.filter(
-    (r): r is PriceObservationRecord & { priceKrw: number } => r.soldOut !== true && r.priceKrw != null,
+    (r): r is PricedRecord => r.soldOut !== true && r.priceKrw != null,
   );
   const soldOutRecords = records.filter((r) => r.soldOut === true);
   const checkedAt = records.reduce((latest, r) => (r.checkedAt > latest ? r.checkedAt : latest), records[0].checkedAt);
@@ -177,14 +401,6 @@ export function summarizeFrom(records: PriceObservationRecord[], tier: DomesticM
     productUrl: r.sourceProductUrl,
     checkedAt: r.checkedAt,
   }));
-
-  // 가격 집계에 실제로 들어간 리스팅만 센다 — 화면에 보이는 최저가/평균가가
-  // 어떤 재고 상태 위에 세워졌는지를 그대로 반영해야 한다.
-  const stockCounts = {
-    onSale: activeRecords.filter((r) => r.soldOut === false).length,
-    unknown: activeRecords.filter((r) => r.soldOut == null).length,
-    soldOut: soldOutRecords.length,
-  };
 
   if (activeRecords.length === 0) {
     return {
@@ -196,28 +412,50 @@ export function summarizeFrom(records: PriceObservationRecord[], tier: DomesticM
       lowestPriceCheckedAt: null,
       sampleListings: [],
       soldOutListings,
-      stockCounts,
+      stockCounts: { onSale: 0, unknown: 0, soldOut: soldOutRecords.length },
+      markets: [],
+      sellers: [],
+      priceMarketCode: null,
+      priceMarketBasis: "UNRESOLVED",
       checkedAt,
     };
   }
 
-  const prices = activeRecords.map((r) => r.priceKrw);
-  const lowestPriceKrw = Math.min(...prices);
-  // 같은 최저가가 여러 시점에 관측됐다면 가장 최근 관측을 쓴다 — 화면이
-  // 실제보다 오래됐다고 말하지 않게 하기 위함(보수적으로 최신 쪽).
-  const lowestPriceCheckedAt = activeRecords
-    .filter((r) => r.priceKrw === lowestPriceKrw)
-    .reduce<string | null>((latest, r) => (latest == null || r.checkedAt > latest ? r.checkedAt : latest), null);
-  const highestPriceKrw = Math.max(...prices);
-  const averagePriceKrw = Math.round(prices.reduce((sum, p) => sum + p, 0) / prices.length);
-  const sorted = [...activeRecords].sort((a, b) => a.priceKrw - b.priceKrw);
+  const marketGroups = groupByKey(activeRecords, marketKeyOf);
+  const marketKeys = [...marketGroups.keys()].sort(compareMarketKey);
+  const markets = marketKeys.map((key) => summarizeMarketGroup(key, marketGroups.get(key)!));
+  const resolved = resolvePriceMarketKey(marketKeys, options.analysisMarketCountry);
+  // 판단 대상 시장을 못 고르면 빈 배열이다 — 아무 시장이나 골라 숫자를 내는
+  // 대신 최저/평균/최고가를 null로 남긴다(markets/sellers에는 전부 남아 있으니
+  // 데이터를 버리는 것도, 행을 숨기는 것도 아니다).
+  const priceRecords = resolved ? marketGroups.get(resolved.key)! : [];
+
+  // 가격 집계에 실제로 들어간 리스팅만 센다 — 화면에 보이는 최저가/평균가가
+  // 어떤 재고 상태 위에 세워졌는지를 그대로 반영해야 한다. 판단 시장 밖의
+  // 관측은 그 최저가를 만든 적이 없으므로 여기서도 세지 않는다.
+  const stockCounts = {
+    onSale: priceRecords.filter((r) => r.soldOut === false).length,
+    unknown: priceRecords.filter((r) => r.soldOut == null).length,
+    soldOut: soldOutRecords.length,
+  };
+
+  // sellerCount만은 시장으로 나누지 않는다 — Bobo Choses가 KR/DE/INT 세
+  // 시장에 있어도 판매처는 여전히 한 곳이다. sellerIdentityKey(호스트명 우선)에
+  // 시장을 섞지 않는 것이 이 규칙의 구현 그 자체다.
+  const sellerCount = new Set(activeRecords.map(sellerIdentityKey)).size;
+  const sellers = groupSellersByMarket(activeRecords);
+
+  const resolvedMarket = resolved ? markets.find((m) => m.marketCode === marketCodeFromKey(resolved.key))! : null;
+  const sorted = [...priceRecords].sort((a, b) => a.priceKrw - b.priceKrw);
   return {
     tier,
-    lowestPriceKrw,
-    highestPriceKrw,
-    averagePriceKrw,
-    sellerCount: new Set(activeRecords.map(sellerIdentityKey)).size,
-    lowestPriceCheckedAt,
+    lowestPriceKrw: resolvedMarket?.lowestPriceKrw ?? null,
+    highestPriceKrw: resolvedMarket?.highestPriceKrw ?? null,
+    averagePriceKrw: resolvedMarket?.averagePriceKrw ?? null,
+    sellerCount,
+    // 같은 최저가가 여러 시점에 관측됐다면 가장 최근 관측을 쓴다 — 화면이
+    // 실제보다 오래됐다고 말하지 않게 하기 위함(보수적으로 최신 쪽).
+    lowestPriceCheckedAt: resolvedMarket?.lowestPriceCheckedAt ?? null,
     sampleListings: sorted.slice(0, 5).map((r) => ({
       mallName: r.sourceLabel,
       priceKrw: r.priceKrw,
@@ -228,6 +466,10 @@ export function summarizeFrom(records: PriceObservationRecord[], tier: DomesticM
     })),
     soldOutListings,
     stockCounts,
+    markets,
+    sellers,
+    priceMarketCode: resolved ? marketCodeFromKey(resolved.key) : null,
+    priceMarketBasis: resolved?.basis ?? "UNRESOLVED",
     checkedAt,
   };
 }
@@ -242,14 +484,21 @@ const EMPTY_SUMMARY: DomesticMarketSummary = {
   sampleListings: [],
   soldOutListings: [],
   stockCounts: { onSale: 0, unknown: 0, soldOut: 0 },
+  markets: [],
+  sellers: [],
+  priceMarketCode: null,
+  priceMarketBasis: "UNRESOLVED",
   checkedAt: null,
 };
 
-export function summarizeDomesticMarket(records: PriceObservationRecord[]): DomesticMarketSummary {
+export function summarizeDomesticMarket(
+  records: PriceObservationRecord[],
+  options: MarketAggregationOptions = {},
+): DomesticMarketSummary {
   const verified = records.filter((r) => r.source === "DOMESTIC_SHOP");
-  if (verified.length > 0) return summarizeFrom(verified, "PRIMARY");
+  if (verified.length > 0) return summarizeFrom(verified, "PRIMARY", options);
   const candidates = records.filter((r) => r.source === "NAVER_SHOPPING");
-  if (candidates.length > 0) return summarizeFrom(candidates, "SECONDARY");
+  if (candidates.length > 0) return summarizeFrom(candidates, "SECONDARY", options);
   return EMPTY_SUMMARY;
 }
 
@@ -271,9 +520,13 @@ export interface DomesticMarketSplit {
 export function summarizeDomesticMarketSplit(
   exactRecords: PriceObservationRecord[],
   comparisonRecords: PriceObservationRecord[],
+  // GLOBAL-MARKET ② — 두 버킷 모두 같은 분석 시장을 기준으로 판단해야 한다.
+  // 버킷마다 다른 시장의 가격을 고르면 EXACT/COMPARISON 비교 자체가 무의미해진다.
+  options: MarketAggregationOptions = {},
 ): DomesticMarketSplit {
-  const exact = exactRecords.length > 0 ? summarizeFrom(exactRecords, "PRIMARY") : EMPTY_SUMMARY;
-  const comparison = comparisonRecords.length > 0 ? summarizeFrom(comparisonRecords, "SECONDARY") : EMPTY_SUMMARY;
+  const exact = exactRecords.length > 0 ? summarizeFrom(exactRecords, "PRIMARY", options) : EMPTY_SUMMARY;
+  const comparison =
+    comparisonRecords.length > 0 ? summarizeFrom(comparisonRecords, "SECONDARY", options) : EMPTY_SUMMARY;
   if (exact.sellerCount > 0) return { exact, comparison, resolved: exact, basis: "EXACT" };
   if (comparison.sellerCount > 0) return { exact, comparison, resolved: comparison, basis: "COMPARISON" };
   return { exact, comparison, resolved: EMPTY_SUMMARY, basis: "NONE" };

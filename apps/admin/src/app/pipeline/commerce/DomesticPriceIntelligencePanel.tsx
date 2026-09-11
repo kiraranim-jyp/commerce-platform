@@ -39,6 +39,55 @@ interface SoldOutListing {
   checkedAt: string;
 }
 
+/** GLOBAL-MARKET ②(CPO 지시, 2026-09-11) — 서버(summarizeFrom)가 이미 시장별로
+ * 나눠 낸 값을 그대로 옮기는 타입. 여기서 시장을 다시 판별하거나 합치지
+ * 않는다. 구버전 응답에는 없을 수 있어 optional로 둔다(화면이 죽지 않게). */
+interface SellerMarketPriceInfo {
+  marketCode: string | null;
+  marketCountry: string | null;
+  currency: string;
+  priceAmount: number | null;
+  priceKrw: number;
+  productUrl: string | null;
+  checkedAt: string;
+}
+
+interface SellerMarketGroupInfo {
+  sellerKey: string;
+  sellerLabel: string | null;
+  markets: SellerMarketPriceInfo[];
+}
+
+/** 시장 코드 안에 적힌 지역을 그대로 읽어 라벨/국기로 만든다. 코드에 없는
+ * 나라를 통화나 도메인으로 지어내지 않는다 — "en-int"처럼 국가가 아닌 코드는
+ * 국기 없이 🌐로 둔다. marketCode가 null이거나 ""면 "시장 미확인"이다. */
+function marketLabel(marketCode: string | null): { flag: string; text: string } {
+  const code = marketCode?.trim().toLowerCase() ?? "";
+  if (!code) return { flag: "❔", text: "시장 미확인" };
+  const region = /^(?:[a-z]{2}-)?([a-z]{2})$/.exec(code)?.[1];
+  const suffix = (code.includes("-") ? code.split("-").pop()! : code).toUpperCase();
+  if (!region) return { flag: "🌐", text: suffix };
+  const flag = String.fromCodePoint(...[...region.toUpperCase()].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
+  return { flag, text: suffix };
+}
+
+/** 관측된 통화와 금액을 그대로 보여준다 — 원화 환산값만 남기면 €75(DE)와
+ * €84(INT)가 서로 다른 시장의 가격이라는 사실이 화면에서 다시 사라진다.
+ * 원본 금액이 없으면(레거시 행) 저장된 원화값으로 폴백한다. */
+function formatMarketPrice(price: SellerMarketPriceInfo): string {
+  if (price.priceAmount == null) return `₩${price.priceKrw.toLocaleString()}`;
+  try {
+    return new Intl.NumberFormat("ko-KR", {
+      style: "currency",
+      currency: price.currency,
+      maximumFractionDigits: price.currency === "KRW" ? 0 : 2,
+    }).format(price.priceAmount);
+  } catch {
+    // Intl이 모르는 통화 코드면 지어내지 않고 코드를 그대로 붙인다.
+    return `${price.priceAmount.toLocaleString()} ${price.currency}`;
+  }
+}
+
 /** N-4.07 Sprint(대표님 지시: "출처 + 가격 + 확인시간을 보여준다") — "2시간 전"/
  * "3일 전" 형태. 절대시각은 옆의 오래된 가격 배지/전체 마지막확인 문구가 이미
  * 보여주므로, 리스팅 한 줄에는 상대시간만 짧게 붙인다. */
@@ -416,6 +465,11 @@ interface DomesticCompetition {
   /** MI-STOCK-CLARITY-1 — 위 가격 집계에 들어간 리스팅의 재고 3분류 개수.
    * 구버전 응답에는 없을 수 있어 optional로 둔다(화면이 죽지 않게). */
   stockCounts?: { onSale: number; unknown: number; soldOut: number };
+  /** GLOBAL-MARKET ② — 판매처별 시장 가격. 위 lowestPriceKrw/averagePriceKrw는
+   * 이 중 priceMarketCode 한 시장의 값이고, 나머지 시장은 여기에만 있다. */
+  sellers?: SellerMarketGroupInfo[];
+  priceMarketCode?: string | null;
+  priceMarketBasis?: "SINGLE" | "ANALYSIS" | "UNRESOLVED";
   checkedAt: string | null;
 }
 
@@ -1746,6 +1800,80 @@ export function DomesticPriceIntelligencePanel({
                 );
               })}
             </ul>
+            {/* GLOBAL-MARKET ②(CPO 지시, 2026-09-11) — 한 판매처가 여러 시장에
+                동시에 있을 때(실측: Bobo Choses는 /en-kr ₩162,000 · /en-de €75 ·
+                /en-int €84) 판매처를 먼저, 시장을 그 아래 둔다. 위 리스팅 목록은
+                판단 시장(priceMarketCode) 하나의 가격만 보여주므로, 나머지 시장
+                가격이 없어진 것처럼 보이지 않게 여기 그대로 남긴다. 시장 정보가
+                없는 기존 데이터(market_code 전부 null)에서는 보탤 정보가 없으므로
+                이 블록 자체가 나타나지 않는다 — 화면이 예전과 같다. */}
+            {(() => {
+              const sellers = domesticCompetition.sellers ?? [];
+              const hasMarketDetail = sellers.some(
+                (s) => s.markets.length > 1 || s.markets.some((m) => m.marketCode != null),
+              );
+              if (!hasMarketDetail) return null;
+              return (
+                <div className="mt-1.5 border-t border-border pt-1.5">
+                  <p className="mb-1 text-[10px] text-text-tertiary">판매처별 시장 가격 · 시장끼리 합산하지 않습니다</p>
+                  <ul className="space-y-1">
+                    {sellers.map((seller) => (
+                      <li key={seller.sellerKey}>
+                        <p className="text-text-primary">{seller.sellerLabel ?? "알 수 없음"}</p>
+                        <ul className="ml-2 space-y-0.5">
+                          {seller.markets.map((market) => {
+                            const label = marketLabel(market.marketCode);
+                            const isJudgingMarket =
+                              (domesticCompetition.priceMarketCode ?? null) === market.marketCode;
+                            return (
+                              <li
+                                key={market.marketCode ?? "unknown"}
+                                className="flex items-center justify-between text-text-secondary"
+                              >
+                                <span className="flex items-center gap-1">
+                                  <span>
+                                    {label.flag} {label.text}
+                                  </span>
+                                  {/* 판단 시장만 명시한다 — 나머지는 보여주되 국내
+                                      판단에 쓰이지 않았다는 뜻이다. */}
+                                  {isJudgingMarket && domesticCompetition.priceMarketBasis === "ANALYSIS" && (
+                                    <span className="rounded bg-success-soft px-1 py-0.5 text-[9px] font-medium text-success">
+                                      국내 판단 기준
+                                    </span>
+                                  )}
+                                  <span className="text-[10px] text-text-tertiary">
+                                    · 기준 국가 {market.marketCountry ?? "미확인"}
+                                  </span>
+                                </span>
+                                {market.productUrl ? (
+                                  <a
+                                    href={market.productUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-text-primary underline"
+                                  >
+                                    {formatMarketPrice(market)}
+                                  </a>
+                                ) : (
+                                  <span className="text-text-primary">{formatMarketPrice(market)}</span>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </li>
+                    ))}
+                  </ul>
+                  {/* 시장이 둘 이상인데 무엇이 이 분석의 시장인지 확정하지 못한
+                      경우. 아무 시장이나 골라 최저가라고 말하지 않는다. */}
+                  {domesticCompetition.priceMarketBasis === "UNRESOLVED" && (
+                    <p className="mt-1 rounded-md bg-warning-soft px-2 py-1 text-[10px] font-medium text-warning">
+                      시장이 여러 개라 국내 기준 가격을 확정하지 못했습니다 — 위 최저/평균가는 비워 둡니다.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
             {domesticCompetition.soldOutListings.length > 0 && (
               <ul className="mt-1.5 space-y-0.5 border-t border-border pt-1.5">
                 {domesticCompetition.soldOutListings.map((listing, i) => (
