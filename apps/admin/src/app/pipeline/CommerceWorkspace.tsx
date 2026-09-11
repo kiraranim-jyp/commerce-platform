@@ -67,6 +67,9 @@ import { computeChecklistReadiness } from "./commerce/readiness";
 import { buildPriorityItems, resolveRegistrationReadinessState } from "./commerce/RegistrationStatusBanner";
 import { RegistrationHistoryPanel } from "./commerce/RegistrationHistoryPanel";
 import { WorkflowPanel } from "./commerce/WorkflowPanel";
+import { StageBody } from "./commerce/StageBody";
+import { buildRegistrationChannels } from "./commerce/registration-channels";
+import { resolveStageFocus, type WorkSurface } from "./commerce/stage-focus";
 import {
   MARKET_SIGNAL_NOT_STARTED,
   resolveWorkflow,
@@ -1152,6 +1155,39 @@ export function CommerceWorkspace({
     setTab(target);
   }
 
+  /**
+   * UX 2.2(CEO 지시, 2026-09-11) — 상단 Flow의 현재 단계가 본문의 주인공을 정한다.
+   *
+   * 여기서 단계를 다시 판정하지 않는다(workflow.currentStepKey 그대로) — 무게를
+   * 정하는 규칙표도 stage-focus.ts 한 곳에 있다. 이 컴포넌트가 하는 일은
+   * "지금 어느 작업면을 보고 있는가"를 얹어주는 것뿐이다.
+   */
+  const workSurface: WorkSurface = tab === "source" ? "PRODUCT" : tab === "content" ? "CONTENT" : "CHANNEL";
+  /** 끝난 ②를 눌러(또는 요약 카드의 [판단 상세보기]) 판단을 펼쳐 둔 상태.
+   * 단계를 ②로 되돌리는 것이 아니다 — 현재 단계는 그대로고 MI만 펼친다. */
+  const [marketDetailOpen, setMarketDetailOpen] = useState(false);
+  const stageFocus = resolveStageFocus({
+    stage: workflow.currentStepKey,
+    surface: workSurface,
+    marketDetailOpen,
+  });
+
+  /** 채널 목록은 한 번만 만든다 — 오른쪽 Action Center와 ④ 본문이 같은 배열을
+   * 본다(둘이 각자 만들면 준비 상태가 두 벌 계산되어 서로 다른 말을 한다). */
+  const registrationChannels = buildRegistrationChannels({
+    order: PLATFORM_ORDER,
+    labelOf: (id) => PLATFORM_ADAPTERS[id].label,
+    isComingSoon: (id) => SOON_PLATFORMS.has(id),
+    isPreviewOnly: (id) => id === "smartstore",
+    readiness: mergedReadiness,
+  });
+
+  /** 판단을 펼쳐 본다 — 판단 카드는 좁은 Flow 줄에 들어가지 않으므로 본문에서 연다. */
+  function openMarketDetail() {
+    setMarketDetailOpen(true);
+    focusMarketVerdict();
+  }
+
   /** Sprint A-2(Auto Fill) — register 라우트가 등록 시점에만 돌리던
    * buildCoupangCompliance()를 여기서도 그대로 호출해서 "이미 자동으로 채워질
    * 값"을 등록 전에 미리 보여준다. 별도 매칭 로직을 새로 만들지 않는다 — 등록
@@ -1839,7 +1875,17 @@ export function CommerceWorkspace({
           그와 별개로 위쪽엔 시스템 작업 바가, 아래쪽 MI 패널 안엔 또 다른
           5단계 목록이 각자 돌고 있었다. 이제 셋은 하나의 상태(workflow)에서
           나오고, 큰 단계는 언제나 정확히 하나만 활성이다. */}
-      <WorkflowPanel workflow={workflow} onNavigate={navigateWorkflow} />
+      {/* UX 2.2 — 본문이 현재 단계의 항목을 작업면으로 이미 갖고 있으므로
+          여기서 같은 체크리스트를 반복하지 않는다(variant="compact"). 끝난
+          단계를 누르면 결과만 보여준다 — 그 단계로 되돌아가지 않는다. */}
+      <WorkflowPanel
+        workflow={workflow}
+        onNavigate={navigateWorkflow}
+        variant="compact"
+        onOpenStageDetail={(key) => {
+          if (key === "MARKET_JUDGING") openMarketDetail();
+        }}
+      />
 
       {isEditingDraftField && (
         <div className="flex w-fit items-center gap-2 rounded-md border border-warning/30 bg-warning-soft px-3 py-1.5 text-xs font-medium text-warning">
@@ -1910,188 +1956,211 @@ export function CommerceWorkspace({
         </span>
       </div>
 
-      {/* MI-FLOW-2(CEO 지시, 2026-09-11) — 본문 폭을 통째로 쓰던 "등록 전 확인"
-          블록을 오른쪽 Action Center로 옮겼다.
+      {/* ── UX 2.2(CEO 지시, 2026-09-11) — 하나의 작업 화면 ────────────────
+          왼쪽 기둥은 "지금 단계가 시키는 일" 하나이고, 오른쪽 기둥은 화면 전체에
+          단 하나뿐인 Action Center다. 탭 분기 안에 기둥을 따로 만들지 않는다 —
+          탭마다 오른쪽 카드가 새로 생기던 것이 CEO가 지적한 "우측 Action 카드가
+          여러 곳에서 반복된다"의 실체였다. lg 미만에서는 1열로 접히고 order
+          유틸리티로 Action Center가 먼저 온다(결론과 행동이 스크롤 아래에
+          묻히지 않도록). */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="order-2 min-w-0 space-y-4 lg:order-1">
+          {/* ── MI는 탭 분기 **밖**에서 한 번만 마운트된다 ─────────────────
+              UX-1E(CEO 지시, 2026-09-05) — 셀러의 첫 질문은 "이 해외 상품을
+              국내에 팔아도 되나?"다. 판단이 항상 맨 위에 온다.
 
-          이 블록은 REGISTRATION-UX-1에서 만든 좋은 정보였지만, 판단 카드 위에
-          가로로 누워 있어서 화면을 처음 열면 "🟡 등록 전 확인 필요"가 먼저
-          눈에 들어왔다 — 아직 팔지 말지도 정하지 않은 셀러에게 등록 준비 상태를
-          먼저 보여준 셈이다. 항목·판정·클릭 이동은 하나도 바뀌지 않는다
-          (mergedReadiness/commonInfoLevel/priceLevel 그대로) — 놓이는 자리만
-          본문 위에서 오른쪽 기둥으로 옮긴다. 함께 있던 채널별 "…에서 확인하기"
-          링크는 Action Center의 등록 버튼이 그대로 이어받는다. */}
+              UX 2.2에서 이 자리를 상품정보 탭 밖으로 옮긴 이유는 배치가 아니라
+              **정확성**이다. 예전에는 이 패널이 상품정보 탭에서만 마운트돼서,
+              쿠팡 탭이 sessionStorage로 복원된 세션에서는 시장 분석이 시작조차
+              되지 않았다 — 상단 단계가 탭에 따라 ②로 되돌아갔다. 이제 패널은
+              어느 탭에서도 계속 마운트된 채로 있고, 단계가 정한 무게
+              (stage-focus.ts)로 전체/요약/숨김만 바뀐다. 계산·서버 호출·판정은
+              하나도 달라지지 않는다.
 
-      {tab === "source" && (
-        /* MI-FLOW-2(CEO 지시, 2026-09-11) — 상품정보 화면을 두 기둥으로 나눈다.
-           왼쪽은 "판단 → 근거", 오른쪽은 "지금 할 수 있는 일"(Action Center).
-           PlatformPreview가 이미 쓰고 있는 것과 같은 grid 패턴을 그대로 쓴다 —
-           새 레이아웃 언어를 만들지 않는다. lg 미만에서는 1열로 접히고,
-           order 유틸리티로 Action Center가 먼저 오게 한다(모바일에서 결론과
-           행동이 스크롤 아래에 묻히지 않도록). */
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
-          <div className="order-2 space-y-4 lg:order-1">
-            {/* UX-1E(CEO 지시, 2026-09-05) — 셀러의 첫 질문은 "이 해외 상품을
-                국내에 팔아도 되나?"다. 판단이 항상 맨 위에 온다.
-                MI-UI-1 — snapshotId는 최초 스냅샷 저장 응답이 와야 채워진다.
-                그때까지 자리를 미리 잡아두되 없는 값을 지어내지 않는다. */}
-            {snapshotId ? (
-              <DomesticPriceIntelligencePanel
-                snapshotId={snapshotId}
-                onPriceLevelChange={handlePriceLevelChange}
-                onSellerVerdictChange={handleSellerVerdictChange}
-                onMarketSignalChange={handleMarketSignalChange}
-                onRequestPriceReview={handleRequestPriceReview}
-                autoChecking={priceCheckPriming}
-              />
-            ) : (
-              <MarketIntelligenceSkeleton />
-            )}
-
-            {/* MI-FLOW-2 — 판단 다음은 근거다: 한국 시장 → 해외 시장 → 이미지 →
-                Source Data. 기존에는 이미지와 Source Data가 판단과 가격비교
-                사이에 끼어 있어서, 같은 질문("얼마에 팔리나")의 근거가 화면
-                두 곳으로 쪼개져 있었다. 렌더 순서만 바꾼다 — 컴포넌트도
-                데이터도 그대로다.
-                국내(한국 시장)를 해외보다 먼저 둔다 — 판매 판단이 한국 기준이라
-                근거도 한국부터 읽혀야 한다. */}
-            <div id={PRICE_COMPARISON_ANCHOR_ID} className="scroll-mt-4 space-y-4">
-              <DomesticShopSearch
-                title={product.title.value}
-                brand={product.brand.value}
-                sourceUrl={product.sourceUrl}
-                sku={product.sku.value || undefined}
-                description={product.description.value || undefined}
-              />
-              <ComparisonShopSearch
-                title={product.title.value}
-                brand={product.brand.value}
-                sourceUrl={product.sourceUrl}
-                sku={product.sku.value || undefined}
-                description={product.description.value || undefined}
-                onRequestPriceReview={handleRequestPriceReview}
-              />
-            </div>
-
-            <section className="rounded-lg border border-border bg-surface p-4 shadow-subtle">
-              <p className="mb-3 text-sm font-medium text-text-primary">이미지</p>
-              <ImageInlineEditor
-                product={product}
-                items={items}
-                thumbnails={thumbnails}
-                representativeId={representativeId}
-                onPreview={onPreviewImage}
-                onSetRepresentative={onSetRepresentative}
-                onToggleGalleryUsage={onToggleGalleryUsage}
-                onToggleDescriptionUsage={onToggleDescriptionUsage}
-                onMoveImage={onMoveImage}
-                onAddImage={onAddImage}
-                onRemoveImage={onRemoveImage}
-                addingImage={addingImage}
-              />
-            </section>
-            <SourceDataView
-              product={product}
-              onUpdateField={updateField}
-              onUpdatePrice={updatePrice}
-              onUpdateOptions={updateOptions}
-              exchangeRates={exchangeRates}
+              MI-UI-1 — snapshotId는 최초 스냅샷 저장 응답이 와야 채워진다.
+              그때까지 자리를 미리 잡아두되 없는 값을 지어내지 않는다. */}
+          {snapshotId ? (
+            <DomesticPriceIntelligencePanel
+              snapshotId={snapshotId}
+              onPriceLevelChange={handlePriceLevelChange}
+              onSellerVerdictChange={handleSellerVerdictChange}
+              onMarketSignalChange={handleMarketSignalChange}
+              onRequestPriceReview={handleRequestPriceReview}
+              autoChecking={priceCheckPriming}
+              presentation={stageFocus.mi}
+              onOpenDetail={openMarketDetail}
+              // 되돌아갈 길은 "펼쳐 둔 상태"일 때만 준다 — ②가 현재 단계일 때
+              // MI는 접을 수 있는 곁가지가 아니라 그 단계의 일 자체다.
+              onCloseDetail={
+                marketDetailOpen && workflow.currentStepKey !== "MARKET_JUDGING"
+                  ? () => setMarketDetailOpen(false)
+                  : undefined
+              }
             />
-            <MissingFieldsBulkPanel product={product} onBulkApply={bulkSetFieldReference} />
-            {snapshotId && <AuditLogPanel snapshotId={snapshotId} />}
-            <BacklogPanel />
-          </div>
+          ) : (
+            stageFocus.mi !== "HIDDEN" && <MarketIntelligenceSkeleton />
+          )}
 
-          <div className="order-1 lg:order-2">
-            <ActionCenter
-              verdict={sellVerdict ? FINAL_VERDICT_COPY[sellVerdict] : null}
-              verdictPending={!verdictReported}
-              checklist={actionChecklist}
-              channelOrder={PLATFORM_ORDER}
-              channelLabelOf={(id) => PLATFORM_ADAPTERS[id].label}
-              isComingSoon={(id) => SOON_PLATFORMS.has(id)}
-              isPreviewOnly={(id) => id === "smartstore"}
-              readiness={mergedReadiness}
-              onOpenVerdict={focusMarketVerdict}
+          {tab === "source" && (
+            <StageBody
+              focus={stageFocus}
+              workflow={workflow}
+              channels={registrationChannels}
+              categoryVerified={Object.values(categoryMappings).some(isVerifiedCategorySelected)}
               onGoToChannel={setTab}
+              /* 국내(한국 시장)를 해외보다 먼저 둔다 — 판매 판단이 한국 기준이라
+                 근거도 한국부터 읽혀야 한다. 컴포넌트도 데이터도 그대로다. */
+              marketEvidence={
+                <div id={PRICE_COMPARISON_ANCHOR_ID} className="scroll-mt-4 space-y-4">
+                  <DomesticShopSearch
+                    title={product.title.value}
+                    brand={product.brand.value}
+                    sourceUrl={product.sourceUrl}
+                    sku={product.sku.value || undefined}
+                    description={product.description.value || undefined}
+                  />
+                  <ComparisonShopSearch
+                    title={product.title.value}
+                    brand={product.brand.value}
+                    sourceUrl={product.sourceUrl}
+                    sku={product.sku.value || undefined}
+                    description={product.description.value || undefined}
+                    onRequestPriceReview={handleRequestPriceReview}
+                  />
+                </div>
+              }
+              surfaces={{
+                source: (
+                  <SourceDataView
+                    product={product}
+                    onUpdateField={updateField}
+                    onUpdatePrice={updatePrice}
+                    onUpdateOptions={updateOptions}
+                    exchangeRates={exchangeRates}
+                  />
+                ),
+                images: (
+                  <ImageInlineEditor
+                    product={product}
+                    items={items}
+                    thumbnails={thumbnails}
+                    representativeId={representativeId}
+                    onPreview={onPreviewImage}
+                    onSetRepresentative={onSetRepresentative}
+                    onToggleGalleryUsage={onToggleGalleryUsage}
+                    onToggleDescriptionUsage={onToggleDescriptionUsage}
+                    onMoveImage={onMoveImage}
+                    onAddImage={onAddImage}
+                    onRemoveImage={onRemoveImage}
+                    addingImage={addingImage}
+                  />
+                ),
+                required: <MissingFieldsBulkPanel product={product} onBulkApply={bulkSetFieldReference} />,
+              }}
+              archive={
+                <>
+                  {snapshotId && <AuditLogPanel snapshotId={snapshotId} />}
+                  <BacklogPanel />
+                </>
+              }
             />
-          </div>
+          )}
+
+          {tab === "content" && (
+            <AIContentPanel
+              product={product}
+              onGenerate={generateContent}
+              onUpdateField={updateField}
+              onUpdateKeywords={updateKeywords}
+            />
+          )}
+
+          {listing && tab !== "source" && tab !== "content" && (
+            <PlatformPreview
+              product={product}
+              listing={listing}
+              categoryCandidates={categoryCandidates}
+              listingStatus={effectiveListingStatus}
+              listingResult={listingResults[tab]}
+              naverValidation={smartStoreValidationEligible ? smartStoreValidation : null}
+              naverValidationLoading={smartStoreValidationEligible ? smartStoreValidationLoading : false}
+              naverValidationError={smartStoreValidationEligible ? smartStoreValidationError : null}
+              onRetryNaverValidation={retrySmartStoreValidation}
+              naverResolved={smartStoreValidationEligible ? smartStoreResolved : undefined}
+              compliancePreview={complianceReportPreview}
+              payloadPreview={payloadPreviewEligible ? payloadPreview : null}
+              payloadPreviewUnavailableReason={payloadPreviewEligible ? payloadPreviewUnavailableReason : null}
+              onReadinessChange={(state, priorityItems) => handleReadinessChange(tab, state, priorityItems)}
+              onUpdateField={updateField}
+              onUpdateSalePriceKrw={updateSalePriceKrw}
+              onUpdateOriginalPrice={updateOriginalPrice}
+              onUpdatePriceBreakdown={updatePriceBreakdown}
+              onUpdateCustomsCost={updateCustomsCost}
+              exchangeRates={exchangeRates}
+              exchangeRatesLoading={exchangeRatesLoading}
+              onRefreshExchangeRates={fetchExchangeRates}
+              onSelectCategory={(candidate) => selectCategory(tab, candidate)}
+              onFixTextField={updateField}
+              onSetFieldReference={setFieldReference}
+              onUpdateChildCertification={updateChildCertification}
+              onFixNumberField={updateNumberField}
+              onUpdateOptions={updateOptions}
+              onUpdateVariant={updateVariant}
+              onOpenListingModal={openListingModal}
+              onRetryListing={retryListing}
+              onFetchCoupangCategory={tab === "coupang" ? fetchCoupangCategoryRecommendation : undefined}
+              coupangCategoryFetching={coupangCategoryFetching}
+              naverCategoryLoading={naverCategoryLoading}
+              coupangSearchCandidates={tab === "coupang" ? coupangSearchCandidates : undefined}
+              coupangSearchAttempted={coupangSearchAttempted}
+              coupangRecommendAttempted={coupangRecommendAttempted}
+              categoryTraceLog={categoryTraceLog}
+              coupangResolverDecision={tab === "coupang" ? coupangResolverDecision : null}
+              categoryMeta={tab === "coupang" ? categoryMeta : null}
+              categoryMetaLoading={tab === "coupang" && categoryMetaLoading}
+              categoryMetaError={tab === "coupang" ? categoryMetaError : null}
+              categoryFieldOverrides={product.categoryFieldOverrides}
+              onUpdateCategoryFieldOverride={updateCategoryFieldOverride}
+              resolvedCategoryFields={resolvedCategoryFields}
+              productOptionGroups={product.optionGroups}
+              settingsMissing={tab === "coupang" ? (coupangSettingsMissing ?? undefined) : undefined}
+              settingsRecommended={tab === "coupang" ? (coupangSettingsRecommended ?? undefined) : undefined}
+              developerMode={developerMode}
+              jobKey={jobKey}
+            />
+          )}
+
+          {/* N-3.38 — 플랫폼 탭에는 그 플랫폼 이력만 보인다(예: SmartStore 탭에
+              Coupang 등록 이력이 섞여 보이던 문제 수정). source/content 탭은 특정
+              플랫폼이 아니라 전체를 보여준다(기존 동작 유지). */}
+          <RegistrationHistoryPanel
+            history={
+              tab !== "source" && tab !== "content"
+                ? registrationHistory.filter((entry) => entry.platform === tab)
+                : registrationHistory
+            }
+          />
         </div>
-      )}
 
-      {tab === "content" && (
-        <AIContentPanel
-          product={product}
-          onGenerate={generateContent}
-          onUpdateField={updateField}
-          onUpdateKeywords={updateKeywords}
-        />
-      )}
-
-      {listing && tab !== "source" && tab !== "content" && (
-        <PlatformPreview
-          product={product}
-          listing={listing}
-          categoryCandidates={categoryCandidates}
-          listingStatus={effectiveListingStatus}
-          listingResult={listingResults[tab]}
-          naverValidation={smartStoreValidationEligible ? smartStoreValidation : null}
-          naverValidationLoading={smartStoreValidationEligible ? smartStoreValidationLoading : false}
-          naverValidationError={smartStoreValidationEligible ? smartStoreValidationError : null}
-          onRetryNaverValidation={retrySmartStoreValidation}
-          naverResolved={smartStoreValidationEligible ? smartStoreResolved : undefined}
-          compliancePreview={complianceReportPreview}
-          payloadPreview={payloadPreviewEligible ? payloadPreview : null}
-          payloadPreviewUnavailableReason={payloadPreviewEligible ? payloadPreviewUnavailableReason : null}
-          onReadinessChange={(state, priorityItems) => handleReadinessChange(tab, state, priorityItems)}
-          onUpdateField={updateField}
-          onUpdateSalePriceKrw={updateSalePriceKrw}
-          onUpdateOriginalPrice={updateOriginalPrice}
-          onUpdatePriceBreakdown={updatePriceBreakdown}
-          onUpdateCustomsCost={updateCustomsCost}
-          exchangeRates={exchangeRates}
-          exchangeRatesLoading={exchangeRatesLoading}
-          onRefreshExchangeRates={fetchExchangeRates}
-          onSelectCategory={(candidate) => selectCategory(tab, candidate)}
-          onFixTextField={updateField}
-          onSetFieldReference={setFieldReference}
-          onUpdateChildCertification={updateChildCertification}
-          onFixNumberField={updateNumberField}
-          onUpdateOptions={updateOptions}
-          onUpdateVariant={updateVariant}
-          onOpenListingModal={openListingModal}
-          onRetryListing={retryListing}
-          onFetchCoupangCategory={tab === "coupang" ? fetchCoupangCategoryRecommendation : undefined}
-          coupangCategoryFetching={coupangCategoryFetching}
-          naverCategoryLoading={naverCategoryLoading}
-          coupangSearchCandidates={tab === "coupang" ? coupangSearchCandidates : undefined}
-          coupangSearchAttempted={coupangSearchAttempted}
-          coupangRecommendAttempted={coupangRecommendAttempted}
-          categoryTraceLog={categoryTraceLog}
-          coupangResolverDecision={tab === "coupang" ? coupangResolverDecision : null}
-          categoryMeta={tab === "coupang" ? categoryMeta : null}
-          categoryMetaLoading={tab === "coupang" && categoryMetaLoading}
-          categoryMetaError={tab === "coupang" ? categoryMetaError : null}
-          categoryFieldOverrides={product.categoryFieldOverrides}
-          onUpdateCategoryFieldOverride={updateCategoryFieldOverride}
-          resolvedCategoryFields={resolvedCategoryFields}
-          productOptionGroups={product.optionGroups}
-          settingsMissing={tab === "coupang" ? (coupangSettingsMissing ?? undefined) : undefined}
-          settingsRecommended={tab === "coupang" ? (coupangSettingsRecommended ?? undefined) : undefined}
-          developerMode={developerMode}
-          jobKey={jobKey}
-        />
-      )}
-
-      {/* N-3.38 — 플랫폼 탭에는 그 플랫폼 이력만 보인다(예: SmartStore 탭에
-          Coupang 등록 이력이 섞여 보이던 문제 수정). source/content 탭은 특정
-          플랫폼이 아니라 전체를 보여준다(기존 동작 유지). */}
-      <RegistrationHistoryPanel
-        history={
-          tab !== "source" && tab !== "content"
-            ? registrationHistory.filter((entry) => entry.platform === tab)
-            : registrationHistory
-        }
-      />
+        {/* ── 화면에 단 하나뿐인 Action Center ────────────────────────────
+            탭 분기 밖에 있으므로 어느 탭에서도 이것 하나다. 본문이 이미 갖고
+            있는 블록(③의 체크리스트 / ④·채널 화면의 등록 행동)은 여기서 한
+            줄로 접힌다 — 같은 목록을 두 번 두지 않는다(stage-focus.ts). */}
+        <div className="order-1 lg:order-2">
+          <ActionCenter
+            verdict={sellVerdict ? FINAL_VERDICT_COPY[sellVerdict] : null}
+            verdictPending={!verdictReported}
+            checklist={actionChecklist}
+            checklistMode={stageFocus.actionCenter.checklist}
+            channels={registrationChannels}
+            channelsMode={stageFocus.actionCenter.channels}
+            currentStageLabel={workflow.current.label}
+            currentTodo={workflow.currentSubStep?.label ?? null}
+            onOpenVerdict={openMarketDetail}
+            onGoToChannel={setTab}
+          />
+        </div>
+      </div>
 
       {confirmingPlatform && listing && (
         <ListingConfirmationModal

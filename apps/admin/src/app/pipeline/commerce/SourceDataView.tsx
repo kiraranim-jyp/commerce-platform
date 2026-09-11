@@ -31,14 +31,17 @@ export function SourceDataView({
 }) {
   const krw = convertToKrw(product.price.value.amount, product.price.value.currency, exchangeRates?.rates);
   return (
-    <section className="rounded-lg border border-border p-4 text-sm">
-      <h3 className="text-base font-medium">Source Data</h3>
-      <p className="mt-1 text-xs text-text-secondary">
+    // UX 2.2(CEO 지시, 2026-09-11) — 이 편집기는 이제 자기 카드 껍데기를 갖지
+    // 않는다. 두 자리에서 쓰이는데(③ 등록 준비의 펼친 작업면 / 그 외 단계의
+    // "Source Data ▾" 접힘 섹션) 둘 다 이미 제목과 테두리를 갖고 있어서,
+    // 여기서 또 두르면 카드 안에 같은 제목의 카드가 겹쳐 보인다.
+    <div className="text-sm">
+      <p className="text-xs text-text-secondary">
         원본 사이트에서 추출한 상품 정보입니다. 값을 직접 수정할 수 있으며, 수정한 필드는
         &ldquo;수정됨&rdquo;으로 표시됩니다.
       </p>
 
-      <div className="mt-4 overflow-x-auto">
+      <div className="mt-3 overflow-x-auto">
         <table className="w-full border-collapse text-left">
           <thead>
             <tr className="border-b border-border text-xs text-text-secondary">
@@ -133,7 +136,7 @@ export function SourceDataView({
           </tbody>
         </table>
       </div>
-    </section>
+    </div>
   );
 }
 

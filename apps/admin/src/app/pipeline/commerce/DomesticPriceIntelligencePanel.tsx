@@ -30,10 +30,12 @@ import {
   splitByTargetMarket,
   type TargetMarket,
 } from "./market-target";
-import { buildHeadlineNumbers } from "./mi-headline";
+import { buildHeadlineNumbers, type HeadlineNumber } from "./mi-headline";
 import { miEmptyState } from "./mi-empty-state";
 // UX 2.1 — 이 패널의 내부 진행 상태를 하나의 작업 Flow(② 시장 판단)로 올려보낸다.
 import type { MarketSignal as WorkflowMarketSignal } from "./workflow";
+// UX 2.2 — 이 패널을 어느 무게로 그릴지는 화면이 아니라 단계가 정한다.
+import type { MiPresentation } from "./stage-focus";
 
 interface SampleListing {
   mallName: string | null;
@@ -886,6 +888,59 @@ const SELLER_FACING_VERDICT_STYLE: Record<SellerFacingVerdict["code"], string> =
   NOT_RECOMMENDED: "border-border bg-error-soft text-error",
 };
 
+/** UX 2.2 — 요약 카드는 박스 색 대신 글자 색만 쓴다(오른쪽 Action Center의
+ * 판단 줄과 같은 위계). 판정 3단계는 위 STYLE과 같은 값에서 나온다 — 색이
+ * 서로 다른 판정을 말하지 않도록 키를 공유한다. */
+const SELLER_FACING_VERDICT_TEXT: Record<SellerFacingVerdict["code"], string> = {
+  RECOMMENDED: "text-success",
+  CONDITIONAL: "text-warning",
+  NOT_RECOMMENDED: "text-error",
+};
+
+/**
+ * UX 2.2(CEO 지시, 2026-09-11) — ③④에서 MI가 앉는 자리.
+ *
+ * 전체 화면과 같은 카드 골격(border/surface)을 쓰되 높이를 한 줄로 줄인다.
+ * 자리를 아예 없애지 않는 이유: 등록 준비/등록 단계에서도 셀러는 "지금 이
+ * 상품을 팔아도 된다고 했었나?"를 계속 확인한다 — 결론은 남고 근거만 접힌다.
+ */
+function MiSummaryShell({
+  children,
+  onOpenDetail,
+}: {
+  children: React.ReactNode;
+  onOpenDetail?: () => void;
+}) {
+  return (
+    <section
+      id={MARKET_VERDICT_ANCHOR_ID}
+      className="flex scroll-mt-4 flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg border border-border bg-surface px-4 py-2.5 shadow-subtle"
+    >
+      <div className="flex min-w-0 flex-col">{children}</div>
+      {onOpenDetail && (
+        <button
+          type="button"
+          onClick={onOpenDetail}
+          className="shrink-0 rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-primary hover:bg-primary-soft"
+        >
+          판단 상세보기 →
+        </button>
+      )}
+    </section>
+  );
+}
+
+/** 요약 한 줄에 들어가는 숫자 한 칸. 값이 없으면 빈 상태 칩을 그대로 쓴다 —
+ * 요약이라고 해서 "없음"을 "0"이나 "—"로 바꾸지 않는다. */
+function MiSummaryNumber({ number }: { number: HeadlineNumber | undefined }) {
+  if (!number) return null;
+  return (
+    <span className="text-xs text-text-secondary">
+      · {number.label} {number.value ?? <span className="text-text-tertiary">{number.empty?.chip}</span>}
+    </span>
+  );
+}
+
 /** P-18 Sprint 6(CPO 지시, 2026-09-01) — 상단 4칸 요약 카드 한 칸. 값이 없으면
  * (관측치 없음) 지어내지 않고 "—"만 보여준다. */
 function SummaryStat({
@@ -933,6 +988,9 @@ export function DomesticPriceIntelligencePanel({
   onMarketSignalChange,
   onRequestPriceReview,
   autoChecking,
+  presentation = "FULL",
+  onOpenDetail,
+  onCloseDetail,
 }: {
   snapshotId: string;
   /** P-32 — "팔 만한가?"의 답(판매 판정)을 상위로 보고한다. CommerceWorkspace가
@@ -962,6 +1020,27 @@ export function DomesticPriceIntelligencePanel({
    * 읽는다 — 컴포넌트 mount 자체를 트리거로 쓰지 않는다는 원칙 그대로,
    * 이 패널은 그 신호를 그냥 전달받아 반응만 한다. */
   autoChecking?: boolean;
+  /**
+   * UX 2.2(CEO 지시, 2026-09-11) — 이 패널의 **표현 무게**. 데이터도, 계산도,
+   * 서버 호출도 전혀 달라지지 않는다(아래 useState/useEffect는 어느 값이든
+   * 똑같이 돈다) — 같은 결과를 통째로 펼칠지 한 줄로 접을지만 정한다.
+   *
+   *   FULL    ② 시장 판단이 현재 단계 — 화면의 주인공.
+   *   SUMMARY ③④ — 결론 한 줄 + [판단 상세보기].
+   *   HIDDEN  아직 판단할 근거 자체가 없는 구간. 계산은 그대로 돌고 화면에만 없다.
+   *
+   * ── HIDDEN이 return null인 것이 중요한 이유 ─────────────────────────────
+   * 이 패널은 이제 탭 분기 밖(CommerceWorkspace 껍데기)에서 **항상** 마운트된다.
+   * 예전처럼 상품정보 탭 안에서만 마운트되면, 쿠팡 탭이 sessionStorage로 복원된
+   * 세션에서는 패널이 아예 뜨지 않아 ② 시장 판단이 영원히 "시작 안 함"에
+   * 머물렀다 — 상단 단계가 탭에 따라 뒤로 돌아가는 실제 버그였다. 화면에서
+   * 숨길 때도 언마운트하지 않는 이유가 그것이다.
+   */
+  presentation?: MiPresentation;
+  /** 요약 카드의 [판단 상세보기]. 단계를 되돌리지 않고 판단만 펼친다. */
+  onOpenDetail?: () => void;
+  /** 펼쳐 둔 판단을 다시 접는다. 상세보기로 펼친 경우에만 넘어온다. */
+  onCloseDetail?: () => void;
 }) {
   const [data, setData] = useState<PriceHistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1234,7 +1313,23 @@ export function DomesticPriceIntelligencePanel({
   // 셀러는 두 진행 표시가 다른 작업인 줄 알고 다시 읽는다. 여기는 곧 들어올
   // 결과의 자리만 잡아둔다 — 화면이 갑자기 튀어나오지 않게 하려던 MI-UI-1의
   // 목적은 그대로 지켜진다.
+  //
+  // UX 2.2 — 아래 세 갈래(진행 중 / 못 불러옴 / 결과)는 표현 무게마다 모양이
+  // 다르다. 판정은 하나도 달라지지 않는다 — 같은 사실을 한 줄로 줄일 뿐이다.
+  // HIDDEN은 훅이 전부 돈 뒤에 화면만 비운다(위 presentation 주석 참고).
+  if (presentation === "HIDDEN") return null;
+
   if (autoChecking || loading || justCompleted) {
+    if (presentation === "SUMMARY") {
+      return (
+        <MiSummaryShell>
+          <span className="text-sm font-semibold text-text-secondary">⏳ 시장 분석 중</span>
+          <span className="text-[11px] text-text-tertiary">
+            {KR_TARGET_MARKET.flag} {KR_TARGET_MARKET.label} 시장 기준으로 판단하고 있습니다
+          </span>
+        </MiSummaryShell>
+      );
+    }
     // MarketIntelligenceSkeleton이 CollapsibleSection까지 포함한다 — 여기서 또
     // 감싸면 "Market Intelligence" 헤더가 두 겹으로 겹친다.
     return (
@@ -1251,6 +1346,14 @@ export function DomesticPriceIntelligencePanel({
   // 건지 아직 안 한 건지" 알 수 없었다. 실패는 실패라고 말한다 — 없는 숫자를
   // 만들지 않는다는 UX-3 원칙과 같은 이유다.
   if (!data) {
+    if (presentation === "SUMMARY") {
+      return (
+        <MiSummaryShell>
+          <span className="text-sm font-semibold text-text-secondary">⚠ 시장 분석을 불러오지 못했습니다</span>
+          <span className="text-[11px] text-text-tertiary">잠시 후 다시 시도해주세요 — 등록은 계속할 수 있습니다</span>
+        </MiSummaryShell>
+      );
+    }
     return (
       <CollapsibleSection title="Market Intelligence" defaultOpen>
         <p className="rounded-md border border-border bg-background px-3 py-2 text-xs text-text-secondary">
@@ -1357,9 +1460,55 @@ export function DomesticPriceIntelligencePanel({
   // 블록에서만 쓰던 표시용 값이라 함께 제거했다. domesticMarketSplit 자체는
   // 서버 계산 그대로 남아 있고 가격 판단에는 영향이 없다.
 
+  /**
+   * UX 2.2(CEO 지시, 2026-09-11) — ③④에서의 MI.
+   *
+   * "🟡 조건부 판매 · 한국 시장 ₩57,000 · 예상 마진 22.4% · [판단 상세보기]"
+   *
+   * 여기서 어떤 숫자도 새로 만들지 않는다 — 바로 위에서 전체 화면이 쓰는 것과
+   * **같은** headlineNumbers/sellerDecision을 골라 쓴다. 요약이 자기 계산을
+   * 갖게 되면 접었을 때와 펼쳤을 때 다른 숫자를 말하게 되고, 그건 이 프로젝트가
+   * 반복해서 겪은 "화면마다 다른 숫자" 버그와 정확히 같은 종류다.
+   * 값이 없으면 지어내지 않고 빈 상태 어휘(mi-empty-state.ts)를 그대로 쓴다.
+   */
+  if (presentation === "SUMMARY") {
+    const verdictCopy = hasAnyData ? FINAL_VERDICT_COPY[sellerDecision.finalVerdict] : null;
+    return (
+      <MiSummaryShell onOpenDetail={onOpenDetail}>
+        <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          {verdictCopy ? (
+            <span className={`text-sm font-bold ${SELLER_FACING_VERDICT_TEXT[sellerDecision.finalVerdict]}`}>
+              {verdictCopy.icon} {verdictCopy.title}
+            </span>
+          ) : (
+            // 근거가 하나도 없는 상태 — "비추천"이 아니다. 나쁘다고 말하지 않는다.
+            <span className="text-sm font-bold text-text-secondary">{miEmptyState("UNJUDGEABLE").chip}</span>
+          )}
+          <MiSummaryNumber number={headlineNumbers.find((n) => n.key === "targetMarketPrice")} />
+          <MiSummaryNumber number={headlineNumbers.find((n) => n.key === "estimatedMargin")} />
+        </span>
+        <span className="text-[11px] text-text-tertiary">
+          {KR_TARGET_MARKET.flag} {KR_TARGET_MARKET.label} 시장 기준 판단입니다 — 이 단계에서는 결론만 보여줍니다
+        </span>
+      </MiSummaryShell>
+    );
+  }
+
   return (
     <CollapsibleSection title="Market Intelligence" defaultOpen>
       <div className="space-y-2 text-xs">
+        {/* UX 2.2 — 요약에서 [판단 상세보기]로 펼친 경우에만 되돌아갈 길을 둔다.
+            ②가 현재 단계일 때는 이 버튼이 없다 — 그때 MI는 접을 수 있는 곁가지가
+            아니라 그 단계에서 해야 할 일 자체다. */}
+        {onCloseDetail && (
+          <button
+            type="button"
+            onClick={onCloseDetail}
+            className="rounded-md border border-border px-2 py-1 text-[11px] text-text-secondary hover:bg-background"
+          >
+            ▴ 판단 요약으로 접기
+          </button>
+        )}
         {/* MI-FLOW-2(CEO 지시, 2026-09-11) — 무엇을 기준으로 한 판단인지부터
             말한다. 이 한 줄이 없으면 아래 모든 숫자가 "어느 나라 얘기인지"
             모르는 값이 된다. */}

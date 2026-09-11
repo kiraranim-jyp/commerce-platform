@@ -656,9 +656,21 @@ export function PlatformPreview({
         : false;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+    // UX 2.2(CEO 지시, 2026-09-11) — 이 화면은 더 이상 자기 오른쪽 기둥을 갖지
+    // 않는다.
+    //
+    // 예전에는 채널 탭이 [본문 | 360px 상태 카드] 2단이었다. 그런데 UX 2.2에서
+    // Action Center가 탭 분기 밖으로 올라가 화면 전체의 오른쪽 기둥이 되면서,
+    // 채널 탭에서는 오른쪽에 비슷한 카드 기둥이 둘 나란히 서게 됐다 — CEO가
+    // 지적한 "우측 Action 카드가 여러 곳에서 반복된다"가 정확히 이 모양이다.
+    //
+    // 카드를 지우지 않는다. 등록 게이트(allRequiredPassed)와 등록 버튼은
+    // 지금까지와 똑같이 RegistrationReadinessCard 하나가 책임진다 — 놓이는
+    // 자리만 오른쪽 기둥에서 이 화면 맨 위로 옮긴다(lg 미만에서 이미 그렇게
+    // 쌓이던 순서 그대로라 새 레이아웃을 만든 것도 아니다).
+    <div className="space-y-4">
       {tabDataLoading && (
-        <div className="order-0 col-span-full flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-3 text-sm text-text-secondary">
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-3 text-sm text-text-secondary">
           <span
             aria-hidden
             className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
@@ -667,13 +679,9 @@ export function PlatformPreview({
         </div>
       )}
       {/* N-3.58 STEP1(CPO 지시: "판매 전 체크를 가장 먼저 보여주기") — 이
-       * grid의 DOM 순서 자체는 그대로 두되(오른쪽 sticky 컬럼이라는 기존
-       * 구조를 다시 만들지 않는다), order 유틸리티만으로 모바일(lg 미만,
-       * grid-cols가 1열로 접혀 DOM 순서대로 세로 스택된다)에서는 이 배너+카드
-       * 컬럼이 화면 맨 위에 먼저 오도록 시각적 순서만 바꾼다. 데스크톱(lg+)은
-       * order-lg 클래스로 기존 좌/우 배치를 그대로 유지한다 — 레이아웃 자체를
-       * 새로 설계하지 않는다. */}
-      <div className="order-1 space-y-4 lg:order-2">
+       * 배너+카드가 화면 맨 위에 온다. UX 2.2에서 단(column) 구조가 사라지면서
+       * 예전 모바일 순서가 모든 폭에서의 순서가 됐다(order 유틸리티 불필요). */}
+      <div className="space-y-4">
         <RegistrationStatusBanner
           state={registrationState}
           priorityItems={priorityItems}
@@ -708,7 +716,7 @@ export function PlatformPreview({
         />
       </div>
 
-      <div className="order-2 space-y-3 lg:order-1">
+      <div className="space-y-3">
         <CollapsibleSection
           title="기본정보"
           badge={sectionCompletionBadge("section-basic")}

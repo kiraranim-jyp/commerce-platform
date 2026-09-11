@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { stepInteraction, type StepInteraction } from "./stage-focus";
 import {
   BIG_STEP_ORDER,
   SUB_STEP_ICON,
@@ -18,32 +20,55 @@ import {
  * 예전에는 이 자리에 진행바가 셋이었다(시스템 작업 / 상품등록 / MI 내부).
  * 지금은 workflow.ts가 만든 상태 하나만 그린다 — 화면은 판정하지 않는다.
  *
- * ── 이 컴포넌트의 규칙 ───────────────────────────────────────────────────
- * 1. 큰 단계는 넷뿐이고, 그중 정확히 하나만 활성이다(workflow.current).
- * 2. 하위 항목은 **현재 단계의 것만** 보여준다. 끝난 단계의 체크리스트는
- *    지우고 한 줄 결과로 바꾼다 — 끝난 목록이 계속 앉아 있으면 셀러는
- *    "아직 뭔가 돌고 있나"로 읽는다.
- * 3. 동시에 여러 항목을 "진행 중"으로 그리지 않는다. ● 는 항상 하나다.
- * 4. 내부 작업명을 쓰지 않는다. 문장은 전부 workflow.ts가 만들어 내려준다.
- * 5. 빨간 실패 표시가 없다 — 만들 수 있는 값 자체가 타입에 없다.
- *
- * ── 왜 두 곳에서 렌더되는가 ──────────────────────────────────────────────
- * 수집 중에는 page.tsx가(아직 CommerceWorkspace가 마운트되기 전이다),
- * 수집이 끝난 뒤에는 CommerceWorkspace가 이 컴포넌트를 그린다. 둘은 같은
- * 순간에 함께 존재하지 않고(page.tsx는 result가 오면 넘겨준다) 같은
- * resolveWorkflow()를 쓰므로, 화면에 보이는 Flow는 언제나 하나다.
+ * ── UX 2.2(CEO 지시, 2026-09-11)에서 바뀐 것 ─────────────────────────────
+ * 1. **끝난 단계를 눌러도 그 단계로 돌아가지 않는다.** 예전에는 ②를 누르면
+ *    판단 화면으로 탭을 옮기고 스크롤했다 — 그 순간 이 줄은 진행 표시가
+ *    아니라 탭 내비게이션이 되고, "지금 어느 흐름에 서 있는지"가 다시
+ *    여러 개가 된다(UX 2.1이 없앤 바로 그 혼란). 끝난 단계는 결과를 펼쳐
+ *    보여줄 뿐이고(상세보기), 현재 단계만 실제 작업으로 데려간다.
+ * 2. **완료 / 현재 / 예정의 차이를 훨씬 크게 그린다.** 현재 단계만 진하게
+ *    테두리를 두르고, 끝난 단계는 작게 눌러 두고, 아직 안 온 단계는 🔒다.
+ * 3. **compact 변형.** 본문이 현재 단계의 항목을 이미 작업면으로 갖고 있는
+ *    화면(CommerceWorkspace)에서는 여기서 같은 체크리스트를 반복하지 않는다 —
+ *    같은 목록이 위아래에 두 번 있으면 셀러는 둘이 다른 것인 줄 알고 두 번 읽는다.
+ *    수집 중 화면(page.tsx)은 본문에 그 목록이 없으므로 full 그대로 쓴다.
  */
 export function WorkflowPanel({
   workflow,
   onNavigate,
+  variant = "full",
+  onOpenStageDetail,
 }: {
   workflow: Workflow;
   /** 항목을 눌렀을 때의 이동. 수집 중에는 갈 곳이 없으므로 넘기지 않는다. */
   onNavigate?: (target: WorkflowNavTarget) => void;
+  /**
+   * full    — 현재 단계의 하위 항목을 여기서 목록으로 보여준다(본문에 없을 때).
+   * compact — 본문이 그 목록을 갖고 있으므로 여기서는 단계와 한 줄 안내만.
+   */
+  variant?: "full" | "compact";
+  /**
+   * 끝난 단계의 [상세보기]가 화면 본문에서 열려야 하는 경우(오늘은 ② 시장 판단
+   * 하나뿐 — 판단 카드는 이 좁은 줄에 들어가지 않는다). 넘기지 않으면 이
+   * 컴포넌트 안에서 결과 요약만 펼친다.
+   */
+  onOpenStageDetail?: (key: BigStepKey) => void;
 }) {
   const { steps, current, currentSubStep, completed } = workflow;
   const byKey = new Map<BigStepKey, BigStep>(steps.map((step) => [step.key, step]));
-  const finished = steps.filter((step) => step.done && step.key !== current.key);
+  /** 끝난 단계 중 지금 결과를 펼쳐 둔 것. 한 번에 하나만 — 여기도 흐름은 하나다. */
+  const [openDetailKey, setOpenDetailKey] = useState<BigStepKey | null>(null);
+  const openDetail = openDetailKey ? (byKey.get(openDetailKey) ?? null) : null;
+
+  function handleStepClick(step: BigStep, interaction: StepInteraction) {
+    if (interaction === "LOCKED") return;
+    if (interaction === "ACTIVE") {
+      onNavigate?.(defaultTargetOf(step));
+      return;
+    }
+    // DETAIL_ONLY — 결과만 보여준다. 단계는 바뀌지 않는다.
+    setOpenDetailKey((prev) => (prev === step.key ? null : step.key));
+  }
 
   return (
     <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
@@ -54,27 +79,41 @@ export function WorkflowPanel({
         {BIG_STEP_ORDER.map((key, index) => {
           const step = byKey.get(key);
           if (!step) return null;
-          const active = step.key === current.key;
+          const interaction = stepInteraction(step, current.key);
+          const active = interaction === "ACTIVE";
+          const locked = interaction === "LOCKED";
           return (
             <li key={key} className="flex items-center">
               <button
                 type="button"
-                onClick={onNavigate ? () => onNavigate(defaultTargetOf(step)) : undefined}
-                disabled={!onNavigate}
-                className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors ${
-                  onNavigate ? "hover:bg-background" : "cursor-default"
-                } ${active ? "bg-primary-soft" : ""}`}
+                onClick={() => handleStepClick(step, interaction)}
+                disabled={locked || (active && !onNavigate)}
+                title={
+                  locked
+                    ? "앞 단계가 끝나면 열립니다"
+                    : active
+                      ? "지금 이 단계입니다"
+                      : "끝난 단계입니다 — 결과만 확인합니다"
+                }
+                className={`flex items-center gap-1.5 rounded-md transition-colors ${
+                  active
+                    ? // 현재 단계 — 화면에서 제일 진한 칸. 끝난 단계보다 크다.
+                      "border border-primary bg-primary-soft px-2.5 py-1.5 text-sm shadow-subtle"
+                    : locked
+                      ? "cursor-default px-2 py-1 text-xs opacity-50"
+                      : "px-2 py-1 text-xs hover:bg-background"
+                }`}
               >
-                <BigStepIcon status={step.status} index={step.index} active={active} />
+                <BigStepIcon status={step.status} index={step.index} active={active} locked={locked} />
                 <span
                   className={
                     active
-                      ? "font-semibold text-primary"
-                      : step.status === "COMPLETED"
-                        ? "text-text-secondary"
-                        : step.status === "LOCKED"
-                          ? "text-text-tertiary"
-                          : "font-medium text-text-primary"
+                      ? "font-bold text-primary"
+                      : locked
+                        ? "text-text-tertiary"
+                        : // 끝난 단계 — 줄을 지우지는 않되(결과가 있었다는 사실도 정보다)
+                          // 무게를 확실히 낮춘다.
+                          "text-text-tertiary"
                   }
                 >
                   {/* ②는 이 제품의 핵심 단계다 — 나머지와 같은 무게로 두면 화면이
@@ -82,6 +121,9 @@ export function WorkflowPanel({
                   {step.key === "MARKET_JUDGING" ? "⭐ " : ""}
                   {step.label}
                 </span>
+                {interaction === "DETAIL_ONLY" && (
+                  <span className="text-[10px] text-primary/70">{openDetailKey === key ? "접기" : "상세보기"}</span>
+                )}
               </button>
               {index < BIG_STEP_ORDER.length - 1 && (
                 <span className="mx-0.5 text-text-tertiary" aria-hidden>
@@ -120,51 +162,106 @@ export function WorkflowPanel({
       </div>
 
       {/* ── 하위 작업 영역 ──────────────────────────────────────────────
-          현재 단계의 항목만. 전부 끝난 뒤에는 목록 대신 결과 한 줄이다. */}
+          현재 단계의 항목만. 전부 끝난 뒤에는 목록 대신 결과 한 줄이다.
+          compact에서는 본문이 같은 목록을 작업면으로 갖고 있으므로 생략한다. */}
       {completed ? (
         <p className="mt-3 rounded-md bg-background px-3 py-2 text-xs text-text-secondary">
           ✓ {current.summary ?? "모든 단계가 끝났습니다"}
         </p>
       ) : (
-        <ul className="mt-3 space-y-1">
-          {current.subSteps.map((sub) => (
-            <SubStepRow
-              key={sub.key}
-              sub={sub}
-              highlighted={sub.key === currentSubStep?.key}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </ul>
+        variant === "full" && (
+          <ul className="mt-3 space-y-1">
+            {current.subSteps.map((sub) => (
+              <SubStepRow
+                key={sub.key}
+                sub={sub}
+                highlighted={sub.key === currentSubStep?.key}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </ul>
+        )
       )}
 
-      {/* ── 끝난 단계의 결과 요약 ────────────────────────────────────────
-          "② 시장 판단 ✓ 분석 완료 · 국내 비교상품 ⚪ 검색 데이터 없음"처럼,
-          비어 있던 항목이 있으면 그 사실까지 한 줄에 남긴다 — 결과가 없었다는
-          것도 결과다. 이걸 지우면 셀러는 분석이 안 돌았다고 생각한다. */}
-      {finished.length > 0 && (
-        <ul className="mt-2 space-y-0.5 border-t border-border pt-2 text-[11px]">
-          {finished.map((step) => (
-            <li key={step.key} className="flex flex-wrap items-center gap-x-1.5 text-text-tertiary">
-              <span className={step.status === "ATTENTION" ? "text-warning" : "text-success"}>
-                {step.status === "ATTENTION" ? "⚠" : "✓"}
-              </span>
-              <span className="text-text-secondary">
-                {step.index}. {step.label}
-              </span>
-              {step.summary && <span>— {step.summary}</span>}
-              {step.subSteps
-                .filter((s) => s.status === "DONE_NO_DATA" || s.status === "ATTENTION")
-                .map((s) => (
-                  <span key={s.key} className={s.status === "ATTENTION" ? "text-warning" : undefined}>
-                    · {s.label} {s.message}
-                  </span>
-                ))}
-            </li>
-          ))}
-        </ul>
+      {/* ── 끝난 단계의 결과 ────────────────────────────────────────────
+          기본은 한 줄 요약뿐이다("② 시장 판단 ✓ 분석 완료 · 국내 비교상품
+          ⚪ 검색 데이터 없음"). 비어 있던 항목이 있으면 그 사실까지 남긴다 —
+          결과가 없었다는 것도 결과다. 이걸 지우면 셀러는 분석이 안 돌았다고
+          생각한다. 자세한 항목별 결과는 눌렀을 때만 펼친다. */}
+      {openDetail && (
+        <div className="mt-3 rounded-md border border-border bg-background p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-medium text-text-primary">
+              {openDetail.index}. {openDetail.label} — 결과
+            </p>
+            <div className="flex items-center gap-2">
+              {/* 판단 카드처럼 이 줄에 들어가지 않는 결과는 본문에서 펼친다.
+                  그래도 현재 단계는 바뀌지 않는다 — 보기만 하는 동작이다. */}
+              {onOpenStageDetail && openDetail.key === "MARKET_JUDGING" && (
+                <button
+                  type="button"
+                  onClick={() => onOpenStageDetail(openDetail.key)}
+                  className="rounded-md border border-border px-2 py-0.5 text-[11px] text-primary hover:bg-surface"
+                >
+                  판단 상세보기 →
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setOpenDetailKey(null)}
+                className="text-[11px] text-text-tertiary hover:underline"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+          {openDetail.summary && <p className="mt-1 text-[11px] text-text-secondary">{openDetail.summary}</p>}
+          <ul className="mt-2 space-y-0.5">
+            {openDetail.subSteps.map((sub) => (
+              <li key={sub.key} className="flex items-start gap-1.5 text-[11px] text-text-secondary">
+                <span className={`w-3 shrink-0 ${ICON_CLASS[sub.status]}`} aria-hidden>
+                  {SUB_STEP_ICON[sub.status]}
+                </span>
+                <span>
+                  {sub.label}
+                  {sub.message && <span className="ml-1 text-text-tertiary">{sub.message}</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
+
+      <FinishedStageSummary steps={steps} currentKey={current.key} />
     </section>
+  );
+}
+
+/** 끝난 단계들의 한 줄 결과. 목록을 그대로 남겨두지 않기 위한 자리다. */
+function FinishedStageSummary({ steps, currentKey }: { steps: BigStep[]; currentKey: BigStepKey }) {
+  const finished = steps.filter((step) => step.done && step.key !== currentKey);
+  if (finished.length === 0) return null;
+  return (
+    <ul className="mt-2 space-y-0.5 border-t border-border pt-2 text-[11px]">
+      {finished.map((step) => (
+        <li key={step.key} className="flex flex-wrap items-center gap-x-1.5 text-text-tertiary">
+          <span className={step.status === "ATTENTION" ? "text-warning" : "text-success"}>
+            {step.status === "ATTENTION" ? "⚠" : "✓"}
+          </span>
+          <span className="text-text-secondary">
+            {step.index}. {step.label}
+          </span>
+          {step.summary && <span>— {step.summary}</span>}
+          {step.subSteps
+            .filter((s) => s.status === "DONE_NO_DATA" || s.status === "ATTENTION")
+            .map((s) => (
+              <span key={s.key} className={s.status === "ATTENTION" ? "text-warning" : undefined}>
+                · {s.label} {s.message}
+              </span>
+            ))}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -238,24 +335,47 @@ const ICON_CLASS: Record<SubStepStatus, string> = {
   ATTENTION: "text-warning",
 };
 
-function BigStepIcon({ status, index, active }: { status: BigStepStatus; index: number; active: boolean }) {
+function BigStepIcon({
+  status,
+  index,
+  active,
+  locked,
+}: {
+  status: BigStepStatus;
+  index: number;
+  active: boolean;
+  locked: boolean;
+}) {
+  // 아직 오지 않은 단계는 번호가 아니라 자물쇠다 — 번호만 있으면 "눌러도
+  // 되는 칸"으로 읽히고, 눌렀는데 아무 일도 없으면 고장으로 읽힌다.
+  if (locked) {
+    return (
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border text-[9px] text-text-tertiary">
+        🔒
+      </span>
+    );
+  }
   if (status === "COMPLETED") {
     return (
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success text-[10px] font-bold text-white">
+      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-success text-[9px] font-bold text-white">
         ✓
       </span>
     );
   }
   if (status === "ATTENTION") {
     return (
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-warning text-[10px] font-bold text-white">
+      <span
+        className={`flex shrink-0 items-center justify-center rounded-full bg-warning font-bold text-white ${
+          active ? "h-6 w-6 text-[11px]" : "h-4 w-4 text-[9px]"
+        }`}
+      >
         !
       </span>
     );
   }
   if (status === "IN_PROGRESS" && active) {
     return (
-      <span className="flex h-5 w-5 shrink-0 animate-pulse items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+      <span className="flex h-6 w-6 shrink-0 animate-pulse items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white">
         ●
       </span>
     );

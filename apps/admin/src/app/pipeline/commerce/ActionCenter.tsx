@@ -1,8 +1,9 @@
 "use client";
 
 import type { PlatformId } from "@commerce/shared";
-import { readinessStateToLevel, type PriorityItem, type ReadinessLevel, type RegistrationReadinessState } from "./readiness-state";
-import { buildRegistrationChannels, channelActionLabel, type RegistrationChannel } from "./registration-channels";
+import { readinessStateToLevel, type ReadinessLevel } from "./readiness-state";
+import { channelActionLabel, type RegistrationChannel } from "./registration-channels";
+import type { PanelMode } from "./stage-focus";
 
 /**
  * MI-FLOW-2(CEO 지시, 2026-09-11) — 상품정보 화면 오른쪽 기둥.
@@ -24,16 +25,26 @@ import { buildRegistrationChannels, channelActionLabel, type RegistrationChannel
  * 돌아온다. 그래서 이 버튼은 기존 진입점으로 **데려다 줄** 뿐이다 —
  * 채널 탭으로 전환하고 등록 카드로 스크롤한다. 등록 판정과 실행은 지금까지와
  * 똑같이 그 화면 하나가 책임진다.
+ *
+ * ── UX 2.2(CEO 지시, 2026-09-11) — 화면에 **하나만** 존재한다 ─────────────
+ * 이 컬럼은 이제 탭 분기 밖(CommerceWorkspace 껍데기)에서 한 번만 렌더된다.
+ * 어느 탭이든, 어느 단계든 오른쪽 기둥은 이것 하나다.
+ *
+ * 그리고 **본문이 이미 갖고 있는 블록은 여기서 한 줄로 접는다**(checklistMode /
+ * channelsMode). ③ 등록 준비에서는 본문이 그 체크리스트를 작업면으로 펼치고,
+ * ④/채널 화면에서는 본문이 등록 행동을 갖는다 — 같은 목록을 오른쪽에 한 번 더
+ * 두면 CEO가 지적한 "우측 Action 카드가 여러 곳에서 반복된다"가 그대로다.
+ * 접어도 결론과 진행 상황은 남는다(지우는 것이 아니다).
  */
 export function ActionCenter({
   verdict,
   verdictPending,
   checklist,
-  channelOrder,
-  channelLabelOf,
-  isComingSoon,
-  isPreviewOnly,
-  readiness,
+  checklistMode = "LIST",
+  channels,
+  channelsMode = "LIST",
+  currentStageLabel,
+  currentTodo,
   onOpenVerdict,
   onGoToChannel,
 }: {
@@ -42,23 +53,26 @@ export function ActionCenter({
   /** 분석이 아직 끝나지 않았는가. null verdict를 "나쁨"으로 읽지 않게 구분한다. */
   verdictPending: boolean;
   checklist: ChecklistItem[];
-  channelOrder: readonly PlatformId[];
-  channelLabelOf: (id: PlatformId) => string;
-  isComingSoon: (id: PlatformId) => boolean;
-  isPreviewOnly: (id: PlatformId) => boolean;
-  readiness: Partial<
-    Record<PlatformId, { state: RegistrationReadinessState; priorityItems: PriorityItem[]; provisional: boolean }>
-  >;
+  /** LIST = 목록 그대로. SUMMARY = 본문이 이 목록을 갖고 있으므로 한 줄로. */
+  checklistMode?: PanelMode;
+  /**
+   * 채널 목록. UX 2.2에서 호출부(CommerceWorkspace)가 buildRegistrationChannels()로
+   * **한 번만** 만들어 이 컬럼과 ④ 본문에 같은 배열을 넘긴다 — 예전처럼 여기서
+   * 또 만들면 같은 채널 상태가 두 벌 계산되고, 한쪽만 바뀌는 순간 오른쪽과
+   * 본문이 서로 다른 준비 상태를 말한다.
+   */
+  channels: RegistrationChannel[];
+  /** LIST = 채널 버튼 그대로. SUMMARY = 본문/채널 화면이 이미 그 행동을 갖고 있다. */
+  channelsMode?: PanelMode;
+  /** 지금 단계 이름. 접힌 블록이 "왜 접혀 있는지"를 이 한 줄이 설명한다. */
+  currentStageLabel?: string;
+  /** 지금 해야 하는 한 가지. workflow.ts의 currentSubStep에서 그대로 온다. */
+  currentTodo?: string | null;
   onOpenVerdict: () => void;
   onGoToChannel: (id: PlatformId) => void;
 }) {
-  const channels = buildRegistrationChannels({
-    order: channelOrder,
-    labelOf: channelLabelOf,
-    isComingSoon,
-    isPreviewOnly,
-    readiness,
-  });
+  /** 접힌 체크리스트가 보여주는 유일한 숫자. 목록과 같은 배열에서 센다. */
+  const doneCount = checklist.filter((item) => item.ok).length;
 
   return (
     <aside className="space-y-3 lg:sticky lg:top-4">
@@ -90,39 +104,84 @@ export function ActionCenter({
           아니라 이미 계산된 상품정보 레벨/채널별 priorityItems를 옮긴다. */}
       <section className="rounded-lg border border-border bg-surface p-3 shadow-subtle">
         <p className="mb-1.5 text-[11px] text-text-tertiary">등록 전 확인</p>
-        <ul className="space-y-1 text-[11px]">
-          {checklist.map((item) => (
-            <li key={item.key}>
-              <button
-                type="button"
-                onClick={item.onClick}
-                className="flex w-full items-start gap-1.5 text-left hover:underline"
-              >
-                <span className={item.ok ? "text-success" : "text-warning"}>{item.ok ? "✓" : "⚠"}</span>
-                <span className={item.ok ? "text-text-secondary" : "font-medium text-text-primary"}>
-                  {item.label}
-                  {item.detail && <span className="ml-1 text-[10px] text-text-tertiary">— {item.detail}</span>}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        {checklistMode === "SUMMARY" ? (
+          // 본문이 같은 목록을 작업면으로 펼치고 있다 — 여기서는 진척만 남긴다.
+          <>
+            <p className="text-xs font-medium text-text-primary">
+              {doneCount}/{checklist.length} 확인 완료
+            </p>
+            <p className="mt-0.5 text-[10px] text-text-tertiary">
+              {currentTodo
+                ? `지금 할 일: ${currentTodo}`
+                : `${currentStageLabel ?? "등록 준비"} 화면에서 하나씩 확인하고 있습니다`}
+            </p>
+          </>
+        ) : (
+          <ul className="space-y-1 text-[11px]">
+            {checklist.map((item) => (
+              <li key={item.key}>
+                <button
+                  type="button"
+                  onClick={item.onClick}
+                  className="flex w-full items-start gap-1.5 text-left hover:underline"
+                >
+                  <span className={item.ok ? "text-success" : "text-warning"}>{item.ok ? "✓" : "⚠"}</span>
+                  <span className={item.ok ? "text-text-secondary" : "font-medium text-text-primary"}>
+                    {item.label}
+                    {item.detail && <span className="ml-1 text-[10px] text-text-tertiary">— {item.detail}</span>}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {/* ③ 커머스 등록 — 채널 목록은 PLATFORM_ORDER 하나에서만 나온다.
           채널이 늘어도 이 파일은 고치지 않는다. */}
       <section className="rounded-lg border border-border bg-surface p-3 shadow-subtle">
         <p className="mb-1.5 text-[11px] text-text-tertiary">커머스 등록</p>
-        <div className="space-y-1.5">
-          {channels.map((channel) => (
-            <ChannelButton key={channel.id} channel={channel} onClick={() => onGoToChannel(channel.id)} />
-          ))}
-        </div>
-        <p className="mt-2 text-[10px] text-text-tertiary">
-          {/* 이 버튼이 바로 등록하는 것이 아니라는 사실을 숨기지 않는다 —
-              "등록"이라고 쓰고 확인 화면으로 보내면 그 자체가 거짓말이 된다. */}
-          채널 화면으로 이동합니다 — 최종 확인 후 등록됩니다.
-        </p>
+        {channelsMode === "SUMMARY" ? (
+          // 본문(④ 채널 카드) 또는 채널 화면 자체가 등록 행동을 갖고 있다.
+          // 같은 버튼을 여기 한 번 더 두면 어느 쪽이 진짜인지 알 수 없어진다.
+          // 상태는 남긴다 — 접는 것은 행동이지 사실이 아니다.
+          <>
+            <ul className="space-y-0.5 text-[11px] text-text-secondary">
+              {channels.map((channel) => {
+                const level = channel.state ? readinessStateToLevel(channel.state) : null;
+                return (
+                  <li key={channel.id} className="flex items-center gap-1.5">
+                    {level ? (
+                      <span className={`h-2 w-2 rounded-full ${LEVEL_DOT_CLASS[level]}`} aria-label={level} />
+                    ) : (
+                      <span className="h-2 w-2 rounded-full bg-border" aria-hidden />
+                    )}
+                    {channel.label}
+                    {channel.availability === "COMING_SOON" && (
+                      <span className="text-[10px] text-text-tertiary">준비중</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="mt-1.5 text-[10px] text-text-tertiary">
+              지금 보고 있는 화면에서 등록을 진행합니다.
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="space-y-1.5">
+              {channels.map((channel) => (
+                <ChannelButton key={channel.id} channel={channel} onClick={() => onGoToChannel(channel.id)} />
+              ))}
+            </div>
+            <p className="mt-2 text-[10px] text-text-tertiary">
+              {/* 이 버튼이 바로 등록하는 것이 아니라는 사실을 숨기지 않는다 —
+                  "등록"이라고 쓰고 확인 화면으로 보내면 그 자체가 거짓말이 된다. */}
+              채널 화면으로 이동합니다 — 최종 확인 후 등록됩니다.
+            </p>
+          </>
+        )}
       </section>
     </aside>
   );
