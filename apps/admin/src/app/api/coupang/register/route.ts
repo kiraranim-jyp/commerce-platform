@@ -222,7 +222,8 @@ export async function POST(request: Request) {
   // PHASE 3.2 — 인라인이던 것을 buildPriceBreakdownSnapshot()으로 꺼냈을 뿐
   // 계산과 의미는 동일하다(salePriceKrw는 여전히 상품정보의 최종 판매가격이다 —
   // 채널 최종가가 아니다). 함수로 꺼낸 이유는 그 뜻이 유지되는지를 테스트로
-  // 고정하기 위해서다(channel-price-audit.test.ts).
+  // 고정하기 위해서다(pipeline/commerce/__tests__/channel-price-no-mi.test.ts의
+  // "⑩ registration_attempts.price_breakdown의 의미는 바뀌지 않는다").
   const priceBreakdownSnapshot = buildPriceBreakdownSnapshot(product);
   // PHASE 3.2 — 실제로 이 채널에 어떤 가격이 어떤 근거로 나갔는지. listing은
   // 클라이언트가 이미 어댑터로 만든 값이고 payload의 salePrice도 여기서 나온다 —
