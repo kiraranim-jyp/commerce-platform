@@ -108,6 +108,12 @@ export async function runPriceCheck(input: PriceCheckInput): Promise<PriceCheckR
       observations.push({
         snapshotId: input.snapshotId,
         source: "SELLER_ORIGIN",
+        // GLOBAL-SELLER/MARKET 1단계 — probe가 이미 들고 있는 값을 그대로 넘긴다.
+        // 여기서 market을 새로 판별하지 않는다(URL로 국가를 추측하지도 않는다).
+        // marketCode는 실제로 요청한 코드이고("" 또는 en-kr), market_country는
+        // 그 매장이 /meta.json에 스스로 적어 둔 기준 국가다.
+        marketCode: chosenProbe?.marketCode ?? null,
+        marketCountry: chosenProbe?.shopMeta?.country ?? null,
         currency,
         priceAmount,
         exchangeRate: useKrMarket ? null : (exchangeRates.rates[currency.toUpperCase()] ?? null),

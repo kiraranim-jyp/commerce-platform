@@ -62,6 +62,16 @@ export interface NewPriceObservation {
   /** N-4.06 — DOMESTIC_SHOP일 때 domestic_price_sources.id. */
   sourceRefId?: string | null;
   currency: string;
+  /** GLOBAL-SELLER/MARKET 1단계(CPO 확정, 2026-09-11) — 관측 근거와 해석을 나눠
+   * 보존한다. 통화만 남기면 같은 통화의 다른 시장 가격을 구분할 수 없다(실측:
+   * bobochoses.com /en-de €75.00 vs /en-int €84.00).
+   *
+   *  marketCode    : 실제로 요청/확인된 시장 코드 그대로. ""(로케일 없는 기본
+   *                  요청)도 그대로 둔다 — 임의의 시장으로 바꿔 적지 않는다.
+   *  marketCountry : source가 스스로 선언한 기준 국가(/meta.json의 country 등).
+   *                  국가에서 통화를 추론하거나 그 반대로 하지 않는다. */
+  marketCode?: string | null;
+  marketCountry?: string | null;
   /** N-4.18-Q3 PART E-1(대표님 지시, 2026-08-27) — 완전 품절이라 가격 자체를
    * 못 찾았을 때(soldOut===true) null. 0원을 지어내지 않는다. */
   priceAmount: number | null;
@@ -84,6 +94,10 @@ function toBaseRow(o: NewPriceObservation) {
     source_label: o.sourceLabel ?? null,
     source_product_url: o.sourceProductUrl ?? null,
     source_ref_id: o.sourceRefId ?? null,
+    // 관측 근거 그대로 — ""(기본 요청)는 ""로, 모르면 null로 간다. 빈 값을
+    // 어떤 시장으로 바꿔 적지 않는다(CPO 지시).
+    market_code: o.marketCode ?? null,
+    market_country: o.marketCountry ?? null,
     currency: o.currency,
     price_amount: o.priceAmount,
     shipping_cost_amount: o.shippingCostAmount ?? null,
