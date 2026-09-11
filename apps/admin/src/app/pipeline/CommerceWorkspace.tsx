@@ -37,7 +37,13 @@ import {
   type PlatformConnectionStatus,
   type RegistrationHistoryEntry,
 } from "@commerce/listing";
-import { PLATFORM_ADAPTERS, PLATFORM_ORDER, isVerifiedCategorySelected } from "@commerce/marketplace";
+import {
+  applyChannelPriceOverride,
+  clearChannelPriceOverride,
+  isVerifiedCategorySelected,
+  PLATFORM_ADAPTERS,
+  PLATFORM_ORDER,
+} from "@commerce/marketplace";
 import { DEFAULT_PRICE_BREAKDOWN_INPUT, resolveListingPrice, resolveSourcePrice } from "@commerce/pricing";
 import { resolveCategoryCacheAction } from "./category-cache-hydrate";
 import { AIContentPanel } from "./commerce/AIContentPanel";
@@ -312,6 +318,23 @@ export function CommerceWorkspace({
       setTimeout(() => {
         document.getElementById(PRICE_SURFACE_ANCHOR_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 50);
+    });
+  }
+
+  /**
+   * PHASE 3.2 추가지시(CPO, 2026-09-11) — 가격 계산 카드에서 시장 정보를 뺀
+   * 자리에 남는 링크 하나가 부르는 함수.
+   *
+   * handleRequestPriceReview와 완전히 같은 모양이다(탭 전환 + 스크롤, 계산도
+   * 저장도 조회도 없음). 다른 점은 도착지뿐 — 이쪽은 ② 🌎 판매자 글로벌 시장 /
+   * ③ 📊 한국 시장 경쟁가격이 사는 근거 영역(PRICE_COMPARISON_ANCHOR_ID)이다.
+   * 새 화면을 만들지 않는다: 그 블록들은 이미 거기 있었고, 가격 카드가 사본을
+   * 들고 있던 것이 문제였다.
+   */
+  function handleOpenMarketComparison() {
+    setTab("source");
+    requestAnimationFrame(() => {
+      document.getElementById(PRICE_COMPARISON_ANCHOR_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
@@ -740,6 +763,32 @@ export function CommerceWorkspace({
     }));
   }
 
+  /**
+   * PHASE 3.2(CPO 확정, 2026-09-11) — 이 채널에만 적용되는 최종 등록가격.
+   *
+   * updateSalePriceKrw(상품의 최종 판매가격)와 **절대** 섞이지 않는다. 여기서
+   * priceOverrideKrw를 같이 건드리면, 셀러가 쿠팡 가격을 한 번 고친 순간
+   * 상품정보의 기준가와 나머지 전 채널의 등록가가 함께 끌려간다 — 상품정보로
+   * 돌아갔을 때 자기가 정한 적 없는 숫자를 보게 되는 그 사고다.
+   *
+   * amountKrw가 null이면 이 채널의 값을 지우고 상품정보 가격으로 돌아간다
+   * (0을 저장하지 않는다 — "0원 등록"과 "지정 안 함"은 다른 상태다).
+   *
+   * MI는 여기서 다시 돌지 않는다. 이건 누락이 아니라 의도다 — MI는 "이 상품을
+   * 팔 만한가"를 답하고 채널 최종가는 "이 채널에 얼마로 등록할 것인가"를
+   * 답한다. 실제로도 MI 조회는 snapshotId를 키로만 발동하고(page.tsx의 최초
+   * 스냅샷 생성 1회, DomesticPriceIntelligencePanel의 useEffect([snapshotId]),
+   * 셀러가 직접 누르는 [가격 다시 확인]), product 상태 변경으로는 발동하지
+   * 않는다. 이 함수는 순수 상태 갱신뿐이라 fetch를 한 번도 부르지 않는다.
+   */
+  function updateChannelPriceKrw(platform: PlatformId, amountKrw: number | null) {
+    setProduct((prev) =>
+      amountKrw == null
+        ? clearChannelPriceOverride(prev, platform)
+        : applyChannelPriceOverride(prev, platform, amountKrw),
+    );
+  }
+
   /** CEO 실측 리포트(2026-08-03) — Shopify Markets 스토어는 공개 상품 JSON의
    * 통화/가격이 요청 지역(서버 리전)에 따라 달라지는 경우가 있어(presentment
    * pricing), 자동 크롤링이 실제 판매 통화/금액과 다른 값을 가져올 수 있다.
@@ -988,10 +1037,15 @@ export function CommerceWorkspace({
     const priceValid = product.priceValidity === "VALID";
     for (const platformId of PLATFORM_ORDER) {
       try {
-        const model = PLATFORM_ADAPTERS[platformId].toListingModel(product, categoryMappings[platformId], {
-          liveRates: exchangeRates?.rates,
-          roundingUnit: priceRoundingUnit ?? undefined,
-        });
+        // PHASE 3.2 — 잠정치도 실제 탭과 **같은 채널 인자**로 계산한다. 여기서
+        // platformId를 빠뜨리면 탭을 열기 전 배지는 상품정보 가격 기준,
+        // 탭을 연 뒤에는 채널 최종가 기준이 되어 같은 화면이 두 값을 말한다.
+        const model = PLATFORM_ADAPTERS[platformId].toListingModel(
+          product,
+          categoryMappings[platformId],
+          { liveRates: exchangeRates?.rates, roundingUnit: priceRoundingUnit ?? undefined },
+          platformId,
+        );
         const summary = computeChecklistReadiness(model.validations, model.category);
         out[platformId] = {
           state: resolveRegistrationReadinessState(summary, priceValid),
@@ -1028,10 +1082,14 @@ export function CommerceWorkspace({
     // roundingUnit을 넘겨서 resolveListingPrice()가 화면에 보인 "권장
     // 판매가격"과 정확히 같은 숫자를 내도록 한다(등록에 실제로 쓰이는
     // listing이 이 useMemo 하나이므로, 여기서만 맞추면 전체가 맞는다).
-    return PLATFORM_ADAPTERS[tab].toListingModel(product, effectiveCategorySelection, {
-      liveRates: exchangeRates?.rates,
-      roundingUnit: priceRoundingUnit ?? undefined,
-    });
+    // PHASE 3.2 — 등록에 실제로 쓰이는 listing은 이 useMemo 하나뿐이고, 네 번째
+    // 인자 tab이 "지금 어느 채널의 최종 등록가격을 해석하는가"를 결정한다.
+    return PLATFORM_ADAPTERS[tab].toListingModel(
+      product,
+      effectiveCategorySelection,
+      { liveRates: exchangeRates?.rates, roundingUnit: priceRoundingUnit ?? undefined },
+      tab,
+    );
   }, [tab, product, effectiveCategorySelection, exchangeRates, priceRoundingUnit]);
 
   /**
@@ -2171,6 +2229,12 @@ export function CommerceWorkspace({
                       exchangeRates={exchangeRates}
                       exchangeRatesLoading={exchangeRatesLoading}
                       onRefreshExchangeRates={fetchExchangeRates}
+                      /* PHASE 3.2 추가지시 — 가격 계산 카드에서 내려간 시장
+                         정보(국가별 원본가격 비교 · 한국向 표시가)로 가는 유일한
+                         통로. 이미 존재하는 ②/③ 블록의 앵커로 스크롤만 한다 —
+                         새 화면을 만들지도, 여기서 시장 데이터를 다시 조회하지도
+                         않는다. */
+                      onOpenMarketComparison={handleOpenMarketComparison}
                     />
                   </div>
                 ),
@@ -2211,9 +2275,15 @@ export function CommerceWorkspace({
               payloadPreviewUnavailableReason={payloadPreviewEligible ? payloadPreviewUnavailableReason : null}
               onReadinessChange={(state, priorityItems) => handleReadinessChange(tab, state, priorityItems)}
               onUpdateField={updateField}
-              /* UX 2.5 — 채널 화면은 판매가를 읽기만 한다. [가격 수정하기]가
-                 상품정보의 가격 계산으로 데려가는 것이 이 화면의 유일한 가격 행동이다. */
+              /* UX 2.5 — [상품정보 가격 계산 →]은 상품의 기준가를 고치러 간다. */
               onRequestPriceReview={handleRequestPriceReview}
+              /* PHASE 3.2 — 이 채널에만 적용되는 최종 등록가격. tab이 곧 채널이라
+                 다른 채널의 값을 건드릴 경로 자체가 없다. */
+              onUpdateChannelPrice={(amountKrw) => updateChannelPriceKrw(tab, amountKrw)}
+              /* 채널 최종가를 지우면 돌아갈 값 = 상품정보 최종 판매가격.
+                 listingPrice는 이미 위에서 상품 기준으로만 계산된 값이다
+                 (채널 값이 섞이지 않는다 — 그래서 여기 그대로 쓸 수 있다). */
+              productPriceKrw={listingPrice.priceKrw}
               onSelectCategory={(candidate) => selectCategory(tab, candidate)}
               onFixTextField={updateField}
               onSetFieldReference={setFieldReference}

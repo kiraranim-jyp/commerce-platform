@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PLATFORM_ADAPTERS, PLATFORM_ORDER } from "@commerce/marketplace";
-import { PLATFORM_CATEGORY_TABLES } from "@commerce/category";
+import { PLATFORM_CATEGORY_TABLES, UNRESOLVED_CATEGORY } from "@commerce/category";
 import type { CanonicalProduct, FieldSource, ProvenanceField } from "@commerce/shared";
 import { LISTING_EXECUTORS } from "../registry";
 
@@ -81,7 +81,10 @@ describe("Platform SDK contract", () => {
   it("모든 어댑터는 CanonicalProduct 하나로 validations를 최소 1개 이상 채운 ListingModel을 만든다", () => {
     const product = makeMockProduct();
     for (const platform of PLATFORM_ORDER) {
-      const listing = PLATFORM_ADAPTERS[platform].toListingModel(product);
+      // PHASE 3.2 — platform이 필수 인자가 됐다. 여기서 registry key를 그대로
+      // 넘기는 것이 "어느 채널의 가격을 해석하는가"를 호출부가 직접 적는다는
+      // 계약 그 자체다.
+      const listing = PLATFORM_ADAPTERS[platform].toListingModel(product, UNRESOLVED_CATEGORY, undefined, platform);
       expect(listing.platform).toBe(platform);
       expect(listing.validations.length).toBeGreaterThan(0);
     }
@@ -90,7 +93,7 @@ describe("Platform SDK contract", () => {
   it("모든 실행기는 PREVIEW 모드에서 예외 없이 ListingResult를 반환한다", async () => {
     const product = makeMockProduct();
     for (const platform of PLATFORM_ORDER) {
-      const listing = PLATFORM_ADAPTERS[platform].toListingModel(product);
+      const listing = PLATFORM_ADAPTERS[platform].toListingModel(product, UNRESOLVED_CATEGORY, undefined, platform);
       const result = await LISTING_EXECUTORS[platform].execute(product, listing, "PREVIEW");
       expect(result.platform).toBe(platform);
       expect(result.mode).toBe("PREVIEW");

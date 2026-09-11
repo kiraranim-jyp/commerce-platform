@@ -1,4 +1,5 @@
 export * from "./types";
+export * from "./channel-price";
 export * from "./validation";
 export * from "./registry";
 export * from "./capabilities";

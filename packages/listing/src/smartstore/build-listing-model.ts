@@ -1,4 +1,4 @@
-import type { CategorySelection } from "@commerce/category";
+import { UNRESOLVED_CATEGORY, type CategorySelection } from "@commerce/category";
 import { smartstoreAdapter, type ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
 
@@ -13,5 +13,9 @@ export function buildSmartStoreListingModel(
   product: CanonicalProduct,
   categorySelection?: CategorySelection,
 ): ListingModel {
-  return smartstoreAdapter.toListingModel(product, categorySelection);
+  // PHASE 3.2 — 이 래퍼는 이름 그대로 "스마트스토어" 전용이라 채널을 고정해
+  // 넘긴다. 카테고리가 없으면 UNRESOLVED_CATEGORY를 명시적으로 적는다
+  // (어댑터의 기본값에 기대지 않는다 — 기본값이 있으면 인자를 빠뜨린 호출부가
+  // 조용히 통과한다).
+  return smartstoreAdapter.toListingModel(product, categorySelection ?? UNRESOLVED_CATEGORY, undefined, "smartstore");
 }

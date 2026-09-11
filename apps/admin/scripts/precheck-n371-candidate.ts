@@ -79,7 +79,7 @@ async function main() {
   const leafCategoryId = categorySelection.candidate?.id;
   if (!leafCategoryId) throw new Error("leafCategoryId를 확인할 수 없습니다.");
 
-  const listing = smartstoreAdapter.toListingModel(product, categorySelection);
+  const listing = smartstoreAdapter.toListingModel(product, categorySelection, undefined, "smartstore");
   console.log(`[2/4] ListingModel 생성 완료 — title="${listing.title}"`);
 
   console.log(`[3/4] GET /api/naver/resolve (읽기 전용, categoryId=${leafCategoryId})`);

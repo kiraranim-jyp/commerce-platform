@@ -242,6 +242,8 @@ async function runOne(spec: ProductSpec) {
     priceKrw: spec.price.currency === "KRW" ? spec.price.amount : Math.round(spec.price.amount * 1900),
     priceIsEstimate: spec.price.currency !== "KRW",
     priceSource: "SELLER_OVERRIDE",
+    // PHASE 3.2 — 채널 최종 등록가격이 없는 상태(= 상품정보 최종 판매가격을 그대로 쓴다).
+    priceOrigin: "PRODUCT_OVERRIDE",
     options: [],
     shippingInfo: "",
     description: product.description.value,

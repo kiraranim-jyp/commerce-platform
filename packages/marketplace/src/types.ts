@@ -1,6 +1,7 @@
 import type { CanonicalProduct, PlatformId } from "@commerce/shared";
 import type { CategorySelection } from "@commerce/category";
 import type { ListingPriceSource } from "@commerce/pricing";
+import type { ChannelPriceOrigin } from "./channel-price";
 
 export type { PlatformId } from "@commerce/shared";
 
@@ -30,6 +31,11 @@ export interface ListingModel {
    * UNRESOLVED면 priceKrw는 0이다(원본가로 지어낸 값이 아니라 "계산 자체를
    * 못 했다"는 뜻) — "판매가격" 검증 규칙이 이 상태를 ERROR로 잡는다. */
   priceSource: ListingPriceSource;
+  /** PHASE 3.2 — 이 채널의 priceKrw가 **어디서 왔는지**. priceSource(가격 계산
+   * 엔진의 판정)와 축이 다르다: priceSource는 "셀러 확정값이냐 시스템 권장값이냐"를,
+   * priceOrigin은 "그 확정값이 이 채널 전용이냐 상품 공통이냐"를 말한다.
+   * 등록 감사 기록의 "가격 출처"와 채널 화면의 안내 문구가 둘 다 이 값을 읽는다. */
+  priceOrigin: ChannelPriceOrigin;
   options: string[];
   shippingInfo: string;
   description: string;
@@ -81,9 +87,25 @@ export interface ListingPricingContext {
 export interface PlatformAdapter {
   platform: PlatformId;
   label: string;
+  /**
+   * PHASE 3.2 — 네 인자 전부 **필수**다. 특히 platform이 그렇다.
+   *
+   * 왜 optional로 두지 않았나: 채널 최종 등록가격은 platform 키로만 찾을 수
+   * 있다. 이 인자가 optional이면 호출부 하나가 그걸 빠뜨려도 타입도 테스트도
+   * 통과하고, 그 채널만 셀러가 지정한 가격 대신 상품 기준가로 조용히 등록된다 —
+   * 가격이 틀린 채로 성공하는 종류의 사고다. 빠뜨린 호출부는 **컴파일 에러**여야
+   * 한다. categorySelection/pricingContext까지 필수인 것도 같은 이유다(TS는
+   * optional 뒤에 required를 둘 수 없으므로 선택의 여지도 없다) — 값이 없는
+   * 호출부는 UNRESOLVED_CATEGORY / undefined를 **명시적으로** 적는다.
+   *
+   * 어댑터 자신도 platform 필드를 갖고 있지만(this.platform) 그것과 별개로 받는다:
+   * 호출부가 "지금 어느 채널의 가격을 해석하는 중인가"를 직접 적게 만드는 것이
+   * 이 인자의 목적이다.
+   */
   toListingModel(
     product: CanonicalProduct,
-    categorySelection?: CategorySelection,
-    pricingContext?: ListingPricingContext,
+    categorySelection: CategorySelection,
+    pricingContext: ListingPricingContext | undefined,
+    platform: PlatformId,
   ): ListingModel;
 }

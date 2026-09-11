@@ -59,7 +59,7 @@ async function main() {
   const categorySelection = ws.categoryMappings?.smartstore;
   if (!categorySelection) throw new Error("categoryMappings.smartstore가 스냅샷에 없습니다.");
 
-  const listing = smartstoreAdapter.toListingModel(product, categorySelection);
+  const listing = smartstoreAdapter.toListingModel(product, categorySelection, undefined, "smartstore");
   console.log(`[2/5] ListingModel 생성 완료 — title="${listing.title}", category=${listing.category.candidate?.id}`);
   console.log(`      validations: ${listing.validations.map((v) => `${v.field}=${v.status}`).join(", ")}`);
 

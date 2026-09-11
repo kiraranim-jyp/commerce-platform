@@ -83,7 +83,7 @@ async function recommendCategory(product: CanonicalProduct): Promise<CategorySel
 
 async function register(product: CanonicalProduct, categorySelection: CategorySelection) {
   console.log("[3/4] ListingModel 빌드 (coupangAdapter.toListingModel)");
-  const listing = coupangAdapter.toListingModel(product, categorySelection);
+  const listing = coupangAdapter.toListingModel(product, categorySelection, undefined, "coupang");
   const errors = listing.validations.filter((v) => v.status === "ERROR");
   console.log(`    registrableScore=${listing.registrableScore} errors=${errors.length}`);
   if (errors.length > 0) {

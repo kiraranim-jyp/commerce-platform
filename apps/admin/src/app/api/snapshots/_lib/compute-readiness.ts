@@ -230,7 +230,7 @@ async function computeSmartstoreReadiness(
   const afterServiceDirector = context.notice.afterServiceDirector;
   const afterServiceTelephoneNumber = context.notice.companyContactNumber;
 
-  const listing = PLATFORM_ADAPTERS.smartstore.toListingModel(product, category);
+  const listing = PLATFORM_ADAPTERS.smartstore.toListingModel(product, category, undefined, "smartstore");
   const payload = buildNaverProductPayload({
     product,
     listing,
@@ -298,7 +298,7 @@ function computeMarketplaceReadiness(
   registered: boolean,
 ): PlatformReadiness {
   const categoryConfirmed = isVerifiedCategorySelected(category);
-  const listing = PLATFORM_ADAPTERS[platform].toListingModel(product, category);
+  const listing = PLATFORM_ADAPTERS[platform].toListingModel(product, category, undefined, platform);
   // N-3.56(이 파일 상단 주석 참고) — compliance report(고시/KC 등)는 카테고리
   // API 실시간 조회가 필요해 이번 대시보드 배치 계산에서는 제외한다. 가격/
   // 카테고리/마켓플레이스 필수 필드(상품명/이미지/옵션/배송정보 등)까지만

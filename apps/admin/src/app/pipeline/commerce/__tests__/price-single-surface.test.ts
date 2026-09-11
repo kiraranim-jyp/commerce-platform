@@ -81,19 +81,61 @@ describe("① 가격 편집기는 상품정보 ③ 등록 준비에만 있다", 
   });
 });
 
-describe("② 채널 화면은 판매가를 읽기만 하고, readiness가 갈 곳은 그대로 있다", () => {
+/**
+ * PHASE 3.2(CPO 확정, 2026-09-11) — ②가 말하는 것이 한 단계 바뀌었다.
+ *
+ * UX 2.5의 ②는 "채널 화면은 판매가를 읽기만 한다"였다. 그 근거는 데이터에
+ * 채널별 가격이라는 개념이 없다는 사실이었고, 그건 그때 사실이었다. 이번에
+ * 바뀐 것은 화면이 아니라 데이터 모델이다 — CanonicalProduct.channelPriceOverrides가
+ * 생겼고, 채널마다 다른 등록가를 실제로 저장한다.
+ *
+ * 그래서 이 블록이 지키는 것은 이제 "읽기 전용"이 아니라 **역할 분리**다:
+ * 채널 화면은 그 채널의 최종 등록가격만 만질 수 있고, 상품의 기준가를 고치는
+ * 통로(PriceEditor와 그 setter 넷)는 여전히 여기 없다. 그 통로가 하나라도
+ * 돌아오면 셀러는 다시 "가격을 채널마다 관리한다"고 읽는다.
+ */
+describe("② 채널 화면은 그 채널의 최종 등록가격만 만지고, readiness가 갈 곳은 그대로 있다", () => {
+  const channelPriceSection = read("../ChannelPriceSection.tsx");
+
   it("등록에 쓰일 그 값(listing.priceKrw)을 그대로 보여준다 — 따로 계산하지 않는다", () => {
-    expect(platformPreview).toContain("formatKrw(listing.priceKrw)");
+    // 채널 화면이 그리는 숫자는 어댑터가 이미 해석해 넘긴 값 하나뿐이다.
+    expect(platformPreview).toContain("priceKrw={listing.priceKrw}");
+    expect(channelPriceSection).toContain("formatKrw(priceKrw)");
     // UNRESOLVED일 때 0을 "판매가격"이라고 부르지 않는다(어댑터가 0으로 채우는 자리다).
-    expect(platformPreview).toContain('listing.priceSource === "UNRESOLVED" ? "미확정"');
+    expect(channelPriceSection).toContain('priceOrigin === "UNRESOLVED"');
+    expect(channelPriceSection).toContain('"미확정"');
     // 계산기가 쓰던 입력(마진율/수수료율/배송비)을 여기서 다시 그리지 않는다.
     expect(platformPreview).not.toContain("computePriceBreakdown");
+    expect(channelPriceSection).not.toContain("computePriceBreakdown");
   });
 
-  it("읽기전용이라는 사실과 고치러 갈 길을 화면이 직접 말한다", () => {
-    expect(platformPreview).toContain("가격은 상품정보에서 관리됩니다");
-    expect(platformPreview).toContain("가격 수정하기");
-    expect(platformPreview).toContain("onClick={onRequestPriceReview}");
+  it("기본은 읽기 전용이고, [수정]을 눌러야만 이 채널 전용 값이 생긴다", () => {
+    // 편집창이 처음부터 펼쳐져 있으면 UX 2.5 이전으로 돌아간다 —
+    // 셀러가 채널마다 가격을 따로 정해야 한다고 읽는 화면이다.
+    expect(channelPriceSection).toContain("const [editing, setEditing] = useState(false);");
+    expect(channelPriceSection).toContain("상품정보 가격을 사용합니다");
+    expect(channelPriceSection).toContain("이 채널만");
+    expect(channelPriceSection).toContain("※ 이 채널(");
+    // 되돌릴 길이 반드시 있어야 한다 — 한 번 고치면 못 돌아오는 값이 아니다.
+    expect(channelPriceSection).toContain("상품정보 가격 사용");
+    expect(channelPriceSection).toContain("onUpdateChannelPrice(null)");
+  });
+
+  it("채널 화면에서 상품정보 가격으로 가는 길이 남아 있다", () => {
+    expect(channelPriceSection).toContain("상품정보 가격 계산 →");
+    expect(channelPriceSection).toContain("onClick={onRequestPriceReview}");
+    expect(platformPreview).toContain("onRequestPriceReview={onRequestPriceReview}");
+  });
+
+  it("채널 가격 변경 경로에 서버 호출이 하나도 없다 — MI가 다시 돌 이유가 생기지 않는다", () => {
+    expect(channelPriceSection).not.toContain("fetch(");
+    const at = workspace.indexOf("function updateChannelPriceKrw");
+    expect(at).toBeGreaterThan(-1);
+    const body = workspace.slice(at, workspace.indexOf("\n  }", at));
+    expect(body).toContain("setProduct(");
+    expect(body).not.toContain("fetch(");
+    // 상품의 기준가를 같이 건드리지 않는다 — 이 한 줄이 UX 불변식의 전부다.
+    expect(body).not.toContain("priceOverrideKrw");
   });
 
   it('id="section-price"가 살아 있다 — readiness의 스크롤 경로가 끊기지 않는다', () => {
@@ -174,48 +216,99 @@ describe("③ 가격으로 가는 길은 전부 같은 한 곳으로 모인다",
   });
 });
 
-describe("④ 가격 계산 카드의 주 사슬에는 수수료가 없다", () => {
+/**
+ * PHASE 3.2 추가지시(CPO, 2026-09-11) — 가격 계산 카드의 순서를 원래대로 되돌린다.
+ *
+ * UX 2.5에서는 계산 사슬이 카드의 본문이었고 최종 판매가격이 그 아래였다.
+ * CPO가 옛 화면과 나란히 두고 확인한 결론은 반대다: 셀러가 이 카드에 오는
+ * 이유는 "그래서 얼마에 팔 건가"이고, 그 답이 스크롤 끝에 있으면 카드를 다
+ * 읽어야 답이 나온다. 결론을 맨 위에 두고 근거를 그 아래 순서대로 둔다.
+ *
+ * 계산은 한 줄도 바뀌지 않았다 — computePriceBreakdown() 하나가 여전히 유일한
+ * 산식이다. 바뀐 것은 읽는 순서뿐이다.
+ */
+describe("④ 가격 계산 카드는 결론(최종 판매가격) → 근거(가격 계산 상세) 순이다", () => {
   const editor = read("../PriceEditor.tsx");
-  const chainAt = editor.indexOf('<Row label="원본 가격"');
-  const suggestedAt = editor.indexOf("권장 판매가격\n            <ValueBadge kind=\"aiSuggested\" />");
+  const finalPriceAt = editor.indexOf("최종 판매가격\n            {product.priceOverrideKrw && (");
   const detailAt = editor.indexOf("{detailOpen && (");
+  const chainAt = editor.indexOf('<Row label="원본 가격"');
 
-  it("사슬은 원본 가격 → 원화 환산 → 국제배송비 → 착지원가 → 기본 마진율 → 권장 판매가격 순이다", () => {
-    // CEO가 그려 준 카드 그대로다. 순서가 바뀌면 "무엇을 더해서 이 값이 됐는지"를
-    // 읽을 수 없게 된다.
-    const order = [
-      '<Row label="원본 가격"',
-      "<Row label={PRICE_LINE_LABEL.SOURCE_PRICE_KRW}>",
-      "<Row label={PRICE_LINE_LABEL.INTERNATIONAL_SHIPPING}>",
-      "{PRICE_LINE_LABEL.LANDED_COST}",
-      '<Row label="기본 마진율">',
-    ].map((needle) => editor.indexOf(needle));
-    expect(order.every((at) => at > -1)).toBe(true);
-    expect([...order].sort((a, b) => a - b)).toEqual(order);
-    expect(suggestedAt).toBeGreaterThan(order[order.length - 1]);
+  it("최종 판매가격이 카드 맨 위에 있고, 계산 상세는 그 아래다", () => {
+    expect(finalPriceAt).toBeGreaterThan(-1);
+    expect(finalPriceAt).toBeLessThan(detailAt);
+    expect(chainAt).toBeGreaterThan(detailAt);
+    // 결론 옆에는 "적용" 버튼과 저장 여부 안내만 있다 — 계산 입력이 올라오지 않는다.
+    expect(editor).toContain("최종 판매가격에 적용");
+    expect(editor).toContain("아직 저장된 값이 없어 권장 판매가격을 보여주고 있습니다");
   });
 
-  it("사슬이 접혀 있지 않다 — 보러 온 것을 한 번 더 접지 않는다", () => {
-    expect(chainAt).toBeGreaterThan(-1);
-    expect(chainAt).toBeLessThan(detailAt);
+  it("상세는 기본으로 펼쳐져 있다 — 보러 온 것을 한 번 더 접지 않는다", () => {
+    expect(editor).toContain("const [detailOpen, setDetailOpen] = useState(true);");
+    expect(editor).toContain('detailOpen ? "▾ 가격 계산 상세" : "▸ 가격 계산 상세"');
     // open prop으로 "요약만 그리기" 분기를 다시 만들지 않는다.
     expect(editor).not.toContain("if (!open)");
   });
 
-  it("수수료(%)는 사슬이 아니라 상세 안에 있다 — 채널이 둘인데 한 줄로 적을 수 없다", () => {
-    const feeAt = editor.indexOf('<Row label="예상 수수료">');
-    expect(feeAt).toBeGreaterThan(detailAt);
+  it("상세 안의 순서는 계산 순서 그대로다 — 원본 가격 → 환율 → 원화 환산 → 국제배송비 → 착지원가 → 예상 수수료 → 목표 마진 → 권장 판매가격 → 수수료 금액 → 예상 이익", () => {
+    const order = [
+      '<Row label="원본 가격"',
+      '<Row label="환율">',
+      "<Row label={PRICE_LINE_LABEL.SOURCE_PRICE_KRW}>",
+      "<Row label={PRICE_LINE_LABEL.INTERNATIONAL_SHIPPING}>",
+      "{PRICE_LINE_LABEL.LANDED_COST}",
+      '<Row label="예상 수수료">',
+      '<Row label="목표 마진">',
+      "권장 판매가격\n              <ValueBadge kind=\"aiSuggested\" />",
+      '<Row label="예상 수수료 금액">',
+      "예상 이익(최종 판매가격 기준)",
+    ].map((needle) => editor.indexOf(needle));
+    expect(order.every((at) => at > -1)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    // 전부 상세 안이다 — 결론 옆에 계산 입력이 새지 않는다.
+    expect(order[0]).toBeGreaterThan(detailAt);
+  });
+
+  it("수수료(%)는 결론 옆이 아니라 상세 안에 있다 — 채널이 둘인데 한 줄로 적을 수 없다", () => {
+    expect(editor.indexOf('<Row label="예상 수수료">')).toBeGreaterThan(detailAt);
     expect(editor.indexOf('<Row label="예상 수수료 금액">')).toBeGreaterThan(detailAt);
     // 그렇다고 계산에서 빠진 것은 아니다 — 공식은 그대로다.
     expect(editor).toContain("feePercent: n");
-    expect(editor).toContain("채널 수수료는 이 사슬에 표시하지 않습니다");
   });
 
   it("라벨은 판단 카드의 사슬과 같은 표에서 나온다", () => {
     // 같은 숫자를 두 화면이 다른 이름으로 부르면 셀러는 다른 값이라고 읽는다.
-    expect(editor).toContain('import { PRICE_LINE_LABEL } from "./price-hierarchy";');
+    // CPO 목업의 "상품 원가"/"랜드드 코스트"를 그대로 쓰지 않는 이유가 이것이다 —
+    // 그 이름은 판단 카드 ④ 수익성 사슬의 "원화 환산"/"착지원가"와 같은 숫자를
+    // 가리키면서 다르게 불러, 이 저장소가 반복해서 고쳐 온 라벨 표류를 되살린다.
+    expect(editor).toContain('import { PRICE_LINE_LABEL, PRICE_SECTION_TITLE } from "./price-hierarchy";');
     expect(editor).not.toContain('<Row label="상품 원가">');
     expect(editor).not.toContain("랜드드 코스트");
+  });
+
+  it("시장 정보는 이 카드에 없다 — 링크 한 줄로만 나간다", () => {
+    // 시장 비교표/타국 표시가는 ②·③으로 돌아갔다. 블록이 아니라 링크여야
+    // 한다 — 블록이 되는 순간 계산 카드가 다시 비교 카드가 된다.
+    //
+    // 막는 것은 조회와 렌더다(주석에서 "왜 내렸는지"를 설명하는 것은 괜찮다 —
+    // 위 "채널 화면은 편집기를 import조차 하지 않는다"와 같은 규칙).
+    expect(editor).not.toContain("/api/price-intelligence");
+    expect(editor).not.toContain("sellerIntel");
+    expect(editor).not.toContain("expandedIntel");
+    expect(editor).not.toContain("function CountryPriceTable");
+    expect(editor).not.toContain("<CountryPriceTable");
+    expect(editor).toContain("onOpenMarketComparison");
+    expect(editor).toContain("PRICE_SECTION_TITLE.SELLER_GLOBAL_MARKET");
+    expect(editor).toContain("PRICE_SECTION_TITLE.DOMESTIC_COMPETITION");
+    // 도착지는 이미 존재하는 근거 영역이다 — 새 화면을 만들지 않았다.
+    expect(workspace).toContain("function handleOpenMarketComparison()");
+    expect(workspace).toContain("onOpenMarketComparison={handleOpenMarketComparison}");
+  });
+
+  it("원본 가격은 지금까지처럼 직접 고칠 수 있다 — 편집 가능 여부를 이번에 바꾸지 않았다", () => {
+    // 원본가 provenance(USER_EDITED 태깅)는 CommerceWorkspace.updateOriginalPrice가
+    // 그대로 맡는다. 이 카드는 그 setter가 있을 때만 입력칸을 그린다.
+    expect(editor).toContain("{onUpdateOriginalPrice ? (");
+    expect(workspace).toContain("onUpdateOriginalPrice={updateOriginalPrice}");
   });
 });
 

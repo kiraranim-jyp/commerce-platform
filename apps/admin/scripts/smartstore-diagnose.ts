@@ -87,7 +87,7 @@ async function main() {
     return;
   }
 
-  const listing = smartstoreAdapter.toListingModel(product, categorySelection);
+  const listing = smartstoreAdapter.toListingModel(product, categorySelection, undefined, "smartstore");
 
   const resolveRes = await fetch(
     `${BASE_URL}/api/naver/resolve?categoryId=${leafCategoryId}&countryOfOrigin=${encodeURIComponent(product.countryOfOrigin.value || "")}&brand=${encodeURIComponent(product.brand.value || "")}`,

@@ -192,6 +192,25 @@ export interface CanonicalProduct {
    * 남아서 등록 이력에서 재구성할 수 없었다 — 이 필드가 그 계산 근거다.
    * priceOverrideKrw 없이(자동 환율값 그대로 등록) 이 필드만 있을 수도 있다. */
   priceBreakdown?: { shippingKrw: number; feePercent: number; marginPercent: number };
+  /** PHASE 3.2(CPO 확정, 2026-09-11) — "이 채널에 얼마로 등록할 것인가"의 답.
+   *
+   * priceOverrideKrw("이 상품의 최종 판매가격")와 역할이 다르다. 상품정보에서
+   * 정한 가격이 모든 채널의 기본값이고, 셀러가 특정 채널만 다르게 등록하고
+   * 싶을 때(스마트스토어 ₩139,000 · 쿠팡 ₩145,000) 그 채널 키에만 값이 생긴다.
+   * 그래서 여기에 값을 넣어도 priceOverrideKrw는 절대 바뀌지 않는다 — 상품정보로
+   * 돌아가면 여전히 원래의 최종 판매가격이 보여야 한다(이 분리가 깨지면 채널
+   * 하나를 고칠 때마다 상품의 기준가가 조용히 이동한다).
+   *
+   * 해석 순서는 resolveChannelListingPrice()(@commerce/marketplace) 한 곳에만
+   * 있다: 채널 최종가 > priceOverrideKrw > 권장 판매가격. "전역 override"라는
+   * 개념은 없다 — 채널 값은 그 채널 하나에만 적용된다.
+   *
+   * Partial인 이유: 값이 있는 채널만 키가 존재한다. 키가 없다 = 이 채널은
+   * 상품정보 가격을 그대로 쓴다(0으로 채워 "0원 등록"처럼 보이게 하지 않는다).
+   * product_snapshots.workspace jsonb 안에 그대로 들어가므로 DB 마이그레이션이
+   * 필요 없다 — 대신 이 필드를 모르는 과거 스냅샷을 위해
+   * backfillCanonicalProduct()가 빈 객체로 초기화한다. */
+  channelPriceOverrides?: Partial<Record<PlatformId, ProvenanceField<number>>>;
   /** P-3-2(대표님 지시, 2026-08-28) — 관세/부가세는 판매자 공통 기본값이
    * 아니라 카테고리/HS코드마다 달라 상품별로 직접 입력한다(국내 배송원가와
    * 반대로 SellerProfile이 아니라 여기 CanonicalProduct에 둔다 — P-3-1
@@ -378,6 +397,11 @@ export function backfillCanonicalProduct(raw: CanonicalProduct): CanonicalProduc
   return {
     ...raw,
     priceValidity: raw.priceValidity ?? inferLegacyPriceValidity(raw.price.value),
+    // PHASE 3.2 — 이 필드 도입 이전 스냅샷에는 키 자체가 없다. 빈 객체로
+    // 초기화하지 않으면 "채널 최종가가 없다"와 "이 스냅샷은 채널 최종가라는
+    // 개념을 모른다"가 코드에서 구분되지 않아, 나중에 값을 넣는 쪽이 undefined를
+    // 매번 방어해야 한다. 값을 지어내는 게 아니다 — 빈 객체 = override 없음이다.
+    channelPriceOverrides: raw.channelPriceOverrides ?? {},
     careInstructions: raw.careInstructions ?? emptyField(""),
     options: raw.options ?? emptyField([]),
     optionGroups: raw.optionGroups ?? [],

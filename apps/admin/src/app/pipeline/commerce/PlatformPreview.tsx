@@ -12,10 +12,10 @@ import type {
   NaverPayloadValidationResult,
 } from "@commerce/listing";
 import { isVerifiedCategorySelected, MARKETPLACE_DESCRIPTORS } from "@commerce/marketplace";
-import { formatKrw } from "@commerce/pricing";
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct, CanonicalProductCertification, CanonicalProductOptionGroup, FieldSource } from "@commerce/shared";
 import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
+import { ChannelPriceSection } from "./ChannelPriceSection";
 import { CategoryRequirementsEditor } from "./CategoryRequirementsEditor";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { ComplianceBreakdown } from "./ComplianceBreakdown";
@@ -313,6 +313,8 @@ export function PlatformPreview({
   payloadPreview,
   payloadPreviewUnavailableReason,
   onReadinessChange,
+  onUpdateChannelPrice,
+  productPriceKrw,
 }: {
   product: CanonicalProduct;
   listing: ListingModel;
@@ -476,6 +478,16 @@ export function PlatformPreview({
    * 계산되므로, 두 플랫폼을 동시에 강제로 미리 계산하는 구조 변경 없이도 한 번
    * 방문한 탭의 상태는 계속 보인다). */
   onReadinessChange?: (state: RegistrationReadinessState, priorityItems: PriorityItem[]) => void;
+  /** PHASE 3.2 — 이 채널의 최종 등록가격을 정하거나(숫자) 지운다(null).
+   * null을 넘기면 상품정보 최종 판매가격으로 되돌아간다 — 0을 저장하지 않는다.
+   * 이 핸들러는 상품정보 가격(priceOverrideKrw)을 절대 건드리지 않고, MI
+   * 재조회도 일으키지 않는다(CommerceWorkspace의 updateChannelPriceKrw 참고). */
+  onUpdateChannelPrice?: (amountKrw: number | null) => void;
+  /** PHASE 3.2 — 채널 최종가가 없을 때 이 채널이 쓰게 될 값(= 상품정보 최종
+   * 판매가격). "수정을 취소하면 얼마로 돌아가는가"를 화면이 정직하게 말하려면
+   * listing.priceKrw만으로는 부족하다 — 그 값은 이미 채널 최종가일 수 있다.
+   * 계산할 수 없으면(원본가 미확인) null. */
+  productPriceKrw?: number | null;
 }) {
   // isVerifiedPlatformCode까지 확인해야 한다 — state만 보면 미리보기가
   // "선택 완료"로 보이는데 실제 등록은 CP001로 거부되는 버그가 재발한다.
@@ -930,54 +942,46 @@ export function PlatformPreview({
           )}
         </CollapsibleSection>
 
-        {/* UX 2.5(CEO 지시, 2026-09-11) — 가격 편집기는 여기서 내려가고 결과만 남는다.
+        {/* PHASE 3.2(CPO 확정, 2026-09-11) — 채널별 최종 등록가격.
          *
-         * 왜 옮겼나: 판매가는 처음부터 채널별 값이 아니었다. 모든 어댑터가
-         * resolveListingPrice() 하나를 부르고, 스마트스토어와 쿠팡이 같은 숫자를
-         * 받는다는 사실은 packages/marketplace/src/__tests__/
-         * listing-price-contract.test.ts가 못박고 있다. 그런데 편집기가 채널
-         * 화면마다 떠 있어서, 화면만 보면 "쿠팡 탭에서 고친 가격"과
-         * "스마트스토어 탭에서 고친 가격"이 따로 있는 것처럼 읽혔다 — 데이터에는
-         * 존재하지도 않는 구분이다. 이제 고치는 곳은 상품정보 ③ 등록 준비 하나다.
+         * UX 2.5에서 이 자리는 완전한 읽기 전용이었다. 그때 판단의 근거는
+         * "판매가는 채널별 값이 아니다"였고, 그건 그 시점에 사실이었다. 이번에
+         * 바뀐 것은 화면이 아니라 **데이터 모델**이다: 채널마다 다른 등록가를
+         * 실제로 저장할 수 있게 됐다(CanonicalProduct.channelPriceOverrides).
          *
-         * 이 섹션을 통째로 없애지 않은 이유: id="section-price"가 살아 있어야 한다.
-         * readiness.ts의 LABEL_TO_SECTION["판매가격"]과 naverFieldSection(
-         * "originProduct.salePrice")이 이 id로 스크롤하고, readiness.test.ts는
-         * "required이고 READY가 아닌 항목은 갈 곳이 반드시 있다"를 계약으로
-         * 검사한다. 섹션을 지우면 그 경로가 조용히 끊긴다(기본정보 안내 문구와
-         * 같은 read-only 선례: 위 section-basic의 "이 정보는 상품정보 탭과
-         * 공유됩니다" 문구). */}
+         * 그래도 기본값은 여전히 읽기 전용이다. 가격을 정하는 곳은 상품정보
+         * 하나이고, 이 화면은 "그 값을 이 채널에 그대로 쓰겠다"를 기본으로
+         * 보여준다. [수정]을 눌러야만 이 채널 전용 값을 만든다 — 편집창을
+         * 처음부터 열어두면 UX 2.5 이전으로 돌아가 셀러가 채널마다 가격을
+         * 따로 관리해야 한다고 읽는다.
+         *
+         * 여기서 고친 값은 이 채널에만 적용된다. 상품정보의 최종 판매가격은
+         * 절대 바뀌지 않는다(applyChannelPriceOverride가 그 경계다) — 상품정보로
+         * 돌아가면 여전히 원래 숫자가 보여야 한다.
+         *
+         * id="section-price"는 그대로 살아 있어야 한다: readiness.ts의
+         * LABEL_TO_SECTION["판매가격"]과 naverFieldSection("originProduct.salePrice")이
+         * 이 id로 스크롤하고, readiness.test.ts가 "required이고 READY가 아닌
+         * 항목은 갈 곳이 반드시 있다"를 계약으로 검사한다. */}
         <CollapsibleSection
           title="가격"
           badge={sectionCompletionBadge("section-price")}
           alwaysRenderChildren
           {...sectionProps("section-price")}
         >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="min-w-0">
-              <p className="flex items-baseline gap-1.5 text-sm text-text-secondary">
-                판매가격
-                <span className="text-base font-semibold text-text-primary">
-                  {listing.priceSource === "UNRESOLVED" ? "미확정" : formatKrw(listing.priceKrw)}
-                </span>
-              </p>
-              {/* 이 화면이 지금 보여주는 숫자가 바로 등록 payload에 들어갈 값이다
-                  (listing.priceKrw — 어댑터가 resolveListingPrice()로 만든 값).
-                  따로 계산하지 않으므로 상품정보에서 본 최종 판매가격과 갈릴 수 없다. */}
-              <p className="mt-0.5 text-[11px] text-text-tertiary">
-                가격은 상품정보에서 관리됩니다 — 여기서 정한 한 값이 모든 채널에 그대로 적용됩니다.
-              </p>
-            </div>
-            {onRequestPriceReview && (
-              <button
-                type="button"
-                onClick={onRequestPriceReview}
-                className="shrink-0 rounded-md border border-primary px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary-soft"
-              >
-                가격 수정하기 →
-              </button>
-            )}
-          </div>
+          {/* key에 채널을 박는 이유: PlatformPreview는 탭을 바꿔도 같은 자리에
+              재사용된다(언마운트되지 않는다). key가 없으면 쿠팡 탭에서 열어둔
+              편집 상태가 스마트스토어 탭으로 그대로 넘어가, 다른 채널의 값을
+              고치는 것처럼 보인다. */}
+          <ChannelPriceSection
+            key={listing.platform}
+            platformLabel={listing.platformLabel}
+            priceKrw={listing.priceKrw}
+            priceOrigin={listing.priceOrigin}
+            productPriceKrw={productPriceKrw ?? null}
+            onUpdateChannelPrice={onUpdateChannelPrice}
+            onRequestPriceReview={onRequestPriceReview}
+          />
         </CollapsibleSection>
 
         {/* CEO 지시(2026-08-24, CPO 부재중): "각 커머스별 이미지는 제거하고

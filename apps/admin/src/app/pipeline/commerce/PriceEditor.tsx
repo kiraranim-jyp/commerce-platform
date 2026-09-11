@@ -2,22 +2,20 @@
 
 import { useEffect, useState } from "react";
 import type { CanonicalProduct } from "@commerce/shared";
-import { countryToFlagEmoji } from "@commerce/shared";
 import {
   computePriceBreakdown,
-  convertToKrw,
   DEFAULT_PRICE_BREAKDOWN_INPUT,
   DEFAULT_PRICE_ROUNDING_UNIT,
-  FIXED_RATES_TO_KRW,
   formatKrw,
   formatOriginalPrice,
 } from "@commerce/pricing";
-import type { PriceIntelligenceResult } from "@commerce/pricing";
 import { EditableText } from "./EditableField";
 // UX 2.5 — 라벨 어휘는 판단 카드의 ④ 수익성 사슬과 같은 표에서 가져온다.
 // 같은 숫자를 두 화면이 다른 이름으로 부르던 것이 이 저장소가 반복해서 고쳐 온
 // 라벨 표류다(price-hierarchy.ts의 "의미 하나당 라벨 하나" 주석 참고).
-import { PRICE_LINE_LABEL } from "./price-hierarchy";
+// PHASE 3.2 추가지시 — 시장 비교로 나가는 링크 문구도 같은 표(PRICE_SECTION_TITLE)를
+// 쓴다. 링크에 적힌 이름과 실제 도착지 제목이 다르면 셀러는 다른 화면으로 간 줄 안다.
+import { PRICE_LINE_LABEL, PRICE_SECTION_TITLE } from "./price-hierarchy";
 import { ValueBadge } from "@/components/ui/ValueBadge";
 
 /**
@@ -111,6 +109,7 @@ export function PriceEditor({
   exchangeRates,
   exchangeRatesLoading,
   onRefreshExchangeRates,
+  onOpenMarketComparison,
 }: {
   product: CanonicalProduct;
   onUpdateSalePriceKrw: (amountKrw: number) => void;
@@ -120,6 +119,10 @@ export function PriceEditor({
   exchangeRates: { rates: Record<string, number>; fetchedAt: string; source: "frankfurter" | "fallback" } | null;
   exchangeRatesLoading: boolean;
   onRefreshExchangeRates: () => void;
+  /** PHASE 3.2 추가지시(CPO, 2026-09-11) — 이 카드에서 내려간 시장 정보로 가는
+   * 단 하나의 통로. 값을 가져오는 함수가 아니라 화면 이동이다(여기서 시장
+   * 데이터를 다시 조회하지 않는다 — 그러면 블록을 뺀 의미가 없다). */
+  onOpenMarketComparison?: () => void;
 }) {
   const breakdownInput = product.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT;
 
@@ -172,54 +175,21 @@ export function PriceEditor({
 
   const roundingUnit = sellerDefaults?.priceRoundingUnit ?? DEFAULT_PRICE_ROUNDING_UNIT;
 
-  // N-3.10 Part D — "판매처 원본가격 참고" 카드를 별도 섹션으로 두지 않고
-  // N-3.7 데이터(판매처 실제 등록 국가 기준 원본가격)를 이 Breakdown의
-  // "원본 가격" 행에 참고 문구로 직접 편입한다(CPO 지시 — 가격 UI를 하나로
-  // 합친다는 원칙과 동일선상). 국가별 다중 시장 비교(구 PriceIntelligencePanel의
-  // "국가별 가격 보기")는 Part I-M 해외 가격비교 Beta가 이어받는다.
-  const [sellerIntel, setSellerIntel] = useState<PriceIntelligenceResult | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/price-intelligence", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sourceUrl: product.sourceUrl }),
-    })
-      .then((res) => res.json())
-      .then((json: PriceIntelligenceResult) => {
-        if (!cancelled) setSellerIntel(json);
-      })
-      .catch(() => {
-        // 조회 실패해도 원본 가격 입력 자체는 그대로 쓸 수 있으므로 조용히 무시한다.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [product.sourceUrl]);
-
-  // N-3.13 Part H(CPO 지시) — "원본 사이트가 실제 제공하는 국가별 가격"과
-  // "CartPilot이 환산한 가격"을 절대 섞지 않는다. 기본 조회(위 useEffect)는
-  // 비용 때문에 origin+KR 2곳만 가져온다 — 나머지 후보 시장(US/GB/FR/DE/JP/
-  // AU/CA)은 사용자가 버튼을 눌렀을 때만 추가로 조회한다(N-3.2 원래 설계
-  // "국가별 가격 전체 조회는 펼쳤을 때만"을 그대로 따른다 — 자동 전체조회
-  // 안 함). 이미 결과가 있으면 다시 조회하지 않는다(중복 호출 방지).
-  const [expandedIntel, setExpandedIntel] = useState<PriceIntelligenceResult | null>(null);
-  const [expandLoading, setExpandLoading] = useState(false);
-  function loadExpandedMarkets() {
-    if (expandedIntel || expandLoading) return;
-    setExpandLoading(true);
-    fetch("/api/price-intelligence?expand=true", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sourceUrl: product.sourceUrl }),
-    })
-      .then((res) => res.json())
-      .then((json: PriceIntelligenceResult) => setExpandedIntel(json))
-      .catch(() => {
-        // 조회 실패해도 기존 원본가격 표시는 그대로 유지 — 조용히 무시.
-      })
-      .finally(() => setExpandLoading(false));
-  }
+  // PHASE 3.2 추가지시(CPO, 2026-09-11) — "가격 계산 카드에서 시장 정보를 뺀다".
+  //
+  // 여기 있던 것: price-intelligence API 2회 조회(기본 + expand)와 그 결과로
+  // 그리던 해외 원본가 · 원화 환산가 · 그 판매처의 한국 표시가 · 국가별 비교표.
+  //
+  // 왜 뺐나: 이 카드가 답해야 하는 질문은 "얼마에 팔면 얼마가 남는가" 하나다.
+  // 같은 카드 안에서 다른 나라 표시가를 나열하면 셀러는 계산을 읽다 말고
+  // 비교를 시작하고, 무엇보다 "원본 가격"(내가 치르는 값)과 "한국向 표시가"
+  // (그 판매처가 한국에 파는 값)가 같은 화면에서 자리를 다툰다 — 라벨이 달라도
+  // 나란히 놓이는 순간 하나로 읽힌다.
+  //
+  // 사실이 사라진 것이 아니라 자리를 옮겼다. 시장 근거는 이미 ② 🌎 판매자
+  // 글로벌 시장 가격 / ③ 📊 한국 시장 경쟁가격이 책임지고 있고(price-hierarchy.ts의
+  // PRICE_SECTION_TITLE), 아래 한 줄 링크가 거기로 데려간다. 조회 2회도 함께
+  // 사라져서 이 카드는 이제 서버를 한 번도 부르지 않는다(판매자 기본값 조회 제외).
 
   // 타이핑 중 즉시 재계산을 위한 로컬 draft — product.priceBreakdown/price가
   // 외부(탭 전환, Settings 기본값 반영)에서 바뀌면 다시 동기화한다.
@@ -279,7 +249,10 @@ export function PriceEditor({
   const feeAmountKrw = Math.round((finalPriceKrw * draftInput.feePercent) / 100);
   const netProfitKrw = finalPriceKrw - breakdown.landedCostKrw - feeAmountKrw;
 
-  const [detailOpen, setDetailOpen] = useState(false);
+  // PHASE 3.2 추가지시 — 기본으로 펼쳐 둔다(▾). 셀러는 ③ 등록 준비에서
+  // "판매가격"을 골라 이 화면을 **보러** 온 것이라, 보러 온 것을 한 번 더
+  // 접어두지 않는다(UX 2.5의 판단 그대로). 접을 수 있게만 남긴다.
+  const [detailOpen, setDetailOpen] = useState(true);
 
   if (priceUnresolved) {
     return (
@@ -328,222 +301,22 @@ export function PriceEditor({
     <section className="rounded-lg border border-border p-4 text-sm">
       <h3 className="text-base font-medium">가격 계산</h3>
       <p className="mt-0.5 text-[11px] text-text-tertiary">
-        원본 가격/국제배송비/마진율을 고치면 아래 값이 즉시 다시 계산됩니다 — 실제 등록에 쓰이는 최종 판매가격은 직접
-        입력하거나 &ldquo;적용&rdquo; 버튼을 눌러야만 바뀝니다.
+        배송비/수수료/마진/원본가격을 고치면 아래 값이 즉시 다시 계산됩니다. 실제 등록에 쓰이는 최종 판매가격은 직접
+        입력하거나 &ldquo;적용&rdquo;을 눌러야 바뀝니다.
       </p>
 
-      {/* UX 2.5(CEO 지시, 2026-09-11) — 계산 사슬이 이 카드의 본문이다.
+      {/* PHASE 3.2 추가지시(CPO, 2026-09-11) — 카드의 순서를 원래 모양으로 되돌린다.
        *
-       * 예전에는 사슬 전체가 "▸ 가격 계산 상세 보기" 뒤에 접혀 있었다. 가격
-       * 편집기가 채널 화면의 여러 Accordion 중 하나였을 때는 그게 맞았지만,
-       * 지금 셀러는 ③ 등록 준비에서 "판매가격"을 골라 **이 화면을 보러** 온
-       * 것이다 — 보러 온 것을 한 번 더 접어두지 않는다.
+       * 맨 위는 **최종 판매가격**이다. UX 2.5에서는 계산 사슬을 먼저 펼쳐 놓고
+       * 최종 판매가격을 그 아래에 뒀는데, 셀러가 이 카드에 오는 이유는 "그래서
+       * 얼마에 팔 건가"이고 그 답이 스크롤 끝에 있으면 카드를 다 읽어야 답이
+       * 나온다. 결론을 맨 위에 두고, 그 결론이 어떻게 나왔는지는 바로 아래
+       * "가격 계산 상세"에 순서대로 둔다(기본으로 펼쳐 둔다 — 보러 온 것을 한 번
+       * 더 접지 않는다는 UX 2.5의 판단은 그대로 유효하다).
        *
-       * 라벨은 price-hierarchy.ts의 어휘를 그대로 가져다 쓴다(원화 환산 ·
-       * 국제배송비 · 착지원가). 같은 숫자를 판단 카드의 ④ 수익성 사슬은
-       * "원화 환산"이라 부르고 이 화면은 "상품 원가"라고 부르던 것이 이
-       * 저장소가 반복해서 고쳐 온 라벨 표류다 — 계산은 한 줄도 바뀌지 않고
-       * 이름만 한 곳으로 모은다.
-       *
-       * 수수료(%)는 이 사슬에 올리지 않는다(CEO 지시). 지금 활성 채널이 둘인데
-       * "수수료 10%" 한 줄을 사슬 한가운데 두면 그게 어느 채널의 수수료인지
-       * 화면이 답할 수가 없다. 계산식에서 빼는 것이 아니라(공식은 여전히
-       * computePriceBreakdown 하나뿐이고 수수료율도 그대로 들어간다) 표시
-       * 위치만 아래 상세로 내린다. */}
-      <div className="mt-3 space-y-2.5 text-xs">
-        <Row label="원본 가격" badge={<ValueBadge kind="original" />}>
-          {onUpdateOriginalPrice ? (
-            <div className="flex items-center justify-end gap-1.5">
-              <LiveNumberField
-                value={draftOriginalAmount}
-                onLiveChange={setDraftOriginalAmount}
-                onCommit={(n) => {
-                  setDraftOriginalAmount(n);
-                  onUpdateOriginalPrice({ amount: n });
-                }}
-                className="w-24 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
-              />
-              <select
-                value={product.price.value.currency}
-                onChange={(e) => onUpdateOriginalPrice({ currency: e.target.value })}
-                className="rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
-              >
-                {SELECTABLE_CURRENCIES.map((code) => (
-                  <option key={code} value={code}>
-                    {code}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <span className="font-medium text-text-primary">
-              {formatOriginalPrice(product.price.value.amount, product.price.value.currency)}
-            </span>
-          )}
-        </Row>
-        {sellerIntel?.status === "OK" && (
-          <div className="-mt-1.5 space-y-1 pl-[calc(6rem+0.5rem)] text-[11px] text-text-tertiary">
-            {sellerIntel.sellerOriginPrice ? (
-              <>
-                <p>
-                  🌍 해외 원본가{sellerIntel.seller.name ? ` — ${sellerIntel.seller.name}` : ""}:{" "}
-                  {countryToFlagEmoji(sellerIntel.seller.country) ?? "🌐"}{" "}
-                  <span className="font-medium text-text-secondary">
-                    {formatOriginalPrice(sellerIntel.sellerOriginPrice.amount, sellerIntel.sellerOriginPrice.currency)}
-                  </span>
-                  {onUpdateOriginalPrice && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onUpdateOriginalPrice({
-                          amount: sellerIntel.sellerOriginPrice!.amount,
-                          currency: sellerIntel.sellerOriginPrice!.currency,
-                        })
-                      }
-                      className="ml-1.5 text-primary hover:underline"
-                    >
-                      이 값을 원본가격으로 적용
-                    </button>
-                  )}
-                </p>
-                {sellerIntel.convertedSellerOriginToKrw && (
-                  <p>
-                    💱 원화 환산가(1 {sellerIntel.sellerOriginPrice.currency} = ₩
-                    {Math.round(sellerIntel.convertedSellerOriginToKrw.exchangeRate).toLocaleString("ko-KR")}):{" "}
-                    <span className="font-medium text-text-secondary">
-                      ≈ {formatKrw(sellerIntel.convertedSellerOriginToKrw.amount)}
-                    </span>
-                  </p>
-                )}
-                {/* N-4.18-Q3 PART C/D(대표님 실측 지시, 2026-08-26: "해외 원가 200
-                    GBP 환산 ₩389,358인데 실제 한국 접속가는 ₩234,800 — 이걸 섞으면
-                    안 된다") — probeOriginAndKrMarkets가 이미 이 판매처 사이트의
-                    /en-kr/ 시장 가격(원문 제공, 실측 확인)을 가져오고 있었지만,
-                    지금까지는 "국가별 원본가격 비교 보기"를 클릭해야만 나오는 표
-                    안에만 있어서 기본 화면에서 원본가/환산가와 혼동되거나 아예
-                    안 보였다(실제 버그). 원본가/환산가 바로 아래, 항상 보이는 위치로
-                    옮기고 "이 값이 무엇인지"(=이 판매처가 한국 방문자에게 실제로
-                    보여주는 가격, 환율 계산이 아니라 원문 그대로)를 명시한다. 왜
-                    원본×환율과 다른지는 아직 확인된 원인이 없으므로(VAT/지역별
-                    가격정책 등) 추측해서 설명하지 않는다 — PART E에서 별도로 다룬다. */}
-                {sellerIntel.krMarket ? (
-                  <p>
-                    🇰🇷 한국向 표시가(이 판매처가 한국 방문자에게 실제로 보여주는 가격, 환율 계산 아님):{" "}
-                    <span className="font-medium text-text-secondary">{formatKrw(sellerIntel.krMarket.amount)}</span>
-                    {sellerIntel.convertedSellerOriginToKrw &&
-                      Math.abs(sellerIntel.krMarket.amount - sellerIntel.convertedSellerOriginToKrw.amount) >
-                        sellerIntel.convertedSellerOriginToKrw.amount * 0.05 && (
-                        <span className="ml-1 text-warning">
-                          (원화 환산가와 {sellerIntel.krMarket.amount > sellerIntel.convertedSellerOriginToKrw.amount ? "다릅니다" : "다릅니다"} — 원인 미확인)
-                        </span>
-                      )}
-                  </p>
-                ) : (
-                  <p>🇰🇷 한국向 표시가: 이 판매처는 한국向 별도 가격을 제공하지 않습니다(원본가만 존재).</p>
-                )}
-              </>
-            ) : (
-              <p>
-                ⚠{" "}
-                {sellerIntel.seller.country
-                  ? "판매처 원본가격을 확인하지 못했습니다."
-                  : "편집샵 원본 국가를 확인할 수 없어 원본가격을 조회하지 못했습니다."}
-              </p>
-            )}
-          </div>
-        )}
-
-        {sellerIntel?.status === "OK" && sellerIntel.sellerOriginPrice && (
-          <div className="pl-[calc(6rem+0.5rem)]">
-            {!expandedIntel ? (
-              <button
-                type="button"
-                onClick={loadExpandedMarkets}
-                disabled={expandLoading}
-                className="text-[11px] text-primary hover:underline disabled:opacity-50"
-              >
-                {expandLoading ? "국가별 원본가격 조회 중..." : "국가별 원본가격 비교 보기 (추가 조회)"}
-              </button>
-            ) : (
-              <CountryPriceTable intel={expandedIntel} liveRates={liveRates} />
-            )}
-          </div>
-        )}
-
-        {/* 환율은 별도 줄이 아니라 "이 원화가 어디서 왔는지"를 밝히는 근거로
-            환산값 바로 아래 붙인다 — price-hierarchy.ts의 exchangeRateNote와
-            같은 취급이다(환율 자체는 가격이 아니다). */}
-        <Row label={PRICE_LINE_LABEL.SOURCE_PRICE_KRW}>
-          <div className="flex flex-col items-end gap-0.5">
-            <span className="font-medium text-text-primary">{formatKrw(breakdown.costKrw)}</span>
-            <span className="flex items-center gap-1.5 text-[11px] text-text-tertiary">
-              1 {breakdown.originalCurrency} = ₩{Math.round(breakdown.exchangeRate).toLocaleString("ko-KR")}
-              {breakdown.isRateEstimate
-                ? " (추정 고정환율)"
-                : exchangeRates?.source === "frankfurter"
-                  ? " (출처: ECB)"
-                  : ""}
-              <button
-                type="button"
-                onClick={onRefreshExchangeRates}
-                disabled={exchangeRatesLoading}
-                className="text-primary hover:underline disabled:opacity-50"
-              >
-                {exchangeRatesLoading ? "불러오는 중…" : "새로고침"}
-              </button>
-            </span>
-          </div>
-        </Row>
-
-        <Row label={PRICE_LINE_LABEL.INTERNATIONAL_SHIPPING}>
-          <div className="flex items-center justify-end gap-1">
-            <span className="text-text-secondary">₩</span>
-            <LiveNumberField
-              value={draftInput.shippingKrw}
-              onLiveChange={(n) => liveUpdateBreakdown({ shippingKrw: n })}
-              onCommit={(n) => commitBreakdown({ shippingKrw: n })}
-              className="w-24 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
-            />
-          </div>
-        </Row>
-
-        <div className="flex items-center justify-between border-t border-border pt-2.5">
-          <span className="font-medium text-text-primary">{PRICE_LINE_LABEL.LANDED_COST}</span>
-          <span className="font-medium text-text-primary">{formatKrw(breakdown.landedCostKrw)}</span>
-        </div>
-
-        <Row label="기본 마진율">
-          <div className="flex items-center justify-end gap-1">
-            <LiveNumberField
-              value={draftInput.marginPercent}
-              max={99}
-              onLiveChange={(n) => liveUpdateBreakdown({ marginPercent: n })}
-              onCommit={(n) => commitBreakdown({ marginPercent: n })}
-              className="w-14 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
-            />
-            <span className="text-text-secondary">%</span>
-            <span className="ml-1 text-[11px] text-text-tertiary">
-              (판매가 기준 목표 이익률 — <a href="/settings" className="text-primary hover:underline">Settings에서 기본값 변경</a>)
-            </span>
-          </div>
-        </Row>
-        <p className="pl-[calc(6rem+0.5rem)] text-[11px] text-text-tertiary">
-          채널 수수료는 이 사슬에 표시하지 않습니다 — 채널마다 요율이 달라 한 줄로 적으면 어느 채널 기준인지 알 수 없기
-          때문입니다. 지금 계산에 실제로 들어간 수수료율은 아래 &ldquo;가격 계산 상세&rdquo;에서 확인하고 고칠 수 있습니다.
-        </p>
-
-        <div className="flex items-center justify-between border-t border-border pt-2.5">
-          <span className="flex items-center gap-1.5 font-medium text-text-primary">
-            권장 판매가격
-            <ValueBadge kind="aiSuggested" />
-          </span>
-          <span className="text-base font-semibold text-text-primary">{formatKrw(breakdown.suggestedPriceKrw)}</span>
-        </div>
-      </div>
-
-      {/* N-3.16 잔여3(CPO 지시: "최종 판매가가 가장 강하게 보여야 함") — 사슬의
-          끝이자 실제 등록에 쓰이는 값. 권장 판매가격 바로 아래에 둔다(사슬을
-          읽어 내려온 눈이 그대로 도착하는 자리다). */}
+       * 계산은 한 줄도 바뀌지 않았다. computePriceBreakdown() 하나가 여전히
+       * 유일한 산식이고 환율·착지원가·마진 역산도 그대로다 — 바뀐 것은 읽는
+       * 순서뿐이다. */}
       <div className="mt-3 rounded-md border border-border bg-background p-3">
         <div className="flex items-center justify-between gap-3">
           <span className="flex items-center gap-1.5 text-sm font-medium text-text-primary">
@@ -575,11 +348,14 @@ export function PriceEditor({
             ? "직접 저장된 값입니다 — 위 계산 값을 고쳐도 자동으로 바뀌지 않습니다. 다시 계산하려면 버튼을 누르세요."
             : "아직 저장된 값이 없어 권장 판매가격을 보여주고 있습니다 — 입력하거나 버튼을 눌러야 저장됩니다."}
         </p>
-        {/* UX 2.5 — 이 값 하나가 스마트스토어/쿠팡에 그대로 간다는 사실을 편집
-            지점에서 말한다. 채널 화면의 읽기전용 문구("가격은 상품정보에서
-            관리됩니다")와 짝이 되는 문장이다. */}
+        {/* PHASE 3.2 — UX 2.5의 "채널마다 따로 정하지 않습니다"를 여기서 정정한다.
+            이제 채널별 최종 등록가격이 실제로 존재한다(CanonicalProduct.
+            channelPriceOverrides). 다만 여기서 정한 값이 여전히 **모든 채널의
+            기본값**이고, 채널 값은 그 채널 하나에만 붙는다 — 그래서 채널에서
+            무엇을 고쳐도 이 숫자는 움직이지 않는다. */}
         <p className="mt-1 text-[11px] text-text-tertiary">
-          이 값 하나가 등록하는 모든 채널의 판매가격이 됩니다 — 채널마다 따로 정하지 않습니다.
+          이 값이 모든 채널의 기본 등록가격이 됩니다 — 특정 채널만 다르게 등록하려면 그 채널 화면의 &ldquo;가격&rdquo;에서
+          수정하세요. 채널에서 고쳐도 이 값은 바뀌지 않습니다.
         </p>
         <PriceProvenanceRow product={product} breakdown={breakdown} />
       </div>
@@ -589,51 +365,174 @@ export function PriceEditor({
         onClick={() => setDetailOpen((v) => !v)}
         className="mt-3 text-xs font-medium text-primary hover:underline"
       >
-        {detailOpen ? "▾ 가격 계산 상세 접기" : "▸ 가격 계산 상세 보기"}
+        {detailOpen ? "▾ 가격 계산 상세" : "▸ 가격 계산 상세"}
       </button>
 
       {detailOpen && (
-      <div className="mt-3 space-y-2.5 text-xs">
-        {/* 수수료는 사슬에서 내려왔을 뿐 계산에서 빠진 것이 아니다 — 권장
-            판매가격 공식(landedCost/(1-fee%-margin%))에 그대로 들어간다. 여기서
-            고치면 위 사슬의 권장 판매가격이 즉시 다시 계산된다. */}
-        <Row label="예상 수수료">
-          <div className="flex items-center justify-end gap-1">
-            <LiveNumberField
-              value={draftInput.feePercent}
-              max={99}
-              onLiveChange={(n) => liveUpdateBreakdown({ feePercent: n })}
-              onCommit={(n) => commitBreakdown({ feePercent: n })}
-              className="w-14 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
-            />
-            <span className="text-text-secondary">%</span>
+        <div className="mt-3 space-y-2.5 text-xs">
+          {/* 사슬의 순서 = 계산 순서다. 원본 가격 → 환율 → 원화 환산 →
+              국제배송비 → 착지원가 → 수수료율/마진율 → 권장 판매가격 →
+              수수료 금액 → 예상 이익. 순서가 흐트러지면 "무엇을 더해서 이 값이
+              됐는지"를 읽을 수 없게 된다.
+
+              라벨은 price-hierarchy.ts의 표에서만 가져온다(원화 환산 ·
+              국제배송비 · 착지원가). 같은 숫자를 판단 카드의 ④ 수익성 사슬은
+              "원화 환산"이라 부르는데 이 카드만 "상품 원가"라고 부르면, 셀러는
+              두 화면에서 서로 다른 값을 봤다고 읽는다 — 이 저장소가 반복해서
+              고쳐 온 라벨 표류라 여기서 되살리지 않는다. */}
+          <Row label="원본 가격" badge={<ValueBadge kind="original" />}>
+            {onUpdateOriginalPrice ? (
+              <div className="flex items-center justify-end gap-1.5">
+                <LiveNumberField
+                  value={draftOriginalAmount}
+                  onLiveChange={setDraftOriginalAmount}
+                  onCommit={(n) => {
+                    setDraftOriginalAmount(n);
+                    onUpdateOriginalPrice({ amount: n });
+                  }}
+                  className="w-24 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+                />
+                <select
+                  value={product.price.value.currency}
+                  onChange={(e) => onUpdateOriginalPrice({ currency: e.target.value })}
+                  className="rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+                >
+                  {SELECTABLE_CURRENCIES.map((code) => (
+                    <option key={code} value={code}>
+                      {code}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <span className="font-medium text-text-primary">
+                {formatOriginalPrice(product.price.value.amount, product.price.value.currency)}
+              </span>
+            )}
+          </Row>
+
+          {/* 환율은 가격이 아니라 "이 원화가 어디서 왔는지"를 밝히는 근거다 —
+              그래서 원화 환산 바로 위에 자기 줄로 둔다(값 자체를 여기서 곱하지
+              않는다, computePriceBreakdown이 이미 낸 값을 그대로 읽는다). */}
+          <Row label="환율">
+            <span className="flex items-center justify-end gap-1.5 text-text-secondary">
+              1 {breakdown.originalCurrency} = ₩{Math.round(breakdown.exchangeRate).toLocaleString("ko-KR")}
+              {breakdown.isRateEstimate
+                ? " (추정 고정환율)"
+                : exchangeRates?.source === "frankfurter"
+                  ? " (출처: ECB)"
+                  : ""}
+              <button
+                type="button"
+                onClick={onRefreshExchangeRates}
+                disabled={exchangeRatesLoading}
+                className="text-primary hover:underline disabled:opacity-50"
+              >
+                {exchangeRatesLoading ? "불러오는 중…" : "새로고침"}
+              </button>
+            </span>
+          </Row>
+
+          <Row label={PRICE_LINE_LABEL.SOURCE_PRICE_KRW}>
+            <span className="font-medium text-text-primary">{formatKrw(breakdown.costKrw)}</span>
+          </Row>
+
+          <Row label={PRICE_LINE_LABEL.INTERNATIONAL_SHIPPING}>
+            <div className="flex items-center justify-end gap-1">
+              <span className="text-text-secondary">₩</span>
+              <LiveNumberField
+                value={draftInput.shippingKrw}
+                onLiveChange={(n) => liveUpdateBreakdown({ shippingKrw: n })}
+                onCommit={(n) => commitBreakdown({ shippingKrw: n })}
+                className="w-24 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+          </Row>
+
+          <div className="flex items-center justify-between border-t border-border pt-2.5">
+            <span className="font-medium text-text-primary">{PRICE_LINE_LABEL.LANDED_COST}</span>
+            <span className="font-medium text-text-primary">{formatKrw(breakdown.landedCostKrw)}</span>
           </div>
-        </Row>
 
-        <Row label="예상 수수료 금액">
-          <span className="font-medium text-text-primary">{formatKrw(feeAmountKrw)}</span>
-        </Row>
+          {/* 수수료율은 권장 판매가격 공식(landedCost/(1-fee%-margin%))에 그대로
+              들어간다 — 고치면 아래 권장 판매가격이 즉시 다시 계산된다. 카드
+              맨 위 요약에는 올리지 않는다: 지금 활성 채널이 둘인데 "수수료 10%"
+              한 줄을 결론 옆에 두면 그게 어느 채널의 요율인지 화면이 답할 수 없다. */}
+          <Row label="예상 수수료">
+            <div className="flex items-center justify-end gap-1">
+              <LiveNumberField
+                value={draftInput.feePercent}
+                max={99}
+                onLiveChange={(n) => liveUpdateBreakdown({ feePercent: n })}
+                onCommit={(n) => commitBreakdown({ feePercent: n })}
+                className="w-14 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+              />
+              <span className="text-text-secondary">%</span>
+            </div>
+          </Row>
 
-        <div className="flex items-center justify-between border-t border-border pt-2.5">
-          <span className="font-medium text-text-primary">예상 이익(최종 판매가격 기준)</span>
-          <span className={`font-medium ${netProfitKrw >= 0 ? "text-success" : "text-error"}`}>
-            {netProfitKrw >= 0 ? "+" : ""}
-            {formatKrw(netProfitKrw)}
-          </span>
+          <Row label="목표 마진">
+            <div className="flex items-center justify-end gap-1">
+              <LiveNumberField
+                value={draftInput.marginPercent}
+                max={99}
+                onLiveChange={(n) => liveUpdateBreakdown({ marginPercent: n })}
+                onCommit={(n) => commitBreakdown({ marginPercent: n })}
+                className="w-14 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+              />
+              <span className="text-text-secondary">%</span>
+              <span className="ml-1 text-[11px] text-text-tertiary">
+                (판매가 기준 목표 이익률 — <a href="/settings" className="text-primary hover:underline">Settings에서 기본값 변경</a>)
+              </span>
+            </div>
+          </Row>
+
+          <div className="flex items-center justify-between border-t border-border pt-2.5">
+            <span className="flex items-center gap-1.5 font-medium text-text-primary">
+              권장 판매가격
+              <ValueBadge kind="aiSuggested" />
+            </span>
+            <span className="text-base font-semibold text-text-primary">{formatKrw(breakdown.suggestedPriceKrw)}</span>
+          </div>
+
+          <Row label="예상 수수료 금액">
+            <span className="font-medium text-text-primary">{formatKrw(feeAmountKrw)}</span>
+          </Row>
+
+          <div className="flex items-center justify-between border-t border-border pt-2.5">
+            <span className="font-medium text-text-primary">예상 이익(최종 판매가격 기준)</span>
+            <span className={`font-medium ${netProfitKrw >= 0 ? "text-success" : "text-error"}`}>
+              {netProfitKrw >= 0 ? "+" : ""}
+              {formatKrw(netProfitKrw)}
+            </span>
+          </div>
+
+          <p className="pt-1 text-[11px] text-text-tertiary">
+            국제배송비/수수료율/마진율은 실제 물류·정산 데이터가 없어 추정치입니다 — 직접 아는 값으로 고쳐서 다시 계산할 수
+            있습니다.
+          </p>
+
+          {/* PHASE 3.2 추가지시 — 시장 정보는 이 카드에 들어오지 않는다. 여기
+              있던 국가별 원본가격 비교표/한국向 표시가는 ②·③으로 돌아갔고,
+              남는 것은 거기로 가는 링크 한 줄뿐이다(블록이 아니라 링크여야
+              한다 — 블록이 되는 순간 계산 카드가 다시 비교 카드가 된다). */}
+          {onOpenMarketComparison && (
+            <p className="text-[11px] text-text-tertiary">
+              다른 나라 판매가·한국 시장 경쟁가격은{" "}
+              <button type="button" onClick={onOpenMarketComparison} className="text-primary hover:underline">
+                {PRICE_SECTION_TITLE.SELLER_GLOBAL_MARKET} / {PRICE_SECTION_TITLE.DOMESTIC_COMPETITION}
+              </button>
+              에서 확인하세요.
+            </p>
+          )}
+
+          <CustomsCostSection
+            domesticShippingCostKrw={sellerDefaults?.domesticShippingCostKrw ?? null}
+            customsDutyKrw={product.customsDutyKrw?.value ?? null}
+            customsVatKrw={product.customsVatKrw?.value ?? null}
+            onUpdateCustomsCost={onUpdateCustomsCost}
+          />
         </div>
-
-        <p className="pt-1 text-[11px] text-text-tertiary">
-          국제배송비/수수료율/마진율은 실제 물류·정산 데이터가 없어 추정치입니다 — 직접 아는 값으로 고쳐서 다시 계산할 수
-          있습니다.
-        </p>
-
-        <CustomsCostSection
-          domesticShippingCostKrw={sellerDefaults?.domesticShippingCostKrw ?? null}
-          customsDutyKrw={product.customsDutyKrw?.value ?? null}
-          customsVatKrw={product.customsVatKrw?.value ?? null}
-          onUpdateCustomsCost={onUpdateCustomsCost}
-        />
-      </div>
       )}
     </section>
   );
@@ -819,130 +718,6 @@ function Row({
         {badge && <span className="ml-1.5">{badge}</span>}
       </span>
       <div className="min-w-0 flex-1 text-right">{children}</div>
-    </div>
-  );
-}
-
-/** N-3.13 Part H(CPO 지시) — "원본 사이트가 실제 제공하는 국가별 가격"과
- * "CartPilot이 환산한 가격"을 표로 분리해서 보여준다. sellerOriginPrice/
- * krMarket/additionalMarkets는 전부 실제로 fetch에 성공한 관측값(PriceObservation,
- * confidence:"HIGH")만 들어있다 — 이 컴포넌트는 새 값을 추측하거나 다른
- * 국가 가격을 복제하지 않고, API가 준 값을 그대로 나열만 한다. `≈`는
- * CartPilot 환산 열에만 붙이고 원본 가격 열에는 절대 붙이지 않는다(CPO
- * 지시). testedMarketCodes에는 있지만 additionalMarkets에 없는 코드는
- * "조회했지만 이 시장에서 가격을 제공하지 않음"으로 명시한다(추측으로
- * 빈 칸을 만들지 않는다). */
-function CountryPriceTable({
-  intel,
-  liveRates,
-}: {
-  intel: PriceIntelligenceResult;
-  liveRates?: Record<string, number>;
-}) {
-  interface Row {
-    label: string;
-    flag: string;
-    observation: { amount: number; currency: string } | null;
-    note: string;
-  }
-
-  const rows: Row[] = [];
-  if (intel.sellerOriginPrice) {
-    rows.push({
-      label: intel.seller.country ?? "확인 불가",
-      flag: countryToFlagEmoji(intel.seller.country) ?? "🌐",
-      observation: intel.sellerOriginPrice,
-      note: `원본 제공${intel.seller.name ? ` (${intel.seller.name})` : ""}`,
-    });
-  }
-  if (intel.krMarket) {
-    rows.push({ label: "KR", flag: countryToFlagEmoji("KR") ?? "🇰🇷", observation: intel.krMarket, note: "원본 제공" });
-  }
-  for (const m of intel.additionalMarkets) {
-    rows.push({
-      label: m.country ?? m.marketCode,
-      flag: countryToFlagEmoji(m.country) ?? "🌐",
-      observation: m,
-      note: "원본 제공",
-    });
-  }
-  // 실제로 조회했지만(testedMarketCodes) 값을 못 받은(additionalMarkets에 없는) 시장 —
-  // "제공하지 않음"으로 명시한다. sellerOriginPrice/krMarket에 해당하는 ""/"en-kr"은
-  // 위에서 이미 다뤘으니 제외한다. 국가 코드(label) 기준으로도 중복 제거한다 —
-  // 판매처 원본 마켓("")과 명시적 en-gb 프로브가 같은 나라를 가리키는 경우
-  // "실제 값"과 "원본 미제공"이 같은 나라로 동시에 뜨면 안 되기 때문이다.
-  const returnedCodes = new Set([
-    ...(intel.sellerOriginPrice ? [intel.sellerOriginPrice.marketCode] : []),
-    ...(intel.krMarket ? [intel.krMarket.marketCode] : []),
-    ...intel.additionalMarkets.map((m) => m.marketCode),
-  ]);
-  const returnedCountryLabels = new Set(rows.map((r) => r.label));
-  for (const code of intel.testedMarketCodes) {
-    if (code === "" || code === "en-kr" || returnedCodes.has(code)) continue;
-    const match = /^[a-z]{2}-([a-z]{2})$/i.exec(code);
-    const countryCode = match ? match[1].toUpperCase() : null;
-    if (countryCode && returnedCountryLabels.has(countryCode)) continue;
-    rows.push({
-      label: countryCode ?? code,
-      flag: countryToFlagEmoji(countryCode) ?? "🌐",
-      observation: null,
-      note: "원본 미제공",
-    });
-  }
-
-  if (rows.length === 0) {
-    return <p className="mt-1.5 text-[11px] text-text-tertiary">조회된 국가별 가격이 없습니다.</p>;
-  }
-
-  return (
-    <div className="mt-1.5 overflow-x-auto">
-      <table className="w-full min-w-[420px] border-collapse text-left text-[11px]">
-        <thead>
-          <tr className="border-b border-border text-text-tertiary">
-            <th className="py-1 pr-2 font-medium">국가/지역</th>
-            <th className="py-1 pr-2 font-medium">원본 가격</th>
-            <th className="py-1 pr-2 font-medium">원본 통화</th>
-            <th className="py-1 pr-2 font-medium">TTAEJYO 환산</th>
-            <th className="py-1 font-medium">근거</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => {
-            const currencyCode = row.observation?.currency.toUpperCase();
-            // 알려진 환율(liveRates 또는 고정 폴백표)이 없는 통화는 절대 변환하지 않는다 —
-            // convertToKrw는 모르는 통화를 금액 그대로 KRW 취급해 돌려주는데(추정치로
-            // 표시하기 위한 최후 폴백), 이 표에서 그대로 쓰면 "80 AUD ≈ ₩80" 같은 조작된
-            // 값처럼 보인다(CPO 지시 — 원본과 계산값을 절대 혼동시키지 않는다). 이 표에서는
-            // 실제 환율을 아는 통화만 환산하고, 모르면 "환율 정보 없음"으로 명시한다.
-            const hasKnownRate =
-              currencyCode != null &&
-              (currencyCode === "KRW" || liveRates?.[currencyCode] != null || FIXED_RATES_TO_KRW[currencyCode] != null);
-            const krw = row.observation && currencyCode !== "KRW" && hasKnownRate
-              ? convertToKrw(row.observation.amount, row.observation.currency, liveRates)
-              : null;
-            const convertedCell = row.observation == null
-              ? "—"
-              : currencyCode === "KRW"
-                ? "—"
-                : hasKnownRate && krw
-                  ? `≈ ${formatKrw(krw.amountKrw)}`
-                  : "환율 정보 없음";
-            return (
-              <tr key={`${row.label}-${i}`} className="border-b border-border last:border-b-0">
-                <td className="py-1 pr-2 text-text-primary">
-                  {row.flag} {row.label}
-                </td>
-                <td className="py-1 pr-2 text-text-primary">
-                  {row.observation ? row.observation.amount.toLocaleString("en-US") : "—"}
-                </td>
-                <td className="py-1 pr-2 text-text-secondary">{row.observation?.currency ?? "—"}</td>
-                <td className="py-1 pr-2 text-text-secondary">{convertedCell}</td>
-                <td className="py-1 text-text-tertiary">{row.note}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
     </div>
   );
 }

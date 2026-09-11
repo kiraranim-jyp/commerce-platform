@@ -1,7 +1,7 @@
-import type { CanonicalProduct } from "@commerce/shared";
+import type { CanonicalProduct, PlatformId } from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
-import { UNRESOLVED_CATEGORY, type CategorySelection } from "@commerce/category";
-import { resolveListingPrice } from "@commerce/pricing";
+import type { CategorySelection } from "@commerce/category";
+import { resolveChannelListingPrice } from "../channel-price";
 import { categoryFieldRule } from "../category-field";
 import { effectiveDescription, effectiveTitle } from "../content-field";
 import { imageFormatFieldRule } from "../image-field";
@@ -21,8 +21,9 @@ export const smartstoreAdapter: PlatformAdapter = {
   label: "스마트스토어",
   toListingModel(
     product: CanonicalProduct,
-    categorySelection: CategorySelection = UNRESOLVED_CATEGORY,
-    pricingContext?: ListingPricingContext,
+    categorySelection: CategorySelection,
+    pricingContext: ListingPricingContext | undefined,
+    platform: PlatformId,
   ): ListingModel {
     const representativeImageEntry = product.images.find((img) => img.isRepresentative);
     const representativeImage = representativeImageEntry
@@ -34,17 +35,9 @@ export const smartstoreAdapter: PlatformAdapter = {
       .slice(0, MAX_ADDITIONAL_IMAGES);
     // P-4-H1-2-2(대표님 지시) — 쿠팡 어댑터와 완전히 동일한 resolveListingPrice()를
     // 쓴다(어댑터별로 각자 계산하지 않는다 — 그게 이번 버그의 원인이었다).
-    const resolution = resolveListingPrice(
-      {
-        priceOverrideKrw: product.priceOverrideKrw?.value,
-        originalAmount: product.price.value.amount,
-        originalCurrency: product.price.value.currency,
-        priceBreakdown: product.priceBreakdown,
-        priceValidity: product.priceValidity,
-      },
-      pricingContext?.liveRates,
-      pricingContext?.roundingUnit,
-    );
+    // PHASE 3.2 — 쿠팡 어댑터와 똑같이 resolveChannelListingPrice()를 부른다.
+    // 채널마다 **값**은 달라질 수 있지만 **계산하는 함수**는 여전히 하나다.
+    const resolution = resolveChannelListingPrice(product, platform, pricingContext);
     const amountKrw = resolution.priceKrw ?? 0;
     const isEstimate = resolution.isEstimate;
     const title = effectiveTitle(product);
@@ -103,6 +96,7 @@ export const smartstoreAdapter: PlatformAdapter = {
       priceKrw: amountKrw,
       priceIsEstimate: isEstimate,
       priceSource: resolution.source,
+      priceOrigin: resolution.origin,
       options: product.options.value,
       shippingInfo: "해외배송",
       description,

@@ -1,7 +1,7 @@
-import type { CanonicalProduct } from "@commerce/shared";
+import type { CanonicalProduct, PlatformId } from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
-import { UNRESOLVED_CATEGORY, type CategorySelection } from "@commerce/category";
-import { resolveListingPrice } from "@commerce/pricing";
+import type { CategorySelection } from "@commerce/category";
+import { resolveChannelListingPrice } from "../channel-price";
 import { categoryFieldRule } from "../category-field";
 import { effectiveDescription, effectiveTitle } from "../content-field";
 import { imageFormatFieldRule } from "../image-field";
@@ -17,8 +17,9 @@ export const elevenstAdapter: PlatformAdapter = {
   label: "11번가",
   toListingModel(
     product: CanonicalProduct,
-    categorySelection: CategorySelection = UNRESOLVED_CATEGORY,
-    pricingContext?: ListingPricingContext,
+    categorySelection: CategorySelection,
+    pricingContext: ListingPricingContext | undefined,
+    platform: PlatformId,
   ): ListingModel {
     const representativeImageEntry = product.images.find((img) => img.isRepresentative);
     const representativeImage = representativeImageEntry
@@ -28,18 +29,9 @@ export const elevenstAdapter: PlatformAdapter = {
       .filter((img) => !img.isRepresentative && img.useInProductGallery)
       .map((img) => getSelectedImageUrl(img))
       .slice(0, MAX_ADDITIONAL_IMAGES);
-    // P-4-H1-2-2 — coupang/smartstore 어댑터와 동일한 resolveListingPrice().
-    const resolution = resolveListingPrice(
-      {
-        priceOverrideKrw: product.priceOverrideKrw?.value,
-        originalAmount: product.price.value.amount,
-        originalCurrency: product.price.value.currency,
-        priceBreakdown: product.priceBreakdown,
-        priceValidity: product.priceValidity,
-      },
-      pricingContext?.liveRates,
-      pricingContext?.roundingUnit,
-    );
+    // P-4-H1-2-2 / PHASE 3.2 — coupang/smartstore 어댑터와 동일한
+    // resolveChannelListingPrice()(내부에서 같은 resolveListingPrice를 부른다).
+    const resolution = resolveChannelListingPrice(product, platform, pricingContext);
     const amountKrw = resolution.priceKrw ?? 0;
     const isEstimate = resolution.isEstimate;
     const title = effectiveTitle(product);
@@ -103,6 +95,7 @@ export const elevenstAdapter: PlatformAdapter = {
       priceKrw: amountKrw,
       priceIsEstimate: isEstimate,
       priceSource: resolution.source,
+      priceOrigin: resolution.origin,
       options: product.options.value,
       shippingInfo: "해외배송",
       description,

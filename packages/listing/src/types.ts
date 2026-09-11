@@ -113,6 +113,11 @@ export interface ListingResult {
    * 또 바꿀 수 있어(product.priceBreakdown은 계속 바뀜) 등록 순간의 값을
    * 별도로 남겨야 등록 이력에서 "그때 왜 이 가격이었는지" 재구성할 수 있다. */
   priceBreakdown?: unknown;
+  /** PHASE 3.2(CPO 확정, 2026-09-11) — "채널 · 최종 등록가격 · 가격 출처 ·
+   * 등록 시점". 바로 위 priceBreakdown(당시 상품 가격 **계산** 결과)과
+   * 의도적으로 분리한다 — 그쪽에 얹으면 채널이라는 축이 존재하지도 않던
+   * 과거 행들의 의미까지 소급해서 바뀐다. brandResolution과 같은 이유로 unknown. */
+  channelPriceRecord?: unknown;
   /** Sprint A-2.5(Category Resolver 2.0) — 등록마다 Predict Result/Selected
    * Result/Final Registered/Manual Override 여부/판단 근거를 남겨 Resolver
    * 정확도를 나중에 분석할 수 있게 한다. brandResolution과 같은 이유로 unknown. */

@@ -11,6 +11,7 @@ import {
   type CoupangPayload,
 } from "@commerce/listing";
 import type { ListingResult, RegistrationStepLog } from "@commerce/listing";
+import { buildChannelPriceAuditRecord, buildPriceBreakdownSnapshot } from "@/lib/channel-price-audit";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getCoupangCredentials, getVendorUserId } from "../_lib/env";
 import { getDefaultDescriptionTemplate } from "../_lib/description-template";
@@ -56,6 +57,10 @@ async function logRegistrationAttempt(
     compliance_report: complianceReport ?? null,
     brand_resolution: result.brandResolution ?? null,
     price_breakdown: result.priceBreakdown ?? null,
+    // PHASE 3.2 — price_breakdown과 나란히, 그러나 별개로 남긴다. 저 컬럼의 뜻
+    // ("당시 상품 가격 계산 결과")은 한 글자도 바꾸지 않았고 과거 행도 백필하지
+    // 않는다 — 이 컬럼은 배포 시점 이후 등록부터만 채워진다.
+    channel_price_record: result.channelPriceRecord ?? null,
     category_resolver_kpi: result.categoryResolverKpi ?? null,
     snapshot_id: snapshotId ?? null,
     // Sprint B-1(CPO 지시: "등록 시도까지 동일 Job Key로 추적") — snapshot_id로도
@@ -67,12 +72,22 @@ async function logRegistrationAttempt(
   // snapshot_id는 마이그레이션 016을 실행해야 생기는 컬럼이다 — 다른 optional
   // 컬럼(brand_resolution 등)과 같은 이유로 없으면 제거하고 재시도 목록에 포함한다.
   // brand_resolution/price_breakdown/category_resolver_kpi 컬럼은 각각 수동
-  // 마이그레이션(009/010/011)을, job_key는 025를 실행해야 생긴다(구조적으로
-  // 여기서 직접 실행 불가) — 마이그레이션 전에는 컬럼이 없어 insert 전체가
-  // 실패한다. payload/response/compliance 등 나머지 데이터까지 통째로
-  // 유실되는 걸 막기 위해, 아직 없는 컬럼이 뭔지 모르는 채로 하나씩
-  // 제외해가며 재시도한다.
-  const optionalColumns = ["brand_resolution", "price_breakdown", "category_resolver_kpi", "snapshot_id", "job_key"];
+  // 마이그레이션(009/010/011)을, job_key는 025를, channel_price_record는 048을
+  // 실행해야 생긴다(구조적으로 여기서 직접 실행 불가) — 마이그레이션 전에는
+  // 컬럼이 없어 insert 전체가 실패한다. payload/response/compliance 등 나머지
+  // 데이터까지 통째로 유실되는 걸 막기 위해, 아직 없는 컬럼이 뭔지 모르는 채로
+  // 하나씩 제외해가며 재시도한다.
+  // PHASE 3.2 — channel_price_record를 맨 앞에 둔다: 048이 아직 실행 전이면
+  // 이 컬럼 하나 때문에 나머지 감사 데이터가 전부 날아가면 안 되므로 가장 먼저
+  // 포기하는 필드여야 한다(마이그레이션 미실행 환경에서도 우아하게 저하).
+  const optionalColumns = [
+    "channel_price_record",
+    "brand_resolution",
+    "price_breakdown",
+    "category_resolver_kpi",
+    "snapshot_id",
+    "job_key",
+  ];
   for (let attempt = 0; attempt <= optionalColumns.length; attempt++) {
     const { error } = await supabase.from("registration_attempts").insert(row);
     if (!error) return;
@@ -204,14 +219,15 @@ export async function POST(request: Request) {
   // P0-1(가격 계산 투명화) — 이 등록 시도 시점의 배송비/수수료율/마진율 입력값을
   // 스냅샷으로 남긴다(product.priceBreakdown은 사용자가 나중에 또 바꿀 수 있어서
   // "그때 왜 이 가격이었는지"를 등록 이력에서 재구성하려면 순간값이 필요하다).
-  const priceBreakdownSnapshot = product.priceBreakdown
-    ? {
-        originalAmount: product.price.value.amount,
-        originalCurrency: product.price.value.currency,
-        ...product.priceBreakdown,
-        salePriceKrw: product.priceOverrideKrw?.value ?? null,
-      }
-    : undefined;
+  // PHASE 3.2 — 인라인이던 것을 buildPriceBreakdownSnapshot()으로 꺼냈을 뿐
+  // 계산과 의미는 동일하다(salePriceKrw는 여전히 상품정보의 최종 판매가격이다 —
+  // 채널 최종가가 아니다). 함수로 꺼낸 이유는 그 뜻이 유지되는지를 테스트로
+  // 고정하기 위해서다(channel-price-audit.test.ts).
+  const priceBreakdownSnapshot = buildPriceBreakdownSnapshot(product);
+  // PHASE 3.2 — 실제로 이 채널에 어떤 가격이 어떤 근거로 나갔는지. listing은
+  // 클라이언트가 이미 어댑터로 만든 값이고 payload의 salePrice도 여기서 나온다 —
+  // 새로 계산하지 않고 나간 값 그대로 기록한다.
+  const channelPriceRecord = buildChannelPriceAuditRecord(listing);
 
   const withMeta = (result: ListingResult): ListingResult => ({
     ...result,
@@ -221,6 +237,7 @@ export async function POST(request: Request) {
     complianceReport,
     brandResolution: brandResolutionMeta,
     priceBreakdown: priceBreakdownSnapshot,
+    channelPriceRecord,
     categoryResolverKpi: categoryResolverKpiSnapshot,
   });
 

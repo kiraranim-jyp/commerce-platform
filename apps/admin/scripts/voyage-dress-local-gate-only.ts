@@ -92,6 +92,8 @@ const payload = buildNaverProductPayload({
     priceKrw: 153120, // 88 GBP * 1740 (FIXED_RATES_TO_KRW와 동일 기준, delta=0 유도)
     priceIsEstimate: false,
     priceSource: "SELLER_OVERRIDE",
+    // PHASE 3.2 — 채널 최종 등록가격이 없는 상태(= 상품정보 최종 판매가격을 그대로 쓴다).
+    priceOrigin: "PRODUCT_OVERRIDE",
     options: ["Size"],
     shippingInfo: "",
     description: product.description.value,

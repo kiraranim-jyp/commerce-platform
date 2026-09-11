@@ -14,6 +14,7 @@ import {
   type RegistrationStepLog,
   type ListingResult,
 } from "@commerce/listing";
+import { buildChannelPriceAuditRecord } from "@/lib/channel-price-audit";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { recordAuditLog } from "@/lib/audit-log";
 import { getNaverCredentials } from "../../naver/_lib/env";
@@ -86,10 +87,15 @@ async function logRegistrationAttempt(
     // Sprint B-1 — Coupang register route와 동일한 이유(고객 문의 시 조인 없이
     // 바로 검색).
     job_key: jobKey ?? null,
+    // PHASE 3.2 — 채널 · 최종 등록가격 · 가격 출처 · 등록 시점. 쿠팡 route와
+    // 완전히 같은 구조를 같은 함수(buildChannelPriceAuditRecord)로 만든다 —
+    // 채널마다 감사 기록 모양이 달라지면 나중에 두 번 읽어야 한다.
+    channel_price_record: result.channelPriceRecord ?? null,
   };
-  // Coupang register route와 같은 이유(마이그레이션 016/025 미실행 환경 대비) —
-  // snapshot_id/job_key 컬럼이 없으면 그 필드만 제외하고 재시도한다.
-  const optionalColumns = ["snapshot_id", "job_key"];
+  // Coupang register route와 같은 이유(마이그레이션 016/025/048 미실행 환경 대비) —
+  // 해당 컬럼이 없으면 그 필드만 제외하고 재시도한다. channel_price_record가
+  // 맨 앞인 이유도 쿠팡 route와 같다(가장 새 컬럼 = 가장 먼저 포기).
+  const optionalColumns = ["channel_price_record", "snapshot_id", "job_key"];
   for (let attempt = 0; attempt <= optionalColumns.length; attempt++) {
     const { error } = await supabase.from("registration_attempts").insert(row);
     if (!error) return;
@@ -128,12 +134,18 @@ export async function POST(request: Request) {
   const snapshotId = body.snapshotId ?? null;
   const jobKey = body.jobKey ?? null;
 
+  // PHASE 3.2 — 실제로 이 채널에 나간 최종 등록가격과 그 근거. 새로 계산하지
+  // 않고 클라이언트가 어댑터로 만든 listing 값을 그대로 기록한다(payload의
+  // originProduct.salePrice도 같은 listing.priceKrw에서 나온다).
+  const channelPriceRecord = buildChannelPriceAuditRecord(listing);
+
   const withMeta = (result: ListingResult): ListingResult => ({
     ...result,
     traceId,
     durationMs: Date.now() - startedAt,
     steps,
     payload,
+    channelPriceRecord,
   });
 
   const credentials = await getNaverCredentials();

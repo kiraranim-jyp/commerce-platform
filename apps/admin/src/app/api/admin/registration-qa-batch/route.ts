@@ -169,7 +169,7 @@ async function runOne(
     const categorySelection: CategorySelection = { state: "SELECTED", candidate, provenance: "INFERRED" };
 
     const product = buildCanonicalProduct(item.url, productData, productDataSources, []);
-    const listing = coupangAdapter.toListingModel(product, categorySelection);
+    const listing = coupangAdapter.toListingModel(product, categorySelection, undefined, "coupang");
 
     const categoryCode = resolveVerifiedCategoryCode(listing.category);
     const categoryMeta = categoryCode != null ? await fetchCategoryMeta(credentials, categoryCode) : null;

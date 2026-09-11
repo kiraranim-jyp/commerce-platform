@@ -73,7 +73,7 @@ const unverifiedSelection: CategorySelection = {
   },
 };
 
-const listing = coupangAdapter.toListingModel(product, unverifiedSelection);
+const listing = coupangAdapter.toListingModel(product, unverifiedSelection, undefined, "coupang");
 const categoryValidation = listing.validations.find((v) => v.field === "category");
 const realRegisterCategoryCode = resolveVerifiedCategoryCode(unverifiedSelection);
 
@@ -95,7 +95,7 @@ const verifiedSelection: CategorySelection = {
   ...unverifiedSelection,
   candidate: { ...unverifiedSelection.candidate!, id: "81484", isVerifiedPlatformCode: true },
 };
-const verifiedListing = coupangAdapter.toListingModel(product, verifiedSelection);
+const verifiedListing = coupangAdapter.toListingModel(product, verifiedSelection, undefined, "coupang");
 const verifiedCategoryValidation = verifiedListing.validations.find((v) => v.field === "category");
 const verifiedRealCode = resolveVerifiedCategoryCode(verifiedSelection);
 console.log();

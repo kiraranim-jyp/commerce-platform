@@ -1,7 +1,7 @@
-import type { CanonicalProduct } from "@commerce/shared";
+import type { CanonicalProduct, PlatformId } from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
-import { UNRESOLVED_CATEGORY, type CategorySelection } from "@commerce/category";
-import { resolveListingPrice } from "@commerce/pricing";
+import type { CategorySelection } from "@commerce/category";
+import { resolveChannelListingPrice } from "../channel-price";
 import { categoryFieldRule } from "../category-field";
 import { effectiveDescription, effectiveTitle } from "../content-field";
 import { imageFormatFieldRule } from "../image-field";
@@ -24,8 +24,9 @@ export const coupangAdapter: PlatformAdapter = {
   label: "쿠팡",
   toListingModel(
     product: CanonicalProduct,
-    categorySelection: CategorySelection = UNRESOLVED_CATEGORY,
-    pricingContext?: ListingPricingContext,
+    categorySelection: CategorySelection,
+    pricingContext: ListingPricingContext | undefined,
+    platform: PlatformId,
   ): ListingModel {
     const representativeImageEntry = product.images.find((img) => img.isRepresentative);
     const representativeImage = representativeImageEntry
@@ -38,17 +39,10 @@ export const coupangAdapter: PlatformAdapter = {
     // P-4-H1-2-2(대표님 지시) — override가 없을 때 원본가를 마진 0%로 그냥
     // 환산해서 쓰던 버그를 고친 지점. resolveListingPrice() 하나로 통일한다
     // (스마트스토어 어댑터도 동일하게 이 함수를 쓴다 — 각자 계산하지 않는다).
-    const resolution = resolveListingPrice(
-      {
-        priceOverrideKrw: product.priceOverrideKrw?.value,
-        originalAmount: product.price.value.amount,
-        originalCurrency: product.price.value.currency,
-        priceBreakdown: product.priceBreakdown,
-        priceValidity: product.priceValidity,
-      },
-      pricingContext?.liveRates,
-      pricingContext?.roundingUnit,
-    );
+    // PHASE 3.2 — 그 호출을 resolveChannelListingPrice()로 감쌌다. 해석 순서에
+    // "이 채널의 최종 등록가격"이 맨 앞에 한 단계 붙었을 뿐이고, 채널 값이
+    // 없으면 결과는 이전과 완전히 동일하다(계산식은 그대로 resolveListingPrice).
+    const resolution = resolveChannelListingPrice(product, platform, pricingContext);
     const amountKrw = resolution.priceKrw ?? 0;
     const isEstimate = resolution.isEstimate;
     const title = effectiveTitle(product);
@@ -126,6 +120,7 @@ export const coupangAdapter: PlatformAdapter = {
       priceKrw: amountKrw,
       priceIsEstimate: isEstimate,
       priceSource: resolution.source,
+      priceOrigin: resolution.origin,
       options: product.options.value,
       shippingInfo: "해외배송",
       description,

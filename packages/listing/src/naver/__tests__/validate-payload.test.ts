@@ -77,6 +77,8 @@ function makeMinimalListing(product: CanonicalProduct): ListingModel {
     priceKrw: 10000,
     priceIsEstimate: false,
     priceSource: "SELLER_OVERRIDE",
+    // PHASE 3.2 — 채널 최종 등록가격이 없는 상태(= 상품정보 최종 판매가격을 그대로 쓴다).
+    priceOrigin: "PRODUCT_OVERRIDE",
     options: [],
     shippingInfo: "",
     description: product.description.value,
