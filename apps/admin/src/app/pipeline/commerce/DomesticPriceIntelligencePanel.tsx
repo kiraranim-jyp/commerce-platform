@@ -1854,15 +1854,79 @@ export function DomesticPriceIntelligencePanel({
               </div>
             </div>
 
-            {/* 추천 판매가는 "내 판매가격"이 아니다 — 사슬 밖에 따로 둔다. 사슬
-                안에 넣으면 셀러는 이미 그 값으로 팔기로 되어 있다고 읽는다.
-                CASE C/D는 억지 추천가를 만들지 않으므로 값이 없을 수 있다. */}
-            {recommendation?.recommendedPrice != null && currentPrice.sellingPriceKrw == null && (
-              <p className="mt-1.5 text-[10px] text-text-tertiary">
-                참고 · 추천 판매가 ₩{recommendation.recommendedPrice.toLocaleString()}
-                {recommendation.estimatedMarginPercent != null &&
-                  ` — 이 가격으로 팔면 ${PRICE_MEANING_LABEL.EXPECTED_MARGIN} 약 ${recommendation.estimatedMarginPercent}%`}
-              </p>
+            {/* UX 2.3(CEO 지시, 2026-09-11) — 추천 판매가를 접힌 상세에서
+                사슬 바로 아래로 옮긴다. 이 값은 "내 판매가격"이 아니라서 사슬
+                안에 넣을 수 없지만(넣으면 셀러는 이미 그 가격으로 팔기로 되어
+                있다고 읽는다), 사슬이 "내 판매가격 ⚪ 확인 불가"로 끝나는 상태
+                에서는 바로 다음에 와야 하는 정보다 — 상세를 펼쳐야만 보이면
+                "그럼 얼마에 팔라는 건데?"에서 화면이 멈춘다. 사본을 만들지
+                않고 블록 자체를 옮겼다: 같은 숫자가 화면에 두 번 뜨면 둘 중
+                하나만 고쳐지는 순간 서로 다른 추천가를 말한다. */}
+            {cost && (
+              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 rounded-md border border-current/20 bg-background/40 p-2 sm:grid-cols-3">
+                {/* UX 2.3(CEO 지시, 2026-09-11) — 여기 있던 예상 수익 칸(📈)을
+                    없앤다. 같은 값(unifiedDecision.estimatedProfitKrw)이 이제 위
+                    가격 사슬의 마지막 줄에 항상 보이고, 사슬에서는 그 앞의 원가와
+                    판매가까지 함께 읽힌다. 접힌 상세 안에 사본을 하나 더 두면
+                    같은 숫자가 화면에 두 번 뜨고, 둘 중 하나만 고쳐지는 순간
+                    같은 상품이 서로 다른 수익을 말한다. 계산은 그대로다. */}
+                {/* P-26 Sprint 2/3(CPO 지시, 2026-09-03) — "10% 최소마진은 더
+                    이상 절대 하한선이 아니다"(CEO 승인 옵션 1). minimumPrice/
+                    targetPrice는 참고용 숫자로만 노출하고, 실제 권장가는
+                    computePriceRecommendation()의 CASE A/B/C/D 판정
+                    (marketCase)을 그대로 따른다 — 여기서 값을 다시 비교하지
+                    않는다. CASE C/D는 억지 추천가를 만들지 않으므로
+                    recommendedPrice가 null일 수 있다(화면도 "없음"을 명시). */}
+                {recommendation && (
+                  <>
+                    {/* UX-1C — 최소마진/목표마진 참고가는 L3(상세 계산)로 이동.
+                        L1에는 실제로 "얼마에 팔지"인 최종 추천 판매가만 남긴다. */}
+                    <div>
+                      <dt className="text-[10px] text-text-tertiary">🏷 최종 추천 판매가</dt>
+                      {recommendation.recommendedPrice != null ? (
+                        <>
+                          <dd className="text-sm font-semibold text-text-primary">
+                            ₩{recommendation.recommendedPrice.toLocaleString()}
+                          </dd>
+                          {recommendation.estimatedMarginPercent != null && (
+                            <p className="mt-0.5 text-[10px] text-text-tertiary">
+                              예상 마진 약 {recommendation.estimatedMarginPercent}%
+                              {recommendation.marketCase === "B" && " (목표마진 미달, 손실 아님)"}
+                            </p>
+                          )}
+                          {/* MI 2.0 PHASE 1.3 — "브랜드 시장 중앙값"이라는 표현을
+                              뺀다(그 값은 국내 시장가가 아니라 해외 원본가 분포다).
+                              다만 이 가격이 국내 동일상품 근거 없이 나온 참고치라는
+                              사실 자체는 숨기지 않는다 — 근거의 강도는 알려야 한다. */}
+                          {recommendation.competitiveBasis === "BRAND_MEDIAN" && (
+                            <p className="mt-0.5 text-[10px] text-text-tertiary">
+                              💡 국내 동일상품 가격이 확인되지 않아 참고 기준으로 산정된 값입니다
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <dd className="text-sm font-semibold text-text-tertiary">추천가 없음</dd>
+                          <p className="mt-0.5 text-[10px] text-text-tertiary">
+                            {recommendation.marketCase === "C"
+                              ? "국내 시장가로 팔면 착지원가도 회수하지 못합니다"
+                              : // MI-FLOW-2 — 내부 판정명(EXACT)을 셀러 화면에서 뺀다.
+                                // 셀러에게 필요한 사실은 "동일상품 가격이 확인되지
+                                // 않았다"이지 우리 매칭 등급의 이름이 아니다.
+                                "국내 동일상품 가격이 확인되지 않아 시장 경쟁력 기반 추천을 낼 수 없습니다"}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </>
+                )}
+                {!recommendation && (
+                  <div>
+                    <dt className="text-[10px] text-text-tertiary">🏷 추천 판매가</dt>
+                    <dd className="text-sm font-semibold text-text-primary">₩{cost.suggestedPriceKrw.toLocaleString()}</dd>
+                  </div>
+                )}
+              </dl>
             )}
 
             {/* MI-STOCK-CLARITY-1(CPO 지시, 2026-09-10) — 위 국내 비교상품 가격이
@@ -1933,72 +1997,6 @@ export function DomesticPriceIntelligencePanel({
                 minimumMarginPercent(10%) 기준이라 "손익분기"라고 부르면 실제
                 계산과 다른 숫자를 말하는 셈이다(값을 지어내지 않는다는 이
                 프로젝트의 원칙과 동일한 이유). */}
-            {cost && (
-              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 rounded-md border border-current/20 bg-background/40 p-2 sm:grid-cols-3">
-                {/* UX 2.3(CEO 지시, 2026-09-11) — 여기 있던 예상 수익 칸(📈)을
-                    없앤다. 같은 값(unifiedDecision.estimatedProfitKrw)이 이제 위
-                    가격 사슬의 마지막 줄에 항상 보이고, 사슬에서는 그 앞의 원가와
-                    판매가까지 함께 읽힌다. 접힌 상세 안에 사본을 하나 더 두면
-                    같은 숫자가 화면에 두 번 뜨고, 둘 중 하나만 고쳐지는 순간
-                    같은 상품이 서로 다른 수익을 말한다. 계산은 그대로다. */}
-                {/* P-26 Sprint 2/3(CPO 지시, 2026-09-03) — "10% 최소마진은 더
-                    이상 절대 하한선이 아니다"(CEO 승인 옵션 1). minimumPrice/
-                    targetPrice는 참고용 숫자로만 노출하고, 실제 권장가는
-                    computePriceRecommendation()의 CASE A/B/C/D 판정
-                    (marketCase)을 그대로 따른다 — 여기서 값을 다시 비교하지
-                    않는다. CASE C/D는 억지 추천가를 만들지 않으므로
-                    recommendedPrice가 null일 수 있다(화면도 "없음"을 명시). */}
-                {recommendation && (
-                  <>
-                    {/* UX-1C — 최소마진/목표마진 참고가는 L3(상세 계산)로 이동.
-                        L1에는 실제로 "얼마에 팔지"인 최종 추천 판매가만 남긴다. */}
-                    <div>
-                      <dt className="text-[10px] text-text-tertiary">🏷 최종 추천 판매가</dt>
-                      {recommendation.recommendedPrice != null ? (
-                        <>
-                          <dd className="text-sm font-semibold text-text-primary">
-                            ₩{recommendation.recommendedPrice.toLocaleString()}
-                          </dd>
-                          {recommendation.estimatedMarginPercent != null && (
-                            <p className="mt-0.5 text-[10px] text-text-tertiary">
-                              예상 마진 약 {recommendation.estimatedMarginPercent}%
-                              {recommendation.marketCase === "B" && " (목표마진 미달, 손실 아님)"}
-                            </p>
-                          )}
-                          {/* MI 2.0 PHASE 1.3 — "브랜드 시장 중앙값"이라는 표현을
-                              뺀다(그 값은 국내 시장가가 아니라 해외 원본가 분포다).
-                              다만 이 가격이 국내 동일상품 근거 없이 나온 참고치라는
-                              사실 자체는 숨기지 않는다 — 근거의 강도는 알려야 한다. */}
-                          {recommendation.competitiveBasis === "BRAND_MEDIAN" && (
-                            <p className="mt-0.5 text-[10px] text-text-tertiary">
-                              💡 국내 동일상품 가격이 확인되지 않아 참고 기준으로 산정된 값입니다
-                            </p>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <dd className="text-sm font-semibold text-text-tertiary">추천가 없음</dd>
-                          <p className="mt-0.5 text-[10px] text-text-tertiary">
-                            {recommendation.marketCase === "C"
-                              ? "국내 시장가로 팔면 착지원가도 회수하지 못합니다"
-                              : // MI-FLOW-2 — 내부 판정명(EXACT)을 셀러 화면에서 뺀다.
-                                // 셀러에게 필요한 사실은 "동일상품 가격이 확인되지
-                                // 않았다"이지 우리 매칭 등급의 이름이 아니다.
-                                "국내 동일상품 가격이 확인되지 않아 시장 경쟁력 기반 추천을 낼 수 없습니다"}
-                          </p>
-                        </>
-                      )}
-                    </div>
-                  </>
-                )}
-                {!recommendation && (
-                  <div>
-                    <dt className="text-[10px] text-text-tertiary">🏷 추천 판매가</dt>
-                    <dd className="text-sm font-semibold text-text-primary">₩{cost.suggestedPriceKrw.toLocaleString()}</dd>
-                  </div>
-                )}
-              </dl>
-            )}
 
             {/* UX-1C L2 — "왜 이 판단인가". 판정 엔진이 이미 낸 reasons를 그대로
                 쓴다(문구를 새로 지어내면 판정 의미를 바꾸는 셈이라 금지).

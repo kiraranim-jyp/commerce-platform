@@ -46,6 +46,19 @@ describe("가격 계층은 화면에 한 벌만 있다", () => {
     expect(panel).not.toContain("💰 현재 구매가");
   });
 
+  it("추천 판매가는 한 곳에서만 그려지고, 사슬 안으로 들어가지 않는다", () => {
+    // 사슬 안에 넣으면 "내 판매가격"으로 읽힌다(이미 그 가격으로 팔기로 된 줄
+    // 안다). 사본을 만들면 둘 중 하나만 고쳐지는 순간 추천가가 둘이 된다.
+    expect((panel.match(/recommendation\.recommendedPrice\.toLocaleString\(\)/g) ?? []).length).toBe(1);
+    const chainAt = panel.indexOf("<PriceChainView");
+    // 주석에도 같은 문구가 있어서 버튼 JSX 그대로를 찾는다.
+    const detailToggleAt = panel.indexOf("{caret(showMarketDetail)} 왜 이렇게 판단했나요?");
+    const recommendedAt = panel.indexOf("🏷 최종 추천 판매가");
+    // 사슬 바로 아래 — 상세를 펼쳐야만 보이는 자리가 아니다.
+    expect(recommendedAt).toBeGreaterThan(chainAt);
+    expect(recommendedAt).toBeLessThan(detailToggleAt);
+  });
+
   it("국내 비교상품 분포를 '한국 시장 가격'이라고 부르지 않는다", () => {
     // 그 이름은 원본 판매자의 한국 표시가와 겹친다 — 한 라벨이 두 사실을
     // 가리키던 자리다. 라벨은 price-hierarchy.ts의 표에서만 나온다.
