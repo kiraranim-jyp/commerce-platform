@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   priceAgeTier,
   priceLevelFromVerdict,
@@ -32,6 +32,8 @@ import {
 } from "./market-target";
 import { buildHeadlineNumbers } from "./mi-headline";
 import { miEmptyState } from "./mi-empty-state";
+// UX 2.1 — 이 패널의 내부 진행 상태를 하나의 작업 Flow(② 시장 판단)로 올려보낸다.
+import type { MarketSignal as WorkflowMarketSignal } from "./workflow";
 
 interface SampleListing {
   mallName: string | null;
@@ -247,25 +249,19 @@ function caret(open: boolean): string {
 }
 
 /**
- * MI-LOADING-1(CPO 지시, 2026-09-06) — Market Intelligence 분석 진행 화면.
+ * UX 2.1(CEO 지시, 2026-09-11) — 이 자리에 있던 MarketIntelligenceProgress
+ * (시장가격 → 국내비교 → 레이더 → 가격비교 5단계 목록)를 제거한다.
  *
- * 설계 원칙은 하나다: **표시되는 단계는 전부 실제로 실행 중인 작업이다.**
- *   상품 정보    이미 로드된 스냅샷 — 진입 시점에 실제로 완료된 상태
- *   국내 시장가   page.tsx의 /api/price-history/check (autoChecking일 때만 표시)
- *   원가·전략    /api/price-history/:id
- *   경쟁 판매처   /api/domestic-price-sources/links
- *   가격 알림    /api/price-history/:id/alerts
+ * 없애는 것이 아니라 **옮기는** 것이다. 그 진행 상태는 이제 onMarketSignalChange로
+ * 상단의 단 하나뿐인 작업 Flow에 올라가 ② 시장 판단의 하위 단계로 그려진다
+ * (workflow.ts / WorkflowPanel.tsx). 같은 정보를 화면 두 곳에서 각자 그리면
+ * 그게 바로 이번 지시가 없애려는 "진행 표시 세 개" 문제 그 자체다.
  *
- * 뒤 3개는 원래부터 병렬 요청이라 순차로 끝나지 않는다. 그래서 "3/5" 같은
- * 가짜 순번이나 시간 기반 퍼센트를 쓰지 않고, 각 요청이 실제로 resolve될 때
- * 그 항목만 체크한다. 진행률은 "실제로 끝난 항목 수 / 전체"로만 계산한다.
+ * 여기(화면 가운데)는 이제 ②의 **결과**만 책임진다 — 분석이 도는 동안에는
+ * 결과 자리를 잡아두는 준비 화면(MarketIntelligenceSkeleton)을 보여준다.
+ * 실제 요청과 1:1로만 진행을 표시한다는 MI-LOADING-1 원칙은 그대로 살아 있다:
+ * 그 판단이 workflow.ts로 옮겨갔을 뿐이다.
  */
-type MiStepState = "running" | "done";
-interface MiStep {
-  label: string;
-  detail: string;
-  state: MiStepState;
-}
 
 /**
  * MI-UI-1(CEO 지시, 2026-09-11) — 준비 화면과 진행 화면의 높이를 맞추기 위한
@@ -284,11 +280,16 @@ const MI_LOADING_MIN_HEIGHT = "min-h-[260px]";
  * 로딩 표시도 없었다. 그 공백을 이 컴포넌트가 채운다.
  *
  * 여기서 데이터를 흉내 내지 않는다 — 숫자 자리에 회색 막대만 두고, 무엇을
- * 기다리는 중인지 문장으로 말한다. 아직 요청조차 시작하지 않은 단계라
- * MarketIntelligenceProgress의 단계 목록(실제 요청과 1:1)은 쓰지 않는다:
- * 시작도 안 한 작업을 진행 중으로 표시하지 않는다는 MI-LOADING-1 원칙 그대로다.
+ * 기다리는 중인지 문장으로 말한다. 단계 목록은 여기에 두지 않는다: 어디까지
+ * 왔는지는 상단 작업 Flow의 ② 시장 판단이 하위 단계로 보여주고, 이 자리는
+ * 곧 들어올 결과의 모양만 잡아둔다(UX 2.1).
  */
-export function MarketIntelligenceSkeleton() {
+export function MarketIntelligenceSkeleton({
+  /** 무엇을 기다리는 중인지. 스냅샷 저장 전과 분석 중은 기다리는 대상이 다르다. */
+  message = "상품 정보를 저장하는 중입니다 — 저장이 끝나면 시장 분석을 시작합니다.",
+}: {
+  message?: string;
+} = {}) {
   return (
     <CollapsibleSection title="Market Intelligence" defaultOpen>
       <div className={`rounded-md border border-border bg-background p-4 ${MI_LOADING_MIN_HEIGHT}`}>
@@ -296,9 +297,7 @@ export function MarketIntelligenceSkeleton() {
           <span className="text-base">🤖</span>
           <p className="text-sm font-semibold text-text-primary">AI Market Intelligence</p>
         </div>
-        <p className="mb-4 text-xs text-text-secondary">
-          상품 정보를 저장하는 중입니다 — 저장이 끝나면 시장 분석을 시작합니다.
-        </p>
+        <p className="mb-4 text-xs text-text-secondary">{message}</p>
         {/* 결과 화면의 4칸 요약이 들어올 자리. 라벨을 미리 쓰지 않는다 —
             값이 없는데 "국내 최저가"라고 써두면 곧 숫자가 나올 자리인지
             "확인 불가"로 끝날 자리인지 지금은 알 수 없기 때문이다. */}
@@ -316,79 +315,6 @@ export function MarketIntelligenceSkeleton() {
         </div>
       </div>
     </CollapsibleSection>
-  );
-}
-
-function MarketIntelligenceProgress({ steps, completed }: { steps: MiStep[]; completed: boolean }) {
-  const doneCount = steps.filter((s) => s.state === "done").length;
-  const percent = Math.round((doneCount / Math.max(1, steps.length)) * 100);
-
-  return (
-    <div className={`rounded-md border border-border bg-background p-4 ${MI_LOADING_MIN_HEIGHT}`}>
-      <div className="mb-1 flex items-center gap-2">
-        <span className="text-base">🤖</span>
-        <p className="text-sm font-semibold text-text-primary">AI Market Intelligence</p>
-      </div>
-      <p className="mb-3 text-xs text-text-secondary">
-        {completed ? "분석이 끝났습니다. 결과를 정리하고 있습니다." : "상품 데이터를 분석하고 있습니다."}
-      </p>
-
-      {/* MI-LOADING-1 STEP 3(CEO 요구: "상단에 기본 진행 스텝도 있고") —
-          같은 단계를 가로로 압축해 한눈에 보여준다. 아래 목록과 동일한 상태를
-          쓰므로 두 표시가 어긋날 수 없다(별도 상태를 만들지 않는다). */}
-      <ol className="mb-3 flex items-center gap-1">
-        {steps.map((step, i) => {
-          const done = completed || step.state === "done";
-          return (
-            <li key={step.label} className="flex flex-1 items-center gap-1">
-              <span
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold transition-colors duration-300 ${
-                  done
-                    ? "bg-primary text-white"
-                    : "animate-pulse border border-primary text-primary"
-                }`}
-              >
-                {done ? "✓" : i + 1}
-              </span>
-              {i < steps.length - 1 && (
-                <span className={`h-px flex-1 transition-colors duration-300 ${done ? "bg-primary" : "bg-border"}`} />
-              )}
-            </li>
-          );
-        })}
-      </ol>
-
-      <div className="mb-1 h-1.5 overflow-hidden rounded-full bg-border">
-        <div
-          className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
-          style={{ width: `${completed ? 100 : percent}%` }}
-        />
-      </div>
-      <p className="mb-3 text-right text-[10px] text-text-tertiary">
-        {completed ? steps.length : doneCount} / {steps.length}
-      </p>
-
-      <ul className="space-y-1.5">
-        {steps.map((step) => {
-          const done = completed || step.state === "done";
-          return (
-            <li key={step.label} className="flex items-start gap-2 text-xs transition-opacity duration-300">
-              <span className={done ? "text-success" : "animate-pulse text-primary"}>{done ? "✓" : "◉"}</span>
-              <span className="flex-1">
-                <span className={done ? "text-text-secondary" : "font-medium text-text-primary"}>{step.label}</span>
-                <span className="ml-1 text-[10px] text-text-tertiary">{step.detail}</span>
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-
-      {!completed && (
-        <p className="mt-3 text-[10px] text-text-tertiary">
-          국내 시장 가격을 실제로 조회하므로 10~20초 정도 걸릴 수 있습니다.
-        </p>
-      )}
-    </div>
   );
 }
 
@@ -1004,6 +930,7 @@ export function DomesticPriceIntelligencePanel({
   snapshotId,
   onPriceLevelChange,
   onSellerVerdictChange,
+  onMarketSignalChange,
   onRequestPriceReview,
   autoChecking,
 }: {
@@ -1015,6 +942,16 @@ export function DomesticPriceIntelligencePanel({
   /** N-4.08 STEP6-4와 같은 패턴(onReadinessChange) — 이 패널이 계산한 값을
    * CommerceWorkspace가 탭 배지/상태 요약에 캐싱해서 쓸 수 있게 보고한다. */
   onPriceLevelChange?: (level: PriceLevel) => void;
+  /**
+   * UX 2.1(CEO 지시, 2026-09-11) — 이 패널 안에서만 돌던 진행 표시(시장가격 →
+   * 국내비교 → 레이더 → 가격비교)를 상단의 단 하나뿐인 작업 Flow로 올려보낸다.
+   *
+   * 그 진행 표시가 여기 갇혀 있었기 때문에 셀러는 "MI는 별도 작업인가?"를
+   * 물었다 — 실제로는 ② 시장 판단, 즉 흐름의 핵심 단계 하나가 돌고 있는
+   * 것이었다. 여기서 새 판정을 만들지 않는다: 이미 갖고 있는 요청 완료 여부와
+   * 서버 응답의 존재 여부만 사실 그대로 옮긴다.
+   */
+  onMarketSignalChange?: (signal: WorkflowMarketSignal) => void;
   /** N-4.18-H-2 STEP H-2-5 — "[가격/마진 확인]" 버튼. 이 패널은 상품정보
    * 탭에서만 마운트되고 PriceEditor는 커머스 플랫폼 탭에만 있어(서로 다른
    * 탭), 실제 이동은 CommerceWorkspace가 탭 전환+스크롤로 처리한다. */
@@ -1184,6 +1121,49 @@ export function DomesticPriceIntelligencePanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, data]);
 
+  /**
+   * UX 2.1 — ② 시장 판단의 진행 상태. 위 onSellerVerdictChange와 같은 패턴이지만
+   * 판정 하나가 아니라 "지금 어디까지 왔는가"를 통째로 올려보낸다.
+   *
+   * ── 여기서 절대 하지 않는 것 ───────────────────────────────────────────
+   * 다시 계산하지 않는다. 아래 값들은 전부 (a) 이미 끝난 요청인지(stepDone /
+   * autoChecking)와 (b) 서버 응답에 그 값이 실제로 들어있는지 둘 중 하나다.
+   * 특히 "데이터가 없다"와 "못 불러왔다"를 분리해서 올린다 — 위쪽 화면이 그
+   * 둘을 같은 실패로 그리면 국내 비교상품 0건이 "시장 판단 실패"가 된다.
+   */
+  const marketSignal = useMemo<WorkflowMarketSignal>(() => {
+    // 자동 가격 확인(page.tsx가 쏘는 /api/price-history/check)이 돌고 있는 동안은
+    // 시장가 조회가 아직 끝나지 않은 것이다 — stepDone.analysis만 보면 안 된다.
+    const priceProbeDone = !autoChecking && stepDone.analysis;
+    // 아래 세 항목은 같은 응답(/api/price-history/:id) 하나에서 나온다.
+    // 요청을 쪼개서 가짜 순차 진행을 만들지 않는다 — 같은 시점에 함께 끝난다.
+    const analysisDone = priceProbeDone;
+    const hasDomestic = (data?.domesticCompetition?.tier ?? "NONE") !== "NONE" || candidates.length > 0;
+    const hasDemandSignal = (data?.marketSignals?.signals ?? []).some((s) => s.level !== "unknown");
+    const verdict = data?.sellerDecision?.finalVerdict ?? null;
+    return {
+      notStarted: false,
+      priceProbeDone,
+      domesticProbeDone: !autoChecking && stepDone.competitors,
+      domesticDataFound: hasDomestic,
+      demandProbeDone: analysisDone,
+      demandDataFound: hasDemandSignal,
+      profitabilityDone: analysisDone,
+      profitabilityFound: data?.recommendation?.estimatedMarginPercent != null,
+      verdictKnown: verdict != null,
+      // 서버의 SELLER_FACING_COPY와 같은 문구를 쓴다 — UI에서 이름을 다시 짓지 않는다.
+      verdictLabel: verdict ? FINAL_VERDICT_COPY[verdict].title : null,
+      // 요청이 전부 끝났는데 응답이 없는 경우에만 "못 불러왔다"이다.
+      // 로딩 중의 null을 실패로 읽으면 화면이 매번 실패부터 보여준다.
+      loadFailed: !loading && !autoChecking && data === null,
+    };
+  }, [autoChecking, loading, data, candidates, stepDone]);
+
+  useEffect(() => {
+    onMarketSignalChange?.(marketSignal);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [marketSignal]);
+
   /** N-4.07 Sprint(대표님 지시: "상품 화면 [가격 다시 확인] 버튼") —
    * /api/price-history/check(기존, UI 연결처 없었음)를 그대로 호출한다.
    * skipIfCheckedToday는 이 경로에서는 안 준다 — 사용자가 명시적으로 "지금
@@ -1248,27 +1228,23 @@ export function DomesticPriceIntelligencePanel({
   // 반드시 resolve/reject되므로(무한 대기 아님) 별도 타임아웃을 새로 만들지
   // 않는다(기존 정책 그대로 상속, 크롤러 timeout 로직 자체는 이번에 건드리지
   // 않는다).
-  // MI-LOADING-1 — 진행 단계는 실제 요청과 1:1이다. autoChecking 단계는 실제로
-  // 자동 가격 확인이 돌고 있을 때만 목록에 넣는다(안 돌면 아예 표시하지 않는다).
-  const miSteps: MiStep[] = [
-    { label: "상품 정보 확인", detail: "상품명 · 옵션 · 원가", state: "done" },
-    ...(autoChecking
-      ? [{ label: "국내 시장 가격 확인", detail: "동일상품 실시간 조회", state: "running" as MiStepState }]
-      : []),
-    {
-      label: "원가·마진 분석 및 판매 전략 생성",
-      detail: "착지원가 · 추천가 · 마진",
-      state: stepDone.analysis ? "done" : "running",
-    },
-    { label: "경쟁 판매처 조회", detail: "국내 판매처 후보", state: stepDone.competitors ? "done" : "running" },
-    { label: "가격 변동 알림 확인", detail: "최근 가격 변화", state: stepDone.alerts ? "done" : "running" },
-  ];
-
+  // UX 2.1 — 분석이 도는 동안 이 자리는 "어디까지 왔는지"를 말하지 않는다.
+  // 그건 상단 작업 Flow의 ② 시장 판단이 이미 하위 단계로 보여주고 있고
+  // (onMarketSignalChange로 올려보낸 그 값이다), 같은 말을 두 번 하는 순간
+  // 셀러는 두 진행 표시가 다른 작업인 줄 알고 다시 읽는다. 여기는 곧 들어올
+  // 결과의 자리만 잡아둔다 — 화면이 갑자기 튀어나오지 않게 하려던 MI-UI-1의
+  // 목적은 그대로 지켜진다.
   if (autoChecking || loading || justCompleted) {
+    // MarketIntelligenceSkeleton이 CollapsibleSection까지 포함한다 — 여기서 또
+    // 감싸면 "Market Intelligence" 헤더가 두 겹으로 겹친다.
     return (
-      <CollapsibleSection title="Market Intelligence" defaultOpen>
-        <MarketIntelligenceProgress steps={miSteps} completed={!autoChecking && !loading && justCompleted} />
-      </CollapsibleSection>
+      <MarketIntelligenceSkeleton
+        message={
+          justCompleted && !autoChecking && !loading
+            ? "분석이 끝났습니다. 결과를 정리하고 있습니다."
+            : "한국 시장 기준으로 이 상품을 판단하고 있습니다 — 실제 시장 가격을 조회하므로 10~20초 정도 걸릴 수 있습니다."
+        }
+      />
     );
   }
   // MI-LOADING-1 — 기존에는 결과가 없으면 패널이 통째로 사라져서 "분석이 실패한

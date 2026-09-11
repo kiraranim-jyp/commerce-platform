@@ -10,31 +10,33 @@ function formatTime(iso: string): string {
 }
 
 /**
- * P0-UI Epic 5(진행 단계 단순화) — packages/image/src/pipeline/progress.ts의
- * STAGE_WEIGHTS 누적 퍼센트 경계를 그대로 옮겨와 4단계로 묶는다. 실제 파이프라인
- * 세부 단계(analyze/extract/download/dedup/classify/product/model/...)를 그대로
- * 보여주는 대신 사용자가 이해할 수 있는 이름으로 요약한다 — 세부 단계는 "▼ 개발
- * 로그"를 펼치면 그대로 보인다(정보를 지운 게 아니라 기본 노출만 줄였다).
+ * UX 2.1(CEO 지시, 2026-09-11) — 여기 있던 `상품 분석 → 이미지 다운로드 →
+ * 이미지 처리 → 마무리` 4칸 바를 없앤다.
+ *
+ * 기능을 지운 게 아니라 **자리를 옮겼다**. 그 네 칸은 이제 하나뿐인 작업
+ * Flow의 ① 상품 수집 안쪽 하위 단계다(workflow.ts의 COLLECT_SUB_STEPS —
+ * 구간 경계값 7/21/96/100은 그대로다). 화면 위에 4칸 바가 있고 그 아래
+ * 또 다른 4단계 바가 있으면, 둘이 같은 작업인지 다른 작업인지 셀러는
+ * 알 수 없다 — 그게 이번 지시가 없애려는 문제 그 자체였다.
+ *
+ * 이 컴포넌트에 남는 것은 두 가지뿐이다: 실제 진행률 막대와 개발 로그.
+ * 둘 다 단계 판정을 하지 않는다.
  */
-const SIMPLE_STAGES = [
-  { label: "상품 분석", upTo: 7 },
-  { label: "이미지 다운로드", upTo: 21 },
-  { label: "이미지 처리", upTo: 96 },
-  { label: "마무리", upTo: 100 },
-] as const;
-
-function currentSimpleStageIndex(percent: number): number {
-  const index = SIMPLE_STAGES.findIndex((s) => percent <= s.upTo);
-  return index === -1 ? SIMPLE_STAGES.length - 1 : index;
-}
-
-/** 진행률 바 + 단순화된 4단계 요약. 세부 타임스탬프 로그는 기본 접혀 있다. */
 export function ProgressPanel({
   current,
   log,
+  developerMode = false,
 }: {
   current: PipelineProgressEvent | null;
   log: PipelineProgressEvent[];
+  /**
+   * UX 2.1 — 파이프라인이 흘려주는 원본 메시지("중복 이미지 검사 중...",
+   * "대표 이미지 선정 중...")는 내부 작업 이름이다. 셀러가 읽어야 할 문장은
+   * 작업 Flow가 이미 한 줄로 보여주고 있으므로, 여기서 같은 순간에 더 잘게
+   * 쪼갠 두 번째 문장을 또 띄우지 않는다 — 두 문장이 다르면 셀러는 둘이
+   * 다른 작업인 줄 안다. 정보를 지우는 게 아니라 개발 로그 쪽으로만 남긴다.
+   */
+  developerMode?: boolean;
 }) {
   const [logExpanded, setLogExpanded] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -44,37 +46,9 @@ export function ProgressPanel({
   }, [log.length, logExpanded]);
 
   const percent = current?.percent ?? 0;
-  const activeIndex = currentSimpleStageIndex(percent);
 
   return (
     <div className="mt-4 space-y-3">
-      <div className="flex items-center gap-2 text-xs">
-        {SIMPLE_STAGES.map((stage, index) => {
-          const state = index < activeIndex ? "done" : index === activeIndex ? "active" : "locked";
-          return (
-            <div key={stage.label} className="flex items-center gap-2">
-              <span
-                className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-medium ${
-                  state === "done"
-                    ? "border-success/30 bg-success-soft text-success"
-                    : state === "active"
-                      ? "border-warning/30 bg-warning-soft text-warning"
-                      : "border-border text-text-tertiary"
-                }`}
-              >
-                <span aria-hidden>{state === "done" ? "✓" : state === "active" ? "●" : "○"}</span>
-                {stage.label}
-              </span>
-              {index < SIMPLE_STAGES.length - 1 && (
-                <span className="text-text-tertiary" aria-hidden>
-                  →
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
       <div>
         <div className="mt-1 h-2 w-full overflow-hidden rounded bg-background">
           <div
@@ -82,8 +56,8 @@ export function ProgressPanel({
             style={{ width: `${percent}%` }}
           />
         </div>
-        {current && (
-          <p className="mt-1 truncate text-xs text-text-secondary">
+        {developerMode && current && (
+          <p className="mt-1 truncate font-mono text-[11px] text-text-tertiary">
             {current.message}
             {current.fileName && current.current != null && current.total != null
               ? ` (${current.current}/${current.total})`

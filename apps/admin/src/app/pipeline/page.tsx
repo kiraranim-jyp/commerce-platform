@@ -15,6 +15,8 @@ import { PreviewModal } from "./PreviewModal";
 import { ProcessingReportView } from "./ProcessingReport";
 import { ProgressPanel } from "./ProgressPanel";
 import { readPipelineSSEStream } from "./sse";
+import { WorkflowPanel } from "./commerce/WorkflowPanel";
+import { MARKET_SIGNAL_NOT_STARTED, resolveWorkflow } from "./commerce/workflow";
 import { isStaleSnapshotResponse, resolveSnapshotSaveAction } from "./snapshot-save-guard";
 import type { PipelineProgressEvent, PipelineResponse, TabKey, WorkspaceItem } from "./types";
 import { WorkspaceTabs } from "./WorkspaceTabs";
@@ -757,6 +759,36 @@ export default function PipelinePage() {
   const previewItem = items.find((item) => item.id === previewId) ?? null;
   const canDownload = !loading && items.length > 0 && retryingIds.size === 0;
   const started = loading || result !== null;
+  /**
+   * UX 2.1(CEO 지시, 2026-09-11) — 수집이 끝나기 전 구간의 작업 Flow.
+   *
+   * CommerceWorkspace는 결과가 도착해야 마운트되므로, 그 전까지 화면 맨 위를
+   * 이 값이 책임진다. 같은 resolveWorkflow()를 쓰고, 결과가 도착하는 순간
+   * 아래 CommerceWorkspace가 그리는 Flow로 바통을 넘긴다 — 두 개가 동시에
+   * 화면에 있는 순간은 없다(아래 렌더 조건 참고). ②③④의 입력은 아직
+   * 아무것도 시작되지 않았다는 사실 그대로다: 시작도 안 한 작업을 진행
+   * 중으로 표시하지 않는다.
+   */
+  const collectingWorkflow = resolveWorkflow({
+    collection: {
+      running: loading,
+      percent: currentProgress?.percent ?? 0,
+      productReady: false,
+      imageCount: items.length,
+      failedImageCount: items.filter((item) => item.status === "failed").length,
+    },
+    market: MARKET_SIGNAL_NOT_STARTED,
+    prepare: {
+      categoryVerified: false,
+      productInfoOk: false,
+      productInfoMissing: null,
+      optionGroupCount: 0,
+      imageCount: 0,
+      detailReady: false,
+      requiredFieldBlockingCount: 0,
+    },
+    register: { channels: [] },
+  });
 
   return (
     <>
@@ -894,17 +926,20 @@ export default function PipelinePage() {
         </>
       ) : (
         <>
-          {loading && (
-            <div className="mt-6">
-              <p className="text-sm text-text-secondary">
-                AI가 상품을 분석하고 있습니다 — 이미지 수집, 상품 정보 추출, 배경 제거까지
-                자동으로 진행됩니다.
-              </p>
-            </div>
-          )}
+          {/* UX 2.1 — 수집 중에도 셀러가 보는 흐름은 같은 4단계 하나다.
+              결과가 도착하면(result && product) 아래 CommerceWorkspace가
+              같은 컴포넌트를 이어서 그리므로, 이 블록은 그때 사라진다 —
+              진행 표시가 두 개 겹치는 순간을 만들지 않는다.
+              수집이 중간에 실패하면(loading=false, result=null) 아예 그리지
+              않는다: 멈춘 ●를 계속 돌려두면 그건 거짓말이고, 그 경우 셀러가
+              읽어야 할 것은 아래 오류 문구다. */}
+          {loading && !(result && product) && <WorkflowPanel workflow={collectingWorkflow} />}
 
-          {(loading || progressLog.length > 0) && (
-            <ProgressPanel current={currentProgress} log={progressLog} />
+          {/* 세부 진행률과 개발 로그. 단계 판정은 하지 않는다(위 Flow가 한다).
+              수집이 끝난 뒤에는 Developer Mode에서만 남는다 — 끝난 진행 목록이
+              화면에 계속 앉아 있으면 그것도 "아직 뭔가 돌고 있나"로 읽힌다. */}
+          {(loading || (progressLog.length > 0 && developerMode)) && (
+            <ProgressPanel current={currentProgress} log={progressLog} developerMode={developerMode} />
           )}
         </>
       )}

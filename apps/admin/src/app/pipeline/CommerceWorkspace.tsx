@@ -66,7 +66,14 @@ import type { PriorityItem, ReadinessLevel, RegistrationReadinessState } from ".
 import { computeChecklistReadiness } from "./commerce/readiness";
 import { buildPriorityItems, resolveRegistrationReadinessState } from "./commerce/RegistrationStatusBanner";
 import { RegistrationHistoryPanel } from "./commerce/RegistrationHistoryPanel";
-import { StageStepper } from "./commerce/StageStepper";
+import { WorkflowPanel } from "./commerce/WorkflowPanel";
+import {
+  MARKET_SIGNAL_NOT_STARTED,
+  resolveWorkflow,
+  type MarketSignal as WorkflowMarketSignal,
+  type WorkflowChannel,
+  type WorkflowNavTarget,
+} from "./commerce/workflow";
 import { SourceDataView } from "./commerce/SourceDataView";
 import type { WorkspaceItem } from "./types";
 
@@ -252,6 +259,23 @@ export function CommerceWorkspace({
   function handleSellerVerdictChange(verdict: SellerFinalVerdict | null) {
     setVerdictReported(true);
     setSellVerdict((prev) => (prev === verdict ? prev : verdict));
+  }
+
+  /**
+   * UX 2.1(CEO 지시, 2026-09-11) — ② 시장 판단의 진행 상태.
+   *
+   * DomesticPriceIntelligencePanel은 상품정보 탭에서만 마운트된다. 셀러가
+   * 쿠팡 탭으로 넘어가면 패널이 언마운트되지만, 그렇다고 ②가 "아직 분석 중"으로
+   * 되돌아가면 안 된다 — 그래서 마지막으로 보고된 값을 여기 붙잡아 둔다
+   * (platformReadiness/priceLevel과 같은 sticky visited 원칙).
+   */
+  const [marketSignal, setMarketSignal] = useState<WorkflowMarketSignal>(MARKET_SIGNAL_NOT_STARTED);
+  function handleMarketSignalChange(next: WorkflowMarketSignal) {
+    // 패널이 매 렌더마다 같은 내용을 보고해도 리렌더가 꼬리를 물지 않도록
+    // 값이 실제로 달라졌을 때만 교체한다(얕은 비교로 충분한 평평한 객체다).
+    setMarketSignal((prev) =>
+      (Object.keys(next) as (keyof WorkflowMarketSignal)[]).every((k) => prev[k] === next[k]) ? prev : next,
+    );
   }
 
   /** MI-FLOW-2 — 상단 진행바/Action Center에서 판단 카드로 데려가는 단일 경로.
@@ -1054,6 +1078,80 @@ export function CommerceWorkspace({
     return items;
   })();
 
+  /**
+   * UX 2.1(CEO 지시, 2026-09-11) — 화면 전체가 따르는 **단 하나의** 작업 Flow.
+   *
+   * 여기서 하는 일은 "지금 이미 존재하는 값들을 workflow.ts가 읽을 수 있는
+   * 모양으로 옮기는 것"뿐이다. 새 판정도, 새 게이트도, 저장되는 상태도 없다.
+   * ①은 이 컴포넌트가 마운트된 시점에 이미 끝나 있고(page.tsx가 수집 중
+   * 화면을 따로 보여준다), ②는 패널이 올려보낸 marketSignal, ③은 product과
+   * 카테고리 확정 여부, ④는 채널별 등록 상태에서 그대로 나온다.
+   */
+  const workflow = useMemo(() => {
+    // 카테고리는 isVerifiedCategorySelected로만 판정한다 — state만 보면
+    // 확정되지 않은 카테고리로 등록을 시도해 register API가 CP001로 거부하는
+    // 버그가 재발한다(packages/marketplace/src/category-field.ts 참고).
+    const categoryVerified = Object.values(categoryMappings).some(isVerifiedCategorySelected);
+    const hasTitle = Boolean(product.title.value.trim());
+    const hasBrand = Boolean(product.brand.value.trim());
+    // ④를 잠그는 데 쓰는 "필수 정보"는 **실제로 등록할 수 있는 채널**의 것만 센다.
+    // 아직 등록 기능이 없는 채널(SOON)의 잠정 부족 항목까지 세면, 셀러가 고칠
+    // 방법이 없는 이유로 흐름이 영원히 멈춘다 — 그 채널들의 부족 항목은
+    // 오른쪽 Action Center가 지금처럼 따로 보여준다.
+    const registerableBlocking = PLATFORM_ORDER.filter((id) => !SOON_PLATFORMS.has(id)).reduce(
+      (sum, id) => sum + (mergedReadiness[id]?.priorityItems.length ?? 0),
+      0,
+    );
+    const channels: WorkflowChannel[] = PLATFORM_ORDER.map((id) => ({
+      id,
+      label: PLATFORM_ADAPTERS[id].label,
+      availability: !SOON_PLATFORMS.has(id) ? "AVAILABLE" : id === "smartstore" ? "PREVIEW_ONLY" : "COMING_SOON",
+      // 실제로 마켓에 제출이 끝난 상태만 "등록 완료"다 — READY(화면 표시용
+      // 파생값)를 등록 완료로 읽으면 등록하지도 않은 상품이 ✓가 된다.
+      registered: listingStates[id] === "SUBMITTED",
+    }));
+
+    return resolveWorkflow({
+      collection: {
+        running: false,
+        percent: 100,
+        productReady: true,
+        imageCount: product.images.length,
+        // 실패한 이미지는 ⚠ 한 줄로만 남긴다 — 흐름 전체를 빨갛게 만들지 않는다.
+        failedImageCount: items.filter((item) => item.status === "failed").length,
+      },
+      // 스냅샷이 아직 저장되기 전이면 판단 패널 자체가 마운트되지 않아 보고가
+      // 없다. 그건 "셀러가 아직 확인하지 않았다"가 아니라 "곧 시작된다"이다 —
+      // 그 둘을 같은 문장으로 쓰면 아무것도 안 한 셀러에게 안 한 일을 탓하게
+      // 된다. notStarted만 걷어내면 ②가 정상적으로 "조회 중"으로 그려진다.
+      market:
+        marketSignal.notStarted && snapshotId == null ? { ...marketSignal, notStarted: false } : marketSignal,
+      prepare: {
+        categoryVerified,
+        productInfoOk: hasTitle && hasBrand,
+        productInfoMissing: !hasTitle ? "상품명을 확인해주세요" : !hasBrand ? "브랜드를 확인해주세요" : null,
+        optionGroupCount: product.optionGroups?.length ?? 0,
+        imageCount: product.images.length,
+        detailReady: Boolean(product.description.value.trim() || product.descriptionKo.value.trim()),
+        requiredFieldBlockingCount: registerableBlocking,
+      },
+      register: { channels },
+    });
+  }, [product, items, categoryMappings, mergedReadiness, listingStates, marketSignal, snapshotId]);
+
+  /** 작업 Flow의 항목을 눌렀을 때의 이동. 탭 전환과 스크롤은 이미 있는 경로를 그대로 쓴다. */
+  function navigateWorkflow(target: WorkflowNavTarget) {
+    if (target === "market") {
+      focusMarketVerdict();
+      return;
+    }
+    if (target === "price") {
+      handleRequestPriceReview();
+      return;
+    }
+    setTab(target);
+  }
+
   /** Sprint A-2(Auto Fill) — register 라우트가 등록 시점에만 돌리던
    * buildCoupangCompliance()를 여기서도 그대로 호출해서 "이미 자동으로 채워질
    * 값"을 등록 전에 미리 보여준다. 별도 매칭 로직을 새로 만들지 않는다 — 등록
@@ -1595,7 +1693,7 @@ export function CommerceWorkspace({
       tab === "smartstore" ? (smartStoreValidation ? smartStoreValidation.ok : true) : true;
     // isVerifiedPlatformCode까지 확인해야 한다 — state만 보면 이 화면이
     // READY로 잘못 판정해 등록 버튼을 열어주고 register API가 CP001로
-    // 거부하는 버그가 재발한다(같은 실수가 StageStepper/PlatformPreview에도
+    // 거부하는 버그가 재발한다(같은 실수가 WorkflowPanel/PlatformPreview에도
     // 각각 따로 있었다 — packages/marketplace/category-field.ts 참고).
     const categoryConfirmed = isVerifiedCategorySelected(listing.category);
     const requiresCategory = !SOON_PLATFORMS.has(tab);
@@ -1737,13 +1835,11 @@ export function CommerceWorkspace({
         wasEditingDraftFieldRef.current = isDraftFieldTarget(document.activeElement);
       }}
     >
-      <StageStepper
-        product={product}
-        categoryMappings={categoryMappings}
-        verdictKnown={sellVerdict != null}
-        onNavigate={setTab}
-        onFocusMarket={focusMarketVerdict}
-      />
+      {/* UX 2.1 — 화면 맨 위의 유일한 진행 표시. 예전엔 여기 4단계 바가 있었고
+          그와 별개로 위쪽엔 시스템 작업 바가, 아래쪽 MI 패널 안엔 또 다른
+          5단계 목록이 각자 돌고 있었다. 이제 셋은 하나의 상태(workflow)에서
+          나오고, 큰 단계는 언제나 정확히 하나만 활성이다. */}
+      <WorkflowPanel workflow={workflow} onNavigate={navigateWorkflow} />
 
       {isEditingDraftField && (
         <div className="flex w-fit items-center gap-2 rounded-md border border-warning/30 bg-warning-soft px-3 py-1.5 text-xs font-medium text-warning">
@@ -1843,6 +1939,7 @@ export function CommerceWorkspace({
                 snapshotId={snapshotId}
                 onPriceLevelChange={handlePriceLevelChange}
                 onSellerVerdictChange={handleSellerVerdictChange}
+                onMarketSignalChange={handleMarketSignalChange}
                 onRequestPriceReview={handleRequestPriceReview}
                 autoChecking={priceCheckPriming}
               />
