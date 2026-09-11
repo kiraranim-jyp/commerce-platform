@@ -10,6 +10,12 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 export type DomesticSourcePriority = "P0" | "P1" | "P2";
 export type DomesticSourceCollectionStrategy = "AUTO_API" | "AUTO_SCRAPE" | "MANUAL" | "NOT_AVAILABLE";
 export type DomesticSourceStatus = "ACTIVE" | "PAUSED" | "NOT_AVAILABLE" | "ERROR";
+/**
+ * TTAEJYO 2.0(CEO 지시, 2026-09-12) — "이 판매처는 어떤 종류의 판매처인가".
+ * collection_strategy(긁을 수 있는가)와 섞지 않는다 — 쿠팡은 MARKETPLACE이면서
+ * MANUAL이고, 보보쇼즈 공식은 GLOBAL이면서 AUTO_API다. 마이그레이션 049가
+ * 실행되기 전에는 전부 null이다(값을 지어내지 않는다). */
+export type DomesticSourceType = "MARKETPLACE" | "RETAILER" | "VERTICAL" | "GLOBAL";
 
 export interface DomesticPriceSource {
   id: string;
@@ -29,6 +35,10 @@ export interface DomesticPriceSource {
   lastCheckedAt: string | null;
   lastSuccessAt: string | null;
   source: "SYSTEM" | "USER";
+  /** 마이그레이션 049 실행 전에는 null이다 — "분류되지 않음"이지 "일반 소매몰"이
+   * 아니다. 오늘 이 값으로 검색 대상을 가르지 않는다(카테고리 적합도는
+   * categoryScope가 맡는다). */
+  sourceType: DomesticSourceType | null;
   /** GLOBAL-MARKET ③-2(CPO 확정, 2026-09-11) — 이 워크스페이스에서의 실효 노출.
    * catalogEnabled && workspaceEnabled로 이미 합쳐진 값이다. 호출부(검색/일일
    * 확인/화면)가 두 플래그를 각자 AND하기 시작하면 한 곳에서 반드시 빠뜨린다 —
@@ -62,6 +72,9 @@ interface DomesticPriceSourceRow {
   last_success_at?: string | null;
   source: "SYSTEM" | "USER";
   enabled: boolean;
+  /** 마이그레이션 049. 아직 실행 전인 세션에서도 select("*")가 깨지지 않도록
+   * optional로 받는다(last_checked_at과 정확히 같은 이유). */
+  source_type?: DomesticSourceType | null;
   created_at: string;
 }
 
@@ -81,6 +94,7 @@ function toSource(row: DomesticPriceSourceRow, workspaceEnabled: boolean): Domes
     lastCheckedAt: row.last_checked_at ?? null,
     lastSuccessAt: row.last_success_at ?? null,
     source: row.source,
+    sourceType: row.source_type ?? null,
     enabled: row.enabled && workspaceEnabled,
     catalogEnabled: row.enabled,
     workspaceEnabled,

@@ -7,9 +7,11 @@ import {
   supportsDomesticIdentifierExtraction,
   type ComparisonSearchResult,
 } from "@commerce/crawler";
+import { sourceFitsScopes } from "@commerce/category";
 import { buildDomesticShopQueryFromFields } from "@commerce/shared";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/require-user";
+import { resolveCategoryScopes } from "../_lib/category-scope";
 import { listDomesticPriceSources } from "../_lib/domestic-price-source";
 
 /** N-4.07(대표님 지시: "국내 키즈의류 수입아동복 편집샵 사이트를 기본 등록해서 비교해줘") —
@@ -145,8 +147,20 @@ export async function POST(request: Request) {
 
   // s.enabled는 이미 "카탈로그 ON && 이 판매자 ON"으로 합쳐진 실효값이다
   // (listDomesticPriceSources 주석) — 여기서 두 플래그를 다시 AND하지 않는다.
+  //
+  // TTAEJYO 2.0(CEO 지시, 2026-09-12) — 여기에 카테고리 적합도를 하나 더 건다.
+  // 노출 모델(카탈로그 ON && 판매자 ON)은 그대로다. 세 번째 조건이 아니라
+  // **그 위에 얹는 필터**라 판매자가 켜 둔 샵을 우리가 몰래 끄지 않는다:
+  // 카테고리를 못 정하면(null) 필터 자체가 걸리지 않고, category_scope를
+  // 주장하지 않은 소스(빈 배열)는 언제나 통과한다(sourceFitsScopes 주석).
+  const categoryScopes = resolveCategoryScopes({
+    title: body.title,
+    description: body.description,
+    brand: body.brand,
+    sourceUrl: body.sourceUrl,
+  });
   const sources = (await listDomesticPriceSources(auth.user.workspaceId)).filter(
-    (s) => s.enabled && s.status === "ACTIVE",
+    (s) => s.enabled && s.status === "ACTIVE" && sourceFitsScopes(s.categoryScope, categoryScopes),
   );
 
   // MI-DOMESTIC-FIX-1(CPO 지시, 2026-09-09) — 여기가 buildDomesticShopQuery를

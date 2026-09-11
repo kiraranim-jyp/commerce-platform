@@ -161,6 +161,60 @@ export function extractCategoryTaxon(text: string): CategoryTaxon | null {
   return null;
 }
 
+/**
+ * TTAEJYO 2.0(CEO 지시, 2026-09-12) — "여성 원피스와 아동 원피스가 서로 매칭되면
+ * 안 된다."
+ *
+ * ── 왜 위 CategoryTaxon으로는 안 되는가 ──────────────────────────────────
+ * 둘 다 DRESS다. 상품유형은 **정확히 같고**, 다른 것은 대상 연령이다. 그래서
+ * taxon 축으로는 "카테고리 일치"(+보정)까지 받는다 — 지금까지 이 두 상품은
+ * 매칭에서 서로를 밀어내기는커녕 서로를 끌어당기고 있었다.
+ *
+ * ── 판정 알고리즘은 건드리지 않는다 ──────────────────────────────────────
+ * matchTruth 서열(IDENTIFIER/TEXT/SIMILAR/CONFLICT)도, classifyMatchLevel의
+ * 95/85/70 경계도, SKU가 최종 우선이라는 순서도 그대로다. 여기서 더하는 것은
+ * 위 taxon과 **완전히 같은 모양의 보조 신호** 하나뿐이다.
+ *
+ * ── 일치할 때는 아무것도 하지 않는다(비대칭) ─────────────────────────────
+ * 의도한 것이다. 불일치에만 감점하고 일치에는 가점하지 않으면, 기존 아동↔아동
+ * 쌍의 점수가 **한 소수점도 움직이지 않는다**. 새 신호가 기존 판정을 흔들지
+ * 않는다는 것을 산술로 보장하는 가장 단순한 방법이다.
+ *
+ * ── 어휘 ─────────────────────────────────────────────────────────────────
+ * CATEGORY_TAXON_WORDS와 같은 원칙: 번역사전을 만들지 않고, 부분문자열 오탐이
+ * 없는 말만 쓴다. "men"은 넣지 않았다 — normalizeText는 형태소 분석 없이 부분
+ * 포함만 보는데 "men"은 garment/embellishment 안에 그대로 들어 있다(이 파일이
+ * 이미 "코트"→"타이니코튼" 오탐으로 한 번 겪은 문제다). "women"은 그 자체로
+ * 충분히 길어 안전하고, 한글 "여성/남성"도 다른 단어에 섞이지 않는다.
+ */
+export type AudienceTaxon = "KIDS" | "ADULT";
+
+const AUDIENCE_TAXON_WORDS: Record<AudienceTaxon, string[]> = {
+  KIDS: ["kids", "girls", "boys", "baby", "toddler", "아동", "키즈", "베이비", "주니어"],
+  ADULT: ["women", "여성", "남성"],
+};
+
+/** 한글 단어는 반드시 normalizeText를 통과시켜 비교 대상과 같은 형태(NFKD로
+ * 분해된 자모)로 맞춘다 — 그러지 않으면 한글 항목이 통째로 죽는다(위
+ * NORMALIZED_CATEGORY_TAXON_WORDS 주석의 실측 사고 그대로). */
+const NORMALIZED_AUDIENCE_TAXON_WORDS: Record<AudienceTaxon, string[]> = Object.fromEntries(
+  Object.entries(AUDIENCE_TAXON_WORDS).map(([taxon, words]) => [taxon, words.map((w) => normalizeText(w))]),
+) as Record<AudienceTaxon, string[]>;
+
+/** 제목에서 대상 연령층을 읽는다. 근거가 없으면 null — "모른다"이지 "다르다"가
+ * 아니다(taxon과 같은 규칙). */
+export function extractAudienceTaxon(text: string): AudienceTaxon | null {
+  const normalized = normalizeText(text);
+  if (!normalized) return null;
+  // KIDS를 먼저 본다. "Girls Women's-style Dress"처럼 두 신호가 함께 있으면
+  // 더 좁은 쪽(아동)이 답이다 — 성인 매장이 아동복을 "girls"로 표기하는 일은
+  // 있어도, 아동 매장이 성인복을 "women"으로 표기하는 일은 없다.
+  for (const taxon of ["KIDS", "ADULT"] as AudienceTaxon[]) {
+    if (NORMALIZED_AUDIENCE_TAXON_WORDS[taxon].some((w) => normalized.includes(w))) return taxon;
+  }
+  return null;
+}
+
 export type MatchLevel = "very_high" | "high" | "medium" | "low";
 
 /** N-4.18-D(대표님 지시, 2026-08-25: "95% 이상만 동일상품 확정, 85~94%는 유사상품으로
@@ -299,6 +353,18 @@ export function scoreCandidateMatch(query: ComparisonQuery, candidate: Compariso
       score = score * 0.3;
       reasons.push("카테고리 불일치");
     }
+  }
+
+  // TTAEJYO 2.0(CEO 지시, 2026-09-12) — 대상 연령층. 위 taxon과 같은 자리에,
+  // 같은 규칙(양쪽 다 확인될 때만)으로, 같은 감점폭을 쓴다. 다른 점은 하나뿐이다:
+  // **일치할 때 가점하지 않는다**. 그래서 기존 아동↔아동 매칭 점수는 이 블록이
+  // 생기기 전과 완전히 같고, 새로 달라지는 것은 "여성 원피스 ↔ 아동 원피스"처럼
+  // 양쪽 연령층이 실제로 확인되면서 서로 다른 경우뿐이다.
+  const queryAudience = extractAudienceTaxon(query.title);
+  const candidateAudience = extractAudienceTaxon(candidate.title);
+  if (queryAudience && candidateAudience && queryAudience !== candidateAudience) {
+    score = score * 0.3;
+    reasons.push("대상 연령층 불일치");
   }
 
   // 2. SKU/article code — 둘 다 있을 때만, 가장 강한 신호

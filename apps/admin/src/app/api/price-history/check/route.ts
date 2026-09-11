@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/require-user";
 import { backfillCanonicalProduct, buildProductIdentityDna } from "@commerce/shared";
 import { computeMarketAlert, type AlertCategory } from "@commerce/pricing";
+import { resolveCategoryScopesFromProduct } from "../../domestic-price-sources/_lib/category-scope";
 import { getSnapshot } from "../../snapshots/_lib/snapshot";
 import { computeMarketIntelligence } from "../_lib/market-intelligence";
 import { openAlertIfNotActive, resolveAlertsNotIn } from "../_lib/price-alerts";
@@ -50,6 +51,10 @@ export async function POST(request: Request) {
       workspaceId: auth.user.workspaceId,
       dna: buildProductIdentityDna(product),
       description: product.description.value || undefined,
+      // TTAEJYO 2.0 — 이 상품 카테고리에 맞는 편집샵만 뒤진다. 스냅샷을 통째로
+      // 갖고 있는 경로라 breadcrumb/권장연령까지 근거로 쓸 수 있다(검색 라우트는
+      // 그 둘이 없어 더 자주 null이 된다 — 판정 함수는 둘이 같은 것을 쓴다).
+      categoryScopes: resolveCategoryScopesFromProduct(product),
     });
   } catch (error) {
     domesticShop = {

@@ -24,6 +24,10 @@ export default defineConfig({
       // MI-DOMESTIC-FIX-1(2026-09-09) — shared는 그동안 한 번도 실행되지 않고
       // 있었다. 검색어 생성 정책이 여기 살기 때문에 회귀를 여기서 잡아야 한다.
       "../../packages/shared/src/**/__tests__/**/*.test.ts",
+      // TTAEJYO 2.0(2026-09-12) — category도 crawler와 같은 처지다(테스트 러너
+      // 없음). 카테고리 프로필은 "아동 동작이 한 점도 안 바뀐다"를 증명해야 하는
+      // 코드라 회귀를 반드시 여기서 잡는다.
+      "../../packages/category/src/**/__tests__/**/*.test.ts",
     ],
   },
 });

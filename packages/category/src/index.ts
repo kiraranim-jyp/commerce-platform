@@ -4,6 +4,7 @@ export * from "./candidate-scoring";
 export * from "./classify";
 export * from "./demographic-signal";
 export * from "./product-resolver";
+export * from "./profiles";
 export * from "./golden-dataset";
 export * from "./keyword-rules";
 export * from "./provider";

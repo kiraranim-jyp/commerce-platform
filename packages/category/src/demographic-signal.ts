@@ -1,4 +1,5 @@
 import type { CanonicalProduct } from "@commerce/shared";
+import { CATEGORY_PROFILES } from "./profiles";
 
 export interface DemographicSignal {
   isKids: boolean;
@@ -17,29 +18,14 @@ export interface DemographicSignal {
  * 없어 쿠팡 predict API가 "여성스니커즈"로 잘못 추측했다). 이런 경우
  * product.breadcrumbPath(사이트 자신의 분류 — 예: ["Home","Shoes","Children"])가
  * 남은 유일한 신호라 KIDS_KEYWORDS와 같은 방식으로 함께 검사한다.
+ *
+ * TTAEJYO 2.0(2026-09-12) — 목록 자체는 한 글자도 바뀌지 않았고, 사는 곳만
+ * profiles.ts의 아동 프로필 안으로 옮겼다. "아동 전문 브랜드"는 전역 사실이
+ * 아니라 아동 카테고리의 사실이기 때문이다 — 여성 브랜드 목록이 생기는 순간
+ * 두 전역 상수가 나란히 서게 되고, 그때 어느 쪽을 봐야 하는지 코드가 답하지
+ * 못한다. 이 이름은 기존 호출부(product-resolver.ts)를 위해 그대로 남긴다.
  */
-export const KNOWN_KIDS_BRANDS = [
-  "bobo choses",
-  "bonton",
-  "bonpoint",
-  "caramel",
-  "confetti",
-  "hundred pieces",
-  "jacadi",
-  "konges sløjd",
-  "liewood",
-  "mini rodini",
-  "molo",
-  "petit bateau",
-  "the new society",
-  "tinycottons",
-  "zara kids",
-  // P-13C-1(2026-08-31, 실측: STEP2/3에서 24개 null-category 상품 중 두
-  // 브랜드 모두 아동 전문 브랜드로 확인됨 — Misha & Puff는 성별/연령 신호
-  // 부재로 "여성 골프 원피스"까지 잘못 갔던 실제 사고 사례).
-  "misha & puff",
-  "the animals observatory",
-];
+export const KNOWN_KIDS_BRANDS = CATEGORY_PROFILES.KIDS_FASHION.brandHints;
 
 const KIDS_KEYWORDS = [
   "kids",

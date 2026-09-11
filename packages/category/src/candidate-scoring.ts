@@ -1,4 +1,5 @@
 import type { ProductSignals } from "./product-resolver";
+import { detectCategoryProfile, fitCategoryPath } from "./profiles";
 
 /**
  * Sprint A-5(Category Resolver 3.0) — CPO 지시: "쿠팡 Predict API를 그대로
@@ -116,8 +117,21 @@ export interface CategoryScoreResult {
  * 텍스트를 대조 대상으로 쓴다. 성별(gender)도 같은 방식으로 추가한다 —
  * "공용"/"남녀공용" 같은 유니섹스 표기까지 신호로 반영해야 이 실측 사례처럼
  * 여러 후보가 동점에 가까울 때 정답이 명확히 위로 올라온다. */
-const KIDS_PATH_KEYWORDS = ["영유아동", "유아동", "아동", "주니어", "베이비", "키즈"];
-const ADULT_GENDERED_PATH_KEYWORDS = ["여성", "남성"];
+/**
+ * TTAEJYO 2.0(CEO 지시, 2026-09-12) — 여기 있던 KIDS_PATH_KEYWORDS /
+ * ADULT_GENDERED_PATH_KEYWORDS 두 상수를 profiles.ts로 옮겼다(값은 그대로).
+ *
+ * 옮긴 이유가 이번 스프린트의 핵심 버그다. 이 보정은 지금까지 **한 방향으로만**
+ * 작동했다: 아동 신호일 때 성인 경로를 -30 하지만, 성인 신호일 때 아동 경로는
+ * 한 푼도 깎지 않았다. 그래서 여성 원피스를 넣으면 "유아동 원피스" 후보가
+ * expect 히트(원피스)로 95점을 그대로 받고 1순위가 됐다 — 아동 상품에서
+ * 그토록 조심스럽게 막아 온 사고가 반대 방향으로는 통째로 뚫려 있었다.
+ *
+ * 두 상수를 프로필의 platformPathKeywords / conflictPathKeywords로 바꾸면
+ * 방향이 저절로 대칭이 된다. 아동 프로필의 두 목록이 옛 상수와 같은 값이라
+ * **아동 상품의 점수는 한 점도 달라지지 않는다**(category-resolver-p13c1
+ * 테스트가 그 사실을 고정한다).
+ */
 const UNISEX_PATH_KEYWORDS = ["남녀공용", "공용", "유니섹스"];
 const GIRL_PATH_KEYWORDS = ["여아", "걸즈"];
 const BOY_PATH_KEYWORDS = ["남아", "보이즈"];
@@ -135,7 +149,10 @@ export function scoreCategoryCandidate(
   signals: Pick<ProductSignals, "productType" | "ageGroup" | "gender">,
 ): CategoryScoreResult {
   const nameText = [categoryName, ...categoryPath].join(" ");
-  const isKidsSignal = signals.ageGroup === "baby" || signals.ageGroup === "kids";
+  // 연령·성별·상품유형만으로 카테고리 프로필을 고른다(텍스트/브랜드는 여기
+  // 없으므로 넘기지 않는다 — 없는 근거를 지어내지 않는다). 못 고르면 null이고,
+  // 그때 아래 보정은 통째로 생략된다 = 이 함수의 기존 동작 그대로다.
+  const detection = detectCategoryProfile(signals);
   const genderKeywords: Record<string, string[]> = {
     unisex: UNISEX_PATH_KEYWORDS,
     girl: GIRL_PATH_KEYWORDS,
@@ -149,17 +166,17 @@ export function scoreCategoryCandidate(
     if (result.conflict) return result;
     let { score, reason } = result;
 
-    if (isKidsSignal) {
-      const hasKidsKeyword = KIDS_PATH_KEYWORDS.some((kw) => nameText.includes(kw));
-      if (hasKidsKeyword) {
+    if (detection) {
+      // 보정폭(+5 / -30)은 손대지 않는다. 바뀐 것은 "무엇을 아동 경로로 보는가"가
+      // 프로필에서 오게 된 것뿐이고, 아동 프로필의 값이 옛 상수와 같아서 아동
+      // 상품에서는 결과가 완전히 동일하다.
+      const { fit, keyword } = fitCategoryPath(detection.profile, nameText);
+      if (fit === "MATCH") {
         score = Math.min(100, score + 5);
-        reason += ` 카테고리 경로에 아동 연령대 표기가 있어 연령 신호(${signals.ageGroup})와도 일치합니다.`;
-      } else {
-        const adultHit = ADULT_GENDERED_PATH_KEYWORDS.find((kw) => nameText.includes(kw));
-        if (adultHit) {
-          score = Math.max(0, score - 30);
-          reason += ` 다만 카테고리 경로가 성인 대상("${adultHit}")으로 보여 연령 신호(${signals.ageGroup})와 어긋날 수 있습니다.`;
-        }
+        reason += ` 카테고리 경로가 ${detection.profile.label}(${keyword})이라 상품 신호(${detection.reason})와도 일치합니다.`;
+      } else if (fit === "CONFLICT") {
+        score = Math.max(0, score - 30);
+        reason += ` 다만 카테고리 경로가 다른 카테고리("${keyword}")로 보여 상품 신호(${detection.reason})와 어긋날 수 있습니다.`;
       }
     }
 

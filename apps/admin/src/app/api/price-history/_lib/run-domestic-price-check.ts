@@ -10,6 +10,7 @@ import {
   type ComparisonCandidate,
   type ModelEvidenceResult,
 } from "@commerce/crawler";
+import { sourceFitsScopes } from "@commerce/category";
 import { buildDomesticShopQuery, type ProductIdentityDna } from "@commerce/shared";
 import { listDomesticPriceSources, recordDomesticSourceCheckAttempt } from "../../domestic-price-sources/_lib/domestic-price-source";
 import {
@@ -54,6 +55,16 @@ export interface DomesticPriceCheckInput {
    * 없으면(undefined) modelCode 증거는 그냥 unavailable로 정직하게 처리되고
    * 기존 동작이 그대로 유지된다(호출부를 안 고쳐도 회귀 없음). */
   description?: string;
+  /**
+   * TTAEJYO 2.0(CEO 지시, 2026-09-12) — 이 상품에 맞는 국내 판매처 범위
+   * (domestic_price_sources.category_scope와 대조할 값). resolveCategoryScopes가
+   * 정한다.
+   *
+   * 선택 인자인 이유는 workspaceId와 정반대다. 안 넘기면 "전부 검색"이 되는데,
+   * 그건 **오늘의 동작 그대로**라 넘기지 않은 호출부가 조용히 손해를 보지
+   * 않는다(workspaceId는 안 넘기면 남의 설정을 무시하게 되므로 필수였다).
+   */
+  categoryScopes?: string[] | null;
 }
 
 export interface DomesticPriceCheckResult {
@@ -248,8 +259,14 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
   // GLOBAL-MARKET ③-2 — s.enabled는 listDomesticPriceSources(workspaceId)가 이미
   // "카탈로그 ON && 이 판매자 ON"으로 합친 실효값이다. 판단 기준은 그대로고,
   // 대상 목록만 판매자별로 좁혀진다(P0 우선 검색/조기 중단 로직은 안 건드림).
+  //
+  // TTAEJYO 2.0(CEO 지시, 2026-09-12) — 여기에 카테고리 적합도를 한 겹 더 얹는다.
+  // domestic_price_sources.category_scope는 029부터 있었고 값도 채워져 있었는데
+  // 이 루프가 한 번도 읽지 않았다 — 그래서 어떤 상품이든 아동복 편집샵 전부를
+  // 매일 크롤링했고, 맞지 않는 샵의 0건이 화면에서는 "국내 비교상품 없음"으로
+  // 읽혔다. 범위를 못 정하면(undefined) 필터는 걸리지 않는다(= 오늘 동작 그대로).
   const allSources = (await listDomesticPriceSources(input.workspaceId)).filter(
-    (s) => s.enabled && s.status === "ACTIVE",
+    (s) => s.enabled && s.status === "ACTIVE" && sourceFitsScopes(s.categoryScope, input.categoryScopes ?? null),
   );
   const p0Sources = allSources.filter((s) => s.priority === "P0");
   const otherSources = allSources.filter((s) => s.priority !== "P0");
