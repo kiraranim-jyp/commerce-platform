@@ -83,6 +83,21 @@ describe("③④는 요약만 보여준다", () => {
   });
 });
 
+describe("시장별 가격 한 줄은 시장·통화·환산을 모두 말한다", () => {
+  it("원본 통화 가격 옆에 저장된 원화 환산값이 함께 온다", () => {
+    // 매입처 비교가 이 블록의 존재 이유인데, €75만 보여주면 비교할 수가 없다.
+    // 환율을 새로 계산하지 않고 관측 시점에 저장된 price_krw를 그대로 쓴다.
+    expect(panel).toContain("원화 환산 ₩{price.priceKrw.toLocaleString()}");
+    expect(panel).toContain('price.currency.toUpperCase() !== "KRW"');
+  });
+
+  it("판매자 신고 국가를 시장이라고 부르지 않는다", () => {
+    // market_country(신고 국가)와 market_code(관측된 시장)는 다른 사실이다.
+    expect(panel).toContain("판매자 신고 국가");
+    expect(panel).not.toContain("기준 국가 {price.marketCountry");
+  });
+});
+
 describe("근거 블록은 위젯이 아니라 의미로 묶인다", () => {
   const domestic = read("../DomesticShopSearch.tsx");
   const comparison = read("../ComparisonShopSearch.tsx");

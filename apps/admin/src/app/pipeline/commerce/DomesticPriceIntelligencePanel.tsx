@@ -151,6 +151,15 @@ function MarketPriceRow({
           · 판매자 신고 국가 {price.marketCountry ?? "미확인"}
         </span>
       </span>
+      {/* UX 2.3(CEO 지시, 2026-09-11) — 한 행이 시장 · 원본 통화 가격 · 원화
+          환산을 전부 말해야 한다. 지금까지 이 줄은 €75만 보여줬고, 그 값이
+          원화로 얼마인지는 셀러가 직접 환산해야 했다(매입처 비교가 이 블록의
+          존재 이유인데 비교할 수가 없었다). 저장된 price_krw를 그대로 옮긴다 —
+          여기서 환율 계산을 새로 하지 않는다. 원본 금액이 없는 레거시 행은
+          formatMarketPrice가 이미 원화를 보여주므로 같은 값을 두 번 쓰지 않는다. */}
+      {price.priceAmount != null && price.currency.toUpperCase() !== "KRW" && (
+        <span className="text-[10px] text-text-tertiary">원화 환산 ₩{price.priceKrw.toLocaleString()}</span>
+      )}
       {price.productUrl ? (
         <a href={price.productUrl} target="_blank" rel="noreferrer" className="text-text-primary underline">
           {formatMarketPrice(price)}
