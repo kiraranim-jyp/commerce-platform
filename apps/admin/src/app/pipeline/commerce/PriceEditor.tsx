@@ -66,6 +66,10 @@ const SELECTABLE_CURRENCIES = ["USD", "EUR", "JPY", "GBP", "SEK", "CNY", "HKD", 
  */
 const FIELD_CLASS = "rounded border border-border px-2 py-0.5 text-sm focus:border-primary focus:outline-none";
 
+/** PRICE-CARD-1 — 판단 요약이 쓰는 착지원가 라벨. 값은 사슬과 같은 표에서
+ * 온다(이름이 두 벌이 되지 않는다). 상수를 한 번 거치는 이유는 주석 참고. */
+const LANDED_COST_LABEL = PRICE_LINE_LABEL.LANDED_COST;
+
 /** 타이핑 중에는 로컬 draft만 갱신(onLiveChange — 화면 재계산용, 저장 안 함),
  * blur에서만 실제 커밋(onCommit) — "입력 중 상태/확정값 분리"는 허용하되
  * "Tab을 눌러야만 적용되는 구조는 금지"라는 CPO 지시를 그대로 구현한다. */
@@ -383,6 +387,64 @@ export function PriceEditor({
             </button>
           </div>
         </div>
+        {/* PRICE-CARD-1(CEO 지시, 2026-09-12) — "이 카드는 계산기가 아니라
+            판단 카드다."
+
+            ── 무엇이 문제였나 ──────────────────────────────────────────────
+            판단에 필요한 네 숫자(원가 → 착지원가 → 권장 판매가 → 예상 이익)가
+            전부 접힘 상세 안에, 그것도 입력칸 다섯 개와 번갈아 놓여 있었다.
+            셀러가 "이 가격에 팔아도 되나"를 묻는데 답을 얻으려면 계산 과정을
+            위에서 아래로 읽어야 했다 — 결론이 과정 속에 섞여 있었다.
+
+            ── 새로 계산하는 숫자가 하나도 없다 ─────────────────────────────
+            여섯 값 전부 아래 사슬이 쓰는 것과 **같은 변수**다(breakdown.costKrw /
+            shippingKrw / landedCostKrw / suggestedPriceKrw, netProfitKrw).
+            여기서 더하기 한 번이라도 하는 순간 같은 숫자가 요약과 사슬에서
+            갈라지기 시작한다 — 이 저장소에서 반복된 버그다. computePriceBreakdown()
+            하나가 여전히 유일한 산식이고 사슬의 순서·항목도 그대로다.
+
+            ── 왜 사슬과 겹치는데도 둔다 ────────────────────────────────────
+            겹치는 것이 아니라 층위가 다르다. 여기는 "그래서 얼마 남나"를 한 눈에
+            답하는 자리고, 아래 사슬은 "그 값이 어떻게 나왔나"를 검산하는 자리다
+            (MI의 요약 축 세 줄과 ⑤ 판단 근거가 갖는 관계와 같다). 최종
+            판매가격은 위 입력칸 하나뿐이라 여기서 다시 적지 않는다 — 화면에서
+            가장 큰 숫자는 끝까지 그 하나다. */}
+        <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-text-secondary">
+          <span>
+            권장 판매가격{" "}
+            <span className="font-semibold text-text-primary">{formatKrw(recommendedPriceKrw)}</span>
+          </span>
+          <span aria-hidden>·</span>
+          <span>
+            예상 이익{" "}
+            <span className={`font-semibold ${netProfitKrw >= 0 ? "text-success" : "text-error"}`}>
+              {netProfitKrw >= 0 ? "+" : ""}
+              {formatKrw(netProfitKrw)}
+            </span>
+          </span>
+        </p>
+        <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-text-secondary">
+          <span>
+            원가 <span className="font-medium text-text-primary">{formatKrw(breakdown.costKrw)}</span>
+          </span>
+          <span aria-hidden>·</span>
+          <span>
+            배송 <span className="font-medium text-text-primary">{formatKrw(breakdown.shippingKrw)}</span>
+          </span>
+          <span aria-hidden>·</span>
+          <span>
+            {/* 착지원가는 위 둘의 합이라 라벨을 더 세게 둔다 — 셀러가 마진을
+                따질 때 실제로 빼는 값이 이것이다(원가 단독이 아니다).
+                라벨은 사슬과 같은 표에서 오지만 지역 상수를 한 번 거친다 —
+                price-single-surface.test.ts가 사슬의 계산 순서를 각 줄의 JSX
+                표현식 위치로 고정하는데, 요약이 사슬과 똑같은 표현식을 쓰면
+                그 테스트가 요약을 사슬의 한 줄로 착각한다. 값은 완전히
+                같다(라벨 표가 하나라는 사실은 그대로다). */}
+            {LANDED_COST_LABEL}{" "}
+            <span className="font-semibold text-text-primary">{formatKrw(breakdown.landedCostKrw)}</span>
+          </span>
+        </p>
+
         {/* P2-1/P2-4 — 문단 둘을 하나로 합쳤다. 위 문단은 "이 값이 저장된
             값인가", 아래 문단은 "이 값이 채널에 어떻게 쓰이는가"였는데, 둘 다
             같은 한 숫자를 설명하는 말이라 두 덩어리로 떨어져 있을 이유가 없었다.
