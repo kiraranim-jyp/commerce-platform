@@ -43,15 +43,28 @@ function axisPoint(index: number, total: number, ratio: number): { x: number; y:
  * MI-UI-1(CEO 지시, 2026-09-11) — "수익성 · 국내 가격 경쟁력을 주식 시세처럼
  * 한눈에 읽히게."
  *
- * 방향(▲/▼)은 좋다/나쁘다, 개수는 강도, 색은 그 둘을 한 번 더 확인시킨다.
- * 등급 단어(높음/보통/낮음)는 지우지 않는다 — 화살표만 남기면 "▲가 몇 개면
- * 높음인지"를 이 화면에서 배워야 하고, 스크린리더에서는 방향 자체가 사라진다.
- * 등급 판정은 computeRadar()가 이미 낸 값 그대로다(여기서 다시 나누지 않는다).
+ * 처음엔 ▲▼ 시세 표기로 만들었다가 CEO 지시로 별점으로 바꿨다 — MI는 오르내리는
+ * 방향을 보여주는 지표가 아니라 "지금 팔기에 얼마나 좋은가"를 보여주는 지표라
+ * 별점이 그 의미에 맞다.
+ *
+ * 별칸이 5개인데 쓰는 값이 3개뿐인 것은 의도한 것이다. computeRadar()가 내는
+ * 등급은 HIGH/MEDIUM/LOW 셋뿐이고(RADAR_LEVEL_SCORE = 3/2/1), ★★★★☆나 ★★☆☆☆를
+ * 채우려면 우리가 실제로는 구분하지 못하는 중간 등급을 지어내야 한다. 5칸 틀은
+ * 읽는 사람에게 익숙해서 그대로 두되, 없는 해상도를 있는 척하지 않는다 —
+ * 그 두 값은 영영 나오지 않는다.
+ *
+ * 등급 단어(매우 좋음/보통/낮음)는 지우지 않는다. 별만 남기면 색과 모양에만
+ * 의존하게 되고(색각 이상·흑백 출력), 스크린리더에서는 ★ 반복만 읽힌다.
+ * 색은 보조일 뿐 색만으로 판단하게 만들지 않는다. 숫자 점수는 노출하지 않는다 —
+ * 3단계를 점수로 보여주면 없는 정밀도가 있는 것처럼 읽힌다.
+ *
+ * 데이터가 없는 축은 여기서 다루지 않는다. ☆☆☆☆☆로 그리면 "낮다"로 읽히는데
+ * 모르는 것과 낮은 것은 다르다 — 호출부에서 "—"와 사유 문장으로 따로 그린다.
  */
-const LEVEL_TICKER: Record<RadarLevel, { mark: string; word: string; className: string }> = {
-  HIGH: { mark: "▲▲▲", word: "높음", className: "font-bold text-success" },
-  MEDIUM: { mark: "▲", word: "보통", className: "font-semibold text-warning" },
-  LOW: { mark: "▼▼▼", word: "낮음", className: "font-bold text-error" },
+const LEVEL_STARS: Record<RadarLevel, { mark: string; word: string; className: string }> = {
+  HIGH: { mark: "★★★★★", word: "매우 좋음", className: "font-bold text-success" },
+  MEDIUM: { mark: "★★★☆☆", word: "보통", className: "font-semibold text-warning" },
+  LOW: { mark: "★☆☆☆☆", word: "낮음", className: "font-bold text-error" },
 };
 
 /**
@@ -170,19 +183,20 @@ export function MiRadar({ radar }: { radar: RadarResult }) {
       <ul className="w-full space-y-0.5">
         {radar.axes.map((axis) => {
           const reason = missingReason(axis);
-          const ticker = axis.state.status === "SCORED" ? LEVEL_TICKER[axis.state.level] : null;
+          const stars = axis.state.status === "SCORED" ? LEVEL_STARS[axis.state.level] : null;
           return (
             <li key={axis.key} className="flex items-baseline justify-between gap-2 text-[11px]">
               <span className={reason ? "text-text-tertiary" : "text-text-secondary"}>
                 {axis.icon} {axis.label}
               </span>
-              {ticker ? (
-                <span className={`shrink-0 text-right ${ticker.className}`}>
-                  {/* 화살표를 붙여 써야 개수가 "강도"로 읽힌다 — 자간을 좁힌다. */}
-                  <span className="tracking-[-0.15em]">{ticker.mark}</span> {ticker.word}
+              {stars ? (
+                <span className={`shrink-0 text-right ${stars.className}`}>
+                  {/* 별을 붙여 써야 채운 칸 수가 한 덩어리로 읽힌다 — 자간을 좁힌다. */}
+                  <span className="tracking-[-0.1em]">{stars.mark}</span> {stars.word}
                 </span>
               ) : (
-                <span className="text-right text-text-tertiary">⚪ {reason}</span>
+                // 모르는 축을 ☆☆☆☆☆로 그리면 "낮다"로 읽힌다 — 별점 대신 사유를 쓴다.
+                <span className="text-right text-text-tertiary">— {reason}</span>
               )}
             </li>
           );
