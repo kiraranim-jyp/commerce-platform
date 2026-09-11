@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { extractAudienceTaxon, scoreCandidateMatch } from "../comparison-search/match";
+import type { ComparisonCandidate, ComparisonQuery } from "../comparison-search/types";
 
 /**
  * TTAEJYO 2.0(CEO 지시, 2026-09-12) — "여성 원피스와 아동 원피스가 서로
@@ -11,8 +12,17 @@ import { extractAudienceTaxon, scoreCandidateMatch } from "../comparison-search/
  * ②가 이 신호를 비대칭(불일치만 감점, 일치는 무보정)으로 만든 이유이고,
  * 그래서 판정 알고리즘(matchTruth 서열·95/85/70 경계·SKU 우선)은 그대로다.
  */
-const query = (title: string) => ({ title, brand: "Bobo Choses" });
-const candidate = (title: string) => ({ title, url: "https://shop.example.com/p/1", brand: "Bobo Choses" });
+const query = (title: string): ComparisonQuery => ({ title, brand: "Bobo Choses" });
+const candidate = (title: string): ComparisonCandidate => ({
+  title,
+  url: "https://shop.example.com/p/1",
+  brand: "Bobo Choses",
+  // 가격·이미지·신뢰도는 이 테스트의 관심사가 아니지만 타입상 필수라 중립값을
+  // 둔다 — 값을 지어내지 않기 위해 가격/이미지는 null이다(확인 안 됨).
+  price: null,
+  imageUrl: null,
+  confidence: 0,
+});
 
 describe("대상 연령층 추출", () => {
   it("제목에 실제로 쓰이는 말만 읽는다", () => {
