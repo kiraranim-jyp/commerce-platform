@@ -106,8 +106,17 @@ export function buildHeadlineNumbers(
     },
     {
       key: "targetMarketPrice",
-      label: `${market.shortLabel} 가격`,
-      basis: marketPrice ? marketPrice.basis : `${market.label} 시장 기준`,
+      /**
+       * UX 2.3(CEO 지시, 2026-09-11) — 라벨을 "한국 시장 가격"에서 "국내 비교상품"
+       * 으로 바꾼다. 이 숫자는 한국 편집샵에서 관측된 *남의 판매가*인데, 화면에는
+       * 같은 이름을 쓰는 다른 사실이 하나 더 있다: 원본 판매자가 한국 방문자에게
+       * 직접 보여주는 가격(currentPrice.costBasis === "KR_MARKET", 내가 살 값).
+       * 한 라벨이 둘을 겸하면 셀러는 "내가 살 값"과 "남이 파는 값"을 구분할 수
+       * 없다 — 그래서 두 의미에 각각 다른 라벨을 준다(price-hierarchy.ts).
+       * 어느 시장의 관측인지는 basis가 계속 말한다(시장 정보를 잃지 않는다).
+       */
+      label: "국내 비교상품",
+      basis: marketPrice ? marketPrice.basis : `${market.label} 시장 관측`,
       value: marketPrice ? formatKrwAmount(marketPrice.krw) : null,
       empty: marketPrice
         ? null

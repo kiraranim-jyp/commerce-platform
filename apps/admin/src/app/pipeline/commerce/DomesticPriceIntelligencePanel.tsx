@@ -32,6 +32,15 @@ import {
 } from "./market-target";
 import { buildHeadlineNumbers, type HeadlineNumber } from "./mi-headline";
 import { miEmptyState } from "./mi-empty-state";
+// UX 2.3(CEO 지시, 2026-09-11) — 여덟 가지 "가격"에 각각 하나씩만 라벨을 붙이고,
+// 수익성 사슬과 시장 경쟁력을 서로 독립된 두 축으로 만든다(둘 다 순수 함수).
+import {
+  buildMarketContext,
+  buildPriceChain,
+  PRICE_MEANING_LABEL,
+  type MarketContext,
+  type PriceChainRow,
+} from "./price-hierarchy";
 // UX 2.1 — 이 패널의 내부 진행 상태를 하나의 작업 Flow(② 시장 판단)로 올려보낸다.
 import type { MarketSignal as WorkflowMarketSignal } from "./workflow";
 // UX 2.2 — 이 패널을 어느 무게로 그릴지는 화면이 아니라 단계가 정한다.
@@ -711,6 +720,12 @@ interface PriceHistoryResponse {
     originalAmount: number;
     originalCurrency: string;
     costKrw: number;
+    /** UX 2.3(CEO 지시, 2026-09-11) — computePriceBreakdown()이 처음부터 돌려주던
+     * 값인데(packages/pricing/src/breakdown.ts) 프론트 타입에 없어서 화면이 읽지
+     * 못하고 있었다. 착지원가 = 원화 환산 + 이 값이라는 관계를 보여주려면 중간
+     * 항이 화면에 있어야 한다 — 새 계산이 아니라 타입 노출만 추가한다(P-2-3
+     * unifiedDecision 때와 같은 패턴). */
+    shippingKrw: number;
     landedCostKrw: number;
     /** P-9 STEP 6(대표님 지시, 2026-08-30) — 이미 computePriceBreakdown()이
      * 판매가 유무와 무관하게 항상 계산해 돌려주던 값(packages/pricing/src/
@@ -923,7 +938,9 @@ function MiSummaryShell({
           onClick={onOpenDetail}
           className="shrink-0 rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-primary hover:bg-primary-soft"
         >
-          판단 상세보기 →
+          {/* UX 2.3 — 이 버튼이 여는 것은 "판단"이 아니라 가격 계층 전체다.
+              무엇이 열리는지 버튼이 먼저 말해야 셀러가 눌러볼지 고를 수 있다. */}
+          가격 판단 상세보기 →
         </button>
       )}
     </section>
@@ -938,6 +955,161 @@ function MiSummaryNumber({ number }: { number: HeadlineNumber | undefined }) {
     <span className="text-xs text-text-secondary">
       · {number.label} {number.value ?? <span className="text-text-tertiary">{number.empty?.chip}</span>}
     </span>
+  );
+}
+
+/**
+ * UX 2.3(CEO 지시, 2026-09-11) — 가격 계층. "이 숫자들이 서로 무슨 관계인가"를
+ * 화면 모양 자체가 말하게 한다.
+ *
+ * ── 왜 한 줄에 한 의미만 두는가 ──────────────────────────────────────────
+ * CEO 지시문의 스케치는 `£55.00 → 약 ₩99,928`처럼 두 값을 한 줄에 둔다. 그
+ * 모양을 그대로 쓰지 않고 줄을 나눈 이유는 같은 지시문의 더 강한 규칙 때문이다:
+ * "서로 다른 두 의미를 하나의 뭉뚱그린 숫자로 잇지 않는다". 한 줄에 두 값을
+ * 두면 라벨은 앞의 값에만 붙고 뒤의 숫자는 라벨 없이 남는다 — 그게 정확히
+ * "€37 ≈ ₩57,756"이 만들어지던 방식이다. 대신 관계는 줄머리 기호(→ / + / =)와
+ * 가로줄이 그대로 보여준다: 관계는 살리고 라벨은 하나씩 유지한다.
+ *
+ * 계산은 하지 않는다 — price-hierarchy.ts가 고른 값을 순서대로 그리기만 한다.
+ */
+const CHAIN_ROLE_MARK: Record<PriceChainRow["role"], string> = {
+  SOURCE: "",
+  CONVERT: "→",
+  ADD: "+",
+  TOTAL: "=",
+  PLAN: "",
+  RESULT: "",
+};
+
+function PriceChainView({ rows }: { rows: PriceChainRow[] }) {
+  return (
+    <dl className="rounded-md border border-current/20 bg-background/40 p-2.5">
+      {rows.map((row) => {
+        const total = row.role === "TOTAL";
+        const plan = row.role === "PLAN";
+        const result = row.role === "RESULT";
+        return (
+          <div
+            key={row.key}
+            className={`flex flex-wrap items-baseline justify-between gap-x-2 py-1 ${
+              // 가로줄은 "여기까지가 내가 치르는 돈"이라는 뜻이다. 합계 줄 위에만 둔다.
+              total ? "mt-0.5 border-t border-current/25 pt-1.5" : ""
+            } ${plan ? "mt-1 border-t border-dashed border-current/25 pt-1.5" : ""}`}
+          >
+            <dt className="flex min-w-0 items-baseline gap-1">
+              <span className="w-3 shrink-0 text-[11px] text-text-tertiary" aria-hidden>
+                {CHAIN_ROLE_MARK[row.role]}
+              </span>
+              <span
+                className={
+                  total || plan || result
+                    ? "text-[11px] font-semibold text-text-primary"
+                    : "text-[11px] text-text-secondary"
+                }
+              >
+                {row.label}
+              </span>
+            </dt>
+            <dd className="flex min-w-0 flex-col items-end">
+              {row.value ? (
+                <span
+                  className={
+                    total || result
+                      ? "text-sm font-bold text-text-primary"
+                      : "text-sm font-semibold text-text-primary"
+                  }
+                >
+                  {row.value}
+                </span>
+              ) : (
+                // 값이 없으면 0이나 "—"로 바꾸지 않는다 — 왜 없는지까지 말한다.
+                <span className="text-xs font-semibold text-text-tertiary">{row.empty?.chip}</span>
+              )}
+              {(row.value ? row.basis : (row.empty?.reason ?? row.basis)) && (
+                <span className="text-right text-[10px] leading-tight text-text-tertiary">
+                  {row.value ? row.basis : (row.empty?.reason ?? row.basis)}
+                </span>
+              )}
+            </dd>
+          </div>
+        );
+      })}
+    </dl>
+  );
+}
+
+/**
+ * UX 2.3 — 사슬 옆에 놓이는 **두 번째 축**: 시장 맥락.
+ *
+ * 이 블록이 비어도 위 사슬은 절대 비지 않는다(반대도 마찬가지다). 국내 비교상품
+ * 0건은 "판단 실패"가 아니라 "가격 경쟁력만 확인 불가"이고, 그 문장을 여기서
+ * 직접 말한다 — 지금까지는 이 자리가 비면 셀러가 화면 전체를 "판단 불가"로
+ * 읽었다. 해외 시장은 지우지 않고 접어 둔다: 매입처를 고를 때 쓰는 진짜
+ * 정보이면서, 한국 경쟁가로 절대 쓰이면 안 되는 값이기 때문이다.
+ */
+function MarketContextView({
+  context,
+  overseasRows,
+  open,
+  onToggle,
+}: {
+  context: MarketContext;
+  overseasRows: { sellerKey: string; sellerLabel: string | null; marketCode: string | null; price: SellerMarketPriceInfo }[];
+  open: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="rounded-md border border-current/20 bg-background/40 p-2.5">
+      <p className="text-[11px] font-semibold text-text-primary">
+        {context.market.flag} {context.market.label} 시장
+      </p>
+      <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-2">
+        <span className="text-[11px] text-text-secondary">{context.comparable.label}</span>
+        {context.comparable.value ? (
+          <span className="text-sm font-semibold text-text-primary">{context.comparable.value}</span>
+        ) : (
+          <span className="text-xs font-semibold text-text-tertiary">{context.comparable.empty?.chip}</span>
+        )}
+      </div>
+      <p className="text-right text-[10px] leading-tight text-text-tertiary">
+        {context.comparable.value
+          ? context.comparable.basis
+          : (context.comparable.empty?.reason ?? context.comparable.basis)}
+      </p>
+      {/* 이번 지시의 핵심 문장. "시장 비교 불가 ≠ 수익성 계산 불가"를 화면이
+          직접 말한다 — 셀러가 빈 칸을 보고 스스로 추론하게 두지 않는다. */}
+      {context.competitivenessNote && (
+        <p className="mt-1.5 rounded border border-border bg-background px-2 py-1 text-[10px] leading-relaxed text-text-secondary">
+          → {context.competitivenessNote}
+        </p>
+      )}
+
+      {/* 🌎 해외 시장 — 보여주되 한국과 같은 층위에 두지 않는다. 접힌 줄이
+          개수를 말하므로 "열어봐야 아는" 접힘이 아니다. */}
+      {context.overseas.count > 0 && (
+        <div className="mt-2 border-t border-current/20 pt-1.5">
+          <button type="button" onClick={onToggle} className="text-[11px] font-medium text-text-primary hover:underline">
+            {caret(open)} {context.overseas.label}
+          </button>
+          {open && (
+            <>
+              <p className="mt-1 text-[10px] leading-relaxed text-text-tertiary">{context.overseas.note}</p>
+              <ul className="mt-1 space-y-0.5 text-[11px]">
+                {overseasRows.map((row) => (
+                  <MarketPriceRow
+                    key={`${row.sellerKey}-${row.marketCode ?? "unknown"}`}
+                    sellerLabel={row.sellerLabel}
+                    price={row.price}
+                    isJudgingMarket={false}
+                    judgingBasis={null}
+                  />
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1452,6 +1624,60 @@ export function DomesticPriceIntelligencePanel({
   );
   const { target: koreanMarketRows, overseas: overseasMarketRows } = splitByTargetMarket(sellerMarketRows);
 
+  /**
+   * UX 2.3(CEO 지시, 2026-09-11) — 수익성 사슬과 시장 맥락, 두 축.
+   *
+   * 새 계산 없음 — cost / currentPrice / unifiedDecision / recommendation /
+   * domesticCompetition을 고르기만 한다(price-hierarchy.ts). 두 함수가 서로의
+   * 입력을 받지 않는 것이 이번 지시의 핵심이다: 국내 비교상품이 0건이어도
+   * 사슬은 전부 계산된 채로 남고, 무너지는 것은 가격 경쟁력 하나뿐이다.
+   */
+  const priceChain = buildPriceChain({
+    originPrice: cost ? { amount: cost.originalAmount, currency: cost.originalCurrency } : null,
+    // 언제 확인된 가격인지까지 한 문장에 남긴다(예전 현재 구매가 칸(💰)이
+    // 들고 있던 정보 그대로 — 칸을 없애면서 사실을 잃지 않게 옮겼다).
+    originPriceBasis: costSource
+      ? `${COST_SOURCE_LABEL[costSource]}${
+          costSource !== "STATIC_SNAPSHOT" && originLatestCheckedAt
+            ? ` · ${relativeTimeFromNow(originLatestCheckedAt)}`
+            : ""
+        }`
+      : null,
+    // 원가 기준이 "원본 판매자의 한국 표시가"면 그건 환율 환산값이 아니다 —
+    // 라벨 자체가 달라야 한다(run-price-check.ts의 KR_MARKET 승격).
+    costBasisIsKrMarket: currentPrice.costBasis === "KR_MARKET",
+    sourcePriceKrw: cost?.costKrw ?? null,
+    exchangeRate: fx?.rate ?? null,
+    exchangeRateIsEstimate: fx?.isEstimate ?? false,
+    internationalShippingKrw: cost?.shippingKrw ?? null,
+    landedCostKrw: cost?.landedCostKrw ?? null,
+    // 추천가를 여기에 절대 넣지 않는다 — "내 판매가격"은 판매자가 정한 값만이다.
+    sellerPlannedPriceKrw: currentPrice.sellingPriceKrw,
+    expectedProfitKrw: unifiedDecision?.estimatedProfitKrw.value ?? null,
+    platformFeeKrw: unifiedDecision?.platformFeeKrw.value ?? null,
+    costIncomplete: unifiedDecision?.dataCompleteness === "INCOMPLETE",
+    // 판매가가 있으면 그 기준 마진, 없으면 추천가 기준 마진 — 어느 쪽인지는
+    // marginBasis가 라벨 옆에 밝힌다(같은 "예상 마진"이 두 사실이 되지 않게).
+    marginPercent: unifiedDecision?.marginPercent.value ?? recommendation?.estimatedMarginPercent ?? null,
+    marginBasis:
+      unifiedDecision?.marginPercent.value != null
+        ? "PLANNED"
+        : recommendation?.estimatedMarginPercent != null
+          ? "RECOMMENDED"
+          : null,
+  });
+  const marketContext = buildMarketContext({
+    domesticBasis: domesticMarketSplit.basis,
+    domesticAveragePriceKrw: domesticCompetition.averagePriceKrw,
+    domesticLowestPriceKrw: domesticCompetition.lowestPriceKrw,
+    domesticSellerCount: domesticCompetition.sellerCount,
+    domesticUnresolved: domesticCompetition.priceMarketBasis === "UNRESOLVED",
+    // 해외 관측은 개수만 넘긴다 — 가격을 넘기면 언젠가 그 값이 국내 비교상품
+    // 자리로 흘러든다. 실제 가격 행은 화면이 splitByTargetMarket 결과에서
+    // 직접 받아 "해외 시장 참고" 블록 안에서만 그린다.
+    overseasMarketCount: overseasMarketRows.length,
+  });
+
   /** UX-1D — "가격 전략" 요약에 쓸 대표 국내 가격. 새로 계산하지 않는다.
    * 서버가 이미 낸 domesticMarketSplit의 평균가를 우선순위대로 고르기만 한다:
    * ① 동일상품(EXACT) 평균 → ② 비교상품(COMPARISON) 평균 → ③ 표시 안 함.
@@ -1463,13 +1689,19 @@ export function DomesticPriceIntelligencePanel({
   /**
    * UX 2.2(CEO 지시, 2026-09-11) — ③④에서의 MI.
    *
-   * "🟡 조건부 판매 · 한국 시장 ₩57,000 · 예상 마진 22.4% · [판단 상세보기]"
+   * "🟡 조건부 판매 · 국내 비교상품 ₩116,600 · 착지원가 ₩111,928 ·
+   *  예상 마진 22.4% · [가격 판단 상세보기]"
    *
    * 여기서 어떤 숫자도 새로 만들지 않는다 — 바로 위에서 전체 화면이 쓰는 것과
    * **같은** headlineNumbers/sellerDecision을 골라 쓴다. 요약이 자기 계산을
    * 갖게 되면 접었을 때와 펼쳤을 때 다른 숫자를 말하게 되고, 그건 이 프로젝트가
    * 반복해서 겪은 "화면마다 다른 숫자" 버그와 정확히 같은 종류다.
    * 값이 없으면 지어내지 않고 빈 상태 어휘(mi-empty-state.ts)를 그대로 쓴다.
+   *
+   * UX 2.3(CEO 지시, 2026-09-11) — 착지원가를 요약에 넣는다. ③④에서 셀러가
+   * 계속 확인하는 것은 "얼마에 사서 얼마 남는가"인데 그 앞쪽 절반(원가)이
+   * 요약에 없어서, 확인하려면 매번 상세를 펼쳐야 했다. 여기는 끝까지 **요약**
+   * 이다 — 사슬 전체와 시장 근거는 ②(FULL)에만 있다.
    */
   if (presentation === "SUMMARY") {
     const verdictCopy = hasAnyData ? FINAL_VERDICT_COPY[sellerDecision.finalVerdict] : null;
@@ -1485,6 +1717,7 @@ export function DomesticPriceIntelligencePanel({
             <span className="text-sm font-bold text-text-secondary">{miEmptyState("UNJUDGEABLE").chip}</span>
           )}
           <MiSummaryNumber number={headlineNumbers.find((n) => n.key === "targetMarketPrice")} />
+          <MiSummaryNumber number={headlineNumbers.find((n) => n.key === "landedCost")} />
           <MiSummaryNumber number={headlineNumbers.find((n) => n.key === "estimatedMargin")} />
         </span>
         <span className="text-[11px] text-text-tertiary">
@@ -1582,38 +1815,56 @@ export function DomesticPriceIntelligencePanel({
               </p>
             )}
 
-            {/* ② 핵심 숫자 — MI-FLOW-2(CEO 지시, 2026-09-11).
-                원본 판매가격과 한국 시장 가격을 "€37 ≈ ₩57,756"처럼 한 등식으로
-                잇지 않는다. 앞은 원본 판매자 페이지의 가격이고 뒤는 한국 시장에서
-                관측된 가격이라, 이으면 "한국에서도 5만 8천 원"이라는 없는 사실이
-                만들어진다. 값이 없으면 지어내지 않고 왜 없는지를 밝힌다. */}
-            <div className="mt-2.5">
-              <p className="mb-1 text-[11px] font-medium text-text-tertiary">핵심 숫자</p>
-              <dl className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-md border border-current/20 bg-background/40 p-2 sm:grid-cols-4">
-                {headlineNumbers.map((n) => (
-                  <div key={n.key}>
-                    <dt className="text-[10px] text-text-tertiary">{n.label}</dt>
-                    {n.value ? (
-                      <dd className="text-sm font-semibold text-text-primary">{n.value}</dd>
-                    ) : (
-                      <dd className="text-sm font-semibold text-text-tertiary">{n.empty?.chip}</dd>
-                    )}
-                    <p className="mt-0.5 text-[10px] text-text-tertiary">
-                      {n.value ? n.basis : (n.empty?.reason ?? n.basis)}
-                    </p>
-                  </div>
-                ))}
-              </dl>
+            {/* ② 가격 계층 — UX 2.3(CEO 지시, 2026-09-11).
+                여기 있던 "핵심 숫자" 4칸 표(원본 판매가격 / 한국 시장 가격 /
+                착지원가 / 예상 마진)를 걷어낸다. 네 숫자가 같은 크기·같은 모양의
+                칸에 나란히 있어서, 서로 무슨 관계인지(무엇을 더하면 무엇이 되고
+                무엇에서 무엇을 빼면 무엇이 남는지)가 화면에서 전혀 읽히지 않았다.
+                게다가 그중 둘("한국 시장 가격"과 원본 판매자의 한국 표시가)이
+                같은 이름을 쓰고 있었다.
+
+                대신 두 덩어리를 나란히 둔다. 왼쪽은 **수익성 사슬**(원본가격 →
+                환산 → 국제배송 → 착지원가 → 내 판매가 → 예상 수익·마진)이고,
+                오른쪽은 **시장 맥락**(국내 비교상품 + 해외 참고)이다. 둘은 서로
+                독립이라 한쪽이 비어도 다른 쪽은 그대로 계산된 채 남는다 —
+                "국내 비교 불가"가 "수익성 계산 불가"로 읽히던 것이 이번 지시가
+                고치라고 한 바로 그 화면이다. 숫자는 전부 서버 값 그대로다. */}
+            <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+              <div>
+                <p className="mb-1 text-[11px] font-medium text-text-tertiary">얼마에 사서 얼마 남는가</p>
+                <PriceChainView rows={priceChain} />
+              </div>
+              <div>
+                <p className="mb-1 text-[11px] font-medium text-text-tertiary">시장에서는 얼마인가</p>
+                <MarketContextView
+                  context={marketContext}
+                  overseasRows={overseasMarketRows}
+                  open={showOverseasMarkets}
+                  onToggle={() => setShowOverseasMarkets((v) => !v)}
+                />
+              </div>
             </div>
 
-            {/* MI-STOCK-CLARITY-1(CPO 지시, 2026-09-10) — 위 한국 시장 가격이 어떤
-                재고 상태 위에 세워졌는지 밝힌다. 국내 자동검색 6곳 중 재고 판정이
-                구현된 곳은 2곳뿐이라 "재고 불명"이 예외가 아니라 기본값인데, 집계
-                필터가 soldOut !== true라 불명이 판매중과 함께 계산에 들어간다.
+            {/* 추천 판매가는 "내 판매가격"이 아니다 — 사슬 밖에 따로 둔다. 사슬
+                안에 넣으면 셀러는 이미 그 값으로 팔기로 되어 있다고 읽는다.
+                CASE C/D는 억지 추천가를 만들지 않으므로 값이 없을 수 있다. */}
+            {recommendation?.recommendedPrice != null && currentPrice.sellingPriceKrw == null && (
+              <p className="mt-1.5 text-[10px] text-text-tertiary">
+                참고 · 추천 판매가 ₩{recommendation.recommendedPrice.toLocaleString()}
+                {recommendation.estimatedMarginPercent != null &&
+                  ` — 이 가격으로 팔면 ${PRICE_MEANING_LABEL.EXPECTED_MARGIN} 약 ${recommendation.estimatedMarginPercent}%`}
+              </p>
+            )}
+
+            {/* MI-STOCK-CLARITY-1(CPO 지시, 2026-09-10) — 위 국내 비교상품 가격이
+                어떤 재고 상태 위에 세워졌는지 밝힌다. 국내 자동검색 6곳 중 재고
+                판정이 구현된 곳은 2곳뿐이라 "재고 불명"이 예외가 아니라 기본값인데,
+                집계 필터가 soldOut !== true라 불명이 판매중과 함께 계산에 들어간다.
                 계산 방식은 그대로 두고 확인되지 않았다는 사실만 드러낸다. */}
             {(domesticCompetition.stockCounts?.unknown ?? 0) > 0 && (
               <p className="mt-1 text-[10px] text-text-tertiary">
-                한국 시장 가격은 재고 상태를 확인하지 못한 {domesticCompetition.stockCounts?.unknown}건을 포함합니다
+                {PRICE_MEANING_LABEL.DOMESTIC_COMPARABLE_PRICE} 가격은 재고 상태를 확인하지 못한{" "}
+                {domesticCompetition.stockCounts?.unknown}건을 포함합니다
                 {(domesticCompetition.stockCounts?.onSale ?? 0) > 0 && ` (판매중 확인 ${domesticCompetition.stockCounts?.onSale}건)`}
                 {(domesticCompetition.stockCounts?.soldOut ?? 0) > 0 && ` · 품절 ${domesticCompetition.stockCounts?.soldOut}건은 제외됨`}.
               </p>
@@ -1675,20 +1926,12 @@ export function DomesticPriceIntelligencePanel({
                 프로젝트의 원칙과 동일한 이유). */}
             {cost && (
               <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 rounded-md border border-current/20 bg-background/40 p-2 sm:grid-cols-3">
-                {/* UX-1C — 구매가/착지원가는 "이 숫자가 어떻게 나왔나"(L3)로
-                    내렸다. L1에는 판매 결정에 직접 쓰는 예상 이익·마진율과
-                    추천 판매가만 남긴다. 같은 숫자를 두 곳에 띄우지 않는다. */}
-                <div>
-                  <dt className="text-[10px] text-text-tertiary">📈 예상 수익</dt>
-                  <dd className="text-sm font-semibold text-text-primary">
-                    {unifiedDecision?.estimatedProfitKrw.value != null
-                      ? `₩${unifiedDecision.estimatedProfitKrw.value.toLocaleString()}`
-                      : "판매가 설정 필요"}
-                    {unifiedDecision?.marginPercent.value != null && (
-                      <span className="text-text-tertiary"> ({unifiedDecision.marginPercent.value}%)</span>
-                    )}
-                  </dd>
-                </div>
+                {/* UX 2.3(CEO 지시, 2026-09-11) — 여기 있던 예상 수익 칸(📈)을
+                    없앤다. 같은 값(unifiedDecision.estimatedProfitKrw)이 이제 위
+                    가격 사슬의 마지막 줄에 항상 보이고, 사슬에서는 그 앞의 원가와
+                    판매가까지 함께 읽힌다. 접힌 상세 안에 사본을 하나 더 두면
+                    같은 숫자가 화면에 두 번 뜨고, 둘 중 하나만 고쳐지는 순간
+                    같은 상품이 서로 다른 수익을 말한다. 계산은 그대로다. */}
                 {/* P-26 Sprint 2/3(CPO 지시, 2026-09-03) — "10% 최소마진은 더
                     이상 절대 하한선이 아니다"(CEO 승인 옵션 1). minimumPrice/
                     targetPrice는 참고용 숫자로만 노출하고, 실제 권장가는
@@ -1780,24 +2023,12 @@ export function DomesticPriceIntelligencePanel({
                 </button>
                 {showCalcDetail && (
                   <dl className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-2 rounded-md border border-current/20 bg-background/40 p-2 sm:grid-cols-3">
-                    <div>
-                      <dt className="text-[10px] text-text-tertiary">💰 현재 구매가</dt>
-                      <dd className="text-sm font-semibold text-text-primary">₩{cost.costKrw.toLocaleString()}</dd>
-                      {costSource && (
-                        <p className="text-[10px] text-text-tertiary">
-                          {COST_SOURCE_LABEL[costSource]}
-                          {costSource !== "STATIC_SNAPSHOT" && originLatestCheckedAt
-                            ? ` · ${relativeTimeFromNow(originLatestCheckedAt)}`
-                            : ""}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <dt className="text-[10px] text-text-tertiary">📦 착지원가</dt>
-                      <dd className="text-sm font-semibold text-text-primary">
-                        ₩{cost.landedCostKrw.toLocaleString()}
-                      </dd>
-                    </div>
+                    {/* UX 2.3 — 현재 구매가 칸(💰, cost.costKrw)과 착지원가 칸
+                        (📦, cost.landedCostKrw)을 없앤다. 둘 다 위 가격 사슬에
+                        원화 환산 / 착지원가로 이미 있고, 사슬에서는 그 사이에
+                        무엇이 더해졌는지(국제배송비)까지 보인다. 언제 확인된
+                        가격인지(costSource)는 사슬의 첫 줄 기준 문장이 그대로
+                        들고 있다 — 정보를 지운 것이 아니라 한 곳으로 모았다. */}
                     {recommendation && (
                       <>
                         <div>
@@ -2103,8 +2334,13 @@ export function DomesticPriceIntelligencePanel({
                 {/* MI-UI-1 — "상세보기 … 접기"를 캐럿으로 대신한다. 곳 수와
                     "참고가격(검증 전)"은 그대로 둔다 — 앞은 숫자고 뒤는 그
                     가격을 얼마나 믿어도 되는지를 가르는 상태 표시다. */}
-                {caret(showDomesticDetail)} {KR_TARGET_MARKET.flag} {KR_TARGET_MARKET.shortLabel} (
-                {domesticCompetition.sellerCount}곳
+                {/* UX 2.3 — 블록 제목을 "한국 시장"에서 "🇰🇷 한국 시장 · 국내
+                    비교상품"으로 바꾼다. 이 목록에 있는 것은 한국 편집샵이 파는
+                    가격(남의 판매가)이지 이 상품의 한국 시장 가격 일반이 아니다 —
+                    제목이 "한국 시장"이면 위 사슬의 원본 판매자 한국 표시가와
+                    같은 것으로 읽힌다. */}
+                {caret(showDomesticDetail)} {KR_TARGET_MARKET.flag} {KR_TARGET_MARKET.shortLabel} ·{" "}
+                {PRICE_MEANING_LABEL.DOMESTIC_COMPARABLE_PRICE} ({domesticCompetition.sellerCount}곳
                 {domesticCompetition.tier === "SECONDARY" ? " · 참고가격(검증 전)" : ""})
               </button>
               <div className="flex items-center gap-2">
@@ -2125,8 +2361,17 @@ export function DomesticPriceIntelligencePanel({
               <p className="mb-1 text-[10px] text-warning">🟡 동일상품 미확인 — 국내 비교상품 시장가격(참고용) 기준</p>
             )}
             <div className="mb-1.5 grid grid-cols-2 gap-2 border-b border-border pb-1.5">
-              <SummaryStat label="한국 시장 최저가" value={domesticCompetition.lowestPriceKrw} />
-              <SummaryStat label="한국 시장 평균가" value={domesticCompetition.averagePriceKrw} />
+              {/* UX 2.3 — 이 둘은 "한국 시장 가격"이 아니라 국내 비교상품 가격의
+                  분포다. 라벨에 그대로 적는다(위 사슬의 대표값 한 줄과 같은 뜻을
+                  가리키되, 여기서는 최저/평균으로 펼쳐 보여준다). */}
+              <SummaryStat
+                label={`${PRICE_MEANING_LABEL.DOMESTIC_COMPARABLE_PRICE} 최저가`}
+                value={domesticCompetition.lowestPriceKrw}
+              />
+              <SummaryStat
+                label={`${PRICE_MEANING_LABEL.DOMESTIC_COMPARABLE_PRICE} 평균가`}
+                value={domesticCompetition.averagePriceKrw}
+              />
             </div>
             <ul className="space-y-0.5">
               {domesticCompetition.sampleListings.slice(0, 5).map((listing, i) => {
@@ -2331,46 +2576,13 @@ export function DomesticPriceIntelligencePanel({
           </div>
         )}
 
-        {/* MI-FLOW-2(CEO 지시, 2026-09-11) — 한국이 아닌 시장의 관측은 여기 모아
-            접어 둔다.
-
-            지우지 않는 이유: 같은 판매처가 /en-kr ₩162,000 · /en-de €75 ·
-            /en-int €84를 동시에 갖고 있는 경우가 실제로 있고(Bobo Choses 실측),
-            그 차이는 셀러가 매입처를 고를 때 쓰는 진짜 정보다.
-            접는 이유: 그 값들이 한국 시장 가격과 같은 층위로 나열돼 있으면
-            "한국에서 €75에 팔린다"로 읽힌다. 판매 판단은 한국 시장만 본다는
-            사실을 블록 제목과 안내 문장이 함께 말한다. */}
-        {overseasMarketRows.length > 0 && (
-          <div className="rounded-md border border-dashed border-border bg-background p-2">
-            <button
-              type="button"
-              onClick={() => setShowOverseasMarkets((v) => !v)}
-              className="font-medium text-text-primary hover:underline"
-            >
-              {caret(showOverseasMarkets)} 🌎 해외 시장 참고 {overseasMarketRows.length}개
-            </button>
-            {showOverseasMarkets && (
-              <>
-                <p className="mt-1 text-[10px] text-text-tertiary">
-                  판매 판단은 한국 시장을 기준으로 합니다 — 아래 가격은 매입처 비교용 참고값이고, 한국 시장
-                  가격과 합산하지 않습니다.
-                </p>
-                <ul className="mt-1 space-y-0.5">
-                  {overseasMarketRows.map((row) => (
-                    <MarketPriceRow
-                      key={`${row.sellerKey}-${row.marketCode ?? "unknown"}`}
-                      sellerLabel={row.sellerLabel}
-                      price={row.price}
-                      isJudgingMarket={false}
-                      judgingBasis={null}
-                    />
-                  ))}
-                </ul>
-              </>
-            )}
-          </div>
-        )}
-
+        {/* UX 2.3(CEO 지시, 2026-09-11) — 여기 있던 "🌎 해외 시장 참고 N개" 블록을
+            위 시장 맥락(MarketContextView) 안으로 옮겼다. 지운 것이 아니라 옮긴
+            것이다: 해외 관측은 국내 비교상품과 **같은 질문**("시장에서는 얼마인가")
+            의 답이라 같은 덩어리 안에 있어야 한다. 판단 카드에서 한참 떨어진 화면
+            맨 아래에 따로 서 있으면, 셀러는 그것을 국내 가격 목록의 연장으로 읽는다.
+            토글 상태(showOverseasMarkets)는 그대로 하나만 쓴다 — 같은 블록이 두
+            곳에 생기면 한쪽만 열리는 화면이 된다. */}
 
         {/* Beta RC(CPO 지시, 2026-09-05) — "판매 추천/조건부/비추천"이라는 표현이
             상표권·지식재산권·브랜드 판매 권한까지 검토된 결과로 오해될 수 있다.

@@ -246,7 +246,12 @@ export function ComparisonShopSearch({
   }, [title]);
 
   return (
-    <CollapsibleSection title="해외 가격비교 (베타)" defaultOpen>
+    // UX 2.3(CEO 지시, 2026-09-11) — 근거는 "위젯"이 아니라 "의미"로 묶는다.
+    // "해외 가격비교"라는 제목은 이 블록이 무엇의 가격인지 말해주지 않아서,
+    // 바로 위 국내 비교상품 목록의 연장으로 읽혔다. 이 안에 있는 것은 글로벌
+    // 시장의 **다른 판매처** 가격과 **원본 판매자** 본인의 현재가 두 가지이고,
+    // 둘 다 한국 경쟁가로 쓰이지 않는다.
+    <CollapsibleSection title="🌎 글로벌 시장 · 해외 판매처 가격 (베타)" defaultOpen>
       <p className="text-xs text-text-tertiary">
         활성화된 해외 편집샵에서 유사 상품을 검색합니다 — 참고용 조회이며, 어떤 가격도 자동으로 원본가격/판매가에
         반영되지 않습니다.
@@ -305,12 +310,22 @@ function SourceVerificationCard({
   const onSale = isOnSale(price, regularPrice);
   return (
     <div className="space-y-1 rounded-md border border-success/30 bg-success-soft px-3 py-2 text-xs">
-      <div className="font-medium text-success">✓ 원본 상품 현재 판매가 확인됨</div>
+      {/* UX 2.3 — 이 카드는 "원본 판매자" 묶음이다. 아래 표(글로벌 시장의 다른
+          판매처)와 목적이 달라서 제목으로 먼저 갈라 둔다. */}
+      <div className="font-medium text-success">✓ 원본 판매자 · 원본 상품 현재 판매가 확인됨</div>
       <div className="flex flex-wrap items-baseline gap-x-2 text-text-primary">
         {/* MI-UX-9 §4 — `177900.00 KRW`를 만들던 자리. 통화별 소수 자릿수와
-            천단위 구분은 formatMoney가 전담한다. */}
+            천단위 구분은 formatMoney가 전담한다.
+            UX 2.3 — 두 숫자에 각각 라벨을 붙인다. 예전에는 `£55.00  약 ₩99,928`
+            처럼 뒤 숫자가 라벨 없이 붙어 있어서, 그 값이 환율로 만든 값인지
+            한국에서 관측된 값인지 화면이 말해주지 않았다. */}
+        <span className="text-[10px] text-text-tertiary">원본 판매가격</span>
         <span className="font-semibold">{formatMoney(price?.amount, price?.currency)}</span>
-        {krwAmount != null && <span className="text-text-secondary">약 {formatMoney(krwAmount, "KRW")}</span>}
+        {krwAmount != null && (
+          <span className="text-text-secondary">
+            <span className="text-[10px] text-text-tertiary">원화 환산</span> 약 {formatMoney(krwAmount, "KRW")}
+          </span>
+        )}
         {onSale && (
           <>
             <span className="text-text-tertiary line-through">
@@ -572,10 +587,16 @@ function OverseasRowTable({
               {/* MI-REDEFINE-1 ⑥ — 국내 표와 같은 정렬 규칙(가격 우측 정렬,
                   헤더 줄바꿈 방지). 해외는 재고 데이터가 없으므로 재고 컬럼을
                   만들지 않는다 — 컬럼 수를 맞추려고 빈 값을 넣지 않는다. */}
+              {/* UX 2.3(CEO 지시, 2026-09-11) — 한 행이 시장 · 판매처 · 상품 ·
+                  가격 · 통화 · 원화 환산 · 매칭 상태를 헷갈리지 않게 말해야 한다.
+                  "국가"를 "판매처 국가"로 고친 것은 정확성 때문이다: 이 값은 그
+                  상점이 스스로 신고한 국가(shopCountry)이지 관측된 시장이
+                  아니다 — "시장"이라고 부르면 ES로 신고한 판매처의 en-kr 페이지
+                  가격이 "스페인 시장 가격"으로 읽힌다. */}
               <th className="whitespace-nowrap px-2 py-1.5 font-medium">판매처</th>
-              <th className="whitespace-nowrap px-2 py-1.5 font-medium">국가</th>
+              <th className="whitespace-nowrap px-2 py-1.5 font-medium">판매처 국가</th>
               <th className="px-2 py-1.5 font-medium">상품</th>
-              <th className="whitespace-nowrap px-2 py-1.5 text-right font-medium">상품가격</th>
+              <th className="whitespace-nowrap px-2 py-1.5 text-right font-medium">원본 통화 가격 · 원화 환산</th>
               <th className="whitespace-nowrap px-2 py-1.5 font-medium">매칭상태</th>
             </tr>
           </thead>
@@ -704,7 +725,9 @@ function PriceCell({
       )}
       {krwAmount != null && (
         <div className="text-text-secondary">
-          약 {formatMoney(krwAmount, "KRW")}
+          {/* UX 2.3 — "약 ₩64,820"만 있으면 그 숫자가 한국에서 관측된 가격인지
+              우리가 환율로 만든 값인지 알 수 없다. 라벨로 못박는다. */}
+          <span className="text-[10px] text-text-tertiary">원화 환산</span> 약 {formatMoney(krwAmount, "KRW")}
           {fxLine && <span className="ml-1 text-[10px] text-text-tertiary">· {fxLine}</span>}
         </div>
       )}

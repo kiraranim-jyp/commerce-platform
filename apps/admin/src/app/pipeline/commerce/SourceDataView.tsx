@@ -88,8 +88,12 @@ export function SourceDataView({
                   </span>
                 ) : (
                   product.price.value.currency.toUpperCase() !== "KRW" && (
+                    /* UX 2.3(CEO 지시, 2026-09-11) — "≈ ₩99,928"에서 "≈"만
+                       빼고 라벨을 붙인다. 앞의 £55와 뒤의 ₩99,928은 같은 가격의
+                       다른 표기가 아니라 *원본 판매자 가격*과 *우리가 환율로 만든
+                       환산값*이다. ≈로 이으면 "한국에서도 그 값"으로 읽힌다. */
                     <span className="text-xs text-text-tertiary">
-                      ≈ {formatKrw(krw.amountKrw)}
+                      원화 환산 {formatKrw(krw.amountKrw)}
                       {krw.isEstimate ? " (추정 환율)" : " (실시간 환율)"} — 배송비/마진 포함 계산은
                       플랫폼 탭의 &ldquo;가격&rdquo; 섹션에서
                     </span>
