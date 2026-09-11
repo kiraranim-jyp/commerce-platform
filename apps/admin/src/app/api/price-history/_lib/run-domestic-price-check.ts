@@ -41,6 +41,12 @@ import { hasObservationToday, recordPriceObservations } from "./price-observatio
 export interface DomesticPriceCheckInput {
   snapshotId: string;
   dna: ProductIdentityDna;
+  /** GLOBAL-MARKET ③-2(CPO 확정, 2026-09-11) — 어느 판매자의 편집샵 목록으로
+   * 검색할지. 선택 인자로 두지 않는다 — 안 넘기면 조용히 "전체 카탈로그"로
+   * 검색되어, 판매자가 꺼 둔 편집샵까지 매일 크롤링하고 그 가격이 링크로
+   * 저장된다(끈 사실이 무의미해진다). 호출부는 requireUser()가 정한 값을
+   * 그대로 넘긴다. */
+  workspaceId: string;
   skipIfCheckedToday?: boolean;
   /** N-4.18-Q3 PART H-3-6(대표님 지시, 2026-08-27) — modelCode 증거(H-3-2)의
    * 해외측 원문 소스. ProductIdentityDna에는 없는 필드라(설계 원칙: "이미
@@ -238,7 +244,13 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
   // 소스는 검색하지 않는다(사이트별 실제 HTTP 요청 자체를 절약). P0에서 확실한
   // 동일상품을 못 찾았을 때만 나머지 소스까지 검색한다 — recall(후보를 최대한
   // 놓치지 않는다) 원칙은 그대로 유지하면서, 이미 충분한 경우에만 비용을 아낀다.
-  const allSources = (await listDomesticPriceSources()).filter((s) => s.enabled && s.status === "ACTIVE");
+  //
+  // GLOBAL-MARKET ③-2 — s.enabled는 listDomesticPriceSources(workspaceId)가 이미
+  // "카탈로그 ON && 이 판매자 ON"으로 합친 실효값이다. 판단 기준은 그대로고,
+  // 대상 목록만 판매자별로 좁혀진다(P0 우선 검색/조기 중단 로직은 안 건드림).
+  const allSources = (await listDomesticPriceSources(input.workspaceId)).filter(
+    (s) => s.enabled && s.status === "ACTIVE",
+  );
   const p0Sources = allSources.filter((s) => s.priority === "P0");
   const otherSources = allSources.filter((s) => s.priority !== "P0");
   const query = {

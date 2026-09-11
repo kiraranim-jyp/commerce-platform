@@ -46,6 +46,8 @@ export async function POST(request: Request) {
   try {
     domesticShop = await runDomesticPriceCheck({
       snapshotId,
+      // GLOBAL-MARKET ③-2 — 이 판매자가 켜 둔 편집샵만 검색한다.
+      workspaceId: auth.user.workspaceId,
       dna: buildProductIdentityDna(product),
       description: product.description.value || undefined,
     });

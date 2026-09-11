@@ -2414,7 +2414,12 @@ interface DomesticPriceSource {
   lastCheckedAt: string | null;
   lastSuccessAt: string | null;
   source: "SYSTEM" | "USER";
+  /** GLOBAL-MARKET ③-2(CPO 확정, 2026-09-11) — 실효 노출(카탈로그 ON && 내 설정 ON). */
   enabled: boolean;
+  /** 운영자가 서비스에서 내렸는지. false면 내가 켜도 보이지 않는다. */
+  catalogEnabled: boolean;
+  /** 내가 내 목록에서 쓰는지 — 체크박스가 쓰는 값. */
+  workspaceEnabled: boolean;
 }
 
 interface ConnectionCheckResult {
@@ -3130,12 +3135,19 @@ function DomesticPriceSourcesSection() {
     }
   }
 
+  /** GLOBAL-MARKET ③-2(CPO 확정, 2026-09-11) — 이 체크박스는 이제 "나만" 끄고
+   * 켠다(workspace_domestic_shop_settings). 예전에는 공용 카탈로그의 enabled를
+   * 직접 바꿔서, 한 판매자가 끄면 모든 판매자의 목록에서 그 편집샵이 사라졌다.
+   * 실패하면 화면이 껐다고 표시하고 실제로는 계속 검색되므로 오류를 띄운다. */
   async function handleToggleEnabled(source: DomesticPriceSource) {
-    await fetch(`/api/domestic-price-sources/${source.id}`, {
+    setError(null);
+    const res = await fetch(`/api/domestic-price-sources/${source.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enabled: !source.enabled }),
+      body: JSON.stringify({ enabled: !source.workspaceEnabled }),
     });
+    const data = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+    if (data && data.ok === false) setError(data.error ?? "설정 변경에 실패했습니다.");
     await load();
   }
 
@@ -3172,6 +3184,12 @@ function DomesticPriceSourcesSection() {
         체크된 사이트만 국내 가격비교 Primary Source로 사용됩니다. 조사 완료 후보는 삭제 대신 비활성화할 수
         있습니다.
       </p>
+      {/* GLOBAL-MARKET ③-2(CPO 확정, 2026-09-11) — 목록 자체는 모두가 함께 쓰는
+          카탈로그이고, 체크는 내 계정에만 적용된다. 이 문장이 없으면 체크를 끄는
+          것이 다른 판매자에게도 영향을 준다고 오해할 수 있다. */}
+      <p className="mt-1 text-xs text-text-secondary">
+        체크는 내 계정에만 적용됩니다 — 다른 판매자의 목록은 바뀌지 않습니다.
+      </p>
       <p className="mt-1 text-xs text-text-tertiary">
         collectionStrategy는 실제 사이트 구조를 조사한 결과입니다 — 확인되지 않은 사이트를 임의로
         &quot;자동&quot;으로 표시하지 않습니다(N-4.06/N-4.07 원칙).
@@ -3188,7 +3206,7 @@ function DomesticPriceSourcesSection() {
               <label className="flex flex-1 items-center gap-3">
                 <input
                   type="checkbox"
-                  checked={source.enabled}
+                  checked={source.workspaceEnabled}
                   onChange={() => void handleToggleEnabled(source)}
                   className="h-4 w-4 rounded border-border accent-primary"
                 />
@@ -3197,6 +3215,14 @@ function DomesticPriceSourcesSection() {
                   {source.source === "SYSTEM" && (
                     <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
                       조사완료
+                    </span>
+                  )}
+                  {/* GLOBAL-MARKET ③-2 — 운영자가 내린 편집샵은 내가 체크해도
+                      보이지 않는다. 체크 상태와 실제 노출이 다른 이유를 화면에
+                      적어 두지 않으면 "켰는데 왜 검색이 안 되지"가 된다. */}
+                  {!source.catalogEnabled && (
+                    <span className="ml-2 rounded-full bg-text-tertiary/10 px-2 py-0.5 text-[11px] font-medium text-text-tertiary">
+                      서비스 제공 중단
                     </span>
                   )}
                   <p className="text-xs text-text-secondary">

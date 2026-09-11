@@ -9,6 +9,7 @@ import {
 } from "@commerce/crawler";
 import { buildDomesticShopQueryFromFields } from "@commerce/shared";
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth/require-user";
 import { listDomesticPriceSources } from "../_lib/domestic-price-source";
 
 /** N-4.07(대표님 지시: "국내 키즈의류 수입아동복 편집샵 사이트를 기본 등록해서 비교해줘") —
@@ -127,6 +128,14 @@ function logDomesticFunnel(
 }
 
 export async function POST(request: Request) {
+  // GLOBAL-MARKET ③-2(CPO 확정, 2026-09-11) — 이 라우트가 셀러 화면의 데이터
+  // 원천이므로, 판매자가 자기 목록에서 끈 편집샵은 여기서도 검색되면 안 된다
+  // (끈 이유가 "이 샵 결과는 내 판단에 방해가 된다"인데 화면엔 그대로 뜨면
+  // 껐다는 사실 자체가 거짓말이 된다). 어느 워크스페이스인지는 requireUser()만
+  // 정한다 — 크롤러 요청을 실제로 발생시키는 경로라 인증 없이 열어두지 않는다.
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
+
   const body = (await request.json().catch(() => null)) as
     | { title?: string; brand?: string; sourceUrl?: string; sku?: string; description?: string }
     | null;
@@ -134,7 +143,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "title이 필요합니다." }, { status: 400 });
   }
 
-  const sources = (await listDomesticPriceSources()).filter((s) => s.enabled && s.status === "ACTIVE");
+  // s.enabled는 이미 "카탈로그 ON && 이 판매자 ON"으로 합쳐진 실효값이다
+  // (listDomesticPriceSources 주석) — 여기서 두 플래그를 다시 AND하지 않는다.
+  const sources = (await listDomesticPriceSources(auth.user.workspaceId)).filter(
+    (s) => s.enabled && s.status === "ACTIVE",
+  );
 
   // MI-DOMESTIC-FIX-1(CPO 지시, 2026-09-09) — 여기가 buildDomesticShopQuery를
   // 우회하던 자리다. searchTerm을 비워두면 크롤러가 query.title로 폴백해서
