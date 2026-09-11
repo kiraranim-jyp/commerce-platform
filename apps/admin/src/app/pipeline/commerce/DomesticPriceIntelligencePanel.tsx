@@ -19,7 +19,7 @@ import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { domesticMatchDisplay } from "./match-display";
 // MI 2.0 PHASE 1 — 판매 판단의 근거를 4축으로 분해해 보여준다(새 판정 아님).
 import { computeRadar, type RadarSearchInterest, type RadarMatchTruth } from "@commerce/pricing";
-import { MiAxisStars, MiRadar, MiRadarSummary } from "./MiRadar";
+import { MiAxisStars, MiRadar, MiRadarSummary, MiVerdictAxes } from "./MiRadar";
 import { shouldRefetchAfterAutoCheck } from "../snapshot-save-guard";
 // MI-FLOW-2(CEO 지시, 2026-09-11) — 판단 기준 시장 / 빈 상태 / 핵심 숫자 라벨은
 // 전부 순수 함수로 빼 두었다. 화면에서 시장을 다시 판별하거나 숫자를 다시
@@ -2103,17 +2103,19 @@ export function DomesticPriceIntelligencePanel({
             <p className="mt-0.5 text-lg font-bold">
               {FINAL_VERDICT_COPY[sellerDecision.finalVerdict].icon} {FINAL_VERDICT_COPY[sellerDecision.finalVerdict].title}
             </p>
-            {/* UX-1C L1 — 한 줄 결론 설명은 항상 보인다. 숫자만 보고 "그래서 왜
-                추천인데?"가 되지 않게 하기 위함(CPO 지시). MI-FLOW-2에서 판정
-                바로 아래로 올렸다 — 판정과 그 이유 사이에 숫자표가 끼어 있으면
-                두 문장이 한 덩어리로 읽히지 않는다. */}
-            <p className="mt-0.5 text-text-secondary">{representativeVerdict.description}</p>
-            {sellerDecision.downgradedByMarket && (
-              <p className="mt-0.5 text-[10px] text-text-tertiary">
-                가격 경쟁력은 {FINAL_VERDICT_COPY[sellerDecision.priceVerdict].title} 수준이지만, 종합 시장 신호가 불리해
-                한 단계 낮췄습니다
-              </p>
-            )}
+            {/* MI-TEXT-1(CEO 지시, 2026-09-12) — 판정 아래는 문장이 아니라 축
+                세 줄이다.
+
+                여기 있던 것은 representativeVerdict.description 한두 줄과
+                강등 사유 한 줄이었다(UX-1C L1에서 "숫자만 보고 왜 추천인지
+                모르면 안 된다"는 이유로 올린 자리다). 그 목적 자체는 옳은데,
+                같은 사실을 축 등급이 이미 더 짧게 말하고 있었다 — 셀러는
+                "🟢 판매 추천"을 본 다음 문장을 끝까지 읽어야 무엇이 좋고 무엇이
+                나쁜지 알 수 있었다.
+                축 세 줄은 그 답을 한 눈에 준다. 문장은 지우지 않고 바로 아래
+                접힘 상세의 첫 줄로 내렸다 — 정보 이동이지 삭제가 아니다.
+                판정·등급·문장 어느 것도 새로 계산하지 않는다(전부 서버 값). */}
+            <MiVerdictAxes radar={radar} />
             {/* UX 2.4.1(CEO 지시, 2026-09-11) — "왜 이렇게 판단했나요"를 판정 줄에
                 붙인다. 지금까지 이 토글은 ⑤ 판단 근거 아래, 카드 맨 밑에 있었다.
                 판정에 대한 되물음인데 화면 끝까지 내려가야 나오니, 셀러는 판정을
@@ -2131,6 +2133,17 @@ export function DomesticPriceIntelligencePanel({
 
             {showMarketDetail && (
               <>
+            {/* MI-TEXT-1(CEO 지시, 2026-09-12) — 첫 화면에서 내려온 두 문장.
+                판정을 설명하는 말이므로 상세의 **첫 줄**이어야 한다 — 근거
+                목록이나 숫자 뒤에 두면 "왜 이렇게 판단했나요?"를 눌러 놓고도
+                답을 찾아 스크롤해야 한다. 문구는 서버 값 그대로다. */}
+            <p className="mt-1.5 text-text-secondary">{representativeVerdict.description}</p>
+            {sellerDecision.downgradedByMarket && (
+              <p className="mt-0.5 text-[11px] text-text-tertiary">
+                가격 경쟁력은 {FINAL_VERDICT_COPY[sellerDecision.priceVerdict].title} 수준이지만, 종합 시장 신호가 불리해
+                한 단계 낮췄습니다
+              </p>
+            )}
             {/* P-12D(대표님/CPO 지시, 2026-08-31) — "숫자 → 결론 → 이유 → 상세정보"
                 순서로 확정. 얼마에 사서/얼마가 들고/얼마에 팔지/얼마 남는지 4개
                 숫자를 결론 설명·판단근거보다 먼저 보여준다. 새 계산 없음 — cost/

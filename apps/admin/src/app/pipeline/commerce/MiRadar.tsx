@@ -1,4 +1,4 @@
-import type { RadarLevel, RadarResult } from "@commerce/pricing";
+import type { RadarAxis, RadarAxisKey, RadarLevel, RadarResult } from "@commerce/pricing";
 import { RADAR_LEVEL_SCORE } from "@commerce/pricing";
 import { emptyStateForAxis } from "./mi-empty-state";
 
@@ -115,6 +115,61 @@ export function MiAxisStars({ radar, className = "" }: { radar: RadarResult; cla
         );
       })}
     </ul>
+  );
+}
+
+/**
+ * MI-TEXT-1(CEO 지시, 2026-09-12) — "3초 안에 판단하고, 자세한 건 펼쳐서 본다."
+ *
+ * 판정 바로 아래에 서는 세 줄. 지금까지 이 자리에는 문장이 있었다
+ * (representativeVerdict.description — "국내 동일상품 대비 가격 경쟁력이 있고
+ * 목표 마진도 확보됩니다" 같은 한두 줄). 틀린 문장은 아니지만 3초 안에 읽히지
+ * 않고, 무엇보다 **같은 사실을 이미 축 등급이 말하고 있었다**. 문장은 지우지
+ * 않고 접힘 상세 첫 줄로 내렸다(정보 이동이지 삭제가 아니다).
+ *
+ * ── 왜 세 축만인가 ───────────────────────────────────────────────────────
+ * computeRadar가 내는 축은 넷이다. 그중 🎯 상품 판단 신뢰도는 "시장이 어떤가"가
+ * 아니라 "우리 매칭을 얼마나 믿을 수 있나"라 판매 판단과 층위가 다르다 —
+ * 아래 ⑤ 판단 근거에 네 축이 전부 그대로 있으므로 여기서 빼도 사라지지 않는다.
+ * 순서는 CEO 지시문의 순서 그대로다(가격 경쟁력 → 시장 수요 → 수익성).
+ *
+ * ── 등급 어휘를 새로 만들지 않는다 ───────────────────────────────────────
+ * 별점·등급 단어는 아래 MiAxisStars와 **같은 LEVEL_STARS 하나**에서 나온다.
+ * 컴포넌트를 따로 둔 것은 모양(요약/상세) 때문이지 판정 때문이 아니다 —
+ * 같은 상품의 같은 축이 화면 위아래에서 다른 등급으로 보이는 일은 구조적으로
+ * 불가능하다. 결측 축도 ☆☆☆☆☆로 그리지 않는다(모르는 것 ≠ 낮은 것).
+ */
+const VERDICT_AXIS_ORDER: RadarAxisKey[] = ["priceCompetitiveness", "marketDemand", "profitability"];
+
+export function MiVerdictAxes({ radar }: { radar: RadarResult }) {
+  const axes = VERDICT_AXIS_ORDER.map((key) => radar.axes.find((a) => a.key === key)).filter(
+    (a): a is RadarAxis => a != null,
+  );
+  if (axes.length === 0) return null;
+  return (
+    <dl className="mt-1.5 space-y-0.5">
+      {axes.map((axis) => {
+        const empty = emptyStateForAxis(axis.state);
+        const stars = axis.state.status === "SCORED" ? LEVEL_STARS[axis.state.level] : null;
+        return (
+          <div key={axis.key} className="flex items-baseline gap-2 text-xs">
+            {/* 라벨 폭을 고정해 세 줄의 등급이 같은 세로줄에 선다 — 줄마다
+                등급 위치가 달라지면 "한눈에 비교"가 되지 않는다. */}
+            <dt className="w-[104px] shrink-0 opacity-70">{axis.label}</dt>
+            <dd className={stars ? stars.className : "opacity-70"}>
+              {stars ? (
+                <>
+                  <span className="tracking-[-0.1em]">{stars.mark}</span> {stars.word}
+                </>
+              ) : (
+                // 사유는 여기서 말하지 않는다(⑤가 말한다) — 첫 화면은 결론만.
+                empty?.chip
+              )}
+            </dd>
+          </div>
+        );
+      })}
+    </dl>
   );
 }
 
