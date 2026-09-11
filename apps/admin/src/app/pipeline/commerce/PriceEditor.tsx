@@ -52,6 +52,20 @@ import { ValueBadge } from "@/components/ui/ValueBadge";
  */
 const SELECTABLE_CURRENCIES = ["USD", "EUR", "JPY", "GBP", "SEK", "CNY", "HKD", "KRW"];
 
+/**
+ * P2-1(CEO 지시, 2026-09-12) — 계산 사슬의 입력 칸 하나의 모양.
+ *
+ * 값을 지우지 않고 카드를 짧게 만들라는 지시라, 가장 먼저 깎을 수 있는 것이
+ * 줄마다 반복되는 높이다. py-1 → py-0.5(30px → 26px)는 한 줄에서는 티가 안
+ * 나지만 입력 칸이 다섯 줄, 그 사이 여백이 아홉 줄인 화면에서는 그대로 카드
+ * 길이가 된다.
+ *
+ * 상수로 빼는 이유는 취향이 아니다 — 지금까지 같은 문자열이 다섯 군데에
+ * 복사돼 있었고, 다음에 높이를 손보는 사람은 그중 넷만 고칠 것이다. 그러면
+ * 한 화면 안에서 입력 칸 높이가 두 가지가 된다.
+ */
+const FIELD_CLASS = "rounded border border-border px-2 py-0.5 text-sm focus:border-primary focus:outline-none";
+
 /** 타이핑 중에는 로컬 draft만 갱신(onLiveChange — 화면 재계산용, 저장 안 함),
  * blur에서만 실제 커밋(onCommit) — "입력 중 상태/확정값 분리"는 허용하되
  * "Tab을 눌러야만 적용되는 구조는 금지"라는 CPO 지시를 그대로 구현한다. */
@@ -95,7 +109,7 @@ function LiveNumberField({
         if (!Number.isNaN(n)) onLiveChange(clamp(n));
       }}
       onBlur={() => onCommit(clamp(Number(draft)))}
-      className={className ?? "w-24 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"}
+      className={className ?? `w-24 ${FIELD_CLASS}`}
     />
   );
 }
@@ -249,6 +263,27 @@ export function PriceEditor({
   const feeAmountKrw = Math.round((finalPriceKrw * draftInput.feePercent) / 100);
   const netProfitKrw = finalPriceKrw - breakdown.landedCostKrw - feeAmountKrw;
 
+  // P2-2(CEO 지시, 2026-09-12) — "권장 판매가격 ₩143,500"과 "최종 판매가격
+  // ₩143,500"이 같은 숫자로 나란히 떠 있는데, 화면이 그 둘의 **관계**를 말한
+  // 적이 없다. 셀러가 실제로 묻는 것은 "같은 값인가, 다른 값인가"이고 답은
+  // 셋뿐이다:
+  //   ① 아직 저장 전이라 권장가를 그대로 비추고 있다(자동 적용된 것이 아니다)
+  //   ② 저장했는데 마침 권장가와 같다
+  //   ③ 저장한 값이 권장가와 다르다 — 그 차액이 곧 셀러가 내린 판단이다
+  //
+  // 여기서 새로 계산하는 가격은 없다. 이미 화면에 떠 있는 두 숫자의 차이를
+  // 말로 옮길 뿐이고, 최종 판매가격이 바뀌는 길은 여전히 입력칸과 [최종
+  // 판매가격에 적용] 둘뿐이다 — 권장가가 최종가로 조용히 넘어가지 않는다.
+  const recommendedPriceKrw = breakdown.suggestedPriceKrw;
+  const finalMinusRecommendedKrw = finalPriceKrw - recommendedPriceKrw;
+  const recommendationRelation = !product.priceOverrideKrw
+    ? "최종 판매가격을 아직 저장하지 않아 위 칸이 이 값을 그대로 비추고 있습니다 — [최종 판매가격에 적용]을 눌러야 실제 등록가가 됩니다."
+    : finalMinusRecommendedKrw === 0
+      ? "저장된 최종 판매가격과 같은 금액입니다."
+      : `저장된 최종 판매가격이 ${formatKrw(Math.abs(finalMinusRecommendedKrw))} ${
+          finalMinusRecommendedKrw > 0 ? "높습니다" : "낮습니다"
+        }.`;
+
   // PHASE 3.2 추가지시 — 기본으로 펼쳐 둔다(▾). 셀러는 ③ 등록 준비에서
   // "판매가격"을 골라 이 화면을 **보러** 온 것이라, 보러 온 것을 한 번 더
   // 접어두지 않는다(UX 2.5의 판단 그대로). 접을 수 있게만 남긴다.
@@ -256,13 +291,13 @@ export function PriceEditor({
 
   if (priceUnresolved) {
     return (
-      <section className="rounded-lg border border-border p-4 text-sm">
+      <section className="rounded-lg border border-border px-4 py-3 text-sm">
         <h3 className="text-base font-medium">가격 계산</h3>
-        <div className="mt-3">
+        <div className="mt-2.5">
           <PriceUnresolvedBanner product={product} />
         </div>
         {onUpdateOriginalPrice && (
-          <div className="mt-3 rounded-md border border-border bg-background p-3">
+          <div className="mt-2.5 rounded-md border border-border bg-background px-3 py-2.5">
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm font-medium text-text-primary">원본 가격 직접 입력</span>
               <div className="flex items-center gap-1.5">
@@ -277,7 +312,7 @@ export function PriceEditor({
                 <select
                   value={product.price.value.currency}
                   onChange={(e) => onUpdateOriginalPrice({ currency: e.target.value })}
-                  className="rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+                  className={FIELD_CLASS}
                 >
                   <option value="">통화 선택</option>
                   {SELECTABLE_CURRENCIES.map((code) => (
@@ -288,7 +323,10 @@ export function PriceEditor({
                 </select>
               </div>
             </div>
-            <p className="mt-1 text-[11px] text-text-tertiary">
+            {/* P2-4 — 이 문장은 "지금 무엇을 하면 화면이 다시 움직이는가"를
+                알려주는 안내라 계산 설명(secondary)이다. text-[11px]/tertiary는
+                실제 화면에서 읽히지 않아 있으나 마나였다. */}
+            <p className="mt-1 text-xs text-text-secondary">
               원본 가격과 통화를 모두 정확히 입력하면(0보다 큰 값) 자동으로 가격 계산이 다시 시작됩니다.
             </p>
           </div>
@@ -298,12 +336,14 @@ export function PriceEditor({
   }
 
   return (
-    <section className="rounded-lg border border-border p-4 text-sm">
+    <section className="rounded-lg border border-border px-4 py-3 text-sm">
+      {/* P2-1(CEO 지시, 2026-09-12) — 제목 바로 아래에 있던 두 줄짜리 안내문을
+          없앴다. 내용이 틀려서가 아니라 **같은 말이 아래에 두 번 더 있었기**
+          때문이다: "고치면 즉시 다시 계산된다"는 상세 맨 아래 추정치 문단이,
+          "최종 판매가격은 직접 입력하거나 적용을 눌러야 바뀐다"는 바로 아래
+          최종 판매가격 칸의 안내가 이미 말한다. 사실을 지운 것이 아니라 세
+          벌이던 사본을 한 벌로 줄인 것이다(정보 삭제 아님). */}
       <h3 className="text-base font-medium">가격 계산</h3>
-      <p className="mt-0.5 text-[11px] text-text-tertiary">
-        배송비/수수료/마진/원본가격을 고치면 아래 값이 즉시 다시 계산됩니다. 실제 등록에 쓰이는 최종 판매가격은 직접
-        입력하거나 &ldquo;적용&rdquo;을 눌러야 바뀝니다.
-      </p>
 
       {/* PHASE 3.2 추가지시(CPO, 2026-09-11) — 카드의 순서를 원래 모양으로 되돌린다.
        *
@@ -317,7 +357,7 @@ export function PriceEditor({
        * 계산은 한 줄도 바뀌지 않았다. computePriceBreakdown() 하나가 여전히
        * 유일한 산식이고 환율·착지원가·마진 역산도 그대로다 — 바뀐 것은 읽는
        * 순서뿐이다. */}
-      <div className="mt-3 rounded-md border border-border bg-background p-3">
+      <div className="mt-2.5 rounded-md border border-border bg-background px-3 py-2.5">
         <div className="flex items-center justify-between gap-3">
           <span className="flex items-center gap-1.5 text-sm font-medium text-text-primary">
             최종 판매가격
@@ -343,19 +383,18 @@ export function PriceEditor({
             </button>
           </div>
         </div>
-        <p className="mt-1 text-[11px] text-text-tertiary">
+        {/* P2-1/P2-4 — 문단 둘을 하나로 합쳤다. 위 문단은 "이 값이 저장된
+            값인가", 아래 문단은 "이 값이 채널에 어떻게 쓰이는가"였는데, 둘 다
+            같은 한 숫자를 설명하는 말이라 두 덩어리로 떨어져 있을 이유가 없었다.
+            사실은 셋 다 남는다: ① 저장 여부 ② 모든 채널의 기본값 ③ 채널에서
+            고쳐도 이 값은 안 움직인다.
+            크기는 한 단계 올린다(text-[11px]/tertiary → text-xs/secondary) —
+            상태를 말하는 문장이 실제 화면에서 읽히지 않으면 없는 것과 같다. */}
+        <p className="mt-1 text-xs text-text-secondary">
           {product.priceOverrideKrw
-            ? "직접 저장된 값입니다 — 위 계산 값을 고쳐도 자동으로 바뀌지 않습니다. 다시 계산하려면 버튼을 누르세요."
-            : "아직 저장된 값이 없어 권장 판매가격을 보여주고 있습니다 — 입력하거나 버튼을 눌러야 저장됩니다."}
-        </p>
-        {/* PHASE 3.2 — UX 2.5의 "채널마다 따로 정하지 않습니다"를 여기서 정정한다.
-            이제 채널별 최종 등록가격이 실제로 존재한다(CanonicalProduct.
-            channelPriceOverrides). 다만 여기서 정한 값이 여전히 **모든 채널의
-            기본값**이고, 채널 값은 그 채널 하나에만 붙는다 — 그래서 채널에서
-            무엇을 고쳐도 이 숫자는 움직이지 않는다. */}
-        <p className="mt-1 text-[11px] text-text-tertiary">
-          이 값이 모든 채널의 기본 등록가격이 됩니다 — 특정 채널만 다르게 등록하려면 그 채널 화면의 &ldquo;가격&rdquo;에서
-          수정하세요. 채널에서 고쳐도 이 값은 바뀌지 않습니다.
+            ? "직접 저장한 값입니다 — 아래 계산 값이 바뀌어도 따라 움직이지 않습니다."
+            : "아직 저장된 값이 없어 권장 판매가격을 보여주고 있습니다 — 입력하거나 버튼을 눌러야 저장됩니다."}{" "}
+          모든 채널의 기본 등록가격이며, 특정 채널만 다르게 등록하려면 그 채널 화면에서 고칩니다(그때도 이 값은 그대로입니다).
         </p>
         <PriceProvenanceRow product={product} breakdown={breakdown} />
       </div>
@@ -363,13 +402,16 @@ export function PriceEditor({
       <button
         type="button"
         onClick={() => setDetailOpen((v) => !v)}
-        className="mt-3 text-xs font-medium text-primary hover:underline"
+        className="mt-2.5 text-xs font-medium text-primary hover:underline"
       >
         {detailOpen ? "▾ 가격 계산 상세" : "▸ 가격 계산 상세"}
       </button>
 
+      {/* P2-1 — 줄 간격 space-y-2.5(10px) → space-y-1.5(6px). 사슬은 열 줄이라
+          줄 사이 여백만으로 36px이 줄어든다. 줄을 지우거나 합치지 않았다 —
+          순서도 개수도 그대로다. */}
       {detailOpen && (
-        <div className="mt-3 space-y-2.5 text-xs">
+        <div className="mt-2 space-y-1.5 text-xs">
           {/* 사슬의 순서 = 계산 순서다. 원본 가격 → 환율 → 원화 환산 →
               국제배송비 → 착지원가 → 수수료율/마진율 → 권장 판매가격 →
               수수료 금액 → 예상 이익. 순서가 흐트러지면 "무엇을 더해서 이 값이
@@ -390,12 +432,12 @@ export function PriceEditor({
                     setDraftOriginalAmount(n);
                     onUpdateOriginalPrice({ amount: n });
                   }}
-                  className="w-24 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+                  className={`w-24 ${FIELD_CLASS}`}
                 />
                 <select
                   value={product.price.value.currency}
                   onChange={(e) => onUpdateOriginalPrice({ currency: e.target.value })}
-                  className="rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+                  className={FIELD_CLASS}
                 >
                   {SELECTABLE_CURRENCIES.map((code) => (
                     <option key={code} value={code}>
@@ -444,12 +486,12 @@ export function PriceEditor({
                 value={draftInput.shippingKrw}
                 onLiveChange={(n) => liveUpdateBreakdown({ shippingKrw: n })}
                 onCommit={(n) => commitBreakdown({ shippingKrw: n })}
-                className="w-24 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+                className={`w-24 ${FIELD_CLASS}`}
               />
             </div>
           </Row>
 
-          <div className="flex items-center justify-between border-t border-border pt-2.5">
+          <div className="flex items-center justify-between border-t border-border pt-1.5">
             <span className="font-medium text-text-primary">{PRICE_LINE_LABEL.LANDED_COST}</span>
             <span className="font-medium text-text-primary">{formatKrw(breakdown.landedCostKrw)}</span>
           </div>
@@ -465,12 +507,18 @@ export function PriceEditor({
                 max={99}
                 onLiveChange={(n) => liveUpdateBreakdown({ feePercent: n })}
                 onCommit={(n) => commitBreakdown({ feePercent: n })}
-                className="w-14 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+                className={`w-14 ${FIELD_CLASS}`}
               />
               <span className="text-text-secondary">%</span>
             </div>
           </Row>
 
+          {/* P2-1 — "(판매가 기준 목표 이익률 — Settings에서 기본값 변경)"이
+              입력칸 옆에 붙어 두 줄로 접히면서 이 행 하나가 다른 행의 두 배를
+              차지하고 있었다. 두 사실(마진의 기준 / 기본값을 어디서 바꾸나)은
+              아래 추정치 문단으로 옮겨 붙였다 — 지운 것이 아니라 자리를 옮긴
+              것이다(같은 문단이 이미 "이 값들은 추정치다"를 말하고 있어서,
+              오히려 한 문단이 한 가지를 말하게 됐다). */}
           <Row label="목표 마진">
             <div className="flex items-center justify-end gap-1">
               <LiveNumberField
@@ -478,28 +526,35 @@ export function PriceEditor({
                 max={99}
                 onLiveChange={(n) => liveUpdateBreakdown({ marginPercent: n })}
                 onCommit={(n) => commitBreakdown({ marginPercent: n })}
-                className="w-14 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+                className={`w-14 ${FIELD_CLASS}`}
               />
               <span className="text-text-secondary">%</span>
-              <span className="ml-1 text-[11px] text-text-tertiary">
-                (판매가 기준 목표 이익률 — <a href="/settings" className="text-primary hover:underline">Settings에서 기본값 변경</a>)
-              </span>
             </div>
           </Row>
 
-          <div className="flex items-center justify-between border-t border-border pt-2.5">
+          {/* P2-2(CEO 지시, 2026-09-12) — 권장 판매가격과 최종 판매가격이 같은
+              ₩143,500으로 떠 있어도 둘은 다른 사실이다:
+                권장 판매가격 = 이 사슬이 낸 **계산 결과**(AI 추천)
+                최종 판매가격 = 실제 등록에 쓰일 **상품 기본 판매가격**
+              지금까지 두 줄은 같은 크기(text-base font-semibold)·같은 색으로
+              떠 있어서 어느 쪽이 실제로 팔리는 값인지 화면이 답하지 않았다.
+              결론(위 칸)은 크기를 그대로 두고 여기를 한 단계 내린다(text-sm ·
+              secondary) — 값을 감추는 것이 아니라 둘의 층위를 보이게 하는 것이다.
+              그리고 관계를 한 줄로 직접 말한다(같은 금액인지, 얼마나 다른지). */}
+          <div className="flex flex-wrap items-center justify-between gap-x-3 border-t border-border pt-1.5">
             <span className="flex items-center gap-1.5 font-medium text-text-primary">
               권장 판매가격
               <ValueBadge kind="aiSuggested" />
             </span>
-            <span className="text-base font-semibold text-text-primary">{formatKrw(breakdown.suggestedPriceKrw)}</span>
+            <span className="text-sm font-semibold text-text-secondary">{formatKrw(recommendedPriceKrw)}</span>
+            <span className="w-full text-xs text-text-secondary">{recommendationRelation}</span>
           </div>
 
           <Row label="예상 수수료 금액">
             <span className="font-medium text-text-primary">{formatKrw(feeAmountKrw)}</span>
           </Row>
 
-          <div className="flex items-center justify-between border-t border-border pt-2.5">
+          <div className="flex items-center justify-between border-t border-border pt-1.5">
             <span className="font-medium text-text-primary">예상 이익(최종 판매가격 기준)</span>
             <span className={`font-medium ${netProfitKrw >= 0 ? "text-success" : "text-error"}`}>
               {netProfitKrw >= 0 ? "+" : ""}
@@ -507,9 +562,16 @@ export function PriceEditor({
             </span>
           </div>
 
-          <p className="pt-1 text-[11px] text-text-tertiary">
-            국제배송비/수수료율/마진율은 실제 물류·정산 데이터가 없어 추정치입니다 — 직접 아는 값으로 고쳐서 다시 계산할 수
-            있습니다.
+          {/* P2-1/P2-4 — 위 "목표 마진" 행에 붙어 있던 괄호 설명이 여기로 합쳐졌다.
+              같은 문단이 말하는 것은 하나다: "이 세 입력은 추정치이고, 아는
+              값으로 고치면 즉시 다시 계산되며, 기본값은 Settings에 있다."
+              계산을 설명하는 문장이라 tertiary가 아니라 secondary다. */}
+          <p className="pt-0.5 text-xs text-text-secondary">
+            국제배송비·예상 수수료·목표 마진은 실제 물류·정산 데이터가 없어 추정치입니다(목표 마진은 판매가 기준 이익률) —
+            아는 값으로 고치면 즉시 다시 계산됩니다.{" "}
+            <a href="/settings" className="text-primary hover:underline">
+              Settings에서 기본값 변경
+            </a>
           </p>
 
           {/* PHASE 3.2 추가지시 — 시장 정보는 이 카드에 들어오지 않는다. 여기
@@ -517,7 +579,7 @@ export function PriceEditor({
               남는 것은 거기로 가는 링크 한 줄뿐이다(블록이 아니라 링크여야
               한다 — 블록이 되는 순간 계산 카드가 다시 비교 카드가 된다). */}
           {onOpenMarketComparison && (
-            <p className="text-[11px] text-text-tertiary">
+            <p className="text-xs text-text-secondary">
               다른 나라 판매가·한국 시장 경쟁가격은{" "}
               <button type="button" onClick={onOpenMarketComparison} className="text-primary hover:underline">
                 {PRICE_SECTION_TITLE.SELLER_GLOBAL_MARKET} / {PRICE_SECTION_TITLE.DOMESTIC_COMPETITION}
@@ -581,10 +643,14 @@ function CustomsCostSection({
   }
 
   return (
-    <div className="mt-3 space-y-2.5 border-t border-border pt-3 text-sm">
+    <div className="mt-2 space-y-1.5 border-t border-border pt-2 text-sm">
+      {/* P2-4 — 제목(primary)과 그 제목이 무엇을 뜻하는지(secondary)를 한 단계로
+          가른다. 설명 문장이 tertiary 11px이라 실제로는 읽히지 않았는데, 이
+          문장이야말로 "왜 이 숫자가 권장 판매가격을 안 바꾸는가"에 대한 답이다. */}
       <p className="text-xs font-medium text-text-primary">예상 구매 비용(Market Intelligence 판단용)</p>
-      <p className="text-[11px] text-text-tertiary">
-        위 권장 판매가격 계산에는 반영되지 않습니다 — 아래 "Market Intelligence"의 예상 마진/판매 판단에만 쓰입니다.
+      <p className="text-xs text-text-secondary">
+        위 권장 판매가격 계산에는 반영되지 않습니다 — 아래 &ldquo;Market Intelligence&rdquo;의 예상 마진/판매 판단에만
+        쓰입니다.
       </p>
       <Row label="국내 배송원가">
         {domesticShippingCostKrw != null ? (
@@ -608,7 +674,7 @@ function CustomsCostSection({
             placeholder="미확인"
             onChange={(e) => setDutyDraft(e.target.value)}
             onBlur={commitDuty}
-            className="w-24 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+            className={`w-24 ${FIELD_CLASS}`}
           />
         </div>
       </Row>
@@ -622,7 +688,7 @@ function CustomsCostSection({
             placeholder="미확인"
             onChange={(e) => setVatDraft(e.target.value)}
             onBlur={commitVat}
-            className="w-24 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+            className={`w-24 ${FIELD_CLASS}`}
           />
         </div>
       </Row>
@@ -681,7 +747,10 @@ function PriceProvenanceRow({
   breakdown: ReturnType<typeof computePriceBreakdown>;
 }) {
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 border-t border-border pt-2 text-[11px] text-text-tertiary">
+    // P2-4 — 여기 있는 것은 설명 문구가 아니라 **숫자 셋**이다(원본가 · 추천가 ·
+    // 확정가). 숫자를 tertiary 회색으로 두면 배지만 보이고 값이 안 읽힌다 —
+    // 라벨(배지)은 그대로 두고 숫자만 한 단계 올린다.
+    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 border-t border-border pt-1.5 text-[11px] text-text-secondary">
       <span className="inline-flex items-center gap-1">
         <ValueBadge kind="original" />
         {formatOriginalPrice(product.price.value.amount, product.price.value.currency)}
@@ -712,8 +781,11 @@ function Row({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3">
-      <span className="w-24 shrink-0 pt-1.5 text-text-secondary">
+    // P2-1 — items-start + pt-1.5(라벨을 입력칸 첫 줄에 맞추려던 보정)를
+    // items-center로 바꾼다. 이제 행 안에서 두 줄로 접히는 내용이 없어서
+    // 보정이 필요 없고, 행마다 위쪽 6px이 그대로 사라진다.
+    <div className="flex items-center justify-between gap-3">
+      <span className="w-24 shrink-0 text-text-secondary">
         {label}
         {badge && <span className="ml-1.5">{badge}</span>}
       </span>

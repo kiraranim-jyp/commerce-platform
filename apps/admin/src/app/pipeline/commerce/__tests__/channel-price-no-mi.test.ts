@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { UNRESOLVED_CATEGORY } from "@commerce/category";
 import { applyChannelPriceOverride, clearChannelPriceOverride } from "@commerce/marketplace";
@@ -154,5 +156,48 @@ describe("PHASE 3.2 ⑩: registration_attempts.price_breakdown의 의미는 바�
       priceOriginLabel: "채널 최종 등록가격",
       registeredAt: "2026-09-11T00:00:00.000Z",
     });
+  });
+});
+
+/**
+ * P2 UX POLISH(CEO 지시, 2026-09-12) — 밀도·층위·가독성만 손본다는 약속을
+ * 데이터 쪽에서 한 번 더 못박는다.
+ *
+ * 배치를 고치다 보면 "이 값을 보여주려면 한 번 더 조회해야 하는데"가 가장 흔한
+ * 실수다. 그 순간 셀러가 배송비를 10원 고칠 때마다 10~20초짜리 재분석이 붙고,
+ * 그 응답이 판단 카드를 갈아치운다. 그래서 가격 UI 세 파일이 서버를 부르는
+ * 지점을 숫자로 고정한다.
+ */
+describe("P2: 가격 UI를 손봐도 MI는 돌지 않는다", () => {
+  function readSource(relativeToThisFile: string): string {
+    return readFileSync(fileURLToPath(new URL(relativeToThisFile, import.meta.url)), "utf8").replace(/\r\n/g, "\n");
+  }
+
+  const editor = readSource("../PriceEditor.tsx");
+  const actionCenter = readSource("../ActionCenter.tsx");
+  const channelPriceSection = readSource("../ChannelPriceSection.tsx");
+
+  it("가격 계산 카드의 서버 호출은 판매자 기본값 조회 하나뿐이다", () => {
+    // 반올림 단위/국내 배송원가를 읽는 Settings 조회는 PHASE 3.2 이전부터
+    // 있던 것이고 시장 분석과 무관하다. 그 외의 fetch가 하나라도 늘면
+    // "가격을 고칠 때마다 서버를 부른다"가 된다.
+    expect(editor.match(/fetch\(/g) ?? []).toHaveLength(1);
+    expect(editor).toContain('fetch("/api/settings/coupang/profiles")');
+    expect(editor).not.toContain("/api/price-intelligence");
+  });
+
+  it("오른쪽 기둥과 채널 가격 칸은 서버를 아예 부르지 않는다", () => {
+    expect(actionCenter).not.toContain("fetch(");
+    expect(channelPriceSection).not.toContain("fetch(");
+  });
+
+  it("채널 가격 칸은 여전히 그 채널 하나만 만진다 — 상품 기준가로 새지 않는다", () => {
+    // PHASE 3.2에서 확정한 격리다. 이번 밀도 작업이 여기 손대지 않았음을
+    // 같은 파일에서 한 번 더 확인한다(상품 가격 setter가 돌아오지 않았다).
+    expect(channelPriceSection).toContain("onUpdateChannelPrice(Math.round(parsedDraft));");
+    expect(channelPriceSection).toContain("상품정보의 최종 판매가격은 바뀌지 않습니다");
+    for (const setter of ["priceOverrideKrw", "onUpdateSalePriceKrw", "computePriceBreakdown"]) {
+      expect(channelPriceSection).not.toContain(setter);
+    }
   });
 });
