@@ -37,17 +37,43 @@ const panel = read("../DomesticPriceIntelligencePanel.tsx");
 const radar = read("../MiRadar.tsx");
 
 const verdictAt = panel.indexOf("{FINAL_VERDICT_COPY[sellerDecision.finalVerdict].icon}");
-const axesAt = panel.indexOf("<MiVerdictAxes");
 /** 주석에도 같은 문구가 나오므로(왜 이 자리로 옮겼는지 설명한다) 버튼 자체를 찾는다. */
 const toggleAt = panel.indexOf("{caret(showMarketDetail)} 왜 이렇게 판단했나요?");
 const detailOpenAt = panel.indexOf("{showMarketDetail && (");
 const descriptionAt = panel.indexOf("{representativeVerdict.description}");
 
-describe("판정 카드 첫 화면은 결론 + 축 세 줄 + 토글뿐이다", () => {
-  it("판정 바로 아래가 축 줄이다", () => {
+describe("판정 카드 첫 화면은 결론 + 가격 세 블록 + 토글뿐이다", () => {
+  /**
+   * MI-POLISH-2(CEO 지시, 2026-09-12) — MI-TEXT-1이 판정 아래 세워 뒀던 축 세 줄
+   * (MiVerdictAxes)이 이 자리에서 빠졌다. 그 교환("문장 두 줄 → 등급 세 줄")은
+   * 그때 옳았지만 이번 지시가 본 것은 한 층 위다: **축은 판단 숫자가 아니라
+   * 판단의 근거**이고, 근거는 「왜 이렇게 판단했나요?」 안에 산다. 사라진 것은
+   * 없다 — 상세의 MiAxisStars가 네 축을 결측 사유까지 달고 그대로 보여준다
+   * (요약 쪽이 사유를 생략하던 표시였다).
+   *
+   * 이 describe의 목적은 그대로다: 판정 아래에 읽을거리가 쌓이지 않게 막는 것.
+   * 조건이 "축이 있다"에서 "축조차 없다"로 더 세졌을 뿐이다.
+   */
+  it("판정 바로 아래는 ① 원본 상품이다 — 그 사이에 아무것도 서지 않는다", () => {
+    const originalAt = panel.indexOf("<OriginalPriceView");
     expect(verdictAt).toBeGreaterThan(-1);
-    expect(axesAt).toBeGreaterThan(verdictAt);
-    expect(axesAt).toBeLessThan(toggleAt);
+    expect(originalAt).toBeGreaterThan(verdictAt);
+    const between = panel.slice(panel.indexOf("</p>", verdictAt), originalAt);
+    expect(between).not.toContain("<dl");
+    expect(between).not.toContain("<ul");
+    expect(between).not.toContain("<MiAxisStars");
+    // 요약 축 컴포넌트는 화면에도, 파일에도 남아 있지 않다.
+    expect(panel).not.toContain("<MiVerdictAxes");
+    expect(radar).not.toContain("export function MiVerdictAxes");
+  });
+
+  it("토글은 본문 맨 아래다 — 다 읽고 나서 묻는 질문이기 때문이다", () => {
+    // 판정 바로 아래에 있던 시절에는, 아직 묻지도 않은 질문의 답이 본문
+    // 한가운데서 펼쳐졌다(①~③이 그 아래로 밀린다).
+    const chainAt = panel.indexOf("<PriceChainView");
+    expect(chainAt).toBeGreaterThan(-1);
+    expect(toggleAt).toBeGreaterThan(chainAt);
+    expect(detailOpenAt).toBeGreaterThan(toggleAt);
   });
 
   it("긴 설명 문장이 첫 화면에 없다 — 접힘 안에만 있다", () => {
@@ -75,8 +101,9 @@ describe("판정 카드 첫 화면은 결론 + 축 세 줄 + 토글뿐이다", (
 
 describe("등급 어휘는 한 곳에서만 나온다", () => {
   it("별점·등급 단어 매핑이 MiRadar.tsx의 LEVEL_STARS 하나뿐이다", () => {
-    // 요약(MiVerdictAxes)과 상세(MiAxisStars)가 각자 매핑을 갖는 순간, 같은
-    // 상품의 같은 축이 화면 위아래에서 다른 등급으로 보이는 날이 온다.
+    // 요약과 상세가 각자 매핑을 갖는 순간, 같은 상품의 같은 축이 화면
+    // 위아래에서 다른 등급으로 보이는 날이 온다. MI-POLISH-2에서 요약 표시
+    // 자체가 사라졌으므로 이제 매핑뿐 아니라 **표시**도 하나다.
     // 주석에는 별이 나올 수 있으므로(왜 5칸인지 설명한다) 값 선언만 센다.
     expect((radar.match(/mark: "★/g) ?? []).length).toBe(3);
     expect(panel).not.toContain('mark: "★');
@@ -92,18 +119,22 @@ describe("등급 어휘는 한 곳에서만 나온다", () => {
     // 주석은 "☆☆☆☆☆로 그리면 안 된다"고 설명하므로 그 문자열을 갖는다.
     // 실제로 그릴 수 있는 값(LEVEL_STARS의 mark)에 그 별이 없다는 것만 본다.
     expect(radar).not.toContain('mark: "☆☆☆☆☆"');
-    // 결측 축은 두 컴포넌트 모두 emptyStateForAxis의 칩을 쓴다.
-    expect((radar.match(/emptyStateForAxis\(axis\.state\)/g) ?? []).length).toBe(2);
+    // 결측 축은 별점 대신 빈 상태 칩을 쓴다. MI-POLISH-2에서 축을 그리는
+    // 컴포넌트가 MiAxisStars 하나로 줄어서 호출도 한 번이다 — 개수가 줄어든
+    // 것은 규칙이 느슨해진 것이 아니라 그 규칙을 어길 수 있는 자리가 없어진 것이다.
+    expect((radar.match(/emptyStateForAxis\(axis\.state\)/g) ?? []).length).toBe(1);
   });
 });
 
 describe("판단 근거 네 축은 여전히 화면에 있다", () => {
-  it("⑤ 판단 근거의 MiAxisStars가 사슬 뒤에 그대로 있다", () => {
-    // 첫 화면의 세 줄은 요약이다. 결측 사유·모순 문장·🎯 상품 판단 신뢰도는
-    // 여전히 ⑤에만 있고, 이 테스트가 그 자리를 지킨다(정보 손실 없음).
+  it("④ 판단 근거가 사슬 뒤 접힘 안에 그대로 있다", () => {
+    // 결측 사유·모순 문장·🎯 상품 판단 신뢰도는 여전히 ④에만 있고, 이 테스트가
+    // 그 자리를 지킨다(정보 손실 없음). MI-POLISH-2에서 바뀐 것은 층이다:
+    // 본문 블록이었던 ④가 「왜 이렇게 판단했나요?」 안으로 들어갔다.
     const chainAt = panel.indexOf("<PriceChainView");
     const evidenceAt = panel.indexOf("<MiAxisStars");
     expect(evidenceAt).toBeGreaterThan(chainAt);
+    expect(evidenceAt).toBeGreaterThan(detailOpenAt);
     expect(panel).toContain("PRICE_SECTION_TITLE.DECISION_EVIDENCE");
   });
 });

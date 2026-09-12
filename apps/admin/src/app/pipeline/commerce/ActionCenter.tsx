@@ -35,6 +35,13 @@ import type { PanelMode } from "./stage-focus";
  * ④/채널 화면에서는 본문이 등록 행동을 갖는다 — 같은 목록을 오른쪽에 한 번 더
  * 두면 CEO가 지적한 "우측 Action 카드가 여러 곳에서 반복된다"가 그대로다.
  * 접어도 결론과 진행 상황은 남는다(지우는 것이 아니다).
+ *
+ * ── MI-POLISH-2(CEO 지시, 2026-09-12) — 새 규칙 하나 ──────────────────────
+ * **MI 판단 화면에서는 작업 진행상태를 반복해서 보여주지 않는다.** 진행은 상단
+ * workflow bar 하나의 것이다. 판단이 본문의 주인공인 동안(stage-focus의
+ * PanelMode="DEFERRED") 이 기둥에 남는 **누를 수 있는 것은 판매 판단 하나**이고,
+ * 등록 전 확인과 커머스 등록은 각각 한 줄로 접힌다. 그 한 줄이 진척 숫자를
+ * 갖지 않는 것이 SUMMARY와의 차이다 — 숫자를 적는 순간 그게 곧 반복이다.
  */
 export function ActionCenter({
   verdict,
@@ -126,7 +133,12 @@ export function ActionCenter({
           아니라 이미 계산된 상품정보 레벨/채널별 priorityItems를 옮긴다. */}
       <section className="rounded-lg border border-border bg-surface px-3 py-2.5 shadow-subtle">
         <p className="mb-1 text-[11px] font-medium leading-4 text-text-tertiary">등록 전 확인</p>
-        {checklistMode === "SUMMARY" ? (
+        {checklistMode === "DEFERRED" ? (
+          // MI-POLISH-2 — 판단 화면에서는 진척(N/M · 지금 할 일)을 적지 않는다.
+          // 그 숫자는 상단 workflow bar가 이미 갖고 있고, 여기 한 번 더 적으면
+          // 아직 팔지 말지도 정하지 않은 셀러가 등록 준비부터 읽게 된다.
+          <p className="text-xs text-text-secondary">판매 판단이 끝나면 여기서 확인합니다.</p>
+        ) : checklistMode === "SUMMARY" ? (
           // 본문이 같은 목록을 작업면으로 펼치고 있다 — 여기서는 진척만 남긴다.
           <>
             <p className="text-xs font-medium text-text-primary">
@@ -172,7 +184,15 @@ export function ActionCenter({
           채널을 하나로 합치지 않는다 — 등록은 여전히 채널마다 따로 간다. */}
       <section className="rounded-lg border border-border bg-surface px-3 py-2.5 shadow-subtle">
         <p className="mb-1 text-[11px] font-medium leading-4 text-text-tertiary">커머스 등록</p>
-        {channelsMode === "SUMMARY" ? (
+        {channelsMode === "DEFERRED" ? (
+          // 채널 이름은 남긴다 — 목록에서 빼면 "따조는 이 채널을 지원 안 하나?"가
+          // 된다(registration-channels.ts의 판단 그대로). 접는 것은 버튼과 준비
+          // 상태 점이다: 판단이 끝나지 않았는데 "준비됨/확인 3건"을 세어 봐야
+          // 셀러가 지금 할 수 있는 일이 없다.
+          <p className="text-xs text-text-secondary">
+            {channels.map((channel) => channel.label).join(" · ")} — 판단 뒤에 등록합니다.
+          </p>
+        ) : channelsMode === "SUMMARY" ? (
           // 본문(④ 채널 카드) 또는 채널 화면 자체가 등록 행동을 갖고 있다.
           // 같은 버튼을 여기 한 번 더 두면 어느 쪽이 진짜인지 알 수 없어진다.
           // 상태는 남긴다 — 접는 것은 행동이지 사실이 아니다.

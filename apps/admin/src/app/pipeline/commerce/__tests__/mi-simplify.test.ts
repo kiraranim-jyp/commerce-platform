@@ -142,16 +142,23 @@ describe("② 한국 시장 경쟁가격은 비교 대상이 없으면 DOM에 �
     expect(comparison.domestic.value).not.toBeNull();
   });
 
-  it("렌더 지점이 그 값으로 **게이팅**된다 — 빈 카드가 아니라 블록이 없다", () => {
+  it("게이트가 뷰의 첫 줄이다 — 호출부가 빠뜨릴 수 있는 자리 자체가 없다", () => {
     // "빈 칸 두 개짜리 카드"와 "카드 없음"은 다른 화면이다. 빈 칸은 정보가
     // 아니라 질문이라, 셀러는 조회가 고장났는지 자기가 뭘 안 했는지를 스스로
-    // 추론해야 했다. 조건이 렌더 바로 앞에 있어야 React가 아무것도 만들지 않는다.
-    const gateAt = panel.indexOf("{marketComparison.hasComparable && (");
-    const viewAt = panel.indexOf("<MarketComparisonView");
-    expect(gateAt).toBeGreaterThan(-1);
-    expect(gateAt).toBeLessThan(viewAt);
-    // 게이트와 렌더 사이에 다른 렌더가 끼어 있지 않다(게이트가 이 블록만 덮는다).
-    expect(panel.slice(gateAt, viewAt).trim()).toBe("{marketComparison.hasComparable && (");
+    // 추론해야 했다.
+    //
+    // MI-POLISH-2(CEO 지시, 2026-09-12) — 그 게이트가 호출부의
+    // `{marketComparison.hasComparable && (…)}`에서 **뷰 안**으로 들어갔다.
+    // 호출부 조건은 이 뷰를 한 번 더 쓰는 사람이 빠뜨릴 수 있고, 무엇보다
+    // "빈 카드가 아니라 카드 없음"을 소스 배치로는 증명할 수 없다 — 실제 렌더가
+    // 빈 문자열이라는 것은 mi-polish.test.ts가 DOM으로 확인한다.
+    const viewAt = panel.indexOf("function MarketComparisonView");
+    const bodyAt = panel.indexOf("return (", viewAt);
+    const gateAt = panel.indexOf("if (!comparison.hasComparable) return null;", viewAt);
+    expect(gateAt).toBeGreaterThan(viewAt);
+    expect(gateAt).toBeLessThan(bodyAt);
+    // 호출부에는 조건이 남아 있지 않다(두 곳이 각자 세면 언젠가 갈라진다).
+    expect(panelCode).not.toContain("{marketComparison.hasComparable && (");
   });
 
   it("숨긴 사실은 판정 안에 남는다 — '판단하지 않았다'를 말하지 않고 지우지 않는다", () => {
@@ -271,9 +278,13 @@ describe("본문은 짧아졌고, 다음 추가는 툴팁·상세로 내려앉�
    * 좁혀진다 — 그게 이번 지시가 코드에 남기라고 한 규칙이다.
    */
   it("본문 코드 줄 수가 MI-SIMPLIFY-1 이전(169줄)보다 줄어든 채로 남는다", () => {
+    // MI-POLISH-2(CEO 지시, 2026-09-12) — 상한이 한 번 더 내려간다: 144 → 116.
+    // 축 세 줄 · ④ 판단 근거 · 👉 안내 문장 · cta.hint · 기준 문장들이 전부
+    // 툴팁과 「왜 이렇게 판단했나요?」로 내려갔다(mi-polish.test.ts가 그 이동을
+    // 항목별로 고정한다). 여기 남는 것은 판정 · ① · ② · ③ · 바닥 한 줄뿐이다.
     const lines = bodyCode.split("\n").filter((line) => line.trim()).length;
     expect(lines).toBeLessThan(169);
-    expect(lines).toBeLessThanOrEqual(148);
+    expect(lines).toBeLessThanOrEqual(118);
   });
 
   it("본문에 남는 것은 판정 · ① · ② · ③ 넷뿐이다", () => {

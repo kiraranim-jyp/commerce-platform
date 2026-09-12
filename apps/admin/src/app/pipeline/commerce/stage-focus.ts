@@ -62,8 +62,25 @@ export type ImageRole =
 /** 본문 덩어리의 무게. MAIN은 펼친 채, COLLAPSED는 제목 + ▾만. */
 export type SectionWeight = "MAIN" | "COLLAPSED";
 
-/** 오른쪽 Action Center의 각 블록을 목록으로 둘지 한 줄로 접을지. */
-export type PanelMode = "LIST" | "SUMMARY";
+/**
+ * 오른쪽 Action Center의 각 블록을 어느 무게로 둘지.
+ *
+ *   LIST     목록 그대로 — 여기서 할 일이 있다.
+ *   SUMMARY  본문이 같은 목록을 갖고 있다 — 진척만 한 줄로 남긴다.
+ *   DEFERRED 아직 이 단계의 일이 아니다 — 진행상태조차 반복하지 않는다.
+ *
+ * ── MI-POLISH-2(CEO 지시, 2026-09-12) — DEFERRED가 왜 필요한가 ─────────────
+ * SUMMARY와 DEFERRED는 둘 다 "접는다"지만 접는 이유가 정반대다. SUMMARY는
+ * *같은 목록이 본문에 있어서* 오른쪽이 사본을 만들지 않는 것이고, DEFERRED는
+ * *아직 그 일을 할 때가 아니라서* 오른쪽이 애초에 말하지 않는 것이다.
+ *
+ * 이 구분이 없으면 ② 시장 판단 화면에서 오른쪽 기둥이 "등록 전 확인 0/7 ·
+ * 지금 할 일: 카테고리 확정"을 띄운다. 그건 상단 workflow bar가 이미 말하고
+ * 있는 진행상태이고, 아직 팔지 말지도 정하지 않은 셀러에게 등록 준비 진척을
+ * 들이미는 것은 판단을 방해한다 — 이번 지시가 세운 규칙이 그것이다:
+ * **MI 판단 화면에서는 작업 진행상태를 반복해서 보여주지 않는다.**
+ */
+export type PanelMode = "LIST" | "SUMMARY" | "DEFERRED";
 
 /**
  * 상단 Flow에서 한 단계를 눌렀을 때 할 수 있는 일.
@@ -165,6 +182,21 @@ export function resolveStageFocus(input: StageFocusInput): StageFocus {
   const bodyOwnsChannels =
     surface === "CHANNEL" || (surface === "PRODUCT" && stage === "COMMERCE_REGISTERING");
 
+  /**
+   * MI-POLISH-2(CEO 지시, 2026-09-12) — 판단 화면이 열려 있는 동안 오른쪽은
+   * 판단 하나만 말한다.
+   *
+   * 여기서 묻는 것은 "지금 단계가 ②인가"가 아니라 "MI가 본문의 주인공인가"다.
+   * ③④에서 셀러가 [판단 상세보기]로 MI를 펼쳤을 때도 화면이 하는 일은 같기
+   * 때문이다 — 판단을 다시 읽는 중이다. mi 값을 그대로 쓰면 그 판단이 한 곳
+   * (위 mi 계산)에서만 내려진다.
+   *
+   * 접는 것은 **행동과 진행상태**뿐이다. 채널 이름·판정·등록 경로는 그대로
+   * 남는다(ActionCenter의 DEFERRED 분기 참고) — 지우는 것이 아니라, 지금
+   * 물어야 할 질문 하나만 남기는 것이다.
+   */
+  const miOwnsBody = mi === "FULL";
+
   return {
     stage,
     surface,
@@ -174,8 +206,10 @@ export function resolveStageFocus(input: StageFocusInput): StageFocus {
     marketEvidence: stage === "MARKET_JUDGING" ? "MAIN" : "COLLAPSED",
     sourceData: "COLLAPSED",
     actionCenter: {
-      checklist: bodyOwnsChecklist ? "SUMMARY" : "LIST",
-      channels: bodyOwnsChannels ? "SUMMARY" : "LIST",
+      // 본문이 같은 목록을 갖고 있는 쪽이 먼저다. 그때는 "지금 저기서 하고
+      // 있다"는 진척이 반복이 아니라 안내이기 때문이다(UX 2.2 그대로).
+      checklist: bodyOwnsChecklist ? "SUMMARY" : miOwnsBody ? "DEFERRED" : "LIST",
+      channels: bodyOwnsChannels ? "SUMMARY" : miOwnsBody ? "DEFERRED" : "LIST",
     },
   };
 }

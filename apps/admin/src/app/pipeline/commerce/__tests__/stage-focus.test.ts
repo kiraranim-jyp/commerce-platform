@@ -169,10 +169,37 @@ describe("Action Center는 본문이 가진 블록을 반복하지 않는다", (
     }
   });
 
-  it("②에서는 오른쪽이 목록 그대로다 — 본문은 판단 근거를 보고 있다", () => {
+  /**
+   * MI-POLISH-2(CEO 지시, 2026-09-12) — **MI 판단 화면에서는 작업 진행상태를
+   * 반복해서 보여주지 않는다.**
+   *
+   * ②에서 오른쪽이 목록 그대로였던 것이 이번에 뒤집힌 규칙이다. 그 화면에서
+   * 오른쪽 기둥은 "등록 전 확인 0/7 · 지금 할 일: 카테고리 확정"과 채널 버튼
+   * 셋을 띄우고 있었는데, 셀러는 아직 **팔지 말지도 정하지 않았다**. 진행상태는
+   * 상단 workflow bar 하나의 것이고, 이 기둥이 그것을 한 번 더 적으면 판단
+   * 화면에서 가장 큰 덩어리가 등록 준비 진척이 된다.
+   */
+  it("②에서는 오른쪽이 판단 하나만 말한다 — 진행상태를 반복하지 않는다", () => {
     const market = focus("MARKET_JUDGING");
-    expect(market.actionCenter.checklist).toBe("LIST");
-    expect(market.actionCenter.channels).toBe("LIST");
+    expect(market.mi).toBe("FULL");
+    expect(market.actionCenter.checklist).toBe("DEFERRED");
+    expect(market.actionCenter.channels).toBe("DEFERRED");
+  });
+
+  it("판단을 펼쳐 둔 ③에서도 같다 — 판단이 본문의 주인공인가가 기준이다", () => {
+    // 단계가 아니라 mi 값을 보기 때문에, ③④에서 [판단 상세보기]로 펼친 경우도
+    // 같은 화면이다(그때 셀러가 하는 일도 판단을 다시 읽는 것이다).
+    const opened = focus("REGISTRATION_PREPARING", { marketDetailOpen: true });
+    expect(opened.mi).toBe("FULL");
+    // 체크리스트는 본문이 갖고 있으므로 진척 한 줄이 반복이 아니라 안내다.
+    expect(opened.actionCenter.checklist).toBe("SUMMARY");
+    expect(opened.actionCenter.channels).toBe("DEFERRED");
+  });
+
+  it("접힌 요약(SUMMARY)일 때는 오른쪽이 목록 그대로다 — 그때는 판단 화면이 아니다", () => {
+    const channelSurface = focus("REGISTRATION_PREPARING", { surface: "CONTENT" });
+    expect(channelSurface.mi).toBe("SUMMARY");
+    expect(channelSurface.actionCenter.channels).toBe("LIST");
   });
 
   it("어떤 단계·작업면 조합에서도 같은 블록이 본문과 오른쪽에 동시에 펼쳐지지 않는다", () => {
