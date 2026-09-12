@@ -115,7 +115,6 @@ export function PriceCalculationDetail({
   product,
   onUpdateOriginalPrice,
   onUpdatePriceBreakdown,
-  onUpdateCustomsCost,
   exchangeRates,
   exchangeRatesLoading,
   onRefreshExchangeRates,
@@ -126,7 +125,6 @@ export function PriceCalculationDetail({
   product: CanonicalProduct;
   onUpdateOriginalPrice?: (patch: Partial<{ amount: number; currency: string }>) => void;
   onUpdatePriceBreakdown: (breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) => void;
-  onUpdateCustomsCost: (patch: Partial<{ customsDutyKrw: number | null; customsVatKrw: number | null }>) => void;
   exchangeRates: { rates: Record<string, number>; fetchedAt: string; source: "frankfurter" | "fallback" } | null;
   exchangeRatesLoading: boolean;
   onRefreshExchangeRates: () => void;
@@ -420,64 +418,33 @@ export function PriceCalculationDetail({
         </p>
       )}
 
-      <CustomsCostSection
-        domesticShippingCostKrw={domesticShippingCostKrw}
-        customsDutyKrw={product.customsDutyKrw?.value ?? null}
-        customsVatKrw={product.customsVatKrw?.value ?? null}
-        onUpdateCustomsCost={onUpdateCustomsCost}
-      />
+      <SellerBorneCostSection domesticShippingCostKrw={domesticShippingCostKrw} />
     </div>
   );
 }
 
 /** P-3-2(대표님 지시, 2026-08-28) — 위 "가격 계산 Breakdown"(computePriceBreakdown,
- * 권장 판매가격 공식)과 완전히 별개다. 이 값들은 Market Intelligence의
+ * 권장 판매가격 공식)과 완전히 별개다. 이 값은 Market Intelligence의
  * computeUnifiedPriceDecision()에만 쓰이고, 권장 판매가격/예상 이익(위 계산)에는
  * 전혀 영향을 주지 않는다 — 기존 계산식을 건드리지 않는다는 원칙을 그대로
  * 지킨다. 국내 배송원가는 Settings에서만 고칠 수 있는 판매자 공통 기본값이라
- * 여기서는 읽기전용으로만 보여준다(P-3-1에서 확정: 국내배송원가=Settings
- * 기본값, 관세/부가세=상품별). */
-function CustomsCostSection({
-  domesticShippingCostKrw,
-  customsDutyKrw,
-  customsVatKrw,
-  onUpdateCustomsCost,
-}: {
-  domesticShippingCostKrw: number | null;
-  customsDutyKrw: number | null;
-  customsVatKrw: number | null;
-  onUpdateCustomsCost: (patch: Partial<{ customsDutyKrw: number | null; customsVatKrw: number | null }>) => void;
-}) {
-  const [dutyDraft, setDutyDraft] = useState(customsDutyKrw != null ? String(customsDutyKrw) : "");
-  const [vatDraft, setVatDraft] = useState(customsVatKrw != null ? String(customsVatKrw) : "");
-  // LiveNumberField와 같은 패턴 — 외부에서(스냅샷 전환 등) product.customsDutyKrw/
-  // customsVatKrw가 바뀌면 로컬 draft를 다시 동기화한다.
-  const [syncedDuty, setSyncedDuty] = useState(customsDutyKrw);
-  const [syncedVat, setSyncedVat] = useState(customsVatKrw);
-  if (customsDutyKrw !== syncedDuty) {
-    setSyncedDuty(customsDutyKrw);
-    setDutyDraft(customsDutyKrw != null ? String(customsDutyKrw) : "");
-  }
-  if (customsVatKrw !== syncedVat) {
-    setSyncedVat(customsVatKrw);
-    setVatDraft(customsVatKrw != null ? String(customsVatKrw) : "");
-  }
-
-  function commitDuty() {
-    const n = dutyDraft.trim() === "" ? null : Number(dutyDraft);
-    onUpdateCustomsCost({ customsDutyKrw: n != null && Number.isFinite(n) ? n : null });
-  }
-  function commitVat() {
-    const n = vatDraft.trim() === "" ? null : Number(vatDraft);
-    onUpdateCustomsCost({ customsVatKrw: n != null && Number.isFinite(n) ? n : null });
-  }
-
+ * 여기서는 읽기전용으로만 보여준다(P-3-1에서 확정).
+ *
+ * MI-COST-POLICY-1(대표님 결정, 2026-09-12) — 여기 있던 관세/부가세 입력 두 칸을
+ * 없앴다. "관세·부가세는 구매자 부담이며 판매자 가격/수익성 계산에 포함하지
+ * 않는다"는 결정이라, 셀러에게 물어볼 이유 자체가 사라졌다. 입력칸만 지우고
+ * 계산에 남겨두면 셀러가 못 보는 값이 마진을 깎는 상태가 되므로, 엔진
+ * (LANDED_COST_PARTS)에서 먼저 빼고 그 결과로 이 칸이 필요 없어진 순서다.
+ * 그래서 이 블록은 이제 "판매자가 실제로 부담하는 비용" 한 줄만 남는다 —
+ * 블록째 지우지 않는 이유는 국내 배송원가가 여전히 마진 계산에 들어가는데
+ * 이 화면 어디에도 그 사실을 말하는 곳이 없어지기 때문이다. */
+function SellerBorneCostSection({ domesticShippingCostKrw }: { domesticShippingCostKrw: number | null }) {
   return (
     <div className="mt-2 space-y-1.5 border-t border-border pt-2 text-sm">
       {/* P2-4 — 제목(primary)과 그 제목이 무엇을 뜻하는지(secondary)를 한 단계로
           가른다. 이 문장이야말로 "왜 이 숫자가 권장 판매가격을 안 바꾸는가"에
           대한 답이다. */}
-      <p className="text-xs font-medium text-text-primary">예상 구매 비용(판매 판단용)</p>
+      <p className="text-xs font-medium text-text-primary">판매자 부담 비용(판매 판단용)</p>
       <p className="text-xs text-text-secondary">
         위 권장 판매가격 계산에는 반영되지 않습니다 — 이 카드 맨 위의 판매 판단(예상 마진)에만 쓰입니다.
       </p>
@@ -492,34 +459,6 @@ function CustomsCostSection({
             </a>
           </span>
         )}
-      </Row>
-      <Row label="관세">
-        <div className="flex items-center gap-1">
-          <span className="text-text-secondary">₩</span>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={dutyDraft}
-            placeholder="미확인"
-            onChange={(e) => setDutyDraft(e.target.value)}
-            onBlur={commitDuty}
-            className={`w-24 ${FIELD_CLASS}`}
-          />
-        </div>
-      </Row>
-      <Row label="부가세">
-        <div className="flex items-center gap-1">
-          <span className="text-text-secondary">₩</span>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={vatDraft}
-            placeholder="미확인"
-            onChange={(e) => setVatDraft(e.target.value)}
-            onBlur={commitVat}
-            className={`w-24 ${FIELD_CLASS}`}
-          />
-        </div>
       </Row>
     </div>
   );

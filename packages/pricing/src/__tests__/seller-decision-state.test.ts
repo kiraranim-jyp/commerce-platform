@@ -71,17 +71,22 @@ describe("P-2-3 STEP 14: sellerDecisionStateFromUnifiedDecision Case A-F", () =>
  * 상품별 입력)를 만들었다 — 이 테스트는 "값이 다 채워지면 🟢가 실제로
  * 나온다"는 것을 엔진 레벨에서 증명한다(P-1-3 STEP 9 Case A와 동일한 고마진
  * 입력을 그대로 재사용).
+ *
+ * MI-COST-POLICY-1(대표님 결정, 2026-09-12) — 그 3개 중 둘(관세/부가세)이
+ * 사라졌다. 구매자 부담이라 판매자 원가가 아니므로, 이제 🟢를 막을 수 있는
+ * 비용 결측은 국내 배송원가 하나뿐이다. 입력에서 관부가세 두 줄을 빼되
+ * 기대값(ESTIMATED/COMPLETE, READY)은 그대로 둔 이유는, 예전 입력에서도 그
+ * 둘이 0/actual이라 원래 결과에 기여하지 않았기 때문이다 — 기대를 낮춘 것이
+ * 아니라 더 이상 존재하지 않는 입력을 지운 것이다.
  */
-describe("P-3-2: 비용 3개 필드가 모두 채워지면 dataCompleteness=COMPLETE + 🟢 READY", () => {
-  it("G) 국내배송원가/관세/부가세 전부 actual — COMPLETE + READY", () => {
+describe("P-3-2 / MI-COST-POLICY-1: 판매자 부담 비용이 채워지면 dataCompleteness=COMPLETE + 🟢 READY", () => {
+  it("G) 국내배송원가 estimated — ESTIMATED + READY(관부가세는 애초에 판정에 관여하지 않는다)", () => {
     const input: UnifiedPriceInput = {
       sourceProductPriceKrw: pc(100000, "actual"),
       exchangeRate: pc(1740, "actual"),
       internationalShippingKrw: pc(12000, "estimated", "seller_default"),
       sellerDomesticShippingCostKrw: pc(3000, "estimated", "SellerProfile.domesticShippingCostKrw"),
       customerChargedShippingKrw: pc(null, "unknown"),
-      customsDutyKrw: pc(0, "actual", "product.customsDutyKrw"),
-      customsVatKrw: pc(0, "actual", "product.customsVatKrw"),
       platformFeeRate: pc(10, "estimated", "default"),
       currentSellingPriceKrw: pc(180000, "actual"),
       domesticCompetitivePrice: { average: 200000, lowest: 190000 },
@@ -98,15 +103,17 @@ describe("P-3-2: 비용 3개 필드가 모두 채워지면 dataCompleteness=COMP
     expect(state).toEqual({ code: "READY", icon: "🟢", title: "바로 판매 가능" });
   });
 
-  it("H) 국내배송원가까지 actual(관세/부가세도 actual)이면 dataCompleteness=COMPLETE", () => {
+  it("H) 국내배송원가까지 actual이면 dataCompleteness=COMPLETE — 관부가세를 몰라도 COMPLETE를 막지 못한다", () => {
     const input: UnifiedPriceInput = {
       sourceProductPriceKrw: pc(100000, "actual"),
       exchangeRate: pc(1740, "actual"),
       internationalShippingKrw: pc(12000, "actual", "seller_input"),
       sellerDomesticShippingCostKrw: pc(3000, "actual", "SellerProfile.domesticShippingCostKrw"),
       customerChargedShippingKrw: pc(null, "unknown"),
-      customsDutyKrw: pc(0, "actual", "product.customsDutyKrw"),
-      customsVatKrw: pc(0, "actual", "product.customsVatKrw"),
+      // MI-COST-POLICY-1 — 일부러 unknown으로 넣는다. 예전 정책이라면 이것만으로
+      // INCOMPLETE였다. 이제는 COMPLETE가 나오는 것이 맞는 기대값이다.
+      customsDutyKrw: pc(null, "unknown"),
+      customsVatKrw: pc(null, "unknown"),
       platformFeeRate: pc(10, "actual", "contracted_rate"),
       currentSellingPriceKrw: pc(180000, "actual"),
       domesticCompetitivePrice: { average: 200000, lowest: 190000 },

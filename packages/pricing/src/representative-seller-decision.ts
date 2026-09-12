@@ -102,7 +102,10 @@ const VERDICT_COPY: Record<RepresentativeVerdictCode, { icon: RepresentativeVerd
   NEEDS_INFO: {
     icon: "🟠",
     title: "추가 정보가 필요합니다",
-    description: "원가, 국제 배송비, 관세/부가세 등 실제 계산에 필요한 정보가 없습니다.",
+    // MI-COST-POLICY-1(대표님 결정, 2026-09-12) — "관세/부가세"를 뺐다. 구매자
+    // 부담이라 계산에 들어가지 않는 값을 "필요한 정보"라고 말하면, 셀러는
+    // 이제 아무도 요구하지 않는 숫자를 찾아 헤매게 된다.
+    description: "원가, 국제 배송비, 국내 배송원가 등 실제 계산에 필요한 정보가 없습니다.",
   },
   HOLD: {
     icon: "🔴",

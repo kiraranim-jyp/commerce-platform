@@ -138,10 +138,10 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
     : null;
 
   // P-3-2(대표님 지시, 2026-08-28) — P-3-1에서 확정한 설계: 국내 배송원가는
-  // 상품마다 다시 입력하지 않는 판매자 기본값(SellerProfile), 관세/부가세는
-  // 카테고리마다 달라 상품별 입력(CanonicalProduct)이다. 둘 다 값이 없으면
+  // 상품마다 다시 입력하지 않는 판매자 기본값(SellerProfile)이다. 값이 없으면
   // 여전히 unknown으로 전달된다 — 이 조회가 실패하거나 프로필이 없어도
-  // 기존과 완전히 동일하게(unknown) 동작한다.
+  // 기존과 완전히 동일하게(unknown) 동작한다. (MI-COST-POLICY-1에서 같이 읽던
+  // 상품별 관세/부가세 입력은 사라졌다 — 구매자 부담이라 판매자 원가가 아니다.)
   const sellerProfile = await getDefaultSellerProfile();
 
   // P-12B(대표님/CPO 지시, 2026-08-31) — 착지원가/추천판매가는 과거 크롤링
@@ -219,14 +219,17 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
   // 제공한다.
   //
   // P-3-2(대표님 지시, 2026-08-28) — P-3-1 조사 이전에는 sellerDomesticShippingCostKrw/
-  // customerChargedShippingKrw/customsDutyKrw/customsVatKrw 4개가 전부 하드코딩된
-  // unknown이었다(추적하는 곳이 없었다). 이제 국내 배송원가는 SellerProfile
-  // 기본값, 관세/부가세는 상품별 입력(product.customsDutyKrw/customsVatKrw)에서
-  // 실제로 채워진 값만 "actual"로 전달한다 — 값이 없으면(아직 입력 전) 여전히
-  // unknown이다(0으로 지어내지 않는다). customerChargedShippingKrw는
-  // SellerProfile.deliveryCharge(고객 청구 배송비)를 그대로 통과시킨다 —
-  // computeUnifiedPriceDecision()의 LANDED_COST_PARTS에 포함되지 않는 정보용
-  // 필드라(unified-price-decision.ts 참고) 원가 합산에는 전혀 영향이 없다.
+  // customerChargedShippingKrw가 하드코딩된 unknown이었다(추적하는 곳이 없었다).
+  // 이제 국내 배송원가는 SellerProfile 기본값에서 실제로 채워진 값만 전달한다 —
+  // 값이 없으면(아직 입력 전) 여전히 unknown이다(0으로 지어내지 않는다).
+  // customerChargedShippingKrw는 SellerProfile.deliveryCharge(고객 청구 배송비)를
+  // 그대로 통과시킨다 — computeUnifiedPriceDecision()의 LANDED_COST_PARTS에
+  // 포함되지 않는 정보용 필드라 원가 합산에는 전혀 영향이 없다.
+  //
+  // MI-COST-POLICY-1(대표님 결정, 2026-09-12) — P-3-2에서 함께 넘기던 관세/부가세
+  // 두 줄은 여기서 사라졌다. 구매자가 통관 때 내는 돈이라 판매자 수익성 계산에
+  // 들어갈 자리가 없다. 이 호출부에서 빼는 것만으로는 부족해 엔진의
+  // LANDED_COST_PARTS 자체에서도 뺐다(화면에서만 감추면 화면이 거짓말을 한다).
   const unifiedDecision: UnifiedPriceDecision | null =
     cost != null && currentSellingPriceKrw != null
       ? computeUnifiedPriceDecision({
@@ -241,14 +244,9 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
             sellerProfile?.deliveryCharge != null
               ? { value: sellerProfile.deliveryCharge, status: "actual", source: "SellerProfile.deliveryCharge" }
               : { value: null, status: "unknown" },
-          customsDutyKrw:
-            product.customsDutyKrw?.value != null
-              ? { value: product.customsDutyKrw.value, status: "actual", source: "product.customsDutyKrw" }
-              : { value: null, status: "unknown" },
-          customsVatKrw:
-            product.customsVatKrw?.value != null
-              ? { value: product.customsVatKrw.value, status: "actual", source: "product.customsVatKrw" }
-              : { value: null, status: "unknown" },
+          // MI-COST-POLICY-1 — 관세/부가세는 여기서 더 이상 넘기지 않는다.
+          // product.customsDutyKrw/customsVatKrw에 저장된 값은 그대로 남지만
+          // 읽지 않는다(과거 스냅샷을 고쳐 쓰지 않기 위해 지우지도 않는다).
           platformFeeRate: { value: cost.feePercent, status: "estimated", source: "default" },
           currentSellingPriceKrw: { value: currentSellingPriceKrw, status: "actual" },
           domesticCompetitivePrice: {

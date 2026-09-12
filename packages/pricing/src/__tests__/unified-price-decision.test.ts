@@ -22,8 +22,6 @@ describe("P-1-3 STEP 9: computeUnifiedPriceDecision 회귀 케이스 A-G", () =>
       internationalShippingKrw: pc(12000, "estimated", "seller_default"),
       sellerDomesticShippingCostKrw: pc(3000, "actual"),
       customerChargedShippingKrw: pc(null, "unknown"),
-      customsDutyKrw: pc(0, "actual"),
-      customsVatKrw: pc(0, "actual"),
       platformFeeRate: pc(10, "estimated", "default"),
       currentSellingPriceKrw: pc(180000, "actual"),
       domesticCompetitivePrice: { average: 200000, lowest: 190000 },
@@ -44,8 +42,6 @@ describe("P-1-3 STEP 9: computeUnifiedPriceDecision 회귀 케이스 A-G", () =>
       internationalShippingKrw: pc(12000, "estimated", "seller_default"),
       sellerDomesticShippingCostKrw: pc(0, "actual"),
       customerChargedShippingKrw: pc(null, "unknown"),
-      customsDutyKrw: pc(0, "actual"),
-      customsVatKrw: pc(0, "actual"),
       platformFeeRate: pc(10, "estimated", "default"),
       currentSellingPriceKrw: pc(140980, "actual"),
       domesticCompetitivePrice: { average: 145000, lowest: 138000 },
@@ -70,8 +66,6 @@ describe("P-1-3 STEP 9: computeUnifiedPriceDecision 회귀 케이스 A-G", () =>
       internationalShippingKrw: pc(12000, "estimated", "seller_default"),
       sellerDomesticShippingCostKrw: pc(null, "unknown"),
       customerChargedShippingKrw: pc(null, "unknown"),
-      customsDutyKrw: pc(0, "actual"),
-      customsVatKrw: pc(0, "actual"),
       platformFeeRate: pc(10, "estimated", "default"),
       currentSellingPriceKrw: pc(180000, "actual"),
       domesticCompetitivePrice: { average: 200000, lowest: 190000 },
@@ -89,7 +83,20 @@ describe("P-1-3 STEP 9: computeUnifiedPriceDecision 회귀 케이스 A-G", () =>
     expect(result.level).toBe("GREEN");
   });
 
-  it("D) 관부가세 UNKNOWN — 0원으로 조작하지 않고 missingComponents에 명시적으로 남긴다", () => {
+  /**
+   * MI-COST-POLICY-1(대표님 결정, 2026-09-12) — 이 케이스는 **정책 변경으로
+   * 기대값이 뒤집혔다**(테스트를 느슨하게 만든 것이 아니다).
+   *
+   * 원래 D는 "관부가세를 모르면 missingComponents=['관세','부가세'] +
+   * INCOMPLETE"를 고정했다. 그 시절 정책은 관부가세가 판매자 원가라는
+   * 것이었고, 모르면 판단을 신뢰할 수 없다는 결론이 옳았다. 이제
+   * "관세·부가세는 구매자 부담이며 판매자 가격/수익성 계산에 포함하지
+   * 않는다"로 정책이 바뀌었으므로, 같은 입력에서 **모른다는 사실 자체가
+   * 판단을 흐리지 않는다**는 것이 맞는 기대값이다. 입력값(150000/15000/5000/
+   * 220000)은 한 글자도 바꾸지 않고 기대값만 새 정책으로 옮겼다 — 그래야
+   * 무엇이 달라졌는지가 이 한 파일에서 그대로 읽힌다.
+   */
+  it("D) 관부가세를 몰라도 판단은 흐려지지 않는다 — 판매자 원가가 아니므로 missingComponents에 오르지 않는다", () => {
     const input: UnifiedPriceInput = {
       sourceProductPriceKrw: pc(150000, "actual"),
       exchangeRate: pc(1740, "actual"),
@@ -102,9 +109,12 @@ describe("P-1-3 STEP 9: computeUnifiedPriceDecision 회귀 케이스 A-G", () =>
       currentSellingPriceKrw: pc(220000, "actual"),
     };
     const result = computeUnifiedPriceDecision(input);
-    expect(result.missingComponents).toEqual(["관세", "부가세"]);
-    expect(result.landedCostKrw).toEqual({ value: 170000, status: "incomplete" });
-    expect(result.dataCompleteness).toBe("INCOMPLETE");
+    expect(result.missingComponents).toEqual([]);
+    // 착지원가 숫자 자체(170000)는 정책 변경 전후로 같다 — 예전에도 unknown인
+    // 관부가세는 더해지지 않았기 때문이다. 바뀐 것은 status다: 예전에는
+    // "관세를 몰라서 incomplete"였고, 이제는 알아야 할 것을 다 안 상태다.
+    expect(result.landedCostKrw).toEqual({ value: 170000, status: "estimated" });
+    expect(result.dataCompleteness).toBe("ESTIMATED");
   });
 
   it("E) 고객 청구 배송비 존재 — 원가 합산에 자동 반영되지 않고 정보용 필드로만 통과한다", () => {
@@ -114,8 +124,6 @@ describe("P-1-3 STEP 9: computeUnifiedPriceDecision 회귀 케이스 A-G", () =>
       internationalShippingKrw: pc(12000, "estimated", "seller_default"),
       sellerDomesticShippingCostKrw: pc(null, "unknown"),
       customerChargedShippingKrw: pc(3000, "actual", "SellerProfile.deliveryCharge"),
-      customsDutyKrw: pc(0, "actual"),
-      customsVatKrw: pc(0, "actual"),
       platformFeeRate: pc(10, "estimated", "default"),
       currentSellingPriceKrw: pc(150000, "actual"),
     };
@@ -137,8 +145,6 @@ describe("P-1-3 STEP 9: computeUnifiedPriceDecision 회귀 케이스 A-G", () =>
       internationalShippingKrw: pc(12000, "actual", "seller_input"),
       sellerDomesticShippingCostKrw: pc(3000, "actual"),
       customerChargedShippingKrw: pc(null, "unknown"),
-      customsDutyKrw: pc(0, "actual"),
-      customsVatKrw: pc(0, "actual"),
       platformFeeRate: pc(10, "actual", "contracted_rate"),
       currentSellingPriceKrw: pc(150000, "actual"),
     };
@@ -157,8 +163,6 @@ describe("P-1-3 STEP 9: computeUnifiedPriceDecision 회귀 케이스 A-G", () =>
       internationalShippingKrw: pc(12000, "estimated", "seller_default"),
       sellerDomesticShippingCostKrw: pc(3000, "actual"),
       customerChargedShippingKrw: pc(null, "unknown"),
-      customsDutyKrw: pc(0, "actual"),
-      customsVatKrw: pc(0, "actual"),
       platformFeeRate: pc(10, "estimated", "default"),
       currentSellingPriceKrw: pc(180000, "actual"),
       domesticCompetitivePrice: { average: 200000, lowest: 190000 },

@@ -97,7 +97,9 @@ describe("PHASE 3.2 ⑧: 채널 가격을 바꿔도 MI API를 부르지 않는�
     expect(after.priceOverrideKrw).toEqual(before.priceOverrideKrw);
     expect(after.priceBreakdown).toEqual(before.priceBreakdown);
     expect(after.priceValidity).toBe(before.priceValidity);
-    // 관세/부가세 등 마진 계산에 들어가는 나머지 입력도 그대로다.
+    // MI-COST-POLICY-1(2026-09-12) 이후 관세/부가세는 마진 계산에 들어가지
+    // 않지만(구매자 부담), 스냅샷에 저장돼 있던 값은 그대로 남아 있어야 한다 —
+    // 과거 데이터를 고쳐 쓰지 않는다는 원칙이라 이 단언은 그대로 둔다.
     expect(after.customsDutyKrw).toEqual(before.customsDutyKrw);
     expect(after.customsVatKrw).toEqual(before.customsVatKrw);
 

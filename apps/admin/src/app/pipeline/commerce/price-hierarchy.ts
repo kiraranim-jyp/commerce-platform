@@ -446,8 +446,11 @@ export function buildPriceChain(input: PriceChainInput): PriceChainRow[] {
   });
 
   // ⑥ 그래서 남는 값. 착지원가만 빼는 게 아니라 플랫폼 수수료(와 확인된
-  //    관부가세)까지 빠진 값이라, 화면에서 "판매가 − 착지원가"로 암산했을 때
+  //    국내 배송원가)까지 빠진 값이라, 화면에서 "판매가 − 착지원가"로 암산했을 때
   //    맞지 않는다. 그 차이를 숨기지 않고 기준 문장에 적는다.
+  //    MI-COST-POLICY-1(2026-09-12) — 여기 적혀 있던 관부가세는 빠졌다. 화면의
+  //    착지원가(computePriceBreakdown)와 예상 수익(computeUnifiedPriceDecision)이
+  //    어긋나던 원인 하나가 관부가세였는데, 이제 그 차이는 국내 배송원가뿐이다.
   const profitBasis = [
     "내 판매가 − 확인된 원가 − 플랫폼 수수료",
     input.platformFeeKrw != null ? `수수료 ${formatKrwAmount(input.platformFeeKrw)}` : null,

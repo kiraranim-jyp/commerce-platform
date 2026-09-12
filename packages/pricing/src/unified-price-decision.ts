@@ -11,7 +11,8 @@ import { computePriceDecision, priceLevelFromVerdict, type PriceDecisionVerdict,
  * 않는다("기존 계산식 임의 수정 금지", "computeLandedCost()를 삭제하거나
  * 재작성 금지") — computePriceDecision()의 verdict/level 계산 로직은 그대로
  * 재사용하고, 이 함수가 하는 일은 오직 "그 함수에 넘길 costPriceKrw를 배송비/
- * 관부가세/수수료까지 포함한 진짜 원가로 만들어주는 것"뿐이다. MAINTAIN/
+ * 수수료까지 포함한 진짜 원가로 만들어주는 것"뿐이다(관세/부가세는
+ * MI-COST-POLICY-1에서 빠졌다 — 구매자 부담이라 판매자 원가가 아니다). MAINTAIN/
  * CONSIDER_LOWER/MARGIN_RISK, GREEN/YELLOW/RED라는 이름은 절대 바꾸지
  * 않는다(P-1-2에서 확인: 이미 대시보드/UI 전역에서 쓰이는 값이라 이름을
  * 바꾸면 그 자체가 회귀 위험).
@@ -52,8 +53,25 @@ export interface UnifiedPriceInput {
    * 잡고 배송원가를 비용으로 잡는 모델)가 아직 이 시스템에 없기 때문이다.
    * UnifiedPriceDecision에 그대로 통과시켜 화면에서 참고용으로만 보여준다. */
   customerChargedShippingKrw: PriceComponent;
-  customsDutyKrw: PriceComponent;
-  customsVatKrw: PriceComponent;
+  /**
+   * MI-COST-POLICY-1(대표님 결정, 2026-09-12) — **원가 합산에 참여하지 않는다.**
+   *
+   * "관세·부가세는 구매자 부담이며 판매자 가격/수익성 계산에 포함하지 않는다."
+   * 해외직구 통관세는 수입자(=구매자) 명의로 부과되는 돈이라 판매자의 손익에
+   * 들어가는 비용이 아니다. 그런데 P-3-2에서는 이 둘을 LANDED_COST_PARTS에
+   * 넣어 착지원가에서 빼고 있었고, 그 결과 예상이익/마진/verdict가 판매자가
+   * 실제로 치르지 않는 돈만큼 나쁘게 계산됐다. 이제 합산에서 완전히 뺀다 —
+   * 화면에서만 감추면 화면이 거짓말을 하게 되므로 계산 경로 자체에서 뺀다.
+   *
+   * 필드를 지우지 않고 optional로 남기는 이유: 이 값을 아직 넘기는 호출부가
+   * 생기더라도 결과가 달라지지 않는다는 사실을 타입과 테스트로 못 박기 위해서다
+   * (읽는 코드가 한 줄도 없다 — 넘겨도 무시된다).
+   *
+   * @deprecated 판매자 원가가 아니다. 읽지 않는다.
+   */
+  customsDutyKrw?: PriceComponent;
+  /** @deprecated 구매자 부담. customsDutyKrw와 같은 이유로 읽지 않는다. */
+  customsVatKrw?: PriceComponent;
   /** 플랫폼 수수료율(%). 현재 판매가 기준으로 곱한다(computeLandedCost와
    * 동일한 이유 — 실제 정산은 원가가 아니라 판매가 기준으로 떼인다). */
   platformFeeRate: PriceComponent;
@@ -81,18 +99,28 @@ export interface UnifiedPriceDecision {
    * vs SHIPPING_UNKNOWN처럼 서로 다른 차원의 개념을 하나의 enum으로 합치지
    * 않는다"). */
   dataCompleteness: DataCompleteness;
-  /** 원가 합산에서 제외된 항목의 한글 라벨 목록(예: ["국내 배송원가", "관부가세"]). */
+  /** 원가 합산에서 제외된 항목의 한글 라벨 목록(예: ["국내 배송원가"]).
+   * MI-COST-POLICY-1 이후 여기에 "관세"/"부가세"가 들어갈 경로는 없다 —
+   * 판매자 원가가 아닌 값을 "아직 모른다"고 셀러에게 요구하지 않는다. */
   missingComponents: string[];
   /** STEP 8 — 원가 계산에 전혀 관여하지 않은 정보용 값을 그대로 통과시킨다. */
   customerChargedShippingKrw: PriceComponent;
 }
 
+/**
+ * 판매자가 실제로 부담하는 원가만 들어온다.
+ *
+ * MI-COST-POLICY-1(대표님 결정, 2026-09-12) — 여기 있던 관세/부가세 두 줄을
+ * 뺐다. 구매자가 통관 때 따로 내는 돈이라 판매자 손익에 들어갈 자리가 없다.
+ * 이 배열이 곧 착지원가의 정의이고, 그 착지원가가 예상이익 → 마진 → verdict
+ * 까지 그대로 흐르므로, 여기서 빼는 것 하나로 계산 경로 전체에서 사라진다.
+ * missingComponents/dataCompleteness도 같은 배열을 돌기 때문에 "관세를 몰라서
+ * INCOMPLETE"라는 판정 역시 구조적으로 불가능해진다.
+ */
 const LANDED_COST_PARTS: { key: keyof UnifiedPriceInput; label: string }[] = [
   { key: "sourceProductPriceKrw", label: "해외 상품가(환산)" },
   { key: "internationalShippingKrw", label: "국제배송비" },
   { key: "sellerDomesticShippingCostKrw", label: "국내 배송원가" },
-  { key: "customsDutyKrw", label: "관세" },
-  { key: "customsVatKrw", label: "부가세" },
 ];
 
 export function computeUnifiedPriceDecision(input: UnifiedPriceInput): UnifiedPriceDecision {

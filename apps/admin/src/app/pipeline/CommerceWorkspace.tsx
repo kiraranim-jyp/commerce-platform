@@ -866,27 +866,13 @@ export function CommerceWorkspace({
     setProduct((prev) => ({ ...prev, priceBreakdown: breakdown }));
   }
 
-  /** P-3-2(대표님 지시, 2026-08-28) — 관세/부가세는 카테고리마다 달라 상품별로
-   * 직접 입력한다(국내 배송원가와 반대로 SellerProfile이 아니라 상품에 저장 —
-   * P-3-1에서 확정한 설계). null을 넘기면(입력값 지움) 다시 unknown으로
-   * 돌아간다 — 0으로 저장하지 않는다. */
-  function updateCustomsCost(patch: Partial<{ customsDutyKrw: number | null; customsVatKrw: number | null }>) {
-    setProduct((prev) => ({
-      ...prev,
-      ...(patch.customsDutyKrw !== undefined && {
-        customsDutyKrw:
-          patch.customsDutyKrw == null
-            ? undefined
-            : { value: patch.customsDutyKrw, source: "USER_EDITED" as FieldSource, confidence: 1 },
-      }),
-      ...(patch.customsVatKrw !== undefined && {
-        customsVatKrw:
-          patch.customsVatKrw == null
-            ? undefined
-            : { value: patch.customsVatKrw, source: "USER_EDITED" as FieldSource, confidence: 1 },
-      }),
-    }));
-  }
+  /* MI-COST-POLICY-1(대표님 결정, 2026-09-12) — 여기 있던 updateCustomsCost()를
+   * 지웠다. "관세·부가세는 구매자 부담이며 판매자 가격/수익성 계산에 포함하지
+   * 않는다"는 결정으로 계산에서 빠졌고, 계산에 쓰이지 않는 값을 셀러에게
+   * 입력받는 통로만 남겨두면 그 자체가 다시 "이 값이 마진에 영향을 준다"는
+   * 오해를 만든다. CanonicalProduct.customsDutyKrw/customsVatKrw 타입 필드와
+   * 이미 저장된 값은 건드리지 않는다 — 과거 스냅샷을 고쳐 쓰지 않기 위해서다
+   * (읽는 코드가 없을 뿐이다). */
 
   /** Sprint A #1 — CategoryRequirementsEditor에서 입력한 값을 저장한다. 빈
    * 문자열로 지우면 다시 자동 매칭/임시값 경로로 돌아간다(build-payload.ts가
@@ -1213,7 +1199,6 @@ export function CommerceWorkspace({
       product={product}
       onUpdateOriginalPrice={updateOriginalPrice}
       onUpdatePriceBreakdown={updatePriceBreakdown}
-      onUpdateCustomsCost={updateCustomsCost}
       exchangeRates={exchangeRates}
       exchangeRatesLoading={exchangeRatesLoading}
       onRefreshExchangeRates={fetchExchangeRates}
@@ -2333,8 +2318,9 @@ export function CommerceWorkspace({
                    MI/PRICE-1(CEO 지시, 2026-09-12) — 바뀐 것은 이 카드가 묻는
                    질문이다. 계산 사슬은 MI ④로 올라갔고 여기 남는 것은 확정
                    하나뿐이다: "권장 143,500원으로 팔 것인가." 그래서 계산에
-                   필요하던 prop 넷(원본가·배송/수수료/마진·관세·환율)이 전부
-                   상세 계산 쪽으로 옮겨갔고, 권장가는 숫자 하나로만 내려온다.
+                   필요하던 prop이 전부 상세 계산 쪽으로 옮겨갔고, 권장가는
+                   숫자 하나로만 내려온다(그중 관부가세 입력은 MI-COST-POLICY-1
+                   에서 아예 사라졌다 — 구매자 부담이라 판매자 원가가 아니다).
 
                    앵커 id를 노드 바깥에 붙이는 이유: 두 자리 중 어디에 놓이든
                    같은 id가 따라와야 handleRequestPriceReview의 스크롤이 성립한다. */

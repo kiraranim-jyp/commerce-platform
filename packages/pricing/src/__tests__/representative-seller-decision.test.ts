@@ -128,7 +128,10 @@ describe("P-8/P-9-B: deriveRepresentativeSellerVerdict", () => {
           verdict: "MAINTAIN",
           dataCompleteness: "INCOMPLETE",
           marginPercent: { value: 30, status: "incomplete" },
-          missingComponents: ["국내 배송원가", "관세"],
+          // MI-COST-POLICY-1(2026-09-12) — "관세"를 뺐다. 엔진이 더 이상
+          // missingComponents에 넣지 않는 라벨이라, 여기 남겨두면 실제로는
+          // 나올 수 없는 입력으로 테스트하는 셈이 된다.
+          missingComponents: ["국내 배송원가"],
         },
         sellability: { level: "GREEN", estimatedMarginPercent: 30, reason: "..." },
         domesticMatched: true,

@@ -55,9 +55,19 @@ describe("P2-1: 카드가 짧아진 이유는 밀도지 삭제가 아니다", ()
     ]) {
       expect(detail, `${label} 줄이 사라졌다`).toContain(label);
     }
-    // 관세/부가세·국내 배송원가(판매 판단용 입력)도 그대로다.
-    for (const label of ["국내 배송원가", "관세", "부가세"]) {
+    // 판매 판단용 입력 줄도 그대로다.
+    //
+    // MI-COST-POLICY-1(대표님 결정, 2026-09-12) — 여기 함께 고정돼 있던
+    // "관세"/"부가세" 두 줄을 뺐다. 이건 줄을 지워 카드를 줄인 것이 아니라
+    // 정책이 바뀐 것이다: 관세·부가세는 구매자 부담이라 판매자 수익성
+    // 계산에 들어가지 않고, 계산에 쓰이지 않는 값을 입력받을 이유가 없다.
+    // 아래에서 그 두 줄이 **없다는 것**을 따로 고정한다(지운 것이 실수로
+    // 되살아나지 않게).
+    for (const label of ["국내 배송원가"]) {
       expect(detail).toContain(`<Row label="${label}">`);
+    }
+    for (const removed of ["관세", "부가세"]) {
+      expect(detail, `${removed} 입력이 되살아났다`).not.toContain(`<Row label="${removed}">`);
     }
   });
 

@@ -211,12 +211,15 @@ export interface CanonicalProduct {
    * 필요 없다 — 대신 이 필드를 모르는 과거 스냅샷을 위해
    * backfillCanonicalProduct()가 빈 객체로 초기화한다. */
   channelPriceOverrides?: Partial<Record<PlatformId, ProvenanceField<number>>>;
-  /** P-3-2(대표님 지시, 2026-08-28) — 관세/부가세는 판매자 공통 기본값이
-   * 아니라 카테고리/HS코드마다 달라 상품별로 직접 입력한다(국내 배송원가와
-   * 반대로 SellerProfile이 아니라 여기 CanonicalProduct에 둔다 — P-3-1
-   * 조사에서 확정한 설계). 사용자가 입력하기 전까지는 없다(0으로 지어내지
-   * 않는다) — computeUnifiedPriceDecision()이 이 필드가 없으면 그대로
-   * unknown으로 받는다. */
+  /** P-3-2(대표님 지시, 2026-08-28)에서 상품별 입력으로 추가됐던 관세/부가세.
+   *
+   * MI-COST-POLICY-1(대표님 결정, 2026-09-12) — **읽는 코드가 한 곳도 없다.**
+   * "관세·부가세는 구매자 부담이며 판매자 가격/수익성 계산에 포함하지 않는다"는
+   * 결정으로 착지원가/예상이익/마진/verdict 어디에서도 쓰이지 않고, 입력 UI도
+   * 사라졌다. 그런데도 타입에서 지우지 않는 이유는 이미 저장된
+   * product_snapshots.workspace jsonb에 이 키가 들어 있는 스냅샷이 있기
+   * 때문이다 — 타입을 지우면 그 값을 지우거나 마이그레이션해야 하고, 그건
+   * 과거 데이터를 고쳐 쓰는 일이다. 읽지 않은 채 그대로 두는 것이 맞다. */
   customsDutyKrw?: ProvenanceField<number>;
   customsVatKrw?: ProvenanceField<number>;
   /** P0(Category Meta -> 동적 입력폼) — 카테고리 확정 후 사용자가 화면에서
