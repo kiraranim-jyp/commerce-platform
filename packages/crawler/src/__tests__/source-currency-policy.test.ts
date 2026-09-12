@@ -40,6 +40,45 @@ describe("등록된 source만 원본 통화를 요청한다", () => {
   });
 });
 
+/**
+ * SMALLABLE-PRICE-1(CPO 지시, 2026-09-12) — "Smallable 원본 상품가격 기준 = FR".
+ *
+ * 통화만 고정해서는 금액이 하나로 정해지지 않았다. smallable은 같은 상품·같은 EUR
+ * 인데도 배송국가별로 다른 금액을 준다(430651 기준 KR 73 / FR 75 / US 79 / JP 81).
+ * 파라미터가 없으면 접속 지역이 국가를 정하는데, Production 크롤러 egress는 JP로
+ * 지오로케이션돼 있어서 여태 JP 가격이 원본가격으로 들어가고 있었다 — 아무도
+ * 고르지 않았는데 인프라 위치가 대신 골라준 값이다.
+ *
+ * FR인 근거는 판매자가 공시한 판매조건이다: 표시가는 프랑스 부가세가 포함된 EUR이고,
+ * EU 밖으로 배송하면 프랑스 부가세를 빼고 도착국가 세금·관세를 따로 물린다. 배송비도
+ * 도착지별로 따로 계산한다. 그래서 FR 값이 도착지 비용이 아직 섞이지 않은 원본
+ * 상품가격이고, KR 73은 "한국까지 배송된 값"이라 국제배송비·수입비용 정책과 경계가
+ * 뭉개진다 — 원본가격으로 쓰면 안 된다.
+ */
+describe("smallable은 배송국가도 FR로 고정한다", () => {
+  it("핵심 회귀: currency=EUR과 country=FR이 함께 붙는다", () => {
+    const u = new URL(withSourceCurrency("https://www.smallable.com/en/product/x-430651"));
+    expect(u.searchParams.get("currency")).toBe("EUR");
+    expect(u.searchParams.get("country")).toBe("FR");
+  });
+
+  it("핵심 회귀: 이미 쿼리가 있는 URL에서도 둘 다 붙는다", () => {
+    // 실제로 사용자가 붙여넣는 형태다 — 검색 결과에서 복사하면 algsearch가 딸려온다.
+    const u = new URL(
+      withSourceCurrency("https://www.smallable.com/en/product/x-430651?algsearch=8a468cb59a6e85f2fdb1b9ee8aa9eae8"),
+    );
+    expect(u.searchParams.get("algsearch")).toBe("8a468cb59a6e85f2fdb1b9ee8aa9eae8");
+    expect(u.searchParams.get("currency")).toBe("EUR");
+    expect(u.searchParams.get("country")).toBe("FR");
+  });
+
+  it("붙여넣은 URL에 다른 국가가 들어 있어도 정책이 이긴다", () => {
+    const u = new URL(withSourceCurrency("https://www.smallable.com/en/product/x?country=KR&currency=KRW"));
+    expect(u.searchParams.get("country")).toBe("FR");
+    expect(u.searchParams.get("currency")).toBe("EUR");
+  });
+});
+
 describe("핵심 회귀 — 등록되지 않은 사이트는 건드리지 않는다", () => {
   it.each([
     "https://junioredition.com/products/catsuit-onesie-by-mini-rodini",
@@ -49,6 +88,9 @@ describe("핵심 회귀 — 등록되지 않은 사이트는 건드리지 않는
   ])("%s → URL 그대로, 통화 추론 없음", (url) => {
     expect(withSourceCurrency(url)).toBe(url);
     expect(expectedCurrencyFor(url)).toBeNull();
+    // SMALLABLE-PRICE-1 — country는 smallable 한 줄짜리 등록이다. "글로벌 사이트는
+    // 본국 기준"처럼 일반 규칙으로 번지면 안 된다(다른 사이트는 실측하지 않았다).
+    expect(new URL(withSourceCurrency(url)).searchParams.get("country")).toBeNull();
   });
 
   it("Shopify 매장은 등록하지 않는다 — meta.json 권위가 더 강한 근거다", () => {
