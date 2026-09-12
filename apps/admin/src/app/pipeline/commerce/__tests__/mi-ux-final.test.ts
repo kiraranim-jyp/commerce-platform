@@ -95,6 +95,11 @@ function renderPanel(
       openPriceDetailRequest: options.openPriceDetailRequest ?? 0,
       onRequestPriceReview: () => {},
       snapshotOriginPrice: { amount: 75, currency: "EUR" },
+      // MI-MARKET-EVIDENCE-1 — 프로덕션에서 두 드릴다운은 언제나 연결돼 있다
+      // (CommerceWorkspace가 아래 가격비교 패널을 연다). 연결하지 않으면 버튼이
+      // 사라져서, "요약 옆에 언제나 근거로 가는 길이 있다"를 검사할 수 없다.
+      onOpenDomesticEvidence: () => {},
+      onOpenOverseasEvidence: () => {},
     }),
   );
 }
@@ -237,9 +242,17 @@ function baseData(): PriceHistoryResponse {
       reasons: ["국내 동일상품 3곳 확인", "예상 마진 22.4%"],
     },
     sellerFacingVerdict: { code: "RECOMMENDED", icon: "🟢", title: "판매 추천", reasons: [] },
+    /**
+     * MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 두 버킷이 실제 값을 갖는다.
+     *
+     * 서버는 동일상품/비교상품을 **서로 겹치지 않는 두 버킷**으로 집계하고
+     * (summarizeDomesticMarketSplit) 대표 가격은 그중 한 버킷만으로 낸다. 화면의
+     * 등급 표시가 이 두 수에서 나오므로, 예전처럼 둘 다 비워 두면 "basis는
+     * EXACT인데 동일상품은 0곳"이라는 서버에 존재할 수 없는 상태가 된다.
+     */
     domesticMarketSplit: {
       basis: "EXACT",
-      exact: EMPTY_COMPETITION(),
+      exact: { ...EMPTY_COMPETITION(), tier: "PRIMARY", sellerCount: 3, averagePriceKrw: 116600 },
       comparison: EMPTY_COMPETITION(),
     },
     marketSignals: {
@@ -375,7 +388,7 @@ describe("패널 전체를 렌더했을 때 첫 화면", () => {
   const html = renderPanel(baseData());
   const text = visibleText(html);
 
-  it("셀러가 보는 것은 판정 · 원본 상품 · 한국 시장 경쟁가격 · 수익성 · 되물음 한 줄이다", () => {
+  it("셀러가 보는 것은 판정 · 원본 상품 · 국내 시장 · 해외 시장 · 수익성 · 되물음 한 줄이다", () => {
     // 판정
     expect(text).toContain("판매 추천");
     expect(text).toContain("대한민국 시장 기준");
@@ -383,9 +396,13 @@ describe("패널 전체를 렌더했을 때 첫 화면", () => {
     expect(text).toContain(PRICE_SECTION_TITLE.ORIGINAL);
     expect(text).toContain("€75.00");
     expect(text).toContain(`ⓘ ${GLOBAL_MARKET_HINT_LABEL}`);
-    // 한국 시장 경쟁가격
+    // 🇰🇷 국내 시장 — 대표 가격은 언제나 근거의 두께와 **등급**을 달고 나온다.
     expect(text).toContain(PRICE_SECTION_TITLE.DOMESTIC_COMPETITION);
     expect(text).toContain("₩116,600");
+    expect(text).toContain("비교 판매처 3곳");
+    expect(text).toContain("🟢 동일상품 기준");
+    // 🌎 해외 시장 — 조회 결과가 아직 없으면 숫자를 지어내지 않고 그 사실만 말한다.
+    expect(text).toContain(PRICE_SECTION_TITLE.OVERSEAS_MARKET);
     // 수익성 — 판정 한 줄 · 착지원가 · 권장 판매가 · 예상 이익 · ⓘ 기준
     expect(text).toContain(PRICE_SECTION_TITLE.PROFITABILITY);
     expect(text).toContain("설정 마진 기준 판매 가능");
@@ -422,8 +439,8 @@ describe("패널 전체를 렌더했을 때 첫 화면", () => {
   });
 
   it("건너뛸 수 있는 번호가 화면 어디에도 없다", () => {
-    // 국내 비교상품이 0건이면 가운데 블록이 통째로 사라진다. 그때 ①→③ 점프가
-    // 보이면 셀러의 질문이 "팔까"에서 "②는 왜 없지"로 바뀐다.
+    // MI-MARKET-EVIDENCE-1 이후 블록은 조건부로 사라지지 않지만, 번호를 되살릴
+    // 이유도 없다 — 순서는 제목의 나열(price-hierarchy.ts)이 정하고 테스트가 고정한다.
     expect(text).not.toMatch(/[①②③④⑤]/);
   });
 
@@ -444,11 +461,12 @@ describe("패널 전체를 렌더했을 때 첫 화면", () => {
     expect(html).not.toContain("<svg");
   });
 
-  it("접힘은 셋뿐이고 전부 닫혀 있다", () => {
-    // ⓘ 글로벌 시장 가격 · ⓘ 가격 계산 기준 · 왜 이렇게 판단했나요?
+  it("펼침 없이 서는 것은 접힘 셋과 드릴다운 둘이고, 열린 것은 하나도 없다", () => {
+    // 접힘 셋: ⓘ 글로벌 시장 가격 · ⓘ 가격 계산 기준 · 왜 이렇게 판단했나요?
+    // 드릴다운 둘: ▸ 국내 가격 보기 · ▸ 해외 가격 보기(MI-MARKET-EVIDENCE-1).
     // 열림 캐럿(▾)이 하나도 없다는 것이 "도착하자마자 닫혀 있다"의 증거다.
     expect(html).not.toContain("▾");
-    expect((html.match(/▸/g) ?? []).length).toBe(3);
+    expect((html.match(/▸/g) ?? []).length).toBe(5);
   });
 });
 
@@ -456,10 +474,22 @@ describe("국내 비교상품이 없을 때", () => {
   const html = renderPanel(withoutDomestic());
   const text = visibleText(html);
 
-  it("② 블록이 DOM에 아예 없다 — 빈 칸 두 개짜리 카드가 아니다", () => {
-    expect(text).not.toContain(PRICE_SECTION_TITLE.DOMESTIC_COMPETITION);
-    expect(text).not.toContain("검색 데이터 없음");
-    expect(text).not.toContain(PRICE_MEANING_LABEL.DOMESTIC_COMPARABLE_PRICE);
+  /**
+   * MI-MARKET-EVIDENCE-1(CEO 지시 ③, 2026-09-12) — 블록은 사라지지 않고, 숫자를
+   * 지어내지도 않는다.
+   *
+   * MI-SIMPLIFY-1에서는 이 블록이 통째로 DOM에서 빠졌다. 그때는 빈 칸 두 개짜리
+   * 카드였기 때문이고, 지금은 셀러가 읽는 순서(원본 → 국내 → 해외 → 수익성)의
+   * 가운데 칸이라 사라지면 판정이 근거 없이 내려온 숫자가 된다. 바뀐 것은
+   * 게이트가 고르는 결과이지 "빈 칸을 두지 않는다"는 원칙이 아니다 — 빈 칸 대신
+   * **정직한 빈 상태 한 칩**이 선다.
+   */
+  it("블록은 서되 숫자도 범위도 없이 빈 상태만 말한다", () => {
+    expect(text).toContain(PRICE_SECTION_TITLE.DOMESTIC_COMPETITION);
+    expect(text).toContain("⚪ 검색 데이터 없음");
+    // 근거가 0건이면 개수도 등급도 말하지 않는다(없는 근거를 세지 않는다).
+    expect(text).not.toContain("동일상품 기준");
+    expect(text).not.toContain("비교 판매처 0곳");
   });
 
   it("①과 ③은 그대로 남는다 — 비교 불가가 계산 불가는 아니다", () => {
@@ -524,8 +554,10 @@ describe("글로벌 시장 관측이 없을 때도 ⓘ 글로벌 시장 가격�
     expect(hint).not.toContain("if (summaryLine == null) return");
   });
 
-  it("접힘 수는 두 상태에서 같다 — 셋, 전부 닫혀 있다", () => {
-    expect((html.match(/▸/g) ?? []).length).toBe(3);
+  it("접힘 수는 두 상태에서 같다 — 접힘 셋 + 드릴다운 둘, 전부 닫혀 있다", () => {
+    // 관측이 있든 없든 어포던스의 개수가 같아야 한다. 개수가 상태에 따라
+    // 달라지면 셀러는 "내가 뭘 안 해서 하나가 없나"를 묻게 된다.
+    expect((html.match(/▸/g) ?? []).length).toBe(5);
     expect(html).not.toContain("▾");
   });
 
@@ -617,11 +649,34 @@ describe("내려간 것들은 사라지지 않았다", () => {
  * 것이 스무 덩어리면 되물음은 답이 아니라 두 번째 화면이다.
  */
 describe("되물음의 답은 네 줄이고, 그 안에 계산도 레이더도 없다", () => {
+  /**
+   * MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 세 번째 줄이 바뀌었다.
+   * 근거의 강도(🔎)는 이제 본문 🇰🇷 국내 시장의 등급 칩이 숫자와 함께 직접
+   * 보여주므로, 되물음은 그 자리에 본문의 다른 한 블록(🌎 해외)을 설명한다.
+   * 줄 수는 그대로 넷이다.
+   */
   const CASES = [
-    { name: "추천", input: { marketCase: "A" as const, hasComparable: true, evidenceBasis: "EXACT" as const } },
-    { name: "조건부", input: { marketCase: "B" as const, hasComparable: true, evidenceBasis: "COMPARISON" as const } },
-    { name: "비추천", input: { marketCase: "C" as const, hasComparable: true, evidenceBasis: "EXACT" as const } },
-    { name: "판단 보류", input: { marketCase: null, hasComparable: false, evidenceBasis: "NONE" as const } },
+    {
+      name: "추천",
+      input: { marketCase: "A" as const, hasComparable: true, evidenceBasis: "EXACT" as const, hasOverseasRange: true },
+    },
+    {
+      name: "조건부",
+      input: {
+        marketCase: "B" as const,
+        hasComparable: true,
+        evidenceBasis: "COMPARISON" as const,
+        hasOverseasRange: true,
+      },
+    },
+    {
+      name: "비추천",
+      input: { marketCase: "C" as const, hasComparable: true, evidenceBasis: "EXACT" as const, hasOverseasRange: false },
+    },
+    {
+      name: "판단 보류",
+      input: { marketCase: null, hasComparable: false, evidenceBasis: "NONE" as const, hasOverseasRange: false },
+    },
   ];
 
   it("네 판정 전부 정확히 네 줄이다", () => {
@@ -633,12 +688,15 @@ describe("되물음의 답은 네 줄이고, 그 안에 계산도 레이더도 �
     }
   });
 
-  it("네 줄의 모양은 같다 — 수익성 → 가격 경쟁력 → 근거 → 행동", () => {
+  it("네 줄의 모양은 같다 — 수익성 → 🇰🇷 국내 → 🌎 해외 → 행동", () => {
+    // 가운데 두 줄의 머리 기호가 본문 블록 둘과 같다. 되물음의 각 줄이 화면의
+    // 어느 블록을 설명하는지가 기호만으로 읽히고, 두 시장이 한 숫자로 합쳐진
+    // 적이 없다는 사실도 어휘가 계속 말한다.
     for (const { name, input } of CASES) {
-      const [margin, price, evidence, action] = buildMiVerdictExplanation(input);
+      const [margin, domestic, overseas, action] = buildMiVerdictExplanation(input);
       expect(["🟢", "🟡", "🔴", "⚪"], name).toContain(margin.slice(0, margin.indexOf(" ")));
-      expect(price, name).toMatch(/^💰 /);
-      expect(evidence, name).toMatch(/^🔎 /);
+      expect(domestic, name).toMatch(/^🇰🇷 /);
+      expect(overseas, name).toMatch(/^🌎 /);
       expect(action, name).toMatch(/^→ /);
     }
   });

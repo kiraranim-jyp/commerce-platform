@@ -66,6 +66,10 @@ import type { PriceLevel, SellerFinalVerdict } from "./commerce/DomesticPriceInt
 import { ActionCenter, type ChecklistItem } from "./commerce/ActionCenter";
 import { AuditLogPanel } from "./commerce/AuditLogPanel";
 import { DomesticShopSearch } from "./commerce/DomesticShopSearch";
+// MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 해외 가격비교 패널이 만든 요약을
+// MI로 옮기는 통로. 이 파일은 요약을 **만들지 않는다**(값을 들고만 있는다) —
+// 만들기 시작하면 같은 조회 결과에 대한 요약 규칙이 두 벌이 된다.
+import type { MarketEvidenceSummary } from "./commerce/market-evidence";
 import { ImageInlineEditor } from "./ImageInlineEditor";
 import { ListingConfirmationModal } from "./commerce/ListingConfirmationModal";
 import { MissingFieldsBulkPanel } from "./commerce/MissingFieldsBulkPanel";
@@ -327,6 +331,43 @@ export function CommerceWorkspace({
     requestAnimationFrame(() => {
       setTimeout(() => {
         document.getElementById(PRICE_SURFACE_ANCHOR_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
+    });
+  }
+
+  /**
+   * MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — MI 본문의 시장 요약 두 개와
+   * 그 드릴다운.
+   *
+   * ── 왜 상태가 여기 있는가 ───────────────────────────────────────────────
+   * 요약은 MI 안에, 원자료는 화면 아래 가격비교 패널에 있다. 두 컴포넌트는
+   * 형제라서 둘을 잇는 값은 공통 부모인 여기 말고는 있을 곳이 없다. 해외 요약을
+   * MI가 직접 조회해서 만들면 같은 질문을 두 경로로 묻게 되고, 그 순간 한 화면에
+   * 서로 다른 해외 가격이 두 벌 생긴다 — 이 저장소가 반복해서 겪은 버그다.
+   *
+   * 여기서 요약을 **만들지 않는다**. 패널이 완성한 값을 들고 있다가 MI로
+   * 내려보내기만 한다(계산도 개수 세기도 없다).
+   */
+  const [overseasMarketEvidence, setOverseasMarketEvidence] = useState<MarketEvidenceSummary | null>(null);
+  const [domesticEvidenceOpen, setDomesticEvidenceOpen] = useState(false);
+  const [overseasEvidenceOpen, setOverseasEvidenceOpen] = useState(false);
+  const [marketEvidenceRequest, setMarketEvidenceRequest] = useState(0);
+  /**
+   * [▸ 국내 가격 보기] / [▸ 해외 가격 보기] — 요약이 선 근거의 원자료를 연다.
+   *
+   * handleRequestPriceReview와 완전히 같은 모양이다: 탭 전환 + 접힘 펼침 +
+   * 스크롤. 표를 여기서 새로 그리지 않고 **이미 있는 그 패널**을 여는 것이
+   * 핵심이다 — 같은 시장 사실이 화면에 두 벌 생길 자리를 만들지 않는다.
+   */
+  function openMarketEvidence(which: "DOMESTIC" | "OVERSEAS") {
+    setTab("source");
+    if (which === "DOMESTIC") setDomesticEvidenceOpen(true);
+    else setOverseasEvidenceOpen(true);
+    // ③④에서는 두 패널이 「📊 시장 가격 비교」 접힘 안쪽에 있다 — 바깥도 함께 연다.
+    setMarketEvidenceRequest((n) => n + 1);
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        document.getElementById(PRICE_COMPARISON_ANCHOR_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 50);
     });
   }
@@ -2268,6 +2309,13 @@ export function CommerceWorkspace({
                  고칠 때마다 MI를 다시 돌릴 배선이 생긴다. 노드는 이미 완성된
                  화면이라 패널이 그 안의 값을 읽을 수 없다. */
               priceCalculationDetail={priceCalculationDetail}
+              /* MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 🌎 해외 시장 요약과
+                 두 드릴다운. 요약은 아래 해외 가격비교 패널이 자기 조회 결과로
+                 만든 값 그대로이고, 드릴다운은 그 패널을 여는 일만 한다 —
+                 MI는 해외 가격을 조회하지도 표를 그리지도 않는다. */
+              overseasMarketEvidence={overseasMarketEvidence}
+              onOpenDomesticEvidence={() => openMarketEvidence("DOMESTIC")}
+              onOpenOverseasEvidence={() => openMarketEvidence("OVERSEAS")}
               openPriceDetailRequest={priceDetailRequest}
             />
           ) : (
@@ -2284,8 +2332,16 @@ export function CommerceWorkspace({
               /* UX 2.5 — 바깥(판단 카드·해외 가격비교·상단 Flow)에서 온 "가격 좀
                  보자"는 요청. 카운터가 올라가면 StageBody가 가격 작업면을 펼친다. */
               openPriceSurfaceRequest={priceSurfaceRequest}
+              /* MI-MARKET-EVIDENCE-1 — MI의 [▸ 국내/해외 가격 보기]가 ③④에서
+                 바깥 「📊 시장 가격 비교」 접힘까지 열 수 있게 하는 요청. */
+              openMarketEvidenceRequest={marketEvidenceRequest}
               /* 국내(한국 시장)를 해외보다 먼저 둔다 — 판매 판단이 한국 기준이라
-                 근거도 한국부터 읽혀야 한다. 컴포넌트도 데이터도 그대로다. */
+                 근거도 한국부터 읽혀야 한다. 컴포넌트도 데이터도 그대로다.
+
+                 MI-MARKET-EVIDENCE-1 — 두 패널은 이제 MI 요약의 드릴다운 대상이라
+                 기본 접힘이고, 여는 주체는 위 요약의 버튼이다(open을 여기서
+                 들고 있는 이유). 조회는 접힌 상태에서도 그대로 돈다 — 접힌 것은
+                 표이지 데이터가 아니고, 요약이 그 데이터 위에 서 있다. */
               marketEvidence={
                 <div id={PRICE_COMPARISON_ANCHOR_ID} className="scroll-mt-4 space-y-4">
                   <DomesticShopSearch
@@ -2294,6 +2350,8 @@ export function CommerceWorkspace({
                     sourceUrl={product.sourceUrl}
                     sku={product.sku.value || undefined}
                     description={product.description.value || undefined}
+                    open={domesticEvidenceOpen}
+                    onToggle={setDomesticEvidenceOpen}
                   />
                   <ComparisonShopSearch
                     title={product.title.value}
@@ -2302,6 +2360,9 @@ export function CommerceWorkspace({
                     sku={product.sku.value || undefined}
                     description={product.description.value || undefined}
                     onRequestPriceReview={handleRequestPriceReview}
+                    open={overseasEvidenceOpen}
+                    onToggle={setOverseasEvidenceOpen}
+                    onEvidenceChange={setOverseasMarketEvidence}
                   />
                 </div>
               }

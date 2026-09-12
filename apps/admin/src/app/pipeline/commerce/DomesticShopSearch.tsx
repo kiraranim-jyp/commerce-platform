@@ -159,6 +159,8 @@ export function DomesticShopSearch({
   sourceUrl,
   sku,
   description,
+  open,
+  onToggle,
 }: {
   title: string;
   brand?: string;
@@ -168,6 +170,20 @@ export function DomesticShopSearch({
    * 01195-VERNICE-NERO")를 국내 후보의 modelCode와 비교해 matchTruth를 계산하는
    * 데 쓴다. 없어도(undefined) 기존처럼 matchLevel 배지만 보여준다(하위호환). */
   description?: string;
+  /**
+   * MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 이 표는 이제 MI 🇰🇷 국내 시장
+   * 요약의 **드릴다운 대상**이다.
+   *
+   * 그래서 기본 펼침(defaultOpen)을 버리고 바깥이 여는 접힘이 됐다. 요약이 위에
+   * 있는데 표가 아래에서 함께 펼쳐져 있으면 같은 시장 사실이 한 화면에 두 벌
+   * 서고, 그게 정확히 "MI를 짧게 만들면 근거가 사라지고, 근거를 되살리면 화면이
+   * 길어진다"를 반복하게 만든 구조다. 조회는 그대로 마운트 시 자동으로 돈다 —
+   * 접혀 있는 것은 표이지 데이터가 아니다(요약이 그 데이터 위에 서 있다).
+   *
+   * 둘 다 주지 않으면 예전처럼 스스로 여닫는다(CollapsibleSection의 비제어 모드).
+   */
+  open?: boolean;
+  onToggle?: (open: boolean) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchResult[] | null>(null);
@@ -210,7 +226,12 @@ export function DomesticShopSearch({
     // 여기 있는 가격은 한국 편집샵이 파는 값(국내 비교상품)이고, 판매 판단이
     // 서 있는 한국 시장의 경쟁가 근거다. "국내 가격비교"라는 이름은 바로 아래
     // 해외 블록과 같은 층위로 읽혀서, 둘이 같은 종류의 가격처럼 보였다.
-    <CollapsibleSection title="🇰🇷 한국 시장 · 국내 비교상품 (베타)" defaultOpen>
+    <CollapsibleSection
+      title="🇰🇷 한국 시장 · 국내 비교상품 (베타)"
+      summary="판매처 · 상품 · 가격 · 재고 · 매칭상태 — MI 🇰🇷 국내 시장 요약의 원자료"
+      open={open}
+      onToggle={onToggle}
+    >
       {/* MI-UI-1(CEO 지시, 2026-09-11: "글이 너무 많다") — 세 줄을 한 줄로 줄인다.
           지우지 않고 남긴 두 가지는 셀러의 행동을 바꾸는 사실이다: ① 여기 가격이
           판매가에 자동 반영되지 않는다(반영된다고 오해하면 가격을 안 정한다),

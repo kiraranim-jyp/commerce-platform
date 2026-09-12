@@ -1,30 +1,45 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { GLOBAL_MARKET_HINT_LABEL, GLOBAL_MARKET_UNAVAILABLE_NOTE } from "../global-market";
+import {
+  buildOverseasMarketEvidence,
+  DOMESTIC_MARKET_DRILL_DOWN,
+  OVERSEAS_MARKET_DRILL_DOWN,
+} from "../market-evidence";
+import { isDefaultVisibleTier, overseasMatchDisplay } from "../match-display";
 import { buildMiVerdictExplanation } from "../mi-verdict-copy";
 import { PRICE_MEANING_LABEL, PRICE_SECTION_TITLE } from "../price-hierarchy";
 import {
   headingsInOrder,
+  overseasResults,
+  overseasResultsMixedTier,
   productTabElement,
   productionData,
   regionsOf,
   visibleText,
   withDomesticComparable,
+  withMixedTierDomestic,
   PROFIT,
+  type OverseasSearchResult,
   type TabOptions,
 } from "./product-tab-composition";
 
 /**
- * MI-FINAL-UX-3 REWORK(CEO 지시, 2026-09-12) — **상품정보 탭 전체**의 첫 화면.
+ * MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — **상품정보 탭 전체**의 첫 화면.
  *
  * 이 파일이 보는 것은 MiPanelView 하나가 아니라 CommerceWorkspace가 상품정보
  * 탭에서 실제로 조립하는 트리다(product-tab-composition.ts). 그래야 "MI는
  * 짧은데 화면은 길다"를 구분해서 말할 수 있다 — 지난 세 번의 시도가 전부
- * 여기서 갈렸다. 실제로 이 파일을 처음 돌렸을 때 「국내 비교상품」·「🔎 판단
- * 근거」가 화면에 있다고 나왔는데, 둘 다 MI가 아니라 그 아래 단계 본문이
- * 그리던 글자였다 — 패널만 보던 검사로는 이 사실이 보이지 않는다.
+ * 여기서 갈렸다.
  *
- * 규칙은 하나다: **아무것도 누르지 않은 상태의 렌더 결과**만 근거로 쓴다.
+ * ── 이번 지시로 바뀐 것 ──────────────────────────────────────────────────
+ * 앞선 네 번은 전부 "더 짧게"였다. 그 결과 국내/해외 가격이 MI 밖으로 밀려났고,
+ * 판정만 남은 화면은 근거 없이 내려온 숫자처럼 읽혔다. 이제 이 파일이 고정하는
+ * 것은 **짧음**이 아니라 셀러가 묻는 순서다:
+ *
+ *   원본 €50 → 🇰🇷 한국에서 얼마에 팔리나 → 🌎 해외에서는 → 💰 얼마에 팔면 되나
+ *
+ * 규칙은 그대로다: **아무것도 누르지 않은 상태의 렌더 결과**만 근거로 쓴다.
  * 소스 줄 수도, 잘라낸 구간도, 자식 하나만 떼어낸 렌더도 근거가 아니다.
  */
 
@@ -37,6 +52,34 @@ const MARKET_STAGE: TabOptions = { marketDone: false };
 /** ③ 등록 준비에서 [가격 판단 상세보기]로 MI를 펼쳐 둔 화면. MI는 같은 FULL이다. */
 const PREPARE_STAGE_MI_OPEN: TabOptions = { marketDetailOpen: true };
 
+/**
+ * 해외 요약은 화면이 만들지 않는다 — 해외 가격비교 패널이 자기 조회 결과로
+ * 만들어 올려보낸 값이다. 여기서도 그 패널이 쓰는 함수를 같은 규칙(기본 노출
+ * 등급만 · 현재가로 검증된 건만 숫자)으로 불러서 넘긴다. 손으로 요약 문자열을
+ * 적으면 화면이 그 요약을 어떻게 다루는지 검사하는 의미가 사라진다.
+ */
+function overseasEvidenceFrom(results: OverseasSearchResult[]) {
+  return buildOverseasMarketEvidence({
+    candidates: results.flatMap((r) =>
+      r.candidates
+        .map((c) => ({
+          shopId: r.shopId,
+          shopCountry: r.shopCountry,
+          tier: overseasMatchDisplay(c.productMatchTruth!).tier,
+          price: c.priceStatus === "VERIFIED_CURRENT" ? c.price : null,
+        }))
+        .filter((c) => isDefaultVisibleTier(c.tier)),
+    ),
+  });
+}
+
+/** 국내·해외가 전부 확인된 화면 — CEO 지시문의 목표 첫 화면 그대로다. */
+const WITH_BOTH_MARKETS: TabOptions = {
+  ...MARKET_STAGE,
+  data: withDomesticComparable(),
+  overseasMarketEvidence: overseasEvidenceFrom(overseasResults()),
+};
+
 describe("상품정보 탭 — 아무것도 누르지 않았을 때의 첫 화면", () => {
   const html = render(MARKET_STAGE);
   const headings = headingsInOrder(html);
@@ -46,8 +89,7 @@ describe("상품정보 탭 — 아무것도 누르지 않았을 때의 첫 화�
 
   /**
    * ── 이 테스트가 실제로 증명하는 것 ──────────────────────────────────────
-   * 셀러가 읽는 제목이 **무엇이 몇 개 어떤 순서로** 서는가. 화면이 짧다는 것은
-   * 코드 줄 수가 아니라 이 목록의 길이다.
+   * 셀러가 읽는 제목이 **무엇이 몇 개 어떤 순서로** 서는가.
    */
   it("첫 화면의 최상위 제목은 순서까지 고정된다", () => {
     expect(headings).toEqual([
@@ -55,7 +97,8 @@ describe("상품정보 탭 — 아무것도 누르지 않았을 때의 첫 화�
       "Market Intelligence",
       "원본 상품",
       "ⓘ 글로벌 시장 가격",
-      // "한국 시장 경쟁가격"은 비교상품 0건이라 DOM에 없다(아래 별도 검사).
+      "🇰🇷 국내 시장",
+      "🌎 해외 시장",
       "수익성",
       "ⓘ 가격 계산 기준",
       "왜 이렇게 판단했나요?",
@@ -75,18 +118,23 @@ describe("상품정보 탭 — 아무것도 누르지 않았을 때의 첫 화�
   });
 
   /**
-   * MI가 화면에서 차지하는 제목은 여섯이다. 이 숫자가 늘면 판단 카드가 다시
-   * 설명 화면이 되어가는 중이라는 뜻이라, 숫자 자체를 못 박는다.
+   * MI가 세우는 제목은 여덟이다. 데이터가 있든 없든 같은 여덟이라는 것이
+   * 이번 지시의 핵심이다 — 블록이 조건부로 사라지면 셀러가 읽는 순서의 한 칸이
+   * 비고, 그 순간 판정은 다시 근거 없이 내려온 숫자가 된다.
    */
-  it("MI가 첫 화면에 세우는 제목은 여섯 개다", () => {
-    expect(headingsInOrder(miHtml)).toEqual([
+  it("MI의 제목 여덟은 데이터 유무와 무관하게 같은 순서로 선다", () => {
+    const expected = [
       "Market Intelligence",
       "원본 상품",
       "ⓘ 글로벌 시장 가격",
+      "🇰🇷 국내 시장",
+      "🌎 해외 시장",
       "수익성",
       "ⓘ 가격 계산 기준",
       "왜 이렇게 판단했나요?",
-    ]);
+    ];
+    expect(headingsInOrder(miHtml)).toEqual(expected);
+    expect(headingsInOrder(regionsOf(render(WITH_BOTH_MARKETS)).mi)).toEqual(expected);
   });
 
   /** 첫 번째 접힘 토글 앞에 서는 것 — 판정과 원본 가격뿐이다. */
@@ -103,9 +151,9 @@ describe("상품정보 탭 — 아무것도 누르지 않았을 때의 첫 화�
 
   /**
    * ── 지시 ① ──────────────────────────────────────────────────────────────
-   * ⓘ는 관측이 0건이어도 사라지지 않는다. 지난 시도에서 이 자리가 관측이 없을 때
-   * 문장으로 바뀌면서 화면 높이를 늘렸다 — 바뀌는 것은 팝오버의 **내용**이지
-   * 어포던스가 아니다.
+   * ⓘ는 관측이 0건이어도 사라지지 않는다. 이 자리는 **원본 €50의 근거**(같은
+   * 판매처의 다른 시장 가격)이고, 아래 🌎 해외 시장(다른 판매처들의 가격)과는
+   * 끝까지 다른 사실이다.
    */
   it("관측이 0건이어도 ⓘ 글로벌 시장 가격이 그대로 선다", () => {
     expect(productionData().sellerGlobalMarkets).toEqual([]);
@@ -113,30 +161,86 @@ describe("상품정보 탭 — 아무것도 누르지 않았을 때의 첫 화�
     // 팝오버가 닫혀 있으므로 그 안의 문장은 본문에 없다(툴팁은 태그 속성이라
     // visibleText에 잡히지 않는다 — 화면 높이를 차지하지 않는다는 뜻이다).
     expect(miText).not.toContain(GLOBAL_MARKET_UNAVAILABLE_NOTE);
-    // 관측이 있는 상품에서도 같은 어포던스 하나다(문장으로 바뀌지 않는다).
-    const withObservations = regionsOf(render({ ...MARKET_STAGE, data: withDomesticComparable() })).mi;
-    expect(visibleText(withObservations)).toContain(`ⓘ ${GLOBAL_MARKET_HINT_LABEL}`);
-  });
-
-  /**
-   * ── 지시 ② ──────────────────────────────────────────────────────────────
-   * 비교상품이 0건이면 블록이 "빈 카드"가 아니라 **없다**. 원본 판매자 한국
-   * 표시가(①의 작은 줄)와는 끝까지 다른 자리다.
-   */
-  it("국내 비교상품이 0건이면 한국 시장 경쟁가격 블록이 DOM에 없다", () => {
-    expect(headingsInOrder(miHtml)).not.toContain(PRICE_SECTION_TITLE.DOMESTIC_COMPETITION);
-    expect(miText).not.toContain(PRICE_SECTION_TITLE.DOMESTIC_COMPETITION);
-    expect(miText).not.toContain(PRICE_MEANING_LABEL.DOMESTIC_COMPARABLE_PRICE);
-  });
-
-  it("비교상품이 있으면 같은 블록이 그때만 선다", () => {
-    const withDomestic = regionsOf(render({ ...MARKET_STAGE, data: withDomesticComparable() })).mi;
-    expect(headingsInOrder(withDomestic)).toContain(PRICE_SECTION_TITLE.DOMESTIC_COMPETITION);
-    expect(visibleText(withDomestic)).toContain("₩116,600");
   });
 
   /**
    * ── 지시 ③ ──────────────────────────────────────────────────────────────
+   * 비교상품이 0건이면 **숫자를 지어내지 않는다**. 블록은 그대로 서고, 없다는
+   * 사실만 말한다(MI-SIMPLIFY-1에서는 블록째 사라졌다 — 그때는 두 칸짜리 빈
+   * 카드였기 때문이고, 지금은 셀러가 읽는 순서의 가운데 칸이라 다르다).
+   */
+  it("국내·해외 비교상품이 0건이면 숫자도 범위도 없이 빈 상태만 말한다", () => {
+    expect(miText).toContain(PRICE_SECTION_TITLE.DOMESTIC_COMPETITION);
+    expect(miText).toContain(PRICE_SECTION_TITLE.OVERSEAS_MARKET);
+    expect(miText).toContain("⚪ 검색 데이터 없음");
+    // 없는 값을 대신할 숫자를 만들지 않는다 — 개수도, 범위 기호도 없다.
+    expect(miText).not.toContain("동일상품 기준");
+    expect(miText).not.toContain("비교 판매처 0곳");
+    expect(miText).not.toContain("~");
+    // 드릴다운도 열 것이 없으면 말하지 않는다 — 버튼은 그대로 두고(원자료
+    // 패널은 존재한다) 요약이 거짓 숫자를 갖지 않는 것이 핵심이다.
+    expect(miText).toContain(`▸ ${DOMESTIC_MARKET_DRILL_DOWN}`);
+    expect(miText).toContain(`▸ ${OVERSEAS_MARKET_DRILL_DOWN}`);
+  });
+
+  /**
+   * ── 지시 ②(등급 없는 개수 금지) ─────────────────────────────────────────
+   * 개수는 언제나 등급과 함께 나간다. 셀러가 묻는 것은 "3곳인가"가 아니라
+   * "이 3곳을 왜 믿을 수 있지?"다.
+   */
+  it("국내·해외 요약은 대표 숫자 · 개수 · 등급 셋을 함께 말한다", () => {
+    const text = visibleText(regionsOf(render(WITH_BOTH_MARKETS)).mi);
+    // 🇰🇷 국내 — 서버 집계의 대표 가격과 판매처 수, 그리고 그 등급.
+    expect(text).toContain("₩116,600");
+    expect(text).toContain("비교 판매처 3곳");
+    // 🌎 해외 — 관측된 양끝(평균이 아니다)과 판매처/국가 수, 그리고 그 등급.
+    expect(text).toContain("€45.00 ~ €52.00");
+    expect(text).toContain("판매처 3곳 · 3개 국가");
+    // 등급은 두 블록 모두에 붙는다. 전부 같은 등급일 때만 "기준"이라고 말한다.
+    expect((text.match(/🟢 동일상품 기준/g) ?? []).length).toBe(2);
+  });
+
+  /**
+   * ── CPO 추가 지시(2026-09-12) — 등급이 섞이면 하나로 접지 않는다 ────────────
+   * 🟢 1곳 + ⚪ 2곳을 "🟢 동일상품 기준"으로 적으면 추정 두 곳이 확정으로
+   * 포장된다. 요약만 읽고도 "전부 확정은 아니다"가 보여야 한다.
+   */
+  it("등급이 섞이면 요약이 강한 등급 하나를 주장하지 않는다", () => {
+    const mixed = render({
+      ...MARKET_STAGE,
+      data: withMixedTierDomestic(),
+      overseasMarketEvidence: overseasEvidenceFrom(overseasResultsMixedTier()),
+    });
+    const text = visibleText(regionsOf(mixed).mi);
+    // 어느 블록도 "🟢 동일상품 기준"이라고 말하지 않는다.
+    expect(text).not.toContain("🟢 동일상품 기준");
+    // 대신 분포를 그대로 보여준다 — 국내는 🟢 1 · ⚪ 2, 해외는 🟢 1 · 🟡 2.
+    expect(text).toContain("🟢 동일상품 1 · ⚪ 비교상품 2");
+    expect(text).toContain("🟢 동일상품 1 · 🟡 동일상품 추정 2");
+    // 대표 가격이 무엇 위에 서 있는지도 말한다(국내는 동일상품 버킷만으로 집계된다).
+    expect(text).toContain("등급이 섞여 있습니다");
+  });
+
+  /**
+   * ── 같은 시장 사실이 한 화면에 두 번 서지 않는다 ─────────────────────────
+   * 요약은 MI에, 원자료는 아래 패널에 한 벌뿐이다. 패널이 펼쳐진 채로 있으면
+   * 같은 가격이 두 곳에서 뜨고, 그게 "짧게 만들면 근거가 사라지고 근거를
+   * 되살리면 화면이 길어진다"를 반복하게 만든 구조다.
+   */
+  it("국내·해외 가격은 요약 한 번뿐이고 아래 패널은 접혀 있다", () => {
+    const rendered = render(WITH_BOTH_MARKETS);
+    const text = visibleText(rendered);
+    expect((text.match(/€45\.00 ~ €52\.00/g) ?? []).length).toBe(1);
+    expect((text.match(/₩116,600/g) ?? []).length).toBe(1);
+    // 원자료 **표**가 첫 화면에 한 개도 없다(접혀 있다는 뜻이다). 접힘 요약
+    // 한 줄이 같은 낱말들을 쓰므로 글자가 아니라 표 자체를 센다.
+    const stage = regionsOf(rendered).stage;
+    expect(stage).not.toContain("<table");
+    expect(stage).not.toContain("<th");
+  });
+
+  /**
+   * ── 지시 ③(수익성) ─────────────────────────────────────────────────────
    * 수익성은 요약 셋과 판정 한 줄이다. 계산 입력은 접힘 안에만 있다.
    */
   it("수익성은 판정 한 줄 + 숫자 셋이고 계산 입력은 본문에 없다", () => {
@@ -194,6 +298,7 @@ describe("상품정보 탭 — 아무것도 누르지 않았을 때의 첫 화�
       marketCase: "D",
       hasComparable: false,
       evidenceBasis: "NONE",
+      hasOverseasRange: false,
     });
     expect(lines).toHaveLength(4);
     for (const line of lines) expect(miText).not.toContain(line);
@@ -216,11 +321,12 @@ describe("상품정보 탭 — 아무것도 누르지 않았을 때의 첫 화�
  * 길다는 관찰은 MI가 길다는 뜻이 아닐 수 있다 — 아래 목록이 그 답이다.
  */
 describe("첫 화면의 길이는 MI가 아니라 그 아래가 정한다", () => {
-  it("② 시장 판단 단계에서 MI 아래에 펼쳐진 채로 서는 것은 가격비교 두 패널이다", () => {
+  it("② 시장 판단 단계에서 MI 아래에 서는 가격비교 두 패널은 접혀 있다", () => {
     const { stage } = regionsOf(render(MARKET_STAGE));
     expect(headingsInOrder(stage)).toEqual([
       "지금 단계 · 2. 시장 판단",
-      // 이 둘은 MI가 아니다 — 각자 자기 CollapsibleSection을 defaultOpen으로 연다.
+      // MI-MARKET-EVIDENCE-1 — 제목은 그대로 서지만 표는 접혔다. 이 둘은 이제
+      // 위 요약의 드릴다운 대상이고, 펼쳐져 있으면 같은 가격이 두 벌 뜬다.
       "🇰🇷 한국 시장 · 국내 비교상품 (베타)",
       "🌎 글로벌 시장 · 해외 판매처 가격 (베타)",
       "💰 판매가격 확정",
@@ -228,6 +334,10 @@ describe("첫 화면의 길이는 MI가 아니라 그 아래가 정한다", () =
       "Source Data",
       "Backlog",
     ]);
+    // 접힘 요약 한 줄은 무엇이 열리는지 말한다 — "열어봐야 아는" 접힘을 만들지 않는다.
+    const text = visibleText(stage);
+    expect(text).toContain("판매처 · 상품 · 가격 · 재고 · 매칭상태");
+    expect(text).toContain("판매처 · 국가 · 상품 · 가격 · 매칭상태");
   });
 
   it("③ 등록 준비에서 MI를 펼쳐도 MI 자신의 제목 수는 변하지 않는다", () => {
@@ -236,6 +346,8 @@ describe("첫 화면의 길이는 MI가 아니라 그 아래가 정한다", () =
       "Market Intelligence",
       "원본 상품",
       "ⓘ 글로벌 시장 가격",
+      "🇰🇷 국내 시장",
+      "🌎 해외 시장",
       "수익성",
       "ⓘ 가격 계산 기준",
       "왜 이렇게 판단했나요?",

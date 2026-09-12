@@ -420,17 +420,24 @@ describe("① 원본 상품 가격은 언제나 원본 통화가 먼저다", () 
     expect(headline.converted).toBeNull();
   });
 
-  it("읽는 순서는 ① 원본 → ② 한국 경쟁 → ③ 수익성 → ④ 근거다", () => {
-    // 순서가 제목 안에 적혀 있어야 누가 블록을 옮겼을 때 번호가 먼저 어긋난다.
+  it("읽는 순서는 원본 → 🇰🇷 국내 → 🌎 해외 → 수익성 → 근거다", () => {
+    // MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 이 표의 **나열 순서**가 곧
+    // 본문의 읽는 순서이고, 그 순서는 셀러가 묻는 순서다: 원본 €50 → 한국에서
+    // 얼마에 팔리나 → 해외에서는 → 얼마에 팔면 되나. 블록을 옮기면 여기서 먼저
+    // 어긋난다(화면의 렌더 순서는 price-display-layout.test.ts가 따로 고정한다).
     expect(Object.values(PRICE_SECTION_TITLE)).toEqual([
       "원본 상품",
       "🌎 판매자 글로벌 시장 가격",
-      "한국 시장 경쟁가격",
+      "🇰🇷 국내 시장",
+      "🌎 해외 시장",
       "수익성",
       "🔎 판단 근거",
     ]);
     // US/DE/FR는 **같은 판매자**의 시장이다 — 남의 해외 가격 비교가 아니다.
     expect(PRICE_SECTION_TITLE.SELLER_GLOBAL_MARKET).not.toContain("해외 가격 비교");
+    // 두 "해외"는 다른 사실이라 이름도 끝까지 갈려 있어야 한다: 앞은 같은
+    // 판매자의 다른 시장(원본 가격의 근거), 뒤는 다른 판매처들의 가격(시세).
+    expect(PRICE_SECTION_TITLE.SELLER_GLOBAL_MARKET).not.toBe(PRICE_SECTION_TITLE.OVERSEAS_MARKET);
   });
 
   /**

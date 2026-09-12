@@ -36,6 +36,9 @@ describe("가격 계층은 화면에 한 벌만 있다", () => {
     expect(jsxUses(panel, "OriginalPriceView")).toBe(1);
     expect(jsxUses(panel, "PriceChainView")).toBe(1);
     expect(jsxUses(panel, "MarketComparisonView")).toBe(1);
+    // MI-MARKET-EVIDENCE-1 — 🌎 해외 시장도 한 번뿐이다. 요약이 두 벌이 되면
+    // 한 화면에서 서로 다른 가격대가 나올 수 있다(아래 원자료 표는 별개 층이다).
+    expect(jsxUses(panel, "OverseasMarketEvidenceView")).toBe(1);
     // MI-SIMPLIFY-1 — 글로벌 시장은 본문 한 줄(Hint)이고, 시장별 원자료
     // (CardView)는 그 한 줄을 펼쳤을 때만 나온다. 카드가 본문으로 되돌아오면
     // CardView가 두 번 쓰이거나 Hint 밖에서 쓰이게 되고, 아래 두 줄이 막는다.
@@ -181,13 +184,22 @@ describe("가격 영역은 정해진 순서로 읽힌다", () => {
    * 카드 하나가 ⓘ 한 줄이 되면서 남은 순서가 한 칸씩 당겨진다:
    * 판단 → ① 원본(+ⓘ 글로벌) → ② 한국 경쟁 → ③ 수익성 → ④ 근거.
    */
-  it("판단 → ① 원본 → ② 한국 경쟁 → ③ 수익성 → ④ 근거 순서다", () => {
+  /**
+   * MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 순서가 셀러의 질문 순서다:
+   * 원본 €50 → 🇰🇷 한국에서 얼마에 팔리나 → 🌎 해외에서는 → 💰 얼마에 팔면 되나.
+   * 🌎 해외가 국내 뒤·수익성 앞에 있어야 하는 이유가 그것이다 — 해외는 판정을
+   * 바꾸는 값이 아니라 국내 가격대가 이상하지 않은지 확인해 주는 값이다.
+   */
+  const overseasAt = panel.indexOf("<OverseasMarketEvidenceView");
+
+  it("판단 → 원본 → 🇰🇷 국내 → 🌎 해외 → 수익성 → 근거 순서다", () => {
     expect(verdictAt).toBeGreaterThan(-1);
     expect(originalAt).toBeGreaterThan(verdictAt);
-    // ⓘ 글로벌 시장은 ① 바로 아래에 붙는다 — 원본 상품의 사실이기 때문이다.
+    // ⓘ 글로벌 시장은 원본 바로 아래에 붙는다 — 원본 상품의 사실이기 때문이다.
     expect(globalHintAt).toBeGreaterThan(originalAt);
     expect(comparisonAt).toBeGreaterThan(globalHintAt);
-    expect(chainAt).toBeGreaterThan(comparisonAt);
+    expect(overseasAt).toBeGreaterThan(comparisonAt);
+    expect(chainAt).toBeGreaterThan(overseasAt);
     expect(evidenceAt).toBeGreaterThan(chainAt);
   });
 
@@ -197,7 +209,8 @@ describe("가격 영역은 정해진 순서로 읽힌다", () => {
     // "내가 뭘 안 했나"를 묻게 만든다. 순서 감시는 바로 위 테스트(소스 상의
     // 렌더 순서)와 price-hierarchy.test.ts(표의 나열 순서)가 계속 맡는다.
     const hierarchy = read("../price-hierarchy.ts");
-    for (const title of ["원본 상품", "한국 시장 경쟁가격"]) {
+    // MI-MARKET-EVIDENCE-1 — 두 시장 제목은 국기로 갈린다(번호가 아니다).
+    for (const title of ["원본 상품", "🇰🇷 국내 시장", "🌎 해외 시장"]) {
       expect(hierarchy).toContain(title);
     }
     // 글로벌 시장은 본문 순서에 없으므로 번호도 없다(price-hierarchy.test.ts가
@@ -382,6 +395,22 @@ describe("근거 블록은 위젯이 아니라 의미로 묶인다", () => {
 
   it("해외 블록 제목이 글로벌 시장임을 말한다", () => {
     expect(comparison).toContain('title="🌎 글로벌 시장 · 해외 판매처 가격 (베타)"');
+  });
+
+  it("두 블록은 MI 요약의 드릴다운 대상이라 기본 펼침이 아니다", () => {
+    // MI-MARKET-EVIDENCE-1(CEO 지시 ④, 2026-09-12) — 같은 시장 사실이 한 화면에
+    // 두 번 서지 않게 하는 유일한 장치다. 요약이 위에 있고 표가 아래에서 함께
+    // 펼쳐져 있으면, 화면을 줄일 때마다 근거가 사라지고 근거를 되살릴 때마다
+    // 화면이 길어지는 왕복이 그대로 되돌아온다.
+    // 주석은 "왜 버렸는지"를 설명한다 — 막아야 하는 것은 실제 prop뿐이다.
+    for (const source of [stripComments(domestic), stripComments(comparison)]) {
+      expect(source).not.toContain("defaultOpen");
+      expect(source).toContain("open={open}");
+      expect(source).toContain("onToggle={onToggle}");
+    }
+    // 접힘 요약 한 줄이 무엇이 열리는지 말한다("열어봐야 아는" 접힘을 만들지 않는다).
+    expect(domestic).toContain("판매처 · 상품 · 가격 · 재고 · 매칭상태");
+    expect(comparison).toContain("판매처 · 국가 · 상품 · 가격 · 매칭상태");
   });
 
   it("해외 표의 국가 열은 '시장'이 아니라 '판매처 국가'다", () => {

@@ -51,6 +51,15 @@ import {
   type MarketComparison,
   type MarketComparisonSide,
 } from "./market-comparison";
+// MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 본문으로 되돌아온 시장 요약 둘.
+// 개수와 등급을 한 묶음으로만 내보내는 규칙이 이 파일 하나에 있다(화면이 다시
+// 세지 않는다 — 세기 시작하면 요약이 드릴다운보다 강한 주장을 하게 된다).
+import {
+  buildDomesticMarketEvidence,
+  buildOverseasMarketEvidence,
+  tierCountsText,
+  type MarketEvidenceSummary,
+} from "./market-evidence";
 // UX 2.4(CEO 지시, 2026-09-11) — 판매자가 시장마다 직접 파는 가격(B 그룹).
 // 국내 비교상품(C 그룹)과 절대 같은 카드에 서지 않도록 파일부터 분리돼 있다.
 import {
@@ -1245,26 +1254,48 @@ function OriginalPriceView({ headline }: { headline: OriginalPriceHeadline }) {
  * 실제 DOM으로 확인할 수 있게(mi-polish.test.ts). "빈 카드가 아니라 카드 없음"은
  * 소스 배치가 아니라 렌더 결과로만 증명되는 사실이다.
  */
+/**
+ * ── MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 블록이 되돌아온다 ──────────────
+ * MI-POLISH-2/MI-SIMPLIFY-1은 비교상품이 0건이면 이 블록을 **DOM에서 없앴다**.
+ * 근거는 "빈 칸 두 개짜리 카드는 정보가 아니라 질문"이었고, 그건 그때 화면에서는
+ * 참이었다 — 빈 칸 둘이 각각 `⚪ 검색 데이터 없음`만 말했기 때문이다.
+ *
+ * 지금은 반대가 됐다. 국내와 해외가 나란히 서면서 이 자리는 셀러가 묻는 순서의
+ * **가운데 칸**이 됐고(원본 → 국내 → 해외 → 수익성), 가운데가 조건부로 사라지면
+ * 판정이 근거 없이 내려온 숫자로 읽힌다. 그래서 블록은 언제나 서고, 없을 때는
+ * 없다는 사실을 정직하게 말한다 — 숫자도 범위도 지어내지 않는다(CEO 지시 ③).
+ *
+ * 게이트가 뷰 안에 있어야 한다는 MI-POLISH-2의 규칙은 그대로 유효하다. 바뀐 것은
+ * 게이트가 고르는 결과뿐이다: `null` 대신 빈 상태 칩(ComparisonSideView가 이미
+ * 그리고 있던 그 칩)이다.
+ */
 export function MarketComparisonView({
   comparison,
   context,
+  evidence,
+  onDrillDown,
   stockNote,
 }: {
   comparison: MarketComparison;
   /** 근거의 두께(비교 판매처 수)와 "가격 경쟁력만 확인 불가" 문장은 C 그룹 그대로다. */
   context: MarketContext;
+  /**
+   * MI-MARKET-EVIDENCE-1 — 근거의 두께와 **등급 분포**. 개수만 적으면 셀러는
+   * 세 곳이 전부 확정된 동일상품이라고 읽는다(Smallable/Bobo 오매칭이 그
+   * 상태였다) — 그래서 개수는 언제나 등급과 한 묶음으로만 나간다.
+   */
+  evidence: MarketEvidenceSummary;
+  /** 판매처별 원자료(판매처 · 상품 · 가격 · 재고 · 매칭상태)를 여는 길. */
+  onDrillDown?: () => void;
   /** 국내 비교상품 가격이 어떤 재고 상태 위에 서 있는지. 그 사실이 붙어야 할
    * 곳은 그 가격 옆이라 이 블록이 들고 있는다. */
   stockNote?: React.ReactNode;
 }) {
-  // 빈 칸 두 개짜리 카드는 정보가 아니라 질문이다 — 셀러는 조회가 고장났는지
-  // 자기가 뭘 안 했는지를 스스로 추론해야 했다. 무엇이 "비교상품이 있다"인지는
-  // 화면이 아니라 buildMarketComparison이 정한다(두 곳이 각자 세면 블록은
-  // 숨겼는데 판정은 비교한 것으로 나오는 날이 온다).
-  if (!comparison.hasComparable) return null;
   return (
     <div className="rounded-md border border-current/20 bg-background/40 p-2.5">
-      <p className="text-[11px] font-semibold text-text-primary">{comparison.title}</p>
+      <p className="text-[11px] font-semibold text-text-primary" title={evidence.hint}>
+        {comparison.title}
+      </p>
       {/* ── MI-FINAL-UX-3(CEO 지시, 2026-09-12) — VS 두 칸을 한 칸으로 ──────────
           왼쪽 칸(원본 판매자 한국 표시가)을 뺀다. 그 값은 MI/PRICE-2 이후
           바로 위 「원본 상품」이 자기 라벨을 달고 이미 말하고 있어서, 여기
@@ -1277,10 +1308,11 @@ export function MarketComparisonView({
           얼마에 파는가.** 원본 판매자의 한국 표시가와 나란히 놓고 비교하는
           일은 셀러가 두 블록을 읽으면서 자연히 한다(같은 화면, 세 줄 위). */}
       <div className="mt-1.5">
-        <ComparisonSideView flag={context.market.flag} side={comparison.domestic} />
+        <ComparisonSideView flag={null} side={comparison.domestic} />
       </div>
-      {/* MI-POLISH-2 — 아래 남는 것은 근거의 두께 한 줄과, 지울 수 없는 경고뿐이다. */}
-      <p className="mt-1 text-[10px] text-text-tertiary">{context.sellerCount.label}</p>
+      {/* MI-MARKET-EVIDENCE-1 — 근거의 두께 한 줄이 등급을 함께 들고 간다.
+          여기서 개수를 다시 세지 않는다(요약과 드릴다운이 갈라지지 않게). */}
+      <MarketEvidenceBasisLine evidence={evidence} onDrillDown={onDrillDown} />
       {stockNote}
       {/* UX 2.3의 핵심 문장. "시장 비교 불가 ≠ 수익성 계산 불가"를 화면이 직접
           말한다 — 셀러가 빈 칸을 보고 스스로 추론하게 두지 않는다.
@@ -1300,20 +1332,118 @@ export function MarketComparisonView({
  * MI-POLISH-2 — 기준 문장(관측 시장·환산·등급)과 결측 사유는 title로 내려간다.
  * 왼쪽 칸이 비었을 때 "⚪ 검색 데이터 없음"과 그 사유가 함께 두 줄로 서면,
  * 비교 카드의 절반이 조회 실패 설명문이 된다. */
-function ComparisonSideView({ flag, side }: { flag: string; side: MarketComparisonSide }) {
+function ComparisonSideView({ flag, side }: { flag: string | null; side: MarketComparisonSide }) {
   return (
     <div
       className="min-w-[9rem] flex-1 rounded border border-border bg-background px-2 py-1.5"
       title={(side.value ? side.basis : (side.empty?.reason ?? side.basis)) ?? undefined}
     >
+      {/* MI-MARKET-EVIDENCE-1 — 국기는 블록 제목(🇰🇷 국내 시장)이 이미 달고 있다.
+          여기서 또 붙이면 같은 국기가 두 줄 연속으로 서고, 셀러는 그 둘이 서로
+          다른 시장인가를 한 번 더 확인하게 된다. null이면 라벨만 그린다. */}
       <p className="text-[10px] text-text-tertiary">
-        {flag} {side.label}
+        {flag ? `${flag} ` : ""}
+        {side.label}
       </p>
       {side.value ? (
         <p className="text-sm font-semibold text-text-primary">{side.value}</p>
       ) : (
         <p className="text-xs font-semibold text-text-tertiary">{side.empty?.chip}</p>
       )}
+    </div>
+  );
+}
+
+/**
+ * MI-MARKET-EVIDENCE-1(CEO 지시 + CPO 추가 지시, 2026-09-12) — **개수는 혼자
+ * 나가지 않는다.**
+ *
+ * ── 이 한 줄이 답하는 질문 ───────────────────────────────────────────────
+ * 셀러가 묻는 것은 "비교 대상이 3곳인가"가 아니라 **"이 3곳을 왜 비교 대상으로
+ * 믿을 수 있지?"**다. 그래서 두께(3곳)와 등급(🟢/🟡/⚪)이 언제나 같은 줄에 있다.
+ *
+ * 등급이 섞였을 때 하나로 접지 않는 것이 이 줄의 핵심이다. 🟢 1곳 + 🟡 2곳을
+ * "🟢 동일상품 기준"으로 적으면 추정 두 곳이 확정으로 포장된다 — 이 작업이
+ * 고치려는 신뢰 문제 그 자체라, 접는 경로 자체를 tierCountsText가 갖지 않는다.
+ *
+ * 국내와 해외가 **같은 컴포넌트**를 쓰는 것도 규칙이다. 두 블록이 각자 이 줄을
+ * 그리면 한쪽만 등급을 잃는 날이 온다(이 저장소에서 실제로 반복된 사고다).
+ */
+function MarketEvidenceBasisLine({
+  evidence,
+  onDrillDown,
+}: {
+  evidence: MarketEvidenceSummary;
+  onDrillDown?: () => void;
+}) {
+  const basis = [evidence.scopeLabel, tierCountsText(evidence.tiers)].filter(Boolean).join(" · ");
+  return (
+    <>
+      {/* 근거가 0건이면 이 줄 자체가 없다. 바로 위 칸이 이미 빈 상태 칩으로
+          같은 사실을 말하고 있어서, 여기서 한 번 더 적으면 "⚪ 검색 데이터 없음"이
+          두 줄 연속으로 선다 — 없다는 사실이 두 배로 커 보이는 화면이다. */}
+      {basis && <p className="mt-1 text-[10px] text-text-tertiary">{basis}</p>}
+      {/* 등급이 섞였다는 사실은 요약만 읽고도 보여야 한다 — 드릴다운을 열어야
+          알 수 있으면 요약이 강한 쪽으로 반올림된 채로 읽힌다. */}
+      {evidence.mixedNote && <p className="text-[10px] text-warning">{evidence.mixedNote}</p>}
+      {/* 원자료는 누른 사람에게만 온다. 여는 대상은 이 화면 아래 가격비교
+          패널 하나이고, 여기서 같은 표를 두 번째로 그리지 않는다 —
+          그리면 같은 시장 사실이 한 화면에 두 벌이 된다. */}
+      {onDrillDown && (
+        <button
+          type="button"
+          onClick={onDrillDown}
+          className="mt-0.5 block text-left text-[10px] text-primary hover:underline"
+        >
+          ▸ {evidence.drillDownLabel}
+        </button>
+      )}
+    </>
+  );
+}
+
+/**
+ * MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — **🌎 해외 시장**.
+ *
+ * ── 왜 국내와 합치지 않는가 ──────────────────────────────────────────────
+ * 두 블록은 서로 다른 질문에 답한다:
+ *
+ *   🇰🇷 국내  한국에서 **경쟁 가능한가**   → 내가 겨룰 값
+ *   🌎 해외  이 상품이 **어떤 가격대인가** → 이 상품의 시세
+ *
+ * 하나의 숫자(옛 `VS` 한 칸)로 접으면 둘 중 아무것도 답하지 못한다. 그래서 두
+ * 블록은 컴포넌트도, 만드는 함수도, 입력도 서로 만나지 않는다 —
+ * buildDomesticMarketEvidence와 buildOverseasMarketEvidence는 서로의 결과를
+ * 인자로 받을 수 없다(price-hierarchy의 두 축 분리와 같은 장치다).
+ *
+ * 이 뷰는 숫자를 만들지 않는다. 가격대 문자열도 등급 개수도 market-evidence.ts가
+ * 이미 완성한 값을 배치만 한다.
+ */
+export function OverseasMarketEvidenceView({
+  evidence,
+  onDrillDown,
+}: {
+  evidence: MarketEvidenceSummary;
+  onDrillDown?: () => void;
+}) {
+  return (
+    <div className="rounded-md border border-current/20 bg-background/40 p-2.5">
+      <p className="text-[11px] font-semibold text-text-primary" title={evidence.hint}>
+        {evidence.title}
+      </p>
+      <div
+        className="mt-1.5 min-w-[9rem] rounded border border-border bg-background px-2 py-1.5"
+        title={(evidence.figure ? evidence.figureBasis : evidence.figureEmpty?.reason) ?? undefined}
+      >
+        {/* 값이 없으면 지어내지 않는다 — 범위도 평균도 만들지 않고 빈 상태
+            어휘를 그대로 쓴다(mi-empty-state.ts의 세 칩 중 하나). */}
+        {evidence.figure ? (
+          <p className="text-sm font-semibold text-text-primary">{evidence.figure}</p>
+        ) : (
+          <p className="text-xs font-semibold text-text-tertiary">{evidence.figureEmpty?.chip}</p>
+        )}
+      </div>
+      <MarketEvidenceBasisLine evidence={evidence} onDrillDown={onDrillDown} />
     </div>
   );
 }
@@ -1577,6 +1707,9 @@ export function DomesticPriceIntelligencePanel({
   onCloseDetail,
   priceCalculationDetail = null,
   profitability = null,
+  overseasMarketEvidence = null,
+  onOpenDomesticEvidence,
+  onOpenOverseasEvidence,
   openPriceDetailRequest = 0,
 }: {
   snapshotId: string;
@@ -1662,6 +1795,17 @@ export function DomesticPriceIntelligencePanel({
    * 주석 참고). 여기서도 product를 받지 않는다 — 숫자만 지나간다.
    */
   profitability?: ProfitabilityNumbers | null;
+  /**
+   * MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 🌎 해외 시장 요약과 두 드릴다운.
+   *
+   * 이 패널은 해외 가격을 **조회하지 않는다**. 조회는 화면 아래 해외 가격비교
+   * 패널이 이미 하고 있고, 그 결과로 만든 요약이 CommerceWorkspace를 거쳐 여기로
+   * 내려온다 — 같은 조회를 두 곳에서 하면 한 화면에 해외 가격이 두 벌 생긴다.
+   * 드릴다운도 마찬가지로 이 패널이 표를 그리지 않고, 이미 있는 그 패널을 연다.
+   */
+  overseasMarketEvidence?: MarketEvidenceSummary | null;
+  onOpenDomesticEvidence?: () => void;
+  onOpenOverseasEvidence?: () => void;
   /**
    * 바깥에서 "가격이 왜 이 값인지 보여달라"는 요청이 올 때마다 1씩 올라가는 값
    * (③ 등록 준비의 확정 카드, 채널 화면의 [상품정보 가격 계산 →]).
@@ -1976,6 +2120,9 @@ export function DomesticPriceIntelligencePanel({
       presentation={presentation}
       priceCalculationDetail={priceCalculationDetail}
       profitability={profitability}
+      overseasMarketEvidence={overseasMarketEvidence}
+      onOpenDomesticEvidence={onOpenDomesticEvidence}
+      onOpenOverseasEvidence={onOpenOverseasEvidence}
       openPriceDetailRequest={openPriceDetailRequest}
       onCloseDetail={onCloseDetail}
       onOpenDetail={onOpenDetail}
@@ -2017,6 +2164,9 @@ export function MiPanelView({
   presentation = "FULL",
   priceCalculationDetail = null,
   profitability = null,
+  overseasMarketEvidence = null,
+  onOpenDomesticEvidence,
+  onOpenOverseasEvidence,
   openPriceDetailRequest = 0,
   onCloseDetail,
   onOpenDetail,
@@ -2041,6 +2191,25 @@ export function MiPanelView({
    * 고쳐도 시장 분석이 다시 돌 배선은 여전히 없다).
    */
   profitability?: ProfitabilityNumbers | null;
+  /**
+   * MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 🌎 해외 시장 요약.
+   *
+   * 국내와 달리 이 값은 **패널이 만들 수 없다**. 해외 판매처 가격은 price-history
+   * 응답이 아니라 별도 조회(/api/comparison/search)의 결과이고, 그 조회를 이미
+   * 하고 있는 컴포넌트가 화면 아래 가격비교 패널이다. 그래서 그 패널이 자기
+   * 결과로 만든 요약을 위로 올려보내고(CommerceWorkspace), 여기로 내려온다 —
+   * 같은 조회를 MI가 한 번 더 하면 한 화면에 서로 다른 해외 가격이 두 벌 생긴다
+   * (이 저장소에서 반복된 "화면마다 다른 숫자" 버그와 같은 종류다).
+   *
+   * null이면 아직 조회가 끝나지 않았거나 결과가 없는 상태다. 둘을 구분하지
+   * 않는 이유는 셀러가 할 일이 같기 때문이다 — 어느 쪽이든 화면은 "확인되지
+   * 않았다"고만 말하고 숫자를 지어내지 않는다.
+   */
+  overseasMarketEvidence?: MarketEvidenceSummary | null;
+  /** ▸ 국내 가격 보기 — 아래 국내 가격비교 패널(판매처·상품·가격·재고·매칭상태)을 연다. */
+  onOpenDomesticEvidence?: () => void;
+  /** ▸ 해외 가격 보기 — 아래 해외 가격비교 패널(판매처·국가·상품·가격·매칭상태)을 연다. */
+  onOpenOverseasEvidence?: () => void;
   openPriceDetailRequest?: number;
   onCloseDetail?: () => void;
   onOpenDetail?: () => void;
@@ -2329,6 +2498,28 @@ export function MiPanelView({
   const marketComparison = buildMarketComparison(globalMarketCard, marketContext);
 
   /**
+   * MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 본문의 가운데 두 칸.
+   *
+   * 국내는 전부 서버 집계에서 온다(새 계산 없음). 특히 등급 두 칸이
+   * domesticMarketSplit의 **서로 겹치지 않는 두 버킷**과 1:1로 대응한다:
+   * exact는 식별자 근거가 있는 관측만, comparison은 그렇지 않은 관측만 담는다
+   * (summarizeDomesticMarketSplit). 그래서 두 수를 나란히 적는 것이 곧 정확한
+   * 분포이고, 하나로 접어 "동일상품 3곳"이라고 부를 필요도 여지도 없다.
+   *
+   * 해외는 이 패널이 만들 수 없다(위 overseasMarketEvidence 주석). 값이 없으면
+   * 빈 요약을 만들어 같은 모양으로 세운다 — 블록이 조건부로 사라지면 셀러가 읽는
+   * 순서(원본 → 국내 → 해외 → 수익성)의 한 칸이 비고, 그 순간 판정은 다시 근거
+   * 없이 내려온 숫자가 된다.
+   */
+  const domesticEvidence = buildDomesticMarketEvidence({
+    context: marketContext,
+    basis: domesticMarketSplit.basis,
+    exactSellerCount: domesticMarketSplit.exact.sellerCount,
+    comparisonSellerCount: domesticMarketSplit.comparison.sellerCount,
+  });
+  const overseasEvidence = overseasMarketEvidence ?? buildOverseasMarketEvidence({ candidates: [] });
+
+  /**
    * MI-SIMPLIFY-1(CPO 지시, 2026-09-12) — ③ 수익성의 판정 배지.
    *
    * 판정을 여기서 내리지 않는다. 서버가 이미 낸 marketCase(computePriceRecommendation
@@ -2557,29 +2748,31 @@ export function MiPanelView({
                 </div>
               </div>
 
-              {/* ② 한국 시장 경쟁가격 — 화면에서 비교가 일어나는 유일한 자리.
-                  ①의 🇰🇷 줄(이 판매처가 한국에서 받는 값)과 국내 비교상품(다른
-                  한국 판매자들이 받는 값)을 나란히 놓는다. 두 값은 끝까지 서로
-                  다른 builder가 만들고, 여기서는 결과만 짝짓는다.
+              {/* ── MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 시장 두 칸 ───────
+                  셀러가 묻는 순서는 넷이다:
+                    원본 €50 → 🇰🇷 한국에서 얼마에 팔리나 → 🌎 해외에서는 →
+                    💰 내가 얼마에 팔면 되나
+                  네 번의 단순화를 거치며 가운데 두 칸이 ② 단계의 베타 패널로
+                  내려갔고, 그 결과 판정은 근거 없이 내려온 숫자로 읽혔다.
+                  여기서 되돌리되 **요약으로만** 되돌린다 — 예전의 전체 표가
+                  아니라 대표 숫자 하나 · 근거의 두께와 등급 한 줄 · 드릴다운
+                  하나다. 원자료는 여전히 아래 패널 한 벌뿐이라, 같은 시장
+                  사실이 한 화면에 두 번 서지 않는다.
 
-                  MI-SIMPLIFY-1 — 비교할 국내 상품이 없으면 블록 자체가 없다
-                  (빈 칸으로 남기지 않는다). 빈 칸은 정보가 아니라 질문이라,
-                  셀러는 조회가 고장났는지 자기가 뭘 안 했는지를 스스로 추론해야
-                  했다. 그 사실은 사라지지 않고 "왜 이렇게 판단했나요?" 안에서
-                  판정의 일부로 말한다(NO_DOMESTIC_COMPARABLE_NOTE). 무엇이
-                  "비교상품이 있다"인지는 화면이 아니라 buildMarketComparison이
-                  정한다 — 여기서 다시 세면 블록은 숨겼는데 판정은 비교한 것으로
-                  나오는 날이 온다.
+                  두 블록을 절대 합치지 않는 이유는 답하는 질문이 다르기
+                  때문이다(market-evidence.ts) — 하나의 숫자로 접으면 둘 중
+                  아무것도 답하지 못한다. 그래서 두 요약을 만드는 함수는 서로의
+                  결과를 인자로 받을 수조차 없다.
 
-                  MI-POLISH-2(CEO 지시, 2026-09-12) — 그 게이트가 여기 있던
-                  `{...hasComparable && (…)}`에서 **뷰 안**으로 들어갔다. 조건이
-                  호출부에 있으면 이 뷰를 한 번 더 쓰는 사람이 게이트를 빠뜨릴
-                  수 있고, 무엇보다 "빈 카드가 아니라 카드 없음"을 렌더 결과로
-                  증명할 수가 없다. 이제 렌더가 빈 문자열이라는 것을 테스트가
-                  직접 확인한다(mi-polish.test.ts). */}
+                  MI-POLISH-2의 "게이트는 뷰 안에 있다"는 규칙은 그대로다.
+                  바뀐 것은 게이트가 고르는 결과뿐이다: 비교상품이 0건이면
+                  블록이 사라지는 것이 아니라 빈 상태 칩이 선다(CEO 지시 ③ —
+                  숫자도 범위도 지어내지 않는다). */}
               <MarketComparisonView
                 comparison={marketComparison}
                 context={marketContext}
+                evidence={domesticEvidence}
+                onDrillDown={onOpenDomesticEvidence}
                 stockNote={
                   /* MI-STOCK-CLARITY-1(CPO 지시, 2026-09-10) — 국내 비교상품
                      가격이 어떤 재고 상태 위에 서 있는지. UX 2.4.1에서 이 문장을
@@ -2597,6 +2790,8 @@ export function MiPanelView({
                   ) : null
                 }
               />
+
+              <OverseasMarketEvidenceView evidence={overseasEvidence} onDrillDown={onOpenOverseasEvidence} />
 
               {/* ③ 수익성 — 착지원가 → 내 판매가격 → 예상 수익 → 예상 마진,
                   그리고 판정 한 줄. 네 줄이 답하는 것은 "내 원가 기준 얼마에
@@ -2748,6 +2943,10 @@ export function MiPanelView({
                 marketCase: recommendation?.marketCase ?? null,
                 hasComparable: marketComparison.hasComparable,
                 evidenceBasis: domesticMarketSplit.basis,
+                // MI-MARKET-EVIDENCE-1 — 본문 🌎 해외 시장이 실제로 가격대를
+                // 보여주고 있는가. 화면과 되물음이 같은 값을 보므로 "본문에는
+                // 가격대가 있는데 되물음은 없다고 말하는" 상태가 생길 수 없다.
+                hasOverseasRange: overseasEvidence.figure != null,
               }).map((line) => (
                 <li key={line}>{line}</li>
               ))}

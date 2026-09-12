@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { countryToFlagEmoji } from "@commerce/shared";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { deriveComparisonResultState, getComparisonResultHeadline, type ComparisonResultState } from "@/lib/comparison-result-status";
@@ -15,6 +15,14 @@ import {
   tierGroupLabel,
   type MatchDisplayTier,
 } from "./match-display";
+// MI-MARKET-EVIDENCE-1 — 이 조회 결과를 MI 본문의 🌎 해외 시장 요약으로 옮기는
+// 유일한 함수. 개수·등급·가격대를 여기서 직접 만들지 않는다(요약 규칙이 두 벌이
+// 되면 요약과 이 표가 다른 말을 하게 된다).
+import {
+  buildOverseasMarketEvidence,
+  type MarketEvidenceSummary,
+  type OverseasMarketCandidateInput,
+} from "./market-evidence";
 // MI-UX-9 §10 — 검색 상태 5종(자동지원/수동필요/검색실패/결과없음/확인불가) 구분.
 import { searchSourceStatusDisplay } from "@/lib/search-source-status";
 import {
@@ -162,6 +170,9 @@ export function ComparisonShopSearch({
   sku,
   description,
   onRequestPriceReview,
+  open,
+  onToggle,
+  onEvidenceChange,
 }: {
   title: string;
   brand?: string;
@@ -176,6 +187,24 @@ export function ComparisonShopSearch({
    * handleRequestPriceReview를 그대로 전달받는다(탭 전환 + 스크롤만 하는 안전한
    * 함수 — 여기서 새 네비게이션 로직을 만들지 않는다). */
   onRequestPriceReview?: () => void;
+  /**
+   * MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 이 표는 MI 🌎 해외 시장 요약의
+   * **드릴다운 대상**이다(국내 표와 같은 이유로 기본 펼침을 버렸다).
+   */
+  open?: boolean;
+  onToggle?: (open: boolean) => void;
+  /**
+   * MI-MARKET-EVIDENCE-1 — 이 조회 결과로 만든 요약을 위로 올려보낸다.
+   *
+   * MI가 같은 조회를 한 번 더 하지 않게 하는 장치다. 해외 판매처 가격은
+   * price-history 응답에 없고 이 컴포넌트만 갖고 있으므로, 여기서 만들어
+   * 올려보내지 않으면 MI는 같은 질문을 별도 경로로 다시 물어야 하고 —
+   * 그 순간 한 화면에 서로 다른 해외 가격이 두 벌 생긴다.
+   *
+   * 요약은 **아래 표가 기본으로 보여주는 행들**로만 만든다(같은 필터·같은 등급
+   * 판정). 요약이 표보다 넓은 집합을 세면 "요약은 5곳인데 열어보니 3줄"이 된다.
+   */
+  onEvidenceChange?: (evidence: MarketEvidenceSummary | null) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchResult[] | null>(null);
@@ -245,13 +274,56 @@ export function ComparisonShopSearch({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title]);
 
+  /**
+   * MI-MARKET-EVIDENCE-1 — 위 요약이 아래 표와 **같은 행**을 센다.
+   *
+   * 필터도 등급 판정도 ResultTable이 쓰는 것 그대로다(isDefaultVisibleTier /
+   * displayTierForCandidate). 여기서 조건을 한 글자라도 다르게 쓰면 요약과
+   * 드릴다운이 다른 개수를 말하게 되고, 그러면 요약은 확인할 수 없는 주장이 된다.
+   *
+   * 가격도 같은 규칙을 따른다 — P-4-DATA-4의 절대 원칙대로 현재가로 검증된 건만
+   * 숫자를 갖고, 나머지는 가격 없이 개수와 등급에만 들어간다(표의 PriceCell이
+   * 숫자 대신 "가격 확인 필요"를 그리는 그 행들이다).
+   */
+  const evidence = useMemo<MarketEvidenceSummary | null>(() => {
+    if (!results) return null;
+    const candidates: OverseasMarketCandidateInput[] = [];
+    for (const r of results) {
+      if (r.status !== "ok" || !Array.isArray(r.candidates)) continue;
+      for (const c of r.candidates) {
+        const tier = displayTierForCandidate(c);
+        if (!isDefaultVisibleTier(tier)) continue;
+        const status = c.priceStatus ?? "UNVERIFIED_SEARCH";
+        candidates.push({
+          shopId: r.shopId,
+          shopCountry: r.shopCountry ?? null,
+          tier,
+          price: isPriceDisplayable(status, c.price) ? c.price : null,
+        });
+      }
+    }
+    return buildOverseasMarketEvidence({ candidates });
+  }, [results]);
+
+  /** 콜백은 ref로 잡는다 — 부모가 매 렌더 새 함수를 넘겨도 보고가 무한히 돌지 않는다. */
+  const onEvidenceChangeRef = useRef(onEvidenceChange);
+  onEvidenceChangeRef.current = onEvidenceChange;
+  useEffect(() => {
+    onEvidenceChangeRef.current?.(evidence);
+  }, [evidence]);
+
   return (
     // UX 2.3(CEO 지시, 2026-09-11) — 근거는 "위젯"이 아니라 "의미"로 묶는다.
     // "해외 가격비교"라는 제목은 이 블록이 무엇의 가격인지 말해주지 않아서,
     // 바로 위 국내 비교상품 목록의 연장으로 읽혔다. 이 안에 있는 것은 글로벌
     // 시장의 **다른 판매처** 가격과 **원본 판매자** 본인의 현재가 두 가지이고,
     // 둘 다 한국 경쟁가로 쓰이지 않는다.
-    <CollapsibleSection title="🌎 글로벌 시장 · 해외 판매처 가격 (베타)" defaultOpen>
+    <CollapsibleSection
+      title="🌎 글로벌 시장 · 해외 판매처 가격 (베타)"
+      summary="판매처 · 국가 · 상품 · 가격 · 매칭상태 — MI 🌎 해외 시장 요약의 원자료"
+      open={open}
+      onToggle={onToggle}
+    >
       <p className="text-xs text-text-tertiary">
         활성화된 해외 편집샵에서 유사 상품을 검색합니다 — 참고용 조회이며, 어떤 가격도 자동으로 원본가격/판매가에
         반영되지 않습니다.

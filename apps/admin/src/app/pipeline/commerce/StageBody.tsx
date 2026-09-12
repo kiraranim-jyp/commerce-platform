@@ -74,6 +74,7 @@ export function StageBody({
   categoryVerified,
   onGoToChannel,
   openPriceSurfaceRequest = 0,
+  openMarketEvidenceRequest = 0,
 }: {
   focus: StageFocus;
   workflow: Workflow;
@@ -95,6 +96,17 @@ export function StageBody({
    * 두 번째 클릭에서 값이 그대로라 아무 일도 일어나지 않는다.
    */
   openPriceSurfaceRequest?: number;
+  /**
+   * MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — MI의 [▸ 국내/해외 가격 보기]가
+   * 올 때마다 1씩 올라가는 값.
+   *
+   * ②에서는 근거가 본문에 그대로 있어 이 값이 필요 없지만, ③④에서는 같은
+   * 패널들이 「📊 시장 가격 비교」 접힘 **안쪽**에 있다. 그 바깥 접힘을 열어주지
+   * 않으면 드릴다운이 조용히 실패한다 — 요약은 "보기"라고 말하는데 눌러도
+   * 아무 일이 없는 상태가, 이번 작업이 없애려는 불신과 정확히 같은 종류다.
+   * 카운터인 이유는 openPriceSurfaceRequest와 같다(같은 요청이 두 번 온다).
+   */
+  openMarketEvidenceRequest?: number;
 }) {
   /**
    * ③에서 지금 펼쳐 작업 중인 항목. **이 상태가 여기 있는 이유**는 아래 접힘
@@ -123,6 +135,14 @@ export function StageBody({
     setSyncedPriceRequest(openPriceSurfaceRequest);
     setPriceOpen(true);
     setPickedKey("price");
+  }
+
+  /** MI-MARKET-EVIDENCE-1 — 위와 같은 렌더 중 동기화. 접는 것은 셀러만 한다. */
+  const [marketEvidenceOpen, setMarketEvidenceOpen] = useState(false);
+  const [syncedMarketEvidenceRequest, setSyncedMarketEvidenceRequest] = useState(openMarketEvidenceRequest);
+  if (openMarketEvidenceRequest !== syncedMarketEvidenceRequest) {
+    setSyncedMarketEvidenceRequest(openMarketEvidenceRequest);
+    setMarketEvidenceOpen(true);
   }
 
   const prepareSubSteps = focus.main === "PREPARE" ? workflow.current.subSteps : [];
@@ -196,6 +216,10 @@ export function StageBody({
           <CollapsibleSection
             title="📊 시장 가격 비교"
             summary="🇰🇷 국내 경쟁 판매자 · 🌎 해외 판매처에서 관측된 가격"
+            /* MI-MARKET-EVIDENCE-1 — MI의 [▸ 국내/해외 가격 보기]가 여는 바깥 접힘.
+               제어 모드로 바꾼 것뿐이고 셀러가 직접 여닫는 동작은 그대로다. */
+            open={marketEvidenceOpen}
+            onToggle={setMarketEvidenceOpen}
           >
             {marketEvidence}
           </CollapsibleSection>

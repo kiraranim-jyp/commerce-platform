@@ -105,7 +105,7 @@ describe("CASE A~D는 번역되지, 노출되지 않는다", () => {
   });
 });
 
-describe("② 한국 시장 경쟁가격은 비교 대상이 없으면 DOM에 아예 없다", () => {
+describe("🇰🇷 국내 시장은 비교 대상 유무를 한 곳에서만 판정한다", () => {
   const EMPTY_CARD = buildGlobalMarketCard({ observations: [] });
 
   function contextWith(domesticLowest: number | null) {
@@ -128,22 +128,16 @@ describe("② 한국 시장 경쟁가격은 비교 대상이 없으면 DOM에 �
     expect(comparison.domestic.value).not.toBeNull();
   });
 
-  it("게이트가 뷰의 첫 줄이다 — 호출부가 빠뜨릴 수 있는 자리 자체가 없다", () => {
-    // "빈 칸 두 개짜리 카드"와 "카드 없음"은 다른 화면이다. 빈 칸은 정보가
-    // 아니라 질문이라, 셀러는 조회가 고장났는지 자기가 뭘 안 했는지를 스스로
-    // 추론해야 했다.
-    //
-    // MI-POLISH-2(CEO 지시, 2026-09-12) — 그 게이트가 호출부의
+  it("숨기는 조건이 호출부에 남아 있지 않다", () => {
+    // MI-POLISH-2(CEO 지시, 2026-09-12) — 그 조건이 호출부의
     // `{marketComparison.hasComparable && (…)}`에서 **뷰 안**으로 들어갔다.
-    // 호출부 조건은 이 뷰를 한 번 더 쓰는 사람이 빠뜨릴 수 있고, 무엇보다
-    // "빈 카드가 아니라 카드 없음"을 소스 배치로는 증명할 수 없다 — 실제 렌더가
-    // 빈 문자열이라는 것은 mi-polish.test.ts가 DOM으로 확인한다.
-    const viewAt = panel.indexOf("function MarketComparisonView");
-    const bodyAt = panel.indexOf("return (", viewAt);
-    const gateAt = panel.indexOf("if (!comparison.hasComparable) return null;", viewAt);
-    expect(gateAt).toBeGreaterThan(viewAt);
-    expect(gateAt).toBeLessThan(bodyAt);
-    // 호출부에는 조건이 남아 있지 않다(두 곳이 각자 세면 언젠가 갈라진다).
+    // 호출부에 두면 이 뷰를 한 번 더 쓰는 사람이 다른 결과를 만들 수 있다.
+    //
+    // MI-MARKET-EVIDENCE-1(CEO 지시 ③, 2026-09-12) — 조건이 고르는 **결과**가
+    // 바뀌었다. 이 블록은 이제 셀러가 읽는 순서(원본 → 국내 → 해외 → 수익성)의
+    // 가운데 칸이라 사라지지 않고, 근거가 없으면 정직한 빈 상태 칩 하나를
+    // 세운다(실제 렌더는 mi-polish.test.ts가 DOM으로 확인한다). 판정을 한
+    // 곳에서만 한다는 규칙은 그대로다.
     expect(panelCode).not.toContain("{marketComparison.hasComparable && (");
   });
 
@@ -307,10 +301,17 @@ describe("본문은 짧아졌고, 다음 추가는 툴팁·상세로 내려앉�
     expect(lines).toBeLessThanOrEqual(155);
   });
 
-  it("본문에 남는 것은 판정 · ① · ② · ③ 넷뿐이다", () => {
+  it("본문에 남는 것은 판정 · 원본 · 국내 · 해외 · 수익성뿐이다", () => {
     // 판단 근거(별점·레이더)와 시장 신호·전략 가이드는 여전히 접힘 안이거나
-    // ④ 판단 근거 안이다. 새 블록이 본문에 서면 여기서 먼저 걸린다.
-    const blocks = ["<OriginalPriceView", "<GlobalMarketHint", "<MarketComparisonView", "<PriceChainView"];
+    // 판단 근거 안이다. 새 블록이 본문에 서면 여기서 먼저 걸린다.
+    // MI-MARKET-EVIDENCE-1 — 🌎 해외 시장이 본문 블록으로 들어왔다.
+    const blocks = [
+      "<OriginalPriceView",
+      "<GlobalMarketHint",
+      "<MarketComparisonView",
+      "<OverseasMarketEvidenceView",
+      "<PriceChainView",
+    ];
     for (const block of blocks) expect(bodyCode).toContain(block);
     expect(bodyCode).not.toContain("<MiRadar ");
     expect(bodyCode).not.toContain("<MiRadarSummary");

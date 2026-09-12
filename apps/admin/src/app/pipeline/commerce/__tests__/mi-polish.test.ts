@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { MarketComparisonView } from "../DomesticPriceIntelligencePanel";
 import { buildGlobalMarketCard } from "../global-market";
 import { buildMarketComparison } from "../market-comparison";
+import { buildDomesticMarketEvidence } from "../market-evidence";
 import { buildMarketContext, PRICE_MEANING_LABEL, PRICE_SECTION_TITLE } from "../price-hierarchy";
 import { miBodySource, readSourceAt, stripComments } from "./source-text";
 
@@ -51,10 +52,24 @@ const detail = panel.slice(panel.indexOf("{showMarketDetail && ("));
 
 /* ───────────────── ③ 데이터 없으면 DOM 자체가 없다(실제 렌더) ───────────────── */
 
-describe("② 한국 시장 경쟁가격은 비교 대상이 없으면 DOM에 노드를 만들지 않는다", () => {
+/**
+ * ── MI-MARKET-EVIDENCE-1(CEO 지시 ③, 2026-09-12) — 규칙이 뒤집힌 자리 ──────────
+ * MI-POLISH-2는 비교 대상이 없으면 이 블록을 DOM에서 **없앴다**. 그건 그때
+ * 화면에서 참이었다: 빈 칸 두 개가 각각 `⚪ 검색 데이터 없음`만 말하고 있었다.
+ *
+ * 지금은 국내와 해외가 나란히 서면서 이 자리가 셀러가 묻는 순서의 가운데 칸이
+ * 됐고(원본 → 국내 → 해외 → 수익성), 가운데가 조건부로 사라지면 판정이 근거
+ * 없이 내려온 숫자로 읽힌다. 그래서 블록은 언제나 서고, 없을 때는 **없다는
+ * 사실만** 말한다 — 숫자도 범위도 지어내지 않는다.
+ *
+ * 뒤집히지 않은 것이 둘 있다: 게이트는 여전히 뷰 안에 있고(호출부가 빠뜨릴 수
+ * 있는 자리를 만들지 않는다), "빈 칸을 두지 않는다"는 원칙도 그대로다 —
+ * 빈 칸 대신 정직한 빈 상태 칩 하나가 선다.
+ */
+describe("🇰🇷 국내 시장은 비교 대상이 없어도 서고, 대신 숫자를 지어내지 않는다", () => {
   const EMPTY_GLOBAL = buildGlobalMarketCard({ observations: [] });
 
-  function comparisonWith(domesticLowestKrw: number | null) {
+  function viewPropsWith(domesticLowestKrw: number | null) {
     const context = buildMarketContext({
       domesticBasis: domesticLowestKrw == null ? "NONE" : "EXACT",
       domesticAveragePriceKrw: domesticLowestKrw,
@@ -62,44 +77,52 @@ describe("② 한국 시장 경쟁가격은 비교 대상이 없으면 DOM에 �
       domesticSellerCount: domesticLowestKrw == null ? 0 : 3,
       domesticUnresolved: false,
     });
-    return { comparison: buildMarketComparison(EMPTY_GLOBAL, context), context };
+    return {
+      comparison: buildMarketComparison(EMPTY_GLOBAL, context),
+      context,
+      // 등급 분포는 서버의 두 버킷에서 온다 — 화면이 다시 세지 않는다.
+      evidence: buildDomesticMarketEvidence({
+        context,
+        basis: domesticLowestKrw == null ? ("NONE" as const) : ("EXACT" as const),
+        exactSellerCount: domesticLowestKrw == null ? 0 : 3,
+        comparisonSellerCount: 0,
+      }),
+    };
   }
 
-  it("비교상품이 없으면 렌더 결과가 빈 문자열이다 — 빈 카드가 아니라 **없음**이다", () => {
-    // 이것이 이번 지시가 "의도가 아니라 실제 DOM으로 확인하라"고 한 항목이다.
-    // 빈 칸 두 개짜리 카드는 정보가 아니라 질문이다: 셀러는 조회가 고장났는지,
-    // 자기가 뭘 안 했는지, 판정이 틀렸는지를 스스로 추론해야 했다.
-    const { comparison, context } = comparisonWith(null);
-    expect(comparison.hasComparable).toBe(false);
-    const html = renderToStaticMarkup(createElement(MarketComparisonView, { comparison, context }));
-    expect(html).toBe("");
-    // "비어 있다"가 아니라 "없다"임을 한 번 더 못박는다 — 제목도 칩도 상자도 없다.
-    expect(html).not.toContain("div");
-    expect(html).not.toContain(PRICE_SECTION_TITLE.DOMESTIC_COMPETITION);
-    expect(html).not.toContain("검색 데이터 없음");
+  it("비교상품이 없으면 제목과 빈 상태 칩만 있고 숫자는 하나도 없다", () => {
+    const props = viewPropsWith(null);
+    expect(props.comparison.hasComparable).toBe(false);
+    const html = renderToStaticMarkup(createElement(MarketComparisonView, props));
+    expect(html).toContain(PRICE_SECTION_TITLE.DOMESTIC_COMPETITION);
+    expect(html).toContain("검색 데이터 없음");
+    // 없는 근거를 세지 않는다 — 개수도 등급도 없다.
+    expect(html).not.toContain("0곳");
+    expect(html).not.toContain("동일상품 기준");
+    expect(html).not.toMatch(/₩[\d,]/);
   });
 
-  it("비교상품이 있으면 그 카드가 그대로 뜬다 — 숨기는 조건이 과하지 않다", () => {
-    const { comparison, context } = comparisonWith(116600);
-    const html = renderToStaticMarkup(createElement(MarketComparisonView, { comparison, context }));
+  it("비교상품이 있으면 대표 가격 · 개수 · 등급이 함께 뜬다", () => {
+    const props = viewPropsWith(116600);
+    const html = renderToStaticMarkup(createElement(MarketComparisonView, props));
     expect(html).toContain(PRICE_SECTION_TITLE.DOMESTIC_COMPETITION);
     expect(html).toContain("₩116,600");
-    // MI-FINAL-UX-3(CEO 지시, 2026-09-12) — VS 두 칸이 한 칸이 됐다. 왼쪽이던
-    // "원본 판매자 한국 표시가"는 MI/PRICE-2 이후 바로 위 「원본 상품」이 자기
-    // 라벨로 이미 말한다 — 두 칸이 같은 모양·같은 국기로 나란히 서면 "내가 살
-    // 값"과 "내가 경쟁할 값"이 한 카드에서 다시 섞인다.
+    // MI-MARKET-EVIDENCE-1(CPO 추가 지시) — 개수는 혼자 나가지 않는다.
+    expect(html).toContain("비교 판매처 3곳");
+    expect(html).toContain("🟢 동일상품 기준");
+    // MI-FINAL-UX-3 — VS 두 칸이 한 칸이 됐다. 왼쪽이던 "원본 판매자 한국
+    // 표시가"는 바로 위 「원본 상품」이 자기 라벨로 이미 말한다.
     expect(html).not.toContain("VS");
     expect(html).not.toContain(PRICE_MEANING_LABEL.KR_MARKET_PRICE);
   });
 
-  it("게이트는 뷰 안에 있고, 호출부에는 남아 있지 않다", () => {
-    // 조건이 호출부에 있으면 이 뷰를 한 번 더 쓰는 사람이 빠뜨릴 수 있다.
-    const viewAt = panel.indexOf("function MarketComparisonView");
-    expect(panel.indexOf("if (!comparison.hasComparable) return null;", viewAt)).toBeGreaterThan(viewAt);
+  it("숨길 수 있는 조건이 호출부에 남아 있지 않다", () => {
+    // 게이트를 뷰 안에 둔다는 MI-POLISH-2의 규칙은 그대로다 — 조건이 호출부에
+    // 있으면 이 뷰를 한 번 더 쓰는 사람이 다른 결과를 만들 수 있다.
     expect(panelCode).not.toContain("{marketComparison.hasComparable && (");
   });
 
-  it("숨긴 사실은 판정 안에 남는다 — 지우지 않고 층만 내린다", () => {
+  it("비교 근거가 없다는 사실은 판정 안에도 남는다 — 지우지 않고 층만 나눈다", () => {
     expect(detail).toContain("{!marketComparison.hasComparable && (");
     expect(detail).toContain("{NO_DOMESTIC_COMPARABLE_NOTE}");
   });
@@ -108,8 +131,15 @@ describe("② 한국 시장 경쟁가격은 비교 대상이 없으면 DOM에 �
 /* ───────────────────────── 본문에 남는 것 / 남지 않는 것 ───────────────────────── */
 
 describe("본문 최상위에는 판정 + 세 블록 + 바닥 한 줄뿐이다", () => {
-  it("세 블록이 전부 있고, 그 밖의 블록은 하나도 없다", () => {
-    for (const block of ["<OriginalPriceView", "<GlobalMarketHint", "<MarketComparisonView", "<PriceChainView"]) {
+  it("네 블록이 전부 있고, 그 밖의 블록은 하나도 없다", () => {
+    // MI-MARKET-EVIDENCE-1 — 🌎 해외 시장이 본문의 네 번째 블록으로 들어왔다.
+    for (const block of [
+      "<OriginalPriceView",
+      "<GlobalMarketHint",
+      "<MarketComparisonView",
+      "<OverseasMarketEvidenceView",
+      "<PriceChainView",
+    ]) {
       expect(bodyCode).toContain(block);
     }
     // 판단 근거(축·레이더)는 전부 접힘 안이다.
@@ -192,10 +222,10 @@ describe("근거 문장은 지워지지 않고 툴팁이 된다", () => {
     expect(originalView).toContain("title={headline.krMarket.basis ?? undefined}");
   });
 
-  it("② 비교 카드의 ※ 설명과 칸별 기준도 title이다", () => {
+  it("🇰🇷 국내 시장 칸의 ※ 설명과 칸별 기준도 title이다", () => {
     const comparisonView = panel.slice(
       panel.indexOf("export function MarketComparisonView("),
-      panel.indexOf("function GlobalMarketHint("),
+      panel.indexOf("function MarketEvidenceBasisLine("),
     );
     // MI-FINAL-UX-3 — versusNote는 "무엇과 무엇을 비교하는가"를 말하는데,
     // 비교가 한 칸으로 줄면서 설명할 대상이 없어졌다. 칸별 기준(title)은 그대로다.

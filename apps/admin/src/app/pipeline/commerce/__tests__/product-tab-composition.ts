@@ -1,6 +1,11 @@
-import { createElement, type ReactElement, type ReactNode } from "react";
+import { createElement, useState, type ReactElement, type ReactNode } from "react";
 import { JSDOM } from "jsdom";
 import type { CanonicalProduct, FieldSource, ProvenanceField } from "@commerce/shared";
+// MI-MARKET-EVIDENCE-1 — 해외 가격비교 응답 fixture는 **서버가 실제로 돌려주는
+// 타입**으로 못박는다. 손으로 적은 모양이 유니온 밖의 값을 갖고 있어 화면이
+// 죽고 코드 경로 하나가 통째로 숨었던 적이 있다(이 파일 위쪽 주석 참고).
+import type { ComparisonSearchResult } from "@commerce/crawler/src/comparison-search/types";
+import type { MarketEvidenceSummary } from "../market-evidence";
 import { MiPanelView, type DomesticCandidate, type PriceHistoryResponse } from "../DomesticPriceIntelligencePanel";
 import { ActionCenter } from "../ActionCenter";
 import { PriceCalculationDetail } from "../PriceCalculationDetail";
@@ -232,7 +237,19 @@ export function productionData(): PriceHistoryResponse {
   };
 }
 
-/** 국내 비교상품이 실제로 확인된 상품. ② 블록이 DOM에 서는 유일한 경우다. */
+/** 국내에서 관측된 한 버킷. summarizeDomesticMarketSplit이 돌려주는 모양 그대로다. */
+function competitionBucket(sellerCount: number, averagePriceKrw: number | null): PriceHistoryResponse["domesticCompetition"] {
+  return {
+    ...EMPTY_COMPETITION(),
+    tier: sellerCount > 0 ? "PRIMARY" : "NONE",
+    lowestPriceKrw: averagePriceKrw,
+    highestPriceKrw: averagePriceKrw,
+    averagePriceKrw,
+    sellerCount,
+  };
+}
+
+/** 국내 비교상품이 실제로 확인된 상품. 🇰🇷 국내 시장이 숫자를 갖는 경우다. */
 export function withDomesticComparable(): PriceHistoryResponse {
   const data = productionData();
   data.domesticCompetition = {
@@ -249,7 +266,16 @@ export function withDomesticComparable(): PriceHistoryResponse {
     priceMarketBasis: "SINGLE",
     checkedAt: "2026-09-12T08:00:00.000Z",
   };
-  data.domesticMarketSplit = { basis: "EXACT", exact: EMPTY_COMPETITION(), comparison: EMPTY_COMPETITION() };
+  /**
+   * MI-MARKET-EVIDENCE-1 — 세 곳이 **전부 식별자로 확인된 동일상품**인 경우.
+   * 서버의 두 버킷은 서로 겹치지 않으므로(summarizeDomesticMarketSplit) 비교상품
+   * 버킷은 0곳이고, 그때만 요약이 "🟢 동일상품 기준"이라고 말할 수 있다.
+   */
+  data.domesticMarketSplit = {
+    basis: "EXACT",
+    exact: competitionBucket(3, 116600),
+    comparison: competitionBucket(0, null),
+  };
   data.recommendation = {
     ...data.recommendation!,
     marketCase: "A",
@@ -258,6 +284,109 @@ export function withDomesticComparable(): PriceHistoryResponse {
     competitiveBasis: "DOMESTIC_LOWEST",
   };
   return data;
+}
+
+/**
+ * MI-MARKET-EVIDENCE-1(CPO 추가 지시, 2026-09-12) — 등급이 **섞인** 상품.
+ *
+ * 🟢 식별자로 확인된 동일상품 1곳 + ⚪ 그렇지 않은 비교 관측 2곳. 대표 가격은
+ * 서버가 동일상품 버킷 하나로만 집계한다(basis = EXACT) — 즉 화면이 "비교상품
+ * 3곳 · 🟢 동일상품 기준"이라고 말하면 두 곳이 확정으로 포장되고, 대표 가격이
+ * 세 곳의 값인 것처럼도 읽힌다. 둘 다 참이 아니다.
+ */
+export function withMixedTierDomestic(): PriceHistoryResponse {
+  const data = withDomesticComparable();
+  data.domesticMarketSplit = {
+    basis: "EXACT",
+    exact: competitionBucket(1, 116600),
+    comparison: competitionBucket(2, 121000),
+  };
+  return data;
+}
+
+/* ─────────────────────── 🌎 해외 판매처 가격 fixture ─────────────────────── */
+
+/** /api/comparison/search가 돌려주는 행 그대로(라우트가 shopCountry를 얹은 모양). */
+export type OverseasSearchResult = ComparisonSearchResult & { shopCountry: string | null };
+
+/**
+ * 해외 편집샵 세 곳에서 확인된 후보들. 값은 응답 타입이 허용하는 값만 쓴다 —
+ * productMatchTruth/priceStatus는 유니온 밖으로 나갈 수 없다.
+ *
+ * 전부 EXACT_PRODUCT이고 가격이 현재가로 검증된 경우라, 요약이 "🟢 동일상품
+ * 기준"이라고 말할 수 있는 유일한 상태다.
+ */
+export function overseasResults(): OverseasSearchResult[] {
+  return [
+    {
+      shopId: "smallable",
+      shopName: "Smallable",
+      domain: "smallable.com",
+      shopCountry: "FR",
+      status: "ok",
+      candidates: [
+        {
+          title: "Terry Bermuda Shorts",
+          url: "https://smallable.com/p/430632",
+          price: { amount: 45, currency: "EUR" },
+          imageUrl: null,
+          confidence: 0.91,
+          matchLevel: "very_high",
+          productMatchTruth: "EXACT_PRODUCT",
+          priceStatus: "VERIFIED_CURRENT",
+        },
+      ],
+    },
+    {
+      shopId: "childrensalon",
+      shopName: "Childrensalon",
+      domain: "childrensalon.com",
+      shopCountry: "GB",
+      status: "ok",
+      candidates: [
+        {
+          title: "Terry Bermuda Shorts",
+          url: "https://childrensalon.com/p/1",
+          price: { amount: 52, currency: "EUR" },
+          imageUrl: null,
+          confidence: 0.88,
+          matchLevel: "high",
+          productMatchTruth: "CONFIRMED_PRODUCT",
+          priceStatus: "VERIFIED_CURRENT",
+        },
+      ],
+    },
+    {
+      shopId: "kidsroom",
+      shopName: "Kidsroom",
+      domain: "kidsroom.de",
+      shopCountry: "DE",
+      status: "ok",
+      candidates: [
+        {
+          title: "Terry Bermuda Shorts",
+          url: "https://kidsroom.de/p/1",
+          price: { amount: 49, currency: "EUR" },
+          imageUrl: null,
+          confidence: 0.9,
+          matchLevel: "very_high",
+          productMatchTruth: "EXACT_PRODUCT",
+          priceStatus: "VERIFIED_CURRENT",
+        },
+      ],
+    },
+  ];
+}
+
+/**
+ * 같은 조회인데 등급이 섞인 경우 — 🟢 하나 + 🟡 동일상품 추정 둘.
+ * (VERY_SIMILAR는 match-display가 PRESUMED_SAME으로 옮기는 값이다.)
+ */
+export function overseasResultsMixedTier(): OverseasSearchResult[] {
+  const results = overseasResults();
+  results[1]!.candidates[0]!.productMatchTruth = "VERY_SIMILAR";
+  results[2]!.candidates[0]!.productMatchTruth = "VERY_SIMILAR";
+  return results;
 }
 
 /**
@@ -287,6 +416,16 @@ export interface TabOptions {
   /** ③④에서 [가격 판단 상세보기]로 MI를 펼쳐 둔 상태. */
   marketDetailOpen?: boolean;
   data?: PriceHistoryResponse;
+  /**
+   * MI-MARKET-EVIDENCE-1 — 🌎 해외 시장 요약의 **초기값**.
+   *
+   * 프로덕션에서 이 값은 아래 해외 가격비교 패널이 조회를 끝낸 뒤 위로 올려보내
+   * 채워진다(CommerceWorkspace가 들고 있는 상태 그대로). 서버 렌더는 effect를
+   * 돌리지 않으므로, "해외 가격이 실제로 있는 화면"을 서버 렌더로 검사하려면
+   * 그 상태의 초기값을 넣어주는 길이 필요하다 — 마운트 뒤에는 패널이 보낸
+   * 값으로 덮인다(즉 이 옵션이 패널을 우회하지 않는다).
+   */
+  overseasMarketEvidence?: MarketEvidenceSummary | null;
 }
 
 const CHANNELS: RegistrationChannel[] = [
@@ -309,8 +448,29 @@ const CHANNELS: RegistrationChannel[] = [
  * 실제 화면의 `grid lg:grid-cols-[minmax(0,1fr)_300px]` 두 칸이 이 둘이다.
  */
 export function productTabElement(options: TabOptions = {}): ReactElement {
+  return createElement(ProductTab, options);
+}
+
+/**
+ * MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 조립이 **컴포넌트**가 됐다.
+ *
+ * 이유는 하나다: 이번 화면에는 형제 사이를 오가는 상태가 둘 생겼다.
+ *   ① 해외 가격비교 패널 → (요약) → MI 🌎 해외 시장
+ *   ② MI [▸ 국내/해외 가격 보기] → (펼침) → 그 패널
+ * 프로덕션에서 그 둘을 들고 있는 곳은 공통 부모(CommerceWorkspace)다. 여기서도
+ * 같은 자리에 같은 상태를 두지 않으면, 드릴다운이 실제로 표를 여는지 · 요약이
+ * 정말 그 표의 행에서 나온 값인지를 렌더 결과로 확인할 수가 없다 — 확인할 수
+ * 없는 것을 보고하지 않는다는 것이 이 파일의 존재 이유다.
+ */
+function ProductTab(options: TabOptions): ReactElement {
   const data = options.data ?? productionData();
   const product = makeProduct();
+  /** CommerceWorkspace가 들고 있는 그 상태 셋 그대로. */
+  const [overseasMarketEvidence, setOverseasMarketEvidence] = useState<MarketEvidenceSummary | null>(
+    options.overseasMarketEvidence ?? null,
+  );
+  const [domesticEvidenceOpen, setDomesticEvidenceOpen] = useState(false);
+  const [overseasEvidenceOpen, setOverseasEvidenceOpen] = useState(false);
 
   const workflow = resolveWorkflow({
     collection: { running: false, percent: 100, productReady: true, imageCount: 6, failedImageCount: 0 },
@@ -375,6 +535,11 @@ export function productTabElement(options: TabOptions = {}): ReactElement {
     profitability: PROFIT,
     openPriceDetailRequest: 0,
     onRequestPriceReview: noop,
+    // MI-MARKET-EVIDENCE-1 — 요약은 아래 패널이 올려보낸 값 그대로이고,
+    // 드릴다운은 그 패널을 여는 일만 한다(표를 여기서 두 번째로 그리지 않는다).
+    overseasMarketEvidence,
+    onOpenDomesticEvidence: () => setDomesticEvidenceOpen(true),
+    onOpenOverseasEvidence: () => setOverseasEvidenceOpen(true),
   });
 
   const stageBody = createElement(StageBody, {
@@ -393,6 +558,8 @@ export function productTabElement(options: TabOptions = {}): ReactElement {
         sourceUrl: product.sourceUrl,
         sku: product.sku.value,
         description: product.description.value,
+        open: domesticEvidenceOpen,
+        onToggle: setDomesticEvidenceOpen,
       }),
       createElement(ComparisonShopSearch, {
         title: product.title.value,
@@ -401,6 +568,9 @@ export function productTabElement(options: TabOptions = {}): ReactElement {
         sku: product.sku.value,
         description: product.description.value,
         onRequestPriceReview: noop,
+        open: overseasEvidenceOpen,
+        onToggle: setOverseasEvidenceOpen,
+        onEvidenceChange: setOverseasMarketEvidence,
       }),
     ),
     surfaces: {
@@ -503,7 +673,10 @@ export const TOP_LEVEL_HEADINGS = [
   // MI 카드
   "Market Intelligence",
   "원본 상품",
-  "한국 시장 경쟁가격",
+  // MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 셀러가 묻는 순서의 가운데 두 칸.
+  // 이 둘이 서로 다른 질문에 답한다는 사실이 제목에서부터 갈려 있어야 한다.
+  "🇰🇷 국내 시장",
+  "🌎 해외 시장",
   "수익성",
   "ⓘ 글로벌 시장 가격",
   "ⓘ 가격 계산 기준",
