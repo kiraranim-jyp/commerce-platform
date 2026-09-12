@@ -191,15 +191,86 @@ describe("가격 영역은 정해진 순서로 읽힌다", () => {
   });
 
   it("비교는 ③ 한 곳에서만 일어난다", () => {
-    // ①은 원본과 그 환산뿐이고(환산은 비교가 아니다), ②는 시장별 관측을 나열만
-    // 하며, ④는 사슬이다. VS는 화면에 한 번뿐이어야 한다.
+    // ①은 원본 판매처의 사실만 갖고(환산도 한국 표시가도 그 판매처의 값이다),
+    // ②는 시장별 관측을 나열만 하며, ④는 사슬이다. VS는 화면에 한 번뿐이어야 한다.
     expect(jsxUses(panel, "ComparisonSideView")).toBe(2);
     const comparison = read("../market-comparison.ts");
     expect(comparison).toContain('versus: "VS"');
-    // ①은 한국에서 관측된 어떤 값도 들고 있지 않다.
+    // ①은 **다른 판매자**의 값(국내 경쟁시장)을 들고 있지 않다. MI/PRICE-2에서
+    // 들어온 원본 판매자 한국 표시가는 그 판매처 자신의 페이지에서 읽은 값이라
+    // 비교 대상이 아니다 — 비교는 여전히 ③ 한 곳뿐이다.
     const originalView = panel.slice(panel.indexOf("function OriginalPriceView"), panel.indexOf("function MarketComparisonView"));
     expect(originalView).not.toContain("marketContext");
     expect(originalView).not.toContain("domesticCompetition");
+  });
+});
+
+/**
+ * MI/PRICE-2(CEO 지시, 2026-09-12) — 관측된 시장가와 착지원가를 가르는 배치.
+ *
+ * 고정하려는 실제 화면(Bobo Choses B226AC043):
+ *
+ *   🇰🇷 한국 · en-kr    착지원가 기준    ₩162,000
+ *
+ * ₩162,000은 그 판매처가 한국 방문자에게 보여주는 관측된 시장가이고, 착지원가는
+ * €75 → ₩116,742 + 국제배송비다. 관측된 시장가에 원가 라벨이 붙는 순간 두
+ * 사실의 경계가 사라진다 — 그리고 그 혼동은 GLOBAL 판매처마다 반복된다.
+ */
+describe("② 글로벌 시장은 관측된 시장가만 말한다", () => {
+  const globalCardView = panel.slice(
+    panel.indexOf("function GlobalMarketCardView"),
+    panel.indexOf("function SummaryStat"),
+  );
+
+  it("② 영역이 그리는 문자열 어디에도 착지원가가 없다", () => {
+    // 주석(왜 지웠는지)은 남겨두되, 렌더되는 코드에는 없어야 한다.
+    expect(stripComments(globalCardView)).not.toContain("착지원가");
+    expect(stripComments(read("../global-market.ts"))).not.toContain("착지원가");
+    // 배지 자체가 사라졌다 — 모양만 바꾼 것이 아니다(주석에서 언급하는 것은
+    // 괜찮다. 막는 것은 렌더다 — 이 폴더의 다른 배치 테스트와 같은 규칙).
+    expect(panelCode).not.toContain("착지원가 기준");
+    expect(panelCode).not.toContain("row.isCostBasis");
+  });
+
+  it("🇰🇷 줄은 관측된 시장가 라벨을 달고, 그 라벨은 가격 계층 표에서 온다", () => {
+    expect(globalCardView).toContain("{row.priceMeaningLabel}");
+    expect(read("../global-market.ts")).toContain("PRICE_MEANING_LABEL.KR_MARKET_PRICE");
+  });
+
+  it("모든 시장 줄이 동일 상품 표시를 달고, 근거는 펼친 상세에 있다", () => {
+    expect(globalCardView).toContain("{row.identity.icon} {row.identity.text}");
+    const evidenceAt = globalCardView.indexOf("{row.identity.evidence}");
+    const detailGateAt = globalCardView.indexOf("{showDetail && (");
+    expect(evidenceAt).toBeGreaterThan(detailGateAt);
+  });
+
+  it("국내 경쟁시장의 매칭 상태는 그대로다 — 다른 개념이라 어휘도 다르다", () => {
+    // ③은 *다른 판매자*의 비교 가능 상품을 matchTruth가 판정한다. 그 세 상태를
+    // 글로벌 줄의 표시로 대체하거나 반대로 덮어쓰면 두 개념이 하나가 된다.
+    const matchDisplay = read("../match-display.ts");
+    expect(matchDisplay).toContain('label: "동일상품"');
+    expect(matchDisplay).toContain('label: "동일상품 추정"');
+    expect(matchDisplay).toContain('label: "유사상품"');
+    // 글로벌 줄의 문구는 그 셋 중 어느 것과도 같지 않다.
+    expect(read("../global-market.ts")).toContain('text: "동일 상품 · 판매자 직접 관측"');
+    expect(matchDisplay).not.toContain("동일 상품 · 판매자 직접 관측");
+    // 반대 방향도 막는다 — 글로벌 카드가 매칭 판정을 import해 쓰지 않는다
+    // (주석에서 두 개념의 차이를 설명하는 것은 괜찮다. 막는 것은 의존이다).
+    expect(stripComments(read("../global-market.ts"))).not.toContain("match-display");
+  });
+
+  it("①이 원본 판매자 한국 표시가를 들고 있다 — 관측이 사라지지 않았다", () => {
+    // 배지를 지우면서 사실까지 지우면 ₩162,000이 화면에서 없어진다. 그 값은
+    // 판매처 자신의 한국 페이지에서 읽은 값이라 ① 원본 상품 가격에 산다.
+    const originalView = panel.slice(
+      panel.indexOf("function OriginalPriceView"),
+      panel.indexOf("function MarketComparisonView"),
+    );
+    expect(originalView).toContain("{headline.krMarket.label}");
+    expect(originalView).toContain("{headline.krMarket.value}");
+    // ①과 ②가 같은 줄에서 나온 같은 문자열을 쓴다(사본이 아니라 같은 사실).
+    expect(panel).toContain("const judgingMarketRow = pickJudgingMarketRow(globalMarketCard);");
+    expect(panel).toContain("krMarketObservation: judgingMarketRow");
   });
 });
 

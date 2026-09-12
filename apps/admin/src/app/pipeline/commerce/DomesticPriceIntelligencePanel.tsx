@@ -50,6 +50,7 @@ import {
 // 국내 비교상품(C 그룹)과 절대 같은 카드에 서지 않도록 파일부터 분리돼 있다.
 import {
   buildGlobalMarketCard,
+  pickJudgingMarketRow,
   type GlobalMarketCard,
   type GlobalMarketRow,
   type MarketObservationInput,
@@ -1128,10 +1129,17 @@ function PriceChainView({ rows }: { rows: PriceChainRow[] }) {
  * UX 2.4.1(CEO 지시, 2026-09-11) — **① 원본 상품 가격**. 화면이 여는 첫 줄.
  *
  * 셀러는 URL을 붙여넣고 "이 상품이 원래 얼마지?"를 묻는다. 그 답은 원본 통화로
- * 적힌 한 줄이다 — 그래서 이 블록에는 원본 통화 금액과 그 환산밖에 없다.
- * 한국에서 관측된 어떤 값도 여기 들어오지 않는다: 환산은 비교가 아니고, 같은
- * 카드 안에서 원본가와 한국가가 나란히 서는 순간 "원본가격이 왜 한국 돈이지?"가
- * 다시 시작된다(이번 지시의 출발점이 정확히 그 화면이다).
+ * 적힌 한 줄이다 — 그래서 가장 큰 숫자는 언제나 원본 통화 금액이다.
+ * 국내 경쟁시장의 어떤 값도 여기 들어오지 않는다: 남이 파는 값이 원본가 옆에
+ * 서는 순간 "원본가격이 왜 한국 돈이지?"가 다시 시작된다(UX 2.4.1의 출발점이
+ * 정확히 그 화면이다).
+ *
+ * ── MI/PRICE-2(CEO 지시, 2026-09-12) — 원본 판매자 한국 표시가는 여기 산다 ──
+ * 다만 /en-kr의 ₩162,000은 남의 값이 아니다. **그 판매처 자신의 페이지**에서
+ * 직접 읽은 값이라 원본 상품의 사실에 속한다 — 그래서 작은 줄로 함께 선다.
+ * 그 값을 ②의 시장 줄에 "착지원가 기준"이라고 적어 두던 것이 이번에 지운
+ * 화면이다: 관측된 시장가와 내가 치르는 돈(₩116,742 + 국제배송비)은 다른
+ * 사실이고, 후자는 ④ 수익성에만 있다.
  */
 function OriginalPriceView({ headline }: { headline: OriginalPriceHeadline }) {
   return (
@@ -1160,6 +1168,17 @@ function OriginalPriceView({ headline }: { headline: OriginalPriceHeadline }) {
           .filter(Boolean)
           .join(" · ")}
       </p>
+      {/* MI/PRICE-2 — 원본 판매자 한국 표시가. 원본 통화 금액보다 한 단계 작게
+          두는 것이 층위다: 첫 질문의 답은 €75이고, 이 줄은 같은 판매처가 한국
+          페이지에 따로 매긴 값이다. 숫자를 여기서 만들지 않는다 — ②의 🇰🇷 줄이
+          들고 있던 문자열 그대로다(같은 사실의 두 표시). */}
+      {headline.krMarket?.value && (
+        <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
+          <span className="text-[10px] text-text-tertiary">{headline.krMarket.label}</span>
+          <span className="text-sm font-semibold text-text-primary">{headline.krMarket.value}</span>
+          <span className="text-[10px] leading-tight text-text-tertiary">{headline.krMarket.basis}</span>
+        </p>
+      )}
       {headline.note && <p className="mt-1 text-[10px] leading-relaxed text-text-secondary">※ {headline.note}</p>}
     </div>
   );
@@ -1253,6 +1272,15 @@ function ComparisonSideView({ flag, side }: { flag: string; side: MarketComparis
  * 🇰🇷 한국 ₩78,000(이 판매처가 한국에 직접 파는 값)과 국내 비교상품 ₩116,600
  * (다른 한국 판매자들이 파는 값)이 같은 목록에 서면, 셀러는 ₩38,600짜리
  * 기회를 "같은 종류의 숫자 둘"로 읽고 지나친다.
+ *
+ * ── MI/PRICE-2(CEO 지시, 2026-09-12) — 두 블록의 "동일 상품"은 다른 개념이다 ─
+ *   🌎 판매자 글로벌 시장   같은 판매자가 여러 시장에서 파는 가격   구성으로 동일
+ *   🇰🇷 국내 경쟁시장       다른 판매자의 비교 가능 상품           매칭으로 판정
+ *
+ * 그래서 이 줄의 배지는 언제나 🟢 하나이고(등급이 없다), ③의 🟢 동일상품 /
+ * 🟡 동일상품 추정 / ⚪ 유사상품(match-display.ts)과 문구가 일부러 다르다.
+ * 같은 어휘를 쓰면 셀러는 글로벌 줄의 동일성도 알고리즘이 흔들 수 있다고 읽고,
+ * 반대로 국내 줄의 추정도 확정처럼 읽는다.
  */
 function GlobalMarketCardView({
   card,
@@ -1304,16 +1332,24 @@ function GlobalMarketRowView({ row, showDetail }: { row: GlobalMarketRow; showDe
             {row.flag} {row.name}
           </span>
           <span className="text-[10px] text-text-tertiary">{row.code}</span>
-          {/* 원가 기준 줄은 "두 번째 사실"이 아니라 위 사슬 첫 줄과 같은 관측이다.
-              그 사실을 배지로 말해야 셀러가 같은 숫자를 두 번 세지 않는다. */}
-          {row.isCostBasis && (
-            <span className="rounded bg-primary-soft px-1 py-0.5 text-[9px] font-medium text-primary">착지원가 기준</span>
-          )}
+          {/* MI/PRICE-2 — 여기 있던 "착지원가 기준" 배지를 지웠다. ₩162,000은
+              관측된 시장가이고 착지원가(₩116,742 + 국제배송비)는 다른 숫자라,
+              그 자리에서 원가를 말하면 시장가가 원가로 읽힌다. 같은 관측이 ④
+              원가 계산의 출발점이라는 사실은 ①이 문장으로 말한다. */}
+          <span className="rounded bg-success-soft px-1 py-0.5 text-[9px] font-medium text-success">
+            {row.identity.icon} {row.identity.text}
+          </span>
           <span className="text-[10px] text-text-tertiary">
             {row.availability.icon} {row.availability.text}
           </span>
         </span>
         <span className="flex items-baseline gap-1.5">
+          {/* 판단 시장 줄만 라벨을 단다 — 화면의 다른 "한국 가격"(③ 국내 비교상품,
+              ④ 착지원가)과 부딪히는 유일한 줄이라서다. €75(DE)는 부딪힐 상대가
+              없어 시장 이름만으로 충분하다. */}
+          {row.priceMeaningLabel && (
+            <span className="text-[10px] text-text-tertiary">{row.priceMeaningLabel}</span>
+          )}
           {row.productUrl ? (
             <a href={row.productUrl} target="_blank" rel="noreferrer" className="font-semibold text-text-primary underline">
               {row.observedPrice}
@@ -1328,7 +1364,10 @@ function GlobalMarketRowView({ row, showDetail }: { row: GlobalMarketRow; showDe
       </div>
       {showDetail && (
         <p className="text-[10px] text-text-tertiary">
-          판매자 신고 국가 {row.declaredCountry ?? "미확인"} · 관측 {relativeTimeFromNow(row.checkedAt)}
+          {/* 동일 상품이라는 판단의 근거. 줄에 두면 시장·가격이 뒤로 밀려서
+              펼침에만 둔다(배지는 사실을, 이 줄은 그 사실이 선 근거를 말한다). */}
+          {row.identity.evidence} · 판매자 신고 국가 {row.declaredCountry ?? "미확인"} · 관측{" "}
+          {relativeTimeFromNow(row.checkedAt)}
         </p>
       )}
     </li>
@@ -1997,11 +2036,17 @@ export function DomesticPriceIntelligencePanel({
    */
   const globalMarketCard = buildGlobalMarketCard({
     observations: data.sellerGlobalMarkets ?? [],
-    // 착지원가가 "판매자의 한국 표시가"에서 나온 경우, 글로벌 카드의 🇰🇷 한국
-    // 줄은 위 사슬 첫 줄과 **같은 관측**이다. 두 번째 사실인 척하지 않도록
-    // 그 줄에만 "착지원가 기준" 배지를 붙인다(숫자를 새로 만들지 않는다).
-    costBasisIsTargetMarket: currentPrice.costBasis === "KR_MARKET",
   });
+
+  /**
+   * MI/PRICE-2(CEO 지시, 2026-09-12) — ②에서 관측된 한국 줄을 ①로 넘긴다.
+   *
+   * 여기서 관측을 다시 고르지 않는다. 카드가 이미 만든 줄을 그대로 집고
+   * (pickJudgingMarketRow: 판단 시장 관측이 정확히 하나일 때만), 그 줄이 들고
+   * 있는 문자열을 넘긴다 — ①의 ₩162,000과 ②의 ₩162,000이 같은 코드에서 나온
+   * 같은 사실이어야 한쪽만 고쳐지는 날이 오지 않는다.
+   */
+  const judgingMarketRow = pickJudgingMarketRow(globalMarketCard);
 
   /**
    * UX 2.4.1(CEO 지시, 2026-09-11) — ① 원본 상품 가격.
@@ -2026,6 +2071,11 @@ export function DomesticPriceIntelligencePanel({
       : null,
     costBasisIsKrMarket: currentPrice.costBasis === "KR_MARKET",
     snapshotOriginPrice,
+    // ②의 🇰🇷 줄 그대로. 그 값은 판매자 자신의 한국 페이지에서 직접 읽은 값이라
+    // 원본 상품의 사실에 속한다(MI/PRICE-2). 금액을 여기서 다시 만들지 않는다.
+    krMarketObservation: judgingMarketRow
+      ? { price: judgingMarketRow.observedPrice, marketCode: judgingMarketRow.code }
+      : null,
   });
 
   /**

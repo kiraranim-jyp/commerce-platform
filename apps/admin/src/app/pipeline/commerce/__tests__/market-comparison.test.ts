@@ -44,7 +44,7 @@ const MARKET: MarketContextInput = {
   domesticUnresolved: false,
 };
 
-const CARD = buildGlobalMarketCard({ observations: OBSERVATIONS, costBasisIsTargetMarket: true });
+const CARD = buildGlobalMarketCard({ observations: OBSERVATIONS });
 const CONTEXT = buildMarketContext(MARKET);
 const COMPARISON = buildMarketComparison(CARD, CONTEXT);
 
@@ -75,19 +75,20 @@ describe("③은 판매자 한국 가격과 국내 비교상품만 짝짓는다"
     expect(COMPARISON.versusNote).toContain("다른 대한민국 판매자");
   });
 
-  it("같은 관측이 ④ 사슬의 출발점이면 그 사실을 왼쪽 칸이 밝힌다", () => {
-    // 밝히지 않으면 셀러가 같은 숫자를 두 번 센다.
-    expect(COMPARISON.seller.basis).toContain("착지원가 기준");
+  it("왼쪽 칸은 관측된 시장가다 — 원가 라벨을 달지 않는다", () => {
+    // MI/PRICE-2(CEO 지시, 2026-09-12) — 여기 "착지원가 기준"이 붙어 있었다.
+    // 그러면 "판매자가 받는 값 VS 다른 판매자가 받는 값"이라는 이 블록의 문장이
+    // "내 원가 VS 남의 판매가"로 읽힌다. ₩162,000은 관측된 시장가이고 착지원가
+    // (₩116,742 + 국제배송비)는 다른 숫자다 — 그 관계는 ①이 문장으로 말한다.
     expect(COMPARISON.seller.basis).toContain("이 판매처가 직접 파는 값");
+    expect(COMPARISON.seller.basis).not.toContain("착지원가");
+    expect(JSON.stringify(COMPARISON)).not.toContain("착지원가");
   });
 });
 
 describe("모르면 고르지 않는다", () => {
   it("이 판매처의 한국 시장 관측이 없으면 '검색 데이터 없음'이다", () => {
-    const card = buildGlobalMarketCard({
-      observations: OBSERVATIONS.filter((o) => o.marketCode !== "en-kr"),
-      costBasisIsTargetMarket: false,
-    });
+    const card = buildGlobalMarketCard({ observations: OBSERVATIONS.filter((o) => o.marketCode !== "en-kr") });
     const comparison = buildMarketComparison(card, CONTEXT);
     expect(comparison.seller.value).toBeNull();
     expect(comparison.seller.empty?.kind).toBe("NO_SEARCH_DATA");
@@ -98,7 +99,6 @@ describe("모르면 고르지 않는다", () => {
   it("한국 시장 관측이 여러 개면 아무거나 골라 판매자 한국 가격이라고 부르지 않는다", () => {
     const card = buildGlobalMarketCard({
       observations: [...OBSERVATIONS, { ...OBSERVATIONS[0]!, marketCode: "kr", priceAmount: 81000, priceKrw: 81000 }],
-      costBasisIsTargetMarket: true,
     });
     const comparison = buildMarketComparison(card, CONTEXT);
     expect(comparison.seller.value).toBeNull();

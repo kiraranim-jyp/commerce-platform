@@ -1,4 +1,4 @@
-import type { GlobalMarketCard } from "./global-market";
+import { pickJudgingMarketRow, type GlobalMarketCard } from "./global-market";
 import { KR_TARGET_MARKET, type TargetMarket } from "./market-target";
 import { miEmptyState, type MiEmptyState } from "./mi-empty-state";
 import { PRICE_MEANING_LABEL, PRICE_SECTION_TITLE, type MarketContext } from "./price-hierarchy";
@@ -61,7 +61,7 @@ export function buildMarketComparison(
   market: TargetMarket = KR_TARGET_MARKET,
 ): MarketComparison {
   const judging = card.rows.filter((row) => row.isJudgingMarket);
-  const row = judging.length === 1 ? judging[0]! : null;
+  const row = pickJudgingMarketRow(card);
 
   const seller: MarketComparisonSide = {
     // 라벨은 price-hierarchy의 표에서만 나온다. 여기서 "판매자 한국 가격" 같은
@@ -72,11 +72,14 @@ export function buildMarketComparison(
     basis: row
       ? [
           `${row.flag} ${row.name} · ${row.code}`,
+          // MI/PRICE-2(CEO 지시, 2026-09-12) — 여기 있던 "착지원가 기준"을 뺐다.
+          // 이 칸의 ₩162,000은 **관측된 시장가**이고, 착지원가(€75 → ₩116,742 +
+          // 국제배송비)는 다른 숫자다. 비교의 한쪽 칸에 원가 라벨이 붙으면
+          // "판매자가 받는 값 VS 다른 판매자가 받는 값"이라는 이 블록의 문장이
+          // "내 원가 VS 남의 판매가"로 읽힌다 — ②의 배지와 같은 종류의 오독이다.
+          // 같은 관측이 ④ 원가 계산의 출발점이라는 사실은 ①이 말한다.
           "이 판매처가 직접 파는 값",
           row.krwPrice ? `원화 환산 ${row.krwPrice}` : null,
-          // 같은 관측이 ④ 사슬의 출발점이기도 하다는 사실. 숨기면 셀러가 같은
-          // 숫자를 두 번 센다.
-          row.isCostBasis ? "착지원가 기준" : null,
         ]
           .filter(Boolean)
           .join(" · ")

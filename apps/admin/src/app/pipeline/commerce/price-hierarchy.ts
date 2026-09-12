@@ -484,6 +484,13 @@ export function buildPriceChain(input: PriceChainInput): PriceChainRow[] {
  * 세우고, 한국 표시가는 ②의 🇰🇷 줄과 ④ 사슬에 그대로 남긴다. 지우지 않는다 —
  * 자리를 바꿀 뿐이다. 두 값은 서로 다른 사실이라 같은 카드에서 겨루면 안 된다.
  *
+ * ── MI/PRICE-2(CEO 지시, 2026-09-12) — 한국 표시가는 ①에도 선다 ────────────
+ * "겨루면 안 된다"와 "같은 카드에 있으면 안 된다"는 다른 말이다. /en-kr의
+ * ₩162,000은 남의 가격이 아니라 **그 판매처 자신의 페이지에서 직접 읽은 값**이라
+ * 원본 상품의 사실에 속한다. 그래서 krMarket 줄로 ①에 함께 세우되, 큰 숫자
+ * 자리는 여전히 원본 통화(€75)가 갖는다 — 첫 질문의 답은 그쪽이기 때문이다.
+ * 두 줄은 크기와 라벨로 층이 갈리지 겨루지 않는다.
+ *
  * ── 없는 환산을 만들지 않는다 ────────────────────────────────────────────
  * 스냅샷 원본가를 쓰는 경우 그 금액에 대응하는 원화값이 응답에 없다. 환율을
  * 곱해 만들어 낼 수는 있지만 그 순간 화면에만 존재하는 아홉 번째 숫자가 생기고,
@@ -496,6 +503,17 @@ export interface OriginalPriceHeadline {
   price: PriceLine;
   /** 원화 환산 한 줄. 대응하는 원화값이 응답에 없으면 null이다(곱하지 않는다). */
   converted: PriceLine | null;
+  /**
+   * MI/PRICE-2(CEO 지시, 2026-09-12) — 그 판매처가 한국 방문자에게 직접 보여주는
+   * 값 한 줄. 관측이 없으면 null이고, ①의 첫 줄이 이미 그 값일 때도 null이다
+   * (같은 라벨을 한 카드에서 두 번 쓰지 않는다).
+   *
+   * 왜 ①인가: /en-kr의 ₩162,000은 **판매자 자신의 페이지에서 직접 읽은 값**이다.
+   * 남이 파는 값도, 우리가 환율로 만든 값도 아니라 "이 상품이 원래 얼마인가"에
+   * 딸린 원본 사실이다. 그래서 원본 상품 가격과 같은 카드에 산다 — €75와
+   * ₩162,000이 한 판매처의 두 시장 표시가라는 것이 여기서 한눈에 읽힌다.
+   */
+  krMarket: PriceLine | null;
   /**
    * 원본 통화 가격과 한국 표시가가 다른 사실이라는 것을 말하는 한 줄.
    * 둘을 나란히 놓을 이유가 없는 상품에서는 null이다.
@@ -520,14 +538,66 @@ export interface OriginalPriceHeadlineInput {
    * 넘긴다 — 못 읽은 값을 원본가격이라고 부르지 않는다.
    */
   snapshotOriginPrice: { amount: number; currency: string } | null;
+  /**
+   * MI/PRICE-2(CEO 지시, 2026-09-12) — ② 글로벌 시장에서 관측된 **판단 시장(한국)
+   * 줄** 그대로. 금액 문자열과 그 줄의 시장 코드만 받는다.
+   *
+   * 숫자가 아니라 이미 완성된 문자열을 받는 것이 중요하다. 여기서 원화 금액을
+   * 다시 포맷하면 ②의 "₩162,000"과 ①의 "₩162,000"이 서로 다른 코드에서 나오고,
+   * 언젠가 한쪽만 고쳐진다. 같은 관측이 두 자리에 보이는 것은 사본이 아니라
+   * **같은 사실의 두 표시**여야 한다.
+   *
+   * 판단 시장 관측이 정확히 하나일 때만 호출부가 값을 넘긴다
+   * (global-market.pickJudgingMarketRow) — 모르면 고르지 않는다.
+   */
+  krMarketObservation: { price: string; marketCode: string } | null;
 }
 
 function isKrw(currency: string): boolean {
   return currency.toUpperCase() === "KRW";
 }
 
+/**
+ * MI/PRICE-2(CEO 지시, 2026-09-12) — ①에 놓이는 "원본 판매자 한국 표시가" 한 줄.
+ *
+ * ── 무엇이 문제였나 ──────────────────────────────────────────────────────
+ * 실제 화면(Bobo Choses B226AC043)의 ② 글로벌 시장 카드가 이랬다:
+ *
+ *   🇰🇷 한국 · en-kr    착지원가 기준    ₩162,000
+ *
+ * ₩162,000은 착지원가가 아니다. 그건 그 판매처가 한국 방문자에게 보여주는
+ * **관측된 시장가**이고, 착지원가는 €75 → 환율 → ₩116,742 + 국제배송비다.
+ * 배지는 "이 관측이 곧 원가 사슬의 출발점"이라는 참인 사실을 말하려던 것인데,
+ * 시장가 옆에 붙는 순간 그 숫자 자체가 원가로 읽혔다.
+ *
+ * ── 사실을 어떻게 보존하는가 ─────────────────────────────────────────────
+ * 배지는 지우고, 사실은 여기로 옮긴다. 관측된 값은 ①에서 자기 라벨(원본 판매자
+ * 한국 표시가)을 달고 서고, "이 관측이 ④의 출발점"이라는 관계는 금액이 아니라
+ * 기준 문장이 말한다. 라벨은 무엇인지를, 기준 문장은 어디에 쓰였는지를 말한다 —
+ * 배지 하나가 둘을 겸하려다 첫 번째를 틀리게 만들었던 자리다.
+ */
+function krMarketLine(input: OriginalPriceHeadlineInput): PriceLine | null {
+  const observed = input.krMarketObservation;
+  if (!observed) return null;
+  return {
+    key: "KR_MARKET_PRICE",
+    label: PRICE_MEANING_LABEL.KR_MARKET_PRICE,
+    basis: [
+      `${observed.marketCode} 페이지에서 직접 관측 · 환율 환산이 아닙니다`,
+      // 같은 관측이 ④ 원가 계산의 출발점인 상품에서만 붙는다. 숨기면 셀러가
+      // 같은 숫자를 두 번 세고, 금액 옆에 배지로 붙이면 시장가가 원가가 된다.
+      input.costBasisIsKrMarket ? "④ 수익성의 착지원가가 이 관측에서 출발합니다" : null,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    value: observed.price,
+    empty: null,
+  };
+}
+
 export function buildOriginalPriceHeadline(input: OriginalPriceHeadlineInput): OriginalPriceHeadline {
   const title = PRICE_SECTION_TITLE.ORIGINAL;
+  const krMarket = krMarketLine(input);
   // 원가가 한국 표시가 기준이면 그 원화값은 원본 통화 가격이 아니다 — 사슬의
   // 첫 줄을 ①으로 올릴 수 없는 유일한 경우다.
   const chainOrigin = input.costBasisIsKrMarket ? null : (input.observedOriginPrice ?? input.originPrice);
@@ -555,6 +625,7 @@ export function buildOriginalPriceHeadline(input: OriginalPriceHeadlineInput): O
             ? null
             : miEmptyState("UNVERIFIABLE", "환율을 확인하지 못해 환산할 수 없습니다"),
       },
+      krMarket,
       note: null,
     };
   }
@@ -572,9 +643,14 @@ export function buildOriginalPriceHeadline(input: OriginalPriceHeadlineInput): O
       },
       // 이 금액의 원화 짝이 응답에 없다. 환율을 곱해 만들지 않는다.
       converted: null,
-      note: input.costBasisIsKrMarket
-        ? `${PRICE_MEANING_LABEL.KR_MARKET_PRICE}는 이 값과 다른 사실입니다 — 아래 ②·④에서 확인하세요.`
-        : null,
+      krMarket,
+      // MI/PRICE-2 — 한국 표시가가 이제 바로 아래 줄에 서 있으므로 "아래 ②·④에서
+      // 확인하세요"라고 보낼 이유가 없다. 대신 두 값이 왜 다른지를 말한다:
+      // €75는 원본 페이지의 값이고 ₩162,000은 같은 판매처의 한국 페이지 값이다.
+      note:
+        input.costBasisIsKrMarket || krMarket
+          ? `${PRICE_MEANING_LABEL.KR_MARKET_PRICE}는 이 값의 환율 환산이 아니라, 같은 판매처가 한국 페이지에 따로 매긴 값입니다.`
+          : null,
     };
   }
 
@@ -594,6 +670,9 @@ export function buildOriginalPriceHeadline(input: OriginalPriceHeadlineInput): O
       empty: krw != null ? null : miEmptyState("UNVERIFIABLE", "원본 상품 가격을 읽지 못했습니다"),
     },
     converted: null,
+    // 이 분기의 첫 줄이 이미 한국 표시가면(krwOnly.key === "KR_MARKET_PRICE")
+    // 같은 라벨을 한 카드에서 두 번 쓰게 된다 — 그때는 줄을 만들지 않는다.
+    krMarket: krwOnly.key === "KR_MARKET_PRICE" ? null : krMarket,
     note:
       krw != null && input.costBasisIsKrMarket
         ? "이 판매처는 한국 방문자에게 원화로 직접 가격을 매깁니다 — 원본 통화 가격은 따로 확인되지 않았습니다."

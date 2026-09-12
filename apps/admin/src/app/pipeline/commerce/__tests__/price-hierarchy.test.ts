@@ -395,5 +395,81 @@ function HEADLINE_FROM(chain: PriceChainInput): Omit<OriginalPriceHeadlineInput,
     exchangeRateIsEstimate: chain.exchangeRateIsEstimate,
     originPriceBasis: chain.originPriceBasis,
     costBasisIsKrMarket: chain.costBasisIsKrMarket,
+    // 기본값은 "관측 없음"이다. ②의 🇰🇷 줄이 있는 상품만 아래 describe에서 따로 넘긴다.
+    krMarketObservation: null,
   };
 }
+
+/**
+ * MI/PRICE-2(CEO 지시, 2026-09-12) — 고정하려는 실제 화면.
+ *
+ * ② 글로벌 시장 카드의 한국 줄이 이렇게 떠 있었다:
+ *
+ *   🇰🇷 한국 · en-kr    착지원가 기준    ₩162,000
+ *
+ * ₩162,000은 착지원가가 아니다 — 그 판매처가 한국 방문자에게 보여주는 관측된
+ * 시장가이고, 착지원가는 €75 → ₩116,742 + 국제배송비다. 관측된 시장가를 원가
+ * 라벨로 부르면 "판매자가 그 시장에서 받는 값"과 "내가 들여오는 데 드는 돈"의
+ * 경계가 사라진다.
+ *
+ * 이 테스트가 못박는 것: 그 관측은 ①에서 **자기 라벨로** 서고, 원가와의 관계는
+ * 금액이 아니라 기준 문장이 말한다.
+ */
+describe("원본 판매자 한국 표시가는 ①에서 자기 라벨로 선다", () => {
+  const KR_OBSERVED = { price: "₩162,000", marketCode: "en-kr" };
+
+  it("②의 🇰🇷 관측이 있으면 ①에 그 줄이 함께 선다", () => {
+    const headline = buildOriginalPriceHeadline({
+      ...HEADLINE_FROM({ ...CHAIN, costBasisIsKrMarket: true, observedOriginPrice: null, sourcePriceKrw: 162000 }),
+      snapshotOriginPrice: { amount: 75, currency: "EUR" },
+      krMarketObservation: KR_OBSERVED,
+    });
+    // 큰 숫자는 여전히 원본 통화다 — 첫 질문("원래 얼마지?")의 답이 그쪽이라서.
+    expect(headline.price.value).toContain("75");
+    expect(headline.krMarket?.label).toBe(PRICE_MEANING_LABEL.KR_MARKET_PRICE);
+    expect(headline.krMarket?.value).toBe("₩162,000");
+  });
+
+  it("그 줄은 관측이라고 말하지 원가라고 말하지 않는다", () => {
+    const headline = buildOriginalPriceHeadline({
+      ...HEADLINE_FROM({ ...CHAIN, costBasisIsKrMarket: true, observedOriginPrice: null, sourcePriceKrw: 162000 }),
+      snapshotOriginPrice: { amount: 75, currency: "EUR" },
+      krMarketObservation: KR_OBSERVED,
+    });
+    expect(headline.krMarket?.basis).toContain("en-kr 페이지에서 직접 관측");
+    expect(headline.krMarket?.basis).toContain("환율 환산이 아닙니다");
+    // 관계는 말하되 금액의 정체를 바꾸지 않는다 — "착지원가 기준"이라는 라벨이
+    // 아니라 "④의 착지원가가 여기서 출발한다"는 문장이다.
+    expect(headline.krMarket?.basis).toContain("④ 수익성의 착지원가가 이 관측에서 출발합니다");
+    expect(headline.krMarket?.label).not.toContain("착지원가");
+  });
+
+  it("원가 기준이 아니면 원가와의 관계를 말하지 않는다 — 없는 사실을 적지 않는다", () => {
+    const headline = buildOriginalPriceHeadline({
+      ...HEADLINE_FROM({ ...CHAIN, observedOriginPrice: { amount: 75, currency: "EUR", exchangeRate: 1556.56 } }),
+      snapshotOriginPrice: null,
+      krMarketObservation: KR_OBSERVED,
+    });
+    expect(headline.krMarket?.value).toBe("₩162,000");
+    expect(headline.krMarket?.basis).not.toContain("착지원가");
+  });
+
+  it("①의 첫 줄이 이미 한국 표시가면 같은 라벨을 두 번 쓰지 않는다", () => {
+    const headline = buildOriginalPriceHeadline({
+      ...HEADLINE_FROM({ ...CHAIN, costBasisIsKrMarket: true, observedOriginPrice: null, sourcePriceKrw: 162000 }),
+      snapshotOriginPrice: null,
+      krMarketObservation: KR_OBSERVED,
+    });
+    expect(headline.price.key).toBe("KR_MARKET_PRICE");
+    expect(headline.krMarket).toBeNull();
+  });
+
+  it("관측이 없으면 줄도 없다 — 한국 표시가를 지어내지 않는다", () => {
+    const headline = buildOriginalPriceHeadline({
+      ...HEADLINE_FROM(CHAIN),
+      snapshotOriginPrice: null,
+      krMarketObservation: null,
+    });
+    expect(headline.krMarket).toBeNull();
+  });
+});

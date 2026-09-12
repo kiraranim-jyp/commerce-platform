@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { buildGlobalMarketCard, marketDisplayName, type MarketObservationInput } from "../global-market";
+import {
+  buildGlobalMarketCard,
+  marketDisplayName,
+  pickJudgingMarketRow,
+  type MarketObservationInput,
+} from "../global-market";
+import { domesticMatchDisplay } from "../match-display";
 import { buildMarketContext, PRICE_MEANING_LABEL } from "../price-hierarchy";
+import { readSourceAt, stripComments } from "./source-text";
+
+/** 화면에 나가는 문자열만 검사한다 — 주석은 "왜 지웠나"를 설명해야 하므로 걷어낸다. */
+function read(relativeToThisFile: string): string {
+  return readSourceAt(new URL(relativeToThisFile, import.meta.url));
+}
 
 /**
  * UX 2.4(CEO 지시, 2026-09-11) — 고정하려는 실제 화면.
@@ -61,7 +73,7 @@ const OBSERVATIONS: MarketObservationInput[] = [
   },
 ];
 
-const CARD = buildGlobalMarketCard({ observations: OBSERVATIONS, costBasisIsTargetMarket: true });
+const CARD = buildGlobalMarketCard({ observations: OBSERVATIONS });
 
 describe("시장 이름과 국기는 관측된 market_code에서만 나온다", () => {
   it("코드에 적힌 지역 글자를 그대로 읽는다", () => {
@@ -180,29 +192,105 @@ describe("판매자 신고 국가는 기본 화면의 값이 아니다", () => {
   });
 });
 
-describe("착지원가 기준 줄은 두 번째 사실인 척하지 않는다", () => {
-  it("원가가 한국 표시가에서 나왔으면 그 줄에만 표시가 붙는다", () => {
-    expect(CARD.rows.filter((r) => r.isCostBasis).map((r) => r.marketCode)).toEqual(["en-kr"]);
+/**
+ * MI/PRICE-2(CEO 지시, 2026-09-12) — 고정하려는 실제 화면.
+ *
+ *   🇰🇷 한국 · en-kr    착지원가 기준    ₩162,000
+ *
+ * ₩162,000은 착지원가가 아니다. 그건 Bobo Choses가 한국 방문자에게 직접 보여주는
+ * **관측된 시장가**이고, 착지원가는 €75 → ₩116,742 + 국제배송비다. 관측된
+ * 시장가에 원가 라벨이 붙는 순간 "판매자가 그 시장에서 받는 값"과 "내가 들여오는
+ * 데 드는 돈"의 경계가 사라지고, 그 혼동은 GLOBAL 판매처마다 반복된다.
+ */
+describe("관측된 시장가를 원가라고 부르지 않는다", () => {
+  it("줄에도 카드에도 착지원가가 없다 — 그 값은 ④ 수익성에만 있다", () => {
+    // 주석(왜 지웠는지)은 남아 있어도 되지만, 화면에 나가는 문자열에는 없어야 한다.
+    expect(JSON.stringify(CARD)).not.toContain("착지원가");
+    expect(stripComments(read("../global-market.ts"))).not.toContain("착지원가");
   });
 
-  it("원가가 원문 통화 환산이면 어느 줄도 원가 기준이 아니다", () => {
-    const card = buildGlobalMarketCard({ observations: OBSERVATIONS, costBasisIsTargetMarket: false });
-    expect(card.rows.some((r) => r.isCostBasis)).toBe(false);
+  it("원가를 넘길 수 있는 인자 자체가 없다 — 배지가 되살아날 자리를 없앴다", () => {
+    // 이 카드가 받는 것은 관측 목록 하나뿐이다. 새 인자를 뚫어야만 원가가 다시
+    // 들어올 수 있고, 그때 이 테스트가 먼저 깨진다.
+    const input: Parameters<typeof buildGlobalMarketCard>[0] = { observations: OBSERVATIONS };
+    expect(Object.keys(input)).toEqual(["observations"]);
   });
 
-  it("판단 시장 관측이 둘이면 아무 줄에도 붙이지 않는다 — 모르면 말하지 않는다", () => {
-    const card = buildGlobalMarketCard({
-      observations: [...OBSERVATIONS, { ...OBSERVATIONS[0]!, marketCode: "kr" }],
-      costBasisIsTargetMarket: true,
-    });
-    expect(card.rows.some((r) => r.isCostBasis)).toBe(false);
+  it("판단 시장 줄은 자기 라벨을 달고, 그 라벨은 가격 계층 표에서 온다", () => {
+    const kr = CARD.rows.find((r) => r.marketCode === "en-kr")!;
+    expect(kr.priceMeaningLabel).toBe(PRICE_MEANING_LABEL.KR_MARKET_PRICE);
+    // 관측된 값이라는 사실을 말하지, 무엇의 기준이라고 말하지 않는다.
+    expect(kr.priceMeaningLabel).toContain("표시가");
+    expect(kr.priceMeaningLabel).not.toContain("기준");
+  });
+
+  it("부딪힐 상대가 없는 시장 줄에는 라벨을 억지로 붙이지 않는다", () => {
+    // "🇩🇪 독일 · en-de · €75"로 충분하다 — 화면에 다른 독일 가격이 없다.
+    expect(CARD.rows.find((r) => r.marketCode === "en-de")!.priceMeaningLabel).toBeNull();
+    expect(CARD.rows.find((r) => r.marketCode === "en-int")!.priceMeaningLabel).toBeNull();
+  });
+});
+
+/**
+ * MI/PRICE-2 — ②의 동일성은 매칭이 아니라 구성으로 성립한다.
+ *
+ *   🌎 판매자 글로벌 시장   같은 판매자가 여러 시장에서 파는 가격   구성으로 동일
+ *   🇰🇷 국내 경쟁시장       다른 판매자의 비교 가능 상품           매칭으로 판정
+ */
+describe("글로벌 시장 줄의 동일 상품 표시는 매칭 등급이 아니다", () => {
+  it("모든 줄이 같은 🟢 하나를 단다 — 등급이 없다", () => {
+    for (const row of CARD.rows) {
+      expect(row.identity.icon).toBe("🟢");
+      expect(row.identity.text).toBe("동일 상품 · 판매자 직접 관측");
+    }
+    expect(new Set(CARD.rows.map((r) => r.identity.text)).size).toBe(1);
+  });
+
+  it("국내 매칭 상태와 같은 말을 쓰지 않는다 — 두 개념이 한 어휘로 합쳐지지 않는다", () => {
+    // 국내는 matchTruth가 판정한 결과라 등급이 흔들린다(match-display.ts).
+    for (const row of CARD.rows) {
+      for (const domestic of [
+        domesticMatchDisplay("EXACT_IDENTIFIER").label,
+        domesticMatchDisplay("TEXT_CONFIRMED").label,
+        domesticMatchDisplay("SIMILAR").label,
+      ]) {
+        expect(row.identity.text).not.toBe(domestic);
+      }
+    }
+  });
+
+  it("근거는 줄이 아니라 펼친 상세가 들고, 관측에 적힌 것만 말한다", () => {
+    const kr = CARD.rows.find((r) => r.marketCode === "en-kr")!;
+    expect(kr.identity.evidence).toContain("동일 판매처 · 동일 상품 경로");
+    // 시장 코드를 뗀 상품 경로 — 여러 줄에 같은 경로가 적히는 것이 곧 증거다.
+    expect(kr.identity.evidence).toContain("/products/x");
+    expect(kr.identity.evidence).toContain("시장 코드만 en-kr로 바꿔 관측");
+    // 줄에 보이는 짧은 말에는 근거가 섞이지 않는다(줄이 길어지면 가격이 밀린다).
+    expect(kr.identity.text).not.toContain("경로");
+  });
+
+  it("URL이 없으면 경로를 지어내지 않는다", () => {
+    const us = CARD.rows.find((r) => r.marketCode === "en-us")!;
+    expect(us.productUrl).toBeNull();
+    expect(us.identity.evidence).not.toContain("/products");
   });
 });
 
 describe("관측된 시장이 없을 때", () => {
   it("판단 실패가 아니라 '검색 데이터 없음'이다", () => {
-    const card = buildGlobalMarketCard({ observations: [], costBasisIsTargetMarket: false });
+    const card = buildGlobalMarketCard({ observations: [] });
     expect(card.rows).toHaveLength(0);
     expect(card.empty?.chip).toBe("⚪ 검색 데이터 없음");
+  });
+});
+
+describe("판단 시장 줄은 정확히 하나일 때만 골라진다", () => {
+  it("하나면 그 줄을, 없거나 둘이면 null을 돌려준다 — 모르면 고르지 않는다", () => {
+    expect(pickJudgingMarketRow(CARD)?.marketCode).toBe("en-kr");
+    expect(pickJudgingMarketRow(buildGlobalMarketCard({ observations: [] }))).toBeNull();
+    const twoKr = buildGlobalMarketCard({
+      observations: [...OBSERVATIONS, { ...OBSERVATIONS[0]!, marketCode: "kr" }],
+    });
+    expect(pickJudgingMarketRow(twoKr)).toBeNull();
   });
 });
