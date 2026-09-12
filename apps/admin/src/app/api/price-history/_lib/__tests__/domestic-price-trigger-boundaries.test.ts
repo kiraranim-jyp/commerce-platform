@@ -125,7 +125,12 @@ describe("DOMESTIC-PRICE-TRIGGER-1 경계 ①: 화면 조회 경로는 여전히
     expect(body.results[0].candidates).toHaveLength(1);
     expect(hoisted.upsertDomesticProductLink).not.toHaveBeenCalled();
     expect(hoisted.recordPriceObservations).not.toHaveBeenCalled();
-  });
+    // 이 테스트가 오래 걸리는 이유는 단언이 아니라 위 동적 import다 — 라우트
+    // 하나를 부르려고 그 모듈 그래프 전체를 변환한다(단독 실행 ~1.6초). 화면
+    // 조립 테스트(product-tab-*)가 들어오면서 워커가 붐비자 기본 5초를 간헐적
+    // 으로 넘겼다. 검사하는 내용은 한 글자도 바꾸지 않고, 변환에 쓸 시간만
+    // 넉넉히 준다.
+  }, 30_000);
 
   it("검색 라우트 소스에 쓰기 함수 이름이 아예 등장하지 않는다", () => {
     const source = readFileSync(
