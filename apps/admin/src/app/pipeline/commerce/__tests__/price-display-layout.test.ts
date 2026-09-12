@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { stripComments } from "./source-text";
 
 /**
  * UX 2.3(CEO 지시, 2026-09-11) — 같은 가격이 화면에 두 번 뜨지 않는다.
@@ -19,6 +20,8 @@ function read(relativeToThisFile: string): string {
 }
 
 const panel = read("../DomesticPriceIntelligencePanel.tsx");
+/** 주석을 걷어낸 소스 — 막아야 하는 것은 실제 호출과 렌더뿐이다(source-text.ts). */
+const panelCode = stripComments(panel);
 
 /** JSX 사용처만 센다(import/정의와 헷갈리지 않게). */
 function jsxUses(source: string, component: string): number {
@@ -219,11 +222,30 @@ describe("오른쪽 Action Center에는 가격 상세가 없다", () => {
 });
 
 describe("가격 상세는 접히고, 같은 숫자는 두 번 그려지지 않는다", () => {
-  it("접힌 기본 화면은 사슬의 SUMMARY 줄만 그린다", () => {
-    // 무엇을 접을지는 price-hierarchy.ts의 tier가 정한다 — 화면이 key나 role을
+  it("④ 수익성은 언제나 사슬의 SUMMARY 줄만 그린다", () => {
+    // 무엇이 요약인지는 price-hierarchy.ts의 tier가 정한다 — 화면이 key나 role을
     // 세어 고르기 시작하면 값이 하나 늘 때마다 여기를 또 고쳐야 한다.
     expect(panel).toContain('rows.filter((row) => row.tier === "SUMMARY")');
-    expect(panel).toContain("showDetail={showPriceDetail}");
+    // MI/PRICE-1(CEO 지시, 2026-09-12) — 이 뷰에 showDetail이 없다. DETAIL 층
+    // (원본 가격 · 원화 환산 · 국제배송비)을 그리는 곳은 상세 계산 하나이고,
+    // 여기서도 그리면 같은 접힘 안에서 같은 국제배송비가 두 번 나온다.
+    expect(panel).not.toContain("showDetail={showPriceDetail}");
+    expect(panel).toContain("<PriceChainView rows={priceChain} />");
+  });
+
+  it("④의 접힘은 하나뿐이고, 그 안에 들어가는 것은 상세 계산 슬롯이다", () => {
+    // CPO가 지정한 모양: 요약 넷 + 토글 하나. 토글이 둘이 되는 순간 셀러는
+    // 어느 쪽에 계산이 있는지 몰라 둘 다 눌러본다(UX 2.4에서 이미 겪었다).
+    expect((panel.match(/setShowPriceDetail\(/g) ?? []).length).toBe(2); // 토글 1개 + 바깥 요청 동기화 1개
+    expect(panel).toContain("{caret(showPriceDetail)} 가격 계산 기준 보기");
+    expect(panel).toContain("{showPriceDetail && (");
+    expect(panel).toContain("{priceCalculationDetail}");
+    // 패널이 상세 계산을 직접 만들지 않는다 — 노드로 받기만 한다. 직접 만들면
+    // product와 setter 넷이 이 패널로 들어오고, 그때부터 "가격이 바뀌었으니
+    // 다시 분석하자"는 배선이 생길 수 있다(주석에서 그 함수를 언급하는 것은
+    // 괜찮다 — 막는 것은 호출과 렌더다).
+    expect(panelCode).not.toContain("computePriceBreakdown");
+    expect(panelCode).not.toContain("<PriceCalculationDetail");
   });
 
   it("국내 비교상품 평균가는 판단 카드에만 있다 — 근거 블록이 사본을 갖지 않는다", () => {

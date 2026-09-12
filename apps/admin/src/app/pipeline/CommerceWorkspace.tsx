@@ -54,6 +54,7 @@ import {
   FINAL_VERDICT_COPY,
   MARKET_VERDICT_ANCHOR_ID,
   MarketIntelligenceSkeleton,
+  PRICE_CALCULATION_ANCHOR_ID,
   PRICE_COMPARISON_ANCHOR_ID,
 } from "./commerce/DomesticPriceIntelligencePanel";
 import type { PriceLevel, SellerFinalVerdict } from "./commerce/DomesticPriceIntelligencePanel";
@@ -75,6 +76,7 @@ import { RegistrationHistoryPanel } from "./commerce/RegistrationHistoryPanel";
 import { WorkflowPanel } from "./commerce/WorkflowPanel";
 import { PRICE_SURFACE_ANCHOR_ID, StageBody } from "./commerce/StageBody";
 import { PriceEditor } from "./commerce/PriceEditor";
+import { PriceCalculationDetail } from "./commerce/PriceCalculationDetail";
 import { buildRegistrationChannels } from "./commerce/registration-channels";
 import { resolveStageFocus, type WorkSurface } from "./commerce/stage-focus";
 import {
@@ -338,6 +340,32 @@ export function CommerceWorkspace({
     });
   }
 
+  /**
+   * MI/PRICE-1(CEO 지시, 2026-09-12) — "그래서 왜 이 가격인가"로 가는 단 하나의
+   * 통로.
+   *
+   * 상세 계산이 MI ④ 안 접힘 하나에만 있으므로, 그 질문을 갖고 오는 모든
+   * 진입점(③ 확정 카드의 [가격 계산 기준 보기], 원본가 미확인 경고)이 여기로
+   * 모인다. handleRequestPriceReview와 완전히 같은 모양이다 — 탭 전환 + 접힘
+   * 펼침 요청 + 스크롤뿐이고, 여기서 어떤 가격도 계산하거나 저장하지 않는다.
+   * MI를 다시 돌리지도 않는다(요청 카운터는 화면 상태일 뿐 조회 키가 아니다).
+   */
+  const [priceDetailRequest, setPriceDetailRequest] = useState(0);
+  function handleOpenPriceCalculation() {
+    setTab("source");
+    // ③④ 단계에서 MI는 결론 한 줄로 접혀 있다(stage-focus의 SUMMARY). 접힌
+    // 채로 두면 ④ 자체가 렌더되지 않아 이 버튼이 갈 곳을 잃는다 — 그래서 판단을
+    // 펼친다. 단계를 ②로 되돌리는 것이 아니다(openMarketDetail과 같은 성질이고,
+    // 도착지만 판정 카드가 아니라 ④ 수익성이다).
+    setMarketDetailOpen(true);
+    setPriceDetailRequest((n) => n + 1);
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        document.getElementById(PRICE_CALCULATION_ANCHOR_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
+    });
+  }
+
   useEffect(() => {
     try {
       sessionStorage.setItem(TAB_STORAGE_KEY, tab);
@@ -450,6 +478,17 @@ export function CommerceWorkspace({
    * 같이 읽어서 resolveListingPrice()에 넘긴다 — 그래야 화면에 보인 "권장
    * 판매가격"과 등록에 쓰이는 listing.priceKrw가 정확히 같은 숫자가 된다. */
   const [priceRoundingUnit, setPriceRoundingUnit] = useState<number | null>(null);
+  /**
+   * MI/PRICE-1(CEO 지시, 2026-09-12) — Settings에 저장된 국내 배송원가 기본값.
+   *
+   * 예전에는 PriceEditor가 같은 엔드포인트를 **한 번 더** 불러 이 값을 스스로
+   * 읽었다. 두 곳이 각자 조회하면 언젠가 한쪽만 실패해서 화면의 권장가와
+   * 등록가가 다른 반올림 단위로 갈린다 — 조회는 여기 하나로 모으고 가격 UI는
+   * props로 받기만 한다(그래서 가격 화면에는 이제 fetch가 하나도 없다).
+   * 수정은 Settings에서만 한다(SellerProfile 필드라 상품별로 저장할 곳이
+   * 없다 — P-3-1에서 확정한 설계).
+   */
+  const [domesticShippingCostKrw, setDomesticShippingCostKrw] = useState<number | null>(null);
 
   /** P0(환율 시스템) — 고정 환율표 대신 실제 환율을 보여준다. 컴포넌트 마운트
    * 시 한 번 불러오고, 이후엔 "새로고침" 버튼으로만 다시 부른다(CPO 요구사항:
@@ -527,6 +566,7 @@ export function CommerceWorkspace({
             isDefault: boolean;
             companyContactNumber: string;
             priceRoundingUnit?: number;
+            domesticShippingCostKrw?: number | null;
             defaultMarginPercent?: number | null;
           }[];
         }) => {
@@ -537,6 +577,9 @@ export function CommerceWorkspace({
           // P-4-H1-2-2 — 이 프로필은 플랫폼 공통 설정이라(N-3.69) coupang 탭이
           // 아니어도 항상 읽는다. 이전에는 tab==="coupang"일 때만 조회했다.
           setPriceRoundingUnit(defaultProfile?.priceRoundingUnit ?? null);
+          // MI/PRICE-1 — 예전에 PriceEditor가 따로 조회하던 값. 같은 응답에서
+          // 이미 오고 있었으므로 조회를 늘리지 않고 읽기만 한 줄 더한다.
+          setDomesticShippingCostKrw(defaultProfile?.domesticShippingCostKrw ?? null);
 
           /* UX 2.5(CEO 지시, 2026-09-11) — Settings의 "기본 마진율"을 이 상품에
              1회 반영한다. 상품별 저장값(priceBreakdown)이 이미 있으면 절대
@@ -563,6 +606,9 @@ export function CommerceWorkspace({
         if (!cancelled) {
           setDefaultContactNumber("");
           setPriceRoundingUnit(null);
+          // 조회 실패해도 화면은 packages/pricing의 전역 기본값으로 계속 돈다
+          // (반올림 단위는 폴백, 국내 배송원가는 "미확인"으로 표시된다).
+          setDomesticShippingCostKrw(null);
         }
       });
     return () => {
@@ -1117,6 +1163,68 @@ export function CommerceWorkspace({
         priceRoundingUnit ?? undefined,
       ),
     [product, exchangeRates, priceRoundingUnit],
+  );
+
+  /**
+   * MI/PRICE-1(CEO 지시, 2026-09-12) — ③ 등록 준비의 확정 카드가 보여주는
+   * **권장 판매가격**.
+   *
+   * 새 산식을 만들지 않는다. 바로 위 listingPrice가 부르는 그 함수를, 확정값이
+   * 없다고 가정하고(priceOverrideKrw: null) 한 번 더 부를 뿐이다. 그래서 이
+   * 숫자는 정의상 "셀러가 아무것도 확정하지 않았다면 실제로 등록됐을 값"과
+   * 정확히 같고, 확정 카드가 자기 산술을 갖는 일이 구조적으로 불가능하다.
+   *
+   * 상세 계산(PriceCalculationDetail)은 타이핑 중인 draft로 같은 공식을 돌려
+   * 즉시 다시 계산한다 — blur에서 product.priceBreakdown이 갱신되면 이 값도
+   * 같은 숫자로 따라온다. 입력 중에만 잠깐 다른 것은 "저장 전/후"라는 사실
+   * 그대로이지 두 공식이 갈라진 것이 아니다.
+   */
+  const recommendedPriceKrw = useMemo(
+    () =>
+      resolveListingPrice(
+        {
+          priceOverrideKrw: null,
+          originalAmount: product.price.value.amount,
+          originalCurrency: product.price.value.currency,
+          priceBreakdown: product.priceBreakdown,
+          priceValidity: product.priceValidity,
+        },
+        exchangeRates?.rates,
+        priceRoundingUnit ?? undefined,
+      ).priceKrw,
+    [product, exchangeRates, priceRoundingUnit],
+  );
+
+  /**
+   * MI/PRICE-1(CEO 지시, 2026-09-12) — 제품 전체에서 **유일한 상세 계산 화면**.
+   *
+   * 노드를 여기서 한 번만 만들어 MI ④ 💰 수익성의 접힘으로 내려보낸다. 예전에
+   * 이 사슬은 ③ 등록 준비의 "가격 계산" 카드 안에 있었고, 그 위 MI가 이미
+   * 원가·수익·마진을 말한 뒤였다 — 셀러 눈에 가격이 두 번 계산되는 것처럼
+   * 보이던 화면의 실체다. 자리를 옮겼을 뿐 줄·순서·산식은 그대로다.
+   *
+   * 상태와 핸들러 소유권이 여기 남는 것이 중요하다(StageBody가 편집기를
+   * ReactNode로 받는 것과 같은 규칙) — MI 패널은 이 노드를 자리에 놓기만 하고,
+   * 그 안의 값을 읽을 수 없다. 그래서 가격을 고쳐도 시장 분석이 다시 돌 배선이
+   * 생기지 않는다.
+   */
+  const priceCalculationDetail = (
+    <PriceCalculationDetail
+      product={product}
+      onUpdateOriginalPrice={updateOriginalPrice}
+      onUpdatePriceBreakdown={updatePriceBreakdown}
+      onUpdateCustomsCost={updateCustomsCost}
+      exchangeRates={exchangeRates}
+      exchangeRatesLoading={exchangeRatesLoading}
+      onRefreshExchangeRates={fetchExchangeRates}
+      priceRoundingUnit={priceRoundingUnit}
+      domesticShippingCostKrw={domesticShippingCostKrw}
+      /* PHASE 3.2 추가지시 — 계산 사슬에서 내려간 시장 정보(국가별 원본가격
+         비교 · 한국向 표시가)의 관측 원본으로 가는 유일한 통로. 이미 존재하는
+         근거 영역의 앵커로 스크롤만 한다 — 새 화면을 만들지도, 여기서 시장
+         데이터를 다시 조회하지도 않는다. */
+      onOpenMarketComparison={handleOpenMarketComparison}
+    />
   );
 
   // N-4.08 STEP6-3/6-4(CPO 지시: "상품정보 = 공통 정보 관리") — "상품정보" 탭
@@ -2142,6 +2250,16 @@ export function CommerceWorkspace({
                   ? () => setMarketDetailOpen(false)
                   : undefined
               }
+              /* MI/PRICE-1(CEO 지시, 2026-09-12) — ④ 💰 수익성의 접힘 안에 들어갈
+                 상세 계산. 화면 전체에서 이 노드 하나뿐이고, 여기서 한 번 만들어
+                 슬롯으로 내려보낸다(StageBody가 무거운 편집기를 ReactNode로 받는
+                 것과 같은 규칙).
+
+                 패널에 product를 넘기지 않는 이유는 그대로다 — 넘기면 가격을
+                 고칠 때마다 MI를 다시 돌릴 배선이 생긴다. 노드는 이미 완성된
+                 화면이라 패널이 그 안의 값을 읽을 수 없다. */
+              priceCalculationDetail={priceCalculationDetail}
+              openPriceDetailRequest={priceDetailRequest}
             />
           ) : (
             stageFocus.mi !== "HIDDEN" && <MarketIntelligenceSkeleton />
@@ -2210,11 +2328,13 @@ export function CommerceWorkspace({
                    실제로는 채널별 가격이라는 개념이 데이터에 없는데도(모든
                    어댑터가 resolveListingPrice() 하나를 부른다) 화면만 그렇게
                    보였다. 여기 한 번만 만들어서 ③ 체크리스트에서 펼치든 아래
-                   접힘에서 열든 같은 노드가 움직인다.
+                   접힘에서 열든 같은 노드가 움직인다. 그 성질은 이번에도 그대로다.
 
-                   접기/펼치기는 이제 바깥(StageBody의 CollapsibleSection, ③
-                   체크리스트의 펼침)이 맡는다 — 계산기 자신은 open 여부를
-                   판단하지 않는다.
+                   MI/PRICE-1(CEO 지시, 2026-09-12) — 바뀐 것은 이 카드가 묻는
+                   질문이다. 계산 사슬은 MI ④로 올라갔고 여기 남는 것은 확정
+                   하나뿐이다: "권장 143,500원으로 팔 것인가." 그래서 계산에
+                   필요하던 prop 넷(원본가·배송/수수료/마진·관세·환율)이 전부
+                   상세 계산 쪽으로 옮겨갔고, 권장가는 숫자 하나로만 내려온다.
 
                    앵커 id를 노드 바깥에 붙이는 이유: 두 자리 중 어디에 놓이든
                    같은 id가 따라와야 handleRequestPriceReview의 스크롤이 성립한다. */
@@ -2222,19 +2342,11 @@ export function CommerceWorkspace({
                   <div id={PRICE_SURFACE_ANCHOR_ID} className="scroll-mt-4">
                     <PriceEditor
                       product={product}
+                      recommendedPriceKrw={recommendedPriceKrw}
                       onUpdateSalePriceKrw={updateSalePriceKrw}
-                      onUpdateOriginalPrice={updateOriginalPrice}
-                      onUpdatePriceBreakdown={updatePriceBreakdown}
-                      onUpdateCustomsCost={updateCustomsCost}
-                      exchangeRates={exchangeRates}
-                      exchangeRatesLoading={exchangeRatesLoading}
-                      onRefreshExchangeRates={fetchExchangeRates}
-                      /* PHASE 3.2 추가지시 — 가격 계산 카드에서 내려간 시장
-                         정보(국가별 원본가격 비교 · 한국向 표시가)로 가는 유일한
-                         통로. 이미 존재하는 ②/③ 블록의 앵커로 스크롤만 한다 —
-                         새 화면을 만들지도, 여기서 시장 데이터를 다시 조회하지도
-                         않는다. */
-                      onOpenMarketComparison={handleOpenMarketComparison}
+                      /* "왜 이 값인가"는 여기서 답하지 않는다 — MI ④의 상세
+                         계산으로 데려가기만 한다(사본을 만들지 않는다). */
+                      onOpenPriceCalculation={handleOpenPriceCalculation}
                     />
                   </div>
                 ),

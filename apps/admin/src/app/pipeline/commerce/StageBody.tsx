@@ -38,13 +38,17 @@ export interface StageSurfaces {
   /** 이미지 편집기. */
   images: React.ReactNode;
   /**
-   * UX 2.5(CEO 지시, 2026-09-11) — 가격 계산기(PriceEditor).
+   * UX 2.5(CEO 지시, 2026-09-11) — 판매가격 확정 카드(PriceEditor).
    *
    * 이 자리에 **노드 하나**로 들어온다는 점이 중요하다. 아래에서 이 값은
    * 두 위치(③ 체크리스트에서 펼친 자리 / "언제든 열어볼 수 있는 것"의 접힘)에
    * 쓰이지만, 두 자리가 동시에 그려지지 않도록 서로 배타적으로 막혀 있고
-   * 실제 PriceEditor 엘리먼트는 CommerceWorkspace가 한 번만 만든다 — 화면에 계산기가
-   * 두 벌 생기면 같은 상품이 위아래에서 다른 판매가를 말한다.
+   * 실제 PriceEditor 엘리먼트는 CommerceWorkspace가 한 번만 만든다 — 화면에
+   * 확정 카드가 두 벌 생기면 같은 상품이 위아래에서 다른 판매가를 말한다.
+   *
+   * MI/PRICE-1(CEO 지시, 2026-09-12) — 이 노드에 계산 사슬은 더 이상 없다.
+   * 상세 계산은 MI ④ 💰 수익성의 접힘 하나에만 있고, 여기 남은 것은 "권장가를
+   * 최종가로 확정할 것인가"뿐이다.
    */
   price: React.ReactNode;
   /** 채널별 필수 정보 일괄 처리 패널. */
@@ -173,7 +177,10 @@ export function StageBody({
         {expandedSurface !== "PRICE" && (
           <CollapsibleSection
             title={PREPARE_SURFACE_LABEL.PRICE}
-            summary="원본 가격 → 착지원가 → 권장 판매가격 · 여기서 정한 한 값이 모든 채널의 판매가가 됩니다"
+            /* MI/PRICE-1 — 요약이 계산 사슬을 다시 적지 않는다. 이 카드가 묻는
+               것은 "얼마로 팔 것인가" 하나이고, 그 값이 어떻게 나왔는지는 MI
+               ④ 💰 수익성이 답한다. */
+            summary="권장 판매가격을 확인하고 최종 판매가격을 확정합니다 · 여기서 정한 한 값이 모든 채널의 기본 판매가가 됩니다"
             open={priceOpen}
             onToggle={setPriceOpen}
           >

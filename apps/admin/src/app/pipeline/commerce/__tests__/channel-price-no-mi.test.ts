@@ -174,16 +174,25 @@ describe("P2: 가격 UI를 손봐도 MI는 돌지 않는다", () => {
   }
 
   const editor = readSource("../PriceEditor.tsx");
+  const detail = readSource("../PriceCalculationDetail.tsx");
   const actionCenter = readSource("../ActionCenter.tsx");
   const channelPriceSection = readSource("../ChannelPriceSection.tsx");
 
-  it("가격 계산 카드의 서버 호출은 판매자 기본값 조회 하나뿐이다", () => {
-    // 반올림 단위/국내 배송원가를 읽는 Settings 조회는 PHASE 3.2 이전부터
-    // 있던 것이고 시장 분석과 무관하다. 그 외의 fetch가 하나라도 늘면
-    // "가격을 고칠 때마다 서버를 부른다"가 된다.
-    expect(editor.match(/fetch\(/g) ?? []).toHaveLength(1);
-    expect(editor).toContain('fetch("/api/settings/coupang/profiles")');
+  it("가격 화면은 이제 서버를 한 번도 부르지 않는다", () => {
+    // P2 시점에는 판매자 기본값(반올림 단위·국내 배송원가) 조회 하나가 남아
+    // 있었다. MI/PRICE-1(CEO 지시, 2026-09-12)에서 그 조회를 CommerceWorkspace로
+    // 올렸다 — 거기서 이미 같은 엔드포인트를 부르고 있었고, 두 곳이 각자
+    // 조회하면 한쪽만 실패했을 때 화면의 권장가와 등록가가 다른 반올림 단위로
+    // 갈린다. 지금 가격 UI 네 파일의 fetch 합계는 0이다(느슨해진 것이 아니라
+    // 조여진 것이다).
+    expect(editor.match(/fetch\(/g) ?? []).toHaveLength(0);
+    expect(detail.match(/fetch\(/g) ?? []).toHaveLength(0);
     expect(editor).not.toContain("/api/price-intelligence");
+    expect(detail).not.toContain("/api/price-intelligence");
+    // 조회는 사라진 것이 아니라 한 곳으로 모였다 — 값은 props로 내려온다.
+    expect(readSource("../../CommerceWorkspace.tsx")).toContain('fetch("/api/settings/coupang/profiles")');
+    expect(detail).toContain("priceRoundingUnit: number | null;");
+    expect(detail).toContain("domesticShippingCostKrw: number | null;");
   });
 
   it("오른쪽 기둥과 채널 가격 칸은 서버를 아예 부르지 않는다", () => {

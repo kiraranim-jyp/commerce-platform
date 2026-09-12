@@ -159,13 +159,17 @@ export function ChannelPriceSection({
             상품정보 가격 사용
           </button>
         )}
+        {/* MI/PRICE-1(CEO 지시, 2026-09-12) — 도착지 이름이 바뀌었다. 이 버튼이
+            데려가는 ③의 카드는 이제 계산하지 않고 확정만 한다(상세 계산은 MI ④
+            한 곳으로 올라갔다). 버튼 이름과 도착지 제목이 다르면 눌렀을 때
+            "여기가 맞나?"가 된다 — 이 저장소가 반복해서 고쳐 온 문제다. */}
         {onRequestPriceReview && (
           <button
             type="button"
             onClick={onRequestPriceReview}
             className="rounded-md border border-primary px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary-soft"
           >
-            상품정보 가격 계산 →
+            상품정보 판매가격 확정 →
           </button>
         )}
       </div>

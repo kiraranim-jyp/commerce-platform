@@ -120,22 +120,39 @@ describe("여덟 가지 가격은 한 라벨로 합쳐지지 않는다", () => {
     expect(recommended.basis).toBe("추천 판매가 기준");
   });
 
-  it("접힌 가격 판단은 원본 → 착지원가 → 내 판매가격 → 수익만 남는다", () => {
+  it("④ 수익성 요약은 착지원가 → 내 판매가격 → 예상 수익 → 예상 마진 넷이다", () => {
     // UX 2.4(CEO 지시, 2026-09-11) — 환산가와 국제배송비는 착지원가 안에 이미
-    // 합쳐져 있어서 접어도 사실이 사라지지 않는다. 원본가격·착지원가·내 판매가·
-    // 수익은 접는 순간 셀러가 답을 못 얻는다.
+    // 합쳐져 있어서 접어도 사실이 사라지지 않는다. 착지원가·내 판매가·수익은
+    // 접는 순간 셀러가 답을 못 얻는다.
+    //
+    // MI/PRICE-1(CEO 지시, 2026-09-12) — 원본 판매가격이 요약에서 내려갔다.
+    // 지워진 것이 아니라 **이미 두 곳이 답하고 있어서**다: 바로 위 ① 원본 상품
+    // 가격이 원본 통화로, ④의 상세 계산이 편집 가능한 첫 줄로. 같은 값이 한
+    // 카드에서 세 번 나오는 것이 이번 지시가 없애라고 한 화면이다.
     const rows = buildPriceChain(CHAIN);
     expect(rows.filter((r) => r.tier === "SUMMARY").map((r) => r.key)).toEqual([
-      "SOURCE_ORIGINAL_PRICE",
       "LANDED_COST",
       "SELLER_PLANNED_PRICE",
       "EXPECTED_PROFIT",
       "EXPECTED_MARGIN",
     ]);
     expect(rows.filter((r) => r.tier === "DETAIL").map((r) => r.key)).toEqual([
+      "SOURCE_ORIGINAL_PRICE",
       "SOURCE_PRICE_KRW",
       "INTERNATIONAL_SHIPPING",
     ]);
+  });
+
+  it("원가 기준이 한국 표시가인 상품만 그 줄을 요약에 남긴다", () => {
+    // ①이 그때는 스냅샷의 원본 통화 가격을 세우기 때문에, 실제로 착지원가에
+    // 들어간 한국 표시가를 화면 어디서도 대신 말해주지 않는다. 이 한 줄을
+    // 내리면 "무엇을 더해서 착지원가가 됐는지"가 요약에서 사라진다.
+    const rows = buildPriceChain({ ...CHAIN, costBasisIsKrMarket: true });
+    const head = rows[0];
+    expect(head.key).toBe("KR_MARKET_PRICE");
+    expect(head.tier).toBe("SUMMARY");
+    // 반대로 일반 상품의 출발점은 ①이 이미 답하므로 요약에 남지 않는다.
+    expect(buildPriceChain(CHAIN)[0]).toMatchObject({ key: "SOURCE_ORIGINAL_PRICE", tier: "DETAIL" });
   });
 
   it("접힘은 순서를 다시 정하지 않는다 — 계산 순서가 곧 화면 순서다", () => {

@@ -31,12 +31,16 @@ function read(relativeToThisFile: string): string {
 }
 
 const editor = read("../PriceEditor.tsx");
+/** MI/PRICE-1(CEO 지시, 2026-09-12) — 계산 사슬의 새 주소. 줄·순서·산식은 그대로고
+ * 소유자만 바뀌었다(상세 계산은 제품 전체에서 이 파일 하나뿐이다). */
+const detail = read("../PriceCalculationDetail.tsx");
 const actionCenter = read("../ActionCenter.tsx");
 
 describe("P2-1: 카드가 짧아진 이유는 밀도지 삭제가 아니다", () => {
   it("계산 사슬의 열 줄이 하나도 빠지지 않았다", () => {
     // 순서는 price-single-surface.test.ts가 고정한다. 여기서 고정하는 것은
     // "존재"다 — 카드를 줄이라는 지시를 줄을 지워서 만족시키지 않는다.
+    // MI/PRICE-1에서도 같다: 사슬이 MI ④로 옮겨갔을 뿐 열 줄 전부 살아 있다.
     for (const label of [
       "원본 가격",
       "환율",
@@ -49,35 +53,35 @@ describe("P2-1: 카드가 짧아진 이유는 밀도지 삭제가 아니다", ()
       "예상 수수료 금액",
       "예상 이익(최종 판매가격 기준)",
     ]) {
-      expect(editor, `${label} 줄이 사라졌다`).toContain(label);
+      expect(detail, `${label} 줄이 사라졌다`).toContain(label);
     }
-    // 관세/부가세·국내 배송원가(MI 판단용 입력)도 그대로다.
+    // 관세/부가세·국내 배송원가(판매 판단용 입력)도 그대로다.
     for (const label of ["국내 배송원가", "관세", "부가세"]) {
-      expect(editor).toContain(`<Row label="${label}">`);
+      expect(detail).toContain(`<Row label="${label}">`);
     }
   });
 
   it("줄 높이는 한 곳에서만 정한다 — 입력칸 모양이 화면 안에서 두 가지가 되지 않는다", () => {
-    expect(editor).toContain("const FIELD_CLASS =");
-    expect(editor).toContain("px-2 py-0.5 text-sm");
+    expect(detail).toContain("const FIELD_CLASS =");
+    expect(detail).toContain("px-2 py-0.5 text-sm");
     // 예전처럼 같은 문자열을 행마다 복사해두면 다음에 높이를 고치는 사람이
     // 그중 몇 개를 빠뜨린다.
-    expect(editor).not.toContain("rounded border border-border px-2 py-1 text-sm");
+    expect(detail).not.toContain("rounded border border-border px-2 py-1 text-sm");
   });
 
   it("사슬의 줄 간격과 행 정렬이 조밀한 값으로 고정돼 있다", () => {
-    expect(editor).toContain('<div className="mt-2 space-y-1.5 text-xs">');
+    expect(detail).toContain('<div className="mt-2 space-y-1.5 text-xs">');
     // Row는 더 이상 라벨을 입력칸 첫 줄에 맞추려고 위쪽 여백을 넣지 않는다.
-    expect(editor).toContain('<div className="flex items-center justify-between gap-3">');
-    expect(editor).not.toContain('<span className="w-24 shrink-0 pt-1.5 text-text-secondary">');
+    expect(detail).toContain('<div className="flex items-center justify-between gap-3">');
+    expect(detail).not.toContain('<span className="w-24 shrink-0 pt-1.5 text-text-secondary">');
   });
 
   it("제목 아래 안내문이 아래 문구와 같은 말을 세 번 하지 않는다", () => {
-    // 이 문장이 말하던 두 사실은 각각 최종 판매가격 칸의 안내와 상세 맨 아래
+    // 이 문장이 말하던 두 사실은 각각 확정 카드의 안내와 상세 맨 아래
     // 추정치 문단에 그대로 살아 있다 — 줄인 것은 사본이지 사실이 아니다.
-    expect(editor).not.toContain("배송비/수수료/마진/원본가격을 고치면 아래 값이 즉시 다시 계산됩니다");
-    expect(editor).toContain("아는 값으로 고치면 즉시 다시 계산됩니다");
-    expect(editor).toContain("아직 저장된 값이 없어 권장 판매가격을 보여주고 있습니다");
+    expect(detail).not.toContain("배송비/수수료/마진/원본가격을 고치면 아래 값이 즉시 다시 계산됩니다");
+    expect(detail).toContain("아는 값으로 고치면 즉시 다시 계산됩니다");
+    expect(editor).toContain("최종 판매가격을 아직 저장하지 않아 위 칸이 이 값을 그대로 비추고 있습니다");
   });
 });
 
@@ -91,7 +95,7 @@ describe("P2-2: 권장 판매가격과 최종 판매가격은 다른 층위로 �
     // 둘이 같은 크기/같은 색으로 돌아가면 화면은 다시 "무엇이 실제 판매가인지"를
     // 말하지 못한다.
     expect(editor).not.toContain(
-      '<span className="text-base font-semibold text-text-primary">{formatKrw(breakdown.suggestedPriceKrw)}</span>',
+      '<span className="text-base font-semibold text-text-primary">{formatKrw(recommendedPriceKrw)}</span>',
     );
   });
 
@@ -102,9 +106,12 @@ describe("P2-2: 권장 판매가격과 최종 판매가격은 다른 층위로 �
     // ② 저장했고 마침 같은 금액
     expect(editor).toContain("저장된 최종 판매가격과 같은 금액입니다.");
     // ③ 저장한 값이 권장가와 다르다 — 차액을 숨기지 않는다
-    expect(editor).toContain("const finalMinusRecommendedKrw = finalPriceKrw - recommendedPriceKrw;");
+    expect(editor).toContain("const finalMinusRecommendedKrw = finalPriceKrw - (recommendedPriceKrw ?? 0);");
     expect(editor).toContain("높습니다");
     expect(editor).toContain("낮습니다");
+    // MI/PRICE-1 — 이 문장은 확정 카드에만 있다. 두 값이 나란히 놓이는 자리가
+    // 제품 전체에서 거기 하나이기 때문이다(상세 계산은 권장가까지만 답한다).
+    expect(detail).not.toContain("recommendationRelation");
   });
 
   it("추천은 여전히 자동으로 최종 판매가격이 되지 않는다", () => {
@@ -114,7 +121,9 @@ describe("P2-2: 권장 판매가격과 최종 판매가격은 다른 층위로 �
     expect(editor).toContain("최종 판매가격에 적용");
     // 권장가가 바뀔 때 최종가를 따라 쓰는 effect가 없다(자동 적용 금지).
     expect(editor).not.toContain("useEffect(() => {\n    onUpdateSalePriceKrw");
-    expect(editor).toContain("const finalPriceKrw = product.priceOverrideKrw?.value ?? breakdown.suggestedPriceKrw;");
+    expect(editor).toContain("const finalPriceKrw = product.priceOverrideKrw?.value ?? recommendedPriceKrw ?? 0;");
+    // 상세 계산에는 최종가를 바꾸는 통로가 아예 없다 — 계산은 확정하지 않는다.
+    expect(detail).not.toContain("onUpdateSalePriceKrw");
   });
 });
 
@@ -151,6 +160,7 @@ describe("P2-4: 설명 문구는 읽히는 크기다", () => {
     // 필요한 문장이면 읽히게 두고, 읽을 필요가 없으면 지운다 — 글씨를 줄여
     // 정보를 숨기는 중간 상태를 만들지 않는다.
     expect(editor).not.toContain("text-[10px]");
+    expect(detail).not.toContain("text-[10px]");
     expect(actionCenter).not.toContain("text-[10px]");
   });
 
@@ -159,7 +169,7 @@ describe("P2-4: 설명 문구는 읽히는 크기다", () => {
       '<p className="mt-1 text-xs text-text-secondary">',
       '<p className="pt-0.5 text-xs text-text-secondary">',
     ]) {
-      expect(editor).toContain(snippet);
+      expect(detail).toContain(snippet);
     }
     // 판단 기준을 말하는 오른쪽 기둥의 한 줄도 같은 단계로 올라왔다.
     expect(actionCenter).toContain('<p className="mt-0.5 text-xs text-text-secondary">');

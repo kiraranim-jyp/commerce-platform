@@ -235,6 +235,16 @@ export const PRICE_COMPARISON_ANCHOR_ID = "price-comparison-source";
 export const MARKET_VERDICT_ANCHOR_ID = "market-verdict";
 
 /**
+ * MI/PRICE-1(CEO 지시, 2026-09-12) — ④ 💰 수익성으로 데려가는 앵커.
+ *
+ * 상세 계산이 여기 하나뿐이 되면서, "왜 이 가격인가"를 묻는 모든 진입점
+ * (③ 등록 준비의 확정 카드, 채널 화면의 [상품정보 가격 계산 →])이 결국 이
+ * 한 자리로 와야 한다. id를 한 곳에서 정의해 두어 진입점마다 다른 곳으로
+ * 데려가는 일이 생기지 않게 한다(MARKET_VERDICT_ANCHOR_ID와 같은 이유).
+ */
+export const PRICE_CALCULATION_ANCHOR_ID = "price-calculation-detail";
+
+/**
  * MI-FLOW-2(CEO 지시, 2026-09-11) — "분석 기준 시장: 🇰🇷 대한민국"을 항상 띄운다.
  *
  * 판매 판단은 처음부터 한국 시장 관측(KR_MARKET)을 기준으로 계산돼 왔는데,
@@ -1043,15 +1053,21 @@ const CHAIN_ROLE_MARK: Record<PriceChainRow["role"], string> = {
   RESULT: "",
 };
 
-function PriceChainView({ rows, showDetail }: { rows: PriceChainRow[]; showDetail: boolean }) {
+function PriceChainView({ rows }: { rows: PriceChainRow[] }) {
   /**
-   * UX 2.4(CEO 지시, 2026-09-11) — 접었을 때는 원본 → 착지원가 → 내 판매가격 →
-   * 수익만 남는다. 환산가와 국제배송비는 착지원가 안에 이미 합쳐져 있어서
-   * (결과가 화면에 남아 있어서) 접어도 사실이 사라지지 않는다. 무엇이 접히는지는
-   * price-hierarchy.ts의 tier가 정한다 — 화면이 key/role을 세어 고르기 시작하면
-   * 값이 하나 늘 때마다 여기를 또 고쳐야 한다.
+   * UX 2.4(CEO 지시, 2026-09-11) — 여기 남는 것은 착지원가 → 내 판매가격 →
+   * 예상 수익 → 예상 마진이다. 환산가와 국제배송비는 착지원가 안에 이미
+   * 합쳐져 있어서(결과가 화면에 남아 있어서) 접어도 사실이 사라지지 않는다.
+   * 무엇이 요약인지는 price-hierarchy.ts의 tier가 정한다 — 화면이 key/role을
+   * 세어 고르기 시작하면 값이 하나 늘 때마다 여기를 또 고쳐야 한다.
+   *
+   * MI/PRICE-1(CEO 지시, 2026-09-12) — showDetail prop이 없어졌다. 예전에는 이
+   * 뷰가 DETAIL 층(원화 환산 · 국제배송비)까지 펼쳐 그렸는데, 지금은 그 줄들을
+   * **편집 가능한 상세 계산**(PriceCalculationDetail)이 같은 ④ 안에서 그린다.
+   * 둘 다 그리면 한 접힘 안에서 같은 국제배송비가 두 번 나온다 — 이번 지시가
+   * 없애라고 한 중복 그대로다. 그래서 이 뷰는 언제나 요약 넷만 그린다.
    */
-  const visible = showDetail ? rows : rows.filter((row) => row.tier === "SUMMARY");
+  const visible = rows.filter((row) => row.tier === "SUMMARY");
   return (
     <dl className="rounded-md border border-current/20 bg-background/40 p-2.5">
       {visible.map((row) => {
@@ -1370,6 +1386,8 @@ export function DomesticPriceIntelligencePanel({
   presentation = "FULL",
   onOpenDetail,
   onCloseDetail,
+  priceCalculationDetail = null,
+  openPriceDetailRequest = 0,
 }: {
   snapshotId: string;
   /**
@@ -1432,6 +1450,31 @@ export function DomesticPriceIntelligencePanel({
   onOpenDetail?: () => void;
   /** 펼쳐 둔 판단을 다시 접는다. 상세보기로 펼친 경우에만 넘어온다. */
   onCloseDetail?: () => void;
+  /**
+   * MI/PRICE-1(CEO 지시, 2026-09-12) — ④ 💰 수익성의 접힘 안에 들어가는 **상세
+   * 계산**. 제품 전체에서 이 슬롯 하나뿐이다(PriceCalculationDetail).
+   *
+   * ── 왜 컴포넌트가 아니라 슬롯(ReactNode)인가 ─────────────────────────────
+   * 상세 계산은 CanonicalProduct와 그 setter 넷을 읽고 쓴다. 그 값을 이 패널이
+   * 직접 받으면, 셀러가 배송비를 10원 고칠 때마다 MI가 통째로 다시 그려지고
+   * 언젠가는 "가격이 바뀌었으니 다시 분석하자"는 코드가 여기 들어온다. 그 순간
+   * 숫자 하나 고칠 때마다 10~20초짜리 재분석이 붙는다.
+   *
+   * 그래서 이 패널은 product를 통째로 받지 않는다(price-single-surface.test.ts가
+   * 이 사실을 마운트 지점에서 검사한다). 이미 만들어진 노드를 자리에 놓기만
+   * 하고, 상태와 핸들러 소유권은 CommerceWorkspace에 그대로 남는다 —
+   * StageBody가 무거운 편집기를 ReactNode로 받는 것과 완전히 같은 규칙이다.
+   */
+  priceCalculationDetail?: React.ReactNode;
+  /**
+   * 바깥에서 "가격이 왜 이 값인지 보여달라"는 요청이 올 때마다 1씩 올라가는 값
+   * (③ 등록 준비의 확정 카드, 채널 화면의 [상품정보 가격 계산 →]).
+   *
+   * 불리언이 아니라 카운터인 이유는 StageBody.openPriceSurfaceRequest와 같다:
+   * 같은 요청이 두 번 올 수 있는데(접었다가 다시 누르는 경우) 불리언이면 두
+   * 번째 클릭에서 값이 그대로라 아무 일도 일어나지 않는다.
+   */
+  openPriceDetailRequest?: number;
 }) {
   const [data, setData] = useState<PriceHistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1448,14 +1491,30 @@ export function DomesticPriceIntelligencePanel({
   /**
    * UX 2.4(CEO 지시, 2026-09-11) — 가격 영역의 접힘은 **두 개뿐**이다.
    *
-   *   showPriceDetail        ④ 수익성의 계산 과정(환율 환산 · 국제배송비)
+   *   showPriceDetail        ④ 수익성의 [가격 계산 기준 보기]
    *   showGlobalMarketDetail 글로벌 시장 상세(판매자 신고 국가 · 관측 시각)
    *
    * 한국 경쟁시장 상세는 새 토글을 만들지 않고 아래 근거 영역의 "🇰🇷 국내
    * 비교상품" 블록(showDomesticDetail)이 계속 책임진다 — 같은 내용을 여는
    * 버튼이 두 개가 되면 셀러는 둘이 다른 것인 줄 알고 둘 다 눌러본다.
+   *
+   * MI/PRICE-1(CEO 지시, 2026-09-12) — 이 토글이 여는 것이 바뀌었다. 예전에는
+   * 사슬의 DETAIL 두 줄(환율 환산 · 국제배송비)만 폈는데, 이제는 제품 전체에서
+   * 유일한 상세 계산(priceCalculationDetail 슬롯)을 편다. ④의 접힘은 여전히
+   * **하나**다 — 요약 넷 + 토글 하나가 CPO가 지정한 모양이다.
    */
   const [showPriceDetail, setShowPriceDetail] = useState(false);
+  /**
+   * 바깥의 "가격 계산 기준 보기" 요청을 이 토글에 잇는다. useEffect가 아니라
+   * 렌더 중 동기화인 이유는 이 저장소의 다른 파생 state(StageBody의
+   * priceOpen, LiveNumberField의 draft)와 같다 — 한 번 더 그리는 대신 이번
+   * 렌더에서 바로 맞춘다. 접는 것은 셀러만 할 수 있다(요청은 열기만 한다).
+   */
+  const [syncedPriceDetailRequest, setSyncedPriceDetailRequest] = useState(openPriceDetailRequest);
+  if (openPriceDetailRequest !== syncedPriceDetailRequest) {
+    setSyncedPriceDetailRequest(openPriceDetailRequest);
+    setShowPriceDetail(true);
+  }
   const [showGlobalMarketDetail, setShowGlobalMarketDetail] = useState(false);
   // UX-1(CPO 지시, 2026-09-05) — 시장 신호 블록은 "종합 상태 + 3개 신호"까지만
   // 기본 노출하고, 판단 근거 표와 전략 가이드는 상세로 내린다. 사용자가 먼저
@@ -2492,27 +2551,21 @@ export function DomesticPriceIntelligencePanel({
                 }
               />
 
-              {/* ④ 수익성 — 원본 → 원화 환산 → +국제배송 → 착지원가 → 내
-                  판매가격 → 예상 수익·마진. 그 사이 과정(환산 · 국제배송비)은
-                  접혀 있고, 첫 줄은 ①과 **같은 입력**에서 나온 같은 값이다. */}
-              <div>
-                <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-2">
-                  <p className="text-[11px] font-medium text-text-tertiary">
-                    {PRICE_SECTION_TITLE.PROFITABILITY} — 얼마에 사서 얼마 남는가
-                  </p>
-                  {/* UX 2.4.1 — "원본 상세"라는 이름을 버린다. ①이 원본을 맡은
-                      뒤로 이 토글이 여는 것은 원본이 아니라 그 사이의 계산
-                      과정(환율 환산 · 국제배송비)이다. 이름이 내용과 다르면
-                      셀러는 원본을 더 보려고 눌렀다가 다른 것을 본다. */}
-                  <button
-                    type="button"
-                    onClick={() => setShowPriceDetail((v) => !v)}
-                    className="text-[11px] text-primary hover:underline"
-                  >
-                    {caret(showPriceDetail)} 계산 과정
-                  </button>
-                </div>
-                <PriceChainView rows={priceChain} showDetail={showPriceDetail} />
+              {/* ④ 수익성 — 착지원가 → 내 판매가격 → 예상 수익 → 예상 마진.
+                  네 줄이 답하는 것은 "내 원가 기준 얼마에 팔면 수익이 나는가"
+                  하나다.
+
+                  MI/PRICE-1(CEO 지시, 2026-09-12) — 여기가 "왜 143,500원인가"에
+                  답하는 자리가 됐다. 예전에는 이 블록 아래 별도의 "가격 계산"
+                  카드가 원가·배송비·수수료·마진·권장 판매가격을 처음부터 다시
+                  말했고, 셀러 눈에는 같은 가격이 두 번 계산되는 것처럼 보였다.
+                  이제 그 사슬은 아래 접힘 **하나** 안에만 있다(요약 넷 + 토글
+                  하나 = CPO가 지정한 모양). ③ 등록 준비에 남는 것은 확정뿐이다. */}
+              <div id={PRICE_CALCULATION_ANCHOR_ID} className="scroll-mt-4">
+                <p className="mb-1 text-[11px] font-medium text-text-tertiary">
+                  {PRICE_SECTION_TITLE.PROFITABILITY} — 얼마에 사서 얼마 남는가
+                </p>
+                <PriceChainView rows={priceChain} />
               </div>
             </div>
 
@@ -2589,6 +2642,34 @@ export function DomesticPriceIntelligencePanel({
                   </div>
                 )}
               </dl>
+            )}
+
+            {/* MI/PRICE-1(CEO 지시, 2026-09-12) — ④의 **유일한** 접힘.
+                제품 전체에서 상세 계산이 그려지는 자리가 여기 하나다.
+
+                토글 문구가 "계산 과정"이 아니라 "가격 계산 기준"인 이유:
+                열리는 것이 과정 몇 줄이 아니라 그 가격을 만든 **입력들**
+                (원본가·국제배송비·수수료율·목표 마진)이고, 셀러는 그것을 여기서
+                바로 고칠 수 있다. 이름이 내용과 다르면 눌러 놓고 다른 것을 본다.
+
+                토글이 ④의 맨 아래에 있는 이유: 위 네 줄과 🏷 최종 추천 판매가가
+                결론이고, 이건 그 결론이 어떻게 나왔는지다. 결론을 근거 아래에
+                두면 카드를 다 읽어야 답이 나온다(PHASE 3.2에서 확인한 순서). */}
+            {priceCalculationDetail && (
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPriceDetail((v) => !v)}
+                  className="text-[11px] font-medium text-primary hover:underline"
+                >
+                  {caret(showPriceDetail)} 가격 계산 기준 보기
+                </button>
+                {showPriceDetail && (
+                  <div className="mt-1 rounded-md border border-current/20 bg-background/40 px-2.5 pb-2.5 pt-0.5">
+                    {priceCalculationDetail}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* MI-STOCK-CLARITY-1의 재고 문장은 UX 2.4.1에서 ③ 한국 시장

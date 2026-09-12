@@ -176,13 +176,26 @@ export type ChainRole = "SOURCE" | "CONVERT" | "ADD" | "TOTAL" | "PLAN" | "RESUL
  *
  * 무엇이 DETAIL인지는 "없어도 판단이 되는가"로 가른다. 환산가와 국제배송비는
  * 착지원가 안에 이미 합쳐져 있어서(= 결과가 SUMMARY에 남아 있어서) 접어도
- * 사실이 사라지지 않는다. 원본가격·착지원가·내 판매가·수익은 접는 순간 셀러가
- * 답을 못 얻는다.
+ * 사실이 사라지지 않는다. 착지원가·내 판매가·수익은 접는 순간 셀러가 답을
+ * 못 얻는다.
+ *
+ * ── MI/PRICE-1(CEO 지시, 2026-09-12) — SOURCE는 왜 DETAIL로 내려갔나 ───────
+ * "원본 판매가격"은 이 사슬이 답하는 유일한 값이 아니다. 바로 위 ① 원본 상품
+ * 가격이 같은 값을 원본 통화로, 이 화면에서 가장 큰 숫자로 이미 답하고 있다.
+ * 그 상태에서 ④의 요약 첫 줄이 또 원본가격이면 같은 사실이 한 카드 안에서 두
+ * 번 나온다 — 이번 지시가 없애라고 한 "가격이 두 번 계산되는 것처럼 보이는"
+ * 화면의 한 조각이다. ④ 요약에 남는 것은 ①이 답하지 못하는 넷뿐이다:
+ * 착지원가 · 내 판매가격 · 예상 수익 · 예상 마진.
+ *
+ * 다만 원가 기준이 "판매자의 한국 표시가"인 상품(costBasisIsKrMarket)은
+ * 예외다. 그때 ①은 스냅샷의 원본 통화 가격을 세우기 때문에, 실제로 원가에
+ * 들어간 한국 표시가를 ①이 대신 말해주지 못한다 — 그 줄만 SUMMARY로 남긴다
+ * (buildPriceChain의 해당 분기에서 tier를 직접 지정한다).
  */
 export type ChainTier = "SUMMARY" | "DETAIL";
 
 const TIER_BY_ROLE: Record<ChainRole, ChainTier> = {
-  SOURCE: "SUMMARY",
+  SOURCE: "DETAIL",
   CONVERT: "DETAIL",
   ADD: "DETAIL",
   TOTAL: "SUMMARY",
@@ -323,7 +336,10 @@ export function buildPriceChain(input: PriceChainInput): PriceChainRow[] {
     rows.push({
       key: "KR_MARKET_PRICE",
       role: "SOURCE",
-      tier: TIER_BY_ROLE.SOURCE,
+      // MI/PRICE-1 — 이 줄만 요약에 남는다. ①은 이 경우 스냅샷의 원본 통화
+      // 가격을 세우므로, 실제로 착지원가에 들어간 한국 표시가를 화면 어디서도
+      // 대신 말해주지 않는다(위 ChainTier 주석의 예외 하나).
+      tier: "SUMMARY",
       label: PRICE_MEANING_LABEL.KR_MARKET_PRICE,
       basis: [
         "이 판매처가 한국 방문자에게 직접 보여주는 가격 · 환율 환산이 아닙니다",
