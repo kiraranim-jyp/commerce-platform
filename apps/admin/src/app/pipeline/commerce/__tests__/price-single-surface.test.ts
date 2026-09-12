@@ -311,7 +311,11 @@ describe("④ 상세 계산은 MI ④ 수익성 한 곳에만 있고, ③ 등록
   it("MI ④는 요약 넷 + 토글 하나다 — 계산이 펼치기 전에 새지 않는다", () => {
     const chainAt = panel.indexOf("<PriceChainView rows={priceChain} />");
     const toggleAt = panel.indexOf("ⓘ 가격 계산 기준 {caret(showPriceDetail)}");
-    const slotAt = panel.indexOf("{priceCalculationDetail}");
+    // MI-UX-FINAL-REVIEW — 패널이 둘로 갈리면서(바깥은 fetch, MiPanelView는
+    // 렌더) `priceCalculationDetail={priceCalculationDetail}`라는 전달 줄이
+    // 생겼고 그 줄이 이 marker를 먼저 문다. 슬롯이 실제로 그려지는 자리는
+    // 토글 뒤에 있는 쪽이다.
+    const slotAt = panel.indexOf("{priceCalculationDetail}", toggleAt);
     expect(chainAt).toBeGreaterThan(-1);
     expect(toggleAt).toBeGreaterThan(chainAt);
     expect(slotAt).toBeGreaterThan(toggleAt);

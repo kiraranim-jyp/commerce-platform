@@ -5,7 +5,7 @@ import { MarketComparisonView } from "../DomesticPriceIntelligencePanel";
 import { buildGlobalMarketCard } from "../global-market";
 import { buildMarketComparison } from "../market-comparison";
 import { buildMarketContext, PRICE_SECTION_TITLE } from "../price-hierarchy";
-import { readSourceAt, stripComments } from "./source-text";
+import { miBodySource, readSourceAt, stripComments } from "./source-text";
 
 /**
  * MI-POLISH-2(CEO 지시, 2026-09-12) — MI-SIMPLIFY-1이 169줄을 144줄로 줄였는데,
@@ -37,30 +37,15 @@ const panel = readSourceAt(new URL("../DomesticPriceIntelligencePanel.tsx", impo
 /** 주석은 "왜 지웠는지"를 길게 설명한다 — 막아야 하는 것은 실제 렌더뿐이다. */
 const panelCode = stripComments(panel);
 
-/** 셀러가 누르지 않고 보는 **본문**. mi-simplify.test.ts와 같은 방식으로 자른다
- * (판정 카드에서 「왜 이렇게 판단했나요?」 접힘 블록만 들어낸 나머지). */
-function miBody(source: string): string {
-  const cardAt = source.indexOf("{hasAnyData && (");
-  const cardEndAt = source.indexOf("{/* 가격 재조회", cardAt);
-  const detailAt = source.indexOf("{showMarketDetail && (", cardAt);
-  expect(cardAt).toBeGreaterThan(-1);
-  expect(detailAt).toBeGreaterThan(cardAt);
-  let depth = 0;
-  let detailEndAt = detailAt;
-  for (let i = detailAt; i < cardEndAt; i++) {
-    if (source[i] === "{") depth++;
-    else if (source[i] === "}") {
-      depth--;
-      if (depth === 0) {
-        detailEndAt = i + 1;
-        break;
-      }
-    }
-  }
-  return source.slice(cardAt, detailAt) + source.slice(detailEndAt, cardEndAt);
-}
-
-const body = miBody(panel);
+/**
+ * 셀러가 누르지 않고 보는 **본문**(정의는 source-text.ts의 miBodySource).
+ *
+ * MI-UX-FINAL-REVIEW(CEO 지시, 2026-09-12) — 이 파일이 "본문"이라고 부르던
+ * 구간은 판정 카드 안쪽뿐이었다. 그래서 카드 **밖**에 접힘 없이 서 있던
+ * 다섯 덩어리는 아래 금지 목록을 전부 통과했고, 통과한 채로 프로덕션 첫
+ * 화면의 절반을 차지하고 있었다. 구간을 FULL 렌더 전체로 넓힌다.
+ */
+const body = miBodySource(panel);
 const bodyCode = stripComments(body);
 const detail = panel.slice(panel.indexOf("{showMarketDetail && ("));
 
@@ -156,7 +141,19 @@ describe("본문 최상위에는 판정 + 세 블록 + 바닥 한 줄뿐이다",
      * 상세냐"로 좁혀진다 — 그게 이번 지시가 코드에 남기라고 한 규칙이다.
      */
     const lines = bodyCode.split("\n").filter((line) => line.trim()).length;
-    expect(lines).toBeLessThanOrEqual(118);
+    /**
+     * MI-UX-FINAL-REVIEW(CEO 지시, 2026-09-12) — 이 숫자로 "화면이 짧아졌다"를
+     * 주장하지 않는다. 앞선 두 번(169 → 144 → 116)이 전부 줄어든 채로 통과했는데
+     * 프로덕션 화면은 그대로 길었다 — 세던 구간이 화면의 일부였기 때문이다.
+     * 화면이 실제로 무엇을 보여주는지는 mi-ux-final.test.ts가 패널을 통째로
+     * 렌더해서 확인한다.
+     *
+     * 그래도 상한을 남기는 이유는 하나다: 다음 기능이 본문에 줄을 세우려 할 때
+     * 여기서 먼저 걸리고, 그때 고를 수 있는 길이 "툴팁이냐 상세냐"로 좁혀진다.
+     * 구간이 FULL 렌더 전체로 넓어졌으므로(miBodySource) 이전 숫자와 직접
+     * 비교할 수 있는 값이 아니다.
+     */
+    expect(lines).toBeLessThanOrEqual(155);
   });
 });
 

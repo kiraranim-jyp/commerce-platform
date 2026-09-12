@@ -361,8 +361,26 @@ export function globalMarketSummaryLine(card: GlobalMarketCard): string | null {
  * 조회할 수 없었다는 사실일 뿐이고, 그 사실은 "팔 만한가"의 답을 바꾸지 않는다
  * — ③ 수익성은 이 줄이 비어도 전부 계산된 채로 남는다. 경고 상자를 세우면
  * 셀러는 판정이 흔들린 줄 알고 멈춘다.
+ *
+ * ── MI-UX-FINAL-REVIEW(CEO 지시, 2026-09-12) — "현재 사이트에서는"을 앞에 단다 ──
+ * 실증으로 확인한 사실이 하나 있다: 다른 시장 가격을 만드는 유일한 장치는
+ * Shopify Markets probe(shopify-market-probe.ts의 extractShopifyHandle)이고,
+ * handle을 뽑지 못하는 사이트에서는 관측이 **아예 생기지 않는다**(빈 배열).
+ * 즉 이 줄이 뜨는 대부분의 경우는 "조회에 실패했다"가 아니라 "이 사이트에는
+ * 애초에 시장별 페이지가 없다"이다. 주어가 없으면 셀러는 우리 조회가 고장난
+ * 줄 알고 다시 확인을 누른다 — 고칠 수 없는 것을 고치라고 시키는 문장이 된다.
  */
-export const GLOBAL_MARKET_UNAVAILABLE_NOTE = "글로벌 시장 가격을 확인할 수 없습니다.";
+export const GLOBAL_MARKET_UNAVAILABLE_NOTE = "현재 사이트에서는 글로벌 시장 가격을 확인할 수 없습니다.";
+
+/**
+ * 본문 ① 원본 가격 아래 ⓘ 한 줄에 쓰는 이름.
+ *
+ * card.title(🌎 판매자 글로벌 시장 가격)을 쓰지 않는 이유는 층이 다르기
+ * 때문이다. 그건 펼친 원자료의 **제목**이고, 본문에 남는 것은 "여기를 누르면
+ * 무엇이 열리는가"를 말하는 가장 짧은 이름 하나다 — 본문 한 줄이 제목처럼
+ * 길어지면 그 줄은 다시 판단 숫자와 같은 무게를 갖는다.
+ */
+export const GLOBAL_MARKET_HINT_LABEL = "글로벌 시장 가격";
 
 /**
  * 판단 시장(오늘은 한국) 관측 줄. **정확히 하나일 때만** 돌려준다.

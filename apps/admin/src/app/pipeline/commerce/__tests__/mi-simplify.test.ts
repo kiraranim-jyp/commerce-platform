@@ -3,7 +3,7 @@ import { buildGlobalMarketCard, globalMarketSummaryLine, GLOBAL_MARKET_UNAVAILAB
 import { buildMarketComparison } from "../market-comparison";
 import { miMarketCaseVerdict, NO_DOMESTIC_COMPARABLE_NOTE, PRICE_BASIS_TOOLTIP } from "../mi-market-case";
 import { buildMarketContext, PRICE_SECTION_TITLE } from "../price-hierarchy";
-import { readSourceAt, stripComments } from "./source-text";
+import { miBodySource, readSourceAt, stripComments } from "./source-text";
 
 /**
  * MI-SIMPLIFY-1(CPO 지시, 2026-09-12) — MI는 판단 화면이지 가격 계산 설명
@@ -34,31 +34,17 @@ const panel = readSourceAt(new URL("../DomesticPriceIntelligencePanel.tsx", impo
 /** 주석은 "왜 지웠는지"를 길게 설명한다 — 막아야 하는 것은 실제 렌더뿐이다. */
 const panelCode = stripComments(panel);
 
-/** 판정 카드에서 "왜 이렇게 판단했나요?" 접힘을 뺀 나머지 = 셀러가 누르지 않고
- * 보는 **본문**. 중괄호를 세어 자르므로 블록이 커지거나 줄어도 따라간다. */
-function miBody(source: string): string {
-  const cardAt = source.indexOf("{hasAnyData && (");
-  const cardEndAt = source.indexOf("{/* 가격 재조회", cardAt);
-  const detailAt = source.indexOf("{showMarketDetail && (", cardAt);
-  expect(cardAt).toBeGreaterThan(-1);
-  expect(detailAt).toBeGreaterThan(cardAt);
-  let depth = 0;
-  let detailEndAt = detailAt;
-  for (let i = detailAt; i < cardEndAt; i++) {
-    if (source[i] === "{") depth++;
-    else if (source[i] === "}") {
-      depth--;
-      if (depth === 0) {
-        detailEndAt = i + 1;
-        break;
-      }
-    }
-  }
-  expect(detailEndAt).toBeGreaterThan(detailAt);
-  return source.slice(cardAt, detailAt) + source.slice(detailEndAt, cardEndAt);
-}
-
-const body = miBody(panel);
+/**
+ * 셀러가 누르지 않고 보는 **본문**.
+ *
+ * MI-UX-FINAL-REVIEW(CEO 지시, 2026-09-12) — 정의가 source-text.ts로 옮겨가며
+ * 넓어졌다. 예전에는 판정 카드 **안쪽**만 잘라서, 카드 아래에 접힘 없이 서
+ * 있던 다섯 덩어리(재조회 · 기회 · 국내 비교상품 · 동일상품 근거 · 안내 문단)를
+ * 이 파일이 구조적으로 볼 수 없었다. 이제 FULL 렌더 전체에서 「왜 이렇게
+ * 판단했나요?」 블록만 들어낸 나머지가 본문이다 — 아래 금지 목록이 전부 그
+ * 넓어진 구간에 적용된다.
+ */
+const body = miBodySource(panel);
 const bodyCode = stripComments(body);
 
 describe("CASE A~D는 번역되지, 노출되지 않는다", () => {
@@ -187,7 +173,10 @@ describe("글로벌 시장 가격은 툴팁·상세에 산다 — 본문 카드�
 
   it("관측이 없으면 조용한 한 줄 하나다 — 경고 상자도 실패 로그도 없다", () => {
     expect(globalMarketSummaryLine(buildGlobalMarketCard({ observations: [] }))).toBeNull();
-    expect(GLOBAL_MARKET_UNAVAILABLE_NOTE).toBe("글로벌 시장 가격을 확인할 수 없습니다.");
+    // MI-UX-FINAL-REVIEW — 주어가 붙었다. 관측을 만드는 유일한 장치가 Shopify
+    // Markets probe라(shopify-market-probe.ts의 extractShopifyHandle), 이 줄이
+    // 뜨는 대부분은 조회 실패가 아니라 "이 사이트에는 시장별 페이지가 없다"이다.
+    expect(GLOBAL_MARKET_UNAVAILABLE_NOTE).toBe("현재 사이트에서는 글로벌 시장 가격을 확인할 수 없습니다.");
     const hint = panel.slice(panel.indexOf("function GlobalMarketHint"), panel.indexOf("function GlobalMarketCardView"));
     // 조회 실패를 판정의 실패처럼 그리지 않는다(노란 경고 = warning 계열 클래스).
     expect(hint).not.toMatch(/warning|error/);
@@ -204,7 +193,13 @@ describe("글로벌 시장 가격은 툴팁·상세에 산다 — 본문 카드�
 
   it("근거는 툴팁(title)이, 원자료는 펼침이 맡는다", () => {
     const hint = panel.slice(panel.indexOf("function GlobalMarketHint"), panel.indexOf("function GlobalMarketCardView"));
-    expect(hint).toContain("title={card.note}");
+    // MI-UX-FINAL-REVIEW — 툴팁이 시장별 가격까지 함께 맡는다. 본문 한 줄에
+    // 남는 것은 이름 하나(ⓘ 글로벌 시장 가격)뿐이고 값은 마우스를 올리거나
+    // 펼쳐야 나온다 — 카드가 한 줄이 됐어도 네 개의 가격이 본문에 늘어서
+    // 있으면 층만 내려갔지 표면은 그대로다.
+    expect(hint).toContain("title={`${summaryLine} · ${card.note}`}");
+    expect(hint).toContain("ⓘ {GLOBAL_MARKET_HINT_LABEL}");
+    expect(hint).not.toContain(">{summaryLine}<");
     expect(hint).toContain("{open && <GlobalMarketCardView card={card} />}");
     // 기본은 접힘이다 — 펼침 상태가 렌더 기본값이 되면 카드가 되살아난다.
     expect(panel).toContain("const [showGlobalMarketDetail, setShowGlobalMarketDetail] = useState(false);");
@@ -283,8 +278,19 @@ describe("본문은 짧아졌고, 다음 추가는 툴팁·상세로 내려앉�
     // 툴팁과 「왜 이렇게 판단했나요?」로 내려갔다(mi-polish.test.ts가 그 이동을
     // 항목별로 고정한다). 여기 남는 것은 판정 · ① · ② · ③ · 바닥 한 줄뿐이다.
     const lines = bodyCode.split("\n").filter((line) => line.trim()).length;
-    expect(lines).toBeLessThan(169);
-    expect(lines).toBeLessThanOrEqual(118);
+    /**
+     * MI-UX-FINAL-REVIEW(CEO 지시, 2026-09-12) — 이 숫자로 "화면이 짧아졌다"를
+     * 주장하지 않는다. 앞선 두 번(169 → 144 → 116)이 전부 줄어든 채로 통과했는데
+     * 프로덕션 화면은 그대로 길었다 — 세던 구간이 화면의 일부였기 때문이다.
+     * 화면이 실제로 무엇을 보여주는지는 mi-ux-final.test.ts가 패널을 통째로
+     * 렌더해서 확인한다.
+     *
+     * 그래도 상한을 남기는 이유는 하나다: 다음 기능이 본문에 줄을 세우려 할 때
+     * 여기서 먼저 걸리고, 그때 고를 수 있는 길이 "툴팁이냐 상세냐"로 좁혀진다.
+     * 구간이 FULL 렌더 전체로 넓어졌으므로(miBodySource) 이전 숫자와 직접
+     * 비교할 수 있는 값이 아니다.
+     */
+    expect(lines).toBeLessThanOrEqual(155);
   });
 
   it("본문에 남는 것은 판정 · ① · ② · ③ 넷뿐이다", () => {

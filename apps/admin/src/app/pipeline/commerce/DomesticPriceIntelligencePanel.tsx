@@ -57,6 +57,7 @@ import {
   buildGlobalMarketCard,
   globalMarketSummaryLine,
   pickJudgingMarketRow,
+  GLOBAL_MARKET_HINT_LABEL,
   GLOBAL_MARKET_UNAVAILABLE_NOTE,
   type GlobalMarketCard,
   type GlobalMarketRow,
@@ -405,7 +406,7 @@ interface RecheckResult {
  * 이제 EXACT(95%+, 이미 자동확정)까지 포함해 전부 돌려준다. 세 등급을 같은 시각
  * 패턴으로 보여준다: 🟢 동일상품(95~100%, 가격비교 자동반영) / 🟡 동일상품 후보
  * (85~94%, 셀러 확인 필요) / ⚪ 유사상품(70~84%, 가격비교 미반영). */
-interface DomesticCandidate {
+export interface DomesticCandidate {
   id: string;
   matchType: "EXACT" | "HIGH_CONFIDENCE" | "REVIEW_REQUIRED";
   matchConfidence: number;
@@ -766,7 +767,7 @@ const BRAND_MARKET_CONFIDENCE_LABEL: Record<"HIGH" | "MEDIUM" | "LOW", string> =
   LOW: "🟡 신뢰도 낮음",
 };
 
-interface PriceHistoryResponse {
+export interface PriceHistoryResponse {
   ok: boolean;
   product: { title: string; brand: string; sourceUrl: string };
   currentPrice: {
@@ -1351,6 +1352,19 @@ function ComparisonSideView({ flag, side }: { flag: string; side: MarketComparis
  * 노란 경고 상자를 세우지 않는 이유는 그게 사실이 아니기 때문이다 — 다른 시장
  * 가격을 못 본 것은 판정의 실패가 아니고, ③ 수익성은 그대로 계산된 채 남는다.
  */
+/**
+ * ── MI-UX-FINAL-REVIEW(CEO 지시, 2026-09-12) — 한 줄이 이름 하나가 된다 ───────
+ * MI-SIMPLIFY-1이 카드를 한 줄로 접었는데, 그 한 줄이 여전히 시장 목록 전체를
+ * 본문에 늘어놓고 있었다("ⓘ 🌎 판매자 글로벌 시장 가격  🇫🇷 FR €75.00 ·
+ * 🇩🇪 DE €75.00 · 🌎 INT €84.00 · 🇰🇷 KR ₩162,000"). 층은 내렸는데 **표면이
+ * 줄지 않은** 것이다 — 원본 가격 바로 아래에서 네 개의 가격이 판단 숫자와
+ * 같은 줄 폭을 차지하면, 셀러의 눈은 "원래 얼마인가" 다음에 곧바로 "그래서
+ * 어느 게 진짜 가격이지?"로 빠진다.
+ *
+ * 그래서 본문에 남는 것은 **이름 하나**다: ⓘ 글로벌 시장 가격 ▸.
+ * 시장별 가격은 사라지지 않는다 — 툴팁(한 줄 요약)과 펼침(원자료)에 그대로
+ * 있다. 이 파일의 규칙 그대로다: 본문은 판단 숫자, 툴팁은 근거, 펼침은 원자료.
+ */
 function GlobalMarketHint({
   card,
   summaryLine,
@@ -1358,7 +1372,8 @@ function GlobalMarketHint({
   onToggle,
 }: {
   card: GlobalMarketCard;
-  /** 시장 줄들을 이어 붙인 본문 한 줄. global-market.ts가 완성한 문자열 그대로다. */
+  /** 시장 줄들을 이어 붙인 한 줄. global-market.ts가 완성한 문자열 그대로다.
+   * 본문에 그리지 않고 툴팁으로만 쓴다(펼치지 않아도 값을 볼 수 있는 자리). */
   summaryLine: string | null;
   /** 시장별 원자료를 펼쳤는가. */
   open: boolean;
@@ -1366,6 +1381,8 @@ function GlobalMarketHint({
 }) {
   // 조용한 한 줄. 상태 칩(⚪)도 쓰지 않는다 — 이 사실은 판단의 빈 칸이 아니라
   // 그저 부가 정보의 부재라, 빈 상태 어휘를 쓰면 판정이 비어 보인다.
+  // 버튼으로 만들지 않는 이유: 눌러도 나올 것이 없는 토글은 셀러에게 "뭔가
+  // 숨겨져 있다"고 거짓말한다.
   if (summaryLine == null) {
     return <p className="text-[10px] text-text-tertiary">ⓘ {GLOBAL_MARKET_UNAVAILABLE_NOTE}</p>;
   }
@@ -1374,13 +1391,12 @@ function GlobalMarketHint({
       <button
         type="button"
         onClick={onToggle}
-        // 툴팁이 "그 숫자의 근거"를 맡는다 — 이 줄이 국내 비교상품도 착지원가도
-        // 아니라는 사실은 본문 문장이 아니라 여기서 말한다.
-        title={card.note}
-        className="flex w-full flex-wrap items-baseline gap-x-1.5 text-left text-[10px] text-text-tertiary hover:underline"
+        // 툴팁이 "그 숫자의 근거"를 맡는다 — 시장별 가격과, 이 줄이 국내
+        // 비교상품도 착지원가도 아니라는 사실이 전부 여기 있다(본문 문장이 아님).
+        title={`${summaryLine} · ${card.note}`}
+        className="flex flex-wrap items-baseline gap-x-1 text-left text-[10px] text-text-tertiary hover:underline"
       >
-        <span className="font-medium">ⓘ {card.title}</span>
-        <span className="min-w-0 text-text-secondary">{summaryLine}</span>
+        <span className="font-medium">ⓘ {GLOBAL_MARKET_HINT_LABEL}</span>
         <span aria-hidden>{caret(open)}</span>
       </button>
       {open && <GlobalMarketCardView card={card} />}
@@ -1614,67 +1630,13 @@ export function DomesticPriceIntelligencePanel({
 }) {
   const [data, setData] = useState<PriceHistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showHistory, setShowHistory] = useState(false);
-  // P-2-3 ④(대표님 지시, 2026-08-28) — "기본 화면에서 바로 10개 이상의 경쟁
-  // 가격을 보여주지 않는다." 판매처별 개별 리스팅/추세/이력은 기본 접힘.
-  const [showDomesticDetail, setShowDomesticDetail] = useState(false);
-  // MI-FLOW-2(CEO 지시, 2026-09-11) — "왜 이런 판단인가"(showReasonDetail)와
-  // "왜 추천인가"(showWhyVerdict) 토글을 없앴다. 같은 화면에서 같은 질문을
-  // 묻는 접힘이 넷이라, 근거 하나를 보려고 몇 번을 눌러야 하는지 알 수 없었다.
-  // 내용은 전부 showMarketDetail 하나 아래로 모았다(삭제 아님).
-  /** MI-UX-9 §9 — "동일상품 매칭 근거"는 기본 숨김(상세 펼침에서만 확인). */
-  const [showMatchEvidence, setShowMatchEvidence] = useState(false);
-  /**
-   * UX 2.4(CEO 지시, 2026-09-11) — 가격 영역의 접힘은 **두 개뿐**이다.
-   *
-   *   showPriceDetail        ③ 수익성의 [ⓘ 가격 계산 기준]
-   *   showGlobalMarketDetail 글로벌 시장 상세(판매자 신고 국가 · 관측 시각)
-   *
-   * 한국 경쟁시장 상세는 새 토글을 만들지 않고 아래 근거 영역의 "🇰🇷 국내
-   * 비교상품" 블록(showDomesticDetail)이 계속 책임진다 — 같은 내용을 여는
-   * 버튼이 두 개가 되면 셀러는 둘이 다른 것인 줄 알고 둘 다 눌러본다.
-   *
-   * MI/PRICE-1(CEO 지시, 2026-09-12) — 이 토글이 여는 것이 바뀌었다. 예전에는
-   * 사슬의 DETAIL 두 줄(환율 환산 · 국제배송비)만 폈는데, 이제는 제품 전체에서
-   * 유일한 상세 계산(priceCalculationDetail 슬롯)을 편다. ③의 접힘은 여전히
-   * **하나**다 — 요약 넷 + 토글 하나가 CPO가 지정한 모양이다.
-   */
-  const [showPriceDetail, setShowPriceDetail] = useState(false);
-  /**
-   * 바깥의 "가격 계산 기준 보기" 요청을 이 토글에 잇는다. useEffect가 아니라
-   * 렌더 중 동기화인 이유는 이 저장소의 다른 파생 state(StageBody의
-   * priceOpen, LiveNumberField의 draft)와 같다 — 한 번 더 그리는 대신 이번
-   * 렌더에서 바로 맞춘다. 접는 것은 셀러만 할 수 있다(요청은 열기만 한다).
-   */
-  const [syncedPriceDetailRequest, setSyncedPriceDetailRequest] = useState(openPriceDetailRequest);
-  if (openPriceDetailRequest !== syncedPriceDetailRequest) {
-    setSyncedPriceDetailRequest(openPriceDetailRequest);
-    setShowPriceDetail(true);
-  }
-  const [showGlobalMarketDetail, setShowGlobalMarketDetail] = useState(false);
-  // UX-1(CPO 지시, 2026-09-05) — 시장 신호 블록은 "종합 상태 + 3개 신호"까지만
-  // 기본 노출하고, 판단 근거 표와 전략 가이드는 상세로 내린다. 사용자가 먼저
-  // 봐야 하는 건 "팔아도 되는가"이지 근거 전체가 아니다(기능 제거가 아니라 계층화).
-  const [showMarketDetail, setShowMarketDetail] = useState(false);
-  // UX-1B(CPO 지시, 2026-09-05) — 해외 원가 구성(상품가/환율/환산/국제배송비/
-  // MI-UX-8 — 해외 구매 비용 블록을 제거하면서 이 토글도 쓰이지 않게 됐다.
-  // 원가 구성은 "해외 가격비교" 영역에서 확인한다.
-  // UX-1C(CPO 지시, 2026-09-05) — 최종 판단 카드를 3단계로 나눈다.
-  //   L1 결론      : 판정 · 추천 판매가 · 예상 이익/마진율 · 한 줄 이유
-  //   L2 왜 그런가 : representativeVerdict.reasons (판정 엔진이 낸 근거 문장)
-  //   L3 어떻게 계산: 구매가 · 착지원가 · 최소마진/목표마진 참고가 · 브랜드 프로파일
-  // UX-2(CEO 지시, 2026-09-05) — "이건 노출되도 될 것 같아". UX-1C가 판단
-  // 근거와 원가 숫자를 접었는데, CEO 실사용 판단은 "이 정도는 첫 화면에
-  // 보여도 된다"여서 초기 상태를 펼침으로 바꿨었다.
-  //
-  // MI 2.0 PHASE 1.2(CPO 지시, 2026-09-09) — 그 결정을 되돌려 다시 접는다.
-  // ⚠️ 이건 위 CEO 지시를 뒤집는 변경이므로 근거를 남긴다: UX-2 시점에는
-  // 첫 화면에 결론 말고 보여줄 것이 이 블록들뿐이었다. 지금은 그 자리를
-  // 4축 레이더와 판단 요약이 채우고 있어서, 같은 근거를 두 번 펼쳐 두면
-  // 첫 화면이 다시 길어지고 "결론 → 근거" 계층이 무너진다.
-  // 접는 기능 자체와 내용은 그대로다 — 초기 상태만 바꾼다.
-  const [showCalcDetail, setShowCalcDetail] = useState(false);
-  // MI-UX-8 — "가격 전략" 블록 제거로 이 토글도 함께 사라졌다.
+  // MI-UX-FINAL-REVIEW(CEO 지시, 2026-09-12) — 펼침 상태(showMarketDetail /
+  // showPriceDetail / showGlobalMarketDetail / showDomesticDetail / showHistory /
+  // showMatchEvidence / showCalcDetail)는 전부 MiPanelView로 내려갔다. 여기
+  // 남는 것은 "서버에서 무엇을 읽었는가"뿐이다 — 그 분리가 있어야 화면 전체를
+  // 서버 렌더로 그려서 첫 화면에 무엇이 서는지 직접 확인할 수 있다.
+  // MI-FLOW-2(CEO 지시, 2026-09-11)의 규칙은 그대로다: "왜"를 묻는 접힘은
+  // 화면에 하나뿐이고, 나머지는 전부 그 아래에 산다.
   const [rechecking, setRechecking] = useState(false);
   const [recheckResult, setRecheckResult] = useState<RecheckResult | null>(null);
   const [candidates, setCandidates] = useState<DomesticCandidate[]>([]);
@@ -1952,12 +1914,129 @@ export function DomesticPriceIntelligencePanel({
     }
     return (
       <CollapsibleSection title="Market Intelligence" defaultOpen>
-        <p className="rounded-md border border-border bg-background px-3 py-2 text-xs text-text-secondary">
-          ⚠ 시장 분석 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.
+        {/* MI-UX-FINAL-REVIEW(CEO 지시, 2026-09-12) — 기술적 실패는 카드가 아니라
+            한 줄이다. 테두리 두른 상자는 "판정이 나빴다"처럼 읽히는데, 이건
+            판정이 아니라 우리 쪽 조회가 아직 안 된 상태다. */}
+        <p className="text-xs text-text-tertiary">
+          ⓘ 시장 분석 데이터를 불러오지 못했습니다 — 잠시 후 다시 시도해주세요.
         </p>
       </CollapsibleSection>
     );
   }
+
+  return (
+    <MiPanelView
+      data={data}
+      candidates={candidates}
+      snapshotOriginPrice={snapshotOriginPrice}
+      presentation={presentation}
+      priceCalculationDetail={priceCalculationDetail}
+      openPriceDetailRequest={openPriceDetailRequest}
+      onCloseDetail={onCloseDetail}
+      onOpenDetail={onOpenDetail}
+      onRequestPriceReview={onRequestPriceReview}
+      rechecking={rechecking}
+      recheckResult={recheckResult}
+      onRecheck={() => void recheckNow()}
+      confirmingId={confirmingId}
+      onConfirmSameProduct={(id) => void confirmSameProduct(id)}
+    />
+  );
+}
+
+/**
+ * MI-UX-FINAL-REVIEW(CEO 지시, 2026-09-12) — **패널이 실제로 그리는 화면 전부**.
+ *
+ * ── 왜 이 컴포넌트가 생겼나 ──────────────────────────────────────────────
+ * 이번 지시의 출발점은 "테스트는 통과하는데 화면은 여전히 길다"였다. 그 간극의
+ * 원인은 명확하다: 지금까지의 검사는 (a) 소스 텍스트를 잘라 보거나 (b) 자식
+ * 하나(MarketComparisonView)만 렌더해 봤다. 둘 다 "패널 전체를 그렸을 때 셀러
+ * 눈앞에 무엇이 서는가"는 증명하지 못한다 — 실제로 판정 카드 **아래**에는
+ * 재조회 버튼 · 기회 카드 · 국내 비교상품 블록 · 동일상품 근거 · 안내 두 문단이
+ * 접힘 없이 계속 서 있었고, 어떤 테스트도 그 영역을 보고 있지 않았다.
+ *
+ * 그래서 화면을 통째로 렌더할 수 있는 자리를 만든다. 바깥 패널은 fetch와
+ * 서버 보고(onPriceLevelChange 등)만 갖고, 그리는 일은 전부 여기서 한다 —
+ * 이 컴포넌트는 서버 응답과 후보 목록만 받으면 되므로 react-dom/server로
+ * **패널 전체**를 그려서 결과 마크업을 검사할 수 있다(mi-ux-final.test.ts).
+ * 자식 하나가 아니라 화면 하나를 검사한다는 것이 이번 변경의 핵심이다.
+ *
+ * 데이터도 계산도 하나 바뀌지 않았다: 아래 코드는 예전 패널의 렌더 부분
+ * 그대로이고, 펼침 상태(showMarketDetail 등)가 함께 내려온 것뿐이다.
+ * 서버 호출은 여기에 하나도 없다(있으면 그리는 일과 읽는 일이 다시 섞인다).
+ */
+export function MiPanelView({
+  data,
+  candidates,
+  snapshotOriginPrice = null,
+  presentation = "FULL",
+  priceCalculationDetail = null,
+  openPriceDetailRequest = 0,
+  onCloseDetail,
+  onOpenDetail,
+  onRequestPriceReview,
+  rechecking = false,
+  recheckResult = null,
+  onRecheck,
+  confirmingId = null,
+  onConfirmSameProduct,
+}: {
+  data: PriceHistoryResponse;
+  candidates: DomesticCandidate[];
+  snapshotOriginPrice?: { amount: number; currency: string } | null;
+  presentation?: MiPresentation;
+  priceCalculationDetail?: React.ReactNode;
+  openPriceDetailRequest?: number;
+  onCloseDetail?: () => void;
+  onOpenDetail?: () => void;
+  onRequestPriceReview?: () => void;
+  rechecking?: boolean;
+  recheckResult?: RecheckResult | null;
+  onRecheck?: () => void;
+  confirmingId?: string | null;
+  onConfirmSameProduct?: (id: string) => void;
+}) {
+  // P-2-3 ④(대표님 지시, 2026-08-28) — "기본 화면에서 바로 10개 이상의 경쟁
+  // 가격을 보여주지 않는다." 판매처별 개별 리스팅/추세/이력은 기본 접힘.
+  const [showDomesticDetail, setShowDomesticDetail] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  /** MI-UX-9 §9 — "동일상품 매칭 근거"는 기본 숨김(상세 펼침에서만 확인). */
+  const [showMatchEvidence, setShowMatchEvidence] = useState(false);
+  /**
+   * UX 2.4(CEO 지시, 2026-09-11) — 가격 영역의 접힘은 **두 개뿐**이다.
+   *
+   *   showPriceDetail        ③ 수익성의 [ⓘ 가격 계산 기준]
+   *   showGlobalMarketDetail 글로벌 시장 상세(판매자 신고 국가 · 관측 시각)
+   *
+   * MI/PRICE-1(CEO 지시, 2026-09-12) — 이 토글이 여는 것이 바뀌었다. 예전에는
+   * 사슬의 DETAIL 두 줄(환율 환산 · 국제배송비)만 폈는데, 이제는 제품 전체에서
+   * 유일한 상세 계산(priceCalculationDetail 슬롯)을 편다. ③의 접힘은 여전히
+   * **하나**다 — 요약 넷 + 토글 하나가 CPO가 지정한 모양이다.
+   */
+  const [showPriceDetail, setShowPriceDetail] = useState(false);
+  /**
+   * 바깥의 "가격 계산 기준 보기" 요청을 이 토글에 잇는다. useEffect가 아니라
+   * 렌더 중 동기화인 이유는 이 저장소의 다른 파생 state(StageBody의
+   * priceOpen, LiveNumberField의 draft)와 같다 — 한 번 더 그리는 대신 이번
+   * 렌더에서 바로 맞춘다. 접는 것은 셀러만 할 수 있다(요청은 열기만 한다).
+   */
+  const [syncedPriceDetailRequest, setSyncedPriceDetailRequest] = useState(openPriceDetailRequest);
+  if (openPriceDetailRequest !== syncedPriceDetailRequest) {
+    setSyncedPriceDetailRequest(openPriceDetailRequest);
+    setShowPriceDetail(true);
+  }
+  const [showGlobalMarketDetail, setShowGlobalMarketDetail] = useState(false);
+  /**
+   * 「왜 이렇게 판단했나요?」 하나. 본문이 아닌 것은 전부 이 아래에 산다.
+   *
+   * MI-UX-FINAL-REVIEW — 이 토글이 맡는 범위가 넓어졌다. 예전에는 판정 카드
+   * 안쪽 상세만 여닫았고, 카드 **아래**의 재조회·기회·국내 비교상품·동일상품
+   * 근거·안내 문단은 어떤 토글에도 속하지 않은 채 항상 서 있었다. 이제 그
+   * 다섯 덩어리가 전부 여기로 들어온다 — 지운 것은 하나도 없다.
+   */
+  const [showMarketDetail, setShowMarketDetail] = useState(false);
+  // UX-1C(CPO 지시, 2026-09-05) / MI 2.0 PHASE 1.2 — 원가 참고 숫자는 기본 접힘.
+  const [showCalcDetail, setShowCalcDetail] = useState(false);
 
   const {
     product,
@@ -2268,10 +2347,12 @@ export function DomesticPriceIntelligencePanel({
             ▴ 판단 요약으로 접기
           </button>
         )}
-        {/* MI-FLOW-2(CEO 지시, 2026-09-11) — 무엇을 기준으로 한 판단인지부터
-            말한다. 이 한 줄이 없으면 아래 모든 숫자가 "어느 나라 얘기인지"
-            모르는 값이 된다. */}
-        <TargetMarketBanner />
+        {/* MI-UX-FINAL-REVIEW(CEO 지시, 2026-09-12) — 여기 있던 분석 기준 시장
+            배너(테두리 두른 두 줄: "분석 기준 시장 🇰🇷 대한민국" + "판매 판단은
+            한국 시장을 기준으로 합니다")를 「왜 이렇게 판단했나요?」 안으로
+            내렸다. 같은 사실을 바로 아래 판정 카드의 첫 줄이 이미 말하고 있어서
+            (🇰🇷 대한민국 시장 기준), 화면이 열리자마자 같은 문장을 두 번 읽게
+            된다. 판단의 **기준**은 판단 숫자가 아니라 그 숫자의 근거다. */}
 
         {/* MI-FLOW-2 — 빈 상태를 세 가지로 구분한다. 여기는 그중 "판단 불가":
             가격 근거가 하나도 없어서 아직 아무 말도 할 수 없는 상태다.
@@ -2547,46 +2628,54 @@ export function DomesticPriceIntelligencePanel({
             {/* MI-STOCK-CLARITY-1의 재고 문장은 UX 2.4.1에서 ② 한국 시장
                 경쟁가격 블록 안으로 옮겼다 — 그 문장이 설명하는 숫자가 거기
                 있기 때문이다. 사본을 만들지 않았다(집계·문구 그대로 이동). */}
+          </div>
+        )}
 
-            {/* ── MI-POLISH-2(CEO 지시, 2026-09-12) — 카드의 바닥 한 줄 ─────────
-                본문이 끝나는 곳에는 딱 두 가지만 선다: **되물음 하나**와
-                **행동 하나**.
+        {/* ── MI-POLISH-2(CEO 지시, 2026-09-12) — 본문의 바닥 한 줄 ─────────────
+            본문이 끝나는 곳에는 딱 두 가지만 선다: **되물음 하나**와
+            **행동 하나**.
 
-                되물음(「왜 이렇게 판단했나요?」)이 판정 바로 아래가 아니라 여기로
-                내려온 이유는 읽는 순서다. 셀러는 판정 → ① 원본 → ② 한국 경쟁 →
-                ③ 수익성을 다 읽고 나서야 "정말?"을 묻는다. 버튼이 맨 위에 있으면
-                아직 묻지도 않은 질문의 답이 본문 한가운데서 펼쳐진다.
+            되물음(「왜 이렇게 판단했나요?」)이 판정 바로 아래가 아니라 여기로
+            내려온 이유는 읽는 순서다. 셀러는 판정 → ① 원본 → ② 한국 경쟁 →
+            ③ 수익성을 다 읽고 나서야 "정말?"을 묻는다. 버튼이 맨 위에 있으면
+            아직 묻지도 않은 질문의 답이 본문 한가운데서 펼쳐진다.
 
-                행동은 하나다. 예전에는 이 자리에 👉 안내 문장 하나, cta.hint 설명
-                한 줄, 버튼 하나가 세로로 쌓여 있었다 — 셋 다 같은 곳
-                (onRequestPriceReview)으로 데려가면서 화면만 세 줄 길어졌다.
-                👉 문장은 「왜 이렇게 판단했나요?」 안으로 내려가고("왜 그것을
-                하는가"는 판정의 설명이다), cta.hint는 버튼의 title이 된다
-                ("눌렀을 때 무슨 화면이 열리는가"는 그 버튼의 근거다). 여기 남는
-                것은 누를 수 있는 것 하나뿐이다. 새 등록/가격 엔드포인트를
-                만들지 않는다(연결은 지금까지와 같다). */}
-            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => setShowMarketDetail((v) => !v)}
-                className="text-left text-[11px] text-primary hover:underline"
-              >
-                {caret(showMarketDetail)} 왜 이렇게 판단했나요?
-              </button>
-              {onRequestPriceReview && (
-                <button
-                  type="button"
-                  onClick={onRequestPriceReview}
-                  title={verdictCta.hint || undefined}
-                  className="rounded-md border border-current px-2 py-1 text-[11px] font-medium hover:opacity-80"
-                >
-                  {verdictCta.label}
-                </button>
-              )}
-            </div>
+            행동은 하나다. 예전에는 이 자리에 👉 안내 문장 하나, cta.hint 설명
+            한 줄, 버튼 하나가 세로로 쌓여 있었다 — 셋 다 같은 곳
+            (onRequestPriceReview)으로 데려가면서 화면만 세 줄 길어졌다.
+            👉 문장은 「왜 이렇게 판단했나요?」 안으로 내려가고("왜 그것을
+            하는가"는 판정의 설명이다), cta.hint는 버튼의 title이 된다
+            ("눌렀을 때 무슨 화면이 열리는가"는 그 버튼의 근거다).
 
-            {showMarketDetail && (
-              <>
+            ── MI-UX-FINAL-REVIEW(CEO 지시, 2026-09-12) — 판정 카드 **밖**으로 ──
+            이 줄이 카드 안에 있는 동안에는, 판단할 근거가 하나도 없는 상태
+            (hasAnyData === false)에서 카드째 사라졌다. 그래서 그때 화면에 남는
+            유일한 행동이었던 「🔄 다시 확인」은 접힘에 넣을 수가 없었고, 결국
+            본문에 상시 노출된 채로 남았다 — 첫 화면에서 지워야 할 "반복 작업
+            상태"가 살아남은 경로가 정확히 이것이다. 되물음을 카드 밖으로 꺼내면
+            두 상태가 같은 구조를 갖고, 접힘이 화면 전체에 하나만 남는다. */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setShowMarketDetail((v) => !v)}
+            className="text-left text-[11px] text-primary hover:underline"
+          >
+            {caret(showMarketDetail)} 왜 이렇게 판단했나요?
+          </button>
+          {onRequestPriceReview && (
+            <button
+              type="button"
+              onClick={onRequestPriceReview}
+              title={verdictCta.hint || undefined}
+              className="rounded-md border border-border px-2 py-1 text-[11px] font-medium text-primary hover:bg-primary-soft"
+            >
+              {verdictCta.label}
+            </button>
+          )}
+        </div>
+
+        {showMarketDetail && (
+          <div className="rounded-md border border-border bg-background p-3 text-text-secondary">
             {/* MI-TEXT-1(CEO 지시, 2026-09-12) — 첫 화면에서 내려온 두 문장.
                 판정을 설명하는 말이므로 상세의 **첫 줄**이어야 한다 — 근거
                 목록이나 숫자 뒤에 두면 "왜 이렇게 판단했나요?"를 눌러 놓고도
@@ -2919,34 +3008,45 @@ export function DomesticPriceIntelligencePanel({
                       버튼 이름과 도착지 제목이 다르면 눌렀을 때 "여기가 맞나?"가 된다. */}
                   📊 시장 가격 비교 원본 보기 ↓
                 </button>
-              </>
-            )}
-          </div>
-        )}
 
-        {/* 가격 재조회 — 판단 카드 바로 아래. "다시 확인"은 판단을 갱신하는
-            행동이므로 판단 옆에 둔다(기존에는 카드 위에 있어서 판정보다 먼저
-            읽혔다). MI-UI-1 — 아이콘이 "다시"를 말하므로 "가격"까지 반복하지
-            않는다. 진행 중 문구는 그대로 둔다(상태어를 아이콘으로 바꾸지 않는다). */}
-        <div className="flex items-center justify-end">
-          <button
-            type="button"
-            onClick={() => void recheckNow()}
-            disabled={rechecking}
-            className="rounded-md border border-border px-2 py-1 text-[11px] font-medium text-text-secondary hover:bg-background disabled:opacity-50"
-          >
-            {rechecking ? "확인 중..." : "🔄 다시 확인"}
-          </button>
-        </div>
-        {recheckResult && (
-          <p className="rounded-md border border-border bg-background px-2 py-1 text-[11px] text-text-secondary">
-            {recheckResult.icon} {recheckResult.message}
-          </p>
-        )}
+                {/* ── MI-UX-FINAL-REVIEW(CEO 지시, 2026-09-12) — 여기부터 다섯 덩어리 ──
+                    아래 다섯은 지금까지 판정 카드 **밖**, 접힘 **밖**에 서 있었다:
+                    🔄 다시 확인(+결과 문장) · 💡 기회 · 🇰🇷 국내 비교상품 ·
+                    동일상품 근거 · 안내 두 문단. 하나하나는 짧지만 전부 합쳐
+                    첫 화면의 절반을 차지했고, 어떤 토글에도 속하지 않아서
+                    "본문을 줄였다"는 지금까지의 측정이 이 영역을 보지 못했다
+                    (테스트가 판정 카드만 잘라 보고 있었다 — 그게 "테스트는
+                    통과하는데 화면은 길다"의 정확한 실체다).
+
+                    전부 근거이거나 작업 상태다: 다시 확인은 반복 작업, 기회와
+                    국내 비교상품과 동일상품 근거는 판정의 근거, 안내 두 문단은
+                    이 판정이 보지 않는 범위의 설명. 지운 것은 하나도 없고
+                    층만 내렸다 — 이 파일이 계속 지켜온 규칙 그대로다. */}
+
+                {/* 가격 재조회 — "다시 확인"은 판단을 갱신하는 행동이라 판단의
+                    근거와 같은 층에 둔다. MI-UI-1 — 아이콘이 "다시"를 말하므로
+                    "가격"까지 반복하지 않는다. 진행 중 문구는 그대로 둔다. */}
+                <div className="mt-3 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={onRecheck}
+                    disabled={rechecking}
+                    className="rounded-md border border-border px-2 py-1 text-[11px] font-medium text-text-secondary hover:bg-surface disabled:opacity-50"
+                  >
+                    {rechecking ? "확인 중..." : "🔄 다시 확인"}
+                  </button>
+                </div>
+                {recheckResult && (
+                  <p className="mt-1 text-[11px] text-text-secondary">
+                    {recheckResult.icon} {recheckResult.message}
+                  </p>
+                )}
 
         {/* STEP J-10 — "💡 기회"(있을 때만, computeSellerAction이 이미 계산).
             MI-FLOW-2 — 판단 바로 아래로 올렸다. 이건 근거가 아니라 행동 제안이라
-            근거 목록(아래 한국 시장/해외 시장) 사이에 끼면 읽히지 않는다. */}
+            근거 목록(아래 한국 시장/해외 시장) 사이에 끼면 읽히지 않는다.
+            MI-UX-FINAL-REVIEW — "행동 제안"은 판정이 이미 가리키는 행동의
+            변주라, 본문에 카드로 서면 CTA 버튼과 같은 말을 두 번 한다. */}
         {sellerAction.opportunity && (
           <div className="rounded-md border border-primary/30 bg-primary-soft p-2.5 text-text-secondary">
             <p className="font-medium text-text-primary">
@@ -3222,7 +3322,7 @@ export function DomesticPriceIntelligencePanel({
                     {c.matchType === "HIGH_CONFIDENCE" && !c.verified && (
                       <button
                         type="button"
-                        onClick={() => void confirmSameProduct(c.id)}
+                        onClick={() => onConfirmSameProduct?.(c.id)}
                         disabled={confirmingId === c.id}
                         className="mt-1.5 rounded-md border border-primary px-2 py-1 text-[11px] font-medium text-primary hover:bg-primary-soft disabled:opacity-50"
                       >
@@ -3245,20 +3345,32 @@ export function DomesticPriceIntelligencePanel({
             판매처별 목록으로 되돌렸고, 판매자가 시장마다 실제로 낸 가격은 판단
             카드 안의 "🌎 판매자 글로벌 시장 가격"(SELLER_ORIGIN 관측)이 맡는다. */}
 
+        {/* MI-FLOW-2(CEO 지시, 2026-09-11) — 무엇을 기준으로 한 판단인지.
+            MI-UX-FINAL-REVIEW — 본문 맨 위에서 여기로 내려왔다. 판정 카드가
+            이미 첫 줄에서 "🇰🇷 대한민국 시장 기준"이라고 말하므로 본문에서는
+            같은 문장이 두 번이었고, 판단의 **기준**은 판단 숫자가 아니라 그
+            숫자의 근거라 아래 두 안내 문단과 같은 자리에 선다. */}
+        <div className="mt-3">
+          <TargetMarketBanner />
+        </div>
+
         {/* Beta RC(CPO 지시, 2026-09-05) — "판매 추천/조건부/비추천"이라는 표현이
             상표권·지식재산권·브랜드 판매 권한까지 검토된 결과로 오해될 수 있다.
-            현재 판정이 실제로 보는 범위와 보지 않는 범위를 명시한다. 판정 카드
-            바깥(패널 루트)에 두어 🟢/🟡/🔴 어떤 상태에서도 항상 함께 보인다.
-            문구 추가일 뿐 판정 로직/API/DB는 변경하지 않는다. */}
-        <p className="text-[10px] text-text-tertiary">
+            현재 판정이 실제로 보는 범위와 보지 않는 범위를 명시한다.
+            MI-UX-FINAL-REVIEW — 이 두 문단은 첫 화면에 항상 떠 있었다. 사실은
+            그대로 남기되(지우면 판정이 검토한 범위를 과장하게 된다) 판단의
+            근거와 같은 자리로 내린다 — 셀러가 "정말?"을 묻는 순간 함께 읽힌다. */}
+        <p className="mt-2 text-[10px] text-text-tertiary">
           현재 판매 판단은 가격 경쟁력, 경쟁 환경, 예상 수익성 및 KC·규제 정보를 기반으로 합니다. 상표권,
           지식재산권, 정품 여부 및 브랜드 판매 권한은 별도 확인이 필요합니다.
         </p>
 
-        <p className="text-[10px] text-text-tertiary">
+        <p className="mt-1 text-[10px] text-text-tertiary">
           참고용 판단입니다 — 판매가는 자동으로 변경되지 않으며, 최종 결정은 직접 내려야 합니다. 가격경쟁력은
           등록 가능 여부와 무관합니다 — 마진이 낮거나 가격이 높아도 등록 자체는 막히지 않습니다.
         </p>
+          </div>
+        )}
       </div>
     </CollapsibleSection>
   );
