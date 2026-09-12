@@ -81,7 +81,9 @@ export interface MarketObservationInput {
  * 없는 나라 이름을 지어내느니 코드가 낫다.
  *
  * 목록의 근거는 실제로 조회하는 시장이다(crawler의 EXPAND_CANDIDATE_MARKET_CODES
- * + 기본 조회의 en-kr). 새 시장을 찌르기 시작하면 여기에 한 줄을 더해야 한다.
+ * + 기본 조회의 en-kr + SMALLABLE-MARKET-PROBE-1의 SMALLABLE_CANDIDATE_MARKET_COUNTRIES
+ * = FR/KR/US/JP, 전부 이미 이 표에 있다). 새 시장을 찌르기 시작하면 여기에 한
+ * 줄을 더해야 한다.
  */
 const MARKET_REGION_NAME: Record<string, string> = {
   kr: "한국",
@@ -363,12 +365,17 @@ export function globalMarketSummaryLine(card: GlobalMarketCard): string | null {
  * 셀러는 판정이 흔들린 줄 알고 멈춘다.
  *
  * ── MI-UX-FINAL-REVIEW(CEO 지시, 2026-09-12) — "현재 사이트에서는"을 앞에 단다 ──
- * 실증으로 확인한 사실이 하나 있다: 다른 시장 가격을 만드는 유일한 장치는
- * Shopify Markets probe(shopify-market-probe.ts의 extractShopifyHandle)이고,
- * handle을 뽑지 못하는 사이트에서는 관측이 **아예 생기지 않는다**(빈 배열).
- * 즉 이 줄이 뜨는 대부분의 경우는 "조회에 실패했다"가 아니라 "이 사이트에는
- * 애초에 시장별 페이지가 없다"이다. 주어가 없으면 셀러는 우리 조회가 고장난
- * 줄 알고 다시 확인을 누른다 — 고칠 수 없는 것을 고치라고 시키는 문장이 된다.
+ * 실증으로 확인한 사실이 하나 있다: 다른 시장 가격은 시장 관측 경로가 **등록된
+ * 사이트에서만** 생기고, 등록되지 않은 사이트에서는 관측이 아예 생기지 않는다
+ * (빈 배열). 즉 이 줄이 뜨는 대부분의 경우는 "조회에 실패했다"가 아니라 "이
+ * 사이트에는 우리가 찔러 볼 시장이 아직 없다"이다. 주어가 없으면 셀러는 우리
+ * 조회가 고장난 줄 알고 다시 확인을 누른다 — 고칠 수 없는 것을 고치라고 시키는
+ * 문장이 된다.
+ *
+ * SMALLABLE-MARKET-PROBE-1(CPO 지시, 2026-09-13) — 등록된 경로가 둘이 됐다:
+ * Shopify Markets probe(로케일 프리픽스)와 사이트별 probe(smallable의 배송국가
+ * 쿼리). 그래서 위 문장의 주어가 "Shopify가 아닌 사이트"에서 "아직 등록되지
+ * 않은 사이트"로 좁아졌다 — 문구 자체는 그대로 참이다.
  */
 export const GLOBAL_MARKET_UNAVAILABLE_NOTE = "현재 사이트에서는 글로벌 시장 가격을 확인할 수 없습니다.";
 

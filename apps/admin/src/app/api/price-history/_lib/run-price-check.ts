@@ -1,5 +1,10 @@
 import { convertToKrwStrict } from "@commerce/pricing";
-import { probeOriginAndKrMarkets, probeAdditionalMarkets, type ShopifyMarketProbeResult } from "@commerce/crawler";
+import {
+  probeOriginAndKrMarkets,
+  probeAdditionalMarkets,
+  supportsSiteMarketProbe,
+  type ShopifyMarketProbeResult,
+} from "@commerce/crawler";
 import { fetchLiveExchangeRates } from "@/lib/exchange-rates";
 import {
   recordPriceObservations,
@@ -135,7 +140,12 @@ export function buildAdditionalMarketObservations(params: {
       priceKrw: converted.amountKrw,
       salePriceKrw,
       originalPriceKrw,
-      soldOut: probe.available === false,
+      // SMALLABLE-MARKET-PROBE-1 — available이 undefined면 "재고를 확인하지
+      // 못했다"이지 "판매중"이 아니다. 예전 식(`=== false`)은 그 셋 중 모르는
+      // 하나를 판매중으로 바꿔 적었다. Shopify 경로에서는 결과가 바뀌지 않는다:
+      // probeMarket()이 가격 없는 응답을 이미 null로 버려서, 결과가 존재하면
+      // available은 언제나 boolean이다.
+      soldOut: probe.available == null ? null : probe.available === false,
     });
   }
 
@@ -244,9 +254,16 @@ export async function runPriceCheck(input: PriceCheckInput): Promise<PriceCheckR
     // marketProbe가 null이면 Shopify 상품 URL이 아니므로 확장 조회 자체를
     // 하지 않는다(불필요한 HTTP 요청 금지 — PART H 비용 원칙).
     //
+    // SMALLABLE-MARKET-PROBE-1(CPO 지시, 2026-09-13) — 그 게이트가 정확히
+    // smallable을 막고 있었다. smallable은 Shopify가 아니라 probeOriginAndKrMarkets가
+    // 언제나 null이고, 그래서 확장 조회에 **도달한 적이 없다**(관측 실패가 아니라
+    // 시도 부재였다). 게이트를 없애는 대신 조건을 하나 더 둔다: 시장 관측 경로가
+    // 실측으로 등록된 사이트만 통과한다. 등록되지 않은 사이트는 예전 그대로
+    // HTTP 요청을 한 건도 보내지 않는다(PART H 유지).
+    //
     // originAlreadyChecked(cron 재실행)일 때는 이 블록 자체에 도달하지 않는다 —
     // 기존 "오늘 이미 확인했으면 아무것도 하지 않는다" 동작을 그대로 둔다.
-    if (marketProbe) {
+    if (marketProbe || supportsSiteMarketProbe(input.sourceUrl)) {
       const extraProbes = await probeAdditionalMarkets(input.sourceUrl, BASIC_PROBE_MARKET_CODES).catch(() => []);
       if (extraProbes.length > 0) {
         // 멱등성은 이제 시장까지 본다 — 같은 날 같은 snapshot+SELLER_ORIGIN에

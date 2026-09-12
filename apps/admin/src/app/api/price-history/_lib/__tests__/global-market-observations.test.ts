@@ -34,6 +34,10 @@ const RATES = vi.hoisted(() => ({
 const crawler = vi.hoisted(() => ({
   probeOriginAndKrMarkets: vi.fn(),
   probeAdditionalMarkets: vi.fn(),
+  // SMALLABLE-MARKET-PROBE-1 — 확장 조회 게이트가 보는 두 번째 조건. 기본값은
+  // "등록된 사이트가 아니다"라 이 파일의 기존 Shopify 시나리오는 전부 예전과
+  // 같은 경로를 탄다(게이트가 marketProbe 하나로 결정된다).
+  supportsSiteMarketProbe: vi.fn(() => false),
 }));
 
 const supabaseRef = vi.hoisted(() => ({ current: null as ReturnType<typeof makeSupabaseStub> | null }));
@@ -161,6 +165,8 @@ beforeEach(() => {
   supabaseRef.current = makeSupabaseStub();
   crawler.probeOriginAndKrMarkets.mockReset();
   crawler.probeAdditionalMarkets.mockReset();
+  crawler.supportsSiteMarketProbe.mockReset();
+  crawler.supportsSiteMarketProbe.mockReturnValue(false);
   crawler.probeOriginAndKrMarkets.mockResolvedValue({ origin: BOBO_ORIGIN, kr: BOBO_KR });
   crawler.probeAdditionalMarkets.mockResolvedValue([BOBO_DE, BOBO_INT]);
 });
@@ -407,5 +413,134 @@ describe("GLOBAL-MARKET ③ — 추가 시장 관측이 실제로 저장된다",
     expect(isCostBasisOriginObservation({ sourceLabel: "KR_MARKET" })).toBe(true);
     expect(isCostBasisOriginObservation({ sourceLabel: "ORIGIN_FX" })).toBe(true);
     expect(isCostBasisOriginObservation({ sourceLabel: MARKET_PROBE_SOURCE_LABEL })).toBe(false);
+  });
+});
+
+/**
+ * SMALLABLE-MARKET-PROBE-1(CPO 지시, 2026-09-13) — **비-Shopify 판매처도 시장
+ * 관측이 DB까지 간다.**
+ *
+ * 여기서 검증하는 것은 "API가 200을 돌려줬다"가 아니라 실제 저장 함수
+ * (recordPriceObservations)가 만든 **행의 내용**이다 — 위 Bobo Choses 시나리오와
+ * 같은 Supabase 스텁을 쓰고, 쌓인 행을 그대로 읽는다.
+ *
+ * 실측 근거(2026-09-13, smallable.com 실제 HTTP 응답의 JSON-LD):
+ *   430632(sku AAA1804532)  FR €45 · KR €44 · US €47 · JP €49
+ *   430651(sku AAA1804641)  FR €75 · KR €73 · US €79 · JP €81
+ */
+describe("SMALLABLE-MARKET-PROBE-1 — 비-Shopify 판매처의 시장 관측이 저장된다", () => {
+  const SMALLABLE = "https://www.smallable.com/en/product/all-about-monsters-washed-t-shirt-organic-cotton-blue-bobo-choses-430632";
+
+  /** 실제 probe가 돌려주는 모양 그대로 — shopMeta는 null이다(smallable에는 매장
+   * 기준 국가를 선언하는 엔드포인트가 없다). */
+  function smallableProbe(country: string, amount: number, available?: boolean): ShopifyMarketProbeResult {
+    return {
+      marketCode: country.toLowerCase(),
+      amount,
+      currency: "EUR",
+      sourceUrl: `${SMALLABLE}?currency=EUR&country=${country}`,
+      shopMeta: null,
+      regularPrice: null,
+      available,
+    };
+  }
+
+  function smallableInput() {
+    return { snapshotId: "snap-smallable", sourceUrl: SMALLABLE, originalPriceAmount: 45, originalCurrency: "EUR" };
+  }
+
+  beforeEach(() => {
+    // smallable은 Shopify가 아니라 기본 조회가 언제나 null이다 — 예전에는 이
+    // null 하나 때문에 확장 조회에 도달조차 못 했다.
+    crawler.probeOriginAndKrMarkets.mockResolvedValue(null);
+    crawler.supportsSiteMarketProbe.mockReturnValue(true);
+    crawler.probeAdditionalMarkets.mockResolvedValue([
+      smallableProbe("FR", 45, true),
+      smallableProbe("KR", 44, true),
+      smallableProbe("US", 47, true),
+      smallableProbe("JP", 49, true),
+    ]);
+  });
+
+  it("핵심 회귀: 430632이 원가 1행 + 시장 4행(fr/kr/us/jp)으로 저장된다", async () => {
+    const result = await runPriceCheck(smallableInput());
+    expect(result.status).toBe("SUCCESS");
+    expect(crawler.probeAdditionalMarkets).toHaveBeenCalledWith(SMALLABLE, ["", "en-kr"]);
+
+    const rows = supabaseRef.current!.rows;
+    expect(rows).toHaveLength(5);
+
+    // 원가 행은 예전과 똑같다 — 시장이 생겼다고 원가 근거가 바뀌지 않는다.
+    expect(rows[0]).toMatchObject({
+      source: "SELLER_ORIGIN",
+      source_label: "ORIGIN_FX",
+      currency: "EUR",
+      price_amount: 45,
+      price_krw: 70200,
+      market_code: null,
+    });
+
+    const markets = rows.filter((r) => r.source_label === MARKET_PROBE_SOURCE_LABEL);
+    expect(markets.map((r) => r.market_code)).toEqual(["fr", "kr", "us", "jp"]);
+    const byMarket = new Map(markets.map((r) => [r.market_code, r]));
+    expect(byMarket.get("fr")).toMatchObject({ currency: "EUR", price_amount: 45, price_krw: 70200 });
+    expect(byMarket.get("kr")).toMatchObject({ currency: "EUR", price_amount: 44, price_krw: 68640 });
+    expect(byMarket.get("us")).toMatchObject({ currency: "EUR", price_amount: 47, price_krw: 73320 });
+    expect(byMarket.get("jp")).toMatchObject({ currency: "EUR", price_amount: 49, price_krw: 76440 });
+  });
+
+  it("market_country는 NULL이다 — 요청한 배송국가를 판매처 신고 국가로 적지 않는다", async () => {
+    await runPriceCheck(smallableInput());
+    const markets = supabaseRef.current!.rows.filter((r) => r.source_label === MARKET_PROBE_SOURCE_LABEL);
+    expect(markets.map((r) => r.market_country)).toEqual([null, null, null, null]);
+    // market_code(요청한 시장)와 market_country(판매처가 선언한 국가)는 끝까지
+    // 다른 칸이다 — EUR이라고 FR을 적지도, country=KR이라고 KR을 적지도 않는다.
+    expect(markets.every((r) => r.currency === "EUR")).toBe(true);
+  });
+
+  it("원가 판단 입력은 그대로다 — 시장 4행은 원가 근거에서 빠진다", async () => {
+    await runPriceCheck(smallableInput());
+    const costBasis = toRecords(supabaseRef.current!.rows).filter(isCostBasisOriginObservation);
+    expect(costBasis).toHaveLength(1);
+    expect(costBasis[0].sourceLabel).toBe("ORIGIN_FX");
+    expect(costBasis[0].priceKrw).toBe(70200);
+  });
+
+  it("KR 관측은 집계에서 한국 시장으로만 쓰인다 — FR/US/JP와 섞이지 않는다", async () => {
+    await runPriceCheck(smallableInput());
+    const summary = summarizeFrom(toRecords(supabaseRef.current!.rows), "PRIMARY", {
+      analysisMarketCountry: DOMESTIC_ANALYSIS_MARKET_COUNTRY,
+    });
+    expect(summary.priceMarketBasis).toBe("ANALYSIS");
+    expect(summary.priceMarketCode).toBe("kr");
+    expect(summary.lowestPriceKrw).toBe(68640);
+    expect(summary.highestPriceKrw).toBe(68640);
+  });
+
+  it("재고를 확인하지 못한 시장은 sold_out=NULL이다 — '판매중'으로 바꿔 적지 않는다", async () => {
+    crawler.probeAdditionalMarkets.mockResolvedValue([smallableProbe("KR", 44, undefined)]);
+    await runPriceCheck(smallableInput());
+    const market = supabaseRef.current!.rows.find((r) => r.source_label === MARKET_PROBE_SOURCE_LABEL)!;
+    expect(market.sold_out).toBeNull();
+  });
+
+  it("같은 날 다시 확인해도 시장 4행은 한 번씩만 쌓인다", async () => {
+    await runPriceCheck(smallableInput());
+    await runPriceCheck(smallableInput());
+    const markets = supabaseRef.current!.rows.filter((r) => r.source_label === MARKET_PROBE_SOURCE_LABEL);
+    expect(markets.map((r) => r.market_code).sort()).toEqual(["fr", "jp", "kr", "us"]);
+  });
+
+  it("등록되지 않은 사이트는 확장 조회를 시도조차 하지 않는다(HTTP 요청 0건)", async () => {
+    crawler.supportsSiteMarketProbe.mockReturnValue(false);
+    const result = await runPriceCheck({
+      snapshotId: "snap-unknown",
+      sourceUrl: "https://unknown-shop.example/p/1",
+      originalPriceAmount: 45,
+      originalCurrency: "EUR",
+    });
+    expect(result.status).toBe("SUCCESS");
+    expect(crawler.probeAdditionalMarkets).not.toHaveBeenCalled();
+    expect(supabaseRef.current!.rows).toHaveLength(1);
   });
 });

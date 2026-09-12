@@ -121,3 +121,38 @@ export function withSourceCurrency(url: string): string {
     return url;
   }
 }
+
+/**
+ * SMALLABLE-MARKET-PROBE-1(CPO 지시, 2026-09-13) — **다른 배송국가를 요청하는 URL.**
+ *
+ * 위 withSourceCurrency()는 한 글자도 바뀌지 않았다. 원본가격이 FR이라는 결정은
+ * SMALLABLE-PRICE-1에서 이미 끝났고 여기서 다시 열지 않는다. 이 함수는 전혀 다른
+ * 질문에 답한다: **이 판매처는 다른 배송국가에는 얼마를 받는가**(= 시장 관측).
+ * 두 질문을 한 함수로 합치면 언젠가 probe 후보 하나가 조용히 원본가격을 바꾼다 —
+ * 함수를 나눠 둔 것이 그 사고를 막는 장치다.
+ *
+ * 국가 규칙이 등록되지 않은 source는 null이다. 아무 사이트에나 `?country=`를 붙여
+ * "시장을 관측했다"고 말하지 않는다 — 그 파라미터를 무시하는 사이트에서는 똑같은
+ * 가격이 국가만 다른 시장 여러 개로 저장되고, 그건 관측이 아니라 복제다.
+ */
+export function withSourceMarketCountry(url: string, countryCode: string): string | null {
+  const rule = ruleFor(url);
+  if (!rule?.country) return null;
+  const country = countryCode.trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(country)) return null;
+  try {
+    const u = new URL(url);
+    u.searchParams.set(rule.queryParam, rule.currency);
+    u.searchParams.set(rule.country.queryParam, country);
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
+/** 이 source가 배송국가별 시장 관측을 지원하는가(= country 규칙이 실측으로 등록돼
+ * 있는가). 등록은 여전히 한 줄씩 수동이다 — "글로벌 사이트는 다 되겠지"로 넓히지
+ * 않는다. */
+export function supportsMarketCountryProbe(url: string): boolean {
+  return ruleFor(url)?.country != null;
+}

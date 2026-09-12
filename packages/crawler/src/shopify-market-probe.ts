@@ -1,3 +1,4 @@
+import type { MarketProbeResult } from "./market-probe-result";
 import { extractShopifyHandle, fetchShopifyProductJson } from "./shopify-product-json";
 
 /**
@@ -7,22 +8,17 @@ import { extractShopifyHandle, fetchShopifyProductJson } from "./shopify-product
  * price_currency를 그대로 신뢰, 없으면 shopCurrency로 override하는 로직 포함)을
  * 그대로 재사용한다 — 이 파일은 "어떤 marketCode를 어떤 순서로 시도할지"만
  * 관장한다.
+ *
+ * SMALLABLE-MARKET-PROBE-1(CPO 지시, 2026-09-13) — 이 파일은 **Shopify 전용**이다.
+ * 비-Shopify 사이트를 여기서 일반화하지 않는다: 이 경로의 가격 정확도는
+ * `/meta.json` 권위·로케일 프리픽스·`?country=` 같은 Shopify 고유 사실 위에
+ * 서 있어서, 다른 사이트를 끼워 넣는 순간 그 근거가 전부 조건문이 된다.
+ * 어느 probe를 쓸지 고르는 일은 market-probe.ts가 한다.
  */
 
-export interface ShopifyMarketProbeResult {
-  marketCode: string;
-  amount: number;
-  currency: string;
-  sourceUrl: string;
-  /** N-3.7 — 이 요청이 내부적으로 이미 가져온 판매처 메타(/meta.json). 별도로
-   * 다시 fetch하지 않고 fetchShopifyProductJson이 가져온 걸 그대로 넘긴다. */
-  shopMeta: import("./shopify-product-json").ShopifyShopMeta | null;
-  /** P-12A(대표님/CPO 지시, 2026-08-31) — fetchShopifyProductJson이 이미
-   * 추출하던 productData.regularPrice/available을 그대로 노출한다(신규 fetch
-   * 없음). regularPrice가 amount보다 클 때만 "실제 할인 중"이다. */
-  regularPrice: { amount: number; currency: string } | null;
-  available: boolean | undefined;
-}
+/** Shopify probe의 결과. 모양은 시장 관측 공통 타입 그대로다(파일 두 개가 서로
+ * 다른 모양을 주면 저장부가 갈라진다) — 이름만 기존 호출부를 위해 남긴다. */
+export type ShopifyMarketProbeResult = MarketProbeResult;
 
 async function probeMarket(origin: string, handle: string, marketCode: string): Promise<ShopifyMarketProbeResult | null> {
   const prefix = marketCode ? `/${marketCode}` : "";
@@ -87,7 +83,14 @@ export const EXPAND_CANDIDATE_MARKET_CODES = [
   "en-int",
 ];
 
-export async function probeAdditionalMarkets(
+/**
+ * SMALLABLE-MARKET-PROBE-1 — 이름만 바뀌었다(probeAdditionalMarkets →
+ * probeAdditionalShopifyMarkets). 본문은 한 줄도 손대지 않는다: Shopify 경로의
+ * 동작이 바뀌면 이미 관측되고 있는 판매처(junioredition/Bobo Choses)의 시계열이
+ * 조용히 갈라진다. 바깥에서 부르던 이름(probeAdditionalMarkets)은 market-probe.ts가
+ * 이어받아 "Shopify면 이 함수"로 넘긴다.
+ */
+export async function probeAdditionalShopifyMarkets(
   sourceUrl: string,
   excludeMarketCodes: string[],
 ): Promise<ShopifyMarketProbeResult[]> {

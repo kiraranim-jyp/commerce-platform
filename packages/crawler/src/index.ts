@@ -9,7 +9,10 @@ export { extractProductGroupOptions, extractFromJsonLd } from "./product-data-ex
 export type { ExtractionTrace } from "./scoring";
 export type { StrategySource } from "./strategies/types";
 export * from "./comparison-search";
+export * from "./market-probe-result";
+export * from "./market-probe";
 export * from "./shopify-market-probe";
+export * from "./smallable-market-probe";
 export { fetchShopifyShopMeta, stripShopifyLocalePrefix, type ShopifyShopMeta } from "./shopify-product-json";
 export { normalizeUrl } from "./utils/url.util";
 export { withTimeout, ExtractionTimeoutError } from "./with-timeout";
