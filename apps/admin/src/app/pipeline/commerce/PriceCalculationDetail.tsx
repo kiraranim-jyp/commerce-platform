@@ -3,16 +3,19 @@
 import { useState } from "react";
 import type { CanonicalProduct } from "@commerce/shared";
 import {
-  computePriceBreakdown,
   DEFAULT_PRICE_BREAKDOWN_INPUT,
   DEFAULT_PRICE_ROUNDING_UNIT,
   formatKrw,
   formatOriginalPrice,
 } from "@commerce/pricing";
-// MI/PRICE-1 — 라벨 어휘는 판단 카드의 ③ 수익성 사슬과 같은 표에서 가져온다.
+// MI/PRICE-1 — 라벨 어휘는 판단 카드의 수익성 요약과 같은 표에서 가져온다.
 // 같은 숫자를 두 화면이 다른 이름으로 부르던 것이 이 저장소가 반복해서 고쳐 온
 // 라벨 표류다(price-hierarchy.ts의 "의미 하나당 라벨 하나" 주석 참고).
-import { PRICE_LINE_LABEL, PRICE_SECTION_TITLE } from "./price-hierarchy";
+import { PRICE_LINE_LABEL, PRICE_MEANING_LABEL } from "./price-hierarchy";
+// MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 이 사슬이 내는 세 숫자(착지원가 · 권장
+// 판매가 · 예상 이익)를 수익성 요약도 쓴다. 식은 이 파일에서 저 파일로 글자
+// 그대로 옮겨졌을 뿐이고, 이제 두 화면이 **같은 함수의 같은 결과**를 그린다.
+import { computeProfitabilityNumbers } from "./profitability";
 import { ValueBadge } from "@/components/ui/ValueBadge";
 
 /**
@@ -120,7 +123,6 @@ export function PriceCalculationDetail({
   onRefreshExchangeRates,
   priceRoundingUnit,
   domesticShippingCostKrw,
-  onOpenMarketComparison,
 }: {
   product: CanonicalProduct;
   onUpdateOriginalPrice?: (patch: Partial<{ amount: number; currency: string }>) => void;
@@ -135,10 +137,6 @@ export function PriceCalculationDetail({
   /** P-3-1에서 확정: 국내배송원가는 Settings에서만 고치는 판매자 공통 기본값이라
    * 여기서는 읽기전용으로만 보여준다. */
   domesticShippingCostKrw: number | null;
-  /** PHASE 3.2 추가지시(CPO, 2026-09-11) — 시장 관측 원본으로 가는 단 하나의
-   * 통로. 값을 가져오는 함수가 아니라 화면 이동이다(여기서 시장 데이터를 다시
-   * 조회하지 않는다 — 그러면 이 사슬이 다시 비교 카드가 된다). */
-  onOpenMarketComparison?: () => void;
 }) {
   const breakdownInput = product.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT;
   const roundingUnit = priceRoundingUnit ?? DEFAULT_PRICE_ROUNDING_UNIT;
@@ -178,28 +176,29 @@ export function PriceCalculationDetail({
   }
 
   const liveRates = exchangeRates?.rates;
-  const breakdown = computePriceBreakdown(
-    { originalAmount: draftOriginalAmount, originalCurrency: product.price.value.currency, ...draftInput },
+
+  // N-3.54(CPO 지시: "원본 가격을 못 읽었으면 가격을 계산하지 말고") —
+  // product.priceValidity가 VALID가 아니면 breakdown.suggestedPriceKrw는
+  // 배송비 등 나머지 입력값만으로 계산된 숫자라 진짜 가격이 아니다. 이 화면
+  // 전체가 그 숫자를 "권장 판매가"처럼 보여주지 않고, 대신 원본 가격을
+  // 직접 확인/입력하라는 경고로 대체한다.
+  // MI-FINAL-UX-3 — 그 게이트가 computeProfitabilityNumbers 안으로 들어갔다.
+  // 같은 조건에서 수익성 요약도 숫자를 갖지 않아야 하기 때문이다("상세에는
+  // 값이 있는데 요약만 확인 불가"가 이번 지시의 출발점이었다).
+  const priceUnresolved = product.priceValidity !== "VALID";
+  const profit = computeProfitabilityNumbers(
+    {
+      originalAmount: draftOriginalAmount,
+      originalCurrency: product.price.value.currency,
+      breakdownInput: draftInput,
+      priceResolved: !priceUnresolved,
+      priceOverrideKrw: product.priceOverrideKrw?.value ?? null,
+    },
     liveRates,
     roundingUnit,
   );
 
-  // N-3.54(CPO 지시: "원본 가격을 못 읽었으면 가격을 계산하지 말고") —
-  // product.priceValidity가 VALID가 아니면 위 breakdown.suggestedPriceKrw는
-  // 배송비 등 나머지 입력값만으로 계산된 숫자라 진짜 가격이 아니다. 이 화면
-  // 전체가 그 숫자를 "권장 판매가격"처럼 보여주지 않고, 대신 원본 가격을
-  // 직접 확인/입력하라는 경고로 대체한다.
-  const priceUnresolved = product.priceValidity !== "VALID";
-
-  // 최종 판매가격 표시값 — 사용자가 아직 아무것도 커밋하지 않았으면(product.
-  // priceOverrideKrw == null) 권장 판매가격을 그대로 미리 보여주기만 한다(자동
-  // 커밋 아님 — 확정은 ③ 등록 준비의 [적용] 하나뿐이다). 예상 이익은 "실제로
-  // 팔 값" 기준이어야 하므로 여기서도 같은 규칙으로 고른다.
-  const finalPriceKrw = product.priceOverrideKrw?.value ?? breakdown.suggestedPriceKrw;
-  const feeAmountKrw = Math.round((finalPriceKrw * draftInput.feePercent) / 100);
-  const netProfitKrw = finalPriceKrw - breakdown.landedCostKrw - feeAmountKrw;
-
-  if (priceUnresolved) {
+  if (priceUnresolved || !profit) {
     return (
       <div className="space-y-2.5 text-sm">
         <PriceUnresolvedBanner product={product} />
@@ -240,6 +239,10 @@ export function PriceCalculationDetail({
       </div>
     );
   }
+
+  // 아래 사슬이 그리는 숫자는 전부 이 하나에서 나온다 — 요약이 보는 것과
+  // 같은 객체다(사본이 아니라 같은 결과).
+  const { breakdown, feeAmountKrw, expectedProfitKrw } = profit;
 
   return (
     /* P2-1 — 줄 간격 space-y-2.5(10px) → space-y-1.5(6px). 사슬은 열 줄이라
@@ -347,12 +350,11 @@ export function PriceCalculationDetail({
         </div>
       </Row>
 
-      {/* P2-1 — "(판매가 기준 목표 이익률 — Settings에서 기본값 변경)"이
-          입력칸 옆에 붙어 두 줄로 접히면서 이 행 하나가 다른 행의 두 배를
-          차지하고 있었다. 두 사실(마진의 기준 / 기본값을 어디서 바꾸나)은
-          아래 추정치 문단으로 옮겨 붙였다 — 지운 것이 아니라 자리를 옮긴
-          것이다(같은 문단이 이미 "이 값들은 추정치다"를 말하고 있어서,
-          오히려 한 문단이 한 가지를 말하게 됐다). */}
+      {/* MI-FINAL-UX-3(CEO 지시, 2026-09-12) — Settings 링크는 **그 링크가 바꾸는
+          설정 옆**에 선다. 아래 있던 추정치 문단("…기본값은 Settings에 있다")이
+          링크를 들고 있었는데, 문단은 세 입력(국제배송비·수수료·마진)을 한꺼번에
+          말하느라 셀러가 "무엇을 누르면 무엇이 바뀌는지"를 알 수 없었다. 목표
+          마진 옆의 [설정] 하나가 그 문단 전체보다 정확하다. */}
       <Row label="목표 마진">
         <div className="flex items-center justify-end gap-1">
           <LiveNumberField
@@ -363,6 +365,9 @@ export function PriceCalculationDetail({
             className={`w-14 ${FIELD_CLASS}`}
           />
           <span className="text-text-secondary">%</span>
+          <a href="/settings" className="text-xs text-primary hover:underline">
+            [설정]
+          </a>
         </div>
       </Row>
 
@@ -372,9 +377,11 @@ export function PriceCalculationDetail({
           카드에 두면 셀러는 계산을 읽다 말고 결정을 요구받는다(그 화면이
           이번 지시의 출발점이다). 권장가와 최종가의 관계 문장도 확정 카드가
           갖는다: 두 값이 나란히 있는 자리가 거기 하나뿐이기 때문이다. */}
+      {/* MI-FINAL-UX-3 — 라벨을 표에서 가져온다. 수익성 요약의 「권장 판매가」와
+          이 줄이 같은 값을 다른 이름으로 부르고 있었다("권장 판매가격"). */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 border-t border-border pt-1.5">
         <span className="flex items-center gap-1.5 font-medium text-text-primary">
-          권장 판매가격
+          {PRICE_MEANING_LABEL.RECOMMENDED_PRICE}
           <ValueBadge kind="aiSuggested" />
         </span>
         <span className="text-sm font-semibold text-text-primary">{formatKrw(breakdown.suggestedPriceKrw)}</span>
@@ -385,38 +392,24 @@ export function PriceCalculationDetail({
       </Row>
 
       <div className="flex items-center justify-between border-t border-border pt-1.5">
-        <span className="font-medium text-text-primary">예상 이익(최종 판매가격 기준)</span>
-        <span className={`font-medium ${netProfitKrw >= 0 ? "text-success" : "text-error"}`}>
-          {netProfitKrw >= 0 ? "+" : ""}
-          {formatKrw(netProfitKrw)}
+        <span className="font-medium text-text-primary">{PRICE_MEANING_LABEL.EXPECTED_PROFIT}(최종 판매가격 기준)</span>
+        <span className={`font-medium ${expectedProfitKrw >= 0 ? "text-success" : "text-error"}`}>
+          {expectedProfitKrw >= 0 ? "+" : ""}
+          {formatKrw(expectedProfitKrw)}
         </span>
       </div>
 
-      {/* P2-1/P2-4 — 위 "목표 마진" 행에 붙어 있던 괄호 설명이 여기로 합쳐졌다.
-          같은 문단이 말하는 것은 하나다: "이 세 입력은 추정치이고, 아는
-          값으로 고치면 즉시 다시 계산되며, 기본값은 Settings에 있다."
-          계산을 설명하는 문장이라 tertiary가 아니라 secondary다. */}
-      <p className="pt-0.5 text-xs text-text-secondary">
-        국제배송비·예상 수수료·목표 마진은 실제 물류·정산 데이터가 없어 추정치입니다(목표 마진은 판매가 기준 이익률) —
-        아는 값으로 고치면 즉시 다시 계산됩니다.{" "}
-        <a href="/settings" className="text-primary hover:underline">
-          Settings에서 기본값 변경
-        </a>
-      </p>
-
-      {/* PHASE 3.2 추가지시 — 시장 정보는 이 사슬에 들어오지 않는다. 여기
-          있던 국가별 원본가격 비교표/한국向 표시가는 ⓘ 글로벌 시장과 ②로 돌아갔고,
-          남는 것은 그 관측 원본으로 가는 링크 한 줄뿐이다(블록이 아니라
-          링크여야 한다 — 블록이 되는 순간 계산 사슬이 다시 비교 카드가 된다). */}
-      {onOpenMarketComparison && (
-        <p className="text-xs text-text-secondary">
-          다른 나라 판매가·한국 시장 경쟁가격은{" "}
-          <button type="button" onClick={onOpenMarketComparison} className="text-primary hover:underline">
-            {PRICE_SECTION_TITLE.SELLER_GLOBAL_MARKET} / {PRICE_SECTION_TITLE.DOMESTIC_COMPETITION}
-          </button>
-          에서 확인하세요.
-        </p>
-      )}
+      {/* ── MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 문단 둘을 지웠다 ────────────────
+          ① "국제배송비·예상 수수료·목표 마진은 … 추정치입니다 … Settings에서
+             기본값 변경" — 세 입력을 한꺼번에 말하느라 무엇을 누르면 무엇이
+             바뀌는지 답하지 못했다. 링크는 위 「목표 마진」 옆 [설정]로 갔고,
+             "추정치"라는 사실은 각 줄이 이미 입력칸으로 말하고 있다(고칠 수
+             있는 값이라는 것이 곧 확정값이 아니라는 뜻이다).
+          ② "다른 나라 판매가·한국 시장 경쟁가격은 … 에서 확인하세요" — 그 두
+             블록은 이 접힘 **바로 위**에 있다. 위로 올라가라고 안내하는 문장은
+             화면이 길어졌다는 신호이지 길잡이가 아니다.
+          onOpenMarketComparison prop 자체를 지운 것이 장치다 — 보낼 곳이 없으면
+          문장도 되살아나지 않는다. */}
 
       <SellerBorneCostSection domesticShippingCostKrw={domesticShippingCostKrw} />
     </div>

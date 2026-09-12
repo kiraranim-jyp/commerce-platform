@@ -10,6 +10,7 @@ import {
   type OriginalPriceHeadlineInput,
   type PriceChainInput,
 } from "../price-hierarchy";
+import { computeProfitabilityNumbers } from "../profitability";
 
 /**
  * UX 2.3(CEO 지시, 2026-09-11) — 고정하려는 실제 화면.
@@ -24,6 +25,21 @@ import {
  *   ② 국내 데이터가 비어도 수익성 사슬은 전부 살아 있고, 저하되는 것은
  *      가격 경쟁력 하나뿐이다(시장 비교 불가 ≠ 수익성 계산 불가).
  */
+/** [ⓘ 가격 계산 기준]이 실제로 그리는 숫자. 요약이 이 값을 그대로 쓴다는 것을
+ * 테스트도 같은 함수로 확인한다 — fixture가 손으로 적은 숫자면 "같은 값"이라는
+ * 명제를 검사할 수가 없다. */
+const PROFIT = computeProfitabilityNumbers(
+  {
+    originalAmount: 55,
+    originalCurrency: "GBP",
+    breakdownInput: { shippingKrw: 12000, feePercent: 10, marginPercent: 20 },
+    priceResolved: true,
+    priceOverrideKrw: null,
+  },
+  { GBP: 1816.87 },
+  10,
+);
+
 const CHAIN: PriceChainInput = {
   originPrice: { amount: 55, currency: "GBP" },
   observedOriginPrice: null,
@@ -33,13 +49,19 @@ const CHAIN: PriceChainInput = {
   exchangeRate: 1816.87,
   exchangeRateIsEstimate: false,
   internationalShippingKrw: 12000,
-  landedCostKrw: 111928,
   sellerPlannedPriceKrw: 150000,
-  expectedProfitKrw: 23072,
-  platformFeeKrw: 15000,
   costIncomplete: false,
   marginPercent: 15.4,
   marginBasis: "PLANNED",
+  /**
+   * MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 요약 세 줄의 유일한 출처.
+   *
+   * 예전 CHAIN은 landedCostKrw/expectedProfitKrw/platformFeeKrw를 서버 값으로
+   * 따로 갖고 있었다. 그 출처가 상세 계산과 달라서 프로덕션에서 "요약은 확인
+   * 불가인데 상세에는 숫자가 있다"가 났다 — 이제 넘길 수 있는 인자가 없다.
+   * 숫자는 상세 계산이 실제로 그리는 값 그대로다(computePriceBreakdown 결과).
+   */
+  profitability: PROFIT,
 };
 
 const MARKET: MarketContextInput = {
@@ -50,14 +72,17 @@ const MARKET: MarketContextInput = {
   domesticUnresolved: false,
 };
 
-describe("여덟 가지 가격은 한 라벨로 합쳐지지 않는다", () => {
+describe("아홉 가지 가격은 한 라벨로 합쳐지지 않는다", () => {
   it("의미마다 라벨이 하나씩이고 서로 겹치지 않는다", () => {
+    // MI-FINAL-UX-3 — 아홉 번째는 「권장 판매가」다. 상세 계산이 "권장 판매가격"
+    // 이라고 부르던 값이 수익성 요약에도 서면서, 두 자리가 같은 문자열을
+    // 쓰도록 표에 올렸다(의미 하나당 라벨 하나 — 두 이름이 생길 자리를 없앤다).
     const labels = Object.values(PRICE_MEANING_LABEL);
-    expect(labels).toHaveLength(8);
-    expect(new Set(labels).size).toBe(8);
+    expect(labels).toHaveLength(9);
+    expect(new Set(labels).size).toBe(9);
   });
 
-  it("착지원가에 더해지는 비용은 여덟 가격 중 어느 이름도 쓰지 않는다", () => {
+  it("착지원가에 더해지는 비용은 아홉 가격 중 어느 이름도 쓰지 않는다", () => {
     // "국제배송비"가 아홉 번째 가격으로 섞이면 그 순간 이 파일의 약속이 깨진다.
     expect(Object.values(PRICE_MEANING_LABEL)).not.toContain(PRICE_LINE_LABEL.INTERNATIONAL_SHIPPING);
   });
@@ -120,38 +145,56 @@ describe("여덟 가지 가격은 한 라벨로 합쳐지지 않는다", () => {
     expect(recommended.basis).toBe("추천 판매가 기준");
   });
 
-  it("④ 수익성 요약은 착지원가 → 내 판매가격 → 예상 수익 → 예상 마진 넷이다", () => {
-    // UX 2.4(CEO 지시, 2026-09-11) — 환산가와 국제배송비는 착지원가 안에 이미
-    // 합쳐져 있어서 접어도 사실이 사라지지 않는다. 착지원가·내 판매가·수익은
-    // 접는 순간 셀러가 답을 못 얻는다.
+  it("수익성 요약은 착지원가 → 권장 판매가 → 예상 이익 셋이고, 셋 다 상세 계산의 값이다", () => {
+    // ── MI-FINAL-UX-3(CEO 지시, 2026-09-12) ───────────────────────────────
+    // 프로덕션에서 이 요약은 ⚪ 확인 불가인데 바로 아래 [ⓘ 가격 계산 기준]에는
+    // 숫자가 있었다. 원인은 입력이다: 요약의 "내 판매가격/예상 수익"은
+    // priceOverrideKrw가 있어야 나오는 서버 값이고(② 시장 판단 단계에서는 항상
+    // 없다), 상세는 확정 전에 권장 판매가로 폴백해 계산한다.
     //
-    // MI/PRICE-1(CEO 지시, 2026-09-12) — 원본 판매가격이 요약에서 내려갔다.
-    // 지워진 것이 아니라 **이미 두 곳이 답하고 있어서**다: 바로 위 ① 원본 상품
-    // 가격이 원본 통화로, ④의 상세 계산이 편집 가능한 첫 줄로. 같은 값이 한
-    // 카드에서 세 번 나오는 것이 이번 지시가 없애라고 한 화면이다.
+    // 그래서 요약이 쓰는 값을 상세와 **같은 함수**의 결과로 바꿨다. 이 테스트가
+    // 고정하는 것은 "같은 숫자"이지 "비슷한 숫자"가 아니다 — 아래 세 줄은
+    // computeProfitabilityNumbers가 낸 값과 문자 그대로 같아야 한다.
     const rows = buildPriceChain(CHAIN);
     expect(rows.filter((r) => r.tier === "SUMMARY").map((r) => r.key)).toEqual([
       "LANDED_COST",
-      "SELLER_PLANNED_PRICE",
+      "RECOMMENDED_PRICE",
       "EXPECTED_PROFIT",
-      "EXPECTED_MARGIN",
     ]);
+    const value = (key: string) => rows.find((r) => r.key === key)!.value;
+    expect(value("LANDED_COST")).toBe(`₩${PROFIT!.landedCostKrw.toLocaleString("ko-KR")}`);
+    expect(value("RECOMMENDED_PRICE")).toBe(`₩${PROFIT!.recommendedPriceKrw.toLocaleString("ko-KR")}`);
+    expect(value("EXPECTED_PROFIT")).toBe(`₩${PROFIT!.expectedProfitKrw.toLocaleString("ko-KR")}`);
+    // 내려간 둘은 사라지지 않았다 — 층만 바뀌었다.
     expect(rows.filter((r) => r.tier === "DETAIL").map((r) => r.key)).toEqual([
       "SOURCE_ORIGINAL_PRICE",
       "SOURCE_PRICE_KRW",
       "INTERNATIONAL_SHIPPING",
+      "SELLER_PLANNED_PRICE",
+      "EXPECTED_MARGIN",
     ]);
   });
 
-  it("원가 기준이 한국 표시가인 상품만 그 줄을 요약에 남긴다", () => {
-    // ①이 그때는 스냅샷의 원본 통화 가격을 세우기 때문에, 실제로 착지원가에
-    // 들어간 한국 표시가를 화면 어디서도 대신 말해주지 않는다. 이 한 줄을
-    // 내리면 "무엇을 더해서 착지원가가 됐는지"가 요약에서 사라진다.
+  it("상세 계산이 숫자를 못 그리는 상태면 요약도 같이 비어 있다", () => {
+    // "요약만 확인 불가"가 다시 생기는 유일한 경로를 막는다: 두 화면이 같은
+    // 조건(원본 가격 미확인)에서 같이 비어야 한다.
+    const rows = buildPriceChain({ ...CHAIN, profitability: null });
+    for (const key of ["LANDED_COST", "RECOMMENDED_PRICE", "EXPECTED_PROFIT"]) {
+      const row = rows.find((r) => r.key === key)!;
+      expect(row.value, `${row.label}이(가) 값을 지어냈다`).toBeNull();
+      expect(row.empty?.chip).toBe("⚪ 확인 불가");
+    }
+  });
+
+  it("원가 기준이 한국 표시가인 상품도 요약에 그 줄을 세우지 않는다", () => {
+    // MI-FINAL-UX-3 — 예전에는 이 줄만 요약에 남겼다(①이 그때는 스냅샷의 원본
+    // 통화 가격을 세우기 때문). MI/PRICE-2가 같은 관측을 「원본 상품」의
+    // "원본 판매자 한국 표시가" 줄로 올린 뒤로는 화면에 두 번 서게 된다 —
+    // 사실이 사라지는 것이 아니라 한 번만 선다.
     const rows = buildPriceChain({ ...CHAIN, costBasisIsKrMarket: true });
     const head = rows[0];
     expect(head.key).toBe("KR_MARKET_PRICE");
-    expect(head.tier).toBe("SUMMARY");
-    // 반대로 일반 상품의 출발점은 ①이 이미 답하므로 요약에 남지 않는다.
+    expect(head.tier).toBe("DETAIL");
     expect(buildPriceChain(CHAIN)[0]).toMatchObject({ key: "SOURCE_ORIGINAL_PRICE", tier: "DETAIL" });
   });
 
@@ -167,10 +210,18 @@ describe("여덟 가지 가격은 한 라벨로 합쳐지지 않는다", () => {
     }
   });
 
-  it("예상 수익이 착지원가만 뺀 값이 아니라는 사실을 숨기지 않는다", () => {
+  it("예상 이익이 착지원가만 뺀 값이 아니라는 사실을 숨기지 않는다", () => {
     const profit = buildPriceChain(CHAIN).find((r) => r.key === "EXPECTED_PROFIT")!;
-    expect(profit.basis).toContain("플랫폼 수수료");
-    expect(profit.basis).toContain("₩15,000");
+    // 수수료까지 빠진 값이라 "판매가 − 착지원가"로 암산하면 맞지 않는다.
+    // 그 차이는 지우지 않고 기준 문장에 적는다(본문이 아니라 툴팁으로 간다).
+    expect(profit.basis).toContain("예상 수수료");
+    expect(profit.basis).toContain(`₩${PROFIT!.feeAmountKrw.toLocaleString("ko-KR")}`);
+    // 확정 전에는 그 뺄셈의 기준이 권장 판매가라는 사실까지 말한다 —
+    // 상세 계산의 「예상 이익(최종 판매가격 기준)」과 같은 기준이다.
+    const beforePlan = buildPriceChain({ ...CHAIN, sellerPlannedPriceKrw: null }).find(
+      (r) => r.key === "EXPECTED_PROFIT",
+    )!;
+    expect(beforePlan.basis).toContain("권장 판매가 − 착지원가");
   });
 });
 
@@ -178,8 +229,6 @@ describe("판매가를 정하지 않아도 원가 사슬은 끊기지 않는다"
   const noPlan = buildPriceChain({
     ...CHAIN,
     sellerPlannedPriceKrw: null,
-    expectedProfitKrw: null,
-    platformFeeKrw: null,
     marginPercent: 22.4,
     marginBasis: "RECOMMENDED",
   });
@@ -374,11 +423,11 @@ describe("① 원본 상품 가격은 언제나 원본 통화가 먼저다", () 
   it("읽는 순서는 ① 원본 → ② 한국 경쟁 → ③ 수익성 → ④ 근거다", () => {
     // 순서가 제목 안에 적혀 있어야 누가 블록을 옮겼을 때 번호가 먼저 어긋난다.
     expect(Object.values(PRICE_SECTION_TITLE)).toEqual([
-      "① 원본 상품 가격",
+      "원본 상품",
       "🌎 판매자 글로벌 시장 가격",
-      "② 📊 한국 시장 경쟁가격",
-      "③ 💰 수익성",
-      "④ 🔎 판단 근거",
+      "한국 시장 경쟁가격",
+      "수익성",
+      "🔎 판단 근거",
     ]);
     // US/DE/FR는 **같은 판매자**의 시장이다 — 남의 해외 가격 비교가 아니다.
     expect(PRICE_SECTION_TITLE.SELLER_GLOBAL_MARKET).not.toContain("해외 가격 비교");
@@ -392,15 +441,14 @@ describe("① 원본 상품 가격은 언제나 원본 통화가 먼저다", () 
    * 사실이라 본문의 읽는 순서에 속하지 않는다 — 누군가 그 카드를 본문으로
    * 되돌리려 하면 번호부터 다시 붙여야 하고, 이 테스트가 먼저 막는다.
    */
-  it("판매자 글로벌 시장만 번호가 없다 — 본문 순서에 속하지 않는다", () => {
-    expect(PRICE_SECTION_TITLE.SELLER_GLOBAL_MARKET).not.toMatch(/[①②③④⑤]/);
-    const numbered = Object.entries(PRICE_SECTION_TITLE).filter(([, title]) => /^[①②③④]/.test(title));
-    expect(numbered.map(([key]) => key)).toEqual([
-      "ORIGINAL",
-      "DOMESTIC_COMPETITION",
-      "PROFITABILITY",
-      "DECISION_EVIDENCE",
-    ]);
+  it("어느 제목에도 번호가 없다 — 건너뛸 수 있는 번호는 결함으로 읽힌다", () => {
+    // MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 번호는 순서를 감시하는 장치였지만,
+    // 국내 비교상품이 0건이면 ②가 통째로 사라져 셀러는 ①에서 ③으로 건너뛴
+    // 화면을 본다. 그 순간 질문이 "팔까"에서 "②가 왜 없지"로 바뀐다.
+    // 순서는 이 표의 나열 순서가 계속 정한다(바로 위 테스트가 고정한다).
+    for (const title of Object.values(PRICE_SECTION_TITLE)) {
+      expect(title, `${title}에 번호가 남아 있다`).not.toMatch(/[①②③④⑤]/);
+    }
   });
 });
 

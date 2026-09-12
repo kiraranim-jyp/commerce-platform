@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { MarketComparisonView } from "../DomesticPriceIntelligencePanel";
 import { buildGlobalMarketCard } from "../global-market";
 import { buildMarketComparison } from "../market-comparison";
-import { buildMarketContext, PRICE_SECTION_TITLE } from "../price-hierarchy";
+import { buildMarketContext, PRICE_MEANING_LABEL, PRICE_SECTION_TITLE } from "../price-hierarchy";
 import { miBodySource, readSourceAt, stripComments } from "./source-text";
 
 /**
@@ -84,7 +84,12 @@ describe("② 한국 시장 경쟁가격은 비교 대상이 없으면 DOM에 �
     const html = renderToStaticMarkup(createElement(MarketComparisonView, { comparison, context }));
     expect(html).toContain(PRICE_SECTION_TITLE.DOMESTIC_COMPETITION);
     expect(html).toContain("₩116,600");
-    expect(html).toContain("VS");
+    // MI-FINAL-UX-3(CEO 지시, 2026-09-12) — VS 두 칸이 한 칸이 됐다. 왼쪽이던
+    // "원본 판매자 한국 표시가"는 MI/PRICE-2 이후 바로 위 「원본 상품」이 자기
+    // 라벨로 이미 말한다 — 두 칸이 같은 모양·같은 국기로 나란히 서면 "내가 살
+    // 값"과 "내가 경쟁할 값"이 한 카드에서 다시 섞인다.
+    expect(html).not.toContain("VS");
+    expect(html).not.toContain(PRICE_MEANING_LABEL.KR_MARKET_PRICE);
   });
 
   it("게이트는 뷰 안에 있고, 호출부에는 남아 있지 않다", () => {
@@ -192,7 +197,9 @@ describe("근거 문장은 지워지지 않고 툴팁이 된다", () => {
       panel.indexOf("export function MarketComparisonView("),
       panel.indexOf("function GlobalMarketHint("),
     );
-    expect(comparisonView).toContain("title={comparison.versusNote}");
+    // MI-FINAL-UX-3 — versusNote는 "무엇과 무엇을 비교하는가"를 말하는데,
+    // 비교가 한 칸으로 줄면서 설명할 대상이 없어졌다. 칸별 기준(title)은 그대로다.
+    expect(comparisonView).not.toContain("title={comparison.versusNote}");
     expect(comparisonView).not.toContain("※ {comparison.versusNote}");
     expect(comparisonView).toContain("title={(side.value ? side.basis : (side.empty?.reason ?? side.basis)) ?? undefined}");
   });
@@ -224,7 +231,9 @@ describe("조회 실패는 카드가 아니라 한 줄이다", () => {
   it("글로벌 시장을 못 본 것도 조용한 한 줄이다", () => {
     const hint = panel.slice(panel.indexOf("function GlobalMarketHint"), panel.indexOf("function GlobalMarketCardView"));
     expect(hint).not.toMatch(/warning|error/);
-    expect(hint).toContain("ⓘ {GLOBAL_MARKET_UNAVAILABLE_NOTE}");
+    // MI-FINAL-UX-3 — 그 한 줄은 이제 본문이 아니라 팝오버 안에 있다. 본문에
+    // 남는 것은 두 상태 모두 이름 하나(ⓘ 글로벌 시장 가격)다.
+    expect(hint).toContain("{GLOBAL_MARKET_UNAVAILABLE_NOTE}");
   });
 });
 

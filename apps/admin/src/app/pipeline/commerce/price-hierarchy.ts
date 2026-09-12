@@ -1,6 +1,9 @@
 import { KR_TARGET_MARKET, type TargetMarket } from "./market-target";
 import { miEmptyState, type MiEmptyState } from "./mi-empty-state";
 import { formatKrwAmount, formatOriginAmount } from "./mi-headline";
+// MI-FINAL-UX-3 — 요약 세 줄과 상세 계산이 같은 함수의 결과를 쓴다는 것을
+// 타입으로 못박는다(이 파일은 여전히 아무것도 계산하지 않는다 — 고르기만 한다).
+import type { ProfitabilityNumbers } from "./profitability";
 
 /**
  * UX 2.3(CEO 지시, 2026-09-11) — 화면의 "가격"은 한 종류가 아니다.
@@ -70,13 +73,14 @@ import { formatKrwAmount, formatOriginAmount } from "./mi-headline";
  * 새로 계산하는 것은 없고, 이미 저장된 세 값(금액·통화·환율)을 고를 뿐이다.
  */
 
-/** 화면에 뜨는 여덟 가지 "가격". 새 값이 생기면 여기에 키를 더해야 한다. */
+/** 화면에 뜨는 아홉 가지 "가격". 새 값이 생기면 여기에 키를 더해야 한다. */
 export type PriceMeaning =
   | "SOURCE_ORIGINAL_PRICE"
   | "SOURCE_PRICE_KRW"
   | "LANDED_COST"
   | "KR_MARKET_PRICE"
   | "DOMESTIC_COMPARABLE_PRICE"
+  | "RECOMMENDED_PRICE"
   | "SELLER_PLANNED_PRICE"
   | "EXPECTED_PROFIT"
   | "EXPECTED_MARGIN";
@@ -107,8 +111,15 @@ export const PRICE_MEANING_LABEL: Record<PriceMeaning, string> = {
   // 않는다 — 하나는 내가 살 값이고 하나는 남이 파는 값이다.
   KR_MARKET_PRICE: "원본 판매자 한국 표시가",
   DOMESTIC_COMPARABLE_PRICE: "국내 비교상품",
+  // MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 착지원가 / (1 − 수수료% − 마진%). 상세
+  // 계산(PriceCalculationDetail)이 사슬의 마지막 줄로 답하던 값이 이제 수익성
+  // 요약의 한 줄이기도 하다. 두 자리가 같은 문자열을 쓰는 것이 중요하다 —
+  // 한쪽만 "권장 판매가격"이라고 부르면 셀러는 다른 값이라고 읽는다.
+  RECOMMENDED_PRICE: "권장 판매가",
   SELLER_PLANNED_PRICE: "내 판매가격",
-  EXPECTED_PROFIT: "예상 수익",
+  // MI-FINAL-UX-3 — "예상 수익"에서 "예상 이익"으로. 상세 계산이 처음부터 쓰던
+  // 말이 이쪽이고, 같은 뺄셈의 결과를 두 화면이 다른 이름으로 부를 이유가 없다.
+  EXPECTED_PROFIT: "예상 이익",
   EXPECTED_MARGIN: "예상 마진",
 };
 
@@ -141,13 +152,27 @@ export const PRICE_LINE_LABEL: Record<PriceLineKey, string> = {
  * 것이다. 값이 사라진 것이 아니라 층이 바뀌었다: 본문 한 줄(ⓘ) → 펼치면
  * 시장별 원자료.
  */
+/**
+ * ── MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 번호를 뗀다 ────────────────────────
+ * 번호는 순서를 감시하는 장치였지만, 화면에서는 **빠진 번호를 세는 장치**가
+ * 됐다. 국내 비교상품이 0건이면 ②가 통째로 사라지고 셀러는 ①에서 ③으로
+ * 건너뛴 화면을 본다 — 그 순간 질문이 "이 상품을 팔까"에서 "②가 왜 없지,
+ * 내가 뭘 안 했나"로 바뀐다. 블록이 조건부로 사라지는 화면에서 고정 번호는
+ * 읽는 순서가 아니라 결함을 가리킨다.
+ *
+ * 순서 자체는 여전히 이 표의 **나열 순서**가 정하고, 화면이 그 순서대로만
+ * 쓴다는 것은 테스트가 고정한다(번호 없이도 감시는 남는다).
+ *
+ * 이모지도 함께 뗐다. 제목 셋이 전부 한 단어짜리 명사가 되면 첫 화면은 이름
+ * 셋과 숫자 몇 개로만 읽힌다 — 3초 안에 팔지 말지를 정하는 화면의 모양이다.
+ */
 export const PRICE_SECTION_TITLE = {
-  ORIGINAL: "① 원본 상품 가격",
-  /** 번호 없음 — 본문 카드가 아니라 ① 아래의 ⓘ 한 줄과 그 펼침의 제목이다. */
+  ORIGINAL: "원본 상품",
+  /** 본문 카드가 아니라 원본 상품 아래의 ⓘ 한 줄과 그 팝오버의 제목이다. */
   SELLER_GLOBAL_MARKET: "🌎 판매자 글로벌 시장 가격",
-  DOMESTIC_COMPETITION: "② 📊 한국 시장 경쟁가격",
-  PROFITABILITY: "③ 💰 수익성",
-  DECISION_EVIDENCE: "④ 🔎 판단 근거",
+  DOMESTIC_COMPETITION: "한국 시장 경쟁가격",
+  PROFITABILITY: "수익성",
+  DECISION_EVIDENCE: "🔎 판단 근거",
 } as const;
 
 /** 화면에 그대로 쓰는 한 줄. mi-headline.HeadlineNumber와 같은 모양이다 —
@@ -199,20 +224,40 @@ export type ChainRole = "SOURCE" | "CONVERT" | "ADD" | "TOTAL" | "PLAN" | "RESUL
  * 화면의 한 조각이다. ④ 요약에 남는 것은 ①이 답하지 못하는 넷뿐이다:
  * 착지원가 · 내 판매가격 · 예상 수익 · 예상 마진.
  *
- * 다만 원가 기준이 "판매자의 한국 표시가"인 상품(costBasisIsKrMarket)은
- * 예외다. 그때 ①은 스냅샷의 원본 통화 가격을 세우기 때문에, 실제로 원가에
- * 들어간 한국 표시가를 ①이 대신 말해주지 못한다 — 그 줄만 SUMMARY로 남긴다
- * (buildPriceChain의 해당 분기에서 tier를 직접 지정한다).
+ * ── MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 요약은 셋이다 ────────────────────
+ * 착지원가 · 권장 판매가 · 예상 이익. 셋 다 상세 계산(PriceCalculationDetail)이
+ * 이미 그리고 있는 값이고, 이제 **같은 함수**(profitability.ts)에서 온다.
+ *
+ * 요약에서 내려간 둘은 이렇다:
+ *   내 판매가격  ② 시장 판단 단계에서는 아직 확정된 값이 없다. 프로덕션에서
+ *                 이 줄이 실제로 보여준 것은 언제나 ⚪ 확인 불가였고, "팔지
+ *                 말지"를 묻는 화면에서 그 칩은 판정이 흔들린 것처럼 읽혔다.
+ *                 그 자리를 대신하는 것이 권장 판매가다 — 상세 계산도 확정
+ *                 전에는 정확히 그 값으로 이익을 계산한다.
+ *   예상 마진    판정 배지("설정 마진 기준 판매 가능")가 같은 사실을 이미
+ *                 말한다. 숫자와 그 숫자에 대한 판정이 나란히 서면 셀러는
+ *                 둘 중 무엇이 결론인지 다시 고른다.
+ * 둘 다 사슬에는 그대로 남는다(DETAIL) — 지운 것이 아니라 층이 바뀌었다.
+ *
+ * 원가 기준이 "판매자의 한국 표시가"인 상품(costBasisIsKrMarket)도 더 이상
+ * 예외가 아니다. MI/PRICE-2 이후 그 관측은 ① 원본 상품이 자기 라벨(원본 판매자
+ * 한국 표시가)을 달고 직접 말한다 — 사슬이 한 번 더 말하면 같은 값이 한 카드에
+ * 두 번 선다.
  */
 export type ChainTier = "SUMMARY" | "DETAIL";
 
+/**
+ * 자리(role)만으로 정해지는 기본 층. 요약에 서는 셋은 이 표가 아니라
+ * buildPriceChain이 직접 지정한다 — 같은 role(PLAN/RESULT)에 요약 줄과 상세
+ * 줄이 함께 있기 때문이다(권장 판매가 vs 내 판매가격, 예상 이익 vs 예상 마진).
+ */
 const TIER_BY_ROLE: Record<ChainRole, ChainTier> = {
   SOURCE: "DETAIL",
   CONVERT: "DETAIL",
   ADD: "DETAIL",
   TOTAL: "SUMMARY",
-  PLAN: "SUMMARY",
-  RESULT: "SUMMARY",
+  PLAN: "DETAIL",
+  RESULT: "DETAIL",
 };
 
 export interface PriceChainRow extends PriceLine {
@@ -272,20 +317,35 @@ export interface PriceChainInput {
   exchangeRateIsEstimate: boolean;
   /** cost.shippingKrw — 국제배송비(판매자 기본값, 추정). */
   internationalShippingKrw: number | null;
-  /** cost.landedCostKrw — 환산가 + 국제배송비. */
-  landedCostKrw: number | null;
-  /** currentPrice.sellingPriceKrw — 판매자가 실제로 정한 값. 추천가를 여기에 넣지 않는다. */
+  /**
+   * currentPrice.sellingPriceKrw — 판매자가 실제로 정한 값. 권장가를 여기에 넣지 않는다.
+   *
+   * MI-FINAL-UX-3 — 여기 함께 있던 landedCostKrw · expectedProfitKrw ·
+   * platformFeeKrw 셋을 지웠다. 서버가 그 값들을 낼 수 있는 조건(판매가 확정)과
+   * 상세 계산이 숫자를 그리는 조건(원본 가격 확인)이 서로 달라서, 두 출처가
+   * 한 사슬에 섞이면 요약과 상세가 다른 숫자를 말하는 상태가 구조적으로
+   * 되살아난다. 넘길 수 있는 인자가 없으면 그 경로도 없다 —
+   * 이 저장소가 "배지를 지우는 대신 인자를 지운" 것과 같은 장치다.
+   */
   sellerPlannedPriceKrw: number | null;
-  /** unifiedDecision.estimatedProfitKrw.value */
-  expectedProfitKrw: number | null;
-  /** unifiedDecision.platformFeeKrw.value — 수익 계산에서 추가로 빠진 금액. */
-  platformFeeKrw: number | null;
   /** unifiedDecision.dataCompleteness === "INCOMPLETE" — 아직 모르는 비용이 있다. */
   costIncomplete: boolean;
   /** unifiedDecision.marginPercent.value 또는 recommendation.estimatedMarginPercent. */
   marginPercent: number | null;
   /** 위 마진이 어느 판매가 기준인가. 두 마진을 같은 라벨로 내보내지 않기 위한 값이다. */
   marginBasis: "PLANNED" | "RECOMMENDED" | null;
+  /**
+   * MI-FINAL-UX-3(CEO 지시, 2026-09-12) — [ⓘ 가격 계산 기준]이 그리는 바로 그
+   * 숫자들. 요약 세 줄(착지원가 · 권장 판매가 · 예상 이익)은 전부 여기서만
+   * 나온다.
+   *
+   * 서버 값(landedCostKrw 등)을 폴백으로 두지 않는 이유가 중요하다. 두 출처를
+   * 섞으면 "요약은 서버 환율, 상세는 방금 조회한 환율"인 상품에서 두 화면이
+   * 다른 착지원가를 말하게 되고, 그건 이 지시가 고치라고 한 어긋남 그 자체다.
+   * 상세가 숫자를 못 그리는 상태(원본 가격 미확인)에서는 null이고, 그때는 요약도
+   * 빈 상태 어휘를 쓴다 — 두 화면이 같은 조건에서 같이 비어 있다.
+   */
+  profitability: ProfitabilityNumbers | null;
 }
 
 function krwLine(
@@ -348,10 +408,10 @@ export function buildPriceChain(input: PriceChainInput): PriceChainRow[] {
     rows.push({
       key: "KR_MARKET_PRICE",
       role: "SOURCE",
-      // MI/PRICE-1 — 이 줄만 요약에 남는다. ①은 이 경우 스냅샷의 원본 통화
-      // 가격을 세우므로, 실제로 착지원가에 들어간 한국 표시가를 화면 어디서도
-      // 대신 말해주지 않는다(위 ChainTier 주석의 예외 하나).
-      tier: "SUMMARY",
+      // MI-FINAL-UX-3 — 예전에는 이 줄만 요약에 남겼다. MI/PRICE-2가 같은 관측을
+      // ① 원본 상품의 "원본 판매자 한국 표시가" 줄로 올린 뒤로는 화면에 두 번
+      // 서게 되므로 상세로 되돌린다(사실이 사라지는 것이 아니라 한 번만 선다).
+      tier: TIER_BY_ROLE.SOURCE,
       label: PRICE_MEANING_LABEL.KR_MARKET_PRICE,
       basis: [
         "이 판매처가 한국 방문자에게 직접 보여주는 가격 · 환율 환산이 아닙니다",
@@ -420,18 +480,36 @@ export function buildPriceChain(input: PriceChainInput): PriceChainRow[] {
   );
 
   // ④ 합계 — 여기까지가 "내가 치르는 돈"이다.
-  rows.push(
-    krwLine(
+  //    MI-FINAL-UX-3 — 금액은 상세 계산과 **같은 breakdown**에서 온다. 서버의
+  //    cost.landedCostKrw를 폴백으로 두지 않는 이유는 위 profitability 주석 그대로다.
+  const profit = input.profitability;
+  rows.push({
+    ...krwLine(
       "LANDED_COST",
       "TOTAL",
-      input.landedCostKrw,
+      profit?.landedCostKrw ?? null,
       input.costBasisIsKrMarket ? "한국 표시가 + 국제배송비" : "원화 환산 + 국제배송비",
       "원본 가격을 확인하지 못해 원가를 계산할 수 없습니다",
     ),
-  );
+    tier: "SUMMARY",
+  });
 
-  // ⑤ 내가 정하는 값. 추천가를 절대 여기에 넣지 않는다 — 넣는 순간 셀러는
-  //    "이미 이 가격으로 팔기로 되어 있다"고 읽는다(추천가는 별도 줄에 있다).
+  // ⑤ 권장 판매가 — 착지원가 / (1 − 수수료% − 마진%). 이 값이 요약에 서는
+  //    이유는 ② 시장 판단 단계에서 셀러가 아직 아무 가격도 확정하지 않았기
+  //    때문이다. 상세 계산도 그 상태에서는 정확히 이 값으로 이익을 계산한다 —
+  //    요약과 상세가 같은 가격을 말한다는 것이 이 줄의 존재 이유다.
+  rows.push({
+    key: "RECOMMENDED_PRICE",
+    role: "PLAN",
+    tier: "SUMMARY",
+    label: PRICE_MEANING_LABEL.RECOMMENDED_PRICE,
+    basis: "착지원가 + 설정 가격정책(수수료율 · 목표 마진)에서 역산한 값",
+    value: profit != null ? formatKrwAmount(profit.recommendedPriceKrw) : null,
+    empty: profit != null ? null : miEmptyState("UNVERIFIABLE", "원본 가격을 확인하지 못해 계산할 수 없습니다"),
+  });
+
+  // ⑥ 내가 정하는 값. 추천가를 절대 여기에 넣지 않는다 — 넣는 순간 셀러는
+  //    "이미 이 가격으로 팔기로 되어 있다"고 읽는다(권장가는 바로 위 줄이다).
   rows.push({
     key: "SELLER_PLANNED_PRICE",
     role: "PLAN",
@@ -445,28 +523,32 @@ export function buildPriceChain(input: PriceChainInput): PriceChainRow[] {
         : miEmptyState("UNVERIFIABLE", "아직 판매가를 정하지 않았습니다"),
   });
 
-  // ⑥ 그래서 남는 값. 착지원가만 빼는 게 아니라 플랫폼 수수료(와 확인된
-  //    국내 배송원가)까지 빠진 값이라, 화면에서 "판매가 − 착지원가"로 암산했을 때
-  //    맞지 않는다. 그 차이를 숨기지 않고 기준 문장에 적는다.
-  //    MI-COST-POLICY-1(2026-09-12) — 여기 적혀 있던 관부가세는 빠졌다. 화면의
-  //    착지원가(computePriceBreakdown)와 예상 수익(computeUnifiedPriceDecision)이
-  //    어긋나던 원인 하나가 관부가세였는데, 이제 그 차이는 국내 배송원가뿐이다.
+  // ⑦ 그래서 남는 값. 착지원가만 빼는 게 아니라 플랫폼 수수료까지 빠진 값이라,
+  //    화면에서 "판매가 − 착지원가"로 암산했을 때 맞지 않는다. 그 차이를 숨기지
+  //    않고 기준 문장에 적는다.
+  //    MI-COST-POLICY-1(2026-09-12) — 여기 적혀 있던 관부가세는 빠졌다.
+  //    MI-FINAL-UX-3 — 기준 문장의 주어가 "내 판매가"에서 "실제로 팔 값"으로
+  //    바뀌었다. 확정 전에는 그 값이 권장 판매가이고, 상세 계산의 「예상
+  //    이익(최종 판매가격 기준)」이 말하는 것과 정확히 같은 기준이다.
   const profitBasis = [
-    "내 판매가 − 확인된 원가 − 플랫폼 수수료",
-    input.platformFeeKrw != null ? `수수료 ${formatKrwAmount(input.platformFeeKrw)}` : null,
+    profit != null && input.sellerPlannedPriceKrw == null
+      ? "권장 판매가 − 착지원가 − 예상 수수료"
+      : "최종 판매가 − 착지원가 − 예상 수수료",
+    profit != null ? `예상 수수료 ${formatKrwAmount(profit.feeAmountKrw)}` : null,
     input.costIncomplete ? "아직 확인되지 않은 비용이 있어 실제 수익은 더 낮을 수 있습니다" : null,
   ]
     .filter(Boolean)
     .join(" · ");
-  rows.push(
-    krwLine(
+  rows.push({
+    ...krwLine(
       "EXPECTED_PROFIT",
       "RESULT",
-      input.expectedProfitKrw,
+      profit?.expectedProfitKrw ?? null,
       profitBasis,
-      "판매가를 정하면 예상 수익을 계산합니다",
+      "원본 가격을 확인하면 예상 이익을 계산합니다",
     ),
-  );
+    tier: "SUMMARY",
+  });
 
   rows.push({
     key: "EXPECTED_MARGIN",

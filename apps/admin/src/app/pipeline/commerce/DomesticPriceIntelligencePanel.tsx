@@ -71,6 +71,12 @@ import {
   NO_DOMESTIC_COMPARABLE_NOTE,
   PRICE_BASIS_TOOLTIP,
 } from "./mi-market-case";
+// MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 되물음이 답하는 것은 "왜 이 판정인가"
+// 하나이고, 그 답은 네 줄이다. 나머지는 그 아래 한 단계 더 들어간다.
+import { buildMiVerdictExplanation, MI_VERDICT_EVIDENCE_TOGGLE_LABEL } from "./mi-verdict-copy";
+// MI-FINAL-UX-3 — 수익성 요약 세 줄은 [ⓘ 가격 계산 기준]이 그리는 바로 그
+// 숫자다. 화면이 그 값을 다시 만들지 않는다는 것을 타입으로 못박는다.
+import type { ProfitabilityNumbers } from "./profitability";
 // UX 2.1 — 이 패널의 내부 진행 상태를 하나의 작업 Flow(② 시장 판단)로 올려보낸다.
 import type { MarketSignal as WorkflowMarketSignal } from "./workflow";
 // UX 2.2 — 이 패널을 어느 무게로 그릴지는 화면이 아니라 단계가 정한다.
@@ -1059,15 +1065,14 @@ function MiSummaryNumber({ number }: { number: HeadlineNumber | undefined }) {
  * 가로줄이 그대로 보여준다: 관계는 살리고 라벨은 하나씩 유지한다.
  *
  * 계산은 하지 않는다 — price-hierarchy.ts가 고른 값을 순서대로 그리기만 한다.
+ *
+ * ── MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 줄머리 기호를 뗐다 ────────────────
+ * 그 기호들은 사슬 전체(원본 → 환산 + 배송비 = 착지원가)가 한 화면에 있을 때만
+ * 관계를 말한다. 지금 이 뷰가 그리는 것은 요약 셋(착지원가 · 권장 판매가 ·
+ * 예상 이익)뿐이라, 첫 줄에 붙은 "="가 가리키는 앞 항이 화면에 없다 — 아무것도
+ * 안 더했는데 합계 기호만 서 있는 셈이다. 사슬의 관계는 그 사슬이 실제로
+ * 그려지는 곳([ⓘ 가격 계산 기준]의 상세 계산)이 그대로 보여준다.
  */
-const CHAIN_ROLE_MARK: Record<PriceChainRow["role"], string> = {
-  SOURCE: "",
-  CONVERT: "→",
-  ADD: "+",
-  TOTAL: "=",
-  PLAN: "",
-  RESULT: "",
-};
 
 function PriceChainView({ rows }: { rows: PriceChainRow[] }) {
   /**
@@ -1114,9 +1119,6 @@ function PriceChainView({ rows }: { rows: PriceChainRow[] }) {
             } ${plan ? "mt-1 border-t border-dashed border-current/25 pt-1.5" : ""}`}
           >
             <dt className="flex min-w-0 items-baseline gap-1">
-              <span className="w-3 shrink-0 text-[11px] text-text-tertiary" aria-hidden>
-                {CHAIN_ROLE_MARK[row.role]}
-              </span>
               <span
                 className={
                   total || plan || result
@@ -1261,17 +1263,23 @@ export function MarketComparisonView({
   // 숨겼는데 판정은 비교한 것으로 나오는 날이 온다).
   if (!comparison.hasComparable) return null;
   return (
-    <div className="rounded-md border border-current/20 bg-background/40 p-2.5" title={comparison.versusNote}>
+    <div className="rounded-md border border-current/20 bg-background/40 p-2.5">
       <p className="text-[11px] font-semibold text-text-primary">{comparison.title}</p>
-      <div className="mt-1.5 flex flex-wrap items-stretch gap-2">
-        <ComparisonSideView flag={context.market.flag} side={comparison.seller} />
-        {/* 기호가 "이 둘은 비교 대상"이라고 말한다. 가운데 놓여야 두 칸이 서로
-            다른 사실이라는 것이 모양만으로 읽힌다. */}
-        <div className="flex items-center text-[11px] font-bold text-text-tertiary">{comparison.versus}</div>
+      {/* ── MI-FINAL-UX-3(CEO 지시, 2026-09-12) — VS 두 칸을 한 칸으로 ──────────
+          왼쪽 칸(원본 판매자 한국 표시가)을 뺀다. 그 값은 MI/PRICE-2 이후
+          바로 위 「원본 상품」이 자기 라벨을 달고 이미 말하고 있어서, 여기
+          한 번 더 세우면 같은 관측이 한 화면에 두 번 뜬다. 게다가 두 칸이
+          같은 모양·같은 국기로 나란히 서면 "내가 살 값"과 "내가 경쟁할 값"이
+          한 카드 안에서 다시 섞인다 — 이 블록이 VS로 갈라놓으려던 바로 그
+          혼동을, 모양이 되돌려 놓고 있었다.
+
+          이 카드가 답하는 질문은 하나로 줄어든다: **한국에서 다른 사람들은
+          얼마에 파는가.** 원본 판매자의 한국 표시가와 나란히 놓고 비교하는
+          일은 셀러가 두 블록을 읽으면서 자연히 한다(같은 화면, 세 줄 위). */}
+      <div className="mt-1.5">
         <ComparisonSideView flag={context.market.flag} side={comparison.domestic} />
       </div>
-      {/* MI-POLISH-2 — ※ versusNote(무엇과 무엇을 비교하는가)는 블록 title로
-          올라갔다. 아래 남는 것은 근거의 두께 한 줄과, 지울 수 없는 경고뿐이다. */}
+      {/* MI-POLISH-2 — 아래 남는 것은 근거의 두께 한 줄과, 지울 수 없는 경고뿐이다. */}
       <p className="mt-1 text-[10px] text-text-tertiary">{context.sellerCount.label}</p>
       {stockNote}
       {/* UX 2.3의 핵심 문장. "시장 비교 불가 ≠ 수익성 계산 불가"를 화면이 직접
@@ -1365,6 +1373,26 @@ function ComparisonSideView({ flag, side }: { flag: string; side: MarketComparis
  * 시장별 가격은 사라지지 않는다 — 툴팁(한 줄 요약)과 펼침(원자료)에 그대로
  * 있다. 이 파일의 규칙 그대로다: 본문은 판단 숫자, 툴팁은 근거, 펼침은 원자료.
  */
+/**
+ * ── MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 이름은 사라지지 않는다 ──────────────
+ * 대표님 프로덕션 화면에는 원본 가격 옆에 ⓘ 글로벌 시장 가격이 **없었다**.
+ * 지운 적은 없는데 없었던 이유가 이 함수 안에 있었다: 관측이 하나도 없을 때
+ * (summaryLine == null) 이 컴포넌트는 버튼 대신 **다른 문장**을 본문 한 줄로
+ * 그렸다. 그 조건이 프로덕션의 대부분이다 — 다른 시장 가격을 만드는 장치는
+ * Shopify Markets probe 하나뿐이고, handle을 못 뽑는 사이트에서는 관측이 아예
+ * 생기지 않는다(빈 배열). 즉 "데이터가 있는 화면"을 전제로 쓴 보고와 "데이터가
+ * 없는 화면"인 실제가 둘 다 참이었다.
+ *
+ * 그래서 두 상태를 같은 모양으로 만든다. 본문에 서는 것은 언제나 **이름
+ * 하나**(ⓘ 글로벌 시장 가격 ▸)이고, 값이 있든 없든 그 이름은 자리를 지킨다.
+ * 없다는 사실은 팝오버 안에서 한 줄로 말한다 — 셀러가 물었을 때만 답하는 자리다.
+ *
+ * ── 왜 팝오버인가 ───────────────────────────────────────────────────────
+ * 예전에는 펼침이 본문 흐름 안의 카드였다. 그러면 눌렀을 때 판정 카드가 통째로
+ * 아래로 밀리고, 원본 가격과 수익성 사이에 시장 목록이 끼어든다 — 층을 내렸다고
+ * 말하면서 표면은 그대로 늘어나는 상태다. absolute로 띄우면 본문 높이가 한 줄도
+ * 늘지 않는다("never a card, never a new body row").
+ */
 function GlobalMarketHint({
   card,
   summaryLine,
@@ -1373,48 +1401,57 @@ function GlobalMarketHint({
 }: {
   card: GlobalMarketCard;
   /** 시장 줄들을 이어 붙인 한 줄. global-market.ts가 완성한 문자열 그대로다.
-   * 본문에 그리지 않고 툴팁으로만 쓴다(펼치지 않아도 값을 볼 수 있는 자리). */
+   * 본문에 그리지 않고 툴팁/팝오버로만 쓴다. 관측이 없으면 null이다. */
   summaryLine: string | null;
   /** 시장별 원자료를 펼쳤는가. */
   open: boolean;
   onToggle: () => void;
 }) {
-  // 조용한 한 줄. 상태 칩(⚪)도 쓰지 않는다 — 이 사실은 판단의 빈 칸이 아니라
-  // 그저 부가 정보의 부재라, 빈 상태 어휘를 쓰면 판정이 비어 보인다.
-  // 버튼으로 만들지 않는 이유: 눌러도 나올 것이 없는 토글은 셀러에게 "뭔가
-  // 숨겨져 있다"고 거짓말한다.
-  if (summaryLine == null) {
-    return <p className="text-[10px] text-text-tertiary">ⓘ {GLOBAL_MARKET_UNAVAILABLE_NOTE}</p>;
-  }
   return (
-    <div>
+    <div className="relative">
       <button
         type="button"
         onClick={onToggle}
         // 툴팁이 "그 숫자의 근거"를 맡는다 — 시장별 가격과, 이 줄이 국내
         // 비교상품도 착지원가도 아니라는 사실이 전부 여기 있다(본문 문장이 아님).
-        title={`${summaryLine} · ${card.note}`}
+        // 관측이 없을 때는 그 사실 한 줄이 같은 자리에 온다.
+        title={summaryLine ? `${summaryLine} · ${card.note}` : GLOBAL_MARKET_UNAVAILABLE_NOTE}
         className="flex flex-wrap items-baseline gap-x-1 text-left text-[10px] text-text-tertiary hover:underline"
       >
         <span className="font-medium">ⓘ {GLOBAL_MARKET_HINT_LABEL}</span>
         <span aria-hidden>{caret(open)}</span>
       </button>
-      {open && <GlobalMarketCardView card={card} />}
+      {open && (
+        // 본문 흐름 밖에 뜬다 — 열어도 아래 블록이 밀리지 않는다.
+        <div className="absolute left-0 top-full z-20 mt-1 w-max max-w-[22rem] rounded-md border border-border bg-surface p-2.5 shadow-subtle">
+          {summaryLine ? (
+            <GlobalMarketCardView card={card} />
+          ) : (
+            // 관측이 없을 때 팝오버가 말하는 것은 이 한 줄뿐이다. 경고 상자도,
+            // 실패 로그도 쓰지 않는다 — 다른 시장 가격을 못 본 것은 판정의
+            // 실패가 아니고, 수익성은 이 줄이 비어도 그대로 계산된 채 남는다.
+            <p className="text-[11px] text-text-tertiary">{GLOBAL_MARKET_UNAVAILABLE_NOTE}</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 /**
- * 펼쳤을 때만 그려지는 원자료. 본문에서 내려온 것은 배치이지 사실이 아니다 —
+ * 팝오버 안에서만 그려지는 원자료. 본문에서 내려온 것은 배치이지 사실이 아니다 —
  * 시장별 줄·라벨·근거·신고 국가는 전부 그대로다.
  *
  * open/onToggle을 더 이상 받지 않는다. 이 뷰 자체가 이미 "펼친 상태"이므로
  * 자기 안에 두 번째 접힘을 갖는 순간 셀러는 같은 내용을 두 번 열어야 한다
  * (UX 2.4가 없애 둔 중첩 토글이 되살아난다).
+ *
+ * MI-FINAL-UX-3 — 자기 테두리를 버렸다. 팝오버가 이미 상자라서, 상자 안의
+ * 상자가 되면 한 사실에 테두리가 둘이 된다.
  */
 function GlobalMarketCardView({ card }: { card: GlobalMarketCard }) {
   return (
-    <div className="mt-1 rounded-md border border-current/20 bg-background/40 p-2.5">
+    <div>
       {card.rows.length === 0 ? (
         <p className="text-[11px] text-text-tertiary">
           {card.empty?.chip}
@@ -1539,6 +1576,7 @@ export function DomesticPriceIntelligencePanel({
   onOpenDetail,
   onCloseDetail,
   priceCalculationDetail = null,
+  profitability = null,
   openPriceDetailRequest = 0,
 }: {
   snapshotId: string;
@@ -1618,6 +1656,12 @@ export function DomesticPriceIntelligencePanel({
    * StageBody가 무거운 편집기를 ReactNode로 받는 것과 완전히 같은 규칙이다.
    */
   priceCalculationDetail?: React.ReactNode;
+  /**
+   * MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 위 슬롯이 그리는 숫자 셋. 수익성 요약이
+   * 상세 계산과 같은 값을 말하게 하는 유일한 통로다(MiPanelView의 같은 이름 prop
+   * 주석 참고). 여기서도 product를 받지 않는다 — 숫자만 지나간다.
+   */
+  profitability?: ProfitabilityNumbers | null;
   /**
    * 바깥에서 "가격이 왜 이 값인지 보여달라"는 요청이 올 때마다 1씩 올라가는 값
    * (③ 등록 준비의 확정 카드, 채널 화면의 [상품정보 가격 계산 →]).
@@ -1931,6 +1975,7 @@ export function DomesticPriceIntelligencePanel({
       snapshotOriginPrice={snapshotOriginPrice}
       presentation={presentation}
       priceCalculationDetail={priceCalculationDetail}
+      profitability={profitability}
       openPriceDetailRequest={openPriceDetailRequest}
       onCloseDetail={onCloseDetail}
       onOpenDetail={onOpenDetail}
@@ -1971,6 +2016,7 @@ export function MiPanelView({
   snapshotOriginPrice = null,
   presentation = "FULL",
   priceCalculationDetail = null,
+  profitability = null,
   openPriceDetailRequest = 0,
   onCloseDetail,
   onOpenDetail,
@@ -1986,6 +2032,15 @@ export function MiPanelView({
   snapshotOriginPrice?: { amount: number; currency: string } | null;
   presentation?: MiPresentation;
   priceCalculationDetail?: React.ReactNode;
+  /**
+   * MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 위 슬롯이 그리는 숫자들.
+   *
+   * 슬롯(ReactNode)만으로는 요약이 상세와 같은 값을 말할 수가 없다 — 이 패널은
+   * 그 노드 안을 읽을 수 없기 때문이다. 그래서 값만 따로 내려온다. product를
+   * 통째로 받지 않는다는 규칙은 그대로다(숫자 셋과 그 근거 셋뿐이고, 가격을
+   * 고쳐도 시장 분석이 다시 돌 배선은 여전히 없다).
+   */
+  profitability?: ProfitabilityNumbers | null;
   openPriceDetailRequest?: number;
   onCloseDetail?: () => void;
   onOpenDetail?: () => void;
@@ -2035,6 +2090,16 @@ export function MiPanelView({
    * 다섯 덩어리가 전부 여기로 들어온다 — 지운 것은 하나도 없다.
    */
   const [showMarketDetail, setShowMarketDetail] = useState(false);
+  /**
+   * MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 되물음 **안쪽**의 두 번째 단계.
+   *
+   * 「왜 이렇게 판단했나요?」가 답하는 것은 네 줄이고, 그 아래 있던 스무
+   * 덩어리(레이더 · 시장 신호 · 판단 근거 · 국내 비교상품 · 동일상품 근거 ·
+   * 재조회 · 안내 문단)는 전부 이 토글로 들어간다. 접힘을 하나 더 만드는 것이
+   * 이 파일의 규칙에 어긋나 보이지만 그렇지 않다 — 첫 화면의 접힘은 여전히
+   * 셋이고, 이 넷째는 이미 펼친 사람에게만 존재한다.
+   */
+  const [showMarketEvidence, setShowMarketEvidence] = useState(false);
   // UX-1C(CPO 지시, 2026-09-05) / MI 2.0 PHASE 1.2 — 원가 참고 숫자는 기본 접힘.
   const [showCalcDetail, setShowCalcDetail] = useState(false);
 
@@ -2178,12 +2243,12 @@ export function MiPanelView({
     exchangeRate: fx?.rate ?? null,
     exchangeRateIsEstimate: fx?.isEstimate ?? false,
     internationalShippingKrw: cost?.shippingKrw ?? null,
-    landedCostKrw: cost?.landedCostKrw ?? null,
-    // 추천가를 여기에 절대 넣지 않는다 — "내 판매가격"은 판매자가 정한 값만이다.
+    // 권장가를 여기에 절대 넣지 않는다 — "내 판매가격"은 판매자가 정한 값만이다.
     sellerPlannedPriceKrw: currentPrice.sellingPriceKrw,
-    expectedProfitKrw: unifiedDecision?.estimatedProfitKrw.value ?? null,
-    platformFeeKrw: unifiedDecision?.platformFeeKrw.value ?? null,
     costIncomplete: unifiedDecision?.dataCompleteness === "INCOMPLETE",
+    // MI-FINAL-UX-3 — 요약 세 줄(착지원가 · 권장 판매가 · 예상 이익)의 유일한
+    // 출처. 상세 계산과 같은 함수의 같은 결과라 두 화면이 갈라질 수 없다.
+    profitability,
     // 판매가가 있으면 그 기준 마진, 없으면 추천가 기준 마진 — 어느 쪽인지는
     // marginBasis가 라벨 옆에 밝힌다(같은 "예상 마진"이 두 사실이 되지 않게).
     marginPercent: unifiedDecision?.marginPercent.value ?? recommendation?.estimatedMarginPercent ?? null,
@@ -2561,36 +2626,27 @@ export function MiPanelView({
                 >
                   {PRICE_SECTION_TITLE.PROFITABILITY}
                 </p>
-                <PriceChainView rows={priceChain} />
-
                 {/* 판정 배지. CASE A/B/C/D는 여기서 **문구로만** 나온다 —
                     내부 이름이 화면에 닿는 경로가 mi-market-case.ts 한 곳뿐이라
                     "CASE B" 같은 글자가 새어 나갈 자리가 없다. A/B/C의 아이콘과
                     제목은 서버의 SELLER_FACING_COPY 그대로라, 카드 맨 위 헤드라인과
-                    같은 어휘를 쓴다(판정 하나에 어휘가 두 벌이 되지 않는다). */}
-                <p className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 text-[11px]">
-                  <span className="font-semibold text-text-primary">
-                    {profitVerdict.icon} {profitVerdict.note}
-                  </span>
-                  {/* 권장 판매가는 이 판정이 가리키는 **행동**이라 배지와 한 줄에
-                      선다. CASE C/D는 억지 추천가를 만들지 않으므로 이 칸 자체가
-                      없다 — "추천가 없음"이라고 적던 자리이고, 왜 없는지는 바로
-                      왼쪽 배지가 이미 말한다(같은 사실을 두 번 쓰지 않는다). */}
-                  {recommendation?.recommendedPrice != null && (
-                    <span className="text-text-secondary">
-                      🏷 최종 추천 판매가 ₩{recommendation.recommendedPrice.toLocaleString()}
-                    </span>
-                  )}
-                  {/* 추천 판정 자체가 아직 없는 상품(국내 관측 전)은 원가에서
-                      역산한 제안가만 있다. 라벨이 위와 다른 이유가 그것이다 —
-                      시장 경쟁력을 본 값이 아니라 내 원가에서 나온 값이라,
-                      같은 이름을 쓰면 근거의 강도가 화면에서 뭉개진다. */}
-                  {!recommendation && cost && (
-                    <span className="text-text-secondary">
-                      🏷 추천 판매가 ₩{cost.suggestedPriceKrw.toLocaleString()}
-                    </span>
-                  )}
+                    같은 어휘를 쓴다(판정 하나에 어휘가 두 벌이 되지 않는다).
+
+                    MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 배지가 숫자들 **위**로
+                    올라왔다. 셀러가 이 블록에서 먼저 읽어야 하는 것은 "팔아도
+                    되는가"이고, 세 숫자는 그 판정을 확인하는 값이다.
+
+                    같은 줄에 붙어 있던 🏷 두 갈래(최종 추천 판매가 /
+                    추천 판매가)도 뺐다. 바로 아래 「권장 판매가」 줄이 상세
+                    계산과 같은 값으로 그 자리를 대신한다 — 한 화면에 "이 가격에
+                    팔아라"가 둘이면 셀러는 어느 쪽을 등록할지 다시 고른다.
+                    시장가 기준 추천(recommendation.recommendedPrice)이 사라진
+                    것은 아니다: 되물음 아래 근거 영역의 sellingSummary가
+                    "권장 판매가 ₩…으로 등록을 진행하세요"로 그대로 말한다. */}
+                <p className="mb-1 text-[11px] font-semibold text-text-primary">
+                  {profitVerdict.icon} {profitVerdict.note}
                 </p>
+                <PriceChainView rows={priceChain} />
 
                 {/* MI/PRICE-1(CEO 지시, 2026-09-12) — ③의 **유일한** 접힘.
                     제품 전체에서 상세 계산이 그려지는 자리가 여기 하나다.
@@ -2676,10 +2732,42 @@ export function MiPanelView({
 
         {showMarketDetail && (
           <div className="rounded-md border border-border bg-background p-3 text-text-secondary">
+            {/* ── MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 되물음의 답은 네 줄이다 ──
+                이 접힘은 "왜 이 판정인가" 하나에 답한다. 지금까지는 그 자리에
+                화면의 나머지 절반(판정 설명 두 문장 · 👉 행동 · 근거 목록 ·
+                참고표 · 신호 3종 · 레이더 · 국내 비교상품 · 동일상품 근거 ·
+                안내 두 문단)이 전부 서 있었다 — 층은 내려갔지만 눌렀을 때
+                받는 것이 스무 덩어리면 되물음은 답이 아니라 두 번째 화면이다.
+
+                네 줄은 판정을 다시 내리지 않는다. 수익성 배지와 **같은
+                입력**(marketCase)에 이미 계산된 두 사실(비교가격이 있는가 ·
+                동일상품 근거인가)을 붙여 문장으로 옮길 뿐이다
+                (mi-verdict-copy.ts). 나머지는 한 단계 아래로 간다. */}
+            <ul className="space-y-0.5 text-text-secondary">
+              {buildMiVerdictExplanation({
+                marketCase: recommendation?.marketCase ?? null,
+                hasComparable: marketComparison.hasComparable,
+                evidenceBasis: domesticMarketSplit.basis,
+              }).map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+
+            {/* 레이더도 신호도 목록도 전부 이 아래다 — 지운 것은 하나도 없고,
+                한 번 더 물었을 때만 나온다("Radar expands only inside it,
+                on demand"). */}
+            <button
+              type="button"
+              onClick={() => setShowMarketEvidence((v) => !v)}
+              className="mt-2 block text-left text-[11px] text-primary hover:underline"
+            >
+              {caret(showMarketEvidence)} {MI_VERDICT_EVIDENCE_TOGGLE_LABEL}
+            </button>
+            {showMarketEvidence && (
+              <div className="mt-1.5 border-t border-border pt-2">
             {/* MI-TEXT-1(CEO 지시, 2026-09-12) — 첫 화면에서 내려온 두 문장.
-                판정을 설명하는 말이므로 상세의 **첫 줄**이어야 한다 — 근거
-                목록이나 숫자 뒤에 두면 "왜 이렇게 판단했나요?"를 눌러 놓고도
-                답을 찾아 스크롤해야 한다. 문구는 서버 값 그대로다. */}
+                MI-FINAL-UX-3에서 한 단계 더 내려왔다: 네 줄이 같은 질문에 더
+                짧게 답하므로, 이 긴 설명은 근거를 펼친 사람만 읽는다. */}
             <p className="mt-1.5 text-text-secondary">{representativeVerdict.description}</p>
             {/* MI-SIMPLIFY-1(CPO 지시, 2026-09-12) — 본문에서 내려온 두 문장.
                 ② 한국 시장 경쟁가격 블록이 통째로 사라졌을 때, 그 사실이 가는
@@ -3369,6 +3457,8 @@ export function MiPanelView({
           참고용 판단입니다 — 판매가는 자동으로 변경되지 않으며, 최종 결정은 직접 내려야 합니다. 가격경쟁력은
           등록 가능 여부와 무관합니다 — 마진이 낮거나 가격이 높아도 등록 자체는 막히지 않습니다.
         </p>
+              </div>
+            )}
           </div>
         )}
       </div>

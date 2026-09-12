@@ -81,11 +81,19 @@ describe("판정 카드 첫 화면은 결론 + 가격 세 블록 + 토글뿐이�
     expect(descriptionAt).toBeGreaterThan(detailOpenAt); // 접힘 블록 안이다
   });
 
-  it("그 문장은 접힘 상세의 첫 줄이다 — 눌러 놓고 답을 찾아 헤매지 않는다", () => {
-    const between = panel.slice(detailOpenAt, descriptionAt);
-    // 상세 시작과 문장 사이에 다른 데이터 블록이 끼어 있지 않다(주석만 있다).
+  it("접힘의 첫 줄은 네 줄 요약이고, 긴 설명은 그 아래 한 단계 더 들어간다", () => {
+    // MI-FINAL-UX-3(CEO 지시, 2026-09-12) — MI-TEXT-1이 여기로 내린 두 문장이
+    // 한 층 더 내려갔다. 되물음이 답해야 하는 것은 "왜 이 판정인가" 하나이고,
+    // 그 답은 네 줄이다(mi-verdict-copy.ts). 문장은 지워지지 않았다 — 근거를
+    // 펼친 사람만 읽는다.
+    const linesAt = panel.indexOf("buildMiVerdictExplanation({", detailOpenAt);
+    const evidenceGateAt = panel.indexOf("{showMarketEvidence && (", detailOpenAt);
+    expect(linesAt).toBeGreaterThan(detailOpenAt);
+    expect(evidenceGateAt).toBeGreaterThan(linesAt);
+    expect(descriptionAt).toBeGreaterThan(evidenceGateAt);
+    // 네 줄과 그 목록 사이에 다른 데이터 블록이 끼어 있지 않다(주석만 있다).
+    const between = panel.slice(detailOpenAt, linesAt);
     expect(between).not.toContain("<dl");
-    expect(between).not.toContain("<ul");
     expect(between).not.toContain("confidenceBasis");
   });
 

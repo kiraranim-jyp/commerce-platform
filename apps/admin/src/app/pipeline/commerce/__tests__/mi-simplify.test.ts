@@ -180,7 +180,12 @@ describe("글로벌 시장 가격은 툴팁·상세에 산다 — 본문 카드�
     const hint = panel.slice(panel.indexOf("function GlobalMarketHint"), panel.indexOf("function GlobalMarketCardView"));
     // 조회 실패를 판정의 실패처럼 그리지 않는다(노란 경고 = warning 계열 클래스).
     expect(hint).not.toMatch(/warning|error/);
-    expect(hint).toContain("ⓘ {GLOBAL_MARKET_UNAVAILABLE_NOTE}");
+    // MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 그 한 줄이 **본문에서 팝오버로**
+    // 옮겨갔다. 관측이 없을 때 본문의 ⓘ 이름을 문장으로 바꿔 치우던 분기가
+    // 바로 "대표님 화면에 ⓘ 글로벌 시장 가격이 없던" 원인이라, 이제 두 상태가
+    // 같은 버튼을 갖고 문장은 팝오버 안에만 있다.
+    expect(hint).toContain("{GLOBAL_MARKET_UNAVAILABLE_NOTE}");
+    expect(hint).toContain("ⓘ {GLOBAL_MARKET_HINT_LABEL}");
   });
 
   it("본문에 시장별 목록(ul/행)이 없다 — 카드가 아니라 한 줄이다", () => {
@@ -197,10 +202,14 @@ describe("글로벌 시장 가격은 툴팁·상세에 산다 — 본문 카드�
     // 남는 것은 이름 하나(ⓘ 글로벌 시장 가격)뿐이고 값은 마우스를 올리거나
     // 펼쳐야 나온다 — 카드가 한 줄이 됐어도 네 개의 가격이 본문에 늘어서
     // 있으면 층만 내려갔지 표면은 그대로다.
-    expect(hint).toContain("title={`${summaryLine} · ${card.note}`}");
+    // MI-FINAL-UX-3 — 관측이 없을 때도 같은 자리가 근거를 들고 있다(그 사실 한 줄).
+    expect(hint).toContain("title={summaryLine ? `${summaryLine} · ${card.note}` : GLOBAL_MARKET_UNAVAILABLE_NOTE}");
     expect(hint).toContain("ⓘ {GLOBAL_MARKET_HINT_LABEL}");
     expect(hint).not.toContain(">{summaryLine}<");
-    expect(hint).toContain("{open && <GlobalMarketCardView card={card} />}");
+    // MI-FINAL-UX-3 — 펼침은 본문 흐름 밖(absolute 팝오버)에 뜬다. 카드였을
+    // 때는 열 때마다 아래 블록이 통째로 밀렸다.
+    expect(hint).toContain("<GlobalMarketCardView card={card} />");
+    expect(hint).toContain("absolute left-0 top-full");
     // 기본은 접힘이다 — 펼침 상태가 렌더 기본값이 되면 카드가 되살아난다.
     expect(panel).toContain("const [showGlobalMarketDetail, setShowGlobalMarketDetail] = useState(false);");
   });
@@ -211,31 +220,36 @@ describe("글로벌 시장 가격은 툴팁·상세에 산다 — 본문 카드�
 });
 
 describe("③ 수익성은 판정이지 계산서가 아니다", () => {
-  const profit = body.slice(body.indexOf("{PRICE_SECTION_TITLE.PROFITABILITY}"), body.indexOf("{PRICE_SECTION_TITLE.DECISION_EVIDENCE}"));
+  // MI-POLISH-2에서 ④ 판단 근거가 접힘 안으로 내려간 뒤로 본문에는 그 제목이
+  // 없다. 그래서 이 블록의 끝은 본문의 바닥 한 줄(되물음)이다.
+  const profit = body.slice(body.indexOf("{PRICE_SECTION_TITLE.PROFITABILITY}"), body.indexOf("{caret(showMarketDetail)} 왜 이렇게 판단했나요?"));
   const profitCode = stripComments(profit);
 
-  it("사슬은 요약 네 줄이고, 그 넷이 무엇인지는 price-hierarchy의 tier가 정한다", () => {
+  it("사슬이 무엇을 요약에 세우는지는 화면이 아니라 price-hierarchy가 정한다", () => {
     // 화면이 key나 role을 세어 고르기 시작하면 값이 하나 늘 때마다 여기를
     // 또 고쳐야 한다(이 규칙은 UX 2.4부터 그대로다).
     expect(profitCode).toContain("<PriceChainView rows={priceChain} />");
     expect(panel).toContain('rows.filter((row) => row.tier === "SUMMARY")');
+    // MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 요약은 셋이고, 셋 다 [ⓘ 가격 계산
+    // 기준]이 그리는 값이다. 무엇이 요약인지는 buildPriceChain이 줄마다 직접
+    // 지정한다(같은 role에 요약 줄과 상세 줄이 함께 있기 때문 — 권장 판매가 vs
+    // 내 판매가격, 예상 이익 vs 예상 마진). 그 계약은 price-hierarchy.test.ts가
+    // 실제 결과로 고정한다.
     const hierarchy = readSourceAt(new URL("../price-hierarchy.ts", import.meta.url));
-    const summaryRoles = [...hierarchy.matchAll(/^\s{2}(SOURCE|CONVERT|ADD|TOTAL|PLAN|RESULT): "(SUMMARY|DETAIL)"/gm)];
-    expect(summaryRoles.filter(([, , tier]) => tier === "SUMMARY").map(([, role]) => role)).toEqual([
-      "TOTAL",
-      "PLAN",
-      "RESULT",
-    ]);
+    expect(hierarchy).toContain("profitability: ProfitabilityNumbers | null;");
+    // 서버 값을 폴백으로 되돌리는 경로 자체가 없다 — 넘길 인자가 없다.
+    expect(hierarchy).not.toContain("landedCostKrw: number | null;");
+    expect(hierarchy).not.toContain("expectedProfitKrw: number | null;");
   });
 
-  it("배지는 하나이고, 그 옆 숫자는 '얼마에 팔지' 하나뿐이다", () => {
-    // 요약 넷 + 배지 하나 + 추천가 하나. 이 자리에 숫자가 더 붙기 시작하면
-    // 결론이어야 할 블록이 다시 계산서가 된다.
+  it("수익성에 서는 것은 배지 하나와 요약 세 줄뿐이다 — 값을 직접 포맷하지 않는다", () => {
     expect((profitCode.match(/profitVerdict\.(icon|note|title)/g) ?? []).length).toBe(2);
-    const priceReads = profitCode.match(/\.toLocaleString\(\)/g) ?? [];
-    expect(priceReads.length).toBeLessThanOrEqual(2); // 추천가(있을 때) + 원가 역산 제안가(추천 없을 때) — 동시에 뜨지 않는다
-    expect(profitCode).toContain("recommendation?.recommendedPrice != null");
-    expect(profitCode).toContain("{!recommendation && cost && (");
+    // MI-FINAL-UX-3 — 여기 있던 🏷 두 갈래(최종 추천 판매가 / 추천 판매가)를
+    // 뺐다. 바로 아래 「권장 판매가」 줄이 상세 계산과 같은 값으로 그 자리를
+    // 대신한다 — 한 화면에 "이 가격에 팔아라"가 둘이면 셀러는 다시 고른다.
+    expect(profitCode.match(/\.toLocaleString\(\)/g) ?? []).toHaveLength(0);
+    expect(profitCode).not.toContain("recommendation?.recommendedPrice != null");
+    expect(profitCode).not.toContain("{!recommendation && cost && (");
   });
 
   it("계산 사슬이 본문에서 다시 펼쳐지지 않는다", () => {

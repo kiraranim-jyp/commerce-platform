@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { PRICE_LINE_LABEL } from "../price-hierarchy";
+import { PRICE_LINE_LABEL, PRICE_MEANING_LABEL } from "../price-hierarchy";
+import { stripComments } from "./source-text";
 
 /**
  * P2 UX POLISH(CEO 지시, 2026-09-12) — "더 예쁘게"가 아니라, 지금의 가격 계산
@@ -49,9 +50,13 @@ describe("P2-1: 카드가 짧아진 이유는 밀도지 삭제가 아니다", ()
       PRICE_LINE_LABEL.LANDED_COST,
       "예상 수수료",
       "목표 마진",
-      "권장 판매가격",
+      // MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 두 줄의 라벨이 표에서 온다.
+      // 수익성 요약이 같은 값을 그리게 되면서, 같은 숫자를 두 자리가 다른
+      // 이름으로 부르던 것("권장 판매가격"/"권장 판매가", "예상 이익"/"예상 수익")을
+      // 한 문자열로 합쳤다(의미 하나당 라벨 하나).
+      "{PRICE_MEANING_LABEL.RECOMMENDED_PRICE}",
       "예상 수수료 금액",
-      "예상 이익(최종 판매가격 기준)",
+      "{PRICE_MEANING_LABEL.EXPECTED_PROFIT}(최종 판매가격 기준)",
     ]) {
       expect(detail, `${label} 줄이 사라졌다`).toContain(label);
     }
@@ -86,11 +91,17 @@ describe("P2-1: 카드가 짧아진 이유는 밀도지 삭제가 아니다", ()
     expect(detail).not.toContain('<span className="w-24 shrink-0 pt-1.5 text-text-secondary">');
   });
 
-  it("제목 아래 안내문이 아래 문구와 같은 말을 세 번 하지 않는다", () => {
-    // 이 문장이 말하던 두 사실은 각각 확정 카드의 안내와 상세 맨 아래
-    // 추정치 문단에 그대로 살아 있다 — 줄인 것은 사본이지 사실이 아니다.
+  it("설명 문단은 링크 하나로 줄었다 — 같은 말을 세 번 하지 않는다", () => {
     expect(detail).not.toContain("배송비/수수료/마진/원본가격을 고치면 아래 값이 즉시 다시 계산됩니다");
-    expect(detail).toContain("아는 값으로 고치면 즉시 다시 계산됩니다");
+    // MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 그 아래 남아 있던 추정치 문단도
+    // 지웠다. 세 입력(국제배송비·수수료·마진)을 한꺼번에 말하느라 "무엇을
+    // 누르면 무엇이 바뀌는가"에 답하지 못했고, 그 답은 목표 마진 옆 [설정]
+    // 링크 하나가 더 정확히 한다. "고칠 수 있다"는 사실은 입력칸 자체가
+    // 이미 말한다.
+    expect(stripComments(detail)).not.toContain("아는 값으로 고치면 즉시 다시 계산됩니다");
+    const marginRowAt = detail.indexOf('<Row label="목표 마진">');
+    const marginRow = detail.slice(marginRowAt, detail.indexOf("</Row>", marginRowAt));
+    expect(marginRow).toContain('href="/settings"');
     expect(editor).toContain("최종 판매가격을 아직 저장하지 않아 위 칸이 이 값을 그대로 비추고 있습니다");
   });
 });
@@ -175,12 +186,12 @@ describe("P2-4: 설명 문구는 읽히는 크기다", () => {
   });
 
   it("계산을 설명하는 문장은 tertiary가 아니라 secondary다", () => {
-    for (const snippet of [
-      '<p className="mt-1 text-xs text-text-secondary">',
-      '<p className="pt-0.5 text-xs text-text-secondary">',
-    ]) {
-      expect(detail).toContain(snippet);
-    }
+    // MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 여기 함께 고정돼 있던 추정치 문단
+    // (pt-0.5)은 지워졌다. 남은 설명 문장(판매자 부담 비용이 왜 권장 판매가를
+    // 바꾸지 않는가)은 그대로 secondary다 — 크기로 정보를 숨기지 않는다는
+    // 규칙 자체는 바뀌지 않았다.
+    expect(detail).toContain('<p className="mt-1 text-xs text-text-secondary">');
+    expect(detail).toContain('<p className="text-xs text-text-secondary">');
     // 판단 기준을 말하는 오른쪽 기둥의 한 줄도 같은 단계로 올라왔다.
     expect(actionCenter).toContain('<p className="mt-0.5 text-xs text-text-secondary">');
   });

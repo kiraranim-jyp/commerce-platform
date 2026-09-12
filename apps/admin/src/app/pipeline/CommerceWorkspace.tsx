@@ -44,7 +44,12 @@ import {
   PLATFORM_ADAPTERS,
   PLATFORM_ORDER,
 } from "@commerce/marketplace";
-import { DEFAULT_PRICE_BREAKDOWN_INPUT, resolveListingPrice, resolveSourcePrice } from "@commerce/pricing";
+import {
+  DEFAULT_PRICE_BREAKDOWN_INPUT,
+  DEFAULT_PRICE_ROUNDING_UNIT,
+  resolveListingPrice,
+  resolveSourcePrice,
+} from "@commerce/pricing";
 import { resolveCategoryCacheAction } from "./category-cache-hydrate";
 import { AIContentPanel } from "./commerce/AIContentPanel";
 import { BacklogPanel } from "./commerce/BacklogPanel";
@@ -77,6 +82,9 @@ import { WorkflowPanel } from "./commerce/WorkflowPanel";
 import { PRICE_SURFACE_ANCHOR_ID, StageBody } from "./commerce/StageBody";
 import { PriceEditor } from "./commerce/PriceEditor";
 import { PriceCalculationDetail } from "./commerce/PriceCalculationDetail";
+// MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 상세 계산과 수익성 요약이 같은 숫자를
+// 말하게 하는 단 하나의 함수. 여기서 한 번, 상세 계산이 draft로 한 번 부른다.
+import { computeProfitabilityNumbers } from "./commerce/profitability";
 import { buildRegistrationChannels } from "./commerce/registration-channels";
 import { resolveStageFocus, type WorkSurface } from "./commerce/stage-focus";
 import {
@@ -323,22 +331,13 @@ export function CommerceWorkspace({
     });
   }
 
-  /**
-   * PHASE 3.2 추가지시(CPO, 2026-09-11) — 가격 계산 카드에서 시장 정보를 뺀
-   * 자리에 남는 링크 하나가 부르는 함수.
-   *
-   * handleRequestPriceReview와 완전히 같은 모양이다(탭 전환 + 스크롤, 계산도
-   * 저장도 조회도 없음). 다른 점은 도착지뿐 — 이쪽은 ② 🌎 판매자 글로벌 시장 /
-   * ③ 📊 한국 시장 경쟁가격이 사는 근거 영역(PRICE_COMPARISON_ANCHOR_ID)이다.
-   * 새 화면을 만들지 않는다: 그 블록들은 이미 거기 있었고, 가격 카드가 사본을
-   * 들고 있던 것이 문제였다.
-   */
-  function handleOpenMarketComparison() {
-    setTab("source");
-    requestAnimationFrame(() => {
-      document.getElementById(PRICE_COMPARISON_ANCHOR_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }
+  /* MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 여기 있던 handleOpenMarketComparison을
+     지웠다. 그 함수가 존재한 이유는 상세 계산 안의 "다른 나라 판매가·한국 시장
+     경쟁가격은 …에서 확인하세요" 문장 하나였고, 그 문장은 자기 바로 위에 있는
+     블록으로 올라가라고 시키고 있었다. 문장을 지우면서 도착지도 같이 지운다 —
+     부를 곳이 없는 이동 함수를 남겨 두면 다음 사람이 그 문장을 되살린다.
+     근거 영역의 앵커(PRICE_COMPARISON_ANCHOR_ID)는 그대로다: MI 되물음 안의
+     [📊 시장 가격 비교 원본 보기 ↓]가 여전히 그 자리로 데려간다. */
 
   /**
    * MI/PRICE-1(CEO 지시, 2026-09-12) — "그래서 왜 이 가격인가"로 가는 단 하나의
@@ -1204,12 +1203,33 @@ export function CommerceWorkspace({
       onRefreshExchangeRates={fetchExchangeRates}
       priceRoundingUnit={priceRoundingUnit}
       domesticShippingCostKrw={domesticShippingCostKrw}
-      /* PHASE 3.2 추가지시 — 계산 사슬에서 내려간 시장 정보(국가별 원본가격
-         비교 · 한국向 표시가)의 관측 원본으로 가는 유일한 통로. 이미 존재하는
-         근거 영역의 앵커로 스크롤만 한다 — 새 화면을 만들지도, 여기서 시장
-         데이터를 다시 조회하지도 않는다. */
-      onOpenMarketComparison={handleOpenMarketComparison}
     />
+  );
+
+  /**
+   * MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 위 상세 계산이 그리는 **숫자 셋**.
+   *
+   * MI가 슬롯(ReactNode) 안을 읽을 수는 없으므로 값만 따로 내려보낸다. 새
+   * 산식은 없다 — 상세 계산이 자기 안에서 돌리던 computeProfitabilityNumbers를
+   * 여기서 한 번 더 부를 뿐이고, 입력(원본가 · priceBreakdown · 환율 ·
+   * 반올림 단위 · priceOverrideKrw)이 같으므로 결과가 갈릴 수 없다. 상세가
+   * 타이핑 중 draft로 잠깐 다른 값을 보이는 것은 "저장 전/후"라는 사실 그대로다
+   * (바로 위 recommendedPriceKrw가 같은 이유로 같은 모양을 하고 있다).
+   */
+  const profitability = useMemo(
+    () =>
+      computeProfitabilityNumbers(
+        {
+          originalAmount: product.price.value.amount,
+          originalCurrency: product.price.value.currency,
+          breakdownInput: product.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT,
+          priceResolved: product.priceValidity === "VALID",
+          priceOverrideKrw: product.priceOverrideKrw?.value ?? null,
+        },
+        exchangeRates?.rates,
+        priceRoundingUnit ?? DEFAULT_PRICE_ROUNDING_UNIT,
+      ),
+    [product, exchangeRates, priceRoundingUnit],
   );
 
   // N-4.08 STEP6-3/6-4(CPO 지시: "상품정보 = 공통 정보 관리") — "상품정보" 탭
@@ -2225,6 +2245,10 @@ export function CommerceWorkspace({
               onSellerVerdictChange={handleSellerVerdictChange}
               onMarketSignalChange={handleMarketSignalChange}
               onRequestPriceReview={handleRequestPriceReview}
+              /* MI-FINAL-UX-3 — 수익성 요약 세 줄의 값. 상세 계산과 같은 함수의
+                 같은 결과라, "요약은 확인 불가인데 상세에는 숫자가 있다"가
+                 구조적으로 성립하지 않는다. */
+              profitability={profitability}
               autoChecking={priceCheckPriming}
               presentation={stageFocus.mi}
               onOpenDetail={openMarketDetail}

@@ -43,7 +43,10 @@ describe("가격 계층은 화면에 한 벌만 있다", () => {
     expect(jsxUses(panel, "GlobalMarketCardView")).toBe(1);
     const hintAt = panel.indexOf("function GlobalMarketHint");
     const hintEndAt = panel.indexOf("function GlobalMarketCardView");
-    expect(panel.slice(hintAt, hintEndAt)).toContain("{open && <GlobalMarketCardView card={card} />}");
+    // MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 원자료는 본문 흐름 밖 팝오버에 뜬다.
+    const hintSource = panel.slice(hintAt, hintEndAt);
+    expect(hintSource).toContain("<GlobalMarketCardView card={card} />");
+    expect(hintSource).toContain("absolute left-0 top-full");
   });
 
   it("①은 사슬과 같은 입력에서 만들어진다 — 두 번째 원본가격이 생기지 않는다", () => {
@@ -88,16 +91,19 @@ describe("가격 계층은 화면에 한 벌만 있다", () => {
     expect(panel).not.toContain("💰 현재 구매가");
   });
 
-  it("추천 판매가는 한 곳에서만 그려지고, 사슬 안으로 들어가지 않는다", () => {
-    // 사슬 안에 넣으면 "내 판매가격"으로 읽힌다(이미 그 가격으로 팔기로 된 줄
-    // 안다). 사본을 만들면 둘 중 하나만 고쳐지는 순간 추천가가 둘이 된다.
-    expect((panel.match(/recommendation\.recommendedPrice\.toLocaleString\(\)/g) ?? []).length).toBe(1);
-    const chainAt = panel.indexOf("<PriceChainView");
-    const evidenceAt = panel.indexOf("<MiAxisStars");
-    const recommendedAt = panel.indexOf("🏷 최종 추천 판매가");
-    // ④ 수익성 안, 사슬 바로 아래 — 상세를 펼쳐야만 보이는 자리가 아니다.
-    expect(recommendedAt).toBeGreaterThan(chainAt);
-    expect(recommendedAt).toBeLessThan(evidenceAt);
+  it("추천 판매가를 화면이 직접 포맷하지 않는다 — 사슬 안으로도 들어가지 않는다", () => {
+    // MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 수익성 배지 옆에 있던 🏷 두 갈래를
+    // 뺐다. 그 자리를 「권장 판매가」 줄이 대신하고, 그 값은 상세 계산과 같은
+    // 함수에서 온다(화면이 숫자를 만들지 않는다). 시장가 기준 추천은 되물음
+    // 아래 근거 영역의 sellingSummary가 문장으로 그대로 말한다.
+    expect((panel.match(/recommendation\.recommendedPrice\.toLocaleString\(\)/g) ?? []).length).toBe(0);
+    // 🏷 두 줄은 화면 어디에도 없다. 권장 판매가는 사슬의 한 줄로 서고,
+    // 그 값은 buildPriceChain이 profitability에서 골라 온 문자열이다.
+    expect(panel).not.toContain("🏷 최종 추천 판매가");
+    expect(panel).not.toContain("🏷 추천 판매가");
+    const hierarchy = read("../price-hierarchy.ts");
+    expect(hierarchy).toContain('RECOMMENDED_PRICE: "권장 판매가"');
+    expect(hierarchy).toContain("value: profit != null ? formatKrwAmount(profit.recommendedPriceKrw) : null,");
   });
 
   it("국내 비교상품 분포를 '한국 시장 가격'이라고 부르지 않는다", () => {
@@ -185,10 +191,13 @@ describe("가격 영역은 정해진 순서로 읽힌다", () => {
     expect(evidenceAt).toBeGreaterThan(chainAt);
   });
 
-  it("각 블록이 몇 번인지 화면이 직접 말한다", () => {
-    // 제목에 번호가 없으면 순서가 깨져도 화면만 봐서는 알 수 없다.
+  it("블록 제목에는 번호가 없다 — 건너뛰는 번호가 결함으로 읽히기 때문이다", () => {
+    // MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 번호는 순서를 감시하는 장치였지만,
+    // 한국 시장 경쟁가격 블록이 조건부로 사라지는 화면에서는 ①→③ 점프가 되어
+    // "내가 뭘 안 했나"를 묻게 만든다. 순서 감시는 바로 위 테스트(소스 상의
+    // 렌더 순서)와 price-hierarchy.test.ts(표의 나열 순서)가 계속 맡는다.
     const hierarchy = read("../price-hierarchy.ts");
-    for (const title of ["① 원본 상품 가격", "② 📊 한국 시장 경쟁가격"]) {
+    for (const title of ["원본 상품", "한국 시장 경쟁가격"]) {
       expect(hierarchy).toContain(title);
     }
     // 글로벌 시장은 본문 순서에 없으므로 번호도 없다(price-hierarchy.test.ts가
@@ -206,12 +215,20 @@ describe("가격 영역은 정해진 순서로 읽힌다", () => {
     expect(panel).not.toContain("globalMarketCard={priceChain");
   });
 
-  it("비교는 ③ 한 곳에서만 일어난다", () => {
-    // ①은 원본 판매처의 사실만 갖고(환산도 한국 표시가도 그 판매처의 값이다),
-    // ②는 시장별 관측을 나열만 하며, ④는 사슬이다. VS는 화면에 한 번뿐이어야 한다.
-    expect(jsxUses(panel, "ComparisonSideView")).toBe(2);
-    const comparison = read("../market-comparison.ts");
-    expect(comparison).toContain('versus: "VS"');
+  it("한 카드 안에서 두 한국 가격을 겨루게 하지 않는다", () => {
+    // MI-FINAL-UX-3(CEO 지시, 2026-09-12) — VS 두 칸이 한 칸이 됐다. 왼쪽이던
+    // "원본 판매자 한국 표시가"는 MI/PRICE-2 이후 「원본 상품」이 자기 라벨로
+    // 이미 말하고, 두 칸이 같은 모양·같은 국기로 나란히 서면 "내가 살 값"과
+    // "내가 경쟁할 값"이 다시 섞인다 — VS가 갈라놓으려던 혼동을 모양이
+    // 되돌려 놓고 있었다.
+    expect(jsxUses(panel, "ComparisonSideView")).toBe(1);
+    const comparisonView = panel.slice(
+      panel.indexOf("export function MarketComparisonView("),
+      panel.indexOf("function ComparisonSideView("),
+    );
+    expect(comparisonView).toContain("side={comparison.domestic}");
+    expect(comparisonView).not.toContain("side={comparison.seller}");
+    expect(comparisonView).not.toContain("{comparison.versus}");
     // ①은 **다른 판매자**의 값(국내 경쟁시장)을 들고 있지 않다. MI/PRICE-2에서
     // 들어온 원본 판매자 한국 표시가는 그 판매처 자신의 페이지에서 읽은 값이라
     // 비교 대상이 아니다 — 비교는 여전히 ③ 한 곳뿐이다.

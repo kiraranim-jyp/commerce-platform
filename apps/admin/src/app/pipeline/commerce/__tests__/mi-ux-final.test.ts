@@ -6,9 +6,11 @@ import {
   type DomesticCandidate,
   type PriceHistoryResponse,
 } from "../DomesticPriceIntelligencePanel";
-import { GLOBAL_MARKET_UNAVAILABLE_NOTE } from "../global-market";
+import { GLOBAL_MARKET_HINT_LABEL, GLOBAL_MARKET_UNAVAILABLE_NOTE } from "../global-market";
+import { buildMiVerdictExplanation, MI_VERDICT_EVIDENCE_TOGGLE_LABEL } from "../mi-verdict-copy";
 import { PRICE_MEANING_LABEL, PRICE_SECTION_TITLE } from "../price-hierarchy";
-import { readSourceAt } from "./source-text";
+import { computeProfitabilityNumbers } from "../profitability";
+import { readSourceAt, stripComments } from "./source-text";
 
 /**
  * MI-UX-FINAL-REVIEW(CEO 지시, 2026-09-12) — **화면을 통째로 그려서 확인한다**.
@@ -50,9 +52,37 @@ function visibleText(html: string): string {
 const PRICE_CALC_SENTINEL = "상세계산슬롯";
 const priceCalculationDetail = createElement("div", null, PRICE_CALC_SENTINEL);
 
+/**
+ * MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 그 슬롯이 실제로 그리는 숫자.
+ *
+ * PriceCalculationDetail이 자기 안에서 부르는 그 함수를, 같은 입력(실측 상품의
+ * 원본가 €75 · 국제배송비 ₩10,000 · 수수료 10% · 목표 마진 20% · 관측 환율)으로
+ * 여기서도 부른다. 요약이 "상세와 같은 값"을 말하는지를 검사하려면 기준이
+ * 손으로 적은 숫자가 아니라 **상세가 쓰는 함수의 결과**여야 한다.
+ */
+const PROFIT = computeProfitabilityNumbers(
+  {
+    originalAmount: 75,
+    originalCurrency: "EUR",
+    breakdownInput: { shippingKrw: 10000, feePercent: 10, marginPercent: 20 },
+    priceResolved: true,
+    priceOverrideKrw: null,
+  },
+  { EUR: 1556.56 },
+  10,
+)!;
+
+function krw(amount: number): string {
+  return `₩${amount.toLocaleString("ko-KR")}`;
+}
+
 function renderPanel(
   data: PriceHistoryResponse,
-  options: { candidates?: DomesticCandidate[]; openPriceDetailRequest?: number } = {},
+  options: {
+    candidates?: DomesticCandidate[];
+    openPriceDetailRequest?: number;
+    profitability?: typeof PROFIT | null;
+  } = {},
 ): string {
   return renderToStaticMarkup(
     createElement(MiPanelView, {
@@ -60,6 +90,8 @@ function renderPanel(
       candidates: options.candidates ?? CANDIDATES,
       presentation: "FULL",
       priceCalculationDetail,
+      // 요약이 보는 값과 상세가 보는 값이 같은 객체다.
+      profitability: options.profitability === undefined ? PROFIT : options.profitability,
       openPriceDetailRequest: options.openPriceDetailRequest ?? 0,
       onRequestPriceReview: () => {},
       snapshotOriginPrice: { amount: 75, currency: "EUR" },
@@ -78,7 +110,20 @@ function baseData(): PriceHistoryResponse {
   return {
     ok: true,
     product: { title: "Terry Bermuda Shorts", brand: "Bobo Choses", sourceUrl: "https://bobochoses.com/en/products/b226ac043" },
-    currentPrice: { sellingPriceKrw: 143500, costPriceKrw: 116742, costBasis: "ORIGIN_FX" },
+    /**
+     * MI-FINAL-UX-3(CEO 지시, 2026-09-12) — **판매가는 아직 확정되지 않았다.**
+     *
+     * 지금까지 이 fixture는 sellingPriceKrw = 143,500과 완성된 unifiedDecision을
+     * 들고 있었다. 그래서 테스트에서는 수익성에 숫자가 떴고, 프로덕션에서는
+     * ⚪ 확인 불가가 떴다 — 둘 다 참이었다. 서버의 그 두 값은 전부
+     * product.priceOverrideKrw에서 나오는데(market-intelligence.ts:116, 234),
+     * MI가 서는 ② 시장 판단 단계에서는 셀러가 아직 아무 가격도 확정하지 않는다.
+     *
+     * 그래서 fixture를 프로덕션 쪽으로 되돌린다. 여기서 숫자가 보인다면 그건
+     * 서버가 아니라 상세 계산과 같은 함수에서 온 것이다 — 이 파일이 검사하려는
+     * 명제가 정확히 그것이다.
+     */
+    currentPrice: { sellingPriceKrw: null, costPriceKrw: 116742, costBasis: "ORIGIN_FX" },
     sellerGlobalMarkets: [
       {
         marketCode: "en-de",
@@ -180,17 +225,9 @@ function baseData(): PriceHistoryResponse {
       reason: "가격 경쟁력이 있습니다",
       estimatedMarginPercent: 22.4,
     },
-    unifiedDecision: {
-      landedCostKrw: { value: 126742, status: "estimated" },
-      platformFeeKrw: { value: 8610, status: "estimated" },
-      estimatedProfitKrw: { value: 8148, status: "estimated" },
-      marginPercent: { value: 5.7, status: "estimated" },
-      verdict: "MAINTAIN",
-      level: "GREEN",
-      dataCompleteness: "COMPLETE",
-      missingComponents: [],
-      customerChargedShippingKrw: { value: 0, status: "actual" },
-    },
+    // 판매가가 없으면 서버는 이 값을 아예 만들지 않는다(cost != null &&
+    // currentSellingPriceKrw != null). 프로덕션의 대부분이 이 상태다.
+    unifiedDecision: null,
     representativeVerdict: {
       code: "READY",
       icon: "🟢",
@@ -338,27 +375,56 @@ describe("패널 전체를 렌더했을 때 첫 화면", () => {
   const html = renderPanel(baseData());
   const text = visibleText(html);
 
-  it("셀러가 보는 것은 판정 · ① 원본 · ② 한국 경쟁 · ③ 수익성 · 되물음 한 줄이다", () => {
+  it("셀러가 보는 것은 판정 · 원본 상품 · 한국 시장 경쟁가격 · 수익성 · 되물음 한 줄이다", () => {
     // 판정
     expect(text).toContain("판매 추천");
     expect(text).toContain("대한민국 시장 기준");
-    // ① 원본 상품 — 원본 통화 금액과 글로벌 시장으로 가는 ⓘ 한 줄
+    // 원본 상품 — 원본 통화 금액과 글로벌 시장으로 가는 ⓘ 한 줄
     expect(text).toContain(PRICE_SECTION_TITLE.ORIGINAL);
     expect(text).toContain("€75.00");
-    expect(text).toContain("ⓘ 글로벌 시장 가격");
-    // ② 한국 시장 경쟁가격
+    expect(text).toContain(`ⓘ ${GLOBAL_MARKET_HINT_LABEL}`);
+    // 한국 시장 경쟁가격
     expect(text).toContain(PRICE_SECTION_TITLE.DOMESTIC_COMPETITION);
     expect(text).toContain("₩116,600");
-    // ③ 수익성 — 착지원가 · 권장 판매가 · 예상 이익 · 판정 한 줄 · ⓘ 기준
+    // 수익성 — 판정 한 줄 · 착지원가 · 권장 판매가 · 예상 이익 · ⓘ 기준
     expect(text).toContain(PRICE_SECTION_TITLE.PROFITABILITY);
-    expect(text).toContain(PRICE_MEANING_LABEL.LANDED_COST);
-    expect(text).toContain("₩126,742");
-    expect(text).toContain("최종 추천 판매가 ₩143,500");
-    expect(text).toContain(PRICE_MEANING_LABEL.EXPECTED_PROFIT);
     expect(text).toContain("설정 마진 기준 판매 가능");
+    expect(text).toContain(PRICE_MEANING_LABEL.LANDED_COST);
+    expect(text).toContain(PRICE_MEANING_LABEL.RECOMMENDED_PRICE);
+    expect(text).toContain(PRICE_MEANING_LABEL.EXPECTED_PROFIT);
     expect(text).toContain("ⓘ 가격 계산 기준");
     // 되물음 한 줄
     expect(text).toContain("왜 이렇게 판단했나요?");
+  });
+
+  /**
+   * ── MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 이번 지시의 핵심 검사 ────────────
+   * 프로덕션 화면은 「수익성 ⚪ 확인 불가」인데 바로 아래 [ⓘ 가격 계산 기준]에는
+   * 숫자가 있었다. fixture가 판매가를 확정한 상품이라 테스트만 그 사실을 보지
+   * 못했다(위 currentPrice 주석 참고). 이제 fixture는 확정 전이고, 그 상태에서
+   * 요약 셋이 **상세가 쓰는 함수의 값과 문자 그대로 같은지**를 본다.
+   */
+  it("수익성 세 숫자가 상세 계산의 값과 정확히 같다 — 판매가 확정 전에도", () => {
+    expect(baseData().currentPrice.sellingPriceKrw).toBeNull();
+    expect(baseData().unifiedDecision).toBeNull();
+    for (const value of [PROFIT.landedCostKrw, PROFIT.recommendedPriceKrw, PROFIT.expectedProfitKrw]) {
+      expect(text, `${krw(value)}이(가) 수익성에 없다`).toContain(krw(value));
+    }
+    // 그 세 줄 어디에도 빈 상태 칩이 서지 않는다.
+    expect(text).not.toContain("⚪ 확인 불가");
+  });
+
+  it("수익성에는 확정되지 않은 값을 세우지 않는다 — 내 판매가격·예상 마진은 층이 다르다", () => {
+    // 둘 다 판매가를 확정해야 나오는 값이라, 이 단계에서는 언제나 빈 칸이었다.
+    // 빈 칸이 판정 카드 안에 서면 셀러는 판정이 흔들린 줄 알고 멈춘다.
+    expect(text).not.toContain(PRICE_MEANING_LABEL.SELLER_PLANNED_PRICE);
+    expect(text).not.toContain(PRICE_MEANING_LABEL.EXPECTED_MARGIN);
+  });
+
+  it("건너뛸 수 있는 번호가 화면 어디에도 없다", () => {
+    // 국내 비교상품이 0건이면 가운데 블록이 통째로 사라진다. 그때 ①→③ 점프가
+    // 보이면 셀러의 질문이 "팔까"에서 "②는 왜 없지"로 바뀐다.
+    expect(text).not.toMatch(/[①②③④⑤]/);
   });
 
   it("금지 항목이 하나도 없다", () => {
@@ -410,16 +476,57 @@ describe("국내 비교상품이 없을 때", () => {
   });
 });
 
-describe("글로벌 시장 관측이 없을 때", () => {
+/**
+ * ── MI-FINAL-UX-3(CEO 지시, 2026-09-12) — ⓘ가 사라지던 자리 ──────────────────
+ * 앞선 배치의 보고는 첫 화면이 "원본 상품 가격 €75.00 · ⓘ 글로벌 시장 가격 ▸"로
+ * 열린다고 적었는데 대표님 프로덕션 캡처에는 그 줄이 없었다. 지운 적은 없다 —
+ * 관측이 하나도 없을 때 GlobalMarketHint가 버튼 대신 **다른 문장**을 본문 한
+ * 줄로 그렸기 때문이다. 그리고 그 조건이 프로덕션의 대부분이다(시장별 페이지를
+ * 만드는 장치는 Shopify Markets probe 하나뿐이고, handle을 못 뽑으면 관측이
+ * 아예 생기지 않는다).
+ *
+ * 그래서 이 describe가 고정하는 것은 "값이 없어도 **이름은 그 자리에 있다**"이다.
+ */
+describe("글로벌 시장 관측이 없을 때도 ⓘ 글로벌 시장 가격은 원본 가격 옆에 있다", () => {
   const html = renderPanel(withoutGlobalMarket());
   const text = visibleText(html);
 
-  it("노란 상자가 아니라 한 줄이다 — 문구는 지시문 그대로다", () => {
+  it("본문에 서는 것은 두 상태 모두 이름 하나다", () => {
+    expect(text).toContain(`ⓘ ${GLOBAL_MARKET_HINT_LABEL}`);
+    // 데이터가 있는 화면도 같은 이름 하나다(모양이 상태에 따라 달라지지 않는다).
+    expect(visibleText(renderPanel(baseData()))).toContain(`ⓘ ${GLOBAL_MARKET_HINT_LABEL}`);
+  });
+
+  it("없다는 사실은 팝오버가 말한다 — 본문 줄도, 카드도 아니다", () => {
     expect(GLOBAL_MARKET_UNAVAILABLE_NOTE).toBe("현재 사이트에서는 글로벌 시장 가격을 확인할 수 없습니다.");
-    expect(text).toContain(`ⓘ ${GLOBAL_MARKET_UNAVAILABLE_NOTE}`);
+    // 닫힌 화면에는 그 문장이 없다(높이를 한 줄도 차지하지 않는다).
+    expect(text).not.toContain(GLOBAL_MARKET_UNAVAILABLE_NOTE);
+    // 그래도 읽을 수는 있다 — 마우스를 올리면 나오는 근거 자리에 그대로 있다.
+    expect(html).toContain(`title="${GLOBAL_MARKET_UNAVAILABLE_NOTE}"`);
     expect(html).not.toMatch(/warning-soft|error-soft|danger-soft/);
-    // 눌러도 나올 것이 없는 토글을 만들지 않는다(버튼 하나가 줄었다).
-    expect((html.match(/▸/g) ?? []).length).toBe(2);
+  });
+
+  it("데이터가 있을 때는 같은 자리가 시장 목록을 들고 있다", () => {
+    const withData = renderPanel(baseData());
+    expect(withData).toContain("🇩🇪 DE €75.00");
+    expect(withData).toContain("🇰🇷 KR ₩162,000");
+    // 그 목록은 본문에 그려지지 않는다 — 툴팁과 팝오버가 맡는다.
+    expect(visibleText(withData)).not.toContain("🇩🇪 DE €75.00");
+  });
+
+  it("펼침은 본문 흐름 밖에 뜬다 — 열어도 아래 블록이 밀리지 않는다", () => {
+    const panel = readSourceAt(new URL("../DomesticPriceIntelligencePanel.tsx", import.meta.url));
+    const hint = panel.slice(panel.indexOf("function GlobalMarketHint("), panel.indexOf("function GlobalMarketCardView("));
+    // absolute가 아니면 팝오버가 아니라 카드다("never a card, never a new body row").
+    expect(hint).toContain("absolute left-0 top-full");
+    expect(hint).toContain("{GLOBAL_MARKET_UNAVAILABLE_NOTE}");
+    // 관측 유무로 **버튼이 사라지는** 분기가 다시 생기지 않게 한다.
+    expect(hint).not.toContain("if (summaryLine == null) return");
+  });
+
+  it("접힘 수는 두 상태에서 같다 — 셋, 전부 닫혀 있다", () => {
+    expect((html.match(/▸/g) ?? []).length).toBe(3);
+    expect(html).not.toContain("▾");
   });
 
   it("이 상태에서도 금지 항목이 하나도 없다", () => {
@@ -497,5 +604,134 @@ describe("내려간 것들은 사라지지 않았다", () => {
     expect(gateAt).toBeGreaterThan(-1);
     expect(slotAt).toBeGreaterThan(gateAt);
     expect(panel.indexOf("ⓘ 가격 계산 기준 {caret(showPriceDetail)}")).toBeLessThan(gateAt);
+  });
+});
+
+/* ─────────────── 「왜 이렇게 판단했나요?」는 네 줄로 끝난다 ─────────────── */
+
+/**
+ * MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 되물음이 답하는 질문은 하나다:
+ * **왜 이 판정인가.** 지금까지 이 접힘은 화면의 나머지 절반(설명 두 문장 ·
+ * 👉 행동 · 근거 목록 · 참고표 · 신호 3종 · 레이더 · 국내 비교상품 · 동일상품
+ * 근거 · 안내 두 문단)을 통째로 들고 있었고, 층은 내려갔지만 눌렀을 때 받는
+ * 것이 스무 덩어리면 되물음은 답이 아니라 두 번째 화면이다.
+ */
+describe("되물음의 답은 네 줄이고, 그 안에 계산도 레이더도 없다", () => {
+  const CASES = [
+    { name: "추천", input: { marketCase: "A" as const, hasComparable: true, evidenceBasis: "EXACT" as const } },
+    { name: "조건부", input: { marketCase: "B" as const, hasComparable: true, evidenceBasis: "COMPARISON" as const } },
+    { name: "비추천", input: { marketCase: "C" as const, hasComparable: true, evidenceBasis: "EXACT" as const } },
+    { name: "판단 보류", input: { marketCase: null, hasComparable: false, evidenceBasis: "NONE" as const } },
+  ];
+
+  it("네 판정 전부 정확히 네 줄이다", () => {
+    for (const { name, input } of CASES) {
+      const lines = buildMiVerdictExplanation(input);
+      expect(lines, `${name}이(가) 네 줄이 아니다`).toHaveLength(4);
+      // 줄 하나가 문단이 되면 "네 줄"은 숫자만 맞는 약속이 된다.
+      for (const line of lines) expect(line.length, `${name}: ${line}`).toBeLessThanOrEqual(40);
+    }
+  });
+
+  it("네 줄의 모양은 같다 — 수익성 → 가격 경쟁력 → 근거 → 행동", () => {
+    for (const { name, input } of CASES) {
+      const [margin, price, evidence, action] = buildMiVerdictExplanation(input);
+      expect(["🟢", "🟡", "🔴", "⚪"], name).toContain(margin.slice(0, margin.indexOf(" ")));
+      expect(price, name).toMatch(/^💰 /);
+      expect(evidence, name).toMatch(/^🔎 /);
+      expect(action, name).toMatch(/^→ /);
+    }
+  });
+
+  it("네 줄에는 레이더도, 계산도, 상표권도, 기술 상태도 없다", () => {
+    const BANNED = [
+      "레이더",
+      "축",
+      "착지원가 ₩",
+      "환율",
+      "국제배송비",
+      "수수료",
+      "상표권",
+      "지식재산권",
+      "CASE",
+      "확인 불가",
+      "검색 데이터 없음",
+      "다시 확인",
+      "신호",
+    ];
+    for (const { name, input } of CASES) {
+      const text = buildMiVerdictExplanation(input).join(" ");
+      for (const needle of BANNED) {
+        expect(text, `${name}에 "${needle}"이(가) 있다`).not.toContain(needle);
+      }
+    }
+  });
+
+  it("판정이 바뀌면 네 줄도 바뀐다 — 같은 말을 네 번 하지 않는다", () => {
+    const rendered = CASES.map(({ input }) => buildMiVerdictExplanation(input).join(" | "));
+    expect(new Set(rendered).size).toBe(4);
+  });
+
+  it("나머지 전부는 그 네 줄 아래 한 단계 더 들어간다 — 지운 것이 아니다", () => {
+    const panel = readSourceAt(new URL("../DomesticPriceIntelligencePanel.tsx", import.meta.url));
+    const detail = panel.slice(panel.indexOf("{showMarketDetail && ("));
+    // 네 줄이 먼저고, 그다음이 두 번째 토글이고, 나머지는 전부 그 뒤다.
+    const linesAt = detail.indexOf("buildMiVerdictExplanation({");
+    const toggleAt = detail.indexOf("{MI_VERDICT_EVIDENCE_TOGGLE_LABEL}");
+    const gateAt = detail.indexOf("{showMarketEvidence && (");
+    expect(linesAt).toBeGreaterThan(-1);
+    expect(toggleAt).toBeGreaterThan(linesAt);
+    expect(gateAt).toBeGreaterThan(toggleAt);
+    expect(MI_VERDICT_EVIDENCE_TOGGLE_LABEL).toBe("판단 근거 자세히 보기");
+    for (const needle of [
+      "<MiRadar radar={radar} />",
+      "{representativeVerdict.description}",
+      "🔄 다시 확인",
+      "상표권,",
+      "참고용 판단입니다",
+      "📶 시장 신호",
+    ]) {
+      expect(detail.indexOf(needle), `${needle}이(가) 두 번째 단계 밖에 있다`).toBeGreaterThan(gateAt);
+    }
+  });
+});
+
+/* ─────────────── 상세 계산에서 지운 문장 셋 ─────────────── */
+
+/**
+ * MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 문장은 자기가 설명하는 값 옆에 있을
+ * 때만 길잡이이고, 그렇지 않으면 화면이 길어졌다는 신호다.
+ */
+describe("가격 계산 기준 안의 설명 문단은 링크 하나로 줄었다", () => {
+  const detail = readSourceAt(new URL("../PriceCalculationDetail.tsx", import.meta.url));
+  // 금지 문구는 **코드에만** 건다 — 이 저장소는 "왜 지웠는지"를 주석으로 길게
+  // 남기는 것이 규칙이라, 주석까지 막으면 근거를 지우게 된다(source-text.ts).
+  const detailCode = stripComments(detail);
+
+  it("추정치 문단도, 다른 나라 판매가 안내도 없다", () => {
+    for (const needle of [
+      "국제배송비·예상 수수료·목표 마진은 실제 물류·정산 데이터가 없어 추정치입니다",
+      "Settings에서 기본값 변경",
+      "다른 나라 판매가",
+      "에서 확인하세요",
+    ]) {
+      expect(detailCode, `"${needle}"이(가) 남아 있다`).not.toContain(needle);
+    }
+    // 보낼 곳이 없으면 문장도 되살아나지 않는다 — prop 자체를 지웠다.
+    expect(detailCode).not.toContain("onOpenMarketComparison");
+  });
+
+  it("Settings 링크는 그 링크가 바꾸는 설정 옆에 선다", () => {
+    const marginRow = detail.slice(detail.indexOf('<Row label="목표 마진">'), detail.indexOf("</Row>", detail.indexOf('<Row label="목표 마진">')));
+    expect(marginRow).toContain('href="/settings"');
+    expect(marginRow).toContain("[설정]");
+  });
+
+  it("판매자 부담 비용(국내 배송원가)은 그대로다 — 계산에 들어가는 값이라 숨기지 않는다", () => {
+    // packages/pricing/unified-price-decision.ts의 LANDED_COST_PARTS에
+    // sellerDomesticShippingCostKrw가 그대로 있다: 착지원가 → 예상이익 → 마진 →
+    // verdict까지 흐른다. 화면에서만 감추면 셀러가 못 보는 값이 판정을 움직인다.
+    expect(detail).toContain("판매자 부담 비용(판매 판단용)");
+    expect(detail).toContain('<Row label="국내 배송원가">');
   });
 });

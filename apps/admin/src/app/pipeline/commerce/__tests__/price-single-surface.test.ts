@@ -300,9 +300,11 @@ describe("④ 상세 계산은 MI ④ 수익성 한 곳에만 있고, ③ 등록
       "{PRICE_LINE_LABEL.LANDED_COST}",
       '<Row label="예상 수수료">',
       '<Row label="목표 마진">',
-      '권장 판매가격\n          <ValueBadge kind="aiSuggested" />',
+      // MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 두 줄의 라벨이 표에서 온다.
+      // 같은 숫자를 수익성 요약과 이 사슬이 다른 이름으로 부르던 마지막 두 자리다.
+      '{PRICE_MEANING_LABEL.RECOMMENDED_PRICE}\n          <ValueBadge kind="aiSuggested" />',
       '<Row label="예상 수수료 금액">',
-      "예상 이익(최종 판매가격 기준)",
+      "{PRICE_MEANING_LABEL.EXPECTED_PROFIT}(최종 판매가격 기준)",
     ].map((needle) => detail.indexOf(needle));
     expect(order.every((at) => at > -1)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
@@ -336,25 +338,32 @@ describe("④ 상세 계산은 MI ④ 수익성 한 곳에만 있고, ③ 등록
     // CPO 목업의 "원상품 가격"/"기본 마진율"을 그대로 쓰지 않는 이유가 이것이다 —
     // 그 이름은 ④ 수익성 요약의 "착지원가"/"원화 환산"과 같은 숫자를 가리키면서
     // 다르게 불러, 이 저장소가 반복해서 고쳐 온 라벨 표류를 되살린다.
-    expect(detail).toContain('import { PRICE_LINE_LABEL, PRICE_SECTION_TITLE } from "./price-hierarchy";');
+    // MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 가져오는 표가 하나 늘었다. 권장
+    // 판매가와 예상 이익도 이제 수익성 요약과 같은 문자열을 쓴다(같은 숫자를
+    // 두 자리가 다른 이름으로 부르던 마지막 두 줄이었다). 반대로
+    // PRICE_SECTION_TITLE은 더 이상 쓰지 않는다 — 그 이름을 쓰던 "다른 나라
+    // 판매가…" 안내 문장이 사라졌기 때문이다.
+    expect(detail).toContain('import { PRICE_LINE_LABEL, PRICE_MEANING_LABEL } from "./price-hierarchy";');
     expect(detail).not.toContain('<Row label="상품 원가">');
     expect(detail).not.toContain("랜드드 코스트");
   });
 
-  it("시장 정보는 상세 계산에 없다 — 링크 한 줄로만 나간다", () => {
-    // 시장 비교표/타국 표시가는 ②·③으로 돌아갔다. 블록이 아니라 링크여야
-    // 한다 — 블록이 되는 순간 계산 사슬이 다시 비교 카드가 된다.
+  it("시장 정보는 상세 계산에 없다 — 이제 링크 한 줄도 없다", () => {
+    // 시장 비교표/타국 표시가는 판단 카드로 돌아갔다(PHASE 3.2).
     expect(detail).not.toContain("/api/price-intelligence");
     expect(detail).not.toContain("sellerIntel");
     expect(detail).not.toContain("expandedIntel");
     expect(detail).not.toContain("function CountryPriceTable");
     expect(detail).not.toContain("<CountryPriceTable");
-    expect(detail).toContain("onOpenMarketComparison");
-    expect(detail).toContain("PRICE_SECTION_TITLE.SELLER_GLOBAL_MARKET");
-    expect(detail).toContain("PRICE_SECTION_TITLE.DOMESTIC_COMPETITION");
-    // 도착지는 이미 존재하는 근거 영역이다 — 새 화면을 만들지 않았다.
-    expect(workspace).toContain("function handleOpenMarketComparison()");
-    expect(workspace).toContain("onOpenMarketComparison={handleOpenMarketComparison}");
+    // MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 그 자리에 남아 있던 "다른 나라
+    // 판매가·한국 시장 경쟁가격은 …에서 확인하세요" 한 줄도 지웠다. 그 두
+    // 블록은 이 접힘 **바로 위**에 있다 — 위로 올라가라고 시키는 문장은
+    // 길잡이가 아니라 화면이 길어졌다는 신호다. 도착지 함수까지 함께 지운
+    // 것이 장치다(부를 곳이 없으면 문장도 되살아나지 않는다).
+    expect(stripComments(detail)).not.toContain("onOpenMarketComparison");
+    expect(workspace).not.toContain("function handleOpenMarketComparison()");
+    // 근거 영역의 앵커 자체는 그대로다 — MI 되물음 안의 버튼이 거기로 간다.
+    expect(panel).toContain("PRICE_COMPARISON_ANCHOR_ID");
   });
 
   it("원본 가격은 지금까지처럼 직접 고칠 수 있다 — 편집 가능 여부를 이번에 바꾸지 않았다", () => {
