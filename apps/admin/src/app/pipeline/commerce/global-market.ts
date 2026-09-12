@@ -52,7 +52,7 @@ import { PRICE_MEANING_LABEL, PRICE_SECTION_TITLE } from "./price-hierarchy";
  *
  * 그래서 이 카드는 원가를 **입력으로도 받지 않는다**(GlobalMarketCardInput에서
  * costBasisIsTargetMarket을 지운 이유다 — 넘길 수 있는 인자가 없으면 배지도
- * 되살아날 수 없다). 착지원가는 ④ 수익성 한 곳에만 있다.
+ * 되살아날 수 없다). 착지원가는 ③ 수익성 한 곳에만 있다.
  *
  * 지운 것은 배지이지 사실이 아니다. "그 관측이 곧 원가 계산의 출발점"인 상품이
  * 있다는 사실은 ① 원본 상품 가격이 한 문장으로 말한다(price-hierarchy의
@@ -233,6 +233,15 @@ export interface GlobalMarketRow {
   checkedAt: string;
   /** 판매 판단이 서 있는 시장인가. market_code로만 판별한다. */
   isJudgingMarket: boolean;
+  /**
+   * MI-SIMPLIFY-1(CPO 지시, 2026-09-12) — 이 줄을 본문 한 줄에 넣을 때의 모양
+   * ("🇫🇷 FR €75"). 시장 · 가격, 그 둘뿐이다.
+   *
+   * 문자열을 여기서 만드는 이유는 이 파일의 다른 모든 문자열과 같다: 화면이
+   * 국기와 코드를 다시 조립하기 시작하면 같은 관측이 툴팁과 상세에서 서로 다른
+   * 모양으로 뜬다. 금액은 observedPrice 그대로라 값이 갈라질 수 없다.
+   */
+  compact: string;
 }
 
 export interface GlobalMarketCard {
@@ -271,14 +280,18 @@ export function buildGlobalMarketCard(
     const isKrw = o.currency.toUpperCase() === "KRW";
     const isJudgingMarket = isTargetMarket(o.marketCode, market);
     const path = sameProductPath(o.productUrl, o.marketCode);
+    // 원본 금액이 없는 행(레거시)은 저장된 원화값이 그 줄의 유일한 가격이다.
+    const observedPrice =
+      o.priceAmount != null ? formatOriginAmount(o.priceAmount, o.currency) : formatKrwAmount(o.priceKrw);
     return {
       marketCode: o.marketCode,
       flag: display.flag,
       name: display.name,
       code: o.marketCode,
-      // 원본 금액이 없는 행(레거시)은 저장된 원화값이 그 줄의 유일한 가격이다.
-      observedPrice:
-        o.priceAmount != null ? formatOriginAmount(o.priceAmount, o.currency) : formatKrwAmount(o.priceKrw),
+      observedPrice,
+      // 본문 한 줄용 모양. 같은 observedPrice를 쓰므로 툴팁과 상세가 다른 금액을
+      // 말할 수 없다(사본이 아니라 같은 문자열이다).
+      compact: `${display.flag} ${marketSuffix(o.marketCode)} ${observedPrice}`,
       // 판단 시장 줄만 라벨을 갖는다 — 화면에서 다른 "한국 가격"과 부딪히는
       // 유일한 줄이기 때문이다(위 GlobalMarketRow 주석).
       priceMeaningLabel: isJudgingMarket ? PRICE_MEANING_LABEL.KR_MARKET_PRICE : null,
@@ -308,7 +321,7 @@ export function buildGlobalMarketCard(
     // 아니고(③), 내가 치르는 돈도 아니다(④). MI/PRICE-2에서 뒤 절이 늘었다:
     // 🇰🇷 줄에 붙어 있던 "착지원가 기준" 배지를 지우면서, 그 배지가 잘못 말하던
     // 경계를 카드 전체가 한 번만 정확히 말하게 옮긴 것이다.
-    note: `각 시장에서 실제 관측된 판매가격입니다 — 이 판매처가 직접 파는 값이고, ${market.label} 편집샵의 비교상품 가격이 아닙니다. 제가 들여올 때 드는 돈은 ④ 수익성에서 따로 계산합니다.`,
+    note: `각 시장에서 실제 관측된 판매가격입니다 — 이 판매처가 직접 파는 값이고, ${market.label} 편집샵의 비교상품 가격이 아닙니다. 제가 들여올 때 드는 돈은 ③ 수익성에서 따로 계산합니다.`,
     empty:
       rows.length > 0
         ? null
@@ -317,6 +330,39 @@ export function buildGlobalMarketCard(
           miEmptyState("NO_SEARCH_DATA", "이 판매처에서 확인된 다른 시장 가격이 없습니다"),
   };
 }
+
+/**
+ * MI-SIMPLIFY-1(CPO 지시, 2026-09-12) — ②였던 카드가 본문에서 **한 줄**이 된다.
+ *
+ * ── 왜 카드를 접는가 ────────────────────────────────────────────────────
+ * MI가 답하는 질문은 하나뿐이다: "이 상품을 한국에서 이 가격에 팔 만한가?"
+ * 그 판단에 필요한 사실은 셋이다 — 원본 가격 · 한국에서 팔 수 있는 가격 ·
+ * 내 마진 기준으로 팔 만한가. 판매처가 프랑스에서 얼마를 받는지는 그 셋 중
+ * 어느 것도 아니다. **매입처를 고를 때** 필요한 사실이라 화면에서 지우지는
+ * 않지만, 본문에 카드로 서면 판단에 필요한 숫자와 같은 무게로 읽힌다.
+ *
+ * 그래서 이 저장소의 규칙을 그대로 적용한다:
+ *   본문     판단에 필요한 숫자
+ *   툴팁     그 숫자의 근거
+ *   상세보기  원하면 확인하는 원자료
+ *
+ * 이 함수가 만드는 것이 그 가운데 층이다. 계산은 여전히 없다 — 각 줄이 이미
+ * 들고 있는 compact 문자열을 이어 붙이기만 한다(평균도, 최저도, 차액도 없다).
+ */
+export function globalMarketSummaryLine(card: GlobalMarketCard): string | null {
+  return card.rows.length > 0 ? card.rows.map((row) => row.compact).join(" · ") : null;
+}
+
+/**
+ * 관측이 하나도 없을 때 본문에 남는 **한 줄**.
+ *
+ * 노란 경고 상자도, 실패 로그도, 긴 설명도 쓰지 않는다(CPO 명시). 다른 시장
+ * 가격을 못 봤다는 것은 판단의 실패가 아니라 이 판매처에 다른 시장이 없거나
+ * 조회할 수 없었다는 사실일 뿐이고, 그 사실은 "팔 만한가"의 답을 바꾸지 않는다
+ * — ③ 수익성은 이 줄이 비어도 전부 계산된 채로 남는다. 경고 상자를 세우면
+ * 셀러는 판정이 흔들린 줄 알고 멈춘다.
+ */
+export const GLOBAL_MARKET_UNAVAILABLE_NOTE = "글로벌 시장 가격을 확인할 수 없습니다.";
 
 /**
  * 판단 시장(오늘은 한국) 관측 줄. **정확히 하나일 때만** 돌려준다.

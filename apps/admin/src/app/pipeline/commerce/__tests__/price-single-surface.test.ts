@@ -310,7 +310,7 @@ describe("④ 상세 계산은 MI ④ 수익성 한 곳에만 있고, ③ 등록
 
   it("MI ④는 요약 넷 + 토글 하나다 — 계산이 펼치기 전에 새지 않는다", () => {
     const chainAt = panel.indexOf("<PriceChainView rows={priceChain} />");
-    const toggleAt = panel.indexOf("{caret(showPriceDetail)} 가격 계산 기준 보기");
+    const toggleAt = panel.indexOf("ⓘ 가격 계산 기준 {caret(showPriceDetail)}");
     const slotAt = panel.indexOf("{priceCalculationDetail}");
     expect(chainAt).toBeGreaterThan(-1);
     expect(toggleAt).toBeGreaterThan(chainAt);

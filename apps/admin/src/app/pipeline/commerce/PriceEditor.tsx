@@ -22,7 +22,7 @@ import { ValueBadge } from "@/components/ui/ValueBadge";
  *
  * 그래서 이 카드에서 계산 사슬(원본가 → 환율 → 환산 → 국제배송비 → 착지원가 →
  * 수수료 → 마진 → 권장 판매가격)이 통째로 빠졌다. 지운 것이 아니라 소유자가
- * 바뀐 것이다 — 그 사슬은 이제 MI ④ 💰 수익성의 접힘 안, PriceCalculationDetail
+ * 바뀐 것이다 — 그 사슬은 이제 MI ③ 💰 수익성의 접힘 안, PriceCalculationDetail
  * 하나에서만 그려진다. 남는 질문은 여기서 하나뿐이다: **그래서 얼마로 팔 것인가.**
  *
  * ── UX 2.5(2026-09-11)에서 지킨 것은 그대로 지킨다 ────────────────────────
@@ -57,7 +57,7 @@ export function PriceEditor({
    */
   recommendedPriceKrw: number | null;
   onUpdateSalePriceKrw: (amountKrw: number) => void;
-  /** MI ④ 💰 수익성의 [가격 계산 기준 보기]를 펼치고 그 자리로 데려간다.
+  /** MI ③ 💰 수익성의 [ⓘ 가격 계산 기준]을 펼치고 그 자리로 데려간다.
    * 여기서 계산하지도, 조회하지도 않는다 — 화면 이동 하나뿐이다. */
   onOpenPriceCalculation?: () => void;
 }) {
@@ -99,7 +99,7 @@ export function PriceEditor({
               있고, 그 자리로 데려가는 길만 남긴다. 같은 입력칸이 두 카드에
               생기면 어느 쪽이 실제로 저장되는지 화면이 답하지 못한다. */}
           <p className="mt-1 text-xs opacity-90">
-            {PRICE_SECTION_TITLE.PROFITABILITY}의 [가격 계산 기준 보기]에서 원본 가격을 직접 입력하면 계산이 다시
+            {PRICE_SECTION_TITLE.PROFITABILITY}의 [ⓘ 가격 계산 기준]에서 원본 가격을 직접 입력하면 계산이 다시
             시작됩니다.
           </p>
         </div>

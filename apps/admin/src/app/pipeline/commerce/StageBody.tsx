@@ -47,7 +47,7 @@ export interface StageSurfaces {
    * 확정 카드가 두 벌 생기면 같은 상품이 위아래에서 다른 판매가를 말한다.
    *
    * MI/PRICE-1(CEO 지시, 2026-09-12) — 이 노드에 계산 사슬은 더 이상 없다.
-   * 상세 계산은 MI ④ 💰 수익성의 접힘 하나에만 있고, 여기 남은 것은 "권장가를
+   * 상세 계산은 MI ③ 💰 수익성의 접힘 하나에만 있고, 여기 남은 것은 "권장가를
    * 최종가로 확정할 것인가"뿐이다.
    */
   price: React.ReactNode;
@@ -179,7 +179,7 @@ export function StageBody({
             title={PREPARE_SURFACE_LABEL.PRICE}
             /* MI/PRICE-1 — 요약이 계산 사슬을 다시 적지 않는다. 이 카드가 묻는
                것은 "얼마로 팔 것인가" 하나이고, 그 값이 어떻게 나왔는지는 MI
-               ④ 💰 수익성이 답한다. */
+               ③ 💰 수익성이 답한다. */
             summary="권장 판매가격을 확인하고 최종 판매가격을 확정합니다 · 여기서 정한 한 값이 모든 채널의 기본 판매가가 됩니다"
             open={priceOpen}
             onToggle={setPriceOpen}
@@ -191,7 +191,7 @@ export function StageBody({
             비교"로. 이 묶음이 실제로 들고 있는 것은 두 시장의 관측이다:
             국내 경쟁 판매자와 해외 판매처. 제목이 "비교 근거"라고만 하면
             무엇과 무엇을 비교한 것인지 열어봐야 알 수 있고, 판단 카드 안의
-            ③ 한국 시장 경쟁가격과 이름으로 이어지지도 않는다. */}
+            ② 한국 시장 경쟁가격과 이름으로 이어지지도 않는다. */}
         {focus.marketEvidence === "COLLAPSED" && (
           <CollapsibleSection
             title="📊 시장 가격 비교"

@@ -35,8 +35,15 @@ describe("가격 계층은 화면에 한 벌만 있다", () => {
     // 화면 위아래에서 다른 값을 말한다.
     expect(jsxUses(panel, "OriginalPriceView")).toBe(1);
     expect(jsxUses(panel, "PriceChainView")).toBe(1);
-    expect(jsxUses(panel, "GlobalMarketCardView")).toBe(1);
     expect(jsxUses(panel, "MarketComparisonView")).toBe(1);
+    // MI-SIMPLIFY-1 — 글로벌 시장은 본문 한 줄(Hint)이고, 시장별 원자료
+    // (CardView)는 그 한 줄을 펼쳤을 때만 나온다. 카드가 본문으로 되돌아오면
+    // CardView가 두 번 쓰이거나 Hint 밖에서 쓰이게 되고, 아래 두 줄이 막는다.
+    expect(jsxUses(panel, "GlobalMarketHint")).toBe(1);
+    expect(jsxUses(panel, "GlobalMarketCardView")).toBe(1);
+    const hintAt = panel.indexOf("function GlobalMarketHint");
+    const hintEndAt = panel.indexOf("function GlobalMarketCardView");
+    expect(panel.slice(hintAt, hintEndAt)).toContain("{open && <GlobalMarketCardView card={card} />}");
   });
 
   it("①은 사슬과 같은 입력에서 만들어진다 — 두 번째 원본가격이 생기지 않는다", () => {
@@ -158,16 +165,22 @@ describe("시장별 가격 한 줄은 시장·통화·환산을 모두 말한다
 describe("가격 영역은 정해진 순서로 읽힌다", () => {
   const verdictAt = panel.indexOf("{FINAL_VERDICT_COPY[sellerDecision.finalVerdict].icon}");
   const originalAt = panel.indexOf("<OriginalPriceView");
-  const globalAt = panel.indexOf("<GlobalMarketCardView");
+  const globalHintAt = panel.indexOf("<GlobalMarketHint");
   const comparisonAt = panel.indexOf("<MarketComparisonView");
   const chainAt = panel.indexOf("<PriceChainView");
   const evidenceAt = panel.indexOf("<MiAxisStars");
 
-  it("판단 → ① 원본 → ② 글로벌 → ③ 한국 경쟁 → ④ 수익성 → ⑤ 근거 순서다", () => {
+  /**
+   * MI-SIMPLIFY-1(CPO 지시, 2026-09-12) — 본문에서 ②(글로벌 시장)가 빠졌다.
+   * 카드 하나가 ⓘ 한 줄이 되면서 남은 순서가 한 칸씩 당겨진다:
+   * 판단 → ① 원본(+ⓘ 글로벌) → ② 한국 경쟁 → ③ 수익성 → ④ 근거.
+   */
+  it("판단 → ① 원본 → ② 한국 경쟁 → ③ 수익성 → ④ 근거 순서다", () => {
     expect(verdictAt).toBeGreaterThan(-1);
     expect(originalAt).toBeGreaterThan(verdictAt);
-    expect(globalAt).toBeGreaterThan(originalAt);
-    expect(comparisonAt).toBeGreaterThan(globalAt);
+    // ⓘ 글로벌 시장은 ① 바로 아래에 붙는다 — 원본 상품의 사실이기 때문이다.
+    expect(globalHintAt).toBeGreaterThan(originalAt);
+    expect(comparisonAt).toBeGreaterThan(globalHintAt);
     expect(chainAt).toBeGreaterThan(comparisonAt);
     expect(evidenceAt).toBeGreaterThan(chainAt);
   });
@@ -175,9 +188,12 @@ describe("가격 영역은 정해진 순서로 읽힌다", () => {
   it("각 블록이 몇 번인지 화면이 직접 말한다", () => {
     // 제목에 번호가 없으면 순서가 깨져도 화면만 봐서는 알 수 없다.
     const hierarchy = read("../price-hierarchy.ts");
-    for (const title of ["① 원본 상품 가격", "② 🌎 판매자 글로벌 시장 가격", "③ 📊 한국 시장 경쟁가격"]) {
+    for (const title of ["① 원본 상품 가격", "② 📊 한국 시장 경쟁가격"]) {
       expect(hierarchy).toContain(title);
     }
+    // 글로벌 시장은 본문 순서에 없으므로 번호도 없다(price-hierarchy.test.ts가
+    // 그 사실 자체를 고정한다).
+    expect(hierarchy).toContain('SELLER_GLOBAL_MARKET: "🌎 판매자 글로벌 시장 가격"');
     expect(panel).toContain("PRICE_SECTION_TITLE.PROFITABILITY");
     expect(panel).toContain("PRICE_SECTION_TITLE.DECISION_EVIDENCE");
   });
@@ -308,7 +324,7 @@ describe("가격 상세는 접히고, 같은 숫자는 두 번 그려지지 않�
     // CPO가 지정한 모양: 요약 넷 + 토글 하나. 토글이 둘이 되는 순간 셀러는
     // 어느 쪽에 계산이 있는지 몰라 둘 다 눌러본다(UX 2.4에서 이미 겪었다).
     expect((panel.match(/setShowPriceDetail\(/g) ?? []).length).toBe(2); // 토글 1개 + 바깥 요청 동기화 1개
-    expect(panel).toContain("{caret(showPriceDetail)} 가격 계산 기준 보기");
+    expect(panel).toContain("ⓘ 가격 계산 기준 {caret(showPriceDetail)}");
     expect(panel).toContain("{showPriceDetail && (");
     expect(panel).toContain("{priceCalculationDetail}");
     // 패널이 상세 계산을 직접 만들지 않는다 — 노드로 받기만 한다. 직접 만들면

@@ -371,17 +371,36 @@ describe("① 원본 상품 가격은 언제나 원본 통화가 먼저다", () 
     expect(headline.converted).toBeNull();
   });
 
-  it("읽는 순서는 ① 원본 → ② 글로벌 → ③ 한국 경쟁 → ④ 수익성 → ⑤ 근거다", () => {
+  it("읽는 순서는 ① 원본 → ② 한국 경쟁 → ③ 수익성 → ④ 근거다", () => {
     // 순서가 제목 안에 적혀 있어야 누가 블록을 옮겼을 때 번호가 먼저 어긋난다.
     expect(Object.values(PRICE_SECTION_TITLE)).toEqual([
       "① 원본 상품 가격",
-      "② 🌎 판매자 글로벌 시장 가격",
-      "③ 📊 한국 시장 경쟁가격",
-      "④ 💰 수익성",
-      "⑤ 🔎 판단 근거",
+      "🌎 판매자 글로벌 시장 가격",
+      "② 📊 한국 시장 경쟁가격",
+      "③ 💰 수익성",
+      "④ 🔎 판단 근거",
     ]);
     // US/DE/FR는 **같은 판매자**의 시장이다 — 남의 해외 가격 비교가 아니다.
     expect(PRICE_SECTION_TITLE.SELLER_GLOBAL_MARKET).not.toContain("해외 가격 비교");
+  });
+
+  /**
+   * MI-SIMPLIFY-1(CPO 지시, 2026-09-12) — 번호가 없다는 것이 곧 계층이다.
+   *
+   * MI가 답하는 질문은 하나("이 상품을 한국에서 이 가격에 팔 만한가?")이고 그
+   * 답에 필요한 사실은 셋뿐이다. 판매자 글로벌 시장은 매입처를 고를 때의
+   * 사실이라 본문의 읽는 순서에 속하지 않는다 — 누군가 그 카드를 본문으로
+   * 되돌리려 하면 번호부터 다시 붙여야 하고, 이 테스트가 먼저 막는다.
+   */
+  it("판매자 글로벌 시장만 번호가 없다 — 본문 순서에 속하지 않는다", () => {
+    expect(PRICE_SECTION_TITLE.SELLER_GLOBAL_MARKET).not.toMatch(/[①②③④⑤]/);
+    const numbered = Object.entries(PRICE_SECTION_TITLE).filter(([, title]) => /^[①②③④]/.test(title));
+    expect(numbered.map(([key]) => key)).toEqual([
+      "ORIGINAL",
+      "DOMESTIC_COMPETITION",
+      "PROFITABILITY",
+      "DECISION_EVIDENCE",
+    ]);
   });
 });
 
@@ -439,8 +458,8 @@ describe("원본 판매자 한국 표시가는 ①에서 자기 라벨로 선다
     expect(headline.krMarket?.basis).toContain("en-kr 페이지에서 직접 관측");
     expect(headline.krMarket?.basis).toContain("환율 환산이 아닙니다");
     // 관계는 말하되 금액의 정체를 바꾸지 않는다 — "착지원가 기준"이라는 라벨이
-    // 아니라 "④의 착지원가가 여기서 출발한다"는 문장이다.
-    expect(headline.krMarket?.basis).toContain("④ 수익성의 착지원가가 이 관측에서 출발합니다");
+    // 아니라 "③의 착지원가가 여기서 출발한다"는 문장이다(MI-SIMPLIFY-1에서 수익성이 ④ → ③으로 당겨졌다 — 문장 구조는 그대로다).
+    expect(headline.krMarket?.basis).toContain("③ 수익성의 착지원가가 이 관측에서 출발합니다");
     expect(headline.krMarket?.label).not.toContain("착지원가");
   });
 

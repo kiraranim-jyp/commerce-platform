@@ -4,7 +4,7 @@ import { miEmptyState, type MiEmptyState } from "./mi-empty-state";
 import { PRICE_MEANING_LABEL, PRICE_SECTION_TITLE, type MarketContext } from "./price-hierarchy";
 
 /**
- * UX 2.4.1(CEO 지시, 2026-09-11) — **③ 한국 시장 경쟁가격**: 화면에서 비교가
+ * UX 2.4.1(CEO 지시, 2026-09-11) — **② 한국 시장 경쟁가격**: 화면에서 비교가
  * 일어나는 유일한 자리.
  *
  * ── 왜 이 파일이 따로 있는가 ─────────────────────────────────────────────
@@ -20,12 +20,12 @@ import { PRICE_MEANING_LABEL, PRICE_SECTION_TITLE, type MarketContext } from "./
  * 셀러는 "₩78,000에 사서 ₩116,600에 파는" 기회를 "비슷한 숫자 둘"로 읽는다.
  *
  * 그래서 이 파일은 두 builder의 **결과만** 받는다. 입력을 섞지 않고 결과를 나란히
- * 놓는다 — 그것이 이번 지시가 요구한 "③은 비교가 일어나는 유일한 곳"이다.
+ * 놓는다 — 그것이 이번 지시가 요구한 "② 한 곳에서만 비교가 일어난다"이다.
  *
  * ── 계산하지 않는다 ─────────────────────────────────────────────────────
  * 차액도, 비율도, 평균도 내지 않는다. ₩38,600이라는 숫자는 매력적이지만 그건
  * 우리가 만든 값이고, 실제로는 그 사이에 국제배송비·수수료·관부가세가 있다.
- * 두 값을 나란히 놓는 것까지가 화면의 일이고, 빼는 것은 ④ 수익성의 일이다.
+ * 두 값을 나란히 놓는 것까지가 화면의 일이고, 빼는 것은 ③ 수익성의 일이다.
  */
 export interface MarketComparisonSide {
   label: string;
@@ -38,7 +38,7 @@ export interface MarketComparisonSide {
 
 export interface MarketComparison {
   title: string;
-  /** 왼쪽 — 이 판매처가 한국에서 직접 받는 값(②의 🇰🇷 줄과 같은 관측이다). */
+  /** 왼쪽 — 이 판매처가 한국에서 직접 받는 값(① 아래 ⓘ 글로벌 시장의 🇰🇷 줄과 같은 관측이다). */
   seller: MarketComparisonSide;
   /** 오른쪽 — 다른 한국 판매자들이 받는 값(C 그룹 그대로). */
   domestic: MarketComparisonSide;
@@ -46,12 +46,27 @@ export interface MarketComparison {
   versus: string;
   /** 무엇과 무엇을 비교하고 있는지 한 문장. 라벨만으로는 "둘 다 한국 가격"으로 읽힌다. */
   versusNote: string;
+  /**
+   * MI-SIMPLIFY-1(CPO 지시, 2026-09-12) — 비교할 국내 상품이 실제로 있는가.
+   *
+   * 없으면 화면은 이 블록을 **통째로 그리지 않는다**(빈 칸으로 남기지 않는다).
+   * 빈 칸은 정보가 아니라 질문이다: 셀러는 "⚪ 검색 데이터 없음" 두 칸을 보고
+   * 조회가 고장났는지, 자기가 뭘 안 했는지, 판정이 틀렸는지를 스스로 추론해야
+   * 했다. 비교 근거가 없다는 사실 자체는 지우지 않고 "왜 이렇게 판단했나요?"
+   * 안으로 옮긴다 — 그건 판정의 일부이지 본문의 숫자가 아니다
+   * (mi-market-case.ts의 NO_DOMESTIC_COMPARABLE_NOTE).
+   *
+   * 판정은 여기서 하지 않는다. buildMarketContext가 이미 낸 comparable에 값이
+   * 있는지만 본다 — "비교상품이 있다"의 기준을 두 곳에서 각자 정하면 언젠가
+   * 블록은 숨겼는데 판정은 비교한 것으로 나오는 화면이 생긴다.
+   */
+  hasComparable: boolean;
 }
 
 /**
  * 두 축의 **결과**를 나란히 놓는다. 어느 쪽 builder의 입력에도 손대지 않는다.
  *
- * 판매자 한국 가격은 ②의 판단 시장 줄에서만 온다 — 판단 시장 줄이 정확히 하나일
+ * 판매자 한국 가격은 글로벌 시장 카드의 판단 시장 줄에서만 온다 — 그 줄이 정확히 하나일
  * 때만 쓰고, 없으면 "확인되지 않았다", 둘 이상이면 "확정하지 못했다"고 말한다
  * (buildGlobalMarketCard의 원가 기준 판별과 같은 규칙이다: 모르면 고르지 않는다).
  */
@@ -77,7 +92,7 @@ export function buildMarketComparison(
           // 국제배송비)는 다른 숫자다. 비교의 한쪽 칸에 원가 라벨이 붙으면
           // "판매자가 받는 값 VS 다른 판매자가 받는 값"이라는 이 블록의 문장이
           // "내 원가 VS 남의 판매가"로 읽힌다 — ②의 배지와 같은 종류의 오독이다.
-          // 같은 관측이 ④ 원가 계산의 출발점이라는 사실은 ①이 말한다.
+          // 같은 관측이 ③ 원가 계산의 출발점이라는 사실은 ①이 말한다.
           "이 판매처가 직접 파는 값",
           row.krwPrice ? `원화 환산 ${row.krwPrice}` : null,
         ]
@@ -107,5 +122,8 @@ export function buildMarketComparison(
     domestic,
     versus: "VS",
     versusNote: `왼쪽은 이 판매처가 ${market.label}에서 직접 받는 값, 오른쪽은 다른 ${market.label} 판매자들이 받는 값입니다 — 같은 상품의 서로 다른 두 가격입니다.`,
+    // 오른쪽 칸(국내 비교상품)에 값이 있을 때만 이 블록이 비교다. 왼쪽만 있는
+    // 상태는 비교가 아니라 관측 하나이고, 그 관측은 ①이 이미 말하고 있다.
+    hasComparable: domestic.value != null,
   };
 }

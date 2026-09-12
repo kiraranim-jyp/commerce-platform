@@ -43,7 +43,7 @@ const panel = read("../DomesticPriceIntelligencePanel.tsx");
 describe("판단에 필요한 숫자가 접기 전에 보인다", () => {
   it("④ 수익성 요약이 토글보다 먼저 그려진다", () => {
     const chainAt = panel.indexOf("<PriceChainView rows={priceChain} />");
-    const toggleAt = panel.indexOf("{caret(showPriceDetail)} 가격 계산 기준 보기");
+    const toggleAt = panel.indexOf("ⓘ 가격 계산 기준 {caret(showPriceDetail)}");
     expect(chainAt).toBeGreaterThan(-1);
     expect(toggleAt).toBeGreaterThan(chainAt);
   });

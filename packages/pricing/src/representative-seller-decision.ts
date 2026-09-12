@@ -292,7 +292,18 @@ const SELLER_FACING_MAP: Record<RepresentativeVerdictCode, SellerFacingVerdictCo
   HOLD: "NOT_RECOMMENDED",
 };
 
-const SELLER_FACING_COPY: Record<SellerFacingVerdictCode, { icon: SellerFacingVerdict["icon"]; title: string }> = {
+/**
+ * MI-SIMPLIFY-1(CPO 지시, 2026-09-12) — export로 바꿨다. 값도 의미도 그대로다.
+ *
+ * ③ 수익성의 판정 배지가 CASE A/B/C를 셀러 어휘로 옮길 때 이 표를 그대로 쓴다.
+ * 화면 쪽에서 "판매 추천"을 다시 타이핑하면 같은 판정에 어휘가 둘이 되고,
+ * 한쪽만 고쳐지는 날 같은 상품이 카드 위아래에서 다른 말을 한다 — 이 저장소가
+ * FINAL_VERDICT_COPY를 한 벌만 유지하는 이유와 정확히 같다.
+ */
+export const SELLER_FACING_COPY: Record<
+  SellerFacingVerdictCode,
+  { icon: SellerFacingVerdict["icon"]; title: string }
+> = {
   RECOMMENDED: { icon: "🟢", title: "판매 추천" },
   CONDITIONAL: { icon: "🟡", title: "조건부 판매" },
   NOT_RECOMMENDED: { icon: "🔴", title: "판매 비추천" },
