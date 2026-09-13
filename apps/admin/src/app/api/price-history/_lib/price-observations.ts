@@ -170,11 +170,47 @@ export async function recordPriceObservations(
  * 그대로 유지한다(판정 로직 자체는 한 줄도 바꾸지 않는다). */
 export const MARKET_PROBE_SOURCE_LABEL = "MARKET_PROBE";
 
+/** N-4.18-Q3 P0-2 이후 run-price-check.ts가 원가 근거 행에 남기는 두 라벨.
+ * 문자열을 세 파일(run-price-check/market-intelligence/brand-market)이 각자
+ * 적어 두면 한 곳만 고쳤을 때 필터가 조용히 어긋난다. */
+export const ORIGIN_FX_SOURCE_LABEL = "ORIGIN_FX";
+export const KR_MARKET_SOURCE_LABEL = "KR_MARKET";
+
 /** 원가 근거로 쓸 수 있는 SELLER_ORIGIN 관측인가. 과거 관측은 sourceLabel이
  * null(=ORIGIN_FX였던 시절)이라 null을 제외하면 안 된다 — 새로 생긴 추가
  * 시장 행만 정확히 걸러낸다. */
 export function isCostBasisOriginObservation(record: { sourceLabel: string | null }): boolean {
   return record.sourceLabel !== MARKET_PROBE_SOURCE_LABEL;
+}
+
+/**
+ * GLOBAL-ORIGIN-PRICE-WIRING-1(CEO 지시, 2026-09-13) — **원가 계산이 읽을
+ * SELLER_ORIGIN 시계열**을 고른다.
+ *
+ * ── 왜 필터 하나로 부족해졌나 ────────────────────────────────────────────
+ * 지금까지 원가 근거 행은 한 번의 확인마다 정확히 한 행이었다(KR_MARKET
+ * **또는** ORIGIN_FX). 이제는 둘 다 저장된다 — 원본가(사이트 기준 시장)와
+ * 한국 표시가는 서로 다른 사실이고, CEO 확정 정책상 **동시에 존재하는 것이
+ * 정상**이기 때문이다. 그런데 두 행은 같은 insert 배치라 checked_at까지 같아서,
+ * `originHistory[0]`만 읽던 기존 코드는 어느 쪽이 원가가 될지 보장할 수 없다.
+ * 시계열에 둘이 섞이면 computePriceChange가 같은 시점의 €75와 ₩168,000을
+ * "가격 변동"으로 읽어 없던 급락 알림까지 만든다.
+ *
+ * ── 고르는 규칙 ──────────────────────────────────────────────────────────
+ * ORIGIN_FX 행이 하나라도 있으면 KR_MARKET 행을 뺀다. 원가는 원본 시장 가격
+ * 기준이어야 하고(₩168,000은 한국 방문자에게 보여주는 판매처 자체 환산가라
+ * 사이트 스프레드가 이미 들어 있다), 한 시장으로만 이뤄진 시계열이어야
+ * 가격 변동이 실제 변동을 뜻한다.
+ *
+ * ── 기존 데이터는 그대로다 ───────────────────────────────────────────────
+ * ORIGIN_FX가 한 건도 없는 스냅샷(이 변경 이전에만 확인된 상품)은 반환값이
+ * 예전 필터 결과와 **완전히 동일**하다 — KR_MARKET/null 행이 그대로 원가로
+ * 남는다. 과거 행을 지우거나 다시 계산하지 않는다(읽는 쪽만 달라진다).
+ */
+export function selectCostBasisOriginObservations<T extends { sourceLabel: string | null }>(records: T[]): T[] {
+  const candidates = records.filter(isCostBasisOriginObservation);
+  if (!candidates.some((r) => r.sourceLabel === ORIGIN_FX_SOURCE_LABEL)) return candidates;
+  return candidates.filter((r) => r.sourceLabel !== KR_MARKET_SOURCE_LABEL);
 }
 
 /** market_code는 null과 ""(로케일 프리픽스 없는 기본 요청) 두 형태로 "시장

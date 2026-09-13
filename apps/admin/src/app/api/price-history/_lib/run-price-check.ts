@@ -12,6 +12,8 @@ import {
   getObservedMarketKeysToday,
   normalizeMarketKey,
   MARKET_PROBE_SOURCE_LABEL,
+  ORIGIN_FX_SOURCE_LABEL,
+  KR_MARKET_SOURCE_LABEL,
   type NewPriceObservation,
 } from "./price-observations";
 
@@ -152,6 +154,85 @@ export function buildAdditionalMarketObservations(params: {
   return { observations, errors };
 }
 
+/**
+ * GLOBAL-ORIGIN-PRICE-WIRING-1(CEO 지시, 2026-09-13) — **원가 근거 행 한 개**를
+ * 만든다(ORIGIN_FX 또는 KR_MARKET). 두 행이 같은 규칙(환산·할인·품절·관측 근거)
+ * 위에 서도록 지금까지 인라인으로 한 번만 쓰이던 코드를 그대로 함수로 뽑았다 —
+ * 계산은 한 줄도 새로 만들지 않았다(convertToKrwStrict / P-12A 할인 판정 그대로).
+ *
+ * probe는 **관측 근거**다(marketCode/marketCountry/URL/재고/정가). 금액과 통화를
+ * 따로 받는 이유는 원본가 행이 probe 없이도(비-Shopify) 만들어져야 하기
+ * 때문이다 — 그때는 크롤링 시점에 확정된 원본 통화 금액이 그대로 들어간다.
+ */
+function buildCostBasisObservation(params: {
+  snapshotId: string;
+  sourceLabel: string;
+  probe: ShopifyMarketProbeResult | null;
+  amount: number;
+  currency: string;
+  rates: Record<string, number>;
+}): { observation: NewPriceObservation | null; error: string | null } {
+  // PRICE-ACCURACY-REGRESSION-1.1(CPO 결정, 2026-09-11) — price_history는 정의상
+  // KRW 시계열이라 환율을 모르면 넣을 값이 없다. 예전엔 convertToKrw가 금액을
+  // 그대로 KRW로 돌려줘서 `499 DKK`가 `₩499`로 저장됐고, 한 번 저장되면 마진·
+  // CASE 판정까지 그 값을 믿게 된다. 원본가격 자체는 product_snapshots에 통화와
+  // 함께 남아 있으므로 여기서 건너뛰어도 "원가를 버리는" 것이 아니다.
+  const converted = convertToKrwStrict(params.amount, params.currency, params.rates);
+  if (!converted) {
+    return { observation: null, error: `환율 정보 없음(${params.currency}) — 원화 환산 가격을 저장하지 않았습니다.` };
+  }
+
+  // P-12A(대표님/CPO 지시, 2026-08-31) — "실제 구매 가능한 가격"을 Market
+  // Intelligence까지 흘려보내려면 할인 여부/정가/품절 여부를 이 시점에 같이
+  // 저장해야 한다. price_krw의 기존 의미(실제 판매가)는 그대로 두고,
+  // sale_price_krw는 "할인 중"이라는 상태 정보로만 쓴다(CPO 확정:
+  // price_krw==sale_price_krw여도 무방, 의미가 다르다).
+  const probe = params.probe;
+  let salePriceKrw: number | null = null;
+  let originalPriceKrw: number | null = null;
+  let soldOut: boolean | null = null;
+  if (probe) {
+    soldOut = probe.available === false;
+    // regularPrice(할인 전 정가)가 있고 현재가보다 실제로 클 때만 "할인 중"이다
+    // — 같거나 작으면 할인이 아니다(정가=현재가인 상품을 할인 중으로 지어내지 않는다).
+    if (probe.regularPrice && probe.regularPrice.amount > probe.amount) {
+      salePriceKrw = converted.amountKrw;
+      originalPriceKrw =
+        convertToKrwStrict(probe.regularPrice.amount, probe.regularPrice.currency, params.rates)?.amountKrw ?? null;
+    }
+  }
+
+  return {
+    observation: {
+      snapshotId: params.snapshotId,
+      source: "SELLER_ORIGIN",
+      // N-4.18-Q3 — sourceLabel은 SELLER_ORIGIN에서 지금까지 안 쓰이던 필드라
+      // (DOMESTIC_SHOP만 상점명으로 사용) 마이그레이션 없이 원가 근거
+      // (KR_MARKET/ORIGIN_FX)를 그대로 재사용한다.
+      sourceLabel: params.sourceLabel,
+      // GLOBAL-SELLER/MARKET 1단계 — probe가 이미 들고 있는 값을 그대로 넘긴다.
+      // 여기서 market을 새로 판별하지 않는다(URL로 국가를 추측하지도 않는다).
+      // marketCode는 실제로 요청한 코드이고("" 또는 en-kr), market_country는
+      // 그 매장이 /meta.json에 스스로 적어 둔 기준 국가다.
+      marketCode: probe?.marketCode ?? null,
+      marketCountry: probe?.shopMeta?.country ?? null,
+      // GLOBAL-MARKET ③ — probe가 실제로 조회한 URL을 그대로 남긴다. 판매처
+      // 식별(sellerIdentityKey)이 호스트명을 우선 쓰기 때문이다. 비-Shopify
+      // (probe 실패)면 예전처럼 null 그대로다.
+      sourceProductUrl: probe?.sourceUrl ?? null,
+      currency: params.currency,
+      priceAmount: params.amount,
+      exchangeRate:
+        params.currency.toUpperCase() === "KRW" ? null : (params.rates[params.currency.toUpperCase()] ?? null),
+      priceKrw: converted.amountKrw,
+      salePriceKrw,
+      originalPriceKrw,
+      soldOut,
+    },
+    error: null,
+  };
+}
+
 export async function runPriceCheck(input: PriceCheckInput): Promise<PriceCheckResult> {
   const errors: string[] = [];
   const observations: NewPriceObservation[] = [];
@@ -164,88 +245,81 @@ export async function runPriceCheck(input: PriceCheckInput): Promise<PriceCheckR
   if (originAlreadyChecked) {
     originSaved = true; // 오늘 이미 저장돼 있음 — 상태 계산상 "저장됨"으로 취급.
   } else if (input.originalPriceAmount > 0 && input.originalCurrency) {
-    // N-4.18-Q3 P0-2(대표님 지시: "£200×환율보다 실제 한국 표시가가 더 정확한
-    // 원가") — 실측 확인(2026-08-26, PèPè 사례): £200×환율=₩377,400인데 실제
-    // 한국 로케일(en-kr) 표시가는 ₩234,800이었다(차이 ₩142,600). Shopify
-    // 상품이고 en-kr 시장이 KRW로 직접 표시되면 그 값을 원가로 쓴다 — 통화
-    // 변환 오차/마진 없이 실제 한국에서 결제되는 금액에 더 가깝다. 실패하면
-    // (Shopify가 아니거나 en-kr 시장이 없으면) 기존 원문 통화×환율 그대로 폴백.
+    /**
+     * GLOBAL-ORIGIN-PRICE-WIRING-1(CEO 확정, 2026-09-13) — **원본가와 한국
+     * 표시가는 둘 다 저장한다.**
+     *
+     * ── 무엇이 틀려 있었나(Production 실측, 2026-09-13 SELECT) ──────────────
+     * Bobo Choses B226AC114의 최신 스냅샷에는 KR_MARKET ₩168,000 한 행만 있고
+     * ORIGIN_FX가 0건이었다. 원인은 URL도 크롤러도 아니다 — 등록된 URL에
+     * 프리픽스가 없는 스냅샷(`/products/…`)에서도, 스냅샷에 저장된 원본가가
+     * 이미 EUR 75인데도 결과가 같았다. 이 자리의 코드가 한국 표시가를 원가의
+     * **대체**로 골랐기 때문이다(`useKrMarket ? "KR_MARKET" : "ORIGIN_FX"`):
+     * en-kr 시장이 KRW로 값을 주는 판매처는 원본가 행이 아예 생기지 않았다.
+     *
+     * ── 왜 대체가 아니라 병존인가 ────────────────────────────────────────
+     * 두 값은 서로 다른 사실이라 하나가 다른 하나를 지울 수 없다. ₩168,000은
+     * 판매처가 한국 방문자에게 직접 보여주는 값(판매처 자체 환산·스프레드 포함)
+     * 이고, €75는 그 판매처가 기준 시장에서 매긴 상품 가격이다. 착지원가·마진·
+     * CASE는 후자를 원가로 써야 한다(CEO 확정) — 그래서 원본가 행은 **항상**
+     * 만들고, 한국 표시가는 시장 관측으로 나란히 남긴다. 둘 중 어느 쪽을 원가로
+     * 읽을지는 저장이 아니라 조회가 정한다(selectCostBasisOriginObservations).
+     * N-4.18-Q3 P0-2가 남긴 KR_MARKET 행 자체는 그대로다 — 삭제도 수정도 없다.
+     */
     const marketProbe = await probeOriginAndKrMarkets(input.sourceUrl).catch(() => null);
-    const krPrice = marketProbe?.kr;
-    const useKrMarket = krPrice != null && krPrice.currency === "KRW" && krPrice.amount > 0;
-
-    const priceAmount = useKrMarket ? krPrice.amount : input.originalPriceAmount;
-    const currency = useKrMarket ? "KRW" : input.originalCurrency;
     const exchangeRates = await fetchLiveExchangeRates();
-    // PRICE-ACCURACY-REGRESSION-1.1(CPO 결정, 2026-09-11) — price_history는 정의상
-    // KRW 시계열이라 환율을 모르면 넣을 값이 없다. 예전엔 convertToKrw가 금액을
-    // 그대로 KRW로 돌려줘서 `499 DKK`가 `₩499`로 저장됐고, 한 번 저장되면 마진·
-    // CASE 판정까지 그 값을 믿게 된다. 원본가격 자체는 product_snapshots에 통화와
-    // 함께 남아 있으므로 여기서 건너뛰어도 "원가를 버리는" 것이 아니다.
-    const converted = convertToKrwStrict(priceAmount, currency, exchangeRates.rates);
-    if (!converted) errors.push(`환율 정보 없음(${currency}) — 원화 환산 가격을 저장하지 않았습니다.`);
 
-    // P-12A(대표님/CPO 지시, 2026-08-31) — "실제 구매 가능한 가격"을 Market
-    // Intelligence까지 흘려보내려면 할인 여부/정가/품절 여부를 이 시점에
-    // 같이 저장해야 한다. useKrMarket으로 이미 고른 kr/origin probe 결과
-    // 하나에서만 파생한다(새 fetch 없음, marketProbe는 위에서 이미 받아온 것).
-    // price_krw의 기존 의미(실제 판매가)는 그대로 두고, sale_price_krw는
-    // "할인 중"이라는 상태 정보로만 쓴다(CPO 확정: price_krw==sale_price_krw여도
-    // 무방, 의미가 다르다).
-    const chosenProbe = useKrMarket ? krPrice : (marketProbe?.origin ?? null);
-    let salePriceKrw: number | null = null;
-    let originalPriceKrw: number | null = null;
-    let soldOut: boolean | null = null;
-    if (chosenProbe && converted) {
-      soldOut = chosenProbe.available === false;
-      // regularPrice(할인 전 정가)가 있고 현재가보다 실제로 클 때만 "할인 중"이다
-      // — 같거나 작으면 할인이 아니다(정가=현재가인 상품을 할인 중으로 지어내지 않는다).
-      if (chosenProbe.regularPrice && chosenProbe.regularPrice.amount > chosenProbe.amount) {
-        salePriceKrw = converted.amountKrw;
-        originalPriceKrw =
-          convertToKrwStrict(
-            chosenProbe.regularPrice.amount,
-            chosenProbe.regularPrice.currency,
-            exchangeRates.rates,
-          )?.amountKrw ?? null;
-      }
-    }
+    /**
+     * ① 원본가(ORIGIN_FX) — **사이트 기준 시장에서 관측한 값**.
+     *
+     * 기준 시장을 우리가 정하지 않는다. 사이트가 스스로 선언한 값만 쓴다:
+     * Shopify는 `/meta.json`의 country이고(probeOriginAndKrMarkets의 origin
+     * 조회가 이미 그 국가로 고정해서 요청한다 — `?country=ES` → EUR 75),
+     * 선언하지 않는 사이트는 기존 SOURCE_CURRENCY_RULES가 크롤링 시점에
+     * 고정해 둔 원본 통화 금액(smallable: `?currency=EUR&country=FR`)이 그대로
+     * input으로 들어온다. **둘 다 없으면 지어내지 않고 예전 값 그대로 간다.**
+     * 국가→통화 매핑도, 사이트별 새 어댑터도 여기서 만들지 않는다.
+     */
+    const originProbe = marketProbe?.origin ?? null;
+    const siteDeclaredBaseMarket =
+      originProbe && originProbe.shopMeta?.country && originProbe.amount > 0 && originProbe.currency
+        ? originProbe
+        : null;
+    const origin = buildCostBasisObservation({
+      snapshotId: input.snapshotId,
+      sourceLabel: ORIGIN_FX_SOURCE_LABEL,
+      // 관측 근거(시장 코드/기준 국가/URL/재고)는 probe가 있으면 probe 것이다.
+      // 기준 시장 선언이 없으면 금액만 기존 폴백을 쓰고 근거는 그대로 남긴다.
+      probe: originProbe,
+      amount: siteDeclaredBaseMarket ? siteDeclaredBaseMarket.amount : input.originalPriceAmount,
+      currency: siteDeclaredBaseMarket ? siteDeclaredBaseMarket.currency : input.originalCurrency,
+      rates: exchangeRates.rates,
+    });
+    if (origin.observation) observations.push(origin.observation);
+    if (origin.error) errors.push(origin.error);
 
-    if (converted) {
-      observations.push({
+    /**
+     * ② 한국 표시가(KR_MARKET) — N-4.18-Q3 P0-2가 만든 행을 **그대로** 유지한다.
+     * 달라진 것은 이 행이 원본가를 밀어내지 않는다는 것뿐이다. Shopify가
+     * 아니거나 en-kr 시장이 없으면 예전처럼 이 행 자체가 없다.
+     */
+    const krProbe = marketProbe?.kr ?? null;
+    if (krProbe && krProbe.currency === "KRW" && krProbe.amount > 0) {
+      const kr = buildCostBasisObservation({
         snapshotId: input.snapshotId,
-        source: "SELLER_ORIGIN",
-        // GLOBAL-SELLER/MARKET 1단계 — probe가 이미 들고 있는 값을 그대로 넘긴다.
-        // 여기서 market을 새로 판별하지 않는다(URL로 국가를 추측하지도 않는다).
-        // marketCode는 실제로 요청한 코드이고("" 또는 en-kr), market_country는
-        // 그 매장이 /meta.json에 스스로 적어 둔 기준 국가다.
-        marketCode: chosenProbe?.marketCode ?? null,
-        marketCountry: chosenProbe?.shopMeta?.country ?? null,
-        // GLOBAL-MARKET ③(CPO 지시, 2026-09-11) — probe가 실제로 조회한 URL을
-        // 그대로 남긴다(지금까지 SELLER_ORIGIN은 이 칸이 비어 있었다). 이유는
-        // 판매처 식별이다: sellerIdentityKey는 호스트명을 우선 쓰고 없을 때만
-        // sourceLabel로 폴백하는데, 아래에서 추가되는 시장 행들은 라벨이
-        // MARKET_PROBE라 URL이 없으면 같은 Bobo Choses가 판매처 2곳으로 세어진다
-        // (실측 기준 KR/DE/INT는 전부 bobochoses.com 한 곳이다). 판정/계산에
-        // 쓰이는 값이 아니라 식별용 근거 URL이다. 비-Shopify(probe 실패)면
-        // 예전처럼 null 그대로다.
-        sourceProductUrl: chosenProbe?.sourceUrl ?? null,
-        currency,
-        priceAmount,
-        exchangeRate: useKrMarket ? null : (exchangeRates.rates[currency.toUpperCase()] ?? null),
-        priceKrw: converted.amountKrw,
-        // N-4.18-Q3 — sourceLabel은 SELLER_ORIGIN에서 지금까지 안 쓰이던
-        // 필드라(DOMESTIC_SHOP만 상점명으로 사용) 마이그레이션 없이 원가
-        // 근거(KR_MARKET/ORIGIN_FX)를 그대로 재사용한다.
-        sourceLabel: useKrMarket ? "KR_MARKET" : "ORIGIN_FX",
-        salePriceKrw,
-        originalPriceKrw,
-        soldOut,
+        sourceLabel: KR_MARKET_SOURCE_LABEL,
+        probe: krProbe,
+        amount: krProbe.amount,
+        currency: "KRW",
+        rates: exchangeRates.rates,
       });
-      // 환율을 몰라 아무것도 저장하지 않았는데 SUCCESS로 보고하면 안 된다 —
-      // 이 경우 status는 NO_RESULT가 되고 errors에 사유가 남는다.
-      originSaved = true;
+      if (kr.observation) observations.push(kr.observation);
+      if (kr.error) errors.push(kr.error);
     }
+
+    // 환율을 몰라 아무것도 저장하지 않았는데 SUCCESS로 보고하면 안 된다 —
+    // 이 경우 status는 NO_RESULT가 되고 errors에 사유가 남는다.
+    if (observations.length > 0) originSaved = true;
 
     // GLOBAL-MARKET ③(CPO 지시, 2026-09-11) — 여기까지는 origin("")과 en-kr
     // 두 곳만 저장했다. 실측(Bobo Choses B226AC043, 2026-09-11): 같은 상품이

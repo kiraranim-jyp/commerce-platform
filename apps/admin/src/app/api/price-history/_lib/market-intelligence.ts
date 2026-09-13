@@ -28,7 +28,7 @@ import { fetchLiveExchangeRates } from "@/lib/exchange-rates";
 import { getSearchInterestRatio } from "./market-signals-cache";
 import { getDefaultSellerProfile } from "@/app/api/coupang/_lib/seller-profile";
 import { getSnapshot } from "../../snapshots/_lib/snapshot";
-import { getPriceHistory, isCostBasisOriginObservation } from "./price-observations";
+import { getPriceHistory, selectCostBasisOriginObservations } from "./price-observations";
 import { computeBrandMarketProfileFor } from "./brand-market";
 import { listDomesticProductLinks, priceTierFromLink } from "../../domestic-price-sources/_lib/domestic-product-link";
 
@@ -55,7 +55,13 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
   // "최신 SELLER_ORIGIN 1건"을 그대로 읽으므로, 그 행이 섞이면 실측 기준
   // 원가가 ₩162,000(en-kr)에서 €84(en-int) 환산값으로 바뀐다. 원가/마진/CASE
   // 판정 로직은 한 줄도 건드리지 않고, 입력만 예전과 동일하게 유지한다.
-  const originHistory = originRecords.filter(isCostBasisOriginObservation);
+  //
+  // GLOBAL-ORIGIN-PRICE-WIRING-1(CEO 지시, 2026-09-13) — 이제 한 번의 확인이
+  // 원본가(ORIGIN_FX)와 한국 표시가(KR_MARKET)를 **둘 다** 남긴다. 원가는 원본
+  // 시장 가격 기준이어야 하므로(₩168,000은 판매처가 한국 방문자에게 보여주는
+  // 자체 환산가다) 선택 규칙을 헬퍼 한 곳에 모았다 — 아래 costPriceKrw/costBasis/
+  // 원가추세는 전부 이 배열만 읽으므로 판정 로직 자체는 그대로다.
+  const originHistory = selectCostBasisOriginObservations(originRecords);
 
   // P-19-B Sprint 7(CPO 지시, 2026-09-02) — "🟢 동일상품 확인" 가격과 "🟡 비교상품"
   // 시장 참고가격을 완전히 분리된 두 버킷으로 집계한다. domestic_product_links의

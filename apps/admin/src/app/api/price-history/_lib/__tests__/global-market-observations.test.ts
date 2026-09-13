@@ -51,9 +51,12 @@ vi.mock("@/lib/supabase-admin", () => ({
 }));
 
 const { runPriceCheck, buildAdditionalMarketObservations } = await import("../run-price-check");
-const { MARKET_PROBE_SOURCE_LABEL, isCostBasisOriginObservation, normalizeMarketKey } = await import(
-  "../price-observations"
-);
+const {
+  MARKET_PROBE_SOURCE_LABEL,
+  isCostBasisOriginObservation,
+  selectCostBasisOriginObservations,
+  normalizeMarketKey,
+} = await import("../price-observations");
 
 /** price_observations 한 테이블만 흉내내는 최소 Supabase 스텁. insert는 실제로
  * 행을 쌓고, select+eq/gte 필터도 실제로 적용한다 — 멱등성(E)을 "쿼리 결과"가
@@ -180,23 +183,90 @@ beforeEach(() => {
 });
 
 describe("GLOBAL-MARKET ③ — 추가 시장 관측이 실제로 저장된다", () => {
-  it("Bobo Choses 한 상품이 SELLER_ORIGIN 3행(en-kr/en-de/en-int)으로 저장된다", async () => {
+  it("Bobo Choses 한 상품이 SELLER_ORIGIN 4행(원본/en-kr/en-de/en-int)으로 저장된다", async () => {
     const result = await runPriceCheck(baseInput());
     expect(result.status).toBe("SUCCESS");
 
     const rows = supabaseRef.current!.rows;
-    expect(rows).toHaveLength(3);
+    // GLOBAL-ORIGIN-PRICE-WIRING-1 — 원본가 행("")이 하나 늘었다. 예전에는
+    // en-kr이 KRW를 주는 순간 원본가 행이 아예 만들어지지 않았다.
+    expect(rows).toHaveLength(4);
     expect(new Set(rows.map((r) => r.source))).toEqual(new Set(["SELLER_ORIGIN"]));
 
     const byMarket = new Map(rows.map((r) => [r.market_code, r]));
-    expect([...byMarket.keys()].sort()).toEqual(["en-de", "en-int", "en-kr"]);
+    expect([...byMarket.keys()].sort()).toEqual(["", "en-de", "en-int", "en-kr"]);
     // 실측값이 그대로 들어간다(원문 통화/금액은 건드리지 않는다).
-    expect(byMarket.get("en-kr")).toMatchObject({ currency: "KRW", price_amount: 162000, price_krw: 162000 });
+    expect(byMarket.get("")).toMatchObject({
+      source_label: "ORIGIN_FX",
+      currency: "EUR",
+      price_amount: 75,
+      price_krw: 117000,
+    });
+    expect(byMarket.get("en-kr")).toMatchObject({
+      source_label: "KR_MARKET",
+      currency: "KRW",
+      price_amount: 162000,
+      price_krw: 162000,
+    });
     expect(byMarket.get("en-de")).toMatchObject({ currency: "EUR", price_amount: 75, price_krw: 117000 });
     expect(byMarket.get("en-int")).toMatchObject({ currency: "EUR", price_amount: 84, price_krw: 131040 });
 
     // 확장 조회는 이미 확인한 두 시장을 다시 찌르지 않는다.
     expect(crawler.probeAdditionalMarkets).toHaveBeenCalledWith(baseInput().sourceUrl, ["", "en-kr"]);
+  });
+
+  /**
+   * GLOBAL-ORIGIN-PRICE-WIRING-1(CEO 지시, 2026-09-13) — **핵심 회귀.**
+   *
+   * Production 실측(B226AC114, 2026-09-13 SELECT): ORIGIN_FX 0건 · KR_MARKET
+   * ₩168,000 한 행. 그 한 행이 원가로 읽히면 착지원가→마진→CASE→레이더가 전부
+   * 틀린다. 이제 둘이 동시에 존재하고, 원가는 원본가 쪽을 읽는다.
+   */
+  it("핵심 회귀: 원본가(ORIGIN_FX)와 한국 표시가(KR_MARKET)가 동시에 저장된다", async () => {
+    await runPriceCheck(baseInput());
+    const records = toRecords(supabaseRef.current!.rows);
+
+    const originFx = records.find((r) => r.sourceLabel === "ORIGIN_FX");
+    const krMarket = records.find((r) => r.sourceLabel === "KR_MARKET");
+    // 원본가는 사이트가 /meta.json에 선언한 기준 시장(country=ES) 조회 결과다.
+    expect(originFx).toMatchObject({ currency: "EUR", priceAmount: 75, marketCountry: "ES" });
+    // 한국 표시가는 지워지지도 바뀌지도 않는다 — 시장 관측으로 그대로 남는다.
+    expect(krMarket).toMatchObject({ currency: "KRW", priceAmount: 162000, marketCode: "en-kr" });
+
+    // 원가로 읽히는 것은 원본가 한 행뿐이다.
+    const costBasis = selectCostBasisOriginObservations(records);
+    expect(costBasis).toHaveLength(1);
+    expect(costBasis[0].sourceLabel).toBe("ORIGIN_FX");
+    expect(costBasis[0].priceKrw).toBe(117000);
+    // ₩162,000(실 Production은 ₩168,000)이 원가 계산에 들어가지 않는다.
+    expect(costBasis.map((r) => r.priceKrw)).not.toContain(162000);
+  });
+
+  it("원본가 행은 사이트가 기준 국가를 선언했을 때만 probe 값을 쓴다 — 없으면 기존 폴백 그대로", async () => {
+    // /meta.json에 country가 없는 매장: 프리픽스 없는 요청은 지오로케이션에
+    // 흔들릴 수 있으므로 probe 금액을 원본가로 승격하지 않는다(N-4.19).
+    crawler.probeOriginAndKrMarkets.mockResolvedValue({
+      origin: { ...BOBO_ORIGIN, amount: 99, currency: "USD", shopMeta: { ...SHOP_META, country: null } },
+      kr: BOBO_KR,
+    });
+    crawler.probeAdditionalMarkets.mockResolvedValue([]);
+    await runPriceCheck(baseInput());
+
+    const originRow = supabaseRef.current!.rows.find((r) => r.source_label === "ORIGIN_FX")!;
+    // 크롤링 시점에 확정된 원본 통화 금액(EUR 75)이 그대로 남는다 — USD 99가 아니다.
+    expect(originRow).toMatchObject({ currency: "EUR", price_amount: 75, market_country: null });
+  });
+
+  it("selectCostBasisOriginObservations — ORIGIN_FX가 없는 과거 스냅샷은 예전 그대로 KR_MARKET이 원가다", () => {
+    const legacy = [
+      { sourceLabel: "KR_MARKET" as string | null },
+      { sourceLabel: MARKET_PROBE_SOURCE_LABEL as string | null },
+      { sourceLabel: null as string | null },
+    ];
+    expect(selectCostBasisOriginObservations(legacy)).toEqual([
+      { sourceLabel: "KR_MARKET" },
+      { sourceLabel: null },
+    ]);
   });
 
   it("A) sellerCount === 1 — 시장이 셋이어도 판매처는 Bobo Choses 한 곳이다", async () => {
@@ -206,7 +276,8 @@ describe("GLOBAL-MARKET ③ — 추가 시장 관측이 실제로 저장된다",
     });
     expect(summary.sellerCount).toBe(1);
     expect(summary.sellers).toHaveLength(1);
-    expect(summary.sellers[0].markets).toHaveLength(3);
+    // 원본가 행(market_code="")까지 4개 — 시장 셋 + "시장 미확인" 하나다.
+    expect(summary.sellers[0].markets).toHaveLength(4);
   });
 
   it("B) DE €75 / INT €84 / KR ₩162,000은 절대 섞이지 않는다 — 옛 혼합값이 나오지 않는다", async () => {
@@ -215,7 +286,8 @@ describe("GLOBAL-MARKET ③ — 추가 시장 관측이 실제로 저장된다",
       analysisMarketCountry: DOMESTIC_ANALYSIS_MARKET_COUNTRY,
     });
     const byCode = new Map(summary.markets.map((m) => [m.marketCode, m]));
-    expect(summary.markets).toHaveLength(3);
+    // 시장 셋 + 원본가 행의 "시장 미확인"(marketCode null) 하나.
+    expect(summary.markets).toHaveLength(4);
     expect(byCode.get("en-kr")!.lowestPriceKrw).toBe(162000);
     expect(byCode.get("en-de")!.lowestPriceKrw).toBe(117000);
     expect(byCode.get("en-int")!.lowestPriceKrw).toBe(131040);
@@ -241,16 +313,17 @@ describe("GLOBAL-MARKET ③ — 추가 시장 관측이 실제로 저장된다",
     expect(summary.sampleListings).toHaveLength(1);
   });
 
-  it("C-2) 원가 판단은 여전히 KR_MARKET 관측 1건이다 — 추가 시장 행은 원가로 읽히지 않는다", async () => {
+  it("C-2) 원가 판단은 원본가 관측 1건이다 — 추가 시장 행도 한국 표시가도 원가로 읽히지 않는다", async () => {
     await runPriceCheck(baseInput());
     const records = toRecords(supabaseRef.current!.rows);
-    // market-intelligence/compute-readiness/brand-market이 쓰는 필터 그대로.
-    const costBasisRecords = records.filter(isCostBasisOriginObservation);
+    // market-intelligence/compute-readiness/brand-market이 쓰는 선택 규칙 그대로.
+    const costBasisRecords = selectCostBasisOriginObservations(records);
     expect(costBasisRecords).toHaveLength(1);
-    expect(costBasisRecords[0].sourceLabel).toBe("KR_MARKET");
-    expect(costBasisRecords[0].priceKrw).toBe(162000);
-    // 필터가 없었다면 €84(₩131,040) 행이 원가가 될 수 있었다.
+    expect(costBasisRecords[0].sourceLabel).toBe("ORIGIN_FX");
+    expect(costBasisRecords[0].priceKrw).toBe(117000);
+    // 규칙이 없었다면 €84(₩131,040)나 한국 표시가(₩162,000)가 원가가 될 수 있었다.
     expect(records.some((r) => r.priceKrw === 131040)).toBe(true);
+    expect(records.some((r) => r.priceKrw === 162000)).toBe(true);
   });
 
   it("D) market_code의 NULL과 \"\"는 시장 미확인으로 남는다 — 국가로 채우지 않는다", async () => {
@@ -259,7 +332,8 @@ describe("GLOBAL-MARKET ③ — 추가 시장 관측이 실제로 저장된다",
     crawler.probeAdditionalMarkets.mockResolvedValue([probe("", 75, "EUR"), BOBO_DE]);
     await runPriceCheck(baseInput());
     const marketCodes = supabaseRef.current!.rows.map((r) => r.market_code);
-    expect(marketCodes).toEqual(["en-kr", "en-de"]);
+    // ""는 원본가(ORIGIN_FX) 행 자신이고, 확장 조회가 되돌려준 ""는 버려진다.
+    expect(marketCodes).toEqual(["", "en-kr", "en-de"]);
 
     // NULL/""가 섞인 관측은 한 그룹("시장 미확인")으로만 묶이고 국가가 생기지 않는다.
     const built = buildAdditionalMarketObservations({
@@ -307,7 +381,7 @@ describe("GLOBAL-MARKET ③ — 추가 시장 관측이 실제로 저장된다",
     await runPriceCheck(baseInput());
     const rows = supabaseRef.current!.rows;
     // Bobo는 모든 시장에서 country=ES를 선언한다 — DE 시장이라고 "DE"로 적지 않는다.
-    expect(rows.map((r) => r.market_country)).toEqual(["ES", "ES", "ES"]);
+    expect(rows.map((r) => r.market_country)).toEqual(["ES", "ES", "ES", "ES"]);
 
     // 선언이 없으면 null이다(통화 EUR에서 국가를 지어내지 않는다).
     const noMeta = buildAdditionalMarketObservations({
@@ -330,12 +404,12 @@ describe("GLOBAL-MARKET ③ — 추가 시장 관측이 실제로 저장된다",
 
   it("E) 같은 날 재실행해도 snapshot+source+market_code가 중복 저장되지 않는다", async () => {
     await runPriceCheck(baseInput());
-    expect(supabaseRef.current!.rows).toHaveLength(3);
+    expect(supabaseRef.current!.rows).toHaveLength(4);
 
     // cron 재실행(skipIfCheckedToday) — 기존대로 아무것도 추가하지 않는다.
     const cron = await runPriceCheck({ ...baseInput(), skipIfCheckedToday: true });
     expect(cron.savedCount).toBe(0);
-    expect(supabaseRef.current!.rows).toHaveLength(3);
+    expect(supabaseRef.current!.rows).toHaveLength(4);
 
     // 수동 "지금 확인" 재실행 — 원가 관측은 기존 동작대로 시계열로 한 번 더
     // 쌓이지만, 추가 시장(en-de/en-int)은 오늘 이미 저장돼 있으므로 다시
@@ -358,16 +432,23 @@ describe("GLOBAL-MARKET ③ — 추가 시장 관측이 실제로 저장된다",
     const rows = supabaseRef.current!.rows;
     expect(rows.filter((r) => r.market_code === "en-kr")).toHaveLength(1);
     expect(rows.filter((r) => r.market_code === "en-kr")[0].source_label).toBe("KR_MARKET");
-    expect(rows.map((r) => r.market_code)).toEqual(["en-kr", "en-de"]);
+    expect(rows.map((r) => r.market_code)).toEqual(["", "en-kr", "en-de"]);
   });
 
-  it("F) 추가 시장이 없는 상품은 예전과 완전히 동일하게 1행만 저장된다", async () => {
+  it("F) 추가 시장이 없어도 원가 근거 2행(원본가 + 한국 표시가)은 남는다", async () => {
     crawler.probeAdditionalMarkets.mockResolvedValue([]);
     const result = await runPriceCheck(baseInput());
     expect(result.status).toBe("SUCCESS");
     const rows = supabaseRef.current!.rows;
-    expect(rows).toHaveLength(1);
+    expect(rows).toHaveLength(2);
     expect(rows[0]).toMatchObject({
+      source: "SELLER_ORIGIN",
+      source_label: "ORIGIN_FX",
+      market_code: "",
+      currency: "EUR",
+      price_krw: 117000,
+    });
+    expect(rows[1]).toMatchObject({
       source: "SELLER_ORIGIN",
       source_label: "KR_MARKET",
       market_code: "en-kr",
@@ -401,8 +482,8 @@ describe("GLOBAL-MARKET ③ — 추가 시장 관측이 실제로 저장된다",
     crawler.probeAdditionalMarkets.mockRejectedValue(new Error("network"));
     const result = await runPriceCheck(baseInput());
     expect(result.status).toBe("SUCCESS");
-    expect(supabaseRef.current!.rows).toHaveLength(1);
-    expect(supabaseRef.current!.rows[0].source_label).toBe("KR_MARKET");
+    expect(supabaseRef.current!.rows).toHaveLength(2);
+    expect(supabaseRef.current!.rows.map((r) => r.source_label)).toEqual(["ORIGIN_FX", "KR_MARKET"]);
   });
 
   it("환율을 모르는 통화의 시장은 값을 지어내지 않고 건너뛴다(사유는 errors에 남는다)", () => {

@@ -1,7 +1,7 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { resolveBrand, stripShopifyLocalePrefix, normalizeUrl } from "@commerce/crawler";
 import { computeBrandMarketProfile, type BrandMarketProfile } from "@commerce/pricing";
-import { isCostBasisOriginObservation } from "./price-observations";
+import { selectCostBasisOriginObservations } from "./price-observations";
 
 /**
  * P-13A(대표님/CPO 지시, 2026-08-31) — 국내 동일상품이 없을 때, 같은 브랜드로
@@ -88,13 +88,28 @@ export async function computeBrandMarketProfileFor(brandRaw: string | undefined)
 
   // 상품(snapshot)당 최신 관측 1건만 — 이미 checked_at desc로 정렬돼 있으니
   // 먼저 만난 것이 최신이다.
-  const latestPerSnapshot = new Map<string, PriceObservationRow>();
+  //
+  // GLOBAL-MARKET ③ — 원가 근거가 아닌 "추가 확인 시장" 행은 표본에서 뺀다.
+  // 예전에는 SELLER_ORIGIN 행이 곧 원가였으므로 이 필터는 기존 데이터의
+  // 결과를 바꾸지 않는다(과거 행의 source_label은 null 또는 KR_MARKET/ORIGIN_FX).
+  //
+  // GLOBAL-ORIGIN-PRICE-WIRING-1(CEO 지시, 2026-09-13) — 한 번의 확인이 원본가와
+  // 한국 표시가를 둘 다 남기게 되면서 "먼저 만난 것"만으로는 부족해졌다: 두 행은
+  // checked_at까지 같아 정렬이 순서를 보장하지 못한다. 상품별로 모아서
+  // market-intelligence와 **같은 선택 규칙**을 적용한다 — 브랜드 시장 표본의
+  // 가격과 그 상품 화면의 원가가 서로 다른 행을 가리키면 안 된다.
+  const rowsBySnapshot = new Map<string, PriceObservationRow[]>();
   for (const row of observations as PriceObservationRow[]) {
-    // GLOBAL-MARKET ③ — 원가 근거가 아닌 "추가 확인 시장" 행은 표본에서 뺀다.
-    // 예전에는 SELLER_ORIGIN 행이 곧 원가였으므로 이 필터는 기존 데이터의
-    // 결과를 바꾸지 않는다(과거 행의 source_label은 null 또는 KR_MARKET/ORIGIN_FX).
-    if (!isCostBasisOriginObservation({ sourceLabel: row.source_label ?? null })) continue;
-    if (!latestPerSnapshot.has(row.snapshot_id)) latestPerSnapshot.set(row.snapshot_id, row);
+    const list = rowsBySnapshot.get(row.snapshot_id) ?? [];
+    list.push(row);
+    rowsBySnapshot.set(row.snapshot_id, list);
+  }
+  const latestPerSnapshot = new Map<string, PriceObservationRow>();
+  for (const [snapshotId, rows] of rowsBySnapshot) {
+    const costBasis = selectCostBasisOriginObservations(
+      rows.map((row) => ({ ...row, sourceLabel: row.source_label ?? null })),
+    );
+    if (costBasis[0]) latestPerSnapshot.set(snapshotId, costBasis[0]);
   }
 
   // 실제 상품(sourceUrl) 단위로 묶어, 같은 상품의 중복 snapshot 중 가장 최근
