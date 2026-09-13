@@ -26,8 +26,32 @@ CEO 지시 원문:
 Smallable 430632   "All About Monsters Washed T-shirt"
    ↓
 B226AC018          ← 정답 (동일상품)
-B226AD013          ← 오답 (다른 상품인데 SAME으로 올라옴)
+B226AD013          ← 등록 당시 오답으로 지목됨.  ⚠️ 실측으로 반증됨 — 아래 참고
 ```
+
+### ⚠️ 2026-09-13 실측 정정 — `B226AD013`은 이 결함이 아니다
+
+`14a7f7c` 회귀 측정에서 네 쌍을 라이브로 다시 쟀다. 결과:
+
+```
+430632 ↔ B226AC018   SAME       corePoints 8, conflicts/blockers 없음
+430632 ↔ B226AD013   CONFLICT   AUDIENCE(ADULT↔KIDS) + COLOR(PINK↔BLUE)
+```
+
+**`B226AD013`은 이미 CONFLICT로 정상 배제되고 있다.** 등록 시점에 CEO가 지목한 핸들이
+실제 오탐 대상과 달랐던 것으로 보인다. 이 줄을 고치지 않고 두면 다음 작업이
+결함이 아닌 쌍을 쫓게 된다.
+
+**실제 의심 대상은 이 둘이다**(2026-09-13 에이전트 실측, `923ae6f` 이후에도 SAME):
+
+```
+mush-monster-duo-all-over-t-shirt
+softpaw-monster-all-over-t-shirt
+```
+
+이 두 쌍은 아직 **독립적으로 재측정되지 않았다** — 위 4쌍 회귀 밖이라 확인하지
+못했다. 작업 시작 시 **가장 먼저 이 두 쌍의 verdict를 라이브로 재현**하고,
+재현되지 않으면 이 결함 자체를 재정의하라. 재현 없이 고치지 않는다.
 
 `923ae6f` 이후에도 430632의 SAME은 3건이며, 그중
 `mush-monster-duo-all-over-t-shirt` / `softpaw-monster-all-over-t-shirt` 는
