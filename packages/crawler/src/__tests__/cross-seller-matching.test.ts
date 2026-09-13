@@ -293,6 +293,102 @@ describe("파이프라인 배선 — 판정이 실제 검색 경로를 타고 �
 });
 
 /**
+ * MATCHING-2.0-INTEGRATION-3(CEO 지시, 2026-09-13) — 0.09짜리 오판정 회귀.
+ *
+ * ── 무엇이 잘못돼 있었나 ────────────────────────────────────────────────────
+ * Smallable 430701(하프집업 스웨트셔츠)과 B226AC049(전면 프린트 후드집업)는 서로
+ * 다른 상품인데 SAME으로 올라왔고, SAME은 deriveMatchTruth에서 STRONG_IDENTIFIER가
+ * 되어 priceTierFromLink의 EXACT — 즉 **동일상품 가격 집계**에 들어간다. 다른
+ * 상품의 가격이 이 상품의 가격으로 쓰이고 있었다는 뜻이다.
+ *
+ * ── 왜 점수로는 구분되지 않았나(라이브 실측) ────────────────────────────────
+ * 정답 쌍(430701↔B226AC114)과 오판정 쌍(430701↔B226AC049)은 판정기가 세는 **모든
+ * 축에서 글자 하나까지 같은 답**을 냈다 — TITLE 1(겹치는 말은 "zipped" 하나) ·
+ * CATEGORY 1 · COLOR 1 · MATERIAL 1 · FIT 1 · AUDIENCE 1 · SIZE 1, 합 7점,
+ * 충돌 없음, 보류 없음, identifierConfirmed 둘 다 false. 그래서 개수를 세는
+ * 규칙(SAME_MIN_AXES)으로는 둘을 가를 방법이 원리적으로 없었다.
+ *
+ * 색상·소재·핏이 셋 다 같았던 이유도 실측으로 확인했다: bobochoses.com 카탈로그
+ * 3,000건 중 **여섯 상품이 글자 하나까지 같은 설명문을 공유**한다("Light heather
+ * grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in
+ * Portugal." — B226AC114/B226AC049/B226AC027/B226AC036/B226AB055/B226AB058).
+ * 세 축이 아니라 한 문장을 세 번 센 것이고, 그 문장은 후드집업에 대해서는 사실도
+ * 아니다.
+ *
+ * ── 그래서 무엇을 고쳤나 ────────────────────────────────────────────────────
+ * 상품을 실제로 구별하는 말은 제목에 있었다("sweatshirt" ↔ "hoodie"). 그런데 그
+ * 말은 두 축 사이의 틈으로 사라지고 있었다 — 제목 축은 "상품군 축이 세고 있으니"
+ * 유형어를 지우고, 상품군 축은 판매처 자신의 분류만 보고 제목을 보지 않는다.
+ * Bobo는 후드집업도 type="Sweatshirts"에 넣으므로 판매처 분류로는 원리상 구분되지
+ * 않는다. 그 틈을 GarmentForm 축으로 메웠다(product-facts.ts).
+ */
+describe("MATCHING-2.0-INTEGRATION-3 회귀 — 다른 상품이 동일상품 가격에 들어오지 않는다", () => {
+  const B226AC049 = () => bobo("B226AC049");
+
+  it("쌍 B: Smallable 430701 ↔ B226AC049 는 SAME이 아니다", () => {
+    const match = compareCrossSellerProducts(SMALLABLE_430701(), B226AC049());
+    expect(match.verdict).not.toBe("SAME");
+    expect(match.identifierConfirmed).toBe(false);
+    expect(match.blockers.map((b) => b.blocker)).toContain("GARMENT_FORM");
+  });
+
+  it("쌍 B는 동일상품 가격에 쓰이지 않는다 — 이 사고의 실제 피해가 막혔는지", () => {
+    const match = compareCrossSellerProducts(SMALLABLE_430701(), B226AC049());
+    expect(isSameProductForPricing(match)).toBe(false);
+    // SAME만이 STRONG_IDENTIFIER로 승격되고, STRONG_IDENTIFIER만 EXACT(동일상품
+    // 가격)가 된다. 그 승격이 더 이상 일어나지 않는다는 것을 여기서 못박는다.
+    expect(deriveMatchTruth("low", "unavailable", match.verdict)).not.toBe("STRONG_IDENTIFIER");
+  });
+
+  it("쌍 A: Smallable 430701 ↔ B226AC114 는 여전히 SAME이다 — 수정이 정답을 죽이지 않았다", () => {
+    const match = compareCrossSellerProducts(SMALLABLE_430701(), bobo("B226AC114"));
+    expect(match.verdict).toBe("SAME");
+    expect(match.blockers).toEqual([]);
+    expect(deriveMatchTruth("low", "unavailable", match.verdict)).toBe("STRONG_IDENTIFIER");
+  });
+
+  it("쌍 C: B226AC114 ↔ B226AC049 는 서로 다른 상품이다", () => {
+    const match = compareCrossSellerProducts(bobo("B226AC114"), B226AC049());
+    expect(match.verdict).toBe("CONFLICT");
+    expect(match.conflicts.map((c) => c.conflict)).toContain("MODEL_CODE");
+  });
+
+  it("세 쌍 전부 방향을 바꿔도 같은 답이다", () => {
+    expect(verdictBothWays(SMALLABLE_430701(), bobo("B226AC114"))).toBe("SAME");
+    expect(verdictBothWays(SMALLABLE_430701(), B226AC049())).not.toBe("SAME");
+    expect(verdictBothWays(bobo("B226AC114"), B226AC049())).toBe("CONFLICT");
+  });
+
+  it("판정을 가른 것은 점수가 아니다 — 두 쌍의 점수 축은 완전히 같다", () => {
+    // 이 단언이 깨지면 "숫자를 올려서 고쳤다"는 뜻이다. 실측 그대로, 정답 쌍과
+    // 오판정 쌍은 점수로는 구분되지 않는다.
+    const good = compareCrossSellerProducts(SMALLABLE_430701(), bobo("B226AC114"));
+    const bad = compareCrossSellerProducts(SMALLABLE_430701(), B226AC049());
+    const points = (m: typeof good) =>
+      m.axes.filter((a) => a.axis !== "IMAGE").reduce((sum, a) => sum + a.points, 0);
+    expect(points(bad)).toBe(points(good));
+    expect(bad.axes.map((a) => a.axis).sort()).toEqual(good.axes.map((a) => a.axis).sort());
+  });
+
+  it("옷의 형태가 같으면 보류하지 않는다 — 이 규칙이 아무 데나 발화하지 않는다는 것", () => {
+    // 430632(티셔츠)↔B226AC018(티셔츠), 430651(스웨트셔츠)↔B226AC043(스웨트셔츠).
+    for (const [left, right] of [
+      [SMALLABLE_430632(), bobo("B226AC018")],
+      [SMALLABLE_430651(), bobo("B226AC043")],
+    ] as const) {
+      const match = compareCrossSellerProducts(left, right);
+      expect(match.blockers.map((b) => b.blocker)).not.toContain("GARMENT_FORM");
+    }
+  });
+
+  it("한쪽이 두 형태를 함께 말하면 보류하지 않는다 — 'hooded sweatshirt'는 둘 다다", () => {
+    const hooded = { ...B226AC049(), title: "Pixel Abduction all over hooded sweatshirt" };
+    const match = compareCrossSellerProducts(SMALLABLE_430701(), hooded);
+    expect(match.blockers.map((b) => b.blocker)).not.toContain("GARMENT_FORM");
+  });
+});
+
+/**
  * 이전부터 쌓아 온 미매칭 쌍. 답이 확정된 인수 테스트가 아니라 **계속 추적하기
  * 위한** 항목이라, 지금 어떤 등급에 서는지와 그 이유를 그대로 고정해 둔다 —
  * 다음에 누가 무엇을 바꾸든 이 두 쌍의 상태 변화가 테스트로 드러난다.

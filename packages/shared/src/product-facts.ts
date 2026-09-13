@@ -311,6 +311,113 @@ export function buildSizeProfile(labels: string[]): SizeProfile {
   return { values, systems };
 }
 
+/* ───────────────────────────── 옷의 형태 ───────────────────────────── */
+
+/**
+ * MATCHING-2.0-INTEGRATION-3(CEO 지시, 2026-09-13) — 제목이 말하는 "옷의 형태".
+ *
+ * ── 왜 필요한가(실측) ───────────────────────────────────────────────────────
+ * Smallable 430701과 Bobo B226AC049는 판정기가 세는 **모든 축에서 글자 하나까지
+ * 같은 답**을 낸다(2026-09-13 라이브 실측): 상품군 Sweatshirts, 색상 GREY, 소재
+ * organic cotton 100, 핏 loose fit, 대상 KIDS, 사이즈 체계 AGE, 제목 겹침
+ * "zipped" 하나. 그런데 하나는 하프집업 스웨트셔츠이고 다른 하나는 전면 프린트
+ * 후드집업이다. 사진으로 보면 사람은 1초 만에 구분한다.
+ *
+ * 그 축들이 전부 같게 나온 이유도 실측으로 확인했다. bobochoses.com 전체 카탈로그
+ * 3,000건을 받아 세어 보면, "Light heather grey sweatshirt. Organic Cotton 100%.
+ * Loose fit. Responsibly made in Portugal." 이라는 **글자 하나까지 똑같은 설명문을
+ * 여섯 개 상품이 공유**한다(B226AC114, B226AC049, B226AC027, B226AC036,
+ * B226AB055, B226AB058). 즉 색상·소재·핏 세 축은 독립된 세 근거가 아니라 **한
+ * 문장을 세 번 센 것**이고, 그 문장은 B226AC049에 대해서는 사실도 아니다.
+ * 상품군·대상·사이즈는 아동 라인 전체의 상수다.
+ *
+ * ── 그래서 무엇이 빠져 있었나 ──────────────────────────────────────────────
+ * 상품을 실제로 구별하는 말은 제목에 있었다 — "sweatshirt"와 "hoodie". 그런데 이
+ * 말은 두 축 **사이의 틈**으로 사라지고 있었다. 제목 축은 "상품군 축이 이미 세고
+ * 있으니 빼자"며 유형어를 지우고, 상품군 축은 판매처 자신의 분류(categoryText)만
+ * 보고 제목을 보지 않는다. Bobo는 후드집업도 Sweatshirts 칸에 넣으므로 판매처
+ * 분류로는 원리상 구분되지 않는다. 두 축이 서로 "저쪽이 세고 있다"고 가정하는
+ * 바람에 아무도 세지 않았다.
+ *
+ * ── 왜 CategoryTaxon을 쓰지 않는가 ─────────────────────────────────────────
+ * comparison-search/match.ts의 CategoryTaxon은 sweater/tee/hoodie를 **일부러 전부
+ * TOP으로 뭉친다**(CPO 지시, 2026-09-10 — 해외와 국내가 같은 상품을 맨투맨/
+ * 스웨트셔츠/티셔츠로 다르게 부르는 일이 흔해서 세분화하면 진짜 동일상품이
+ * 떨어진다). 그 판단을 뒤집지 않는다. 여기 것은 그 축을 대체하지 않고, 점수에도
+ * 손대지 않으며, 오직 "SAME으로 올리지 않는다"는 보류 신호로만 쓰인다.
+ *
+ * ── 어휘는 실측한 카탈로그에서만 가져온다 ──────────────────────────────────
+ * 아래 낱말은 전부 bobochoses.com 3,000건 제목에서 실제로 센 것이다(괄호 안이
+ * 관측 횟수). 관측되지 않은 말은 넣지 않는다 — 이 저장소의 기존 원칙 그대로다.
+ *
+ * ── 뭉칠 수 있으면 뭉친다(오차단이 미차단보다 나쁘다) ──────────────────────
+ * 형태가 갈리면 진짜 동일상품이 죽을 수 있으므로, 판매처마다 다르게 부를 법한
+ * 것은 **일부러 같은 형태로 묶는다**. jumper를 SWEATSHIRT에 넣은 것이 그 예다
+ * (영국 표기에서 스웨트셔츠를 jumper라고 부른다). shorts/leggings를 PANTS에,
+ * cardigan/coat를 JACKET에 묶은 것도 같은 이유다. 갈라 둔 것은 실제로 물건이
+ * 다르다고 확인한 hoodie ↔ sweatshirt 하나뿐이고, 한 제목이 두 형태를 동시에
+ * 말하면("hooded sweatshirt") 두 형태를 다 담아서 **차단이 일어나지 않게** 한다.
+ */
+export type GarmentForm =
+  | "HOODIE"
+  | "SWEATSHIRT"
+  | "SHIRT"
+  | "DRESS"
+  | "SKIRT"
+  | "PANTS"
+  | "JACKET"
+  | "OVERALL"
+  | "SOCKS";
+
+const GARMENT_FORM_WORDS: Record<GarmentForm, string[]> = {
+  // hoodie(12) / hooded(1). 이 저장소가 형태를 갈라 두는 **유일한** 자리다.
+  HOODIE: ["hoodie", "hoodies", "hooded", "후드집업", "후디"],
+  // sweatshirt(97) + Smallable 표기 "Sweat"(430701) / "Sweatshirt"(430651).
+  // jumper(24)는 니트 스웨터지만 일부러 여기 둔다 — 위 주석 참고.
+  SWEATSHIRT: ["sweatshirt", "sweatshirts", "sweat", "sweats", "jumper", "jumpers", "맨투맨", "스웨트셔츠"],
+  // shirt(146, "T-shirt"의 shirt 포함 — 토큰으로 쪼개면 t는 한 글자라 사라진다).
+  // 티셔츠와 셔츠를 굳이 가르지 않는다. 가르지 않으면 차단이 안 일어날 뿐이다.
+  SHIRT: ["shirt", "shirts", "blouse", "polo", "셔츠", "티셔츠"],
+  DRESS: ["dress", "dresses", "원피스"],
+  SKIRT: ["skirt", "skirts", "스커트"],
+  PANTS: ["pants", "trousers", "leggings", "shorts", "bermuda", "jogging", "바지", "팬츠", "레깅스"],
+  JACKET: ["jacket", "jackets", "cardigan", "cardigans", "coat", "coats", "자켓", "재킷", "카디건"],
+  OVERALL: ["overall", "overalls", "jumpsuit", "dungarees"],
+  SOCKS: ["socks", "sock", "양말"],
+};
+
+/** 어휘 목록은 토큰과 **같은 파이프라인**을 통과시킨다(이 파일 위쪽
+ * normalizedWordSet 주석의 실측 사고 그대로 — 한쪽만 NFC로 합치면 한글이 죽는다). */
+const NORMALIZED_GARMENT_FORM_WORDS: [GarmentForm, Set<string>][] = (
+  Object.entries(GARMENT_FORM_WORDS) as [GarmentForm, string[]][]
+).map(([form, words]) => [form, normalizedWordSet(words)]);
+
+/**
+ * 제목에서 알아볼 수 있는 옷의 형태를 **전부** 모은다.
+ *
+ * 토큰 완전일치만 본다. 부분 포함을 쓰면 "sweat"이 "sweatshirt" 안에 들어 있어서
+ * 스웨트셔츠 하나가 두 형태로 읽히고, 그 전에 이 저장소가 이미 "코트"→
+ * "타이니코튼" 오탐으로 겪은 문제가 그대로 재현된다.
+ *
+ * 여러 형태가 잡히면 잡힌 대로 전부 돌려준다 — "hooded sweatshirt"는 두 형태를
+ * 다 말하는 것이 사실이고, 그 사실을 그대로 두어야 호출부가 교집합으로 안전하게
+ * 판단할 수 있다.
+ */
+export function resolveGarmentForms(text: string | null | undefined): Set<GarmentForm> {
+  const found = new Set<GarmentForm>();
+  if (!text) return found;
+  const tokens = new Set(tokenizeFactText(text));
+  for (const [form, words] of NORMALIZED_GARMENT_FORM_WORDS) {
+    for (const token of tokens) {
+      if (words.has(token)) {
+        found.add(form);
+        break;
+      }
+    }
+  }
+  return found;
+}
+
 /* ───────────────────────── 대상 연령층 / 성별 ───────────────────────── */
 
 /**

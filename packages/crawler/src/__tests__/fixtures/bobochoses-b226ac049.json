@@ -1,0 +1,72 @@
+{
+  "id": 15692661850495,
+  "title": "Pixel Abduction all over zipped hoodie",
+  "handle": "b226ac049-pixel-abduction-all-over-zipped-hoodie",
+  "description": "<p>Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.</p>",
+  "vendor": "AW26",
+  "type": "Sweatshirts",
+  "tags": [
+    "aw26",
+    "children",
+    "clothing",
+    "Current",
+    "drop-1",
+    "Kid",
+    "sweatshirts"
+  ],
+  "price": 8500,
+  "available": true,
+  "options": [
+    {
+      "name": "Clothing size",
+      "position": 1,
+      "values": [
+        "2-3Y",
+        "4-5Y",
+        "6-7Y",
+        "8-9Y",
+        "10-11Y",
+        "12-13Y"
+      ]
+    }
+  ],
+  "images": [
+    "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC049_1_1.webp?v=1783422258",
+    "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC049_6.jpg?v=1783673202",
+    "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC049_2_1.webp?v=1783422276"
+  ],
+  "featured_image": "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC049_1_1.webp?v=1783422258",
+  "url": "/products/b226ac049-pixel-abduction-all-over-zipped-hoodie",
+  "variants": [
+    {
+      "title": "2-3Y",
+      "sku": "B226AC04905101",
+      "available": true
+    },
+    {
+      "title": "4-5Y",
+      "sku": "B226AC04905102",
+      "available": true
+    },
+    {
+      "title": "6-7Y",
+      "sku": "B226AC04905103",
+      "available": true
+    },
+    {
+      "title": "8-9Y",
+      "sku": "B226AC04905104",
+      "available": true
+    },
+    {
+      "title": "10-11Y",
+      "sku": "B226AC04905105",
+      "available": true
+    },
+    {
+      "title": "12-13Y",
+      "sku": "B226AC04905106",
+      "available": true
+    }
+  ]
+}

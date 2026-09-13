@@ -39,9 +39,11 @@ import {
   resolveAdultGender,
   resolveAudienceGroup,
   resolveColorHueGroups,
+  resolveGarmentForms,
   tokenizeFactText,
   type AudienceGroup,
   type ColorHueGroup,
+  type GarmentForm,
   type GenderGroup,
   type ProductFacts,
   type SizeSystem,
@@ -63,7 +65,13 @@ export type CrossSellerConflict =
 
 /** SAME으로 올라가는 것을 막지만, CONFLICT로 끌어내리지는 않는 반증. "다르다고
  * 말할 만큼은 아니지만, 같다고 확정할 수는 없다"는 상태다. */
-export type CrossSellerBlocker = "MATERIAL" | "FIT" | "SIZE_SYSTEM" | "BRAND_UNCONFIRMED" | "NO_TITLE_OVERLAP";
+export type CrossSellerBlocker =
+  | "MATERIAL"
+  | "FIT"
+  | "SIZE_SYSTEM"
+  | "BRAND_UNCONFIRMED"
+  | "NO_TITLE_OVERLAP"
+  | "GARMENT_FORM";
 
 export type CrossSellerAxis =
   | "TITLE"
@@ -117,11 +125,24 @@ export const CROSS_SELLER_IMAGE_STRONG_MAX_DISTANCE = 95;
 
 /** 서로 다른 축 몇 개가 동시에 맞아야 "동일상품"이라고 말할 것인가.
  *
- * 실측으로 확인한 근거: Bobo Choses AW26 아동 라인에는 하프집업 스웨트셔츠가
- * 여러 개 있지만, "상품군=스웨트셔츠 · 색상=회색 계열 · 소재=Organic Cotton
- * 100% · 핏=Loose fit · 대상=아동 · 사이즈 체계=연령형"을 **동시에** 만족하는
- * 것은 B226AC114 하나뿐이다(B226AC042/043은 소재가 66/17/17이고 색이 다르다).
- * 즉 이 정도 개수가 겹치면 브랜드 카탈로그 안에서 상품이 특정된다. */
+ * ── 여기 있던 근거는 실측으로 틀렸다(MATCHING-2.0-INTEGRATION-3, 2026-09-13) ──
+ * 원래 이 자리에는 이렇게 적혀 있었다: "상품군=스웨트셔츠 · 색상=회색 계열 ·
+ * 소재=Organic Cotton 100% · 핏=Loose fit · 대상=아동 · 사이즈 체계=연령형을
+ * 동시에 만족하는 것은 B226AC114 하나뿐이다." 표본이 여섯 개 상품이었다.
+ *
+ * bobochoses.com 카탈로그 전체(3,000건)를 실제로 받아 세어 보니 그 여섯 조건을
+ * 동시에 만족하는 상품은 하나가 아니라 **최소 여섯 개**다. 색상·소재·핏이 전부
+ * 설명문 한 문장에서 나오는데, "Light heather grey sweatshirt. Organic Cotton
+ * 100%. Loose fit. Responsibly made in Portugal."이라는 **글자 하나까지 같은
+ * 문장을 여섯 상품이 공유**하기 때문이다(B226AC114, B226AC049, B226AC027,
+ * B226AC036, B226AB055, B226AB058). 즉 그 세 축은 독립된 세 근거가 아니라 한
+ * 문장을 세 번 센 것이고, 상품군·대상·사이즈는 아동 라인의 상수다.
+ *
+ * ── 그래서 이 숫자를 올리지 않았다 ──────────────────────────────────────────
+ * 숫자를 6으로 올려도 위 여섯 상품은 여전히 전부 통과한다(점수가 7점이다).
+ * 문제는 개수가 아니라 **세는 축이 상품을 구별하지 못한다**는 것이라, 숫자로는
+ * 고쳐지지 않는다. 대신 구별하는 축(제목이 말하는 옷의 형태, GarmentForm)을
+ * 판정에 들여보냈다 — compareGarmentForm 주석 참고. */
 const SAME_MIN_AXES = 5;
 const PRESUMED_SAME_MIN_AXES = 3;
 
@@ -234,6 +255,28 @@ function compareCategory(x: ProductFacts, y: ProductFacts): {
   const shared = sharedTokens(textX, textY);
   const detail = shared.length > 0 ? `상품군 ${shared.join("/")}` : `상품군 ${taxonX ?? "?"}↔${taxonY ?? "?"}`;
   return { taxonOutcome, textOutcome, detail };
+}
+
+/**
+ * 두 상품의 **제목이 말하는 옷의 형태**를 견준다.
+ *
+ * 판매처 자신의 분류(categoryText)는 보지 않는다. 그건 이미 compareCategory가
+ * 보고 있고, 무엇보다 그 칸은 판매처의 진열 칸이라 형태를 말해주지 않는다 —
+ * Bobo는 후드집업(B226AC049)도 하프집업 스웨트셔츠(B226AC114)도 똑같이
+ * type="Sweatshirts"에 넣는다(실측). 상품 자신의 이름만이 형태를 말한다.
+ *
+ * 한쪽이라도 형태를 말하지 않으면 "모름"이다. 겹치는 형태가 하나라도 있으면
+ * "일치"다("hooded sweatshirt" ↔ "sweatshirt"는 겹친다). 양쪽 다 말했는데 하나도
+ * 겹치지 않을 때만 "불일치"다.
+ */
+function compareGarmentForm(x: ProductFacts, y: ProductFacts): { outcome: AxisOutcome; detail: string } {
+  const left = resolveGarmentForms(x.title);
+  const right = resolveGarmentForms(y.title);
+  const show = (s: Set<GarmentForm>) => [...s].sort().join("/");
+  if (left.size === 0 || right.size === 0) return { outcome: "unknown", detail: "옷의 형태를 읽지 못했다" };
+  return intersects(left, right)
+    ? { outcome: "match", detail: `옷의 형태 ${show(left)}` }
+    : { outcome: "mismatch", detail: `옷의 형태 ${show(left)} ↔ ${show(right)}` };
 }
 
 function compareColor(x: ProductFacts, y: ProductFacts): {
@@ -406,6 +449,12 @@ export function compareCrossSellerProducts(
   if (audience.outcome === "match") {
     axes.push({ axis: "AUDIENCE", points: 1, detail: `대상 ${audience.values[0]}` });
   }
+
+  // 일치해도 점수를 주지 않는다(불일치에만 보류). 의도한 비대칭이다 — 새 신호가
+  // 기존 쌍의 점수를 한 점도 움직이지 않는다는 것을 산술로 보장하는 가장 단순한
+  // 방법이고, match.ts의 AudienceTaxon이 같은 이유로 이미 쓰는 방식이다.
+  const garment = compareGarmentForm(x, y);
+  if (garment.outcome === "mismatch") blockers.push({ blocker: "GARMENT_FORM", detail: garment.detail });
 
   const size = compareSize(x, y);
   if (size.systemOutcome === "mismatch") blockers.push({ blocker: "SIZE_SYSTEM", detail: size.detail });

@@ -1,0 +1,184 @@
+{
+  "_capture": {
+    "이 파일은 무엇인가": "bobochoses.com이 실제로 내려준 응답. resources 이하는 손대지 않은 원문이고, 이 _capture 칸만 우리가 붙인 기록이다(운영 파서는 resources만 읽으므로 무해하다).",
+    "받은 날": "2026-09-13",
+    "엔드포인트": "GET https://bobochoses.com/search/suggest.json?q={q}&resources[type]=product&resources[limit]=5",
+    "무엇으로": "curl, User-Agent: Chrome/131.0.0.0 (운영 코드 shopify-suggest.ts와 같은 헤더)",
+    "질의(q)": "Bobo Choses zipped sweat organic cotton Heather grey",
+    "왜 남기는가": "MATCHING-2.0-INTEGRATION-3(CEO 지시) — stripBrandPrefix를 되돌리지 않는 근거를 실측으로 고정한다. 브랜드 접두어를 붙이면 정답(B226AC114)이 1위이고, 떼면 다른 상품(B226AC049 후드집업)이 1위가 된다."
+  },
+  "resources": {
+    "results": {
+      "products": [
+        {
+          "available": true,
+          "body": "<p>Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.</p>",
+          "compare_at_price_max": "0.00",
+          "compare_at_price_min": "0.00",
+          "handle": "b226ac114-bobo-choses-bolder-half-zipped-sweatshirt",
+          "id": 15692664111487,
+          "image": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC114_1_1.webp?v=1783420607",
+          "price": "75.00",
+          "price_max": "75.00",
+          "price_min": "75.00",
+          "tags": [
+            "aw26",
+            "branded",
+            "children",
+            "clothing",
+            "Current",
+            "Kid",
+            "NewArrivals",
+            "sweatshirts"
+          ],
+          "title": "Bobo Choses Bolder half zipped sweatshirt",
+          "type": "Sweatshirts",
+          "url": "/products/b226ac114-bobo-choses-bolder-half-zipped-sweatshirt?_pos=1&_psq=Bobo+Choses+zipped+sweat+organic+cotton+Heather+grey&_psid=6b9a00704&_ss=e",
+          "variants": [],
+          "vendor": "AW26",
+          "featured_image": {
+            "alt": "Bobo Choses Bolder half zipped sweatshirt",
+            "aspect_ratio": 0.75,
+            "height": 2000,
+            "url": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC114_1_1.webp?v=1783420607",
+            "width": 1500
+          }
+        },
+        {
+          "available": true,
+          "body": "<p>Light heather grey sweatshirt. Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%. Boxy fit. Responsibly made in Spain.</p>",
+          "compare_at_price_max": "0.00",
+          "compare_at_price_min": "0.00",
+          "handle": "b226ab011-bobo-choses-stripes-sweatshirt",
+          "id": 15692654870911,
+          "image": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AB011_1_1.webp?v=1783428897",
+          "price": "52.00",
+          "price_max": "52.00",
+          "price_min": "52.00",
+          "tags": [
+            "aw26",
+            "Baby",
+            "children",
+            "clothing",
+            "Current",
+            "drop-1",
+            "Newborn",
+            "sweatshirts"
+          ],
+          "title": "Bobo Choses stripes sweatshirt",
+          "type": "Sweatshirts",
+          "url": "/products/b226ab011-bobo-choses-stripes-sweatshirt?_pos=2&_psq=Bobo+Choses+zipped+sweat+organic+cotton+Heather+grey&_psid=6b9a00704&_ss=e",
+          "variants": [],
+          "vendor": "AW26",
+          "featured_image": {
+            "alt": "Bobo Choses stripes sweatshirt",
+            "aspect_ratio": 0.75,
+            "height": 2000,
+            "url": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AB011_1_1.webp?v=1783428897",
+            "width": 1500
+          }
+        },
+        {
+          "available": true,
+          "body": "<p>The long grey jogging pants for kids are a timeless and easy-to-wear piece. Crafted from GOTS-certified organic cotton, they feature an inner brushed fleece for added warmth. The loose fit, along with an elasticated waistband and bottom, offer all-day comfort. Practical patch and seam pockets complete the design.</p>\n\n<p>Key features:</p>\n<ul>\n<li>Design: elasticated bottom, elasticated waistband, loose fit, long length, patch pocket, seam pocket and inner brush fleece</li>\n<li>Materials: 100% organic cotton</li>\n<li>Quality: GOTS-certified</li>\n<li>Made in Portugal</li>\n</ul>",
+          "compare_at_price_max": "0.00",
+          "compare_at_price_min": "0.00",
+          "handle": "b324ec025-bobo-choses-grey-jogging-pants",
+          "id": 9718155215181,
+          "image": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B324EC025_1.jpg?v=1773912990",
+          "price": "59.00",
+          "price_max": "59.00",
+          "price_min": "59.00",
+          "tags": [
+            "children",
+            "clothing",
+            "con",
+            "Current",
+            "CurrentIconic",
+            "iconic",
+            "Kid",
+            "trousers"
+          ],
+          "title": "Bobo Choses grey jogging pants",
+          "type": "Trousers",
+          "url": "/products/b324ec025-bobo-choses-grey-jogging-pants?_pos=3&_psq=Bobo+Choses+zipped+sweat+organic+cotton+Heather+grey&_psid=6b9a00704&_ss=e",
+          "variants": [],
+          "vendor": "CON",
+          "featured_image": {
+            "alt": "Bobo Choses grey jogging pants",
+            "aspect_ratio": 0.75,
+            "height": 2731,
+            "url": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B324EC025_1.jpg?v=1773912990",
+            "width": 2048
+          }
+        },
+        {
+          "available": true,
+          "body": "<p>Heather grey sweatshirt. Cotton 66%, Organic Cotton 34%. Loose fit. Responsibly made in Spain.</p>",
+          "compare_at_price_max": "0.00",
+          "compare_at_price_min": "0.00",
+          "handle": "b226ad024-lilac-tag-relaxed-sweatshirt",
+          "id": 15692666929535,
+          "image": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AD024_8.jpg?v=1783945214",
+          "price": "95.00",
+          "price_max": "95.00",
+          "price_min": "95.00",
+          "tags": [
+            "adult",
+            "aw26",
+            "clothing",
+            "Current",
+            "drop-2",
+            "sweatshirts",
+            "Woman"
+          ],
+          "title": "Lilac tag relaxed sweatshirt",
+          "type": "Sweatshirts",
+          "url": "/products/b226ad024-lilac-tag-relaxed-sweatshirt?_pos=4&_psq=Bobo+Choses+zipped+sweat+organic+cotton+Heather+grey&_psid=6b9a00704&_ss=e",
+          "variants": [],
+          "vendor": "AW26",
+          "featured_image": {
+            "alt": "Lilac tag relaxed sweatshirt",
+            "aspect_ratio": 0.75,
+            "height": 4000,
+            "url": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AD024_8.jpg?v=1783945214",
+            "width": 3000
+          }
+        },
+        {
+          "available": true,
+          "body": "<p>Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.</p>",
+          "compare_at_price_max": "0.00",
+          "compare_at_price_min": "0.00",
+          "handle": "b226ac049-pixel-abduction-all-over-zipped-hoodie",
+          "id": 15692661850495,
+          "image": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC049_1_1.webp?v=1783422258",
+          "price": "85.00",
+          "price_max": "85.00",
+          "price_min": "85.00",
+          "tags": [
+            "aw26",
+            "children",
+            "clothing",
+            "Current",
+            "drop-1",
+            "Kid",
+            "sweatshirts"
+          ],
+          "title": "Pixel Abduction all over zipped hoodie",
+          "type": "Sweatshirts",
+          "url": "/products/b226ac049-pixel-abduction-all-over-zipped-hoodie?_pos=5&_psq=Bobo+Choses+zipped+sweat+organic+cotton+Heather+grey&_psid=6b9a00704&_ss=e",
+          "variants": [],
+          "vendor": "AW26",
+          "featured_image": {
+            "alt": "Pixel Abduction all over zipped hoodie",
+            "aspect_ratio": 0.75,
+            "height": 2000,
+            "url": "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC049_1_1.webp?v=1783422258",
+            "width": 1500
+          }
+        }
+      ]
+    }
+  }
+}
