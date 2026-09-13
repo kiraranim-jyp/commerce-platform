@@ -15,11 +15,12 @@
  *
  * ══ 증거는 합산하되, 대체하지 않는다 ═════════════════════════════════════════
  *
- * 어떤 비식별자 신호 하나도 혼자서 "동일상품"을 만들 수 없다. 색상이 같다고,
- * 소재가 같다고, 제목이 비슷하다고 동일상품이 되지 않는다 — 같은 브랜드 안에서
- * 그런 일치는 흔하다. 서로 다른 축에서 최소 SAME_MIN_AXES개가 동시에 맞을 때만
- * 동일상품이라고 말한다. 식별자(브랜드 품번)가 실제로 일치할 때만 예외인데,
- * 그건 식별자가 바로 "같은 상품"의 정의이기 때문이다.
+ * 어떤 신호 하나도 혼자서 "동일상품"을 만들 수 없다. 색상이 같다고, 소재가
+ * 같다고, 제목이 비슷하다고 동일상품이 되지 않는다 — 같은 브랜드 안에서 그런
+ * 일치는 흔하다. 서로 다른 축에서 최소 SAME_MIN_AXES개가 동시에 맞을 때만
+ * 동일상품이라고 말한다. **브랜드 품번도 예외가 아니다**(MATCHING-3.1, 아래
+ * "품번은 가장 강한 증거이지 면제권이 아니다" 참고) — 품번은 가장 큰 점수를
+ * 받지만, 그 점수도 혼자서는 SAME_MIN_AXES에 닿지 못한다.
  *
  * ══ 강한 반증은 점수로 뒤집을 수 없다 ════════════════════════════════════════
  *
@@ -29,6 +30,22 @@
  * 실측 근거: B226AC114(아동 스웨트셔츠)와 B226AD013(여성 티셔츠)은 제목·소재·
  * 브랜드가 전부 겹쳐서 텍스트 점수로는 높게 나오지만, 대상 연령층과 색상이
  * 서로 반증한다.
+ *
+ * ══ 품번은 가장 강한 증거이지 면제권이 아니다 ════════════════════════════════
+ *
+ * MATCHING-3.1(CEO 지시, 2026-09-14). 여기에는 원래 `if (identifierConfirmed)
+ * return "SAME"` 한 줄이 있었다 — 품번이 같으면 보류도, 브랜드 확인도, 축 개수도
+ * 보지 않고 즉시 동일상품이었다. 그 전제("브랜드 품번이 같으면 같은 상품")가
+ * 실측 데이터에서 깨진다. junioredition.com 은 서로 다른 두 상품에 **글자 하나까지
+ * 같은 Product Code** 를 적는다(2026-09-14 라이브 실측, `/products/*.js` 원문):
+ *
+ *   Minnie Newborn Body  / Minnie Newborn Onesie      둘 다 KS106168-P05261
+ *   Bubble Sweatshirt Grey Melange / Graystone / Conker Stripe   둘 다 AW26MS185
+ *   Giulia Flower Sandals Ombretto Pink / Cacao / Bubblegum Pink Patent  전부 01325
+ *
+ * 그래서 품번 일치는 이제 **가장 강한 축**(IDENTIFIER_AXIS_POINTS)으로 들어가고,
+ * 등급 규칙은 하나만 남는다 — 보류 없음 · 브랜드 확인 · 축 합계 SAME_MIN_AXES.
+ * 임계값은 한 칸도 움직이지 않았다.
  */
 import {
   buildSizeProfile,
@@ -71,7 +88,8 @@ export type CrossSellerBlocker =
   | "SIZE_SYSTEM"
   | "BRAND_UNCONFIRMED"
   | "NO_TITLE_OVERLAP"
-  | "GARMENT_FORM";
+  | "GARMENT_FORM"
+  | "SAME_SELLER_DISTINCT_LISTING";
 
 export type CrossSellerAxis =
   | "TITLE"
@@ -91,8 +109,10 @@ export interface CrossSellerMatch {
   axes: { axis: CrossSellerAxis; points: number; detail: string }[];
   conflicts: { conflict: CrossSellerConflict; detail: string }[];
   blockers: { blocker: CrossSellerBlocker; detail: string }[];
-  /** 식별자(브랜드 품번/URL 품번)로 확정됐는지. 가격 정책이 "동일상품 확인"을
-   * 이 값과 verdict로 판단한다. */
+  /** 브랜드 품번(설명문 라벨 또는 URL 앞머리)이 실제로 일치했는지. **이 값이
+   * 참이라고 해서 verdict가 SAME이 되지는 않는다**(MATCHING-3.1) — 품번은 가장
+   * 강한 축 하나로 점수에 들어갈 뿐이고, 등급은 언제나 보류·브랜드·축 합계로
+   * 정해진다. 보고/디버깅용 사실 기록이다. */
   identifierConfirmed: boolean;
   /** 사람이 읽는 한 줄 근거 목록(화면/로그용). */
   reasons: string[];
@@ -145,6 +165,21 @@ export const CROSS_SELLER_IMAGE_STRONG_MAX_DISTANCE = 95;
  * 판정에 들여보냈다 — compareGarmentForm 주석 참고. */
 const SAME_MIN_AXES = 5;
 const PRESUMED_SAME_MIN_AXES = 3;
+
+/**
+ * 브랜드 품번이 실제로 일치할 때 주는 점수.
+ *
+ * 두 가지를 동시에 만족해야 하는 숫자다.
+ *  · 부분 일치(2점)보다 반드시 커야 한다 — 완전 일치가 부분 일치보다 약할 수 없다.
+ *  · 혼자서는 SAME_MIN_AXES(5)에 닿지 못해야 한다 — 이 파일 맨 위의 "어떤 신호도
+ *    혼자서 동일상품을 만들지 못한다"가 품번에도 그대로 적용된다는 뜻이고,
+ *    MATCHING-3.1이 폐기한 것이 바로 그 예외다.
+ * 3은 그 두 조건을 만족하는 유일한 값이다(4면 나머지 축 1개로 SAME이 된다).
+ *
+ * SAME_MIN_AXES / PRESUMED_SAME_MIN_AXES 는 건드리지 않았다 — 이 변경은 임계값을
+ * 옮기는 것이 아니라, 임계값을 **건너뛰던 길**을 없애는 것이다.
+ */
+const IDENTIFIER_AXIS_POINTS = 3;
 
 /** 제목 토큰 겹침이 이 이상이면 "핵심 상품명이 같다"고 본다(Jaccard). */
 const STRONG_TITLE_OVERLAP = 0.5;
@@ -338,6 +373,56 @@ function slugCarriesCode(facts: ProductFacts, code: string | null): boolean {
   return slug.replace(/[^a-z0-9]/g, "").includes(normalizeFactText(code).replace(/[^a-z0-9]/g, ""));
 }
 
+/** 같은 판매처인지 보려면 호스트를 맞춰야 한다. 등록상품의 URL에는 `www.`와
+ * 로케일 프리픽스가 붙고(실측: `https://www.junioredition.com/en-kr/collections/
+ * konges-slojd/products/…`), 검색 응답의 URL에는 붙지 않는다
+ * (`https://junioredition.com/products/…`). 두 글자 차이로 같은 가게를 다른
+ * 가게로 읽으면 이 규칙이 통째로 죽는다. */
+function sellerHost(url: string): string | null {
+  try {
+    return new URL(url).host.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * MATCHING-3.1(CEO 지시, 2026-09-14) — **한 판매처가 스스로 둘로 갈라 놓은 진열**.
+ *
+ * ── 왜 이 축인가(실측) ──────────────────────────────────────────────────────
+ * 2026-09-14 라이브 실측에서 거짓 SAME 7건을 재현하고, 그 7건을 **동시에** 가르는
+ * 상품 증거 축이 있는지 전수로 쟀다. 없다:
+ *
+ *   색상 표기가 다르다        7건 중 3건만 (Minnie Body↔Onesie 는 둘 다 "Rosetto")
+ *   판매처 분류가 다르다      7건 중 3건만 (Giulia 4색은 전부 "Shoes")
+ *   핵심 상품명이 다르다      7건 중 6건만 (Grey Melange↔Graystone 은 토큰이 같다)
+ *   옷의 형태가 다르다        0건 (romper/bodysuit 는 어휘 목록에 없고, 어휘 확대는 금지)
+ *
+ * 그런데 7건 **전부**에서 참인 사실이 하나 있다: 같은 판매처가 그 둘을 서로 다른
+ * 두 개의 상품 페이지로 진열해 두었다. 판매처는 자기 카탈로그의 권위다 — 그가
+ * 두 개로 나눠 놓은 것을, 그가 두 상품에 같이 적어 둔 품번을 근거로 우리가 하나로
+ * 합칠 수는 없다.
+ *
+ * ── 무엇을 하고 무엇을 하지 않는가 ──────────────────────────────────────────
+ * 보류(blocker)일 뿐 충돌(conflict)이 아니다. "다른 상품이다"라고 말하지 않고
+ * "같다고 확정하지 않는다"고만 말한다 — 같은 판매처가 같은 상품을 중복 진열하는
+ * 일(재고 분할 진열 등)이 실제로 있고, 그 경우 이 쌍은 SAME 대신 PRESUMED_SAME이
+ * 된다. 같은 판매처끼리의 비교는 애초에 교차판매처 가격 비교에 쓰이지 않으므로
+ * 그 보류에는 피해가 없다.
+ *
+ * 같은 URL(자기 자신)은 대상이 아니다 — 검색이 원본 상품 자신을 물어온 경우가
+ * 실측 18건 중 11건이고, 그건 정상 SAME이다.
+ */
+function sameSellerDistinctListing(x: ProductFacts, y: ProductFacts): boolean {
+  const hostX = sellerHost(x.sourceUrl);
+  const hostY = sellerHost(y.sourceUrl);
+  if (!hostX || !hostY || hostX !== hostY) return false;
+  const slugX = x.urlSlug ?? extractUrlSlug(x.sourceUrl);
+  const slugY = y.urlSlug ?? extractUrlSlug(y.sourceUrl);
+  if (!slugX || !slugY) return false;
+  return slugX !== slugY;
+}
+
 /* ─────────────────────────── 본 판정 ─────────────────────────── */
 
 export function compareCrossSellerProducts(
@@ -427,7 +512,14 @@ export function compareCrossSellerProducts(
     blockers.push({ blocker: "NO_TITLE_OVERLAP", detail: "핵심 상품명에 겹치는 말이 없다" });
   }
 
-  if (modelCode === "partial") {
+  // 품번이 확인되면 가장 강한 축 하나로 들어간다(부분 일치보다 크고, 혼자서는
+  // SAME_MIN_AXES에 못 닿는다 — IDENTIFIER_AXIS_POINTS 주석 참고). 완전 일치와
+  // 부분 일치를 함께 세지 않는다: slugCarriesCode가 참이면서 modelCode가
+  // "partial"인 경우가 실제로 있어(B126AI018 ↔ B126AI01831152), 두 번 세면 같은
+  // 근거로 2점을 더 얻는다.
+  if (identifierConfirmed) {
+    axes.push({ axis: "MODEL_CODE", points: IDENTIFIER_AXIS_POINTS, detail: "브랜드 품번 일치" });
+  } else if (modelCode === "partial") {
     axes.push({ axis: "MODEL_CODE", points: 2, detail: `모델코드 부분 일치 ${x.brandModelCode}/${y.brandModelCode}` });
   }
   if (category.taxonOutcome === "match" || category.textOutcome === "match") {
@@ -470,6 +562,13 @@ export function compareCrossSellerProducts(
     axes.push({ axis: "IMAGE", points: 1, detail: `대표 이미지 거리 ${image.minDistance}` });
   }
 
+  if (sameSellerDistinctListing(x, y)) {
+    blockers.push({
+      blocker: "SAME_SELLER_DISTINCT_LISTING",
+      detail: "같은 판매처가 서로 다른 두 상품으로 진열하고 있다",
+    });
+  }
+
   if (!brandOk) {
     blockers.push({ blocker: "BRAND_UNCONFIRMED", detail: "양쪽 브랜드를 확인하지 못했다" });
   }
@@ -483,8 +582,9 @@ export function compareCrossSellerProducts(
     .filter((axis) => axis.axis !== "IMAGE")
     .reduce((sum, axis) => sum + axis.points, 0);
 
+  // 품번이 일치해도 여기를 지나간다. 예외가 없다 — 그 예외가 MATCHING-3.1이
+  // 폐기한 것이고, 폐기했다는 사실이 코드에서 보여야 한다.
   const verdict = ((): CrossSellerVerdict => {
-    if (identifierConfirmed) return "SAME";
     const blocked = blockers.length > 0;
     if (!blocked && brandOk && corePoints >= SAME_MIN_AXES) return "SAME";
     if (totalPoints >= PRESUMED_SAME_MIN_AXES) return "PRESUMED_SAME";
@@ -496,7 +596,6 @@ export function compareCrossSellerProducts(
     ...axes.map((axis) => `근거: ${axis.detail}`),
     ...blockers.map((blocker) => `보류: ${blocker.detail}`),
   ];
-  if (identifierConfirmed) reasons.unshift("근거: 브랜드 품번 일치");
 
   return { verdict, axes, conflicts, blockers, identifierConfirmed, reasons };
 }
