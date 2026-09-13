@@ -70,6 +70,10 @@ import {
   type GlobalMarketRow,
   type MarketObservationInput,
 } from "./global-market";
+// MATCHING-2.0-INTEGRATION-1(CEO 지시, 2026-09-13) — "이 MI가 어느 상품인가".
+// 판매자가 등록한 URL 그대로만 쓰기 위해, 매칭 결과를 인자로 받을 수 없는
+// 순수 함수로 분리해 둔다(global-market.ts와 같은 장치).
+import { buildOriginProductLink, type OriginProductLink } from "./origin-product";
 // MI-SIMPLIFY-1(CPO 지시, 2026-09-12) — CASE A/B/C/D를 셀러 어휘로 옮기는 유일한
 // 지점. 화면이 marketCase로 직접 분기해 문장을 조립하지 않는다(내부 이름이
 // 새어 나가는 경로 자체를 없앤다).
@@ -935,7 +939,65 @@ function PriceChainView({ rows }: { rows: PriceChainRow[] }) {
  * 붙어서, 숫자 하나를 위해 네 문장을 읽어야 했다. 전부 참이지만 전부 **근거**다.
  * 사실은 지우지 않고 title로 옮긴다 — 본문은 숫자, 툴팁은 근거(이 파일의 규칙).
  */
-function OriginalPriceView({ headline }: { headline: OriginalPriceHeadline }) {
+/**
+ * MATCHING-2.0-INTEGRATION-1(CEO 지시, 2026-09-13) — 원본 상품 이름과 그 주소.
+ *
+ * ① 원본 상품 카드의 **첫 두 줄**이다. 가격보다 위에 오는 이유는 순서가 곧
+ * 질문의 순서이기 때문이다: "무슨 상품인가" 다음이 "얼마인가"다.
+ *
+ * 주소는 판매자가 등록한 값 그대로이고(origin-product.ts), 눈에는 접힌 모양이
+ * 보이되 클릭하면 접히지 않은 원본이 새 탭에서 열린다. title 속성에도 원본
+ * 전체를 둔다 — 접힌 주소를 눈으로 복원할 수 없으면 접는 것이 곧 감추는 것이 된다.
+ */
+function OriginProductLine({ link }: { link: OriginProductLink }) {
+  const [copied, setCopied] = useState(false);
+  if (!link.productTitle && !link.url) return null;
+
+  async function copy(url: string) {
+    try {
+      await navigator.clipboard?.writeText(url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // 클립보드 권한이 없는 환경(HTTP 등) — 조용히 무시한다. 주소는 화면에
+      // 그대로 있고 링크도 살아 있으므로 셀러가 못 하게 되는 일이 없다.
+    }
+  }
+
+  return (
+    <div className="mb-1.5">
+      {link.productTitle && (
+        <p className="text-xs font-semibold leading-snug text-text-primary">{link.productTitle}</p>
+      )}
+      {link.url && (
+        <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5">
+          <a
+            href={link.url}
+            target="_blank"
+            rel="noreferrer"
+            title={link.url}
+            className="text-[10px] font-medium text-primary underline"
+          >
+            {link.linkLabel}
+          </a>
+          {/* 접힌 주소. 클릭 대상이 아니라 "어느 주소인지"를 눈으로 확인하는 줄이다. */}
+          <span className="text-[10px] text-text-tertiary" title={link.url}>
+            {link.displayUrl}
+          </span>
+          <button
+            type="button"
+            onClick={() => void copy(link.url!)}
+            className="text-[10px] text-text-tertiary underline hover:text-text-secondary"
+          >
+            {copied ? "복사됨" : "복사"}
+          </button>
+        </p>
+      )}
+    </div>
+  );
+}
+
+function OriginalPriceView({ headline, originProduct }: { headline: OriginalPriceHeadline; originProduct: OriginProductLink }) {
   // 원본가·환산의 근거와 ※ 주석을 한 줄로 합쳐 큰 숫자에 붙인다. 여러 title을
   // 나눠 달면 셀러가 어느 숫자 위에 마우스를 올려야 하는지 또 골라야 한다.
   const priceNote =
@@ -949,7 +1011,9 @@ function OriginalPriceView({ headline }: { headline: OriginalPriceHeadline }) {
   return (
     <div className="rounded-md border border-current/20 bg-background/40 p-2.5">
       <p className="text-[11px] font-semibold text-text-primary">{headline.title}</p>
-      <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2" title={priceNote}>
+      {/* MATCHING-2.0-INTEGRATION-1 — 제목 바로 아래가 "무슨 상품인가"의 답이다. */}
+      <OriginProductLine link={originProduct} />
+      <div className="flex flex-wrap items-baseline gap-x-2" title={priceNote}>
         {headline.price.value ? (
           // 원본 통화 금액이 이 화면에서 가장 큰 숫자다 — 첫 질문의 답이므로.
           <span className="text-lg font-bold text-text-primary">{headline.price.value}</span>
@@ -1389,6 +1453,12 @@ function GlobalMarketRowView({ row, showDetail }: { row: GlobalMarketRow; showDe
           {/* 원화 환산값에는 반드시 라벨이 붙는다 — "≈ ₩57,756"만 있으면 그게
               한국에서 관측된 가격인지 우리가 환율로 만든 값인지 알 수 없다. */}
           {row.krwPrice && <span className="text-[10px] text-text-tertiary">원화 환산 {row.krwPrice}</span>}
+          {/* MATCHING-2.0-INTEGRATION-1 — 한국 줄은 반대다. 원화가 큰 숫자 자리에
+              서고, 그 판매처가 페이지에 실제로 적어 둔 외화가 이 작은 줄로 남는다.
+              둘 중 하나를 지우지 않는다 — 지우면 관측과 환산의 경계가 사라진다. */}
+          {row.observedOriginPrice && (
+            <span className="text-[10px] text-text-tertiary">원 표시가 {row.observedOriginPrice}</span>
+          )}
         </span>
       </div>
       {showDetail && (
@@ -2166,6 +2236,16 @@ export function MiPanelView({
   const judgingMarketRow = pickJudgingMarketRow(globalMarketCard);
 
   /**
+   * MATCHING-2.0-INTEGRATION-1 — 이 MI가 어느 상품에 대한 것인가.
+   *
+   * 서버 응답의 product를 그대로 옮긴다. 매칭 결과(globalMarketCard / 국내 후보)는
+   * 인자로도 넘기지 않는다 — 넘길 수 있게 두면 언젠가 "더 확실한 판매처 URL로
+   * 바꿔주자"는 코드가 들어오고, 그 순간 셀러가 등록한 주소와 화면의 주소가
+   * 달라진다.
+   */
+  const originProduct = buildOriginProductLink({ title: data.product?.title, sourceUrl: data.product?.sourceUrl });
+
+  /**
    * UX 2.4.1(CEO 지시, 2026-09-11) — ① 원본 상품 가격.
    *
    * 사슬과 **같은 입력**을 받는다(observedOriginPrice / cost / fx). 그래야 ①의
@@ -2190,8 +2270,15 @@ export function MiPanelView({
     snapshotOriginPrice,
     // ②의 🇰🇷 줄 그대로. 그 값은 판매자 자신의 한국 페이지에서 직접 읽은 값이라
     // 원본 상품의 사실에 속한다(MI/PRICE-2). 금액을 여기서 다시 만들지 않는다.
+    // MATCHING-2.0-INTEGRATION-1 — 그 줄의 대표 금액이 원화 환산이면 원 표시가도
+    // 함께 넘긴다. ①이 "이 숫자가 관측인가 환산인가"를 기준 문장으로 말할 수
+    // 있어야 한다(price-hierarchy.krMarketLine).
     krMarketObservation: judgingMarketRow
-      ? { price: judgingMarketRow.observedPrice, marketCode: judgingMarketRow.code }
+      ? {
+          price: judgingMarketRow.observedPrice,
+          marketCode: judgingMarketRow.code,
+          observedOriginPrice: judgingMarketRow.observedOriginPrice,
+        }
       : null,
   });
 
@@ -2465,7 +2552,7 @@ export function MiPanelView({
                   펼쳤을 때만 나온다. 두 builder의 분리는 그대로다(글로벌 카드는
                   국내 비교상품을 입력으로 받을 수 없다). */}
               <div>
-                <OriginalPriceView headline={originalPrice} />
+                <OriginalPriceView headline={originalPrice} originProduct={originProduct} />
                 <div className="mt-1">
                   <GlobalMarketHint
                     card={globalMarketCard}

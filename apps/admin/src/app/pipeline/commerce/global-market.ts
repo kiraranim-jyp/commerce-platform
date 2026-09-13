@@ -198,8 +198,36 @@ export interface GlobalMarketRow {
   name: string;
   /** 목록에 함께 적는 원본 코드("en-de"). 이름이 어디서 왔는지 셀러가 대조할 수 있게. */
   code: string;
-  /** 관측된 통화 그대로의 금액. 이 줄의 주인공이다. */
+  /**
+   * 이 줄의 주인공 금액.
+   *
+   * ── MATCHING-2.0-INTEGRATION-1(CEO 지시, 2026-09-13) — 한국 줄만 원화가 앞에 선다 ──
+   * 다른 시장 줄에서는 관측된 통화 그대로다(€75는 프랑스 줄의 답이다). 한국 줄만
+   * 다른 이유는 그 줄을 읽는 사람이 한국에서 파는 사람이기 때문이다. 실제 화면은
+   * 이랬다:
+   *
+   *   🇰🇷 한국 KR · 원본 판매자 한국 표시가 €73.00 · 원화 환산 ₩113,629   ❌
+   *
+   * 한국 시장 줄의 대표 숫자가 유로면, 이 줄이 답해야 하는 질문("한국에서 이
+   * 판매처는 얼마를 받나")에 셀러가 환산을 한 번 더 해야 답이 나온다. 게다가 큰
+   * 숫자가 €73이라 화면의 다른 유로 금액들과 같은 층으로 읽히고, 정작 비교해야
+   * 할 원화 값은 작은 글씨의 부속으로 밀린다.
+   *
+   * 사실은 하나도 바꾸지 않는다. market_code=KR · observed_currency=EUR ·
+   * converted=KRW 세 사실은 그대로 남고(declaredCountry/observedOriginPrice가
+   * 들고 있다), 환율도 다시 계산하지 않는다 — 관측 시점에 저장된 price_krw를
+   * 그대로 쓴다. 바뀌는 것은 **어느 쪽을 크게 쓰는가** 하나다.
+   */
   observedPrice: string;
+  /**
+   * MATCHING-2.0-INTEGRATION-1 — 위 대표 금액이 원화 환산일 때, 그 판매처가
+   * 실제로 페이지에 적어 둔 외화 표시가("원 표시가 €73.00").
+   *
+   * 원화를 앞세우면서 원 표시가를 지우면 "이 값이 관측인가 환산인가"를 화면이
+   * 더 이상 말하지 못한다 — 이 줄이 그 사실을 대신 붙들고 있는다. 관측 통화가
+   * 이미 원화면 null이다(같은 숫자를 두 번 쓰지 않는다는 이 파일의 규칙 그대로).
+   */
+  observedOriginPrice: string | null;
   /**
    * MI/PRICE-2 — 이 금액이 무슨 값인지 말하는 라벨. 판단 시장(한국) 줄에만 붙고
    * 나머지 줄은 null이다.
@@ -283,14 +311,20 @@ export function buildGlobalMarketCard(
     const isJudgingMarket = isTargetMarket(o.marketCode, market);
     const path = sameProductPath(o.productUrl, o.marketCode);
     // 원본 금액이 없는 행(레거시)은 저장된 원화값이 그 줄의 유일한 가격이다.
-    const observedPrice =
-      o.priceAmount != null ? formatOriginAmount(o.priceAmount, o.currency) : formatKrwAmount(o.priceKrw);
+    const originAmount = o.priceAmount != null ? formatOriginAmount(o.priceAmount, o.currency) : null;
+    // 판단 시장(한국) 줄이 외화로 관측됐을 때만 대표 금액이 원화가 된다. 관측
+    // 통화가 이미 원화면 바꿀 것이 없고, 다른 시장 줄은 그 시장의 통화가 답이다.
+    const krwLeads = isJudgingMarket && !isKrw && originAmount != null;
+    const observedPrice = krwLeads ? formatKrwAmount(o.priceKrw) : (originAmount ?? formatKrwAmount(o.priceKrw));
     return {
       marketCode: o.marketCode,
       flag: display.flag,
       name: display.name,
       code: o.marketCode,
       observedPrice,
+      // 원화가 앞에 섰을 때만 채운다 — 그 외에는 observedPrice가 이미 관측 통화
+      // 그대로라 같은 값을 두 번 적는 꼴이 된다.
+      observedOriginPrice: krwLeads ? originAmount : null,
       // 본문 한 줄용 모양. 같은 observedPrice를 쓰므로 툴팁과 상세가 다른 금액을
       // 말할 수 없다(사본이 아니라 같은 문자열이다).
       compact: `${display.flag} ${marketSuffix(o.marketCode)} ${observedPrice}`,
@@ -306,7 +340,8 @@ export function buildGlobalMarketCard(
           .join(" · "),
       },
       // 원화가 이미 앞에 있으면 환산 칸을 비운다(같은 숫자를 두 번 쓰지 않는다).
-      krwPrice: o.priceAmount != null && !isKrw ? formatKrwAmount(o.priceKrw) : null,
+      // krwLeads인 줄도 마찬가지다 — 그 줄의 원화는 observedPrice가 이미 들고 있다.
+      krwPrice: o.priceAmount != null && !isKrw && !krwLeads ? formatKrwAmount(o.priceKrw) : null,
       availability: availabilityOf(o.soldOut),
       declaredCountry: o.marketCountry,
       productUrl: o.productUrl,

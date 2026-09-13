@@ -6,7 +6,7 @@ import {
   type MarketObservationInput,
 } from "../global-market";
 import { domesticMatchDisplay } from "../match-display";
-import { buildMarketContext, PRICE_MEANING_LABEL } from "../price-hierarchy";
+import { buildMarketContext, buildOriginalPriceHeadline, PRICE_MEANING_LABEL } from "../price-hierarchy";
 import { readSourceAt, stripComments } from "./source-text";
 
 /** 화면에 나가는 문자열만 검사한다 — 주석은 "왜 지웠나"를 설명해야 하므로 걷어낸다. */
@@ -273,6 +273,88 @@ describe("글로벌 시장 줄의 동일 상품 표시는 매칭 등급이 아�
     const us = CARD.rows.find((r) => r.marketCode === "en-us")!;
     expect(us.productUrl).toBeNull();
     expect(us.identity.evidence).not.toContain("/products");
+  });
+});
+
+/**
+ * MATCHING-2.0-INTEGRATION-1(CEO 지시, 2026-09-13) — 고정하려는 실제 화면.
+ *
+ * 오늘:
+ *   🇰🇷 한국 KR · 원본 판매자 한국 표시가 €73.00 · 원화 환산 ₩113,629   ❌
+ *
+ * 요구:
+ *   🇰🇷 한국 · 🟢 동일 상품 · 판매자 직접 관측
+ *   ₩113,629
+ *   원 표시가 €73.00
+ *
+ * 한국 시장 줄을 읽는 사람은 한국에서 파는 사람이다. 그 줄의 대표 숫자가 유로면
+ * 이 줄이 답해야 하는 질문("이 판매처는 한국에서 얼마를 받나")에 셀러가 환산을
+ * 한 번 더 해야 답이 나온다. 사실은 셋 다 그대로 남는다 — 시장은 KR, 관측 통화는
+ * EUR, 환산은 KRW. 바뀌는 것은 어느 쪽을 크게 쓰는가 하나다.
+ */
+describe("한국 시장 줄의 대표 숫자는 원화다", () => {
+  const KR_IN_EUR: MarketObservationInput = {
+    marketCode: "en-kr",
+    marketCountry: "ES",
+    currency: "EUR",
+    priceAmount: 73,
+    priceKrw: 113629,
+    soldOut: false,
+    productUrl: "https://www.smallable.com/en-kr/product/x-430701",
+    checkedAt: "2026-09-13T02:00:00.000Z",
+  };
+  const card = buildGlobalMarketCard({ observations: [KR_IN_EUR, OBSERVATIONS[1]!, OBSERVATIONS[2]!] });
+  const kr = card.rows.find((r) => r.marketCode === "en-kr")!;
+
+  it("큰 숫자 자리에 원화가 서고, 원 표시가는 지워지지 않고 뒤에 남는다", () => {
+    expect(kr.observedPrice).toBe("₩113,629");
+    expect(kr.observedOriginPrice).toBe("€73.00");
+    // 같은 숫자를 두 번 쓰지 않는다 — 원화가 이미 앞에 있으므로 환산 칸은 비어 있다.
+    expect(kr.krwPrice).toBeNull();
+    // 본문 한 줄 요약도 같은 문자열을 쓴다(두 자리가 다른 금액을 말할 수 없다).
+    expect(kr.compact).toBe("🇰🇷 KR ₩113,629");
+  });
+
+  it("환율을 다시 계산하지 않는다 — 관측에 저장된 원화값 그대로다", () => {
+    expect(kr.observedPrice).toBe(`₩${(113629).toLocaleString("ko-KR")}`);
+  });
+
+  it("판단 시장이 아닌 줄은 그대로 그 시장의 통화가 주인공이다", () => {
+    const us = card.rows.find((r) => r.marketCode === "en-us")!;
+    expect(us.observedPrice).toContain("53");
+    expect(us.observedOriginPrice).toBeNull();
+    expect(us.krwPrice).toBe("₩71,221");
+  });
+
+  it("관측 통화가 이미 원화면 바꿀 것이 없다 — 원 표시가 줄도 만들지 않는다", () => {
+    const krwObserved = CARD.rows.find((r) => r.marketCode === "en-kr")!;
+    expect(krwObserved.observedPrice).toBe("₩78,000");
+    expect(krwObserved.observedOriginPrice).toBeNull();
+    expect(krwObserved.krwPrice).toBeNull();
+  });
+
+  it("①로 넘어가는 값도 같은 줄에서 나온다 — 그 숫자가 환산이라는 사실을 기준이 말한다", () => {
+    const row = pickJudgingMarketRow(card)!;
+    const headline = buildOriginalPriceHeadline({
+      observedOriginPrice: null,
+      originPrice: null,
+      sourcePriceKrw: null,
+      exchangeRate: null,
+      exchangeRateIsEstimate: false,
+      originPriceBasis: null,
+      costBasisIsKrMarket: false,
+      snapshotOriginPrice: { amount: 75, currency: "EUR" },
+      krMarketObservation: {
+        price: row.observedPrice,
+        marketCode: row.code,
+        observedOriginPrice: row.observedOriginPrice,
+      },
+    });
+    expect(headline.krMarket?.value).toBe("₩113,629");
+    // "직접 관측 · 환율 환산이 아닙니다"라고 말하면 거짓이 된다 — 이 값은 환산이다.
+    expect(headline.krMarket?.basis).toContain("€73.00");
+    expect(headline.krMarket?.basis).toContain("환산");
+    expect(headline.krMarket?.basis).not.toContain("환율 환산이 아닙니다");
   });
 });
 

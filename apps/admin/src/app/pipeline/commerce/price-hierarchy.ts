@@ -661,7 +661,21 @@ export interface OriginalPriceHeadlineInput {
    * 판단 시장 관측이 정확히 하나일 때만 호출부가 값을 넘긴다
    * (global-market.pickJudgingMarketRow) — 모르면 고르지 않는다.
    */
-  krMarketObservation: { price: string; marketCode: string } | null;
+  krMarketObservation: {
+    price: string;
+    marketCode: string;
+    /**
+     * MATCHING-2.0-INTEGRATION-1(CEO 지시, 2026-09-13) — 위 price가 원화 환산일
+     * 때 그 판매처가 한국 페이지에 실제로 적어 둔 외화 표시가("€73.00").
+     *
+     * 한국 시장 줄의 대표 금액이 원화가 되면서(global-market.ts) 이 줄에 오는
+     * 값도 원화가 됐다. 그런데 "원본 판매자 한국 표시가 ₩113,629"만 적으면
+     * 그것이 관측인지 환산인지 화면이 말하지 않는다 — 이 저장소가 가장 오래
+     * 붙들고 있는 경계다. 기준 문장이 그 사실을 대신 말한다. 관측 자체가
+     * 원화였으면 undefined/null이고, 그때 기준 문장은 예전 그대로다.
+     */
+    observedOriginPrice?: string | null;
+  } | null;
 }
 
 function isKrw(currency: string): boolean {
@@ -694,7 +708,11 @@ function krMarketLine(input: OriginalPriceHeadlineInput): PriceLine | null {
     key: "KR_MARKET_PRICE",
     label: PRICE_MEANING_LABEL.KR_MARKET_PRICE,
     basis: [
-      `${observed.marketCode} 페이지에서 직접 관측 · 환율 환산이 아닙니다`,
+      observed.observedOriginPrice
+        ? // 관측은 외화였고 이 숫자는 그 관측의 원화 환산이다. 환율을 여기서 다시
+          // 돌리지 않는다 — global-market이 저장된 price_krw를 그대로 옮겨 온 값이다.
+          `${observed.marketCode} 페이지 표시가 ${observed.observedOriginPrice}를 관측 시점 환율로 환산한 값입니다`
+        : `${observed.marketCode} 페이지에서 직접 관측 · 환율 환산이 아닙니다`,
       // 같은 관측이 ③ 원가 계산의 출발점인 상품에서만 붙는다. 숨기면 셀러가
       // 같은 숫자를 두 번 세고, 금액 옆에 배지로 붙이면 시장가가 원가가 된다.
       input.costBasisIsKrMarket ? "③ 수익성의 착지원가가 이 관측에서 출발합니다" : null,

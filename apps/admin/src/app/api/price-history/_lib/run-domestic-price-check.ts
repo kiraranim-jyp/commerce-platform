@@ -11,7 +11,12 @@ import {
   type ModelEvidenceResult,
 } from "@commerce/crawler";
 import { sourceFitsScopes } from "@commerce/category";
-import { buildDomesticShopQuery, type ProductIdentityDna } from "@commerce/shared";
+import {
+  buildCrossSellerSearchQueries,
+  buildDomesticShopQuery,
+  productFactsFromIdentityDna,
+  type ProductIdentityDna,
+} from "@commerce/shared";
 import { listDomesticPriceSources, recordDomesticSourceCheckAttempt } from "../../domestic-price-sources/_lib/domestic-price-source";
 import {
   listDomesticProductLinks,
@@ -188,8 +193,43 @@ export function isEvidenceEvaluationWorthwhile(
   domain: string,
 ): boolean {
   if (candidates.length === 0) return false;
+  // MATCHING-2.0-INTEGRATION-1(CEO 지시, 2026-09-13) — 이 가드의 전제는 "low면
+  // 뭘 골라도 NOT_MATCHED로 끝난다"였고, 그 전제를 무너뜨리는 증거가 식별자
+  // 하나뿐이던 시절에 쓰였다. 이제는 교차판매처 판정도 텍스트 등급과 무관하게
+  // 등급을 바꾼다(deriveMatchTruth: SAME → STRONG_IDENTIFIER).
+  //
+  // 실측 그대로다: Smallable 430701과 Bobo B226AC114는 상품명 어휘가 거의 겹치지
+  // 않아 텍스트로는 low인데, 브랜드·상품군·색상·소재·핏·대상이 동시에 맞아
+  // 동일상품이다. 이 가드가 그 후보를 평가 전에 버리면 판정기가 아무리 정확해도
+  // 닿을 자리가 없다 — MI에서 Bobo가 아예 사라지던 경로 중 하나가 여기였다.
+  if (candidates.some((c) => c.crossSellerVerdict === "SAME" || c.crossSellerVerdict === "PRESUMED_SAME")) return true;
   if (candidates[0].matchLevel !== "low") return true;
   return foreignModelCode !== null && domain === "foretforet.com";
+}
+
+/**
+ * MATCHING-2.0-INTEGRATION-1 — 교차판매처 판정이 있으면 그 판정이 텍스트 순위보다
+ * 먼저다.
+ *
+ * selectDomesticCandidate는 지금까지 "confidence 1위 중 modelCode conflict가 아닌
+ * 첫 후보"를 골랐다. 판매처마다 자기 SKU를 쓰는 쌍에서는 modelCode가 언제나
+ * "unavailable"이라 그 필터가 발화하지 않고, 결국 텍스트 1위가 그대로 대표가 된다.
+ * 그런데 같은 라인의 다른 색상이 텍스트로는 더 높게 나오는 일이 실제로 있다
+ * (B226AC042 ↔ B226AC043은 제목이 글자 하나까지 같다) — 그때 그 판매처는 반증된
+ * 후보 하나 때문에 통째로 버려진다.
+ *
+ * 판정이 하나도 붙어 있지 않으면 입력 순서를 **그대로** 돌려준다. 기존 경로의
+ * 대표 후보는 한 건도 달라지지 않는다.
+ */
+const CROSS_SELLER_PREFERENCE: Record<string, number> = { SAME: 0, PRESUMED_SAME: 1, CONFLICT: 3 };
+
+export function orderByCrossSellerVerdict(candidates: ComparisonCandidate[]): ComparisonCandidate[] {
+  if (!candidates.some((c) => c.crossSellerVerdict)) return candidates;
+  // 판정이 없는 후보(2)는 동일상품/추정보다 뒤, 반증(3)보다 앞. Array.sort는
+  // 안정 정렬이라 같은 등급 안에서는 confidence 내림차순이 그대로 유지된다.
+  const rank = (c: ComparisonCandidate) =>
+    c.crossSellerVerdict ? (CROSS_SELLER_PREFERENCE[c.crossSellerVerdict] ?? 2) : 2;
+  return [...candidates].sort((a, b) => rank(a) - rank(b));
 }
 
 export interface CandidateSelection {
@@ -209,12 +249,16 @@ export async function selectDomesticCandidate(
   foreignModelCode: string | null,
   fetchModelCode: (url: string) => Promise<string | null>,
 ): Promise<CandidateSelection> {
+  // MATCHING-2.0-INTEGRATION-1 — 판정이 있으면 판정 순으로 먼저 세운다(없으면
+  // 입력 그대로). 아래 두 분기가 모두 이 목록을 쓰므로, 식별자 추출을 지원하지
+  // 않는 도메인에서도 반증된 후보가 대표가 되지 않는다.
+  const ordered = orderByCrossSellerVerdict(candidates);
   if (!supportsDomesticIdentifierExtraction(domain)) {
-    return { candidate: candidates[0], modelCodeEvidence: compareModelCode(foreignModelCode, null), skippedConflictCount: 0 };
+    return { candidate: ordered[0], modelCodeEvidence: compareModelCode(foreignModelCode, null), skippedConflictCount: 0 };
   }
 
   const evaluated: { candidate: ComparisonCandidate; modelCodeEvidence: ModelEvidenceResult }[] = [];
-  for (const candidate of candidates.slice(0, MAX_EVIDENCE_CANDIDATES)) {
+  for (const candidate of ordered.slice(0, MAX_EVIDENCE_CANDIDATES)) {
     // N-4.18-Q3 PART H-3-11 STEP 7(대표님 지시, 2026-08-27: "실제로 네트워크
     // 요청이 생략됐는지 확인한다") — isEvidenceEvaluationWorthwhile 가드가
     // 실제로 이 fetch 자체를 막는지 Vercel 로그로 관측할 수 있게 하는 관측용
@@ -223,7 +267,12 @@ export async function selectDomesticCandidate(
     const domesticModelCode = await fetchModelCode(candidate.url);
     evaluated.push({ candidate, modelCodeEvidence: compareModelCode(foreignModelCode, domesticModelCode) });
   }
-  const winnerIndex = evaluated.findIndex((e) => e.modelCodeEvidence !== "conflict");
+  // MATCHING-2.0-INTEGRATION-1 — 반증의 종류가 둘이 됐다. 품번이 어긋나는 것과
+  // 대상·색상·상품군이 어긋나는 것은 같은 강도의 반증이고(match-truth.ts가 둘 다
+  // CONFLICT로 끝낸다), 대표 후보에서 빼는 규칙도 같아야 한다.
+  const winnerIndex = evaluated.findIndex(
+    (e) => e.modelCodeEvidence !== "conflict" && e.candidate.crossSellerVerdict !== "CONFLICT",
+  );
   if (winnerIndex === -1) return { ...evaluated[0], skippedConflictCount: 0 };
   return { ...evaluated[winnerIndex], skippedConflictCount: winnerIndex };
 }
@@ -270,12 +319,35 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
   );
   const p0Sources = allSources.filter((s) => s.priority === "P0");
   const otherSources = allSources.filter((s) => s.priority !== "P0");
+  /**
+   * MATCHING-2.0-INTEGRATION-1(CEO 지시, 2026-09-13) — 저장 경로가 쓰던 질의를
+   * 라이브 검색 라우트와 **같은 질의**로 맞춘다.
+   *
+   * ── 무엇이 실제로 빠져 있었나 ────────────────────────────────────────────
+   * MATCHING-2.0-CORE는 검색어를 여럿으로 넓히고(buildCrossSellerSearchQueries)
+   * 등록상품의 사실 묶음을 질의에 실었다(productFactsFromIdentityDna). 그런데
+   * 그 두 줄이 들어간 곳은 /api/domestic-price-sources/search 한 곳뿐이다.
+   * DB에 링크와 관측을 남기는 유일한 경로인 이 함수는 예전 모양 그대로였다:
+   *
+   *   searchTerm  = buildDomesticShopQuery(dna)   ← 단 하나
+   *   facts       = 없음                          ← 교차판매처 판정이 돌 수 없음
+   *
+   * Smallable 상품의 DNA는 identifier.tier="SKU"(AAA1804922)라 그 하나뿐인
+   * 검색어가 판매처 자신의 재고번호가 된다. 그 번호로 Bobo 공식몰을 검색하면
+   * 언제나 0건이고, 0건이면 링크도 관측도 생기지 않는다 — 프로덕션 MI에서
+   * Bobo가 "국내에 없는 상품"으로 보이던 1차 원인이 정확히 이 한 줄이었다.
+   *
+   * 새 검색 정책도 새 판정도 만들지 않는다. 이미 있는 두 함수를 같은 인자로
+   * 부르기만 한다 — 그래야 화면이 🟢이라고 말한 그 판정이 그대로 저장된다.
+   */
   const query = {
     title: searchTitle,
     brand: input.dna.brand.value || undefined,
     sourceUrl: input.dna.sourceUrl,
     sku,
     searchTerm,
+    searchTerms: buildCrossSellerSearchQueries(input.dna).map(stripLeadingDevTag).filter(Boolean),
+    facts: productFactsFromIdentityDna(input.dna),
   };
   const toRef = (s: (typeof allSources)[number]) => ({
     id: s.id,
@@ -292,7 +364,14 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
   const searchResults = [...p0Results, ...otherResults];
   // H-3-6에서 루프 안에서 매 반복 재계산하던 것을 H-3-9에서 loop 밖으로 뺐다 — result에
   // 의존하지 않는 순수 파생값이라 동작은 동일하다(성능/가독성 정리).
-  const foreignModelCode = extractForeignModelCode(input.description);
+  //
+  // MATCHING-2.0-INTEGRATION-1 — 라이브 라우트는 설명문에 코드가 없을 때 원본 URL의
+  // 앞머리 조각까지 본다(P-10-F). 저장 경로만 설명문 하나만 보고 있었고, 그래서
+  // Bobo 공식몰이 원본인 상품(/products/b226ac114-…)에서도 foreignModelCode가
+  // null이 되어 품번 비교가 시작조차 못 했다 — 방향이 바뀌면 결과가 달라지던
+  // 자리다. 새 추출기를 만들지 않는다: dna.brandModelCode가 이미 그 규칙으로
+  // 채워진 값이다(resolveBrandModelCode).
+  const foreignModelCode = extractForeignModelCode(input.description) ?? input.dna.brandModelCode;
 
   for (const result of searchResults) {
     if (result.status === "error") {
@@ -344,6 +423,17 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     if (matchType === "NOT_MATCHED" && (modelCodeEvidence === "exact" || modelCodeEvidence === "partial")) {
       matchType = "REVIEW_REQUIRED";
     }
+    // MATCHING-2.0-INTEGRATION-1 — 바로 위 규칙과 같은 이유, 같은 모양. 텍스트
+    // 점수가 낮다는 이유만으로 "근거가 있는 후보"를 버리지 않는다. matchConfidence는
+    // 여전히 best.confidence 그대로 저장된다(점수를 승격시키지 않는다) — 라벨만
+    // 정직한 REVIEW_REQUIRED가 되고, verified 여부는 아래 decideCandidateEvidence가
+    // 교차판매처 근거로 판단한다.
+    if (
+      matchType === "NOT_MATCHED" &&
+      (best.crossSellerVerdict === "SAME" || best.crossSellerVerdict === "PRESUMED_SAME")
+    ) {
+      matchType = "REVIEW_REQUIRED";
+    }
     if (matchType === "NOT_MATCHED") continue;
 
     // N-4.18-Q3 PART H-3-6(대표님 지시, 2026-08-27) — Evidence Decision을
@@ -356,10 +446,18 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       modelCode: modelCodeEvidence,
       options: "unavailable",
       image: "unavailable",
+      // MATCHING-2.0-INTEGRATION-1 — 화면이 읽는 판정과 DB에 남는 판정이 같은
+      // 입력에서 나오게 하는 한 줄. 이 값이 없으면 deriveMatchTruth가 텍스트
+      // 등급만 보고 🟢 동일상품을 SIMILAR로 깎아 저장했고, MI 집계는 그 깎인
+      // 값을 읽어 동일상품 가격에서 제외했다.
+      crossSeller: best.crossSellerVerdict,
     });
 
     const { verified: finalVerified, matchReasons: evidenceMatchReasons } = applyEvidenceDecision(
-      best.matchReasons ?? [],
+      // MATCHING-2.0-INTEGRATION-1 — 교차판매처 판정의 근거 문장을 함께 남긴다.
+      // 이 링크가 곧 price_observations의 sourceRefId가 가리키는 대상이라,
+      // "이 가격이 왜 동일상품 가격인가"의 답은 이 배열 말고 남는 자리가 없다.
+      [...(best.matchReasons ?? []), ...(best.crossSellerReasons ?? [])],
       evidenceDecision,
     );
     // N-4.18-Q3 UI 후속(대표님 지시, 2026-08-27) — selectDomesticCandidate()가

@@ -30,6 +30,7 @@
  *    아무리 높아도(SIMILAR/TEXT_CONFIRMED) 절대 이 함수가 임의로 승격하지
  *    않는다(듀베베 72%가 자동으로 동일상품 취급되지 않아야 하는 이유).
  */
+import type { CrossSellerVerdict } from "./cross-seller";
 import type { MatchResult } from "./match";
 import type { ImageEvidenceResult, ModelEvidenceResult, OptionEvidenceResult } from "./evidence";
 import { deriveMatchTruth, type MatchTruth } from "./match-truth";
@@ -46,6 +47,21 @@ export interface CandidateEvidenceInput {
    * 쪽 옵션 비교 로직은 이번 단계 범위 밖 — 지어내지 않는다). */
   options: OptionEvidenceResult;
   image: ImageEvidenceResult;
+  /**
+   * MATCHING-2.0-INTEGRATION-1(CEO 지시, 2026-09-13) — 교차판매처 판정.
+   *
+   * MATCHING-2.0-CORE는 이 값을 deriveMatchTruth()까지 연결했는데, 그 값을
+   * 실제로 **저장하는** 경로(run-domestic-price-check → decideCandidateEvidence)만
+   * 인자를 받을 자리가 없어서 빠져 있었다. 결과가 갈렸다: 라이브 검색 화면은
+   * 🟢을 보여주는데 DB에 남는 match_truth는 SIMILAR/INSUFFICIENT_EVIDENCE라
+   * MI 집계가 같은 상품을 다른 등급으로 읽었다.
+   *
+   * 이 파일 맨 위 P-7-C 주석이 이미 그 원칙을 적어 두고 있다 — "실시간 검색과
+   * 저장 파이프라인이 서로 다른 상품 진실 판정 기준을 가지면 안 된다". 새 판정
+   * 로직이 아니라 그 기준을 실어 나르는 칸 하나다. 없으면(undefined) 예전과
+   * 똑같이 동작한다.
+   */
+  crossSeller?: CrossSellerVerdict;
 }
 
 export interface CandidateEvidenceDecision {
@@ -63,18 +79,26 @@ export interface CandidateEvidenceDecision {
 
 export function decideCandidateEvidence(input: CandidateEvidenceInput): CandidateEvidenceDecision {
   const reasons: string[] = [];
-  const truth = deriveMatchTruth(input.match.level, input.modelCode);
+  const truth = deriveMatchTruth(input.match.level, input.modelCode, input.crossSeller);
+  // 근거 문장은 truth가 실제로 어디서 왔는지를 말해야 한다. 품번을 비교조차 못 한
+  // 쌍(판매처마다 자기 SKU를 쓰는 경우)에 "modelCode 일치"라고 적으면 화면이 없는
+  // 사실을 말하게 된다 — MATCHING-2.0-CORE가 match-display.ts에서 고친 것과 같은 자리다.
+  const hasIdentifierEvidence = input.modelCode === "exact" || input.modelCode === "partial";
 
   if (truth === "CONFLICT") {
     reasons.push(
-      `modelCode 충돌(기존 매칭 level=${input.match.level}) — 자동확정 금지, 검토 필요로 전환`,
+      hasIdentifierEvidence || input.modelCode === "conflict"
+        ? `modelCode 충돌(기존 매칭 level=${input.match.level}) — 자동확정 금지, 검토 필요로 전환`
+        : `교차판매처 반증(대상·색상·상품군·품번 중 하나 이상이 어긋남, 기존 매칭 level=${input.match.level}) — 자동확정 금지, 검토 필요로 전환`,
     );
     return { decision: "review_required", reasons, truth };
   }
 
   if (truth === "EXACT_IDENTIFIER" || truth === "STRONG_IDENTIFIER") {
     reasons.push(
-      `modelCode ${input.modelCode === "exact" ? "완전" : "부분"} 일치(식별자 근거) + 기존 매칭 level=${input.match.level} — 텍스트 점수와 무관하게 식별자 증거로 자동확정`,
+      hasIdentifierEvidence
+        ? `modelCode ${input.modelCode === "exact" ? "완전" : "부분"} 일치(식별자 근거) + 기존 매칭 level=${input.match.level} — 텍스트 점수와 무관하게 식별자 증거로 자동확정`
+        : `교차판매처 판정 동일상품(브랜드·상품군·색상·소재·핏·대상이 동시에 일치) + 기존 매칭 level=${input.match.level} — 품번을 맞춰볼 수 없어도 서로 다른 축이 동시에 맞아 자동확정`,
     );
     if (input.options === "strong_overlap") reasons.push("옵션 구성도 강하게 일치(보조 근거)");
     if (input.image === "strong_match") reasons.push("이미지도 강하게 일치(보조 근거)");

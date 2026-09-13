@@ -150,7 +150,7 @@ function mixedTierNote(tiers: MarketEvidenceTierCount[], headlineTier: MatchDisp
   if (tiers.length < 2) return null;
   const headline = headlineTier ? TIER_NAME[headlineTier] : null;
   return headline
-    ? `등급이 섞여 있습니다 — 위 가격은 ${headline.icon} ${headline.label}로 확인된 곳만으로 계산했습니다.`
+    ? `등급이 섞여 있습니다 — 위 가격은 ${headline.icon} ${headline.label}으로 확인된 곳만으로 계산했습니다.`
     : "등급이 섞여 있습니다 — 확정된 동일상품만으로 이루어진 가격대가 아닙니다.";
 }
 
@@ -255,17 +255,41 @@ export function buildOverseasMarketEvidence(input: OverseasMarketEvidenceInput):
     ? [`판매처 ${shopCount}곳`, countryCount > 0 ? `${countryCount}개 국가` : null].filter(Boolean).join(" · ")
     : null;
 
-  const priced = candidates.filter((c) => c.price != null).map((c) => c.price!);
+  /**
+   * MATCHING-2.0-INTEGRATION-1(CEO 지시, 2026-09-13) — **가격대에 들어가는 것은
+   * 🟢 동일상품뿐이다.**
+   *
+   * ── 여기가 등급 게이트가 새던 자리다 ─────────────────────────────────────
+   * 호출부(ComparisonShopSearch)는 isDefaultVisibleTier로 **화면에 보여줄 것**을
+   * 고른다. 그 집합은 🟢 동일상품 · 🔵 옵션 다름 · 🟡 추정 · ⚪ 유사상품 넷이고,
+   * 목록에 넣는 기준으로는 맞다(등급이 배지로 함께 보이므로).
+   *
+   * 그런데 그 목록이 그대로 이 함수의 가격 계산에도 들어왔다. 그래서 "이 상품의
+   * 해외 가격대"가 **다른 상품의 가격**으로 만들어졌다 — 유사상품 한 건이
+   * 양끝 중 하나를 차지하면 범위 전체가 그 상품의 값이 된다. 등급 개수는 옆에
+   * 정직하게 적혀 있었지만, 셀러가 읽는 큰 숫자는 이미 섞인 뒤였다.
+   *
+   * 등급은 여기서 다시 판정하지 않는다(tiers는 위에서 전부 그대로 센다). 숫자에
+   * 넣을 자격만 좁힌다: 🟢 하나. 🟡/⚪/🔵는 목록과 등급 분포에 그대로 남아
+   * 참고로 읽히고, 집계에는 들어가지 않는다.
+   */
+  const priced = candidates.filter((c) => c.tier === "SAME" && c.price != null).map((c) => c.price!);
   const currencies = new Set(priced.map((p) => p.currency.toUpperCase()));
   const amounts = priced.map((p) => p.amount);
+  /** 🟢이 아닌 등급에만 가격이 있었는가 — 빈 사유를 정확히 말하기 위한 구분. */
+  const hasNonSamePrice = candidates.some((c) => c.tier !== "SAME" && c.price != null);
 
   let figure: string | null = null;
   let figureBasis: string | null = null;
   let figureEmpty: MiEmptyState | null = null;
   if (priced.length === 0) {
-    figureEmpty = hasEvidence
-      ? miEmptyState("UNVERIFIABLE", "해외 판매처 가격을 현재가로 확인하지 못했습니다")
-      : miEmptyState("NO_SEARCH_DATA", null);
+    figureEmpty = !hasEvidence
+      ? miEmptyState("NO_SEARCH_DATA", null)
+      : hasNonSamePrice
+        ? // 가격은 있는데 전부 동일상품으로 확정되지 않은 등급이다. "못 찾았다"가
+          // 아니라 "그 가격은 이 상품의 가격이라고 말할 수 없다"이므로 그대로 적는다.
+          miEmptyState("UNVERIFIABLE", "동일상품으로 확정된 해외 판매처 가격이 없습니다 — 아래 목록은 참고용입니다")
+        : miEmptyState("UNVERIFIABLE", "해외 판매처 가격을 현재가로 확인하지 못했습니다");
   } else if (currencies.size > 1) {
     // 환율로 접지 않는다 — 접는 순간 어느 판매처에도 없는 숫자가 대표값이 된다.
     figureEmpty = miEmptyState("UNVERIFIABLE", "관측 통화가 여러 개라 하나의 가격대로 묶지 않았습니다");
@@ -277,7 +301,9 @@ export function buildOverseasMarketEvidence(input: OverseasMarketEvidenceInput):
       min === max
         ? formatAmount(min, currency)
         : `${formatAmount(min, currency)} ~ ${formatAmount(max, currency)}`;
-    figureBasis = `해외 판매처 ${priced.length}곳에서 확인된 판매가 중 최저·최고 · 평균이 아닙니다`;
+    // 개수 앞에 등급을 붙인다 — "해외 판매처 3곳"만 적으면 그 3곳이 목록 전체로
+    // 읽히고, 등급 게이트를 닫은 사실이 화면에서 사라진다.
+    figureBasis = `🟢 동일상품으로 확정된 해외 판매처 ${priced.length}곳에서 확인된 판매가 중 최저·최고 · 평균이 아닙니다`;
   }
 
   return {
@@ -288,9 +314,9 @@ export function buildOverseasMarketEvidence(input: OverseasMarketEvidenceInput):
     figureEmpty,
     scopeLabel,
     tiers,
-    // 해외는 서버 집계가 없어 대표값이 특정 등급만으로 계산되지 않는다 —
-    // 가격대에 들어간 등급을 하나로 지목할 수 없으므로 지목하지 않는다.
-    mixedNote: mixedTierNote(tiers, null),
+    // MATCHING-2.0-INTEGRATION-1 — 이제 가격대에 들어간 등급을 하나로 지목할 수
+    // 있다(🟢만 들어간다). 가격대가 아예 없을 때는 지목할 대상도 없으므로 null이다.
+    mixedNote: mixedTierNote(tiers, figure ? "SAME" : null),
     drillDownLabel: OVERSEAS_MARKET_DRILL_DOWN,
     hasEvidence,
   };

@@ -141,7 +141,16 @@ describe("🌎 해외 시장 요약", () => {
     expect(evidence.scopeLabel).toBe("판매처 2곳 · 2개 국가");
   });
 
-  it("등급이 섞이면 강한 등급 하나를 주장하지 않는다", () => {
+  /**
+   * MATCHING-2.0-INTEGRATION-1(CEO 지시, 2026-09-13) — 이 케이스가 바뀐 자리다.
+   *
+   * 예전에는 세 후보의 가격이 전부 가격대에 들어가 "€45.00 ~ €52.00"이 나왔고,
+   * 그 양끝 중 하나(€52)는 **동일상품으로 확정되지 않은 후보**의 값이었다.
+   * 등급 분포는 옆에 정직하게 적혀 있었지만 셀러가 읽는 큰 숫자는 이미 섞인
+   * 뒤였다 — "유사상품 가격이 글로벌 시장 가격에 들어간다"가 실제로 일어나던
+   * 경로다. 이제 🟢만 숫자가 되고, 🟡은 등급 분포와 아래 목록에 그대로 남는다.
+   */
+  it("등급이 섞이면 가격대는 🟢 동일상품만으로 만든다 — 🟡/⚪ 가격은 숫자에 들어가지 않는다", () => {
     const evidence = buildOverseasMarketEvidence({
       candidates: [
         candidate("a", "FR", "SAME", 45),
@@ -149,7 +158,28 @@ describe("🌎 해외 시장 요약", () => {
         candidate("c", "DE", "PRESUMED_SAME", 49),
       ],
     });
+    // 분포는 접지 않는다(🟢 1 · 🟡 2) — 섞였다는 사실 자체는 그대로 보인다.
     expect(tierCountsText(evidence.tiers)).toBe("🟢 동일상품 1 · 🟡 동일상품 추정 2");
+    // 숫자는 🟢 한 건뿐이라 범위가 아니라 그 값 하나다. 🟡의 €52/€49는 어디에도 없다.
+    expect(evidence.figure).toBe("€45.00");
+    expect(evidence.figure).not.toContain("52");
+    expect(evidence.figure).not.toContain("49");
+    expect(evidence.figureBasis).toContain("🟢 동일상품으로 확정된 해외 판매처 1곳");
+    // 그리고 그 사실을 요약이 직접 말한다("전부는 아니다"가 아니라 "이것만으로").
+    expect(evidence.mixedNote).toContain("🟢 동일상품");
+    expect(evidence.mixedNote).toContain("등급이 섞여 있습니다");
+  });
+
+  it("동일상품이 하나도 없으면 가격대를 만들지 않는다 — 유사상품 가격을 대표값으로 올리지 않는다", () => {
+    const evidence = buildOverseasMarketEvidence({
+      candidates: [candidate("a", "FR", "SIMILAR", 45), candidate("b", "GB", "PRESUMED_SAME", 52)],
+    });
+    expect(evidence.figure).toBeNull();
+    expect(evidence.figureEmpty?.reason).toContain("동일상품으로 확정된 해외 판매처 가격이 없습니다");
+    // 근거 자체는 사라지지 않는다 — 등급과 판매처 수는 그대로 남아 참고가 된다.
+    expect(evidence.scopeLabel).toBe("판매처 2곳 · 2개 국가");
+    expect(tierCountsText(evidence.tiers)).toBe("🟡 동일상품 추정 1 · ⚪ 비교상품 1");
+    // 가격대가 없으면 "위 가격은 …"이라고 말할 대상도 없다.
     expect(evidence.mixedNote).toContain("확정된 동일상품만으로 이루어진 가격대가 아닙니다");
   });
 
