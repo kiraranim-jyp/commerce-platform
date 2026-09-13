@@ -44,6 +44,26 @@ function bobo(code: string): ProductFacts {
   return productFactsFromShopifyProduct(raw, "bobochoses.com");
 }
 
+/** junioredition.com `/products/{handle}.js` 응답 원문. 운영 경로(shopify-suggest.ts)와
+ * 같은 모양으로 `url`에 "/products/{handle}"을 넘긴다. */
+function junior(handle: string): ProductFacts {
+  const raw = JSON.parse(readFileSync(path.join(FIXTURES, `junioredition-${handle}.json`), "utf8")) as Record<string, unknown>;
+  return productFactsFromShopifyProduct(
+    {
+      title: raw.title as string,
+      handle: raw.handle as string,
+      url: `/products/${raw.handle as string}`,
+      description: raw.description as string,
+      vendor: raw.vendor as string,
+      type: raw.type as string,
+      tags: raw.tags as string[],
+      options: raw.options as { name?: string; values?: string[] }[],
+      images: raw.images as string[],
+    },
+    "junioredition.com",
+  );
+}
+
 const SMALLABLE_430701 = () => smallable("smallable-430701-product.html", "430701");
 const SMALLABLE_430700 = () => smallable("smallable-430700-product.html", "430700");
 const SMALLABLE_430632 = () => smallable("smallable-430632-product.html", "430632");
@@ -385,6 +405,90 @@ describe("MATCHING-2.0-INTEGRATION-3 회귀 — 다른 상품이 동일상품 �
     const hooded = { ...B226AC049(), title: "Pixel Abduction all over hooded sweatshirt" };
     const match = compareCrossSellerProducts(SMALLABLE_430701(), hooded);
     expect(match.blockers.map((b) => b.blocker)).not.toContain("GARMENT_FORM");
+  });
+});
+
+/**
+ * MATCHING-2.0-REGRESSION(CEO 지시, 2026-09-14) — 430632 SAME 오탐.
+ *
+ * ── 무엇이 잘못돼 있었나(라이브 전수 실측, 2026-09-14) ──────────────────────
+ * Smallable 430632("All About Monsters Washed T-shirt", 2/3~12/13 years)를
+ * bobochoses.com 카탈로그 4,015건 + junioredition.com 18,236건 **전부**와 붙이면
+ * SAME이 6건 나왔다. 정답은 B226AC018 하나이고 **나머지 다섯은 전부 아기옷**이다
+ * (3M~24M). 여섯 살 아이 티셔츠와 6개월 아기 티셔츠가 동일상품 가격에 들어가고
+ * 있었다는 뜻이다.
+ *
+ * ── 왜 점수로는 구분되지 않았나 ─────────────────────────────────────────────
+ * 오답 쌍이 얻은 6점은 TITLE+1 CATEGORY+1 COLOR+1 MATERIAL+1 FIT+1 AUDIENCE+1이고,
+ * 그중 어느 한 점을 빼도 5점이라 SAME_MIN_AXES(5)를 그대로 통과한다. 숫자로는
+ * 고칠 수 없는 자리였다. 뒤의 다섯 축은 상품을 구별하지 않는다 — bobochoses.com
+ * 카탈로그에서 AUDIENCE는 KIDS가 86.4%(0.39 bit), FIT은 loose fit이 55.1%,
+ * junioredition.com에서 SIZE 체계는 판독된 2,193건이 **100% AGE 하나**(0.00 bit)다.
+ * TITLE 1점을 사 준 공유 토큰도 "all" 하나뿐인데, 이 말은 bobochoses.com 제목에서
+ * 가장 흔한 토큰이다(4,015건 중 433건 = 10.78%).
+ *
+ * ── 그런데 구분하는 축이 데이터에 실제로 있었다 ────────────────────────────
+ * 사이즈다. 정답 쌍만 양쪽이 연령형이고, 오답 다섯은 전부 개월형이다. 판정기가
+ * 그것을 못 본 이유는 `normalizeSizeLabel`이 개월 표기를 통째로 버렸기 때문이다
+ * (실측: 읽지 못한 사이즈 라벨이 bobochoses.com 29.8%, junioredition.com 54.7%).
+ * 그 한 칸을 메우자 다섯 건이 전부 SIZE_SYSTEM 보류로 내려가고, 정답 쌍과 기존
+ * SAME은 한 건도 움직이지 않았다(원본 18건 × 카탈로그 22,251건 = 400,518쌍 전이
+ * 시뮬레이션: SAME→SAME 20 / SAME→PRESUMED_SAME 5 / 그 외 → SAME 0).
+ *
+ * 임계값은 한 칸도 옮기지 않았고 어휘 목록도 늘리지 않았다.
+ */
+describe("MATCHING-2.0-REGRESSION 회귀 — 아기옷이 아동복의 동일상품 가격에 들어오지 않는다", () => {
+  /** 실측 거짓 SAME 5건 — [상대, 그 상대의 사이즈 표기] */
+  const BABY_FALSE_SAME: [() => ProductFacts, string][] = [
+    [() => bobo("B226AB043"), "bobochoses.com Mush Monster Duo all over T-shirt (3M~24M)"],
+    [() => bobo("B226AB048"), "bobochoses.com Softpaw Monster all over T-shirt (3M~24M)"],
+    [() => junior("mush-monster-duo-all-over-baby-t-shirt-by-bobo-choses"), "Junior Edition Mush Monster Duo All Over Baby T-Shirt (6~24 Months)"],
+    [() => junior("juicy-tomatoes-all-over-baby-t-shirt-by-bobo-choses"), "Junior Edition Juicy Tomatoes All Over Baby T-Shirt (6·18 Months)"],
+    [() => junior("bobo-choses-color-all-over-baby-t-shirt-by-bobo-choses"), "Junior Edition Bobo Choses Color All Over Baby T-Shirt (6~18 Months)"],
+  ];
+
+  it.each(BABY_FALSE_SAME)("430632 ↔ %#: 아기옷은 SAME이 아니다", (other) => {
+    const match = compareCrossSellerProducts(SMALLABLE_430632(), other());
+    expect(match.verdict).not.toBe("SAME");
+    expect(match.blockers.map((b) => b.blocker)).toContain("SIZE_SYSTEM");
+    // 이 사고의 실제 피해 — 다른 상품의 가격이 이 상품의 가격으로 쓰이는 것.
+    expect(isSameProductForPricing(match)).toBe(false);
+    expect(deriveMatchTruth("low", "unavailable", match.verdict)).not.toBe("STRONG_IDENTIFIER");
+  });
+
+  it("다섯 건 전부 방향을 바꿔도 같은 답이다", () => {
+    for (const [other] of BABY_FALSE_SAME) {
+      expect(verdictBothWays(SMALLABLE_430632(), other())).not.toBe("SAME");
+    }
+  });
+
+  it("정답 쌍 430632 ↔ B226AC018 은 여전히 SAME이다 — 이번 수정에서 가장 깨지기 쉬운 자리", () => {
+    const match = compareCrossSellerProducts(SMALLABLE_430632(), bobo("B226AC018"));
+    expect(match.verdict).toBe("SAME");
+    expect(match.blockers).toEqual([]);
+    // 양쪽 다 연령형이라 사이즈가 오히려 **근거**로 남는다.
+    expect(match.axes.find((a) => a.axis === "SIZE")).toBeDefined();
+    expect(deriveMatchTruth("low", "unavailable", match.verdict)).toBe("STRONG_IDENTIFIER");
+  });
+
+  it("판정을 가른 것은 점수가 아니다 — 오답 쌍은 어느 한 점을 빼도 여전히 문턱을 넘었다", () => {
+    // 이 단언이 깨지면 "숫자를 올려서 고쳤다"는 뜻이다. 개월을 읽기 전의 오답 쌍은
+    // 6점이었고 SAME_MIN_AXES는 5다 — 한 점을 빼도 통과한다. 숫자로는 고칠 수 없었다.
+    const baby = bobo("B226AB043");
+    const points = (facts: ProductFacts) =>
+      compareCrossSellerProducts(SMALLABLE_430632(), facts)
+        .axes.filter((a) => a.axis !== "IMAGE")
+        .reduce((sum, a) => sum + a.points, 0);
+    // 보류가 걸린 지금도 축 점수 자체는 5점 이상으로 남아 있다(점수로 막은 것이 아니다).
+    expect(points(baby)).toBeGreaterThanOrEqual(5);
+    expect(compareCrossSellerProducts(SMALLABLE_430632(), baby).verdict).toBe("PRESUMED_SAME");
+  });
+
+  it("개월↔개월끼리는 막지 않는다 — 이 규칙이 아무 데나 발화하지 않는다는 것", () => {
+    const left = bobo("B226AB043");
+    const right = bobo("B226AB048");
+    const match = compareCrossSellerProducts(left, right);
+    expect(match.blockers.map((b) => b.blocker)).not.toContain("SIZE_SYSTEM");
   });
 });
 

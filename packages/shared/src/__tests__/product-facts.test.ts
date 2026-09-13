@@ -102,6 +102,30 @@ describe("사이즈 — 표기가 달라도 같은 사이즈이고, 체계가 �
     expect([...kids.systems]).toEqual(["AGE"]);
     expect([...adult.systems]).toEqual(["ALPHA"]);
   });
+
+  /**
+   * MATCHING-2.0-REGRESSION(2026-09-14). 개월 표기는 지금까지 **통째로 버려지거나**
+   * 연령형과 같은 체계로 들어갔다. 라벨 원문은 전부 실측(bobochoses.com은 "3M",
+   * junioredition.com은 "6 Months", Misha & Puff는 "12-18 Months").
+   */
+  it("개월 표기를 읽는다 — 판매처마다 다른 표기가 같은 값이 된다", () => {
+    expect(normalizeSizeLabel("6M")).toEqual({ value: "6m", system: "MONTH" });
+    expect(normalizeSizeLabel("6 Months")).toEqual({ value: "6m", system: "MONTH" });
+    expect(normalizeSizeLabel("6 mois")).toEqual({ value: "6m", system: "MONTH" });
+    expect(normalizeSizeLabel("12-18 Months")).toEqual({ value: "12-18m", system: "MONTH" });
+  });
+
+  it("개월형과 연령형은 서로 다른 체계다 — 6개월 아기옷과 여섯 살 아이 옷은 다른 물건이다", () => {
+    const baby = buildSizeProfile(["3M", "6M", "9M", "12M", "18M", "24M"]);
+    const kids = buildSizeProfile(["2/3 years", "4/5 years", "12/13 years"]);
+    expect([...baby.systems]).toEqual(["MONTH"]);
+    expect([...kids.systems]).toEqual(["AGE"]);
+  });
+
+  it("알파벳 사이즈 'M'은 개월로 읽히지 않는다 — 앞에 숫자가 없다", () => {
+    expect(normalizeSizeLabel("M")).toEqual({ value: "m", system: "ALPHA" });
+    expect(normalizeSizeLabel("S")).toEqual({ value: "s", system: "ALPHA" });
+  });
 });
 
 describe("대상 연령 / 성별 — 제목이 아니라 사이트 자신의 분류에서 읽는다", () => {

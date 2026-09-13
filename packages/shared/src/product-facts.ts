@@ -262,18 +262,49 @@ export function extractFitPhrase(text: string | null | undefined): string | null
 /**
  * 사이즈는 두 가지를 서로 다른 목적으로 쓴다.
  *
- *  · 사이즈 **체계**(연령형 / 알파벳형 / 숫자형)는 상품 종류를 가른다. 아동복은
- *    "2-3Y", 성인복은 "XS~XL"이다(실측: B226AC114 vs B226AD013). 체계가 다르면
- *    같은 상품일 수 없다.
+ *  · 사이즈 **체계**(개월형 / 연령형 / 알파벳형 / 숫자형)는 상품 종류를 가른다.
+ *    아기옷은 "3M~24M", 아동복은 "2-3Y", 성인복은 "XS~XL"이다(실측: B226AB043 vs
+ *    B226AC018 vs B226AD013). 체계가 다르면 같은 상품일 수 없다.
  *  · 사이즈 **값**의 겹침은 보조 근거다. 다만 이것만으로 다름을 말하지는 않는다 —
  *    한쪽에 4/5 years만 남고 다른 쪽에 12/13Y만 남는 일은 재고 때문에 늘 생긴다.
+ *
+ * ══ 개월을 연령과 같은 체계로 읽던 것이 실측으로 틀렸다 ══════════════════════
+ * MATCHING-2.0-REGRESSION(CEO 지시, 2026-09-14). Smallable 430632("All About
+ * Monsters Washed T-shirt", 2/3~12/13 years)를 bobochoses.com 4,015건 +
+ * junioredition.com 18,236건 **전수**와 붙이면 SAME이 6건 나왔다(2026-09-14 라이브).
+ * 그중 정답은 하나(B226AC018)이고, **나머지 다섯은 전부 3M~24M짜리 아기옷**이다:
+ *
+ *   B226AB043 Mush Monster Duo all over T-shirt        ["3M","6M","9M","12M","18M","24M"]
+ *   B226AB048 Softpaw Monster all over T-shirt         ["3M","6M","9M","12M","18M","24M"]
+ *   JE Mush Monster Duo All Over Baby T-Shirt          ["6 Months","12 Months","18 Months","24 Months"]
+ *   JE Juicy Tomatoes All Over Baby T-Shirt            ["6 Months","18 Months"]
+ *   JE Bobo Choses Color All Over Baby T-Shirt         ["6 Months","12 Months","18 Months"]
+ *
+ * 여섯 살 아이 티셔츠와 6개월 아기 티셔츠는 같은 물건이 아니다. 그런데 판정기는
+ * 그 사실을 볼 수 없었다 — 이 함수가 **개월 표기를 통째로 버리고 있었기 때문**이다.
+ * 단일 개월("6M", "6 Months")은 어느 규칙에도 걸리지 않아 null이 되고, 범위형
+ * ("12-18 Months")은 걸리더라도 연령형과 **같은 AGE 체계**로 들어갔다. 그래서
+ * 두 상품을 실제로 가르는 유일한 축이 "불일치"가 아니라 "정보 없음"이 됐다.
+ *
+ * 버려진 양은 적지 않다: 이 함수가 읽지 못한 사이즈 라벨이 bobochoses.com
+ * 10,739개 중 3,196개(29.8%), junioredition.com 19,076개 중 10,431개(54.7%)였고,
+ * 그 상위 항목이 전부 "9 Months"/"9M"/"12 Months"/"18M" 같은 개월 표기였다(실측).
+ *
+ * ── 임계값은 한 칸도 움직이지 않았다 ────────────────────────────────────────
+ * SAME_MIN_AXES(5)도 STRONG_TITLE_OVERLAP(0.5)도 그대로다. 개월을 독립 체계로
+ * 읽으면 compareSize가 "체계 불일치"를 말하게 되고, 그것이 기존 SIZE_SYSTEM
+ * **보류**(충돌이 아니다)로 이어져 SAME만 막는다. 아기 사이즈를 개월로 적는
+ * 판매처와 연령으로 적는 판매처가 같은 상품을 서로 다르게 부를 가능성은 남지만,
+ * 그때 답은 CONFLICT가 아니라 PRESUMED_SAME이다 — "증거가 부족하면 SAME이 아니라
+ * PRESUMED가 기본값"이라는 정책(CEO, 2026-09-13) 그대로다.
  */
-export type SizeSystem = "AGE" | "ALPHA" | "NUMERIC";
+export type SizeSystem = "MONTH" | "AGE" | "ALPHA" | "NUMERIC";
 
 const ALPHA_SIZE_TOKENS = normalizedWordSet(["xxs", "xs", "s", "m", "l", "xl", "xxl", "xxxl", "free"]);
 
 /** "4/5 years", "4-5Y", "2-3Y"를 같은 값("4-5y")으로 만든다. 구분자(/ 또는 -)와
- * 단위 표기(Y / years)가 판매처마다 다를 뿐 같은 사실이다. */
+ * 단위 표기(Y / years)가 판매처마다 다를 뿐 같은 사실이다. 개월도 마찬가지로
+ * "6M" / "6 Months" / "6 mois"를 같은 값("6m")으로 모은다. */
 export function normalizeSizeLabel(label: string): { value: string; system: SizeSystem } | null {
   const raw = normalizeFactText(label).replace(/\s+/g, " ").trim();
   if (!raw) return null;
@@ -285,7 +316,12 @@ export function normalizeSizeLabel(label: string): { value: string; system: Size
   if (ageSingle) return { value: `${Number(ageSingle[1])}y`, system: "AGE" };
 
   const monthRange = /^(\d{1,2})\s*[-/]\s*(\d{1,2})\s*(?:m|mo|month|months|mois)\b/.exec(raw);
-  if (monthRange) return { value: `${Number(monthRange[1])}-${Number(monthRange[2])}m`, system: "AGE" };
+  if (monthRange) return { value: `${Number(monthRange[1])}-${Number(monthRange[2])}m`, system: "MONTH" };
+
+  // 단일 개월("6M", "9 Months", "24 months"). 알파벳 사이즈 "M"은 앞에 숫자가 없어
+  // 이 규칙에 걸리지 않고 아래 ALPHA 경로로 내려간다.
+  const monthSingle = /^(\d{1,2})\s*(?:m|mo|month|months|mois)\b/.exec(raw);
+  if (monthSingle) return { value: `${Number(monthSingle[1])}m`, system: "MONTH" };
 
   const compact = raw.replace(/[^a-z0-9]/g, "");
   if (ALPHA_SIZE_TOKENS.has(compact)) return { value: compact, system: "ALPHA" };

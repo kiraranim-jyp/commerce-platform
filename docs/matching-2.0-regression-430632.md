@@ -1,7 +1,7 @@
 # MATCHING-2.0-REGRESSION · 430632 SAME 오탐
 
 **등록일** 2026-09-13 · **등록자** CTO · **지시** CEO, 2026-09-13
-**상태** 🔴 미해결 (등록만 됨)
+**상태** ✅ 해결 (2026-09-14) — 원인은 **개월 사이즈를 통째로 버리던 파서**였다. §9 참고
 **차단 조건** 이 결함이 남아 있는 한 매칭 2.0을 최종 완료로 보고하지 않는다.
 
 ---
@@ -136,3 +136,107 @@ PRESUMED / TEXT_CONFIRMED → 참고만
 SIMILAR                   → 참고만
 CONFLICT                  → 제외
 ```
+
+---
+
+## 9. 규명과 해결 (2026-09-14, 라이브 실측)
+
+### 9-1. 오답 쌍은 몇 점을 어디서 받았나 — **어느 1점을 빼도 SAME이었다**
+
+`430632 ↔ junioredition "Mush Monster Duo All Over Baby T-Shirt"` (라이브 재현):
+
+```
+TITLE+1(공유 토큰 "all" 하나) CATEGORY+1 COLOR+1 MATERIAL+1 FIT+1 AUDIENCE+1 = core 6
+blockers 없음 · conflicts 없음 · identifierConfirmed false · titleOverlap 0.125
+```
+
+`SAME_MIN_AXES`가 5이므로 **6점에서 1점을 빼도 5점이라 여전히 통과한다.** 숫자로는
+고칠 수 없는 자리였다(이 문서 §5의 "숫자 조정 금지"가 실측으로 다시 확인됐다).
+
+### 9-2. 라인 공통 축의 정보량 — 카탈로그 전수로 셌다
+
+bobochoses.com 4,015건 · junioredition.com 18,236건을 통째로 받아 축별 값 분포를 셌다.
+아래 "일치 확률"은 무작위 두 상품이 그 축에서 같은 값을 가질 확률(Σp²)이다.
+
+| 축 | bobochoses.com | junioredition.com |
+|---|---|---|
+| AUDIENCE | KIDS 86.4% → 일치확률 **76.4%** (0.39 bit) | 일치확률 53.6% (0.90 bit) |
+| FIT | loose fit 55.1% → 37.6% (1.41 bit) | 28.3% (1.82 bit) |
+| CATEGORY taxon | TOP 45.9% → 30.5% (1.71 bit) | 28.2% (1.83 bit) |
+| SIZE 체계 | 51.5% (0.96 bit) | 판독분 **100% AGE 하나 → 0.00 bit** |
+| MATERIAL | organic cotton:100 28.8% → 10.1% (3.30 bit) | 11.5% (3.13 bit) |
+| COLOR | 14.9% (2.75 bit) | 10.0% (3.32 bit) |
+
+TITLE 1점을 사 준 토큰 `all`은 **bobochoses.com 제목에서 가장 흔한 말**이다
+(4,015건 중 433건 = 10.78%, 2위 `over` 10.49%). 반면 정답 쌍이 공유한 말은
+`about` 0.25% · `monsters` 0.30%이고, 430701/430651 정답 쌍의 `zipped`는 0.47%다.
+
+**결론: 그렇다. 상품을 구별하지 못하는 축이 6점 중 5점을 만들고 있었다.**
+
+### 9-3. 그런데 구별하는 축이 데이터에 **실제로 있었다** — 사이즈
+
+`430632`를 두 카탈로그 **22,251건 전수**와 붙이면 SAME이 6건 나왔다.
+
+| 상대 | core | 사이즈 |
+|---|---|---|
+| B226AC018 (정답) | 8 | `2-3Y … 12-13Y` |
+| B226AB043 Mush Monster Duo all over T-shirt | 6 | `3M,6M,9M,12M,18M,24M` |
+| B226AB048 Softpaw Monster all over T-shirt | 6 | `3M,6M,9M,12M,18M,24M` |
+| JE Mush Monster Duo All Over Baby T-Shirt | 6 | `6/12/18/24 Months` |
+| JE Juicy Tomatoes All Over Baby T-Shirt | 6 | `6/18 Months` |
+| JE Bobo Choses Color All Over Baby T-Shirt | 5 | `6/12/18 Months` |
+
+**거짓 SAME 다섯 건이 전부 아기옷이다.** 여섯 살 아이 티셔츠와 6개월 아기
+티셔츠가 동일상품 가격에 들어가고 있었다. 판정기가 그것을 못 본 이유는 하나다 —
+`normalizeSizeLabel`이 **개월 표기를 통째로 버리고 있었다.** 단일 개월(`6M`,
+`6 Months`)은 어느 규칙에도 안 걸려 `null`이 되고, 범위형(`12-18 Months`)은
+걸리더라도 연령형과 같은 `AGE` 체계로 들어갔다. 실측으로 읽지 못한 사이즈 라벨이
+bobochoses.com 10,739개 중 3,196개(29.8%), junioredition.com 19,076개 중
+10,431개(54.7%)였고 상위 항목이 전부 개월 표기였다.
+
+### 9-4. 무엇을 고쳤나 (`packages/shared/src/product-facts.ts` 한 곳)
+
+```
+SizeSystem 에 "MONTH" 추가
+normalizeSizeLabel:  "12-18 Months" → MONTH (기존 AGE)
+                     "6M" / "6 Months" / "6 mois" → MONTH (기존 판독 실패)
+```
+
+`cross-seller.ts`는 **한 줄도 고치지 않았다.** 기존 `SIZE_SYSTEM` **보류**(충돌이
+아니다)가 그대로 발화한다. 임계값(`SAME_MIN_AXES` / `PRESUMED_SAME_MIN_AXES` /
+`STRONG_TITLE_OVERLAP` / 이미지 임계값)도 어휘 목록도 손대지 않았다.
+
+### 9-5. 전이표 — 원본 18건 × 카탈로그 22,251건 = **400,518쌍**
+
+|  | →SAME | →PRESUMED_SAME | →SIMILAR | →UNKNOWN | →CONFLICT |
+|---|---|---|---|---|---|
+| SAME (25) | **20** | **5** | 0 | 0 | 0 |
+| PRESUMED_SAME (953) | 0 | 953 | 0 | 0 | 0 |
+| SIMILAR (2,568) | 0 | 0 | 2,568 | 0 | 0 |
+| UNKNOWN (540) | 0 | 0 | 0 | 540 | 0 |
+| CONFLICT (396,432) | 0 | 0 | 0 | 0 | 396,432 |
+
+내려간 5건은 위 §9-3의 아기옷 다섯 건이고 **그 외에는 하나도 없다.**
+`그 외 → SAME`은 **0건**이다(새 오탐이 생기지 않았다).
+
+### 9-6. 수정 후 라이브 재확인
+
+```
+430632 ↔ 카탈로그 22,251건   SAME 1건 (B226AC018, core 8) — 나머지 5건 전부 PRESUMED_SAME
+430632 ↔ Mush Monster Duo    PRESUMED_SAME  보류: 사이즈 체계 MONTH ↔ AGE
+430632 ↔ B226AC018           SAME   core 8 (SIZE 축이 오히려 근거로 남는다)
+430632 ↔ B226AD013           CONFLICT (AUDIENCE + COLOR)
+430701 ↔ B226AC114           SAME   core 7
+430651 ↔ B226AC043           SAME   core 7
+```
+
+### 9-7. 남은 것 (이번에 고치지 않았다 · 기록)
+
+- **`AUDIENCE` 축이 아기와 아동을 같은 `KIDS`로 뭉친다.** 오답 쌍이 받은
+  `AUDIENCE +1`은 지금도 그대로다 — 사이즈가 막았을 뿐이다. 사이즈를 안 적는
+  판매처에서는 이 구멍이 다시 열린다.
+- **`TITLE` 축이 문서빈도를 모른다.** `all`(10.78%)도 `monsters`(0.30%)도 똑같이
+  1점이다. 카탈로그 문서빈도를 판정 시점에 알 방법이 현재 구조에 없다
+  (`compareCrossSellerProducts`는 두 `ProductFacts`만 보는 순수 함수다).
+- **`Booty Ghosts Long Sleeve T-Shirt` ↔ Bobo 샘플 라인 3건**이 SAME으로 올라온다
+  (전수 조사에서 발견, 이번 결함과 기전이 다르다 — 별건).
