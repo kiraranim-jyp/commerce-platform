@@ -1,3 +1,4 @@
+import { compareCrossSellerProducts } from "./cross-seller";
 import type { ComparisonCandidate, ComparisonQuery } from "./types";
 import { normalizeMatchingTitle } from "./title-normalize";
 
@@ -10,6 +11,20 @@ const STOPWORDS = new Set(["the", "a", "an", "for", "and", "with", "by", "in", "
  * 유니코드 정규화 형태에 따라 토큰화 결과가 달라지는 버그가 있었다(60% confidence 원인). */
 const COMBINING_DIACRITICS_RE = new RegExp("[\\u0300-\\u036f]", "g");
 
+/**
+ * MATCHING-2.0-CORE(2026-09-13) — 이 파일의 normalizeText/tokenize는
+ * packages/shared의 normalizeFactText/tokenizeFactText와 거의 같지만 **의도적으로
+ * 합치지 않았다**.
+ *
+ * 둘은 한글을 다르게 다룬다. 여기 것은 NFKD로 분해된 자모를 구분자로 취급해서
+ * 한글 낱말을 통째로 버리고, 저쪽 것은 자모 범위를 살린 뒤 NFC로 되돌린다.
+ * 저쪽 동작이 옳지만, 이 함수는 지금 **운영 중인 confidence 점수**의 입력이다 —
+ * 여기를 바꾸면 오늘 잘 맞고 있는 매칭들의 점수가 한꺼번에 움직인다. 이번 변경의
+ * 조건이 "기존 매칭을 건드리지 않는다"였으므로, 새 판정 계층만 새 자를 쓰고 이
+ * 계층은 쓰던 자를 그대로 쓴다.
+ *
+ * 합칠 때는 점수 이동 폭을 실측한 뒤에 따로 해야 한다.
+ */
 function normalizeText(text: string): string {
   return text
     .normalize("NFKD")
@@ -464,7 +479,16 @@ export function withConfidence(query: ComparisonQuery, candidates: ComparisonCan
       const normalizedCandidate: ComparisonCandidate = { ...c, title: normalizeMatchingTitle(c.title) };
       const { confidence, level, reasons } = scoreCandidateMatch(normalizedQuery, normalizedCandidate);
       const withMatch: ComparisonCandidate = { ...c, confidence, matchLevel: level, matchReasons: reasons };
-      return { ...withMatch, ...derivePriceStatus(withMatch) };
+      // MATCHING-2.0-CORE(CEO 지시, 2026-09-13) — 양쪽에서 사실 묶음을 읽어낸
+      // 경우에만 교차판매처 판정을 얹는다. confidence도 matchLevel도 손대지
+      // 않는다(기존 계산을 다시 하지 않는다는 이 저장소의 계층 분리 원칙 그대로) —
+      // 새 필드로만 답을 남기고, 그 답을 쓸지는 화면/가격 정책이 정한다.
+      const cross =
+        query.facts && c.facts ? compareCrossSellerProducts(query.facts, c.facts) : null;
+      const withCross: ComparisonCandidate = cross
+        ? { ...withMatch, crossSellerVerdict: cross.verdict, crossSellerReasons: cross.reasons }
+        : withMatch;
+      return { ...withCross, ...derivePriceStatus(withCross) };
     })
     .sort((a, b) => b.confidence - a.confidence);
 }

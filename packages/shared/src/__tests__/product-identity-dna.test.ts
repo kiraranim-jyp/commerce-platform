@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildDomesticShopQuery, buildProductIdentityDna } from "../product-identity-dna";
+import {
+  buildCrossSellerSearchQueries,
+  buildDomesticShopQuery,
+  buildProductIdentityDna,
+} from "../product-identity-dna";
 import type { CanonicalProduct, ProvenanceField } from "../product-types";
 
 function field<T>(value: T): ProvenanceField<T> {
@@ -151,5 +155,52 @@ describe("buildDomesticShopQuery", () => {
   it("브랜드도 identifier도 없으면 원본 title로 폴백한다(지어내지 않는다)", () => {
     const dna = buildProductIdentityDna(baseProduct({ brand: field(""), title: field("") }));
     expect(buildDomesticShopQuery(dna)).toBe("");
+  });
+});
+
+/**
+ * MATCHING-2.0-CORE(CEO 지시, 2026-09-13) — 검색어를 하나만 만들면 "그 말로 못
+ * 찾았다"가 "국내에 없다"로 읽힌다. 값은 전부 실제 상품(Smallable 430701 /
+ * bobochoses.com B226AC114)에서 온 것이다.
+ */
+describe("buildCrossSellerSearchQueries", () => {
+  const smallableLike = () =>
+    buildProductIdentityDna(
+      baseProduct({
+        sourceUrl:
+          "https://www.smallable.com/en/product/bobo-choses-zipped-sweat-organic-cotton-heather-grey-bobo-choses-430701",
+        title: field("Bobo Choses Zipped Sweat Organic Cotton | Heather grey"),
+        brand: field("Bobo Choses"),
+        sku: field("AAA1804922"),
+        color: field("Heather grey"),
+        material: field("100% Organic Cotton"),
+      }),
+    );
+
+  it("판매처 자신의 재고번호를 단독 검색어로 쓰지 않는다", () => {
+    const queries = buildCrossSellerSearchQueries(smallableLike());
+    expect(queries).not.toContain("AAA1804922");
+    expect(queries.some((q) => q.includes("AAA1804922"))).toBe(false);
+  });
+
+  it("좁은 말(브랜드+상품명+색상)부터 넓은 말 순서로 만든다", () => {
+    const queries = smallableLike() && buildCrossSellerSearchQueries(smallableLike());
+    expect(queries[0]).toBe("Bobo Choses zipped sweat Heather grey");
+    expect(queries[1]).toBe("Bobo Choses zipped sweat");
+    // 마지막 그물도 "브랜드 + 명사 하나"보다는 좁다 — 소재가 함께 들어간다.
+    expect(queries[queries.length - 1]).toBe("Bobo Choses organic cotton zipped");
+    expect(new Set(queries).size).toBe(queries.length);
+  });
+
+  it("브랜드 품번이 원문에 있으면 그것을 1순위 단독 검색어로 쓴다", () => {
+    const dna = buildProductIdentityDna(
+      baseProduct({
+        sourceUrl: "https://bobochoses.com/products/b226ac114-bobo-choses-bolder-half-zipped-sweatshirt",
+        title: field("Bobo Choses Bolder half zipped sweatshirt"),
+        description: field("Light heather grey sweatshirt. Product code B226AC114 AW26 Made in Portugal."),
+      }),
+    );
+    expect(dna.brandModelCode).toBe("B226AC114");
+    expect(buildCrossSellerSearchQueries(dna)[0]).toBe("B226AC114");
   });
 });

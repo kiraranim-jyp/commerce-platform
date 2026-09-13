@@ -364,9 +364,14 @@ function ResultHeadline({ results, title, brand }: { results: SearchResult[]; ti
     );
   }
   if (exactCount > 0) {
+    // MATCHING-2.0-CORE(CEO 지시, 2026-09-13) — 등급이 섞여 있으면 섞여 있다고
+    // 말한다. 지금까지는 🟢가 하나라도 있으면 🟡 건수가 헤드라인에서 통째로
+    // 사라져서, 참고용으로만 써야 할 후보가 몇 건이나 있는지 셀러가 알 수 없었다.
+    // 가격 판단에 쓰는 것은 여전히 🟢뿐이고, 바뀌는 것은 말하는 방식뿐이다.
     return (
       <p className="rounded-md border border-success/30 bg-success-soft px-3 py-2 text-xs text-success">
-        🟢 국내 편집샵에서 동일상품을 {exactCount}건 확인했습니다.
+        🟢 국내 편집샵에서 동일상품을 {exactCount}건 확인했습니다
+        {comparisonCount > 0 && <> · 🟡 참고 {comparisonCount}건(가격 판단에는 쓰지 않음)</>}.
       </p>
     );
   }

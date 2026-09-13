@@ -89,7 +89,63 @@ function resolveQueryCode(query: ComparisonQuery): string | null {
   return fromDescription ?? null;
 }
 
+/**
+ * MATCHING-2.0-CORE(CEO 지시, 2026-09-13) — 교차판매처 판정을 기존 7단계 값으로
+ * 옮긴다.
+ *
+ * 새 판정 값을 화면·가격 정책까지 따로 배선하지 않고 이 한 곳에서 기존 어휘로
+ * 번역하는 이유: 이미 검증된 표시/가격 경로(overseasMatchDisplay →
+ * priceTierFromLink)가 그대로 살아 있고, 판정 값만 더 정확해지기 때문이다.
+ * 판정 값을 두 벌 들고 다니면 화면과 가격이 서로 다른 답을 보게 된다.
+ *
+ * SAME을 CONFIRMED_PRODUCT로 옮기는 것이 맞는 이유: 이 값은 "구조화 코드가
+ * 일치했다"가 아니라 "동일상품으로 확인됐다"를 뜻하고(EXACT_PRODUCT가 URL
+ * 동일이라는 더 강한 사실을 따로 맡는다), 표시도 🟢 동일상품, 가격 정책도
+ * "동일상품 가격으로 사용"이다 — 교차판매처 SAME이 요구하는 것과 정확히 같다.
+ */
+function fromCrossSellerVerdict(verdict: NonNullable<ComparisonCandidate["crossSellerVerdict"]>): ProductMatchTruth {
+  switch (verdict) {
+    case "SAME":
+      return "CONFIRMED_PRODUCT";
+    case "PRESUMED_SAME":
+      return "VERY_SIMILAR";
+    case "SIMILAR":
+      return "SIMILAR";
+    case "CONFLICT":
+      return "CONFLICT";
+    case "UNKNOWN":
+      return "INSUFFICIENT_EVIDENCE";
+  }
+}
+
 export function deriveProductMatchTruth(
+  query: ComparisonQuery,
+  candidate: ComparisonCandidate,
+  confidence: number,
+): ProductMatchTruth {
+  const existing = deriveProductMatchTruthFromText(query, candidate, confidence);
+  if (!candidate.crossSellerVerdict) return existing;
+  const cross = fromCrossSellerVerdict(candidate.crossSellerVerdict);
+
+  // 반증은 언제나 이긴다. 단 하나의 예외가 있다: 기존 계층이 "같은 모델인데
+  // 옵션(색상/사이즈)만 다르다"고 **더 구체적으로** 말할 수 있는 경우다. 그건
+  // 셀러에게 더 쓸모 있는 말이고, 가격 정책상으로는 CONFLICT와 똑같이 다뤄진다
+  // (둘 다 동일상품 가격으로 쓰이지 않는다) — 정확도를 잃지 않으면서 정보만
+  // 더 준다.
+  if (cross === "CONFLICT") {
+    return existing === "SAME_MODEL_VARIANT" ? "SAME_MODEL_VARIANT" : "CONFLICT";
+  }
+
+  // 반증이 없으면 둘 중 근거가 강한 쪽을 쓴다. 기존 계층이 식별자 완전일치처럼
+  // 이 판정기가 볼 수 없는 증거를 쥐고 있을 수 있고(오늘 잘 동작하는 매칭을
+  // 새 규칙이 조용히 깎지 않게 한다), 반대로 이 판정기가 여러 축을 모아 기존
+  // 계층보다 확실히 말할 수 있는 경우도 있다.
+  return PRODUCT_MATCH_TRUTH_RANK[cross] > PRODUCT_MATCH_TRUTH_RANK[existing] ? cross : existing;
+}
+
+/** P-11 STEP 4 이래의 기존 판정 경로. 교차판매처 사실을 양쪽에서 읽어내지 못한
+ * 후보는 예전과 완전히 같은 길을 간다. */
+function deriveProductMatchTruthFromText(
   query: ComparisonQuery,
   candidate: ComparisonCandidate,
   confidence: number,

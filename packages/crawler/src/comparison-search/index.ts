@@ -65,6 +65,31 @@ export type { DomesticCandidateTrust } from "./display-priority";
  * 구조화 코드 완전일치만으로 별도 판정을 얹는다. */
 export { attachProductMatchTruth, deriveProductMatchTruth, PRODUCT_MATCH_TRUTH_RANK } from "./product-identity";
 export type { ProductMatchTruth } from "./product-identity";
+/** MATCHING-2.0-CORE(CEO 지시, 2026-09-13) — 판매처가 달라도 같은 물건인지
+ * 판정하는 계층. 방향을 바꿔도 같은 답이 나오고, 강한 반증은 점수로 뒤집히지
+ * 않는다. scoreCandidateMatch/confidence/matchLevel은 전혀 재계산하지 않는다. */
+export {
+  compareCrossSellerProducts,
+  CROSS_SELLER_IMAGE_STRONG_MAX_DISTANCE,
+  isSameProductForPricing,
+} from "./cross-seller";
+export type {
+  CrossSellerAxis,
+  CrossSellerBlocker,
+  CrossSellerConflict,
+  CrossSellerImageEvidence,
+  CrossSellerMatch,
+  CrossSellerVerdict,
+} from "./cross-seller";
+/** 판매처 응답 → ProductFacts 어댑터. 사이트별 차이는 전부 여기서 흡수하고
+ * 판정기는 사이트를 모른다. */
+export {
+  extractSmallableBreadcrumb,
+  extractSmallableSizeLabels,
+  productFactsFromShopifyProduct,
+  productFactsFromSmallableHtml,
+} from "./seller-facts";
+export type { ShopifyProductLike } from "./seller-facts";
 
 /** Sprint B-1.5/B-1.8 — search-suggest.json의 가격은 신뢰하지 않는다(B-1.4에서 확인: Vercel에서
  * 로케일 프리픽스를 줘도 기본 통화 숫자가 그대로 돌아옴). 검색은 "후보 발견"까지만 담당하고,
@@ -284,7 +309,17 @@ async function searchOneDomesticShop(
   }
   const searchTerm = query.searchTerm ?? query.title;
   try {
-    const primary = await searchDomesticShopCandidates(source.domain, searchTerm);
+    // MATCHING-2.0-CORE(CEO 지시, 2026-09-13) — 좁은 검색어부터 차례로 시도하고
+    // 결과가 나오면 멈춘다. 검색어 하나가 0건이라는 사실은 "이 상품이 국내에
+    // 없다"가 아니라 "그 말로는 못 찾았다"일 뿐인데, 지금까지 그 둘이 구분되지
+    // 않았다. 이 목록이 없으면(하위호환) 기존처럼 searchTerm 하나만 쓴다.
+    const terms = query.searchTerms?.length ? query.searchTerms : [searchTerm];
+    let primary: ComparisonCandidate[] | null = null;
+    for (const term of terms) {
+      primary = await searchDomesticShopCandidates(source.domain, term);
+      // 파서가 없는 도메인(null)은 검색어를 바꿔도 달라지지 않는다 — 즉시 멈춘다.
+      if (primary === null || primary.length > 0) break;
+    }
     if (primary === null) return { ...base, status: "unsupported", candidates: [] };
     const primaryScored = withConfidence(query, primary);
     if (primaryScored.length > 0) {

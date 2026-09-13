@@ -1,4 +1,5 @@
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
+import { productFactsFromShopifyProduct } from "./seller-facts";
 import type { ComparisonCandidate } from "./types";
 
 const FETCH_TIMEOUT_MS = 10000;
@@ -21,11 +22,18 @@ interface ShopifySuggestResponse {
       // 값), 이 엔드포인트는 로케일 추정을 하지 않고 항상 DB 기준 통화만 쓴다.
       products?: Array<{
         title?: string;
+        handle?: string;
         url?: string;
         price?: string;
         image?: string;
         vendor?: string;
         body?: string;
+        /** MATCHING-2.0-CORE(실측 확인, 2026-09-13) — 이 엔드포인트는 상품유형과
+         * 태그도 함께 준다("type":"Sweatshirts", "tags":["children","Kid",…]).
+         * 지금까지 응답에서 그냥 버리고 있었는데, 이 두 칸이 바로 아동복과
+         * 성인복을 가르는 신호다(제목에는 그 말이 없다). */
+        type?: string;
+        tags?: string[];
       }>;
     };
   };
@@ -55,6 +63,13 @@ export async function searchShopifySuggest(
     confidence: 0,
     brand: p.vendor || undefined,
     sku: extractArticleCode(p.body),
+    // 응답에 실제로 들어 있는 칸만 넘긴다. 이 어댑터가 없으면 상품유형/태그/
+    // 설명문이 그대로 버려지고, 그 결과 색상·소재·핏·대상 연령이 매칭에 한 번도
+    // 도달하지 못한다 — 이번에 고치는 파이프라인 누락이 바로 그 지점이다.
+    facts: productFactsFromShopifyProduct(
+      { title: p.title, handle: p.handle, url: p.url, body: p.body, vendor: p.vendor, type: p.type, tags: p.tags, image: p.image },
+      domain,
+    ),
   }));
 }
 

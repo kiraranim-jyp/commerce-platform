@@ -8,7 +8,12 @@ import {
   type ComparisonSearchResult,
 } from "@commerce/crawler";
 import { sourceFitsScopes } from "@commerce/category";
-import { buildDomesticShopQueryFromFields } from "@commerce/shared";
+import {
+  buildCrossSellerSearchQueries,
+  buildDomesticShopQuery,
+  identityDnaFromFields,
+  productFactsFromIdentityDna,
+} from "@commerce/shared";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/require-user";
 import { resolveCategoryScopes } from "../_lib/category-scope";
@@ -67,7 +72,9 @@ async function attachMatchTruth(
       if (!supportsDomesticIdentifierExtraction(result.domain)) {
         const candidates = result.candidates.map((c) => ({
           ...c,
-          matchTruth: c.matchLevel ? deriveMatchTruth(c.matchLevel, compareModelCode(foreignModelCode, null)) : undefined,
+          matchTruth: c.matchLevel
+            ? deriveMatchTruth(c.matchLevel, compareModelCode(foreignModelCode, null), c.crossSellerVerdict)
+            : undefined,
         }));
         return { ...result, candidates };
       }
@@ -81,7 +88,7 @@ async function attachMatchTruth(
           const domesticModelCode =
             i < MAX_MODEL_CODE_FETCH_PER_SHOP ? await fetchDomesticModelCode(result.domain, c.url) : null;
           const modelCodeEvidence = compareModelCode(foreignModelCode, domesticModelCode);
-          return { ...c, matchTruth: deriveMatchTruth(c.matchLevel, modelCodeEvidence) };
+          return { ...c, matchTruth: deriveMatchTruth(c.matchLevel, modelCodeEvidence, c.crossSellerVerdict) };
         }),
       );
       return { ...result, candidates };
@@ -139,7 +146,17 @@ export async function POST(request: Request) {
   if (!auth.ok) return auth.response;
 
   const body = (await request.json().catch(() => null)) as
-    | { title?: string; brand?: string; sourceUrl?: string; sku?: string; description?: string }
+    | {
+        title?: string;
+        brand?: string;
+        sourceUrl?: string;
+        sku?: string;
+        description?: string;
+        /** MATCHING-2.0-CORE — 화면이 이미 갖고 있던 값. 보내주면 색상/소재 축이
+         * 살아나고, 안 보내주면 예전과 똑같이 동작한다. */
+        color?: string;
+        material?: string;
+      }
     | null;
   if (!body?.title) {
     return NextResponse.json({ ok: false, error: "title이 필요합니다." }, { status: 400 });
@@ -170,14 +187,34 @@ export async function POST(request: Request) {
   // 것은 이미 실측으로 확인된 동작이었다(product-identity-dna.ts 주석 참고).
   // 배치 경로와 같은 검색어 정책을 쓰도록 잇기만 한다 — title은 그대로 넘겨
   // 매칭 스코어링 신호로는 계속 쓰인다(검색어는 좁게, 매칭 신호는 넓게).
-  const searchTerm = buildDomesticShopQueryFromFields({
+  //
+  // MATCHING-2.0-CORE(CEO 지시, 2026-09-13) — 검색어를 하나만 만들던 것을 여러
+  // 개로 넓힌다. "브랜드 + 명사 하나"는 그 브랜드의 같은 유형 상품을 전부 끌고
+  // 오고, 판매처별 상위 5건 한도 때문에 정작 목표 상품이 후보에 들지 못한다.
+  // buildCrossSellerSearchQueries는 좁은 말부터 넓은 말 순서로 돌려주고,
+  // 크롤러가 결과가 나오는 첫 검색어에서 멈춘다. searchTerm은 그대로 넘겨
+  // 이 목록을 모르는 경로(하위호환)가 예전처럼 동작하게 둔다.
+  const dna = identityDnaFromFields({
     title: body.title,
     brand: body.brand,
     sku: body.sku,
     sourceUrl: body.sourceUrl,
+    color: body.color,
+    material: body.material,
+    description: body.description,
   });
+  const searchTerm = buildDomesticShopQuery(dna);
   const rawResults = await searchDomesticShops(
-    { title: body.title, brand: body.brand, sourceUrl: body.sourceUrl, sku: body.sku, searchTerm },
+    {
+      title: body.title,
+      brand: body.brand,
+      sourceUrl: body.sourceUrl,
+      sku: body.sku,
+      description: body.description,
+      searchTerm,
+      searchTerms: buildCrossSellerSearchQueries(dna),
+      facts: productFactsFromIdentityDna(dna),
+    },
     sources.map((s) => ({ id: s.id, name: s.name, domain: s.domain, currency: s.currency, collectionStrategy: s.collectionStrategy })),
   );
   // P-10-F(CEO 승인, 2026-09-11) — 원본 코드를 설명문에서만 찾던 것을 넓힌다.

@@ -1,3 +1,4 @@
+import type { CrossSellerVerdict } from "./cross-seller";
 import type { MatchLevel } from "./match";
 import type { ModelEvidenceResult } from "./evidence";
 
@@ -55,7 +56,16 @@ const HIGH_OR_ABOVE: ReadonlySet<MatchLevel> = new Set(["high", "very_high"]);
  * 다른 하나 위에 구현하면 "자동확정 기준"과 "화면 표시 기준"이 우연히 같은 값이
  * 되어야 한다는 잘못된 결합이 생긴다.
  */
-export function deriveMatchTruth(level: MatchLevel, modelCode: ModelEvidenceResult): MatchTruth {
+export function deriveMatchTruth(
+  level: MatchLevel,
+  modelCode: ModelEvidenceResult,
+  crossSeller?: CrossSellerVerdict,
+): MatchTruth {
+  // MATCHING-2.0-CORE(CEO 지시, 2026-09-13) — 교차판매처 반증은 여기서도 먼저,
+  // 그리고 무조건 이긴다. 대상 연령·성별·상품군·색상·품번 중 하나라도 서로
+  // 반증하면 텍스트 점수가 얼마든 상관없다.
+  if (crossSeller === "CONFLICT") return "CONFLICT";
+
   if (modelCode === "conflict") return "CONFLICT";
 
   // exact/partial(=식별자 증거가 있음)은 텍스트 등급이 low여도 승격한다 — CPO 지시
@@ -69,7 +79,28 @@ export function deriveMatchTruth(level: MatchLevel, modelCode: ModelEvidenceResu
   }
   if (modelCode === "partial") return "STRONG_IDENTIFIER";
 
-  // modelCode === "unavailable" — 식별자 증거가 아예 없다. 텍스트 점수만으로 판단한다.
-  if (level === "low") return "INSUFFICIENT_EVIDENCE";
-  return HIGH_OR_ABOVE.has(level) ? "TEXT_CONFIRMED" : "SIMILAR";
+  // modelCode === "unavailable" — 식별자 증거가 아예 없다. 여기가 판매처마다
+  // 자기 SKU를 쓰는 상황의 기본값이고, 지금까지 텍스트 점수 말고는 볼 것이
+  // 없었다. 이제는 교차판매처 판정이 있으면 그 근거를 함께 본다.
+  //
+  // SAME을 STRONG_IDENTIFIER로 옮기는 것에 대해: 이름은 식별자를 말하지만 이 값이
+  // 실제로 하는 일은 "🟢 동일상품으로 표시하고 가격 비교에 쓴다"이고, 그것이
+  // SAME이 요구하는 것과 정확히 같다. 이름과 뜻의 어긋남을 없애려면 새 값을
+  // 만들어야 하는데, 이 값은 domestic_product_links의 CHECK 제약(마이그레이션
+  // 030)에 그대로 들어가 있어 스키마 변경을 부른다 — 배지 문구
+  // (match-display.ts)를 사실에 맞게 고치는 쪽이 정직하면서 스키마를 건드리지
+  // 않는 길이다.
+  const textOnly: MatchTruth =
+    level === "low" ? "INSUFFICIENT_EVIDENCE" : HIGH_OR_ABOVE.has(level) ? "TEXT_CONFIRMED" : "SIMILAR";
+  if (!crossSeller) return textOnly;
+  const fromCross: MatchTruth =
+    crossSeller === "SAME"
+      ? "STRONG_IDENTIFIER"
+      : crossSeller === "PRESUMED_SAME"
+        ? "TEXT_CONFIRMED"
+        : crossSeller === "SIMILAR"
+          ? "SIMILAR"
+          : "INSUFFICIENT_EVIDENCE";
+  // 둘 중 근거가 강한 쪽. 오늘 잘 동작하는 매칭을 새 규칙이 조용히 깎지 않게 한다.
+  return MATCH_TRUTH_RANK[fromCross] > MATCH_TRUTH_RANK[textOnly] ? fromCross : textOnly;
 }

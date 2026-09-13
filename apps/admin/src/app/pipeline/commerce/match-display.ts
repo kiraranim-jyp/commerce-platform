@@ -44,7 +44,12 @@ const TIERS: Record<MatchDisplayTier, MatchDisplay> = {
     tier: "SAME",
     icon: "🟢",
     label: "동일상품",
-    note: "정확한 상품 식별자 일치",
+    // MATCHING-2.0-CORE(2026-09-13) — 이 등급에 오는 길이 둘이 됐다. 품번이 실제로
+    // 일치한 경우와, 브랜드·상품군·색상·소재·핏·대상 연령이 한꺼번에 맞아 확인된
+    // 경우다. 앞의 문구("정확한 상품 식별자 일치")는 뒤쪽 경우에 대해 화면이
+    // 사실이 아닌 말을 하게 만든다 — 두 경우에 모두 참인 말로 바꾸고, 이 등급만
+    // 가격 비교에 쓰인다는 정책까지 배지에서 읽히게 한다.
+    note: "동일상품으로 확인됨 — 가격 비교에 사용",
     className: "bg-success-soft text-success",
   },
   SAME_MODEL_OPTION_DIFF: {
@@ -79,7 +84,9 @@ const TIERS: Record<MatchDisplayTier, MatchDisplay> = {
     tier: "CONFLICT",
     icon: "🔴",
     label: "다른 상품 가능성",
-    note: "상품 식별자가 달라 동일상품으로 보기 어렵습니다",
+    // 반증의 종류도 늘었다 — 품번뿐 아니라 대상 연령(성인↔아동), 성별, 상품군,
+    // 색상이 서로 어긋나는 경우가 여기로 온다.
+    note: "대상·색상·상품군·품번 중 하나 이상이 서로 어긋납니다",
     className: "bg-error-soft text-error",
   },
 };

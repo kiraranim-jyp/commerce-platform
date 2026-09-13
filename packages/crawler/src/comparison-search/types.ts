@@ -1,3 +1,5 @@
+import type { ProductFacts } from "@commerce/shared";
+
 export interface ComparisonCandidate {
   title: string;
   url: string;
@@ -64,6 +66,16 @@ export interface ComparisonCandidate {
    * 사이트에서 재고 상태를 확인할 방법이 없거나 실측 근거가 없음(추측 금지 — null이
    * 기본값이며 "판매중"으로 임의 해석하지 않는다). */
   soldOut?: boolean | null;
+  /** MATCHING-2.0-CORE(CEO 지시, 2026-09-13) — 이 후보에서 읽어낸 사실 묶음.
+   * 파서가 채울 수 있으면 채우고, 못 채우면 undefined다(그 경우 판정은 기존
+   * 텍스트 경로만 쓴다 — 하위호환). */
+  facts?: ProductFacts;
+  /** 양쪽 facts가 다 있을 때만 채워지는 교차판매처 판정. 이 값이 있으면
+   * 화면 표시와 가격 정책이 이 값을 우선한다 — confidence/matchLevel은 그대로
+   * 두고(기존 계산을 건드리지 않는다) 판정만 얹는 기존 계층 분리 패턴 그대로다. */
+  crossSellerVerdict?: "SAME" | "PRESUMED_SAME" | "SIMILAR" | "UNKNOWN" | "CONFLICT";
+  /** 그 판정의 근거/보류 사유(사람이 읽는 문장). */
+  crossSellerReasons?: string[];
 }
 
 export interface ComparisonSearchResult {
@@ -107,6 +119,14 @@ export interface ComparisonQuery {
    * 자체는 매칭 스코어링(scoreCandidateMatch)에 계속 그대로 쓰인다 —
    * 검색어를 좁히는 것과 동일상품 판정 신호를 넓게 쓰는 것은 별개다. */
   searchTerm?: string;
+  /** MATCHING-2.0-CORE — "브랜드 + 명사 하나"로 한 번만 찾던 것을 좁은 말부터
+   * 넓은 말 순서로 여러 번 찾기 위한 목록(buildCrossSellerSearchQueries).
+   * 결과가 나오면 거기서 멈춘다. 없으면(undefined) 기존 searchTerm 한 개
+   * 경로 그대로다 — 하위호환. */
+  searchTerms?: string[];
+  /** MATCHING-2.0-CORE — 등록상품(내 상품)에서 읽어낸 사실 묶음. 후보 쪽
+   * facts와 짝이 될 때만 교차판매처 판정이 돌아간다. */
+  facts?: ProductFacts;
 }
 
 /** comparison_shops 테이블 행의 최소 부분집합 — packages/crawler는 apps/admin에 의존하지 않으므로

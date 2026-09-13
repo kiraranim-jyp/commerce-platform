@@ -1,0 +1,73 @@
+{
+  "id": 15692664111487,
+  "title": "Bobo Choses Bolder half zipped sweatshirt",
+  "handle": "b226ac114-bobo-choses-bolder-half-zipped-sweatshirt",
+  "description": "<p>Light heather grey sweatshirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.</p>",
+  "vendor": "AW26",
+  "type": "Sweatshirts",
+  "tags": [
+    "aw26",
+    "branded",
+    "children",
+    "clothing",
+    "Current",
+    "Kid",
+    "NewArrivals",
+    "sweatshirts"
+  ],
+  "price": 7500,
+  "available": true,
+  "options": [
+    {
+      "name": "Clothing size",
+      "position": 1,
+      "values": [
+        "2-3Y",
+        "4-5Y",
+        "6-7Y",
+        "8-9Y",
+        "10-11Y",
+        "12-13Y"
+      ]
+    }
+  ],
+  "images": [
+    "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC114_1_1.webp?v=1783420607",
+    "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC114_7_1.webp?v=1783420584",
+    "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC114_2_1.webp?v=1783420574"
+  ],
+  "featured_image": "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC114_1_1.webp?v=1783420607",
+  "url": "/products/b226ac114-bobo-choses-bolder-half-zipped-sweatshirt",
+  "variants": [
+    {
+      "title": "2-3Y",
+      "sku": "B226AC11405101",
+      "available": true
+    },
+    {
+      "title": "4-5Y",
+      "sku": "B226AC11405102",
+      "available": true
+    },
+    {
+      "title": "6-7Y",
+      "sku": "B226AC11405103",
+      "available": true
+    },
+    {
+      "title": "8-9Y",
+      "sku": "B226AC11405104",
+      "available": true
+    },
+    {
+      "title": "10-11Y",
+      "sku": "B226AC11405105",
+      "available": true
+    },
+    {
+      "title": "12-13Y",
+      "sku": "B226AC11405106",
+      "available": true
+    }
+  ]
+}

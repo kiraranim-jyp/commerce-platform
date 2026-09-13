@@ -1,0 +1,66 @@
+{
+  "id": 15692678267263,
+  "title": "All About Monsters oversize T-shirt",
+  "handle": "b226ad013-all-about-monsters-oversize-t-shirt",
+  "description": "<p>Light pink t-shirt. Organic Cotton 100%. Fits true to size, take your normal size. Responsibly made in Portugal.</p>",
+  "vendor": "AW26",
+  "type": "T-shirts",
+  "tags": [
+    "adult",
+    "aw26",
+    "clothing",
+    "Current",
+    "drop-1",
+    "t-shirts",
+    "Woman"
+  ],
+  "price": 5500,
+  "available": true,
+  "options": [
+    {
+      "name": "Clothing size",
+      "position": 1,
+      "values": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL"
+      ]
+    }
+  ],
+  "images": [
+    "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AD013_6.jpg?v=1783936630",
+    "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AD013_1.jpg?v=1783936614",
+    "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AD013_2.jpg?v=1783936608"
+  ],
+  "featured_image": "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AD013_6.jpg?v=1783936630",
+  "url": "/products/b226ad013-all-about-monsters-oversize-t-shirt",
+  "variants": [
+    {
+      "title": "XS",
+      "sku": "B226AD01368101",
+      "available": false
+    },
+    {
+      "title": "S",
+      "sku": "B226AD01368103",
+      "available": true
+    },
+    {
+      "title": "M",
+      "sku": "B226AD01368104",
+      "available": true
+    },
+    {
+      "title": "L",
+      "sku": "B226AD01368107",
+      "available": true
+    },
+    {
+      "title": "XL",
+      "sku": "B226AD013681XL",
+      "available": true
+    }
+  ]
+}

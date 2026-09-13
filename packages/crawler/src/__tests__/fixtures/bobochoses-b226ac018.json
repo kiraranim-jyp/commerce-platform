@@ -1,0 +1,72 @@
+{
+  "id": 15692660769151,
+  "title": "All About Monsters T-shirt",
+  "handle": "b226ac018-all-about-monsters-t-shirt",
+  "description": "<p>Midnight blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Spain.</p>",
+  "vendor": "AW26",
+  "type": "T-shirts",
+  "tags": [
+    "aw26",
+    "children",
+    "clothing",
+    "Current",
+    "drop-2",
+    "Kid",
+    "t-shirts"
+  ],
+  "price": 4500,
+  "available": true,
+  "options": [
+    {
+      "name": "Clothing size",
+      "position": 1,
+      "values": [
+        "2-3Y",
+        "4-5Y",
+        "6-7Y",
+        "8-9Y",
+        "10-11Y",
+        "12-13Y"
+      ]
+    }
+  ],
+  "images": [
+    "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC018_1_1.webp?v=1783422703",
+    "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC018_6_1.webp?v=1783422708",
+    "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC018_8_1.webp?v=1783422684"
+  ],
+  "featured_image": "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC018_1_1.webp?v=1783422703",
+  "url": "/products/b226ac018-all-about-monsters-t-shirt",
+  "variants": [
+    {
+      "title": "2-3Y",
+      "sku": "B226AC01840101",
+      "available": true
+    },
+    {
+      "title": "4-5Y",
+      "sku": "B226AC01840102",
+      "available": true
+    },
+    {
+      "title": "6-7Y",
+      "sku": "B226AC01840103",
+      "available": true
+    },
+    {
+      "title": "8-9Y",
+      "sku": "B226AC01840104",
+      "available": true
+    },
+    {
+      "title": "10-11Y",
+      "sku": "B226AC01840105",
+      "available": true
+    },
+    {
+      "title": "12-13Y",
+      "sku": "B226AC01840106",
+      "available": true
+    }
+  ]
+}

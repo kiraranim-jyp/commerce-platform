@@ -1,0 +1,73 @@
+{
+  "id": 15692664013183,
+  "title": "Bobo Choses Pop T-shirt",
+  "handle": "b226ac112-bobo-choses-pop-t-shirt",
+  "description": "<p>Offwhite t-shirt. Organic Cotton 100%. Responsibly made in Portugal.</p>",
+  "vendor": "AW26",
+  "type": "T-shirts",
+  "tags": [
+    "aw26",
+    "branded",
+    "children",
+    "clothing",
+    "Current",
+    "Kid",
+    "NewArrivals",
+    "t-shirts"
+  ],
+  "price": 5000,
+  "available": true,
+  "options": [
+    {
+      "name": "Clothing size",
+      "position": 1,
+      "values": [
+        "2-3Y",
+        "4-5Y",
+        "6-7Y",
+        "8-9Y",
+        "10-11Y",
+        "12-13Y"
+      ]
+    }
+  ],
+  "images": [
+    "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC112_1_1.webp?v=1783420634",
+    "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC112_6_1.webp?v=1783420639",
+    "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC112_3_1.webp?v=1783420626"
+  ],
+  "featured_image": "//cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC112_1_1.webp?v=1783420634",
+  "url": "/products/b226ac112-bobo-choses-pop-t-shirt",
+  "variants": [
+    {
+      "title": "2-3Y",
+      "sku": "B226AC11219901",
+      "available": true
+    },
+    {
+      "title": "4-5Y",
+      "sku": "B226AC11219902",
+      "available": true
+    },
+    {
+      "title": "6-7Y",
+      "sku": "B226AC11219903",
+      "available": true
+    },
+    {
+      "title": "8-9Y",
+      "sku": "B226AC11219904",
+      "available": true
+    },
+    {
+      "title": "10-11Y",
+      "sku": "B226AC11219905",
+      "available": true
+    },
+    {
+      "title": "12-13Y",
+      "sku": "B226AC11219906",
+      "available": true
+    }
+  ]
+}

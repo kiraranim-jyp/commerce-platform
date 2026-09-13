@@ -1,3 +1,12 @@
+import {
+  buildCoreTitleTokens,
+  extractCodeLikeSlugSegment,
+  extractFitPhrase,
+  extractLabeledProductCode,
+  extractUrlSlug,
+  parseMaterialComposition,
+  type ProductFacts,
+} from "./product-facts";
 import type { CanonicalProduct } from "./product-types";
 import { getSelectedImageUrl } from "./product-types";
 
@@ -62,33 +71,51 @@ export interface ProductIdentityDna {
   /** isRepresentative 이미지의 실제 사용 URL(getSelectedImageUrl, 배경제거
    * 여부 반영). 없으면 null. */
   representativeImageUrl: string | null;
+
+  /* ── MATCHING-2.0-CORE(CEO 지시, 2026-09-13)에서 추가된 축 ──────────────
+   *
+   * 아래 값들은 전부 CanonicalProduct에 **이미 들어와 있던** 것이다. 그런데
+   * 이 구조체가 그것을 실어 나르지 않아서 ComparisonQuery에도, 결국
+   * scoreCandidateMatch에도 한 번도 도달한 적이 없었다. 판매처가 서로 다른
+   * SKU를 쓰는 상황에서 동일상품을 가릴 수 있는 근거가 바로 이 값들인데,
+   * 가장 강한 증거가 파이프라인 중간에서 조용히 버려지고 있었다.
+   *
+   * 새로 크롤링하는 값은 하나도 없다 — 있는 것을 연결만 한다. */
+
+  /** 브랜드가 부여한 품번(Article/Product code). identifier와 달리 판매처
+   * 자신의 재고번호를 절대 담지 않는다 — 그 구분이 없으면 "SKU가 다르니 다른
+   * 상품"이라는 틀린 규칙으로 되돌아간다. 현재 CanonicalProduct에는 이 둘을
+   * 나눠 담는 칸이 없어서, sku가 브랜드 품번 모양일 때만(영문+숫자 혼합) 여기
+   * 채운다 — 확신이 없으면 null이다. */
+  brandModelCode: string | null;
+  /** material.value 그대로. 비어 있으면 null. */
+  material: string | null;
+  /** 설명문에서 실제로 관측된 핏 표현만(없으면 null). */
+  fit: string | null;
+  /** recommendedAge.value 그대로("2-3 years" 등). */
+  ageRange: string | null;
+  /** optionGroups 중 사이즈 축의 값 목록. 사이즈 축이 없으면 빈 배열. */
+  sizeRange: string[];
+  /** 대상 연령/성별을 읽을 수 있는 원문 조각들(breadcrumb, Shopify 태그). */
+  audienceSignals: string[];
+  /** sourceUrl의 마지막 경로 조각. 판매처가 URL에 브랜드 품번을 그대로 넣는
+   * 경우(bobochoses.com handle)가 있어 식별자 증거로 쓸 수 있다. */
+  urlSlug: string | null;
+  /** 등록에 실제로 쓰이는 이미지 URL 전체(대표 1장만이 아니라). 이미지 교차
+   * 비교는 한 쌍이라도 강하게 일치하면 근거로 보기 때문에 여러 장이 필요하다. */
+  imageUrls: string[];
 }
 
-const SEASON_CODE_RE = /^(ss|aw|fw)\d{2}$/i;
-const SIZE_LIKE_RE = /^\d{1,3}(y|m|cm|호)$/i;
-const STOPWORDS = new Set(["the", "a", "an", "for", "and", "with", "by", "in", "of"]);
-
-function normalizeText(text: string): string {
-  return text
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .trim();
-}
-
-function tokenize(text: string): string[] {
-  return normalizeText(text)
-    .split(/[^a-z0-9가-힣]+/)
-    .filter((t) => t.length > 1 && !STOPWORDS.has(t) && !SEASON_CODE_RE.test(t) && !SIZE_LIKE_RE.test(t));
-}
-
-/** brand.value/color.value의 각 단어를 title 토큰에서 제거한다 — 매처가
- * "브랜드 일치"/"색상 일치"를 이미 별도 신호로 볼 것이므로, 핵심 상품명
- * 토큰에 중복으로 남아 union을 부풀리지 않게 한다(N-3.11 comparison-search의
- * stripBrandWords와 같은 이유, 여기서는 색상까지 같이 뺀다). */
-function coreTitleTokensOf(title: string, brand: string, color: string | null): string[] {
-  const noiseWords = new Set([...tokenize(brand), ...(color ? tokenize(color) : [])]);
-  return tokenize(title).filter((t) => !noiseWords.has(t));
+/** brand/color/material의 각 단어를 title 토큰에서 제거한다 — 매처가 그 셋을
+ * 이미 별도 축으로 세고 있어서, 핵심 상품명에 남겨두면 같은 근거를 두 번 세게
+ * 된다(N-3.11 comparison-search의 stripBrandWords와 같은 이유). 실제 토큰화
+ * 규칙은 product-facts.ts 한 곳에만 둔다 — 검색어를 만드는 쪽과 동일상품을
+ * 판정하는 쪽이 다른 자를 쓰면 두 결과가 조용히 어긋난다. */
+function coreTitleTokensOf(title: string, brand: string, color: string | null, material: string | null): string[] {
+  // 소재는 원문 전체가 아니라 **읽어낸 성분 이름**만 노이즈로 쓴다. 원문을 통째로
+  // 넣으면 설명문에 우연히 들어 있던 상품명 단어까지 같이 깎여 나간다.
+  const fabrics = parseMaterialComposition(material).map((c) => c.fabric).join(" ");
+  return buildCoreTitleTokens(title, [brand, color, fabrics]);
 }
 
 function resolveIdentifier(product: CanonicalProduct): ProductIdentifier | null {
@@ -97,6 +124,48 @@ function resolveIdentifier(product: CanonicalProduct): ProductIdentifier | null 
   const modelName = product.modelName.value.trim();
   if (modelName) return { value: modelName, tier: "MODEL_NAME" };
   return null;
+}
+
+/**
+ * 브랜드가 부여한 품번은 sku 필드에서 **가져오지 않는다**.
+ *
+ * CanonicalProduct에는 "브랜드 품번"과 "판매처 재고번호"를 나눠 담는 칸이 없고,
+ * 둘 다 sku 한 칸으로 들어온다. 모양으로 가르려는 시도는 실측에서 실패했다 —
+ * Bobo 품번 B226AC114(영문 3자+숫자 6자)와 Smallable 재고번호 AAA1804922(영문
+ * 3자+숫자 7자)는 글자 구성이 사실상 같다. 모양으로는 못 가른다.
+ *
+ * 대신 **어디에 적혀 있었는지**로 가른다. 브랜드 품번은 원문이 스스로 그렇게
+ * 부르는 자리에만 있다: 설명문의 "Product code" / "Article code" 라벨(실측:
+ * junioredition/bobochoses), 또는 브랜드 공식몰이 URL 앞머리에 그대로 붙여둔
+ * 조각(실측: `b226ac114-bobo-choses-bolder-half-zipped-sweatshirt`). 두 곳 중
+ * 어디에도 없으면 null이다 — 그리고 null은 "품번 충돌 없음"으로 읽힌다.
+ * 이것이 "SKU가 다르니 다른 상품"이라는 규칙으로 되돌아가지 않는 유일한 길이다.
+ */
+function resolveBrandModelCode(product: CanonicalProduct): string | null {
+  const labeled = extractLabeledProductCode(product.description?.value);
+  if (labeled) return labeled;
+  return extractCodeLikeSlugSegment(extractUrlSlug(product.sourceUrl));
+}
+
+/** optionGroups 중 "사이즈 축"의 값 목록. 축 이름은 판매처마다 다르므로
+ * (Size / Clothing size / 사이즈) 이름에 사이즈라는 말이 들어있는지로만 고른다 —
+ * 없으면 빈 배열이고, 빈 배열은 "사이즈 정보 없음"이다. */
+function resolveSizeRange(product: CanonicalProduct): string[] {
+  const group = product.optionGroups?.find((g) => /size|사이즈|치수/i.test(g.name));
+  return group ? [...group.values] : [];
+}
+
+/** 대상 연령/성별을 읽을 수 있는 원문 조각. 사이트 자신의 분류(breadcrumb)와
+ * Shopify 태그는 제목보다 훨씬 신뢰할 만한 신호인데(실측: 제목에는 "여성"
+ * 표기가 없고 태그에만 "adult","Woman"이 있다) 지금까지 매칭에 한 번도
+ * 쓰이지 않았다. */
+function resolveAudienceSignals(product: CanonicalProduct): string[] {
+  return [
+    ...(product.breadcrumbPath ?? []),
+    ...(product.shopifyTags ? product.shopifyTags.split(/[,;]/) : []),
+    ...(product.shopifyProductType ? [product.shopifyProductType] : []),
+    ...(product.recommendedAge?.value ? [product.recommendedAge.value] : []),
+  ].filter((s) => s.trim().length > 0);
 }
 
 function resolveCategory(product: CanonicalProduct): ProductCategorySignal | null {
@@ -115,16 +184,55 @@ function resolveCategory(product: CanonicalProduct): ProductCategorySignal | nul
 export function buildProductIdentityDna(product: CanonicalProduct): ProductIdentityDna {
   const brandValue = product.brand.value.trim();
   const colorValue = product.color.value.trim() || null;
+  const materialValue = product.material?.value.trim() || null;
+  const descriptionValue = product.description?.value ?? "";
   const representative = product.images.find((img) => img.isRepresentative);
+  const identifier = resolveIdentifier(product);
   return {
     sourceUrl: product.sourceUrl,
     brand: { value: brandValue, confident: product.brandResolution?.confidence === "HIGH" },
-    identifier: resolveIdentifier(product),
+    identifier,
     title: product.title.value,
-    coreTitleTokens: coreTitleTokensOf(product.title.value, brandValue, colorValue),
+    coreTitleTokens: coreTitleTokensOf(product.title.value, brandValue, colorValue, materialValue),
     color: colorValue,
     category: resolveCategory(product),
     representativeImageUrl: representative ? getSelectedImageUrl(representative) : null,
+    brandModelCode: resolveBrandModelCode(product),
+    // 소재는 전용 필드가 비어 있으면 설명문을 그대로 넘긴다 — 성분 목록을
+    // 읽어내는 일(parseMaterialComposition)은 비교 시점에 하므로, 여기서는
+    // "원문에 뭐가 있었는지"만 옮긴다(이 구조체의 기존 원칙 그대로).
+    material: materialValue ?? (descriptionValue.trim() ? descriptionValue : null),
+    fit: extractFitPhrase(materialValue ? `${materialValue} ${descriptionValue}` : descriptionValue),
+    ageRange: product.recommendedAge?.value.trim() || null,
+    sizeRange: resolveSizeRange(product),
+    audienceSignals: resolveAudienceSignals(product),
+    urlSlug: extractUrlSlug(product.sourceUrl),
+    imageUrls: product.images.map(getSelectedImageUrl),
+  };
+}
+
+/**
+ * DNA를 그대로 비교 가능한 사실 묶음으로 옮긴다. 새 값을 만들지 않는다 —
+ * 칸 이름만 바꿔 담는다. 이 함수가 있는 이유는 "등록상품"과 "검색 후보"가
+ * 같은 타입으로 비교대에 올라와야 방향 대칭이 성립하기 때문이다.
+ */
+export function productFactsFromIdentityDna(dna: ProductIdentityDna): ProductFacts {
+  return {
+    sourceUrl: dna.sourceUrl,
+    urlSlug: dna.urlSlug,
+    brand: dna.brand.value || null,
+    brandModelCode: dna.brandModelCode,
+    sellerSku: dna.identifier?.tier === "SKU" ? dna.identifier.value : null,
+    title: dna.title,
+    coreTitleTokens: dna.coreTitleTokens,
+    categoryText: dna.category?.value ?? null,
+    colorText: dna.color,
+    materialText: dna.material,
+    fitText: dna.fit,
+    ageRangeText: dna.ageRange,
+    sizeLabels: dna.sizeRange,
+    audienceSignals: dna.audienceSignals,
+    imageUrls: dna.imageUrls,
   };
 }
 
@@ -180,17 +288,95 @@ export function buildDomesticShopQueryFromFields(input: {
   brand?: string;
   sku?: string;
   sourceUrl?: string;
+  color?: string;
+  material?: string;
 }): string {
+  return buildDomesticShopQuery(identityDnaFromFields(input));
+}
+
+/** 화면이 보내주는 몇 개 필드만으로 DNA 모양을 갖춘다. 없는 값은 지어내지 않고
+ * null/빈 배열로 둔다 — 그러면 그 축은 근거에서 빠질 뿐이고, 검색어가 원제목으로
+ * 되돌아가지는 않는다. */
+export function identityDnaFromFields(input: {
+  title: string;
+  brand?: string;
+  sku?: string;
+  sourceUrl?: string;
+  color?: string;
+  material?: string;
+  description?: string;
+}): ProductIdentityDna {
   const brandValue = (input.brand ?? "").trim();
   const sku = input.sku?.trim();
-  return buildDomesticShopQuery({
+  const color = input.color?.trim() || null;
+  const material = input.material?.trim() || null;
+  const slug = extractUrlSlug(input.sourceUrl);
+  return {
     sourceUrl: input.sourceUrl ?? "",
     brand: { value: brandValue, confident: false },
     identifier: sku ? { value: sku, tier: "SKU" } : null,
     title: input.title,
-    coreTitleTokens: coreTitleTokensOf(input.title, brandValue, null),
-    color: null,
+    coreTitleTokens: coreTitleTokensOf(input.title, brandValue, color, material),
+    color,
     category: null,
     representativeImageUrl: null,
-  });
+    brandModelCode: extractLabeledProductCode(input.description) ?? extractCodeLikeSlugSegment(slug),
+    material: material ?? (input.description?.trim() ? input.description : null),
+    fit: extractFitPhrase(input.description ?? null),
+    ageRange: null,
+    sizeRange: [],
+    audienceSignals: [],
+    urlSlug: slug,
+    imageUrls: [],
+  };
+}
+
+/**
+ * MATCHING-2.0-CORE — "브랜드 + 명사 하나"로 검색하던 것을 그만둔다.
+ *
+ * 기존 buildDomesticShopQuery는 검색어를 **하나만** 만든다. 그 하나가 브랜드와
+ * 핵심 명사 하나로 끝나면(예: "Bobo Choses sweatshirt") 그 브랜드의 스웨트셔츠가
+ * 전부 딸려 나오고, 목표 상품은 판매처별 상위 5건 한도 밖으로 밀려난다 —
+ * 후보가 아예 만들어지지 않으니 뒤에 아무리 좋은 판정기를 붙여도 소용이 없다.
+ *
+ * 그래서 **좁은 것부터 넓은 것 순서로** 여러 개를 만들어 돌려준다. 호출부는
+ * 결과가 나올 때까지 순서대로 시도하면 된다(먼저 성공한 것을 쓰고 멈춘다).
+ *
+ * 판매처 자신의 재고번호는 절대 첫 줄에 두지 않는다. Smallable의 AAA1804922로
+ * Bobo 공식몰을 검색하면 언제나 0건이고, 그 0건이 "이 상품은 없다"로 읽혀 왔다.
+ * 브랜드 품번(원문이 Product/Article code라고 부른 것, 혹은 공식몰 URL 앞머리)이
+ * 있을 때만 단독 검색이 의미가 있다.
+ */
+const MAX_CROSS_SELLER_QUERIES = 4;
+
+export function buildCrossSellerSearchQueries(dna: ProductIdentityDna): string[] {
+  const brand = dna.brand.value.trim();
+  const core = dna.coreTitleTokens.slice(0, MAX_CORE_TITLE_TOKENS_IN_QUERY);
+  const colorToken = dna.color ? dna.color.trim() : "";
+  const materialToken = dna.material ? (parseMaterialComposition(dna.material)[0]?.fabric ?? "") : "";
+
+  const candidates = [
+    // ① 브랜드 품번 단독 — 있으면 이것만으로 정확히 한 상품을 가리킨다.
+    dna.brandModelCode ?? "",
+    // ② 브랜드 + 핵심 상품명 + 색상 — 같은 라인의 다른 색을 걸러내는 가장 좁은 말.
+    [brand, ...core, colorToken].filter(Boolean).join(" "),
+    // ③ 브랜드 + 핵심 상품명 — 색상 표기가 판매처마다 달라 ②가 0건일 때.
+    [brand, ...core].filter(Boolean).join(" "),
+    // ④ 브랜드 + 소재 + 핵심 명사 하나 — 상품명 어휘가 아예 다른 판매처를 위한
+    //    마지막 그물. 그래도 "브랜드 + 명사 하나"보다는 좁다.
+    [brand, materialToken, core[0] ?? ""].filter(Boolean).join(" "),
+  ];
+
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const candidate of candidates) {
+    const trimmed = candidate.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    out.push(trimmed);
+    if (out.length >= MAX_CROSS_SELLER_QUERIES) break;
+  }
+  // 브랜드도 상품명도 없으면 기존 정책(buildDomesticShopQuery)으로 되돌아간다 —
+  // 여기서 빈 배열을 돌려주면 호출부가 검색을 아예 못 하게 된다.
+  return out.length > 0 ? out : [buildDomesticShopQuery(dna)];
 }
