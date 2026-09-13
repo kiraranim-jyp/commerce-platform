@@ -135,6 +135,96 @@ order by
 
 
 -- ============================================================================
+-- Q1-b — P0 조기 중단(B-7)의 "간접 지문"을 본다
+--
+-- 왜 간접인가: 코드는 "이번 실행에서 어느 소스를 검색했는지"를 어디에도
+-- 기록하지 않는다. p0Results / otherResults는 메모리에만 있고
+-- (run-domestic-price-check.ts:373-377), 그 분기를 남기는 컬럼이 없다.
+-- 남는 흔적은 하나뿐이다 — 검색이 실제로 끝난 소스에만
+-- recordDomesticSourceCheckAttempt()가 last_checked_at을 now()로 덮어쓴다
+-- (domestic-price-source.ts:329-350). 따라서 "P0들의 last_checked_at은 방금인데
+-- P1 bobochoses.com만 과거에 머물러 있다"가 조기 중단의 지문이다.
+--
+-- 읽는 법:
+--   priority 순으로 정렬돼 있다. P0 묶음의 last_checked_at이 한 덩어리로 최근이고,
+--   P1/P2 중 recordable=true인 소스(아래 정의)의 값이 그보다 확연히 오래됐으면
+--   → 그 회차에서 P1 검색이 아예 실행되지 않았다는 뜻이다(조기 중단 의심).
+--   P0와 P1이 같은 시각(초 단위까지)으로 찍혀 있으면
+--   → P1도 검색됐다는 뜻이고, 조기 중단은 그 회차에 발동하지 않았다.
+--
+-- ⚠️ 이 값이 결정적 증거가 **아닌** 이유 — 전부 코드에서 확인한 사실이다.
+--  (1) collection_strategy가 AUTO_API/AUTO_SCRAPE가 아닌 소스는 검색 함수가
+--      즉시 status="unsupported"로 돌아오고, 호출부가 그 분기에서
+--      recordDomesticSourceCheckAttempt를 **부르지 않는다**
+--      (comparison-search/index.ts:307-309, run-domestic-price-check.ts:397).
+--      즉 MANUAL 소스의 last_checked_at은 검색됐든 안 됐든 영원히 null이다 —
+--      "오래됐다"를 조기 중단의 근거로 쓸 수 없다. 아래 recordable 컬럼이
+--      그 구분을 해 준다. recordable=false인 행의 시각은 무시한다.
+--  (2) 이 갱신은 await되지 않는다(`void recordDomesticSourceCheckAttempt(...)`,
+--      run-domestic-price-check.ts:394/399/403). 서버리스 함수가 응답 후 곧바로
+--      종료되면 update가 날아갈 수 있다 — 값이 안 찍혔다고 해서 검색을 안 했다는
+--      증명은 되지 않는다.
+--  (3) 이 컬럼은 워크스페이스별이 아니라 **카탈로그 전역**이다. 다른 판매자의
+--      실행도 같은 행을 덮어쓴다 — 시각이 최근이라고 해서 "내 상품 때문에"
+--      검색됐다는 뜻은 아니다.
+--  (4) last_error_at 이라는 컬럼은 **존재하지 않는다**(029:33-34는
+--      last_error_code / last_error_message만, 032:44-52는 last_checked_at /
+--      last_success_at만 추가한다). 오류가 난 시각은 last_checked_at으로 읽는다
+--      (오류 경로도 last_checked_at을 함께 갱신한다 —
+--       domestic-price-source.ts:336). 없는 컬럼을 지어내지 않는다.
+--
+-- last_error_code 값의 뜻(domestic-price-source.ts:337-347):
+--   null         마지막 확인이 성공했고 후보도 찾았다(OK)
+--   'NO_RESULT'  요청은 정상이었고 후보가 0건
+--   'SEARCH_ERROR' 검색 중 예외(메시지는 last_error_message)
+-- ============================================================================
+with target as (
+  select s.id, s.workspace_id
+  from product_snapshots s
+  where s.source_url ilike '%430701%'
+),
+ws as (
+  select distinct workspace_id from target
+),
+newest_p0 as (
+  -- 비교 기준: P0 중 가장 최근 확인 시각. 아래 staleness_vs_newest_p0가
+  -- "이 소스는 그보다 얼마나 뒤처져 있는가"를 보여준다.
+  select max(src.last_checked_at) as t
+  from domestic_price_sources src
+  where src.priority = 'P0'
+    and src.collection_strategy in ('AUTO_API', 'AUTO_SCRAPE')
+)
+select
+  src.priority,
+  src.name,
+  src.domain,
+  src.collection_strategy,
+  src.status,
+  (src.enabled and coalesce(wss.enabled, true))        as effective_enabled,
+  -- 이 소스가 last_checked_at을 남길 수 있는 종류인가(위 주의 (1)).
+  -- false면 시각이 null/과거인 것이 정상이며 조기 중단의 증거가 아니다.
+  (src.collection_strategy in ('AUTO_API', 'AUTO_SCRAPE')) as recordable,
+  src.last_checked_at,
+  src.last_success_at,
+  src.last_error_code,
+  src.last_error_message,
+  (select t from newest_p0)                            as newest_p0_checked_at,
+  (select t from newest_p0) - src.last_checked_at      as staleness_vs_newest_p0
+from ws
+cross join domestic_price_sources src
+left join workspace_domestic_shop_settings wss
+       on wss.workspace_id = ws.workspace_id
+      and wss.source_id    = src.id
+where src.status = 'ACTIVE'
+order by src.priority, src.last_checked_at desc nulls last, src.name;
+-- effective_enabled로 행을 걸러내지 않는다. 꺼진 소스야말로 여기서 봐야 하는
+-- 행이다 — effective_enabled=false면 그 소스는 P0/P1로 갈리기 **전에**
+-- allSources 필터에서 빠진다(run-domestic-price-check.ts:330-332). 그 경우
+-- last_checked_at이 오래된 이유는 조기 중단이 아니라 "애초에 목록에 없었다"이며,
+-- 이쪽이 훨씬 직접적인 원인이므로 조기 중단보다 먼저 배제해야 한다.
+
+
+-- ============================================================================
 -- Q2 — 이 스냅샷에 걸린 domestic_product_links 전부
 --
 -- 확인하는 것: 후보 발견 → 매칭 → 링크 저장이 실제로 일어났는가, 그리고
