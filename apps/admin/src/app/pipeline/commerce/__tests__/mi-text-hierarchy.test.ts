@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { stripComments } from "./source-text";
 
 /**
  * MI-TEXT-1(CEO 지시, 2026-09-12) — "3초 안에 판단하고, 자세한 건 펼쳐서 본다."
@@ -76,30 +77,44 @@ describe("판정 카드 첫 화면은 결론 + 가격 세 블록 + 토글뿐이�
     expect(detailOpenAt).toBeGreaterThan(toggleAt);
   });
 
-  it("긴 설명 문장이 첫 화면에 없다 — 접힘 안에만 있다", () => {
-    expect(descriptionAt).toBeGreaterThan(-1); // 지워지지 않았다
-    expect(descriptionAt).toBeGreaterThan(detailOpenAt); // 접힘 블록 안이다
+  /**
+   * MI-UX-FINAL-4(CEO 지시, 2026-09-13) — **긴 설명 문장이 화면에서 빠졌다.**
+   *
+   * MI-TEXT-1이 이 문장(representativeVerdict.description, 두 문장)을 판정 아래에서
+   * 접힘 안으로 내렸고, MI-FINAL-UX-3이 한 층 더 내렸다. 두 번 다 "층을 내린다"였고,
+   * 두 번 다 문장은 그대로였다. 이번 지시는 층이 아니라 **같은 말을 두 번 하는가**를
+   * 본다: 그 두 문장이 말하는 것("국내 동일상품 가격이 확인되지 않아 참고 기준으로
+   * 산정했습니다")은 되물음 네 줄의 둘째 줄이 이미 말한다. 되물음 안에서 같은 사실을
+   * 긴 문장으로 한 번 더 읽게 만들면, 되물음은 다시 설명 화면이 된다.
+   *
+   * 서버 응답의 representativeVerdict.description은 그대로다 — 계산도 계약도
+   * 건드리지 않았고, 읽는 화면이 없어졌을 뿐이다.
+   */
+  it("긴 설명 문장은 화면 어디에도 없다 — 되물음 네 줄이 같은 사실을 말한다", () => {
+    expect(descriptionAt).toBe(-1);
+    expect(stripComments(panel)).not.toContain("representativeVerdict.description");
   });
 
-  it("접힘의 첫 줄은 네 줄 요약이고, 긴 설명은 그 아래 한 단계 더 들어간다", () => {
-    // MI-FINAL-UX-3(CEO 지시, 2026-09-12) — MI-TEXT-1이 여기로 내린 두 문장이
-    // 한 층 더 내려갔다. 되물음이 답해야 하는 것은 "왜 이 판정인가" 하나이고,
-    // 그 답은 네 줄이다(mi-verdict-copy.ts). 문장은 지워지지 않았다 — 근거를
-    // 펼친 사람만 읽는다.
-    const linesAt = panel.indexOf("buildMiVerdictExplanation({", detailOpenAt);
+  it("접힘이 여는 것은 판정 한 줄 · 네 줄 · 그 아래 토글 하나다", () => {
+    const linesAt = panel.indexOf("verdictExplanation.slice(0, -1)", detailOpenAt);
     const evidenceGateAt = panel.indexOf("{showMarketEvidence && (", detailOpenAt);
     expect(linesAt).toBeGreaterThan(detailOpenAt);
     expect(evidenceGateAt).toBeGreaterThan(linesAt);
-    expect(descriptionAt).toBeGreaterThan(evidenceGateAt);
-    // 네 줄과 그 목록 사이에 다른 데이터 블록이 끼어 있지 않다(주석만 있다).
-    const between = panel.slice(detailOpenAt, linesAt);
+    // 네 줄과 그 토글 사이에 다른 데이터 블록이 끼어 있지 않다(주석만 있다).
+    const between = panel.slice(linesAt, evidenceGateAt);
     expect(between).not.toContain("<dl");
     expect(between).not.toContain("confidenceBasis");
+    expect(between).not.toContain("marketSignals");
   });
 
-  it("강등 사유도 지워지지 않고 상세로 함께 내려갔다", () => {
-    const downgradeAt = panel.indexOf("종합 시장 신호가 불리해");
-    expect(downgradeAt).toBeGreaterThan(detailOpenAt);
+  /**
+   * MI-UX-FINAL-4 — 강등 사유 문장("가격 경쟁력은 … 종합 시장 신호가 불리해 한
+   * 단계 낮췄습니다")도 같은 이유로 빠졌다. 판정이 한 단계 낮다는 사실은 되물음
+   * 첫 줄의 판정 배지와 네 줄이 이미 말하고, sellerDecision.downgradedByMarket는
+   * 서버 응답에 그대로 있다(읽는 화면이 없을 뿐이다).
+   */
+  it("강등 사유 문장도 화면에서 빠졌다 — 판정 배지가 그 결과를 이미 말한다", () => {
+    expect(panel.indexOf("종합 시장 신호가 불리해")).toBe(-1);
   });
 
   it("토글 문구는 CEO 지시문 그대로다", () => {
@@ -135,14 +150,40 @@ describe("등급 어휘는 한 곳에서만 나온다", () => {
 });
 
 describe("판단 근거 네 축은 여전히 화면에 있다", () => {
-  it("④ 판단 근거가 사슬 뒤 접힘 안에 그대로 있다", () => {
-    // 결측 사유·모순 문장·🎯 상품 판단 신뢰도는 여전히 ④에만 있고, 이 테스트가
-    // 그 자리를 지킨다(정보 손실 없음). MI-POLISH-2에서 바뀐 것은 층이다:
-    // 본문 블록이었던 ④가 「왜 이렇게 판단했나요?」 안으로 들어갔다.
+  /**
+   * MI-UX-FINAL-4(CEO 지시, 2026-09-13) — 네 축이 **두 층으로 갈렸다**.
+   *
+   *   그림(레이더)  되물음을 펴면 바로. 판정 옆에 서서 "왜 이 판정인가"를
+   *                 한눈에 보여주는 것이 이 그림의 일이다.
+   *   낱말(네 줄)   그 아래 「판단 근거 자세히 보기」 하나 더.
+   *
+   * 예전에는 MiRadar가 자기 그림 아래에 MiAxisStars를 함께 그려서, 같은 네 축이
+   * 한 화면에 두 번(그림 + 별점 목록) 떠 있었다. 축은 하나도 사라지지 않았다 —
+   * 사라진 것은 중복이다.
+   */
+  it("레이더는 되물음을 펴면 바로, 축의 낱말은 한 단계 더 아래다", () => {
     const chainAt = panel.indexOf("<PriceChainView");
-    const evidenceAt = panel.indexOf("<MiAxisStars");
-    expect(evidenceAt).toBeGreaterThan(chainAt);
-    expect(evidenceAt).toBeGreaterThan(detailOpenAt);
-    expect(panel).toContain("PRICE_SECTION_TITLE.DECISION_EVIDENCE");
+    const radarAt = panel.indexOf("<MiRadar radar={radar}");
+    const evidenceGateAt = panel.indexOf("{showMarketEvidence && (", detailOpenAt);
+    const axisLinesAt = panel.indexOf("buildMiVerdictEvidence(radar)", detailOpenAt);
+    expect(radarAt).toBeGreaterThan(chainAt);
+    expect(radarAt).toBeGreaterThan(detailOpenAt);
+    expect(radarAt).toBeLessThan(evidenceGateAt);
+    expect(axisLinesAt).toBeGreaterThan(evidenceGateAt);
+  });
+
+  it("그림과 낱말이 같은 자리에 겹치지 않는다 — 레이더는 축 목록을 끄고 그려진다", () => {
+    expect(panel).toContain("withAxisList={false}");
+    // 축 목록을 그리는 컴포넌트는 여전히 하나뿐이고(MiRadar.tsx), 이 화면이
+    // 그것을 두 번 부르지 않는다.
+    expect(panel).not.toContain("<MiAxisStars");
+  });
+
+  it("네 축은 CEO가 지정한 이름과 순서로 네 줄이 된다", () => {
+    const evidence = read("../mi-verdict-evidence.ts");
+    expect(evidence).toContain('{ key: "profitability", title: "💰 수익성" }');
+    expect(evidence).toContain('{ key: "priceCompetitiveness", title: "🇰🇷 가격 경쟁력" }');
+    expect(evidence).toContain('{ key: "matchConfidence", title: "🔎 상품 동일성" }');
+    expect(evidence).toContain('{ key: "marketDemand", title: "📊 시장 신호" }');
   });
 });

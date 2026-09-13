@@ -134,7 +134,25 @@ export function MiAxisStars({ radar, className = "" }: { radar: RadarResult; cla
  * "매핑이 하나"가 아니라 "표시 자체가 하나"라서 더 단단하다.
  */
 
-export function MiRadar({ radar }: { radar: RadarResult }) {
+export function MiRadar({
+  radar,
+  withAxisList = true,
+}: {
+  radar: RadarResult;
+  /**
+   * MI-UX-FINAL-4(CEO 지시, 2026-09-13) — 그림 아래에 축 목록을 함께 그릴 것인가.
+   *
+   * false로 쓰는 자리는 하나다: 「왜 이렇게 판단했나요?」의 GO/STOP 카드. 그
+   * 카드에서 축의 **낱말**은 한 단계 아래 「판단 근거 자세히 보기」가 갖는다
+   * (mi-verdict-evidence.ts). 둘 다 그리면 같은 네 축이 한 화면에 두 번 뜨고,
+   * 그게 이번 지시가 없애라고 한 중복의 정확한 모양이다.
+   *
+   * 기본값이 true인 이유: 이 컴포넌트가 홀로 서는 자리에서는 그림만으로 축의
+   * 상태를 읽을 수 없다(스크린리더·모바일). 목록을 빼는 것은 **옆에 같은 사실이
+   * 있을 때만** 옳은 선택이라, 그 판단을 호출부가 명시하게 한다.
+   */
+  withAxisList?: boolean;
+}) {
   const total = radar.axes.length;
 
   // 등급이 있는 축만 폴리곤에 넣는다. 결측 축 방향으로 선을 중심까지
@@ -227,8 +245,9 @@ export function MiRadar({ radar }: { radar: RadarResult }) {
       </svg>
 
       {/* 축별 상태를 텍스트로도 준다 — 차트만으로는 스크린리더/모바일에서
-          읽기 어렵고, 결측 이유는 그림으로 표현할 수 없다. */}
-      <MiAxisStars radar={radar} />
+          읽기 어렵고, 결측 이유는 그림으로 표현할 수 없다. 같은 사실이 바로
+          옆에 이미 있는 자리에서만 호출부가 이 목록을 끈다(위 prop 주석). */}
+      {withAxisList && <MiAxisStars radar={radar} />}
     </div>
   );
 }

@@ -147,11 +147,20 @@ describe("③④는 요약만 보여준다", () => {
 });
 
 describe("시장별 가격 한 줄은 시장·통화·환산을 모두 말한다", () => {
+  /**
+   * MI-UX-FINAL-4(CEO 지시, 2026-09-13) — 이 규칙을 지키는 행이 **하나로 줄었다**.
+   *
+   * 예전에는 같은 규칙을 따르는 행이 둘이었다: 되물음 안 국내 비교상품 목록의
+   * MarketPriceRow와, ⓘ 글로벌 시장 가격의 GlobalMarketRowView. 되물음이 원자료
+   * 표를 더 이상 갖지 않으면서 앞엣것이 사라졌다(같은 사실은 아래 「📊 시장 가격
+   * 비교」 패널 한 벌뿐이다). 규칙 자체는 그대로이고, 그 규칙을 어길 수 있는
+   * 자리가 하나 줄었을 뿐이다.
+   */
   it("원본 통화 가격 옆에 저장된 원화 환산값이 함께 온다", () => {
     // 매입처 비교가 이 블록의 존재 이유인데, €75만 보여주면 비교할 수가 없다.
     // 환율을 새로 계산하지 않고 관측 시점에 저장된 price_krw를 그대로 쓴다.
-    expect(panel).toContain("원화 환산 ₩{price.priceKrw.toLocaleString()}");
-    expect(panel).toContain('price.currency.toUpperCase() !== "KRW"');
+    expect(panel).toContain("원화 환산 {row.krwPrice}");
+    expect(panel).toContain("{row.krwPrice && <span");
   });
 
   it("판매자 신고 국가를 시장이라고 부르지 않는다", () => {
@@ -177,7 +186,9 @@ describe("가격 영역은 정해진 순서로 읽힌다", () => {
   const globalHintAt = panel.indexOf("<GlobalMarketHint");
   const comparisonAt = panel.indexOf("<MarketComparisonView");
   const chainAt = panel.indexOf("<PriceChainView");
-  const evidenceAt = panel.indexOf("<MiAxisStars");
+  /* MI-UX-FINAL-4 — 근거(네 축)는 이제 레이더가 서는 자리로 읽는다. 축 목록
+     (MiAxisStars)은 되물음 한 단계 아래의 네 줄로 바뀌었다. */
+  const evidenceAt = panel.indexOf("<MiRadar radar={radar}");
 
   /**
    * MI-SIMPLIFY-1(CPO 지시, 2026-09-12) — 본문에서 ②(글로벌 시장)가 빠졌다.
@@ -217,7 +228,10 @@ describe("가격 영역은 정해진 순서로 읽힌다", () => {
     // 그 사실 자체를 고정한다).
     expect(hierarchy).toContain('SELLER_GLOBAL_MARKET: "🌎 판매자 글로벌 시장 가격"');
     expect(panel).toContain("PRICE_SECTION_TITLE.PROFITABILITY");
-    expect(panel).toContain("PRICE_SECTION_TITLE.DECISION_EVIDENCE");
+    // MI-UX-FINAL-4(CEO 지시, 2026-09-13) — 「🔎 판단 근거」라는 제목 자체가
+    // 사라졌다(되물음 안에 카드 제목을 세우면 그 자리가 또 하나의 화면이 된다).
+    // 축은 그대로이고, 이름은 mi-verdict-evidence.ts의 네 줄이 갖는다.
+    expect(panel).not.toContain("PRICE_SECTION_TITLE.DECISION_EVIDENCE");
   });
 
   it("글로벌 시장 카드는 사슬 안으로 접혀 들어가지 않는다", () => {
@@ -365,17 +379,26 @@ describe("가격 상세는 접히고, 같은 숫자는 두 번 그려지지 않�
     expect(panelCode).not.toContain("<PriceCalculationDetail");
   });
 
-  it("국내 비교상품 평균가는 판단 카드에만 있다 — 근거 블록이 사본을 갖지 않는다", () => {
-    // 대표값(평균가)은 판단 카드가, 분포의 폭(최저~최고)은 근거 블록이 말한다.
+  /**
+   * MI-UX-FINAL-4(CEO 지시, 2026-09-13) — 사본이 생길 **자리 자체가** 없어졌다.
+   *
+   * 예전에는 판단 카드가 대표값(평균가)을, 되물음 안 근거 블록이 분포의 폭
+   * (최저~최고)을 말했다. 되물음이 원자료 표를 갖지 않게 되면서 뒤엣것이 통째로
+   * 사라졌다 — 분포는 아래 「📊 시장 가격 비교」 패널이 원자료로 보여준다.
+   * 그래서 이 판의 규칙은 더 강해졌다: 판단 카드 밖에서 이 숫자를 그리는 코드가
+   * 패널에 한 줄도 없다.
+   */
+  it("국내 비교상품 가격은 판단 카드에만 있다 — 패널이 사본을 그릴 자리가 없다", () => {
     expect(panel).not.toContain("평균가`}");
-    expect(panel).toContain("domesticCompetition.highestPriceKrw");
+    expect(panel).not.toContain("<SummaryStat");
+    expect(panel).not.toContain("{domesticCompetition.sampleListings");
   });
 
   it("판매자 신고 국가는 기본 화면에 없고 펼친 상세에만 있다", () => {
     // 기본 화면에 "독일 / 판매자 신고 국가 ES"를 나란히 두면(실측: Bobo Choses는
     // 모든 시장에서 country=ES) 시장과 신고 국가를 가르려던 표시가 오히려 둘을
     // 섞어 보이게 한다.
-    expect(panel).toContain("showDeclaredCountry && (");
+    // MI-UX-FINAL-4 — 이 규칙을 지키는 행도 하나로 줄었다(위 주석 참고).
     expect(panel).toContain("{showDetail && (");
     // 판단 카드의 글로벌 시장 줄은 기본 상태에서 신고 국가를 그리지 않는다.
     const rowView = panel.slice(panel.indexOf("function GlobalMarketRowView"));

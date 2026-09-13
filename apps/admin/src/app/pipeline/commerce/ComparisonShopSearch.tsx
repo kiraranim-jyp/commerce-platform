@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { countryToFlagEmoji } from "@commerce/shared";
-import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
+// MI-COLLECTION-GUARD-1 — "이 상품은 이미 수집했다"는 사실이 사는 곳.
+import { useCollectOnce } from "./market-collection";
+// MI-UX-FINAL-4 — 「📊 시장 가격 비교」 안에서는 접힘을 한 겹 벗는다.
+import { MarketEvidenceFrame, MARKET_EVIDENCE_EMPTY, type MarketEvidenceVariant } from "./market-evidence-frame";
 import { deriveComparisonResultState, getComparisonResultHeadline, type ComparisonResultState } from "@/lib/comparison-result-status";
 import { computeFxLine, computeKrwAmount, formatMoney, isOnSale, isPriceDisplayable } from "@/lib/price-truth";
 // MATCHING-UNIFY-1 — 국내/해외가 같은 문구를 쓰도록 라벨 매핑을 한 곳에서 가져온다.
@@ -156,6 +159,78 @@ interface SourceVerification {
   regularPrice: { amount: number; currency: string } | null;
 }
 
+/**
+ * MI-COLLECTION-GUARD-1 — 한 번의 수집이 만들어 내는 것 전부.
+ *
+ * 예전에는 이 다섯 조각이 각자 `useState`로 흩어져 있었다. 한 덩어리로 묶은
+ * 이유는 취향이 아니라 수명이다: 다섯 조각은 **같은 한 번의 조회**에서 나온
+ * 사실이라 함께 태어나고 함께 늙어야 한다. 흩어져 있으면 "표는 새 결과인데
+ * 환율은 이전 조회 것"이 언젠가 성립한다.
+ */
+interface OverseasCollection {
+  results: SearchResult[];
+  sourceVerification: SourceVerification | null;
+  krwRates: Record<string, number> | null;
+  fxSource: "frankfurter" | "fallback" | null;
+  queriedAt: string;
+}
+
+/**
+ * 실제 조회. **이 함수를 부르는 곳은 두 군데뿐이다** — 상품이 바뀌었을 때의
+ * 최초 1회(useCollectOnce)와 셀러가 [가격비교 다시 검색]을 누를 때.
+ * 마운트도, 탭도, 접힘도 여기로 오는 길이 없다.
+ */
+async function collectOverseasPrices(input: {
+  title: string;
+  brand?: string;
+  sourceUrl?: string;
+  sku?: string;
+  description?: string;
+}): Promise<OverseasCollection> {
+  let searchRes: Response;
+  let ratesRes: Response | null;
+  try {
+    [searchRes, ratesRes] = await Promise.all([
+      fetch("/api/comparison/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      }),
+      // N-3.10 Part L — 원본가격 옆에 KRW 환산도 같이 보여준다. PriceEditor가
+      // 이미 쓰는 것과 같은 /api/exchange-rates를 그대로 재사용한다(별도
+      // 환율 로직을 새로 만들지 않는다).
+      fetch("/api/exchange-rates").catch(() => null),
+    ]);
+  } catch {
+    throw new Error("검색 요청에 실패했습니다.");
+  }
+  const data = (await searchRes.json().catch(() => null)) as {
+    ok: boolean;
+    results?: SearchResult[];
+    sourceVerification?: SourceVerification;
+    error?: string;
+  } | null;
+  if (!data?.ok) throw new Error(data?.error ?? "검색에 실패했습니다.");
+
+  let krwRates: Record<string, number> | null = null;
+  let fxSource: "frankfurter" | "fallback" | null = null;
+  if (ratesRes?.ok) {
+    const ratesData = (await ratesRes.json().catch(() => null)) as {
+      rates?: Record<string, number>;
+      source?: "frankfurter" | "fallback";
+    } | null;
+    if (ratesData?.rates) krwRates = ratesData.rates;
+    fxSource = ratesData?.source ?? null;
+  }
+  return {
+    results: data.results ?? [],
+    sourceVerification: data.sourceVerification ?? null,
+    krwRates,
+    fxSource,
+    queriedAt: new Date().toLocaleString("ko-KR"),
+  };
+}
+
 /** Sprint B-1 Phase 1 — 해외 편집샵 가격비교. 기존 등록 흐름과 완전히 분리된 추가 조회 기능이라
  * 필수/선택 입력 Accordion(sectionProps/sectionCompletionBadge) 체계에는 엮지 않는다.
  *
@@ -173,6 +248,7 @@ export function ComparisonShopSearch({
   open,
   onToggle,
   onEvidenceChange,
+  variant = "DRILL_DOWN",
 }: {
   title: string;
   brand?: string;
@@ -205,74 +281,42 @@ export function ComparisonShopSearch({
    * 판정). 요약이 표보다 넓은 집합을 세면 "요약은 5곳인데 열어보니 3줄"이 된다.
    */
   onEvidenceChange?: (evidence: MarketEvidenceSummary | null) => void;
+  /**
+   * MI-UX-FINAL-4 — 이 패널이 어느 자리에 서 있는가(market-evidence-frame.ts).
+   * FLAT은 「📊 시장 가격 비교」 안쪽이라 접힘을 한 겹 벗는다 — 이미 "시장 가격을
+   * 보겠다"고 말하고 들어온 셀러에게 같은 질문을 한 번 더 하지 않는다.
+   */
+  variant?: MarketEvidenceVariant;
 }) {
-  const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<SearchResult[] | null>(null);
-  const [sourceVerification, setSourceVerification] = useState<SourceVerification | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [krwRates, setKrwRates] = useState<Record<string, number> | null>(null);
+  /**
+   * MI-COLLECTION-GUARD-1(CEO 지시, 2026-09-13) — 이 조회는 상품 하나에 한 번이다.
+   *
+   * 여기 있던 것은 `useState` 여섯 개와 `autoSearchedRef` 하나였다. 그 ref가
+   * "한 번만"을 지키고 있었는데, ref의 수명은 **이 컴포넌트 인스턴스**여서
+   * 탭 이동·접기/펼치기·단계 전환이 언마운트할 때마다 함께 사라졌다. 그러면
+   * 다음 마운트는 자기가 처음인 줄 알고 `POST /api/comparison/search`를 다시
+   * 쏜다 — 그건 표시용 조회가 아니라 판매자가 켜 둔 편집샵을 실제로 뒤지는
+   * 크롤링이다. 자세한 경로는 market-collection.ts의 머리 주석에 있다.
+   *
+   * 상태를 통째로 그 모듈로 옮겼다. 수명이 상품과 같아지므로 재마운트가
+   * 수집을 부르지 못하고, 돌아온 화면은 이미 채워진 채로 선다.
+   */
+  const collection = useCollectOnce<OverseasCollection>(
+    // title이 아직 없으면 물어볼 것이 없다(예전 `!title` 가드와 같은 뜻이다).
+    // 키는 상품의 정체다 — 셀러가 상품명을 손보는 것으로 크롤링이 다시 돌면 안 된다.
+    title ? `overseas:${sourceUrl || title}` : null,
+    () => collectOverseasPrices({ title, brand, sourceUrl, sku, description }),
+  );
+  const { loading, error } = collection;
+  const results = collection.data?.results ?? null;
+  const sourceVerification = collection.data?.sourceVerification ?? null;
   // P-4-DATA-6 P0-3(CPO 지시, 2026-08-29) — "환율로 계산했다"고만 말하지 않고 어떤
   // 환율을 썼는지 그대로 보여준다("기준 환율 1 GBP = ₩1,852 · frankfurter"). rate는
   // 이 페이지가 표시할 후보들과 같은 순간에 딱 한 번 조회한 krwRates에서 그대로
   // 가져온다 — 후보마다 다른 환율을 쓰지 않는다(P0-3: 단일 FX 엔진 원칙).
-  const [fxSource, setFxSource] = useState<"frankfurter" | "fallback" | null>(null);
-  const [queriedAt, setQueriedAt] = useState<string | null>(null);
-  // N-3.13 P0 — CPO 지시: "해외가격비교가 하나도 없음이면 기능 구현 완료로 인정하지
-  // 않는다." 원인은 버그가 아니라 UX였다 — 이 섹션은 기본 접힘(defaultOpen=false)이고
-  // 검색도 버튼을 눌러야만 실행됐다(useState(null)만 있고 자동 실행 트리거가 없었음).
-  // CEO가 상세 화면을 열어도 "빈 화면"처럼 보였던 이유. title이 준비되면 마운트 시
-  // 한 번 자동 검색한다(수동 재검색 버튼은 그대로 남겨 재조회 가능하게 한다).
-  const autoSearchedRef = useRef(false);
-
-  async function runSearch() {
-    setLoading(true);
-    setError(null);
-    try {
-      const [searchRes, ratesRes] = await Promise.all([
-        fetch("/api/comparison/search", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, brand, sourceUrl, sku, description }),
-        }),
-        // N-3.10 Part L — 원본가격 옆에 KRW 환산도 같이 보여준다. PriceEditor가
-        // 이미 쓰는 것과 같은 /api/exchange-rates를 그대로 재사용한다(별도
-        // 환율 로직을 새로 만들지 않는다).
-        fetch("/api/exchange-rates").catch(() => null),
-      ]);
-      const data = (await searchRes.json()) as {
-        ok: boolean;
-        results?: SearchResult[];
-        sourceVerification?: SourceVerification;
-        error?: string;
-      };
-      if (!data.ok) {
-        setError(data.error ?? "검색에 실패했습니다.");
-        return;
-      }
-      setResults(data.results ?? []);
-      setSourceVerification(data.sourceVerification ?? null);
-      setQueriedAt(new Date().toLocaleString("ko-KR"));
-      if (ratesRes?.ok) {
-        const ratesData = (await ratesRes.json()) as {
-          rates?: Record<string, number>;
-          source?: "frankfurter" | "fallback";
-        };
-        if (ratesData.rates) setKrwRates(ratesData.rates);
-        setFxSource(ratesData.source ?? null);
-      }
-    } catch {
-      setError("검색 요청에 실패했습니다.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    if (autoSearchedRef.current || !title) return;
-    autoSearchedRef.current = true;
-    void runSearch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title]);
+  const krwRates = collection.data?.krwRates ?? null;
+  const fxSource = collection.data?.fxSource ?? null;
+  const queriedAt = collection.data?.queriedAt ?? null;
 
   /**
    * MI-MARKET-EVIDENCE-1 — 위 요약이 아래 표와 **같은 행**을 센다.
@@ -318,7 +362,8 @@ export function ComparisonShopSearch({
     // 바로 위 국내 비교상품 목록의 연장으로 읽혔다. 이 안에 있는 것은 글로벌
     // 시장의 **다른 판매처** 가격과 **원본 판매자** 본인의 현재가 두 가지이고,
     // 둘 다 한국 경쟁가로 쓰이지 않는다.
-    <CollapsibleSection
+    <MarketEvidenceFrame
+      variant={variant}
       title="🌎 글로벌 시장 · 해외 판매처 가격 (베타)"
       summary="판매처 · 국가 · 상품 · 가격 · 매칭상태 — MI 🌎 해외 시장 요약의 원자료"
       open={open}
@@ -328,13 +373,17 @@ export function ComparisonShopSearch({
         활성화된 해외 편집샵에서 유사 상품을 검색합니다 — 참고용 조회이며, 어떤 가격도 자동으로 원본가격/판매가에
         반영되지 않습니다.
       </p>
+      {/* MI-COLLECTION-GUARD-1 — 크롤링을 다시 돌리는 **유일한** 버튼이다.
+          이름이 "다시"라고 말하는 이유가 그것이다: 첫 조회는 셀러가 부탁하지
+          않아도 이미 끝나 있고(상품당 한 번), 이 버튼은 그 결과를 버리고 판매처를
+          다시 뒤지겠다는 명시적 요청이다. */}
       <button
         type="button"
-        onClick={() => void runSearch()}
+        onClick={collection.recollect}
         disabled={loading || !title}
         className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
       >
-        {loading ? "검색 중..." : "가격비교 검색"}
+        {loading ? "검색 중..." : "가격비교 다시 검색"}
       </button>
       {error && <p className="text-xs text-error">{error}</p>}
       {queriedAt && <p className="text-[10px] text-text-tertiary">조회 시점: {queriedAt}</p>}
@@ -351,7 +400,9 @@ export function ComparisonShopSearch({
       )}
       {results && <ResultHeadline results={results} />}
       {results && <ResultTable results={results} krwRates={krwRates} fxSource={fxSource} />}
-    </CollapsibleSection>
+      {/* 조회가 끝났는데 한 곳도 없었다 — "아직 조회 중"과 구분해서만 말한다. */}
+      {results?.length === 0 && <p className="text-xs text-text-secondary">{MARKET_EVIDENCE_EMPTY}</p>}
+    </MarketEvidenceFrame>
   );
 }
 

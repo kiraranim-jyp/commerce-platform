@@ -68,10 +68,10 @@ describe("P2-1: 카드가 짧아진 이유는 밀도지 삭제가 아니다", ()
     // 계산에 들어가지 않고, 계산에 쓰이지 않는 값을 입력받을 이유가 없다.
     // 아래에서 그 두 줄이 **없다는 것**을 따로 고정한다(지운 것이 실수로
     // 되살아나지 않게).
-    for (const label of ["국내 배송원가"]) {
-      expect(detail).toContain(`<Row label="${label}">`);
-    }
-    for (const removed of ["관세", "부가세"]) {
+    // MI-UX-FINAL-4(대표님 결정, 2026-09-13) — "국내 배송원가" 한 줄도 같은
+    // 자리에서 빠졌다. 같은 이유이고 같은 순서다(엔진의 LANDED_COST_PARTS에서
+    // 먼저 빼고, 물어볼 이유가 사라진 칸을 없앤다).
+    for (const removed of ["관세", "부가세", "국내 배송원가"]) {
       expect(detail, `${removed} 입력이 되살아났다`).not.toContain(`<Row label="${removed}">`);
     }
   });
@@ -187,11 +187,12 @@ describe("P2-4: 설명 문구는 읽히는 크기다", () => {
 
   it("계산을 설명하는 문장은 tertiary가 아니라 secondary다", () => {
     // MI-FINAL-UX-3(CEO 지시, 2026-09-12) — 여기 함께 고정돼 있던 추정치 문단
-    // (pt-0.5)은 지워졌다. 남은 설명 문장(판매자 부담 비용이 왜 권장 판매가를
-    // 바꾸지 않는가)은 그대로 secondary다 — 크기로 정보를 숨기지 않는다는
-    // 규칙 자체는 바뀌지 않았다.
+    // (pt-0.5)은 지워졌다. MI-UX-FINAL-4(2026-09-13) — 판매자 부담 비용을
+    // 설명하던 문장도 그 블록과 함께 사라졌다. 남은 설명 문장(원본 가격을
+    // 고치면 계산이 다시 시작된다)은 그대로 secondary다 — 크기로 정보를
+    // 숨기지 않는다는 규칙 자체는 바뀌지 않았다.
     expect(detail).toContain('<p className="mt-1 text-xs text-text-secondary">');
-    expect(detail).toContain('<p className="text-xs text-text-secondary">');
+    expect(detail).not.toContain("text-text-tertiary\">위 권장 판매가격 계산");
     // 판단 기준을 말하는 오른쪽 기둥의 한 줄도 같은 단계로 올라왔다.
     expect(actionCenter).toContain('<p className="mt-0.5 text-xs text-text-secondary">');
   });

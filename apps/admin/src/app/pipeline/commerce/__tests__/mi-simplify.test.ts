@@ -146,9 +146,13 @@ describe("🇰🇷 국내 시장은 비교 대상 유무를 한 곳에서만 판
     // 경쟁력까지 확인된 판정으로 읽는다.
     expect(NO_DOMESTIC_COMPARABLE_NOTE).toContain("가격 경쟁력은 판단하지 않았습니다");
     const detail = panel.slice(panel.indexOf("{showMarketDetail && ("));
-    expect(detail).toContain("{!marketComparison.hasComparable && (");
-    expect(detail).toContain("{NO_DOMESTIC_COMPARABLE_NOTE}");
-    // 본문에는 없다 — 본문은 판단에 필요한 숫자이지 판정의 근거가 아니다.
+    // MI-UX-FINAL-4(CEO 지시, 2026-09-13) — 그 사실은 이제 되물음 **네 줄의 한
+    // 줄**이 직접 말한다(mi-verdict-copy.ts의 domesticLine). 별도 문단으로 한
+    // 번 더 적던 것을 없앴을 뿐, 말하지 않게 된 것은 없다.
+    expect(detail).toContain("verdictExplanation");
+    // 화면 어디에도 이 문단은 더 이상 없다 — 같은 사실을 세 번 적던 것을
+    // 두 층(본문 빈 상태 칩 · 되물음 둘째 줄)으로 줄였다.
+    expect(stripComments(panel)).not.toContain("{NO_DOMESTIC_COMPARABLE_NOTE}");
     expect(bodyCode).not.toContain("NO_DOMESTIC_COMPARABLE_NOTE");
   });
 });

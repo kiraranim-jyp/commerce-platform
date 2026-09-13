@@ -17,6 +17,7 @@ import { ComparisonShopSearch } from "../ComparisonShopSearch";
 import { BacklogPanel } from "../BacklogPanel";
 import { ImageInlineEditor } from "../../ImageInlineEditor";
 import { StageBody } from "../StageBody";
+import type { MarketEvidenceVariant } from "../market-evidence-frame";
 import { resolveStageFocus } from "../stage-focus";
 import { resolveWorkflow } from "../workflow";
 import { computeProfitabilityNumbers } from "../profitability";
@@ -58,8 +59,10 @@ function field<T>(value: T, source: FieldSource = "ORIGINAL"): ProvenanceField<T
 /** 관측 환율. CEO 스크린샷의 "1 EUR = ₩1,557"이 나오는 값이다. */
 export const RATES = { EUR: 1556.56 };
 export const ROUNDING_UNIT = 100;
-/** Settings의 판매자 공통 기본값. MI-COST-POLICY STOP 대상이라 화면에서 지우지 않는다. */
-export const DOMESTIC_SHIPPING_COST_KRW = 3000;
+/* MI-UX-FINAL-4(대표님 결정, 2026-09-13) — 여기 있던 DOMESTIC_SHIPPING_COST_KRW
+   fixture를 지웠다. 상세 계산이 더 이상 그 값을 받지 않는다(착지원가에서 빠졌다).
+   fixture가 남아 있으면 "화면이 이 값을 쓴다"는 사실이 테스트 자료에 계속 살아
+   있게 된다 — 조립이 프로덕션과 같은 prop만 넘긴다는 것이 이 파일의 규칙이다. */
 
 export function makeProduct(): CanonicalProduct {
   return {
@@ -471,6 +474,18 @@ function ProductTab(options: TabOptions): ReactElement {
   );
   const [domesticEvidenceOpen, setDomesticEvidenceOpen] = useState(false);
   const [overseasEvidenceOpen, setOverseasEvidenceOpen] = useState(false);
+  /**
+   * MI-COLLECTION-GUARD-1(CEO 지시, 2026-09-13) — **탭이 여기 있어야 하는 이유.**
+   *
+   * 지금까지 이 조립에는 탭이 없었다. 그래서 "탭을 옮겼다 돌아오면 수집이 다시
+   * 돈다"는 프로덕션의 사실이 이 harness에서는 **표현될 수조차 없었다** — 재수집을
+   * 만든 언마운트 경계가 바로 그 탭 분기였는데, 측정 장치에 그 경계가 없었다.
+   *
+   * 프로덕션의 모양 그대로다(CommerceWorkspace의 `{tab === "source" && …}`):
+   * MI 카드는 탭 분기 **밖**에서 계속 마운트된 채로 있고, 단계 본문(가격비교 두
+   * 패널이 사는 곳)만 탭을 떠나는 순간 통째로 언마운트된다.
+   */
+  const [tab, setTab] = useState<"source" | "smartstore">("source");
 
   const workflow = resolveWorkflow({
     collection: { running: false, percent: 100, productReady: true, imageCount: 6, failedImageCount: 0 },
@@ -514,6 +529,10 @@ function ProductTab(options: TabOptions): ReactElement {
     marketDetailOpen: options.marketDetailOpen ?? false,
   });
 
+  /** MI-UX-FINAL-4 — CommerceWorkspace가 같은 한 줄로 정하는 그 값 그대로. */
+  const marketEvidenceVariant: MarketEvidenceVariant =
+    focus.marketEvidence === "COLLAPSED" ? "FLAT" : "DRILL_DOWN";
+
   /** 제품 전체에서 단 하나뿐인 상세 계산 노드. MI의 접힘 슬롯으로 내려간다. */
   const priceCalculationDetail: ReactNode = createElement(PriceCalculationDetail, {
     product,
@@ -523,7 +542,6 @@ function ProductTab(options: TabOptions): ReactElement {
     exchangeRatesLoading: false,
     onRefreshExchangeRates: noop,
     priceRoundingUnit: ROUNDING_UNIT,
-    domesticShippingCostKrw: DOMESTIC_SHIPPING_COST_KRW,
   });
 
   const mi = createElement(MiPanelView, {
@@ -560,6 +578,7 @@ function ProductTab(options: TabOptions): ReactElement {
         description: product.description.value,
         open: domesticEvidenceOpen,
         onToggle: setDomesticEvidenceOpen,
+        variant: marketEvidenceVariant,
       }),
       createElement(ComparisonShopSearch, {
         title: product.title.value,
@@ -571,6 +590,7 @@ function ProductTab(options: TabOptions): ReactElement {
         open: overseasEvidenceOpen,
         onToggle: setOverseasEvidenceOpen,
         onEvidenceChange: setOverseasMarketEvidence,
+        variant: marketEvidenceVariant,
       }),
     ),
     surfaces: {
@@ -619,8 +639,31 @@ function ProductTab(options: TabOptions): ReactElement {
     onGoToChannel: noop,
   });
 
-  return createElement("div", null, mi, stageBody, actionCenter);
+  /**
+   * 탭 줄. 프로덕션의 TabButton 두 개와 같은 일만 한다(setTab). 라벨을 상수로
+   * 내보내는 이유는 테스트가 "상품정보"라는 글자를 손으로 적지 않게 하기
+   * 위해서다 — 라벨이 바뀌면 테스트가 조용히 다른 버튼을 누르게 된다.
+   */
+  const tabs = createElement(
+    "div",
+    null,
+    createElement("button", { type: "button", onClick: () => setTab("source") }, TAB_LABEL.source),
+    createElement("button", { type: "button", onClick: () => setTab("smartstore") }, TAB_LABEL.smartstore),
+  );
+
+  return createElement(
+    "div",
+    null,
+    mi,
+    // 탭 분기 안쪽 — 상품정보를 떠나면 단계 본문이 통째로 언마운트된다.
+    tab === "source" ? stageBody : createElement("div", null, "스마트스토어 화면"),
+    actionCenter,
+    tabs,
+  );
 }
+
+/** 탭 버튼에 적히는 글자. 테스트와 조립이 같은 문자열을 본다. */
+export const TAB_LABEL = { source: "상품정보", smartstore: "스마트스토어" } as const;
 
 /* ───────────────────────────── 읽기 도구 ───────────────────────────── */
 

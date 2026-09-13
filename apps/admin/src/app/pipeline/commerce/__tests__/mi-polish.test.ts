@@ -6,6 +6,7 @@ import { buildGlobalMarketCard } from "../global-market";
 import { buildMarketComparison } from "../market-comparison";
 import { buildDomesticMarketEvidence } from "../market-evidence";
 import { buildMarketContext, PRICE_MEANING_LABEL, PRICE_SECTION_TITLE } from "../price-hierarchy";
+import { buildMiVerdictExplanation } from "../mi-verdict-copy";
 import { miBodySource, readSourceAt, stripComments } from "./source-text";
 
 /**
@@ -122,9 +123,25 @@ describe("🇰🇷 국내 시장은 비교 대상이 없어도 서고, 대신 �
     expect(panelCode).not.toContain("{marketComparison.hasComparable && (");
   });
 
-  it("비교 근거가 없다는 사실은 판정 안에도 남는다 — 지우지 않고 층만 나눈다", () => {
-    expect(detail).toContain("{!marketComparison.hasComparable && (");
-    expect(detail).toContain("{NO_DOMESTIC_COMPARABLE_NOTE}");
+  /**
+   * MI-UX-FINAL-4(CEO 지시, 2026-09-13) — 이 사실이 사는 자리가 **본문으로 올라왔다**.
+   *
+   * 예전에는 "국내 동일상품을 확인하지 못했다"가 되물음 안쪽의 별도 문단
+   * (NO_DOMESTIC_COMPARABLE_NOTE)으로 한 번 더 적혀 있었다. 이제 그 사실은 두
+   * 곳이 말한다: 본문 🇰🇷 국내 시장의 빈 상태 칩(뷰 안의 게이트)과, 되물음 네
+   * 줄의 두 번째 줄("🇰🇷 국내 동일상품 가격을 확인하지 못했습니다").
+   * 같은 사실을 세 번 적던 것을 두 층으로 줄인 것이지 지운 것이 아니다.
+   */
+  it("비교 근거가 없다는 사실은 되물음 네 줄이 직접 말한다 — 별도 문단으로 한 번 더 적지 않는다", () => {
+    expect(buildMiVerdictExplanation({
+      marketCase: "D",
+      hasComparable: false,
+      evidenceBasis: "NONE",
+      hasOverseasRange: false,
+    })).toContain("🇰🇷 국내 동일상품 가격을 확인하지 못했습니다.");
+    expect(detail).not.toContain("{NO_DOMESTIC_COMPARABLE_NOTE}");
+    // 그리고 그 네 줄이 실제로 되물음 안에서 그려진다.
+    expect(detail).toContain("verdictExplanation");
   });
 });
 
@@ -153,10 +170,18 @@ describe("본문 최상위에는 판정 + 세 블록 + 바닥 한 줄뿐이다",
     expect(bodyCode).not.toContain("sellerDecision.factors.map");
   });
 
-  it("본문 제목은 ①②③ 셋뿐이다 — ④ 판단 근거는 접힘 안으로 내려갔다", () => {
+  /**
+   * MI-UX-FINAL-4(CEO 지시, 2026-09-13) — 「🔎 판단 근거」라는 **제목 자체가**
+   * 사라졌다. 되물음 안에 카드 제목을 세우면 그 자리가 또 하나의 화면이 된다 —
+   * 그 자리는 이제 판정 한 줄 · 사실 세 줄 · 결론 한 줄이고, 네 축의 낱말은
+   * 그 아래 토글 하나가 연다. 축 자체는 하나도 사라지지 않았다.
+   */
+  it("본문 제목은 셋뿐이고, 되물음은 제목 없이 판정과 네 줄로만 선다", () => {
     expect(bodyCode).toContain("PRICE_SECTION_TITLE.PROFITABILITY");
     expect(bodyCode).not.toContain("PRICE_SECTION_TITLE.DECISION_EVIDENCE");
-    expect(detail).toContain("PRICE_SECTION_TITLE.DECISION_EVIDENCE");
+    expect(detail).not.toContain("PRICE_SECTION_TITLE.DECISION_EVIDENCE");
+    // 네 축은 「판단 근거 자세히 보기」가 여는 네 줄로 그대로 있다.
+    expect(detail).toContain("buildMiVerdictEvidence(radar)");
   });
 
   it("계산 사슬의 중간 단계는 본문 어디에도 없다", () => {
@@ -339,11 +364,19 @@ describe("MI 판단 화면에서는 작업 진행상태를 반복해서 보여�
     expect(actionCenter).toContain('const actionableChannels = channels.filter((channel) => channel.availability !== "COMING_SOON");');
   });
 
-  it("MI 본문도 행동을 하나만 갖는다 — 👉 문장과 힌트는 층을 내렸다", () => {
+  it("MI 본문도 행동을 하나만 갖는다 — 힌트는 버튼의 title로 내려갔다", () => {
     // 예전에는 👉 안내 문장 · cta.hint · 버튼이 세로로 쌓여 셋 다 같은 곳으로
-    // 데려갔다. 문장은 접힘 안, 힌트는 버튼의 title, 남는 것은 버튼 하나.
+    // 데려갔다. 힌트는 버튼의 title이 되고, 남는 것은 버튼 하나다.
+    //
+    // MI-UX-FINAL-4(CEO 지시, 2026-09-13) — 👉 문장(sellingSummary.action)은
+    // 되물음 안에서도 사라졌다. 되물음의 마지막 줄이 이미 "그래서 어떻게 하라"
+    // 하나를 말하고 있어서, 같은 행동이 한 접힘 안에 두 문장으로 서 있었다.
+    // sellingSummary는 서버 응답과 계산에 그대로 있다(읽는 화면이 없을 뿐이다).
     expect(bodyCode).not.toContain("👉");
-    expect(detail).toContain("👉 {sellingSummary.action}");
+    // 주석은 걷어내고 본다 — 이 저장소는 "무엇을 왜 지웠는지"를 주석으로
+    // 남기는 것이 규칙이라(source-text.ts), 주석까지 막으면 근거를 지우게 된다.
+    expect(stripComments(detail)).not.toContain("👉");
+    expect(detail).toContain("verdictExplanation[verdictExplanation.length - 1]");
     expect(bodyCode).toContain("title={verdictCta.hint || undefined}");
     expect((bodyCode.match(/onClick=\{onRequestPriceReview\}/g) ?? []).length).toBe(1);
   });

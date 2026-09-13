@@ -59,16 +59,18 @@ describe("MI-COST-POLICY-1 ①: 관부가세가 입력에 있어도 계산은 �
     expect(withUnknownCustoms).toEqual(withoutCustoms);
   });
 
-  it("착지원가는 판매자가 실제로 부담하는 세 항목의 합 그대로다 — 관부가세가 낄 자리가 없다", () => {
+  it("착지원가는 판매자가 실제로 부담하는 항목의 합 그대로다 — 관부가세가 낄 자리가 없다", () => {
     const result = computeUnifiedPriceDecision({
       ...BASE_INPUT,
       customsDutyKrw: pc(13000, "actual"),
       customsVatKrw: pc(18000, "actual"),
     });
-    // 150,000(해외 상품가) + 15,000(국제배송비) + 5,000(국내 배송원가)
-    expect(result.landedCostKrw.value).toBe(170000);
-    // 관부가세가 더해졌다면 201,000이었을 것이다.
-    expect(result.landedCostKrw.value).not.toBe(201000);
+    // 150,000(해외 상품가) + 15,000(국제배송비)
+    // MI-UX-FINAL-4(2026-09-13) — 세 번째 항목이던 국내 배송원가 5,000이 빠져
+    // 170,000 → 165,000이 됐다. 이 파일의 주제(관부가세)는 그대로다.
+    expect(result.landedCostKrw.value).toBe(165000);
+    // 관부가세가 더해졌다면 196,000이었을 것이다.
+    expect(result.landedCostKrw.value).not.toBe(196000);
   });
 });
 
@@ -87,14 +89,17 @@ describe("MI-COST-POLICY-1 ②: 관부가세를 몰라도 데이터 완전성이
     expect(sellerDecisionStateFromUnifiedDecision(result).code).not.toBe("NEEDS_COST_INFO");
   });
 
-  it("여전히 판매자 원가인 국내 배송원가를 모르면 INCOMPLETE다 — 완전성 판정을 통째로 약화시킨 게 아니다", () => {
+  it("여전히 판매자 원가인 국제배송비를 모르면 INCOMPLETE다 — 완전성 판정을 통째로 약화시킨 게 아니다", () => {
+    // MI-UX-FINAL-4(2026-09-13) — 예전에는 이 자리가 국내 배송원가였다. 그 값이
+    // 착지원가에서 빠지면서, "원가인데 모르는 항목"의 예시를 실제로 원가인
+    // 항목으로 바꿨다. 검사하는 성질은 한 글자도 달라지지 않았다.
     const result = computeUnifiedPriceDecision({
       ...BASE_INPUT,
-      sellerDomesticShippingCostKrw: pc(null, "unknown"),
+      internationalShippingKrw: pc(null, "unknown"),
       customsDutyKrw: pc(null, "unknown"),
       customsVatKrw: pc(null, "unknown"),
     });
-    expect(result.missingComponents).toEqual(["국내 배송원가"]);
+    expect(result.missingComponents).toEqual(["국제배송비"]);
     expect(result.dataCompleteness).toBe("INCOMPLETE");
   });
 });
@@ -117,12 +122,14 @@ describe("MI-COST-POLICY-1 ③: 정책 변경이 숫자를 얼마나 움직이�
   const VAT = 18000;
   const input: UnifiedPriceInput = { ...BASE_INPUT, customsDutyKrw: pc(DUTY, "actual"), customsVatKrw: pc(VAT, "actual") };
 
-  it("신정책 — 예상이익 +28,000 / 마진 12.7% / MAINTAIN·GREEN", () => {
+  it("신정책 — 예상이익 +33,000 / 마진 15.0% / MAINTAIN·GREEN", () => {
     const result = computeUnifiedPriceDecision(input);
-    expect(result.landedCostKrw.value).toBe(170000);
+    // MI-UX-FINAL-4(2026-09-13) — 국내 배송원가 5,000이 더 빠지면서 이 예시가
+    // 한 번 더 움직였다: 170,000 → 165,000, 이익 28,000 → 33,000, 12.7% → 15.0%.
+    expect(result.landedCostKrw.value).toBe(165000);
     expect(result.platformFeeKrw.value).toBe(22000);
-    expect(result.estimatedProfitKrw.value).toBe(28000);
-    expect(result.marginPercent.value).toBe(12.7);
+    expect(result.estimatedProfitKrw.value).toBe(33000);
+    expect(result.marginPercent.value).toBe(15);
     expect(result.verdict).toBe("MAINTAIN");
     expect(result.level).toBe("GREEN");
     expect(sellerDecisionStateFromUnifiedDecision(result).code).toBe("READY");
@@ -146,9 +153,11 @@ describe("MI-COST-POLICY-1 ③: 정책 변경이 숫자를 얼마나 움직이�
     expect(oldDecision.marginPercent).toBe(-1.4);
     expect(oldDecision.verdict).toBe("MARGIN_RISK");
 
-    // 차이는 정확히 관세+부가세만큼이다 — 다른 무엇도 함께 바뀌지 않았다.
+    // 차이는 정확히 "원가에서 빠진 항목들"만큼이다 — 다른 무엇도 함께 바뀌지
+    // 않았다. MI-COST-POLICY-1이 뺀 관세+부가세에, MI-UX-FINAL-4가 뺀 국내
+    // 배송원가 5,000이 더해져 36,000이다.
     const now = computeUnifiedPriceDecision(input);
-    expect(now.estimatedProfitKrw.value! - oldProfit).toBe(DUTY + VAT);
+    expect(now.estimatedProfitKrw.value! - oldProfit).toBe(DUTY + VAT + 5000);
   });
 });
 
@@ -177,13 +186,16 @@ describe("MI-COST-POLICY-1 ④: 상품가격 + 해외배송비 → 착지원가 
     expect(breakdown.landedCostKrw).toBe(150000 + 15000);
   });
 
-  it("② 통합 판단의 착지원가는 그 값에 국내 배송원가만 더한 값이다 — 관부가세라는 제3의 항목이 없다", () => {
+  it("② 통합 판단의 착지원가는 그 값과 정확히 같다 — 제3의 항목이 없다", () => {
+    // MI-UX-FINAL-4(2026-09-13) — 예전에는 여기에 국내 배송원가 5,000이 더
+    // 붙어서, 상세 계산의 착지원가와 판단의 착지원가가 서로 다른 숫자였다.
+    // 이제 두 경로가 같은 값을 말한다.
     const unified = computeUnifiedPriceDecision({
       ...BASE_INPUT,
       customsDutyKrw: pc(13000, "actual"),
       customsVatKrw: pc(18000, "actual"),
     });
-    expect(unified.landedCostKrw.value).toBe(breakdown.landedCostKrw + 5000);
+    expect(unified.landedCostKrw.value).toBe(breakdown.landedCostKrw);
   });
 
   it("③ 예상이익 = 판매가 − 착지원가 − 수수료, ④ 마진 = 예상이익 / 판매가 (손으로 계산한 값과 일치)", () => {

@@ -66,6 +66,8 @@ import type { PriceLevel, SellerFinalVerdict } from "./commerce/DomesticPriceInt
 import { ActionCenter, type ChecklistItem } from "./commerce/ActionCenter";
 import { AuditLogPanel } from "./commerce/AuditLogPanel";
 import { DomesticShopSearch } from "./commerce/DomesticShopSearch";
+// MI-UX-FINAL-4 — 가격비교 패널이 서는 자리(드릴다운 / 접힘 안쪽 평면).
+import type { MarketEvidenceVariant } from "./commerce/market-evidence-frame";
 // MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 해외 가격비교 패널이 만든 요약을
 // MI로 옮기는 통로. 이 파일은 요약을 **만들지 않는다**(값을 들고만 있는다) —
 // 만들기 시작하면 같은 조회 결과에 대한 요약 규칙이 두 벌이 된다.
@@ -518,17 +520,12 @@ export function CommerceWorkspace({
    * 같이 읽어서 resolveListingPrice()에 넘긴다 — 그래야 화면에 보인 "권장
    * 판매가격"과 등록에 쓰이는 listing.priceKrw가 정확히 같은 숫자가 된다. */
   const [priceRoundingUnit, setPriceRoundingUnit] = useState<number | null>(null);
-  /**
-   * MI/PRICE-1(CEO 지시, 2026-09-12) — Settings에 저장된 국내 배송원가 기본값.
-   *
-   * 예전에는 PriceEditor가 같은 엔드포인트를 **한 번 더** 불러 이 값을 스스로
-   * 읽었다. 두 곳이 각자 조회하면 언젠가 한쪽만 실패해서 화면의 권장가와
-   * 등록가가 다른 반올림 단위로 갈린다 — 조회는 여기 하나로 모으고 가격 UI는
-   * props로 받기만 한다(그래서 가격 화면에는 이제 fetch가 하나도 없다).
-   * 수정은 Settings에서만 한다(SellerProfile 필드라 상품별로 저장할 곳이
-   * 없다 — P-3-1에서 확정한 설계).
-   */
-  const [domesticShippingCostKrw, setDomesticShippingCostKrw] = useState<number | null>(null);
+  /* MI-UX-FINAL-4(대표님 결정, 2026-09-13) — 여기 있던 domesticShippingCostKrw
+     state를 지웠다. 이 값이 화면에 있던 이유는 하나였다: 착지원가에 들어가서
+     마진을 깎고 있으니 셀러에게 그 사실을 말해야 한다는 것. 엔진의
+     LANDED_COST_PARTS에서 빠진 지금은 말할 사실 자체가 없다.
+     seller_profiles의 값과 Settings 화면은 그대로 둔다 — 저장된 값을 고쳐 쓰지
+     않는다(읽는 코드가 없을 뿐이다). */
 
   /** P0(환율 시스템) — 고정 환율표 대신 실제 환율을 보여준다. 컴포넌트 마운트
    * 시 한 번 불러오고, 이후엔 "새로고침" 버튼으로만 다시 부른다(CPO 요구사항:
@@ -617,9 +614,6 @@ export function CommerceWorkspace({
           // P-4-H1-2-2 — 이 프로필은 플랫폼 공통 설정이라(N-3.69) coupang 탭이
           // 아니어도 항상 읽는다. 이전에는 tab==="coupang"일 때만 조회했다.
           setPriceRoundingUnit(defaultProfile?.priceRoundingUnit ?? null);
-          // MI/PRICE-1 — 예전에 PriceEditor가 따로 조회하던 값. 같은 응답에서
-          // 이미 오고 있었으므로 조회를 늘리지 않고 읽기만 한 줄 더한다.
-          setDomesticShippingCostKrw(defaultProfile?.domesticShippingCostKrw ?? null);
 
           /* UX 2.5(CEO 지시, 2026-09-11) — Settings의 "기본 마진율"을 이 상품에
              1회 반영한다. 상품별 저장값(priceBreakdown)이 이미 있으면 절대
@@ -645,10 +639,9 @@ export function CommerceWorkspace({
       .catch(() => {
         if (!cancelled) {
           setDefaultContactNumber("");
-          setPriceRoundingUnit(null);
           // 조회 실패해도 화면은 packages/pricing의 전역 기본값으로 계속 돈다
-          // (반올림 단위는 폴백, 국내 배송원가는 "미확인"으로 표시된다).
-          setDomesticShippingCostKrw(null);
+          // (반올림 단위는 폴백으로 돌아간다).
+          setPriceRoundingUnit(null);
         }
       });
     return () => {
@@ -1243,7 +1236,6 @@ export function CommerceWorkspace({
       exchangeRatesLoading={exchangeRatesLoading}
       onRefreshExchangeRates={fetchExchangeRates}
       priceRoundingUnit={priceRoundingUnit}
-      domesticShippingCostKrw={domesticShippingCostKrw}
     />
   );
 
@@ -1459,6 +1451,17 @@ export function CommerceWorkspace({
     surface: workSurface,
     marketDetailOpen,
   });
+
+  /**
+   * MI-UX-FINAL-4(CEO 지시, 2026-09-13) — 가격비교 두 패널이 어느 자리에 서는가.
+   *
+   * COLLAPSED는 "두 패널이 「📊 시장 가격 비교」 접힘 **안쪽**에 있다"는 뜻이다
+   * (StageBody 참고). 그 안에서는 자기 접힘을 또 갖지 않는다 — 바깥을 열고 다시
+   * 국내/해외를 눌러야 했던 두 번째 클릭이 아무 질문에도 답하지 않기 때문이다.
+   * ②에서는 그대로 드릴다운이다(MI 요약이 결론이고 표가 그 원자료다).
+   */
+  const marketEvidenceVariant: MarketEvidenceVariant =
+    stageFocus.marketEvidence === "COLLAPSED" ? "FLAT" : "DRILL_DOWN";
 
   /** 채널 목록은 한 번만 만든다 — 오른쪽 Action Center와 ④ 본문이 같은 배열을
    * 본다(둘이 각자 만들면 준비 상태가 두 벌 계산되어 서로 다른 말을 한다). */
@@ -2341,7 +2344,13 @@ export function CommerceWorkspace({
                  MI-MARKET-EVIDENCE-1 — 두 패널은 이제 MI 요약의 드릴다운 대상이라
                  기본 접힘이고, 여는 주체는 위 요약의 버튼이다(open을 여기서
                  들고 있는 이유). 조회는 접힌 상태에서도 그대로 돈다 — 접힌 것은
-                 표이지 데이터가 아니고, 요약이 그 데이터 위에 서 있다. */
+                 표이지 데이터가 아니고, 요약이 그 데이터 위에 서 있다.
+
+                 MI-UX-FINAL-4(CEO 지시, 2026-09-13) — 두 패널의 **모양**이 자리에
+                 따라 갈린다. ②에서는 위 MI 요약이 결론이라 표는 드릴다운으로
+                 접혀 있고, ③④에서는 이 둘이 「📊 시장 가격 비교」 접힘 안쪽이라
+                 접힘을 한 겹 벗는다 — 이미 시장 가격을 보겠다고 들어온 자리에서
+                 다시 국내/해외를 눌러야 했던 두 번째 클릭이 그 겹이었다. */
               marketEvidence={
                 <div id={PRICE_COMPARISON_ANCHOR_ID} className="scroll-mt-4 space-y-4">
                   <DomesticShopSearch
@@ -2352,6 +2361,7 @@ export function CommerceWorkspace({
                     description={product.description.value || undefined}
                     open={domesticEvidenceOpen}
                     onToggle={setDomesticEvidenceOpen}
+                    variant={marketEvidenceVariant}
                   />
                   <ComparisonShopSearch
                     title={product.title.value}
@@ -2363,6 +2373,7 @@ export function CommerceWorkspace({
                     open={overseasEvidenceOpen}
                     onToggle={setOverseasEvidenceOpen}
                     onEvidenceChange={setOverseasMarketEvidence}
+                    variant={marketEvidenceVariant}
                   />
                 </div>
               }

@@ -122,7 +122,6 @@ export function PriceCalculationDetail({
   exchangeRatesLoading,
   onRefreshExchangeRates,
   priceRoundingUnit,
-  domesticShippingCostKrw,
 }: {
   product: CanonicalProduct;
   onUpdateOriginalPrice?: (patch: Partial<{ amount: number; currency: string }>) => void;
@@ -134,9 +133,10 @@ export function PriceCalculationDetail({
    * 값을 그대로 받는다 — 등록가(resolveListingPrice)와 화면의 권장가가 같은
    * 단위로 반올림되지 않으면 두 숫자가 10원 단위로 갈린다. */
   priceRoundingUnit: number | null;
-  /** P-3-1에서 확정: 국내배송원가는 Settings에서만 고치는 판매자 공통 기본값이라
-   * 여기서는 읽기전용으로만 보여준다. */
-  domesticShippingCostKrw: number | null;
+  /* MI-UX-FINAL-4(대표님 결정, 2026-09-13) — 여기 있던 domesticShippingCostKrw
+     prop을 지웠다. prop이 남아 있으면 언젠가 그 통로를 타고 칸이 되살아난다
+     (8ac100d가 onUpdateCustomsCost를 지운 것과 같은 이유다 — 보낼 곳이 없으면
+     화면도 되살아나지 않는다). */
 }) {
   const breakdownInput = product.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT;
   const roundingUnit = priceRoundingUnit ?? DEFAULT_PRICE_ROUNDING_UNIT;
@@ -355,6 +355,17 @@ export function PriceCalculationDetail({
           링크를 들고 있었는데, 문단은 세 입력(국제배송비·수수료·마진)을 한꺼번에
           말하느라 셀러가 "무엇을 누르면 무엇이 바뀌는지"를 알 수 없었다. 목표
           마진 옆의 [설정] 하나가 그 문단 전체보다 정확하다. */}
+      {/* MI-UX-FINAL-4(CEO 지시, 2026-09-13) — [설정]이 줄을 밀지 않는다.
+          이 줄의 **값**은 입력칸이고 [설정]은 그 옆의 작은 곁가지다. 그런데
+          링크가 입력칸과 같은 흐름에 같은 크기로 서 있어서, 폭이 좁아지면
+          "[설" / "정]"으로 줄바꿈되며 행 높이가 늘고 입력칸이 밀렸다 —
+          한글은 공백 없이도 어디서나 끊어지기 때문이다.
+
+          그래서 셋을 고친다: ① shrink-0으로 링크가 입력칸의 자리를 빼앗지
+          않게 하고 ② whitespace-nowrap으로 글자 안에서 끊기지 않게 하고
+          ③ 크기·색을 한 단계 낮춰(text-[11px] tertiary) 값과 곁가지의 층을
+          눈으로도 가른다. 링크가 가는 곳도, 이 줄이 계산에 들어가는 방식도
+          그대로다. */}
       <Row label="목표 마진">
         <div className="flex items-center justify-end gap-1">
           <LiveNumberField
@@ -362,10 +373,14 @@ export function PriceCalculationDetail({
             max={99}
             onLiveChange={(n) => liveUpdateBreakdown({ marginPercent: n })}
             onCommit={(n) => commitBreakdown({ marginPercent: n })}
-            className={`w-14 ${FIELD_CLASS}`}
+            className={`w-14 shrink-0 ${FIELD_CLASS}`}
           />
-          <span className="text-text-secondary">%</span>
-          <a href="/settings" className="text-xs text-primary hover:underline">
+          <span className="shrink-0 text-text-secondary">%</span>
+          <a
+            href="/settings"
+            title="판매자 기본 마진율을 Settings에서 바꿉니다"
+            className="shrink-0 whitespace-nowrap text-[11px] text-text-tertiary hover:text-primary hover:underline"
+          >
             [설정]
           </a>
         </div>
@@ -411,48 +426,23 @@ export function PriceCalculationDetail({
           onOpenMarketComparison prop 자체를 지운 것이 장치다 — 보낼 곳이 없으면
           문장도 되살아나지 않는다. */}
 
-      <SellerBorneCostSection domesticShippingCostKrw={domesticShippingCostKrw} />
-    </div>
-  );
-}
+      {/* ── MI-UX-FINAL-4(대표님 결정, 2026-09-13) — 「판매자 부담 비용」을 뺐다 ──
+          여기 있던 것은 SellerBorneCostSection 한 블록(제목 · 설명 한 줄 ·
+          「국내 배송원가」 한 줄)이다.
 
-/** P-3-2(대표님 지시, 2026-08-28) — 위 "가격 계산 Breakdown"(computePriceBreakdown,
- * 권장 판매가격 공식)과 완전히 별개다. 이 값은 Market Intelligence의
- * computeUnifiedPriceDecision()에만 쓰이고, 권장 판매가격/예상 이익(위 계산)에는
- * 전혀 영향을 주지 않는다 — 기존 계산식을 건드리지 않는다는 원칙을 그대로
- * 지킨다. 국내 배송원가는 Settings에서만 고칠 수 있는 판매자 공통 기본값이라
- * 여기서는 읽기전용으로만 보여준다(P-3-1에서 확정).
- *
- * MI-COST-POLICY-1(대표님 결정, 2026-09-12) — 여기 있던 관세/부가세 입력 두 칸을
- * 없앴다. "관세·부가세는 구매자 부담이며 판매자 가격/수익성 계산에 포함하지
- * 않는다"는 결정이라, 셀러에게 물어볼 이유 자체가 사라졌다. 입력칸만 지우고
- * 계산에 남겨두면 셀러가 못 보는 값이 마진을 깎는 상태가 되므로, 엔진
- * (LANDED_COST_PARTS)에서 먼저 빼고 그 결과로 이 칸이 필요 없어진 순서다.
- * 그래서 이 블록은 이제 "판매자가 실제로 부담하는 비용" 한 줄만 남는다 —
- * 블록째 지우지 않는 이유는 국내 배송원가가 여전히 마진 계산에 들어가는데
- * 이 화면 어디에도 그 사실을 말하는 곳이 없어지기 때문이다. */
-function SellerBorneCostSection({ domesticShippingCostKrw }: { domesticShippingCostKrw: number | null }) {
-  return (
-    <div className="mt-2 space-y-1.5 border-t border-border pt-2 text-sm">
-      {/* P2-4 — 제목(primary)과 그 제목이 무엇을 뜻하는지(secondary)를 한 단계로
-          가른다. 이 문장이야말로 "왜 이 숫자가 권장 판매가격을 안 바꾸는가"에
-          대한 답이다. */}
-      <p className="text-xs font-medium text-text-primary">판매자 부담 비용(판매 판단용)</p>
-      <p className="text-xs text-text-secondary">
-        위 권장 판매가격 계산에는 반영되지 않습니다 — 이 카드 맨 위의 판매 판단(예상 마진)에만 쓰입니다.
-      </p>
-      <Row label="국내 배송원가">
-        {domesticShippingCostKrw != null ? (
-          <span className="font-medium text-text-primary">{formatKrw(domesticShippingCostKrw)} (Settings 기본값)</span>
-        ) : (
-          <span className="text-text-tertiary">
-            미확인 —{" "}
-            <a href="/settings" className="text-primary hover:underline">
-              Settings에서 입력
-            </a>
-          </span>
-        )}
-      </Row>
+          지난 두 지시에서 이 블록은 STOP이었다. 이유는 하나였다:
+          sellerDomesticShippingCostKrw가 LANDED_COST_PARTS에 들어 있어 착지원가 →
+          예상이익 → 마진 → verdict를 실제로 움직이고 있었고, 계산에 들어가는 값을
+          화면에서만 지우면 셀러가 보지도 고치지도 못하는 숫자가 판정을 깎는다.
+
+          이번에는 대표님이 제거를 결정했고, 8ac100d(관부가세)가 세운 순서를 그대로
+          따랐다 — **엔진에서 먼저 뺐다**(packages/pricing의 LANDED_COST_PARTS).
+          계산에 들어가지 않는 값이 되었으므로, 그 사실을 설명하려고 서 있던 이
+          블록도 함께 설 이유가 없어졌다. 지우는 순서가 반대였다면 화면이 거짓말을
+          했을 것이다.
+
+          Settings의 판매자 공통 기본값과 seller_profiles에 저장된 값은 그대로
+          둔다 — 과거 데이터를 고쳐 쓰지 않는다(읽는 코드가 없을 뿐이다). */}
     </div>
   );
 }

@@ -42,6 +42,16 @@ import { ValueBadge } from "@/components/ui/ValueBadge";
  * 한 번 부른 결과다. 이 카드가 스스로 computePriceBreakdown을 부르면 상세
  * 사슬과 이 카드가 각자 산술을 갖게 되고, 그때부터 같은 상품이 화면 위아래에서
  * 다른 권장가를 말한다(이 저장소에서 반복된 버그다).
+ *
+ * ── MI-UX-FINAL-4(CEO 지시, 2026-09-13) — 제목을 뗐다 ────────────────────
+ * 이 카드는 자기 제목으로 「💰 판매가격 확정」을 그리고 있었는데, 이 카드가 서는
+ * 자리는 **두 곳 다 이미 같은 이름의 제목을 갖고 있다**: ③ 등록 준비의 하위 항목
+ * 버튼(판매가격)과, 그 밖 접힘 목록의 CollapsibleSection(💰 판매가격 확정).
+ * 그래서 화면에는 언제나 「판매가격 확정 › 판매가격 확정」 두 층이 떠 있었다.
+ *
+ * 한 기능 = 한 제목 = 한 진입점. 제목은 이 카드를 **담는 자리**가 갖고(접었을
+ * 때도 보여야 하므로 거기여야 한다), 이 카드는 내용만 갖는다. 이름 자체는
+ * 그대로다(PREPARE_SURFACE_LABEL.PRICE) — 없앤 것은 이름이 아니라 중복이다.
  */
 export function PriceEditor({
   product,
@@ -92,8 +102,7 @@ export function PriceEditor({
   if (priceUnresolved) {
     return (
       <section className="rounded-lg border border-border px-4 py-3 text-sm">
-        <h3 className="text-base font-medium">💰 판매가격 확정</h3>
-        <div className="mt-2.5 rounded-md border border-warning bg-warning-soft p-3 text-sm text-warning">
+          <div className="mt-2.5 rounded-md border border-warning bg-warning-soft p-3 text-sm text-warning">
           <p className="font-medium">⚠️ 원본 상품 가격을 확인할 수 없어 판매가격을 확정할 수 없습니다.</p>
           {/* 여기서 원본 가격을 다시 묻지 않는다 — 입력칸은 상세 계산 한 곳에만
               있고, 그 자리로 데려가는 길만 남긴다. 같은 입력칸이 두 카드에
@@ -118,7 +127,6 @@ export function PriceEditor({
 
   return (
     <section className="rounded-lg border border-border px-4 py-3 text-sm">
-      <h3 className="text-base font-medium">💰 판매가격 확정</h3>
 
       <div className="mt-2.5 rounded-md border border-border bg-background px-3 py-2.5">
         {/* 권장 판매가격은 계산 **결과**이고 최종 판매가격은 실제 등록가다.

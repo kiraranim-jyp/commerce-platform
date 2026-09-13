@@ -44,10 +44,26 @@ export interface UnifiedPriceInput {
    * 보여주기 위한 투명성 목적의 필드다. */
   exchangeRate: PriceComponent;
   internationalShippingKrw: PriceComponent;
-  /** 판매자가 실제로 부담하는 국내 배송원가. P-1-2 실측 결과 현재 시스템에
-   * 이 값을 추적하는 곳이 전혀 없다 — 호출부가 값을 지어내지 않는 한 항상
-   * { value: null, status: "unknown" }이 기본이다. */
-  sellerDomesticShippingCostKrw: PriceComponent;
+  /**
+   * MI-UX-FINAL-4(대표님 결정, 2026-09-13) — **원가 합산에 참여하지 않는다.**
+   *
+   * 이 값은 P-3-2에서 LANDED_COST_PARTS에 들어갔고, 그 뒤로 착지원가 → 예상이익
+   * → 마진 → verdict까지 그대로 흘렀다. 지난 두 번의 지시에서는 STOP이었다 —
+   * 계산에 들어가는 값을 화면에서만 지우면 화면이 거짓말을 하기 때문이다.
+   *
+   * 이번에 대표님이 제거를 결정했다. 그래서 8ac100d(관부가세)가 세운 순서를
+   * 그대로 따른다: **엔진에서 먼저 빼고**, 그 결과로 셀러에게 보여줄 이유가
+   * 사라진 화면 블록(판매자 부담 비용)을 없앤다. 반대 순서로 하면 셀러가 보지도
+   * 고치지도 못하는 값이 계속 마진을 깎는다.
+   *
+   * 필드를 지우지 않고 optional로 남기는 이유도 그때와 같다: 아직 이 값을 넘기는
+   * 호출부가 생기더라도 결과가 달라지지 않는다는 사실을 타입과 테스트로 못 박기
+   * 위해서다. Settings의 판매자 공통 기본값(seller_profiles.domestic_shipping_cost_krw)과
+   * 이미 저장된 값은 건드리지 않는다 — 읽는 코드가 한 줄도 없을 뿐이다.
+   *
+   * @deprecated 판매 판단 계산에 들어가지 않는다. 읽지 않는다.
+   */
+  sellerDomesticShippingCostKrw?: PriceComponent;
   /** 고객에게 청구하는 배송비(SellerProfile.deliveryCharge와 연결 가능).
    * 원가 합산에 자동으로 더하지 않는다(STEP 8) — 판매 구조(배송비를 매출로
    * 잡고 배송원가를 비용으로 잡는 모델)가 아직 이 시스템에 없기 때문이다.
@@ -108,19 +124,26 @@ export interface UnifiedPriceDecision {
 }
 
 /**
- * 판매자가 실제로 부담하는 원가만 들어온다.
+ * 착지원가의 정의. 이 배열이 곧 그 정의이고, 그 착지원가가 예상이익 → 마진 →
+ * verdict까지 그대로 흐르므로, 여기서 빼는 것 하나로 계산 경로 전체에서 사라진다.
+ * missingComponents/dataCompleteness도 같은 배열을 돌기 때문에 "그 값을 몰라서
+ * INCOMPLETE"라는 판정 역시 함께 불가능해진다.
  *
- * MI-COST-POLICY-1(대표님 결정, 2026-09-12) — 여기 있던 관세/부가세 두 줄을
- * 뺐다. 구매자가 통관 때 따로 내는 돈이라 판매자 손익에 들어갈 자리가 없다.
- * 이 배열이 곧 착지원가의 정의이고, 그 착지원가가 예상이익 → 마진 → verdict
- * 까지 그대로 흐르므로, 여기서 빼는 것 하나로 계산 경로 전체에서 사라진다.
- * missingComponents/dataCompleteness도 같은 배열을 돌기 때문에 "관세를 몰라서
- * INCOMPLETE"라는 판정 역시 구조적으로 불가능해진다.
+ * MI-COST-POLICY-1(대표님 결정, 2026-09-12) — 관세/부가세 두 줄을 뺐다.
+ * 구매자가 통관 때 따로 내는 돈이라 판매자 손익에 들어갈 자리가 없다.
+ *
+ * MI-UX-FINAL-4(대표님 결정, 2026-09-13) — 국내 배송원가 한 줄을 더 뺐다.
+ * 같은 순서를 따른다: 엔진에서 먼저 빼고, 그 결과로 물어볼 이유가 사라진 화면
+ * 블록을 없앤다. 숫자가 움직인다는 것은 의도다 — 착지원가가 그 금액만큼 낮아지고
+ * 예상이익·마진이 그만큼 올라간다. 지금까지의 판정이 셀러가 실제로 치르는지
+ * 확인된 적 없는 비용을 원가로 세고 있었다는 뜻이기도 하다(이 값은 Settings의
+ * 판매자 공통 기본값이라 상품별 실비가 아니었다).
+ *
+ * 남은 두 줄은 상품마다 실제로 확인되는 값이다 — 원본 판매가와 국제배송비.
  */
 const LANDED_COST_PARTS: { key: keyof UnifiedPriceInput; label: string }[] = [
   { key: "sourceProductPriceKrw", label: "해외 상품가(환산)" },
   { key: "internationalShippingKrw", label: "국제배송비" },
-  { key: "sellerDomesticShippingCostKrw", label: "국내 배송원가" },
 ];
 
 export function computeUnifiedPriceDecision(input: UnifiedPriceInput): UnifiedPriceDecision {

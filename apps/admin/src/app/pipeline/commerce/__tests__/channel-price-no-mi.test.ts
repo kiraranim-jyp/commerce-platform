@@ -5,6 +5,7 @@ import { UNRESOLVED_CATEGORY } from "@commerce/category";
 import { applyChannelPriceOverride, clearChannelPriceOverride } from "@commerce/marketplace";
 import type { CanonicalProduct, FieldSource, ProvenanceField } from "@commerce/shared";
 import { buildChannelPriceAuditRecord, buildPriceBreakdownSnapshot } from "@/lib/channel-price-audit";
+import { stripComments } from "./source-text";
 
 /**
  * PHASE 3.2(CPO 확정, 2026-09-11) ⑧⑩.
@@ -194,7 +195,13 @@ describe("P2: 가격 UI를 손봐도 MI는 돌지 않는다", () => {
     // 조회는 사라진 것이 아니라 한 곳으로 모였다 — 값은 props로 내려온다.
     expect(readSource("../../CommerceWorkspace.tsx")).toContain('fetch("/api/settings/coupang/profiles")');
     expect(detail).toContain("priceRoundingUnit: number | null;");
-    expect(detail).toContain("domesticShippingCostKrw: number | null;");
+    // MI-UX-FINAL-4(대표님 결정, 2026-09-13) — 여기 함께 고정돼 있던
+    // domesticShippingCostKrw prop이 사라졌다. 그 값은 착지원가에서 빠졌고
+    // (LANDED_COST_PARTS), 계산에 쓰이지 않는 값을 화면까지 내려보낼 통로를
+    // 남겨두면 언젠가 그 통로를 타고 칸이 되살아난다.
+    // 주석은 걷어내고 검사한다 — 이 저장소는 "왜 지웠는지"를 주석으로 남기는
+    // 것이 규칙이라, 주석까지 막으면 근거를 지우게 된다(source-text.ts).
+    expect(stripComments(detail)).not.toContain("domesticShippingCostKrw");
   });
 
   it("오른쪽 기둥과 채널 가격 칸은 서버를 아예 부르지 않는다", () => {

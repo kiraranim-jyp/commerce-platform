@@ -604,24 +604,48 @@ describe("내려간 것들은 사라지지 않았다", () => {
   const panel = readSourceAt(new URL("../DomesticPriceIntelligencePanel.tsx", import.meta.url));
   const detail = panel.slice(panel.indexOf("{showMarketDetail && ("));
 
-  it("다섯 덩어리 전부가 「왜 이렇게 판단했나요?」 아래에 있다", () => {
-    for (const needle of [
-      "🔄 다시 확인",
-      "{recheckResult.message}",
-      "{sellerAction.opportunity.title}",
-      "{PRICE_MEANING_LABEL.DOMESTIC_COMPARABLE_PRICE} (",
-      "동일상품 근거 ({candidates.length}건)",
-      "상표권,",
-      "참고용 판단입니다",
-      "<TargetMarketBanner />",
-    ]) {
-      expect(detail, `${needle}이(가) 상세에 없다`).toContain(needle);
+  /**
+   * MI-UX-FINAL-4(CEO 지시, 2026-09-13) — **이 목록이 뒤집혔다.**
+   *
+   * MI-UX-FINAL-REVIEW는 이 다섯 덩어리를 첫 화면에서 접힘 안으로 내렸고, 그때
+   * 이 테스트가 "지운 것이 아니라 내린 것"임을 고정했다. 이번 지시가 본 것은 한
+   * 층 위다: 내려간 자리에서 **스무 덩어리를 받는 것**이 문제였다. 되물음이
+   * 답하는 질문은 "팔까, 말까" 하나이고, 다섯 덩어리 중 어느 것도 그 질문에
+   * 답하지 않는다.
+   *
+   * 각 덩어리가 말하던 사실이 어디로 갔는지는 아래에 하나씩 적는다 — 사실이
+   * 사라진 것이 아니라 그 사실을 말하는 자리가 이미 화면에 하나씩 있었다.
+   */
+  it("다섯 덩어리는 되물음에서 빠졌다 — 같은 사실을 말하는 자리가 이미 하나씩 있다", () => {
+    const detailCode = stripComments(detail);
+    const gone: [string, string][] = [
+      // 💡 기회 — 판정이 가리키는 행동의 변주. 카드 바닥의 CTA 버튼 하나가 그 행동이다.
+      ["{sellerAction.opportunity.title}", "카드 바닥 CTA"],
+      // 🇰🇷 국내 비교상품 원자료 표 — 아래 「📊 시장 가격 비교」 패널 한 벌뿐이다.
+      ["{PRICE_MEANING_LABEL.DOMESTIC_COMPARABLE_PRICE} (", "시장 가격 비교 패널"],
+      // 동일상품 근거 — 매칭 알고리즘 설명. 되물음이 다시 받지 않는다(CEO 금지 목록).
+      ["동일상품 근거 ({candidates.length}건)", "금지"],
+      // 상표권 안내 두 문단 — 판정이 보지 않는 범위의 설명이지 판정의 근거가 아니다.
+      ["상표권,", "금지"],
+      ["참고용 판단입니다", "금지"],
+      // 분석 기준 시장 배너 — 판정 카드 첫 줄이 "🇰🇷 대한민국 시장 기준"을 이미 말한다.
+      ["<TargetMarketBanner />", "판정 카드 첫 줄"],
+    ];
+    for (const [needle] of gone) {
+      expect(detailCode, `${needle}이(가) 되물음에 남아 있다`).not.toContain(needle);
     }
+    // 하나는 남는다 — 수집을 다시 돌리는 명시적 행동. 이 통로가 없으면
+    // 재수집을 막은 것이 아니라 재수집을 없앤 것이 된다(MI-COLLECTION-GUARD-1).
+    expect(detail).toContain("🔄 다시 분석");
+    expect(detail).toContain("{recheckResult.message}");
   });
 
-  it("레이더와 축도 그 아래 한 벌만 있다", () => {
-    expect(detail).toContain("<MiRadar radar={radar} />");
-    expect(detail).toContain("<MiAxisStars radar={radar} />");
+  it("레이더는 되물음을 펴면 판정 옆에 서고, 축 목록은 한 단계 더 아래다", () => {
+    // MI-UX-FINAL-4 — 레이더가 GO/STOP 카드의 왼쪽 칸으로 올라왔다. 같은 네 축의
+    // 낱말은 「판단 근거 자세히 보기」 하나가 갖는다(그림 + 별점 목록이 한 화면에
+    // 두 벌 뜨던 것이 이번에 없앤 중복이다).
+    expect(detail).toContain("<MiRadar radar={radar} withAxisList={false} />");
+    expect(detail).not.toContain("<MiAxisStars");
     expect(panel.slice(0, panel.indexOf("{showMarketDetail && ("))).not.toContain("<MiRadar");
   });
 
@@ -730,26 +754,39 @@ describe("되물음의 답은 네 줄이고, 그 안에 계산도 레이더도 �
     expect(new Set(rendered).size).toBe(4);
   });
 
-  it("나머지 전부는 그 네 줄 아래 한 단계 더 들어간다 — 지운 것이 아니다", () => {
+  /**
+   * MI-UX-FINAL-4(CEO 지시, 2026-09-13) — 두 번째 단계가 받는 것도 **넷**이다.
+   *
+   * 예전에는 이 토글 아래에 나머지 스무 덩어리가 전부 있었다. 이제 여기 있는
+   * 것은 판정을 떠받치는 네 축의 한 줄씩이다(mi-verdict-evidence.ts).
+   * CEO가 지정한 그 넷이고, 다섯 번째 줄을 세우려 하면 그 파일의 테스트가 먼저
+   * 걸린다.
+   */
+  it("두 번째 단계가 여는 것은 네 축의 한 줄씩이다 — 그 밖의 덩어리가 없다", () => {
     const panel = readSourceAt(new URL("../DomesticPriceIntelligencePanel.tsx", import.meta.url));
     const detail = panel.slice(panel.indexOf("{showMarketDetail && ("));
-    // 네 줄이 먼저고, 그다음이 두 번째 토글이고, 나머지는 전부 그 뒤다.
-    const linesAt = detail.indexOf("buildMiVerdictExplanation({");
+    const linesAt = detail.indexOf("verdictExplanation.slice(0, -1)");
     const toggleAt = detail.indexOf("{MI_VERDICT_EVIDENCE_TOGGLE_LABEL}");
     const gateAt = detail.indexOf("{showMarketEvidence && (");
     expect(linesAt).toBeGreaterThan(-1);
     expect(toggleAt).toBeGreaterThan(linesAt);
     expect(gateAt).toBeGreaterThan(toggleAt);
     expect(MI_VERDICT_EVIDENCE_TOGGLE_LABEL).toBe("판단 근거 자세히 보기");
-    for (const needle of [
-      "<MiRadar radar={radar} />",
+    // 그 게이트가 여는 것은 네 줄 하나뿐이다.
+    expect(detail.indexOf("buildMiVerdictEvidence(radar)")).toBeGreaterThan(gateAt);
+    // 되물음이 절대 다시 받지 않는 것들(CEO 금지 목록).
+    const detailCode = stripComments(detail);
+    for (const banned of [
       "{representativeVerdict.description}",
-      "🔄 다시 확인",
       "상표권,",
       "참고용 판단입니다",
       "📶 시장 신호",
+      "sellingGuidance.map",
+      "confidenceBasis",
+      "sellerDecision.factors.map",
+      "종합 시장 상태",
     ]) {
-      expect(detail.indexOf(needle), `${needle}이(가) 두 번째 단계 밖에 있다`).toBeGreaterThan(gateAt);
+      expect(detailCode, `${banned}이(가) 되물음에 다시 들어왔다`).not.toContain(banned);
     }
   });
 });
@@ -785,11 +822,16 @@ describe("가격 계산 기준 안의 설명 문단은 링크 하나로 줄었�
     expect(marginRow).toContain("[설정]");
   });
 
-  it("판매자 부담 비용(국내 배송원가)은 그대로다 — 계산에 들어가는 값이라 숨기지 않는다", () => {
-    // packages/pricing/unified-price-decision.ts의 LANDED_COST_PARTS에
-    // sellerDomesticShippingCostKrw가 그대로 있다: 착지원가 → 예상이익 → 마진 →
-    // verdict까지 흐른다. 화면에서만 감추면 셀러가 못 보는 값이 판정을 움직인다.
-    expect(detail).toContain("판매자 부담 비용(판매 판단용)");
-    expect(detail).toContain('<Row label="국내 배송원가">');
+  /**
+   * MI-UX-FINAL-4(대표님 결정, 2026-09-13) — 이 기대값이 **뒤집혔다**.
+   *
+   * 이 줄이 여기 있던 이유는 하나였다: 그 값이 LANDED_COST_PARTS에 있어
+   * 착지원가 → 예상이익 → 마진 → verdict를 움직이고 있으니, 화면에서만 감추면
+   * 셀러가 못 보는 값이 판정을 깎는다. 이번에 엔진에서 먼저 뺐으므로 그 이유가
+   * 사라졌다 — 계산에 들어가지 않는 값을 셀러에게 보여줄 자리가 없다.
+   */
+  it("판매자 부담 비용 블록이 사라졌다 — 계산에서 뺀 결과이지 화면만 감춘 것이 아니다", () => {
+    expect(stripComments(detail)).not.toContain("판매자 부담 비용");
+    expect(detail).not.toContain('<Row label="국내 배송원가">');
   });
 });

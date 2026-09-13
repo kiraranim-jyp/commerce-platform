@@ -56,9 +56,19 @@ describe("MI-COST-POLICY-1 ①: 셀러가 보는 가격 화면 어디에도 관�
     expect(workspaceCode).not.toContain("updateCustomsCost");
   });
 
-  it("남아 있는 판매 판단용 입력은 국내 배송원가 하나다 — 블록을 통째로 지워 그 사실을 잃지 않았다", () => {
-    expect(detail).toContain('<Row label="국내 배송원가">');
-    expect(detail).toContain("판매자 부담 비용(판매 판단용)");
+  /**
+   * MI-UX-FINAL-4(대표님 결정, 2026-09-13) — 이 기대값이 **뒤집혔다**.
+   *
+   * 관부가세를 뺀 뒤 이 블록에 남아 있던 한 줄이 국내 배송원가였다. 그 값은
+   * 여전히 LANDED_COST_PARTS에 있어 마진을 움직였기 때문에, 그때는 "블록째
+   * 지우면 그 사실을 말할 곳이 없어진다"가 옳았다. 이번에 대표님이 그 값도
+   * 계산에서 빼기로 결정했고, 같은 순서(엔진 먼저 → 화면)를 따랐으므로
+   * 이제는 말할 사실 자체가 없다 — 블록이 통째로 사라지는 것이 맞다.
+   */
+  it("판매 판단용 입력 블록 자체가 사라졌다 — 계산에 들어가지 않는 값을 셀러에게 묻지 않는다", () => {
+    expect(detail).not.toContain('<Row label="국내 배송원가">');
+    expect(stripComments(detail)).not.toContain("판매자 부담 비용");
+    expect(stripComments(detail)).not.toContain("SellerBorneCostSection");
   });
 });
 
@@ -73,7 +83,10 @@ describe("MI-COST-POLICY-1 ②: 서버가 가격 엔진에 관부가세를 넘�
 
   it("판매자가 실제로 부담하는 비용은 그대로 넘긴다 — 비용 항목을 싸잡아 지운 것이 아니다", () => {
     const code = stripComments(marketIntelligence);
-    expect(code).toContain("sellerDomesticShippingCostKrw");
+    // MI-UX-FINAL-4 — sellerDomesticShippingCostKrw는 이 목록에서 빠졌다
+    // (착지원가에서 빠진 값을 계속 넘기면 "이 값이 마진에 영향을 준다"는
+    // 오해가 코드에 그대로 남는다). 상품마다 실제로 확인되는 두 항목은 그대로다.
+    expect(code).not.toContain("sellerDomesticShippingCostKrw");
     expect(code).toContain("internationalShippingKrw");
     expect(code).toContain("platformFeeRate");
   });

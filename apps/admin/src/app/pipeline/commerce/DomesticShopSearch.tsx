@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
+import { useState } from "react";
+// MI-COLLECTION-GUARD-1 — "이 상품은 이미 수집했다"는 사실이 사는 곳.
+import { useCollectOnce } from "./market-collection";
+// MI-UX-FINAL-4 — 「📊 시장 가격 비교」 안에서는 접힘을 한 겹 벗는다.
+import { MarketEvidenceFrame, MARKET_EVIDENCE_EMPTY, type MarketEvidenceVariant } from "./market-evidence-frame";
 // MATCHING-UNIFY-1 — 해외와 같은 라벨을 쓰기 위한 공통 매핑.
 // MI-UX-9 — 기본 노출 등급/그룹 순서/유사상품 상한도 같은 곳에서 가져온다.
 import {
@@ -148,6 +151,39 @@ interface SearchResult {
   error?: string;
 }
 
+/** MI-COLLECTION-GUARD-1 — 한 번의 수집이 낳는 것 전부(해외 패널과 같은 규칙). */
+interface DomesticCollection {
+  results: SearchResult[];
+  queriedAt: string;
+}
+
+/** 실제 조회. 부르는 곳은 상품당 최초 1회와 [가격비교 다시 검색] 둘뿐이다. */
+async function collectDomesticPrices(input: {
+  title: string;
+  brand?: string;
+  sourceUrl?: string;
+  sku?: string;
+  description?: string;
+}): Promise<DomesticCollection> {
+  let res: Response;
+  try {
+    res = await fetch("/api/domestic-price-sources/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+  } catch {
+    throw new Error("검색 요청에 실패했습니다.");
+  }
+  const data = (await res.json().catch(() => null)) as {
+    ok: boolean;
+    results?: SearchResult[];
+    error?: string;
+  } | null;
+  if (!data?.ok) throw new Error(data?.error ?? "검색에 실패했습니다.");
+  return { results: data.results ?? [], queriedAt: new Date().toLocaleString("ko-KR") };
+}
+
 /** N-4.07(대표님 지시: "국내 키즈의류 수입아동복 편집샵 사이트를 기본 등록해서 비교해줘") —
  * ComparisonShopSearch(해외)와 완전히 같은 UX 패턴(자동 1회 검색 + 재검색 버튼 + 매칭등급
  * 배지 + 매칭 불확실(70% 미만) 접기)을 그대로 따른다. 국내 소스는 이미 KRW로만 표시되므로 환율 변환
@@ -161,6 +197,7 @@ export function DomesticShopSearch({
   description,
   open,
   onToggle,
+  variant = "DRILL_DOWN",
 }: {
   title: string;
   brand?: string;
@@ -184,49 +221,32 @@ export function DomesticShopSearch({
    */
   open?: boolean;
   onToggle?: (open: boolean) => void;
+  /** MI-UX-FINAL-4 — 해외 패널과 같은 규칙(market-evidence-frame.ts). */
+  variant?: MarketEvidenceVariant;
 }) {
-  const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<SearchResult[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [queriedAt, setQueriedAt] = useState<string | null>(null);
-  const autoSearchedRef = useRef(false);
-
-  async function runSearch() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/domestic-price-sources/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, brand, sourceUrl, sku, description }),
-      });
-      const data = (await res.json()) as { ok: boolean; results?: SearchResult[]; error?: string };
-      if (!data.ok) {
-        setError(data.error ?? "검색에 실패했습니다.");
-        return;
-      }
-      setResults(data.results ?? []);
-      setQueriedAt(new Date().toLocaleString("ko-KR"));
-    } catch {
-      setError("검색 요청에 실패했습니다.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    if (autoSearchedRef.current || !title) return;
-    autoSearchedRef.current = true;
-    void runSearch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title]);
+  /**
+   * MI-COLLECTION-GUARD-1(CEO 지시, 2026-09-13) — 해외 패널과 **같은 병, 같은 약**.
+   *
+   * 여기 있던 `autoSearchedRef`도 인스턴스 수명이라, 탭을 옮기거나 「📊 시장 가격
+   * 비교」를 접었다 펴는 것만으로 `POST /api/domestic-price-sources/search`가
+   * 다시 나갔다 — 등록된 국내 편집샵을 전부 다시 뒤지는 요청이다. 보호장치를
+   * 상품 수명으로 옮긴다(market-collection.ts).
+   */
+  const collection = useCollectOnce<DomesticCollection>(
+    title ? `domestic:${sourceUrl || title}` : null,
+    () => collectDomesticPrices({ title, brand, sourceUrl, sku, description }),
+  );
+  const { loading, error } = collection;
+  const results = collection.data?.results ?? null;
+  const queriedAt = collection.data?.queriedAt ?? null;
 
   return (
     // UX 2.3(CEO 지시, 2026-09-11) — 제목이 이 블록의 **의미**를 말하게 한다.
     // 여기 있는 가격은 한국 편집샵이 파는 값(국내 비교상품)이고, 판매 판단이
     // 서 있는 한국 시장의 경쟁가 근거다. "국내 가격비교"라는 이름은 바로 아래
     // 해외 블록과 같은 층위로 읽혀서, 둘이 같은 종류의 가격처럼 보였다.
-    <CollapsibleSection
+    <MarketEvidenceFrame
+      variant={variant}
       title="🇰🇷 한국 시장 · 국내 비교상품 (베타)"
       summary="판매처 · 상품 · 가격 · 재고 · 매칭상태 — MI 🇰🇷 국내 시장 요약의 원자료"
       open={open}
@@ -241,13 +261,14 @@ export function DomesticShopSearch({
         참고용 조회 — 어떤 가격도 원본가격/판매가에 자동 반영되지 않습니다. 검색 대상은 설정 &gt; 국내
         가격비교에서 관리합니다.
       </p>
+      {/* MI-COLLECTION-GUARD-1 — 국내 편집샵을 다시 뒤지는 유일한 통로. */}
       <button
         type="button"
-        onClick={() => void runSearch()}
+        onClick={collection.recollect}
         disabled={loading || !title}
         className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
       >
-        {loading ? "검색 중..." : "가격비교 검색"}
+        {loading ? "검색 중..." : "가격비교 다시 검색"}
       </button>
       {error && <p className="text-xs text-error">{error}</p>}
       {/* MI-UI-1 — "조회 시점:" 라벨은 🕒로 대신한다. 시각 값 자체는 그대로다
@@ -255,7 +276,8 @@ export function DomesticShopSearch({
       {queriedAt && <p className="text-[10px] text-text-tertiary">🕒 {queriedAt}</p>}
       {results && <ResultHeadline results={results} title={title} brand={brand} />}
       {results && <ResultTable results={results} />}
-    </CollapsibleSection>
+      {results?.length === 0 && <p className="text-xs text-text-secondary">{MARKET_EVIDENCE_EMPTY}</p>}
+    </MarketEvidenceFrame>
   );
 }
 

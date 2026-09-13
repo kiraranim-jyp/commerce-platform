@@ -27,9 +27,15 @@ describe("P-1-3 STEP 9: computeUnifiedPriceDecision 회귀 케이스 A-G", () =>
       domesticCompetitivePrice: { average: 200000, lowest: 190000 },
     };
     const result = computeUnifiedPriceDecision(input);
-    expect(result.landedCostKrw).toEqual({ value: 115000, status: "estimated" });
+    // MI-UX-FINAL-4(대표님 결정, 2026-09-13) — 착지원가에서 국내 배송원가(3,000)가
+    // 빠졌다. 입력은 한 글자도 바꾸지 않고 기대값만 새 정책으로 옮긴다 —
+    // 그래야 무엇이 얼마나 달라졌는지가 이 한 줄에서 그대로 읽힌다.
+    //   115,000 → 112,000 (해외 상품가 100,000 + 국제배송비 12,000)
+    expect(result.landedCostKrw).toEqual({ value: 112000, status: "estimated" });
     expect(result.platformFeeKrw).toEqual({ value: 18000, status: "estimated" });
-    expect(result.marginPercent.value).toBe(26.1);
+    // 예상이익 180,000 − 112,000 − 18,000 = 50,000 → 26.1% → 27.8%
+    expect(result.marginPercent.value).toBe(27.8);
+    // 판정은 그대로다 — 원가가 낮아졌으니 나빠질 수 없다.
     expect(result.verdict).toBe("MAINTAIN");
     expect(result.level).toBe("GREEN");
     expect(result.missingComponents).toEqual([]);
@@ -59,7 +65,19 @@ describe("P-1-3 STEP 9: computeUnifiedPriceDecision 회귀 케이스 A-G", () =>
     expect(result.level).toBe("RED");
   });
 
-  it("C) 국내 배송원가 UNKNOWN — 계산 결과는 나오지만 dataCompleteness=INCOMPLETE로 표시되어 verdict를 무조건 신뢰할 수 없음을 UI에 전달한다", () => {
+  /**
+   * MI-UX-FINAL-4(대표님 결정, 2026-09-13) — 이 케이스도 **정책 변경으로 기대값이
+   * 뒤집혔다**(테스트를 느슨하게 만든 것이 아니다).
+   *
+   * 원래 C는 "국내 배송원가를 모르면 INCOMPLETE"를 고정했다. 그 시절 정책은 그
+   * 값이 판매자 원가라는 것이었고, 모르면 판단을 신뢰할 수 없다는 결론이 옳았다.
+   * 이제 그 값은 착지원가에 들어가지 않으므로, 모른다는 사실이 판단을 흐릴 경로가
+   * 없다는 것이 맞는 기대값이다. 입력은 그대로 두고 기대값만 옮긴다.
+   *
+   * 완전성 판정 자체가 약해진 것이 아니라는 것은 바로 아래 케이스가 증명한다 —
+   * **실제로 원가인** 항목이 unknown이면 여전히 INCOMPLETE다.
+   */
+  it("C) 국내 배송원가를 몰라도 판단이 흐려지지 않는다 — 착지원가에 들어가지 않는 값이기 때문이다", () => {
     const input: UnifiedPriceInput = {
       sourceProductPriceKrw: pc(100000, "actual"),
       exchangeRate: pc(1740, "actual"),
@@ -71,16 +89,31 @@ describe("P-1-3 STEP 9: computeUnifiedPriceDecision 회귀 케이스 A-G", () =>
       domesticCompetitivePrice: { average: 200000, lowest: 190000 },
     };
     const result = computeUnifiedPriceDecision(input);
-    expect(result.missingComponents).toEqual(["국내 배송원가"]);
-    expect(result.landedCostKrw.status).toBe("incomplete");
-    expect(result.dataCompleteness).toBe("INCOMPLETE");
-    // 이 입력에서 verdict 자체는 GREEN이 나온다(알려진 원가만으로는 마진이
-    // 충분해 보이므로) — 그러나 dataCompleteness=INCOMPLETE가 항상 함께
-    // 반환되므로, 화면은 "GREEN이지만 국내 배송원가를 몰라서 실제로는
-    // 달라질 수 있다"는 사실을 절대 숨길 수 없다. verdict만 보고 안심하면
-    // 안 된다는 것을 이 필드 하나로 강제한다.
+    expect(result.missingComponents).toEqual([]);
+    expect(result.landedCostKrw).toEqual({ value: 112000, status: "estimated" });
+    expect(result.dataCompleteness).toBe("ESTIMATED");
     expect(result.verdict).toBe("MAINTAIN");
     expect(result.level).toBe("GREEN");
+  });
+
+  /**
+   * 완전성 판정은 그대로 살아 있다. 이 줄이 없으면 위 C의 변경은 "unknown을
+   * 무시하도록 엔진을 약하게 만들었다"와 구분되지 않는다 — 남은 두 항목 중
+   * 하나만 모르면 여전히 INCOMPLETE이고 그 이름이 화면에 나간다.
+   */
+  it("C-2) 실제로 원가인 항목(국제배송비)이 unknown이면 여전히 INCOMPLETE다", () => {
+    const result = computeUnifiedPriceDecision({
+      sourceProductPriceKrw: pc(100000, "actual"),
+      exchangeRate: pc(1740, "actual"),
+      internationalShippingKrw: pc(null, "unknown"),
+      customerChargedShippingKrw: pc(null, "unknown"),
+      platformFeeRate: pc(10, "estimated", "default"),
+      currentSellingPriceKrw: pc(180000, "actual"),
+    });
+    expect(result.missingComponents).toEqual(["국제배송비"]);
+    expect(result.landedCostKrw.status).toBe("incomplete");
+    expect(result.dataCompleteness).toBe("INCOMPLETE");
+    expect(result.estimatedProfitKrw.status).toBe("incomplete");
   });
 
   /**
@@ -110,10 +143,11 @@ describe("P-1-3 STEP 9: computeUnifiedPriceDecision 회귀 케이스 A-G", () =>
     };
     const result = computeUnifiedPriceDecision(input);
     expect(result.missingComponents).toEqual([]);
-    // 착지원가 숫자 자체(170000)는 정책 변경 전후로 같다 — 예전에도 unknown인
-    // 관부가세는 더해지지 않았기 때문이다. 바뀐 것은 status다: 예전에는
-    // "관세를 몰라서 incomplete"였고, 이제는 알아야 할 것을 다 안 상태다.
-    expect(result.landedCostKrw).toEqual({ value: 170000, status: "estimated" });
+    // 관부가세는 예전에도 unknown이라 더해지지 않았다 — 이 줄이 움직인 이유는
+    // 관부가세가 아니라 국내 배송원가다.
+    // MI-UX-FINAL-4 — 170,000 → 165,000. 국내 배송원가 5,000이 빠진 그 차이다
+    // (해외 상품가 150,000 + 국제배송비 15,000).
+    expect(result.landedCostKrw).toEqual({ value: 165000, status: "estimated" });
     expect(result.dataCompleteness).toBe("ESTIMATED");
   });
 

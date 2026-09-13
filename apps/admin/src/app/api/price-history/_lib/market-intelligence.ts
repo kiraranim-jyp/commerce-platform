@@ -230,16 +230,18 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
   // 두 줄은 여기서 사라졌다. 구매자가 통관 때 내는 돈이라 판매자 수익성 계산에
   // 들어갈 자리가 없다. 이 호출부에서 빼는 것만으로는 부족해 엔진의
   // LANDED_COST_PARTS 자체에서도 뺐다(화면에서만 감추면 화면이 거짓말을 한다).
+  //
+  // MI-UX-FINAL-4(대표님 결정, 2026-09-13) — 국내 배송원가(sellerDomesticShippingCostKrw)도
+  // 같은 이유·같은 순서로 빠졌다. 엔진의 LANDED_COST_PARTS에서 먼저 뺐으므로
+  // 여기서 넘겨도 무시될 뿐이지만, 넘기는 줄을 남겨두면 "이 값이 마진에
+  // 영향을 준다"는 오해가 코드에 그대로 남는다. sellerProfile.domesticShippingCostKrw
+  // 자체는 지우지 않는다 — Settings에 저장된 판매자 값이고, 읽는 곳이 없을 뿐이다.
   const unifiedDecision: UnifiedPriceDecision | null =
     cost != null && currentSellingPriceKrw != null
       ? computeUnifiedPriceDecision({
           sourceProductPriceKrw: { value: cost.costKrw, status: cost.isRateEstimate ? "estimated" : "actual" },
           exchangeRate: { value: cost.exchangeRate, status: cost.isRateEstimate ? "estimated" : "actual" },
           internationalShippingKrw: { value: cost.shippingKrw, status: "estimated", source: "seller_default" },
-          sellerDomesticShippingCostKrw:
-            sellerProfile?.domesticShippingCostKrw != null
-              ? { value: sellerProfile.domesticShippingCostKrw, status: "estimated", source: "SellerProfile.domesticShippingCostKrw" }
-              : { value: null, status: "unknown" },
           customerChargedShippingKrw:
             sellerProfile?.deliveryCharge != null
               ? { value: sellerProfile.deliveryCharge, status: "actual", source: "SellerProfile.deliveryCharge" }
