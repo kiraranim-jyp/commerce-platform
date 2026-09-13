@@ -1,5 +1,6 @@
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
 import { decodeHtmlEntities } from "./html-entities";
+import { productFactsFromListing } from "./seller-facts";
 import type { ComparisonCandidate } from "./types";
 
 const FETCH_TIMEOUT_MS = 10000;
@@ -175,17 +176,23 @@ export async function searchForetforet(query: string): Promise<ComparisonCandida
 
     const img = IMG_RE.exec(block)?.[1];
     const sku = TRAILING_CODE_RE.exec(title)?.[1];
+    const url = `https://${DOMAIN}/shop/shopdetail.html?branduid=${branduid}`;
+    const imageUrl = img ? (img.startsWith("//") ? `https:${img}` : img) : null;
 
     candidates.push({
       title,
-      url: `https://${DOMAIN}/shop/shopdetail.html?branduid=${branduid}`,
+      url,
       price: salePrice ? { amount: salePrice, currency: "KRW" } : null,
       regularPrice:
         regularPrice && salePrice && regularPrice > salePrice ? { amount: regularPrice, currency: "KRW" } : null,
-      imageUrl: img ? (img.startsWith("//") ? `https:${img}` : img) : null,
+      imageUrl,
       confidence: 0,
       brand,
       sku,
+      // MI-MATCHING-3.0 — 위에서 이미 읽은 값을 판정기가 보는 칸에도 담는다.
+      // sku(BB26KSSSTC045041)는 국내 유통사 코드라 brandModelCode가 아니라
+      // sellerSku 칸으로만 들어간다(productFactsFromListing 주석 참고).
+      facts: productFactsFromListing({ title, url, brand, sellerSku: sku, imageUrl }),
     });
   }
 

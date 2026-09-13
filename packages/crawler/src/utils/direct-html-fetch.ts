@@ -35,7 +35,14 @@ export interface DirectHtmlResult {
   finalUrl: string;
 }
 
-export async function fetchHtmlDirect(url: string, redirectsLeft = MAX_REDIRECTS): Promise<DirectHtmlResult | null> {
+export async function fetchHtmlDirect(
+  url: string,
+  redirectsLeft = MAX_REDIRECTS,
+  /** MI-MATCHING-3.0(CEO 지시, 2026-09-14) — 호출부가 쓰던 헤더를 그대로 넘길 수
+   * 있게만 열어 둔다(예: Shopify suggest는 `Accept: application/json`). 넘기지
+   * 않으면 지금까지와 똑같은 기본 헤더다 — 기존 호출부 동작은 바뀌지 않는다. */
+  headerOverrides?: Record<string, string>,
+): Promise<DirectHtmlResult | null> {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -63,6 +70,7 @@ export async function fetchHtmlDirect(url: string, redirectsLeft = MAX_REDIRECTS
             "User-Agent": CHROME_UA,
             Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.9",
+            ...headerOverrides,
           },
         },
         (res) => {
@@ -77,7 +85,7 @@ export async function fetchHtmlDirect(url: string, redirectsLeft = MAX_REDIRECTS
               done(null);
               return;
             }
-            void fetchHtmlDirect(next, redirectsLeft - 1).then(done);
+            void fetchHtmlDirect(next, redirectsLeft - 1, headerOverrides).then(done);
             return;
           }
           let body = "";

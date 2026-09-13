@@ -1,6 +1,7 @@
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
 import type { ProductOption } from "./evidence";
 import { decodeHtmlEntities } from "./html-entities";
+import { productFactsFromListing } from "./seller-facts";
 import type { ComparisonCandidate } from "./types";
 
 const FETCH_TIMEOUT_MS = 10000;
@@ -187,10 +188,13 @@ export async function searchRulii(query: string): Promise<ComparisonCandidate[]>
     const regularPrice = parsePrice(extractField(block, "판매가"));
     const amount = salePrice ?? regularPrice;
     const img = IMG_RE.exec(block)?.[1];
+    const url = href.startsWith("http") ? href : `https://${DOMAIN}${href}`;
+    const imageUrl = img ? (img.startsWith("//") ? `https:${img}` : img) : null;
+    const sku = extractModelCode(title);
 
     candidates.push({
       title,
-      url: href.startsWith("http") ? href : `https://${DOMAIN}${href}`,
+      url,
       price: amount ? { amount, currency: "KRW" } : null,
       // N-4.18-Q2 P0-4 — 할인판매가와 정가가 둘 다 있고 정가가 더 클 때만
       // "실제 할인"으로 본다(둘이 같으면 표시상 중복이라 null 유지).
@@ -198,10 +202,12 @@ export async function searchRulii(query: string): Promise<ComparisonCandidate[]>
         salePrice && regularPrice && regularPrice > salePrice
           ? { amount: regularPrice, currency: "KRW" }
           : null,
-      imageUrl: img ? (img.startsWith("//") ? `https:${img}` : img) : null,
+      imageUrl,
       confidence: 0,
       brand,
-      sku: extractModelCode(title),
+      sku,
+      // MI-MATCHING-3.0 — 위에서 이미 읽은 값을 판정기가 보는 칸에도 담는다.
+      facts: productFactsFromListing({ title, url, brand, sellerSku: sku, imageUrl }),
     });
   }
 

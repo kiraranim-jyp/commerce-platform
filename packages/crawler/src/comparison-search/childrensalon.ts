@@ -1,4 +1,5 @@
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
+import { productFactsFromListing } from "./seller-facts";
 import type { ComparisonCandidate } from "./types";
 
 const FETCH_TIMEOUT_MS = 10000;
@@ -61,13 +62,19 @@ export async function searchChildrensalon(currency: string | null, query: string
     const amount = parsePrice(lastPrice);
 
     const title = decodeEntities(designer ? `${designer} ${rawName}` : rawName);
+    const url = href ? `https://${DOMAIN}${href}` : `https://${DOMAIN}`;
+    const brand = designer ? decodeEntities(designer) : undefined;
     candidates.push({
       title,
-      url: href ? `https://${DOMAIN}${href}` : `https://${DOMAIN}`,
+      url,
       price: amount && currency ? { amount, currency } : null,
       imageUrl: img ?? null,
       confidence: 0,
-      brand: designer ? decodeEntities(designer) : undefined,
+      brand,
+      // MI-MATCHING-3.0 — 국내 편집샵 파서와 같은 결함이 여기에도 있었다:
+      // 브랜드(designer)를 이미 읽고 있으면서 판정기가 보는 칸에는 담지 않아
+      // 이 판매처 후보는 교차판매처 판정을 한 번도 받은 적이 없다.
+      facts: productFactsFromListing({ title, url, brand, imageUrl: img ?? null }),
     });
   }
 

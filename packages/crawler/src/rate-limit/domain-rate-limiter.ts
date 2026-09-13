@@ -7,6 +7,8 @@
  * 것만으로도 실질적인 효과가 있다.
  */
 
+import { fetchHtmlDirect } from "../utils/direct-html-fetch";
+
 interface DomainState {
   lastRequestAt: number;
   activeCount: number;
@@ -85,6 +87,51 @@ export function recordRateLimitResponse(
   state.blockedUntil = Date.now() + waitMs;
 }
 
+/**
+ * MI-MATCHING-3.0 STEP 0(CEO 지시, 2026-09-14) — **이 429는 "요청이 많다"가 아니다.**
+ *
+ * 실측(2026-09-14, 같은 순간·같은 IP·같은 헤더로 junioredition/nickis/villagekids
+ * 세 도메인에 동시 확인, 2회 재현):
+ *
+ *   node fetch(undici)            429   ← 운영 코드가 쓰던 것
+ *   node:https (HTTP/1.1)         200
+ *   node:http2 (HTTP/2)           200
+ *   curl                          200
+ *   node fetch + curl User-Agent  429   ← 헤더를 바꿔도 그대로 429
+ *   새 프로세스의 첫 node fetch    429   ← 커넥션 재사용 문제도 아니다
+ *
+ * 즉 원인은 헤더도, 요청량도, HTTP 버전도, 커넥션 상태도, IP도 아니다. 남는 것은
+ * **클라이언트 스택(undici)의 TLS 지문**뿐이고, Cloudflare(응답 `server:
+ * cloudflare`, `retry-after` 없음)가 그 지문에만 429를 준다. 헤더를 보강해도
+ * 고쳐지지 않는다는 것을 실측으로 확인했다.
+ *
+ * 이 사실이 왜 중요한가: 이 429는 "해외 편집샵에 그 상품이 없다"로 화면에 읽혔다.
+ * 재고 없음과 차단은 전혀 다른 사실인데 같은 자리에 도착하고 있었다.
+ *
+ * 그래서 429일 때만, **이미 저장소에 있는** node:https 경로(fetchHtmlDirect —
+ * smallable의 헤더 초과 문제 때문에 이미 같은 이유로 만들어 둔 것)로 한 번 더
+ * 물어본다. 우회 프록시도, 재시도 폭주도 아니다: 429가 났을 때 요청 하나가
+ * 늘어날 뿐이고, 그마저도 실패하면 원래의 429 응답을 그대로 돌려준다
+ * (errorKind="RATE_LIMITED"가 지금처럼 화면까지 정직하게 전달된다).
+ */
+const NULL_BODY_STATUSES = new Set([204, 205, 304]);
+
+function headerRecord(init?: RequestInit): Record<string, string> | undefined {
+  const headers = init?.headers;
+  if (!headers) return undefined;
+  if (headers instanceof Headers) return Object.fromEntries(headers.entries());
+  if (Array.isArray(headers)) return Object.fromEntries(headers);
+  return headers as Record<string, string>;
+}
+
+async function retryThroughDirectStack(url: string, init?: RequestInit): Promise<Response | null> {
+  const direct = await fetchHtmlDirect(url, undefined, headerRecord(init));
+  if (!direct) return null;
+  if (direct.status === 429 || direct.status < 200 || direct.status > 599) return null;
+  if (NULL_BODY_STATUSES.has(direct.status)) return null;
+  return new Response(direct.html, { status: direct.status });
+}
+
 /** plain fetch 하나를 도메인 속도 제어 + 429 시 1회 재시도(Retry-After 우선, 없으면
  * 지수 백오프)까지 포함해서 실행한다. Shopify JSON/HTML plain fetch처럼 도메인별
  * 상태 관리가 필요한 모든 호출부가 이 함수를 통해서만 fetch하도록 한다. */
@@ -103,6 +150,10 @@ export async function fetchWithDomainRateLimit(url: string, init?: RequestInit):
       attempt++;
       response = await fetch(url, init);
       recordRateLimitResponse(url, response.status, response.headers.get("retry-after"));
+    }
+    if (response.status === 429) {
+      const direct = await retryThroughDirectStack(url, init);
+      if (direct) return direct;
     }
     return response;
   } finally {

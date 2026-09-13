@@ -140,6 +140,67 @@ export function productFactsFromShopifyProduct(input: ShopifyProductLike, domain
   };
 }
 
+/* ─────────────────── 검색 목록만 주는 편집샵(국내 Cafe24/MakeShop · Childrensalon) ─────────────────── */
+
+/**
+ * MI-MATCHING-3.0(CEO 지시, 2026-09-14) — 검색 결과 **목록**에서 읽은 사실을
+ * 그대로 ProductFacts로 옮긴다.
+ *
+ * ── 무엇이 빠져 있었나(실측) ────────────────────────────────────────────────
+ * 국내 파서 5개(looxloo/rulii/deuxbebe/chocoel/foretforet)와 childrensalon은
+ * 목록에서 브랜드·이미지·판매처 상품코드를 **이미 읽고 있었다**. 그런데 그 값을
+ * `ComparisonCandidate.brand` / `.imageUrl` / `.sku` 에만 담았고, 판정기
+ * (compareCrossSellerProducts)는 그 세 칸을 보지 않는다 — `facts`만 본다.
+ * 그래서 match.ts의 `query.facts && c.facts` 관문이 언제나 거짓이 되고,
+ * 국내 후보 전부가 `crossSellerVerdict = undefined`(판정 미실행)로 남았다.
+ * 데이터가 없어서가 아니라 **담는 칸이 비어 있어서**였다.
+ *
+ * ── 판매처 상품코드를 brandModelCode에 넣지 않는다 ──────────────────────────
+ * 포레포레 `BB26KSSSTC045041`, LOOXLOO `75A7D-415-16`은 그 판매처(또는 국내
+ * 유통사)가 붙인 번호이지 브랜드 품번이 아니다(실측). 이 값을 brandModelCode에
+ * 넣으면 compareModelCode가 접두사부터 갈라져 "모델코드 충돌"을 지어내고,
+ * slugCarriesCode가 우연히 걸리면 반대로 근거 없는 SAME이 만들어진다. 그래서
+ * 언제나 sellerSku 칸에만 둔다 — ProductFacts.brandModelCode 주석의 규칙 그대로다.
+ *
+ * ── 목록에 없는 것은 지어내지 않는다 ────────────────────────────────────────
+ * 판매처 자신의 분류·소재·핏·사이즈는 **상세 페이지에만** 있고 목록에는 없다
+ * (실측). 그래서 여기서는 null/빈 배열이고, 판정기는 그것을 "다름"이 아니라
+ * "근거 없음"으로 읽는다. 색상은 기존 추출기(extractColorFromTitle)를 그대로
+ * 쓴다 — 한국어 색상 표기("헤더그레이")는 이 추출기가 읽지 못하며, 그 사실을
+ * 여기서 어휘를 새로 심어 덮지 않는다(별도 판단 대상).
+ */
+export interface ListingProductLike {
+  title: string;
+  url: string;
+  /** 목록 마크업에 브랜드 칸이 있는 판매처만 채워진다. */
+  brand?: string | null;
+  /** 판매처 자신의 상품코드/재고번호. 브랜드 품번이 아니다. */
+  sellerSku?: string | null;
+  imageUrl?: string | null;
+}
+
+export function productFactsFromListing(input: ListingProductLike): ProductFacts {
+  const brand = input.brand?.trim() || null;
+  const color = extractColorFromTitle(input.title) ?? null;
+  return {
+    sourceUrl: input.url,
+    urlSlug: extractUrlSlug(input.url),
+    brand,
+    brandModelCode: null,
+    sellerSku: input.sellerSku?.trim() || null,
+    title: input.title,
+    coreTitleTokens: coreTokens(input.title, brand, color, null),
+    categoryText: null,
+    colorText: color,
+    materialText: null,
+    fitText: null,
+    ageRangeText: null,
+    sizeLabels: [],
+    audienceSignals: [],
+    imageUrls: input.imageUrl ? [input.imageUrl] : [],
+  };
+}
+
 /* ───────────────────────────────── Smallable ───────────────────────────────── */
 
 /**

@@ -1,6 +1,7 @@
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
 import type { ProductOption } from "./evidence";
 import { decodeHtmlEntities } from "./html-entities";
+import { productFactsFromListing } from "./seller-facts";
 import type { ComparisonCandidate } from "./types";
 
 const FETCH_TIMEOUT_MS = 10000;
@@ -159,20 +160,31 @@ export async function searchLooxloo(query: string): Promise<ComparisonCandidate[
     const regularPrice = parsePrice(extractField(block, "판매가"));
     const amount = salePrice ?? regularPrice;
     const img = IMG_RE.exec(block)?.[1];
+    const url = href ? `https://${DOMAIN}${href}` : `https://${DOMAIN}`;
+    const imageUrl = img ? (img.startsWith("//") ? `https:${img}` : img) : null;
 
     candidates.push({
       title,
-      url: href ? `https://${DOMAIN}${href}` : `https://${DOMAIN}`,
+      url,
       price: amount ? { amount, currency: "KRW" } : null,
       // N-4.18-Q2 P0-4 — 할인판매가/정가가 둘 다 있고 정가가 더 클 때만 노출.
       regularPrice:
         salePrice && regularPrice && regularPrice > salePrice
           ? { amount: regularPrice, currency: "KRW" }
           : null,
-      imageUrl: img ? (img.startsWith("//") ? `https:${img}` : img) : null,
+      imageUrl,
       confidence: 0,
       brand,
       sku: extractModelCode(title),
+      // MI-MATCHING-3.0 — 위에서 이미 읽은 값을 판정기가 보는 칸에도 담는다
+      // (seller-facts.ts productFactsFromListing 주석 참고). 새로 읽는 값은 없다.
+      facts: productFactsFromListing({
+        title,
+        url,
+        brand,
+        sellerSku: extractModelCode(title),
+        imageUrl,
+      }),
     });
   }
 

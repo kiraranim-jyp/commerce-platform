@@ -1,5 +1,6 @@
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
 import { decodeHtmlEntities } from "./html-entities";
+import { productFactsFromListing } from "./seller-facts";
 import type { ComparisonCandidate } from "./types";
 
 const FETCH_TIMEOUT_MS = 10000;
@@ -109,20 +110,27 @@ export async function searchChocoel(query: string): Promise<ComparisonCandidate[
     const amount = salePrice ?? regularPrice;
     const img = IMG_RE.exec(block)?.[1];
 
+    const url = href.startsWith("http") ? href : `https://${DOMAIN}${href}`;
+    const imageUrl = img ? (img.startsWith("//") ? `https:${img}` : img) : null;
+
     candidates.push({
       title,
-      url: href.startsWith("http") ? href : `https://${DOMAIN}${href}`,
+      url,
       price: amount ? { amount, currency: "KRW" } : null,
       // N-4.18-Q2 P0-4 — 할인판매가/정가가 둘 다 있고 정가가 더 클 때만 노출.
       regularPrice:
         salePrice && regularPrice && regularPrice > salePrice
           ? { amount: regularPrice, currency: "KRW" }
           : null,
-      imageUrl: img ? (img.startsWith("//") ? `https:${img}` : img) : null,
+      imageUrl,
       confidence: 0,
       // 실측 확인: 목록 마크업에 브랜드/SKU 필드 자체가 없음(undefined 유지).
       brand: undefined,
       sku: undefined,
+      // MI-MATCHING-3.0 — 브랜드가 없는 판매처라 facts.brand도 null이다. 그래도
+      // 제목·이미지·URL은 실재하므로 판정기가 상품군/대상 축을 볼 수 있게 담는다
+      // (브랜드가 없으면 BRAND_UNCONFIRMED 보류가 붙어 SAME으로 올라가지 못한다).
+      facts: productFactsFromListing({ title, url, imageUrl }),
     });
   }
 
