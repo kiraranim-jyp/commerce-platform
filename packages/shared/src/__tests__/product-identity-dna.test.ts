@@ -3,6 +3,7 @@ import {
   buildCrossSellerSearchQueries,
   buildDomesticShopQuery,
   buildProductIdentityDna,
+  productTypeTokenOf,
 } from "../product-identity-dna";
 import type { CanonicalProduct, ProvenanceField } from "../product-types";
 
@@ -183,13 +184,94 @@ describe("buildCrossSellerSearchQueries", () => {
     expect(queries.some((q) => q.includes("AAA1804922"))).toBe(false);
   });
 
-  it("좁은 말(브랜드+상품명+색상)부터 넓은 말 순서로 만든다", () => {
-    const queries = smallableLike() && buildCrossSellerSearchQueries(smallableLike());
+  it("1차 질의는 브랜드+핵심명+유형+색상이고, 소재는 그 자리에 없다", () => {
+    /**
+     * MI-MATCHING-INTEGRATION-2(CEO/CPO 지시, 2026-09-13):
+     *
+     *   1차 질의   브랜드 + 상품 핵심명 + 상품 유형 + 색상
+     *   보조 신호  소재 · 모델 단서
+     *
+     * 예전 판의 마지막 그물은 "Bobo Choses organic cotton zipped"였다 —
+     * "organic cotton"은 상품명이 아니라 **소재**인데 핵심명 자리에 들어가
+     * 있었다. 같은 말을 두 축에서 두 번 세면, 그 말이 판매처마다 다르게 적혀
+     * 있을 때 두 칸이 한꺼번에 무너진다.
+     */
+    const queries = buildCrossSellerSearchQueries(smallableLike());
+    // 이 픽스처에는 카테고리 신호가 없어 유형 칸이 비어 있다(지어내지 않는다).
     expect(queries[0]).toBe("Bobo Choses zipped sweat Heather grey");
     expect(queries[1]).toBe("Bobo Choses zipped sweat");
-    // 마지막 그물도 "브랜드 + 명사 하나"보다는 좁다 — 소재가 함께 들어간다.
-    expect(queries[queries.length - 1]).toBe("Bobo Choses organic cotton zipped");
+    // 소재는 지워진 것이 아니라 **내려갔다** — 1차 계열이 전부 0건일 때의 그물.
+    expect(queries[queries.length - 1]).toBe("Bobo Choses zipped sweat organic cotton");
+    expect(queries[0]).not.toContain("cotton");
     expect(new Set(queries).size).toBe(queries.length);
+  });
+
+  /**
+   * 실측(2026-09-13, bobochoses.com /search/suggest.json 직접 호출):
+   *
+   *   Bobo Choses zipped sweat organic cotton Heather grey   B226AC114 #3
+   *   Bobo Choses zipped sweat Sweatshirts Heather grey      B226AC114 #1
+   *
+   * 상품 유형 한 단어가 목표 상품을 3위에서 1위로 올린다. 순위가 중요한 이유는
+   * 예뻐서가 아니라 **상위 몇 건만 상세 조회되기 때문**이다(bobochoses-kr.ts의
+   * MAX_DETAIL_LOOKUPS=3) — 3위는 그 경계 바로 위였다.
+   */
+  it("상품 유형을 쓴다 — 관측된 분류의 마지막 조각을 읽을 뿐이다", () => {
+    const dna = buildProductIdentityDna(
+      baseProduct({
+        sourceUrl:
+          "https://www.smallable.com/en/product/bobo-choses-zipped-sweat-organic-cotton-heather-grey-bobo-choses-430701",
+        title: field("Bobo Choses Zipped Sweat Organic Cotton | Heather grey"),
+        brand: field("Bobo Choses"),
+        sku: field("AAA1804922"),
+        color: field("Heather grey"),
+        material: field("100% Organic Cotton"),
+        breadcrumbPath: ["Home", "Fashion Children", "Boy", "Sweatshirts"],
+      }),
+    );
+    const queries = buildCrossSellerSearchQueries(dna);
+    expect(queries[0]).toBe("Bobo Choses zipped sweat Sweatshirts Heather grey");
+    // 경로 전체("Home > Fashion Children > …")가 검색어로 나가지 않는다 —
+    // 그러면 상품과 무관한 말이 질의의 대부분이 된다.
+    expect(queries.every((q) => !q.includes("Fashion Children"))).toBe(true);
+    // 색상을 뗀 칸이 남는다 — 좁은 말이 0건이면 내려갈 자리가 있어야 한다.
+    expect(queries).toContain("Bobo Choses zipped sweat Sweatshirts");
+  });
+
+  /**
+   * CPO 지시(2026-09-13) — **실측을 규칙으로 굳히지 않는다.**
+   *
+   * "organic cotton을 빼고 sweatshirts를 붙인다"는 이 상품 하나의 답이다. 다른
+   * 상품에는 dress · sneakers · bag이 와야 하고, 그 말들의 목록을 코드에 심는
+   * 순간 목록에 없는 상품은 전부 유형을 잃는다. 유형은 브랜드·색상과 똑같이
+   * **관측된 값에서 구조로** 나온다.
+   */
+  it("유형 어휘를 코드가 알고 있지 않다 — 다른 상품군도 같은 규칙으로 나온다", () => {
+    const dress = buildProductIdentityDna(
+      baseProduct({
+        sourceUrl: "https://www.smallable.com/en/product/x-999001",
+        title: field("Konges Slojd Ruffle Dress"),
+        brand: field("Konges Slojd"),
+        color: field("Lemon"),
+        breadcrumbPath: ["Home", "Fashion Children", "Girl", "Dresses & Skirts"],
+      }),
+    );
+    // 유형은 마지막 조각에서 나오고, 한 칸에 둘이 적혀 있으면 앞의 것을 읽는다.
+    expect(productTypeTokenOf(dress)).toBe("Dresses");
+    expect(buildCrossSellerSearchQueries(dress)[0]).toBe("Konges Slojd ruffle dress Dresses Lemon");
+
+    const sneakers = buildProductIdentityDna(
+      baseProduct({
+        sourceUrl: "https://www.smallable.com/en/product/y-999002",
+        title: field("Veja Esplar Sneakers"),
+        brand: field("Veja"),
+        breadcrumbPath: ["Home", "Shoes", "Sneakers"],
+      }),
+    );
+    expect(productTypeTokenOf(sneakers)).toBe("Sneakers");
+
+    // 분류 신호가 없으면 유형을 지어내지 않는다 — 빈 값이고, 질의는 그만큼 넓어진다.
+    expect(productTypeTokenOf(smallableLike())).toBe("");
   });
 
   it("브랜드 품번이 원문에 있으면 그것을 1순위 단독 검색어로 쓴다", () => {

@@ -156,11 +156,19 @@ describe("시장별 가격 한 줄은 시장·통화·환산을 모두 말한다
    * 비교」 패널 한 벌뿐이다). 규칙 자체는 그대로이고, 그 규칙을 어길 수 있는
    * 자리가 하나 줄었을 뿐이다.
    */
-  it("원본 통화 가격 옆에 저장된 원화 환산값이 함께 온다", () => {
-    // 매입처 비교가 이 블록의 존재 이유인데, €75만 보여주면 비교할 수가 없다.
-    // 환율을 새로 계산하지 않고 관측 시점에 저장된 price_krw를 그대로 쓴다.
-    expect(panel).toContain("원화 환산 {row.krwPrice}");
-    expect(panel).toContain("{row.krwPrice && <span");
+  it("나라마다 숫자는 하나다 — 그 줄에서 관측된 통화 그대로", () => {
+    /**
+     * MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 여기 있던 "원화 환산
+     * {row.krwPrice}"를 지운다. 그 칸이 있는 동안 프랑스 줄은 €75와 ₩116,742
+     * 두 금액을 동시에 말했고, 화면에는 나라 수의 두 배만큼 금액이 떴다.
+     *
+     * 대신 한국 줄만 원화가 대표값이 되고(그 줄을 읽는 사람이 한국에서 파는
+     * 사람이라서), 관측 통화가 외화였다는 사실은 괄호 한 조각으로 남는다.
+     */
+    expect(panel).not.toContain("원화 환산 {row.krwPrice}");
+    expect(panel).not.toContain("row.krwPrice");
+    expect(panel).toContain("{row.observedPrice}");
+    expect(panel).toContain("(원 표시가 {row.observedOriginPrice})");
   });
 
   it("판매자 신고 국가를 시장이라고 부르지 않는다", () => {
@@ -292,16 +300,24 @@ describe("② 글로벌 시장은 관측된 시장가만 말한다", () => {
     expect(panelCode).not.toContain("row.isCostBasis");
   });
 
-  it("🇰🇷 줄은 관측된 시장가 라벨을 달고, 그 라벨은 가격 계층 표에서 온다", () => {
-    expect(globalCardView).toContain("{row.priceMeaningLabel}");
-    expect(read("../global-market.ts")).toContain("PRICE_MEANING_LABEL.KR_MARKET_PRICE");
+  it("🇰🇷 줄에는 가격 의미 라벨도 환산 칸도 없다 — 나라와 금액 둘뿐이다", () => {
+    // MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 이 줄이 "원본 판매자
+    // 한국 표시가 €73.00 · 원화 환산 ₩113,629"로 떠 있던 것을 지운다. 라벨과
+    // 환산 칸이 함께 사라지고 한국 줄의 대표값은 언제나 원화 하나다.
+    expect(globalCardView).not.toContain("row.priceMeaningLabel");
+    expect(globalCardView).not.toContain("row.krwPrice");
+    expect(stripComments(read("../global-market.ts"))).not.toContain("PRICE_MEANING_LABEL");
+    expect(stripComments(globalCardView)).not.toContain("원화 환산");
   });
 
-  it("모든 시장 줄이 동일 상품 표시를 달고, 근거는 펼친 상세에 있다", () => {
-    expect(globalCardView).toContain("{row.identity.icon} {row.identity.text}");
-    const evidenceAt = globalCardView.indexOf("{row.identity.evidence}");
+  it("동일 상품이라는 사실은 줄이 아니라 카드가 한 번 말한다", () => {
+    // 달라지지 않는 사실을 네 줄에 네 번 적으면 줄마다 판정된 결과로 읽힌다.
+    expect(globalCardView).not.toContain("row.identity");
+    expect(globalCardView).toContain("{card.invariant.icon} {card.invariant.text}");
+    // 같은 상품 경로(근거)는 여전히 펼친 상세에만 있다.
+    const pathAt = globalCardView.indexOf("row.sameProductPath");
     const detailGateAt = globalCardView.indexOf("{showDetail && (");
-    expect(evidenceAt).toBeGreaterThan(detailGateAt);
+    expect(pathAt).toBeGreaterThan(detailGateAt);
   });
 
   it("국내 경쟁시장의 매칭 상태는 그대로다 — 다른 개념이라 어휘도 다르다", () => {
@@ -311,9 +327,13 @@ describe("② 글로벌 시장은 관측된 시장가만 말한다", () => {
     expect(matchDisplay).toContain('label: "동일상품"');
     expect(matchDisplay).toContain('label: "동일상품 추정"');
     expect(matchDisplay).toContain('label: "유사상품"');
-    // 글로벌 줄의 문구는 그 셋 중 어느 것과도 같지 않다.
-    expect(read("../global-market.ts")).toContain('text: "동일 상품 · 판매자 직접 관측"');
-    expect(matchDisplay).not.toContain("동일 상품 · 판매자 직접 관측");
+    // 글로벌 카드가 한 번 적는 불변식 문구는 그 셋 중 어느 것과도 같지 않다.
+    // MI-MATCHING-INTEGRATION-2 — 문구 자체가 바뀌었다: 등급처럼 읽히던
+    // "동일 상품 · 판매자 직접 관측" 대신 관측 방식을 그대로 적는다.
+    const globalMarket = read("../global-market.ts");
+    expect(globalMarket).toContain("시장 코드만 바꿔 관측한 값입니다");
+    expect(globalMarket).not.toContain('text: "동일 상품 · 판매자 직접 관측"');
+    expect(matchDisplay).not.toContain("시장 코드만 바꿔 관측한 값입니다");
     // 반대 방향도 막는다 — 글로벌 카드가 매칭 판정을 import해 쓰지 않는다
     // (주석에서 두 개념의 차이를 설명하는 것은 괜찮다. 막는 것은 의존이다).
     expect(stripComments(read("../global-market.ts"))).not.toContain("match-display");

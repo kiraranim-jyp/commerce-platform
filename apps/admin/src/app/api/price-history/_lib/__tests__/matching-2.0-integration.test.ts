@@ -329,9 +329,24 @@ describe("저장 경로가 라이브 검색과 같은 질의를 만든다", () =
 
     const query = hoisted.queries[0]!;
     expect(query.searchTerms?.length ?? 0).toBeGreaterThan(1);
-    // 이 번호 하나가 예전 저장 경로의 유일한 검색어였고, 그 값으로는 언제나 0건이다.
-    expect(query.searchTerm).toBe("AAA1804922");
+    /**
+     * MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — **다른 판매자의 검색창에
+     * 이 판매자의 재고번호를 넣지 않는다.**
+     *
+     * 이 줄은 얼마 전까지 `toBe("AAA1804922")`였다 — 그게 당시의 사실이었기
+     * 때문이다. searchTerms(사다리)를 채운 뒤에도 searchTerm 한 칸은 여전히
+     * buildDomesticShopQuery(dna)였고, tier가 SKU인 상품에서 그 값은 판매처
+     * 자신의 재고번호다. searchTerms가 어떤 이유로든 비면(하위호환 분기) 그
+     * 번호가 그대로 Bobo 공식몰로 나간다 — 언제나 0건인 말이 폴백 자리에
+     * 장전돼 있었다.
+     *
+     * 이제 폴백도 사다리의 첫 칸과 같은 값이다(두 곳이 다른 정책을 갖지 않는다).
+     */
+    expect(query.searchTerm).not.toBe("AAA1804922");
+    expect(query.searchTerm).toBe(query.searchTerms![0]);
+    expect(query.searchTerm).toContain("Bobo Choses");
     expect(query.searchTerms!.some((t) => t.includes("AAA1804922"))).toBe(false);
+    expect(query.searchTerm!.includes("AAA1804922")).toBe(false);
   });
 
   it("등록상품의 사실 묶음이 질의에 실린다 — 이게 없으면 판정 자체가 돌지 않는다", async () => {

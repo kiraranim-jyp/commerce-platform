@@ -10,7 +10,6 @@ import {
 import { sourceFitsScopes } from "@commerce/category";
 import {
   buildCrossSellerSearchQueries,
-  buildDomesticShopQuery,
   identityDnaFromFields,
   productFactsFromIdentityDna,
 } from "@commerce/shared";
@@ -203,7 +202,18 @@ export async function POST(request: Request) {
     material: body.material,
     description: body.description,
   });
-  const searchTerm = buildDomesticShopQuery(dna);
+  /**
+   * MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — **다른 판매자의 검색창에
+   * 이 판매자의 재고번호를 넣지 않는다.**
+   *
+   * 이 줄은 buildDomesticShopQuery(dna)였고, tier가 SKU인 상품에서 그 값은
+   * 판매처 자신의 재고번호다(Smallable AAA1804922). searchTerms를 모르는
+   * 하위호환 분기가 폴백으로 쓰는 자리라, 그 번호가 그대로 Bobo 공식몰로 나가는
+   * — 언제나 0건인 — 말이 장전돼 있었다. 저장 경로(run-domestic-price-check)와
+   * **같은 값**을 쓴다: 사다리의 첫 칸. 두 경로가 다른 폴백 정책을 갖지 않는다.
+   */
+  const searchTerms = buildCrossSellerSearchQueries(dna);
+  const searchTerm = searchTerms[0] ?? body.title;
   const rawResults = await searchDomesticShops(
     {
       title: body.title,
@@ -212,7 +222,7 @@ export async function POST(request: Request) {
       sku: body.sku,
       description: body.description,
       searchTerm,
-      searchTerms: buildCrossSellerSearchQueries(dna),
+      searchTerms,
       facts: productFactsFromIdentityDna(dna),
     },
     sources.map((s) => ({ id: s.id, name: s.name, domain: s.domain, currency: s.currency, collectionStrategy: s.collectionStrategy })),

@@ -137,24 +137,59 @@ describe("판매자 글로벌 시장 가격은 국내 비교상품과 절대 섞
   });
 
   it("시장끼리 평균·최저를 내지 않는다 — 아홉 번째 가격을 만들지 않는다", () => {
-    // 카드가 내놓는 것은 줄 목록뿐이다. 요약 숫자가 생기면 어느 시장에서도
-    // 살 수 없는 "글로벌 평균가"가 화면에 뜬다.
-    expect(Object.keys(CARD).sort()).toEqual(["empty", "note", "rows", "title"]);
+    // 카드가 내놓는 것은 줄 목록과 불변식 한 줄뿐이다. 요약 숫자가 생기면
+    // 어느 시장에서도 살 수 없는 "글로벌 평균가"가 화면에 뜬다.
+    expect(Object.keys(CARD).sort()).toEqual(["empty", "invariant", "note", "rows", "title"]);
+    // 불변식은 문장 하나다 — 금액 필드가 아니다.
+    expect(Object.keys(CARD.invariant).sort()).toEqual(["icon", "text"]);
   });
 });
 
-describe("시장 한 줄은 시장·통화·환산·판매 상태를 말한다", () => {
-  it("관측된 통화 그대로의 금액이 줄의 주인공이다", () => {
+/**
+ * MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 나라마다 숫자 하나.
+ *
+ *   🇰🇷 한국   ₩113,629  (원 표시가 €73)
+ *   🇫🇷 프랑스  €75      🇯🇵 일본 €81      🇺🇸 미국 €79
+ *
+ * 한국 줄만 원화가 대표값이다. 다른 나라 줄은 그 나라에서 관측된 통화 그대로이고,
+ * 관측이 없으면 "—"다 — 다른 나라 가격을 옮겨 적어 칸을 채우지 않는다.
+ */
+describe("시장 한 줄은 나라와 금액 하나만 말한다", () => {
+  it("판단 시장이 아닌 줄의 대표값은 그 나라에서 관측된 통화 그대로다", () => {
     const us = CARD.rows.find((r) => r.marketCode === "en-us")!;
     expect(us.observedPrice).toContain("53");
-    expect(us.krwPrice).toBe("₩71,221");
+    // 환산 원화가 비-한국 줄의 대표값이 되는 경로 자체가 없다.
+    expect(us.observedPrice).not.toContain("71,221");
+    expect(us.observedOriginPrice).toBeNull();
   });
 
-  it("원화로 관측된 시장에는 원화 환산을 덧붙이지 않는다", () => {
-    // "₩78,000 ≈ ₩78,000"은 정보가 아니라 같은 숫자의 두 번째 사본이다.
+  it("한 줄에 금액은 하나뿐이다 — 환산 칸이라는 두 번째 금액 자리가 없다", () => {
+    // 여기 있던 krwPrice("원화 환산 ₩57,756")를 지웠다. 그 칸이 있는 동안
+    // 프랑스 줄은 €75와 ₩116,742 두 금액을 동시에 말했고, 그 둘이 한 화면의
+    // 다른 원화 금액들과 같은 층으로 읽혔다.
+    for (const row of CARD.rows) {
+      expect(Object.keys(row)).not.toContain("krwPrice");
+    }
+    expect(JSON.stringify(CARD)).not.toContain("원화 환산");
+  });
+
+  it("원화로 관측된 한국 줄에는 원 표시가를 덧붙이지 않는다", () => {
+    // "₩78,000 (원 표시가 ₩78,000)"은 정보가 아니라 같은 숫자의 두 번째 사본이다.
     const kr = CARD.rows.find((r) => r.marketCode === "en-kr")!;
     expect(kr.observedPrice).toBe("₩78,000");
-    expect(kr.krwPrice).toBeNull();
+    expect(kr.observedOriginPrice).toBeNull();
+  });
+
+  it("관측 금액이 없으면 다른 나라 값을 옮겨 적지 않고 — 로 남긴다", () => {
+    const card = buildGlobalMarketCard({
+      observations: [
+        { ...OBSERVATIONS[0]!, marketCode: "en-fr", currency: "EUR", priceAmount: null, priceKrw: 113629 },
+      ],
+    });
+    // priceKrw가 저장돼 있어도 프랑스 줄의 대표값이 되지 않는다 — 프랑스에서
+    // 관측된 유로 금액이 없다는 것이 이 줄의 사실이다.
+    expect(card.rows[0]!.observedPrice).toBe("—");
+    expect(card.rows[0]!.observedPrice).not.toContain("113,629");
   });
 
   it("재고 세 상태를 하나로 뭉개지 않는다", () => {
@@ -185,7 +220,7 @@ describe("판매자 신고 국가는 기본 화면의 값이 아니다", () => {
 
   it("기본 화면에 그리는 문자열 어디에도 신고 국가가 섞이지 않는다", () => {
     for (const row of CARD.rows) {
-      for (const shown of [row.name, row.code, row.observedPrice, row.krwPrice ?? "", row.availability.text]) {
+      for (const shown of [row.name, row.code, row.observedPrice, row.observedOriginPrice ?? "", row.availability.text]) {
         expect(shown).not.toContain(row.declaredCountry ?? " ");
       }
     }
@@ -216,18 +251,14 @@ describe("관측된 시장가를 원가라고 부르지 않는다", () => {
     expect(Object.keys(input)).toEqual(["observations"]);
   });
 
-  it("판단 시장 줄은 자기 라벨을 달고, 그 라벨은 가격 계층 표에서 온다", () => {
-    const kr = CARD.rows.find((r) => r.marketCode === "en-kr")!;
-    expect(kr.priceMeaningLabel).toBe(PRICE_MEANING_LABEL.KR_MARKET_PRICE);
-    // 관측된 값이라는 사실을 말하지, 무엇의 기준이라고 말하지 않는다.
-    expect(kr.priceMeaningLabel).toContain("표시가");
-    expect(kr.priceMeaningLabel).not.toContain("기준");
-  });
-
-  it("부딪힐 상대가 없는 시장 줄에는 라벨을 억지로 붙이지 않는다", () => {
-    // "🇩🇪 독일 · en-de · €75"로 충분하다 — 화면에 다른 독일 가격이 없다.
-    expect(CARD.rows.find((r) => r.marketCode === "en-de")!.priceMeaningLabel).toBeNull();
-    expect(CARD.rows.find((r) => r.marketCode === "en-int")!.priceMeaningLabel).toBeNull();
+  it("줄에는 가격 의미 라벨이 아예 없다 — 나라와 금액 둘뿐이다", () => {
+    // MI-MATCHING-INTEGRATION-2 — 여기 있던 "원본 판매자 한국 표시가"는 한국
+    // 줄에만 붙던 라벨이었고, 그 라벨 때문에 줄 하나가 "라벨 · 외화 · 환산"
+    // 세 조각으로 읽혔다. 그 값이 무슨 값인지는 카드가 note로 한 번 말한다.
+    for (const row of CARD.rows) {
+      expect(Object.keys(row)).not.toContain("priceMeaningLabel");
+    }
+    expect(JSON.stringify(CARD)).not.toContain(PRICE_MEANING_LABEL.KR_MARKET_PRICE);
   });
 });
 
@@ -237,42 +268,46 @@ describe("관측된 시장가를 원가라고 부르지 않는다", () => {
  *   🌎 판매자 글로벌 시장   같은 판매자가 여러 시장에서 파는 가격   구성으로 동일
  *   🇰🇷 국내 경쟁시장       다른 판매자의 비교 가능 상품           매칭으로 판정
  */
-describe("글로벌 시장 줄의 동일 상품 표시는 매칭 등급이 아니다", () => {
-  it("모든 줄이 같은 🟢 하나를 단다 — 등급이 없다", () => {
+describe("글로벌 시장의 동일 상품 표시는 줄이 아니라 카드가 한 번 단다", () => {
+  it("줄에는 배지가 없다 — 달라지지 않는 사실을 네 줄에 네 번 적지 않는다", () => {
     for (const row of CARD.rows) {
-      expect(row.identity.icon).toBe("🟢");
-      expect(row.identity.text).toBe("동일 상품 · 판매자 직접 관측");
+      expect(Object.keys(row)).not.toContain("identity");
     }
-    expect(new Set(CARD.rows.map((r) => r.identity.text)).size).toBe(1);
+    // 카드에는 정확히 한 번 있다. 줄의 🟢는 재고 상태(판매중)라 다른 사실이다 —
+    // 동일 상품이라는 말이 붙은 자리가 카드 하나뿐인지를 센다.
+    expect(CARD.invariant.icon).toBe("🟢");
+    expect(JSON.stringify(CARD).match(/동일 ?상품/g) ?? []).toHaveLength(0);
+    expect(CARD.invariant.text).not.toContain("동일상품");
   });
 
   it("국내 매칭 상태와 같은 말을 쓰지 않는다 — 두 개념이 한 어휘로 합쳐지지 않는다", () => {
     // 국내는 matchTruth가 판정한 결과라 등급이 흔들린다(match-display.ts).
-    for (const row of CARD.rows) {
-      for (const domestic of [
-        domesticMatchDisplay("EXACT_IDENTIFIER").label,
-        domesticMatchDisplay("TEXT_CONFIRMED").label,
-        domesticMatchDisplay("SIMILAR").label,
-      ]) {
-        expect(row.identity.text).not.toBe(domestic);
-      }
+    for (const domestic of [
+      domesticMatchDisplay("EXACT_IDENTIFIER").label,
+      domesticMatchDisplay("TEXT_CONFIRMED").label,
+      domesticMatchDisplay("SIMILAR").label,
+    ]) {
+      expect(CARD.invariant.text).not.toBe(domestic);
     }
+    // 지운 것은 문구 자체다 — "동일 상품 · 판매자 직접 관측"이 어느 줄에도 없다.
+    expect(JSON.stringify(CARD)).not.toContain("동일 상품 · 판매자 직접 관측");
   });
 
-  it("근거는 줄이 아니라 펼친 상세가 들고, 관측에 적힌 것만 말한다", () => {
+  it("불변식은 관측 방식을 말한다 — 줄마다 판정된 등급이 아니다", () => {
+    expect(CARD.invariant.text).toContain("시장 코드만");
+    expect(CARD.invariant.text).toContain("같은 상품 페이지");
+  });
+
+  it("같은 상품 경로는 펼친 상세의 값이고, 관측에 적힌 것만 말한다", () => {
     const kr = CARD.rows.find((r) => r.marketCode === "en-kr")!;
-    expect(kr.identity.evidence).toContain("동일 판매처 · 동일 상품 경로");
     // 시장 코드를 뗀 상품 경로 — 여러 줄에 같은 경로가 적히는 것이 곧 증거다.
-    expect(kr.identity.evidence).toContain("/products/x");
-    expect(kr.identity.evidence).toContain("시장 코드만 en-kr로 바꿔 관측");
-    // 줄에 보이는 짧은 말에는 근거가 섞이지 않는다(줄이 길어지면 가격이 밀린다).
-    expect(kr.identity.text).not.toContain("경로");
+    expect(kr.sameProductPath).toBe("/products/x");
   });
 
   it("URL이 없으면 경로를 지어내지 않는다", () => {
     const us = CARD.rows.find((r) => r.marketCode === "en-us")!;
     expect(us.productUrl).toBeNull();
-    expect(us.identity.evidence).not.toContain("/products");
+    expect(us.sameProductPath).toBeNull();
   });
 });
 
@@ -309,10 +344,15 @@ describe("한국 시장 줄의 대표 숫자는 원화다", () => {
   it("큰 숫자 자리에 원화가 서고, 원 표시가는 지워지지 않고 뒤에 남는다", () => {
     expect(kr.observedPrice).toBe("₩113,629");
     expect(kr.observedOriginPrice).toBe("€73.00");
-    // 같은 숫자를 두 번 쓰지 않는다 — 원화가 이미 앞에 있으므로 환산 칸은 비어 있다.
-    expect(kr.krwPrice).toBeNull();
     // 본문 한 줄 요약도 같은 문자열을 쓴다(두 자리가 다른 금액을 말할 수 없다).
     expect(kr.compact).toBe("🇰🇷 KR ₩113,629");
+  });
+
+  it("지시가 지목한 그 줄이 화면에서 사라졌다", () => {
+    // 오늘의 화면: "원본 판매자 한국 표시가 €73.00 · 원화 환산 ₩113,629"
+    const shown = JSON.stringify(card);
+    expect(shown).not.toContain("원화 환산");
+    expect(shown).not.toContain(PRICE_MEANING_LABEL.KR_MARKET_PRICE);
   });
 
   it("환율을 다시 계산하지 않는다 — 관측에 저장된 원화값 그대로다", () => {
@@ -323,14 +363,12 @@ describe("한국 시장 줄의 대표 숫자는 원화다", () => {
     const us = card.rows.find((r) => r.marketCode === "en-us")!;
     expect(us.observedPrice).toContain("53");
     expect(us.observedOriginPrice).toBeNull();
-    expect(us.krwPrice).toBe("₩71,221");
   });
 
   it("관측 통화가 이미 원화면 바꿀 것이 없다 — 원 표시가 줄도 만들지 않는다", () => {
     const krwObserved = CARD.rows.find((r) => r.marketCode === "en-kr")!;
     expect(krwObserved.observedPrice).toBe("₩78,000");
     expect(krwObserved.observedOriginPrice).toBeNull();
-    expect(krwObserved.krwPrice).toBeNull();
   });
 
   it("①로 넘어가는 값도 같은 줄에서 나온다 — 그 숫자가 환산이라는 사실을 기준이 말한다", () => {

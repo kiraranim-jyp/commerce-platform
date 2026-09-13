@@ -136,13 +136,88 @@ export function tierGroupLabel(tier: MatchDisplayTier): string {
 }
 
 /** MI-UX-9 §7 — 유사상품은 가격 판단에 의미가 있는 상위 몇 건만 기본 노출하고
- * 나머지는 "더 보기"로 넘긴다. 동일상품/추정은 건수가 많지 않고 판단에 직접
- * 쓰이므로 자르지 않는다. 서버 정렬(랭킹 점수) 순서를 그대로 신뢰한다 — 여기서
- * 새로 정렬하지 않는다. */
+ * 나머지는 "더 보기"로 넘긴다. 서버 정렬(랭킹 점수) 순서를 그대로 신뢰한다 —
+ * 여기서 새로 정렬하지 않는다. */
 export const SIMILAR_DEFAULT_LIMIT = 3;
 
+/**
+ * MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — **확정되지 않은 등급은 셋까지.**
+ *
+ *   🟢 동일상품      전부
+ *   🟡 동일상품 추정  상위 3건
+ *   ⚪ 유사상품      상위 3건
+ *   그 아래          기본 화면에 그리지 않는다(isDefaultVisibleTier)
+ *
+ * ── 왜 동일상품만 자르지 않는가 ─────────────────────────────────────────
+ * 🟢은 "이 상품이 저기에도 있다"는 **사실의 목록**이다. 넷째 판매처를 감추면
+ * 화면이 시장을 실제보다 좁게 말한다. 반면 🟡/⚪은 확정되지 않은 **후보**이고,
+ * 후보는 길어질수록 판단을 돕는 게 아니라 판단을 미루게 만든다 — 실측에서 한
+ * 검색이 유사상품 스무 건을 내놓는 일이 흔하다.
+ *
+ * 🔵 동일 모델 · 옵션 다름도 확정되지 않은 참고 등급이라 같은 상한을 쓴다
+ * (해외에서만 나오는 값이다 — 국내 MatchTruth에는 이 값이 없다). 지시문의 세
+ * 그룹에 이름이 없다는 이유로 그룹을 통째로 지우지는 않는다: 그건 상한이
+ * 아니라 삭제이고, 지금 화면에 있는 사실이 사라진다.
+ *
+ * 자른 나머지는 버리지 않는다 — 호출부가 "더 보기" 묶음으로 넘긴다(데이터
+ * 삭제가 아니라 기본 노출량 제한).
+ */
+const DEFAULT_LIMIT_BY_TIER: Partial<Record<MatchDisplayTier, number>> = {
+  SAME_MODEL_OPTION_DIFF: SIMILAR_DEFAULT_LIMIT,
+  PRESUMED_SAME: SIMILAR_DEFAULT_LIMIT,
+  SIMILAR: SIMILAR_DEFAULT_LIMIT,
+};
+
 export function defaultLimitForTier(tier: MatchDisplayTier): number | null {
-  return tier === "SIMILAR" ? SIMILAR_DEFAULT_LIMIT : null;
+  return DEFAULT_LIMIT_BY_TIER[tier] ?? null;
+}
+
+/**
+ * MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — **애초에 목록에 설 수 있는
+ * 후보인가.**
+ *
+ * 지시가 적은 통과 조건은 다섯이다:
+ *
+ *   브랜드 일치 · 상품 유형 일치 · 대상(audience) 충돌 없음 ·
+ *   명시적 색상/품번 충돌 없음 · 최소 유사도
+ *
+ * ── 여기서 판정을 새로 하지 않는다 ──────────────────────────────────────
+ * 앞의 넷은 이미 계산된 값 하나에 그대로 들어 있다. compareCrossSellerProducts
+ * (packages/crawler/comparison-search/cross-seller.ts)가 CONFLICT로 끝내는
+ * 경우가 정확히 그 넷이다 — BRAND · CATEGORY(상품 유형) · AUDIENCE/GENDER ·
+ * COLOR · MODEL_CODE. 그리고 브랜드를 확인하지 못했거나 상품 유형이 겹치지
+ * 않으면 그 후보는 SAME 등급에 도달하지 못한다(blockers/coreAxes). 즉 다섯 축의
+ * 결과는 crossSellerVerdict와 matchTruth/productMatchTruth 안에 이미 있고,
+ * 화면이 할 일은 **그 값을 읽는 것**이지 같은 비교를 한 번 더 하는 것이 아니다.
+ * 여기서 축을 다시 재면 판정기와 화면이 서로 다른 답을 내는 날이 온다.
+ *
+ * 다섯째(최소 유사도)만 이 층의 값이다. 텍스트 점수가 바닥인데 근거도 없는
+ * 후보는 "유사상품"이라고 부를 근거조차 없다 — 다만 **근거가 있으면** 점수는
+ * 보지 않는다(실측: Smallable 430701 ↔ Bobo B226AC114은 상품명 어휘가 거의
+ * 겹치지 않아 텍스트로는 0.38인데 교차판매처 판정은 SAME이다). 점수 하한이
+ * 근거를 이기면 이번 작업이 되살린 그 후보가 다시 화면에서 사라진다.
+ */
+export const MIN_DISPLAY_SIMILARITY = 0.2;
+
+export interface CandidateDisplayGateInput {
+  tier: MatchDisplayTier;
+  /** scoreCandidateMatch가 이미 낸 텍스트 유사도. 다시 계산하지 않는다. */
+  confidence: number;
+  /** 교차판매처 판정(있으면). 없으면 이 후보에 대해 판정이 돌지 않았다는 뜻이다. */
+  crossSellerVerdict?: "SAME" | "PRESUMED_SAME" | "SIMILAR" | "UNKNOWN" | "CONFLICT";
+}
+
+export function mayShowCandidate(input: CandidateDisplayGateInput): boolean {
+  // ① 다섯 축 중 하나라도 명시적으로 어긋난 후보는 목록에 서지 않는다.
+  //    (CONFLICT 등급은 그 반증이 있다는 뜻 그 자체다.)
+  if (input.crossSellerVerdict === "CONFLICT") return false;
+  if (!isDefaultVisibleTier(input.tier)) return false;
+  // ② 근거로 올라온 등급은 텍스트 점수를 보지 않는다 — 점수 하한이 근거를
+  //    이기면 "판매처마다 SKU가 다른" 바로 그 쌍이 다시 사라진다.
+  if (input.tier === "SAME" || input.tier === "SAME_MODEL_OPTION_DIFF") return true;
+  if (input.crossSellerVerdict === "SAME" || input.crossSellerVerdict === "PRESUMED_SAME") return true;
+  // ③ 그 밖에는 최소 유사도.
+  return input.confidence >= MIN_DISPLAY_SIMILARITY;
 }
 
 /** 국내(matchTruth) → 공통 표시. 국내에는 옵션 차이 데이터가 없으므로

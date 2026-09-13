@@ -14,6 +14,9 @@ import {
   DEFAULT_TIER_ORDER,
   defaultLimitForTier,
   isDefaultVisibleTier,
+  // MI-MATCHING-INTEGRATION-2 — "애초에 목록에 설 수 있는 후보인가". 국내 표와
+  // 같은 함수를 쓴다(두 화면이 다른 기준으로 후보를 거르지 않는다).
+  mayShowCandidate,
   overseasMatchDisplay,
   tierGroupLabel,
   type MatchDisplayTier,
@@ -632,13 +635,20 @@ function ResultTable({
 
   // MI-UX-9 §5/§6 — 기본 노출은 판정값 기준. 이전 `matchLevel !== "low"` 필터는
   // CONFLICT(식별자 충돌)도 텍스트 점수만 높으면 통과시켰다.
-  const visibleRows = allRows.filter((row) => row.candidate && isDefaultVisibleTier(displayTierForCandidate(row.candidate)));
-  const hiddenRows = allRows.filter((row) => !row.candidate || !isDefaultVisibleTier(displayTierForCandidate(row.candidate)));
+  //
+  // MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 그 조건이 국내 표와 같은
+  // 문 하나(mayShowCandidate)로 모였다: 등급 + 다섯 축 중 명시적 충돌 없음 +
+  // 최소 유사도. 판정을 다시 하지 않는다 — 이미 계산된 값을 읽는다.
+  const mayShow = (c: Candidate) =>
+    mayShowCandidate({ tier: displayTierForCandidate(c), confidence: c.confidence });
+  const visibleRows = allRows.filter((row) => row.candidate && mayShow(row.candidate));
+  const hiddenRows = allRows.filter((row) => !row.candidate || !mayShow(row.candidate));
   // CEO 지시(2026-08-19: "매칭성공 0이면 조회를 하지마") — 참고 가능한 매칭이
   // 하나도 없으면 표 자체를 그리지 않는다(위 ResultHeadline이 이미 안내).
   if (visibleRows.length === 0) return null;
 
-  // §7 — 유사상품만 상위 N건으로 자르고, 나머지는 "더 보기"로 넘긴다.
+  // §7 — 확정되지 않은 등급(🔵/🟡/⚪)만 상위 3건으로 자르고, 나머지는 "더 보기"로
+  // 넘긴다. 🟢 동일상품은 자르지 않는다(사실의 목록이지 후보가 아니다).
   const groups = DEFAULT_TIER_ORDER.map((tier) => {
     const rows = visibleRows.filter((row) => displayTierForCandidate(row.candidate!) === tier);
     const limit = defaultLimitForTier(tier);

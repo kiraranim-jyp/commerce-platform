@@ -11,7 +11,9 @@ import {
   DEFAULT_TIER_ORDER,
   defaultLimitForTier,
   domesticMatchDisplay,
-  isDefaultVisibleTier,
+  // MI-MATCHING-INTEGRATION-2 — "애초에 목록에 설 수 있는 후보인가"를 정하는
+  // 단 하나의 문. 국내/해외 두 표가 같은 함수를 부른다.
+  mayShowCandidate,
   tierGroupLabel,
   type MatchDisplayTier,
 } from "./match-display";
@@ -94,6 +96,11 @@ export interface Candidate {
   matchLevel?: MatchLevel;
   matchReasons?: string[];
   matchTruth?: MatchTruth;
+  /** MATCHING-2.0-CORE — 교차판매처 판정. 없으면(undefined) 이 후보에 대해
+   * 판정이 돌지 않았다는 뜻이다(양쪽 facts가 다 있어야 돈다). 화면은 이 값을
+   * **읽기만** 한다 — 같은 비교를 여기서 다시 하지 않는다(match-display.ts의
+   * mayShowCandidate 주석 참고). */
+  crossSellerVerdict?: "SAME" | "PRESUMED_SAME" | "SIMILAR" | "UNKNOWN" | "CONFLICT";
   /** N-4.18-Q3 PART E-2 — 매칭 신뢰도와 완전히 분리된 축. true=품절 확인,
    * false=판매중 확인, null/undefined=그 사이트에서 확인할 방법이 없음(임의로
    * 판매중/품절 어느 쪽으로도 해석하지 않는다). */
@@ -492,12 +499,26 @@ function ResultTable({ results }: { results: SearchResult[] }) {
 
   // MI-UX-9 §5/§6 — 기본 노출은 매칭 가능성이 있는 등급만. CONFLICT(다른 상품
   // 가능성)와 UNKNOWN(근거 부족)은 가격 판단 근거가 될 수 없으므로 "더 보기" 뒤로.
-  const visibleRows = allRows.filter((row) => row.candidate && isDefaultVisibleTier(displayTierForCandidate(row.candidate)));
-  const hiddenRows = allRows.filter((row) => !row.candidate || !isDefaultVisibleTier(displayTierForCandidate(row.candidate)));
+  //
+  // MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 그 조건이 mayShowCandidate
+  // 하나로 모였다. 등급뿐 아니라 "브랜드/상품 유형/대상/색상/품번 중 하나라도
+  // 명시적으로 어긋났는가"와 최소 유사도까지 같은 문 하나가 본다(판정을 다시
+  // 하지 않는다 — 이미 계산된 값을 읽는다).
+  const mayShow = (c: Candidate) =>
+    mayShowCandidate({
+      tier: displayTierForCandidate(c),
+      confidence: c.confidence,
+      crossSellerVerdict: c.crossSellerVerdict,
+    });
+  const visibleRows = allRows.filter((row) => row.candidate && mayShow(row.candidate));
+  const hiddenRows = allRows.filter((row) => !row.candidate || !mayShow(row.candidate));
   if (visibleRows.length === 0) return null;
 
-  // §7 — 등급별로 묶고, 유사상품만 상위 N건으로 자른다. 잘린 나머지는 버리지
-  // 않고 "더 보기" 묶음으로 넘어간다(데이터 삭제가 아니라 기본 노출량 제한).
+  // §7 — 등급별로 묶고, 확정되지 않은 등급(🟡 추정 · ⚪ 유사 · 🔵 옵션 다름)만
+  // 상위 3건으로 자른다. 🟢 동일상품은 자르지 않는다 — 그건 후보가 아니라
+  // "이 상품이 저기에도 있다"는 사실의 목록이라, 넷째 판매처를 감추면 화면이
+  // 시장을 실제보다 좁게 말한다. 잘린 나머지는 버리지 않고 "더 보기" 묶음으로
+  // 넘어간다(데이터 삭제가 아니라 기본 노출량 제한).
   const groups = DEFAULT_TIER_ORDER.map((tier) => {
     const rows = visibleRows.filter((row) => displayTierForCandidate(row.candidate!) === tier);
     const limit = defaultLimitForTier(tier);

@@ -6,6 +6,7 @@ import { resetMarketCollectionsForTests } from "../market-collection";
 import { GLOBAL_MARKET_HINT_LABEL } from "../global-market";
 import { ORIGIN_PRODUCT_LINK_LABEL } from "../origin-product";
 import { PRICE_MEANING_LABEL, PRICE_SECTION_TITLE } from "../price-hierarchy";
+import { SAME_PRODUCT_SELLERS_TITLE } from "../same-product-sellers";
 import {
   overseasResults,
   productionData,
@@ -53,6 +54,55 @@ function krMarketInEuro(): TabOptions {
           checkedAt: "2026-09-13T02:00:00.000Z",
         },
       ],
+    },
+  };
+}
+
+/**
+ * MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — **두 판매처의 가격이 한
+ * 화면에 있다.**
+ *
+ * 실측 그대로다: Smallable이 한국에 €73(₩113,629)로 팔고, 같은 상품
+ * (B226AC114)을 Bobo Choses 공식몰이 ₩168,000에 판다. 이 쌍이 이번 작업의
+ * 결승선이고, 여기까지 와야 "찾았다"가 "연결됐다"가 된다.
+ *
+ * 국내 관측은 **EXACT 버킷에만** 넣는다 — 서버가 priceTierFromLink로 이미
+ * 나눈 그 버킷이고, 🟡/⚪ 관측은 다른 버킷에 있어서 이 카드에 닿을 수 없다.
+ */
+function boboConnectedAsSameProduct(): TabOptions {
+  const base = krMarketInEuro();
+  const data = base.data!;
+  const empty = data.domesticMarketSplit.exact;
+  return {
+    ...base,
+    data: {
+      ...data,
+      domesticMarketSplit: {
+        ...data.domesticMarketSplit,
+        basis: "EXACT",
+        exact: {
+          ...empty,
+          tier: "PRIMARY",
+          lowestPriceKrw: 168000,
+          highestPriceKrw: 168000,
+          averagePriceKrw: 168000,
+          sellerCount: 1,
+          stockCounts: { onSale: 1, unknown: 0, soldOut: 0 },
+          priceMarketCode: "kr",
+          priceMarketBasis: "SINGLE",
+          checkedAt: "2026-09-13T02:00:00.000Z",
+          sampleListings: [
+            {
+              mallName: "Bobo Choses 공식몰",
+              priceKrw: 168000,
+              productUrl: "https://bobochoses.com/products/b226ac114-bobo-choses-bolder-half-zipped-sweatshirt",
+              checkedAt: "2026-09-13T02:00:00.000Z",
+              salePriceKrw: null,
+              originalPriceKrw: null,
+            },
+          ],
+        },
+      },
     },
   };
 }
@@ -149,16 +199,103 @@ describe("한국 시장 줄의 대표 숫자는 원화다", () => {
     expect(text).not.toContain(`${PRICE_MEANING_LABEL.KR_MARKET_PRICE} €73.00`);
   });
 
-  it("글로벌 시장 가격을 펼치면 원화가 앞, 원 표시가가 뒤다", async () => {
+  it("글로벌 시장 가격을 펼치면 원화가 앞, 원 표시가가 괄호로 뒤에 남는다", async () => {
     await mount(krMarketInEuro());
     clickText(GLOBAL_MARKET_HINT_LABEL);
     const text = visibleText(regionsOf(page().outerHTML).mi);
 
-    expect(text).toContain("🟢 동일 상품 · 판매자 직접 관측");
     expect(text).toContain("₩113,629");
     // 관측된 외화는 지워지지 않는다 — 지우면 "관측인가 환산인가"를 화면이 못 말한다.
-    expect(text).toContain("원 표시가 €73.00");
-    // "원화 환산 ₩113,629"은 없다(같은 숫자를 두 번 쓰지 않는다).
-    expect(text).not.toContain("원화 환산 ₩113,629");
+    expect(text).toContain("(원 표시가 €73.00)");
+    // MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 오늘 화면에서 지우는 것 둘.
+    // 범위는 이 카드다: ① 원본 상품의 "약 ₩77,828 · 원화 환산"은 다른 사실
+    // (원본 통화 → 원화 환산)이고 이 지시가 지목한 줄이 아니다.
+    const card = text.slice(text.indexOf(GLOBAL_MARKET_HINT_LABEL), text.indexOf("🇰🇷 국내 시장"));
+    expect(card).not.toContain("원화 환산");
+    expect(card).not.toContain("🟢 동일 상품 · 판매자 직접 관측");
+    expect(card).not.toContain(PRICE_MEANING_LABEL.KR_MARKET_PRICE);
+  });
+
+  /**
+   * MI-MATCHING-INTEGRATION-2 — 줄마다 반복되던 배지가 카드에 한 번 선다.
+   *
+   * 지우는 것은 배지이지 사실이 아니다. 이 카드의 줄들이 같은 상품이라는 것은
+   * 매칭이 판정한 결과가 아니라 구성으로 참인 불변식이고(같은 페이지, 시장
+   * 코드만 바꿈), 그 사실이 화면에서 사라지면 이 카드가 왜 따로 있는지도
+   * 사라진다.
+   */
+  it("동일 상품이라는 사실은 카드에 한 번만 적힌다", async () => {
+    await mount(krMarketInEuro());
+    clickText(GLOBAL_MARKET_HINT_LABEL);
+    const text = visibleText(regionsOf(page().outerHTML).mi);
+
+    const invariant = "시장 코드만 바꿔 관측한 값입니다";
+    expect(text).toContain(invariant);
+    expect(text.split(invariant)).toHaveLength(2);
+  });
+});
+
+/**
+ * MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — **결승선.**
+ *
+ *   동일상품 판매처
+ *   Smallable     ₩113,629
+ *   Bobo Choses   ₩168,000
+ *   🟢 동일상품
+ *
+ * "Bobo를 찾았다"와 "MI가 Bobo 가격을 연결했다"는 다른 말이다. 앞엣것은 검색이
+ * 한 일이고, 뒤엣것은 이 화면이 한 일이다 — 그 사이에 저장(링크/관측)과 집계가
+ * 있고, 그 어느 한 칸이 비어도 셀러 눈에는 아무 일도 일어나지 않은 것과 같다.
+ */
+describe("두 판매처의 같은 상품 가격이 한 화면에 선다", () => {
+  it("Smallable ₩113,629과 Bobo ₩168,000이 같은 카드에 나란히 온다", async () => {
+    await mount(boboConnectedAsSameProduct());
+    const text = visibleText(regionsOf(page().outerHTML).mi);
+
+    expect(text).toContain(SAME_PRODUCT_SELLERS_TITLE);
+    expect(text).toContain("Smallable");
+    expect(text).toContain("₩113,629");
+    expect(text).toContain("Bobo Choses 공식몰");
+    expect(text).toContain("₩168,000");
+    // 등급은 카드에 한 번 붙는다 — 줄마다 붙이면 방금 글로벌 카드에서 고친
+    // 그 문제(달라지지 않는 사실을 줄 수만큼 반복)를 그대로 반복하게 된다.
+    expect(text).toContain("🟢 동일상품");
+  });
+
+  it("Bobo 가격 줄은 Bobo 상품 페이지로 열린다 — 원본 줄은 여전히 Smallable이다", async () => {
+    await mount(boboConnectedAsSameProduct());
+    const anchors = Array.from(page().querySelectorAll("a"));
+    expect(anchors.some((a) => (a.getAttribute("href") ?? "").includes("b226ac114"))).toBe(true);
+    // 원본 상품 링크는 매칭 결과로 대체되지 않는다.
+    const origin = anchors.find((a) => (a.textContent ?? "").includes(ORIGIN_PRODUCT_LINK_LABEL));
+    expect(origin!.getAttribute("href")).toBe(SMALLABLE_URL);
+  });
+
+  it("비교할 다른 판매처가 없으면 이 카드는 아예 그려지지 않는다", async () => {
+    // 원본 한 줄만 있는 상태는 비교가 아니라 관측 하나이고, 그 관측은 ① 원본
+    // 상품이 이미 말하고 있다. 빈 칸 하나짜리 카드는 정보가 아니라 질문이다.
+    await mount(krMarketInEuro());
+    expect(visibleText(regionsOf(page().outerHTML).mi)).not.toContain(SAME_PRODUCT_SELLERS_TITLE);
+  });
+
+  /**
+   * CPO 지시(2026-09-13) — 화면 순서:
+   *   원본 URL → 글로벌 시장 가격 → 동일상품 판매처 → 관련상품
+   *
+   * 배치 규칙은 순수 함수로 표현할 수 없고, 깨지는 방식은 늘 같다: 누군가
+   * 블록 하나를 "여기가 더 잘 보이니까" 위로 올린다. 그래서 렌더된 화면의
+   * 글자 순서로 못박는다.
+   */
+  it("읽는 순서가 화면 순서다 — 원본 → 글로벌 → 동일상품 판매처 → 관련상품", async () => {
+    await mount(boboConnectedAsSameProduct());
+    const text = visibleText(regionsOf(page().outerHTML).mi);
+    const at = (needle: string) => {
+      const i = text.indexOf(needle);
+      expect(i, `"${needle}"이 화면에 없다`).toBeGreaterThanOrEqual(0);
+      return i;
+    };
+    expect(at(ORIGIN_PRODUCT_LINK_LABEL)).toBeLessThan(at(GLOBAL_MARKET_HINT_LABEL));
+    expect(at(GLOBAL_MARKET_HINT_LABEL)).toBeLessThan(at(SAME_PRODUCT_SELLERS_TITLE));
+    expect(at(SAME_PRODUCT_SELLERS_TITLE)).toBeLessThan(at(PRICE_SECTION_TITLE.DOMESTIC_COMPETITION));
   });
 });

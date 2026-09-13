@@ -74,6 +74,11 @@ import {
 // 판매자가 등록한 URL 그대로만 쓰기 위해, 매칭 결과를 인자로 받을 수 없는
 // 순수 함수로 분리해 둔다(global-market.ts와 같은 장치).
 import { buildOriginProductLink, type OriginProductLink } from "./origin-product";
+// MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 🌎 글로벌 시장(한 판매처의
+// 여러 나라)과 나란히, 여러 판매처의 같은 상품을 세우는 두 번째 카드. 두 카드는
+// 서로의 입력을 받지 않는다 — 합쳐지는 순간 "구성으로 같은 상품"과 "판정으로
+// 같은 상품"이 한 목록이 된다.
+import { buildSameProductSellersCard, type SameProductSellersCard } from "./same-product-sellers";
 // MI-SIMPLIFY-1(CPO 지시, 2026-09-12) — CASE A/B/C/D를 셀러 어휘로 옮기는 유일한
 // 지점. 화면이 marketCase로 직접 분기해 문장을 조립하지 않는다(내부 이름이
 // 새어 나가는 경로 자체를 없앤다).
@@ -997,7 +1002,63 @@ function OriginProductLine({ link }: { link: OriginProductLink }) {
   );
 }
 
-function OriginalPriceView({ headline, originProduct }: { headline: OriginalPriceHeadline; originProduct: OriginProductLink }) {
+/**
+ * MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — **동일상품 판매처** 카드.
+ *
+ * 고정하려는 실제 화면:
+ *
+ *   동일상품 판매처
+ *   Smallable     ₩113,629
+ *   Bobo Choses   ₩168,000
+ *   🟢 동일상품
+ *
+ * ── 게이트는 뷰 안에 있다 ───────────────────────────────────────────────
+ * 비교할 다른 판매처가 없으면 이 카드는 **DOM에서 사라진다**(빈 칸으로 남기지
+ * 않는다). 원본 한 줄만 있는 상태는 비교가 아니라 관측 하나이고, 그 관측은
+ * ① 원본 상품이 이미 말하고 있다 — 같은 사실을 두 번 적으면서 화면만 길어진다.
+ * 조건을 호출부가 아니라 이 뷰의 첫 줄에 두는 이유는 MI-POLISH-2의 규칙 그대로다:
+ * 규칙과 뷰가 다른 파일에 살면 다음 사람이 게이트 없는 두 번째 렌더를 만든다.
+ *
+ * 등급은 카드에 **한 번** 붙는다. 줄마다 붙이면 🌎 글로벌 시장 카드가 방금
+ * 고친 그 문제(달라지지 않는 사실을 줄 수만큼 반복)를 이 카드가 그대로 반복한다.
+ */
+export function SameProductSellersView({ card }: { card: SameProductSellersCard }) {
+  if (card.empty) return null;
+  return (
+    <div className="rounded-md border border-current/20 bg-background/40 p-2.5">
+      <p className="text-[11px] font-semibold text-text-primary">{card.title}</p>
+      <ul className="mt-1 space-y-0.5">
+        {card.rows.map((row) => (
+          <li key={row.key} className="flex flex-wrap items-baseline justify-between gap-x-2 text-[11px]">
+            <span className="flex flex-wrap items-baseline gap-x-1">
+              <span className="text-text-primary">{row.sellerName}</span>
+              {/* 목록의 어느 줄이 셀러가 등록한 그 판매처인지. 이 표시가 없으면
+                  여러 줄이 선 목록에서 기준이 사라진다. */}
+              {row.isOrigin && <span className="text-[10px] text-text-tertiary">등록한 판매처</span>}
+            </span>
+            {row.productUrl ? (
+              <a
+                href={row.productUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-text-primary underline"
+              >
+                {row.price}
+              </a>
+            ) : (
+              <span className="font-semibold text-text-primary">{row.price}</span>
+            )}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-1.5 text-[10px] leading-relaxed text-text-tertiary" title={card.note}>
+        {card.verdict.icon} {card.verdict.label}
+      </p>
+    </div>
+  );
+}
+
+function OriginalPriceView({ headline }: { headline: OriginalPriceHeadline }) {
   // 원본가·환산의 근거와 ※ 주석을 한 줄로 합쳐 큰 숫자에 붙인다. 여러 title을
   // 나눠 달면 셀러가 어느 숫자 위에 마우스를 올려야 하는지 또 골라야 한다.
   const priceNote =
@@ -1011,8 +1072,13 @@ function OriginalPriceView({ headline, originProduct }: { headline: OriginalPric
   return (
     <div className="rounded-md border border-current/20 bg-background/40 p-2.5">
       <p className="text-[11px] font-semibold text-text-primary">{headline.title}</p>
-      {/* MATCHING-2.0-INTEGRATION-1 — 제목 바로 아래가 "무슨 상품인가"의 답이다. */}
-      <OriginProductLine link={originProduct} />
+      {/* MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 여기 있던
+          OriginProductLine(상품명 + 원본 URL)이 패널 맨 위로 올라갔다.
+
+          이 화면은 이제 판매처가 여러 줄 서는 화면이다(🌎 글로벌 시장 ·
+          동일상품 판매처). 기준이 되는 상품과 그 주소가 목록보다 **아래**에
+          있으면, 셀러는 어느 줄이 자기가 붙여넣은 그 상품인지를 목록을 다 읽은
+          뒤에야 안다. 사본을 만들지 않았다 — 같은 컴포넌트가 자리만 옮겼다. */}
       <div className="flex flex-wrap items-baseline gap-x-2" title={priceNote}>
         {headline.price.value ? (
           // 원본 통화 금액이 이 화면에서 가장 큰 숫자다 — 첫 질문의 답이므로.
@@ -1407,7 +1473,14 @@ function GlobalMarketCardView({ card }: { card: GlobalMarketCard }) {
               <GlobalMarketRowView key={row.marketCode} row={row} showDetail />
             ))}
           </ul>
-          <p className="mt-1.5 text-[10px] leading-relaxed text-text-tertiary">※ {card.note}</p>
+          {/* MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 줄마다 네 번
+              반복되던 🟢 배지가 카드에 **한 번** 선다. 이 카드의 동일성은 줄마다
+              판정된 결과가 아니라 구성으로 성립하는 불변식이라(같은 페이지,
+              시장 코드만 바꿔 관측), 그 사실을 적는 자리도 카드 하나여야 한다. */}
+          <p className="mt-1.5 text-[10px] leading-relaxed text-text-tertiary">
+            {card.invariant.icon} {card.invariant.text}
+          </p>
+          <p className="mt-1 text-[10px] leading-relaxed text-text-tertiary">※ {card.note}</p>
         </>
       )}
     </div>
@@ -1428,21 +1501,21 @@ function GlobalMarketRowView({ row, showDetail }: { row: GlobalMarketRow; showDe
           {/* MI/PRICE-2 — 여기 있던 "착지원가 기준" 배지를 지웠다. ₩162,000은
               관측된 시장가이고 착지원가(₩116,742 + 국제배송비)는 다른 숫자라,
               그 자리에서 원가를 말하면 시장가가 원가로 읽힌다. 같은 관측이 ④
-              원가 계산의 출발점이라는 사실은 ①이 문장으로 말한다. */}
-          <span className="rounded bg-success-soft px-1 py-0.5 text-[9px] font-medium text-success">
-            {row.identity.icon} {row.identity.text}
-          </span>
+              원가 계산의 출발점이라는 사실은 ①이 문장으로 말한다.
+
+              MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 그 옆에 있던
+              "🟢 동일 상품 · 판매자 직접 관측" 배지도 지운다. 네 줄에 네 번
+              반복되는 동안 그 말은 **줄마다 판정된 결과**로 읽혔고, 어휘가
+              ③ 국내의 🟢 동일상품과 같아서 두 카드가 같은 종류의 목록으로
+              보였다. 같은 사실을 카드가 한 번 말한다(card.invariant). */}
           <span className="text-[10px] text-text-tertiary">
             {row.availability.icon} {row.availability.text}
           </span>
         </span>
         <span className="flex items-baseline gap-1.5">
-          {/* 판단 시장 줄만 라벨을 단다 — 화면의 다른 "한국 가격"(③ 국내 비교상품,
-              ④ 착지원가)과 부딪히는 유일한 줄이라서다. €75(DE)는 부딪힐 상대가
-              없어 시장 이름만으로 충분하다. */}
-          {row.priceMeaningLabel && (
-            <span className="text-[10px] text-text-tertiary">{row.priceMeaningLabel}</span>
-          )}
+          {/* MI-MATCHING-INTEGRATION-2 — 나라마다 숫자 하나다. 한국 줄은 원화,
+              그 밖의 나라는 그 나라에서 관측된 통화 그대로, 관측이 없으면 "—".
+              금액 문자열은 global-market.ts가 이미 완성했다(여기서 고르지 않는다). */}
           {row.productUrl ? (
             <a href={row.productUrl} target="_blank" rel="noreferrer" className="font-semibold text-text-primary underline">
               {row.observedPrice}
@@ -1450,23 +1523,21 @@ function GlobalMarketRowView({ row, showDetail }: { row: GlobalMarketRow; showDe
           ) : (
             <span className="font-semibold text-text-primary">{row.observedPrice}</span>
           )}
-          {/* 원화 환산값에는 반드시 라벨이 붙는다 — "≈ ₩57,756"만 있으면 그게
-              한국에서 관측된 가격인지 우리가 환율로 만든 값인지 알 수 없다. */}
-          {row.krwPrice && <span className="text-[10px] text-text-tertiary">원화 환산 {row.krwPrice}</span>}
-          {/* MATCHING-2.0-INTEGRATION-1 — 한국 줄은 반대다. 원화가 큰 숫자 자리에
-              서고, 그 판매처가 페이지에 실제로 적어 둔 외화가 이 작은 줄로 남는다.
-              둘 중 하나를 지우지 않는다 — 지우면 관측과 환산의 경계가 사라진다. */}
+          {/* 한국 줄의 대표값이 원화 환산일 때만 남는 괄호 한 조각. 지우면 그
+              ₩113,629가 한국에서 관측된 값인지 우리가 환율로 만든 값인지 화면이
+              더 이상 말하지 못한다 — "원화 환산"이라는 말은 쓰지 않는다. */}
           {row.observedOriginPrice && (
-            <span className="text-[10px] text-text-tertiary">원 표시가 {row.observedOriginPrice}</span>
+            <span className="text-[10px] text-text-tertiary">(원 표시가 {row.observedOriginPrice})</span>
           )}
         </span>
       </div>
       {showDetail && (
         <p className="text-[10px] text-text-tertiary">
-          {/* 동일 상품이라는 판단의 근거. 줄에 두면 시장·가격이 뒤로 밀려서
-              펼침에만 둔다(배지는 사실을, 이 줄은 그 사실이 선 근거를 말한다). */}
-          {row.identity.evidence} · 판매자 신고 국가 {row.declaredCountry ?? "미확인"} · 관측{" "}
-          {relativeTimeFromNow(row.checkedAt)}
+          {/* 같은 상품 경로 — 여러 줄에 같은 경로가 적히는 것 자체가 이 카드의
+              불변식이 참이라는 증거다. 읽어내지 못하면 그 조각을 빼고, 없는
+              경로를 지어내지 않는다. */}
+          {row.sameProductPath ? `${row.sameProductPath} · ` : ""}판매자 신고 국가{" "}
+          {row.declaredCountry ?? "미확인"} · 관측 {relativeTimeFromNow(row.checkedAt)}
         </p>
       )}
     </li>
@@ -2246,6 +2317,27 @@ export function MiPanelView({
   const originProduct = buildOriginProductLink({ title: data.product?.title, sourceUrl: data.product?.sourceUrl });
 
   /**
+   * MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — **동일상품 판매처**.
+   *
+   * 위 글로벌 시장 카드가 "한 판매처의 여러 나라"라면 이 카드는 "여러 판매처의
+   * 같은 상품"이다. 두 카드는 서로의 입력을 받지 않는다: 여기 들어오는 국내
+   * 관측은 **EXACT 버킷 하나뿐**이고(domesticMarketSplit.exact — 서버가
+   * priceTierFromLink로 이미 나눠 둔 것), 🟡 추정도 ⚪ 유사도 넘길 자리가 없다.
+   *
+   * 새 판정도 새 계산도 없다. 원본 판매처의 금액은 ②의 🇰🇷 줄이 이미 완성한
+   * 문자열 그대로이고(judgingMarketRow.observedPrice), 국내 금액은 서버 집계가
+   * 들고 있던 price_krw 그대로다.
+   */
+  const sameProductSellers = buildSameProductSellersCard({
+    origin: { sourceUrl: data.product?.sourceUrl ?? null, price: judgingMarketRow?.observedPrice ?? null },
+    sameProductListings: domesticMarketSplit.exact.sampleListings.map((l) => ({
+      mallName: l.mallName,
+      priceKrw: l.priceKrw,
+      productUrl: l.productUrl,
+    })),
+  });
+
+  /**
    * UX 2.4.1(CEO 지시, 2026-09-11) — ① 원본 상품 가격.
    *
    * 사슬과 **같은 입력**을 받는다(observedOriginPrice / cost / fx). 그래야 ①의
@@ -2418,6 +2510,18 @@ export function MiPanelView({
             ▴ 판단 요약으로 접기
           </button>
         )}
+        {/* ── MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 맨 위는 상품이다 ──
+            이 화면이 답하는 모든 숫자는 **한 상품**에 대한 것이고, 그 상품이
+            무엇인지는 판정보다 먼저 서 있어야 한다. 아래로 내려가면 판매처가
+            여러 줄 서는 목록이 둘(🌎 글로벌 시장 · 동일상품 판매처) 나오는데,
+            기준 상품이 그 목록보다 아래에 있으면 어느 줄이 원본인지 화면이
+            말하지 못한다.
+
+            여기 적히는 주소는 **셀러가 등록한 그 URL 그대로**다. 매칭으로 찾아낸
+            동일상품(🟢)이 아무리 확실해도 그 후보의 주소가 이 자리에 오는 일은
+            없다 — buildOriginProductLink는 후보 목록을 인자로 받을 수조차 없다
+            (origin-product.ts). */}
+        <OriginProductLine link={originProduct} />
         {/* MI-UX-FINAL-REVIEW(CEO 지시, 2026-09-12) — 여기 있던 분석 기준 시장
             배너(테두리 두른 두 줄: "분석 기준 시장 🇰🇷 대한민국" + "판매 판단은
             한국 시장을 기준으로 합니다")를 「왜 이렇게 판단했나요?」 안으로
@@ -2552,7 +2656,7 @@ export function MiPanelView({
                   펼쳤을 때만 나온다. 두 builder의 분리는 그대로다(글로벌 카드는
                   국내 비교상품을 입력으로 받을 수 없다). */}
               <div>
-                <OriginalPriceView headline={originalPrice} originProduct={originProduct} />
+                <OriginalPriceView headline={originalPrice} />
                 <div className="mt-1">
                   <GlobalMarketHint
                     card={globalMarketCard}
@@ -2562,6 +2666,16 @@ export function MiPanelView({
                   />
                 </div>
               </div>
+
+              {/* ── MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 동일상품 판매처 ──
+                  바로 위 🌎 글로벌 시장은 **한 판매처의 여러 나라**이고, 이
+                  카드는 **여러 판매처의 같은 상품**이다. 둘을 나란히 두되 절대
+                  합치지 않는다: 앞쪽의 동일성은 구성으로 참인 불변식이고
+                  (같은 페이지, 시장 코드만 바꿈) 뒤쪽의 동일성은 판정의 결과다.
+
+                  이 카드에 서는 것은 🟢 동일상품으로 확정된 관측뿐이다. 🟡/⚪가
+                  넘어올 수 있는 인자가 buildSameProductSellersCard에 없다. */}
+              <SameProductSellersView card={sameProductSellers} />
 
               {/* ── MI-MARKET-EVIDENCE-1(CEO 지시, 2026-09-12) — 시장 두 칸 ───────
                   셀러가 묻는 순서는 넷이다:

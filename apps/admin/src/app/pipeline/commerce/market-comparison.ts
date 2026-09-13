@@ -95,7 +95,13 @@ export function buildMarketComparison(
           // "내 원가 VS 남의 판매가"로 읽힌다 — ②의 배지와 같은 종류의 오독이다.
           // 같은 관측이 ③ 원가 계산의 출발점이라는 사실은 ①이 말한다.
           "이 판매처가 직접 파는 값",
-          row.krwPrice ? `원화 환산 ${row.krwPrice}` : null,
+          // MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 여기 있던
+          // "원화 환산 ₩113,629"를 뺀다. 판단 시장 줄의 대표값은 이제 **언제나
+          // 원화**라(global-market.ts), 그 원화는 왼쪽 칸의 value가 이미 들고
+          // 있다 — 같은 숫자를 기준 문장에 한 번 더 적으면 셀러는 두 금액이
+          // 있는 줄로 읽는다. 남길 사실은 "그 원화가 환산값인가"이고, 그건
+          // 판매처가 페이지에 실제로 적어 둔 외화 표시가가 말한다.
+          row.observedOriginPrice ? `원 표시가 ${row.observedOriginPrice}` : null,
         ]
           .filter(Boolean)
           .join(" · ")

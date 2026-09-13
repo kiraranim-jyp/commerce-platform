@@ -5,19 +5,31 @@ import type { ComparisonCandidate } from "./types";
 const DOMAIN = "bobochoses.com";
 const MAX_DETAIL_LOOKUPS = 3;
 
-/** N-4.18-C STEP3/4(실측 확인, 2026-08-25) — bobochoses.com은 단일 브랜드
- * 스토어라 상품 title에 "Bobo Choses"가 아예 없다(예: 실제 상품 title은
- * "Stamp Bloom all over denim pants"). curl로 직접 확인: suggest.json은
- * "stamp bloom denim pants"(브랜드 없음)로는 정상 매칭하지만, 앞에
- * "Bobo Choses"만 붙여도("Bobo Choses stamp bloom") 토큰 수와 무관하게
- * 전부 0건이 된다(AND 토큰 매칭으로 추정 — 이 사전버그는 STEP3 도입 이전
- * 코드도 동일했다, 즉 이번에 새로 생긴 회귀가 아니라 원래 있던 gap이다).
- * 다른 스토어(LOOXLOO 등)는 브랜드가 실제로 title/필드에 나오므로 이 처리를
- * 하지 않는다 — 이 스토어에서만 브랜드 접두어를 제거한다. */
-function stripBrandPrefix(query: string): string {
-  const stripped = query.replace(/^\s*bobo\s+choses\s+/i, "").trim();
-  return stripped || query;
-}
+/**
+ * MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 여기 있던 stripBrandPrefix를
+ * 지운다.
+ *
+ * 그 함수는 2026-08-25 실측 위에 서 있었다: "suggest.json은 'stamp bloom denim
+ * pants'로는 맞지만 'Bobo Choses stamp bloom'은 0건이 된다(AND 토큰 매칭으로
+ * 추정)". 오늘 같은 엔드포인트를 같은 방법으로 다시 찔러 보면 그 사실이 더 이상
+ * 참이 아니다(2026-09-13 실측, curl 직접 호출):
+ *
+ *   Bobo Choses stamp bloom               5건(stamp bloom 상품들)
+ *   Bobo Choses stamp bloom denim pants   5건 · b226ac070-…-denim-pants 가 1위
+ *
+ * 이 엔드포인트는 더 이상 AND 토큰 매칭이 아니라 관련도 순 매칭이고, 그래서
+ * 브랜드 단어를 떼는 것은 이제 이득이 없을 뿐 아니라 **해롭다**. 같은 날 실측:
+ *
+ *   zipped sweat organic cotton heather grey              B226AC114 #3
+ *   Bobo Choses zipped sweat organic cotton Heather grey  B226AC114 #1
+ *
+ * 이 스토어의 상품 title에는 실제로 "Bobo Choses"가 들어 있는 것이 많고
+ * (B226AC114 = "Bobo Choses Bolder half zipped sweatshirt"), 그 단어가 관련도를
+ * 끌어올린다. 바로 아래 MAX_DETAIL_LOOKUPS가 상위 3건만 상세 조회하므로 순위는
+ * 곧 "이 후보가 존재하는가"다 — #3은 그 경계 바로 위였다.
+ *
+ * 추측으로 되돌린 것이 아니라, 근거가 됐던 실측을 같은 방법으로 다시 재고 바꿨다.
+ */
 
 /** N-4.07 — 실측 확인(2026-08-23, curl): bobochoses.com은 /ko-kr/search/suggest.json이
  * 417 "Unsupported buyer locale"을 반환한다(이 스토어는 검색 제안 API에서 로케일
@@ -28,7 +40,7 @@ function stripBrandPrefix(query: string): string {
  * 이미 로케일 프리픽스를 그대로 신뢰하는 계약이라(shopify-product-json.ts 주석 참고)
  * 검색으로 후보를 찾은 뒤 상세만 /ko-kr/ 강제로 다시 조회해서 실제 판매가를 확정한다. */
 export async function searchBoboChosesKorea(query: string): Promise<ComparisonCandidate[]> {
-  const searchCandidates = await searchShopifySuggest(DOMAIN, null, stripBrandPrefix(query));
+  const searchCandidates = await searchShopifySuggest(DOMAIN, null, query);
   const top = searchCandidates.slice(0, MAX_DETAIL_LOOKUPS);
 
   const enriched = await Promise.all(

@@ -13,7 +13,6 @@ import {
 import { sourceFitsScopes } from "@commerce/category";
 import {
   buildCrossSellerSearchQueries,
-  buildDomesticShopQuery,
   productFactsFromIdentityDna,
   type ProductIdentityDna,
 } from "@commerce/shared";
@@ -292,8 +291,22 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     return { linksCreatedOrUpdated: 0, pricesRecorded: 0, sourceErrors: [], domesticModelCodeFetchCount: 0 };
 
   const searchTitle = stripLeadingDevTag(input.dna.title);
-  const searchTerm = stripLeadingDevTag(buildDomesticShopQuery(input.dna));
   const sku = input.dna.identifier?.tier === "SKU" ? input.dna.identifier.value : undefined;
+  /**
+   * MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — **다른 판매자의 검색창에
+   * 이 판매자의 재고번호를 넣지 않는다.**
+   *
+   * searchTerms(후보 질의 사다리)를 채운 뒤에도 이 줄은 여전히
+   * buildDomesticShopQuery(dna)였다. tier가 SKU인 상품에서 그 값은 판매처 자신의
+   * 재고번호(Smallable AAA1804922)이고, searchTerms가 어떤 이유로든 비면
+   * (searchOneDomesticShop의 하위호환 분기) 그 번호가 그대로 Bobo 공식몰로
+   * 나간다 — 언제나 0건인 말이 폴백 자리에 장전돼 있는 상태였다.
+   *
+   * 폴백도 "이 상품을 가리키는 말"이어야 한다. 사다리의 첫 칸이 곧 가장 좁은
+   * 그 말이므로 같은 값을 쓴다(두 곳이 다른 정책을 갖지 않는다).
+   */
+  const searchTerms = buildCrossSellerSearchQueries(input.dna).map(stripLeadingDevTag).filter(Boolean);
+  const searchTerm = searchTerms[0] ?? searchTitle;
 
   // STEP 1 — 활성 소스 대상으로 검색해서 동일상품 후보를 찾고, 신뢰도에 따라
   // domestic_product_links를 만들거나 갱신한다(NOT_MATCHED는 링크를 만들지 않는다).
@@ -346,7 +359,7 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     sourceUrl: input.dna.sourceUrl,
     sku,
     searchTerm,
-    searchTerms: buildCrossSellerSearchQueries(input.dna).map(stripLeadingDevTag).filter(Boolean),
+    searchTerms,
     facts: productFactsFromIdentityDna(input.dna),
   };
   const toRef = (s: (typeof allSources)[number]) => ({

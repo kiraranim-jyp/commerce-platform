@@ -342,29 +342,106 @@ export function identityDnaFromFields(input: {
  * 그래서 **좁은 것부터 넓은 것 순서로** 여러 개를 만들어 돌려준다. 호출부는
  * 결과가 나올 때까지 순서대로 시도하면 된다(먼저 성공한 것을 쓰고 멈춘다).
  *
- * 판매처 자신의 재고번호는 절대 첫 줄에 두지 않는다. Smallable의 AAA1804922로
+ * 판매처 자신의 재고번호는 이 목록 어디에도 없다. Smallable의 AAA1804922로
  * Bobo 공식몰을 검색하면 언제나 0건이고, 그 0건이 "이 상품은 없다"로 읽혀 왔다.
- * 브랜드 품번(원문이 Product/Article code라고 부른 것, 혹은 공식몰 URL 앞머리)이
- * 있을 때만 단독 검색이 의미가 있다.
+ *
+ * ── MI-MATCHING-INTEGRATION-2(CEO/CPO 지시, 2026-09-13) — 축을 사실대로 편다 ────
+ * 질의의 재료는 다섯 축이고, 그중 **둘만 1차 질의에 선다**:
+ *
+ *   브랜드 + 상품 핵심명 + 상품 유형 + 색상        ← 1차 질의
+ *   소재 · 모델 단서                                ← 보조 신호(재질의 / 매칭 축)
+ *
+ * 이전 판은 그중 **상품 유형**을 아예 쓰지 않았고, 핵심명과 소재를 구분하지도
+ * 않았다. 그래서 Smallable 430701의 핵심명 토큰은 ["zipped","sweat","organic",
+ * "cotton"]이었고 — 뒤 둘은 상품명이 아니라 소재다 — 가장 넓은 그물조차
+ * "Bobo Choses organic cotton zipped"처럼 소재를 섞은 말이 됐다.
+ *
+ * 실측(2026-09-13, bobochoses.com /search/suggest.json 직접 호출):
+ *
+ *   Bobo Choses zipped sweat organic cotton Heather grey   B226AC114 #3
+ *   Bobo Choses zipped sweat sweatshirts Heather grey       B226AC114 #1
+ *   Bobo Choses zipped sweat sweatshirts                    B226AC114 #1
+ *   Bobo Choses zipped sweat                                B226AC114 #1
+ *
+ * 상품 유형 한 단어가 목표 상품을 3위에서 1위로 올린다. 이게 중요한 이유는
+ * 순위가 예뻐서가 아니라 **상위 몇 건만 상세 조회되기 때문**이다
+ * (bobochoses-kr.ts의 MAX_DETAIL_LOOKUPS=3) — 3위는 그 경계 바로 위였다.
+ *
+ * ── 이 실측을 규칙으로 굳히지 않는다(CPO 지시) ───────────────────────────
+ * "organic cotton을 빼고 sweatshirts를 붙인다"는 이 상품 하나의 답이다. 다른
+ * 상품에는 dress · sneakers · bag · cardigan · t-shirt · coat가 와야 하고,
+ * 그 말들의 목록을 여기에 심는 순간 목록에 없는 상품은 전부 유형을 잃는다.
+ * 그래서 유형은 **관측된 값에서 구조로** 꺼낸다 — 브랜드와 색상을 이미 그렇게
+ * 꺼내고 있는 것과 같은 방식이다(productTypeTokenOf).
+ *
+ * ── 소재는 지우는 것이 아니라 내리는 것이다(CPO 지시) ────────────────────
+ * 소재는 핵심 상품명 자리에서만 빠진다. 축 자체는 그대로 남아서 (a) 1차 계열이
+ * 전부 0건일 때의 마지막 그물이 되고, (b) 매칭 단계에서는 여전히 증거 축이다
+ * (cross-seller.ts의 compareMaterial — ProductFacts.materialText로 그대로
+ * 전달된다). 소재를 아예 버리면 실제로 존재하는 매칭 신호가 사라진다.
+ *
+ * 사다리의 아래쪽 칸들이 색상·유형을 하나씩 떼는 이유: 그 표기가 판매처마다
+ * 다르기 때문이다(Heather grey ↔ Light heather grey). 좁은 말이 0건이면 다음
+ * 칸으로 내려가는 것이 이 목록의 존재 이유다.
  */
-const MAX_CROSS_SELLER_QUERIES = 4;
+const MAX_CROSS_SELLER_QUERIES = 5;
+
+/**
+ * 상품 유형 한 조각. **관측된 분류에서 읽을 뿐 유형 어휘를 여기서 정의하지 않는다.**
+ *
+ * dna.category는 이미 사이트 자신의 분류만 담는다(breadcrumb → JSON-LD →
+ * Shopify product type 순, buildProductIdentityDna). 그중 **마지막 조각**이
+ * 곧 상품 유형이다 — "Home > Fashion Children > Boy > Sweatshirts"를 통째로
+ * 검색어에 넣으면 상품과 무관한 말이 질의의 대부분이 된다.
+ *
+ * 분리 기호로 한 번 더 자르는 이유도 같다: 사이트가 "Sweatshirts & Hoodies"
+ * 처럼 두 유형을 한 칸에 적는 경우가 있고, 그대로 넣으면 검색어에 이 상품이
+ * 아닌 유형이 섞인다. 앞 조각을 쓰는 것은 추측이 아니라 그 칸에 적힌 첫 번째
+ * 값을 읽는 것이다. 여기에 어떤 유형 목록도 두지 않는다 — 목록을 두면 목록에
+ * 없는 상품이 유형을 잃는다.
+ */
+export function productTypeTokenOf(dna: ProductIdentityDna): string {
+  const raw = dna.category?.value?.trim();
+  if (!raw) return "";
+  const leaf = raw.split(">").pop()!.trim();
+  return leaf.split(/[&/,]/)[0]!.trim();
+}
 
 export function buildCrossSellerSearchQueries(dna: ProductIdentityDna): string[] {
   const brand = dna.brand.value.trim();
-  const core = dna.coreTitleTokens.slice(0, MAX_CORE_TITLE_TOKENS_IN_QUERY);
   const colorToken = dna.color ? dna.color.trim() : "";
-  const materialToken = dna.material ? (parseMaterialComposition(dna.material)[0]?.fabric ?? "") : "";
+  const fabrics = dna.material ? parseMaterialComposition(dna.material).map((c) => c.fabric) : [];
+  const materialToken = fabrics[0] ?? "";
+  const typeToken = productTypeTokenOf(dna);
+
+  // 소재 단어는 핵심 상품명에서 뺀다. coreTitleTokens는 브랜드/색상/사이즈만
+  // 걷어낸 상태라 "organic cotton"처럼 제목에 적힌 소재가 그대로 남아 있는데,
+  // 그건 상품명이 아니라 소재 축이 이미 들고 있는 사실이다(같은 말을 두 축에서
+  // 두 번 세면 그 말이 빠졌을 때 두 칸이 한꺼번에 무너진다).
+  const fabricWords = new Set(fabrics.flatMap((f) => f.toLowerCase().split(/\s+/)).filter(Boolean));
+  const coreName = dna.coreTitleTokens
+    .filter((t) => !fabricWords.has(t.toLowerCase()))
+    .slice(0, MAX_CORE_TITLE_TOKENS_IN_QUERY);
+  // 소재 단어를 빼고 나면 아무것도 안 남는 제목도 있다(제목이 소재뿐인 경우).
+  // 그때는 원래 토큰을 그대로 쓴다 — 빈 핵심명으로 사다리를 세우면 모든 칸이
+  // "브랜드"만 남는다.
+  const core = coreName.length > 0 ? coreName : dna.coreTitleTokens.slice(0, MAX_CORE_TITLE_TOKENS_IN_QUERY);
 
   const candidates = [
-    // ① 브랜드 품번 단독 — 있으면 이것만으로 정확히 한 상품을 가리킨다.
+    // ① 모델 단서 단독 — 있으면 이것만으로 정확히 한 상품을 가리킨다.
     dna.brandModelCode ?? "",
-    // ② 브랜드 + 핵심 상품명 + 색상 — 같은 라인의 다른 색을 걸러내는 가장 좁은 말.
-    [brand, ...core, colorToken].filter(Boolean).join(" "),
-    // ③ 브랜드 + 핵심 상품명 — 색상 표기가 판매처마다 달라 ②가 0건일 때.
+    // ② **1차 질의** — 브랜드 + 핵심 상품명 + 상품 유형 + 색상. 소재는 여기
+    //    없다(CPO 지시: 소재는 1차 질의의 재료가 아니라 보조 신호다).
+    [brand, ...core, typeToken, colorToken].filter(Boolean).join(" "),
+    // ③ 색상을 뗀다 — 색상 이름이 판매처마다 다를 때(Heather grey ↔ Light
+    //    heather grey) ②가 0건이 된다. 상품 유형은 남는다.
+    [brand, ...core, typeToken].filter(Boolean).join(" "),
+    // ④ 유형까지 뗀다 — 유형 어휘가 사이트마다 다를 때(Sweatshirts ↔ Knitwear).
     [brand, ...core].filter(Boolean).join(" "),
-    // ④ 브랜드 + 소재 + 핵심 명사 하나 — 상품명 어휘가 아예 다른 판매처를 위한
-    //    마지막 그물. 그래도 "브랜드 + 명사 하나"보다는 좁다.
-    [brand, materialToken, core[0] ?? ""].filter(Boolean).join(" "),
+    // ⑤ 보조 신호로 다시 던지는 마지막 그물 — 제목 어휘가 아예 다른 판매처를
+    //    위해 **소재**를 단서로 쓴다. 소재 축이 지워진 것이 아니라 여기(그리고
+    //    매칭 단계의 증거 축)로 내려온 것이다.
+    [brand, ...core, materialToken].filter(Boolean).join(" "),
   ];
 
   const seen = new Set<string>();
@@ -376,7 +453,11 @@ export function buildCrossSellerSearchQueries(dna: ProductIdentityDna): string[]
     out.push(trimmed);
     if (out.length >= MAX_CROSS_SELLER_QUERIES) break;
   }
-  // 브랜드도 상품명도 없으면 기존 정책(buildDomesticShopQuery)으로 되돌아간다 —
-  // 여기서 빈 배열을 돌려주면 호출부가 검색을 아예 못 하게 된다.
-  return out.length > 0 ? out : [buildDomesticShopQuery(dna)];
+  if (out.length > 0) return out;
+  // 브랜드도 상품명도 유형도 없다 — 그래도 **판매처 자신의 재고번호는 쓰지
+  // 않는다**(buildDomesticShopQuery로 되돌아가면 tier=SKU인 상품에서 정확히 그
+  // 번호가 나온다). 남은 것은 등록된 상품명 원문뿐이고, 그건 적어도 이 상품에
+  // 대한 말이다.
+  const title = dna.title.trim();
+  return title ? [title] : [];
 }
