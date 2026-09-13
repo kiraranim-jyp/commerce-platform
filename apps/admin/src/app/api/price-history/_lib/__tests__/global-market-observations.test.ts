@@ -104,8 +104,16 @@ function makeSupabaseStub() {
 const BOBO = "https://bobochoses.com";
 const HANDLE = "b226ac043";
 /** 실측 /meta.json — 모든 시장에서 country=ES다(= "판매처가 선언한 국가"이지
- * "그 시장의 국가"가 아니다). */
-const SHOP_META = { name: "Bobo Choses", country: "ES", currency: "EUR" };
+ * "그 시장의 국가"가 아니다).
+ *
+ * GLOBAL-SOURCE-PRICE-POLICY-FINAL(2026-09-13) — ships_to_countries가 늘었다.
+ * 실제 응답에는 JP가 없고(그래서 en-jp probe가 걸러진다) KR/US/DE는 있다. */
+const SHOP_META = {
+  name: "Bobo Choses",
+  country: "ES",
+  currency: "EUR",
+  shipsToCountries: ["ES", "FR", "DE", "GB", "US", "KR", "CA", "AU"],
+};
 
 function probe(marketCode: string, amount: number, currency: string): ShopifyMarketProbeResult {
   const prefix = marketCode ? `/${marketCode}` : "";
@@ -504,6 +512,46 @@ describe("SMALLABLE-MARKET-PROBE-1 — 비-Shopify 판매처의 시장 관측이
     expect(costBasis).toHaveLength(1);
     expect(costBasis[0].sourceLabel).toBe("ORIGIN_FX");
     expect(costBasis[0].priceKrw).toBe(70200);
+  });
+
+  /**
+   * GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — **한국 관측(€73)이
+   * 원본가가 되는 경로가 없다.**
+   *
+   * Production DB 실측(430701, 최신 스냅샷, 2026-09-13 SELECT):
+   *   ORIGIN_FX     market_code NULL  EUR 75  ₩116,742   ← 원본가 카드가 읽는 행
+   *   MARKET_PROBE  fr                EUR 75  ₩116,742
+   *   MARKET_PROBE  kr                EUR 73  ₩113,629
+   *   MARKET_PROBE  us                EUR 79  ₩122,968
+   *   MARKET_PROBE  jp                EUR 81  ₩126,081
+   *
+   * CEO §F 금지 조항: "가장 싼 시장을 자동으로 원본가로 선택". €73은 이 상품에서
+   * 가장 싼 값이고, 그래서 하필 원본가 자리로 새기 가장 쉬운 값이다.
+   */
+  it("핵심 회귀: 430701의 kr 관측 €73은 원본가 후보에 들어오지 못한다", async () => {
+    crawler.probeAdditionalMarkets.mockResolvedValue([
+      smallableProbe("FR", 75, true),
+      smallableProbe("KR", 73, true),
+      smallableProbe("US", 79, true),
+      smallableProbe("JP", 81, true),
+    ]);
+    await runPriceCheck({ ...smallableInput(), originalPriceAmount: 75 });
+
+    const records = toRecords(supabaseRef.current!.rows);
+    const costBasis = records.filter(isCostBasisOriginObservation);
+    // 원가 근거는 정확히 한 행이고, 그 행은 FR로 고정된 원본가 조회의 결과다.
+    expect(costBasis).toHaveLength(1);
+    expect(costBasis[0].sourceLabel).toBe("ORIGIN_FX");
+    expect(costBasis[0].priceAmount).toBe(75);
+    // 다른 나라 값은 하나도 원가 근거에 없다 — €73도, 가장 비싼 €81도.
+    expect(costBasis.map((r) => r.priceAmount)).not.toContain(73);
+    expect(costBasis.map((r) => r.priceAmount)).not.toContain(81);
+    // 그렇다고 €73이 사라지는 것도 아니다. 시장 관측으로 그대로 남아
+    // 🌐 글로벌 시장 카드의 🇰🇷 줄(€73.00 ≈ ₩113,629)이 된다.
+    const kr = records.find((r) => r.marketCode === "kr");
+    expect(kr?.sourceLabel).toBe(MARKET_PROBE_SOURCE_LABEL);
+    expect(kr?.priceAmount).toBe(73);
+    expect(isCostBasisOriginObservation(kr!)).toBe(false);
   });
 
   it("KR 관측은 집계에서 한국 시장으로만 쓰인다 — FR/US/JP와 섞이지 않는다", async () => {

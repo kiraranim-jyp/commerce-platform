@@ -1,6 +1,8 @@
 import { isTargetMarket, parseMarketRegion, KR_TARGET_MARKET, type TargetMarket } from "./market-target";
 import { miEmptyState, type MiEmptyState } from "./mi-empty-state";
 import { formatKrwAmount, formatOriginAmount } from "./mi-headline";
+// GLOBAL-SOURCE-PRICE-POLICY-FINAL — 카드가 제목을 따로 들고 있지 않다는 규칙은
+// 그대로다. 바뀐 것은 그 제목의 글자뿐이다(price-hierarchy 한 곳).
 // UX 2.4.1 — 제목(번호 포함)은 가격 계층 표 한 곳에서만 나온다. 이 카드가 자기
 // 제목을 따로 들고 있으면 읽는 순서를 두 파일이 각각 주장하게 된다.
 // MI-MATCHING-INTEGRATION-2 — 여기서 PRICE_MEANING_LABEL을 더 이상 읽지 않는다.
@@ -68,14 +70,23 @@ import { PRICE_SECTION_TITLE } from "./price-hierarchy";
 export interface MarketObservationInput {
   /** 관측된 market_code. 빈 값은 애초에 서버에서 빠져 있다(시장이 아니다). */
   marketCode: string;
-  /** 판매자가 스스로 신고한 국가. **기본 화면에 절대 쓰지 않는다**(아래 주석 참고). */
-  marketCountry: string | null;
+  /** 그 시장에서 실제로 관측된 통화. */
   currency: string;
+  /** 그 통화로 관측된 금액. 못 읽었으면 null이다(다른 시장 값으로 채우지 않는다). */
   priceAmount: number | null;
+  /**
+   * 관측 시점에 이미 저장된 원화 환산값.
+   *
+   * GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — 이 카드의 `≈ ₩…`는
+   * 전부 이 값에서 나온다. 화면이 환율을 새로 구해 곱하지 않는다:
+   *  · 환율 정책은 시스템에 하나뿐이고(packages/pricing/currency.ts ·
+   *    apps/admin/lib/exchange-rates.ts), 그 정책이 이미 이 숫자를 만들었다.
+   *  · 저장부는 환율을 모르는 통화의 관측을 **아예 저장하지 않는다**
+   *    (run-price-check의 "환율 정보 없음(XXX)"). 즉 여기 도착한 행은 전부
+   *    convertToKrwStrict를 통과한 값이고, `499 DKK → ₩499` 같은 날조가 낄 수 없다.
+   *  · 여기서 새로 만드는 값이 없으므로 **저장되는 것도 없다**. 표시·비교 전용이다.
+   */
   priceKrw: number;
-  soldOut: boolean | null;
-  productUrl: string | null;
-  checkedAt: string;
 }
 
 /**
@@ -134,70 +145,27 @@ export function marketDisplayName(marketCode: string): { flag: string; name: str
   return { flag: flagOfRegion(region), name: name ?? marketSuffix(marketCode) };
 }
 
-/** 이 시장에서 지금 살 수 있는가. 세 상태를 하나로 뭉개지 않는다 —
- * "확인 못 했다"를 "판매중"으로 바꿔 적으면 매입 계획이 틀어진다. */
-export interface MarketAvailability {
-  icon: string;
-  text: string;
-}
-
 /**
  * MI-MATCHING-INTEGRATION-2 — 관측이 없는 나라 줄에 서는 것. 이 상수가 있는
  * 이유는 반대편을 막기 위해서다: 빈 칸을 채울 값이 이것 하나뿐이면, 다른 나라의
  * 가격을 옮겨 적는 코드가 들어올 자리가 없다.
  */
-const EMPTY_PRICE = "—";
-
-function availabilityOf(soldOut: boolean | null): MarketAvailability {
-  if (soldOut === true) return { icon: "🔴", text: "품절" };
-  if (soldOut === false) return { icon: "🟢", text: "판매중" };
-  return { icon: "⚪", text: "재고 확인 불가" };
-}
+export const EMPTY_PRICE = "—";
 
 /**
- * MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — **줄마다 붙던 🟢 배지를
- * 지운다.**
+ * GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — **줄에서 지운 것들.**
  *
- * 이 카드의 동일성은 구성으로 성립한다(identity by construction): 각 줄은 같은
- * 판매처가 같은 상품 페이지를 시장 코드만 바꿔 관측한 값이다. 그 사실은 줄마다
- * 달라지지 않는다 — 그런데 달라지지 않는 사실을 네 줄에 네 번 적으면, 읽는
- * 사람은 그것을 **줄마다 판정된 결과**로 읽는다. 게다가 그 배지의 어휘가
- * ③ 국내의 🟢 동일상품과 같아서, 두 카드가 같은 종류의 목록으로 보였다.
+ * 이 카드가 답하는 질문은 하나다: *같은 상품이 시장마다 얼마인가.* 그 답에
+ * 필요한 것은 나라·관측 통화 금액·원화 환산 셋뿐이고, 나머지는 전부 지웠다 —
+ * URL · 판매중/품절 · 판매자 신고 국가 · 관측 시각 · 같은 상품 경로 ·
+ * "동일 상품 · 판매자 직접 관측" 배지 · 하단 disclaimer.
  *
- * 사실은 지우지 않고 카드에 **한 번** 적는다(GlobalMarketCard.invariant). 그래야
- * "같은 페이지, 시장 코드만 바꿈"이라는 이 카드의 불변식이 그대로 남으면서도,
- * 줄은 나라와 가격 둘만 말하는 목록이 된다.
+ * 화면에서만 감추지 않고 **필드 자체를 없앤 것**이 이번 작업의 장치다. 이 카드는
+ * 그 값들을 입력으로도 받지 못한다(MarketObservationInput이 넉 줄로 줄었다) —
+ * 되살리려면 입력부터 다시 뚫어야 하고, 그때 이 파일의 테스트가 먼저 깨진다.
+ * 지운 사실 중 사라지는 것은 없다: 재고·관측 시각·URL은 전부 서버가 계속 저장하고,
+ * 원본 가격의 근거는 ① 원본 상품 가격이 자기 문장으로 말한다.
  */
-export interface GlobalMarketIdentity {
-  icon: string;
-  /** 카드에 한 번 적는 짧은 말. 매칭 등급이 아니라 관측 방식이다. */
-  text: string;
-}
-
-/** 카드 전체가 한 번 갖는 값 — 줄마다 갖는 값이 아니다. */
-const SAME_PRODUCT_BY_CONSTRUCTION: GlobalMarketIdentity = {
-  icon: "🟢",
-  text: "같은 판매처 · 같은 상품 페이지에서 시장 코드만 바꿔 관측한 값입니다",
-};
-
-/**
- * 시장 코드를 뗀 상품 경로. 관측된 URL에 적힌 것을 읽을 뿐이고, 읽을 수 없으면
- * null이다 — "같은 상품"의 근거를 지어내지 않는다.
- *
- * 첫 조각이 이 줄의 시장 코드일 때만 떼어낸다(/en-kr/products/x → /products/x).
- * 그래야 남는 경로가 시장과 무관해지고, 여러 줄에 같은 경로가 적히는 것 자체가
- * "같은 상품을 시장만 바꿔 봤다"는 증거가 된다.
- */
-function sameProductPath(productUrl: string | null, marketCode: string): string | null {
-  if (!productUrl) return null;
-  try {
-    const segments = new URL(productUrl).pathname.split("/").filter(Boolean);
-    if (segments[0]?.toLowerCase() === marketCode.trim().toLowerCase()) segments.shift();
-    return segments.length > 0 ? `/${segments.join("/")}` : null;
-  } catch {
-    return null;
-  }
-}
 
 /** 화면에 그대로 쓰는 시장 한 줄. 문자열은 전부 여기서 완성한다 — 컴포넌트가
  * 숫자를 다시 포맷하기 시작하면 같은 값이 카드마다 다른 모양으로 뜬다. */
@@ -210,49 +178,51 @@ export interface GlobalMarketRow {
   /** 목록에 함께 적는 원본 코드("en-de"). 이름이 어디서 왔는지 셀러가 대조할 수 있게. */
   code: string;
   /**
-   * 이 줄의 유일한 금액.
+   * 이 줄의 대표 금액 — **그 시장에서 실제로 관측된 통화·금액 그대로.**
    *
-   * ── MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 나라마다 한 숫자 ───────
-   * 규칙은 셋이고 전부 이 한 필드로 강제된다:
+   * ── GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) ──────────────
+   * 규칙이 하나로 줄었다. 전에는 한국 줄만 원화가 대표값이었는데(그래서 한 줄만
+   * 모양이 달랐다), 이제 **모든 줄이 같은 규칙**이다:
    *
-   *   · 한국(판단 시장) 줄의 대표값은 **언제나 원화**다. 그 줄을 읽는 사람은
-   *     한국에서 파는 사람이고, 큰 숫자가 유로면 답을 얻으려고 환산을 한 번 더
-   *     해야 한다.
-   *   · 다른 나라 줄의 대표값은 **그 나라에서 관측된 통화 그대로**다. 환산값이
-   *     비-한국 줄의 대표값이 되는 경로는 존재하지 않는다.
-   *   · 관측이 없으면 `—`다. 다른 나라의 값을 옮겨 적어 칸을 채우는 코드는
-   *     이 함수 안에 없다 — 각 줄은 자기 관측 하나만 읽는다.
+   *     🇫🇷 프랑스   €75.00   ≈ ₩116,742
+   *     🇰🇷 한국     €73.00   ≈ ₩113,629
+   *     🇺🇸 미국     €79.00   ≈ ₩122,968
+   *     🇯🇵 일본     €81.00   ≈ ₩126,081
    *
-   * 환율을 다시 돌리지 않는다. 한국 줄의 원화는 관측 시점에 저장된 price_krw
-   * 그대로다.
+   * 이 카드의 질문은 "이 판매처는 나라마다 얼마를 받는가"이고, 그 답은 나라마다
+   * 다른 **통화로 관측된 금액**이다. 한국 줄만 원화로 접으면 네 줄이 같은 축에서
+   * 비교되지 않는다 — 🇰🇷가 ₩113,629이고 🇫🇷가 €75일 때 셀러는 둘 중 어느 쪽이
+   * 싼지 알 수 없다. 환산은 보조로 옆에 붙는다(krwEquivalent).
+   *
+   * 관측 금액이 없으면 `—`다. 다른 나라의 값도, 저장된 원화값도 이 자리에 오지
+   * 않는다 — 각 줄은 자기 관측 하나만 읽는다.
+   *
+   * ⚠️ 일본 줄이 `€81.00`인 것은 오류가 아니라 사실이다. Production DB의 JP
+   * 관측은 EUR 81이고(2026-09-13 확인), 그것을 환율로 ¥로 바꿔 적으면 관측한 적
+   * 없는 엔화 가격을 실제 관측처럼 말하게 된다(CEO §F 금지).
    */
   observedPrice: string;
   /**
-   * 한국 줄의 대표값이 원화일 때, 그 판매처가 페이지에 실제로 적어 둔 외화
-   * 표시가. 화면에는 괄호로 붙는다("(원 표시가 €73)").
+   * 관측 통화가 원화가 아닐 때 옆에 붙는 **보조** 환산값("≈ ₩116,742").
    *
-   * 지우지 않는 이유는 하나다 — 지우면 그 ₩113,629가 한국에서 관측된 값인지
-   * 우리가 환율로 만든 값인지 화면이 더 이상 말하지 못한다. 관측 통화가 이미
-   * 원화면 null이다(같은 숫자를 두 번 쓰지 않는다).
-   *
-   * "원화 환산"이라는 말은 이 카드 어디에도 쓰지 않는다. 그 말이 붙은 줄이
-   * 시장가와 같은 층으로 읽히던 것이 이번에 지우는 것이다.
+   * 관측 통화가 이미 원화면 null이다 — observedPrice가 곧 그 원화라 같은 숫자를
+   * 두 번 적는 꼴이 된다. 환율을 여기서 구하지 않고, 저장된 price_krw를 문장으로
+   * 옮기기만 한다(MarketObservationInput.priceKrw 주석 참고). 이 값은 어디에도
+   * 저장되지 않는다 — 표시·비교 전용이다.
    */
-  observedOriginPrice: string | null;
-  availability: MarketAvailability;
+  krwEquivalent: string | null;
   /**
-   * 판매자가 스스로 신고한 국가(market_country). **기본 화면에 쓰지 않는다.**
-   * DB에는 market_code=en-de인데 market_country=ES인 행이 실제로 있다(Bobo
-   * Choses는 모든 시장에서 country=ES다). 기본 화면에 "독일 / 판매자 신고 국가
-   * ES"를 같이 그리면, 이번 작업이 없애려는 바로 그 혼동("이게 독일 가격이야
-   * 스페인 가격이야?")을 화면이 스스로 만든다. 펼친 상세에서만 쓴다.
+   * 이 관측의 원화 표현. **이 카드가 그리는 값이 아니다** — ① 원본 상품 가격의
+   * 한국 표시가 줄과 ② 한국 시장 경쟁가격의 왼쪽 칸이 읽는 값이다.
+   *
+   * 두 층을 한 필드로 합치지 않는 이유: 저쪽 칸은 다른 **한국 판매자들의 원화**와
+   * 나란히 서는 자리라 원화가 아니면 비교 자체가 성립하지 않고, 이쪽 카드는
+   * 나라끼리 비교하는 자리라 관측 통화여야 한다. 같은 관측의 서로 다른 두 질문에
+   * 대한 답이고, 값은 둘 다 같은 행(priceKrw)에서 나오므로 갈라질 수 없다.
+   *
+   * 관측 통화 금액을 읽지 못했고 관측이 원화도 아니면 null이다(모르면 고르지 않는다).
    */
-  declaredCountry: string | null;
-  /** 시장 코드를 뗀 상품 경로. 여러 줄에 같은 경로가 적히는 것 자체가 이 카드의
-   * 불변식이 참이라는 증거다. 읽어낼 수 없으면 null이고, 펼친 상세에만 쓴다. */
-  sameProductPath: string | null;
-  productUrl: string | null;
-  checkedAt: string;
+  krwPrice: string | null;
   /** 판매 판단이 서 있는 시장인가. market_code로만 판별한다. */
   isJudgingMarket: boolean;
   /**
@@ -270,14 +240,14 @@ export interface GlobalMarketCard {
   title: string;
   rows: GlobalMarketRow[];
   /**
-   * MI-MATCHING-INTEGRATION-2 — 줄마다 반복되던 🟢 배지가 카드에 한 번 서는
-   * 자리. 이 카드의 불변식("같은 페이지, 시장 코드만 바꿈")은 그대로 남고,
-   * 줄은 나라와 가격만 말한다.
+   * 관측된 시장이 하나도 없을 때. 판단 실패가 아니다 — 흔적이 없는 것이다.
+   *
+   * GLOBAL-SOURCE-PRICE-POLICY-FINAL — 여기 있던 invariant(🟢 배지 한 줄)와
+   * note(하단 disclaimer)가 사라졌다. 카드는 이제 제목과 줄 목록뿐이다.
+   * 두 문장 다 "이 값이 무엇이 아닌지"를 설명하는 말이었고, 설명이 표보다 길면
+   * 셀러는 표를 읽기 전에 문장을 읽는다 — 이 카드가 답하는 질문은 표 네 줄로
+   * 이미 끝난다.
    */
-  invariant: GlobalMarketIdentity;
-  /** 이 카드의 값이 무엇인지 한 줄. 국내 경쟁가가 아니라는 사실을 항상 함께 말한다. */
-  note: string;
-  /** 관측된 시장이 하나도 없을 때. 판단 실패가 아니다 — 흔적이 없는 것이다. */
   empty: MiEmptyState | null;
 }
 
@@ -306,52 +276,37 @@ export function buildGlobalMarketCard(
   const rows: GlobalMarketRow[] = input.observations.map((o) => {
     const display = marketDisplayName(o.marketCode);
     const isKrw = o.currency.toUpperCase() === "KRW";
-    const isJudgingMarket = isTargetMarket(o.marketCode, market);
-    const path = sameProductPath(o.productUrl, o.marketCode);
     // 이 줄의 관측 금액. 관측 통화 그대로이고, 금액이 없으면 null이다.
     const originAmount = o.priceAmount != null ? formatOriginAmount(o.priceAmount, o.currency) : null;
-    // MI-MATCHING-INTEGRATION-2 — 한국 줄만 원화가 대표값이다. 다른 나라 줄은
-    // **어떤 경우에도** 환산값이 대표값이 되지 않는다: 관측 통화 금액이 없으면
-    // 그냥 없는 것이고(EMPTY_PRICE), 저장된 price_krw로 대신 채우지 않는다.
-    const krwLeads = isJudgingMarket && !isKrw && originAmount != null;
-    const observedPrice = isJudgingMarket
-      ? // 한국 줄: 관측이 원화면 그대로, 외화면 저장된 환산 원화. 둘 다 없으면 —.
-        (krwLeads || isKrw ? formatKrwAmount(o.priceKrw) : EMPTY_PRICE)
-      : // 그 밖의 나라: 그 나라에서 관측된 통화 금액 하나뿐.
-        (originAmount ?? EMPTY_PRICE);
+    // 저장된 원화값을 문장으로 옮기기만 한다(곱셈이 없다 = 환율을 다시 돌리지
+    // 않는다). 관측 통화 금액을 못 읽었고 관측이 원화도 아니면 null이다 —
+    // 그 줄은 자기 금액을 하나도 말하지 못하는 줄이고, 거기에 원화만 세우면
+    // 관측된 시장가가 아니라 환산값이 대표값이 된다.
+    const krwPrice = originAmount != null || isKrw ? formatKrwAmount(o.priceKrw) : null;
+    // GLOBAL-SOURCE-PRICE-POLICY-FINAL — 모든 줄이 같은 규칙이다. 판단 시장이라고
+    // 해서 원화로 접지 않는다(그 분기 자체가 사라졌다 — isJudgingMarket은 이제
+    // 금액을 고르는 데 쓰이지 않고, ①/②가 어느 줄을 읽을지 고를 때만 쓴다).
+    const observedPrice = originAmount ?? EMPTY_PRICE;
     return {
       marketCode: o.marketCode,
       flag: display.flag,
       name: display.name,
       code: o.marketCode,
       observedPrice,
-      // 한국 줄에서 원화가 대표값일 때만 채운다 — 그 외에는 observedPrice가 이미
-      // 관측 통화 그대로라 같은 값을 두 번 적는 꼴이 된다.
-      observedOriginPrice: krwLeads ? originAmount : null,
-      // 본문 한 줄용 모양. 같은 observedPrice를 쓰므로 툴팁과 상세가 다른 금액을
+      // 관측 통화가 이미 원화면 붙이지 않는다 — observedPrice와 같은 숫자다.
+      // 관측 금액 자체가 없으면(—) 환산만 덩그러니 붙이지 않는다.
+      krwEquivalent: !isKrw && krwPrice != null ? `≈ ${krwPrice}` : null,
+      krwPrice,
+      // 본문 한 줄용 모양. 같은 observedPrice를 쓰므로 툴팁과 카드가 다른 금액을
       // 말할 수 없다(사본이 아니라 같은 문자열이다).
       compact: `${display.flag} ${marketSuffix(o.marketCode)} ${observedPrice}`,
-      availability: availabilityOf(o.soldOut),
-      declaredCountry: o.marketCountry,
-      // 근거는 관측에 적힌 것만 쓴다. 경로를 읽지 못하면 그 조각을 빼고,
-      // 없는 상품 코드를 지어내지 않는다. 펼친 상세에서만 보인다.
-      sameProductPath: path,
-      productUrl: o.productUrl,
-      checkedAt: o.checkedAt,
-      isJudgingMarket,
+      isJudgingMarket: isTargetMarket(o.marketCode, market),
     };
   });
 
   return {
     title: PRICE_SECTION_TITLE.SELLER_GLOBAL_MARKET,
     rows,
-    invariant: SAME_PRODUCT_BY_CONSTRUCTION,
-    // "각 시장에서 실제 관측된 판매가격"(CEO 지시문 그대로). 뒷문장 둘은 이
-    // 카드가 무엇이 **아닌지**를 화면이 직접 말하게 한다 — 국내 비교상품도
-    // 아니고(③), 내가 치르는 돈도 아니다(④). MI/PRICE-2에서 뒤 절이 늘었다:
-    // 🇰🇷 줄에 붙어 있던 "착지원가 기준" 배지를 지우면서, 그 배지가 잘못 말하던
-    // 경계를 카드 전체가 한 번만 정확히 말하게 옮긴 것이다.
-    note: `각 시장에서 실제 관측된 판매가격입니다 — 이 판매처가 직접 파는 값이고, ${market.label} 편집샵의 비교상품 가격이 아닙니다. 제가 들여올 때 드는 돈은 ③ 수익성에서 따로 계산합니다.`,
     empty:
       rows.length > 0
         ? null

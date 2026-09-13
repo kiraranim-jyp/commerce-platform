@@ -42,17 +42,32 @@ function krMarketInEuro(): TabOptions {
         brand: "Bobo Choses",
         sourceUrl: SMALLABLE_URL,
       },
+      sellerGlobalMarkets: [{ marketCode: "en-kr", currency: "EUR", priceAmount: 73, priceKrw: 113629 }],
+    },
+  };
+}
+
+/**
+ * GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — **Production DB 그대로.**
+ *
+ * Smallable 430701 최신 스냅샷의 MARKET_PROBE 네 행을 값까지 그대로 옮긴 것이다
+ * (2026-09-13 SELECT로 확인: fr EUR 75 / kr EUR 73 / us EUR 79 / jp EUR 81,
+ * price_krw 116742 / 113629 / 122968 / 126081, 관측 환율 1556.56).
+ *
+ * 손으로 쓴 값이 아니라 실제 저장된 행이라는 것이 중요하다 — 이 저장소는 화면
+ * 검증을 지어낸 픽스처로 하다가 세 번 사고가 났다.
+ */
+function smallable430701AllMarkets(): TabOptions {
+  const base = krMarketInEuro();
+  return {
+    ...base,
+    data: {
+      ...base.data!,
       sellerGlobalMarkets: [
-        {
-          marketCode: "en-kr",
-          marketCountry: "ES",
-          currency: "EUR",
-          priceAmount: 73,
-          priceKrw: 113629,
-          soldOut: false,
-          productUrl: "https://www.smallable.com/en-kr/product/bobo-choses-zipped-sweat-430701",
-          checkedAt: "2026-09-13T02:00:00.000Z",
-        },
+        { marketCode: "fr", currency: "EUR", priceAmount: 75, priceKrw: 116742 },
+        { marketCode: "kr", currency: "EUR", priceAmount: 73, priceKrw: 113629 },
+        { marketCode: "us", currency: "EUR", priceAmount: 79, priceKrw: 122968 },
+        { marketCode: "jp", currency: "EUR", priceAmount: 81, priceKrw: 126081 },
       ],
     },
   };
@@ -199,39 +214,65 @@ describe("한국 시장 줄의 대표 숫자는 원화다", () => {
     expect(text).not.toContain(`${PRICE_MEANING_LABEL.KR_MARKET_PRICE} €73.00`);
   });
 
-  it("글로벌 시장 가격을 펼치면 원화가 앞, 원 표시가가 괄호로 뒤에 남는다", async () => {
-    await mount(krMarketInEuro());
+  /**
+   * GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — **CEO가 확정한 표를
+   * 실제 컴포넌트 트리에서 확인한다.**
+   *
+   *     🌐 글로벌 시장 가격
+   *     🇫🇷 프랑스   €75.00   ≈ ₩116,742
+   *     🇰🇷 한국     €73.00   ≈ ₩113,629
+   *     🇺🇸 미국     €79.00   ≈ ₩122,968
+   *     🇯🇵 일본     €81.00   ≈ ₩126,081
+   */
+  it("글로벌 시장 카드가 나라마다 관측 통화와 ≈ 환산을 함께 그린다", async () => {
+    await mount(smallable430701AllMarkets());
     clickText(GLOBAL_MARKET_HINT_LABEL);
     const text = visibleText(regionsOf(page().outerHTML).mi);
-
-    expect(text).toContain("₩113,629");
-    // 관측된 외화는 지워지지 않는다 — 지우면 "관측인가 환산인가"를 화면이 못 말한다.
-    expect(text).toContain("(원 표시가 €73.00)");
-    // MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 오늘 화면에서 지우는 것 둘.
-    // 범위는 이 카드다: ① 원본 상품의 "약 ₩77,828 · 원화 환산"은 다른 사실
-    // (원본 통화 → 원화 환산)이고 이 지시가 지목한 줄이 아니다.
     const card = text.slice(text.indexOf(GLOBAL_MARKET_HINT_LABEL), text.indexOf("🇰🇷 국내 시장"));
-    expect(card).not.toContain("원화 환산");
-    expect(card).not.toContain("🟢 동일 상품 · 판매자 직접 관측");
-    expect(card).not.toContain(PRICE_MEANING_LABEL.KR_MARKET_PRICE);
+
+    for (const line of [
+      "🇫🇷 프랑스 €75.00 ≈ ₩116,742",
+      "🇰🇷 한국 €73.00 ≈ ₩113,629",
+      "🇺🇸 미국 €79.00 ≈ ₩122,968",
+      "🇯🇵 일본 €81.00 ≈ ₩126,081",
+    ]) {
+      expect(card).toContain(line);
+    }
+    // §4 — JP 관측은 EUR 81이다. 엔화로 환산해 실제 관측처럼 보여주지 않는다.
+    expect(card).not.toContain("¥");
+    expect(card).not.toContain("JPY");
   });
 
   /**
-   * MI-MATCHING-INTEGRATION-2 — 줄마다 반복되던 배지가 카드에 한 번 선다.
-   *
-   * 지우는 것은 배지이지 사실이 아니다. 이 카드의 줄들이 같은 상품이라는 것은
-   * 매칭이 판정한 결과가 아니라 구성으로 참인 불변식이고(같은 페이지, 시장
-   * 코드만 바꿈), 그 사실이 화면에서 사라지면 이 카드가 왜 따로 있는지도
-   * 사라진다.
+   * GLOBAL-SOURCE-PRICE-POLICY-FINAL §H — **카드에서 지운 것들이 실제로 화면에
+   * 없다.** 소스 텍스트가 아니라 렌더된 DOM으로 센다.
    */
-  it("동일 상품이라는 사실은 카드에 한 번만 적힌다", async () => {
-    await mount(krMarketInEuro());
+  it("URL · 재고 · 신고 국가 · 관측 시각 · 원 표시가 · 배지 · disclaimer가 없다", async () => {
+    await mount(smallable430701AllMarkets());
     clickText(GLOBAL_MARKET_HINT_LABEL);
-    const text = visibleText(regionsOf(page().outerHTML).mi);
+    const html = page().outerHTML;
+    const text = visibleText(regionsOf(html).mi);
+    const card = text.slice(text.indexOf(GLOBAL_MARKET_HINT_LABEL), text.indexOf("🇰🇷 국내 시장"));
 
-    const invariant = "시장 코드만 바꿔 관측한 값입니다";
-    expect(text).toContain(invariant);
-    expect(text.split(invariant)).toHaveLength(2);
+    for (const gone of [
+      "원 표시가",
+      "원화 환산",
+      "판매자 신고 국가",
+      "판매중",
+      "품절",
+      "재고 확인 불가",
+      "동일 상품",
+      "시장 코드만 바꿔 관측한 값입니다",
+      "비교상품 가격이 아닙니다",
+    ]) {
+      expect(card).not.toContain(gone);
+    }
+    expect(card).not.toContain(PRICE_MEANING_LABEL.KR_MARKET_PRICE);
+    // 시장 코드(en-kr/kr 같은 수집 기술 상태)도 줄에 서지 않는다.
+    expect(card).not.toMatch(/\b(en-)?(fr|kr|us|jp)\b/);
+    // 상품 링크가 사라졌다 — 이 카드 안에 <a>가 한 개도 없다.
+    const cardHtml = html.slice(html.indexOf("글로벌 시장 가격"), html.indexOf("국내 시장"));
+    expect(cardHtml).not.toContain("<a ");
   });
 });
 

@@ -181,8 +181,16 @@ export const PRICE_LINE_LABEL: Record<PriceLineKey, string> = {
  */
 export const PRICE_SECTION_TITLE = {
   ORIGINAL: "원본 상품",
-  /** 본문 카드가 아니라 원본 상품 아래의 ⓘ 한 줄과 그 팝오버의 제목이다. */
-  SELLER_GLOBAL_MARKET: "🌎 판매자 글로벌 시장 가격",
+  /**
+   * 본문 카드가 아니라 원본 상품 아래의 ⓘ 한 줄과 그 팝오버의 제목이다.
+   *
+   * GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — CEO가 확정한 글자
+   * 그대로다("🌎 판매자 글로벌 시장 가격" → "🌐 글로벌 시장 가격"). "판매자"가
+   * 빠진 자리는 비지 않는다: 이 카드가 한 판매처의 여러 나라라는 사실은 나라
+   * 줄들이 이미 말하고, 그 말이 제목에 한 번 더 있으면 ③의 "동일상품 판매처"와
+   * 한 글자 차이로 읽힌다.
+   */
+  SELLER_GLOBAL_MARKET: "🌐 글로벌 시장 가격",
   DOMESTIC_COMPETITION: "🇰🇷 국내 시장",
   OVERSEAS_MARKET: "🌎 해외 시장",
   PROFITABILITY: "수익성",

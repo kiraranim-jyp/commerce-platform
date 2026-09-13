@@ -160,8 +160,8 @@ describe("🇰🇷 국내 시장은 비교 대상 유무를 한 곳에서만 판
 describe("글로벌 시장 가격은 툴팁·상세에 산다 — 본문 카드가 아니다", () => {
   const CARD = buildGlobalMarketCard({
     observations: [
-      { marketCode: "en-fr", marketCountry: "ES", currency: "EUR", priceAmount: 75, priceKrw: 116742, soldOut: false, productUrl: null, checkedAt: "2026-09-12T00:00:00Z" },
-      { marketCode: "en-kr", marketCountry: "ES", currency: "KRW", priceAmount: 162000, priceKrw: 162000, soldOut: false, productUrl: null, checkedAt: "2026-09-12T00:00:00Z" },
+      { marketCode: "en-fr", currency: "EUR", priceAmount: 75, priceKrw: 116742 },
+      { marketCode: "en-kr", currency: "KRW", priceAmount: 162000, priceKrw: 162000 },
     ],
   });
 
@@ -201,7 +201,10 @@ describe("글로벌 시장 가격은 툴팁·상세에 산다 — 본문 카드�
     // 펼쳐야 나온다 — 카드가 한 줄이 됐어도 네 개의 가격이 본문에 늘어서
     // 있으면 층만 내려갔지 표면은 그대로다.
     // MI-FINAL-UX-3 — 관측이 없을 때도 같은 자리가 근거를 들고 있다(그 사실 한 줄).
-    expect(hint).toContain("title={summaryLine ? `${summaryLine} · ${card.note}` : GLOBAL_MARKET_UNAVAILABLE_NOTE}");
+    // GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — 툴팁에 붙어 있던
+    // card.note(하단 disclaimer와 같은 문장)를 뺐다. 마우스를 올린 셀러가 읽는
+    // 첫 문장이 가격이어야지, "이 값은 무엇이 아닌지"가 되면 안 된다.
+    expect(hint).toContain("title={summaryLine ?? GLOBAL_MARKET_UNAVAILABLE_NOTE}");
     expect(hint).toContain("ⓘ {GLOBAL_MARKET_HINT_LABEL}");
     expect(hint).not.toContain(">{summaryLine}<");
     // MI-FINAL-UX-3 — 펼침은 본문 흐름 밖(absolute 팝오버)에 뜬다. 카드였을

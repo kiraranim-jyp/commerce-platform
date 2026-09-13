@@ -642,7 +642,6 @@ function ResultTable({
   const mayShow = (c: Candidate) =>
     mayShowCandidate({ tier: displayTierForCandidate(c), confidence: c.confidence });
   const visibleRows = allRows.filter((row) => row.candidate && mayShow(row.candidate));
-  const hiddenRows = allRows.filter((row) => !row.candidate || !mayShow(row.candidate));
   // CEO 지시(2026-08-19: "매칭성공 0이면 조회를 하지마") — 참고 가능한 매칭이
   // 하나도 없으면 표 자체를 그리지 않는다(위 ResultHeadline이 이미 안내).
   if (visibleRows.length === 0) return null;
@@ -660,7 +659,12 @@ function ResultTable({
     };
   }).filter((g) => g.total > 0);
 
-  const moreRows = [...groups.flatMap((g) => g.overflow), ...hiddenRows];
+  // GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — "더 보기"는 상한
+  // 초과분만 받는다(국내 표 DomesticShopSearch와 같은 규칙 · 같은 이유). 관련성
+  // 문(mayShowCandidate)을 통과하지 못한 후보는 목록에도 "더 보기"에도 없다 —
+  // 접어 두는 것과 없는 것은 다르고, `더 보기 (35건)`이라는 숫자는 셀러에게
+  // "아직 안 본 35건"으로 읽힌다.
+  const moreRows = groups.flatMap((g) => g.overflow);
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-text-secondary">

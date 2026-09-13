@@ -427,7 +427,8 @@ describe("① 원본 상품 가격은 언제나 원본 통화가 먼저다", () 
     // 어긋난다(화면의 렌더 순서는 price-display-layout.test.ts가 따로 고정한다).
     expect(Object.values(PRICE_SECTION_TITLE)).toEqual([
       "원본 상품",
-      "🌎 판매자 글로벌 시장 가격",
+      // GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — CEO가 확정한 글자.
+      "🌐 글로벌 시장 가격",
       "🇰🇷 국내 시장",
       "🌎 해외 시장",
       "수익성",

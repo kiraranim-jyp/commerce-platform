@@ -156,25 +156,34 @@ describe("시장별 가격 한 줄은 시장·통화·환산을 모두 말한다
    * 비교」 패널 한 벌뿐이다). 규칙 자체는 그대로이고, 그 규칙을 어길 수 있는
    * 자리가 하나 줄었을 뿐이다.
    */
-  it("나라마다 숫자는 하나다 — 그 줄에서 관측된 통화 그대로", () => {
+  it("나라마다 관측가 하나 + 보조 환산 하나다", () => {
     /**
-     * MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 여기 있던 "원화 환산
-     * {row.krwPrice}"를 지운다. 그 칸이 있는 동안 프랑스 줄은 €75와 ₩116,742
-     * 두 금액을 동시에 말했고, 화면에는 나라 수의 두 배만큼 금액이 떴다.
+     * GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — 형식이 확정됐다:
      *
-     * 대신 한국 줄만 원화가 대표값이 되고(그 줄을 읽는 사람이 한국에서 파는
-     * 사람이라서), 관측 통화가 외화였다는 사실은 괄호 한 조각으로 남는다.
+     *     🇫🇷 프랑스   €75.00   ≈ ₩116,742
+     *
+     * 대표값은 **그 시장에서 관측된 통화**이고, 환산은 보조로 옆에 붙는다.
+     * 직전 화면(7a3250b)은 한국 줄만 "₩113,629 (원 표시가 €73.00)"이라 네 줄이
+     * 같은 축에서 비교되지 않았다 — 그 괄호 조각이 이번에 사라졌다.
+     *
+     * "원화 환산"이라는 문구는 여전히 이 줄에 없다. 환산이라는 사실은 문장이
+     * 아니라 ≈ 기호와 작은 글씨가 말한다.
      */
     expect(panel).not.toContain("원화 환산 {row.krwPrice}");
-    expect(panel).not.toContain("row.krwPrice");
+    expect(panel).not.toContain("(원 표시가 {row.observedOriginPrice})");
     expect(panel).toContain("{row.observedPrice}");
-    expect(panel).toContain("(원 표시가 {row.observedOriginPrice})");
+    expect(panel).toContain("{row.krwEquivalent}");
   });
 
-  it("판매자 신고 국가를 시장이라고 부르지 않는다", () => {
-    // market_country(신고 국가)와 market_code(관측된 시장)는 다른 사실이다.
-    expect(panel).toContain("판매자 신고 국가");
-    expect(panel).not.toContain("기준 국가 {price.marketCountry");
+  it("§H 제거 목록이 줄에서 사라졌다 — URL · 재고 · 신고 국가 · 관측 시각", () => {
+    // 화면에서만 감춘 것이 아니라 GlobalMarketRow에 필드 자체가 없다.
+    const globalMarket = stripComments(read("../global-market.ts"));
+    for (const gone of ["declaredCountry", "sameProductPath", "observedOriginPrice", "availability", "checkedAt"]) {
+      expect(globalMarket).not.toContain(gone);
+    }
+    // 판매자 신고 국가는 이 화면 어디에도 **그려지지** 않는다(주석에서 왜
+    // 지웠는지 설명하는 것은 괜찮다 — 막는 것은 렌더다).
+    expect(panelCode).not.toContain("판매자 신고 국가");
   });
 });
 
@@ -234,7 +243,8 @@ describe("가격 영역은 정해진 순서로 읽힌다", () => {
     }
     // 글로벌 시장은 본문 순서에 없으므로 번호도 없다(price-hierarchy.test.ts가
     // 그 사실 자체를 고정한다).
-    expect(hierarchy).toContain('SELLER_GLOBAL_MARKET: "🌎 판매자 글로벌 시장 가격"');
+    // GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — CEO가 확정한 글자.
+    expect(hierarchy).toContain('SELLER_GLOBAL_MARKET: "🌐 글로벌 시장 가격"');
     expect(panel).toContain("PRICE_SECTION_TITLE.PROFITABILITY");
     // MI-UX-FINAL-4(CEO 지시, 2026-09-13) — 「🔎 판단 근거」라는 제목 자체가
     // 사라졌다(되물음 안에 카드 제목을 세우면 그 자리가 또 하나의 화면이 된다).
@@ -300,24 +310,27 @@ describe("② 글로벌 시장은 관측된 시장가만 말한다", () => {
     expect(panelCode).not.toContain("row.isCostBasis");
   });
 
-  it("🇰🇷 줄에는 가격 의미 라벨도 환산 칸도 없다 — 나라와 금액 둘뿐이다", () => {
+  it("🇰🇷 줄에는 가격 의미 라벨이 없다 — 나라 · 관측가 · 환산 셋뿐이다", () => {
     // MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 이 줄이 "원본 판매자
-    // 한국 표시가 €73.00 · 원화 환산 ₩113,629"로 떠 있던 것을 지운다. 라벨과
-    // 환산 칸이 함께 사라지고 한국 줄의 대표값은 언제나 원화 하나다.
+    // 한국 표시가 €73.00 · 원화 환산 ₩113,629"로 떠 있던 것을 지웠다.
+    //
+    // GLOBAL-SOURCE-PRICE-POLICY-FINAL — 라벨은 계속 없고, 환산은 "원화 환산"
+    // 이라는 문구가 아니라 ≈ 기호로 돌아왔다(krwEquivalent). 문구가 아니라
+    // 기호라는 것이 핵심이다: 장황한 말이 붙으면 그 줄이 다시 설명이 된다.
     expect(globalCardView).not.toContain("row.priceMeaningLabel");
-    expect(globalCardView).not.toContain("row.krwPrice");
     expect(stripComments(read("../global-market.ts"))).not.toContain("PRICE_MEANING_LABEL");
     expect(stripComments(globalCardView)).not.toContain("원화 환산");
+    expect(globalCardView).toContain("row.krwEquivalent");
   });
 
-  it("동일 상품이라는 사실은 줄이 아니라 카드가 한 번 말한다", () => {
-    // 달라지지 않는 사실을 네 줄에 네 번 적으면 줄마다 판정된 결과로 읽힌다.
+  it("카드에는 🟢 불변식 한 줄도 ※ disclaimer도 없다", () => {
+    // GLOBAL-SOURCE-PRICE-POLICY-FINAL §H — 둘 다 "이 값이 무엇이 아닌지"를
+    // 설명하는 문장이었고, 네 줄짜리 표 밑에서 표보다 길었다.
     expect(globalCardView).not.toContain("row.identity");
-    expect(globalCardView).toContain("{card.invariant.icon} {card.invariant.text}");
-    // 같은 상품 경로(근거)는 여전히 펼친 상세에만 있다.
-    const pathAt = globalCardView.indexOf("row.sameProductPath");
-    const detailGateAt = globalCardView.indexOf("{showDetail && (");
-    expect(pathAt).toBeGreaterThan(detailGateAt);
+    expect(globalCardView).not.toContain("card.invariant");
+    expect(globalCardView).not.toContain("card.note");
+    // 줄이 접히는 상세 층 자체가 없다 — 펼칠 원자료가 남아 있지 않다.
+    expect(globalCardView).not.toContain("showDetail");
   });
 
   it("국내 경쟁시장의 매칭 상태는 그대로다 — 다른 개념이라 어휘도 다르다", () => {
@@ -327,13 +340,15 @@ describe("② 글로벌 시장은 관측된 시장가만 말한다", () => {
     expect(matchDisplay).toContain('label: "동일상품"');
     expect(matchDisplay).toContain('label: "동일상품 추정"');
     expect(matchDisplay).toContain('label: "유사상품"');
-    // 글로벌 카드가 한 번 적는 불변식 문구는 그 셋 중 어느 것과도 같지 않다.
-    // MI-MATCHING-INTEGRATION-2 — 문구 자체가 바뀌었다: 등급처럼 읽히던
-    // "동일 상품 · 판매자 직접 관측" 대신 관측 방식을 그대로 적는다.
-    const globalMarket = read("../global-market.ts");
-    expect(globalMarket).toContain("시장 코드만 바꿔 관측한 값입니다");
+    // GLOBAL-SOURCE-PRICE-POLICY-FINAL — 글로벌 카드에는 이제 등급처럼 읽힐 수
+    // 있는 문구가 **하나도 없다**. 두 개념이 한 어휘로 합쳐질 자리 자체가 사라진
+    // 것이라, 이 경계는 전보다 강해졌다.
+    const globalMarket = stripComments(read("../global-market.ts"));
+    expect(globalMarket).not.toContain("시장 코드만 바꿔 관측한 값입니다");
     expect(globalMarket).not.toContain('text: "동일 상품 · 판매자 직접 관측"');
-    expect(matchDisplay).not.toContain("시장 코드만 바꿔 관측한 값입니다");
+    for (const label of ["동일상품", "동일상품 추정", "유사상품"]) {
+      expect(globalMarket).not.toContain(`"${label}"`);
+    }
     // 반대 방향도 막는다 — 글로벌 카드가 매칭 판정을 import해 쓰지 않는다
     // (주석에서 두 개념의 차이를 설명하는 것은 괜찮다. 막는 것은 의존이다).
     expect(stripComments(read("../global-market.ts"))).not.toContain("match-display");
@@ -414,17 +429,19 @@ describe("가격 상세는 접히고, 같은 숫자는 두 번 그려지지 않�
     expect(panel).not.toContain("{domesticCompetition.sampleListings");
   });
 
-  it("판매자 신고 국가는 기본 화면에 없고 펼친 상세에만 있다", () => {
+  it("판매자 신고 국가는 화면 어디에도 없다 — 그릴 값 자체가 사라졌다", () => {
     // 기본 화면에 "독일 / 판매자 신고 국가 ES"를 나란히 두면(실측: Bobo Choses는
     // 모든 시장에서 country=ES) 시장과 신고 국가를 가르려던 표시가 오히려 둘을
     // 섞어 보이게 한다.
-    // MI-UX-FINAL-4 — 이 규칙을 지키는 행도 하나로 줄었다(위 주석 참고).
-    expect(panel).toContain("{showDetail && (");
-    // 판단 카드의 글로벌 시장 줄은 기본 상태에서 신고 국가를 그리지 않는다.
-    const rowView = panel.slice(panel.indexOf("function GlobalMarketRowView"));
-    const declaredAt = rowView.indexOf("판매자 신고 국가");
-    const detailGateAt = rowView.indexOf("{showDetail && (");
-    expect(declaredAt).toBeGreaterThan(detailGateAt);
+    //
+    // GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — 예전에는 "펼친
+    // 상세에만 있다"였다. 이제 상세 층 자체가 없고, 🌐 카드는 신고 국가를
+    // **입력으로도 받지 못한다**(§H). 규칙을 어길 수 있는 자리가 0이 됐다.
+    const rowView = panelCode.slice(panelCode.indexOf("function GlobalMarketRowView"));
+    expect(rowView).not.toContain("판매자 신고 국가");
+    expect(rowView).not.toContain("declaredCountry");
+    expect(rowView).not.toContain("showDetail");
+    expect(stripComments(read("../global-market.ts"))).not.toContain("marketCountry");
   });
 });
 

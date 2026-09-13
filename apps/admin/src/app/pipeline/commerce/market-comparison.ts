@@ -1,4 +1,4 @@
-import { pickJudgingMarketRow, type GlobalMarketCard } from "./global-market";
+import { EMPTY_PRICE, pickJudgingMarketRow, type GlobalMarketCard } from "./global-market";
 import { KR_TARGET_MARKET, type TargetMarket } from "./market-target";
 import { miEmptyState, type MiEmptyState } from "./mi-empty-state";
 import { PRICE_MEANING_LABEL, PRICE_SECTION_TITLE, type MarketContext } from "./price-hierarchy";
@@ -84,7 +84,12 @@ export function buildMarketComparison(
     // 두 번째 이름을 만들면 같은 사실에 라벨이 둘이 되고, 그게 이 계층이
     // 없애려던 문제 그 자체다(의미 하나당 라벨 하나).
     label: PRICE_MEANING_LABEL.KR_MARKET_PRICE,
-    value: row ? row.observedPrice : null,
+    // GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — 이 칸은 여전히
+    // **원화**다(row.krwPrice). 🌐 카드의 한국 줄은 이제 관측 통화(€73.00)를
+    // 대표값으로 쓰지만, 이 칸은 다른 한국 판매자들의 원화와 나란히 서는 자리라
+    // 유로가 오면 비교 자체가 성립하지 않는다. 같은 관측의 다른 질문이고, 두
+    // 값은 같은 행(priceKrw)에서 나오므로 갈라질 수 없다.
+    value: row ? (row.krwPrice ?? EMPTY_PRICE) : null,
     basis: row
       ? [
           `${row.flag} ${row.name} · ${row.code}`,
@@ -101,7 +106,12 @@ export function buildMarketComparison(
           // 있다 — 같은 숫자를 기준 문장에 한 번 더 적으면 셀러는 두 금액이
           // 있는 줄로 읽는다. 남길 사실은 "그 원화가 환산값인가"이고, 그건
           // 판매처가 페이지에 실제로 적어 둔 외화 표시가가 말한다.
-          row.observedOriginPrice ? `원 표시가 ${row.observedOriginPrice}` : null,
+          //
+          // GLOBAL-SOURCE-PRICE-POLICY-FINAL — 그 외화 표시가가 이제 🌐 카드
+          // 한국 줄의 대표값(row.observedPrice)이다. krwEquivalent가 있다는 것은
+          // 곧 "관측 통화가 원화가 아니다"라는 뜻이라, 그때만 이 조각이 선다
+          // (원화로 관측된 줄에 "원 표시가 ₩113,629"를 적으면 같은 숫자의 사본이다).
+          row.krwEquivalent ? `원 표시가 ${row.observedPrice}` : null,
         ]
           .filter(Boolean)
           .join(" · ")

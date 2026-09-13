@@ -511,7 +511,6 @@ function ResultTable({ results }: { results: SearchResult[] }) {
       crossSellerVerdict: c.crossSellerVerdict,
     });
   const visibleRows = allRows.filter((row) => row.candidate && mayShow(row.candidate));
-  const hiddenRows = allRows.filter((row) => !row.candidate || !mayShow(row.candidate));
   if (visibleRows.length === 0) return null;
 
   // §7 — 등급별로 묶고, 확정되지 않은 등급(🟡 추정 · ⚪ 유사 · 🔵 옵션 다름)만
@@ -530,7 +529,20 @@ function ResultTable({ results }: { results: SearchResult[] }) {
     };
   }).filter((g) => g.total > 0);
 
-  const moreRows = [...groups.flatMap((g) => g.overflow), ...hiddenRows];
+  // GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — **"더 보기"는 상한
+  // 초과분만 받는다.**
+  //
+  // 직전 작업(7a3250b)은 상한은 넣었지만 mayShowCandidate를 통과하지 못한 것들을
+  // 전부 "더 보기" 뒤로 보냈고, 그래서 화면에 `더 보기 (35건)`이 남았다. 그 35건은
+  // 목록에 설 근거가 없다고 이미 판정된 후보들이다 — 접어 두는 것과 없는 것은
+  // 다르다. 숫자가 보이는 순간 셀러는 "35건을 아직 안 봤다"고 읽고, 열어서 확인한
+  // 뒤에야 볼 필요가 없었다는 걸 안다.
+  //
+  // 두 종류를 가른다:
+  //   · 관련성이 낮아 목록에 설 수 없는 후보 → 아예 없다(hiddenRows를 쓰지 않는다).
+  //   · 관련성은 통과했는데 상위 3건 밖인 후보 → "더 보기"에 남는다(g.overflow).
+  // 데이터를 지우는 것이 아니라 그리지 않는 것이다 — 진단은 서버 응답에 그대로 있다.
+  const moreRows = groups.flatMap((g) => g.overflow);
   return (
     <div className="space-y-2">
       {/* §7 — 기본 화면은 "무엇이 몇 건 있는지"를 한 줄로 먼저 보여준다. */}

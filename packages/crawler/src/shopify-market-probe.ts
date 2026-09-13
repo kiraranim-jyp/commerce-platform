@@ -1,5 +1,11 @@
 import type { MarketProbeResult } from "./market-probe-result";
-import { extractShopifyHandle, fetchShopifyProductJson } from "./shopify-product-json";
+import {
+  extractShopifyHandle,
+  fetchShopifyProductJson,
+  fetchShopifyShopMeta,
+  shipsToCountry,
+  type ShopifyShopMeta,
+} from "./shopify-product-json";
 
 /**
  * Sprint N-3.2 — 한 상품 URL에 대해 여러 Shopify Markets locale(예: "en-kr")을
@@ -84,11 +90,54 @@ export const EXPAND_CANDIDATE_MARKET_CODES = [
 ];
 
 /**
- * SMALLABLE-MARKET-PROBE-1 — 이름만 바뀌었다(probeAdditionalMarkets →
- * probeAdditionalShopifyMarkets). 본문은 한 줄도 손대지 않는다: Shopify 경로의
- * 동작이 바뀌면 이미 관측되고 있는 판매처(junioredition/Bobo Choses)의 시계열이
- * 조용히 갈라진다. 바깥에서 부르던 이름(probeAdditionalMarkets)은 market-probe.ts가
+ * GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — **그 시장이 실재하는지
+ * 확인할 수 있을 때만 관측한다.**
+ *
+ * ── 무엇이 문제였나 ─────────────────────────────────────────────────────
+ * 실측(2026-09-13): Bobo Choses는 일본에 배송하지 않는다(`/meta.json`의
+ * `ships_to_countries`에 JP가 없다). 그런데 일본을 요청하면 404가 아니라
+ * **본국(스페인) 가격을 그대로** 돌려준다 — `?country=JP`와 `?country=XX`(존재
+ * 하지 않는 국가)의 응답이 구별되지 않는다. 그 응답을 저장하면 €75가 "일본
+ * 시장에서 관측된 가격"이 되고, 화면은 존재하지 않는 시장 하나를 진짜처럼
+ * 보여준다. 관측이 0건인 것보다 나쁘다 — 틀렸다는 것을 알 방법이 없기 때문이다.
+ *
+ * ── 왜 이 축인가 ────────────────────────────────────────────────────────
+ * 응답 자체는 증거가 되지 못한다(위 참고). 판매처가 **스스로 공시한 배송 국가
+ * 목록**이 우리가 가진 유일한 독립 근거이고, 그건 이미 받아오고 있던 값이다
+ * (`/meta.json` — 새 엔드포인트도, 새 요청 축도 만들지 않는다).
+ *
+ * ── 확인할 수 없으면 기록하지 않는다 ─────────────────────────────────────
+ * 목록을 못 읽으면 그 매장의 **국가 시장은 하나도 관측하지 않는다**(null을 "배송
+ * 한다"로 해석하지 않는다). "모르는 것은 null"이라는 이 저장소의 규칙 그대로다.
+ *
+ * ── 국가가 아닌 시장 코드는 이 문을 지나지 않는다 ─────────────────────────
+ * "en-int"는 어느 나라도 아니라서 배송 국가로 검증할 대상 자체가 없다(화면도 이
+ * 코드를 끝까지 국가로 바꾸지 않는다 — 🌎 국제). 이 줄이 주장하는 것은 "일본
+ * 가격"이 아니라 "국제 시장 가격"이고, 그 주장은 이 가드가 막으려는 종류의
+ * 거짓말이 아니다. 국가를 주장하지 않는 코드에 배송 국가 검증을 걸면, 실측으로
+ * 다른 값이 확인된 진짜 시장(en-de €75 vs en-int €84)이 근거 없이 사라진다.
+ *
+ * 실측 영향(2026-09-13 `/meta.json` 확인): bobochoses는 en-jp 하나만 빠지고
+ * (en-us/en-gb/en-fr/en-de/en-au/en-ca/en-int는 그대로), junioredition은
+ * `ships_to_countries`가 `"*"`로 시작해 한 건도 빠지지 않는다.
+ */
+function marketMayBeObserved(shopMeta: ShopifyShopMeta | null, marketCode: string): boolean {
+  // 시장 코드 끝의 2글자 지역만 국가 주장이다("en-de"→DE, "en-int"→없음).
+  const region = /-([a-z]{2})$/i.exec(marketCode)?.[1];
+  if (!region) return true;
+  return shipsToCountry(shopMeta, region) === true;
+}
+
+/**
+ * SMALLABLE-MARKET-PROBE-1 — 이름이 바뀌었다(probeAdditionalMarkets →
+ * probeAdditionalShopifyMarkets). 바깥에서 부르던 이름은 market-probe.ts가
  * 이어받아 "Shopify면 이 함수"로 넘긴다.
+ *
+ * GLOBAL-SOURCE-PRICE-POLICY-FINAL — 후보 목록과 요청 방식은 그대로이고, 그
+ * 앞에 문이 하나 생겼다(marketMayBeObserved). 문을 요청 **전**에 두는 이유는
+ * PART H(비용)다 — 배송하지 않는 나라에는 HTTP 요청을 한 건도 보내지 않는다.
+ * `/meta.json`은 각 probeMarket이 어차피 한 번씩 부르던 것이라 여기서 먼저
+ * 불러도 요청 수는 늘지 않는 쪽에 가깝다(오히려 걸러진 만큼 줄어든다).
  */
 export async function probeAdditionalShopifyMarkets(
   sourceUrl: string,
@@ -97,7 +146,10 @@ export async function probeAdditionalShopifyMarkets(
   const handle = extractShopifyHandle(sourceUrl);
   if (!handle) return [];
   const origin = new URL(sourceUrl).origin;
-  const candidates = EXPAND_CANDIDATE_MARKET_CODES.filter((code) => !excludeMarketCodes.includes(code));
+  const shopMeta = await fetchShopifyShopMeta(origin);
+  const candidates = EXPAND_CANDIDATE_MARKET_CODES.filter(
+    (code) => !excludeMarketCodes.includes(code) && marketMayBeObserved(shopMeta, code),
+  );
   const results = await Promise.all(candidates.map((code) => probeMarket(origin, handle, code)));
   return results.filter((r): r is ShopifyMarketProbeResult => r !== null);
 }

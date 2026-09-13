@@ -77,22 +77,18 @@ describe("원본 주소는 매칭 결과로 대체될 수 없다", () => {
 
   it("동일상품으로 확인된 판매처 주소가 있어도 원본 줄은 원본을 가리킨다", () => {
     // 같은 화면에 Bobo 공식몰 관측이 함께 있는 상황을 그대로 만든다.
+    //
+    // GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — 🌐 카드는 이제
+    // 관측 URL을 **입력으로도 받지 않는다**(§H 제거 목록). 그래서 "다른 판매처
+    // URL이 원본 줄로 새는" 경로가 하나 더 막혔다: 새려면 애초에 카드 안에 그
+    // 주소가 있어야 하는데, 이제 카드가 주소를 들고 있지 않다.
     const observations: MarketObservationInput[] = [
-      {
-        marketCode: "en-kr",
-        marketCountry: "ES",
-        currency: "KRW",
-        priceAmount: 168000,
-        priceKrw: 168000,
-        soldOut: false,
-        productUrl: "https://bobochoses.com/en-kr/products/b226ac114-bobo-choses-bolder-half-zipped-sweatshirt",
-        checkedAt: "2026-09-13T02:00:00.000Z",
-      },
+      { marketCode: "en-kr", currency: "KRW", priceAmount: 168000, priceKrw: 168000 },
     ];
     const card = buildGlobalMarketCard({ observations });
     const link = buildOriginProductLink({ title: "Bobo Choses Zipped Sweat Organic Cotton | Heather grey", sourceUrl: SMALLABLE_URL });
 
-    expect(card.rows[0]!.productUrl).toContain("bobochoses.com");
+    expect(JSON.stringify(card)).not.toContain("bobochoses.com");
     expect(link.url).toBe(SMALLABLE_URL);
     expect(link.url).not.toContain("bobochoses.com");
   });

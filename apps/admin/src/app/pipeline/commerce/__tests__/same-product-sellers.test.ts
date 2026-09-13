@@ -121,23 +121,19 @@ describe("글로벌 시장 카드와 서로의 입력을 받지 않는다", () =
     expect(stripComments(read("../global-market.ts"))).not.toContain("sameProductListings");
   });
 
-  it("원본 판매처의 금액은 ②의 🇰🇷 줄이 이미 완성한 문자열 그대로다", () => {
+  it("원본 판매처의 금액은 🌐 카드의 🇰🇷 줄이 이미 완성한 원화 문자열 그대로다", () => {
     // 사본이 아니라 같은 문자열이라, 한쪽만 고쳐지는 날이 올 수 없다.
+    //
+    // GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — 읽는 필드가
+    // observedPrice에서 krwPrice로 바뀌었다. 🌐 카드의 한국 줄은 이제 관측
+    // 통화(€73.00)를 대표값으로 쓰는데, 이 카드는 그 값을 **국내 판매처들의
+    // 원화 옆에** 세운다 — 유로가 오면 "누가 더 싼가"를 눈으로 답할 수 없다.
     const observations: MarketObservationInput[] = [
-      {
-        marketCode: "en-kr",
-        marketCountry: "ES",
-        currency: "EUR",
-        priceAmount: 73,
-        priceKrw: 113629,
-        soldOut: false,
-        productUrl: `${SMALLABLE_URL}?market=kr`,
-        checkedAt: "2026-09-13T02:00:00.000Z",
-      },
+      { marketCode: "en-kr", currency: "EUR", priceAmount: 73, priceKrw: 113629 },
     ];
     const row = pickJudgingMarketRow(buildGlobalMarketCard({ observations }))!;
-    const card = buildSameProductSellersCard(input({ origin: { sourceUrl: SMALLABLE_URL, price: row.observedPrice } }));
-    expect(card.rows[0]!.price).toBe(row.observedPrice);
+    const card = buildSameProductSellersCard(input({ origin: { sourceUrl: SMALLABLE_URL, price: row.krwPrice } }));
+    expect(card.rows[0]!.price).toBe(row.krwPrice);
     expect(card.rows[0]!.price).toBe("₩113,629");
   });
 });

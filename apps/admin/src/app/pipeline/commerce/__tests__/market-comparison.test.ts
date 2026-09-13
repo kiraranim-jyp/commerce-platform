@@ -14,26 +14,8 @@ import { buildMarketContext, PRICE_MEANING_LABEL, PRICE_SECTION_TITLE, type Mark
  * 화면의 다른 어디에서도 비교하지 않는다.
  */
 const OBSERVATIONS: MarketObservationInput[] = [
-  {
-    marketCode: "en-kr",
-    marketCountry: "ES",
-    currency: "KRW",
-    priceAmount: 78000,
-    priceKrw: 78000,
-    soldOut: false,
-    productUrl: "https://bobochoses.com/en-kr/products/x",
-    checkedAt: "2026-09-11T02:00:00.000Z",
-  },
-  {
-    marketCode: "en-de",
-    marketCountry: "ES",
-    currency: "EUR",
-    priceAmount: 37,
-    priceKrw: 57756,
-    soldOut: false,
-    productUrl: null,
-    checkedAt: "2026-09-11T02:00:00.000Z",
-  },
+  { marketCode: "en-kr", currency: "KRW", priceAmount: 78000, priceKrw: 78000 },
+  { marketCode: "en-de", currency: "EUR", priceAmount: 37, priceKrw: 57756 },
 ];
 
 const MARKET: MarketContextInput = {

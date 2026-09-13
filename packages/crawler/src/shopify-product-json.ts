@@ -170,6 +170,39 @@ export interface ShopifyShopMeta {
   country: string | null;
   /** 매장 표시명(예: "Junior Edition") — 있으면 UI에 그대로 쓴다. */
   name: string | null;
+  /**
+   * GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — 이 매장이 **실제로
+   * 배송하는 국가 목록**. `/meta.json`이 이미 돌려주던 값인데 여태 버리고 있었다.
+   *
+   * 실측(2026-09-13):
+   *   bobochoses.com   KR·US·GB·FR·DE… 있음, **JP 없음**
+   *   junioredition.com  맨 앞이 `"*"`(전 세계) + JP·KR 포함
+   *
+   * `"*"`는 Shopify가 "나머지 전부"를 뜻하는 데 쓰는 와일드카드다(실측으로 확인한
+   * 실제 응답 값이다 — 추측이 아니다). 그래서 목록을 그대로 두고 읽는 쪽이 이
+   * 값을 해석한다(shipsToCountry).
+   *
+   * 목록을 못 읽었으면 빈 배열이 아니라 **null**이다. "배송 국가가 없다"와
+   * "배송 국가를 확인하지 못했다"는 다른 사실이고, 이 구분이 곧 시장 관측을
+   * 저장할지 말지를 가른다.
+   */
+  shipsToCountries: string[] | null;
+}
+
+/**
+ * 이 매장이 그 나라로 배송하는가. **모르면 null이다**(false가 아니다).
+ *
+ * GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — 이 함수가 막는 사고는
+ * 실측으로 확인된 것이다: Bobo Choses는 일본에 배송하지 않는데, `?country=JP`나
+ * `/en-jp/` 프리픽스로 요청하면 **404가 아니라 본국(스페인) 가격을 그대로**
+ * 돌려준다. 즉 응답만 봐서는 "일본 시장 가격"과 "일본이 아닌 값"을 구별할 수
+ * 없고, 그대로 저장하면 존재하지 않는 일본 시장이 DB와 화면에 생긴다.
+ */
+export function shipsToCountry(shopMeta: ShopifyShopMeta | null, countryCode: string): boolean | null {
+  const list = shopMeta?.shipsToCountries;
+  if (!list || list.length === 0) return null;
+  if (list.includes("*")) return true;
+  return list.includes(countryCode.trim().toUpperCase());
 }
 
 /** 실측 확인(2026-08-03, CEO 리포트) — Shopify Markets를 쓰는 스토어는
@@ -189,11 +222,22 @@ export async function fetchShopifyShopMeta(origin: string): Promise<ShopifyShopM
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!response.ok) return null;
-    const meta = (await response.json()) as { currency?: string; country?: string; name?: string };
+    const meta = (await response.json()) as {
+      currency?: string;
+      country?: string;
+      name?: string;
+      ships_to_countries?: unknown;
+    };
+    // 배열이고 문자열만 들어 있을 때만 받는다. 모양이 다르면 null(=확인 못 함)이다 —
+    // 반쯤 읽은 목록으로 "이 나라엔 배송 안 한다"고 단정하면 실제로 있는 시장이 사라진다.
+    const shipsTo = Array.isArray(meta.ships_to_countries)
+      ? meta.ships_to_countries.filter((c): c is string => typeof c === "string").map((c) => c.trim().toUpperCase())
+      : null;
     return {
       currency: meta.currency ? meta.currency.toUpperCase() : null,
       country: meta.country ? meta.country.toUpperCase() : null,
       name: meta.name ? meta.name.trim() : null,
+      shipsToCountries: shipsTo && shipsTo.length > 0 ? shipsTo : null,
     };
   } catch {
     return null;

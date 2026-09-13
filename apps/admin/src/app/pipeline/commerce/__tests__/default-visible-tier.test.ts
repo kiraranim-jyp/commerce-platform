@@ -9,6 +9,7 @@ import {
   overseasMatchDisplay,
   SIMILAR_DEFAULT_LIMIT,
 } from "../match-display";
+import { readSourceAt, stripComments } from "./source-text";
 
 /** MI-UX-9(CPO 지시, 2026-09-07 §5/§6/§7) — 기본 가격비교 리스트에 무엇이 들어가고
  * 무엇이 "더 보기" 뒤로 가는지를 코드 레벨로 고정한다.
@@ -125,5 +126,52 @@ describe("목록에 설 수 있는 후보의 조건", () => {
   it("근거도 없고 점수도 바닥이면 '유사상품'이라고 부를 근거조차 없다", () => {
     expect(mayShowCandidate({ tier: "SIMILAR", confidence: 0.05 })).toBe(false);
     expect(mayShowCandidate({ tier: "SIMILAR", confidence: MIN_DISPLAY_SIMILARITY })).toBe(true);
+  });
+});
+
+/**
+ * GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — **"더 보기"에 무엇이
+ * 들어가는가.**
+ *
+ * CEO가 지목한 화면:
+ *
+ *     SAME          전부
+ *     PRESUMED_SAME 상위 3
+ *     SIMILAR       relevance threshold 통과분 상위 3
+ *     LOW relevance 표시하지 않음   ← "더 보기"에도 넣지 않는다
+ *     CONFLICT      가격 비교에서 제외
+ *
+ * 직전 작업(7a3250b)은 상한은 넣었지만 통과하지 못한 후보를 전부 "더 보기" 뒤로
+ * 보냈고, 그래서 `더 보기 (35건)`이 남았다. 접어 두는 것과 없는 것은 다르다 —
+ * 숫자가 보이는 순간 셀러는 "아직 안 본 35건"으로 읽는다.
+ *
+ * 배치 규칙이라 순수 함수로 표현할 수 없어 소스 텍스트로 못박는다(이 폴더의 다른
+ * 배치 테스트와 같은 방식). 두 화면이 같은 규칙을 쓰는지도 함께 센다.
+ */
+describe("더 보기는 상한 초과분만 받는다", () => {
+  const files = {
+    국내: readSourceAt(new URL("../DomesticShopSearch.tsx", import.meta.url)),
+    해외: readSourceAt(new URL("../ComparisonShopSearch.tsx", import.meta.url)),
+  };
+
+  for (const [name, source] of Object.entries(files)) {
+    it(`${name} 표: 더 보기 묶음이 overflow만으로 만들어진다`, () => {
+      expect(stripComments(source)).toContain("const moreRows = groups.flatMap((g) => g.overflow);");
+    });
+
+    it(`${name} 표: 관련성 문을 통과 못 한 후보가 더 보기로 새지 않는다`, () => {
+      // hiddenRows를 만들어 두면 언젠가 "버리긴 아까우니 더 보기에 넣자"는 코드가
+      // 돌아온다 — 변수 자체를 없앤 것이 이번 작업의 장치다.
+      expect(stripComments(source)).not.toContain("hiddenRows");
+    });
+
+    it(`${name} 표: 상한 초과분은 버려지지 않는다 — 자른 뒤에도 overflow에 남는다`, () => {
+      expect(stripComments(source)).toContain("overflow: limit == null ? [] : rows.slice(limit),");
+    });
+  }
+
+  it("CONFLICT는 두 화면 모두에서 가격 비교 목록에 서지 못한다", () => {
+    expect(mayShowCandidate({ tier: "CONFLICT", confidence: 0.99 })).toBe(false);
+    expect(mayShowCandidate({ tier: "SIMILAR", confidence: 0.99, crossSellerVerdict: "CONFLICT" })).toBe(false);
   });
 });

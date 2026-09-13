@@ -130,26 +130,8 @@ function baseData(): PriceHistoryResponse {
      */
     currentPrice: { sellingPriceKrw: null, costPriceKrw: 116742, costBasis: "ORIGIN_FX" },
     sellerGlobalMarkets: [
-      {
-        marketCode: "en-de",
-        marketCountry: "ES",
-        currency: "EUR",
-        priceAmount: 75,
-        priceKrw: 116742,
-        soldOut: false,
-        productUrl: "https://bobochoses.com/en-de/products/b226ac043",
-        checkedAt: new Date().toISOString(),
-      },
-      {
-        marketCode: "en-kr",
-        marketCountry: "ES",
-        currency: "KRW",
-        priceAmount: 162000,
-        priceKrw: 162000,
-        soldOut: false,
-        productUrl: "https://bobochoses.com/en-kr/products/b226ac043",
-        checkedAt: new Date().toISOString(),
-      },
+      { marketCode: "en-de", currency: "EUR", priceAmount: 75, priceKrw: 116742 },
+      { marketCode: "en-kr", currency: "KRW", priceAmount: 162000, priceKrw: 162000 },
     ],
     domesticCompetition: {
       tier: "PRIMARY",

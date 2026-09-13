@@ -66,6 +66,7 @@ import {
   pickJudgingMarketRow,
   GLOBAL_MARKET_HINT_LABEL,
   GLOBAL_MARKET_UNAVAILABLE_NOTE,
+  EMPTY_PRICE,
   type GlobalMarketCard,
   type GlobalMarketRow,
   type MarketObservationInput,
@@ -1421,10 +1422,14 @@ function GlobalMarketHint({
       <button
         type="button"
         onClick={onToggle}
-        // 툴팁이 "그 숫자의 근거"를 맡는다 — 시장별 가격과, 이 줄이 국내
-        // 비교상품도 착지원가도 아니라는 사실이 전부 여기 있다(본문 문장이 아님).
+        // 툴팁이 "그 숫자의 근거"를 맡는다 — 시장별 가격이 그대로 들어간다.
         // 관측이 없을 때는 그 사실 한 줄이 같은 자리에 온다.
-        title={summaryLine ? `${summaryLine} · ${card.note}` : GLOBAL_MARKET_UNAVAILABLE_NOTE}
+        //
+        // GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — 여기 붙어
+        // 있던 card.note(하단 disclaimer와 같은 문장)를 뺐다. 툴팁이 시장 네
+        // 줄보다 긴 설명을 달고 있으면, 마우스를 올린 셀러가 읽는 첫 문장이
+        // 가격이 아니라 "이 값은 무엇이 아닌지"가 된다.
+        title={summaryLine ?? GLOBAL_MARKET_UNAVAILABLE_NOTE}
         className="flex flex-wrap items-baseline gap-x-1 text-left text-[10px] text-text-tertiary hover:underline"
       >
         <span className="font-medium">ⓘ {GLOBAL_MARKET_HINT_LABEL}</span>
@@ -1467,79 +1472,46 @@ function GlobalMarketCardView({ card }: { card: GlobalMarketCard }) {
           {card.empty?.reason && <span className="ml-1 text-[10px]">— {card.empty.reason}</span>}
         </p>
       ) : (
-        <>
-          <ul className="space-y-0.5">
-            {card.rows.map((row) => (
-              <GlobalMarketRowView key={row.marketCode} row={row} showDetail />
-            ))}
-          </ul>
-          {/* MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 줄마다 네 번
-              반복되던 🟢 배지가 카드에 **한 번** 선다. 이 카드의 동일성은 줄마다
-              판정된 결과가 아니라 구성으로 성립하는 불변식이라(같은 페이지,
-              시장 코드만 바꿔 관측), 그 사실을 적는 자리도 카드 하나여야 한다. */}
-          <p className="mt-1.5 text-[10px] leading-relaxed text-text-tertiary">
-            {card.invariant.icon} {card.invariant.text}
-          </p>
-          <p className="mt-1 text-[10px] leading-relaxed text-text-tertiary">※ {card.note}</p>
-        </>
+        /* GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — 카드는 제목과
+           나라 줄 목록뿐이다. 줄 아래에 있던 🟢 불변식 한 줄과 ※ disclaimer
+           한 줄을 지웠다: 둘 다 "이 값이 무엇이 아닌지"를 설명하는 문장이었고,
+           네 줄짜리 표 밑에 두 문단이 붙으면 설명이 표보다 길어진다. */
+        <ul className="space-y-0.5">
+          {card.rows.map((row) => (
+            <GlobalMarketRowView key={row.marketCode} row={row} />
+          ))}
+        </ul>
       )}
     </div>
   );
 }
 
-/** 시장 한 줄. 숫자를 여기서 만들지 않는다 — global-market.ts가 이미 완성한
- * 문자열을 배치만 한다(같은 값이 카드마다 다른 모양으로 뜨는 것을 막는다). */
-function GlobalMarketRowView({ row, showDetail }: { row: GlobalMarketRow; showDetail: boolean }) {
+/**
+ * 시장 한 줄. 숫자를 여기서 만들지 않는다 — global-market.ts가 이미 완성한
+ * 문자열을 배치만 한다(같은 값이 카드마다 다른 모양으로 뜨는 것을 막는다).
+ *
+ * GLOBAL-SOURCE-PRICE-POLICY-FINAL(CEO 확정, 2026-09-13) — 줄이 말하는 것은 셋뿐이다:
+ *
+ *     🇫🇷 프랑스     €75.00     ≈ ₩116,742
+ *
+ * 나라 · 그 나라에서 관측된 통화 금액 · 보조 원화 환산. 여기 있던 시장 코드,
+ * 재고 배지, 상품 링크, 원 표시가 괄호, 그리고 아래 상세 한 줄(판매자 신고 국가 ·
+ * 관측 시각 · 같은 상품 경로)이 전부 사라졌다. 화면에서만 감춘 것이 아니라
+ * GlobalMarketRow에 그 필드 자체가 없어서 그릴 수 있는 값이 남지 않았다.
+ *
+ * ≈ 가 붙은 값은 **환산이지 관측이 아니다.** 그래서 작게, 흐리게, 뒤에 선다 —
+ * 앞의 €75.00과 같은 크기로 그리면 두 금액이 같은 층의 사실로 읽힌다.
+ */
+function GlobalMarketRowView({ row }: { row: GlobalMarketRow }) {
   return (
-    <li className="text-[11px] text-text-secondary">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-        <span className="flex flex-wrap items-baseline gap-1">
-          <span className="text-text-primary">
-            {row.flag} {row.name}
-          </span>
-          <span className="text-[10px] text-text-tertiary">{row.code}</span>
-          {/* MI/PRICE-2 — 여기 있던 "착지원가 기준" 배지를 지웠다. ₩162,000은
-              관측된 시장가이고 착지원가(₩116,742 + 국제배송비)는 다른 숫자라,
-              그 자리에서 원가를 말하면 시장가가 원가로 읽힌다. 같은 관측이 ④
-              원가 계산의 출발점이라는 사실은 ①이 문장으로 말한다.
-
-              MI-MATCHING-INTEGRATION-2(CEO 지시, 2026-09-13) — 그 옆에 있던
-              "🟢 동일 상품 · 판매자 직접 관측" 배지도 지운다. 네 줄에 네 번
-              반복되는 동안 그 말은 **줄마다 판정된 결과**로 읽혔고, 어휘가
-              ③ 국내의 🟢 동일상품과 같아서 두 카드가 같은 종류의 목록으로
-              보였다. 같은 사실을 카드가 한 번 말한다(card.invariant). */}
-          <span className="text-[10px] text-text-tertiary">
-            {row.availability.icon} {row.availability.text}
-          </span>
-        </span>
-        <span className="flex items-baseline gap-1.5">
-          {/* MI-MATCHING-INTEGRATION-2 — 나라마다 숫자 하나다. 한국 줄은 원화,
-              그 밖의 나라는 그 나라에서 관측된 통화 그대로, 관측이 없으면 "—".
-              금액 문자열은 global-market.ts가 이미 완성했다(여기서 고르지 않는다). */}
-          {row.productUrl ? (
-            <a href={row.productUrl} target="_blank" rel="noreferrer" className="font-semibold text-text-primary underline">
-              {row.observedPrice}
-            </a>
-          ) : (
-            <span className="font-semibold text-text-primary">{row.observedPrice}</span>
-          )}
-          {/* 한국 줄의 대표값이 원화 환산일 때만 남는 괄호 한 조각. 지우면 그
-              ₩113,629가 한국에서 관측된 값인지 우리가 환율로 만든 값인지 화면이
-              더 이상 말하지 못한다 — "원화 환산"이라는 말은 쓰지 않는다. */}
-          {row.observedOriginPrice && (
-            <span className="text-[10px] text-text-tertiary">(원 표시가 {row.observedOriginPrice})</span>
-          )}
-        </span>
-      </div>
-      {showDetail && (
-        <p className="text-[10px] text-text-tertiary">
-          {/* 같은 상품 경로 — 여러 줄에 같은 경로가 적히는 것 자체가 이 카드의
-              불변식이 참이라는 증거다. 읽어내지 못하면 그 조각을 빼고, 없는
-              경로를 지어내지 않는다. */}
-          {row.sameProductPath ? `${row.sameProductPath} · ` : ""}판매자 신고 국가{" "}
-          {row.declaredCountry ?? "미확인"} · 관측 {relativeTimeFromNow(row.checkedAt)}
-        </p>
-      )}
+    <li className="flex items-baseline justify-between gap-x-3 text-[11px] text-text-secondary">
+      <span className="text-text-primary">
+        {row.flag} {row.name}
+      </span>
+      <span className="flex items-baseline gap-1.5">
+        <span className="font-semibold text-text-primary">{row.observedPrice}</span>
+        {row.krwEquivalent && <span className="text-[10px] text-text-tertiary">{row.krwEquivalent}</span>}
+      </span>
     </li>
   );
 }
@@ -2324,12 +2296,17 @@ export function MiPanelView({
    * 관측은 **EXACT 버킷 하나뿐**이고(domesticMarketSplit.exact — 서버가
    * priceTierFromLink로 이미 나눠 둔 것), 🟡 추정도 ⚪ 유사도 넘길 자리가 없다.
    *
-   * 새 판정도 새 계산도 없다. 원본 판매처의 금액은 ②의 🇰🇷 줄이 이미 완성한
-   * 문자열 그대로이고(judgingMarketRow.observedPrice), 국내 금액은 서버 집계가
+   * 새 판정도 새 계산도 없다. 원본 판매처의 금액은 🌐 카드의 🇰🇷 줄이 이미 완성한
+   * 문자열 그대로이고(judgingMarketRow.krwPrice), 국내 금액은 서버 집계가
    * 들고 있던 price_krw 그대로다.
+   *
+   * GLOBAL-SOURCE-PRICE-POLICY-FINAL — observedPrice가 아니라 krwPrice를 읽는다.
+   * 🌐 카드의 한국 줄은 이제 관측 통화(€73.00)를 대표값으로 쓰는데, 이 카드는 그
+   * 값을 **국내 판매처들의 원화 옆에** 세운다 — 유로가 오면 "누가 더 싼가"를
+   * 셀러가 눈으로 답할 수 없다.
    */
   const sameProductSellers = buildSameProductSellersCard({
-    origin: { sourceUrl: data.product?.sourceUrl ?? null, price: judgingMarketRow?.observedPrice ?? null },
+    origin: { sourceUrl: data.product?.sourceUrl ?? null, price: judgingMarketRow?.krwPrice ?? null },
     sameProductListings: domesticMarketSplit.exact.sampleListings.map((l) => ({
       mallName: l.mallName,
       priceKrw: l.priceKrw,
@@ -2365,11 +2342,15 @@ export function MiPanelView({
     // MATCHING-2.0-INTEGRATION-1 — 그 줄의 대표 금액이 원화 환산이면 원 표시가도
     // 함께 넘긴다. ①이 "이 숫자가 관측인가 환산인가"를 기준 문장으로 말할 수
     // 있어야 한다(price-hierarchy.krMarketLine).
+    // GLOBAL-SOURCE-PRICE-POLICY-FINAL — ①의 한국 표시가 줄은 계속 원화다
+    // (krwPrice). 그 원화가 환산값이라는 사실은 관측 통화 금액이 말하는데, 그
+    // 값이 이제 🌐 카드 한국 줄의 대표값(observedPrice)이다. krwEquivalent가
+    // 있다는 것이 곧 "관측 통화가 원화가 아니다"라서, 그때만 넘긴다.
     krMarketObservation: judgingMarketRow
       ? {
-          price: judgingMarketRow.observedPrice,
+          price: judgingMarketRow.krwPrice ?? EMPTY_PRICE,
           marketCode: judgingMarketRow.code,
-          observedOriginPrice: judgingMarketRow.observedOriginPrice,
+          observedOriginPrice: judgingMarketRow.krwEquivalent ? judgingMarketRow.observedPrice : null,
         }
       : null,
   });
