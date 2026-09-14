@@ -245,3 +245,92 @@ describe("정상 판정은 보존된다", () => {
     expect(deriveMatchTruth("low", modelCode, cross.verdict)).toBe("STRONG_IDENTIFIER");
   });
 });
+
+/**
+ * ── 8번째 거짓 SAME(MATCHING-3.2-B 작업 중 발견, 2026-09-14) ────────────────
+ * 위 7건과 같은 사고인데 고정되지 않은 채로 남아 있었다. AW26MS185 를 쓰는
+ * junioredition 상품은 Grey Melange · Graystone **두 개가 아니라 세 개**다 —
+ * Conker Stripe 도 본문에 같은 `Product code AW26MS185` 를 적는다(실측).
+ * 그래서 Bubble Sweatshirt 는 두 쌍이 아니라 세 쌍이 같은 품번으로 묶인다.
+ *
+ * 픽스처 `junioredition-bubble-sweatshirt-in-conker-stripe-by-main-story.json` 은
+ * 손으로 쓰지 않았다 — 2026-09-14 에
+ * `https://www.junioredition.com/products/bubble-sweatshirt-in-conker-stripe-by-main-story.js`
+ * 가 내려준 응답 원문이고, 위 7건과 같은 운영 어댑터로 읽는다.
+ */
+const CONKER = "bubble-sweatshirt-in-conker-stripe-by-main-story";
+
+/** Conker Stripe 와 품번이 같은 나머지 두 진열. [원본 handle, 원본 컬렉션] */
+const CONKER_PAIRS: [string, string][] = [
+  ["bubble-sweatshirt-in-grey-melange-by-main-story", "kids-clothing"],
+  ["bubble-sweatshirt-in-graystone-by-main-story", "kids-clothing"],
+];
+
+describe("8번째 거짓 SAME — AW26MS185 는 세 상품이 나눠 쓴다", () => {
+  it("세 진열의 품번은 글자 하나까지 같다 — 추출을 바꿔서 가린 것이 아니다", () => {
+    for (const [handle] of CONKER_PAIRS) {
+      expect(candidate(handle).brandModelCode).toBe("AW26MS185");
+      expect(
+        compareModelCode(candidate(handle).brandModelCode, candidate(CONKER).brandModelCode),
+      ).toBe("exact");
+      // 품번이 확인됐다는 사실은 그대로 기록된다 — 다만 그것이 등급을 정하지 않는다.
+      expect(
+        compareCrossSellerProducts(candidate(handle), candidate(CONKER)).identifierConfirmed,
+      ).toBe(true);
+    }
+    expect(candidate(CONKER).brandModelCode).toBe("AW26MS185");
+  });
+
+  it.each(CONKER_PAIRS)("%s ↔ Conker Stripe 는 SAME이 아니다 (다른 색)", (handle, collection) => {
+    const match = bothWays(registered(handle, collection), candidate(CONKER));
+    expect(match.verdict).not.toBe("SAME");
+    expect(match.verdict).toBe("PRESUMED_SAME");
+    // 같은 판매처가 세 상품으로 진열했다는 사실이 실제 보류 사유로 남는다.
+    expect(match.blockers.map((b) => b.blocker)).toContain("SAME_SELLER_DISTINCT_LISTING");
+  });
+
+  it("두 쌍 다 동일상품 가격에 쓰이지 않는다 — 이 사고의 실제 피해가 막혔는지", () => {
+    for (const [handle, collection] of CONKER_PAIRS) {
+      const match = compareCrossSellerProducts(registered(handle, collection), candidate(CONKER));
+      expect(isSameProductForPricing(match)).toBe(false);
+      expect(deriveMatchTruth("low", "unavailable", match.verdict)).not.toBe("STRONG_IDENTIFIER");
+    }
+  });
+});
+
+/**
+ * ── 원본 자기 자신은 SAME 이다 ─────────────────────────────────────────────
+ * 3.1 보고의 "원본 자기 자신 11건 SAME 유지"를 픽스처가 있는 **전부**로 넓혀
+ * 고정한다. 위 `정상 판정은 보존된다` 의 SELF 는 그중 5건만 덮고 있어서, 나머지가
+ * 조용히 깨져도 드러나지 않았다. 검색이 원본 상품 자신을 물어온 경우는 같은 URL
+ * 이므로 판매처 진열 분리가 아니고, 어떤 보류도 붙지 않아야 한다.
+ */
+const ALL_SELF_HANDLES: readonly string[] = [
+  "baby-circus-stripe-cardigan-in-antique-rose-by-misha-puff",
+  "baby-circus-stripe-romper-in-antique-rose-by-misha-puff",
+  "bobo-choses-color-all-over-baby-t-shirt-by-bobo-choses",
+  "bubble-sweatshirt-in-conker-stripe-by-main-story",
+  "bubble-sweatshirt-in-graystone-by-main-story",
+  "bubble-sweatshirt-in-grey-melange-by-main-story",
+  "circus-stripe-cardigan-in-mink-by-misha-puff",
+  "giulia-flower-sandals-in-bubblegum-pink-patent-by-pepe",
+  "giulia-flower-sandals-in-cacao-by-pepe",
+  "giulia-flower-sandals-in-camelia-by-pepe",
+  "giulia-flower-sandals-in-ombretto-pink-by-pepe",
+  "juicy-tomatoes-all-over-baby-t-shirt-by-bobo-choses",
+  "lulu-t-bar-shoes-in-vernice-nero-by-pepe",
+  "minnie-newborn-body-in-rosetto-by-konges-slojd",
+  "minnie-newborn-onesie-in-rosetto-by-konges-slojd",
+  "mush-monster-duo-all-over-baby-t-shirt-by-bobo-choses",
+];
+
+describe("원본 자기 자신 — 픽스처로 가진 junioredition 상품 전부", () => {
+  it.each(ALL_SELF_HANDLES)("%s 자신은 SAME이고 보류가 없다", (handle) => {
+    // 컬렉션 프리픽스는 URL 모양을 만들기 위한 것일 뿐 판정에 쓰이지 않는다 —
+    // 같은 상품을 `www.` + 로케일/컬렉션이 붙은 등록 URL 모양으로 한 번 더 만든다.
+    const match = bothWays(registered(handle, "kids-clothing"), candidate(handle));
+    expect(match.verdict).toBe("SAME");
+    expect(match.blockers).toEqual([]);
+    expect(isSameProductForPricing(match)).toBe(true);
+  });
+});
