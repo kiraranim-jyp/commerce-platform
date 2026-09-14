@@ -1,11 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CanonicalProduct } from "@commerce/shared";
 import { Button } from "@/components/ui/Button";
 import {
   EMPTY_LOTTEON_CHANNEL_FORM,
   LOTTEON_CHILD_PRODUCT_ITEM_CODE,
+  LOTTEON_FIX_LOCATION_LABEL,
+  buildLotteOnMissingInfo,
+  buildLotteOnSafetyLineFromCommon,
+  collectLotteOnNoticeSourceValues,
+  computeLotteOnRegistrationReadiness,
   describeLotteOnCategoryItem,
   parseDisplayCategoryNos,
   requiresSafetyCertification,
@@ -13,65 +18,56 @@ import {
   toLotteOnChannelPayload,
   type CommonCategorySource,
   type LotteOnChannelForm,
+  type LotteOnValidationSnapshot,
 } from "./lotteon-channel-form";
+import {
+  LOTTEON_SAFETY_TYPE_LABEL,
+  type LotteOnCategoryCandidate,
+  type LotteOnStandardCategory,
+} from "./lotteon-category";
 
 /**
- * LOTTEON COMMERCE SPRINT 3(CEO 확정, 2026-09-14) — 롯데ON 탭.
+ * LOTTEON COMMERCE SPRINT 4(CEO 확정, 2026-09-14) — 롯데ON 탭.
  *
  * ── 이 탭이 하는 일 / 하지 않는 일 ─────────────────────────────────────────
  * 하지 않는 일: **상품을 다시 만들지 않는다.** 상품명 · 대표이미지 · 상세페이지 ·
  * 가격 · 옵션 · 재고는 공통 상품관리가 이미 갖고 있고, 이 화면에는 그 값을
  * 입력하는 칸이 하나도 없다(아래 ①은 전부 읽기 전용이다 — input이 아니다).
- * 고치려면 상품정보 탭으로 데려간다(onEditCommonInfo). 스마트스토어/쿠팡 탭과
- * 같은 원칙이다: 같은 상품이 화면 안에 두 벌 생기지 않는다.
+ * 고치려면 상품정보 탭으로 데려간다(onEditCommonInfo).
  *
  * 하는 일: **롯데ON에만 있는 차별점**만 받는다.
- *   ② 카테고리  표준(scatNo) + 전시(dcatLst[]) 2중 구조
+ *   ② 카테고리  표준(scatNo) + 전시(dcatLst[]) 2중 구조 — **추천**으로 채운다
  *   ③ 고시      pdItmsCd · pdItmsArtlLst[]
- *   ④ 인증      sftyAthnLst[] · impPrxCd (유아동=품목코드 23이면 필수)
+ *   ④ 인증      sftyAthnLst[] · impPrxCd
  *   ⑤ 배송      출고지 · 반품지 · 배송비 정책 · 배송가능지역
- * 전부 "상품 데이터에서 파생할 수 없는 외부 코드"라는 공통점이 있다. 파생할 수
- * 있는 값을 여기 칸으로 만드는 순간 이 탭은 세 번째 상품관리가 된다.
  *
- * ── 구조 ──────────────────────────────────────────────────────────────────
- *  - `PlatformId`에 들어가지 않는다(CPO 확정). PLATFORM_ADAPTERS /
- *    LISTING_EXECUTORS / ListingModel 경로를 전혀 쓰지 않고 서버 라우트
- *    (/api/lotteon/payload-preview · /api/lotteon/register)만 호출한다.
- *    Naver/Coupang 등록 경로는 한 줄도 건드리지 않는다.
- *  - 폼 모양/파싱/요약은 전부 ./lotteon-channel-form.ts(순수 함수)에 있다.
- *    이 파일에는 렌더링과 fetch만 남긴다.
+ * ── SPRINT 4에서 바뀐 것 ──────────────────────────────────────────────────
+ * 1. **등록 가능성**을 화면에 세운다. 값은 서버 검증(validateLotteOnPayload)
+ *    결과를 세기만 한 것이라(computeLotteOnRegistrationReadiness) 화면이
+ *    서버보다 낙관적으로 말할 경로가 없다. 탭에 들어오면 한 번 자동으로
+ *    확인하고, 입력이 바뀌면 **결과를 무효로 표시하고 등록 버튼을 잠근다** —
+ *    SPRINT 3까지는 확인을 통과한 뒤 값을 지워도 버튼이 열려 있었다.
+ * 2. **부족한 정보**를 "왜 필요한지 + 무엇을 어디서"까지 말한다(§8).
+ *    공통 상품정보가 먼저 오고, 그 항목은 상품정보 탭으로 데려간다.
+ * 3. **카테고리 추천**(CEO 신규 요건). 조회가 아니라 추천이다. 점수는
+ *    쿠팡·스마트스토어가 쓰는 그 함수(scoreCategoryCandidate)를 그대로 쓴다.
+ *    표준카테고리를 고르면 전시카테고리 · 고시 품목코드 · 과세구분 · 요구
+ *    안전인증 유형이 **같은 응답에서 함께 따라온다** — 다시 묻지 않는다.
  *
- * 🔴 인증키는 이 화면에 절대 나타나지 않는다. 설정 화면에서 저장하고, 등록은
- * 서버가 그 키로 수행한다.
+ * 🔴 인증키는 이 화면에 절대 나타나지 않는다.
  */
-interface ValidationField {
-  field: string;
-  label: string;
-  status: "READY" | "MISSING" | "BLOCKED";
-  reason?: string;
-  code?: string;
-}
-
-interface ValidationResult {
-  ok: boolean;
-  fields: ValidationField[];
-  readyCount: number;
-  missingCount: number;
-  blockedCount: number;
-}
-
 interface PreviewResponse {
   ok: boolean;
   message?: string;
   identityError?: string | null;
   payload?: unknown;
-  validation?: ValidationResult;
+  validation?: LotteOnValidationSnapshot;
 }
 
 interface RegisterResponse {
   ok: boolean;
   message?: string;
-  validation?: ValidationResult;
+  validation?: LotteOnValidationSnapshot;
   nextStep?: string;
   result?: {
     status: "SUBMITTED" | "FAILED";
@@ -92,7 +88,28 @@ interface CategoryLookupState {
   unrecognized: unknown[];
 }
 
+interface RecommendState {
+  loading: boolean;
+  error: string | null;
+  decision: "AUTO_SELECT" | "RECOMMEND" | "REJECT" | null;
+  candidates: LotteOnCategoryCandidate[];
+  signalEvidence: string[];
+  scannedLeafCount: number;
+  unrecognizedCount: number;
+  truncated: boolean;
+}
+
 const EMPTY_LOOKUP: CategoryLookupState = { loading: false, error: null, options: [], unrecognized: [] };
+const EMPTY_RECOMMEND: RecommendState = {
+  loading: false,
+  error: null,
+  decision: null,
+  candidates: [],
+  signalEvidence: [],
+  scannedLeafCount: 0,
+  unrecognizedCount: 0,
+  truncated: false,
+};
 
 export function LotteOnRegistrationPanel({
   product,
@@ -103,20 +120,23 @@ export function LotteOnRegistrationPanel({
   commonPrice,
   commonCategorySources,
   onEditCommonInfo,
+  onReadinessChange,
 }: {
   product: CanonicalProduct;
   snapshotId?: string | null;
   jobKey?: string | null;
   liveRates?: Record<string, number>;
   roundingUnit?: number;
-  /** 상품정보 화면이 이미 계산해 둔 판매가격. 여기서 다시 계산하지 않는다 —
-   * 다시 계산하면 같은 상품의 가격이 화면 안에 두 벌 생긴다. */
+  /** 상품정보 화면이 이미 계산해 둔 판매가격. 여기서 다시 계산하지 않는다. */
   commonPrice: { priceKrw: number | null; resolved: boolean };
-  /** 공통 분류(원본 사이트 · 다른 채널 확정값). **읽기 전용**이고, 이 탭에서
-   * 고른 롯데ON 번호가 이 값으로 되돌아 흘러가는 경로는 없다. */
+  /** 공통 분류(원본 사이트 · 다른 채널 확정값). **읽기 전용**. */
   commonCategorySources: CommonCategorySource[];
   /** 공통 정보를 고치러 가는 유일한 통로 — 상품정보 탭. */
   onEditCommonInfo: () => void;
+  /** 탭 줄/준비상태 줄이 롯데ON 상태를 함께 보여주기 위한 보고 채널.
+   * 스마트스토어/쿠팡의 onReadinessChange와 같은 자리다 — 여기서 새 판정을
+   * 만들지 않고 이미 계산된 값을 올려보내기만 한다. */
+  onReadinessChange?: (percent: number, allRequiredPassed: boolean, missingCount: number) => void;
 }) {
   const [form, setForm] = useState<LotteOnChannelForm>(EMPTY_LOTTEON_CHANNEL_FORM);
   const [displayCategoryText, setDisplayCategoryText] = useState("");
@@ -128,16 +148,48 @@ export function LotteOnRegistrationPanel({
   const [error, setError] = useState<string | null>(null);
   const [standardLookup, setStandardLookup] = useState<CategoryLookupState>(EMPTY_LOOKUP);
   const [displayLookup, setDisplayLookup] = useState<CategoryLookupState>(EMPTY_LOOKUP);
+  const [recommend, setRecommend] = useState<RecommendState>(EMPTY_RECOMMEND);
+  /** 추천에서 고른 표준카테고리 — 전시/고시/과세/안전인증 후보의 출처다. */
+  const [pickedCategory, setPickedCategory] = useState<LotteOnStandardCategory | null>(null);
+  /**
+   * 확인을 통과한 뒤 입력이 바뀌었는가. true면 화면의 등록 가능성/부족한 정보는
+   * **옛 입력에 대한 답**이다 — 등록 버튼을 잠그고 다시 확인하게 한다.
+   * (SPRINT 3까지는 이 상태가 없어서 확인 후 값을 지워도 버튼이 열려 있었다.)
+   */
+  const [stale, setStale] = useState(false);
 
-  /** ① 공통 상품정보 — 실제 payload를 만드는 함수와 같은 것을 쓴다(요약이
-   * payload와 다른 말을 할 수 있는 경로가 없다). */
+  /** ① 공통 상품정보 — 실제 payload를 만드는 함수와 같은 것을 쓴다. */
   const common = useMemo(() => summarizeCommonProduct(product, commonPrice), [product, commonPrice]);
+  /** 고시 "내용"으로 그대로 쓸 수 있는 공통 값 — 다시 치지 않게 한다. */
+  const noticeSources = useMemo(() => collectLotteOnNoticeSourceValues(product), [product]);
+
+  const validation = preview?.validation ?? null;
+  const readiness = useMemo(() => computeLotteOnRegistrationReadiness(validation), [validation]);
+  const missingInfo = useMemo(() => buildLotteOnMissingInfo(validation), [validation]);
 
   const safetyRequired = requiresSafetyCertification(form);
   const safetyMissing = safetyRequired && !form.certification.safetyText.trim();
 
+  useEffect(() => {
+    onReadinessChange?.(stale ? 0 : readiness.percent, !stale && readiness.allRequiredPassed, missingInfo.length);
+  }, [onReadinessChange, readiness.percent, readiness.allRequiredPassed, missingInfo.length, stale]);
+
+  /**
+   * 입력이 바뀐 횟수. 확인 요청을 보낸 시점의 값과 응답이 돌아온 시점의 값이
+   * 다르면 그 결과는 **이미 옛 입력에 대한 답**이라 stale을 풀지 않는다 —
+   * 느린 응답이 도중에 바뀐 입력을 "확인됨"으로 덮는 경로를 막는다.
+   */
+  const formVersionRef = useRef(0);
+
+  function markFormChanged() {
+    formVersionRef.current += 1;
+    // 입력이 바뀌면 직전 확인 결과는 더 이상 이 입력에 대한 답이 아니다.
+    setStale(true);
+  }
+
   function patch<K extends keyof LotteOnChannelForm>(section: K, changes: Partial<LotteOnChannelForm[K]>) {
     setForm((prev) => ({ ...prev, [section]: { ...prev[section], ...changes } }));
+    markFormChanged();
   }
 
   /** 전시카테고리는 여러 개다 — 화면에서는 한 줄 텍스트로 받고 배열로 보관한다. */
@@ -153,12 +205,88 @@ export function LotteOnRegistrationPanel({
   }
 
   /**
-   * 카테고리 조회 — 이미 있는 읽기 전용 라우트(/api/lotteon/categories)를 부른다.
-   * 새 조회 경로를 만들지 않는다.
+   * 카테고리 **추천**(CEO 신규 요건). 조회가 아니다.
    *
-   * 🔴 응답 필드명을 실동작으로 확인하지 못했다. 알아본 것만 버튼으로 만들고,
-   * 못 알아본 것은 원문 그대로 보여준다(지어낸 파싱으로 "결과 없음"을 만들지
-   * 않는다). 번호를 직접 아는 셀러는 조회 없이 그냥 입력하면 된다.
+   * 서버(/api/lotteon/category-recommend)가 onpick 205 표준카테고리 목록을
+   * 받아 이 상품의 신호(연령/성별/상품유형)와 대조해 점수를 매긴다 — 쿠팡과
+   * 같은 scoreCategoryCandidate()를 쓴다.
+   */
+  async function runRecommend() {
+    setRecommend({ ...EMPTY_RECOMMEND, loading: true });
+    try {
+      const res = await fetch("/api/lotteon/category-recommend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product }),
+      });
+      const data = (await res.json()) as {
+        ok: boolean;
+        message?: string;
+        decision?: RecommendState["decision"];
+        candidates?: LotteOnCategoryCandidate[];
+        signalEvidence?: string[];
+        scannedLeafCount?: number;
+        unrecognizedCount?: number;
+        truncated?: boolean;
+      };
+      if (!data.ok) {
+        setRecommend({ ...EMPTY_RECOMMEND, error: data.message ?? "카테고리를 추천하지 못했습니다." });
+        return;
+      }
+      setRecommend({
+        loading: false,
+        error: null,
+        decision: data.decision ?? null,
+        candidates: data.candidates ?? [],
+        signalEvidence: data.signalEvidence ?? [],
+        scannedLeafCount: data.scannedLeafCount ?? 0,
+        unrecognizedCount: data.unrecognizedCount ?? 0,
+        truncated: Boolean(data.truncated),
+      });
+    } catch {
+      setRecommend({ ...EMPTY_RECOMMEND, error: "서버에 연결하지 못했습니다." });
+    }
+  }
+
+  /**
+   * 추천 후보를 고른다 — **한 번에 네 가지가 채워진다.**
+   *
+   * 표준카테고리번호 · 전시카테고리(disp_list) · 고시 품목코드(pd_Itms_list) ·
+   * 과세구분코드(tdf_cd)는 전부 205 응답 한 건 안에 같이 들어 있다. 셀러에게
+   * 다시 묻지 않는 이유는 "편해서"가 아니라, 따로 입력받으면 표준카테고리와
+   * 짝이 맞지 않는 조합을 만들 수 있어서다(등록이 거절된다).
+   *
+   * 🔴 공통 카테고리(categoryMappings)는 건드리지 않는다 — 이 함수가 쓰는
+   * setter는 전부 이 컴포넌트 안의 롯데ON 폼이다.
+   */
+  function applyRecommendation(candidate: LotteOnCategoryCandidate) {
+    const category = candidate.category;
+    setPickedCategory(category);
+    const displayNos = category.displayCategories.map((entry) => entry.displayCategoryId);
+    setDisplayCategoryText(displayNos.join(", "));
+    setForm((prev) => ({
+      ...prev,
+      category: { standardCategoryNo: category.id, displayCategoryNos: displayNos },
+      notice: { ...prev.notice, itemCode: category.noticeItemCodes[0] ?? prev.notice.itemCode },
+      codes: { ...prev.codes, taxTypeCode: category.taxTypeCode ?? prev.codes.taxTypeCode },
+    }));
+    markFormChanged();
+  }
+
+  /**
+   * 상품정보에 이미 있는 어린이제품 인증을 롯데ON 형식으로 옮겨 적는다.
+   * 🔴 인증번호를 만들지 않는다 — 셀러가 상품정보에 입력해 둔 실제 값만 옮긴다.
+   */
+  const commonSafetyLine = useMemo(
+    () => buildLotteOnSafetyLineFromCommon(product, pickedCategory?.safetyTypeCodes[0] ?? null),
+    [product, pickedCategory],
+  );
+
+  /**
+   * 카테고리 **조회** — 번호를 이미 아는 셀러를 위한 길은 그대로 둔다.
+   *
+   * 🔴 응답 필드명을 실동작으로 확인하지 못했다. 문서 원문 필드(std_cat_id /
+   * disp_cat_id)로 읽어보고, 못 읽으면 원문을 그대로 보여준다.
    */
   async function lookupCategories(kind: "standard" | "display") {
     const setState = kind === "standard" ? setStandardLookup : setDisplayLookup;
@@ -185,30 +313,59 @@ export function LotteOnRegistrationPanel({
     }
   }
 
-  async function runValidation() {
-    setPreviewing(true);
-    setError(null);
-    setRegisterResult(null);
-    try {
-      const res = await fetch("/api/lotteon/payload-preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product, channel: toLotteOnChannelPayload(form), liveRates, roundingUnit }),
-      });
-      const data = (await res.json()) as PreviewResponse;
-      setPreview(data);
-      if (!data.ok) setError(data.message ?? "등록 정보를 만들지 못했습니다.");
-    } catch {
-      setError("서버에 연결하지 못했습니다.");
-    } finally {
-      setPreviewing(false);
-    }
-  }
+  const runValidation = useCallback(
+    async (currentForm: LotteOnChannelForm) => {
+      setPreviewing(true);
+      setError(null);
+      setRegisterResult(null);
+      const requestedVersion = formVersionRef.current;
+      try {
+        const res = await fetch("/api/lotteon/payload-preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            product,
+            channel: toLotteOnChannelPayload(currentForm),
+            liveRates,
+            roundingUnit,
+          }),
+        });
+        const data = (await res.json()) as PreviewResponse;
+        setPreview(data);
+        // 요청을 보낸 뒤 입력이 또 바뀌었으면 이 결과는 옛 입력에 대한 답이다.
+        if (formVersionRef.current === requestedVersion) setStale(false);
+        if (!data.ok) setError(data.message ?? "등록 정보를 만들지 못했습니다.");
+      } catch {
+        setError("서버에 연결하지 못했습니다.");
+      } finally {
+        setPreviewing(false);
+      }
+    },
+    [product, liveRates, roundingUnit],
+  );
+
+  /**
+   * 탭에 들어오면 **한 번** 자동으로 확인한다.
+   *
+   * 이유는 UX가 아니라 정확성이다. 자동 확인이 없으면 "등록 가능성"과 "부족한
+   * 정보"를 셀러가 버튼을 누르기 전까지 볼 수 없고, 그동안 화면은 빈 채로
+   * 남는다 — 그 빈 화면을 메우려고 화면 쪽에서 따로 판정을 만들면 서버와
+   * 갈라진다. 그래서 판정은 계속 서버 하나로 두고, 시점만 앞당긴다.
+   *
+   * 입력마다 다시 쏘지 않는다(207 Identity를 매번 호출한다). 입력이 바뀌면
+   * stale로 표시만 하고, 다시 쏘는 것은 셀러의 [등록 정보 확인] 클릭이다.
+   */
+  const autoCheckedRef = useRef(false);
+  useEffect(() => {
+    if (autoCheckedRef.current) return;
+    autoCheckedRef.current = true;
+    void runValidation(EMPTY_LOTTEON_CHANNEL_FORM);
+  }, [runValidation]);
 
   async function runRegister() {
-    // 검증을 통과한 등록 정보가 있을 때만 등록한다 — 화면 게이트이고,
-    // 서버(register 라우트)가 같은 검증을 한 번 더 한다.
-    if (!preview?.validation?.ok) return;
+    // 게이트는 셋을 동시에 만족해야 열린다(§10): 등록 가능성 100% + 서버 검증
+    // 통과 + 그 결과가 **지금 입력에 대한 것**일 것.
+    if (!canRegister) return;
     if (!window.confirm("롯데ON에 이 상품을 실제로 등록합니다. 계속하시겠습니까?")) return;
     setRegistering(true);
     setError(null);
@@ -234,10 +391,123 @@ export function LotteOnRegistrationPanel({
     }
   }
 
-  const validation = preview?.validation;
+  const connectionOk = preview != null && preview.ok && !preview.identityError;
+  const canRegister = !stale && readiness.percent === 100 && readiness.allRequiredPassed && !registering && !previewing;
 
   return (
     <div className="space-y-4">
+      {/* ── 등록 상태 ───────────────────────────────────────────────────── */}
+      <Section title="등록 상태" description="이 상품이 롯데ON에 지금 어떤 상태인지.">
+        <ul className="space-y-1.5 text-xs">
+          <StatusRow
+            label="롯데ON 연결"
+            tone={preview == null ? "muted" : connectionOk ? "ok" : "warn"}
+            value={
+              preview == null
+                ? "확인 중…"
+                : connectionOk
+                  ? "인증키 · 서버 IP 확인됨 (거래처 조회 성공)"
+                  : (preview.identityError ?? "거래처 정보를 확인하지 못했습니다.")
+            }
+          />
+          <StatusRow
+            label="등록"
+            tone={registerResult?.result?.status === "SUBMITTED" ? "ok" : registerResult ? "error" : "muted"}
+            value={
+              registerResult?.result
+                ? registerResult.result.status === "SUBMITTED"
+                  ? `등록 요청 완료 — 판매자상품번호(spdNo) ${registerResult.result.externalProductId ?? "미확인"}`
+                  : `등록 실패 — ${registerResult.result.message}`
+                : "아직 이 화면에서 등록한 적이 없습니다."
+            }
+          />
+        </ul>
+      </Section>
+
+      {/* ── 등록 가능성 ─────────────────────────────────────────────────── */}
+      <Section
+        title="등록 가능성"
+        description="롯데ON이 상품등록(87)에서 필수로 요구하는 항목을 실제 등록에 쓰이는 그 검증으로 세어 본 결과입니다."
+      >
+        {previewing && preview == null ? (
+          <p className="text-xs text-text-tertiary">확인 중…</p>
+        ) : validation == null ? (
+          <p className="text-xs text-text-tertiary">아직 확인하지 않았습니다 — 아래 [등록 정보 확인]을 눌러 주세요.</p>
+        ) : (
+          <>
+            <div className="flex items-baseline gap-2">
+              <span
+                className={`text-2xl font-semibold ${
+                  stale
+                    ? "text-text-tertiary"
+                    : readiness.percent >= 100
+                      ? "text-success"
+                      : readiness.percent >= 60
+                        ? "text-warning"
+                        : "text-error"
+                }`}
+              >
+                {readiness.percent}%
+              </span>
+              <span className="text-xs text-text-tertiary">
+                필수 {readiness.total}개 중 {readiness.readyCount}개 준비됨
+                {validation.blockedCount > 0 ? ` · 차단 ${validation.blockedCount}개` : ""}
+              </span>
+            </div>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded bg-background">
+              <div
+                className={`h-full ${
+                  stale ? "bg-border" : readiness.percent >= 100 ? "bg-success" : readiness.percent >= 60 ? "bg-warning" : "bg-error"
+                }`}
+                style={{ width: `${readiness.percent}%` }}
+              />
+            </div>
+            {stale && (
+              <p className="mt-2 rounded-md bg-warning-soft px-3 py-2 text-[11px] text-warning">
+                입력이 바뀌었습니다 — 위 숫자는 바뀌기 전 입력에 대한 결과입니다. [등록 정보 확인]을 다시 눌러 주세요.
+              </p>
+            )}
+          </>
+        )}
+      </Section>
+
+      {/* ── 부족한 정보 (§8) ────────────────────────────────────────────── */}
+      {missingInfo.length > 0 && (
+        <section className="rounded-lg border border-warning/40 bg-warning/5 px-4 py-3">
+          <h3 className="text-sm font-semibold text-text-primary">
+            ⚠ 롯데ON 등록에 {missingInfo.length}개 정보가 부족합니다
+          </h3>
+          <p className="mt-0.5 text-[11px] text-text-tertiary">
+            공통 상품정보는 고치면 스마트스토어·쿠팡에도 함께 반영됩니다 — 그래서 맨 위에 둡니다.
+          </p>
+          <ol className="mt-3 space-y-3">
+            {missingInfo.map((item, index) => (
+              <li key={item.key} className="text-xs">
+                <p className="font-medium text-text-primary">
+                  {index + 1}. {item.label}
+                  <span
+                    className={`ml-2 rounded px-1.5 py-0.5 text-[10px] ${
+                      item.where === "COMMON_PRODUCT"
+                        ? "bg-primary/10 text-primary"
+                        : "bg-background text-text-tertiary"
+                    }`}
+                  >
+                    {LOTTEON_FIX_LOCATION_LABEL[item.where]}에서 해결
+                  </span>
+                </p>
+                <p className="mt-0.5 text-text-secondary">{item.why}</p>
+                <p className="mt-0.5 text-text-secondary">→ {item.what}</p>
+                {item.where === "COMMON_PRODUCT" && (
+                  <Button variant="secondary" size="sm" className="mt-1" onClick={onEditCommonInfo}>
+                    상품정보에서 수정
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
       <div className="rounded-lg border border-border bg-surface px-4 py-3">
         <p className="text-sm font-semibold text-text-primary">롯데ON 등록</p>
         <p className="mt-1 text-xs text-text-tertiary">
@@ -279,11 +549,23 @@ export function LotteOnRegistrationPanel({
         )}
       </Section>
 
-      {/* ── ② 카테고리 — 표준 + 전시 2중 ────────────────────────────────── */}
+      {/* ── ② 카테고리 — 표준 + 전시 2중 · 추천 ──────────────────────────── */}
       <Section
+        id="lotteon-section-category"
         title="② 카테고리 (롯데ON 전용 · 2중 구조)"
         description="롯데ON은 표준카테고리 1개와 전시카테고리 1개 이상을 함께 요구합니다. 여기서 고른 값은 롯데ON에만 적용되고, 스마트스토어·쿠팡 카테고리를 덮어쓰지 않습니다."
+        action={
+          <Button variant="primary" size="sm" disabled={recommend.loading} onClick={() => void runRecommend()}>
+            {recommend.loading ? "추천 중…" : "카테고리 추천"}
+          </Button>
+        }
       >
+        <CategoryRecommendation
+          state={recommend}
+          pickedId={form.category.standardCategoryNo}
+          onPick={applyRecommendation}
+        />
+
         {commonCategorySources.length > 0 ? (
           <div className="mb-3 rounded-md bg-background px-3 py-2 text-[11px] text-text-secondary">
             <p className="font-medium text-text-tertiary">참고 — 이 상품의 공통 분류</p>
@@ -304,7 +586,7 @@ export function LotteOnRegistrationPanel({
         <div className="grid gap-3 sm:grid-cols-2">
           <TextField
             label="표준카테고리번호 (scatNo)"
-            hint="롯데ON 표준 분류 1개. 아래 [조회]로 목록을 불러오거나 판매자센터에서 확인한 번호를 적습니다."
+            hint="롯데ON 표준 분류 1개. 위 [카테고리 추천]으로 고르거나, 번호를 알고 있으면 직접 적습니다."
             value={form.category.standardCategoryNo}
             onChange={(value) => patch("category", { standardCategoryNo: value })}
           />
@@ -322,13 +604,13 @@ export function LotteOnRegistrationPanel({
 
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <CategoryLookup
-            title="표준카테고리 조회"
+            title="표준카테고리 직접 찾기"
             state={standardLookup}
             onLookup={() => void lookupCategories("standard")}
             onPick={(code) => patch("category", { standardCategoryNo: code })}
           />
           <CategoryLookup
-            title="전시카테고리 조회"
+            title="전시카테고리 직접 찾기"
             state={displayLookup}
             onLookup={() => void lookupCategories("display")}
             onPick={addDisplayCategory}
@@ -338,9 +620,15 @@ export function LotteOnRegistrationPanel({
 
       {/* ── ③ 고시 ──────────────────────────────────────────────────────── */}
       <Section
+        id="lotteon-section-notice"
         title="③ 상품정보제공고시 (롯데ON 전용)"
-        description="품목코드에 따라 요구되는 항목이 달라집니다. 항목코드 체계는 품목마다 달라 자동으로 만들지 않습니다."
+        description="품목코드는 표준카테고리를 고르면 함께 따라옵니다. 항목코드 체계는 품목마다 달라 자동으로 만들지 않습니다."
       >
+        {pickedCategory && pickedCategory.noticeItemCodes.length > 0 && (
+          <p className="mb-3 rounded-md bg-success/5 px-3 py-2 text-[11px] text-text-secondary">
+            선택한 표준카테고리({pickedCategory.name})가 알려준 고시 품목코드: {pickedCategory.noticeItemCodes.join(", ")}
+          </p>
+        )}
         <div className="grid gap-3">
           <TextField
             label="상품품목코드 (pdItmsCd)"
@@ -356,13 +644,40 @@ export function LotteOnRegistrationPanel({
             onChange={(value) => patch("notice", { articlesText: value })}
           />
         </div>
+        {/* 🔴 이 목록은 **입력칸이 아니다.** 상품정보에 이미 있는 값을 읽어서
+            보여주기만 한다 — 셀러가 소재/색상/제조사를 세 번째로 다시 치지
+            않게 하는 것이 목적이다(스마트스토어는 이 값들로 고시를 자동
+            생성한다). 항목코드 체계는 품목마다 달라 여기서 만들지 않는다. */}
+        {noticeSources.length > 0 && (
+          <div className="mt-3 rounded-md bg-background px-3 py-2 text-[11px] text-text-secondary">
+            <p className="font-medium text-text-tertiary">
+              고시 내용으로 그대로 쓸 수 있는 값 — 상품정보에 이미 있습니다(다시 입력하지 마세요)
+            </p>
+            <ul className="mt-1 space-y-0.5">
+              {noticeSources.map((row) => (
+                <li key={row.label}>
+                  <span className="text-text-tertiary">{row.label}</span> — {row.value}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </Section>
 
       {/* ── ④ 인증 ──────────────────────────────────────────────────────── */}
       <Section
+        id="lotteon-section-certification"
         title="④ 안전인증 (롯데ON 전용)"
         description="인증번호는 실제 취득한 값만 사용할 수 있습니다 — 어떤 경우에도 자동 생성하지 않습니다."
       >
+        {pickedCategory && pickedCategory.safetyTypeCodes.length > 0 && (
+          <p className="mb-3 rounded-md bg-warning-soft px-3 py-2 text-[11px] text-warning">
+            선택한 표준카테고리가 요구하는 안전인증 유형:{" "}
+            {pickedCategory.safetyTypeCodes
+              .map((code) => `${code}(${LOTTEON_SAFETY_TYPE_LABEL[code] ?? "유형 미상"})`)
+              .join(" · ")}
+          </p>
+        )}
         {safetyRequired && (
           <p
             className={`mb-3 rounded-md px-3 py-2 text-[11px] ${
@@ -372,6 +687,22 @@ export function LotteOnRegistrationPanel({
             품목코드 {LOTTEON_CHILD_PRODUCT_ITEM_CODE}(어린이제품)이 선택되어 있습니다 —{" "}
             {safetyMissing ? "안전인증을 입력해야 등록할 수 있습니다." : "안전인증이 입력되어 있습니다."}
           </p>
+        )}
+        {commonSafetyLine && !form.certification.safetyText.trim() && (
+          <div className="mb-3 rounded-md bg-background px-3 py-2 text-[11px] text-text-secondary">
+            <p>
+              상품정보에 어린이제품 인증이 이미 입력돼 있습니다 — 다시 치지 말고 그대로 가져오세요.
+              <span className="ml-1 font-mono text-text-primary">{commonSafetyLine}</span>
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-1"
+              onClick={() => patch("certification", { safetyText: commonSafetyLine })}
+            >
+              상품정보의 인증정보 가져오기
+            </Button>
+          </div>
         )}
         <div className="grid gap-3">
           <TextAreaField
@@ -392,6 +723,7 @@ export function LotteOnRegistrationPanel({
 
       {/* ── ⑤ 배송 ──────────────────────────────────────────────────────── */}
       <Section
+        id="lotteon-section-delivery"
         title="⑤ 배송 (롯데ON 전용)"
         description="출고지 · 반품지 · 배송비 정책은 롯데ON 판매자센터에 먼저 등록해야 생기는 번호입니다. 우리가 만들 수 없습니다."
       >
@@ -442,9 +774,16 @@ export function LotteOnRegistrationPanel({
 
       {/* ── 그 밖의 롯데ON 코드 ─────────────────────────────────────────── */}
       <Section
+        id="lotteon-section-codes"
         title="그 밖의 롯데ON 코드"
         description="원산지·과세·브랜드는 롯데ON 코드체계를 따릅니다 — 상품정보의 원산지 텍스트로는 코드를 정할 수 없습니다."
       >
+        {product.countryOfOrigin.value.trim() && (
+          <p className="mb-3 text-[11px] text-text-tertiary">
+            참고 — 상품정보의 원산지: <b className="text-text-secondary">{product.countryOfOrigin.value}</b>. 이 텍스트로
+            롯데ON 코드를 정할 수 없어서 코드는 따로 고릅니다(추론하지 않습니다).
+          </p>
+        )}
         <div className="grid gap-3 sm:grid-cols-2">
           <TextField
             label="원산지코드 (oplcCd)"
@@ -454,7 +793,7 @@ export function LotteOnRegistrationPanel({
           />
           <TextField
             label="과세유형코드 (tdfDvsCd)"
-            hint="01 과세 · 02 면세 · 03 영세 · 04 해당없음"
+            hint="01 과세 · 02 면세 · 03 영세 · 04 해당없음. 표준카테고리를 고르면 그 카테고리 값으로 채워집니다."
             value={form.codes.taxTypeCode}
             onChange={(value) => patch("codes", { taxTypeCode: value })}
           />
@@ -475,14 +814,18 @@ export function LotteOnRegistrationPanel({
 
       {/* ── 검증 · 등록 ─────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="secondary" size="sm" disabled={previewing} onClick={() => void runValidation()}>
+        <Button variant="secondary" size="sm" disabled={previewing} onClick={() => void runValidation(form)}>
           {previewing ? "확인 중…" : "등록 정보 확인"}
         </Button>
-        <Button variant="primary" size="sm" disabled={!validation?.ok || registering} onClick={() => void runRegister()}>
+        <Button variant="primary" size="sm" disabled={!canRegister} onClick={() => void runRegister()}>
           {registering ? "등록 중…" : "롯데ON에 등록"}
         </Button>
-        {!validation?.ok && (
-          <span className="text-[11px] text-text-tertiary">등록 정보 확인을 통과해야 등록 버튼이 열립니다.</span>
+        {!canRegister && (
+          <span className="text-[11px] text-text-tertiary">
+            {stale
+              ? "입력이 바뀌었습니다 — 등록 정보 확인을 다시 통과해야 등록 버튼이 열립니다."
+              : "등록 가능성 100% + 등록 정보 확인을 통과해야 등록 버튼이 열립니다."}
+          </span>
         )}
       </div>
 
@@ -525,7 +868,6 @@ export function LotteOnRegistrationPanel({
           <p className="text-xs text-text-tertiary">
             실제로 롯데ON에 전송될 데이터입니다 — 등록 버튼을 누르기 전에도 항상 최신 상태로 계산되어 있습니다.
           </p>
-          {/* 개발자용 원문 확인은 유지하고 이름만 스마트스토어/쿠팡 탭과 맞춘다. */}
           <button
             type="button"
             onClick={() => setShowPayload((prev) => !prev)}
@@ -566,19 +908,33 @@ export function LotteOnRegistrationPanel({
   );
 }
 
+function StatusRow({ label, value, tone }: { label: string; value: string; tone: "ok" | "warn" | "error" | "muted" }) {
+  const dot = tone === "ok" ? "text-success" : tone === "warn" ? "text-warning" : tone === "error" ? "text-error" : "text-text-tertiary";
+  return (
+    <li className="flex gap-2">
+      <span className={dot}>●</span>
+      <span className="text-text-secondary">
+        <b className="text-text-primary">{label}</b> — {value}
+      </span>
+    </li>
+  );
+}
+
 function Section({
+  id,
   title,
   description,
   action,
   children,
 }: {
+  id?: string;
   title: string;
   description?: string;
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-border bg-surface px-4 py-3">
+    <section id={id} className="scroll-mt-4 rounded-lg border border-border bg-surface px-4 py-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
@@ -591,8 +947,97 @@ function Section({
   );
 }
 
-/** 조회 결과. 알아본 항목은 버튼으로, 못 알아본 것은 원문 그대로 보여준다 —
- * 지어낸 파싱으로 "결과 없음"을 만들지 않는다(lotteon-channel-form.ts 참고). */
+/**
+ * 카테고리 추천 결과.
+ *
+ * 점수와 이유를 그대로 보여준다 — scoreCategoryCandidate()가 만든 문장이고
+ * 화면이 다시 쓰지 않는다. 상품유형과 충돌하는 후보는 눌러서 고를 수 있게
+ * 두되(셀러가 우리보다 잘 알 수 있다) 충돌이라는 사실을 숨기지 않는다.
+ */
+function CategoryRecommendation({
+  state,
+  pickedId,
+  onPick,
+}: {
+  state: RecommendState;
+  pickedId: string;
+  onPick: (candidate: LotteOnCategoryCandidate) => void;
+}) {
+  if (state.loading) {
+    return <p className="mb-3 text-[11px] text-text-tertiary">롯데ON 표준카테고리를 읽어 상품과 대조하는 중…</p>;
+  }
+  if (state.error) {
+    return <p className="mb-3 rounded-md bg-error/5 px-3 py-2 text-[11px] text-error">{state.error}</p>;
+  }
+  if (state.decision == null) {
+    return (
+      <p className="mb-3 text-[11px] text-text-tertiary">
+        [카테고리 추천]을 누르면 이 상품의 연령대·성별·상품유형 신호로 롯데ON 표준카테고리 후보를 골라 드립니다 —
+        스마트스토어·쿠팡 추천과 같은 판단 기준을 씁니다.
+      </p>
+    );
+  }
+  return (
+    <div className="mb-3 rounded-md border border-border bg-background px-3 py-2">
+      <p className="text-[11px] font-medium text-text-secondary">
+        {state.decision === "AUTO_SELECT"
+          ? "추천 — 상품과 잘 맞는 카테고리를 찾았습니다."
+          : state.decision === "RECOMMEND"
+            ? "추천 — 후보를 골랐지만 확신이 높지는 않습니다. 확인하고 골라 주세요."
+            : "추천할 수 있는 카테고리를 찾지 못했습니다 — 아래에서 직접 찾아 주세요."}
+        <span className="ml-1 text-text-tertiary">
+          (표준카테고리 리프 {state.scannedLeafCount}개와 대조)
+        </span>
+      </p>
+      {state.signalEvidence.length > 0 && (
+        <p className="mt-1 text-[11px] text-text-tertiary">판단 근거 — {state.signalEvidence.join(" · ")}</p>
+      )}
+      {(state.truncated || state.unrecognizedCount > 0) && (
+        <p className="mt-1 text-[11px] text-warning">
+          {state.truncated ? "카테고리 목록을 끝까지 읽지 못했습니다(조회 상한). " : ""}
+          {state.unrecognizedCount > 0
+            ? `응답 ${state.unrecognizedCount}건은 표준카테고리로 읽히지 않았습니다 — 그만큼 후보에서 빠져 있습니다.`
+            : ""}
+        </p>
+      )}
+      {state.candidates.length > 0 && (
+        <ul className="mt-2 space-y-1">
+          {state.candidates.map((candidate) => (
+            <li key={candidate.category.id}>
+              <button
+                type="button"
+                onClick={() => onPick(candidate)}
+                className={`w-full rounded px-2 py-1.5 text-left text-[11px] hover:bg-surface ${
+                  pickedId === candidate.category.id ? "bg-surface ring-1 ring-primary" : ""
+                }`}
+              >
+                <span className="font-medium text-text-primary">{candidate.path.join(" › ")}</span>
+                <span className="ml-2 font-mono text-text-tertiary">{candidate.category.id}</span>
+                <span
+                  className={`ml-2 ${candidate.conflict ? "text-error" : candidate.score >= 95 ? "text-success" : "text-warning"}`}
+                >
+                  {candidate.score}점{candidate.conflict ? " · 다른 도메인으로 보임" : ""}
+                </span>
+                <span className="block text-text-tertiary">{candidate.reason}</span>
+                <span className="block text-text-tertiary">
+                  전시카테고리 {candidate.category.displayCategories.length}개
+                  {candidate.category.noticeItemCodes.length > 0
+                    ? ` · 고시 품목 ${candidate.category.noticeItemCodes.join("/")}`
+                    : ""}
+                  {candidate.category.safetyTypeCodes.length > 0
+                    ? ` · 안전인증 ${candidate.category.safetyTypeCodes.join("/")}`
+                    : ""}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** 조회 결과. 알아본 항목은 버튼으로, 못 알아본 것은 원문 그대로 보여준다. */
 function CategoryLookup({
   title,
   state,

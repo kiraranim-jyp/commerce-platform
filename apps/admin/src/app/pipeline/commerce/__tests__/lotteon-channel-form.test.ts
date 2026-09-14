@@ -273,17 +273,67 @@ describe("④ 화면 요약과 실제 payload가 같은 값을 말한다", () =>
   });
 });
 
-describe("카테고리 조회 결과 표시 — 모르면 모른다고 한다", () => {
-  it("번호+이름을 알아보면 선택지로 만든다", () => {
-    expect(describeLotteOnCategoryItem({ scatNo: "100123", scatNm: "유아동 반바지" })).toEqual({
-      code: "100123",
-      name: "유아동 반바지",
+/**
+ * SPRINT 4(2026-09-14) — 이 describe의 기대값이 바뀌었다. 기능 변경이 아니라
+ * **틀린 짐작을 문서 원문으로 바로잡은 것**이다.
+ *
+ * SPRINT 3의 기대값은 `{ scatNo, scatNm }`이었다. 그건 "롯데ON은 번호를 …No,
+ * 이름을 …Nm으로 쓴다"는 우리 짐작이었고, onpick 205/206 문서 원문(무인증
+ * GET으로 확보)의 실제 필드명은 `std_cat_id`/`std_cat_nm`,
+ * `disp_cat_id`/`disp_cat_nm`이다. 옛 짐작은 응답 어디에도 없는 이름이라
+ * 전부 null이 됐을 뿐 아니라, 정규식 폴백(`/no$/i`)이 **`depth_no`에 먼저
+ * 걸려서 깊이번호를 표준카테고리번호로 넣는** 더 나쁜 결과를 냈다.
+ */
+describe("카테고리 조회 결과 표시 — 문서 원문 필드로 읽고, 모르면 모른다고 한다", () => {
+  /** 205 문서 Response Sample 원문(data 부분) 그대로 — 우리가 만든 값이 아니다. */
+  const STANDARD_CATEGORY_SAMPLE = {
+    depth_no: "3",
+    chl_athn: "",
+    upr_std_cat_id: "BC01030000",
+    smartpick_yn: "N",
+    std_cat_nm: "도서/문화상품권",
+    std_cat_desc: "도서/문화상품권",
+    disp_list: [{ mall_dvs_cd: "LTON", std_cat_id: "BC01030100", disp_cat_id: "FC14070100" }],
+    leaf_yn: "Y",
+    pd_itms_list: [],
+    std_cat_id: "BC01030100",
+    use_yn: "Y",
+    tdf_cd: "01",
+    age_limit_cd: "0",
+  };
+
+  it("표준카테고리(205)는 std_cat_id / std_cat_nm 으로 읽는다", () => {
+    expect(describeLotteOnCategoryItem(STANDARD_CATEGORY_SAMPLE)).toEqual({
+      code: "BC01030100",
+      name: "도서/문화상품권",
     });
+  });
+
+  it("🔴 회귀 — 깊이번호(depth_no)를 카테고리번호로 착각하지 않는다", () => {
+    // 옛 정규식은 depth_no에 먼저 걸려 code:"3"을 돌려줬다. 셀러가 조회 결과를
+    // 눌렀을 때 등록 payload의 scatNo에 "3"이 들어가는 경로였다.
+    expect(describeLotteOnCategoryItem(STANDARD_CATEGORY_SAMPLE)?.code).not.toBe("3");
+  });
+
+  it("전시카테고리(206)는 disp_cat_id / disp_cat_nm 으로 읽는다", () => {
+    expect(
+      describeLotteOnCategoryItem({
+        depth_no: "2",
+        upr_disp_cat_id: "EC1",
+        disp_cat_id: "EC2",
+        disp_cat_nm: "신규등록local2d",
+        mall_dvs_cd: "LTON",
+        leaf_yn: "N",
+        use_yn: "Y",
+      }),
+    ).toEqual({ code: "EC2", name: "신규등록local2d" });
   });
 
   it("알아보지 못하면 지어내지 않고 null을 돌려준다(화면이 원문을 그대로 보여준다)", () => {
     expect(describeLotteOnCategoryItem({ foo: 1, bar: 2 })).toBeNull();
     expect(describeLotteOnCategoryItem(null)).toBeNull();
     expect(describeLotteOnCategoryItem("문자열")).toBeNull();
+    // 옛 짐작(…No/…Nm)은 실제 응답에 없는 이름이다 — 이제 읽히지 않는다.
+    expect(describeLotteOnCategoryItem({ scatNo: "100123", scatNm: "유아동 반바지" })).toBeNull();
   });
 });

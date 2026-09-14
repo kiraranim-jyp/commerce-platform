@@ -724,3 +724,92 @@ API 호출을 프로덕션으로 넘기므로 같은 401에 도달한다.
 
 해소 조건은 하나다: **인증된 세션에서 읽기 API(207/93/onpick)를 호출할 수 있으면
 된다.** 등록(87)까지 가지 않아도 STOP-C 판정은 가능하다.
+
+---
+
+# 14. SPRINT 4 갱신 (2026-09-14) — 카테고리 응답 스키마 확보 · 경계 판정
+
+## 14-1. §12-3 미해결 항목 중 해소된 것
+
+**확보 방법(무인증, 누구나 재현 가능 — §12-1과 같은 경로):**
+```
+GET https://soapi.lotteon.com/soapi/v1/openapi/o/apiguide/getApiGuideDetailInfo
+    ?apiNo={205|206|87}&apiMjrVerCd=V1&apiMnrVerNm=1.0&mdulDvsCd=SL
+→ data.apiGdeCnts (HTML)에 Received Message 표 + Response Sample(json) 전문이 들어 있다
+```
+
+| §12-3 | 항목 | 확인 결과 |
+|---|---|---|
+| 4 | 표준↔전시 카테고리 접합 비용 | **작다. 접합이 필요 없다.** 205 응답의 `disp_list[]`가 그 표준카테고리에 매핑된 전시카테고리(`disp_cat_id`)를 직접 준다. 87의 `dcatLst`에는 그중 1개 이상을 넣는다 → **전시카테고리를 따로 추천/검색할 필요가 없다** |
+| 5 | `pdItmsCd`(고시 품목코드) | **카테고리가 알려준다.** 205 응답의 `pd_Itms_list[].pd_Itms_cd`. 유아동(23) 여부가 여기서 드러난다 — 셀러가 찾아 넣을 필요가 없다. ⚠️ `pdArtlCd`(고시 **항목**코드) 코드표는 여전히 미확인 |
+
+## 14-2. 205 표준카테고리 응답 — 문서 원문 필드 (구현이 쓰는 이름)
+
+```
+std_cat_id · std_cat_nm · upr_std_cat_id · depth_no · leaf_yn · use_yn
+disp_list[]    { mall_dvs_cd, std_cat_id, disp_cat_id }   → 87 dcatLst 후보
+pd_Itms_list[] { std_cat_id, pd_Itms_cd }                 → 87 pdItmsCd
+   ⚠️ 문서 표는 pd_Itms_list, 같은 문서의 Response Sample은 pd_itms_list —
+      어느 쪽이 실제인지 확인 못 해서 파서가 둘 다 읽는다
+attr_list[]    { attr_pi_type(P=scatAttrLst / I=itmOptLst), attr_id, prio_rnk }
+tdf_cd → 87 tdfDvsCd · age_limit_cd → 87 ageLmtCd
+chl_athn chl_cfm chl_sups elc_athn elc_cfm elc_sups life_athn life_cfm
+life_sups life_std cmcn_athn cmcn_reg cmcn_tntt chem_life chem_bioc etc
+   → 이 카테고리가 요구하는 87 sftyAthnTypCd 유형
+```
+
+206 전시카테고리: `disp_cat_id · disp_cat_nm · upr_disp_cat_id · depth_no ·
+leaf_yn · mall_dvs_cd · disp_yn · use_yn` + 브랜드/거래처 제어 목록.
+
+🔴 **`elc_athn`(205) → `ELC_AHTN`(87)** — 87 공통코드표의 철자가 `ELC_AHTN`이다.
+오타로 보여도 고치면 안 된다(고치면 롯데ON이 모르는 코드가 된다).
+
+## 14-3. 확인된 결함 — 카테고리 조회가 깊이번호를 카테고리번호로 넣고 있었다
+
+SPRINT 3의 `describeLotteOnCategoryItem()`은 필드명을 정규식으로 짐작했다
+(`/(^|_)(scat|dcat|cat)?_?no$/i` → 폴백 `/no$/i`). 205/206 응답의 첫 필드가
+`depth_no`라서 **그 정규식이 깊이번호에 먼저 걸린다** — 셀러가 조회 결과를
+누르면 `scatNo`에 `"3"`이 들어간다. 문서 원문 필드로 교체했고, 회귀 테스트로
+고정했다(`lotteon-sprint4-boundary.test.ts`).
+
+## 14-4. 경계 판정 — **A** (공통 구조 변경 불필요)
+
+| 축 | 판정 |
+|---|---|
+| 공통 상품정보를 롯데ON 탭이 재입력받는가 | **아니다.** 입력칸이 없다(렌더 테스트로 고정) |
+| 스마트스토어/쿠팡이 공통정보를 재입력받는가 | **아니다.** Naver 고시는 `CanonicalProduct`+SellerProfile에서 전부 파생되고(`naver/build-payload.ts`), Coupang 고시도 동의어 매칭으로 파생된다. 쿠팡의 `CategoryRequirementsEditor`는 **덮어쓰기**를 `product.categoryFieldOverrides`(공통 모델)에 저장한다 — 사본이 아니라 한 벌이다 |
+| 공통 모델이 경계를 지원하는가 | **한다.** 소재·색상·제조사·원산지·취급방법·권장연령·품명·모델명·수입사·`certificationType`·`childCertification`이 전부 `CanonicalProduct`에 있다 |
+
+→ **A. 공통 구조 변경 0.** 롯데ON이 그 값을 **읽지 않고 있었을 뿐**이다.
+
+## 14-5. 다만 — readiness 계산에 책임 혼재가 있다 (이번에 고치지 않음)
+
+CEO가 스크린샷에서 짚은 "상품 준비 상태와 채널 등록 상태가 한 화면에 섞였다"는
+문구 문제가 아니라 **계산 문제**다. 실측:
+
+| 위치 | 사실 |
+|---|---|
+| `CommerceWorkspace.tsx:1375` `commonInfoLevel` | 상품 전용이다(title/images/priceValidity/brand/description). 채널 입력 0 — **정상** |
+| `CommerceWorkspace.tsx:1433` `categoryVerified` | `Object.values(categoryMappings).some(isVerifiedCategorySelected)` — **어느 한 채널이라도** 확정이면 true. 이 값이 상품정보 탭의 "등록할 카테고리를 확정해주세요"(`StageBody.tsx:436`)를 켠다 → 쿠팡만 확정해도 상품 수준에서 "확정됨"이 된다 |
+| `provisionalReadiness`(`~1141`) · `resolveRegistrationReadinessState` | 채널 상태를 계산하면서 **상품 수준** `priceValid`를 채널마다 그대로 재사용한다 |
+| `compute-readiness.ts:308` 주석 | *"최종 등록 게이트(register route)는 이 계산을 그대로 쓰지 않으므로 이 카드는 1차 판단"* — 저장소가 이미 인정하고 있다 |
+
+이것을 고치면 스마트스토어/쿠팡의 준비도 표시가 함께 바뀐다 = **공통 구조
+변경**이라 이번 작업에서 손대지 않았다(지시: "공통 구조를 바꿔야 하면 영향
+범위를 먼저 보고하고 멈춰라"). 롯데ON은 이 혼재된 값을 **쓰지 않는다** — 자기
+등록 가능성을 `validateLotteOnPayload` 결과에서만 계산한다.
+
+## 14-6. 쿠팡 쪽 기존 결함(확인만 — 이번 범위 아님)
+
+`decision === "AUTO_SELECT"`여도 캐시 하이드레이트가 `selectCategory()`를
+부르지 않아 `categoryMappings`가 `UNRESOLVED`로 남는다
+(`CommerceWorkspace.tsx` 하이드레이트 effect). 롯데ON에는 같은 구멍을 만들지
+않았다 — 추천 후보를 누르면 그 자리에서 폼에 반영된다.
+
+## 14-7. STOP-C — 여전히 판정 불가
+
+카테고리 **응답 스키마**는 문서 원문으로 확보했지만 **실동작**은 여전히 0회다.
+`/api/*` 전체가 Seller 세션 뒤에 있고(§13-2) 에이전트에게 로그인 수단이 없다.
+그래서 파서는 문서 원문 필드로 읽고, 못 읽으면 원문을 그대로 보여준다.
+`unrecognizedCount`를 응답과 화면에 실어 **"몇 건을 못 읽었는지"를 숨기지
+않는다.**

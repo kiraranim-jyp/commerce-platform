@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   CanonicalProduct,
   CanonicalProductCertification,
@@ -298,6 +298,46 @@ export function CommerceWorkspace({
       return { ...prev, [platformId]: { state, priorityItems } };
     });
   }
+
+  /**
+   * LOTTEON COMMERCE SPRINT 4(CEO 확정, 2026-09-14) — 롯데ON 탭이 보고하는
+   * 등록 가능성. platformReadiness와 **같은 자리, 다른 그릇**이다 — 롯데ON은
+   * PlatformId가 아니라서 그 Record에 들어갈 수 없다(타입이 막는다).
+   *
+   * 🔴 여기서 판정하지 않는다. 패널이 서버 검증(validateLotteOnPayload) 결과를
+   * 센 값을 그대로 받는다 — 탭 배지가 탭 안의 숫자보다 낙관적으로 말할 경로가
+   * 없다.
+   */
+  const [lotteOnReadiness, setLotteOnReadiness] = useState<{
+    percent: number;
+    allRequiredPassed: boolean;
+    missingCount: number;
+  } | null>(null);
+  const handleLotteOnReadinessChange = useCallback(
+    (percent: number, allRequiredPassed: boolean, missingCount: number) => {
+      setLotteOnReadiness((prev) => {
+        if (
+          prev &&
+          prev.percent === percent &&
+          prev.allRequiredPassed === allRequiredPassed &&
+          prev.missingCount === missingCount
+        ) {
+          return prev;
+        }
+        return { percent, allRequiredPassed, missingCount };
+      });
+    },
+    [],
+  );
+  /** 탭 배지/준비상태 줄의 3단계. readinessStateToLevel과 같은 어휘를 쓴다 —
+   * 새 색 체계를 만들지 않는다. */
+  const lotteOnLevel: ReadinessLevel | null = lotteOnReadiness
+    ? lotteOnReadiness.allRequiredPassed
+      ? "GREEN"
+      : lotteOnReadiness.percent >= 60
+        ? "YELLOW"
+        : "RED"
+    : null;
 
   /** N-4.07 Sprint(대표님 지시: "가격경쟁력을 상품정보/스마트스토어/쿠팡과 나란히
    * 4번째 차원으로") — DomesticPriceIntelligencePanel(상품정보 탭 안에서만
@@ -2292,6 +2332,9 @@ export function CommerceWorkspace({
             SOON 배지를 달지 않는다 — 실제 등록이 동작하는 탭이다. */}
         <TabButton active={tab === LOTTEON_TAB} onClick={() => setTab(LOTTEON_TAB)}>
           롯데ON
+          {/* 스마트스토어/쿠팡 탭과 같은 점이다 — 롯데ON만 상태 없이 서 있으면
+              "이 탭은 아직 반쪽"으로 읽힌다. 값은 탭이 보고한 것 그대로다. */}
+          {lotteOnLevel && <ReadinessLevelDot level={lotteOnLevel} />}
         </TabButton>
       </div>
 
@@ -2309,6 +2352,11 @@ export function CommerceWorkspace({
             {PLATFORM_ADAPTERS[platformId].label}
           </span>
         ))}
+        {lotteOnLevel && (
+          <span className="flex items-center gap-1">
+            <ReadinessLevelDot level={lotteOnLevel} /> 롯데ON
+          </span>
+        )}
         <span className="flex items-center gap-1">
           <PriceLevelDot level={priceLevel} /> 가격경쟁력
         </span>
@@ -2540,6 +2588,9 @@ export function CommerceWorkspace({
               commonCategorySources={lotteOnCommonCategorySources}
               /* 공통 정보를 고치는 화면은 상품정보 하나뿐이다. */
               onEditCommonInfo={() => setTab("source")}
+              /* 탭 배지/준비상태 줄이 쓸 값. 패널이 서버 검증 결과를 센 값을
+                 그대로 올려보낸다 — 여기서 다시 판정하지 않는다. */
+              onReadinessChange={handleLotteOnReadinessChange}
             />
           )}
 
