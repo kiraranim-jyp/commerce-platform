@@ -75,6 +75,7 @@ import type { MarketEvidenceSummary } from "./commerce/market-evidence";
 import { ImageInlineEditor } from "./ImageInlineEditor";
 import { ListingConfirmationModal } from "./commerce/ListingConfirmationModal";
 import { LotteOnRegistrationPanel } from "./commerce/LotteOnRegistrationPanel";
+import { resolveCommonCategorySources } from "./commerce/lotteon-channel-form";
 import { MissingFieldsBulkPanel } from "./commerce/MissingFieldsBulkPanel";
 import type { NaverResolveResponse } from "./commerce/NaverPayloadPreview";
 import { PlatformPreview } from "./commerce/PlatformPreview";
@@ -125,6 +126,22 @@ function isPlatformTab(tab: CommerceTab): tab is PlatformId {
 /** 아직 구현되지 않아 탭에서 비활성화하고 SOON 배지로 표시하는 플랫폼/기능 —
  * 백로그 패널에도 같은 목록을 보여준다. */
 const SOON_PLATFORMS = new Set<PlatformId>(["smartstore", "elevenst"]);
+
+/**
+ * LOTTEON COMMERCE SPRINT 3(CEO 확정, 2026-09-14) — 상품등록 화면이 **보여주는**
+ * 채널 목록.
+ *
+ * 11번가는 이 화면에서 빠진다. 빠지는 곳은 여기 한 줄뿐이고,
+ * `PLATFORM_ORDER`(packages/marketplace) · `PlatformId` · 11번가 어댑터는 **한
+ * 줄도 건드리지 않았다**(CEO 명시: "UI 제거만 허용"). 즉 이것은 기능 삭제가
+ * 아니라 화면에서 안 보이게 하는 것이고, 되살리려면 이 filter 하나만 지우면
+ * 된다.
+ *
+ * 채널을 나열하는 자리는 전부 이 배열 하나를 봐야 한다 — 탭 줄과 Action Center,
+ * ④ 흐름이 각자 다른 목록을 쓰면 "탭에는 없는데 오른쪽 카드에는 있는" 채널이
+ * 생긴다(이 화면이 이미 여러 번 겪은 종류의 불일치다).
+ */
+const WORKSPACE_PLATFORM_ORDER: PlatformId[] = PLATFORM_ORDER.filter((id) => id !== "elevenst");
 
 const INITIAL_CATEGORY_MAPPINGS: Record<PlatformId, CategorySelection> = {
   smartstore: UNRESOLVED_CATEGORY,
@@ -255,7 +272,7 @@ export function CommerceWorkspace({
         saved === "source" ||
         saved === "content" ||
         saved === LOTTEON_TAB ||
-        PLATFORM_ORDER.includes(saved as PlatformId)
+        WORKSPACE_PLATFORM_ORDER.includes(saved as PlatformId)
       ) {
         return saved as CommerceTab;
       }
@@ -1124,7 +1141,7 @@ export function CommerceWorkspace({
   const provisionalReadiness = useMemo(() => {
     const out: Partial<Record<PlatformId, { state: RegistrationReadinessState; priorityItems: PriorityItem[] }>> = {};
     const priceValid = product.priceValidity === "VALID";
-    for (const platformId of PLATFORM_ORDER) {
+    for (const platformId of WORKSPACE_PLATFORM_ORDER) {
       try {
         // PHASE 3.2 — 잠정치도 실제 탭과 **같은 채널 인자**로 계산한다. 여기서
         // platformId를 빠뜨리면 탭을 열기 전 배지는 상품정보 가격 기준,
@@ -1153,7 +1170,7 @@ export function CommerceWorkspace({
     const out: Partial<
       Record<PlatformId, { state: RegistrationReadinessState; priorityItems: PriorityItem[]; provisional: boolean }>
     > = {};
-    for (const platformId of PLATFORM_ORDER) {
+    for (const platformId of WORKSPACE_PLATFORM_ORDER) {
       const actual = platformReadiness[platformId];
       if (actual) {
         out[platformId] = { ...actual, provisional: false };
@@ -1208,6 +1225,24 @@ export function CommerceWorkspace({
         priceRoundingUnit ?? undefined,
       ),
     [product, exchangeRates, priceRoundingUnit],
+  );
+
+  /**
+   * LOTTEON COMMERCE SPRINT 3(CEO 확정, 2026-09-14) — 롯데ON 탭이 카테고리를 고를
+   * 때 참고할 **공통 분류**.
+   *
+   * 읽기만 한다. resolveCommonCategorySources()가 문자열 경로만 돌려주므로
+   * (CategorySelection을 돌려주지 않는다) 롯데ON 탭이 고른 표준/전시 카테고리가
+   * categoryMappings를 덮어쓸 경로가 타입 수준에서 존재하지 않는다 — CEO 지시
+   * "기존 단일 category 값에 덮어쓰지 마라"를 주석이 아니라 구조로 지킨다.
+   */
+  const lotteOnCommonCategorySources = useMemo(
+    () =>
+      resolveCommonCategorySources(product, categoryMappings, {
+        order: WORKSPACE_PLATFORM_ORDER,
+        labelOf: (id) => PLATFORM_ADAPTERS[id].label,
+      }),
+    [product, categoryMappings],
   );
 
   /**
@@ -1364,7 +1399,7 @@ export function CommerceWorkspace({
       label: "필수정보",
       ok: blocking === 0,
       detail: blocking === 0 ? "확인 완료" : `${blocking}건 확인 필요`,
-      onClick: () => setTab(PLATFORM_ORDER.find((id) => (mergedReadiness[id]?.priorityItems.length ?? 0) > 0) ?? "source"),
+      onClick: () => setTab(WORKSPACE_PLATFORM_ORDER.find((id) => (mergedReadiness[id]?.priorityItems.length ?? 0) > 0) ?? "source"),
     });
     // N-4.07 — 가격경쟁력은 등록을 막지 않는다(대표님 지시). UNKNOWN은 "부족"이
     // 아니라 "아직 모름"이라 경고로 올리지 않는다.
@@ -1402,11 +1437,11 @@ export function CommerceWorkspace({
     // 아직 등록 기능이 없는 채널(SOON)의 잠정 부족 항목까지 세면, 셀러가 고칠
     // 방법이 없는 이유로 흐름이 영원히 멈춘다 — 그 채널들의 부족 항목은
     // 오른쪽 Action Center가 지금처럼 따로 보여준다.
-    const registerableBlocking = PLATFORM_ORDER.filter((id) => !SOON_PLATFORMS.has(id)).reduce(
+    const registerableBlocking = WORKSPACE_PLATFORM_ORDER.filter((id) => !SOON_PLATFORMS.has(id)).reduce(
       (sum, id) => sum + (mergedReadiness[id]?.priorityItems.length ?? 0),
       0,
     );
-    const channels: WorkflowChannel[] = PLATFORM_ORDER.map((id) => ({
+    const channels: WorkflowChannel[] = WORKSPACE_PLATFORM_ORDER.map((id) => ({
       id,
       label: PLATFORM_ADAPTERS[id].label,
       availability: !SOON_PLATFORMS.has(id) ? "AVAILABLE" : id === "smartstore" ? "PREVIEW_ONLY" : "COMING_SOON",
@@ -1492,7 +1527,7 @@ export function CommerceWorkspace({
   /** 채널 목록은 한 번만 만든다 — 오른쪽 Action Center와 ④ 본문이 같은 배열을
    * 본다(둘이 각자 만들면 준비 상태가 두 벌 계산되어 서로 다른 말을 한다). */
   const registrationChannels = buildRegistrationChannels({
-    order: PLATFORM_ORDER,
+    order: WORKSPACE_PLATFORM_ORDER,
     labelOf: (id) => PLATFORM_ADAPTERS[id].label,
     isComingSoon: (id) => SOON_PLATFORMS.has(id),
     isPreviewOnly: (id) => id === "smartstore",
@@ -2230,7 +2265,7 @@ export function CommerceWorkspace({
           {TAB_LABELS.content}
           <SoonBadge />
         </TabButton>
-        {PLATFORM_ORDER.map((platformId) => {
+        {WORKSPACE_PLATFORM_ORDER.map((platformId) => {
           const soon = SOON_PLATFORMS.has(platformId);
           // Sprint N-2.7(CPO 지시) — smartstore(네이버)만 Preview 전용으로 임시
           // 활성화한다. requiresCategory 등 나머지 SOON_PLATFORMS 판정은 그대로
@@ -2268,7 +2303,7 @@ export function CommerceWorkspace({
         <span className="flex items-center gap-1">
           <ReadinessLevelDot level={commonInfoLevel} /> 상품정보
         </span>
-        {PLATFORM_ORDER.filter((platformId) => platformReadiness[platformId]).map((platformId) => (
+        {WORKSPACE_PLATFORM_ORDER.filter((platformId) => platformReadiness[platformId]).map((platformId) => (
           <span key={platformId} className="flex items-center gap-1">
             <ReadinessLevelDot level={readinessStateToLevel(platformReadiness[platformId]!.state)} />{" "}
             {PLATFORM_ADAPTERS[platformId].label}
@@ -2494,6 +2529,17 @@ export function CommerceWorkspace({
                  권장 판매가격과 롯데ON에 나가는 금액이 같은 계산을 거치게 한다. */
               liveRates={exchangeRates?.rates}
               roundingUnit={priceRoundingUnit ?? undefined}
+              /* LOTTEON COMMERCE SPRINT 3 — 공통 정보를 **다시 계산해서** 넘기지
+                 않는다. 화면이 이미 갖고 있는 listingPrice(위 useMemo, 상품정보
+                 가격 화면과 같은 숫자)를 그대로 내려보낸다. 패널이 자기 가격을
+                 계산하기 시작하면 같은 상품의 가격이 화면 안에 두 벌 생긴다. */
+              commonPrice={{ priceKrw: listingPrice.priceKrw, resolved: listingPrice.source !== "UNRESOLVED" }}
+              /* 공통 분류는 **읽기 전용**으로만 내려간다 — 반환 타입에
+                 CategorySelection이 없으므로(lotteon-channel-form.ts) 롯데ON에서
+                 고른 번호가 categoryMappings로 되돌아 흘러갈 경로 자체가 없다. */
+              commonCategorySources={lotteOnCommonCategorySources}
+              /* 공통 정보를 고치는 화면은 상품정보 하나뿐이다. */
+              onEditCommonInfo={() => setTab("source")}
             />
           )}
 
@@ -2653,11 +2699,16 @@ function SoonBadge() {
 }
 
 /** Sprint N-2.7 — smartstore 탭은 클릭 가능하지만 실제 등록은 아직 안 된다는
- * 걸 SOON과는 다른 문구로 구분한다("준비중"이 아니라 "미리보기 가능"). */
+ * 걸 SOON과는 다른 문구로 구분한다("준비중"이 아니라 "확인까지는 된다").
+ *
+ * LOTTEON COMMERCE SPRINT 3(CEO 지시, 2026-09-14) — 배지 글자를 "PREVIEW"에서
+ * 한국어로 바꾼다. 판정도 붙는 자리도 그대로다(smartstore 탭 하나) — 셀러가
+ * 읽을 수 있는 말로 바꾼 것뿐이다. 탭 안의 섹션 이름("등록 정보")과 같은
+ * 어휘를 쓴다. */
 function PreviewBadge() {
   return (
     <span className="rounded-full bg-warning-soft px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-warning">
-      PREVIEW
+      확인 전용
     </span>
   );
 }

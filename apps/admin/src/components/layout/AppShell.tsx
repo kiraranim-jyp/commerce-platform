@@ -12,7 +12,6 @@ import {
   Image as ImageIcon,
   Package,
   Settings,
-  ShoppingCart,
   type LucideIcon,
 } from "lucide-react";
 import { AppHeader } from "./AppHeader";
@@ -43,9 +42,14 @@ const NAV_ITEMS: NavigationItem[] = [
   { id: "dashboard", title: "운영 Dashboard", href: "/admin/dashboard", icon: Home, adminOnly: true },
   { id: "today", title: "오늘의 등록", href: "/today", icon: ClipboardList },
   { id: "pipeline", title: "상품등록", href: "/pipeline", icon: Package },
-  // LOTTEON COMMERCE SPRINT 2 Phase 2 — 판매관리는 **조회 전용**이다(발송 처리 ·
-  // 송장 · 클레임 승인 · 환불 없음). 배지로 그 사실을 메뉴에서부터 말한다.
-  { id: "sales", title: "판매관리", href: "/sales", icon: ShoppingCart, badge: "조회" },
+  /* LOTTEON COMMERCE SPRINT 3(CEO 확정, 2026-09-14) — 여기 있던 "판매관리(조회)"
+     항목을 지웠다. 판매관리는 이번 제품 범위에서 **제거**됐다(축소가 아니라
+     제외다). 되살리려면 메뉴 한 줄이 아니라 조회 라우트(/api/lotteon/orders ·
+     /api/lotteon/claims)부터 복원해야 한다 —
+     docs/lotteon-commerce-sprint-3-scope-reversal.md에 삭제 범위를 적어 뒀다.
+     `_lib/forbidden-endpoints.ts`의 210 guard는 **지우지 않았다**: 판매관리
+     화면이 사라져도 상품등록이 같은 HTTP 클라이언트를 계속 쓰므로, 누군가
+     주문 경로를 다시 더할 때 막아야 하는 쪽은 여전히 그 guard다. */
   { id: "recent", title: "최근 작업", href: "/snapshots", icon: Clock },
   { id: "images", title: "이미지", href: "/assets", icon: ImageIcon },
   { id: "settings", title: "설정", href: "/settings", icon: Settings },

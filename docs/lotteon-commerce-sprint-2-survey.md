@@ -681,3 +681,46 @@ GET https://soapi.lotteon.com/soapi/v1/openapi/o/apiguide/getApiGuideDetailInfo
 4. 표준↔전시 카테고리 트리의 실제 규모와 이 저장소 카테고리 추천기와의 접합 비용.
 5. `pdArtlCd`(고시 항목코드) 코드표 — 품목코드마다 다르고 문서에 통합 표가 없다. 그래서
    **자동 생성하지 않고** 셀러 입력으로 받는다.
+
+---
+
+# 13. SPRINT 3 갱신 (2026-09-14)
+
+## 13-1. 범위 변경
+
+CEO가 **판매관리를 제품 범위에서 제거**했다. §2·§5-2의 주문/클레임 조사 결과는
+그대로 유효하지만, 그 축의 **구현물은 저장소에서 삭제**됐다.
+삭제 범위와 복원 방법은 `docs/lotteon-commerce-sprint-3-scope-reversal.md`에 있다.
+**210 guard는 삭제하지 않았다** — 이유는 같은 문서 §3.
+
+## 13-2. STOP-C — **여전히 판정 불가** (§12-3-1 유지)
+
+Sprint 3에서도 롯데ON 실 API를 **단 1회도 호출하지 못했다.** 이유가 §12-3 때와
+다르다. 그때는 "인증키가 시스템에 없어서"였고, 지금은 **우리 앱에 로그인할 수단이
+에이전트에게 없어서**다.
+
+실측(2026-09-14, 배포본 `https://commerce-platform-mocha.vercel.app`):
+
+| 호출 | 결과 |
+|---|---|
+| `GET /api/settings/lotteon` | **HTTP 401** `{"ok":false,"error":"로그인이 필요합니다."}` |
+| `POST /api/lotteon/auth-test` | **HTTP 401** (동일) |
+| `GET /api/lotteon/categories?job=cheetahStandardCategory` | **HTTP 401** (동일) |
+| `GET /login` | HTTP 200 (배포 자체는 정상) |
+
+BETA-SECURITY-2 §15 이후 `/api/*` 전체가 `src/proxy.ts`의 Seller 인증(Supabase
+세션 쿠키) 뒤에 있다. 롯데ON 라우트 자체의 문제가 아니다 — Naver/Coupang 라우트도
+같은 401을 준다. 로컬 dev 서버도 대안이 되지 못한다: `apps/admin/.env.local`에는
+`QA_PROXY_TO_PROD=1` 하나뿐이라 Supabase 설정이 없고, `QA_PROXY_TO_PROD` 경로는
+API 호출을 프로덕션으로 넘기므로 같은 401에 도달한다.
+
+따라서 다음 셋은 **이번에도 확인하지 못했다** — 추정으로 채우지 않는다:
+
+1. `207` 실 응답(문서의 `data.{trGrpCd,trDvsCd,trNo,trNm}`과 일치하는가)
+2. onpick `205/206` 실 응답의 **필드명** — 그래서 카테고리 조회 결과 표시는
+   "알아보면 선택지로, 못 알아보면 원문 그대로"로 구현했다
+   (`describeLotteOnCategoryItem()`이 추측이라는 사실을 숨기지 않는다)
+3. `87` 상품등록의 실제 동작 및 `returnCode` 실값
+
+해소 조건은 하나다: **인증된 세션에서 읽기 API(207/93/onpick)를 호출할 수 있으면
+된다.** 등록(87)까지 가지 않아도 STOP-C 판정은 가능하다.

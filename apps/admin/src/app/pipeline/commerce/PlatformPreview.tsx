@@ -1166,7 +1166,10 @@ export function PlatformPreview({
         </CollapsibleSection>
 
         {capabilities.hasPayloadInspector && (
-          <CollapsibleSection title="Payload Preview" {...sectionProps("section-payload")}>
+          /* LOTTEON COMMERCE SPRINT 3(CEO 지시, 2026-09-14) — 스마트스토어 탭의
+             같은 섹션과 이름을 맞춘다("등록 정보"). 기능은 그대로다 —
+             CoupangPayloadInspector도 섹션 id(section-payload)도 안 건드렸다. */
+          <CollapsibleSection title="등록 정보" {...sectionProps("section-payload")}>
             <p className="text-xs text-text-tertiary">
               실제로 쿠팡에 전송될 데이터입니다 — 등록 버튼을 누르기 전에도 항상 최신
               상태로 계산되어 있습니다.

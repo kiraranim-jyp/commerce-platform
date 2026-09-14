@@ -1,0 +1,149 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
+import type { CanonicalProduct } from "@commerce/shared";
+import { LotteOnRegistrationPanel } from "../LotteOnRegistrationPanel";
+
+/**
+ * LOTTEON COMMERCE SPRINT 3(CEO 확정, 2026-09-14) — **화면을 통째로 그려서**
+ * "롯데ON 탭이 상품을 다시 만들지 않는다"를 확인한다.
+ *
+ * 소스 텍스트 검사(lotteon-channel-form.test.ts)는 "그 코드가 없다"를 증명한다.
+ * 이 파일은 다른 명제를 본다: **셀러가 실제로 보는 화면에** 상품명/가격/옵션
+ * 입력칸이 없고, 대신 그 값들이 어디서 왔는지가 읽히는가. 같은 실수를 두 층에서
+ * 각각 잡는다(mi-ux-final.test.ts가 같은 이유로 존재한다).
+ */
+
+function field<T>(value: T) {
+  return { value, source: "USER_EDITED", confidence: 1 } as never;
+}
+
+function makeProduct(): CanonicalProduct {
+  return {
+    sourceUrl: "https://example.com/products/a",
+    title: field("Terry Bermuda Shorts"),
+    brand: field("Bobo Choses"),
+    price: field({ amount: 50, currency: "EUR" }),
+    priceValidity: "VALID",
+    sku: field("B226AC043"),
+    description: field("Terry bermuda shorts."),
+    material: field(""),
+    color: field(""),
+    recommendedAge: field(""),
+    manufacturer: field(""),
+    careInstructions: field(""),
+    options: field([]),
+    optionGroups: [],
+    variants: [],
+    images: [],
+    titleKo: field("테리 버뮤다 반바지"),
+    descriptionKo: field("부드러운 테리 소재 반바지입니다."),
+    keywords: field([]),
+    seoTitle: field(""),
+    seoDescription: field(""),
+    countryOfOrigin: field("스페인"),
+    returnPolicy: field("반품 가능"),
+    shippingFee: field(0),
+    stockQuantity: field(999),
+    certification: field(""),
+    importer: field(""),
+    childCertification: field(null),
+    itemName: field(""),
+    modelName: field(""),
+    weight: field(""),
+    certificationType: field(""),
+    priceBreakdown: { shippingKrw: 12000, feePercent: 10, marginPercent: 12 },
+    priceOverrideKrw: undefined,
+  } as unknown as CanonicalProduct;
+}
+
+function renderTab(): string {
+  return renderToStaticMarkup(
+    createElement(LotteOnRegistrationPanel, {
+      product: makeProduct(),
+      commonPrice: { priceKrw: 128000, resolved: true },
+      commonCategorySources: [{ path: ["Home", "Kids", "Shorts"], origin: "원본 상품 페이지 분류" }],
+      onEditCommonInfo: () => {},
+    }),
+  );
+}
+
+/** 셀러가 **읽는 글자**만 남긴다(태그를 통째로 지운다). */
+function visibleText(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&#x27;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** 화면에 실제로 선 입력 요소들의 라벨. `<label>라벨<input …>` 구조를 이용한다. */
+function inputLabels(html: string): string[] {
+  const labels: string[] = [];
+  const pattern = /<label[^>]*>([\s\S]*?)<\/label>/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(html)) !== null) {
+    const block = match[1];
+    if (!/<input|<textarea|<select/.test(block)) continue;
+    const spanMatch = /<span[^>]*>([\s\S]*?)<\/span>/.exec(block);
+    if (spanMatch) labels.push(visibleText(spanMatch[1]));
+  }
+  return labels;
+}
+
+describe("롯데ON 탭 — 실제로 그려지는 화면", () => {
+  it("입력칸이 하나도 공통 상품정보를 묻지 않는다", () => {
+    const labels = inputLabels(renderTab());
+    expect(labels.length).toBeGreaterThan(0);
+    for (const label of labels) {
+      for (const forbidden of ["상품명", "판매가", "가격", "재고", "옵션", "이미지", "상세설명", "상세페이지"]) {
+        expect(label, `롯데ON 탭이 공통 항목을 다시 묻고 있다: "${label}"`).not.toContain(forbidden);
+      }
+    }
+  });
+
+  it("입력칸은 전부 롯데ON 전용 네 축(카테고리·고시·인증·배송)과 코드값이다", () => {
+    const labels = inputLabels(renderTab());
+    // 라벨마다 롯데ON API 필드명을 괄호로 함께 적는다 — 셀러가 판매자센터에서
+    // 같은 이름을 찾을 수 있어야 하고, 우리가 지어낸 이름이 아니라는 표시다.
+    expect(labels).toContain("표준카테고리번호 (scatNo)");
+    expect(labels).toContain("전시카테고리번호 (dcatLst)");
+    expect(labels).toContain("상품품목코드 (pdItmsCd)");
+    expect(labels).toContain("고시 항목 (pdItmsArtlLst)");
+    expect(labels).toContain("안전인증 목록 (sftyAthnLst)");
+    expect(labels).toContain("수입대행코드 (impPrxCd)");
+    expect(labels).toContain("출고지번호 (owhpNo)");
+    expect(labels).toContain("반품지번호 (rtrpNo)");
+    expect(labels).toContain("배송비정책번호 (dvCstPolNo)");
+    expect(labels).toContain("배송가능지역코드 (dvRgsprGrpCd)");
+  });
+
+  it("공통 정보는 값과 출처를 함께 읽어준다 — '다시 입력하라'가 아니라 '이걸 씁니다'", () => {
+    const text = visibleText(renderTab());
+    expect(text).toContain("테리 버뮤다 반바지"); // 상품명(공통)
+    expect(text).toContain("128,000원"); // 판매가격(공통 · 화면이 계산한 값 그대로)
+    expect(text).toContain("옵션 없음 — 단품 1건으로 등록");
+    expect(text).toContain("상품정보에서 수정");
+    expect(text).toContain("다시 입력하지 않습니다");
+  });
+
+  it("공통 분류를 참고로 보여주되 롯데ON 카테고리와 섞지 않는다", () => {
+    const text = visibleText(renderTab());
+    expect(text).toContain("참고 — 이 상품의 공통 분류");
+    expect(text).toContain("Home › Kids › Shorts");
+    expect(text).toContain("스마트스토어·쿠팡 카테고리를 덮어쓰지 않습니다");
+  });
+
+  it("'Preview'라는 글자가 화면에 없다", () => {
+    expect(visibleText(renderTab())).not.toContain("Preview");
+  });
+
+  it("등록 버튼은 확인을 통과하기 전에는 잠겨 있다", () => {
+    const html = renderTab();
+    const registerButton = /<button[^>]*>롯데ON에 등록<\/button>/.test(html.replace(/\s+/g, " "));
+    expect(registerButton || html.includes("롯데ON에 등록")).toBe(true);
+    expect(html).toContain("등록 정보 확인을 통과해야 등록 버튼이 열립니다");
+  });
+});

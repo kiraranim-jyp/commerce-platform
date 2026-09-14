@@ -463,9 +463,15 @@ export function NaverPayloadPreview({
   // 나오면 두 곳이 다른 답을 보여줄 위험이 있다(CP001과 같은 종류) — 화면에
   // 등록 CTA/상태를 하나만 남기고, 이 컴포넌트는 "고급 검증 정보"(payload
   // 필드 단위 상세, 우측 카드가 안 보여주는 정보)만 담당한다.
+  // LOTTEON COMMERCE SPRINT 3(CEO 지시, 2026-09-14) — "Payload Preview"라는
+  // 이름을 버린다. 셀러에게 payload는 아무 뜻이 없고, preview는 "아직 진짜가
+  // 아니다"로 읽힌다 — 실제로는 **이 값이 그대로 전송된다**. 기능은 한 줄도
+  // 줄이지 않았다(아래 필드 단위 상세와 JSON 원문 모두 그대로다). 이름만
+  // 셀러의 말로 바꾼다. 쿠팡 탭(PlatformPreview)·롯데ON 탭도 같은 이름을 쓴다 —
+  // 채널마다 다른 이름을 붙이면 같은 것이 세 개로 보인다.
   return (
     <CollapsibleSection
-      title="Payload Preview"
+      title="등록 정보"
       summary="원산지 · 고시정보 · KC · 배송/반품 등 SmartStore 전용 항목입니다. 등록 가능 여부는 우측 등록 준비도 카드를 확인하세요."
     >
       {(blockedIssues.length > 0 || missingIssues.length > 0) && (
@@ -847,7 +853,8 @@ export function NaverPayloadPreview({
           onClick={() => setShowJson((v) => !v)}
           className="text-xs font-medium text-text-secondary underline decoration-border hover:text-text-primary"
         >
-          {showJson ? "Payload Preview 닫기" : "▶ Payload Preview (Naver v2 Request)"}
+          {/* 개발자용 원문 확인은 그대로 유지한다(CEO 명시) — 이름만 바꾼다. */}
+          {showJson ? "전송 데이터 원문 닫기" : "▶ 전송 데이터 원문 보기 (Naver v2 Request)"}
         </button>
       </div>
       {showJson && (
