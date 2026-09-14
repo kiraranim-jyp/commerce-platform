@@ -1453,6 +1453,13 @@ export function CommerceWorkspace({
    * validate-payload/buildCoupangCompliance가 결정한다 — 여기 ✓가 떠 있어도
    * 채널 화면에서 막힐 수 있고, 그 이유는 그 화면이 정확하게 말해준다.
    */
+  /**
+   * 지금 보고 있는 작업면. stage-focus.ts와 같은 규칙을 쓴다 — 여기서 먼저
+   * 선언하는 이유는 actionChecklist가 이 값을 읽어야 하기 때문이다(커머스
+   * 탭에서는 MI에서 온 항목을 목록에 넣지 않는다).
+   */
+  const workSurface: WorkSurface = tab === "source" ? "PRODUCT" : tab === "content" ? "CONTENT" : "CHANNEL";
+
   const actionChecklist: ChecklistItem[] = (() => {
     const items: ChecklistItem[] = [];
     const hasTitle = Boolean(product.title.value.trim());
@@ -1500,7 +1507,12 @@ export function CommerceWorkspace({
     });
     // N-4.07 — 가격경쟁력은 등록을 막지 않는다(대표님 지시). UNKNOWN은 "부족"이
     // 아니라 "아직 모름"이라 경고로 올리지 않는다.
-    if (priceLevel === "YELLOW" || priceLevel === "RED") {
+    //
+    // REWORK(CEO 지시, 2026-09-14) — 커머스 탭에서는 이 항목을 목록에 넣지
+    // 않는다. MI에서 온 유일한 항목이라(누르면 상품정보 탭의 판단 카드로
+    // 데려간다) 커머스 탭에 남겨두면 "MI를 제거했다"가 절반만 참이 된다.
+    // 상품정보 화면에서는 지금까지와 똑같이 뜬다.
+    if (workSurface !== "CHANNEL" && (priceLevel === "YELLOW" || priceLevel === "RED")) {
       items.push({
         key: "price-competitiveness",
         label: "가격경쟁력",
@@ -1601,7 +1613,6 @@ export function CommerceWorkspace({
    * 정하는 규칙표도 stage-focus.ts 한 곳에 있다. 이 컴포넌트가 하는 일은
    * "지금 어느 작업면을 보고 있는가"를 얹어주는 것뿐이다.
    */
-  const workSurface: WorkSurface = tab === "source" ? "PRODUCT" : tab === "content" ? "CONTENT" : "CHANNEL";
   /** 끝난 ②를 눌러(또는 요약 카드의 [판단 상세보기]) 판단을 펼쳐 둔 상태.
    * 단계를 ②로 되돌리는 것이 아니다 — 현재 단계는 그대로고 MI만 펼친다. */
   const [marketDetailOpen, setMarketDetailOpen] = useState(false);
@@ -2415,9 +2426,14 @@ export function CommerceWorkspace({
             <ReadinessLevelDot level={lotteOnLevel} /> 롯데ON
           </span>
         )}
-        <span className="flex items-center gap-1">
-          <PriceLevelDot level={priceLevel} /> 가격경쟁력
-        </span>
+        {/* REWORK(CEO 지시, 2026-09-14) — 가격경쟁력은 MI 요약이다. 커머스
+            탭에서는 이 한 점도 서지 않는다. 상품정보 화면에서는 그대로다 —
+            지우는 것은 "커머스 탭에서의 표시"뿐이다. */}
+        {workSurface !== "CHANNEL" && (
+          <span className="flex items-center gap-1">
+            <PriceLevelDot level={priceLevel} /> 가격경쟁력
+          </span>
+        )}
       </div>
 
       {/* ── UX 2.2(CEO 지시, 2026-09-11) — 하나의 작업 화면 ────────────────
@@ -2760,6 +2776,7 @@ export function CommerceWorkspace({
           <ActionCenter
             verdict={sellVerdict ? FINAL_VERDICT_COPY[sellVerdict] : null}
             verdictPending={!verdictReported}
+            verdictMode={stageFocus.actionCenter.verdict}
             checklist={actionChecklist}
             checklistMode={stageFocus.actionCenter.checklist}
             channels={registrationChannels}

@@ -245,13 +245,28 @@ const PLATFORM_TABS: PlatformId[] = ["smartstore", "coupang"];
 /* ─────────────────────────────────────────────────────────────────────── */
 
 describe("골격 — CEO 지시서의 섹션 구조와 실제 렌더 순서가 같다", () => {
-  /** 화면에 실제로 선 제목(h3)과 그룹 이름표를 순서대로. */
+  /**
+   * 화면에 실제로 선 제목과 그룹 이름표를 순서대로.
+   *
+   * 세 종류를 읽는다 — 세 탭이 쓰는 제목 표기가 실제로 그 셋이기 때문이다:
+   *   1. 접히지 않는 카드(등록 상태 · 등록 가능성)의 h3
+   *   2. 그룹 이름표(uppercase)
+   *   3. **CollapsibleSection의 제목** — REWORK(2026-09-14)에서 ①~⑦ 섹션이
+   *      스마트스토어·쿠팡 탭과 같은 컴포넌트를 쓰게 되면서 제목이 h3가 아니라
+   *      아코디언 머리의 span이 됐다. 기대 목록(아래 toEqual)은 한 줄도 바뀌지
+   *      않는다 — 바뀐 것은 제목을 그리는 컴포넌트뿐이고, 그것이 이번 작업의
+   *      목적이다(세 탭이 같은 섹션 껍데기를 쓴다).
+   */
   function sectionTitles(html: string): string[] {
-    const titles: string[] = [];
-    const pattern = /<(h3|p)[^>]*class="[^"]*(?:text-sm font-semibold text-text-primary|uppercase tracking-wide text-text-tertiary)[^"]*"[^>]*>([\s\S]*?)<\/\1>/g;
+    const found: { at: number; text: string }[] = [];
+    const heading = /<(h3|p)[^>]*class="[^"]*(?:text-sm font-semibold text-text-primary|uppercase tracking-wide text-text-tertiary)[^"]*"[^>]*>([\s\S]*?)<\/\1>/g;
     let match: RegExpExecArray | null;
-    while ((match = pattern.exec(html)) !== null) titles.push(stripTags(match[2]));
-    return titles;
+    while ((match = heading.exec(html)) !== null) found.push({ at: match.index, text: stripTags(match[2]) });
+
+    const accordion = /<span[^>]*class="[^"]*text-sm font-medium text-text-primary[^"]*"[^>]*>([\s\S]*?)<\/span>/g;
+    while ((match = accordion.exec(html)) !== null) found.push({ at: match.index, text: stripTags(match[1]) });
+
+    return found.sort((a, b) => a.at - b.at).map((entry) => entry.text);
   }
 
   it("롯데ON 탭의 섹션이 지시서 골격 순서 그대로 선다", () => {

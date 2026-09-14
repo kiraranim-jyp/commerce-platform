@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CanonicalProduct, LotteOnChannelInfo } from "@commerce/shared";
 import { Button } from "@/components/ui/Button";
+import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import {
   LOTTEON_CHILD_PRODUCT_ITEM_CODE,
   LOTTEON_FIX_LOCATION_LABEL,
@@ -664,7 +665,7 @@ export function LotteOnRegistrationPanel({
       </div>
 
       {/* ── ① 공통 상품정보 — 읽기 전용 ─────────────────────────────────── */}
-      <Section
+      <FormSection
         title="① 상품정보 (공통)"
         description="상품관리에 저장된 값입니다. 여기서는 고칠 수 없고, 고치면 스마트스토어·쿠팡에도 함께 반영됩니다."
         action={
@@ -693,7 +694,7 @@ export function LotteOnRegistrationPanel({
             비어 있는 항목은 롯데ON 탭에서 채울 수 없습니다 — 상품정보에서 채우면 이 표와 등록 정보가 함께 갱신됩니다.
           </p>
         )}
-      </Section>
+      </FormSection>
 
       {/* ── ② 셀러 설정 정보 — 읽기 전용 ─────────────────────────────────── */}
       {/*
@@ -707,7 +708,7 @@ export function LotteOnRegistrationPanel({
         하나뿐이어야 값이 두 벌로 갈라지지 않는다(스마트스토어·쿠팡의
         settingsMissing이 /settings로 보내는 것과 같은 원칙이다).
       */}
-      <Section
+      <FormSection
         id="lotteon-section-seller-settings"
         title="② 셀러 설정 정보 (배송 정책 · 반품/교환)"
         description="비즈니스 설정 — Settings에서 한 번만 하면 됩니다. 스마트스토어·쿠팡의 「배송 정책 · 반품/교환」과 같은 배송 프로필을 읽습니다. 이 탭에서는 고칠 수 없습니다."
@@ -733,10 +734,10 @@ export function LotteOnRegistrationPanel({
             <SellerSettingRow key={row.label} row={row} />
           ))}
         </dl>
-      </Section>
+      </FormSection>
 
       {/* ── ③ 카테고리 — 표준 + 전시 2중 · 추천 ──────────────────────────── */}
-      <Section
+      <FormSection
         id="lotteon-section-category"
         title="③ 카테고리 (롯데ON 전용 · 2중 구조)"
         description="롯데ON은 표준카테고리 1개와 전시카테고리 1개 이상을 함께 요구합니다. 여기서 고른 값은 롯데ON에만 적용되고, 스마트스토어·쿠팡 카테고리를 덮어쓰지 않습니다."
@@ -802,7 +803,7 @@ export function LotteOnRegistrationPanel({
             onPick={addDisplayCategory}
           />
         </div>
-      </Section>
+      </FormSection>
 
       {/* ── 롯데ON 필수 등록정보 (④ 고시 · ⑤ 안전인증 · ⑥ 배송) ────────── */}
       <GroupHeading
@@ -810,7 +811,7 @@ export function LotteOnRegistrationPanel({
         description="아래 세 가지는 롯데ON이 등록 필수로 요구하고, 상품정보에서도 셀러 설정에서도 파생할 수 없는 값입니다."
       />
 
-      <Section
+      <FormSection
         id="lotteon-section-notice"
         title="④ 상품정보제공고시 (롯데ON 전용)"
         description="품목코드는 표준카테고리를 고르면 함께 따라옵니다. 항목코드 체계는 품목마다 달라 자동으로 만들지 않습니다."
@@ -854,10 +855,10 @@ export function LotteOnRegistrationPanel({
             </ul>
           </div>
         )}
-      </Section>
+      </FormSection>
 
       {/* ── ⑤ 인증 ──────────────────────────────────────────────────────── */}
-      <Section
+      <FormSection
         id="lotteon-section-certification"
         title="⑤ 안전인증 (롯데ON 전용)"
         description="인증번호는 실제 취득한 값만 사용할 수 있습니다 — 어떤 경우에도 자동 생성하지 않습니다."
@@ -911,10 +912,10 @@ export function LotteOnRegistrationPanel({
             onChange={(value) => patch("certification", { importProxyCode: value })}
           />
         </div>
-      </Section>
+      </FormSection>
 
       {/* ── ⑥ 배송 ──────────────────────────────────────────────────────── */}
-      <Section
+      <FormSection
         id="lotteon-section-delivery"
         title="⑥ 배송 (롯데ON 전용)"
         description="출고지 · 반품지 · 배송비 정책은 롯데ON 판매자센터에 먼저 등록해야 생기는 번호입니다. 우리가 만들 수 없습니다."
@@ -974,7 +975,7 @@ export function LotteOnRegistrationPanel({
             onChange={(value) => patch("delivery", { weekdayCloseTime: value })}
           />
         </div>
-      </Section>
+      </FormSection>
 
       {/* ── 롯데ON 고유 관리정보 (⑦) ───────────────────────────────────── */}
       <GroupHeading
@@ -982,7 +983,7 @@ export function LotteOnRegistrationPanel({
         description="롯데ON 코드체계를 따르는 값입니다 — 상품정보의 텍스트나 셀러 설정에서 코드를 정할 수 없습니다."
       />
 
-      <Section
+      <FormSection
         id="lotteon-section-codes"
         title="⑦ 그 밖의 롯데ON 코드"
         description="원산지·과세·브랜드는 롯데ON 코드체계를 따릅니다 — 상품정보의 원산지 텍스트로는 코드를 정할 수 없습니다."
@@ -1019,7 +1020,7 @@ export function LotteOnRegistrationPanel({
             onChange={(value) => patch("codes", { externalProductNo: value })}
           />
         </div>
-      </Section>
+      </FormSection>
 
       {/* ── 검증 · 등록 ─────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-2">
@@ -1207,6 +1208,54 @@ function SellerSettingRow({ row }: { row: LotteOnSellerSettingRow }) {
   );
 }
 
+/**
+ * REWORK 커머스 등록 구조 통일(CEO 지시, 2026-09-14) — ①~⑦ 입력 섹션의 껍데기.
+ *
+ * 🔴 **새 껍데기를 만들지 않는다.** 스마트스토어·쿠팡 탭(PlatformPreview)의
+ * 「기본정보 · 카테고리 · 옵션 · 가격 · 배송 · 고시정보 · KC · 상세설명 ·
+ * 등록 정보」가 쓰는 바로 그 `@/components/ui/CollapsibleSection`을 그대로
+ * 쓴다. 지금까지 롯데ON만 자기 `Section`(항상 펼쳐진 카드)을 갖고 있었고,
+ * 그래서 같은 자리에 있는 같은 성격의 섹션이 세 탭에서 다르게 보였다 —
+ * CEO가 "롯데ON만 뭔가 다른 상품등록 페이지"라고 읽은 차이가 이것이다.
+ *
+ * 두 가지만 맞춰준다:
+ *  1. `description`은 CollapsibleSection의 `summary` 자리로 간다(접었을 때도
+ *     보이는 한 줄 — 그 컴포넌트가 이미 그 용도로 갖고 있는 슬롯이다).
+ *  2. `action`(버튼/링크)은 **본문 안**으로 내린다. CollapsibleSection의 머리는
+ *     통째로 `<button>`이라 그 안에 버튼을 넣으면 중첩 버튼이 된다.
+ *
+ * `defaultOpen`은 true다 — 오늘 화면에서 보이던 것이 내일 사라지지 않게 한다.
+ * 달라지는 것은 **접을 수 있게 됐다**는 것뿐이고, 그게 "긴 단일 컬럼"을 스마트
+ * 스토어·쿠팡과 같은 길이로 만드는 수단이다.
+ */
+function FormSection({
+  id,
+  title,
+  description,
+  action,
+  children,
+}: {
+  id?: string;
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <CollapsibleSection id={id} title={title} summary={description} defaultOpen>
+      {action && <div className="mb-3 flex flex-wrap items-center justify-end gap-2">{action}</div>}
+      {children}
+    </CollapsibleSection>
+  );
+}
+
+/**
+ * 맨 위 두 장(등록 상태 · 등록 가능성)의 껍데기.
+ *
+ * 이 둘은 접히지 않는다 — 스마트스토어·쿠팡 탭에서도 같은 자리의
+ * RegistrationStatusBanner / RegistrationReadinessCard가 접히지 않는 카드이기
+ * 때문이다. 세 탭의 첫 화면이 같은 모양이어야 한다.
+ */
 function Section({
   id,
   title,

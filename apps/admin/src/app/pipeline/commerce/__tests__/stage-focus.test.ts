@@ -147,11 +147,35 @@ describe("MI의 무게는 단계가 정한다 — 데이터가 아니라 표현�
     expect(opened.stage).toBe("REGISTRATION_PREPARING");
   });
 
-  it("채널 화면 위에 판단을 통째로 펼치지 않는다 — 결론만 남긴다", () => {
-    // 등록하러 들어온 화면에서 판단 카드부터 스크롤해 내려가게 만들지 않는다.
-    expect(focus("MARKET_JUDGING", { surface: "CHANNEL" }).mi).toBe("SUMMARY");
-    // 다만 셀러가 직접 펼쳤다면 그 의사가 우선이다.
-    expect(focus("MARKET_JUDGING", { surface: "CHANNEL", marketDetailOpen: true }).mi).toBe("FULL");
+  /**
+   * REWORK 커머스 등록 구조 통일(CEO 지시, 2026-09-14) — 규칙이 바뀐 자리다.
+   *
+   * 전까지는 채널 화면에서 MI를 "결론 한 줄(SUMMARY)"로 남겼다. CEO 표가 세 탭
+   * 모두 `MI 표시/관리 = 제거`로 바뀌었으므로 한 줄도 남기지 않는다 — 커머스
+   * 탭에서 처음 읽는 문장이 "팔아도 되는가"가 되면 셀러는 등록을 막는 것이
+   * 판매 판단인 줄로 읽는다.
+   */
+  it("커머스 탭에는 MI가 한 줄도 서지 않는다 — 요약조차 남기지 않는다", () => {
+    for (const stage of BIG_STEP_ORDER) {
+      expect(focus(stage, { surface: "CHANNEL" }).mi).toBe("HIDDEN");
+    }
+  });
+
+  it("상품정보 탭에서 판단을 펼쳐 둔 채 커머스 탭으로 와도 MI는 서지 않는다", () => {
+    // marketDetailOpen보다 작업면 판정이 먼저다 — 그러지 않으면 "제거"가
+    // 셀러의 직전 클릭 하나로 되돌아온다.
+    expect(focus("MARKET_JUDGING", { surface: "CHANNEL", marketDetailOpen: true }).mi).toBe("HIDDEN");
+    // 상품정보 화면에서는 지금까지와 똑같다.
+    expect(focus("MARKET_JUDGING", { surface: "PRODUCT", marketDetailOpen: true }).mi).toBe("FULL");
+  });
+
+  it("커머스 탭에서는 오른쪽 기둥도 판매 판단을 말하지 않는다", () => {
+    for (const stage of BIG_STEP_ORDER) {
+      expect(focus(stage, { surface: "CHANNEL" }).actionCenter.verdict).toBe("DEFERRED");
+      // 상품정보/AI 콘텐츠 화면에서는 그대로 남는다 — 지운 것은 커머스 탭뿐이다.
+      expect(focus(stage, { surface: "PRODUCT" }).actionCenter.verdict).toBe("LIST");
+      expect(focus(stage, { surface: "CONTENT" }).actionCenter.verdict).toBe("LIST");
+    }
   });
 });
 

@@ -137,6 +137,15 @@ export interface StageFocus {
    */
   sourceData: SectionWeight;
   actionCenter: {
+    /**
+     * 판매 판단(MI) 결론 한 줄.
+     *
+     * REWORK 커머스 등록 구조 통일(CEO 지시, 2026-09-14) — **커머스 탭에서는
+     * DEFERRED다.** 아래 mi 계산과 같은 이유다: 등록하러 온 화면에서 "팔아도
+     * 되는가"를 다시 물으면 두 질문이 한 화면에 서고, 셀러는 등록을 막는 것이
+     * 판매 판단인 줄 읽는다. 판단은 상품정보 화면 하나의 것이다.
+     */
+    verdict: PanelMode;
     /** 등록 전 확인 목록. ③ 본문이 같은 목록을 이미 갖고 있으면 한 줄로 접는다. */
     checklist: PanelMode;
     /** 채널 버튼. ④ 본문이나 채널 화면이 이미 그 행동을 갖고 있으면 한 줄로 접는다. */
@@ -161,17 +170,36 @@ const IMAGE_ROLE_BY_STAGE: Record<BigStepKey, ImageRole> = {
 export function resolveStageFocus(input: StageFocusInput): StageFocus {
   const { stage, surface, marketDetailOpen } = input;
 
+  /**
+   * REWORK 커머스 등록 구조 통일(CEO 지시, 2026-09-14) — **커머스 탭에 MI를
+   * 표시하지 않는다.**
+   *
+   * 지금까지 채널 화면은 MI를 SUMMARY로 남겨 두고 있었다. 그래서 스마트스토어·
+   * 쿠팡·롯데ON 세 탭 모두 본문 맨 위에 판단 카드가 한 줄 서 있었고, 그 아래에
+   * 등록 준비가 왔다. 셀러가 등록하러 들어온 화면에서 처음 읽는 문장이 "팔아도
+   * 되는가"였다는 뜻이다 — 등록을 막는 것이 판매 판단이라고 읽힐 수밖에 없다.
+   * CEO 표가 세 탭 모두 `MI 표시/관리 = 제거`인 이유가 이것이다.
+   *
+   * 🔴 **계산을 끄는 것이 아니다.** HIDDEN은 DomesticPriceIntelligencePanel이
+   * 훅을 전부 돌린 뒤 화면만 비우는 값이다(그 파일의 `presentation === "HIDDEN"`
+   * → `return null`이 훅 아래에 있다). 패널은 탭 분기 밖에서 계속 마운트된 채로
+   * 있으므로, UX 2.2가 고쳤던 "쿠팡 탭으로 복원된 세션에서 시장 분석이 시작조차
+   * 되지 않던" 버그는 되돌아오지 않는다.
+   *
+   * marketDetailOpen보다 이 판정이 **먼저** 온다. 상품정보 탭에서 판단을 펼쳐
+   * 둔 채 채널 탭으로 넘어와도 커머스 탭에는 MI가 서지 않아야 하기 때문이다.
+   */
   const mi: MiPresentation =
-    // 수집 중에는 판단의 근거가 아직 하나도 없다. 접힌 요약조차 지어낼 값이 없다.
-    stage === "COLLECTING"
+    surface === "CHANNEL"
       ? "HIDDEN"
-      : marketDetailOpen
-        ? "FULL"
-        : // 채널 화면은 ④의 작업면이다. 그 위에 MI를 통째로 펼치면 등록하러 온
-          // 셀러가 판단 카드부터 다시 스크롤해 내려가야 한다 — 결론만 남긴다.
-          surface === "PRODUCT" && stage === "MARKET_JUDGING"
+      : // 수집 중에는 판단의 근거가 아직 하나도 없다. 접힌 요약조차 지어낼 값이 없다.
+        stage === "COLLECTING"
+        ? "HIDDEN"
+        : marketDetailOpen
           ? "FULL"
-          : "SUMMARY";
+          : surface === "PRODUCT" && stage === "MARKET_JUDGING"
+            ? "FULL"
+            : "SUMMARY";
 
   // 본문이 이미 갖고 있는 블록은 오른쪽에서 한 줄로 접는다. 같은 목록을 본문과
   // 오른쪽에 두 번 두면 셀러는 둘이 다른 것인 줄 알고 두 번 읽는다 — CEO가
@@ -204,6 +232,9 @@ export function resolveStageFocus(input: StageFocusInput): StageFocus {
     marketEvidence: stage === "MARKET_JUDGING" ? "MAIN" : "COLLAPSED",
     sourceData: "COLLAPSED",
     actionCenter: {
+      // 커머스 탭에서는 오른쪽 기둥도 판매 판단을 말하지 않는다 — 본문에서만
+      // 지우고 오른쪽에 남겨두면 "MI를 제거했다"가 절반만 참이 된다.
+      verdict: surface === "CHANNEL" ? "DEFERRED" : "LIST",
       // 본문이 같은 목록을 갖고 있는 쪽이 먼저다. 그때는 "지금 저기서 하고
       // 있다"는 진척이 반복이 아니라 안내이기 때문이다(UX 2.2 그대로).
       checklist: bodyOwnsChecklist ? "SUMMARY" : miOwnsBody ? "DEFERRED" : "LIST",

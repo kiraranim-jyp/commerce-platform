@@ -46,6 +46,7 @@ import type { PanelMode } from "./stage-focus";
 export function ActionCenter({
   verdict,
   verdictPending,
+  verdictMode = "LIST",
   checklist,
   checklistMode = "LIST",
   channels,
@@ -59,6 +60,11 @@ export function ActionCenter({
   verdict: { icon: string; title: string; tone: "GOOD" | "CAUTION" | "STOP" } | null;
   /** 분석이 아직 끝나지 않았는가. null verdict를 "나쁨"으로 읽지 않게 구분한다. */
   verdictPending: boolean;
+  /**
+   * LIST = 판단 한 줄 그대로. DEFERRED = **이 화면에서는 판매 판단을 말하지
+   * 않는다**(커머스 탭). stage-focus.ts가 정하고 여기서는 따르기만 한다.
+   */
+  verdictMode?: PanelMode;
   checklist: ChecklistItem[];
   /** LIST = 목록 그대로. SUMMARY = 본문이 이 목록을 갖고 있으므로 한 줄로. */
   checklistMode?: PanelMode;
@@ -100,7 +106,13 @@ export function ActionCenter({
   return (
     <aside className="space-y-2 lg:sticky lg:top-4">
       {/* ① 판매 판단 — 왼쪽 카드와 같은 값이다. 여기서는 결론 한 줄만 두고
-          근거는 반복하지 않는다(누르면 왼쪽 판단 카드로 데려간다). */}
+          근거는 반복하지 않는다(누르면 왼쪽 판단 카드로 데려간다).
+
+          REWORK(CEO 지시, 2026-09-14) — 커머스 탭(verdictMode="DEFERRED")에서는
+          이 블록 자체가 서지 않는다. 본문에서 MI를 지우고 오른쪽에만 남겨두면
+          "커머스 탭에서 MI를 제거했다"가 절반만 참이 되기 때문이다. 지우는 것은
+          **이 화면에서의 표시**뿐이고 판단·계산은 그대로 돈다. */}
+      {verdictMode !== "DEFERRED" && (
       <section className="rounded-lg border border-border bg-surface px-3 py-2.5 shadow-subtle">
         {/* P2-4 — 세 카드의 머리말은 globals.css의 Label 규약(text-[11px]
             font-medium tertiary)을 그대로 쓴다. leading-4를 붙이는 이유는
@@ -128,6 +140,7 @@ export function ActionCenter({
               : "가격 근거가 아직 없어 판단을 세우지 못했습니다"}
         </p>
       </section>
+      )}
 
       {/* ② 등록 전 확인 — 판단과 등록 사이에서 실제로 걸리는 것만. 새 판정이
           아니라 이미 계산된 상품정보 레벨/채널별 priorityItems를 옮긴다. */}
