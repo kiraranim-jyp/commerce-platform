@@ -493,6 +493,113 @@ describe("MATCHING-2.0-REGRESSION 회귀 — 아기옷이 아동복의 동일상
 });
 
 /**
+ * MATCHING-3.2-B(CEO 지시, 2026-09-14) — 아기옷/아동복을 `KIDS` 하나로 뭉개던
+ * 자리를 가른다.
+ *
+ * ── 왜 872defc(사이즈)만으로는 부족했나 ─────────────────────────────────────
+ * 바로 위 MATCHING-2.0-REGRESSION 회귀는 **후보에 사이즈가 있는 픽스처**로 고정돼
+ * 있다(`/products/{handle}.js` 원문). 그런데 운영이 후보를 만드는 경로는
+ * `/search/suggest.json`이고 그 응답에는 `options` 칸이 아예 없다 — 즉
+ * `shopifySizeLabels()`가 언제나 빈 배열을 돌려주고 `SIZE_SYSTEM` 보류는
+ * **운영에서 한 번도 발화할 수 없다**(2026-09-14 라이브 실측, 후보 경로 18개
+ * 전부. docs/matching-2.0-regression-430632.md §10).
+ *
+ * 그래서 여기서는 같은 픽스처의 **사이즈를 지운 채** — 운영 후보와 똑같은 모양으로
+ * — 같은 다섯 쌍을 다시 잰다. 사이즈가 없으면 872defc의 보류는 사라지고, 남는
+ * 것은 원문이 직접 말한 "Baby"뿐이다.
+ *
+ * ── 무엇이 그 말을 듣게 했나 ────────────────────────────────────────────────
+ * `resolveAudienceGroup`은 baby/newborn을 이미 어휘로 갖고 있었지만 결과를 `KIDS`
+ * 한 값으로 환원했다. 그래서 `type="Baby T Shirt"`라고 적힌 상품이 아동복과 같은
+ * 값이 되고, 오탐에 `AUDIENCE +1`까지 보태고 있었다. 이제 라인(BABY/CHILD/JUNIOR)을
+ * 따로 읽고, 서로 다른 라인이면 **보류**한다 — 충돌이 아니다.
+ */
+describe("MATCHING-3.2-B 회귀 — 운영 후보 모양(사이즈 없음)에서도 아기옷이 막힌다", () => {
+  /** 운영 후보와 같은 모양 — `/search/suggest.json` 응답에는 `options`가 없다. */
+  const asSearchSuggest = (facts: ProductFacts): ProductFacts => ({ ...facts, sizeLabels: [] });
+
+  const BABY_FALSE_SAME: [string, () => ProductFacts][] = [
+    ["bobochoses.com Mush Monster Duo all over T-shirt", () => bobo("B226AB043")],
+    ["bobochoses.com Softpaw Monster all over T-shirt", () => bobo("B226AB048")],
+    [
+      "Junior Edition Mush Monster Duo All Over Baby T-Shirt",
+      () => junior("mush-monster-duo-all-over-baby-t-shirt-by-bobo-choses"),
+    ],
+    [
+      "Junior Edition Juicy Tomatoes All Over Baby T-Shirt",
+      () => junior("juicy-tomatoes-all-over-baby-t-shirt-by-bobo-choses"),
+    ],
+    [
+      "Junior Edition Bobo Choses Color All Over Baby T-Shirt",
+      () => junior("bobo-choses-color-all-over-baby-t-shirt-by-bobo-choses"),
+    ],
+  ];
+
+  it.each(BABY_FALSE_SAME)("430632 ↔ %s: 사이즈를 지워도 SAME이 아니다", (_label, other) => {
+    const candidate = asSearchSuggest(other());
+    // 전제 확인 — 이 모양에서는 872defc의 보류가 발화할 자리가 없다.
+    expect(candidate.sizeLabels).toEqual([]);
+    const match = compareCrossSellerProducts(SMALLABLE_430632(), candidate);
+    expect(match.blockers.map((b) => b.blocker)).not.toContain("SIZE_SYSTEM");
+    // 남은 근거는 원문이 직접 말한 연령 라인뿐이다.
+    expect(match.blockers.map((b) => b.blocker)).toContain("AUDIENCE_LINE");
+    expect(match.verdict).not.toBe("SAME");
+    expect(isSameProductForPricing(match)).toBe(false);
+    expect(deriveMatchTruth("low", "unavailable", match.verdict)).not.toBe("STRONG_IDENTIFIER");
+  });
+
+  it("보류이지 충돌이 아니다 — 아기옷과 아동복을 '다른 상품'이라고 확정하지 않는다", () => {
+    for (const [, other] of BABY_FALSE_SAME) {
+      const match = compareCrossSellerProducts(SMALLABLE_430632(), asSearchSuggest(other()));
+      expect(match.conflicts).toEqual([]);
+      expect(match.verdict).not.toBe("CONFLICT");
+    }
+  });
+
+  it("다섯 건 전부 방향을 바꿔도 같은 답이다", () => {
+    for (const [, other] of BABY_FALSE_SAME) {
+      expect(verdictBothWays(SMALLABLE_430632(), asSearchSuggest(other()))).not.toBe("SAME");
+    }
+  });
+
+  it("정답 쌍 430632 ↔ B226AC018 은 사이즈를 지워도 SAME이다", () => {
+    const match = compareCrossSellerProducts(SMALLABLE_430632(), asSearchSuggest(bobo("B226AC018")));
+    expect(match.verdict).toBe("SAME");
+    expect(match.blockers).toEqual([]);
+    expect(deriveMatchTruth("low", "unavailable", match.verdict)).toBe("STRONG_IDENTIFIER");
+  });
+
+  it("같은 라인끼리는 막지 않는다 — 이 규칙이 아무 데나 발화하지 않는다는 것", () => {
+    // 아기↔아기(B226AB043 ↔ B226AB048), 아동↔아동(430632 ↔ B226AC018).
+    for (const [left, right] of [
+      [asSearchSuggest(bobo("B226AB043")), asSearchSuggest(bobo("B226AB048"))],
+      [SMALLABLE_430632(), asSearchSuggest(bobo("B226AC018"))],
+    ] as const) {
+      expect(compareCrossSellerProducts(left, right).blockers.map((b) => b.blocker)).not.toContain("AUDIENCE_LINE");
+    }
+  });
+
+  it("한쪽이 연령을 말하지 않으면 보류도 가점도 없다 — 증거 없이 채우지 않는다", () => {
+    // 라인을 읽을 말이 하나도 없는 후보(실측: junioredition.com 아동 상품의 태그는
+    // 연령 낱말이 아니라 사이즈 목록이라 라인이 읽히지 않는다). 모름은 반증이 아니다.
+    const silent: ProductFacts = {
+      ...asSearchSuggest(bobo("B226AB043")),
+      audienceSignals: [],
+      categoryText: null,
+      title: "All over T-shirt",
+    };
+    const match = compareCrossSellerProducts(SMALLABLE_430632(), silent);
+    expect(match.blockers.map((b) => b.blocker)).not.toContain("AUDIENCE_LINE");
+  });
+
+  it("성인↔아동은 여전히 CONFLICT다 — 이번 변경이 그 규칙을 약화시키지 않았다", () => {
+    const match = compareCrossSellerProducts(SMALLABLE_430632(), asSearchSuggest(bobo("B226AD013")));
+    expect(match.verdict).toBe("CONFLICT");
+    expect(match.conflicts.map((c) => c.conflict)).toContain("AUDIENCE");
+  });
+});
+
+/**
  * 이전부터 쌓아 온 미매칭 쌍. 답이 확정된 인수 테스트가 아니라 **계속 추적하기
  * 위한** 항목이라, 지금 어떤 등급에 서는지와 그 이유를 그대로 고정해 둔다 —
  * 다음에 누가 무엇을 바꾸든 이 두 쌍의 상태 변화가 테스트로 드러난다.

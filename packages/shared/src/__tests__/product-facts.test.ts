@@ -10,6 +10,7 @@ import {
   parseMaterialComposition,
   resolveAdultGender,
   resolveAudienceGroup,
+  resolveAudienceLine,
   resolveColorHueGroups,
   tokenizeFactText,
 } from "../product-facts";
@@ -138,6 +139,60 @@ describe("대상 연령 / 성별 — 제목이 아니라 사이트 자신의 분
   it("성별은 성인 표기에서만 읽는다 — 아동 매장의 Boy/Girl 진열 칸으로 충돌을 만들지 않는다", () => {
     expect(resolveAdultGender(["Home", "Fashion  Children", "Boy"])).toBeNull();
     expect(resolveAdultGender(["adult", "Woman"])).toBe("FEMALE");
+  });
+});
+
+/**
+ * MATCHING-3.2-B(CEO 지시, 2026-09-14) — 아동 안쪽의 연령 라인.
+ *
+ * 여기 나오는 신호는 전부 2026-09-14 라이브 실측 원문이다(Smallable breadcrumb,
+ * bobochoses.com / junioredition.com 상품 태그·상품유형).
+ */
+describe("아동 안쪽의 연령 라인 — 원문이 직접 말한 것만 읽는다", () => {
+  it("판매처가 아기라고 적으면 BABY다 — 같은 상품에 붙은 우산말(children)이 그것을 덮지 않는다", () => {
+    // bobochoses.com 아기 상품의 실제 태그. "children"이 함께 붙어 있다.
+    expect(resolveAudienceLine(["aw26", "Baby", "children", "clothing", "trousers"])).toBe("BABY");
+    // junioredition.com 아기 상품의 실제 태그 + 상품유형.
+    expect(resolveAudienceLine(["all-baby", "baby", "baby-tops", "6-12-months", "Baby T Shirt"])).toBe("BABY");
+    expect(resolveAudienceLine(["0-3-months", "newborn", "Bodysuit"])).toBe("BABY");
+    // Smallable은 매장 자체가 부서로 갈려 있다(breadcrumb 실측).
+    expect(resolveAudienceLine(["Home", "Fashion  Baby", "Girl", "Swimwear"])).toBe("BABY");
+  });
+
+  it("아동은 CHILD다", () => {
+    expect(resolveAudienceLine(["aw26", "children", "clothing", "Kid", "t-shirts"])).toBe("CHILD");
+    expect(resolveAudienceLine(["Home", "Fashion  Children", "Boy", "Blouses, T-shirts"])).toBe("CHILD");
+    expect(resolveAudienceLine(["kids", "T Shirt"])).toBe("CHILD");
+  });
+
+  it("주니어는 JUNIOR다", () => {
+    expect(resolveAudienceLine(["Boys", "Junior Boys", "T-Shirts"])).toBe("JUNIOR");
+  });
+
+  it("원문이 아무 말도 안 하면 null이다 — 아동일 거라고 채우지 않는다", () => {
+    // junioredition.com 아동 상품의 흔한 태그는 연령 낱말이 아니라 사이즈 목록이다.
+    expect(resolveAudienceLine(["1-year", "10-years", "2-years", "t-shirts", "tops", "T Shirt"])).toBeNull();
+    expect(resolveAudienceLine([])).toBeNull();
+    // 성인 상품에도 아동 라인은 없다 — 이 축은 아동 안쪽만 가른다.
+    expect(resolveAudienceLine(["bobo-choses-adult", "womens-tops", "T Shirt"])).toBeNull();
+    // toddler는 어느 라인에도 넣지 않았다 — 실측에서 그 말을 단 96건 전부 사이즈
+    // 라벨이 없어 아기인지 아동인지 데이터가 말해주지 않는다.
+    expect(resolveAudienceLine(["toddler", "T Shirt"])).toBeNull();
+  });
+
+  it("KIDS/ADULT 축은 그대로다 — 이 축은 성인↔아동 규칙을 건드리지 않는다", () => {
+    const babyTags = ["all-baby", "baby", "baby-tops", "Baby T Shirt"];
+    const childTags = ["aw26", "children", "clothing", "Kid", "t-shirts"];
+    expect(resolveAudienceGroup(babyTags)).toBe("KIDS");
+    expect(resolveAudienceGroup(childTags)).toBe("KIDS");
+    expect(resolveAudienceLine(babyTags)).toBe("BABY");
+    expect(resolveAudienceLine(childTags)).toBe("CHILD");
+  });
+
+  it("한글 표기도 같은 파이프라인을 통과한다", () => {
+    expect(resolveAudienceLine(["베이비", "티셔츠"])).toBe("BABY");
+    expect(resolveAudienceLine(["아동", "티셔츠"])).toBe("CHILD");
+    expect(resolveAudienceLine(["주니어"])).toBe("JUNIOR");
   });
 });
 

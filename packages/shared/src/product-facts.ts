@@ -487,6 +487,64 @@ export function resolveAudienceGroup(signals: string[]): AudienceGroup | null {
 }
 
 /**
+ * MATCHING-3.2-B(CEO 지시, 2026-09-14) — `KIDS` 안쪽의 **연령 라인**.
+ *
+ * ── 왜 AudienceGroup을 쪼개지 않았나 ────────────────────────────────────────
+ * 위 `AudienceGroup`은 그대로 둔다. 그 타입을 세 값으로 늘리는 순간
+ * cross-seller.ts의 `compareAudience` 불일치가 곧바로 **CONFLICT**가 되고,
+ * `BABY ↔ CHILD`가 "다른 상품"으로 확정된다 — CEO가 명시적으로 금지한 동작이다
+ * (이번 작업은 잘못된 SAME을 막는 증거 정밀화이지, AUDIENCE 불일치를 새로운
+ * 충돌로 만드는 작업이 아니다). 그래서 성인↔아동을 가르는 축은 손대지 않고,
+ * 아동 안쪽을 가르는 축을 **따로** 둔다. 이 축은 점수를 주지 않고 보류만 만든다
+ * (cross-seller.ts의 `AUDIENCE_LINE` 보류).
+ *
+ * ── 어휘는 늘리지 않았다. 이미 갖고 있던 말을 살렸을 뿐이다 ─────────────────
+ * 아래 세 목록의 낱말은 전부 위 `KIDS_TOKENS`에 이미 있던 것이다. 지금까지는
+ * "baby"도 "kid"도 똑같이 `KIDS` 한 값으로 환원돼서, 원문이 직접 "Baby"라고
+ * 말하고 있는데도 그 말이 판정에 닿지 못했다(matching-2.0-regression-430632 §10-3).
+ *
+ * ── 우선순위의 근거(2026-09-14 카탈로그 전수 실측) ──────────────────────────
+ * 같은 상품에 여러 말이 함께 붙는다. 그때 **더 구체적인 말**이 이긴다.
+ * 사이즈 체계를 정답으로 놓고 두 카탈로그 22,251건을 세어 보면:
+ *
+ *   bobochoses.com   "baby"      개월형 140 · 연령형   0   → 100.0% 아기
+ *                    "newborn"   개월형  33 · 연령형   0   → 100.0% 아기
+ *                    "kid"       개월형   1 · 연령형 264   →  99.6% 아동
+ *                    "children"  개월형 140 · 연령형 264   → **아기와 아동 둘 다에 붙는 우산말**
+ *   junioredition.com "baby"     개월형 543 · 연령형  12   →  97.8% 아기
+ *                    "kid"/"kids" 개월형  0 · 연령형 186   → 100.0% 아동
+ *
+ * 즉 "children"은 혼자서는 아동을 뜻하지 않는다(bobochoses.com의 아기 상품
+ * 140건이 전부 이 말을 달고 있다). 그런데 그 140건은 **동시에 "baby"도 달고
+ * 있어서**, BABY를 먼저 보는 것만으로 갈린다. 반대로 Smallable은 매장 자체가
+ * "Fashion Baby / Fashion Children / Fashion Teen"으로 갈라져 있어 "Children"이
+ * 그대로 아동을 뜻한다(실측 breadcrumb). 한 목록으로 두 판매처를 다 맞추는 방법이
+ * 우선순위다.
+ *
+ * `toddler`는 어느 라인에도 넣지 않았다 — junioredition.com 96건 전부 사이즈
+ * 라벨이 없어 아기인지 아동인지 **데이터가 말해주지 않는다**. 짐작으로 채우면
+ * 그 짐작이 곧바로 보류(=SAME 차단)가 되므로 모르는 채로 둔다.
+ */
+export type AudienceLine = "BABY" | "CHILD" | "JUNIOR";
+
+const BABY_LINE_TOKENS = normalizedWordSet(["baby", "babies", "newborn", "베이비"]);
+const JUNIOR_LINE_TOKENS = normalizedWordSet(["junior", "주니어"]);
+const CHILD_LINE_TOKENS = normalizedWordSet(["kid", "kids", "child", "children", "childrens", "아동", "키즈"]);
+
+/**
+ * 원문이 **직접 말한** 연령 라인만 돌려준다. 아무 말도 없으면 `null`이고,
+ * `null`은 "아동 라인 어딘가"가 아니라 **모름**이다 — 호출부는 이 값이 양쪽 다
+ * 있을 때만 무언가를 한다. 증거 없이 BABY/CHILD/JUNIOR를 채우지 않는다.
+ */
+export function resolveAudienceLine(signals: string[]): AudienceLine | null {
+  const tokens = new Set(signals.flatMap((s) => tokenizeFactText(s)));
+  for (const token of tokens) if (BABY_LINE_TOKENS.has(token)) return "BABY";
+  for (const token of tokens) if (JUNIOR_LINE_TOKENS.has(token)) return "JUNIOR";
+  for (const token of tokens) if (CHILD_LINE_TOKENS.has(token)) return "CHILD";
+  return null;
+}
+
+/**
  * 성별은 **성인 표기가 양쪽에 다 있을 때만** 읽는다. 아동복의 boy/girl은 상품의
  * 성질이라기보다 매장의 진열 칸이라서(같은 유니섹스 티셔츠가 한 판매처에서는
  * Boy, 다른 곳에서는 Girl에 걸린다) 이걸로 충돌을 선언하면 진짜 동일상품이

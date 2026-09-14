@@ -55,10 +55,12 @@ import {
   parseMaterialComposition,
   resolveAdultGender,
   resolveAudienceGroup,
+  resolveAudienceLine,
   resolveColorHueGroups,
   resolveGarmentForms,
   tokenizeFactText,
   type AudienceGroup,
+  type AudienceLine,
   type ColorHueGroup,
   type GarmentForm,
   type GenderGroup,
@@ -89,6 +91,9 @@ export type CrossSellerBlocker =
   | "BRAND_UNCONFIRMED"
   | "NO_TITLE_OVERLAP"
   | "GARMENT_FORM"
+  /** MATCHING-3.2-B — 양쪽이 서로 다른 아동 연령 라인(아기/아동/주니어)을 **직접
+   * 말했다**. 충돌이 아니라 보류다 — compareAudienceLine 주석 참고. */
+  | "AUDIENCE_LINE"
   | "SAME_SELLER_DISTINCT_LISTING";
 
 export type CrossSellerAxis =
@@ -251,6 +256,50 @@ function compareAudience(x: ProductFacts, y: ProductFacts): {
   };
   const left = resolveAudienceGroup(signalsOf(x));
   const right = resolveAudienceGroup(signalsOf(y));
+  if (!left || !right) return { outcome: "unknown", values: [left, right] };
+  return { outcome: left === right ? "match" : "mismatch", values: [left, right] };
+}
+
+/**
+ * MATCHING-3.2-B(CEO 지시, 2026-09-14) — **아동 안쪽의 연령 라인**을 견준다.
+ *
+ * ── 왜 충돌이 아니라 보류인가 ───────────────────────────────────────────────
+ * 위 compareAudience의 불일치는 conflicts로 가고, conflicts는 점수를 보지도 않고
+ * 판정을 CONFLICT로 끝낸다. 같은 자리에 `BABY ↔ CHILD`를 넣으면 "아기옷과
+ * 아동옷은 다른 상품이다"가 아니라 **"아기옷과 아동옷은 서로 반증한다"**가 되고,
+ * 그건 이 저장소가 성인↔아동에만 허용한 강도다. 실제로 필요한 것은 그보다 약하다:
+ * 같은 그래픽의 BABY판과 CHILD판은 **다른 상품이 맞지만**, 그 둘을 "충돌"로
+ * 선언할 만큼 원문이 늘 명확하지는 않다(증거 존재율 46.8%, 실측). 그래서
+ * SAME으로 올라가는 것만 막고 CONFLICT로는 내리지 않는 보류에 둔다.
+ *
+ * ── 무엇을 읽고 무엇을 읽지 않는가 ──────────────────────────────────────────
+ * 판매처 자신의 분류·태그·상품유형, 명시적 연령 표기, 그리고 제목. 이것이 전부다.
+ * compareAudience가 쓰는 "연령형 사이즈면 kids"라는 합성 신호는 **일부러 뺐다** —
+ * 사이즈는 이미 compareSize가 따로 세고 있고(872defc의 MONTH 파싱 포함), 여기서
+ * 다시 읽으면 같은 근거가 두 축에서 두 번 발화한다. 그리고 그 합성 신호는
+ * 연령형에만 있어서(개월형에는 대응하는 말이 없다) 한쪽으로만 기우는 비대칭
+ * 증거가 된다.
+ *
+ * ── 한쪽이라도 모르면 아무것도 하지 않는다 ──────────────────────────────────
+ * `resolveAudienceLine`은 원문이 직접 말하지 않으면 null을 돌려준다. null은
+ * "아마 아동"이 아니라 모름이라서, 보류도 가점도 만들지 않는다. 일치할 때 점수를
+ * 주지 않는 것도 의도다 — 기존 AUDIENCE 축이 이미 KIDS↔KIDS에 +1을 주고 있고
+ * (BABY↔BABY는 그 +1을 그대로 받는다), 여기서 한 점을 더 주면 **기존 쌍의 점수가
+ * 움직여서** 지금까지 SAME이 아니던 쌍이 SAME이 된다. compareGarmentForm이 같은
+ * 이유로 쓰는 비대칭 그대로다.
+ */
+function compareAudienceLine(x: ProductFacts, y: ProductFacts): {
+  outcome: AxisOutcome;
+  values: [AudienceLine | null, AudienceLine | null];
+} {
+  const signalsOf = (facts: ProductFacts): string[] => [
+    ...facts.audienceSignals,
+    ...(facts.categoryText ? [facts.categoryText] : []),
+    ...(facts.ageRangeText ? [facts.ageRangeText] : []),
+    facts.title,
+  ];
+  const left = resolveAudienceLine(signalsOf(x));
+  const right = resolveAudienceLine(signalsOf(y));
   if (!left || !right) return { outcome: "unknown", values: [left, right] };
   return { outcome: left === right ? "match" : "mismatch", values: [left, right] };
 }
@@ -540,6 +589,18 @@ export function compareCrossSellerProducts(
 
   if (audience.outcome === "match") {
     axes.push({ axis: "AUDIENCE", points: 1, detail: `대상 ${audience.values[0]}` });
+  }
+
+  // 아동 안쪽의 연령 라인(아기/아동/주니어). 위 AUDIENCE 축과 달리 불일치가
+  // 충돌이 아니라 보류이고, 일치해도 점수를 주지 않는다 — compareAudienceLine
+  // 주석의 두 이유(성인↔아동과 같은 강도를 줄 수 없다 · 기존 쌍의 점수를 한 점도
+  // 움직이지 않는다) 그대로다.
+  const audienceLine = compareAudienceLine(x, y);
+  if (audienceLine.outcome === "mismatch") {
+    blockers.push({
+      blocker: "AUDIENCE_LINE",
+      detail: `연령 라인 ${audienceLine.values[0]} ↔ ${audienceLine.values[1]}`,
+    });
   }
 
   // 일치해도 점수를 주지 않는다(불일치에만 보류). 의도한 비대칭이다 — 새 신호가
