@@ -6,8 +6,10 @@ import { PLATFORM_ADAPTERS } from "@commerce/marketplace";
 import { UNRESOLVED_CATEGORY, type CategorySelection } from "@commerce/category";
 import { LotteOnRegistrationPanel } from "../LotteOnRegistrationPanel";
 import { PlatformPreview } from "../PlatformPreview";
-import { CommerceManagementSection } from "../CommerceManagementSection";
+import { MissingFieldsBulkPanel } from "../MissingFieldsBulkPanel";
+import { StageBody } from "../StageBody";
 import { computeChecklistReadiness } from "../readiness";
+import { resolveStageFocus } from "../stage-focus";
 import { MARKET_SIGNAL_NOT_STARTED, resolveWorkflow } from "../workflow";
 import {
   EMPTY_LOTTEON_CHANNEL_FORM,
@@ -265,16 +267,46 @@ const SAVED_LOTTEON: LotteOnChannelInfo = {
   codes: { originCode: "OP-ES", taxTypeCode: "01", brandNo: "BR-4242", externalProductNo: "EPD-1" },
 };
 
-function renderCommerceManagement(product: CanonicalProduct): string {
+/**
+ * REWORK-4 §1(CEO 지시, 2026-09-14) — 여기 있던 renderCommerceManagement()가
+ * 사라졌다. 상품정보 탭의 「🛒 커머스 관리정보」 섹션을 없앴기 때문이다
+ * (CommerceManagementSection.tsx 삭제). 아래 증명 3이 그 자리를 대신한다:
+ * **화면에서는 사라졌고 저장은 그대로**라는 두 사실을 같이 못 박는다.
+ */
+function renderProductInfoBody(product: CanonicalProduct): string {
+  const workflow = resolveWorkflow({
+    collection: { running: false, percent: 100, productReady: true, imageCount: 6, failedImageCount: 0 },
+    market: MARKET_SIGNAL_NOT_STARTED,
+    prepare: {
+      productInfoOk: true,
+      productInfoMissing: null,
+      optionGroupCount: 0,
+      imageCount: 6,
+      detailReady: true,
+      priceResolved: true,
+      priceKrw: 128000,
+      requiredFieldBlockingCount: 0,
+    },
+    register: { channels: [] },
+  });
   return renderToStaticMarkup(
-    createElement(CommerceManagementSection, {
-      product,
-      channels: [
-        { id: "smartstore" as PlatformId, label: "스마트스토어" },
-        { id: "coupang" as PlatformId, label: "쿠팡" },
-      ],
+    createElement(StageBody, {
+      focus: resolveStageFocus({
+        stage: workflow.currentStepKey,
+        surface: "PRODUCT",
+        marketDetailOpen: false,
+      }),
+      workflow,
+      channels: [],
       onGoToChannel: () => {},
-      onGoToLotteOn: () => {},
+      marketEvidence: createElement("div", null, "시장 근거"),
+      archive: createElement("div", null, "기록"),
+      surfaces: {
+        source: createElement("div", null, "SOURCE"),
+        images: createElement("div", null, "IMAGES"),
+        price: createElement("div", null, "PRICE"),
+        required: createElement(MissingFieldsBulkPanel, { product, onBulkApply: () => {} }),
+      },
     }),
   );
 }
@@ -297,12 +329,10 @@ describe("증명 1 — 롯데ON 탭에 공통 상품정보 입력칸이 0개다"
     const labels = collectInputs(renderLotteOnTab()).map((i) => i.label);
     // 라벨마다 괄호 안에 롯데ON 원문 필드명이 있다 = 우리가 지어낸 칸이 아니다.
     expect(labels).toEqual([
+      // REWORK-4 §5 — 순서가 10섹션 골격을 따른다(⑤ 배송 → ⑦ 고시 → ⑧ KC).
+      // 칸의 **집합**은 한 건도 달라지지 않았다 — 서 있는 자리만 바뀌었다.
       "표준카테고리번호 (scatNo)",
       "전시카테고리번호 (dcatLst)",
-      "상품품목코드 (pdItmsCd)",
-      "고시 항목 (pdItmsArtlLst)",
-      "안전인증 목록 (sftyAthnLst)",
-      "수입대행코드 (impPrxCd)",
       "출고지번호 (owhpNo)",
       "반품지번호 (rtrpNo)",
       "배송비정책번호 (dvCstPolNo)",
@@ -310,6 +340,10 @@ describe("증명 1 — 롯데ON 탭에 공통 상품정보 입력칸이 0개다"
       "택배사코드 (hdcCd)",
       "반품택배사코드 (rtngHdcCd)",
       "평일 발송마감시간",
+      "상품품목코드 (pdItmsCd)",
+      "고시 항목 (pdItmsArtlLst)",
+      "안전인증 목록 (sftyAthnLst)",
+      "수입대행코드 (impPrxCd)",
       "원산지코드 (oplcCd)",
       "과세유형코드 (tdfDvsCd)",
       "브랜드번호 (brdNo)",
@@ -319,7 +353,7 @@ describe("증명 1 — 롯데ON 탭에 공통 상품정보 입력칸이 0개다"
 
   it("MI를 관리하지 않는다 — 판매 추천/비추천 어휘가 화면에 없다", () => {
     const text = stripTags(renderLotteOnTab());
-    for (const word of ["판매 추천", "판매 비추천", "조건부 판매", "가격경쟁력"]) {
+    for (const word of ["판매 추천", "판매 비추천", "조건부 판매", "가격경쟁력", "가격 경쟁력"]) {
       expect(text, `롯데ON 탭에 MI 어휘가 새어 들어왔다: ${word}`).not.toContain(word);
     }
   });
@@ -360,42 +394,36 @@ describe("증명 2 — 롯데ON 관리값이 탭을 벗어났다 돌아와도 �
   });
 });
 
-describe("증명 3 — 상품 정보에 롯데ON 관리정보가 실제로 렌더된다", () => {
-  it("저장된 롯데ON 값이 상품 정보 쪽 화면에 읽기 전용으로 서 있다", () => {
-    const html = renderCommerceManagement(makeProduct({ lotteOnChannelInfo: SAVED_LOTTEON }));
-    const text = stripTags(html);
-    expect(text).toContain("롯데ON");
-    expect(text).toContain("출고지번호");
-    expect(text).toContain("OW-77");
-    expect(text).toContain("RT-88");
-    expect(text).toContain("DC-99");
-    expect(text).toContain("BR-4242");
+describe("증명 3 — 상품정보 화면에서 커머스 관리정보가 사라졌고, 저장은 그대로다", () => {
+  /**
+   * REWORK-4 §1(CEO 지시, 2026-09-14) — 이 describe가 뒤집혔다.
+   *
+   * 직전 지시(3층 구조 재정렬)는 롯데ON 관리값을 상품정보에서도 읽어주게 했다.
+   * 이번 지시는 그 **화면**을 없앤다 — 커머스 값을 보는 곳은 그 채널 탭 하나다.
+   *
+   * 🔴 다만 저장까지 없애는 것이 아니다. 그것을 지우면 c451e79가 고친 "탭을
+   * 옮기면 롯데ON 입력이 전부 사라지던" 버그가 그대로 돌아온다. 그래서 이
+   * 블록은 **두 명제를 한 자리에서** 본다: 화면에 없다 / 저장은 살아 있다.
+   */
+  it("상품정보 본문에 「🛒 커머스 관리정보」 섹션이 없다", () => {
+    const text = stripTags(renderProductInfoBody(makeProduct({ lotteOnChannelInfo: SAVED_LOTTEON })));
+    expect(text).not.toContain("커머스 관리정보");
+    expect(text).not.toContain("채널마다 따로 관리되는 값입니다");
   });
 
-  it("스마트스토어 · 쿠팡 · 롯데ON이 같은 레벨로 선다", () => {
-    const text = stripTags(renderCommerceManagement(makeProduct({ lotteOnChannelInfo: SAVED_LOTTEON })));
-    expect(text).toContain("스마트스토어");
-    expect(text).toContain("쿠팡");
-    expect(text).toContain("롯데ON");
+  it("상품정보 본문이 롯데ON 관리값을 한 건도 읽어주지 않는다", () => {
+    const html = renderProductInfoBody(makeProduct({ lotteOnChannelInfo: SAVED_LOTTEON }));
+    for (const saved of ["OW-77", "RT-88", "DC-99", "BR-4242", "EPD-1", "205001"]) {
+      expect(html, `상품정보 화면에 롯데ON 관리값이 남아 있다: ${saved}`).not.toContain(saved);
+    }
   });
 
-  it("🔴 이 화면은 입력칸을 하나도 만들지 않는다 — 고치는 곳은 각 커머스 탭이다", () => {
-    const inputs = collectInputs(renderCommerceManagement(makeProduct({ lotteOnChannelInfo: SAVED_LOTTEON })));
-    expect(inputs, `커머스 관리정보에 입력칸이 생겼다: ${inputs.map((i) => i.label).join(" / ")}`).toEqual([]);
-  });
-
-  it("🔴 카테고리는 여기에 없다 — 롯데ON 카테고리 번호가 화면에 나타나지 않는다", () => {
-    const html = renderCommerceManagement(makeProduct({ lotteOnChannelInfo: SAVED_LOTTEON }));
-    // 저장 타입에는 들어 있지만(205001 / 3001) 이 화면은 그 키를 읽지 않는다.
-    expect(html).not.toContain("205001");
-    expect(html).not.toContain("3001");
-    expect(stripTags(html)).toContain("카테고리는 여기에 없습니다");
-  });
-
-  it("아직 입력이 없으면 '없음'을 말하되 자리는 남긴다", () => {
-    const text = stripTags(renderCommerceManagement(makeProduct()));
-    expect(text).toContain("아직 저장된 값이 없습니다");
-    expect(text).toContain("출고지번호");
+  it("🔴 저장은 그대로다 — 같은 값으로 롯데ON 탭을 열면 전부 들어 있다", () => {
+    // 화면 한 자리를 지웠을 뿐이라는 사실을, 저장을 읽는 쪽에서 직접 확인한다.
+    const html = renderLotteOnTab(SAVED_LOTTEON);
+    for (const saved of ["OW-77", "RT-88", "DC-99", "BR-4242", "EPD-1", "205001"]) {
+      expect(html, `롯데ON 탭이 저장값을 잃었다: ${saved}`).toContain(`value="${saved}"`);
+    }
   });
 });
 

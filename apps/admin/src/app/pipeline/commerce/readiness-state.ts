@@ -1,5 +1,5 @@
 import type { KcStatus } from "@commerce/listing";
-import type { ReadinessItem, ReadinessSummary } from "./readiness";
+import type { ReadinessGroup, ReadinessItem, ReadinessSummary } from "./readiness";
 
 /**
  * N-3.56(버그 수정) — RegistrationStatusBanner.tsx는 최상단에 "use client"가
@@ -125,4 +125,106 @@ export function buildPriorityItems(
     });
   }
   return items;
+}
+
+/* ── REWORK-4 §2 — "무엇이 · 왜 · 어디서 · [바로 이동]" ────────────────────── */
+
+/**
+ * REWORK-4 §2(CEO 지시, 2026-09-14) — **추상 버튼을 없애고 그 자리를 채운다.**
+ *
+ * 지금까지 이 판정 아래에 서 있던 것은 「부족한 정보 한 번에 해결하기」 버튼
+ * 하나였다. 무엇을·어디를 고치는 것인지 문장에 없었고, 눌러도 해결되지 않았다
+ * (모달이 같은 목록을 한 번 더 읽어줄 뿐이었다). 대신 지금 당장 해야 하는 **한
+ * 개**를 네 가지가 다 붙은 채로 보여준다:
+ *
+ *   무엇이 부족한가 → 왜 필요한가 → 어디서 입력하는가 → [바로 이동]
+ *
+ * 🔴 새 판정을 만들지 않는다. 네 문장 전부 이미 계산된 값에서만 나온다 —
+ * buildPriorityItems가 고른 순서, ReadinessItem.label / hint / group,
+ * 그리고 이미 있던 이동 장치(sectionId · externalHref) 그대로다.
+ *
+ * 🔴 **이동 경로가 없는 안내를 만들지 않는다.** action이 null이면 버튼을 그리지
+ * 않는다 — 아래 REGISTRATION_SECTION_LABEL에 없는 sectionId는 화면에 그 앵커가
+ * 실제로 없다는 뜻이라(예: readiness.ts가 대표이미지에 매핑해 둔 "section-images"
+ * 는 PlatformPreview에 존재하지 않는다) 눌러도 아무 데도 가지 않는다. 그런
+ * 버튼은 「부족한 정보 한 번에 해결하기」와 같은 종류의 거짓말이다.
+ */
+export const REGISTRATION_SECTION_LABEL: Record<string, string> = {
+  // PlatformPreview.tsx의 CollapsibleSection 제목 그대로다 — 안내가 부르는
+  // 이름과 셀러가 화면에서 읽는 제목이 달라지면 "거기가 어딘데"가 다시 생긴다.
+  "section-category": "카테고리",
+  "section-basic": "기본정보",
+  "section-options": "옵션",
+  "section-price": "가격",
+  "section-shipping": "배송",
+  "section-notice": "고시정보",
+  "section-kc": "KC (어린이제품 등 인증정보)",
+  "section-description": "상세설명",
+};
+
+export type PriorityAction =
+  /** 이 화면 안의 섹션으로 스크롤한다(기존 goToSection 그대로). */
+  | { kind: "SECTION"; sectionId: string; label: string }
+  /** 이 화면 밖(설정·판매자센터)으로 보낸다(기존 externalHref 그대로). */
+  | { kind: "EXTERNAL"; href: string; label: string };
+
+export interface PriorityGuidance {
+  /** 무엇이 부족한가 — 실제로 비어 있는 항목 이름들. */
+  what: string;
+  /** 왜 필요한가 / 왜 자동으로 채우지 못했는가. */
+  why: string;
+  /** 어디서 입력하는가. 버튼이 없어도 이 문장은 항상 있다. */
+  where: string;
+  /** 바로 이동. 갈 곳이 확실할 때만 만든다. */
+  action: PriorityAction | null;
+}
+
+/** 서버가 사유를 주지 않았을 때 쓰는 문장. 성격(group)마다 이유가 다르다. */
+const WHY_BY_GROUP: Record<ReadinessGroup, string> = {
+  LEGAL: "법적 필수 정보라 TTAEJYO가 대신 만들어낼 수 없습니다 — 실제 값을 확인해 입력해야 합니다.",
+  BUSINESS_SETTINGS: "판매자 설정에서 한 번 채우면 이후 모든 상품에 자동으로 적용되는 값입니다.",
+  PRODUCT_INFO: "상품 원문에서 이 값을 찾지 못해 자동으로 채우지 못했습니다.",
+};
+
+export function describePriorityItem(item: PriorityItem): PriorityGuidance {
+  const missingLabels = item.sourceItems.map((i) => i.label);
+  const what =
+    missingLabels.length > 0
+      ? `비어 있는 항목: ${missingLabels.join(" · ")}`
+      : `${item.label} — 아직 확인되지 않았습니다.`;
+
+  const group = item.sourceItems.find((i) => i.group)?.group;
+  const why = item.detail ?? item.sourceItems.find((i) => i.hint)?.hint ?? WHY_BY_GROUP[group ?? "PRODUCT_INFO"];
+
+  const sectionLabel = item.sectionId ? REGISTRATION_SECTION_LABEL[item.sectionId] : undefined;
+  if (sectionLabel && item.sectionId) {
+    return {
+      what,
+      why,
+      where: `이 화면의 「${sectionLabel}」에서 입력합니다.`,
+      action: { kind: "SECTION", sectionId: item.sectionId, label: `「${sectionLabel}」에서 입력하기 →` },
+    };
+  }
+  if (item.externalHref) {
+    const external = item.externalHref === "/settings";
+    return {
+      what,
+      why,
+      where: external
+        ? "설정 화면에서 채웁니다 — 상품마다 다시 입력하지 않습니다."
+        : "아래 안내로 이동해 해결합니다.",
+      action: {
+        kind: "EXTERNAL",
+        href: item.externalHref,
+        label: external ? "설정으로 가기 →" : "해결 방법 보기 →",
+      },
+    };
+  }
+  return {
+    what,
+    why,
+    // 갈 곳을 만들어내지 않는다 — 어디인지 모르면 모른다고 말하고 버튼을 빼놓는다.
+    where: "이 화면의 아래 필수항목 목록에서 해당 항목을 찾아 채웁니다.",
+    action: null,
+  };
 }

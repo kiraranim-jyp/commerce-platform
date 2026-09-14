@@ -71,7 +71,6 @@ export function StageBody({
   marketEvidence,
   archive,
   channels,
-  commerceManagement,
   onGoToChannel,
   openPriceSurfaceRequest = 0,
   openMarketEvidenceRequest = 0,
@@ -84,17 +83,16 @@ export function StageBody({
   /** 변경 이력·백로그처럼 단계와 무관한 기록. 항상 맨 아래 접힘. */
   archive: React.ReactNode;
   channels: RegistrationChannel[];
-  /**
-   * 3층 구조 재정렬(CEO 지시, 2026-09-14) — 상품 정보의 **세 번째 층**:
-   * 「커머스 관리정보」(스마트스토어 · 쿠팡 · 롯데ON).
+  /*
+   * REWORK-4 §1(CEO 지시, 2026-09-14) — 여기 있던 `commerceManagement` 슬롯이
+   * 사라졌다. 상품정보 탭의 「🛒 커머스 관리정보」 접힘을 통째로 없앤다.
    *
-   * 여기 있던 `categoryVerified: boolean`을 이 슬롯이 대체한다. 상품 정보가
-   * 커머스에 대해 물어야 하는 것은 "카테고리가 확정됐는가"(채널의 질문)가
-   * 아니라 "이 상품을 각 채널에 어떻게 관리하고 있는가"이기 때문이다.
-   *
-   * 🔴 카테고리는 이 노드에 들어가지 않는다 — 카테고리는 채널 탭에서 관리한다.
+   * 🔴 **저장을 지운 것이 아니다.** CanonicalProduct.lotteOnChannelInfo는 그대로
+   * 남아 있고(c451e79가 "탭을 옮기면 롯데ON 입력이 전부 사라지던" 버그를 고친
+   * 그 저장이다), 롯데ON 탭이 지금까지와 똑같이 그 값을 읽고 쓴다. 없어진 것은
+   * **상품정보 화면에서 그 값을 한 번 더 읽어주던 자리** 하나뿐이다 —
+   * 커머스 값을 보는 곳은 그 채널 탭 하나여야 한다는 이번 통일의 결론이다.
    */
-  commerceManagement: React.ReactNode;
   /** 채널 화면으로 데려간다. 등록을 여기서 실행하지 않는다 — 등록 게이트는
    * 지금까지와 같이 그 화면 하나가 책임진다(ActionCenter와 같은 원칙). */
   onGoToChannel: (id: PlatformId) => void;
@@ -252,18 +250,47 @@ export function StageBody({
             {surfaces.source}
           </CollapsibleSection>
         )}
-        {/* 3층 구조 재정렬(CEO 지시, 2026-09-14) — 상품 정보의 세 번째 층.
-            공통 상품정보(위 Source Data) · MI(바깥 판단 카드) 옆에 **커머스
-            관리정보**가 선다: 스마트스토어 · 쿠팡 · 롯데ON을 같은 레벨로 둔다.
-            지금까지 롯데ON은 이 층에 아예 없었고(탭 로컬 useState라 탭을
-            벗어나면 사라졌다), 그래서 "상품정보에 롯데온 내용은 하나도 없다"가
-            사실이었다. */}
-        <CollapsibleSection
-          title="🛒 커머스 관리정보"
-          summary="이 상품을 채널마다 어떻게 관리하고 있는지 — 스마트스토어 · 쿠팡 · 롯데ON (카테고리는 각 채널 탭에서 관리합니다)"
-        >
-          {commerceManagement}
-        </CollapsibleSection>
+        {/* REWORK-4(CEO 지시, 2026-09-14) — **빠져 있던 한 자리를 채운다.**
+
+            price·images·source는 전부 "③의 작업면이지만 어느 단계에서도 열 수
+            있는 것"으로 여기 접힘을 하나씩 갖고 있었는데, required만 없었다.
+            그래서 「불러오지 못한 항목 … 상세페이지 참조로 일괄 등록」 패널에
+            도달하는 길이 **③에서 그 체크리스트 항목을 펼쳤을 때 하나뿐**이었다
+            (PrepareWorkSurface의 surface === "REQUIRED" 분기).
+
+            그 하나뿐인 길이 이번에 닫혔다: ③ 체크리스트에서 카테고리 항목이
+            빠지면서 ④로 넘어가는 창이 넓어졌고, "카테고리 미확정 + 필수정보부족
+            0"인 상품은 곧바로 ④에 서기 때문에 ③ 체크리스트 자체가 그려지지
+            않는다. 그런데 그 상태에서도 이 패널이 다룰 항목(품명·모델명·중량…
+            source === "REQUIRED")은 그대로 남아 있다 — 채널 readiness가 세는
+            blockingCount와 이 패널이 세는 누락 항목은 애초에 다른 값이다.
+
+            새 설계를 만들지 않는다. 위 price/source와 **같은 규칙**을 그대로
+            적용한다: ③에서 지금 펼쳐 쓰고 있으면 여기 두지 않는다(같은 패널이
+            한 화면에 두 벌 뜨면 어느 쪽 체크박스가 진짜인지 알 수 없다).
+
+            🔴 대상 필드는 한 건도 줄이지 않는다 — 무엇을 보여줄지는 지금까지와
+            같이 MissingFieldsBulkPanel 자신이 NOTICE_REFERENCE_ELIGIBLE_FIELDS로
+            정한다. KC/인증이 "상세페이지 참조"로 대체되지 않는 성질도 그대로다
+            (그 화이트리스트에 애초에 없다 — N-3.45 STEP10 영구 가드).
+            처리할 항목이 없으면 패널이 스스로 null을 돌려주므로 빈 접힘이
+            남지도 않는다. */}
+        {expandedSurface !== "REQUIRED" && (
+          <CollapsibleSection
+            title={PREPARE_SURFACE_LABEL.REQUIRED}
+            summary="원본에서 불러오지 못한 등록 정보 — 상세페이지에 이미 나와 있다면 «상세페이지 참조»로 한 번에 처리합니다"
+          >
+            {surfaces.required}
+          </CollapsibleSection>
+        )}
+        {/* REWORK-4 §1(CEO 지시, 2026-09-14) — 여기 있던 「🛒 커머스 관리정보」
+            접힘을 **화면에서** 없앴다. 채널 관리값(롯데ON 고시·인증·배송 번호,
+            채널 전용 판매가)을 읽는 자리는 그 채널 탭 하나여야 한다 — 상품정보가
+            같은 값을 한 번 더 읽어주면 "어느 화면이 진짜인가"가 다시 생긴다.
+
+            🔴 저장은 그대로다. CanonicalProduct.lotteOnChannelInfo도, 그 값을
+            읽고 쓰는 롯데ON 탭도 한 줄도 바뀌지 않았다(three-layer-realign.test.ts
+            증명 2·6이 그 사실을 계속 지킨다). 지운 것은 화면 한 자리다. */}
         {archive}
       </div>
     </div>

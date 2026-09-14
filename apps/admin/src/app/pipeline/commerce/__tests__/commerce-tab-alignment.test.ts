@@ -17,6 +17,7 @@ import { LotteOnRegistrationPanel } from "../LotteOnRegistrationPanel";
 import { PlatformPreview } from "../PlatformPreview";
 import { computeChecklistReadiness } from "../readiness";
 import { computeLotteOnRegistrationReadiness } from "../lotteon-channel-form";
+import { REGISTRATION_SECTION_KEYS, sectionTitle } from "../registration-sections";
 
 /**
  * REWORK — 커머스 탭 구조 통일(CEO 지시, 2026-09-14).
@@ -297,21 +298,41 @@ describe("골격 — CEO 지시서의 섹션 구조와 실제 렌더 순서가 �
     expect(titles).toEqual([
       // 이 탭이 무엇을 정하고 무엇을 정하지 않는지 — 안내 박스
       "이 탭에서 정하는 것",
-      // 상품정보 — 상품정보 Source에서 자동 표시
-      "① 상품정보 (공통)",
-      // 셀러 설정 정보 — Seller Settings에서 자동 반영
-      "② 셀러 설정 정보 (배송 정책 · 반품/교환)",
-      // LOTTEON 카테고리 — 추천 → 셀러 선택 → 확정
-      "③ 카테고리 (롯데ON 전용 · 2중 구조)",
-      // LOTTEON 필수 등록정보
-      "롯데ON 필수 등록정보",
-      "④ 상품정보제공고시 (롯데ON 전용)",
-      "⑤ 안전인증 (롯데ON 전용)",
-      "⑥ 배송 (롯데ON 전용)",
-      // LOTTEON 고유 관리정보
+      /* REWORK-4 §5(CEO 지시, 2026-09-14) — 여기부터 **10섹션 골격** 그대로다.
+         이전 순서는 롯데ON만의 것이었고(상품정보 → 셀러설정 → 카테고리 → 고시
+         → 안전인증 → 배송, 6/10) ③ 옵션 · ④ 가격 · ⑨ 상세설명 · ⑩ 등록정보가
+         아예 없었다. 넷 다 **읽기 전용 요약**으로 붙었다 — 아래 "채널 고유값
+         입력" 테스트가 이 탭의 입력칸이 여전히 롯데ON 고유값뿐임을 같은 렌더
+         결과로 고정한다. */
+      "① 기본 상품정보",
+      "② 카테고리 (롯데ON 전용 · 2중 구조)",
+      "③ 옵션",
+      "④ 가격",
+      "⑤ 배송 (롯데ON 전용)",
+      "⑥ 배송정책 · 반품/교환",
+      "⑦ 고시정보 (상품정보제공고시 · 롯데ON 전용)",
+      "⑧ KC / 인증 (안전인증 · 롯데ON 전용)",
+      "⑨ 상세설명",
+      "⑩ 등록정보",
+      // 골격 뒤에 붙는 **채널 고유 항목**(CEO 표의 "+ 채널 고유 항목").
       "롯데ON 고유 관리정보",
-      "⑦ 그 밖의 롯데ON 코드",
+      "그 밖의 롯데ON 코드 (채널 고유)",
     ]);
+  });
+
+  /**
+   * REWORK-4 §5 — 골격 달성도를 **렌더 결과에서 센다.**
+   *
+   * 지시서의 10개가 화면에 실제로 몇 개 서 있는지를 눈으로 비교하지 않는다.
+   * 목차는 registration-sections.ts 하나뿐이므로, 그 목록을 그대로 순회해서
+   * 제목이 있는지 본다 — 이름을 손으로 적으면 목차가 다시 두 벌이 된다.
+   */
+  it("롯데ON 좌측 상세가 10섹션 골격을 10/10 갖춘다", () => {
+    const titles = sectionTitles(columnsOf(renderLotteOnTab({ sellerSettings: makeSellerSettings() })).left);
+    const missing = REGISTRATION_SECTION_KEYS.filter(
+      (key) => !titles.some((title) => title.startsWith(sectionTitle(key))),
+    );
+    expect(missing, `롯데ON 좌측에 없는 골격 섹션: ${missing.join(" / ")}`).toEqual([]);
   });
 
   it("등록 상태 · 등록 가능성 · [등록 정보 확인] · [채널 등록]이 전부 우측 요약에 있다", () => {
@@ -356,7 +377,11 @@ describe("골격 — CEO 지시서의 섹션 구조와 실제 렌더 순서가 �
       "판매 추천",
       "판매 비추천",
       "조건부 판매",
+      // REWORK-4 §4(CEO 지시, 2026-09-14) — 띄어쓴 "가격 경쟁력"도 함께 막는다.
+      // CEO가 지목한 표기는 띄어쓴 쪽인데 이 목록엔 붙여쓴 것만 있었다 —
+      // 한 글자 차이로 검사를 빠져나가는 어휘를 남겨두지 않는다.
       "가격경쟁력",
+      "가격 경쟁력",
       "예상 마진",
       "국내 비교상품",
       "시장 판단",
@@ -557,12 +582,10 @@ describe("표 4행 — 채널 고유값 입력", () => {
   it("LOTTEON — 선 입력칸 전수가 전부 롯데ON 고유값이다", () => {
     const labels = collectInputs(renderLotteOnTab({ sellerSettings: makeSellerSettings() })).map((i) => i.label);
     expect(labels).toEqual([
+      // REWORK-4 §5 — 순서가 10섹션 골격을 따른다(⑤ 배송 → ⑦ 고시 → ⑧ KC).
+      // 칸의 **집합**은 한 건도 달라지지 않았다 — 서 있는 자리만 바뀌었다.
       "표준카테고리번호 (scatNo)",
       "전시카테고리번호 (dcatLst)",
-      "상품품목코드 (pdItmsCd)",
-      "고시 항목 (pdItmsArtlLst)",
-      "안전인증 목록 (sftyAthnLst)",
-      "수입대행코드 (impPrxCd)",
       "출고지번호 (owhpNo)",
       "반품지번호 (rtrpNo)",
       "배송비정책번호 (dvCstPolNo)",
@@ -570,6 +593,10 @@ describe("표 4행 — 채널 고유값 입력", () => {
       "택배사코드 (hdcCd)",
       "반품택배사코드 (rtngHdcCd)",
       "평일 발송마감시간",
+      "상품품목코드 (pdItmsCd)",
+      "고시 항목 (pdItmsArtlLst)",
+      "안전인증 목록 (sftyAthnLst)",
+      "수입대행코드 (impPrxCd)",
       "원산지코드 (oplcCd)",
       "과세유형코드 (tdfDvsCd)",
       "브랜드번호 (brdNo)",
@@ -661,7 +688,7 @@ describe("표 6행 — 독립 readiness (LOTTEON 반드시 PASS)", () => {
 describe("표 7행 — MI와 readiness 독립 (LOTTEON 반드시 PASS)", () => {
   it("LOTTEON 탭 화면에 MI 어휘가 하나도 없다", () => {
     const text = stripTags(renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
-    for (const word of ["판매 추천", "판매 비추천", "조건부 판매", "가격경쟁력", "시장 가격"]) {
+    for (const word of ["판매 추천", "판매 비추천", "조건부 판매", "가격경쟁력", "가격 경쟁력", "시장 가격"]) {
       expect(text, `롯데ON 탭에 MI 어휘가 새어 들어왔다: ${word}`).not.toContain(word);
     }
   });

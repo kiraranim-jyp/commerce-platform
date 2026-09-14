@@ -61,7 +61,6 @@ export function ChannelRegistrationSummary({
   state,
   priorityItems,
   onPriorityItemClick,
-  onResolveMissing,
   statusRows,
   percent,
   required,
@@ -84,7 +83,6 @@ export function ChannelRegistrationSummary({
   state: RegistrationReadinessState;
   priorityItems: PriorityItem[];
   onPriorityItemClick?: (item: PriorityItem) => void;
-  onResolveMissing?: () => void;
   /** 채널 연결 상태·직전 등록 결과처럼 그 채널에만 있는 사실. 판정이 아니다. */
   statusRows?: ReactNode;
   percent: number;
@@ -107,12 +105,15 @@ export function ChannelRegistrationSummary({
 }) {
   return (
     <div className="space-y-3 lg:sticky lg:top-4">
-      {/* ① 등록 상태 + 부족정보 + [부족정보 해결] */}
+      {/* ① 등록 상태 + 먼저 해결할 항목 1개(무엇/왜/어디서/[바로 이동])
+             REWORK-4 §2 — 여기 있던 [부족정보 해결] 추상 버튼이 사라졌다.
+             통과한 항목은 아래 필수항목 목록과 **같은 배열**을 넘겨서 ✓로
+             남긴다(두 카드가 서로 다른 목록을 세지 않게 한다). */}
       <RegistrationStatusBanner
         state={state}
         priorityItems={priorityItems}
         onItemClick={onPriorityItemClick}
-        onOpenGuide={onResolveMissing}
+        checkedItems={required}
       />
       {statusRows}
       {/* ② 등록 가능성 + 필수항목 + [등록 정보 확인] + [채널 등록] */}

@@ -17,7 +17,6 @@ import { ComparisonShopSearch } from "../ComparisonShopSearch";
 import { BacklogPanel } from "../BacklogPanel";
 import { ImageInlineEditor } from "../../ImageInlineEditor";
 import { StageBody } from "../StageBody";
-import { CommerceManagementSection } from "../CommerceManagementSection";
 import type { MarketEvidenceVariant } from "../market-evidence-frame";
 import { resolveStageFocus } from "../stage-focus";
 import { resolveWorkflow } from "../workflow";
@@ -564,15 +563,11 @@ function ProductTab(options: TabOptions): ReactElement {
     focus,
     workflow,
     channels: CHANNELS,
-    /* 3층 구조 재정렬(CEO 지시, 2026-09-14) — 여기 있던 categoryVerified가
-       「커머스 관리정보」 슬롯으로 바뀌었다. 프로덕션(CommerceWorkspace)이
-       만들어 내려보내는 노드와 같은 컴포넌트다. */
-    commerceManagement: createElement(CommerceManagementSection, {
-      product,
-      channels: CHANNELS.map((c) => ({ id: c.id, label: c.label })),
-      onGoToChannel: noop,
-      onGoToLotteOn: noop,
-    }),
+    /* REWORK-4 §1(CEO 지시, 2026-09-14) — 여기 있던 `commerceManagement` 슬롯이
+       사라졌다. 상품정보 탭에서 「🛒 커머스 관리정보」 섹션을 없앴기 때문이고,
+       이 조립은 프로덕션(CommerceWorkspace)이 넘기는 prop만 넘긴다는 규칙을
+       그대로 지킨다 — 화면에 없는 것을 여기서 만들어주면 이 harness가 다시
+       프로덕션과 갈라진다. */
     onGoToChannel: noop,
     openPriceSurfaceRequest: 0,
     marketEvidence: createElement(

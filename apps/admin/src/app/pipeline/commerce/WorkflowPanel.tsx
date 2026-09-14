@@ -38,6 +38,7 @@ export function WorkflowPanel({
   onNavigate,
   variant = "full",
   onOpenStageDetail,
+  currentTarget,
 }: {
   workflow: Workflow;
   /** 항목을 눌렀을 때의 이동. 수집 중에는 갈 곳이 없으므로 넘기지 않는다. */
@@ -53,8 +54,24 @@ export function WorkflowPanel({
    * 컴포넌트 안에서 결과 요약만 펼친다.
    */
   onOpenStageDetail?: (key: BigStepKey) => void;
+  /**
+   * REWORK-4 §3(CEO 지시, 2026-09-14) — **지금 셀러가 서 있는 자리.**
+   *
+   * 아래 [… 확인하기 →]는 "지금 갈 곳"을 하나로 말하는 CTA인데, 그 값이 지금
+   * 보고 있는 화면 자신일 때가 있다. ④ 커머스 등록에서 스마트스토어 탭을 연
+   * 셀러는 화면 맨 위에서 「스마트스토어 확인하기 →」를 다시 본다 — 눌러도
+   * 제자리다. 커머스 상세 화면에서 등록으로 데려가는 버튼이 반복된다는 지적이
+   * 가리키는 것이 이 버튼이다(좌측 상세의 등록 행동은 REWORK-2에서 이미
+   * 우측 요약으로 옮겨졌고, 렌더 덤프에서 0건이다).
+   *
+   * 넘기지 않으면 지금까지와 똑같이 동작한다(수집 화면 등).
+   */
+  currentTarget?: WorkflowNavTarget | null;
 }) {
   const { steps, current, currentSubStep, completed } = workflow;
+  /** 지금 갈 곳이 지금 보고 있는 화면 자신인가 — 그렇다면 CTA를 그리지 않는다. */
+  const ctaTarget = (currentSubStep?.target as WorkflowNavTarget | undefined) ?? defaultTargetOf(current);
+  const alreadyHere = currentTarget != null && ctaTarget === currentTarget;
   const byKey = new Map<BigStepKey, BigStep>(steps.map((step) => [step.key, step]));
   /** 끝난 단계 중 지금 결과를 펼쳐 둔 것. 한 번에 하나만 — 여기도 흐름은 하나다. */
   const [openDetailKey, setOpenDetailKey] = useState<BigStepKey | null>(null);
@@ -150,10 +167,10 @@ export function WorkflowPanel({
             (배경 작업이라 볼 것이 없거나, 아직 분석이 시작되지 않았거나)
             그 단계의 기본 자리로 데려간다 — 버튼이 사라져서 "그래서 뭘 하라는
             거지"로 끝나는 순간을 만들지 않는다. */}
-        {onNavigate && !completed && (
+        {onNavigate && !completed && !alreadyHere && (
           <button
             type="button"
-            onClick={() => onNavigate((currentSubStep?.target as WorkflowNavTarget) ?? defaultTargetOf(current))}
+            onClick={() => onNavigate(ctaTarget)}
             className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
           >
             {currentSubStep?.target ? currentSubStep.label : current.label} 확인하기 →

@@ -19,10 +19,13 @@
 export {
   resolveRegistrationReadinessState,
   buildPriorityItems,
+  describePriorityItem,
+  REGISTRATION_SECTION_LABEL,
   type RegistrationReadinessState,
   type PriorityItem,
 } from "./readiness-state";
-import type { RegistrationReadinessState, PriorityItem } from "./readiness-state";
+import { describePriorityItem, type RegistrationReadinessState, type PriorityItem } from "./readiness-state";
+import type { ReadinessItem } from "./readiness";
 
 const STATE_META: Record<
   RegistrationReadinessState,
@@ -34,18 +37,39 @@ const STATE_META: Record<
   READY: { icon: "🟢", title: "등록 준비 완료", className: "border-success bg-success-soft" },
 };
 
+/**
+ * REWORK-4 §2(CEO 지시, 2026-09-14) — **지금 당장 해야 하는 1개를 먼저.**
+ *
+ * ── 없앤 것 ──────────────────────────────────────────────────────────────
+ * 「부족한 정보 한 번에 해결하기」 버튼. 무엇을·어디를 고치는 것인지 문장에
+ * 없었고, 눌러도 해결되지 않았다(모달이 같은 목록을 한 번 더 읽어줄 뿐이었다).
+ *
+ * ── 대신 서는 것 ─────────────────────────────────────────────────────────
+ * 우선순위 첫 항목 하나가 네 가지를 다 달고 펼쳐진다:
+ *   무엇이 부족한가 → 왜 필요한가 → 어디서 입력하는가 → [바로 이동]
+ * 나머지는 "그 다음"으로 접어 둔다 — 첫 항목을 해결하면 다음이 올라온다.
+ * 통과한 항목은 "그 외 확인 항목 N개"에 ✓로 남긴다(사라지지 않는다: 무엇이
+ * 이미 끝났는지 보이지 않으면 셀러는 남은 하나가 전부인 줄 모른다).
+ *
+ * 🔴 판정은 여기서 하지 않는다. 순서는 buildPriorityItems가, 네 문장은
+ * describePriorityItem이 이미 만든 값이다.
+ */
 export function RegistrationStatusBanner({
   state,
   priorityItems,
   onItemClick,
-  onOpenGuide,
+  checkedItems,
 }: {
   state: RegistrationReadinessState;
   priorityItems: PriorityItem[];
   onItemClick?: (item: PriorityItem) => void;
-  onOpenGuide?: () => void;
+  /** 이미 통과한 필수 항목들 — "그 외 확인 항목"에 ✓로 남는다. */
+  checkedItems?: ReadinessItem[];
 }) {
   const meta = STATE_META[state];
+  const [first, ...rest] = priorityItems;
+  const passed = (checkedItems ?? []).filter((i) => i.passed);
+
   return (
     <section className={`rounded-lg border p-4 text-sm ${meta.className}`}>
       <p className="flex items-center gap-1.5 text-base font-semibold text-text-primary">
@@ -53,60 +77,24 @@ export function RegistrationStatusBanner({
         {meta.title}
       </p>
 
-      {state !== "READY" && priorityItems.length > 0 && (
-        <div className="mt-3 space-y-1.5">
-          <p className="text-xs font-medium text-text-tertiary">먼저 해결할 항목 {priorityItems.length}개</p>
-          <ol className="space-y-1">
-            {priorityItems.map((item, index) => {
-              const clickable = Boolean(item.sectionId && onItemClick);
-              return (
-                <li key={item.key} className="text-sm">
-                  {clickable ? (
-                    <button
-                      type="button"
-                      onClick={() => onItemClick!(item)}
-                      className="flex w-full items-start gap-1.5 rounded px-1 py-0.5 text-left hover:bg-background/60"
-                    >
-                      <span className="shrink-0 font-medium text-text-tertiary">{index + 1}.</span>
-                      <span>
-                        <span className="font-medium text-text-primary underline decoration-dotted">{item.label}</span>
-                        {item.detail && <span className="block text-[11px] text-text-tertiary">{item.detail}</span>}
-                      </span>
-                    </button>
-                  ) : item.externalHref ? (
-                    <a
-                      href={item.externalHref}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-start gap-1.5 rounded px-1 py-0.5 hover:bg-background/60"
-                    >
-                      <span className="shrink-0 font-medium text-text-tertiary">{index + 1}.</span>
-                      <span>
-                        <span className="font-medium text-text-primary underline decoration-dotted">{item.label}</span>
-                        {item.detail && <span className="block text-[11px] text-text-tertiary">{item.detail}</span>}
-                      </span>
-                    </a>
-                  ) : (
-                    <span className="flex items-start gap-1.5 px-1 py-0.5">
-                      <span className="shrink-0 font-medium text-text-tertiary">{item.retryable ? "⚠️" : `${index + 1}.`}</span>
-                      <span>
-                        <span className="font-medium text-text-primary">{item.label}</span>
-                        {item.detail && <span className="block text-[11px] text-text-tertiary">{item.detail}</span>}
-                      </span>
-                    </span>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-          {onOpenGuide && (
-            <button
-              type="button"
-              onClick={onOpenGuide}
-              className="mt-2 w-full rounded-md border border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10"
-            >
-              부족한 정보 한 번에 해결하기
-            </button>
+      {state !== "READY" && first && (
+        <div className="mt-3 space-y-2">
+          <p className="text-xs font-medium text-text-tertiary">먼저 해결할 항목 1개</p>
+          <FirstPriorityBlock item={first} onItemClick={onItemClick} />
+
+          {rest.length > 0 && (
+            <div className="rounded-md bg-background/50 px-2.5 py-2">
+              <p className="text-[11px] font-medium text-text-tertiary">
+                그 다음 {rest.length}개 — 위 항목을 해결하면 차례로 올라옵니다
+              </p>
+              <ul className="mt-1 space-y-0.5">
+                {rest.map((item, index) => (
+                  <li key={item.key} className="text-[11px] text-text-secondary">
+                    {index + 2}. {item.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
       )}
@@ -114,6 +102,60 @@ export function RegistrationStatusBanner({
       {state === "READY" && (
         <p className="mt-1 text-xs text-text-secondary">필수 정보가 모두 확인됐습니다 — 아래에서 바로 등록할 수 있습니다.</p>
       )}
+
+      {passed.length > 0 && (
+        <div className="mt-3 border-t border-border/60 pt-2">
+          <p className="text-[11px] font-medium text-text-tertiary">그 외 확인 항목 {passed.length}개</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-text-secondary">
+            {passed.map((item) => `✓ ${item.label}`).join("  ")}
+          </p>
+        </div>
+      )}
     </section>
+  );
+}
+
+/**
+ * 지금 해야 하는 한 개. **네 가지가 전부 있어야 이 블록이 성립한다** —
+ * 그중 [바로 이동]만은 갈 곳이 확실할 때만 그린다(없는 곳으로 보내는 버튼은
+ * 이번에 없앤 추상 버튼과 같은 종류다).
+ */
+function FirstPriorityBlock({
+  item,
+  onItemClick,
+}: {
+  item: PriorityItem;
+  onItemClick?: (item: PriorityItem) => void;
+}) {
+  const guide = describePriorityItem(item);
+  return (
+    <div className="rounded-md border border-border bg-surface px-3 py-2.5">
+      <p className="flex items-start gap-1.5 text-sm font-semibold text-text-primary">
+        <span className="shrink-0 text-text-tertiary">{item.retryable ? "⚠️" : "①"}</span>
+        <span>{item.label}</span>
+      </p>
+      <p className="mt-1.5 text-xs text-text-secondary">{guide.what}</p>
+      <p className="mt-0.5 text-[11px] text-text-tertiary">{guide.why}</p>
+      <p className="mt-0.5 text-[11px] text-text-tertiary">{guide.where}</p>
+      {guide.action?.kind === "SECTION" && onItemClick && (
+        <button
+          type="button"
+          onClick={() => onItemClick(item)}
+          className="mt-2 rounded-md border border-primary px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/10"
+        >
+          {guide.action.label}
+        </button>
+      )}
+      {guide.action?.kind === "EXTERNAL" && (
+        <a
+          href={guide.action.href}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-2 inline-block rounded-md border border-primary px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/10"
+        >
+          {guide.action.label}
+        </a>
+      )}
+    </div>
   );
 }

@@ -105,7 +105,6 @@ import {
   type WorkflowNavTarget,
 } from "./commerce/workflow";
 import { SourceDataView } from "./commerce/SourceDataView";
-import { CommerceManagementSection } from "./commerce/CommerceManagementSection";
 import type { WorkspaceItem } from "./types";
 
 /**
@@ -2348,6 +2347,13 @@ export function CommerceWorkspace({
         workflow={workflow}
         onNavigate={navigateWorkflow}
         variant="compact"
+        /* REWORK-4 §3(CEO 지시, 2026-09-14) — 커머스 상세 화면 안에서 같은
+           채널로 데려가는 버튼이 반복되지 않게 한다. 스마트스토어 탭을 열어 둔
+           셀러가 화면 맨 위에서 「스마트스토어 확인하기 →」를 다시 보고 눌러도
+           제자리인 상태가 그 반복이었다. 실제 등록 Action은 지금처럼 우측 등록
+           요약 하나에만 있다(ChannelRegistrationSummary). 롯데ON은 PlatformId가
+           아니라 ④ 항목에 없으므로 이 비교에 걸리지 않는다 — null로 둔다. */
+        currentTarget={tab === LOTTEON_TAB ? null : (tab as WorkflowNavTarget)}
         onOpenStageDetail={(key) => {
           if (key === "MARKET_JUDGING") openMarketDetail();
         }}
@@ -2532,22 +2538,16 @@ export function CommerceWorkspace({
               focus={stageFocus}
               workflow={workflow}
               channels={registrationChannels}
-              /* 3층 구조 재정렬(CEO 지시, 2026-09-14) — 여기 있던
-                 `categoryVerified={...some(isVerifiedCategorySelected)}`가 이
-                 슬롯으로 바뀌었다. 상품 정보는 "커머스 카테고리가 확정됐는가"를
-                 묻지 않는다(workflow.ts의 근거 주석 참고) — 대신 "이 상품을
-                 채널마다 어떻게 관리하고 있는가"를 읽어준다. */
-              commerceManagement={
-                <CommerceManagementSection
-                  product={product}
-                  channels={WORKSPACE_PLATFORM_ORDER.map((id) => ({
-                    id,
-                    label: PLATFORM_ADAPTERS[id].label,
-                  }))}
-                  onGoToChannel={setTab}
-                  onGoToLotteOn={() => setTab(LOTTEON_TAB)}
-                />
-              }
+              /* REWORK-4 §1(CEO 지시, 2026-09-14) — 여기 있던
+                 `commerceManagement={<CommerceManagementSection …/>}`를 뺐다.
+                 상품정보 탭에서 「🛒 커머스 관리정보」 섹션을 없앤다는 지시다.
+
+                 🔴 저장을 뺀 것이 아니다 — 아래 롯데ON 탭이 넘겨받는
+                 `channelInfo={product.lotteOnChannelInfo}` / `onChannelInfoChange`
+                 는 그대로다. 그 배선이 c451e79가 고친 "탭을 옮기면 롯데ON 입력이
+                 전부 사라지던" 버그의 수리이고, 여기서 지우면 그 버그가 그대로
+                 돌아온다. 없앤 것은 그 값을 상품정보에서 한 번 더 읽어주던
+                 읽기 전용 화면 하나뿐이다. */
               onGoToChannel={setTab}
               /* UX 2.5 — 바깥(판단 카드·해외 가격비교·상단 Flow)에서 온 "가격 좀
                  보자"는 요청. 카운터가 올라가면 StageBody가 가격 작업면을 펼친다. */

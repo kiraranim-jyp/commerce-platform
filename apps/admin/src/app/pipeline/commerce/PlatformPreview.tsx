@@ -22,7 +22,6 @@ import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { ComplianceBreakdown } from "./ComplianceBreakdown";
 import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
 import { EditableDate, EditableText, EditableTextarea } from "./EditableField";
-import { GuidedResolutionModal } from "./GuidedResolutionModal";
 import { KcSellerStatusBanner } from "./KcSellerStatusBanner";
 import { ListingSection } from "./ListingSection";
 import { NaverPayloadPreview } from "./NaverPayloadPreview";
@@ -549,7 +548,11 @@ export function PlatformPreview({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [registrationState, priorityItems]);
 
-  const [guideOpen, setGuideOpen] = useState(false);
+  /* REWORK-4 §2(CEO 지시, 2026-09-14) — 여기 있던 `guideOpen` state와
+     GuidedResolutionModal이 사라졌다. 그 모달을 여는 유일한 버튼이
+     「부족한 정보 한 번에 해결하기」였고, 그 버튼이 이번에 없어졌다.
+     모달 자체도 같은 목록을 한 번 더 읽어주기만 했지 해결하지는 않았다 —
+     지금은 그 자리를 「먼저 해결할 항목 1개」가 대신한다. */
 
   // Sprint A-3(작업2 — Accordion, 작업4 — Auto Scroll) — 어떤 섹션이 펼쳐져 있는지
   // 여기서 관리한다(controlled). Summary에서 항목을 클릭하면 해당 섹션을 펼치고
@@ -681,7 +684,6 @@ export function PlatformPreview({
       state={registrationState}
       priorityItems={priorityItems}
       onPriorityItemClick={(item) => item.sectionId && goToSection(item.sectionId)}
-      onResolveMissing={priorityItems.length > 0 ? () => setGuideOpen(true) : undefined}
       isCalculating={capabilities.hasNaverPreview && Boolean(naverValidationLoading)}
       errorMessage={capabilities.hasNaverPreview ? naverValidationError : null}
       onRetry={onRetryNaverValidation}
@@ -1202,17 +1204,6 @@ export function PlatformPreview({
           jobKey={jobKey}
         />
       </div>
-
-      {guideOpen && (
-        <GuidedResolutionModal
-          items={priorityItems}
-          onClose={() => setGuideOpen(false)}
-          onGoToItem={(item) => {
-            if (item.sectionId) goToSection(item.sectionId);
-            setGuideOpen(false);
-          }}
-        />
-      )}
     </div>
   );
 

@@ -24,11 +24,13 @@ import {
   toLotteOnChannelInfo,
   toLotteOnChannelPayload,
   type CommonCategorySource,
+  type CommonProductRow,
   type LotteOnChannelForm,
   type LotteOnValidationField,
   type LotteOnValidationSnapshot,
 } from "./lotteon-channel-form";
 import { LOTTEON_SAFETY_TYPE_LABEL, type LotteOnCategoryCandidate } from "./lotteon-category";
+import { sectionTitle } from "./registration-sections";
 import { ChannelRegistrationFrame, ChannelRegistrationSummary } from "./ChannelRegistrationFrame";
 import type { ReadinessItem } from "./readiness";
 import { resolveRegistrationReadinessState, type PriorityItem } from "./readiness-state";
@@ -218,6 +220,17 @@ export function LotteOnRegistrationPanel({
 
   /** ① 공통 상품정보 — 실제 payload를 만드는 함수와 같은 것을 쓴다. */
   const common = useMemo(() => summarizeCommonProduct(product, commonPrice), [product, commonPrice]);
+  /**
+   * REWORK-4 §5 — 공통 요약의 행을 **10섹션 골격의 제자리로** 나눠 보낸다.
+   *
+   * 행 자체를 새로 만들지 않는다(summarizeCommonProduct가 유일한 출처다) —
+   * 어느 섹션에 설 것인지만 라벨로 고른다. 라벨이 바뀌면 여기서 0행이 되고,
+   * 아래 렌더 테스트가 "그 섹션이 비었다"로 바로 잡는다.
+   */
+  const rowsOf = useCallback(
+    (...labels: string[]): CommonProductRow[] => common.rows.filter((row) => labels.includes(row.label)),
+    [common],
+  );
   /** 고시 "내용"으로 그대로 쓸 수 있는 공통 값 — 다시 치지 않게 한다. */
   const noticeSources = useMemo(() => collectLotteOnNoticeSourceValues(product), [product]);
   /**
@@ -548,7 +561,10 @@ export function LotteOnRegistrationPanel({
       state={registrationState}
       priorityItems={priorityItems}
       onPriorityItemClick={(item) => item.sectionId && scrollToSection(item.sectionId)}
-      onResolveMissing={missingInfo.length > 0 ? () => scrollToSection(LOTTEON_MISSING_INFO_ID) : undefined}
+      /* REWORK-4 §2 — 여기 있던 onResolveMissing(= 「부족한 정보 한 번에
+         해결하기」)이 사라졌다. 롯데ON의 §8 부족한 정보 목록은 아래 본문에
+         그대로 남아 있고(LOTTEON_MISSING_INFO_ID), 우선순위 첫 항목은 위
+         배너가 무엇/왜/어디서/[바로 이동]까지 갖춰서 말한다. */
       statusRows={
         <section className="rounded-lg border border-border bg-surface px-3 py-2.5">
           <p className="text-[11px] font-medium leading-4 text-text-tertiary">등록 상태</p>
@@ -719,87 +735,37 @@ export function LotteOnRegistrationPanel({
             화면에 적는다. 예전에는 탭을 벗어나면 사라졌기 때문에, "남는다"는
             사실 자체가 셀러가 알아야 할 변경점이다. */}
         <p className="mt-1 text-xs text-text-tertiary">
-          여기서 입력한 값은 <b>상품 정보 → 커머스 관리정보 → 롯데ON</b>에 저장됩니다 — 다른 탭에 다녀와도 남아
-          있습니다. 스마트스토어·쿠팡에는 아무 영향을 주지 않습니다.
+          여기서 입력한 값은 <b>이 상품에 저장됩니다</b> — 다른 탭에 다녀와도 그대로 남아 있습니다. 스마트스토어·쿠팡에는
+          아무 영향을 주지 않습니다.
         </p>
       </div>
 
-      {/* ── ① 공통 상품정보 — 읽기 전용 ─────────────────────────────────── */}
-      <FormSection
-        title="① 상품정보 (공통)"
+      {/* ── 좌측 등록 상세 — 10섹션 골격(registration-sections.ts) ──────────
+          REWORK-4 §5(CEO 지시, 2026-09-14). 여기 있던 순서는 롯데ON만의 것이었다
+          (상품정보 → 셀러설정 → 카테고리 → 고시 → 안전인증 → 배송 → 코드, 6/10).
+          이제 세 채널이 같은 목차를 쓴다: ① 기본 상품정보 ② 카테고리 ③ 옵션
+          ④ 가격 ⑤ 배송 ⑥ 배송정책·반품/교환 ⑦ 고시정보 ⑧ KC/인증 ⑨ 상세설명
+          ⑩ 등록정보 + 채널 고유 항목.
+
+          🔴 없던 4개(③④⑨⑩)는 **읽기 전용 요약**으로 붙인다. 전부 공통값이라
+          이 탭에서 입력칸을 만들면 같은 값이 두 곳에 생긴다(three-layer-realign
+          .test.ts 증명 1이 그 금지를 렌더 결과로 지킨다). 값은 새로 계산하지
+          않는다 — ① 이 이미 읽던 summarizeCommonProduct()의 같은 행들을 골라
+          제자리에 놓을 뿐이다. */}
+
+      {/* ── ① 기본 상품정보 — 읽기 전용(공통값) ──────────────────────────── */}
+      <CommonInfoSection
+        id="lotteon-section-basic"
+        title={sectionTitle("BASIC")}
         description="상품관리에 저장된 값입니다. 여기서는 고칠 수 없고, 고치면 스마트스토어·쿠팡에도 함께 반영됩니다."
-        action={
-          <Button variant="secondary" size="sm" onClick={onEditCommonInfo}>
-            상품정보에서 수정
-          </Button>
-        }
-      >
-        <dl className="divide-y divide-border text-xs">
-          {common.rows.map((row) => (
-            <div key={row.label} className="grid gap-0.5 py-2 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-3">
-              <dt className="font-medium text-text-secondary">{row.label}</dt>
-              <dd>
-                {row.value ? (
-                  <span className="text-text-primary">{row.value}</span>
-                ) : (
-                  <span className="text-warning">입력 필요 — 상품정보에서 채워주세요</span>
-                )}
-                <span className="ml-2 text-[11px] text-text-tertiary">{row.origin}</span>
-              </dd>
-            </div>
-          ))}
-        </dl>
-        {common.hasMissing && (
-          <p className="mt-2 rounded-md bg-warning-soft px-3 py-2 text-[11px] text-warning">
-            비어 있는 항목은 롯데ON 탭에서 채울 수 없습니다 — 상품정보에서 채우면 이 표와 등록 정보가 함께 갱신됩니다.
-          </p>
-        )}
-      </FormSection>
-
-      {/* ── ② 셀러 설정 정보 — 읽기 전용 ─────────────────────────────────── */}
-      {/*
-        REWORK 커머스 탭 구조 통일(CEO 지시, 2026-09-14).
-
-        이 섹션이 없던 동안 롯데ON 탭은 출고지·반품지·택배사를 "그냥 모르는 값"
-        으로 취급해 셀러에게 손으로 치게 했다. 셀러 설정에 이미 같은 개념이
-        있는지 없는지를 화면이 말한 적이 한 번도 없었다.
-
-        🔴 여기는 **입력칸을 만들지 않는다.** 셀러 설정을 고치는 곳은 설정 화면
-        하나뿐이어야 값이 두 벌로 갈라지지 않는다(스마트스토어·쿠팡의
-        settingsMissing이 /settings로 보내는 것과 같은 원칙이다).
-      */}
-      <FormSection
-        id="lotteon-section-seller-settings"
-        title="② 셀러 설정 정보 (배송 정책 · 반품/교환)"
-        description="비즈니스 설정 — Settings에서 한 번만 하면 됩니다. 스마트스토어·쿠팡의 「배송 정책 · 반품/교환」과 같은 배송 프로필을 읽습니다. 이 탭에서는 고칠 수 없습니다."
-        action={
-          <a
-            href="/settings"
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-text-secondary transition-colors hover:bg-background"
-          >
-            설정하러 가기
-          </a>
-        }
-      >
-        {sellerSettings == null && (
-          <p className="mb-3 rounded-md bg-warning-soft px-3 py-2 text-[11px] text-warning">
-            셀러 설정(배송 프로필)을 아직 불러오지 못했습니다 — 셀러 설정에서 먼저 등록해주세요. 설정 → 배송 프로필에서 한
-            번 채워두면 이후 모든 상품에 자동 적용됩니다.
-          </p>
-        )}
-        <dl className="divide-y divide-border text-xs">
-          {sellerSettingRows.map((row) => (
-            <SellerSettingRow key={row.label} row={row} />
-          ))}
-        </dl>
-      </FormSection>
+        rows={rowsOf("상품명", "브랜드")}
+        onEditCommonInfo={onEditCommonInfo}
+      />
 
       {/* ── ③ 카테고리 — 표준 + 전시 2중 · 추천 ──────────────────────────── */}
       <FormSection
         id="lotteon-section-category"
-        title="③ 카테고리 (롯데ON 전용 · 2중 구조)"
+        title={sectionTitle("CATEGORY", "롯데ON 전용 · 2중 구조")}
         description="롯데ON은 표준카테고리 1개와 전시카테고리 1개 이상을 함께 요구합니다. 여기서 고른 값은 롯데ON에만 적용되고, 스마트스토어·쿠팡 카테고리를 덮어쓰지 않습니다."
         action={
           <Button variant="primary" size="sm" disabled={recommend.loading} onClick={() => void runRecommend()}>
@@ -865,119 +831,28 @@ export function LotteOnRegistrationPanel({
         </div>
       </FormSection>
 
-      {/* ── 롯데ON 필수 등록정보 (④ 고시 · ⑤ 안전인증 · ⑥ 배송) ────────── */}
-      <GroupHeading
-        title="롯데ON 필수 등록정보"
-        description="아래 세 가지는 롯데ON이 등록 필수로 요구하고, 상품정보에서도 셀러 설정에서도 파생할 수 없는 값입니다."
+      {/* ── ③ 옵션 — 읽기 전용(공통값) ──────────────────────────────────── */}
+      <CommonInfoSection
+        id="lotteon-section-options"
+        title={sectionTitle("OPTIONS")}
+        description="옵션과 재고는 상품정보의 값을 그대로 씁니다 — 롯데ON에서 조합을 따로 만들지 않습니다."
+        rows={rowsOf("옵션", "재고")}
+        onEditCommonInfo={onEditCommonInfo}
       />
 
-      <FormSection
-        id="lotteon-section-notice"
-        title="④ 상품정보제공고시 (롯데ON 전용)"
-        description="품목코드는 표준카테고리를 고르면 함께 따라옵니다. 항목코드 체계는 품목마다 달라 자동으로 만들지 않습니다."
-      >
-        {selectedCategory && selectedCategory.noticeItemCodes.length > 0 && (
-          <p className="mb-3 rounded-md bg-success/5 px-3 py-2 text-[11px] text-text-secondary">
-            선택한 표준카테고리({selectedCategory.name})가 알려준 고시 품목코드:{" "}
-            {selectedCategory.noticeItemCodes.join(", ")}
-          </p>
-        )}
-        <div className="grid gap-3">
-          <TextField
-            label="상품품목코드 (pdItmsCd)"
-            hint={`고시 품목. ${LOTTEON_CHILD_PRODUCT_ITEM_CODE} = 어린이제품(유아동) — 이 경우 ④ 안전인증이 필수입니다.`}
-            value={form.notice.itemCode}
-            onChange={(value) => patch("notice", { itemCode: value })}
-          />
-          <TextAreaField
-            label="고시 항목 (pdItmsArtlLst)"
-            hint="한 줄에 하나씩 `항목코드:내용`"
-            placeholder={"0020:색상\n0060:제조국"}
-            value={form.notice.articlesText}
-            onChange={(value) => patch("notice", { articlesText: value })}
-          />
-        </div>
-        {/* 🔴 이 목록은 **입력칸이 아니다.** 상품정보에 이미 있는 값을 읽어서
-            보여주기만 한다 — 셀러가 소재/색상/제조사를 세 번째로 다시 치지
-            않게 하는 것이 목적이다(스마트스토어는 이 값들로 고시를 자동
-            생성한다). 항목코드 체계는 품목마다 달라 여기서 만들지 않는다. */}
-        {noticeSources.length > 0 && (
-          <div className="mt-3 rounded-md bg-background px-3 py-2 text-[11px] text-text-secondary">
-            <p className="font-medium text-text-tertiary">
-              고시 내용으로 그대로 쓸 수 있는 값 — 상품정보에 이미 있습니다(다시 입력하지 마세요)
-            </p>
-            <ul className="mt-1 space-y-0.5">
-              {noticeSources.map((row) => (
-                <li key={row.label}>
-                  <span className="text-text-tertiary">{row.label}</span> — {row.value}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </FormSection>
-
-      {/* ── ⑤ 인증 ──────────────────────────────────────────────────────── */}
-      <FormSection
-        id="lotteon-section-certification"
-        title="⑤ 안전인증 (롯데ON 전용)"
-        description="인증번호는 실제 취득한 값만 사용할 수 있습니다 — 어떤 경우에도 자동 생성하지 않습니다."
-      >
-        {selectedCategory && selectedCategory.safetyTypeCodes.length > 0 && (
-          <p className="mb-3 rounded-md bg-warning-soft px-3 py-2 text-[11px] text-warning">
-            선택한 표준카테고리가 요구하는 안전인증 유형:{" "}
-            {selectedCategory.safetyTypeCodes
-              .map((code) => `${code}(${LOTTEON_SAFETY_TYPE_LABEL[code] ?? "유형 미상"})`)
-              .join(" · ")}
-          </p>
-        )}
-        {safetyRequired && (
-          <p
-            className={`mb-3 rounded-md px-3 py-2 text-[11px] ${
-              safetyMissing ? "bg-error/5 text-error" : "bg-success/5 text-text-secondary"
-            }`}
-          >
-            품목코드 {LOTTEON_CHILD_PRODUCT_ITEM_CODE}(어린이제품)이 선택되어 있습니다 —{" "}
-            {safetyMissing ? "안전인증을 입력해야 등록할 수 있습니다." : "안전인증이 입력되어 있습니다."}
-          </p>
-        )}
-        {commonSafetyLine && !form.certification.safetyText.trim() && (
-          <div className="mb-3 rounded-md bg-background px-3 py-2 text-[11px] text-text-secondary">
-            <p>
-              상품정보에 어린이제품 인증이 이미 입력돼 있습니다 — 다시 치지 말고 그대로 가져오세요.
-              <span className="ml-1 font-mono text-text-primary">{commonSafetyLine}</span>
-            </p>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="mt-1"
-              onClick={() => patch("certification", { safetyText: commonSafetyLine })}
-            >
-              상품정보의 인증정보 가져오기
-            </Button>
-          </div>
-        )}
-        <div className="grid gap-3">
-          <TextAreaField
-            label="안전인증 목록 (sftyAthnLst)"
-            hint="한 줄에 하나씩 `유형코드:인증번호[:기관명]`"
-            placeholder={"CHL_CFM:CB123456789"}
-            value={form.certification.safetyText}
-            onChange={(value) => patch("certification", { safetyText: value })}
-          />
-          <TextField
-            label="수입대행코드 (impPrxCd)"
-            hint="전기용품·생활용품 계열 KC 인증을 넣으면 필수 — PUR_PRX / PRL_IMP / NONE. 어린이제품(CHL_*)에는 필요 없습니다."
-            value={form.certification.importProxyCode}
-            onChange={(value) => patch("certification", { importProxyCode: value })}
-          />
-        </div>
-      </FormSection>
+      {/* ── ④ 가격 — 읽기 전용(공통값) ──────────────────────────────────── */}
+      <CommonInfoSection
+        id="lotteon-section-price"
+        title={sectionTitle("PRICE")}
+        description="판매가격은 상품정보의 가격 계산 결과 하나뿐입니다 — 채널마다 다시 정하지 않습니다."
+        rows={rowsOf("판매가격")}
+        onEditCommonInfo={onEditCommonInfo}
+      />
 
       {/* ── ⑥ 배송 ──────────────────────────────────────────────────────── */}
       <FormSection
         id="lotteon-section-delivery"
-        title="⑥ 배송 (롯데ON 전용)"
+        title={sectionTitle("SHIPPING", "롯데ON 전용")}
         description="출고지 · 반품지 · 배송비 정책은 롯데ON 판매자센터에 먼저 등록해야 생기는 번호입니다. 우리가 만들 수 없습니다."
       >
         {/*
@@ -1037,6 +912,216 @@ export function LotteOnRegistrationPanel({
         </div>
       </FormSection>
 
+      {/* ── ② 셀러 설정 정보 — 읽기 전용 ─────────────────────────────────── */}
+      {/*
+        REWORK 커머스 탭 구조 통일(CEO 지시, 2026-09-14).
+
+        이 섹션이 없던 동안 롯데ON 탭은 출고지·반품지·택배사를 "그냥 모르는 값"
+        으로 취급해 셀러에게 손으로 치게 했다. 셀러 설정에 이미 같은 개념이
+        있는지 없는지를 화면이 말한 적이 한 번도 없었다.
+
+        🔴 여기는 **입력칸을 만들지 않는다.** 셀러 설정을 고치는 곳은 설정 화면
+        하나뿐이어야 값이 두 벌로 갈라지지 않는다(스마트스토어·쿠팡의
+        settingsMissing이 /settings로 보내는 것과 같은 원칙이다).
+      */}
+      <FormSection
+        id="lotteon-section-seller-settings"
+        title={sectionTitle("SHIPPING_POLICY")}
+        description="비즈니스 설정 — Settings에서 한 번만 하면 됩니다. 스마트스토어·쿠팡의 「배송 정책 · 반품/교환」과 같은 배송 프로필을 읽습니다. 이 탭에서는 고칠 수 없습니다."
+        action={
+          <a
+            href="/settings"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-text-secondary transition-colors hover:bg-background"
+          >
+            설정하러 가기
+          </a>
+        }
+      >
+        {sellerSettings == null && (
+          <p className="mb-3 rounded-md bg-warning-soft px-3 py-2 text-[11px] text-warning">
+            셀러 설정(배송 프로필)을 아직 불러오지 못했습니다 — 셀러 설정에서 먼저 등록해주세요. 설정 → 배송 프로필에서 한
+            번 채워두면 이후 모든 상품에 자동 적용됩니다.
+          </p>
+        )}
+        <dl className="divide-y divide-border text-xs">
+          {sellerSettingRows.map((row) => (
+            <SellerSettingRow key={row.label} row={row} />
+          ))}
+        </dl>
+      </FormSection>
+
+      <FormSection
+        id="lotteon-section-notice"
+        title={sectionTitle("NOTICE", "상품정보제공고시 · 롯데ON 전용")}
+        description="품목코드는 표준카테고리를 고르면 함께 따라옵니다. 항목코드 체계는 품목마다 달라 자동으로 만들지 않습니다."
+      >
+        {selectedCategory && selectedCategory.noticeItemCodes.length > 0 && (
+          <p className="mb-3 rounded-md bg-success/5 px-3 py-2 text-[11px] text-text-secondary">
+            선택한 표준카테고리({selectedCategory.name})가 알려준 고시 품목코드:{" "}
+            {selectedCategory.noticeItemCodes.join(", ")}
+          </p>
+        )}
+        <div className="grid gap-3">
+          <TextField
+            label="상품품목코드 (pdItmsCd)"
+            hint={`고시 품목. ${LOTTEON_CHILD_PRODUCT_ITEM_CODE} = 어린이제품(유아동) — 이 경우 ④ 안전인증이 필수입니다.`}
+            value={form.notice.itemCode}
+            onChange={(value) => patch("notice", { itemCode: value })}
+          />
+          <TextAreaField
+            label="고시 항목 (pdItmsArtlLst)"
+            hint="한 줄에 하나씩 `항목코드:내용`"
+            placeholder={"0020:색상\n0060:제조국"}
+            value={form.notice.articlesText}
+            onChange={(value) => patch("notice", { articlesText: value })}
+          />
+        </div>
+        {/* 🔴 이 목록은 **입력칸이 아니다.** 상품정보에 이미 있는 값을 읽어서
+            보여주기만 한다 — 셀러가 소재/색상/제조사를 세 번째로 다시 치지
+            않게 하는 것이 목적이다(스마트스토어는 이 값들로 고시를 자동
+            생성한다). 항목코드 체계는 품목마다 달라 여기서 만들지 않는다. */}
+        {noticeSources.length > 0 && (
+          <div className="mt-3 rounded-md bg-background px-3 py-2 text-[11px] text-text-secondary">
+            <p className="font-medium text-text-tertiary">
+              고시 내용으로 그대로 쓸 수 있는 값 — 상품정보에 이미 있습니다(다시 입력하지 마세요)
+            </p>
+            <ul className="mt-1 space-y-0.5">
+              {noticeSources.map((row) => (
+                <li key={row.label}>
+                  <span className="text-text-tertiary">{row.label}</span> — {row.value}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </FormSection>
+
+      {/* ── ⑤ 인증 ──────────────────────────────────────────────────────── */}
+      <FormSection
+        id="lotteon-section-certification"
+        title={sectionTitle("KC", "안전인증 · 롯데ON 전용")}
+        description="인증번호는 실제 취득한 값만 사용할 수 있습니다 — 어떤 경우에도 자동 생성하지 않습니다."
+      >
+        {selectedCategory && selectedCategory.safetyTypeCodes.length > 0 && (
+          <p className="mb-3 rounded-md bg-warning-soft px-3 py-2 text-[11px] text-warning">
+            선택한 표준카테고리가 요구하는 안전인증 유형:{" "}
+            {selectedCategory.safetyTypeCodes
+              .map((code) => `${code}(${LOTTEON_SAFETY_TYPE_LABEL[code] ?? "유형 미상"})`)
+              .join(" · ")}
+          </p>
+        )}
+        {safetyRequired && (
+          <p
+            className={`mb-3 rounded-md px-3 py-2 text-[11px] ${
+              safetyMissing ? "bg-error/5 text-error" : "bg-success/5 text-text-secondary"
+            }`}
+          >
+            품목코드 {LOTTEON_CHILD_PRODUCT_ITEM_CODE}(어린이제품)이 선택되어 있습니다 —{" "}
+            {safetyMissing ? "안전인증을 입력해야 등록할 수 있습니다." : "안전인증이 입력되어 있습니다."}
+          </p>
+        )}
+        {commonSafetyLine && !form.certification.safetyText.trim() && (
+          <div className="mb-3 rounded-md bg-background px-3 py-2 text-[11px] text-text-secondary">
+            <p>
+              상품정보에 어린이제품 인증이 이미 입력돼 있습니다 — 다시 치지 말고 그대로 가져오세요.
+              <span className="ml-1 font-mono text-text-primary">{commonSafetyLine}</span>
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-1"
+              onClick={() => patch("certification", { safetyText: commonSafetyLine })}
+            >
+              상품정보의 인증정보 가져오기
+            </Button>
+          </div>
+        )}
+        <div className="grid gap-3">
+          <TextAreaField
+            label="안전인증 목록 (sftyAthnLst)"
+            hint="한 줄에 하나씩 `유형코드:인증번호[:기관명]`"
+            placeholder={"CHL_CFM:CB123456789"}
+            value={form.certification.safetyText}
+            onChange={(value) => patch("certification", { safetyText: value })}
+          />
+          <TextField
+            label="수입대행코드 (impPrxCd)"
+            hint="전기용품·생활용품 계열 KC 인증을 넣으면 필수 — PUR_PRX / PRL_IMP / NONE. 어린이제품(CHL_*)에는 필요 없습니다."
+            value={form.certification.importProxyCode}
+            onChange={(value) => patch("certification", { importProxyCode: value })}
+          />
+        </div>
+      </FormSection>
+
+      {/* ── ⑨ 상세설명 — 읽기 전용(공통값) ──────────────────────────────── */}
+      <CommonInfoSection
+        id="lotteon-section-description"
+        title={sectionTitle("DESCRIPTION")}
+        description="대표이미지와 상세페이지는 상품정보 + 셀러 공통 상세블록에서 조립됩니다 — 스마트스토어·쿠팡과 같은 조립 경로입니다."
+        rows={rowsOf("대표이미지", "상세페이지")}
+        onEditCommonInfo={onEditCommonInfo}
+      />
+
+      {/* ── ⑩ 등록정보 — 읽기 전용(실제 전송 데이터) ────────────────────── */}
+      <FormSection
+        id="lotteon-section-payload"
+        title={sectionTitle("LISTING_INFO")}
+        description="이 화면의 값으로 실제 롯데ON에 나갈 데이터입니다. 여기서 고치지 않습니다 — 위 섹션을 고치면 이 내용이 따라옵니다."
+      >
+
+        {validation && (
+          <div className="rounded-lg border border-border bg-surface px-4 py-3">
+            <p className="mb-2 text-sm font-semibold text-text-primary">
+              등록 정보 확인 — 준비 {validation.readyCount} · 누락 {validation.missingCount} · 차단{" "}
+              {validation.blockedCount}
+            </p>
+            <ul className="space-y-1 text-xs">
+              {validation.fields.map((field) => (
+                <li key={field.field} className="flex gap-2">
+                  <span
+                    className={
+                      field.status === "READY" ? "text-success" : field.status === "BLOCKED" ? "text-error" : "text-warning"
+                    }
+                  >
+                    {field.status === "READY" ? "●" : field.status === "BLOCKED" ? "■" : "▲"}
+                  </span>
+                  <span className="text-text-secondary">
+                    <b className="text-text-primary">{field.label}</b>
+                    {field.reason ? ` — ${field.reason}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {preview?.payload != null && (
+          <div className="rounded-lg border border-border bg-surface px-4 py-3">
+            <p className="text-xs text-text-tertiary">
+              실제로 롯데ON에 전송될 데이터입니다 — 등록 버튼을 누르기 전에도 항상 최신 상태로 계산되어 있습니다.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowPayload((prev) => !prev)}
+              className="mt-1 text-xs font-medium text-text-secondary underline decoration-border hover:text-text-primary"
+            >
+              {showPayload ? "전송 데이터 원문 닫기" : "▶ 전송 데이터 원문 보기 (LotteON 87 Request)"}
+            </button>
+            {showPayload && (
+              <pre className="mt-2 max-h-[420px] overflow-auto rounded bg-background p-3 text-[11px] text-text-secondary">
+                {JSON.stringify(preview.payload, null, 2)}
+              </pre>
+            )}
+          </div>
+        )}
+        {validation == null && preview?.payload == null && (
+          <p className="text-xs text-text-tertiary">
+            아직 계산된 전송 데이터가 없습니다 — 우측 등록 요약의 [등록 정보 확인]을 누르면 여기에 나타납니다.
+          </p>
+        )}
+      </FormSection>
+
       {/* ── 롯데ON 고유 관리정보 (⑦) ───────────────────────────────────── */}
       <GroupHeading
         title="롯데ON 고유 관리정보"
@@ -1045,7 +1130,7 @@ export function LotteOnRegistrationPanel({
 
       <FormSection
         id="lotteon-section-codes"
-        title="⑦ 그 밖의 롯데ON 코드"
+        title="그 밖의 롯데ON 코드 (채널 고유)"
         description="원산지·과세·브랜드는 롯데ON 코드체계를 따릅니다 — 상품정보의 원산지 텍스트로는 코드를 정할 수 없습니다."
       >
         {product.countryOfOrigin.value.trim() && (
@@ -1082,62 +1167,11 @@ export function LotteOnRegistrationPanel({
         </div>
       </FormSection>
 
-      {/* REWORK-2 — 여기 있던 [등록 정보 확인] · [롯데ON에 등록] 두 버튼이
-          우측 등록 요약으로 올라갔다. 스마트스토어·쿠팡의 등록 버튼이 서는
-          자리와 같은 자리이고, 같은 컴포넌트가 그린다 — 세 채널에서 등록
-          행동의 위치가 같아야 한다는 것이 이번 지시의 11번이다. */}
-
       {error && <div className="rounded-lg border border-error/40 bg-error/5 px-4 py-3 text-sm text-error">{error}</div>}
 
       {preview?.identityError && (
         <div className="rounded-lg border border-warning/40 bg-warning/5 px-4 py-3 text-xs text-text-secondary">
           거래처 정보(Identity) 조회 실패 — {preview.identityError}
-        </div>
-      )}
-
-      {validation && (
-        <div className="rounded-lg border border-border bg-surface px-4 py-3">
-          <p className="mb-2 text-sm font-semibold text-text-primary">
-            등록 정보 확인 — 준비 {validation.readyCount} · 누락 {validation.missingCount} · 차단{" "}
-            {validation.blockedCount}
-          </p>
-          <ul className="space-y-1 text-xs">
-            {validation.fields.map((field) => (
-              <li key={field.field} className="flex gap-2">
-                <span
-                  className={
-                    field.status === "READY" ? "text-success" : field.status === "BLOCKED" ? "text-error" : "text-warning"
-                  }
-                >
-                  {field.status === "READY" ? "●" : field.status === "BLOCKED" ? "■" : "▲"}
-                </span>
-                <span className="text-text-secondary">
-                  <b className="text-text-primary">{field.label}</b>
-                  {field.reason ? ` — ${field.reason}` : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {preview?.payload != null && (
-        <div className="rounded-lg border border-border bg-surface px-4 py-3">
-          <p className="text-xs text-text-tertiary">
-            실제로 롯데ON에 전송될 데이터입니다 — 등록 버튼을 누르기 전에도 항상 최신 상태로 계산되어 있습니다.
-          </p>
-          <button
-            type="button"
-            onClick={() => setShowPayload((prev) => !prev)}
-            className="mt-1 text-xs font-medium text-text-secondary underline decoration-border hover:text-text-primary"
-          >
-            {showPayload ? "전송 데이터 원문 닫기" : "▶ 전송 데이터 원문 보기 (LotteON 87 Request)"}
-          </button>
-          {showPayload && (
-            <pre className="mt-2 max-h-[420px] overflow-auto rounded bg-background p-3 text-[11px] text-text-secondary">
-              {JSON.stringify(preview.payload, null, 2)}
-            </pre>
-          )}
         </div>
       )}
 
@@ -1296,6 +1330,67 @@ function FormSection({
       {action && <div className="mb-3 flex flex-wrap items-center justify-end gap-2">{action}</div>}
       {children}
     </CollapsibleSection>
+  );
+}
+
+/**
+ * REWORK-4 §5(CEO 지시, 2026-09-14) — **공통값을 읽기만 하는 섹션.**
+ *
+ * 10섹션 골격에서 롯데ON에 없던 ③ 옵션 · ④ 가격 · ⑨ 상세설명과 ① 기본
+ * 상품정보가 전부 이 모양이다. 세 채널이 같은 목차를 갖되, 공통값을 롯데ON
+ * 탭에서 **다시 입력받지는 않는다**는 두 요구를 동시에 지키는 자리다.
+ *
+ * 🔴 이 컴포넌트는 input/textarea/select를 하나도 만들지 않는다 — 그것이
+ * 계약이다(three-layer-realign.test.ts 증명 1이 롯데ON 탭 전체에서 공통
+ * 상품정보 입력칸 0개를 렌더 결과로 세고 있다). 고치러 가는 길은 하나,
+ * [상품정보에서 수정]뿐이다.
+ */
+function CommonInfoSection({
+  id,
+  title,
+  description,
+  rows,
+  onEditCommonInfo,
+}: {
+  id: string;
+  title: string;
+  description: string;
+  rows: CommonProductRow[];
+  onEditCommonInfo: () => void;
+}) {
+  const hasMissing = rows.some((row) => row.missing);
+  return (
+    <FormSection
+      id={id}
+      title={title}
+      description={description}
+      action={
+        <Button variant="secondary" size="sm" onClick={onEditCommonInfo}>
+          상품정보에서 수정
+        </Button>
+      }
+    >
+      <dl className="divide-y divide-border text-xs">
+        {rows.map((row) => (
+          <div key={row.label} className="grid gap-0.5 py-2 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-3">
+            <dt className="font-medium text-text-secondary">{row.label}</dt>
+            <dd>
+              {row.value ? (
+                <span className="text-text-primary">{row.value}</span>
+              ) : (
+                <span className="text-warning">입력 필요 — 상품정보에서 채워주세요</span>
+              )}
+              <span className="ml-2 text-[11px] text-text-tertiary">{row.origin}</span>
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {hasMissing && (
+        <p className="mt-2 rounded-md bg-warning-soft px-3 py-2 text-[11px] text-warning">
+          비어 있는 항목은 롯데ON 탭에서 채울 수 없습니다 — 상품정보에서 채우면 이 표와 등록 정보가 함께 갱신됩니다.
+        </p>
+      )}
+    </FormSection>
   );
 }
 
