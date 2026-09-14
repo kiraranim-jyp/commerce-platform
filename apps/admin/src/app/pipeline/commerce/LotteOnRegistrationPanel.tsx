@@ -26,7 +26,13 @@ import {
   type LotteOnValidationField,
   type LotteOnValidationSnapshot,
 } from "./lotteon-channel-form";
-import { LOTTEON_SAFETY_TYPE_LABEL, type LotteOnCategoryCandidate } from "./lotteon-category";
+import {
+  LOTTEON_SAFETY_TYPE_LABEL,
+  buildLotteOnCategoryPath,
+  parseLotteOnStandardCategory,
+  type LotteOnCategoryCandidate,
+  type LotteOnStandardCategory,
+} from "./lotteon-category";
 import { sectionTitle } from "./registration-sections";
 import { ChannelRegistrationFrame, ChannelRegistrationSummary } from "./ChannelRegistrationFrame";
 import type { ReadinessItem } from "./readiness";
@@ -197,6 +203,12 @@ export function LotteOnRegistrationPanel({
   const [error, setError] = useState<string | null>(null);
   const [recommend, setRecommend] = useState<RecommendState>(EMPTY_RECOMMEND);
   /**
+   * REWORK-6 ②(CEO 판정, 2026-09-14: "추천 실패가 곧 등록 불가가 되어서는 안
+   * 된다") — 추천이 후보를 내지 못했을 때 셀러가 **목록에서 카테고리를 고르는**
+   * 길. 번호를 찾아 적는 폐기된 UX가 아니다(입력칸이 하나도 없다).
+   */
+  const [directPickOpen, setDirectPickOpen] = useState(false);
+  /**
    * 확인을 통과한 뒤 입력이 바뀌었는가. true면 화면의 등록 가능성/부족한 정보는
    * **옛 입력에 대한 답**이다 — 등록 버튼을 잠그고 다시 확인하게 한다.
    * (SPRINT 3까지는 이 상태가 없어서 확인 후 값을 지워도 버튼이 열려 있었다.)
@@ -333,9 +345,22 @@ export function LotteOnRegistrationPanel({
    * setter는 전부 이 컴포넌트 안의 롯데ON 폼이다.
    */
   function applyRecommendation(candidate: LotteOnCategoryCandidate) {
-    const next = applyLotteOnRecommendedCategory(form, candidate.category);
+    applyCategory(candidate.category);
+  }
+
+  /**
+   * REWORK-6 ②(CEO 판정, 2026-09-14) — **고른 경로가 달라도 반영 경로는 하나다.**
+   *
+   * 추천 후보에서 고르든(위) 추천 실패 후 목록에서 직접 고르든, 도착하는 곳은
+   * 이 함수 하나다 — 그래서 "추천으로 고른 것만 제대로 반영되고 직접 고른 것은
+   * 우측 요약에서 안 사라진다" 같은 갈라짐이 생길 수 없다(627ac53이 고친
+   * 재검증 경로를 그대로 탄다).
+   */
+  function applyCategory(category: LotteOnStandardCategory) {
+    const next = applyLotteOnRecommendedCategory(form, category);
     setDisplayCategoryText(next.category.displayCategoryNos.join(", "));
     commitForm(next);
+    setDirectPickOpen(false);
     /**
      * REWORK-5 ③(CEO 실측: "우측 요약에서도 안 없어짐") — **선택 즉시 자동
      * 반영**의 실제 구현이 이 한 줄이다.
@@ -733,6 +758,32 @@ export function LotteOnRegistrationPanel({
           pickedId={form.category.standardCategoryNo}
           onPick={applyRecommendation}
         />
+
+        {/* REWORK-6 ②(CEO 판정, 2026-09-14) — **추천 실패가 등록 불가가 되지
+            않는다.** 추천이 후보를 내지 못하면 지금까지 남는 안내는 "상품정보를
+            채우고 다시 추천"뿐이었다 — 셀러가 상품정보를 더 채울 수 없는 상품
+            (원문에 연령/유형 신호가 없는 상품)에서는 그대로 막다른 길이었다.
+
+            🔴 되살리지 않는 것: scatNo/dcatLst **번호 직접 입력**. 아래
+            CategoryDirectPicker에는 입력칸이 하나도 없다 — 롯데ON이 돌려준
+            목록을 위에서부터 눌러 내려가 고르는 것뿐이고, 고르면 추천에서
+            고른 것과 **완전히 같은 경로**(applyCategory)를 탄다. */}
+        {isRecommendDeadEnd(recommend) && !directPickOpen && (
+          <div className="mb-3 rounded-md border border-warning/40 bg-warning-soft px-3 py-2.5">
+            <p className="text-[11px] font-medium text-warning">카테고리를 자동 추천하지 못했습니다.</p>
+            <p className="mt-1 text-[11px] text-text-secondary">
+              롯데ON 카테고리를 직접 선택해주세요 — 롯데ON이 제공하는 표준카테고리 목록에서 고르면 됩니다. 번호를
+              찾아 적지 않습니다.
+            </p>
+            <Button variant="primary" size="sm" className="mt-2" onClick={() => setDirectPickOpen(true)}>
+              롯데ON 카테고리 선택
+            </Button>
+          </div>
+        )}
+
+        {directPickOpen && (
+          <CategoryDirectPicker onPick={applyCategory} onClose={() => setDirectPickOpen(false)} />
+        )}
 
         {commonCategorySources.length > 0 ? (
           <div className="mb-3 rounded-md bg-background px-3 py-2 text-[11px] text-text-secondary">
@@ -1427,6 +1478,236 @@ function CategoryRecommendation({
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+/**
+ * REWORK-6 ②(CEO 판정, 2026-09-14) — 추천이 막다른 길이 됐는가.
+ *
+ * 조회 실패(error)와 "추천 못 함"(REJECT)과 "후보 0건"은 셀러에게는 같은
+ * 상황이다 — 이 화면에서 더 나아갈 수단이 없다는 것. 셋 다 직접 선택 경로를
+ * 열어 준다. 아직 추천을 눌러보지도 않았을 때(decision === null, error === null)
+ * 는 막다른 길이 아니다 — 먼저 추천을 시켜야 한다(원칙: 시스템 추천 → 셀러 선택).
+ */
+function isRecommendDeadEnd(state: RecommendState): boolean {
+  if (state.loading) return false;
+  if (state.error) return true;
+  if (state.decision == null) return false;
+  return state.decision === "REJECT" || state.candidates.length === 0;
+}
+
+/** 목록을 몇 장까지 읽는가 — /api/lotteon/category-recommend와 같은 상한이다. */
+const DIRECT_PICK_PAGE_SIZE = 500;
+const DIRECT_PICK_MAX_PAGES = 20;
+
+/** 최상위(부모 없음) 묶음의 키. */
+const DIRECT_PICK_ROOT = "";
+
+/**
+ * REWORK-6 ②(CEO 판정, 2026-09-14) — **추천이 실패해도 카테고리를 고를 수 있다.**
+ *
+ * ── 되살리지 않는 것 ─────────────────────────────────────────────────────────
+ * 🔴 scatNo / dcatLst **번호 직접 입력**. 이 컴포넌트에는 `<input>`이 하나도
+ * 없다(테스트가 그것을 고정한다). 셀러가 하는 일은 롯데ON이 돌려준 표준카테고리
+ * 목록을 위에서부터 눌러 내려가는 것뿐이고, 마지막 리프를 누르면 끝난다.
+ *
+ * ── 왜 이 길이 필요한가 ──────────────────────────────────────────────────────
+ * 추천은 상품 원문의 신호(연령/성별/상품유형)로 점수를 매긴다. 원문에 그 신호가
+ * 없는 상품은 아무리 다시 눌러도 후보가 나오지 않는다 — "상품정보를 채우고 다시
+ * 추천"은 그런 상품에게는 해결책이 아니라 막다른 길이다. 카테고리를 아는 사람은
+ * 그때 셀러다.
+ *
+ * ── 새 조회 경로를 만들지 않는다 ─────────────────────────────────────────────
+ * 이미 있는 조회 라우트(/api/lotteon/categories, job=cheetahStandardCategory)를
+ * 그대로 쓰고, 응답을 읽는 파서도 추천 라우트와 같은 parseLotteOnStandardCategory
+ * 하나다 — 같은 응답을 두 군데서 다르게 읽을 경로가 없다.
+ *
+ * ── 고른 뒤 ──────────────────────────────────────────────────────────────────
+ * onPick은 추천 후보를 고를 때와 **같은 함수**(applyCategory)다. 표준·전시·고시
+ * 품목·과세·요구 안전인증이 한 번에 채워지고 곧바로 재검증이 돈다.
+ */
+function CategoryDirectPicker({
+  onPick,
+  onClose,
+}: {
+  onPick: (category: LotteOnStandardCategory) => void;
+  onClose: () => void;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<LotteOnStandardCategory[]>([]);
+  const [truncated, setTruncated] = useState(false);
+  /** 지금 펼쳐 보고 있는 상위 카테고리 id. null이면 최상위 목록이다. */
+  const [cursor, setCursor] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const collected: LotteOnStandardCategory[] = [];
+      let cut = false;
+      try {
+        for (let page = 0; page < DIRECT_PICK_MAX_PAGES; page += 1) {
+          const params = new URLSearchParams({
+            job: "cheetahStandardCategory",
+            skip: String(page * DIRECT_PICK_PAGE_SIZE),
+            limit: String(DIRECT_PICK_PAGE_SIZE),
+          });
+          const res = await fetch(`/api/lotteon/categories?${params.toString()}`);
+          const data = (await res.json()) as { ok?: boolean; message?: string; items?: unknown[] };
+          if (!data.ok) {
+            // 첫 장부터 실패하면 그 실패를 그대로 보여준다 — 인증/네트워크
+            // 실패를 "카테고리 없음"으로 바꾸지 않는다(추천 라우트와 같은 원칙).
+            if (page === 0) {
+              if (!cancelled) {
+                setError(data.message ?? "롯데ON 카테고리 목록을 불러오지 못했습니다.");
+                setLoading(false);
+              }
+              return;
+            }
+            cut = true;
+            break;
+          }
+          const items = data.items ?? [];
+          for (const item of items) {
+            const parsed = parseLotteOnStandardCategory(item);
+            if (parsed) collected.push(parsed);
+          }
+          if (items.length < DIRECT_PICK_PAGE_SIZE) break;
+          if (page === DIRECT_PICK_MAX_PAGES - 1) cut = true;
+        }
+      } catch {
+        if (!cancelled) {
+          setError("서버에 연결하지 못했습니다.");
+          setLoading(false);
+        }
+        return;
+      }
+      if (cancelled) return;
+      setCategories(collected);
+      setTruncated(cut);
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const byId = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+  /** 부모 id → 자식 목록. 사용중지(use_yn=N)는 아예 보여주지 않는다. */
+  const childrenOf = useMemo(() => {
+    const map = new Map<string, LotteOnStandardCategory[]>();
+    for (const category of categories) {
+      if (!category.usable) continue;
+      const key = category.parentId ?? DIRECT_PICK_ROOT;
+      const bucket = map.get(key);
+      if (bucket) bucket.push(category);
+      else map.set(key, [category]);
+    }
+    for (const bucket of map.values()) bucket.sort((a, b) => a.name.localeCompare(b.name, "ko"));
+    return map;
+  }, [categories]);
+
+  const current = cursor ? (byId.get(cursor) ?? null) : null;
+  /** 최상위 → 지금 자리까지의 이름 경로. 되돌아갈 길이기도 하다. */
+  const trail = useMemo(
+    () => (current ? buildLotteOnCategoryPath(current, byId) : []),
+    [current, byId],
+  );
+  const trailIds = useMemo(() => {
+    if (!current) return [] as string[];
+    const ids: string[] = [current.id];
+    let parent = current.parentId;
+    while (parent && byId.has(parent) && !ids.includes(parent)) {
+      ids.unshift(parent);
+      parent = byId.get(parent)!.parentId;
+    }
+    return ids;
+  }, [current, byId]);
+
+  const rows = childrenOf.get(cursor ?? DIRECT_PICK_ROOT) ?? [];
+
+  return (
+    <div className="mb-3 rounded-md border border-border bg-background px-3 py-2.5">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-[11px] font-medium text-text-secondary">롯데ON 카테고리 선택</p>
+          <p className="mt-0.5 text-[11px] text-text-tertiary">
+            롯데ON이 제공하는 표준카테고리 목록입니다. 위에서부터 눌러 내려가 맨 끝(선택 가능) 카테고리를 고르면
+            표준카테고리 · 전시카테고리 · 고시 품목코드 · 과세구분 · 요구 안전인증이 함께 채워집니다.
+          </p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={onClose}>
+          닫기
+        </Button>
+      </div>
+
+      {loading && <p className="mt-2 text-[11px] text-text-tertiary">롯데ON 표준카테고리 목록을 읽는 중…</p>}
+      {error && <p className="mt-2 rounded-md bg-error/5 px-3 py-2 text-[11px] text-error">{error}</p>}
+
+      {!loading && !error && (
+        <>
+          {truncated && (
+            <p className="mt-2 text-[11px] text-warning">
+              카테고리 목록을 끝까지 읽지 못했습니다(조회 상한) — 보이지 않는 카테고리가 있을 수 있습니다.
+            </p>
+          )}
+          <nav className="mt-2 flex flex-wrap items-center gap-1 text-[11px] text-text-tertiary">
+            <button type="button" className="underline hover:text-text-primary" onClick={() => setCursor(null)}>
+              전체
+            </button>
+            {trail.map((name, index) => (
+              <span key={trailIds[index] ?? name} className="flex items-center gap-1">
+                <span aria-hidden>›</span>
+                <button
+                  type="button"
+                  className="underline hover:text-text-primary"
+                  onClick={() => setCursor(trailIds[index] ?? null)}
+                >
+                  {name}
+                </button>
+              </span>
+            ))}
+          </nav>
+
+          {rows.length === 0 ? (
+            <p className="mt-2 text-[11px] text-text-tertiary">
+              이 아래에는 더 고를 카테고리가 없습니다 — 위 경로에서 다른 갈래를 골라 주세요.
+            </p>
+          ) : (
+            <ul className="mt-2 max-h-72 space-y-0.5 overflow-y-auto">
+              {rows.map((category) => {
+                const hasChildren = (childrenOf.get(category.id) ?? []).length > 0;
+                // 리프 판정은 롯데ON이 말한 leaf_yn을 먼저 믿는다. 트리를 다 읽지
+                // 못했을 때(truncated) 자식이 안 보인다는 이유로 리프라고 단정하지
+                // 않는다 — 87의 scatNo는 리프여야 하고, 아니면 등록이 거절된다.
+                const selectable = category.leaf && !hasChildren;
+                return (
+                  <li key={category.id}>
+                    <button
+                      type="button"
+                      onClick={() => (selectable ? onPick(category) : setCursor(category.id))}
+                      className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-[11px] hover:bg-surface"
+                    >
+                      <span className="min-w-0">
+                        <span className="font-medium text-text-primary">{category.name}</span>
+                        {selectable && category.safetyTypeCodes.length > 0 && (
+                          <span className="block text-text-tertiary">
+                            안전인증 {category.safetyTypeCodes.join("/")}
+                          </span>
+                        )}
+                      </span>
+                      <span className="shrink-0 text-text-tertiary">
+                        {selectable ? "이 카테고리 선택 →" : "하위 열기 ›"}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </>
       )}
     </div>
   );

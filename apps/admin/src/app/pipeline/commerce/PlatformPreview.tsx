@@ -84,6 +84,7 @@ function ReferenceEligibleFieldRow({
   onSetReference,
   placeholder,
   required,
+  referenceLimitation,
 }: {
   label: string;
   field: { value: string; source: FieldSource; confidence: number };
@@ -91,21 +92,45 @@ function ReferenceEligibleFieldRow({
   onSetReference?: (referenced: boolean) => void;
   placeholder?: string;
   required?: boolean;
+  /**
+   * REWORK-6 ①(CEO 판정, 2026-09-14: "화면에는 참조로 등록됐다고 나오는데
+   * payload에서는 빈 값이면 사용자를 속이는 UI다") — **이 입력칸이 두 군데로
+   * 나뉘어 나갈 때**, 참조가 통하지 않는 쪽을 그 자리에서 말한다.
+   *
+   * 지금 해당하는 필드는 "모델명" 하나다. 이 한 칸이 두 곳으로 간다:
+   *   productInfoProvidedNotice(KIDS).modelName   참조 대체 **가능**
+   *   naverShoppingSearchInfo.modelName           참조 대체 **불가**(조사 결과)
+   * 참조를 고르면 앞쪽만 채워지고 뒤쪽은 비는데, 지금까지 화면에는
+   * "상세페이지 참조로 등록됩니다" 한 줄만 떴다 — 절반만 참인 문장이다.
+   *
+   * 🔴 빈 문자열/참조 문구를 카탈로그 쪽에 몰래 실어 보내지 않는다. 네이버가
+   * 그 문자열을 받아준다는 근거를 찾지 못했고(조사 §1), 카탈로그 매칭용
+   * 필드에 "상품 상세페이지 참조"를 넣는 것은 네이버에 거짓 데이터를 보내는
+   * 일이다. 대신 **셀러에게 그 자리에서 알리고 직접 입력을 요구한다.**
+   */
+  referenceLimitation?: string;
 }) {
   const isReferenced = field.source === "DETAIL_PAGE_REFERENCE";
   return (
     <FieldRow label={label} field={field} required={required}>
       {isReferenced ? (
-        <div className="flex items-center justify-between gap-2 rounded border border-dashed border-selected-border bg-selected-soft px-2 py-1 text-sm text-selected">
-          <span>상세페이지 참조로 등록됩니다</span>
-          {onSetReference && (
-            <button
-              type="button"
-              className="shrink-0 text-[11px] underline"
-              onClick={() => onSetReference(false)}
-            >
-              직접 입력으로 전환
-            </button>
+        <div className="space-y-1">
+          <div className="flex items-center justify-between gap-2 rounded border border-dashed border-selected-border bg-selected-soft px-2 py-1 text-sm text-selected">
+            <span>상세페이지 참조로 등록됩니다</span>
+            {onSetReference && (
+              <button
+                type="button"
+                className="shrink-0 text-[11px] underline"
+                onClick={() => onSetReference(false)}
+              >
+                직접 입력으로 전환
+              </button>
+            )}
+          </div>
+          {referenceLimitation && (
+            <p className="rounded border border-warning/40 bg-warning-soft px-2 py-1 text-[11px] leading-relaxed text-warning">
+              ⚠ {referenceLimitation}
+            </p>
           )}
         </div>
       ) : (
@@ -119,6 +144,11 @@ function ReferenceEligibleFieldRow({
             >
               상세페이지 참조로 등록
             </button>
+          )}
+          {/* 누르기 **전에도** 그 버튼이 무엇을 못 하는지 알 수 있어야 한다 —
+              누른 뒤에만 알려주면 셀러는 "되는 줄 알고" 넘어간 다음에야 막힌다. */}
+          {referenceLimitation && (
+            <p className="text-[11px] leading-relaxed text-text-tertiary">{referenceLimitation}</p>
           )}
         </div>
       )}
@@ -824,12 +854,21 @@ export function PlatformPreview({
               onSetReference={(r) => onSetFieldReference?.("itemName", r)}
               placeholder="품명 미확인"
             />
+            {/* REWORK-6 ①(CEO 판정, 2026-09-14) — 이 한 칸이 **두 곳으로** 나간다.
+                고시정보 모델명은 참조로 대체되지만, 네이버 쇼핑 카탈로그
+                모델명(naverShoppingSearchInfo.modelName)은 대체되지 않는다 —
+                네이버가 그 자리에 "상품 상세페이지 참조" 문자열을 허용한다는
+                근거를 찾지 못했고(공식 문서·GitHub Discussion #2136/#979/#1878
+                에 해당 문구 허용 언급 없음), 그 필드는 카탈로그 검색·연결에
+                쓰이는 값이라 문구를 채워 보내면 네이버에 거짓 데이터를 보내는
+                것이 된다. 그래서 **조용히 비우지 않고 그 자리에서 말한다.** */}
             <ReferenceEligibleFieldRow
               label="모델명"
               field={product.modelName}
               onCommit={(v) => fix?.("modelName", v)}
               onSetReference={(r) => onSetFieldReference?.("modelName", r)}
               placeholder="모델명 미확인"
+              referenceLimitation="이 값은 스마트스토어의 「네이버 쇼핑 카탈로그 모델명」에는 쓸 수 없습니다 — 고시정보 모델명만 참조로 대체됩니다. 어린이제품 카테고리는 실제 모델명을 직접 입력해야 등록이 열립니다."
             />
             <ReferenceEligibleFieldRow
               label="중량"
