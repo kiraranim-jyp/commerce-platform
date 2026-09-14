@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import {
   LOTTEON_CHILD_PRODUCT_ITEM_CODE,
   LOTTEON_FIX_LOCATION_LABEL,
+  applyLotteOnRecommendedCategory,
   buildLotteOnMissingInfo,
   buildLotteOnSafetyLineFromCommon,
   collectLotteOnNoticeSourceValues,
@@ -16,6 +17,8 @@ import {
   listLotteOnBlockingConditions,
   parseDisplayCategoryNos,
   requiresSafetyCertification,
+  resolveLotteOnSelectedCategory,
+  setLotteOnStandardCategoryNo,
   summarizeCommonProduct,
   toLotteOnChannelInfo,
   toLotteOnChannelPayload,
@@ -24,11 +27,7 @@ import {
   type LotteOnValidationField,
   type LotteOnValidationSnapshot,
 } from "./lotteon-channel-form";
-import {
-  LOTTEON_SAFETY_TYPE_LABEL,
-  type LotteOnCategoryCandidate,
-  type LotteOnStandardCategory,
-} from "./lotteon-category";
+import { LOTTEON_SAFETY_TYPE_LABEL, type LotteOnCategoryCandidate } from "./lotteon-category";
 
 /**
  * LOTTEON COMMERCE SPRINT 4(CEO 확정, 2026-09-14) — 롯데ON 탭.
@@ -174,8 +173,6 @@ export function LotteOnRegistrationPanel({
   const [standardLookup, setStandardLookup] = useState<CategoryLookupState>(EMPTY_LOOKUP);
   const [displayLookup, setDisplayLookup] = useState<CategoryLookupState>(EMPTY_LOOKUP);
   const [recommend, setRecommend] = useState<RecommendState>(EMPTY_RECOMMEND);
-  /** 추천에서 고른 표준카테고리 — 전시/고시/과세/안전인증 후보의 출처다. */
-  const [pickedCategory, setPickedCategory] = useState<LotteOnStandardCategory | null>(null);
   /**
    * 확인을 통과한 뒤 입력이 바뀌었는가. true면 화면의 등록 가능성/부족한 정보는
    * **옛 입력에 대한 답**이다 — 등록 버튼을 잠그고 다시 확인하게 한다.
@@ -193,6 +190,16 @@ export function LotteOnRegistrationPanel({
   const missingInfo = useMemo(() => buildLotteOnMissingInfo(validation), [validation]);
   /** §17 — 카테고리 전에는 등록 가능성을 숫자로 말하지 않는다. */
   const categoryChosen = isLotteOnCategoryChosen(form);
+  /**
+   * 선택한 표준카테고리가 알려준 것(이름 · 고시 품목코드 · 요구 안전인증 유형).
+   *
+   * LOTTEON-CATEGORY-PERSIST(CEO 지시, 2026-09-14) — 예전에는 이것이 컴포넌트
+   * 로컬 useState(pickedCategory)였다. 그래서 탭을 벗어나면 사라졌고, 돌아온
+   * 셀러에게는 **"안전인증이 필요하다"는 차단만 남고 그것을 푸는 길이 없었다**
+   * (유형코드를 모르면 상품정보의 실제 인증번호를 등록 형식으로 옮길 수 없다).
+   * 이제 폼 = 상품 저장값에서 나온다 — 폼이 남으면 이것도 남는다.
+   */
+  const selectedCategory = resolveLotteOnSelectedCategory(form);
   /** §18 — 퍼센트보다 먼저 보여줄, 실제로 등록을 막는 필수 조건. */
   const blockingConditions = useMemo(() => listLotteOnBlockingConditions(validation), [validation]);
 
@@ -299,16 +306,17 @@ export function LotteOnRegistrationPanel({
    * setter는 전부 이 컴포넌트 안의 롯데ON 폼이다.
    */
   function applyRecommendation(candidate: LotteOnCategoryCandidate) {
-    const category = candidate.category;
-    setPickedCategory(category);
-    const displayNos = category.displayCategories.map((entry) => entry.displayCategoryId);
-    setDisplayCategoryText(displayNos.join(", "));
-    commitForm({
-      ...form,
-      category: { standardCategoryNo: category.id, displayCategoryNos: displayNos },
-      notice: { ...form.notice, itemCode: category.noticeItemCodes[0] ?? form.notice.itemCode },
-      codes: { ...form.codes, taxTypeCode: category.taxTypeCode ?? form.codes.taxTypeCode },
-    });
+    const next = applyLotteOnRecommendedCategory(form, candidate.category);
+    setDisplayCategoryText(next.category.displayCategoryNos.join(", "));
+    commitForm(next);
+  }
+
+  /**
+   * 번호를 직접 넣는 길(입력칸 · 조회 결과 클릭). 추천이 알려준 값은 여기서
+   * 버려진다 — 판단은 setLotteOnStandardCategoryNo() 한 곳에만 있다.
+   */
+  function setStandardCategoryNo(value: string) {
+    commitForm(setLotteOnStandardCategoryNo(form, value));
   }
 
   /**
@@ -316,8 +324,8 @@ export function LotteOnRegistrationPanel({
    * 🔴 인증번호를 만들지 않는다 — 셀러가 상품정보에 입력해 둔 실제 값만 옮긴다.
    */
   const commonSafetyLine = useMemo(
-    () => buildLotteOnSafetyLineFromCommon(product, pickedCategory?.safetyTypeCodes[0] ?? null),
-    [product, pickedCategory],
+    () => buildLotteOnSafetyLineFromCommon(product, selectedCategory?.safetyTypeCodes[0] ?? null),
+    [product, selectedCategory],
   );
 
   /**
@@ -690,7 +698,7 @@ export function LotteOnRegistrationPanel({
             label="표준카테고리번호 (scatNo)"
             hint="롯데ON 표준 분류 1개. 위 [카테고리 추천]으로 고르거나, 번호를 알고 있으면 직접 적습니다."
             value={form.category.standardCategoryNo}
-            onChange={(value) => patch("category", { standardCategoryNo: value })}
+            onChange={setStandardCategoryNo}
           />
           <TextField
             label="전시카테고리번호 (dcatLst)"
@@ -709,7 +717,7 @@ export function LotteOnRegistrationPanel({
             title="표준카테고리 직접 찾기"
             state={standardLookup}
             onLookup={() => void lookupCategories("standard")}
-            onPick={(code) => patch("category", { standardCategoryNo: code })}
+            onPick={setStandardCategoryNo}
           />
           <CategoryLookup
             title="전시카테고리 직접 찾기"
@@ -726,9 +734,10 @@ export function LotteOnRegistrationPanel({
         title="③ 상품정보제공고시 (롯데ON 전용)"
         description="품목코드는 표준카테고리를 고르면 함께 따라옵니다. 항목코드 체계는 품목마다 달라 자동으로 만들지 않습니다."
       >
-        {pickedCategory && pickedCategory.noticeItemCodes.length > 0 && (
+        {selectedCategory && selectedCategory.noticeItemCodes.length > 0 && (
           <p className="mb-3 rounded-md bg-success/5 px-3 py-2 text-[11px] text-text-secondary">
-            선택한 표준카테고리({pickedCategory.name})가 알려준 고시 품목코드: {pickedCategory.noticeItemCodes.join(", ")}
+            선택한 표준카테고리({selectedCategory.name})가 알려준 고시 품목코드:{" "}
+            {selectedCategory.noticeItemCodes.join(", ")}
           </p>
         )}
         <div className="grid gap-3">
@@ -772,10 +781,10 @@ export function LotteOnRegistrationPanel({
         title="④ 안전인증 (롯데ON 전용)"
         description="인증번호는 실제 취득한 값만 사용할 수 있습니다 — 어떤 경우에도 자동 생성하지 않습니다."
       >
-        {pickedCategory && pickedCategory.safetyTypeCodes.length > 0 && (
+        {selectedCategory && selectedCategory.safetyTypeCodes.length > 0 && (
           <p className="mb-3 rounded-md bg-warning-soft px-3 py-2 text-[11px] text-warning">
             선택한 표준카테고리가 요구하는 안전인증 유형:{" "}
-            {pickedCategory.safetyTypeCodes
+            {selectedCategory.safetyTypeCodes
               .map((code) => `${code}(${LOTTEON_SAFETY_TYPE_LABEL[code] ?? "유형 미상"})`)
               .join(" · ")}
           </p>

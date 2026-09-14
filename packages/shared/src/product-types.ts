@@ -133,6 +133,34 @@ export function getSelectedImageUrl(image: CanonicalProductImage): string {
 }
 
 /**
+ * 셀러가 고른 표준카테고리가 **함께 알려준** 값(205 응답 한 건에 같이 실려 온다).
+ *
+ * ── 왜 번호만으로는 부족한가 ───────────────────────────────────────────────
+ * 롯데ON에서 표준카테고리는 분류 하나가 아니라 **요구조건의 출처**다. 번호만
+ * 저장하면 탭을 벗어났다 돌아왔을 때 "이 카테고리가 무엇을 요구하는가"를 다시
+ * 알 방법이 없다. 특히 안전인증 유형코드(sftyAthnTypCd)는 우리가 정할 수 없는
+ * 값이라, 잃어버리면 상품정보에 이미 있는 실제 인증번호를 등록 형식으로 옮겨
+ * 적을 방법 자체가 사라진다(87 payload의 sftyAthnLst가 못 만들어진다).
+ *
+ * 🔴 **카테고리 객체 전체를 넣지 않는다.** 트리 메타(부모/깊이/leaf/use_yn),
+ * 추천 후보 목록, 점수, 이유, 신호 근거, 나이제한코드는 여기 없다 — 등록에도
+ * 필수조건 판정에도 쓰이지 않고, 스냅샷 jsonb만 키운다. 전시카테고리와
+ * 과세구분은 고르는 순간 이미 위 displayCategoryNos / codes.taxTypeCode로
+ * 옮겨졌으므로 여기서 한 번 더 들고 있지 않는다.
+ *
+ * 🔴 CategorySelection이 아니다 — 문자열뿐이라 공통 category/categoryMappings로
+ * 섞일 타입조차 없다.
+ */
+export interface LotteOnSelectedCategoryFacts {
+  /** std_cat_nm. 복귀했을 때 셀러가 "무엇을 골랐는지"를 읽을 수 있는 유일한 값. */
+  name: string;
+  /** pd_Itms_cd 후보 — 고시 품목코드(pdItmsCd)를 정하는 근거. */
+  noticeItemCodes: string[];
+  /** 이 카테고리가 요구하는 안전인증 유형(sftyAthnTypCd). 87 payload에 그대로 들어간다. */
+  safetyTypeCodes: string[];
+}
+
+/**
  * 롯데ON **커머스 관리정보** — 상품 수준에 저장되는 롯데ON 전용 값.
  *
  * 세 가지가 여기에 **없다**는 것이 이 타입의 존재 이유다: 상품명·가격·옵션·
@@ -151,6 +179,9 @@ export interface LotteOnChannelInfo {
     standardCategoryNo: string;
     /** 전시카테고리번호(dcatLst) — 1개 이상. */
     displayCategoryNos: string[];
+    /** 추천에서 고른 카테고리가 함께 알려준 값. 번호를 직접 친 경우에는 없다
+     * (없음 = "이 번호가 무엇을 요구하는지 우리가 들은 적 없다"). */
+    selected?: LotteOnSelectedCategoryFacts | null;
   };
   /** 상품정보제공고시 — pdItmsCd + pdItmsArtlLst[]의 원문 입력. */
   notice: { itemCode: string; articlesText: string };

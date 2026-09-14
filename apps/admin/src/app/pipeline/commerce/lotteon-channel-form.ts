@@ -1,11 +1,20 @@
-import type { CanonicalProduct, LotteOnChannelInfo, PlatformId } from "@commerce/shared";
+import type {
+  CanonicalProduct,
+  LotteOnChannelInfo,
+  LotteOnSelectedCategoryFacts,
+  PlatformId,
+} from "@commerce/shared";
 import type { CategorySelection } from "@commerce/category";
 import {
   hasLotteOnSellableOptions,
   resolveLotteOnImageUrls,
   resolveLotteOnProductName,
 } from "@commerce/listing";
-import { parseLotteOnDisplayCategory, parseLotteOnStandardCategory } from "./lotteon-category";
+import {
+  parseLotteOnDisplayCategory,
+  parseLotteOnStandardCategory,
+  type LotteOnStandardCategory,
+} from "./lotteon-category";
 
 /**
  * LOTTEON COMMERCE SPRINT 3(CEO 확정, 2026-09-14) — 롯데ON 탭이 **무엇을 다시
@@ -55,6 +64,15 @@ export interface LotteOnCategoryMapping {
   standardCategoryNo: string;
   /** 전시카테고리번호(dcatLst) — onpick 206. 표준카테고리에 매핑된 것만 가능. */
   displayCategoryNos: string[];
+  /**
+   * 위 번호를 고를 때 카테고리가 **함께 알려준** 최소 사실(저장 타입과 같은
+   * 모양이다 — @commerce/shared의 LotteOnSelectedCategoryFacts).
+   *
+   * 번호를 손으로 친 경우에는 없다. "없음"과 "빈 목록"은 다른 말이다 — 없음은
+   * 우리가 이 번호의 요구조건을 들은 적이 없다는 뜻이고, 빈 목록은 요구하는
+   * 것이 없다고 들었다는 뜻이다.
+   */
+  selected?: LotteOnSelectedCategoryFacts | null;
 }
 
 /** 고시(상품정보제공고시) — pdItmsCd + pdItmsArtlLst[]. */
@@ -145,6 +163,20 @@ export function toLotteOnChannelInfo(form: LotteOnChannelForm): LotteOnChannelIn
     category: {
       standardCategoryNo: form.category.standardCategoryNo,
       displayCategoryNos: [...form.category.displayCategoryNos],
+      /**
+       * 🔴 고른 적이 없으면 **키 자체를 만들지 않는다.** `selected: null`을 넣으면
+       * 이 필드를 모르던 옛 스냅샷과 "번호를 손으로 친 상품"이 서로 다른 모양이
+       * 되고, 그 차이가 아무 의미도 없는 채로 jsonb에 남는다.
+       */
+      ...(form.category.selected
+        ? {
+            selected: {
+              name: form.category.selected.name,
+              noticeItemCodes: [...form.category.selected.noticeItemCodes],
+              safetyTypeCodes: [...form.category.selected.safetyTypeCodes],
+            },
+          }
+        : {}),
     },
     notice: { itemCode: form.notice.itemCode, articlesText: form.notice.articlesText },
     certification: {
@@ -170,6 +202,68 @@ export function fromLotteOnChannelInfo(info: LotteOnChannelInfo | undefined | nu
     delivery: { ...EMPTY_LOTTEON_CHANNEL_FORM.delivery, ...info.delivery },
     codes: { ...EMPTY_LOTTEON_CHANNEL_FORM.codes, ...info.codes },
   };
+}
+
+/* ── 표준카테고리를 바꾸는 **두 가지 길** ─────────────────────────────────
+ *
+ * 표준카테고리번호를 바꾸는 자리를 컴포넌트 안에 흩어 두지 않고 여기 둘로만
+ * 둔다. 이유는 하나다 — 번호와 "그 번호가 요구하는 것"이 **갈라지면 안 된다.**
+ * 추천에서 고른 카테고리의 안전인증 유형을, 셀러가 그 뒤에 손으로 바꿔 넣은
+ * 다른 번호의 요구조건으로 말하기 시작하면 화면은 통과인데 등록은 거절되고,
+ * 더 나쁘게는 **틀린 유형코드로 인증이 등록된다.**
+ */
+
+/**
+ * 추천 후보를 고른 결과. **한 번에 네 가지가 채워진다** — 표준카테고리번호,
+ * 전시카테고리, 고시 품목코드, 과세구분. 전부 205 응답 한 건에 같이 들어 있다.
+ *
+ * 여기서 저장에 남기는 것은 그중 번호들과 `selected` 세 줄뿐이다(카테고리 객체
+ * 전체가 아니다 — LotteOnSelectedCategoryFacts 주석 참고).
+ */
+export function applyLotteOnRecommendedCategory(
+  form: LotteOnChannelForm,
+  category: LotteOnStandardCategory,
+): LotteOnChannelForm {
+  return {
+    ...form,
+    category: {
+      standardCategoryNo: category.id,
+      displayCategoryNos: category.displayCategories.map((entry) => entry.displayCategoryId),
+      selected: {
+        name: category.name,
+        noticeItemCodes: [...category.noticeItemCodes],
+        safetyTypeCodes: [...category.safetyTypeCodes],
+      },
+    },
+    notice: { ...form.notice, itemCode: category.noticeItemCodes[0] ?? form.notice.itemCode },
+    codes: { ...form.codes, taxTypeCode: category.taxTypeCode ?? form.codes.taxTypeCode },
+  };
+}
+
+/**
+ * 번호를 **직접** 넣는 길(입력칸에 치거나, 조회 결과를 누르거나).
+ *
+ * 🔴 이때 `selected`를 버린다. 우리는 이 번호가 무엇을 요구하는지 들은 적이
+ * 없고, 직전 카테고리의 대답을 이 번호의 대답인 척 남겨 두면 그것이 곧
+ * 오등록이다. 고시 품목코드/과세구분은 **지우지 않는다** — 이미 셀러의 입력이
+ * 된 값이라 화면이 임의로 비우면 셀러가 넣은 값이 사라진다.
+ */
+export function setLotteOnStandardCategoryNo(form: LotteOnChannelForm, standardCategoryNo: string): LotteOnChannelForm {
+  return {
+    ...form,
+    category: { ...form.category, standardCategoryNo, selected: null },
+  };
+}
+
+/**
+ * 지금 화면이 "선택한 표준카테고리가 알려준 것"이라고 말해도 되는가.
+ *
+ * 번호가 비어 있으면 알려준 것도 없다 — 셀러가 번호를 지웠는데 직전 카테고리의
+ * 요구조건이 화면에 남아 있으면, 고르지도 않은 카테고리의 조건을 보게 된다.
+ */
+export function resolveLotteOnSelectedCategory(form: LotteOnChannelForm): LotteOnSelectedCategoryFacts | null {
+  if (!form.category.standardCategoryNo.trim()) return null;
+  return form.category.selected ?? null;
 }
 
 /** 상품 정보의 「커머스 관리정보」가 읽는 한 줄. 값이 없으면 null이다. */
