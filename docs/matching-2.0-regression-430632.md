@@ -1,7 +1,12 @@
 # MATCHING-2.0-REGRESSION · 430632 SAME 오탐
 
 **등록일** 2026-09-13 · **등록자** CTO · **지시** CEO, 2026-09-13
-**상태** ✅ 해결 (2026-09-14) — 원인은 **개월 사이즈를 통째로 버리던 파서**였다. §9 참고
+**상태** 🟡 **판정기는 고쳤다 · 증거 배선이 남았다** (2026-09-14, MATCHING-3.2-B)
+§10의 재개방 사유(후보 사이즈가 운영에 도달하지 않는다)는 여전히 참이다. 그 빈
+자리를 사이즈가 아니라 **연령 라인**으로 메웠고, 후보 사이즈가 하나도 없는 운영
+후보 모양에서 오탐 5건이 전부 SAME 아래로 내려간다(§11). 다만 **질의쪽 대상연령
+증거가 운영에서 전달되지 않아** AUDIENCE 축 자체가 아직 발화하지 않는다 — 배선은
+별건으로 남긴다(§11-4, STOP).
 **차단 조건** 이 결함이 남아 있는 한 매칭 2.0을 최종 완료로 보고하지 않는다.
 
 ---
@@ -240,3 +245,241 @@ normalizeSizeLabel:  "12-18 Months" → MONTH (기존 AGE)
   (`compareCrossSellerProducts`는 두 `ProductFacts`만 보는 순수 함수다).
 - **`Booty Ghosts Long Sleeve T-Shirt` ↔ Bobo 샘플 라인 3건**이 SAME으로 올라온다
   (전수 조사에서 발견, 이번 결함과 기전이 다르다 — 별건).
+
+---
+
+## 10. ⚠️ 재개방 (2026-09-14, MATCHING-3.2 조사 중 발견)
+
+**§9의 해결은 시뮬레이션 경로에서만 참이다. 운영 경로에서는 오탐 5건이 그대로 살아 있다.**
+
+### 10-1. 무엇이 틀렸나 — `SIZE_SYSTEM` 은 운영에서 한 번도 발화할 수 없다
+
+§9의 전이표는 `/products/{handle}.js` / `products.json` 으로 받은 **카탈로그 원문**을
+후보로 썼다. 그 응답에는 `options`(사이즈)가 들어 있다. 그런데 **운영이 후보를 만드는
+경로는 그것이 아니다.**
+
+```
+searchShopifySuggest  →  https://{domain}/search/suggest.json
+   실측 응답 키(2026-09-14 라이브, junioredition.com):
+   available, body, compare_at_price_max, compare_at_price_min, handle, id,
+   image, price, price_max, price_min, tags, title, type, url, variants, vendor, featured_image
+   →  `options` 칸이 **없다**
+```
+
+`shopifySizeLabels()` 는 `input.options` 에서만 사이즈를 읽으므로, 이 경로로 만들어진
+**모든 후보의 `sizeLabels` 는 언제나 `[]`** 다. 나머지 판매처도 마찬가지다:
+
+```
+Shopify suggest 11곳(junioredition 포함)  options 없음        → sizeLabels []
+childrensalon.com                        productFactsFromListing → sizeLabels []
+국내 6곳(looxloo/rulii/deuxbebe/chocoel/foretforet) productFactsFromListing → sizeLabels []
+bobochoses.com(국내 소스)                 facts 자체를 만들지 않는다
+enrichCandidatePrices                     price 만 바꾼다. facts 를 건드리지 않는다
+```
+
+`compareSize()` 는 **양쪽 다** 사이즈를 읽어야 판정한다
+(`left.systems.size === 0 || right.systems.size === 0 → unknown`).
+질의(등록상품)에는 사이즈가 있어도(`CanonicalProduct.optionGroups`) 후보에는 없으므로,
+**`SIZE_SYSTEM` 보류도 `SIZE` 가점도 운영에서 구조적으로 발화 불가능하다.**
+
+### 10-2. 라이브 재현 — 오탐이 그대로 돌아온다
+
+운영 함수 `searchShopifySuggest("junioredition.com", …)` 로 후보를 받아
+`430632`(2/3~12/13 years)와 붙인 결과(2026-09-14 라이브):
+
+```
+SAME  core 6  Mush Monster Duo All Over Baby T-Shirt by Bobo Choses
+              type="Baby T Shirt"  tags=["3-6-months","6-12-months","all-baby","baby","baby-tops",…]
+              axes = TITLE+1 CATEGORY+1 COLOR+1 MATERIAL+1 FIT+1 AUDIENCE+1
+              blockers = 없음
+```
+
+§9-3에서 막혔다고 보고한 바로 그 상품이다. 후보 쪽 사이즈를 지운 상태로 전수
+시뮬레이션(원본 16건 × 22,251건)을 다시 돌리면 **§9-3의 다섯 건이 전부 SAME으로
+되돌아온다**(3M~24M 두 건 + 6~24 Months 세 건).
+
+### 10-3. 그런데 원문은 연령대를 **명시적으로** 말하고 있다
+
+그 후보의 `type` 은 문자 그대로 `"Baby T Shirt"` 이고, 태그에는 `baby` / `all-baby` /
+`baby-tops` / `3-6-months` / `6-12-months` 가 있다. 이 값들은 **이미
+`ProductFacts.audienceSignals` 에 담겨 판정기까지 도착해 있다.** 그런데
+`resolveAudienceGroup()` 이 `AudienceGroup = "KIDS" | "ADULT"` 두 값으로만 환원하므로,
+"Baby" 라고 쓰여 있는 신호가 아동복과 같은 `KIDS` 가 되고 **오탐에 `AUDIENCE +1` 을
+보태고 있다.**
+
+### 10-4. 다음 작업이 볼 것
+
+```
+경로 A  후보에 사이즈를 실어 보낸다(/products/{handle}.js 조회)
+        → 872defc 가 의도한 대로 동작하게 된다. 다만 판매처마다 상세 요청이 1회 늘어난다.
+경로 B  AUDIENCE 를 BABY/CHILD 로 가른다
+        → 새 데이터가 필요 없다. 이미 audienceSignals 에 도착해 있는 말만 읽으면 된다.
+        → 시뮬레이션(원본 16건×22,251 및 bobo 4,015×JE 276 양방향)에서
+          오탐 5건/131건/267건이 막히고 **정상 SAME 오차단은 0건**이었다.
+```
+
+두 경로는 배타적이지 않다. **이번 단계에서는 아무것도 고치지 않았다(조사 지시).**
+
+---
+
+## 11. 경로 B 구현 (2026-09-14, MATCHING-3.2-B · 라이브 실측)
+
+### 11-0. ⚠️ §10-2 정정 — 그 재현은 질의쪽이 운영이 아니었다
+
+§10-2 는 후보를 운영 함수(`searchShopifySuggest`)로 받았지만, 붙인 질의쪽 `430632`
+facts 는 `productFactsFromSmallableHtml` 로 만든 것이다(그래서 "2/3~12/13 years" 가
+있었다). **그 파서는 운영 경로 어디에도 배선돼 있지 않다** — 호출하는 곳이 테스트
+파일뿐이다(실측, 2026-09-14).
+
+운영 해외 화면이 실제로 만드는 질의 facts 는 이것이다:
+
+```
+CommerceWorkspace → ComparisonShopSearch(collectOverseasPrices)
+   보내는 필드  title · brand · sourceUrl · sku · description   (color/material 도 안 보낸다)
+POST /api/comparison/search → identityDnaFromFields(...) → productFactsFromIdentityDna
+   audienceSignals  []        ← 하드코딩
+   sizeRange        []        ← 하드코딩
+   ageRange         null      ← 하드코딩
+   category         null      ← 하드코딩
+```
+
+그래서 같은 쌍을 **운영 경로 그대로** 다시 재면 이렇다(2026-09-14 라이브):
+
+```
+430632 ↔ JE "Mush Monster Duo All Over Baby T-Shirt"
+   PRESUMED_SAME  core 4   TITLE+1 CATEGORY+1 MATERIAL+1 FIT+1
+   AUDIENCE +1 은 붙지 않는다 — 질의쪽 대상연령이 아예 비어 있어 축이 "모름"이다
+```
+
+§10-2 의 "운영 경로에서 오탐이 그대로 돌아온다" 는 **후보쪽만 운영이었다.** 오탐이
+SAME 으로 서 있는 것은 질의쪽 증거가 도착한 순간이고, 그때 무엇이 그것을 막느냐가
+이 절의 내용이다.
+
+### 11-1. 무엇을 고쳤나 (두 파일, 임계값 0칸)
+
+```
+packages/shared/src/product-facts.ts
+   AudienceLine = "BABY" | "CHILD" | "JUNIOR"   신설
+   resolveAudienceLine(signals)                 신설
+   AudienceGroup("KIDS" | "ADULT") 과 resolveAudienceGroup 은 **한 글자도 바꾸지 않았다**
+
+packages/crawler/src/comparison-search/cross-seller.ts
+   CrossSellerBlocker 에 "AUDIENCE_LINE" 추가
+   compareAudienceLine() 신설 — 불일치면 **보류**, 일치해도 **점수 없음**
+```
+
+`AudienceGroup` 을 세 값으로 늘리지 않은 이유는 하나다. `compareAudience` 의 불일치는
+`conflicts` 로 가고 conflicts 는 점수를 보지도 않고 CONFLICT 로 끝낸다 — 그 자리에
+`BABY ↔ CHILD` 를 넣으면 아기옷과 아동복이 **서로 반증하는 사이**가 되고, 그건 이
+저장소가 성인↔아동에만 허용한 강도다(CEO 금지 조항).
+
+일치에 점수를 주지 않은 것도 의도다. 기존 `AUDIENCE +1`(KIDS↔KIDS)은 그대로 두므로
+`BABY↔BABY` 는 지금까지 받던 1점을 **똑같이** 받고, 새 축이 기존 쌍의 점수를 한 점도
+움직이지 않는다는 것이 산술로 보장된다(`compareGarmentForm` 이 쓰는 비대칭 그대로).
+
+어휘는 늘리지 않았다 — 세 라인의 낱말은 전부 `KIDS_TOKENS` 에 이미 있던 것이다.
+우선순위(BABY > JUNIOR > CHILD)의 근거는 카탈로그 22,251건 전수 실측이다:
+
+| 토큰 | bobochoses.com 개월형/연령형 | junioredition.com 개월형/연령형 | 판정 |
+|---|---|---|---|
+| `baby` | 140 / **0** | 543 / 12 | BABY (100.0% · 97.8%) |
+| `newborn` | 33 / **0** | 10 / **0** | BABY (100.0%) |
+| `kid` | 1 / 264 | 0 / 181 | CHILD (99.6% · 100%) |
+| `kids` | — | 0 / 5 | CHILD |
+| `children` | 140 / 264 | 사이즈 붙은 상품 없음 | **우산말 — 혼자서는 아동이 아니다** |
+| `toddler` | 0건 | 96건 전부 사이즈 없음 | **어느 라인에도 넣지 않았다** |
+
+`children` 이 아기 상품에도 붙는다는 것이 이 표의 핵심이다. 그런데 그 140건은
+**동시에 `baby` 도 달고 있어서** BABY 를 먼저 보는 것만으로 갈린다. 반대로 Smallable
+은 매장이 부서로 갈려 있어(`Fashion Baby` / `Fashion Children` / `Fashion Teen`,
+breadcrumb 실측) `Children` 이 그대로 아동을 뜻한다. 한 목록으로 두 판매처를 다
+맞추는 방법이 우선순위다.
+
+### 11-2. 오탐 5건 — **후보 사이즈를 지운 채로** 재검증
+
+§9 의 회귀 테스트는 후보에 사이즈가 있는 픽스처를 쓴다. 운영 후보에는 그 칸이 없으므로
+(§10-1), 같은 픽스처의 `sizeLabels` 를 **지우고** 다시 쟀다. 그러면 872defc 의
+`SIZE_SYSTEM` 보류는 발화할 자리가 없고, 남는 것은 원문이 직접 말한 "Baby" 뿐이다.
+
+| 쌍 (후보 사이즈 없음) | core | 보류 | 판정 |
+|---|---|---|---|
+| 430632 ↔ B226AB043 Mush Monster Duo | 6 | **AUDIENCE_LINE** BABY↔CHILD | PRESUMED_SAME |
+| 430632 ↔ B226AB048 Softpaw Monster | 6 | **AUDIENCE_LINE** | PRESUMED_SAME |
+| 430632 ↔ JE Mush Monster Duo Baby T-Shirt | 6 | **AUDIENCE_LINE** | PRESUMED_SAME |
+| 430632 ↔ JE Juicy Tomatoes Baby T-Shirt | 6 | **AUDIENCE_LINE** | PRESUMED_SAME |
+| 430632 ↔ JE Bobo Choses Color Baby T-Shirt | 5 | **AUDIENCE_LINE** | PRESUMED_SAME |
+| **430632 ↔ B226AC018 (정답)** | 7 | 없음 | **SAME** |
+| 430632 ↔ B226AD013 (성인) | 0 | — | **CONFLICT** (AUDIENCE+COLOR) |
+
+이 일곱 줄이 그대로 고정 테스트로 들어갔다
+(`cross-seller-matching.test.ts` · "MATCHING-3.2-B 회귀").
+
+### 11-3. 라이브 확인 — 증거가 도착하면 무엇이 일어나는가
+
+운영 후보(`searchShopifySuggest("junioredition.com", …)`, 2026-09-14 라이브)에
+질의쪽 대상연령 증거(등록상품이 **이미 DB 에 갖고 있는** breadcrumb
+`["Home","Fashion  Children","Boy","Blouses, T-shirts"]`)를 실어 붙인 결과:
+
+```
+Mush Monster Duo All Over Baby T-Shirt   core 5   보류 AUDIENCE_LINE(BABY↔CHILD)  → PRESUMED_SAME
+Juicy Tomatoes All Over Baby T-Shirt     core 5   보류 AUDIENCE_LINE              → PRESUMED_SAME
+Bobo Choses Color All Over Baby T-Shirt  core 5   보류 AUDIENCE_LINE              → PRESUMED_SAME
+Everyday Ghosts All Over Baby T-Shirt    core 5   보류 AUDIENCE_LINE              → PRESUMED_SAME
+All About Monsters T Shirt (Womenswear)  core 0   충돌 AUDIENCE                   → CONFLICT
+```
+
+**이번 수정 전이었다면 위 네 건은 전부 `SAME`(core 5, 보류 없음)이다.** 성인 상품은
+여전히 CONFLICT 로 끝난다 — 성인↔아동 정책은 한 칸도 약해지지 않았다.
+
+### 11-4. 🔴 STOP — 질의쪽 증거 배선은 이번에 하지 않았다
+
+위 §11-3 이 보여주듯 이 수정이 운영 판정을 실제로 바꾸려면 등록상품의 대상연령
+증거가 질의 facts 에 실려야 한다(`identityDnaFromFields` 의 `audienceSignals: []`).
+그 배선만 따로 전수로 재 봤다 — **새 SAME 이 6건 생긴다.**
+
+```
+원본 68건(운영 DB 등록상품) × 카탈로그 22,251건 = 1,513,068쌍
+
+배선 전 → 배선 후(+라인 분리)
+   SAME(32)            → SAME 32                     정상 SAME 손실 0
+   PRESUMED_SAME(1610) → SAME 6  /  CONFLICT 40
+   SIMILAR(9652)       → PRESUMED_SAME 744 / CONFLICT 768
+   UNKNOWN(18162)      → SIMILAR 3854 / CONFLICT 510
+```
+
+새로 생기는 SAME 6건은 전부 `AUDIENCE +1` 이 새로 붙어서 core 4→5 가 된 쌍이다.
+그중 하나는 정답(`430632 ↔ B226AC018`)이지만 나머지는 다른 색/다른 상품으로 보인다
+(`430651 ↔ B226AC042`, `430704 ↔ B226AC117`, `430663 ↔ B226AC163`/`B226AC058`).
+
+지시서의 STOP 조건("기타 → SAME 이 1건이라도 새로 생기면 즉시 STOP")에 걸리므로
+**배선은 하지 않았다.** 이 배선은 별건으로 판단받아야 한다 — 사이즈 전달(경로 A)과
+같은 성격의 "증거 전달" 작업이고, 그 자체로 점수를 움직인다.
+
+### 11-5. 전이표 — 라인 분리 **그 자체**는 무엇을 움직이는가
+
+```
+(1) 질의쪽이 운영 그대로(audienceSignals 없음) — 1,513,068쌍
+      모든 칸이 대각선. 이동 0건.   ← 배선 없이는 아무것도 바뀌지 않는다(그 자체가 §11-4 의 근거)
+
+(2) 질의쪽에 증거가 실린 상태에서 라인 분리만 — 1,513,068쌍
+                  →SAME  →PRESUMED  →SIMILAR  →UNKNOWN  →CONFLICT
+      SAME(45)        38          7         0         0          0
+      PRESUMED(2301)   0       2301         0         0          0
+      SIMILAR(11994)   0          0     11994         0          0
+      UNKNOWN(13798)   0          0         0     13798          0
+      CONFLICT(…)      0          0         0         0        그대로
+```
+
+**기타 → SAME 은 0건이다** — 이 축은 보류만 만들고 점수를 주지 않으므로 구조적으로
+SAME 을 새로 만들 수 없다. 내려간 7건은 **전부 430632 의 아기옷 오탐**이고(§9-3 의
+다섯 건 + `B226AB049 Softpaw Monster all over shirt` + `JE Everyday Ghosts All Over
+Baby T-Shirt`), 정상 SAME 의 강등은 0건이다.
+
+### 11-6. 남은 것
+
+- **질의쪽 대상연령 배선**(§11-4) — STOP. 별건 판단 필요.
+- **경로 A(후보 사이즈 전달)** — 여전히 미착수(MATCHING-3.3).
+- **`Booty Ghosts` ↔ Bobo 샘플 라인 3건** — 이번 수정으로 **바뀌지 않았다**(확인함).
+  원본쪽 라인이 읽히지 않아(태그가 연령 낱말이 아니라 사이즈 목록이다) 이 보류가
+  발화할 자리가 없다. 별건 문서 `docs/matching-regression-booty-ghosts.md` 그대로.
+- **`TITLE` 축이 문서빈도를 모른다** — 그대로.

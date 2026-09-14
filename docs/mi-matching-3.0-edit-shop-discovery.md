@@ -546,3 +546,121 @@ DB write / 마이그레이션            하지 않음 (SELECT만)
 토큰/커넥션 문자열 출력            하지 않음
 임시 스크립트 저장소 잔류          없음 (전부 삭제)
 ```
+
+---
+
+## 9. Ground Truth 확대 — Baby / Child / Junior (MATCHING-3.2 STEP 7, 2026-09-14)
+
+§7의 18건은 **그대로 둔다.** 아래는 MATCHING-3.2 AUDIENCE 조사 중 **자동으로**
+확보한 연령대별 골든 쌍이다. CEO 수동 라벨링을 쓰지 않았다.
+
+### 9-1. 선정 방법 (전부 기계 판정 · 사람 판단 0)
+
+```
+모집단   bobochoses.com 4,015건 × junioredition.com 18,236건 전수 (2026-09-14 라이브)
+필터     ① 편집샵(junioredition.com)이 실제로 취급 중인 상품일 것
+         ② 브랜드 공식몰(bobochoses.com)에 대응 상품이 있을 것
+         ③ 양쪽 다 사이즈 라벨이 판독될 것            ← 연령대 정답의 근거
+         ④ 두 사이즈가 같은 체계일 것(MONTH↔MONTH / AGE↔AGE)
+         ⑤ compareCrossSellerProducts 가 MODEL_CODE+3(품번 확인) 을 준 SAME 일 것
+         ⑥ bobochoses 샘플 진열(`samples` 태그 / `sb…` handle)은 제외
+```
+
+⑤가 정답성을 보증한다 — 품번이 실제로 확인된 쌍만 남으므로 "닮아 보여서 SAME"이
+섞이지 않는다. 결과: **BABY 20쌍 · CHILD 12쌍.**
+
+### 9-2. BABY (개월형 사이즈, 20쌍)
+
+| # | 편집샵(junioredition.com) `/products/{handle}` | 사이즈 | 공식몰(bobochoses.com) `/products/{handle}` | core |
+|---|---|---|---|---|
+| 1 | `almost-moire-all-over-sheepskin-baby-jacket-by-bobo-choses` | 12·18·24 Months | `b226ab091-almost-moire-all-over-sheepskin-jacket` | 10 |
+| 2 | `pixel-abduction-sheepskin-reversible-baby-jacket-by-bobo-choses` | 12·18·24 Months | `b226ab094-pixel-abduction-sheepskin-reversible-jacket` | 10 |
+| 3 | `softpaw-monster-sheepskin-reversible-baby-jacket-by-bobo-choses` | 12·18·24 Months | `b226ab095-softpaw-monster-sheepskin-reversible-jacket` | 10 |
+| 4 | `watercolor-all-over-woven-baby-body-by-bobo-choses` | 6·12·18 Months | `b226ab006-watercolor-all-over-woven-body` | 9 |
+| 5 | `stamp-bloom-baby-cardigan-by-bobo-choses` | 6~24 Months | `b226ab025-stamp-bloom-cardigan` | 9 |
+| 6 | `stamp-bloom-knitted-baby-overall-by-bobo-choses` | 6~24 Months | `b226ab031-stamp-bloom-knitted-overall` | 9 |
+| 7 | `everyday-ghosts-all-over-baby-t-shirt-by-bobo-choses` | 6~24 Months | `b226ab039-everyday-ghosts-all-over-t-shirt` | 10 |
+| 8 | `mush-monster-duo-all-over-baby-t-shirt-by-bobo-choses` | 6~24 Months | `b226ab043-mush-monster-duo-all-over-t-shirt` | 11 |
+| 9 | `stamp-bloom-all-over-baby-sweatshirt-by-bobo-choses` | 6~24 Months | `b226ab056-stamp-bloom-all-over-sweatshirt` | 11 |
+| 10 | `stamp-bloom-all-over-corduroy-baby-pants-by-bobo-choses` | 6~24 Months | `b226ab076-stamp-bloom-all-over-corduroy-pants` | 10 |
+| 11 | `mush-monster-duo-all-over-corduroy-baby-overall-by-bobo-choses` | 6~24 Months | `b226ab084-mush-monster-duo-all-over-corduroy-overall` | 9 |
+| 12 | `mush-monster-duo-all-over-baby-jogging-pants-by-bobo-choses` | 6~24 Months | `b226ab117-mush-monster-duo-all-over-jogging-pants` | 11 |
+| 13 | `hug-hairy-monster-baby-t-shirt-by-bobo-choses` | 6~24 Months | `b226ab040-hug-hairy-monster-t-shirt` | 11 |
+| 14 | `bigtooth-lemon-baby-sweatshirt-by-bobo-choses` | 6~24 Months | `b226ab055-bigtooth-lemon-sweatshirt` | 10 |
+| 15 | `pixel-abduction-all-over-baby-sweatshirt-by-bobo-choses` | 6~24 Months | `b226ab058-pixel-abduction-all-over-sweatshirt` | 10 |
+| 16 | `booty-ghosts-baby-sweatshirt-by-bobo-choses` | 6~24 Months | `b226ab061-booty-ghosts-sweatshirt` | 11 |
+| 17 | `pixel-abduction-all-over-baby-jogging-pants-by-bobo-choses` | 6~24 Months | `b226ab069-pixel-abduction-all-over-jogging-pants` | 10 |
+| 18 | `mush-monsters-duo-corduroy-baby-pants-by-bobo-choses` | 6~24 Months | `b226ab078-mush-monsters-duo-corduroy-pants` | 10 |
+| 19 | `watercolor-all-over-corduroy-baby-overall-by-bobo-choses` | 6~24 Months | `b226ab083-watercolor-all-over-corduroy-overall` | 9 |
+| 20 | `booo-bo-choses-tag-denim-baby-overall-by-bobo-choses` | 6~24 Months | `b226ab085-booo-bo-choses-tag-denim-overall` | 9 |
+
+8번은 특히 값이 크다 — `430632`(아동 티셔츠)의 거짓 SAME 상대였던 바로 그 상품이다.
+**같은 상품은 SAME, 다른 연령대의 다른 상품은 SAME 아님**을 한 쌍으로 동시에 잰다.
+
+### 9-3. CHILD (연령형 사이즈, 12쌍)
+
+| # | 편집샵 handle | 사이즈 | 공식몰 handle | core |
+|---|---|---|---|---|
+| 1 | `stamp-bloom-all-over-reversible-jacket-by-bobo-choses` | 2-3 ~ 12-13 Years | `b226ac097-stamp-bloom-all-over-reversible-jacket` | 10 |
+| 2 | `stamp-bloom-all-over-denim-pants-by-bobo-choses` | 2-3 ~ 12-13 Years | `b226ac070-stamp-bloom-all-over-denim-pants` | 9 |
+| 3 | `almost-moire-all-over-sheepskin-jacket-by-bobo-choses` | 2-3 ~ 12-13 Years | `b226ac094-almost-moire-all-over-sheepskin-jacket` | 10 |
+| 4 | `pixel-abduction-all-over-reversible-jacket-by-bobo-choses` | 2-3 ~ 12-13 Years | `b226ac098-pixel-abduction-all-over-reversible-jacket` | 10 |
+| 5 | `almost-moire-all-over-reversible-anorak-in-navy-blue-by-bobo-choses` | 4-5 ~ 12-13 Years | `b226ac099-almost-moire-all-over-reversible-anorak` | 9 |
+| 6 | `everyday-ghosts-t-shirt-by-bobo-choses` | 2-3 ~ 12-13 Years | `b226ac005-everyday-ghosts-t-shirt` | 10 |
+| 7 | `mr-footish-t-shirt-by-bobo-choses` | 2-3 ~ 12-13 Years | `b226ac020-mr-footish-t-shirt` | 9 |
+| 8 | `long-puff-hoodie-by-bobo-choses` | 2-3 ~ 12-13 Years | `b226ac046-long-puff-hoodie` | 9 |
+| 9 | `taxi-saurus-tag-twill-pants-by-bobo-choses` | 2-3 ~ 12-13 Years | `b226ac071-taxi-saurus-tag-twill-pants` | 10 |
+| 10 | `taxi-saurus-tag-denim-pants-by-bobo-choses` | 2-3 ~ 12-13 Years | `b226ac073-taxi-saurus-tag-denim-pants` | 9 |
+| 11 | `bobo-choses-embossed-t-shirt-by-bobo-choses` | 2-3 ~ 12-13 Years | `b226ac111-bobo-choses-embossed-t-shirt` | 10 |
+| 12 | `bobo-choses-pop-long-sleeve-t-shirt-by-bobo-choses` | 2-3 ~ 12-13 Years | `b226ac112-bobo-choses-pop-t-shirt` | 9 |
+
+여러 쌍이 **BABY판과 CHILD판이 짝을 이룬다**(Stamp Bloom / Everyday Ghosts /
+Pixel Abduction / Mush Monster Duo / Booty Ghosts / Hug Hairy Monster).
+같은 그래픽 · 같은 브랜드 · 같은 소재 · 다른 연령 라인이므로,
+**"AUDIENCE를 세분화해도 정상 SAME이 유지되는가"를 재는 최적의 쌍**이다.
+
+### 9-4. JUNIOR — 편집샵은 실제로 취급하지만 **대조 쌍을 만들 수 없다**
+
+```
+junioredition.com 에서 14세 이상 사이즈를 파는 상품   125건 (실측)
+  예) Wynken "Mixed Media Jacket in Ecru Mix"        4/6/8/10/12/14 Years
+      Repose AMS "Biker Short in Wild Flower"        10/14 Years
+      The New Society "TNS Logo Jogging Pant"        4~14 Years
+
+bobochoses.com 에서 14세 이상 사이즈를 파는 상품     0건 (최대 12-13Y)
+```
+
+즉 JUNIOR 는 **현재 활성화된 대조 판매처에 대응 상품 자체가 없어** 골든 쌍을
+만들 수 없다. 브랜드(Wynken / Repose AMS / The New Society)의 공식몰이 대조군에
+들어오기 전까지는 이 연령대의 회귀를 쌍으로 고정할 수 없다 — **기록만 남긴다.**
+
+---
+
+## 10. 배선 감사 · AUDIENCE 축 (MATCHING-3.2-B, 2026-09-14 실측)
+
+§4-1 이 국내 facts 의 소실 지점을 짚은 것과 같은 방식으로, 이번에는 **대상 연령
+신호가 어느 경로에서 양쪽에 동시에 도착하는가**를 전수로 확인했다. 결론부터:
+**한 경로도 없다.** `compareAudience` 는 양쪽이 다 있어야 발화하는데(한쪽이라도
+null 이면 "모름"), 실제로 마주치는 조합이 언제나 한쪽만 채워져 있다.
+
+| 경로 | 질의쪽 `audienceSignals` | 후보쪽 `audienceSignals` | AUDIENCE 축 |
+|---|---|---|---|
+| 해외 화면 `POST /api/comparison/search` | **[]** (`identityDnaFromFields` 하드코딩) | 태그+상품유형 O (`productFactsFromShopifyProduct`) | **발화 불가** |
+| 국내 화면 `POST /api/domestic-price-sources/search` | **[]** (같은 함수) | **[]** (`productFactsFromListing`) | **발화 불가** |
+| 국내 저장 `run-domestic-price-check` | breadcrumb/태그 O (`buildProductIdentityDna`) | **[]** (`productFactsFromListing`) | **발화 불가** |
+
+`productFactsFromSmallableHtml` 은 breadcrumb 을 제대로 읽지만 **운영 경로 어디에도
+배선돼 있지 않다** — 호출처가 테스트 파일뿐이다(실측). 즉 §10-1 에서 `SIZE` 축에
+대해 확인한 것과 **글자 그대로 같은 모양의 결함**이 `AUDIENCE` 축에도 있다:
+파서는 값을 읽고 있고, 판정기는 그 값을 쓸 준비가 돼 있는데, 둘 사이의 한 칸이
+비어 있다.
+
+등록상품 쪽 증거는 **이미 DB 에 있다**(`product_snapshots.workspace.canonicalProduct`
+실측 68건 중 66건이 `breadcrumbPath` 또는 `shopifyTags`/`shopifyProductType` 을
+갖고 있다. 예: 430632 = `["Home","Fashion  Children","Boy","Blouses, T-shirts"]`).
+화면이 그 두 칸을 보내지 않을 뿐이다.
+
+**이번 작업에서 그 배선을 하지 않았다.** 배선만 켜면 `AUDIENCE +1` 이 새로 붙어
+전수 1,513,068쌍에서 **새 SAME 이 6건** 생기고, 그중 최소 4건이 다른 상품으로
+보인다 — 지시서의 STOP 조건에 해당한다. 자세한 수치와 개별 판정은
+`docs/matching-2.0-regression-430632.md` §11-4 에 있다.
