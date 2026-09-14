@@ -1,0 +1,291 @@
+import { describe, expect, it } from "vitest";
+import type { CanonicalProduct, FieldSource, ProvenanceField } from "@commerce/shared";
+import {
+  BLANK_LOTTEON_CHANNEL_CONFIG,
+  buildLotteOnPayload,
+  buildLotteOnSalePeriod,
+  type LotteOnChannelConfig,
+  type LotteOnPayloadInput,
+} from "../build-payload";
+import { validateLotteOnPayload, LOTTEON_NOTICE_ITEM_CODE_CHILDREN } from "../validate-payload";
+import { lotteOnAdapter } from "../adapter";
+
+/**
+ * LOTTEON COMMERCE SPRINT 2 Phase 3 — 실제 API 호출 없이 payload 생성/검증
+ * 계약을 고정한다. 이 테스트가 지키는 것은 세 가지다:
+ *
+ *  1) 가격이 기존 단일 출처(resolveListingPrice)를 그대로 탄다 — 롯데ON만의
+ *     별도 가격 경로가 생기면 여기서 값이 어긋난다.
+ *  2) 채널 전용 값(카테고리/고시/안전인증/출고지)이 없으면 **등록이 막힌다** —
+ *     빈 값으로 "성공한 것처럼 보이는 등록"이 나가지 않는다.
+ *  3) 유아동(품목코드 23) 상품은 안전인증 없이는 절대 통과하지 못한다 —
+ *     이 저장소의 주력 카테고리라 회피할 수 없는 규칙이다.
+ */
+function field<T>(value: T, source: FieldSource = "ORIGINAL"): ProvenanceField<T> {
+  return { value, source, confidence: source === "ORIGINAL" ? 0.9 : 1 };
+}
+
+const PRODUCT_FINAL_KRW = 143500;
+
+function makeProduct(overrides: Partial<CanonicalProduct> = {}): CanonicalProduct {
+  return {
+    sourceUrl: "https://example.com/products/test-item",
+    title: field("Test Item"),
+    brand: field("TestBrand"),
+    price: field({ amount: 88, currency: "GBP" }),
+    priceValidity: "VALID",
+    sku: field("TEST-SKU-1"),
+    description: field("A test product."),
+    material: field(""),
+    color: field(""),
+    recommendedAge: field(""),
+    manufacturer: field("테스트제조사"),
+    careInstructions: field(""),
+    options: field([]),
+    optionGroups: [],
+    variants: [],
+    images: [
+      {
+        id: "img-1",
+        originalUrl: "https://example.com/images/test.jpg",
+        selectedVariant: "ORIGINAL",
+        isRepresentative: true,
+        useInProductGallery: true,
+        useInDescription: false,
+        classification: "PRODUCT",
+      },
+    ],
+    titleKo: field("테스트 상품"),
+    descriptionKo: field(""),
+    keywords: field(["키워드1", "키워드2", "키워드3", "키워드4", "키워드5", "키워드6"]),
+    seoTitle: field(""),
+    seoDescription: field(""),
+    countryOfOrigin: field("대한민국"),
+    returnPolicy: field("반품 가능"),
+    shippingFee: field(0, "DEFAULT"),
+    stockQuantity: field(30, "DEFAULT"),
+    certification: field(""),
+    importer: field(""),
+    childCertification: field(null),
+    itemName: field(""),
+    modelName: field("MODEL-1"),
+    weight: field(""),
+    certificationType: field(""),
+    priceBreakdown: { shippingKrw: 12000, feePercent: 10, marginPercent: 12 },
+    priceOverrideKrw: field(PRODUCT_FINAL_KRW, "USER_EDITED"),
+    ...overrides,
+  };
+}
+
+/** 모든 채널 전용 값이 채워진 상태 — "등록 가능"의 기준선. */
+function completeChannel(overrides: Partial<LotteOnChannelConfig> = {}): LotteOnChannelConfig {
+  return {
+    ...BLANK_LOTTEON_CHANNEL_CONFIG,
+    ...buildLotteOnSalePeriod(new Date("2026-09-14T00:00:00Z")),
+    trGrpCd: "SR",
+    trNo: "LO10000",
+    standardCategoryNo: "BC63080300",
+    displayCategories: [{ mallCd: "LTON", lfDcatNo: "FC11130203" }],
+    originCode: "KR",
+    noticeItemCode: "01",
+    noticeArticles: [{ pdArtlCd: "0020", pdArtlCnts: "블루" }],
+    outboundPlaceNo: "115",
+    returnPlaceNo: "115",
+    deliveryCostPolicyNo: "335",
+    deliveryRegionGroupCode: "GN101",
+    ...overrides,
+  };
+}
+
+function inputFor(product: CanonicalProduct, channel: LotteOnChannelConfig, detailHtml = "<p>상세</p>"): LotteOnPayloadInput {
+  return { product, channel, detailHtml };
+}
+
+describe("buildLotteOnPayload", () => {
+  it("가격은 기존 단일 출처(resolveListingPrice)를 그대로 쓴다 — 롯데ON 전용 계산이 없다", () => {
+    const payload = buildLotteOnPayload(inputFor(makeProduct(), completeChannel()));
+    expect(payload.spdLst[0].itmLst[0].slPrc).toBe(PRODUCT_FINAL_KRW);
+  });
+
+  it("옵션이 없으면 단품 1건 · sitmYn='N'", () => {
+    const payload = buildLotteOnPayload(inputFor(makeProduct(), completeChannel()));
+    const registration = payload.spdLst[0];
+    expect(registration.sitmYn).toBe("N");
+    expect(registration.itmLst).toHaveLength(1);
+    expect(registration.itmLst[0].rprtSitmYn).toBe("Y");
+    expect(registration.optSrtLst).toBeUndefined();
+  });
+
+  it("옵션 조합을 우리가 만들어내지 않는다 — variants에 있는 것만 단품이 된다", () => {
+    const product = makeProduct({
+      // 옵션 축은 2×2지만 실제 조합은 2건만 확인됐다 → 단품도 2건이어야 한다.
+      optionGroups: [
+        { name: "색상", values: ["블루", "레드"] },
+        { name: "사이즈", values: ["S", "M"] },
+      ],
+      variants: [
+        { id: "v1", optionValues: { 색상: "블루", 사이즈: "S" }, stockQuantity: 3 },
+        { id: "v2", optionValues: { 색상: "레드", 사이즈: "M" }, stockQuantity: 5 },
+      ],
+    });
+    const registration = buildLotteOnPayload(inputFor(product, completeChannel())).spdLst[0];
+    expect(registration.sitmYn).toBe("Y");
+    expect(registration.itmLst).toHaveLength(2);
+    expect(registration.itmLst.map((i) => i.stkQty)).toEqual([3, 5]);
+    // optSrtLst는 단품에 실제로 등장한 값만 담는다.
+    expect(registration.optSrtLst?.map((o) => o.optNm)).toEqual(["색상", "사이즈"]);
+    expect(registration.optSrtLst?.[0].optValSrtLst.map((v) => v.optVal)).toEqual(["블루", "레드"]);
+  });
+
+  it("옵션 판매가는 차액이 아니라 절대 판매가로 실린다(Naver와 반대 — 롯데ON 스키마)", () => {
+    const product = makeProduct({
+      optionGroups: [{ name: "사이즈", values: ["S", "L"] }],
+      variants: [
+        { id: "v1", optionValues: { 사이즈: "S" }, price: { amount: 88, currency: "GBP" }, priceMode: "ABSOLUTE" },
+        { id: "v2", optionValues: { 사이즈: "L" }, price: { amount: 98, currency: "GBP" }, priceMode: "ABSOLUTE" },
+      ],
+    });
+    const items = buildLotteOnPayload(inputFor(product, completeChannel())).spdLst[0].itmLst;
+    expect(items[0].slPrc).toBe(PRODUCT_FINAL_KRW);
+    // 두 번째 단품은 기본가보다 비싸야 한다(차액 0이 아니라 절대가).
+    expect(items[1].slPrc).toBeGreaterThan(PRODUCT_FINAL_KRW);
+  });
+
+  it("검색키워드는 5개까지만 싣는다(문서 상한)", () => {
+    const registration = buildLotteOnPayload(inputFor(makeProduct(), completeChannel())).spdLst[0];
+    expect(registration.scKwdLst).toHaveLength(5);
+  });
+
+  it("상품 1건만 보낸다 — 일괄 등록 인터페이스를 만들지 않는다", () => {
+    expect(buildLotteOnPayload(inputFor(makeProduct(), completeChannel())).spdLst).toHaveLength(1);
+  });
+
+  it("채널 값이 없으면 빈 문자열로 남기고 임의 기본값을 지어내지 않는다", () => {
+    const registration = buildLotteOnPayload(
+      inputFor(makeProduct(), { ...BLANK_LOTTEON_CHANNEL_CONFIG }),
+    ).spdLst[0];
+    expect(registration.scatNo).toBe("");
+    expect(registration.owhpNo).toBe("");
+    expect(registration.dcatLst).toEqual([]);
+  });
+});
+
+describe("validateLotteOnPayload", () => {
+  it("모든 채널 값이 채워지면 통과한다", () => {
+    const result = validateLotteOnPayload(inputFor(makeProduct(), completeChannel()));
+    expect(result.blockedCount).toBe(0);
+    expect(result.missingCount).toBe(0);
+    expect(result.ok).toBe(true);
+  });
+
+  it("표준/전시 카테고리가 없으면 등록을 막는다 — 쿠팡/네이버 카테고리를 재사용할 수 없다", () => {
+    const result = validateLotteOnPayload(
+      inputFor(makeProduct(), completeChannel({ standardCategoryNo: null, displayCategories: [] })),
+    );
+    expect(result.ok).toBe(false);
+    const blocked = result.fields.filter((f) => f.code === "CATEGORY_REQUIRED").map((f) => f.field);
+    expect(blocked).toEqual(expect.arrayContaining(["scatNo", "dcatLst"]));
+  });
+
+  it("품목코드 23(어린이제품)은 안전인증 없이 절대 통과하지 못한다", () => {
+    const result = validateLotteOnPayload(
+      inputFor(makeProduct(), completeChannel({ noticeItemCode: LOTTEON_NOTICE_ITEM_CODE_CHILDREN })),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.fields.find((f) => f.field === "sftyAthnLst")?.code).toBe("SAFETY_CERTIFICATION_REQUIRED");
+  });
+
+  it("KC계열 안전인증을 넣으면 수입대행코드가 필수다", () => {
+    const withKc = completeChannel({
+      noticeItemCode: LOTTEON_NOTICE_ITEM_CODE_CHILDREN,
+      safetyCertifications: [{ sftyAthnTypCd: "KC_CHL_PKG", sftyAthnNo: "ABC-123" }],
+    });
+    const blockedResult = validateLotteOnPayload(inputFor(makeProduct(), withKc));
+    expect(blockedResult.fields.find((f) => f.field === "impPrxCd")?.code).toBe("IMPORT_PROXY_REQUIRED");
+
+    const okResult = validateLotteOnPayload(inputFor(makeProduct(), { ...withKc, importProxyCode: "PUR_PRX" }));
+    expect(okResult.fields.find((f) => f.field === "impPrxCd")?.status).toBe("READY");
+  });
+
+  it("어린이제품 안전확인(CHL_CFM)은 수입대행코드를 요구하지 않는다(문서 표 그대로)", () => {
+    const result = validateLotteOnPayload(
+      inputFor(
+        makeProduct(),
+        completeChannel({
+          noticeItemCode: LOTTEON_NOTICE_ITEM_CODE_CHILDREN,
+          safetyCertifications: [{ sftyAthnTypCd: "CHL_CFM", sftyAthnNo: "CB-1234" }],
+        }),
+      ),
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("출고지/회수지/배송비정책/배송가능지역이 없으면 막는다 — 임의 번호를 보낼 수 없다", () => {
+    const result = validateLotteOnPayload(
+      inputFor(
+        makeProduct(),
+        completeChannel({
+          outboundPlaceNo: null,
+          returnPlaceNo: null,
+          deliveryCostPolicyNo: null,
+          deliveryRegionGroupCode: null,
+        }),
+      ),
+    );
+    const blocked = result.fields.filter((f) => f.code === "SELLER_PLACE_REQUIRED").map((f) => f.field);
+    expect(blocked).toEqual(["owhpNo", "rtrpNo", "dvCstPolNo", "dvRgsprGrpCd"]);
+  });
+
+  it("가격을 계산하지 못하면 막는다", () => {
+    const product = makeProduct({ priceValidity: "MISSING", priceOverrideKrw: undefined });
+    const result = validateLotteOnPayload(inputFor(product, completeChannel()));
+    expect(result.fields.find((f) => f.field === "slPrc")?.code).toBe("PRICE_UNRESOLVED");
+  });
+
+  it("상세페이지에 롯데ON 임시 이미지 경로가 남아 있으면 막는다", () => {
+    const result = validateLotteOnPayload(
+      inputFor(
+        makeProduct(),
+        completeChannel(),
+        '<img src="https://doc-pub.lotteon.com/ec/public/tmp/a.jpg">',
+      ),
+    );
+    expect(result.fields.find((f) => f.field === "epnLst")?.code).toBe("TEMP_IMAGE_URL");
+  });
+
+  it("거래처 정보(207 Identity)를 못 얻으면 막는다", () => {
+    const result = validateLotteOnPayload(inputFor(makeProduct(), completeChannel({ trGrpCd: null, trNo: null })));
+    expect(result.fields.find((f) => f.field === "trNo")?.code).toBe("IDENTITY_REQUIRED");
+  });
+});
+
+describe("lotteOnAdapter (NextGenMarketplaceAdapter 계약)", () => {
+  it("PlatformId가 아니라 자체 id로 식별된다", () => {
+    expect(lotteOnAdapter.id).toBe("lotteon");
+    expect(lotteOnAdapter.status).toBe("LIVE");
+  });
+
+  it("인증키가 없으면 NOT_CONFIGURED, 있으면 READY_FOR_CONNECTION", () => {
+    expect(lotteOnAdapter.resolveConnectionStatus(false)).toBe("NOT_CONFIGURED");
+    expect(lotteOnAdapter.resolveConnectionStatus(true)).toBe("READY_FOR_CONNECTION");
+  });
+
+  it("카테고리/속성/배송은 추측하지 않고 UNRESOLVED로 남긴다", () => {
+    const product = makeProduct();
+    expect(lotteOnAdapter.resolveCategory(product).status).toBe("UNRESOLVED");
+    expect(lotteOnAdapter.resolveAttributes(product, lotteOnAdapter.resolveCategory(product)).status).toBe("UNRESOLVED");
+    expect(lotteOnAdapter.resolveDelivery(product).status).toBe("UNRESOLVED");
+  });
+
+  it("채널 설정 없이 buildPayload하면 무엇이 비었는지 issues로 알려준다", () => {
+    const result = lotteOnAdapter.buildPayload(makeProduct());
+    const fields = result.issues.map((i) => i.field);
+    expect(fields).toEqual(expect.arrayContaining(["scatNo", "dcatLst", "owhpNo", "rtrpNo"]));
+  });
+
+  it("register()는 어댑터 층에서 실행되지 않는다 — 서버 라우트가 담당한다", async () => {
+    const result = await lotteOnAdapter.register({ spdLst: [] });
+    expect(result.status).toBe("NOT_IMPLEMENTED");
+    expect(result.message).toContain("/api/lotteon/register");
+  });
+});

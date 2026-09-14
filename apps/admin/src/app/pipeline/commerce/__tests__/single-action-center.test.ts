@@ -35,7 +35,12 @@ describe("오른쪽 기둥은 화면에 하나뿐이다", () => {
     // 자기 기둥을 또 만들게 된다 — UX 2.2 이전이 정확히 그 모양이었다.
     const actionCenterAt = workspace.indexOf("<ActionCenter");
     const sourceTabBranchAt = workspace.indexOf('{tab === "source" && (');
-    const channelBranchAt = workspace.indexOf('{listing && tab !== "source" && tab !== "content" && (');
+    // LOTTEON COMMERCE SPRINT 2(2026-09-14) — 이 분기의 조건식이
+    // `tab !== "source" && tab !== "content"`에서 `isPlatformTab(tab)`으로
+    // 바뀌었다(롯데ON 탭이 PlatformId가 아니라서 PLATFORM_ADAPTERS를 인덱싱하는
+    // 자리와 분리해야 했다). **검사 대상은 그대로 "채널 분기의 위치"다** —
+    // 찾는 문자열만 새 조건식으로 맞춘다.
+    const channelBranchAt = workspace.indexOf("{listing && isPlatformTab(tab) && (");
     expect(actionCenterAt).toBeGreaterThan(-1);
     expect(sourceTabBranchAt).toBeGreaterThan(-1);
     expect(channelBranchAt).toBeGreaterThan(-1);

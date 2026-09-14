@@ -12,6 +12,7 @@ import {
   Image as ImageIcon,
   Package,
   Settings,
+  ShoppingCart,
   type LucideIcon,
 } from "lucide-react";
 import { AppHeader } from "./AppHeader";
@@ -42,6 +43,9 @@ const NAV_ITEMS: NavigationItem[] = [
   { id: "dashboard", title: "운영 Dashboard", href: "/admin/dashboard", icon: Home, adminOnly: true },
   { id: "today", title: "오늘의 등록", href: "/today", icon: ClipboardList },
   { id: "pipeline", title: "상품등록", href: "/pipeline", icon: Package },
+  // LOTTEON COMMERCE SPRINT 2 Phase 2 — 판매관리는 **조회 전용**이다(발송 처리 ·
+  // 송장 · 클레임 승인 · 환불 없음). 배지로 그 사실을 메뉴에서부터 말한다.
+  { id: "sales", title: "판매관리", href: "/sales", icon: ShoppingCart, badge: "조회" },
   { id: "recent", title: "최근 작업", href: "/snapshots", icon: Clock },
   { id: "images", title: "이미지", href: "/assets", icon: ImageIcon },
   { id: "settings", title: "설정", href: "/settings", icon: Settings },

@@ -51,4 +51,15 @@ export const PLATFORM_ORDER: PlatformId[] = ["smartstore", "coupang", "elevenst"
  * 이 7개 자리를 채우면 되고, 순서는 위 우선순위(카카오 최우선)를 따른다 —
  * 지금 코드를 미리 만들지는 않는다(추측 구현 금지, 실제 API 스펙 확인 후
  * 착수).
+ *
+ * ── LOTTEON COMMERCE SPRINT 2(2026-09-14) 갱신 ─────────────────────────────
+ * 롯데ON은 위 7개 자리를 **이 레지스트리에 등록하지 않는 방식**으로 채웠다
+ * (CPO 확정). `PlatformId`에 'lotteon'을 넣지 않고 soon/의 NextGenMarketplaceAdapter
+ * 계약을 쓴다 — 그래야 PLATFORM_ADAPTERS/LISTING_EXECUTORS/PLATFORM_CATEGORY_TABLES/
+ * FIELD_CAPABILITY_MATRIX와 이미 동작 중인 Naver/Coupang 등록 경로를 건드리지 않는다.
+ * 실제 구현 위치:
+ *   packages/listing/src/lotteon/{types,build-payload,validate-payload,adapter}.ts
+ *   apps/admin/src/app/api/lotteon/{payload-preview,register,...}/route.ts
+ * 여기 PLATFORM_ADAPTERS에 lotteon을 추가하려 하지 마라 — 그건 별개의 결정이고,
+ * 하려면 §7-3 경로 B(컴파일 에러로 드러나는 12곳)를 통째로 다뤄야 한다.
  */

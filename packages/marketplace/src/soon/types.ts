@@ -74,7 +74,17 @@ export interface RegistrationResult {
 export interface NextGenMarketplaceAdapter<TPayload = unknown> {
   readonly id: string;
   readonly label: string;
-  readonly status: "SOON";
+  /**
+   * LOTTEON COMMERCE SPRINT 2(CPO 확정, 2026-09-14) — "SOON" 하나뿐이던 값에
+   * "LIVE"를 **더한다**(기존 두 어댑터는 그대로 "SOON"이라 변경 0줄). 롯데ON은
+   * 공식 API 스펙을 문서 원문으로 확보했고 실제 상품등록(87)까지 구현하므로
+   * "아직 실호출 안 함"이라는 뜻의 SOON이 사실과 다르다 — 여기서 거짓말을 하면
+   * 화면이 "준비 중"이라고 표시하는 채널에 실제 등록이 나간다.
+   *
+   * 이 계약을 PlatformId(smartstore/coupang/elevenst)로 끌어올리지 않는다 —
+   * 그 순간 Naver/Coupang의 동작 중인 등록 코드를 전부 건드리게 된다.
+   */
+  readonly status: "SOON" | "LIVE";
   /** N-4.04 Part S — credential 존재 여부(호출부가 env 확인 후 넘긴다)만 받고,
    * 이 API 자체가 아직 공식 스펙 확보 전인지는 어댑터가 안다(resolveConnectionStatus
    * 내부에서 apiSpecConfirmed를 하드코딩) — 이 함수는 실제 네트워크 호출을 하지

@@ -74,6 +74,7 @@ import type { MarketEvidenceVariant } from "./commerce/market-evidence-frame";
 import type { MarketEvidenceSummary } from "./commerce/market-evidence";
 import { ImageInlineEditor } from "./ImageInlineEditor";
 import { ListingConfirmationModal } from "./commerce/ListingConfirmationModal";
+import { LotteOnRegistrationPanel } from "./commerce/LotteOnRegistrationPanel";
 import { MissingFieldsBulkPanel } from "./commerce/MissingFieldsBulkPanel";
 import type { NaverResolveResponse } from "./commerce/NaverPayloadPreview";
 import { PlatformPreview } from "./commerce/PlatformPreview";
@@ -103,7 +104,23 @@ import {
 import { SourceDataView } from "./commerce/SourceDataView";
 import type { WorkspaceItem } from "./types";
 
-type CommerceTab = "source" | "content" | PlatformId;
+/**
+ * LOTTEON COMMERCE SPRINT 2 Phase 3(CPO 확정, 2026-09-14) — "lotteon"은
+ * **PlatformId가 아니다.** PlatformId 유니언을 넓히면 그 값을 소진 검사하는
+ * 곳(PLATFORM_ADAPTERS / LISTING_EXECUTORS / PLATFORM_CATEGORY_TABLES /
+ * FIELD_CAPABILITY_MATRIX …)과 이미 동작 중인 Naver/Coupang 등록 경로를 전부
+ * 흔들게 된다. 그래서 이 화면 안에서만 쓰는 탭 값으로 더한다 — 아래
+ * isPlatformTab()이 "이 탭이 기존 플랫폼 어댑터 경로를 타는가"의 유일한 판정이고,
+ * 롯데ON 탭은 자체 패널(LotteOnRegistrationPanel) + 서버 라우트만 쓴다.
+ */
+const LOTTEON_TAB = "lotteon" as const;
+type CommerceTab = "source" | "content" | PlatformId | typeof LOTTEON_TAB;
+
+/** 기존 어댑터/Executor 경로를 타는 탭인지. false면 PLATFORM_ADAPTERS를
+ * 인덱싱하면 안 된다(undefined가 되어 렌더 중에 터진다). */
+function isPlatformTab(tab: CommerceTab): tab is PlatformId {
+  return tab !== "source" && tab !== "content" && tab !== LOTTEON_TAB;
+}
 
 /** 아직 구현되지 않아 탭에서 비활성화하고 SOON 배지로 표시하는 플랫폼/기능 —
  * 백로그 패널에도 같은 목록을 보여준다. */
@@ -127,7 +144,7 @@ const INITIAL_LISTING_RESULTS: Record<PlatformId, ListingResult | null> = {
   elevenst: null,
 };
 
-const TAB_LABELS: Record<Exclude<CommerceTab, PlatformId>, string> = {
+const TAB_LABELS: Record<"source" | "content", string> = {
   source: "상품 정보",
   content: "AI 콘텐츠",
 };
@@ -234,7 +251,12 @@ export function CommerceWorkspace({
     if (typeof window === "undefined") return "source";
     try {
       const saved = sessionStorage.getItem(TAB_STORAGE_KEY);
-      if (saved === "source" || saved === "content" || PLATFORM_ORDER.includes(saved as PlatformId)) {
+      if (
+        saved === "source" ||
+        saved === "content" ||
+        saved === LOTTEON_TAB ||
+        PLATFORM_ORDER.includes(saved as PlatformId)
+      ) {
         return saved as CommerceTab;
       }
     } catch {
@@ -1001,7 +1023,9 @@ export function CommerceWorkspace({
   }, [tab, product]);
 
   const categoryCandidates = useMemo(() => {
-    if (tab === "source" || tab === "content") return [];
+    // 롯데ON 탭은 여기 오지 않는다 — 카테고리를 onpick-api(표준+전시 2중)로
+    // 따로 고르고, 이 저장소의 쿠팡/네이버 추천기는 그 코드체계를 모른다.
+    if (!isPlatformTab(tab)) return [];
     const ruleBased = ruleBasedCategoryProvider.recommendCategory(product, tab);
     // CEO 피드백(2026-08-04) — "AI 추정 카테고리"(CartPilot 내부 rule-based
     // 추측)가 실제 쿠팡 코드가 아니고 선택해도 등록에 못 쓰여 혼란만 준다는
@@ -1032,7 +1056,7 @@ export function CommerceWorkspace({
    * [선택]을 눌러야만 진짜 SELECTED로 커밋된다(추천이 보이는 것과 확정한 것을 구분).
    */
   const effectiveCategorySelection = useMemo((): CategorySelection => {
-    if (tab === "source" || tab === "content") return UNRESOLVED_CATEGORY;
+    if (!isPlatformTab(tab)) return UNRESOLVED_CATEGORY;
     const stored = categoryMappings[tab];
     if (stored.state === "UNRESOLVED" && categoryCandidates.length > 0) {
       return { state: "RECOMMENDED", candidate: categoryCandidates[0], provenance: "RECOMMENDED" };
@@ -1142,7 +1166,9 @@ export function CommerceWorkspace({
   }, [platformReadiness, provisionalReadiness]);
 
   const listing = useMemo(() => {
-    if (tab === "source" || tab === "content") return null;
+    // 롯데ON은 ListingModel(Preview 모델) 경로를 쓰지 않는다 — 서버 라우트가
+    // CanonicalProduct에서 바로 87 payload를 만든다.
+    if (!isPlatformTab(tab)) return null;
     // P-4-H1-2-2(대표님 지시) — PriceEditor가 쓰는 것과 동일한 liveRates/
     // roundingUnit을 넘겨서 resolveListingPrice()가 화면에 보인 "권장
     // 판매가격"과 정확히 같은 숫자를 내도록 한다(등록에 실제로 쓰이는
@@ -2012,7 +2038,7 @@ export function CommerceWorkspace({
    * 이미 확인된 문제였다 — 그 실패를 API 호출 이후가 아니라 여기서 미리 막는다.
    */
   const effectiveListingStatus: ListingStatus = useMemo(() => {
-    if (tab === "source" || tab === "content" || !listing) return "DRAFT";
+    if (!isPlatformTab(tab) || !listing) return "DRAFT";
     const stored = listingStates[tab];
     if (stored !== "DRAFT") return stored;
     const noMarketplaceErrors = listing.validations.every((v) => v.status !== "ERROR");
@@ -2030,7 +2056,7 @@ export function CommerceWorkspace({
   }, [tab, listing, listingStates, smartStoreValidation]);
 
   function openListingModal() {
-    if (tab === "source" || tab === "content") return;
+    if (!isPlatformTab(tab)) return;
     // N-3.60 실측에서 발견 — KcSellerStatusBanner의 "판매 가능 상품으로 확인"
     // 버튼은 RegistrationReadinessCard의 canRegister(allRequiredPassed) 게이트를
     // 거치지 않고 이 함수를 직접 호출해서, 필수 항목이 아직 9개 남은 상태에서도
@@ -2144,7 +2170,7 @@ export function CommerceWorkspace({
   }
 
   function retryListing() {
-    if (tab === "source" || tab === "content") return;
+    if (!isPlatformTab(tab)) return;
     setListingStates((prev) => ({ ...prev, [tab]: "DRAFT" }));
     setListingResults((prev) => ({ ...prev, [tab]: null }));
   }
@@ -2226,6 +2252,12 @@ export function CommerceWorkspace({
             </TabButton>
           );
         })}
+        {/* LOTTEON COMMERCE SPRINT 2 Phase 3 — 롯데ON. PlatformId가 아니므로
+            PLATFORM_ADAPTERS/PLATFORM_ORDER를 타지 않고 여기 한 줄로 선다.
+            SOON 배지를 달지 않는다 — 실제 등록이 동작하는 탭이다. */}
+        <TabButton active={tab === LOTTEON_TAB} onClick={() => setTab(LOTTEON_TAB)}>
+          롯데ON
+        </TabButton>
       </div>
 
       {/* N-4.07 Sprint(대표님 지시: "상품정보 🟢 · 스마트스토어 🟢 · 쿠팡 🟡 · 가격 🟢
@@ -2452,7 +2484,24 @@ export function CommerceWorkspace({
             />
           )}
 
-          {listing && tab !== "source" && tab !== "content" && (
+          {tab === LOTTEON_TAB && (
+            <LotteOnRegistrationPanel
+              product={product}
+              snapshotId={snapshotId}
+              jobKey={jobKey}
+              /* 가격은 기존 단일 출처를 그대로 탄다 — PriceEditor/어댑터가 쓰는
+                 것과 같은 환율·반올림을 서버에 그대로 넘겨서, 화면에 보인
+                 권장 판매가격과 롯데ON에 나가는 금액이 같은 계산을 거치게 한다. */
+              liveRates={exchangeRates?.rates}
+              roundingUnit={priceRoundingUnit ?? undefined}
+            />
+          )}
+
+          {/* LOTTEON SPRINT 2 — 롯데ON 탭은 이 블록에 들어오지 않는다.
+              isPlatformTab()으로 명시해 PLATFORM_ADAPTERS를 인덱싱하는 자리와
+              완전히 분리한다(listing은 롯데ON에서 항상 null이지만, 그 사실에
+              의존하지 않고 조건에 직접 적는다). */}
+          {listing && isPlatformTab(tab) && (
             <PlatformPreview
               product={product}
               listing={listing}

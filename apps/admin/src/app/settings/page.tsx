@@ -58,6 +58,15 @@ interface NaverAccountValues {
   sellerId: string | null;
 }
 
+/**
+ * LOTTEON COMMERCE SPRINT 2 Phase 1 — 롯데ON은 정적 Bearer 인증키 **하나**뿐이다
+ * (조사 §5-1). 🔴 CEO 지시로 마스킹본조차 서버가 내려주지 않으므로 화면이 가진
+ * 정보는 "저장되어 있는가" 하나다 — Naver clientSecretSaved와 같은 취급.
+ */
+interface LotteOnAccountValues {
+  apiKeySaved: boolean;
+}
+
 interface SellerProfile {
   id: string;
   name: string;
@@ -170,6 +179,11 @@ export default function SettingsPage() {
   const [naverSellerId, setNaverSellerId] = useState("");
   const [naverAccountSaving, setNaverAccountSaving] = useState(false);
 
+  // LOTTEON SPRINT 2 Phase 1
+  const [lotteOnAccount, setLotteOnAccount] = useState<LotteOnAccountValues>({ apiKeySaved: false });
+  const [lotteOnApiKey, setLotteOnApiKey] = useState("");
+  const [lotteOnAccountSaving, setLotteOnAccountSaving] = useState(false);
+
   const [profiles, setProfiles] = useState<SellerProfile[]>([]);
   const [brandProfiles, setBrandProfiles] = useState<BrandProfile[]>([]);
   const [templates, setTemplates] = useState<DescriptionTemplate[]>([]);
@@ -194,13 +208,15 @@ export default function SettingsPage() {
   }
 
   async function loadAll() {
-    const [accountRes, profilesRes, brandProfilesRes, templatesRes, naverAccountRes] = await Promise.all([
-      fetch("/api/settings/coupang"),
-      fetch("/api/settings/coupang/profiles"),
-      fetch("/api/settings/coupang/brand-profiles"),
-      fetch("/api/settings/coupang/templates"),
-      fetch("/api/settings/naver"),
-    ]);
+    const [accountRes, profilesRes, brandProfilesRes, templatesRes, naverAccountRes, lotteOnAccountRes] =
+      await Promise.all([
+        fetch("/api/settings/coupang"),
+        fetch("/api/settings/coupang/profiles"),
+        fetch("/api/settings/coupang/brand-profiles"),
+        fetch("/api/settings/coupang/templates"),
+        fetch("/api/settings/naver"),
+        fetch("/api/settings/lotteon"),
+      ]);
     const accountData = (await accountRes.json()) as {
       configured: boolean;
       missing: string[];
@@ -210,6 +226,7 @@ export default function SettingsPage() {
     const brandProfilesData = (await brandProfilesRes.json()) as { profiles: BrandProfile[] };
     const templatesData = (await templatesRes.json()) as { templates: DescriptionTemplate[] };
     const naverAccountData = (await naverAccountRes.json()) as { values: NaverAccountValues };
+    const lotteOnAccountData = (await lotteOnAccountRes.json()) as { values: LotteOnAccountValues };
 
     setConfigured(accountData.configured);
     setMissing(accountData.missing);
@@ -221,6 +238,7 @@ export default function SettingsPage() {
     setTemplates(templatesData.templates ?? []);
     setNaverAccount(naverAccountData.values);
     setNaverSellerId(naverAccountData.values.sellerId ?? "");
+    setLotteOnAccount(lotteOnAccountData.values ?? { apiKeySaved: false });
   }
 
   // loadAll()을 effect 콜백에서 직접 호출하면 setState가 effect 본문 내에서
@@ -295,6 +313,31 @@ export default function SettingsPage() {
       await loadAll();
     } finally {
       setNaverAccountSaving(false);
+    }
+  }
+
+  /** LOTTEON SPRINT 2 Phase 1 — 인증키 하나만 보낸다. 🔴 저장 직후 입력칸을
+   * 즉시 비운다(handleSaveNaverAccount가 clientSecret을 비우는 것과 같은 이유) —
+   * 화면에 인증키가 남아 있으면 그것만으로 평문 노출이다. */
+  async function handleSaveLotteOnAccount() {
+    setLotteOnAccountSaving(true);
+    setSaveMessage(null);
+    try {
+      const res = await fetch("/api/settings/lotteon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: lotteOnApiKey || undefined }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (!data.ok) {
+        setSaveMessage(`롯데ON 계정 저장 실패: ${data.error}`);
+        return;
+      }
+      setSaveMessage("롯데ON 인증키가 저장되었습니다.");
+      setLotteOnApiKey("");
+      await loadAll();
+    } finally {
+      setLotteOnAccountSaving(false);
     }
   }
 
@@ -389,6 +432,12 @@ export default function SettingsPage() {
                 handleSaveNaverAccount={handleSaveNaverAccount}
                 naverAccountSaving={naverAccountSaving}
                 onNaverAccountCleared={loadAll}
+                lotteOnAccount={lotteOnAccount}
+                lotteOnApiKey={lotteOnApiKey}
+                setLotteOnApiKey={setLotteOnApiKey}
+                handleSaveLotteOnAccount={handleSaveLotteOnAccount}
+                lotteOnAccountSaving={lotteOnAccountSaving}
+                onLotteOnAccountCleared={loadAll}
               />
             </div>
 
@@ -2509,6 +2558,12 @@ function CommerceAccountManager({
   handleSaveNaverAccount,
   naverAccountSaving,
   onNaverAccountCleared,
+  lotteOnAccount,
+  lotteOnApiKey,
+  setLotteOnApiKey,
+  handleSaveLotteOnAccount,
+  lotteOnAccountSaving,
+  onLotteOnAccountCleared,
 }: {
   account: AccountValues;
   onAccountCleared: () => void;
@@ -2532,8 +2587,14 @@ function CommerceAccountManager({
   handleSaveNaverAccount: () => void;
   naverAccountSaving: boolean;
   onNaverAccountCleared: () => void;
+  lotteOnAccount: LotteOnAccountValues;
+  lotteOnApiKey: string;
+  setLotteOnApiKey: (v: string) => void;
+  handleSaveLotteOnAccount: () => void;
+  lotteOnAccountSaving: boolean;
+  onLotteOnAccountCleared: () => void;
 }) {
-  const [openCommerce, setOpenCommerce] = useState<"coupang" | "naver" | null>(null);
+  const [openCommerce, setOpenCommerce] = useState<"coupang" | "naver" | "lotteon" | null>(null);
   const [naverClearing, setNaverClearing] = useState(false);
 
   // 쿠팡은 저장된 계정 정보(account prop)만으로 "미연결 vs 확인 필요"를
@@ -2551,6 +2612,13 @@ function CommerceAccountManager({
   const [naverChecking, setNaverChecking] = useState(false);
   const [naverCheckedAt, setNaverCheckedAt] = useState<string | null>(null);
 
+  // LOTTEON SPRINT 2 Phase 1 — 쿠팡/네이버와 같은 3값 규약을 그대로 쓴다.
+  const lotteOnConfigured = lotteOnAccount.apiKeySaved;
+  const [lotteOnCheck, setLotteOnCheck] = useState<ConnectionCheckResult | null>(null);
+  const [lotteOnChecking, setLotteOnChecking] = useState(false);
+  const [lotteOnCheckedAt, setLotteOnCheckedAt] = useState<string | null>(null);
+  const [lotteOnClearing, setLotteOnClearing] = useState(false);
+
   const coupangHeaderStatus: PlatformConnectionStatus = coupangCheck
     ? coupangCheck.status
     : coupangConfigured
@@ -2559,6 +2627,11 @@ function CommerceAccountManager({
   const naverHeaderStatus: PlatformConnectionStatus = naverCheck
     ? naverCheck.status
     : naverConfigured
+      ? "UNKNOWN"
+      : "NOT_CONFIGURED";
+  const lotteOnHeaderStatus: PlatformConnectionStatus = lotteOnCheck
+    ? lotteOnCheck.status
+    : lotteOnConfigured
       ? "UNKNOWN"
       : "NOT_CONFIGURED";
 
@@ -2600,6 +2673,33 @@ function CommerceAccountManager({
       setCoupangCheckedAt(null);
     } finally {
       setClearing(false);
+    }
+  }
+
+  async function checkLotteOn() {
+    setLotteOnChecking(true);
+    try {
+      const res = await fetch("/api/lotteon/auth-test", { method: "POST" });
+      const data = (await res.json()) as ConnectionCheckResult;
+      setLotteOnCheck(data);
+    } catch {
+      setLotteOnCheck({ status: "AUTH_FAILED", ...classifyNetworkErrorClient() });
+    } finally {
+      setLotteOnCheckedAt(new Date().toISOString());
+      setLotteOnChecking(false);
+    }
+  }
+
+  async function handleClearLotteOnAccount() {
+    if (!window.confirm("롯데ON 연결 정보를 삭제하시겠습니까?\n저장된 API 인증키가 삭제됩니다.")) return;
+    setLotteOnClearing(true);
+    try {
+      await fetch("/api/settings/lotteon", { method: "DELETE" });
+      onLotteOnAccountCleared();
+      setLotteOnCheck(null);
+      setLotteOnCheckedAt(null);
+    } finally {
+      setLotteOnClearing(false);
     }
   }
 
@@ -2820,6 +2920,92 @@ function CommerceAccountManager({
                 />
               </Field>
             </div>
+          </div>
+        </div>
+      </CommerceAccordionShell>
+
+      {/* 롯데ON — LOTTEON COMMERCE SPRINT 2 Phase 1(CPO 승인, 2026-09-14).
+          쿠팡/네이버와 달리 인증 정보가 **인증키 하나**뿐이다(정적 Bearer,
+          OAuth·서명 없음 — 조사 §5-1). 그래서 카드도 하나다.
+
+          🔴 보안(CEO 지시): 인증키는 저장 후 화면에 다시 나타나지 않는다 —
+          서버가 마스킹본조차 내려주지 않으므로(apiKeySaved boolean만) 여기서
+          보여줄 수 있는 값 자체가 없다. Payload Preview·로그 출력·하드코딩
+          모두 없다. */}
+      <CommerceAccordionShell
+        label="롯데ON"
+        status={lotteOnHeaderStatus}
+        checkedAt={lotteOnCheckedAt}
+        open={openCommerce === "lotteon"}
+        onToggle={() => setOpenCommerce((p) => (p === "lotteon" ? null : "lotteon"))}
+      >
+        <div className="space-y-3">
+          <ConnectionErrorNotice result={lotteOnCheck} />
+          <div className="rounded-lg border border-border bg-surface px-4 py-3">
+            <p className="mb-3 text-xs font-semibold text-text-secondary">API 연결 정보</p>
+            <p className="mb-3 -mt-2 text-[11px] text-text-tertiary">
+              롯데ON 판매자센터 &gt; 판매자정보 &gt; OpenAPI관리에서 발급한 인증키입니다. 인증키 하나로 인증이
+              끝납니다(별도 서명/토큰 발급 없음).
+            </p>
+            <div className="space-y-3 text-sm">
+              <Field label="API 인증키" hint={lotteOnAccount.apiKeySaved ? "저장됨" : "미저장"}>
+                <input
+                  type="password"
+                  value={lotteOnApiKey}
+                  onChange={(e) => setLotteOnApiKey(e.target.value)}
+                  placeholder={
+                    lotteOnAccount.apiKeySaved ? "•••• (변경하려면 새 값 입력)" : "새 값을 입력하지 않으면 기존 값 유지"
+                  }
+                  className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+                />
+              </Field>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleSaveLotteOnAccount}
+                  disabled={lotteOnAccountSaving}
+                  className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+                >
+                  {lotteOnAccountSaving ? "저장 중…" : "저장"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void checkLotteOn()}
+                  disabled={lotteOnChecking}
+                  className="rounded-md border border-border px-4 py-2 text-sm font-medium text-text-secondary hover:bg-background disabled:opacity-50"
+                >
+                  {lotteOnChecking ? "확인 중…" : "연결 테스트"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleClearLotteOnAccount()}
+                  disabled={lotteOnClearing}
+                  className="rounded-md border border-error px-4 py-2 text-sm font-medium text-error hover:bg-error/5 disabled:opacity-50"
+                >
+                  {lotteOnClearing ? "삭제 중…" : "연결 정보 삭제"}
+                </button>
+              </div>
+              <p className="text-[11px] text-text-tertiary">
+                저장한 인증키는 보안상 화면에 다시 표시되지 않습니다 — 저장 여부만 보여줍니다. &ldquo;연결 정보
+                삭제&rdquo;는 이 화면에 저장된 값만 지웁니다(배포 환경변수 LOTTEON_API_KEY가 설정돼 있다면 삭제 후에도
+                계속 연결됨으로 표시될 수 있습니다).
+              </p>
+            </div>
+          </div>
+          {/* 롯데ON만의 두 가지 운영 조건 — 쿠팡/네이버에는 없어서 여기서만 안내한다. */}
+          <div className="rounded-lg border border-border bg-surface px-4 py-3">
+            <p className="mb-2 text-xs font-semibold text-text-secondary">연결 전에 반드시 확인할 것</p>
+            <ul className="space-y-1 text-[11px] text-text-tertiary">
+              <li>
+                · <b>서버 IP 등록이 필수입니다.</b> 판매자센터 &gt; OpenAPI관리 &gt; 정보설정에서 이 시스템의 아웃바운드
+                프록시 IP를 등록해야 합니다. 등록하지 않으면 인증키가 맞아도 403으로 거부됩니다. 등록할 IP는 연결
+                테스트 실패 시 응답의 <code>proxyOutboundIp</code> 값입니다(Vercel IP가 아닙니다).
+              </li>
+              <li>
+                · <b>인증키 유효기간은 1년입니다.</b> 만료되면 연동이 조용히 멈춥니다 — 만료 전에 재발급해 이 화면에서
+                교체해야 합니다.
+              </li>
+            </ul>
           </div>
         </div>
       </CommerceAccordionShell>
