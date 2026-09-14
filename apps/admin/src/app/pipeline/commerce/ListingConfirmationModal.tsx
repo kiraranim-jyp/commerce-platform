@@ -56,8 +56,15 @@ export function ListingConfirmationModal({
   onCancel,
   onConfirm,
 }: {
-  listing: ListingModel;
-  /** LIVE면 실제 쿠팡 API가 호출된다는 경고 문구와 버튼 문구를 바꾼다. */
+  /**
+   * REWORK-7 ⑤(CEO 지시, 2026-09-15) — 롯데ON은 PlatformId가 아니라서
+   * ListingModel을 만들 수 없다(그 타입은 marketplace 어댑터가 만든다).
+   * 이 모달이 실제로 읽는 네 칸만 요구한다 — 그래야 **세 채널이 같은
+   * 컴포넌트**를 쓸 수 있다. ListingModel은 이 네 칸을 전부 갖고 있으므로
+   * 스마트스토어·쿠팡 호출부는 한 글자도 바뀌지 않는다.
+   */
+  listing: Pick<ListingModel, "platformLabel" | "title" | "priceKrw" | "priceSource">;
+  /** LIVE면 실제 API가 호출된다는 경고 문구와 버튼 문구를 바꾼다. */
   mode?: ExecutionMode;
   /** null이면 확인 화면, 그 외에는 같은 모달이 진행 화면으로 바뀐다. */
   progress?: ListingProgressStep | null;
@@ -196,11 +203,11 @@ export function ListingConfirmationModal({
       >
         {/* REWORK-5 ⑤ — 제목이 채널 이름을 달고 선다. 세 채널이 **같은 모달**을
             쓰기 때문에, 지금 어느 채널에 등록하는지는 제목이 말해야 한다. */}
-        <h3 className="text-base font-semibold tracking-tight text-text-primary">
-          {listing.platformLabel} 등록 전 최종 확인
-        </h3>
+        {/* REWORK-7 ⑤(CEO 지시, 2026-09-15) — 제목은 세 채널이 **같은 한 문장**,
+            채널 이름은 바로 아래 줄이 말한다. */}
+        <h3 className="text-base font-semibold tracking-tight text-text-primary">판매 전 최종 확인</h3>
         <p className="mt-1 text-xs text-text-secondary">
-          이 상품을 {listing.platformLabel}에 판매 등록하기 전에 아래 내용을 확인해주세요.
+          {listing.platformLabel}에 상품을 등록합니다 · {formatKrw(listing.priceKrw)}
         </p>
 
         {/* 등록 대상 — 무엇을 등록하는지가 가격보다 먼저 온다. */}
@@ -266,28 +273,25 @@ export function ListingConfirmationModal({
           <p className="mt-1 text-xs text-text-secondary">{PRICE_SOURCE_LABEL[listing.priceSource]}</p>
         </div>
 
-        {/* REWORK-5 ⑤ — 등록 가능 상태. 여기서 새로 판정하지 않는다: 이 모달이
-            열렸다는 사실 자체가 상위 게이트(RegistrationReadinessCard의
-            canRegister = 필수항목 전부 통과 + 카테고리 확정)를 이미 지났다는
-            뜻이다. 그 사실을 셀러에게 한 줄로 확인시켜 준다. */}
+        {/* REWORK-7 ⑤ — **무엇이 등록되는가.** 이 모달이 열렸다는 사실 자체가
+            상위 게이트(필수항목 전부 통과 + 카테고리 확정)를 이미 지났다는
+            뜻이라, 여기서 다시 판정하지 않고 등록되는 것의 목록만 말한다. */}
         <div className="mt-3 rounded-md border border-border bg-background p-3">
-          <p className="text-xs font-medium text-text-tertiary">✅ 등록 가능 상태</p>
-          <p className="mt-1 text-sm font-medium text-success">
-            필수 정보가 모두 확인되어 {listing.platformLabel}에 등록할 수 있습니다.
+          <p className="text-xs font-medium text-text-tertiary">등록되는 정보</p>
+          <p className="mt-1 text-xs text-text-secondary">
+            상품정보 · 옵션 · 상세페이지 · 배송/반품 · 채널별 필수정보
           </p>
         </div>
 
+        {/* REWORK-7 ⑤ — 등록 결과의 최종 확인 장소는 우리 화면이 아니다.
+            등록 요청이 전달된 것과 실제로 판매 가능한 상태로 등록된 것은
+            다르다(SUSPENSION 등) — 누르기 전에 그 사실을 말한다. */}
+        <p className="mt-3 rounded-md bg-warning-soft px-3 py-2 text-xs text-warning">
+          ⚠ 등록 후 커머스 판매자센터에서 실제 등록 결과를 확인해주세요.
+        </p>
+
         <p className="mt-4 text-xs font-medium text-text-tertiary">확인할 사항</p>
         <div className="mt-1.5 space-y-2">
-          <label className="flex items-start gap-2 text-xs text-text-secondary">
-            <input
-              type="checkbox"
-              checked={generalConfirmed}
-              onChange={(e) => setGeneralConfirmed(e.target.checked)}
-              className="mt-0.5"
-            />
-            <span>상품의 판매 가능 여부와 필요한 인증정보를 직접 확인했습니다.</span>
-          </label>
           <label className="flex items-start gap-2 text-xs text-text-secondary">
             <input
               type="checkbox"
@@ -295,7 +299,16 @@ export function ListingConfirmationModal({
               onChange={(e) => setPriceInfoConfirmed(e.target.checked)}
               className="mt-0.5"
             />
-            <span>상품 가격과 상품정보가 실제 판매 상품과 일치합니다.</span>
+            <span>상품정보와 판매가격을 확인했습니다.</span>
+          </label>
+          <label className="flex items-start gap-2 text-xs text-text-secondary">
+            <input
+              type="checkbox"
+              checked={generalConfirmed}
+              onChange={(e) => setGeneralConfirmed(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>필요한 인증정보를 확인했습니다.</span>
           </label>
           <label className="flex items-start gap-2 text-xs text-text-secondary">
             <input
@@ -304,7 +317,7 @@ export function ListingConfirmationModal({
               onChange={(e) => setResponsibilityConfirmed(e.target.checked)}
               className="mt-0.5"
             />
-            <span>등록 후 문제가 발생할 경우 판매자가 판매중지/수정 조치를 해야 합니다.</span>
+            <span>등록 후 결과를 확인하겠습니다.</span>
           </label>
         </div>
         {confirmError && <p className="mt-1 text-xs text-error">{confirmError}</p>}
@@ -336,11 +349,9 @@ export function ListingConfirmationModal({
               isLive ? "bg-error hover:bg-error/90" : "bg-primary hover:bg-primary-hover"
             }`}
           >
-            {submitting
-              ? "확인 저장 중..."
-              : isLive
-                ? `🚀 ${listing.platformLabel} 등록 시작`
-                : `${listing.platformLabel} 등록 시작`}
+            {/* REWORK-7 ⑤ — 우측 요약의 [등록 시작]과 **같은 문구**로 끝난다.
+                채널 이름은 위 두 줄이 이미 말했다. */}
+            {submitting ? "확인 저장 중..." : "등록 시작"}
           </button>
         </div>
       </div>

@@ -61,78 +61,68 @@ export function ChannelRegistrationSummary({
   state,
   priorityItems,
   onPriorityItemClick,
-  statusRows,
-  percent,
   required,
-  recommended,
   allRequiredPassed,
   isCalculating,
   errorMessage,
   onRetry,
-  platformLabel,
   status,
   registrationEnabled,
-  registrationReadinessState,
   onRegister,
-  onItemClick,
-  settingsMissing,
-  autoFillStats,
   percentUnavailable,
   verifyAction,
 }: {
   state: RegistrationReadinessState;
   priorityItems: PriorityItem[];
   onPriorityItemClick?: (item: PriorityItem) => void;
-  /** 채널 연결 상태·직전 등록 결과처럼 그 채널에만 있는 사실. 판정이 아니다. */
-  statusRows?: ReactNode;
-  percent: number;
   required: ReadinessItem[];
-  recommended: ReadinessItem[];
   allRequiredPassed: boolean;
   isCalculating?: boolean;
   errorMessage?: string | null;
   onRetry?: () => void;
-  platformLabel: string;
   status: ListingStatus;
   registrationEnabled?: boolean;
-  registrationReadinessState?: RegistrationReadinessState;
   onRegister: () => void;
-  onItemClick?: (sectionId: string) => void;
-  settingsMissing?: string[];
-  autoFillStats?: { total: number; autoFilled: number; userInput: number };
   percentUnavailable?: ReactNode;
   verifyAction?: ReactNode;
 }) {
   return (
-    <div className="space-y-3 lg:sticky lg:top-4">
-      {/* ① 등록 상태 + 먼저 해결할 항목 1개(무엇/왜/어디서/[바로 이동])
-             REWORK-4 §2 — 여기 있던 [부족정보 해결] 추상 버튼이 사라졌다.
-             통과한 항목은 아래 필수항목 목록과 **같은 배열**을 넘겨서 ✓로
-             남긴다(두 카드가 서로 다른 목록을 세지 않게 한다). */}
+    /* REWORK-7 ①(CEO 지시, 2026-09-15) — **네 칸짜리 카드 하나.** 세 채널이
+       같은 컴포넌트로 같은 순서를 그린다:
+           ① 등록 준비 상태 → ② 필수 확인 → ③ 남은 항목 → ④ [등록 시작]
+       (③은 등록을 막는 것이 있을 때만 선다.)
+
+       ── 여기서 사라진 props ──────────────────────────────────────────────
+       percent / recommended / settingsMissing / autoFillStats / onItemClick /
+       statusRows / platformLabel / registrationReadinessState.
+       전부 **우측에 상세를 더 늘리기 위한** 입력이었다(퍼센트 막대, 선택 입력
+       목록, 자동입력 KPI, 채널 상태 행). 값 자체는 사라지지 않는다 — 좌측
+       상세와 채널 판정에는 그대로 있고, 요약이 그것을 다시 그리지 않을 뿐이다.
+
+       data-summary는 "무엇이 요약에 서 있는가"를 렌더 결과에서 세기 위한
+       표식이다 — 클래스 이름으로 찾으면 Tailwind 유틸리티 하나만 바꿔도
+       검사가 조용히 무력해진다(data-frame과 같은 이유). */
+    <div
+      data-summary="channel-registration"
+      className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface text-sm shadow-elevated lg:sticky lg:top-4"
+    >
+      {/* ① 등록 준비 상태 · ③ 남은 항목 N개(무엇/왜/어디서/[이동]) */}
       <RegistrationStatusBanner
         state={state}
         priorityItems={priorityItems}
         onItemClick={onPriorityItemClick}
         checkedItems={required}
       />
-      {statusRows}
-      {/* ② 등록 가능성 + 필수항목 + [등록 정보 확인] + [채널 등록] */}
+      {/* ② 필수 확인(자리 단위) · ④ [등록 시작] */}
       <RegistrationReadinessCard
         isCalculating={isCalculating}
         errorMessage={errorMessage}
         onRetry={onRetry}
-        percent={percent}
         required={required}
-        recommended={recommended}
         allRequiredPassed={allRequiredPassed}
-        platformLabel={platformLabel}
         status={status}
         registrationEnabled={registrationEnabled}
-        registrationReadinessState={registrationReadinessState}
         onRegister={onRegister}
-        onItemClick={onItemClick}
-        settingsMissing={settingsMissing}
-        autoFillStats={autoFillStats}
         percentUnavailable={percentUnavailable}
         verifyAction={verifyAction}
       />

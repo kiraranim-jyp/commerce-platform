@@ -344,9 +344,10 @@ describe("REWORK-6 ① — 전체 사슬(부족 발견 → 이동 → 입력 →
   it("🔴 7단계를 한 번에 끝까지 밟는다", async () => {
     await render(makeProduct());
 
-    /* ① 부족 항목 발견 — 우선순위 카드 1번이 이 필드다. */
+    /* ① 부족 항목 발견 — 남은 항목 1번이 이 필드다.
+       REWORK-7 ①(2026-09-15) — 머리말이 "먼저 해결할 항목 1개" → "남은 항목 1개". */
     const before = text();
-    expect(before).toContain("먼저 해결할 항목 1개");
+    expect(before).toContain("남은 항목 1개");
     expect(before, "부족 항목에 카탈로그 모델명이 서 있지 않다").toContain(CATALOG_MODEL_NAME);
     expect(before, "필드 경로를 날것으로 읽어 주면 안 된다").not.toContain("naverShoppingSearchInfo");
     expect(missingLabels()).toContain(CATALOG_MODEL_NAME);
@@ -389,13 +390,16 @@ describe("REWORK-6 ① — 전체 사슬(부족 발견 → 이동 → 입력 →
     expect(missingLabels(), "값을 넣었는데 부족 항목에 그대로 남아 있다").not.toContain(
       CATALOG_MODEL_NAME,
     );
-    // 우측 요약이 그 사실을 그대로 말한다 — 우선순위 카드가 통째로 사라진다.
+    // 우측 요약이 그 사실을 그대로 말한다 — 남은 항목 블록이 통째로 사라진다.
+    /* REWORK-7 ①(2026-09-15) — 머리말이 "먼저 해결할 항목 1개" → "남은 항목 N개",
+       판정 문구가 "등록 준비 완료" → "등록 가능"으로 짧아졌다. 사슬(⑦ 부족 항목이
+       화면에서 사라진다)을 보는 방식은 그대로다 — 이제 그 블록이 **통째로 서지
+       않는 것**이 증거다(전부 통과하면 남은 항목 칸 자체를 그리지 않는다). */
     const after = text();
-    expect(after, "우선순위 카드가 아직 서 있다 — 부족 항목이 남았다는 뜻이다").not.toContain(
-      "먼저 해결할 항목",
+    expect(after, "남은 항목 카드가 아직 서 있다 — 부족 항목이 남았다는 뜻이다").not.toContain(
+      "남은 항목",
     );
-    expect(after).toContain("등록 준비 완료");
-    expect(after).toContain("남은 작업 0개");
+    expect(after).toContain("등록 가능");
     // 🔴 화면에 남은 "네이버 쇼핑 카탈로그 모델명"은 **부족 항목이 아니라**
     //    모델명 입력칸 옆의 사전 안내 한 줄뿐이다(참조 버튼이 무엇을 못 하는지).
     //    그 문구가 부족 항목 목록에서 사라졌다는 것이 위 missingLabels()다.
@@ -411,5 +415,71 @@ describe("REWORK-6 ① — 전체 사슬(부족 발견 → 이동 → 입력 →
     await render(makeProduct());
     const labels = Array.from(container.querySelectorAll("button")).map((b) => (b.textContent ?? "").trim());
     expect(labels).toContain("「기본정보」에서 입력하기 →");
+  });
+});
+
+/* ── 3. REWORK-7 ③ — SKU는 카탈로그 모델명이 아니다 ────────────────────────── */
+
+/**
+ * REWORK-7 ③(CEO 지시, 2026-09-15) — **"상품코드(SKU) AAA1804916이 있는데
+ * readiness는 modelName이 없다고 한다"의 답을 코드에 못 박는다.**
+ *
+ * 판정: **B — SKU와 카탈로그 modelName은 별개다(입력 위치 UX 버그).**
+ *
+ * ── 근거 ① 같은 payload가 둘을 **다른 자리**로 보낸다 ─────────────────────
+ *   product.sku            → originProduct.sellerManagementCode  (판매자 상품코드)
+ *   카탈로그 모델명        → …detailAttribute.naverShoppingSearchInfo.modelName
+ * 한 요청이 두 칸을 동시에 들고 나간다. 같은 개념이면 네이버 스키마에 칸이
+ * 둘일 이유가 없다. 아래 테스트가 그 사실을 payload로 직접 확인한다.
+ *
+ * ── 근거 ② 원본 판매처가 이미 둘을 나눠 준다(라이브 실측) ─────────────────
+ * Smallable JSON-LD(docs/matching-3.2-d-color-authority.md에 전문 기록):
+ *   {"model":"430663", "sku":"AAA1804712", "color":"Lavender"}
+ * AAA 접두사 값은 **판매처 자신의 재고번호**이고 모델번호는 별도 필드다.
+ * 이 저장소는 그 구분을 이미 독립적으로 세워 두었다 —
+ * crawler/comparison-search/seller-facts.ts: "판매처 자신의 상품코드/재고번호.
+ * 브랜드 품번이 아니다." (brandModelCode에 넣으면 근거 없는 SAME이 만들어진다)
+ *
+ * ── 근거 ③ naverShoppingSearchInfo의 형제가 말해 준다 ─────────────────────
+ * 이 객체에 함께 사는 필드는 manufacturerName · brandName이다(제조사 층위).
+ * 판매자 재고번호가 낄 자리가 아니다.
+ *
+ * 🔴 그래서 SKU를 modelName에 복사하지 않는다. 이 테스트는 미래의 누군가가
+ * "값이 있는데 왜 안 쓰냐"며 배선을 이어 붙이는 것을 막는 못이다.
+ */
+describe("REWORK-7 ③ — SKU는 카탈로그 모델명이 아니다(B 판정을 고정한다)", () => {
+  const SELLER_STOCK_CODE = "AAA1804916";
+
+  it("SKU는 sellerManagementCode로 간다 — 카탈로그 모델명 자리에 복사되지 않는다", () => {
+    const product = makeProduct({ sku: field(SELLER_STOCK_CODE, "ORIGINAL") } as never);
+    const origin = payloadOf(product).originProduct;
+    expect(origin.sellerManagementCode, "SKU가 판매자 상품코드 자리에 안 들어간다").toBe(SELLER_STOCK_CODE);
+    expect(
+      origin.detailAttribute?.naverShoppingSearchInfo?.modelName,
+      "🔴 판매처 재고번호가 카탈로그 모델명으로 새어 들어갔다",
+    ).not.toBe(SELLER_STOCK_CODE);
+  });
+
+  it("SKU만 있고 모델명이 비면 카탈로그 모델명은 여전히 비어 있다 — 그래서 readiness가 막는다", () => {
+    const product = makeProduct({
+      sku: field(SELLER_STOCK_CODE, "ORIGINAL"),
+      modelName: field("", "ORIGINAL"),
+    } as never);
+    expect(payloadOf(product).originProduct.detailAttribute?.naverShoppingSearchInfo?.modelName).toBeUndefined();
+    // 판정은 그대로다 — 값이 없으니 없다고 말한다(SKU로 메우지 않는다).
+    expect(
+      validationOf(product).fields.some((f) => f.field === "naverShoppingSearchInfo.modelName"),
+      "SKU가 있다고 해서 카탈로그 모델명 판정이 조용히 통과되면 안 된다",
+    ).toBe(true);
+  });
+
+  it("셀러가 기본정보에 직접 넣은 모델명만 카탈로그로 간다 — SKU와 서로 다른 값이 각자 자리로", () => {
+    const product = makeProduct({
+      sku: field(SELLER_STOCK_CODE, "ORIGINAL"),
+      modelName: field("B226AC043", "USER_EDITED"),
+    } as never);
+    const origin = payloadOf(product).originProduct;
+    expect(origin.sellerManagementCode).toBe(SELLER_STOCK_CODE);
+    expect(origin.detailAttribute?.naverShoppingSearchInfo?.modelName).toBe("B226AC043");
   });
 });

@@ -335,19 +335,31 @@ describe("골격 — CEO 지시서의 섹션 구조와 실제 렌더 순서가 �
     expect(missing, `롯데ON 좌측에 없는 골격 섹션: ${missing.join(" / ")}`).toEqual([]);
   });
 
-  it("등록 상태 · 등록 가능성 · [등록 정보 확인] · [채널 등록]이 전부 우측 요약에 있다", () => {
-    const { right } = columnsOf(renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
+  /**
+   * REWORK-7 ①·②(CEO 지시, 2026-09-15) — 우측 요약의 목차가 바뀌었다.
+   *
+   * 「등록 상태」(롯데ON 연결 · 직전 등록 결과)는 좌측 상세 맨 아래로 내려갔다 —
+   * 스마트스토어·쿠팡이 같은 성격의 사실(ListingSection)을 처음부터 거기 두고
+   * 있었기 때문이다. 「등록 가능성 N%」는 「등록 준비 상태」+「필수 확인」으로
+   * 바뀌었다(퍼센트보다 등록을 막는 조건 중심). [등록 정보 확인] → [등록 시작]
+   * 버튼 순서는 그대로다.
+   */
+  it("등록 준비 상태 · 필수 확인 · [등록 정보 확인] · [등록 시작]이 전부 우측 요약에 있다", () => {
+    const { right, left } = columnsOf(renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
     const text = stripTags(right);
-    expect(text).toContain("등록 상태");
-    expect(text).toContain("등록 가능성");
-    // CEO 프레임의 버튼 순서 — [등록 정보 확인] 다음에 [채널 등록].
+    expect(text).toContain("등록 준비 상태");
+    expect(text).toContain("필수 확인");
+    // CEO 프레임의 버튼 순서 — [등록 정보 확인] 다음에 [등록 시작].
     const confirmButton = right.indexOf(">등록 정보 확인<");
-    const registerButton = right.indexOf(">⚠ 부족한 정보 해결하기<");
+    const registerButton = right.indexOf(">등록 시작<");
     expect(confirmButton).toBeGreaterThan(-1);
     expect(registerButton).toBeGreaterThan(confirmButton);
     // 좌측 상세에는 등록 행동이 남아 있지 않다 — 행동은 한 곳에서만.
-    const { left } = columnsOf(renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
     expect(left).not.toContain(">등록 정보 확인<");
+    expect(left).not.toContain(">등록 시작<");
+    // 「등록 상태」는 좌측으로 내려갔다 — 우측에 한 채널만 갖는 칸이 없다.
+    expect(stripTags(left)).toContain("등록 상태");
+    expect(text).not.toContain("등록 상태");
   });
 
   it("세 탭이 같은 프레임을 쓴다 — 좌측 상세 · 우측 요약", () => {
@@ -360,9 +372,10 @@ describe("골격 — CEO 지시서의 섹션 구조와 실제 렌더 순서가 �
       const { left, right } = columnsOf(html);
       expect(left.length, `${name}: 좌측 상세가 비어 있다`).toBeGreaterThan(0);
       expect(right.length, `${name}: 우측 요약이 비어 있다`).toBeGreaterThan(0);
-      // 우측 요약은 세 채널 모두 "등록 가능성"과 등록 버튼을 갖는다.
-      expect(stripTags(right), `${name}: 우측에 등록 가능성이 없다`).toContain("등록 가능성");
-      expect(/<button[^>]*>(⚠ 부족한 정보 해결하기|🔴 등록 불가|판매 전 최종 확인|🟠 판매 가능 여부 확인하기)</.test(right), `${name}: 우측에 등록 버튼이 없다`).toBe(true);
+      // 우측 요약은 세 채널 모두 같은 네 칸 중 ①②④를 항상 갖는다.
+      expect(stripTags(right), `${name}: 우측에 등록 준비 상태가 없다`).toContain("등록 준비 상태");
+      expect(stripTags(right), `${name}: 우측에 필수 확인이 없다`).toContain("필수 확인");
+      expect(/<button[^>]*>등록 시작</.test(right), `${name}: 우측에 [등록 시작]이 없다`).toBe(true);
     }
   });
 
@@ -509,12 +522,20 @@ describe("표 2행 — 셀러 설정 자동 반영", () => {
     );
   });
 
-  it("coupang — 셀러 설정이 비면 그 항목과 설정 이동 경로가 탭에 나타난다", () => {
-    const html = renderPlatformTab("coupang", { settingsMissing: ["출고지", "반품지"] });
-    const text = stripTags(html);
-    expect(text).toContain("출고지");
-    expect(text).toContain("반품지");
-    expect(html).toContain('href="/settings"');
+  /**
+   * REWORK-7 ①(CEO 지시, 2026-09-15) — **우측 요약은 이름을 나열하지 않는다.**
+   *
+   * 셀러 설정 누락 항목(출고지·반품지)은 그대로 살아 있지만, 요약에서는
+   * 「판매자 설정」 자리 한 줄로 접힌다. 이름과 [이동]은 그 항목이 **남은 항목
+   * 1위**가 됐을 때 선다(REWORK-4 §2의 "한 번에 하나" 규칙 그대로) — 그 경로는
+   * rework7-summary-shape.test.ts가 요약 컴포넌트 단위로 따로 증명한다.
+   */
+  it("coupang — 셀러 설정 누락은 「판매자 설정」 한 줄로 접힌다(이름 나열 없음)", () => {
+    const { right } = columnsOf(renderPlatformTab("coupang", { settingsMissing: ["출고지", "반품지"] }));
+    const text = stripTags(right);
+    expect(text).toContain("판매자 설정");
+    expect(text, "우측 요약이 셀러 설정 항목 이름을 나열한다").not.toContain("출고지");
+    expect(text, "우측 요약이 셀러 설정 항목 이름을 나열한다").not.toContain("반품지");
   });
 
   /**
@@ -531,8 +552,13 @@ describe("표 2행 — 셀러 설정 자동 반영", () => {
   it("smartstore — settingsMissing을 넘겨도 준비도 카드에 그 항목이 서지 않는다(현재 동작 고정)", () => {
     const text = stripTags(renderPlatformTab("smartstore", { settingsMissing: ["출고지", "반품지"] }));
     expect(text).not.toContain("출고지");
-    // 다만 "설정하러 가기" 버튼 자체는 뜬다 — 목록 없이 배너만 선다.
-    expect(text).toContain("설정하러 가기");
+    /* REWORK-7 ①(2026-09-15) — 여기 있던 "설정하러 가기" 버튼이 사라졌다.
+       요약이 settingsMissing을 따로 받아 그리던 자리인데, **목록도 없이 버튼만**
+       서 있었다(위 주석이 기록한 그 비대칭). 이동 경로가 필요한 항목은 남은
+       항목 1위가 됐을 때 그 항목이 자기 [이동]을 달고 선다 — 갈 곳 없는 버튼을
+       남겨 두지 않는다(REWORK-4 §2). 스마트스토어에 셀러 설정 누락 안내 경로가
+       아예 없다는 사실 자체는 여전히 그대로다 — 이번 범위가 아니다. */
+    expect(text).not.toContain("설정하러 가기");
   });
 
   /**

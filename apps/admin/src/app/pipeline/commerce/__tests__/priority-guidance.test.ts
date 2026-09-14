@@ -146,9 +146,14 @@ describe("§2 — 먼저 해결할 항목 1개가 네 가지를 전부 말한다
     };
   }
 
-  it("머리말이 '먼저 해결할 항목 1개'다 — 목록이 아니라 하나다", () => {
+  /* REWORK-7 ①(CEO 지시, 2026-09-15) — 머리말이 CEO가 §1에 적은 "남은 항목 N개"로
+     바뀌었다. **"하나만 펼친다"는 규칙 자체는 그대로다** — 아래 세 검사(무엇/왜/
+     어디서/[이동])가 여전히 첫 항목 하나에 대해서만 성립한다. */
+  it("머리말이 '남은 항목 N개'다 — 목록이 아니라 하나를 편다", () => {
     const text = stripTags(bannerHtml().html);
-    expect(text).toContain("먼저 해결할 항목 1개");
+    expect(text).toContain("남은 항목");
+    // 펼쳐진 항목은 하나뿐이다 — 나머지를 번호로 나열하지 않는다.
+    expect(text).not.toContain("그 다음");
   });
 
   it("① 무엇이 부족한가 · ② 왜 필요한가 · ③ 어디서 입력하는가가 전부 화면에 있다", () => {
@@ -173,7 +178,18 @@ describe("§2 — 먼저 해결할 항목 1개가 네 가지를 전부 말한다
     expect(html).toContain("「카테고리」에서 입력하기 →");
   });
 
-  it("그 외 확인 항목이 ✓로 남는다 — 무엇이 이미 끝났는지 사라지지 않는다", () => {
+  /**
+   * REWORK-7 ①(CEO 판정, 2026-09-15) — **여기 있던 "그 외 확인 항목 N개 ✓ 상품명
+   * ✓ 브랜드 …"가 사라졌다.**
+   *
+   * BEFORE 렌더 덤프에서 이 줄과 바로 아래 준비도 카드가 **같은 필드 목록을 한
+   * 기둥 안에서 두 번** 그리고 있었다(쿠팡: ✓ 상품명 ✓ 브랜드 ✓ 대표이미지
+   * ✓ 이미지 형식 ✓ 판매가격 ✓ 상세설명 — 두 번). 무엇이 이미 끝났는지는
+   * 사라지지 않는다: 아래 「필수 확인」이 **자리 단위**로 말한다(summary-checklist).
+   *
+   * 배너가 checkedItems로 하는 일은 이제 **세는 것뿐**이다.
+   */
+  it("통과 여부는 세기만 한다 — 배너가 항목 이름을 나열하지 않는다", () => {
     const summary = computeChecklistReadiness([], UNRESOLVED_CATEGORY);
     const html = renderToStaticMarkup(
       createElement(RegistrationStatusBanner, {
@@ -188,9 +204,11 @@ describe("§2 — 먼저 해결할 항목 1개가 네 가지를 전부 말한다
       }),
     );
     const text = stripTags(html);
-    expect(text).toContain("그 외 확인 항목 2개");
-    expect(text).toContain("✓ 상품명");
-    expect(text).toContain("✓ 브랜드");
+    expect(text).not.toContain("그 외 확인 항목");
+    expect(text).not.toContain("✓ 상품명");
+    expect(text).not.toContain("✓ 브랜드");
+    // 미통과 개수(카테고리 1개)는 머리말이 말한다.
+    expect(text).toContain("남은 항목 1개");
   });
 });
 

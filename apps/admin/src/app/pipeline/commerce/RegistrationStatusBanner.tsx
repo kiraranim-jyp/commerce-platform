@@ -27,14 +27,19 @@ export {
 import { describePriorityItem, type RegistrationReadinessState, type PriorityItem } from "./readiness-state";
 import type { ReadinessItem } from "./readiness";
 
+/**
+ * REWORK-7 ①(CEO 지시, 2026-09-15) — 판정 한 줄. 세 채널이 같은 네 문구만
+ * 쓴다. 상태 자체(4단계)는 resolveRegistrationReadinessState가 정하던 그대로다 —
+ * 여기서 바뀐 것은 **문구뿐**이다.
+ */
 const STATE_META: Record<
   RegistrationReadinessState,
   { icon: string; title: string; className: string }
 > = {
-  BLOCKED: { icon: "🔴", title: "현재 등록할 수 없습니다", className: "border-error bg-error-soft" },
-  SELLER_REVIEW: { icon: "🟠", title: "판매 전 확인이 필요한 상품입니다", className: "border-warning bg-warning-soft" },
-  NEEDS_REVIEW: { icon: "🟡", title: "등록 전 확인이 필요합니다", className: "border-warning bg-warning-soft" },
-  READY: { icon: "🟢", title: "등록 준비 완료", className: "border-success bg-success-soft" },
+  BLOCKED: { icon: "🔴", title: "등록 불가", className: "bg-error-soft" },
+  SELLER_REVIEW: { icon: "🟠", title: "판매 전 확인 필요", className: "bg-warning-soft" },
+  NEEDS_REVIEW: { icon: "🟡", title: "등록 전 확인 필요", className: "bg-warning-soft" },
+  READY: { icon: "🟢", title: "등록 가능", className: "bg-success-soft" },
 };
 
 /**
@@ -63,55 +68,45 @@ export function RegistrationStatusBanner({
   state: RegistrationReadinessState;
   priorityItems: PriorityItem[];
   onItemClick?: (item: PriorityItem) => void;
-  /** 이미 통과한 필수 항목들 — "그 외 확인 항목"에 ✓로 남는다. */
+  /**
+   * 필수 항목 전체. **개수를 세는 데에만 쓴다** — 이름을 나열하지 않는다.
+   *
+   * REWORK-7 ① — 여기 있던 "그 외 확인 항목 6개 ✓ 상품명 ✓ 브랜드 ✓ 대표이미지
+   * ✓ 이미지 형식 ✓ 판매가격 ✓ 상세설명"이 사라졌다. 바로 아래 카드가 같은
+   * 목록을 한 번 더 그리고 있었고(BEFORE 덤프로 확인), 둘 다 좌측 상세가 이미
+   * 섹션마다 보여주는 필드였다. 무엇이 끝났는지는 아래 「필수 확인」이 자리
+   * 단위로 말한다.
+   */
   checkedItems?: ReadinessItem[];
 }) {
   const meta = STATE_META[state];
-  const [first, ...rest] = priorityItems;
-  const passed = (checkedItems ?? []).filter((i) => i.passed);
+  const [first] = priorityItems;
+  const remaining = (checkedItems ?? []).filter((i) => !i.passed).length;
 
   return (
-    <section className={`rounded-lg border p-4 text-sm ${meta.className}`}>
-      <p className="flex items-center gap-1.5 text-base font-semibold text-text-primary">
-        <span>{meta.icon}</span>
-        {meta.title}
-      </p>
+    <>
+      {/* ① 등록 준비 상태 — 판정 한 줄. */}
+      <section className={`px-4 py-3 text-sm ${meta.className}`}>
+        <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">등록 준비 상태</p>
+        <p className="mt-1 flex items-center gap-1.5 text-base font-semibold text-text-primary">
+          <span aria-hidden>{meta.icon}</span>
+          {meta.title}
+        </p>
+      </section>
 
+      {/* ③ 남은 항목 — 지금 등록을 막는 것 하나. 전부 통과했으면 이 블록 자체가
+          서지 않는다(빈 목록을 "0개"라고 적어 두면 읽을 것이 하나 더 는다). */}
       {state !== "READY" && first && (
-        <div className="mt-3 space-y-2">
-          <p className="text-xs font-medium text-text-tertiary">먼저 해결할 항목 1개</p>
-          <FirstPriorityBlock item={first} onItemClick={onItemClick} />
-
-          {rest.length > 0 && (
-            <div className="rounded-md bg-background/50 px-2.5 py-2">
-              <p className="text-[11px] font-medium text-text-tertiary">
-                그 다음 {rest.length}개 — 위 항목을 해결하면 차례로 올라옵니다
-              </p>
-              <ul className="mt-1 space-y-0.5">
-                {rest.map((item, index) => (
-                  <li key={item.key} className="text-[11px] text-text-secondary">
-                    {index + 2}. {item.label}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
-
-      {state === "READY" && (
-        <p className="mt-1 text-xs text-text-secondary">필수 정보가 모두 확인됐습니다 — 아래에서 바로 등록할 수 있습니다.</p>
-      )}
-
-      {passed.length > 0 && (
-        <div className="mt-3 border-t border-border/60 pt-2">
-          <p className="text-[11px] font-medium text-text-tertiary">그 외 확인 항목 {passed.length}개</p>
-          <p className="mt-1 text-[11px] leading-relaxed text-text-secondary">
-            {passed.map((item) => `✓ ${item.label}`).join("  ")}
+        <section className="border-t border-border px-4 py-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">
+            남은 항목 {Math.max(remaining, 1)}개
           </p>
-        </div>
+          <div className="mt-1.5">
+            <FirstPriorityBlock item={first} onItemClick={onItemClick} />
+          </div>
+        </section>
       )}
-    </section>
+    </>
   );
 }
 
@@ -131,7 +126,7 @@ function FirstPriorityBlock({
   return (
     <div className="rounded-md border border-border bg-surface px-3 py-2.5">
       <p className="flex items-start gap-1.5 text-sm font-semibold text-text-primary">
-        <span className="shrink-0 text-text-tertiary">{item.retryable ? "⚠️" : "①"}</span>
+        {item.retryable && <span className="shrink-0 text-text-tertiary">⚠️</span>}
         <span>{item.label}</span>
       </p>
       <p className="mt-1.5 text-xs text-text-secondary">{guide.what}</p>

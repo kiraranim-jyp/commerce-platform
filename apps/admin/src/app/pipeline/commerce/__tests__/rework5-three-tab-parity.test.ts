@@ -268,24 +268,25 @@ describe("REWORK-5 ⑥ — 세 탭을 나란히 놓은 렌더 비교", () => {
     expect(raw.LOTTEON[0]).toBe("① 기본 상품정보");
   });
 
-  it("세 탭 모두 우측 요약에 등록 가능성이 선다", async () => {
+  /* REWORK-7 ①(CEO 지시, 2026-09-15) — 「등록 가능성 N%」가 「등록 준비 상태」 +
+     「필수 확인」으로 바뀌었다. 판정 4단계 자체는 그대로고(문구만 짧아졌다),
+     퍼센트는 우측에서 내려갔다 — 등록을 막는 조건 중심으로 말하라는 판정. */
+  it("세 탭 모두 우측 요약에 등록 준비 상태 · 필수 확인이 선다", async () => {
     for (const tab of TABS) {
       const { right } = columnsOf(await mount(tab.element()));
-      expect(clean(right.textContent ?? ""), `${tab.label}: 우측 요약에 등록 가능성이 없다`).toContain(
-        "등록 가능성",
-      );
+      const text = clean(right.textContent ?? "");
+      expect(text, `${tab.label}: 우측 요약에 등록 준비 상태가 없다`).toContain("등록 준비 상태");
+      expect(text, `${tab.label}: 우측 요약에 필수 확인이 없다`).toContain("필수 확인");
     }
   });
 
-  it("세 탭 모두 우측 요약이 등록 판정 배너로 시작한다", async () => {
+  it("세 탭 모두 우측 요약이 등록 판정 한 줄로 시작한다", async () => {
     for (const tab of TABS) {
       const { right } = columnsOf(await mount(tab.element()));
       const text = clean(right.textContent ?? "");
       expect(
-        ["등록 준비 완료", "등록 전 확인이 필요합니다", "현재 등록할 수 없습니다", "판매 전 확인이 필요한 상품입니다"].some(
-          (s) => text.includes(s),
-        ),
-        `${tab.label}: 우측 요약에 등록 판정 배너가 없다`,
+        ["등록 가능", "등록 전 확인 필요", "등록 불가", "판매 전 확인 필요"].some((s) => text.includes(s)),
+        `${tab.label}: 우측 요약에 등록 판정이 없다`,
       ).toBe(true);
     }
   });

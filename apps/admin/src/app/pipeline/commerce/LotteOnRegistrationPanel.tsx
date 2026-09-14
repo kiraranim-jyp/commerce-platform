@@ -35,6 +35,7 @@ import {
 } from "./lotteon-category";
 import { sectionTitle } from "./registration-sections";
 import { ChannelRegistrationFrame, ChannelRegistrationSummary } from "./ChannelRegistrationFrame";
+import { ListingConfirmationModal, type ListingProgressStep } from "./ListingConfirmationModal";
 import type { ReadinessItem } from "./readiness";
 import { resolveRegistrationReadinessState, type PriorityItem } from "./readiness-state";
 import {
@@ -199,6 +200,9 @@ export function LotteOnRegistrationPanel({
   const [previewing, setPreviewing] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [registerResult, setRegisterResult] = useState<RegisterResponse | null>(null);
+  /* REWORK-7 ⑤ — 최종 확인 모달(세 채널 공용)과 그 안의 진행 단계. */
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [registerProgress, setRegisterProgress] = useState<ListingProgressStep | null>(null);
   const [showPayload, setShowPayload] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recommend, setRecommend] = useState<RecommendState>(EMPTY_RECOMMEND);
@@ -451,30 +455,53 @@ export function LotteOnRegistrationPanel({
     // 게이트는 셋을 동시에 만족해야 열린다(§10): 등록 가능성 100% + 서버 검증
     // 통과 + 그 결과가 **지금 입력에 대한 것**일 것.
     if (!canRegister) return;
-    if (!window.confirm("롯데ON에 이 상품을 실제로 등록합니다. 계속하시겠습니까?")) return;
     setRegistering(true);
     setError(null);
+    /* REWORK-7 ⑤ — 단계를 새로 만든 게 아니라 **이미 일어나던 일에 이름을
+       붙인 것**이다(627ac53의 스마트스토어·쿠팡과 같은 세 단계, 같은 모달).
+       PREPARING payload 조립 → SENDING /api/lotteon/register 왕복 →
+       CONFIRMING 돌아온 결과 기록. 등록 경로는 한 줄도 바뀌지 않는다. */
+    setRegisterProgress("PREPARING");
     try {
+      const body = JSON.stringify({
+        product,
+        channel: toLotteOnChannelPayload(form),
+        snapshotId: snapshotId ?? undefined,
+        jobKey: jobKey ?? undefined,
+        liveRates,
+        roundingUnit,
+      });
+      setRegisterProgress("SENDING");
       const res = await fetch("/api/lotteon/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          product,
-          channel: toLotteOnChannelPayload(form),
-          snapshotId: snapshotId ?? undefined,
-          jobKey: jobKey ?? undefined,
-          liveRates,
-          roundingUnit,
-        }),
+        body,
       });
+      setRegisterProgress("CONFIRMING");
       const data = (await res.json()) as RegisterResponse;
       setRegisterResult(data);
     } catch {
       setError("서버에 연결하지 못했습니다.");
     } finally {
       setRegistering(false);
+      setRegisterProgress(null);
+      setConfirmOpen(false);
     }
   }
+
+  /**
+   * REWORK-7 ④ — 🔴 필수 / ⚪ 선택. 서버 검증이 이름을 올린 필드만 필수다
+   * (validateLotteOnPayload의 ok는 MISSING·BLOCKED 둘 다 0일 때만 참이므로,
+   * 검증이 들여다본 필드는 예외 없이 등록을 막는다). 검증 전에는 undefined —
+   * 모르는 것을 필수라고도 선택이라고도 적지 않는다.
+   */
+  const requirementOf = useCallback(
+    (validationField: string): FieldRequirement => {
+      if (!validation) return undefined;
+      return validation.fields.some((f) => f.field === validationField) ? "REQUIRED" : "OPTIONAL";
+    },
+    [validation],
+  );
 
   const connectionOk = preview != null && preview.ok && !preview.identityError;
   const canRegister = !stale && readiness.percent === 100 && readiness.allRequiredPassed && !registering && !previewing;
@@ -545,50 +572,16 @@ export function LotteOnRegistrationPanel({
          해결하기」)이 사라졌다. 롯데ON의 §8 부족한 정보 목록은 아래 본문에
          그대로 남아 있고(LOTTEON_MISSING_INFO_ID), 우선순위 첫 항목은 위
          배너가 무엇/왜/어디서/[바로 이동]까지 갖춰서 말한다. */
-      statusRows={
-        <section className="rounded-lg border border-border bg-surface px-3 py-2.5">
-          <p className="text-[11px] font-medium leading-4 text-text-tertiary">등록 상태</p>
-          <ul className="mt-1 space-y-1.5 text-xs">
-            <StatusRow
-              label="롯데ON 연결"
-              tone={preview == null ? "muted" : connectionOk ? "ok" : "warn"}
-              value={
-                preview == null
-                  ? "확인 중…"
-                  : connectionOk
-                    ? "인증키 · 서버 IP 확인됨 (거래처 조회 성공)"
-                    : (preview.identityError ?? "거래처 정보를 확인하지 못했습니다.")
-              }
-            />
-            <StatusRow
-              label="등록"
-              tone={registerResult?.result?.status === "SUBMITTED" ? "ok" : registerResult ? "error" : "muted"}
-              value={
-                registerResult?.result
-                  ? registerResult.result.status === "SUBMITTED"
-                    ? `등록 요청 완료 — 판매자상품번호(spdNo) ${registerResult.result.externalProductId ?? "미확인"}`
-                    : `등록 실패 — ${registerResult.result.message}`
-                  : "아직 이 화면에서 등록한 적이 없습니다."
-              }
-            />
-          </ul>
-          {stale && (
-            <p className="mt-2 rounded-md bg-warning-soft px-2 py-1.5 text-[11px] text-warning">
-              입력이 바뀌었습니다 — 위 결과는 바뀌기 전 입력에 대한 것입니다. [등록 정보 확인]을 다시 눌러 주세요.
-            </p>
-          )}
-        </section>
-      }
-      percent={readiness.percent}
+      /* REWORK-7 ②·④(CEO 지시, 2026-09-15) — 여기 있던 「등록 상태」(롯데ON 연결 ·
+         직전 등록 결과)가 **좌측 상세 맨 아래로** 내려갔다. 스마트스토어·쿠팡은
+         같은 성격의 사실(ListingSection — 연결/직전 등록 결과)을 처음부터 좌측
+         맨 아래에 두고 있었다. 우측에만 한 채널이 칸을 하나 더 갖고 있으면
+         "세 탭이 같은 등록 화면"은 렌더 결과에서 거짓이 된다. */
       required={readinessItems}
-      recommended={[]}
       allRequiredPassed={!stale && readiness.allRequiredPassed}
-      platformLabel="롯데ON"
       status={listingStatus}
       registrationEnabled
-      registrationReadinessState={registrationState}
-      onRegister={() => void runRegister()}
-      onItemClick={scrollToSection}
+      onRegister={() => setConfirmOpen(true)}
       /* §17 — 카테고리 전에는 등록 가능성을 숫자로 말하지 않는다. 0%도 말하지
          않는다: 0%는 "다 모자라다"는 판정이고, 지금 참인 것은 "아직 판단할 수
          없다"이다. 표준카테고리가 전시카테고리·고시 품목코드·과세구분·요구
@@ -632,9 +625,11 @@ export function LotteOnRegistrationPanel({
           </button>
           {!canRegister && (
             <p className="text-[11px] text-text-tertiary">
+              {/* REWORK-7 ④(CEO 지시, 2026-09-15) — 퍼센트가 아니라 **등록을 막는
+                  조건**으로 말한다. 게이트 자체(canRegister)는 그대로다. */}
               {stale
                 ? "입력이 바뀌었습니다 — 등록 정보 확인을 다시 통과해야 등록 버튼이 열립니다."
-                : "등록 가능성 100% + 등록 정보 확인을 통과해야 등록 버튼이 열립니다."}
+                : "위 필수 확인을 모두 통과하고 등록 정보 확인을 통과해야 등록 버튼이 열립니다."}
             </p>
           )}
         </div>
@@ -868,41 +863,48 @@ export function LotteOnRegistrationPanel({
         <div className="grid gap-3 sm:grid-cols-2">
           <TextField
             label="출고지번호 (owhpNo)"
+            requirement={requirementOf("owhpNo")}
             hint="롯데ON에 선등록된 출고지"
             value={form.delivery.outboundPlaceNo}
             onChange={(value) => patch("delivery", { outboundPlaceNo: value })}
           />
           <TextField
             label="반품지번호 (rtrpNo)"
+            requirement={requirementOf("rtrpNo")}
             hint="롯데ON에 선등록된 회수지"
             value={form.delivery.returnPlaceNo}
             onChange={(value) => patch("delivery", { returnPlaceNo: value })}
           />
           <TextField
             label="배송비정책번호 (dvCstPolNo)"
+            requirement={requirementOf("dvCstPolNo")}
             hint="롯데ON에 선등록된 배송비 정책"
             value={form.delivery.deliveryCostPolicyNo}
             onChange={(value) => patch("delivery", { deliveryCostPolicyNo: value })}
           />
           <TextField
             label="배송가능지역코드 (dvRgsprGrpCd)"
+            requirement={requirementOf("dvRgsprGrpCd")}
             hint="공통코드 DV_RGSPR_GRP_CD"
             value={form.delivery.deliveryRegionGroupCode}
             onChange={(value) => patch("delivery", { deliveryRegionGroupCode: value })}
           />
           <TextField
             label="택배사코드 (hdcCd)"
+            requirement={requirementOf("hdcCd")}
             hint="공통코드 DV_CO_CD (예: 0001 롯데택배)"
             value={form.delivery.courierCode}
             onChange={(value) => patch("delivery", { courierCode: value })}
           />
           <TextField
             label="반품택배사코드 (rtngHdcCd)"
+            requirement={requirementOf("rtngHdcCd")}
             value={form.delivery.returnCourierCode}
             onChange={(value) => patch("delivery", { returnCourierCode: value })}
           />
           <TextField
             label="평일 발송마감시간"
+            requirement={requirementOf("nldySndCloseTm")}
             hint="HHMM · 분은 00 또는 30만"
             value={form.delivery.weekdayCloseTime}
             onChange={(value) => patch("delivery", { weekdayCloseTime: value })}
@@ -964,12 +966,14 @@ export function LotteOnRegistrationPanel({
         <div className="grid gap-3">
           <TextField
             label="상품품목코드 (pdItmsCd)"
+            requirement={requirementOf("pdItmsCd")}
             hint={`고시 품목. ${LOTTEON_CHILD_PRODUCT_ITEM_CODE} = 어린이제품(유아동) — 이 경우 ④ 안전인증이 필수입니다.`}
             value={form.notice.itemCode}
             onChange={(value) => patch("notice", { itemCode: value })}
           />
           <TextAreaField
             label="고시 항목 (pdItmsArtlLst)"
+            requirement={requirementOf("pdItmsArtlLst")}
             hint="한 줄에 하나씩 `항목코드:내용`"
             placeholder={"0020:색상\n0060:제조국"}
             value={form.notice.articlesText}
@@ -1039,6 +1043,7 @@ export function LotteOnRegistrationPanel({
         <div className="grid gap-3">
           <TextAreaField
             label="안전인증 목록 (sftyAthnLst)"
+            requirement={requirementOf("sftyAthnLst")}
             hint="한 줄에 하나씩 `유형코드:인증번호[:기관명]`"
             placeholder={"CHL_CFM:CB123456789"}
             value={form.certification.safetyText}
@@ -1046,6 +1051,7 @@ export function LotteOnRegistrationPanel({
           />
           <TextField
             label="수입대행코드 (impPrxCd)"
+            requirement={requirementOf("impPrxCd")}
             hint="전기용품·생활용품 계열 KC 인증을 넣으면 필수 — PUR_PRX / PRL_IMP / NONE. 어린이제품(CHL_*)에는 필요 없습니다."
             value={form.certification.importProxyCode}
             onChange={(value) => patch("certification", { importProxyCode: value })}
@@ -1071,10 +1077,12 @@ export function LotteOnRegistrationPanel({
 
         {validation && (
           <div className="rounded-lg border border-border bg-surface px-4 py-3">
-            <p className="mb-2 text-sm font-semibold text-text-primary">
-              등록 정보 확인 — 준비 {validation.readyCount} · 누락 {validation.missingCount} · 차단{" "}
-              {validation.blockedCount}
-            </p>
+            {/* REWORK-7 ⑤(CEO 지시, 2026-09-15) — 여기 있던 판정 한 줄
+                ("등록 정보 확인 — 준비 N · 누락 N · 차단 N")이 사라졌다.
+                등록 가능 여부를 말하는 자리는 우측 요약 하나다 — 같은 판정이
+                두 곳에 서면 둘이 어긋나는 순간 어느 쪽이 참인지 알 수 없다
+                (CP001류). 아래 필드별 사유는 **상세**라 좌측에 남는다. */}
+            <p className="mb-2 text-sm font-semibold text-text-primary">필드별 확인 결과</p>
             <ul className="space-y-1 text-xs">
               {validation.fields.map((field) => (
                 <li key={field.field} className="flex gap-2">
@@ -1140,24 +1148,28 @@ export function LotteOnRegistrationPanel({
         <div className="grid gap-3 sm:grid-cols-2">
           <TextField
             label="원산지코드 (oplcCd)"
+            requirement={requirementOf("oplcCd")}
             hint="공통코드 OPLC_CD"
             value={form.codes.originCode}
             onChange={(value) => patch("codes", { originCode: value })}
           />
           <TextField
             label="과세유형코드 (tdfDvsCd)"
+            requirement={requirementOf("tdfDvsCd")}
             hint="01 과세 · 02 면세 · 03 영세 · 04 해당없음. 표준카테고리를 고르면 그 카테고리 값으로 채워집니다."
             value={form.codes.taxTypeCode}
             onChange={(value) => patch("codes", { taxTypeCode: value })}
           />
           <TextField
             label="브랜드번호 (brdNo)"
+            requirement={requirementOf("brdNo")}
             hint="속성모듈(204) 조회 결과. 없으면 비워둡니다"
             value={form.codes.brandNo}
             onChange={(value) => patch("codes", { brandNo: value })}
           />
           <TextField
             label="업체상품번호 (epdNo)"
+            requirement={requirementOf("epdNo")}
             hint="우리 쪽 식별자. 등록 후 상품 상태 조회(93)에 씁니다"
             value={form.codes.externalProductNo}
             onChange={(value) => patch("codes", { externalProductNo: value })}
@@ -1194,10 +1206,73 @@ export function LotteOnRegistrationPanel({
           )}
         </div>
       )}
+
+      {/* ── 등록 상태 — 채널 연결 · 직전 등록 결과 ─────────────────────────
+          REWORK-7 ②(CEO 지시, 2026-09-15) — 우측 요약에서 내려온 자리다.
+          스마트스토어·쿠팡의 ListingSection과 같은 성격(그 채널에서 실제로
+          무슨 일이 있었는가)이고, 그 둘이 이미 좌측 맨 아래에 두고 있던 자리다. */}
+      <section className="rounded-lg border border-border bg-surface px-4 py-3">
+        <p className="text-[11px] font-medium leading-4 text-text-tertiary">등록 상태</p>
+        <ul className="mt-1 space-y-1.5 text-xs">
+          <StatusRow
+            label="롯데ON 연결"
+            tone={preview == null ? "muted" : connectionOk ? "ok" : "warn"}
+            value={
+              preview == null
+                ? "확인 중…"
+                : connectionOk
+                  ? "인증키 · 서버 IP 확인됨 (거래처 조회 성공)"
+                  : (preview.identityError ?? "거래처 정보를 확인하지 못했습니다.")
+            }
+          />
+          <StatusRow
+            label="등록"
+            tone={registerResult?.result?.status === "SUBMITTED" ? "ok" : registerResult ? "error" : "muted"}
+            value={
+              registerResult?.result
+                ? registerResult.result.status === "SUBMITTED"
+                  ? `등록 요청 완료 — 판매자상품번호(spdNo) ${registerResult.result.externalProductId ?? "미확인"}`
+                  : `등록 실패 — ${registerResult.result.message}`
+                : "아직 이 화면에서 등록한 적이 없습니다."
+            }
+          />
+        </ul>
+        {stale && (
+          <p className="mt-2 rounded-md bg-warning-soft px-2 py-1.5 text-[11px] text-warning">
+            입력이 바뀌었습니다 — 위 결과는 바뀌기 전 입력에 대한 것입니다. [등록 정보 확인]을 다시 눌러 주세요.
+          </p>
+        )}
+      </section>
     </div>
   );
 
-  return <ChannelRegistrationFrame detail={detail} summary={summary} />;
+  return (
+    <>
+      <ChannelRegistrationFrame detail={detail} summary={summary} />
+      {/* REWORK-7 ⑤(CEO 지시, 2026-09-15) — 롯데ON도 **같은 모달**을 쓴다.
+          여기 있던 브라우저 기본 확인창("롯데ON에 이 상품을 실제로 등록합니다…")
+          이 사라졌다 — 그 창은 무엇이 등록되는지도, 무엇을 확인해야 하는지도
+          말하지 못했고 세 채널 중 롯데ON만 다른 화면이었다.
+          627ac53이 만든 모달을 그대로 쓴다(새로 만들지 않는다). */}
+      {confirmOpen && (
+        <ListingConfirmationModal
+          listing={{
+            platformLabel: "롯데ON",
+            title: product.titleKo.value || product.title.value,
+            /* 가격이 아직 없으면(resolved=false) 0을 "0원"으로 말하지 않는다 —
+               priceSource=UNRESOLVED가 "판매가격을 계산할 수 없습니다"를
+               그대로 띄운다(모달의 기존 문구, 새로 만들지 않음). */
+            priceKrw: commonPrice.priceKrw ?? 0,
+            priceSource: commonPrice.resolved && commonPrice.priceKrw != null ? "SELLER_OVERRIDE" : "UNRESOLVED",
+          }}
+          mode="LIVE"
+          progress={registerProgress}
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={() => void runRegister()}
+        />
+      )}
+    </>
+  );
 }
 
 /** 이 탭 안의 섹션으로 데려간다. 서버 렌더(테스트)에서는 document가 없으므로 조용히 아무 일도 하지 않는다. */
@@ -1777,20 +1852,50 @@ function PickedCategorySummary({
   );
 }
 
+/**
+ * REWORK-7 ④(CEO 지시, 2026-09-15) — 🔴 필수 · ⚪ 선택(없어도 등록 가능).
+ *
+ * 🔴 **판정을 여기서 만들지 않는다.** 롯데ON 서버 검증(validateLotteOnPayload)은
+ * `ok = missingCount === 0 && blockedCount === 0`이다 — 즉 **검증이 한 번이라도
+ * 들여다본 필드는 전부 등록을 막는다.** 그래서 "그 필드가 검증 결과에 이름으로
+ * 올라와 있는가"가 그대로 필수/선택이 된다(READY로 통과한 것도 올라온다).
+ * 검증이 아예 보지 않는 값(브랜드번호·업체상품번호·과세유형코드)만 선택이다.
+ *
+ * 검증을 아직 돌리지 않았으면 undefined다 — 모르는 것을 필수라고도 선택이라고도
+ * 적지 않는다.
+ */
+type FieldRequirement = "REQUIRED" | "OPTIONAL" | undefined;
+
+function RequirementBadge({ requirement }: { requirement: FieldRequirement }) {
+  if (!requirement) return null;
+  return requirement === "REQUIRED" ? (
+    <span className="rounded bg-error-soft px-1 py-0.5 text-[10px] font-medium text-error">🔴 필수</span>
+  ) : (
+    <span className="rounded bg-background px-1 py-0.5 text-[10px] text-text-tertiary">
+      ⚪ 선택 — 없어도 등록 가능
+    </span>
+  );
+}
+
 function TextField({
   label,
   hint,
   value,
   onChange,
+  requirement,
 }: {
   label: string;
   hint?: string;
   value: string;
   onChange: (value: string) => void;
+  requirement?: FieldRequirement;
 }) {
   return (
     <label className="flex flex-col gap-1 text-xs">
-      <span className="font-medium text-text-secondary">{label}</span>
+      <span className="flex flex-wrap items-center gap-1 font-medium text-text-secondary">
+        {label}
+        <RequirementBadge requirement={requirement} />
+      </span>
       <input
         type="text"
         value={value}
@@ -1808,16 +1913,21 @@ function TextAreaField({
   value,
   placeholder,
   onChange,
+  requirement,
 }: {
   label: string;
   hint?: string;
   value: string;
   placeholder?: string;
   onChange: (value: string) => void;
+  requirement?: FieldRequirement;
 }) {
   return (
     <label className="flex flex-col gap-1 text-xs">
-      <span className="font-medium text-text-secondary">{label}</span>
+      <span className="flex flex-wrap items-center gap-1 font-medium text-text-secondary">
+        {label}
+        <RequirementBadge requirement={requirement} />
+      </span>
       <textarea
         rows={4}
         value={value}

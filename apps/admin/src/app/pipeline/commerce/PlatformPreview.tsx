@@ -717,26 +717,11 @@ export function PlatformPreview({
       isCalculating={capabilities.hasNaverPreview && Boolean(naverValidationLoading)}
       errorMessage={capabilities.hasNaverPreview ? naverValidationError : null}
       onRetry={onRetryNaverValidation}
-      percent={readinessSummary.percent}
       required={readinessSummary.required}
-      recommended={readinessSummary.recommended}
       allRequiredPassed={readinessSummary.allRequiredPassed}
-      platformLabel={listing.platformLabel}
       status={listingStatus}
       registrationEnabled={capabilities.registrationEnabled}
-      registrationReadinessState={registrationState}
       onRegister={onOpenListingModal}
-      onItemClick={goToSection}
-      settingsMissing={settingsMissing}
-      autoFillStats={
-        compliancePreview
-          ? {
-              total: compliancePreview.autoResolvedCount + compliancePreview.userRequiredCount,
-              autoFilled: compliancePreview.autoResolvedCount,
-              userInput: compliancePreview.userRequiredCount,
-            }
-          : undefined
-      }
     />
   );
 

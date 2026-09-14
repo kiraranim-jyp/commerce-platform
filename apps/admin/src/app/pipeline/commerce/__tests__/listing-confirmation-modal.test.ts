@@ -74,36 +74,56 @@ function stripTags(html: string): string {
 
 /* ── 1. 확인 화면이 지시서의 블록을 전부 갖췄는가 ─────────────────────────── */
 
-describe("REWORK-5 ⑤ — 확인 화면의 블록", () => {
+/**
+ * REWORK-7 ⑤(CEO 지시, 2026-09-15) — 모달의 **문구**가 지시서 그대로 바뀌었다.
+ * 아래 기대값은 CEO가 §5에 직접 적은 화면이다:
+ *
+ *   판매 전 최종 확인
+ *   {채널}에 상품을 등록합니다 · 판매가격
+ *   등록되는 정보: 상품정보 · 옵션 · 상세페이지 · 배송/반품 · 채널별 필수정보
+ *   ⚠ 등록 후 커머스 판매자센터에서 실제 등록 결과를 확인해주세요
+ *   ☐ 상품정보와 판매가격을 확인했습니다
+ *   ☐ 필요한 인증정보를 확인했습니다
+ *   ☐ 등록 후 결과를 확인하겠습니다
+ *   [취소] [등록 시작]
+ *
+ * 구조(세 채널 공통 · 진행 단계 · 진행 중 닫기 금지)는 REWORK-5 그대로다 —
+ * 이 모달을 새로 만들지 않고 문구만 지시서에 맞췄다.
+ */
+describe("REWORK-7 ⑤ — 확인 화면의 블록", () => {
   for (const [platform, label] of CHANNELS) {
-    it(`${label} — 제목이 채널 이름을 달고 선다`, () => {
-      expect(stripTags(render(platform, label))).toContain(`${label} 등록 전 최종 확인`);
+    it(`${label} — 제목은 세 채널 공통 한 문장, 채널 이름은 그 아래 줄이 말한다`, () => {
+      const text = stripTags(render(platform, label));
+      expect(text).toContain("판매 전 최종 확인");
+      expect(text).toContain(`${label}에 상품을 등록합니다`);
     });
 
-    it(`${label} — 등록 대상 · 판매가격 · 등록 가능 상태가 전부 있다`, () => {
+    it(`${label} — 등록 대상 · 판매가격 · 등록되는 정보 · 판매자센터 확인 안내가 전부 있다`, () => {
       const text = stripTags(render(platform, label));
       expect(text).toContain("등록 대상");
       expect(text).toContain("테리 버뮤다 반바지");
       expect(text).toContain("판매가격");
       expect(text).toContain("128,000");
-      expect(text).toContain("등록 가능 상태");
+      expect(text).toContain("등록되는 정보");
+      expect(text).toContain("상품정보 · 옵션 · 상세페이지 · 배송/반품 · 채널별 필수정보");
+      expect(text).toContain("등록 후 커머스 판매자센터에서 실제 등록 결과를 확인해주세요");
     });
 
-    it(`${label} — 확인할 사항 3개와 등록 진행 안내가 있다`, () => {
+    it(`${label} — 확인할 사항 3개(CEO 문구 그대로)와 등록 진행 안내가 있다`, () => {
       const html = render(platform, label);
       const text = stripTags(html);
       expect(text).toContain("확인할 사항");
-      expect(text).toContain("판매 가능 여부와 필요한 인증정보");
-      expect(text).toContain("상품 가격과 상품정보가 실제 판매 상품과 일치");
-      expect(text).toContain("판매자가 판매중지/수정 조치");
+      expect(text).toContain("상품정보와 판매가격을 확인했습니다");
+      expect(text).toContain("필요한 인증정보를 확인했습니다");
+      expect(text).toContain("등록 후 결과를 확인하겠습니다");
       expect((html.match(/type="checkbox"/g) ?? []).length).toBe(3);
       expect(text).toContain("등록 진행 안내");
     });
 
-    it(`${label} — [취소]와 [${label} 등록 시작]이 선다`, () => {
+    it(`${label} — [취소]와 [등록 시작]이 선다 — 우측 요약과 같은 문구다`, () => {
       const text = stripTags(render(platform, label));
       expect(text).toContain("취소");
-      expect(text).toContain(`${label} 등록 시작`);
+      expect(text).toContain("등록 시작");
     });
   }
 });
@@ -140,7 +160,7 @@ describe("REWORK-5 ⑤ — 같은 모달에서 진행 단계를 보여준다", (
     expect(text).toContain("등록 중...");
     // 체크박스/버튼은 사라진다 — 진행 중에 다시 누를 수 있으면 안 된다.
     expect(render("coupang", "쿠팡", "PREPARING")).not.toContain('type="checkbox"');
-    expect(text).not.toContain("쿠팡 등록 시작");
+    expect(text).not.toContain("등록 시작");
     expect(text).not.toContain("취소");
   });
 

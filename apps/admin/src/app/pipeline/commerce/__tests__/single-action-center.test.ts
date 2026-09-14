@@ -80,8 +80,15 @@ describe("오른쪽 기둥은 화면에 하나뿐이다", () => {
     expect(lotteOnPanel).toContain("<ChannelRegistrationFrame");
     expect(lotteOnPanel).toContain("<ChannelRegistrationSummary");
     // 등록 게이트와 등록 버튼은 그대로 살아 있다 — 지운 것이 아니라 옮긴 것이다.
+    // REWORK-7 ⑤(2026-09-15) — 세 채널 모두 [등록 시작]이 **최종 확인 모달**을
+    // 연다. 롯데ON만 window.confirm으로 바로 등록하던 갈림길이 사라졌다.
     expect(platformPreview).toContain("onRegister={onOpenListingModal}");
-    expect(lotteOnPanel).toContain("onRegister={() => void runRegister()}");
+    expect(lotteOnPanel).toContain("onRegister={() => setConfirmOpen(true)}");
+    expect(lotteOnPanel).toContain("<ListingConfirmationModal");
+    expect(lotteOnPanel).toContain("onConfirm={() => void runRegister()}");
+    expect(lotteOnPanel, "롯데ON만 브라우저 확인창으로 등록하던 경로가 남아 있다").not.toContain(
+      "window.confirm(",
+    );
   });
 
   it("공용 프레임은 저장소에 하나뿐이다", () => {

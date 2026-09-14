@@ -75,6 +75,13 @@ const LABEL_TO_SECTION: Record<string, string> = {
   상품명: "section-basic",
   브랜드: "section-basic",
   대표이미지: "section-images",
+  // REWORK-7 ①(2026-09-15, 렌더 덤프로 발견) — 이미지 검증의 "이미지 형식"
+  // (packages/marketplace/image-field.ts)만 이 표에 빠져 있어서 sectionId가
+  // undefined였다. 그 결과 (1) 우측에서 눌러도 아무 데도 가지 않는 죽은
+  // 항목이었고(readiness.test.ts가 경계하는 바로 그 상태), (2) 자리 단위
+  // 요약에서 「상품정보」가 아니라 「채널 필수정보」로 떨어졌다. 대표이미지와
+  // 같은 자리를 가리킨다 — 같은 섹션의 같은 이미지에 대한 검증이다.
+  "이미지 형식": "section-images",
   판매가격: "section-price",
   옵션: "section-options",
   배송정보: "section-shipping",
