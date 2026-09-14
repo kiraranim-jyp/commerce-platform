@@ -32,6 +32,7 @@ import {
   type ExecutionMode,
   type ListingResult,
   type ListingStatus,
+  type LotteOnSellerSettingsInput,
   type NaverCategoryCandidate,
   type NaverPayloadValidationResult,
   type NoticeReferenceEligibleField,
@@ -571,6 +572,16 @@ export function CommerceWorkspace({
   const [naverCategoryLoading, setNaverCategoryLoading] = useState(false);
   /** Sprint A-11(작업8) — 없어도 등록은 되지만 채워두면 좋은 판매자 설정 목록. */
   const [coupangSettingsRecommended, setCoupangSettingsRecommended] = useState<string[] | null>(null);
+  /**
+   * REWORK 커머스 탭 구조 통일(CEO 지시, 2026-09-14) — 롯데ON 탭이 읽는 셀러
+   * 설정(배송 프로필)의 부분집합.
+   *
+   * 새 API도 새 조회도 만들지 않는다: 아래 effect가 이미 마운트 때마다
+   * /api/settings/coupang/profiles를 한 번 부르고 있고(반올림 단위·기본 마진율을
+   * 그 응답에서 읽는다), 같은 응답에서 필요한 필드만 더 꺼낸다.
+   * null = "아직 못 읽었거나 프로필이 없다" — 화면이 그 사실을 그대로 말한다.
+   */
+  const [lotteOnSellerSettings, setLotteOnSellerSettings] = useState<LotteOnSellerSettingsInput | null>(null);
   /** P0(Category Resolver 추적) — "추천 → 검증 → 선택"이 실제로 어떻게 이어졌는지
    * 등록 전에도 화면에서 바로 볼 수 있게 한다(register/route.ts의 "카테고리 추적"
    * 로그는 등록 시점에만 남아서, 등록 전 단계의 추론 과정은 별도로 남겨야 한다). */
@@ -686,12 +697,35 @@ export function CommerceWorkspace({
             priceRoundingUnit?: number;
             domesticShippingCostKrw?: number | null;
             defaultMarginPercent?: number | null;
+            // REWORK(2026-09-14) — 롯데ON 탭의 「② 셀러 설정 정보」가 읽는 필드.
+            outboundLeadTimeDays?: number | null;
+            deliveryCompanyCode?: string | null;
+            naverDeliveryCompanyCode?: string | null;
+            outboundShippingPlaceCode?: number | null;
+            returnCenterCode?: string | null;
+            topCommonImageEnabled?: boolean;
+            bottomCommonImageEnabled?: boolean;
           }[];
         }) => {
           if (cancelled) return;
           const profiles = data.profiles ?? [];
           const defaultProfile = profiles.find((p) => p.isDefault) ?? profiles[0];
           setDefaultContactNumber(defaultProfile?.companyContactNumber ?? "");
+          /* REWORK(2026-09-14) — 프로필이 없으면 null로 둔다. 빈 객체로 채우면
+             화면이 "값 없음"이 아니라 "설정은 있는데 다 비었다"로 읽힌다. */
+          setLotteOnSellerSettings(
+            defaultProfile
+              ? {
+                  outboundLeadTimeDays: defaultProfile.outboundLeadTimeDays ?? null,
+                  deliveryCompanyCode: defaultProfile.deliveryCompanyCode ?? null,
+                  naverDeliveryCompanyCode: defaultProfile.naverDeliveryCompanyCode ?? null,
+                  outboundShippingPlaceCode: defaultProfile.outboundShippingPlaceCode ?? null,
+                  returnCenterCode: defaultProfile.returnCenterCode ?? null,
+                  topCommonImageEnabled: Boolean(defaultProfile.topCommonImageEnabled),
+                  bottomCommonImageEnabled: Boolean(defaultProfile.bottomCommonImageEnabled),
+                }
+              : null,
+          );
           // P-4-H1-2-2 — 이 프로필은 플랫폼 공통 설정이라(N-3.69) coupang 탭이
           // 아니어도 항상 읽는다. 이전에는 tab==="coupang"일 때만 조회했다.
           setPriceRoundingUnit(defaultProfile?.priceRoundingUnit ?? null);
@@ -723,6 +757,9 @@ export function CommerceWorkspace({
           // 조회 실패해도 화면은 packages/pricing의 전역 기본값으로 계속 돈다
           // (반올림 단위는 폴백으로 돌아간다).
           setPriceRoundingUnit(null);
+          // REWORK(2026-09-14) — 못 읽었으면 못 읽었다고 둔다. 빈 값으로 채우면
+          // 롯데ON 탭이 "셀러 설정이 비어 있습니다"라고 단정하게 된다.
+          setLotteOnSellerSettings(null);
         }
       });
     return () => {
@@ -2622,6 +2659,12 @@ export function CommerceWorkspace({
                  CategorySelection이 없으므로(lotteon-channel-form.ts) 롯데ON에서
                  고른 번호가 categoryMappings로 되돌아 흘러갈 경로 자체가 없다. */
               commonCategorySources={lotteOnCommonCategorySources}
+              /* REWORK 커머스 탭 구조 통일(CEO 지시, 2026-09-14) — 셀러 설정은
+                 **읽기 전용**으로만 내려간다. 이 패널에는 셀러 설정을 고치는
+                 setter가 없다(설정 화면 하나에서만 고친다). 스마트스토어·쿠팡이
+                 settingsMissing/settingsRecommended로 /settings를 가리키는 것과
+                 같은 원칙이고, 같은 프로필을 읽는다. */
+              sellerSettings={lotteOnSellerSettings}
               /* 3층 구조 재정렬(CEO 지시, 2026-09-14) — 롯데ON 관리정보는 이제
                  상품 수준에 있다. 패널은 이 값으로 폼을 초기화하고, 입력이
                  바뀌면 그대로 올려보낸다(스마트스토어·쿠팡의

@@ -2,12 +2,14 @@ import type { CanonicalProduct } from "@commerce/shared";
 import {
   assembleNaverDetailContent,
   resolveDetailBlocks,
+  resolveLotteOnShipBudgetDays,
   BLANK_LOTTEON_CHANNEL_CONFIG,
   buildLotteOnSalePeriod,
   type LotteOnChannelConfig,
   type LotteOnPayloadInput,
+  type LotteOnSellerSettingsInput,
 } from "@commerce/listing";
-import { getDefaultSellerProfile } from "../../coupang/_lib/seller-profile";
+import { getDefaultSellerProfile, type SellerProfile } from "../../coupang/_lib/seller-profile";
 import { getDefaultDescriptionTemplate } from "../../coupang/_lib/description-template";
 import { findBrandProfileByName } from "../../coupang/_lib/brand-profile";
 import { fetchLotteOnIdentity } from "./identity";
@@ -62,12 +64,31 @@ function trimOrNull(value: string | undefined): string | null {
 }
 
 /**
+ * SellerProfile(어드민 DB 모양) → 롯데ON이 읽는 부분집합.
+ *
+ * 화면(CommerceWorkspace)도 같은 모양을 만들어 패널에 내려준다 — 두 곳이 같은
+ * 타입을 만들게 해서 "화면에는 반영됐다고 적혀 있는데 payload는 다른 값"이
+ * 생기지 않게 한다.
+ */
+export function toLotteOnSellerSettings(profile: SellerProfile | null): LotteOnSellerSettingsInput | null {
+  if (!profile) return null;
+  return {
+    outboundLeadTimeDays: profile.outboundLeadTimeDays,
+    deliveryCompanyCode: profile.deliveryCompanyCode,
+    naverDeliveryCompanyCode: profile.naverDeliveryCompanyCode,
+    outboundShippingPlaceCode: profile.outboundShippingPlaceCode,
+    returnCenterCode: profile.returnCenterCode,
+    topCommonImageEnabled: profile.topCommonImageEnabled,
+    bottomCommonImageEnabled: profile.bottomCommonImageEnabled,
+  };
+}
+
+/**
  * 상세페이지 HTML을 만든다. 판매자 프로필/템플릿/브랜드는 기존 쿠팡용 저장소를
  * 그대로 재사용한다(Naver가 이미 같은 값을 재사용하는 선례 — 새 DB 컬럼을
  * 만들지 않는다).
  */
-async function buildDetailHtml(product: CanonicalProduct): Promise<string> {
-  const sellerProfile = await getDefaultSellerProfile();
+async function buildDetailHtml(product: CanonicalProduct, sellerProfile: SellerProfile | null): Promise<string> {
   const descriptionTemplate = await getDefaultDescriptionTemplate();
   const brandProfile = await findBrandProfileByName(product.brand.value);
 
@@ -102,6 +123,13 @@ export async function buildLotteOnContext(
   // 옛 거래처로 조용히 등록되는 일을 막는다.
   const identity = await fetchLotteOnIdentity();
   const period = buildLotteOnSalePeriod(options?.now ?? new Date());
+  /**
+   * REWORK 커머스 탭 구조 통일(CEO 지시, 2026-09-14) — 셀러 설정을 **한 번만**
+   * 읽어서 상세페이지 조립과 배송값 판정이 같은 프로필을 보게 한다. 예전에는
+   * buildDetailHtml() 안에서만 읽었고, 그래서 배송 쪽은 셀러 설정을 아예 모른
+   * 채 상수를 썼다(sndBgtNday: 3 고정).
+   */
+  const sellerProfile = await getDefaultSellerProfile();
 
   const channel: LotteOnChannelConfig = {
     ...BLANK_LOTTEON_CHANNEL_CONFIG,
@@ -133,7 +161,18 @@ export async function buildLotteOnContext(
     courierCode: trimOrNull(form.courierCode),
     returnCourierCode: trimOrNull(form.returnCourierCode),
 
-    shipBudgetDays: typeof form.shipBudgetDays === "number" ? form.shipBudgetDays : 3,
+    /**
+     * 발송예정일수 — **셀러 설정의 "출고 소요일"이 그대로 온다.**
+     *
+     * 설정 화면이 그 값을 "배송비/출고 소요일은 두 플랫폼에 동일하게 적용됩니다"
+     * 라고 말하고 있다 = 코드체계가 없는 플랫폼 중립 값이다. 롯데ON만 그것을
+     * 무시하고 상수 3을 쓰던 자리를, 스마트스토어·쿠팡과 같은 출처로 맞춘다.
+     * 상한(일반상품 3일) 처리는 resolveLotteOnShipBudgetDays() 한 곳에만 있다.
+     */
+    shipBudgetDays:
+      typeof form.shipBudgetDays === "number"
+        ? form.shipBudgetDays
+        : resolveLotteOnShipBudgetDays(toLotteOnSellerSettings(sellerProfile)).days,
     weekdayCloseTime: trimOrNull(form.weekdayCloseTime) ?? "1400",
     saturdayShippingAvailable: Boolean(form.saturdayShippingAvailable),
     saturdayCloseTime: trimOrNull(form.saturdayCloseTime),
@@ -147,7 +186,7 @@ export async function buildLotteOnContext(
     input: {
       product,
       channel,
-      detailHtml: await buildDetailHtml(product),
+      detailHtml: await buildDetailHtml(product, sellerProfile),
       liveRates: options?.liveRates,
       roundingUnit: options?.roundingUnit,
     },

@@ -28,6 +28,11 @@ import {
   type LotteOnValidationSnapshot,
 } from "./lotteon-channel-form";
 import { LOTTEON_SAFETY_TYPE_LABEL, type LotteOnCategoryCandidate } from "./lotteon-category";
+import {
+  describeLotteOnSellerSettings,
+  type LotteOnSellerSettingRow,
+  type LotteOnSellerSettingsInput,
+} from "@commerce/listing";
 
 /**
  * LOTTEON COMMERCE SPRINT 4(CEO 확정, 2026-09-14) — 롯데ON 탭.
@@ -39,10 +44,25 @@ import { LOTTEON_SAFETY_TYPE_LABEL, type LotteOnCategoryCandidate } from "./lott
  * 고치려면 상품정보 탭으로 데려간다(onEditCommonInfo).
  *
  * 하는 일: **롯데ON에만 있는 차별점**만 받는다.
- *   ② 카테고리  표준(scatNo) + 전시(dcatLst[]) 2중 구조 — **추천**으로 채운다
- *   ③ 고시      pdItmsCd · pdItmsArtlLst[]
- *   ④ 인증      sftyAthnLst[] · impPrxCd
- *   ⑤ 배송      출고지 · 반품지 · 배송비 정책 · 배송가능지역
+ *   ③ 카테고리  표준(scatNo) + 전시(dcatLst[]) 2중 구조 — **추천**으로 채운다
+ *   ④ 고시      pdItmsCd · pdItmsArtlLst[]
+ *   ⑤ 인증      sftyAthnLst[] · impPrxCd
+ *   ⑥ 배송      출고지 · 반품지 · 배송비 정책 · 배송가능지역
+ *   ⑦ 롯데ON 고유 코드  oplcCd · tdfDvsCd · brdNo · epdNo
+ *
+ * ── REWORK 커머스 탭 구조 통일(CEO 지시, 2026-09-14) ──────────────────────
+ * 이 탭의 골격을 스마트스토어·쿠팡과 같은 원칙으로 맞춘다:
+ *
+ *   ① 상품정보 (공통)   상품정보 Source에서 자동 표시  (읽기 전용 — 이미 있었다)
+ *   ② 셀러 설정 정보     Seller Settings에서 자동 반영  (읽기 전용 — **이번에 신설**)
+ *   ③ 카테고리           추천 → 셀러 선택 → 확정
+ *   ④⑤⑥ 롯데ON 필수 등록정보
+ *   ⑦ 롯데ON 고유 관리정보
+ *
+ * ②가 없던 동안 이 탭은 출고지·반품지·택배사를 "그냥 모르는 값"으로 취급해
+ * 셀러에게 손으로 치게 했다 — 셀러 설정에 같은 개념이 있는지조차 말하지 않았다.
+ * 판정(자동 반영 / 코드체계 다름 / 개념 없음)은 화면이 만들지 않고
+ * @commerce/listing의 describeLotteOnSellerSettings()가 준 표를 그대로 그린다.
  *
  * ── SPRINT 4에서 바뀐 것 ──────────────────────────────────────────────────
  * 1. **등록 가능성**을 화면에 세운다. 값은 서버 검증(validateLotteOnPayload)
@@ -122,6 +142,7 @@ export function LotteOnRegistrationPanel({
   roundingUnit,
   commonPrice,
   commonCategorySources,
+  sellerSettings,
   channelInfo,
   onChannelInfoChange,
   onEditCommonInfo,
@@ -136,6 +157,13 @@ export function LotteOnRegistrationPanel({
   commonPrice: { priceKrw: number | null; resolved: boolean };
   /** 공통 분류(원본 사이트 · 다른 채널 확정값). **읽기 전용**. */
   commonCategorySources: CommonCategorySource[];
+  /**
+   * REWORK 커머스 탭 구조 통일(CEO 지시, 2026-09-14) — 셀러 설정(배송 프로필).
+   * 스마트스토어·쿠팡이 쓰는 그 프로필 그대로다(새 저장소를 만들지 않았다).
+   * **읽기 전용** — 이 탭에는 셀러 설정을 고치는 입력칸이 하나도 없고, 비어
+   * 있으면 설정 화면으로 데려간다.
+   */
+  sellerSettings?: LotteOnSellerSettingsInput | null;
   /**
    * 3층 구조 재정렬(CEO 지시, 2026-09-14) — 상품 수준에 저장돼 있는 롯데ON
    * 관리정보(CanonicalProduct.lotteOnChannelInfo). 이 값이 폼의 **초기값**이다.
@@ -184,6 +212,11 @@ export function LotteOnRegistrationPanel({
   const common = useMemo(() => summarizeCommonProduct(product, commonPrice), [product, commonPrice]);
   /** 고시 "내용"으로 그대로 쓸 수 있는 공통 값 — 다시 치지 않게 한다. */
   const noticeSources = useMemo(() => collectLotteOnNoticeSourceValues(product), [product]);
+  /**
+   * ② 셀러 설정 정보 — 판정은 화면이 하지 않는다. payload가 쓰는 것과 **같은**
+   * 함수(@commerce/listing describeLotteOnSellerSettings)가 준 표를 그대로 그린다.
+   */
+  const sellerSettingRows = useMemo(() => describeLotteOnSellerSettings(sellerSettings), [sellerSettings]);
 
   const validation = preview?.validation ?? null;
   const readiness = useMemo(() => computeLotteOnRegistrationReadiness(validation), [validation]);
@@ -612,11 +645,14 @@ export function LotteOnRegistrationPanel({
       )}
 
       <div className="rounded-lg border border-border bg-surface px-4 py-3">
-        <p className="text-sm font-semibold text-text-primary">롯데ON 등록</p>
+        {/* REWORK(2026-09-14) — 예전 제목은 "롯데ON 등록"이었다. 화면 맨 아래
+            등록 버튼과 같은 이름이라 "여기가 등록하는 곳인가"로 읽혔다. 안내
+            박스라는 사실을 제목이 직접 말하게 바꾼다(새 용어가 아니라 설명이다). */}
+        <p className="text-sm font-semibold text-text-primary">이 탭에서 정하는 것</p>
         <p className="mt-1 text-xs text-text-tertiary">
-          상품명 · 이미지 · 상세페이지 · 가격 · 옵션 · 재고는 <b>상품정보에 있는 것을 그대로 씁니다</b> — 이 탭에서 다시
-          입력하지 않습니다. 아래에서는 <b>롯데ON에만 필요한 것</b>(표준·전시 2중 카테고리, 고시, 안전인증, 배송
-          선등록 번호)만 정합니다.
+          상품명 · 이미지 · 상세페이지 · 가격 · 옵션 · 재고는 <b>상품정보에 있는 것을 그대로 씁니다</b>. 출고 소요일 ·
+          공통 상세블록은 <b>셀러 설정에 있는 것을 그대로 씁니다</b>. 둘 다 이 탭에서 다시 입력하지 않습니다. 아래에서는{" "}
+          <b>롯데ON에만 필요한 것</b>(표준·전시 2중 카테고리, 고시, 안전인증, 배송 선등록 번호)만 정합니다.
         </p>
         {/* 3층 구조 재정렬(CEO 지시, 2026-09-14) — 이 탭의 입력이 어디에 남는지
             화면에 적는다. 예전에는 탭을 벗어나면 사라졌기 때문에, "남는다"는
@@ -659,10 +695,50 @@ export function LotteOnRegistrationPanel({
         )}
       </Section>
 
-      {/* ── ② 카테고리 — 표준 + 전시 2중 · 추천 ──────────────────────────── */}
+      {/* ── ② 셀러 설정 정보 — 읽기 전용 ─────────────────────────────────── */}
+      {/*
+        REWORK 커머스 탭 구조 통일(CEO 지시, 2026-09-14).
+
+        이 섹션이 없던 동안 롯데ON 탭은 출고지·반품지·택배사를 "그냥 모르는 값"
+        으로 취급해 셀러에게 손으로 치게 했다. 셀러 설정에 이미 같은 개념이
+        있는지 없는지를 화면이 말한 적이 한 번도 없었다.
+
+        🔴 여기는 **입력칸을 만들지 않는다.** 셀러 설정을 고치는 곳은 설정 화면
+        하나뿐이어야 값이 두 벌로 갈라지지 않는다(스마트스토어·쿠팡의
+        settingsMissing이 /settings로 보내는 것과 같은 원칙이다).
+      */}
+      <Section
+        id="lotteon-section-seller-settings"
+        title="② 셀러 설정 정보 (배송 정책 · 반품/교환)"
+        description="비즈니스 설정 — Settings에서 한 번만 하면 됩니다. 스마트스토어·쿠팡의 「배송 정책 · 반품/교환」과 같은 배송 프로필을 읽습니다. 이 탭에서는 고칠 수 없습니다."
+        action={
+          <a
+            href="/settings"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-text-secondary transition-colors hover:bg-background"
+          >
+            설정하러 가기
+          </a>
+        }
+      >
+        {sellerSettings == null && (
+          <p className="mb-3 rounded-md bg-warning-soft px-3 py-2 text-[11px] text-warning">
+            셀러 설정(배송 프로필)을 아직 불러오지 못했습니다 — 셀러 설정에서 먼저 등록해주세요. 설정 → 배송 프로필에서 한
+            번 채워두면 이후 모든 상품에 자동 적용됩니다.
+          </p>
+        )}
+        <dl className="divide-y divide-border text-xs">
+          {sellerSettingRows.map((row) => (
+            <SellerSettingRow key={row.label} row={row} />
+          ))}
+        </dl>
+      </Section>
+
+      {/* ── ③ 카테고리 — 표준 + 전시 2중 · 추천 ──────────────────────────── */}
       <Section
         id="lotteon-section-category"
-        title="② 카테고리 (롯데ON 전용 · 2중 구조)"
+        title="③ 카테고리 (롯데ON 전용 · 2중 구조)"
         description="롯데ON은 표준카테고리 1개와 전시카테고리 1개 이상을 함께 요구합니다. 여기서 고른 값은 롯데ON에만 적용되고, 스마트스토어·쿠팡 카테고리를 덮어쓰지 않습니다."
         action={
           <Button variant="primary" size="sm" disabled={recommend.loading} onClick={() => void runRecommend()}>
@@ -728,10 +804,15 @@ export function LotteOnRegistrationPanel({
         </div>
       </Section>
 
-      {/* ── ③ 고시 ──────────────────────────────────────────────────────── */}
+      {/* ── 롯데ON 필수 등록정보 (④ 고시 · ⑤ 안전인증 · ⑥ 배송) ────────── */}
+      <GroupHeading
+        title="롯데ON 필수 등록정보"
+        description="아래 세 가지는 롯데ON이 등록 필수로 요구하고, 상품정보에서도 셀러 설정에서도 파생할 수 없는 값입니다."
+      />
+
       <Section
         id="lotteon-section-notice"
-        title="③ 상품정보제공고시 (롯데ON 전용)"
+        title="④ 상품정보제공고시 (롯데ON 전용)"
         description="품목코드는 표준카테고리를 고르면 함께 따라옵니다. 항목코드 체계는 품목마다 달라 자동으로 만들지 않습니다."
       >
         {selectedCategory && selectedCategory.noticeItemCodes.length > 0 && (
@@ -775,10 +856,10 @@ export function LotteOnRegistrationPanel({
         )}
       </Section>
 
-      {/* ── ④ 인증 ──────────────────────────────────────────────────────── */}
+      {/* ── ⑤ 인증 ──────────────────────────────────────────────────────── */}
       <Section
         id="lotteon-section-certification"
-        title="④ 안전인증 (롯데ON 전용)"
+        title="⑤ 안전인증 (롯데ON 전용)"
         description="인증번호는 실제 취득한 값만 사용할 수 있습니다 — 어떤 경우에도 자동 생성하지 않습니다."
       >
         {selectedCategory && selectedCategory.safetyTypeCodes.length > 0 && (
@@ -832,12 +913,24 @@ export function LotteOnRegistrationPanel({
         </div>
       </Section>
 
-      {/* ── ⑤ 배송 ──────────────────────────────────────────────────────── */}
+      {/* ── ⑥ 배송 ──────────────────────────────────────────────────────── */}
       <Section
         id="lotteon-section-delivery"
-        title="⑤ 배송 (롯데ON 전용)"
+        title="⑥ 배송 (롯데ON 전용)"
         description="출고지 · 반품지 · 배송비 정책은 롯데ON 판매자센터에 먼저 등록해야 생기는 번호입니다. 우리가 만들 수 없습니다."
       >
+        {/*
+          REWORK(2026-09-14) — 여기 있는 칸들이 "왜 셀러 설정에서 자동으로 오지
+          않는가"를 화면에 적는다. 위 ② 셀러 설정 정보가 같은 판정(코드체계가
+          다름 / 개념 자체가 없음)을 이미 보여주고 있고, 두 섹션이 다른 말을
+          하지 않도록 문장의 출처를 한 함수로 묶어 두었다.
+        */}
+        <p className="mb-3 rounded-md bg-background px-3 py-2 text-[11px] text-text-secondary">
+          이 번호들은 <b>셀러 설정에서 자동으로 채울 수 없습니다.</b> 출고지·반품지·택배사는 셀러 설정에 같은 개념이
+          있지만 쿠팡/스마트스토어 코드체계라 롯데ON에 그대로 쓸 수 없고, 배송비정책번호·배송가능지역코드·반품택배사코드는
+          셀러 설정에 그 개념 자체가 없습니다 — 위 <b>② 셀러 설정 정보</b>에 항목별 사유를 적어 두었습니다. 발송예정일수는
+          셀러 설정의 <b>출고 소요일</b>이 자동으로 들어갑니다.
+        </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <TextField
             label="출고지번호 (owhpNo)"
@@ -883,10 +976,15 @@ export function LotteOnRegistrationPanel({
         </div>
       </Section>
 
-      {/* ── 그 밖의 롯데ON 코드 ─────────────────────────────────────────── */}
+      {/* ── 롯데ON 고유 관리정보 (⑦) ───────────────────────────────────── */}
+      <GroupHeading
+        title="롯데ON 고유 관리정보"
+        description="롯데ON 코드체계를 따르는 값입니다 — 상품정보의 텍스트나 셀러 설정에서 코드를 정할 수 없습니다."
+      />
+
       <Section
         id="lotteon-section-codes"
-        title="그 밖의 롯데ON 코드"
+        title="⑦ 그 밖의 롯데ON 코드"
         description="원산지·과세·브랜드는 롯데ON 코드체계를 따릅니다 — 상품정보의 원산지 텍스트로는 코드를 정할 수 없습니다."
       >
         {product.countryOfOrigin.value.trim() && (
@@ -1058,6 +1156,54 @@ function StatusRow({ label, value, tone }: { label: string; value: string; tone:
         <b className="text-text-primary">{label}</b> — {value}
       </span>
     </li>
+  );
+}
+
+/**
+ * 섹션 묶음의 이름표(CEO 골격의 "LOTTEON 필수 등록정보" / "LOTTEON 고유
+ * 관리정보"). 새 컴포넌트 체계를 만들지 않고 한 줄 제목만 세운다 — 섹션 자체는
+ * 기존 Section 그대로다.
+ */
+function GroupHeading({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="px-1 pt-1">
+      <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">{title}</p>
+      <p className="mt-0.5 text-[11px] text-text-tertiary">{description}</p>
+    </div>
+  );
+}
+
+/**
+ * ② 셀러 설정 정보의 한 줄.
+ *
+ * 네 가지 처지를 **각각 다른 문장**으로 말한다. "셀러 설정에 없다"와 "셀러
+ * 설정에는 있지만 롯데ON 코드가 아니다"는 셀러가 해야 할 일이 완전히 다르다
+ * (앞은 설정에 가서 채우면 되고, 뒤는 가도 소용없다).
+ */
+const SELLER_SETTING_USAGE_LABEL: Record<LotteOnSellerSettingRow["usage"], { mark: string; text: string; tone: string }> = {
+  AUTO_APPLIED: { mark: "●", text: "자동 반영됨", tone: "text-success" },
+  SETTINGS_REQUIRED: { mark: "▲", text: "셀러 설정에서 먼저 등록해주세요", tone: "text-warning" },
+  CHANNEL_CODE_DIFFERS: { mark: "▲", text: "셀러 설정에 있지만 롯데ON 코드체계가 다름", tone: "text-warning" },
+  NO_SETTING_CONCEPT: { mark: "○", text: "셀러 설정에 없는 개념 — 롯데ON 고유값", tone: "text-text-tertiary" },
+};
+
+function SellerSettingRow({ row }: { row: LotteOnSellerSettingRow }) {
+  const usage = SELLER_SETTING_USAGE_LABEL[row.usage];
+  return (
+    <div className="grid gap-0.5 py-2 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-3">
+      <dt className="font-medium text-text-secondary">
+        {row.label}
+        {row.lotteOnField && <span className="ml-1 text-[11px] text-text-tertiary">→ {row.lotteOnField}</span>}
+      </dt>
+      <dd>
+        <p>
+          <span className={usage.tone}>{usage.mark}</span>{" "}
+          <span className="text-text-primary">{row.settingValue ?? "셀러 설정에 값 없음"}</span>
+          <span className={`ml-2 text-[11px] ${usage.tone}`}>{usage.text}</span>
+        </p>
+        <p className="mt-0.5 text-[11px] text-text-tertiary">{row.note}</p>
+      </dd>
+    </div>
   );
 }
 
