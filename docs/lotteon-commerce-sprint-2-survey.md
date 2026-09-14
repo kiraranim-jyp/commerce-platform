@@ -813,3 +813,179 @@ CEO가 스크린샷에서 짚은 "상품 준비 상태와 채널 등록 상태�
 그래서 파서는 문서 원문 필드로 읽고, 못 읽으면 원문을 그대로 보여준다.
 `unrecognizedCount`를 응답과 화면에 실어 **"몇 건을 못 읽었는지"를 숨기지
 않는다.**
+
+---
+
+# 15. 커머스 등록 구조 재정렬 — 조사 (2026-09-14)
+
+지시서 전제: *"롯데ON 탭이 상품정보의 축소판처럼 커졌다. 현재 화면에
+`상품명·브랜드·제조사·소재·색상·사용연령·품명·모델명·중량`이 롯데ON 탭에
+들어와 있다."*
+
+## 15-0. 판정 — **B** (공통 구조는 있으나 경계 오류)
+
+🔴 **전제가 사실과 다르다.** 그 9개 필드는 롯데ON 탭이 아니라
+**스마트스토어·쿠팡 탭**(`PlatformPreview.tsx` "기본정보" 섹션)에 있다.
+9개가 그 순서 그대로 일치한다:
+
+| 필드 | PlatformPreview.tsx | 편집 가능 |
+|---|---|---|
+| 상품명 | 749 | ✅ input |
+| 브랜드 | 756 | ✅ input |
+| 제조사 | 773 | ✅ input |
+| 소재 | 794 | ✅ input |
+| 색상 | 801 | ✅ input |
+| 사용연령 | 808 | ✅ input |
+| 품명 | 824 | ✅ input |
+| 모델명 | 831 | ✅ input |
+| 중량 | 838 | ✅ input |
+
+롯데ON 패널에는 이 입력칸이 **한 번도 있었던 적이 없다.** 세 커밋 전부 0건:
+
+```
+git show 6e93261:…/LotteOnRegistrationPanel.tsx | grep -c 'label="상품명"|…'  → 0
+git show 065e585:…/LotteOnRegistrationPanel.tsx → 0
+git show 79d5ade:…/LotteOnRegistrationPanel.tsx → 0
+```
+
+렌더 테스트가 이미 이것을 고정하고 있다(`lotteon-tab-render.test.ts:97`
+"입력칸이 하나도 공통 상품정보를 묻지 않는다" — 실제 `renderToStaticMarkup`).
+
+→ 재정렬이 필요한 탭은 **롯데ON이 아니라 스마트스토어·쿠팡**이다.
+
+## 15-1. 조사 A — "커머스 관리정보" 층은 실재하는가
+
+**부분적으로 실재한다.** 다만 한 곳이 아니라 세 곳에 흩어져 있고, 키 체계가 다르다.
+
+| 저장소 | 타입 | 채널별 키 | 어디에 저장 |
+|---|---|---|---|
+| `CanonicalProduct.channelPriceOverrides` | `Partial<Record<PlatformId, ProvenanceField<number>>>` | ✅ | 상품 모델 (`product-types.ts:213`) |
+| `categoryMappings` | `Record<PlatformId, CategorySelection>` | ✅ | 워크스페이스 → 스냅샷 jsonb |
+| `CanonicalProduct.categoryFieldOverrides` | `Record<string, string>` | ❌ **평평함** | 상품 모델 (`product-types.ts:229`) |
+| 롯데ON 채널값 전체 | `LotteOnChannelForm` | — | **컴포넌트 로컬 `useState`. 저장 안 됨** |
+
+- `channelPriceOverrides`가 CEO가 말한 "커머스 관리정보" 층의 **작동하는 선례**다.
+- 카테고리는 `CanonicalProduct`가 아니라 워크스페이스에 있다 — 이것은 CEO 지시
+  ("상품 정보의 커머스 관리정보에 롯데ON 카테고리를 넣지 않는다")와 **이미 일치**한다.
+- 롯데ON은 `PlatformId`가 아니라서(§12-2, CPO 확정) 위 두 채널별 저장소에 들어갈
+  자리가 **타입 수준으로 없다.** 그래서 표준카테고리번호·고시·안전인증·배송
+  선등록 번호가 전부 `LotteOnRegistrationPanel`의 `useState`에만 있고,
+  **탭을 벗어나면 사라진다.** 이것이 롯데ON 쪽의 진짜 결함이다.
+
+## 15-2. 조사 B — 3개 탭 필드 전수 · 5분류
+
+### 스마트스토어 · 쿠팡 (공용 `PlatformPreview.tsx`)
+
+| 분류 | 필드 | 입력 |
+|---|---|---|
+| **COMMON** ⚠ 탭에 있으면 안 됨 | 상품명·브랜드·SKU·제조사·소재·색상·사용연령·품명·모델명·중량 | **전부 input** |
+| COMMON | 옵션·재고·이미지·상세설명·KC(certificationType/childCertification) | input |
+| CHANNEL_MANAGEMENT | 채널 최종 등록가(`onUpdateChannelPrice`) | input |
+| CHANNEL_CATEGORY | 카테고리 추천/검색/선택 | 선택 |
+| CHANNEL_CATEGORY | 쿠팡 카테고리 요구조건(`CategoryRequirementsEditor`) | input |
+| REGISTRATION_STATE | `RegistrationStatusBanner` · `RegistrationReadinessCard` | 읽기 전용 |
+| MI | 없음 ✅ | — |
+
+### 롯데ON (`LotteOnRegistrationPanel.tsx`)
+
+| 분류 | 필드 | 입력 |
+|---|---|---|
+| COMMON | 상품명·브랜드·대표이미지·상세페이지·판매가격·옵션·재고 | **읽기 전용 요약** ✅ |
+| COMMON | 소재·색상·치수·제조사·원산지·취급주의·권장연령·품명·모델명·수입사·KC유형 | **읽기 전용 목록** ✅ |
+| CHANNEL_CATEGORY | `scatNo` · `dcatLst` | input + 추천 |
+| CHANNEL_MANAGEMENT | `pdItmsCd`·`pdItmsArtlLst`·`sftyAthnLst`·`impPrxCd` | input |
+| CHANNEL_MANAGEMENT | 배송 5종·`oplcCd`·`tdfDvsCd`·`brdNo`·`epdNo` | input |
+| REGISTRATION_STATE | 등록 상태 · 등록 가능성 · 부족한 정보 | 읽기 전용 |
+| MI | **없음** ✅ | — |
+
+→ 롯데ON 탭에 COMMON 입력칸은 **0개**. 지시서의 목표 모양 ①~⑧이 이미 서 있다.
+
+## 15-3. 조사 C — 실제 중복
+
+**데이터 중복은 없다.** 스마트스토어/쿠팡 탭의 COMMON 입력칸은 사본이 아니라
+**같은 `CanonicalProduct`에 같은 setter로 쓴다**(`onUpdateField={updateField}`,
+`onFixTextField={updateField}` — `CommerceWorkspace.tsx:2617,2628`).
+`PlatformPreview.tsx:745`가 화면에서도 그렇게 말한다:
+*"이 정보는 상품정보 탭과 공유됩니다 — 어느 탭에서 고쳐도 모든 커머스에 동일하게 적용됩니다."*
+
+→ 문제는 **중복이 아니라 배치**다. 공통값을 채널 탭에서 고칠 수 있다는 것뿐이다.
+
+**진짜 경계 결함 1건**: `categoryFieldOverrides`는 평평한 `Record<string,string>`이고
+키가 쿠팡 카테고리 메타의 `attributeTypeName` 원문이다. 채널 키가 없어서, 다른
+채널이 같은 이름의 요구필드를 갖는 순간 값이 서로를 덮어쓴다. 현재는 쿠팡만
+읽고 쓰므로 발현되지 않는다(스마트스토어 payload는 이 필드를 참조하지 않음).
+
+## 15-4. 조사 D — readiness 계산 · MI 공유 지점
+
+**MI와 등록 가능성은 공유 지점이 없다.** 추적 결과:
+
+- `resolveRegistrationReadinessState(summary, priceValid, kcStatus)` — MI 인자 없음
+  (`readiness-state.ts:37`)
+- `provisionalReadiness`는 채널마다 `product.priceValidity`(상품 수준)를 재사용하지만,
+  이것은 MI가 아니라 "원본 가격을 읽었는가"다(`CommerceWorkspace.tsx:1183`)
+- `priceLevel`(MI)은 `actionChecklist`에 "가격경쟁력" 한 줄로만 나타나고 **등록을
+  막지 않는다** — 문구 자체가 *"(등록 자체는 가능합니다)"*(`CommerceWorkspace.tsx:1452`)
+- 기존 테스트가 이미 고정: `registration-readiness-outcome.test.ts:107`
+  *"핵심 불변식 — 판매 판단과 등록 준비는 서로에게 영향을 주지 않는다"*
+- 롯데ON은 `validateLotteOnPayload` 결과만 읽는다. MI prop을 받지 않는다.
+
+**§14-5의 책임 혼재는 여전하다**(고치지 않음 — 15-6 참고).
+
+## 15-5. 조사 E — 카테고리 흐름 3채널
+
+| | 후보 출처 | 점수 함수 | 자동 확정 | 저장 |
+|---|---|---|---|---|
+| 스마트스토어 | `/api/naver/category-search` | `scoreCategoryCandidate` | ❌ 클릭 필요 | `categoryMappings.smartstore` |
+| 쿠팡 | `/api/coupang/category-recommend` | `scoreCategoryCandidate` | ❌ 클릭 필요 | `categoryMappings.coupang` |
+| 롯데ON | `/api/lotteon/category-recommend` | `scoreCategoryCandidate` | ❌ 클릭 필요 | 로컬 state (미저장) |
+
+**추천 ≠ 자동 확정**은 세 채널 모두 지켜지고 있다. 새 추천 시스템은 만들지 않았다
+— 셋 다 `packages/category`의 같은 `scoreCategoryCandidate()`를 쓴다.
+
+**§14-6 쿠팡 결함은 지금도 그대로다**(확인만, 고치지 않음):
+`CommerceWorkspace.tsx:1877-1884` 하이드레이트 분기가 `resolverDecision`이
+`AUTO_SELECT`여도 `selectCategory()`를 부르지 않아 `categoryMappings.coupang`이
+`UNRESOLVED`로 남는다.
+
+## 15-6. §20 `categoryVerified` — 영향 범위 (보고만, 수정하지 않음)
+
+```ts
+CommerceWorkspace.tsx:1473  const categoryVerified = Object.values(categoryMappings).some(isVerifiedCategorySelected);
+CommerceWorkspace.tsx:2448  categoryVerified={Object.values(categoryMappings).some(isVerifiedCategorySelected)}
+```
+
+`.some()`이라 **어느 한 채널이라도** 확정이면 상품 수준에서 "확정됨"이 된다.
+사용처는 둘뿐이고, 둘 다 상품정보 탭이다 — 채널별 readiness
+(`platformReadiness`/`mergedReadiness`)는 이 값을 **읽지 않는다.**
+
+1. `StageBody.tsx:443` — ③의 문구를 *"✓ 등록할 카테고리가 확정되어 있습니다"*로 켠다
+2. `workflow.prepare.categoryVerified` — ④ 커머스 등록 단계를 연다
+   (`StageBody.tsx:449` *"확정 전에는 ④ 커머스 등록이 열리지 않습니다"*)
+
+**수정하지 않은 이유**: 올바른 대체식이 지시서만으로 정해지지 않는다. 세 후보가
+서로 다른 화면을 만든다.
+
+| 안 | 식 | 결과 |
+|---|---|---|
+| ① | `.every()` 전 채널 | SOON 채널(11번가)이 영구 미확정 → ④가 **영원히 안 열린다**. 배제 |
+| ② | `.every()` 등록 가능 채널만 | 현재 등록 가능 채널은 쿠팡 1개뿐. 스마트스토어만 확정한 셀러는 ④가 닫힌다 — 오늘 열리던 것이 닫힌다 |
+| ③ | ④를 채널별로 분해 | 지시서의 "각각 독립"에 가장 충실하지만 `workflow.ts` 구조 변경 = "최소 수정" 아님 |
+
+②는 기존 셀러의 흐름을 좁히고, ③은 최소 수정을 넘는다. `SOON_PLATFORMS =
+{smartstore, elevenst}`이므로 ②의 실효는 "쿠팡 카테고리만 ④를 연다"이다.
+**CEO가 ②/③ 중 무엇을 원하는지 확인한 뒤 고치는 것이 맞다.**
+
+## 15-7. 이번에 고친 것
+
+1. **§17·§18** — 카테고리 선택 전에는 등록 가능성을 **숫자로 말하지 않는다.**
+   표준카테고리가 전시카테고리·고시 품목코드·과세구분·요구 안전인증을 함께
+   결정하므로(§14-2), 고르기 전의 퍼센트는 "요구조건 목록이 정해지기 전에 센 수"다
+   — 고르는 순간 숫자가 **거꾸로 내려간다.** 0%도 말하지 않는다(0%는 "다 모자라다"는
+   판정이고, 참인 것은 "아직 판단할 수 없다"이다).
+2. **§18** — 퍼센트보다 **실제로 등록을 막는 필수 조건**을 먼저 세운다.
+   문장은 서버(`validateLotteOnPayload`)가 준 `label`/`reason` 그대로다.
+3. **§11** — 판매 판단 ≠ 등록 가능성을 회귀로 고정
+   (`__tests__/lotteon-mi-independence.test.ts`, 15건). 값 검증 + **배선 검증**
+   (롯데ON 코드·패널 마운트 지점·탭 배지에 MI 식별자가 없다)을 함께 건다.
+4. 공통 읽기 전용 요약에 **브랜드**를 더했다(지시서의 "상품명·브랜드·옵션 n개·
+   이미지 n장"). 등록 필수값이 아니므로 `missing`으로 세지 않는다.

@@ -12,12 +12,15 @@ import {
   collectLotteOnNoticeSourceValues,
   computeLotteOnRegistrationReadiness,
   describeLotteOnCategoryItem,
+  isLotteOnCategoryChosen,
+  listLotteOnBlockingConditions,
   parseDisplayCategoryNos,
   requiresSafetyCertification,
   summarizeCommonProduct,
   toLotteOnChannelPayload,
   type CommonCategorySource,
   type LotteOnChannelForm,
+  type LotteOnValidationField,
   type LotteOnValidationSnapshot,
 } from "./lotteon-channel-form";
 import {
@@ -166,6 +169,10 @@ export function LotteOnRegistrationPanel({
   const validation = preview?.validation ?? null;
   const readiness = useMemo(() => computeLotteOnRegistrationReadiness(validation), [validation]);
   const missingInfo = useMemo(() => buildLotteOnMissingInfo(validation), [validation]);
+  /** §17 — 카테고리 전에는 등록 가능성을 숫자로 말하지 않는다. */
+  const categoryChosen = isLotteOnCategoryChosen(form);
+  /** §18 — 퍼센트보다 먼저 보여줄, 실제로 등록을 막는 필수 조건. */
+  const blockingConditions = useMemo(() => listLotteOnBlockingConditions(validation), [validation]);
 
   const safetyRequired = requiresSafetyCertification(form);
   const safetyMissing = safetyRequired && !form.certification.safetyText.trim();
@@ -424,20 +431,72 @@ export function LotteOnRegistrationPanel({
         </ul>
       </Section>
 
-      {/* ── 등록 가능성 ─────────────────────────────────────────────────── */}
+      {/* ── 등록 가능성 ─────────────────────────────────────────────────────
+          🔴 MI(판매 추천/비추천)와 **완전히 독립**이다(§11). 이 섹션이 읽는 값은
+          validation(서버 validateLotteOnPayload 결과) 하나뿐이고, 이 컴포넌트는
+          marketSignal · priceLevel · sellerVerdict 같은 MI 값을 prop으로 받지도
+          않는다 — "팔 만한가"와 "등록이 되는가"가 서로를 끌어당길 배선 자체가
+          없다. 회귀는 __tests__/lotteon-mi-independence.test.ts가 고정한다. */}
       <Section
         title="등록 가능성"
-        description="롯데ON이 상품등록(87)에서 필수로 요구하는 항목을 실제 등록에 쓰이는 그 검증으로 세어 본 결과입니다."
+        description="롯데ON이 상품등록(87)에서 필수로 요구하는 항목을, 실제 등록에 쓰이는 그 검증으로 확인한 결과입니다. 이 상품이 잘 팔릴지(판매 판단)와는 아무 관계가 없습니다."
       >
         {previewing && preview == null ? (
           <p className="text-xs text-text-tertiary">확인 중…</p>
         ) : validation == null ? (
           <p className="text-xs text-text-tertiary">아직 확인하지 않았습니다 — 아래 [등록 정보 확인]을 눌러 주세요.</p>
+        ) : !categoryChosen ? (
+          /* §17 — 카테고리 전에는 숫자를 말하지 않는다. 0%도 말하지 않는다:
+             0%는 "다 모자라다"는 판정이고, 지금 참인 것은 "아직 판단할 수
+             없다"이다. 표준카테고리가 전시카테고리·고시 품목코드·과세구분·
+             요구 안전인증을 함께 들고 오기 때문에(조사 §14-2), 고르는 순간
+             필수 항목의 **목록 자체**가 바뀐다. */
+          <>
+            <div className="rounded-md bg-warning-soft px-3 py-2 text-xs text-warning">
+              <p className="font-semibold">⚠ 등록 가능성 판단 제한 — 카테고리를 먼저 선택해주세요.</p>
+              <p className="mt-1 text-[11px] text-text-secondary">
+                롯데ON은 표준카테고리가 <b>전시카테고리 · 고시 품목코드 · 과세구분 · 요구 안전인증</b>을 함께
+                결정합니다. 카테고리를 고르기 전에는 이 상품에 무엇이 요구되는지가 아직 정해지지 않아,
+                지금 퍼센트를 보여주면 카테고리를 고른 뒤 숫자가 거꾸로 내려갑니다.
+              </p>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="mt-2"
+                onClick={() => scrollToSection("lotteon-section-category")}
+              >
+                ② 카테고리 선택으로 이동
+              </Button>
+            </div>
+            {blockingConditions.length > 0 && (
+              <div className="mt-3">
+                <p className="text-[11px] font-medium text-text-tertiary">
+                  카테고리와 무관하게 지금 이미 확인된 것 — 카테고리를 고르면 여기에 항목이 더 늘어납니다.
+                </p>
+                <BlockingConditionList fields={blockingConditions} />
+              </div>
+            )}
+          </>
         ) : (
           <>
-            <div className="flex items-baseline gap-2">
+            {/* §18 — 퍼센트보다 **실제로 등록을 막는 필수 조건**이 먼저다.
+                셀러가 해야 할 일은 "83%를 100%로 만드는 것"이 아니라 이 줄들을
+                없애는 것이고, 퍼센트는 그 진행 정도를 뒤에서 거들 뿐이다. */}
+            {blockingConditions.length > 0 ? (
+              <>
+                <p className="text-xs font-semibold text-text-primary">
+                  등록을 막고 있는 필수 조건 {blockingConditions.length}개
+                </p>
+                <BlockingConditionList fields={blockingConditions} />
+              </>
+            ) : (
+              <p className="text-xs font-semibold text-success">
+                ● 롯데ON 필수 조건을 모두 만족합니다 — 등록을 막는 항목이 없습니다.
+              </p>
+            )}
+            <div className="mt-3 flex items-baseline gap-2">
               <span
-                className={`text-2xl font-semibold ${
+                className={`text-sm font-semibold ${
                   stale
                     ? "text-text-tertiary"
                     : readiness.percent >= 100
@@ -449,12 +508,12 @@ export function LotteOnRegistrationPanel({
               >
                 {readiness.percent}%
               </span>
-              <span className="text-xs text-text-tertiary">
+              <span className="text-[11px] text-text-tertiary">
                 필수 {readiness.total}개 중 {readiness.readyCount}개 준비됨
                 {validation.blockedCount > 0 ? ` · 차단 ${validation.blockedCount}개` : ""}
               </span>
             </div>
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded bg-background">
+            <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded bg-background">
               <div
                 className={`h-full ${
                   stale ? "bg-border" : readiness.percent >= 100 ? "bg-success" : readiness.percent >= 60 ? "bg-warning" : "bg-error"
@@ -464,7 +523,7 @@ export function LotteOnRegistrationPanel({
             </div>
             {stale && (
               <p className="mt-2 rounded-md bg-warning-soft px-3 py-2 text-[11px] text-warning">
-                입력이 바뀌었습니다 — 위 숫자는 바뀌기 전 입력에 대한 결과입니다. [등록 정보 확인]을 다시 눌러 주세요.
+                입력이 바뀌었습니다 — 위 결과는 바뀌기 전 입력에 대한 것입니다. [등록 정보 확인]을 다시 눌러 주세요.
               </p>
             )}
           </>
@@ -905,6 +964,36 @@ export function LotteOnRegistrationPanel({
         </div>
       )}
     </div>
+  );
+}
+
+/** 이 탭 안의 섹션으로 데려간다. 서버 렌더(테스트)에서는 document가 없으므로 조용히 아무 일도 하지 않는다. */
+function scrollToSection(id: string) {
+  if (typeof document === "undefined") return;
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/**
+ * §18 — 등록을 막는 필수 조건 목록.
+ *
+ * 라벨과 사유는 **서버가 준 문장 그대로**다(field.label / field.reason). 화면이
+ * 다시 쓰면 서버가 막는 이유와 화면이 말하는 이유가 갈라진다.
+ */
+function BlockingConditionList({ fields }: { fields: LotteOnValidationField[] }) {
+  return (
+    <ul className="mt-2 space-y-1 text-xs">
+      {fields.map((field) => (
+        <li key={field.field} className="flex gap-2">
+          <span className={field.status === "BLOCKED" ? "text-error" : "text-warning"}>
+            {field.status === "BLOCKED" ? "■" : "▲"}
+          </span>
+          <span className="text-text-secondary">
+            <b className="text-text-primary">{field.label}</b>
+            {field.reason ? ` — ${field.reason}` : ""}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 

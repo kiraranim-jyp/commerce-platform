@@ -264,6 +264,16 @@ export function summarizeCommonProduct(
       missing: !name,
     },
     {
+      // 브랜드는 롯데ON 등록 필수값이 아니다(등록에 쓰이는 것은 brdNo 코드다).
+      // 그래도 요약에 두는 이유는 셀러가 "이 상품이 맞나"를 상품명만으로는
+      // 확신하지 못하기 때문이다 — missing으로 세지 않는 이유도 같다. 여기서
+      // ⚠를 켜면 등록을 막지 않는 항목이 등록 불가처럼 읽힌다.
+      label: "브랜드",
+      value: product.brand.value.trim() || null,
+      origin: "상품정보 · 브랜드",
+      missing: false,
+    },
+    {
       label: "대표이미지",
       value: representative ? `대표 1장 + 추가 ${Math.max(gallery.length - 1, 0)}장 (최대 10장)` : null,
       origin: "상품정보 · 이미지에서 갤러리로 선택한 것",
@@ -447,6 +457,42 @@ export function computeLotteOnRegistrationReadiness(
     // 서버가 계산한 ok를 그대로 쓴다(세어서 다시 만들지 않는다).
     allRequiredPassed: validation.ok,
   };
+}
+
+/**
+ * §17 — 카테고리를 고르기 전인가.
+ *
+ * 롯데ON에서 표준카테고리는 "분류 하나"가 아니라 **요구조건의 출처**다. 205
+ * 응답 한 건이 전시카테고리 · 고시 품목코드 · 과세구분 · 요구 안전인증 유형을
+ * 함께 들고 온다(조사 §14-2). 그래서 카테고리를 고르기 전의 필수 항목 수는
+ * "아직 이 상품에 무엇이 요구되는지 모르는 상태에서 센 수"다 — 그 수로 만든
+ * 퍼센트를 등록 가능성이라고 부르면, 카테고리를 고른 순간 요구조건이 늘어나
+ * 숫자가 거꾸로 내려간다. 셀러에게는 "준비가 풀렸다"로 읽힌다.
+ *
+ * 그래서 이 시점에는 숫자를 **말하지 않는다**(0%도 말하지 않는다 — 0%는
+ * "다 모자라다"는 판정이고, 여기서 참인 것은 "아직 판단할 수 없다"이다).
+ */
+export function isLotteOnCategoryChosen(form: LotteOnChannelForm): boolean {
+  return form.category.standardCategoryNo.trim().length > 0;
+}
+
+/**
+ * §18 — **실제로 등록을 막는 필수 조건**만 추린다. 퍼센트보다 먼저 보여줄 값이다.
+ *
+ * 🔴 새로 판정하지 않는다. 서버 검증 결과(validateLotteOnPayload)에서 READY가
+ * 아닌 줄을 고르기만 한다 — 화면이 서버보다 낙관적으로 말할 경로를 만들지
+ * 않기 위해서다(computeLotteOnRegistrationReadiness와 같은 원칙).
+ *
+ * BLOCKED가 MISSING보다 앞에 온다. 둘 다 등록을 막지만, BLOCKED는 셀러가
+ * 이 화면에서 채워서 풀 수 없는 것(우리가 만들 수 없는 값이거나 지금 보내면
+ * 잘못된 등록이 되는 것)이라 먼저 알아야 한다.
+ */
+export function listLotteOnBlockingConditions(
+  validation: LotteOnValidationSnapshot | null,
+): LotteOnValidationField[] {
+  if (!validation) return [];
+  const rank = (field: LotteOnValidationField) => (field.status === "BLOCKED" ? 0 : 1);
+  return validation.fields.filter((field) => field.status !== "READY").sort((a, b) => rank(a) - rank(b));
 }
 
 /** 부족한 항목을 **어디서** 채우는가. 이 값이 §8 안내의 핵심이다 —
