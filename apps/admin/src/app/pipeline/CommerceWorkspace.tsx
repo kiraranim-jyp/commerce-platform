@@ -2627,6 +2627,11 @@ export function CommerceWorkspace({
                     onUpdateField={updateField}
                     onUpdatePrice={updatePrice}
                     onUpdateOptions={updateOptions}
+                    /* DELTA-B(CEO 지시, 2026-09-15) — 「네이버 쇼핑 카탈로그
+                       모델명」의 "직접 입력 / 상세페이지에서 찾기" 라디오가 쓰는
+                       setter. 채널 탭의 참조 버튼(onSetFieldReference)과 **같은
+                       함수**다 — 두 화면이 서로 다른 상태 전이를 갖지 않는다. */
+                    onSetModelNameReference={(referenced) => setFieldReference("modelName", referenced)}
                     exchangeRates={exchangeRates}
                   />
                 ),

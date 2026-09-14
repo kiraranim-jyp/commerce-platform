@@ -232,6 +232,16 @@ function Harness({ initial }: { initial: CanonicalProduct }) {
           setCurrent((prev) => ({ ...prev, [key]: { value, source: "USER_EDITED", confidence: 1 } })),
         onUpdatePrice: () => {},
         onUpdateOptions: () => {},
+        /* DELTA-B(2026-09-15) — CommerceWorkspace.setFieldReference("modelName", …)
+           그대로다. 이것을 넘기지 않으면 화면과 다른 모양(라디오 없는 입력칸만)을
+           검사하게 된다. */
+        onSetModelNameReference: (referenced: boolean) =>
+          setCurrent((prev) => ({
+            ...prev,
+            modelName: referenced
+              ? { value: "", source: "DETAIL_PAGE_REFERENCE", confidence: 1 }
+              : { value: "", source: "REQUIRED", confidence: 0 },
+          })),
         exchangeRates: null,
       } as never),
       images: createElement("div", null, "IMAGES"),
@@ -270,18 +280,24 @@ async function clickSection(title: string): Promise<void> {
   });
 }
 
-/** 「Source Data」 표의 "모델명" 줄(라벨 셀 → 그 행 전체). */
+/** 「Source Data」 표의 모델명 줄(라벨 셀 → 그 행 전체).
+ *
+ * DELTA-B(CEO 판정, 2026-09-15) — 이 줄의 이름이 "모델명"에서
+ * 「네이버 쇼핑 카탈로그 모델명」으로 바뀌었다. 칸만 만들고 이름을 그대로 두면
+ * 고시정보 모델명과 섞여 읽힌다는 판정이다. */
 function modelNameRow(): HTMLTableRowElement {
   const cell = Array.from(container.querySelectorAll("td")).find(
-    (td) => (td.textContent ?? "").trim() === "모델명",
+    (td) => (td.textContent ?? "").trim() === CATALOG_MODEL_NAME,
   );
-  if (!cell) throw new Error("「Source Data」에 '모델명' 줄이 없다");
+  if (!cell) throw new Error(`「Source Data」에 '${CATALOG_MODEL_NAME}' 줄이 없다`);
   return cell.closest("tr") as HTMLTableRowElement;
 }
 
+/** DELTA-B — 이 줄에는 이제 라디오(직접 입력 / 상세페이지에서 찾기)도 있다.
+ *  타이핑할 칸은 EditableText가 그리는 것 하나뿐이다(data-draft-field). */
 function modelNameInput(): HTMLInputElement {
-  const input = modelNameRow().querySelector("input");
-  if (!input) throw new Error("'모델명' 줄에 입력칸이 없다");
+  const input = modelNameRow().querySelector("input[data-draft-field]");
+  if (!input) throw new Error(`'${CATALOG_MODEL_NAME}' 줄에 입력칸이 없다`);
   return input as HTMLInputElement;
 }
 
@@ -344,7 +360,12 @@ describe("REWORK-8 ① — 근본 원인은 문구가 아니라 자리다", () =
     await render(makeProduct());
     await clickSection("필수 정보");
     const panel = text();
-    expect(panel).toContain("모델명은 참조로 절반만 대체됩니다");
+    /* DELTA-B(2026-09-15) — 문구가 «절반만 대체»에서 «두 가지입니다»로 바뀌었다.
+       "절반"은 한 값이 반만 들어간다고 읽히지만 실제로는 **서로 다른 두 필드**다.
+       패널의 체크 항목 이름도 「고시정보 모델명」으로 바뀌어, 이 패널이 손대는
+       자리가 어디인지가 항목 이름 자체에 있다. */
+    expect(panel).toContain("고시정보 모델명");
+    expect(panel).toContain("모델명은 두 가지입니다");
     expect(panel).toContain(CATALOG_MODEL_NAME);
     expect(panel, "어디로 가야 하는지 말하지 않는다").toContain("Source Data");
   });
@@ -378,7 +399,10 @@ describe("REWORK-8 ① — 전체 사슬 9단계(상품정보에서 끝까지)",
 
     /* ⑤ 실제 값 입력 — 입력칸이 정말 있고, 거기에 타이핑한다. */
     const input = modelNameInput();
-    expect(input.getAttribute("placeholder") ?? "").toContain("모델명");
+    /* DELTA-B(2026-09-15) — 이름은 placeholder가 아니라 **줄 라벨**이 진다
+       (「네이버 쇼핑 카탈로그 모델명」). placeholder는 예시값만 든다. */
+    expect(modelNameRow().textContent ?? "").toContain(CATALOG_MODEL_NAME);
+    expect(input.getAttribute("placeholder") ?? "").toContain("B226AC043");
     await type(input, "B226AC043");
 
     /* ⑥ 저장 — 상품 모델에 USER_EDITED로 남는다. */
@@ -438,12 +462,14 @@ describe("REWORK-8 ① — 전체 사슬 9단계(상품정보에서 끝까지)",
     const labels = Array.from(container.querySelectorAll("tbody tr")).map((tr) =>
       (tr.querySelector("td")?.textContent ?? "").trim(),
     );
+    /* DELTA-B(CEO 판정, 2026-09-15) — 자리는 그대로 SKU 다음이고, **이름이**
+       「네이버 쇼핑 카탈로그 모델명」으로 바뀌었다. */
     expect(labels).toEqual([
       "상품명",
       "브랜드",
       "가격",
       "SKU",
-      "모델명",
+      CATALOG_MODEL_NAME,
       "옵션",
       "소재",
       "상세설명",
@@ -455,7 +481,7 @@ describe("REWORK-8 ① — 전체 사슬 9단계(상품정보에서 끝까지)",
     await render(makeProduct());
     await clickSection("Source Data");
     const row = modelNameRow().textContent ?? "";
-    expect(row).toContain("위 SKU와 다른 값입니다");
+    expect(row).toContain("네이버 카탈로그 식별용 모델명");
     expect(row).toContain("네이버 쇼핑 카탈로그");
     // SKU 줄은 그대로 살아 있다.
     expect(

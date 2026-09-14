@@ -231,11 +231,18 @@ function text(): string {
   return (container.textContent ?? "").replace(/\s+/g, " ").trim();
 }
 
-/** 「기본정보」 아코디언 안의 "모델명" 줄(라벨 → 그 줄 전체). */
+/** 「기본정보」 아코디언 안의 모델명 줄(라벨 → 그 줄 전체).
+ *
+ * DELTA-B(CEO 판정, 2026-09-15) — 라벨이 "모델명"에서
+ * "모델명(고시정보 + 네이버 쇼핑 카탈로그)"로 바뀌었다. 한 칸이 가는 두 자리를
+ * 라벨에 적지 않으면 셀러가 두 개념을 섞어 읽는다는 판정이다. 여기서는 접두
+ * 일치로 찾되 **다른 줄을 잡지 않는다**는 것을 아래에서 함께 확인한다. */
 function modelNameRow(): HTMLElement {
-  const label = Array.from(container.querySelectorAll("label")).find(
-    (l) => (l.textContent ?? "").trim() === "모델명",
+  const candidates = Array.from(container.querySelectorAll("label")).filter((l) =>
+    (l.textContent ?? "").trim().startsWith("모델명"),
   );
+  if (candidates.length > 1) throw new Error(`"모델명"으로 시작하는 라벨이 ${candidates.length}개다`);
+  const label = candidates[0];
   if (!label) throw new Error("「기본정보」에 '모델명' 라벨이 없다");
   const row = label.closest("div")?.parentElement;
   if (!row) throw new Error("'모델명' 줄을 찾지 못했다");

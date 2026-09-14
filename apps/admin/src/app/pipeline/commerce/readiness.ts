@@ -305,7 +305,12 @@ const NAVER_NOTICE_FIELD_LABEL: Record<string, string> = {
   recommendedAge: "사용연령",
   certificationType: "인증구분",
   itemName: "품명",
-  modelName: "모델명",
+  /* DELTA-B(CEO 판정, 2026-09-15) — 이 표는 고시정보(productInfoProvidedNotice)
+     필드 전용이다. 위 NAVER_FIELD_LABEL의 "naverShoppingSearchInfo.modelName"
+     = 「네이버 쇼핑 카탈로그 모델명」과 **다른 필드**이고, 부족 항목 목록에는
+     둘이 동시에 설 수 있다. 한쪽이 그냥 "모델명"이면 셀러는 같은 항목이 두 번
+     뜬 줄 알고 하나만 처리한다. */
+  modelName: "고시정보 모델명",
   weight: "중량",
 };
 

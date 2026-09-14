@@ -854,17 +854,38 @@ export function PlatformPreview({
               placeholder="제조사 미확인"
             />
             {/* N-3.85 STEP1(대표님 지시) — 제조사가 null일 때 그냥 빈 칸을
-                보여주지 않는다. 원문→브랜드 기본값→판매자 기본값 순서로
+                보여주지 않는다. 원문→브랜드 프로필→판매자 기본정보 순서로
                 이미 다 확인했지만 셋 다 값이 없다는 사실과, 실제 입력 위치를
                 명시한다(값을 지어내지 않는다는 원칙은 그대로 — 안내 문구만
                 추가). naverResolved.notice.manufacturer는 register 라우트와
                 동일한 resolveNaverContext() 결과라 payload에 실제로 들어갈
-                값과 항상 같다(별도 판정 로직 없음). */}
+                값과 항상 같다(별도 판정 로직 없음).
+
+                DELTA-A(CEO 지시, 2026-09-15) — 폴백 사슬 ②(브랜드 프로필)는
+                이미 배선돼 있다(resolve-context.ts:183 brandProfile?.manufacturer
+                → build-payload.ts:482 resolvedManufacturer). 빠져 있던 것은
+                **그 사실을 셀러에게 말하는 화면**이었다:
+                  ⓐ 브랜드 프로필이 채워 준 값이 화면에는 보이지 않았다 —
+                    위 입력칸은 product.manufacturer만 그리므로 빈칸이고,
+                    경고도 안 뜨니(값이 있으니) 셀러는 아무것도 못 본다.
+                  ⓑ 안내가 "Settings의 판매자 정보 탭"만 지목했다 — 브랜드
+                    단위로 등록하면 그 브랜드 상품에 전부 적용된다는 사실이
+                    어디에도 없었다. */}
+            {!product.manufacturer.value && naverResolved?.notice?.manufacturer && (
+              <p className="col-span-2 -mt-1 rounded bg-selected-soft px-2 py-1.5 text-[11px] text-selected">
+                🔵 상품 원문에 제조사가 없어{" "}
+                {naverResolved.notice.manufacturerSource === "BRAND_DEFAULT"
+                  ? "브랜드 프로필"
+                  : "판매자 기본정보"}
+                의 제조사 <strong>{naverResolved.notice.manufacturer}</strong>가 자동으로 적용됩니다 — 위 칸에
+                직접 입력하면 그 값이 우선합니다.
+              </p>
+            )}
             {!product.manufacturer.value && !naverResolved?.notice?.manufacturer && (
               <p className="col-span-2 -mt-1 rounded bg-warning-soft px-2 py-1.5 text-[11px] text-warning">
-                ⚠ 제조사 정보가 없습니다 — 자동 입력 순서(상품 원문 → 브랜드 기본값 → 판매자 기본정보)를 모두
-                확인했지만 입력 가능한 값이 없습니다. 위 입력창에 직접 입력하거나, Settings의 판매자 정보
-                탭에서 기본 제조사를 등록해주세요(이후 등록되는 모든 상품에 자동 적용됩니다).
+                ⚠ 제조사 정보가 없습니다 — 상품 원문 → 브랜드 프로필 → 판매자 기본정보를 확인했지만 제조사
+                정보가 없습니다. 위에서 직접 입력하거나 Settings → 브랜드 프로필에서 제조사를 등록하면 해당
+                브랜드 상품에 자동 적용됩니다.
               </p>
             )}
             <ReferenceEligibleFieldRow
@@ -912,13 +933,21 @@ export function PlatformPreview({
                 에 해당 문구 허용 언급 없음), 그 필드는 카탈로그 검색·연결에
                 쓰이는 값이라 문구를 채워 보내면 네이버에 거짓 데이터를 보내는
                 것이 된다. 그래서 **조용히 비우지 않고 그 자리에서 말한다.** */}
+            {/* DELTA-B(CEO 판정, 2026-09-15) — 라벨이 그냥 "모델명"이면 두 개념이
+                섞인다. 이 한 칸이 가는 두 자리를 라벨에 그대로 적는다.
+                직접 입력하면 **둘 다** 채워지고, 참조를 고르면 고시정보 쪽만
+                채워진다(아래 referenceLimitation이 고르기 전에 말한다). */}
             <ReferenceEligibleFieldRow
-              label="모델명"
+              label="모델명(고시정보 + 네이버 쇼핑 카탈로그)"
               field={product.modelName}
               onCommit={(v) => fix?.("modelName", v)}
               onSetReference={(r) => onSetFieldReference?.("modelName", r)}
-              placeholder="모델명 미확인"
-              referenceLimitation="이 값은 스마트스토어의 「네이버 쇼핑 카탈로그 모델명」에는 쓸 수 없습니다 — 고시정보 모델명만 참조로 대체됩니다. 어린이제품 카테고리는 실제 모델명을 직접 입력해야 등록이 열립니다."
+              placeholder="예: B226AC043 (상품코드(SKU)와 다른 값)"
+              /* 🔴 경고 시점을 앞으로(CEO 지적) — 기존 문구는 "이 값은 …에는 쓸 수
+                 없습니다"로 **문제부터** 시작했다. 셀러는 자기가 무엇을 채우고
+                 있는지 모른 채 못 한다는 말부터 듣는다. 무엇인지 → 어떻게
+                 갈라지는지 → 그래서 무엇을 해야 하는지 순서로 뒤집는다. */
+              referenceLimitation="모델명은 두 자리로 나갑니다 — 「고시정보 모델명」(상세페이지·고시정보용)과 「네이버 쇼핑 카탈로그 모델명」(SmartStore 카탈로그 식별용)은 별도 값입니다. “상세페이지 참조”로 대체되는 것은 고시정보 쪽뿐이고 카탈로그 모델명은 비어 있는 채로 남습니다. 어린이제품 등 카탈로그 모델명이 필수인 카테고리는 실제 모델명을 직접 입력해야 등록이 열립니다."
             />
             <ReferenceEligibleFieldRow
               label="중량"

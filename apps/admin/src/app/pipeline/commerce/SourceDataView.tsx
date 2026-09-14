@@ -13,11 +13,28 @@ import { extractionSourceLabel, ProvenanceBadge } from "./provenance";
  * 열어야만(쿠팡 탭 안) 환산값이 보였다 — 대표님이 본 화면은 여기였을 가능성이
  * 높다. 같은 계산 로직(convertToKrw)을 재사용해 라이트하게 옆에 붙인다.
  */
+/** DELTA-B(CEO 판정, 2026-09-15) — 이 화면에서 "모델명"이라고만 적으면 **두
+ * 개념이 섞인다.** 한 칸이 두 자리로 나가기 때문이다:
+ *
+ *   ① 고시정보 모델명              productInfoProvidedNotice(KIDS).modelName
+ *   ② 네이버 쇼핑 카탈로그 모델명   naverShoppingSearchInfo.modelName
+ *
+ * 등록을 막는 쪽은 ②이고, «상세페이지 참조»로 채워지는 쪽은 ①뿐이다. 그래서
+ * 이 칸의 **이름을 ②로 적는다** — 셀러가 화면을 보고 "아, 네이버 쇼핑
+ * 카탈로그에 들어가는 모델명이구나"를 바로 알아야 한다. ①은 참조를 골랐을 때만
+ * 이름이 등장한다(그때만 관계가 생긴다).
+ *
+ * 🔴 SKU와 섞지 않는다 — 바로 위 칸이고 값도 있지만 payload에서 서로 다른
+ * 자리로 나간다(sku → sellerManagementCode). 두 줄 모두 "이 값이 어디로
+ * 가는가"를 자기 줄에 달고 있는 이유다. */
+export const CATALOG_MODEL_NAME_LABEL = "네이버 쇼핑 카탈로그 모델명";
+
 export function SourceDataView({
   product,
   onUpdateField,
   onUpdatePrice,
   onUpdateOptions,
+  onSetModelNameReference,
   exchangeRates,
 }: {
   product: CanonicalProduct;
@@ -30,6 +47,10 @@ export function SourceDataView({
   ) => void;
   onUpdatePrice: (amount: number, currency: string) => void;
   onUpdateOptions: (raw: string) => void;
+  /** DELTA-B — CommerceWorkspace.setFieldReference("modelName", …) 그대로다.
+   * 새 상태 전이를 만들지 않는다(채널 탭의 참조 버튼과 **같은 함수**를 부른다).
+   * 넘기지 않으면 라디오 없이 직접 입력칸만 그린다(기존 호출부 호환). */
+  onSetModelNameReference?: (referenced: boolean) => void;
   exchangeRates?: { rates: Record<string, number> } | null;
 }) {
   const krw = convertToKrw(product.price.value.amount, product.price.value.currency, exchangeRates?.rates);
@@ -48,7 +69,9 @@ export function SourceDataView({
         <table className="w-full border-collapse text-left">
           <thead>
             <tr className="border-b border-border text-xs text-text-secondary">
-              <th className="w-24 py-2 pr-2 font-medium">필드</th>
+              {/* DELTA-B — 라벨이 길어졌다("네이버 쇼핑 카탈로그 모델명").
+                  w-24(6rem)에서는 네 줄로 쪼개져 읽히지 않는다. */}
+              <th className="w-40 py-2 pr-2 font-medium">필드</th>
               <th className="py-2 pr-2 font-medium">값</th>
               <th className="w-28 py-2 pr-2 font-medium">출처</th>
               <th className="w-20 py-2 pr-2 font-medium">신뢰도</th>
@@ -110,6 +133,13 @@ export function SourceDataView({
                 onCommit={(v) => onUpdateField("sku", v)}
                 placeholder="SKU 없음"
               />
+              {/* DELTA-B(CEO 지시, 2026-09-15) — SKU와 아래 카탈로그 모델명이
+                  **완전히 분리되게** 각 줄이 자기 도착지를 달고 있는다. 이 두
+                  줄은 나란히 서 있고 값도 둘 다 영문+숫자라, 도착지를 적어
+                  두지 않으면 셀러는 계속 같은 값으로 읽는다. */}
+              <p className="mt-1 text-[11px] leading-relaxed text-text-tertiary">
+                └─ 판매자 상품관리번호 — 판매처 자신의 재고번호입니다.
+              </p>
             </Row>
             {/* REWORK-8 ①(CEO 지시, 2026-09-15) — **빠져 있던 입력 자리를 만든다.**
 
@@ -133,23 +163,12 @@ export function SourceDataView({
                 새 편집 패턴을 만들지 않는다 — 위 SKU/소재와 같은 Row + EditableText
                 이고, 같은 onUpdateField를 탄다(USER_EDITED가 되고 build-payload가
                 그 값만 카탈로그로 보낸다). */}
-            <Row label="모델명" field={product.modelName}>
-              <EditableText
-                value={product.modelName.value}
+            <Row label={CATALOG_MODEL_NAME_LABEL} field={product.modelName}>
+              <ModelNameField
+                field={product.modelName}
                 onCommit={(v) => onUpdateField("modelName", v)}
-                placeholder="모델명 미확인 (예: B226AC043)"
+                onSetReference={onSetModelNameReference}
               />
-              <p className="mt-1 text-[11px] leading-relaxed text-text-tertiary">
-                위 SKU와 다른 값입니다 — SKU는 판매처 자신의 재고번호이고, 모델명은 네이버 쇼핑
-                카탈로그 검색·연결에 쓰이는 값입니다.
-              </p>
-              {product.modelName.source === "DETAIL_PAGE_REFERENCE" && (
-                <p className="mt-1 rounded border border-warning/40 bg-warning-soft px-2 py-1 text-[11px] leading-relaxed text-warning">
-                  ⚠ 지금은 &ldquo;상세페이지 참조&rdquo;로 표시돼 있습니다 — 고시정보 모델명만 대체되고
-                  「네이버 쇼핑 카탈로그 모델명」은 비어 있습니다. 위 칸에 직접 입력하면 두 자리가 모두
-                  채워집니다.
-                </p>
-              )}
             </Row>
             <Row label="옵션" field={product.options}>
               <EditableText
@@ -183,6 +202,92 @@ export function SourceDataView({
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+/**
+ * DELTA-B(CEO 지시, 2026-09-15) — 「네이버 쇼핑 카탈로그 모델명」 한 칸.
+ *
+ * REWORK-8이 만든 것은 **칸**이었고 이름은 그대로 "모델명"이었다. CEO 판정:
+ * "무슨 모델을 말하는 거지?" — 라벨은 위(Row)에서 ②의 이름으로 바꿨고, 여기는
+ * 두 가지를 더 말한다.
+ *
+ * 1. 이 칸이 무엇인가 — SmartStore 카탈로그 식별용이라고 **먼저** 말한다.
+ *    (기존 문구는 "…에는 쓸 수 없습니다"로 시작해서 문제부터 설명했다 —
+ *     CEO 지적: 너무 뒤에서 설명한다.)
+ * 2. «상세페이지 참조»가 정확히 무엇을 가져오는가 — 「고시정보의 모델명」이다.
+ *    그래서 선택지 이름이 "상세페이지에서 찾기"이고, 그 아래 한 줄이 무엇을
+ *    가져오는지 적는다. 고르기 **전에** 읽힌다.
+ *
+ * 🔴 상태 전이를 새로 만들지 않는다 — onSetReference는 CommerceWorkspace의
+ * setFieldReference("modelName", …)이고, 채널 탭의 참조 버튼과 같은 함수다.
+ */
+function ModelNameField({
+  field,
+  onCommit,
+  onSetReference,
+}: {
+  field: { value: string; source: FieldSource };
+  onCommit: (v: string) => void;
+  onSetReference?: (referenced: boolean) => void;
+}) {
+  const isReferenced = field.source === "DETAIL_PAGE_REFERENCE";
+  return (
+    <div className="space-y-1">
+      {onSetReference ? (
+        <>
+          {/* 🔴 입력칸을 <label> 안에 넣지 않는다 — label은 자기 안의 첫
+              컨트롤(라디오)로 클릭을 넘기므로, 입력칸을 감싸면 값을 치려고
+              누른 클릭이 라디오로 가서 포커스를 빼앗는다. */}
+          <div className="flex items-center gap-2 text-sm">
+            <label className="flex shrink-0 items-center gap-2">
+              <input
+                type="radio"
+                name="catalog-model-name-mode"
+                checked={!isReferenced}
+                onChange={() => onSetReference(false)}
+              />
+              <span className="text-text-secondary">직접 입력</span>
+            </label>
+            <EditableText
+              value={field.value}
+              onCommit={onCommit}
+              placeholder="예: B226AC043"
+              className="w-40 rounded border border-border px-2 py-0.5 text-sm focus:border-primary focus:outline-none"
+            />
+          </div>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="radio"
+              name="catalog-model-name-mode"
+              checked={isReferenced}
+              onChange={() => onSetReference(true)}
+              className="mt-1"
+            />
+            <span>
+              <span className="text-text-secondary">상세페이지에서 찾기</span>
+              <span className="block text-[11px] leading-relaxed text-text-tertiary">
+                상세페이지의 고시정보 모델명을 사용합니다.
+              </span>
+            </span>
+          </label>
+        </>
+      ) : (
+        <EditableText value={field.value} onCommit={onCommit} placeholder="예: B226AC043" />
+      )}
+
+      <p className="text-[11px] leading-relaxed text-text-tertiary">
+        └─ 네이버 카탈로그 식별용 모델명 — SmartStore의 네이버 쇼핑 카탈로그에서 상품을 식별할 때
+        사용하는 모델명입니다. 위 SKU(판매자 상품관리번호)와는 다른 값입니다.
+      </p>
+
+      {isReferenced && (
+        <p className="rounded border border-warning/40 bg-warning-soft px-2 py-1 text-[11px] leading-relaxed text-warning">
+          ℹ 상세페이지 참조는 고시정보의 모델명을 가져옵니다. 「{CATALOG_MODEL_NAME_LABEL}」으로 사용할 수
+          없는 경우 직접 입력해야 합니다 — 지금은 이 칸이 비어 있어 스마트스토어 등록이 계속 막힙니다.
+        </p>
+      )}
     </div>
   );
 }

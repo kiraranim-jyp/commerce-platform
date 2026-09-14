@@ -273,11 +273,18 @@ function payloadNow() {
   } as never);
 }
 
-/** 「기본정보」 아코디언 안의 "모델명" 줄을 찾는다(라벨 → 그 줄 전체). */
+/** 「기본정보」 아코디언 안의 모델명 줄을 찾는다(라벨 → 그 줄 전체).
+ *
+ * DELTA-B(CEO 판정, 2026-09-15) — 라벨이 "모델명"에서
+ * "모델명(고시정보 + 네이버 쇼핑 카탈로그)"로 바뀌었다. 접두 일치로 찾되 그런
+ * 라벨이 화면에 하나뿐이라는 것을 함께 확인한다(엉뚱한 줄을 잡으면 초록으로
+ * 지나가 버린다). */
 function modelNameRow(): HTMLElement {
-  const label = Array.from(container.querySelectorAll("label")).find(
-    (l) => (l.textContent ?? "").trim() === "모델명",
+  const candidates = Array.from(container.querySelectorAll("label")).filter((l) =>
+    (l.textContent ?? "").trim().startsWith("모델명"),
   );
+  if (candidates.length > 1) throw new Error(`"모델명"으로 시작하는 라벨이 ${candidates.length}개다`);
+  const label = candidates[0];
   if (!label) throw new Error("「기본정보」에 '모델명' 라벨이 없다");
   const row = label.closest("div")?.parentElement;
   if (!row) throw new Error("'모델명' 줄을 찾지 못했다");

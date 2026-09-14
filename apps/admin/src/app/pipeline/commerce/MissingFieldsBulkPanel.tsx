@@ -22,7 +22,11 @@ import { NOTICE_REFERENCE_ELIGIBLE_FIELDS, type NoticeReferenceEligibleField } f
 
 const FIELD_LABEL: Record<NoticeReferenceEligibleField, string> = {
   itemName: "품명",
-  modelName: "모델명",
+  /* DELTA-B(CEO 판정, 2026-09-15) — 이 패널이 다루는 것은 **고시정보** 쪽
+     모델명뿐이다. 여기서 «상세페이지 참조»로 채워지는 자리가 정확히 그것이고,
+     「네이버 쇼핑 카탈로그 모델명」은 이 패널로는 끝내 채워지지 않는다. 그냥
+     "모델명"이라고 적어 두면 셀러는 체크 한 번으로 둘 다 끝났다고 믿는다. */
+  modelName: "고시정보 모델명",
   weight: "중량",
   material: "소재",
   color: "색상",
@@ -97,9 +101,10 @@ export function MissingFieldsBulkPanel({
                 입력칸을 만들었고(SourceDataView), 이 줄은 그리로 보낸다. */}
             {field === "modelName" && (
               <p className="ml-6 rounded border border-warning/40 bg-warning-soft px-2 py-1 text-[11px] leading-relaxed text-warning">
-                ⚠ 모델명은 참조로 절반만 대체됩니다 — 고시정보 모델명은 채워지지만 「네이버 쇼핑 카탈로그
-                모델명」은 비어 있어 스마트스토어 등록이 계속 막힙니다. 같은 화면의 「Source Data」에 있는
-                &ldquo;모델명&rdquo; 칸에 실제 값을 직접 입력해주세요.
+                ⚠ 모델명은 두 가지입니다 — 여기서 참조로 채워지는 것은 「고시정보 모델명」뿐이고,
+                스마트스토어 등록을 막고 있는 「네이버 쇼핑 카탈로그 모델명」은 별도 값이라 채워지지
+                않습니다. 같은 화면의 「Source Data」에 있는 &ldquo;네이버 쇼핑 카탈로그 모델명&rdquo; 칸에
+                실제 값을 직접 입력해주세요.
               </p>
             )}
           </div>
