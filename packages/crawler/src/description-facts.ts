@@ -38,8 +38,27 @@ export function extractCountryOfOrigin(description: string | undefined): string 
  * 맞는 것"이 이 파일의 불변식(원문에 실제로 있는 값만 반환)에 맞다. */
 const FABRIC_WORDS =
   "cotton|polyester|elastane|nylon|wool|linen|silk|spandex|viscose|acrylic|cashmere|leather|denim|rayon|lycra|modal|bamboo|hemp|polyamide|acetate|polyurethane|elastomultiester";
+
+/**
+ * REWORK-5 ①(CEO 지시, 2026-09-14 — 실측 근거: smallable.com 430700) — 원단
+ * 이름 앞에 붙는 수식어. 이것이 없어서 **"100% Organic Cotton"이 통째로 누락**
+ * 되고 있었다: 아래 구성비 패턴이 `숫자% + 원단이름`만 허용해서 퍼센트와 원단
+ * 사이에 "Organic" 한 단어가 끼면 매칭이 그대로 실패했다("100% Cotton"은
+ * 잡히고 "100% Organic Cotton"은 안 잡히는 상태였다 — 실제로 두 문자열을
+ * 넣어 확인했다).
+ *
+ * 수식어를 `[a-z]+`로 무제한 허용하지 않는 이유는 이 파일이 이미 겪은 오탐
+ * 이다("50% Off Sale … cotton"류가 소재로 둔갑한다, 위 주석 참고). 그래서
+ * **실제 상품 원문에서 관측된 수식어만** 화이트리스트로 둔다 — 이 목록은
+ * packages/shared/src/product-facts.ts의 FABRIC_QUALIFIERS와 같은 어휘다
+ * (그 파일은 비교용 정규화를 위해 이미 같은 문제를 풀어 두었지만, 등록
+ * payload를 만드는 이 함수는 손대지 않아 고시정보 쪽만 계속 비어 있었다).
+ */
+const FABRIC_QUALIFIERS = "organic|recycled|virgin|brushed|combed|merino|regenerated|bio";
+/** 수식어 최대 2개까지 + 원단 이름 하나("100% Recycled Organic Cotton"). */
+const FABRIC_TERM = `(?:(?:${FABRIC_QUALIFIERS})\\s+){0,2}(?:${FABRIC_WORDS})`;
 const MATERIAL_COMPOSITION_PATTERN = new RegExp(
-  `\\b\\d{1,3}%\\s*(?:${FABRIC_WORDS})\\b(?:,\\s*\\d{1,3}%\\s*(?:${FABRIC_WORDS})\\b)*`,
+  `\\b\\d{1,3}%\\s*${FABRIC_TERM}\\b(?:,\\s*\\d{1,3}%\\s*${FABRIC_TERM}\\b)*`,
   "gi",
 );
 
@@ -49,8 +68,11 @@ const MATERIAL_COMPOSITION_PATTERN = new RegExp(
  * 문장은 구성비 없이도 흔하다 — FABRIC_WORDS 화이트리스트(같은 불변식: 원문에
  * 실제로 있는 단어만 반환)에 형용사 접두어(organic/recycled/genuine/premium
  * 등)까지만 허용해서 좁게 매칭한다. */
+/** REWORK-5 ① — "Composition: 100% Cotton"도 같은 종류의 라벨이다(smallable이
+ * 쓰는 머리말이 정확히 COMPOSITION이다). 라벨 하나를 더할 뿐 매칭 대상은
+ * 그대로 FABRIC_WORDS 화이트리스트다. */
 const MATERIAL_LABEL_PATTERN = new RegExp(
-  `(?:material|fabric|fabrication)\\s*[:：]\\s*((?:[a-z]+\\s+){0,2}(?:${FABRIC_WORDS}))\\b`,
+  `(?:material|fabric|fabrication|composition)\\s*[:：]\\s*(?:\\d{1,3}%\\s*)?((?:[a-z]+\\s+){0,2}(?:${FABRIC_WORDS}))\\b`,
   "i",
 );
 

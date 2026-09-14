@@ -27,6 +27,24 @@ const KC_STATUS_LABEL: Record<KcStatus, { label: string; className: string }> = 
   BLOCKED: { label: "⚠ 카테고리가 아직 확정되지 않아 확인할 수 없습니다", className: "text-error" },
 };
 
+/**
+ * REWORK-5 ⑤(CEO 지시, 2026-09-14) — **등록 진행 단계.**
+ *
+ * 이 모달은 [등록 시작]을 누른 순간 닫히고, 화면 어딘가의 상태 배지가 조용히
+ * 바뀌는 것이 전부였다. 셀러 입장에서는 "눌렀는데 아무 일도 안 일어났다"와
+ * 구분되지 않는다 — 실제로 등록은 네트워크 왕복 두 번(연결 확인 → 전송)이라
+ * 몇 초가 걸린다. 그래서 **같은 모달 안에서** 어디까지 갔는지 보여준다.
+ *
+ * 🔴 단계를 새로 만든 것이 아니라 **이미 일어나던 일에 이름을 붙인 것**이다:
+ *   PREPARING  등록 직전 연결/중복 확인 + payload 준비
+ *   SENDING    LISTING_EXECUTORS[platform].execute() 왕복 중
+ *   CONFIRMING 돌아온 결과를 기록하는 중
+ * 등록 경로(어떤 API를 어떤 인자로 부르는가)는 한 줄도 바뀌지 않는다.
+ */
+export type ListingProgressStep = "PREPARING" | "SENDING" | "CONFIRMING";
+
+const PROGRESS_ORDER: ListingProgressStep[] = ["PREPARING", "SENDING", "CONFIRMING"];
+
 export function ListingConfirmationModal({
   listing,
   mode = "DRY_RUN",
@@ -34,12 +52,15 @@ export function ListingConfirmationModal({
   smartstoreCategoryCode,
   snapshotId,
   jobKey,
+  progress = null,
   onCancel,
   onConfirm,
 }: {
   listing: ListingModel;
   /** LIVE면 실제 쿠팡 API가 호출된다는 경고 문구와 버튼 문구를 바꾼다. */
   mode?: ExecutionMode;
+  /** null이면 확인 화면, 그 외에는 같은 모달이 진행 화면으로 바뀐다. */
+  progress?: ListingProgressStep | null;
   /** N-3.52(CPO 지시) — SmartStore일 때만 넘어온다(smartStoreValidation.kcStatus
    * 그대로, 여기서 다시 계산하지 않는다). undefined면 이 카드 자체를 숨긴다
    * (Coupang 등 다른 플랫폼). */
@@ -111,19 +132,82 @@ export function ListingConfirmationModal({
     onConfirm();
   }
 
+  /* REWORK-5 ⑤ — 진행 중에는 닫히지 않는다. 배경을 눌러 닫으면 등록은 그대로
+     진행되는데 화면만 사라져서 셀러가 "취소됐다"고 오해한다. */
+  const dismissable = progress == null;
+
+  if (progress != null) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+        <div className="w-full max-w-md rounded-lg bg-surface p-5 shadow-elevated">
+          <h3 className="text-base font-semibold tracking-tight text-text-primary">등록 중...</h3>
+          <p className="mt-1 text-xs text-text-secondary">
+            {listing.platformLabel}에 등록하고 있습니다 — 이 창을 닫지 마세요.
+          </p>
+          <ol className="mt-4 space-y-2">
+            {(
+              [
+                ["PREPARING", "상품정보 준비"],
+                ["SENDING", `${listing.platformLabel} 전송`],
+                ["CONFIRMING", "등록 결과 확인"],
+              ] as const
+            ).map(([step, label], index) => {
+              const at = PROGRESS_ORDER.indexOf(progress);
+              const mine = PROGRESS_ORDER.indexOf(step);
+              const state = mine < at ? "DONE" : mine === at ? "ACTIVE" : "WAITING";
+              return (
+                <li key={step} className="flex items-center gap-2 text-sm">
+                  <span
+                    className={`w-4 shrink-0 text-center ${
+                      state === "DONE"
+                        ? "text-success"
+                        : state === "ACTIVE"
+                          ? "text-primary"
+                          : "text-text-tertiary"
+                    }`}
+                  >
+                    {state === "DONE" ? "✓" : state === "ACTIVE" ? "●" : "○"}
+                  </span>
+                  <span
+                    className={
+                      state === "WAITING" ? "text-text-tertiary" : "font-medium text-text-primary"
+                    }
+                  >
+                    {index + 1}. {label}
+                  </span>
+                  {state === "WAITING" && <span className="text-xs text-text-tertiary">대기</span>}
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-      onClick={onCancel}
+      onClick={dismissable ? onCancel : undefined}
     >
       <div
         className="w-full max-w-md rounded-lg bg-surface p-5 shadow-elevated"
         onClick={(event) => event.stopPropagation()}
       >
-        <h3 className="text-base font-semibold tracking-tight text-text-primary">판매 전 최종 확인</h3>
+        {/* REWORK-5 ⑤ — 제목이 채널 이름을 달고 선다. 세 채널이 **같은 모달**을
+            쓰기 때문에, 지금 어느 채널에 등록하는지는 제목이 말해야 한다. */}
+        <h3 className="text-base font-semibold tracking-tight text-text-primary">
+          {listing.platformLabel} 등록 전 최종 확인
+        </h3>
         <p className="mt-1 text-xs text-text-secondary">
           이 상품을 {listing.platformLabel}에 판매 등록하기 전에 아래 내용을 확인해주세요.
         </p>
+
+        {/* 등록 대상 — 무엇을 등록하는지가 가격보다 먼저 온다. */}
+        <div className="mt-4 rounded-md border border-border bg-background p-3">
+          <p className="text-xs font-medium text-text-tertiary">📦 등록 대상</p>
+          <p className="mt-1 text-sm font-medium text-text-primary">{listing.title}</p>
+        </div>
         {isLive && (
           <p className="mt-2 rounded-md bg-warning-soft px-3 py-2 text-xs font-medium text-warning">
             ⚠ 실제로 {listing.platformLabel}에 등록됩니다 — 등록 후 되돌릴 수 없으니 아래 내용을 확인해주세요.
@@ -182,7 +266,19 @@ export function ListingConfirmationModal({
           <p className="mt-1 text-xs text-text-secondary">{PRICE_SOURCE_LABEL[listing.priceSource]}</p>
         </div>
 
-        <div className="mt-4 space-y-2">
+        {/* REWORK-5 ⑤ — 등록 가능 상태. 여기서 새로 판정하지 않는다: 이 모달이
+            열렸다는 사실 자체가 상위 게이트(RegistrationReadinessCard의
+            canRegister = 필수항목 전부 통과 + 카테고리 확정)를 이미 지났다는
+            뜻이다. 그 사실을 셀러에게 한 줄로 확인시켜 준다. */}
+        <div className="mt-3 rounded-md border border-border bg-background p-3">
+          <p className="text-xs font-medium text-text-tertiary">✅ 등록 가능 상태</p>
+          <p className="mt-1 text-sm font-medium text-success">
+            필수 정보가 모두 확인되어 {listing.platformLabel}에 등록할 수 있습니다.
+          </p>
+        </div>
+
+        <p className="mt-4 text-xs font-medium text-text-tertiary">확인할 사항</p>
+        <div className="mt-1.5 space-y-2">
           <label className="flex items-start gap-2 text-xs text-text-secondary">
             <input
               type="checkbox"
@@ -213,6 +309,16 @@ export function ListingConfirmationModal({
         </div>
         {confirmError && <p className="mt-1 text-xs text-error">{confirmError}</p>}
 
+        {/* REWORK-5 ⑤ — 등록 진행 안내. 누르면 무슨 일이 일어나는지를 누르기
+            전에 말한다(아래 진행 화면의 세 단계와 같은 말이다). */}
+        <div className="mt-4 rounded-md bg-background px-3 py-2">
+          <p className="text-xs font-medium text-text-tertiary">등록 진행 안내</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-text-secondary">
+            ① 상품정보 준비 → ② {listing.platformLabel} 전송 → ③ 등록 결과 확인 순서로 진행됩니다. 전송 중에는
+            이 창이 닫히지 않습니다.
+          </p>
+        </div>
+
         <div className="mt-3 flex justify-end gap-2">
           <button
             type="button"
@@ -221,6 +327,7 @@ export function ListingConfirmationModal({
           >
             취소
           </button>
+          {/* 세 채널이 같은 버튼을 쓴다 — 문구만 채널 이름을 받는다. */}
           <button
             type="button"
             onClick={handleConfirmClick}
@@ -229,7 +336,11 @@ export function ListingConfirmationModal({
               isLive ? "bg-error hover:bg-error/90" : "bg-primary hover:bg-primary-hover"
             }`}
           >
-            {submitting ? "확인 저장 중..." : isLive ? `🚀 ${listing.platformLabel} 등록 시작` : "등록 시작"}
+            {submitting
+              ? "확인 저장 중..."
+              : isLive
+                ? `🚀 ${listing.platformLabel} 등록 시작`
+                : `${listing.platformLabel} 등록 시작`}
           </button>
         </div>
       </div>

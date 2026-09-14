@@ -583,9 +583,12 @@ describe("표 4행 — 채널 고유값 입력", () => {
     const labels = collectInputs(renderLotteOnTab({ sellerSettings: makeSellerSettings() })).map((i) => i.label);
     expect(labels).toEqual([
       // REWORK-4 §5 — 순서가 10섹션 골격을 따른다(⑤ 배송 → ⑦ 고시 → ⑧ KC).
-      // 칸의 **집합**은 한 건도 달라지지 않았다 — 서 있는 자리만 바뀌었다.
-      "표준카테고리번호 (scatNo)",
-      "전시카테고리번호 (dcatLst)",
+      /* REWORK-5 ③(CEO 실측 판정: FAIL) — 여기 맨 앞에 있던
+         "표준카테고리번호 (scatNo)" · "전시카테고리번호 (dcatLst)" 두 칸이
+         **없어졌다.** 지운 것이지 옮긴 것이 아니다 — 셀러가 번호를 찾아 손으로
+         적는 UX 자체를 폐기했고, 카테고리는 [카테고리 추천] → 후보 → [선택]
+         하나로만 정해진다(선택 결과는 읽기 전용 요약으로 확인한다).
+         나머지 칸의 집합은 한 건도 달라지지 않았다. */
       "출고지번호 (owhpNo)",
       "반품지번호 (rtrpNo)",
       "배송비정책번호 (dvCstPolNo)",
@@ -650,11 +653,17 @@ describe("표 5행 — 독립 카테고리 (LOTTEON 반드시 PASS)", () => {
     expect(stripTags(renderLotteOnTab())).toContain("스마트스토어·쿠팡 카테고리를 덮어쓰지 않습니다");
   });
 
+  /**
+   * REWORK-5 ③ — 예전에는 "scatNo 입력칸이 value=\"\"로 비어 있다"로 이것을
+   * 증명했다. 그 칸이 없어졌으므로(셀러가 번호를 적는 UX 폐기) 같은 명제를
+   * **읽기 전용 요약이 뭐라고 말하는가**로 증명한다. 명제 자체는 그대로다:
+   * 아무것도 고르지 않았으면 우리가 대신 골라 두지 않는다.
+   */
   it("LOTTEON — 카테고리를 자동으로 확정하지 않는다(빈 폼은 빈 채로 남는다)", () => {
-    const html = renderLotteOnTab({ sellerSettings: makeSellerSettings() });
-    const scatNo = /<span[^>]*>표준카테고리번호 \(scatNo\)<\/span>[\s\S]*?<input[^>]*>/.exec(html);
-    expect(scatNo).not.toBeNull();
-    expect(scatNo![0]).toContain('value=""');
+    const text = stripTags(renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
+    expect(text).toContain("아직 고른 카테고리가 없습니다");
+    // "고른 카테고리가 채운 값" 표는 고르기 전에는 서지 않는다.
+    expect(text).not.toContain("선택한 카테고리가 채운 값");
   });
 });
 

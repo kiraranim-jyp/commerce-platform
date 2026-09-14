@@ -272,6 +272,14 @@ const NAVER_FIELD_LABEL: Record<string, string> = {
   "detailAttribute.originAreaInfo.originAreaCode": "원산지",
   "detailAttribute.originAreaInfo.importer": "수입사명",
   "smartstoreChannelProduct.naverShoppingRegistration": "네이버쇼핑 연동",
+  // REWORK-5 ②(CEO 지시, 2026-09-14) — 이 한 줄이 없어서 부족정보가 필드
+  // 경로를 날것으로 읽어 주고 있었다("naverShoppingSearchInfo.modelName 이
+  // 없습니다"). 셀러가 읽는 이름은 화면의 입력칸 이름과 같아야 한다 —
+  // 아래 naverFieldSectionId()가 보내는 「기본정보」의 "모델명"이 그것이다.
+  // (고시정보의 modelName과 **다른 필드**라는 사실이 이름에 드러나야 해서
+  // "모델명"이 아니라 "네이버 쇼핑 카탈로그 모델명"이다 — 둘 다 화면에
+  // 동시에 뜰 수 있고, 같은 이름이면 셀러가 하나만 채우고 끝냈다고 믿는다.)
+  "naverShoppingSearchInfo.modelName": "네이버 쇼핑 카탈로그 모델명",
 };
 
 const NAVER_NOTICE_FIELD_LABEL: Record<string, string> = {
@@ -360,6 +368,16 @@ function naverFieldSectionId(field: string): string | undefined {
   // 않았다. computeChecklistReadiness(coupang/11번가)가 이미 쓰는 것과 같은
   // DOM id("section-price", PlatformPreview.tsx에 실제로 존재 확인)로 통일한다.
   if (field === "originProduct.salePrice") return "section-price";
+  // REWORK-5 ②(CEO 지시, 2026-09-14) — 지금까지 이 필드에는 sectionId도
+  // externalHref도 없었다. 그래서 describePriorityItem()이 action:null을
+  // 돌려줬고, 우선순위 카드에 **[이동] 버튼 자체가 그려지지 않았다**(안내
+  // 문장도 "아래 필수항목 목록에서 찾아 채웁니다"라는 일반문으로 떨어졌다).
+  // 실제 입력칸은 PlatformPreview.tsx의 「기본정보」 CollapsibleSection 안
+  // "모델명" ReferenceEligibleFieldRow다(product.modelName → updateField로
+  // USER_EDITED가 되고, build-payload.ts가 그 값을 이 필드에 그대로 넣는다).
+  // 추측이 아니라 그 자리를 실제로 확인하고 연결한다 — 같은 파일의
+  // originAreaCode/name이 이미 "section-basic"으로 가는 것과 같은 자리다.
+  if (field === "naverShoppingSearchInfo.modelName") return "section-basic";
   if (field.startsWith("productInfoProvidedNotice")) {
     const suffix = field.split(".").pop() ?? field;
     return NAVER_NOTICE_FIELD_SECTION[suffix];

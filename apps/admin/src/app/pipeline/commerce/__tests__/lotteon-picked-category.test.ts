@@ -18,7 +18,11 @@ import {
   type LotteOnPayloadInput,
 } from "@commerce/listing";
 import { LotteOnRegistrationPanel } from "../LotteOnRegistrationPanel";
-import { summarizeLotteOnManagedValues } from "../lotteon-channel-form";
+import {
+  fromLotteOnChannelInfo,
+  setLotteOnStandardCategoryNo,
+  summarizeLotteOnManagedValues,
+} from "../lotteon-channel-form";
 import type { LotteOnStandardCategory } from "../lotteon-category";
 
 /**
@@ -326,16 +330,115 @@ async function click(label: string): Promise<void> {
   });
 }
 
-/** 셀러가 하는 일 그대로 — 추천을 누르고, 나온 후보를 누른다. */
-async function recommendAndPick(): Promise<void> {
+/**
+ * 셀러가 하는 일 그대로 — 추천을 누르고, 나온 후보를 누른다. **여기까지가
+ * 셀러의 한 동작이다**(REWORK-5 ③ 이후로는 [등록 정보 확인]을 따로 누르지
+ * 않는다 — 선택이 곧 확인을 부른다).
+ */
+async function recommendAndPickOnly(): Promise<void> {
   await click("카테고리 추천");
   await click(RECOMMENDED_CATEGORY.id);
-  // 입력이 바뀌면 직전 확인 결과는 stale이다 — 셀러가 다시 확인을 누르는 것까지가
-  // 한 동작이다(자동 재확인은 없다).
+}
+
+/**
+ * 기존 테스트들이 쓰던 형태 — 선택 뒤에 확인을 한 번 더 누른다. 자동 확인이
+ * 생긴 뒤에도 이 경로는 그대로 유효해야 한다(같은 결과에 도달한다).
+ */
+async function recommendAndPick(): Promise<void> {
+  await recommendAndPickOnly();
   await click("등록 정보 확인");
 }
 
 /* ─────────────────────────────────────────────────────────────────────── */
+
+/**
+ * REWORK-5 ③(CEO 실측 판정: FAIL) — **"다시 조회 → 번호 찾아서 입력 → 우측
+ * 요약에서도 안 없어짐"** 세 가지를 하나씩 뒤집는다.
+ */
+describe("REWORK-5 ③ — 번호를 찾아 적는 길이 없어졌다", () => {
+  it("표준·전시 카테고리번호 입력칸이 화면에 없다", async () => {
+    saved = { ...PREFILLED };
+    await enterTab(makeProduct());
+    expect(text()).not.toContain("표준카테고리번호 (scatNo)");
+    expect(text()).not.toContain("전시카테고리번호 (dcatLst)");
+  });
+
+  it("[직접 찾기] 조회 버튼이 화면에 없다 — 조회해서 번호를 옮겨 적는 길이 사라졌다", async () => {
+    saved = { ...PREFILLED };
+    await enterTab(makeProduct());
+    expect(text()).not.toContain("표준카테고리 직접 찾기");
+    expect(text()).not.toContain("전시카테고리 직접 찾기");
+  });
+
+  it("남은 길은 [카테고리 추천] 하나다", async () => {
+    saved = { ...PREFILLED };
+    await enterTab(makeProduct());
+    expect(text()).toContain("카테고리 추천");
+    expect(text()).toContain("아직 고른 카테고리가 없습니다");
+  });
+});
+
+describe("REWORK-5 ③ — 선택 즉시 자동 반영(확인을 다시 누르지 않는다)", () => {
+  /**
+   * 🔴 이 저장소가 신고받은 바로 그 증상이다.
+   *
+   * BEFORE: 후보를 고르면 commitForm()이 stale=true를 세우는데 우측 요약이 읽는
+   * 부족정보는 **직전 검증 응답**에서 나왔다. 그래서 카테고리를 골라도 요약에는
+   * "카테고리 없음"이 그대로 남고 등록 가능성은 0%로 떨어졌다 — 셀러가
+   * [등록 정보 확인]을 한 번 더 눌러야만 사라졌다.
+   */
+  it("🔴 고르기만 하면 우측 요약의 부족 항목에서 카테고리가 사라진다", async () => {
+    saved = { ...PREFILLED };
+    await enterTab(makeProduct());
+
+    // 고르기 전 — 카테고리가 부족 항목에 서 있다.
+    expect(text()).toContain("표준카테고리");
+    const before = readiness!.missingCount;
+
+    // 셀러의 한 동작: 추천 → 선택. [등록 정보 확인]은 누르지 않는다.
+    await recommendAndPickOnly();
+
+    expect(
+      readiness!.missingCount,
+      "고른 뒤에도 부족 항목 수가 그대로다 — 요약이 갱신되지 않았다",
+    ).toBeLessThan(before);
+    // 서버가 scatNo를 READY로 판정했다 = 부족 목록에서 빠졌다.
+    const sent = sentChannels[sentChannels.length - 1];
+    expect(sent.standardCategoryNo).toBe("BC63080300");
+  });
+
+  it("🔴 고른 직후 화면이 stale 경고를 띄우지 않는다 — 결과가 지금 입력에 대한 것이다", async () => {
+    saved = { ...PREFILLED };
+    await enterTab(makeProduct());
+    await recommendAndPickOnly();
+    expect(text()).not.toContain("입력이 바뀌었습니다");
+  });
+
+  it("선택 한 번이 표준·전시·고시 품목·과세를 함께 반영한다 — 확인을 누르지 않아도", async () => {
+    saved = { ...PREFILLED };
+    await enterTab(makeProduct());
+    await recommendAndPickOnly();
+
+    const sent = sentChannels[sentChannels.length - 1];
+    expect(sent.standardCategoryNo).toBe("BC63080300");
+    expect(sent.displayCategoryNos).toEqual(["FC11130203", "FC11130204"]);
+    expect(sent.noticeItemCode).toBe("23");
+    expect(sent.taxTypeCode).toBe("01");
+  });
+
+  /** 고른 결과를 셀러가 눈으로 확인할 자리(입력칸 대신 들어선 읽기 전용 요약). */
+  it("고른 결과가 읽기 전용 요약으로 화면에 선다", async () => {
+    saved = { ...PREFILLED };
+    await enterTab(makeProduct());
+    await recommendAndPickOnly();
+
+    const after = text();
+    expect(after).toContain("선택한 카테고리가 채운 값");
+    expect(after).toContain("BC63080300");
+    expect(after).toContain("FC11130203");
+    expect(after).toContain("23");
+  });
+});
 
 describe("1 — 고른 카테고리가 실제로 무엇을 먹이는가", () => {
   it("고르면 표준·전시·고시 품목·과세가 한 번에 채워지고, 그 값으로 서버 검증이 돈다", async () => {
@@ -536,30 +639,37 @@ describe("3 — 저장한 것은 최소 필드뿐이다", () => {
     });
   });
 
-  it("🔴 번호를 손으로 바꾸면 직전 카테고리가 알려준 것은 버려진다", async () => {
+  /**
+   * REWORK-5 ③(CEO 지시, 2026-09-14) — **이 테스트가 화면에서 함수로 내려왔다.**
+   *
+   * 원래는 "셀러가 표준카테고리번호 칸을 직접 고친다"를 실제 입력칸에 타이핑해서
+   * 검사했다. 그 입력칸이 **없어졌다** — 번호를 찾아 손으로 적는 UX 자체가
+   * 폐기됐기 때문이다(CEO 실측 판정 FAIL: "다시 조회 → 번호 찾아서 입력").
+   *
+   * 🔴 그래도 이 명제를 지우지 않는다. 판단은 여전히
+   * setLotteOnStandardCategoryNo() 한 곳에 살아 있고, 그 함수가 "번호가 바뀌면
+   * 직전 카테고리가 알려준 것(요구 안전인증 유형 · 고시 품목)을 버린다"를
+   * 지켜야 한다는 사실은 화면 모양과 무관하게 참이어야 한다. 나중에 어떤
+   * 경로로든 번호가 다시 바뀔 수 있게 되면, 그때 틀린 유형코드로 인증이
+   * 등록되는 것을 막는 것이 이 규칙이다.
+   */
+  it("🔴 번호가 바뀌면 직전 카테고리가 알려준 것은 버려진다(함수 수준 — 입력칸은 폐기됨)", async () => {
     saved = { ...PREFILLED };
     await enterTab(makeProduct());
     await recommendAndPick();
     expect(saved!.category.selected?.safetyTypeCodes).toEqual(["CHL_CFM"]);
 
-    // 셀러가 표준카테고리번호 칸을 직접 고친다 — 우리는 이 번호가 무엇을
-    // 요구하는지 들은 적이 없다. 직전 카테고리의 대답이 남아 있으면 **틀린
-    // 유형코드로 인증이 등록된다.**
-    const input = Array.from(container.querySelectorAll("input")).find(
-      (element) => element.value === "BC63080300",
-    );
-    if (!input) throw new Error("표준카테고리번호 입력칸을 찾지 못했다");
-    await act(async () => {
-      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
-      setter.call(input, "BC99999999");
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-    });
+    // 화면에서 그 칸이 정말 사라졌는지부터 확인한다 — 이 테스트가 함수로
+    // 내려온 이유 자체가 렌더 사실이어야 한다.
+    expect(
+      Array.from(container.querySelectorAll("input")).some((el) => el.value === "BC63080300"),
+      "폐기했어야 할 표준카테고리번호 입력칸이 아직 화면에 있다",
+    ).toBe(false);
 
-    expect(saved!.category.standardCategoryNo).toBe("BC99999999");
-    expect(saved!.category.selected ?? null).toBeNull();
-    expect(text(), "고르지도 않은 카테고리의 요구조건이 화면에 남았다").not.toContain(
-      "선택한 표준카테고리가 요구하는 안전인증 유형",
-    );
+    const picked = fromLotteOnChannelInfo(saved!);
+    const changed = setLotteOnStandardCategoryNo(picked, "BC99999999");
+    expect(changed.category.standardCategoryNo).toBe("BC99999999");
+    expect(changed.category.selected ?? null).toBeNull();
   });
 
   it("🔴 상품 정보 화면으로 나가는 경로가 함수 수준에서 없다", async () => {

@@ -75,7 +75,7 @@ import type { MarketEvidenceVariant } from "./commerce/market-evidence-frame";
 // 만들기 시작하면 같은 조회 결과에 대한 요약 규칙이 두 벌이 된다.
 import type { MarketEvidenceSummary } from "./commerce/market-evidence";
 import { ImageInlineEditor } from "./ImageInlineEditor";
-import { ListingConfirmationModal } from "./commerce/ListingConfirmationModal";
+import { ListingConfirmationModal, type ListingProgressStep } from "./commerce/ListingConfirmationModal";
 import { LotteOnRegistrationPanel } from "./commerce/LotteOnRegistrationPanel";
 import { resolveCommonCategorySources } from "./commerce/lotteon-channel-form";
 import { MissingFieldsBulkPanel } from "./commerce/MissingFieldsBulkPanel";
@@ -507,6 +507,9 @@ export function CommerceWorkspace({
   const [listingStates, setListingStates] = useState(INITIAL_LISTING_STATES);
   const [listingResults, setListingResults] = useState(INITIAL_LISTING_RESULTS);
   const [confirmingPlatform, setConfirmingPlatform] = useState<PlatformId | null>(null);
+  /** REWORK-5 ⑤ — 등록이 어디까지 갔는가. null이면 확인 화면, 그 외에는 같은
+   *  모달이 진행 화면으로 바뀐다(채널별 별도 모달을 만들지 않는다). */
+  const [listingProgress, setListingProgress] = useState<ListingProgressStep | null>(null);
   // A-12.3(작업8, CPO 지시: "React State → Payload → 등록 구조는 유지하고, 지금은
   // 임시 수정 상태인지 저장된 상태인지 알려주는 UX만 추가") — EditableText/
   // EditableTextarea(commerce/EditableField.tsx)는 blur 시점에만 CanonicalProduct에
@@ -2226,6 +2229,11 @@ export function CommerceWorkspace({
   }
 
   function cancelListingModal() {
+    /* REWORK-5 ⑤ — 전송이 시작된 뒤에는 닫지 않는다. 여기서 닫아도 등록 자체는
+       그대로 진행되므로, 셀러는 "취소했다"고 믿은 채 실제로는 등록된 상품을
+       갖게 된다. 진행 화면에 [취소]를 그리지 않는 것과 별개로, 게이트를 화면
+       모양이 아니라 이 함수에 둔다. */
+    if (listingProgress != null) return;
     if (confirmingPlatform) {
       setListingStates((prev) => ({ ...prev, [confirmingPlatform]: "DRAFT" }));
     }
@@ -2261,8 +2269,18 @@ export function CommerceWorkspace({
   async function confirmListing() {
     if (!confirmingPlatform || !listing) return;
     const platform = confirmingPlatform;
-    setConfirmingPlatform(null);
+    /* REWORK-5 ⑤(CEO 지시, 2026-09-14) — 모달을 **여기서 닫지 않는다.**
+       예전에는 이 자리에서 곧바로 닫아서, 셀러는 몇 초 동안 아무 변화도 없는
+       화면을 보고 "눌렀는데 아무 일도 안 일어났다"로 읽었다(등록은 실제로
+       네트워크 왕복 두 번이다). 이제 같은 모달이 진행 화면으로 바뀌고,
+       결과를 다 기록한 뒤 finally에서 닫힌다.
 
+       🔴 아래 등록 경로는 한 줄도 바뀌지 않았다 — 연결 확인 · 중복 LIVE 차단 ·
+       executor 호출 인자 · 결과 기록 · 이력/상태 갱신이 전부 그대로다. 더한
+       것은 setListingProgress 세 줄과 try/finally 뿐이고, 어느 것도 새 분기를
+       만들지 않는다(쿠팡 실등록이 강한 회귀 기준이라 최소 침습으로 간다). */
+    setListingProgress("PREPARING");
+    try {
     // 등록 직전 한 번 더 인증을 확인한다 — 모달을 열어둔 사이에 키가 만료되거나
     // 세션 시작 뒤 한 번도 확인 안 했을 수 있다. 여기서 확인한 "지금 이 순간의"
     // 상태로만 LIVE 여부를 결정한다(모달이 열려 있던 시점의 오래된 상태로 실제
@@ -2285,6 +2303,7 @@ export function CommerceWorkspace({
     }
 
     setListingStates((prev) => ({ ...prev, [platform]: "SUBMITTING" }));
+    setListingProgress("SENDING");
     const result = await LISTING_EXECUTORS[platform].execute(product, listing, mode, {
       snapshotId: snapshotId ?? undefined,
       jobKey: jobKey ?? undefined,
@@ -2292,6 +2311,7 @@ export function CommerceWorkspace({
       // detailBlocks를 아예 읽지 않는다(sellerProfile을 직접 조회해서
       // resolveDetailBlocks()로 계산한다) — 더 이상 여기서 넘길 필요가 없다.
     });
+    setListingProgress("CONFIRMING");
     setListingResults((prev) => ({ ...prev, [platform]: result }));
     const finishedAt = Date.now();
     setRegistrationHistory((prev) => [
@@ -2315,6 +2335,12 @@ export function CommerceWorkspace({
       ...prev,
     ]);
     setListingStates((prev) => ({ ...prev, [platform]: result.status }));
+    } finally {
+      /* 성공·실패·중복 LIVE 조기 반환 어느 쪽으로 끝나든 진행 화면은 닫힌다.
+         결과 자체는 기존 그대로 listingResults/listingStates가 화면에 알린다. */
+      setListingProgress(null);
+      setConfirmingPlatform(null);
+    }
   }
 
   function retryListing() {
@@ -2819,6 +2845,7 @@ export function CommerceWorkspace({
           }
           snapshotId={snapshotId ?? null}
           jobKey={jobKey ?? null}
+          progress={listingProgress}
           onCancel={cancelListingModal}
           onConfirm={confirmListing}
         />

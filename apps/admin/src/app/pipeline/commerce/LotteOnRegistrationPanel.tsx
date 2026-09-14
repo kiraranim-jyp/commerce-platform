@@ -12,14 +12,11 @@ import {
   buildLotteOnSafetyLineFromCommon,
   collectLotteOnNoticeSourceValues,
   computeLotteOnRegistrationReadiness,
-  describeLotteOnCategoryItem,
   fromLotteOnChannelInfo,
   isLotteOnCategoryChosen,
   listLotteOnBlockingConditions,
-  parseDisplayCategoryNos,
   requiresSafetyCertification,
   resolveLotteOnSelectedCategory,
-  setLotteOnStandardCategoryNo,
   summarizeCommonProduct,
   toLotteOnChannelInfo,
   toLotteOnChannelPayload,
@@ -112,15 +109,6 @@ interface RegisterResponse {
   };
 }
 
-interface CategoryLookupState {
-  loading: boolean;
-  error: string | null;
-  /** 알아본 것 — 누르면 번호가 입력칸에 들어간다. */
-  options: { code: string; name: string }[];
-  /** 못 알아본 원문 — 지어내지 않고 그대로 보여준다. */
-  unrecognized: unknown[];
-}
-
 interface RecommendState {
   loading: boolean;
   error: string | null;
@@ -132,7 +120,6 @@ interface RecommendState {
   truncated: boolean;
 }
 
-const EMPTY_LOOKUP: CategoryLookupState = { loading: false, error: null, options: [], unrecognized: [] };
 const EMPTY_RECOMMEND: RecommendState = {
   loading: false,
   error: null,
@@ -208,8 +195,6 @@ export function LotteOnRegistrationPanel({
   const [registerResult, setRegisterResult] = useState<RegisterResponse | null>(null);
   const [showPayload, setShowPayload] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [standardLookup, setStandardLookup] = useState<CategoryLookupState>(EMPTY_LOOKUP);
-  const [displayLookup, setDisplayLookup] = useState<CategoryLookupState>(EMPTY_LOOKUP);
   const [recommend, setRecommend] = useState<RecommendState>(EMPTY_RECOMMEND);
   /**
    * 확인을 통과한 뒤 입력이 바뀌었는가. true면 화면의 등록 가능성/부족한 정보는
@@ -292,18 +277,6 @@ export function LotteOnRegistrationPanel({
     commitForm({ ...form, [section]: { ...form[section], ...changes } });
   }
 
-  /** 전시카테고리는 여러 개다 — 화면에서는 한 줄 텍스트로 받고 배열로 보관한다. */
-  function setDisplayCategories(raw: string) {
-    setDisplayCategoryText(raw);
-    patch("category", { displayCategoryNos: parseDisplayCategoryNos(raw) });
-  }
-
-  function addDisplayCategory(code: string) {
-    const next = parseDisplayCategoryNos(`${displayCategoryText} ${code}`);
-    setDisplayCategoryText(next.join(", "));
-    patch("category", { displayCategoryNos: next });
-  }
-
   /**
    * 카테고리 **추천**(CEO 신규 요건). 조회가 아니다.
    *
@@ -363,14 +336,27 @@ export function LotteOnRegistrationPanel({
     const next = applyLotteOnRecommendedCategory(form, candidate.category);
     setDisplayCategoryText(next.category.displayCategoryNos.join(", "));
     commitForm(next);
-  }
-
-  /**
-   * 번호를 직접 넣는 길(입력칸 · 조회 결과 클릭). 추천이 알려준 값은 여기서
-   * 버려진다 — 판단은 setLotteOnStandardCategoryNo() 한 곳에만 있다.
-   */
-  function setStandardCategoryNo(value: string) {
-    commitForm(setLotteOnStandardCategoryNo(form, value));
+    /**
+     * REWORK-5 ③(CEO 실측: "우측 요약에서도 안 없어짐") — **선택 즉시 자동
+     * 반영**의 실제 구현이 이 한 줄이다.
+     *
+     * 원인은 이랬다: commitForm()이 markFormChanged()로 stale=true를 세우는데,
+     * 우측 요약이 읽는 부족정보(missingInfo)는 **직전 검증 응답**에서 나온다.
+     * 그래서 카테고리를 골라도 요약에는 고르기 전의 "카테고리 없음"이 그대로
+     * 남고, percent는 stale 때문에 0으로 떨어졌다 — 셀러 눈에는 "골랐는데
+     * 아무 일도 안 일어났고 오히려 나빠진" 화면이었다. 셀러가 [등록 정보
+     * 확인]을 한 번 더 눌러야만 사라졌다.
+     *
+     * 🔴 새 판정을 만들어 메우지 않는다. 화면이 스스로 "이제 카테고리는
+     * 찼다"고 계산하기 시작하면 서버 판정과 갈라진다(이 저장소가 CP001로
+     * 이미 겪은 일이다). 대신 **셀러가 눌렀어야 할 그 확인을 대신 눌러 준다**
+     * — 판정의 출처는 그대로 서버 하나다.
+     *
+     * 입력칸 타이핑마다 쏘지 않는 기존 규칙은 그대로다. 카테고리 선택은
+     * 타이핑이 아니라 **완결된 한 번의 결정**이고, 그 한 번이 표준·전시·고시
+     * 품목·과세·요구 안전인증을 한꺼번에 바꾼다 — 확인을 미룰 이유가 없다.
+     */
+    void runValidation(next);
   }
 
   /**
@@ -381,37 +367,6 @@ export function LotteOnRegistrationPanel({
     () => buildLotteOnSafetyLineFromCommon(product, selectedCategory?.safetyTypeCodes[0] ?? null),
     [product, selectedCategory],
   );
-
-  /**
-   * 카테고리 **조회** — 번호를 이미 아는 셀러를 위한 길은 그대로 둔다.
-   *
-   * 🔴 응답 필드명을 실동작으로 확인하지 못했다. 문서 원문 필드(std_cat_id /
-   * disp_cat_id)로 읽어보고, 못 읽으면 원문을 그대로 보여준다.
-   */
-  async function lookupCategories(kind: "standard" | "display") {
-    const setState = kind === "standard" ? setStandardLookup : setDisplayLookup;
-    const job = kind === "standard" ? "cheetahStandardCategory" : "cheetahDisplayCategory";
-    setState({ ...EMPTY_LOOKUP, loading: true });
-    try {
-      const res = await fetch(`/api/lotteon/categories?job=${job}&limit=100`);
-      const data = (await res.json()) as { ok: boolean; message?: string; items?: unknown[] };
-      if (!data.ok) {
-        setState({ ...EMPTY_LOOKUP, error: data.message ?? "카테고리를 조회하지 못했습니다." });
-        return;
-      }
-      const items = data.items ?? [];
-      const options: { code: string; name: string }[] = [];
-      const unrecognized: unknown[] = [];
-      for (const item of items) {
-        const described = describeLotteOnCategoryItem(item);
-        if (described) options.push(described);
-        else unrecognized.push(item);
-      }
-      setState({ loading: false, error: null, options, unrecognized });
-    } catch {
-      setState({ ...EMPTY_LOOKUP, error: "서버에 연결하지 못했습니다." });
-    }
-  }
 
   const runValidation = useCallback(
     async (currentForm: LotteOnChannelForm) => {
@@ -796,39 +751,31 @@ export function LotteOnRegistrationPanel({
           </p>
         )}
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <TextField
-            label="표준카테고리번호 (scatNo)"
-            hint="롯데ON 표준 분류 1개. 위 [카테고리 추천]으로 고르거나, 번호를 알고 있으면 직접 적습니다."
-            value={form.category.standardCategoryNo}
-            onChange={setStandardCategoryNo}
-          />
-          <TextField
-            label="전시카테고리번호 (dcatLst)"
-            hint="1개 이상. 쉼표로 구분합니다. 표준카테고리에 매핑된 것만 등록됩니다."
-            value={displayCategoryText}
-            onChange={setDisplayCategories}
-          />
-        </div>
-        <p className="mt-1 text-[11px] text-text-tertiary">
-          전시카테고리 {form.category.displayCategoryNos.length}개 인식됨
-          {form.category.displayCategoryNos.length > 0 ? ` — ${form.category.displayCategoryNos.join(", ")}` : ""}
-        </p>
+        {/* REWORK-5 ③(CEO 실측 판정: FAIL — "다시 조회 → 번호 찾아서 입력") ───
+            여기 있던 것들이 **폐기됐다**:
+              · 표준카테고리번호(scatNo) 직접 입력칸
+              · 전시카테고리번호(dcatLst) 쉼표 입력칸
+              · [표준카테고리 직접 찾기] · [전시카테고리 직접 찾기] 조회 목록
 
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <CategoryLookup
-            title="표준카테고리 직접 찾기"
-            state={standardLookup}
-            onLookup={() => void lookupCategories("standard")}
-            onPick={setStandardCategoryNo}
-          />
-          <CategoryLookup
-            title="전시카테고리 직접 찾기"
-            state={displayLookup}
-            onLookup={() => void lookupCategories("display")}
-            onPick={addDisplayCategory}
-          />
-        </div>
+            왜 지우는가 — 셀러는 롯데ON 표준 분류 번호를 알 방법이 없다. 조회를
+            눌러 목록에서 번호를 찾아 옮겨 적는 것은 "카테고리를 고르는 일"이
+            아니라 **우리가 해야 할 대조 작업을 셀러에게 떠넘긴 것**이었다.
+            게다가 번호를 손으로 넣으면 그 번호가 요구하는 전시카테고리 · 고시
+            품목코드 · 과세구분 · 안전인증 유형을 우리가 들은 적이 없어서
+            (setLotteOnStandardCategoryNo가 selected를 버린다) 셀러는 그 넷을
+            또 따로 채워야 했다.
+
+            남는 길은 하나다 — 위 [카테고리 추천] → 후보 → [선택]. 스마트스토어·
+            쿠팡이 쓰는 추천→선택과 같은 모양이고, 선택 한 번이 다섯 값을 함께
+            채운다(applyLotteOnRecommendedCategory).
+
+            🔴 카테고리는 여전히 채널별 독립이다 — 이 선택은 롯데ON 폼에만
+            들어가고 공통 categoryMappings를 건드리지 않는다. */}
+        <PickedCategorySummary
+          form={form}
+          selected={selectedCategory}
+          displayCategoryText={displayCategoryText}
+        />
       </FormSection>
 
       {/* ── ③ 옵션 — 읽기 전용(공통값) ──────────────────────────────────── */}
@@ -1432,7 +1379,7 @@ function CategoryRecommendation({
           ? "추천 — 상품과 잘 맞는 카테고리를 찾았습니다."
           : state.decision === "RECOMMEND"
             ? "추천 — 후보를 골랐지만 확신이 높지는 않습니다. 확인하고 골라 주세요."
-            : "추천할 수 있는 카테고리를 찾지 못했습니다 — 아래에서 직접 찾아 주세요."}
+            : "추천할 수 있는 카테고리를 찾지 못했습니다 — 상품정보(상품유형·연령대)를 채운 뒤 다시 추천해 주세요."}
         <span className="ml-1 text-text-tertiary">
           (표준카테고리 리프 {state.scannedLeafCount}개와 대조)
         </span>
@@ -1485,52 +1432,66 @@ function CategoryRecommendation({
   );
 }
 
-/** 조회 결과. 알아본 항목은 버튼으로, 못 알아본 것은 원문 그대로 보여준다. */
-function CategoryLookup({
-  title,
-  state,
-  onLookup,
-  onPick,
+/**
+ * REWORK-5 ③ — **고른 결과**를 읽기 전용으로 보여준다.
+ *
+ * 입력칸이 아니다. 셀러가 만질 것은 위의 [선택] 하나뿐이고, 여기는 그 한 번의
+ * 선택이 실제로 무엇을 채웠는지 **확인**하는 자리다 — 선택이 다섯 값을 한꺼번에
+ * 채운다는 말이 참인지를 셀러가 눈으로 볼 수 있어야 한다(그러지 않으면 "골랐는데
+ * 아무 일도 안 일어났다"는 직전 상태와 화면상 구분되지 않는다).
+ *
+ * 🔴 번호를 숨기지는 않는다. 판매자센터에서 대조해야 할 때 필요한 값이라
+ * 그대로 보여주되, **고쳐 넣는 칸으로는 두지 않는다.**
+ */
+function PickedCategorySummary({
+  form,
+  selected,
+  displayCategoryText,
 }: {
-  title: string;
-  state: CategoryLookupState;
-  onLookup: () => void;
-  onPick: (code: string) => void;
+  form: LotteOnChannelForm;
+  selected: ReturnType<typeof resolveLotteOnSelectedCategory>;
+  displayCategoryText: string;
 }) {
+  if (!isLotteOnCategoryChosen(form)) {
+    return (
+      <p className="rounded-md border border-dashed border-border px-3 py-2 text-[11px] text-text-tertiary">
+        아직 고른 카테고리가 없습니다 — 위 [카테고리 추천]을 눌러 후보에서 하나를 고르면 표준카테고리 · 전시카테고리 ·
+        고시 품목코드 · 과세구분 · 요구 안전인증이 한 번에 채워집니다.
+      </p>
+    );
+  }
+  const rows: { label: string; value: string }[] = [
+    { label: "표준카테고리 (scatNo)", value: `${selected?.name ? `${selected.name} · ` : ""}${form.category.standardCategoryNo}` },
+    {
+      label: "전시카테고리 (dcatLst)",
+      value: `${form.category.displayCategoryNos.length}개 — ${displayCategoryText || form.category.displayCategoryNos.join(", ")}`,
+    },
+  ];
+  if (selected?.noticeItemCodes.length) {
+    rows.push({ label: "고시 품목코드 (pdItmsCd)", value: selected.noticeItemCodes.join(" / ") });
+  }
+  if (form.codes.taxTypeCode) {
+    rows.push({ label: "과세구분 (tdfCd)", value: form.codes.taxTypeCode });
+  }
+  if (selected?.safetyTypeCodes.length) {
+    rows.push({ label: "요구 안전인증 (sftyAthnLst)", value: selected.safetyTypeCodes.join(" / ") });
+  }
   return (
-    <div className="rounded-md border border-dashed border-border px-3 py-2">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-medium text-text-secondary">{title}</span>
-        <Button variant="secondary" size="sm" disabled={state.loading} onClick={onLookup}>
-          {state.loading ? "조회 중…" : "조회"}
-        </Button>
-      </div>
-      {state.error && <p className="mt-2 text-[11px] text-error">{state.error}</p>}
-      {state.options.length > 0 && (
-        <ul className="mt-2 max-h-40 space-y-0.5 overflow-auto">
-          {state.options.map((option) => (
-            <li key={option.code}>
-              <button
-                type="button"
-                onClick={() => onPick(option.code)}
-                className="w-full truncate rounded px-1 py-0.5 text-left text-[11px] text-text-secondary hover:bg-background"
-              >
-                <span className="font-mono text-text-primary">{option.code}</span> {option.name}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {state.unrecognized.length > 0 && (
-        <div className="mt-2">
-          <p className="text-[11px] text-warning">
-            응답 {state.unrecognized.length}건의 필드 구조를 아직 확인하지 못했습니다 — 원문을 그대로 보여줍니다.
-          </p>
-          <pre className="mt-1 max-h-40 overflow-auto rounded bg-background p-2 text-[10px] text-text-tertiary">
-            {JSON.stringify(state.unrecognized.slice(0, 5), null, 2)}
-          </pre>
-        </div>
-      )}
+    <div className="rounded-md border border-border bg-background px-3 py-2">
+      <p className="text-[11px] font-medium text-text-secondary">
+        선택한 카테고리가 채운 값 — 셀러가 다시 입력하지 않습니다
+      </p>
+      <dl className="mt-1.5 space-y-1">
+        {rows.map((row) => (
+          <div key={row.label} className="flex gap-2 text-[11px]">
+            <dt className="w-44 shrink-0 text-text-tertiary">{row.label}</dt>
+            <dd className="min-w-0 break-words font-mono text-text-primary">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-1.5 text-[11px] text-text-tertiary">
+        다른 카테고리로 바꾸려면 위 [카테고리 추천]에서 다시 고르면 됩니다.
+      </p>
     </div>
   );
 }

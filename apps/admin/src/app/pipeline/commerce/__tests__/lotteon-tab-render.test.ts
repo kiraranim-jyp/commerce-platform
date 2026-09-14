@@ -108,8 +108,12 @@ describe("롯데ON 탭 — 실제로 그려지는 화면", () => {
     const labels = inputLabels(renderTab());
     // 라벨마다 롯데ON API 필드명을 괄호로 함께 적는다 — 셀러가 판매자센터에서
     // 같은 이름을 찾을 수 있어야 하고, 우리가 지어낸 이름이 아니라는 표시다.
-    expect(labels).toContain("표준카테고리번호 (scatNo)");
-    expect(labels).toContain("전시카테고리번호 (dcatLst)");
+    /* REWORK-5 ③(CEO 실측 판정: FAIL — "다시 조회 → 번호 찾아서 입력") —
+       표준/전시 카테고리번호는 이제 **입력칸이 아니다.** 셀러가 번호를 찾아
+       적는 UX를 폐기하고 [카테고리 추천] → [선택] 하나로 남겼다. 그래서 이
+       두 줄은 "있어야 한다"가 아니라 **"없어야 한다"**로 뒤집힌다. */
+    expect(labels).not.toContain("표준카테고리번호 (scatNo)");
+    expect(labels).not.toContain("전시카테고리번호 (dcatLst)");
     expect(labels).toContain("상품품목코드 (pdItmsCd)");
     expect(labels).toContain("고시 항목 (pdItmsArtlLst)");
     expect(labels).toContain("안전인증 목록 (sftyAthnLst)");
