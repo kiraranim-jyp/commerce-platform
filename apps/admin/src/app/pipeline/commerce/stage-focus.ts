@@ -98,15 +98,13 @@ export type PrepareSurface =
   | "SOURCE"
   /** 이미지 편집기. */
   | "IMAGES"
-  /** 카테고리 — 실제 확정은 채널 화면에서만 가능하다(등록 payload에 들어가는 값). */
-  | "CATEGORY"
   /**
    * UX 2.5(CEO 지시, 2026-09-11) — 가격 계산기(PriceEditor).
    *
-   * 카테고리와 정반대다. 카테고리는 채널마다 코드가 달라서 채널 화면에서만
-   * 확정할 수 있지만, 판매가는 resolveListingPrice()가 내는 **하나의 값**이라
-   * 채널이 고를 것이 없다. 그래서 편집기는 여기 하나만 있고 채널 화면에는
-   * 그 결과를 읽기전용으로 보여준다.
+   * 판매가는 resolveListingPrice()가 내는 **하나의 값**이라 채널이 고를 것이
+   * 없다. 그래서 편집기는 여기 하나만 있고 채널 화면에는 그 결과를 읽기전용으로
+   * 보여준다(3층 구조 재정렬 이후 이 성질을 갖는 유일한 항목이다 — 카테고리는
+   * 정반대라서 상품 수준 체크리스트에서 아예 빠졌다).
    */
   | "PRICE"
   /** 채널별 필수 정보. */
@@ -235,9 +233,9 @@ export function stepInteraction(step: BigStep, currentStageKey: BigStepKey): Ste
  * 항목을 하나 더 만들었을 때 본문에서만 조용히 사라진다.
  */
 const PREPARE_SURFACE_BY_KEY: Record<string, PrepareSurface> = {
-  // 카테고리 확정 UI는 채널 화면에만 있다(등록 payload의 leafCategoryId /
-  // displayCategoryCode를 만드는 값이라 채널별 후보 목록이 필요하다).
-  category: "CATEGORY",
+  // 3층 구조 재정렬(CEO 확정, 2026-09-14) — `category` 키가 사라졌다.
+  // ③ 체크리스트에 카테고리 항목이 더 이상 없기 때문이다(workflow.ts 참고).
+  // 카테고리 확정 UI는 예전과 같이 채널 화면에만 있다.
   // 가격은 채널별 후보가 없다 — 값이 하나뿐이라 편집기도 하나뿐이다(PRICE 주석 참고).
   price: "PRICE",
   product_info: "SOURCE",
@@ -261,7 +259,6 @@ export function prepareSurfaceOf(subStepKey: string): PrepareSurface {
 export const PREPARE_SURFACE_LABEL: Record<PrepareSurface, string> = {
   SOURCE: "Source Data",
   IMAGES: "이미지",
-  CATEGORY: "카테고리",
   // PriceEditor가 자기 제목으로 쓰는 문구와 같은 말이다 — 접었을 때와 펼쳤을 때
   // 이름이 달라지면 셀러는 둘을 다른 화면으로 읽는다.
   //

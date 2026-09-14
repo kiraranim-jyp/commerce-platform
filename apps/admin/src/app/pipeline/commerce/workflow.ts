@@ -174,10 +174,15 @@ export interface MarketSignal {
   loadFailed: boolean;
 }
 
-/** ③ 등록 준비 — 전부 product/categoryMappings/채널 준비 상태에서 읽어낸다. */
+/**
+ * ③ 등록 준비 — 전부 product/채널 준비 상태에서 읽어낸다.
+ *
+ * 3층 구조 재정렬(CEO 확정, 2026-09-14) — `categoryVerified`가 **여기서 사라졌다.**
+ * 상품 수준은 "커머스 카테고리가 확정됐는가"를 묻지 않는다(자세한 이유는
+ * buildRegistrationPreparing의 주석). 카테고리 게이트는 채널별 readiness에만
+ * 남는다.
+ */
 export interface PrepareSignal {
-  /** isVerifiedCategorySelected로 확정된 카테고리가 있는가. state만 보면 CP001이 재발한다. */
-  categoryVerified: boolean;
   /** 상품명·브랜드가 채워졌는가. */
   productInfoOk: boolean;
   productInfoMissing: string | null;
@@ -537,19 +542,28 @@ function buildRegistrationPreparing(signal: PrepareSignal, collectionDone: boole
   };
 
   const subSteps: SubStep[] = [
-    // 카테고리가 맨 앞인 이유: 실제 등록 payload에 들어가는 값이고
-    // (smartstore leafCategoryId / coupang displayCategoryCode), 이게 비면
-    // 아래 항목을 아무리 채워도 register API가 CP001로 거부한다.
-    item(
-      "category",
-      "카테고리 확인",
-      signal.categoryVerified,
-      "확정됨",
-      "등록할 카테고리를 확정해주세요",
-      "smartstore",
-    ),
-    // UX 2.5(CEO 지시, 2026-09-11) — 판매가격이 카테고리 바로 다음에 오는 것은
-    // 배치 취향이 아니라 두 항목이 같은 성질이기 때문이다: 둘 다 등록 payload에
+    // 3층 구조 재정렬(CEO 확정, 2026-09-14) — **"카테고리 확인" 항목을 여기서
+    // 뺀다.** 여기 있던 판정은 `categoryMappings의 어느 하나라도 확정`(.some())
+    // 이었고, 그래서 쿠팡만 확정한 셀러에게 상품 수준이 "확정됨"이라고 말했다.
+    // 고치는 방향을 .every()로 돌리면 반대쪽 사고가 난다: 11번가처럼 등록
+    // 기능이 없는 채널 때문에 영원히 안 열리거나, 스마트스토어 하나만 팔려는
+    // 셀러의 흐름이 쿠팡 때문에 닫힌다.
+    //
+    // 답은 셋 중 하나를 고르는 것이 아니라 **묻지 않는 것**이다. 카테고리는
+    // 채널마다 코드가 다른 채널의 값이므로(smartstore leafCategoryId /
+    // coupang displayCategoryCode / lotteon scatNo+dcatLst) "이 상품의
+    // 카테고리가 확정됐는가"라는 상품 수준 질문 자체가 성립하지 않는다.
+    //
+    // 등록이 느슨해지지 않는다 — 카테고리 없는 등록을 막는 게이트는 원래
+    // 여기가 아니라 채널 쪽에 각각 서 있고 그대로 남는다:
+    //   · CommerceWorkspace.effectiveListingStatus — isVerifiedCategorySelected
+    //     (그 채널의 카테고리)가 없으면 DRAFT라 등록 모달이 열리지 않는다
+    //   · readiness.ts computeChecklistReadiness — "카테고리" required 항목을
+    //     그 채널의 categoryMappings[platform]으로 판정한다
+    //   · 롯데ON — 서버 validateLotteOnPayload가 scatNo/dcatLst를 막는다
+    //
+    // UX 2.5(CEO 지시, 2026-09-11) — 판매가격이 맨 앞에 오는 것은
+    // 배치 취향이 아니라 성질 때문이다: 등록 payload에
     // 실제로 들어가는 값이고, 비면 register API가 거부한다(가격 쪽은
     // resolveListingPrice()가 UNRESOLVED를 내는 순간 어댑터의 "판매가격" 검증이
     // ERROR가 된다 — packages/marketplace의 각 adapter).

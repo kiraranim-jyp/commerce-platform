@@ -7,6 +7,7 @@ import type {
   CanonicalProductVariant,
   CommerceCategoryPathResult,
   FieldSource,
+  LotteOnChannelInfo,
   PlatformId,
 } from "@commerce/shared";
 import {
@@ -103,6 +104,7 @@ import {
   type WorkflowNavTarget,
 } from "./commerce/workflow";
 import { SourceDataView } from "./commerce/SourceDataView";
+import { CommerceManagementSection } from "./commerce/CommerceManagementSection";
 import type { WorkspaceItem } from "./types";
 
 /**
@@ -947,6 +949,24 @@ export function CommerceWorkspace({
     );
   }
 
+  /**
+   * 3층 구조 재정렬(CEO 지시, 2026-09-14) — 롯데ON **커머스 관리정보**를 상품에
+   * 저장한다.
+   *
+   * 바로 위 updateChannelPriceKrw와 같은 자리다: 채널에만 적용되는 값을 상품
+   * 수준에 두고, 다른 채널과 공통 상품정보는 건드리지 않는다. 저장 경로도 같다 —
+   * setProduct가 page.tsx의 product 상태를 바꾸면 그 상태가 sessionStorage와
+   * product_snapshots.workspace jsonb로 이미 저장되고 있다(새 API도, 새 테이블도,
+   * 마이그레이션도 없다).
+   *
+   * 🔴 공통 카테고리(categoryMappings)는 여기서 절대 바뀌지 않는다 — 이 함수가
+   * 쓰는 것은 product.lotteOnChannelInfo 하나뿐이고, 그 안의 카테고리는
+   * CategorySelection이 아니라 롯데ON 번호 문자열이라 섞일 타입조차 없다.
+   */
+  function updateLotteOnChannelInfo(info: LotteOnChannelInfo) {
+    setProduct((prev) => ({ ...prev, lotteOnChannelInfo: info }));
+  }
+
   /** CEO 실측 리포트(2026-08-03) — Shopify Markets 스토어는 공개 상품 JSON의
    * 통화/가격이 요청 지역(서버 리전)에 따라 달라지는 경우가 있어(presentment
    * pricing), 자동 크롤링이 실제 판매 통화/금액과 다른 값을 가져올 수 있다.
@@ -1463,14 +1483,16 @@ export function CommerceWorkspace({
    * 여기서 하는 일은 "지금 이미 존재하는 값들을 workflow.ts가 읽을 수 있는
    * 모양으로 옮기는 것"뿐이다. 새 판정도, 새 게이트도, 저장되는 상태도 없다.
    * ①은 이 컴포넌트가 마운트된 시점에 이미 끝나 있고(page.tsx가 수집 중
-   * 화면을 따로 보여준다), ②는 패널이 올려보낸 marketSignal, ③은 product과
-   * 카테고리 확정 여부, ④는 채널별 등록 상태에서 그대로 나온다.
+   * 화면을 따로 보여준다), ②는 패널이 올려보낸 marketSignal, ③은 product,
+   * ④는 채널별 등록 상태에서 그대로 나온다.
    */
   const workflow = useMemo(() => {
-    // 카테고리는 isVerifiedCategorySelected로만 판정한다 — state만 보면
-    // 확정되지 않은 카테고리로 등록을 시도해 register API가 CP001로 거부하는
-    // 버그가 재발한다(packages/marketplace/src/category-field.ts 참고).
-    const categoryVerified = Object.values(categoryMappings).some(isVerifiedCategorySelected);
+    // 3층 구조 재정렬(CEO 확정, 2026-09-14) — 여기 있던 categoryVerified 계산이
+    // 사라졌다. 상품 수준은 커머스 카테고리 확정 여부를 묻지 않는다(근거는
+    // workflow.ts buildRegistrationPreparing의 주석). 카테고리 없는 등록을 막는
+    // 게이트는 effectiveListingStatus와 채널별 computeChecklistReadiness에
+    // 그대로 남아 있다. 그래서 의존성에서도 categoryMappings가 빠진다 — 카테고리가
+    // 바뀌면 mergedReadiness가 먼저 바뀌고, 그 값은 아래에 그대로 들어 있다.
     const hasTitle = Boolean(product.title.value.trim());
     const hasBrand = Boolean(product.brand.value.trim());
     // ④를 잠그는 데 쓰는 "필수 정보"는 **실제로 등록할 수 있는 채널**의 것만 센다.
@@ -1506,7 +1528,6 @@ export function CommerceWorkspace({
       market:
         marketSignal.notStarted && snapshotId == null ? { ...marketSignal, notStarted: false } : marketSignal,
       prepare: {
-        categoryVerified,
         productInfoOk: hasTitle && hasBrand,
         productInfoMissing: !hasTitle ? "상품명을 확인해주세요" : !hasBrand ? "브랜드를 확인해주세요" : null,
         optionGroupCount: product.optionGroups?.length ?? 0,
@@ -1521,7 +1542,7 @@ export function CommerceWorkspace({
       },
       register: { channels },
     });
-  }, [product, items, categoryMappings, mergedReadiness, listingStates, marketSignal, snapshotId, listingPrice]);
+  }, [product, items, mergedReadiness, listingStates, marketSignal, snapshotId, listingPrice]);
 
   /** 작업 Flow의 항목을 눌렀을 때의 이동. 탭 전환과 스크롤은 이미 있는 경로를 그대로 쓴다. */
   function navigateWorkflow(target: WorkflowNavTarget) {
@@ -2445,7 +2466,22 @@ export function CommerceWorkspace({
               focus={stageFocus}
               workflow={workflow}
               channels={registrationChannels}
-              categoryVerified={Object.values(categoryMappings).some(isVerifiedCategorySelected)}
+              /* 3층 구조 재정렬(CEO 지시, 2026-09-14) — 여기 있던
+                 `categoryVerified={...some(isVerifiedCategorySelected)}`가 이
+                 슬롯으로 바뀌었다. 상품 정보는 "커머스 카테고리가 확정됐는가"를
+                 묻지 않는다(workflow.ts의 근거 주석 참고) — 대신 "이 상품을
+                 채널마다 어떻게 관리하고 있는가"를 읽어준다. */
+              commerceManagement={
+                <CommerceManagementSection
+                  product={product}
+                  channels={WORKSPACE_PLATFORM_ORDER.map((id) => ({
+                    id,
+                    label: PLATFORM_ADAPTERS[id].label,
+                  }))}
+                  onGoToChannel={setTab}
+                  onGoToLotteOn={() => setTab(LOTTEON_TAB)}
+                />
+              }
               onGoToChannel={setTab}
               /* UX 2.5 — 바깥(판단 카드·해외 가격비교·상단 Flow)에서 온 "가격 좀
                  보자"는 요청. 카운터가 올라가면 StageBody가 가격 작업면을 펼친다. */
@@ -2586,6 +2622,12 @@ export function CommerceWorkspace({
                  CategorySelection이 없으므로(lotteon-channel-form.ts) 롯데ON에서
                  고른 번호가 categoryMappings로 되돌아 흘러갈 경로 자체가 없다. */
               commonCategorySources={lotteOnCommonCategorySources}
+              /* 3층 구조 재정렬(CEO 지시, 2026-09-14) — 롯데ON 관리정보는 이제
+                 상품 수준에 있다. 패널은 이 값으로 폼을 초기화하고, 입력이
+                 바뀌면 그대로 올려보낸다(스마트스토어·쿠팡의
+                 channelPriceOverrides와 같은 층·같은 저장 경로다). */
+              channelInfo={product.lotteOnChannelInfo}
+              onChannelInfoChange={updateLotteOnChannelInfo}
               /* 공통 정보를 고치는 화면은 상품정보 하나뿐이다. */
               onEditCommonInfo={() => setTab("source")}
               /* 탭 배지/준비상태 줄이 쓸 값. 패널이 서버 검증 결과를 센 값을

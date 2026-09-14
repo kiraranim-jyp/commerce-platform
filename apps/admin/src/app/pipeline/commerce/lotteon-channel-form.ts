@@ -1,4 +1,4 @@
-import type { CanonicalProduct, PlatformId } from "@commerce/shared";
+import type { CanonicalProduct, LotteOnChannelInfo, PlatformId } from "@commerce/shared";
 import type { CategorySelection } from "@commerce/category";
 import {
   hasLotteOnSellableOptions,
@@ -125,6 +125,99 @@ export const EMPTY_LOTTEON_CHANNEL_FORM: LotteOnChannelForm = {
   },
   codes: { originCode: "", taxTypeCode: "01", brandNo: "", externalProductNo: "" },
 };
+
+/* ── 저장 ↔ 폼 ──────────────────────────────────────────────────────────────
+ *
+ * 3층 구조 재정렬(CEO 지시, 2026-09-14). 예전에는 위 폼이 컴포넌트 로컬
+ * useState에만 있어서 **탭을 벗어나면 사라졌다**. 이제 같은 값이 상품 수준
+ * (CanonicalProduct.lotteOnChannelInfo)에 저장되고, 탭에 다시 들어오면 여기서
+ * 폼으로 되돌아온다.
+ *
+ * 두 타입의 필드 이름을 일부러 1:1로 맞췄다 — 이름이 갈라지면 "저장은 됐는데
+ * 화면에 안 돌아오는" 버그가 조용히 생긴다. 그래도 매핑을 명시적으로 적는
+ * 이유는 저장 타입이 @commerce/shared에 있어서(다른 패키지가 읽는다) 폼 쪽
+ * 사정으로 모양이 바뀌면 안 되기 때문이다.
+ */
+
+/** 폼 → 저장. 화면이 들고 있는 문자열을 그대로 옮긴다(해석하지 않는다). */
+export function toLotteOnChannelInfo(form: LotteOnChannelForm): LotteOnChannelInfo {
+  return {
+    category: {
+      standardCategoryNo: form.category.standardCategoryNo,
+      displayCategoryNos: [...form.category.displayCategoryNos],
+    },
+    notice: { itemCode: form.notice.itemCode, articlesText: form.notice.articlesText },
+    certification: {
+      safetyText: form.certification.safetyText,
+      importProxyCode: form.certification.importProxyCode,
+    },
+    delivery: { ...form.delivery },
+    codes: { ...form.codes },
+  };
+}
+
+/**
+ * 저장 → 폼. 키가 없는 과거 스냅샷(이 필드를 모르던 시절)에서는 빈 폼이 나온다 —
+ * 섹션 단위로 기본값과 합치므로, 나중에 필드가 늘어도 옛 스냅샷이 `undefined`
+ * 문자열을 입력칸에 넣지 않는다.
+ */
+export function fromLotteOnChannelInfo(info: LotteOnChannelInfo | undefined | null): LotteOnChannelForm {
+  if (!info) return EMPTY_LOTTEON_CHANNEL_FORM;
+  return {
+    category: { ...EMPTY_LOTTEON_CHANNEL_FORM.category, ...info.category },
+    notice: { ...EMPTY_LOTTEON_CHANNEL_FORM.notice, ...info.notice },
+    certification: { ...EMPTY_LOTTEON_CHANNEL_FORM.certification, ...info.certification },
+    delivery: { ...EMPTY_LOTTEON_CHANNEL_FORM.delivery, ...info.delivery },
+    codes: { ...EMPTY_LOTTEON_CHANNEL_FORM.codes, ...info.codes },
+  };
+}
+
+/** 상품 정보의 「커머스 관리정보」가 읽는 한 줄. 값이 없으면 null이다. */
+export interface LotteOnManagedValueRow {
+  label: string;
+  value: string | null;
+}
+
+/**
+ * 상품 정보 화면에 보여줄 롯데ON 관리정보 — **읽기 전용 요약**.
+ *
+ * 🔴 카테고리는 여기 없다(CEO 지시). 저장 타입에는 들어 있지만 이 함수가
+ * 내보내지 않으므로, 상품 정보 화면이 롯데ON 카테고리를 보여주거나 고칠 경로가
+ * 함수 수준에서 존재하지 않는다. 카테고리는 롯데ON 탭에서만 관리한다.
+ */
+export function summarizeLotteOnManagedValues(
+  info: LotteOnChannelInfo | undefined | null,
+): { rows: LotteOnManagedValueRow[]; filledCount: number } {
+  /**
+   * 🔴 info가 없으면 **빈 폼으로 채우지 않는다.** EMPTY_LOTTEON_CHANNEL_FORM에는
+   * 관행 기본값(평일 마감 1400 · 과세 01)이 들어 있어서, 그걸로 메우면 아직
+   * 아무것도 입력하지 않은 상품이 "2개 항목이 저장돼 있습니다"로 읽힌다.
+   * "입력한 적 없음"과 "기본값으로 입력함"은 셀러에게 다른 문장이다.
+   */
+  const saved = info ? fromLotteOnChannelInfo(info) : null;
+  const text = (value: string | undefined) => (value?.trim() ? value.trim() : null);
+  const articles = parseNoticeArticles(saved?.notice.articlesText ?? "");
+  const certifications = parseSafetyCertifications(saved?.certification.safetyText ?? "");
+  const rows: LotteOnManagedValueRow[] = [
+    { label: "고시 품목코드", value: text(saved?.notice.itemCode) },
+    { label: "고시 항목", value: articles.length > 0 ? `${articles.length}건` : null },
+    // 🔴 인증번호 원문은 여기에 적지 않는다 — 건수만 센다.
+    { label: "안전인증", value: certifications.length > 0 ? `${certifications.length}건` : null },
+    { label: "수입대행코드", value: text(saved?.certification.importProxyCode) },
+    { label: "출고지번호", value: text(saved?.delivery.outboundPlaceNo) },
+    { label: "반품지번호", value: text(saved?.delivery.returnPlaceNo) },
+    { label: "배송비정책번호", value: text(saved?.delivery.deliveryCostPolicyNo) },
+    { label: "배송가능지역코드", value: text(saved?.delivery.deliveryRegionGroupCode) },
+    { label: "택배사코드", value: text(saved?.delivery.courierCode) },
+    { label: "반품택배사코드", value: text(saved?.delivery.returnCourierCode) },
+    { label: "평일 발송마감시간", value: text(saved?.delivery.weekdayCloseTime) },
+    { label: "원산지코드", value: text(saved?.codes.originCode) },
+    { label: "과세유형코드", value: text(saved?.codes.taxTypeCode) },
+    { label: "브랜드번호", value: text(saved?.codes.brandNo) },
+    { label: "업체상품번호", value: text(saved?.codes.externalProductNo) },
+  ];
+  return { rows, filledCount: rows.filter((row) => row.value != null).length };
+}
 
 /** "코드:값" 줄 단위 입력 → 고시 항목 배열. 코드체계를 우리가 만들지 않으므로
  * 셀러가 롯데ON 문서/판매자센터에서 본 코드를 그대로 적는다. */

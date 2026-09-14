@@ -133,6 +133,44 @@ export function getSelectedImageUrl(image: CanonicalProductImage): string {
 }
 
 /**
+ * 롯데ON **커머스 관리정보** — 상품 수준에 저장되는 롯데ON 전용 값.
+ *
+ * 세 가지가 여기에 **없다**는 것이 이 타입의 존재 이유다: 상품명·가격·옵션·
+ * 재고·이미지 같은 공통 상품정보(CanonicalProduct가 이미 갖고 있다), MI(판매
+ * 판단), 그리고 스마트스토어·쿠팡의 카테고리(categoryMappings). 여기 있는
+ * 값은 전부 "롯데ON에만 있고 롯데ON 판매자센터에서만 발급되는 것"이다.
+ *
+ * 전부 문자열/문자열배열인 이유: 이 값들의 코드체계를 우리가 만들지 않는다.
+ * 셀러가 롯데ON에서 본 코드를 그대로 적고, 우리는 그것을 해석하지 않고 보관해
+ * 그대로 등록 payload에 넣는다. 그래서 jsonb 직렬화가 손실 없이 왕복한다.
+ */
+export interface LotteOnChannelInfo {
+  /** 🔴 롯데ON 탭 전용. 상품 정보 화면은 이 키를 읽지도 보여주지도 않는다. */
+  category: {
+    /** 표준카테고리번호(scatNo). */
+    standardCategoryNo: string;
+    /** 전시카테고리번호(dcatLst) — 1개 이상. */
+    displayCategoryNos: string[];
+  };
+  /** 상품정보제공고시 — pdItmsCd + pdItmsArtlLst[]의 원문 입력. */
+  notice: { itemCode: string; articlesText: string };
+  /** 안전인증 — sftyAthnLst[]의 원문 입력 + impPrxCd. 인증번호는 생성하지 않는다. */
+  certification: { safetyText: string; importProxyCode: string };
+  /** 배송 — 전부 롯데ON 판매자센터에 선등록해야 생기는 번호다. */
+  delivery: {
+    outboundPlaceNo: string;
+    returnPlaceNo: string;
+    deliveryCostPolicyNo: string;
+    deliveryRegionGroupCode: string;
+    courierCode: string;
+    returnCourierCode: string;
+    weekdayCloseTime: string;
+  };
+  /** 그 밖의 롯데ON 코드 — 원산지·과세·브랜드번호·업체상품번호. */
+  codes: { originCode: string; taxTypeCode: string; brandNo: string; externalProductNo: string };
+}
+
+/**
  * 플랫폼과 무관한 "기준" 상품 데이터. 스마트스토어/쿠팡/11번가 Preview는 전부
  * 이 하나의 구조에서 PlatformAdapter를 통해 파생된다 — 플랫폼마다 별도로 상품
  * 데이터를 복제하지 않는다(packages/marketplace의 어댑터 설계 원칙).
@@ -211,6 +249,30 @@ export interface CanonicalProduct {
    * 필요 없다 — 대신 이 필드를 모르는 과거 스냅샷을 위해
    * backfillCanonicalProduct()가 빈 객체로 초기화한다. */
   channelPriceOverrides?: Partial<Record<PlatformId, ProvenanceField<number>>>;
+  /** 3층 구조 재정렬(CEO 지시, 2026-09-14) — 롯데ON **커머스 관리정보**.
+   *
+   * 왜 여기인가: 이 값들은 그때까지 LotteOnRegistrationPanel의 컴포넌트 로컬
+   * useState에만 있었다. 탭을 벗어나면 컴포넌트가 언마운트되면서 고시·인증·
+   * 배송번호가 전부 사라졌고, 그래서 "상품정보에 롯데온 내용은 하나도 없다"가
+   * 사실이었다. 상품 수준으로 올리면 스마트스토어·쿠팡의 channelPriceOverrides
+   * 와 정확히 같은 층에 서고, page.tsx가 이미 product 전체를
+   * product_snapshots.workspace jsonb로 저장하므로 **새 저장 경로도 DB
+   * 마이그레이션도 필요 없다**(channelPriceOverrides가 그 선례다).
+   *
+   * 왜 PlatformId가 아닌가: 롯데ON은 PlatformId가 아니다(CPO 확정). PlatformId를
+   * 넓히면 PLATFORM_ADAPTERS를 인덱싱하는 모든 자리가 롯데ON을 어댑터로 요구하게
+   * 된다 — 그래서 채널 전용 키 하나로 따로 둔다.
+   *
+   * 🔴 `category`의 취급: 값 자체는 여기 보관되지만(보관하지 않으면 탭을 벗어날
+   * 때 사라지는 그 버그가 그대로 남는다) **상품 정보 화면은 이 키를 읽지도
+   * 보여주지도 않는다** — 카테고리는 롯데ON 탭에서만 관리한다(CEO 지시).
+   * 공통 카테고리(categoryMappings)로 흘러갈 경로도 없다: 여기는 문자열
+   * 번호일 뿐이고 CategorySelection이 아니다.
+   *
+   * 키가 없다 = 이 상품에 롯데ON 관리정보를 아직 입력하지 않았다. 빈 객체로
+   * 초기화하지 않는 이유도 같다 — "입력한 적 없음"과 "전부 빈 값으로 입력함"은
+   * 화면에서 다른 문장이다. */
+  lotteOnChannelInfo?: LotteOnChannelInfo;
   /** P-3-2(대표님 지시, 2026-08-28)에서 상품별 입력으로 추가됐던 관세/부가세.
    *
    * MI-COST-POLICY-1(대표님 결정, 2026-09-12) — **읽는 코드가 한 곳도 없다.**

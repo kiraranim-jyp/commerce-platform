@@ -71,7 +71,7 @@ export function StageBody({
   marketEvidence,
   archive,
   channels,
-  categoryVerified,
+  commerceManagement,
   onGoToChannel,
   openPriceSurfaceRequest = 0,
   openMarketEvidenceRequest = 0,
@@ -84,7 +84,17 @@ export function StageBody({
   /** 변경 이력·백로그처럼 단계와 무관한 기록. 항상 맨 아래 접힘. */
   archive: React.ReactNode;
   channels: RegistrationChannel[];
-  categoryVerified: boolean;
+  /**
+   * 3층 구조 재정렬(CEO 지시, 2026-09-14) — 상품 정보의 **세 번째 층**:
+   * 「커머스 관리정보」(스마트스토어 · 쿠팡 · 롯데ON).
+   *
+   * 여기 있던 `categoryVerified: boolean`을 이 슬롯이 대체한다. 상품 정보가
+   * 커머스에 대해 물어야 하는 것은 "카테고리가 확정됐는가"(채널의 질문)가
+   * 아니라 "이 상품을 각 채널에 어떻게 관리하고 있는가"이기 때문이다.
+   *
+   * 🔴 카테고리는 이 노드에 들어가지 않는다 — 카테고리는 채널 탭에서 관리한다.
+   */
+  commerceManagement: React.ReactNode;
   /** 채널 화면으로 데려간다. 등록을 여기서 실행하지 않는다 — 등록 게이트는
    * 지금까지와 같이 그 화면 하나가 책임진다(ActionCenter와 같은 원칙). */
   onGoToChannel: (id: PlatformId) => void;
@@ -168,7 +178,6 @@ export function StageBody({
           onPick={setPickedKey}
           surfaces={surfaces}
           channels={channels}
-          categoryVerified={categoryVerified}
           onGoToChannel={onGoToChannel}
         />
       )}
@@ -243,6 +252,18 @@ export function StageBody({
             {surfaces.source}
           </CollapsibleSection>
         )}
+        {/* 3층 구조 재정렬(CEO 지시, 2026-09-14) — 상품 정보의 세 번째 층.
+            공통 상품정보(위 Source Data) · MI(바깥 판단 카드) 옆에 **커머스
+            관리정보**가 선다: 스마트스토어 · 쿠팡 · 롯데ON을 같은 레벨로 둔다.
+            지금까지 롯데ON은 이 층에 아예 없었고(탭 로컬 useState라 탭을
+            벗어나면 사라졌다), 그래서 "상품정보에 롯데온 내용은 하나도 없다"가
+            사실이었다. */}
+        <CollapsibleSection
+          title="🛒 커머스 관리정보"
+          summary="이 상품을 채널마다 어떻게 관리하고 있는지 — 스마트스토어 · 쿠팡 · 롯데ON (카테고리는 각 채널 탭에서 관리합니다)"
+        >
+          {commerceManagement}
+        </CollapsibleSection>
         {archive}
       </div>
     </div>
@@ -336,7 +357,6 @@ function PrepareStage({
   onPick,
   surfaces,
   channels,
-  categoryVerified,
   onGoToChannel,
 }: {
   subSteps: SubStep[];
@@ -346,7 +366,6 @@ function PrepareStage({
   onPick: (key: string) => void;
   surfaces: StageSurfaces;
   channels: RegistrationChannel[];
-  categoryVerified: boolean;
   onGoToChannel: (id: PlatformId) => void;
 }) {
   const doneCount = subSteps.filter((s) => s.status === "DONE" || s.status === "DONE_NO_DATA").length;
@@ -390,7 +409,6 @@ function PrepareStage({
                     subStepKey={sub.key}
                     surfaces={surfaces}
                     channels={channels}
-                    categoryVerified={categoryVerified}
                     onGoToChannel={onGoToChannel}
                   />
                 </div>
@@ -407,13 +425,11 @@ function PrepareWorkSurface({
   subStepKey,
   surfaces,
   channels,
-  categoryVerified,
   onGoToChannel,
 }: {
   subStepKey: string;
   surfaces: StageSurfaces;
   channels: RegistrationChannel[];
-  categoryVerified: boolean;
   onGoToChannel: (id: PlatformId) => void;
 }) {
   const surface = prepareSurfaceOf(subStepKey);
@@ -433,25 +449,10 @@ function PrepareWorkSurface({
       </div>
     );
   }
-  if (surface === "CATEGORY") {
-    return (
-      <div className="space-y-2 text-xs">
-        {/* 카테고리는 화면 표시용 분류가 아니라 등록 payload에 실제로 들어가는
-            값이다(smartstore leafCategoryId / coupang displayCategoryCode).
-            그래서 확정은 채널별 후보 목록이 있는 채널 화면에서만 가능하다 —
-            여기에 또 하나의 선택 UI를 만들면 두 목록이 갈라진다. */}
-        <p className={categoryVerified ? "text-success" : "font-medium text-text-primary"}>
-          {categoryVerified
-            ? "✓ 등록할 카테고리가 확정되어 있습니다."
-            : "카테고리는 채널마다 코드가 달라서 채널 화면에서 확정합니다."}
-        </p>
-        <p className="text-text-tertiary">
-          확정 전에는 ④ 커머스 등록이 열리지 않습니다 — 카테고리가 비면 등록 API가 거부하기 때문입니다.
-        </p>
-        <ChannelJumpList channels={channels} onGoToChannel={onGoToChannel} />
-      </div>
-    );
-  }
+  // 3층 구조 재정렬(CEO 확정, 2026-09-14) — "카테고리" 작업면이 여기서 사라졌다.
+  // ③ 체크리스트에 카테고리 항목 자체가 없어졌기 때문이다(workflow.ts 참고):
+  // 상품 수준은 커머스 카테고리 확정 여부를 묻지 않는다. 카테고리를 고르는 곳은
+  // 지금도 예전과 같이 각 채널 탭 하나씩이고, 그 게이트도 그대로 남아 있다.
   return <>{surfaces.source}</>;
 }
 

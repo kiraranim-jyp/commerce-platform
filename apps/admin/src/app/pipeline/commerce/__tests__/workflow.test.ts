@@ -54,7 +54,9 @@ const JUDGED: MarketSignal = {
 const MARKET_LOAD_FAILED: MarketSignal = { ...MARKET_SIGNAL_NOT_STARTED, notStarted: false, loadFailed: true };
 
 const PREPARED: PrepareSignal = {
-  categoryVerified: true,
+  // 3층 구조 재정렬(CEO 확정, 2026-09-14) — categoryVerified가 이 신호에서
+  // 사라졌다. ③이 아직 안 끝난 상태를 만들 때 쓰던 그 값이라, 아래 케이스들은
+  // requiredFieldBlockingCount(채널이 실제로 올려보내는 잔여 항목 수)로 바꿨다.
   productInfoOk: true,
   productInfoMissing: null,
   optionGroupCount: 2,
@@ -105,7 +107,7 @@ describe("resolveWorkflow() — 단 하나의 작업 Flow", () => {
       // 시장 분석 중
       input({ market: { ...JUDGED, domesticProbeDone: false, verdictKnown: false, verdictLabel: null } }),
       // 등록 준비 중
-      input({ prepare: { ...PREPARED, categoryVerified: false } }),
+      input({ prepare: { ...PREPARED, requiredFieldBlockingCount: 2 } }),
       // 등록 차례
       input(),
       // 전부 끝남
@@ -150,7 +152,7 @@ describe("resolveWorkflow() — 단 하나의 작업 Flow", () => {
     const afterCollect = resolveWorkflow(input({ market: MARKET_SIGNAL_NOT_STARTED }));
     expect(afterCollect.currentStepKey).toBe("MARKET_JUDGING");
     // 시장 판단까지 끝나면 → ③ 등록 준비
-    const afterMarket = resolveWorkflow(input({ prepare: { ...PREPARED, categoryVerified: false } }));
+    const afterMarket = resolveWorkflow(input({ prepare: { ...PREPARED, requiredFieldBlockingCount: 2 } }));
     expect(afterMarket.currentStepKey).toBe("REGISTRATION_PREPARING");
     // 등록 준비까지 끝나면 → ④ 커머스 등록
     expect(resolveWorkflow(input()).currentStepKey).toBe("COMMERCE_REGISTERING");
@@ -170,21 +172,21 @@ describe("resolveWorkflow() — 단 하나의 작업 Flow", () => {
     // 실제로 일어나는 상황: 쿠팡 탭을 보던 중 다른 화면에 갔다 돌아오면 그 탭이
     // 복원되고 판단 패널은 마운트되지 않는다 — 그러면 분석은 시작조차 안 된다.
     const wf = resolveWorkflow(
-      input({ market: MARKET_SIGNAL_NOT_STARTED, prepare: { ...PREPARED, categoryVerified: false } }),
+      input({ market: MARKET_SIGNAL_NOT_STARTED, prepare: { ...PREPARED, requiredFieldBlockingCount: 2 } }),
     );
     // 시작도 안 한 작업을 진행 중으로 표시하지 않는다.
     expect(wf.steps[1].subSteps.every((s) => s.status === "UPCOMING")).toBe(true);
     expect(wf.steps[1].headline).toContain("아직 확인하지 않았습니다");
-    // ③은 ②가 아니라 ①에 매달려 있어서, 지금 바로 카테고리를 고칠 수 있다.
+    // ③은 ②가 아니라 ①에 매달려 있어서, 지금 바로 남은 항목을 고칠 수 있다.
     expect(wf.steps[2].status).toBe("ATTENTION");
-    expect(wf.steps[2].subSteps.find((s) => s.key === "category")?.target).toBe("smartstore");
+    expect(wf.steps[2].subSteps.find((s) => s.key === "required_fields")?.target).toBe("coupang");
   });
 });
 
 describe("데이터 없음은 단계 실패가 아니다", () => {
   it("국내 비교상품이 0건이어도 ② 시장 판단은 ✓ 분석 완료다", () => {
     const wf = resolveWorkflow(
-      input({ market: { ...JUDGED, domesticDataFound: false }, prepare: { ...PREPARED, categoryVerified: false } }),
+      input({ market: { ...JUDGED, domesticDataFound: false }, prepare: { ...PREPARED, requiredFieldBlockingCount: 2 } }),
     );
     const market = wf.steps[1];
     expect(market.done).toBe(true);
@@ -236,7 +238,7 @@ describe("데이터 없음은 단계 실패가 아니다", () => {
     const wf = resolveWorkflow(
       input({
         market: MARKET_LOAD_FAILED,
-        prepare: { ...PREPARED, categoryVerified: false },
+        prepare: { ...PREPARED, requiredFieldBlockingCount: 2 },
       }),
     );
     expect(wf.steps[1].status).toBe("ATTENTION");
@@ -251,7 +253,6 @@ describe("데이터 없음은 단계 실패가 아니다", () => {
         collection: { ...COLLECTED, failedImageCount: 8 },
         market: MARKET_LOAD_FAILED,
         prepare: {
-          categoryVerified: false,
           productInfoOk: false,
           productInfoMissing: "상품명을 확인해주세요",
           optionGroupCount: 0,
@@ -280,9 +281,9 @@ describe("데이터 없음은 단계 실패가 아니다", () => {
 });
 
 describe("④ 커머스 등록", () => {
-  it("카테고리가 확정되기 전에는 잠겨 있다", () => {
-    const wf = resolveWorkflow(input({ prepare: { ...PREPARED, categoryVerified: false } }));
-    expect(wf.steps[2].subSteps.find((s) => s.key === "category")?.status).toBe("ATTENTION");
+  it("③에 남은 항목이 있으면 잠겨 있다", () => {
+    const wf = resolveWorkflow(input({ prepare: { ...PREPARED, requiredFieldBlockingCount: 2 } }));
+    expect(wf.steps[2].subSteps.find((s) => s.key === "required_fields")?.status).toBe("ATTENTION");
     expect(wf.steps[2].done).toBe(false);
     expect(wf.steps[3].status).toBe("LOCKED");
     expect(wf.steps[3].done).toBe(false);
@@ -290,10 +291,30 @@ describe("④ 커머스 등록", () => {
     expect(wf.steps[3].subSteps.filter((s) => s.status === "RUNNING")).toHaveLength(0);
   });
 
-  it("카테고리가 확정되면 열린다", () => {
+  it("③이 끝나면 열린다", () => {
     const wf = resolveWorkflow(input());
     expect(wf.steps[3].status).toBe("IN_PROGRESS");
     expect(wf.currentStepKey).toBe("COMMERCE_REGISTERING");
+  });
+
+  /**
+   * 3층 구조 재정렬(CEO 확정, 2026-09-14) — **이 변경의 핵심 회귀**.
+   *
+   * 예전 ③에는 "카테고리 확인" 항목이 있었고, 그 판정이
+   * `Object.values(categoryMappings).some(isVerifiedCategorySelected)`였다.
+   * 그래서 커머스 카테고리를 하나도 확정하지 않은 상품은 ④가 통째로 잠겼고,
+   * 반대로 쿠팡 하나만 확정하면 상품 수준이 "확정됨"이라고 말했다. 둘 다
+   * 상품 수준에서 답할 수 없는 질문을 물었기 때문에 생긴 답이다.
+   *
+   * 이제 ③은 카테고리를 묻지 않는다. 등록을 실제로 막는 자리는 채널 쪽에
+   * 그대로 남는다(CommerceWorkspace.effectiveListingStatus ·
+   * readiness.computeChecklistReadiness · 롯데ON 서버 검증).
+   */
+  it("커머스 카테고리를 하나도 확정하지 않아도 ③이 끝나고 ④가 열린다", () => {
+    const wf = resolveWorkflow(input());
+    expect(wf.steps[2].subSteps.map((s) => s.key)).not.toContain("category");
+    expect(wf.steps[2].done).toBe(true);
+    expect(wf.steps[3].status).toBe("IN_PROGRESS");
   });
 
   it("네이버·쿠팡은 각자의 Flow가 아니라 ④ 안의 채널 항목이다", () => {

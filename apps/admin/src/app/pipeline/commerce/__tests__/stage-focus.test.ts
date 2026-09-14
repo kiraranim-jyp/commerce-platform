@@ -57,7 +57,8 @@ const JUDGED: MarketSignal = {
 };
 
 const PREPARED: PrepareSignal = {
-  categoryVerified: true,
+  // 3층 구조 재정렬(CEO 확정, 2026-09-14) — categoryVerified가 사라졌다.
+  // ③이 아직 안 끝난 상태는 requiredFieldBlockingCount로 만든다.
   productInfoOk: true,
   productInfoMissing: null,
   optionGroupCount: 2,
@@ -219,7 +220,7 @@ describe("Action Center는 본문이 가진 블록을 반복하지 않는다", (
 describe("상단 Flow는 탭 내비게이션이 아니다", () => {
   it("끝난 단계는 결과만 보여준다 — 그 단계로 데려가지 않는다", () => {
     // ③이 현재 단계인 상황(①② 완료, ④ 미도달).
-    const wf = resolveWorkflow(input({ prepare: { ...PREPARED, categoryVerified: false } }));
+    const wf = resolveWorkflow(input({ prepare: { ...PREPARED, requiredFieldBlockingCount: 2 } }));
     expect(wf.currentStepKey).toBe("REGISTRATION_PREPARING");
     const interactions = wf.steps.map((step) => stepInteraction(step, wf.currentStepKey));
     expect(interactions).toEqual(["DETAIL_ONLY", "DETAIL_ONLY", "ACTIVE", "LOCKED"]);
@@ -228,7 +229,7 @@ describe("상단 Flow는 탭 내비게이션이 아니다", () => {
   it("활성 단계는 언제나 정확히 하나다", () => {
     const cases = [
       input({ market: { ...JUDGED, domesticProbeDone: false, verdictKnown: false, verdictLabel: null } }),
-      input({ prepare: { ...PREPARED, categoryVerified: false } }),
+      input({ prepare: { ...PREPARED, requiredFieldBlockingCount: 2 } }),
       input(),
     ];
     for (const c of cases) {
@@ -245,9 +246,8 @@ describe("③ 체크리스트 항목 ↔ 작업면", () => {
     // 여기서 잡힌다 — 조용히 "열 곳이 없는 항목"이 생기는 것을 막는다.
     const prepareStep = resolveWorkflow(input()).steps[2];
     expect(prepareStep.subSteps.map((s) => s.key)).toEqual([
-      "category",
-      // UX 2.5 — 판매가격이 카테고리 바로 뒤에 온다. 둘 다 등록 payload에 실제로
-      // 들어가는 값이고, 비면 등록 API가 거부한다.
+      // 3층 구조 재정렬(CEO 확정, 2026-09-14) — "category"가 이 목록에서 빠졌다.
+      // 상품 수준은 커머스 카테고리 확정 여부를 묻지 않는다(workflow.ts 참고).
       "price",
       "product_info",
       "option",
@@ -266,9 +266,10 @@ describe("③ 체크리스트 항목 ↔ 작업면", () => {
     expect(prepareSurfaceOf("detail")).toBe("SOURCE");
     expect(prepareSurfaceOf("image")).toBe("IMAGES");
     expect(prepareSurfaceOf("required_fields")).toBe("REQUIRED");
-    // 카테고리는 등록 payload에 들어가는 값이라 채널 화면에서만 확정한다.
-    expect(prepareSurfaceOf("category")).toBe("CATEGORY");
-    // UX 2.5 — 가격은 정반대다: 채널이 고를 것이 없어서(값이 하나뿐) 편집기가
+    // 3층 구조 재정렬 — 카테고리 작업면 자체가 없어졌다. ③에 항목이 없으므로
+    // 모르는 키 취급(SOURCE)이 되고, 카테고리를 고르는 곳은 채널 탭 하나뿐이다.
+    expect(prepareSurfaceOf("category")).toBe("SOURCE");
+    // UX 2.5 — 가격은 채널이 고를 것이 없어서(값이 하나뿐) 편집기가
     // 상품정보 쪽에만 있다.
     expect(prepareSurfaceOf("price")).toBe("PRICE");
   });
@@ -294,7 +295,7 @@ describe("단계 전환 — 셀러가 누르는 '다음' 버튼은 없다", () =
   });
 
   it("② 시장판단 → ③ 등록준비가 자동으로 넘어간다", () => {
-    const wf = resolveWorkflow(input({ prepare: { ...PREPARED, categoryVerified: false } }));
+    const wf = resolveWorkflow(input({ prepare: { ...PREPARED, requiredFieldBlockingCount: 2 } }));
     expect(wf.currentStepKey).toBe("REGISTRATION_PREPARING");
     const f = focus(wf.currentStepKey);
     expect(f.main).toBe("PREPARE");
@@ -311,7 +312,7 @@ describe("단계 전환 — 셀러가 누르는 '다음' 버튼은 없다", () =
   it("카테고리가 확정되기 전에는 ④가 본문을 가져가지 않는다", () => {
     // 등록 payload에 들어가는 값이라 비면 register API가 거부한다 — 열어주는
     // 것 자체가 거짓말이 된다(UX 2.1이 세운 게이트를 UX 2.2가 흔들지 않는다).
-    const wf = resolveWorkflow(input({ prepare: { ...PREPARED, categoryVerified: false } }));
+    const wf = resolveWorkflow(input({ prepare: { ...PREPARED, requiredFieldBlockingCount: 2 } }));
     expect(focus(wf.currentStepKey).main).toBe("PREPARE");
     expect(wf.steps[3].status).toBe("LOCKED");
   });
@@ -322,7 +323,7 @@ describe("데이터 없음은 어떤 단계도 실패로 만들지 않는다", (
     const wf = resolveWorkflow(
       input({
         market: { ...JUDGED, domesticDataFound: false },
-        prepare: { ...PREPARED, categoryVerified: false },
+        prepare: { ...PREPARED, requiredFieldBlockingCount: 2 },
       }),
     );
     expect(wf.steps[1].done).toBe(true);
@@ -346,7 +347,7 @@ describe("데이터 없음은 어떤 단계도 실패로 만들지 않는다", (
           verdictKnown: false,
           verdictLabel: null,
         },
-        prepare: { ...PREPARED, categoryVerified: false },
+        prepare: { ...PREPARED, requiredFieldBlockingCount: 2 },
       }),
     );
     expect(wf.currentStepKey).toBe("REGISTRATION_PREPARING");
@@ -358,7 +359,7 @@ describe("쿠팡 탭 왕복 — 탭을 옮겨도 현재 단계는 그대로다",
   it("같은 데이터라면 작업면이 바뀌어도 단계와 본문 주인공이 바뀌지 않는다", () => {
     // 단계는 데이터에서만 나온다(resolveWorkflow). 작업면(탭)은 무게만 바꾼다 —
     // 그래서 쿠팡 탭에 갔다 돌아와도 ③은 여전히 ③이다.
-    const wf = resolveWorkflow(input({ prepare: { ...PREPARED, categoryVerified: false } }));
+    const wf = resolveWorkflow(input({ prepare: { ...PREPARED, requiredFieldBlockingCount: 2 } }));
     const onProduct = focus(wf.currentStepKey, { surface: "PRODUCT" });
     const onChannel = focus(wf.currentStepKey, { surface: "CHANNEL" });
     const backOnProduct = focus(wf.currentStepKey, { surface: "PRODUCT" });
@@ -372,9 +373,9 @@ describe("쿠팡 탭 왕복 — 탭을 옮겨도 현재 단계는 그대로다",
     // 쿠팡 탭이 sessionStorage로 복원된 세션에서 실제로 일어나던 상황이다.
     // ③은 ②가 아니라 ①에 매달려 있으므로(workflow.ts) 지금 바로 손볼 수 있다.
     const wf = resolveWorkflow(
-      input({ market: MARKET_SIGNAL_NOT_STARTED, prepare: { ...PREPARED, categoryVerified: false } }),
+      input({ market: MARKET_SIGNAL_NOT_STARTED, prepare: { ...PREPARED, requiredFieldBlockingCount: 2 } }),
     );
     expect(wf.steps[2].status).toBe("ATTENTION");
-    expect(wf.steps[2].subSteps.find((s) => s.key === "category")?.status).toBe("ATTENTION");
+    expect(wf.steps[2].subSteps.find((s) => s.key === "required_fields")?.status).toBe("ATTENTION");
   });
 });

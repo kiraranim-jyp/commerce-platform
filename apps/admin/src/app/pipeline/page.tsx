@@ -779,7 +779,6 @@ export default function PipelinePage() {
     },
     market: MARKET_SIGNAL_NOT_STARTED,
     prepare: {
-      categoryVerified: false,
       productInfoOk: false,
       productInfoMissing: null,
       optionGroupCount: 0,

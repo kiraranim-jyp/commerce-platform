@@ -160,7 +160,6 @@ describe("③ 가격으로 가는 길은 전부 같은 한 곳으로 모인다",
     collection: { running: false, percent: 100, productReady: true, imageCount: 8, failedImageCount: 0 },
     market: MARKET_SIGNAL_NOT_STARTED,
     prepare: {
-      categoryVerified: false,
       productInfoOk: true,
       productInfoMissing: null,
       optionGroupCount: 1,

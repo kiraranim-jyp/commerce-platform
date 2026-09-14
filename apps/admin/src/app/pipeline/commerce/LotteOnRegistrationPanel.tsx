@@ -1,10 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CanonicalProduct } from "@commerce/shared";
+import type { CanonicalProduct, LotteOnChannelInfo } from "@commerce/shared";
 import { Button } from "@/components/ui/Button";
 import {
-  EMPTY_LOTTEON_CHANNEL_FORM,
   LOTTEON_CHILD_PRODUCT_ITEM_CODE,
   LOTTEON_FIX_LOCATION_LABEL,
   buildLotteOnMissingInfo,
@@ -12,11 +11,13 @@ import {
   collectLotteOnNoticeSourceValues,
   computeLotteOnRegistrationReadiness,
   describeLotteOnCategoryItem,
+  fromLotteOnChannelInfo,
   isLotteOnCategoryChosen,
   listLotteOnBlockingConditions,
   parseDisplayCategoryNos,
   requiresSafetyCertification,
   summarizeCommonProduct,
+  toLotteOnChannelInfo,
   toLotteOnChannelPayload,
   type CommonCategorySource,
   type LotteOnChannelForm,
@@ -122,6 +123,8 @@ export function LotteOnRegistrationPanel({
   roundingUnit,
   commonPrice,
   commonCategorySources,
+  channelInfo,
+  onChannelInfoChange,
   onEditCommonInfo,
   onReadinessChange,
 }: {
@@ -134,6 +137,17 @@ export function LotteOnRegistrationPanel({
   commonPrice: { priceKrw: number | null; resolved: boolean };
   /** 공통 분류(원본 사이트 · 다른 채널 확정값). **읽기 전용**. */
   commonCategorySources: CommonCategorySource[];
+  /**
+   * 3층 구조 재정렬(CEO 지시, 2026-09-14) — 상품 수준에 저장돼 있는 롯데ON
+   * 관리정보(CanonicalProduct.lotteOnChannelInfo). 이 값이 폼의 **초기값**이다.
+   *
+   * 예전에는 이 prop이 없어서 폼이 항상 EMPTY로 시작했고, 탭을 벗어나 컴포넌트가
+   * 언마운트되면 고시·인증·배송번호가 전부 사라졌다 — 그것이 "상품정보에
+   * 롯데온 내용은 하나도 없다"의 실제 원인이었다.
+   */
+  channelInfo?: LotteOnChannelInfo;
+  /** 입력이 바뀔 때마다 상품 수준으로 올려보낸다(저장 경로는 상품과 같다). */
+  onChannelInfoChange?: (info: LotteOnChannelInfo) => void;
   /** 공통 정보를 고치러 가는 유일한 통로 — 상품정보 탭. */
   onEditCommonInfo: () => void;
   /** 탭 줄/준비상태 줄이 롯데ON 상태를 함께 보여주기 위한 보고 채널.
@@ -141,8 +155,16 @@ export function LotteOnRegistrationPanel({
    * 만들지 않고 이미 계산된 값을 올려보내기만 한다. */
   onReadinessChange?: (percent: number, allRequiredPassed: boolean, missingCount: number) => void;
 }) {
-  const [form, setForm] = useState<LotteOnChannelForm>(EMPTY_LOTTEON_CHANNEL_FORM);
-  const [displayCategoryText, setDisplayCategoryText] = useState("");
+  /**
+   * 폼의 시작점은 **상품에 저장된 값**이다(없으면 빈 폼). 여기서 prop을 계속
+   * 따라가지 않고 초기값으로만 쓰는 이유: 타이핑 중인 입력칸을 부모 리렌더가
+   * 되감지 않게 하기 위해서다. 탭을 벗어나면 이 컴포넌트는 언마운트되고, 다시
+   * 들어오면 저장된 값으로 새로 초기화된다 — 그 왕복이 "남아 있다"의 실제 경로다.
+   */
+  const [form, setForm] = useState<LotteOnChannelForm>(() => fromLotteOnChannelInfo(channelInfo));
+  const [displayCategoryText, setDisplayCategoryText] = useState(() =>
+    fromLotteOnChannelInfo(channelInfo).category.displayCategoryNos.join(", "),
+  );
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [registering, setRegistering] = useState(false);
@@ -194,9 +216,19 @@ export function LotteOnRegistrationPanel({
     setStale(true);
   }
 
-  function patch<K extends keyof LotteOnChannelForm>(section: K, changes: Partial<LotteOnChannelForm[K]>) {
-    setForm((prev) => ({ ...prev, [section]: { ...prev[section], ...changes } }));
+  /**
+   * 폼을 바꾸는 **유일한** 통로. 로컬 상태와 상품 수준 저장이 같은 호출에서
+   * 함께 움직인다 — 둘을 따로 부르는 자리를 만들면 "화면에는 있는데 저장은 안
+   * 된" 값이 생긴다(이 화면이 정확히 그 상태였다).
+   */
+  function commitForm(next: LotteOnChannelForm) {
+    setForm(next);
+    onChannelInfoChange?.(toLotteOnChannelInfo(next));
     markFormChanged();
+  }
+
+  function patch<K extends keyof LotteOnChannelForm>(section: K, changes: Partial<LotteOnChannelForm[K]>) {
+    commitForm({ ...form, [section]: { ...form[section], ...changes } });
   }
 
   /** 전시카테고리는 여러 개다 — 화면에서는 한 줄 텍스트로 받고 배열로 보관한다. */
@@ -271,13 +303,12 @@ export function LotteOnRegistrationPanel({
     setPickedCategory(category);
     const displayNos = category.displayCategories.map((entry) => entry.displayCategoryId);
     setDisplayCategoryText(displayNos.join(", "));
-    setForm((prev) => ({
-      ...prev,
+    commitForm({
+      ...form,
       category: { standardCategoryNo: category.id, displayCategoryNos: displayNos },
-      notice: { ...prev.notice, itemCode: category.noticeItemCodes[0] ?? prev.notice.itemCode },
-      codes: { ...prev.codes, taxTypeCode: category.taxTypeCode ?? prev.codes.taxTypeCode },
-    }));
-    markFormChanged();
+      notice: { ...form.notice, itemCode: category.noticeItemCodes[0] ?? form.notice.itemCode },
+      codes: { ...form.codes, taxTypeCode: category.taxTypeCode ?? form.codes.taxTypeCode },
+    });
   }
 
   /**
@@ -361,12 +392,17 @@ export function LotteOnRegistrationPanel({
    *
    * 입력마다 다시 쏘지 않는다(207 Identity를 매번 호출한다). 입력이 바뀌면
    * stale로 표시만 하고, 다시 쏘는 것은 셀러의 [등록 정보 확인] 클릭이다.
+   *
+   * 3층 구조 재정렬(2026-09-14) — 확인하는 대상이 **빈 폼이 아니라 상품에
+   * 저장돼 있던 값**으로 바뀐다. 예전처럼 EMPTY로 확인하면, 배송번호까지 다
+   * 채워둔 상품으로 탭에 다시 들어왔을 때 화면이 "아무것도 없다"고 말한다.
    */
   const autoCheckedRef = useRef(false);
+  const restoredFormRef = useRef(form);
   useEffect(() => {
     if (autoCheckedRef.current) return;
     autoCheckedRef.current = true;
-    void runValidation(EMPTY_LOTTEON_CHANNEL_FORM);
+    void runValidation(restoredFormRef.current);
   }, [runValidation]);
 
   async function runRegister() {
@@ -573,6 +609,13 @@ export function LotteOnRegistrationPanel({
           상품명 · 이미지 · 상세페이지 · 가격 · 옵션 · 재고는 <b>상품정보에 있는 것을 그대로 씁니다</b> — 이 탭에서 다시
           입력하지 않습니다. 아래에서는 <b>롯데ON에만 필요한 것</b>(표준·전시 2중 카테고리, 고시, 안전인증, 배송
           선등록 번호)만 정합니다.
+        </p>
+        {/* 3층 구조 재정렬(CEO 지시, 2026-09-14) — 이 탭의 입력이 어디에 남는지
+            화면에 적는다. 예전에는 탭을 벗어나면 사라졌기 때문에, "남는다"는
+            사실 자체가 셀러가 알아야 할 변경점이다. */}
+        <p className="mt-1 text-xs text-text-tertiary">
+          여기서 입력한 값은 <b>상품 정보 → 커머스 관리정보 → 롯데ON</b>에 저장됩니다 — 다른 탭에 다녀와도 남아
+          있습니다. 스마트스토어·쿠팡에는 아무 영향을 주지 않습니다.
         </p>
       </div>
 
