@@ -29,11 +29,18 @@ import {
   type LotteOnValidationSnapshot,
 } from "./lotteon-channel-form";
 import { LOTTEON_SAFETY_TYPE_LABEL, type LotteOnCategoryCandidate } from "./lotteon-category";
+import { ChannelRegistrationFrame, ChannelRegistrationSummary } from "./ChannelRegistrationFrame";
+import type { ReadinessItem } from "./readiness";
+import { resolveRegistrationReadinessState, type PriorityItem } from "./readiness-state";
 import {
   describeLotteOnSellerSettings,
+  type ListingStatus,
   type LotteOnSellerSettingRow,
   type LotteOnSellerSettingsInput,
 } from "@commerce/listing";
+
+/** [부족정보 해결]이 데려가는 자리. 우측 요약과 좌측 상세가 같은 id를 본다. */
+const LOTTEON_MISSING_INFO_ID = "lotteon-missing-info";
 
 /**
  * LOTTEON COMMERCE SPRINT 4(CEO 확정, 2026-09-14) — 롯데ON 탭.
@@ -479,138 +486,191 @@ export function LotteOnRegistrationPanel({
   const connectionOk = preview != null && preview.ok && !preview.identityError;
   const canRegister = !stale && readiness.percent === 100 && readiness.allRequiredPassed && !registering && !previewing;
 
-  return (
-    <div className="space-y-4">
-      {/* ── 등록 상태 ───────────────────────────────────────────────────── */}
-      <Section title="등록 상태" description="이 상품이 롯데ON에 지금 어떤 상태인지.">
-        <ul className="space-y-1.5 text-xs">
-          <StatusRow
-            label="롯데ON 연결"
-            tone={preview == null ? "muted" : connectionOk ? "ok" : "warn"}
-            value={
-              preview == null
-                ? "확인 중…"
-                : connectionOk
-                  ? "인증키 · 서버 IP 확인됨 (거래처 조회 성공)"
-                  : (preview.identityError ?? "거래처 정보를 확인하지 못했습니다.")
-            }
-          />
-          <StatusRow
-            label="등록"
-            tone={registerResult?.result?.status === "SUBMITTED" ? "ok" : registerResult ? "error" : "muted"}
-            value={
-              registerResult?.result
-                ? registerResult.result.status === "SUBMITTED"
-                  ? `등록 요청 완료 — 판매자상품번호(spdNo) ${registerResult.result.externalProductId ?? "미확인"}`
-                  : `등록 실패 — ${registerResult.result.message}`
-                : "아직 이 화면에서 등록한 적이 없습니다."
-            }
-          />
-        </ul>
-      </Section>
+  /* ──────────────────────────────────────────────────────────────────────
+     REWORK-2(CEO 지시, 2026-09-14) — 우측 · 등록 요약으로 옮기기 위한 변환.
 
-      {/* ── 등록 가능성 ─────────────────────────────────────────────────────
-          🔴 MI(판매 추천/비추천)와 **완전히 독립**이다(§11). 이 섹션이 읽는 값은
-          validation(서버 validateLotteOnPayload 결과) 하나뿐이고, 이 컴포넌트는
-          marketSignal · priceLevel · sellerVerdict 같은 MI 값을 prop으로 받지도
-          않는다 — "팔 만한가"와 "등록이 되는가"가 서로를 끌어당길 배선 자체가
-          없다. 회귀는 __tests__/lotteon-mi-independence.test.ts가 고정한다. */}
-      <Section
-        title="등록 가능성"
-        description="롯데ON이 상품등록(87)에서 필수로 요구하는 항목을, 실제 등록에 쓰이는 그 검증으로 확인한 결과입니다. 이 상품이 잘 팔릴지(판매 판단)와는 아무 관계가 없습니다."
-      >
-        {previewing && preview == null ? (
+     🔴 **판정을 새로 만들지 않는다.** 아래 세 값은 전부 이미 계산돼 있던
+     것(validation / readiness / missingInfo)을 스마트스토어·쿠팡 요약이 읽는
+     모양으로 옮겨 적기만 한다. 라벨과 사유는 서버 문장 그대로다.
+     ────────────────────────────────────────────────────────────────────── */
+
+  /** 서버 검증 한 줄 = 요약의 필수항목 한 줄. 롯데ON 검증에는 선택 항목이 없다. */
+  const readinessItems: ReadinessItem[] = useMemo(() => {
+    const sectionOf = new Map(missingInfo.map((item) => [item.key, item.sectionId]));
+    return (validation?.fields ?? []).map((field) => ({
+      label: field.label,
+      passed: field.status === "READY",
+      required: true,
+      hint: field.reason,
+      sectionId: sectionOf.get(field.field),
+    }));
+  }, [validation, missingInfo]);
+
+  /** 부족정보 — "무엇을 어디서" 한 줄. 순서는 buildLotteOnMissingInfo가 정한 그대로다. */
+  const priorityItems: PriorityItem[] = useMemo(
+    () =>
+      missingInfo.slice(0, 3).map((item) => ({
+        key: item.key,
+        label: item.label,
+        detail: `${LOTTEON_FIX_LOCATION_LABEL[item.where]}에서 해결 — ${item.what}`,
+        sectionId: item.where === "LOTTEON_TAB" ? item.sectionId : undefined,
+        externalHref: item.where === "SETTINGS" ? "/settings" : undefined,
+        sourceItems: [],
+      })),
+    [missingInfo],
+  );
+
+  /** 등록 상태 4단계 — 스마트스토어·쿠팡이 쓰는 그 함수 하나로 정한다. */
+  const registrationState = resolveRegistrationReadinessState(
+    {
+      items: readinessItems,
+      required: readinessItems,
+      recommended: [],
+      allRequiredPassed: !stale && readiness.allRequiredPassed,
+      percent: readiness.percent,
+    },
+    commonPrice.resolved,
+  );
+
+  /** 등록 버튼의 문구를 정하는 축. 게이트는 canRegister 하나뿐이다. */
+  const listingStatus: ListingStatus = registering
+    ? "SUBMITTING"
+    : registerResult?.result?.status === "SUBMITTED"
+      ? "SUBMITTED"
+      : registerResult?.result?.status === "FAILED"
+        ? "FAILED"
+        : canRegister
+          ? "READY"
+          : "DRAFT";
+
+  const summary = (
+    <ChannelRegistrationSummary
+      state={registrationState}
+      priorityItems={priorityItems}
+      onPriorityItemClick={(item) => item.sectionId && scrollToSection(item.sectionId)}
+      onResolveMissing={missingInfo.length > 0 ? () => scrollToSection(LOTTEON_MISSING_INFO_ID) : undefined}
+      statusRows={
+        <section className="rounded-lg border border-border bg-surface px-3 py-2.5">
+          <p className="text-[11px] font-medium leading-4 text-text-tertiary">등록 상태</p>
+          <ul className="mt-1 space-y-1.5 text-xs">
+            <StatusRow
+              label="롯데ON 연결"
+              tone={preview == null ? "muted" : connectionOk ? "ok" : "warn"}
+              value={
+                preview == null
+                  ? "확인 중…"
+                  : connectionOk
+                    ? "인증키 · 서버 IP 확인됨 (거래처 조회 성공)"
+                    : (preview.identityError ?? "거래처 정보를 확인하지 못했습니다.")
+              }
+            />
+            <StatusRow
+              label="등록"
+              tone={registerResult?.result?.status === "SUBMITTED" ? "ok" : registerResult ? "error" : "muted"}
+              value={
+                registerResult?.result
+                  ? registerResult.result.status === "SUBMITTED"
+                    ? `등록 요청 완료 — 판매자상품번호(spdNo) ${registerResult.result.externalProductId ?? "미확인"}`
+                    : `등록 실패 — ${registerResult.result.message}`
+                  : "아직 이 화면에서 등록한 적이 없습니다."
+              }
+            />
+          </ul>
+          {stale && (
+            <p className="mt-2 rounded-md bg-warning-soft px-2 py-1.5 text-[11px] text-warning">
+              입력이 바뀌었습니다 — 위 결과는 바뀌기 전 입력에 대한 것입니다. [등록 정보 확인]을 다시 눌러 주세요.
+            </p>
+          )}
+        </section>
+      }
+      percent={readiness.percent}
+      required={readinessItems}
+      recommended={[]}
+      allRequiredPassed={!stale && readiness.allRequiredPassed}
+      platformLabel="롯데ON"
+      status={listingStatus}
+      registrationEnabled
+      registrationReadinessState={registrationState}
+      onRegister={() => void runRegister()}
+      onItemClick={scrollToSection}
+      /* §17 — 카테고리 전에는 등록 가능성을 숫자로 말하지 않는다. 0%도 말하지
+         않는다: 0%는 "다 모자라다"는 판정이고, 지금 참인 것은 "아직 판단할 수
+         없다"이다. 표준카테고리가 전시카테고리·고시 품목코드·과세구분·요구
+         안전인증을 함께 들고 오기 때문에(조사 §14-2), 고르는 순간 필수 항목의
+         **목록 자체**가 바뀐다. */
+      percentUnavailable={
+        previewing && preview == null ? (
           <p className="text-xs text-text-tertiary">확인 중…</p>
         ) : validation == null ? (
           <p className="text-xs text-text-tertiary">아직 확인하지 않았습니다 — 아래 [등록 정보 확인]을 눌러 주세요.</p>
         ) : !categoryChosen ? (
-          /* §17 — 카테고리 전에는 숫자를 말하지 않는다. 0%도 말하지 않는다:
-             0%는 "다 모자라다"는 판정이고, 지금 참인 것은 "아직 판단할 수
-             없다"이다. 표준카테고리가 전시카테고리·고시 품목코드·과세구분·
-             요구 안전인증을 함께 들고 오기 때문에(조사 §14-2), 고르는 순간
-             필수 항목의 **목록 자체**가 바뀐다. */
-          <>
-            <div className="rounded-md bg-warning-soft px-3 py-2 text-xs text-warning">
-              <p className="font-semibold">⚠ 등록 가능성 판단 제한 — 카테고리를 먼저 선택해주세요.</p>
-              <p className="mt-1 text-[11px] text-text-secondary">
-                롯데ON은 표준카테고리가 <b>전시카테고리 · 고시 품목코드 · 과세구분 · 요구 안전인증</b>을 함께
-                결정합니다. 카테고리를 고르기 전에는 이 상품에 무엇이 요구되는지가 아직 정해지지 않아,
-                지금 퍼센트를 보여주면 카테고리를 고른 뒤 숫자가 거꾸로 내려갑니다.
-              </p>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="mt-2"
-                onClick={() => scrollToSection("lotteon-section-category")}
-              >
-                ② 카테고리 선택으로 이동
-              </Button>
-            </div>
-            {blockingConditions.length > 0 && (
-              <div className="mt-3">
-                <p className="text-[11px] font-medium text-text-tertiary">
-                  카테고리와 무관하게 지금 이미 확인된 것 — 카테고리를 고르면 여기에 항목이 더 늘어납니다.
-                </p>
-                <BlockingConditionList fields={blockingConditions} />
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-            {/* §18 — 퍼센트보다 **실제로 등록을 막는 필수 조건**이 먼저다.
-                셀러가 해야 할 일은 "83%를 100%로 만드는 것"이 아니라 이 줄들을
-                없애는 것이고, 퍼센트는 그 진행 정도를 뒤에서 거들 뿐이다. */}
-            {blockingConditions.length > 0 ? (
-              <>
-                <p className="text-xs font-semibold text-text-primary">
-                  등록을 막고 있는 필수 조건 {blockingConditions.length}개
-                </p>
-                <BlockingConditionList fields={blockingConditions} />
-              </>
-            ) : (
-              <p className="text-xs font-semibold text-success">
-                ● 롯데ON 필수 조건을 모두 만족합니다 — 등록을 막는 항목이 없습니다.
-              </p>
-            )}
-            <div className="mt-3 flex items-baseline gap-2">
-              <span
-                className={`text-sm font-semibold ${
-                  stale
-                    ? "text-text-tertiary"
-                    : readiness.percent >= 100
-                      ? "text-success"
-                      : readiness.percent >= 60
-                        ? "text-warning"
-                        : "text-error"
-                }`}
-              >
-                {readiness.percent}%
-              </span>
-              <span className="text-[11px] text-text-tertiary">
-                필수 {readiness.total}개 중 {readiness.readyCount}개 준비됨
-                {validation.blockedCount > 0 ? ` · 차단 ${validation.blockedCount}개` : ""}
-              </span>
-            </div>
-            <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded bg-background">
-              <div
-                className={`h-full ${
-                  stale ? "bg-border" : readiness.percent >= 100 ? "bg-success" : readiness.percent >= 60 ? "bg-warning" : "bg-error"
-                }`}
-                style={{ width: `${readiness.percent}%` }}
-              />
-            </div>
-            {stale && (
-              <p className="mt-2 rounded-md bg-warning-soft px-3 py-2 text-[11px] text-warning">
-                입력이 바뀌었습니다 — 위 결과는 바뀌기 전 입력에 대한 것입니다. [등록 정보 확인]을 다시 눌러 주세요.
-              </p>
-            )}
-          </>
-        )}
-      </Section>
+          <div className="rounded-md bg-warning-soft px-2 py-2 text-xs text-warning">
+            <p className="font-semibold">⚠ 등록 가능성 판단 제한 — 카테고리를 먼저 선택해주세요.</p>
+            <p className="mt-1 text-[11px] text-text-secondary">
+              롯데ON은 표준카테고리가 <b>전시카테고리 · 고시 품목코드 · 과세구분 · 요구 안전인증</b>을 함께
+              결정합니다. 카테고리를 고르기 전에는 이 상품에 무엇이 요구되는지가 아직 정해지지 않아, 지금
+              퍼센트를 보여주면 카테고리를 고른 뒤 숫자가 거꾸로 내려갑니다.
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-2"
+              onClick={() => scrollToSection("lotteon-section-category")}
+            >
+              ③ 카테고리 선택으로 이동
+            </Button>
+          </div>
+        ) : null
+      }
+      /* CEO 프레임의 버튼 순서 — [부족정보 해결](배너) → [등록 정보 확인] →
+         [채널 등록]. 등록 게이트는 그대로 canRegister 하나다. */
+      verifyAction={
+        <div className="space-y-1">
+          <button
+            type="button"
+            disabled={previewing}
+            onClick={() => void runValidation(form)}
+            className="w-full rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-background disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {previewing ? "확인 중…" : "등록 정보 확인"}
+          </button>
+          {!canRegister && (
+            <p className="text-[11px] text-text-tertiary">
+              {stale
+                ? "입력이 바뀌었습니다 — 등록 정보 확인을 다시 통과해야 등록 버튼이 열립니다."
+                : "등록 가능성 100% + 등록 정보 확인을 통과해야 등록 버튼이 열립니다."}
+            </p>
+          )}
+        </div>
+      }
+    />
+  );
 
-      {/* ── 부족한 정보 (§8) ────────────────────────────────────────────── */}
+  const detail = (
+    <div className="space-y-4">
+      {/* ── §18 등록을 막고 있는 필수 조건 ────────────────────────────────
+          우측 요약의 필수항목 목록과 같은 값이지만, 여기서는 **차단된 것만**
+          서버 문장 그대로 먼저 세운다. 셀러가 해야 할 일은 "83%를 100%로
+          만드는 것"이 아니라 이 줄들을 없애는 것이기 때문이다. */}
+      {blockingConditions.length > 0 && (
+        <section className="rounded-lg border border-border bg-surface px-4 py-3">
+          <p className="text-sm font-semibold text-text-primary">
+            등록을 막고 있는 필수 조건 {blockingConditions.length}개
+          </p>
+          {!categoryChosen && (
+            <p className="mt-0.5 text-[11px] text-text-tertiary">
+              카테고리와 무관하게 지금 이미 확인된 것 — 카테고리를 고르면 여기에 항목이 더 늘어납니다.
+            </p>
+          )}
+          <BlockingConditionList fields={blockingConditions} />
+        </section>
+      )}
+
+      {/* ── 부족한 정보 (§8) ──────────────────────────────────────────────
+          우측 요약의 부족정보는 "무엇이 몇 개"까지다. 여기서는 **왜 필요하고
+          어디서 고치는지**를 항목마다 편다 — [부족정보 해결]이 데려오는 자리다. */}
       {missingInfo.length > 0 && (
-        <section className="rounded-lg border border-warning/40 bg-warning/5 px-4 py-3">
+        <section id={LOTTEON_MISSING_INFO_ID} className="scroll-mt-4 rounded-lg border border-warning/40 bg-warning/5 px-4 py-3">
           <h3 className="text-sm font-semibold text-text-primary">
             ⚠ 롯데ON 등록에 {missingInfo.length}개 정보가 부족합니다
           </h3>
@@ -1022,22 +1082,10 @@ export function LotteOnRegistrationPanel({
         </div>
       </FormSection>
 
-      {/* ── 검증 · 등록 ─────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="secondary" size="sm" disabled={previewing} onClick={() => void runValidation(form)}>
-          {previewing ? "확인 중…" : "등록 정보 확인"}
-        </Button>
-        <Button variant="primary" size="sm" disabled={!canRegister} onClick={() => void runRegister()}>
-          {registering ? "등록 중…" : "롯데ON에 등록"}
-        </Button>
-        {!canRegister && (
-          <span className="text-[11px] text-text-tertiary">
-            {stale
-              ? "입력이 바뀌었습니다 — 등록 정보 확인을 다시 통과해야 등록 버튼이 열립니다."
-              : "등록 가능성 100% + 등록 정보 확인을 통과해야 등록 버튼이 열립니다."}
-          </span>
-        )}
-      </div>
+      {/* REWORK-2 — 여기 있던 [등록 정보 확인] · [롯데ON에 등록] 두 버튼이
+          우측 등록 요약으로 올라갔다. 스마트스토어·쿠팡의 등록 버튼이 서는
+          자리와 같은 자리이고, 같은 컴포넌트가 그린다 — 세 채널에서 등록
+          행동의 위치가 같아야 한다는 것이 이번 지시의 11번이다. */}
 
       {error && <div className="rounded-lg border border-error/40 bg-error/5 px-4 py-3 text-sm text-error">{error}</div>}
 
@@ -1116,6 +1164,8 @@ export function LotteOnRegistrationPanel({
       )}
     </div>
   );
+
+  return <ChannelRegistrationFrame detail={detail} summary={summary} />;
 }
 
 /** 이 탭 안의 섹션으로 데려간다. 서버 렌더(테스트)에서는 document가 없으므로 조용히 아무 일도 하지 않는다. */
@@ -1249,39 +1299,6 @@ function FormSection({
   );
 }
 
-/**
- * 맨 위 두 장(등록 상태 · 등록 가능성)의 껍데기.
- *
- * 이 둘은 접히지 않는다 — 스마트스토어·쿠팡 탭에서도 같은 자리의
- * RegistrationStatusBanner / RegistrationReadinessCard가 접히지 않는 카드이기
- * 때문이다. 세 탭의 첫 화면이 같은 모양이어야 한다.
- */
-function Section({
-  id,
-  title,
-  description,
-  action,
-  children,
-}: {
-  id?: string;
-  title: string;
-  description?: string;
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section id={id} className="scroll-mt-4 rounded-lg border border-border bg-surface px-4 py-3">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
-          {description && <p className="mt-0.5 text-[11px] text-text-tertiary">{description}</p>}
-        </div>
-        {action}
-      </div>
-      <div className="mt-3">{children}</div>
-    </section>
-  );
-}
 
 /**
  * 카테고리 추천 결과.

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { ListingStatus } from "@commerce/listing";
 import type { ReadinessItem } from "./readiness";
 import type { RegistrationReadinessState } from "./readiness-state";
@@ -60,6 +61,8 @@ export function RegistrationReadinessCard({
   autoFillStats,
   registrationEnabled = true,
   registrationReadinessState,
+  percentUnavailable = null,
+  verifyAction = null,
 }: {
   /** N-3.72(사용자 지시, 2026-08-21: "0%는 값이 없어서가 아니라 검증이 아직
    * 안 끝나서인 경우가 있다 — 계산 중과 실패를 구분하라") — 실제 프로덕션
@@ -99,6 +102,24 @@ export function RegistrationReadinessCard({
   /** N-3.57 STEP6 — 없으면(Coupang/11번가처럼 이 4-state 모델을 아직 안 쓰는
    * 플랫폼) 기존 BUTTON_LABEL[status] 문구를 그대로 쓴다(회귀 없음). */
   registrationReadinessState?: RegistrationReadinessState;
+  /**
+   * REWORK-2(CEO 지시, 2026-09-14) — **숫자를 말할 수 없는 상태**를 위한 자리.
+   *
+   * 롯데ON은 표준카테고리가 전시카테고리·고시 품목코드·과세구분·요구 안전인증을
+   * 함께 결정하므로, 카테고리를 고르기 전에는 필수 항목의 **목록 자체**가 아직
+   * 정해지지 않는다(884ce93이 세운 규칙). 그때 퍼센트를 그리면 카테고리를 고른
+   * 뒤 숫자가 거꾸로 내려간다. 이 값이 있으면 큰 퍼센트/막대 자리에 이 노드가
+   * 대신 서고, 나머지(필수 목록·버튼)는 그대로다 — 카드를 한 벌 더 만들지
+   * 않기 위한 슬롯이다.
+   */
+  percentUnavailable?: ReactNode;
+  /**
+   * REWORK-2 — 등록 버튼 **바로 위**의 보조 행동. 롯데ON처럼 등록 전에 서버
+   * 검증을 따로 돌리는 채널의 [등록 정보 확인]이 여기 온다. CEO 프레임의
+   * 버튼 순서([부족정보 해결] → [등록 정보 확인] → [채널 등록])를 세 채널이
+   * 같은 컴포넌트에서 지키게 하는 자리다.
+   */
+  verifyAction?: ReactNode;
 }) {
   const scoreClassName = percent >= 90 ? "text-success" : percent >= 60 ? "text-warning" : "text-error";
   const barClassName = percent >= 90 ? "bg-success" : percent >= 60 ? "bg-warning" : "bg-error";
@@ -192,21 +213,27 @@ export function RegistrationReadinessCard({
             여부(등록 가능/불가)와 완성도 퍼센트는 서로 다른 신호라 분리해서
             보여준다 — 필수 충족이면 초록 배지로 먼저 "등록 가능"을 명확히
             말하고, 퍼센트는 그 아래 보조 지표로만 둔다. */}
-        {allRequiredPassed ? (
+        {allRequiredPassed && !percentUnavailable ? (
           <p className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-1 text-xs font-medium text-success">
             🟢 필수 항목 충족 — 등록 가능
           </p>
         ) : (
           <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">등록 가능성</p>
         )}
-        <p className={`mt-1 text-3xl font-semibold tabular-nums ${scoreClassName}`}>{percent}%</p>
-        <div className="mt-2 h-2 w-full overflow-hidden rounded bg-background">
-          <div
-            className={`h-full rounded transition-all duration-300 ${barClassName}`}
-            style={{ width: `${percent}%` }}
-          />
-        </div>
-        {allRequiredPassed && emptyOptionalCount > 0 && (
+        {percentUnavailable ? (
+          <div className="mt-1">{percentUnavailable}</div>
+        ) : (
+          <>
+            <p className={`mt-1 text-3xl font-semibold tabular-nums ${scoreClassName}`}>{percent}%</p>
+            <div className="mt-2 h-2 w-full overflow-hidden rounded bg-background">
+              <div
+                className={`h-full rounded transition-all duration-300 ${barClassName}`}
+                style={{ width: `${percent}%` }}
+              />
+            </div>
+          </>
+        )}
+        {!percentUnavailable && allRequiredPassed && emptyOptionalCount > 0 && (
           <p className="mt-1.5 rounded-md bg-background px-2 py-1 text-[11px] text-text-tertiary">
             참고로, 선택 입력 {emptyOptionalCount}건이 비어 있습니다 — 등록에는 영향 없습니다.
           </p>
@@ -298,6 +325,8 @@ export function RegistrationReadinessCard({
           설정하러 가기
         </a>
       )}
+
+      {verifyAction}
 
       <button
         type="button"

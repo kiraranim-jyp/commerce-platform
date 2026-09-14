@@ -23,6 +23,8 @@ function read(relativeToRepoFile: string): string {
 
 const workspace = read("../../CommerceWorkspace.tsx");
 const platformPreview = read("../PlatformPreview.tsx");
+const lotteOnPanel = read("../LotteOnRegistrationPanel.tsx");
+const frame = read("../ChannelRegistrationFrame.tsx");
 
 describe("오른쪽 기둥은 화면에 하나뿐이다", () => {
   it("<ActionCenter>는 코드 전체에서 한 번만 렌더된다", () => {
@@ -49,13 +51,45 @@ describe("오른쪽 기둥은 화면에 하나뿐이다", () => {
     expect(actionCenterAt).toBeGreaterThan(channelBranchAt);
   });
 
-  it("채널 화면이 자기 오른쪽 기둥을 다시 만들지 않는다", () => {
-    // 예전 PlatformPreview는 [본문 | 360px 상태 카드] 2단이었다. Action Center가
-    // 화면 전체의 기둥이 된 지금 그 2단을 그대로 두면 오른쪽 카드 기둥이 둘이 된다.
+  /**
+   * REWORK-2(CEO 지시, 2026-09-14) — 규칙이 **하나 더 정확해졌다.**
+   *
+   * UX 2.2는 "채널 화면은 오른쪽 기둥을 갖지 않는다"였다. 그 규칙대로 만들었더니
+   * 렌더 덤프에서 드러난 화면은 이랬다: 채널 탭 오른쪽에 선 것은 채널 등록
+   * 요약이 아니라 **상품 Action 카드**("등록 전 확인 · 커머스 등록")였고, 등록
+   * 판정·부족정보·등록 버튼은 본문에 세로로 쌓여 있었다.
+   *
+   * 그래서 규칙을 "기둥이 하나다"로 되돌린다 — **누가 그 하나를 갖는지**가
+   * 화면마다 다를 뿐이다(stage-focus의 actionCenter.pillar). 채널 탭에서는
+   * 워크스페이스가 자기 기둥을 접고(channelOwnsPillar), 채널 화면이 등록 요약
+   * 하나를 세운다. 두 기둥이 동시에 서는 경우는 여전히 없다.
+   */
+  it("채널 화면에서는 상품 Action Center가 서지 않는다", () => {
+    // 워크스페이스가 자기 기둥을 접는 배선이 실제로 있다.
+    expect(workspace).toContain("channelOwnsPillar");
+    expect(workspace).toContain('stageFocus.actionCenter.pillar === "CHANNEL_REGISTRATION"');
+    expect(workspace).toContain("{!channelOwnsPillar && (");
+  });
+
+  it("채널 화면의 오른쪽 기둥은 세 채널이 같은 컴포넌트로 세운다", () => {
+    // 예전 PlatformPreview의 [본문 | 360px 상태 카드] 2단은 돌아오지 않는다 —
+    // 폭도 순서도 공용 프레임 하나가 정한다.
     expect(platformPreview).not.toContain("lg:grid-cols-[minmax(0,1fr)_360px]");
+    expect(platformPreview).toContain("<ChannelRegistrationFrame");
+    expect(platformPreview).toContain("<ChannelRegistrationSummary");
+    expect(lotteOnPanel).toContain("<ChannelRegistrationFrame");
+    expect(lotteOnPanel).toContain("<ChannelRegistrationSummary");
     // 등록 게이트와 등록 버튼은 그대로 살아 있다 — 지운 것이 아니라 옮긴 것이다.
-    expect(platformPreview).toContain("<RegistrationReadinessCard");
     expect(platformPreview).toContain("onRegister={onOpenListingModal}");
+    expect(lotteOnPanel).toContain("onRegister={() => void runRegister()}");
+  });
+
+  it("공용 프레임은 저장소에 하나뿐이다", () => {
+    // 프레임이 둘이 되는 순간 "세 채널이 같은 화면"이 코드에서 거짓이 된다.
+    for (const source of [platformPreview, lotteOnPanel]) {
+      expect(source).toContain('from "./ChannelRegistrationFrame"');
+    }
+    expect(frame.match(/lg:grid-cols-\[minmax\(0,1fr\)_300px\]/g) ?? []).toHaveLength(1);
   });
 });
 

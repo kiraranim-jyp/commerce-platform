@@ -138,6 +138,24 @@ export interface StageFocus {
   sourceData: SectionWeight;
   actionCenter: {
     /**
+     * REWORK-2(CEO 지시, 2026-09-14) — **오른쪽 기둥이 지금 무엇의 요약인가.**
+     *
+     * PRODUCT               상품 Action Center(판매 판단 · 등록 전 확인 · 커머스 등록)
+     * CHANNEL_REGISTRATION  채널 등록 요약(등록 상태 · 등록 가능성 · 부족정보 · 등록)
+     *
+     * 이 값이 생긴 이유는 렌더 덤프가 보여준 사실 하나다: 커머스 탭에서 오른쪽에
+     * 서 있던 것은 채널 등록 요약이 아니라 **상품 수준 Action 카드**였다("등록
+     * 전 확인 ⚠ 카테고리 확인 / 커머스 등록 스마트스토어 · 쿠팡 준비중"). 채널
+     * 화면에서 그 카드는 지금 하는 일과 무관한 두 번째 목록이고, 정작 등록
+     * 판정은 본문 맨 위에 세로로 쌓여 있었다.
+     *
+     * CHANNEL_REGISTRATION에서 오른쪽 기둥의 내용을 만드는 것은 채널 화면
+     * 자신이다(ChannelRegistrationFrame). 워크스페이스는 자기 기둥을 세우지
+     * 않는다 — 기둥이 둘이 되면 UX 2.2가 없앤 "우측 Action 카드 반복"이
+     * 그대로 돌아온다.
+     */
+    pillar: "PRODUCT" | "CHANNEL_REGISTRATION";
+    /**
      * 판매 판단(MI) 결론 한 줄.
      *
      * REWORK 커머스 등록 구조 통일(CEO 지시, 2026-09-14) — **커머스 탭에서는
@@ -232,6 +250,8 @@ export function resolveStageFocus(input: StageFocusInput): StageFocus {
     marketEvidence: stage === "MARKET_JUDGING" ? "MAIN" : "COLLAPSED",
     sourceData: "COLLAPSED",
     actionCenter: {
+      // 채널 화면에서는 오른쪽 기둥의 주인이 바뀐다(그 화면이 직접 세운다).
+      pillar: surface === "CHANNEL" ? "CHANNEL_REGISTRATION" : "PRODUCT",
       // 커머스 탭에서는 오른쪽 기둥도 판매 판단을 말하지 않는다 — 본문에서만
       // 지우고 오른쪽에 남겨두면 "MI를 제거했다"가 절반만 참이 된다.
       verdict: surface === "CHANNEL" ? "DEFERRED" : "LIST",

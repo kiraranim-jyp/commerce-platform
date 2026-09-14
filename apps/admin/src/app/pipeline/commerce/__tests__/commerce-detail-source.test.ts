@@ -280,3 +280,195 @@ describe("MI 표시/관리 — 커머스 탭에서 제거됐다(세 탭 전부)"
     expect(guard).toContain('workSurface !== "CHANNEL"');
   });
 });
+
+/* ── 🔴 최종 payload 문자열 — 값으로 비교한다 ──────────────────────────────
+ *
+ * REWORK-2(CEO 지시, 2026-09-14) — "함수 이름이 같은지 보는 것으로 끝내지
+ * 마라. 실제 등록 payload에서 동일한 공통 Source가 최종 콘텐츠로 들어가는가."
+ *
+ * 그래서 여기서는 조립기 출력이 아니라 **세 채널의 실제 등록 payload를 만들고**,
+ * 상단 이미지 URL · 본문 문장 · 하단 이미지 URL이 그 payload 안에 같은 값으로
+ * 같은 순서로 들어 있는지 본다. 세 payload는 서로 다른 스키마라(Coupang은
+ * contents 배열, Naver는 detailContent HTML 문자열, 롯데ON은 epnLst[].cnts)
+ * 비교 대상은 "스키마"가 아니라 **그 안에 실린 문자열 값**이다.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+import { UNRESOLVED_CATEGORY } from "@commerce/category";
+import { PLATFORM_ADAPTERS } from "@commerce/marketplace";
+import {
+  BLANK_LOTTEON_CHANNEL_CONFIG,
+  buildCoupangPayload,
+  buildLotteOnPayload,
+  buildNaverProductPayload,
+} from "@commerce/listing";
+import type { CanonicalProduct } from "@commerce/shared";
+
+function provenance<T>(value: T) {
+  return { value, source: "USER_EDITED", confidence: 1 } as never;
+}
+
+const BODY_TEXT = "부드러운 테리 소재 반바지입니다.";
+
+function payloadProduct(): CanonicalProduct {
+  return {
+    sourceUrl: "https://example.com/products/a",
+    title: provenance("Terry Bermuda Shorts"),
+    brand: provenance("Bobo Choses"),
+    price: provenance({ amount: 50, currency: "EUR" }),
+    priceValidity: "VALID",
+    sku: provenance("B226AC043"),
+    description: provenance(BODY_TEXT),
+    material: provenance("면 100%"),
+    color: provenance("네이비"),
+    recommendedAge: provenance(""),
+    manufacturer: provenance("Bobo Choses"),
+    careInstructions: provenance(""),
+    options: provenance([]),
+    optionGroups: [],
+    variants: [],
+    images: [
+      {
+        id: "img-1",
+        originalUrl: "https://cdn.example.com/product/1.jpg",
+        processedUrl: null,
+        selectedVariant: "ORIGINAL",
+        useInGallery: true,
+        useInDescription: true,
+        classification: "PRODUCT",
+      },
+    ],
+    titleKo: provenance("테리 버뮤다 반바지"),
+    descriptionKo: provenance(BODY_TEXT),
+    keywords: provenance([]),
+    seoTitle: provenance(""),
+    seoDescription: provenance(""),
+    countryOfOrigin: provenance("스페인"),
+    returnPolicy: provenance("반품 가능"),
+    shippingFee: provenance(0),
+    stockQuantity: provenance(999),
+    certification: provenance(""),
+    importer: provenance(""),
+    childCertification: provenance(null),
+    itemName: provenance(""),
+    modelName: provenance(""),
+    weight: provenance(""),
+    certificationType: provenance(""),
+    priceBreakdown: { shippingKrw: 12000, feePercent: 10, marginPercent: 12 },
+    priceOverrideKrw: undefined,
+  } as unknown as CanonicalProduct;
+}
+
+/** 셀러가 상단 블록까지 켜 둔 구성 — 세 채널에 같은 배열이 간다. */
+function enabledBlocks(): DetailPageBlock[] {
+  return defaultDetailBlocks().map((block) => (block.kind === "COMMON_IMAGE" ? { ...block, enabled: true } : block));
+}
+
+describe("🔴 최종 payload 문자열 — 상단 템플릿 · 본문 · 하단 템플릿이 같은 값이다", () => {
+  const product = payloadProduct();
+  const blocksForAll = enabledBlocks();
+
+  /** 스마트스토어 최종 payload에서 상세 콘텐츠 문자열. */
+  function naverDetailContent(): string {
+    const listing = PLATFORM_ADAPTERS.smartstore.toListingModel(product, UNRESOLVED_CATEGORY, undefined, "smartstore");
+    const payload = buildNaverProductPayload({
+      product,
+      listing,
+      leafCategoryId: "50000535",
+      releaseAddressBookNo: 1,
+      refundAddressBookNo: 2,
+      primaryReturnDeliveryCompanyPriorityType: "PRIMARY",
+      sellerDeliveryFee: null,
+      returnDeliveryFee: 3000,
+      exchangeDeliveryFee: 6000,
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+      originAreaCode: "0200037",
+      originAreaRequiresContent: false,
+      detailBlocks: blocksForAll,
+      descriptionTemplate: TEMPLATE,
+      commonImages: COMMON_IMAGES,
+      brandIntro: CTX.brandIntro,
+    } as never);
+    return (payload as unknown as { originProduct: { detailContent: string } }).originProduct.detailContent;
+  }
+
+  /** 쿠팡 최종 payload에서 상세 콘텐츠 문자열(배열을 순서대로 이어붙인 값). */
+  function coupangDetailContent(): string {
+    const listing = PLATFORM_ADAPTERS.coupang.toListingModel(product, UNRESOLVED_CATEGORY, undefined, "coupang");
+    const payload = buildCoupangPayload(product, listing, {
+      sellerConfig: { ...COMMON_IMAGES } as never,
+      descriptionTemplate: TEMPLATE,
+      detailBlocks: blocksForAll,
+    });
+    return payload.items
+      .flatMap((item) => item.contents.flatMap((content) => content.contentDetails.map((d) => d.content)))
+      .join("\n");
+  }
+
+  /** 롯데ON 최종 payload에서 상품기술서(epnLst[DSCRP].cnts). */
+  function lotteOnDetailContent(): string {
+    // api/lotteon/_lib/build-context.ts의 buildDetailHtml()이 만드는 값 그대로.
+    const detailHtml = assembleNaverDetailContent(blocksForAll, {
+      aiDescription: product.descriptionKo.value || product.description.value,
+      template: TEMPLATE,
+      commonImages: COMMON_IMAGES,
+      productImageUrls: product.images.map((image) => image.originalUrl),
+      sizeChartImageUrls: [],
+      brandIntro: CTX.brandIntro,
+    });
+    const payload = buildLotteOnPayload({
+      product,
+      channel: { ...BLANK_LOTTEON_CHANNEL_CONFIG },
+      detailHtml,
+    });
+    const description = payload.spdLst[0].epnLst.find((entry) => entry.pdEpnTypCd === "DSCRP");
+    expect(description, "롯데ON payload에 상품기술서(DSCRP)가 없다").toBeDefined();
+    return description!.cnts;
+  }
+
+  const FINAL: Record<string, string> = {
+    smartstore: naverDetailContent(),
+    coupang: coupangDetailContent(),
+    lotteon: lotteOnDetailContent(),
+  };
+
+  it("세 payload 모두 비어 있지 않다 — 빈 문자열끼리 같다고 말하지 않는다", () => {
+    for (const [channel, content] of Object.entries(FINAL)) {
+      expect(content.length, `${channel} 최종 상세 콘텐츠가 비어 있다`).toBeGreaterThan(50);
+    }
+  });
+
+  it("상단 템플릿 이미지 URL이 세 payload에 **같은 문자열**로 들어 있다", () => {
+    for (const [channel, content] of Object.entries(FINAL)) {
+      expect(content, `${channel} payload에 상단 공통 이미지가 없다`).toContain(COMMON_IMAGES.topCommonImageUrl);
+    }
+  });
+
+  it("본문(AI 상세설명)이 세 payload에 같은 문장으로 들어 있다", () => {
+    for (const [channel, content] of Object.entries(FINAL)) {
+      expect(content, `${channel} payload의 본문이 공통 Source가 아니다`).toContain(BODY_TEXT);
+    }
+  });
+
+  it("하단 템플릿 이미지 URL이 세 payload에 **같은 문자열**로 들어 있다", () => {
+    for (const [channel, content] of Object.entries(FINAL)) {
+      expect(content, `${channel} payload에 하단 공통 이미지가 없다`).toContain(COMMON_IMAGES.bottomCommonImageUrl);
+    }
+  });
+
+  it("상단 → 본문 → 하단 순서가 세 payload에서 같다", () => {
+    for (const [channel, content] of Object.entries(FINAL)) {
+      const top = content.indexOf(COMMON_IMAGES.topCommonImageUrl);
+      const body = content.indexOf(BODY_TEXT);
+      const bottom = content.indexOf(COMMON_IMAGES.bottomCommonImageUrl);
+      expect(top, `${channel}: 상단이 본문보다 뒤에 있다`).toBeLessThan(body);
+      expect(body, `${channel}: 본문이 하단보다 뒤에 있다`).toBeLessThan(bottom);
+    }
+  });
+
+  it("롯데ON 상세 콘텐츠는 스마트스토어와 **문자 단위로 같다** — 롯데ON 전용 템플릿 0건", () => {
+    // 같은 블록 · 같은 셀러 설정 · 같은 본문을 넣으면 결과 문자열까지 같아야
+    // 한다. 한 글자라도 다르면 어딘가에 롯데ON 전용 가공이 들어간 것이다.
+    expect(FINAL.lotteon).toBe(FINAL.smartstore);
+  });
+});

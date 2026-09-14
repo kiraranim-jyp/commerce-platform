@@ -17,6 +17,7 @@ import type { CanonicalProduct, CanonicalProductCertification, CanonicalProductO
 import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
 import { ChannelPriceSection } from "./ChannelPriceSection";
 import { CategoryRequirementsEditor } from "./CategoryRequirementsEditor";
+import { ChannelRegistrationFrame, ChannelRegistrationSummary } from "./ChannelRegistrationFrame";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { ComplianceBreakdown } from "./ComplianceBreakdown";
 import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
@@ -28,8 +29,7 @@ import { NaverPayloadPreview } from "./NaverPayloadPreview";
 import type { NaverResolveResponse } from "./NaverPayloadPreview";
 import { OptionVariantEditor } from "./OptionVariantEditor";
 import { computeChecklistReadiness, computeNaverPayloadReadiness } from "./readiness";
-import { RegistrationReadinessCard } from "./RegistrationReadinessCard";
-import { buildPriorityItems, resolveRegistrationReadinessState, RegistrationStatusBanner } from "./RegistrationStatusBanner";
+import { buildPriorityItems, resolveRegistrationReadinessState } from "./RegistrationStatusBanner";
 import type { PriorityItem, RegistrationReadinessState } from "./readiness-state";
 import { SellerProfileSummaryCard } from "./SellerProfileSummaryCard";
 import { NaverSellerProfileSummaryCard } from "./NaverSellerProfileSummaryCard";
@@ -664,19 +664,51 @@ export function PlatformPreview({
         ? Boolean(coupangCategoryFetching)
         : false;
 
-  return (
-    // UX 2.2(CEO 지시, 2026-09-11) — 이 화면은 더 이상 자기 오른쪽 기둥을 갖지
-    // 않는다.
-    //
-    // 예전에는 채널 탭이 [본문 | 360px 상태 카드] 2단이었다. 그런데 UX 2.2에서
-    // Action Center가 탭 분기 밖으로 올라가 화면 전체의 오른쪽 기둥이 되면서,
-    // 채널 탭에서는 오른쪽에 비슷한 카드 기둥이 둘 나란히 서게 됐다 — CEO가
-    // 지적한 "우측 Action 카드가 여러 곳에서 반복된다"가 정확히 이 모양이다.
-    //
-    // 카드를 지우지 않는다. 등록 게이트(allRequiredPassed)와 등록 버튼은
-    // 지금까지와 똑같이 RegistrationReadinessCard 하나가 책임진다 — 놓이는
-    // 자리만 오른쪽 기둥에서 이 화면 맨 위로 옮긴다(lg 미만에서 이미 그렇게
-    // 쌓이던 순서 그대로라 새 레이아웃을 만든 것도 아니다).
+  /**
+   * REWORK-2(CEO 지시, 2026-09-14) — 우측 · 등록 요약.
+   *
+   * UX 2.2에서 이 두 카드를 오른쪽 기둥에서 본문 맨 위로 내렸었다. 그 결과
+   * 채널 탭은 "판정 → 상세 → 등록 버튼"이 한 줄로 쌓인 세로 문서가 됐고,
+   * 오른쪽에는 채널과 무관한 상품 Action 카드가 대신 서 있었다(BEFORE 덤프).
+   * 이번에는 두 카드를 **채널 요약 기둥**으로 되돌리되, 세 채널이 같은
+   * 컴포넌트(ChannelRegistrationSummary)를 통해서만 세운다.
+   *
+   * 값은 하나도 다시 계산하지 않는다 — 바로 위에서 이미 만든
+   * registrationState / priorityItems / readinessSummary 그대로다.
+   */
+  const summary = (
+    <ChannelRegistrationSummary
+      state={registrationState}
+      priorityItems={priorityItems}
+      onPriorityItemClick={(item) => item.sectionId && goToSection(item.sectionId)}
+      onResolveMissing={priorityItems.length > 0 ? () => setGuideOpen(true) : undefined}
+      isCalculating={capabilities.hasNaverPreview && Boolean(naverValidationLoading)}
+      errorMessage={capabilities.hasNaverPreview ? naverValidationError : null}
+      onRetry={onRetryNaverValidation}
+      percent={readinessSummary.percent}
+      required={readinessSummary.required}
+      recommended={readinessSummary.recommended}
+      allRequiredPassed={readinessSummary.allRequiredPassed}
+      platformLabel={listing.platformLabel}
+      status={listingStatus}
+      registrationEnabled={capabilities.registrationEnabled}
+      registrationReadinessState={registrationState}
+      onRegister={onOpenListingModal}
+      onItemClick={goToSection}
+      settingsMissing={settingsMissing}
+      autoFillStats={
+        compliancePreview
+          ? {
+              total: compliancePreview.autoResolvedCount + compliancePreview.userRequiredCount,
+              autoFilled: compliancePreview.autoResolvedCount,
+              userInput: compliancePreview.userRequiredCount,
+            }
+          : undefined
+      }
+    />
+  );
+
+  const detail = (
     <div className="space-y-4">
       {tabDataLoading && (
         <div className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-3 text-sm text-text-secondary">
@@ -687,43 +719,6 @@ export function PlatformPreview({
           대상정보를 확인중입니다...
         </div>
       )}
-      {/* N-3.58 STEP1(CPO 지시: "판매 전 체크를 가장 먼저 보여주기") — 이
-       * 배너+카드가 화면 맨 위에 온다. UX 2.2에서 단(column) 구조가 사라지면서
-       * 예전 모바일 순서가 모든 폭에서의 순서가 됐다(order 유틸리티 불필요). */}
-      <div className="space-y-4">
-        <RegistrationStatusBanner
-          state={registrationState}
-          priorityItems={priorityItems}
-          onItemClick={(item) => item.sectionId && goToSection(item.sectionId)}
-          onOpenGuide={priorityItems.length > 0 ? () => setGuideOpen(true) : undefined}
-        />
-
-        <RegistrationReadinessCard
-          isCalculating={capabilities.hasNaverPreview && Boolean(naverValidationLoading)}
-          errorMessage={capabilities.hasNaverPreview ? naverValidationError : null}
-          onRetry={onRetryNaverValidation}
-          percent={readinessSummary.percent}
-          required={readinessSummary.required}
-          recommended={readinessSummary.recommended}
-          allRequiredPassed={readinessSummary.allRequiredPassed}
-          platformLabel={listing.platformLabel}
-          status={listingStatus}
-          registrationEnabled={capabilities.registrationEnabled}
-          registrationReadinessState={registrationState}
-          onRegister={onOpenListingModal}
-          onItemClick={goToSection}
-          settingsMissing={settingsMissing}
-          autoFillStats={
-            compliancePreview
-              ? {
-                  total: compliancePreview.autoResolvedCount + compliancePreview.userRequiredCount,
-                  autoFilled: compliancePreview.autoResolvedCount,
-                  userInput: compliancePreview.userRequiredCount,
-                }
-              : undefined
-          }
-        />
-      </div>
 
       <div className="space-y-3">
         <CollapsibleSection
@@ -1220,4 +1215,6 @@ export function PlatformPreview({
       )}
     </div>
   );
+
+  return <ChannelRegistrationFrame detail={detail} summary={summary} />;
 }

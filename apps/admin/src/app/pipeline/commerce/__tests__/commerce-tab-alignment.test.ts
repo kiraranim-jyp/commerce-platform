@@ -1,5 +1,6 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 import type { CanonicalProduct, PlatformId } from "@commerce/shared";
 import { PLATFORM_ADAPTERS } from "@commerce/marketplace";
@@ -109,6 +110,24 @@ function stripTags(html: string): string {
 function attr(tagHtml: string, name: string): string | null {
   const match = new RegExp(`${name}="([^"]*)"`).exec(tagHtml);
   return match ? match[1] : null;
+}
+
+/**
+ * REWORK-2(CEO 지시, 2026-09-14) — 한 탭의 렌더 결과를 **좌측 상세 / 우측 요약**
+ * 두 덩어리로 가른다.
+ *
+ * 클래스 이름이 아니라 공용 프레임이 붙인 `data-frame`으로 찾는다. Tailwind
+ * 유틸리티 하나만 바뀌어도 "좌우가 실제로 갈렸는가"를 보던 검사가 조용히
+ * 무력해지기 때문이다 — 이 저장소가 "코드상 그렇다"로 여러 번 틀린 자리다.
+ */
+function columnsOf(html: string): { left: string; right: string } {
+  const root = new JSDOM(`<!doctype html><body>${html}</body>`).window.document.body.firstElementChild;
+  if (!root) throw new Error("렌더 결과가 비어 있다");
+  if (root.getAttribute("data-frame") !== "channel-registration") {
+    throw new Error("공용 등록 프레임(data-frame=channel-registration)이 최상위에 없다 — 세로형 화면이다");
+  }
+  const [left, right] = Array.from(root.children);
+  return { left: left?.innerHTML ?? "", right: right?.innerHTML ?? "" };
 }
 
 /**
@@ -269,12 +288,13 @@ describe("골격 — CEO 지시서의 섹션 구조와 실제 렌더 순서가 �
     return found.sort((a, b) => a.at - b.at).map((entry) => entry.text);
   }
 
-  it("롯데ON 탭의 섹션이 지시서 골격 순서 그대로 선다", () => {
-    const titles = sectionTitles(renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
+  it("롯데ON 탭 **좌측 등록 상세**의 섹션이 지시서 골격 순서 그대로 선다", () => {
+    /* REWORK-2(CEO 지시, 2026-09-14) — 등록 상태 · 등록 가능성이 이 목록에서
+       빠졌다. 지운 것이 아니라 **우측 등록 요약으로 옮겼다**(바로 아래 테스트가
+       우측에 있다는 사실을 렌더 결과로 고정한다). 좌측에 남는 것은 CEO 프레임의
+       "좌측 · 등록 상세"뿐이다. */
+    const titles = sectionTitles(columnsOf(renderLotteOnTab({ sellerSettings: makeSellerSettings() })).left);
     expect(titles).toEqual([
-      // 등록 상태 / 등록 가능성
-      "등록 상태",
-      "등록 가능성",
       // 이 탭이 무엇을 정하고 무엇을 정하지 않는지 — 안내 박스
       "이 탭에서 정하는 것",
       // 상품정보 — 상품정보 Source에서 자동 표시
@@ -294,14 +314,63 @@ describe("골격 — CEO 지시서의 섹션 구조와 실제 렌더 순서가 �
     ]);
   });
 
-  it("등록 정보 확인 · 롯데ON 등록이 마지막에 온다", () => {
-    const html = renderLotteOnTab({ sellerSettings: makeSellerSettings() });
-    // 버튼은 마지막 섹션 뒤에 선다(문구 자체는 위쪽 안내에도 나오므로 버튼
-    // 요소의 위치로 본다).
-    const confirmButton = html.indexOf(">등록 정보 확인<");
-    const registerButton = html.indexOf(">롯데ON에 등록<");
-    expect(confirmButton).toBeGreaterThan(html.indexOf("⑦ 그 밖의 롯데ON 코드"));
+  it("등록 상태 · 등록 가능성 · [등록 정보 확인] · [채널 등록]이 전부 우측 요약에 있다", () => {
+    const { right } = columnsOf(renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
+    const text = stripTags(right);
+    expect(text).toContain("등록 상태");
+    expect(text).toContain("등록 가능성");
+    // CEO 프레임의 버튼 순서 — [등록 정보 확인] 다음에 [채널 등록].
+    const confirmButton = right.indexOf(">등록 정보 확인<");
+    const registerButton = right.indexOf(">⚠ 부족한 정보 해결하기<");
+    expect(confirmButton).toBeGreaterThan(-1);
     expect(registerButton).toBeGreaterThan(confirmButton);
+    // 좌측 상세에는 등록 행동이 남아 있지 않다 — 행동은 한 곳에서만.
+    const { left } = columnsOf(renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
+    expect(left).not.toContain(">등록 정보 확인<");
+  });
+
+  it("세 탭이 같은 프레임을 쓴다 — 좌측 상세 · 우측 요약", () => {
+    const rendered: [string, string][] = [
+      ["smartstore", renderPlatformTab("smartstore")],
+      ["coupang", renderPlatformTab("coupang")],
+      ["lotteon", renderLotteOnTab({ sellerSettings: makeSellerSettings() })],
+    ];
+    for (const [name, html] of rendered) {
+      const { left, right } = columnsOf(html);
+      expect(left.length, `${name}: 좌측 상세가 비어 있다`).toBeGreaterThan(0);
+      expect(right.length, `${name}: 우측 요약이 비어 있다`).toBeGreaterThan(0);
+      // 우측 요약은 세 채널 모두 "등록 가능성"과 등록 버튼을 갖는다.
+      expect(stripTags(right), `${name}: 우측에 등록 가능성이 없다`).toContain("등록 가능성");
+      expect(/<button[^>]*>(⚠ 부족한 정보 해결하기|🔴 등록 불가|판매 전 최종 확인|🟠 판매 가능 여부 확인하기)</.test(right), `${name}: 우측에 등록 버튼이 없다`).toBe(true);
+    }
+  });
+
+  it("세 탭 어디에도 MI 어휘가 없다 — 커머스 탭의 질문은 등록 하나다", () => {
+    const rendered: [string, string][] = [
+      ["smartstore", renderPlatformTab("smartstore")],
+      ["coupang", renderPlatformTab("coupang")],
+      ["lotteon", renderLotteOnTab({ sellerSettings: makeSellerSettings() })],
+    ];
+    const MI_WORDS = [
+      "판매 판단",
+      "판매 추천",
+      "판매 비추천",
+      "조건부 판매",
+      "가격경쟁력",
+      "예상 마진",
+      "국내 비교상품",
+      "시장 판단",
+      "Market Intelligence",
+      "국내 시장",
+      "해외 시장",
+      "판단 근거",
+    ];
+    for (const [name, html] of rendered) {
+      const text = stripTags(html);
+      for (const word of MI_WORDS) {
+        expect(text, `${name} 탭에 MI 어휘가 새어 들어왔다: ${word}`).not.toContain(word);
+      }
+    }
   });
 
   it("섹션 명칭은 스마트스토어·쿠팡의 기존 어휘를 재사용한다", () => {

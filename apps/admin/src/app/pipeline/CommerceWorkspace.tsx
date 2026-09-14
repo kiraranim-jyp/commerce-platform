@@ -1621,6 +1621,11 @@ export function CommerceWorkspace({
     surface: workSurface,
     marketDetailOpen,
   });
+  /**
+   * REWORK-2 — 지금 오른쪽 기둥의 주인이 채널 화면인가. 판단은 stage-focus
+   * 하나에서만 내린다(여기서 tab을 다시 세지 않는다).
+   */
+  const channelOwnsPillar = stageFocus.actionCenter.pillar === "CHANNEL_REGISTRATION";
 
   /**
    * MI-UX-FINAL-4(CEO 지시, 2026-09-13) — 가격비교 두 패널이 어느 자리에 서는가.
@@ -2443,7 +2448,15 @@ export function CommerceWorkspace({
           여러 곳에서 반복된다"의 실체였다. lg 미만에서는 1열로 접히고 order
           유틸리티로 Action Center가 먼저 온다(결론과 행동이 스크롤 아래에
           묻히지 않도록). */}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+      {/* REWORK-2(CEO 지시, 2026-09-14) — 커머스 탭에서는 이 격자가 **한 칸**이 된다.
+          오른쪽 기둥의 주인이 채널 화면으로 넘어가기 때문이다(stage-focus의
+          actionCenter.pillar). 채널 화면은 자기 안에서 같은 비율의 2단
+          (ChannelRegistrationFrame: 1fr + 300px)을 세우므로 셀러가 보는 폭은
+          상품정보 탭과 같고, 화면에 선 기둥은 여전히 하나뿐이다.
+
+          React 트리는 바뀌지 않는다 — 두 칸 div는 그대로 있고 클래스만 바뀐다.
+          그래야 탭을 옮겨도 MI 패널이 언마운트되지 않는다(UX 2.2가 고친 버그). */}
+      <div className={`grid gap-4 ${channelOwnsPillar ? "" : "lg:grid-cols-[minmax(0,1fr)_300px]"}`}>
         <div className="order-2 min-w-0 space-y-4 lg:order-1">
           {/* ── MI는 탭 분기 **밖**에서 한 번만 마운트된다 ─────────────────
               UX-1E(CEO 지시, 2026-09-05) — 셀러의 첫 질문은 "이 해외 상품을
@@ -2772,7 +2785,8 @@ export function CommerceWorkspace({
             탭 분기 밖에 있으므로 어느 탭에서도 이것 하나다. 본문이 이미 갖고
             있는 블록(③의 체크리스트 / ④·채널 화면의 등록 행동)은 여기서 한
             줄로 접힌다 — 같은 목록을 두 번 두지 않는다(stage-focus.ts). */}
-        <div className="order-1 lg:order-2">
+        <div className={channelOwnsPillar ? "hidden" : "order-1 lg:order-2"}>
+          {!channelOwnsPillar && (
           <ActionCenter
             verdict={sellVerdict ? FINAL_VERDICT_COPY[sellVerdict] : null}
             verdictPending={!verdictReported}
@@ -2786,6 +2800,7 @@ export function CommerceWorkspace({
             onOpenVerdict={openMarketDetail}
             onGoToChannel={setTab}
           />
+          )}
         </div>
       </div>
 

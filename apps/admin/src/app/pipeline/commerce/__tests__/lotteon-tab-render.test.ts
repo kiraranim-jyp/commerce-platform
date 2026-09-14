@@ -140,10 +140,17 @@ describe("롯데ON 탭 — 실제로 그려지는 화면", () => {
     expect(visibleText(renderTab())).not.toContain("Preview");
   });
 
+  /**
+   * REWORK-2(CEO 지시, 2026-09-14) — 등록 버튼이 **우측 등록 요약**으로 올라갔고,
+   * 문구를 정하는 곳도 스마트스토어·쿠팡과 같은 컴포넌트(RegistrationReadinessCard)가
+   * 됐다. 그래서 확인 전 문구는 더 이상 "롯데ON에 등록"이 아니라 세 채널이 함께
+   * 쓰는 문구다 — **게이트 자체는 한 글자도 바뀌지 않았다**(canRegister 하나).
+   */
   it("등록 버튼은 확인을 통과하기 전에는 잠겨 있다", () => {
-    const html = renderTab();
-    const registerButton = /<button[^>]*>롯데ON에 등록<\/button>/.test(html.replace(/\s+/g, " "));
-    expect(registerButton || html.includes("롯데ON에 등록")).toBe(true);
+    const html = renderTab().replace(/\s+/g, " ");
+    expect(/<button[^>]*disabled[^>]*>⚠ 부족한 정보 해결하기<\/button>/.test(html)).toBe(true);
     expect(html).toContain("등록 정보 확인을 통과해야 등록 버튼이 열립니다");
+    // 확인 버튼은 잠기지 않는다 — 잠그면 여는 방법이 없어진다.
+    expect(html).toContain(">등록 정보 확인</button>");
   });
 });
