@@ -83,10 +83,26 @@ export function MissingFieldsBulkPanel({
           전체 선택
         </label>
         {missingFields.map((field) => (
-          <label key={field} className="flex items-center gap-2 py-0.5 text-sm">
-            <input type="checkbox" checked={checked.has(field)} onChange={() => toggle(field)} />
-            {FIELD_LABEL[field]}
-          </label>
+          <div key={field}>
+            <label className="flex items-center gap-2 py-0.5 text-sm">
+              <input type="checkbox" checked={checked.has(field)} onChange={() => toggle(field)} />
+              {FIELD_LABEL[field]}
+            </label>
+            {/* REWORK-8 ①(CEO 지시, 2026-09-15) — 이 패널에서 «참조»가 **절반만**
+                통하는 필드가 하나 있다. 모델명은 고시정보 쪽만 대체되고 네이버
+                쇼핑 카탈로그 모델명은 비어 있는 채로 남아 등록을 계속 막는다
+                (REWORK-6 확정). 지금까지 이 줄은 다른 8개와 똑같이 생겨서,
+                체크하고 적용한 셀러는 "처리했다"고 믿은 채 막다른 길로 갔다.
+                🔴 문구만 고치는 게 아니다 — 같은 화면의 「Source Data」에 실제
+                입력칸을 만들었고(SourceDataView), 이 줄은 그리로 보낸다. */}
+            {field === "modelName" && (
+              <p className="ml-6 rounded border border-warning/40 bg-warning-soft px-2 py-1 text-[11px] leading-relaxed text-warning">
+                ⚠ 모델명은 참조로 절반만 대체됩니다 — 고시정보 모델명은 채워지지만 「네이버 쇼핑 카탈로그
+                모델명」은 비어 있어 스마트스토어 등록이 계속 막힙니다. 같은 화면의 「Source Data」에 있는
+                &ldquo;모델명&rdquo; 칸에 실제 값을 직접 입력해주세요.
+              </p>
+            )}
+          </div>
         ))}
       </div>
 

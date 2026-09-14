@@ -22,7 +22,10 @@ export function SourceDataView({
 }: {
   product: CanonicalProduct;
   onUpdateField: (
-    key: "title" | "brand" | "sku" | "description" | "material",
+    /* REWORK-8 ①(CEO 지시, 2026-09-15) — "modelName"이 새로 들어왔다. 이 union은
+       CommerceWorkspace.updateField()의 키 집합의 부분집합이고(그쪽에 이미
+       "modelName"이 있다), 넓히는 것 말고 새 배선을 만들지 않았다. */
+    key: "title" | "brand" | "sku" | "description" | "material" | "modelName",
     value: string,
   ) => void;
   onUpdatePrice: (amount: number, currency: string) => void;
@@ -107,6 +110,46 @@ export function SourceDataView({
                 onCommit={(v) => onUpdateField("sku", v)}
                 placeholder="SKU 없음"
               />
+            </Row>
+            {/* REWORK-8 ①(CEO 지시, 2026-09-15) — **빠져 있던 입력 자리를 만든다.**
+
+                신고된 상태: 상품명 정상 · 상품코드(SKU) AAA1804916 · 모델명 비어
+                있음 · 화면은 "네이버 쇼핑 카탈로그 모델명이 없습니다"라고 하는데
+                **모델명을 칠 칸이 없다.**
+
+                실측한 근본 원인은 문구가 아니라 자리다. 이 화면(상품정보)에서
+                모델명에 도달하는 길은 「불러오지 못한 항목」 패널의 체크박스
+                하나뿐이었고, 그 체크박스가 하는 일은 «상세페이지 참조»로 바꾸는
+                것이다 — 그것은 고시정보 모델명만 채우고 카탈로그 모델명
+                (naverShoppingSearchInfo.modelName)은 끝내 비운다(REWORK-6에서
+                확정). 즉 상품정보에서 셀러가 할 수 있는 유일한 동작이 **막다른
+                길을 만드는 동작**이었다.
+
+                🔴 SKU를 복사하지 않는다. 바로 위 칸이 SKU이고 값도 있지만, 그 둘은
+                payload에서 서로 다른 자리로 나간다(sku → sellerManagementCode,
+                모델명 → naverShoppingSearchInfo.modelName). 그 판정은 REWORK-7 ③
+                에서 확정됐고 rework6-modelname-chain.test.ts가 못으로 박아 뒀다.
+
+                새 편집 패턴을 만들지 않는다 — 위 SKU/소재와 같은 Row + EditableText
+                이고, 같은 onUpdateField를 탄다(USER_EDITED가 되고 build-payload가
+                그 값만 카탈로그로 보낸다). */}
+            <Row label="모델명" field={product.modelName}>
+              <EditableText
+                value={product.modelName.value}
+                onCommit={(v) => onUpdateField("modelName", v)}
+                placeholder="모델명 미확인 (예: B226AC043)"
+              />
+              <p className="mt-1 text-[11px] leading-relaxed text-text-tertiary">
+                위 SKU와 다른 값입니다 — SKU는 판매처 자신의 재고번호이고, 모델명은 네이버 쇼핑
+                카탈로그 검색·연결에 쓰이는 값입니다.
+              </p>
+              {product.modelName.source === "DETAIL_PAGE_REFERENCE" && (
+                <p className="mt-1 rounded border border-warning/40 bg-warning-soft px-2 py-1 text-[11px] leading-relaxed text-warning">
+                  ⚠ 지금은 &ldquo;상세페이지 참조&rdquo;로 표시돼 있습니다 — 고시정보 모델명만 대체되고
+                  「네이버 쇼핑 카탈로그 모델명」은 비어 있습니다. 위 칸에 직접 입력하면 두 자리가 모두
+                  채워집니다.
+                </p>
+              )}
             </Row>
             <Row label="옵션" field={product.options}>
               <EditableText

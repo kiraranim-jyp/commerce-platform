@@ -690,12 +690,54 @@ export function PlatformPreview({
   // 확인중입니다" 배너로 보여준다 — 이게 끝나기 전에 readinessSummary가
   // null validation을 "확인 안 됨"으로 잘못 읽어 0%를 보여주던 게 이번에
   // 고치는 버그의 핵심이다.
-  const tabDataLoading =
+  //
+  // REWORK-9(CEO 지시, 2026-09-15: "SmartStore에만 뜨는 «대상정보를 확인중입니다»가
+  // 무엇인지 조사하라") — **의미는 있다. 없앨 것이 아니라 이름을 붙여야 한다.**
+  //
+  // 실측한 정체(CommerceWorkspace.tsx):
+  //   naverCategoryLoading    L1105 effect — deps [tab, product].
+  //                           POST /api/naver/category-search. 상품이 바뀔 때마다
+  //                           자동 실행된다.
+  //   naverValidationLoading  L2031 effect — deps [eligible, listing, product, retry],
+  //                           500ms 디바운스. GET /api/naver/resolve로 출고지·반품지·
+  //                           배송·원산지·고시·상세블록을 받아 payload를 만들고
+  //                           validateNaverPayload()를 돌린다.
+  //   coupangCategoryFetching L1774 — 셀러가 버튼을 눌렀을 때만 켜진다.
+  //
+  // 🔴 그래서 **SmartStore에만** 뜬다. 쿠팡 쪽 플래그는 사용자가 누를 때만 켜지고,
+  // SmartStore만 자동 조회를 둘 걸어 두었기 때문이다 — 채널 차이가 아니라 배선 차이다.
+  //
+  // 이 값은 읽기 전용이다(GET/POST 조회뿐, 상품을 바꾸지 않는다). 하지만 **기다려야
+  // 하는 값**이다: 등록 게이트가 smartStoreValidation.ok를 쓰고(CommerceWorkspace
+  // L2197), 끝나기 전에는 우측 요약의 부족 항목이 확정되지 않는다.
+  //
+  // 지금까지 이 배너는 "대상정보를 확인중입니다..." 한 줄이었다 — 무엇을 확인하는지,
+  // 지금 어디까지 왔는지, 언제 끝나는지 어느 것도 말하지 않았다. 문구만 바꾸지 않고
+  // **확인 항목을 그대로 나열해서 각각의 완료 여부를 보여준다**(아래 tabDataChecks).
+  const tabDataChecks: { label: string; detail: string; done: boolean }[] =
     listing.platform === "smartstore"
-      ? Boolean(naverCategoryLoading) || Boolean(naverValidationLoading)
+      ? [
+          {
+            label: "카테고리 후보 조회",
+            detail: "네이버 리프 카테고리와 대조",
+            done: !naverCategoryLoading,
+          },
+          {
+            label: "등록 가능성 검증",
+            detail: "출고지·반품지·배송비·원산지·고시정보를 네이버에서 읽어 판정",
+            done: !naverValidationLoading,
+          },
+        ]
       : listing.platform === "coupang"
-        ? Boolean(coupangCategoryFetching)
-        : false;
+        ? [
+            {
+              label: "카테고리 추천 조회",
+              detail: "쿠팡 카테고리 자동매칭",
+              done: !coupangCategoryFetching,
+            },
+          ]
+        : [];
+  const tabDataLoading = tabDataChecks.some((c) => !c.done);
 
   /**
    * REWORK-2(CEO 지시, 2026-09-14) — 우측 · 등록 요약.
@@ -728,12 +770,35 @@ export function PlatformPreview({
   const detail = (
     <div className="space-y-4">
       {tabDataLoading && (
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-3 text-sm text-text-secondary">
-          <span
-            aria-hidden
-            className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
-          />
-          대상정보를 확인중입니다...
+        <div className="rounded-lg border border-border bg-surface px-4 py-3 text-sm text-text-secondary">
+          <div className="flex items-center gap-2 font-medium text-text-primary">
+            <span
+              aria-hidden
+              className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
+            />
+            등록 대상 정보를 확인하고 있습니다
+          </div>
+          {/* REWORK-9 — 무엇을 확인하는지 · 현재 상태 · 완료 여부. 셋을 전부 적는다. */}
+          <ul className="mt-2 space-y-1">
+            {tabDataChecks.map((check) => (
+              <li key={check.label} className="flex items-start gap-2 text-xs">
+                <span aria-hidden className={check.done ? "text-success" : "text-text-tertiary"}>
+                  {check.done ? "✓" : "⟳"}
+                </span>
+                <span>
+                  <span className="font-medium text-text-primary">{check.label}</span>
+                  <span className="ml-1 text-text-tertiary">— {check.detail}</span>
+                  <span className={`ml-1 ${check.done ? "text-success" : "text-text-secondary"}`}>
+                    {check.done ? "완료" : "확인 중"}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[11px] text-text-tertiary">
+            조회만 합니다 — 상품 정보를 바꾸지 않습니다. 모두 완료되면 이 안내가 사라지고 오른쪽 「등록 준비
+            상태」가 이 결과로 다시 계산됩니다.
+          </p>
         </div>
       )}
 
