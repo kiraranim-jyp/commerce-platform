@@ -189,6 +189,16 @@ async function collectOverseasPrices(input: {
   sourceUrl?: string;
   sku?: string;
   description?: string;
+  /**
+   * GOLF-01-WIRE — 셀러가 상품 검색을 시작할 때 고른 조사 카테고리.
+   *
+   * 이 값이 없으면 `/api/comparison/search`가 `selectedMarketSourceScopes(undefined)`
+   * → 자동추정으로 떨어지고, 골프는 어휘가 비어 있어 `null`이 된다. `null`은
+   * `sourceFitsScopes` 규약상 "필터 없음"이라 **아동복 소싱처 25곳과 접근이
+   * 막힌 GDO·Victoria까지 전부 조회된다**(실측: 배선 전 28곳). CEO가 FAIL로
+   * 지정한 그 자리다.
+   */
+  marketCategoryProfileId?: string;
 }): Promise<OverseasCollection> {
   let searchRes: Response;
   let ratesRes: Response | null;
@@ -247,6 +257,7 @@ export function ComparisonShopSearch({
   sourceUrl,
   sku,
   description,
+  marketCategoryProfileId,
   onRequestPriceReview,
   open,
   onToggle,
@@ -257,6 +268,8 @@ export function ComparisonShopSearch({
   brand?: string;
   sourceUrl?: string;
   sku?: string;
+  /** GOLF-01-WIRE — 상품 검색 시작 때 고른 조사 카테고리. collectOverseasPrices 머리 주석 참조. */
+  marketCategoryProfileId?: string;
   /** P-11 STEP 4 — product-identity.ts가 sku가 비어있을 때 "Article code: XXX"
    * 텍스트를 직접 뽑아내는 폴백 소스로 쓴다(STEP 1 실측: product.sku.value가
    * 비어있어도 설명문에는 Article code가 그대로 있는 경우가 흔함). */
@@ -307,8 +320,12 @@ export function ComparisonShopSearch({
   const collection = useCollectOnce<OverseasCollection>(
     // title이 아직 없으면 물어볼 것이 없다(예전 `!title` 가드와 같은 뜻이다).
     // 키는 상품의 정체다 — 셀러가 상품명을 손보는 것으로 크롤링이 다시 돌면 안 된다.
+    // GOLF-01-WIRE — 키에 카테고리를 «넣지 않는다». 카테고리는 상품 검색 시작 때
+    // 정해져 상품과 수명이 같고, 스냅샷 복원 중에 ""→"KIDS_FASHION"으로 늦게 채워질
+    // 수 있다. 키에 넣으면 그 순간 키가 바뀌어 수집이 한 번 더 돈다 — 표시용 조회가
+    // 아니라 셀러가 켜 둔 편집샵을 실제로 뒤지는 크롤링이다(MI-COLLECTION-GUARD-1).
     title ? `overseas:${sourceUrl || title}` : null,
-    () => collectOverseasPrices({ title, brand, sourceUrl, sku, description }),
+    () => collectOverseasPrices({ title, brand, sourceUrl, sku, description, marketCategoryProfileId }),
   );
   const { loading, error } = collection;
   const results = collection.data?.results ?? null;

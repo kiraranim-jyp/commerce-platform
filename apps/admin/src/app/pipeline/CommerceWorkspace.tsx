@@ -181,6 +181,7 @@ const TAB_LABELS: Record<"source" | "content", string> = {
  */
 export function CommerceWorkspace({
   product,
+  marketCategoryProfileId,
   onUpdateProduct,
   items,
   thumbnails,
@@ -203,6 +204,13 @@ export function CommerceWorkspace({
   priceCheckPriming,
 }: {
   product: CanonicalProduct;
+  /**
+   * GOLF-01-WIRE — 셀러가 상품 검색을 시작할 때 고른 조사 카테고리
+   * (`workspace.marketCategoryProfileId`). 해외 가격비교가 이 값으로 조사
+   * 대상을 거른다. 국내 경로는 스냅샷 저장 때 이미 같은 값을 넘기고 있다 —
+   * 두 경로가 «같은 한 값»을 보도록 여기서 다시 추정하지 않는다.
+   */
+  marketCategoryProfileId?: string;
   onUpdateProduct: (updater: (prev: CanonicalProduct) => CanonicalProduct) => void;
   items: WorkspaceItem[];
   thumbnails: Record<string, string>;
@@ -2632,6 +2640,7 @@ export function CommerceWorkspace({
                     sourceUrl={product.sourceUrl}
                     sku={product.sku.value || undefined}
                     description={product.description.value || undefined}
+                    marketCategoryProfileId={marketCategoryProfileId}
                     onRequestPriceReview={handleRequestPriceReview}
                     open={overseasEvidenceOpen}
                     onToggle={setOverseasEvidenceOpen}

@@ -1053,6 +1053,9 @@ export default function PipelinePage() {
         <div className="mt-6 space-y-6">
           <CommerceWorkspace
             product={product}
+            // GOLF-01-WIRE — 빈 문자열("미선택")은 undefined로 보낸다. 그래야
+            // 라우트가 기존 자동추정 폴백을 그대로 탄다(레거시 스냅샷 무회귀).
+            marketCategoryProfileId={marketCategoryId || undefined}
             onUpdateProduct={updateProduct}
             items={items}
             thumbnails={thumbnails}
