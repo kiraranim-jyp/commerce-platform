@@ -1,6 +1,7 @@
 import { CATEGORY_PROFILE_LIST, selectedMarketSourceScopes, sourceFitsScopes } from "@commerce/category";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/require-user";
+import { isCollectableAccess, listComparisonShops } from "../comparison-shops/_lib/comparison-shop";
 import { listDomesticPriceSources } from "../domestic-price-sources/_lib/domestic-price-source";
 
 export const runtime = "nodejs";
@@ -40,6 +41,12 @@ export interface MarketCategoryOption {
    * 이 값으로 정한다 — 셀러가 자기 목록에서 전부 꺼 둔 것과 "우리가 아직 사이트를
    * 확보하지 못한 것"은 완전히 다른 사실이고, 후자만 "준비중"이다. */
   catalogSourceCount: number;
+  /** GOLF-01 축 A(CEO 지시, 2026-09-15) — 이 카테고리에 연결된 **해외** 판매처
+   * 수. 설정 화면이 "국내 n곳 · 해외 m곳"을 같이 보여주기 위한 값이다.
+   * available 판정에는 넣지 않는다 — 분석 파이프라인의 조사 대상은 국내
+   * 카탈로그이고, 해외가 있다고 국내 조사가 열리지는 않기 때문이다
+   * (그 판정을 바꾸면 기존 아동 동작이 함께 바뀐다). */
+  overseasSourceCount: number;
   /** false면 화면에서 선택 불가("준비중"). */
   available: boolean;
 }
@@ -49,14 +56,20 @@ export async function GET() {
   const auth = await requireUser();
   if (!auth.ok) return auth.response;
 
-  const sources = await listDomesticPriceSources(auth.user.workspaceId);
+  const [sources, shops] = await Promise.all([
+    listDomesticPriceSources(auth.user.workspaceId),
+    listComparisonShops(),
+  ]);
 
   const categories: MarketCategoryOption[] = CATEGORY_PROFILE_LIST.map((profile) => {
     // 셀러가 고른 카테고리를 조사 범위로 바꾸는 그 함수를 그대로 쓴다
     // (여기서 marketSourceScopes를 직접 펼치면 두 곳이 언젠가 어긋난다).
     const scopes = selectedMarketSourceScopes(profile.id);
+    // GOLF-01 축 A — 실측으로 막힌 것이 확인된 판매처는 세지 않는다. 등록만
+    // 되어 있고 한 번도 호출되지 않을 사이트를 "조사 대상 n곳"에 넣으면,
+    // 이 라우트가 막으려고 만들어진 바로 그 거짓말이 다시 생긴다.
     const fitting = sources.filter(
-      (s) => s.status === "ACTIVE" && sourceFitsScopes(s.categoryScope, scopes),
+      (s) => s.status === "ACTIVE" && isCollectableAccess(s.accessStatus) && sourceFitsScopes(s.categoryScope, scopes),
     );
     const catalogSourceCount = fitting.filter((s) => s.catalogEnabled).length;
     return {
@@ -64,6 +77,9 @@ export async function GET() {
       label: profile.label,
       sourceCount: fitting.filter((s) => s.enabled).length,
       catalogSourceCount,
+      overseasSourceCount: shops.filter(
+        (s) => s.isActive && isCollectableAccess(s.accessStatus) && sourceFitsScopes(s.categoryScope, scopes),
+      ).length,
       available: catalogSourceCount > 0,
     };
   });

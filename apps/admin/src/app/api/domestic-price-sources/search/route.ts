@@ -15,6 +15,7 @@ import {
 } from "@commerce/shared";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/require-user";
+import { isCollectableAccess } from "../../comparison-shops/_lib/comparison-shop";
 import { resolveCategoryScopes } from "../_lib/category-scope";
 import { listDomesticPriceSources } from "../_lib/domestic-price-source";
 
@@ -175,8 +176,19 @@ export async function POST(request: Request) {
     brand: body.brand,
     sourceUrl: body.sourceUrl,
   });
+  //
+  // GOLF-01 축 A(CEO 지시, 2026-09-15) — 🔴 막힌 사이트를 반복 호출하지 않는다.
+  // 실측으로 403/로그인요구가 확인된 소스는 access_status에 그 사실이 적혀
+  // 있다(마이그레이션 051). 매 검색마다 다시 두드려서 다시 차단당하는 대신
+  // 여기서 뺀다 — 화면은 그 소스를 "접근 차단"/"로그인 필요"라고 말한다.
+  // null(확인 안 함)은 통과시킨다: 기존 16행이 전부 null이라 여기서 막으면
+  // 그 순간 모든 조사가 멈춘다.
   const sources = (await listDomesticPriceSources(auth.user.workspaceId)).filter(
-    (s) => s.enabled && s.status === "ACTIVE" && sourceFitsScopes(s.categoryScope, categoryScopes),
+    (s) =>
+      s.enabled &&
+      s.status === "ACTIVE" &&
+      isCollectableAccess(s.accessStatus) &&
+      sourceFitsScopes(s.categoryScope, categoryScopes),
   );
 
   // MI-DOMESTIC-FIX-1(CPO 지시, 2026-09-09) — 여기가 buildDomesticShopQuery를

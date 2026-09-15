@@ -6,6 +6,29 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
  * SYSTEM(추천 seed)/USER(직접 추가) 구분은 삭제 가능 여부에만 쓰인다 —
  * SYSTEM 사이트는 활성/비활성만, USER 사이트는 삭제까지 가능하다.
  */
+/**
+ * GOLF-01 축 A(CEO 지시, 2026-09-15) — "등록됨"과 "수집 성공"은 다른 사실이다.
+ *
+ * 마이그레이션 051. 사람이 직접 열어 본 결과만 들어간다:
+ *   "OK"              열리고 실제 값을 확인했다
+ *   "BLOCKED"         WAF/봇차단으로 접근 자체가 막혔다
+ *   "LOGIN_REQUIRED"  로그인 없이는 값을 볼 수 없다
+ *   null              이번에 확인하지 않았다 — 🔴 "수집 가능"이 아니다
+ *
+ * collectionStrategy(국내)/파서 존재 여부(해외)와 섞지 않는다. "열리는가"와
+ * "우리가 자동으로 읽을 수 있는가"는 다른 질문이고, 다나와처럼 열리지만 파서가
+ * 없는 사이트가 실제로 있다.
+ */
+export type MarketSourceAccessStatus = "OK" | "BLOCKED" | "LOGIN_REQUIRED";
+
+/** 이 판매처를 지금 실제로 호출해도 되는가. 🔴 막힌 사이트를 반복 호출하지
+ * 않는다(CEO 명시) — 조사 대상을 고르는 모든 자리가 이 함수 하나를 쓴다.
+ * null(확인 안 함)은 오늘까지의 동작 그대로 통과시킨다: 기존 16행·25행이
+ * 전부 null이라, 여기서 null을 막으면 그 순간 모든 조사가 멈춘다. */
+export function isCollectableAccess(status: MarketSourceAccessStatus | null | undefined): boolean {
+  return status !== "BLOCKED" && status !== "LOGIN_REQUIRED";
+}
+
 export interface ComparisonShop {
   id: string;
   name: string;
@@ -13,6 +36,15 @@ export interface ComparisonShop {
   url: string;
   country: string | null;
   currency: string | null;
+  /** 마이그레이션 051. 국내(domestic_price_sources.category_scope)와 **같은
+   * 어휘·같은 판정 함수(sourceFitsScopes)**를 쓴다 — 해외용 카테고리 체계를
+   * 따로 만들지 않는다. 051이 기존 25행에 KIDS_FASHION을 명시적으로 넣었다:
+   * 비워 두면 "빈 배열 = 모든 카테고리" 규칙 때문에 아동복 편집샵 25곳이
+   * 골프 조사에 전부 따라붙는다. */
+  categoryScope: string[];
+  accessStatus: MarketSourceAccessStatus | null;
+  /** 그 판정의 근거 한 줄(사람이 읽는다). 차단 사유와, 있으면 우회 경로. */
+  accessNote: string | null;
   source: "SYSTEM" | "USER";
   isActive: boolean;
   createdAt: string;
@@ -27,6 +59,13 @@ interface ComparisonShopRow {
   currency: string | null;
   source: "SYSTEM" | "USER";
   is_active: boolean;
+  /** 마이그레이션 051이 아직 실행되지 않은 세션에서도 select("*")가 깨지지
+   * 않도록 optional로 받는다(domestic-price-source.ts의 source_type/032의
+   * last_checked_at과 정확히 같은 패턴). 실행 전에는 categoryScope가 빈
+   * 배열이라 sourceFitsScopes가 전부 통과시킨다 = 오늘 동작 그대로. */
+  category_scope?: string[] | null;
+  access_status?: MarketSourceAccessStatus | null;
+  access_note?: string | null;
   created_at: string;
 }
 
@@ -38,6 +77,9 @@ function toShop(row: ComparisonShopRow): ComparisonShop {
     url: row.url,
     country: row.country,
     currency: row.currency,
+    categoryScope: row.category_scope ?? [],
+    accessStatus: row.access_status ?? null,
+    accessNote: row.access_note ?? null,
     source: row.source,
     isActive: row.is_active,
     createdAt: row.created_at,
@@ -88,6 +130,11 @@ export async function createComparisonShop(
   isActiveInput?: boolean,
   countryInput?: string | null,
   currencyInput?: string | null,
+  /** GOLF-01 축 A — 설정 화면에서 카테고리를 고른 채로 추가하면 그 카테고리에
+   * 연결된다. 🔴 사이트를 카테고리마다 중복 생성하지 않는다(CEO 명시): 행은
+   * 하나이고 이 배열이 연결이다(Site Master → Category ↔ Site).
+   * 비워서 부르면 예전과 같이 빈 배열 = 모든 카테고리에서 보인다. */
+  categoryScopeInput?: string[],
 ): Promise<{ ok: true; shop: ComparisonShop } | { ok: false; error: string }> {
   const parsed = parseShopUrl(urlInput);
   if (!parsed) {
@@ -116,6 +163,9 @@ export async function createComparisonShop(
       is_active: isActiveInput ?? true,
       country: countryInput ?? null,
       currency: currencyInput ?? null,
+      // 마이그레이션 051 미실행 세션에서 INSERT 자체가 실패하지 않도록, 값이
+      // 있을 때만 컬럼을 보낸다(읽기 쪽 optional 처리와 같은 이유).
+      ...(categoryScopeInput && categoryScopeInput.length > 0 ? { category_scope: categoryScopeInput } : {}),
     })
     .select()
     .single();

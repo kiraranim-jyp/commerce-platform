@@ -15,8 +15,15 @@ import {
   type PlatformConnectionStatus,
   type TemplateSectionBlock,
 } from "@commerce/listing";
+import { selectedMarketSourceScopes, sourceFitsScopes } from "@commerce/category";
 import type { ConnectionErrorType } from "@/lib/connection-error";
 
+/**
+ * GOLF-01 축 A(CEO 지시, 2026-09-15) — "해외 편집샵" · "국내 가격비교" 두 탭을
+ * **시장조사 사이트 관리** 하나로 합친다. 두 탭이 따로 있으면 셀러는 "골프용품을
+ * 조사할 때 어디를 뒤지는가"를 두 화면을 오가며 머리로 합쳐야 한다 — 그게
+ * 한 화면에서 [카테고리 ▼] 하나로 보여야 한다는 것이 CEO가 그린 모양이다.
+ */
 const TAB_KEYS = [
   "accounts",
   "shipping",
@@ -24,11 +31,14 @@ const TAB_KEYS = [
   "pricing",
   "brand",
   "detail",
-  "comparisonShops",
-  "domesticPriceSources",
+  "marketSources",
   "platformStatus",
 ] as const;
 type SettingsTabKey = (typeof TAB_KEYS)[number];
+
+/** 합치기 전 URL(?tab=comparisonShops · ?tab=domesticPriceSources)로 들어온
+ * 북마크가 "계정 관리"로 떨어지지 않게 새 탭으로 옮겨 준다. */
+const LEGACY_MARKET_SOURCE_TABS = ["comparisonShops", "domesticPriceSources"] as const;
 
 interface ShippingPlaceOption {
   code: number | null;
@@ -196,6 +206,10 @@ export default function SettingsPage() {
   const [activeTab, setActiveTabState] = useState<SettingsTabKey>("accounts");
   useEffect(() => {
     const tab = new URLSearchParams(window.location.search).get("tab");
+    if (tab && (LEGACY_MARKET_SOURCE_TABS as readonly string[]).includes(tab)) {
+      setActiveTabState("marketSources");
+      return;
+    }
     if (tab && (TAB_KEYS as readonly string[]).includes(tab)) {
       setActiveTabState(tab as SettingsTabKey);
     }
@@ -387,8 +401,7 @@ export default function SettingsPage() {
                 { value: "pricing", label: "가격 정책" },
                 { value: "brand", label: "브랜드 관리" },
                 { value: "detail", label: "상세페이지 관리" },
-                { value: "comparisonShops", label: "해외 편집샵" },
-                { value: "domesticPriceSources", label: "국내 가격비교" },
+                { value: "marketSources", label: "시장조사 사이트 관리" },
                 { value: "platformStatus", label: "플랫폼 지원 현황" },
               ]}
             />
@@ -466,21 +479,13 @@ export default function SettingsPage() {
             </p>
             <DescriptionTemplateSection templates={templates} onChanged={loadAll} />
           </div>
-          <div className={activeTab === "comparisonShops" ? "mt-5" : "hidden"}>
+          <div className={activeTab === "marketSources" ? "mt-5" : "hidden"}>
             <SectionHeader
-              title="해외 편집샵 가격 비교"
-              description="상품의 해외 가격 비교에 사용할 편집샵을 선택하고 관리합니다."
+              title="시장조사 사이트 관리"
+              description="카테고리를 고르면 그 카테고리에 연결된 국내·해외 조사 대상 사이트만 보입니다."
               className="mb-3"
             />
-            <ComparisonShopsSection />
-          </div>
-          <div className={activeTab === "domesticPriceSources" ? "mt-5" : "hidden"}>
-            <SectionHeader
-              title="국내 전문 편집샵 가격비교"
-              description="등록상품과 동일한 상품을 국내 수입 키즈 전문 편집샵에서 찾아 가격을 비교합니다. 동일상품 신뢰도가 충분히 높은 상품만 가격 분석에 사용합니다."
-              className="mb-3"
-            />
-            <DomesticPriceSourcesSection />
+            <MarketResearchSourcesSection />
           </div>
           <div className={activeTab === "platformStatus" ? "mt-5" : "hidden"}>
             <SectionHeader
@@ -2438,6 +2443,10 @@ function DescriptionTemplateSection({
   );
 }
 
+/** GOLF-01 축 A — 국내/해외가 같은 사실을 다른 말로 부르지 않도록 서버가 쓰는
+ * 어휘(comparison-shop.ts의 MarketSourceAccessStatus)를 그대로 받는다. */
+type MarketSourceAccessStatus = "OK" | "BLOCKED" | "LOGIN_REQUIRED";
+
 interface ComparisonShop {
   id: string;
   name: string;
@@ -2445,6 +2454,10 @@ interface ComparisonShop {
   url: string;
   country: string | null;
   currency: string | null;
+  /** 마이그레이션 051. 051 이전 응답에는 없어서 빈 배열로 온다 = 모든 카테고리. */
+  categoryScope: string[];
+  accessStatus: MarketSourceAccessStatus | null;
+  accessNote: string | null;
   source: "SYSTEM" | "USER";
   isActive: boolean;
 }
@@ -2469,6 +2482,11 @@ interface DomesticPriceSource {
   catalogEnabled: boolean;
   /** 내가 내 목록에서 쓰는지 — 체크박스가 쓰는 값. */
   workspaceEnabled: boolean;
+  accessStatus: MarketSourceAccessStatus | null;
+  accessNote: string | null;
+  /** GOLF-01 축 A — null이면 모두가 함께 쓰는 중앙 기본 사이트, 값이 있으면
+   * 내가 추가한 사이트다(다른 판매자에게는 보이지 않는다). */
+  workspaceId: string | null;
 }
 
 interface ConnectionCheckResult {
@@ -3108,7 +3126,116 @@ function formatCheckedAtRelative(iso: string): string {
  * 관리한다. SYSTEM(추천 seed)은 활성/비활성만, USER(직접 추가)는 삭제도
  * 가능하다 — API가 이미 이 규칙을 강제하므로 UI는 버튼 노출만 그에 맞춘다.
  */
-function ComparisonShopsSection() {
+/**
+ * GOLF-01 축 A(CEO 지시, 2026-09-15) — 설정 → 시장조사 사이트 관리.
+ *
+ * ── Site Master 와 Category ↔ Site 연결을 분리한다 ────────────────────────
+ * 🔴 사이트를 카테고리마다 중복 생성하지 않는다(CEO 명시). 사이트 행은
+ * 하나다(domestic_price_sources / comparison_shops = Site Master). 카테고리
+ * 연결은 그 행의 category_scope 배열이고, 이 화면은 그 배열을 **읽어서
+ * 거르기만** 한다. 「사이트 추가」를 누르면 지금 고른 카테고리가 그 배열로
+ * 들어간다 — 그게 "연결"이다. 조인 테이블을 새로 파지 않는다(국내가 이미
+ * 이 모양으로 돌고 있고, 해외는 051이 같은 모양을 얹었다).
+ *
+ * ── 초기 범위는 작게(CEO 명시) ────────────────────────────────────────────
+ * 기본 사이트 목록 + on/off + 「사이트 추가」. 수집주기·크롤링 방식·CSS
+ * selector·파싱 규칙은 만들지 않는다.
+ */
+interface MarketCategoryOption {
+  id: string;
+  label: string;
+  sourceCount: number;
+  catalogSourceCount: number;
+  overseasSourceCount: number;
+  available: boolean;
+}
+
+/** 🔴 "등록됨"과 "수집 성공"은 다른 사실이다(CEO 명시). 이 라벨이 그 구분을
+ * 화면에서 말하는 유일한 자리다. null은 일부러 아무 말도 하지 않는다 —
+ * "이번에 확인하지 않았다"를 "수집 가능"으로 옮기면 그게 거짓말이다. */
+const ACCESS_STATUS_LABEL: Record<MarketSourceAccessStatus, string> = {
+  OK: "🟢 수집 가능",
+  BLOCKED: "🔴 접근 차단",
+  LOGIN_REQUIRED: "🔴 로그인 필요",
+};
+
+function AccessStatusNote({ status, note }: { status: MarketSourceAccessStatus | null; note: string | null }) {
+  if (!status) return null;
+  const blocked = status !== "OK";
+  return (
+    <p className={`text-xs ${blocked ? "text-error" : "text-success"}`}>
+      {ACCESS_STATUS_LABEL[status]}
+      {blocked ? " — 조사 대상에서 자동 제외됩니다(반복 호출하지 않습니다)" : ""}
+      {note ? ` · ${note}` : ""}
+    </p>
+  );
+}
+
+function MarketResearchSourcesSection() {
+  const [categories, setCategories] = useState<MarketCategoryOption[]>([]);
+  const [categoryId, setCategoryId] = useState("");
+
+  useEffect(() => {
+    void (async () => {
+      const res = await fetch("/api/market-categories").catch(() => null);
+      if (!res) return;
+      const data = (await res.json().catch(() => null)) as { categories?: MarketCategoryOption[] } | null;
+      setCategories(data?.categories ?? []);
+    })();
+  }, []);
+
+  // 화면이 "이 카테고리는 무엇을 뒤지는가"를 계산하는 식은 서버(조사 경로)와
+  // 같은 함수여야 한다 — 여기서 marketSourceScopes를 직접 펼치면 언젠가 표와
+  // 실제 조사 대상이 다른 말을 한다.
+  const scopes = selectedMarketSourceScopes(categoryId || null);
+  const selected = categories.find((c) => c.id === categoryId) ?? null;
+
+  return (
+    <div className="space-y-5">
+      <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
+        <label className="block text-sm">
+          <span className="font-medium text-text-primary">카테고리</span>
+          <select
+            aria-label="시장조사 카테고리"
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            className="mt-2 w-full rounded-md border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          >
+            <option value="">전체 카테고리</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label} — 국내 {c.catalogSourceCount}곳 · 해외 {c.overseasSourceCount}곳
+                {c.catalogSourceCount === 0 && c.overseasSourceCount === 0 ? " (준비중)" : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+        {selected && (
+          <p className="mt-2 text-xs text-text-secondary">
+            「{selected.label}」로 상품을 분석하면 지금 이 계정이 실제로 뒤지는 국내 판매처는{" "}
+            <b>{selected.sourceCount}곳</b>입니다(카탈로그에 준비된 곳 {selected.catalogSourceCount}곳 중 내가 켜
+            둔 것). 접근이 막힌 것으로 실측 확인된 사이트는 이 수에 넣지 않습니다.
+          </p>
+        )}
+        <p className="mt-2 text-xs text-text-tertiary">
+          아래 목록은 이 카테고리에 연결된 사이트만 보여줍니다. 사이트는 카테고리마다 중복해서 만들지 않습니다 —
+          한 사이트가 여러 카테고리에 연결될 수 있습니다.
+        </p>
+      </section>
+
+      <div>
+        <h2 className="mb-2 text-sm font-semibold text-text-secondary">국내 가격비교</h2>
+        <DomesticPriceSourcesSection categoryScopes={scopes} />
+      </div>
+      <div>
+        <h2 className="mb-2 text-sm font-semibold text-text-secondary">해외 가격비교 / 소싱</h2>
+        <ComparisonShopsSection categoryScopes={scopes} />
+      </div>
+    </div>
+  );
+}
+
+function ComparisonShopsSection({ categoryScopes }: { categoryScopes: string[] | null }) {
   const [shops, setShops] = useState<ComparisonShop[]>([]);
   const [loading, setLoading] = useState(true);
   const [urlInput, setUrlInput] = useState("");
@@ -3139,7 +3266,13 @@ function ComparisonShopsSection() {
       const res = await fetch("/api/comparison-shops", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: urlInput, name: nameInput || undefined }),
+        // GOLF-01 축 A — 지금 고른 카테고리가 곧 "연결"이다. 고르지 않았으면
+        // 보내지 않는다(빈 배열 = 모든 카테고리 = 예전 동작 그대로).
+        body: JSON.stringify({
+          url: urlInput,
+          name: nameInput || undefined,
+          ...(categoryScopes ? { categoryScope: categoryScopes } : {}),
+        }),
       });
       const data = (await res.json()) as { ok: boolean; error?: string };
       if (data.ok) {
@@ -3168,6 +3301,11 @@ function ComparisonShopsSection() {
     await load();
   }
 
+  // GOLF-01 축 A — 조사 경로(api/comparison/search)가 쓰는 **같은 함수**로
+  // 거른다. 화면이 보여주는 목록과 실제 조사 대상이 다른 말을 하지 않게 하는
+  // 유일한 방법은 같은 판정을 쓰는 것이다.
+  const visibleShops = shops.filter((s) => sourceFitsScopes(s.categoryScope, categoryScopes));
+
   return (
     <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
       <h2 className="text-base font-semibold text-text-primary">편집샵(Seller) 목록</h2>
@@ -3178,14 +3316,23 @@ function ComparisonShopsSection() {
         아래 국가/통화는 참고 표시값입니다 — 실제 원본가격을 조회할 때는 이 값을 그대로 신뢰하지 않고 매번 그
         판매처의 공식 사이트 데이터로 다시 확인합니다.
       </p>
+      {/* GOLF-01 축 A — 해외는 아직 셀러별 목록이 아니다. 이 사실을 적어 두지
+          않으면 셀러는 자기가 추가한 해외 사이트가 자기 것인 줄 안다. */}
+      <p className="mt-1 text-xs text-text-tertiary">
+        해외 사이트 목록은 아직 모든 판매자가 함께 씁니다 — 여기서 추가하면 다른 판매자에게도 보입니다.
+      </p>
 
       {loading ? (
         <p className="mt-3 text-xs text-text-tertiary">불러오는 중…</p>
-      ) : shops.length === 0 ? (
-        <p className="mt-3 text-xs text-text-tertiary">등록된 편집샵이 없습니다.</p>
+      ) : visibleShops.length === 0 ? (
+        <p className="mt-3 text-xs text-text-tertiary">
+          {shops.length === 0
+            ? "등록된 편집샵이 없습니다."
+            : "이 카테고리에 연결된 해외 사이트가 아직 없습니다 — 아래에서 추가하면 이 카테고리에 연결됩니다."}
+        </p>
       ) : (
         <ul className="mt-3 divide-y divide-border text-sm">
-          {shops.map((shop) => (
+          {visibleShops.map((shop) => (
             <li key={shop.id} className="flex items-center justify-between gap-3 py-2">
               <label className="flex flex-1 items-center gap-3">
                 <input
@@ -3205,7 +3352,9 @@ function ComparisonShopsSection() {
                     {shop.domain}
                     {shop.country ? ` · ${shop.country}` : ""}
                     {shop.currency ? ` · ${shop.currency}` : ""}
+                    {shop.categoryScope.length > 0 ? ` · ${shop.categoryScope.join(", ")}` : ""}
                   </p>
+                  <AccessStatusNote status={shop.accessStatus} note={shop.accessNote} />
                 </div>
               </label>
               {shop.source === "USER" && (
@@ -3275,7 +3424,7 @@ const DOMESTIC_STRATEGY_LABEL: Record<DomesticPriceSource["collectionStrategy"],
  * 있게 드롭다운을 둔다 — 이 화면 자체는 실제 수집을 하지 않는다(메타데이터
  * CRUD만).
  */
-function DomesticPriceSourcesSection() {
+function DomesticPriceSourcesSection({ categoryScopes }: { categoryScopes: string[] | null }) {
   const [sources, setSources] = useState<DomesticPriceSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [urlInput, setUrlInput] = useState("");
@@ -3306,7 +3455,13 @@ function DomesticPriceSourcesSection() {
       const res = await fetch("/api/domestic-price-sources", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: urlInput, name: nameInput || undefined }),
+        // GOLF-01 축 A — 지금 고른 카테고리가 곧 "연결"이다. 서버는 이 추가분에
+        // 내 workspace_id를 붙여 저장하므로 다른 판매자에게는 보이지 않는다.
+        body: JSON.stringify({
+          url: urlInput,
+          name: nameInput || undefined,
+          ...(categoryScopes ? { categoryScope: categoryScopes } : {}),
+        }),
       });
       const data = (await res.json()) as { ok: boolean; error?: string };
       if (data.ok) {
@@ -3363,6 +3518,10 @@ function DomesticPriceSourcesSection() {
     await load();
   }
 
+  // GOLF-01 축 A — 조사 경로(run-domestic-price-check / domestic-price-sources
+  // search)가 쓰는 같은 함수로 거른다.
+  const visibleSources = sources.filter((s) => sourceFitsScopes(s.categoryScope, categoryScopes));
+
   return (
     <section className="rounded-lg border border-border bg-surface p-5 shadow-subtle">
       <h2 className="text-base font-semibold text-text-primary">국내 편집샵 후보 목록</h2>
@@ -3376,6 +3535,12 @@ function DomesticPriceSourcesSection() {
       <p className="mt-1 text-xs text-text-secondary">
         체크는 내 계정에만 적용됩니다 — 다른 판매자의 목록은 바뀌지 않습니다.
       </p>
+      {/* GOLF-01 축 A — 「사이트 추가」로 넣은 사이트는 이제 내 것이다. 이 문장이
+          없으면 셀러는 자기가 추가한 사이트가 전체에 공개되는 줄 안다(그게
+          이번에 고친 실제 동작이다). */}
+      <p className="mt-1 text-xs text-text-secondary">
+        「편집샵 추가」로 넣은 사이트는 내 계정에만 보입니다 — 다른 판매자의 목록에는 나타나지 않습니다.
+      </p>
       <p className="mt-1 text-xs text-text-tertiary">
         collectionStrategy는 실제 사이트 구조를 조사한 결과입니다 — 확인되지 않은 사이트를 임의로
         &quot;자동&quot;으로 표시하지 않습니다(N-4.06/N-4.07 원칙).
@@ -3383,11 +3548,15 @@ function DomesticPriceSourcesSection() {
 
       {loading ? (
         <p className="mt-3 text-xs text-text-tertiary">불러오는 중…</p>
-      ) : sources.length === 0 ? (
-        <p className="mt-3 text-xs text-text-tertiary">등록된 편집샵이 없습니다.</p>
+      ) : visibleSources.length === 0 ? (
+        <p className="mt-3 text-xs text-text-tertiary">
+          {sources.length === 0
+            ? "등록된 편집샵이 없습니다."
+            : "이 카테고리에 연결된 국내 사이트가 아직 없습니다 — 아래에서 추가하면 이 카테고리에 연결됩니다."}
+        </p>
       ) : (
         <ul className="mt-3 divide-y divide-border text-sm">
-          {sources.map((source) => (
+          {visibleSources.map((source) => (
             <li key={source.id} className="flex items-center justify-between gap-3 py-2">
               <label className="flex flex-1 items-center gap-3">
                 <input
@@ -3411,10 +3580,17 @@ function DomesticPriceSourcesSection() {
                       서비스 제공 중단
                     </span>
                   )}
+                  {/* GOLF-01 축 A — 내가 추가한 사이트인지 중앙 기본인지. */}
+                  {source.workspaceId && (
+                    <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                      내가 추가
+                    </span>
+                  )}
                   <p className="text-xs text-text-secondary">
                     {source.domain} · {source.currency}
                     {source.categoryScope.length > 0 ? ` · ${source.categoryScope.join(", ")}` : ""}
                   </p>
+                  <AccessStatusNote status={source.accessStatus} note={source.accessNote} />
                   <p className="text-xs text-text-tertiary">
                     {source.collectionStrategy === "AUTO_API" || source.collectionStrategy === "AUTO_SCRAPE" ? "🟢" : "🟡"}{" "}
                     {DOMESTIC_STRATEGY_LABEL[source.collectionStrategy]} · 마지막 확인{" "}

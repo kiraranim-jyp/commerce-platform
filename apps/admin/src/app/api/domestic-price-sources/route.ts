@@ -28,6 +28,14 @@ export async function POST(request: Request) {
   if (!body?.url) {
     return NextResponse.json({ ok: false, error: "URL이 필요합니다." }, { status: 400 });
   }
-  const result = await createDomesticPriceSource({ ...body, url: body.url });
+  // GOLF-01 축 A — 어느 판매자가 추가하는지는 requireUser()만 정한다(body의
+  // workspaceId는 권한 근거가 아니다 — require-user.ts §5/§13). 이 한 줄이
+  // "판매자 추가가 다른 판매자에게 보이면 안 된다"의 쓰기 쪽 절반이다
+  // (읽기 쪽 절반은 listDomesticPriceSources의 .or 필터).
+  const result = await createDomesticPriceSource({
+    ...body,
+    url: body.url,
+    workspaceId: auth.user.workspaceId,
+  });
   return NextResponse.json(result);
 }

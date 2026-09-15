@@ -55,10 +55,19 @@ function makeSupabaseStub(options: {
   function builder(table: string) {
     const filters: Array<[string, unknown]> = [];
     let mode: "select" | "upsert" | "update" = "select";
+    /** GOLF-01 축 A — listDomesticPriceSources가 거는 소유자 필터
+     * (`workspace_id.is.null,workspace_id.eq.<uuid>`). 스텁이 이 조건을 실제로
+     * 적용해야 "셀러 추가분이 남의 목록에 안 보인다"를 관찰할 수 있다. */
+    let ownerFilter: string | null = null;
 
     const chain = {
       select: () => chain,
       order: () => chain,
+      or: (expr: string) => {
+        const m = /workspace_id\.eq\.([0-9a-fA-F-]+)/.exec(expr);
+        ownerFilter = m ? m[1] : null;
+        return chain;
+      },
       eq: (col: string, val: unknown) => {
         filters.push([col, val]);
         return chain;
@@ -75,7 +84,14 @@ function makeSupabaseStub(options: {
       },
       then: (resolve: (v: unknown) => unknown) => {
         if (table === "domestic_price_sources") {
-          if (mode === "select") return resolve({ data: options.catalog, error: null });
+          if (mode === "select") {
+            const visible = options.catalog.filter((row) => {
+              const owner = (row as { workspace_id?: string | null }).workspace_id ?? null;
+              if (owner === null) return true; // 중앙 기본 카탈로그는 모두가 본다
+              return ownerFilter !== null && owner === ownerFilter;
+            });
+            return resolve({ data: visible, error: null });
+          }
           return resolve({ error: null });
         }
         if (options.settingsTableMissing) {
@@ -200,6 +216,34 @@ describe("GLOBAL-MARKET ③-2 — 국내 편집샵 ON/OFF는 워크스페이스�
     // 카탈로그 상태와 정확히 같아진다(마이그레이션 전 동작 그대로).
     expect(sources[0].enabled).toBe(true);
     expect(sources[1].enabled).toBe(false);
+  });
+
+  /**
+   * GOLF-01 축 A(CEO 지시, 2026-09-15) — 047이 만든 "판매자별"은 on/off에만
+   * 적용되고 **목록의 구성**에는 적용되지 않았다: createDomesticPriceSource()가
+   * workspace_id 없이 공용 카탈로그에 넣어서, A가 추가한 사이트가 B·C에게도
+   * 보였다. 실사용에서 아직 터지지 않은 이유는 source='USER' 국내 소스가 실측
+   * 0행이기 때문일 뿐이다 — 위 on/off 버그와 정확히 같은 종류의 잠복이라
+   * 같은 자리에서 못 박는다.
+   */
+  it("B가 추가한 사이트는 A의 목록에 나타나지 않는다", async () => {
+    stub = makeSupabaseStub({
+      catalog: [
+        catalogRow(), // 중앙 기본 카탈로그(workspace_id 없음)
+        catalogRow({ id: "b-only", domain: "b-only.co.kr", source: "USER", workspace_id: WORKSPACE_B }),
+      ],
+      settings: [],
+    });
+    const { listDomesticPriceSources } = await import("../domestic-price-source");
+
+    const forA = await listDomesticPriceSources(WORKSPACE_A);
+    const forB = await listDomesticPriceSources(WORKSPACE_B);
+    expect(forA.map((s) => s.domain), "B가 추가한 사이트가 A에게 새어 나갔다").toEqual(["test-shop.co.kr"]);
+    expect(forB.map((s) => s.domain).sort()).toEqual(["b-only.co.kr", "test-shop.co.kr"]);
+    // 중앙 기본 사이트는 양쪽 다에게 보인다 — 격리가 공용 카탈로그까지 먹으면
+    // 모든 판매자의 목록이 통째로 비어 버린다.
+    expect(forA[0].workspaceId).toBeNull();
+    expect(forB.find((s) => s.domain === "b-only.co.kr")!.workspaceId).toBe(WORKSPACE_B);
   });
 
   it("카탈로그 메타데이터 수정은 enabled를 절대 쓰지 않는다", async () => {

@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import type { MarketSourceAccessStatus } from "../../comparison-shops/_lib/comparison-shop";
 
 /**
  * N-4.07(대표님 지시: "후보군 리스트는 추가로 관리할수 있게 해줘") —
@@ -39,6 +40,16 @@ export interface DomesticPriceSource {
    * 아니다. 오늘 이 값으로 검색 대상을 가르지 않는다(카테고리 적합도는
    * categoryScope가 맡는다). */
   sourceType: DomesticSourceType | null;
+  /** GOLF-01 축 A(마이그레이션 051) — 사람이 직접 열어 본 결과. null은 "이번에
+   * 확인하지 않았다"이지 "수집 가능"이 아니다. comparison_shops와 같은 어휘를
+   * 쓴다(국내/해외가 같은 사실을 다른 말로 부르지 않는다). */
+  accessStatus: MarketSourceAccessStatus | null;
+  accessNote: string | null;
+  /** GOLF-01 축 A(마이그레이션 051) — null이면 중앙 기본 카탈로그(모든 셀러가
+   * 본다), 값이 있으면 그 워크스페이스만 보는 추가분이다. 🔴 이 값이 다른
+   * 워크스페이스에게 새어 나가면 셀러 A의 사이트가 셀러 B 목록에 뜬다 —
+   * 걸러내는 자리는 listDomesticPriceSources() 한 곳뿐이다. */
+  workspaceId: string | null;
   /** GLOBAL-MARKET ③-2(CPO 확정, 2026-09-11) — 이 워크스페이스에서의 실효 노출.
    * catalogEnabled && workspaceEnabled로 이미 합쳐진 값이다. 호출부(검색/일일
    * 확인/화면)가 두 플래그를 각자 AND하기 시작하면 한 곳에서 반드시 빠뜨린다 —
@@ -75,6 +86,11 @@ interface DomesticPriceSourceRow {
   /** 마이그레이션 049. 아직 실행 전인 세션에서도 select("*")가 깨지지 않도록
    * optional로 받는다(last_checked_at과 정확히 같은 이유). */
   source_type?: DomesticSourceType | null;
+  /** 마이그레이션 051. 미실행 세션에서도 select("*")가 깨지지 않도록 optional
+   * (source_type / last_checked_at과 정확히 같은 패턴). */
+  access_status?: MarketSourceAccessStatus | null;
+  access_note?: string | null;
+  workspace_id?: string | null;
   created_at: string;
 }
 
@@ -95,6 +111,9 @@ function toSource(row: DomesticPriceSourceRow, workspaceEnabled: boolean): Domes
     lastSuccessAt: row.last_success_at ?? null,
     source: row.source,
     sourceType: row.source_type ?? null,
+    accessStatus: row.access_status ?? null,
+    accessNote: row.access_note ?? null,
+    workspaceId: row.workspace_id ?? null,
     enabled: row.enabled && workspaceEnabled,
     catalogEnabled: row.enabled,
     workspaceEnabled,
@@ -119,6 +138,12 @@ function isMissingTableError(error: { message: string; code?: string }): boolean
  * workspaceId를 선택 인자로 두지 않는다. 선택 인자로 두면 "여기선 안 넘겨도
  * 되겠지"가 한 번만 생겨도 한 판매자의 설정이 다른 판매자에게 새어 나간다 —
  * 스냅샷 소유권(snapshot.ts)과 동일하게 경계를 인자 자체로 강제한다.
+ *
+ * GOLF-01 축 A(CEO 지시, 2026-09-15) — 이제 **목록 자체**도 판매자별이다:
+ *   중앙 기본 사이트(workspace_id is null) + 이 판매자가 추가한 사이트
+ * 🔴 다른 판매자가 추가한 사이트는 여기서 걸러진다. 합치는 자리가 예나 지금이나
+ *    이 함수 하나뿐이라(047이 on/off를 여기로 모은 이유와 같다) 이 한 줄이
+ *    격리의 전부다 — 호출부가 각자 거르기 시작하면 한 곳에서 반드시 빠뜨린다.
  */
 export async function listDomesticPriceSources(workspaceId: string): Promise<DomesticPriceSource[]> {
   const supabase = getSupabaseAdmin();
@@ -126,11 +151,27 @@ export async function listDomesticPriceSources(workspaceId: string): Promise<Dom
   const { data, error } = await supabase
     .from("domestic_price_sources")
     .select("*")
+    .or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`)
     .order("priority", { ascending: true })
     .order("name", { ascending: true });
   if (error) {
-    console.warn("[domestic-price-source] 목록 조회 실패:", error.message);
-    return [];
+    // 마이그레이션 051 미실행이면 workspace_id 컬럼이 없어 이 필터가 통째로
+    // 실패한다. 목록이 비면 "편집샵이 전부 사라졌다"가 되므로, 그때는 필터
+    // 없이 한 번 더 읽는다(loadWorkspaceShopSettings의 fail-open과 같은 원칙 —
+    // 051 이전에는 셀러 추가분이라는 개념 자체가 없으므로 결과도 동일하다).
+    const fallback = await supabase
+      .from("domestic_price_sources")
+      .select("*")
+      .order("priority", { ascending: true })
+      .order("name", { ascending: true });
+    if (fallback.error) {
+      console.warn("[domestic-price-source] 목록 조회 실패:", error.message);
+      return [];
+    }
+    const settingsFallback = await loadWorkspaceShopSettings(workspaceId);
+    return (fallback.data as DomesticPriceSourceRow[]).map((row) =>
+      toSource(row, settingsFallback.get(row.id) ?? true),
+    );
   }
 
   const settings = await loadWorkspaceShopSettings(workspaceId);
@@ -214,6 +255,17 @@ export interface CreateDomesticPriceSourceInput {
    * 실제 사이트 구조를 조사하기 전까지는 기본값을 MANUAL로 둔다(추정 금지 원칙,
    * 이 함수는 검증 없이 호출부가 준 값을 그대로 저장만 한다). */
   collectionStrategy?: DomesticSourceCollectionStrategy;
+  /**
+   * GOLF-01 축 A(CEO 지시, 2026-09-15) — **이 사이트를 추가한 판매자.**
+   *
+   * 이 인자가 없던 시절의 버그가 정확히 이것이다: 셀러 A가 추가한 사이트가
+   * workspace_id 없이 공용 카탈로그에 들어가서 셀러 B·C의 목록에도 즉시
+   * 나타났다(실측: source='USER' 국내 소스가 0행이라 아직 터지지 않았을 뿐).
+   * 선택 인자로 두지 않는다 — 한 번만 빠뜨려도 전역 오염이 되살아난다.
+   * 중앙 기본 카탈로그를 seed하는 길은 마이그레이션(SQL)뿐이고, 화면에서
+   * 들어오는 추가는 언제나 임자가 있다.
+   */
+  workspaceId: string;
 }
 
 export async function createDomesticPriceSource(
@@ -227,10 +279,14 @@ export async function createDomesticPriceSource(
   const supabase = getSupabaseAdmin();
   if (!supabase) return { ok: false, error: "Supabase가 설정되어 있지 않습니다." };
 
+  // 중복 판정도 소유자 안에서 한다(051이 unique를 (소유자, domain)으로 바꾼
+  // 것과 같은 범위). 전역으로 보면 셀러 B가 자기 목록에 보이지도 않는 도메인
+  // 때문에 "이미 등록된 도메인입니다"를 받고 영문을 모른다.
   const { data: existing } = await supabase
     .from("domestic_price_sources")
     .select("id")
     .eq("domain", parsed.domain)
+    .or(`workspace_id.is.null,workspace_id.eq.${input.workspaceId}`)
     .maybeSingle();
   if (existing) {
     return { ok: false, error: "이미 등록된 도메인입니다." };
@@ -249,6 +305,7 @@ export async function createDomesticPriceSource(
       status: "ACTIVE",
       source: "USER",
       enabled: true,
+      workspace_id: input.workspaceId,
     })
     .select()
     .single();
