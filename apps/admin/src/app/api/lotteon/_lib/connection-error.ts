@@ -50,6 +50,60 @@ export function classifyLotteOnHttpStatus(httpStatus: number): ConnectionErrorIn
 }
 
 /**
+ * REWORK-12 ②(CEO 실측 캡처, 2026-09-15) — **네트워크 실패의 한국어 사유.**
+ *
+ * 캡처에서 롯데ON 탭의 ② 카테고리 자리에 이 문장 하나만 서 있었다:
+ *
+ *     The operation was aborted due to timeout
+ *
+ * 그건 `AbortSignal.timeout()`이 던진 DOMException의 `error.message`다. client.ts
+ * 가 그 값을 그대로 `message`에 담고(L153), request.ts 가 그대로 화면에 내려보내고
+ * (NETWORK_ERROR 분기), 패널이 그대로 그렸다. 셀러에게 영문 예외 문자열을 보여주는
+ * 것은 "사유를 말한 것"이 아니다 — 무엇이 실패했는지도, 다음에 뭘 하면 되는지도
+ * 없다.
+ *
+ * 🔴 실패를 숨기지 않는다. 원문 예외는 `providerMessage`로 응답에 그대로 남는다
+ * (디버깅 경로를 없애면 담당자가 원인을 못 찾는다). 화면에 서는 글자만 바뀐다.
+ *
+ * 분류는 지어내지 않는다 — Node/undici가 실제로 쓰는 문자열만 본다. 모르는
+ * 문자열은 "연결하지 못했습니다"로 두고 원문을 nextAction에 붙인다.
+ */
+export function classifyLotteOnNetworkError(message: string | null): ConnectionErrorInfo {
+  const raw = (message ?? "").trim();
+  const lower = raw.toLowerCase();
+
+  // AbortSignal.timeout() → DOMException(TimeoutError): "The operation was aborted due to timeout"
+  if (lower.includes("timeout") || lower.includes("aborted")) {
+    return {
+      // 🔴 errorType 6종(공용 규약)을 늘리지 않는다 — 타임아웃도 네트워크 실패다.
+      errorType: "NETWORK_ERROR",
+      userMessage: "롯데ON 응답이 제한 시간 안에 오지 않았습니다.",
+      nextAction: "잠시 후 [다시 확인]을 눌러 주세요. 계속 반복되면 롯데ON 점검 여부를 확인해야 합니다.",
+    };
+  }
+  // undici: ENOTFOUND / EAI_AGAIN(DNS) · ECONNREFUSED · ECONNRESET · socket hang up
+  if (
+    lower.includes("enotfound") ||
+    lower.includes("eai_again") ||
+    lower.includes("econnrefused") ||
+    lower.includes("econnreset") ||
+    lower.includes("socket hang up") ||
+    lower.includes("fetch failed")
+  ) {
+    return {
+      errorType: "NETWORK_ERROR",
+      userMessage: "롯데ON 서버에 연결하지 못했습니다.",
+      nextAction: "네트워크 또는 롯데ON 점검 중일 수 있습니다. 잠시 후 다시 시도해 주세요.",
+    };
+  }
+  return {
+    errorType: "NETWORK_ERROR",
+    userMessage: "롯데ON 요청이 실패했습니다.",
+    nextAction: raw ? `잠시 후 다시 시도해 주세요. (원인: ${raw})` : "잠시 후 다시 시도해 주세요.",
+  };
+}
+
+/**
  * 🔴 HTTP 200인데 실패인 경우(조사 §5-1 — "정상처리, 체크에서 에러값은
  * 리턴코드로 출력"). returnCode가 "0000"이 아니거나, 아예 파싱되지 않았을 때
  * 쓴다. returnCode 통합 코드표를 확보하지 못했으므로(조사 §11-3) 코드별 해석을

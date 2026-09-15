@@ -869,7 +869,7 @@ export function PlatformPreview({
                  두 모델명은 다른 값이고, 참조는 한쪽만 채운다. 빠진 것은 "왜"와
                  "예외"(어린이제품 카테고리 설명) — 그 사실이 실제로 등록을 막으면
                  부족 항목이 그 자리에서 이름과 사유를 대고 선다. */
-              referenceLimitationDetail="「고시정보 모델명」과 「네이버 쇼핑 카탈로그 모델명」은 별도 값입니다. “상세페이지 참조”는 고시정보 쪽만 채우므로 카탈로그 모델명은 직접 입력해야 합니다."
+              referenceLimitationDetail="「고시정보 모델명」과 「네이버 쇼핑 카탈로그 모델명」은 별도 값입니다. 참조는 고시정보만 채우므로 카탈로그는 직접 입력해야 합니다."
             />
             <ReferenceEligibleFieldRow
               label="중량"

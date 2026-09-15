@@ -134,6 +134,15 @@ interface RegisterResponse {
 interface RecommendState {
   loading: boolean;
   error: string | null;
+  /**
+   * REWORK-12 ②(CEO 실측 캡처, 2026-09-15) — **사유 다음에 오는 행동 한 줄.**
+   *
+   * 캡처에서 이 자리에 서 있던 글자는 `The operation was aborted due to timeout`
+   * 하나였다. 이제 서버가 한국어 사유(`message`)와 다음 행동(`nextAction`)을
+   * 나눠 내려보내고(_lib/connection-error.ts), 화면이 둘 다 그린다.
+   * 🔴 화면이 사유를 만들지 않는다 — 서버 문장을 그대로 세운다.
+   */
+  errorAction: string | null;
   decision: "AUTO_SELECT" | "RECOMMEND" | "REJECT" | null;
   candidates: LotteOnCategoryCandidate[];
   signalEvidence: string[];
@@ -206,6 +215,7 @@ function autoPick<T extends { no: string; isDefault?: boolean }>(options: T[]): 
 const EMPTY_RECOMMEND: RecommendState = {
   loading: false,
   error: null,
+  errorAction: null,
   decision: null,
   candidates: [],
   signalEvidence: [],
@@ -429,6 +439,8 @@ export function LotteOnRegistrationPanel({
       const data = (await res.json()) as {
         ok: boolean;
         message?: string;
+        /** REWORK-12 ② — 서버가 만든 «다음에 무엇을 하면 되는가» 한 줄. */
+        nextAction?: string;
         decision?: RecommendState["decision"];
         candidates?: LotteOnCategoryCandidate[];
         signalEvidence?: string[];
@@ -439,12 +451,21 @@ export function LotteOnRegistrationPanel({
         pagesFetched?: number;
       };
       if (!data.ok) {
-        setRecommend({ ...EMPTY_RECOMMEND, error: data.message ?? "카테고리를 추천하지 못했습니다." });
+        /* REWORK-12 ②(CEO 실측 캡처, 2026-09-15) — 여기서 받은 `message`가
+           영문 예외 문자열이던 것이 화면의 «The operation was aborted due to
+           timeout»이었다. 서버가 한국어 사유/다음 행동을 나눠 보내게 됐으므로
+           (api/lotteon/_lib/request.ts) 그대로 두 줄로 세운다. */
+        setRecommend({
+          ...EMPTY_RECOMMEND,
+          error: data.message ?? "카테고리를 추천하지 못했습니다.",
+          errorAction: data.nextAction ?? null,
+        });
         return;
       }
       setRecommend({
         loading: false,
         error: null,
+        errorAction: null,
         decision: data.decision ?? null,
         candidates: data.candidates ?? [],
         signalEvidence: data.signalEvidence ?? [],
@@ -455,7 +476,11 @@ export function LotteOnRegistrationPanel({
         pagesFetched: data.pagesFetched ?? 0,
       });
     } catch {
-      setRecommend({ ...EMPTY_RECOMMEND, error: "서버에 연결하지 못했습니다." });
+      setRecommend({
+        ...EMPTY_RECOMMEND,
+        error: "서버에 연결하지 못했습니다.",
+        errorAction: "잠시 후 [다시 확인]을 눌러 주세요.",
+      });
     }
   }, [product]);
 
@@ -922,7 +947,12 @@ export function LotteOnRegistrationPanel({
       <CommonInfoSection
         title={sectionTitle("BASIC")}
         description="상품정보에 저장된 값을 그대로 씁니다 — 이 탭에서 다시 입력하지 않습니다. 고치면 스마트스토어·쿠팡에도 함께 반영됩니다."
-        rows={rowsOf("상품명", "브랜드")}
+        /* REWORK-12 ②(CEO 실측 캡처, 2026-09-15) — 쿠팡 ①과 **같은 아홉 칸**이다
+           (상품명 · 브랜드 · SKU · 제조사 · 소재 · 색상 · 사용연령 · 품명 ·
+           모델명). 제조사는 아래 children의 ManufacturerField가 그린다 — 세 탭
+           공용 컴포넌트라 그 한 칸만 순서가 다르게 설 수 없다.
+           🔴 입력칸은 여전히 0개다(ReadOnlyFieldRow). */
+        rows={rowsOf("상품명", "브랜드", "상품코드(SKU)", "소재", "색상", "사용연령", "품명", "모델명")}
         onEditCommonInfo={onEditCommonInfo}
         badge={sectionCompletionBadge("lotteon-section-basic")}
         {...sectionProps("lotteon-section-basic")}
@@ -1037,7 +1067,14 @@ export function LotteOnRegistrationPanel({
         description="옵션과 재고는 상품정보의 값을 그대로 씁니다 — 롯데ON에서 조합을 따로 만들지 않습니다."
         rows={rowsOf("옵션", "재고")}
         onEditCommonInfo={onEditCommonInfo}
-      />
+      >
+        {/* REWORK-12 ②(CEO 실측 캡처, 2026-09-15) — 이 섹션에 있던 글자는
+            「1개 옵션 · 단품 6건」 한 줄이 전부였다. 쿠팡 ③은 같은 자리에서
+            **무엇이 등록되는지**(축 이름 · 값 · 단품)를 보여준다.
+            🔴 입력칸을 만들지 않는다 — 읽기 전용 목록이고, 값은 상품정보의
+            product.optionGroups / product.variants 그대로다(새로 계산 0). */}
+        <LotteOnOptionDetail product={product} />
+      </CommonInfoSection>
 
       {/* ── ④ 가격 — 읽기 전용(공통값) ──────────────────────────────────── */}
       <CommonInfoSection
@@ -1745,6 +1782,69 @@ function CommonInfoSection({
 
 
 /**
+ * REWORK-12 ②(CEO 실측 캡처, 2026-09-15: 롯데ON "③ 옵션 = 「1개 옵션 · 단품 6건」
+ * 한 줄") — **무엇이 단품으로 나가는가.**
+ *
+ * 쿠팡 ③에는 옵션 표가 서 있는데 롯데ON ③에는 요약 한 줄뿐이었다. 같은 번호의
+ * 같은 섹션이 한쪽에서만 값을 보여주면 셀러는 롯데ON에 무엇이 등록되는지 이
+ * 화면에서 확인할 수 없다.
+ *
+ * 🔴 입력칸을 만들지 않는다. 롯데ON 탭은 공통값을 입력받지 않는다는 계약이
+ * 그대로다(three-layer-realign.test.ts 증명 1). 여기 있는 것은 목록뿐이고,
+ * 값은 상품정보의 `optionGroups` / `variants`를 그대로 읽는다 — 조합을
+ * 만들어내지도, 없는 재고를 0으로 채우지도 않는다.
+ */
+function LotteOnOptionDetail({ product }: { product: CanonicalProduct }) {
+  const groups = product.optionGroups ?? [];
+  const variants = product.variants ?? [];
+
+  if (groups.length === 0 && variants.length === 0) {
+    return (
+      <p className="text-[11px] text-text-tertiary sm:col-span-2 xl:col-span-3">
+        원본에서 옵션을 찾지 못했습니다 — 단품 1건으로 등록됩니다.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2 sm:col-span-2 xl:col-span-3">
+      {groups.map((group) => (
+        <div key={group.name} className="text-[11px]">
+          <span className="font-medium text-text-secondary">{group.name}</span>
+          <span className="ml-1 text-text-tertiary">({group.values.length}개)</span>
+          <p className="mt-0.5 text-text-secondary">{group.values.join(" · ")}</p>
+        </div>
+      ))}
+      {variants.length > 0 && (
+        <div className="overflow-x-auto rounded border border-border">
+          <table className="w-full text-[11px]">
+            <thead className="bg-background text-text-tertiary">
+              <tr>
+                <th className="px-2 py-1 text-left font-medium">단품</th>
+                <th className="px-2 py-1 text-left font-medium">재고</th>
+              </tr>
+            </thead>
+            <tbody>
+              {variants.map((variant) => (
+                <tr key={variant.id} className="border-t border-border">
+                  <td className="px-2 py-1 text-text-secondary">
+                    {Object.values(variant.optionValues).join(" / ") || "단품"}
+                  </td>
+                  {/* 🔴 없는 값을 0으로 적지 않는다 — 어댑터가 상품 재고로 폴백한다. */}
+                  <td className="px-2 py-1 text-text-tertiary">
+                    {variant.stockQuantity == null ? "상품 재고 사용" : `${variant.stockQuantity}개`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
  * 카테고리 추천 결과.
  *
  * 점수와 이유를 그대로 보여준다 — scoreCategoryCandidate()가 만든 문장이고
@@ -1776,9 +1876,16 @@ function CategoryRecommendation({
     );
   }
   if (state.error) {
+    /* REWORK-12 ②(CEO 실측 캡처, 2026-09-15) — 이 자리에 영문 예외 문자열
+       하나만 서 있었다. 이제 **한국어 사유 + 다음 행동** 두 줄이고, 아래에는
+       추천 없이도 카테고리를 고를 수 있는 길(isRecommendDeadEnd → [롯데ON
+       카테고리 선택])이 그대로 열린다 — 조회 실패가 등록 불가가 되지 않는다. */
     return (
       <CategoryRecommendationShell subtitle={subtitle}>
-        <p className="rounded-md bg-error/5 px-3 py-2 text-xs text-error">{state.error}</p>
+        <div className="rounded-md bg-error/5 px-3 py-2">
+          <p className="text-xs font-medium text-error">🔴 카테고리 추천 실패 — {state.error}</p>
+          {state.errorAction && <p className="mt-1 text-[11px] text-text-secondary">{state.errorAction}</p>}
+        </div>
       </CategoryRecommendationShell>
     );
   }

@@ -497,6 +497,62 @@ export function summarizeCommonProduct(
       origin: "상품정보 · 재고 수량",
       missing: stock <= 0 && !usesOptions,
     },
+    /*
+     * REWORK-12 ②(CEO 실측 캡처, 2026-09-15: "순서는 맞으나 내용과 디자인이
+     * 다르다") — **① 기본 상품정보가 두 줄뿐이었다.**
+     *
+     * 캡처 대조:
+     *   쿠팡    ① = 상품명 · 브랜드 · SKU · 제조사 · 소재 · 색상 · 사용연령 ·
+     *               품명 · 모델명   (9칸)
+     *   롯데ON  ① = 상품명 · 브랜드 + "제조사 미확인"   (2칸 + 1)
+     * 같은 번호의 같은 섹션인데 한쪽만 값이 거의 없었다.
+     *
+     * 아래 여섯 줄은 **쿠팡 ①이 이미 보여주던 그 값들**이다. 새 값을 만들지
+     * 않는다 — `product`의 같은 필드를 읽을 뿐이고, 롯데ON 탭에서는 읽기
+     * 전용으로 선다(공통값을 이 탭에서 입력받지 않는다는 계약 그대로).
+     *
+     * 🔴 `missing`은 전부 false다. 이 여섯 개가 롯데ON 등록을 막는지는
+     * **서버 검증**이 정한다(validateLotteOnPayload). 화면이 여기서 "필수"를
+     * 새로 판정하면 등록 게이트가 두 벌이 된다 — 이 코드베이스가 이미 두 번
+     * 겪은 CP001류 버그다. 값이 비어 있다는 사실 자체는 ReadOnlyFieldRow의
+     * placeholder가 그 자리에서 말한다.
+     */
+    {
+      label: "상품코드(SKU)",
+      value: product.sku.value.trim() || null,
+      origin: "상품정보 · 상품코드",
+      missing: false,
+    },
+    {
+      label: "소재",
+      value: product.material.value.trim() || null,
+      origin: "상품정보 · 소재",
+      missing: false,
+    },
+    {
+      label: "색상",
+      value: product.color.value.trim() || null,
+      origin: "상품정보 · 색상",
+      missing: false,
+    },
+    {
+      label: "사용연령",
+      value: product.recommendedAge.value.trim() || null,
+      origin: "상품정보 · 사용연령",
+      missing: false,
+    },
+    {
+      label: "품명",
+      value: product.itemName.value.trim() || null,
+      origin: "상품정보 · 품명",
+      missing: false,
+    },
+    {
+      label: "모델명",
+      value: product.modelName.value.trim() || null,
+      origin: "상품정보 · 모델명",
+      missing: false,
+    },
   ];
 
   return { rows, hasMissing: rows.some((row) => row.missing) };

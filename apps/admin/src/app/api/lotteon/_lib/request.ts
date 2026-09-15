@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getLotteOnCredentials } from "./env";
 import { callLotteOnApi, callLotteOnPickApi, type LotteOnApiError, type LotteOnApiResponse } from "./client";
-import { classifyLotteOnHttpStatus, classifyLotteOnReturnCode } from "./connection-error";
+import {
+  classifyLotteOnHttpStatus,
+  classifyLotteOnNetworkError,
+  classifyLotteOnReturnCode,
+} from "./connection-error";
 
 /**
  * LOTTEON COMMERCE SPRINT 2 Phase 2 — 조회 라우트들이 공유하는 실행 껍데기.
@@ -76,12 +80,22 @@ export async function runLotteOnRead(options: {
   }
 
   if (!result.ok) {
+    /* REWORK-12 ②(CEO 실측 캡처, 2026-09-15) — 여기서 `result.message`를 그대로
+       내려보내던 것이 화면의 "The operation was aborted due to timeout"이었다.
+       `AbortSignal.timeout()`이 던진 DOMException의 영문 message다.
+
+       🔴 원문을 버리지 않는다 — `providerMessage`로 그대로 남는다(디버깅 경로).
+       바뀌는 것은 화면이 읽는 `message` 하나이고, 위 HTTP/returnCode 분기가
+       이미 쓰던 규칙(classify… → userMessage)과 같은 모양이 된다. */
+    const issue = classifyLotteOnNetworkError(result.message);
     return {
       ok: false,
       response: NextResponse.json({
         ok: false,
         reason: "NETWORK_ERROR",
-        message: result.message,
+        ...issue,
+        message: issue.userMessage,
+        providerMessage: result.message,
         causeChain: result.causeChain,
       }),
     };
