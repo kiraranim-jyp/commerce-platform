@@ -209,6 +209,21 @@ export const LOTTEON_READ_PATHS = {
   exchangeSearch: "/v1/openapi/claim/v1/exchangeOpenApi/exchangeSearch",
   /** 205 / 206 — 표준 · 전시 카테고리(onpick-api 호스트). */
   onpickCheetah: "/cheetah/econCheetah.ecn",
+  /**
+   * REWORK-11 ④(CEO 지시, 2026-09-15) — **배송 설정 조회.** 셋 다 읽기이고
+   * 금지 목록(주문/배송/클레임 쓰기)에 저촉되지 않는다.
+   *
+   *   150 getDvpListSr       출고지(dvpTypCd=02) · 반품지(01) 목록
+   *   166 getDvCstListSr     배송비 정책 목록
+   *    89 getDetailCodeList  공통코드 상세(택배사 · 배송가능지역 등)
+   *
+   * 🔴 같은 파일의 registDvpSr / updateDvpSr / deleteDvpSr(151/152/153)과
+   * registDvCstSr / updateDvCstSr / deleteDvCstSr(168/169/170)은 **여기 없다.**
+   * 이 목록은 조회 전용이고, 셀러의 판매자센터 설정을 우리가 바꾸지 않는다.
+   */
+  deliveryPlaceList: "/v1/openapi/contract/v1/dvp/getDvpListSr",
+  deliveryCostPolicyList: "/v1/openapi/contract/v1/dvl/getDvCstListSr",
+  detailCodeList: "/v1/openapi/bocommon/v1/code/getDetailCodeList",
 } as const;
 
 /** 이번 스프린트에서 허용된 **유일한** 쓰기(조사 §6-3 — 상품 축은 등록 후

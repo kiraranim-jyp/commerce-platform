@@ -152,6 +152,57 @@ interface RecommendState {
   pagesFetched: number;
 }
 
+/**
+ * REWORK-11 ④ — `/api/lotteon/delivery-settings` 응답. 전부 **롯데ON이 준 값**이고
+ * 화면이 만들어내는 필드는 하나도 없다.
+ */
+interface DeliveryPlaceOption {
+  no: string;
+  name: string | null;
+  typeCode: string | null;
+  isDefault: boolean;
+}
+
+interface CostPolicyOption {
+  no: string;
+  name: string | null;
+}
+
+interface CodeOption {
+  code: string;
+  name: string | null;
+}
+
+interface DeliverySettingsResponse {
+  /** 조회에 실제로 쓴 소속거래처코드. 문서로 확정되지 않은 값이라 화면에 적는다. */
+  sentAfflTrCd: string;
+  outboundPlaces: DeliveryPlaceOption[];
+  returnPlaces: DeliveryPlaceOption[];
+  costPolicies: CostPolicyOption[];
+  couriers: CodeOption[];
+  deliveryRegionGroups: CodeOption[];
+  /** 어느 API가 왜 답하지 못했는가. 비어 있으면 전부 정상이다. */
+  issues: { source: string; message: string }[];
+}
+
+interface DeliverySettingsState {
+  loading: boolean;
+  error: string | null;
+  data: DeliverySettingsResponse | null;
+}
+
+/**
+ * 자동으로 고를 수 있는 한 건. **판매자센터가 기본으로 표시한 건**이거나
+ * **후보가 하나뿐**일 때만이다 — 여럿 중 하나를 우리가 고르면 엉뚱한 출고지로
+ * 주문이 간다. 그 경우에는 셀러가 목록에서 고른다.
+ */
+function autoPick<T extends { no: string; isDefault?: boolean }>(options: T[]): T | null {
+  if (options.length === 0) return null;
+  const marked = options.find((option) => option.isDefault);
+  if (marked) return marked;
+  return options.length === 1 ? options[0] : null;
+}
+
 const EMPTY_RECOMMEND: RecommendState = {
   loading: false,
   error: null,
@@ -444,6 +495,90 @@ export function LotteOnRegistrationPanel({
   function applyRecommendation(candidate: LotteOnCategoryCandidate) {
     applyCategory(candidate.category);
   }
+
+  /**
+   * REWORK-11 ④(CEO 지시, 2026-09-15) — **배송 설정을 우리가 조회한다.**
+   *
+   * CEO 실측: 판매자센터에 출고지·반품지·배송비정책이 이미 등록돼 있다. 지금까지
+   * 이 탭은 그 번호를 셀러에게 손으로 치게 했다 — 물어보지 않았을 뿐이다.
+   *
+   * 🔴 조회에 쓰는 소속거래처코드(afflTrCd)가 문서로 확정되지 않았다(207의 trNo
+   * 인지 별도 상위 거래처번호인지). 그래서 **결과가 비거나 실패하면 그 사유를
+   * 그대로 화면에 세운다** — "설정값이 없습니다"로 바꿔 셀러에게 다시 입력시키지
+   * 않는다. 값은 하나도 지어내지 않는다.
+   */
+  const [deliverySettings, setDeliverySettings] = useState<DeliverySettingsState>({
+    loading: true,
+    error: null,
+    data: null,
+  });
+  const deliveryAppliedRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/lotteon/delivery-settings");
+        const data = (await res.json()) as Partial<DeliverySettingsResponse> & { ok?: boolean; message?: string };
+        if (cancelled) return;
+        if (!data.ok) {
+          setDeliverySettings({ loading: false, error: data.message ?? "배송 설정을 조회하지 못했습니다.", data: null });
+          return;
+        }
+        /* 🔴 응답에 없는 배열을 undefined로 들고 다니지 않는다 — 한 곳에서
+           모양을 맞춰 두면 아래 렌더가 매번 `?? []`를 반복하지 않아도 된다.
+           값을 지어내는 것이 아니다(없으면 0건이고, 0건은 위 안내가 말한다). */
+        setDeliverySettings({
+          loading: false,
+          error: null,
+          data: {
+            sentAfflTrCd: data.sentAfflTrCd ?? "",
+            outboundPlaces: data.outboundPlaces ?? [],
+            returnPlaces: data.returnPlaces ?? [],
+            costPolicies: data.costPolicies ?? [],
+            couriers: data.couriers ?? [],
+            deliveryRegionGroups: data.deliveryRegionGroups ?? [],
+            issues: data.issues ?? [],
+          },
+        });
+      } catch {
+        if (!cancelled) {
+          setDeliverySettings({ loading: false, error: "서버에 연결하지 못했습니다.", data: null });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /**
+   * 조회 결과를 **비어 있는 칸에만** 넣는다. 셀러가 이미 넣어 둔 값이나 저장돼
+   * 있던 값을 덮지 않는다. 자동으로 고를 수 있는 것은 "판매자센터가 기본으로
+   * 표시한 건" 또는 "후보가 하나뿐인 경우"뿐이다 — 여러 개 중 하나를 우리가
+   * 골라 주면 엉뚱한 출고지로 주문이 간다.
+   */
+  useEffect(() => {
+    const data = deliverySettings.data;
+    if (!data || deliveryAppliedRef.current) return;
+    deliveryAppliedRef.current = true;
+    const patch: Partial<LotteOnChannelForm["delivery"]> = {};
+    const outbound = autoPick(data.outboundPlaces);
+    const returning = autoPick(data.returnPlaces);
+    const policy = autoPick(data.costPolicies);
+    if (!form.delivery.outboundPlaceNo && outbound) patch.outboundPlaceNo = outbound.no;
+    if (!form.delivery.returnPlaceNo && returning) patch.returnPlaceNo = returning.no;
+    if (!form.delivery.deliveryCostPolicyNo && policy) patch.deliveryCostPolicyNo = policy.no;
+    if (Object.keys(patch).length === 0) return;
+    const next = { ...form, delivery: { ...form.delivery, ...patch } };
+    setForm(next);
+    onChannelInfoChange?.(toLotteOnChannelInfo(next));
+    markFormChanged();
+    void runValidation(next);
+    // form/runValidation은 매 렌더 새로 만들어진다 — 이 효과는 조회 결과가
+    // 처음 도착했을 때 딱 한 번만 돈다(deliveryAppliedRef).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deliverySettings.data]);
 
   /**
    * REWORK-6 ②(CEO 판정, 2026-09-14) — **고른 경로가 달라도 반영 경로는 하나다.**
@@ -927,51 +1062,93 @@ export function LotteOnRegistrationPanel({
           다름 / 개념 자체가 없음)을 이미 보여주고 있고, 두 섹션이 다른 말을
           하지 않도록 문장의 출처를 한 함수로 묶어 두었다.
         */}
-        <p className="mb-3 rounded-md bg-background px-3 py-2 text-[11px] text-text-secondary">
-          이 번호들은 <b>셀러 설정에서 자동으로 채울 수 없습니다.</b> 출고지·반품지·택배사는 셀러 설정에 같은 개념이
-          있지만 쿠팡/스마트스토어 코드체계라 롯데ON에 그대로 쓸 수 없고, 배송비정책번호·배송가능지역코드·반품택배사코드는
-          셀러 설정에 그 개념 자체가 없습니다 — 아래 <b>⑥ 배송정책 · 반품/교환</b>에 항목별 사유를 적어 두었습니다. 발송예정일수는
-          셀러 설정의 <b>출고 소요일</b>이 자동으로 들어갑니다.
-        </p>
+        {/* REWORK-11 ④(CEO 지시, 2026-09-15) — 여기 있던 「셀러 설정에서 자동으로
+            채울 수 없습니다」 4줄 안내가 사라졌다. **사실이 아니게 됐기 때문이다** —
+            이제 롯데ON 판매자센터에 직접 물어본다(150 · 166 · 89). 조회 상태와
+            결과는 바로 아래 한 줄이 말한다. */}
+        <DeliveryLookupNote state={deliverySettings} />
         <div className="grid gap-3 sm:grid-cols-2">
           <ChannelCodeField
             label="출고지번호 (owhpNo)"
             requirement={requirementOf("owhpNo")}
-            note="롯데ON에 선등록된 출고지"
+            note={
+              <DeliveryOptionPicker
+                options={deliverySettings.data?.outboundPlaces ?? []}
+                current={form.delivery.outboundPlaceNo}
+                onPick={(value) => patch("delivery", { outboundPlaceNo: value })}
+                emptyLabel="롯데ON에 선등록된 출고지"
+              />
+            }
             value={form.delivery.outboundPlaceNo}
             onChange={(value) => patch("delivery", { outboundPlaceNo: value })}
           />
           <ChannelCodeField
             label="반품지번호 (rtrpNo)"
             requirement={requirementOf("rtrpNo")}
-            note="롯데ON에 선등록된 회수지"
+            note={
+              <DeliveryOptionPicker
+                options={deliverySettings.data?.returnPlaces ?? []}
+                current={form.delivery.returnPlaceNo}
+                onPick={(value) => patch("delivery", { returnPlaceNo: value })}
+                emptyLabel="롯데ON에 선등록된 회수지"
+              />
+            }
             value={form.delivery.returnPlaceNo}
             onChange={(value) => patch("delivery", { returnPlaceNo: value })}
           />
           <ChannelCodeField
             label="배송비정책번호 (dvCstPolNo)"
             requirement={requirementOf("dvCstPolNo")}
-            note="롯데ON에 선등록된 배송비 정책"
+            note={
+              <DeliveryOptionPicker
+                options={(deliverySettings.data?.costPolicies ?? []).map((policy) => ({ ...policy, isDefault: false }))}
+                current={form.delivery.deliveryCostPolicyNo}
+                onPick={(value) => patch("delivery", { deliveryCostPolicyNo: value })}
+                emptyLabel="롯데ON에 선등록된 배송비 정책"
+              />
+            }
             value={form.delivery.deliveryCostPolicyNo}
             onChange={(value) => patch("delivery", { deliveryCostPolicyNo: value })}
           />
           <ChannelCodeField
             label="배송가능지역코드 (dvRgsprGrpCd)"
             requirement={requirementOf("dvRgsprGrpCd")}
-            note="공통코드 DV_RGSPR_GRP_CD"
+            note={
+              <CodeOptionPicker
+                options={deliverySettings.data?.deliveryRegionGroups ?? []}
+                current={form.delivery.deliveryRegionGroupCode}
+                onPick={(value) => patch("delivery", { deliveryRegionGroupCode: value })}
+                emptyLabel="공통코드 DV_RGSPR_GRP_CD"
+              />
+            }
             value={form.delivery.deliveryRegionGroupCode}
             onChange={(value) => patch("delivery", { deliveryRegionGroupCode: value })}
           />
           <ChannelCodeField
             label="택배사코드 (hdcCd)"
             requirement={requirementOf("hdcCd")}
-            note="공통코드 DV_CO_CD (예: 0001 롯데택배)"
+            note={
+              <CodeOptionPicker
+                options={deliverySettings.data?.couriers ?? []}
+                current={form.delivery.courierCode}
+                onPick={(value) => patch("delivery", { courierCode: value })}
+                emptyLabel="공통코드 DV_CO_CD (예: 0001 롯데택배)"
+              />
+            }
             value={form.delivery.courierCode}
             onChange={(value) => patch("delivery", { courierCode: value })}
           />
           <ChannelCodeField
             label="반품택배사코드 (rtngHdcCd)"
             requirement={requirementOf("rtngHdcCd")}
+            note={
+              <CodeOptionPicker
+                options={deliverySettings.data?.couriers ?? []}
+                current={form.delivery.returnCourierCode}
+                onPick={(value) => patch("delivery", { returnCourierCode: value })}
+                emptyLabel="공통코드 DV_CO_CD"
+              />
+            }
             value={form.delivery.returnCourierCode}
             onChange={(value) => patch("delivery", { returnCourierCode: value })}
           />
@@ -1978,6 +2155,112 @@ function PickedCategorySummary({
         다른 카테고리로 바꾸려면 위 [카테고리 추천]에서 다시 고르면 됩니다.
       </p>
     </div>
+  );
+}
+
+/**
+ * REWORK-11 ④(CEO 지시, 2026-09-15) — **조회가 어떻게 됐는지 한 줄.**
+ *
+ * 🔴 "설정값이 없습니다"로 뭉개지 않는다. 실패했으면 실패 사유를, 응답은 왔는데
+ * 0건이면 그 사실과 **무엇으로 물어봤는지**(소속거래처코드)를 그대로 적는다 —
+ * 그 둘은 셀러가 해야 할 일이 완전히 다르다.
+ */
+function DeliveryLookupNote({ state }: { state: DeliverySettingsState }) {
+  if (state.loading) {
+    return (
+      <p className="mb-3 text-[11px] text-text-tertiary">
+        롯데ON 판매자센터에서 출고지 · 반품지 · 배송비 정책을 불러오는 중…
+      </p>
+    );
+  }
+  if (state.error) {
+    return (
+      <p className="mb-3 rounded-md bg-error/5 px-3 py-2 text-[11px] text-error">
+        롯데ON 배송 설정을 불러오지 못했습니다 — {state.error}
+      </p>
+    );
+  }
+  const data = state.data;
+  if (!data) return null;
+  const found =
+    data.outboundPlaces.length + data.returnPlaces.length + data.costPolicies.length;
+  return (
+    <div className="mb-3 space-y-1">
+      <p className="text-[11px] text-text-secondary">
+        {found > 0
+          ? `롯데ON 판매자센터에서 출고지 ${data.outboundPlaces.length}건 · 반품지 ${data.returnPlaces.length}건 · 배송비 정책 ${data.costPolicies.length}건을 불러왔습니다 — 후보가 하나뿐이거나 기본으로 표시된 건은 자동으로 채웠습니다.`
+          : `롯데ON이 출고지 · 반품지 · 배송비 정책을 0건 돌려줬습니다(소속거래처코드 ${data.sentAfflTrCd}로 조회).`}
+      </p>
+      {/* 🔴 실패/빈 응답 사유를 서버 문장 그대로. 화면이 다시 쓰지 않는다. */}
+      {data.issues.map((issue) => (
+        <p key={`${issue.source}-${issue.message}`} className="rounded bg-warning-soft px-2 py-1 text-[11px] text-warning">
+          ⚠ {issue.source} — {issue.message}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+/** 롯데ON이 돌려준 장소/정책 중 하나를 고른다. 번호를 찾아 적게 하지 않는다. */
+function DeliveryOptionPicker({
+  options,
+  current,
+  onPick,
+  emptyLabel,
+}: {
+  options: { no: string; name: string | null; isDefault?: boolean }[];
+  current: string;
+  onPick: (value: string) => void;
+  /** 조회 결과가 없을 때 그 자리에 남는 기존 힌트. */
+  emptyLabel: string;
+}) {
+  if (options.length === 0) return <>{emptyLabel}</>;
+  return (
+    <span className="flex flex-wrap items-center gap-1">
+      {options.map((option) => (
+        <button
+          key={option.no}
+          type="button"
+          onClick={() => onPick(option.no)}
+          className={`rounded border px-1.5 py-0.5 text-[11px] ${
+            current === option.no
+              ? "border-selected-border bg-selected-soft text-selected"
+              : "border-border text-text-secondary hover:bg-background"
+          }`}
+        >
+          {option.name ? `${option.name} · ${option.no}` : option.no}
+        </button>
+      ))}
+    </span>
+  );
+}
+
+/** 공통코드(89) 한 건 고르기. 목록이 길 수 있어 select로 받는다. */
+function CodeOptionPicker({
+  options,
+  current,
+  onPick,
+  emptyLabel,
+}: {
+  options: CodeOption[];
+  current: string;
+  onPick: (value: string) => void;
+  emptyLabel: string;
+}) {
+  if (options.length === 0) return <>{emptyLabel}</>;
+  return (
+    <select
+      value={current}
+      onChange={(event) => onPick(event.target.value)}
+      className="mt-0.5 w-full rounded border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
+    >
+      <option value="">선택 안 함</option>
+      {options.map((option) => (
+        <option key={option.code} value={option.code}>
+          {option.name ? `${option.name} (${option.code})` : option.code}
+        </option>
+      ))}
+    </select>
   );
 }
 
