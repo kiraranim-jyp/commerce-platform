@@ -39,14 +39,19 @@ import type { ManufacturerResolutionState } from "./use-manufacturer-resolution"
 /**
  * REWORK-11 ①(CEO 판정, 2026-09-15) — **이 탭의 입력 한 줄은 이제 스마트스토어·
  * 쿠팡과 같은 컴포넌트가 그린다.** 여기 있던 전용 `TextField` · `TextAreaField` ·
- * `RequirementBadge`가 사라지고 공용 `ChannelCodeField` · `ChannelCodeTextArea` ·
- * `RequirementBadge`(StatusBadge 기반)로 바뀌었다 — 같은 자리가 탭마다 다른
- * 테두리·여백·글자 크기로 보이던 차이가 여기서 끝난다.
+ * `RequirementBadge`가 사라지고 공용 `ChannelCodeField` · `ChannelCodeTextArea`로
+ * 바뀌었다 — 같은 자리가 탭마다 다른 테두리·여백·글자 크기로 보이던 차이가
+ * 여기서 끝난다.
+ *
+ * REWORK-14(2026-09-15) — 그 공용 컴포넌트 **안에 넣던 것**까지 쿠팡과 한 벌이
+ * 됐다. 필수는 라벨 뒤 별표, 비어 있는 필수는 「입력 필요」 알약, 선택은 아무
+ * 표시도 없다. API 필드명은 라벨에서 빠져 ⓘ 안으로 들어갔고, 목록에서 고르는
+ * 컨트롤은 도움말 줄 밖(입력칸 아래)으로 나왔다.
  */
 import {
   ChannelCodeField,
   ChannelCodeTextArea,
-  InfoTip,
+  FIELD_INPUT_CLASS,
   ReadOnlyFieldRow,
   type FieldRequirement,
 } from "./registration-fields";
@@ -1153,85 +1158,96 @@ export function LotteOnRegistrationPanel({
             결과는 바로 아래 한 줄이 말한다. */}
         <DeliveryLookupNote state={deliverySettings} />
         <div className={FIELD_GRID_CLASS}>
+          {/* REWORK-14 — 목록에서 고르는 컨트롤이 도움말 줄(`note`) 밖으로 나왔다.
+              전에는 조회가 성공하면 회색 안내 문장 자리에 전폭 `select`와 버튼 칩이
+              서서, 쿠팡에는 없는 「도움말 줄이 입력칸이 되는」 모양이 됐다. 이제
+              도움말은 언제나 글자 한 줄이고, 고르는 컨트롤은 쿠팡이 「상세페이지
+              참조로 등록」 버튼을 두는 자리(입력칸 바로 아래)에 선다. */}
           <ChannelCodeField
-            label="출고지번호 (owhpNo)"
+            label="출고지번호"
+            code="owhpNo"
             requirement={requirementOf("owhpNo")}
-            note={
+            note="롯데ON에 선등록된 출고지"
+            belowInput={
               <DeliveryOptionPicker
                 options={deliverySettings.data?.outboundPlaces ?? []}
                 current={form.delivery.outboundPlaceNo}
                 onPick={(value) => patch("delivery", { outboundPlaceNo: value })}
-                emptyLabel="롯데ON에 선등록된 출고지"
               />
             }
             value={form.delivery.outboundPlaceNo}
             onChange={(value) => patch("delivery", { outboundPlaceNo: value })}
           />
           <ChannelCodeField
-            label="반품지번호 (rtrpNo)"
+            label="반품지번호"
+            code="rtrpNo"
             requirement={requirementOf("rtrpNo")}
-            note={
+            note="롯데ON에 선등록된 회수지"
+            belowInput={
               <DeliveryOptionPicker
                 options={deliverySettings.data?.returnPlaces ?? []}
                 current={form.delivery.returnPlaceNo}
                 onPick={(value) => patch("delivery", { returnPlaceNo: value })}
-                emptyLabel="롯데ON에 선등록된 회수지"
               />
             }
             value={form.delivery.returnPlaceNo}
             onChange={(value) => patch("delivery", { returnPlaceNo: value })}
           />
           <ChannelCodeField
-            label="배송비정책번호 (dvCstPolNo)"
+            label="배송비정책번호"
+            code="dvCstPolNo"
             requirement={requirementOf("dvCstPolNo")}
-            note={
+            note="롯데ON에 선등록된 배송비 정책"
+            belowInput={
               <DeliveryOptionPicker
                 options={(deliverySettings.data?.costPolicies ?? []).map((policy) => ({ ...policy, isDefault: false }))}
                 current={form.delivery.deliveryCostPolicyNo}
                 onPick={(value) => patch("delivery", { deliveryCostPolicyNo: value })}
-                emptyLabel="롯데ON에 선등록된 배송비 정책"
               />
             }
             value={form.delivery.deliveryCostPolicyNo}
             onChange={(value) => patch("delivery", { deliveryCostPolicyNo: value })}
           />
           <ChannelCodeField
-            label="배송가능지역코드 (dvRgsprGrpCd)"
+            label="배송가능지역코드"
+            code="dvRgsprGrpCd"
             requirement={requirementOf("dvRgsprGrpCd")}
-            note={
+            note="공통코드 DV_RGSPR_GRP_CD"
+            belowInput={
               <CodeOptionPicker
                 options={deliverySettings.data?.deliveryRegionGroups ?? []}
                 current={form.delivery.deliveryRegionGroupCode}
                 onPick={(value) => patch("delivery", { deliveryRegionGroupCode: value })}
-                emptyLabel="공통코드 DV_RGSPR_GRP_CD"
               />
             }
             value={form.delivery.deliveryRegionGroupCode}
             onChange={(value) => patch("delivery", { deliveryRegionGroupCode: value })}
           />
           <ChannelCodeField
-            label="택배사코드 (hdcCd)"
+            label="택배사코드"
+            code="hdcCd"
             requirement={requirementOf("hdcCd")}
-            note={
+            note="공통코드 DV_CO_CD (예: 0001 롯데택배)"
+            belowInput={
               <CodeOptionPicker
                 options={deliverySettings.data?.couriers ?? []}
                 current={form.delivery.courierCode}
                 onPick={(value) => patch("delivery", { courierCode: value })}
-                emptyLabel="공통코드 DV_CO_CD (예: 0001 롯데택배)"
               />
             }
             value={form.delivery.courierCode}
             onChange={(value) => patch("delivery", { courierCode: value })}
           />
           <ChannelCodeField
-            label="반품택배사코드 (rtngHdcCd)"
+            label="반품택배사코드"
+            code="rtngHdcCd"
             requirement={requirementOf("rtngHdcCd")}
-            note={
+            note="공통코드 DV_CO_CD"
+            belowInput={
               <CodeOptionPicker
                 options={deliverySettings.data?.couriers ?? []}
                 current={form.delivery.returnCourierCode}
                 onPick={(value) => patch("delivery", { returnCourierCode: value })}
-                emptyLabel="공통코드 DV_CO_CD"
               />
             }
             value={form.delivery.returnCourierCode}
@@ -1239,6 +1255,7 @@ export function LotteOnRegistrationPanel({
           />
           <ChannelCodeField
             label="평일 발송마감시간"
+            code="nldySndCloseTm"
             requirement={requirementOf("nldySndCloseTm")}
             note="HHMM · 분은 00 또는 30만"
             value={form.delivery.weekdayCloseTime}
@@ -1302,14 +1319,16 @@ export function LotteOnRegistrationPanel({
         )}
         <div className={FIELD_GRID_NARROW_CLASS}>
           <ChannelCodeField
-            label="상품품목코드 (pdItmsCd)"
+            label="상품품목코드"
+            code="pdItmsCd"
             requirement={requirementOf("pdItmsCd")}
             note={`고시 품목. ${LOTTEON_CHILD_PRODUCT_ITEM_CODE} = 어린이제품(유아동) — 이 경우 ④ 안전인증이 필수입니다.`}
             value={form.notice.itemCode}
             onChange={(value) => patch("notice", { itemCode: value })}
           />
           <ChannelCodeTextArea
-            label="고시 항목 (pdItmsArtlLst)"
+            label="고시 항목"
+            code="pdItmsArtlLst"
             requirement={requirementOf("pdItmsArtlLst")}
             /* REWORK-10 E(CEO 지시, 2026-09-15) — **조회 API가 없는 것은 없는 그대로
                적는다.** 항목코드(pdArtlCd)는 롯데ON이 목록을 내려주는 API가 없다
@@ -1384,7 +1403,8 @@ export function LotteOnRegistrationPanel({
         )}
         <div className={FIELD_GRID_NARROW_CLASS}>
           <ChannelCodeTextArea
-            label="안전인증 목록 (sftyAthnLst)"
+            label="안전인증 목록"
+            code="sftyAthnLst"
             requirement={requirementOf("sftyAthnLst")}
             note="한 줄에 하나씩 `유형코드:인증번호[:기관명]`"
             placeholder={"CHL_CFM:CB123456789"}
@@ -1392,7 +1412,8 @@ export function LotteOnRegistrationPanel({
             onChange={(value) => patch("certification", { safetyText: value })}
           />
           <ChannelCodeField
-            label="수입대행코드 (impPrxCd)"
+            label="수입대행코드"
+            code="impPrxCd"
             requirement={requirementOf("impPrxCd")}
             note="전기용품·생활용품 계열 KC 인증을 넣으면 필수 — PUR_PRX / PRL_IMP / NONE. 어린이제품(CHL_*)에는 필요 없습니다."
             value={form.certification.importProxyCode}
@@ -1519,28 +1540,32 @@ export function LotteOnRegistrationPanel({
         )}
         <div className={FIELD_GRID_CLASS}>
           <ChannelCodeField
-            label="원산지코드 (oplcCd)"
+            label="원산지코드"
+            code="oplcCd"
             requirement={requirementOf("oplcCd")}
             note="공통코드 OPLC_CD"
             value={form.codes.originCode}
             onChange={(value) => patch("codes", { originCode: value })}
           />
           <ChannelCodeField
-            label="과세유형코드 (tdfDvsCd)"
+            label="과세유형코드"
+            code="tdfDvsCd"
             requirement={requirementOf("tdfDvsCd")}
             note="01 과세 · 02 면세 · 03 영세 · 04 해당없음. 표준카테고리를 고르면 그 카테고리 값으로 채워집니다."
             value={form.codes.taxTypeCode}
             onChange={(value) => patch("codes", { taxTypeCode: value })}
           />
           <ChannelCodeField
-            label="브랜드번호 (brdNo)"
+            label="브랜드번호"
+            code="brdNo"
             requirement={requirementOf("brdNo")}
             note="속성모듈(204) 조회 결과. 없으면 비워둡니다"
             value={form.codes.brandNo}
             onChange={(value) => patch("codes", { brandNo: value })}
           />
           <ChannelCodeField
-            label="업체상품번호 (epdNo)"
+            label="업체상품번호"
+            code="epdNo"
             requirement={requirementOf("epdNo")}
             note="우리 쪽 식별자. 등록 후 상품 상태 조회(93)에 씁니다"
             value={form.codes.externalProductNo}
@@ -2393,20 +2418,24 @@ function DeliveryLookupNote({ state }: { state: DeliverySettingsState }) {
   );
 }
 
-/** 롯데ON이 돌려준 장소/정책 중 하나를 고른다. 번호를 찾아 적게 하지 않는다. */
+/**
+ * 롯데ON이 돌려준 장소/정책 중 하나를 고른다. 번호를 찾아 적게 하지 않는다.
+ *
+ * REWORK-14 — `emptyLabel`이 사라졌다. 조회 결과가 없을 때 하던 말("롯데ON에
+ * 선등록된 출고지")은 이제 **언제나** 그 칸의 도움말 줄(`note`)에 서 있다 —
+ * 조회 성공 여부에 따라 도움말 줄이 입력 컨트롤로 바뀌던 것이 롯데ON에만
+ * 있던 모양이었다. 고를 것이 없으면 이 컴포넌트는 아무것도 그리지 않는다.
+ */
 function DeliveryOptionPicker({
   options,
   current,
   onPick,
-  emptyLabel,
 }: {
   options: { no: string; name: string | null; isDefault?: boolean }[];
   current: string;
   onPick: (value: string) => void;
-  /** 조회 결과가 없을 때 그 자리에 남는 기존 힌트. */
-  emptyLabel: string;
 }) {
-  if (options.length === 0) return <>{emptyLabel}</>;
+  if (options.length === 0) return null;
   return (
     <span className="flex flex-wrap items-center gap-1">
       {options.map((option) => (
@@ -2432,19 +2461,19 @@ function CodeOptionPicker({
   options,
   current,
   onPick,
-  emptyLabel,
 }: {
   options: CodeOption[];
   current: string;
   onPick: (value: string) => void;
-  emptyLabel: string;
 }) {
-  if (options.length === 0) return <>{emptyLabel}</>;
+  if (options.length === 0) return null;
   return (
+    /* REWORK-14 — 입력칸과 **같은 옷**을 입는다(FIELD_INPUT_CLASS). 전에는
+       `text-xs` + 제 여백이라 바로 위 입력칸과 다른 높이로 서 있었다. */
     <select
       value={current}
       onChange={(event) => onPick(event.target.value)}
-      className="mt-0.5 w-full rounded border border-border px-2 py-1 text-xs focus:border-primary focus:outline-none"
+      className={FIELD_INPUT_CLASS}
     >
       <option value="">선택 안 함</option>
       {options.map((option) => (

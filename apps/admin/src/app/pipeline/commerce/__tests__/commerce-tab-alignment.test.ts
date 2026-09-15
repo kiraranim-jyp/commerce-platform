@@ -647,21 +647,27 @@ describe("표 4행 — 채널 고유값 입력", () => {
          적는 UX 자체를 폐기했고, 카테고리는 [카테고리 추천] → 후보 → [선택]
          하나로만 정해진다(선택 결과는 읽기 전용 요약으로 확인한다).
          나머지 칸의 집합은 한 건도 달라지지 않았다. */
-      "출고지번호 (owhpNo)",
-      "반품지번호 (rtrpNo)",
-      "배송비정책번호 (dvCstPolNo)",
-      "배송가능지역코드 (dvRgsprGrpCd)",
-      "택배사코드 (hdcCd)",
-      "반품택배사코드 (rtngHdcCd)",
+      /* REWORK-14(CEO 실측 판정 3회차, 2026-09-15) — 라벨에서 괄호 안 API
+         필드명이 빠졌다. **지운 것이 아니라 ⓘ 안으로 옮겼다** — 쿠팡·스마트
+         스토어 라벨에는 코드 병기가 0건이라 같은 자리의 글자 조판이 탭마다
+         달랐고, 서버 검증이 부르는 이름조차 그냥 「출고지번호」다. 코드는
+         `title`·`sr-only`에 그대로 남아 있고, 그 사실은
+         rework14-field-parity.test.ts가 화면 문서에서 직접 확인한다. */
+      "출고지번호",
+      "반품지번호",
+      "배송비정책번호",
+      "배송가능지역코드",
+      "택배사코드",
+      "반품택배사코드",
       "평일 발송마감시간",
-      "상품품목코드 (pdItmsCd)",
-      "고시 항목 (pdItmsArtlLst)",
-      "안전인증 목록 (sftyAthnLst)",
-      "수입대행코드 (impPrxCd)",
-      "원산지코드 (oplcCd)",
-      "과세유형코드 (tdfDvsCd)",
-      "브랜드번호 (brdNo)",
-      "업체상품번호 (epdNo)",
+      "상품품목코드",
+      "고시 항목",
+      "안전인증 목록",
+      "수입대행코드",
+      "원산지코드",
+      "과세유형코드",
+      "브랜드번호",
+      "업체상품번호",
     ]);
   });
 
@@ -811,7 +817,9 @@ describe("셀러 설정 판정표 — 화면과 payload가 같은 함수를 본�
     const byLabel = new Map(
       Array.from(container.querySelectorAll("input")).map((input) => [fieldLabelOf(input), input]),
     );
-    for (const label of ["출고지번호 (owhpNo)", "반품지번호 (rtrpNo)", "택배사코드 (hdcCd)"]) {
+    /* REWORK-14 — 라벨에서 API 필드명이 ⓘ 안으로 옮겨 갔다(쿠팡 라벨 조판과
+       같은 형식). 보는 대상(그 칸이 비어 있는가)은 그대로다. */
+    for (const label of ["출고지번호", "반품지번호", "택배사코드"]) {
       const input = byLabel.get(label);
       expect(input, `${label} 입력칸을 찾지 못했다`).toBeTruthy();
       expect(input!.value, `${label}에 셀러 설정 값이 흘러들어갔다`).toBe("");

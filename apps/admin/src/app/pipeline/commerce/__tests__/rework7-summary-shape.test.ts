@@ -428,7 +428,23 @@ describe("REWORK-7 ⑤ — [등록 시작]은 하나뿐이고 최종 확인 모�
 
 /* ── ④ 롯데ON 고유 필드의 필수/선택 구분 ──────────────────────────────────── */
 
-describe("REWORK-7 ④ — 롯데ON 고유 필드가 🔴 필수 · ⚪ 선택으로 갈린다", () => {
+/**
+ * REWORK-14(CEO 실측 판정 3회차, 2026-09-15) — **말은 그대로, 말버릇만 쿠팡으로.**
+ *
+ * REWORK-7 ④가 요구한 것은 「그 칸이 필수인지 선택인지 셀러가 알 수 있을 것」
+ * 이고 그 요구는 여기서 하나도 약해지지 않는다. 바뀐 것은 **그것을 말하는
+ * 방법**이다 — 롯데ON만 「🔴 필수」·「○ 선택 — 없어도 등록 가능」이라는 전용
+ * 배지를 갖고 있었고, 그게 CEO가 캡처에서 「● 필수」로 읽은 그 물건이다.
+ *
+ *   필수다           라벨 뒤 빨간 `*`      ← 쿠팡 ⑦ 원산지가 쓰던 그것
+ *   필수인데 비었다   「입력 필요」 알약     ← 쿠팡의 ProvenanceBadge(REQUIRED)
+ *   선택이다         아무 표시도 없다       ← 쿠팡에는 "선택"이라 적는 칸이 0건
+ *
+ * 마지막 줄이 정보 손실로 보이지만 아니다. 별표가 **있는 칸이 필수**라고
+ * 화면 전체가 한 가지 방법으로 말하므로, 별표가 없다는 사실 자체가 "없어도
+ * 된다"는 뜻이 된다 — 쿠팡·스마트스토어가 처음부터 그렇게 말해 왔다.
+ */
+describe("REWORK-7 ④ / REWORK-14 — 롯데ON 고유 필드의 필수·선택을 쿠팡의 말버릇으로 말한다", () => {
   /**
    * 그 이름을 단 **입력 한 줄 전체**(라벨 + 배지 + 입력칸 + 안내)를 찾는다.
    *
@@ -448,25 +464,34 @@ describe("REWORK-7 ④ — 롯데ON 고유 필드가 🔴 필수 · ⚪ 선택�
     return row as HTMLElement;
   }
 
-  it("서버 검증이 이름을 올린 필드는 🔴 필수다", async () => {
+  /** 그 칸이 «필수»라고 말하는 유일한 표시 — 라벨 뒤 빨간 별표. */
+  function isRequired(row: HTMLElement): boolean {
+    return row.querySelector("label > span.ml-0\\.5.text-error") != null;
+  }
+
+  it("서버 검증이 이름을 올린 필드는 라벨에 빨간 별표가 선다", async () => {
     const dom = await mount(lotteOnElement());
     await act(async () => expandAllSections(dom));
-    expect(clean(fieldRowFor(dom, "출고지번호").textContent ?? "")).toContain("🔴 필수");
+    const row = fieldRowFor(dom, "출고지번호");
+    expect(isRequired(row), "출고지번호에 필수 표시가 없다").toBe(true);
+    // 비어 있는 필수 칸이라 쿠팡과 같은 「입력 필요」 알약이 함께 선다.
+    expect(clean(row.textContent ?? "")).toContain("입력 필요");
   });
 
-  it("검증이 아예 보지 않는 값은 ⚪ 선택 — 없어도 등록 가능하다고 적는다", async () => {
+  it("검증이 아예 보지 않는 값에는 아무 표시도 붙이지 않는다 — 쿠팡이 그러하듯", async () => {
     const dom = await mount(lotteOnElement());
     await act(async () => expandAllSections(dom));
     for (const field of ["브랜드번호", "업체상품번호", "과세유형코드"]) {
-      const text = clean(fieldRowFor(dom, field).textContent ?? "");
-      /* 글리프가 ⚪에서 ○로 바뀌었다 — 공용 StatusBadge(neutral)의 것이다.
-         "없어도 등록 가능"이라는 **말**은 그대로다. */
-      expect(text, `${field}: 선택 표시가 없다`).toContain("선택 — 없어도 등록 가능");
+      const row = fieldRowFor(dom, field);
+      expect(isRequired(row), `${field}: 선택인데 필수 표시가 붙었다`).toBe(false);
+      const text = clean(row.textContent ?? "");
+      expect(text, `${field}: 「선택」이라고 적었다`).not.toContain("선택 — 없어도 등록 가능");
+      expect(text, `${field}: 선택인데 「입력 필요」가 붙었다`).not.toContain("입력 필요");
     }
   });
 
   it("🔴 판정을 화면이 만들지 않는다 — 검증 전에는 필수도 선택도 적지 않는다", async () => {
-    /* 서버가 답하기 전에는 아무 배지도 붙지 않아야 한다. payload-preview가
+    /* 서버가 답하기 전에는 아무 표시도 붙지 않아야 한다. payload-preview가
        영영 돌아오지 않는 상황을 만들어 그 순간을 붙잡는다. */
     vi.stubGlobal(
       "fetch",
@@ -478,9 +503,13 @@ describe("REWORK-7 ④ — 롯데ON 고유 필드가 🔴 필수 · ⚪ 선택�
       }),
     );
     const dom = await mount(lotteOnElement());
+    await act(async () => expandAllSections(dom));
     const text = clean(dom.textContent ?? "");
     expect(text, "검증 전인데 필수라고 단정했다").not.toContain("🔴 필수");
     expect(text, "검증 전인데 선택이라고 단정했다").not.toContain("⚪ 선택");
+    for (const field of ["출고지번호", "브랜드번호"]) {
+      expect(isRequired(fieldRowFor(dom, field)), `${field}: 검증 전인데 필수 표시가 붙었다`).toBe(false);
+    }
   });
 });
 

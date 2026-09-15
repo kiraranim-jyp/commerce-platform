@@ -122,22 +122,26 @@ describe("롯데ON 탭 — 실제로 그려지는 화면", () => {
 
   it("입력칸은 전부 롯데ON 전용 네 축(카테고리·고시·인증·배송)과 코드값이다", async () => {
     const labels = inputLabels((await renderTab()));
-    // 라벨마다 롯데ON API 필드명을 괄호로 함께 적는다 — 셀러가 판매자센터에서
-    // 같은 이름을 찾을 수 있어야 하고, 우리가 지어낸 이름이 아니라는 표시다.
+    /* REWORK-14(CEO 실측 판정 3회차, 2026-09-15) — 라벨은 사람이 읽는 이름만
+       들고 있다. 롯데ON API 필드명은 **사라진 것이 아니라** 라벨 뒤 ⓘ 안으로
+       들어갔다(쿠팡이 이미 쓰던 InfoTip 형식 — 쿠팡·스마트스토어 라벨에는
+       코드 병기가 0건이라 같은 자리의 글자 조판이 탭마다 달랐다). 셀러가
+       판매자센터에서 같은 이름을 찾을 수 있어야 한다는 요구는 그대로이고,
+       그 증명은 rework14-field-parity.test.ts ③이 한다. */
     /* REWORK-5 ③(CEO 실측 판정: FAIL — "다시 조회 → 번호 찾아서 입력") —
        표준/전시 카테고리번호는 이제 **입력칸이 아니다.** 셀러가 번호를 찾아
        적는 UX를 폐기하고 [카테고리 추천] → [선택] 하나로 남겼다. 그래서 이
        두 줄은 "있어야 한다"가 아니라 **"없어야 한다"**로 뒤집힌다. */
     expect(labels).not.toContain("표준카테고리번호 (scatNo)");
     expect(labels).not.toContain("전시카테고리번호 (dcatLst)");
-    expect(labels).toContain("상품품목코드 (pdItmsCd)");
-    expect(labels).toContain("고시 항목 (pdItmsArtlLst)");
-    expect(labels).toContain("안전인증 목록 (sftyAthnLst)");
-    expect(labels).toContain("수입대행코드 (impPrxCd)");
-    expect(labels).toContain("출고지번호 (owhpNo)");
-    expect(labels).toContain("반품지번호 (rtrpNo)");
-    expect(labels).toContain("배송비정책번호 (dvCstPolNo)");
-    expect(labels).toContain("배송가능지역코드 (dvRgsprGrpCd)");
+    expect(labels).toContain("상품품목코드");
+    expect(labels).toContain("고시 항목");
+    expect(labels).toContain("안전인증 목록");
+    expect(labels).toContain("수입대행코드");
+    expect(labels).toContain("출고지번호");
+    expect(labels).toContain("반품지번호");
+    expect(labels).toContain("배송비정책번호");
+    expect(labels).toContain("배송가능지역코드");
   });
 
   it("공통 정보는 값과 출처를 함께 읽어준다 — '다시 입력하라'가 아니라 '이걸 씁니다'", async () => {
