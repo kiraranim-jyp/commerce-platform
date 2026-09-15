@@ -2445,7 +2445,9 @@ function DescriptionTemplateSection({
 
 /** GOLF-01 축 A — 국내/해외가 같은 사실을 다른 말로 부르지 않도록 서버가 쓰는
  * 어휘(comparison-shop.ts의 MarketSourceAccessStatus)를 그대로 받는다. */
-type MarketSourceAccessStatus = "OK" | "BLOCKED" | "LOGIN_REQUIRED";
+type MarketSourceAccessStatus = "OK" | "BLOCKED" | "LOGIN_REQUIRED" | "API_DISCONTINUED";
+/** GOLF-01.5 축 A — 같은 이유로 서버 어휘(MarketSourceRole)를 그대로 받는다. */
+type MarketSourceRole = "PRICE_COMPARISON" | "PRICE_COLLECTION" | "DEMAND_DATA";
 
 interface ComparisonShop {
   id: string;
@@ -2458,6 +2460,15 @@ interface ComparisonShop {
   categoryScope: string[];
   accessStatus: MarketSourceAccessStatus | null;
   accessNote: string | null;
+  /** 마이그레이션 053. 분류 전이면 null이고 화면은 아무 말도 하지 않는다. */
+  role: MarketSourceRole | null;
+  /** 마이그레이션 053 — 같은 사업자가 운영하는 채널 묶음.
+   * 🔴 표시 전용이다. 이 값으로 가격을 합치지 않는다. */
+  operatorKey: string | null;
+  /** GOLF-01.5 축 A — /api/comparison-shops가 packages/crawler에서 읽어 붙여
+   * 주는 값(DB 컬럼이 아니다). "열린다"와 "우리가 자동으로 읽을 수 있다"가
+   * 다른 사실이라는 것을 화면에서 말하는 자리. 구버전 응답에는 없다. */
+  parserAvailable?: boolean;
   source: "SYSTEM" | "USER";
   isActive: boolean;
 }
@@ -2484,6 +2495,8 @@ interface DomesticPriceSource {
   workspaceEnabled: boolean;
   accessStatus: MarketSourceAccessStatus | null;
   accessNote: string | null;
+  /** 마이그레이션 053. 해외와 같은 어휘다. */
+  role: MarketSourceRole | null;
   /** GOLF-01 축 A — null이면 모두가 함께 쓰는 중앙 기본 사이트, 값이 있으면
    * 내가 추가한 사이트다(다른 판매자에게는 보이지 않는다). */
   workspaceId: string | null;
@@ -3157,7 +3170,29 @@ const ACCESS_STATUS_LABEL: Record<MarketSourceAccessStatus, string> = {
   OK: "🟢 수집 가능",
   BLOCKED: "🔴 접근 차단",
   LOGIN_REQUIRED: "🔴 로그인 필요",
+  /** GOLF-01.5 축 A(CEO 지시, 2026-09-16) — 🔴 여기에 "로그인 필요"라고 쓰지
+   * 않는다. 셀러가 로그인해도 열리지 않는다(공식 경로 자체가 없어졌다).
+   * 셀러에게 해결을 요구하는 문구는 셀러의 시간을 빼앗을 뿐이다. */
+  API_DISCONTINUED: "⛔ 가격 수집 불가 · 공식 API 종료",
 };
+
+/** GOLF-01.5 축 A — CEO가 요구한 「역할」 한 칸. 숫자만 세던 화면이 처음으로
+ * "이 소스는 무엇을 해 주는가"를 말한다. null은 일부러 아무 말도 하지
+ * 않는다(분류하지 않은 것을 분류한 척하지 않는다 — accessStatus와 같은 원칙). */
+const SOURCE_ROLE_LABEL: Record<MarketSourceRole, string> = {
+  PRICE_COMPARISON: "가격비교",
+  PRICE_COLLECTION: "가격 수집",
+  DEMAND_DATA: "수요 데이터",
+};
+
+function SourceRoleBadge({ role }: { role: MarketSourceRole | null }) {
+  if (!role) return null;
+  return (
+    <span className="ml-2 rounded-full bg-text-tertiary/10 px-2 py-0.5 text-[11px] font-medium text-text-secondary">
+      역할: {SOURCE_ROLE_LABEL[role]}
+    </span>
+  );
+}
 
 function AccessStatusNote({ status, note }: { status: MarketSourceAccessStatus | null; note: string | null }) {
   if (!status) return null;
@@ -3167,6 +3202,36 @@ function AccessStatusNote({ status, note }: { status: MarketSourceAccessStatus |
       {ACCESS_STATUS_LABEL[status]}
       {blocked ? " — 조사 대상에서 자동 제외됩니다(반복 호출하지 않습니다)" : ""}
       {note ? ` · ${note}` : ""}
+    </p>
+  );
+}
+
+/**
+ * GOLF-01.5 축 A(CEO 지시, 2026-09-16) — 해외 목록에만 있는 줄.
+ *
+ * 국내 목록에는 collectionStrategy 칸이 이미 있어서 "자동인가 수동인가"를
+ * 말한다. 해외(comparison_shops)에는 그 칸이 없다 — 그래서 Rakuten이
+ * 「🟢 수집 가능」이라고만 표시되고, 실제 조사에서는 파서가 없어 한 건도
+ * 못 가져온다는 사실이 화면 어디에도 없었다. 그 자리를 만든다.
+ */
+function ParserAvailabilityNote({ available }: { available: boolean | undefined }) {
+  if (available === undefined) return null;
+  return available ? (
+    <p className="text-xs text-success">🟢 자동 수집 파서 있음</p>
+  ) : (
+    <p className="text-xs text-warning">
+      🟡 자동 수집 파서 없음 — 등록만 되어 있고 자동 조회 결과는 0건입니다(수동 확인)
+    </p>
+  );
+}
+
+/** GOLF-01.5 축 A(CEO 판단, 2026-09-16) — 같은 사업자여도 채널마다 가격이 다르다.
+ * 🔴 이 줄은 관계만 말하고, 그 관계로 값을 합치지 않는다는 것까지 말한다. */
+function OperatorChannelNote({ operatorKey }: { operatorKey: string | null }) {
+  if (!operatorKey) return null;
+  return (
+    <p className="text-xs text-text-tertiary">
+      같은 사업자: {operatorKey} — 채널별 할인·쿠폰·포인트·재고가 달라 가격은 합치지 않고 따로 봅니다.
     </p>
   );
 }
@@ -3221,14 +3286,21 @@ function MarketResearchSourcesSection() {
           아래 목록은 이 카테고리에 연결된 사이트만 보여줍니다. 사이트는 카테고리마다 중복해서 만들지 않습니다 —
           한 사이트가 여러 카테고리에 연결될 수 있습니다.
         </p>
+        {/* GOLF-01.5 축 A(CEO 지시, 2026-09-16) — 숫자만 세지 않는다. 소스마다
+            «무엇을 해 주는가»가 다르고, 그 차이를 화면이 말하지 않으면 셀러는
+            가격을 주지 않는 소스까지 "조사 대상 n곳"으로 믿는다. */}
+        <p className="mt-2 text-xs text-text-tertiary">
+          역할: <b>가격비교</b> 여러 판매자의 값을 모아 주는 매체 · <b>가격 수집</b> 그 자리에서 파는 가격 · <b>수요
+          데이터</b> 가격이 아니라 검색·수요 흐름. 역할이 적히지 않은 사이트는 아직 분류하지 않은 것입니다.
+        </p>
       </section>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-text-secondary">국내 가격비교</h2>
+        <h2 className="mb-2 text-sm font-semibold text-text-secondary">국내 가격</h2>
         <DomesticPriceSourcesSection categoryScopes={scopes} />
       </div>
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-text-secondary">해외 가격비교 / 소싱</h2>
+        <h2 className="mb-2 text-sm font-semibold text-text-secondary">해외 가격</h2>
         <ComparisonShopsSection categoryScopes={scopes} />
       </div>
     </div>
@@ -3348,6 +3420,7 @@ function ComparisonShopsSection({ categoryScopes }: { categoryScopes: string[] |
                       추천
                     </span>
                   )}
+                  <SourceRoleBadge role={shop.role} />
                   <p className="text-xs text-text-secondary">
                     {shop.domain}
                     {shop.country ? ` · ${shop.country}` : ""}
@@ -3355,6 +3428,11 @@ function ComparisonShopsSection({ categoryScopes }: { categoryScopes: string[] |
                     {shop.categoryScope.length > 0 ? ` · ${shop.categoryScope.join(", ")}` : ""}
                   </p>
                   <AccessStatusNote status={shop.accessStatus} note={shop.accessNote} />
+                  {/* GOLF-01.5 축 A — 🔴 "열린다"와 "우리가 읽을 수 있다"는 다른
+                      사실이다. 이 줄이 없으면 Rakuten은 「수집 가능」이라고만
+                      표시되고 실제 조회 결과가 0건인 이유를 아무도 모른다. */}
+                  {shop.accessStatus !== "BLOCKED" && <ParserAvailabilityNote available={shop.parserAvailable} />}
+                  <OperatorChannelNote operatorKey={shop.operatorKey} />
                 </div>
               </label>
               {shop.source === "USER" && (
@@ -3586,6 +3664,7 @@ function DomesticPriceSourcesSection({ categoryScopes }: { categoryScopes: strin
                       내가 추가
                     </span>
                   )}
+                  <SourceRoleBadge role={source.role} />
                   <p className="text-xs text-text-secondary">
                     {source.domain} · {source.currency}
                     {source.categoryScope.length > 0 ? ` · ${source.categoryScope.join(", ")}` : ""}

@@ -1,6 +1,7 @@
 import { JSDOM } from "jsdom";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { selectedMarketSourceScopes, sourceFitsScopes } from "@commerce/category";
+import { supportsComparisonShopSearch } from "@commerce/crawler";
 
 /**
  * GOLF-01 축 A(CEO 지시, 2026-09-15) — 설정 → 시장조사 사이트 관리.
@@ -21,7 +22,7 @@ import { selectedMarketSourceScopes, sourceFitsScopes } from "@commerce/category
 const WS_A = "11111111-1111-1111-1111-111111111111";
 const WS_B = "22222222-2222-2222-2222-222222222222";
 
-type Access = "OK" | "BLOCKED" | "LOGIN_REQUIRED" | null;
+type Access = "OK" | "BLOCKED" | "LOGIN_REQUIRED" | "API_DISCONTINUED" | null;
 
 interface DomesticRow {
   id: string;
@@ -43,7 +44,11 @@ interface DomesticRow {
   accessStatus: Access;
   accessNote: string | null;
   workspaceId: string | null;
+  /** GOLF-01.5 축 A(마이그레이션 053) — 053 적용 직후 살아있는 DB 실측:
+   * 다나와 PRICE_COMPARISON · 네이버 쇼핑 DEMAND_DATA · 나머지 16행 null. */
+  role: Role;
 }
+type Role = "PRICE_COMPARISON" | "PRICE_COLLECTION" | "DEMAND_DATA" | null;
 
 function dom_(
   domain: string,
@@ -53,8 +58,10 @@ function dom_(
   strategy: DomesticRow["collectionStrategy"] = "MANUAL",
   status: DomesticRow["status"] = "ACTIVE",
   accessStatus: Access = null,
+  role: Role = null,
 ): DomesticRow {
   return {
+    role,
     id: `d-${domain}`,
     name,
     domain,
@@ -98,7 +105,9 @@ const DOMESTIC: DomesticRow[] = [
   dom_("ssfshop.com", "SSF SHOP", ["FASHION_ACCESSORIES", "KIDS_FASHION", "WOMEN_FASHION"], false),
   dom_("wconcept.co.kr", "W컨셉", ["FASHION_ACCESSORIES", "KIDS_FASHION", "WOMEN_FASHION"], false),
   // 052가 넣은 골프 2곳.
-  dom_("danawa.com", "다나와", ["GOLF"], true, "MANUAL", "ACTIVE", "OK"),
+  dom_("danawa.com", "다나와", ["GOLF"], true, "MANUAL", "ACTIVE", "OK", "PRICE_COMPARISON"),
+  // GOLF-01.5 축 A(CEO 지시, 2026-09-16) — 053 이후 네이버 쇼핑은 LOGIN_REQUIRED가
+  // 아니다. 검색 API가 2026-07-31 종료됐고, 셀러가 로그인해도 열리지 않는다.
   dom_(
     "shopping.naver.com",
     "네이버 쇼핑",
@@ -106,7 +115,8 @@ const DOMESTIC: DomesticRow[] = [
     true,
     "NOT_AVAILABLE",
     "NOT_AVAILABLE",
-    "LOGIN_REQUIRED",
+    "API_DISCONTINUED",
+    "DEMAND_DATA",
   ),
 ];
 
@@ -122,10 +132,29 @@ interface OverseasRow {
   accessNote: string | null;
   source: "SYSTEM" | "USER";
   isActive: boolean;
+  role: Role;
+  /** 마이그레이션 053 실측: GDO='GDO' · Victoria='Victoria Golf(Xebio)' ·
+   * Rakuten 市場=null(마켓플레이스 자체는 사업자가 아니다) · 아동 25행 null. */
+  operatorKey: string | null;
+  /** DB 컬럼이 아니다 — /api/comparison-shops가 packages/crawler에서 읽어
+   * 붙여 준다. 실측: 아동 25곳 중 Shopify suggest 11곳 + childrensalon 1곳만
+   * true, Rakuten·GDO·Victoria는 전부 false(파서가 없다). */
+  parserAvailable: boolean;
 }
 
-function ovs(domain: string, name: string, scope: string[], accessStatus: Access = null): OverseasRow {
+function ovs(
+  domain: string,
+  name: string,
+  scope: string[],
+  accessStatus: Access = null,
+  role: Role = null,
+  operatorKey: string | null = null,
+  parserAvailable = false,
+): OverseasRow {
   return {
+    role,
+    operatorKey,
+    parserAvailable,
     id: `o-${domain}`,
     name,
     domain,
@@ -170,10 +199,14 @@ const KIDS_OVERSEAS_DOMAINS = [
 ];
 
 const OVERSEAS: OverseasRow[] = [
-  ...KIDS_OVERSEAS_DOMAINS.map((d) => ovs(d, d, ["KIDS_FASHION"])),
-  ovs("shop.golfdigest.co.jp", "GDO 골프샵", ["GOLF"], "BLOCKED"),
-  ovs("victoriagolf.co.jp", "Victoria Golf", ["GOLF"], "BLOCKED"),
-  ovs("rakuten.co.jp", "Rakuten 市場", ["GOLF"], "OK"),
+  // parserAvailable은 지어내지 않는다 — packages/crawler의 진짜 판정 함수로
+  // 계산한다(그게 실제 조사 경로가 쓰는 그 조건이다).
+  ...KIDS_OVERSEAS_DOMAINS.map((d) =>
+    ovs(d, d, ["KIDS_FASHION"], null, null, null, supportsComparisonShopSearch(d)),
+  ),
+  ovs("shop.golfdigest.co.jp", "GDO 골프샵", ["GOLF"], "BLOCKED", "PRICE_COLLECTION", "GDO", false),
+  ovs("victoriagolf.co.jp", "Victoria Golf", ["GOLF"], "BLOCKED", "PRICE_COLLECTION", "Victoria Golf(Xebio)", false),
+  ovs("rakuten.co.jp", "Rakuten 市場", ["GOLF"], "OK", "PRICE_COLLECTION", null, false),
 ];
 
 /* ══════════════════════ ① /api/market-categories — 실측 카탈로그로 센다 ══════════════════════ */
@@ -474,7 +507,7 @@ describe("GOLF-01 ③ 설정 → 시장조사 사이트 관리 — 카테고리�
     await act(async () => root.unmount());
   });
 
-  it("🔴 막힌 사이트는 화면이 '접근 차단' · '로그인 필요'라고 그대로 말한다", async () => {
+  it("🔴 막힌 사이트는 화면이 '접근 차단'이라고 그대로 말한다", async () => {
     const { root, act } = await mountSettings();
     const select = q<HTMLSelectElement>('select[aria-label="시장조사 카테고리"]');
     await act(async () => {
@@ -484,10 +517,17 @@ describe("GOLF-01 ③ 설정 → 시장조사 사이트 관리 — 카테고리�
 
     const domesticText = sectionByHeading("국내 편집샵 후보 목록").textContent ?? "";
     const overseasText = sectionByHeading("편집샵(Seller) 목록").textContent ?? "";
-    expect(domesticText, "로그인이 막는 사이트를 화면이 말하지 않는다").toContain("로그인 필요");
     expect(domesticText, "다나와가 수집 가능이라고 말하지 않는다").toContain("수집 가능");
     expect(overseasText, "403으로 막힌 사이트를 화면이 말하지 않는다").toContain("접근 차단");
     expect(overseasText).toContain("조사 대상에서 자동 제외됩니다");
+
+    // GOLF-01.5 축 A(CEO 지시, 2026-09-16) — 이 줄은 2026-09-15에는 정반대였다
+    // ("로그인 필요"가 **보여야** 통과하는 검사였다). 셀러가 로그인해도 열리지
+    // 않는다는 사실이 확인된 이상, 그 문구는 셀러에게 해결할 수 없는 일을
+    // 시키는 UX다. 같은 자리에서 방향을 뒤집어 고정한다.
+    expect(domesticText, "셀러가 로그인해도 열리지 않는데 여전히 '로그인 필요'라고 말한다").not.toContain(
+      "로그인 필요",
+    );
 
     await act(async () => root.unmount());
   });
@@ -555,6 +595,105 @@ describe("GOLF-01 ③ 설정 → 시장조사 사이트 관리 — 카테고리�
     expect(text).toContain("내 골프샵");
     expect(text, "내가 추가한 사이트를 중앙 기본 사이트와 구분해서 말하지 않는다").toContain("내가 추가");
     expect(text).toContain("내 계정에만 보입니다");
+    await act(async () => root.unmount());
+  });
+});
+
+/* ═════ ⑤ GOLF-01.5 — 화면이 «역할»까지 말하고, 네이버에게 로그인을 요구하지 않는다 ═════ */
+
+describe("GOLF-01.5 축 A(CEO 지시, 2026-09-16) — 설정 화면이 소스의 역할을 말한다", () => {
+  async function golfScreen() {
+    const mounted = await mountSettings();
+    const select = q<HTMLSelectElement>('select[aria-label="시장조사 카테고리"]');
+    await mounted.act(async () => {
+      typeInto(select, "GOLF");
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    return mounted;
+  }
+
+  it("🔴 네이버 쇼핑이 «가격 수집»에서 빠지고 «수요 데이터»로 바뀌었다", async () => {
+    const { root, act } = await golfScreen();
+    const section = sectionByHeading("국내 편집샵 후보 목록");
+    const naverRow = [...section.querySelectorAll("li")].find((li) =>
+      (li.textContent ?? "").includes("네이버 쇼핑"),
+    );
+    expect(naverRow, "네이버 쇼핑 줄이 사라졌다 — 지우지 말고 역할만 바꾼다").toBeTruthy();
+    const text = naverRow!.textContent ?? "";
+    console.log(`[GOLF-01.5 증거] 네이버 쇼핑 줄: ${text}`);
+
+    // 🔴 CEO 지시의 본문: 셀러가 로그인해도 안 되는 일을 시키지 않는다.
+    expect(text, "셀러에게 해결할 수 없는 일을 시키는 문구가 남아 있다").not.toContain("로그인");
+    expect(text, "왜 가격을 못 가져오는지 화면이 말하지 않는다").toContain("가격 수집 불가");
+    expect(text).toContain("API 종료");
+    expect(text, "역할이 수요 데이터로 바뀌었다고 말하지 않는다").toContain("역할: 수요 데이터");
+    await act(async () => root.unmount());
+  });
+
+  it("🔴 화면 전체 어디에도 «로그인 필요»가 남아 있지 않다", async () => {
+    const { root, act } = await golfScreen();
+    const all = container.textContent ?? "";
+    expect(all, "「로그인 필요」 문구가 아직 화면에 있다").not.toContain("로그인 필요");
+    await act(async () => root.unmount());
+  });
+
+  it("🔴 역할을 세 가지로 갈라서 말한다 — 가격비교 / 가격 수집 / 수요 데이터", async () => {
+    const { root, act } = await golfScreen();
+    const domestic = sectionByHeading("국내 편집샵 후보 목록").textContent ?? "";
+    const overseas = sectionByHeading("편집샵(Seller) 목록").textContent ?? "";
+    console.log(`[GOLF-01.5 증거] 국내 역할 표시: ${domestic.includes("역할: 가격비교") ? "다나와=가격비교" : "없음"}`);
+
+    expect(domestic, "다나와가 가격비교 매체라고 말하지 않는다").toContain("역할: 가격비교");
+    expect(domestic).toContain("역할: 수요 데이터");
+    expect(overseas, "해외 소스의 역할을 말하지 않는다").toContain("역할: 가격 수집");
+    await act(async () => root.unmount());
+  });
+
+  it("🔴 Rakuten은 «열린다»고만 하지 않고 «자동 수집 파서가 없다»고까지 말한다", async () => {
+    const { root, act } = await golfScreen();
+    const rakutenRow = [...sectionByHeading("편집샵(Seller) 목록").querySelectorAll("li")].find((li) =>
+      (li.textContent ?? "").includes("Rakuten"),
+    );
+    const text = rakutenRow!.textContent ?? "";
+    console.log(`[GOLF-01.5 증거] Rakuten 줄: ${text}`);
+
+    // access_status는 여전히 OK다(실제로 열린다). 그러나 파서가 없어서 자동
+    // 조회 결과는 0건이다 — 그 둘을 한 줄로 뭉개면 "등록됐는데 값이 없다"가
+    // 화면에서 사라져 버린다(CEO가 이번에 지적한 바로 그 상태).
+    expect(text).toContain("수집 가능");
+    expect(text, "파서가 없다는 사실을 화면이 말하지 않는다").toContain("자동 수집 파서 없음");
+    expect(text).toContain("자동 조회 결과는 0건");
+    await act(async () => root.unmount());
+  });
+
+  it("🔴 GDO는 «같은 사업자»라고만 말하고, 가격을 합친다고는 말하지 않는다", async () => {
+    const { root, act } = await golfScreen();
+    const gdoRow = [...sectionByHeading("편집샵(Seller) 목록").querySelectorAll("li")].find((li) =>
+      (li.textContent ?? "").includes("GDO"),
+    );
+    const text = gdoRow!.textContent ?? "";
+    console.log(`[GOLF-01.5 증거] GDO 줄: ${text}`);
+    expect(text).toContain("같은 사업자: GDO");
+    expect(text, "같은 사업자면 가격을 합쳐도 된다고 읽힐 여지를 남겼다").toContain("가격은 합치지 않고 따로 봅니다");
+    expect(text, "차단된 사이트인데 접근 차단이라고 말하지 않는다").toContain("접근 차단");
+    await act(async () => root.unmount());
+  });
+
+  it("🔴 아동의류 화면은 예전 그대로다(회귀) — 역할 칸이 없는 사이트에 말을 지어내지 않는다", async () => {
+    const { root, act } = await mountSettings();
+    const select = q<HTMLSelectElement>('select[aria-label="시장조사 카테고리"]');
+    await act(async () => {
+      typeInto(select, "KIDS_FASHION");
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(shopNamesIn("국내 편집샵 후보 목록")).toHaveLength(16);
+    expect(shopNamesIn("편집샵(Seller) 목록")).toHaveLength(25);
+
+    // 아동 41행은 053이 role을 채우지 않았다(null). 화면은 그 줄에 역할을
+    // 지어내 붙이지 않는다 — "분류하지 않았다"를 "가격 수집"으로 둔갑시키면
+    // access_status가 null일 때 아무 말도 하지 않기로 한 원칙이 깨진다.
+    const kidsRows = [...sectionByHeading("국내 편집샵 후보 목록").querySelectorAll("li")];
+    expect(kidsRows.filter((li) => (li.textContent ?? "").includes("역할:"))).toHaveLength(0);
     await act(async () => root.unmount());
   });
 });

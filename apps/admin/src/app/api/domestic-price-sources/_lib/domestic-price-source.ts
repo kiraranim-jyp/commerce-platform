@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import type { MarketSourceAccessStatus } from "../../comparison-shops/_lib/comparison-shop";
+import type { MarketSourceAccessStatus, MarketSourceRole } from "../../comparison-shops/_lib/comparison-shop";
 
 /**
  * N-4.07(대표님 지시: "후보군 리스트는 추가로 관리할수 있게 해줘") —
@@ -45,6 +45,10 @@ export interface DomesticPriceSource {
    * 쓴다(국내/해외가 같은 사실을 다른 말로 부르지 않는다). */
   accessStatus: MarketSourceAccessStatus | null;
   accessNote: string | null;
+  /** GOLF-01.5 축 A(마이그레이션 053) — 이 소스가 해 주는 일. 해외(comparison_shops)와
+   * **같은 어휘**를 쓴다(국내/해외가 같은 사실을 다른 말로 부르지 않는다).
+   * 네이버 쇼핑이 여기서 DEMAND_DATA가 되면서 가격 수집 소스에서 빠졌다. */
+  role: MarketSourceRole | null;
   /** GOLF-01 축 A(마이그레이션 051) — null이면 중앙 기본 카탈로그(모든 셀러가
    * 본다), 값이 있으면 그 워크스페이스만 보는 추가분이다. 🔴 이 값이 다른
    * 워크스페이스에게 새어 나가면 셀러 A의 사이트가 셀러 B 목록에 뜬다 —
@@ -91,6 +95,8 @@ interface DomesticPriceSourceRow {
   access_status?: MarketSourceAccessStatus | null;
   access_note?: string | null;
   workspace_id?: string | null;
+  /** 마이그레이션 053. 051의 세 컬럼과 같은 이유로 optional이다. */
+  source_role?: MarketSourceRole | null;
   created_at: string;
 }
 
@@ -113,6 +119,7 @@ function toSource(row: DomesticPriceSourceRow, workspaceEnabled: boolean): Domes
     sourceType: row.source_type ?? null,
     accessStatus: row.access_status ?? null,
     accessNote: row.access_note ?? null,
+    role: row.source_role ?? null,
     workspaceId: row.workspace_id ?? null,
     enabled: row.enabled && workspaceEnabled,
     catalogEnabled: row.enabled,

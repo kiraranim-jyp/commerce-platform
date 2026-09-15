@@ -186,6 +186,20 @@ const SHOPIFY_SUGGEST_DOMAINS = new Set([
   "folkberlin.com",
 ]);
 
+/**
+ * GOLF-01.5 축 A(CEO 지시, 2026-09-16) — "이 도메인에 자동 수집 파서가 있는가"를
+ * **검색을 실행하지 않고** 물어보는 자리. 값을 새로 정의하지 않는다 —
+ * searchOneShop이 실제로 분기하는 그 조건을 그대로 돌려준다(두 곳에 적으면
+ * 언젠가 화면이 "수집 가능"이라고 말하는데 실제로는 unsupported가 된다 —
+ * 지금 Rakuten이 정확히 그 상태다: 등록됐고 접근도 되지만 파서가 없어서
+ * 값이 0건이다).
+ *
+ * 🔴 access_status(열리는가)와 섞지 않는다. 이건 "우리가 읽을 수 있는가"다.
+ */
+export function supportsComparisonShopSearch(domain: string): boolean {
+  return SHOPIFY_SUGGEST_DOMAINS.has(domain) || domain === "childrensalon.com";
+}
+
 /** 이 Phase에서 실제 파서가 있는 도메인만 여기 등록한다 — comparison_shops의 나머지 활성
  * 사이트는 자동으로 "unsupported"가 된다(하드코딩된 사이트 "허용 목록"이 아니라, 파서 존재 여부). */
 async function searchOneShop(shop: ComparisonShopRef, query: ComparisonQuery): Promise<ComparisonSearchResult> {
@@ -250,7 +264,24 @@ export async function searchComparisonShops(
  * 다른 도메인은 검색 목록 가격을 그대로 쓰므로 이 필드를 건드리지 않는다). 이 규칙은
  * 검색어가 원문이든 alias든(아래 참고) 동일하게 적용돼야 하므로 도메인 분기 자체를
  * 검색어와 분리된 헬퍼로 뺀다. */
+/** GOLF-01.5 축 A — 해외의 supportsComparisonShopSearch와 같은 이유·같은 역할.
+ * 이 Set이 "파서가 있는가"의 유일한 진실이고, 아래 분기는 이 Set을 통과한
+ * 도메인만 받는다(목록을 두 번 적지 않는다). */
+const DOMESTIC_SEARCH_DOMAINS = new Set([
+  "looxloo.com",
+  "bobochoses.com",
+  "rulii.co.kr",
+  "deuxbebe.com",
+  "chocoel.co.kr",
+  "foretforet.com",
+]);
+
+export function supportsDomesticShopSearch(domain: string): boolean {
+  return DOMESTIC_SEARCH_DOMAINS.has(domain);
+}
+
 async function searchDomesticShopCandidates(domain: string, term: string): Promise<ComparisonCandidate[] | null> {
+  if (!supportsDomesticShopSearch(domain)) return null;
   if (domain === "looxloo.com") return searchLooxloo(term);
   if (domain === "bobochoses.com") {
     const candidates = await searchBoboChosesKorea(term);
