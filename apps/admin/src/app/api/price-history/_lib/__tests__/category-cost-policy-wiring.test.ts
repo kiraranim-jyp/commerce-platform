@@ -26,13 +26,35 @@ describe("GOLF-01 축B: CATEGORY_PROFILES의 모든 카테고리에 비용 정�
     }
   });
 
-  it("관부가세를 원가로 보는 카테고리는 오늘 골프 하나뿐이다 — 나머지는 기존 정책 그대로다", () => {
-    const withImportTaxes = (Object.keys(CATEGORY_PROFILES) as CategoryProfileId[]).filter(
-      (id) => CATEGORY_COST_POLICIES[id].importTaxesInLandedCost,
+  /**
+   * 🔴 GOLF-01-TAX(CEO 최종 결정, 2026-09-15) — 이 검사가 **더 강해졌다.**
+   *
+   * 예전에는 "관부가세를 원가로 보는 카테고리는 골프 하나뿐"을 셌다. CEO가
+   * 그 방향을 거둔 지금은 셀 것이 없다 — 정책에 그런 스위치 자체가 없다.
+   * 개수를 세는 대신 **필드가 존재하지 않는다**를 고정한다. 필드가 없으면
+   * 목록에 새 카테고리가 들어올 수도 없다.
+   */
+  it("어떤 카테고리도 관부가세를 판매자 원가로 보지 않는다 — 켤 수 있는 칸 자체가 없다", () => {
+    for (const id of Object.keys(CATEGORY_PROFILES) as CategoryProfileId[]) {
+      expect(CATEGORY_COST_POLICIES[id], id).not.toHaveProperty("importTaxesInLandedCost");
+      // 관부가세가 원가에 없으니 모든 착지원가는 세전이다.
+      expect(CATEGORY_COST_POLICIES[id].landedCostTaxBasis, id).toBe("TAX_EXCLUDED");
+    }
+  });
+
+  it("갈리는 것은 품목/HS 하나다 — 그 축이 «관세를 말할 수 있는가»를 정한다", () => {
+    const classified = (Object.keys(CATEGORY_PROFILES) as CategoryProfileId[]).filter(
+      (id) => CATEGORY_COST_POLICIES[id].hsCode != null,
     );
-    expect(withImportTaxes).toEqual(["GOLF"]);
-    // 🔴 아동의류가 이 목록에 들어오면 MI-COST-POLICY-1이 깨진 것이다.
-    expect(CATEGORY_COST_POLICIES.KIDS_FASHION.importTaxesInLandedCost).toBe(false);
+    expect(classified).toEqual(["GOLF"]);
+    // 🔴 품목 분류를 확정하지 못한 카테고리에 관세율을 붙이면 그 순간 임의의
+    //    세율이 구매자 부담으로 표시된다.
+    expect(CATEGORY_COST_POLICIES.KIDS_FASHION.hsCode).toBeNull();
+    expect(CATEGORY_COST_POLICIES.KIDS_FASHION.customsDutyRate).toBeNull();
+    // 반면 수입부가세율은 품목이 아니라 법이 정하므로 모든 카테고리가 들고 있다.
+    for (const id of Object.keys(CATEGORY_PROFILES) as CategoryProfileId[]) {
+      expect(CATEGORY_COST_POLICIES[id].importVatRate?.percent, id).toBe(10);
+    }
   });
 
   it("카테고리 id 어휘가 두 패키지에서 같다 — 비용 정책 쪽에만 있는 이름은 DEFAULT뿐이다", () => {
@@ -92,7 +114,14 @@ describe("PRICING-BASIS-1: 두 숫자가 각자 어느 세금 기준인지 화�
     expect(context.comparable.basis).toContain("세금 포함");
   });
 
-  it("골프(관부가세 포함 정책)의 착지원가는 «한국 도착 기준»이라고 밝힌다", () => {
+  /**
+   * GOLF-01-TAX 이후 오늘의 정책 중 LANDED_TAXED를 내는 것은 없다. 그래도 이
+   * 검사를 남기는 이유는, 세후 원가를 만드는 카테고리가 언젠가 생겼을 때
+   * 화면이 그 사실을 말하는 문장을 이미 갖고 있어야 하기 때문이다 —
+   * comparePriceBasis가 LANDED_TAXED ↔ TAX_INCLUDED만 비교 가능으로 두는 것과
+   * 짝을 이룬다.
+   */
+  it("세후(LANDED_TAXED) 착지원가는 «한국 도착 기준»이라고 밝힌다", () => {
     const row = buildPriceChain({ ...CHAIN, landedCostTaxBasis: "LANDED_TAXED" }).find(
       (r) => r.key === "LANDED_COST",
     )!;
@@ -101,7 +130,7 @@ describe("PRICING-BASIS-1: 두 숫자가 각자 어느 세금 기준인지 화�
     expect(row.basis).toContain("국제배송비");
   });
 
-  it("🔴 아동의류(관부가세 제외 정책)의 착지원가는 «세금 별도»라고 밝힌다 — 국내가와 그냥 빼면 안 되는 값이다", () => {
+  it("🔴 오늘의 모든 착지원가는 «세금 별도»라고 밝힌다 — 국내가와 그냥 빼면 안 되는 값이다", () => {
     const row = buildPriceChain({ ...CHAIN, landedCostTaxBasis: "TAX_EXCLUDED" }).find(
       (r) => r.key === "LANDED_COST",
     )!;

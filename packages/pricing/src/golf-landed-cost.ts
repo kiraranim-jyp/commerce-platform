@@ -1,5 +1,10 @@
 import { convertToKrwStrict } from "./currency";
-import { computeImportTaxes, type ImportTaxResult } from "./import-tax";
+import {
+  resolveBuyerImportCharge,
+  type BuyerImportChargeEstimate,
+  type DeliveryTerms,
+  type ImportMode,
+} from "./buyer-import-charge";
 import { resolveCategoryCostPolicy, type CategoryCostPolicy } from "./category-cost-policy";
 import {
   estimateEmsJapanToKorea,
@@ -11,10 +16,17 @@ import {
 import type { PriceComponent } from "./unified-price-decision";
 
 /**
- * GOLF-01 축B(CEO 지시, 2026-09-15) — CEO가 수용하라고 한 구조 그대로:
+ * GOLF-01-TAX(CEO 최종 결정, 2026-09-15) — CEO가 수용하라고 한 구조 그대로:
  *
- *   상품가 + 국제배송비 + 관세 + 수입부가세 + 기타 비용
+ *   상품가 + 국제배송비 + 기타 판매자 비용   → 판매자 원가
+ *   [별도 참고] 관세 · 부가가치세            → 구매자 부담 예상액
  *   배송 계산용:  실중량 · 가로 · 세로 · 높이 · 용적중량
+ *
+ * ── 🔴 직전 방향에서 무엇이 바뀌었나 ─────────────────────────────────────
+ * d72575f는 관세·부가세를 components에 넣어 착지원가로 흘려보냈다. 지금은
+ * 그 두 칸이 **components에 없다**. 세금은 buyerImportCharge라는 별도 필드로만
+ * 나가고, 그 필드는 computeUnifiedPriceDecision이 받지 않는 모양이다 —
+ * 실수로도 원가에 이어 붙일 수 없다.
  *
  * ── 이 파일은 새 가격 엔진이 아니다 ──────────────────────────────────────
  * 계산은 전부 기존 조각을 **부르기만** 한다: 환산은 convertToKrwStrict,
@@ -27,10 +39,14 @@ import type { PriceComponent } from "./unified-price-decision";
  * 이 저장소가 P-1-3에서 한 번 겪은 사고다.
  *
  * ── 모르면 멈춘다 ────────────────────────────────────────────────────────
- * 치수·중량이 없으면 배송비가 null이고, 관세율이 확정되지 않았으면 세금이
- * null이다. null은 computeUnifiedPriceDecision에서 status="unknown"이 되어
- * dataCompleteness="INCOMPLETE" → 🟠 "비용 확인 필요"로 흐른다. 값을 지어내서
- * 🟢을 내지 않는다.
+ * 치수·중량이 없으면 배송비가 null이고, null은 computeUnifiedPriceDecision에서
+ * status="unknown"이 되어 dataCompleteness="INCOMPLETE" → 🟠 "비용 확인 필요"로
+ * 흐른다. 값을 지어내서 🟢을 내지 않는다.
+ *
+ * 세금 쪽은 흐르는 곳이 다르다. 관세율이나 해당 여부가 확정되지 않으면
+ * buyerImportCharge가 «확인 필요»를 들고 나가고, 그 사실은 **판매자 원가의
+ * 완전성에 영향을 주지 않는다** — 판매자가 치르지 않는 돈을 몰라서 셀러의
+ * 판정을 🟠으로 내리면, 그건 관부가세를 원가로 세던 시절로 돌아가는 것과 같다.
  */
 export interface GolfLandedCostInput {
   /** 해외 판매처 가격(원본 통화 그대로). 환산은 이 함수가 한 번만 한다. */
@@ -51,6 +67,13 @@ export interface GolfLandedCostInput {
   sellerConfirmedDutyRatePercent?: number | null;
   /** CATEGORY_PROFILES의 id. 기본 "GOLF". */
   categoryProfileId?: string;
+  /**
+   * 구매자 부담 참고정보의 판단 축(buyer-import-charge.ts). 모르면 넘기지
+   * 않는다 — 그 축이 «확인 필요»로 남는 것이 정확한 상태다.
+   */
+  originCountry?: string | null;
+  deliveryTerms?: DeliveryTerms | null;
+  importMode?: ImportMode | null;
 }
 
 export interface GolfLandedCostBreakdown {
@@ -65,16 +88,21 @@ export interface GolfLandedCostBreakdown {
   shippingStatus: "actual" | "estimated" | "unknown";
   /** 과세가격(CIF) = 상품가 + 국제운임. 둘 중 하나라도 없으면 null. */
   customsValueKrw: number | null;
-  importTax: ImportTaxResult | null;
+  /**
+   * 🔴 **판매자 원가가 아니다.** 구매자가 통관 때 따로 부담하는 금액의
+   * 참고정보다(buyer-import-charge.ts). 아래 components와 **다른 필드**인 것이
+   * 이 값이 원가로 새지 못하게 하는 구조다.
+   */
+  buyerImportCharge: BuyerImportChargeEstimate;
   /**
    * 그대로 computeUnifiedPriceDecision(...)에 펼쳐 넣을 수 있는 조각.
    * 호출부가 PriceComponent를 손으로 만들면 status 규칙이 두 곳에 생긴다.
+   *
+   * 🔴 여기 두 칸뿐이다. 관세·부가세 칸은 GOLF-01-TAX에서 사라졌다.
    */
   components: {
     sourceProductPriceKrw: PriceComponent;
     internationalShippingKrw: PriceComponent;
-    customsDutyKrw: PriceComponent;
-    customsVatKrw: PriceComponent;
   };
   /** 화면에 그대로 쓰는 "왜 이 숫자인가" 줄들. 순서가 곧 계산 순서다. */
   notes: string[];
@@ -125,26 +153,22 @@ export function computeGolfLandedCost(input: GolfLandedCostInput): GolfLandedCos
   const customsValueKrw =
     productCostKrw != null && internationalShippingKrw != null ? productCostKrw + internationalShippingKrw : null;
 
-  // ⑤ 관세 → 수입부가세. 정책이 관부가세를 원가로 보지 않으면 아예 계산하지 않는다.
-  let importTax: ImportTaxResult | null = null;
-  if (policy.importTaxesInLandedCost && customsValueKrw != null) {
-    importTax = computeImportTaxes({
-      customsValueKrw,
-      dutyRate: policy.customsDutyRate,
-      vatRate: policy.importVatRate,
-      sellerConfirmedDutyRatePercent: input.sellerConfirmedDutyRatePercent,
-    });
-    if (importTax.resolved) {
-      notes.push(
-        `관세 ${importTax.appliedDutyRatePercent}%(과세가격 ₩${customsValueKrw.toLocaleString("ko-KR")} 기준) + 수입부가세 ${importTax.appliedVatRatePercent}%(과세가격+관세 기준)`,
-      );
-    } else {
-      notes.push(`관세·수입부가세 확인 필요 — ${importTax.unresolvedReason}`);
-      if (importTax.provisionalNote) notes.push(`참고: ${importTax.provisionalNote}(계산에는 넣지 않았습니다)`);
-    }
-  } else if (policy.importTaxesInLandedCost) {
-    notes.push("상품가 또는 국제배송비를 몰라 과세가격을 만들 수 없어 세금을 계산하지 못했습니다");
-  }
+  // ⑤ 여기서 판매자 원가는 **끝났다.** 아래는 전부 «구매자 부담» 참고정보다.
+  //    함수 안에서 순서가 이어지지만 값은 이어지지 않는다 — buyerImportCharge의
+  //    어떤 숫자도 위 components로 돌아가지 않는다.
+  const buyerImportCharge = resolveBuyerImportCharge({
+    categoryProfileId: policy.id,
+    // 이 제품이 답하는 질문은 언제나 "한국에서 팔 만한가"다(KR_TARGET_MARKET).
+    destinationCountry: "KR",
+    originCountry: input.originCountry,
+    customsValueKrw,
+    // 🔴 소액면세 한도는 CIF가 아니라 **물품가격**으로 잰다(관세법 시행규칙 제45조).
+    goodsValueKrw: productCostKrw,
+    deliveryTerms: input.deliveryTerms,
+    importMode: input.importMode,
+    liveRates: input.liveRates,
+    sellerConfirmedDutyRatePercent: input.sellerConfirmedDutyRatePercent,
+  });
 
   const component = (value: number | null, status: PriceComponent["status"], source: string): PriceComponent =>
     value == null ? { value: null, status: "unknown", source } : { value, status, source };
@@ -157,7 +181,7 @@ export function computeGolfLandedCost(input: GolfLandedCostInput): GolfLandedCos
     internationalShippingKrw,
     shippingStatus,
     customsValueKrw,
-    importTax,
+    buyerImportCharge,
     components: {
       sourceProductPriceKrw: component(
         productCostKrw,
@@ -168,18 +192,6 @@ export function computeGolfLandedCost(input: GolfLandedCostInput): GolfLandedCos
         internationalShippingKrw,
         shippingStatus === "actual" ? "actual" : "estimated",
         emsEstimate ? `EMS ${emsEstimate.bracketUptoKg}kg 구간` : "seller_input",
-      ),
-      // 🔴 확정되지 않은 세율의 provisional 금액은 여기로 오지 않는다. 오는 것은
-      //    importTax.customsDutyKrw(확정 세율로만 채워지는 값)뿐이다.
-      customsDutyKrw: component(
-        importTax?.customsDutyKrw ?? null,
-        input.sellerConfirmedDutyRatePercent != null ? "actual" : "estimated",
-        policy.customsDutyRate?.basis ?? "관세율 확인 필요",
-      ),
-      customsVatKrw: component(
-        importTax?.importVatKrw ?? null,
-        "estimated",
-        policy.importVatRate?.basis ?? "수입부가세율 확인 필요",
       ),
     },
     notes,

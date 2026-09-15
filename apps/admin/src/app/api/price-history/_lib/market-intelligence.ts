@@ -21,11 +21,10 @@ import {
   buildSellingSummary,
   buildConfidenceBasis,
   buildSellerDecision,
-  computeImportTaxes,
+  resolveBuyerImportCharge,
   resolveCategoryCostPolicy,
   type UnifiedPriceDecision,
   type PriceObservationRecord,
-  type PriceComponent,
 } from "@commerce/pricing";
 import { fetchLiveExchangeRates } from "@/lib/exchange-rates";
 import { getSearchInterestRatio } from "./market-signals-cache";
@@ -180,6 +179,13 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
 
   let cost: ReturnType<typeof computePriceBreakdown> | null = null;
   let recommendation: ReturnType<typeof computePriceRecommendation> | null = null;
+  /**
+   * GOLF-01-TAX — 원가 계산에 실제로 쓰인 그 환율표를 아래 구매자 부담 참고정보도
+   * 쓴다. 소액면세 한도는 달러로 적혀 있어(관세법 시행규칙 제45조) 원화와
+   * 비교하려면 환율이 필요한데, 여기서 환율을 한 번 더 조회하면 같은 응답 안의
+   * 두 숫자가 서로 다른 환율 위에 서게 된다.
+   */
+  let liveRates: Record<string, number> | undefined;
   // STATIC_SNAPSHOT일 때만 기존 priceValidity 게이트를 그대로 유지한다(회귀
   // 방지). LATEST_SALE/LATEST_PRICE는 이미 실측된 값이라 이 게이트와 무관하다.
   const hasResolvedPrice = resolvedOriginalAmount > 0 && Boolean(resolvedOriginalCurrency);
@@ -187,6 +193,7 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
     costSource !== "STATIC_SNAPSHOT" ? hasResolvedPrice : product.priceValidity === "VALID" && hasResolvedPrice;
   if (canComputeCost) {
     const exchangeRates = await fetchLiveExchangeRates();
+    liveRates = exchangeRates.rates;
     const breakdownInput = product.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT;
     cost = computePriceBreakdown(
       { originalAmount: resolvedOriginalAmount, originalCurrency: resolvedOriginalCurrency, ...breakdownInput },
@@ -256,25 +263,38 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
   const marketCategoryProfileId = snapshot.workspace.marketCategoryProfileId ?? null;
   const costPolicy = resolveCategoryCostPolicy(marketCategoryProfileId);
 
-  // 골프처럼 관부가세를 판매자 원가로 보는 카테고리에서만 수입세금을 계산한다.
-  // 과세가격(CIF) = 환산 상품가 + 국제배송비 — 둘 다 cost에 이미 있는 값이고
-  // 여기서 새로 환산하거나 배송비를 만들지 않는다.
-  //
-  // 🔴 관세율이 아직 확정되지 않았으므로(category-cost-policy.ts의
-  //    GOLF_CUSTOMS_DUTY_RATE 주석) computeImportTaxes는 오늘 null을 낸다.
-  //    그 null이 status="unknown"으로 흘러 dataCompleteness=INCOMPLETE →
-  //    🟠 "비용 확인 필요"가 된다. 지어낸 8%로 🟢을 내지 않는다는 뜻이고,
-  //    세율이 확정되는 순간 코드 변경 없이 그대로 계산에 들어간다.
-  const importTax =
-    costPolicy.importTaxesInLandedCost && cost != null
-      ? computeImportTaxes({
+  /**
+   * 🔴 GOLF-01-TAX(CEO 최종 결정, 2026-09-15) — **이 값은 아래
+   * computeUnifiedPriceDecision에 넘어가지 않는다.**
+   *
+   * d72575f는 골프 카테고리에 한해 통관세를 착지원가 인자로 넘겼다. CEO가 그
+   * 방향을 거뒀고, 그래서 이 호출부는 MI-COST-POLICY-1 직후의 모습으로 돌아왔다 —
+   * 아래 computeUnifiedPriceDecision(...) 인자 목록 어디에도 세금 칸이 없다.
+   *
+   * 대신 같은 사실을 **응답의 다른 가지**로 내보낸다. 원가 인자와 참고정보가
+   * 서로 다른 변수·다른 응답 필드라 섞일 수 없고, 아동의류든 골프든 **같은
+   * 함수**가 같은 모양을 만든다(카테고리별 분기가 이 줄에 없다는 것이 곧
+   * "공통 표시 구조"다).
+   *
+   * 과세가격(CIF) = 환산 상품가 + 국제배송비 — 둘 다 cost에 이미 있는 값이고
+   * 여기서 새로 환산하거나 배송비를 만들지 않는다. 소액면세 한도를 재는
+   * 물품가격은 국제운임을 뺀 cost.costKrw다.
+   *
+   * 수입 형태(구매대행/사업자 정식수입)와 배송 조건(DDP/DDU)은 이 저장소가
+   * 아직 저장하지 않는 값이라 넘기지 않는다 — 넘길 값이 없다는 사실이 화면에
+   * «확인 필요»로 그대로 나오는 것이 맞다.
+   */
+  const buyerImportCharge =
+    cost != null
+      ? resolveBuyerImportCharge({
+          categoryProfileId: marketCategoryProfileId,
+          // 이 제품의 판단 시장은 한국 하나다(KR_TARGET_MARKET).
+          destinationCountry: "KR",
           customsValueKrw: cost.landedCostKrw,
-          dutyRate: costPolicy.customsDutyRate,
-          vatRate: costPolicy.importVatRate,
+          goodsValueKrw: cost.costKrw,
+          liveRates,
         })
       : null;
-  const importTaxComponent = (value: number | null, source: string): PriceComponent =>
-    value == null ? { value: null, status: "unknown", source } : { value, status: "estimated", source };
 
   const unifiedDecision: UnifiedPriceDecision | null =
     cost != null && currentSellingPriceKrw != null
@@ -287,19 +307,6 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
             sellerProfile?.deliveryCharge != null
               ? { value: sellerProfile.deliveryCharge, status: "actual", source: "SellerProfile.deliveryCharge" }
               : { value: null, status: "unknown" },
-          // MI-COST-POLICY-1 — 상품에 저장돼 있던 product.customsDutyKrw/
-          // customsVatKrw는 여전히 읽지 않는다(과거 스냅샷을 고쳐 쓰지 않기 위해
-          // 지우지도 않는다). 아래 두 줄은 그 저장값이 아니라 **이번에 정책으로
-          // 계산한 값**이고, DEFAULT/아동의류 정책에서는 항상 null이라 엔진이
-          // 아예 읽지 않는다(LANDED_COST_PARTS에 오르지 않는다).
-          customsDutyKrw: importTaxComponent(
-            importTax?.customsDutyKrw ?? null,
-            costPolicy.customsDutyRate?.basis ?? "관세율 확인 필요",
-          ),
-          customsVatKrw: importTaxComponent(
-            importTax?.importVatKrw ?? null,
-            costPolicy.importVatRate?.basis ?? "수입부가세율 확인 필요",
-          ),
           platformFeeRate: { value: cost.feePercent, status: "estimated", source: "default" },
           currentSellingPriceKrw: { value: currentSellingPriceKrw, status: "actual" },
           domesticCompetitivePrice: {
@@ -516,15 +523,17 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
     costPolicy: {
       id: costPolicy.id,
       label: costPolicy.label,
-      importTaxesInLandedCost: costPolicy.importTaxesInLandedCost,
       landedCostTaxBasis: costPolicy.landedCostTaxBasis,
       note: costPolicy.policyNote,
-      /** 세율을 확인했는가. NEEDS_VERIFICATION이면 금액이 계산에 들어가지 않는다. */
-      customsDutyRate: costPolicy.customsDutyRate,
-      importVatRate: costPolicy.importVatRate,
+      /** 품목/HS를 확정한 카테고리만 값이 있다. null이면 관세가 «확인 필요»다. */
+      hsCode: costPolicy.hsCode,
     },
-    /** 정책이 관부가세를 원가로 보는 카테고리에서만 값이 있다. 아니면 null. */
-    importTax,
+    /**
+     * GOLF-01-TAX — **판매자 원가 밖에** 서는 예상 구매자 부담. 모든 카테고리가
+     * 같은 모양으로 받는다(아동의류도 골프도 같은 함수를 지난다). 원가를
+     * 계산하지 못한 상품에서는 null이다.
+     */
+    buyerImportCharge,
     decision,
     unifiedDecision,
     recommendation,

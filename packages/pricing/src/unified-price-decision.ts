@@ -98,22 +98,20 @@ export interface UnifiedPriceInput {
    * 생기더라도 결과가 달라지지 않는다는 사실을 타입과 테스트로 못 박기 위해서다
    * (읽는 코드가 한 줄도 없다 — 넘겨도 무시된다).
    *
-   * ── GOLF-01 축B(CEO 지시, 2026-09-15) — 이 필드가 다시 읽힌다. 단, 조건부다 ──
-   * 위 결정은 **취소되지 않았다.** 아동의류를 포함한 모든 기존 카테고리에서 이
-   * 값은 여전히 읽히지 않는다(넘겨도 결과가 한 글자도 달라지지 않는다 —
-   * mi-cost-policy-customs-removed.test.ts가 그대로 지킨다).
+   * ── GOLF-01-TAX(CEO 최종 결정, 2026-09-15) — 조건부 예외도 없어졌다 ────────
+   * d72575f가 잠시 이 필드를 "GOLF 카테고리에서만 읽히는 값"으로 되살렸다.
+   * CEO가 그 방향을 거뒀다: 관세·부가가치세는 **어떤 카테고리에서도** 판매자
+   * 원가에 들어가지 않고, 별도의 «예상 구매자 부담»으로만 표시된다
+   * (packages/pricing/src/buyer-import-charge.ts).
    *
-   * 달라진 것은 하나다: categoryProfileId가 "GOLF"면
-   * (= CategoryCostPolicy.importTaxesInLandedCost === true) 이 값이 착지원가
-   * 항목이 된다. 골프채는 단가가 높아 소액면세 한도를 넘고 재판매 수입이라
-   * 통관세를 판매자가 실제로 치르기 때문이다 — MI-COST-POLICY-1이 "판매자가
-   * 내지 않는 돈"이라고 판단한 근거가 이 카테고리에서는 성립하지 않는다.
+   * 그래서 이 두 필드를 읽는 코드는 다시 **한 줄도 없다.** 아래
+   * LANDED_COST_PARTS에 관세/부가세 자리가 없고, 그 배열이 정책에 따라 갈리지도
+   * 않는다 — 넘길 수는 있지만 결과가 달라질 경로 자체가 사라졌다.
    *
-   * 필드 이름을 바꾸지 않았다. 같은 사실을 가리키는 칸을 하나 더 만들면 두 칸이
-   * 언젠가 서로 다른 값을 들게 된다.
+   * @deprecated 판매자 원가가 아니다. 읽지 않는다.
    */
   customsDutyKrw?: PriceComponent;
-  /** customsDutyKrw와 완전히 같은 규칙 — GOLF 정책에서만 읽힌다. */
+  /** @deprecated 구매자 부담. customsDutyKrw와 같은 이유로 읽지 않는다. */
   customsVatKrw?: PriceComponent;
   /** 플랫폼 수수료율(%). 현재 판매가 기준으로 곱한다(computeLandedCost와
    * 동일한 이유 — 실제 정산은 원가가 아니라 판매가 기준으로 떼인다). */
@@ -157,7 +155,17 @@ export interface UnifiedPriceDecision {
   costPolicy: {
     id: CategoryCostPolicy["id"];
     label: string;
-    importTaxesInLandedCost: boolean;
+    /**
+     * 🔴 GOLF-01-TAX 이후 **언제나 false다.** 타입이 `false` 리터럴인 것이
+     * 그 사실이다 — 정책에서 읽어 오는 값이 아니라 이 엔진이 관세·부가세를
+     * 원가로 세는 경로를 갖고 있지 않다는 **엔진 자신의 사실**이다.
+     *
+     * 값이 하나로 굳었는데도 필드를 남긴 이유: MI-COST-POLICY-1이 세운 검사들이
+     * 이 값을 보고 있고, 이제 그 검사들은 아동의류뿐 아니라 **모든 카테고리에서**
+     * 참이 된다. 필드를 지우면 그 검사가 사라지고, 검사가 사라지면 다음 사람이
+     * 다시 원가에 넣는다.
+     */
+    importTaxesInLandedCost: false;
     note: string;
   };
   /**
@@ -186,27 +194,15 @@ export interface UnifiedPriceDecision {
  *
  * 남은 두 줄은 상품마다 실제로 확인되는 값이다 — 원본 판매가와 국제배송비.
  *
- * GOLF-01 축B(CEO 지시, 2026-09-15) — 이 배열이 **카테고리별로 갈린다**. 갈리는
- * 방식이 중요하다: 아래 BASE_LANDED_COST_PARTS는 위 두 줄 그대로이고, 골프
- * 정책만 그 **뒤에** 관세·부가세 두 줄을 더한다. 기존 정책의 배열을 고치지
- * 않았으므로 아동의류 경로에는 새 항목이 끼어들 자리가 없다.
+ * 🔴 GOLF-01-TAX(CEO 최종 결정, 2026-09-15) — 이 배열은 **카테고리별로 갈리지
+ * 않는다.** d72575f가 골프 정책에 한해 관세·부가세 두 줄을 뒤에 붙이던 분기를
+ * 통째로 걷어냈다. 함수도 조건문도 남기지 않은 이유는, 남겨 두면 그것이 곧
+ * "여기에 세금을 붙이는 방법"의 설명서가 되기 때문이다. 상수 하나가 곧 정의다.
  */
-const BASE_LANDED_COST_PARTS: { key: keyof UnifiedPriceInput; label: string }[] = [
+const LANDED_COST_PARTS: { key: keyof UnifiedPriceInput; label: string }[] = [
   { key: "sourceProductPriceKrw", label: "해외 상품가(환산)" },
   { key: "internationalShippingKrw", label: "국제배송비" },
 ];
-
-/** GOLF 정책에서만 더해지는 두 줄. 순서는 통관 계산 순서(관세 → 그 위의 부가세). */
-const IMPORT_TAX_LANDED_COST_PARTS: { key: keyof UnifiedPriceInput; label: string }[] = [
-  { key: "customsDutyKrw", label: "관세" },
-  { key: "customsVatKrw", label: "수입부가세" },
-];
-
-function landedCostParts(policy: CategoryCostPolicy): { key: keyof UnifiedPriceInput; label: string }[] {
-  return policy.importTaxesInLandedCost
-    ? [...BASE_LANDED_COST_PARTS, ...IMPORT_TAX_LANDED_COST_PARTS]
-    : BASE_LANDED_COST_PARTS;
-}
 
 export function computeUnifiedPriceDecision(input: UnifiedPriceInput): UnifiedPriceDecision {
   const costPolicy = resolveCategoryCostPolicy(input.categoryProfileId);
@@ -215,10 +211,7 @@ export function computeUnifiedPriceDecision(input: UnifiedPriceInput): UnifiedPr
   let hasEstimatedCost = false;
   const missingComponents: string[] = [];
 
-  for (const part of landedCostParts(costPolicy)) {
-    // 관세/부가세는 optional 필드라 아예 안 넘어올 수 있다. 그때는 0이 아니라
-    // "모른다"다 — 안 넘긴 값을 0원으로 세면 원가가 조용히 낮아지고, 그건
-    // 이 엔진이 unknown을 다루는 규칙(값을 지어내지 않는다)과 정반대다.
+  for (const part of LANDED_COST_PARTS) {
     const component = input[part.key] as PriceComponent | undefined;
     if (component == null || component.status === "unknown" || component.value == null) {
       hasUnknownCost = true;
@@ -288,7 +281,9 @@ export function computeUnifiedPriceDecision(input: UnifiedPriceInput): UnifiedPr
     costPolicy: {
       id: costPolicy.id,
       label: costPolicy.label,
-      importTaxesInLandedCost: costPolicy.importTaxesInLandedCost,
+      // 정책에서 읽어 오지 않는다 — 위 LANDED_COST_PARTS에 세금 자리가 없다는
+      // 사실을 그대로 적는다. 정책이 무엇으로 바뀌어도 이 값은 false다.
+      importTaxesInLandedCost: false,
       note: costPolicy.policyNote,
     },
     landedCostTaxBasis: costPolicy.landedCostTaxBasis,

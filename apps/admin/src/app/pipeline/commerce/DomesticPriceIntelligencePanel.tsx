@@ -5,6 +5,7 @@ import {
   priceLevelFromVerdict,
   type PriceLevel,
   type UnifiedPriceDecision,
+  type BuyerImportChargeEstimate,
 } from "@commerce/pricing";
 // P-9-A(대표님 지시, 2026-08-30) — @commerce/crawler 루트 배럴(index.ts)은
 // playwright-core/browser-launcher를 함께 export한다. 클라이언트 컴포넌트에서
@@ -32,11 +33,13 @@ import { miEmptyState } from "./mi-empty-state";
 // UX 2.3(CEO 지시, 2026-09-11) — 여덟 가지 "가격"에 각각 하나씩만 라벨을 붙이고,
 // 수익성 사슬과 시장 경쟁력을 서로 독립된 두 축으로 만든다(둘 다 순수 함수).
 import {
+  buildBuyerBurdenBlock,
   buildMarketContext,
   buildOriginalPriceHeadline,
   buildPriceChain,
   PRICE_MEANING_LABEL,
   PRICE_SECTION_TITLE,
+  type BuyerBurdenBlock,
   type MarketContext,
   type OriginalPriceHeadline,
   type PriceChainRow,
@@ -654,6 +657,15 @@ export interface PriceHistoryResponse {
    * (P-1-3 STEP 6/7) 프론트 타입 선언이 없어 화면에서 못 읽고 있었다 — 새
    * 계산이 아니라 타입 노출만 추가한다. */
   unifiedDecision: UnifiedPriceDecision | null;
+  /**
+   * GOLF-01-TAX(CEO 최종 결정, 2026-09-15) — 판매자 원가 **밖**에 서는 참고정보.
+   *
+   * 서버(resolveBuyerImportCharge)가 이미 «해당 / 비해당 / 확인 필요»와 금액을
+   * 전부 정해서 보낸다. 이 화면은 그 값을 옮기기만 한다 — 여기서 세율을 곱하거나
+   * 해당 여부를 다시 판단하는 줄이 하나라도 생기면 같은 사실을 두 곳이 말하게
+   * 된다. 구버전 응답에는 없다(optional).
+   */
+  buyerImportCharge?: BuyerImportChargeEstimate | null;
   representativeVerdict: RepresentativeVerdict;
   /** P-19-B Sprint 8(CPO 지시, 2026-09-02) — 판매자에게 최종적으로 보여줄 화면은
    * 무조건 3단계(🟢 판매 추천/🟡 조건부 판매/🔴 판매 비추천)로 통합한다.
@@ -917,6 +929,73 @@ function PriceChainView({ rows }: { rows: PriceChainRow[] }) {
           </div>
         );
       })}
+    </dl>
+  );
+}
+
+/**
+ * GOLF-01-TAX(CEO 최종 결정, 2026-09-15) — **[별도 참고] 예상 구매자 부담.**
+ *
+ * ── 왜 별도의 컴포넌트인가 ───────────────────────────────────────────────
+ * 위 PriceChainView와 같은 <dl> 안에 줄을 더할 수도 있었다. 그러면 화면은
+ * 비슷해 보이지만 **합계 줄이 둘**인 한 표가 된다 — 셀러는 맨 아래 큰 숫자를
+ * 결론으로 읽으므로, 그 표의 결론이 「예상 이익」인지 「구매자 부담 예상액」인지가
+ * 매번 흔들린다. 그래서 테두리부터 다른 칸으로 갈라 세운다: 위 칸이 «내가 치르는
+ * 돈», 이 칸이 «구매자가 따로 내는 돈»이다.
+ *
+ * 이 뷰는 아무것도 판단하지 않는다. 라벨·값·판정 문구는 전부
+ * price-hierarchy.buildBuyerBurdenBlock이 고른 문자열 그대로다(그 위로는
+ * packages/pricing의 resolveBuyerImportCharge). 세목 이름이 이 파일에 글자로
+ * 박혀 있지 않은 것이 그 사실이다 — MI-COST-POLICY-1이 화면 쪽에 세운 규칙을
+ * 그대로 지키면서 CEO가 요구한 참고 블록을 세우는 유일한 방법이다.
+ */
+function BuyerBurdenView({ block }: { block: BuyerBurdenBlock }) {
+  return (
+    <dl className="mt-1.5 rounded-md border border-dashed border-current/25 bg-background/20 p-2.5">
+      <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-2">
+        <dt className="text-[11px] font-medium text-text-tertiary">{block.title}</dt>
+        <dd className="text-[10px] text-text-tertiary">{block.caption}</dd>
+      </div>
+      {block.lines.map((line) => (
+        <div
+          key={line.key}
+          title={line.basis}
+          className={`flex flex-wrap items-baseline justify-between gap-x-2 py-1 ${
+            line.isTotal ? "mt-0.5 border-t border-current/25 pt-1.5" : ""
+          }`}
+        >
+          <dt
+            className={
+              line.isTotal
+                ? "text-[11px] font-semibold text-text-primary"
+                : "text-[11px] text-text-secondary"
+            }
+          >
+            {line.label}
+          </dt>
+          <dd
+            className={
+              // 확인 필요/비해당은 금액이 아니다 — 금액과 같은 크기로 그리면
+              // 셀러가 그 칸을 숫자로 읽는다. 무엇이 금액인지는 화면이 문자열을
+              // 뜯어 보고 정하지 않는다(price-hierarchy의 isAmount).
+              line.isAmount
+                ? line.isTotal
+                  ? "text-sm font-bold text-text-primary"
+                  : "text-sm font-semibold text-text-primary"
+                : "text-xs font-semibold text-text-tertiary"
+            }
+          >
+            {line.value}
+          </dd>
+        </div>
+      ))}
+      {block.unknownAxes.length > 0 && (
+        // 무엇을 채우면 답이 나오는지. "확인 필요"만 남기면 셀러는 조회가
+        // 고장난 것으로 읽는다(빈 상태 어휘와 같은 규칙).
+        <p className="mt-1 text-[10px] leading-relaxed text-text-tertiary">
+          확인이 필요한 정보: {block.unknownAxes.join(" · ")}
+        </p>
+      )}
     </dl>
   );
 }
@@ -2116,6 +2195,9 @@ export function MiPanelView({
     decision,
     recommendation,
     unifiedDecision,
+    // GOLF-01-TAX — 판매자 원가 밖의 참고정보. unifiedDecision과 나란히 받되
+    // 절대 섞이지 않는다(서로의 입력이 아니다).
+    buyerImportCharge,
     representativeVerdict,
     // P-31 — sellerFacingVerdict(가격/매칭 레이어 판정)는 이제 화면에서 직접
     // 쓰지 않는다. 서버가 그 값을 sellerDecision.priceVerdict로 넘겨주고,
@@ -2252,6 +2334,11 @@ export function MiPanelView({
     // 여기서 판단하면 화면과 엔진이 서로 다른 기준을 말하게 된다.
     landedCostTaxBasis: unifiedDecision?.landedCostTaxBasis,
   });
+  /**
+   * GOLF-01-TAX — 사슬과 **다른 변수**다. buildPriceChain의 입력에 이 값이 들어갈
+   * 자리가 없고, 이 값의 어떤 숫자도 사슬의 합계에 닿지 않는다.
+   */
+  const buyerBurden = buildBuyerBurdenBlock(buyerImportCharge);
   const marketContext = buildMarketContext({
     domesticBasis: domesticMarketSplit.basis,
     domesticAveragePriceKrw: domesticCompetition.averagePriceKrw,
@@ -2756,6 +2843,11 @@ export function MiPanelView({
                   {profitVerdict.icon} {profitVerdict.note}
                 </p>
                 <PriceChainView rows={priceChain} />
+                {/* GOLF-01-TAX(CEO 최종 결정, 2026-09-15) — 판매자 원가 사슬이
+                    끝난 **바로 아래**, 그러나 그 표 **밖**이다. CEO 원문의 배치
+                    그대로이고, 두 칸의 테두리가 다르다는 것이 "이 숫자는 저
+                    합계에 들어가지 않는다"는 말을 문구 없이 한다. */}
+                {buyerBurden && <BuyerBurdenView block={buyerBurden} />}
 
                 {/* MI/PRICE-1(CEO 지시, 2026-09-12) — ③의 **유일한** 접힘.
                     제품 전체에서 상세 계산이 그려지는 자리가 여기 하나다.

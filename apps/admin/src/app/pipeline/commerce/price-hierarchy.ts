@@ -1,4 +1,9 @@
-import { PRICE_TAX_BASIS_LABEL, type PriceTaxBasis } from "@commerce/pricing";
+import {
+  PRICE_TAX_BASIS_LABEL,
+  type BuyerImportChargeEstimate,
+  type ImportChargeApplicability,
+  type PriceTaxBasis,
+} from "@commerce/pricing";
 import { KR_TARGET_MARKET, type TargetMarket } from "./market-target";
 import { miEmptyState, type MiEmptyState } from "./mi-empty-state";
 import { formatKrwAmount, formatOriginAmount } from "./mi-headline";
@@ -617,6 +622,124 @@ export function buildPriceChain(input: PriceChainInput): PriceChainRow[] {
   });
 
   return rows;
+}
+
+/* ─────────────────── [별도 참고] 예상 구매자 부담 ─────────────────── */
+
+/**
+ * GOLF-01-TAX(CEO 최종 결정, 2026-09-15) — **판매자 원가 아래, 그러나 판매자
+ * 원가와 같은 블록이 아닌 자리.**
+ *
+ * CEO 원문의 모양 그대로다:
+ *
+ *   상품가 / 배송비 / 기타 판매자 비용
+ *   ────────────
+ *   판매자 원가            ← 위 buildPriceChain이 만드는 사슬
+ *
+ *   [별도 참고]
+ *   관세        예상 ○○원  ← 여기서부터 이 함수
+ *   부가가치세  예상 ○○원
+ *   ────────────
+ *   구매자 부담 예상액
+ *
+ * ── 왜 buildPriceChain에 줄을 더하지 않는가 ──────────────────────────────
+ * 그 배열은 "내가 치르는 돈"의 사슬이고, 합계 줄(LANDED_COST) 하나가 그 위의
+ * 전부를 더한다는 뜻을 화면 모양으로 말한다. 거기에 관세 줄을 끼우면 — 접혀
+ * 있든 라벨이 달랐든 — 언젠가 누군가 그 줄을 합계에 넣는다. 배열이 다르면
+ * 그럴 수 없다. 이것이 «판매자 원가와 어떻게 분리되는가»에 대한 구조적 답이다.
+ *
+ * ── 이 함수도 계산하지 않는다 ────────────────────────────────────────────
+ * 금액·세율·해당 여부는 전부 packages/pricing의 resolveBuyerImportCharge가 이미
+ * 정한 값이다. 여기서는 순서와 라벨만 고른다(이 파일의 원칙 그대로).
+ */
+export const BUYER_IMPORT_CHARGE_SECTION = {
+  /** 블록의 이름. "[별도 참고]"가 제목에 붙어 있는 것이 이 블록의 전부다. */
+  title: "[별도 참고] 예상 구매자 부담",
+  /** 제목 옆 한 줄. 이 블록이 무엇이 **아닌지**를 먼저 말한다. */
+  caption: "판매자 원가·예상 이익에는 포함되지 않습니다",
+  totalLabel: "구매자 부담 예상액",
+} as const;
+
+export type BuyerBurdenLineKey = "CUSTOMS_DUTY" | "IMPORT_VAT" | "BUYER_BURDEN_TOTAL";
+
+export interface BuyerBurdenLine {
+  key: BuyerBurdenLineKey;
+  label: string;
+  /** 화면에 그대로 쓰는 값("예상 ₩87,142" / "확인 필요" / "비해당"). */
+  value: string;
+  /**
+   * 위 value가 **금액인가**. 화면이 문자열을 뜯어 보고 판단하지 않게 하는 값이다 —
+   * "예상"으로 시작하는지 세는 코드가 화면에 생기면 문구를 못 고치게 된다.
+   * 금액이 아닌 칸(확인 필요 · 비해당)은 금액과 같은 크기로 그리지 않는다.
+   */
+  isAmount: boolean;
+  /** 해당 / 비해당 / 확인 필요. 합계 줄은 null이다(세목이 아니다). */
+  applicability: ImportChargeApplicability | null;
+  /** 왜 이 값인가. 툴팁으로 내려간다(이 파일의 다른 줄과 같은 층). */
+  basis: string;
+  /** 합계 줄인가. 화면이 가로줄을 어디에 그을지가 이 값으로 정해진다. */
+  isTotal: boolean;
+}
+
+export interface BuyerBurdenBlock {
+  title: string;
+  caption: string;
+  lines: BuyerBurdenLine[];
+  /** 한 줄이라도 «확인 필요»인가. */
+  needsReview: boolean;
+  /** 판단 근거·남은 숙제. 펼침(원자료) 층에 그대로 선다. */
+  notes: string[];
+  /** 여섯 축 중 아직 모르는 것들의 이름. 셀러가 무엇을 채우면 되는지 그대로다. */
+  unknownAxes: string[];
+}
+
+/**
+ * 🔴 **모든 카테고리가 이 함수를 지난다.** 아동의류든 골프든 같은 블록 모양이
+ * 나오고, 갈리는 것은 각 줄의 값(«예상 ₩○○» / «확인 필요» / «비해당»)뿐이다.
+ * 카테고리 이름을 보고 분기하는 줄이 이 함수에 하나도 없다는 것이 그 사실이다.
+ *
+ * estimate가 없으면(원가 자체를 계산하지 못한 상품) null이다 — 빈 블록을 그려
+ * "확인 필요"만 늘어놓지 않는다.
+ */
+export function buildBuyerBurdenBlock(
+  estimate: BuyerImportChargeEstimate | null | undefined,
+): BuyerBurdenBlock | null {
+  if (!estimate) return null;
+  const chargeLine = (charge: typeof estimate.duty): BuyerBurdenLine => ({
+    key: charge.kind === "CUSTOMS_DUTY" ? "CUSTOMS_DUTY" : "IMPORT_VAT",
+    label: charge.label,
+    // 값도 판정도 서버가 이미 문자열로 만든 것을 그대로 쓴다 — 화면이 다시
+    // 조립하면 "확인 필요"의 기준이 두 곳에 생긴다.
+    value: charge.display,
+    // 「비해당」의 amountKrw는 0이지만 그건 금액 칸이 아니다 — 0원을 큰 숫자로
+    // 그리면 셀러는 "계산이 끝났다"가 아니라 "0원을 낸다"로 읽는다.
+    isAmount: charge.applicability === "APPLICABLE" && charge.amountKrw != null,
+    applicability: charge.applicability,
+    basis: `${charge.applicabilityLabel} · ${charge.basis}`,
+    isTotal: false,
+  });
+  return {
+    title: BUYER_IMPORT_CHARGE_SECTION.title,
+    caption: BUYER_IMPORT_CHARGE_SECTION.caption,
+    lines: [
+      chargeLine(estimate.duty),
+      chargeLine(estimate.vat),
+      {
+        key: "BUYER_BURDEN_TOTAL",
+        label: BUYER_IMPORT_CHARGE_SECTION.totalLabel,
+        value: estimate.totalDisplay,
+        isAmount: estimate.totalKrw != null,
+        applicability: null,
+        basis: estimate.needsReview
+          ? "두 세목 중 확인이 필요한 항목이 있어 합계를 내지 않았습니다"
+          : "관세 + 부가가치세",
+        isTotal: true,
+      },
+    ],
+    needsReview: estimate.needsReview,
+    notes: estimate.notes,
+    unknownAxes: estimate.axes.filter((a) => !a.known).map((a) => a.label),
+  };
 }
 
 /* ──────────────────────── ① 원본 상품 가격(헤드라인) ──────────────────────── */

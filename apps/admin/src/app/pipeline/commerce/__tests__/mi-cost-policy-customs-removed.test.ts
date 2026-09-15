@@ -75,26 +75,20 @@ describe("MI-COST-POLICY-1 ①: 셀러가 보는 가격 화면 어디에도 관�
 
 describe("MI-COST-POLICY-1 ②: 서버가 아동의류 원가에 관부가세를 넣지 않는다", () => {
   /**
-   * ── GOLF-01 축B(CEO 지시, 2026-09-15) — 이 검사의 «방법»이 바뀌었다 ─────────
+   * ── GOLF-01-TAX(CEO 최종 결정, 2026-09-15) — 글자 검사가 **되돌아왔다** ──────
    *
-   * 원래 이 자리는 소스 텍스트에서 "customsDutyKrw"라는 **글자**가 사라졌는지
-   * 봤다. 그때는 그게 정확한 검사였다 — 넘길 이유가 어떤 카테고리에도 없었으니
-   * 글자가 있다는 것 자체가 회귀였다.
+   * 직전 스프린트(d72575f)에서 이 자리의 글자 검사를 한 번 풀었다. 골프
+   * 카테고리에 한해 통관세를 착지원가 인자로 넘기기로 했기 때문에, 소스에
+   * "customsDutyKrw"가 **있어야 하는** 상태였다. 그때는 글자 대신 결과를 보는
+   * 것이 옳았다.
    *
-   * 이번에 CEO가 카테고리별 비용 정책을 지시했다: 아동의류는 기존 정책 유지,
-   * 골프는 관세·부가세를 판매자 원가로 본다. 그래서 market-intelligence.ts는
-   * 이제 그 두 인자를 **정책이 요구할 때만 값이 채워지는 통로**로 넘긴다.
-   * 글자는 있고, 아동의류에서 값은 없다.
+   * CEO가 그 방향을 거뒀다. 관부가세는 어떤 카테고리에서도 판매자 원가에
+   * 들어가지 않는다. 그러면 market-intelligence.ts가 그 인자를 넘길 이유가 다시
+   * 없어지고, **글자가 있다는 것 자체가 회귀**인 상태로 돌아온다.
    *
-   * 여기서 글자 검사를 그대로 두면 두 가지 중 하나가 일어난다: 골프 정책을
-   * 포기하거나, 테스트를 지우거나. 둘 다 틀렸다. 그래서 **같은 것을 더 강하게**
-   * 지키도록 방법을 바꾼다 — 글자가 아니라 **결과**를 본다. 글자 검사는 통로가
-   * 생기면 막지 못하는 대신 값이 흐르는지는 보지 못했다. 아래 검사는 엔진을
-   * 실제로 돌려서 "아동의류에서는 관부가세가 착지원가를 한 원도 움직이지
-   * 못한다"를 직접 확인한다. 이게 원래 지키려던 사실 그 자체다.
-   *
-   * 글자 검사도 버리지 않는다 — **셀러가 보는 화면**(위 ①)에서는 그대로다.
-   * 아동의류 화면에 "관세"가 뜨면 여전히 실패한다.
+   * 그래서 두 검사를 **둘 다** 둔다: 결과 검사(아래 첫 it)는 d72575f가 세운
+   * 그대로 남기고 — 카테고리를 명시해도 결과가 안 움직인다 — 글자 검사(둘째 it)는
+   * MI-COST-POLICY-1의 원래 형태로 복구한다. 약해진 것이 아니라 한 겹 더 두꺼워졌다.
    */
   it("아동의류(및 카테고리 미지정) 정책에서는 관부가세를 넘겨도 착지원가·마진·판정이 한 글자도 달라지지 않는다", () => {
     const base = {
@@ -115,6 +109,9 @@ describe("MI-COST-POLICY-1 ②: 서버가 아동의류 원가에 관부가세를
       { ...base, ...customs },
       { ...base, ...customs, categoryProfileId: "KIDS_FASHION" },
       { ...base, ...customs, categoryProfileId: null },
+      // 🔴 GOLF-01-TAX — 골프도 이 목록에 들어왔다. 예외 카테고리가 사라졌다는
+      //    사실을 MI-COST-POLICY-1의 검사가 직접 지킨다.
+      { ...base, ...customs, categoryProfileId: "GOLF" },
     ]) {
       const result = computeUnifiedPriceDecision(input);
       expect(result.landedCostKrw).toEqual(noCategory.landedCostKrw);
@@ -127,17 +124,34 @@ describe("MI-COST-POLICY-1 ②: 서버가 아동의류 원가에 관부가세를
     }
   });
 
-  it("서버가 아동의류에 넘기는 관부가세 값은 «저장된 상품 값»이 아니라 «정책이 낸 값»이다 — 정책이 아니라면 항상 null이다", () => {
+  it("🔴 서버가 관부가세를 판정 엔진에 넘기는 «통로» 자체가 없다 — 인자 이름이 소스에 남아 있지 않다", () => {
     const code = stripComments(marketIntelligence);
     expect(code).toContain("computeUnifiedPriceDecision({");
-    // 통로는 정책 결과(importTax)에서만 온다. product.customsDutyKrw 같은
-    // **저장된 상품 값**을 다시 읽기 시작하면 과거 스냅샷이 소급해서 마진을
-    // 깎는다 — MI-COST-POLICY-1이 막은 바로 그 경로다.
-    expect(code).toContain("importTaxComponent(");
-    expect(code).not.toContain("product.customsDutyKrw");
-    expect(code).not.toContain("product.customsVatKrw");
-    // 그리고 그 importTax 자체가 정책 게이트 뒤에 있다.
-    expect(code).toContain("costPolicy.importTaxesInLandedCost");
+    // GOLF-01-TAX — d72575f가 열었던 두 인자를 닫았다. 값이 null이라 무해한
+    // 통로여도, 통로가 있으면 다음 사람이 거기에 값을 채운다.
+    for (const gone of ["customsDutyKrw", "customsVatKrw", "importTaxComponent", "importTaxesInLandedCost"]) {
+      expect(code, `${gone}이(가) 서버 계산 경로에 남아 있다`).not.toContain(gone);
+    }
+    // 대신 «판매자 원가 밖»의 참고정보를 만드는 함수가 있다. 이름이 다른 것이
+    // 곧 자리가 다르다는 뜻이다(그 결과는 응답의 다른 가지로만 나간다).
+    expect(code).toContain("resolveBuyerImportCharge(");
+    expect(code).toContain("buyerImportCharge");
+  });
+
+  /**
+   * GOLF-01-TAX — CEO가 «예상 구매자 부담»을 모든 카테고리에서 표시하라고 했다.
+   * 그 블록의 글자(관세 · 부가가치세)는 위 ①이 감시하는 세 화면이 아니라
+   * price-hierarchy.ts / packages/pricing에 산다. 화면은 서버가 정한 문자열을
+   * 옮기기만 한다 — ①의 규칙(가격 화면이 세목 문구를 스스로 짓지 않는다)을
+   * 지키면서 참고 블록을 세우는 유일한 방법이고, 아래가 그 사실의 검사다.
+   */
+  it("참고 블록의 세목 문구는 화면이 짓지 않는다 — 값도 판정도 서버가 만든 문자열 그대로다", () => {
+    const panelCode = stripComments(panel);
+    expect(panelCode).toContain("buildBuyerBurdenBlock(buyerImportCharge)");
+    expect(panelCode).toContain("<BuyerBurdenView block={buyerBurden} />");
+    // 화면에는 line.label / line.value만 있다 — 세목 이름도 금액 문구도 없다.
+    expect(panelCode).not.toContain("예상 ₩");
+    expect(panelCode).not.toContain("비해당");
   });
 
   it("판매자가 실제로 부담하는 비용은 그대로 넘긴다 — 비용 항목을 싸잡아 지운 것이 아니다", () => {

@@ -5,20 +5,25 @@ import { EMS_VOLUMETRIC_DIVISOR } from "./parcel-weight";
 /**
  * GOLF-01 축B(CEO 지시, 2026-09-15) — **카테고리별 비용 정책**.
  *
- * ── 이 파일이 존재하는 이유 ──────────────────────────────────────────────
- * 지시의 핵심은 "기존 정책을 깨지 않고 카테고리별로 분기하는 것"이다:
+ * ── 🔴 GOLF-01-TAX(CEO 최종 결정, 2026-09-15) — 방향이 바뀌었다 ───────────
+ * d72575f는 골프 카테고리에 한해 관세·부가세를 착지원가에 넣었다
+ * (importTaxesInLandedCost: true). CEO가 그 방향을 거뒀다:
  *
- *   아동의류  기존 비용 정책 유지(MI-COST-POLICY-1 그대로)
- *   골프      별도 비용 정책(관세·부가세·중량·용적중량 포함)
+ *   관세·부가가치세는 **어떤 카테고리에서도** 판매자 원가·수익성 계산에
+ *   포함하지 않는다. 모든 카테고리에서 **별도의 예상 구매자 부담 정보**로
+ *   표시한다.
  *
- * MI-COST-POLICY-1(2026-09-12)은 "관세·부가세는 구매자 부담"이라는 **결정**이었고
- * 그 결정 자체는 여전히 유효하다 — 다만 그것이 **모든 카테고리의 사실**은
- * 아니었다. 아동의류 직구는 개인 자가사용 소액 통관이라 판매자가 통관세를 내지
- * 않는 경우가 실제로 대부분이다. 골프채는 단가가 높아 그 전제가 깨진다.
+ * 그래서 이 파일에는 `importTaxesInLandedCost` 같은 스위치가 **없다**. 필드를
+ * false로 두면 다음 사람이 true로 뒤집을 수 있지만, 필드가 없으면 뒤집을 자리도
+ * 없다 — MI-COST-POLICY-1의 «판매자 원가 계산 원칙»이 카테고리 예외 없이
+ * 구조로 되살아났다는 뜻이다.
  *
- * 그래서 정책을 **뒤집지 않고 넓힌다**. 아래 DEFAULT 정책은 MI-COST-POLICY-1이
- * 만든 상태와 한 글자도 다르지 않고, 그것이 카테고리를 모를 때의 동작이다.
- * 골프만 별도 항목으로 갈라진다.
+ * ── 그럼 이 파일은 무엇으로 갈라지는가 ───────────────────────────────────
+ * 두 가지다: ① **품목/HS와 그에 붙는 관세율**(구매자 부담 참고정보를 계산할
+ * 재료 — buyer-import-charge.ts가 읽는다) ② **국제배송비를 중량으로 계산하는가**
+ * (골프채는 용적중량이 실중량을 거의 언제나 이긴다). 둘 다 판매자 원가의
+ * «구성»을 바꾸지 않는다 — ①은 원가 밖의 참고 블록에만 쓰이고, ②는 원래부터
+ * 판매자가 치르는 국제배송비다.
  *
  * ── 🔴 카테고리 id를 여기서 지어내지 않는다 ──────────────────────────────
  * 아래 키는 전부 packages/category의 CATEGORY_PROFILES에 실제로 있는 id다
@@ -30,9 +35,7 @@ import { EMS_VOLUMETRIC_DIVISOR } from "./parcel-weight";
  *
  * ── 왜 필드가 이것뿐인가 ─────────────────────────────────────────────────
  * 오늘 코드가 실제로 갈라지는 것만 둔다(CATEGORY_PROFILES의 원칙 그대로).
- * 갈라지는 것은 둘이다: ① 관세·수입부가세를 판매자 원가로 보는가 ② 국제배송비를
- * 중량으로 계산하는가. 쓰이지 않는 칸을 파 두면 다음 사람이 그 칸을 채우려고
- * 없는 규칙을 지어낸다.
+ * 쓰이지 않는 칸을 파 두면 다음 사람이 그 칸을 채우려고 없는 규칙을 지어낸다.
  */
 
 /** 이 정책이 붙는 자리. CATEGORY_PROFILES의 id + "모를 때". */
@@ -48,14 +51,21 @@ export interface CategoryCostPolicy {
   id: CostPolicyId;
   label: string;
   /**
-   * 관세·수입부가세를 **판매자 착지원가에 넣는가**.
+   * 축③ **품목/HS** — 이 카테고리의 물품이 어느 세번으로 분류되는가.
    *
-   * false면 unified-price-decision의 착지원가 합산에 그 항목들이 아예 오르지
-   * 않는다(MI-COST-POLICY-1 상태 그대로 — 값을 넘겨도 무시된다).
-   * true면 원가 항목이 되고, 세율을 모르면 "확인 필요"로 남는다.
+   * null이면 우리가 그 카테고리의 품목 분류를 확정하지 못했다는 뜻이고, 그때
+   * 관세는 «확인 필요»다(buyer-import-charge.ts가 이 축을 그대로 읽는다).
+   * 모르는 카테고리에 임의의 HS를 붙이면 그 순간 임의의 세율이 따라온다.
    */
-  importTaxesInLandedCost: boolean;
-  /** importTaxesInLandedCost가 false면 둘 다 null이다(읽을 자리가 없다). */
+  hsCode: string | null;
+  /**
+   * 🔴 이 두 세율은 **판매자 원가 계산에 쓰이지 않는다.** 구매자 부담 참고정보
+   * (buyer-import-charge.ts)를 만들 때만 읽힌다. 읽는 곳이 한 곳뿐이라는 사실이
+   * "관부가세가 원가로 새는" 경로를 구조적으로 막는다.
+   *
+   * customsDutyRate가 null이면 품목/HS가 확정되지 않았다는 뜻이다.
+   * importVatRate는 품목이 아니라 법이 정하는 값이라 모든 카테고리가 같다.
+   */
   customsDutyRate: TaxRateRef | null;
   importVatRate: TaxRateRef | null;
   /**
@@ -69,6 +79,12 @@ export interface CategoryCostPolicy {
    * PRICING-BASIS-1 — 이 정책으로 계산한 **착지원가가 어느 세금 기준인가**.
    * 국내 시장가(언제나 TAX_INCLUDED)와 나란히 놓아도 되는지가 이 값 하나로
    * 정해진다(price-basis.comparePriceBasis 참고).
+   *
+   * GOLF-01-TAX 이후 **모든 카테고리가 TAX_EXCLUDED다.** 관부가세가 어디에서도
+   * 원가에 들어가지 않으니 착지원가는 언제나 세전이고, 따라서 세후인 국내
+   * 시장가와 그냥 뺄 수 없다. 값이 하나로 모였다고 필드를 지우지 않는 이유는,
+   * 지우면 "이 원가가 세후일 수도 있다"는 가능성을 화면이 다시 판단하게 되기
+   * 때문이다 — 판단은 여기 한 곳에만 있어야 한다.
    */
   landedCostTaxBasis: PriceTaxBasis;
   /** 화면/보고에 그대로 쓰는 한 줄. */
@@ -165,93 +181,69 @@ export const GOLF_CLUB_RCEP_JAPAN_DUTY_RATE_2026: TaxRateRef = {
   reviewNote: "2027.1.1.부터 Y6 4.8%로 내려간다 — 연도가 바뀌면 이 상수를 새로 만들어야 한다.",
 };
 
+/**
+ * 모든 카테고리가 같은 문장을 쓴다. GOLF-01-TAX 이후 «판매자 원가가 무엇을
+ * 세는가»는 카테고리마다 갈리지 않기 때문이다 — 갈리는 것은 참고 블록의
+ * 재료(HS·관세율)와 배송비 계산 방식뿐이다.
+ */
+const SELLER_COST_NOTE =
+  "관세·부가가치세는 판매자 원가에 넣지 않고 «예상 구매자 부담»으로 따로 표시합니다(MI-COST-POLICY-1 · GOLF-01-TAX)";
+
+/**
+ * 품목/HS가 확정되지 않은 카테고리의 공통 모양.
+ *
+ * 🔴 importVatRate는 여기서도 채워진다. 수입부가세는 **품목이 아니라 법**이
+ * 정하는 값이라(부가가치세법) 카테고리를 몰라도 세율 자체는 확정이기 때문이다.
+ * 반대로 customsDutyRate는 세번마다 다르므로 null이고, 그 null이 참고 블록에서
+ * «확인 필요»가 된다.
+ */
+const UNCLASSIFIED_ITEM = {
+  hsCode: null,
+  customsDutyRate: null,
+  importVatRate: KOREA_IMPORT_VAT_RATE,
+  weightBasedShipping: false,
+  volumetricDivisor: null,
+  landedCostTaxBasis: "TAX_EXCLUDED",
+  policyNote: SELLER_COST_NOTE,
+} as const;
+
 export const CATEGORY_COST_POLICIES: Record<CostPolicyId, CategoryCostPolicy> = {
   /**
-   * 카테고리를 모를 때. **MI-COST-POLICY-1 + MI-UX-FINAL-4 이후의 오늘 동작과
-   * 한 글자도 다르지 않다** — 이것이 이 스프린트의 회귀 안전장치다. 카테고리를
-   * 넘기지 않는 모든 기존 호출부가 이 정책을 받는다.
+   * 카테고리를 모를 때. 카테고리를 넘기지 않는 모든 기존 호출부가 이 정책을
+   * 받는다 — 그리고 GOLF-01-TAX 이후로는 **골프도 판매자 원가 계산에서는 이
+   * 정책과 똑같이 동작한다**(관부가세가 어디에서도 원가에 오르지 않는다).
    */
-  DEFAULT: {
-    id: "DEFAULT",
-    label: "기본",
-    importTaxesInLandedCost: false,
-    customsDutyRate: null,
-    importVatRate: null,
-    weightBasedShipping: false,
-    volumetricDivisor: null,
-    landedCostTaxBasis: "TAX_EXCLUDED",
-    policyNote: "관세·수입부가세는 구매자 부담이라 판매자 원가에 넣지 않습니다(MI-COST-POLICY-1)",
-  },
+  DEFAULT: { id: "DEFAULT", label: "기본", ...UNCLASSIFIED_ITEM },
   /** 🔴 아동의류는 DEFAULT와 **완전히 같은 값**이다. 이 줄이 달라지면 회귀다. */
-  KIDS_FASHION: {
-    id: "KIDS_FASHION",
-    label: "아동의류",
-    importTaxesInLandedCost: false,
-    customsDutyRate: null,
-    importVatRate: null,
-    weightBasedShipping: false,
-    volumetricDivisor: null,
-    landedCostTaxBasis: "TAX_EXCLUDED",
-    policyNote: "관세·수입부가세는 구매자 부담이라 판매자 원가에 넣지 않습니다(MI-COST-POLICY-1)",
-  },
-  WOMEN_FASHION: {
-    id: "WOMEN_FASHION",
-    label: "여성 패션",
-    importTaxesInLandedCost: false,
-    customsDutyRate: null,
-    importVatRate: null,
-    weightBasedShipping: false,
-    volumetricDivisor: null,
-    landedCostTaxBasis: "TAX_EXCLUDED",
-    policyNote: "관세·수입부가세는 구매자 부담이라 판매자 원가에 넣지 않습니다(MI-COST-POLICY-1)",
-  },
-  FASHION_ACCESSORIES: {
-    id: "FASHION_ACCESSORIES",
-    label: "패션 잡화",
-    importTaxesInLandedCost: false,
-    customsDutyRate: null,
-    importVatRate: null,
-    weightBasedShipping: false,
-    volumetricDivisor: null,
-    landedCostTaxBasis: "TAX_EXCLUDED",
-    policyNote: "관세·수입부가세는 구매자 부담이라 판매자 원가에 넣지 않습니다(MI-COST-POLICY-1)",
-  },
-  HOME_LIFESTYLE: {
-    id: "HOME_LIFESTYLE",
-    label: "라이프스타일",
-    importTaxesInLandedCost: false,
-    customsDutyRate: null,
-    importVatRate: null,
-    weightBasedShipping: false,
-    volumetricDivisor: null,
-    landedCostTaxBasis: "TAX_EXCLUDED",
-    policyNote: "관세·수입부가세는 구매자 부담이라 판매자 원가에 넣지 않습니다(MI-COST-POLICY-1)",
-  },
+  KIDS_FASHION: { id: "KIDS_FASHION", label: "아동의류", ...UNCLASSIFIED_ITEM },
+  WOMEN_FASHION: { id: "WOMEN_FASHION", label: "여성 패션", ...UNCLASSIFIED_ITEM },
+  FASHION_ACCESSORIES: { id: "FASHION_ACCESSORIES", label: "패션 잡화", ...UNCLASSIFIED_ITEM },
+  HOME_LIFESTYLE: { id: "HOME_LIFESTYLE", label: "라이프스타일", ...UNCLASSIFIED_ITEM },
   /**
-   * 🔴 이 저장소에서 **처음으로** 관세·부가세를 판매자 원가로 보는 카테고리다.
+   * 골프는 **품목/HS를 확정한 유일한 카테고리**다. 그 한 가지가 참고 블록에서
+   * 갈린다 — 관세율을 말할 수 있는가, 아니면 «확인 필요»인가.
    *
-   * 골프채는 단가가 높아(¥100,000대) 소액면세 한도를 언제나 넘고, 재판매 목적
-   * 수입은 애초에 자가사용 소액면세·목록통관 대상이 아니다. 즉 통관세는 실제로
-   * 판매자가 치르는 돈이다 — MI-COST-POLICY-1이 아동의류에서 "판매자가 내지 않는
-   * 돈"이라고 판단한 근거가 이 카테고리에서는 성립하지 않는다.
+   * 🔴 GOLF-01-TAX — 이 정책이 관세·부가세를 판매자 원가로 보던 시절은 끝났다.
+   * 아래 두 세율은 buyer-import-charge.ts만 읽고, 그 결과는 마진·verdict에
+   * 닿지 않는다. 골프채 단가가 소액면세 한도를 언제나 넘는다는 사실은 그대로지만,
+   * 그 사실이 답하는 질문이 «판매자 원가에 넣을까»에서 «구매자가 얼마를 더
+   * 낼까»로 바뀌었다.
    *
    * 세율은 둘 다 확정됐다: 기본세율 8%(RCEP 부속서 I 한국 양허표 base rate) ·
-   * 수입부가세 10%(부가가치세법). 그래서 골프 상품은 오늘 실제로 끝까지
-   * 계산된다. RCEP 5.3%는 원산지증명서가 있어야 받는 세율이라 기본값이 아니고,
-   * 셀러가 서류를 갖고 있을 때만 직접 입력한다
+   * 수입부가세 10%(부가가치세법). RCEP 5.3%는 원산지증명서가 있어야 받는 세율이라
+   * 기본값이 아니고, 셀러가 서류를 갖고 있을 때만 직접 입력한다
    * (GOLF_CLUB_RCEP_JAPAN_DUTY_RATE_2026 주석 참고).
    */
   GOLF: {
     id: "GOLF",
     label: "골프용품",
-    importTaxesInLandedCost: true,
+    hsCode: "9506.31.00.00",
     customsDutyRate: GOLF_CUSTOMS_DUTY_RATE,
     importVatRate: KOREA_IMPORT_VAT_RATE,
     weightBasedShipping: true,
     volumetricDivisor: EMS_VOLUMETRIC_DIVISOR,
-    landedCostTaxBasis: "LANDED_TAXED",
-    policyNote:
-      "상품가 + 국제배송비 + 관세 + 수입부가세를 모두 판매자 원가로 봅니다 · 국제배송비는 실중량과 용적중량 중 큰 쪽으로 계산합니다",
+    landedCostTaxBasis: "TAX_EXCLUDED",
+    policyNote: `${SELLER_COST_NOTE} · 국제배송비는 실중량과 용적중량 중 큰 쪽으로 계산합니다`,
   },
 };
 

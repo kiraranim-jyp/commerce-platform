@@ -22,4 +22,7 @@ export * from "./price-basis";
 export * from "./import-tax";
 export * from "./parcel-weight";
 export * from "./category-cost-policy";
+// GOLF-01-TAX(CEO 최종 결정, 2026-09-15) — 관부가세는 판매자 원가가 아니라
+// 모든 카테고리 공통의 «예상 구매자 부담» 참고정보다.
+export * from "./buyer-import-charge";
 export * from "./golf-landed-cost";

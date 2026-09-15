@@ -188,78 +188,79 @@ describe("GOLF-01 축B ①: 아동의류 실상품(Bobo Choses B226AC043 €75)�
   });
 });
 
-/* ════════════════════ ② 골프 — 관세·부가세가 실제로 들어간다 ════════════════════ */
+/* ═══════════ ② 골프 — 🔴 GOLF-01-TAX에서 방향이 뒤집힌 자리 ═══════════ */
 
-describe("GOLF-01 축B ②: 골프는 관세·수입부가세가 착지원가 항목이 된다", () => {
-  it("세율이 확정된 값(셀러 확인)으로 들어오면 착지원가·마진이 그만큼 움직인다", () => {
-    // 과세가격 1,000,000원을 만드는 단순한 수치로 계산을 손으로 검증한다.
-    const base: UnifiedPriceInput = {
-      categoryProfileId: "GOLF",
-      sourceProductPriceKrw: pc(900000, "actual"),
-      exchangeRate: pc(9.2, "estimated"),
-      internationalShippingKrw: pc(100000, "estimated", "EMS"),
-      customerChargedShippingKrw: pc(null, "unknown"),
-      platformFeeRate: pc(10, "estimated", "default"),
-      currentSellingPriceKrw: pc(1500000, "actual"),
-      domesticCompetitivePrice: { lowest: 1490000, average: 1560000 },
-    };
-    // 관세 8% = 80,000 / 부가세 10% × (1,000,000 + 80,000) = 108,000
+/**
+ * ── 이 블록은 «반대 사실»을 지키도록 다시 쓰였다 ────────────────────────────
+ *
+ * d72575f(GOLF-01 축B)에서 이 자리는 "골프는 관세·수입부가세가 착지원가 항목이
+ * 된다"를 지켰다. CEO가 그 방향을 거뒀다(GOLF-01-TAX): 관부가세는 어떤
+ * 카테고리에서도 판매자 원가에 들어가지 않는다.
+ *
+ * 그래서 검사를 지우지 않고 **반대쪽을 고정한다**. 지웠다면 "골프에서 세금이
+ * 원가에 들어가는가"를 아무도 보지 않게 되고, 그때 이 코드는 조용히 예전
+ * 방향으로 되돌아갈 수 있다. 같은 자리에서 정반대의 사실을 지키는 것이
+ * 방향 전환을 기록하는 방법이다.
+ */
+describe("GOLF-01-TAX ②: 골프에서도 관세·부가가치세는 착지원가에 들어가지 않는다", () => {
+  // 과세가격 1,000,000원을 만드는 단순한 수치로 계산을 손으로 검증한다.
+  const base: UnifiedPriceInput = {
+    categoryProfileId: "GOLF",
+    sourceProductPriceKrw: pc(900000, "actual"),
+    exchangeRate: pc(9.2, "estimated"),
+    internationalShippingKrw: pc(100000, "estimated", "EMS"),
+    customerChargedShippingKrw: pc(null, "unknown"),
+    platformFeeRate: pc(10, "estimated", "default"),
+    currentSellingPriceKrw: pc(1500000, "actual"),
+    domesticCompetitivePrice: { lowest: 1490000, average: 1560000 },
+  };
+
+  it("🔴 관세 80,000 · 부가세 108,000을 «넘겨도» 착지원가가 1,000,000에서 움직이지 않는다", () => {
+    const plain = computeUnifiedPriceDecision(base);
     const withTaxes = computeUnifiedPriceDecision({
       ...base,
       customsDutyKrw: pc(80000, "actual"),
       customsVatKrw: pc(108000, "actual"),
     });
-    expect(withTaxes.landedCostKrw.value).toBe(900000 + 100000 + 80000 + 108000);
-    expect(withTaxes.landedCostKrw.value).toBe(1188000);
-    expect(withTaxes.landedCostTaxBasis).toBe("LANDED_TAXED");
-    expect(withTaxes.costPolicy.id).toBe("GOLF");
-    expect(withTaxes.missingComponents).toEqual([]);
-
-    // 같은 상품을 아동의류 정책으로 계산하면 188,000원 싸게 나온다 — 그 차이가
-    // 곧 이 스프린트가 고친 오판의 크기다.
-    const asKids = computeUnifiedPriceDecision({
-      ...base,
-      categoryProfileId: "KIDS_FASHION",
-      customsDutyKrw: pc(80000, "actual"),
-      customsVatKrw: pc(108000, "actual"),
-    });
-    expect(withTaxes.landedCostKrw.value! - asKids.landedCostKrw.value).toBe(188000);
-    expect(asKids.estimatedProfitKrw.value! - withTaxes.estimatedProfitKrw.value!).toBe(188000);
+    expect(plain.landedCostKrw.value).toBe(1000000);
+    expect(withTaxes.landedCostKrw).toEqual(plain.landedCostKrw);
+    expect(withTaxes.estimatedProfitKrw).toEqual(plain.estimatedProfitKrw);
+    expect(withTaxes.marginPercent).toEqual(plain.marginPercent);
+    expect(withTaxes.verdict).toBe(plain.verdict);
+    // 예전 방향이었다면 1,188,000이었을 것이다.
+    expect(withTaxes.landedCostKrw.value).not.toBe(1188000);
   });
 
-  it("🔴 세율을 모르는 상태를 흉내내면 원가가 «확인 필요»로 남는다 — 지어낸 세율로 🟢을 내지 않는다", () => {
+  it("골프와 아동의류의 원가가 **같아졌다** — 카테고리가 원가 구성을 가르지 않는다", () => {
+    const customs = { customsDutyKrw: pc(80000, "actual"), customsVatKrw: pc(108000, "actual") };
+    const asGolf = computeUnifiedPriceDecision({ ...base, ...customs });
+    const asKids = computeUnifiedPriceDecision({ ...base, ...customs, categoryProfileId: "KIDS_FASHION" });
+    expect(asGolf.landedCostKrw.value! - asKids.landedCostKrw.value!).toBe(0);
+    expect(asGolf.estimatedProfitKrw).toEqual(asKids.estimatedProfitKrw);
+    // 라벨만 다르다. 정책이 사라진 것이 아니라 «원가를 가르지 않는» 것이다.
+    expect([asGolf.costPolicy.id, asKids.costPolicy.id]).toEqual(["GOLF", "KIDS_FASHION"]);
+  });
+
+  it("세금을 몰라도 골프 상품의 판정이 🟠으로 내려가지 않는다 — 판매자가 치르지 않는 돈이다", () => {
     const unknownTaxes = computeUnifiedPriceDecision({
-      categoryProfileId: "GOLF",
-      sourceProductPriceKrw: pc(900000, "actual"),
-      exchangeRate: pc(9.2, "estimated"),
-      internationalShippingKrw: pc(100000, "estimated"),
-      customerChargedShippingKrw: pc(null, "unknown"),
-      platformFeeRate: pc(10, "estimated"),
-      currentSellingPriceKrw: pc(1500000, "actual"),
-      domesticCompetitivePrice: { lowest: 1490000, average: 1560000 },
-      // 관세율이 확정되지 않아 computeGolfLandedCost가 null을 낸 상태 그대로.
+      ...base,
       customsDutyKrw: pc(null, "unknown"),
       customsVatKrw: pc(null, "unknown"),
     });
-    expect(unknownTaxes.missingComponents).toEqual(["관세", "수입부가세"]);
-    expect(unknownTaxes.dataCompleteness).toBe("INCOMPLETE");
-    // 마진 자체는 양수(MAINTAIN)지만, 모르는 비용이 있으므로 🟢이 아니라 🟠다.
-    expect(unknownTaxes.verdict).toBe("MAINTAIN");
-    expect(sellerDecisionStateFromUnifiedDecision(unknownTaxes).code).toBe("NEEDS_COST_INFO");
+    // 예전에는 여기서 ["관세","수입부가세"]가 나왔고 dataCompleteness가 INCOMPLETE였다.
+    expect(unknownTaxes.missingComponents).toEqual([]);
+    expect(unknownTaxes.dataCompleteness).not.toBe("INCOMPLETE");
+    expect(sellerDecisionStateFromUnifiedDecision(unknownTaxes).code).not.toBe("NEEDS_COST_INFO");
   });
 
-  it("골프 정책에서 관부가세를 아예 넘기지 않으면 0원이 아니라 «모름»이다", () => {
-    const omitted = computeUnifiedPriceDecision({
-      categoryProfileId: "GOLF",
-      sourceProductPriceKrw: pc(900000, "actual"),
-      exchangeRate: pc(9.2, "estimated"),
-      internationalShippingKrw: pc(100000, "estimated"),
-      customerChargedShippingKrw: pc(null, "unknown"),
-      platformFeeRate: pc(10, "estimated"),
-      currentSellingPriceKrw: pc(1500000, "actual"),
-    });
-    expect(omitted.missingComponents).toEqual(["관세", "수입부가세"]);
-    expect(omitted.landedCostKrw.status).toBe("incomplete");
+  it("어떤 카테고리에서도 costPolicy.importTaxesInLandedCost는 false다 — 켤 수 있는 스위치가 없다", () => {
+    for (const id of [undefined, null, "GOLF", "KIDS_FASHION", "BEAUTY"]) {
+      const result = computeUnifiedPriceDecision({ ...base, categoryProfileId: id });
+      expect(result.costPolicy.importTaxesInLandedCost).toBe(false);
+      expect(result.landedCostTaxBasis).toBe("TAX_EXCLUDED");
+    }
+    // 정책 표에도 그런 칸이 없다(있으면 언젠가 true가 된다).
+    expect(CATEGORY_COST_POLICIES.GOLF).not.toHaveProperty("importTaxesInLandedCost");
   });
 });
 
@@ -419,24 +420,24 @@ describe("GOLF-01 축B ⑤: computeGolfLandedCost가 상품가 → 중량 → �
     expect(result.internationalShippingKrw).toBe(97520);
     // ④ 과세가격(CIF) = ①+③
     expect(result.customsValueKrw).toBe(1089280);
-    // ⑤ 관세 8% · 부가세 10%×(CIF+관세)
-    expect(result.importTax?.resolved).toBe(true);
-    expect(result.importTax?.customsDutyKrw).toBe(87142);
-    expect(result.importTax?.importVatKrw).toBe(117642);
-    expect(result.importTax?.totalImportTaxKrw).toBe(204784);
-    // 🔴 기본 배송비 ₩12,000만 쓰던 예전 계산과 비교하면 원가가 얼마나 달라지는가:
-    //    ₩991,760 + ₩12,000 = ₩1,003,760  →  실제는 ₩1,294,064. 290,304원 차이다.
-    const oldStyle = 991760 + 12000;
-    const now =
-      result.productCostKrw! +
-      result.internationalShippingKrw! +
-      result.importTax!.customsDutyKrw! +
-      result.importTax!.importVatKrw!;
-    expect(now).toBe(1294064);
-    expect(now - oldStyle).toBe(290304);
+    // ⑤ 🔴 GOLF-01-TAX — 관세 8% · 부가세 10%×(CIF+관세)는 계산되지만 그것은
+    //    **구매자 부담 참고정보**다. 판매자 원가는 ①+③에서 끝난다.
+    const tax = result.buyerImportCharge.importTax!;
+    expect(tax.resolved).toBe(true);
+    expect(tax.customsDutyKrw).toBe(87142);
+    expect(tax.importVatKrw).toBe(117642);
+    expect(tax.totalImportTaxKrw).toBe(204784);
+    expect(result.buyerImportCharge.totalKrw).toBe(204784);
+
+    // 🔴 판매자 원가는 세금을 한 원도 세지 않는다.
+    const sellerCost = result.components.sourceProductPriceKrw.value! + result.components.internationalShippingKrw.value!;
+    expect(sellerCost).toBe(1089280);
+    expect(sellerCost).not.toBe(1294064);
+    // 🔴 기본 배송비 ₩12,000만 쓰던 예전 계산과의 차이는 «배송비»에서만 온다.
+    expect(sellerCost - (991760 + 12000)).toBe(85520);
   });
 
-  it("셀러가 RCEP 원산지증명서를 갖고 있으면 그 세율이 우선한다 — 조각이 그대로 통합 판정으로 흘러간다", () => {
+  it("셀러가 RCEP 원산지증명서를 갖고 있으면 그 세율이 우선한다 — 단, 참고 블록에서만이다", () => {
     const result = computeGolfLandedCost({
       sourcePriceAmount: 107800,
       sourcePriceCurrency: "JPY",
@@ -444,9 +445,10 @@ describe("GOLF-01 축B ⑤: computeGolfLandedCost가 상품가 → 중량 → �
       dimensionsCm: { lengthCm: 125, widthCm: 20, heightCm: 20 },
       sellerConfirmedDutyRatePercent: GOLF_CLUB_RCEP_JAPAN_DUTY_RATE_2026.percent!,
     });
-    expect(result.importTax?.resolved).toBe(true);
-    expect(result.importTax?.appliedDutyRatePercent).toBe(5.3);
-    expect(result.components.customsDutyKrw.status).toBe("actual");
+    expect(result.buyerImportCharge.importTax?.resolved).toBe(true);
+    expect(result.buyerImportCharge.duty.ratePercent).toBe(5.3);
+    // 🔴 components에는 세금 칸 자체가 없다 — 이어 붙일 자리가 없다.
+    expect(Object.keys(result.components)).toEqual(["sourceProductPriceKrw", "internationalShippingKrw"]);
 
     const decision = computeUnifiedPriceDecision({
       categoryProfileId: "GOLF",
@@ -459,13 +461,8 @@ describe("GOLF-01 축B ⑤: computeGolfLandedCost가 상품가 → 중량 → �
     });
     expect(decision.missingComponents).toEqual([]);
     expect(decision.dataCompleteness).not.toBe("INCOMPLETE");
-    expect(decision.landedCostKrw.value).toBe(
-      result.productCostKrw! +
-        result.internationalShippingKrw! +
-        result.importTax!.customsDutyKrw! +
-        result.importTax!.importVatKrw!,
-    );
-    expect(decision.landedCostTaxBasis).toBe("LANDED_TAXED");
+    expect(decision.landedCostKrw.value).toBe(result.productCostKrw! + result.internationalShippingKrw!);
+    expect(decision.landedCostTaxBasis).toBe("TAX_EXCLUDED");
   });
 
   it("셀러가 실제 배송비를 알고 있으면 EMS 추정보다 우선한다", () => {
@@ -490,7 +487,12 @@ describe("GOLF-01 축B ⑤: computeGolfLandedCost가 상품가 → 중량 → �
     expect(result.weight.chargeableWeightKg).toBeNull();
     expect(result.internationalShippingKrw).toBeNull();
     expect(result.customsValueKrw).toBeNull();
-    expect(result.importTax).toBeNull();
+    // 세금도 금액이 없다. 다만 «해당 여부»는 물품가격만으로 답할 수 있으므로
+    // 「해당 · 금액 확인 필요」다 — 모르는 것과 안 붙는 것을 섞지 않는다.
+    expect(result.buyerImportCharge.importTax).toBeNull();
+    expect(result.buyerImportCharge.duty.applicability).toBe("APPLICABLE");
+    expect(result.buyerImportCharge.duty.display).toBe("확인 필요");
+    expect(result.buyerImportCharge.totalKrw).toBeNull();
   });
 });
 
@@ -526,8 +528,17 @@ describe("GOLF-01 축B ⑥: 세전 원가와 세후 시장가를 그대로 빼�
     expect(comparePriceBasis(domestic, { amountKrw: null, basis: "LANDED_TAXED", label: "x" }).comparable).toBe(false);
   });
 
-  it("아동의류 착지원가는 TAX_EXCLUDED, 골프는 LANDED_TAXED — 정책이 곧 비교 가능 여부다", () => {
-    expect(CATEGORY_COST_POLICIES.KIDS_FASHION.landedCostTaxBasis).toBe("TAX_EXCLUDED");
-    expect(CATEGORY_COST_POLICIES.GOLF.landedCostTaxBasis).toBe("LANDED_TAXED");
+  /**
+   * 🔴 GOLF-01-TAX — 이 기대값도 뒤집혔다. 골프 착지원가에서 관부가세가 빠졌으니
+   * 골프도 세전이다. 즉 **어떤 카테고리의 착지원가도** 세후인 국내 시장가와
+   * 그냥 뺄 수 없고, comparePriceBasis가 그 뺄셈을 전부 막는다.
+   */
+  it("모든 카테고리의 착지원가가 TAX_EXCLUDED다 — 국내가와 그냥 뺄 수 있는 원가는 없다", () => {
+    for (const policy of Object.values(CATEGORY_COST_POLICIES)) {
+      expect(policy.landedCostTaxBasis, `${policy.id}`).toBe("TAX_EXCLUDED");
+    }
+    expect(
+      comparePriceBasis(domestic, { amountKrw: 1089280, basis: "TAX_EXCLUDED", label: "착지원가" }).gapKrw,
+    ).toBeNull();
   });
 });
