@@ -13,12 +13,16 @@ import { runLotteOnRead } from "../_lib/request";
  * 않았을 뿐이다.
  *
  * ── 부르는 것 ─────────────────────────────────────────────────────────────
- *   207 identity           trGrpCd · trNo (거래처)
- *   150 getDvpListSr       출고지(dvpTypCd=02) · 반품지(01)
- *   166 getDvCstListSr     배송비 정책
- *    89 getDetailCodeList  택배사(DV_CO_CD) · 배송가능지역(DV_RGSPR_GRP_CD)
+ *   207 identity           GET                      trGrpCd · trNo (거래처)
+ *   150 getDvpListSr       **POST + JSON 바디**      출고지(dvpTypCd=02) · 반품지(01)
+ *   166 getDvCstListSr     **POST + JSON 바디**      배송비 정책
+ *    89 getDetailCodeList  GET(grpCd 쿼리)           택배사(DV_CO_CD) · 배송가능지역(DV_RGSPR_GRP_CD)
  * 전부 **읽기**다. forbidden-endpoints.ts의 금지 목록(주문/배송/클레임 쓰기)에
  * 하나도 닿지 않는다 — 그리고 닿더라도 client.ts의 guard가 네트워크 전에 끊는다.
+ *
+ * 메서드/바디는 문서 원문(공개 문서 백엔드 apiNo=150 · 166 · 89)에서 확인한 값이다.
+ * LOTTEON-HOLD-FIX-A(2026-09-15) 전까지 150/166을 GET + 쿼리스트링으로 부르고
+ * 있었다 — 그 동안 `afflTrCd`는 문서가 요구한 자리(JSON 바디)에 실린 적이 없다.
  *
  * ── 🔴 확정되지 않은 것: `afflTrCd` ───────────────────────────────────────
  * 150/166은 소속거래처코드(`afflTrCd`)를 요구한다. 그 값이 **207의 trNo인지 별도
@@ -41,7 +45,7 @@ interface DeliveryPlace {
   name: string | null;
   /** dvpTypCd — 01 반품(회수)지 · 02 출고지. */
   typeCode: string | null;
-  /** 판매자센터에서 기본으로 표시된 건인가(bscYn). 하나뿐일 때 자동 적용의 근거. */
+  /** 대표 출고/회수지인가(150 문서 원문 `rprtYn` [default:'N']). 하나뿐일 때 자동 적용의 근거. */
   isDefault: boolean;
 }
 
@@ -88,6 +92,20 @@ function rows(data: unknown): Record<string, unknown>[] {
   return [];
 }
 
+/**
+ * 150 · 166의 **요청 바디**. 두 API 모두 문서 원문이 `POST` + JSON 바디이고
+ * Request Sample이 `{"afflTrCd":"LO999999","afflLrtrCd":"SLO99999"}`다 —
+ * 쿼리스트링이 아니다.
+ *
+ * 🔴 `afflLrtrCd`(하위거래처번호)는 문서상 **선택값**이고, 우리에게는 그 값이
+ * 없다(207 identity는 trGrpCd/trNo만 준다). 그래서 **키 자체를 넣지 않는다** —
+ * 빈 문자열로 채우면 "하위거래처가 빈 문자열인 곳을 찾아라"라는 다른 질문이
+ * 되고, 0건이 돌아와도 그것이 조회 실패인지 정말 없는 것인지 구분할 수 없게 된다.
+ */
+function buildAfflBody(afflTrCd: string): Record<string, string> {
+  return { afflTrCd };
+}
+
 async function readErrorMessage(response: NextResponse): Promise<string> {
   const body = (await response.clone().json().catch(() => null)) as { message?: string } | null;
   return body?.message ?? "롯데ON이 응답하지 않았습니다.";
@@ -113,9 +131,9 @@ export async function GET() {
   const outboundPlaces: DeliveryPlace[] = [];
   const returnPlaces: DeliveryPlace[] = [];
   const placeRead = await runLotteOnRead({
-    method: "GET",
+    method: "POST",
     path: LOTTEON_READ_PATHS.deliveryPlaceList,
-    query: { afflTrCd },
+    body: buildAfflBody(afflTrCd),
   });
   if (!placeRead.ok) {
     issues.push({ source: "150 출고지/반품지 조회", message: await readErrorMessage(placeRead.response) });
@@ -134,7 +152,10 @@ export async function GET() {
         no,
         name: str(row, "dvpNm", "dvp_nm"),
         typeCode: str(row, "dvpTypCd", "dvp_typ_cd"),
-        isDefault: (str(row, "bscYn", "bsc_yn") ?? "").toUpperCase() === "Y",
+        /* 150 문서 원문의 응답 필드는 `rprtYn`(대표 출고/회수지 여부 [default:'N'])다.
+           `bscYn`은 이 문서 어디에도 없다 — 그 이름으로 읽던 동안 isDefault는
+           항상 false였고, "기본 표시건 자동 적용"이 한 번도 동작하지 않았다. */
+        isDefault: (str(row, "rprtYn", "rprt_yn") ?? "").toUpperCase() === "Y",
       };
       // 문서상 02 = 출고지, 01 = 반품(회수)지. 유형을 못 읽으면 어느 쪽으로도
       // 분류하지 않는다 — 반품지를 출고지로 넣으면 주문이 엉뚱한 곳으로 간다.
@@ -151,9 +172,9 @@ export async function GET() {
   /* ③ 배송비 정책(166). */
   const costPolicies: CostPolicy[] = [];
   const costRead = await runLotteOnRead({
-    method: "GET",
+    method: "POST",
     path: LOTTEON_READ_PATHS.deliveryCostPolicyList,
-    query: { afflTrCd },
+    body: buildAfflBody(afflTrCd),
   });
   if (!costRead.ok) {
     issues.push({ source: "166 배송비정책 조회", message: await readErrorMessage(costRead.response) });
@@ -189,9 +210,12 @@ export async function GET() {
     }
     return list
       .map((row) => {
-        const code = str(row, "dtlCd", "dtl_cd", "cd");
+        /* 89 문서 원문의 data 배열 필드는 `grpCd · langCd · cd · cdNm · cdEpn · sortSeq …`다.
+           `dtlCd`/`dtlCdNm`은 존재하지 않는다 — 없는 이름을 1순위에 두고 있었고
+           실제 값은 폴백이 주워 담고 있었다. 1순위를 문서 원문으로 되돌린다. */
+        const code = str(row, "cd");
         if (!code) return null;
-        return { code, name: str(row, "dtlCdNm", "dtl_cd_nm", "cdNm") };
+        return { code, name: str(row, "cdNm") };
       })
       .filter((option): option is CodeOption => option != null);
   }

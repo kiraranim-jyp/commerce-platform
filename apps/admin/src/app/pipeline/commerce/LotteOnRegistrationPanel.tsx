@@ -204,8 +204,12 @@ interface DeliverySettingsState {
  * 자동으로 고를 수 있는 한 건. **판매자센터가 기본으로 표시한 건**이거나
  * **후보가 하나뿐**일 때만이다 — 여럿 중 하나를 우리가 고르면 엉뚱한 출고지로
  * 주문이 간다. 그 경우에는 셀러가 목록에서 고른다.
+ *
+ * export 하는 이유는 하나다 — `isDefault`의 출처(150의 `rprtYn`)를 고친 뒤에도
+ * **이 규칙 자체는 그대로**임을 테스트로 고정하기 위해서다
+ * (`__tests__/lotteon-delivery-autopick.test.ts`).
  */
-function autoPick<T extends { no: string; isDefault?: boolean }>(options: T[]): T | null {
+export function autoPick<T extends { no: string; isDefault?: boolean }>(options: T[]): T | null {
   if (options.length === 0) return null;
   const marked = options.find((option) => option.isDefault);
   if (marked) return marked;
