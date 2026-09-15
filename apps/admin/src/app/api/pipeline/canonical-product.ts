@@ -104,7 +104,16 @@ export function buildCanonicalProduct(
   // 명시적이라 우선순위가 높다).
   const resolvedColor = extractColor(productData.description) ?? extractColorFromTitle(productData.title);
   const resolvedAge = extractAge(productData.description);
-  const resolvedManufacturer = extractManufacturer(productData.description);
+  /* REWORK-13A(CEO 지시, 2026-09-15) — 제조사 자동 추정 5단계의 ①과 ②를 여기서
+     가른다. 예전에는 ②(설명문 문구)만 있었다.
+       ① 원본 URL 이 구조화 데이터로 «제조사»라고 명시한 값(crawler 가 채운다)
+       ② 상품정보 원문에서 "Manufactured by X" / "제조자: X" 로 확인된 값
+     🔴 브랜드명은 어느 쪽에도 오지 않는다(CEO 금지 항목). 둘 다 없으면 값을
+     지어내지 않고 REQUIRED 로 남긴다 — 그 뒤는 ③브랜드 관리 → ④판매자 기본값
+     → ⑤직접 입력이 답하고, 그 순서는 resolveManufacturer() 하나가 정한다. */
+  const sourceUrlManufacturer = (productData.manufacturer ?? "").trim();
+  const productInfoManufacturer = sourceUrlManufacturer ? "" : (extractManufacturer(productData.description) ?? "");
+  const resolvedManufacturer = sourceUrlManufacturer || productInfoManufacturer;
   const resolvedCareInstructions = extractCareInstructions(productData.description);
   // P1-1(Brand Resolver) — 크롤러가 뽑아온 브랜드 문자열에 시즌/세일 문구가
   // 섞여 오는 경우(실측: "Bobo Choses SS26 Baby 50% Off Sale")가 있어 정제한다.
@@ -173,8 +182,23 @@ export function buildCanonicalProduct(
       ? { value: resolvedAge, source: "ORIGINAL", confidence: 0.7 }
       : { value: "", source: "REQUIRED", confidence: 0 },
     manufacturer: resolvedManufacturer
-      ? { value: resolvedManufacturer, source: "ORIGINAL", confidence: 0.7 }
+      ? {
+          value: resolvedManufacturer,
+          source: "ORIGINAL",
+          /* ①은 구조화 데이터라 그 소스의 신뢰도를 그대로 쓰고(json-ld 0.9 …),
+             ②는 문장에서 긁어낸 값이라 다른 정규식 추출값과 같은 0.7이다. */
+          confidence: sourceUrlManufacturer
+            ? (sources.manufacturer ? CONFIDENCE_BY_SOURCE[sources.manufacturer] : 0.7)
+            : 0.7,
+        }
       : { value: "", source: "REQUIRED", confidence: 0 },
+    /* REWORK-13A — ①인지 ②인지는 여기서만 알 수 있다. 화면·payload가 나중에
+       다시 추론하지 않도록 판정 결과를 그대로 들려 보낸다. */
+    manufacturerOrigin: sourceUrlManufacturer
+      ? ("SOURCE_URL" as const)
+      : productInfoManufacturer
+        ? ("PRODUCT_INFO" as const)
+        : undefined,
     // P0 Epic 4(Notice Resolver) — 세탁방법은 브랜드가 있어도 상품마다 다르고
     // 설명문에 없는 경우가 흔하다 → REQUIRED가 아니라 DEFAULT(등록은 막지 않되
     // 확인 필요)로 시작한다. countryOfOrigin/color/manufacturer와 달리 고시정보의

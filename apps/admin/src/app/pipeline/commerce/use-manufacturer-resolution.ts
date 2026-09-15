@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { resolveManufacturer, type ManufacturerResolution } from "@commerce/listing";
+import {
+  isProductLevelManufacturer,
+  resolveManufacturer,
+  type ManufacturerOrigin,
+  type ManufacturerResolution,
+} from "@commerce/listing";
 
 /**
  * REWORK-10 A(CEO 지시, 2026-09-15) — **화면이 resolver 결과를 받는 배선.**
@@ -76,19 +81,52 @@ interface ProfileLookup {
 }
 
 /**
- * 서버(`findBrandProfileByName`)와 **같은 매칭 규칙**: 공백 제거 + 대소문자
- * 무시 정확 일치. 부분 일치는 쓰지 않는다("Play"가 "Play Up"에 붙는 사고를
+ * 서버(`findBrandProfileByName` → `normalizeBrandKey`)와 **같은 매칭 규칙**:
+ * 유니코드 정규화(NFKC) + 앞뒤 공백 제거 + 연속 공백 한 칸 + 대소문자 무시
+ * **정확 일치**. 부분 일치는 쓰지 않는다("Play"가 "Play Up"에 붙는 사고를
  * 서버가 이미 한 번 막았다 — brand-profile.ts 주석).
+ *
+ * REWORK-13A(CEO 지시, 2026-09-15) — 예전에는 여기가 `trim().toLowerCase()`,
+ * 서버는 Postgres `ilike`였다. 두 규칙이 미묘하게 달라서(저장된 이름 쪽 공백은
+ * 아무도 다듬지 않았고, `ilike`는 이름 안의 `%`·`_`를 와일드카드로 읽었다)
+ * 같은 브랜드에 대해 화면과 서버가 다른 답을 낼 수 있었다. 규칙을 한 글자로
+ * 맞춘다 — 없는 값을 찾아내려는 fuzzy 매칭이 아니라, **같은 이름을 같은 이름으로
+ * 읽게** 하는 정규화다.
  */
+export function normalizeBrandKey(name: string): string {
+  return name.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
 function findBrandManufacturer(rows: BrandProfileRow[], brandName: string): string | null {
-  const key = brandName.trim().toLowerCase();
+  const key = normalizeBrandKey(brandName);
   if (!key) return null;
-  const hit = rows.find((row) => (row.name ?? "").trim().toLowerCase() === key);
+  const hit = rows.find((row) => normalizeBrandKey(row.name ?? "") === key);
   return hit?.manufacturer ?? null;
 }
 
+/**
+ * REWORK-13A — 상품이 들고 있는 제조사를 5단계의 ①·②·⑤ 중 어디로 셀지.
+ *
+ * 하위호환: 첫 인자로 **문자열**을 그대로 넘기던 기존 호출부(CommerceWorkspace)는
+ * 그대로 동작한다 — 그때는 출처를 알 수 없으므로 ②(원본 상품정보)로 센다.
+ * 필드 자체(provenance 포함)를 넘기면 ⑤(직접 입력)과 ①(원본 명시)까지 정확히
+ * 갈린다.
+ */
+export type ProductManufacturerInput =
+  | string
+  | { value: string; source: string; origin?: ManufacturerOrigin };
+
+function splitProductManufacturer(input: ProductManufacturerInput) {
+  if (typeof input === "string") return { productInfoManufacturer: input };
+  const value = (input.value ?? "").trim();
+  if (!value) return {};
+  if (input.source === "USER_EDITED") return { manualManufacturer: value };
+  if (input.origin === "SOURCE_URL") return { sourceUrlManufacturer: value };
+  return { productInfoManufacturer: value };
+}
+
 export function useManufacturerResolution(
-  productManufacturer: string,
+  productManufacturer: ProductManufacturerInput,
   brandName: string,
 ): ManufacturerResolutionState {
   const [lookup, setLookup] = useState<ProfileLookup>({
@@ -120,13 +158,18 @@ export function useManufacturerResolution(
     };
   }, [brandName]);
 
-  /* 상품 원문에 제조사가 있으면 폴백을 기다릴 이유가 없다 — ①이 이미 답이다.
+  /* 상품이 이미 제조사를 들고 있으면(①·②·⑤) 폴백을 기다릴 이유가 없다.
      그 외에는 이 브랜드에 대한 조회가 끝났을 때만 확정된 판정을 말한다. */
   const answered = lookup.brand === brandName;
+  const productLevel = splitProductManufacturer(productManufacturer);
   const resolution = resolveManufacturer({
-    productManufacturer,
+    ...productLevel,
     brandProfileManufacturer: answered ? lookup.brandDefault : null,
     sellerProfileManufacturer: answered ? lookup.sellerDefault : null,
   });
-  return { ...resolution, loading: resolution.source !== "PRODUCT" && !answered, brand: brandName };
+  return {
+    ...resolution,
+    loading: !isProductLevelManufacturer(resolution.source) && !answered,
+    brand: brandName,
+  };
 }

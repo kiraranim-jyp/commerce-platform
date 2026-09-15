@@ -405,6 +405,19 @@ export interface CanonicalProduct {
   /** "Imported by X"/"Manufactured by X" — 브랜드와 다른 개념(브랜드는 판매
    * 브랜드명, 제조자는 실제 제조/수입 주체)이라 별도 필드로 둔다. */
   manufacturer: ProvenanceField<string>;
+  /**
+   * REWORK-13A(CEO 지시, 2026-09-15) — **이 제조사를 어디서 읽었는가.**
+   *
+   * 제조사 자동 추정 5단계(packages/listing/src/common/manufacturer.ts)에서
+   * ①「원본 URL 의 명시적 제조사」와 ②「원본 상품정보에서 문구로 확인」은
+   * 신뢰도가 다른데, 둘 다 이 `manufacturer` 한 칸에 들어온다. 어느 쪽인지는
+   * 채워 넣은 곳(canonical-product.ts)만 알고 있으므로 그때 한 번 적어 둔다 —
+   * resolver도 화면도 여기서 다시 추론하지 않는다.
+   *
+   * 값이 없거나(제조사를 못 찾음) 셀러가 직접 입력한 값이면 undefined다
+   * (직접 입력은 `manufacturer.source === "USER_EDITED"`가 이미 말한다).
+   */
+  manufacturerOrigin?: "SOURCE_URL" | "PRODUCT_INFO";
   /** "Machine wash cold", "Dry clean only" 같은 표준 케어 라벨 — 쿠팡
    * 고시정보의 "세탁방법"/"취급방법 및 취급시 주의사항"에 그대로 쓴다. */
   careInstructions: ProvenanceField<string>;

@@ -43,6 +43,20 @@ export interface ExtractedProductData {
   optionGroups?: CanonicalProductOptionGroup[];
   variants?: CanonicalProductVariant[];
   material?: string;
+  /**
+   * REWORK-13A(CEO 지시, 2026-09-15) — **원본 URL 이 명시한 제조사(제조사 5단계의 ①).**
+   *
+   * 지금까지 CartPilot 은 제조사를 설명문 정규식 하나로만 찾았다
+   * (description-facts.ts:extractManufacturer — "Manufactured by X" / "제조자: X").
+   * 그런데 구조화 데이터가 `Product.manufacturer` 를 **직접** 들고 있는 사이트가
+   * 있고, 그 값은 문장에서 긁어낸 것보다 명백히 신뢰도가 높다 — 그런데도 이
+   * extractor 는 그 필드를 아예 읽지 않아 버리고 있었다.
+   *
+   * 🔴 `brand` 는 절대 이 자리에 오지 않는다. 브랜드명을 제조사로 복사하는 것은
+   * CEO 금지 항목이다("Bobo Choses" → "Bobo Choses S.L." 같은 추론 금지) —
+   * 원본이 **제조사라고 이름 붙여 적어 둔 값**만 여기에 들어온다.
+   */
+  manufacturer?: string;
   /** Sprint A-2(Category Resolver 보강) — JSON-LD BreadcrumbList가 있으면
    * ["Home", "Kids", "Shoes", "Sneakers"]처럼 사이트가 자체적으로 분류해둔
    * 카테고리 경로를 그대로 담는다. title/description에 나이·성별 신호가 전혀
@@ -86,6 +100,43 @@ function resolvePriceField(
     return { validity: "MISSING", amount: null, currency: null };
   }
   return resolveSourcePrice(raw as number | string | null | undefined, explicitCurrency);
+}
+
+/**
+ * REWORK-13A — schema.org `Product.manufacturer` 는 문자열일 수도 있고
+ * Organization 노드(`{ "@type":"Organization", "name":"…" }`)일 수도 있다.
+ * 둘 다 **원본이 제조사라고 명시한 값**이므로 그대로 읽는다. 그 외 형태
+ * (배열·중첩 등 실측으로 확인하지 못한 구조)는 추측하지 않고 버린다.
+ */
+function readManufacturerNode(raw: unknown): string | undefined {
+  if (typeof raw === "string") return raw.trim() || undefined;
+  if (raw && typeof raw === "object") {
+    const name = (raw as Record<string, unknown>).name;
+    if (typeof name === "string") return name.trim() || undefined;
+  }
+  return undefined;
+}
+
+/**
+ * REWORK-13A — `additionalProperty` 에 「제조사」/「manufacturer」라고 **이름을
+ * 붙여** 적어 둔 값도 원본의 명시적 제조사다(readAdditionalProperties 가 이미
+ * 같은 배열을 옵션 축으로 읽고 있다 — 새 파싱이 아니라 같은 데이터의 다른 칸).
+ * 이름이 정확히 이 목록과 맞을 때만 읽는다 — "제조국"/"manufacturerCountry"
+ * 처럼 다른 뜻인 칸을 제조사로 끌어오면 안 된다.
+ */
+const MANUFACTURER_PROPERTY_NAMES = ["제조사", "제조자", "제조원", "manufacturer", "manufactured by"];
+
+function readManufacturerProperty(obj: Record<string, unknown>): string | undefined {
+  const props = Array.isArray(obj.additionalProperty) ? obj.additionalProperty : [];
+  for (const p of props) {
+    const name = typeof (p as Record<string, unknown>)?.name === "string"
+      ? ((p as Record<string, unknown>).name as string).trim().toLowerCase()
+      : "";
+    if (!MANUFACTURER_PROPERTY_NAMES.includes(name)) continue;
+    const value = (p as Record<string, unknown>)?.value;
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return undefined;
 }
 
 /** JSON-LD Product 노드에서 name/brand/offers/sku/description을 뽑는다.
@@ -132,6 +183,8 @@ export function extractFromJsonLd(html: string): ExtractedProductData | null {
             description: typeof product.description === "string" ? product.description : undefined,
             options: [],
             material: typeof product.material === "string" ? product.material : undefined,
+            /* REWORK-13A ① — 원본이 명시한 제조사. brand 는 여기 오지 않는다. */
+            manufacturer: readManufacturerNode(product.manufacturer) ?? readManufacturerProperty(product),
             jsonLdCategory: typeof product.category === "string" ? product.category : undefined,
           };
         }
@@ -392,6 +445,10 @@ async function extractFromMicrodata(page: Page): Promise<Partial<ExtractedProduc
     const nameEl = document.querySelector('[itemprop="name"]');
     const brandEl = document.querySelector('[itemprop="brand"]');
     const skuEl = document.querySelector('[itemprop="sku"]');
+    /* REWORK-13A ① — schema.org Microdata 의 제조사. Organization 을 중첩한
+       사이트는 그 안의 itemprop="name" 이 회사명이라 그것을 먼저 본다. */
+    const manufacturerEl = document.querySelector('[itemprop="manufacturer"]');
+    const manufacturerNameEl = manufacturerEl?.querySelector('[itemprop="name"]');
 
     return {
       title: text(nameEl),
@@ -399,6 +456,8 @@ async function extractFromMicrodata(page: Page): Promise<Partial<ExtractedProduc
       priceRaw: attr(priceEl, "content") || text(priceEl),
       currency: attr(currencyEl, "content") || text(currencyEl),
       sku: attr(skuEl, "content") || text(skuEl),
+      manufacturer:
+        attr(manufacturerEl, "content") || text(manufacturerNameEl) || text(manufacturerEl),
     };
   });
 
@@ -410,6 +469,7 @@ async function extractFromMicrodata(page: Page): Promise<Partial<ExtractedProduc
     title: raw.title,
     brand: raw.brand,
     sku: raw.sku,
+    manufacturer: raw.manufacturer,
     price: priceResolution.validity === "VALID" ? { amount: priceResolution.amount as number, currency: priceResolution.currency as string } : undefined,
     priceValidity: raw.priceRaw ? priceResolution.validity : undefined,
     priceRawText: priceResolution.rawText,
@@ -612,6 +672,10 @@ export async function extractProductData(
     sku: pick("sku"),
     description: pick("description"),
     material: pick("material"),
+    /* REWORK-13A ① — json-ld → microdata → dom 순으로 «원본이 제조사라고 적어
+       둔 값»만 고른다. 어디서도 안 적어 뒀으면 undefined로 남고, 그때 비로소
+       ②(설명문 문구)가 답할 차례가 된다(canonical-product.ts). */
+    manufacturer: pick("manufacturer"),
     options: jsonLd?.options ?? [],
     // Sprint A-9(작업3) — Shopify가 아닌 사이트는 이 DOM select 스캔이 우선
     // 옵션 소스다. jsonLd?.optionGroups는 이 함수 안에서 절대 채워지지 않으므로

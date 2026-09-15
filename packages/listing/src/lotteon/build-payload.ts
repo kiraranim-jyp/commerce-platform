@@ -1,7 +1,7 @@
 import type { CanonicalProduct } from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
 import { computeVariantFinalPriceKrw, resolveListingPrice } from "@commerce/pricing";
-import { resolveManufacturer } from "../common/manufacturer";
+import { manufacturerInputFromProduct, resolveManufacturer } from "../common/manufacturer";
 import type {
   LotteOnCategoryAttribute,
   LotteOnDisplayCategory,
@@ -308,9 +308,11 @@ export function buildLotteOnPayload(input: LotteOnPayloadInput): LotteOnProductR
   const { items, optionSorts, usesOptions } = buildItems(product, basePriceKrw, input.liveRates);
   const keywords = resolveSearchKeywords(product);
   /* REWORK-10 A — 전 채널 공통 resolver. 예전 이 줄은
-     `product.manufacturer.value.trim()` 하나였다(브랜드/판매자 폴백 없음). */
+     `product.manufacturer.value.trim()` 하나였다(브랜드/판매자 폴백 없음).
+     REWORK-13A — 상품이 들고 있는 값을 ①(원본 명시) · ②(상품정보 확인) ·
+     ⑤(직접 입력)으로 나누는 일도 공통 함수가 한다. */
   const manufacturer = resolveManufacturer({
-    productManufacturer: product.manufacturer.value,
+    ...manufacturerInputFromProduct(product),
     brandProfileManufacturer: input.brandProfileManufacturer,
     sellerProfileManufacturer: input.sellerProfileManufacturer,
   }).value;

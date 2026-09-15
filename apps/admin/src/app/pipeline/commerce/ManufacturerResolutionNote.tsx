@@ -1,6 +1,6 @@
 "use client";
 
-import { MANUFACTURER_SOURCE_LABEL } from "@commerce/listing";
+import { isProductLevelManufacturer, MANUFACTURER_SOURCE_LABEL } from "@commerce/listing";
 import type { FieldSource } from "@commerce/shared";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { EditableText } from "./EditableField";
@@ -42,13 +42,30 @@ import type { ManufacturerResolutionState } from "./use-manufacturer-resolution"
    그것은 ⓘ 뒤가 아니라 **화면에 보이는 한 줄**(note)로 나왔다 — 셀러가 실제로
    해야 하는 일을 툴팁 안에 접어 두는 것이 CEO가 지적한 그 문제였다. */
 
-/** 셋 다 비었을 때 ⓘ 뒤에 접히는 문장. 세 탭이 같은 글자를 쓴다. */
+/** 자동 추정이 전부 비었을 때 ⓘ 뒤에 접히는 문장. 세 탭이 같은 글자를 쓴다.
+ *
+ *  REWORK-13A(2026-09-15) — 자동 추정 단계는 넷으로 늘었지만(①원본 페이지의
+ *  명시적 제조사 · ②원본 상품정보 · ③브랜드 프로필 · ④판매자 기본값), 화면
+ *  문장은 그대로 둔다: ①과 ②는 셀러가 보기엔 둘 다 「상품 원문」이고, 셀러가
+ *  할 수 있는 행동은 어느 쪽이든 같다. 늘어난 단계는 payload·판정이 알면 되지
+ *  안내 문장을 길게 만들 이유가 아니다(REWORK-12 ⑤ — 문장은 짧게). */
 export const MANUFACTURER_NONE_DETAIL =
   "상품 원문 · 브랜드 프로필 · 판매자 기본정보 어디에도 제조사가 없습니다.";
 
 /** 조회가 아직 안 끝났을 때. */
 export const MANUFACTURER_LOADING_DETAIL =
   "상품 원문 → 브랜드 프로필 → 판매자 기본정보 순서로 찾는 중입니다.";
+
+/**
+ * REWORK-13A(CEO 지시, 2026-09-15) — **제조사가 비어도 등록 준비는 막히지 않는다.**
+ *
+ * 이 한 줄이 필요한 이유: 예전 안내는 "⚠ … 없습니다"로 끝나서 셀러가 "그럼
+ * 등록을 못 하는구나"로 읽었다. 실제로는 쿠팡·롯데ON은 제조사 없이도 등록되고
+ * (payload 에서 필드를 생략한다), 스마트스토어만 고시정보에서 실제로 요구한다.
+ * 그 사실을 화면이 직접 말한다 — 지어낸 값으로 칸을 메우는 대신.
+ */
+export const MANUFACTURER_OPTIONAL_NOTE =
+  "제조사가 비어 있어도 상품 분석과 등록 준비는 계속됩니다 — 스마트스토어만 등록 직전에 이 값을 요구합니다.";
 
 /** 폴백이 채웠을 때 ⓘ 뒤에 접히는 문장. */
 export const MANUFACTURER_AUTO_DETAIL = "상품 원문에 없어 자동으로 채워진 값입니다.";
@@ -65,7 +82,10 @@ export const MANUFACTURER_AUTO_DETAIL = "상품 원문에 없어 자동으로 �
 export function manufacturerNoneNote(brand: string | undefined): string {
   const name = (brand ?? "").trim();
   return name
-    ? `⚠ 브랜드 「${name}」에 등록된 제조사가 없습니다 — 직접 입력하거나 설정 > 브랜드 프로필에 등록하세요`
+    /* REWORK-13A — 「설정 > 브랜드 관리」는 셀러가 실제로 누르는 탭 이름이고
+       (settings/page.tsx:388), 그 안의 카드 제목이 「브랜드 프로필」이다
+       (settings/page.tsx:1987). 둘 다 적어야 셀러가 길을 잃지 않는다. */
+    ? `⚠ 브랜드 「${name}」에 등록된 제조사가 없습니다 — 직접 입력하거나 설정 > 브랜드 관리의 브랜드 프로필에 등록하세요`
     : "⚠ 브랜드가 확인되지 않아 브랜드 프로필을 조회하지 못했습니다 — 제조사를 직접 입력해주세요";
 }
 
@@ -99,9 +119,10 @@ function viewStateOf(
   resolution: ManufacturerResolutionState,
 ): ManufacturerViewState {
   const value = manufacturerDisplayValue(field, resolution);
-  /* resolution.source === "PRODUCT"도 같은 자리다 — 답한 것이 상품 원문이면
-     칸에 이미 그 값이 보이므로 같은 말을 한 줄 더 적지 않는다. */
-  const fromProduct = field.value.trim().length > 0 || resolution.source === "PRODUCT";
+  /* REWORK-13A — «상품이 들고 있는 값»은 이제 세 단계다(①원본 페이지 ·
+     ②원본 상품정보 · ⑤직접 입력). 셋 중 무엇이든 칸에 그 값이 이미 보이므로
+     같은 말을 한 줄 더 적지 않는다. */
+  const fromProduct = field.value.trim().length > 0 || isProductLevelManufacturer(resolution.source);
 
   if (fromProduct) return { value, note: null, tip: null, badge: "PRODUCT" };
   if (resolution.loading) {
@@ -117,8 +138,15 @@ function viewStateOf(
   }
   /* REWORK-12 ④ — 여기서 note가 null이던 것이 CEO가 본 화면이다: 칸에는
      「제조사 미확인」, 배지에는 「입력 필요」, 그리고 **왜 그런지는 ⓘ 안에**.
-     이제 어디까지 찾아봤는지와 다음 행동이 화면에 그대로 선다. */
-  return { value, note: manufacturerNoneNote(resolution.brand), tip: MANUFACTURER_NONE_DETAIL, badge: "NONE" };
+     이제 어디까지 찾아봤는지와 다음 행동이 화면에 그대로 선다.
+     REWORK-13A — 여기에 «그래도 막히지 않는다»가 한 줄 더 붙는다(ⓘ 안). 예전
+     화면은 ⚠만 보여 줘서 셀러가 등록이 차단된 줄 알았다. */
+  return {
+    value,
+    note: manufacturerNoneNote(resolution.brand),
+    tip: `${MANUFACTURER_NONE_DETAIL} ${MANUFACTURER_OPTIONAL_NOTE}`,
+    badge: "NONE",
+  };
 }
 
 function badgeNode(state: ManufacturerViewState["badge"], field: { value: string; source: FieldSource }) {
