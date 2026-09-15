@@ -378,6 +378,9 @@ describe("REWORK-13A A — 다섯 단계가 화면과 payload에서 똑같이 �
     expect(screen).toContain("상품 원문 · 브랜드 프로필 · 판매자 기본정보 어디에도 제조사가 없습니다");
     expect(screen).toContain("브랜드 「Bobo Choses」에 등록된 제조사가 없습니다");
     expect(screen).toContain("설정 > 브랜드 관리의 브랜드 프로필에 등록하세요");
+    /* 🔴 REWORK-13A — ⚠ 만 보여 주면 셀러는 «등록이 차단됐다»로 읽는다.
+       화면이 «막히지 않는다»를 직접 말하는지 확인한다. */
+    expect(screen).toContain("제조사가 비어 있어도 상품 분석과 등록 준비는 계속됩니다");
     // 🔴 값을 지어내지 않는다 — 칸은 비어 있다.
     expect(shownValue()).toBe("");
     expect(naverManufacturer(makeProduct(), null, null) ?? "").toBe("");
