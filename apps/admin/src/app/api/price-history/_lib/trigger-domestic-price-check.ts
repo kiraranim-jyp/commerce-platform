@@ -1,5 +1,5 @@
 import { backfillCanonicalProduct, buildProductIdentityDna, type CanonicalProduct } from "@commerce/shared";
-import { resolveCategoryScopesFromProduct } from "../../domestic-price-sources/_lib/category-scope";
+import { resolveMarketCategoryScopes } from "../../domestic-price-sources/_lib/category-scope";
 import { runDomesticPriceCheck, type DomesticPriceCheckResult } from "./run-domestic-price-check";
 
 /**
@@ -40,6 +40,12 @@ export interface NewSnapshotDomesticCheckInput {
   /** 방금 저장된 스냅샷의 canonicalProduct. 스냅샷을 다시 읽지 않고 이미 손에
    * 있는 값을 그대로 쓴다 — 저장 직후라 DB를 한 번 더 읽어봐야 같은 값이다. */
   canonicalProduct: CanonicalProduct;
+  /** MARKET-CATEGORY-1(CEO 확정, 2026-09-15) — 셀러가 상품 검색 시작 시 고른
+   * 시장조사 카테고리(workspace.marketCategoryProfileId). **분석 직후 1회 도는
+   * 이 조사가 셀러 선택이 실제로 도달해야 하는 첫 자리다** — 여기를 빼먹으면
+   * 화면에서 고른 값이 첫 조사에는 반영되지 않고 "지금 확인"을 눌러야만
+   * 반영되는, 설명할 수 없는 화면이 된다. 없으면 기존 자동 추정 그대로. */
+  marketCategoryProfileId?: string | null;
 }
 
 /**
@@ -66,7 +72,8 @@ export async function runDomesticPriceCheckForNewSnapshot(
       // TTAEJYO 2.0 — 이 상품 카테고리에 맞는 편집샵만 뒤진다. 스냅샷 전체를
       // 손에 쥔 경로라 breadcrumb/권장연령까지 근거로 쓸 수 있다(가격 확인
       // 라우트와 동일 — 판정 함수는 둘이 같은 것을 쓴다).
-      categoryScopes: resolveCategoryScopesFromProduct(product),
+      // MARKET-CATEGORY-1 — 셀러가 고른 값이 있으면 그것이 이긴다.
+      categoryScopes: resolveMarketCategoryScopes(product, input.marketCategoryProfileId),
       // 멱등성 — 새 정책을 만들지 않고 이미 있는 것을 쓴다. 같은 스냅샷에
       // 오늘자 DOMESTIC_SHOP 관측이 이미 있으면(셀러가 "재확인"을 먼저 눌렀거나,
       // 이 트리거가 재시도로 두 번 불렸거나) 검색도 저장도 하지 않고 끝낸다.

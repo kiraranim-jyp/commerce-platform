@@ -44,7 +44,12 @@ import type { AgeGroup, Gender, ProductSignals } from "./product-resolver";
  * (WOMEN_FASHION × MOM_3040)을 나중에 만들려면 오늘 두 축을 갈라 두는 것
  * 말고 할 일이 없다.
  */
-export type CategoryProfileId = "KIDS_FASHION" | "WOMEN_FASHION" | "FASHION_ACCESSORIES" | "HOME_LIFESTYLE";
+export type CategoryProfileId =
+  | "KIDS_FASHION"
+  | "WOMEN_FASHION"
+  | "FASHION_ACCESSORIES"
+  | "HOME_LIFESTYLE"
+  | "GOLF";
 
 /**
  * 이 카테고리가 스마트스토어에서 법적으로 써야 하는 상품정보제공고시 유형.
@@ -63,7 +68,8 @@ export type NaverNoticeTypeName =
   | "SHOES"
   | "FASHION_ITEMS"
   | "KITCHEN_UTENSILS"
-  | "FURNITURE";
+  | "FURNITURE"
+  | "SPORTS_EQUIPMENT";
 
 /**
  * packages/listing/src/naver/types.ts의 NaverProductInfoProvidedNotice union이
@@ -250,6 +256,51 @@ export const CATEGORY_PROFILES: Record<CategoryProfileId, CategoryProfile> = {
     // 유형 — 소재·색상·치수를 묻는 WEAR와 요구 항목 자체가 다르다).
     naverNoticeType: "KITCHEN_UTENSILS",
   },
+  /**
+   * MARKET-CATEGORY-1(CEO 확정, 2026-09-15) — **셀러가 고를 수 있는 이름만 여기
+   * 둔다. 골프 사이트는 한 곳도 지어내지 않는다.**
+   *
+   * ── 왜 신호 칸이 전부 비어 있나 ──────────────────────────────────────────
+   * 이 프로필은 "상품 검색" 화면의 [대상 카테고리] 목록에 **골프용품이라는
+   * 이름이 보이게** 하려고만 있다. 자동 추론(detectCategoryProfile)은 이번
+   * 지시의 우선순위가 아니고(CEO: "자동 추론은 지금 우선순위가 아니다"), 어휘를
+   * 지어 넣으면 그 순간 기존 아동 상품 판정이 흔들린다.
+   * productTypes/brandHints/productKeywords/ageGroups/genders를 전부 비워 두면
+   * detectCategoryProfile의 네 분기가 이 프로필을 **구조적으로 고를 수 없다**
+   * (①은 productTypes.includes, ②는 brandHints.find, ③은 ageGroups.includes,
+   * ④는 subProfiles가 필요하다 — 전부 빈 값에서 false다). 즉 이 항목을 더해도
+   * 오늘의 자동 판정 결과는 한 건도 바뀌지 않는다.
+   *
+   * ── 선택 가능 여부를 여기서 정하지 않는다 ────────────────────────────────
+   * "골프용품"을 코드에서 막지 않는다(CTO 확정). 선택 가능/불가는 오직
+   * **카탈로그에 이 스코프에 맞는 소스가 몇 개인가**로 정해진다 — 실측 0개면
+   * 화면이 "준비중"으로 잠그고, CEO 승인 사이트가 domestic_price_sources에
+   * 들어오는 순간 코드 변경 없이 선택 가능해진다.
+   *
+   * ── 고시유형 ─────────────────────────────────────────────────────────────
+   * SPORTS_EQUIPMENT는 네이버가 실제로 제공하는 36종 중 하나다
+   * (docs/naver-provided-notice-types-raw.json 실측 응답 원문에 있는 값 — 우리가
+   * 지어낸 이름이 아니다). NAVER_SUPPORTED_NOTICE_TYPES에 없으므로
+   * isNaverNoticeTypeSupported()가 false를 돌려준다 = "스마트스토어 등록은 아직
+   * 지원하지 않는다"가 정직하게 드러난다(FASHION_ACCESSORIES·HOME_LIFESTYLE와
+   * 같은 상태).
+   */
+  GOLF: {
+    id: "GOLF",
+    label: "골프용품",
+    platformPathKeywords: [],
+    conflictPathKeywords: [],
+    ageGroups: [],
+    genders: [],
+    productTypes: [],
+    brandHints: [],
+    productKeywords: [],
+    // 029~035가 쓰는 category_scope 어휘에 값 하나를 더하는 것뿐이다. DB에
+    // CHECK/FK가 없어 마이그레이션이 필요 없고, 이 문자열을 가진 소스 행이
+    // 아직 0개라 오늘은 아무 소스도 이 값으로 걸리지 않는다.
+    marketSourceScopes: ["GOLF"],
+    naverNoticeType: "SPORTS_EQUIPMENT",
+  },
 };
 
 export const CATEGORY_PROFILE_LIST: CategoryProfile[] = Object.values(CATEGORY_PROFILES);
@@ -278,6 +329,24 @@ export interface CategoryProfileDetection {
 /** 이 판정이 실제로 뒤질 국내 판매처 범위(상위 + 하위 갈래). */
 export function detectionMarketSourceScopes(detection: CategoryProfileDetection): string[] {
   return [...detection.profile.marketSourceScopes, ...(detection.subProfile?.extraMarketSourceScopes ?? [])];
+}
+
+/**
+ * MARKET-CATEGORY-1 — **셀러가 직접 고른** 카테고리가 뒤질 국내 판매처 범위.
+ *
+ * 자동 추정(detectionMarketSourceScopes)과 값 계산을 두 번 구현하지 않는다:
+ * 상위 프로필의 marketSourceScopes 그대로다. 하위 갈래(MATERNITY 등)는 더하지
+ * 않는다 — 셀러가 고른 것은 상위 이름 하나이고, 하위 갈래는 상품 어휘로만
+ * 갈리는 값이라 고르지 않은 것을 우리가 얹으면 그건 추측이다.
+ *
+ * 모르는 id(프론트가 옛 값을 보냈거나 손으로 만든 요청)는 null을 돌려준다 =
+ * 필터 없음 = 자동 추정이 없을 때와 완전히 같은 오늘의 동작이다. 여기서 아무
+ * 프로필이나 고르면 "모르는 것"이 "확실히 아닌 것"으로 둔갑한다.
+ */
+export function selectedMarketSourceScopes(profileId: string | null | undefined): string[] | null {
+  if (!profileId) return null;
+  const profile = (CATEGORY_PROFILES as Record<string, CategoryProfile | undefined>)[profileId];
+  return profile ? [...profile.marketSourceScopes] : null;
 }
 
 function matchSubProfile(profile: CategoryProfile, haystack: string): CategorySubProfile | null {

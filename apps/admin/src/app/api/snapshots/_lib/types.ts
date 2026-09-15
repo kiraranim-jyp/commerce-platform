@@ -1,4 +1,4 @@
-import type { CategorySelection } from "@commerce/category";
+import type { CategoryProfileId, CategorySelection } from "@commerce/category";
 import type { DetailPageBlock } from "@commerce/listing";
 import type { CanonicalProduct, PlatformId, ProductMetadata } from "@commerce/shared";
 import type { ProcessingReport, WorkspaceItem } from "../../pipeline/response.types";
@@ -49,6 +49,23 @@ export interface SnapshotWorkspaceState {
    * 없으면(레거시 세션) CommerceWorkspace가 자체 기본값(UNRESOLVED_CATEGORY)으로
    * 대체한다. */
   categoryMappings?: Record<PlatformId, CategorySelection>;
+  /**
+   * MARKET-CATEGORY-1(CEO 확정, 2026-09-15) — 셀러가 **상품 검색을 시작할 때**
+   * 직접 고른 시장조사 카테고리. 이 값이 "어느 사이트를 조사할 것인가"를 정한다.
+   *
+   * 새 컬럼/새 테이블을 만들지 않는다. product_snapshots.workspace(jsonb)는
+   * categoryMappings(채널 카테고리)를 이미 같은 이유로 담고 있는 자리다 —
+   * 마이그레이션 없이 여기 한 칸을 더 쓴다. 저장하는 이유는 화면 복원이 아니라
+   * **재확인 때문이다**: /api/price-history/check가 이 값을 못 읽으면 "지금
+   * 확인"이 첫 조사와 다른 사이트를 뒤지게 된다.
+   *
+   * 없으면(이 기능 이전에 저장된 스냅샷) 기존 자동 추정으로 내려간다 — 오늘
+   * 동작 그대로다(resolveMarketCategoryScopes 참고).
+   *
+   * 주의: 채널 카테고리(categoryMappings)와 다른 축이다. 이건 "어디를 조사할
+   * 것인가"이고 저건 "어느 채널 카테고리로 등록할 것인가"다 — 섞지 않는다.
+   */
+  marketCategoryProfileId?: CategoryProfileId;
   platformSettings: {
     coupang?: {
       sellerProfileId: string | null;

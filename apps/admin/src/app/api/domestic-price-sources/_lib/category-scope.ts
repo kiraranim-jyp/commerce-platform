@@ -1,4 +1,9 @@
-import { detectCategoryProfile, detectionMarketSourceScopes, resolveProductSignals } from "@commerce/category";
+import {
+  detectCategoryProfile,
+  detectionMarketSourceScopes,
+  resolveProductSignals,
+  selectedMarketSourceScopes,
+} from "@commerce/category";
 import type { CanonicalProduct, FieldSource, ProvenanceField } from "@commerce/shared";
 
 /**
@@ -74,4 +79,24 @@ export function resolveCategoryScopesFromProduct(product: CanonicalProduct): str
     breadcrumbPath: product.breadcrumbPath,
     recommendedAge: product.recommendedAge.value,
   });
+}
+
+/**
+ * MARKET-CATEGORY-1(CEO 확정, 2026-09-15) — **셀러가 상품 검색 시작 시 고른
+ * 카테고리가 이긴다.**
+ *
+ * 이 저장소에서 "조사 대상 사이트"를 정하는 값은 categoryScopes 하나뿐이고,
+ * 그 값이 실제로 쓰이는 자리는 sourceFitsScopes 두 줄이다
+ * (run-domestic-price-check.ts / domestic-price-sources/search route.ts).
+ * 그래서 선택값을 화면에서 그 두 줄까지 흘려보내는 방법은 **여기 한 곳에서
+ * 우선순위를 정하는 것**뿐이다 — 필터를 새로 만들지 않는다.
+ *
+ * 고르지 않았거나(레거시 스냅샷) 모르는 id면 기존 자동 추정으로 그대로
+ * 내려간다 = 오늘과 완전히 같은 동작. 회귀가 구조적으로 불가능하다.
+ */
+export function resolveMarketCategoryScopes(
+  product: CanonicalProduct,
+  selectedProfileId: string | null | undefined,
+): string[] | null {
+  return selectedMarketSourceScopes(selectedProfileId) ?? resolveCategoryScopesFromProduct(product);
 }

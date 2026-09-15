@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/require-user";
 import { backfillCanonicalProduct, buildProductIdentityDna } from "@commerce/shared";
 import { computeMarketAlert, type AlertCategory } from "@commerce/pricing";
-import { resolveCategoryScopesFromProduct } from "../../domestic-price-sources/_lib/category-scope";
+import { resolveMarketCategoryScopes } from "../../domestic-price-sources/_lib/category-scope";
 import { getSnapshot } from "../../snapshots/_lib/snapshot";
 import { computeMarketIntelligence } from "../_lib/market-intelligence";
 import { openAlertIfNotActive, resolveAlertsNotIn } from "../_lib/price-alerts";
@@ -54,7 +54,12 @@ export async function POST(request: Request) {
       // TTAEJYO 2.0 — 이 상품 카테고리에 맞는 편집샵만 뒤진다. 스냅샷을 통째로
       // 갖고 있는 경로라 breadcrumb/권장연령까지 근거로 쓸 수 있다(검색 라우트는
       // 그 둘이 없어 더 자주 null이 된다 — 판정 함수는 둘이 같은 것을 쓴다).
-      categoryScopes: resolveCategoryScopesFromProduct(product),
+      //
+      // MARKET-CATEGORY-1(CEO 확정, 2026-09-15) — 셀러가 상품 검색 시작 시 고른
+      // 카테고리가 스냅샷에 남아 있으면 그것이 이긴다. "지금 확인"이 첫 조사와
+      // **같은 사이트 집합**을 뒤지게 하는 자리다 — 여기가 자동 추정으로 되돌아가면
+      // 같은 상품의 1차 조사와 재확인이 서로 다른 곳을 뒤진 결과를 나란히 보여준다.
+      categoryScopes: resolveMarketCategoryScopes(product, snapshot.workspace.marketCategoryProfileId),
     });
   } catch (error) {
     domesticShop = {

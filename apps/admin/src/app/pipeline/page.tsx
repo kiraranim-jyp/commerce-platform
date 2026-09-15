@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { backfillCanonicalProduct, type CanonicalProduct, type PlatformId } from "@commerce/shared";
-import type { CategorySelection } from "@commerce/category";
+import type { CategoryProfileId, CategorySelection } from "@commerce/category";
+import type { MarketCategoryOption } from "@/app/api/market-categories/route";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -24,6 +25,40 @@ import { downloadWorkspaceZip, resizeToSquare } from "./zip";
 
 export default function PipelinePage() {
   const [url, setUrl] = useState("");
+  /**
+   * MARKET-CATEGORY-1(CEO 확정, 2026-09-15) — "상품 검색 시작 시 대상 카테고리를
+   * 셀러가 직접 선택한다." 설정 화면이 아니라 **검색을 시작하는 이 자리**에서
+   * 묻는다. 필수값이라 고르기 전에는 검색이 시작되지 않는다.
+   *
+   * 이 값은 화면에 남는 장식이 아니다 — saveSnapshotToServer()가 스냅샷
+   * workspace에 실어 보내고, /api/snapshots가 분석 직후 국내 조사
+   * (runDomesticPriceCheckForNewSnapshot)에 그대로 넘겨서 sourceFitsScopes가
+   * 뒤질 판매처를 좁히는 데 쓴다. "지금 확인"(/api/price-history/check)도 저장된
+   * 같은 값을 읽으므로 첫 조사와 재확인이 같은 곳을 뒤진다.
+   */
+  const [marketCategoryId, setMarketCategoryId] = useState<CategoryProfileId | "">("");
+  /** 목록은 카탈로그 실측이다(GET /api/market-categories). 이름 상수를 화면에
+   * 복사해 두지 않는다 — 소스가 0개인 카테고리는 서버가 available=false로
+   * 내려주고, 사이트가 카탈로그에 들어오면 코드 변경 없이 선택 가능해진다. */
+  const [marketCategories, setMarketCategories] = useState<MarketCategoryOption[]>([]);
+  /** 고른 카테고리가 실제로 조사 가능한가. 목록을 아직 못 받았거나(빈 배열)
+   * 준비중 카테고리가 들어와 있으면 false — 검색을 시작하지 않는 근거다. */
+  const isSelectedCategoryReady = marketCategories.some(
+    (category) => category.id === marketCategoryId && category.available,
+  );
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch("/api/market-categories");
+        const data = (await res.json()) as { ok?: boolean; categories?: MarketCategoryOption[] };
+        if (data?.ok && Array.isArray(data.categories)) setMarketCategories(data.categories);
+      } catch {
+        // 목록을 못 받으면 선택지가 비어 있고, 필수값이라 검색이 시작되지 않는다.
+        // 고를 수 없는 카테고리를 임의로 지어내 보여주지 않는다 — 그러면 셀러가
+        // 고른 값이 조사 대상과 무관해진다.
+      }
+    })();
+  }, []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PipelineResponse | null>(null);
@@ -180,6 +215,9 @@ export default function PipelinePage() {
             setThumbnails(ws.thumbnails ?? {});
             setRepresentativeId(ws.representativeId);
             setCategoryMappings(ws.categoryMappings ?? null);
+            // MARKET-CATEGORY-1 — 이어서 작업/재오픈 때도 이 상품을 어느
+            // 카테고리로 조사했는지 그대로 복원한다(없으면 이 기능 이전 스냅샷).
+            setMarketCategoryId(ws.marketCategoryProfileId ?? "");
             setHydrated(true);
             return;
           }
@@ -199,9 +237,11 @@ export default function PipelinePage() {
             thumbnails?: Record<string, string>;
             representativeId?: string | null;
             categoryMappings?: Record<PlatformId, CategorySelection>;
+            marketCategoryProfileId?: CategoryProfileId;
           };
           if (saved.result && saved.product) {
             setUrl(saved.url ?? "");
+            setMarketCategoryId(saved.marketCategoryProfileId ?? "");
             setResult(saved.result);
             setProduct(backfillCanonicalProduct(saved.product));
             setItems(saved.items ?? []);
@@ -236,6 +276,7 @@ export default function PipelinePage() {
             thumbnails,
             representativeId,
             categoryMappings,
+            marketCategoryProfileId: marketCategoryId || undefined,
           }),
         );
       } else {
@@ -246,7 +287,7 @@ export default function PipelinePage() {
       // 영향 없게 조용히 무시한다.
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated, url, result, product, items, thumbnails, representativeId, categoryMappings]);
+  }, [hydrated, url, result, product, items, thumbnails, representativeId, categoryMappings, marketCategoryId]);
 
   async function saveSnapshotToServer() {
     if (!result || !product) return;
@@ -292,6 +333,10 @@ export default function PipelinePage() {
             developerMode,
             platformSettings: {},
             categoryMappings: categoryMappings ?? undefined,
+            // MARKET-CATEGORY-1 — 셀러가 고른 조사 카테고리. 이 필드가 서버에
+            // 도착해야 분석 직후 국내 조사와 이후 "지금 확인"이 같은 사이트
+            // 집합을 뒤진다(api/snapshots/route.ts 참고).
+            marketCategoryProfileId: marketCategoryId || undefined,
           },
         }),
       });
@@ -429,6 +474,20 @@ export default function PipelinePage() {
   }
 
   async function runPipeline() {
+    // MARKET-CATEGORY-1 — 필수값. 버튼 disabled만으로 막지 않는다(키보드 Enter·
+    // 프로그램 호출로도 여기 들어올 수 있고, 카테고리 없이 시작한 검색은 어느
+    // 사이트를 뒤졌는지 나중에 설명할 수 없는 결과를 남긴다).
+    if (!marketCategoryId) {
+      setError("대상 카테고리를 먼저 선택해 주세요.");
+      return;
+    }
+    // 준비중(조사 사이트 0곳) 카테고리로는 시작하지 않는다. option이 disabled라
+    // 사람은 고를 수 없지만 select.value는 프로그램으로 넣을 수 있고, 그렇게
+    // 시작된 검색은 "아무 데도 안 뒤진" 결과를 "비교상품 없음"으로 보여준다.
+    if (!isSelectedCategoryReady) {
+      setError("아직 조사 사이트가 등록되지 않은 카테고리입니다 — 다른 카테고리를 선택해 주세요.");
+      return;
+    }
     setAnalysisStartedAt(Date.now());
     setLoading(true);
     setError(null);
@@ -550,6 +609,10 @@ export default function PipelinePage() {
     setJobKey(null);
     setSnapshotStatus(null);
     setUrl("");
+    // MARKET-CATEGORY-1 — 새 상품은 새로 고른다. 이전 상품의 카테고리를 그대로
+    // 물려주면 셀러가 안 고른 값으로 조사가 돌고, 그 사실이 화면 어디에도
+    // 안 적힌다(CEO: 검색 시작 시 직접 선택한다).
+    setMarketCategoryId("");
     setLoading(false);
     setError(null);
     setResult(null);
@@ -874,23 +937,55 @@ export default function PipelinePage() {
                 쿠팡 탭에서 등록 직전(confirmListing)에 이미 독립적으로 다시
                 확인한다(등록 직전 최종 재확인이 이 화면의 사전 확인보다 더
                 정확하다 — 그 사이에 토큰이 만료될 수도 있으므로). */}
-            <div className="mx-auto mt-8 flex max-w-[960px] flex-col gap-2 rounded-xl border border-border bg-surface p-2 shadow-subtle sm:flex-row sm:items-center">
-              <input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://example.com/product/123"
-                aria-label="상품 URL"
-                disabled={loading}
-                className="flex-1 rounded-md border-0 bg-transparent px-4 py-3.5 text-sm text-text-primary focus:outline-none disabled:opacity-60"
-              />
-              <button
-                onClick={runPipeline}
-                disabled={loading || !url}
-                className="flex items-center justify-center gap-2 rounded-md bg-primary px-5 py-3.5 text-sm font-medium text-white shadow-subtle transition-colors hover:bg-primary-hover disabled:opacity-40"
-              >
-                상품 분석 →
-              </button>
+            {/* MARKET-CATEGORY-1(CEO 확정, 2026-09-15) — "상품 검색 시작 시 대상
+                카테고리를 셀러가 직접 선택한다." URL 칸보다 **위**에 둔다: 무엇을
+                조사할지가 어디를 붙여넣을지보다 먼저 정해지는 값이라서다.
+                설정 화면에서 고르는 구조가 아니고, [카테고리 변경] 오버라이드
+                버튼도 만들지 않는다(이번 지시 범위).
+                소스가 0개인 카테고리는 서버가 available=false로 내려주고 여기서
+                선택 불가 + "준비중"으로 표시된다 — 고르게 해 놓고 조사 대상이
+                0곳이 되는 화면(= "국내 비교상품 없음"이라고 거짓말하는 화면)을
+                만들지 않기 위해서다. */}
+            <div className="mx-auto mt-8 flex max-w-[960px] flex-col gap-2 rounded-xl border border-border bg-surface p-2 shadow-subtle">
+              <label className="flex flex-col gap-1 px-4 pt-2 text-left sm:flex-row sm:items-center sm:gap-3 sm:pt-1">
+                <span className="shrink-0 text-xs font-medium text-text-secondary">
+                  대상 카테고리 <span className="text-error">*</span>
+                </span>
+                <select
+                  value={marketCategoryId}
+                  onChange={(e) => setMarketCategoryId(e.target.value as CategoryProfileId | "")}
+                  aria-label="대상 카테고리"
+                  disabled={loading}
+                  className="flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none disabled:opacity-60"
+                >
+                  <option value="">카테고리를 선택하세요</option>
+                  {marketCategories.map((category) => (
+                    <option key={category.id} value={category.id} disabled={!category.available}>
+                      {category.available
+                        ? `${category.label} · 조사 대상 ${category.sourceCount}곳`
+                        : `${category.label} · 준비중(조사 사이트 없음)`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://example.com/product/123"
+                  aria-label="상품 URL"
+                  disabled={loading}
+                  className="flex-1 rounded-md border-0 bg-transparent px-4 py-3.5 text-sm text-text-primary focus:outline-none disabled:opacity-60"
+                />
+                <button
+                  onClick={runPipeline}
+                  disabled={loading || !url || !isSelectedCategoryReady}
+                  className="flex items-center justify-center gap-2 rounded-md bg-primary px-5 py-3.5 text-sm font-medium text-white shadow-subtle transition-colors hover:bg-primary-hover disabled:opacity-40"
+                >
+                  상품 분석 →
+                </button>
+              </div>
             </div>
           </div>
 

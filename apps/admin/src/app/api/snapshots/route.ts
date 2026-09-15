@@ -79,7 +79,18 @@ export async function POST(request: Request) {
     const snapshotId = result.snapshot.id;
     const workspaceId = auth.user.workspaceId;
     const canonicalProduct = body.workspace.canonicalProduct;
-    after(() => runDomesticPriceCheckForNewSnapshot({ snapshotId, workspaceId, canonicalProduct }));
+    // MARKET-CATEGORY-1(CEO 확정, 2026-09-15) — 셀러가 상품 검색 시작 시 고른
+    // 시장조사 카테고리를 그대로 넘긴다. 이 한 줄이 "화면에서 고른 값"과
+    // "실제로 뒤진 사이트"를 잇는 유일한 지점이다(분석 직후 1회 조사 경로).
+    const marketCategoryProfileId = body.workspace.marketCategoryProfileId ?? null;
+    after(() =>
+      runDomesticPriceCheckForNewSnapshot({
+        snapshotId,
+        workspaceId,
+        canonicalProduct,
+        marketCategoryProfileId,
+      }),
+    );
   }
 
   return NextResponse.json(result);
