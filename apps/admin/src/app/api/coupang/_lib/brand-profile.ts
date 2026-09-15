@@ -53,6 +53,32 @@ export async function listBrandProfiles(): Promise<BrandProfile[]> {
   return (data as BrandProfileRow[]).map(toProfile);
 }
 
+/**
+ * 브랜드명 비교 키. 화면(use-manufacturer-resolution.ts:normalizeBrandKey)과
+ * **글자 그대로 같은 규칙**이어야 한다 — 두 곳이 다르면 같은 상품에 대해
+ * 화면과 서버가 서로 다른 제조사를 말한다.
+ *
+ * REWORK-13A(CEO 지시, 2026-09-15 — "③ 브랜드 관리 조회가 브랜드값 정확 일치인데
+ * 대소문자·공백·특수문자 처리는 어떤가") — 실측 결과 세 가지 구멍이 있었다:
+ *   1. `.ilike("name", trimmed)` 는 **조회하는 쪽만** trim 했다. 저장된 이름에
+ *      앞뒤 공백이 있으면 영원히 안 맞는다.
+ *   2. `ilike` 는 패턴이라 이름 안의 `%`·`_` 를 **와일드카드로 읽는다**.
+ *      "A_B" 로 저장된 프로필은 "AxB" 브랜드에도 걸릴 수 있었다(오매칭).
+ *   3. 전각/반각·합자 같은 유니코드 표기 차이를 전혀 다루지 않았다.
+ *
+ * 🔴 fuzzy 매칭이 아니다. 부분 일치·유사도는 여전히 쓰지 않는다("Play"가
+ * "Play Up"에 붙는 사고를 막은 기존 원칙 그대로) — **같은 이름을 같은 이름으로
+ * 읽게** 하는 정규화만 한다.
+ */
+export function normalizeBrandKey(name: string): string {
+  return name.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+/** `%`·`_`·`\` 를 리터럴로 취급하게 만든다 — 브랜드 이름을 패턴으로 읽히지 않기 위함. */
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
 /** product.brand.value(원본 사이트에서 추출/정제된 브랜드명)와 대소문자
  * 무시 정확 일치로 매칭한다 — 부분 일치는 다른 브랜드를 잘못 매칭할 위험이
  * 있어(예: "Play"가 "Play Up"에 매칭) 쓰지 않는다. */
@@ -64,10 +90,16 @@ export async function findBrandProfileByName(brandName: string): Promise<BrandPr
   const { data, error } = await supabase
     .from("coupang_brand_profiles")
     .select("*")
-    .ilike("name", trimmed)
+    .ilike("name", escapeLikePattern(trimmed))
     .maybeSingle();
-  if (error || !data) return null;
-  return toProfile(data as BrandProfileRow);
+  if (!error && data) return toProfile(data as BrandProfileRow);
+  /* REWORK-13A — 위 정확 일치가 놓치는 것은 «다른 브랜드»가 아니라 «같은 브랜드를
+     다르게 적어 둔 것»뿐이다(저장 쪽 공백, 연속 공백, 전각 표기). 목록을 받아
+     양쪽을 같은 키로 정규화해서 **정확히 하나만** 맞을 때 인정한다 — 둘 이상
+     맞으면 어느 것이 옳은지 우리가 정할 근거가 없으므로 아무것도 고르지 않는다. */
+  const key = normalizeBrandKey(trimmed);
+  const matches = (await listBrandProfiles()).filter((p) => normalizeBrandKey(p.name) === key);
+  return matches.length === 1 ? matches[0] : null;
 }
 
 export interface BrandProfileInput {

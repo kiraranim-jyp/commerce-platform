@@ -422,12 +422,41 @@ export function validateNaverPayload(
     "MISSING",
     "색상이 없습니다 — 상품 원본/상세설명에서 확인되지 않았습니다. 상세페이지에 이미 나와 있으면 \"상세페이지 참조\"로 대체할 수 있습니다.",
   );
+  /**
+   * REWORK-13A(CEO 지시, 2026-09-15) — **"제조사 미확인 = 등록 차단"의 실제 자리.**
+   *
+   * ── 무엇이 틀렸었나 ────────────────────────────────────────────────────
+   * 이 줄은 `input.product.manufacturer` **하나만** 봤다. 그런데 payload 에 실제로
+   * 나가는 값은 build-payload.ts 가 계산한 `manufacturerValue` 이고, 그것은
+   * 상품 원문이 비었을 때 ③브랜드 관리 · ④판매자 기본값으로 채워진다
+   * (resolvedManufacturer, N-3.83). 그래서 **브랜드 관리에 제조사를 등록해 둔
+   * 상품인데도** validator 만 "제조자(사)가 없습니다"라고 말했고, 그 MISSING 이
+   * required 로 집계되어 스마트스토어 등록 게이트를 계속 막았다 — payload 엔
+   * 값이 들어 있는데 화면이 못 누르게 막는, N-3.71 이 없애려던 바로 그
+   * UI↔payload 불일치다.
+   *
+   * ── 이제 무엇을 보는가 ─────────────────────────────────────────────────
+   * **실제로 전송될 payload 값**을 본다(같은 파일의 size/naverShoppingSearchInfo
+   * 가 이미 쓰는 판정 방식). 다섯 단계 중 어느 것이 채웠든 값이 있으면 통과다.
+   *
+   * ── 그래도 왜 남겨 두는가 ──────────────────────────────────────────────
+   * 스마트스토어는 이 필드를 **실제로** 필수로 요구한다 — N-3.71 에서 실제
+   * 프로덕션 등록 1건이 `productInfoProvidedNotice.kids.manufacturer:
+   * "데이터를 입력해 주세요."` 로 HTTP 400 을 받은 실측 근거가 있다(같은 파일
+   * 392-410줄). 그러므로 지우지 않고, 대신 **해결 경로**를 문장에 적는다.
+   * 애매한 값을 지어 넣지 않는다.
+   */
+  const noticeManufacturer = (
+    originProduct.detailAttribute?.productInfoProvidedNotice as
+      | Record<string, { manufacturer?: string } | undefined>
+      | undefined
+  )?.[notice]?.manufacturer;
   check(
     fields,
     `${noticePrefix}.manufacturer`,
-    isNoticeFieldSatisfied("manufacturer", input.product.manufacturer),
+    Boolean((noticeManufacturer ?? "").trim()),
     "MISSING",
-    "제조자(사)가 없습니다 — 판매자 정보 기본값(Settings)에도 없습니다. 상세페이지에 이미 나와 있으면 \"상세페이지 참조\"로 대체할 수 있습니다.",
+    "제조사 정보가 필요합니다 — 스마트스토어가 고시정보에서 실제로 요구하는 값입니다. ① 등록 화면의 「제조사」 칸에 직접 입력하거나, ② 설정 > 브랜드 관리에 이 브랜드의 제조사를 등록하면(이후 같은 브랜드 상품에 자동 적용) 해결됩니다. 상세페이지에 이미 나와 있으면 \"상세페이지 참조\"로 대체할 수도 있습니다.",
   );
   check(
     fields,

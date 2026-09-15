@@ -257,6 +257,14 @@ async function computeSmartstoreReadiness(
     descriptionTemplate: context.detailPage.descriptionTemplate,
     commonImages: context.detailPage.commonImages,
     brandIntro: context.detailPage.brandIntro,
+    /* REWORK-13A(CEO 지시, 2026-09-15) — **이 한 줄이 빠져 있었다.**
+       register route(smartstore/register/route.ts:392)는 이미
+       `context.notice.manufacturer`(③브랜드 관리 → ④판매자 기본값 폴백 결과)를
+       넘기는데, 대시보드 준비도는 같은 context를 손에 들고도 이 인자만 빼고
+       payload를 만들었다. 그래서 브랜드 관리에 제조사를 등록해 둔 상품도
+       대시보드에서는 「제조자 없음」으로 집계됐다 — 서버는 등록해 주는데 목록은
+       못 한다고 말하는, N-3.56이 없애려던 그 두 벌 계산이다. */
+    resolvedManufacturer: context.notice.manufacturer,
   });
   const validation = validateNaverPayload(
     payload,
