@@ -19,6 +19,25 @@ const DOMAIN_STATE = new Map<string, DomainState>();
 
 const MIN_INTERVAL_MS = 500;
 const MAX_CONCURRENT = 2;
+
+/**
+ * GOLF-01.5 축 C(CEO 지시, 2026-09-16) — 소스가 «자기 문서로» 더 느린 속도를
+ * 요구하면 그 값을 쓴다. 기본값(500ms · 동시 2)은 공개 웹 페이지를 상대로 정한
+ * 값이다.
+ *
+ * Rakuten: CEO 확인 — 1 request / sec. 공식 문서는 숫자 대신 "If many accesses
+ * to an identical URL are made in a short time, the URL may become unresponsive
+ * for a fixed period" 라고만 적으므로 더 보수적인 쪽(1초 · 동시 1)을 쓴다.
+ * 🔴 override 는 조이는 방향으로만 쓴다 — 추측으로 «완화»하지 않는다.
+ */
+const HOST_OVERRIDES: Record<string, { minIntervalMs: number; maxConcurrent: number }> = {
+  "openapi.rakuten.co.jp": { minIntervalMs: 1000, maxConcurrent: 1 },
+};
+
+function limitsFor(hostname: string): { minIntervalMs: number; maxConcurrent: number } {
+  return HOST_OVERRIDES[hostname] ?? { minIntervalMs: MIN_INTERVAL_MS, maxConcurrent: MAX_CONCURRENT };
+}
+
 const BACKOFF_BASE_MS = 1000;
 const BACKOFF_CAP_MS = 5000;
 const MAX_RETRY_ON_429 = 1;
@@ -42,6 +61,7 @@ function stateFor(hostname: string): DomainState {
 export async function acquireDomainSlot(url: string): Promise<() => void> {
   const hostname = new URL(url).hostname;
   const state = stateFor(hostname);
+  const { minIntervalMs, maxConcurrent } = limitsFor(hostname);
 
   for (;;) {
     const now = Date.now();
@@ -49,13 +69,13 @@ export async function acquireDomainSlot(url: string): Promise<() => void> {
       await sleep(state.blockedUntil - now);
       continue;
     }
-    if (state.activeCount >= MAX_CONCURRENT) {
+    if (state.activeCount >= maxConcurrent) {
       await sleep(POLL_INTERVAL_MS);
       continue;
     }
     const elapsed = now - state.lastRequestAt;
-    if (elapsed < MIN_INTERVAL_MS) {
-      await sleep(MIN_INTERVAL_MS - elapsed);
+    if (elapsed < minIntervalMs) {
+      await sleep(minIntervalMs - elapsed);
       continue;
     }
     break;

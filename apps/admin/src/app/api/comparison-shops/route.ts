@@ -1,4 +1,4 @@
-import { supportsComparisonShopSearch } from "@commerce/crawler";
+import { comparisonShopCollectability } from "@commerce/crawler";
 import { NextResponse } from "next/server";
 import { createComparisonShop, listComparisonShops } from "./_lib/comparison-shop";
 
@@ -17,14 +17,25 @@ export const runtime = "nodejs";
  *    없다»가 바로 이것이다.
  *
  * 값을 여기서 새로 정의하지 않는다 — searchOneShop이 실제로 분기하는 그
- * 조건(supportsComparisonShopSearch)을 그대로 읽는다. DB 컬럼으로 두지 않는
- * 이유도 같다: 파서는 코드에 있지 DB에 있지 않고, 둘을 따로 적는 순간 다시
- * 어긋난다.
+ * 조건을 그대로 읽는다. DB 컬럼으로 두지 않는 이유도 같다: 파서는 코드에 있지
+ * DB에 있지 않고, 둘을 따로 적는 순간 다시 어긋난다.
+ *
+ * GOLF-01.5 축 C(CEO 지시, 2026-09-16) — Rakuten 어댑터가 생기면서
+ * parserAvailable 한 칸으로는 부족해졌다. 이제 세 가지 서로 다른 사실이 있다:
+ *
+ *   accessStatus           그 사이트가 열리는가        (DB · 051/053)
+ *   parserAvailable        우리가 읽을 어댑터가 있는가  (코드 · 등록부)
+ *   credentialsConfigured  그 어댑터를 부를 열쇠가 있는가 (환경변수)
+ *
+ * 🔴 셋을 한 칸에 합치지 않는다. Rakuten 은 오늘 «열리고 · 어댑터도 있고 ·
+ *    키만 없다» — 이 상태를 "파서 없음"이라고 말하면 앞으로 해야 할 일이
+ *    "파서를 만드는 것"으로 잘못 읽힌다.
+ * 🔴 missingCredentials 에는 환경변수 **이름**만 담긴다. 값은 담지 않는다.
  */
 export async function GET() {
   const shops = (await listComparisonShops()).map((shop) => ({
     ...shop,
-    parserAvailable: supportsComparisonShopSearch(shop.domain),
+    ...comparisonShopCollectability(shop.domain),
   }));
   return NextResponse.json({ shops });
 }

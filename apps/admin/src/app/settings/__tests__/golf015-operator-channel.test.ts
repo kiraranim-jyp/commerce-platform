@@ -26,34 +26,54 @@ import { isCollectableAccess } from "../../api/comparison-shops/_lib/comparison-
 /* ══════════════ ① 파서가 없으면 «값이 안 들어온다»를 실행으로 남긴다 ══════════════ */
 
 describe("GOLF-01.5 ① 파서 존재 여부 = 값이 들어오는가", () => {
-  it("🔴 Rakuten·GDO·Victoria는 파서가 없다 — 검색하면 요청조차 나가지 않고 0건이다", async () => {
-    const golfDomains = ["rakuten.co.jp", "shop.golfdigest.co.jp", "victoriagolf.co.jp"];
-    for (const d of golfDomains) {
+  it("🔴 GDO·Victoria는 파서가 없고, Rakuten은 파서는 있지만 키가 없다 — 셋 다 요청조차 나가지 않고 0건이다", async () => {
+    /**
+     * GOLF-01.5 축 C(CEO 지시, 2026-09-16)로 이 테스트의 사실 하나가 바뀌었다.
+     *
+     * 축 A 시점: Rakuten 은 «어댑터 자체가 없어서» unsupported 였다.
+     * 축 C 이후: Rakuten 어댑터는 완성됐고, «자격증명이 없어서» not_configured 다.
+     *
+     * 🔴 CEO 요구의 핵심은 그대로 지켜진다 — 요청이 한 번도 나가지 않고,
+     *    화면이 "수집됐다"고 말하지 않는다. 바뀐 것은 **셀러에게 말해야 할
+     *    이유**뿐이다: "이 사이트는 자동 검색을 못 한다"(직접 가 보세요)에서
+     *    "키가 아직 없다"(우리가 넣으면 풀린다)로.
+     */
+    const noAdapter = ["shop.golfdigest.co.jp", "victoriagolf.co.jp"];
+    for (const d of noAdapter) {
       expect(supportsComparisonShopSearch(d), `${d}에 파서가 없는데 있다고 답한다`).toBe(false);
     }
+    expect(supportsComparisonShopSearch("rakuten.co.jp"), "Rakuten 어댑터가 사라졌다").toBe(true);
 
-    // 🔴 "파서가 없다"를 판정 함수에게만 묻지 않는다. 실제 검색을 돌려서
-    //    (a) 상태가 unsupported이고 (b) 후보가 0건이고 (c) 네트워크 호출이
-    //    한 번도 없었다는 것까지 본다. CEO가 본 화면의 "일본 가격 1곳"이
-    //    실은 «자동 수집 0곳»이라는 사실이 이 세 줄이다.
+    // 🔴 판정 함수에게만 묻지 않는다. 실제 검색을 돌려서 (a) 상태가 «수집했다»가
+    //    아니고 (b) 후보가 0건이고 (c) 네트워크 호출이 한 번도 없었다는 것까지 본다.
+    const golfDomains = ["rakuten.co.jp", ...noAdapter];
+    // 🔴 실행 환경에 키가 꽂혀 있어도 이 테스트의 사실은 바뀌지 않아야 한다 —
+    //    "키가 없을 때 어떻게 되는가"를 재는 테스트이므로 명시적으로 비운다.
+    vi.stubEnv("RAKUTEN_APPLICATION_ID", "");
+    vi.stubEnv("RAKUTEN_ACCESS_KEY", "");
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
-      throw new Error("파서가 없는 도메인인데 실제 HTTP 요청이 나갔다");
+      throw new Error("부르면 안 되는 도메인인데 실제 HTTP 요청이 나갔다");
     });
     const results = await searchComparisonShops(
       { title: "TaylorMade Qi10 Driver 10.5" },
       golfDomains.map((d, i) => ({ id: `o-${i}`, name: d, domain: d, currency: "JPY" })),
     );
     fetchSpy.mockRestore();
+    vi.unstubAllEnvs();
 
     console.log(
       `[GOLF-01.5 증거] 골프 해외 3곳 실제 검색 결과: ` +
         results.map((r) => `${r.domain}=${r.status}/${r.candidates.length}건`).join(" · "),
     );
+    const byDomain = new Map(results.map((r) => [r.domain, r]));
+    expect(byDomain.get("rakuten.co.jp")?.status, "Rakuten이 not_configured가 아니다").toBe("not_configured");
+    for (const d of noAdapter) {
+      expect(byDomain.get(d)?.status, `${d}이 unsupported가 아니다`).toBe("unsupported");
+    }
     for (const r of results) {
-      expect(r.status, `${r.domain}이 unsupported가 아니다`).toBe("unsupported");
       expect(r.candidates, `${r.domain}이 값을 준 것처럼 보인다`).toHaveLength(0);
     }
-    expect(fetchSpy, "파서가 없는 도메인에 실제 HTTP 요청을 보냈다").not.toHaveBeenCalled();
+    expect(fetchSpy, "부르면 안 되는 도메인에 실제 HTTP 요청을 보냈다").not.toHaveBeenCalled();
   });
 
   it("🔴 아동복 파서 12곳은 그대로 살아 있다(회귀)", () => {

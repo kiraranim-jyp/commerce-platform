@@ -26,6 +26,17 @@ export type SearchSourceStatus =
   | "SEARCH_FAILED"
   /** 자동 검색이 정상 수행됐고, 결과가 정말 없었다. */
   | "NO_RESULT"
+  /**
+   * GOLF-01.5 축 C(CEO 지시, 2026-09-16) — 어댑터는 «있는데» 자격증명이 없어서
+   * 요청을 한 번도 보내지 않았다.
+   *
+   * 🔴 MANUAL_REQUIRED 와 절대 합치지 않는다. MANUAL_REQUIRED 는 셀러에게
+   *    "직접 가 보세요"라고 말하고, 이건 **우리가 키를 넣으면 풀리는 일**이다.
+   *    셀러가 아무리 직접 가 봐도 이 상태는 바뀌지 않는다.
+   * 🔴 NO_RESULT 와도 절대 합치지 않는다. 물어보지도 못한 것을 "없다"고 말하지
+   *    않는다 — 이 저장소가 반복해서 고쳐 온 실패 그대로다.
+   */
+  | "NOT_CONFIGURED"
   /** 위 어느 것으로도 확정할 수 없다(구버전 응답 등) → 아는 척하지 않는다. */
   | "UNKNOWN";
 
@@ -41,13 +52,14 @@ export interface SearchSourceStatusDisplay {
 /** crawler의 ComparisonSearchResult에서 이 판정에 필요한 부분만. 국내/해외
  * 컴포넌트가 각자 선언한 SearchResult 인터페이스 둘 다 이 모양을 만족한다. */
 export interface SearchSourceStatusInput {
-  status?: "ok" | "unsupported" | "error";
+  status?: "ok" | "unsupported" | "error" | "not_configured";
   candidates?: unknown[];
   /** P-4-DATA-4에서 이미 있던 구분 — 429는 일반 오류와 셀러 문구가 다르다. */
   errorKind?: "RATE_LIMITED" | "TEMPORARY_ERROR";
 }
 
 export function deriveSearchSourceStatus(result: SearchSourceStatusInput): SearchSourceStatus {
+  if (result.status === "not_configured") return "NOT_CONFIGURED";
   if (result.status === "unsupported") return "MANUAL_REQUIRED";
   if (result.status === "error") return "SEARCH_FAILED";
   if (result.status === "ok") {
@@ -63,6 +75,10 @@ export function searchSourceStatusDisplay(result: SearchSourceStatusInput): Sear
   switch (status) {
     case "MANUAL_REQUIRED":
       return { status, note: "수동 확인 필요 — 이 사이트는 자동 검색을 지원하지 않습니다" };
+    case "NOT_CONFIGURED":
+      // 🔴 셀러가 할 일을 적지 않는다. 셀러는 이 상태를 풀 수 없다 — 그래서
+      //    "직접 확인하세요"라고 말하지 않고, 지금 값이 없는 «이유»만 말한다.
+      return { status, note: "연동 대기 — 이 사이트의 API 키가 아직 등록되지 않아 조회하지 않았습니다" };
     case "SEARCH_FAILED":
       // MI-UX-9 §15 — 기술적 에러 원문(result.error)은 여기에 넣지 않는다.
       // 이전 국내 표는 `검색 실패: ${r.error}`로 서버 예외 메시지를 그대로

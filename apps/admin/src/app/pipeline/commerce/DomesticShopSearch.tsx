@@ -153,7 +153,8 @@ interface SearchResult {
   shopId: string;
   shopName: string;
   domain: string;
-  status: "ok" | "unsupported" | "error";
+  /** GOLF-01.5 축 C — 해외 패널과 같은 이유·같은 값(not_configured). */
+  status: "ok" | "unsupported" | "error" | "not_configured";
   candidates: Candidate[];
   error?: string;
 }

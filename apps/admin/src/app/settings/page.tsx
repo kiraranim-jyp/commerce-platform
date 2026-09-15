@@ -2469,6 +2469,12 @@ interface ComparisonShop {
    * 주는 값(DB 컬럼이 아니다). "열린다"와 "우리가 자동으로 읽을 수 있다"가
    * 다른 사실이라는 것을 화면에서 말하는 자리. 구버전 응답에는 없다. */
   parserAvailable?: boolean;
+  /** GOLF-01.5 축 C — 같은 라우트가 붙여 주는 «수집 능력» 나머지 세 칸.
+   * 🔴 collectionMethod 는 표시용이다. 화면이 이 값으로 다른 판단을 하지 않는다.
+   * 🔴 missingCredentials 는 환경변수 **이름**만 담는다(값 아님). */
+  collectionMethod?: "API" | "FEED" | "WEB" | null;
+  credentialsConfigured?: boolean | null;
+  missingCredentials?: string[];
   source: "SYSTEM" | "USER";
   isActive: boolean;
 }
@@ -3214,15 +3220,44 @@ function AccessStatusNote({ status, note }: { status: MarketSourceAccessStatus |
  * 「🟢 수집 가능」이라고만 표시되고, 실제 조사에서는 파서가 없어 한 건도
  * 못 가져온다는 사실이 화면 어디에도 없었다. 그 자리를 만든다.
  */
-function ParserAvailabilityNote({ available }: { available: boolean | undefined }) {
+/**
+ * GOLF-01.5 축 C(CEO 지시, 2026-09-16) — «파서가 없다»와 «키가 없다»를 가른다.
+ *
+ * 🔴 Rakuten 은 오늘 어댑터가 있고(API), 사이트도 열리고(access_status='OK'),
+ *    **자격증명만 없다**. 이 상태를 "파서 없음"이라고 말하면 앞으로 할 일이
+ *    "파서를 만드는 것"으로 잘못 읽힌다 — 실제로 필요한 것은 키 한 쌍이다.
+ * 🔴 "결과 0건"이라고도 말하지 않는다. 요청을 한 번도 보내지 않았다.
+ * 🔴 화면에 키 «값»은 어디에도 나오지 않는다 — 비어 있는 환경변수 **이름**만
+ *    적는다(그게 운영자가 무엇을 채워야 하는지 말해 주는 유일한 정보다).
+ */
+function ParserAvailabilityNote({
+  available,
+  collectionMethod,
+  credentialsConfigured,
+  missingCredentials,
+}: {
+  available: boolean | undefined;
+  collectionMethod?: "API" | "FEED" | "WEB" | null;
+  credentialsConfigured?: boolean | null;
+  missingCredentials?: string[];
+}) {
   if (available === undefined) return null;
-  return available ? (
-    <p className="text-xs text-success">🟢 자동 수집 파서 있음</p>
-  ) : (
-    <p className="text-xs text-warning">
-      🟡 자동 수집 파서 없음 — 등록만 되어 있고 자동 조회 결과는 0건입니다(수동 확인)
-    </p>
-  );
+  if (!available) {
+    return (
+      <p className="text-xs text-warning">
+        🟡 자동 수집 파서 없음 — 등록만 되어 있고 자동 조회 결과는 0건입니다(수동 확인)
+      </p>
+    );
+  }
+  if (credentialsConfigured === false) {
+    return (
+      <p className="text-xs text-warning">
+        🔑 연동 대기 — 자동 수집 어댑터({collectionMethod ?? "자동 수집"})는 준비됐지만 API 키가 없어 조회하지 않습니다
+        {missingCredentials && missingCredentials.length > 0 ? ` (필요한 환경변수: ${missingCredentials.join(", ")})` : ""}
+      </p>
+    );
+  }
+  return <p className="text-xs text-success">🟢 자동 수집 파서 있음{collectionMethod ? ` (${collectionMethod})` : ""}</p>;
 }
 
 /** GOLF-01.5 축 A(CEO 판단, 2026-09-16) — 같은 사업자여도 채널마다 가격이 다르다.
@@ -3431,7 +3466,14 @@ function ComparisonShopsSection({ categoryScopes }: { categoryScopes: string[] |
                   {/* GOLF-01.5 축 A — 🔴 "열린다"와 "우리가 읽을 수 있다"는 다른
                       사실이다. 이 줄이 없으면 Rakuten은 「수집 가능」이라고만
                       표시되고 실제 조회 결과가 0건인 이유를 아무도 모른다. */}
-                  {shop.accessStatus !== "BLOCKED" && <ParserAvailabilityNote available={shop.parserAvailable} />}
+                  {shop.accessStatus !== "BLOCKED" && (
+                    <ParserAvailabilityNote
+                      available={shop.parserAvailable}
+                      collectionMethod={shop.collectionMethod}
+                      credentialsConfigured={shop.credentialsConfigured}
+                      missingCredentials={shop.missingCredentials}
+                    />
+                  )}
                   <OperatorChannelNote operatorKey={shop.operatorKey} />
                 </div>
               </label>

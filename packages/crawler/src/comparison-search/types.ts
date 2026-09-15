@@ -16,6 +16,14 @@ export interface ComparisonCandidate {
   brand?: string;
   /** 사이트에 명시적으로 존재하는 SKU/article code. 없는 사이트는 채우지 않는다(추측 금지). */
   sku?: string;
+  /** GOLF-01.5 축 C(CEO 지시, 2026-09-16) — **마켓플레이스 안의 실제 판매 점포**.
+   * CEO 가 MI 가 받아야 한다고 말한 7칸 중 «판매처»는 지금까지 판매처=사이트
+   * 하나였다(ComparisonSearchResult.shopName). 마켓플레이스는 그 안에 판매자가
+   * 여럿이라 그 칸 하나로는 사실이 사라진다 — Rakuten 응답의 shopName 이
+   * 정확히 그 값이다. 그 정보를 주지 않는 소스는 채우지 않는다(추측 금지).
+   *
+   * 🔴 매칭·점수 계산에 쓰지 않는다. 표시용 사실 한 칸이다. */
+  sellerName?: string;
   /** Sprint B-1.2 — 동일상품 판별 신뢰도 등급. UI 표시용. */
   matchLevel?: "very_high" | "high" | "medium" | "low";
   /** 어떤 신호로 이 confidence가 나왔는지(디버그/설명용). */
@@ -82,9 +90,28 @@ export interface ComparisonSearchResult {
   shopId: string;
   shopName: string;
   domain: string;
-  status: "ok" | "unsupported" | "error";
+  /**
+   * GOLF-01.5 축 C(CEO 지시, 2026-09-16) — 네 번째 값 "not_configured".
+   *
+   *   ok             자동 수집을 실제로 수행했다(결과는 0건일 수도 있다)
+   *   unsupported    이 소스를 읽을 파서/어댑터가 없다 — 요청을 보내지 않았다
+   *   error          수행했는데 실패했다
+   *   not_configured 어댑터는 있는데 **자격증명이 없어** 요청을 보내지 않았다
+   *
+   * 🔴 왜 unsupported 로 뭉치면 안 되나. unsupported 는 셀러에게 "이 사이트는
+   *    원래 자동 검색을 못 한다 — 직접 가 보세요"라고 말한다. 키가 없어서 못
+   *    부른 것은 셀러가 할 일이 아니라 **우리가 키를 넣으면 풀리는 일**이다.
+   *    둘을 같은 문구로 말하면 화면이 또 거짓말을 한다(이 저장소가 반복해서
+   *    고쳐 온 실패 — unsupported vs NO_RESULT, BLOCKED vs 결과없음).
+   * 🔴 빈 결과(ok + candidates 0건)와도 절대 같지 않다. 물어보지도 못한 것을
+   *    "없다"고 말하지 않는다.
+   */
+  status: "ok" | "unsupported" | "error" | "not_configured";
   candidates: ComparisonCandidate[];
   error?: string;
+  /** status="not_configured" 일 때만 채워진다. 🔴 비어 있는 환경변수 «이름»만
+   * 담는다 — 값은 어떤 경우에도 담지 않는다. */
+  missingCredentials?: string[];
   /** P-4-DATA-4(CPO 지시) — status="error"만으로는 "검색 서비스가 일시적으로 막힘
    * (429)"과 "그 외 오류"가 구분되지 않는다. 429는 "찾지 못했습니다"와 전혀 다른
    * 셀러 문구("요청이 많아 검색하지 못했습니다")를 써야 한다 — 실측 확인(2026-08-29):

@@ -64,3 +64,36 @@ describe("MI-UX-9 §15 — 기술적 에러 원문을 셀러 문구에 넣지 �
     expect(note).not.toContain("수동 확인");
   });
 });
+
+/**
+ * GOLF-01.5 축 C(CEO 지시, 2026-09-16) — «키가 없다»는 네 번째 사실이다.
+ *
+ * 🔴 이 저장소가 반복해서 고쳐 온 실패가 정확히 "서로 다른 사실을 한 문구로
+ *    말하는 것"이다. 여기서 네 상태가 실제로 서로 다른 값·다른 문구로
+ *    갈라지는지를 실행으로 고정한다.
+ */
+describe("GOLF-01.5-C — 키 없음(NOT_CONFIGURED)은 네 번째 사실이다", () => {
+  const notConfigured = { status: "not_configured" as const, candidates: [] };
+  const unsupported = { status: "unsupported" as const, candidates: [] };
+  const noResult = { status: "ok" as const, candidates: [] };
+  const failed = { status: "error" as const, candidates: [] };
+
+  it("🔴 네 상태가 전부 서로 다른 값이다", () => {
+    const values = [notConfigured, unsupported, noResult, failed].map(deriveSearchSourceStatus);
+    expect(values).toEqual(["NOT_CONFIGURED", "MANUAL_REQUIRED", "NO_RESULT", "SEARCH_FAILED"]);
+    expect(new Set(values).size, "두 사실이 같은 값으로 뭉개졌다").toBe(4);
+  });
+
+  it("🔴 셀러에게 «직접 확인하라»고 말하지 않는다 — 셀러가 풀 수 없는 상태다", () => {
+    const note = searchSourceStatusDisplay(notConfigured).note;
+    expect(note).toContain("연동 대기");
+    expect(note).toContain("API 키");
+    expect(note, "셀러가 할 수 없는 일을 시킨다").not.toContain("수동 확인");
+    expect(note, "물어보지도 않고 결과가 없다고 말한다").not.toContain("검색 결과 없음");
+  });
+
+  it("🔴 네 문구가 전부 다르다", () => {
+    const notes = [notConfigured, unsupported, noResult, failed].map((r) => searchSourceStatusDisplay(r).note);
+    expect(new Set(notes).size, "두 상태가 같은 문구를 쓴다").toBe(4);
+  });
+});

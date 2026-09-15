@@ -1,7 +1,7 @@
 import { JSDOM } from "jsdom";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { selectedMarketSourceScopes, sourceFitsScopes } from "@commerce/category";
-import { supportsComparisonShopSearch } from "@commerce/crawler";
+import { comparisonShopCollectability } from "@commerce/crawler";
 
 /**
  * GOLF-01 축 A(CEO 지시, 2026-09-15) — 설정 → 시장조사 사이트 관리.
@@ -137,9 +137,16 @@ interface OverseasRow {
    * Rakuten 市場=null(마켓플레이스 자체는 사업자가 아니다) · 아동 25행 null. */
   operatorKey: string | null;
   /** DB 컬럼이 아니다 — /api/comparison-shops가 packages/crawler에서 읽어
-   * 붙여 준다. 실측: 아동 25곳 중 Shopify suggest 11곳 + childrensalon 1곳만
-   * true, Rakuten·GDO·Victoria는 전부 false(파서가 없다). */
+   * 붙여 준다(comparisonShopCollectability). 아동 25곳 중 Shopify suggest
+   * 11곳 + childrensalon 1곳이 파서 있음이고, GDO·Victoria는 파서가 없다.
+   *
+   * GOLF-01.5 축 C(2026-09-16) — Rakuten 은 이제 «파서는 있고 키가 없다».
+   * 그래서 한 칸으로는 못 말하고 네 칸이 됐다. 🔴 여기서 값을 지어내지 않고
+   * 진짜 판정 함수가 계산하게 한다(아래 ovs 호출부). */
   parserAvailable: boolean;
+  collectionMethod: "API" | "FEED" | "WEB" | null;
+  credentialsConfigured: boolean | null;
+  missingCredentials: string[];
 }
 
 function ovs(
@@ -149,12 +156,13 @@ function ovs(
   accessStatus: Access = null,
   role: Role = null,
   operatorKey: string | null = null,
-  parserAvailable = false,
 ): OverseasRow {
   return {
     role,
     operatorKey,
-    parserAvailable,
+    // 🔴 «수집 능력» 네 칸은 지어내지 않는다 — /api/comparison-shops 가 쓰는
+    //    바로 그 함수로 계산한다(그게 실제 조사 경로가 쓰는 조건이다).
+    ...comparisonShopCollectability(domain),
     id: `o-${domain}`,
     name,
     domain,
@@ -201,12 +209,10 @@ const KIDS_OVERSEAS_DOMAINS = [
 const OVERSEAS: OverseasRow[] = [
   // parserAvailable은 지어내지 않는다 — packages/crawler의 진짜 판정 함수로
   // 계산한다(그게 실제 조사 경로가 쓰는 그 조건이다).
-  ...KIDS_OVERSEAS_DOMAINS.map((d) =>
-    ovs(d, d, ["KIDS_FASHION"], null, null, null, supportsComparisonShopSearch(d)),
-  ),
-  ovs("shop.golfdigest.co.jp", "GDO 골프샵", ["GOLF"], "BLOCKED", "PRICE_COLLECTION", "GDO", false),
-  ovs("victoriagolf.co.jp", "Victoria Golf", ["GOLF"], "BLOCKED", "PRICE_COLLECTION", "Victoria Golf(Xebio)", false),
-  ovs("rakuten.co.jp", "Rakuten 市場", ["GOLF"], "OK", "PRICE_COLLECTION", null, false),
+  ...KIDS_OVERSEAS_DOMAINS.map((d) => ovs(d, d, ["KIDS_FASHION"])),
+  ovs("shop.golfdigest.co.jp", "GDO 골프샵", ["GOLF"], "BLOCKED", "PRICE_COLLECTION", "GDO"),
+  ovs("victoriagolf.co.jp", "Victoria Golf", ["GOLF"], "BLOCKED", "PRICE_COLLECTION", "Victoria Golf(Xebio)"),
+  ovs("rakuten.co.jp", "Rakuten 市場", ["GOLF"], "OK", "PRICE_COLLECTION", null),
 ];
 
 /* ══════════════════════ ① /api/market-categories — 실측 카탈로그로 센다 ══════════════════════ */
@@ -649,20 +655,48 @@ describe("GOLF-01.5 축 A(CEO 지시, 2026-09-16) — 설정 화면이 소스의
     await act(async () => root.unmount());
   });
 
-  it("🔴 Rakuten은 «열린다»고만 하지 않고 «자동 수집 파서가 없다»고까지 말한다", async () => {
+  it("🔴 Rakuten 은 «열린다 · 어댑터도 있다 · 키만 없다»를 세 칸으로 나눠 말한다", async () => {
+    /**
+     * GOLF-01.5 축 C(CEO 지시, 2026-09-16) — 축 A 시점에는 이 줄이 「자동 수집
+     * 파서 없음」이었다. 이제 어댑터가 생겼고 바뀐 사실은 하나다: **키가 없다**.
+     *
+     * 🔴 셋을 한 칸으로 뭉개면 앞으로 할 일이 잘못 읽힌다.
+     *      "파서 없음"  → 파서를 만들어야 한다(틀렸다, 이미 있다)
+     *      "결과 0건"   → 그 사이트에 그 상품이 없다(틀렸다, 물어보지도 않았다)
+     *      "연동 대기"  → 키를 넣으면 풀린다(맞다)
+     */
     const { root, act } = await golfScreen();
     const rakutenRow = [...sectionByHeading("편집샵(Seller) 목록").querySelectorAll("li")].find((li) =>
       (li.textContent ?? "").includes("Rakuten"),
     );
     const text = rakutenRow!.textContent ?? "";
-    console.log(`[GOLF-01.5 증거] Rakuten 줄: ${text}`);
+    console.log(`[GOLF-01.5-C 증거] Rakuten 줄: ${text}`);
 
-    // access_status는 여전히 OK다(실제로 열린다). 그러나 파서가 없어서 자동
-    // 조회 결과는 0건이다 — 그 둘을 한 줄로 뭉개면 "등록됐는데 값이 없다"가
-    // 화면에서 사라져 버린다(CEO가 이번에 지적한 바로 그 상태).
+    // ① access_status 는 여전히 OK 다(실제로 열린다).
     expect(text).toContain("수집 가능");
-    expect(text, "파서가 없다는 사실을 화면이 말하지 않는다").toContain("자동 수집 파서 없음");
-    expect(text).toContain("자동 조회 결과는 0건");
+    // ② 어댑터는 있다 — 「파서 없음」이라고 말하지 않는다.
+    expect(text, "어댑터가 있는데 없다고 말한다").not.toContain("자동 수집 파서 없음");
+    // ③ 지금 값이 0건인 이유가 «키»라고 말한다.
+    expect(text, "키가 없다는 사실을 화면이 말하지 않는다").toContain("연동 대기");
+    expect(text).toContain("API 키가 없어 조회하지 않습니다");
+    // 🔴 무엇을 채워야 하는지 «이름»으로 말한다. 값은 화면에 없다.
+    expect(text).toContain("RAKUTEN_APPLICATION_ID");
+    expect(text).toContain("RAKUTEN_ACCESS_KEY");
+    // 🔴 "결과 없음"이라고 말하지 않는다 — 물어보지 않았다.
+    expect(text, "물어보지도 않고 결과가 없다고 말한다").not.toContain("자동 조회 결과는 0건");
+    await act(async () => root.unmount());
+  });
+
+  it("🔴 GDO 는 그대로 «파서 없음»이다 — 키 문구가 번지지 않는다(역방향 증명)", async () => {
+    const { root, act } = await golfScreen();
+    const gdo = [...sectionByHeading("편집샵(Seller) 목록").querySelectorAll("li")].find((li) =>
+      (li.textContent ?? "").includes("GDO"),
+    );
+    const text = gdo!.textContent ?? "";
+    // GDO 는 BLOCKED 라 파서 줄 자체를 그리지 않는다 — 어느 쪽이든 «키» 이야기는
+    // 나오면 안 된다(이 사이트는 키를 넣어도 열리지 않는다).
+    expect(text, "키를 넣으면 풀릴 것처럼 말한다").not.toContain("연동 대기");
+    expect(text).toContain("접근 차단");
     await act(async () => root.unmount());
   });
 

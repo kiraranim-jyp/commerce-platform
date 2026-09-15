@@ -395,6 +395,11 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       continue;
     }
     if (result.status === "unsupported") continue; // 파서 자체가 없음 — 실제 요청을 보내지 않았으므로 "확인"으로 기록하지 않는다
+    // GOLF-01.5 축 C(CEO 지시, 2026-09-16) — 자격증명이 없어 요청을 보내지 않은
+    // 소스도 같은 이유로 "확인"이 아니다. 🔴 NO_RESULT 로 기록하면
+    // last_error_code 가 "찾지 못함"이 되어, 키만 넣으면 풀릴 일이 "그 사이트에
+    // 그 상품이 없다"로 DB 에 굳는다.
+    if (result.status === "not_configured") continue;
     if (result.candidates.length === 0) {
       void recordDomesticSourceCheckAttempt(result.shopId, "NO_RESULT");
       continue;

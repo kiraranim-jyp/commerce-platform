@@ -122,3 +122,29 @@ describe("가격 상태와 검색 상태 분리 원칙(CPO 지시, 절대 유지
     expect(deriveComparisonResultState(results)).toBe("RESULTS_FOUND");
   });
 });
+
+/**
+ * GOLF-01.5 축 C(CEO 지시, 2026-09-16) — 헤드라인도 «물어보지 않았다»를 말한다.
+ */
+describe("GOLF-01.5-C — 전부 연동 대기면 «상품이 없다»고 말하지 않는다", () => {
+  const notConfigured = { status: "not_configured" as const, candidates: [] };
+  const unsupported = { status: "unsupported" as const, candidates: [] };
+
+  it("🔴 조회 대상이 전부 not_configured 면 NOT_CONFIGURED 다", () => {
+    expect(deriveComparisonResultState([notConfigured])).toBe("NOT_CONFIGURED");
+    const { message } = getComparisonResultHeadline("NOT_CONFIGURED", 0);
+    expect(message).toContain("연동 대기");
+    expect(message, "물어보지도 않고 '확인되지 않았다'고 말한다").toContain("상품이 없다는 뜻이 아닙니다");
+  });
+
+  it("🔴 회귀 — not_configured 가 하나도 없으면 예전 그대로 NO_RESULTS 다", () => {
+    expect(deriveComparisonResultState([unsupported, unsupported])).toBe("NO_RESULTS");
+    expect(deriveComparisonResultState([])).toBe("NO_RESULTS");
+  });
+
+  it("🔴 실제 후보가 있으면 연동 대기가 섞여 있어도 RESULTS_FOUND 다(기존 우선순위 유지)", () => {
+    expect(
+      deriveComparisonResultState([notConfigured, { status: "ok", candidates: [{ matchLevel: "high" }] }]),
+    ).toBe("RESULTS_FOUND");
+  });
+});

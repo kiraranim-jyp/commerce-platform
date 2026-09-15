@@ -150,7 +150,9 @@ interface SearchResult {
   domain: string;
   /** N-3.10 Part L — comparison_shops.country를 API가 join해서 내려준다. */
   shopCountry?: string | null;
-  status: "ok" | "unsupported" | "error";
+  /** GOLF-01.5 축 C — "not_configured"(어댑터는 있으나 자격증명 없음)가 더해졌다.
+   * 서버가 그 값을 보낼 수 있으므로 화면 타입도 그 사실을 알아야 한다. */
+  status: "ok" | "unsupported" | "error" | "not_configured";
   candidates: Candidate[];
   error?: string;
   errorKind?: "RATE_LIMITED" | "TEMPORARY_ERROR";
@@ -420,9 +422,44 @@ export function ComparisonShopSearch({
       )}
       {results && <ResultHeadline results={results} />}
       {results && <ResultTable results={results} krwRates={krwRates} fxSource={fxSource} />}
+      {results && <RakutenAttribution results={results} />}
       {/* 조회가 끝났는데 한 곳도 없었다 — "아직 조회 중"과 구분해서만 말한다. */}
       {results?.length === 0 && <p className="text-xs text-text-secondary">{MARKET_EVIDENCE_EMPTY}</p>}
     </MarketEvidenceFrame>
+  );
+}
+
+/**
+ * GOLF-01.5 축 C(CEO 지시, 2026-09-16) — Rakuten Web Service 크레딧 표기.
+ *
+ * 공식 요구(2026-09-16 확인, https://webservice.rakuten.co.jp/guide/credit):
+ *   · "When a Rakuten Web Service API is used it is necessary to display our
+ *      branding on your site or application."
+ *   · 제공되는 HTML 을 **그대로** 쓴다("Use the provided HTML source code as
+ *     is. Modified HTML is not permissable.") — 그래서 링크 주소도 문구도
+ *     한 글자도 바꾸지 않았다. 번역하지 않는다.
+ *   · 배치는 자유지만 가려서는 안 된다.
+ *   · "Do not use these brandings on sites or apps that do not use Rakuten
+ *      Web Services." → 그래서 **Rakuten 결과가 이번 조회에 실제로 포함된
+ *      경우에만** 그린다. 아동복 조사처럼 Rakuten 을 부르지 않은 화면에는
+ *      뜨지 않는다(규약을 지키는 방향이 곧 정직한 화면이다).
+ *
+ * 🔴 status 는 보지 않는다. 키가 없어 not_configured 이거나 검색이 실패했어도
+ *    «그 API 를 쓰는 화면»이라는 사실은 같다 — 조회 대상에 들어갔다는 것 자체가
+ *    기준이다.
+ */
+const RAKUTEN_DOMAIN = "rakuten.co.jp";
+
+function RakutenAttribution({ results }: { results: SearchResult[] }) {
+  if (!results.some((r) => r.domain === RAKUTEN_DOMAIN)) return null;
+  return (
+    <p className="text-[10px] text-text-tertiary">
+      {/* Rakuten Web Services Attribution Snippet FROM HERE */}
+      <a href="https://developers.rakuten.com/" target="_blank">
+        Supported by Rakuten Developers
+      </a>
+      {/* Rakuten Web Services Attribution Snippet TO HERE */}
+    </p>
   );
 }
 

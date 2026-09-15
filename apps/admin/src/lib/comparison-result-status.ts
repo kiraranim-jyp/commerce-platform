@@ -8,12 +8,21 @@
  * 자체가 RATE_LIMITED인 경우는 완전히 다른 문제이므로 하나의 enum으로 합치지
  * 않는다 — 이 파일은 오직 "검색 시스템이 셀러에게 무엇을 말해야 하는가"만 다룬다. */
 
-export type ComparisonResultState = "RESULTS_FOUND" | "NO_RESULTS" | "PARTIAL_FAILURE" | "RATE_LIMITED" | "ERROR";
+export type ComparisonResultState =
+  | "RESULTS_FOUND"
+  | "NO_RESULTS"
+  | "PARTIAL_FAILURE"
+  | "RATE_LIMITED"
+  | "ERROR"
+  /** GOLF-01.5 축 C(CEO 지시, 2026-09-16) — 조회 대상 판매처가 전부 «부를 수
+   * 없는» 상태였고 그중 하나 이상이 «키가 없어서»였다.
+   * 🔴 NO_RESULTS 로 말하면 "물어봤는데 없더라"가 된다. 물어보지 않았다. */
+  | "NOT_CONFIGURED";
 
 /** ComparisonShopSearch.tsx의 실제 SearchResult/Candidate 타입과 구조적으로 호환되는
  * 최소 입력 — 이 파일이 API 응답 타입 전체를 몰라도 되게 한다(결합도를 낮춘다). */
 export interface ComparisonResultShopInput {
-  status: "ok" | "unsupported" | "error";
+  status: "ok" | "unsupported" | "error" | "not_configured";
   errorKind?: "RATE_LIMITED" | "TEMPORARY_ERROR";
   candidates: Array<{ matchLevel?: "very_high" | "high" | "medium" | "low" }>;
 }
@@ -25,8 +34,12 @@ export interface ComparisonResultShopInput {
  * 1. 매칭 가능한(matchLevel !== "low") 후보가 하나라도 있으면 다른 판매처가
  *    전부 에러여도 RESULTS_FOUND(ST-02) — 판매처 일부 실패가 이미 찾은 결과를
  *    지우지 않는다.
- * 2. "unsupported"(파서 없음)만 제외한 나머지가 하나도 없으면 NO_RESULTS —
- *    비교 가능한 사이트 자체가 없었다는 뜻.
+ * 2. "unsupported"(파서 없음)와 "not_configured"(키 없음)를 제외한 나머지가
+ *    하나도 없으면 NO_RESULTS — 비교 가능한 사이트 자체가 없었다는 뜻.
+ *    🔴 GOLF-01.5 축 C — not_configured 를 «검색한 것»으로 세면, 키가 없어서
+ *       못 물어본 사이트가 "확인했는데 없더라"로 둔갑한다. 요청을 보내지
+ *       않았다는 점에서 unsupported 와 같은 취급을 받아야 한다(문구는 다르다 —
+ *       search-source-status.ts 가 각각 다른 말을 한다).
  * 3. 에러가 하나도 없고 후보도 없으면 NO_RESULTS(ST-01) — 검색은 전부 성공했고
  *    실제로 일치하는 상품이 없었다는 뜻.
  * 4. 검색 대상 전부가 에러이고 전부 RATE_LIMITED면 RATE_LIMITED(ST-04) — "일부"가
@@ -42,8 +55,12 @@ export function deriveComparisonResultState(results: ComparisonResultShopInput[]
   );
   if (acceptableCount > 0) return "RESULTS_FOUND";
 
-  const considered = results.filter((r) => r.status !== "unsupported");
-  if (considered.length === 0) return "NO_RESULTS";
+  const considered = results.filter((r) => r.status !== "unsupported" && r.status !== "not_configured");
+  if (considered.length === 0) {
+    // 🔴 부를 수 있는 판매처가 한 곳도 없었다. 그 이유가 «키 없음»이면 그렇게
+    //    말한다 — 셀러가 해결할 수 없는 일을 "상품이 없다"로 바꿔 말하지 않는다.
+    return results.some((r) => r.status === "not_configured") ? "NOT_CONFIGURED" : "NO_RESULTS";
+  }
 
   const errored = considered.filter((r) => r.status === "error");
   if (errored.length === 0) return "NO_RESULTS";
@@ -78,5 +95,12 @@ export function getComparisonResultHeadline(
       return { tone: "warning", message: "현재 가격 비교 요청이 많아 검색하지 못했습니다 — 잠시 후 다시 시도해주세요." };
     case "ERROR":
       return { tone: "warning", message: "일시적인 오류로 가격 비교를 진행하지 못했습니다 — 잠시 후 다시 시도해주세요." };
+    case "NOT_CONFIGURED":
+      // 🔴 셀러에게 할 일을 주지 않는다. 셀러가 풀 수 없는 상태다.
+      return {
+        tone: "warning",
+        message:
+          "이 카테고리의 판매처는 아직 연동 대기 상태입니다 — API 키가 등록되지 않아 조회하지 않았습니다(상품이 없다는 뜻이 아닙니다).",
+      };
   }
 }

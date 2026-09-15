@@ -1,15 +1,13 @@
 import { extractShopifyHandle, fetchShopifyProductJson, stripShopifyLocalePrefix } from "../shopify-product-json";
-import { searchBoboChosesKorea } from "./bobochoses-kr";
 import { lookupBrandAlias } from "./brand-alias";
-import { searchChildrensalon } from "./childrensalon";
-import { fetchChocoelProductPrice, searchChocoel } from "./chocoel";
-import { fetchDeuxbebeProductPrice, searchDeuxbebe } from "./deuxbebe";
-import { fetchForetforetProductPrice, searchForetforet } from "./foretforet";
-import { fetchLooxlooProductPrice, searchLooxloo } from "./looxloo";
+import { fetchChocoelProductPrice } from "./chocoel";
+import { fetchDeuxbebeProductPrice } from "./deuxbebe";
+import { fetchForetforetProductPrice } from "./foretforet";
+import { fetchLooxlooProductPrice } from "./looxloo";
 import { splitModelColor, withConfidence } from "./match";
-import { selectCandidatesForDetailConfirmation } from "./price-confirmation";
-import { fetchRuliiProductPrice, searchRulii } from "./rulii";
-import { searchShopifySuggest } from "./shopify-suggest";
+import { findPriceSourceAdapter } from "./price-source-adapter";
+import type { PriceSourceCollectionMethod } from "./price-source-adapter";
+import { fetchRuliiProductPrice } from "./rulii";
 import type {
   ComparisonCandidate,
   ComparisonQuery,
@@ -91,146 +89,104 @@ export {
   productFactsFromSmallableHtml,
 } from "./seller-facts";
 export type { ListingProductLike, ShopifyProductLike } from "./seller-facts";
-
-/** Sprint B-1.5/B-1.8 — search-suggest.json의 가격은 신뢰하지 않는다(B-1.4에서 확인: Vercel에서
- * 로케일 프리픽스를 줘도 기본 통화 숫자가 그대로 돌아옴). 검색은 "후보 발견"까지만 담당하고,
- * 실제 판매가/통화는 이미 검증된 상품 상세 JSON 엔드포인트(fetchShopifyProductJson, B-1.1에서
- * /meta.json 기준으로 정확성 확인됨)에서 다시 확정한다.
- *
- * B-1.8 — "동일상품일 가능성"(matchLevel)과 "가격을 확인했는지"(priceSource)는 별개 상태다.
- * matchLevel이 very_high/high인 후보만(= 동일상품일 가능성이 높다고 이미 판단된 것만) 상세
- * 확인 대상으로 삼고, 그중에서도 최대 MAX_DETAIL_CONFIRMATIONS_PER_SHOP건까지만 실제로
- * 요청한다 — 검색 결과가 많다고 전부 호출하지 않는다. medium/low는 애초에 대상에서 제외한다
- * (동일상품인지도 불확실한데 가격까지 확인할 이유가 없다). 상세 확인이 실패하면(네트워크
- * 오류 등) 검색 결과 가격을 그대로 두고 priceSource="search"로 남긴다 — 매칭 결과 자체를
- * 지우지 않는다.
- *
- * P-4-DATA-6 P0-2(CPO 지시, 2026-08-29: "Shopify Markets 가격을 환율로 취급하면 안
- * 된다") — 이전엔 원본 상품의 sourceUrl에 로케일 프리픽스(/en-kr/ 등)가 있으면 그
- * 로케일로 후보 상세를 조회했다. 실측 확인(P-4-DATA-5): 이 경로는 Shopify Markets가
- * 자체 판단한 KRW "지역 표시가"를 그대로 돌려주며, 우리 앱의 Frankfurter/ECB 환율과
- * 최대 6% 차이가 났다(같은 상품, 같은 순간인데 £35 → ₩68,200 vs ₩64,820) — 셀러가
- * 화면에서 구분할 방법이 없는 채로 두 값이 섞여 나왔다. 이제 candidate 상세조회는
- * 항상 로케일 없는 기본 URL(=매장 기준통화, fetchShopifyProductJson이 /meta.json으로
- * 강제하는 shopCurrency)만 쓴다 — KRW 참고환산은 언제나 UI가 /api/exchange-rates
- * 하나로만 계산하도록(단일 FX 엔진), price 필드에는 절대 Shopify 자체 환산 통화가
- * 섞이지 않는다. */
-export async function enrichCandidatePrices(
-  candidates: ComparisonCandidate[],
-  shopDomain: string,
-): Promise<ComparisonCandidate[]> {
-  const withDefaultSource: ComparisonCandidate[] = candidates.map((c) => ({
-    ...c,
-    priceSource: "search",
-    priceStatus: "UNVERIFIED_SEARCH",
-    verificationAttempted: false,
-  }));
-  const eligibleIndexes = selectCandidatesForDetailConfirmation(withDefaultSource);
-  if (eligibleIndexes.length === 0) return withDefaultSource;
-
-  const origin = `https://www.${shopDomain.replace(/^www\./, "")}`;
-
-  // P-4-DATA-4(CPO 지시, 2026-08-29: "조용한 실패(silent failure)를 금지한다") — 이전엔
-  // catch{}가 에러를 그냥 삼키고 검증 전 search 값을 그대로 뒀다. 실측 확인된 실제 사고
-  // (Hug Hairy Monster: matchLevel=very_high인데 fetch 실패로 £62가 화면에 뜰 뻔함)가
-  // 바로 이 경로였다 — "검증 시도했으나 실패"와 "애초에 대상 아님"을 구분해야 하므로,
-  // 검증을 시도한 후보는 성공/실패 여부와 무관하게 verificationAttempted=true를 남긴다.
-  // 실패 시에는 price 필드를 건드리지 않는다(원 검색값이 남아있어도 priceStatus가
-  // PRICE_UNAVAILABLE이면 UI가 숫자를 절대 보여주지 않으므로 안전 — 원칙 1).
-  await Promise.all(
-    eligibleIndexes.map(async (i) => {
-      const candidate = withDefaultSource[i];
-      const handle = extractShopifyHandle(candidate.url);
-      if (!handle) return;
-      try {
-        const detail = await fetchShopifyProductJson(`${origin}/products/${handle}`);
-        if (detail?.productData.price) {
-          withDefaultSource[i] = {
-            ...candidate,
-            price: detail.productData.price,
-            regularPrice: detail.productData.regularPrice ?? null,
-            priceSource: "detail",
-            priceStatus: "VERIFIED_CURRENT",
-            verificationAttempted: true,
-          };
-        } else {
-          withDefaultSource[i] = { ...candidate, priceStatus: "PRICE_UNAVAILABLE", verificationAttempted: true };
-        }
-      } catch {
-        withDefaultSource[i] = { ...candidate, priceStatus: "PRICE_UNAVAILABLE", verificationAttempted: true };
-      }
-    }),
-  );
-
-  return withDefaultSource;
-}
-
-/** N-3.11/N-3.12 Part A — 실제로 /search/suggest.json이 표준 Shopify 응답 구조({resources:
- * {results:{products:[...]}}})를 준다고 직접 fetch로 확인한 도메인만 여기 추가한다
- * (N-3.11: NICKIS/Isola Bella Kids/Petite Maison Kids/Piccoli & Co, N-3.12: Kidswear
- * Collective/Kids Atelier/Designer Kids Wear/Kid Biz/Village Kids/Folk Berlin —
- * 2026-08-12 실측 확인, /cart.json의 currency 필드까지 직접 fetch로 재확인). searchShopifySuggest는
- * 도메인에 종속되지 않으므로 새 파서를 만들 필요가 없다 — 이미 junioredition.com에 쓰던
- * 함수를 그대로 재사용한다(토큰 절약 원칙). */
-const SHOPIFY_SUGGEST_DOMAINS = new Set([
-  "junioredition.com",
-  "nickis.com",
-  "isolabellakids.com",
-  "petitemaisonkids.com",
-  "shoppiccoliandco.com",
-  "kidswearcollective.com",
-  "kidsatelier.com",
-  "designerkidswear.com",
-  "kidbizkid.com",
-  "villagekids.co.uk",
-  "folkberlin.com",
-]);
+/** GOLF-01.5 축 C(CEO 지시, 2026-09-16) — 가격소스 수집 표준. 어댑터가 수집
+ * 방식(API/FEED/WEB)을 자기 «안»에 숨기고, 호출부와 MI 는 공통
+ * ComparisonCandidate 만 본다. 흩어져 있던 파서 등록부 6곳이 이 한 곳으로
+ * 모였다 — 새 수집 경로가 아니라 기존 경로의 등록부를 합친 것이다. */
+export {
+  enrichCandidatePrices,
+  findPriceSourceAdapter,
+  listPriceSourceAdapters,
+} from "./price-source-adapter";
+export type {
+  PriceSourceAdapter,
+  PriceSourceCollectionMethod,
+  PriceSourceReadiness,
+  PriceSourceSearchInput,
+} from "./price-source-adapter";
+export { RAKUTEN_ACCESS_KEY_ENV, RAKUTEN_APPLICATION_ID_ENV } from "./rakuten-ichiba";
 
 /**
  * GOLF-01.5 축 A(CEO 지시, 2026-09-16) — "이 도메인에 자동 수집 파서가 있는가"를
  * **검색을 실행하지 않고** 물어보는 자리. 값을 새로 정의하지 않는다 —
  * searchOneShop이 실제로 분기하는 그 조건을 그대로 돌려준다(두 곳에 적으면
- * 언젠가 화면이 "수집 가능"이라고 말하는데 실제로는 unsupported가 된다 —
- * 지금 Rakuten이 정확히 그 상태다: 등록됐고 접근도 되지만 파서가 없어서
- * 값이 0건이다).
+ * 언젠가 화면이 "수집 가능"이라고 말하는데 실제로는 unsupported가 된다).
+ *
+ * GOLF-01.5 축 C(2026-09-16) — 그 "조건"이 이제 등록부 하나다. 목록을 여기
+ * 따로 적지 않는다: searchOneShop 이 찾는 어댑터를 똑같이 찾아본다.
  *
  * 🔴 access_status(열리는가)와 섞지 않는다. 이건 "우리가 읽을 수 있는가"다.
+ * 🔴 자격증명 유무와도 섞지 않는다. Rakuten 은 어댑터가 «있고»(true) 키가
+ *    «없다» — 그 둘은 화면이 서로 다른 말을 해야 하는 서로 다른 사실이다
+ *    (comparisonShopCollectability 참고).
  */
 export function supportsComparisonShopSearch(domain: string): boolean {
-  return SHOPIFY_SUGGEST_DOMAINS.has(domain) || domain === "childrensalon.com";
+  return findPriceSourceAdapter(domain, "OVERSEAS") !== null;
 }
 
-/** 이 Phase에서 실제 파서가 있는 도메인만 여기 등록한다 — comparison_shops의 나머지 활성
- * 사이트는 자동으로 "unsupported"가 된다(하드코딩된 사이트 "허용 목록"이 아니라, 파서 존재 여부). */
+/** 화면이 한 소스에 대해 말해야 하는 «수집 능력» 전부. /api/comparison-shops 가
+ * 이 값을 그대로 내려보내고 설정 화면이 그대로 읽는다 — 파서 유무와 키 유무를
+ * 각자 따로 계산하지 않게 한다. */
+export interface ComparisonShopCollectability {
+  /** 어댑터가 등록돼 있는가. */
+  parserAvailable: boolean;
+  /** 어떻게 수집하는가(API/FEED/WEB). 어댑터가 없으면 null.
+   * 🔴 표시용이다 — 이 값으로 분기하는 코드는 없어야 한다. */
+  collectionMethod: PriceSourceCollectionMethod | null;
+  /** 자격증명이 필요 없거나 이미 설정돼 있으면 true. 어댑터가 없으면 null
+   * ("파서가 없다"와 "키가 없다"를 같은 칸에서 말하지 않는다). */
+  credentialsConfigured: boolean | null;
+  /** 비어 있는 환경변수 «이름»만. 🔴 값은 담지 않는다. */
+  missingCredentials: string[];
+}
+
+export function comparisonShopCollectability(domain: string): ComparisonShopCollectability {
+  const adapter = findPriceSourceAdapter(domain, "OVERSEAS");
+  if (!adapter) {
+    return { parserAvailable: false, collectionMethod: null, credentialsConfigured: null, missingCredentials: [] };
+  }
+  const readiness = adapter.readiness();
+  return {
+    parserAvailable: true,
+    collectionMethod: adapter.method,
+    credentialsConfigured: readiness.state === "READY",
+    missingCredentials: readiness.state === "NOT_CONFIGURED" ? readiness.missing : [],
+  };
+}
+
+/**
+ * 한 해외 소스 1곳에 대한 수집 1회.
+ *
+ * GOLF-01.5 축 C — 도메인별 if 분기가 사라지고 등록부 조회 한 줄이 됐다.
+ * 🔴 이 함수는 어댑터가 API 인지 WEB 인지 **묻지 않는다**. 수집 방식은 어댑터
+ *    «안»에 있고, 여기서부터 위(=화면·MI)로는 공통 ComparisonCandidate 만 간다.
+ *    그것이 "MI 는 수집 방법을 몰라야 한다"는 CEO 지시의 구현이다.
+ */
 async function searchOneShop(shop: ComparisonShopRef, query: ComparisonQuery): Promise<ComparisonSearchResult> {
   const base = { shopId: shop.id, shopName: shop.name, domain: shop.domain };
+  const adapter = findPriceSourceAdapter(shop.domain, "OVERSEAS");
+  // 등록부에 없는 도메인은 요청 자체를 보내지 않는다(하드코딩 허용목록이 아니라
+  // 어댑터 존재 여부 — comparison_shops 의 나머지 활성 사이트가 여기로 온다).
+  if (!adapter) return { ...base, status: "unsupported", candidates: [] };
+
+  // 🔴 자격증명이 없으면 **부르지 않는다**. 빈 결과로 흉내 내지 않는다.
+  const readiness = adapter.readiness();
+  if (readiness.state === "NOT_CONFIGURED") {
+    return { ...base, status: "not_configured", candidates: [], missingCredentials: readiness.missing };
+  }
+
   try {
-    if (SHOPIFY_SUGGEST_DOMAINS.has(shop.domain)) {
-      const candidates = await searchShopifySuggest(shop.domain, shop.currency, query.title);
-      const scored = withConfidence(query, candidates);
-      const enriched = await enrichCandidatePrices(scored, shop.domain);
-      return { ...base, status: "ok", candidates: enriched };
-    }
-    if (shop.domain === "childrensalon.com") {
-      // Childrensalon은 검색 HTML 자체에서 실제 판매가를 직접 파싱한다(상세 페이지를 따로
-      // 조회하지 않음). P-4-DATA-4(CPO 지시) 이전에는 이 값을 "신뢰 가능"으로 취급해
-      // priceSource="search"인데도 화면에 그대로 노출했다 — 그러나 다른 사이트의 검색
-      // 결과 오염 사례(Booty Ghosts £59, Misha & Puff Mink £270)와 근본적으로 같은
-      // 구조(검색 시점 값을 상세 재확인 없이 신뢰)라, "검증되지 않은 가격 숫자는 어떤
-      // 경우에도 노출하지 않는다"는 새 원칙을 예외 없이 적용한다 — 별도의 상세 조회
-      // 경로가 이 사이트에 아직 없으므로 UNVERIFIED_SEARCH로 남는다(withConfidence의
-      // derivePriceStatus가 priceSource!=="detail"이면 자동으로 이렇게 분류한다).
-      const candidates = await searchChildrensalon(shop.currency, query.title);
-      const scored = withConfidence(query, candidates);
-      return { ...base, status: "ok", candidates: scored };
-    }
-    return { ...base, status: "unsupported", candidates: [] };
+    const candidates = await adapter.search({ term: query.title, currency: shop.currency });
+    const scored = withConfidence(query, candidates);
+    const enriched = adapter.enrichScored ? await adapter.enrichScored(scored) : scored;
+    return { ...base, status: "ok", candidates: enriched };
   } catch (error) {
     const message = error instanceof Error ? error.message : "알 수 없는 오류";
     // P-4-DATA-4(CPO 지시) — 429는 "찾지 못했습니다"와 전혀 다른 셀러 문구가 필요하다.
-    // searchShopifySuggest가 던지는 에러 메시지에 상태코드가 그대로 포함되어 있어
-    // (`Shopify suggest API ${status}`) 여기서 문자열로 판별한다 — 별도 커스텀 에러
-    // 클래스를 새로 만들지 않고 기존 에러 메시지 포맷을 그대로 재사용.
+    // 어댑터들이 던지는 에러 메시지에 상태코드가 그대로 포함되어 있어
+    // (`Shopify suggest API ${status}` · `Rakuten Ichiba Item Search API ${status}`)
+    // 여기서 문자열로 판별한다 — 별도 커스텀 에러 클래스를 새로 만들지 않고
+    // 기존 에러 메시지 포맷을 그대로 재사용.
     const errorKind: "RATE_LIMITED" | "TEMPORARY_ERROR" = /\b429\b/.test(message) ? "RATE_LIMITED" : "TEMPORARY_ERROR";
     return { ...base, status: "error", candidates: [], error: message, errorKind };
   }
@@ -265,70 +221,10 @@ export async function searchComparisonShops(
  * 검색어가 원문이든 alias든(아래 참고) 동일하게 적용돼야 하므로 도메인 분기 자체를
  * 검색어와 분리된 헬퍼로 뺀다. */
 /** GOLF-01.5 축 A — 해외의 supportsComparisonShopSearch와 같은 이유·같은 역할.
- * 이 Set이 "파서가 있는가"의 유일한 진실이고, 아래 분기는 이 Set을 통과한
- * 도메인만 받는다(목록을 두 번 적지 않는다). */
-const DOMESTIC_SEARCH_DOMAINS = new Set([
-  "looxloo.com",
-  "bobochoses.com",
-  "rulii.co.kr",
-  "deuxbebe.com",
-  "chocoel.co.kr",
-  "foretforet.com",
-]);
-
+ * GOLF-01.5 축 C — 그 "유일한 진실"이 이제 해외와 **같은 등록부**다. 국내용
+ * 목록을 따로 적지 않는다(그 목록이 세 벌이던 것이 이번에 한 벌이 됐다). */
 export function supportsDomesticShopSearch(domain: string): boolean {
-  return DOMESTIC_SEARCH_DOMAINS.has(domain);
-}
-
-async function searchDomesticShopCandidates(domain: string, term: string): Promise<ComparisonCandidate[] | null> {
-  if (!supportsDomesticShopSearch(domain)) return null;
-  if (domain === "looxloo.com") return searchLooxloo(term);
-  if (domain === "bobochoses.com") {
-    const candidates = await searchBoboChosesKorea(term);
-    return candidates.map((c) => ({ ...c, priceSource: "detail" as const }));
-  }
-  if (domain === "rulii.co.kr") return searchRulii(term);
-  if (domain === "deuxbebe.com") return searchDeuxbebe(term);
-  if (domain === "chocoel.co.kr") return searchChocoel(term);
-  if (domain === "foretforet.com") return searchForetforet(term);
-  return null;
-}
-
-/** N-4.18-Q3 PART E-2/E-10(대표님 지시, 2026-08-27) — RULII/FORETFORET 둘 다 검색
- * 목록 HTML/AJAX 응답 자체에는 품절 신호가 없다(실측 확인: RULII "원피스" 검색결과에
- * soldout/품절 문자열 0건, FORETFORET product_list.action.html 응답에 sto_state
- * 0건). 반면 상세페이지에는 각자 실측 검증된 soldOut 신호가 있다(rulii.ts의
- * DETAIL_SOLDOUT_RE, foretforet.ts의 sto_state). 그래서 매칭 신뢰도가 높은
- * (very_high/high) 후보만, Sprint B-1.8과 같은 상한(MAX_DETAIL_CONFIRMATIONS_PER_SHOP)
- * 으로 상세페이지를 재확인해 soldOut을 채운다 — 검색 결과 전체를 상세 조회하지
- * 않는다(비용 제한). 실패해도 매칭 결과 자체는 지우지 않고 soldOut만 비워둔다
- * (추측 금지). 두 사이트가 fetchDetail 함수 시그니처만 다르므로 제네릭 헬퍼로 공유한다. */
-async function enrichSoldOutViaDetail(
-  candidates: ComparisonCandidate[],
-  fetchDetail: (url: string) => Promise<{ soldOut: boolean | null }>,
-): Promise<ComparisonCandidate[]> {
-  const eligible = selectCandidatesForDetailConfirmation(candidates);
-  if (eligible.length === 0) return candidates;
-  const result = [...candidates];
-  await Promise.all(
-    eligible.map(async (i) => {
-      try {
-        const detail = await fetchDetail(candidates[i].url);
-        result[i] = { ...candidates[i], soldOut: detail.soldOut };
-      } catch {
-        // soldOut 미채움 유지 — 검색 매칭 결과 자체는 그대로 둔다
-      }
-    }),
-  );
-  return result;
-}
-
-/** 검색-시점 soldOut 상세확인을 지원하는 사이트만 여기 등록한다(파서 존재 여부와
- * 같은 원칙 — 하드코딩 허용목록이 아니라 실측 검증된 것만). */
-function soldOutDetailFetcher(domain: string): ((url: string) => Promise<{ soldOut: boolean | null }>) | null {
-  if (domain === "rulii.co.kr") return fetchRuliiProductPrice;
-  if (domain === "foretforet.com") return fetchForetforetProductPrice;
-  return null;
+  return findPriceSourceAdapter(domain, "DOMESTIC") !== null;
 }
 
 async function searchOneDomesticShop(
@@ -339,25 +235,38 @@ async function searchOneDomesticShop(
   if (source.collectionStrategy !== "AUTO_API" && source.collectionStrategy !== "AUTO_SCRAPE") {
     return { ...base, status: "unsupported", candidates: [] };
   }
+  // 🔴 어댑터 조회를 «검색어 루프 밖»에서 한 번만 한다. 어댑터가 없으면 검색어를
+  //    바꿔도 달라지지 않는다(예전 searchDomesticShopCandidates 가 null 을
+  //    돌려주면 즉시 멈추던 것과 같은 동작이다 — 요청을 한 번도 보내지 않는다).
+  const adapter = findPriceSourceAdapter(source.domain, "DOMESTIC");
+  if (!adapter) return { ...base, status: "unsupported", candidates: [] };
+
+  // 국내 어댑터는 오늘 전부 자격증명이 필요 없다(전부 공개 페이지 WEB 파서).
+  // 그래도 «같은 표준»을 통과시킨다 — 언젠가 국내에 API 소스가 생겼을 때
+  // 이 자리를 다시 고칠 필요가 없고, 그때도 화면 문구는 이미 준비돼 있다.
+  const readiness = adapter.readiness();
+  if (readiness.state === "NOT_CONFIGURED") {
+    return { ...base, status: "not_configured", candidates: [], missingCredentials: readiness.missing };
+  }
+
   const searchTerm = query.searchTerm ?? query.title;
+  const searchWith = (term: string) => adapter.search({ term, currency: source.currency });
+  const enrich = (candidates: ComparisonCandidate[]) =>
+    adapter.enrichScored ? adapter.enrichScored(candidates) : Promise.resolve(candidates);
   try {
     // MATCHING-2.0-CORE(CEO 지시, 2026-09-13) — 좁은 검색어부터 차례로 시도하고
     // 결과가 나오면 멈춘다. 검색어 하나가 0건이라는 사실은 "이 상품이 국내에
     // 없다"가 아니라 "그 말로는 못 찾았다"일 뿐인데, 지금까지 그 둘이 구분되지
     // 않았다. 이 목록이 없으면(하위호환) 기존처럼 searchTerm 하나만 쓴다.
     const terms = query.searchTerms?.length ? query.searchTerms : [searchTerm];
-    let primary: ComparisonCandidate[] | null = null;
+    let primary: ComparisonCandidate[] = [];
     for (const term of terms) {
-      primary = await searchDomesticShopCandidates(source.domain, term);
-      // 파서가 없는 도메인(null)은 검색어를 바꿔도 달라지지 않는다 — 즉시 멈춘다.
-      if (primary === null || primary.length > 0) break;
+      primary = await searchWith(term);
+      if (primary.length > 0) break;
     }
-    if (primary === null) return { ...base, status: "unsupported", candidates: [] };
     const primaryScored = withConfidence(query, primary);
     if (primaryScored.length > 0) {
-      const fetcher = soldOutDetailFetcher(source.domain);
-      const enriched = fetcher ? await enrichSoldOutViaDetail(primaryScored, fetcher) : primaryScored;
-      return { ...base, status: "ok", candidates: enriched };
+      return { ...base, status: "ok", candidates: await enrich(primaryScored) };
     }
 
     // N-4.18-P-4 STEP P-4-2/3(대표님 지시, 2026-08-25) — 원문 검색이 NO_RESULT일
@@ -380,18 +289,13 @@ async function searchOneDomesticShop(
     if (!alias) return { ...base, status: "ok", candidates: [] };
     const { color } = splitModelColor(query.title);
     const aliasQuery = color ? `${alias} ${color}` : alias;
-    const fallback = await searchDomesticShopCandidates(source.domain, aliasQuery);
-    const fallbackHasResults = fallback !== null && fallback.length > 0;
+    const fallback = await searchWith(aliasQuery);
     // 색상을 붙인 쿼리가 결과 0건이면(사이트 검색이 AND 매칭이라 너무 좁아졌을 수
     // 있음) alias 단독으로 한 번 더 시도한다 — 이것도 실패하면 빈 결과 유지.
-    const finalFallback =
-      fallbackHasResults || !color ? fallback : await searchDomesticShopCandidates(source.domain, alias);
-    if (finalFallback === null || finalFallback.length === 0) return { ...base, status: "ok", candidates: [] };
+    const finalFallback = fallback.length > 0 || !color ? fallback : await searchWith(alias);
+    if (finalFallback.length === 0) return { ...base, status: "ok", candidates: [] };
     const fallbackScored = withConfidence(query, finalFallback);
-    const fallbackFetcher = soldOutDetailFetcher(source.domain);
-    const enrichedFallback = fallbackFetcher
-      ? await enrichSoldOutViaDetail(fallbackScored, fallbackFetcher)
-      : fallbackScored;
+    const enrichedFallback = await enrich(fallbackScored);
     return {
       ...base,
       status: "ok",
