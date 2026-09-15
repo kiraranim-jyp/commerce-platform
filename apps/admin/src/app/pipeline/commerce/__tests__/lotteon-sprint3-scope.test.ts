@@ -136,10 +136,10 @@ describe("'Preview'라는 이름을 화면에서 쓰지 않는다", () => {
 
   it("스마트스토어/쿠팡 탭이 같은 이름을 쓴다 — 채널마다 다른 이름을 붙이지 않는다", () => {
     expect(stripComments(readSourceAt(new URL("../NaverPayloadPreview.tsx", import.meta.url)))).toContain(
-      'title="등록 정보"',
+      'title={sectionTitle("LISTING_INFO")}',
     );
     expect(stripComments(readSourceAt(new URL("../PlatformPreview.tsx", import.meta.url)))).toContain(
-      'title="등록 정보"',
+      'title={sectionTitle("LISTING_INFO")}',
     );
   });
 });

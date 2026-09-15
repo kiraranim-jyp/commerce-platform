@@ -2,18 +2,9 @@
 
 import { useState } from "react";
 import type { CategoryCandidate, CategorySelection } from "@commerce/category";
+import { CategoryCandidateCard, candidateStars } from "./CategoryCandidateCard";
 import { CategoryTreeBrowser } from "./CategoryTreeBrowser";
 import { fetchCoupangCategoryTree, fetchNaverCategoryTree } from "./category-tree-adapters";
-
-/** Sprint A-10(작업2/8 — CEO 지시: "★★★★★ 쿠팡 추천 / ★★★★ 추천 후보 / ★★ 유사
- * 카테고리"처럼 등급을 별점으로") — 실제 쿠팡 API가 검증한 코드(isVerifiedPlatformCode)는
- * 신뢰도 숫자와 무관하게 최고 등급이다(API가 확인해준 실제 코드이기 때문). 나머지는
- * AI 추정치의 confidence로 나눈다. */
-function starsFor(candidate: CategoryCandidate, verified: boolean): string {
-  if (verified) return "★★★★★";
-  if (candidate.confidence >= 0.6) return "★★★★";
-  return "★★";
-}
 
 /** A-12.3-P0-4(CPO 3차 지시 — regression 수정: "AI 추천 → 항상 표시 / 검색 →
  * 결과 리스트까지 항상 동작 / 이 둘은 대체관계가 아니라 항상 동시에 존재해야
@@ -31,6 +22,7 @@ export function CategoryRecommendationPanel({
   searchCandidates,
   searchAttempted,
   recommendAttempted,
+  candidatesLoading,
 }: {
   candidates: CategoryCandidate[];
   selection: CategorySelection;
@@ -58,6 +50,15 @@ export function CategoryRecommendationPanel({
   /** AI 추천을 한 번이라도 시도했는지(자동 fetch 포함) — 0개일 때 "추천 결과
    * 없음"과 "아직 불러오는 중"을 구분하는 데 쓴다. */
   recommendAttempted?: boolean;
+  /**
+   * REWORK-10 B(CEO 지시, 2026-09-15) — 스마트스토어의 카테고리 후보 조회가
+   * 도는 중인가(CommerceWorkspace의 naverCategoryLoading).
+   *
+   * 이 prop이 생긴 이유: 스마트스토어 탭 맨 위에 있던 **전용 대기 배너**가
+   * 사라졌기 때문이다. 조회 자체는 그대로 돈다 — 그 사실을 말하는 자리를
+   * 쿠팡이 이미 쓰던 그 자리(아래 "AI 추천을 불러오는 중…")로 옮긴다.
+   */
+  candidatesLoading?: boolean;
 }) {
   const [expanded, setExpanded] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -97,7 +98,7 @@ export function CategoryRecommendationPanel({
   const otherSearch = search.filter((c) => !c.isVerifiedPlatformCode);
 
   const recommendEmpty = candidates.length === 0;
-  const recommendLoading = !!coupangCategoryFetching && !recommendAttempted;
+  const recommendLoading = !!candidatesLoading || (!!coupangCategoryFetching && !recommendAttempted);
 
   return (
     <section className="rounded-lg border border-border p-4 text-sm">
@@ -351,6 +352,11 @@ export function CategoryRecommendationPanel({
   );
 }
 
+/**
+ * REWORK-10 C(CEO 지시, 2026-09-15) — 모양은 공통 카드(CategoryCandidateCard)가
+ * 그린다. 여기 남는 것은 **CategoryCandidate를 그 카드의 입력으로 옮겨 적는 일**
+ * 하나뿐이다 — 롯데ON 탭이 같은 카드를 쓰기 때문에 세 탭의 선택 동작이 같다.
+ */
 function CandidateCard({
   candidate,
   isSelected,
@@ -362,44 +368,25 @@ function CandidateCard({
   onSelect: (candidate: CategoryCandidate) => void;
   verified: boolean;
 }) {
+  /* N-3.1 — leaf 이름 하나가 아니라 전체 경로. hierarchy(실제 id 포함)가 있으면
+     그걸 우선 쓰고, 없으면 path(이름만)로 대체한다. */
+  const path = candidate.hierarchy?.resolved
+    ? candidate.hierarchy.nodes.map((n) => n.name)
+    : candidate.path;
   return (
-    <li className={`rounded-md border p-3 ${isSelected ? "border-selected-border bg-selected-soft" : "border-border"}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          {/* N-3.1 — leaf 이름 하나가 아니라 전체 경로. hierarchy(실제 id 포함)가
-              있으면 그걸 우선 쓰고, 없으면 path(이름만)로 대체한다 — 둘 다
-              CPO 지시대로 leaf 이름 하나만 보여주지 않는다. */}
-          <p className="font-medium text-text-primary">
-            {(candidate.hierarchy?.resolved ? candidate.hierarchy.nodes.map((n) => n.name) : candidate.path).join(
-              " > ",
-            )}
-          </p>
-          {!candidate.hierarchy?.resolved && candidate.path.length <= 1 && (
-            <p className="text-[10px] text-text-tertiary">(상위 경로 조회 불가 — leaf만 확인됨)</p>
-          )}
-          <p className="mt-0.5 text-xs tracking-wide text-warning" aria-label={`신뢰도 등급 ${starsFor(candidate, verified)}`}>
-            {starsFor(candidate, verified)}
-          </p>
-          {/* 참고 후보는 기술적 판단 근거(키워드 매칭 등) 대신 한 줄 설명만 —
-              대표님 피드백: "왜 등록불가인지 전혀 이해하지 못합니다"의 반대
-              방향(왜 이 후보를 추천했는지)도 너무 기술적이면 도움이 안 된다. */}
-          {verified && candidate.reason.length > 0 && (
-            <ul className="mt-1.5 space-y-0.5 text-xs text-text-secondary">
-              {candidate.reason.map((r) => (
-                <li key={r}>- {r}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={() => onSelect(candidate)}
-          disabled={isSelected}
-          className="shrink-0 rounded border border-border px-3 py-1 text-xs font-medium hover:bg-background disabled:opacity-50"
-        >
-          {isSelected ? "선택됨" : "선택"}
-        </button>
-      </div>
-    </li>
+    <CategoryCandidateCard
+      path={path}
+      stars={candidateStars(candidate.confidence, verified)}
+      /* 참고 후보는 기술적 판단 근거(키워드 매칭 등) 대신 등급만 — 대표님
+         피드백: 너무 기술적이면 도움이 안 된다. */
+      reasons={verified ? candidate.reason : []}
+      detail={
+        !candidate.hierarchy?.resolved && candidate.path.length <= 1
+          ? "(상위 경로 조회 불가 — leaf만 확인됨)"
+          : undefined
+      }
+      isSelected={isSelected}
+      onSelect={() => onSelect(candidate)}
+    />
   );
 }

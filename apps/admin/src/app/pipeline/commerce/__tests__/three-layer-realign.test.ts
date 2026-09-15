@@ -16,6 +16,7 @@ import {
   fromLotteOnChannelInfo,
   toLotteOnChannelInfo,
 } from "../lotteon-channel-form";
+import { manufacturerFixture } from "./manufacturer-fixture";
 
 /**
  * 3층 구조 재정렬(CEO 지시, 2026-09-14) — **렌더 결과로만** 증명한다.
@@ -224,6 +225,7 @@ function renderLotteOnTab(channelInfo?: LotteOnChannelInfo): string {
       channelInfo,
       onChannelInfoChange: () => {},
       onEditCommonInfo: () => {},
+      manufacturerResolution: manufacturerFixture(),
     }),
   );
 }
@@ -245,6 +247,7 @@ function renderPlatformTab(platform: PlatformId): string {
       onOpenListingModal: () => {},
       onRetryListing: () => {},
       developerMode: false,
+      manufacturerResolution: manufacturerFixture(),
     }),
   );
 }

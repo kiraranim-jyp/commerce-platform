@@ -18,6 +18,7 @@ import { PlatformPreview } from "../PlatformPreview";
 import { computeChecklistReadiness } from "../readiness";
 import { computeLotteOnRegistrationReadiness } from "../lotteon-channel-form";
 import { REGISTRATION_SECTION_KEYS, sectionTitle } from "../registration-sections";
+import { manufacturerFixture } from "./manufacturer-fixture";
 
 /**
  * REWORK — 커머스 탭 구조 통일(CEO 지시, 2026-09-14).
@@ -232,6 +233,7 @@ function renderLotteOnTab(options: {
       commonCategorySources: [{ path: ["Home", "Kids", "Shorts"], origin: "원본 상품 페이지 분류" }],
       sellerSettings: options.sellerSettings,
       onEditCommonInfo: () => {},
+      manufacturerResolution: manufacturerFixture(),
     }),
   );
 }
@@ -256,6 +258,7 @@ function renderPlatformTab(
       onOpenListingModal: () => {},
       onRetryListing: () => {},
       developerMode: false,
+      manufacturerResolution: manufacturerFixture(),
     }),
   );
 }
@@ -296,8 +299,11 @@ describe("골격 — CEO 지시서의 섹션 구조와 실제 렌더 순서가 �
        "좌측 · 등록 상세"뿐이다. */
     const titles = sectionTitles(columnsOf(renderLotteOnTab({ sellerSettings: makeSellerSettings() })).left);
     expect(titles).toEqual([
-      // 이 탭이 무엇을 정하고 무엇을 정하지 않는지 — 안내 박스
-      "이 탭에서 정하는 것",
+      /* REWORK-10 C(CEO 지시, 2026-09-15) — 여기 있던 "이 탭에서 정하는 것" 안내
+         박스가 사라졌다. 스마트스토어·쿠팡 좌측 상세는 10섹션 골격으로 바로
+         시작하는데 롯데ON만 그 앞에 자기 블록을 갖고 있었다(같은 이유로
+         「등록을 막고 있는 필수 조건」·「부족한 정보」 두 블록도 없어졌다 —
+         셋 다 우측 요약과 ⑩ 등록정보에 이미 있는 내용이었다). */
       /* REWORK-4 §5(CEO 지시, 2026-09-14) — 여기부터 **10섹션 골격** 그대로다.
          이전 순서는 롯데ON만의 것이었고(상품정보 → 셀러설정 → 카테고리 → 고시
          → 안전인증 → 배송, 6/10) ③ 옵션 · ④ 가격 · ⑨ 상세설명 · ⑩ 등록정보가
@@ -305,13 +311,13 @@ describe("골격 — CEO 지시서의 섹션 구조와 실제 렌더 순서가 �
          입력" 테스트가 이 탭의 입력칸이 여전히 롯데ON 고유값뿐임을 같은 렌더
          결과로 고정한다. */
       "① 기본 상품정보",
-      "② 카테고리 (롯데ON 전용 · 2중 구조)",
+      "② 카테고리",
       "③ 옵션",
       "④ 가격",
-      "⑤ 배송 (롯데ON 전용)",
+      "⑤ 배송",
       "⑥ 배송정책 · 반품/교환",
-      "⑦ 고시정보 (상품정보제공고시 · 롯데ON 전용)",
-      "⑧ KC / 인증 (안전인증 · 롯데ON 전용)",
+      "⑦ 고시정보",
+      "⑧ KC / 인증",
       "⑨ 상세설명",
       "⑩ 등록정보",
       // 골격 뒤에 붙는 **채널 고유 항목**(CEO 표의 "+ 채널 고유 항목").
@@ -357,9 +363,14 @@ describe("골격 — CEO 지시서의 섹션 구조와 실제 렌더 순서가 �
     // 좌측 상세에는 등록 행동이 남아 있지 않다 — 행동은 한 곳에서만.
     expect(left).not.toContain(">등록 정보 확인<");
     expect(left).not.toContain(">등록 시작<");
-    // 「등록 상태」는 좌측으로 내려갔다 — 우측에 한 채널만 갖는 칸이 없다.
-    expect(stripTags(left)).toContain("등록 상태");
-    expect(text).not.toContain("등록 상태");
+    /* REWORK-10 C-2(CEO 지시, 2026-09-15) — 「등록 상태」 카드가 **없어졌다.**
+       스마트스토어·쿠팡의 ListingSection은 등록을 시도한 적이 없으면 아무것도
+       그리지 않는데(ListingSection.tsx L166), 롯데ON만 항상 이 카드를 세우고
+       "아직 이 화면에서 등록한 적이 없습니다"를 적고 있었다. 이제 같은 게이트다. */
+    expect(text, "우측 요약에 한 채널만의 칸이 없다").not.toContain("등록 상태");
+    expect(stripTags(left), "등록 전에는 좌측에도 상태 카드가 서지 않는다").not.toContain("등록 상태");
+    // 채널 연결 사실은 지우지 않았다 — ⑩ 등록정보 안으로 들어갔다.
+    expect(stripTags(left)).toContain("롯데ON 연결");
   });
 
   it("세 탭이 같은 프레임을 쓴다 — 좌측 상세 · 우측 요약", () => {

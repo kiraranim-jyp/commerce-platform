@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { CanonicalProduct } from "@commerce/shared";
 import { LotteOnRegistrationPanel } from "../LotteOnRegistrationPanel";
+import { manufacturerFixture } from "./manufacturer-fixture";
 
 /**
  * LOTTEON COMMERCE SPRINT 3(CEO 확정, 2026-09-14) — **화면을 통째로 그려서**
@@ -64,6 +65,7 @@ function renderTab(): string {
       commonPrice: { priceKrw: 128000, resolved: true },
       commonCategorySources: [{ path: ["Home", "Kids", "Shorts"], origin: "원본 상품 페이지 분류" }],
       onEditCommonInfo: () => {},
+      manufacturerResolution: manufacturerFixture(),
     }),
   );
 }

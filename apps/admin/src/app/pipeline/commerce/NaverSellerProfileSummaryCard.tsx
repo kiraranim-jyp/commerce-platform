@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
+import { sectionTitle } from "./registration-sections";
 
 interface SellerProfile {
   id: string;
@@ -58,7 +59,7 @@ export function NaverSellerProfileSummaryCard() {
 
   if (!profile) {
     return (
-      <CollapsibleSection title="배송 정책 · 반품/교환" defaultOpen={false}>
+      <CollapsibleSection title={sectionTitle("SHIPPING_POLICY")} defaultOpen={false}>
         <p className="text-xs text-text-secondary">
           아직 판매자 정보가 없습니다.{" "}
           <a href="/settings" className="text-primary hover:underline">
@@ -70,7 +71,7 @@ export function NaverSellerProfileSummaryCard() {
   }
 
   return (
-    <CollapsibleSection title="배송 정책 · 반품/교환" defaultOpen={false}>
+    <CollapsibleSection title={sectionTitle("SHIPPING_POLICY")} defaultOpen={false}>
       <div className="space-y-4 text-xs">
         <div>
           <div className="mb-1.5 flex items-center justify-between">

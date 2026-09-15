@@ -171,6 +171,7 @@ async function mount(element: ReactElement): Promise<HTMLElement> {
 
 function lotteOnElement(): ReactElement {
   return createElement(LotteOnRegistrationPanel, {
+    manufacturerResolution: manufacturerFixture(),
     product: makeProduct(),
     commonPrice: { priceKrw: 128000, resolved: true },
     commonCategorySources: [{ path: ["Home", "Kids", "Shorts"], origin: "원본 상품 페이지 분류" }],
@@ -182,6 +183,7 @@ function lotteOnElement(): ReactElement {
 function platformElement(platform: PlatformId): ReactElement {
   const product = makeProduct();
   return createElement(PlatformPreview, {
+    manufacturerResolution: manufacturerFixture(),
     product,
     listing: PLATFORM_ADAPTERS[platform].toListingModel(product, UNRESOLVED_CATEGORY, undefined, platform),
     categoryCandidates: [],
@@ -519,3 +521,4 @@ describe("REWORK-7 ① — 접힌 이름은 남은 항목 1위가 됐을 때 이
     expect(rows).toEqual(["✗ 판매자 설정".replace(" ", "")]);
   });
 });
+import { manufacturerFixture } from "./manufacturer-fixture";

@@ -24,7 +24,10 @@ import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
 import { EditableDate, EditableText, EditableTextarea } from "./EditableField";
 import { KcSellerStatusBanner } from "./KcSellerStatusBanner";
 import { ListingSection } from "./ListingSection";
+import { ManufacturerResolutionNote } from "./ManufacturerResolutionNote";
+import type { ManufacturerResolutionState } from "./use-manufacturer-resolution";
 import { NaverPayloadPreview } from "./NaverPayloadPreview";
+import { sectionTitle } from "./registration-sections";
 import type { NaverResolveResponse } from "./NaverPayloadPreview";
 import { OptionVariantEditor } from "./OptionVariantEditor";
 import { computeChecklistReadiness, computeNaverPayloadReadiness } from "./readiness";
@@ -344,6 +347,7 @@ export function PlatformPreview({
   onReadinessChange,
   onUpdateChannelPrice,
   productPriceKrw,
+  manufacturerResolution,
 }: {
   product: CanonicalProduct;
   listing: ListingModel;
@@ -517,6 +521,12 @@ export function PlatformPreview({
    * listing.priceKrw만으로는 부족하다 — 그 값은 이미 채널 최종가일 수 있다.
    * 계산할 수 없으면(원본가 미확인) null. */
   productPriceKrw?: number | null;
+  /**
+   * REWORK-10 A(CEO 지시, 2026-09-15) — 전 채널 공통 제조사 resolver의 결과.
+   * 탭과 무관하게 CommerceWorkspace가 한 번 계산해서 세 채널에 **같은 값**을
+   * 내려보낸다(useManufacturerResolution). 이 화면은 판정하지 않는다.
+   */
+  manufacturerResolution: ManufacturerResolutionState;
 }) {
   // isVerifiedPlatformCode까지 확인해야 한다 — state만 보면 미리보기가
   // "선택 완료"로 보이는데 실제 등록은 CP001로 거부되는 버그가 재발한다.
@@ -680,64 +690,34 @@ export function PlatformPreview({
 
   const fix = onFixTextField;
 
-  // CEO 지시(2026-08-19: "탭 전환 시 로딩 화면 — 대상정보를 확인중입니다") —
-  // 스마트스토어/쿠팡 탭에 들어오면 카테고리 후보를 실제 API로 조회하는 동안
-  // (naverCategoryLoading/coupangCategoryFetching) 화면이 빈 상태로 보여서
-  // 응답이 느려 보였다. 새 판정을 만들지 않고 이미 있는 두 로딩 플래그를
-  // 플랫폼에 맞게 그대로 보여준다.
-  // N-3.72 — SmartStore는 카테고리 조회(naverCategoryLoading)뿐 아니라
-  // payload validation 조회(naverValidationLoading)도 같은 "대상정보를
-  // 확인중입니다" 배너로 보여준다 — 이게 끝나기 전에 readinessSummary가
-  // null validation을 "확인 안 됨"으로 잘못 읽어 0%를 보여주던 게 이번에
-  // 고치는 버그의 핵심이다.
-  //
-  // REWORK-9(CEO 지시, 2026-09-15: "SmartStore에만 뜨는 «대상정보를 확인중입니다»가
-  // 무엇인지 조사하라") — **의미는 있다. 없앨 것이 아니라 이름을 붙여야 한다.**
-  //
-  // 실측한 정체(CommerceWorkspace.tsx):
-  //   naverCategoryLoading    L1105 effect — deps [tab, product].
-  //                           POST /api/naver/category-search. 상품이 바뀔 때마다
-  //                           자동 실행된다.
-  //   naverValidationLoading  L2031 effect — deps [eligible, listing, product, retry],
-  //                           500ms 디바운스. GET /api/naver/resolve로 출고지·반품지·
-  //                           배송·원산지·고시·상세블록을 받아 payload를 만들고
-  //                           validateNaverPayload()를 돌린다.
-  //   coupangCategoryFetching L1774 — 셀러가 버튼을 눌렀을 때만 켜진다.
-  //
-  // 🔴 그래서 **SmartStore에만** 뜬다. 쿠팡 쪽 플래그는 사용자가 누를 때만 켜지고,
-  // SmartStore만 자동 조회를 둘 걸어 두었기 때문이다 — 채널 차이가 아니라 배선 차이다.
-  //
-  // 이 값은 읽기 전용이다(GET/POST 조회뿐, 상품을 바꾸지 않는다). 하지만 **기다려야
-  // 하는 값**이다: 등록 게이트가 smartStoreValidation.ok를 쓰고(CommerceWorkspace
-  // L2197), 끝나기 전에는 우측 요약의 부족 항목이 확정되지 않는다.
-  //
-  // 지금까지 이 배너는 "대상정보를 확인중입니다..." 한 줄이었다 — 무엇을 확인하는지,
-  // 지금 어디까지 왔는지, 언제 끝나는지 어느 것도 말하지 않았다. 문구만 바꾸지 않고
-  // **확인 항목을 그대로 나열해서 각각의 완료 여부를 보여준다**(아래 tabDataChecks).
-  const tabDataChecks: { label: string; detail: string; done: boolean }[] =
-    listing.platform === "smartstore"
-      ? [
-          {
-            label: "카테고리 후보 조회",
-            detail: "네이버 리프 카테고리와 대조",
-            done: !naverCategoryLoading,
-          },
-          {
-            label: "등록 가능성 검증",
-            detail: "출고지·반품지·배송비·원산지·고시정보를 네이버에서 읽어 판정",
-            done: !naverValidationLoading,
-          },
-        ]
-      : listing.platform === "coupang"
-        ? [
-            {
-              label: "카테고리 추천 조회",
-              detail: "쿠팡 카테고리 자동매칭",
-              done: !coupangCategoryFetching,
-            },
-          ]
-        : [];
-  const tabDataLoading = tabDataChecks.some((c) => !c.done);
+  /**
+   * REWORK-10 B(CEO 지시, 2026-09-15) — 접혀 있을 때도 보이는 카테고리 한 줄.
+   * 조회 중 · 확정됨 · 미지정 셋을 같은 자리에서 말한다 — 스마트스토어만 갖던
+   * 전용 대기 배너가 하던 일 중 "카테고리를 불러오는 중"이 여기로 왔다.
+   */
+  const categorySummary =
+    naverCategoryLoading || coupangCategoryFetching
+      ? "카테고리 후보를 불러오는 중…"
+      : isCategoryConfirmed && listing.category.candidate
+        ? listing.category.candidate.path.join(" > ")
+        : "미지정 — 추천 후보에서 선택해주세요.";
+
+  /*
+   * REWORK-10 B(CEO 정정, 2026-09-15) — **SmartStore 전용 대기 UI를 없앤다.**
+   *
+   * 여기 있던 것: `tabDataChecks` / `tabDataLoading`과 좌측 맨 위의
+   * 「등록 대상 정보를 확인하고 있습니다」 배너(확인 항목 목록 포함).
+   *
+   * REWORK-9에서는 "무엇을 확인하는지 보여주자"로 갔다. CEO 판정은 **제거**다 —
+   * 세 채널 중 스마트스토어만 중간 상태를 보여주는 구조 자체가 UX 차이였다.
+   *
+   * 🔴 조회를 없앤 것이 아니다. `naverCategoryLoading` /
+   * `naverValidationLoading`은 그대로 돌고, 등록 게이트도 그대로
+   * `smartStoreValidation.ok`를 쓴다(CommerceWorkspace L2197 무변경). 조회 중
+   * 상태는 **다른 채널과 같은 방식**으로 흡수된다 — 우측 등록 요약의
+   * `isCalculating`(RegistrationReadinessCard의 "확인 중…")이 이미 그 자리이고,
+   * 카테고리 조회 중 상태는 CategoryRecommendationPanel이 자기 안에서 말한다.
+   */
 
   /**
    * REWORK-2(CEO 지시, 2026-09-14) — 우측 · 등록 요약.
@@ -769,42 +749,19 @@ export function PlatformPreview({
 
   const detail = (
     <div className="space-y-4">
-      {tabDataLoading && (
-        <div className="rounded-lg border border-border bg-surface px-4 py-3 text-sm text-text-secondary">
-          <div className="flex items-center gap-2 font-medium text-text-primary">
-            <span
-              aria-hidden
-              className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
-            />
-            등록 대상 정보를 확인하고 있습니다
-          </div>
-          {/* REWORK-9 — 무엇을 확인하는지 · 현재 상태 · 완료 여부. 셋을 전부 적는다. */}
-          <ul className="mt-2 space-y-1">
-            {tabDataChecks.map((check) => (
-              <li key={check.label} className="flex items-start gap-2 text-xs">
-                <span aria-hidden className={check.done ? "text-success" : "text-text-tertiary"}>
-                  {check.done ? "✓" : "⟳"}
-                </span>
-                <span>
-                  <span className="font-medium text-text-primary">{check.label}</span>
-                  <span className="ml-1 text-text-tertiary">— {check.detail}</span>
-                  <span className={`ml-1 ${check.done ? "text-success" : "text-text-secondary"}`}>
-                    {check.done ? "완료" : "확인 중"}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-[11px] text-text-tertiary">
-            조회만 합니다 — 상품 정보를 바꾸지 않습니다. 모두 완료되면 이 안내가 사라지고 오른쪽 「등록 준비
-            상태」가 이 결과로 다시 계산됩니다.
-          </p>
-        </div>
-      )}
-
+      {/* REWORK-10 B — 여기 있던 SmartStore 전용 「등록 대상 정보를 확인하고
+          있습니다」 배너가 사라졌다. 좌측 상세는 세 채널 모두 **10섹션 골격으로
+          바로 시작한다.** */}
       <div className="space-y-3">
+        {/* REWORK-10 C-2(CEO 지시, 2026-09-15) — 아래 열 섹션의 제목은 이제
+            **세 채널이 같은 한 곳**(registration-sections.ts)에서 온다. 예전엔
+            스마트스토어·쿠팡만 자기 문자열("기본정보" · "KC (어린이제품 등
+            인증정보)" · "등록 정보")을 들고 있어서, 같은 자리가 탭마다 다른
+            이름·번호로 보였다(rework5-three-tab-parity가 그 간극을 기록해 두고
+            있었다). 섹션 id(section-basic 등)와 내용은 하나도 바뀌지 않는다 —
+            readiness.ts의 스크롤 목적지와 계약이 그대로 유지된다. */}
         <CollapsibleSection
-          title="기본정보"
+          title={sectionTitle("BASIC")}
           badge={sectionCompletionBadge("section-basic")}
           summary={basicInfoSummary}
           {...sectionProps("section-basic")}
@@ -853,41 +810,14 @@ export function PlatformPreview({
               onSetReference={(r) => onSetFieldReference?.("manufacturer", r)}
               placeholder="제조사 미확인"
             />
-            {/* N-3.85 STEP1(대표님 지시) — 제조사가 null일 때 그냥 빈 칸을
-                보여주지 않는다. 원문→브랜드 프로필→판매자 기본정보 순서로
-                이미 다 확인했지만 셋 다 값이 없다는 사실과, 실제 입력 위치를
-                명시한다(값을 지어내지 않는다는 원칙은 그대로 — 안내 문구만
-                추가). naverResolved.notice.manufacturer는 register 라우트와
-                동일한 resolveNaverContext() 결과라 payload에 실제로 들어갈
-                값과 항상 같다(별도 판정 로직 없음).
-
-                DELTA-A(CEO 지시, 2026-09-15) — 폴백 사슬 ②(브랜드 프로필)는
-                이미 배선돼 있다(resolve-context.ts:183 brandProfile?.manufacturer
-                → build-payload.ts:482 resolvedManufacturer). 빠져 있던 것은
-                **그 사실을 셀러에게 말하는 화면**이었다:
-                  ⓐ 브랜드 프로필이 채워 준 값이 화면에는 보이지 않았다 —
-                    위 입력칸은 product.manufacturer만 그리므로 빈칸이고,
-                    경고도 안 뜨니(값이 있으니) 셀러는 아무것도 못 본다.
-                  ⓑ 안내가 "Settings의 판매자 정보 탭"만 지목했다 — 브랜드
-                    단위로 등록하면 그 브랜드 상품에 전부 적용된다는 사실이
-                    어디에도 없었다. */}
-            {!product.manufacturer.value && naverResolved?.notice?.manufacturer && (
-              <p className="col-span-2 -mt-1 rounded bg-selected-soft px-2 py-1.5 text-[11px] text-selected">
-                🔵 상품 원문에 제조사가 없어{" "}
-                {naverResolved.notice.manufacturerSource === "BRAND_DEFAULT"
-                  ? "브랜드 프로필"
-                  : "판매자 기본정보"}
-                의 제조사 <strong>{naverResolved.notice.manufacturer}</strong>가 자동으로 적용됩니다 — 위 칸에
-                직접 입력하면 그 값이 우선합니다.
-              </p>
-            )}
-            {!product.manufacturer.value && !naverResolved?.notice?.manufacturer && (
-              <p className="col-span-2 -mt-1 rounded bg-warning-soft px-2 py-1.5 text-[11px] text-warning">
-                ⚠ 제조사 정보가 없습니다 — 상품 원문 → 브랜드 프로필 → 판매자 기본정보를 확인했지만 제조사
-                정보가 없습니다. 위에서 직접 입력하거나 Settings → 브랜드 프로필에서 제조사를 등록하면 해당
-                브랜드 상품에 자동 적용됩니다.
-              </p>
-            )}
+            {/* REWORK-10 A(CEO 지시, 2026-09-15) — **전 채널 공통 resolver의 결과.**
+                여기 있던 두 문단은 `naverResolved.notice.manufacturer`를 읽었고,
+                그 prop은 CommerceWorkspace가 스마트스토어 탭에서만 내려보냈다
+                (L2757). 그래서 쿠팡 탭은 브랜드 프로필이 제조사를 채워 주는
+                상품에서도 "⚠ 제조사 정보가 없습니다"를 띄웠다 — CEO가 실측으로
+                잡은 그 상태다. 이제 세 탭이 같은 resolver 결과(prop)와 같은
+                컴포넌트를 쓴다. */}
+            <ManufacturerResolutionNote resolution={manufacturerResolution} className="col-span-2 -mt-1" />
             <ReferenceEligibleFieldRow
               label="소재"
               field={product.material}
@@ -959,7 +889,15 @@ export function PlatformPreview({
           </div>
         </CollapsibleSection>
 
-        <CollapsibleSection title="카테고리" badge={sectionCompletionBadge("section-category")} {...sectionProps("section-category")}>
+        {/* REWORK-10 B — 카테고리 조회 중이라는 사실이 서는 자리. 스마트스토어
+            전용 배너가 없어졌으니 이 상태는 다른 섹션(기본정보 · 옵션 · 가격)이
+            이미 쓰는 그 슬롯(summary — 접혀 있을 때도 보이는 한 줄)으로 말한다. */}
+        <CollapsibleSection
+          title={sectionTitle("CATEGORY")}
+          badge={sectionCompletionBadge("section-category")}
+          summary={categorySummary}
+          {...sectionProps("section-category")}
+        >
           <p
             className={`text-sm ${isCategoryConfirmed ? "text-text-primary" : "text-warning"}`}
           >
@@ -982,6 +920,9 @@ export function PlatformPreview({
             searchCandidates={coupangSearchCandidates}
             searchAttempted={coupangSearchAttempted}
             recommendAttempted={coupangRecommendAttempted}
+            /* REWORK-10 B — 스마트스토어 전용 대기 배너가 없어진 자리. 카테고리
+               조회 중이라는 사실은 쿠팡이 이미 쓰던 이 패널 안의 한 줄로 흡수된다. */
+            candidatesLoading={naverCategoryLoading}
           />
           {/* Sprint A-9(작업2/8) — "검증됨=false" 같은 개발자 로그 문구는 일반
               사용자에게 의미가 없다. Developer Mode를 켰을 때만 원시 추적
@@ -1000,7 +941,7 @@ export function PlatformPreview({
         </CollapsibleSection>
 
         <CollapsibleSection
-          title="옵션"
+          title={sectionTitle("OPTIONS")}
           badge={sectionCompletionBadge("section-options")}
           summary={optionSummary}
           {...sectionProps("section-options")}
@@ -1079,7 +1020,7 @@ export function PlatformPreview({
          * 이 id로 스크롤하고, readiness.test.ts가 "required이고 READY가 아닌
          * 항목은 갈 곳이 반드시 있다"를 계약으로 검사한다. */}
         <CollapsibleSection
-          title="가격"
+          title={sectionTitle("PRICE")}
           badge={sectionCompletionBadge("section-price")}
           alwaysRenderChildren
           {...sectionProps("section-price")}
@@ -1105,7 +1046,7 @@ export function PlatformPreview({
          * ImageInlineEditor는 완전히 제거했다 — 중복 관리 지점을 없애는 게
          * 목적이라 숨기지 않고 아예 뺐다. */}
 
-        <CollapsibleSection title="배송" badge={sectionCompletionBadge("section-shipping")} {...sectionProps("section-shipping")}>
+        <CollapsibleSection title={sectionTitle("SHIPPING")} badge={sectionCompletionBadge("section-shipping")} {...sectionProps("section-shipping")}>
           <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 xl:grid-cols-3">
             <FieldRow label="재고">
               <div className="flex items-center gap-1">
@@ -1139,7 +1080,7 @@ export function PlatformPreview({
           <p className="text-xs text-text-tertiary">현재 배송 요약: {listing.shippingInfo}</p>
           {capabilities.hasSellerProfileSummary && (
             <p className="text-xs text-text-tertiary">
-              비워두면 판매자 기본값(아래 "배송 정책 · 반품/교환" 카드)이 자동 적용됩니다.
+              비워두면 판매자 기본값(아래 {sectionTitle("SHIPPING_POLICY")} 카드)이 자동 적용됩니다.
             </p>
           )}
           {/* N-3.85 STEP6(대표님 지시, 확인 완료) — 배송비는 상품 수량과
@@ -1162,7 +1103,7 @@ export function PlatformPreview({
         {capabilities.hasSellerProfileSummary &&
           (listing.platform === "coupang" ? <SellerProfileSummaryCard /> : <NaverSellerProfileSummaryCard />)}
 
-        <CollapsibleSection title="고시정보" badge={sectionCompletionBadge("section-notice")} {...sectionProps("section-notice")}>
+        <CollapsibleSection title={sectionTitle("NOTICE")} badge={sectionCompletionBadge("section-notice")} {...sectionProps("section-notice")}>
           <p className="mb-2 rounded bg-selected-soft px-2 py-1.5 text-[11px] text-selected">
             🔵 원산지·세탁방법은 상품정보 탭과 공유됩니다 — 어느 탭에서 고쳐도 모든 커머스에 동일하게 적용됩니다.
           </p>
@@ -1217,7 +1158,7 @@ export function PlatformPreview({
           {compliancePreview && <ComplianceBreakdown report={compliancePreview} />}
         </CollapsibleSection>
 
-        <CollapsibleSection title="KC (어린이제품 등 인증정보)" badge={sectionCompletionBadge("section-kc")} {...sectionProps("section-kc")}>
+        <CollapsibleSection title={sectionTitle("KC")} badge={sectionCompletionBadge("section-kc")} {...sectionProps("section-kc")}>
           {/* N-3.57 STEP1(CPO 지시: "KC 4-State를 Seller가 이해할 수 있는
               언어로 전환") — SmartStore에서 kcStatus가 계산된 경우에만 보여준다
               (Coupang/11번가는 이 4-state 모델을 아직 쓰지 않는다, N-3.56
@@ -1268,7 +1209,7 @@ export function PlatformPreview({
           </p>
         </CollapsibleSection>
 
-        <CollapsibleSection title="상세설명" badge={sectionCompletionBadge("section-description")} {...sectionProps("section-description")}>
+        <CollapsibleSection title={sectionTitle("DESCRIPTION")} badge={sectionCompletionBadge("section-description")} {...sectionProps("section-description")}>
           <FieldRow label="상세설명" field={product.description}>
             <EditableTextarea
               value={listing.description}
@@ -1284,7 +1225,7 @@ export function PlatformPreview({
           /* LOTTEON COMMERCE SPRINT 3(CEO 지시, 2026-09-14) — 스마트스토어 탭의
              같은 섹션과 이름을 맞춘다("등록 정보"). 기능은 그대로다 —
              CoupangPayloadInspector도 섹션 id(section-payload)도 안 건드렸다. */
-          <CollapsibleSection title="등록 정보" {...sectionProps("section-payload")}>
+          <CollapsibleSection title={sectionTitle("LISTING_INFO")} {...sectionProps("section-payload")}>
             <p className="text-xs text-text-tertiary">
               실제로 쿠팡에 전송될 데이터입니다 — 등록 버튼을 누르기 전에도 항상 최신
               상태로 계산되어 있습니다.

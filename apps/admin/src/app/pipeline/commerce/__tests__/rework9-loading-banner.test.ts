@@ -5,34 +5,23 @@ import type { CanonicalProduct, PlatformId } from "@commerce/shared";
 import { PLATFORM_ADAPTERS } from "@commerce/marketplace";
 import { UNRESOLVED_CATEGORY } from "@commerce/category";
 import { PlatformPreview } from "../PlatformPreview";
+import { manufacturerFixture } from "./manufacturer-fixture";
 
 /**
- * REWORK-9(CEO 지시, 2026-09-15) — **«대상정보를 확인중입니다»가 무엇인가.**
+ * REWORK-10 B(CEO 정정, 2026-09-15) — **SmartStore 전용 대기 UI 제거.**
  *
- * ── 조사 결과 ─────────────────────────────────────────────────────────────
- * 이 배너는 PlatformPreview 좌측 상세 맨 위에 서고, 두 플래그로만 켜진다
- * (CommerceWorkspace.tsx 실측):
+ * ── 이 파일의 역사 ────────────────────────────────────────────────────────
+ * REWORK-9에서 이 파일은 「등록 대상 정보를 확인하고 있습니다」 배너가 **무엇을**
+ * 확인하는지 적혔는지를 고정했다. CEO 판정이 뒤집혔다 — 요구는 제거다.
+ * 스마트스토어만 중간 상태를 보여주는 구조 자체가 세 탭의 UX 차이였다.
  *
- *   naverCategoryLoading    L1105 effect · deps [tab, product]
- *                           POST /api/naver/category-search — 상품이 바뀔 때마다 자동
- *   naverValidationLoading  L2031 effect · deps [eligible, listing, product, retry]
- *                           500ms 디바운스 → GET /api/naver/resolve →
- *                           buildNaverProductPayload + validateNaverPayload
- *   coupangCategoryFetching L1774 — 셀러가 버튼을 눌렀을 때만 켜진다
- *
- * → **SmartStore에만 뜨는 이유**는 채널 차이가 아니라 배선 차이다. SmartStore만
- *   자동 조회를 둘 걸어 두었고, 쿠팡 쪽 플래그는 사용자가 눌러야 켜진다.
- *
- * ── 판정 ─────────────────────────────────────────────────────────────────
- * **의미 있다 → 제거하지 않는다.** 조회는 읽기 전용이지만(상품을 바꾸지 않는다)
- * 결과를 기다려야 한다 — 등록 게이트가 smartStoreValidation.ok를 쓰고
- * (CommerceWorkspace L2197), 끝나기 전에는 우측 요약의 부족 항목이 확정되지 않는다.
- *
- * 그래서 문구만 바꾸지 않고 **확인 항목을 나열하고 각각의 완료 여부를 보여준다.**
- * 이 파일은 그 세 가지(무엇을 확인하는지 · 현재 상태 · 완료 여부)가 실제 렌더에
- * 전부 서 있는지를 고정한다.
+ * ── 조회는 그대로 돈다 ────────────────────────────────────────────────────
+ *   naverCategoryLoading    POST /api/naver/category-search  (상품이 바뀔 때 자동)
+ *   naverValidationLoading  GET  /api/naver/resolve → validateNaverPayload
+ * 둘 다 살아 있고, 등록 게이트도 그대로 smartStoreValidation.ok를 쓴다.
+ * 바뀐 것은 **그 사실을 스마트스토어 탭 전용 화면으로 보여주던 자리**뿐이고,
+ * 그 상태는 세 채널 공용 UI 두 곳으로 흡수됐다(아래 테스트가 그것을 잡는다).
  */
-
 function field<T>(value: T) {
   return { value, source: "USER_EDITED", confidence: 1 } as never;
 }
@@ -91,6 +80,7 @@ function renderTab(platform: PlatformId, flags: Record<string, unknown>): string
   const listing = PLATFORM_ADAPTERS[platform].toListingModel(product, UNRESOLVED_CATEGORY, undefined, platform);
   return renderToStaticMarkup(
     createElement(PlatformPreview, {
+      manufacturerResolution: manufacturerFixture(),
       product,
       listing,
       categoryCandidates: [],
@@ -114,58 +104,72 @@ function stripTags(html: string): string {
     .trim();
 }
 
-describe("REWORK-9 — 확인 중 배너가 무엇을 확인하는지 말한다", () => {
-  it("🔴 두 조회를 이름으로 나열한다 — «대상정보»라는 정체불명 낱말이 사라졌다", () => {
-    const text = stripTags(renderTab("smartstore", { naverCategoryLoading: true, naverValidationLoading: true }));
-    expect(text, "정체를 말하지 않는 옛 문구가 남아 있다").not.toContain("대상정보를 확인중입니다");
-    expect(text).toContain("등록 대상 정보를 확인하고 있습니다");
-    expect(text).toContain("카테고리 후보 조회");
-    expect(text).toContain("등록 가능성 검증");
-    // 무엇을 읽어 오는지까지 적는다 — 이름만으로는 셀러가 무엇을 기다리는지 모른다.
-    expect(text).toContain("출고지·반품지·배송비·원산지·고시정보를 네이버에서 읽어 판정");
-  });
+describe("REWORK-10 B — SmartStore 전용 대기 UI가 없다", () => {
+  /**
+   * 🔴 CEO 정정(2026-09-15) — REWORK-9은 이 배너에 **이름을 붙였다.** 이번 판정은
+   * **제거**다: 세 채널 중 스마트스토어만 중간 상태를 보여주는 구조 자체가
+   * UX 차이였다. 그래서 이 파일은 이제 "무엇을 확인하는지 적혔는가"가 아니라
+   * **"그 화면이 없는가"**를 렌더 결과로 고정한다.
+   */
+  const BANNER_MARKERS = [
+    "등록 대상 정보를 확인하고 있습니다",
+    "대상정보를 확인중입니다",
+    "카테고리 후보 조회",
+    "등록 가능성 검증",
+    "조회만 합니다",
+    "상품 정보를 바꾸지 않습니다",
+  ];
 
-  it("🔴 항목별 완료 여부를 따로 말한다 — 하나가 끝나도 배너가 통째로 «확인 중»이 아니다", () => {
+  it("🔴 조회가 전부 도는 동안에도 스마트스토어 전용 배너가 0건이다", () => {
     const text = stripTags(
-      renderTab("smartstore", { naverCategoryLoading: false, naverValidationLoading: true }),
+      renderTab("smartstore", { naverCategoryLoading: true, naverValidationLoading: true }),
     );
-    // 끝난 것은 완료, 남은 것은 확인 중 — 둘이 같은 화면에 동시에 선다.
-    expect(text).toContain("완료");
-    expect(text).toContain("확인 중");
-    const categoryIdx = text.indexOf("카테고리 후보 조회");
-    const validationIdx = text.indexOf("등록 가능성 검증");
-    expect(categoryIdx).toBeGreaterThanOrEqual(0);
-    expect(validationIdx).toBeGreaterThan(categoryIdx);
-    // 카테고리 줄(= 첫 줄)이 "완료"를 달고 있다.
-    expect(text.slice(categoryIdx, validationIdx)).toContain("완료");
-    expect(text.slice(categoryIdx, validationIdx)).not.toContain("확인 중");
+    for (const marker of BANNER_MARKERS) {
+      expect(text, `스마트스토어 전용 대기 UI가 남아 있다 — ${marker}`).not.toContain(marker);
+    }
   });
 
-  it("상품을 바꾸지 않는다는 사실과, 끝나면 무엇이 일어나는지를 적는다", () => {
-    const text = stripTags(renderTab("smartstore", { naverCategoryLoading: true }));
-    expect(text).toContain("조회만 합니다");
-    expect(text).toContain("상품 정보를 바꾸지 않습니다");
-    expect(text).toContain("등록 준비 상태");
-  });
-
-  it("전부 끝나면 배너가 통째로 사라진다 — 남아서 기다리게 하지 않는다", () => {
+  it("🔴 조회가 끝난 뒤에도 마찬가지다 — 상태에 관계없이 이 화면은 존재하지 않는다", () => {
     const text = stripTags(
       renderTab("smartstore", { naverCategoryLoading: false, naverValidationLoading: false }),
     );
-    expect(text).not.toContain("등록 대상 정보를 확인하고 있습니다");
-    expect(text).not.toContain("카테고리 후보 조회");
+    for (const marker of BANNER_MARKERS) {
+      expect(text, marker).not.toContain(marker);
+    }
   });
 
-  it("쿠팡은 셀러가 조회를 누른 동안에만, 그리고 자기 항목 하나만 보여준다", () => {
+  it("🔴 쿠팡에도 같은 배너가 없다 — 한 채널만 다른 화면을 갖지 않는다", () => {
     const busy = stripTags(renderTab("coupang", { coupangCategoryFetching: true }));
-    expect(busy).toContain("등록 대상 정보를 확인하고 있습니다");
-    expect(busy).toContain("카테고리 추천 조회");
-    // 🔴 쿠팡에는 네이버 검증 줄이 서지 않는다(없는 조회를 있다고 말하지 않는다).
-    expect(busy).not.toContain("등록 가능성 검증");
+    for (const marker of BANNER_MARKERS) {
+      expect(busy, marker).not.toContain(marker);
+    }
+  });
 
-    const idle = stripTags(renderTab("coupang", {}));
-    expect(idle, "쿠팡은 누르지 않으면 이 배너가 뜨지 않는다").not.toContain(
-      "등록 대상 정보를 확인하고 있습니다",
+  /**
+   * 🔴 조회를 없앤 것이 아니다 — **다른 채널과 같은 자리로 흡수**했다.
+   *
+   *   등록 가능성 검증 중  → 우측 요약의 「필수 확인 · 확인 중…」
+   *                          (RegistrationReadinessCard의 isCalculating — 세 채널 공용)
+   *   카테고리 조회 중      → 카테고리 추천 패널 안의 「AI 추천을 불러오는 중…」
+   *                          (쿠팡이 이미 쓰던 그 한 줄)
+   */
+  it("등록 가능성 검증 중은 세 채널 공용 우측 요약이 말한다", () => {
+    const text = stripTags(renderTab("smartstore", { naverValidationLoading: true }));
+    expect(text).toContain("필수 확인");
+    expect(text).toContain("확인 중…");
+  });
+
+  it("카테고리 조회 중은 세 채널 공용 카테고리 패널이 말한다", () => {
+    const text = stripTags(renderTab("smartstore", { naverCategoryLoading: true }));
+    expect(text).toContain("카테고리 후보를 불러오는 중…");
+  });
+
+  /** 🔴 등록 게이트는 한 줄도 바뀌지 않았다 — 조회 자체는 그대로 돈다. */
+  it("등록 게이트(smartStoreValidation.ok)가 그대로 남아 있다", async () => {
+    const source = await import("node:fs").then((fs) =>
+      fs.readFileSync(new URL("../../CommerceWorkspace.tsx", import.meta.url), "utf8"),
     );
+    expect(source).toContain("smartStoreValidation ? smartStoreValidation.ok : true");
+    expect(source).toContain("/api/naver/resolve");
   });
 });

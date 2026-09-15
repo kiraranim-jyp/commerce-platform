@@ -197,6 +197,7 @@ function Harness({ initial }: { initial: CanonicalProduct }) {
     product = current;
   }, [current]);
   return createElement(PlatformPreview, {
+    manufacturerResolution: manufacturerFixture(),
     product: current,
     listing: listingOf(current),
     categoryCandidates: [],
@@ -490,3 +491,4 @@ describe("REWORK-7 ③ — SKU는 카탈로그 모델명이 아니다(B 판정�
     expect(origin.detailAttribute?.naverShoppingSearchInfo?.modelName).toBe("B226AC043");
   });
 });
+import { manufacturerFixture } from "./manufacturer-fixture";

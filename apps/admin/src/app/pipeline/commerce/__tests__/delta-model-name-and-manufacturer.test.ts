@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { CanonicalProduct, FieldSource } from "@commerce/shared";
 import { PLATFORM_ADAPTERS } from "@commerce/marketplace";
 import { UNRESOLVED_CATEGORY } from "@commerce/category";
-import { buildNaverProductPayload, validateNaverPayload } from "@commerce/listing";
+import { buildNaverProductPayload, resolveManufacturer, validateNaverPayload } from "@commerce/listing";
 import { PlatformPreview } from "../PlatformPreview";
 import { SourceDataView, CATALOG_MODEL_NAME_LABEL } from "../SourceDataView";
 import { MissingFieldsBulkPanel } from "../MissingFieldsBulkPanel";
@@ -178,62 +178,21 @@ function text(): string {
 
 /* ══ DELTA-A ════════════════════════════════════════════════════════════════ */
 
-/** 실제 resolveNaverContext()가 내려주는 notice 블록 모양 그대로. */
-function resolvedWith(notice: {
-  manufacturer: string | null;
-  manufacturerSource: "BRAND_DEFAULT" | "SELLER_DEFAULT" | "NONE";
-}) {
-  return {
-    status: "OK",
-    category: null,
-    address: { releaseAddressBookNo: 1, refundAddressBookNo: 1 },
-    courier: { available: false, value: null, source: null },
-    delivery: {
-      returnCompanies: [],
-      returnCompaniesFetchFailed: false,
-      primaryReturnCompany: null,
-      deliveryFee: null,
-      returnDeliveryFee: null,
-      exchangeDeliveryFee: null,
-    },
-    origin: {
-      areaListFetchFailed: false,
-      resolvedCountryText: "스페인",
-      match: { status: "NO_INPUT", code: null, matchedDisplayName: null, requiresImporter: false },
-      resolvedCountryTextSource: "PRODUCT_FIELD",
-    },
-    notice: {
-      warrantyPolicy: null,
-      afterServiceDirector: null,
-      companyContactNumber: null,
-      ...notice,
-    },
-    detailPage: {
-      descriptionTemplate: null,
-      commonImages: {
-        topCommonImageUrl: null,
-        topCommonImageEnabled: false,
-        bottomCommonImageUrl: null,
-        bottomCommonImageEnabled: false,
-      },
-      brandIntro: null,
-      detailBlocks: [],
-    },
-  } as never;
-}
-
 function PlatformHarness({
   initial,
   naverResolved,
+  manufacturerResolution,
 }: {
   initial: CanonicalProduct;
   naverResolved?: unknown;
+  manufacturerResolution?: ReturnType<typeof manufacturerFixture>;
 }) {
   const [current, setCurrent] = useState(initial);
   useEffect(() => {
     product = current;
   }, [current]);
   return createElement(PlatformPreview, {
+    manufacturerResolution: manufacturerResolution ?? manufacturerFixture(),
     product: current,
     listing: listingOf(current),
     categoryCandidates: [],
@@ -256,10 +215,28 @@ function PlatformHarness({
   } as never);
 }
 
-async function renderPlatform(initial: CanonicalProduct, naverResolved?: unknown): Promise<void> {
+async function renderPlatform(
+  initial: CanonicalProduct,
+  naverResolved?: unknown,
+  manufacturerResolution?: ReturnType<typeof manufacturerFixture>,
+): Promise<void> {
   await act(async () => {
-    root.render(createElement(PlatformHarness, { initial, naverResolved }));
+    root.render(createElement(PlatformHarness, { initial, naverResolved, manufacturerResolution }));
   });
+}
+
+/**
+ * REWORK-10 A(2026-09-15) — 화면이 받는 값을 **공통 resolver로** 만든다.
+ * 예전 이 테스트는 resolvedWith(...)(= /api/naver/resolve 응답 모양)를 넘겼다.
+ * 그 경로는 스마트스토어 탭에서만 채워지는 prop이었고, 그것이 쿠팡 탭에 ⚠ 가
+ * 남던 원인이었다. 이제 세 채널이 같은 함수의 결과를 받는다.
+ */
+function resolution(input: {
+  productManufacturer?: string;
+  brandProfileManufacturer?: string | null;
+  sellerProfileManufacturer?: string | null;
+}) {
+  return { ...resolveManufacturer(input), loading: false };
 }
 
 describe("DELTA-A ① — 폴백 ②(브랜드 프로필)가 실제로 존재하고 payload까지 간다", () => {
@@ -293,7 +270,8 @@ describe("DELTA-A ② — 화면이 «어디까지 찾아봤는지»를 말한�
   it("🔴 브랜드 프로필이 채운 값이 화면에 보인다 — BEFORE에는 한 글자도 없었다", async () => {
     await renderPlatform(
       makeProduct(),
-      resolvedWith({ manufacturer: "Bobo Choses S.L.", manufacturerSource: "BRAND_DEFAULT" }),
+      undefined,
+      resolution({ brandProfileManufacturer: "Bobo Choses S.L." }),
     );
     const screen = text();
     expect(screen, "어느 단계가 채웠는지 말하지 않는다").toContain("브랜드 프로필");
@@ -305,7 +283,8 @@ describe("DELTA-A ② — 화면이 «어디까지 찾아봤는지»를 말한�
   it("판매자 기본정보가 채웠으면 그렇게 말한다 — 브랜드 프로필이라고 하지 않는다", async () => {
     await renderPlatform(
       makeProduct(),
-      resolvedWith({ manufacturer: "따져코리아", manufacturerSource: "SELLER_DEFAULT" }),
+      undefined,
+      resolution({ sellerProfileManufacturer: "따져코리아" }),
     );
     const screen = text();
     expect(screen).toContain("판매자 기본정보의 제조사");
@@ -313,7 +292,7 @@ describe("DELTA-A ② — 화면이 «어디까지 찾아봤는지»를 말한�
   });
 
   it("🔴 셋 다 없을 때만 직접 입력을 안내하고, 확인한 세 단계를 전부 적는다", async () => {
-    await renderPlatform(makeProduct(), resolvedWith({ manufacturer: null, manufacturerSource: "NONE" }));
+    await renderPlatform(makeProduct(), undefined, resolution({}));
     const screen = text();
     expect(screen).toContain("제조사 정보가 없습니다");
     // CEO 지정 — "확인했지만 없다"를 말한다(어디까지 찾아봤는지).
@@ -326,7 +305,8 @@ describe("DELTA-A ② — 화면이 «어디까지 찾아봤는지»를 말한�
   it("셀러가 직접 입력하면 그 값이 제조사 폴백을 이긴다 — 실제 타이핑", async () => {
     await renderPlatform(
       makeProduct(),
-      resolvedWith({ manufacturer: "Bobo Choses S.L.", manufacturerSource: "BRAND_DEFAULT" }),
+      undefined,
+      resolution({ brandProfileManufacturer: "Bobo Choses S.L." }),
     );
     const input = Array.from(container.querySelectorAll("input")).find(
       (i) => (i.getAttribute("placeholder") ?? "") === "제조사 미확인",
@@ -534,3 +514,4 @@ describe("DELTA-B ③ — 부족 항목 목록에서 두 모델명이 서로 다
     expect(panel).toContain(CATALOG_MODEL_NAME_LABEL);
   });
 });
+import { manufacturerFixture } from "./manufacturer-fixture";

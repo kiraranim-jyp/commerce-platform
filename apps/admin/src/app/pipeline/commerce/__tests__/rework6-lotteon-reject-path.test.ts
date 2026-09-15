@@ -12,6 +12,7 @@ import {
   type LotteOnPayloadInput,
 } from "@commerce/listing";
 import { LotteOnRegistrationPanel } from "../LotteOnRegistrationPanel";
+import { manufacturerFixture } from "./manufacturer-fixture";
 
 /**
  * REWORK-6 ②(CEO 판정, 2026-09-14) — **추천 실패가 등록 불가가 되어서는 안 된다.**
@@ -256,17 +257,22 @@ let container: HTMLDivElement;
 let root: Root;
 let saved: LotteOnChannelInfo | undefined;
 let readiness: { percent: number; allRequiredPassed: boolean; missingCount: number } | null = null;
+/** REWORK-10 C — 추천이 자동으로 도는 뒤로, "아직 추천이 끝나지 않은 화면"을
+ *  만들려면 응답을 붙잡아 둘 수 있어야 한다. 기본값은 REJECT 그대로다. */
+let recommendPending = false;
 
 beforeEach(() => {
   // @ts-expect-error — React가 act() 안의 업데이트를 동기 처리하게 하는 전역 플래그.
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   sentChannels = [];
   categoryQueries = [];
+  recommendPending = false;
   vi.stubGlobal(
     "fetch",
     vi.fn((input: unknown, init?: { body?: string }) => {
       const url = String(input);
       if (url.includes("/api/lotteon/category-recommend")) {
+        if (recommendPending) return new Promise(() => {});
         return Promise.resolve({ ok: true, json: () => Promise.resolve(REJECT_RESPONSE) });
       }
       if (url.includes("/api/lotteon/categories")) {
@@ -315,6 +321,7 @@ async function enterTab(product: CanonicalProduct): Promise<void> {
           saved = info;
         },
         onEditCommonInfo: () => {},
+        manufacturerResolution: manufacturerFixture(),
         onReadinessChange: (percent, allRequiredPassed, missingCount) => {
           readiness = { percent, allRequiredPassed, missingCount };
         },
@@ -360,7 +367,8 @@ async function pickRow(name: string): Promise<void> {
 
 /** 추천을 눌러 REJECT를 받는다 — 이 파일 모든 시나리오의 출발점이다. */
 async function recommendAndFail(): Promise<void> {
-  await click("카테고리 추천");
+  /* REWORK-10 C — 추천은 탭에 들어오는 순간 자동으로 돈다(스마트스토어와 같다).
+     셀러가 눌러야 시작되던 그 클릭이 사라졌다. */
 }
 
 /* ── 1. 막다른 길이 아니다 ──────────────────────────────────────────────── */
@@ -379,8 +387,22 @@ describe("REWORK-6 ② — 추천 REJECT가 막다른 길이 아니다", () => {
     ).toContain("롯데ON 카테고리 선택");
   });
 
-  it("추천을 눌러보기 전에는 그 길을 먼저 내밀지 않는다 — 원칙은 시스템 추천 → 셀러 선택이다", async () => {
+  /**
+   * REWORK-10 C(CEO 지시, 2026-09-15) — 이 테스트가 뒤집혔다.
+   *
+   * 직전까지는 "셀러가 [카테고리 추천]을 누르기 전에는 직접 선택 경로를 내밀지
+   * 않는다"였다. 이제 추천은 **탭에 들어오는 순간 자동으로 돈다**(스마트스토어가
+   * 카테고리 후보를 자동으로 조회하는 것과 같은 동작) — 셋 중 롯데ON만 셀러가
+   * 먼저 버튼을 눌러야 시작되는 화면이던 것이 이번에 없어진 차이다.
+   *
+   * 원칙 자체는 그대로다: **시스템 추천이 먼저, 셀러 선택은 그 다음.** 다만
+   * "먼저"가 클릭을 기다리지 않을 뿐이고, 추천이 돌기 전(loading)에는 여전히
+   * 직접 선택 경로를 내밀지 않는다.
+   */
+  it("추천이 돌기 전에는 직접 선택 경로를 내밀지 않는다 — 시스템 추천이 먼저다", async () => {
     saved = { ...PREFILLED };
+    // 추천 응답을 영원히 붙잡아 둔다 = 화면이 "추천 중"인 상태.
+    recommendPending = true;
     await enterTab(makeProduct());
     expect(text()).not.toContain("카테고리를 자동 추천하지 못했습니다.");
   });

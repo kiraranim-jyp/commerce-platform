@@ -8,6 +8,7 @@ import type { CoupangDescriptionTemplate, DetailPageBlock, NaverPayloadValidatio
 import type { CanonicalProduct, CommerceCategoryPathResult } from "@commerce/shared";
 import { formatKrw } from "@commerce/pricing";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
+import { sectionTitle } from "./registration-sections";
 
 /**
  * Sprint N-2.7/N-2.8 — 네이버 v2 상품등록 payload를 실제 POST 없이 미리 보여준다.
@@ -471,7 +472,7 @@ export function NaverPayloadPreview({
   // 채널마다 다른 이름을 붙이면 같은 것이 세 개로 보인다.
   return (
     <CollapsibleSection
-      title="등록 정보"
+      title={sectionTitle("LISTING_INFO")}
       summary="원산지 · 고시정보 · KC · 배송/반품 등 SmartStore 전용 항목입니다. 등록 가능 여부는 우측 등록 준비도 카드를 확인하세요."
     >
       {(blockedIssues.length > 0 || missingIssues.length > 0) && (

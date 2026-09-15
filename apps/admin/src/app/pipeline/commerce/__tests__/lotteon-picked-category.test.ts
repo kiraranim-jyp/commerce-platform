@@ -24,6 +24,7 @@ import {
   summarizeLotteOnManagedValues,
 } from "../lotteon-channel-form";
 import type { LotteOnStandardCategory } from "../lotteon-category";
+import { manufacturerFixture } from "./manufacturer-fixture";
 
 /**
  * LOTTEON-CATEGORY-PERSIST(CEO 지시, 2026-09-14) — **고른 카테고리가 탭을
@@ -301,6 +302,7 @@ async function enterTab(product: CanonicalProduct): Promise<void> {
           saved = info;
         },
         onEditCommonInfo: () => {},
+        manufacturerResolution: manufacturerFixture(),
         onReadinessChange: (percent, allRequiredPassed, missingCount) => {
           readiness = { percent, allRequiredPassed, missingCount };
         },
@@ -320,6 +322,26 @@ function text(): string {
   return (container.textContent ?? "").replace(/\s+/g, " ").trim();
 }
 
+/**
+ * REWORK-10 C(CEO 지시, 2026-09-15) — 후보를 고르는 동작이 스마트스토어·쿠팡과
+ * 같아졌다: 줄 전체가 버튼이던 것에서 **카드 안의 [선택] 버튼**으로 바뀌었다
+ * (CategoryCandidateCard — 세 채널 공용). 그래서 "표준카테고리번호가 적힌 줄을
+ * 누른다"가 아니라 "그 번호를 가진 카드의 [선택]을 누른다"로 찾는다.
+ */
+async function pickCandidate(categoryId: string): Promise<void> {
+  const card = Array.from(container.querySelectorAll("li[data-category-candidate]")).find((li) =>
+    (li.textContent ?? "").includes(categoryId),
+  );
+  if (!card) throw new Error(`후보 카드에 "${categoryId}"가 없다`);
+  const button = Array.from(card.querySelectorAll("button")).find((b) =>
+    (b.textContent ?? "").trim() === "선택",
+  );
+  if (!button) throw new Error(`"${categoryId}" 카드에 [선택] 버튼이 없다`);
+  await act(async () => {
+    button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+}
+
 async function click(label: string): Promise<void> {
   const button = Array.from(container.querySelectorAll("button")).find((b) =>
     (b.textContent ?? "").includes(label),
@@ -331,13 +353,15 @@ async function click(label: string): Promise<void> {
 }
 
 /**
- * 셀러가 하는 일 그대로 — 추천을 누르고, 나온 후보를 누른다. **여기까지가
- * 셀러의 한 동작이다**(REWORK-5 ③ 이후로는 [등록 정보 확인]을 따로 누르지
- * 않는다 — 선택이 곧 확인을 부른다).
+ * 셀러가 하는 일 그대로 — 나온 후보를 누른다. **그것이 전부다.**
+ *
+ * REWORK-10 C(CEO 지시, 2026-09-15) — 여기 있던 `click("카테고리 추천")`이
+ * 사라졌다. 추천이 탭 진입과 동시에 자동으로 돌기 때문이다(스마트스토어가
+ * /api/naver/category-search를 자동으로 돌리는 것과 같은 동작). 셋 중 롯데ON만
+ * "먼저 버튼을 눌러야 시작되는" 화면이던 것이 이번에 사라진 차이다.
  */
 async function recommendAndPickOnly(): Promise<void> {
-  await click("카테고리 추천");
-  await click(RECOMMENDED_CATEGORY.id);
+  await pickCandidate(RECOMMENDED_CATEGORY.id);
 }
 
 /**

@@ -1,6 +1,7 @@
 import type { CanonicalProduct } from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
 import { computeVariantFinalPriceKrw, resolveListingPrice } from "@commerce/pricing";
+import { resolveManufacturer } from "../common/manufacturer";
 import type {
   LotteOnCategoryAttribute,
   LotteOnDisplayCategory,
@@ -133,6 +134,18 @@ export interface LotteOnPayloadInput {
   channel: LotteOnChannelConfig;
   /** 상세페이지 HTML(상품기술서). 조립은 기존 공통 경로가 하고 이 함수는 받기만 한다. */
   detailHtml: string;
+  /**
+   * REWORK-10 A(CEO 지시, 2026-09-15) — **제조사 폴백(브랜드 프로필 → 판매자
+   * 기본정보).** 지금까지 롯데ON payload만 `product.manufacturer.value` 하나를
+   * 보고 있어서, 쿠팡·스마트스토어가 브랜드 프로필로 채워 주는 제조사가
+   * 롯데ON에서는 통째로 빠졌다(mfcrNm 미전송).
+   *
+   * 값을 여기서 조회하지 않는다 — Naver의 `resolvedManufacturer`와 같은 규칙으로
+   * 호출부(api/lotteon/_lib/build-context.ts)가 이미 읽어 둔 브랜드/판매자
+   * 프로필을 넘겨받고, 우선순위 판정은 공통 `resolveManufacturer()` 하나가 한다.
+   */
+  brandProfileManufacturer?: string | null;
+  sellerProfileManufacturer?: string | null;
   /** PriceEditor가 쓰는 것과 같은 환율/반올림 — resolveListingPrice에 그대로 넘긴다. */
   liveRates?: Record<string, number>;
   roundingUnit?: number;
@@ -294,7 +307,13 @@ export function buildLotteOnPayload(input: LotteOnPayloadInput): LotteOnProductR
 
   const { items, optionSorts, usesOptions } = buildItems(product, basePriceKrw, input.liveRates);
   const keywords = resolveSearchKeywords(product);
-  const manufacturer = product.manufacturer.value.trim();
+  /* REWORK-10 A — 전 채널 공통 resolver. 예전 이 줄은
+     `product.manufacturer.value.trim()` 하나였다(브랜드/판매자 폴백 없음). */
+  const manufacturer = resolveManufacturer({
+    productManufacturer: product.manufacturer.value,
+    brandProfileManufacturer: input.brandProfileManufacturer,
+    sellerProfileManufacturer: input.sellerProfileManufacturer,
+  }).value;
   const modelNo = product.modelName.value.trim();
   const importerName = (channel.importerName ?? product.importer.value).trim();
 

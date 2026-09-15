@@ -81,6 +81,7 @@ import { resolveCommonCategorySources } from "./commerce/lotteon-channel-form";
 import { MissingFieldsBulkPanel } from "./commerce/MissingFieldsBulkPanel";
 import type { NaverResolveResponse } from "./commerce/NaverPayloadPreview";
 import { PlatformPreview } from "./commerce/PlatformPreview";
+import { useManufacturerResolution } from "./commerce/use-manufacturer-resolution";
 import { readinessStateToLevel } from "./commerce/readiness-state";
 import type { PriorityItem, ReadinessLevel, RegistrationReadinessState } from "./commerce/readiness-state";
 // REGISTRATION-UX-1 — 채널 탭을 열지 않아도 준비 상태를 계산하기 위해
@@ -1976,6 +1977,20 @@ export function CommerceWorkspace({
   }, [tab, listing, product.sourceUrl, product.categoryRecommendationCache, categoryCachePriming]);
 
   /**
+   * REWORK-10 A(CEO 지시, 2026-09-15) — **제조사 · 전 채널 공통 resolver.**
+   *
+   * 🔴 탭에 걸리지 않는다. 아래 smartStoreValidation/smartStoreResolved는
+   * `tab === "smartstore"`일 때만 도는데, 지금까지 화면의 제조사 안내가 그
+   * 결과(naverResolved)만 보고 있어서 쿠팡 탭은 브랜드 프로필이 제조사를
+   * 채워 주는 상품에서도 "⚠ 제조사 정보가 없습니다"를 띄웠다(CEO 실측).
+   * 이 값은 상품(브랜드명)에만 걸리고, 세 채널에 **같은 객체**로 내려간다.
+   */
+  const manufacturerResolution = useManufacturerResolution(
+    product.manufacturer.value,
+    product.brand.value,
+  );
+
+  /**
    * N-3.27(CPO 지시: "Readiness ↔ 실제 Payload Validation 단일화") — SmartStore
    * register route(/api/smartstore/register)가 실제 POST 직전 최종 게이트로
    * 쓰는 것과 완전히 같은 buildNaverProductPayload + validateNaverPayload를
@@ -1986,6 +2001,7 @@ export function CommerceWorkspace({
    * 결과를 낸다 — 계산이 어긋날 위험이 없다). 카테고리가 아직 확정 안 됐어도
    * leafCategoryId=""로 조회해서(카테고리 외 필드 상태라도) 결과를 보여준다.
    */
+
   const [smartStoreValidation, setSmartStoreValidation] = useState<NaverPayloadValidationResult | null>(null);
   // N-3.73 STEP7(사용자 지시: "Payload Preview가 별도의 임의 BLOCKED 판정을
   // 만들지 못하게 한다") — NaverPayloadPreview.tsx가 지금까지 이 effect와는
@@ -2736,6 +2752,8 @@ export function CommerceWorkspace({
               /* 탭 배지/준비상태 줄이 쓸 값. 패널이 서버 검증 결과를 센 값을
                  그대로 올려보낸다 — 여기서 다시 판정하지 않는다. */
               onReadinessChange={handleLotteOnReadinessChange}
+              /* REWORK-10 A — 스마트스토어·쿠팡과 **같은 값**이다. */
+              manufacturerResolution={manufacturerResolution}
             />
           )}
 
@@ -2797,6 +2815,8 @@ export function CommerceWorkspace({
               settingsRecommended={tab === "coupang" ? (coupangSettingsRecommended ?? undefined) : undefined}
               developerMode={developerMode}
               jobKey={jobKey}
+              /* REWORK-10 A — 세 채널이 같은 제조사 resolver 결과를 받는다. */
+              manufacturerResolution={manufacturerResolution}
             />
           )}
 

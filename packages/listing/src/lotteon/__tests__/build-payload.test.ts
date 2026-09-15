@@ -289,3 +289,44 @@ describe("lotteOnAdapter (NextGenMarketplaceAdapter 계약)", () => {
     expect(result.message).toContain("/api/lotteon/register");
   });
 });
+
+/* ── REWORK-10 A ────────────────────────────────────────────────────────── */
+
+describe("REWORK-10 A — 롯데ON도 전 채널 공통 제조사 resolver를 탄다", () => {
+  /**
+   * 🔴 BEFORE: 이 파일의 제조사 줄은 `product.manufacturer.value.trim()` 하나였다.
+   * 쿠팡·스마트스토어는 브랜드 프로필 → 판매자 기본정보까지 내려가는데 롯데ON만
+   * 원문이 비면 mfcrNm을 통째로 빼고 보냈다 — 같은 상품이 채널마다 다른 제조사로
+   * (또는 제조사 없이) 등록되는 상태였다.
+   */
+  function manufacturerOf(input: Partial<LotteOnPayloadInput>, product = makeProduct()): string | undefined {
+    const payload = buildLotteOnPayload({
+      ...inputFor(product, completeChannel()),
+      ...input,
+    });
+    return payload.spdLst[0].mfcrNm;
+  }
+
+  it("① 상품 원문이 있으면 그것이 이긴다 — 기존 동작 그대로", () => {
+    expect(
+      manufacturerOf({ brandProfileManufacturer: "브랜드제조사", sellerProfileManufacturer: "판매자제조사" }),
+    ).toBe("테스트제조사");
+  });
+
+  it("② 원문이 없으면 브랜드 프로필이 mfcrNm에 실린다 — BEFORE에는 필드 자체가 없었다", () => {
+    const product = makeProduct({ manufacturer: field("") });
+    expect(manufacturerOf({ brandProfileManufacturer: "Bobo Choses S.L." }, product)).toBe(
+      "Bobo Choses S.L.",
+    );
+  });
+
+  it("③ 브랜드 프로필도 없으면 판매자 기본정보", () => {
+    const product = makeProduct({ manufacturer: field("") });
+    expect(manufacturerOf({ sellerProfileManufacturer: "따져코리아" }, product)).toBe("따져코리아");
+  });
+
+  it("④ 셋 다 없으면 값을 지어내지 않는다 — mfcrNm을 아예 싣지 않는다", () => {
+    const product = makeProduct({ manufacturer: field("") });
+    expect(manufacturerOf({}, product)).toBeUndefined();
+  });
+});

@@ -8,7 +8,7 @@ import { UNRESOLVED_CATEGORY } from "@commerce/category";
 import type { LotteOnSellerSettingsInput } from "@commerce/listing";
 import { LotteOnRegistrationPanel } from "../LotteOnRegistrationPanel";
 import { PlatformPreview } from "../PlatformPreview";
-import { REGISTRATION_SECTION_KEYS, sectionTitle } from "../registration-sections";
+import { REGISTRATION_SECTION_KEYS, sectionHeadings, sectionTitle } from "../registration-sections";
 
 /**
  * REWORK-5 ④·⑥(CEO 지시, 2026-09-14) — **세 탭을 나란히 놓고 본다.**
@@ -138,6 +138,7 @@ function lotteOnElement(
   sellerSettings: LotteOnSellerSettingsInput | null = makeSellerSettings(),
 ): ReactElement {
   return createElement(LotteOnRegistrationPanel, {
+    manufacturerResolution: manufacturerFixture(),
     product: makeProduct(),
     commonPrice: { priceKrw: 128000, resolved: true },
     commonCategorySources: [{ path: ["Home", "Kids", "Shorts"], origin: "원본 상품 페이지 분류" }],
@@ -149,6 +150,7 @@ function lotteOnElement(
 function platformElement(platform: PlatformId): ReactElement {
   const product = makeProduct();
   return createElement(PlatformPreview, {
+    manufacturerResolution: manufacturerFixture(),
     product,
     listing: PLATFORM_ADAPTERS[platform].toListingModel(product, UNRESOLVED_CATEGORY, undefined, platform),
     categoryCandidates: [],
@@ -187,33 +189,19 @@ function rawSectionTitles(scope: HTMLElement): string[] {
 }
 
 /**
- * 제목에서 **자리 이름**만 남긴다. 셋을 벗겨낸다:
- *   · 앞의 번호(①~⑩)          — 롯데ON에만 붙어 있다
- *   · 괄호 안의 채널 전용 설명  — "(롯데ON 전용 · 2중 구조)" 등
- *   · 뒤에 붙는 상태 배지        — "🟢 준비됨" 등(쿠팡에만 붙는다)
- * 그리고 같은 자리를 가리키는 다른 표기를 canonical 이름으로 모은다.
+ * REWORK-10 C-2(CEO 지시, 2026-09-15) — **정규화가 더 이상 필요 없다.**
  *
- * 🔴 이 정규화가 필요하다는 사실 자체가 남아 있는 간극이다 — 아래 "표기 차이"
- * 테스트가 그 간극을 숨기지 않고 그대로 기록한다.
+ * 직전까지 이 자리에는 동의어 표(TITLE_SYNONYMS)와 번호/괄호 제거 로직이 있었다.
+ * "기본정보" vs "① 기본 상품정보", "KC (어린이제품 등 인증정보)" vs "⑧ KC / 인증"
+ * 처럼 **같은 자리를 채널마다 다른 이름으로 부르고 있었기** 때문이다. 그 정규화가
+ * 필요하다는 사실 자체가 남아 있던 간극이었고, 이번에 세 채널이 전부
+ * registration-sections.ts의 sectionTitle() 하나를 쓰게 되면서 사라졌다.
+ *
+ * 남는 일은 **상태 배지만 떼는 것**뿐이다(쿠팡 제목 뒤에 "🟢 준비됨" 등이 붙는다).
  */
-const TITLE_SYNONYMS: Record<string, string> = {
-  "기본정보": "기본 상품정보",
-  "배송 정책 · 반품/교환": "배송정책 · 반품/교환",
-  "KC (어린이제품 등 인증정보)": "KC / 인증",
-  "등록 정보": "등록정보",
-};
-
 function canonicalSectionName(title: string): string {
-  let t = title.replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, "");
-  t = t.split(/[🟢🟠🟡🔴⚪]/)[0];
-  // 괄호 설명은 벗기되, "KC (어린이제품 등 인증정보)"처럼 동의어 표에 통째로
-  // 들어 있는 것은 먼저 찾아본다.
-  const whole = clean(t);
-  if (TITLE_SYNONYMS[whole]) return TITLE_SYNONYMS[whole];
-  t = clean(whole.replace(/\s*\([^)]*\)\s*$/, ""));
-  return TITLE_SYNONYMS[t] ?? t;
+  return clean(title.split(/[🟢🟠🟡🔴⚪]/)[0]);
 }
-
 /* ── ⑥ 세 탭 나란히 비교 ─────────────────────────────────────────────────── */
 
 describe("REWORK-5 ⑥ — 세 탭을 나란히 놓은 렌더 비교", () => {
@@ -243,31 +231,36 @@ describe("REWORK-5 ⑥ — 세 탭을 나란히 놓은 렌더 비교", () => {
   });
 
   /**
-   * 🔴 남아 있는 간극을 **숨기지 않고 기록한다.**
+   * 🔴 REWORK-10 C-2(CEO 지시, 2026-09-15) — **간극이 닫혔다.**
    *
-   * 세 탭의 자리와 순서는 같지만 **표기는 아직 다르다** — 롯데ON만 ①~⑩ 번호를
-   * 달고 있고, 같은 자리의 이름도 "기본정보" vs "① 기본 상품정보"처럼 다르다.
-   * 이 테스트는 그 차이를 고정해서 보고서가 사실대로 쓰이게 한다.
-   *
-   * 지시서가 "SS/쿠팡 10칸 read-only 전환"을 CEO 판단 대기로 묶어 두었으므로
-   * 스마트스토어·쿠팡의 제목을 이번에 임의로 바꾸지 않았다. 바꿔야 할지는
-   * CEO가 정할 일이고, 그때까지 이 차이가 조용히 사라지지 않게 못을 박는다.
+   * 직전 버전의 이 테스트는 그 반대를 고정하고 있었다: "롯데ON에만 번호가 붙는다",
+   * "SMARTSTORE[0] === 기본정보, LOTTEON[0] === ① 기본 상품정보". CEO 판정이
+   * 뒤집혔으므로(세 탭의 좌측 섹션 목록·순서·조작 방식이 같아야 한다) 이제
+   * **정규화 없이 원문 그대로** 세 탭이 같은 목차를 내는지를 본다.
    */
-  it("📋 남은 간극 — 자리는 같지만 제목 표기는 아직 채널마다 다르다", async () => {
+  it("🔴 세 탭의 섹션 제목이 정규화 없이 글자 그대로 같다", async () => {
+    const expected = sectionHeadings();
     const raw: Record<string, string[]> = {};
     for (const tab of TABS) {
       const { left } = columnsOf(await mount(tab.element()));
-      raw[tab.label] = rawSectionTitles(left);
+      raw[tab.label] = rawSectionTitles(left).map(canonicalSectionName);
     }
-    // 롯데ON에만 번호가 붙어 있다.
-    expect(raw.LOTTEON.some((t) => /^①/.test(t))).toBe(true);
-    expect(raw.SMARTSTORE.some((t) => /^①/.test(t))).toBe(false);
-    expect(raw.COUPANG.some((t) => /^①/.test(t))).toBe(false);
-    // 같은 자리인데 이름이 다르다 — 정규화 전에는 세 탭이 같지 않다.
-    expect(raw.SMARTSTORE[0]).toBe("기본정보");
-    expect(raw.LOTTEON[0]).toBe("① 기본 상품정보");
+    for (const tab of TABS) {
+      const skeleton = raw[tab.label].filter((n) => expected.includes(n));
+      expect(skeleton, `${tab.label}: 제목 표기가 공용 목차와 다르다`).toEqual(expected);
+    }
+    // 세 탭의 목차가 서로 **같은 배열**이다 — 기준 탭을 따로 두지 않는다.
+    expect(raw.SMARTSTORE.filter((n) => expected.includes(n))).toEqual(
+      raw.LOTTEON.filter((n) => expected.includes(n)),
+    );
+    expect(raw.COUPANG.filter((n) => expected.includes(n))).toEqual(
+      raw.LOTTEON.filter((n) => expected.includes(n)),
+    );
+    // 번호(①~⑩)는 이제 세 탭 전부에 붙는다 — 한 채널만의 표기가 아니다.
+    for (const tab of TABS) {
+      expect(raw[tab.label].some((t) => /^①/.test(t)), `${tab.label}: ① 번호가 없다`).toBe(true);
+    }
   });
-
   /* REWORK-7 ①(CEO 지시, 2026-09-15) — 「등록 가능성 N%」가 「등록 준비 상태」 +
      「필수 확인」으로 바뀌었다. 판정 4단계 자체는 그대로고(문구만 짧아졌다),
      퍼센트는 우측에서 내려갔다 — 등록을 막는 조건 중심으로 말하라는 판정. */
@@ -375,3 +368,4 @@ describe("REWORK-5 ④ — 롯데ON 탭에 공통 상품정보 값이 실제로 
     expect(text).toContain("설정하러 가기");
   });
 });
+import { manufacturerFixture } from "./manufacturer-fixture";

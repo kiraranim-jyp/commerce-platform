@@ -188,6 +188,7 @@ function Harness({ initial }: { initial: CanonicalProduct }) {
     product = current;
   }, [current]);
   return createElement(PlatformPreview, {
+    manufacturerResolution: manufacturerFixture(),
     product: current,
     listing: PLATFORM_ADAPTERS.smartstore.toListingModel(
       current,
@@ -318,7 +319,7 @@ async function type(input: HTMLInputElement, value: string): Promise<void> {
  */
 async function openBasicSection(): Promise<void> {
   const head = Array.from(container.querySelectorAll("button")).find((b) =>
-    (b.textContent ?? "").startsWith("기본정보"),
+    (b.textContent ?? "").startsWith(sectionTitle("BASIC")),
   );
   if (!head) throw new Error("「기본정보」 섹션 머리가 화면에 없다");
   if ((head.textContent ?? "").includes("펼치기")) {
@@ -383,3 +384,5 @@ describe("REWORK-5 ② — 「기본정보」에서 정말 입력이 되는가(�
     expect(payload.originProduct.detailAttribute?.naverShoppingSearchInfo?.modelName).toBeUndefined();
   });
 });
+import { manufacturerFixture } from "./manufacturer-fixture";
+import { sectionTitle } from "../registration-sections";

@@ -10,6 +10,7 @@ import { LotteOnRegistrationPanel } from "../LotteOnRegistrationPanel";
 import { RegistrationStatusBanner } from "../RegistrationStatusBanner";
 import { buildPriorityItems, describePriorityItem } from "../readiness-state";
 import { computeChecklistReadiness } from "../readiness";
+import { manufacturerFixture } from "./manufacturer-fixture";
 
 /**
  * REWORK-4 §2(CEO 지시, 2026-09-14) — **추상 버튼을 없애고 1개 안내를 세운다.**
@@ -93,6 +94,7 @@ function renderPlatformTab(platform: PlatformId): string {
       onOpenListingModal: () => {},
       onRetryListing: () => {},
       developerMode: false,
+      manufacturerResolution: manufacturerFixture(),
     }),
   );
 }
@@ -105,6 +107,7 @@ function renderLotteOnTab(): string {
       commonCategorySources: [],
       onChannelInfoChange: () => {},
       onEditCommonInfo: () => {},
+      manufacturerResolution: manufacturerFixture(),
     }),
   );
 }

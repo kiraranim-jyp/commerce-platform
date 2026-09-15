@@ -88,9 +88,14 @@ export function toLotteOnSellerSettings(profile: SellerProfile | null): LotteOnS
  * 그대로 재사용한다(Naver가 이미 같은 값을 재사용하는 선례 — 새 DB 컬럼을
  * 만들지 않는다).
  */
-async function buildDetailHtml(product: CanonicalProduct, sellerProfile: SellerProfile | null): Promise<string> {
+async function buildDetailHtml(
+  product: CanonicalProduct,
+  sellerProfile: SellerProfile | null,
+  /* REWORK-10 A — 호출부가 이미 읽어 둔 브랜드 프로필을 그대로 받는다(여기서
+     다시 조회하면 같은 요청 안에서 DB를 두 번 왕복한다). */
+  brandProfile: { brandIntro: string } | null,
+): Promise<string> {
   const descriptionTemplate = await getDefaultDescriptionTemplate();
-  const brandProfile = await findBrandProfileByName(product.brand.value);
 
   const productImageUrls = product.images
     .filter((image) => image.useInDescription && image.classification === "PRODUCT")
@@ -130,6 +135,14 @@ export async function buildLotteOnContext(
    * 채 상수를 썼다(sndBgtNday: 3 고정).
    */
   const sellerProfile = await getDefaultSellerProfile();
+  /**
+   * REWORK-10 A(CEO 지시, 2026-09-15) — 제조사 폴백을 위해 브랜드 프로필을
+   * **여기서** 한 번 읽는다. buildDetailHtml() 안에서만 읽던 값이라 payload
+   * 쪽에서는 쓸 수가 없었다 — 그래서 롯데ON만 브랜드 프로필의 제조사를 모른 채
+   * mfcrNm을 비워 보내고 있었다. 조회는 그대로 한 번이다(아래 buildDetailHtml에
+   * 인자로 넘겨서 같은 값을 재사용한다 — DB 왕복이 늘지 않는다).
+   */
+  const brandProfile = await findBrandProfileByName(product.brand.value);
 
   const channel: LotteOnChannelConfig = {
     ...BLANK_LOTTEON_CHANNEL_CONFIG,
@@ -186,7 +199,12 @@ export async function buildLotteOnContext(
     input: {
       product,
       channel,
-      detailHtml: await buildDetailHtml(product, sellerProfile),
+      detailHtml: await buildDetailHtml(product, sellerProfile, brandProfile),
+      /* REWORK-10 A — 제조사 폴백(① 상품 원문 → ② 브랜드 프로필 → ③ 판매자
+         기본정보). 판정은 buildLotteOnPayload 안의 공통 resolveManufacturer()가
+         한다 — 여기서는 값을 읽어 넘기기만 한다. */
+      brandProfileManufacturer: brandProfile?.manufacturer ?? null,
+      sellerProfileManufacturer: sellerProfile?.manufacturer ?? null,
       liveRates: options?.liveRates,
       roundingUnit: options?.roundingUnit,
     },
