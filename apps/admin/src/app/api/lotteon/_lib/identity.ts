@@ -19,14 +19,34 @@ export interface LotteOnIdentity {
   trNm: string | null;
 }
 
+/** 이 호출의 이름. 실패 메시지·로그·화면이 전부 같은 글자를 쓴다. */
+export const LOTTEON_IDENTITY_STEP = "207 identity(거래처 조회)";
+
 export async function fetchLotteOnIdentity(): Promise<
-  { ok: true; identity: LotteOnIdentity } | { ok: false; message: string }
+  | { ok: true; identity: LotteOnIdentity }
+  | { ok: false; message: string; step: string; elapsedMs: number | null; proxyProvider: string | null }
 > {
-  const read = await runLotteOnRead({ method: "GET", path: LOTTEON_READ_PATHS.identity });
+  const read = await runLotteOnRead({
+    method: "GET",
+    path: LOTTEON_READ_PATHS.identity,
+    step: LOTTEON_IDENTITY_STEP,
+  });
   if (!read.ok) {
-    // 라우트 응답 본문에서 사람이 읽을 메시지만 꺼낸다(자격증명은 없다).
-    const body = (await read.response.json().catch(() => null)) as { message?: string } | null;
-    return { ok: false, message: body?.message ?? "롯데ON 거래처 정보(Identity)를 조회하지 못했습니다." };
+    /* 라우트 응답 본문에서 사람이 읽을 값만 꺼낸다(자격증명은 애초에 없다).
+       🔴 LOTTEON-TIMEOUT-1 — 여기서 `message`만 꺼내던 것이 CEO 화면의
+       "제한 시간 안에 오지 않았습니다" 한 줄이었다. 그 한 줄로는 5회 직렬 중
+       **어디서** 끊겼는지 알 수 없었다. 단계·소요시간·아웃바운드 홉을 같이
+       올려보낸다. */
+    const body = (await read.response.json().catch(() => null)) as
+      | { message?: string; elapsedMs?: number; proxyProvider?: string }
+      | null;
+    return {
+      ok: false,
+      message: body?.message ?? "롯데ON 거래처 정보(Identity)를 조회하지 못했습니다.",
+      step: LOTTEON_IDENTITY_STEP,
+      elapsedMs: typeof body?.elapsedMs === "number" ? body.elapsedMs : null,
+      proxyProvider: typeof body?.proxyProvider === "string" ? body.proxyProvider : null,
+    };
   }
 
   const data = read.result.data as Record<string, unknown> | null;
@@ -36,6 +56,9 @@ export async function fetchLotteOnIdentity(): Promise<
     return {
       ok: false,
       message: "롯데ON Identity 응답에 거래처그룹코드/거래처번호가 없습니다 — 응답 형식이 문서와 다릅니다.",
+      step: LOTTEON_IDENTITY_STEP,
+      elapsedMs: null,
+      proxyProvider: null,
     };
   }
   return {

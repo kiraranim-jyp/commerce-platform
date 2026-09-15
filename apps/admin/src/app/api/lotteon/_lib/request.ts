@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getOutboundProxyDiagnostics } from "@/lib/outbound-proxy";
 import { getLotteOnCredentials } from "./env";
 import { callLotteOnApi, callLotteOnPickApi, type LotteOnApiError, type LotteOnApiResponse } from "./client";
 import {
@@ -26,6 +27,48 @@ export interface LotteOnRouteSuccess<T = unknown> {
 
 export type LotteOnHost = "openapi" | "onpick";
 
+/**
+ * LOTTEON-TIMEOUT-1(2026-09-15 실측) — **실패한 호출이 스스로 이름을 대게 한다.**
+ *
+ * ── 왜 필요했나 ───────────────────────────────────────────────────────────
+ * CEO가 ⑤배송에서 본 문장은 "롯데ON 응답이 제한 시간 안에 오지 않았습니다."
+ * **하나**였다. 그 한 줄로는 아무것도 못 고른다:
+ *   · 207인가 150인가 166인가 89인가 (배송 설정 조회는 5회 직렬이다)
+ *   · 20초를 다 쓰고 죽었나, 빨리 죽었나
+ *   · 롯데ON까지 갔다가 늦은 것인가, 아웃바운드 프록시에서 막힌 것인가
+ * 다음 조사가 또 맨땅에서 시작하지 않도록 이 세 가지를 실패 응답과 서버 로그에
+ * 같이 싣는다.
+ *
+ * ── 2026-09-15 실측(이 계측을 넣은 근거) ──────────────────────────────────
+ * 로컬에서 OCI 프록시를 그대로 타고 잰 값이다(인증키 없이, 401이 돌아오는 probe).
+ *   · 프록시로의 TCP 연결            186ms  정상
+ *   · 인증된 CONNECT 8회 순차        60s+ · 60s+ · 60s+ · 6.7s · 11.5s · 1.4s · 0.6s · 0.6s
+ *   · 터널이 선 뒤의 실제 API 왕복   290 ~ 1,700ms (GET · POST 차이 없음)
+ * 즉 느린 것은 롯데ON이 아니라 **프록시의 CONNECT 핸드셰이크**이고, 20초 예산이
+ * 롯데ON에 닿기도 전에 소진될 수 있다. 그래서 실패 응답에 `proxyProvider`를
+ * 남긴다 — 어느 홉을 의심해야 하는지가 응답 자체에 적혀 있어야 한다.
+ *
+ * 🔴 값은 전부 시크릿이 아니다. 프록시 URL·사용자·비밀번호·인증키는 어디에도
+ * 싣지 않는다(provider 라벨은 "OCI"/"FIXIE"/"NONE" 세 글자뿐이다).
+ */
+export interface LotteOnReadFailureContext {
+  /** 어느 API에서 끊겼는가. 예: "207 identity(거래처 조회)". */
+  step: string | null;
+  /** 호출에 실제로 걸린 시간. 20,000ms 근처면 예산을 다 쓰고 죽은 것이다. */
+  elapsedMs: number;
+  /** 아웃바운드 홉 라벨. URL/자격증명은 포함하지 않는다. */
+  proxyProvider: string;
+}
+
+/** 실패 한 건을 Vercel 함수 로그에 한 줄로 남긴다 — 비밀값 없음. */
+function logLotteOnFailure(context: LotteOnReadFailureContext, reason: string, detail: string | null): void {
+  console.warn(
+    `[lotteon] 조회 실패 step=${context.step ?? "(미지정)"} reason=${reason} ` +
+      `elapsedMs=${context.elapsedMs} proxy=${context.proxyProvider}` +
+      (detail ? ` detail=${detail}` : ""),
+  );
+}
+
 /** 자격증명 → 호출 → returnCode 검사까지 한 번에. 성공이면 data를, 아니면
  * 화면에 그대로 보여줄 수 있는 실패 응답을 돌려준다.
  *
@@ -44,7 +87,24 @@ export async function runLotteOnRead(options: {
   query?: Record<string, string>;
   body?: unknown;
   envelope?: "RETURN_CODE" | "RAW";
+  /**
+   * LOTTEON-TIMEOUT-1 — 이 호출의 이름(예: "150 출고지/반품지 조회").
+   * 실패 응답과 서버 로그가 이 이름을 그대로 쓴다. 넘기지 않으면 `step`은
+   * null이고, 그때는 화면이 "어느 단계인지 모른다"는 사실까지 그대로 본다 —
+   * 그럴듯한 이름을 지어내지 않는다.
+   */
+  step?: string;
 }): Promise<{ ok: true; result: LotteOnApiResponse } | { ok: false; response: NextResponse }> {
+  const startedAt = Date.now();
+  const step = options.step ?? null;
+  const proxyProvider = getOutboundProxyDiagnostics().provider;
+  /** 실패 응답마다 똑같이 붙는 꼬리표. 성공 응답에는 붙지 않는다. */
+  const context = (): LotteOnReadFailureContext => ({
+    step,
+    elapsedMs: Date.now() - startedAt,
+    proxyProvider,
+  });
+
   const credentials = await getLotteOnCredentials();
   if (!credentials) {
     return {
@@ -52,6 +112,7 @@ export async function runLotteOnRead(options: {
       response: NextResponse.json({
         ok: false,
         reason: "NOT_CONFIGURED",
+        ...context(),
         message: "롯데ON 인증키가 설정되어 있지 않습니다 — 설정 > 커머스 계정 관리에서 인증키를 입력해 주세요.",
       }),
     };
@@ -69,11 +130,13 @@ export async function runLotteOnRead(options: {
   } catch (error) {
     // 🔴 금지 엔드포인트 guard가 던진 경우 — 라우트가 500으로 죽지 않게 잡되,
     // 절대 조용히 넘기지 않는다. 이 응답이 보이면 그것은 버그 리포트다.
+    logLotteOnFailure(context(), "FORBIDDEN_ENDPOINT", options.path);
     return {
       ok: false,
       response: NextResponse.json({
         ok: false,
         reason: "FORBIDDEN_ENDPOINT",
+        ...context(),
         message: error instanceof Error ? error.message : "허용되지 않은 롯데ON 엔드포인트 호출입니다.",
       }),
     };
@@ -88,11 +151,13 @@ export async function runLotteOnRead(options: {
        바뀌는 것은 화면이 읽는 `message` 하나이고, 위 HTTP/returnCode 분기가
        이미 쓰던 규칙(classify… → userMessage)과 같은 모양이 된다. */
     const issue = classifyLotteOnNetworkError(result.message);
+    logLotteOnFailure(context(), "NETWORK_ERROR", result.message);
     return {
       ok: false,
       response: NextResponse.json({
         ok: false,
         reason: "NETWORK_ERROR",
+        ...context(),
         ...issue,
         message: issue.userMessage,
         providerMessage: result.message,
@@ -103,12 +168,14 @@ export async function runLotteOnRead(options: {
 
   const httpIssue = classifyLotteOnHttpStatus(result.httpStatus);
   if (httpIssue) {
+    logLotteOnFailure(context(), `HTTP_${result.httpStatus}`, null);
     return {
       ok: false,
       response: NextResponse.json({
         ok: false,
         reason: result.httpStatus === 403 ? "IP_NOT_ALLOWLISTED" : "HTTP_ERROR",
         httpStatus: result.httpStatus,
+        ...context(),
         ...httpIssue,
         message: httpIssue.userMessage,
       }),
@@ -117,12 +184,14 @@ export async function runLotteOnRead(options: {
 
   if ((options.envelope ?? "RETURN_CODE") === "RETURN_CODE" && !result.returnOk) {
     const issue = classifyLotteOnReturnCode(result.returnCode, result.message);
+    logLotteOnFailure(context(), `RETURN_CODE_${result.returnCode ?? "NONE"}`, null);
     return {
       ok: false,
       response: NextResponse.json({
         ok: false,
         reason: "RETURN_CODE_NOT_OK",
         returnCode: result.returnCode,
+        ...context(),
         ...issue,
         message: issue.userMessage,
         lotteOnMessage: result.message,

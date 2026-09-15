@@ -34,9 +34,35 @@ import { runLotteOnRead } from "../_lib/request";
  *   2. 실패하거나 **0건이면 그 사유를 그대로 올려보낸다**(`issues`). "설정값이
  *      없습니다"로 바꿔서 셀러에게 다시 입력시키지 않는다 — 조회를 못 한 것과
  *      판매자센터에 정말 없는 것은 셀러가 해야 할 일이 완전히 다르다.
+ *
+ * ── 🔴 LOTTEON-TIMEOUT-1(CEO 실측, 2026-09-15) ────────────────────────────
+ * CEO 화면에 선 문장은 "롯데ON 응답이 제한 시간 안에 오지 않았습니다." 한 줄뿐이었다.
+ * 이 라우트는 **5회 직렬**(207 → 150 → 166 → 89×2)인데 그 한 줄은 어느 회차에서
+ * 끊겼는지 말하지 않았다. 게다가 `ok:false`로 내려가는 길은 ① 207 실패뿐이라
+ * (150/166/89 실패는 `issues`로 가고 `ok:true`다) 그 문장을 본 순간 이미
+ * **207에서 끊겼다는 뜻**이었는데도 화면이 그렇게 말하지 못했다.
+ * 이제 실패한 단계 이름(`failedStep`) · 소요시간 · 아웃바운드 홉을 같이 싣는다.
+ *
+ * ── 직렬을 병렬로 바꾸지 않은 이유 ────────────────────────────────────────
+ * 150 · 166 · 89(DV_CO_CD) · 89(DV_RGSPR_GRP_CD)는 서로 의존하지 않는다
+ * (전부 207의 trNo 하나만 필요하다). 그래도 직렬로 둔다 — 2026-09-15 실측에서
+ * 병목은 롯데ON이 아니라 **아웃바운드 프록시의 CONNECT 핸드셰이크**였고
+ * (60초 넘게 무응답인 경우가 8회 중 3회), 터널이 한 번 서면 뒤따르는 호출은
+ * 같은 keep-alive 소켓을 재사용해 290ms에 끝난다. 병렬로 바꾸면 undici가
+ * 소켓을 여러 개 열어 **CONNECT를 오히려 여러 번** 하게 된다 — 지금 병목에서는
+ * 느려지는 쪽이다. 프록시가 고쳐지기 전에는 이 순서를 유지한다.
  */
 
 export const dynamic = "force-dynamic";
+
+/**
+ * LOTTEON-TIMEOUT-1 — 단계 이름은 여기 한 곳에만 둔다. `issues[].source`,
+ * `runLotteOnRead({step})`(서버 로그), `notAttemptedSteps`가 **같은 글자**를
+ * 써야 로그와 화면을 나중에 맞춰 볼 수 있다.
+ */
+const STEP_PLACES = "150 출고지/반품지 조회";
+const STEP_COST = "166 배송비정책 조회";
+const stepForCodes = (groupCode: string) => `89 공통코드 ${groupCode}`;
 
 /** 판매자센터에 등록된 장소 한 건. 번호는 롯데ON이 발급한 것이고 우리가 만들지 않는다. */
 interface DeliveryPlace {
@@ -120,7 +146,16 @@ export async function GET() {
     return NextResponse.json({
       ok: false,
       reason: "IDENTITY_FAILED",
-      message: identity.message,
+      /* 🔴 LOTTEON-TIMEOUT-1 — 사유 앞에 **어느 단계인지**를 붙인다. 화면이
+         서버 문장을 그대로 세우는 규약(패널 DeliveryLookupNote)이라, 여기서
+         붙이면 화면 파일을 건드리지 않고도 셀러가 단계를 읽을 수 있다. */
+      message: `${identity.step}에서 끊겼습니다 — ${identity.message}`,
+      failedStep: identity.step,
+      elapsedMs: identity.elapsedMs,
+      proxyProvider: identity.proxyProvider,
+      /* 아직 부르지 않은 나머지 단계를 적어 둔다 — "5회 중 1회에서 멈췄다"는
+         사실이 응답만 보고도 드러나야 한다. */
+      notAttemptedSteps: [STEP_PLACES, STEP_COST, stepForCodes("DV_CO_CD"), stepForCodes("DV_RGSPR_GRP_CD")],
       /* 🔴 여기서 멈춘다. afflTrCd 없이 150/166을 부르면 무엇을 물어본 것인지
          알 수 없는 응답이 온다 — 임의의 값으로 질의하지 않는다. */
     });
@@ -134,14 +169,15 @@ export async function GET() {
     method: "POST",
     path: LOTTEON_READ_PATHS.deliveryPlaceList,
     body: buildAfflBody(afflTrCd),
+    step: STEP_PLACES,
   });
   if (!placeRead.ok) {
-    issues.push({ source: "150 출고지/반품지 조회", message: await readErrorMessage(placeRead.response) });
+    issues.push({ source: STEP_PLACES, message: await readErrorMessage(placeRead.response) });
   } else {
     const list = rows(placeRead.result.data);
     if (list.length === 0) {
       issues.push({
-        source: "150 출고지/반품지 조회",
+        source: STEP_PLACES,
         message: `응답은 받았지만 목록이 0건입니다(소속거래처코드 ${afflTrCd}로 조회). 판매자센터에 출고지/반품지가 등록돼 있는데도 0건이면 조회에 쓴 소속거래처코드가 다른 값일 수 있습니다.`,
       });
     }
@@ -163,7 +199,7 @@ export async function GET() {
       else if (place.typeCode === "01") returnPlaces.push(place);
       else
         issues.push({
-          source: "150 출고지/반품지 조회",
+          source: STEP_PLACES,
           message: `장소 ${no}의 유형코드(dvpTypCd)를 읽지 못해 출고지/반품지 어느 쪽으로도 분류하지 않았습니다.`,
         });
     }
@@ -175,14 +211,15 @@ export async function GET() {
     method: "POST",
     path: LOTTEON_READ_PATHS.deliveryCostPolicyList,
     body: buildAfflBody(afflTrCd),
+    step: STEP_COST,
   });
   if (!costRead.ok) {
-    issues.push({ source: "166 배송비정책 조회", message: await readErrorMessage(costRead.response) });
+    issues.push({ source: STEP_COST, message: await readErrorMessage(costRead.response) });
   } else {
     const list = rows(costRead.result.data);
     if (list.length === 0) {
       issues.push({
-        source: "166 배송비정책 조회",
+        source: STEP_COST,
         message: `응답은 받았지만 목록이 0건입니다(소속거래처코드 ${afflTrCd}로 조회).`,
       });
     }
@@ -199,14 +236,15 @@ export async function GET() {
       method: "GET",
       path: LOTTEON_READ_PATHS.detailCodeList,
       query: { grpCd: groupCode },
+      step: stepForCodes(groupCode),
     });
     if (!read.ok) {
-      issues.push({ source: `89 공통코드 ${groupCode}`, message: await readErrorMessage(read.response) });
+      issues.push({ source: stepForCodes(groupCode), message: await readErrorMessage(read.response) });
       return [];
     }
     const list = rows(read.result.data);
     if (list.length === 0) {
-      issues.push({ source: `89 공통코드 ${groupCode}`, message: "응답은 받았지만 목록이 0건입니다." });
+      issues.push({ source: stepForCodes(groupCode), message: "응답은 받았지만 목록이 0건입니다." });
     }
     return list
       .map((row) => {

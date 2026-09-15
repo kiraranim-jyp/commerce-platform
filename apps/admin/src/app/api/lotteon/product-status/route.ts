@@ -60,6 +60,7 @@ export async function POST(request: Request) {
   };
 
   const read = await runLotteOnRead({
+    step: "93 상품목록 조회",
     method: "POST",
     path: LOTTEON_READ_PATHS.productList,
     body: {

@@ -52,6 +52,7 @@ export async function POST(request: Request) {
       path: LOTTEON_READ_PATHS.onpickCheetah,
       query: { job: "cheetahStandardCategory", skip: String(page * PAGE_SIZE), limit: String(PAGE_SIZE) },
       envelope: "RAW",
+      step: `205 표준카테고리 조회(${page + 1}번째 페이지)`,
     });
     // 첫 페이지가 실패하면 그 실패를 그대로 화면에 보여준다(인증키 없음/401/403
     // 을 "추천 결과 없음"으로 바꾸지 않는다 — 원인이 사라지면 셀러는 영원히

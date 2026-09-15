@@ -61,6 +61,7 @@ export async function GET(request: Request) {
     path: LOTTEON_READ_PATHS.onpickCheetah,
     query,
     envelope: "RAW",
+    step: `205/206 카테고리 조회(job=${job})`,
   });
   if (!read.ok) return read.response;
 

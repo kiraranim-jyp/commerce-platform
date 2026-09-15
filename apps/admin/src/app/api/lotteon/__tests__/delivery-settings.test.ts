@@ -34,6 +34,8 @@ const hoisted = vi.hoisted(() => ({
   calls: [] as CapturedCall[],
   /** path → 봉투(returnCode/data). 테스트마다 갈아끼운다. */
   responders: new Map<string, { returnCode: string; message?: string | null; data: unknown }>(),
+  /** path → 네트워크 실패 메시지. 타임아웃(LOTTEON-TIMEOUT-1)을 재현할 때 쓴다. */
+  networkFailures: new Map<string, string>(),
 }));
 
 vi.mock("../_lib/env", () => ({
@@ -46,6 +48,12 @@ vi.mock("../_lib/client", async (importOriginal) => {
     ...actual,
     callLotteOnApi: async (_apiKey: string, options: CapturedCall) => {
       hoisted.calls.push(options);
+      const networkFailure = hoisted.networkFailures.get(options.path);
+      if (networkFailure) {
+        /* client.ts의 catch 분기가 돌려주는 모양 그대로 — AbortSignal.timeout()이
+           던진 DOMException.message가 여기 실린다. */
+        return { ok: false as const, step: "NETWORK_ERROR" as const, message: networkFailure, causeChain: [] };
+      }
       const envelope = hoisted.responders.get(options.path) ?? { returnCode: "0000", data: [] };
       return {
         ok: true as const,
@@ -92,6 +100,12 @@ function setDefaultResponders() {
 
 interface DeliverySettingsBody {
   ok: boolean;
+  message?: string;
+  reason?: string;
+  failedStep?: string | null;
+  elapsedMs?: number | null;
+  proxyProvider?: string | null;
+  notAttemptedSteps?: string[];
   sentAfflTrCd?: string;
   outboundPlaces?: { no: string; name: string | null; typeCode: string | null; isDefault: boolean }[];
   returnPlaces?: { no: string; isDefault: boolean }[];
@@ -113,6 +127,7 @@ function callFor(path: string): CapturedCall | undefined {
 
 beforeEach(() => {
   hoisted.calls.length = 0;
+  hoisted.networkFailures.clear();
   setDefaultResponders();
 });
 
@@ -213,6 +228,69 @@ describe("HTTP 200이어도 returnCode가 0000이 아니면 실패다", () => {
     expect(body.ok).toBe(false);
     expect(callFor(LOTTEON_READ_PATHS.deliveryPlaceList)).toBeUndefined();
     expect(callFor(LOTTEON_READ_PATHS.deliveryCostPolicyList)).toBeUndefined();
+  });
+});
+
+/* ══ LOTTEON-TIMEOUT-1 ═══════════════════════════════════════════════════════
+ * CEO 실측(2026-09-15, Production b8a0e52): ⑤배송에 이 한 줄만 섰다 —
+ *   "롯데ON 배송 설정을 불러오지 못했습니다 — 롯데ON 응답이 제한 시간 안에 오지 않았습니다."
+ * 이 라우트는 5회 직렬인데 그 문장은 **어느 회차에서 끊겼는지 말하지 않았다.**
+ * 다음 조사가 또 맨땅에서 시작하지 않도록, 실패 응답이 단계를 대는지 고정한다.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+describe("LOTTEON-TIMEOUT-1 — 실패하면 어느 단계에서 끊겼는지 응답이 말한다", () => {
+  /** AbortSignal.timeout()이 던지는 DOMException의 실제 message. */
+  const TIMEOUT_RAW = "The operation was aborted due to timeout";
+
+  it("🔴 207에서 타임아웃이면 message가 '207 …에서 끊겼습니다'로 시작한다", async () => {
+    hoisted.networkFailures.set(LOTTEON_READ_PATHS.identity, TIMEOUT_RAW);
+    const body = await runRoute();
+    expect(body.ok).toBe(false);
+    expect(body.reason).toBe("IDENTITY_FAILED");
+    expect(body.failedStep).toBe("207 identity(거래처 조회)");
+    expect(body.message?.startsWith("207 identity(거래처 조회)에서 끊겼습니다 — ")).toBe(true);
+    // 🔴 영문 예외 원문은 셀러 문장에 남지 않는다(REWORK-12 ②의 계약 유지).
+    expect(body.message).not.toContain(TIMEOUT_RAW);
+  });
+
+  it("🔴 207에서 멈췄으면 나머지 4단계를 '부르지 않았다'고 이름으로 적는다", async () => {
+    hoisted.networkFailures.set(LOTTEON_READ_PATHS.identity, TIMEOUT_RAW);
+    const body = await runRoute();
+    expect(body.notAttemptedSteps).toEqual([
+      "150 출고지/반품지 조회",
+      "166 배송비정책 조회",
+      "89 공통코드 DV_CO_CD",
+      "89 공통코드 DV_RGSPR_GRP_CD",
+    ]);
+    // 말만 그런 게 아니라 실제로 부르지 않았다.
+    expect(hoisted.calls.map((call) => call.path)).toEqual([LOTTEON_READ_PATHS.identity]);
+  });
+
+  it("소요시간과 아웃바운드 홉이 응답에 남는다 — 20초를 다 썼는지 구분할 수 있어야 한다", async () => {
+    hoisted.networkFailures.set(LOTTEON_READ_PATHS.identity, TIMEOUT_RAW);
+    const body = await runRoute();
+    expect(typeof body.elapsedMs).toBe("number");
+    // 프록시 미설정 환경에서도 라벨은 남는다(값은 "OCI"/"FIXIE"/"NONE" 셋 중 하나).
+    expect(["OCI", "FIXIE", "NONE"]).toContain(body.proxyProvider);
+  });
+
+  it("🔴 150이 타임아웃이면 전체가 죽지 않는다 — 그 단계만 issues에 이름으로 남는다", async () => {
+    hoisted.networkFailures.set(LOTTEON_READ_PATHS.deliveryPlaceList, TIMEOUT_RAW);
+    const body = await runRoute();
+    // 207은 성공했으므로 라우트는 ok:true다 — 한 단계의 실패가 나머지를 지우지 않는다.
+    expect(body.ok).toBe(true);
+    expect(body.outboundPlaces).toEqual([]);
+    expect(body.issues?.some((issue) => issue.source === "150 출고지/반품지 조회")).toBe(true);
+    // 166 · 89는 그대로 살아 있다.
+    expect(body.costPolicies).toHaveLength(1);
+    expect(body.couriers).toHaveLength(2);
+  });
+
+  it("🔴 응답 어디에도 인증키·프록시 URL이 실리지 않는다", async () => {
+    hoisted.networkFailures.set(LOTTEON_READ_PATHS.identity, TIMEOUT_RAW);
+    const serialized = JSON.stringify(await runRoute());
+    expect(serialized).not.toContain("TEST-KEY-NOT-A-REAL-KEY");
+    expect(serialized).not.toContain("Bearer");
+    expect(serialized).not.toMatch(/https?:\/\/[^"]*@/);
   });
 });
 
