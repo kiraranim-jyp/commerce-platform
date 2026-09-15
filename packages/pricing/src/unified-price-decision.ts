@@ -1,4 +1,6 @@
 import { computePriceDecision, priceLevelFromVerdict, type PriceDecisionVerdict, type PriceLevel } from "./price-decision";
+import { resolveCategoryCostPolicy, type CategoryCostPolicy } from "./category-cost-policy";
+import type { PriceTaxBasis } from "./price-basis";
 
 /**
  * P-1-3(대표님 지시, 2026-08-28) — 단일 가격판단 엔진. P-1-2 조사에서 확인된
@@ -70,6 +72,19 @@ export interface UnifiedPriceInput {
    * UnifiedPriceDecision에 그대로 통과시켜 화면에서 참고용으로만 보여준다. */
   customerChargedShippingKrw: PriceComponent;
   /**
+   * GOLF-01 축B(CEO 지시, 2026-09-15) — 이 상품의 카테고리(CATEGORY_PROFILES의 id).
+   *
+   * **넘기지 않으면 오늘까지와 완전히 같게 동작한다**(DEFAULT 정책 = MI-COST-POLICY-1
+   * + MI-UX-FINAL-4 상태 그대로). 기존 호출부를 한 곳도 고치지 않아도 숫자가
+   * 움직이지 않는다는 뜻이고, 그것이 이 필드를 optional로 둔 이유다.
+   *
+   * 값이 "GOLF"일 때만 아래 customsDutyKrw/customsVatKrw가 **읽힌다**.
+   * 아동의류(KIDS_FASHION)는 명시적으로 넘겨도 DEFAULT와 같은 정책이라
+   * 관부가세가 원가에 오르지 않는다 — 카테고리별 분기가 아동의류를 건드릴 수
+   * 있는 경로가 구조적으로 없다(category-cost-policy.ts 참고).
+   */
+  categoryProfileId?: string | null;
+  /**
    * MI-COST-POLICY-1(대표님 결정, 2026-09-12) — **원가 합산에 참여하지 않는다.**
    *
    * "관세·부가세는 구매자 부담이며 판매자 가격/수익성 계산에 포함하지 않는다."
@@ -83,10 +98,22 @@ export interface UnifiedPriceInput {
    * 생기더라도 결과가 달라지지 않는다는 사실을 타입과 테스트로 못 박기 위해서다
    * (읽는 코드가 한 줄도 없다 — 넘겨도 무시된다).
    *
-   * @deprecated 판매자 원가가 아니다. 읽지 않는다.
+   * ── GOLF-01 축B(CEO 지시, 2026-09-15) — 이 필드가 다시 읽힌다. 단, 조건부다 ──
+   * 위 결정은 **취소되지 않았다.** 아동의류를 포함한 모든 기존 카테고리에서 이
+   * 값은 여전히 읽히지 않는다(넘겨도 결과가 한 글자도 달라지지 않는다 —
+   * mi-cost-policy-customs-removed.test.ts가 그대로 지킨다).
+   *
+   * 달라진 것은 하나다: categoryProfileId가 "GOLF"면
+   * (= CategoryCostPolicy.importTaxesInLandedCost === true) 이 값이 착지원가
+   * 항목이 된다. 골프채는 단가가 높아 소액면세 한도를 넘고 재판매 수입이라
+   * 통관세를 판매자가 실제로 치르기 때문이다 — MI-COST-POLICY-1이 "판매자가
+   * 내지 않는 돈"이라고 판단한 근거가 이 카테고리에서는 성립하지 않는다.
+   *
+   * 필드 이름을 바꾸지 않았다. 같은 사실을 가리키는 칸을 하나 더 만들면 두 칸이
+   * 언젠가 서로 다른 값을 들게 된다.
    */
   customsDutyKrw?: PriceComponent;
-  /** @deprecated 구매자 부담. customsDutyKrw와 같은 이유로 읽지 않는다. */
+  /** customsDutyKrw와 완전히 같은 규칙 — GOLF 정책에서만 읽힌다. */
   customsVatKrw?: PriceComponent;
   /** 플랫폼 수수료율(%). 현재 판매가 기준으로 곱한다(computeLandedCost와
    * 동일한 이유 — 실제 정산은 원가가 아니라 판매가 기준으로 떼인다). */
@@ -121,6 +148,24 @@ export interface UnifiedPriceDecision {
   missingComponents: string[];
   /** STEP 8 — 원가 계산에 전혀 관여하지 않은 정보용 값을 그대로 통과시킨다. */
   customerChargedShippingKrw: PriceComponent;
+  /**
+   * GOLF-01 축B — 이 판단이 **어느 비용 정책으로** 내려졌는가. 화면이 "관세를
+   * 왜 세지 않았는지"(또는 왜 세는지)를 셀러에게 말할 수 있는 유일한 근거다.
+   * 정책을 숨기면 같은 화면이 상품에 따라 다른 원가를 말하면서 이유를 대지
+   * 못한다.
+   */
+  costPolicy: {
+    id: CategoryCostPolicy["id"];
+    label: string;
+    importTaxesInLandedCost: boolean;
+    note: string;
+  };
+  /**
+   * PRICING-BASIS-1 — 위 landedCostKrw가 **어느 세금 기준의 값인가**.
+   * 국내 시장가(언제나 TAX_INCLUDED)와 나란히 놓아도 되는지가 이 값으로 정해진다
+   * (price-basis.comparePriceBasis). 화면이 두 숫자를 그냥 빼지 못하게 하는 장치다.
+   */
+  landedCostTaxBasis: PriceTaxBasis;
 }
 
 /**
@@ -140,21 +185,42 @@ export interface UnifiedPriceDecision {
  * 판매자 공통 기본값이라 상품별 실비가 아니었다).
  *
  * 남은 두 줄은 상품마다 실제로 확인되는 값이다 — 원본 판매가와 국제배송비.
+ *
+ * GOLF-01 축B(CEO 지시, 2026-09-15) — 이 배열이 **카테고리별로 갈린다**. 갈리는
+ * 방식이 중요하다: 아래 BASE_LANDED_COST_PARTS는 위 두 줄 그대로이고, 골프
+ * 정책만 그 **뒤에** 관세·부가세 두 줄을 더한다. 기존 정책의 배열을 고치지
+ * 않았으므로 아동의류 경로에는 새 항목이 끼어들 자리가 없다.
  */
-const LANDED_COST_PARTS: { key: keyof UnifiedPriceInput; label: string }[] = [
+const BASE_LANDED_COST_PARTS: { key: keyof UnifiedPriceInput; label: string }[] = [
   { key: "sourceProductPriceKrw", label: "해외 상품가(환산)" },
   { key: "internationalShippingKrw", label: "국제배송비" },
 ];
 
+/** GOLF 정책에서만 더해지는 두 줄. 순서는 통관 계산 순서(관세 → 그 위의 부가세). */
+const IMPORT_TAX_LANDED_COST_PARTS: { key: keyof UnifiedPriceInput; label: string }[] = [
+  { key: "customsDutyKrw", label: "관세" },
+  { key: "customsVatKrw", label: "수입부가세" },
+];
+
+function landedCostParts(policy: CategoryCostPolicy): { key: keyof UnifiedPriceInput; label: string }[] {
+  return policy.importTaxesInLandedCost
+    ? [...BASE_LANDED_COST_PARTS, ...IMPORT_TAX_LANDED_COST_PARTS]
+    : BASE_LANDED_COST_PARTS;
+}
+
 export function computeUnifiedPriceDecision(input: UnifiedPriceInput): UnifiedPriceDecision {
+  const costPolicy = resolveCategoryCostPolicy(input.categoryProfileId);
   let landedCostValue = 0;
   let hasUnknownCost = false;
   let hasEstimatedCost = false;
   const missingComponents: string[] = [];
 
-  for (const part of LANDED_COST_PARTS) {
-    const component = input[part.key] as PriceComponent;
-    if (component.status === "unknown" || component.value == null) {
+  for (const part of landedCostParts(costPolicy)) {
+    // 관세/부가세는 optional 필드라 아예 안 넘어올 수 있다. 그때는 0이 아니라
+    // "모른다"다 — 안 넘긴 값을 0원으로 세면 원가가 조용히 낮아지고, 그건
+    // 이 엔진이 unknown을 다루는 규칙(값을 지어내지 않는다)과 정반대다.
+    const component = input[part.key] as PriceComponent | undefined;
+    if (component == null || component.status === "unknown" || component.value == null) {
       hasUnknownCost = true;
       missingComponents.push(part.label);
       continue;
@@ -219,6 +285,13 @@ export function computeUnifiedPriceDecision(input: UnifiedPriceInput): UnifiedPr
     dataCompleteness,
     missingComponents,
     customerChargedShippingKrw: input.customerChargedShippingKrw,
+    costPolicy: {
+      id: costPolicy.id,
+      label: costPolicy.label,
+      importTaxesInLandedCost: costPolicy.importTaxesInLandedCost,
+      note: costPolicy.policyNote,
+    },
+    landedCostTaxBasis: costPolicy.landedCostTaxBasis,
   };
 }
 

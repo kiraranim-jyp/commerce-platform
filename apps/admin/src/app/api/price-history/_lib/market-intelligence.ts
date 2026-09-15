@@ -21,8 +21,11 @@ import {
   buildSellingSummary,
   buildConfidenceBasis,
   buildSellerDecision,
+  computeImportTaxes,
+  resolveCategoryCostPolicy,
   type UnifiedPriceDecision,
   type PriceObservationRecord,
+  type PriceComponent,
 } from "@commerce/pricing";
 import { fetchLiveExchangeRates } from "@/lib/exchange-rates";
 import { getSearchInterestRatio } from "./market-signals-cache";
@@ -242,9 +245,41 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
   // 여기서 넘겨도 무시될 뿐이지만, 넘기는 줄을 남겨두면 "이 값이 마진에
   // 영향을 준다"는 오해가 코드에 그대로 남는다. sellerProfile.domesticShippingCostKrw
   // 자체는 지우지 않는다 — Settings에 저장된 판매자 값이고, 읽는 곳이 없을 뿐이다.
+  //
+  // GOLF-01 축B(CEO 지시, 2026-09-15) — 카테고리별 비용 정책.
+  //
+  // 셀러가 "상품 검색"에서 고른 카테고리(workspace.marketCategoryProfileId)를
+  // 그대로 읽는다. 새로 추정하지 않는다 — 카테고리를 여기서 또 판정하면 시장조사
+  // 소스 필터가 쓰는 값과 원가가 쓰는 값이 언젠가 갈라진다. 값이 없으면(이 기능
+  // 이전 스냅샷, 또는 아직 안 고름) null이고 정책은 DEFAULT다 = **오늘까지와
+  // 완전히 같은 계산**이다.
+  const marketCategoryProfileId = snapshot.workspace.marketCategoryProfileId ?? null;
+  const costPolicy = resolveCategoryCostPolicy(marketCategoryProfileId);
+
+  // 골프처럼 관부가세를 판매자 원가로 보는 카테고리에서만 수입세금을 계산한다.
+  // 과세가격(CIF) = 환산 상품가 + 국제배송비 — 둘 다 cost에 이미 있는 값이고
+  // 여기서 새로 환산하거나 배송비를 만들지 않는다.
+  //
+  // 🔴 관세율이 아직 확정되지 않았으므로(category-cost-policy.ts의
+  //    GOLF_CUSTOMS_DUTY_RATE 주석) computeImportTaxes는 오늘 null을 낸다.
+  //    그 null이 status="unknown"으로 흘러 dataCompleteness=INCOMPLETE →
+  //    🟠 "비용 확인 필요"가 된다. 지어낸 8%로 🟢을 내지 않는다는 뜻이고,
+  //    세율이 확정되는 순간 코드 변경 없이 그대로 계산에 들어간다.
+  const importTax =
+    costPolicy.importTaxesInLandedCost && cost != null
+      ? computeImportTaxes({
+          customsValueKrw: cost.landedCostKrw,
+          dutyRate: costPolicy.customsDutyRate,
+          vatRate: costPolicy.importVatRate,
+        })
+      : null;
+  const importTaxComponent = (value: number | null, source: string): PriceComponent =>
+    value == null ? { value: null, status: "unknown", source } : { value, status: "estimated", source };
+
   const unifiedDecision: UnifiedPriceDecision | null =
     cost != null && currentSellingPriceKrw != null
       ? computeUnifiedPriceDecision({
+          categoryProfileId: marketCategoryProfileId,
           sourceProductPriceKrw: { value: cost.costKrw, status: cost.isRateEstimate ? "estimated" : "actual" },
           exchangeRate: { value: cost.exchangeRate, status: cost.isRateEstimate ? "estimated" : "actual" },
           internationalShippingKrw: { value: cost.shippingKrw, status: "estimated", source: "seller_default" },
@@ -252,9 +287,19 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
             sellerProfile?.deliveryCharge != null
               ? { value: sellerProfile.deliveryCharge, status: "actual", source: "SellerProfile.deliveryCharge" }
               : { value: null, status: "unknown" },
-          // MI-COST-POLICY-1 — 관세/부가세는 여기서 더 이상 넘기지 않는다.
-          // product.customsDutyKrw/customsVatKrw에 저장된 값은 그대로 남지만
-          // 읽지 않는다(과거 스냅샷을 고쳐 쓰지 않기 위해 지우지도 않는다).
+          // MI-COST-POLICY-1 — 상품에 저장돼 있던 product.customsDutyKrw/
+          // customsVatKrw는 여전히 읽지 않는다(과거 스냅샷을 고쳐 쓰지 않기 위해
+          // 지우지도 않는다). 아래 두 줄은 그 저장값이 아니라 **이번에 정책으로
+          // 계산한 값**이고, DEFAULT/아동의류 정책에서는 항상 null이라 엔진이
+          // 아예 읽지 않는다(LANDED_COST_PARTS에 오르지 않는다).
+          customsDutyKrw: importTaxComponent(
+            importTax?.customsDutyKrw ?? null,
+            costPolicy.customsDutyRate?.basis ?? "관세율 확인 필요",
+          ),
+          customsVatKrw: importTaxComponent(
+            importTax?.importVatKrw ?? null,
+            costPolicy.importVatRate?.basis ?? "수입부가세율 확인 필요",
+          ),
           platformFeeRate: { value: cost.feePercent, status: "estimated", source: "default" },
           currentSellingPriceKrw: { value: currentSellingPriceKrw, status: "actual" },
           domesticCompetitivePrice: {
@@ -463,6 +508,23 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
     // usableBrandMarketProfile과 표시 여부를 일치시킨다).
     brandMarketProfile: usableBrandMarketProfile,
     margin: decision ? { percent: decision.marginPercent } : null,
+    /**
+     * GOLF-01 축B — 이 상품의 원가가 **어느 비용 정책으로** 계산됐는가.
+     * 화면이 "관세를 왜 세지 않았는지 / 왜 확인 필요인지"를 말할 수 있는 근거다.
+     * 정책만 보내고 판정은 보내지 않는다 — 판정은 unifiedDecision 하나뿐이다.
+     */
+    costPolicy: {
+      id: costPolicy.id,
+      label: costPolicy.label,
+      importTaxesInLandedCost: costPolicy.importTaxesInLandedCost,
+      landedCostTaxBasis: costPolicy.landedCostTaxBasis,
+      note: costPolicy.policyNote,
+      /** 세율을 확인했는가. NEEDS_VERIFICATION이면 금액이 계산에 들어가지 않는다. */
+      customsDutyRate: costPolicy.customsDutyRate,
+      importVatRate: costPolicy.importVatRate,
+    },
+    /** 정책이 관부가세를 원가로 보는 카테고리에서만 값이 있다. 아니면 null. */
+    importTax,
     decision,
     unifiedDecision,
     recommendation,

@@ -1,3 +1,4 @@
+import { PRICE_TAX_BASIS_LABEL, type PriceTaxBasis } from "@commerce/pricing";
 import { KR_TARGET_MARKET, type TargetMarket } from "./market-target";
 import { miEmptyState, type MiEmptyState } from "./mi-empty-state";
 import { formatKrwAmount, formatOriginAmount } from "./mi-headline";
@@ -368,6 +369,24 @@ export interface PriceChainInput {
    * 빈 상태 어휘를 쓴다 — 두 화면이 같은 조건에서 같이 비어 있다.
    */
   profitability: ProfitabilityNumbers | null;
+  /**
+   * PRICING-BASIS-1(CEO 지시, 2026-09-15) — 위 착지원가가 **어느 세금 기준의
+   * 값인가**(unifiedDecision.landedCostTaxBasis 그대로).
+   *
+   * ── 무엇을 고치는가 ──────────────────────────────────────────────────────
+   * 파일럿에서 확정된 결함이다. 우리 착지원가는 세전이고(MI-COST-POLICY-1:
+   * 관부가세는 구매자 부담) 다나와 최저가는 세후다. 두 숫자를 같은 크기로
+   * 나란히 놓으면 부가세 10%만 해도 매번 우리가 약 18.8% 유리해 보인다 —
+   * 어떤 상품을 넣어도 **한 방향으로만** 틀리는 구조적 오판이다.
+   *
+   * 값을 바꾸지 않는다. 각 줄이 자기 기준을 말하게 한다. 화면이 두 숫자를
+   * 실제로 빼야 할 때는 packages/pricing의 comparePriceBasis()가 기준이 다르면
+   * 숫자를 내주지 않는다 — 문구는 다음 사람이 다른 자리에 같은 뺄셈을 쓸 때
+   * 따라오지 않지만, 함수는 따라온다.
+   *
+   * 넘기지 않으면 지금까지와 같다(기준 문장이 붙지 않는다).
+   */
+  landedCostTaxBasis?: PriceTaxBasis;
 }
 
 function krwLine(
@@ -505,12 +524,22 @@ export function buildPriceChain(input: PriceChainInput): PriceChainRow[] {
   //    MI-FINAL-UX-3 — 금액은 상세 계산과 **같은 breakdown**에서 온다. 서버의
   //    cost.landedCostKrw를 폴백으로 두지 않는 이유는 위 profitability 주석 그대로다.
   const profit = input.profitability;
+  // PRICING-BASIS-1 — 무엇을 더한 값인지(구성)와 어느 세금 기준인지(기준)를
+  // 한 줄에 함께 적는다. 둘 중 하나만 있으면 셀러는 아래 "국내 비교상품"과
+  // 그냥 빼도 되는 숫자라고 읽는다.
+  const landedCostComposition = input.costBasisIsKrMarket ? "한국 표시가 + 국제배송비" : "원화 환산 + 국제배송비";
+  const landedCostBasis = [
+    landedCostComposition,
+    input.landedCostTaxBasis ? PRICE_TAX_BASIS_LABEL[input.landedCostTaxBasis] : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   rows.push({
     ...krwLine(
       "LANDED_COST",
       "TOTAL",
       profit?.landedCostKrw ?? null,
-      input.costBasisIsKrMarket ? "한국 표시가 + 국제배송비" : "원화 환산 + 국제배송비",
+      landedCostBasis,
       "원본 가격을 확인하지 못해 원가를 계산할 수 없습니다",
     ),
     tier: "SUMMARY",
@@ -902,11 +931,24 @@ export function buildMarketContext(
   const grade = input.domesticBasis === "EXACT" ? "동일상품 기준" : "비교상품 참고가 기준";
   const sellerNote = input.domesticSellerCount > 0 ? ` · 비교상품 ${input.domesticSellerCount}곳` : "";
 
+  /**
+   * PRICING-BASIS-1(CEO 지시, 2026-09-15) — 이 줄은 **언제나 세후다**.
+   *
+   * 국내 편집샵·다나와에서 관측되는 값은 한국 소비자가 카드로 실제로 긁는
+   * 금액이고, 그 안에는 부가세가 이미 들어 있다. 반면 위 착지원가는 세전일 수
+   * 있다(카테고리 비용 정책에 따라 다르다 — buildPriceChain의 landedCostTaxBasis).
+   *
+   * 이 사실을 적지 않으면 셀러는 두 숫자를 그냥 뺀다. 부가세 10%만 해도 그
+   * 뺄셈은 매번 약 18.8% 유리한 쪽으로 틀린다. 그래서 이 줄은 위 정책이
+   * 무엇이든 **자기 기준을 고정으로 말한다** — buildMarketContext가 수익성
+   * 축의 입력을 하나도 받지 않는다는 이 파일의 원칙을 깨지 않으면서 사실을
+   * 남기는 유일한 방법이다.
+   */
   const comparable: PriceLine = {
     key: "DOMESTIC_COMPARABLE_PRICE",
     label: PRICE_MEANING_LABEL.DOMESTIC_COMPARABLE_PRICE,
     basis: representative
-      ? `${market.label} 시장 관측 ${representative.kind} · ${grade}${sellerNote}`
+      ? `${market.label} 시장 관측 ${representative.kind} · ${grade}${sellerNote} · ${PRICE_TAX_BASIS_LABEL.TAX_INCLUDED}`
       : `${market.label} 시장 관측`,
     value: representative ? formatKrwAmount(representative.krw) : null,
     empty: representative

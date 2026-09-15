@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { computeUnifiedPriceDecision } from "@commerce/pricing";
 import { readSourceAt, stripComments } from "./source-text";
 
 /**
@@ -72,13 +73,71 @@ describe("MI-COST-POLICY-1 ①: 셀러가 보는 가격 화면 어디에도 관�
   });
 });
 
-describe("MI-COST-POLICY-1 ②: 서버가 가격 엔진에 관부가세를 넘기지 않는다", () => {
-  it("computeUnifiedPriceDecision 호출부에 customsDutyKrw/customsVatKrw 인자가 없다", () => {
+describe("MI-COST-POLICY-1 ②: 서버가 아동의류 원가에 관부가세를 넣지 않는다", () => {
+  /**
+   * ── GOLF-01 축B(CEO 지시, 2026-09-15) — 이 검사의 «방법»이 바뀌었다 ─────────
+   *
+   * 원래 이 자리는 소스 텍스트에서 "customsDutyKrw"라는 **글자**가 사라졌는지
+   * 봤다. 그때는 그게 정확한 검사였다 — 넘길 이유가 어떤 카테고리에도 없었으니
+   * 글자가 있다는 것 자체가 회귀였다.
+   *
+   * 이번에 CEO가 카테고리별 비용 정책을 지시했다: 아동의류는 기존 정책 유지,
+   * 골프는 관세·부가세를 판매자 원가로 본다. 그래서 market-intelligence.ts는
+   * 이제 그 두 인자를 **정책이 요구할 때만 값이 채워지는 통로**로 넘긴다.
+   * 글자는 있고, 아동의류에서 값은 없다.
+   *
+   * 여기서 글자 검사를 그대로 두면 두 가지 중 하나가 일어난다: 골프 정책을
+   * 포기하거나, 테스트를 지우거나. 둘 다 틀렸다. 그래서 **같은 것을 더 강하게**
+   * 지키도록 방법을 바꾼다 — 글자가 아니라 **결과**를 본다. 글자 검사는 통로가
+   * 생기면 막지 못하는 대신 값이 흐르는지는 보지 못했다. 아래 검사는 엔진을
+   * 실제로 돌려서 "아동의류에서는 관부가세가 착지원가를 한 원도 움직이지
+   * 못한다"를 직접 확인한다. 이게 원래 지키려던 사실 그 자체다.
+   *
+   * 글자 검사도 버리지 않는다 — **셀러가 보는 화면**(위 ①)에서는 그대로다.
+   * 아동의류 화면에 "관세"가 뜨면 여전히 실패한다.
+   */
+  it("아동의류(및 카테고리 미지정) 정책에서는 관부가세를 넘겨도 착지원가·마진·판정이 한 글자도 달라지지 않는다", () => {
+    const base = {
+      sourceProductPriceKrw: { value: 111000, status: "estimated" as const },
+      exchangeRate: { value: 1480, status: "estimated" as const },
+      internationalShippingKrw: { value: 12000, status: "estimated" as const, source: "seller_default" },
+      customerChargedShippingKrw: { value: null, status: "unknown" as const },
+      platformFeeRate: { value: 10, status: "estimated" as const, source: "default" },
+      currentSellingPriceKrw: { value: 175710, status: "actual" as const },
+      domesticCompetitivePrice: { lowest: 198000, average: 214000 },
+    };
+    const customs = {
+      customsDutyKrw: { value: 9840, status: "actual" as const },
+      customsVatKrw: { value: 13284, status: "actual" as const },
+    };
+    const noCategory = computeUnifiedPriceDecision(base);
+    for (const input of [
+      { ...base, ...customs },
+      { ...base, ...customs, categoryProfileId: "KIDS_FASHION" },
+      { ...base, ...customs, categoryProfileId: null },
+    ]) {
+      const result = computeUnifiedPriceDecision(input);
+      expect(result.landedCostKrw).toEqual(noCategory.landedCostKrw);
+      expect(result.estimatedProfitKrw).toEqual(noCategory.estimatedProfitKrw);
+      expect(result.marginPercent).toEqual(noCategory.marginPercent);
+      expect(result.verdict).toBe(noCategory.verdict);
+      expect(result.dataCompleteness).toBe(noCategory.dataCompleteness);
+      expect(result.missingComponents).toEqual([]);
+      expect(result.costPolicy.importTaxesInLandedCost).toBe(false);
+    }
+  });
+
+  it("서버가 아동의류에 넘기는 관부가세 값은 «저장된 상품 값»이 아니라 «정책이 낸 값»이다 — 정책이 아니라면 항상 null이다", () => {
     const code = stripComments(marketIntelligence);
     expect(code).toContain("computeUnifiedPriceDecision({");
-    for (const gone of ["customsDutyKrw", "customsVatKrw"]) {
-      expect(code, `${gone}을(를) 아직 넘기고 있다`).not.toContain(gone);
-    }
+    // 통로는 정책 결과(importTax)에서만 온다. product.customsDutyKrw 같은
+    // **저장된 상품 값**을 다시 읽기 시작하면 과거 스냅샷이 소급해서 마진을
+    // 깎는다 — MI-COST-POLICY-1이 막은 바로 그 경로다.
+    expect(code).toContain("importTaxComponent(");
+    expect(code).not.toContain("product.customsDutyKrw");
+    expect(code).not.toContain("product.customsVatKrw");
+    // 그리고 그 importTax 자체가 정책 게이트 뒤에 있다.
+    expect(code).toContain("costPolicy.importTaxesInLandedCost");
   });
 
   it("판매자가 실제로 부담하는 비용은 그대로 넘긴다 — 비용 항목을 싸잡아 지운 것이 아니다", () => {

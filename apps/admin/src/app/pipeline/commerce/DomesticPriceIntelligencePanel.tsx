@@ -2247,6 +2247,10 @@ export function MiPanelView({
         : recommendation?.estimatedMarginPercent != null
           ? "RECOMMENDED"
           : null,
+    // PRICING-BASIS-1(CEO 지시, 2026-09-15) — 착지원가가 어느 세금 기준인지.
+    // 서버가 카테고리 비용 정책으로 이미 정한 값을 그대로 옮기기만 한다 —
+    // 여기서 판단하면 화면과 엔진이 서로 다른 기준을 말하게 된다.
+    landedCostTaxBasis: unifiedDecision?.landedCostTaxBasis,
   });
   const marketContext = buildMarketContext({
     domesticBasis: domesticMarketSplit.basis,
