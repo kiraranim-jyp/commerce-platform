@@ -32,7 +32,14 @@ import type { ManufacturerResolutionState } from "./use-manufacturer-resolution"
    스마트스토어·쿠팡 렌더 결과는 그대로다 — 옮기기만 했다. */
 import { FieldRow, FIELD_INPUT_CLASS, InfoTip } from "./registration-fields";
 import { NaverPayloadPreview } from "./NaverPayloadPreview";
-import { initialOpenSections, sectionTitle } from "./registration-sections";
+import {
+  FIELD_GRID_CLASS,
+  FIELD_GRID_NARROW_CLASS,
+  initialOpenSections,
+  SECTION_NOTE_CLASS,
+  SECTION_STACK_CLASS,
+  sectionTitle,
+} from "./registration-sections";
 import type { NaverResolveResponse } from "./NaverPayloadPreview";
 import { OptionVariantEditor } from "./OptionVariantEditor";
 import { computeChecklistReadiness, computeNaverPayloadReadiness } from "./readiness";
@@ -234,7 +241,7 @@ function KcCertificationBlock({
       <p className="text-xs font-medium text-text-secondary">
         실제로 취득한 인증서 값만 입력해주세요 — 값이 없으면 비워둡니다(임의 값 금지).
       </p>
-      <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+      <div className={FIELD_GRID_NARROW_CLASS}>
         <FieldRow label="인증 대상 여부/유형" field={product.certificationType}>
           <EditableText
             value={product.certificationType.value}
@@ -733,7 +740,9 @@ export function PlatformPreview({
       {/* REWORK-10 B — 여기 있던 SmartStore 전용 「등록 대상 정보를 확인하고
           있습니다」 배너가 사라졌다. 좌측 상세는 세 채널 모두 **10섹션 골격으로
           바로 시작한다.** */}
-      <div className="space-y-3">
+      {/* REWORK-13B — 카드 사이 간격도 세 채널이 같은 한 곳에서 받는다
+          (registration-sections.ts). 값은 그대로 `space-y-3`이다. */}
+      <div className={SECTION_STACK_CLASS}>
         {/* REWORK-10 C-2(CEO 지시, 2026-09-15) — 아래 열 섹션의 제목은 이제
             **세 채널이 같은 한 곳**(registration-sections.ts)에서 온다. 예전엔
             스마트스토어·쿠팡만 자기 문자열("기본정보" · "KC (어린이제품 등
@@ -757,10 +766,10 @@ export function PlatformPreview({
               보면서 바로 고칠 수 있는 게 실제로 더 편하다는 게 여러 스프린트
               동안 검증된 이 UI의 설계이고, 값이 갈라지는 문제가 없으므로
               막을 이유가 없다. */}
-          <p className="mb-2 rounded bg-selected-soft px-2 py-1.5 text-[11px] text-selected">
+          <p className={SECTION_NOTE_CLASS}>
             🔵 이 정보는 상품정보 탭과 공유됩니다 — 어느 탭에서 고쳐도 모든 커머스에 동일하게 적용됩니다.
           </p>
-          <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className={FIELD_GRID_CLASS}>
             <FieldRow label="상품명" field={product.title} required>
               <EditableText
                 value={listing.title}
@@ -1039,7 +1048,7 @@ export function PlatformPreview({
          * 목적이라 숨기지 않고 아예 뺐다. */}
 
         <CollapsibleSection title={sectionTitle("SHIPPING")} badge={sectionCompletionBadge("section-shipping")} {...sectionProps("section-shipping")}>
-          <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className={FIELD_GRID_CLASS}>
             <FieldRow label="재고">
               <div className="flex items-center gap-1">
                 <EditableText
@@ -1096,10 +1105,10 @@ export function PlatformPreview({
           (listing.platform === "coupang" ? <SellerProfileSummaryCard /> : <NaverSellerProfileSummaryCard />)}
 
         <CollapsibleSection title={sectionTitle("NOTICE")} badge={sectionCompletionBadge("section-notice")} {...sectionProps("section-notice")}>
-          <p className="mb-2 rounded bg-selected-soft px-2 py-1.5 text-[11px] text-selected">
+          <p className={SECTION_NOTE_CLASS}>
             🔵 원산지·세탁방법은 상품정보 탭과 공유됩니다 — 어느 탭에서 고쳐도 모든 커머스에 동일하게 적용됩니다.
           </p>
-          <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+          <div className={FIELD_GRID_NARROW_CLASS}>
             <FieldRow label="원산지" field={product.countryOfOrigin} required>
               <EditableText
                 value={product.countryOfOrigin.value}

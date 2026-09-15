@@ -85,3 +85,64 @@ export function initialOpenSections(firstSectionId: string): Record<string, bool
 export function sectionHeadings(): string[] {
   return REGISTRATION_SECTION_KEYS.map((key) => sectionTitle(key));
 }
+
+/**
+ * REWORK-13B(CEO 실측 판정, 2026-09-15: "롯데ON만 UI가 아직 다르다") — **공통
+ * 10섹션이 쓰는 뼈대 클래스.**
+ *
+ * ── 왜 여기로 올렸나 ────────────────────────────────────────────────────
+ * 직전까지 "세 탭이 같은 컴포넌트를 쓴다"는 테스트는 전부 통과했는데도 화면은
+ * 달랐다. 재 보니 같은 것은 **카드·머리·입력칸**뿐이고, 그 사이를 채우는
+ * 골격은 채널마다 제 값을 들고 있었다(jsdom 실측, 수정 전):
+ *
+ *   섹션 카드 사이 간격   쿠팡 `space-y-3`        롯데ON `space-y-4`
+ *   필드 격자            쿠팡 3열 한 종류        롯데ON 3열 · 2열 · 1열 세 종류
+ *   본문 첫 줄           쿠팡 파란 안내 문단     롯데ON 우측정렬 버튼 행
+ *
+ * 간격 하나가 4px 다르면 카드 열 개가 쌓인 화면은 눈에 띄게 다른 화면이 된다.
+ * 그래서 값을 **글자로 여기 한 번** 적고 세 채널이 그것을 읽는다.
+ *
+ * 🔴 값은 전부 스마트스토어·쿠팡(PlatformPreview)이 이미 쓰던 그대로다 — 그
+ * 두 탭의 렌더 결과는 한 글자도 바뀌지 않고, 롯데ON이 이쪽으로 맞춰 온다.
+ */
+
+/** 섹션 카드끼리의 세로 간격. 좌측 상세가 이 클래스 하나로 카드를 쌓는다. */
+export const SECTION_STACK_CLASS = "space-y-3";
+
+/** 섹션 본문의 입력 격자. 화면 폭에 따라 1 → 2 → 3열. */
+export const FIELD_GRID_CLASS = "grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 xl:grid-cols-3";
+
+/**
+ * 같은 격자의 2열판. 한 칸에 긴 글(고시 항목 · 인증 목록처럼 textarea)이 들어가는
+ * 섹션이 쓴다 — 쿠팡 ⑦ 고시정보가 이미 이 값이다. 🔴 새 값이 아니라 **둘 중
+ * 하나**라는 규칙이다: 격자는 이 두 종류뿐이고, 채널이 제 것을 만들지 않는다.
+ */
+export const FIELD_GRID_NARROW_CLASS = "grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2";
+
+/**
+ * 섹션 본문 맨 위의 안내 한 줄("이 값은 어디서 오는가 / 어디서 고치는가").
+ *
+ * 쿠팡·스마트스토어는 ① 기본 상품정보와 ⑦ 고시정보에서 이 문단을 쓴다. 롯데ON은
+ * 같은 말을 **섹션 머리의 summary**에 넣고 있어서 머리가 두세 줄로 부풀었고,
+ * 본문 첫 줄에는 대신 우측정렬 버튼 행이 서 있었다 — 카드 열한 개가 전부 그
+ * 모양이라 목록 전체의 인상이 달랐다.
+ */
+export const SECTION_NOTE_CLASS = "mb-2 rounded bg-selected-soft px-2 py-1.5 text-[11px] text-selected";
+
+const CHANNEL_CIRCLED = ["⑪", "⑫", "⑬", "⑭", "⑮"] as const;
+
+/**
+ * 공통 10섹션 **뒤에** 붙는 채널 고유 섹션의 제목. `channelSectionTitle(0,
+ * "롯데ON 고유 코드")` → `"⑪ 롯데ON 고유 코드"`.
+ *
+ * CEO 지시(2026-09-15): "롯데ON 고유 데이터는 ⑩ 이후 별도 영역으로 붙인다 —
+ * ⑪ 롯데ON 고유 관리정보 · ⑫ 롯데ON 고유 코드 …". 지금까지 이 자리의 제목은
+ * 번호가 없는 문장("그 밖의 롯데ON 코드")이라, 공통 골격과 고유 영역의 경계가
+ * 화면에서 번호로 읽히지 않았다.
+ *
+ * 🔴 번호를 ①~⑩ 안에 끼워 넣지 않는다 — 그 순간 공통 목차가 채널마다 갈린다.
+ */
+export function channelSectionTitle(index: number, label: string): string {
+  const mark = CHANNEL_CIRCLED[index] ?? `(${index + 11})`;
+  return `${mark} ${label}`;
+}

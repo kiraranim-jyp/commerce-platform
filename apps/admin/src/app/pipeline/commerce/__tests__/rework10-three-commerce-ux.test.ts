@@ -218,7 +218,9 @@ describe("REWORK-10 ① — 세 탭의 좌측 섹션 목록·순서가 글자 �
   it("🔴 좌측에 한 채널만 갖는 블록이 없다 — 골격 밖 제목은 채널 고유 항목뿐이다", async () => {
     const skeleton = sectionHeadings();
     /** 골격 뒤에 붙는 것만 허용된다(CEO 표의 "+ 채널 고유 항목"). */
-    const ALLOWED_EXTRA = ["그 밖의 롯데ON 코드 (채널 고유)", "롯데ON 고유 관리정보"];
+    /* REWORK-13B — 고유 영역의 섹션 제목은 이제 ⑪부터 번호가 붙는다
+       (registration-sections.ts `channelSectionTitle`). */
+    const ALLOWED_EXTRA = ["⑪ 롯데ON 고유 코드", "롯데ON 고유 영역"];
     for (const tab of tabs(resolution({ brandProfileManufacturer: "Bobo Choses S.L." }))) {
       const { left } = columnsOf(await mount(tab.element()));
       const extra = sectionTitlesOf(left).filter(

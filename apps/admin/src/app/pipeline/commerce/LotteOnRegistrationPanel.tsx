@@ -51,7 +51,15 @@ import {
   type FieldRequirement,
 } from "./registration-fields";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { initialOpenSections, sectionTitle } from "./registration-sections";
+import {
+  channelSectionTitle,
+  FIELD_GRID_CLASS,
+  FIELD_GRID_NARROW_CLASS,
+  initialOpenSections,
+  SECTION_NOTE_CLASS,
+  SECTION_STACK_CLASS,
+  sectionTitle,
+} from "./registration-sections";
 import { ChannelRegistrationFrame, ChannelRegistrationSummary } from "./ChannelRegistrationFrame";
 import { ListingConfirmationModal, type ListingProgressStep } from "./ListingConfirmationModal";
 import type { ReadinessItem } from "./readiness";
@@ -913,6 +921,33 @@ export function LotteOnRegistrationPanel({
     />
   );
 
+  /*
+   * REWORK-13B(CEO 실측 판정, 2026-09-15) — **섹션 머리의 한 줄 상태.**
+   *
+   * 쿠팡 ①②③의 머리에는 접혀 있어도 보이는 한 줄이 서 있다(「자동 입력 6개 ·
+   * 확인 필요 1개」 / 카테고리 / 옵션). 롯데ON 머리에는 그 자리에 **정책 설명**이
+   * 들어가 있어서, 같은 자리가 한쪽은 상태 한 줄 · 한쪽은 설명 세 줄이었다.
+   * 설명은 본문 안내 문단으로 내려갔고(FormSection), 이 자리에는 쿠팡과 **같은
+   * 성격 · 같은 문장 형식**의 한 줄이 선다.
+   *
+   * 🔴 판정을 새로 만들지 않는다 — 셋 다 이 화면이 **이미 읽고 있던 값**이다:
+   *   ① summarizeCommonProduct()의 `missing` 플래그(아래 경고 문단이 쓰는 그것)
+   *   ② CategoryRecommendation에 넘기는 subtitle과 같은 selectedCategory
+   *   ③ LotteOnOptionDetail이 그리는 product.optionGroups 그대로
+   */
+  const basicRows = rowsOf("상품명", "브랜드", "상품코드(SKU)", "소재", "색상", "사용연령", "품명", "모델명");
+  const basicNeedsCheck = basicRows.filter((row) => row.missing).length;
+  const basicInfoSummary = `자동 입력 ${basicRows.length - basicNeedsCheck}개 · 확인 필요 ${basicNeedsCheck}개`;
+  const categorySummary = selectedCategory
+    ? selectedCategory.name
+    : "미지정 — 추천 후보에서 선택해주세요.";
+  const optionGroupCount = product.optionGroups?.length ?? 0;
+  const optionValueCount = product.optionGroups?.reduce((sum, group) => sum + group.values.length, 0) ?? 0;
+  const optionSummary =
+    optionGroupCount > 0
+      ? `자동 추출 — 옵션그룹 ${optionGroupCount}개 · 값 ${optionValueCount}개`
+      : "옵션 없음 — 단일 상품으로 등록됩니다";
+
   const detail = (
     <div className="space-y-4">
       {/* ── REWORK-10 C(CEO 지시, 2026-09-15) — 여기 있던 롯데ON 전용 블록 셋이
@@ -947,6 +982,12 @@ export function LotteOnRegistrationPanel({
           않는다 — ① 이 이미 읽던 summarizeCommonProduct()의 같은 행들을 골라
           제자리에 놓을 뿐이다. */}
 
+      {/* REWORK-13B — 카드 사이 간격을 쿠팡과 같은 한 곳에서 받는다
+          (registration-sections.ts `SECTION_STACK_CLASS`). 직전까지 롯데ON은
+          이 기둥이 없어 바깥 `space-y-4`가 그대로 카드 간격이 됐고, 쿠팡
+          (`space-y-3`)보다 카드마다 4px씩 벌어져 있었다 — 카드 열한 개면
+          목록 전체 길이가 눈에 띄게 달라진다. */}
+      <div className={SECTION_STACK_CLASS}>
       {/* ── ① 기본 상품정보 — 읽기 전용(공통값) ──────────────────────────── */}
       <CommonInfoSection
         title={sectionTitle("BASIC")}
@@ -956,7 +997,8 @@ export function LotteOnRegistrationPanel({
            모델명). 제조사는 아래 children의 ManufacturerField가 그린다 — 세 탭
            공용 컴포넌트라 그 한 칸만 순서가 다르게 설 수 없다.
            🔴 입력칸은 여전히 0개다(ReadOnlyFieldRow). */
-        rows={rowsOf("상품명", "브랜드", "상품코드(SKU)", "소재", "색상", "사용연령", "품명", "모델명")}
+        summary={basicInfoSummary}
+        rows={basicRows}
         onEditCommonInfo={onEditCommonInfo}
         badge={sectionCompletionBadge("lotteon-section-basic")}
         {...sectionProps("lotteon-section-basic")}
@@ -974,6 +1016,7 @@ export function LotteOnRegistrationPanel({
         badge={sectionCompletionBadge("lotteon-section-category")}
         {...sectionProps("lotteon-section-category")}
         title={sectionTitle("CATEGORY")}
+        summary={categorySummary}
         description="롯데ON은 표준카테고리 1개와 전시카테고리 1개 이상을 함께 요구합니다. 여기서 고른 값은 롯데ON에만 적용되고, 스마트스토어·쿠팡 카테고리를 덮어쓰지 않습니다."
         action={
           <Button variant="secondary" size="sm" disabled={recommend.loading} onClick={() => void runRecommend()}>
@@ -1068,6 +1111,7 @@ export function LotteOnRegistrationPanel({
         badge={sectionCompletionBadge("lotteon-section-options")}
         {...sectionProps("lotteon-section-options")}
         title={sectionTitle("OPTIONS")}
+        summary={optionSummary}
         description="옵션과 재고는 상품정보의 값을 그대로 씁니다 — 롯데ON에서 조합을 따로 만들지 않습니다."
         rows={rowsOf("옵션", "재고")}
         onEditCommonInfo={onEditCommonInfo}
@@ -1108,7 +1152,7 @@ export function LotteOnRegistrationPanel({
             이제 롯데ON 판매자센터에 직접 물어본다(150 · 166 · 89). 조회 상태와
             결과는 바로 아래 한 줄이 말한다. */}
         <DeliveryLookupNote state={deliverySettings} />
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className={FIELD_GRID_CLASS}>
           <ChannelCodeField
             label="출고지번호 (owhpNo)"
             requirement={requirementOf("owhpNo")}
@@ -1256,7 +1300,7 @@ export function LotteOnRegistrationPanel({
             {selectedCategory.noticeItemCodes.join(", ")}
           </p>
         )}
-        <div className="grid gap-3">
+        <div className={FIELD_GRID_NARROW_CLASS}>
           <ChannelCodeField
             label="상품품목코드 (pdItmsCd)"
             requirement={requirementOf("pdItmsCd")}
@@ -1338,7 +1382,7 @@ export function LotteOnRegistrationPanel({
             </Button>
           </div>
         )}
-        <div className="grid gap-3">
+        <div className={FIELD_GRID_NARROW_CLASS}>
           <ChannelCodeTextArea
             label="안전인증 목록 (sftyAthnLst)"
             requirement={requirementOf("sftyAthnLst")}
@@ -1446,16 +1490,25 @@ export function LotteOnRegistrationPanel({
         )}
       </FormSection>
 
-      {/* ── 롯데ON 고유 관리정보 (⑦) ───────────────────────────────────── */}
+      {/* ── 공통 ①~⑩ 뒤에 붙는 롯데ON 고유 영역 ────────────────────────────
+          REWORK-13B(CEO 지시, 2026-09-15): "롯데ON 고유 데이터는 ⑩ 이후 별도
+          영역으로 붙인다 — ⑪ 롯데ON 고유 관리정보 · ⑫ 롯데ON 고유 코드 …".
+
+          🔴 "롯데ON이라서 별도 화면"이 아니라 **같은 등록 화면 + 롯데ON 전용
+          영역**이다. 그래서 아래 섹션은 위 ①~⑩과 같은 카드 · 같은 머리 · 같은
+          격자를 쓰고, 다른 것은 번호가 ⑪부터 시작한다는 사실 하나뿐이다.
+          직전까지 이 자리의 제목에는 번호가 없어서("그 밖의 롯데ON 코드"),
+          공통 골격이 어디서 끝나고 고유 영역이 어디서 시작하는지가 화면의
+          번호로 읽히지 않았다. */}
       <GroupHeading
-        title="롯데ON 고유 관리정보"
+        title="롯데ON 고유 영역"
         description="롯데ON 코드체계를 따르는 값입니다 — 상품정보의 텍스트나 셀러 설정에서 코드를 정할 수 없습니다."
       />
 
       <FormSection
         badge={sectionCompletionBadge("lotteon-section-codes")}
         {...sectionProps("lotteon-section-codes")}
-        title="그 밖의 롯데ON 코드 (채널 고유)"
+        title={channelSectionTitle(0, "롯데ON 고유 코드")}
         description="원산지·과세·브랜드는 롯데ON 코드체계를 따릅니다 — 상품정보의 원산지 텍스트로는 코드를 정할 수 없습니다."
       >
         {product.countryOfOrigin.value.trim() && (
@@ -1464,7 +1517,7 @@ export function LotteOnRegistrationPanel({
             롯데ON 코드를 정할 수 없어서 코드는 따로 고릅니다(추론하지 않습니다).
           </p>
         )}
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className={FIELD_GRID_CLASS}>
           <ChannelCodeField
             label="원산지코드 (oplcCd)"
             requirement={requirementOf("oplcCd")}
@@ -1556,6 +1609,7 @@ export function LotteOnRegistrationPanel({
           )}
         </section>
       )}
+      </div>
     </div>
   );
 
@@ -1661,22 +1715,38 @@ function SellerSettingRow({ row }: { row: LotteOnSellerSettingRow }) {
  * 그래서 같은 자리에 있는 같은 성격의 섹션이 세 탭에서 다르게 보였다 —
  * CEO가 "롯데ON만 뭔가 다른 상품등록 페이지"라고 읽은 차이가 이것이다.
  *
- * 두 가지만 맞춰준다:
- *  1. `description`은 CollapsibleSection의 `summary` 자리로 간다(접었을 때도
- *     보이는 한 줄 — 그 컴포넌트가 이미 그 용도로 갖고 있는 슬롯이다).
- *  2. `action`(버튼/링크)은 **본문 안**으로 내린다. CollapsibleSection의 머리는
- *     통째로 `<button>`이라 그 안에 버튼을 넣으면 중첩 버튼이 된다.
+ * `action`(버튼/링크)은 **본문 안**으로 내린다 — CollapsibleSection의 머리는
+ * 통째로 `<button>`이라 그 안에 버튼을 넣으면 중첩 버튼이 된다.
  *
  * REWORK-11 ①(CEO 판정, 2026-09-15) — `defaultOpen`이 사라지고 **부모가 여닫는
  * 상태**(open/onToggle)와 **상태 배지**(badge)를 받는다. 이 둘이 없던 동안
  * 롯데ON은 (1) 모든 섹션이 펼쳐진 채로 시작해 화면이 스마트스토어·쿠팡의 서너
  * 배로 길었고, (2) 섹션 머리에 「준비됨 / 확인 필요」 배지가 아예 없었다 —
  * 같은 컴포넌트를 쓰면서도 결과 화면이 달라 보이던 실제 이유다.
+ *
+ * REWORK-13B(CEO 실측 판정, 2026-09-15: "롯데ON만 UI가 아직 다르다") — **머리와
+ * 본문 첫 줄이 쿠팡과 같아진다.** 직전까지 이 껍데기는 두 가지를 제 방식으로
+ * 하고 있었고, 그 둘이 카드 열한 개에 전부 반복돼 목록 전체의 인상을 갈랐다
+ * (jsdom 실측):
+ *
+ *   1. `description`(두세 줄짜리 정책 설명)을 **머리의 summary**에 넣었다.
+ *      쿠팡의 summary는 「자동 입력 6개 · 확인 필요 1개」 같은 **한 줄 상태**라
+ *      머리가 한 줄인데, 롯데ON은 머리마다 설명이 두세 줄로 흘렀다.
+ *   2. 본문 첫 줄이 `justify-end` 버튼 행이었다. 쿠팡의 본문 첫 줄은 파란 안내
+ *      문단(SECTION_NOTE_CLASS)이다.
+ *
+ * 그래서 설명은 **쿠팡이 쓰는 바로 그 안내 문단**으로 내려오고, 머리의 summary
+ * 자리는 쿠팡과 같은 성격의 한 줄 상태에만 내준다. 버튼은 사라지지 않는다 —
+ * 같은 안내 문단 안에 들어가 별도의 행을 차지하지 않는다.
+ *
+ * 🔴 새 클래스를 만들지 않았다. 문단·격자·카드 간격은 전부
+ * registration-sections.ts가 들고 있는 **쿠팡의 값 그대로**다.
  */
 function FormSection({
   id,
   title,
   description,
+  summary,
   action,
   badge,
   open,
@@ -1686,6 +1756,8 @@ function FormSection({
   id?: string;
   title: string;
   description?: string;
+  /** 머리의 한 줄 상태. 쿠팡 ①②③이 같은 자리에 같은 성격의 값을 세운다. */
+  summary?: React.ReactNode;
   action?: React.ReactNode;
   badge?: React.ReactNode;
   open?: boolean;
@@ -1696,13 +1768,18 @@ function FormSection({
     <CollapsibleSection
       id={id}
       title={title}
-      summary={description}
+      summary={summary}
       badge={badge}
       open={open}
       onToggle={onToggle}
       defaultOpen={open === undefined ? true : undefined}
     >
-      {action && <div className="mb-3 flex flex-wrap items-center justify-end gap-2">{action}</div>}
+      {(description || action) && (
+        <p className={SECTION_NOTE_CLASS}>
+          {description}
+          {action && <span className="ml-2 inline-flex align-middle">{action}</span>}
+        </p>
+      )}
       {children}
     </CollapsibleSection>
   );
@@ -1724,6 +1801,7 @@ function CommonInfoSection({
   id,
   title,
   description,
+  summary,
   rows,
   onEditCommonInfo,
   badge,
@@ -1734,6 +1812,8 @@ function CommonInfoSection({
   id: string;
   title: string;
   description: string;
+  /** 머리의 한 줄 상태. 주지 않으면 머리는 쿠팡 ④⑨처럼 제목 한 줄이다. */
+  summary?: React.ReactNode;
   rows: CommonProductRow[];
   onEditCommonInfo: () => void;
   badge?: React.ReactNode;
@@ -1749,6 +1829,7 @@ function CommonInfoSection({
       id={id}
       title={title}
       description={description}
+      summary={summary}
       badge={badge}
       open={open}
       onToggle={onToggle}
@@ -1763,7 +1844,7 @@ function CommonInfoSection({
           예전에는 같은 자리(① 기본 상품정보)가 한쪽은 라벨+입력칸 격자,
           한쪽은 좌우 2단 표라서 한눈에 다른 화면으로 보였다.
           🔴 입력칸은 여전히 0개다 — ReadOnlyFieldRow는 input을 만들지 않는다. */}
-      <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className={FIELD_GRID_CLASS}>
         {rows.map((row) => (
           <ReadOnlyFieldRow
             key={row.label}

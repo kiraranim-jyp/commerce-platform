@@ -273,7 +273,8 @@ describe("REWORK-11 ① — 세 탭이 같은 컴포넌트로 그려진다(클�
       .map((b) => clean(b.textContent ?? "").split(/[🟢🟠🟡🔴○]/)[0])
       .map((t) => t.replace(/(접기 ▲|펼치기 ▼).*$/, "").trim());
     const extra = titles.filter((t) => !/^[①②③④⑤⑥⑦⑧⑨⑩]/.test(t));
-    expect(extra, `골격 밖 섹션 — ${extra.join(" / ")}`).toEqual(["그 밖의 롯데ON 코드 (채널 고유)"]);
+    /* REWORK-13B — 공통 ①~⑩ **뒤에** 붙는 고유 섹션은 ⑪부터 번호를 받는다. */
+    expect(extra, `골격 밖 섹션 — ${extra.join(" / ")}`).toEqual(["⑪ 롯데ON 고유 코드"]);
   });
 });
 
