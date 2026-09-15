@@ -2131,6 +2131,10 @@ export function CommerceWorkspace({
             warrantyPolicy,
             afterServiceDirector,
             afterServiceTelephoneNumber,
+            // REWORK-13A — 화면 게이트만 이 한 줄이 빠져 있어서, 브랜드 관리에
+            // 제조사를 등록해 둔 상품도 「제조자」로 계속 막혔다. 서버 register
+            // 라우트·대시보드 준비도는 같은 값을 이미 넘기고 있다.
+            resolvedManufacturer: data.notice.manufacturer,
             detailBlocks: data.detailPage.detailBlocks,
             descriptionTemplate: data.detailPage.descriptionTemplate,
             commonImages: data.detailPage.commonImages,
