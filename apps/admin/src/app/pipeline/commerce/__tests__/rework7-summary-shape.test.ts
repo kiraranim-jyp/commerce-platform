@@ -228,13 +228,34 @@ function summaryHeadings(right: HTMLElement): string[] {
 /* ── ① 네 칸 · 같은 순서 ───────────────────────────────────────────────────── */
 
 describe("REWORK-7 ① — 우측 요약은 CEO가 그린 네 칸이다", () => {
+  /**
+   * REWORK-12 ①(CEO 실측 캡처, 2026-09-15: "우측 기둥에 카드가 세로로 8개") —
+   * **이 단언의 범위가 좁았다.**
+   *
+   * 고치기 전에는 두 가지를 안 봤다:
+   *   · 세는 범위가 `frame.children[1]`(우측 칸) **안**이었다 — 좌측이나 프레임
+   *     바깥에 요약이 서면 이 검사는 0건으로 보고 통과한다.
+   *   · 섹션을 **하나도 펼치지 않은 첫 렌더**에서 셌다(initialOpenSections는 ①만
+   *     연다) — 펼친 뒤에 생기는 것은 세지 않는다.
+   *
+   * 이제 셀러가 하는 일을 그대로 한다: 모든 섹션을 **실제로 눌러 펼친 뒤**,
+   * **문서 전체**에서 센다.
+   */
   it("세 탭 모두 요약 카드 하나만 세운다 — 채널마다 칸이 더 붙지 않는다", async () => {
     for (const tab of TABS) {
-      const { right } = columnsOf(await mount(tab.element()));
+      const dom = await mount(tab.element());
+      await act(async () => expandAllSections(dom));
+      // 🔴 문서 전수 — 우측 칸 안만 보지 않는다.
       expect(
-        right.querySelectorAll('[data-summary="channel-registration"]').length,
-        `${tab.label}: 요약 카드가 하나가 아니다`,
+        dom.querySelectorAll('[data-summary="channel-registration"]').length,
+        `${tab.label}: 요약 카드가 하나가 아니다(문서 전수)`,
       ).toBe(1);
+      expect(
+        dom.querySelectorAll('[data-frame="channel-registration"]').length,
+        `${tab.label}: 등록 프레임이 하나가 아니다`,
+      ).toBe(1);
+      const { left, right } = columnsOf(dom);
+      expect(left.querySelectorAll("[data-summary]").length, `${tab.label}: 좌측 상세에 요약이 있다`).toBe(0);
       // 카드 바깥에 우측 기둥이 뭔가를 더 세우고 있지 않다.
       expect(right.children.length, `${tab.label}: 우측에 요약 카드 밖의 칸이 있다`).toBe(1);
     }
