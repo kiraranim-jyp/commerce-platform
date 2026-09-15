@@ -1,6 +1,7 @@
+// @vitest-environment jsdom
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { CanonicalProduct, LotteOnChannelInfo, PlatformId } from "@commerce/shared";
 import { PLATFORM_ADAPTERS } from "@commerce/marketplace";
 import { UNRESOLVED_CATEGORY, type CategorySelection } from "@commerce/category";
@@ -17,6 +18,7 @@ import {
   toLotteOnChannelInfo,
 } from "../lotteon-channel-form";
 import { manufacturerFixture } from "./manufacturer-fixture";
+import { mountExpanded, unmountTab } from "./mount-registration-tab";
 
 /**
  * 3층 구조 재정렬(CEO 지시, 2026-09-14) — **렌더 결과로만** 증명한다.
@@ -216,8 +218,15 @@ function commonProductInputs(inputs: RenderedInput[]): RenderedInput[] {
 
 /* ── 롯데ON 탭 ─────────────────────────────────────────────────────────── */
 
-function renderLotteOnTab(channelInfo?: LotteOnChannelInfo): string {
-  return renderToStaticMarkup(
+/**
+ * REWORK-11 ①(2026-09-15) — **정적 렌더에서 실제 마운트로.**
+ *
+ * 롯데ON 탭이 스마트스토어·쿠팡과 같은 펼침 정책을 쓰게 됐다(첫 화면에는 ① 기본
+ * 상품정보만 열린다). 한 번 그려서 안쪽을 읽는 방식으로는 "접혀 있다"와 "화면에
+ * 없다"가 구분되지 않으므로, 셀러가 하는 그대로 섹션을 펼친 뒤에 읽는다.
+ */
+async function renderLotteOnTab(channelInfo?: LotteOnChannelInfo): Promise<string> {
+  const container = await mountExpanded(
     createElement(LotteOnRegistrationPanel, {
       product: makeProduct(),
       commonPrice: { priceKrw: 128000, resolved: true },
@@ -226,9 +235,14 @@ function renderLotteOnTab(channelInfo?: LotteOnChannelInfo): string {
       onChannelInfoChange: () => {},
       onEditCommonInfo: () => {},
       manufacturerResolution: manufacturerFixture(),
-    }),
+    } as never),
   );
+  return container.innerHTML;
 }
+
+afterEach(async () => {
+  await unmountTab();
+});
 
 /* ── 스마트스토어 · 쿠팡 탭 ─────────────────────────────────────────────── */
 
@@ -317,8 +331,8 @@ function renderProductInfoBody(product: CanonicalProduct): string {
 /* ─────────────────────────────────────────────────────────────────────── */
 
 describe("증명 1 — 롯데ON 탭에 공통 상품정보 입력칸이 0개다", () => {
-  it("입력칸은 존재하되, 그중 공통 상품정보를 묻는 것은 하나도 없다", () => {
-    const inputs = collectInputs(renderLotteOnTab());
+  it("입력칸은 존재하되, 그중 공통 상품정보를 묻는 것은 하나도 없다", async () => {
+    const inputs = collectInputs(await renderLotteOnTab());
     // 0개라는 주장이 "아무것도 안 그려졌다"로 성립하지 않게 먼저 못 박는다.
     expect(inputs.length).toBeGreaterThan(0);
     const offending = commonProductInputs(inputs);
@@ -328,8 +342,8 @@ describe("증명 1 — 롯데ON 탭에 공통 상품정보 입력칸이 0개다"
     ).toEqual([]);
   });
 
-  it("전수 나열 — 라벨이 전부 롯데ON API 필드명을 달고 있다", () => {
-    const labels = collectInputs(renderLotteOnTab()).map((i) => i.label);
+  it("전수 나열 — 라벨이 전부 롯데ON API 필드명을 달고 있다", async () => {
+    const labels = collectInputs(await renderLotteOnTab()).map((i) => i.label);
     // 라벨마다 괄호 안에 롯데ON 원문 필드명이 있다 = 우리가 지어낸 칸이 아니다.
     expect(labels).toEqual([
       // REWORK-4 §5 — 순서가 10섹션 골격을 따른다(⑤ 배송 → ⑦ 고시 → ⑧ KC).
@@ -357,8 +371,8 @@ describe("증명 1 — 롯데ON 탭에 공통 상품정보 입력칸이 0개다"
     ]);
   });
 
-  it("MI를 관리하지 않는다 — 판매 추천/비추천 어휘가 화면에 없다", () => {
-    const text = stripTags(renderLotteOnTab());
+  it("MI를 관리하지 않는다 — 판매 추천/비추천 어휘가 화면에 없다", async () => {
+    const text = stripTags(await renderLotteOnTab());
     for (const word of ["판매 추천", "판매 비추천", "조건부 판매", "가격경쟁력", "가격 경쟁력"]) {
       expect(text, `롯데ON 탭에 MI 어휘가 새어 들어왔다: ${word}`).not.toContain(word);
     }
@@ -372,8 +386,8 @@ describe("증명 2 — 롯데ON 관리값이 탭을 벗어났다 돌아와도 �
    * 그러므로 "돌아왔을 때 남아 있다"는 **상품에 저장된 값으로 새로 마운트했을
    * 때 그 값이 화면에 서 있는가**와 같은 명제다 — 그것을 그대로 그려서 본다.
    */
-  it("저장된 값으로 다시 마운트하면 입력칸에 그 값이 들어 있다", () => {
-    const html = renderLotteOnTab(SAVED_LOTTEON);
+  it("저장된 값으로 다시 마운트하면 입력칸에 그 값이 들어 있다", async () => {
+    const html = (await renderLotteOnTab(SAVED_LOTTEON));
     /* REWORK-5 ③ — 카테고리 두 값("205001" · "3001, 3002")이 이 목록에서
        빠졌다. 값이 사라진 것이 아니라 **입력칸이 사라졌다** — 이제 읽기 전용
        요약으로 서기 때문에 value 속성이 아니라 본문으로 확인한다(바로 아래
@@ -400,15 +414,15 @@ describe("증명 2 — 롯데ON 관리값이 탭을 벗어났다 돌아와도 �
    * 전용 요약이 되었을 뿐, "탭을 벗어났다 돌아와도 남아 있다"는 명제는 한 점도
    * 약해지지 않았다는 것을 별도로 고정한다.
    */
-  it("저장된 카테고리는 읽기 전용 요약으로 돌아온다 — 입력칸이 아닐 뿐 값은 남는다", () => {
-    const text = stripTags(renderLotteOnTab(SAVED_LOTTEON));
+  it("저장된 카테고리는 읽기 전용 요약으로 돌아온다 — 입력칸이 아닐 뿐 값은 남는다", async () => {
+    const text = stripTags((await renderLotteOnTab(SAVED_LOTTEON)));
     expect(text).toContain("선택한 카테고리가 채운 값");
     expect(text, "저장된 표준카테고리번호가 화면에 돌아오지 않았다").toContain("205001");
     expect(text, "저장된 전시카테고리번호가 화면에 돌아오지 않았다").toContain("3001, 3002");
   });
 
-  it("저장된 값이 없으면 빈 폼이다 — 없는 값을 지어내지 않는다", () => {
-    const html = renderLotteOnTab();
+  it("저장된 값이 없으면 빈 폼이다 — 없는 값을 지어내지 않는다", async () => {
+    const html = await renderLotteOnTab();
     expect(html).toContain('value=""');
     expect(html).not.toContain("OW-77");
   });
@@ -425,22 +439,22 @@ describe("증명 3 — 상품정보 화면에서 커머스 관리정보가 사�
    * 옮기면 롯데ON 입력이 전부 사라지던" 버그가 그대로 돌아온다. 그래서 이
    * 블록은 **두 명제를 한 자리에서** 본다: 화면에 없다 / 저장은 살아 있다.
    */
-  it("상품정보 본문에 「🛒 커머스 관리정보」 섹션이 없다", () => {
+  it("상품정보 본문에 「🛒 커머스 관리정보」 섹션이 없다", async () => {
     const text = stripTags(renderProductInfoBody(makeProduct({ lotteOnChannelInfo: SAVED_LOTTEON })));
     expect(text).not.toContain("커머스 관리정보");
     expect(text).not.toContain("채널마다 따로 관리되는 값입니다");
   });
 
-  it("상품정보 본문이 롯데ON 관리값을 한 건도 읽어주지 않는다", () => {
+  it("상품정보 본문이 롯데ON 관리값을 한 건도 읽어주지 않는다", async () => {
     const html = renderProductInfoBody(makeProduct({ lotteOnChannelInfo: SAVED_LOTTEON }));
     for (const saved of ["OW-77", "RT-88", "DC-99", "BR-4242", "EPD-1", "205001"]) {
       expect(html, `상품정보 화면에 롯데ON 관리값이 남아 있다: ${saved}`).not.toContain(saved);
     }
   });
 
-  it("🔴 저장은 그대로다 — 같은 값으로 롯데ON 탭을 열면 전부 들어 있다", () => {
+  it("🔴 저장은 그대로다 — 같은 값으로 롯데ON 탭을 열면 전부 들어 있다", async () => {
     // 화면 한 자리를 지웠을 뿐이라는 사실을, 저장을 읽는 쪽에서 직접 확인한다.
-    const html = renderLotteOnTab(SAVED_LOTTEON);
+    const html = (await renderLotteOnTab(SAVED_LOTTEON));
     for (const saved of ["OW-77", "RT-88", "DC-99", "BR-4242", "EPD-1"]) {
       expect(html, `롯데ON 탭이 저장값을 잃었다: ${saved}`).toContain(`value="${saved}"`);
     }
@@ -457,7 +471,7 @@ describe("증명 4 — 스마트스토어 · 쿠팡 탭의 입력 가능 필드 
    * (a)로 바뀌면 여기서 먼저 깨진다.
    */
   for (const platform of ["smartstore", "coupang"] as PlatformId[]) {
-    it(`${platform} — 입력 가능 필드 전수(10개)가 전부 공통 상품정보다`, () => {
+    it(`${platform} — 입력 가능 필드 전수(10개)가 전부 공통 상품정보다`, async () => {
       const inputs = collectInputs(renderPlatformTab(platform));
       expect(inputs.map((i) => `${i.tag}:${labelKey(i.label)}:${i.readOnly ? "RO" : "RW"}`)).toEqual([
         "input:상품명:RW",
@@ -475,7 +489,7 @@ describe("증명 4 — 스마트스토어 · 쿠팡 탭의 입력 가능 필드 
       expect(commonProductInputs(inputs)).toHaveLength(inputs.length);
     });
 
-    it(`${platform} — 공통 상품정보 입력칸이 살아 있고, 공유된다는 문구가 붙어 있다`, () => {
+    it(`${platform} — 공통 상품정보 입력칸이 살아 있고, 공유된다는 문구가 붙어 있다`, async () => {
       const html = renderPlatformTab(platform);
       const common = commonProductInputs(collectInputs(html));
       expect(common.length, `${platform} 탭의 공통 입력칸이 사라졌다 — (a)는 금지다`).toBeGreaterThan(0);
@@ -483,7 +497,7 @@ describe("증명 4 — 스마트스토어 · 쿠팡 탭의 입력 가능 필드 
       expect(stripTags(html)).toContain("이 정보는 상품정보 탭과 공유됩니다");
     });
 
-    it(`${platform} — 읽기 전용으로 바뀌지 않았다`, () => {
+    it(`${platform} — 읽기 전용으로 바뀌지 않았다`, async () => {
       const common = commonProductInputs(collectInputs(renderPlatformTab(platform)));
       expect(common.every((input) => !input.readOnly)).toBe(true);
     });
@@ -502,14 +516,14 @@ describe("증명 6 — 롯데ON 관리값을 고쳐도 상품 정보와 다른 �
     return { ...product, lotteOnChannelInfo: info };
   }
 
-  it("바뀐 키는 lotteOnChannelInfo 하나뿐이다", () => {
+  it("바뀐 키는 lotteOnChannelInfo 하나뿐이다", async () => {
     const before = makeProduct();
     const after = applyLotteOnChannelInfo(before, SAVED_LOTTEON);
     const changed = (Object.keys(after) as (keyof CanonicalProduct)[]).filter((key) => after[key] !== before[key]);
     expect(changed).toEqual(["lotteOnChannelInfo"]);
   });
 
-  it("공통 상품정보도 채널 가격도 손대지 않는다", () => {
+  it("공통 상품정보도 채널 가격도 손대지 않는다", async () => {
     const before = makeProduct();
     const after = applyLotteOnChannelInfo(before, SAVED_LOTTEON);
     expect(after.title).toBe(before.title);
@@ -519,11 +533,11 @@ describe("증명 6 — 롯데ON 관리값을 고쳐도 상품 정보와 다른 �
     expect(after.channelPriceOverrides).toBe(before.channelPriceOverrides);
   });
 
-  it("폼 ↔ 저장을 왕복해도 값이 그대로다", () => {
+  it("폼 ↔ 저장을 왕복해도 값이 그대로다", async () => {
     expect(toLotteOnChannelInfo(fromLotteOnChannelInfo(SAVED_LOTTEON))).toEqual(SAVED_LOTTEON);
   });
 
-  it("이 필드를 모르던 과거 스냅샷(키 없음)도 그냥 '아직 입력 안 함'이 된다", () => {
+  it("이 필드를 모르던 과거 스냅샷(키 없음)도 그냥 '아직 입력 안 함'이 된다", async () => {
     const legacy = makeProduct();
     expect("lotteOnChannelInfo" in legacy).toBe(false);
     expect(fromLotteOnChannelInfo(legacy.lotteOnChannelInfo)).toEqual(EMPTY_LOTTEON_CHANNEL_FORM);
@@ -544,12 +558,12 @@ describe("증명 5 — 채널 readiness는 자기 카테고리만 본다(상품 
     return summary.required.find((item) => item.label === "카테고리");
   }
 
-  it("확정되지 않은 카테고리면 그 채널의 필수 항목이 통과하지 않는다", () => {
+  it("확정되지 않은 카테고리면 그 채널의 필수 항목이 통과하지 않는다", async () => {
     expect(categoryItem(UNRESOLVED_CATEGORY)?.passed).toBe(false);
     expect(categoryItem(UNRESOLVED_CATEGORY)?.required).toBe(true);
   });
 
-  it("한 채널의 확정이 다른 채널 판정으로 새지 않는다 — 인자가 하나뿐이다", () => {
+  it("한 채널의 확정이 다른 채널 판정으로 새지 않는다 — 인자가 하나뿐이다", async () => {
     // isVerifiedCategorySelected()가 통과시키는 유일한 모양 —
     // state가 SELECTED/CONFIRMED이고 candidate.isVerifiedPlatformCode가 true.
     const confirmed: CategorySelection = {
@@ -569,7 +583,7 @@ describe("증명 5 — 채널 readiness는 자기 카테고리만 본다(상품 
     expect(categoryItem(UNRESOLVED_CATEGORY)?.passed).toBe(false);
   });
 
-  it("③ 등록 준비 체크리스트에는 카테고리 항목 자체가 없다", () => {
+  it("③ 등록 준비 체크리스트에는 카테고리 항목 자체가 없다", async () => {
     // 상품 수준이 카테고리를 묻지 않는다는 것을 workflow 결과로 직접 본다.
     const wf = resolveWorkflow({
       collection: { running: false, percent: 100, productReady: true, imageCount: 6, failedImageCount: 0 },

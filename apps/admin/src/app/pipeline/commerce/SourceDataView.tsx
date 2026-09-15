@@ -2,6 +2,7 @@
 
 import type { CanonicalProduct, FieldSource } from "@commerce/shared";
 import { convertToKrw, formatKrw } from "@commerce/pricing";
+import { InfoTip } from "./registration-fields";
 import { EditableText, EditableTextarea } from "./EditableField";
 import { extractionSourceLabel, ProvenanceBadge } from "./provenance";
 
@@ -277,15 +278,20 @@ function ModelNameField({
         <EditableText value={field.value} onCommit={onCommit} placeholder="예: B226AC043" />
       )}
 
-      <p className="text-[11px] leading-relaxed text-text-tertiary">
-        └─ 네이버 카탈로그 식별용 모델명 — SmartStore의 네이버 쇼핑 카탈로그에서 상품을 식별할 때
-        사용하는 모델명입니다. 위 SKU(판매자 상품관리번호)와는 다른 값입니다.
+      {/* REWORK-11 ⑤(CEO 지시, 2026-09-15: "설명으로 화면을 채우지 마라") —
+          화면에 남는 것은 **이 칸이 무엇인가** 한 줄. SKU와 어떻게 다른지,
+          참조가 정확히 무엇을 가져오는지는 ⓘ로 접힌다(글자는 그대로 남는다). */}
+      <p className="text-[11px] text-text-tertiary">
+        └─ 네이버 카탈로그 식별용 모델명
+        <InfoTip text="SmartStore의 네이버 쇼핑 카탈로그에서 상품을 식별할 때 사용하는 모델명입니다. 위 SKU(판매자 상품관리번호)와는 다른 값입니다." />
       </p>
 
       {isReferenced && (
-        <p className="rounded border border-warning/40 bg-warning-soft px-2 py-1 text-[11px] leading-relaxed text-warning">
-          ℹ 상세페이지 참조는 고시정보의 모델명을 가져옵니다. 「{CATALOG_MODEL_NAME_LABEL}」으로 사용할 수
-          없는 경우 직접 입력해야 합니다 — 지금은 이 칸이 비어 있어 스마트스토어 등록이 계속 막힙니다.
+        <p className="text-[11px] text-warning">
+          ⚠ 「{CATALOG_MODEL_NAME_LABEL}」은 비어 있는 채로 남습니다
+          <InfoTip
+            text={`상세페이지 참조는 고시정보의 모델명을 가져옵니다. 「${CATALOG_MODEL_NAME_LABEL}」으로 사용할 수 없는 경우 직접 입력해야 합니다 — 지금은 이 칸이 비어 있어 스마트스토어 등록이 계속 막힙니다.`}
+          />
         </p>
       )}
     </div>

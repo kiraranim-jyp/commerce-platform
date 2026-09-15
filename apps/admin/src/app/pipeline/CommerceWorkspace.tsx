@@ -2696,7 +2696,17 @@ export function CommerceWorkspace({
                     />
                   </div>
                 ),
-                required: <MissingFieldsBulkPanel product={product} onBulkApply={bulkSetFieldReference} />,
+                required: (
+                  /* REWORK-11 ② — 네 번째 화면(상품정보)도 같은 resolver 결과를
+                     본다. 브랜드 프로필이 채운 제조사를 이 목록이 계속 «불러오지
+                     못한 항목»으로 세우면, 같은 상품에 대해 화면 두 곳이 반대로
+                     말하게 된다. */
+                  <MissingFieldsBulkPanel
+                    product={product}
+                    onBulkApply={bulkSetFieldReference}
+                    manufacturerResolution={manufacturerResolution}
+                  />
+                ),
               }}
               archive={
                 <>

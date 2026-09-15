@@ -408,25 +408,39 @@ describe("REWORK-7 ⑤ — [등록 시작]은 하나뿐이고 최종 확인 모�
 /* ── ④ 롯데ON 고유 필드의 필수/선택 구분 ──────────────────────────────────── */
 
 describe("REWORK-7 ④ — 롯데ON 고유 필드가 🔴 필수 · ⚪ 선택으로 갈린다", () => {
-  /** label 텍스트를 들고 있는 <label> 요소를 찾는다. */
-  function labelFor(dom: HTMLElement, text: string): HTMLElement {
-    const found = Array.from(dom.querySelectorAll("label")).find((el) =>
+  /**
+   * 그 이름을 단 **입력 한 줄 전체**(라벨 + 배지 + 입력칸 + 안내)를 찾는다.
+   *
+   * REWORK-11 ①(2026-09-15) — 롯데ON이 공용 행 컴포넌트(FieldRow)를 쓰게 되면서
+   * 배지가 `<label>` **안**이 아니라 같은 줄의 형제가 됐다(그래야 그 칸의 이름이
+   * "출고지번호 + 배지 전문"이 되지 않는다 — 스마트스토어·쿠팡이 처음부터 쓰던
+   * 구조다). 그래서 라벨이 아니라 라벨을 품은 줄을 본다.
+   */
+  function fieldRowFor(dom: HTMLElement, text: string): HTMLElement {
+    const label = Array.from(dom.querySelectorAll("label")).find((el) =>
       clean(el.textContent ?? "").startsWith(text),
     );
-    if (!found) throw new Error(`입력칸을 찾지 못했다: ${text}`);
-    return found as HTMLElement;
+    if (!label) throw new Error(`입력칸을 찾지 못했다: ${text}`);
+    // label → span(라벨+ⓘ) → div(라벨줄) → div(FieldRow)
+    const row = label.parentElement?.parentElement?.parentElement;
+    if (!row) throw new Error(`입력 줄을 찾지 못했다: ${text}`);
+    return row as HTMLElement;
   }
 
   it("서버 검증이 이름을 올린 필드는 🔴 필수다", async () => {
     const dom = await mount(lotteOnElement());
-    expect(clean(labelFor(dom, "출고지번호").textContent ?? "")).toContain("🔴 필수");
+    await act(async () => expandAllSections(dom));
+    expect(clean(fieldRowFor(dom, "출고지번호").textContent ?? "")).toContain("🔴 필수");
   });
 
   it("검증이 아예 보지 않는 값은 ⚪ 선택 — 없어도 등록 가능하다고 적는다", async () => {
     const dom = await mount(lotteOnElement());
+    await act(async () => expandAllSections(dom));
     for (const field of ["브랜드번호", "업체상품번호", "과세유형코드"]) {
-      const text = clean(labelFor(dom, field).textContent ?? "");
-      expect(text, `${field}: 선택 표시가 없다`).toContain("⚪ 선택 — 없어도 등록 가능");
+      const text = clean(fieldRowFor(dom, field).textContent ?? "");
+      /* 글리프가 ⚪에서 ○로 바뀌었다 — 공용 StatusBadge(neutral)의 것이다.
+         "없어도 등록 가능"이라는 **말**은 그대로다. */
+      expect(text, `${field}: 선택 표시가 없다`).toContain("선택 — 없어도 등록 가능");
     }
   });
 
@@ -522,3 +536,4 @@ describe("REWORK-7 ① — 접힌 이름은 남은 항목 1위가 됐을 때 이
   });
 });
 import { manufacturerFixture } from "./manufacturer-fixture";
+import { expandAllSections } from "./mount-registration-tab";

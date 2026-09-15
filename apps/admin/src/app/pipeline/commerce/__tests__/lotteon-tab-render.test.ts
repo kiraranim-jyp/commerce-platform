@@ -1,9 +1,10 @@
+// @vitest-environment jsdom
 import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { CanonicalProduct } from "@commerce/shared";
 import { LotteOnRegistrationPanel } from "../LotteOnRegistrationPanel";
 import { manufacturerFixture } from "./manufacturer-fixture";
+import { fieldLabelOf, mountExpanded, unmountTab } from "./mount-registration-tab";
 
 /**
  * LOTTEON COMMERCE SPRINT 3(CEO 확정, 2026-09-14) — **화면을 통째로 그려서**
@@ -58,17 +59,30 @@ function makeProduct(): CanonicalProduct {
   } as unknown as CanonicalProduct;
 }
 
-function renderTab(): string {
-  return renderToStaticMarkup(
+/**
+ * REWORK-11 ①(2026-09-15) — **정적 렌더에서 실제 마운트로.**
+ *
+ * 롯데ON 탭도 이제 첫 화면에 ① 기본 상품정보만 펼치고 시작한다(스마트스토어·
+ * 쿠팡과 같은 정책). 그래서 한 번 그려서 안쪽 글자를 읽던 방식으로는 "접혀
+ * 있어서 없다"와 "화면에 아예 없다"를 구분할 수 없다 — 셀러가 하는 그대로
+ * 섹션을 펼친 뒤에 읽는다.
+ */
+async function renderTab(): Promise<string> {
+  const container = await mountExpanded(
     createElement(LotteOnRegistrationPanel, {
       product: makeProduct(),
       commonPrice: { priceKrw: 128000, resolved: true },
       commonCategorySources: [{ path: ["Home", "Kids", "Shorts"], origin: "원본 상품 페이지 분류" }],
       onEditCommonInfo: () => {},
       manufacturerResolution: manufacturerFixture(),
-    }),
+    } as never),
   );
+  return container.innerHTML;
 }
+
+afterEach(async () => {
+  await unmountTab();
+});
 
 /** 셀러가 **읽는 글자**만 남긴다(태그를 통째로 지운다). */
 function visibleText(html: string): string {
@@ -81,23 +95,23 @@ function visibleText(html: string): string {
     .trim();
 }
 
-/** 화면에 실제로 선 입력 요소들의 라벨. `<label>라벨<input …>` 구조를 이용한다. */
+/**
+ * 화면에 실제로 선 입력 요소들의 라벨.
+ *
+ * REWORK-11 ① — 예전에는 `<label>라벨<input …></label>` 구조를 정규식으로
+ * 읽었다. 롯데ON 전용 TextField가 그렇게 그렸기 때문이다. 지금은 세 탭이 같은
+ * 행 컴포넌트(FieldRow)를 쓰고, 거기서는 라벨과 입력칸이 **형제**다 —
+ * 그래서 DOM에서 올라가며 찾는다(fieldLabelOf).
+ */
 function inputLabels(html: string): string[] {
-  const labels: string[] = [];
-  const pattern = /<label[^>]*>([\s\S]*?)<\/label>/g;
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(html)) !== null) {
-    const block = match[1];
-    if (!/<input|<textarea|<select/.test(block)) continue;
-    const spanMatch = /<span[^>]*>([\s\S]*?)<\/span>/.exec(block);
-    if (spanMatch) labels.push(visibleText(spanMatch[1]));
-  }
-  return labels;
+  const host = document.createElement("div");
+  host.innerHTML = html;
+  return Array.from(host.querySelectorAll("input, textarea, select")).map((el) => fieldLabelOf(el));
 }
 
 describe("롯데ON 탭 — 실제로 그려지는 화면", () => {
-  it("입력칸이 하나도 공통 상품정보를 묻지 않는다", () => {
-    const labels = inputLabels(renderTab());
+  it("입력칸이 하나도 공통 상품정보를 묻지 않는다", async () => {
+    const labels = inputLabels((await renderTab()));
     expect(labels.length).toBeGreaterThan(0);
     for (const label of labels) {
       for (const forbidden of ["상품명", "판매가", "가격", "재고", "옵션", "이미지", "상세설명", "상세페이지"]) {
@@ -106,8 +120,8 @@ describe("롯데ON 탭 — 실제로 그려지는 화면", () => {
     }
   });
 
-  it("입력칸은 전부 롯데ON 전용 네 축(카테고리·고시·인증·배송)과 코드값이다", () => {
-    const labels = inputLabels(renderTab());
+  it("입력칸은 전부 롯데ON 전용 네 축(카테고리·고시·인증·배송)과 코드값이다", async () => {
+    const labels = inputLabels((await renderTab()));
     // 라벨마다 롯데ON API 필드명을 괄호로 함께 적는다 — 셀러가 판매자센터에서
     // 같은 이름을 찾을 수 있어야 하고, 우리가 지어낸 이름이 아니라는 표시다.
     /* REWORK-5 ③(CEO 실측 판정: FAIL — "다시 조회 → 번호 찾아서 입력") —
@@ -126,8 +140,8 @@ describe("롯데ON 탭 — 실제로 그려지는 화면", () => {
     expect(labels).toContain("배송가능지역코드 (dvRgsprGrpCd)");
   });
 
-  it("공통 정보는 값과 출처를 함께 읽어준다 — '다시 입력하라'가 아니라 '이걸 씁니다'", () => {
-    const text = visibleText(renderTab());
+  it("공통 정보는 값과 출처를 함께 읽어준다 — '다시 입력하라'가 아니라 '이걸 씁니다'", async () => {
+    const text = visibleText((await renderTab()));
     expect(text).toContain("테리 버뮤다 반바지"); // 상품명(공통)
     expect(text).toContain("128,000원"); // 판매가격(공통 · 화면이 계산한 값 그대로)
     expect(text).toContain("옵션 없음 — 단품 1건으로 등록");
@@ -135,15 +149,15 @@ describe("롯데ON 탭 — 실제로 그려지는 화면", () => {
     expect(text).toContain("다시 입력하지 않습니다");
   });
 
-  it("공통 분류를 참고로 보여주되 롯데ON 카테고리와 섞지 않는다", () => {
-    const text = visibleText(renderTab());
+  it("공통 분류를 참고로 보여주되 롯데ON 카테고리와 섞지 않는다", async () => {
+    const text = visibleText((await renderTab()));
     expect(text).toContain("참고 — 이 상품의 공통 분류");
     expect(text).toContain("Home › Kids › Shorts");
     expect(text).toContain("스마트스토어·쿠팡 카테고리를 덮어쓰지 않습니다");
   });
 
-  it("'Preview'라는 글자가 화면에 없다", () => {
-    expect(visibleText(renderTab())).not.toContain("Preview");
+  it("'Preview'라는 글자가 화면에 없다", async () => {
+    expect(visibleText((await renderTab()))).not.toContain("Preview");
   });
 
   /**
@@ -157,8 +171,8 @@ describe("롯데ON 탭 — 실제로 그려지는 화면", () => {
    * 위 「남은 항목」이 말한다(퍼센트·상태 문구가 아니라 등록을 막는 조건 중심).
    * 게이트는 여전히 canRegister 하나라 disabled가 그대로 걸린다.
    */
-  it("등록 버튼은 확인을 통과하기 전에는 잠겨 있다", () => {
-    const html = renderTab().replace(/\s+/g, " ");
+  it("등록 버튼은 확인을 통과하기 전에는 잠겨 있다", async () => {
+    const html = (await renderTab()).replace(/\s+/g, " ");
     expect(/<button[^>]*disabled[^>]*>등록 시작<\/button>/.test(html)).toBe(true);
     expect(html).toContain("등록 정보 확인을 통과해야 등록 버튼이 열립니다");
     // 확인 버튼은 잠기지 않는다 — 잠그면 여는 방법이 없어진다.

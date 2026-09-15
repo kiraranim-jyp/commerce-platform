@@ -300,7 +300,14 @@ describe("REWORK-5 ④ — 롯데ON 탭에 공통 상품정보 값이 실제로 
   async function lotteOnText(
     settings: LotteOnSellerSettingsInput | null = makeSellerSettings(),
   ): Promise<string> {
-    return clean((await mount(lotteOnElement(settings))).textContent ?? "");
+    const dom = await mount(lotteOnElement(settings));
+    /* REWORK-11 ①(2026-09-15) — 롯데ON 탭도 첫 화면에는 ① 기본 상품정보만
+       펼치고 시작한다(스마트스토어·쿠팡과 같은 정책). 셀러가 하듯 나머지를
+       펼치고 읽는다 — 접혀 있는 것과 화면에 없는 것은 다른 사실이다. */
+    await act(async () => {
+      expandAllSections(dom);
+    });
+    return clean(dom.textContent ?? "");
   }
 
   /** 값 하나하나를 **화면 글자로** 확인한다 — "연결돼 있다"가 아니라 "보인다". */
@@ -369,3 +376,4 @@ describe("REWORK-5 ④ — 롯데ON 탭에 공통 상품정보 값이 실제로 
   });
 });
 import { manufacturerFixture } from "./manufacturer-fixture";
+import { expandAllSections } from "./mount-registration-tab";

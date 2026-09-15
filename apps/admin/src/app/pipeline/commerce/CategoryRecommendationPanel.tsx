@@ -12,6 +12,48 @@ import { fetchCoupangCategoryTree, fetchNaverCategoryTree } from "./category-tre
  * 것만 노출"이 겹치면서 두 기능이 동시에 죽는 회귀가 있었다(실측 확인,
  * git 4dbd5eb). 이번 버전은 두 결과를 완전히 분리된 prop(candidates=AI
  * 추천, searchCandidates=직접 검색)으로 받아 항상 나란히 렌더링한다. */
+/**
+ * REWORK-11 ①(CEO 지시, 2026-09-15) — **카테고리 추천이 서는 껍데기.**
+ *
+ * 롯데ON 탭도 "추천 → 후보 카드 → 선택"을 하는데, 그 목록이 앉아 있던 상자는
+ * 이 파일의 것이 아니라 전용 박스였다(`rounded-md border bg-background px-3
+ * py-2` — 여기는 `rounded-lg border p-4`). 제목 줄도 접기/펼치기도 없었다.
+ * 같은 일을 하는 자리가 탭마다 다른 상자에 담겨 있으면 "같은 등록 화면"은
+ * 렌더 결과에서 거짓이다.
+ *
+ * 🔴 판정·점수·후보는 여기 들어오지 않는다 — 껍데기만이다.
+ */
+export function CategoryRecommendationShell({
+  subtitle,
+  children,
+}: {
+  /** 제목 아래 한 줄 — 고른 카테고리 경로 또는 무엇을 하라는 안내. */
+  subtitle: string;
+  children: React.ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(true);
+  return (
+    <section className="rounded-lg border border-border p-4 text-sm">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-full items-start justify-between gap-2 text-left"
+      >
+        <div>
+          <h3 className="text-base font-medium">카테고리 추천</h3>
+          <p className="mt-0.5 text-xs text-text-secondary">{subtitle}</p>
+        </div>
+        <span className="shrink-0 text-xs text-text-tertiary">{expanded ? "접기" : "펼치기"}</span>
+      </button>
+      {expanded && (
+        <div className="mt-3 space-y-4" onClick={(event) => event.stopPropagation()}>
+          {children}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function CategoryRecommendationPanel({
   candidates,
   selection,
@@ -60,7 +102,6 @@ export function CategoryRecommendationPanel({
    */
   candidatesLoading?: boolean;
 }) {
-  const [expanded, setExpanded] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const isConfirmed = selection.state === "SELECTED" || selection.state === "CONFIRMED";
 
@@ -101,27 +142,15 @@ export function CategoryRecommendationPanel({
   const recommendLoading = !!candidatesLoading || (!!coupangCategoryFetching && !recommendAttempted);
 
   return (
-    <section className="rounded-lg border border-border p-4 text-sm">
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-start justify-between gap-2 text-left"
-      >
-        <div>
-          <h3 className="text-base font-medium">카테고리 추천</h3>
-          <p className="mt-0.5 text-xs text-text-secondary">
-            {isConfirmed && selection.candidate
-              ? `선택됨: ${selection.candidate.path.join(" > ")}`
-              : "AI 추천 또는 검색으로 카테고리를 선택하세요."}
-          </p>
-        </div>
-        <span className="shrink-0 text-xs text-text-tertiary">{expanded ? "접기" : "펼치기"}</span>
-      </button>
-
-      {expanded && (
-        <div className="mt-3 space-y-4" onClick={(event) => event.stopPropagation()}>
-          {/* ── 추천 (항상 존재) ─────────────────────────────────── */}
-          <div>
+    <CategoryRecommendationShell
+      subtitle={
+        isConfirmed && selection.candidate
+          ? `선택됨: ${selection.candidate.path.join(" > ")}`
+          : "AI 추천 또는 검색으로 카테고리를 선택하세요."
+      }
+    >
+      {/* ── 추천 (항상 존재) ─────────────────────────────────── */}
+      <div>
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-text-secondary">
                 {isCoupang ? "쿠팡 추천 카테고리" : "AI 추천"}
@@ -346,9 +375,7 @@ export function CategoryRecommendationPanel({
               />
             </div>
           )}
-        </div>
-      )}
-    </section>
+    </CategoryRecommendationShell>
   );
 }
 

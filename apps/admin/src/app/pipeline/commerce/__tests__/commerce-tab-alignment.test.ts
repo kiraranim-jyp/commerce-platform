@@ -1,7 +1,8 @@
+// @vitest-environment jsdom
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { JSDOM } from "jsdom";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { CanonicalProduct, PlatformId } from "@commerce/shared";
 import { PLATFORM_ADAPTERS } from "@commerce/marketplace";
 import { UNRESOLVED_CATEGORY } from "@commerce/category";
@@ -19,6 +20,7 @@ import { computeChecklistReadiness } from "../readiness";
 import { computeLotteOnRegistrationReadiness } from "../lotteon-channel-form";
 import { REGISTRATION_SECTION_KEYS, sectionTitle } from "../registration-sections";
 import { manufacturerFixture } from "./manufacturer-fixture";
+import { fieldLabelOf, mountExpanded, unmountTab } from "./mount-registration-tab";
 
 /**
  * REWORK — 커머스 탭 구조 통일(CEO 지시, 2026-09-14).
@@ -222,21 +224,37 @@ function commonProductInputs(inputs: RenderedInput[]): RenderedInput[] {
 
 /* ── 렌더 ────────────────────────────────────────────────────────────────── */
 
-function renderLotteOnTab(options: {
+function lotteOnElement(
+  options: { product?: CanonicalProduct; sellerSettings?: LotteOnSellerSettingsInput | null } = {},
+) {
+  return createElement(LotteOnRegistrationPanel, {
+    product: options.product ?? makeProduct(),
+    commonPrice: { priceKrw: 128000, resolved: true },
+    commonCategorySources: [{ path: ["Home", "Kids", "Shorts"], origin: "원본 상품 페이지 분류" }],
+    sellerSettings: options.sellerSettings,
+    onEditCommonInfo: () => {},
+    manufacturerResolution: manufacturerFixture(),
+  } as never);
+}
+
+/**
+ * REWORK-11 ①(2026-09-15) — **정적 렌더에서 실제 마운트로.**
+ *
+ * 롯데ON 탭도 첫 화면에 ① 기본 상품정보만 펼치고 시작한다(스마트스토어·쿠팡과
+ * 같은 정책). 정적 렌더로는 "접혀 있다"와 "화면에 없다"가 구분되지 않으므로,
+ * 셀러가 하듯 섹션을 펼친 뒤 읽는다.
+ */
+async function renderLotteOnTab(options: {
   product?: CanonicalProduct;
   sellerSettings?: LotteOnSellerSettingsInput | null;
-} = {}): string {
-  return renderToStaticMarkup(
-    createElement(LotteOnRegistrationPanel, {
-      product: options.product ?? makeProduct(),
-      commonPrice: { priceKrw: 128000, resolved: true },
-      commonCategorySources: [{ path: ["Home", "Kids", "Shorts"], origin: "원본 상품 페이지 분류" }],
-      sellerSettings: options.sellerSettings,
-      onEditCommonInfo: () => {},
-      manufacturerResolution: manufacturerFixture(),
-    }),
-  );
+} = {}): Promise<string> {
+  const container = await mountExpanded(lotteOnElement(options));
+  return container.innerHTML;
 }
+
+afterEach(async () => {
+  await unmountTab();
+});
 
 function renderPlatformTab(
   platform: PlatformId,
@@ -292,12 +310,12 @@ describe("골격 — CEO 지시서의 섹션 구조와 실제 렌더 순서가 �
     return found.sort((a, b) => a.at - b.at).map((entry) => entry.text);
   }
 
-  it("롯데ON 탭 **좌측 등록 상세**의 섹션이 지시서 골격 순서 그대로 선다", () => {
+  it("롯데ON 탭 **좌측 등록 상세**의 섹션이 지시서 골격 순서 그대로 선다", async () => {
     /* REWORK-2(CEO 지시, 2026-09-14) — 등록 상태 · 등록 가능성이 이 목록에서
        빠졌다. 지운 것이 아니라 **우측 등록 요약으로 옮겼다**(바로 아래 테스트가
        우측에 있다는 사실을 렌더 결과로 고정한다). 좌측에 남는 것은 CEO 프레임의
        "좌측 · 등록 상세"뿐이다. */
-    const titles = sectionTitles(columnsOf(renderLotteOnTab({ sellerSettings: makeSellerSettings() })).left);
+    const titles = sectionTitles(columnsOf(await renderLotteOnTab({ sellerSettings: makeSellerSettings() })).left);
     expect(titles).toEqual([
       /* REWORK-10 C(CEO 지시, 2026-09-15) — 여기 있던 "이 탭에서 정하는 것" 안내
          박스가 사라졌다. 스마트스토어·쿠팡 좌측 상세는 10섹션 골격으로 바로
@@ -333,8 +351,8 @@ describe("골격 — CEO 지시서의 섹션 구조와 실제 렌더 순서가 �
    * 목차는 registration-sections.ts 하나뿐이므로, 그 목록을 그대로 순회해서
    * 제목이 있는지 본다 — 이름을 손으로 적으면 목차가 다시 두 벌이 된다.
    */
-  it("롯데ON 좌측 상세가 10섹션 골격을 10/10 갖춘다", () => {
-    const titles = sectionTitles(columnsOf(renderLotteOnTab({ sellerSettings: makeSellerSettings() })).left);
+  it("롯데ON 좌측 상세가 10섹션 골격을 10/10 갖춘다", async () => {
+    const titles = sectionTitles(columnsOf(await renderLotteOnTab({ sellerSettings: makeSellerSettings() })).left);
     const missing = REGISTRATION_SECTION_KEYS.filter(
       (key) => !titles.some((title) => title.startsWith(sectionTitle(key))),
     );
@@ -350,8 +368,8 @@ describe("골격 — CEO 지시서의 섹션 구조와 실제 렌더 순서가 �
    * 바뀌었다(퍼센트보다 등록을 막는 조건 중심). [등록 정보 확인] → [등록 시작]
    * 버튼 순서는 그대로다.
    */
-  it("등록 준비 상태 · 필수 확인 · [등록 정보 확인] · [등록 시작]이 전부 우측 요약에 있다", () => {
-    const { right, left } = columnsOf(renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
+  it("등록 준비 상태 · 필수 확인 · [등록 정보 확인] · [등록 시작]이 전부 우측 요약에 있다", async () => {
+    const { right, left } = columnsOf(await renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
     const text = stripTags(right);
     expect(text).toContain("등록 준비 상태");
     expect(text).toContain("필수 확인");
@@ -373,11 +391,11 @@ describe("골격 — CEO 지시서의 섹션 구조와 실제 렌더 순서가 �
     expect(stripTags(left)).toContain("롯데ON 연결");
   });
 
-  it("세 탭이 같은 프레임을 쓴다 — 좌측 상세 · 우측 요약", () => {
+  it("세 탭이 같은 프레임을 쓴다 — 좌측 상세 · 우측 요약", async () => {
     const rendered: [string, string][] = [
       ["smartstore", renderPlatformTab("smartstore")],
       ["coupang", renderPlatformTab("coupang")],
-      ["lotteon", renderLotteOnTab({ sellerSettings: makeSellerSettings() })],
+      ["lotteon", await renderLotteOnTab({ sellerSettings: makeSellerSettings() })],
     ];
     for (const [name, html] of rendered) {
       const { left, right } = columnsOf(html);
@@ -390,11 +408,11 @@ describe("골격 — CEO 지시서의 섹션 구조와 실제 렌더 순서가 �
     }
   });
 
-  it("세 탭 어디에도 MI 어휘가 없다 — 커머스 탭의 질문은 등록 하나다", () => {
+  it("세 탭 어디에도 MI 어휘가 없다 — 커머스 탭의 질문은 등록 하나다", async () => {
     const rendered: [string, string][] = [
       ["smartstore", renderPlatformTab("smartstore")],
       ["coupang", renderPlatformTab("coupang")],
-      ["lotteon", renderLotteOnTab({ sellerSettings: makeSellerSettings() })],
+      ["lotteon", await renderLotteOnTab({ sellerSettings: makeSellerSettings() })],
     ];
     const MI_WORDS = [
       "판매 판단",
@@ -422,8 +440,8 @@ describe("골격 — CEO 지시서의 섹션 구조와 실제 렌더 순서가 �
     }
   });
 
-  it("섹션 명칭은 스마트스토어·쿠팡의 기존 어휘를 재사용한다", () => {
-    const text = stripTags(renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
+  it("섹션 명칭은 스마트스토어·쿠팡의 기존 어휘를 재사용한다", async () => {
+    const text = stripTags(await renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
     // 쿠팡/스마트스토어 탭의 셀러 설정 카드 제목 그대로.
     expect(text).toContain("배송 정책 · 반품/교환");
     // 준비도 카드의 BUSINESS_SETTINGS 그룹 문구 그대로.
@@ -438,20 +456,20 @@ describe("표 1행 — 상품정보 자동 반영", () => {
    * "자동 반영"의 정의: **상품정보의 값을 바꾸면 그 탭이 새 값을 말한다.**
    * 탭이 자기 사본을 들고 있으면 이 테스트가 깨진다.
    */
-  it("LOTTEON — 상품정보를 바꾸면 롯데ON 탭이 새 값을 읽는다", () => {
-    const before = stripTags(renderLotteOnTab());
+  it("LOTTEON — 상품정보를 바꾸면 롯데ON 탭이 새 값을 읽는다", async () => {
+    const before = stripTags(await renderLotteOnTab());
     expect(before).toContain("테리 버뮤다 반바지");
 
     const after = stripTags(
-      renderLotteOnTab({ product: makeProduct({ titleKo: field("변경된 상품명 · 니트 조끼") }) }),
+      await renderLotteOnTab({ product: makeProduct({ titleKo: field("변경된 상품명 · 니트 조끼") }) }),
     );
     expect(after).toContain("변경된 상품명 · 니트 조끼");
     expect(after).not.toContain("테리 버뮤다 반바지");
   });
 
-  it("LOTTEON — 고시로 쓸 공통 값(소재·색상)도 상품정보를 바꾸면 따라온다", () => {
+  it("LOTTEON — 고시로 쓸 공통 값(소재·색상)도 상품정보를 바꾸면 따라온다", async () => {
     const after = stripTags(
-      renderLotteOnTab({ product: makeProduct({ material: field("면 100%"), color: field("네이비") }) }),
+      await renderLotteOnTab({ product: makeProduct({ material: field("면 100%"), color: field("네이비") }) }),
     );
     expect(after).toContain("면 100%");
     expect(after).toContain("네이비");
@@ -460,7 +478,7 @@ describe("표 1행 — 상품정보 자동 반영", () => {
   });
 
   for (const platform of PLATFORM_TABS) {
-    it(`${platform} — 상품정보를 바꾸면 탭 입력칸의 값이 따라온다`, () => {
+    it(`${platform} — 상품정보를 바꾸면 탭 입력칸의 값이 따라온다`, async () => {
       const html = renderPlatformTab(platform, { product: makeProduct({ brand: field("새 브랜드명") }) });
       expect(html).toContain("새 브랜드명");
       expect(html).not.toContain("Bobo Choses");
@@ -473,18 +491,18 @@ describe("표 2행 — 셀러 설정 자동 반영", () => {
    * 🔴 여기가 이번 작업의 핵심이다. 셀러 설정 값을 바꿔서 두 번 그리고,
    * 화면이 **다른 말을 하는지**로 판정한다.
    */
-  it("LOTTEON — 셀러 설정의 출고 소요일을 바꾸면 탭이 새 값을 말한다", () => {
-    const two = stripTags(renderLotteOnTab({ sellerSettings: makeSellerSettings({ outboundLeadTimeDays: 2 }) }));
+  it("LOTTEON — 셀러 설정의 출고 소요일을 바꾸면 탭이 새 값을 말한다", async () => {
+    const two = stripTags(await renderLotteOnTab({ sellerSettings: makeSellerSettings({ outboundLeadTimeDays: 2 }) }));
     expect(two).toContain("출고 소요일 2일이 그대로 등록됩니다");
 
-    const one = stripTags(renderLotteOnTab({ sellerSettings: makeSellerSettings({ outboundLeadTimeDays: 1 }) }));
+    const one = stripTags(await renderLotteOnTab({ sellerSettings: makeSellerSettings({ outboundLeadTimeDays: 1 }) }));
     expect(one).toContain("출고 소요일 1일이 그대로 등록됩니다");
     expect(one).not.toContain("2일이 그대로 등록됩니다");
   });
 
-  it("LOTTEON — 셀러 설정의 출고지/반품지/택배사 값이 탭에 그대로 나타난다", () => {
+  it("LOTTEON — 셀러 설정의 출고지/반품지/택배사 값이 탭에 그대로 나타난다", async () => {
     const text = stripTags(
-      renderLotteOnTab({
+      await renderLotteOnTab({
         sellerSettings: makeSellerSettings({
           outboundShippingPlaceCode: 7788,
           returnCenterCode: "RC-1004",
@@ -497,21 +515,21 @@ describe("표 2행 — 셀러 설정 자동 반영", () => {
     expect(text).toContain("CJGLS");
   });
 
-  it("LOTTEON — 셀러 설정이 비어 있으면 '셀러 설정에서 먼저 등록해주세요'와 이동 경로를 말한다", () => {
-    const html = renderLotteOnTab({ sellerSettings: null });
+  it("LOTTEON — 셀러 설정이 비어 있으면 '셀러 설정에서 먼저 등록해주세요'와 이동 경로를 말한다", async () => {
+    const html = await renderLotteOnTab({ sellerSettings: null });
     expect(stripTags(html)).toContain("셀러 설정에서 먼저 등록해주세요");
     expect(html).toContain('href="/settings"');
     expect(stripTags(html)).toContain("설정하러 가기");
   });
 
-  it("LOTTEON — 셀러 설정 섹션에는 입력칸이 하나도 없다(고치는 곳은 설정 하나뿐)", () => {
-    const html = renderLotteOnTab({ sellerSettings: makeSellerSettings() });
+  it("LOTTEON — 셀러 설정 섹션에는 입력칸이 하나도 없다(고치는 곳은 설정 하나뿐)", async () => {
+    const html = await renderLotteOnTab({ sellerSettings: makeSellerSettings() });
     const section = /<section id="lotteon-section-seller-settings"[\s\S]*?<\/section>/.exec(html);
     expect(section, "② 셀러 설정 정보 섹션이 렌더되지 않았다").not.toBeNull();
     expect(collectInputs(section![0])).toEqual([]);
   });
 
-  it("LOTTEON — 셀러 설정 값이 payload(sndBgtNday)까지 간다", () => {
+  it("LOTTEON — 셀러 설정 값이 payload(sndBgtNday)까지 간다", async () => {
     const payloadFor = (days: number | null) =>
       buildLotteOnPayload({
         product: makeProduct(),
@@ -541,7 +559,7 @@ describe("표 2행 — 셀러 설정 자동 반영", () => {
    * 1위**가 됐을 때 선다(REWORK-4 §2의 "한 번에 하나" 규칙 그대로) — 그 경로는
    * rework7-summary-shape.test.ts가 요약 컴포넌트 단위로 따로 증명한다.
    */
-  it("coupang — 셀러 설정 누락은 「판매자 설정」 한 줄로 접힌다(이름 나열 없음)", () => {
+  it("coupang — 셀러 설정 누락은 「판매자 설정」 한 줄로 접힌다(이름 나열 없음)", async () => {
     const { right } = columnsOf(renderPlatformTab("coupang", { settingsMissing: ["출고지", "반품지"] }));
     const text = stripTags(right);
     expect(text).toContain("판매자 설정");
@@ -560,7 +578,7 @@ describe("표 2행 — 셀러 설정 자동 반영", () => {
    * (CommerceWorkspace.tsx의 settingsMissing/settingsRecommended 전달 지점) —
    * 즉 스마트스토어에는 지금 셀러 설정 누락 안내 경로가 아예 없다.
    */
-  it("smartstore — settingsMissing을 넘겨도 준비도 카드에 그 항목이 서지 않는다(현재 동작 고정)", () => {
+  it("smartstore — settingsMissing을 넘겨도 준비도 카드에 그 항목이 서지 않는다(현재 동작 고정)", async () => {
     const text = stripTags(renderPlatformTab("smartstore", { settingsMissing: ["출고지", "반품지"] }));
     expect(text).not.toContain("출고지");
     /* REWORK-7 ①(2026-09-15) — 여기 있던 "설정하러 가기" 버튼이 사라졌다.
@@ -579,7 +597,7 @@ describe("표 2행 — 셀러 설정 자동 반영", () => {
    * 이미 서 있다. 이 차이를 숨기지 않고 테스트로 고정한다.
    */
   for (const platform of PLATFORM_TABS) {
-    it(`${platform} — 셀러 설정 요약 카드는 첫 렌더에 값이 없다(마운트 후 fetch로 채운다)`, () => {
+    it(`${platform} — 셀러 설정 요약 카드는 첫 렌더에 값이 없다(마운트 후 fetch로 채운다)`, async () => {
       const text = stripTags(renderPlatformTab(platform));
       expect(text).not.toContain("CJGLS");
       expect(text).not.toContain("RC-1004");
@@ -588,15 +606,15 @@ describe("표 2행 — 셀러 설정 자동 반영", () => {
 });
 
 describe("표 3행 — 공통값 별도 입력 필요 (LOTTEON 반드시 FAIL)", () => {
-  it("LOTTEON — 공통 상품정보를 묻는 입력칸이 0개다", () => {
-    const inputs = collectInputs(renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
+  it("LOTTEON — 공통 상품정보를 묻는 입력칸이 0개다", async () => {
+    const inputs = collectInputs(await renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
     expect(inputs.length, "아무것도 안 그려져서 0개가 된 것이 아니다").toBeGreaterThan(0);
     const offending = commonProductInputs(inputs);
     expect(offending, `롯데ON 탭이 공통값을 다시 묻고 있다: ${offending.map((i) => i.label).join(" / ")}`).toEqual([]);
   });
 
-  it("LOTTEON — 셀러 설정 값을 다시 묻는 입력칸도 0개다", () => {
-    const inputs = collectInputs(renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
+  it("LOTTEON — 셀러 설정 값을 다시 묻는 입력칸도 0개다", async () => {
+    const inputs = collectInputs(await renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
     // 셀러 설정이 갖고 있는 개념을 이 탭이 새로 입력받지 않는다.
     for (const forbidden of ["출고 소요일", "배송비", "반품배송비", "교환배송비", "품질보증기준", "A/S연락처"]) {
       expect(
@@ -607,7 +625,7 @@ describe("표 3행 — 공통값 별도 입력 필요 (LOTTEON 반드시 FAIL)",
   });
 
   for (const platform of PLATFORM_TABS) {
-    it(`${platform} — 공통값 입력칸이 살아 있다(CEO 재확정: read-only 강제 전환 금지)`, () => {
+    it(`${platform} — 공통값 입력칸이 살아 있다(CEO 재확정: read-only 강제 전환 금지)`, async () => {
       const common = commonProductInputs(collectInputs(renderPlatformTab(platform)));
       expect(common.length).toBeGreaterThan(0);
       expect(common.every((input) => !input.readOnly)).toBe(true);
@@ -616,8 +634,8 @@ describe("표 3행 — 공통값 별도 입력 필요 (LOTTEON 반드시 FAIL)",
 });
 
 describe("표 4행 — 채널 고유값 입력", () => {
-  it("LOTTEON — 선 입력칸 전수가 전부 롯데ON 고유값이다", () => {
-    const labels = collectInputs(renderLotteOnTab({ sellerSettings: makeSellerSettings() })).map((i) => i.label);
+  it("LOTTEON — 선 입력칸 전수가 전부 롯데ON 고유값이다", async () => {
+    const labels = collectInputs(await renderLotteOnTab({ sellerSettings: makeSellerSettings() })).map((i) => i.label);
     expect(labels).toEqual([
       // REWORK-4 §5 — 순서가 10섹션 골격을 따른다(⑤ 배송 → ⑦ 고시 → ⑧ KC).
       /* REWORK-5 ③(CEO 실측 판정: FAIL) — 여기 맨 앞에 있던
@@ -644,8 +662,8 @@ describe("표 4행 — 채널 고유값 입력", () => {
     ]);
   });
 
-  it("LOTTEON — 왜 셀러 설정에서 못 가져오는지 항목마다 이유가 화면에 있다", () => {
-    const text = stripTags(renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
+  it("LOTTEON — 왜 셀러 설정에서 못 가져오는지 항목마다 이유가 화면에 있다", async () => {
+    const text = stripTags(await renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
     // 개념은 있으나 코드체계가 다른 것.
     expect(text).toContain("셀러 설정에 있지만 롯데ON 코드체계가 다름");
     // 개념 자체가 없는 것.
@@ -656,7 +674,7 @@ describe("표 4행 — 채널 고유값 입력", () => {
   });
 
   for (const platform of PLATFORM_TABS) {
-    it(`${platform} — 선 입력칸에 채널 전용 값이 없다(전부 공통 상품정보다)`, () => {
+    it(`${platform} — 선 입력칸에 채널 전용 값이 없다(전부 공통 상품정보다)`, async () => {
       const inputs = collectInputs(renderPlatformTab(platform));
       expect(commonProductInputs(inputs)).toHaveLength(inputs.length);
     });
@@ -664,7 +682,7 @@ describe("표 4행 — 채널 고유값 입력", () => {
 });
 
 describe("표 5행 — 독립 카테고리 (LOTTEON 반드시 PASS)", () => {
-  it("LOTTEON — 롯데ON 카테고리 판정에 공통/다른 채널 카테고리가 들어갈 자리가 없다", () => {
+  it("LOTTEON — 롯데ON 카테고리 판정에 공통/다른 채널 카테고리가 들어갈 자리가 없다", async () => {
     // validateLotteOnPayload는 channel.standardCategoryNo / displayCategories만 본다.
     const result = validateLotteOnPayload({
       product: makeProduct(),
@@ -686,8 +704,8 @@ describe("표 5행 — 독립 카테고리 (LOTTEON 반드시 PASS)", () => {
     expect(withCategory.fields.find((f) => f.field === "scatNo")?.status).toBe("READY");
   });
 
-  it("LOTTEON — 화면이 '스마트스토어·쿠팡 카테고리를 덮어쓰지 않는다'고 말한다", () => {
-    expect(stripTags(renderLotteOnTab())).toContain("스마트스토어·쿠팡 카테고리를 덮어쓰지 않습니다");
+  it("LOTTEON — 화면이 '스마트스토어·쿠팡 카테고리를 덮어쓰지 않는다'고 말한다", async () => {
+    expect(stripTags(await renderLotteOnTab())).toContain("스마트스토어·쿠팡 카테고리를 덮어쓰지 않습니다");
   });
 
   /**
@@ -696,8 +714,8 @@ describe("표 5행 — 독립 카테고리 (LOTTEON 반드시 PASS)", () => {
    * **읽기 전용 요약이 뭐라고 말하는가**로 증명한다. 명제 자체는 그대로다:
    * 아무것도 고르지 않았으면 우리가 대신 골라 두지 않는다.
    */
-  it("LOTTEON — 카테고리를 자동으로 확정하지 않는다(빈 폼은 빈 채로 남는다)", () => {
-    const text = stripTags(renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
+  it("LOTTEON — 카테고리를 자동으로 확정하지 않는다(빈 폼은 빈 채로 남는다)", async () => {
+    const text = stripTags(await renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
     expect(text).toContain("아직 고른 카테고리가 없습니다");
     // "고른 카테고리가 채운 값" 표는 고르기 전에는 서지 않는다.
     expect(text).not.toContain("선택한 카테고리가 채운 값");
@@ -705,7 +723,7 @@ describe("표 5행 — 독립 카테고리 (LOTTEON 반드시 PASS)", () => {
 });
 
 describe("표 6행 — 독립 readiness (LOTTEON 반드시 PASS)", () => {
-  it("LOTTEON readiness는 자기 서버 검증 결과만 센다", () => {
+  it("LOTTEON readiness는 자기 서버 검증 결과만 센다", async () => {
     const snapshot = validateLotteOnPayload({
       product: makeProduct(),
       channel: { ...BLANK_LOTTEON_CHANNEL_CONFIG },
@@ -718,28 +736,28 @@ describe("표 6행 — 독립 readiness (LOTTEON 반드시 PASS)", () => {
     expect(computeLotteOnRegistrationReadiness(snapshot)).toEqual(readiness);
   });
 
-  it("스마트스토어/쿠팡 readiness 계산에 롯데ON 인자가 없다", () => {
+  it("스마트스토어/쿠팡 readiness 계산에 롯데ON 인자가 없다", async () => {
     // computeChecklistReadiness(validations, category, settingsMissing, compliance, settingsRecommended)
     expect(computeChecklistReadiness.length).toBe(5);
     const summary = computeChecklistReadiness([], UNRESOLVED_CATEGORY);
     expect(summary.required.some((item) => /롯데|lotte/i.test(item.label))).toBe(false);
   });
 
-  it("롯데ON readiness 계산은 스마트스토어/쿠팡 readiness를 인자로 받지 않는다", () => {
+  it("롯데ON readiness 계산은 스마트스토어/쿠팡 readiness를 인자로 받지 않는다", async () => {
     // 인자가 하나(검증 스냅샷)뿐이라는 사실 자체가 격리다.
     expect(computeLotteOnRegistrationReadiness.length).toBe(1);
   });
 });
 
 describe("표 7행 — MI와 readiness 독립 (LOTTEON 반드시 PASS)", () => {
-  it("LOTTEON 탭 화면에 MI 어휘가 하나도 없다", () => {
-    const text = stripTags(renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
+  it("LOTTEON 탭 화면에 MI 어휘가 하나도 없다", async () => {
+    const text = stripTags(await renderLotteOnTab({ sellerSettings: makeSellerSettings() }));
     for (const word of ["판매 추천", "판매 비추천", "조건부 판매", "가격경쟁력", "가격 경쟁력", "시장 가격"]) {
       expect(text, `롯데ON 탭에 MI 어휘가 새어 들어왔다: ${word}`).not.toContain(word);
     }
   });
 
-  it("LOTTEON 검증 결과는 MI 입력이 없어도 같은 값을 낸다", () => {
+  it("LOTTEON 검증 결과는 MI 입력이 없어도 같은 값을 낸다", async () => {
     // validateLotteOnPayload의 입력에 MI가 들어갈 필드 자체가 없다.
     const input = {
       product: makeProduct(),
@@ -752,7 +770,7 @@ describe("표 7행 — MI와 readiness 독립 (LOTTEON 반드시 PASS)", () => {
 });
 
 describe("셀러 설정 판정표 — 화면과 payload가 같은 함수를 본다", () => {
-  it("6개 값의 처지가 한 곳에서만 정해진다", () => {
+  it("6개 값의 처지가 한 곳에서만 정해진다", async () => {
     const rows = describeLotteOnSellerSettings(makeSellerSettings());
     const byLabel = Object.fromEntries(rows.map((r) => [r.label, r]));
 
@@ -772,21 +790,28 @@ describe("셀러 설정 판정표 — 화면과 payload가 같은 함수를 본�
     expect(byLabel["상세페이지 공통 이미지 · 기본 구성"].usage).toBe("AUTO_APPLIED");
   });
 
-  it("셀러 설정이 비어 있으면 '자동 반영됨'이라고 말하지 않는다", () => {
+  it("셀러 설정이 비어 있으면 '자동 반영됨'이라고 말하지 않는다", async () => {
     const rows = describeLotteOnSellerSettings(null);
     const leadTime = rows.find((r) => r.label === "출고 소요일")!;
     expect(leadTime.usage).toBe("SETTINGS_REQUIRED");
     expect(leadTime.settingValue).toBeNull();
   });
 
-  it("코드체계가 다른 값을 롯데ON 칸에 옮겨 적지 않는다", () => {
+  it("코드체계가 다른 값을 롯데ON 칸에 옮겨 적지 않는다", async () => {
     // 셀러 설정의 쿠팡 Wing 코드가 롯데ON 폼 초기값으로 새지 않는다 —
     // 셀러 설정을 줘도 출고지/반품지/택배사 입력칸은 빈 채로 남는다.
-    const html = renderLotteOnTab({ sellerSettings: makeSellerSettings() });
-    for (const label of ["출고지번호 \\(owhpNo\\)", "반품지번호 \\(rtrpNo\\)", "택배사코드 \\(hdcCd\\)"]) {
-      const match = new RegExp(`<span[^>]*>${label}</span>[\\s\\S]*?<input[^>]*>`).exec(html);
-      expect(match, `${label} 입력칸을 찾지 못했다`).not.toBeNull();
-      expect(match![0], `${label}에 셀러 설정 값이 흘러들어갔다`).toContain('value=""');
+    /* REWORK-11 ① — 라벨이 롯데ON 전용 TextField의 `<span>`이 아니라 공용
+       FieldRow의 `<label>`이 됐고(세 탭이 같은 행을 쓴다), 실제 마운트에서는
+       입력값이 DOM 속성이 아니라 프로퍼티다. 그래서 문자열이 아니라 **살아 있는
+       입력칸**을 보고 판정한다 — 보는 대상(그 칸이 비어 있는가)은 그대로다. */
+    const container = await mountExpanded(lotteOnElement({ sellerSettings: makeSellerSettings() }));
+    const byLabel = new Map(
+      Array.from(container.querySelectorAll("input")).map((input) => [fieldLabelOf(input), input]),
+    );
+    for (const label of ["출고지번호 (owhpNo)", "반품지번호 (rtrpNo)", "택배사코드 (hdcCd)"]) {
+      const input = byLabel.get(label);
+      expect(input, `${label} 입력칸을 찾지 못했다`).toBeTruthy();
+      expect(input!.value, `${label}에 셀러 설정 값이 흘러들어갔다`).toBe("");
     }
   });
 });

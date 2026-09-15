@@ -13,6 +13,7 @@ import {
 } from "@commerce/listing";
 import { LotteOnRegistrationPanel } from "../LotteOnRegistrationPanel";
 import { manufacturerFixture } from "./manufacturer-fixture";
+import { expandAllSections } from "./mount-registration-tab";
 
 /**
  * REWORK-6 ②(CEO 판정, 2026-09-14) — **추천 실패가 등록 불가가 되어서는 안 된다.**
@@ -327,6 +328,11 @@ async function enterTab(product: CanonicalProduct): Promise<void> {
         },
       }),
     );
+  });
+  /* REWORK-11 ①(2026-09-15) — 롯데ON 탭도 첫 화면에는 ① 기본 상품정보만 펼치고
+     시작한다(스마트스토어·쿠팡과 같은 정책). 셀러가 하듯 나머지를 펼치고 본다. */
+  await act(async () => {
+    expandAllSections(container);
   });
 }
 

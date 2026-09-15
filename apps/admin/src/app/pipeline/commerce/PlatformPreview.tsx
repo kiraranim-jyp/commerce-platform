@@ -24,10 +24,15 @@ import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
 import { EditableDate, EditableText, EditableTextarea } from "./EditableField";
 import { KcSellerStatusBanner } from "./KcSellerStatusBanner";
 import { ListingSection } from "./ListingSection";
-import { ManufacturerResolutionNote } from "./ManufacturerResolutionNote";
+import { ManufacturerField } from "./ManufacturerResolutionNote";
 import type { ManufacturerResolutionState } from "./use-manufacturer-resolution";
+/* REWORK-11 ①(CEO 지시, 2026-09-15) — 여기 있던 FieldRow · FIELD_INPUT_CLASS가
+   공용 모듈로 나갔다. 롯데ON 탭이 **같은 행 컴포넌트**를 쓰게 하기 위해서다
+   (그 탭은 지금까지 자기 TextField/TextAreaField를 따로 갖고 있었다).
+   스마트스토어·쿠팡 렌더 결과는 그대로다 — 옮기기만 했다. */
+import { FieldRow, FIELD_INPUT_CLASS, InfoTip } from "./registration-fields";
 import { NaverPayloadPreview } from "./NaverPayloadPreview";
-import { sectionTitle } from "./registration-sections";
+import { initialOpenSections, sectionTitle } from "./registration-sections";
 import type { NaverResolveResponse } from "./NaverPayloadPreview";
 import { OptionVariantEditor } from "./OptionVariantEditor";
 import { computeChecklistReadiness, computeNaverPayloadReadiness } from "./readiness";
@@ -35,46 +40,8 @@ import { buildPriorityItems, resolveRegistrationReadinessState } from "./Registr
 import type { PriorityItem, RegistrationReadinessState } from "./readiness-state";
 import { SellerProfileSummaryCard } from "./SellerProfileSummaryCard";
 import { NaverSellerProfileSummaryCard } from "./NaverSellerProfileSummaryCard";
-import { extractionSourceLabel, ProvenanceBadge } from "./provenance";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ValueBadge } from "@/components/ui/ValueBadge";
-
-/** Sprint A-3(작업1 — 모든 항목 Editable, 작업8 — Resolver Trace) 필드 라벨 행.
- * SourceDataView가 이미 쓰던 "라벨 + 값 + Source + Confidence" 패턴을 accordion
- * 안에서도 그대로 쓴다 — 새 렌더링 방식을 또 만들지 않는다(CP001과 같은 종류의
- * "같은 걸 두 번 다르게 그린다" 문제를 피한다). */
-function FieldRow({
-  label,
-  field,
-  required,
-  children,
-}: {
-  label: string;
-  field?: { source: FieldSource; confidence: number };
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <div className="flex items-center justify-between gap-2">
-        <label className="text-xs text-text-secondary">
-          {label}
-          {required && <span className="ml-0.5 text-error">*</span>}
-        </label>
-        {field && (
-          <span className="flex items-center gap-1 text-[11px] text-text-tertiary">
-            {extractionSourceLabel(field)}
-            <ProvenanceBadge source={field.source} />
-          </span>
-        )}
-      </div>
-      <div className="mt-0.5">{children}</div>
-    </div>
-  );
-}
-
-const FIELD_INPUT_CLASS =
-  "w-full rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none";
 
 /** N-3.45(CPO 지시) — 상품정보제공고시 필드 중 reference-eligibility.ts 화이트리스트에
  * 있는 필드용 FieldRow. "상세페이지 참조"를 선택하면 입력창 대신 참조 상태 배지를
@@ -88,6 +55,7 @@ function ReferenceEligibleFieldRow({
   placeholder,
   required,
   referenceLimitation,
+  referenceLimitationDetail,
 }: {
   label: string;
   field: { value: string; source: FieldSource; confidence: number };
@@ -112,10 +80,20 @@ function ReferenceEligibleFieldRow({
    * 일이다. 대신 **셀러에게 그 자리에서 알리고 직접 입력을 요구한다.**
    */
   referenceLimitation?: string;
+  /**
+   * REWORK-11 ⑤(CEO 지시, 2026-09-15) — 위 한 줄 뒤에 **접히는** 나머지.
+   * 화면에는 ⓘ 하나만 서고, 글자는 툴팁·보조기술에 그대로 남는다.
+   */
+  referenceLimitationDetail?: string;
 }) {
   const isReferenced = field.source === "DETAIL_PAGE_REFERENCE";
   return (
-    <FieldRow label={label} field={field} required={required}>
+    <FieldRow
+      label={label}
+      field={field}
+      required={required}
+      labelSuffix={referenceLimitationDetail ? <InfoTip text={referenceLimitationDetail} /> : undefined}
+    >
       {isReferenced ? (
         <div className="space-y-1">
           <div className="flex items-center justify-between gap-2 rounded border border-dashed border-selected-border bg-selected-soft px-2 py-1 text-sm text-selected">
@@ -131,9 +109,7 @@ function ReferenceEligibleFieldRow({
             )}
           </div>
           {referenceLimitation && (
-            <p className="rounded border border-warning/40 bg-warning-soft px-2 py-1 text-[11px] leading-relaxed text-warning">
-              ⚠ {referenceLimitation}
-            </p>
+            <p className="text-[11px] text-warning">⚠ {referenceLimitation}</p>
           )}
         </div>
       ) : (
@@ -597,9 +573,11 @@ export function PlatformPreview({
   // Sprint A-3(작업2 — Accordion, 작업4 — Auto Scroll) — 어떤 섹션이 펼쳐져 있는지
   // 여기서 관리한다(controlled). Summary에서 항목을 클릭하면 해당 섹션을 펼치고
   // 그 위치로 스크롤한다.
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    "section-basic": true,
-  });
+  /* REWORK-11 ① — 첫 화면의 펼침 정책은 이제 세 채널이 **한 곳**에서 받는다
+     (registration-sections.ts). 값은 그대로다 — ① 기본 상품정보 하나만 열린다. */
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() =>
+    initialOpenSections("section-basic"),
+  );
 
   function goToSection(sectionId: string) {
     setOpenSections((prev) => ({ ...prev, [sectionId]: true }));
@@ -803,21 +781,21 @@ export function PlatformPreview({
                 className={FIELD_INPUT_CLASS}
               />
             </FieldRow>
-            <ReferenceEligibleFieldRow
-              label="제조사"
+            {/* REWORK-11 ②(CEO 판정, 2026-09-15: "CEO 화면엔 여전히 제조사
+                미확인") — 여기 있던 것은 **두 조각**이었다: 입력칸
+                (ReferenceEligibleFieldRow — `product.manufacturer.value`를 읽어
+                빈 값이면 placeholder "제조사 미확인"을 띄운다)과 그 아래 별도
+                문단(ManufacturerResolutionNote — resolver 결과를 읽는다).
+                브랜드 프로필이 제조사를 채운 상품에서 칸은 비고 문단만 값을
+                말하니, 화면에 먼저 보이는 글자는 그대로 "제조사 미확인"이었다.
+                이제 한 컴포넌트가 **칸과 안내를 함께** 그리고, 칸이 resolver
+                결과를 보여준다(세 탭 공용 — 롯데ON도 같은 컴포넌트다). */}
+            <ManufacturerField
               field={product.manufacturer}
+              resolution={manufacturerResolution}
               onCommit={(v) => fix?.("manufacturer", v)}
               onSetReference={(r) => onSetFieldReference?.("manufacturer", r)}
-              placeholder="제조사 미확인"
             />
-            {/* REWORK-10 A(CEO 지시, 2026-09-15) — **전 채널 공통 resolver의 결과.**
-                여기 있던 두 문단은 `naverResolved.notice.manufacturer`를 읽었고,
-                그 prop은 CommerceWorkspace가 스마트스토어 탭에서만 내려보냈다
-                (L2757). 그래서 쿠팡 탭은 브랜드 프로필이 제조사를 채워 주는
-                상품에서도 "⚠ 제조사 정보가 없습니다"를 띄웠다 — CEO가 실측으로
-                잡은 그 상태다. 이제 세 탭이 같은 resolver 결과(prop)와 같은
-                컴포넌트를 쓴다. */}
-            <ManufacturerResolutionNote resolution={manufacturerResolution} className="col-span-2 -mt-1" />
             <ReferenceEligibleFieldRow
               label="소재"
               field={product.material}
@@ -873,11 +851,12 @@ export function PlatformPreview({
               onCommit={(v) => fix?.("modelName", v)}
               onSetReference={(r) => onSetFieldReference?.("modelName", r)}
               placeholder="예: B226AC043 (상품코드(SKU)와 다른 값)"
-              /* 🔴 경고 시점을 앞으로(CEO 지적) — 기존 문구는 "이 값은 …에는 쓸 수
-                 없습니다"로 **문제부터** 시작했다. 셀러는 자기가 무엇을 채우고
-                 있는지 모른 채 못 한다는 말부터 듣는다. 무엇인지 → 어떻게
-                 갈라지는지 → 그래서 무엇을 해야 하는지 순서로 뒤집는다. */
-              referenceLimitation="모델명은 두 자리로 나갑니다 — 「고시정보 모델명」(상세페이지·고시정보용)과 「네이버 쇼핑 카탈로그 모델명」(SmartStore 카탈로그 식별용)은 별도 값입니다. “상세페이지 참조”로 대체되는 것은 고시정보 쪽뿐이고 카탈로그 모델명은 비어 있는 채로 남습니다. 어린이제품 등 카탈로그 모델명이 필수인 카테고리는 실제 모델명을 직접 입력해야 등록이 열립니다."
+              /* REWORK-11 ⑤(CEO 지시, 2026-09-15: "설명으로 화면을 채우지 마라") —
+                 화면에 남는 것은 **이 칸이 무엇인가** 한 줄이고, "고시정보 모델명과는
+                 별도"라는 정책은 ⓘ로 접힌다. 문장 자체는 한 글자도 버리지 않았다 —
+                 참조를 고르기 전에도 읽을 수 있어야 한다는 REWORK-6의 요구는 그대로다. */
+              referenceLimitation="네이버 쇼핑 카탈로그 등록에 사용하는 모델명입니다."
+              referenceLimitationDetail="모델명은 두 자리로 나갑니다 — 「고시정보 모델명」(상세페이지·고시정보용)과 「네이버 쇼핑 카탈로그 모델명」(SmartStore 카탈로그 식별용)은 별도 값입니다. “상세페이지 참조”로 대체되는 것은 고시정보 쪽뿐이고 카탈로그 모델명은 비어 있는 채로 남습니다. 어린이제품 등 카탈로그 모델명이 필수인 카테고리는 실제 모델명을 직접 입력해야 등록이 열립니다."
             />
             <ReferenceEligibleFieldRow
               label="중량"

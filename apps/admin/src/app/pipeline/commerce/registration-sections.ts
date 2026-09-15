@@ -62,6 +62,25 @@ export function sectionTitle(key: RegistrationSectionKey, suffix?: string): stri
   return suffix ? `${base} (${suffix})` : base;
 }
 
+/**
+ * REWORK-11 ①(CEO 판정, 2026-09-15: "섹션 순서가 같다를 통합 완료로 인정하지
+ * 않는다 — 접힘/펼침 동작까지 같아야 한다") — **처음 화면에서 어느 섹션이
+ * 펼쳐져 있는가.**
+ *
+ * 이 값이 세 채널에 흩어져 있던 동안 화면은 이렇게 갈렸다:
+ *   스마트스토어·쿠팡  `{ "section-basic": true }`  — ① 만 펼치고 시작
+ *   롯데ON            모든 섹션 `defaultOpen`       — 전부 펼치고 시작
+ * 같은 상품으로 탭을 옮기면 롯데ON만 화면이 서너 배 길었다.
+ *
+ * 🔴 여기서 정하는 것은 **정책 하나**다. 어느 섹션이 어떤 id를 갖는지는 채널이
+ * 정한다(스마트스토어·쿠팡은 `section-*`, 롯데ON은 `lotteon-section-*` — 각자의
+ * 스크롤 목적지 계약이 이미 그 이름으로 굳어 있다). 이 함수는 "첫 화면에서 열려
+ * 있어야 하는 것은 **첫 섹션 하나**"라는 규칙만 들고 있는다.
+ */
+export function initialOpenSections(firstSectionId: string): Record<string, boolean> {
+  return { [firstSectionId]: true };
+}
+
 /** 렌더 결과에서 골격 달성도를 세기 위한 것 — 테스트가 쓰는 유일한 기준. */
 export function sectionHeadings(): string[] {
   return REGISTRATION_SECTION_KEYS.map((key) => sectionTitle(key));

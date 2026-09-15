@@ -883,6 +883,20 @@ export function buildLotteOnMissingInfo(validation: LotteOnValidationSnapshot | 
   return items.sort((a, b) => rank(a) - rank(b));
 }
 
+/**
+ * REWORK-11 ①(CEO 지시, 2026-09-15) — 이 필드가 **어느 섹션 자리인가**.
+ *
+ * 왜 필요한가: 롯데ON 섹션 머리에도 스마트스토어·쿠팡과 같은 상태 배지
+ * (준비됨 / 확인 필요)를 세우려면, 통과한 필드(READY)까지 포함해 섹션별로
+ * 묶어야 한다. `buildLotteOnMissingInfo()`는 이름 그대로 **못 채운 것**만
+ * 돌려주므로 그 자리에 쓸 수 없다.
+ *
+ * 🔴 새 표를 만들지 않는다 — 위 LOTTEON_FIX_GUIDE 한 곳을 그대로 읽는다.
+ */
+export function lotteOnFieldSectionId(field: string): string | undefined {
+  return LOTTEON_FIX_GUIDE[field]?.sectionId;
+}
+
 /** 안내 문구용 — 어디로 가야 하는지 한 단어. */
 export const LOTTEON_FIX_LOCATION_LABEL: Record<LotteOnFixLocation, string> = {
   COMMON_PRODUCT: "상품정보",

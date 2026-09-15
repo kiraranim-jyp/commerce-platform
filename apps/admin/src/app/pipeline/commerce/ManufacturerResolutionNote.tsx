@@ -1,65 +1,178 @@
 "use client";
 
 import { MANUFACTURER_SOURCE_LABEL } from "@commerce/listing";
+import type { FieldSource } from "@commerce/shared";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { EditableText } from "./EditableField";
+import { ProvenanceBadge } from "./provenance";
+import { FieldRow, FIELD_INPUT_CLASS, InfoTip } from "./registration-fields";
 import type { ManufacturerResolutionState } from "./use-manufacturer-resolution";
 
 /**
  * REWORK-10 A(CEO 지시, 2026-09-15) — **제조사를 말하는 화면은 하나다.**
+ * REWORK-11 ②·⑤(CEO 판정, 2026-09-15) — **그 하나가 값을 보여 준다.**
  *
- * 세 탭(스마트스토어 · 쿠팡 · 롯데ON)이 이 컴포넌트 하나를 쓴다. 그래서 "쿠팡만
- * ⚠ 제조사 없음이 남는" 상태가 **구조적으로** 성립하지 않는다 — 판정도
- * (resolveManufacturer) 문장도(여기) 한 벌뿐이기 때문이다.
+ * ── REWORK-10이 못 고친 것 ───────────────────────────────────────────────
+ * resolver도 배선도 맞았는데 CEO 화면에는 여전히 `제조사 미확인`이 떠 있었다.
+ * 이유는 단순했다: **입력칸이 읽는 값과 판정이 읽는 값이 달랐다.**
  *
- * 예전에는 이 문단이 PlatformPreview 안에 인라인으로 있었고, 그것이 읽던 값은
- * `naverResolved.notice.manufacturer`였다 — 스마트스토어 탭에서만 채워지는
- * prop이라 쿠팡 탭에서는 항상 "없음"으로 읽혔다.
+ *   입력칸  `product.manufacturer.value`          ← 원문에 없으면 빈 문자열
+ *   안내문  `resolveManufacturer(...)`의 결과      ← 브랜드 프로필이 채운 값
+ *
+ * 그래서 브랜드 프로필에 제조사가 있어도 칸은 비어 있고 placeholder("제조사
+ * 미확인")가 그대로 보였다. 아래 문단이 "브랜드 프로필의 제조사 X가 자동
+ * 적용됩니다"라고 말해도, 셀러 눈에 먼저 들어오는 것은 **빈 칸**이다.
+ *
+ * 이제 칸이 resolver 결과를 그대로 보여준다. 값이 두 벌 저장되는 것이 아니다 —
+ * `product.manufacturer`는 그대로 비어 있고(원문에 없는 게 사실이다), 화면은
+ * **등록에 실제로 나갈 값**을 보여줄 뿐이다. 셀러가 그 칸에 다른 값을 치면
+ * 그때 `product.manufacturer`가 생기고 그 값이 우선한다(resolver ①).
+ *
+ * ── 장문 설명은 ⓘ로 접는다(REWORK-11 ⑤) ─────────────────────────────────
+ * 여기 있던 3~4줄짜리 경고 문단이 한 줄로 줄었다. 지워진 것이 아니라 InfoTip
+ * (title + sr-only)으로 옮겨 갔다 — 눈에 보이는 것은 ⓘ 하나지만 문서에는
+ * 그대로 남아 있다.
  *
  * 🔴 값을 지어내지 않는다. NONE은 "어디까지 찾아봤는지"를 적고 실제 입력
  * 경로 두 개(이 칸 직접 입력 / Settings 브랜드 프로필)를 가리킨다.
  */
-export function ManufacturerResolutionNote({
-  resolution,
-  className = "",
-}: {
-  resolution: ManufacturerResolutionState;
-  /** 격자 안에 놓일 때 칸을 가로지르게 하는 용도(레이아웃만, 판정과 무관). */
-  className?: string;
-}) {
-  // 상품 원문이 이미 답한 경우 — 입력칸에 그 값이 그대로 보인다. 같은 말을
-  // 한 번 더 적지 않는다.
-  if (resolution.source === "PRODUCT") return null;
 
+/** 셋 다 비었을 때 ⓘ 뒤에 접히는 문장. 세 탭이 같은 글자를 쓴다. */
+export const MANUFACTURER_NONE_DETAIL =
+  "제조사 정보가 없습니다 — 상품 원문 → 브랜드 프로필 → 판매자 기본정보를 확인했지만 제조사 정보가 없습니다. " +
+  "이 칸에 직접 입력하거나 Settings → 브랜드 프로필에서 제조사를 등록하면 해당 브랜드 상품에 자동 적용됩니다.";
+
+/** 조회가 아직 안 끝났을 때. */
+export const MANUFACTURER_LOADING_DETAIL =
+  "상품 원문 → 브랜드 프로필 → 판매자 기본정보 순서로 찾습니다. 끝나기 전에는 «없다»고 단정하지 않습니다.";
+
+/** 폴백이 채웠을 때 ⓘ 뒤에 접히는 문장. */
+export const MANUFACTURER_AUTO_DETAIL =
+  "상품 원문에 제조사가 없어 자동으로 적용된 값입니다. 이 칸에 직접 입력하면 그 값이 우선합니다.";
+
+/**
+ * 화면(그리고 payload)이 실제로 쓰게 될 제조사.
+ *
+ * 🔴 판정을 새로 하지 않는다 — 공통 resolver가 이미 ① 상품 원문을 최우선으로
+ * 두고 계산한 결과가 `resolution.value`다. 여기서 하는 일은 "참조로 등록"을
+ * 고른 칸만 비워 두는 것뿐이다(그 칸은 값이 아니라 문구로 나간다).
+ */
+export function manufacturerDisplayValue(
+  field: { value: string; source: FieldSource },
+  resolution: ManufacturerResolutionState,
+): string {
+  if (field.source === "DETAIL_PAGE_REFERENCE") return "";
+  return field.value.trim() || (resolution.resolved ? resolution.value : "");
+}
+
+interface ManufacturerViewState {
+  /** 입력칸/읽기칸에 보이는 값. */
+  value: string;
+  /** 입력칸 아래 한 줄. 없으면 아무것도 그리지 않는다. */
+  note: string | null;
+  /** ⓘ 뒤에 접히는 글. */
+  tip: string | null;
+  badge: "PRODUCT" | "AUTO" | "LOADING" | "NONE";
+}
+
+function viewStateOf(
+  field: { value: string; source: FieldSource },
+  resolution: ManufacturerResolutionState,
+): ManufacturerViewState {
+  const value = manufacturerDisplayValue(field, resolution);
+  /* resolution.source === "PRODUCT"도 같은 자리다 — 답한 것이 상품 원문이면
+     칸에 이미 그 값이 보이므로 같은 말을 한 줄 더 적지 않는다. */
+  const fromProduct = field.value.trim().length > 0 || resolution.source === "PRODUCT";
+
+  if (fromProduct) return { value, note: null, tip: null, badge: "PRODUCT" };
   if (resolution.loading) {
-    return (
-      <p
-        data-manufacturer-note="LOADING"
-        className={`rounded bg-background px-2 py-1.5 text-[11px] text-text-tertiary ${className}`}
-      >
-        제조사 출처를 확인하고 있습니다 — 상품 원문 → 브랜드 프로필 → 판매자 기본정보 순서로 찾습니다.
-      </p>
-    );
+    return { value, note: "제조사 출처를 확인하고 있습니다…", tip: MANUFACTURER_LOADING_DETAIL, badge: "LOADING" };
   }
-
   if (resolution.resolved) {
-    return (
-      <p
-        data-manufacturer-note={resolution.source}
-        className={`rounded bg-selected-soft px-2 py-1.5 text-[11px] text-selected ${className}`}
-      >
-        🔵 상품 원문에 제조사가 없어 {MANUFACTURER_SOURCE_LABEL[resolution.source]}의 제조사{" "}
-        <strong>{resolution.value}</strong>가 자동으로 적용됩니다 — 위 칸에 직접 입력하면 그 값이 우선합니다.
-      </p>
-    );
+    return {
+      value,
+      note: `🔵 ${MANUFACTURER_SOURCE_LABEL[resolution.source]}의 제조사 ${resolution.value}가 자동 적용됩니다`,
+      tip: MANUFACTURER_AUTO_DETAIL,
+      badge: "AUTO",
+    };
   }
+  return { value, note: null, tip: MANUFACTURER_NONE_DETAIL, badge: "NONE" };
+}
+
+function badgeNode(state: ManufacturerViewState["badge"], field: { value: string; source: FieldSource }) {
+  if (field.source === "DETAIL_PAGE_REFERENCE") return <ProvenanceBadge source="DETAIL_PAGE_REFERENCE" />;
+  if (state === "PRODUCT") return field.value.trim() ? <ProvenanceBadge source={field.source} /> : null;
+  if (state === "AUTO") return <StatusBadge status="success" label="자동 적용" />;
+  if (state === "LOADING") return <StatusBadge status="neutral" label="확인 중" />;
+  return <ProvenanceBadge source="REQUIRED" />;
+}
+
+/**
+ * 제조사 한 줄. **세 탭(스마트스토어 · 쿠팡 · 롯데ON)이 이 컴포넌트 하나를 쓴다.**
+ *
+ * 롯데ON은 공통값을 그 탭에서 입력받지 않으므로(three-layer-realign 증명 1)
+ * `onCommit` 없이 부른다 — 그러면 입력칸 대신 같은 틀의 읽기 칸이 선다.
+ * 라벨 · 배지 · 한 줄 안내 · ⓘ는 어느 탭에서나 글자 그대로 같다.
+ */
+export function ManufacturerField({
+  field,
+  resolution,
+  onCommit,
+  onSetReference,
+}: {
+  field: { value: string; source: FieldSource; confidence: number };
+  resolution: ManufacturerResolutionState;
+  /** 없으면 읽기 전용(롯데ON). */
+  onCommit?: (value: string) => void;
+  onSetReference?: (referenced: boolean) => void;
+}) {
+  const state = viewStateOf(field, resolution);
+  const isReferenced = field.source === "DETAIL_PAGE_REFERENCE";
 
   return (
-    <p
-      data-manufacturer-note="NONE"
-      className={`rounded bg-warning-soft px-2 py-1.5 text-[11px] text-warning ${className}`}
+    <FieldRow
+      label="제조사"
+      labelSuffix={state.tip ? <InfoTip text={state.tip} /> : undefined}
+      badge={badgeNode(state.badge, field)}
+      note={state.note}
     >
-      ⚠ 제조사 정보가 없습니다 — 상품 원문 → 브랜드 프로필 → 판매자 기본정보를 확인했지만 제조사 정보가
-      없습니다. 위에서 직접 입력하거나 Settings → 브랜드 프로필에서 제조사를 등록하면 해당 브랜드 상품에 자동
-      적용됩니다.
-    </p>
+      {isReferenced ? (
+        <div className="flex items-center justify-between gap-2 rounded border border-dashed border-selected-border bg-selected-soft px-2 py-1 text-sm text-selected">
+          <span>상세페이지 참조로 등록됩니다</span>
+          {onSetReference && (
+            <button type="button" className="shrink-0 text-[11px] underline" onClick={() => onSetReference(false)}>
+              직접 입력으로 전환
+            </button>
+          )}
+        </div>
+      ) : onCommit ? (
+        <div className="space-y-1">
+          <EditableText
+            value={state.value}
+            onCommit={onCommit}
+            placeholder="제조사 미확인"
+            className={FIELD_INPUT_CLASS}
+          />
+          {onSetReference && (
+            <button
+              type="button"
+              className="text-[11px] text-text-tertiary underline hover:text-text-secondary"
+              onClick={() => onSetReference(true)}
+            >
+              상세페이지 참조로 등록
+            </button>
+          )}
+        </div>
+      ) : (
+        <div
+          data-readonly-field="true"
+          className={`${FIELD_INPUT_CLASS} min-h-[1.875rem] break-words bg-background ${
+            state.value ? "text-text-primary" : "text-warning"
+          }`}
+        >
+          {state.value || "제조사 미확인"}
+        </div>
+      )}
+    </FieldRow>
   );
 }
