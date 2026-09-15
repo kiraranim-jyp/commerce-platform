@@ -58,7 +58,7 @@ let container: HTMLDivElement;
 let pipelineCalls: string[];
 
 const MARKET_CATEGORIES = [
-  { id: "KIDS_FASHION", label: "아동 패션", sourceCount: 11, catalogSourceCount: 11, available: true },
+  { id: "KIDS_FASHION", label: "아동의류", sourceCount: 11, catalogSourceCount: 11, available: true },
   { id: "WOMEN_FASHION", label: "여성 패션", sourceCount: 0, catalogSourceCount: 0, available: false },
   { id: "GOLF", label: "골프용품", sourceCount: 0, catalogSourceCount: 0, available: false },
 ];

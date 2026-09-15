@@ -158,7 +158,7 @@ export interface CategoryProfile {
 export const CATEGORY_PROFILES: Record<CategoryProfileId, CategoryProfile> = {
   KIDS_FASHION: {
     id: "KIDS_FASHION",
-    label: "아동 패션",
+    label: "아동의류",
     // candidate-scoring.ts의 KIDS_PATH_KEYWORDS를 그대로 옮긴 값이다.
     platformPathKeywords: ["영유아동", "유아동", "아동", "주니어", "베이비", "키즈"],
     // 같은 파일의 ADULT_GENDERED_PATH_KEYWORDS 그대로.
