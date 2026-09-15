@@ -171,7 +171,7 @@ describe("MARKET-CATEGORY-1 ① 상품 검색 화면 — 카테고리를 고르�
     expect(pipelineCalls, "카테고리 없이 검색이 시작됐다").toHaveLength(0);
 
     // 카테고리를 고르면 그때 열린다.
-    const select = q<HTMLSelectElement>('select[aria-label="대상 카테고리"]');
+    const select = q<HTMLSelectElement>('select[aria-label="시장조사 카테고리"]');
     await act(async () => {
       typeInto(select, "KIDS_FASHION");
     });
@@ -188,14 +188,39 @@ describe("MARKET-CATEGORY-1 ① 상품 검색 화면 — 카테고리를 고르�
 
   it("🔴 카테고리 칸이 URL 칸보다 위에 있고 필수 표시가 붙어 있다", async () => {
     const { root, act } = await mountPage();
-    const select = q<HTMLSelectElement>('select[aria-label="대상 카테고리"]');
+    const select = q<HTMLSelectElement>('select[aria-label="시장조사 카테고리"]');
     const urlInput = q<HTMLInputElement>('input[aria-label="상품 URL"]');
     // DOCUMENT_POSITION_FOLLOWING = 4 : select 다음에 url이 온다.
     expect(select.compareDocumentPosition(urlInput) & 4).toBeTruthy();
 
     const label = select.closest("label");
-    expect(label?.textContent ?? "").toContain("대상 카테고리");
+    expect(label?.textContent ?? "").toContain("시장조사 카테고리");
     expect(label?.textContent ?? "").toContain("*");
+    await act(async () => root.unmount());
+  });
+
+  /**
+   * GOLF-01.5 축 B(CEO 지시, 2026-09-16) — CEO가 이 화면의 [대상 카테고리]
+   * 골프용품을 보고 "커머스 등록 카테고리와 섞여 있다"고 판정했다. 코드에서는
+   * 이미 갈라져 있었고(이 값은 등록 추천 경로로 한 번도 전달되지 않는다),
+   * 남아 있던 혼동은 **이름**뿐이었다. 그래서 이름을 갈랐다는 사실 자체를
+   * 화면에서 고정한다 — 다음 사람이 "대상 카테고리"로 되돌리면 여기서 깨진다.
+   */
+  it("🔴 이름이 '시장조사'라고 말하고, 등록 카테고리는 채널이 따로 추천한다고 한 줄로 알린다", async () => {
+    const { root, act } = await mountPage();
+    const select = q<HTMLSelectElement>('select[aria-label="시장조사 카테고리"]');
+    const box = select.closest("div");
+    const text = box?.textContent ?? "";
+
+    // "대상 카테고리"라는 옛 이름이 화면에 남아 있으면 안 된다 — 그 말이
+    // 등록 카테고리로 읽힌 것이 이번 지적의 출발점이다.
+    expect(text, "옛 이름 '대상 카테고리'가 아직 화면에 있다").not.toContain("대상 카테고리");
+    expect(text).toContain("시장조사 카테고리");
+    // 이 값이 무엇을 정하는지 · 등록 카테고리는 어디서 오는지 둘 다 적혀 있어야 한다.
+    expect(text).toContain("판매처");
+    expect(text).toContain("등록");
+    expect(text).toContain("채널마다 따로 추천");
+
     await act(async () => root.unmount());
   });
 });
@@ -203,7 +228,7 @@ describe("MARKET-CATEGORY-1 ① 상품 검색 화면 — 카테고리를 고르�
 describe("MARKET-CATEGORY-1 ② 골프용품 — 보이지만 고를 수 없다", () => {
   it("🔴 목록에 '골프용품'이 있고, option이 disabled이며, '준비중'이라고 적혀 있다", async () => {
     const { root, act } = await mountPage();
-    const select = q<HTMLSelectElement>('select[aria-label="대상 카테고리"]');
+    const select = q<HTMLSelectElement>('select[aria-label="시장조사 카테고리"]');
     const options = [...select.querySelectorAll("option")] as HTMLOptionElement[];
 
     const golf = options.find((o) => (o.textContent ?? "").includes("골프용품"));

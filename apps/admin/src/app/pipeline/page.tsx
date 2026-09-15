@@ -478,7 +478,7 @@ export default function PipelinePage() {
     // 프로그램 호출로도 여기 들어올 수 있고, 카테고리 없이 시작한 검색은 어느
     // 사이트를 뒤졌는지 나중에 설명할 수 없는 결과를 남긴다).
     if (!marketCategoryId) {
-      setError("대상 카테고리를 먼저 선택해 주세요.");
+      setError("시장조사 카테고리를 먼저 선택해 주세요.");
       return;
     }
     // 준비중(조사 사이트 0곳) 카테고리로는 시작하지 않는다. option이 disabled라
@@ -945,16 +945,25 @@ export default function PipelinePage() {
                 소스가 0개인 카테고리는 서버가 available=false로 내려주고 여기서
                 선택 불가 + "준비중"으로 표시된다 — 고르게 해 놓고 조사 대상이
                 0곳이 되는 화면(= "국내 비교상품 없음"이라고 거짓말하는 화면)을
-                만들지 않기 위해서다. */}
+                만들지 않기 위해서다.
+
+                GOLF-01.5 축 B(CEO 지시, 2026-09-16) — 이름을 "대상 카테고리"에서
+                "시장조사 카테고리"로 가른다. 이 값이 정하는 것은 **어느 국내·해외
+                판매처를 뒤질 것인가** 하나뿐인데, "대상"이라는 말은 등록 카테고리로도
+                읽힌다 — 실제로 이 화면에서 [대상 카테고리] 골프용품을 보고 "커머스
+                등록도 이 카테고리로 나가는 것 아니냐"는 판정이 나왔다. 두 카테고리는
+                코드에서 이미 완전히 갈라져 있고(이 값은 등록 추천 경로에 한 번도
+                전달되지 않는다), 남아 있던 혼동은 이름뿐이었다. 아래 한 줄이
+                "등록 카테고리는 채널이 따로 추천한다"는 사실을 그 자리에서 말한다. */}
             <div className="mx-auto mt-8 flex max-w-[960px] flex-col gap-2 rounded-xl border border-border bg-surface p-2 shadow-subtle">
               <label className="flex flex-col gap-1 px-4 pt-2 text-left sm:flex-row sm:items-center sm:gap-3 sm:pt-1">
                 <span className="shrink-0 text-xs font-medium text-text-secondary">
-                  대상 카테고리 <span className="text-error">*</span>
+                  시장조사 카테고리 <span className="text-error">*</span>
                 </span>
                 <select
                   value={marketCategoryId}
                   onChange={(e) => setMarketCategoryId(e.target.value as CategoryProfileId | "")}
-                  aria-label="대상 카테고리"
+                  aria-label="시장조사 카테고리"
                   disabled={loading}
                   className="flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none disabled:opacity-60"
                 >
@@ -968,6 +977,10 @@ export default function PipelinePage() {
                   ))}
                 </select>
               </label>
+              <p className="px-4 text-left text-[11px] text-text-tertiary">
+                조사할 국내·해외 판매처를 고르는 값입니다. 스마트스토어·쿠팡·롯데ON에 등록할 카테고리는 등록
+                화면에서 채널마다 따로 추천합니다.
+              </p>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <input
                   type="url"

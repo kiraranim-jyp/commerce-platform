@@ -47,6 +47,64 @@ const PANTS_EXPECT = ["바지", "팬츠", "청바지", "레깅스"];
 const SKIRT_EXPECT = ["스커트"];
 const SWIMWEAR_EXPECT = ["수영복"];
 
+/**
+ * GOLF-01.5 축 B(CEO 지시, 2026-09-16) — product-resolver.ts에 새로 더한 5개
+ * 골프 productType의 대조 기준. 두 표가 어긋나면 "상품유형은 골프드라이버인데
+ * 대조 기준이 없다"가 되어 모든 후보가 50점으로 눌리고, 그게 이번에 실측된
+ * 증상 그 자체다(아래 DOMAIN_PROFILES 머리 주석의 경고 그대로).
+ *
+ * expect 문자열은 CEO 지시문이 직접 적은 실제 채널 경로에서 그대로 옮겼다:
+ *   SmartStore  스포츠/레저 > 골프 > 골프클럽 > 드라이버
+ *   Coupang     스포츠/레저 > 골프 > 골프채   > 드라이버
+ * 두 채널이 3단계 이름을 다르게 부르므로(골프클럽 / 골프채) 둘 다 넣는다 —
+ * 한쪽만 넣으면 그 채널에서만 후보가 0개가 된다.
+ *
+ * 🔴 클럽 종류끼리를 서로의 conflict에 넣는 것이 이 블록의 핵심이다. 이 함수의
+ * 점수는 사실상 이진(expect 히트=95 / 아니면 60)이라 expect만으로는 드라이버
+ * 상품에서 아이언·퍼터 리프까지 전부 95점 동점이 된다 — 동점이면 순위가
+ * "점수"가 아니라 "트리 순서"가 되고, 그게 지금 고치려는 증상이다. conflict
+ * 후보는 목록에서 지워지는 게 아니라 5점으로 내려갈 뿐이라 셀러는 여전히
+ * 볼 수 있다.
+ *
+ * "우드"/"유틸리티"는 expect에 넣지 않는다 — 네이버 트리의 "우드블라인드"
+ * 같은 무관한 리프가 1차 필터를 통과해 95점을 받는다(아래 캔들 항목에서
+ * "아로마"를 뺀 것과 같은 판단). "웨지"도 넣지 않는다(웨지힐/웨지감자).
+ */
+/** 골프 5종의 공통 conflict — 골프 «밖»의 명백히 다른 도메인. "공구"는 공구
+ * 카테고리의 "드라이버"(스크루드라이버)를 막는 자리다. */
+const GOLF_OUTER_CONFLICT = [...FOOD_KEYWORDS, "공구", "가전", "의류", "신발", "가방", "완구", "침구", "자동차"];
+/** 골프 «안»에서 서로 다른 자리 — 클럽 종류/용품 종류가 섞이는 것을 막는다. */
+const GOLF_SIBLINGS = ["드라이버", "아이언", "퍼터", "웨지", "골프공", "골프백", "골프화", "골프웨어", "골프장갑"];
+/** 채널마다 3단계 이름이 다르므로(골프클럽 / 골프채) 둘 다 안전망으로 깐다. */
+const GOLF_CLUB_FALLBACK = ["골프채", "골프클럽"];
+/** 자기 자신을 뺀 나머지 골프 형제 자리 — 그대로 conflict가 된다. */
+const golfSiblingsExcept = (own: string) => GOLF_SIBLINGS.filter((s) => s !== own);
+
+const GOLF_DOMAIN_PROFILES: Record<string, DomainProfile> = {
+  골프클럽: {
+    expect: GOLF_CLUB_FALLBACK,
+    // 클럽 전체를 가리키는 유형이라 클럽 «종류»는 conflict가 아니다(세트 상품이
+    // 드라이버 리프에 걸리는 것은 틀린 추천이 아니다). 용품/의류 계열만 막는다.
+    conflict: [...GOLF_OUTER_CONFLICT, "골프공", "골프백", "골프화", "골프웨어", "골프장갑"],
+  },
+  골프드라이버: {
+    expect: ["드라이버", ...GOLF_CLUB_FALLBACK],
+    conflict: [...GOLF_OUTER_CONFLICT, ...golfSiblingsExcept("드라이버")],
+  },
+  골프아이언: {
+    expect: ["아이언", ...GOLF_CLUB_FALLBACK],
+    conflict: [...GOLF_OUTER_CONFLICT, ...golfSiblingsExcept("아이언")],
+  },
+  골프퍼터: {
+    expect: ["퍼터", ...GOLF_CLUB_FALLBACK],
+    conflict: [...GOLF_OUTER_CONFLICT, ...golfSiblingsExcept("퍼터")],
+  },
+  골프공: {
+    expect: ["골프공", "골프볼"],
+    conflict: [...GOLF_OUTER_CONFLICT, ...golfSiblingsExcept("골프공"), ...GOLF_CLUB_FALLBACK],
+  },
+};
+
 /** product-resolver.ts의 PRODUCT_TYPE_KEYWORDS가 만들어내는 productType
  * 문자열(예: "신발", "홈/리빙")을 이 표의 키로 그대로 쓴다 — 두 표가 어긋나면
  * "상품유형은 신발인데 도메인 프로필이 없다" 같은 조용한 실패가 생기므로, 값이
@@ -83,6 +141,9 @@ const DOMAIN_PROFILES: Record<string, DomainProfile> = {
   "가전/디지털": { expect: ["디지털", "가전"], conflict: [...FOOD_KEYWORDS, "의류", "신발", "가방", "완구", "가구"] },
   반려동물용품: { expect: ["반려동물"], conflict: [...FOOD_KEYWORDS.filter((k) => k !== "간식"), "의류", "신발", "가방"] },
   "문구/사무용품": { expect: ["문구"], conflict: [...FOOD_KEYWORDS, "의류", "신발", "가방", "완구"] },
+  // GOLF-01.5 축 B — 골프 5종. 값과 이유는 이 파일 위쪽 GOLF_DOMAIN_PROFILES
+  // 주석에 있다(TDZ 때문에 선언이 이 표보다 앞에 있어야 한다).
+  ...GOLF_DOMAIN_PROFILES,
 };
 
 /** CPO 지시(2026-08-07, kids hat 실측 사례) — category-resolver-v3.ts가

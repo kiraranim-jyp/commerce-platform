@@ -276,6 +276,52 @@ const PRODUCT_TYPE_KEYWORDS: { type: string; terms: string[] }[] = [
       "setting powder",
     ],
   },
+  /**
+   * GOLF-01.5 축 B(CEO 지시, 2026-09-16) — 실측으로 확인한 구멍.
+   *
+   * 실상품 lazrusgolf.com "Lazrus Golf LAZ2-D Adjustable Driver"를 넣으면
+   * 이 표가 아무것도 못 맞혀 productType이 **null**이 되고, 그 null 하나가 세
+   * 채널의 카테고리 추천을 동시에 무너뜨린다(2026-09-16 실측):
+   *   SmartStore  generateNaverCategoryCandidates가 expectKeywords 없음을 보고
+   *               트리를 아예 훑지 않고 빈 배열을 반환 → 후보 0개
+   *   Coupang     resolveCategoryV3의 트리 탐색 보강이 통째로 꺼지고, 질의 변형도
+   *               상품명 하나로 줄고, 모든 후보가 50점 동점(95 임계선 밖)
+   *   LotteON     모든 리프가 50점 동점 → 상위 10개가 "점수"가 아니라 "트리 순서"
+   *               (실측: 골프 드라이버의 1순위가 "유아동의류 > 티셔츠"였다)
+   *
+   * ── 이 표의 끝에 붙이는 이유 ────────────────────────────────────────────
+   * findMatch()는 **표 순서대로 첫 매치**를 채택한다. 맨 뒤에 붙이면 지금까지
+   * 어떤 유형이든 하나라도 맞히던 상품은 이 블록에 도달조차 하지 않는다 —
+   * 아동/여성/잡화/리빙/뷰티의 판정이 구조적으로 한 건도 바뀔 수 없다.
+   *
+   * ── 영어만 쓴다 ─────────────────────────────────────────────────────────
+   * findMatch()는 `\b`(단어 경계)로 매칭하는데 `\b`의 기준은 [A-Za-z0-9_]다.
+   * 그래서 이 표에 한글을 넣으면 **절대 매칭되지 않는다**(실측: `\b드라이버\b`가
+   * "골프 드라이버"에 false). 위 항목들이 전부 영어인 것도 같은 이유다 —
+   * 죽은 어휘를 넣어 "지원한다"고 말하지 않는다. 같은 이유로 복수형도 따로
+   * 적는다(`\bgolf club\b`는 "Golf Clubs"에 false — 실측 확인).
+   *
+   * ── 시장조사 카테고리(GOLF 프로필)와는 무관하다 ─────────────────────────
+   * 여기 더하는 것은 **커머스 등록 카테고리 추천용 상품유형**이다.
+   * profiles.ts의 GOLF 프로필은 productTypes가 빈 배열이라 이 값들이 늘어도
+   * detectCategoryProfile은 여전히 GOLF를 고를 수 없다 — MARKET-CATEGORY-1의
+   * "시장조사 카테고리는 셀러가 고른다, 추정하지 않는다"가 그대로 유지된다.
+   */
+  {
+    // 세트/우드/웨지처럼 클럽 종류를 특정하지 않는 표기. 구체 유형(드라이버/
+    // 아이언/퍼터)보다 **앞**에 둬서 "golf clubs" 같은 명시적 표기가 제목 뒤쪽의
+    // "driver" 한 단어보다 먼저 이긴다.
+    type: "골프클럽",
+    terms: ["golf club", "golf clubs", "fairway wood", "fairway woods", "golf wedge", "golf wedges"],
+  },
+  // "driver"를 단독으로 두는 것은 안전하다 — `\b` 때문에 "screwdriver"에는
+  // 매칭되지 않고(실측 확인), 공구 카테고리는 아래 DOMAIN_PROFILES의
+  // conflict("공구")가 한 번 더 막는다.
+  { type: "골프드라이버", terms: ["golf driver", "golf drivers", "driver", "drivers"] },
+  // "iron" 단독은 다리미/컬링아이언과 겹쳐 쓰지 않는다(위 "powder"와 같은 원칙).
+  { type: "골프아이언", terms: ["golf iron", "golf irons", "iron set", "iron sets"] },
+  { type: "골프퍼터", terms: ["golf putter", "golf putters", "putter", "putters"] },
+  { type: "골프공", terms: ["golf ball", "golf balls"] },
 ];
 
 function findMatch<T extends string>(
