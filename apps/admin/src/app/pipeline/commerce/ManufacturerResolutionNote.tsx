@@ -37,18 +37,37 @@ import type { ManufacturerResolutionState } from "./use-manufacturer-resolution"
  * 경로 두 개(이 칸 직접 입력 / Settings 브랜드 프로필)를 가리킨다.
  */
 
+/* REWORK-12 ④·⑤(CEO 판정, 2026-09-15) — 세 문장이 전부 **한 줄**로 줄었다
+   (128자→38자 · 61자→33자 · 54자→24자). 사라진 것은 "어떻게 고치는가"인데,
+   그것은 ⓘ 뒤가 아니라 **화면에 보이는 한 줄**(note)로 나왔다 — 셀러가 실제로
+   해야 하는 일을 툴팁 안에 접어 두는 것이 CEO가 지적한 그 문제였다. */
+
 /** 셋 다 비었을 때 ⓘ 뒤에 접히는 문장. 세 탭이 같은 글자를 쓴다. */
 export const MANUFACTURER_NONE_DETAIL =
-  "제조사 정보가 없습니다 — 상품 원문 → 브랜드 프로필 → 판매자 기본정보를 확인했지만 제조사 정보가 없습니다. " +
-  "이 칸에 직접 입력하거나 Settings → 브랜드 프로필에서 제조사를 등록하면 해당 브랜드 상품에 자동 적용됩니다.";
+  "상품 원문 · 브랜드 프로필 · 판매자 기본정보 어디에도 제조사가 없습니다.";
 
 /** 조회가 아직 안 끝났을 때. */
 export const MANUFACTURER_LOADING_DETAIL =
-  "상품 원문 → 브랜드 프로필 → 판매자 기본정보 순서로 찾습니다. 끝나기 전에는 «없다»고 단정하지 않습니다.";
+  "상품 원문 → 브랜드 프로필 → 판매자 기본정보 순서로 찾는 중입니다.";
 
 /** 폴백이 채웠을 때 ⓘ 뒤에 접히는 문장. */
-export const MANUFACTURER_AUTO_DETAIL =
-  "상품 원문에 제조사가 없어 자동으로 적용된 값입니다. 이 칸에 직접 입력하면 그 값이 우선합니다.";
+export const MANUFACTURER_AUTO_DETAIL = "상품 원문에 없어 자동으로 채워진 값입니다.";
+
+/**
+ * REWORK-12 ④ — **폴백이 답하지 못했을 때 화면에 보이는 한 줄.**
+ *
+ * CEO 캡처의 상태(C 판정)가 이것이다: resolver 배선은 맞는데 조회할 데이터가
+ * 실제로 없다. 그러면 화면은 그 사실과 **다음 행동**을 말해야 한다.
+ *
+ * 브랜드가 비어 있는 경우를 따로 가르는 이유: 브랜드 프로필은 브랜드 이름으로
+ * 찾는다. 이름이 없으면 «브랜드 프로필에 등록하세요»는 실행 불가능한 안내다.
+ */
+export function manufacturerNoneNote(brand: string | undefined): string {
+  const name = (brand ?? "").trim();
+  return name
+    ? `⚠ 브랜드 「${name}」에 등록된 제조사가 없습니다 — 직접 입력하거나 설정 > 브랜드 프로필에 등록하세요`
+    : "⚠ 브랜드가 확인되지 않아 브랜드 프로필을 조회하지 못했습니다 — 제조사를 직접 입력해주세요";
+}
 
 /**
  * 화면(그리고 payload)이 실제로 쓰게 될 제조사.
@@ -96,7 +115,10 @@ function viewStateOf(
       badge: "AUTO",
     };
   }
-  return { value, note: null, tip: MANUFACTURER_NONE_DETAIL, badge: "NONE" };
+  /* REWORK-12 ④ — 여기서 note가 null이던 것이 CEO가 본 화면이다: 칸에는
+     「제조사 미확인」, 배지에는 「입력 필요」, 그리고 **왜 그런지는 ⓘ 안에**.
+     이제 어디까지 찾아봤는지와 다음 행동이 화면에 그대로 선다. */
+  return { value, note: manufacturerNoneNote(resolution.brand), tip: MANUFACTURER_NONE_DETAIL, badge: "NONE" };
 }
 
 function badgeNode(state: ManufacturerViewState["badge"], field: { value: string; source: FieldSource }) {

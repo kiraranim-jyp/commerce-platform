@@ -12,5 +12,14 @@ import type { ManufacturerResolutionState } from "../use-manufacturer-resolution
 export function manufacturerFixture(
   overrides: Partial<ManufacturerResolutionState> = {},
 ): ManufacturerResolutionState {
-  return { value: "보보쇼즈", source: "PRODUCT", resolved: true, loading: false, ...overrides };
+  return {
+    value: "보보쇼즈",
+    source: "PRODUCT",
+    resolved: true,
+    loading: false,
+    /* REWORK-12 ④ — 조회에 쓴 브랜드 이름. 화면이 «브랜드 X로 찾아봤다»라고
+       말하는 데 쓴다(판정에는 들어가지 않는다). */
+    brand: "Bobo Choses",
+    ...overrides,
+  };
 }

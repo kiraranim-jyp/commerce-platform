@@ -283,14 +283,16 @@ function ModelNameField({
           참조가 정확히 무엇을 가져오는지는 ⓘ로 접힌다(글자는 그대로 남는다). */}
       <p className="text-[11px] text-text-tertiary">
         └─ 네이버 카탈로그 식별용 모델명
-        <InfoTip text="SmartStore의 네이버 쇼핑 카탈로그에서 상품을 식별할 때 사용하는 모델명입니다. 위 SKU(판매자 상품관리번호)와는 다른 값입니다." />
+        {/* REWORK-12 ⑤(CEO 판정, 2026-09-15) — 77자 → 40자. "무엇인지"만 남긴다. */}
+        <InfoTip text="네이버 쇼핑 카탈로그가 상품을 식별하는 모델명입니다. 위 SKU와는 다른 값입니다." />
       </p>
 
       {isReferenced && (
         <p className="text-[11px] text-warning">
           ⚠ 「{CATALOG_MODEL_NAME_LABEL}」은 비어 있는 채로 남습니다
           <InfoTip
-            text={`상세페이지 참조는 고시정보의 모델명을 가져옵니다. 「${CATALOG_MODEL_NAME_LABEL}」으로 사용할 수 없는 경우 직접 입력해야 합니다 — 지금은 이 칸이 비어 있어 스마트스토어 등록이 계속 막힙니다.`}
+            /* REWORK-12 ⑤ — 108자 → 41자. 남는 것은 "무엇인지" 한 줄. */
+            text={`“상세페이지 참조”는 고시정보 모델명만 채웁니다. 「${CATALOG_MODEL_NAME_LABEL}」은 직접 입력해야 합니다.`}
           />
         </p>
       )}

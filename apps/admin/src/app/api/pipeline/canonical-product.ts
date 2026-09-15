@@ -110,11 +110,19 @@ export function buildCanonicalProduct(
   // 섞여 오는 경우(실측: "Bobo Choses SS26 Baby 50% Off Sale")가 있어 정제한다.
   // 규칙에 안 걸리면 원본 그대로 — 지어내지 않는다.
   const brandResolution = resolveBrandName(productData.brand);
+  const resolvedBrandName = brandResolution?.cleaned ?? productData.brand ?? "";
 
   return {
     sourceUrl,
     title: field(productData.title ?? sourceUrl, "title", sources),
-    brand: field(brandResolution?.cleaned ?? productData.brand ?? "", "brand", sources),
+    /* REWORK-12 ④(CEO 실측 + DB 실측, 2026-09-15) — 브랜드가 **빈 값**이 될 수
+       있게 됐다(문자열 전체가 시즌코드인 경우 — bobochoses.com vendor="AW26",
+       스냅샷 32건 실측). 그때는 color/manufacturer와 같은 규칙을 쓴다: 원본에
+       없는 값을 "원본"이라고 적지 않고 REQUIRED로 시작한다. 그래야 화면이
+       「브랜드 · 입력 필요」라고 사실대로 말하고, 셀러가 고칠 수 있다. */
+    brand: resolvedBrandName
+      ? field(resolvedBrandName, "brand", sources)
+      : { value: "", source: "REQUIRED" as const, confidence: 0 },
     brandResolution:
       brandResolution?.changed && brandResolution.confidence
         ? {

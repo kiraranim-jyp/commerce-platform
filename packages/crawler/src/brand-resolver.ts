@@ -109,10 +109,41 @@ function classifyConfidence(rule: BrandResolverRule, matchedToken: string): Bran
   return "LOW";
 }
 
+/**
+ * REWORK-12 ④(CEO 실측 캡처 + DB 실측, 2026-09-15) — **문자열 전체가 시즌코드인
+ * 경우.**
+ *
+ * 실측(product_snapshots, SELECT only): bobochoses.com 에서 만든 스냅샷 32건의
+ * `canonicalProduct.brand.value` 가 전부 `"AW26"` 이다. Shopify `vendor` 필드에
+ * 시즌코드가 들어오는 매장이고(이 오염은 product-resolver.ts L383 에 이미
+ * 기록돼 있었다), shopify-product-json.ts 가 `brand: product.vendor` 로 그대로
+ * 옮긴다.
+ *
+ * 기존 규칙은 이걸 못 잘랐다 — `earliestMatchAfterStart` 가 **index 0 의 매치를
+ * 건너뛰기** 때문이다("New Balance"의 New 를 지키려고 일부러 만든 가드다).
+ * 그런데 문자열이 시즌코드 **하나뿐**일 때는 지킬 브랜드 이름이 애초에 없다.
+ *
+ * 🔴 브랜드를 지어내지 않는다. 결과는 빈 문자열이고, 그러면 화면이 «브랜드
+ * 미확인 · 입력 필요»라고 **사실대로** 말한다. 지금까지는 "AW26"이 브랜드로
+ * 보였고, 그 이름으로 브랜드 프로필을 조회하니 영원히 0건이었다.
+ */
+const WHOLE_STRING_SEASON_CODE = /^(?:SS|AW|FW|SU|WI)\s?\d{2}$|^(?:Spring|Summer|Fall|Autumn|Winter)\s?\d{2}$/i;
+
 export function resolveBrandName(raw: string | undefined): BrandResolution | undefined {
   if (!raw) return undefined;
   const trimmed = raw.trim();
   if (!trimmed) return undefined;
+
+  if (WHOLE_STRING_SEASON_CODE.test(trimmed)) {
+    return {
+      raw: trimmed,
+      cleaned: "",
+      changed: true,
+      confidence: "HIGH",
+      ruleApplied: ["SEASON_CODE"],
+      matchedToken: trimmed,
+    };
+  }
 
   const candidates = findCandidates(trimmed);
   if (candidates.length === 0) return { raw: trimmed, cleaned: trimmed, changed: false, ruleApplied: [] };

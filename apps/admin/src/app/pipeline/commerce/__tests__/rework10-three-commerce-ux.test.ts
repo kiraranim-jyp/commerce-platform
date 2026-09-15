@@ -96,7 +96,9 @@ function sellerSettings(): LotteOnSellerSettingsInput {
 
 /** 전 채널 공통 resolver의 결과 — 세 탭에 **같은 객체**를 내려보낸다. */
 function resolution(input: Parameters<typeof resolveManufacturer>[0], loading = false) {
-  return { ...resolveManufacturer(input), loading };
+  /* REWORK-12 ④ — 조회에 쓴 브랜드 이름. 화면이 «어느 브랜드로 찾았는지»를
+     말하는 데만 쓴다(판정에 들어가지 않는다). */
+  return { ...resolveManufacturer(input), loading, brand: "Bobo Choses" };
 }
 
 let container: HTMLDivElement;
@@ -260,9 +262,12 @@ describe("REWORK-10 A — 제조사는 세 탭에서 같은 문장을 낸다", (
   it("🔴 셋 다 없을 때만 ⚠ 가 뜨고, 세 탭이 같은 문장을 쓴다", async () => {
     for (const tab of tabs(resolution({}))) {
       const text = clean((await mount(tab.element())).textContent ?? "");
-      expect(text, tab.label).toContain("제조사 정보가 없습니다");
-      expect(text, tab.label).toContain("상품 원문 → 브랜드 프로필 → 판매자 기본정보를 확인했지만");
-      expect(text, tab.label).toContain("Settings → 브랜드 프로필");
+      /* REWORK-12 ④·⑤(CEO 판정, 2026-09-15) — 같은 두 가지를 계속 요구한다:
+         «어디까지 찾아봤는가»와 «다음에 무엇을 하는가». 바뀐 것은 서는 자리다 —
+         전자는 ⓘ(여전히 textContent에 있다), 후자는 **화면에 보이는 한 줄**. */
+      expect(text, tab.label).toContain("상품 원문 · 브랜드 프로필 · 판매자 기본정보 어디에도 제조사가 없습니다");
+      expect(text, tab.label).toContain("브랜드 「Bobo Choses」에 등록된 제조사가 없습니다");
+      expect(text, tab.label).toContain("브랜드 프로필에 등록하세요");
     }
   });
 

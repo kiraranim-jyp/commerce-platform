@@ -98,7 +98,8 @@ export function MissingFieldsBulkPanel({
           않는다 · 등록 시점 표기 · 되돌리는 법)은 지워진 것이 아니라 ⓘ로 접혔다. */}
       <h3 className="text-base font-medium">
         불러오지 못한 항목 ({missingFields.length}개)
-        <InfoTip text="상품 상세페이지에 이미 나와 있는 정보라면 «상세페이지 참조로 등록»을 선택해 한 번에 처리할 수 있습니다. 값을 임의로 만들어내지 않고, 등록 시점에 «상품 상세페이지 참조»로 표시됩니다. 나중에 개별 항목에서 직접 입력으로 되돌릴 수 있습니다." />
+        {/* REWORK-12 ⑤(CEO 판정, 2026-09-15) — 138자 → 43자. "무엇인지"만 남긴다. */}
+        <InfoTip text="상세페이지에 이미 나와 있는 정보를 «상세페이지 참조»로 한 번에 등록합니다." />
       </h3>
       <p className="mt-1 text-xs text-text-secondary">원본 페이지에서 값을 확인하지 못한 등록 정보입니다.</p>
 
@@ -125,7 +126,9 @@ export function MissingFieldsBulkPanel({
             {field === "modelName" && (
               <p className="ml-6 text-[11px] text-warning">
                 ⚠ 이 체크로는 「고시정보 모델명」만 채워집니다
-                <InfoTip text="모델명은 두 가지입니다 — 여기서 참조로 채워지는 것은 「고시정보 모델명」뿐이고, 스마트스토어 등록을 막고 있는 「네이버 쇼핑 카탈로그 모델명」은 별도 값이라 채워지지 않습니다. 같은 화면의 「Source Data」에 있는 «네이버 쇼핑 카탈로그 모델명» 칸에 실제 값을 직접 입력해주세요." />
+                {/* REWORK-12 ⑤ — 162자 → 53자. 이 체크가 **무엇을 채우고 무엇을
+                    못 채우는지**만 남긴다(가는 길은 위 경고 한 줄이 이미 말한다). */}
+                <InfoTip text="모델명은 두 가지입니다 — 「고시정보 모델명」만 채워지고 「네이버 쇼핑 카탈로그 모델명」은 별도 값입니다." />
               </p>
             )}
           </div>

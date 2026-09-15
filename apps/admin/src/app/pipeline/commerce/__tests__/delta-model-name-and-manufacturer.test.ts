@@ -236,7 +236,9 @@ function resolution(input: {
   brandProfileManufacturer?: string | null;
   sellerProfileManufacturer?: string | null;
 }) {
-  return { ...resolveManufacturer(input), loading: false };
+  /* REWORK-12 ④ — `brand`는 조회에 쓴 브랜드 이름이다(판정에 들어가지 않는다).
+     화면이 "브랜드 X로 찾아봤는데 없었다"라고 말하는 데만 쓴다. */
+  return { ...resolveManufacturer(input), loading: false, brand: "Bobo Choses" };
 }
 
 describe("DELTA-A ① — 폴백 ②(브랜드 프로필)가 실제로 존재하고 payload까지 간다", () => {
@@ -291,15 +293,33 @@ describe("DELTA-A ② — 화면이 «어디까지 찾아봤는지»를 말한�
     expect(screen).toContain("따져코리아");
   });
 
+  /**
+   * REWORK-12 ④·⑤(CEO 판정, 2026-09-15) — 같은 세 가지를 계속 요구하되,
+   * **어디에 적히는가**가 바뀌었다.
+   *
+   *   BEFORE  128자짜리 문장 전체가 ⓘ(title + sr-only) 안에만 있었다.
+   *           화면에 보이는 글자는 "제조사 미확인"과 "입력 필요"뿐이었다.
+   *   AFTER   ⓘ에는 **무엇인지**(어디까지 찾아봤는지) 한 줄,
+   *           화면에는 **다음 행동**(어느 브랜드 · 어디에 등록) 한 줄.
+   *
+   * 아래 단언은 여전히 `textContent` 전수라 ⓘ의 sr-only도 함께 읽는다 —
+   * 즉 "정보가 사라지지 않았다"는 성질은 그대로 지킨다.
+   */
   it("🔴 셋 다 없을 때만 직접 입력을 안내하고, 확인한 세 단계를 전부 적는다", async () => {
     await renderPlatform(makeProduct(), undefined, resolution({}));
     const screen = text();
-    expect(screen).toContain("제조사 정보가 없습니다");
-    // CEO 지정 — "확인했지만 없다"를 말한다(어디까지 찾아봤는지).
-    expect(screen).toContain("상품 원문 → 브랜드 프로필 → 판매자 기본정보를 확인했지만");
-    // 그리고 브랜드 단위로 등록하는 길을 지목한다(BEFORE는 판매자 정보 탭만 지목).
-    expect(screen).toContain("Settings → 브랜드 프로필");
-    expect(screen).toContain("해당 브랜드 상품에 자동 적용됩니다");
+    // ⓘ — 어디까지 찾아봤는가(세 단계를 전부 적는다).
+    expect(screen).toContain("상품 원문 · 브랜드 프로필 · 판매자 기본정보 어디에도 제조사가 없습니다");
+    // 화면 한 줄 — 어느 브랜드로 찾았고, 다음에 무엇을 하면 되는가.
+    expect(screen).toContain("브랜드 「Bobo Choses」에 등록된 제조사가 없습니다");
+    expect(screen).toContain("브랜드 프로필에 등록하세요");
+  });
+
+  /** REWORK-12 ④ — 브랜드 자체가 오염/부재면 «브랜드 프로필에 등록하세요»가
+   *  실행 불가능한 안내가 된다. 그때는 다른 말을 한다. */
+  it("브랜드가 비어 있으면 브랜드 프로필을 조회하지 못했다고 말한다", async () => {
+    await renderPlatform(makeProduct(), undefined, { ...resolution({}), brand: "" });
+    expect(text()).toContain("브랜드가 확인되지 않아 브랜드 프로필을 조회하지 못했습니다");
   });
 
   it("셀러가 직접 입력하면 그 값이 제조사 폴백을 이긴다 — 실제 타이핑", async () => {
@@ -425,7 +445,10 @@ describe("DELTA-B ① — 이름이 «어느 모델명인가»를 말한다(라�
   it("바로 아래 한 줄이 이 칸이 무엇인지 말한다 — SmartStore 카탈로그 식별용", async () => {
     await renderSource(makeProduct());
     const row = rowOf(CATALOG_MODEL_NAME_LABEL).textContent ?? "";
-    expect(row).toContain("SmartStore의 네이버 쇼핑 카탈로그에서 상품을 식별할 때 사용하는 모델명입니다");
+    /* REWORK-12 ⑤(CEO 판정, 2026-09-15: "툴팁 내용이 길어서") — 같은 사실을
+       77자 → 40자로 줄인 문장이다. "무엇인지"는 그대로 있고, SKU와 다르다는
+       구분도 그대로 있다. */
+    expect(row).toContain("네이버 쇼핑 카탈로그가 상품을 식별하는 모델명입니다. 위 SKU와는 다른 값입니다.");
   });
 
   it("🔴 SKU와 완전히 분리된다 — 두 줄이 각자 자기 도착지를 달고 있다", async () => {
@@ -463,8 +486,10 @@ describe("DELTA-B ② — «상세페이지 참조»가 무엇을 가져오는�
 
     expect(product.modelName.source).toBe("DETAIL_PAGE_REFERENCE");
     const row = rowOf(CATALOG_MODEL_NAME_LABEL).textContent ?? "";
-    expect(row).toContain("상세페이지 참조는 고시정보의 모델명을 가져옵니다");
-    expect(row).toContain("사용할 수 없는 경우 직접 입력해야 합니다");
+    /* REWORK-12 ⑤ — 108자 → 41자. 두 사실(참조가 채우는 것 · 이 칸은 직접
+       입력해야 한다는 것)은 그대로다. */
+    expect(row).toContain("“상세페이지 참조”는 고시정보 모델명만 채웁니다");
+    expect(row).toContain("직접 입력해야 합니다");
     // 화면이 말한 그대로 payload가 비어 있다(거짓말이 아니다).
     expect(catalogModelName(product)).toBeUndefined();
     expect(missingLabels(product)).toContain(CATALOG_MODEL_NAME_LABEL);

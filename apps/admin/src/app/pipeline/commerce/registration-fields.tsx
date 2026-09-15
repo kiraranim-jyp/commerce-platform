@@ -65,30 +65,47 @@ export function FieldRow({
   note?: ReactNode;
   children: ReactNode;
 }) {
+  /* REWORK-12 ③(CEO 실측 캡처, 2026-09-15: "내용 많아지면서 정렬 및 텍스트가
+     깨져") — 세 가지가 같은 한 줄에서 서로를 밀고 있었다:
+
+       · 긴 라벨("모델명(고시정보 + 네이버 쇼핑 카탈로그)")이 칸을 넘쳐 잘렸다
+       · 「입력 필요」 배지가 shrink 가능해서 라벨에 밀려 두 줄로 쪼개졌다
+       · 출처 글자가 값이 없을 때도 "—" 한 글자를 차지해 줄을 더 좁혔다
+
+     고친 방법은 폭 규칙 셋뿐이다(새 디자인이 아니다):
+       라벨 쪽  min-w-0 flex-1 + 줄바꿈 허용 → 넘치면 **두 줄로 흐른다**(잘리지 않는다)
+       배지 쪽  shrink-0 whitespace-nowrap  → 절대 쪼개지지 않는다
+       출처     말할 것이 없으면(—) 아예 그리지 않는다
+
+     그리고 칸 자체가 `h-full flex-col`이 된다. 3열 격자에서 한 칸만 세로로
+     커지면(예: 참조 안내가 붙은 모델명) 같은 줄의 다른 칸은 위로 붙어 입력칸
+     높이가 들쭉날쭉해 보였다 — 이제 안내는 `mt-auto`로 **칸 바닥**에 서므로
+     같은 줄의 입력칸들이 같은 높이에서 시작한다. */
+  const sourceLabel = field ? extractionSourceLabel(field) : "";
   return (
-    <div>
-      <div className="flex items-center justify-between gap-2">
+    <div className="flex h-full min-w-0 flex-col">
+      <div className="flex items-start justify-between gap-2">
         {/* labelSuffix(ⓘ)는 `<label>` **밖**이다 — 안에 넣으면 그 칸의 이름이
             "제조사 + 툴팁 전문"이 되어버린다(라벨 문자열로 자리를 찾는 검사와
             보조기술 양쪽이 다 어긋난다). */}
-        <span className="flex min-w-0 items-center">
-          <label className="text-xs text-text-secondary">
+        <span className="flex min-w-0 flex-1 items-start">
+          <label className="min-w-0 break-words text-xs leading-snug text-text-secondary">
             {label}
             {required && <span className="ml-0.5 text-error">*</span>}
           </label>
           {labelSuffix}
         </span>
         {field ? (
-          <span className="flex items-center gap-1 text-[11px] text-text-tertiary">
-            {extractionSourceLabel(field)}
+          <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] leading-snug text-text-tertiary">
+            {sourceLabel && sourceLabel !== "—" && <span>{sourceLabel}</span>}
             <ProvenanceBadge source={field.source} />
           </span>
         ) : (
-          badge
+          badge && <span className="flex shrink-0 items-center whitespace-nowrap">{badge}</span>
         )}
       </div>
       <div className="mt-0.5">{children}</div>
-      {note && <p className="mt-0.5 text-[11px] leading-relaxed text-text-tertiary">{note}</p>}
+      {note && <p className="mt-auto pt-0.5 text-[11px] leading-relaxed text-text-tertiary">{note}</p>}
     </div>
   );
 }

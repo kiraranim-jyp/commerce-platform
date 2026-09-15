@@ -87,29 +87,37 @@ function ReferenceEligibleFieldRow({
   referenceLimitationDetail?: string;
 }) {
   const isReferenced = field.source === "DETAIL_PAGE_REFERENCE";
+  /* REWORK-12 ③(CEO 실측 캡처, 2026-09-15) — 참조 안내 한 줄이 `children` 안에
+     있던 동안, 그 줄을 가진 칸(모델명)만 세로로 커져서 3열 격자의 같은 줄 전체가
+     틀어져 보였다. 같은 글자를 FieldRow의 `note` 슬롯으로 옮기면 **칸 바닥**에
+     서므로(FieldRow의 mt-auto) 입력칸들의 높이가 서로 어긋나지 않는다.
+     🔴 문장은 한 글자도 바뀌지 않았다 — 서는 자리만 바뀐다.
+     누르기 **전에도** 그 버튼이 무엇을 못 하는지 알 수 있어야 한다는 REWORK-6의
+     요구도 그대로다(참조 전/후 모두 같은 자리에서 말한다). */
+  const limitationNote = referenceLimitation ? (
+    <span className={isReferenced ? "text-warning" : undefined}>
+      {isReferenced ? `⚠ ${referenceLimitation}` : referenceLimitation}
+    </span>
+  ) : undefined;
   return (
     <FieldRow
       label={label}
       field={field}
       required={required}
       labelSuffix={referenceLimitationDetail ? <InfoTip text={referenceLimitationDetail} /> : undefined}
+      note={limitationNote}
     >
       {isReferenced ? (
-        <div className="space-y-1">
-          <div className="flex items-center justify-between gap-2 rounded border border-dashed border-selected-border bg-selected-soft px-2 py-1 text-sm text-selected">
-            <span>상세페이지 참조로 등록됩니다</span>
-            {onSetReference && (
-              <button
-                type="button"
-                className="shrink-0 text-[11px] underline"
-                onClick={() => onSetReference(false)}
-              >
-                직접 입력으로 전환
-              </button>
-            )}
-          </div>
-          {referenceLimitation && (
-            <p className="text-[11px] text-warning">⚠ {referenceLimitation}</p>
+        <div className="flex items-center justify-between gap-2 rounded border border-dashed border-selected-border bg-selected-soft px-2 py-1 text-sm text-selected">
+          <span className="min-w-0 truncate">상세페이지 참조로 등록됩니다</span>
+          {onSetReference && (
+            <button
+              type="button"
+              className="shrink-0 text-[11px] underline"
+              onClick={() => onSetReference(false)}
+            >
+              직접 입력으로 전환
+            </button>
           )}
         </div>
       ) : (
@@ -123,11 +131,6 @@ function ReferenceEligibleFieldRow({
             >
               상세페이지 참조로 등록
             </button>
-          )}
-          {/* 누르기 **전에도** 그 버튼이 무엇을 못 하는지 알 수 있어야 한다 —
-              누른 뒤에만 알려주면 셀러는 "되는 줄 알고" 넘어간 다음에야 막힌다. */}
-          {referenceLimitation && (
-            <p className="text-[11px] leading-relaxed text-text-tertiary">{referenceLimitation}</p>
           )}
         </div>
       )}
@@ -846,7 +849,12 @@ export function PlatformPreview({
                 직접 입력하면 **둘 다** 채워지고, 참조를 고르면 고시정보 쪽만
                 채워진다(아래 referenceLimitation이 고르기 전에 말한다). */}
             <ReferenceEligibleFieldRow
-              label="모델명(고시정보 + 네이버 쇼핑 카탈로그)"
+              /* REWORK-12 ③(CEO 실측 캡처, 2026-09-15: "모델명(고시정보 + 네이버
+                 쇼핑 카탈… 에서 잘림") — 이름이 25자라 3열 격자의 한 칸을 넘쳤다.
+                 두 자리를 가리킨다는 **사실**은 그대로 두고 글자만 줄인다
+                 (고시정보 → 고시 · 네이버 쇼핑 카탈로그 → 카탈로그). 전문은
+                 바로 옆 ⓘ와 아래 한 줄이 계속 말한다. */
+              label="모델명(고시 + 카탈로그)"
               field={product.modelName}
               onCommit={(v) => fix?.("modelName", v)}
               onSetReference={(r) => onSetFieldReference?.("modelName", r)}
@@ -856,7 +864,12 @@ export function PlatformPreview({
                  별도"라는 정책은 ⓘ로 접힌다. 문장 자체는 한 글자도 버리지 않았다 —
                  참조를 고르기 전에도 읽을 수 있어야 한다는 REWORK-6의 요구는 그대로다. */
               referenceLimitation="네이버 쇼핑 카탈로그 등록에 사용하는 모델명입니다."
-              referenceLimitationDetail="모델명은 두 자리로 나갑니다 — 「고시정보 모델명」(상세페이지·고시정보용)과 「네이버 쇼핑 카탈로그 모델명」(SmartStore 카탈로그 식별용)은 별도 값입니다. “상세페이지 참조”로 대체되는 것은 고시정보 쪽뿐이고 카탈로그 모델명은 비어 있는 채로 남습니다. 어린이제품 등 카탈로그 모델명이 필수인 카테고리는 실제 모델명을 직접 입력해야 등록이 열립니다."
+              /* REWORK-12 ⑤(CEO 판정, 2026-09-15: "툴팁 내용이 길어서 보라는건지
+                 말라는건지") — 200자 → 58자. 남긴 것은 **무엇인지** 두 마디다:
+                 두 모델명은 다른 값이고, 참조는 한쪽만 채운다. 빠진 것은 "왜"와
+                 "예외"(어린이제품 카테고리 설명) — 그 사실이 실제로 등록을 막으면
+                 부족 항목이 그 자리에서 이름과 사유를 대고 선다. */
+              referenceLimitationDetail="「고시정보 모델명」과 「네이버 쇼핑 카탈로그 모델명」은 별도 값입니다. “상세페이지 참조”는 고시정보 쪽만 채우므로 카탈로그 모델명은 직접 입력해야 합니다."
             />
             <ReferenceEligibleFieldRow
               label="중량"

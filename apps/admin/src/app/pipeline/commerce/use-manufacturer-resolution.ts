@@ -45,6 +45,20 @@ interface BrandProfileRow {
 export interface ManufacturerResolutionState extends ManufacturerResolution {
   /** 아직 프로필 조회가 끝나지 않았다 — "없다"고 단정하면 안 되는 구간이다. */
   loading: boolean;
+  /**
+   * REWORK-12 ④(CEO 판정, 2026-09-15: "여전히 제조사 미확인") — **어느 브랜드로
+   * 조회했는가.**
+   *
+   * DB 실측(SELECT only, 2026-09-15): `coupang_brand_profiles` 는 2행뿐이고
+   * (Apolina · The Animals Observatory), `coupang_seller_profiles` 3행은 기본
+   * 프로필까지 전부 `manufacturer = null` 이다. 즉 대부분의 상품에서 폴백은
+   * **실제로 답이 없다**. 그 사실을 "제조사 미확인" 네 글자로만 말하면 셀러는
+   * 무엇이 잘못됐는지도, 무엇을 하면 되는지도 알 수 없다.
+   *
+   * 화면이 «브랜드 X로 찾아봤는데 없었다»라고 말할 수 있도록 조회에 쓴 이름을
+   * 결과와 함께 들고 나간다. 판정을 하나도 바꾸지 않는다 — 문장에 쓰는 값이다.
+   */
+  brand: string;
 }
 
 /**
@@ -114,5 +128,5 @@ export function useManufacturerResolution(
     brandProfileManufacturer: answered ? lookup.brandDefault : null,
     sellerProfileManufacturer: answered ? lookup.sellerDefault : null,
   });
-  return { ...resolution, loading: resolution.source !== "PRODUCT" && !answered };
+  return { ...resolution, loading: resolution.source !== "PRODUCT" && !answered, brand: brandName };
 }
