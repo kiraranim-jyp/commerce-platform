@@ -15,6 +15,11 @@ import { convertToKrw } from "./currency";
  *   46인치(116cm) 클럽 → 125×20×20 박스 → 용적 10kg → EMS ¥10,600 ≈ ₩97,520
  *   같은 클럽        → 120×15×15 슬림 튜브 → 용적 5.4kg → EMS ¥8,200
  *
+ * 🔴 SHIPPING-POLICY-01 — 위 둘째 줄의 ¥8,200 은 **우리가 갖고 있던 다섯 칸짜리
+ * 표가 만든 값이다.** 일본우편 공개 요금표에는 5.5kg 칸이 실재해서 5.4kg 의
+ * 실제 요금은 **¥6,900** 이다(EMS_JAPAN_TO_KOREA_BRACKETS 주석의 출처 참고).
+ * 첫째 줄 ¥10,600 은 공개 요금표와 일치한다 — 바뀌지 않았다.
+ *
  * **포장 하나로 배송비가 16,000~97,000원 사이에서 갈린다.** ₩12,000 기본값을
  * 그대로 쓰면 셀러는 8만 원 적자를 마진으로 착각한다.
  *
@@ -166,23 +171,82 @@ export interface EmsRateBracket {
 }
 
 /**
- * 🟡 **확인 필요** — CEO가 이미 조사해 넘긴 표를 그대로 옮긴 것이다(재조사 금지
- * 지시). 일본우편 EMS 대한민국(제1지역) 요금으로 보고된 값이며, 일본우편 1차
- * 요금표로 우리가 직접 확인한 값은 아니다.
+ * 🟢 **일본우편 EMS 제1지대(第1地帯) 요금표 — 1차 출처에서 직접 옮겼다.**
  *
- * **2kg 미만 구간과 10kg 초과 구간은 이 표에 없다.** 없는 구간의 요금을 지어내지
- * 않는다 — estimateEmsJapanToKorea()가 그 사실을 flag로 돌려준다.
+ * ── 지대 확인이 먼저다 ───────────────────────────────────────────────────
+ * EMS 요금은 «출발국 → 목적지» 가 아니라 «지대» 로 갈린다. 지대를 틀리면 표
+ * 전체가 틀린다. 일본우편 「該当国・地域一覧（EMS・第1）」 이 第1地帯를
+ * **중국 · 한국 · 대만** 으로 못 박고 있고, 한국은 「全域」 으로 등재돼 있다.
+ * 우리가 재는 경로는 언제나 «→ 한국» 이므로(KR_TARGET_MARKET) 이 표가 맞는
+ * 지대다.
+ *   https://www.post.japanpost.jp/service/send/oversea/list/delivery/ems/country/first.html
  *
- * 구간 요금표이므로 "5.4kg"처럼 표에 없는 중량은 **상위 구간**(7kg) 요금이
- * 적용된다. EMS가 실제로 그렇게 과금하고, 그 방향이 셀러에게 보수적이다.
+ * ── 요금 자체의 출처(서로 독립된 두 페이지가 같은 값을 준다) ────────────
+ *   ① 料金表(EMS：第1地帯)
+ *      https://www.post.japanpost.jp/send/oversea/charge/list-ems/zone1.html
+ *   ② 料金表(EMS：取り扱い国すべて) 의 第1地帯 열
+ *      https://www.post.japanpost.jp/send/oversea/charge/list-ems/all.html
+ * 두 페이지의 500g~10kg 구간이 한 줄도 어긋나지 않았다(2026-09-16 조회).
+ *
+ * ── 🔴 SHIPPING-POLICY-01 — 무엇이 바뀌었나 ─────────────────────────────
+ * 직전까지 이 표는 **2 · 3 · 5 · 7 · 10kg 다섯 칸**이었고, 2kg 미만은 칸이
+ * 아예 없어서 «0.06kg 장갑도 0.55kg 골프공도 전부 2kg 요금 ¥3,400» 이었다.
+ * 공개 요금표에는 그 아래로 **500g부터 100g·250g 단위 구간이 실재한다**.
+ * 즉 우리는 없는 구간을 몰랐던 게 아니라, 있는 구간을 **비워 두고 상위 요금을
+ * 씌우고 있었다** — 경량 상품에서 배송비를 2배 넘게 과대계상했다
+ * (0.55kg: ¥3,400 → 실제 ¥1,600).
+ *
+ * 다섯 칸 전부(2/3/5/7/10kg)는 공개 요금표의 같은 값으로 **그대로 남아 있다**.
+ * 이번 변경은 «칸을 채운 것» 이지 «값을 고친 것» 이 아니다.
+ *
+ * ── 🔴 이 표가 하지 않는 것 ─────────────────────────────────────────────
+ * ① **보간·외삽하지 않는다.** 아래 줄은 전부 공개 요금표에 인쇄된 줄이다.
+ *    6kg 과 7kg 사이에 6.5kg 칸이 없는 것은 우리가 뺀 게 아니라 원표에 없다.
+ * ② **10kg 초과를 담지 않는다.** 원표는 30kg까지 이어지지만, EMS 는 중량과
+ *    별도로 «길이 1.5m · 길이+둘레 3m» 같은 치수 제한이 있고 우리는 그 제한을
+ *    검사하지 않는다. 골프백·장척 화물이 실제로 EMS 로 갈 수 있는지 확인하기
+ *    전에 요금만 먼저 채우면, 셀러는 «쓸 수 없는 경로» 로 원가를 계산하게 된다.
+ *    10kg 초과는 지금까지처럼 null(계산 불가)이다.
+ * ③ **小形包装物(국제소포·소형포장물) · 国際eパケット · 에어메일을 담지 않는다.**
+ *    더 싸지만 적용 조건(중량 상한 2kg · 추적/보상 유무 · 발송인 자격)이 다르고,
+ *    상품·경로에 맞는 배송수단이 무엇인지 우리 입력에는 없다. 싸다고 자동으로
+ *    고르면 그 순간 «실제로는 쓸 수 없는 요금» 으로 계산한다(SHIPPING-POLICY-01 ①).
+ *
+ * 구간 요금표이므로 "5.4kg"처럼 경계와 딱 맞지 않는 중량은 **그 중량이 속하는
+ * 구간**(5.5kg)의 요금이 적용된다. 이건 추정이 아니라 EMS 의 과금 방식 그대로다.
  */
 export const EMS_JAPAN_TO_KOREA_BRACKETS: readonly EmsRateBracket[] = [
+  { uptoKg: 0.5, jpy: 1450 },
+  { uptoKg: 0.6, jpy: 1600 },
+  { uptoKg: 0.7, jpy: 1750 },
+  { uptoKg: 0.8, jpy: 1900 },
+  { uptoKg: 0.9, jpy: 2050 },
+  { uptoKg: 1, jpy: 2200 },
+  { uptoKg: 1.25, jpy: 2500 },
+  { uptoKg: 1.5, jpy: 2800 },
+  { uptoKg: 1.75, jpy: 3100 },
   { uptoKg: 2, jpy: 3400 },
+  { uptoKg: 2.5, jpy: 3900 },
   { uptoKg: 3, jpy: 4400 },
+  { uptoKg: 3.5, jpy: 4900 },
+  { uptoKg: 4, jpy: 5400 },
+  { uptoKg: 4.5, jpy: 5900 },
   { uptoKg: 5, jpy: 6400 },
+  { uptoKg: 5.5, jpy: 6900 },
+  { uptoKg: 6, jpy: 7400 },
   { uptoKg: 7, jpy: 8200 },
+  { uptoKg: 8, jpy: 9000 },
+  { uptoKg: 9, jpy: 9800 },
   { uptoKg: 10, jpy: 10600 },
 ] as const;
+
+/**
+ * 이 표가 담고 있는 최대 중량(kg). 이 값을 넘으면 estimateEmsJapanToKorea 는
+ * null 이다 — 공개 요금표에 줄이 있어도 치수 제한을 확인하기 전에는 채우지
+ * 않는다(위 주석 ②).
+ */
+export const EMS_JAPAN_TO_KOREA_MAX_KG =
+  EMS_JAPAN_TO_KOREA_BRACKETS[EMS_JAPAN_TO_KOREA_BRACKETS.length - 1].uptoKg;
 
 export interface EmsEstimate {
   chargeableWeightKg: number;
@@ -192,8 +256,13 @@ export interface EmsEstimate {
   krw: number;
   isRateEstimate: boolean;
   /**
-   * 이 중량이 요금표의 구간과 정확히 맞는가. false면 우리가 가진 표에 없는
-   * 중량이라 **상위 구간 요금으로 보수 추정**한 값이다(예: 5.4kg → 7kg 요금).
+   * 이 중량이 요금표의 **구간 경계와 정확히 같은가**(예: 5.0kg · 10kg).
+   *
+   * 🔴 SHIPPING-POLICY-01 — 이 값의 의미가 좁아졌다. 예전 표는 2/3/5/7/10kg
+   * 다섯 칸뿐이라 false 는 «표에 없는 중량이라 상위 구간으로 보수 추정했다» 는
+   * 뜻이었다. 이제 표는 공개 요금표 전체(500g~10kg)라, false 는 **중량이 경계에
+   * 딱 떨어지지 않는다**는 사실만 말한다 — 요금 자체는 추정이 아니라 EMS 가
+   * 실제로 그 구간에 매기는 공시 요금이다.
    */
   exactBracket: boolean;
   note: string;
@@ -203,6 +272,10 @@ export interface EmsEstimate {
  * 과금중량 → EMS 요금. 표 범위 밖(10kg 초과)이면 **null** 이다 — 비례식으로
  * 늘려서 만들어내지 않는다. 골프백·장척 화물은 EMS 자체가 받지 않거나 별도
  * 요금이라, 여기서 숫자를 지어내면 셀러가 없는 배송수단으로 원가를 계산한다.
+ *
+ * 🔴 **출발국을 이 함수가 묻지 않는다.** 이름 그대로 «일본→한국» 요금표 하나만
+ * 본다. 출발국 확인은 호출부의 책임이고, 그 문은
+ * hasConfirmedWeightBasedShippingRates() 한 곳뿐이다(GOLF-04).
  */
 export function estimateEmsJapanToKorea(
   chargeableWeightKg: number | null,
@@ -212,18 +285,14 @@ export function estimateEmsJapanToKorea(
   const bracket = EMS_JAPAN_TO_KOREA_BRACKETS.find((b) => chargeableWeightKg <= b.uptoKg);
   if (!bracket) return null;
 
-  // 표에 있는 구간 경계와 정확히 같거나, 바로 아래 구간보다 크면서 이 구간
-  // 이하인 경우 — 후자는 "이 구간 요금이 맞다"는 뜻이지만 우리 표가 1kg 단위로
-  // 성겨서 중간값 요금을 확인하지 못한 것이기도 하다. 두 상태를 구분한다.
+  // 경계와 딱 맞는가. 🔴 SHIPPING-POLICY-01 이후 이건 «정확도» 가 아니라 «표시»
+  // 의 문제다 — 어느 쪽이든 요금은 공개 요금표의 그 구간 요금 그대로다.
   const exactBracket = EMS_JAPAN_TO_KOREA_BRACKETS.some((b) => b.uptoKg === chargeableWeightKg);
-  const belowTableFloor = chargeableWeightKg < EMS_JAPAN_TO_KOREA_BRACKETS[0].uptoKg;
   const converted = convertToKrw(bracket.jpy, "JPY", liveRates);
 
-  const note = belowTableFloor
-    ? `2kg 미만 구간 요금표를 확인하지 못해 2kg 요금(¥${bracket.jpy.toLocaleString()})으로 보수 추정했습니다`
-    : exactBracket
-      ? `EMS 일본→한국 ${bracket.uptoKg}kg 구간 ¥${bracket.jpy.toLocaleString()}`
-      : `${chargeableWeightKg}kg은 요금표에 없는 중량이라 상위 구간 ${bracket.uptoKg}kg 요금(¥${bracket.jpy.toLocaleString()})을 적용했습니다`;
+  const note = exactBracket
+    ? `EMS 일본→한국 ${bracket.uptoKg}kg 구간 ¥${bracket.jpy.toLocaleString()}`
+    : `과금중량 ${chargeableWeightKg}kg은 EMS 일본→한국 ${bracket.uptoKg}kg 구간(¥${bracket.jpy.toLocaleString()})에 해당합니다 — EMS는 구간 상한 요금으로 과금합니다`;
 
   return {
     chargeableWeightKg,

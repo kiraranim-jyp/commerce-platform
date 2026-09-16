@@ -23,6 +23,7 @@ import {
   buildSellerDecision,
   resolveBuyerImportCharge,
   resolveCategoryCostPolicy,
+  resolveOverseasShippingBasis,
   type UnifiedPriceDecision,
   type PriceObservationRecord,
 } from "@commerce/pricing";
@@ -302,7 +303,22 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
           categoryProfileId: marketCategoryProfileId,
           sourceProductPriceKrw: { value: cost.costKrw, status: cost.isRateEstimate ? "estimated" : "actual" },
           exchangeRate: { value: cost.exchangeRate, status: cost.isRateEstimate ? "estimated" : "actual" },
-          internationalShippingKrw: { value: cost.shippingKrw, status: "estimated", source: "seller_default" },
+          /**
+           * 🔴 SHIPPING-POLICY-01 ②(CEO 지시, 2026-09-16) — source 가 "seller_default"
+           * 로 «고정»돼 있었다. 판매자가 실제 배송비를 입력해 둔 상품도 근거 문자열은
+           * "기본값"이라고 말했다는 뜻이다. 마진을 부풀리는 방향은 아니지만, 두 상태를
+           * 구분하지 못한다는 점은 같다.
+           *
+           * 🔴 status 는 손대지 않는다 — "estimated" 그대로다. 이 값이 실측이라고
+           * 확인해 주는 장치가 아직 없고, status 를 올리면 dataCompleteness 와
+           * verdict 가 따라 움직인다. 바뀌는 것은 근거 문자열 하나뿐이다.
+           */
+          internationalShippingKrw: {
+            value: cost.shippingKrw,
+            status: "estimated",
+            source:
+              resolveOverseasShippingBasis(cost.shippingKrw).basis === "DEFAULT" ? "seller_default" : "seller_input",
+          },
           customerChargedShippingKrw:
             sellerProfile?.deliveryCharge != null
               ? { value: sellerProfile.deliveryCharge, status: "actual", source: "SellerProfile.deliveryCharge" }

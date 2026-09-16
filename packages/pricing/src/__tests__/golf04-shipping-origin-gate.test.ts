@@ -111,8 +111,12 @@ describe("GOLF-04 STEP 1 — 일본 EMS 요금은 출발국이 일본일 때만 
     expect(unknownOrigin.internationalShippingKrw).not.toBe(japanOrigin.internationalShippingKrw);
   });
 
-  it("출발국 JP 는 지금까지와 똑같은 숫자를 낸다 — 이번 변경은 일본 경로를 건드리지 않는다", () => {
-    // GOLF-02 가 고정한 값과 같은 입력. EMS 2kg 이하 ¥3,400.
+  it("출발국 JP 는 일본 EMS 요금표로 계산한다 — 출발국 문은 일본 경로를 막지 않는다", () => {
+    // 🔴 SHIPPING-POLICY-01 ①(2026-09-16) — 이 줄의 기댓값이 ¥3,400 → ¥1,600 으로
+    //    바뀌었다. 출발국 문(GOLF-04)이 아니라 **요금표**가 바뀌었기 때문이다:
+    //    0.551kg 은 일본우편 공개 요금표(第1地帯)의 600g 구간 ¥1,600 이고,
+    //    ¥3,400 은 2kg 구간이다. 우리 표에 600g 칸이 없어서 2kg 요금을 씌우고 있었다.
+    //    역방향 증명(수정 전 코드): AssertionError: expected 1600 to be 3400
     const cost = computeGolfLandedCost({
       sourcePriceAmount: 4950,
       sourcePriceCurrency: "JPY",
@@ -121,8 +125,9 @@ describe("GOLF-04 STEP 1 — 일본 EMS 요금은 출발국이 일본일 때만 
       originCountry: "JP",
     });
     expect(cost.shippingStatus).toBe("estimated");
-    expect(cost.emsEstimate?.jpy).toBe(3400);
-    expect(cost.internationalShippingKrw).toBe(Math.round(3400 * RATES_2026_09_15.JPY));
+    expect(cost.emsEstimate?.jpy).toBe(1600);
+    expect(cost.emsEstimate?.bracketUptoKg).toBe(0.6);
+    expect(cost.internationalShippingKrw).toBe(Math.round(1600 * RATES_2026_09_15.JPY));
 
     // 소문자·공백도 같은 나라다(buyer-import-charge 가 origin 을 다루는 방식과 동일).
     const lower = computeGolfLandedCost({

@@ -7,6 +7,7 @@ import {
   DEFAULT_PRICE_ROUNDING_UNIT,
   formatKrw,
   formatOriginalPrice,
+  resolveOverseasShippingBasis,
 } from "@commerce/pricing";
 // MI/PRICE-1 — 라벨 어휘는 판단 카드의 수익성 요약과 같은 표에서 가져온다.
 // 같은 숫자를 두 화면이 다른 이름으로 부르던 것이 이 저장소가 반복해서 고쳐 온
@@ -327,6 +328,14 @@ export function PriceCalculationDetail({
           />
         </div>
       </Row>
+      {/* 🔴 SHIPPING-POLICY-01 ②(CEO 지시, 2026-09-16) — "실제 배송비를 모를 때
+          기본값 12,000원을 쓰되 «실제 배송비라고 표시하면 안 된다»".
+          이 줄이 그 구분이다. 환율 줄이 "(추정 고정환율)"을 달고 있는 것과 같은
+          장치다 — 값은 그대로 두고, 그 값이 무엇 위에 서 있는지만 밝힌다.
+          판단은 packages/pricing 한 곳(resolveOverseasShippingBasis)에서만 한다. */}
+      <p className="-mt-0.5 text-right text-[11px] text-text-tertiary">
+        {resolveOverseasShippingBasis(draftInput.shippingKrw).label}
+      </p>
 
       <div className="flex items-center justify-between border-t border-border pt-1.5">
         <span className="font-medium text-text-primary">{PRICE_LINE_LABEL.LANDED_COST}</span>

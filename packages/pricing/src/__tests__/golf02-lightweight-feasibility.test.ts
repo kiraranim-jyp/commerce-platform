@@ -18,13 +18,28 @@ import { computeGolfLandedCost } from "../golf-landed-cost";
  *   ④ 골프공 12구의 «중량 하한» — R&A/USGA 규칙상 볼 1개 최대 45.93g 에서
  *      유도한 값. 박스·포장 무게는 모르므로 더하지 않는다.
  *
- * ── 중량을 몰라도 결론이 흔들리지 않는 이유 ─────────────────────────────────
- * 우리 EMS 표(parcel-weight.ts)의 최하 구간은 «2kg 이하 ¥3,400» 하나뿐이고,
- * 2kg 미만 구간은 확인된 적이 없다(그 파일의 🟡 주석 그대로). 따라서 과금중량이
- * 0 초과 2kg 이하이면 **어떤 값을 넣어도 배송비는 같은 ¥3,400** 이다. 골프공
- * 1더즌(≥0.551kg)도, 장갑 한 짝도 전부 그 범위 안이다 — 그래서 포장 무게를
- * 추정하지 않아도 배송비 항이 바뀌지 않는다. 아래 테스트가 그 사실 자체를
- * 검증한다(sameBracketAcrossPlausibleWeights).
+ * ── 🔴 SHIPPING-POLICY-01 ①(2026-09-16) — 이 문단이 틀렸었다 ────────────────
+ * 원래 이 자리에는 이렇게 적혀 있었다:
+ *
+ *   "우리 EMS 표의 최하 구간은 «2kg 이하 ¥3,400» 하나뿐이고 … 따라서 과금중량이
+ *    0 초과 2kg 이하이면 어떤 값을 넣어도 배송비는 같은 ¥3,400 이다. … 그래서
+ *    포장 무게를 추정하지 않아도 배송비 항이 바뀌지 않는다."
+ *
+ * 그 문장은 **일본우편 요금표의 사실이 아니라 우리 표가 비어 있었다는 사실**을
+ * 적은 것이었다. 공개 요금표(第1地帯)에는 500g·600g·…·1.75kg 구간이 실재하고,
+ * 그래서 2kg 이하에서도 중량에 따라 요금이 ¥1,450 ~ ¥3,400 으로 갈린다.
+ * 골프공 1더즌(0.551kg)의 실제 요금은 ¥3,400 이 아니라 **¥1,600** 이다 —
+ * 우리는 경량 상품의 배송비를 2배 넘게 과대계상하고 있었다.
+ *
+ * ── 그래서 결론은 어떻게 되는가 ─────────────────────────────────────────────
+ * 배송비를 «가장 싼 구간»(500g ¥1,450)까지 낮춰 잡아도 실측 5건은 전부 적자다.
+ * 즉 GOLF-02 의 결론은 유지되지만, **그 결론이 서 있던 근거가 바뀌었다** —
+ * 예전에는 "중량을 몰라도 요금이 같아서" 였고, 지금은 "중량을 가장 유리하게
+ * 가정해도 적자라서" 다. 아래 첫 번째 테스트가 그 새 근거를 검증한다.
+ *
+ * 역방향 증명(수정 전 코드에 대면):
+ *   2kg 이하에서는 어떤 중량을 넣어도 … 배송비가 같다
+ *     AssertionError: expected 5 to be 1
  */
 
 /** Frankfurter(ECB) 2026-09-15 기준. EUR 1 = KRW 1568.32 / JPY 178.86 에서 유도. */
@@ -90,8 +105,9 @@ const MEASURED: Measured[] = [
 ];
 
 describe("GOLF-02-FEASIBILITY — 경량 골프용품 실측 원가", () => {
-  it("2kg 이하에서는 어떤 중량을 넣어도 EMS 구간과 배송비가 같다 (중량 추정이 결론을 바꾸지 않는다)", () => {
-    const shipping = [0.06, 0.55116, 0.9, 1.5, 2].map(
+  it("🔴 2kg 이하에서도 중량이 배송비를 바꾼다 — «어떤 값을 넣어도 같다»는 옛 주장은 우리 표가 비어 있어서 나온 것이었다", () => {
+    const weights = [0.06, 0.55116, 0.9, 1.5, 2] as const;
+    const shipping = weights.map(
       (kg) =>
         computeGolfLandedCost({
           sourcePriceAmount: 4950,
@@ -99,14 +115,36 @@ describe("GOLF-02-FEASIBILITY — 경량 골프용품 실측 원가", () => {
           liveRates: RATES_2026_09_15,
           actualWeightKg: kg,
           // GOLF-04 STEP 1 — 출발국을 명시한다. MEASURED 는 전부 일본 판매처
-          // (kakaku.com · dunlop.co.jp)라 숫자는 그대로지만, 이제 출발국을 적지
+          // (kakaku.com · dunlop.co.jp)라 이 축은 그대로지만, 이제 출발국을 적지
           // 않으면 배송비가 «확인 필요»가 된다 — 통화가 JPY 라는 사실만으로
           // 일본발이라고 가정하지 않기 때문이다.
           originCountry: "JP",
-        }).internationalShippingKrw,
+        }).internationalShippingKrw as number,
     );
-    expect(new Set(shipping).size).toBe(1);
-    expect(shipping[0]).not.toBeNull();
+    // 다섯 중량이 다섯 구간(500g · 600g · 900g · 1.5kg · 2kg)에 각각 걸린다.
+    expect(new Set(shipping).size).toBe(weights.length);
+    // 중량이 늘면 요금도 늘거나 같다(내려가는 구간이 있으면 표를 잘못 옮긴 것이다).
+    for (let i = 1; i < shipping.length; i++) expect(shipping[i]).toBeGreaterThan(shipping[i - 1]);
+    // 실제 공시 요금 ¥1,450 / ¥1,600 / ¥2,050 / ¥2,800 / ¥3,400 × 환율.
+    expect(shipping).toEqual([1450, 1600, 2050, 2800, 3400].map((jpy) => Math.round(jpy * RATES_2026_09_15.JPY)));
+  });
+
+  it("🔴 배송비를 «가장 싼 구간»으로 낮춰 잡아도 실측 5건은 전부 적자다 — 결론은 중량 가정에 기대지 않는다", () => {
+    // 공개 요금표의 최저 구간(500g ¥1,450)은 어떤 상품도 그보다 싸게 갈 수 없는
+    // 하한이다. 그 하한을 모든 건에 씌우는 것이 셀러에게 «최대한 유리한» 가정이다.
+    const cheapestShippingKrw = Math.round(1450 * RATES_2026_09_15.JPY);
+    for (const m of MEASURED) {
+      const cost = computeGolfLandedCost({
+        sourcePriceAmount: m.jpy,
+        sourcePriceCurrency: "JPY",
+        liveRates: RATES_2026_09_15,
+        actualWeightKg: m.actualWeightKg,
+        originCountry: "JP",
+      });
+      expect(cost.internationalShippingKrw, m.label).toBeGreaterThanOrEqual(cheapestShippingKrw);
+      const bestCaseSellerCost = (cost.productCostKrw as number) + cheapestShippingKrw;
+      expect(bestCaseSellerCost - (m.domesticLowestKrw + m.domesticShippingKrw), m.label).toBeGreaterThan(0);
+    }
   });
 
   it("실측 5건 모두 «판매자 원가 ≥ 국내 실구매가» 다 — 즉 판매 후보가 아니다", () => {

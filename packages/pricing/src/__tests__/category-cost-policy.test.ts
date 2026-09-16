@@ -10,6 +10,8 @@ import {
   computeRadar,
   computeUnifiedPriceDecision,
   comparePriceBasis,
+  EMS_JAPAN_TO_KOREA_BRACKETS,
+  EMS_JAPAN_TO_KOREA_MAX_KG,
   estimateEmsJapanToKorea,
   isUsableRate,
   GOLF_CLUB_RCEP_JAPAN_DUTY_RATE_2026,
@@ -356,23 +358,117 @@ describe("GOLF-01 축B ④: 용적중량이 배송비를 가른다(CEO 실측 �
     expect(ems.exactBracket).toBe(true);
   });
 
-  it("같은 클럽 슬림 튜브 120×15×15 → 용적 5.4kg → 상위 구간 7kg 요금 ¥8,200", () => {
+  /**
+   * 🔴 SHIPPING-POLICY-01 ①(CEO 지시, 2026-09-16) — **이 테스트의 제목이 바뀌었다.**
+   *
+   * 예전 제목은 "→ 상위 구간 7kg 요금 ¥8,200" 이었다. 그건 우리가 갖고 있던
+   * 다섯 칸짜리 표(2/3/5/7/10kg)가 만든 값이지 EMS 의 실제 요금이 아니었다.
+   * 일본우편 공개 요금표(第1地帯)에는 **5.5kg 칸이 실재한다** — 5.4kg 의 실제
+   * 요금은 ¥6,900 이다.
+   *
+   * ── 역방향 증명(수정 전 코드에 이 파일을 댄 결과) ────────────────────────
+   *   같은 클럽 슬림 튜브 120×15×15 → 용적 5.4kg
+   *     AssertionError: expected 6900 to be 8200
+   *   포장 하나로 배송비가 갈린다
+   *     AssertionError: expected 3700 to be 2400
+   *
+   * 즉 **이 두 줄은 다섯 칸 표에서만 통과하던 값**이고, 표를 공개 요금표로
+   * 채우는 순간 반드시 깨진다.
+   */
+  it("같은 클럽 슬림 튜브 120×15×15 → 용적 5.4kg → 5.5kg 구간 요금 ¥6,900", () => {
     expect(volumetricWeightKg({ lengthCm: 120, widthCm: 15, heightCm: 15 })).toBe(5.4);
     const ems = estimateEmsJapanToKorea(5.4)!;
-    expect(ems.jpy).toBe(8200);
-    expect(ems.bracketUptoKg).toBe(7);
-    // 요금표에 5.4kg 구간이 없다는 사실을 숨기지 않는다.
+    expect(ems.jpy).toBe(6900);
+    expect(ems.bracketUptoKg).toBe(5.5);
+    // 5.4kg 은 구간 «경계»가 아니다. 그래도 요금은 추정이 아니라 공시 요금이다 —
+    // EMS 가 원래 구간 상한 요금으로 과금하기 때문이다. note 가 그 사실을 말한다.
     expect(ems.exactBracket).toBe(false);
-    expect(ems.note).toContain("요금표에 없는 중량");
+    expect(ems.note).toContain("5.5kg 구간");
+    expect(ems.note).toContain("구간 상한 요금");
+    // 🔴 예전 다섯 칸 표의 답(상위 7kg 구간 ¥8,200)으로 돌아가면 안 된다.
+    expect(ems.jpy).not.toBe(8200);
   });
 
   it("🔴 포장 하나로 배송비가 갈린다 — 두 박스의 차이가 실제 금액으로 나온다", () => {
     const big = estimateEmsJapanToKorea(10)!;
     const slim = estimateEmsJapanToKorea(5.4)!;
-    expect(big.jpy - slim.jpy).toBe(2400);
+    // ¥10,600 − ¥6,900. 다섯 칸 표에서는 ¥2,400 이었다(¥8,200 기준).
+    expect(big.jpy - slim.jpy).toBe(3700);
     // 고정 환율표(JPY 9.2) 기준 — liveRates가 없으면 isRateEstimate=true다.
     expect(big.krw).toBe(Math.round(10600 * 9.2));
     expect(big.isRateEstimate).toBe(true);
+  });
+
+  /**
+   * 🔴 SHIPPING-POLICY-01 ① — **요금표를 «옮겼다»는 것 자체를 고정한다.**
+   *
+   * 출처(2026-09-16 조회, 서로 독립된 두 페이지가 같은 값):
+   *   지대 확인  https://www.post.japanpost.jp/service/send/oversea/list/delivery/ems/country/first.html
+   *              第1地帯 = 중국 · **한국** · 대만
+   *   요금 ①     https://www.post.japanpost.jp/send/oversea/charge/list-ems/zone1.html
+   *   요금 ②     https://www.post.japanpost.jp/send/oversea/charge/list-ems/all.html (第1地帯 열)
+   *
+   * 아래 표는 그 페이지에 인쇄된 줄을 그대로 옮긴 것이다. 한 줄이라도 우리가
+   * 만들어 넣으면 이 테스트가 먼저 깨진다.
+   */
+  it("EMS 제1지대(한국) 공개 요금표를 그대로 갖고 있다 — 지어낸 구간이 없다", () => {
+    const published: ReadonlyArray<readonly [number, number]> = [
+      [0.5, 1450],
+      [0.6, 1600],
+      [0.7, 1750],
+      [0.8, 1900],
+      [0.9, 2050],
+      [1, 2200],
+      [1.25, 2500],
+      [1.5, 2800],
+      [1.75, 3100],
+      [2, 3400],
+      [2.5, 3900],
+      [3, 4400],
+      [3.5, 4900],
+      [4, 5400],
+      [4.5, 5900],
+      [5, 6400],
+      [5.5, 6900],
+      [6, 7400],
+      [7, 8200],
+      [8, 9000],
+      [9, 9800],
+      [10, 10600],
+    ];
+    expect(EMS_JAPAN_TO_KOREA_BRACKETS.map((b) => [b.uptoKg, b.jpy])).toEqual(
+      published.map(([uptoKg, jpy]) => [uptoKg, jpy]),
+    );
+    // 구간이 중량 오름차순이어야 find(첫 일치)가 «가장 싼 해당 구간»을 고른다.
+    for (let i = 1; i < EMS_JAPAN_TO_KOREA_BRACKETS.length; i++) {
+      expect(EMS_JAPAN_TO_KOREA_BRACKETS[i].uptoKg).toBeGreaterThan(EMS_JAPAN_TO_KOREA_BRACKETS[i - 1].uptoKg);
+      expect(EMS_JAPAN_TO_KOREA_BRACKETS[i].jpy).toBeGreaterThan(EMS_JAPAN_TO_KOREA_BRACKETS[i - 1].jpy);
+    }
+    // 🔴 기존 다섯 칸(2/3/5/7/10kg)의 «값»은 하나도 바뀌지 않았다. 이번 변경은
+    //    칸을 채운 것이지 요금을 고친 것이 아니다.
+    for (const [kg, jpy] of [
+      [2, 3400],
+      [3, 4400],
+      [5, 6400],
+      [7, 8200],
+      [10, 10600],
+    ] as const) {
+      expect(estimateEmsJapanToKorea(kg)!.jpy, `${kg}kg`).toBe(jpy);
+    }
+  });
+
+  it("🔴 500g 미만도 «보수 추정»이 아니다 — 500g 이 공개 요금표의 최저 구간이다", () => {
+    const glove = estimateEmsJapanToKorea(0.06)!;
+    expect(glove.jpy).toBe(1450);
+    expect(glove.bracketUptoKg).toBe(0.5);
+    // 예전 문구("2kg 미만 구간 요금표를 확인하지 못해 … 보수 추정")는 사라졌다.
+    expect(glove.note).not.toContain("보수 추정");
+    expect(glove.note).not.toContain("확인하지 못해");
+  });
+
+  it("🔴 10kg 초과는 여전히 계산하지 않는다 — 공개 요금표에 줄이 있어도 치수 제한을 확인하지 않았다", () => {
+    expect(EMS_JAPAN_TO_KOREA_MAX_KG).toBe(10);
+    expect(estimateEmsJapanToKorea(10.1)).toBeNull();
   });
 
   it("실중량이 용적중량보다 크면 실중량으로 과금된다", () => {
