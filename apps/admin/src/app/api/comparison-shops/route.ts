@@ -1,8 +1,20 @@
 import { comparisonShopCollectability } from "@commerce/crawler";
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth/require-user";
 import { createComparisonShop, listComparisonShops } from "./_lib/comparison-shop";
 
 export const runtime = "nodejs";
+
+/**
+ * SOURCE-POLICY-01 후속(CEO 승인, 2026-09-16) — 이 라우트 4개(GET/POST/PATCH/DELETE)에는
+ * 인증이 **아예 없었다**. `requireUser` import 조차 없어서 로그인하지 않은 누구나
+ * 해외 조사 소스 28곳을 켜고 끄고 지울 수 있었다. 국내 쌍(`/api/domestic-price-sources`)은
+ * 처음부터 requireUser()를 쓰고 있었다 — 해외만 빠져 있었다.
+ *
+ * 🔴 workspace로 «좁히지» 않는다. comparison_shops는 workspace_id가 없는 공용
+ *    카탈로그이고(051이 국내에만 넣었다), 여기서 워크스페이스 필터를 새로 만들면
+ *    28행이 전부 안 보이게 된다. 이번에 닫는 것은 «인증»이지 «인가 범위»가 아니다.
+ */
 
 /**
  * GOLF-01.5 축 A(CEO 지시, 2026-09-16) — 목록에 "자동 수집 파서가 있는가"를 같이
@@ -33,6 +45,8 @@ export const runtime = "nodejs";
  * 🔴 missingCredentials 에는 환경변수 **이름**만 담긴다. 값은 담지 않는다.
  */
 export async function GET() {
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
   const shops = (await listComparisonShops()).map((shop) => ({
     ...shop,
     ...comparisonShopCollectability(shop.domain),
@@ -41,6 +55,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireUser();
+  if (!auth.ok) return auth.response;
+
   const body = (await request.json().catch(() => null)) as
     | {
         url?: string;
