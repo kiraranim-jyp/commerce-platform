@@ -143,7 +143,7 @@ vi.mock("../price-observations", async (importOriginal) => {
 
 const { runDomesticPriceCheck } = await import("../run-domestic-price-check");
 const { priceTierFromLink } = await import("../../../domestic-price-sources/_lib/domestic-product-link");
-const { MATCH_JUDGE_VERSION, describeVerification, readMatchProvenance, verificationPhrase } = await import(
+const { describeVerification, readMatchProvenance, verificationPhrase } = await import(
   "../../../domestic-price-sources/_lib/match-provenance"
 );
 const { productFactsFromShopifyProduct, productFactsFromSmallableHtml } = await import(
@@ -374,7 +374,7 @@ describe("MATCHING-FIX-01 ②: 매칭 근거가 링크 행에 적힌다", () => 
     expect(link.matchedBrand).toBeNull();
   });
 
-  it("판정방법과 판정기 버전이 근거에 남는다 — 판정 값 자체는 그대로다", async () => {
+  it("판정방법과 판정 근거가 행에 남는다 — 판정 값 자체는 그대로다", async () => {
     hoisted.candidatesForSearch = [boboCandidate("B226AC114")];
     await runCheck(smallableProduct("smallable-430701-product.html", "430701"));
 
@@ -385,24 +385,47 @@ describe("MATCHING-FIX-01 ②: 매칭 근거가 링크 행에 적힌다", () => 
     expect(priceTierFromLink(link)).toBe("EXACT");
 
     const provenance = readMatchProvenance(link);
-    expect(provenance.judgeVersion).toBe(MATCH_JUDGE_VERSION);
     // 품번을 맞춰볼 수 없던 쌍이므로 «품번 일치»라고 적으면 거짓말이다.
     expect(provenance.method).toBe("CROSS_SELLER_AXES");
-    expect(provenance.stale).toBe(false);
+    expect(provenance.evidenceRecorded).toBe(true);
     // 판정에 들어간 입력이 전부 읽힌다(나중에 이 행을 다시 추측하지 않게).
+    // 🔴 MATCHING-FIX-01-A 로 «판정기 버전»만 뺐다 — 근거 네 가지는 그대로 있다.
+    expect(link.matchReasons.some((r) => r.includes("입력 텍스트등급="))).toBe(true);
     expect(link.matchReasons.some((r) => r.includes("품번증거=unavailable"))).toBe(true);
     expect(link.matchReasons.some((r) => r.includes("교차판매처=SAME"))).toBe(true);
+    expect(link.matchReasons.some((r) => r.includes("→ STRONG_IDENTIFIER"))).toBe(true);
   });
 
   /**
-   * 🔴 CEO P1 — "DB 판정이 코드보다 4일 낡았다는 사실을 숨기지 마라."
-   * backfill 은 하지 않는다. 대신 판정기 줄이 없는 행은 STALE 로 «보인다».
+   * 🔴 MATCHING-FIX-01-A(CEO 조건, 2026-09-16) — "stale 표시는 «updated_at 기반
+   * 으로만» 판단, 새로운 판정 버전 컬럼을 만들지 않음."
+   *
+   * 되돌리기 전에는 이 자리에서 「판정기 줄이 없는 행 = STALE」을 쟀다. 그 판단은
+   * match_reasons 안의 판정기 «버전 문자열»을 현재 코드 상수와 비교해서 나왔다 —
+   * 컬럼만 안 만들었을 뿐 사실상 판정 버전 필드였다. 재는 대상을 바꾼다:
+   * **시스템이 낡음을 판단하지 않는다**는 것과, 근거 줄의 유무라는 «사실»만
+   * 말한다는 것. 마지막 판정 시각은 링크 행의 updated_at 이 답한다.
    */
-  it("판정기 줄이 없는 과거 행은 STALE 로 구분된다 — 값을 고치지 않는다", () => {
+  it("근거 줄이 없는 과거 행에 대해 «낡았다»는 판단을 하지 않는다", () => {
     const legacy = { matchReasons: ["상품명 유사도 92%", "브랜드 일치"] };
-    expect(readMatchProvenance(legacy).judgeVersion).toBeNull();
-    expect(readMatchProvenance(legacy).method).toBeNull();
-    expect(readMatchProvenance(legacy).stale).toBe(true);
+    const provenance = readMatchProvenance(legacy);
+    expect(provenance.method).toBeNull();
+    // 사실만 말한다 — "근거가 적혀 있지 않다". 낡았다·틀렸다고는 말하지 않는다.
+    expect(provenance.evidenceRecorded).toBe(false);
+    // 🔴 판정 버전으로 stale 을 매기는 필드가 되살아나면 여기서 잡힌다.
+    expect(Object.keys(provenance).sort()).toEqual(["evidenceRecorded", "method"]);
+  });
+
+  it("저장되는 근거에 판정기 버전 문자열이 남지 않는다 — 버전으로 판단할 재료 자체가 없다", async () => {
+    hoisted.candidatesForSearch = [boboCandidate("B226AC114")];
+    await runCheck(smallableProduct("smallable-430701-product.html", "430701"));
+
+    const link = hoisted.storedLinks[0]!;
+    expect(link.matchReasons.some((r) => r.startsWith("판정기: "))).toBe(false);
+    expect(link.matchReasons.some((r) => /MATCHING-FIX-01/.test(r))).toBe(false);
+    // 마지막 판정이 언제였는지는 행의 updated_at 이 그대로 답한다.
+    expect(link.updatedAt).toBeTruthy();
+    expect(Number.isNaN(Date.parse(link.updatedAt))).toBe(false);
   });
 });
 
@@ -419,7 +442,7 @@ describe("MATCHING-FIX-01 ③: verified 가 «사람의 확인»처럼 보이지
     expect(standing.autoDecided).toBe(true);
     expect(standing.identifierBacked).toBe(false); // 품번 근거가 아니었다
     expect(standing.humanConfirmed).toBe(false);
-    expect(standing.humanConfirmedKnown).toBe(true); // 이 판정기가 저장한 행이라 «없다»가 사실이다
+    expect(standing.humanConfirmedKnown).toBe(true); // 근거 줄을 남기는 경로가 저장한 행이라 «없다»가 사실이다
 
     const phrase = verificationPhrase(standing);
     expect(phrase).toContain("엔진 자동 판정");

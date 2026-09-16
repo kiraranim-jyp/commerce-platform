@@ -46,15 +46,18 @@ export async function GET(request: Request) {
         matchedColor: l.matchedColor,
         externalProductId: l.externalProductId,
         /**
-         * 🔴 CEO P1 — "DB 판정이 코드보다 4일 낡았다"를 숨기지 마라. 화면이 그
-         * 사실을 말할 수 있으려면 **언제 판정됐는지**와 **어느 판정기가 했는지**가
-         * 둘 다 필요하다. 값은 고치지 않는다(backfill 금지) — 보이기만 한다.
+         * MATCHING-FIX-01-A(CEO 조건, 2026-09-16) — **마지막 판정이 언제였는지**만
+         * 내보낸다. 이 행의 `updated_at` 은 판정 결과를 upsert 할 때 갱신되므로
+         * 그 값이 곧 마지막 판정 시각이다.
+         *
+         * 🔴 «판정이 낡았다»는 판단은 서버가 하지 않는다. 판정기 버전을 현재
+         * 코드와 비교해 stale 을 계산하던 필드(judgeVersion · judgmentStale)를
+         * 제거했다 — 그 비교는 판정 로직을 안 바꾼 배포에서도 멀쩡한 행을 «낡음»
+         * 으로 만들고, 바꾼 배포에서 버전을 안 올리면 낡은 행을 «멀쩡함»으로
+         * 만든다. 날짜라는 사실만 보내고, 낡았는지는 사람이 판단한다.
          */
         updatedAt: l.updatedAt,
-        judgedAt: l.updatedAt,
-        judgeVersion: provenance.judgeVersion,
         matchMethod: provenance.method,
-        judgmentStale: provenance.stale,
         /**
          * Phase D — 하나였던 `verified` 를 셋으로 갈라서 함께 보낸다. DB 의
          * verified 값은 위에 그대로 있고(바꾸지 않았다), 아래는 그 값이 실제로

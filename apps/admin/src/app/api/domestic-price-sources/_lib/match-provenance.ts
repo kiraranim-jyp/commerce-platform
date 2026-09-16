@@ -18,19 +18,31 @@ import { HUMAN_CONFIRMATION_PREFIX, type DomesticProductLink } from "./domestic-
  * 한 줄**로 남긴다. 사람이 읽어도 뜻이 통하고, 기계가 다시 읽을 수도 있다
  * (readMatchProvenance). 컬럼을 늘리는 것은 판정 «정의» 단계에서 다룬다.
  *
- * ══ 🔴 낡았다는 것이 보여야 한다 ═════════════════════════════════════════════
- * CEO P1: "DB 판정이 코드보다 4일 낡았다는 사실을 숨기지 마라." 일괄 backfill 은
- * 하지 않는다(금지). 대신 **판정기 버전**을 매 저장마다 함께 적는다 — 그 줄이
- * 없는 행은 이 버전 이전의 판정기가 만든 행이고, isStaleJudgment() 가 그것을
- * STALE 로 구분한다. 값을 고쳐서 숨기는 것이 아니라, 낡았다는 사실 자체를
- * 읽을 수 있게 만드는 쪽이다.
+ * ══ 🔴 «낡음»은 이 코드가 판단하지 않는다 ════════════════════════════════════
+ * MATCHING-FIX-01-A(CEO 조건, 2026-09-16) — 되돌린 기록.
+ *
+ * 한때 이 파일에는 판정기 «버전 문자열»이 있었고, readMatchProvenance() 가 그
+ * 값을 현재 버전과 비교해 `stale: true/false` 라는 **판단**을 내놓았다. 컬럼을
+ * 만들지는 않았지만 사실상 판정 버전 필드였고, CEO 가 푸시 조건으로 명시한
+ * "stale 표시는 updated_at 기반으로만" 을 글자로만 피한 것이었다.
+ *
+ * 두 방식은 «실제로 다른 답»을 낸다:
+ *   updated_at   "마지막 판정이 09-10 이다" — 사실만 말한다. 거짓말을 할 수 없다.
+ *   버전 문자열     "이 행은 낡았다" — 판단까지 한다. 판정 로직을 안 바꾼 배포에서
+ *                버전만 올리면 멀쩡한 행이 낡은 것이 되고, 판정을 바꿨는데 버전을
+ *                안 올리면 낡은 행이 멀쩡한 것이 된다 — 사람이 매번 기억해야 한다.
+ *
+ * 그래서 버전 문자열과 그 비교를 **둘 다 제거**했다. 근거 줄(텍스트등급 · 품번증거
+ * · 교차판매처 · 결과)은 CEO 가 요구한 매칭 근거 자체이므로 그대로 남는다 —
+ * 없앤 것은 «버전»과 «버전으로 내리던 판단»뿐이다. 마지막 판정 시각은 링크 행의
+ * `updated_at` 이 이미 들고 있고, 화면은 그 날짜까지만 말한다. "낡았다"는 판단은
+ * 지금 단계에서는 사람이 한다.
+ *
+ * 🔴 다음 사람에게: 여기에 판정 버전 문자열을 다시 넣지 마라. 넣는 순간 위의 두
+ *    가지 거짓말이 같이 돌아온다.
  */
 
-/** 판정기 버전. 🔴 판정 규칙이 바뀔 때마다 올린다 — 이 문자열이 곧 "이 행이 어느
- *  시점 규칙으로 판정됐는가"의 답이다. 값 자체는 판정에 쓰이지 않는다. */
-export const MATCH_JUDGE_VERSION = "2026-09-16/MATCHING-FIX-01";
-
-const JUDGE_PREFIX = "판정기: ";
+const EVIDENCE_PREFIX = "판정근거: ";
 const METHOD_PREFIX = "판정방법: ";
 /** 저장 계층이 «지우면 안 되는 줄»로 알아보는 그 접두사와 같은 값을 쓴다 —
  *  두 곳이 다른 문자열을 쓰면 승인 기록이 조용히 사라진다. */
@@ -110,20 +122,19 @@ export function buildMatchProvenanceReasons(input: MatchProvenanceInput): string
       : "";
   return [
     `${METHOD_PREFIX}${method} — ${METHOD_LABEL[method]}`,
-    `${JUDGE_PREFIX}${MATCH_JUDGE_VERSION} · 입력 텍스트등급=${input.matchLevel} · 품번증거=${input.modelCode}${codes} · 교차판매처=${input.crossSeller ?? "판정없음"} → ${input.truth}(순위 ${MATCH_TRUTH_RANK[input.truth]})`,
+    `${EVIDENCE_PREFIX}입력 텍스트등급=${input.matchLevel} · 품번증거=${input.modelCode}${codes} · 교차판매처=${input.crossSeller ?? "판정없음"} → ${input.truth}(순위 ${MATCH_TRUTH_RANK[input.truth]})`,
   ];
 }
 
 export interface MatchProvenance {
-  /** 이 행을 판정한 판정기 버전. null 이면 이 버전 이전에 저장된 행이다. */
-  judgeVersion: string | null;
   method: MatchMethod | null;
   /**
-   * 🔴 CEO P1 — "DB 판정이 코드보다 낡았다"를 숨기지 않기 위한 단 하나의 값.
-   * true 면 **지금 코드가 내릴 판정과 같다고 보장할 수 없는 행**이다. 값을
-   * 고치지 않는다(backfill 금지) — 낡았다는 사실만 말한다.
+   * 이 행에 근거 줄이 «적혀 있는가». 🔴 판단이 아니라 사실이다 — 행의 내용만
+   * 보고 답하고, 코드 버전과는 비교하지 않는다. false 면 근거를 남기기 전의
+   * 저장 경로가 만든 행이라 근거를 읽을 수 없다는 뜻이고, 그 이상(낡았다·
+   * 틀렸다)은 말하지 않는다. 마지막 판정 시각은 행의 `updated_at` 이 말한다.
    */
-  stale: boolean;
+  evidenceRecorded: boolean;
 }
 
 function findPrefixed(reasons: readonly string[], prefix: string): string | null {
@@ -136,11 +147,9 @@ function findPrefixed(reasons: readonly string[], prefix: string): string | null
 
 export function readMatchProvenance(link: Pick<DomesticProductLink, "matchReasons">): MatchProvenance {
   const reasons = link.matchReasons ?? [];
-  const judgeLine = findPrefixed(reasons, JUDGE_PREFIX);
-  const judgeVersion = judgeLine ? (judgeLine.split(" · ")[0] ?? null) : null;
   const methodRaw = findPrefixed(reasons, METHOD_PREFIX);
   const method = methodRaw ? ((methodRaw.split(" — ")[0] ?? null) as MatchMethod | null) : null;
-  return { judgeVersion, method, stale: judgeVersion !== MATCH_JUDGE_VERSION };
+  return { method, evidenceRecorded: findPrefixed(reasons, EVIDENCE_PREFIX) !== null };
 }
 
 /* ═══════════════════ Phase D — `verified` 의 뜻을 셋으로 가른다 ═══════════════════ */
@@ -185,8 +194,10 @@ export function describeVerification(
       : // 판정방법 줄이 없는(낡은) 행은 예전 화면이 쓰던 근거 문구로만 알 수 있다.
         reasons.some((r) => typeof r === "string" && r.includes("식별자 근거")),
     humanConfirmed: humanLine !== null,
-    // 사람 확인 기록이 있거나, 이 판정기 이후에 저장된 행이면 «없다»는 것도 사실이다.
-    humanConfirmedKnown: humanLine !== null || !provenance.stale,
+    // 사람 확인 기록이 있거나, 근거 줄을 남기는 저장 경로가 만든 행이면 «없다»도
+    // 사실이다(그 경로부터 사람 승인은 HUMAN_PREFIX 줄로 따로 남는다). 🔴 행에
+    // 무엇이 적혀 있는지만 보고 답한다 — 코드 버전과 비교하지 않는다.
+    humanConfirmedKnown: humanLine !== null || provenance.evidenceRecorded,
   };
 }
 

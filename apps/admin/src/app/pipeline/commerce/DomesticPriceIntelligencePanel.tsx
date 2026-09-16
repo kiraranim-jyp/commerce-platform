@@ -288,11 +288,10 @@ export interface DomesticCandidate {
   matchedModelName?: string | null;
   matchedColor?: string | null;
   externalProductId?: string | null;
-  /** 🔴 CEO P1 — 이 판정이 «언제» 내려졌고 «어느 판정기»가 했는지. judgmentStale 이
-   *  true 면 지금 코드가 내릴 판정과 같다고 보장할 수 없는 행이다(backfill 없음). */
+  /** MATCHING-FIX-01-A(CEO 조건, 2026-09-16) — 이 판정이 «언제» 내려졌는지.
+   *  링크 행의 updated_at 그대로다. 🔴 «판정이 낡음»이라는 시스템 판단은 화면도
+   *  서버도 하지 않는다 — 날짜라는 사실만 말하고, 낡았는지는 사람이 판단한다. */
   updatedAt?: string;
-  judgeVersion?: string | null;
-  judgmentStale?: boolean;
   /** Phase D — 하나였던 verified 를 셋으로 가른 파생값. 서버가 계산해서 보낸다. */
   verification?: {
     autoDecided: boolean;
@@ -343,22 +342,21 @@ const CANDIDATE_LABEL: Record<DomesticCandidate["matchType"], { icon: string; te
  * 않는다. */
 /**
  * MATCHING-FIX-01 Phase D(CEO 지시, 2026-09-16) — 이 후보의 «판정 출처»를 말하는
- * 한 줄. 🔴 판정을 하지 않는다 — 서버가 이미 보낸 verification/judgmentStale 을
- * 문장으로 옮기기만 한다. 서버가 그 값을 안 보낸 경우(옛 응답)에도 «사람이
- * 확인했다»고는 절대 말하지 않는다.
+ * 한 줄. 🔴 판정을 하지 않는다 — 서버가 이미 보낸 verification 을 문장으로 옮기고,
+ * 마지막 판정 시각(updated_at)을 날짜로 적기만 한다. 서버가 그 값을 안 보낸
+ * 경우(옛 응답)에도 «사람이 확인했다»고는 절대 말하지 않는다.
+ *
+ * MATCHING-FIX-01-A(CEO 조건, 2026-09-16) — 여기서 «판정이 낡음»이라고 말하던
+ * 줄을 지웠다. 그 문장은 판정기 버전 비교(judgmentStale)에서 나왔고, 판정 로직이
+ * 그대로인 배포에서도 멀쩡한 행을 낡은 것으로 만들 수 있었다. 화면은 «마지막
+ * 판정 2026-09-10» 까지만 말한다 — 그게 낡은 것인지는 사람이 판단한다.
  */
 export function candidateProvenanceNote(c: DomesticCandidate): string {
   const parts: string[] = [];
   if (c.verificationLabel) parts.push(c.verificationLabel);
   else if (c.verified) parts.push("엔진 자동 판정 · 사람 확인 여부 기록 없음");
-  if (c.judgmentStale) {
-    // 🔴 CEO P1 — 낡았다는 사실을 숨기지 않는다. 값을 고치지 않고 말로만 알린다.
-    parts.push(
-      c.updatedAt
-        ? `판정이 낡음 — 마지막 판정 ${c.updatedAt.slice(0, 10)}, 그 뒤 판정기가 바뀜`
-        : "판정이 낡음 — 지금 판정기 이전에 저장된 행",
-    );
-  }
+  // 사실 한 줄. 날짜가 없으면 아무 말도 하지 않는다(모르는 것을 지어내지 않는다).
+  if (c.updatedAt) parts.push(`마지막 판정 ${c.updatedAt.slice(0, 10)}`);
   return parts.join(" · ");
 }
 

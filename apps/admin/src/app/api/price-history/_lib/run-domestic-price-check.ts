@@ -512,11 +512,14 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
         ? [...evidenceMatchReasons, `텍스트 유사도 상위 ${skippedConflictCount}건은 modelCode 충돌로 제외하고 이 후보를 선택함`]
         : evidenceMatchReasons;
     /**
-     * MATCHING-FIX-01 Phase C — 판정에 실제로 들어간 입력을 «판정방법»·«판정기»
+     * MATCHING-FIX-01 Phase C — 판정에 실제로 들어간 입력을 «판정방법»·«판정근거»
      * 두 줄로 남긴다. 🔴 판정에는 한 글자도 쓰이지 않는다(아래 upsert 의
      * matchType/matchConfidence/verified/matchTruth 는 전부 이 줄들보다 먼저
-     * 확정돼 있다). 판정기 버전이 함께 남으므로, 이 줄이 없는 과거 행은
-     * readMatchProvenance().stale 로 «낡았다»고 구분된다 — backfill 없이.
+     * 확정돼 있다).
+     *
+     * MATCHING-FIX-01-A(CEO 조건) — 이 줄들에 함께 적히던 «판정기 버전»은 뺐다.
+     * 마지막 판정이 언제였는지는 이 행의 updated_at 이 말하고, 그게 낡은 것인지는
+     * 사람이 판단한다(match-provenance.ts 머리말 참고).
      */
     const finalMatchReasons = [
       ...selectionReasons,
