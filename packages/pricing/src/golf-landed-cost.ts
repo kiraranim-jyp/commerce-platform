@@ -8,6 +8,8 @@ import {
 import { resolveCategoryCostPolicy, type CategoryCostPolicy } from "./category-cost-policy";
 import {
   estimateEmsJapanToKorea,
+  hasConfirmedWeightBasedShippingRates,
+  normalizeOriginCountry,
   resolveChargeableWeight,
   type ChargeableWeight,
   type EmsEstimate,
@@ -68,8 +70,14 @@ export interface GolfLandedCostInput {
   /** CATEGORY_PROFILES의 id. 기본 "GOLF". */
   categoryProfileId?: string;
   /**
-   * 구매자 부담 참고정보의 판단 축(buyer-import-charge.ts). 모르면 넘기지
-   * 않는다 — 그 축이 «확인 필요»로 남는 것이 정확한 상태다.
+   * 🔴 GOLF-04 STEP 1 — **두 곳이 이 값을 읽는다.**
+   *   ① 구매자 부담 참고정보의 판단 축(buyer-import-charge.ts)
+   *   ② **국제배송비를 계산해도 되는가** — 우리가 가진 중량기반 요금표는
+   *      일본발 하나뿐이라(EMS_RATE_TABLE_ORIGIN_COUNTRY), 출발국이 일본이
+   *      아니거나 미상이면 배송비는 «확인 필요»로 남는다.
+   *
+   * 모르면 넘기지 않는다 — 그 축이 «확인 필요»로 남는 것이 정확한 상태다.
+   * 넘기지 않았다고 일본으로 가정하지 않는다.
    */
   originCountry?: string | null;
   deliveryTerms?: DeliveryTerms | null;
@@ -127,14 +135,35 @@ export function computeGolfLandedCost(input: GolfLandedCostInput): GolfLandedCos
   });
   notes.push(weight.note);
 
-  // ③ 국제배송비. 셀러가 아는 실비 > EMS 구간 추정 > 모름.
+  // ③ 국제배송비. 셀러가 아는 실비 > (출발국이 일본일 때만) EMS 구간 추정 > 모름.
+  //
+  // 🔴 GOLF-04 STEP 1 — 여기에 «출발국» 문이 하나 생겼다. 예전에는
+  // policy.weightBasedShipping 만 보고 estimateEmsJapanToKorea 를 불렀고, 그
+  // 함수는 이름 그대로 **일본→한국** 요금표 하나뿐이다. 그래서 Vice(US) ·
+  // Titleist(NZ) · Mizuno(DE) 가격을 넣으면 일본 요금이 조용히 붙었다
+  // (실측: US 상품에 ₩31,280 이 붙었다 — golf04-shipping-origin-gate.test.ts).
+  //
+  // 출발국을 «모르는» 경우도 계산하지 않는다. 통화가 JPY 라고 출발국이 일본인
+  // 것은 아니고(일본 상품을 파는 배대지·병행수입 판매처가 있다), 모르는 것을
+  // 일본으로 가정하는 순간 이 버그가 기본값으로 되돌아온다.
+  const originCountry = normalizeOriginCountry(input.originCountry);
   let internationalShippingKrw: number | null = null;
   let shippingStatus: "actual" | "estimated" | "unknown" = "unknown";
   let emsEstimate: EmsEstimate | null = null;
   if (input.knownInternationalShippingKrw != null && input.knownInternationalShippingKrw >= 0) {
+    // 셀러가 실제로 치른 금액은 출발국·배송경로와 무관하게 언제나 우선한다.
+    // 배대지(포워딩) 경로의 «현지 판매처→배대지 + 배대지→한국» 합계도 이 문으로
+    // 들어온다 — 그래서 배대지를 위한 새 계산기가 필요하지 않다.
     internationalShippingKrw = input.knownInternationalShippingKrw;
     shippingStatus = "actual";
     notes.push(`국제배송비는 판매자가 입력한 실제 금액입니다`);
+  } else if (policy.weightBasedShipping && !hasConfirmedWeightBasedShippingRates(originCountry)) {
+    // 🔴 임의의 배송비를 붙이지 않는다. null 이 그대로 «비용 확인 필요» 로 흐른다.
+    notes.push(
+      originCountry == null
+        ? "출발국이 확인되지 않아 국제배송비를 계산하지 못했습니다 — 어느 나라 요금표를 적용할지 정할 수 없습니다"
+        : `출발국 ${originCountry}→한국 국제배송비 요금표를 확인하지 못해 계산하지 못했습니다 — 다른 나라 요금을 대신 적용하지 않습니다`,
+    );
   } else if (policy.weightBasedShipping) {
     emsEstimate = estimateEmsJapanToKorea(weight.chargeableWeightKg, input.liveRates);
     if (emsEstimate) {

@@ -155,6 +155,9 @@ describe("GOLF-03 — 다섯 축 동일상품 비교", () => {
       sourcePriceCurrency: "JPY",
       liveRates: RATES_2026_09_15,
       actualWeightKg: DOZEN_BALL_MIN_WEIGHT_KG,
+      // GOLF-04 STEP 1 — 이 축의 상품은 전부 일본 판매처다. 출발국을 적지 않으면
+      // 배송비가 «확인 필요»로 나가고, 그건 이 테스트가 재려는 값이 아니다.
+      originCountry: "JP",
     }).internationalShippingKrw as number;
 
     const domesticSpread = AXES.filter((a) => a.domesticRetailKrw != null).map((a) =>

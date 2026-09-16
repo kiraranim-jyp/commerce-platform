@@ -98,6 +98,11 @@ describe("GOLF-02-FEASIBILITY — 경량 골프용품 실측 원가", () => {
           sourcePriceCurrency: "JPY",
           liveRates: RATES_2026_09_15,
           actualWeightKg: kg,
+          // GOLF-04 STEP 1 — 출발국을 명시한다. MEASURED 는 전부 일본 판매처
+          // (kakaku.com · dunlop.co.jp)라 숫자는 그대로지만, 이제 출발국을 적지
+          // 않으면 배송비가 «확인 필요»가 된다 — 통화가 JPY 라는 사실만으로
+          // 일본발이라고 가정하지 않기 때문이다.
+          originCountry: "JP",
         }).internationalShippingKrw,
     );
     expect(new Set(shipping).size).toBe(1);
@@ -134,6 +139,7 @@ describe("GOLF-02-FEASIBILITY — 경량 골프용품 실측 원가", () => {
         sourcePriceCurrency: "JPY",
         liveRates: RATES_2026_09_15,
         actualWeightKg: m.actualWeightKg,
+        originCountry: "JP",
       });
       return (cost.productCostKrw as number) >= m.domesticLowestKrw + m.domesticShippingKrw;
     });

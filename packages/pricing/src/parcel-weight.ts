@@ -131,6 +131,34 @@ export function resolveChargeableWeight(input: ChargeableWeightInput): Chargeabl
 
 /* ─────────────────────────── EMS 일본 → 한국 요금 ─────────────────────────── */
 
+/**
+ * 🔴 GOLF-04 STEP 1 — **이 요금표가 성립하는 출발국.**
+ *
+ * 아래 EMS_JAPAN_TO_KOREA_BRACKETS 는 일본우편 EMS 의 «일본 → 한국» 요금이다.
+ * 함수 이름(estimateEmsJapanToKorea)에 일본이 적혀 있는데도 호출부는 출발국을
+ * 보지 않았고, 그래서 미국·독일·뉴질랜드 판매처 가격에 일본 요금이 조용히
+ * 붙었다. 이 상수는 그 조건을 **데이터로** 꺼내 둔 것이다 — 호출부가
+ * "이 표를 써도 되는 출발국인가" 를 묻고 갈 수 있게.
+ *
+ * 다른 나라 요금표를 확인하기 전까지 이 값은 "JP" 하나다. 이 상수가 늘어나는
+ * 날은 그 나라의 실제 공개 요금표를 읽은 날이어야 한다 — 국가를 추가하는 것과
+ * 요금을 지어내는 것은 같은 일이 된다.
+ */
+export const EMS_RATE_TABLE_ORIGIN_COUNTRY = "JP";
+
+/** 국가코드 비교를 한 곳에서만 한다(대소문자·공백을 호출부마다 다르게 다루지 않기 위해). */
+export function normalizeOriginCountry(country: string | null | undefined): string | null {
+  return country?.trim().toUpperCase() || null;
+}
+
+/**
+ * 이 출발국에 «확인된» 중량기반 국제배송 요금표가 있는가.
+ * false 면 배송비를 계산하지 않는다 — 다른 나라 요금으로 대신하지 않는다.
+ */
+export function hasConfirmedWeightBasedShippingRates(country: string | null | undefined): boolean {
+  return normalizeOriginCountry(country) === EMS_RATE_TABLE_ORIGIN_COUNTRY;
+}
+
 export interface EmsRateBracket {
   /** 이 중량(kg) 이하면 이 요금. */
   uptoKg: number;

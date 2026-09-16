@@ -409,6 +409,9 @@ describe("GOLF-01 축B ⑤: computeGolfLandedCost가 상품가 → 중량 → �
       sourcePriceCurrency: "JPY",
       liveRates: JP_RATES,
       dimensionsCm: { lengthCm: 125, widthCm: 20, heightCm: 20 },
+      // GOLF-04 STEP 1 — CEO 실측 예시는 일본 판매처다. 출발국을 적어야 일본
+      // EMS 요금표가 적용된다(적지 않으면 배송비가 «확인 필요»로 나간다).
+      originCountry: "JP",
     });
     expect(result.policy.id).toBe("GOLF");
     // ① 상품가 ¥107,800 × 9.2 = ₩991,760
@@ -443,6 +446,9 @@ describe("GOLF-01 축B ⑤: computeGolfLandedCost가 상품가 → 중량 → �
       sourcePriceCurrency: "JPY",
       liveRates: JP_RATES,
       dimensionsCm: { lengthCm: 125, widthCm: 20, heightCm: 20 },
+      // GOLF-04 STEP 1 — CEO 실측 예시는 일본 판매처다. 출발국을 적어야 일본
+      // EMS 요금표가 적용된다(적지 않으면 배송비가 «확인 필요»로 나간다).
+      originCountry: "JP",
       sellerConfirmedDutyRatePercent: GOLF_CLUB_RCEP_JAPAN_DUTY_RATE_2026.percent!,
     });
     expect(result.buyerImportCharge.importTax?.resolved).toBe(true);
@@ -471,6 +477,9 @@ describe("GOLF-01 축B ⑤: computeGolfLandedCost가 상품가 → 중량 → �
       sourcePriceCurrency: "JPY",
       liveRates: JP_RATES,
       dimensionsCm: { lengthCm: 125, widthCm: 20, heightCm: 20 },
+      // GOLF-04 STEP 1 — CEO 실측 예시는 일본 판매처다. 출발국을 적어야 일본
+      // EMS 요금표가 적용된다(적지 않으면 배송비가 «확인 필요»로 나간다).
+      originCountry: "JP",
       knownInternationalShippingKrw: 45000,
     });
     expect(result.internationalShippingKrw).toBe(45000);
@@ -483,6 +492,10 @@ describe("GOLF-01 축B ⑤: computeGolfLandedCost가 상품가 → 중량 → �
       sourcePriceAmount: 107800,
       sourcePriceCurrency: "JPY",
       liveRates: JP_RATES,
+      // 🔴 출발국은 «안다»(일본). 그래야 아래 null들이 «치수를 몰라서»라는 이 테스트의
+      //    주장 그대로가 된다 — 출발국까지 비우면 GOLF-04 의 출발국 문에 먼저 걸려서
+      //    같은 null 이 다른 이유로 나오고, 테스트가 재려던 것을 재지 못한다.
+      originCountry: "JP",
     });
     expect(result.weight.chargeableWeightKg).toBeNull();
     expect(result.internationalShippingKrw).toBeNull();
