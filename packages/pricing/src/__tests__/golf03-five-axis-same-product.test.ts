@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { computeGolfLandedCost } from "../golf-landed-cost";
 
@@ -165,10 +166,26 @@ describe("GOLF-03 — 다섯 축 동일상품 비교", () => {
       // 셀러에게 가장 유리한 가정 = 해외 축 중 «가장 싼» 매입가.
       const bestCost = Math.min(...overseas.map((jpy) => sellerCostKrw(jpy, a.actualWeightKg)));
       // 셀러에게 가장 유리한 가정 = 국내 축 중 «가장 비싼» 판매가.
+      //
+      // 🔴 GOLF-04B — 배송비가 null 인 칸은 «실질가를 만들지 않는다».
+      //
+      // 여기 있던 `?? 0` 이 이 저장소에서 «관측가 / 조달가능가 / 소비자 구매가» 를
+      // 섞은 유일한 자리였다. 던롭 공식몰의 「고객직접선택」은 파서가 못 읽은 값이
+      // 아니라 «주문 단계에서 정해지는 값» 이고, 그걸 0 으로 메우면 ₩59,000 이
+      // 소비자가 실제로 내는 금액인 것처럼 계산에 들어간다. 그렇게 나온 숫자가
+      // GOLF-03 보고의 «총이익 +₩1,567» 이었다 — 배송비를 0 으로 놓고, 원가는
+      // 조달 «불가능한» 관측최저가(kakaku ¥4,950)로 잡은 값이다. 두 군데가 동시에
+      // 틀렸고, 조달 가능한 ¥6,930 으로 다시 세면 −₩15,794 다. 부호가 뒤집힌 적이 없다.
+      //
+      // 그래서 null 은 «계산에서 빠진다». 0 도 12,000 도 아니다 — 실질가를 알 수
+      // 없는 축은 «가장 비싼 판매가» 후보가 될 자격이 없다.
+      const domesticRealPriceKrw =
+        a.domesticRetailKrw != null && a.domesticRetailShippingKrw != null
+          ? a.domesticRetailKrw + a.domesticRetailShippingKrw
+          : null;
       const bestDomestic = Math.max(
         a.domesticDanawaKrw + a.domesticDanawaShippingKrw,
-        // 🔴 배송비가 null 인 칸은 0 으로 메우지 않는다 — 상품가만 더한다.
-        a.domesticRetailKrw != null ? a.domesticRetailKrw + (a.domesticRetailShippingKrw ?? 0) : 0,
+        ...(domesticRealPriceKrw != null ? [domesticRealPriceKrw] : []),
       );
       const grossProfit = bestDomestic - bestCost;
       expect(grossProfit, `${a.label}: 매출총이익이 수수료를 넘는다`).toBeLessThan(bestDomestic * PLATFORM_FEE_RATE);
@@ -211,5 +228,30 @@ describe("GOLF-03 — 다섯 축 동일상품 비교", () => {
     });
     expect(Object.keys(cost.components).sort()).toEqual(["internationalShippingKrw", "sourceProductPriceKrw"]);
     expect(cost.buyerImportCharge).toBeTruthy();
+  });
+
+  /**
+   * 🔴 GOLF-04B 재발 방지 — «?? 0» 이 다시 들어오면 여기서 먼저 깨진다.
+   *
+   * 이 검사가 필요한 이유는 위 테스트가 «통과» 하기 때문이다. `?? 0` 이 있어도
+   * 결론(«후보 아님»)은 그대로라서 아무도 눈치채지 못했다. 바뀐 것은 결론이
+   * 아니라 «그 결론을 떠받치는 숫자» 였고, 그 숫자가 보고서로 나가 두 번
+   * 잘못 읽혔다. 그래서 결론이 아니라 «데이터 취급 방식» 자체를 잰다.
+   */
+  it("🔴 배송비가 미상인 국내축은 «실질 구매가» 후보가 되지 않는다 — «?? 0» 재발 방지", () => {
+    const unknownShipping = AXES.filter(
+      (a) => a.domesticRetailKrw != null && a.domesticRetailShippingKrw == null,
+    );
+    expect(
+      unknownShipping.length,
+      "배송비가 미상인 축이 하나도 없으면 이 검사가 무의미하다",
+    ).toBeGreaterThan(0);
+
+    // 이 파일이 자기 자신을 읽는다. 0·12,000 같은 «메우는 값» 이 배송비 칸에
+    // 다시 붙는 순간을 잡으려면 동작만으로는 부족하다 — 메운 값이 결론을
+    // 바꾸지 않으면 동작 검사는 계속 통과하기 때문이다.
+    const source = readFileSync(new URL(import.meta.url), "utf8");
+    const filled = source.match(/domesticRetailShippingKrw\s*\?\?\s*[0-9]/g);
+    expect(filled, `배송비 null 을 상수로 메운 자리가 있다: ${JSON.stringify(filled)}`).toBeNull();
   });
 });
