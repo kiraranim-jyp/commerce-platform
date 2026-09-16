@@ -8,6 +8,8 @@
  * 027_price_observations.sql의 컬럼과 1:1로 대응한다).
  */
 
+import type { ShippingPolicyStatus } from "./shipping-policy";
+
 /** PART H — 특정 소스 하나를 식별한다. 하드코딩된 enum이 아니라 문자열이지만
  * (마이그레이션 주석과 동일한 이유 — 소스 추가 시 스키마 변경 불필요), 실제
  * 코드에서 만들 수 있는 값은 이 상수로만 제한한다("임의 소스명 방지").
@@ -66,6 +68,23 @@ export interface PriceObservationRecord {
    */
   marketCode: string | null;
   marketCountry: string | null;
+  /**
+   * DOMESTIC-SHIPPING-02 1단계(CEO 지시, 2026-09-16) — 마이그레이션 054.
+   * 「배송비를 모른다」와 「배송비가 무료다」는 같은 데이터가 아니다.
+   *
+   *  shippingPolicyStatus : 다섯 값 중 하나(shipping-policy.ts) 또는 null.
+   *                         🔴 null 은 UNREAD 가 «아니다» — null 은 "상태
+   *                         데이터가 없다", UNREAD 는 "읽어봤는데 못 찾았다"는
+   *                         주장이다. 054 는 기존 행을 backfill 하지 않으므로
+   *                         그 행들은 전부 null 로 남는다.
+   *  shippingPolicyNote   : 판매처 «원문 그대로». 우리가 해석한 값을 적지
+   *                         않는다(046 market_code 원칙과 같다).
+   *
+   * 🔴 이 두 필드는 아직 어떤 가격 판정에도 참여하지 않는다. lowestPriceKrw 의
+   *    의미도, 국내 최저가 판정도, 배송비 합산도 이번 단계에서 바뀌지 않는다.
+   */
+  shippingPolicyStatus: ShippingPolicyStatus | null;
+  shippingPolicyNote: string | null;
   checkedAt: string;
 }
 

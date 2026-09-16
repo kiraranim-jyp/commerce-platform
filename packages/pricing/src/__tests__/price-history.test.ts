@@ -30,6 +30,10 @@ function record(overrides: Partial<PriceObservationRecord>): PriceObservationRec
     // backfill하지 않는다) — 이 기본값이 곧 "예전 동작 그대로"의 기준선이다.
     marketCode: null,
     marketCountry: null,
+    // DOMESTIC-SHIPPING-02 — 054도 backfill하지 않는다. 기존 행은 전부 null이고,
+    // 그 null은 "상태 데이터 없음"이지 UNREAD도 FREE도 아니다.
+    shippingPolicyStatus: null,
+    shippingPolicyNote: null,
     checkedAt: "2026-08-23T01:00:00.000Z",
     ...overrides,
   };

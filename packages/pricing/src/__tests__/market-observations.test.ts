@@ -28,6 +28,8 @@ function record(over: Partial<PriceObservationRecord>): PriceObservationRecord {
     soldOut: null,
     marketCode: "en-de",
     marketCountry: "ES",
+    shippingPolicyStatus: null,
+    shippingPolicyNote: null,
     checkedAt: "2026-09-11T02:00:00.000Z",
     ...over,
   };

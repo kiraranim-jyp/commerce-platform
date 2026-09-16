@@ -168,6 +168,8 @@ function toRecords(rows: Array<Record<string, unknown>>): PriceObservationRecord
     soldOut: (row.sold_out as boolean | null) ?? null,
     marketCode: (row.market_code as string | null) ?? null,
     marketCountry: (row.market_country as string | null) ?? null,
+    shippingPolicyStatus: (row.shipping_policy_status as PriceObservationRecord["shippingPolicyStatus"]) ?? null,
+    shippingPolicyNote: (row.shipping_policy_note as string | null) ?? null,
     checkedAt: String(row.checked_at),
   }));
 }

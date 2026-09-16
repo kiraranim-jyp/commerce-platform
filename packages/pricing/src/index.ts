@@ -26,3 +26,7 @@ export * from "./category-cost-policy";
 // 모든 카테고리 공통의 «예상 구매자 부담» 참고정보다.
 export * from "./buyer-import-charge";
 export * from "./golf-landed-cost";
+// DOMESTIC-SHIPPING-02 1단계(CEO 지시, 2026-09-16) — 「배송비를 모른다」와
+// 「배송비가 무료다」를 구분해 «적을» 수 있게 하는 어휘. 계산에는 아직 참여하지
+// 않는다(2단계) — 이 단계는 저장 구조와 그 의미까지다.
+export * from "./shipping-policy";

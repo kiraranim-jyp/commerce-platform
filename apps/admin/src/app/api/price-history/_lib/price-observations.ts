@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import type { PriceObservationRecord, PriceObservationSource } from "@commerce/pricing";
+import type { PriceObservationRecord, PriceObservationSource, ShippingPolicyStatus } from "@commerce/pricing";
+import { isShippingPolicyStatus, resolveShippingPolicy } from "@commerce/pricing";
 
 /**
  * N-4.01 Part E/I(대표님 지시) — price_observations(마이그레이션
@@ -36,7 +37,24 @@ interface PriceObservationRow {
    * 없으면 null, 즉 "시장 미확인"이다(기존 행은 전부 null이고 backfill하지 않는다). */
   market_code?: string | null;
   market_country?: string | null;
+  /** DOMESTIC-SHIPPING-02 1단계 — 마이그레이션 054에서 추가. source_ref_id/038과
+   * 같은 이유로 optional(스키마 캐시 지연 세션 크래시 방지). 없으면 null이고,
+   * 🔴 그 null은 UNREAD가 아니라 "상태 데이터 없음"이다 — 054는 기존 행을
+   * backfill하지 않는다. */
+  shipping_policy_status?: string | null;
+  shipping_policy_note?: string | null;
   checked_at: string;
+}
+
+/** DB에는 054의 CHECK 제약이 있지만, 코드 쪽도 알 수 없는 문자열을 상태로
+ * 승격시키지 않는다(제약이 아직 없는 세션·롤백 직후를 위한 두 번째 문).
+ * 알 수 없는 값은 null로 떨어뜨리되 조용히 넘기지 않는다 — 조용히 null이 되면
+ * "어휘가 어긋났다"는 사실 자체가 사라진다. */
+function toShippingPolicyStatus(value: unknown): ShippingPolicyStatus | null {
+  if (value == null) return null;
+  if (isShippingPolicyStatus(value)) return value;
+  console.warn("[price-observations] 알 수 없는 배송비 상태값을 무시합니다:", value);
+  return null;
 }
 
 function toRecord(row: PriceObservationRow): PriceObservationRecord {
@@ -60,6 +78,10 @@ function toRecord(row: PriceObservationRow): PriceObservationRecord {
     // ""로 둔다. 어떤 시장/국가로 바꿔 적는 일은 여기서도 하지 않는다.
     marketCode: row.market_code ?? null,
     marketCountry: row.market_country ?? null,
+    // 저장된 배송비 «상태»를 해석 없이 그대로 올린다. null을 UNREAD로도,
+    // FREE로도, 0원으로도 바꿔 적지 않는다(CEO §②).
+    shippingPolicyStatus: toShippingPolicyStatus(row.shipping_policy_status),
+    shippingPolicyNote: row.shipping_policy_note ?? null,
     checkedAt: row.checked_at,
   };
 }
@@ -85,7 +107,17 @@ export interface NewPriceObservation {
   /** N-4.18-Q3 PART E-1(대표님 지시, 2026-08-27) — 완전 품절이라 가격 자체를
    * 못 찾았을 때(soldOut===true) null. 0원을 지어내지 않는다. */
   priceAmount: number | null;
+  /** 🔴 DOMESTIC-SHIPPING-02 — 이 칸을 채울 수 있는 것은 shippingPolicyStatus가
+   * FREE(=0) 또는 FLAT(=N)일 때뿐이다. 그 밖의 상태나 상태 없음(null)에 숫자를
+   * 넣으면 recordPriceObservations가 «저장 전에» 거절한다 — 틀린 배송비 한 칸이
+   * 들어가는 것보다 그 배치가 실패하는 편이 낫다(45885bf `?? 0` 회귀). */
   shippingCostAmount?: number | null;
+  /** DOMESTIC-SHIPPING-02 1단계(CEO 지시, 2026-09-16) — 마이그레이션 054.
+   *  shippingPolicyStatus : FREE · FLAT · CONDITIONAL_FREE · ORDER_TIME · UNREAD
+   *                         또는 null(= 상태 데이터 없음, UNREAD와 다르다).
+   *  shippingPolicyNote   : 판매처 원문 그대로(해석 금지). */
+  shippingPolicyStatus?: ShippingPolicyStatus | null;
+  shippingPolicyNote?: string | null;
   taxAmount?: number | null;
   exchangeRate?: number | null;
   priceKrw: number | null;
@@ -110,10 +142,30 @@ function toBaseRow(o: NewPriceObservation) {
     market_country: o.marketCountry ?? null,
     currency: o.currency,
     price_amount: o.priceAmount,
+    // DOMESTIC-SHIPPING-02 — 이 값은 recordPriceObservations가 resolveShippingPolicy로
+    // 이미 검증한 뒤에만 여기 도달한다(FREE는 0으로 정규화됨).
     shipping_cost_amount: o.shippingCostAmount ?? null,
     tax_amount: o.taxAmount ?? null,
     exchange_rate: o.exchangeRate ?? null,
     price_krw: o.priceKrw,
+  };
+}
+
+/** 038이 추가한 3컬럼. 마이그레이션 반영 전 세션에서는 이 층이 통째로 벗겨진다. */
+function to038Columns(o: NewPriceObservation) {
+  return {
+    sale_price_krw: o.salePriceKrw ?? null,
+    original_price_krw: o.originalPriceKrw ?? null,
+    sold_out: o.soldOut ?? null,
+  };
+}
+
+/** 054가 추가한 2컬럼. 위와 같은 이유로 «독립된 층»이다 — 054만 아직 반영이
+ * 안 된 세션에서 038의 값(할인가/품절)까지 같이 버리지 않기 위해서다. */
+function to054Columns(o: NewPriceObservation) {
+  return {
+    shipping_policy_status: o.shippingPolicyStatus ?? null,
+    shipping_policy_note: o.shippingPolicyNote ?? null,
   };
 }
 
@@ -129,6 +181,32 @@ function isMissingColumnError(message: string): boolean {
   return /schema cache|column .* does not exist|could not find the .* column/i.test(message);
 }
 
+/**
+ * DOMESTIC-SHIPPING-02 ③(CEO 지시, 2026-09-16: "이거 빠뜨리면 프로덕션이 멈춘다")
+ * — 054의 두 컬럼을 «독립된 폴백 층»으로 둔다.
+ *
+ * 038 때 실제로 난 회귀: 새 컬럼을 insert row에 넣었는데 마이그레이션이 아직
+ * 반영되지 않은 세션에서 "column not found"가 나면서 RULII뿐 아니라 «모든
+ * 소스의 가격 저장»이 통째로 막혔다(2026-08-25 프로덕션 실측). 054에서 같은
+ * 일이 다시 나지 않게 하는 것이 이 배열이다.
+ *
+ * 🔴 왜 038과 054를 «한 층»으로 합치지 않는가 — 합치면 054만 미반영인 세션에서
+ *    폴백이 038의 값(할인가·정가·품절)까지 같이 버린다. 그건 알고 있던 사실을
+ *    스키마 지연 때문에 잃는 것이고, "모르는 것은 null" 원칙과 반대로 "아는
+ *    것을 null로 만드는" 일이다. 그래서 넓은 것부터 좁은 것으로 한 층씩 벗는다:
+ *
+ *      ① base + 038 + 054   (054까지 반영된 정상 세션)
+ *      ② base + 038         (054 미반영 — 배송비 상태만 비어 있음)
+ *      ③ base               (038도 미반영 — 038 당시의 동작과 완전히 동일)
+ *
+ * 마지막 층은 027/031의 컬럼만 쓰므로 이보다 더 벗을 것이 없다.
+ */
+const OBSERVATION_ROW_LAYERS: ReadonlyArray<(o: NewPriceObservation) => Record<string, unknown>> = [
+  (o) => ({ ...toBaseRow(o), ...to038Columns(o), ...to054Columns(o) }),
+  (o) => ({ ...toBaseRow(o), ...to038Columns(o) }),
+  (o) => ({ ...toBaseRow(o) }),
+];
+
 export async function recordPriceObservations(
   observations: NewPriceObservation[],
 ): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
@@ -136,25 +214,40 @@ export async function recordPriceObservations(
   const supabase = getSupabaseAdmin();
   if (!supabase) return { ok: false, error: "Supabase가 설정되어 있지 않습니다." };
 
-  const { error, count } = await supabase
-    .from("price_observations")
-    .insert(
-      observations.map((o) => ({
-        ...toBaseRow(o),
-        sale_price_krw: o.salePriceKrw ?? null,
-        original_price_krw: o.originalPriceKrw ?? null,
-        sold_out: o.soldOut ?? null,
-      })),
-      { count: "exact" },
-    );
-  if (!error) return { ok: true, count: count ?? observations.length };
-  if (!isMissingColumnError(error.message)) return { ok: false, error: error.message };
+  /**
+   * 🔴 DOMESTIC-SHIPPING-02 ② — 저장 «전에» 상태와 금액의 모순을 막는다.
+   * 여기서 막지 않으면 "UNREAD인데 배송비 0원" 같은 행이 DB에 들어가고, 그
+   * 0원은 다음 단계에서 «확인된 무료배송»과 구분되지 않는다. 그 구분이
+   * 이번 작업의 전부이므로, 어기는 배치는 한 행도 쓰지 않고 거절한다.
+   * (오늘 shippingCostAmount를 넘기는 호출부는 0곳이라 기존 동작은 그대로다.)
+   */
+  const normalized: NewPriceObservation[] = [];
+  for (const [index, o] of observations.entries()) {
+    const policy = resolveShippingPolicy({
+      status: o.shippingPolicyStatus,
+      amount: o.shippingCostAmount,
+      note: o.shippingPolicyNote,
+    });
+    if (!policy.ok) return { ok: false, error: `관측 #${index + 1} 배송비 정책이 올바르지 않습니다 — ${policy.error}` };
+    normalized.push({
+      ...o,
+      shippingPolicyStatus: policy.value.status,
+      shippingCostAmount: policy.value.amount,
+      shippingPolicyNote: policy.value.note,
+    });
+  }
 
-  const retry = await supabase
-    .from("price_observations")
-    .insert(observations.map(toBaseRow), { count: "exact" });
-  if (retry.error) return { ok: false, error: retry.error.message };
-  return { ok: true, count: retry.count ?? observations.length };
+  let lastError = "";
+  for (const buildRow of OBSERVATION_ROW_LAYERS) {
+    const { error, count } = await supabase
+      .from("price_observations")
+      .insert(normalized.map(buildRow), { count: "exact" });
+    if (!error) return { ok: true, count: count ?? normalized.length };
+    lastError = error.message;
+    // 컬럼 부재가 아닌 진짜 실패(FK 위반·RLS 등)는 층을 벗어도 해결되지 않는다.
+    if (!isMissingColumnError(error.message)) return { ok: false, error: error.message };
+  }
+  return { ok: false, error: lastError };
 }
 
 /** GLOBAL-MARKET ③(CPO 지시, 2026-09-11) — 한 SELLER_ORIGIN 소스 안에서 "원가

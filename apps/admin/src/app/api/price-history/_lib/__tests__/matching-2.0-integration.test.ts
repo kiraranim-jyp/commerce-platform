@@ -295,6 +295,8 @@ function aggregateLikeMi() {
     soldOut: (o.soldOut as boolean) ?? null,
     marketCode: null,
     marketCountry: null,
+    shippingPolicyStatus: null,
+    shippingPolicyNote: null,
     checkedAt: "2026-09-13T00:00:00.000Z",
   }));
   const exact: PriceObservationRecord[] = [];

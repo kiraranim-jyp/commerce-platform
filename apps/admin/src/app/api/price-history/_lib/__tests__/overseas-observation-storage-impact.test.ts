@@ -80,6 +80,8 @@ function obs(
     soldOut: null,
     marketCode: null,
     marketCountry: null,
+    shippingPolicyStatus: null,
+    shippingPolicyNote: null,
     checkedAt: "2026-09-15T00:00:00.000Z",
     ...partial,
   } as PriceObservationRecord;
