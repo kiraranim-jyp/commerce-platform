@@ -55,6 +55,14 @@ export function priceTierFromLink(link: Pick<DomesticProductLink, "matchTruth" |
   return link.verified ? "EXACT" : "COMPARISON";
 }
 
+/**
+ * MATCHING-FIX-01 Phase D(CEO 지시, 2026-09-16) — 「사람이 눌렀다」를 적는 한 줄의
+ * 접두사. 🔴 판정에 쓰이지 않는다. 이 값이 여기(저장 계층)에 있는 이유는,
+ * upsert 가 match_reasons 를 통째로 교체할 때 **지우면 안 되는 줄**을 알아보는
+ * 주체가 바로 이 파일이기 때문이다. 뜻과 화면 문구는 match-provenance.ts 가 갖는다.
+ */
+export const HUMAN_CONFIRMATION_PREFIX = "사람 확인: ";
+
 export interface DomesticProductLink {
   id: string;
   snapshotId: string;
@@ -168,12 +176,25 @@ export async function upsertDomesticProductLink(
 
   const { data: existing } = await supabase
     .from("domestic_product_links")
-    .select("verified")
+    .select("verified, match_reasons")
     .eq("snapshot_id", input.snapshotId)
     .eq("source_id", input.sourceId)
     .maybeSingle();
 
   const keepVerified = existing ? (existing as { verified: boolean }).verified : false;
+  /**
+   * MATCHING-FIX-01 Phase D(CEO 지시, 2026-09-16) — **사람이 확인했다는 기록은
+   * 재검색으로 지워지지 않는다.**
+   *
+   * 바로 위 keepVerified 와 같은 이유, 같은 모양이다. match_reasons 는 매 저장마다
+   * 통째로 교체되는데, 사람이 승인 버튼을 눌렀다는 사실만 그 안에 들어 있다
+   * (오늘 스키마에 그 칸이 따로 없다 — match-provenance.ts 주석 참고). 그대로 두면
+   * cron 이 한 번 돌 때마다 verified=true 는 남고 «누가 그렇게 정했는지»만
+   * 사라져서, 화면이 다시 엔진 판정을 사람 확인처럼 말하게 된다.
+   */
+  const carriedHumanReasons = (
+    (existing as { match_reasons?: unknown[] } | null)?.match_reasons ?? []
+  ).filter((r): r is string => typeof r === "string" && r.startsWith(HUMAN_CONFIRMATION_PREFIX));
 
   const { data, error } = await supabase
     .from("domestic_product_links")
@@ -189,7 +210,7 @@ export async function upsertDomesticProductLink(
         matched_color: input.matchedColor ?? null,
         match_type: input.matchType,
         match_confidence: input.matchConfidence,
-        match_reasons: input.matchReasons,
+        match_reasons: [...input.matchReasons, ...carriedHumanReasons],
         match_truth: input.matchTruth,
         verified: keepVerified || input.verified,
         verified_at: keepVerified || input.verified ? new Date().toISOString() : null,
@@ -210,19 +231,46 @@ export interface UpdateDomesticProductLinkInput {
 }
 
 /** 관리자가 REVIEW_REQUIRED 후보를 직접 승인/반려하거나(verified), 링크가 깨졌음을
- * 표시할 때(status=BROKEN_LINK) 쓴다. */
+ * 표시할 때(status=BROKEN_LINK) 쓴다.
+ *
+ * MATCHING-FIX-01 Phase D(CEO 지시, 2026-09-16) — verified 를 «사람이» 켤 때는
+ * 그 사실을 match_reasons 에 한 줄로 남긴다. 🔴 verified 값 자체의 의미나 계산은
+ * 그대로다(여기서 판정하지 않는다) — 지금까지 「엔진이 자동으로 켠 true」와
+ * 「사람이 눌러서 켠 true」가 완전히 같은 모양이라 화면이 둘을 구분할 방법이
+ * 없었고, 그래서 화면이 엔진 판정을 «사람이 확인함»처럼 말했다. 이 한 줄이
+ * 그 구분의 유일한 근거다.
+ *
+ * 반려(verified=false)일 때는 줄을 남기지 않는다 — 「사람이 아니라고 했다」는
+ * 기록은 이번 범위 밖이고, 없는 사실을 만들지 않는다. */
 export async function updateDomesticProductLink(
   id: string,
   input: UpdateDomesticProductLinkInput,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return { ok: false, error: "Supabase가 설정되어 있지 않습니다." };
-  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  const now = new Date().toISOString();
+  const patch: Record<string, unknown> = { updated_at: now };
   if (input.verified !== undefined) {
     patch.verified = input.verified;
-    patch.verified_at = input.verified ? new Date().toISOString() : null;
+    patch.verified_at = input.verified ? now : null;
   }
   if (input.status !== undefined) patch.status = input.status;
+
+  if (input.verified === true) {
+    const { data: existing } = await supabase
+      .from("domestic_product_links")
+      .select("match_reasons")
+      .eq("id", id)
+      .maybeSingle();
+    const reasons = ((existing as { match_reasons?: unknown[] } | null)?.match_reasons ?? []).filter(
+      (r): r is string => typeof r === "string",
+    );
+    // 이미 승인 기록이 있으면 다시 쌓지 않는다(같은 사실을 두 번 적지 않는다).
+    if (!reasons.some((r) => r.startsWith(HUMAN_CONFIRMATION_PREFIX))) {
+      patch.match_reasons = [...reasons, `${HUMAN_CONFIRMATION_PREFIX}관리자가 화면에서 직접 승인함 (${now})`];
+    }
+  }
+
   const { error } = await supabase.from("domestic_product_links").update(patch).eq("id", id);
   if (error) return { ok: false, error: error.message };
   return { ok: true };

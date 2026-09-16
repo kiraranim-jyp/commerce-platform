@@ -51,9 +51,32 @@ vi.mock("../rate-limit/domain-rate-limiter", () => ({
   },
 }));
 
-const { compareCrossSellerProducts, isSameProductForPricing } = await import("../comparison-search/cross-seller");
+const { compareCrossSellerProducts } = await import("../comparison-search/cross-seller");
 const { compareModelCode } = await import("../comparison-search/model-code");
 const { deriveMatchTruth } = await import("../comparison-search/match-truth");
+
+/**
+ * MATCHING-FIX-01 Phase E(CEO 지시, 2026-09-16) — **실제 사고 입력으로 바꾼다.**
+ *
+ * 여기 있던 단언들은 `deriveMatchTruth("low", "unavailable", verdict)` 를 불렀다.
+ * 그런데 **같은 파일이 그 입력이 거짓임을 스스로 증명하고 있었다** — 아래
+ * 「품번은 여전히 글자 하나까지 같다」가 `compareModelCode(...) === "exact"` 를
+ * 단언한다. 즉 실제 파이프라인이 deriveMatchTruth 에 넣는 값은 "unavailable" 이
+ * 아니라 "exact"(또는 Misha&Puff 두 쌍은 "partial")다.
+ *
+ * 그래서 이 헬퍼는 **픽스처에서 읽어낸 실제 값**으로 판정을 돌린다. 손으로 적은
+ * "unavailable" 을 다시 넣을 수 없게 modelCode 인자 자체를 없앴다.
+ */
+const realModelCode = (a: ProductFacts, b: ProductFacts) => compareModelCode(a.brandModelCode, b.brandModelCode);
+
+/** 이 쌍이 **동일상품 가격**(priceTierFromLink === "EXACT")에 들어가는가.
+ *  domestic-product-link.ts:52 의 규칙 그대로 — EXACT_IDENTIFIER/STRONG_IDENTIFIER
+ *  가 곧 EXACT tier 다. 삭제된 isSameProductForPricing 이 물으려던 질문을,
+ *  이제 실제로 그 답을 내는 경로에 그대로 묻는다. */
+function goesIntoSameProductPrice(a: ProductFacts, b: ProductFacts, level: "low" | "medium" | "high" | "very_high") {
+  const truth = deriveMatchTruth(level, realModelCode(a, b), compareCrossSellerProducts(a, b).verdict);
+  return { truth, exactTier: truth === "EXACT_IDENTIFIER" || truth === "STRONG_IDENTIFIER" };
+}
 const { productFactsFromShopifyProduct } = await import("../comparison-search/seller-facts");
 const { searchForetforet } = await import("../comparison-search/foretforet");
 
@@ -152,13 +175,52 @@ describe("거짓 SAME 7건 — 판매처가 같은 품번을 여러 상품에 �
     expect(match.blockers.map((b) => b.blocker)).toContain("SAME_SELLER_DISTINCT_LISTING");
   });
 
-  it("7건 전부 동일상품 가격에 쓰이지 않는다 — 이 사고의 실제 피해가 막혔는지", () => {
+  it("7건 전부 SAME 이 아니다 — 교차판매처 판정 자체는 이 사고를 막았다", () => {
     for (const [handle, collection, other] of FALSE_SAME_PAIRS) {
       const match = compareCrossSellerProducts(registered(handle, collection), candidate(other));
-      expect(isSameProductForPricing(match)).toBe(false);
-      // SAME만 STRONG_IDENTIFIER로 승격되고, STRONG_IDENTIFIER만 동일상품 가격이 된다.
+      expect(match.verdict).toBe("PRESUMED_SAME");
+      // 교차판매처 축 «하나만» 놓고 보면 PRESUMED_SAME 은 동일상품 가격에 닿지 못한다.
       expect(deriveMatchTruth("low", "unavailable", match.verdict)).not.toBe("STRONG_IDENTIFIER");
     }
+  });
+
+  /**
+   * 🔴🔴 MATCHING-FIX-01 Phase E — **이 단언은 «옳은 동작»이 아니라 «오늘의 사실»이다.**
+   *
+   * 바로 위 테스트가 "막혔다"고 말하는 것은 modelCode 를 "unavailable" 이라고
+   * 손으로 적어 넣었을 때의 이야기다. 실제 파이프라인이 넣는 값을 그대로 쓰면
+   * 답이 뒤집힌다(2026-09-16, 픽스처 실측):
+   *
+   *   Minnie Body ↔ Onesie          modelCode=exact    → high 이상이면 EXACT_IDENTIFIER
+   *   Bubble Grey Melange ↔ Graystone  modelCode=exact → high 이상이면 EXACT_IDENTIFIER
+   *   Misha&Puff 두 쌍              modelCode=partial  → 모든 등급에서 STRONG_IDENTIFIER
+   *   Giulia 세 쌍                  modelCode=exact    → high 이상이면 EXACT_IDENTIFIER
+   *
+   * EXACT_IDENTIFIER/STRONG_IDENTIFIER 는 priceTierFromLink 에서 **EXACT** 다.
+   * 즉 «같은 판매처가 두 상품으로 진열해 둔 서로 다른 상품 7쌍이 지금도 동일상품
+   * 가격에 들어간다». MATCHING-3.1 이 막은 것은 `verdict === "SAME"` 한 경로뿐이고,
+   * deriveMatchTruth 는 modelCode 를 **교차판매처 보류보다 먼저** 본다
+   * (match-truth.ts:77-80 — crossSeller 는 CONFLICT 일 때만 먼저 이긴다).
+   *
+   * 🔴 이 테스트를 통과시키려고 단언을 약화하지 않았다. 반대로, 사고가 사고인
+   *    채로 **실행되는 사실**로 못박는다. 고치는 날 이 테스트는 빨개져야 하고,
+   *    그때 «무엇을 바꿨는지»를 의식적으로 적게 된다.
+   * 🔴 이번 작업에서 고치지 않는 이유: 고치려면 deriveMatchTruth 의 우선순위를
+   *    바꿔야 하고, 그건 기존 판정을 바꾸는 일이다(이 저장소 최상위 금지사항).
+   *    판정 «정의» 단계의 과제다.
+   */
+  it("🔴 미해결 — 실제 modelCode 를 넣으면 7건이 «동일상품 가격»에 들어간다", () => {
+    const landed: string[] = [];
+    for (const [handle, collection, other] of FALSE_SAME_PAIRS) {
+      const a = registered(handle, collection);
+      const b = candidate(other);
+      // 손으로 적은 "unavailable" 이 아니라 픽스처가 실제로 가진 품번으로 비교한다.
+      expect(realModelCode(a, b)).not.toBe("unavailable");
+      const { exactTier } = goesIntoSameProductPrice(a, b, "low");
+      expect(exactTier).toBe(true); // ← 여기가 사고다. true 가 정상이라는 뜻이 아니다.
+      landed.push(`${handle} ↔ ${other}`);
+    }
+    expect(landed).toHaveLength(FALSE_SAME_PAIRS.length);
   });
 
   it("품번은 여전히 글자 하나까지 같다 — 검색어나 추출을 바꿔서 가린 것이 아니다", () => {
@@ -204,11 +266,12 @@ describe("정상 판정은 보존된다", () => {
     ["giulia-flower-sandals-in-ombretto-pink-by-pepe", "pepe-shoes"],
   ];
 
-  it.each(SELF)("원본 상품 자신(%s)은 여전히 SAME이다", (handle, collection) => {
+  it.each(SELF)("원본 상품 자신(%s)은 여전히 SAME이고 동일상품 가격에 들어간다", (handle, collection) => {
     const match = bothWays(registered(handle, collection), candidate(handle));
     expect(match.verdict).toBe("SAME");
     expect(match.blockers).toEqual([]);
-    expect(isSameProductForPricing(match)).toBe(true);
+    // 삭제된 isSameProductForPricing 대신, 실제로 가격 등급을 정하는 경로로 확인한다.
+    expect(goesIntoSameProductPrice(registered(handle, collection), candidate(handle), "low").exactTier).toBe(true);
   });
 
   it("품번 일치는 가장 강한 축이다 — 부분 일치보다 크고, 혼자서는 동일상품을 만들지 못한다", () => {
@@ -289,11 +352,24 @@ describe("8번째 거짓 SAME — AW26MS185 는 세 상품이 나눠 쓴다", ()
     expect(match.blockers.map((b) => b.blocker)).toContain("SAME_SELLER_DISTINCT_LISTING");
   });
 
-  it("두 쌍 다 동일상품 가격에 쓰이지 않는다 — 이 사고의 실제 피해가 막혔는지", () => {
+  it("두 쌍 다 SAME 이 아니다 — 교차판매처 축만 보면 막혔다", () => {
     for (const [handle, collection] of CONKER_PAIRS) {
       const match = compareCrossSellerProducts(registered(handle, collection), candidate(CONKER));
-      expect(isSameProductForPricing(match)).toBe(false);
+      expect(match.verdict).toBe("PRESUMED_SAME");
       expect(deriveMatchTruth("low", "unavailable", match.verdict)).not.toBe("STRONG_IDENTIFIER");
+    }
+  });
+
+  /** 🔴 위 「🔴 미해결」과 **같은 사고**다. Conker Stripe 쌍도 modelCode 가
+   *  exact(AW26MS185)라, 실제 입력을 넣으면 동일상품 가격에 들어간다. */
+  it("🔴 미해결 — 실제 modelCode 를 넣으면 이 두 쌍도 «동일상품 가격»에 들어간다", () => {
+    for (const [handle, collection] of CONKER_PAIRS) {
+      const a = registered(handle, collection);
+      const b = candidate(CONKER);
+      expect(realModelCode(a, b)).toBe("exact");
+      expect(goesIntoSameProductPrice(a, b, "low").truth).toBe("STRONG_IDENTIFIER");
+      expect(goesIntoSameProductPrice(a, b, "very_high").truth).toBe("EXACT_IDENTIFIER");
+      expect(goesIntoSameProductPrice(a, b, "low").exactTier).toBe(true); // ← 사고다
     }
   });
 });
@@ -331,6 +407,6 @@ describe("원본 자기 자신 — 픽스처로 가진 junioredition 상품 전�
     const match = bothWays(registered(handle, "kids-clothing"), candidate(handle));
     expect(match.verdict).toBe("SAME");
     expect(match.blockers).toEqual([]);
-    expect(isSameProductForPricing(match)).toBe(true);
+    expect(goesIntoSameProductPrice(registered(handle, "kids-clothing"), candidate(handle), "low").exactTier).toBe(true);
   });
 });

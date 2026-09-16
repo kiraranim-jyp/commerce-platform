@@ -23,6 +23,7 @@ import {
   toDomesticMatchType,
   upsertDomesticProductLink,
 } from "../../domestic-price-sources/_lib/domestic-product-link";
+import { buildMatchProvenanceReasons } from "../../domestic-price-sources/_lib/match-provenance";
 import { hasObservationToday, recordPriceObservations } from "./price-observations";
 
 /**
@@ -234,6 +235,16 @@ export function orderByCrossSellerVerdict(candidates: ComparisonCandidate[]): Co
 export interface CandidateSelection {
   candidate: ComparisonCandidate;
   modelCodeEvidence: ModelEvidenceResult;
+  /**
+   * MATCHING-FIX-01 Phase C(CEO 지시, 2026-09-16) — 이 후보에서 **실제로 읽어낸**
+   * 국내측 브랜드 품번. 지금까지 이 값은 compareModelCode 에 들어갔다가 그 자리에서
+   * 버려졌고, 그래서 링크 행의 matched_model_name 이 늘 null 이었다
+   * ("판정에 쓴 근거가 저장되지 않는다"의 실제 모습).
+   *
+   * 🔴 판정에는 쓰이지 않는다 — modelCodeEvidence 가 이미 그 일을 끝냈다. 이 칸은
+   *    같은 값을 **밖으로 내보내기만** 한다. 추출을 지원하지 않는 도메인이면 null.
+   */
+  domesticModelCode: string | null;
   /** N-4.18-Q3 UI 후속(대표님 지시, 2026-08-27: "왜 이 후보가 선택됐는지 보여줘야
    * 한다") — 대표 후보보다 앞선 순위에서 modelCode conflict로 건너뛴 후보 수.
    * 0이면 원래도 top-1이 그대로 선택된 것(H-3-9 이전과 동일 결과) — UI가 이 값으로
@@ -253,10 +264,19 @@ export async function selectDomesticCandidate(
   // 않는 도메인에서도 반증된 후보가 대표가 되지 않는다.
   const ordered = orderByCrossSellerVerdict(candidates);
   if (!supportsDomesticIdentifierExtraction(domain)) {
-    return { candidate: ordered[0], modelCodeEvidence: compareModelCode(foreignModelCode, null), skippedConflictCount: 0 };
+    return {
+      candidate: ordered[0],
+      modelCodeEvidence: compareModelCode(foreignModelCode, null),
+      domesticModelCode: null,
+      skippedConflictCount: 0,
+    };
   }
 
-  const evaluated: { candidate: ComparisonCandidate; modelCodeEvidence: ModelEvidenceResult }[] = [];
+  const evaluated: {
+    candidate: ComparisonCandidate;
+    modelCodeEvidence: ModelEvidenceResult;
+    domesticModelCode: string | null;
+  }[] = [];
   for (const candidate of ordered.slice(0, MAX_EVIDENCE_CANDIDATES)) {
     // N-4.18-Q3 PART H-3-11 STEP 7(대표님 지시, 2026-08-27: "실제로 네트워크
     // 요청이 생략됐는지 확인한다") — isEvidenceEvaluationWorthwhile 가드가
@@ -264,7 +284,12 @@ export async function selectDomesticCandidate(
     // 로그 한 줄. 판정 로직에는 전혀 관여하지 않는다.
     console.log(`[H-3-11] domestic modelCode fetch (${domain}): ${candidate.url}`);
     const domesticModelCode = await fetchModelCode(candidate.url);
-    evaluated.push({ candidate, modelCodeEvidence: compareModelCode(foreignModelCode, domesticModelCode) });
+    // MATCHING-FIX-01 Phase C — 판정에 쓴 그 값을 그대로 함께 들고 나간다(재계산 없음).
+    evaluated.push({
+      candidate,
+      modelCodeEvidence: compareModelCode(foreignModelCode, domesticModelCode),
+      domesticModelCode,
+    });
   }
   // MATCHING-2.0-INTEGRATION-1 — 반증의 종류가 둘이 됐다. 품번이 어긋나는 것과
   // 대상·색상·상품군이 어긋나는 것은 같은 강도의 반증이고(match-truth.ts가 둘 다
@@ -419,7 +444,7 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     // (selectDomesticCandidate 주석 참고 — confidence 정렬/threshold는 안 건드림).
     // P-28(2026-09-03) — fetchModelCode를 result.domain에 맞는 추출기로 위임한다
     // (fetchDomesticModelCode 레지스트리, foretforet.com 하드코딩 제거).
-    const { candidate: best, modelCodeEvidence, skippedConflictCount } = await selectDomesticCandidate(
+    const { candidate: best, modelCodeEvidence, domesticModelCode, skippedConflictCount } = await selectDomesticCandidate(
       result.candidates,
       result.domain,
       foreignModelCode,
@@ -482,10 +507,28 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     // top-1이 아닌 후보를 골랐을 때만("왜 이 후보인지") 설명을 덧붙인다.
     // skippedConflictCount===0(원래도 top-1)이면 아무것도 추가하지 않는다 —
     // H-3-9 이전과 화면이 달라 보이면 안 되는 대다수 케이스에서 회귀가 없다.
-    const finalMatchReasons =
+    const selectionReasons =
       skippedConflictCount > 0
         ? [...evidenceMatchReasons, `텍스트 유사도 상위 ${skippedConflictCount}건은 modelCode 충돌로 제외하고 이 후보를 선택함`]
         : evidenceMatchReasons;
+    /**
+     * MATCHING-FIX-01 Phase C — 판정에 실제로 들어간 입력을 «판정방법»·«판정기»
+     * 두 줄로 남긴다. 🔴 판정에는 한 글자도 쓰이지 않는다(아래 upsert 의
+     * matchType/matchConfidence/verified/matchTruth 는 전부 이 줄들보다 먼저
+     * 확정돼 있다). 판정기 버전이 함께 남으므로, 이 줄이 없는 과거 행은
+     * readMatchProvenance().stale 로 «낡았다»고 구분된다 — backfill 없이.
+     */
+    const finalMatchReasons = [
+      ...selectionReasons,
+      ...buildMatchProvenanceReasons({
+        truth: evidenceDecision.truth,
+        modelCode: modelCodeEvidence,
+        crossSeller: best.crossSellerVerdict,
+        matchLevel: best.matchLevel ?? "low",
+        foreignModelCode,
+        domesticModelCode,
+      }),
+    ];
 
     const upsertResult = await upsertDomesticProductLink({
       snapshotId: input.snapshotId,
@@ -493,8 +536,30 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       externalUrl: best.url,
       matchedBrand: best.brand ?? null,
       matchedTitle: best.title,
-      matchedColor: null,
-      matchedModelName: null,
+      /**
+       * MATCHING-FIX-01 Phase C — 여기 세 칸은 지금까지 null 하드코딩이었다
+       * (전수 70링크에서 0/70). 판정을 바꾸지 않고 «판정에 쓴 값»을 그대로 적는다.
+       *
+       * 🔴 추측해서 채우지 않는다. 각 칸의 출처는 하나씩 정해져 있고, 그 출처가
+       *    비어 있으면 그대로 null 이다:
+       *      matchedModelName    **판정(compareModelCode)에 실제로 들어간 국내측
+       *                          코드 그 값**. 도메인 추출기가 상세에서 읽어낸
+       *                          값이 있으면 그것이고(없는 도메인은 null),
+       *                          없으면 후보 사실 묶음의 브랜드 품번이다.
+       *                          🔴 판매처 자신의 재고번호(facts.sellerSku)는
+       *                          «넣지 않는다» — 판정이 본 적 없는 값을 근거 칸에
+       *                          적으면 이 칸이 다시 추측이 된다. 두 값을 같은
+       *                          칸에 섞지 않는다는 원칙(product-facts.ts:578-584)
+       *                          이 여기에도 그대로 적용된다.
+       *      matchedColor        후보 원문이 말한 색상(facts.colorText). 색을
+       *                          제목에서 «추론»하지 않는다.
+       *      externalProductId   그 판매처 안에서 이 상품을 가리키는 식별자
+       *                          (URL slug). 우리가 만든 값이 아니라 판매처가
+       *                          붙인 값이다.
+       */
+      matchedModelName: domesticModelCode ?? best.facts?.brandModelCode ?? null,
+      matchedColor: best.facts?.colorText ?? null,
+      externalProductId: best.facts?.urlSlug ?? null,
       matchType,
       matchConfidence: best.confidence,
       matchReasons: finalMatchReasons,

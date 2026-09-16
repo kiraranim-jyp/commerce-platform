@@ -15,7 +15,7 @@ import { sortDomesticCandidatesByTrust } from "@commerce/crawler/src/comparison-
 import type { MatchTruth } from "@commerce/crawler/src/comparison-search/match-truth";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 // MATCHING-UNIFY-1 — 국내 가격비교 표와 같은 라벨을 쓰기 위한 공통 매핑.
-import { domesticMatchDisplay } from "./match-display";
+import { domesticEvidenceNote, domesticMatchDisplay } from "./match-display";
 // MI 2.0 PHASE 1 — 판매 판단의 근거를 4축으로 분해해 보여준다(새 판정 아님).
 import { computeRadar, type RadarSearchInterest, type RadarMatchTruth } from "@commerce/pricing";
 // MI-POLISH-2(CEO 지시, 2026-09-12) — MiVerdictAxes(판정 아래 축 세 줄)를 더
@@ -276,8 +276,31 @@ export interface DomesticCandidate {
    * 계산하던 값을 그대로 전달받는다(새 판정 없음). 마이그레이션 030 이전에 저장된
    * 레거시 행은 null — legacy fallback으로 처리한다. */
   matchTruth: MatchTruth | null;
+  /**
+   * 🔴 MATCHING-FIX-01 Phase D(CEO 지시, 2026-09-16) — 이 값은 «사람이 확인했다»가
+   * 아니다. 「엔진이 이 후보를 가격에 써도 된다고 자동으로 결정했다」는 뜻이고,
+   * 사람이 화면에서 누른 승인도 같은 칸에 들어온다. 둘을 가르는 것은 아래
+   * verification 이다 — 이 불리언만 보고 문구를 만들지 않는다.
+   */
   verified: boolean;
   externalUrl: string;
+  /** Phase C — 판정에 실제로 쓰인 근거(없으면 null, 추측해서 채우지 않는다). */
+  matchedModelName?: string | null;
+  matchedColor?: string | null;
+  externalProductId?: string | null;
+  /** 🔴 CEO P1 — 이 판정이 «언제» 내려졌고 «어느 판정기»가 했는지. judgmentStale 이
+   *  true 면 지금 코드가 내릴 판정과 같다고 보장할 수 없는 행이다(backfill 없음). */
+  updatedAt?: string;
+  judgeVersion?: string | null;
+  judgmentStale?: boolean;
+  /** Phase D — 하나였던 verified 를 셋으로 가른 파생값. 서버가 계산해서 보낸다. */
+  verification?: {
+    autoDecided: boolean;
+    identifierBacked: boolean;
+    humanConfirmed: boolean;
+    humanConfirmedKnown: boolean;
+  };
+  verificationLabel?: string;
 }
 
 const CANDIDATE_LABEL: Record<DomesticCandidate["matchType"], { icon: string; text: string; note: string }> = {
@@ -318,30 +341,59 @@ const CANDIDATE_LABEL: Record<DomesticCandidate["matchType"], { icon: string; te
  * 실제 데이터(PèPè + deuxbebe.com 실측)로 발견해 고친다 — priceTierFromLink()와
  * 동일한 3-way 분기(EXACT/COMPARISON/EXCLUDED)를 그대로 따르고, 새 판정을 만들지
  * 않는다. */
+/**
+ * MATCHING-FIX-01 Phase D(CEO 지시, 2026-09-16) — 이 후보의 «판정 출처»를 말하는
+ * 한 줄. 🔴 판정을 하지 않는다 — 서버가 이미 보낸 verification/judgmentStale 을
+ * 문장으로 옮기기만 한다. 서버가 그 값을 안 보낸 경우(옛 응답)에도 «사람이
+ * 확인했다»고는 절대 말하지 않는다.
+ */
+export function candidateProvenanceNote(c: DomesticCandidate): string {
+  const parts: string[] = [];
+  if (c.verificationLabel) parts.push(c.verificationLabel);
+  else if (c.verified) parts.push("엔진 자동 판정 · 사람 확인 여부 기록 없음");
+  if (c.judgmentStale) {
+    // 🔴 CEO P1 — 낡았다는 사실을 숨기지 않는다. 값을 고치지 않고 말로만 알린다.
+    parts.push(
+      c.updatedAt
+        ? `판정이 낡음 — 마지막 판정 ${c.updatedAt.slice(0, 10)}, 그 뒤 판정기가 바뀜`
+        : "판정이 낡음 — 지금 판정기 이전에 저장된 행",
+    );
+  }
+  return parts.join(" · ");
+}
+
 export function candidateLabel(c: DomesticCandidate): { icon: string; text: string; note: string } {
   if (c.matchTruth) {
     const d = domesticMatchDisplay(c.matchTruth);
     const base = { icon: d.icon, text: d.label };
+    // 🔴 Phase D — 🟢 안에서도 «무슨 근거였는지»가 다르다. 등급(=가격 반영 여부)은
+    // 그대로 두고 근거 문장만 붙인다(match-display.ts domesticEvidenceNote 주석 참고).
+    const evidence = domesticEvidenceNote(c.matchTruth);
     // 가격 반영 여부는 판정이 아니라 기존 정책의 결과를 그대로 옮긴 문구다
     // (EXACT/STRONG만 동일상품 가격, 나머지는 참고 또는 제외).
-    if (c.matchTruth === "TEXT_CONFIRMED" || c.matchTruth === "SIMILAR") {
-      const pct = Math.round(c.matchConfidence * 100);
-      return { ...base, note: `${d.note} · 텍스트 유사도 ${pct}%` };
-    }
-    if (c.matchTruth === "CONFLICT" || c.matchTruth === "INSUFFICIENT_EVIDENCE") {
-      return { ...base, note: `${d.note} — 가격비교에 반영하지 않습니다` };
-    }
-    return { ...base, note: `${d.note} → 동일상품 가격으로 반영됨` };
+    const policy =
+      c.matchTruth === "TEXT_CONFIRMED" || c.matchTruth === "SIMILAR"
+        ? `${d.note} · 텍스트 유사도 ${Math.round(c.matchConfidence * 100)}%`
+        : c.matchTruth === "CONFLICT" || c.matchTruth === "INSUFFICIENT_EVIDENCE"
+          ? `${d.note} — 가격비교에 반영하지 않습니다`
+          : `${d.note} → 동일상품 가격으로 반영됨`;
+    return { ...base, note: [policy, evidence, candidateProvenanceNote(c)].filter(Boolean).join(" · ") };
   }
   // 레거시 fallback(matchTruth=null, 마이그레이션 030 이전 저장된 행) — 예전 로직 그대로.
   if (c.verified) {
     // MATCHING-UNIFY-1 — 레거시 경로도 같은 라벨을 쓴다. 마이그레이션 전
     // 저장된 행이라는 이유로 다른 문구가 나오면 셀러에게는 다른 등급으로 보인다.
+    // 🔴 Phase D — 「확인됨」을 뺐다. 이 행들은 사람이 본 적이 없다.
     const byIdentifier = c.matchReasons.some((r) => r.includes("식별자 근거"));
     return {
       icon: "🟢",
       text: "동일상품",
-      note: byIdentifier ? "식별자 근거로 확인됨 → 가격비교에 반영됨" : "→ 가격비교에 반영됨",
+      note: [
+        byIdentifier ? "식별자 근거로 엔진이 판정함 → 가격비교에 반영됨" : "엔진이 판정함 → 가격비교에 반영됨",
+        candidateProvenanceNote(c),
+      ]
+        .filter(Boolean)
+        .join(" · "),
     };
   }
   if (c.matchType === "HIGH_CONFIDENCE") return CANDIDATE_LABEL.HIGH_CONFIDENCE;

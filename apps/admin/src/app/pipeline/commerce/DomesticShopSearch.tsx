@@ -10,6 +10,7 @@ import { MarketEvidenceFrame, MARKET_EVIDENCE_EMPTY, type MarketEvidenceVariant 
 import {
   DEFAULT_TIER_ORDER,
   defaultLimitForTier,
+  domesticEvidenceNote,
   domesticMatchDisplay,
   // MI-MATCHING-INTEGRATION-2 — "애초에 목록에 설 수 있는 후보인가"를 정하는
   // 단 하나의 문. 국내/해외 두 표가 같은 함수를 부른다.
@@ -441,6 +442,13 @@ function CandidateRowTable({ rows }: { rows: CandidateRow[] }) {
                             {d.icon} {d.label}
                           </span>
                           <p className="text-[10px] text-text-tertiary">{d.note}</p>
+                          {/* 🔴 MATCHING-FIX-01 Phase D(CEO 지시, 2026-09-16) —
+                              EXACT_IDENTIFIER 와 STRONG_IDENTIFIER 는 같은 🟢 배지를
+                              단다(등급이 곧 가격 정책이라 등급 자체는 건드리지
+                              않는다). 그래서 «무슨 근거로 그 등급인지»를 배지 옆
+                              한 줄로 말한다 — 품번이 완전히 맞은 것과 품번 없이
+                              축이 맞은 것이 화면에서 같아 보이면 안 된다. */}
+                          <p className="text-[10px] text-text-tertiary">{domesticEvidenceNote(c.matchTruth)}</p>
                           {/* MI-UX-9 §13 — "근거: A · B · C" 줄은 상세 정보라 기본
                               표에서 뺀다. 배지 + 한 줄 note까지가 기본, 상세 근거는
                               Market Intelligence의 "왜 동일상품인가?" 영역에서 본다.

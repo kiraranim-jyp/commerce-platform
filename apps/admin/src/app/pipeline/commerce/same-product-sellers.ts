@@ -146,7 +146,10 @@ export function buildSameProductSellersCard(input: SameProductSellersInput): Sam
     title: SAME_PRODUCT_SELLERS_TITLE,
     rows,
     verdict: { icon: "🟢", label: "동일상품" },
-    note: "같은 상품을 파는 판매처들의 관측 가격입니다 — 동일상품으로 확정된 판매처만 이 목록에 섭니다.",
+    // MATCHING-FIX-01 Phase D(CEO 지시, 2026-09-16) — 「확정된」이 사람의 확인처럼
+    // 읽혔다. 이 목록에 서는 근거는 엔진이 낸 판정(matchTruth → EXACT 티어) 하나이고
+    // 사람이 본 적은 없다. 누가 그렇게 정했는지를 문장이 직접 말하게 한다.
+    note: "같은 상품을 파는 판매처들의 관측 가격입니다 — 매칭 엔진이 동일상품으로 판정한 판매처만 이 목록에 섭니다(사람 확인 아님).",
     empty:
       // 원본 한 줄만 있는 상태는 비교가 아니라 관측 하나다(① 원본 상품이 이미
       // 말하고 있다). 비교할 상대가 생겼을 때만 이 카드가 답을 갖는다.

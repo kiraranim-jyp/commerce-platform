@@ -661,8 +661,32 @@ export function compareCrossSellerProducts(
   return { verdict, axes, conflicts, blockers, identifierConfirmed, reasons };
 }
 
-/** 🟢 동일상품으로 확인된 것만 가격 비교에 쓴다(가격 정책, CEO 지시). 🟡/⚪는
- * 화면에 참고로만 남고 동일상품 가격 판단에는 절대 들어가지 않는다. */
-export function isSameProductForPricing(match: CrossSellerMatch): boolean {
-  return match.verdict === "SAME";
-}
+/**
+ * ══ 여기 있던 isSameProductForPricing()은 삭제됐다 ════════════════════════════
+ * MATCHING-FIX-01 Phase B(CEO 지시, 2026-09-16) — «두 개의 판정체계를 병렬로
+ * 놔두면 안 된다».
+ *
+ * 그 함수는 `match.verdict === "SAME"` 한 줄이었고, **프로덕션 호출부가 0개**였다
+ * (테스트 둘에서만 불렸다). 즉 지금 막고 있는 것이 하나도 없었다. 그런데도
+ * 이름이 «가격에 쓸지 결정한다»고 말해서, 실제로 그 결정을 내리는 경로
+ * (deriveMatchTruth → domestic_product_links.match_truth → priceTierFromLink)와
+ * 나란히 서 있는 «두 번째 기준»처럼 읽혔다. 두 기준은 실제로 갈렸다 —
+ * 80개 입력 조합 중 24개(30%)에서 tier=EXACT 인데 이 함수는 false 였고,
+ * 불일치는 전부 돈이 움직이는 쪽으로만 났다.
+ *
+ * ── 그 함수가 지키려던 의도는 어디로 갔나 ──────────────────────────────────
+ * ① **deriveMatchTruth 가 이미 흡수하고 있다.** 교차판매처 판정만으로 동일상품
+ *    가격(EXACT tier)에 닿는 등급은 SAME 하나뿐이다 — PRESUMED_SAME 은
+ *    TEXT_CONFIRMED, SIMILAR 은 SIMILAR, UNKNOWN 은 INSUFFICIENT_EVIDENCE 로
+ *    내려간다(match-truth.ts:96-105). 즉 «🟢만 가격 비교에 쓴다»는 규칙은
+ *    교차판매처 축에 관한 한 이미 단일 체계 안에 들어 있다.
+ * ② **테스트로 남겼다.** 이 파일의 verdict 가 가격 등급까지 어떻게 이어지는지는
+ *    apps/admin/.../__tests__/match-truth-to-price-tier.test.ts 가 한 줄로
+ *    이어서 고정한다(판정 → 저장 → 가격 티어). 삭제로 사라진 단언은 그 파일이
+ *    «실제로 돈이 움직이는 경로» 위에서 다시 세운다.
+ *
+ * 🔴 흡수되지 «않은» 것도 함께 적어 둔다: modelCode 가 exact/partial 이면
+ *    교차판매처 판정이 PRESUMED_SAME 이어도 EXACT tier 에 닿는다
+ *    (match-truth.ts:77-80). 그건 이 함수가 막던 것이 아니라 CPO 가 명시적으로
+ *    정한 규칙이고, 바꾸려면 판정 «정의» 단계에서 다뤄야 한다.
+ */

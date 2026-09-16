@@ -49,7 +49,10 @@ const TIERS: Record<MatchDisplayTier, MatchDisplay> = {
     // 경우다. 앞의 문구("정확한 상품 식별자 일치")는 뒤쪽 경우에 대해 화면이
     // 사실이 아닌 말을 하게 만든다 — 두 경우에 모두 참인 말로 바꾸고, 이 등급만
     // 가격 비교에 쓰인다는 정책까지 배지에서 읽히게 한다.
-    note: "동일상품으로 확인됨 — 가격 비교에 사용",
+    // MATCHING-FIX-01 Phase D(CEO 지시, 2026-09-16) — 「확인됨」을 뺐다. 이 등급은
+    // 사람이 본 적이 없고, 엔진이 스스로 내린 판정이다. 그 둘이 같은 말로 보이면
+    // 안 된다는 것이 이번 지시의 요지다(verified=true ≢ 사람의 확인).
+    note: "엔진이 동일상품으로 판정함 — 가격 비교에 사용",
     className: "bg-success-soft text-success",
   },
   SAME_MODEL_OPTION_DIFF: {
@@ -235,6 +238,42 @@ export function domesticMatchDisplay(truth: MatchTruth): MatchDisplay {
       return TIERS.CONFLICT;
     case "INSUFFICIENT_EVIDENCE":
       return TIERS.UNKNOWN;
+  }
+}
+
+/**
+ * MATCHING-FIX-01 Phase D(CEO 지시, 2026-09-16) — **같은 🟢 안에서 무엇이 다른지
+ * 한 줄로 말한다.**
+ *
+ * 바로 위 domesticMatchDisplay 는 EXACT_IDENTIFIER 와 STRONG_IDENTIFIER 를
+ * 같은 TIERS.SAME 으로 그린다. CEO 지적: "confidence 38%가 100%와 같은 배지를
+ * 단다." 실제로 두 값이 오는 길은 다르다 — 앞은 품번이 완전히 일치하면서 텍스트
+ * 등급도 high 이상인 경우이고, 뒤는 품번이 부분만 맞거나 아예 없이 여러 축이
+ * 동시에 맞은 경우다(match-truth.ts:77-105).
+ *
+ * ── 왜 등급(tier)을 가르지 않았나 ───────────────────────────────────────────
+ * tier 는 «가격에 쓰는가»를 정하는 값이다(priceTierFromLink · isDefaultVisibleTier ·
+ * defaultLimitForTier · same-product-sellers 가 전부 이 값을 읽는다). 여기서
+ * tier 를 하나 더 만들면 그 순간 판정이 바뀌고, 그건 이번 작업의 금지사항이다.
+ * 그래서 등급은 그대로 두고 **말**만 늘린다 — 배지가 같은 색이어도 그 옆 한 줄이
+ * 무슨 근거였는지 말한다.
+ *
+ * 🔴 이 문장 어디에도 «사람이 확인했다»는 말이 없다. 둘 다 엔진의 자동 판정이다.
+ */
+export function domesticEvidenceNote(truth: MatchTruth): string {
+  switch (truth) {
+    case "EXACT_IDENTIFIER":
+      return "브랜드 품번이 완전히 일치하고 상품명 유사도도 높음 — 엔진 자동 판정";
+    case "STRONG_IDENTIFIER":
+      return "품번이 부분만 맞거나, 품번 없이 여러 축(브랜드·상품군·색상·소재·핏·대상)이 동시에 맞음 — 엔진 자동 판정";
+    case "TEXT_CONFIRMED":
+      return "식별자를 맞춰보지 못했고 상품명·분류 유사도만 높음 — 엔진 자동 판정";
+    case "SIMILAR":
+      return "닮았다는 것 말고는 근거가 없음 — 엔진 자동 판정";
+    case "CONFLICT":
+      return "대상·색상·상품군·품번 중 하나 이상이 서로 어긋남 — 엔진 자동 판정";
+    case "INSUFFICIENT_EVIDENCE":
+      return "판단할 근거 자체가 모자람 — 엔진 자동 판정";
   }
 }
 

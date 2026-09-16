@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   compareCrossSellerProducts,
   CROSS_SELLER_IMAGE_STRONG_MAX_DISTANCE,
-  isSameProductForPricing,
+  type CrossSellerMatch,
   type CrossSellerVerdict,
 } from "../comparison-search/cross-seller";
 import { withConfidence } from "../comparison-search/match";
@@ -76,6 +76,31 @@ function verdictBothWays(a: ProductFacts, b: ProductFacts): CrossSellerVerdict {
   const backward = compareCrossSellerProducts(b, a);
   expect(backward).toEqual(forward);
   return forward.verdict;
+}
+
+/**
+ * MATCHING-FIX-01 Phase B(CEO 지시, 2026-09-16) — 삭제된 isSameProductForPricing()
+ * 대신 **실제로 가격 등급을 정하는 경로**에 같은 질문을 한다.
+ *
+ *   verdict + modelCode  →  deriveMatchTruth  →  match_truth  →  priceTierFromLink
+ *
+ * 마지막 칸(priceTierFromLink)은 apps/admin 에 있으므로 여기서는 그 함수의 입력이
+ * 되는 등급까지만 본다 — EXACT_IDENTIFIER/STRONG_IDENTIFIER 가 곧 EXACT tier 다
+ * (domestic-product-link.ts:52). 끝까지 이어 붙인 회귀는 apps/admin 의
+ * match-truth-to-price-tier.test.ts 에 있다.
+ *
+ * 🔴 modelCode 를 손으로 적지 않고 **픽스처에서 읽는다**. 예전 함수는 verdict 만
+ *    보면 됐지만 실제 경로는 modelCode 도 같이 보고, 그 차이가 이 작업이 드러낸
+ *    사고다(identifier-safety.test.ts 의 「🔴 미해결」 참고).
+ */
+function goesIntoSameProductPrice(
+  a: ProductFacts,
+  b: ProductFacts,
+  level: "low" | "medium" | "high" | "very_high" = "low",
+): boolean {
+  const match: CrossSellerMatch = compareCrossSellerProducts(a, b);
+  const truth = deriveMatchTruth(level, compareModelCode(a.brandModelCode, b.brandModelCode), match.verdict);
+  return truth === "EXACT_IDENTIFIER" || truth === "STRONG_IDENTIFIER";
 }
 
 describe("MATCHING-2.0-CORE 인수 테스트 A~E", () => {
@@ -159,7 +184,9 @@ describe("강한 반증은 점수로 뒤집을 수 없다", () => {
     const match = compareCrossSellerProducts(left, right);
     expect(match.verdict).toBe("CONFLICT");
     expect(match.conflicts.map((c) => c.conflict)).toEqual(expect.arrayContaining(["COLOR", "MODEL_CODE"]));
-    expect(isSameProductForPricing(match)).toBe(false);
+    // 실제 품번(B226AC042/B226AC043)을 그대로 넣어도 동일상품 가격에 들어가지 않는다.
+    expect(goesIntoSameProductPrice(left, right)).toBe(false);
+    expect(goesIntoSameProductPrice(left, right, "very_high")).toBe(false);
   });
 
   it("compareModelCode의 접두사 규칙 자체가 그대로 살아 있다", () => {
@@ -179,10 +206,32 @@ describe("강한 반증은 점수로 뒤집을 수 없다", () => {
 });
 
 describe("가격 정책", () => {
-  it("🟢 동일상품만 가격 비교에 쓴다", () => {
-    expect(isSameProductForPricing(compareCrossSellerProducts(SMALLABLE_430701(), bobo("B226AC114")))).toBe(true);
-    expect(isSameProductForPricing(compareCrossSellerProducts(SMALLABLE_430632(), bobo("B226AD013")))).toBe(false);
-    expect(isSameProductForPricing(compareCrossSellerProducts(SMALLABLE_430700(), bobo("B226AC112")))).toBe(false);
+  /**
+   * MATCHING-FIX-01 Phase B — 세 쌍 다 **판매처마다 SKU 가 다른** 실제 조건이다
+   * (Smallable 쪽 brandModelCode 가 null → compareModelCode = "unavailable").
+   * 그래서 이 세 쌍에서는 교차판매처 판정이 등급을 혼자 정하고, 삭제된
+   * isSameProductForPricing 과 같은 답이 나온다:
+   *   SAME → STRONG_IDENTIFIER(EXACT tier) · PRESUMED_SAME → TEXT_CONFIRMED
+   *   · CONFLICT → CONFLICT. 같은 답이 «같은 경로 하나»에서 나온다는 것이
+   *   이번 변경의 전부다.
+   */
+  it("🟢 동일상품만 동일상품 가격에 들어간다 — 판정 하나로 이어서 확인한다", () => {
+    expect(goesIntoSameProductPrice(SMALLABLE_430701(), bobo("B226AC114"))).toBe(true);
+    expect(goesIntoSameProductPrice(SMALLABLE_430632(), bobo("B226AD013"))).toBe(false);
+    expect(goesIntoSameProductPrice(SMALLABLE_430700(), bobo("B226AC112"))).toBe(false);
+  });
+
+  it("그 세 쌍의 판정과 품번 증거를 사실 그대로 적는다", () => {
+    const rows: [ProductFacts, ProductFacts, CrossSellerVerdict][] = [
+      [SMALLABLE_430701(), bobo("B226AC114"), "SAME"],
+      [SMALLABLE_430632(), bobo("B226AD013"), "CONFLICT"],
+      [SMALLABLE_430700(), bobo("B226AC112"), "PRESUMED_SAME"],
+    ];
+    for (const [a, b, verdict] of rows) {
+      expect(compareCrossSellerProducts(a, b).verdict).toBe(verdict);
+      // Smallable 은 브랜드 품번을 싣지 않는다 — 품번 축이 애초에 없는 쌍이다.
+      expect(compareModelCode(a.brandModelCode, b.brandModelCode)).toBe("unavailable");
+    }
   });
 });
 
@@ -354,10 +403,12 @@ describe("MATCHING-2.0-INTEGRATION-3 회귀 — 다른 상품이 동일상품 �
 
   it("쌍 B는 동일상품 가격에 쓰이지 않는다 — 이 사고의 실제 피해가 막혔는지", () => {
     const match = compareCrossSellerProducts(SMALLABLE_430701(), B226AC049());
-    expect(isSameProductForPricing(match)).toBe(false);
     // SAME만이 STRONG_IDENTIFIER로 승격되고, STRONG_IDENTIFIER만 EXACT(동일상품
     // 가격)가 된다. 그 승격이 더 이상 일어나지 않는다는 것을 여기서 못박는다.
     expect(deriveMatchTruth("low", "unavailable", match.verdict)).not.toBe("STRONG_IDENTIFIER");
+    // 손으로 적은 "unavailable" 이 아니라 픽스처의 실제 품번으로도 같은 답인지.
+    expect(goesIntoSameProductPrice(SMALLABLE_430701(), B226AC049())).toBe(false);
+    expect(goesIntoSameProductPrice(SMALLABLE_430701(), B226AC049(), "very_high")).toBe(false);
   });
 
   it("쌍 A: Smallable 430701 ↔ B226AC114 는 여전히 SAME이다 — 수정이 정답을 죽이지 않았다", () => {
@@ -452,8 +503,8 @@ describe("MATCHING-2.0-REGRESSION 회귀 — 아기옷이 아동복의 동일상
     expect(match.verdict).not.toBe("SAME");
     expect(match.blockers.map((b) => b.blocker)).toContain("SIZE_SYSTEM");
     // 이 사고의 실제 피해 — 다른 상품의 가격이 이 상품의 가격으로 쓰이는 것.
-    expect(isSameProductForPricing(match)).toBe(false);
     expect(deriveMatchTruth("low", "unavailable", match.verdict)).not.toBe("STRONG_IDENTIFIER");
+    expect(goesIntoSameProductPrice(SMALLABLE_430632(), other())).toBe(false);
   });
 
   it("다섯 건 전부 방향을 바꿔도 같은 답이다", () => {
@@ -544,8 +595,8 @@ describe("MATCHING-3.2-B 회귀 — 운영 후보 모양(사이즈 없음)에서
     // 남은 근거는 원문이 직접 말한 연령 라인뿐이다.
     expect(match.blockers.map((b) => b.blocker)).toContain("AUDIENCE_LINE");
     expect(match.verdict).not.toBe("SAME");
-    expect(isSameProductForPricing(match)).toBe(false);
     expect(deriveMatchTruth("low", "unavailable", match.verdict)).not.toBe("STRONG_IDENTIFIER");
+    expect(goesIntoSameProductPrice(SMALLABLE_430632(), candidate)).toBe(false);
   });
 
   it("보류이지 충돌이 아니다 — 아기옷과 아동복을 '다른 상품'이라고 확정하지 않는다", () => {

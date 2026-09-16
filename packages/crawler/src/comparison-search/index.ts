@@ -70,11 +70,11 @@ export type { ProductMatchTruth } from "./product-identity";
 /** MATCHING-2.0-CORE(CEO 지시, 2026-09-13) — 판매처가 달라도 같은 물건인지
  * 판정하는 계층. 방향을 바꿔도 같은 답이 나오고, 강한 반증은 점수로 뒤집히지
  * 않는다. scoreCandidateMatch/confidence/matchLevel은 전혀 재계산하지 않는다. */
-export {
-  compareCrossSellerProducts,
-  CROSS_SELLER_IMAGE_STRONG_MAX_DISTANCE,
-  isSameProductForPricing,
-} from "./cross-seller";
+/* MATCHING-FIX-01 Phase B(CEO 지시, 2026-09-16) — isSameProductForPricing 은
+   여기서도 사라졌다. 「이 후보를 동일상품 가격에 쓸 것인가」를 답하는 함수는
+   이제 deriveMatchTruth 하나뿐이다(cross-seller.ts 맨 아래 주석이 그 함수가
+   지키려던 의도를 어디에 남겼는지 적고 있다). */
+export { compareCrossSellerProducts, CROSS_SELLER_IMAGE_STRONG_MAX_DISTANCE } from "./cross-seller";
 export type {
   CrossSellerAxis,
   CrossSellerBlocker,
