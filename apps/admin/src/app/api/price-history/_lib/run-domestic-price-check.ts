@@ -551,6 +551,16 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
         salePriceKrw: priceResult.salePriceKrw ?? null,
         originalPriceKrw: priceResult.originalPriceKrw ?? null,
         soldOut: priceResult.soldOut ?? null,
+        // DOMESTIC-SHIPPING-03(CEO 지시, 2026-09-16) — 🔴 바로 위 세 줄과 «같은
+        // 모양, 같은 규칙»이다: 배송 정책을 실측한 사이트(foretforet.com)만 값이
+        // 오고, 나머지 5개 어댑터는 undefined → null로 저장된다(추측 없음).
+        //
+        // 🔴 shippingCostAmount는 «여기서도 넘기지 않는다». 포레포레의 「3,000원」은
+        //    무조건 붙는 배송비가 아니라 「70,000원 미만일 때만」이다 — 그 숫자를
+        //    금액 칸에 넣으면 조건이 사라진 채로 이 상품의 배송비가 되어 버린다.
+        //    조건 원문은 shippingPolicyNote에 판매처가 쓴 그대로 남는다.
+        shippingPolicyStatus: priceResult.shippingPolicyStatus ?? null,
+        shippingPolicyNote: priceResult.shippingPolicyNote ?? null,
       });
     } else if (priceResult.status === "ERROR") {
       sourceErrors.push(`${source.name} 가격 재조회 실패: ${priceResult.error ?? "알 수 없는 오류"}`);

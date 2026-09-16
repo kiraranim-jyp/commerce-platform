@@ -1,3 +1,4 @@
+import type { ShippingPolicyStatus } from "@commerce/pricing";
 import { extractShopifyHandle, fetchShopifyProductJson, stripShopifyLocalePrefix } from "../shopify-product-json";
 import { lookupBrandAlias } from "./brand-alias";
 import { fetchChocoelProductPrice } from "./chocoel";
@@ -25,6 +26,9 @@ export * from "./evidence";
  * unavailable/conflict). 아직 confidence/matchLevel 계산에는 연결하지 않는다
  * (H-3-5에서 연결 예정). */
 export { extractForetforetModelCode, fetchForetforetModelCode } from "./foretforet";
+/** DOMESTIC-SHIPPING-03(CEO 지시, 2026-09-16) — 포레포레 배송비 «정책» 파서.
+ * 금액은 뽑지 않는다(foretforet.ts 실측 주석 참고). */
+export { extractForetforetShippingPolicy, type ForetforetShippingPolicy } from "./foretforet";
 export { compareModelCode, extractForeignModelCode } from "./model-code";
 /** P-28(CPO 지시, 2026-09-03) — 도메인별 국내 식별자 추출기 레지스트리.
  * fetchForetforetModelCode 하드코딩을 일반화한 것 — foretforet.com/
@@ -381,6 +385,17 @@ export interface DomesticPriceRefreshResult {
   salePriceKrw?: number | null;
   originalPriceKrw?: number | null;
   soldOut?: boolean | null;
+  /**
+   * DOMESTIC-SHIPPING-03(CEO 지시, 2026-09-16) — 🔴 바로 위 soldOut 선례를 그대로
+   * 따른다. 배송 정책을 «실측한» 사이트(foretforet.com)만 채우고, 나머지 5개
+   * 어댑터는 값을 넘기지 않는다 → undefined → 저장 시 null. 그래서 그 다섯
+   * 어댑터는 이번 작업에서 코드 변경이 «0줄»이다(시그니처를 강제로 넓히지 않는다).
+   *
+   * 여기서의 null(= 안 넘김)은 «배송비 상태 데이터 없음»이다 — UNREAD("읽었지만
+   * 못 찾음")도, FREE도, 0원도 아니다. 그 구분이 DOMESTIC-SHIPPING-02의 전부다.
+   */
+  shippingPolicyStatus?: ShippingPolicyStatus | null;
+  shippingPolicyNote?: string | null;
 }
 
 /** N-4.07 2차 — domestic_product_links로 이미 매칭이 확정된 특정 상품 1건의 "지금"
@@ -447,9 +462,18 @@ export async function refreshDomesticProductPrice(
       // N-4.18-Q3 PART E-10 — 다른 3개 사이트와 동일 원칙: soldOut은 price 유무와
       // 별개로 항상 전달한다(changeOpt2value는 죽은 코드였고, 실제 신호는
       // sto_state — foretforet.ts 실측 주석 참고).
+      //
+      // DOMESTIC-SHIPPING-03(CEO 지시, 2026-09-16) — 배송비 «상태»도 정확히 같은
+      // 이유로 같은 자리에 싣는다. 가격을 못 찾은 경우(UNAVAILABLE)에도 "배송비
+      // 정책을 확인했다"는 사실 자체는 관측이다. 🔴 어댑터가 준 값을 그대로
+      // 옮기기만 한다 — 여기서 기본값을 채우거나 상태를 바꾸지 않는다.
+      const shipping = {
+        shippingPolicyStatus: result.shippingPolicyStatus,
+        shippingPolicyNote: result.shippingPolicyNote,
+      };
       return result.available && result.price
-        ? { status: "OK", price: result.price, soldOut: result.soldOut }
-        : { status: "UNAVAILABLE", price: null, soldOut: result.soldOut };
+        ? { status: "OK", price: result.price, soldOut: result.soldOut, ...shipping }
+        : { status: "UNAVAILABLE", price: null, soldOut: result.soldOut, ...shipping };
     }
     return { status: "UNSUPPORTED", price: null };
   } catch (error) {

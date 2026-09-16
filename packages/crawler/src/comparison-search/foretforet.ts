@@ -1,3 +1,4 @@
+import type { ShippingPolicyStatus } from "@commerce/pricing";
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
 import { decodeHtmlEntities } from "./html-entities";
 import { productFactsFromListing } from "./seller-facts";
@@ -47,6 +48,14 @@ export interface ForetforetProductPrice {
   price: { amount: number; currency: "KRW" } | null;
   available: boolean;
   soldOut: boolean | null;
+  /**
+   * DOMESTIC-SHIPPING-03(CEO 지시, 2026-09-16) — soldOut 선례 그대로다. HTML을
+   * «실제로 읽었을 때만» 채운다. 응답을 못 받으면(!response.ok) 이 두 칸은
+   * undefined로 남는다 — 그건 "상태 데이터 없음"이고 UNREAD("읽었지만 못 찾음")와
+   * 다른 사실이다(shipping-policy.ts describeShippingPolicy 주석 참고).
+   */
+  shippingPolicyStatus?: ShippingPolicyStatus | null;
+  shippingPolicyNote?: string | null;
 }
 
 /** N-4.18-Q3 PART S(대표님 지시, 2026-08-26) — domestic_product_links로 이미 연결된
@@ -86,6 +95,86 @@ function detectSoldOut(html: string): boolean | null {
   return states.every((s) => s === "SOLDOUT");
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * DOMESTIC-SHIPPING-03(CEO 지시, 2026-09-16) — 배송비 «정책»을 읽는다
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 여기서 금액을 뽑지 않는다. 「3,000원」을 정규화해서 shipping_cost_amount에
+ *    넣는 순간 그 숫자는 «이 상품의 배송비»로 읽히는데, 실제 사실은
+ *    「70,000원 미만일 때만 3,000원」이다. 상태(CONDITIONAL_FREE)와 원문(note)만
+ *    남기고 금액 칸은 비운다 — resolveShippingPolicy()가 그 규칙을 저장 직전에
+ *    다시 강제한다.
+ *
+ * ── 어디를 읽는가 (2026-09-16 실측, branduid=10226592 · HTTP 200) ───────────
+ * MakeShop 상세 페이지에는 배송비가 «두 자리»에 있고, 둘의 성격이 다르다.
+ *
+ *  ① 상품정보 필드 — 상태의 근거
+ *       <span class="shopdetailInfoName">배송비</span>
+ *       <span class="shopdetailInfoCont"><a href="javascript:alert('총 결제금액이
+ *         70,000원 미만시 배송비 3,000원이 청구됩니다.');"><span>배송조건 : (조건)</span>
+ *     "배송조건 : (조건)"은 판매자가 쓴 문장이 아니라 MakeShop이 배송비 설정
+ *     «종류»를 그대로 찍어 주는 라벨이다. 즉 이 자리가 «판매처 스스로 선언한
+ *     배송비 유형»이고, 그래서 상태는 여기서만 읽는다(본문 문장을 우리가
+ *     해석해서 상태를 정하지 않는다).
+ *
+ *  ② 구매혜택 블록 — note의 근거
+ *       <dl><dt>입점사 배송비</dt><dd>총 결제금액이 70,000원 미만시 배송비
+ *         3,000원이 청구됩니다. <br>아래 지역에 배송비가 추가됩니다.<br>진도군
+ *         조도면 : 3,000원(10,000,000원 미만시), …</dd></dl>
+ *     🔴 이 블록의 첫 문장은 ①의 alert 문자열과 «글자까지 같다». 즉 ②는 ①의
+ *        상위집합이다 — 그래서 note를 ②로 두면 «우리가 두 자리를 이어 붙인
+ *        문장»이 아니라 «판매처가 한 자리에 쓴 원문 하나»가 된다. 지역 할증까지
+ *        그 안에 이미 들어 있다.
+ *
+ * 🔴 note에 «원문 그대로»가 아닌 부분은 정확히 셋뿐이고, 저장을 위해 피할 수 없다:
+ *    <br> → 줄바꿈 · 그 밖의 태그 제거 · HTML 엔티티 디코드와 줄별 공백 정리.
+ *    단어는 한 글자도 바꾸지 않고, 요약·재작성·단위 정규화를 하지 않는다.
+ *
+ * 🔴 «(조건)» 말고 다른 라벨은 이번에 한 건도 실측하지 못했다. 그래서 그 밖의
+ *    모든 경우는 UNREAD다 — 「(무료)는 FREE겠지」 같은 추측으로 표를 만들지
+ *    않는다(실측 1건으로 어휘를 넓히지 않는다). UNREAD여도 읽어낸 원문은 note에
+ *    그대로 남기므로, 다음 라벨을 실측하면 그 note가 바로 근거가 된다.
+ */
+const SHIPPING_FIELD_RE = /<span class="shopdetailInfoName">\s*배송비\s*<\/span>([\s\S]*?)<\/p>/;
+/** 필드 안의 판매처 문장은 태그가 아니라 alert() 인자 안에 있다(위 실측 참고). */
+const SHIPPING_FIELD_ALERT_RE = /javascript:alert\('([\s\S]*?)'\)/;
+const VENDOR_SHIPPING_BLOCK_RE = /<dt>\s*입점사 배송비\s*<\/dt>\s*<dd>([\s\S]*?)<\/dd>/;
+/** MakeShop이 찍는 «조건부 무료배송» 라벨. 이 한 값만 실측했다. */
+const CONDITIONAL_SHIPPING_LABEL = "(조건)";
+
+/** 판매처가 쓴 문장만 남긴다 — 태그를 지우고 <br>은 줄바꿈으로 둔다. */
+function shippingBlockToText(html: string): string {
+  return decodeHtmlEntities(html.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, " "))
+    .split("\n")
+    // 줄 안의 연속 공백만 한 칸으로 줄인다(정규식 공백류에 &nbsp; 디코드 문자도 포함된다).
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+export interface ForetforetShippingPolicy {
+  /** 🔴 HTML을 읽은 이상 «상태 없음(null)»은 나오지 않는다 — 못 읽은 것과 읽고도
+   *  못 찾은 것(UNREAD)은 다른 사실이고, 여기 온 시점에 이미 읽은 뒤다. */
+  status: ShippingPolicyStatus;
+  /** 판매처 원문. 아무 문장도 못 찾으면 null(빈 문자열로 "근거를 적었다"고 하지 않는다). */
+  note: string | null;
+}
+
+export function extractForetforetShippingPolicy(html: string): ForetforetShippingPolicy {
+  const fieldBlock = SHIPPING_FIELD_RE.exec(html)?.[1] ?? null;
+  const fieldLabel = fieldBlock ? shippingBlockToText(fieldBlock) : "";
+  const alertText = fieldBlock ? shippingBlockToText(SHIPPING_FIELD_ALERT_RE.exec(fieldBlock)?.[1] ?? "") : "";
+  const vendorText = shippingBlockToText(VENDOR_SHIPPING_BLOCK_RE.exec(html)?.[1] ?? "");
+
+  return {
+    status: fieldLabel.includes(CONDITIONAL_SHIPPING_LABEL) ? "CONDITIONAL_FREE" : "UNREAD",
+    // ②(상위집합) → ①의 문장 → ①의 라벨 순으로 «한 자리»를 고른다. 이어 붙이지
+    // 않는다 — 두 자리를 합치는 순간 그 문장은 판매처 원문이 아니라 우리 편집물이다.
+    note: vendorText || alertText || fieldLabel || null,
+  };
+}
+
 /** N-4.18-Q3 PART H-3-2(대표님 지시, 2026-08-27) — 상세페이지 JSON-LD(schema.org/
  * Product)의 `mpn`(Manufacturer Part Number)을 실측 확인(PèPè 골든케이스:
  * `"mpn":"PP24KASHE1195NER"`, `"@type":"Offer"`가 배열이 아니라 단일 객체 —
@@ -113,13 +202,30 @@ export async function fetchForetforetProductPrice(url: string): Promise<Foretfor
     headers: { Accept: "text/html", "User-Agent": CHROME_UA },
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
+  // 🔴 응답 자체를 못 받았다 — 배송비 정책을 «읽지 않았다». 두 칸을 채우지 않는다
+  //    (UNREAD는 "읽었는데 못 찾았다"는 주장이라 여기서 쓰면 없는 관측이 된다).
   if (!response.ok) return { price: null, available: false, soldOut: null };
   const html = await response.text();
   const amount = parsePrice(DETAIL_PRICE_RE.exec(html)?.[1] ?? "");
   const soldOut = detectSoldOut(html);
+  // DOMESTIC-SHIPPING-03 — soldOut과 같은 자리에서 같은 원칙으로 읽는다: 가격을
+  // 못 찾아도(아래 else 분기) 배송비 정책을 확인한 사실은 그대로 남긴다.
+  const shipping = extractForetforetShippingPolicy(html);
   return amount
-    ? { price: { amount, currency: "KRW" }, available: true, soldOut }
-    : { price: null, available: false, soldOut };
+    ? {
+        price: { amount, currency: "KRW" },
+        available: true,
+        soldOut,
+        shippingPolicyStatus: shipping.status,
+        shippingPolicyNote: shipping.note,
+      }
+    : {
+        price: null,
+        available: false,
+        soldOut,
+        shippingPolicyStatus: shipping.status,
+        shippingPolicyNote: shipping.note,
+      };
 }
 
 /** N-4.18-Q3 PART H-3-6(대표님 지시, 2026-08-27) — domestic_product_links 연결
