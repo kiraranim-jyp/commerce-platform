@@ -15,6 +15,7 @@ import {
   type ListingResult,
 } from "@commerce/listing";
 import { buildChannelPriceAuditRecord } from "@/lib/channel-price-audit";
+import { requireRegistrationAccess } from "@/lib/auth/require-registration-access";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { recordAuditLog } from "@/lib/audit-log";
 import { getNaverCredentials } from "../../naver/_lib/env";
@@ -133,6 +134,13 @@ export async function POST(request: Request) {
   const { product, listing } = body;
   const snapshotId = body.snapshotId ?? null;
   const jobKey = body.jobKey ?? null;
+
+  // P0-C PRE-REGISTER SECURITY GATE(CEO 승인, 2026-09-17) — 쿠팡/롯데ON register와
+  // **같은 함수**를 같은 자리(자격증명 조회 직전)에 둔다. 네이버 계정은
+  // commerce_accounts platform='naver'의 **첫 행**이고 판매자 프로필도 전역이라,
+  // 다른 워크스페이스 셀러가 등록하면 대표 계정 스토어에 상품이 생긴다.
+  const access = await requireRegistrationAccess(snapshotId);
+  if (!access.ok) return access.response;
 
   // PHASE 3.2 — 실제로 이 채널에 나간 최종 등록가격과 그 근거. 새로 계산하지
   // 않고 클라이언트가 어댑터로 만든 listing 값을 그대로 기록한다(payload의

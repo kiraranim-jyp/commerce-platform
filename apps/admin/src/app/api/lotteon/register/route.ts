@@ -7,6 +7,7 @@ import {
   type LotteOnRegistrationResultRow,
 } from "@commerce/listing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { requireRegistrationAccess } from "@/lib/auth/require-registration-access";
 import { getLotteOnCredentials } from "../_lib/env";
 import { callLotteOnApi, LOTTEON_WRITE_PATHS } from "../_lib/client";
 import { classifyLotteOnHttpStatus } from "../_lib/connection-error";
@@ -108,6 +109,15 @@ export async function POST(request: Request) {
   }
   const snapshotId = body.snapshotId ?? null;
   const jobKey = body.jobKey ?? null;
+
+  // P0-C PRE-REGISTER SECURITY GATE(CEO 승인, 2026-09-17) — 쿠팡/스마트스토어
+  // register와 **같은 함수**를 같은 자리(getLotteOnCredentials() 직전)에 둔다.
+  // 롯데ON 계정은 commerce_accounts platform='lotteon'의 **첫 행**이다.
+  // 🔴 여기가 특히 중요하다: `_lib/forbidden-endpoints.ts`는 상품 축(87 등록)을
+  //    명시적으로 **허용**하므로, 인증키가 들어가는 순간 코드 레벨 STOP이 없다.
+  //    오늘 롯데ON이 안전한 유일한 이유가 "키가 없어서"였다.
+  const access = await requireRegistrationAccess(snapshotId);
+  if (!access.ok) return access.response;
 
   const finish = (partial: Omit<LotteOnRegisterResult, "traceId" | "durationMs">): LotteOnRegisterResult => ({
     ...partial,

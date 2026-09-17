@@ -12,6 +12,7 @@ import {
 } from "@commerce/listing";
 import type { ListingResult, RegistrationStepLog } from "@commerce/listing";
 import { buildChannelPriceAuditRecord, buildPriceBreakdownSnapshot } from "@/lib/channel-price-audit";
+import { requireRegistrationAccess } from "@/lib/auth/require-registration-access";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getCoupangCredentials, getVendorUserId } from "../_lib/env";
 import { getDefaultDescriptionTemplate } from "../_lib/description-template";
@@ -215,6 +216,15 @@ export async function POST(request: Request) {
   // 받는다(서버에서 snapshotId로 다시 조회하지 않는다 — pipeline/page.tsx가
   // 스냅샷 저장 응답에서 이미 job_key를 받아 상태로 갖고 있다).
   const jobKey = body.jobKey ?? null;
+
+  // P0-C PRE-REGISTER SECURITY GATE(CEO 승인, 2026-09-17) — 이 라우트에는
+  // 사용자 검증이 **하나도 없었다**. 쿠팡 자격증명(coupang_seller_settings의
+  // id='default' 1행)과 배송 프로필(getDefaultSellerProfile() — 인자를 받지 않는다)이
+  // 전역 싱글턴이라, 로그인한 다른 워크스페이스 셀러가 등록을 누르면 그 사람 상품이
+  // **대표 계정으로** 등록된다. 아래 getCoupangCredentials() 앞에 둔다 — 그 전까지는
+  // 순수 계산뿐이고 외부 호출·기록이 없다.
+  const access = await requireRegistrationAccess(snapshotId);
+  if (!access.ok) return access.response;
 
   // P0-1(가격 계산 투명화) — 이 등록 시도 시점의 배송비/수수료율/마진율 입력값을
   // 스냅샷으로 남긴다(product.priceBreakdown은 사용자가 나중에 또 바꿀 수 있어서
