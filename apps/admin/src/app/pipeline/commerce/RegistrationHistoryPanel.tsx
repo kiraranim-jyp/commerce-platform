@@ -16,6 +16,17 @@ const STATUS_CLASS: Record<string, string> = {
   FAILED: "text-error",
 };
 
+/** P0-C REWORK ②(CEO 실측, 2026-09-17) — DRY_RUN 결과를 "성공"이라고 부르지
+ * 않는다. coupangExecutor는 DRY_RUN일 때 쿠팡 등록 API를 한 번도 호출하지 않고
+ * payload 조립(/api/coupang/payload-preview)만 한 뒤 status="SUBMITTED"를
+ * 돌려준다(packages/listing/src/executors/coupang.executor.ts:56, :105).
+ * 그 값을 이 표가 "성공"으로 적었기 때문에 셀러가 "등록됐다"로 읽었다 —
+ * 같은 상태값이라도 실제 API를 부른 LIVE와 부르지 않은 DRY_RUN은 다르게 적는다. */
+function statusLabel(status: string, mode: string): string {
+  if (status === "SUBMITTED" && mode !== "LIVE") return "미리보기";
+  return STATUS_LABEL[status] ?? status;
+}
+
 function formatTime(iso: string): string {
   const date = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -86,7 +97,18 @@ export function RegistrationHistoryPanel({ history }: { history: RegistrationHis
                * SUBMITTED로 저장되면서 상품 ID만 조용히 비어있었다 — 새 상태를
                * 만들지 않고, 바로 이 화면에서 그 애매함을 숨기지 않고 그대로
                * 보여준다. */}
-              {entry.result.status === "SUBMITTED" && !entry.result.externalProductId && (
+              {/* P0-C REWORK ②(CEO 실측, 2026-09-17) — 위 경고에 mode 조건이
+               * 없어서, 애초에 등록 API를 부르지도 않은 DRY_RUN 건까지
+               * "{채널}이 등록을 수락했지만 상품 ID를 돌려받지 못했습니다"로
+               * 적혔다. DRY_RUN에 상품 ID가 없는 건 이상 징후가 아니라 당연한
+               * 결과다 — 그 둘을 같은 문장으로 말하지 않는다. */}
+              {entry.result.status === "SUBMITTED" && entry.mode !== "LIVE" && (
+                <p className="mt-0.5 text-warning">
+                  ⚠️ 미리보기(DRY_RUN)입니다 — {PLATFORM_ADAPTERS[entry.platform].label}에 등록 요청을 보내지
+                  않았습니다. 등록될 데이터만 검증했고, 상품 ID가 없는 것은 정상입니다.
+                </p>
+              )}
+              {entry.result.status === "SUBMITTED" && entry.mode === "LIVE" && !entry.result.externalProductId && (
                 <p className="mt-0.5 text-warning">
                   ⚠️ {PLATFORM_ADAPTERS[entry.platform].label}이 등록을 수락했지만 상품 ID를 돌려받지 못했습니다 —
                   {entry.platform === "coupang" ? " Wing" : " 스마트스토어 센터"}에서 실제 등록 여부를 직접 확인해주세요.
@@ -104,9 +126,9 @@ export function RegistrationHistoryPanel({ history }: { history: RegistrationHis
               )}
             </div>
             <span
-              className={`shrink-0 font-medium ${STATUS_CLASS[entry.result.status] ?? "text-text-secondary"}`}
+              className={`shrink-0 font-medium ${entry.result.status === "SUBMITTED" && entry.mode !== "LIVE" ? "text-text-secondary" : (STATUS_CLASS[entry.result.status] ?? "text-text-secondary")}`}
             >
-              {STATUS_LABEL[entry.result.status] ?? entry.result.status}
+              {statusLabel(entry.result.status, entry.mode)}
             </span>
           </li>
         ))}
