@@ -12,6 +12,8 @@ export type ConnectionErrorType =
   | "PERMISSION_ERROR"
   | "MISSING_REQUIRED_FIELD"
   | "NETWORK_ERROR"
+  /** P0-C.1(CEO 지시, 2026-09-17) — 아래 classifyNetworkError 주석 참고. */
+  | "TIMEOUT_ERROR"
   | "PROVIDER_SERVER_ERROR"
   | "UNKNOWN_ERROR";
 
@@ -49,11 +51,44 @@ export function classifyHttpStatus(httpStatus: number | undefined, providerLabel
   return null;
 }
 
-/** fetch 실패(네트워크 예외) 분류 — ECONNREFUSED/ETIMEDOUT/network 관련
- * 메시지는 NETWORK_ERROR로, 그 외 예상 못 한 예외는 UNKNOWN_ERROR로 처리한다. */
+/**
+ * P0-C.1(CEO 실측, 2026-09-17) — 🔴 타임아웃이 「알 수 없는 오류」로 새고 있었다.
+ *
+ * 쿠팡/네이버 연결 확인이 둘 다 「연결 확인 중 문제가 발생했습니다 · 잠시 후 다시
+ * 시도해 주세요」로 끝났다. 그 문구는 이 함수의 **UNKNOWN_ERROR 분기**다. 원인을
+ * 실제로 재현해서 확인했다(node, 실측):
+ *
+ *   AbortSignal.timeout(...)  →  TimeoutError: "The operation was aborted due to timeout"
+ *   ECONNREFUSED              →  TypeError:    "fetch failed"
+ *
+ * 아래 정규식에는 `ETIMEDOUT`(= OS 레벨 소켓 타임아웃)만 있고, Node/undici가
+ * **AbortSignal.timeout으로 끊었을 때 쓰는 문구**는 한 글자도 겹치지 않는다.
+ * 그래서 20초 타임아웃(coupang/_lib/client.ts, naver/_lib/client.ts)이 전부
+ * "예상 못 한 예외"로 떨어졌고, 화면은 원인을 말할 수 없었다.
+ *
+ * 🔴 타임아웃과 연결 거부는 다음에 할 일이 다르다 — 거부는 주소/포트/자격증명을
+ *    의심하고, 타임아웃은 프록시·방화벽·상대 서버의 IP 허용목록을 의심한다.
+ *    그래서 같은 NETWORK_ERROR로 합치지 않고 별도 유형으로 가른다.
+ *
+ * `error.name`도 함께 본다 — 네이버 client.ts처럼 호출부가 원본 예외를 자체
+ * 메시지로 감싸 넘기는 경로가 있어서 메시지만으로는 놓칠 수 있다.
+ */
 export function classifyNetworkError(error: unknown): ConnectionErrorInfo {
   const rawMessage = error instanceof Error ? error.message : String(error);
-  if (/ECONNREFUSED|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|network|fetch failed/i.test(rawMessage)) {
+  const rawName = error instanceof Error ? error.name : "";
+  if (
+    /aborted due to timeout|TimeoutError|AbortError|UND_ERR_CONNECT_TIMEOUT|UND_ERR_HEADERS_TIMEOUT|ETIMEDOUT|ESOCKETTIMEDOUT|timed? ?out/i.test(
+      `${rawName} ${rawMessage}`,
+    )
+  ) {
+    return {
+      errorType: "TIMEOUT_ERROR",
+      userMessage: "외부 API 연결 시간이 초과되었습니다.",
+      nextAction:
+        "요청이 거부된 것이 아니라 응답이 오지 않았습니다 — 아웃바운드 프록시 상태, 또는 커머스 쪽 IP 허용목록에 현재 서버 IP가 등록되어 있는지 확인해 주세요.",
+    };
+  }
+  if (/ECONNREFUSED|ENOTFOUND|EAI_AGAIN|network|fetch failed/i.test(rawMessage)) {
     return {
       errorType: "NETWORK_ERROR",
       userMessage: "커머스 서버에 연결할 수 없습니다.",

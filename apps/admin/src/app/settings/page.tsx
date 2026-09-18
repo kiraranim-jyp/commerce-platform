@@ -2557,6 +2557,13 @@ function ConnectionErrorNotice({ result }: { result: ConnectionCheckResult | nul
       <StatusBadge status={status} label={label} />
       <p className="mt-1 text-text-secondary">{result.userMessage ?? result.message}</p>
       {result.nextAction && <p className="mt-1 text-text-tertiary">{result.nextAction}</p>}
+      {/* P0-C.1(CEO 지시 STEP C, 2026-09-17) — 실패 «유형»을 화면에 적는다.
+          그전에는 여섯 종류의 서로 다른 실패가 전부 같은 한 문장으로 보여서,
+          "인증이 거부된 것"과 "응답이 아예 안 온 것"을 구분할 수 없었다.
+          🔴 여기 나가는 것은 분류 이름 하나뿐이다 — Access/Secret Key,
+          Client Secret, 토큰, 프록시 자격증명은 어느 것도 싣지 않는다
+          (원본 오류는 지금처럼 서버 로그와 debug 필드에만 남는다). */}
+      {result.errorType && <p className="mt-1 text-text-tertiary">오류 유형: {result.errorType}</p>}
       {result.proxyProvider && result.proxyProvider !== "NONE" && (
         <p className="mt-1 text-text-tertiary">Proxy: {result.proxyProvider === "OCI" ? "OCI" : "Fixie"}</p>
       )}
