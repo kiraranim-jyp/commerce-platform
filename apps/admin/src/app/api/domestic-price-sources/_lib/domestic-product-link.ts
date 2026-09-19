@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import type { MatchTruth } from "@commerce/crawler";
+import type { CrossSellerVerdict, MatchTruth } from "@commerce/crawler";
 
 /**
  * N-4.07 2차(대표님 지시: "가격보다 동일상품 판별 정확도가 우선이다") —
@@ -81,6 +81,21 @@ export interface DomesticProductLink {
    * 행은 null이다 — "가격 다시 확인"으로 재검색되면 그때 채워진다(일괄 backfill
    * 없음, STEP 3.5 결정). */
   matchTruth: MatchTruth | null;
+  /**
+   * P0-A.8 MATCHING MEASUREMENT ONLY(CEO 승인, 2026-09-18) — compareCrossSellerProducts()가
+   * 실제로 낸 판정. 🔴 **어떤 판정에도 입력으로 쓰이지 않는다.** 측정 전용이다.
+   *
+   * 왜 필요한가: A/B/C 후보안이 전부 이 값을 입력으로 쓰는데, 실측 결과 70행 중
+   * 복원 가능한 행이 0건이라 「이 안을 적용하면 가격이 몇 개 사라지는가」에
+   * 구간으로만 답할 수 있었다. 게다가 오늘 국내 비교가격을 공급하는 EXACT 14개가
+   * **전부** 품번 한 축으로 서 있어(품번 근거 아닌 EXACT = 0건) 안전지대가 없다.
+   *
+   * 🔴 null 과 "UNKNOWN" 은 다르다. null = 이 행을 교차판매처 판정기로 **본 적이 없다**
+   *    (마이그레이션 055 이전 행, 또는 그 판정을 거치지 않는 경로). "UNKNOWN" =
+   *    판정기가 실제로 보고 «근거가 모자랐다»고 결론낸 것. 둘을 합치면 이 칸을
+   *    만든 이유가 그 자리에서 사라진다. backfill 하지 않는 이유도 같다.
+   */
+  crossSellerVerdict: CrossSellerVerdict | null;
   verified: boolean;
   verifiedAt: string | null;
   status: "ACTIVE" | "PAUSED" | "BROKEN_LINK";
@@ -102,6 +117,8 @@ interface DomesticProductLinkRow {
   match_confidence: number;
   match_reasons: string[];
   match_truth: MatchTruth | null;
+  /** 마이그레이션 055. 미실행 환경/레거시 행에서는 undefined 또는 null이다. */
+  cross_seller_verdict?: CrossSellerVerdict | null;
   verified: boolean;
   verified_at: string | null;
   status: "ACTIVE" | "PAUSED" | "BROKEN_LINK";
@@ -124,6 +141,7 @@ function toLink(row: DomesticProductLinkRow): DomesticProductLink {
     matchConfidence: Number(row.match_confidence),
     matchReasons: row.match_reasons ?? [],
     matchTruth: row.match_truth ?? null,
+    crossSellerVerdict: row.cross_seller_verdict ?? null,
     verified: row.verified,
     verifiedAt: row.verified_at,
     status: row.status,
@@ -160,6 +178,9 @@ export interface UpsertDomesticProductLinkInput {
   matchConfidence: number;
   matchReasons: string[];
   matchTruth: MatchTruth;
+  /** P0-A.8 — 측정 전용. 🔴 «실제 근거가 있을 때만» 넘긴다. 호출부가 교차판매처
+   *  판정을 돌리지 않았으면 undefined 로 두고, 여기서 UNKNOWN 으로 메우지 않는다. */
+  crossSellerVerdict?: CrossSellerVerdict;
   verified: boolean;
 }
 
@@ -196,33 +217,50 @@ export async function upsertDomesticProductLink(
     (existing as { match_reasons?: unknown[] } | null)?.match_reasons ?? []
   ).filter((r): r is string => typeof r === "string" && r.startsWith(HUMAN_CONFIRMATION_PREFIX));
 
-  const { data, error } = await supabase
-    .from("domestic_product_links")
-    .upsert(
-      {
-        snapshot_id: input.snapshotId,
-        source_id: input.sourceId,
-        external_url: input.externalUrl,
-        external_product_id: input.externalProductId ?? null,
-        matched_brand: input.matchedBrand ?? null,
-        matched_title: input.matchedTitle ?? null,
-        matched_model_name: input.matchedModelName ?? null,
-        matched_color: input.matchedColor ?? null,
-        match_type: input.matchType,
-        match_confidence: input.matchConfidence,
-        match_reasons: [...input.matchReasons, ...carriedHumanReasons],
-        match_truth: input.matchTruth,
-        verified: keepVerified || input.verified,
-        verified_at: keepVerified || input.verified ? new Date().toISOString() : null,
-        status: "ACTIVE",
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "snapshot_id,source_id" },
-    )
-    .select()
-    .single();
-  if (error) return { ok: false, error: error.message };
-  return { ok: true, link: toLink(data as DomesticProductLinkRow) };
+  const row: Record<string, unknown> = {
+    snapshot_id: input.snapshotId,
+    source_id: input.sourceId,
+    external_url: input.externalUrl,
+    external_product_id: input.externalProductId ?? null,
+    matched_brand: input.matchedBrand ?? null,
+    matched_title: input.matchedTitle ?? null,
+    matched_model_name: input.matchedModelName ?? null,
+    matched_color: input.matchedColor ?? null,
+    match_type: input.matchType,
+    match_confidence: input.matchConfidence,
+    match_reasons: [...input.matchReasons, ...carriedHumanReasons],
+    match_truth: input.matchTruth,
+    verified: keepVerified || input.verified,
+    verified_at: keepVerified || input.verified ? new Date().toISOString() : null,
+    status: "ACTIVE",
+    updated_at: new Date().toISOString(),
+  };
+  /**
+   * P0-A.8(CEO 승인, 2026-09-18) — 🔴 **호출부가 실제로 준 값이 있을 때만** 적는다.
+   * undefined 면 칸 자체를 넣지 않는다 — 여기서 "UNKNOWN"으로 메우면 «판정기가
+   * 근거 부족이라고 결론낸 것»과 «이 경로가 판정기를 아예 안 거친 것»이 같은 값이
+   * 되고, 이 칸을 만든 이유가 그 자리에서 사라진다.
+   */
+  if (input.crossSellerVerdict !== undefined) row.cross_seller_verdict = input.crossSellerVerdict;
+
+  // 마이그레이션 055 미실행 환경 대비 — 컬럼이 없으면 그 칸만 빼고 한 번 더 시도한다
+  // (registration_attempts 의 optionalColumns 폴백과 같은 이유·같은 모양).
+  // 🔴 측정 칸 하나 때문에 «가격 공급 경로»가 끊기면 안 된다. 링크 저장이 우선이다.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const { data, error } = await supabase
+      .from("domestic_product_links")
+      .upsert(row, { onConflict: "snapshot_id,source_id" })
+      .select()
+      .single();
+    if (!error) return { ok: true, link: toLink(data as DomesticProductLinkRow) };
+    if (attempt === 0 && "cross_seller_verdict" in row) {
+      console.warn("[domestic-product-link] cross_seller_verdict 저장 실패, 그 칸을 빼고 재시도:", error.message);
+      delete row.cross_seller_verdict;
+      continue;
+    }
+    return { ok: false, error: error.message };
+  }
+  return { ok: false, error: "링크 저장에 실패했습니다." };
 }
 
 export interface UpdateDomesticProductLinkInput {

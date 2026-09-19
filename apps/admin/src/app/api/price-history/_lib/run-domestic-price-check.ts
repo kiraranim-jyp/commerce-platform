@@ -540,6 +540,20 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       matchedBrand: best.brand ?? null,
       matchedTitle: best.title,
       /**
+       * P0-A.8 MATCHING MEASUREMENT ONLY(CEO 승인, 2026-09-18) — 🔴 판정을 바꾸지
+       * 않는다. 바로 위 :496 과 :529 가 **이미 쓰고 있는 그 값**을 저장 칸에도
+       * 옮길 뿐이다(새로 계산하지 않는다 — 두 번 계산하면 두 값이 갈라진다).
+       *
+       * 왜: A/B/C 후보안이 전부 이 값을 입력으로 쓰는데 70행 중 복원되는 행이
+       * 0건이었다. 그리고 오늘 국내 비교가격을 공급하는 EXACT 14개가 **전부**
+       * 품번 한 축으로 서 있다(품번 근거 아닌 EXACT = 0건). 그 14개가 실제로
+       * SAME 이었는지 PRESUMED_SAME 이었는지 모르는 채로는 어느 안도 못 고른다.
+       *
+       * 🔴 undefined 면 그대로 넘긴다 — 저장 계층이 칸 자체를 빼고, "UNKNOWN"으로
+       *    메우지 않는다. 없는 판정을 지어내지 않는 것이 이 작업의 전부다.
+       */
+      crossSellerVerdict: best.crossSellerVerdict,
+      /**
        * MATCHING-FIX-01 Phase C — 여기 세 칸은 지금까지 null 하드코딩이었다
        * (전수 70링크에서 0/70). 판정을 바꾸지 않고 «판정에 쓴 값»을 그대로 적는다.
        *
