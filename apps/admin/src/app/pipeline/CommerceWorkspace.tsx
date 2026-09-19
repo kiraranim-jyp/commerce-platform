@@ -10,6 +10,9 @@ import type {
   LotteOnChannelInfo,
   PlatformId,
 } from "@commerce/shared";
+/* P0-A.29-C — 육안 비교 카드에 넘길 «대표 이미지». 셀러가 누끼본을 골랐으면 그것을,
+   아니면 원본을 돌려주는 기존 함수를 그대로 쓴다(선택 규칙을 여기서 다시 쓰지 않는다). */
+import { getSelectedImageUrl } from "@commerce/shared";
 import {
   buildResolverBiasedQuery,
   resolveProductSignals,
@@ -2630,6 +2633,12 @@ export function CommerceWorkspace({
                     sourceUrl={product.sourceUrl}
                     sku={product.sku.value || undefined}
                     description={product.description.value || undefined}
+                    /* P0-A.29-C — 육안 비교용. 상품정보가 «이미 갖고 있는» 대표 이미지와
+                       원본 가격을 그대로 넘긴다(새로 만들거나 계산하지 않는다).
+                       🔴 가격은 priceValidity 가 VALID 일 때만 넘긴다 — 못 읽은 가격을
+                          0 으로 그리지 않기 위해서다(N-3.54 와 같은 원칙). */
+                    originImageUrl={product.images[0] ? getSelectedImageUrl(product.images[0]) : null}
+                    originPrice={product.priceValidity === "VALID" ? product.price.value : null}
                     open={domesticEvidenceOpen}
                     onToggle={setDomesticEvidenceOpen}
                     variant={marketEvidenceVariant}
@@ -2645,6 +2654,8 @@ export function CommerceWorkspace({
                     open={overseasEvidenceOpen}
                     onToggle={setOverseasEvidenceOpen}
                     onEvidenceChange={setOverseasMarketEvidence}
+                    originImageUrl={product.images[0] ? getSelectedImageUrl(product.images[0]) : null}
+                    originPrice={product.priceValidity === "VALID" ? product.price.value : null}
                     variant={marketEvidenceVariant}
                   />
                 </div>

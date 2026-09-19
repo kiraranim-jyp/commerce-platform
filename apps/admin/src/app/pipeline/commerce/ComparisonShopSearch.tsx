@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { countryToFlagEmoji } from "@commerce/shared";
 // MI-COLLECTION-GUARD-1 — "이 상품은 이미 수집했다"는 사실이 사는 곳.
 import { useCollectOnce } from "./market-collection";
+import { CandidateComparison } from "./CandidateComparison";
 // MI-UX-FINAL-4 — 「📊 시장 가격 비교」 안에서는 접힘을 한 겹 벗는다.
 import { MarketEvidenceFrame, MARKET_EVIDENCE_EMPTY, type MarketEvidenceVariant } from "./market-evidence-frame";
 import { deriveComparisonResultState, getComparisonResultHeadline, type ComparisonResultState } from "@/lib/comparison-result-status";
@@ -264,12 +265,19 @@ export function ComparisonShopSearch({
   open,
   onToggle,
   onEvidenceChange,
+  originImageUrl,
+  originPrice,
   variant = "DRILL_DOWN",
 }: {
   title: string;
   brand?: string;
   sourceUrl?: string;
   sku?: string;
+  /** P0-A.29-C — 육안 비교의 «왼쪽 칸». 없으면 빈칸으로 그린다(대체 이미지 금지). */
+  originImageUrl?: string | null;
+  /** 🔴 가격이 «확정된 경우에만» 넘어온다. 확정되지 않은 값을 원상품 가격으로
+   *  보여주면 셀러가 그 숫자로 마진을 계산한다. */
+  originPrice?: { amount: number; currency: string } | null;
   /** GOLF-01-WIRE — 상품 검색 시작 때 고른 조사 카테고리. collectOverseasPrices 머리 주석 참조. */
   marketCategoryProfileId?: string;
   /** P-11 STEP 4 — product-identity.ts가 sku가 비어있을 때 "Article code: XXX"
@@ -421,6 +429,29 @@ export function ComparisonShopSearch({
         />
       )}
       {results && <ResultHeadline results={results} />}
+      {/* P0-A.29-C — 국내와 «같은» 화면으로 육안 확인한다. 판정은 건드리지 않는다. */}
+      {results && (
+        <CandidateComparison
+          marketLabel="해외"
+          origin={{ title, brand, imageUrl: originImageUrl ?? null, price: originPrice ?? null, sourceUrl }}
+          rows={results.flatMap((r) =>
+            r.candidates.map((c) => ({
+              shopName: r.shopName,
+              candidate: {
+                title: c.title,
+                url: c.url,
+                price: c.price,
+                imageUrl: c.imageUrl,
+                /* 해외 후보에는 crossSellerVerdict 도 visionScore 도 «없다». 없는 값을
+                   지어내 넘기지 않는다 — 넘기지 않으면 화면에서 그 줄이 사라진다. */
+                matchTruth: c.productMatchTruth,
+                matchReasons: c.matchReasons,
+                confidence: c.confidence,
+              },
+            })),
+          )}
+        />
+      )}
       {results && <ResultTable results={results} krwRates={krwRates} fxSource={fxSource} />}
       {results && <RakutenAttribution results={results} />}
       {/* 조회가 끝났는데 한 곳도 없었다 — "아직 조회 중"과 구분해서만 말한다. */}

@@ -20,6 +20,7 @@ import {
 } from "./match-display";
 // MI-UX-9 §4 — 통화 표시를 한 곳에서. §10 — 검색 상태 5종 구분.
 import { formatMoney } from "@/lib/price-truth";
+import { CandidateComparison } from "./CandidateComparison";
 import { deriveSearchSourceStatus, searchSourceStatusDisplay } from "@/lib/search-source-status";
 
 type MatchLevel = "very_high" | "high" | "medium" | "low";
@@ -204,6 +205,8 @@ export function DomesticShopSearch({
   sourceUrl,
   sku,
   description,
+  originImageUrl,
+  originPrice,
   open,
   onToggle,
   variant = "DRILL_DOWN",
@@ -211,6 +214,10 @@ export function DomesticShopSearch({
   title: string;
   brand?: string;
   sourceUrl?: string;
+  /** P0-A.29-C — 육안 비교용 원상품 대표 이미지/가격. 없으면 그 칸이 «이미지 없음»
+   *  이 된다(다른 상품 사진으로 대체하지 않는다). */
+  originImageUrl?: string | null;
+  originPrice?: { amount: number; currency: string } | null;
   sku?: string;
   /** P-7-B(CPO 지시, 2026-08-29) — 설명문에서 뽑은 상품코드(예: "Article code:
    * 01195-VERNICE-NERO")를 국내 후보의 modelCode와 비교해 matchTruth를 계산하는
@@ -283,7 +290,16 @@ export function DomesticShopSearch({
       {/* MI-UI-1 — "조회 시점:" 라벨은 🕒로 대신한다. 시각 값 자체는 그대로다
           (가격이 언제 기준인지는 판단에 직접 쓰이는 정보라 줄이지 않는다). */}
       {queriedAt && <p className="text-[10px] text-text-tertiary">🕒 {queriedAt}</p>}
-      {results && <ResultHeadline results={results} title={title} brand={brand} />}
+      {results && (
+        <ResultHeadline
+          results={results}
+          title={title}
+          brand={brand}
+          sourceUrl={sourceUrl}
+          originImageUrl={originImageUrl}
+          originPrice={originPrice}
+        />
+      )}
       {results && <ResultTable results={results} />}
       {results?.length === 0 && <p className="text-xs text-text-secondary">{MARKET_EVIDENCE_EMPTY}</p>}
     </MarketEvidenceFrame>
@@ -293,7 +309,22 @@ export function DomesticShopSearch({
 /** P-24 Sprint 2(CPO 지시, 2026-09-02) — "동일상품이 있으면 항상 대표"다.
  * matchLevel(구식 confidence) 기준을 버리고 tierForCandidate()(matchTruth
  * 우선)로 EXACT 존재 여부를 판단한다. */
-function ResultHeadline({ results, title, brand }: { results: SearchResult[]; title: string; brand?: string }) {
+function ResultHeadline({
+  results,
+  title,
+  brand,
+  sourceUrl,
+  originImageUrl,
+  originPrice,
+}: {
+  results: SearchResult[];
+  title: string;
+  brand?: string;
+  /* P0-A.29-C — 육안 비교 카드용. 판정에는 쓰이지 않는다. */
+  sourceUrl?: string;
+  originImageUrl?: string | null;
+  originPrice?: { amount: number; currency: string } | null;
+}) {
   // MI-UX-9 §14 — 부분/변형 응답에서 candidates가 없어도 화면이 죽지 않는다.
   const countBy = (tier: PriceTier) =>
     results.reduce((n, r) => n + (r.candidates ?? []).filter((c) => tierForCandidate(c) === tier).length, 0);
@@ -335,10 +366,23 @@ function ResultHeadline({ results, title, brand }: { results: SearchResult[]; ti
     // 검색은 새로 만들지 않는다 — 아래는 네이버 검색 결과 페이지로 가는 평범한
     // 링크(anchor)일 뿐이고, API 호출도 크롤러도 없다.
     const query = [brand, title].filter(Boolean).join(" ").trim();
+    /**
+     * P0-A.29-C — 여기가 「5건을 찾았지만 근거가 부족해 쓰지 않았습니다」로 끝나던
+     * 자리다. 그 5건이 무엇이었는지 셀러가 볼 방법이 없었고, 그래서 판정을 믿는
+     * 수밖에 없었다. 🔴 이 목록은 «화면 노출» 일 뿐 가격비교에 들어가지 않는다.
+     */
+    const visualRows = results.flatMap((r) =>
+      (r.candidates ?? []).map((candidate) => ({ shopName: r.shopName, candidate })),
+    );
     return (
       <div className="space-y-1.5 rounded-md border border-border bg-background px-3 py-2.5 text-xs">
         <p className="text-text-secondary">{headline}</p>
         <p className="text-[11px] text-text-tertiary">{detail}</p>
+        <CandidateComparison
+          origin={{ title, brand, imageUrl: originImageUrl ?? null, price: originPrice ?? null, sourceUrl }}
+          rows={visualRows}
+          marketLabel="국내"
+        />
         {failedCount > 0 && (
           <p className="text-[11px] text-text-tertiary">
             {failedCount}곳은 이번 검색이 실패했습니다 — 다시 검색하면 결과가 달라질 수 있습니다.
