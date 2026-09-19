@@ -290,14 +290,28 @@ export function DomesticShopSearch({
       {/* MI-UI-1 — "조회 시점:" 라벨은 🕒로 대신한다. 시각 값 자체는 그대로다
           (가격이 언제 기준인지는 판단에 직접 쓰이는 정보라 줄이지 않는다). */}
       {queriedAt && <p className="text-[10px] text-text-tertiary">🕒 {queriedAt}</p>}
+      {results && <ResultHeadline results={results} title={title} brand={brand} />}
+      {/* P0-A.29-D — 육안 확인 카드는 헤드라인의 «어느 분기» 와도 무관하게 선다.
+          전 버전은 「동일상품 없음」 분기 안에만 있어서, 정작 동일상품을 찾은
+          경우에는 눈으로 확인할 화면이 아예 없었다. 올릴 등급은 match-display 의
+          isVisualCheckTier 가 정한다 — 여기서 다시 고르지 않는다. */}
       {results && (
-        <ResultHeadline
-          results={results}
-          title={title}
-          brand={brand}
-          sourceUrl={sourceUrl}
-          originImageUrl={originImageUrl}
-          originPrice={originPrice}
+        <CandidateComparison
+          marketLabel="국내"
+          origin={{ title, brand, imageUrl: originImageUrl ?? null, price: originPrice ?? null, sourceUrl }}
+          rows={results.flatMap((r) =>
+            (r.candidates ?? []).map((c) => ({
+              shopName: r.shopName,
+              tier: displayTierForCandidate(c),
+              candidate: {
+                title: c.title,
+                url: c.url,
+                price: c.price,
+                imageUrl: c.imageUrl,
+                matchReasons: c.matchReasons,
+              },
+            })),
+          )}
         />
       )}
       {results && <ResultTable results={results} />}
@@ -309,22 +323,7 @@ export function DomesticShopSearch({
 /** P-24 Sprint 2(CPO 지시, 2026-09-02) — "동일상품이 있으면 항상 대표"다.
  * matchLevel(구식 confidence) 기준을 버리고 tierForCandidate()(matchTruth
  * 우선)로 EXACT 존재 여부를 판단한다. */
-function ResultHeadline({
-  results,
-  title,
-  brand,
-  sourceUrl,
-  originImageUrl,
-  originPrice,
-}: {
-  results: SearchResult[];
-  title: string;
-  brand?: string;
-  /* P0-A.29-C — 육안 비교 카드용. 판정에는 쓰이지 않는다. */
-  sourceUrl?: string;
-  originImageUrl?: string | null;
-  originPrice?: { amount: number; currency: string } | null;
-}) {
+function ResultHeadline({ results, title, brand }: { results: SearchResult[]; title: string; brand?: string }) {
   // MI-UX-9 §14 — 부분/변형 응답에서 candidates가 없어도 화면이 죽지 않는다.
   const countBy = (tier: PriceTier) =>
     results.reduce((n, r) => n + (r.candidates ?? []).filter((c) => tierForCandidate(c) === tier).length, 0);
@@ -366,23 +365,10 @@ function ResultHeadline({
     // 검색은 새로 만들지 않는다 — 아래는 네이버 검색 결과 페이지로 가는 평범한
     // 링크(anchor)일 뿐이고, API 호출도 크롤러도 없다.
     const query = [brand, title].filter(Boolean).join(" ").trim();
-    /**
-     * P0-A.29-C — 여기가 「5건을 찾았지만 근거가 부족해 쓰지 않았습니다」로 끝나던
-     * 자리다. 그 5건이 무엇이었는지 셀러가 볼 방법이 없었고, 그래서 판정을 믿는
-     * 수밖에 없었다. 🔴 이 목록은 «화면 노출» 일 뿐 가격비교에 들어가지 않는다.
-     */
-    const visualRows = results.flatMap((r) =>
-      (r.candidates ?? []).map((candidate) => ({ shopName: r.shopName, candidate })),
-    );
     return (
       <div className="space-y-1.5 rounded-md border border-border bg-background px-3 py-2.5 text-xs">
         <p className="text-text-secondary">{headline}</p>
         <p className="text-[11px] text-text-tertiary">{detail}</p>
-        <CandidateComparison
-          origin={{ title, brand, imageUrl: originImageUrl ?? null, price: originPrice ?? null, sourceUrl }}
-          rows={visualRows}
-          marketLabel="국내"
-        />
         {failedCount > 0 && (
           <p className="text-[11px] text-text-tertiary">
             {failedCount}곳은 이번 검색이 실패했습니다 — 다시 검색하면 결과가 달라질 수 있습니다.

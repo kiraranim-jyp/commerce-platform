@@ -1,24 +1,27 @@
 "use client";
 
-import { formatMoney } from "@/lib/price-truth";
+import { formatMoney, isPriceDisplayable, type PriceStatus } from "@/lib/price-truth";
+import { isVisualCheckTier, tierDisplay, VISUAL_CHECK_TIER_ORDER, type MatchDisplayTier } from "./match-display";
 
 /**
- * P0-A.29-C(CEO 지시, 2026-09-19) — **자동 판정이 못 쓴 후보를 사람이 눈으로 볼 수
+ * P0-A.29-C/D(CEO 지시, 2026-09-19) — **자동 판정이 낸 답을 사람이 눈으로 볼 수
  * 있게 한다.**
  *
- * 지금까지 이 자리에는 「국내 5곳에서 5건을 찾았지만, 같은 상품이라고 볼 근거가
- * 부족해 가격 비교에 쓰지 않았습니다」한 문장뿐이었다. 셀러는 그 5건이 무엇이었는지
- * 볼 방법이 없었고, 그래서 판정을 «믿는 수밖에» 없었다.
+ * ── 🔴 이 파일에는 «판정» 이 없다 ───────────────────────────────────────────
+ * 처음 만들 때 여기에 자체 선별 규칙(selectVisualCheckCandidates)을 뒀다. 그게
+ * 이번 사고의 원인이다: 그 규칙의 기본값이 「보여준다」여서, 국내에 동일상품이
+ * 하나도 없는데도 후보 5건이 «가격까지 달고» 떴다(실사용 2026-09-19, Pèpè Lulu
+ * T Bar Shoes). 판정기는 「없다」고 말하는데 화면은 「유력 후보 5건」이라고 말한
+ * 것이다.
  *
- * ── 🔴 이 컴포넌트가 하지 않는 것 ───────────────────────────────────────────
- * 자동 가격비교에 «아무 영향도» 주지 않는다. matchTruth · priceTier · EXACT ·
- * COMPARISON · 가격관측 어느 것도 이 화면 때문에 바뀌지 않는다. 여기서 하는 일은
- * 이미 계산된 값을 «그리는 것» 뿐이고, 판정을 다시 하지 않는다.
+ * 그래서 이 파일은 이제 등급을 «계산하지 않는다». 등급은 호출부가 이미 있는
+ * domesticMatchDisplay / overseasMatchDisplay 로 매겨서 넘겨주고, 어느 등급을
+ * 카드에 올릴지는 match-display.ts 의 isVisualCheckTier 하나가 정한다. 판정 의미가
+ * 사는 곳은 한 곳뿐이어야 한다.
  *
- * ── 왜 국내/해외 공통인가 ───────────────────────────────────────────────────
- * 두 검색의 Candidate 모양이 이미 같다(title · url · price · imageUrl ·
- * matchTruth · crossSellerVerdict). 화면을 두 벌로 만들면 한쪽만 고치는 일이
- * 반드시 생긴다 — REWORK-10 이 커머스 세 탭에서 겪은 것과 같은 자리다.
+ * ── 국내/해외 공통인 이유 ───────────────────────────────────────────────────
+ * 두 검색의 후보 모양이 같다. 화면을 두 벌로 만들면 한쪽만 고치는 일이 반드시
+ * 생긴다 — REWORK-10 이 커머스 세 탭에서 겪은 그 자리다.
  */
 
 export interface ComparableCandidate {
@@ -26,10 +29,14 @@ export interface ComparableCandidate {
   url: string;
   price: { amount: number; currency: string } | null;
   imageUrl: string | null;
-  matchTruth?: string;
-  crossSellerVerdict?: string;
+  /**
+   * 🔴 가격을 «숫자로» 보여줘도 되는지는 이 값만 정한다. 검색 목록에서 주운
+   * 미검증 가격을 실제 판매가처럼 그리지 않는다는 기존 원칙(isPriceDisplayable)을
+   * 카드도 똑같이 따른다 — 표에서는 못 보여주는 숫자가 카드에서는 보이면
+   * 셀러는 둘 중 어느 쪽을 믿어야 할지 알 수 없다.
+   */
+  priceStatus?: PriceStatus;
   matchReasons?: string[];
-  confidence?: number;
   /** P0-A.29-B 의 관측 원점수. 🔴 null 이면 «아무것도 표시하지 않는다» —
    *  0 으로 그리면 「낮음」이라는 없는 사실을 말하게 된다. */
   visionScore?: number | null;
@@ -37,6 +44,8 @@ export interface ComparableCandidate {
 
 export interface CandidateWithShop {
   shopName: string;
+  /** 호출부가 기존 판정 표시 계층으로 매긴 등급. 이 파일은 읽기만 한다. */
+  tier: MatchDisplayTier;
   candidate: ComparableCandidate;
 }
 
@@ -76,51 +85,30 @@ function ProductImage({ url, alt }: { url: string | null; alt: string }) {
 /**
  * 판정 근거를 «짧은 줄» 로 요약한다.
  *
- * 🔴 matchReasons 원문을 그대로 쏟지 않는다. 그 배열에는 판정방법·판정근거 같은
- *    긴 진단 문장이 섞여 있어 셀러가 읽을 물건이 아니다. 그렇다고 없는 근거를
- *    지어내지도 않는다 — 실제 문장에 있는 것만 골라 짧게 다시 쓴다.
+ * 🔴 matchReasons 원문을 그대로 쏟지 않는다. 그 배열에는 진단용 긴 문장이 섞여
+ *    있어 셀러가 읽을 물건이 아니다. 그렇다고 없는 근거를 지어내지도 않는다 —
+ *    실제 문장에 있는 것만 골라 짧게 다시 쓴다.
  */
 function summarizeReasons(reasons: string[] | undefined): string[] {
   if (!reasons?.length) return [];
   const out: string[] = [];
   const joined = reasons.join(" | ");
-  if (/품번|모델코드|modelCode/i.test(joined)) out.push("상품 코드 근거 있음");
-  if (/브랜드/.test(joined)) out.push("브랜드 일치");
-  if (/색상/.test(joined)) out.push("색상 일치");
+  if (/품번|모델코드|modelCode|SKU 일치/i.test(joined)) out.push("상품 코드 근거 있음");
+  if (/브랜드 일치/.test(joined)) out.push("브랜드 일치");
+  if (/색상 일치/.test(joined)) out.push("색상 일치");
   if (/소재/.test(joined)) out.push("소재 일치");
-  if (/상품군|카테고리/.test(joined)) out.push("상품군 일치");
+  if (/상품군|카테고리 일치/.test(joined)) out.push("상품군 일치");
   if (/핵심 상품명|모델명 유사도/.test(joined)) out.push("상품명 일치");
   return out;
 }
 
-/** 🔴 «확정» 이라는 말을 쓰지 않는다. 이 화면은 후보를 보여줄 뿐이다. */
-function tierLabel(c: ComparableCandidate): { text: string; tone: string } {
-  if (c.matchTruth === "EXACT_IDENTIFIER" || c.matchTruth === "STRONG_IDENTIFIER" || c.crossSellerVerdict === "SAME") {
-    return { text: "🟢 가장 유력", tone: "bg-success-soft text-success" };
-  }
-  if (c.crossSellerVerdict === "PRESUMED_SAME") return { text: "🟡 유력", tone: "bg-warning-soft text-warning" };
-  return { text: "⚪ 확인 필요", tone: "bg-background text-text-tertiary" };
-}
-
 /**
- * 육안 확인 대상만 남긴다.
- *
- * 🔴 이것은 «동일상품 판정» 이 아니라 «화면 노출 필터» 다. 자동 가격비교는 여전히
- *    priceTierFromLink 가 정하고, 여기서 남긴다고 가격에 들어가지 않는다.
+ * 🔴 카드에 올릴 후보만 남긴다. **등급을 다시 매기지 않는다** — 이미 매겨진
+ *    등급을 match-display 의 정책에 통과시킬 뿐이다.
  */
 export function selectVisualCheckCandidates(rows: CandidateWithShop[]): CandidateWithShop[] {
-  const rank = (c: ComparableCandidate): number => {
-    if (c.matchTruth === "CONFLICT" || c.matchTruth === "INSUFFICIENT_EVIDENCE") return -1;
-    if (c.crossSellerVerdict === "CONFLICT") return -1;
-    if (c.matchTruth === "EXACT_IDENTIFIER" || c.matchTruth === "STRONG_IDENTIFIER" || c.crossSellerVerdict === "SAME") return 2;
-    if (c.crossSellerVerdict === "PRESUMED_SAME") return 1;
-    return 0;
-  };
-  return rows
-    .map((r) => ({ r, score: rank(r.candidate) }))
-    .filter((x) => x.score >= 0)
-    .sort((a, b) => b.score - a.score || (b.r.candidate.confidence ?? 0) - (a.r.candidate.confidence ?? 0))
-    .map((x) => x.r);
+  const order = (t: MatchDisplayTier) => VISUAL_CHECK_TIER_ORDER.indexOf(t);
+  return rows.filter((r) => isVisualCheckTier(r.tier)).sort((a, b) => order(a.tier) - order(b.tier));
 }
 
 export interface OriginProduct {
@@ -129,6 +117,29 @@ export interface OriginProduct {
   imageUrl: string | null;
   price: { amount: number; currency: string } | null;
   sourceUrl?: string;
+}
+
+/**
+ * 🔴 가격 한 칸. 검증된 가격만 숫자로 나온다.
+ *
+ * priceStatus 를 «안 주는» 호출부(국내)는 기존처럼 숫자를 그대로 쓴다 — 국내
+ * 후보 가격은 검색 단계에서 이미 확정돼 오는 값이고, 여기서 없는 상태값을
+ * 지어내 막으면 오늘 잘 보이던 가격이 이유 없이 사라진다.
+ */
+function CandidatePrice({ candidate }: { candidate: ComparableCandidate }) {
+  if (candidate.priceStatus !== undefined && !isPriceDisplayable(candidate.priceStatus, candidate.price)) {
+    return (
+      <p className="text-[11px] text-text-tertiary">
+        {candidate.priceStatus === "PRICE_UNAVAILABLE" ? "가격 확인 실패" : "가격 확인 필요"}
+      </p>
+    );
+  }
+  if (!candidate.price) return null;
+  return (
+    <p className="text-[11px] font-medium text-text-primary">
+      {formatMoney(candidate.price.amount, candidate.price.currency)}
+    </p>
+  );
 }
 
 export function CandidateComparison({
@@ -142,19 +153,38 @@ export function CandidateComparison({
   marketLabel: string;
 }) {
   const selected = selectVisualCheckCandidates(rows);
-  if (selected.length === 0) return null;
+
+  // 🔴 0건을 «침묵» 으로 두지 않는다. 그게 이번 사고 직전의 화면이었다 —
+  //    셀러는 판정이 없었던 것인지 자기가 못 본 것인지 알 수 없었다.
+  if (selected.length === 0) {
+    return (
+      <section className="rounded-md border border-border bg-surface p-3">
+        <h4 className="text-xs font-semibold text-text-primary">{marketLabel} 동일상품 후보</h4>
+        <p className="mt-1 text-[11px] text-text-tertiary">동일상품 후보가 없습니다.</p>
+      </section>
+    );
+  }
+
+  const counts = VISUAL_CHECK_TIER_ORDER.map((tier) => ({
+    tier,
+    n: selected.filter((r) => r.tier === tier).length,
+  })).filter((x) => x.n > 0);
 
   return (
     <section className="space-y-2 rounded-md border border-border bg-surface p-3">
       <div>
-        <h4 className="text-xs font-semibold text-text-primary">동일상품 유력 후보 {selected.length}건</h4>
+        <h4 className="text-xs font-semibold text-text-primary">{marketLabel} 동일상품 후보</h4>
+        {/* 등급을 뭉개서 한 숫자로 말하지 않는다 — 「유력 후보 5건」이 이번 사고의 문장이었다. */}
+        <p className="text-[11px] text-text-secondary">
+          {counts.map(({ tier, n }) => `${tierDisplay(tier).icon} ${tierDisplay(tier).label} ${n}건`).join(" · ")}
+        </p>
         <p className="text-[11px] text-text-tertiary">
           자동 가격비교에는 아직 사용하지 않습니다 — 직접 보시고 판단하시라고 열어 둔 화면입니다.
         </p>
       </div>
 
-      {selected.map(({ shopName, candidate }, index) => {
-        const badge = tierLabel(candidate);
+      {selected.map(({ shopName, candidate, tier }, index) => {
+        const display = tierDisplay(tier);
         const reasons = summarizeReasons(candidate.matchReasons);
         return (
           <div key={`${candidate.url}-${index}`} className="space-y-2 rounded border border-border bg-background p-2.5">
@@ -173,19 +203,23 @@ export function CandidateComparison({
 
               <div className="space-y-1">
                 <div className="flex items-center gap-1">
-                  <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${badge.tone}`}>{badge.text}</span>
+                  <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${display.className}`}>
+                    {display.icon} {display.label}
+                  </span>
                   <span className="text-[10px] text-text-tertiary">{marketLabel} 후보</span>
                 </div>
                 <ProductImage url={candidate.imageUrl} alt={candidate.title} />
                 <p className="line-clamp-2 text-[11px] text-text-primary">{candidate.title}</p>
                 <p className="text-[10px] text-text-tertiary">{shopName}</p>
-                {candidate.price && (
-                  <p className="text-[11px] font-medium text-text-primary">
-                    {formatMoney(candidate.price.amount, candidate.price.currency)}
-                  </p>
-                )}
+                <CandidatePrice candidate={candidate} />
               </div>
             </div>
+
+            {/* 🔴 옵션이 다른 후보는 «가격비교 대상이 아니다» 를 카드 안에서 말한다.
+                같은 카드에 가격 숫자가 있으므로, 말하지 않으면 비교 가격으로 읽힌다. */}
+            {tier === "SAME_MODEL_OPTION_DIFF" && (
+              <p className="text-[10px] text-text-secondary">{display.note}</p>
+            )}
 
             {reasons.length > 0 && (
               <ul className="flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-text-secondary">

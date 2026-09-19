@@ -429,7 +429,9 @@ export function ComparisonShopSearch({
         />
       )}
       {results && <ResultHeadline results={results} />}
-      {/* P0-A.29-C — 국내와 «같은» 화면으로 육안 확인한다. 판정은 건드리지 않는다. */}
+      {/* P0-A.29-C/D — 국내와 «같은» 화면으로 육안 확인한다. 등급은 이미 있는
+          displayTierForCandidate(→ overseasMatchDisplay)가 낸 값을 그대로 넘기고,
+          어느 등급을 카드에 올릴지는 match-display 가 정한다. */}
       {results && (
         <CandidateComparison
           marketLabel="해외"
@@ -437,16 +439,17 @@ export function ComparisonShopSearch({
           rows={results.flatMap((r) =>
             r.candidates.map((c) => ({
               shopName: r.shopName,
+              tier: displayTierForCandidate(c),
               candidate: {
                 title: c.title,
                 url: c.url,
                 price: c.price,
                 imageUrl: c.imageUrl,
-                /* 해외 후보에는 crossSellerVerdict 도 visionScore 도 «없다». 없는 값을
-                   지어내 넘기지 않는다 — 넘기지 않으면 화면에서 그 줄이 사라진다. */
-                matchTruth: c.productMatchTruth,
+                /* 🔴 해외 가격은 상세확인을 통과한 것만 숫자로 나온다. 표(PriceCell)와
+                   같은 규칙을 쓰려고 상태값을 그대로 넘긴다 — 미검증 가격을 실제
+                   판매가처럼 그리지 않는다는 원칙은 카드에서도 같다. */
+                priceStatus: c.priceStatus,
                 matchReasons: c.matchReasons,
-                confidence: c.confidence,
               },
             })),
           )}

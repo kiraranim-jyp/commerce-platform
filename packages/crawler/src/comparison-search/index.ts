@@ -182,7 +182,7 @@ async function searchOneShop(shop: ComparisonShopRef, query: ComparisonQuery): P
   try {
     const candidates = await adapter.search({ term: query.title, currency: shop.currency });
     const scored = withConfidence(query, candidates);
-    const enriched = adapter.enrichScored ? await adapter.enrichScored(scored) : scored;
+    const enriched = adapter.enrichScored ? await adapter.enrichScored(scored, query) : scored;
     return { ...base, status: "ok", candidates: enriched };
   } catch (error) {
     const message = error instanceof Error ? error.message : "알 수 없는 오류";

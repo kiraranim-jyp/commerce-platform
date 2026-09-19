@@ -9,7 +9,7 @@ import { selectCandidatesForDetailConfirmation } from "./price-confirmation";
 import { missingRakutenCredentials, searchRakutenIchiba } from "./rakuten-ichiba";
 import { fetchRuliiProductPrice, searchRulii } from "./rulii";
 import { searchShopifySuggest } from "./shopify-suggest";
-import type { ComparisonCandidate } from "./types";
+import type { ComparisonCandidate, ComparisonQuery } from "./types";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -105,7 +105,7 @@ export interface PriceSourceAdapter {
    * selectCandidatesForDetailConfirmation) search() 안에서는 할 수 없다.
    * 없으면 이 단계를 건너뛴다.
    */
-  enrichScored?(candidates: ComparisonCandidate[]): Promise<ComparisonCandidate[]>;
+  enrichScored?(candidates: ComparisonCandidate[], query?: ComparisonQuery): Promise<ComparisonCandidate[]>;
 }
 
 /** 자격증명이 필요 없는 어댑터(=기존 WEB 파서 전부)가 쓰는 readiness. */
@@ -136,6 +136,9 @@ const ALWAYS_READY = (): PriceSourceReadiness => ({ state: "READY" });
 export async function enrichCandidatePrices(
   candidates: ComparisonCandidate[],
   shopDomain: string,
+  /** P0-A.29-D ㉯ — 주면 「동일 모델 · 옵션 다름」이 상세확인 슬롯에 들어온다.
+   *  안 주면 예전 동작 그대로다(국내 경로). 호출 상한은 어느 쪽이든 같다. */
+  query?: ComparisonQuery,
 ): Promise<ComparisonCandidate[]> {
   const withDefaultSource: ComparisonCandidate[] = candidates.map((c) => ({
     ...c,
@@ -143,7 +146,7 @@ export async function enrichCandidatePrices(
     priceStatus: "UNVERIFIED_SEARCH",
     verificationAttempted: false,
   }));
-  const eligibleIndexes = selectCandidatesForDetailConfirmation(withDefaultSource);
+  const eligibleIndexes = selectCandidatesForDetailConfirmation(withDefaultSource, query);
   if (eligibleIndexes.length === 0) return withDefaultSource;
 
   const origin = `https://www.${shopDomain.replace(/^www\./, "")}`;
@@ -229,7 +232,7 @@ function shopifySuggestAdapter(domain: string): PriceSourceAdapter {
     method: "WEB",
     readiness: ALWAYS_READY,
     search: ({ term, currency }) => searchShopifySuggest(domain, currency, term),
-    enrichScored: (candidates) => enrichCandidatePrices(candidates, domain),
+    enrichScored: (candidates, query) => enrichCandidatePrices(candidates, domain, query),
   };
 }
 

@@ -1,91 +1,127 @@
 import { describe, expect, it } from "vitest";
 import { selectVisualCheckCandidates, type CandidateWithShop } from "../CandidateComparison";
+import { domesticMatchDisplay, overseasMatchDisplay } from "../match-display";
 
 /**
- * P0-A.29-C(CEO 지시, 2026-09-19) — 육안 확인 «노출 필터».
+ * P0-A.29-D Golden UX(CEO 지시, 2026-09-19) — 사장님이 실제로 테스트한 상품을
+ * 그대로 고정한다.
  *
- * 🔴 이것은 동일상품 «판정» 이 아니다. 자동 가격비교는 여전히 priceTierFromLink 가
- *    정하고, 여기서 남긴다고 가격에 들어가지 않는다. 이 파일이 재는 것은
- *    「사람에게 무엇을 보여줄 것인가」뿐이다.
+ *   원상품   junioredition.com  Lulu T Bar Shoes in Tobacco by Pèpè
+ *   국내     rulii 5건 · foretforet 3건  →  동일상품 «0건»
+ *   해외     동일상품 1 · 동일 모델 색상 다름 1 · 나머지 전부 다른 상품
+ *
+ * 사고 당시 화면은 국내에 「동일상품 유력 후보 5건」을 가격까지 달아 띄웠다.
+ * 판정기는 「동일상품 없음」이라고 말하고 있었는데도.
+ *
+ * 🔴 이 파일은 «판정» 을 재지 않는다. 등급은 기존 domesticMatchDisplay /
+ *    overseasMatchDisplay 가 매기고, 여기서는 그 등급 중 무엇이 «육안 확인
+ *    카드에» 오르는지만 잰다.
  */
 
-const row = (over: Partial<CandidateWithShop["candidate"]> & { shopName?: string }): CandidateWithShop => ({
-  shopName: over.shopName ?? "포레포레",
+const row = (tier: CandidateWithShop["tier"], over: Partial<CandidateWithShop["candidate"]> = {}): CandidateWithShop => ({
+  shopName: "테스트샵",
+  tier,
   candidate: {
     title: over.title ?? "테스트 상품",
     url: over.url ?? "https://example.com/p",
     price: over.price ?? { amount: 10000, currency: "KRW" },
-    // 🔴 ?? 를 쓰면 «일부러 넘긴 null» 이 기본값으로 덮인다 — 그러면 「이미지 없음」
-    //    케이스를 영원히 못 잰다. 키가 있는지로 가른다.
     imageUrl: "imageUrl" in over ? (over.imageUrl ?? null) : "https://example.com/i.jpg",
-    matchTruth: over.matchTruth,
-    crossSellerVerdict: over.crossSellerVerdict,
+    priceStatus: over.priceStatus,
     matchReasons: over.matchReasons,
-    confidence: over.confidence,
     visionScore: over.visionScore,
   },
 });
 
-describe("🔴 제외 — 반증이 있는 후보는 눈앞에 두지 않는다", () => {
-  for (const truth of ["CONFLICT", "INSUFFICIENT_EVIDENCE"] as const) {
-    it(`matchTruth=${truth} 는 노출하지 않는다`, () => {
-      expect(selectVisualCheckCandidates([row({ matchTruth: truth })])).toHaveLength(0);
+describe("🔴 국내 — 동일상품이 0건이면 카드도 0건이다", () => {
+  /** 사고 재현: rulii 5 + foretforet 3 이 전부 동일상품이 «아니었다». */
+  const 사장님_국내_8건 = [
+    ...Array.from({ length: 5 }, () => domesticMatchDisplay("SIMILAR").tier),
+    ...Array.from({ length: 3 }, () => domesticMatchDisplay("INSUFFICIENT_EVIDENCE").tier),
+  ].map((tier) => row(tier));
+
+  it("SIMILAR 5건 + INSUFFICIENT_EVIDENCE 3건 → 카드 0건", () => {
+    expect(selectVisualCheckCandidates(사장님_국내_8건)).toHaveLength(0);
+  });
+
+  it("🔴 따라서 가격이 달린 후보도 0건이다 — 이게 사고의 본질이었다", () => {
+    const shown = selectVisualCheckCandidates(사장님_국내_8건);
+    expect(shown.filter((r) => r.candidate.price)).toHaveLength(0);
+  });
+
+  it("TEXT_CONFIRMED(🟡 동일상품 추정)도 육안 확인 카드에는 오르지 않는다", () => {
+    expect(selectVisualCheckCandidates([row(domesticMatchDisplay("TEXT_CONFIRMED").tier)])).toHaveLength(0);
+  });
+
+  it("CONFLICT 는 당연히 오르지 않는다", () => {
+    expect(selectVisualCheckCandidates([row(domesticMatchDisplay("CONFLICT").tier)])).toHaveLength(0);
+  });
+
+  for (const truth of ["EXACT_IDENTIFIER", "STRONG_IDENTIFIER"] as const) {
+    it(`${truth} → 🟢 동일상품으로 카드에 오른다`, () => {
+      const out = selectVisualCheckCandidates([row(domesticMatchDisplay(truth).tier)]);
+      expect(out).toHaveLength(1);
+      expect(out[0].tier).toBe("SAME");
     });
   }
+});
 
-  it("crossSellerVerdict=CONFLICT 도 노출하지 않는다", () => {
-    expect(selectVisualCheckCandidates([row({ crossSellerVerdict: "CONFLICT" })])).toHaveLength(0);
+describe("해외 — 두 종류«만» 오른다", () => {
+  const 사장님_해외 = [
+    row(overseasMatchDisplay("SIMILAR").tier, { title: "다른 상품 A" }),
+    row(overseasMatchDisplay("SAME_MODEL_VARIANT").tier, { title: "색상만 다름" }),
+    row(overseasMatchDisplay("VERY_SIMILAR").tier, { title: "다른 상품 B" }),
+    row(overseasMatchDisplay("EXACT_PRODUCT").tier, { title: "동일상품" }),
+    row(overseasMatchDisplay("CONFLICT").tier, { title: "다른 상품 C" }),
+    row(overseasMatchDisplay("INSUFFICIENT_EVIDENCE").tier, { title: "다른 상품 D" }),
+  ];
+
+  it("🟢 동일상품 1건 + 🔵 동일 모델·옵션 다름 1건 = 2건만 남는다", () => {
+    const out = selectVisualCheckCandidates(사장님_해외);
+    expect(out.map((r) => r.candidate.title)).toEqual(["동일상품", "색상만 다름"]);
   });
 
-  it("🔴 반증이 하나라도 있으면 다른 근거가 강해도 빠진다", () => {
-    // 품번이 맞아도 교차판매처가 반증하면 사람에게 「유력」이라고 내밀지 않는다.
-    const out = selectVisualCheckCandidates([row({ matchTruth: "EXACT_IDENTIFIER", crossSellerVerdict: "CONFLICT" })]);
-    expect(out).toHaveLength(0);
+  it("🔴 동일상품이 «항상» 위에 온다 — 입력 순서에 기대지 않는다", () => {
+    const out = selectVisualCheckCandidates([...사장님_해외].reverse());
+    expect(out.map((r) => r.tier)).toEqual(["SAME", "SAME_MODEL_OPTION_DIFF"]);
+  });
+
+  it("CONFIRMED_PRODUCT 도 🟢 동일상품이다", () => {
+    expect(overseasMatchDisplay("CONFIRMED_PRODUCT").tier).toBe("SAME");
   });
 });
 
-describe("우선순위 — 강한 근거가 위로", () => {
-  it("EXACT/STRONG/SAME 이 PRESUMED_SAME 보다 앞선다", () => {
+describe("🔴 가격 — 검증되지 않은 숫자를 실제 가격처럼 보여주지 않는다", () => {
+  it("SAME_MODEL_VARIANT 의 상세 검증 실패는 가격이 «표시 불가» 상태로 남는다", () => {
     const out = selectVisualCheckCandidates([
-      row({ title: "약함", crossSellerVerdict: "PRESUMED_SAME" }),
-      row({ title: "강함", matchTruth: "EXACT_IDENTIFIER" }),
+      row("SAME_MODEL_OPTION_DIFF", { priceStatus: "PRICE_UNAVAILABLE", price: { amount: 99000, currency: "GBP" } }),
     ]);
-    expect(out.map((r) => r.candidate.title)).toEqual(["강함", "약함"]);
+    // 숫자 자체는 데이터에 남아 있다(지우지 않는다) — 화면이 그리지 않을 뿐이다.
+    expect(out[0].candidate.price).toEqual({ amount: 99000, currency: "GBP" });
+    expect(out[0].candidate.priceStatus).toBe("PRICE_UNAVAILABLE");
   });
 
-  it("같은 등급이면 confidence 가 높은 쪽이 앞선다", () => {
-    const out = selectVisualCheckCandidates([
-      row({ title: "낮음", crossSellerVerdict: "PRESUMED_SAME", confidence: 0.6 }),
-      row({ title: "높음", crossSellerVerdict: "PRESUMED_SAME", confidence: 0.9 }),
-    ]);
-    expect(out.map((r) => r.candidate.title)).toEqual(["높음", "낮음"]);
-  });
-
-  it("근거가 약해도(등급 없음) «제외되지는» 않는다 — 판정이 아니라 노출이다", () => {
-    expect(selectVisualCheckCandidates([row({})])).toHaveLength(1);
+  it("검색 단계 미검증 가격도 UNVERIFIED_SEARCH 로 그대로 온다", () => {
+    const out = selectVisualCheckCandidates([row("SAME", { priceStatus: "UNVERIFIED_SEARCH" })]);
+    expect(out[0].candidate.priceStatus).toBe("UNVERIFIED_SEARCH");
   });
 });
 
-describe("🔴 빈 상태 — 만들어내지 않는다", () => {
+describe("🔴 없는 것을 만들어내지 않는다", () => {
   it("후보 0건이면 0건", () => {
     expect(selectVisualCheckCandidates([])).toHaveLength(0);
   });
 
   it("이미지가 없어도 후보 자체는 남는다 — 이미지 칸만 빈다", () => {
-    const out = selectVisualCheckCandidates([row({ imageUrl: null, matchTruth: "EXACT_IDENTIFIER" })]);
+    const out = selectVisualCheckCandidates([row("SAME", { imageUrl: null })]);
     expect(out).toHaveLength(1);
     expect(out[0].candidate.imageUrl).toBeNull();
   });
-});
 
-describe("🔴 Vision 점수를 지어내지 않는다", () => {
   it("visionScore 가 없으면 undefined 그대로 — 0 으로 바뀌지 않는다", () => {
-    const out = selectVisualCheckCandidates([row({ matchTruth: "EXACT_IDENTIFIER" })]);
-    expect(out[0].candidate.visionScore).toBeUndefined();
+    expect(selectVisualCheckCandidates([row("SAME")])[0].candidate.visionScore).toBeUndefined();
   });
 
   it("0 점이 실제로 관측됐으면 0 이 유지된다 — «없음» 과 구분된다", () => {
-    const out = selectVisualCheckCandidates([row({ matchTruth: "EXACT_IDENTIFIER", visionScore: 0 })]);
-    expect(out[0].candidate.visionScore).toBe(0);
+    expect(selectVisualCheckCandidates([row("SAME", { visionScore: 0 })])[0].candidate.visionScore).toBe(0);
   });
 });

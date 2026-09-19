@@ -122,6 +122,41 @@ export function isDefaultVisibleTier(tier: MatchDisplayTier): boolean {
   return DEFAULT_VISIBLE_TIERS.has(tier);
 }
 
+/** 배지 문구/색을 그대로 빌려 쓰기 위한 접근자. 새 등급도 새 문구도 만들지 않는다 —
+ * 위 TIERS 를 읽기만 한다. */
+export function tierDisplay(tier: MatchDisplayTier): MatchDisplay {
+  return TIERS[tier];
+}
+
+/**
+ * P0-A.29-D(CEO 지시, 2026-09-19) — **육안 확인 카드에 올릴 등급.**
+ *
+ * 표(ResultTable)와 카드는 목적이 다르다. 표는 「시장에 무엇이 있었나」를 보여주고,
+ * 카드는 「이게 같은 물건인지 눈으로 봐 달라」고 묻는다. 물어볼 가치가 있는 것은
+ * 둘뿐이다.
+ *
+ * ── 이번에 이 상수가 생긴 이유 ──────────────────────────────────────────────
+ * 실사용(2026-09-19, Pèpè Lulu T Bar Shoes): 국내에 동일상품이 하나도 없는데
+ * 후보 카드 5건이 «가격까지 달고» 떴다. 원인은 판정이 아니라 카드가 자기 필터를
+ * 따로 들고 있었다는 것이다 — 그 필터의 기본값이 「보여준다」였다. 다른 상품에
+ * 가격을 붙여 보여주면 그건 잘못된 국내 가격비교 정보가 된다.
+ *
+ * 🔴 「숨긴다」는 「그 상품이 시스템에서 배제됐다」가 아니다. 표에는 그대로 있다.
+ *    지금 눈으로 확인할 만큼 유력하지 않다는 뜻뿐이다.
+ *
+ * 🔴 국내에서는 SAME_MODEL_OPTION_DIFF 가 나올 수 없다(옵션 데이터가 없다 —
+ *    이 파일 머리 주석). 그래서 국내는 사실상 🟢 하나만 남는다. 국내용 상수를
+ *    따로 만들지 않는 이유는, 두 벌이 되는 순간 한쪽만 고치는 날이 오기 때문이다.
+ */
+const VISUAL_CHECK_TIERS = new Set<MatchDisplayTier>(["SAME", "SAME_MODEL_OPTION_DIFF"]);
+
+export function isVisualCheckTier(tier: MatchDisplayTier): boolean {
+  return VISUAL_CHECK_TIERS.has(tier);
+}
+
+/** 카드에서 쌓는 순서. 확정에 가까운 쪽이 위에 온다(DEFAULT_TIER_ORDER 와 같은 원칙). */
+export const VISUAL_CHECK_TIER_ORDER: MatchDisplayTier[] = ["SAME", "SAME_MODEL_OPTION_DIFF"];
+
 /** 기본 화면에서 그룹을 쌓는 순서. 판단 가치가 높은 등급이 항상 위에 온다 —
  * 정렬 결과에 기대지 않고 렌더링 구조 자체로 순서를 고정한다(P-24 Sprint 2에서
  * 국내 표에 적용했던 원칙을 국내/해외 공통으로 올린 것). */
