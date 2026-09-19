@@ -297,9 +297,16 @@ export async function upsertDomesticProductLink(
     row.vision_checked_at = input.vision.checkedAt;
   }
 
-  // 마이그레이션 055/056 미실행 환경 대비 — 컬럼이 없으면 그 칸만 빼고 한 번 더 시도한다
+  // P0-A.29-F 후속(CEO 지시, 2026-09-20) — 🔴 **폴백이 «컬럼이 없을 때» 에만 돌게
+  // 한다.** 전에는 첫 시도가 «어떤 이유로든» 실패하면 vision_* 를 통째로 버리고
+  // 재시도했다. 055/056 은 Production 에 이미 적용돼 있으므로(2026-09-20 스키마
+  // 조회로 확인), 그 상태에서 이 폴백이 도는 경우는 «관계없는 오류» 뿐이고 그때
+  // 잃는 것은 관측 데이터다 — 조용히. 이 저장소가 반복해서 금지해 온 모양이다.
+    // 마이그레이션 055/056 미실행 환경 대비 — 컬럼이 없으면 그 칸만 빼고 한 번 더 시도한다
   // (registration_attempts 의 optionalColumns 폴백과 같은 이유·같은 모양).
   // 🔴 측정 칸 하나 때문에 «가격 공급 경로»가 끊기면 안 된다. 링크 저장이 우선이다.
+  const isMissingColumnError = (message: string) =>
+    /column .* does not exist|could not find .* column|schema cache/i.test(message);
   const VISION_COLUMNS = [
     "vision_model", "vision_prompt_version", "vision_media_resolution",
     "vision_score", "vision_reason", "vision_image_refs", "vision_checked_at",
@@ -311,13 +318,13 @@ export async function upsertDomesticProductLink(
       .select()
       .single();
     if (!error) return { ok: true, link: toLink(data as DomesticProductLinkRow) };
-    if (attempt === 0 && VISION_COLUMNS.some((c) => c in row)) {
-      console.warn("[domestic-product-link] vision_* 저장 실패, 그 칸들을 빼고 재시도:", error.message);
+    if (attempt === 0 && isMissingColumnError(error.message) && VISION_COLUMNS.some((c) => c in row)) {
+      console.warn("[domestic-product-link] vision_* 칸이 없어 빼고 재시도:", error.message);
       for (const c of VISION_COLUMNS) delete row[c];
       continue;
     }
-    if (attempt <= 1 && "cross_seller_verdict" in row) {
-      console.warn("[domestic-product-link] cross_seller_verdict 저장 실패, 그 칸을 빼고 재시도:", error.message);
+    if (attempt <= 1 && isMissingColumnError(error.message) && "cross_seller_verdict" in row) {
+      console.warn("[domestic-product-link] cross_seller_verdict 칸이 없어 빼고 재시도:", error.message);
       delete row.cross_seller_verdict;
       continue;
     }

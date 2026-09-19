@@ -112,11 +112,22 @@ export async function runVisionEvidence(
   foreignImageUrl: string | null | undefined,
   domesticImageUrl: string | null | undefined,
 ): Promise<VisionEvidence | null> {
+  /* P0-A.29-F 후속(CEO 지시, 2026-09-20) — 🔴 **왜 null 인지 말한다.**
+     전에는 키가 없어도, 이미지를 못 받아도, API 가 거절해도 전부 조용히 null 이었다.
+     그래서 「Vision 이 왜 0건인가」에 코드로 답할 방법이 없었다.
+     🔴 키 «값» 은 절대 찍지 않는다 — 있다/없다와 실패 종류만 남긴다. */
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || !foreignImageUrl || !domesticImageUrl) return null;
+  if (!apiKey) {
+    console.warn("[vision-evidence] GEMINI_API_KEY 없음 — 관측을 건너뛴다(가격 판정에는 영향 없음)");
+    return null;
+  }
+  if (!foreignImageUrl || !domesticImageUrl) return null;
 
   const [a, b] = await Promise.all([fetchAsInlineData(foreignImageUrl), fetchAsInlineData(domesticImageUrl)]);
-  if (!a || !b) return null;
+  if (!a || !b) {
+    console.warn(`[vision-evidence] 이미지를 받지 못함 — 원상품=${Boolean(a)} 국내=${Boolean(b)}`);
+    return null;
+  }
 
   try {
     const res = await fetch(
@@ -138,10 +149,16 @@ export async function runVisionEvidence(
         signal: AbortSignal.timeout(API_TIMEOUT_MS),
       },
     );
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.warn(`[vision-evidence] Gemini 응답 거절 status=${res.status}`);
+      return null;
+    }
     const body = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
     const text = body.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) return null;
+    if (!text) {
+      console.warn("[vision-evidence] 응답에 본문이 없음 — thinking 예산이 출력을 먹었을 때의 증상과 같다");
+      return null;
+    }
     const parsed = JSON.parse(text) as { score?: unknown; reason?: unknown };
     const score = Number(parsed.score);
     if (!Number.isFinite(score) || score < 0 || score > 100) return null;
