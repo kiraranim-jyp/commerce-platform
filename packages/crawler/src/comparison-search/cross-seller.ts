@@ -417,8 +417,56 @@ function canonicalFit(value: string): string {
   return FIT_CANONICAL[value] ?? value;
 }
 
-function compareFit(x: ProductFacts, y: ProductFacts): { outcome: AxisOutcome; detail: string } {
+/**
+ * P0-A.19 R1(CEO 승인, 2026-09-18) — **`loose fit` ↔ `relaxed fit` 은 «조건부로만»
+ * 같게 읽는다.**
+ *
+ * 🔴 「loose 와 relaxed 는 동의어다」라고 정의하는 것이 **아니다.** 두 판매처 모두
+ *    자기 카탈로그 «안에서» 두 낱말을 구분해 쓴다(실측: bobochoses loose 156 :
+ *    relaxed 63, junioredition loose 11 : relaxed 34). 그래서 전역 synonym 으로
+ *    만들면 브랜드가 의도한 구분까지 지운다.
+ *
+ * 대신 **증거가 이미 충분히 쌓인 자리에서만** 이 한 축을 내려놓는다. 카탈로그
+ * 9,013건(bobochoses 4,013 + junioredition 5,000) 실측:
+ *
+ *   품번 완전일치 교차판매처 쌍                45쌍
+ *     └ 핏 표현이 갈린 것                     26쌍
+ *         └ 그중 loose ↔ relaxed              «21쌍»  (20쌍이 junior=relaxed/bobo=loose 한 방향)
+ *   같은 품번이 «다른 상품» 에 붙은 사례        0건 (브랜드형 품번 136종 전수)
+ *
+ * 즉 품번이 완전히 같고 브랜드도 같은 두 판매처 사이에서는, 이 두 낱말의 차이가
+ * 상품을 가른 적이 «한 번도 없다».
+ *
+ * ── 조건을 넷으로 좁힌 이유 ─────────────────────────────────────────────────
+ * 🔴 `exact modelCode = 동일상품` 이라는 일반 규칙을 만들면 안 된다. 같은 실측에서
+ *    junioredition 의 **숫자형** 품번은 14.8%(230종)가 여러 상품에 걸쳐 있었다
+ *    (예: 261004 → pirita-top-in-rust / -black — 색상만 다른 같은 스타일).
+ *    브랜드형(B226AC010)만 1:1 이었다. 그래서 품번 하나로 열지 않고
+ *    «브랜드 확인 + 교차판매처» 를 함께 요구한다 — 세 조건이 함께 성립하는 구간이
+ *    실측으로 안전하다고 확인된 유일한 자리다.
+ *
+ * 🔴 `fits true to size ↔ oversized/loose/slim`(같은 실측 5건)은 **넣지 않았다.**
+ *    표기 변형이 아니라 뜻이 충돌하는 조합이라 별도 안건이다.
+ */
+const LOOSE_RELAXED = new Set(["loose fit", "relaxed fit"]);
+
+function isLooseRelaxedPair(a: string, b: string): boolean {
+  return a !== b && LOOSE_RELAXED.has(a) && LOOSE_RELAXED.has(b);
+}
+
+function compareFit(
+  x: ProductFacts,
+  y: ProductFacts,
+  /** R1 조건이 이미 성립했는가 — 호출부가 계산해서 넘긴다(여기서 다시 판정하지 않는다). */
+  identifierBackedCrossSeller = false,
+): { outcome: AxisOutcome; detail: string } {
   if (!x.fitText || !y.fitText) return { outcome: "unknown", detail: "핏 정보 없음" };
+  if (identifierBackedCrossSeller && isLooseRelaxedPair(x.fitText, y.fitText)) {
+    return {
+      outcome: "match",
+      detail: `핏 ${x.fitText} ↔ ${y.fitText}(표현 차이 · 동일 브랜드 품번 완전일치 교차판매처)`,
+    };
+  }
   if (canonicalFit(x.fitText) !== canonicalFit(y.fitText)) {
     return { outcome: "mismatch", detail: `핏 ${x.fitText} ↔ ${y.fitText}` };
   }
@@ -622,7 +670,17 @@ export function compareCrossSellerProducts(
   if (material.outcome === "match") axes.push({ axis: "MATERIAL", points: 1, detail: material.detail });
   if (material.outcome === "mismatch") blockers.push({ blocker: "MATERIAL", detail: material.detail });
 
-  const fit = compareFit(x, y);
+  /**
+   * P0-A.19 R1 — 위 compareFit 주석의 세 조건을 «여기서» 조립한다. 전부 이 함수가
+   * 이미 계산해 둔 값이다(새로 판정하지 않는다):
+   *   brandOk      :530  양쪽 브랜드를 확인했고 서로 맞는가
+   *   modelCode    :561  compareModelCode 가 exact 를 냈는가
+   *   sameSeller…  아래 :665 가 쓰는 것과 «같은 함수». 같은 판매처의 두 진열이면 R1 을 열지 않는다
+   *                — 그 경우는 「색상만 다른 자매 상품」일 수 있고, 그게 바로 숫자형 품번
+   *                  14.8% 중복의 모양이다.
+   */
+  const identifierBackedCrossSeller = brandOk && modelCode === "exact" && !sameSellerDistinctListing(x, y);
+  const fit = compareFit(x, y, identifierBackedCrossSeller);
   if (fit.outcome === "match") axes.push({ axis: "FIT", points: 1, detail: fit.detail });
   if (fit.outcome === "mismatch") blockers.push({ blocker: "FIT", detail: fit.detail });
 
