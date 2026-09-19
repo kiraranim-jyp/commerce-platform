@@ -80,7 +80,9 @@ export type CrossSellerConflict =
   | "CATEGORY"
   | "COLOR"
   | "MODEL_CODE"
-  | "BRAND";
+  | "BRAND"
+  /** P0-A.27 — 구성(세트/멀티팩)이 다르다. compareComposition 참고. */
+  | "COMPOSITION";
 
 /** SAME으로 올라가는 것을 막지만, CONFLICT로 끌어내리지는 않는 반증. "다르다고
  * 말할 만큼은 아니지만, 같다고 확정할 수는 없다"는 상태다. */
@@ -319,6 +321,67 @@ function taxonOf(facts: ProductFacts): CategoryTaxon | null {
   // 정확하다). 없으면 제목으로 내려간다 — 기존 extractCategoryTaxon을 그대로
   // 재사용한다(새 어휘를 만들지 않는다).
   return extractCategoryTaxon(facts.categoryText ?? "") ?? extractCategoryTaxon(facts.title);
+}
+
+/**
+ * P0-A.27(CEO 승인, 2026-09-19) — **세트와 단품은 같은 상품이 아니다.**
+ *
+ * ── 왜 이 축이 필요한가 ─────────────────────────────────────────────────────
+ * GOLDEN-FP-001 이 이 축의 존재 이유다:
+ *
+ *   PACEY SET   - cherry dot   (원피스 + 블루머)
+ *   PACEY DRESS - cherry dot   (원피스 단품)
+ *
+ * 사진 속 «원피스» 는 정말 같은 옷이다. 그래서 Vision 이 100점 만점에 95점을 줬다
+ * (P0-A.23 실측 — 진짜 동일상품의 최저 점수와 «같은» 값이라 어떤 임계값으로도
+ * 가를 수 없었다). 구조정보도 못 잡았다: 제목이 겹치고 소재·대상·색상이 같아
+ * PRESUMED_SAME 이었다. 🔴 **이미지로도 기존 축으로도 잡을 수 없는 유형이고,
+ * 그런데 가격은 다르다** — 이 쌍을 동일상품으로 묶으면 국내 비교가가 틀린다.
+ *
+ * ── null 을 «단품» 으로 읽지 않는다 ─────────────────────────────────────────
+ * 🔴 표시가 없는 것은 「단품이다」가 아니라 「이 판매처가 적지 않았다」이다. 그래서
+ *    양쪽 다 표시가 없으면 unknown(축도 보류도 아님)이다.
+ *
+ * ── 「한쪽만 표시」를 충돌로 보는 근거 ───────────────────────────────────────
+ * 이 분기가 이 축에서 유일하게 위험한 자리라, 교차판매처 SAME 쌍을 모아 직접 셌다
+ * (P0-A.27 실측, bobochoses·Konges Sløjd·junioredition 카탈로그 9,013건에서
+ * 품번 또는 제목+색상으로 정답을 만든 246쌍):
+ *
+ *   양쪽 다 표시 없음      238
+ *   양쪽 같은 구성           8   (값이 어긋난 경우 0)
+ *   🔴 한쪽만 표시           0
+ *   🔴 양쪽 다른 구성        0
+ *
+ * 즉 진짜 동일상품에서 한쪽만 구성을 적는 일이 «한 번도 없었다». 그래서 이 분기를
+ * 충돌로 둔다. 다만 표본의 97%가 「양쪽 다 표시 없음」이라 이 규칙은 «드물게»
+ * 발화한다 — 구성 표시가 흔한 상품군(침구·식기·양말)은 측정하지 못했다.
+ */
+const COMPOSITION_PATTERN =
+  /\b(\d+)\s*[-\s]?pack\b|\bpack of (\d+)\b|\bset\b|\bbundle\b|\bkit\b|\b(two|three)[- ]piece\b/i;
+
+/** 제목이 말하는 구성. 없으면 null — 「단품」이 아니라 「표시 없음」이다. */
+function compositionOf(title: string): string | null {
+  const match = COMPOSITION_PATTERN.exec(title ?? "");
+  if (!match) return null;
+  const count = match[1] ?? match[2];
+  if (count) return `PACK_${count}`;
+  const phrase = match[0].toLowerCase();
+  if (phrase.includes("set")) return "SET";
+  if (phrase.includes("bundle")) return "BUNDLE";
+  if (phrase.includes("kit")) return "KIT";
+  return "MULTI";
+}
+
+function compareComposition(x: ProductFacts, y: ProductFacts): { outcome: AxisOutcome; detail: string } {
+  const left = compositionOf(x.title);
+  const right = compositionOf(y.title);
+  if (left === null && right === null) return { outcome: "unknown", detail: "구성 표시 없음" };
+  if (left !== null && right !== null) {
+    return left === right
+      ? { outcome: "match", detail: `구성 ${left}` }
+      : { outcome: "mismatch", detail: `구성 ${left} ↔ ${right}` };
+  }
+  return { outcome: "mismatch", detail: `구성 ${left ?? "표시없음"} ↔ ${right ?? "표시없음"}` };
 }
 
 function compareCategory(x: ProductFacts, y: ProductFacts): {
@@ -611,6 +674,18 @@ export function compareCrossSellerProducts(
     conflicts.push({ conflict: "MODEL_CODE", detail: `모델코드 ${x.brandModelCode} ↔ ${y.brandModelCode}` });
   }
 
+  /**
+   * P0-A.27 — 🔴 **이 검사는 반드시 아래 조기 반환 «앞» 에 있어야 한다.**
+   * 축 계산부(아래쪽)에 두면 conflicts 배열에는 들어가는데 verdict 는 이미
+   * 정해진 뒤라 PRESUMED_SAME 그대로 나온다 — 시뮬레이션에서 실제로 그렇게 됐고,
+   * 앞으로 옮기고 나서야 GOLDEN-FP-001 이 CONFLICT 가 됐다. 새 충돌 축을 더할
+   * 때도 같은 제약이 걸린다.
+   */
+  const composition = compareComposition(x, y);
+  if (composition.outcome === "mismatch") {
+    conflicts.push({ conflict: "COMPOSITION", detail: composition.detail });
+  }
+
   if (conflicts.length > 0) {
     // 점수를 계산하지도, 보지도 않는다. 여기서 끝난다.
     return {
@@ -658,7 +733,22 @@ export function compareCrossSellerProducts(
   } else if (modelCode === "partial") {
     axes.push({ axis: "MODEL_CODE", points: 2, detail: `모델코드 부분 일치 ${x.brandModelCode}/${y.brandModelCode}` });
   }
-  if (category.taxonOutcome === "match" || category.textOutcome === "match") {
+  /**
+   * P0-A.25/27(CEO 승인, 2026-09-19) — 여기는 원래 `taxonOutcome === "match" ||
+   * textOutcome === "match"` 였다. textOutcome 은 카테고리 «원문 토큰 교집합» 이라,
+   * 옷 종류가 아니라 **원단 공법 낱말 하나**로 축이 붙었다:
+   *
+   *   "WOVEN ROMPERS & JUMPSUITS"  vs  "WOVEN DRESSES"   공유 토큰 = «woven»
+   *
+   * 실측(Konges Sløjd 상품유형 116종): 첫 낱말을 공유하는 서로 다른 유형이 34종
+   * (woven 8 · jersey 7 · knitted 7 …). 즉 원피스와 바지가 「같은 상품군」이 된다.
+   *
+   * 🔴 그런데 이 변경의 «판정» 효과는 0 이다(215쌍 시뮬레이션: verdict 변동 0 ·
+   *    tier 변동 0 · SAME 손실 0). 진짜 동일상품은 taxon 이 이미 일치하고 있어서
+   *    토큰 교집합에 기대지 않았기 때문이다. 고치는 것은 «근거의 정확성» 이고,
+   *    지우는 것은 GOLDEN-FP-001 이 받고 있던 거짓 +1 이다.
+   */
+  if (category.taxonOutcome === "match") {
     axes.push({ axis: "CATEGORY", points: 1, detail: category.detail });
   }
   if (color.outcome === "match") {
