@@ -93,14 +93,40 @@ export function deriveMatchTruth(
   const textOnly: MatchTruth =
     level === "low" ? "INSUFFICIENT_EVIDENCE" : HIGH_OR_ABOVE.has(level) ? "TEXT_CONFIRMED" : "SIMILAR";
   if (!crossSeller) return textOnly;
+  //
+  // P0-A.29-F R1(CEO 지시, 2026-09-20) — **SIMILAR 은 «닮았다» 가 아니라
+  // «반증이 없다» 는 뜻이다. 그것으로 등급을 올리지 않는다.**
+  //
+  // compareCrossSellerProducts 의 SIMILAR 조건은 `totalPoints >= 1` 이다 —
+  // 축 «하나» 만 맞아도 나온다. 신발 대 신발이면 상품군 축이 언제나 맞으므로
+  // 사실상 항상 참이다.
+  //
+  // 그 값이 여기서 텍스트 등급을 이기고 있었다:
+  //
+  //     level=low            → textOnly  = INSUFFICIENT_EVIDENCE  (rank 1)
+  //     crossSeller=SIMILAR  → fromCross = SIMILAR                (rank 2)
+  //                            2 > 1     → 🔴 SIMILAR 로 승격
+  //
+  // 실측(2026-09-20, Lulu T Bar Shoes in Tobacco): 국내 원시 후보 18건이 전부
+  // 「모델명 유사도 0%」인데, 그중 10건이 이 경로로 SIMILAR 이 되어 화면에
+  // 「비교 가능한 유사상품」으로 섰다. 실제로는 페페슈즈 플라워샌들 · 나파 키안티
+  // 부츠 · 폼폼 라소 발레리나 슈즈 — 전부 다른 신발이다. 셀러는 동일상품 검증
+  // 결과를 보러 온 것이지 같은 브랜드 카탈로그를 보러 온 것이 아니다.
+  //
+  // 🔴 SAME · PRESUMED_SAME 의 승격은 그대로 둔다. 그 둘은 축이 여럿 맞아야
+  //    나오는 «근거» 이고, 텍스트 점수가 낮아도 동일상품인 실제 사례(Smallable
+  //    430701 ↔ Bobo B226AC114)가 그 길로 살아 있다. 이번에 막는 것은 근거가
+  //    「축 하나」뿐인 경우 하나다.
+  if (crossSeller === "SIMILAR") return textOnly;
   const fromCross: MatchTruth =
     crossSeller === "SAME"
       ? "STRONG_IDENTIFIER"
       : crossSeller === "PRESUMED_SAME"
         ? "TEXT_CONFIRMED"
-        : crossSeller === "SIMILAR"
-          ? "SIMILAR"
-          : "INSUFFICIENT_EVIDENCE";
+        // 남은 것은 UNKNOWN 뿐이다(SIMILAR 는 위에서 돌아갔고, CONFLICT 는 맨
+        // 위에서 끝났다). rank 1 이라 아래 비교에서 절대 승격시키지 않는다 —
+        // «판단 근거가 없다» 가 텍스트 근거를 깎지는 않는다.
+        : "INSUFFICIENT_EVIDENCE";
   // 둘 중 근거가 강한 쪽. 오늘 잘 동작하는 매칭을 새 규칙이 조용히 깎지 않게 한다.
   return MATCH_TRUTH_RANK[fromCross] > MATCH_TRUTH_RANK[textOnly] ? fromCross : textOnly;
 }
