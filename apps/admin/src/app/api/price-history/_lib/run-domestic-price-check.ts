@@ -24,6 +24,7 @@ import {
   upsertDomesticProductLink,
 } from "../../domestic-price-sources/_lib/domestic-product-link";
 import { buildMatchProvenanceReasons } from "../../domestic-price-sources/_lib/match-provenance";
+import { findCachedVisionEvidence, runVisionEvidence, type VisionEvidence } from "./vision-evidence";
 import { hasObservationToday, recordPriceObservations } from "./price-observations";
 
 /**
@@ -533,9 +534,40 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       }),
     ];
 
+    /**
+     * P0-A.29-B(CEO 승인 ㉮, 2026-09-19) — Vision 을 «관측 데이터 수집기» 로만 부른다.
+     *
+     * 🔴 이 값은 아래 upsert 의 어떤 판정 칸에도 들어가지 않는다. matchType ·
+     *    matchConfidence · verified · matchTruth 는 이 줄보다 «먼저» 확정돼 있고,
+     *    priceTierFromLink 는 여전히 matchTruth·verified 만 읽는다. 가격은 한 칸도
+     *    움직이지 않는다 — 그게 이번 단계의 조건이었다.
+     *
+     * 호출 조건(CEO §3):
+     *   · 구조적으로 즉시 제외되지 않은 후보 — 여기까지 왔다는 것이 곧 그 뜻이다
+     *     (matchType === "NOT_MATCHED" 는 위에서 continue 했고, MODEL_CODE ·
+     *      COMPOSITION · AUDIENCE · CATEGORY 충돌은 crossSellerVerdict 가
+     *      "CONFLICT" 로 말해 준다)
+     *   · 양쪽 이미지가 실제로 있을 것
+     *   🔴 BRAND_MISMATCH 는 진입 가능이다 — 그것이 P0-A.29-A 의 목적이었다.
+     *
+     * 비용(CEO §9): 같은 쌍을 「가격 다시 확인」마다 다시 부르지 않는다.
+     * findCachedVisionEvidence 가 (스냅샷, 소스) 로 기존 행을 찾고 프롬프트 판 ·
+     * 모델 · 이미지 URL 이 «전부» 같을 때만 재사용한다.
+     */
+    let visionEvidence: VisionEvidence | undefined;
+    const foreignImageUrl = input.dna.imageUrls[0] ?? null;
+    const domesticImageUrl = best.imageUrl ?? null;
+    if (best.crossSellerVerdict !== "CONFLICT" && foreignImageUrl && domesticImageUrl) {
+      const refs = [foreignImageUrl, domesticImageUrl];
+      const cached = await findCachedVisionEvidence(input.snapshotId, result.shopId, refs);
+      // 🔴 실패하면 undefined 그대로 둔다. 「같다」로도 「다르다」로도 읽지 않는다.
+      visionEvidence = cached ?? (await runVisionEvidence(foreignImageUrl, domesticImageUrl)) ?? undefined;
+    }
+
     const upsertResult = await upsertDomesticProductLink({
       snapshotId: input.snapshotId,
       sourceId: result.shopId,
+      vision: visionEvidence,
       externalUrl: best.url,
       matchedBrand: best.brand ?? null,
       matchedTitle: best.title,

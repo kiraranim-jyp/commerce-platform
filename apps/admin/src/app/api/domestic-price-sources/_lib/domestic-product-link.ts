@@ -96,6 +96,23 @@ export interface DomesticProductLink {
    *    만든 이유가 그 자리에서 사라진다. backfill 하지 않는 이유도 같다.
    */
   crossSellerVerdict: CrossSellerVerdict | null;
+  /**
+   * P0-A.29-B(CEO 승인 ㉮, 2026-09-19) — Vision 등급 «원점수» 와 그것을 재현하는 데
+   * 필요한 것들. 🔴 **어떤 판정에도 입력으로 쓰이지 않는다** — priceTierFromLink 는
+   * 여전히 matchTruth·verified 만 읽는다. 관측 전용이다.
+   *
+   * 🔴 HIGH/REVIEW/LOW 로 접어서 저장하지 않는다. 경계가 아직 정해지지 않았고,
+   *    정해진 뒤에도 과거 행의 뜻이 바뀌면 안 된다.
+   * 🔴 null 은 「같지 않다」가 아니라 «이 쌍을 Vision 으로 본 적이 없다» 이다
+   *    (055 cross_seller_verdict 와 같은 규칙).
+   */
+  visionScore: number | null;
+  visionReason: string | null;
+  visionModel: string | null;
+  visionPromptVersion: string | null;
+  visionMediaResolution: string | null;
+  visionImageRefs: string[] | null;
+  visionCheckedAt: string | null;
   verified: boolean;
   verifiedAt: string | null;
   status: "ACTIVE" | "PAUSED" | "BROKEN_LINK";
@@ -119,6 +136,14 @@ interface DomesticProductLinkRow {
   match_truth: MatchTruth | null;
   /** 마이그레이션 055. 미실행 환경/레거시 행에서는 undefined 또는 null이다. */
   cross_seller_verdict?: CrossSellerVerdict | null;
+  /** 마이그레이션 056. 같은 이유로 전부 optional이다. */
+  vision_score?: number | null;
+  vision_reason?: string | null;
+  vision_model?: string | null;
+  vision_prompt_version?: string | null;
+  vision_media_resolution?: string | null;
+  vision_image_refs?: string[] | null;
+  vision_checked_at?: string | null;
   verified: boolean;
   verified_at: string | null;
   status: "ACTIVE" | "PAUSED" | "BROKEN_LINK";
@@ -142,6 +167,13 @@ function toLink(row: DomesticProductLinkRow): DomesticProductLink {
     matchReasons: row.match_reasons ?? [],
     matchTruth: row.match_truth ?? null,
     crossSellerVerdict: row.cross_seller_verdict ?? null,
+    visionScore: row.vision_score ?? null,
+    visionReason: row.vision_reason ?? null,
+    visionModel: row.vision_model ?? null,
+    visionPromptVersion: row.vision_prompt_version ?? null,
+    visionMediaResolution: row.vision_media_resolution ?? null,
+    visionImageRefs: row.vision_image_refs ?? null,
+    visionCheckedAt: row.vision_checked_at ?? null,
     verified: row.verified,
     verifiedAt: row.verified_at,
     status: row.status,
@@ -181,6 +213,17 @@ export interface UpsertDomesticProductLinkInput {
   /** P0-A.8 — 측정 전용. 🔴 «실제 근거가 있을 때만» 넘긴다. 호출부가 교차판매처
    *  판정을 돌리지 않았으면 undefined 로 두고, 여기서 UNKNOWN 으로 메우지 않는다. */
   crossSellerVerdict?: CrossSellerVerdict;
+  /** P0-A.29-B — 측정 전용. 호출부가 «실제로 Vision 을 돌렸을 때만» 넘긴다.
+   *  안 돌렸으면 undefined 로 두고, 여기서 0 이나 다른 값으로 메우지 않는다. */
+  vision?: {
+    model: string;
+    promptVersion: string;
+    mediaResolution: string;
+    score: number;
+    reason: string | null;
+    imageRefs: string[];
+    checkedAt: string;
+  };
   verified: boolean;
 }
 
@@ -242,18 +285,38 @@ export async function upsertDomesticProductLink(
    * 되고, 이 칸을 만든 이유가 그 자리에서 사라진다.
    */
   if (input.crossSellerVerdict !== undefined) row.cross_seller_verdict = input.crossSellerVerdict;
+  /* P0-A.29-B — 같은 원칙. 호출부가 Vision 을 «실제로 돌렸을 때만» 칸을 쓴다.
+     안 돌렸으면 기존 값을 덮지 않는다(재검색 때마다 점수가 지워지면 캐시가 무의미해진다). */
+  if (input.vision) {
+    row.vision_model = input.vision.model;
+    row.vision_prompt_version = input.vision.promptVersion;
+    row.vision_media_resolution = input.vision.mediaResolution;
+    row.vision_score = input.vision.score;
+    row.vision_reason = input.vision.reason;
+    row.vision_image_refs = input.vision.imageRefs;
+    row.vision_checked_at = input.vision.checkedAt;
+  }
 
-  // 마이그레이션 055 미실행 환경 대비 — 컬럼이 없으면 그 칸만 빼고 한 번 더 시도한다
+  // 마이그레이션 055/056 미실행 환경 대비 — 컬럼이 없으면 그 칸만 빼고 한 번 더 시도한다
   // (registration_attempts 의 optionalColumns 폴백과 같은 이유·같은 모양).
   // 🔴 측정 칸 하나 때문에 «가격 공급 경로»가 끊기면 안 된다. 링크 저장이 우선이다.
-  for (let attempt = 0; attempt < 2; attempt++) {
+  const VISION_COLUMNS = [
+    "vision_model", "vision_prompt_version", "vision_media_resolution",
+    "vision_score", "vision_reason", "vision_image_refs", "vision_checked_at",
+  ] as const;
+  for (let attempt = 0; attempt < 3; attempt++) {
     const { data, error } = await supabase
       .from("domestic_product_links")
       .upsert(row, { onConflict: "snapshot_id,source_id" })
       .select()
       .single();
     if (!error) return { ok: true, link: toLink(data as DomesticProductLinkRow) };
-    if (attempt === 0 && "cross_seller_verdict" in row) {
+    if (attempt === 0 && VISION_COLUMNS.some((c) => c in row)) {
+      console.warn("[domestic-product-link] vision_* 저장 실패, 그 칸들을 빼고 재시도:", error.message);
+      for (const c of VISION_COLUMNS) delete row[c];
+      continue;
+    }
+    if (attempt <= 1 && "cross_seller_verdict" in row) {
       console.warn("[domestic-product-link] cross_seller_verdict 저장 실패, 그 칸을 빼고 재시도:", error.message);
       delete row.cross_seller_verdict;
       continue;
