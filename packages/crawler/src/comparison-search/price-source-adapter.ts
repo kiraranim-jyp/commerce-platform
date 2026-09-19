@@ -9,6 +9,7 @@ import { selectCandidatesForDetailConfirmation } from "./price-confirmation";
 import { missingRakutenCredentials, searchRakutenIchiba } from "./rakuten-ichiba";
 import { fetchRuliiProductPrice, searchRulii } from "./rulii";
 import { searchShopifySuggest } from "./shopify-suggest";
+import type { CanonicalProductVariant } from "@commerce/shared";
 import type { ComparisonCandidate, ComparisonQuery } from "./types";
 
 /**
@@ -111,6 +112,45 @@ export interface PriceSourceAdapter {
 /** 자격증명이 필요 없는 어댑터(=기존 WEB 파서 전부)가 쓰는 readiness. */
 const ALWAYS_READY = (): PriceSourceReadiness => ({ state: "READY" });
 
+/**
+ * P0-A.29-E ㉮(CEO 지시, 2026-09-20) — **원상품이 고른 옵션과 «같은» 옵션의
+ * 가격을 고른다.**
+ *
+ * 실측(junioredition, 2026-09-20): 한 상품이 사이즈마다 £115/£119/£123 이고
+ * 신발 카테고리의 45%가 그렇다. 지금까지 후보 가격은 「구매 가능한 첫 옵션」
+ * 이었으므로, 원상품이 UK 11 을 골랐어도 후보는 UK 4 가격과 비교되고 있었다.
+ *
+ * 🔴 사이즈를 «환산» 하지 않는다. 문자열이 똑같을 때만 같은 옵션으로 본다 —
+ *    실측에서 샵마다 표기가 전부 달랐다(`29 EUR (UK 11)` / `29 EU (11 Little
+ *    Kid US)` / `22` / `35`). 같은 샵 안에서는 옵션 값 문자열의 89%가 상품끼리
+ *    재사용되어 문자열 일치가 안전하다. 샵 간 환산은 별건이다(CEO §11 금지).
+ *
+ * 🔴 옵션 값이 하나뿐인 상품(SINGLE_PRICE)은 애초에 어긋날 수가 없다. 그런
+ *    상품까지 「확인 필요」로 만들면, 실측상 절반이 넘는 멀쩡한 가격이 이유
+ *    없이 사라진다.
+ */
+function resolveSameOptionPrice(
+  variants: CanonicalProductVariant[] | undefined,
+  selected: Record<string, string> | undefined,
+): {
+  price?: { amount: number; currency: string };
+  match?: ComparisonCandidate["priceOptionMatch"];
+  optionValues?: Record<string, string>;
+} {
+  const priced = (variants ?? []).filter((v) => v.price != null);
+  if (priced.length === 0) return {};
+  const distinct = new Set(priced.map((v) => `${v.price?.amount} ${v.price?.currency}`));
+  // 값이 하나면 어느 옵션을 고르든 같은 숫자다 — 판단할 것이 없다.
+  if (distinct.size === 1) return { match: "SINGLE_PRICE", optionValues: priced[0].optionValues };
+  if (!selected || Object.keys(selected).length === 0) return { match: "OPTION_MISMATCH" };
+
+  const hit = priced.find((v) =>
+    Object.entries(selected).every(([name, value]) => v.optionValues?.[name] === value),
+  );
+  if (!hit) return { match: "OPTION_MISMATCH" };
+  return { price: hit.price, match: "SAME_OPTION", optionValues: hit.optionValues };
+}
+
 /** Sprint B-1.5/B-1.8 — search-suggest.json 의 가격은 신뢰하지 않는다(B-1.4 실측:
  * Vercel 에서 로케일 프리픽스를 줘도 기본 통화 숫자가 그대로 돌아옴). 검색은
  * "후보 발견"까지만 담당하고, 실제 판매가/통화는 이미 검증된 상품 상세 JSON
@@ -159,13 +199,16 @@ export async function enrichCandidatePrices(
       try {
         const detail = await fetchShopifyProductJson(`${origin}/products/${handle}`);
         if (detail?.productData.price) {
+          const onOption = resolveSameOptionPrice(detail.productData.variants, query?.selectedOptionValues);
           withDefaultSource[i] = {
             ...candidate,
-            price: detail.productData.price,
+            price: onOption.price ?? detail.productData.price,
             regularPrice: detail.productData.regularPrice ?? null,
             priceSource: "detail",
             priceStatus: "VERIFIED_CURRENT",
             verificationAttempted: true,
+            priceOptionMatch: onOption.match,
+            priceOptionValues: onOption.optionValues,
           };
         } else {
           withDefaultSource[i] = { ...candidate, priceStatus: "PRICE_UNAVAILABLE", verificationAttempted: true };

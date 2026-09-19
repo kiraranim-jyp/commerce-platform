@@ -84,6 +84,28 @@ export interface ComparisonCandidate {
   crossSellerVerdict?: "SAME" | "PRESUMED_SAME" | "SIMILAR" | "UNKNOWN" | "CONFLICT";
   /** 그 판정의 근거/보류 사유(사람이 읽는 문장). */
   crossSellerReasons?: string[];
+  /**
+   * P0-A.29-E ㉮ — **이 가격이 어느 옵션의 가격인가.**
+   *
+   *   SAME_OPTION       원상품이 고른 옵션과 «같은» 옵션의 가격이다 → 비교 가능
+   *   SINGLE_PRICE      이 상품은 옵션이 달라도 값이 하나다 → 비교해도 안전하다
+   *   OPTION_MISMATCH   🔴 옵션마다 값이 다른데 같은 옵션을 못 찾았다 → 숫자를
+   *                     동일 옵션 가격처럼 보여주면 안 된다
+   *
+   * undefined = 이 축을 판단할 근거가 없었다(원상품이 옵션을 고르지 않았거나
+   * 상세를 받지 못했다). 🔴 「문제 없음」이 아니라 「모른다」다.
+   */
+  priceOptionMatch?: "SAME_OPTION" | "SINGLE_PRICE" | "OPTION_MISMATCH";
+  /** 이 후보에서 실제로 가격을 읽어낸 옵션. 상세를 받은 경우에만 채워진다. */
+  priceOptionValues?: Record<string, string>;
+  /**
+   * P0-A.29-E ⑤ — 「동일 모델 · 옵션 다름」이 무엇 때문에 다른가. title 에서
+   * 이미 잘라 쓰던 문자열을 버리지 않고 그대로 들고 온다.
+   *
+   * 🔴 `in` 뒤 문자열을 «색상» 이라고 부르지 않는다 — 소재가 들어올 수도 있다.
+   *    화면도 「옵션」이라고만 말한다.
+   */
+  variantDifference?: { model: string; queryOption: string; candidateOption: string };
 }
 
 export interface ComparisonSearchResult {
@@ -154,6 +176,16 @@ export interface ComparisonQuery {
   /** MATCHING-2.0-CORE — 등록상품(내 상품)에서 읽어낸 사실 묶음. 후보 쪽
    * facts와 짝이 될 때만 교차판매처 판정이 돌아간다. */
   facts?: ProductFacts;
+  /**
+   * P0-A.29-E ㉮(CEO 지시, 2026-09-20) — 원상품 URL 이 «고른» 옵션 값
+   * (예: `{ Size: "29 EUR (UK 11)" }`). 원상품에 옵션 지정이 없으면 undefined 다.
+   *
+   * 🔴 이것으로 «같은 옵션끼리» 가격을 맞춘다. 샵 간 사이즈 환산은 하지 않는다 —
+   *    실측(2026-09-20)에서 샵마다 표기 체계가 전부 달랐다(`29 EUR (UK 11)` /
+   *    `29 EU (11 Little Kid US)` / `22` / `35`). 같은 샵 안에서는 옵션 값
+   *    문자열의 89%가 상품끼리 재사용되어 문자열 일치가 안전하다.
+   */
+  selectedOptionValues?: Record<string, string>;
 }
 
 /** comparison_shops 테이블 행의 최소 부분집합 — packages/crawler는 apps/admin에 의존하지 않으므로

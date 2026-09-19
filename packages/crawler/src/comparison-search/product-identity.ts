@@ -204,6 +204,26 @@ function deriveProductMatchTruthFromText(
   return "INSUFFICIENT_EVIDENCE";
 }
 
+/**
+ * P0-A.29-E ⑤(CEO 지시, 2026-09-20) — 「무엇이 달라서」 SAME_MODEL_VARIANT 인가.
+ *
+ * deriveProductMatchTruthFromText 가 이미 splitModelColor 로 양쪽을 잘라 비교한
+ * 뒤 그 문자열을 버리고 있었다. 같은 함수를 그대로 다시 불러 **문자열만** 꺼낸다 —
+ * 새 파싱도, 새 규칙도 없다.
+ *
+ * 🔴 `in` 뒤 문자열을 «색상» 이라고 부르지 않는다. 이 자리에는 소재도 들어올 수
+ *    있다(`in Leather`). 화면도 「옵션」이라고만 말한다(CEO §6).
+ */
+function describeVariantDifference(
+  query: ComparisonQuery,
+  candidate: ComparisonCandidate,
+): { model: string; queryOption: string; candidateOption: string } | undefined {
+  const q = splitModelColor(query.title);
+  const c = splitModelColor(candidate.title);
+  if (!q.color || !c.color) return undefined;
+  return { model: q.model, queryOption: q.color, candidateOption: c.color };
+}
+
 /** searchComparisonShops()가 반환한 결과에 productMatchTruth를 얹는다 — 기존
  * candidates 배열/필드는 그대로 두고 새 필드만 추가한다(하위호환, 회귀 없음). */
 export function attachProductMatchTruth(
@@ -212,10 +232,17 @@ export function attachProductMatchTruth(
 ): ComparisonSearchResult[] {
   return results.map((result) => {
     if (result.status !== "ok" || result.candidates.length === 0) return result;
-    const candidates = result.candidates.map((c) => ({
-      ...c,
-      productMatchTruth: deriveProductMatchTruth(query, c, c.confidence),
-    }));
+    const candidates = result.candidates.map((c) => {
+      const productMatchTruth = deriveProductMatchTruth(query, c, c.confidence);
+      return {
+        ...c,
+        productMatchTruth,
+        // P0-A.29-E ⑤ — 「동일 모델 · 옵션 다름」일 때만, 그 판정이 이미 쓴 문자열을
+        // 버리지 않고 함께 내보낸다. 판정을 다시 하지 않는다(같은 splitModelColor).
+        variantDifference:
+          productMatchTruth === "SAME_MODEL_VARIANT" ? describeVariantDifference(query, c) : undefined,
+      };
+    });
     return { ...result, candidates };
   });
 }

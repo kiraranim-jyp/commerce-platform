@@ -97,6 +97,20 @@ export type VariantPriceMode = "ABSOLUTE" | "DELTA" | "UNKNOWN";
  * CanonicalProduct.price/stockQuantity로 폴백한다 — "값이 없다"를 "0이다"로
  * 취급하지 않는다.
  */
+/**
+ * P0-A.29-E ㉮ — URL 이 지정한 옵션을 실제로 찾아냈는가. 🔴 세 상태를 하나로
+ * 뭉개지 않는다 — 셀러가 해야 할 행동이 셋 다 다르다.
+ *
+ *   RESOLVED   찾았고 살 수 있다    → 그 가격이 이 상품의 가격
+ *   SOLD_OUT   찾았지만 품절이다    → 가격은 그대로, 「선택 옵션 품절」
+ *   NOT_FOUND  이 상품에 없다       → 🔴 가격을 내놓지 않는다(priceValidity=MISSING)
+ */
+export interface SelectedVariantOnProduct {
+  requestedId: string;
+  status: "RESOLVED" | "SOLD_OUT" | "NOT_FOUND";
+  optionValues?: Record<string, string>;
+}
+
 export interface CanonicalProductVariant {
   id: string;
   /** CanonicalProduct.optionGroups[].name과 일치해야 한다. */
@@ -434,6 +448,18 @@ export interface CanonicalProduct {
    * 구분하기 위해 optionGroups가 비어있지 않은데 variants가 비어있는 상태도
    * 유효하다(어댑터가 이 경우 "옵션 미확정"으로 표시해야 한다). */
   variants: CanonicalProductVariant[];
+  /**
+   * P0-A.29-E ㉮(CEO 지시, 2026-09-20) — **원본 URL 이 가리킨 옵션.**
+   *
+   * `https://…/products/lulu-t-bar-shoes?variant=40096037535807` 처럼 URL 이
+   * 특정 옵션을 지정했을 때만 채워진다. 지정이 없으면 undefined 이고, 그때의
+   * 가격 결정은 예전 그대로다(구매 가능한 첫 variant).
+   *
+   * 🔴 이 값이 있으면 위 `price` 는 «그 옵션의» 가격이다. 실측(junioredition,
+   *    신발 카테고리 45%)에서 한 상품이 사이즈마다 £115/£119/£123 로 달랐다 —
+   *    어느 옵션의 가격인지 말하지 못하는 숫자는 조달 판단에 쓸 수 없다.
+   */
+  selectedVariant?: SelectedVariantOnProduct;
   images: CanonicalProductImage[];
   titleKo: ProvenanceField<string>;
   descriptionKo: ProvenanceField<string>;

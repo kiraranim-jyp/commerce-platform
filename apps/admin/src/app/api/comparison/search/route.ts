@@ -12,6 +12,8 @@ export async function POST(request: Request) {
         brand?: string;
         sourceUrl?: string;
         sku?: string;
+        /** P0-A.29-E ㉮ — CanonicalProduct.selectedVariant.optionValues 를 그대로. */
+        selectedOptionValues?: Record<string, string>;
         description?: string;
         /** MATCHING-2.0-CORE — 화면이 이미 갖고 있던 값인데 여태 보내지 않던 두 칸.
          * 보내주면 색상/소재 축이 살아나고, 안 보내주면 예전과 똑같이 동작한다. */
@@ -58,6 +60,10 @@ export async function POST(request: Request) {
     sku: body.sku,
     description: body.description,
     facts,
+    /* P0-A.29-E ㉮ — 원상품이 «고른» 옵션. 이게 있어야 후보에서 같은 옵션의
+       가격을 고를 수 있다. 원상품이 옵션을 고르지 않았으면 undefined 이고,
+       그때는 후보 가격 결정도 예전 그대로다. */
+    selectedOptionValues: body.selectedOptionValues,
   };
   /**
    * GOLF-01 축 A(CEO 지시, 2026-09-15) — 해외 조사 대상을 두 가지로 좁힌다.

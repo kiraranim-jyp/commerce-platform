@@ -143,6 +143,11 @@ interface Candidate {
   verificationAttempted?: boolean;
   /** P-11 STEP 4 — 없으면(undefined) 구버전 응답이라는 뜻, 기존 matchLevel 배지로 폴백. */
   productMatchTruth?: ProductMatchTruth;
+  /** P0-A.29-E ㉮ — 이 가격이 «어느 옵션» 의 가격인가. 서버가 정한다. */
+  priceOptionMatch?: "SAME_OPTION" | "SINGLE_PRICE" | "OPTION_MISMATCH";
+  priceOptionValues?: Record<string, string>;
+  /** P0-A.29-E ⑤ — 무엇이 달라서 「동일 모델 · 옵션 다름」인가. */
+  variantDifference?: { model: string; queryOption: string; candidateOption: string };
 }
 
 interface SearchResult {
@@ -192,6 +197,9 @@ async function collectOverseasPrices(input: {
   sourceUrl?: string;
   sku?: string;
   description?: string;
+  /** P0-A.29-E ㉮ — 원상품 URL 이 «고른» 옵션. 후보에서 같은 옵션의 가격을
+   *  고르는 데만 쓴다(없으면 후보 가격 결정은 예전 그대로). */
+  selectedOptionValues?: Record<string, string>;
   /**
    * GOLF-01-WIRE — 셀러가 상품 검색을 시작할 때 고른 조사 카테고리.
    *
@@ -267,6 +275,7 @@ export function ComparisonShopSearch({
   onEvidenceChange,
   originImageUrl,
   originPrice,
+  selectedOptionValues,
   variant = "DRILL_DOWN",
 }: {
   title: string;
@@ -278,6 +287,8 @@ export function ComparisonShopSearch({
   /** 🔴 가격이 «확정된 경우에만» 넘어온다. 확정되지 않은 값을 원상품 가격으로
    *  보여주면 셀러가 그 숫자로 마진을 계산한다. */
   originPrice?: { amount: number; currency: string } | null;
+  /** P0-A.29-E ㉮ — 원상품이 고른 옵션(예: `{ Size: "29 EUR (UK 11)" }`). */
+  selectedOptionValues?: Record<string, string>;
   /** GOLF-01-WIRE — 상품 검색 시작 때 고른 조사 카테고리. collectOverseasPrices 머리 주석 참조. */
   marketCategoryProfileId?: string;
   /** P-11 STEP 4 — product-identity.ts가 sku가 비어있을 때 "Article code: XXX"
@@ -335,7 +346,16 @@ export function ComparisonShopSearch({
     // 수 있다. 키에 넣으면 그 순간 키가 바뀌어 수집이 한 번 더 돈다 — 표시용 조회가
     // 아니라 셀러가 켜 둔 편집샵을 실제로 뒤지는 크롤링이다(MI-COLLECTION-GUARD-1).
     title ? `overseas:${sourceUrl || title}` : null,
-    () => collectOverseasPrices({ title, brand, sourceUrl, sku, description, marketCategoryProfileId }),
+    () =>
+      collectOverseasPrices({
+        title,
+        brand,
+        sourceUrl,
+        sku,
+        description,
+        marketCategoryProfileId,
+        selectedOptionValues,
+      }),
   );
   const { loading, error } = collection;
   const results = collection.data?.results ?? null;
@@ -435,7 +455,14 @@ export function ComparisonShopSearch({
       {results && (
         <CandidateComparison
           marketLabel="해외"
-          origin={{ title, brand, imageUrl: originImageUrl ?? null, price: originPrice ?? null, sourceUrl }}
+          origin={{
+            title,
+            brand,
+            imageUrl: originImageUrl ?? null,
+            price: originPrice ?? null,
+            sourceUrl,
+            optionNote: selectedOptionValues ? Object.values(selectedOptionValues).join(" / ") : undefined,
+          }}
           rows={results.flatMap((r) =>
             r.candidates.map((c) => ({
               shopName: r.shopName,
@@ -449,6 +476,9 @@ export function ComparisonShopSearch({
                    같은 규칙을 쓰려고 상태값을 그대로 넘긴다 — 미검증 가격을 실제
                    판매가처럼 그리지 않는다는 원칙은 카드에서도 같다. */
                 priceStatus: c.priceStatus,
+                priceOptionMatch: c.priceOptionMatch,
+                priceOptionValues: c.priceOptionValues,
+                variantDifference: c.variantDifference,
                 matchReasons: c.matchReasons,
               },
             })),

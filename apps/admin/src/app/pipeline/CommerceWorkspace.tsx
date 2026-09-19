@@ -2656,6 +2656,14 @@ export function CommerceWorkspace({
                     onEvidenceChange={setOverseasMarketEvidence}
                     originImageUrl={product.images[0] ? getSelectedImageUrl(product.images[0]) : null}
                     originPrice={product.priceValidity === "VALID" ? product.price.value : null}
+                    /* P0-A.29-E ㉮ — 원상품 URL 이 고른 옵션. 후보에서 «같은 옵션» 의
+                       가격을 고르는 데 쓴다. 찾지 못한 경우(NOT_FOUND)는 넘기지
+                       않는다 — 없는 기준으로 후보 가격을 맞추면 안 된다. */
+                    selectedOptionValues={
+                      product.selectedVariant?.status === "NOT_FOUND"
+                        ? undefined
+                        : product.selectedVariant?.optionValues
+                    }
                     variant={marketEvidenceVariant}
                   />
                 </div>

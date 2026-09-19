@@ -36,6 +36,17 @@ export interface ComparableCandidate {
    * 셀러는 둘 중 어느 쪽을 믿어야 할지 알 수 없다.
    */
   priceStatus?: PriceStatus;
+  /**
+   * P0-A.29-E ㉮ — 이 가격이 «어느 옵션» 의 가격인가. 🔴 OPTION_MISMATCH 는
+   * 「옵션마다 값이 다른데 원상품이 고른 옵션을 못 찾았다」는 뜻이고, 그때는
+   * 숫자를 보여주지 않는다 — 다른 사이즈의 가격을 동일 옵션 가격처럼 읽게
+   * 만드는 것이 이번에 고치는 문제 그 자체다.
+   */
+  priceOptionMatch?: "SAME_OPTION" | "SINGLE_PRICE" | "OPTION_MISMATCH";
+  priceOptionValues?: Record<string, string>;
+  /** P0-A.29-E ⑤ — 무엇이 달라서 「동일 모델 · 옵션 다름」인가. `in` 뒤 문자열을
+   *  «색상» 이라고 부르지 않는다(소재일 수도 있다) — 화면도 「옵션」이라 쓴다. */
+  variantDifference?: { model: string; queryOption: string; candidateOption: string };
   matchReasons?: string[];
   /** P0-A.29-B 의 관측 원점수. 🔴 null 이면 «아무것도 표시하지 않는다» —
    *  0 으로 그리면 「낮음」이라는 없는 사실을 말하게 된다. */
@@ -117,6 +128,9 @@ export interface OriginProduct {
   imageUrl: string | null;
   price: { amount: number; currency: string } | null;
   sourceUrl?: string;
+  /** P0-A.29-E ㉮ — 원상품 URL 이 «고른» 옵션(예: `29 EUR (UK 11)`). 가격 옆에
+   *  이게 없으면 셀러는 그 숫자가 어느 사이즈의 값인지 알 수 없다. */
+  optionNote?: string;
 }
 
 /**
@@ -134,11 +148,25 @@ function CandidatePrice({ candidate }: { candidate: ComparableCandidate }) {
       </p>
     );
   }
+  // 🔴 옵션마다 값이 다른데 같은 옵션을 못 찾았다 — 숫자를 내놓으면 셀러는 그것을
+  //    「같은 옵션의 가격」으로 읽는다. 실측(junioredition 신발 45%)에서 한 상품이
+  //    사이즈마다 £115/£119/£123 이었다.
+  if (candidate.priceOptionMatch === "OPTION_MISMATCH") {
+    return <p className="text-[11px] text-text-tertiary">동일 옵션 가격 확인 필요</p>;
+  }
   if (!candidate.price) return null;
   return (
-    <p className="text-[11px] font-medium text-text-primary">
-      {formatMoney(candidate.price.amount, candidate.price.currency)}
-    </p>
+    <>
+      <p className="text-[11px] font-medium text-text-primary">
+        {formatMoney(candidate.price.amount, candidate.price.currency)}
+      </p>
+      {/* 어느 옵션의 가격인지 말한다. 말하지 않는 숫자는 조달 판단에 쓸 수 없다. */}
+      {candidate.priceOptionMatch === "SAME_OPTION" && candidate.priceOptionValues && (
+        <p className="text-[10px] text-text-tertiary">
+          옵션 {Object.values(candidate.priceOptionValues).join(" / ")} 기준
+        </p>
+      )}
+    </>
   );
 }
 
@@ -199,6 +227,7 @@ export function CandidateComparison({
                     {formatMoney(origin.price.amount, origin.price.currency)}
                   </p>
                 )}
+                {origin.optionNote && <p className="text-[10px] text-text-tertiary">옵션 {origin.optionNote} 기준</p>}
               </div>
 
               <div className="space-y-1">
@@ -215,6 +244,15 @@ export function CandidateComparison({
               </div>
             </div>
 
+            {/* P0-A.29-E ⑤ — «무엇이» 다른지 말한다. 이미 계산된 문자열을 그대로
+                쓴다(새 파싱 없음). 🔴 「색상」이라고 단정하지 않는다 — 이 자리에는
+                소재가 들어오기도 한다. */}
+            {tier === "SAME_MODEL_OPTION_DIFF" && candidate.variantDifference && (
+              <p className="text-[10px] text-text-secondary">
+                모델 {candidate.variantDifference.model} · 옵션 {candidate.variantDifference.queryOption} ↔{" "}
+                {candidate.variantDifference.candidateOption}
+              </p>
+            )}
             {/* 🔴 옵션이 다른 후보는 «가격비교 대상이 아니다» 를 카드 안에서 말한다.
                 같은 카드에 가격 숫자가 있으므로, 말하지 않으면 비교 가격으로 읽힌다. */}
             {tier === "SAME_MODEL_OPTION_DIFF" && (

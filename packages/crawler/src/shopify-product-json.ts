@@ -1,5 +1,5 @@
 import type { CanonicalProductOptionGroup, CanonicalProductVariant } from "@commerce/shared";
-import type { ExtractedProductData } from "./product-data-extractor";
+import type { ExtractedProductData, SelectedVariantResolution } from "./product-data-extractor";
 import { fetchWithDomainRateLimit } from "./rate-limit/domain-rate-limiter";
 import type { ImageCandidate } from "./strategies/types";
 
@@ -13,6 +13,27 @@ const CHROME_UA =
 export function extractShopifyHandle(url: string): string | null {
   const match = /\/products\/([a-z0-9-]+)/i.exec(new URL(url).pathname);
   return match ? match[1] : null;
+}
+
+/**
+ * P0-A.29-E ㉮(CEO 지시, 2026-09-20) — 상품 URL 이 «어느 옵션» 을 가리키는가.
+ *
+ * Shopify 상품 페이지에서 사이즈를 고르면 주소창이 `?variant=40096037535807` 로
+ * 바뀐다. 지금까지 이 저장소는 URL 에서 handle 과 origin 만 뽑았고(둘 다
+ * pathname 만 읽는다) 쿼리는 통째로 버렸다. 그래서 「UK 11 을 골라서 준 URL」이
+ * 「가장 싼 UK 4」의 가격으로 바뀌어 있었다.
+ *
+ * 🔴 숫자만 받는다. Shopify variant id 는 항상 숫자이고, 그 밖의 값을 받아주면
+ *    「지정했는데 못 찾았다」와 「애초에 지정이 없었다」가 섞인다 — 앞은 가격을
+ *    내놓으면 안 되는 상태이고 뒤는 예전 동작을 그대로 써야 하는 상태다.
+ */
+export function extractShopifySelectedVariantId(url: string): string | null {
+  try {
+    const raw = new URL(url).searchParams.get("variant");
+    return raw && /^\d+$/.test(raw) ? raw : null;
+  } catch {
+    return null;
+  }
 }
 
 function toAbsoluteUrl(src: string): string {
@@ -390,8 +411,37 @@ export async function fetchShopifyProductJson(
   // 판매가 사용") — 첫 variant를 무조건 쓰지 않고, 구매 가능한 첫 variant를
   // 우선한다(전부 품절이면 기존처럼 variants[0]로 폴백 — 그래도 가격 자체는
   // 보여줘야 한다).
+  //
+  // P0-A.29-E ㉮(CEO 지시, 2026-09-20) — **URL 이 특정 옵션을 가리키고 있으면
+  // 그 옵션이 이 상품의 가격이다.**
+  //
+  // 실측(junioredition, Lulu T Bar Shoes): 한 상품이 사이즈마다 £115/£119/£123 로
+  // 값이 다르고, 신발 카테고리의 45%가 그렇다. 사장님이 준 URL 은
+  // `?variant=40096037535807`(29 EUR / UK 11 / £119)을 가리키고 있었는데 우리는
+  // 그 파라미터를 버리고 «구매 가능한 첫 variant»(21 EUR / UK 4 / £115)를
+  // 가격으로 썼다. 같은 페이지의 og:price 는 파라미터를 존중해 £119 를 내놓는다 —
+  // 사이트는 정확히 답하고 있었고 우리가 묻지 않았다.
+  //
+  // 🔴 조용한 갈아타기 금지. variant 를 지정했는데 그게 품절이면 «다른 사이즈
+  //    가격» 으로 대체하지 않는다(그게 지금 고치는 문제 그 자체다). 지정했는데
+  //    찾지 못하면 가격을 «내놓지 않는다» — 임의 선택이 곧 오답이다.
+  const optionNames = (product.options ?? []).map((o) => o.name).filter((n): n is string => Boolean(n));
+  const requestedVariantId = extractShopifySelectedVariantId(url);
+  const requestedVariant = requestedVariantId
+    ? product.variants?.find((v) => v.id != null && String(v.id) === requestedVariantId)
+    : undefined;
+  const selectedVariant: SelectedVariantResolution | undefined = requestedVariantId
+    ? {
+        requestedId: requestedVariantId,
+        status: !requestedVariant ? "NOT_FOUND" : isVariantAvailable(requestedVariant) ? "RESOLVED" : "SOLD_OUT",
+        optionValues: requestedVariant ? buildOptionValues(requestedVariant, optionNames) : undefined,
+      }
+    : undefined;
+
   const availableVariant = product.variants?.find(isVariantAvailable);
-  const variant = availableVariant ?? product.variants?.[0];
+  // variant 지정이 없을 때의 동작은 예전 그대로다 — 기존 상품 전체의 가격 결정
+  // 방식이 이번 변경으로 흔들리지 않는다(CEO §3).
+  const variant = requestedVariantId ? requestedVariant : (availableVariant ?? product.variants?.[0]);
   const price =
     variant?.price != null
       ? {
@@ -407,9 +457,14 @@ export async function fetchShopifyProductJson(
   // 판매중"(availableVariant가 이미 이 기준으로 골라져 있다, 위 참고). variants가
   // 아예 없으면(이론상 발생 안 하지만) undefined로 남긴다 — "판매중"을 지어내지
   // 않는다.
-  const available = product.variants?.length ? availableVariant != null : undefined;
+  // P0-A.29-E — 🔴 옵션을 «지정한» 경우에는 「아무 사이즈나 살 수 있다」가 아니라
+  //    「그 사이즈를 살 수 있다」가 답이다. 지정이 없으면 예전 기준 그대로.
+  const available = requestedVariantId
+    ? (requestedVariant ? isVariantAvailable(requestedVariant) : undefined)
+    : product.variants?.length
+      ? availableVariant != null
+      : undefined;
 
-  const optionNames = (product.options ?? []).map((o) => o.name).filter((n): n is string => Boolean(n));
   const optionGroups: CanonicalProductOptionGroup[] = (product.options ?? [])
     .filter((o): o is Required<Pick<ShopifyJsonOption, "name" | "values">> => Boolean(o.name && o.values))
     .map((o) => ({ name: o.name, values: o.values }));
@@ -465,6 +520,7 @@ export async function fetchShopifyProductJson(
       options: optionNames,
       optionGroups,
       variants,
+      selectedVariant,
       shopifyTags: product.tags,
       shopifyProductType: product.product_type,
     },

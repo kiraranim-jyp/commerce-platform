@@ -4,6 +4,22 @@ import { resolveSourcePrice, type PriceValidity } from "@commerce/pricing";
 
 export type ProductDataSource = "json-ld" | "microdata" | "open-graph" | "dom" | "shopify-json";
 
+/**
+ * URL 이 지정한 옵션을 실제로 찾아냈는가. 🔴 세 상태를 하나로 뭉개지 않는다 —
+ * 셀러가 해야 할 행동이 셋 다 다르다.
+ *
+ *   RESOLVED   그 옵션을 찾았고 살 수 있다        → 그 가격이 이 상품의 가격
+ *   SOLD_OUT   그 옵션을 찾았지만 품절이다        → 가격은 그대로, 「선택 옵션 품절」
+ *   NOT_FOUND  그 옵션이 이 상품에 없다           → 🔴 가격을 내놓지 않는다
+ */
+export interface SelectedVariantResolution {
+  requestedId: string;
+  status: "RESOLVED" | "SOLD_OUT" | "NOT_FOUND";
+  /** 찾았을 때만. 예: `{ Size: "29 EUR (UK 11)" }` */
+  optionValues?: Record<string, string>;
+}
+
+
 export interface ExtractedProductData {
   title?: string;
   brand?: string;
@@ -42,6 +58,15 @@ export interface ExtractedProductData {
    * 다루지 않는다(빈 배열). */
   optionGroups?: CanonicalProductOptionGroup[];
   variants?: CanonicalProductVariant[];
+  /**
+   * P0-A.29-E ㉮(CEO 지시, 2026-09-20) — 원본 URL 이 «특정 옵션» 을 가리키고
+   * 있었는가, 그리고 그것을 찾아냈는가. URL 에 옵션 지정이 없으면 undefined 이고
+   * 그때의 동작은 예전 그대로다.
+   *
+   * 🔴 이 값이 있으면 price 는 «그 옵션의» 가격이다. 「가장 싼 옵션」도
+   *    「구매 가능한 첫 옵션」도 아니다.
+   */
+  selectedVariant?: SelectedVariantResolution;
   material?: string;
   /**
    * REWORK-13A(CEO 지시, 2026-09-15) — **원본 URL 이 명시한 제조사(제조사 5단계의 ①).**

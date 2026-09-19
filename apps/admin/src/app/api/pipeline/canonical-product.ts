@@ -209,6 +209,10 @@ export function buildCanonicalProduct(
     options: field(productData.options ?? [], "options", sources),
     optionGroups: productData.optionGroups ?? [],
     variants: productData.variants ?? [],
+    /* P0-A.29-E ㉮ — 원본 URL 이 가리킨 옵션. 🔴 이 값이 있으면 위 price 는
+       «그 옵션의» 가격이다. 화면이 「어느 옵션의 가격인가」를 말할 수 있어야
+       하므로 판정 결과를 버리지 않고 여기까지 들고 온다. */
+    selectedVariant: productData.selectedVariant,
     breadcrumbPath: productData.breadcrumbPath,
     jsonLdCategory: productData.jsonLdCategory,
     shopifyTags: productData.shopifyTags,
