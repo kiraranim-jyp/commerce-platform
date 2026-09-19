@@ -80,7 +80,6 @@ export type CrossSellerConflict =
   | "CATEGORY"
   | "COLOR"
   | "MODEL_CODE"
-  | "BRAND"
   /** P0-A.27 — 구성(세트/멀티팩)이 다르다. compareComposition 참고. */
   | "COMPOSITION";
 
@@ -93,6 +92,9 @@ export type CrossSellerBlocker =
   | "BRAND_UNCONFIRMED"
   | "NO_TITLE_OVERLAP"
   | "GARMENT_FORM"
+  /** P0-A.29-A — 양쪽 브랜드를 «읽었는데 서로 달랐다». 확인 못 한 것
+   *  (BRAND_UNCONFIRMED)과 구분한다 — 무게는 같지만 사실이 다르다. */
+  | "BRAND_MISMATCH"
   /** MATCHING-3.2-B — 양쪽이 서로 다른 아동 연령 라인(아기/아동/주니어)을 **직접
    * 말했다**. 충돌이 아니라 보류다 — compareAudienceLine 주석 참고. */
   | "AUDIENCE_LINE"
@@ -640,7 +642,32 @@ export function compareCrossSellerProducts(
   const brandKnown = Boolean(x.brand && y.brand);
   const brandOk = brandKnown && brandsCompatible(x.brand!, y.brand!);
   if (brandKnown && !brandOk) {
-    conflicts.push({ conflict: "BRAND", detail: `브랜드 ${x.brand} ↔ ${y.brand}` });
+    /**
+     * P0-A.29-A(CEO 승인, 2026-09-19) — **브랜드 불일치는 충돌이 아니라 보류다.**
+     *
+     * 원래 여기서 conflicts 로 갔고, 그러면 아래 조기 반환이 «점수를 보지도 않고»
+     * CONFLICT 로 끝냈다. 그 판정이 실측에서 반대로 일했다:
+     *
+     *   BRAND 충돌  진짜 SAME 에서 «35건» 발생 · DIFF 에서 43건 발생  (P0-A.23)
+     *
+     * 오탐 35 대 유용 43 — 동전던지기보다 조금 나은 수준이다. 원인은 상품이 아니라
+     * vendor 문자열이다:
+     *
+     *   junioredition  "Konges Sløjd Clothing AW26"
+     *   자사몰          "Konges Sløjd A/S"
+     *
+     * 시즌 꼬리표와 법인 접미사가 붙어 있을 뿐 같은 브랜드다. 그런데 이 한 축이
+     * Konges Sløjd 75쌍을 «100%» 차단했고, 그 안에 진짜 동일상품 35건이 있었다
+     * (P0-A.28 실측). 국내 비교가를 만들 기회 자체가 사라진 것이다.
+     *
+     * 🔴 그렇다고 «브랜드가 달라도 좋다»는 뜻이 아니다. 그래서 지우지 않고
+     *    blockers 로 내린다 — SAME 으로 올라가는 것은 여전히 막고(BRAND_UNCONFIRMED
+     *    와 같은 무게), 대신 Vision 이 볼 기회는 남긴다.
+     * 🔴 브랜드 문자열 «정규화 규칙» 은 만들지 않았다. P0-A.23 에서 직접 해 보니
+     *    스페인 법인 접미사 규칙(S.L.)이 "sløjd" 의 "sl" 을 먹어 브랜드명을
+     *    망가뜨렸다. 문자열을 손대는 대신 판정 무게를 낮추는 쪽을 택했다.
+     */
+    blockers.push({ blocker: "BRAND_MISMATCH", detail: `브랜드 ${x.brand} ↔ ${y.brand}` });
   }
 
   const audience = compareAudience(x, y);

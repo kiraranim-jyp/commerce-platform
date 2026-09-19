@@ -104,10 +104,15 @@ describe("🔴 R1 이 «열리지 않는» 자리 — 여기가 새면 거짓 �
     expect(m.conflicts.map((c) => c.conflict)).toContain("MODEL_CODE");
   });
 
-  it("브랜드가 다르면 → SAME 이 되지 않는다 (BRAND 충돌)", () => {
+  it("브랜드가 다르면 → SAME 이 되지 않는다 (P0-A.29-A 이후 «보류»)", () => {
+    /* P0-A.29-A 에서 BRAND 를 충돌에서 보류로 내렸다(오탐 35 : 유용 43 이었다).
+       그래서 여기서 재는 것이 바뀐다 — 「충돌 목록에 BRAND 가 있는가」가 아니라
+       «SAME 이 되지 않는가» 다. 보류는 SAME 승격을 여전히 막고, 대신 Vision 이
+       볼 기회는 남긴다(conflicts 가 비어야 Vision 후보가 된다). */
     const m = verdictOf({ fit: "A loose fit" }, { fit: "A relaxed fit", brand: "Mini Rodini" });
     expect(m.verdict, "🔴 브랜드가 다른데 SAME 이 됐다").not.toBe("SAME");
-    expect(m.conflicts.map((c) => c.conflict)).toContain("BRAND");
+    expect(m.blockers.map((b) => b.blocker)).toContain("BRAND_MISMATCH");
+    expect(m.conflicts.map((c) => String(c.conflict)), "브랜드 불일치는 더 이상 «충돌» 이 아니다").not.toContain("BRAND");
   });
 
   it("🔴 한쪽 브랜드를 «확인하지 못했으면» → 핏 보류가 그대로 남는다", () => {
