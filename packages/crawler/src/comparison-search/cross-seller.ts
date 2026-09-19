@@ -384,11 +384,50 @@ function compareMaterial(x: ProductFacts, y: ProductFacts): { outcome: AxisOutco
     : { outcome: "mismatch", detail: `소재 ${keyLeft} ↔ ${keyRight}` };
 }
 
+/**
+ * P0-A.17 SAFE FIT NORMALIZATION(CEO 승인, 2026-09-18) — **표기 변형 하나만** 같은
+ * 값으로 읽는다.
+ *
+ * ── 왜 이것만인가 ───────────────────────────────────────────────────────────
+ * 실상품 3,000건 표집(bobochoses 1,500 + junioredition 1,500) 실측:
+ *
+ *   bobochoses     oversize fit  1건      junioredition  oversized fit  6건
+ *
+ * 두 판매처가 **서로 다른 철자**를 쓴다. 그래서 같은 오버사이즈 상품이 이 둘
+ * 사이에서 만나면 «항상» FIT 보류가 난다 — 상품이 달라서가 아니라 `d` 한 글자
+ * 때문이다. FIT_PHRASES(product-facts.ts:238)가 이 둘을 처음부터 별개 항목으로
+ * 갖고 있었던 것이 원인이고, 의미 판단이 필요 없는 오탈자급 결함이다.
+ *
+ * 🔴 `loose fit ↔ relaxed fit`은 **넣지 않았다.** 같은 품번 5건에서 전부 이
+ *    조합으로 갈리는 것을 확인했지만(P0-A.16), 두 판매처가 각각 «내부에서도»
+ *    두 낱말을 구분해 쓰고 있어 브랜드가 의도한 구분일 가능성을 배제하지 못했다.
+ *    CEO 보류 결정이며 별도 안건이다.
+ * 🔴 slim/regular/true-to-size 는 실제로 다른 핏이다. 건드리지 않는다.
+ *
+ * ── 왜 추출기가 아니라 «비교» 에서 고치는가 ─────────────────────────────────
+ * extractFitPhrase 를 고치면 저장되는 fitText 자체가 바뀌어 «판매처가 실제로 뭐라
+ * 썼는가»가 사라진다. 여기서만 canonical 로 접으면 원문 표현은 그대로 남고
+ * (아래 detail 도 양쪽 원문을 그대로 적는다) 비교만 같아진다.
+ */
+const FIT_CANONICAL: Record<string, string> = {
+  "oversize fit": "oversized fit",
+};
+
+function canonicalFit(value: string): string {
+  return FIT_CANONICAL[value] ?? value;
+}
+
 function compareFit(x: ProductFacts, y: ProductFacts): { outcome: AxisOutcome; detail: string } {
   if (!x.fitText || !y.fitText) return { outcome: "unknown", detail: "핏 정보 없음" };
-  return x.fitText === y.fitText
-    ? { outcome: "match", detail: `핏 ${x.fitText}` }
-    : { outcome: "mismatch", detail: `핏 ${x.fitText} ↔ ${y.fitText}` };
+  if (canonicalFit(x.fitText) !== canonicalFit(y.fitText)) {
+    return { outcome: "mismatch", detail: `핏 ${x.fitText} ↔ ${y.fitText}` };
+  }
+  // 글자가 달랐는데 같은 값으로 읽은 경우에는 그 사실을 근거 문장에 남긴다 —
+  // "핏 oversized fit" 한 줄만 적으면 두 판매처가 다르게 썼다는 사실이 사라진다.
+  return {
+    outcome: "match",
+    detail: x.fitText === y.fitText ? `핏 ${x.fitText}` : `핏 ${x.fitText} = ${y.fitText}(표기 변형)`,
+  };
 }
 
 function compareSize(x: ProductFacts, y: ProductFacts): {
