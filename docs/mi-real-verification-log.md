@@ -415,3 +415,86 @@ SAME_MODEL_OPTION_DIFF        0
 ```text
 PASS 4 · FAIL 0 · UNVERIFIED 1 · NOT AVAILABLE 1      MI 정확도 🔴 HOLD
 ```
+
+---
+
+# MI-REAL-04 (2026-09-20) — 표본 재집계 + 첫 검증
+
+## 🔴 표본 숫자를 두 번 정정했다
+
+```text
+링크 수            65   ← MI-REAL-03 이 «대기» 로 적은 수. count(*) 였다
+고유 상품쌍        18   ← 중복 스냅샷을 걷어낸 수
+실제 미검증 표본    6   ← 이미 검증한 2쌍을 뺀 수
+```
+
+같은 상품의 스냅샷이 여러 번 생겨 링크가 부풀어 있었다.
+**「65건 대기」는 정정된 과거 수치이고, 이후 정확도 표본에 쓰지 않는다.**
+
+| 유형 | 링크 | 국내상품 | 해외상품 | 고유쌍 |
+|---|---:|---:|---:|---:|
+| SAME → EXACT | 42 | 11 | **5** | 11 |
+| DIFFERENT → COMPARISON | 23 | 7 | **4** | 7 |
+
+🔴 이 상태로 「SAME 5건」을 채우면 **같은 상품을 다섯 번 검증하고 5 PASS 라고 적게 된다.**
+그건 표본 확대가 아니라 숫자 부풀리기다.
+
+## 검증 #3 — Curious Turnip All Over Swim Cap → **UNRESOLVED**
+
+```text
+해외 (junioredition)   HTTP 200
+  🔴 모델코드 B126AI018 — URL 엔 없지만 «페이지 본문» 에 있다
+  Green · 88% Polyester, 12% Elastane · Swim Cap · 52 / 2-6 years
+
+국내 (Bobo Choses KR)  HTTP 404  ← 페이지가 죽었다
+  이미지 확보 불가 · 현재 상품 정보 확인 불가
+```
+
+국내 URL slug 에 `b126ai018` 과 상품명이 그대로 들어 있어 **강한 정황증거**지만,
+현재 페이지를 확인하지 못한 상태에서 SAME 을 확정할 근거로 쓰지 않는다.
+
+```text
+ACTUAL_TRUTH = UNRESOLVED
+MI 결과      = UNVERIFIED
+```
+
+## 남은 5쌍 — HTTP 상태 일괄 확인 (이미지·판정 미확인)
+
+| 쌍 | 국내 후보 | 상태 |
+|---|---|---|
+| `B226AC043` ↔ **`B226AC042`** | `b226ac042-mystery-bc-half-zipped` | **200** |
+| Booty Ghosts ↔ `B226AC010` | `b226ac010-booty-ghosts-t-shirt` | **200** |
+| Stamp Bloom ↔ `B226AC070` | `b226ac070-stamp-bloom-all-over-d…` | **200** |
+| Smallable ↔ `B226AC060` | `b226ac060-bobo-choses-straight-j…` | **200** |
+| FORETFORET ↔ FORETFORET | `shopdetail.html` | **200** |
+
+**5쌍 전부 살아 있다.** 리다이렉트·차단 없음. 다음 세션에서 바로 검증 가능하다.
+
+🔴 **최우선은 `B226AC043` ↔ `B226AC042`** — 같은 사진을 쓰면서 모델코드가 다른 쌍이고,
+Vision 이 100 을 준 그 쌍이다(P0-A.30 기록). 거짓 SAME 이 나올 수 있는 가장 가까운 자리.
+
+⚠️ `FORETFORET ↔ FORETFORET` 은 원본과 후보가 **같은 판매처**다. 그 자체가 정상인지
+먼저 확인해야 한다.
+
+---
+
+## 🔴 누적 — 집계를 «두 축으로» 나눈다 (CEO 지시)
+
+`UNVERIFIED` 하나에 서로 다른 문제를 섞지 않는다.
+
+```text
+■ 실물 상품쌍 검증
+  PASS          4
+  FAIL          0
+  UNRESOLVED    1      ← #3 Curious Turnip (국내 404)
+  미착수        5      ← HTTP 200 확인됨, 검증 가능
+  NOT AVAILABLE 1      ← SAME_MODEL_OPTION_DIFF
+
+■ 별도 UI 검증
+  UNVERIFIED    1      ← Product 화면 14항목 (렌더 경로 재현 불가)
+
+MI 정확도  🔴 HOLD
+```
+
+**「검증 가능한 상품이 3개면 3개, 2개면 2개다.」** 숫자를 늘리는 것보다
+고유 상품 + 실제 확인 가능성을 유지하는 것이 이 트랙의 목적이다.
