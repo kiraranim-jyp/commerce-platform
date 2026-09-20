@@ -204,3 +204,86 @@ CEO 판정(2026-09-20): **이번 작업에서 건드리지 않는다.** 요구�
 관련: 같은 시점의 P1 두 건 — ㉡ `extractSlug` 가 쿼리스트링을 버려 slug 가
 상수로 붕괴하는 문제(`shopdetail` 21건 · `detail` 18건) · ㉢ source 별
 acquisition/fallback 관리(`source_role` 18곳 중 16곳 null).
+
+## MI-REAL-06-B 🟡 URL slug identity collision — **P1 · HOLD**
+
+### 발견
+
+`extractSlug()` 가 URL pathname 의 **마지막 세그먼트만** 사용하고
+**query parameter 를 버린다.** (`match.ts:80` · `product-identity.ts:60` 에 복제,
+`shared/product-facts.ts:684 extractUrlSlug` 도 같은 로직)
+
+### 실측 — Foretforet 실제 상품 3건
+
+실제 페이지를 열어 확인한 값이다(가정 아님).
+
+| branduid | 상품 |
+|---|---|
+| `10278273` | 마이마이 캐너피슈즈 |
+| `10226592` | 페페슈즈 T-스트랩 |
+| `10277972` | 알파베베 유령빕 |
+
+세 상품 모두 → pathname `/shop/shopdetail.html` → slug **`"shopdetail"`**
+
+### 판정 영향
+
+```text
+match.ts:401            동일 slug → score = Math.max(score, 0.95)
+                        → matchLevel very_high → EXACT (autoVerified=true)
+product-identity.ts:158 동일 slug → return "EXACT_PRODUCT"   ← 즉시 확정
+```
+
+🔴 「보조 evidence」가 아니다. 서로 다른 상품이 동일 slug 를 갖는 경우
+**false-positive 로 승격될 수 있는 실제 경로가 존재한다.**
+
+실행 증거: Production URL 로 `deriveProductMatchTruth()` 를 최소 입력
+(원본 URL · 후보 URL 만)으로 호출 → **`EXACT_PRODUCT` 반환**. 코드 읽기가 아니라
+실제 실행으로 확인했다.
+
+### 현재 Production (ACTIVE 71건 전수)
+
+```text
+실제 잘못된 후보 선택 : 0건
+실제 후보 누락        : 0건
+slug 충돌 사례        : 존재 (foretforet 상품 2종이 slug 1종을 공유)
+self-reference 1건    : MI-REAL-05 가 별도 차단
+```
+
+판매처별: `bobochoses.com` 32행/상품 7종/slug 7종(정상) ·
+`deuxbebe.com` 18행/상품 1종(충돌 재료 없음) ·
+🔴 `foretforet.com` 21행/**상품 2종/slug 1종**
+
+### 분류
+
+**MI 정확도 FAIL 아님.** 실제 오판은 아직 확인되지 않았다.
+그러나 **「영향 없음」도 아니다** — 다른 Foretforet 상품이 후보로 선택되는 경우
+slug 동일성만으로 `EXACT_PRODUCT` 가 발생할 수 있는 **잠재 경로가 확인됐다.**
+
+### 원인
+
+`extractSlug` 가 pathname 만 사용하며 **사이트별 상품 식별 query 를 고려하지 않음.**
+
+### 🔴 주의 (고칠 때 하면 안 되는 것)
+
+- 모든 query parameter 를 identity 에 포함하지 않는다 — tracking 이 identity 가 된다.
+- `branduid` 를 전역 하드코딩하지 않는다 — 판매처 하나가 코드에 박힌다.
+- slug evidence 를 전부 없애지 않는다 — 지금 «맞게» 동작하는 매칭이 약해진다.
+- **MI-REAL-05(self-reference)와 별도 문제다.** MI-REAL-05 는 «같은 listing» 만
+  제외하므로, branduid 가 다르면 그 필터를 통과한 뒤 이 규칙에 걸린다.
+
+### 후속 설계 후보
+
+> 「해당 source 에서 slug 가 상품을 구분하지 못한다고 **증명되는** 경우
+> slug evidence 를 승격 신호로 사용하지 않는 정책」 검토.
+
+실제 설계해야 하는 질문은 「query 를 넣을까」가 아니라
+**「어떤 source 에서 URL slug 가 상품 identity 로 신뢰 가능한가」** 다.
+그래서 지금 구현으로 넘어가지 않는다.
+
+### 대상 / 현재 상태
+
+```text
+대상   match.ts · product-identity.ts   (같은 규칙의 복제 — 한쪽만 고치면 안 된다)
+현재   코드 변경 0 · DB 변경 0 · fixture 변경 0
+상태   HOLD
+```
