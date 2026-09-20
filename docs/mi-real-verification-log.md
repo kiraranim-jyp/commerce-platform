@@ -230,3 +230,102 @@ MI 정확도     🔴 HOLD
 5. `SAME_MODEL_OPTION_DIFF` 는 Production 에 **검증 가능한 실물 사례가 없다**는 사실
 
 🔴 **「PASS 4건」과 「MI 전체가 정확하다」는 계속 분리해서 유지한다.**
+
+---
+
+# 갱신 — MI-REAL-01.8 ~ 02.0 (2026-09-20) · Product 화면 실증 시도
+
+**결론: `UNVERIFIED` 유지.** 코드·DB·fixture 변경 **0건**.
+
+## 01.8 — P0-D.2 핵심 로직, 실제 데이터로 확인
+
+**진짜 COMPARISON-only 4건**(국내 EXACT 0 · 비교가격만 존재)을 실제 Production
+데이터로 실제 계산 함수에 넣었다.
+
+| 스냅샷 | 국내 비교가 | basis | 실제 출력 문구 | 금지어 |
+|---|---:|---|---|---|
+| `dbe089ae` | ₩162,000 | COMPARISON | 「국내 가격 비교 데이터 없음 — 마진 기준으로만 판단」 | 0 |
+| `0c1a1b23` | ₩75,000 | COMPARISON | 〃 | 0 |
+| `e57b4678` | ₩162,000 | COMPARISON | 〃 | 0 |
+| `e727a4ee` | ₩162,000 | COMPARISON | 〃 | 0 |
+
+```
+찾던 문구   「국내 최저가 ₩162,000보다 현재 판매가가 높습니다」  →  4건 전부 «없음»
+gap 지표    priceGapVsLowest / vsAverage  →  전부 null
+금지어      낮추 · 인하 · 최저가 · 보다 높습니다 · 경쟁력  →  0건
+```
+
+🔴 **₩75,000 짜리 비교상품이 있는 상품에서도 인하 권고가 나오지 않았다.**
+비교상품 가격이 판정 «입력에서» 실제로 빠진다.
+
+🔴 **다만 이것은 `computePriceDecision` 직접 호출이다.** 대시보드가 실제로 부르는
+`computeSnapshotReadiness` 는 아니다. 그래서 PASS 로 올리지 않았다.
+
+## 01.9 — 🔴 검증 대상이 잘못 지정돼 있었다
+
+DOM 검사 전에 «렌더 지점» 을 먼저 찾았고, 거기서 전제가 어긋났다.
+
+```
+판매판정 reason 문자열의 «유일한» 렌더 지점
+  apps/admin/src/app/today/page.tsx:417
+  <span … title={price?.reason}>        ← 대시보드의 «title 속성»
+```
+
+- Product 화면에서 `decision.reason` 을 그리는 곳 **0곳**
+- 대시보드에서도 본문 텍스트가 아니라 **속성**이라 `textContent` 로는 잡히지 않는다
+
+즉 「상품 화면을 열어 그 문구를 찾는다」는 설계 자체가 **다른 화면을 겨냥**하고 있었다.
+다음에 이 항목을 다시 볼 때는 **대상이 `today/page.tsx` 이고 `[title]` 속성까지
+순회해야 한다.**
+
+## 02.0 — 실제 렌더 경로 재현 실패 (자격증명 부재)
+
+대시보드가 쓰는 `computeSnapshotReadiness` 를 실제 데이터로 실행하려 했으나 막혔다.
+
+```
+apps/admin/.env.local   OCI_PROXY_URL · QA_PROXY_TO_PROD  (둘뿐)
+필요한 것                NEXT_PUBLIC_SUPABASE_URL · SUPABASE_SERVICE_ROLE_KEY
+결과                     Error: supabaseUrl is required.
+```
+
+그 둘은 **Vercel 환경변수에만** 있다. 지금까지 쓴 DB 접근은 `packages/database` 의
+`DATABASE_URL`(Prisma)인데, `compute-readiness` 는 **Supabase 클라이언트**를 쓰므로
+그 경로로 대체되지 않는다.
+
+🔴 **우회하지 않았다.** 자격증명을 로컬로 가져오지도, 다른 값으로 대신하지도 않았다.
+CEO 판단: 「이 검증 하나 때문에 Production credential 을 로컬로 가져올 이유가 없다」.
+
+## 📌 별도 보존 — UX / 설명가능성 후보 (정확도 판정과 분리)
+
+> **Product 화면에는 판매판정 근거가 표시되지 않는다.**
+> `decision.reason` 은 대시보드의 `title` 속성에서만 확인된다.
+
+이것을 결함으로 판정하지 않는다. 남기는 질문은 이것이다 —
+**판매자가 상품 상세에서 「왜 이 가격 판단이 나왔는가」를 확인할 수 있어야 하는가?**
+MI 정확도와 별개의 **정책 결정**이다.
+
+---
+
+## 누적 (변동 없음)
+
+```text
+PASS          4
+FAIL          0
+UNVERIFIED    1      Product 화면 — 렌더 경로 재현 불가
+NOT AVAILABLE 1
+
+MI 정확도     🔴 HOLD
+```
+
+### 🔴 HOLD 의 원인을 정확히 적는다
+
+**이번 COMPARISON 판정 로직 때문이 아니다.** 그쪽은 실제 데이터 4건에서
+비교가격이 판정 입력에서 빠지는 것을 확인했다.
+
+HOLD 인 이유는 둘이다:
+
+1. **실물 매칭 표본이 4건**으로 작다
+2. **Product 화면 검증이 남아 있다**
+
+「증거」와 「추론」을 섞지 않는다 — 계산 단계는 확인했고, 그 값이 화면에
+그대로 실리는지는 확인하지 못했다.
