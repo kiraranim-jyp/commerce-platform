@@ -161,7 +161,12 @@ export const lotteOnAdapter: soonMarketplace.NextGenMarketplaceAdapter<LotteOnPr
     if (registration.itmLst.length === 0) {
       issues.push({ field: "itmLst", severity: "BLOCKED", reason: "단품이 하나도 없습니다." });
     }
-    if (registration.itmLst.some((item) => !(item.slPrc > 0))) {
+    // 🔴 P0-D.3 — slPrc 가 null 일 수 있다(가격 미확정). 「0 이하」와 「모른다」를
+    //    한 문장으로 말하지 않는다 — 앞은 잘못된 값이고 뒤는 아직 없는 값이다.
+    if (registration.itmLst.some((item) => item.slPrc == null)) {
+      issues.push({ field: "slPrc", severity: "BLOCKED", reason: "판매가격을 아직 확정하지 못한 단품이 있습니다." });
+    }
+    if (registration.itmLst.some((item) => item.slPrc != null && !(item.slPrc > 0))) {
       issues.push({ field: "slPrc", severity: "BLOCKED", reason: "판매가가 0 이하인 단품이 있습니다." });
     }
     return { ok: issues.length === 0, issues };

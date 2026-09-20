@@ -6,10 +6,12 @@ import {
   computePriceDecision,
   computeSellability,
   priceLevelFromVerdict,
-  summarizeDomesticMarket,
+  summarizeDomesticMarketSplit,
   type PriceLevel,
+  type PriceObservationRecord,
   type SellabilityResult,
 } from "@commerce/pricing";
+import { listDomesticProductLinks, priceTierFromLink } from "../../domestic-price-sources/_lib/domestic-product-link";
 import { resolveNaverContext } from "../../naver/_lib/resolve-context";
 import { getRegisteredPlatforms } from "./registration-status";
 import { getPriceHistory, selectCostBasisOriginObservations } from "../../price-history/_lib/price-observations";
@@ -119,10 +121,14 @@ async function computePriceSummaryForSnapshot(
   product: CanonicalProduct,
 ): Promise<SnapshotPriceSummary> {
   const currentSellingPriceKrw = product.priceOverrideKrw?.value ?? null;
-  const [originRecords, domesticShopHistory, naverShoppingHistory] = await Promise.all([
+  const [originRecords, domesticShopHistory, naverShoppingHistory, domesticLinks] = await Promise.all([
     getPriceHistory(snapshotId, "SELLER_ORIGIN"),
     getPriceHistory(snapshotId, "DOMESTIC_SHOP"),
     getPriceHistory(snapshotId, "NAVER_SHOPPING"),
+    // 🔴 P0-D.3(CEO 지시, 2026-09-20) — 네 번째 조회가 늘었다. 이미 세 개가
+    //    병렬로 도는 자리라 한 개 추가의 비용은 무시할 만하고, 이것 없이는
+    //    EXACT/COMPARISON 을 가를 방법이 없다(아래 참고).
+    listDomesticProductLinks(snapshotId),
   ]);
   // GLOBAL-MARKET ③(CPO 지시, 2026-09-11) — market-intelligence.ts와 같은 이유.
   // 원가는 여전히 "최신 원가 근거 관측 1건"이다. 추가로 확인만 해 둔 다른 시장
@@ -135,14 +141,53 @@ async function computePriceSummaryForSnapshot(
   const originHistory = selectCostBasisOriginObservations(originRecords);
   const costPriceKrw = originHistory[0]?.priceKrw ?? null;
   const domesticRecords = [...domesticShopHistory, ...naverShoppingHistory];
-  const domesticSummary = summarizeDomesticMarket(domesticRecords);
+  /**
+   * 🔴 P0-D.3 STEP 1(CEO 지시, 2026-09-20) — **대시보드도 EXACT 와 COMPARISON 을
+   * 가른다.** market-intelligence.ts 와 «같은» 분류를 쓴다(새 매칭 로직 아님).
+   *
+   * 여기 있던 한 줄은 `summarizeDomesticMarket(domesticRecords)` 였다. 두 등급을
+   * 통째로 합산했고, 그래서 두 곳이 사실과 다르게 말했다:
+   *
+   *   ① computeSellability 의 `matched` — 그 함수는 !matched 일 때 제목을
+   *      「국내 동일상품 확인 필요」로 낸다. COMPARISON 만 있는 상품이 합산으로
+   *      sellerCount>0 이 되어 **「동일상품을 찾았다」** 가 됐다.
+   *   ② computePriceDecision — P0-D.2 에서 정책 A 를 넣었는데 이 호출부만
+   *      basis 를 안 넘겨 예전 동작(비교상품 가격으로 인하 권고)이 남아 있었다.
+   *
+   * 상품 상세와 대시보드가 같은 국내가격 의미를 쓰지 않으면 같은 상품에 대해
+   * 서로 다른 메시지가 나간다 — 그것이 이번에 닫는 구멍이다.
+   *
+   * 🔴 NAVER_SHOPPING 은 예전과 «똑같이» 비교 버킷이다(동일상품 검증이 없는 검색
+   *    후보 — market-intelligence 의 같은 판단을 그대로 따른다).
+   */
+  const tierBySourceId = new Map(domesticLinks.map((l) => [l.sourceId, priceTierFromLink(l)]));
+  const exactShopRecords: PriceObservationRecord[] = [];
+  const comparisonShopRecords: PriceObservationRecord[] = [...naverShoppingHistory];
+  for (const record of domesticShopHistory) {
+    const tier = record.sourceRefId ? tierBySourceId.get(record.sourceRefId) : undefined;
+    if (tier === "EXACT") exactShopRecords.push(record);
+    else if (tier === "COMPARISON") comparisonShopRecords.push(record);
+    // EXCLUDED·링크 없음(레거시)은 어느 버킷에도 넣지 않는다 — 추측으로 분류하지 않는다.
+  }
+  const domesticSplit = summarizeDomesticMarketSplit(exactShopRecords, comparisonShopRecords);
+  /**
+   * 🔴 표시용은 예전처럼 `resolved` 다. COMPARISON 가격을 화면에서 «지우지»
+   *    않는다(CEO 명시: 참고정보로 계속 제공). 바뀌는 것은 아래 두 곳에서
+   *    그 값을 «판정 근거로 쓰는가» 뿐이다.
+   */
+  const domesticSummary = domesticSplit.resolved;
   // N-4.18-Q3(대표님 지시: "등록 전 상품도 판매 가능성을 판단해야 한다") — 판매가
   // (priceOverrideKrw)가 아직 없는 상품(대부분의 미등록 상품)도 sellability는
   // 계산한다 — 아래 level(가격 유지/조정 판단)과 달리 sellability는 판매가
   // 설정 여부와 무관하게 원가+국내동일상품만으로 판단 가능하다.
   const sellability = computeSellability({
     costPriceKrw,
-    domestic: { matched: domesticSummary.sellerCount > 0, averagePriceKrw: domesticSummary.averagePriceKrw },
+    // 🔴 P0-D.3 — 「국내 동일상품을 찾았다」는 EXACT 버킷에서만 참이다.
+    //    비교상품만 있는 상품에 「찾았다」고 말하면 그 문장이 거짓이 된다.
+    domestic: {
+      matched: domesticSplit.exact.sellerCount > 0,
+      averagePriceKrw: domesticSplit.exact.averagePriceKrw,
+    },
   });
 
   if (currentSellingPriceKrw == null) return { ...EMPTY_PRICE_SUMMARY, sellability };
@@ -159,6 +204,9 @@ async function computePriceSummaryForSnapshot(
     currentSellingPriceKrw,
     domesticAveragePriceKrw: domesticSummary.averagePriceKrw,
     domesticLowestPriceKrw: domesticSummary.lowestPriceKrw,
+    // 🔴 P0-D.3 — P0-D.2 정책 A 를 이 호출부에도 연결한다. 이 줄이 없어서
+    //    대시보드만 비교상품 가격으로 「가격을 낮추라」고 말하고 있었다.
+    domesticBasis: domesticSplit.basis,
   });
   const lastCheckedAt = [...originHistory, ...domesticRecords].reduce<string | null>(
     (latest, r) => (!latest || r.checkedAt > latest ? r.checkedAt : latest),

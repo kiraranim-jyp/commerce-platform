@@ -197,7 +197,11 @@ export function hasLotteOnSellableOptions(product: CanonicalProduct): boolean {
  */
 function buildItems(
   product: CanonicalProduct,
-  basePriceKrw: number,
+  /**
+   * 🔴 P0-D.3(CEO 지시, 2026-09-20) — **null 일 수 있다.** 가격이 확정되지 않은
+   * 상태를 0 으로 바꾸지 않는다. 0 은 「0원에 판다」는 값이고, 「모른다」와 다르다.
+   */
+  basePriceKrw: number | null,
   liveRates: Record<string, number> | undefined,
 ): { items: LotteOnItem[]; optionSorts: LotteOnOptionSort[]; usesOptions: boolean } {
   const { gallery } = resolveLotteOnImageUrls(product);
@@ -227,13 +231,18 @@ function buildItems(
     // 통화에서 차액을 구해 환산한 뒤 기본 최종가에 더한 결과를 그대로 쓴다
     // (Naver는 같은 결과에서 차액만 떼어 쓴다 — 채널 스키마 차이일 뿐
     // 계산 자체는 같은 함수 하나다).
-    const finalKrw = variant.price
-      ? computeVariantFinalPriceKrw(
-          { amount: product.price.value.amount, currency: product.price.value.currency, finalKrw: basePriceKrw },
-          { amount: variant.price.amount, currency: variant.price.currency, mode: variant.priceMode },
-          liveRates,
-        ).finalKrw
-      : basePriceKrw;
+    // 🔴 기본가를 모르면 옵션가도 «만들지 않는다». 차액을 더할 기준이 없기
+    //    때문이다 — 0 을 기준으로 더하면 옵션 차액 자체가 판매가가 된다.
+    const finalKrw =
+      basePriceKrw == null
+        ? null
+        : variant.price
+          ? computeVariantFinalPriceKrw(
+              { amount: product.price.value.amount, currency: product.price.value.currency, finalKrw: basePriceKrw },
+              { amount: variant.price.amount, currency: variant.price.currency, mode: variant.priceMode },
+              liveRates,
+            ).finalKrw
+          : basePriceKrw;
 
     const itmOptLst: LotteOnItemOption[] = Object.entries(variant.optionValues)
       .filter(([name, value]) => name.trim() && String(value).trim())
@@ -303,7 +312,12 @@ export function buildLotteOnPayload(input: LotteOnPayloadInput): LotteOnProductR
     input.liveRates,
     input.roundingUnit,
   );
-  const basePriceKrw = price.priceKrw ?? 0;
+  // 🔴 P0-D.3(CEO 지시, 2026-09-20) — 여기 있던 `price.priceKrw ?? 0` 을 지운다.
+  //    UNRESOLVED 를 0 으로 바꾸면 preview 에 「등록가 ₩0」이 뜬다 — 그건 가격을
+  //    모른다는 사실이 아니라 «0원에 판다»는 «다른 사실»이다. 실제 등록은
+  //    validate 가 먼저 돌아 막고 있지만(register/route.ts:149), 막는 것과
+  //    지어내지 않는 것은 별개다.
+  const basePriceKrw = price.priceKrw;
 
   const { items, optionSorts, usesOptions } = buildItems(product, basePriceKrw, input.liveRates);
   const keywords = resolveSearchKeywords(product);

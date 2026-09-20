@@ -114,7 +114,10 @@ export interface LotteOnItem {
   sortSeq: number;
   itmOptLst?: LotteOnItemOption[];
   itmImgLst: LotteOnItemImage[];
-  slPrc: number;
+  /** 🔴 P0-D.3 — 가격이 확정되지 않았으면 null 이다. 0 으로 바꾸지 않는다
+   *  (0 은 「0원에 판다」는 값이고 「모른다」와 다르다). validateLotteOnPayload 가
+   *  이 상태를 PRICE_UNRESOLVED 로 막는다. */
+  slPrc: number | null;
   stkQty?: number;
 }
 
