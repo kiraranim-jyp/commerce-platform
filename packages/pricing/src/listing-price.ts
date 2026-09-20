@@ -67,6 +67,35 @@ export function resolveListingPrice(
     };
   }
 
+  /**
+   * 🔴 P0-D(2026-09-20) — **원본 가격이 없으면 등록가도 없다.**
+   *
+   * 실제 Production 상품에서 발견했다(snapshot f43c931f):
+   *
+   *     priceValidity = "VALID"   ← 「가격을 읽었다」고 «주장» 한다
+   *     price = { amount: 0, currency: "" }   ← 그런데 값이 없다
+   *
+   * 위 priceValidity 문만 있으면 이 상품이 통과한다. 그리고 아래 계산에서
+   * 상품가 0 에 해외물류비 ₩12,000 이 더해져 착지원가가 12,000 이 되고,
+   * 권장가가 ₩15,385 로 «0보다 크게» 나와 마지막 문까지 빠져나간다.
+   *
+   * 🔴 그 숫자는 **배송비 기본값 하나로 만들어진 가격**이다. 상품 가격이 한
+   *    푼도 들어 있지 않은데 화면과 등록 경로에는 「권장 판매가」라는 이름으로
+   *    나간다 — 이 저장소가 P0 내내 죽여 온 «아무것도 아닌 것으로 만든 숫자»다.
+   *
+   * priceValidity 를 믿지 않고 값 자체를 본다. 통화도 함께 본다 — 통화를
+   * 모르면 환산할 수 없고, convertToKrw 는 모르는 통화에서 금액을 그대로
+   * 원화로 돌려주기 때문이다(P0-B 의 CAD 84 → ₩84 와 같은 자리).
+   */
+  if (!(input.originalAmount > 0) || !input.originalCurrency) {
+    return {
+      priceKrw: null,
+      source: "UNRESOLVED",
+      isEstimate: true,
+      reason: "원본 상품 가격을 확인할 수 없습니다.",
+    };
+  }
+
   const breakdownInput = input.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT;
   /**
    * 🔴 P0-C STEP 3(CEO 승인, 2026-09-20) — **배송비를 모르면 등록가를 제안하지 않는다.**

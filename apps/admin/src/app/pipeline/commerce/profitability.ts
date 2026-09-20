@@ -70,6 +70,15 @@ export function computeProfitabilityNumbers(
 ): ProfitabilityNumbers | null {
   if (!source.priceResolved) return null;
   /**
+   * 🔴 P0-D(2026-09-20) — **priceValidity 를 믿지 않고 값 자체를 본다.**
+   *
+   * 실측(snapshot f43c931f): `priceValidity="VALID"` 인데 `amount 0 · currency ""`.
+   * 그러면 위 문은 통과하고, 아래 계산은 상품가 0 에 해외물류비만 더한
+   * 「배송비로 만든 가격」을 낸다. resolveListingPrice 에 같은 문을 달았으므로
+   * 여기에도 단다 — 한쪽만 막으면 화면의 권장가와 등록가가 갈린다.
+   */
+  if (!(source.originalAmount > 0) || !source.originalCurrency) return null;
+  /**
    * 🔴 P0-C STEP 3(CEO 승인, 2026-09-20) — **배송비를 모르면 숫자를 그리지 않는다.**
    *
    * 바로 위 `priceResolved` 문과 «같은 문»이다. 원본 가격을 못 읽었을 때 이
