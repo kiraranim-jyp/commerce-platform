@@ -266,7 +266,18 @@ export function PriceCalculationDetail({
     roundingUnit,
   );
 
-  if (priceUnresolved || !profit) {
+  /**
+   * 🔴 P0-C STEP 3b(2026-09-20) — **두 「모른다」를 한 문장으로 말하지 않는다.**
+   *
+   * 여기 있던 조건은 `priceUnresolved || !profit` 이었다. 그런데 이번에
+   * computeProfitabilityNumbers 가 «해외물류비를 모를 때도» null 을 돌려주게
+   * 되면서, 배송비 칸을 지운 판매자에게 화면이 「⚠️ 원본 상품 가격을 확인할 수
+   * 없습니다」라고 말했다 — **원본 가격은 멀쩡한데** 말이다.
+   *
+   * 실제로 화면을 띄워서 값을 지워 보는 테스트(p0c-step3b-clear-input-live)가
+   * 이걸 잡았다. 정적 판정만 했으면 「2,571개 통과」로 닫혔을 것이다.
+   */
+  if (priceUnresolved) {
     return (
       <div className="space-y-2.5 text-sm">
         <PriceUnresolvedBanner product={product} />
@@ -304,6 +315,44 @@ export function PriceCalculationDetail({
             </p>
           </div>
         )}
+      </div>
+    );
+  }
+
+  /**
+   * 🔴 P0-C STEP 3b — **해외물류비만 모르는 상태.** 원본 가격은 확인됐다.
+   *
+   * 여기서 숫자를 그리지 않는 이유는 위 unified-price-decision 과 같다: 배송비를
+   * 빼고 더한 착지원가는 「최소 확인 가능한 원가」가 아니라 **배송비를 0 으로 친
+   * 원가** 이고, 그 위에 선 권장가·이익은 전부 낙관적으로 틀린다.
+   *
+   * 🔴 그러나 입력칸은 «남긴다». 숫자를 감추면서 고칠 자리까지 없애면 판매자가
+   *    되돌아올 방법이 없다 — 그건 막는 것이 아니라 가두는 것이다.
+   */
+  if (!profit) {
+    return (
+      <div className="space-y-2.5 text-sm">
+        <div className="rounded-md border border-border bg-background px-3 py-2.5">
+          <p className="text-sm font-medium text-text-primary">
+            {PRICE_MEANING_LABEL.LANDED_COST}를 계산할 수 없습니다
+          </p>
+          <p className="mt-1 text-xs text-text-secondary">
+            {resolveOverseasShipping({ sellerEnteredKrw: draftInput.shippingKrw }).label} — 아래에 금액을 입력하면 계산이
+            다시 시작됩니다. 배송비가 없는 상품이면 0을 입력하십시오.
+          </p>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <span className="text-sm text-text-primary">{PRICE_LINE_LABEL.INTERNATIONAL_SHIPPING}</span>
+            <div className="flex items-center gap-1">
+              <span className="text-text-secondary">₩</span>
+              <NullableNumberField
+                value={draftInput.shippingKrw}
+                onLiveChange={(n) => liveUpdateBreakdown({ shippingKrw: n })}
+                onCommit={(n) => commitBreakdown({ shippingKrw: n })}
+                className={`w-24 ${FIELD_CLASS}`}
+              />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

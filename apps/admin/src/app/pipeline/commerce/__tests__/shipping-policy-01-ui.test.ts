@@ -38,7 +38,14 @@ describe("SHIPPING-POLICY-01 ②: 국제배송비 줄이 «무엇 위에 서 있
     // P0-C STEP 3(2026-09-20) — 함수가 바뀌었다. 지키는 것은 그대로다:
     // 「근거가 국제배송비 줄 바로 아래, 착지원가 줄보다 위에 있다」.
     // 🔴 이제 숫자가 아니라 «판매자가 넣었는가» 를 넘긴다 — 숫자로 역추론하지 않는다.
-    const basisAt = detail.indexOf("resolveOverseasShipping({ sellerEnteredKrw: draftInput.shippingKrw })");
+    // 🔴 P0-C STEP 3b — 같은 호출이 «두 곳» 에 있다. 하나는 배송비를 모를 때
+    //    뜨는 블록(파일 앞쪽), 하나는 여기서 재는 계산 사슬이다. indexOf 로
+    //    첫 번째를 잡으면 앞쪽 블록이 걸려서 순서 판정이 무의미해진다 —
+    //    그래서 «국제배송비 줄 뒤» 에서 찾는다.
+    const basisAt = detail.indexOf(
+      "resolveOverseasShipping({ sellerEnteredKrw: draftInput.shippingKrw })",
+      rowAt,
+    );
     expect(rowAt, "국제배송비 줄을 찾지 못했다").toBeGreaterThan(-1);
     expect(basisAt, "기본값/실제 구분이 사라졌다").toBeGreaterThan(rowAt);
     // 착지원가 줄보다는 위에 있어야 «그 줄의 근거»로 읽힌다.
