@@ -1,7 +1,8 @@
 # MI 실물 정확도 검증 기록 (진행 중 — GO 아님)
 
 - 시작: 2026-09-20
-- 상태: **HOLD.** 실물 독립 검증 **PASS 3 / FAIL 0 / UNVERIFIED 2**
+- 갱신: 2026-09-20 (MI-REAL-01.5 ~ 01.7)
+- 상태: **HOLD.** 실물 독립 검증 **PASS 4 / FAIL 0 / UNVERIFIED 1 / NOT AVAILABLE 1**
 - 이 문서는 **코드 변경 기록이 아니다.** 「실제 상품의 독립 정답 ↔ 시스템 결과」 대조 기록이다.
 
 ---
@@ -43,8 +44,8 @@
 | 1 | `b226ac043` 가격 | 시장별로 다른 가격 | `MARKET_PROBE` EUR 75 / `KR_MARKET` ₩162,000 | ✅ **PASS** |
 | 2 | PèPè Lulu × DEUXBEBE 8021 | **DIFFERENT** | `SIMILAR` → COMPARISON | ✅ **PASS** |
 | 3 | `B226AC009` × Bobo Choses KR | **SAME** | `EXACT_IDENTIFIER` → EXACT | ✅ **PASS** |
-| 4 | PèPè Lulu × 포레포레 10226592 | **UNRESOLVED** | `STRONG_IDENTIFIER` → EXACT | ⚪ **UNVERIFIED** |
-| 5 | Hard Negative #3 (같은 모델·다른 옵션) | — | — | 미착수 |
+| 4 | PèPè Lulu × 포레포레 10226592 | **SAME** | `STRONG_IDENTIFIER` → EXACT | ✅ **PASS** |
+| 5 | Hard Negative #3 (같은 모델·다른 옵션) | — | — | ⬜ **NOT AVAILABLE** |
 | 6 | Product 화면 14항목 | — | — | ⚪ UNVERIFIED |
 
 ### ① 가격 — `b226ac043`
@@ -130,3 +131,102 @@ PèPè "Lulu T Bar Shoes in Vernice Nero"
 > 1 PASS. FAIL 0. 그러나 표본이 3건이므로 MI 정확도 GO 를 선언할 수 없다.**
 
 「3건 PASS」와 「MI 전체가 정확하다」는 **분리해서** 유지한다.
+
+---
+
+# 갱신 — MI-REAL-01.5 ~ 01.7 (2026-09-20)
+
+## ④ 해결 — PèPè Lulu × 포레포레 `10226592` → ✅ **PASS**
+
+`og:image` 에서 상품 이미지를 확보해 12축을 전부 대조했다.
+
+```
+중앙 세로 스트랩 O · 가로 스트랩 T자 연결 O · T-Bar 전체 구조 O
+버클 위치 O · 앞코 라운드 O · 갑피 실루엣 O · 밑창 두툼·검정 O
+힐 낮은 굽 O · 안감 탄/브라운 가죽 O · 인솔 PèPè 금박 각인 O
+색상 O · 소재(에나멜) O
+```
+
+**핵심 차이 없음.** 사이즈 각인만 27(원본) vs 26(국내) — 같은 모델의 다른 사이즈다.
+촬영 구도까지 같은 계열(위에서 내려다본 한 쌍, 직물 배경, 인솔 금박 노출).
+
+`ACTUAL_TRUTH = SAME` → 시스템 `STRONG_IDENTIFIER → EXACT` → **일치**
+
+### 🔴 이 건의 진짜 의미 — 같은 원본에서 두 후보를 «정확히 갈랐다»
+
+```text
+PèPè "Lulu T Bar Shoes in Vernice Nero"   (원본에 모델코드 «없음»)
+  ├─ DEUXBEBE 8021    실제 DIFFERENT → SIMILAR           → COMPARISON  ✅
+  └─ 포레포레 10226592  실제 SAME      → STRONG_IDENTIFIER → EXACT       ✅
+```
+
+브랜드·소재·색·상품군이 전부 같은 두 후보를 **실물 구조(스트랩·밑창)대로** 분리했다.
+🔴 다만 이것은 「STRONG_IDENTIFIER 가 항상 정확하다」의 증명이 아니다. 1건이다.
+
+## ⑤ Hard Negative #3 — ⬜ **NOT AVAILABLE** (억지로 만들지 않았다)
+
+### 탐색 결과 (최소 조회로 종료)
+
+```
+모델코드가 다른 연결 쌍                     0건
+URL 에 색상 단어가 있는 연결 쌍              2건 — 둘 다 이미 검증한 Lulu Vernice Nero
+근거에 옵션/색상 차이가 적힌 링크            0건
+cross_seller_verdict                     null 70 · PRESUMED_SAME 1
+```
+
+🔴 **`SAME_MODEL_OPTION_DIFF` 는 코드에 어휘가 있지만**(match-display.ts 의
+`VISUAL_CHECK_TIER_ORDER`, P0-A.29-D) **Production 데이터에 «한 건도 없다».**
+테스트로는 덮여 있으나 실제 상품에서 그 판정이 나온 적이 없다.
+
+### 후보 생성 시도(MI-REAL-01.7)도 NOT AVAILABLE
+
+`Lulu T-Bar` 의 **다른 색상**(`lulu-t-bar-shoes-in-tobacco`)으로 쌍을 만들려 했다.
+해외 원본은 존재하고 이미지도 확보 가능하다(HTTP 200 · `Pepe-Lulu-T-Bar-Shoes-Tobacco.jpg`).
+
+**그러나 국내에 그 색상이 유통되지 않는다.** DEUXBEBE 의 PèPè 전 라인업 3종:
+
+| 상품명 | 모델 | 판단 |
+|---|---|---|
+| 페페 Lucy 블랙 [벨크로] | **Lucy**(벨크로) | Lulu 아님 |
+| 페페 **Lucy Brown** [벨크로] | **Lucy**(벨크로) | 🔴 이름·색만 비슷 — **후보로 쓰지 않았다** |
+| 페페 VERNICE NERO | (위 ②에서 DIFFERENT 확정) | — |
+
+`Lucy Brown` ↔ `Lulu Tobacco` 는 **다른 모델**이다(벨크로 vs T-바). 이걸 후보로 쓰면
+Hard Negative **#3(같은 모델·다른 색상)** 이 아니라 **#2(다른 모델)** 의 반복이고,
+#2 는 이미 PASS 로 확인했다.
+
+🔴 **「데이터를 못 찾았다」가 아니라 「국내에 그 색상이 유통되지 않는다」이다.**
+MI 분석을 실행해도 결론은 같으므로 **Production 분석을 돌리지 않았다**(불필요한 데이터 생성 회피).
+
+---
+
+## 누적 (2026-09-20 기준)
+
+```text
+PASS          4   가격 1 · DIFFERENT→COMPARISON 1 · SAME→EXACT 2
+FAIL          0
+UNVERIFIED    1   Product 화면 14항목 — CEO 직접 확인 트랙
+NOT AVAILABLE 1   Hard Negative #3 — 국내에 해당 색상 미유통
+
+MI 정확도     🔴 HOLD
+```
+
+코드 변경 **0건** · DB 변경 **0건** · fixture **0건** (01.5~01.7 전 구간)
+
+## 🔴 남은 핵심 미검증 — Product 화면 14항목
+
+표본을 억지로 늘리는 것보다 **이것이 남은 핵심**이다. 체크리스트는 이 문서 위쪽에
+있고, 그중 하나가 결정적이다:
+
+> **PèPè Lulu 상품**(COMPARISON only)에서 `국내 최저가 ₩234,900보다 높습니다` 가
+> 뜨면 **P0-D.2 정책 A 가 화면에서 우회된 것 = 즉시 FAIL**
+
+## 이 트랙을 닫으며 — 확보한 것
+
+1. 진짜 `SAME → EXACT` **2건**
+2. 진짜 `DIFFERENT → COMPARISON` **1건**
+3. **같은 해외 원본의 두 국내 후보를 실물 구조 차이로 올바르게 분리**한 사례
+4. 가격 시장 구분(`MARKET_PROBE` / `KR_MARKET`) **1건**
+5. `SAME_MODEL_OPTION_DIFF` 는 Production 에 **검증 가능한 실물 사례가 없다**는 사실
+
+🔴 **「PASS 4건」과 「MI 전체가 정확하다」는 계속 분리해서 유지한다.**
