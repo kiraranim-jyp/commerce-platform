@@ -1,4 +1,10 @@
-import { computePriceDecision, priceLevelFromVerdict, type PriceDecisionVerdict, type PriceLevel } from "./price-decision";
+import {
+  computePriceDecision,
+  priceLevelFromVerdict,
+  type DomesticPriceBasis,
+  type PriceDecisionVerdict,
+  type PriceLevel,
+} from "./price-decision";
 import { resolveCategoryCostPolicy, type CategoryCostPolicy } from "./category-cost-policy";
 import type { PriceTaxBasis } from "./price-basis";
 import type { ShippingBasis, ShippingMethod } from "./shipping-basis";
@@ -127,7 +133,11 @@ export interface UnifiedPriceInput {
    * 동일한 이유 — 실제 정산은 원가가 아니라 판매가 기준으로 떼인다). */
   platformFeeRate: PriceComponent;
   currentSellingPriceKrw: PriceComponent;
-  domesticCompetitivePrice?: { lowest?: number | null; average?: number | null };
+  /**
+   * 🔴 P0-D.2 — `basis` 가 이 숫자의 «의미» 다. EXACT 가 아니면 판정에 쓰이지
+   *    않는다(제외될 뿐 0 이 되지 않는다). 넘기지 않으면 예전과 같게 동작한다.
+   */
+  domesticCompetitivePrice?: { lowest?: number | null; average?: number | null; basis?: DomesticPriceBasis };
 }
 
 export type DataCompleteness = "COMPLETE" | "ESTIMATED" | "INCOMPLETE";
@@ -314,6 +324,9 @@ export function computeUnifiedPriceDecision(input: UnifiedPriceInput): UnifiedPr
       currentSellingPriceKrw: sellingPriceValue,
       domesticAveragePriceKrw: input.domesticCompetitivePrice?.average ?? null,
       domesticLowestPriceKrw: input.domesticCompetitivePrice?.lowest ?? null,
+      // 🔴 P0-D.2 — 국내가격의 «출처» 를 판정까지 그대로 들고 간다. 넘기지
+      //    않으면 예전과 같게 동작한다(price-decision.ts 의 undefined 규칙).
+      domesticBasis: input.domesticCompetitivePrice?.basis,
     });
     verdict = decision.verdict;
     level = priceLevelFromVerdict(decision.verdict);

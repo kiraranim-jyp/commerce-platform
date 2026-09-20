@@ -136,6 +136,11 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
           currentSellingPriceKrw,
           domesticAveragePriceKrw: domesticSummary.averagePriceKrw,
           domesticLowestPriceKrw: domesticSummary.lowestPriceKrw,
+          // 🔴 P0-D.2(CEO 결정, 2026-09-20) — 이 숫자가 «동일상품» 에서 왔는지
+          //    «비교상품» 에서 왔는지를 판정까지 들고 간다. resolved 는 EXACT 가
+          //    없으면 COMPARISON 으로 폴백하므로, 숫자만 넘기면 판정이 그 둘을
+          //    구분할 방법이 없다 — 실측 4건이 그래서 CONSIDER_LOWER 였다.
+          domesticBasis: domesticMarketSplit.basis,
         })
       : null;
 
@@ -381,6 +386,8 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
           domesticCompetitivePrice: {
             lowest: domesticSummary.lowestPriceKrw,
             average: domesticSummary.averagePriceKrw,
+            // 🔴 P0-D.2 — 같은 이유로 여기도 출처를 함께 보낸다.
+            basis: domesticMarketSplit.basis,
           },
         })
       : null;
