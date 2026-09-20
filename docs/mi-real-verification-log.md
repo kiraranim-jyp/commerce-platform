@@ -898,3 +898,93 @@ ACTIVE 링크 71건의 slug 분포:
 **두 번째 쇼핑몰이 같은 마지막 경로 세그먼트를 쓰는 순간**,
 `URL slug 일치` 는 **상품과 무관하게** 0.95 를 얹는 신호가 된다.
 지금 고치지 않는다 — 기록만 한다.
+
+---
+
+## [MI-REAL-05] 자기참조 후보 차단 — 배포 완료 / 재실행 검증 PENDING
+
+```text
+배포                   PASS
+코드 · 회귀            PASS
+Production 함수 검증   PASS
+실제 재실행 검증       🔴 PENDING
+```
+
+MI-REAL-04 #5 에서 찾은 결함(`FORETFORET ↔ FORETFORET`)을 P0 로 고쳤다.
+**MI 정확도는 여전히 HOLD** — 이번 수정은 «후보 생성» 의 자기참조 결함을 고친
+것이지 정확도를 GO 로 바꿀 근거가 아니다.
+
+### 무엇을 고쳤나
+
+후보 생성 경로에 원본과 후보를 비교하는 코드가 **한 줄도 없었다.**
+`self-reference.ts`(신규, 순수 함수)를 만들어 **후보 선택 직전 한 지점**에서
+목록만 거른다.
+
+```text
+자기참조 조건 = host 동일 «+» listing 동일
+             ≠ host 동일        (같은 브랜드 도메인의 다른 상품은 정상 후보)
+             ≠ slug 동일 · 브랜드 동일 · 상품명 동일
+식별자를 만들 수 없으면 → 제외하지 않는다 (추측 금지, 기존 동작 유지)
+```
+
+🔴 `recordDomesticSourceCheckAttempt(OK)` **뒤** 에 거른다. 자기참조를 거절한
+것을 「그 사이트에 그 상품이 없다」(`NO_RESULT`)로 DB 에 굳히면 안 된다.
+
+점수(`scoreCandidateMatch`) · 선택 규칙(`selectDomesticCandidate`) ·
+`extractSlug` · Vision · DB 스키마 — 전부 건드리지 않았다.
+
+### 🔴 증거의 «층» 을 섞지 않는다
+
+| 증거 | 무엇을 증명하나 | 상태 |
+|---|---|---|
+| 신규 21/21 · fixture 12/12 · 회귀 258/258 · typecheck | 코드가 의도대로 동작 | PASS |
+| Production ACTIVE 71건에 실제 함수 적용 → **제외 1 / 유지 70** | 실데이터에서 함수가 옳게 가른다 | PASS |
+| 배포 ● Ready · `target=production` · `ttaejyo-git-main-…` · `origin/main=6bea64e` | 그 코드가 올라갔다 | PASS |
+| baseline 대조 71→71 · 1→1 · 4→4 | 배포 전후 데이터 **불변** | PASS |
+| 「재실행해도 새 자기참조가 안 생긴다」 | **필터가 실제 요청 경로에서 막았다** | 🔴 **PENDING** |
+
+**마지막 줄이 아직 비어 있다.** 배포 이후 새로 생성된 링크가 **0건** —
+즉 검사가 한 번도 실행되지 않았다. 그러므로 `71→71 · 1→1` 은 「변하지 않았다」는
+사실이지 **「필터가 실제로 막았다」는 증거가 아니다.** 이 둘을 같은 칸에 적지 않는다.
+
+이유: `apps/admin/vercel.json` 에 cron 정의가 없어 자동 재실행이 없고,
+`/api/price-history/check` 는 `requireUser()` 로 로그인 사용자만 호출한다.
+CTO 는 자격증명을 입력하지 않으므로 파이프라인을 직접 돌릴 수 없다.
+
+### 다음 1회 실행 후 대조할 세 가지
+
+```text
+① foretforet branduid=10278273   → 기존 1건 유지 · 새 self-reference 행 0건
+② last_error_code               → 포레포레 null 유지 · NO_RESULT 신규 없음
+③ last_checked_at               → 갱신됨 (= 실제로 실행됐다는 증거)
+＋ 실행 로그 [MI-REAL-05] self-reference excluded (foretforet.com): 1건
+```
+
+네 번째 줄이 찍히면 **코드 적용 → 실제 요청 경로 실행 → 후보 제외 → DB 미생성**
+의 전체 사슬이 이어진다.
+
+### ⚠️ 오독 방지 — 이번 결함과 «무관한» 기존 값
+
+`Bobo Choses Korea(공식)` 의 `last_error_code = NO_RESULT` 는
+**2026-09-10 기존 데이터**다(`last_checked_at` 도 09-10 그대로). 배포 전후가
+동일하며 이번 자기참조 결함이나 이번 수정과 연결해서 읽으면 안 된다.
+
+### fixture 교정은 «예외» 가 아니다
+
+`matching-fix-01-save-path` 의 세 케이스는 `boboProduct` 와 `boboCandidate` 가
+같은 fixture 에서 URL 을 만들어 원본과 후보가 **문자 그대로 같은 URL** 이었다.
+자기참조 차단에 구멍을 낸 것이 아니라, MI-REAL-04 #1 에서 실물 확인한 모양
+(원본 = 글로벌 `/en-kr/products/…`, 후보 = KR `/products/…`)으로 **재료를 고쳤다.**
+품번 추출은 양쪽 다 경로의 마지막 세그먼트만 읽으므로 판정에 영향이 없다.
+
+🔴 「`AC043` 원본 ↔ 다른 URL 의 `AC043` 후보」는 **회귀 테스트로 검증**이며,
+**Production 데이터에는 그 조합이 없다**(국내 후보가 전부 `AC042`). 이 문장을
+「Production 검증」이라고 쓰지 않는다.
+
+### 분리 등록한 백로그 (`docs/tech-debt-register.md`)
+
+```text
+MI-REAL-05-B  Vision E1_TEST 단계의 self-reference 노출 (기본값 OFF, 영향 없음)
+P1 ㉡         extractSlug 가 쿼리를 버려 slug 가 상수로 붕괴 (shopdetail 21 · detail 18)
+P1 ㉢         source 별 acquisition / fallback 관리 (source_role 18곳 중 16곳 null)
+```
