@@ -562,7 +562,38 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
 
     // N-4.18-Q3 PART H-3-11 — 어차피 NOT_MATCHED로 끝날 검색결과는 Evidence
     // HTTP 비용을 쓰지 않는다(isEvidenceEvaluationWorthwhile 주석 참고).
-    if (!isEvidenceEvaluationWorthwhile(candidates, foreignModelCode, result.domain)) continue;
+    //
+    /**
+     * MI-REAL-12 Track B(CEO 지시, 2026-09-21) — **왜 버려졌는지만 관측한다.**
+     *
+     * LOOXLOO·RULII 는 검색이 «OK»(후보 있음)인데 링크가 0건이다. 코드 논리상
+     * Gate 1(여기)이 유력하지만, `candidates[0]` 과 `ordered[0]` 이 다를 수 있어
+     * Gate 2 를 배제하지 못했다. 그 중간값은 DB 에 한 글자도 남지 않는다 —
+     * 버려진 후보는 기록될 자리가 없다. 그래서 여기서 «읽기만» 한다.
+     *
+     * 🔴 판정을 바꾸지 않는다. 순수 함수를 const 로 받아 같은 값을 같은 자리에
+     *    쓸 뿐이다(threshold·registry·rescue·저장 조건 전부 그대로).
+     * 🔴 상품 식별은 URL 까지만 — 자격증명·토큰·payload 는 남기지 않는다.
+     */
+    const worthwhile = isEvidenceEvaluationWorthwhile(candidates, foreignModelCode, result.domain);
+    const top = candidates[0]!;
+    if (!worthwhile) {
+      console.log(
+        `[MI-REAL-12] ${JSON.stringify({
+          gate: "EVIDENCE_NOT_WORTHWHILE",
+          sourceDomain: result.domain,
+          candidateUrl: top.url,
+          candidateSku: top.sku ?? null,
+          candidateMatchLevel: top.matchLevel ?? null,
+          crossSellerVerdict: top.crossSellerVerdict ?? null,
+          worthwhile,
+          foreignModelCode,
+          candidateCount: candidates.length,
+          dropGate: "EVIDENCE_NOT_WORTHWHILE",
+        })}`,
+      );
+      continue;
+    }
 
     // N-4.18-Q3 PART H-3-9(대표님 지시, 2026-08-27) — 기존엔 candidates[0](confidence
     // 1위)만 무조건 대표 후보로 썼다. H-3-7 실측(PèPè)에서 1위가 실제로는 다른
@@ -605,7 +636,28 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     ) {
       matchType = "REVIEW_REQUIRED";
     }
-    if (matchType === "NOT_MATCHED") continue;
+    if (matchType === "NOT_MATCHED") {
+      // MI-REAL-12 Track B — Gate 2. 위 Gate 1 로그와 «같은 모양» 으로 남긴다.
+      // orderedRank 는 selectDomesticCandidate 가 몇 번째 후보를 골랐는지다
+      // (0이면 원래도 1위였다는 뜻 — candidates[0] ↔ ordered[0] 판별용).
+      console.log(
+        `[MI-REAL-12] ${JSON.stringify({
+          gate: "NOT_MATCHED",
+          sourceDomain: result.domain,
+          candidateUrl: best.url,
+          candidateSku: best.sku ?? null,
+          candidateMatchLevel: best.matchLevel ?? null,
+          crossSellerVerdict: best.crossSellerVerdict ?? null,
+          worthwhile: true,
+          orderedRank: skippedConflictCount,
+          topMatchLevel: top.matchLevel ?? null,
+          modelCodeEvidence,
+          matchType: initialMatchType,
+          dropGate: "NOT_MATCHED",
+        })}`,
+      );
+      continue;
+    }
 
     // N-4.18-Q3 PART H-3-6(대표님 지시, 2026-08-27) — Evidence Decision을
     // 기존 matchType/matchConfidence/threshold 계산과 완전히 분리된 안전장치로

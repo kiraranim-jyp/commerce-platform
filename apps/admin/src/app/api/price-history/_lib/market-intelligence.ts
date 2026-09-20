@@ -544,6 +544,46 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
     signals: marketSignals.signals,
   });
 
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * MI-REAL-12(CEO 지시, 2026-09-21) — **읽기 전용 조사 로그. 판정을 바꾸지 않는다.**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 확정해야 하는 질문 하나: 「Vernice Nero 는 국내 EXACT 가격(₩258,000)을
+   * 확보했는데 왜 🟡 조건부 판매인가」. 판정 트리를 읽어 «원가·마진 축» 까지는
+   * 좁혔지만(MI-REAL-11), 다섯 경로 중 어느 것인지는 `sellability.level` /
+   * `marketCase` / `missingComponents` 없이는 못 가른다. 그 값들은 여기서
+   * 계산되고 **어디에도 저장되지 않는다** — 그래서 관측할 자리가 여기뿐이다.
+   *
+   * 🔴 여기서 계산하는 것은 한 줄도 없다. 이미 만들어진 값을 읽기만 한다.
+   * 🔴 로그에 남기는 것은 «판정 값» 뿐이다 — 자격증명·토큰·payload·개인정보 금지.
+   *    상품 식별은 snapshotId 하나로 충분하다(제목도 URL도 넣지 않는다).
+   */
+  console.log(
+    `[MI-REAL-12] ${JSON.stringify({
+      snapshotId,
+      domesticBasis: domesticMarketSplit.basis,
+      exactSellers: domesticMarketSplit.exact.sellerCount,
+      comparisonSellers: domesticMarketSplit.comparison.sellerCount,
+      marketCase: recommendation?.marketCase ?? null,
+      sellability: sellability.level,
+      representative: representativeVerdict.code,
+      priceVerdict: sellerFacingVerdict.code,
+      finalVerdict: sellerDecision.finalVerdict,
+      downgradedByMarket: sellerDecision.downgradedByMarket,
+      outlook: sellerDecision.outlook,
+      landedCostKrw: unifiedDecision?.landedCostKrw.value ?? null,
+      estimatedProfitKrw: unifiedDecision?.estimatedProfitKrw.value ?? null,
+      shippingBasis: unifiedDecision?.landedCostKrw.shippingBasis ?? null,
+      shippingMethod: unifiedDecision?.landedCostKrw.shippingMethod ?? null,
+      marginPercent: unifiedDecision?.marginPercent.value ?? null,
+      dataCompleteness: unifiedDecision?.dataCompleteness ?? null,
+      missingComponents: unifiedDecision?.missingComponents ?? null,
+      unifiedVerdict: unifiedDecision?.verdict ?? null,
+      reasons: representativeVerdict.reasons,
+    })}`,
+  );
+
   return {
     snapshotId,
     product: { title: product.title.value, brand: product.brand.value, sourceUrl: product.sourceUrl },
