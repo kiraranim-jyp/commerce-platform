@@ -752,17 +752,50 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     const hasPrice = priceResult.status === "OK" && Boolean(priceResult.price);
     const hasConfirmedSoldOut = priceResult.soldOut === true;
     if (hasPrice || hasConfirmedSoldOut) {
+      // domestic_price_sources.currency는 항상 KRW — 가격을 못 찾았어도
+      // 통화 자체는 안다(국내 소스이므로).
+      const observedCurrency = priceResult.price?.currency ?? source.currency;
+      /**
+       * P0-B FINAL FIX(CEO 지시, 2026-09-20) — **환율을 모르면 원화를 만들지 않는다.**
+       *
+       * 이 줄은 지금까지 `priceKrw: priceResult.price?.amount` 였다. 통화를
+       * «보지 않고» 금액을 그대로 원화 칸에 넣는다는 뜻이고, 통화가 KRW가
+       * 아닌 순간 그것은 환율 1을 조용히 적용한 값이 된다. SELLER_ORIGIN
+       * 경로는 같은 사고를 PRICE-ACCURACY-REGRESSION-1.1(51758aa, 2026-09-11)
+       * 에서 convertToKrwStrict로 이미 막았는데, 국내 경로만 남아 있었다.
+       *
+       * 🔴 오늘 이 가드가 바꾸는 행은 0건이다. 등록된 국내 소스 12곳이 전부
+       *    currency=KRW이고, Production의 DOMESTIC_SHOP 관측 250건도 전부
+       *    KRW다(2026-09-20 실측). 즉 이것은 «관측된 오류의 수정»이 아니라
+       *    «같은 모양의 사고가 남아 있던 마지막 자리»를 닫는 것이다.
+       *    refreshDomesticProductPrice의 bobochoses.com 분기는 Shopify
+       *    /ko-kr JSON이 말하는 통화를 그대로 돌려주므로, 그 분기가 살아나는
+       *    날 이 줄이 환율 1을 적는 자리가 된다.
+       *
+       * 여기서 환율을 «구하지» 않는 이유: 이 경로에는 exchange_rate 자체가
+       * 없다(항상 null로 저장된다). 없는 환율을 이 자리에서 새로 만들면
+       * 국내 관측에 두 번째 FX 소스가 생긴다 — computeKrwAmount 하나로
+       * 모으기로 한 P-4-DATA-7 불변조건 3을 깨는 일이다. 그래서 여기서는
+       * 「원화로 말할 수 없다」만 남긴다.
+       *
+       * price_amount와 currency는 그대로 보존된다(바로 아래 두 줄). 가격을
+       * 버리는 것이 아니라, 원화라고 «주장»하지 않는 것이다. price_krw가
+       * null인 행은 기존 규칙대로 최저가/평균에서 제외되고
+       * (price-history.ts의 `priceKrw != null` 필터), 남는 것이 없으면
+       * 기존 priceMarketBasis="UNRESOLVED"가 그대로 뜬다 — 새 상태를
+       * 만들지 않는다.
+       */
+      const priceKrw =
+        priceResult.price != null && observedCurrency.toUpperCase() === "KRW" ? priceResult.price.amount : null;
       observations.push({
         snapshotId: input.snapshotId,
         source: "DOMESTIC_SHOP",
         sourceLabel: source.name,
         sourceProductUrl: link.externalUrl,
         sourceRefId: source.id,
-        // domestic_price_sources.currency는 항상 KRW — 가격을 못 찾았어도
-        // 통화 자체는 안다(국내 소스이므로).
-        currency: priceResult.price?.currency ?? source.currency,
+        currency: observedCurrency,
         priceAmount: priceResult.price?.amount ?? null,
-        priceKrw: priceResult.price?.amount ?? null,
+        priceKrw,
         // N-4.18-G STEP G-1/G-3(대표님 지시, 2026-08-25) — 실측된 사이트(RULII)만
         // 값이 있고, 나머지는 undefined→null로 저장된다(추측 없음).
         salePriceKrw: priceResult.salePriceKrw ?? null,
