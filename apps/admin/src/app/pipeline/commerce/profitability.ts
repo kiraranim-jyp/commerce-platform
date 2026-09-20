@@ -31,8 +31,13 @@ export interface ProfitabilitySource {
   /** product.price.value — 원본 통화 금액. 상세 계산은 타이핑 중인 draft를 넘긴다. */
   originalAmount: number;
   originalCurrency: string;
-  /** product.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT — 국제배송비·수수료율·목표마진. */
-  breakdownInput: Pick<PriceBreakdownInput, "shippingKrw" | "feePercent" | "marginPercent">;
+  /**
+   * product.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT — 국제배송비·수수료율·목표마진.
+   *
+   * 🔴 P0-C STEP 3 — `shippingKrw` 가 **null 일 수 있다**(판매자가 입력칸을 비웠다 =
+   *    「모른다」). 0 과 다른 사실이다 — 0 은 「무료라고 확인했다」는 주장이다.
+   */
+  breakdownInput: Pick<PriceBreakdownInput, "feePercent" | "marginPercent"> & { shippingKrw: number | null };
   /**
    * product.priceValidity !== "VALID"면 원본 가격을 못 읽은 상품이다.
    * 그때 상세 계산도 숫자를 그리지 않고 경고 배너만 세우므로(N-3.54), 요약도
@@ -64,11 +69,27 @@ export function computeProfitabilityNumbers(
   roundingUnit: number,
 ): ProfitabilityNumbers | null {
   if (!source.priceResolved) return null;
+  /**
+   * 🔴 P0-C STEP 3(CEO 승인, 2026-09-20) — **배송비를 모르면 숫자를 그리지 않는다.**
+   *
+   * 바로 위 `priceResolved` 문과 «같은 문»이다. 원본 가격을 못 읽었을 때 이
+   * 화면이 숫자 대신 경고를 세우는 것처럼, 해외물류비를 모를 때도 착지원가·
+   * 권장가·예상이익을 만들지 않는다. 배송비를 빼고 더한 착지원가는 「최소
+   * 확인 가능한 원가」가 아니라 **배송비를 0 으로 친 원가**이고, 그 위에 선
+   * 권장가·이익은 전부 낙관적으로 틀린다(unified-price-decision 에서 고친 것과
+   * 같은 사고다).
+   *
+   * 🔴 0 은 여기 걸리지 않는다. 판매자가 «0 을 입력한» 것은 「무료라고 확인했다」는
+   *    유효한 관측이다(CEO 지시). 걸리는 것은 «비운» 경우(null)뿐이다.
+   */
+  const shippingKrw = source.breakdownInput.shippingKrw;
+  if (shippingKrw == null) return null;
   const breakdown = computePriceBreakdown(
     {
       originalAmount: source.originalAmount,
       originalCurrency: source.originalCurrency,
       ...source.breakdownInput,
+      shippingKrw,
     },
     liveRates,
     roundingUnit,

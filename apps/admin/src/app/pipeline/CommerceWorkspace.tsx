@@ -1045,7 +1045,7 @@ export function CommerceWorkspace({
    * priceOverrideKrw(최종 판매가)와는 별개다 — "적용" 버튼을 눌러야만
    * suggestedPriceKrw가 priceOverrideKrw로 반영된다(계산기와 최종값을
    * 분리해서, 계산기를 만지는 중에 등록가가 먼저 바뀌지 않게 한다). */
-  function updatePriceBreakdown(breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) {
+  function updatePriceBreakdown(breakdown: { shippingKrw: number | null; feePercent: number; marginPercent: number }) {
     setProduct((prev) => ({ ...prev, priceBreakdown: breakdown }));
   }
 

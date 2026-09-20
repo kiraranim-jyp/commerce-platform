@@ -7,7 +7,7 @@ import {
   DEFAULT_PRICE_ROUNDING_UNIT,
   formatKrw,
   formatOriginalPrice,
-  resolveOverseasShippingBasis,
+  resolveOverseasShipping,
 } from "@commerce/pricing";
 // MI/PRICE-1 — 라벨 어휘는 판단 카드의 수익성 요약과 같은 표에서 가져온다.
 // 같은 숫자를 두 화면이 다른 이름으로 부르던 것이 이 저장소가 반복해서 고쳐 온
@@ -115,6 +115,73 @@ function LiveNumberField({
   );
 }
 
+/**
+ * P0-C STEP 3(CEO 승인, 2026-09-20) — **「모른다」를 말할 수 있는 입력칸.**
+ *
+ * ── 왜 위 LiveNumberField 를 고치지 않고 새로 만들었나 ──────────────────────
+ * 위 칸은 수수료율·마진율·원본가도 쓴다. 그 셋에는 「모른다」가 없다(비율은
+ * 언제나 값이 있고, 원본가가 없으면 애초에 가격 미확정 배너가 뜬다). 셋의
+ * 동작까지 바꾸면 이번 작업이 배송비 문제를 고치는 일이 아니라 입력 전반을
+ * 흔드는 일이 된다. 그래서 «배송비만» 이 칸을 쓴다.
+ *
+ * ── 고치는 사고 ────────────────────────────────────────────────────────────
+ * 🔴 `Number("") === 0` 이다. NaN 이 아니다. 그래서 위 칸은 판매자가 입력을
+ *    «지우는» 순간 0 을 내보냈고, 그 0 이 저장돼 「판매자가 배송비 0원이라고
+ *    확인했다」가 됐다(2026-09-20 실측 14건). 판매자에게 「모른다」를 말할
+ *    방법이 없었던 것이다.
+ *
+ * 🔴 그렇다고 0 을 «금지» 하지도 않는다. 판매자가 실제로 0 을 «입력» 했다면
+ *    그건 「무료라고 확인했다」는 유효한 관측이다(CEO 지시). 비운 것과 0 을
+ *    친 것은 서로 다른 사실이고, 이 칸이 그 둘을 가른다.
+ */
+function NullableNumberField({
+  value,
+  onLiveChange,
+  onCommit,
+  className,
+  min = 0,
+}: {
+  value: number | null;
+  onLiveChange: (n: number | null) => void;
+  onCommit: (n: number | null) => void;
+  className?: string;
+  min?: number;
+}) {
+  const [draft, setDraft] = useState(value == null ? "" : String(value));
+  const [syncedValue, setSyncedValue] = useState(value);
+  if (value !== syncedValue) {
+    setSyncedValue(value);
+    setDraft(value == null ? "" : String(value));
+  }
+
+  /** 🔴 빈 칸은 0 이 아니라 null 이다. 숫자가 아니면 «아직 판단하지 않는다». */
+  function parse(raw: string): number | null | undefined {
+    if (raw.trim() === "") return null;
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return undefined; // 타이핑 중(예: "-", "1e") — 값을 바꾸지 않는다
+    return Math.max(min, n);
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={draft}
+      placeholder="미확인"
+      onChange={(e) => {
+        setDraft(e.target.value);
+        const next = parse(e.target.value);
+        if (next !== undefined) onLiveChange(next);
+      }}
+      onBlur={() => {
+        const next = parse(draft);
+        onCommit(next === undefined ? null : next);
+      }}
+      className={className ?? `w-24 ${FIELD_CLASS}`}
+    />
+  );
+}
+
 export function PriceCalculationDetail({
   product,
   onUpdateOriginalPrice,
@@ -126,7 +193,7 @@ export function PriceCalculationDetail({
 }: {
   product: CanonicalProduct;
   onUpdateOriginalPrice?: (patch: Partial<{ amount: number; currency: string }>) => void;
-  onUpdatePriceBreakdown: (breakdown: { shippingKrw: number; feePercent: number; marginPercent: number }) => void;
+  onUpdatePriceBreakdown: (breakdown: { shippingKrw: number | null; feePercent: number; marginPercent: number }) => void;
   exchangeRates: { rates: Record<string, number>; fetchedAt: string; source: "frankfurter" | "fallback" } | null;
   exchangeRatesLoading: boolean;
   onRefreshExchangeRates: () => void;
@@ -320,7 +387,8 @@ export function PriceCalculationDetail({
       <Row label={PRICE_LINE_LABEL.INTERNATIONAL_SHIPPING}>
         <div className="flex items-center justify-end gap-1">
           <span className="text-text-secondary">₩</span>
-          <LiveNumberField
+          {/* 🔴 P0-C STEP 3 — 이 칸만 «비울 수 있다». 비우면 0 이 아니라 null 이다. */}
+          <NullableNumberField
             value={draftInput.shippingKrw}
             onLiveChange={(n) => liveUpdateBreakdown({ shippingKrw: n })}
             onCommit={(n) => commitBreakdown({ shippingKrw: n })}
@@ -332,9 +400,14 @@ export function PriceCalculationDetail({
           기본값 12,000원을 쓰되 «실제 배송비라고 표시하면 안 된다»".
           이 줄이 그 구분이다. 환율 줄이 "(추정 고정환율)"을 달고 있는 것과 같은
           장치다 — 값은 그대로 두고, 그 값이 무엇 위에 서 있는지만 밝힌다.
-          판단은 packages/pricing 한 곳(resolveOverseasShippingBasis)에서만 한다. */}
+
+          🔴 P0-C STEP 3(CEO 승인, 2026-09-20) — 근거를 «숫자로 되묻지» 않는다.
+          예전에는 resolveOverseasShippingBasis(숫자) 가 「12,000 이면 기본값,
+          아니면 판매자 입력」이라고 추측했다. 그래서 판매자가 ₩0 을 넣어도
+          「판매자가 입력한 값」이 됐고, 반대로 판매자가 ₩12,000 을 «확정» 해도
+          「확인된 값이 아니다」가 됐다. 이제 값과 근거가 한 쌍으로 온다. */}
       <p className="-mt-0.5 text-right text-[11px] text-text-tertiary">
-        {resolveOverseasShippingBasis(draftInput.shippingKrw).label}
+        {resolveOverseasShipping({ sellerEnteredKrw: draftInput.shippingKrw }).label}
       </p>
 
       <div className="flex items-center justify-between border-t border-border pt-1.5">

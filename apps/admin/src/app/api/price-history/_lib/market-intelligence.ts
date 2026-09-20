@@ -23,7 +23,7 @@ import {
   buildSellerDecision,
   resolveBuyerImportCharge,
   resolveCategoryCostPolicy,
-  resolveOverseasShippingBasis,
+  resolveOverseasShipping,
   type UnifiedPriceDecision,
   type PriceObservationRecord,
 } from "@commerce/pricing";
@@ -192,12 +192,30 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
   const hasResolvedPrice = resolvedOriginalAmount > 0 && Boolean(resolvedOriginalCurrency);
   const canComputeCost =
     costSource !== "STATIC_SNAPSHOT" ? hasResolvedPrice : product.priceValidity === "VALID" && hasResolvedPrice;
-  if (canComputeCost) {
+  const breakdownInput = product.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT;
+  /**
+   * 🔴 P0-C STEP 3(CEO 승인, 2026-09-20) — **배송비를 모르면 원가를 만들지 않는다.**
+   *
+   * 판매자가 해외물류비 입력칸을 «비웠으면»(null) 「모른다」는 의사표시다. 그
+   * 상태로 computePriceBreakdown 을 부르려면 어떤 숫자든 채워 넣어야 하는데,
+   * 그 숫자가 무엇이든 그 순간 「모른다」가 사라진다. 그래서 여기서는 cost 를
+   * null 로 두고, 아래 internationalShippingKrw 가 status="unknown" 으로 내려간다
+   * → computeUnifiedPriceDecision 이 원가·마진·판정을 전부 비운다.
+   *
+   * 🔴 0 은 여기 걸리지 않는다. 판매자가 0 을 «입력» 한 것은 「무료라고
+   *    확인했다」는 유효한 관측이다(CEO 지시). 걸리는 것은 «비운» 경우뿐이다.
+   */
+  const shippingKrw = breakdownInput.shippingKrw;
+  if (canComputeCost && shippingKrw != null) {
     const exchangeRates = await fetchLiveExchangeRates();
     liveRates = exchangeRates.rates;
-    const breakdownInput = product.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT;
     cost = computePriceBreakdown(
-      { originalAmount: resolvedOriginalAmount, originalCurrency: resolvedOriginalCurrency, ...breakdownInput },
+      {
+        originalAmount: resolvedOriginalAmount,
+        originalCurrency: resolvedOriginalCurrency,
+        ...breakdownInput,
+        shippingKrw,
+      },
       exchangeRates.rates,
     );
     // P-24 Sprint 4(CPO 지시, 2026-09-02) — 실측(PèPè): 국내 EXACT 최저가
@@ -313,11 +331,28 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
            * 확인해 주는 장치가 아직 없고, status 를 올리면 dataCompleteness 와
            * verdict 가 따라 움직인다. 바뀌는 것은 근거 문자열 하나뿐이다.
            */
+          /**
+           * 🔴 P0-C STEP 3(CEO 승인, 2026-09-20) — 근거를 «숫자로 되묻지» 않는다.
+           *
+           * 여기 있던 식은 `resolveOverseasShippingBasis(숫자).basis === "DEFAULT"`
+           * 였다. 「값이 12,000 이면 기본값, 아니면 판매자 입력」이라는 추측이다.
+           * 그래서 판매자가 ₩0 을 넣어도 「판매자 입력」이 됐고(실측 14건), 반대로
+           * 판매자가 ₩12,000 을 «확정» 해도 「기본값」이 됐다. 이제 판매자가
+           * 실제로 넣었는지를 그대로 넘겨 근거를 받는다.
+           *
+           * 🔴 status 는 여전히 "estimated" 다 — 이 값이 실측이라고 확인해 주는
+           *    장치가 아직 없다(그 판단은 STEP 5 의 몫이다). 배송비를 «모르는»
+           *    경우는 애초에 여기 오지 않는다: 위에서 cost 가 null 이 되고,
+           *    그러면 이 블록 자체가 실행되지 않는다.
+           */
           internationalShippingKrw: {
             value: cost.shippingKrw,
             status: "estimated",
             source:
-              resolveOverseasShippingBasis(cost.shippingKrw).basis === "DEFAULT" ? "seller_default" : "seller_input",
+              resolveOverseasShipping({ sellerEnteredKrw: product.priceBreakdown?.shippingKrw }).basis ===
+              "SELLER_OVERRIDE"
+                ? "seller_input"
+                : "seller_default",
           },
           customerChargedShippingKrw:
             sellerProfile?.deliveryCharge != null

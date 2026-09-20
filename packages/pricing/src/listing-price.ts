@@ -27,7 +27,12 @@ export interface ListingPriceInput {
   originalCurrency: string;
   /** product.priceBreakdown — 없으면 packages/pricing 전역 기본값(DEFAULT_PRICE_BREAKDOWN_INPUT)을 쓴다
    * (PriceEditor가 사용자가 아직 아무것도 저장하지 않았을 때 쓰는 것과 동일한 기본값). */
-  priceBreakdown?: Pick<PriceBreakdownInput, "shippingKrw" | "feePercent" | "marginPercent"> | null;
+  priceBreakdown?:
+    | (Pick<PriceBreakdownInput, "feePercent" | "marginPercent"> & {
+        /** 🔴 P0-C STEP 3 — null 은 「해외물류비를 모른다」다. 0(무료 확인)과 다르다. */
+        shippingKrw: number | null;
+      })
+    | null;
   /** product.priceValidity — VALID가 아니면(원본 가격 자체를 못 읽음) 원본가 기반
    * 마진 계산을 아예 시도하지 않는다(원본이 없는데 계산하면 의미 없는 숫자가 나온다). */
   priceValidity: "VALID" | "MISSING" | "INVALID" | "UNRESOLVED";
@@ -62,11 +67,34 @@ export function resolveListingPrice(
     };
   }
 
+  const breakdownInput = input.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT;
+  /**
+   * 🔴 P0-C STEP 3(CEO 승인, 2026-09-20) — **배송비를 모르면 등록가를 제안하지 않는다.**
+   *
+   * 판매자가 해외물류비 입력칸을 «비웠으면»(null) 원가를 셀 수 없고, 원가를
+   * 셀 수 없으면 권장 판매가도 없다. 여기서 기본값을 다시 끼워 넣으면 판매자가
+   * «지운» 값이 등록 직전에 되살아난다 — 그것도 아무도 보지 않는 자리에서.
+   *
+   * 🔴 이 경로가 특히 위험한 이유: 화면 계산기는 근거 라벨이라도 붙지만, 이
+   *    함수는 등록가를 «사람이 보지 않는 채» 만든다(listing-price 는 등록 직전에
+   *    불린다). 그래서 여기서 조용히 기본값을 쓰면 아무도 그 사실을 모른다.
+   *
+   * 기존 UNRESOLVED 의미를 그대로 쓴다 — 새 상태를 만들지 않는다.
+   */
+  if (breakdownInput.shippingKrw == null) {
+    return {
+      priceKrw: null,
+      source: "UNRESOLVED",
+      isEstimate: true,
+      reason: "해외물류비가 확인되지 않아 판매가격을 계산할 수 없습니다.",
+    };
+  }
   const breakdown = computePriceBreakdown(
     {
       originalAmount: input.originalAmount,
       originalCurrency: input.originalCurrency,
-      ...(input.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT),
+      ...breakdownInput,
+      shippingKrw: breakdownInput.shippingKrw,
     },
     liveRates,
     roundingUnit,

@@ -35,7 +35,10 @@ describe("SHIPPING-POLICY-01 ②: 국제배송비 줄이 «무엇 위에 서 있
 
   it("그 줄 바로 아래에서 기본값/판매자 입력을 구분한다", () => {
     const rowAt = detail.indexOf("<Row label={PRICE_LINE_LABEL.INTERNATIONAL_SHIPPING}>");
-    const basisAt = detail.indexOf("resolveOverseasShippingBasis(draftInput.shippingKrw)");
+    // P0-C STEP 3(2026-09-20) — 함수가 바뀌었다. 지키는 것은 그대로다:
+    // 「근거가 국제배송비 줄 바로 아래, 착지원가 줄보다 위에 있다」.
+    // 🔴 이제 숫자가 아니라 «판매자가 넣었는가» 를 넘긴다 — 숫자로 역추론하지 않는다.
+    const basisAt = detail.indexOf("resolveOverseasShipping({ sellerEnteredKrw: draftInput.shippingKrw })");
     expect(rowAt, "국제배송비 줄을 찾지 못했다").toBeGreaterThan(-1);
     expect(basisAt, "기본값/실제 구분이 사라졌다").toBeGreaterThan(rowAt);
     // 착지원가 줄보다는 위에 있어야 «그 줄의 근거»로 읽힌다.
@@ -49,7 +52,10 @@ describe("SHIPPING-POLICY-01 ②: 국제배송비 줄이 «무엇 위에 서 있
   });
 
   it("🔴 MI 경로도 같은 함수로 근거를 적는다 — \"seller_default\" 고정 문자열이 사라졌다", () => {
-    expect(marketIntelligence).toContain("resolveOverseasShippingBasis(cost.shippingKrw)");
+    // P0-C STEP 3 — 같은 규칙, 새 함수. 🔴 MI 도 숫자(cost.shippingKrw)가 아니라
+    // «판매자가 실제로 넣었는지» 를 넘긴다. 예전 식은 값이 12,000 이면 기본값이라고
+    // 추측했고, 그래서 판매자가 넣은 ₩0 도 ₩12,000 도 잘못 분류됐다.
+    expect(marketIntelligence).toContain("resolveOverseasShipping({ sellerEnteredKrw: product.priceBreakdown?.shippingKrw })");
     // status 는 손대지 않았다. 올리면 dataCompleteness·verdict 가 따라 움직인다.
     expect(marketIntelligence).toContain(`status: "estimated"`);
   });

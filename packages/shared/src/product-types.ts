@@ -274,7 +274,18 @@ export interface CanonicalProduct {
    * 마진율 입력값) 보관한다. priceOverrideKrw만으로는 "왜 이 금액인지"가 안
    * 남아서 등록 이력에서 재구성할 수 없었다 — 이 필드가 그 계산 근거다.
    * priceOverrideKrw 없이(자동 환율값 그대로 등록) 이 필드만 있을 수도 있다. */
-  priceBreakdown?: { shippingKrw: number; feePercent: number; marginPercent: number };
+  /**
+   * P0-C STEP 3(CEO 승인, 2026-09-20) — 🔴 `shippingKrw` 가 **null 일 수 있다.**
+   *
+   * null 은 「해외물류비를 모른다」이고, **0 과 다른 사실이다.** 0 은 「무료라고
+   * 확인했다」는 판매자의 주장이다. 예전에는 입력칸이 `Number("") === 0` 이라
+   * 그 둘을 구분할 방법이 없었고, 비운 값이 0 으로 저장돼 「확인된 무료배송」이
+   * 됐다(실측 14건).
+   *
+   * 🔴 기존에 저장된 0 은 그대로 둔다(CEO 지시). DB 만 보고는 그 0 이 무료배송인지
+   *    입력을 비운 결과인지 확정할 수 없다 — 새 입력부터 의미가 갈린다.
+   */
+  priceBreakdown?: { shippingKrw: number | null; feePercent: number; marginPercent: number };
   /** PHASE 3.2(CPO 확정, 2026-09-11) — "이 채널에 얼마로 등록할 것인가"의 답.
    *
    * priceOverrideKrw("이 상품의 최종 판매가격")와 역할이 다르다. 상품정보에서
