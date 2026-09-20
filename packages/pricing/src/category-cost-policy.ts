@@ -76,6 +76,22 @@ export interface CategoryCostPolicy {
   /** 용적중량 제수. weightBasedShipping일 때만 의미가 있다. */
   volumetricDivisor: number | null;
   /**
+   * P0-C STEP 3(CEO 승인, 2026-09-20) — 이 카테고리의 **판매자 해외물류비 기본값**.
+   *
+   * 🔴 **오늘은 모든 카테고리가 null 이다.** 금액은 CEO 결정 대기(HOLD)이고,
+   *    근거 계층(`ShippingBasis`)의 «자리» 만 먼저 만든 것이다. 금액이 정해지면
+   *    이 표 한 곳만 채우면 된다 — 계산 코드는 이미 그 값을 읽을 준비가 돼 있다.
+   *
+   * 🔴 이 값은 `deliveryCharge`(구매자 청구 배송비)와 **아무 관계가 없다.**
+   *    Settings 의 ₩19,800 placeholder 가 그 칸이고, 그 숫자를 여기로 옮기는
+   *    것은 CEO 가 명시적으로 금지했다 — 구매자가 내는 돈과 판매자 원가를
+   *    합치는 일이기 때문이다.
+   *
+   * 🔴 카테고리가 «선택되지 않은» 상품에는 적용되지 않는다. 호출부가 애초에
+   *    이 값을 넘기지 않는다(2026-09-20 실측: 스냅샷 328건 중 319건이 미선택).
+   */
+  overseasShippingDefaultKrw: number | null;
+  /**
    * PRICING-BASIS-1 — 이 정책으로 계산한 **착지원가가 어느 세금 기준인가**.
    * 국내 시장가(언제나 TAX_INCLUDED)와 나란히 놓아도 되는지가 이 값 하나로
    * 정해진다(price-basis.comparePriceBasis 참고).
@@ -203,6 +219,8 @@ const UNCLASSIFIED_ITEM = {
   importVatRate: KOREA_IMPORT_VAT_RATE,
   weightBasedShipping: false,
   volumetricDivisor: null,
+  // 🔴 P0-C STEP 3 — 금액은 «아직 없다». 구조만 열어 둔다(CEO 결정: 금액 HOLD).
+  overseasShippingDefaultKrw: null,
   landedCostTaxBasis: "TAX_EXCLUDED",
   policyNote: SELLER_COST_NOTE,
 } as const;
@@ -242,6 +260,8 @@ export const CATEGORY_COST_POLICIES: Record<CostPolicyId, CategoryCostPolicy> = 
     importVatRate: KOREA_IMPORT_VAT_RATE,
     weightBasedShipping: true,
     volumetricDivisor: EMS_VOLUMETRIC_DIVISOR,
+    // 🔴 골프는 중량으로 계산한다 — 카테고리 «고정 금액» 을 둘 자리가 아니다.
+    overseasShippingDefaultKrw: null,
     landedCostTaxBasis: "TAX_EXCLUDED",
     policyNote: `${SELLER_COST_NOTE} · 국제배송비는 실중량과 용적중량 중 큰 쪽으로 계산합니다`,
   },

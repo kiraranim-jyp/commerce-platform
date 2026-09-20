@@ -201,7 +201,9 @@ describe("MI-COST-POLICY-1 ④: 상품가격 + 해외배송비 → 착지원가 
   it("③ 예상이익 = 판매가 − 착지원가 − 수수료, ④ 마진 = 예상이익 / 판매가 (손으로 계산한 값과 일치)", () => {
     const unified = computeUnifiedPriceDecision(BASE_INPUT);
     const selling = BASE_INPUT.currentSellingPriceKrw.value!;
-    const expectedProfit = selling - unified.landedCostKrw.value - unified.platformFeeKrw.value!;
+    // P0-C STEP 3 — landedCostKrw.value 는 이제 null 일 수 있다(원가 항이 하나라도
+    // 비면 합계를 내지 않는다). 이 케이스는 원가가 «전부 확인된» 입력이라 null 이 아니다.
+    const expectedProfit = selling - unified.landedCostKrw.value! - unified.platformFeeKrw.value!;
     expect(unified.estimatedProfitKrw.value).toBe(expectedProfit);
     expect(unified.marginPercent.value).toBe(Number(((expectedProfit / selling) * 100).toFixed(1)));
   });

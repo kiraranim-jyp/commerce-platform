@@ -126,7 +126,13 @@ export interface UnifiedPriceDecision {
   /** 현재 "확인 가능한" 원가만 더한 값이다 — unknown 항목은 0으로 채워
    * 넣지 않고 missingComponents에 그 사실을 남긴다(대표님 명시: "예상
    * 원가 = 148000만 반환하는 계약은 만들지 않는다"). */
-  landedCostKrw: { value: number; status: "actual" | "estimated" | "incomplete" };
+  /**
+   * 🔴 P0-C STEP 3 — `value` 가 **null 일 수 있다.** 원가 항 중 하나라도
+   * 모르면(status="incomplete") 합계를 내지 않는다. 화면은 이 null 을 받아
+   * 숫자 대신 「확인 필요」를 그린다 — 부분합에 «실구매원가» 라는 이름을
+   * 붙이지 않기 위해서다.
+   */
+  landedCostKrw: { value: number | null; status: "actual" | "estimated" | "incomplete" };
   platformFeeKrw: { value: number | null; status: "actual" | "estimated" };
   estimatedProfitKrw: { value: number | null; status: "estimated" | "incomplete" };
   marginPercent: { value: number | null; status: "estimated" | "incomplete" };
@@ -235,19 +241,47 @@ export function computeUnifiedPriceDecision(input: UnifiedPriceInput): UnifiedPr
 
   let estimatedProfitValue: number | null = null;
   let marginPercentValue: number | null = null;
-  if (sellingPriceValue != null && platformFeeValue != null) {
+  /**
+   * 🔴 P0-C STEP 3(CEO 승인, 2026-09-20) — **원가가 확정되지 않으면 마진도 없다.**
+   *
+   * ── 여기 있던 규칙과 그것이 틀린 이유 ──────────────────────────────────────
+   * 예전 주석은 이랬다:
+   *
+   *   > 값 자체는 알 수 있는 항목만으로 계산해서 보여주되(0원 취급이 아니라
+   *   > "최소 확인 가능한" 값), status로 "이 숫자는 아직 불완전하다"는 사실을
+   *   > 함께 전달한다.
+   *
+   * 의도는 옳았지만 산술이 그 의도를 배신한다. 위 루프는 unknown 항을 합계에서
+   * «빼는데», **항을 빼는 것은 0 을 더하는 것과 수치적으로 같다.** 그래서
+   * landedCost 가 실제보다 작아지고, 마진은 실제보다 **높게** 나왔다. 판매자가
+   * 보는 숫자는 「최소 확인 가능한 마진」이 아니라 **「최대 가능 마진」** 이었다 —
+   * 보수적인 쪽이 아니라 낙관적인 쪽으로 틀린다.
+   *
+   * CEO 지시(P0-C STEP 3): 「배송비 UNKNOWN → 실구매원가 확정 불가 → 마진/권장가를
+   * 확정값으로 표시하지 않는다」. 그래서 이제 «숫자를 만들지 않는다».
+   * 라벨로 경고하는 대신 값을 null 로 둔다 — 라벨은 읽히지 않을 수 있지만
+   * null 은 화면이 숫자를 그릴 방법이 아예 없다.
+   *
+   * 🔴 missingComponents 는 그대로 채워진다. 「무엇을 몰라서 못 셌는지」는
+   *    여전히 말할 수 있어야 한다(모른다는 것과 침묵은 다르다).
+   */
+  if (sellingPriceValue != null && platformFeeValue != null && !hasUnknownCost) {
     estimatedProfitValue = sellingPriceValue - landedCostValue - platformFeeValue;
     marginPercentValue = Number(((estimatedProfitValue / sellingPriceValue) * 100).toFixed(1));
   }
-  // "unknown 비용은 계산값을 조작하지 않고 incomplete 상태로 남긴다"(STEP 6) —
-  // 값 자체는 알 수 있는 항목만으로 계산해서 보여주되(0원 취급이 아니라
-  // "최소 확인 가능한" 값), status로 "이 숫자는 아직 불완전하다"는 사실을
-  // 함께 전달한다.
   const profitStatus: "estimated" | "incomplete" = hasUnknownCost ? "incomplete" : "estimated";
 
   let verdict: PriceDecisionVerdict | null = null;
   let level: PriceLevel = "UNKNOWN";
-  if (sellingPriceValue != null) {
+  /**
+   * 🔴 P0-C STEP 3 — 판정도 «만들지 않는다».
+   *
+   * verdict 는 바로 위에서 null 로 남긴 그 마진과 «같은 숫자» 에서 나온다
+   * (costPriceKrw = 알려진 원가 + 수수료). 마진은 감추면서 판정만 내보내면,
+   * 판매자는 근거 없는 GREEN 을 보고 등록한다 — 그것이 이 저장소가 존재하는
+   * 이유의 정반대다. 「모를 때는 판단하지 않는다」가 TTAEJYO 의 규칙이다.
+   */
+  if (sellingPriceValue != null && !hasUnknownCost) {
     // STEP 6 목표 공식 그대로: marginPercent = (판매가 - 원가 - 수수료) / 판매가.
     // computePriceDecision()의 marginPercent = (판매가-costPriceKrw)/판매가이므로,
     // costPriceKrw에 "알려진 원가 + 수수료"를 합쳐서 넘기면 기존 함수를 한 글자도
@@ -269,7 +303,12 @@ export function computeUnifiedPriceDecision(input: UnifiedPriceInput): UnifiedPr
       : "COMPLETE";
 
   return {
-    landedCostKrw: { value: landedCostValue, status: landedCostStatus },
+    // 🔴 P0-C STEP 3 — 항이 하나라도 비면 «합계» 를 말하지 않는다. 예전에는
+    //    알려진 항만 더한 부분합을 status="incomplete" 와 함께 내보냈는데, 그
+    //    숫자는 화면에서 「실구매원가」라는 이름을 달고 그려진다. 부분합에
+    //    이름을 붙이는 순간 그것은 원가가 아니라 «원가처럼 보이는 것» 이다.
+    //    무엇이 빠졌는지는 missingComponents 가 그대로 말한다.
+    landedCostKrw: { value: hasUnknownCost ? null : landedCostValue, status: landedCostStatus },
     platformFeeKrw: { value: platformFeeValue, status: platformFeeStatus },
     estimatedProfitKrw: { value: estimatedProfitValue, status: profitStatus },
     marginPercent: { value: marginPercentValue, status: profitStatus },

@@ -1,5 +1,6 @@
 export * from "./currency";
 export * from "./breakdown";
+export * from "./shipping-basis";
 export * from "./price-intelligence";
 export * from "./price-validity";
 export * from "./price-history";

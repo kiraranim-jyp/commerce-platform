@@ -209,7 +209,8 @@ describe("P-1-3 STEP 9: computeUnifiedPriceDecision 회귀 케이스 A-G", () =>
     expect(fromPriceEditor).toEqual(fromMarketIntelligence);
 
     const manualMargin = Number(
-      (((input.currentSellingPriceKrw.value! - fromPriceEditor.landedCostKrw.value - fromPriceEditor.platformFeeKrw.value!) /
+      // P0-C STEP 3 — 원가가 전부 확인된 입력이라 landedCostKrw.value 는 null 이 아니다.
+      (((input.currentSellingPriceKrw.value! - fromPriceEditor.landedCostKrw.value! - fromPriceEditor.platformFeeKrw.value!) /
         input.currentSellingPriceKrw.value!) *
         100
       ).toFixed(1),
