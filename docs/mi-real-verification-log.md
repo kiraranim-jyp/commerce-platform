@@ -329,3 +329,89 @@ HOLD 인 이유는 둘이다:
 
 「증거」와 「추론」을 섞지 않는다 — 계산 단계는 확인했고, 그 값이 화면에
 그대로 실리는지는 확인하지 못했다.
+
+---
+
+# MI-REAL-03 — 검증 표본 확보 가능성 조사 (2026-09-20)
+
+```text
+결과: HOLD — 데이터 부족
+코드 / DB / fixture 변경: 0
+```
+
+## 연결 현황
+
+```text
+연결된 스냅샷       53 / 328
+연결 안 된 스냅샷   275 / 328
+```
+
+## 후보 생성 — 등록 13곳 중 «3곳» 만 후보를 냈다
+
+| 후보 | 소스 | 방식 | 조회 이력 |
+|---:|---|---|---|
+| **32** | `bobochoses.com` | AUTO_API | O |
+| **21** | `foretforet.com` | AUTO_SCRAPE | O |
+| **18** | `deuxbebe.com` | AUTO_SCRAPE | O |
+| 0 | `rulii.co.kr` · `looxloo.com` | AUTO_SCRAPE | **O** — 돌았는데 0건 |
+| 0 | `chocoel.co.kr` | AUTO_SCRAPE | O · `NO_RESULT` |
+| 0 | `karymarket` · `nokimore` · `ocokorea` · `coconjennie` · `chouchouenfant` · `kidikidi` · `danawa` | **MANUAL** | **X — 자동 조회 없음** |
+| 0 | `shopping.naver.com` | — | `NOT_AVAILABLE` |
+
+## 추가 독립 검증 가능 표본
+
+```text
+SAME → EXACT                 42
+DIFFERENT → COMPARISON       23
+SAME_MODEL_OPTION_DIFF        0
+                            ───
+검증 대기                    65   (그중 «4건» 만 실물 검증 완료)
+```
+
+## 핵심 원인 — 세 겹
+
+```text
+① 자동 후보 생성 경로가 3개 소스에 집중
+   MANUAL 7곳 + NOT_AVAILABLE 1곳은 후보를 낼 경로가 없다
+
+② 그 3개 소스의 브랜드 / 상품 커버리지가 제한적
+   Emile et Ida 9 · Hundred Pieces 6 · Bonpoint 2 · BOSS 2 → 전부 링크 0건
+
+③ 현재 데이터에서 SAME_MODEL_OPTION_DIFF 후보 미확보
+```
+
+### 🔴 ③의 표현을 정확히 한다 (CEO 정정)
+
+**확정된 사실**은 여기까지다 — 「현재 Production 데이터에서 그 유형의 후보가
+확보되지 않았다」.
+
+🔴 **「국내에 그 상품이 유통되지 않는다」는 이번 조사 범위에서의 «해석» 이다.**
+확인한 것은 DEUXBEBE 의 PèPè 3종이 서로 다른 모델이라는 것뿐이고, 국내 유통
+전체를 조사한 것이 아니다. **사실처럼 쓰지 않는다.**
+
+## 판정
+
+| | |
+|---|---|
+| `BLOCKED` 아님 | 후보 생성 경로가 막힌 것이 아니라 **3곳만 열려 있다** |
+| `GO` 아님 | `SAME_MODEL_OPTION_DIFF` 는 현재 데이터로 확보 불가 |
+| **`HOLD`** | 데이터 부족 |
+
+🔴 **「검증할 표본이 없다」는 뜻이 아니다.** 65건이 대기 중이고 4건만 봤다.
+**추가 검증은 코드 변경 없이 지금 바로 가능하다.**
+
+## 다음 — MI-REAL-04
+
+```text
+우선순위:  SAME 5건  →  DIFFERENT 5건  →  추가 SAME / DIFFERENT
+```
+
+🔴 `SAME_MODEL_OPTION_DIFF` 를 **억지로 만들지 않는다.** Production 에서 0이면
+0 그대로 기록한다. 그것을 채우려고 신규 데이터를 만들거나 매칭 로직을 바꾸면
+**검증 자체가 오염된다.**
+
+## 누적 (변동 없음)
+
+```text
+PASS 4 · FAIL 0 · UNVERIFIED 1 · NOT AVAILABLE 1      MI 정확도 🔴 HOLD
+```
