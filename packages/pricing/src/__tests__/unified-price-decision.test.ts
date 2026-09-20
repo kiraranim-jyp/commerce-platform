@@ -31,7 +31,7 @@ describe("P-1-3 STEP 9: computeUnifiedPriceDecision 회귀 케이스 A-G", () =>
     // 빠졌다. 입력은 한 글자도 바꾸지 않고 기대값만 새 정책으로 옮긴다 —
     // 그래야 무엇이 얼마나 달라졌는지가 이 한 줄에서 그대로 읽힌다.
     //   115,000 → 112,000 (해외 상품가 100,000 + 국제배송비 12,000)
-    expect(result.landedCostKrw).toEqual({ value: 112000, status: "estimated" });
+    expect(result.landedCostKrw).toMatchObject({ value: 112000, status: "estimated" });
     expect(result.platformFeeKrw).toEqual({ value: 18000, status: "estimated" });
     // 예상이익 180,000 − 112,000 − 18,000 = 50,000 → 26.1% → 27.8%
     expect(result.marginPercent.value).toBe(27.8);
@@ -55,7 +55,7 @@ describe("P-1-3 STEP 9: computeUnifiedPriceDecision 회귀 케이스 A-G", () =>
     const result = computeUnifiedPriceDecision(input);
     // baseline-price-paths.test.ts Case 2의 computePriceBreakdown 결과와
     // landedCostKrw가 정확히 일치한다(115600) — 같은 입력이면 같은 원가.
-    expect(result.landedCostKrw).toEqual({ value: 115600, status: "estimated" });
+    expect(result.landedCostKrw).toMatchObject({ value: 115600, status: "estimated" });
     expect(result.platformFeeKrw).toEqual({ value: 14098, status: "estimated" });
     expect(result.marginPercent.value).toBe(8);
     // 기존 computePriceDecision(costPriceKrw=원가만)은 이 입력에서 26.5%/MAINTAIN을
@@ -90,7 +90,7 @@ describe("P-1-3 STEP 9: computeUnifiedPriceDecision 회귀 케이스 A-G", () =>
     };
     const result = computeUnifiedPriceDecision(input);
     expect(result.missingComponents).toEqual([]);
-    expect(result.landedCostKrw).toEqual({ value: 112000, status: "estimated" });
+    expect(result.landedCostKrw).toMatchObject({ value: 112000, status: "estimated" });
     expect(result.dataCompleteness).toBe("ESTIMATED");
     expect(result.verdict).toBe("MAINTAIN");
     expect(result.level).toBe("GREEN");
@@ -147,7 +147,7 @@ describe("P-1-3 STEP 9: computeUnifiedPriceDecision 회귀 케이스 A-G", () =>
     // 관부가세가 아니라 국내 배송원가다.
     // MI-UX-FINAL-4 — 170,000 → 165,000. 국내 배송원가 5,000이 빠진 그 차이다
     // (해외 상품가 150,000 + 국제배송비 15,000).
-    expect(result.landedCostKrw).toEqual({ value: 165000, status: "estimated" });
+    expect(result.landedCostKrw).toMatchObject({ value: 165000, status: "estimated" });
     expect(result.dataCompleteness).toBe("ESTIMATED");
   });
 

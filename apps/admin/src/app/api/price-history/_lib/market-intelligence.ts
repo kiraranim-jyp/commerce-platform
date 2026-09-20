@@ -206,6 +206,19 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
    *    확인했다」는 유효한 관측이다(CEO 지시). 걸리는 것은 «비운» 경우뿐이다.
    */
   const shippingKrw = breakdownInput.shippingKrw;
+  /**
+   * P0-C STEP 5 — 근거를 한 번만 구해서 아래로 흘린다(두 번 판정하지 않는다).
+   * 🔴 method 는 넘기지 않는다 — 확인된 배송방법 데이터가 0건이므로 UNKNOWN 이다.
+   */
+  const resolvedShipping = resolveOverseasShipping({
+    // 🔴 저장된 priceBreakdown 이 «있을 때만» 판매자 값이다. 없으면 아래
+    //    legacyFallbackKrw 가 답한다 — 실측 328건 중 89건이 이 경우다.
+    sellerEnteredKrw: product.priceBreakdown ? product.priceBreakdown.shippingKrw : undefined,
+    // 🔴 P0-C STEP 3 §8 — ₩12,000 의 «숫자» 는 바꾸지 않는다. 다만 그 값이
+    //    적용될 때 LEGACY_FALLBACK 이라는 이름이 붙도록 한다. 예전에는 이 경우
+    //    근거가 아예 없었고, 그래서 아무도 모르는 채 원가에 들어갔다.
+    legacyFallbackKrw: DEFAULT_PRICE_BREAKDOWN_INPUT.shippingKrw,
+  });
   if (canComputeCost && shippingKrw != null) {
     const exchangeRates = await fetchLiveExchangeRates();
     liveRates = exchangeRates.rates;
@@ -348,12 +361,17 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
           internationalShippingKrw: {
             value: cost.shippingKrw,
             status: "estimated",
-            source:
-              resolveOverseasShipping({ sellerEnteredKrw: product.priceBreakdown?.shippingKrw }).basis ===
-              "SELLER_OVERRIDE"
-                ? "seller_input"
-                : "seller_default",
+            source: resolvedShipping.basis === "SELLER_OVERRIDE" ? "seller_input" : "seller_default",
           },
+          /**
+           * P0-C STEP 5 — 금액 옆에 «근거» 를 함께 보낸다. landedCostKrw 가
+           * 이 둘을 그대로 달고 나가므로, 화면이 「왜 이 값인가」에 답할 수 있다.
+           *
+           * 🔴 shippingMethod 는 넘기지 않는다 — 오늘 이 값을 «확인한» 데이터가
+           *    한 건도 없다(product_snapshots 328건 중 0건). 국가·판매처로
+           *    추측하는 것은 CEO 가 금지했다. 그래서 UNKNOWN 으로 남는다.
+           */
+          shippingBasis: resolvedShipping.basis,
           customerChargedShippingKrw:
             sellerProfile?.deliveryCharge != null
               ? { value: sellerProfile.deliveryCharge, status: "actual", source: "SellerProfile.deliveryCharge" }

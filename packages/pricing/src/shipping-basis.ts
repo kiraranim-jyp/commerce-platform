@@ -45,10 +45,49 @@
  */
 export type ShippingBasis = "SELLER_OVERRIDE" | "CATEGORY_DEFAULT" | "LEGACY_FALLBACK" | "UNKNOWN";
 
+/**
+ * P0-C STEP 4(CEO 지시, 2026-09-20) — **상품이 어떤 경로로 한국에 오는가.**
+ *
+ * ── 🔴 이 값을 «추정하지 않는다» ────────────────────────────────────────────
+ * CEO 가 명시적으로 금지한 것이 그것이다:
+ *   「일본 상품 → EMS 있으니까 DIRECT」  금지
+ *   「해외몰 → 배대지 업체가 있으니까 FORWARDING」  금지
+ *
+ * 그래서 이 파일에는 **배송방법을 «판정하는» 함수가 없다.** 값은 밖에서
+ * 확인된 것만 들어오고, 없으면 UNKNOWN 이다.
+ *
+ * ── 실태(2026-09-20 실측) ──────────────────────────────────────────────────
+ * 오늘 이 값은 **어디에도 저장돼 있지 않다.** product_snapshots 328건 중
+ * shippingMethod 를 가진 행은 0 이고, originCountry 도 0 이다. 국가에 대한
+ * 유일한 신호는 `inferSourceCountry` 의 **URL 호스트 TLD 추정**인데 그건
+ * 관측이 아니라 추측이라 여기 쓰지 않는다.
+ *
+ * ── 🔴 FORWARDING 을 위한 «새 계산기» 를 만들지 않는다 ─────────────────────
+ * 기존 결정이 이미 있다(golf-landed-cost.ts:155):
+ *   「배대지(포워딩) 경로의 «현지 판매처→배대지 + 배대지→한국» 합계도 이 문으로
+ *    들어온다 — 그래서 배대지를 위한 새 계산기가 필요하지 않다.」
+ * 즉 판매자가 그 합계를 실비로 넣으면 SELLER_OVERRIDE 로 이미 처리된다.
+ * 이 타입이 하는 일은 «그 값이 어느 경로의 값인지» 를 기록하는 것뿐이고,
+ * 금액 계산 방식을 바꾸지 않는다.
+ */
+export type ShippingMethod = "DIRECT" | "FORWARDING" | "UNKNOWN";
+
+export const SHIPPING_METHOD_LABEL: Readonly<Record<ShippingMethod, string>> = {
+  DIRECT: "해외 판매처에서 한국으로 직배송",
+  FORWARDING: "배대지 경유",
+  UNKNOWN: "배송방법이 확인되지 않았습니다",
+};
+
 export interface ResolvedOverseasShipping {
   /** 🔴 UNKNOWN 이면 null 이다. 0 으로 내려가지 않는다. */
   amountKrw: number | null;
   basis: ShippingBasis;
+  /**
+   * 🔴 확인된 경우에만 DIRECT/FORWARDING 이다. 추정하지 않으므로 오늘은 언제나
+   * UNKNOWN 이다(저장된 행이 0건). 금액 계산에는 관여하지 않는다 — 「이 숫자가
+   * 어느 경로의 값인가」를 함께 들고 다니기 위한 칸이다.
+   */
+  method: ShippingMethod;
   /** 화면이 그대로 쓰는 한 줄. 🔴 LEGACY_FALLBACK 은 절대 «실제 배송비» 라고 말하지 않는다. */
   label: string;
 }
@@ -83,6 +122,12 @@ export interface ResolveOverseasShippingInput {
    * 호출부가 지금까지와 똑같은 조건에서 true 를 넘기면 결과 숫자는 그대로다.
    */
   legacyFallbackKrw?: number | null;
+  /**
+   * 🔴 **확인된 경우에만** 넘긴다. 넘기지 않으면 UNKNOWN 이다.
+   * 이 함수는 배송방법을 «판정하지 않는다» — 국가·통화·판매처로 추측하는 코드를
+   * 여기에 만들면 CEO 가 금지한 바로 그 추측이 된다.
+   */
+  method?: ShippingMethod;
 }
 
 /**
@@ -98,9 +143,11 @@ export interface ResolveOverseasShippingInput {
  * 기본값을 덮어씌우면 판매자가 지운 값이 되살아난다.
  */
 export function resolveOverseasShipping(input: ResolveOverseasShippingInput): ResolvedOverseasShipping {
+  const method: ShippingMethod = input.method ?? "UNKNOWN";
   const withBasis = (amountKrw: number | null, basis: ShippingBasis): ResolvedOverseasShipping => ({
     amountKrw,
     basis,
+    method,
     label: SHIPPING_BASIS_LABEL[basis],
   });
 

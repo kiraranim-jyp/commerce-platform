@@ -234,7 +234,26 @@ export function PriceCalculationDetail({
     setDraftOriginalAmount(cleanOriginalAmount);
   }
 
+  /**
+   * 🔴 P0-C STEP 5 — **「판매자가 손댔다」는 사실 자체를 들고 다닌다.**
+   *
+   * 값만으로는 알 수 없다. 저장된 priceBreakdown 이 없으면 화면은
+   * DEFAULT_PRICE_BREAKDOWN_INPUT(₩12,000)으로 칸을 채우는데, 그 12,000 은
+   * 「판매자가 넣은 값」이 아니라 LEGACY_FALLBACK 이다. 둘을 숫자로 구분하려다
+   * 실패한 것이 예전 resolveOverseasShippingBasis 였다.
+   */
+  const [shippingTouched, setShippingTouched] = useState(false);
+  /** 저장된 값이 있거나, 이 화면에서 판매자가 실제로 건드렸을 때만 «판매자 값» 이다. */
+  const sellerEnteredShippingKrw =
+    product.priceBreakdown || shippingTouched ? draftInput.shippingKrw : undefined;
+  const shipping = resolveOverseasShipping({
+    sellerEnteredKrw: sellerEnteredShippingKrw,
+    // 🔴 ₩12,000 의 숫자는 바꾸지 않는다 — 이름만 붙인다(CEO §8).
+    legacyFallbackKrw: DEFAULT_PRICE_BREAKDOWN_INPUT.shippingKrw,
+  });
+
   function liveUpdateBreakdown(patch: Partial<typeof breakdownInput>) {
+    if ("shippingKrw" in patch) setShippingTouched(true);
     setDraftInput((prev) => ({ ...prev, ...patch }));
   }
   function commitBreakdown(patch: Partial<typeof breakdownInput>) {
@@ -337,7 +356,7 @@ export function PriceCalculationDetail({
             {PRICE_MEANING_LABEL.LANDED_COST}를 계산할 수 없습니다
           </p>
           <p className="mt-1 text-xs text-text-secondary">
-            {resolveOverseasShipping({ sellerEnteredKrw: draftInput.shippingKrw }).label} — 아래에 금액을 입력하면 계산이
+            {shipping.label} — 아래에 금액을 입력하면 계산이
             다시 시작됩니다. 배송비가 없는 상품이면 0을 입력하십시오.
           </p>
           <div className="mt-2 flex items-center justify-between gap-3">
@@ -456,7 +475,7 @@ export function PriceCalculationDetail({
           「판매자가 입력한 값」이 됐고, 반대로 판매자가 ₩12,000 을 «확정» 해도
           「확인된 값이 아니다」가 됐다. 이제 값과 근거가 한 쌍으로 온다. */}
       <p className="-mt-0.5 text-right text-[11px] text-text-tertiary">
-        {resolveOverseasShipping({ sellerEnteredKrw: draftInput.shippingKrw }).label}
+        {shipping.label}
       </p>
 
       <div className="flex items-center justify-between border-t border-border pt-1.5">

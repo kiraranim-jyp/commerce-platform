@@ -38,14 +38,11 @@ describe("SHIPPING-POLICY-01 ②: 국제배송비 줄이 «무엇 위에 서 있
     // P0-C STEP 3(2026-09-20) — 함수가 바뀌었다. 지키는 것은 그대로다:
     // 「근거가 국제배송비 줄 바로 아래, 착지원가 줄보다 위에 있다」.
     // 🔴 이제 숫자가 아니라 «판매자가 넣었는가» 를 넘긴다 — 숫자로 역추론하지 않는다.
-    // 🔴 P0-C STEP 3b — 같은 호출이 «두 곳» 에 있다. 하나는 배송비를 모를 때
-    //    뜨는 블록(파일 앞쪽), 하나는 여기서 재는 계산 사슬이다. indexOf 로
-    //    첫 번째를 잡으면 앞쪽 블록이 걸려서 순서 판정이 무의미해진다 —
-    //    그래서 «국제배송비 줄 뒤» 에서 찾는다.
-    const basisAt = detail.indexOf(
-      "resolveOverseasShipping({ sellerEnteredKrw: draftInput.shippingKrw })",
-      rowAt,
-    );
+    // 🔴 P0-C STEP 5 — 근거 해석이 컴포넌트 «맨 위 한 곳» 으로 올라갔다
+    //    (`const shipping = resolveOverseasShipping({...})`). 화면은 그 결과를
+    //    `shipping.label` 로 쓸 뿐이다. 그래서 여기서 재는 것은 호출 위치가
+    //    아니라 «근거 문구가 국제배송비 줄 뒤, 착지원가 줄 앞에 있는가» 다.
+    const basisAt = detail.indexOf("{shipping.label}", rowAt);
     expect(rowAt, "국제배송비 줄을 찾지 못했다").toBeGreaterThan(-1);
     expect(basisAt, "기본값/실제 구분이 사라졌다").toBeGreaterThan(rowAt);
     // 착지원가 줄보다는 위에 있어야 «그 줄의 근거»로 읽힌다.
@@ -62,7 +59,11 @@ describe("SHIPPING-POLICY-01 ②: 국제배송비 줄이 «무엇 위에 서 있
     // P0-C STEP 3 — 같은 규칙, 새 함수. 🔴 MI 도 숫자(cost.shippingKrw)가 아니라
     // «판매자가 실제로 넣었는지» 를 넘긴다. 예전 식은 값이 12,000 이면 기본값이라고
     // 추측했고, 그래서 판매자가 넣은 ₩0 도 ₩12,000 도 잘못 분류됐다.
-    expect(marketIntelligence).toContain("resolveOverseasShipping({ sellerEnteredKrw: product.priceBreakdown?.shippingKrw })");
+    // 🔴 P0-C STEP 5 — 저장된 priceBreakdown 이 «있을 때만» 판매자 값이고,
+    //    없으면 LEGACY_FALLBACK 이다. 그 둘을 모두 넘기는지 본다.
+    expect(marketIntelligence).toContain("resolveOverseasShipping({");
+    expect(marketIntelligence).toContain("sellerEnteredKrw: product.priceBreakdown ? product.priceBreakdown.shippingKrw : undefined");
+    expect(marketIntelligence).toContain("legacyFallbackKrw: DEFAULT_PRICE_BREAKDOWN_INPUT.shippingKrw");
     // status 는 손대지 않았다. 올리면 dataCompleteness·verdict 가 따라 움직인다.
     expect(marketIntelligence).toContain(`status: "estimated"`);
   });

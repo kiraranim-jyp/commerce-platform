@@ -1,6 +1,7 @@
 import { computePriceDecision, priceLevelFromVerdict, type PriceDecisionVerdict, type PriceLevel } from "./price-decision";
 import { resolveCategoryCostPolicy, type CategoryCostPolicy } from "./category-cost-policy";
 import type { PriceTaxBasis } from "./price-basis";
+import type { ShippingBasis, ShippingMethod } from "./shipping-basis";
 
 /**
  * P-1-3(대표님 지시, 2026-08-28) — 단일 가격판단 엔진. P-1-2 조사에서 확인된
@@ -46,6 +47,15 @@ export interface UnifiedPriceInput {
    * 보여주기 위한 투명성 목적의 필드다. */
   exchangeRate: PriceComponent;
   internationalShippingKrw: PriceComponent;
+  /**
+   * P0-C STEP 5(CEO 지시, 2026-09-20) — 바로 위 금액이 «왜 그 값인가».
+   *
+   * 🔴 계산에 관여하지 않는다. 값과 나란히 실려 landedCostKrw 로 그대로 나간다.
+   *    넘기지 않으면 UNKNOWN 이다 — 이 엔진이 배송방법이나 근거를 «추정하지
+   *    않는다»는 뜻이고, 그것이 CEO 가 금지한 것이다.
+   */
+  shippingBasis?: ShippingBasis;
+  shippingMethod?: ShippingMethod;
   /**
    * MI-UX-FINAL-4(대표님 결정, 2026-09-13) — **원가 합산에 참여하지 않는다.**
    *
@@ -132,7 +142,20 @@ export interface UnifiedPriceDecision {
    * 숫자 대신 「확인 필요」를 그린다 — 부분합에 «실구매원가» 라는 이름을
    * 붙이지 않기 위해서다.
    */
-  landedCostKrw: { value: number | null; status: "actual" | "estimated" | "incomplete" };
+  landedCostKrw: {
+    value: number | null;
+    status: "actual" | "estimated" | "incomplete";
+    /**
+     * P0-C STEP 5(CEO 지시, 2026-09-20) — **원가가 숫자 하나가 아니라 «근거를 가진
+     * 결과» 가 되게 하는 칸.** 「왜 이 상품 배송비가 이 값이야?」라는 질문에
+     * 시스템이 스스로 답할 수 있어야 한다.
+     *
+     * 🔴 계산에는 관여하지 않는다 — 값은 그대로이고 근거만 함께 실린다.
+     *    호출부가 넘기지 않으면 UNKNOWN 이다(추정하지 않는다).
+     */
+    shippingBasis: ShippingBasis;
+    shippingMethod: ShippingMethod;
+  };
   platformFeeKrw: { value: number | null; status: "actual" | "estimated" };
   estimatedProfitKrw: { value: number | null; status: "estimated" | "incomplete" };
   marginPercent: { value: number | null; status: "estimated" | "incomplete" };
@@ -308,7 +331,13 @@ export function computeUnifiedPriceDecision(input: UnifiedPriceInput): UnifiedPr
     //    숫자는 화면에서 「실구매원가」라는 이름을 달고 그려진다. 부분합에
     //    이름을 붙이는 순간 그것은 원가가 아니라 «원가처럼 보이는 것» 이다.
     //    무엇이 빠졌는지는 missingComponents 가 그대로 말한다.
-    landedCostKrw: { value: hasUnknownCost ? null : landedCostValue, status: landedCostStatus },
+    landedCostKrw: {
+      value: hasUnknownCost ? null : landedCostValue,
+      status: landedCostStatus,
+      // 🔴 근거는 «받아 적는다». 여기서 판정하지 않는다(추정 금지).
+      shippingBasis: input.shippingBasis ?? "UNKNOWN",
+      shippingMethod: input.shippingMethod ?? "UNKNOWN",
+    },
     platformFeeKrw: { value: platformFeeValue, status: platformFeeStatus },
     estimatedProfitKrw: { value: estimatedProfitValue, status: profitStatus },
     marginPercent: { value: marginPercentValue, status: profitStatus },
