@@ -20,12 +20,13 @@
  *      점수를 «등급» 으로 물어야 갈린다.
  */
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import type { VisionObservation } from "./vision-observation";
 
 /** 🔴 점수는 프롬프트에 종속이다. 프롬프트를 고치면 이 값을 «반드시» 올려야
  *  과거 점수와 새 점수를 섞어 임계값을 긋는 일이 생기지 않는다. */
 export const VISION_PROMPT_VERSION = "grade-v1";
-const VISION_MODEL = process.env.GEMINI_MODEL ?? "gemini-flash-latest";
-const MEDIA_RESOLUTION = "MEDIA_RESOLUTION_LOW";
+export const VISION_MODEL = process.env.GEMINI_MODEL ?? "gemini-flash-latest";
+export const MEDIA_RESOLUTION = "MEDIA_RESOLUTION_LOW";
 const IMAGE_FETCH_TIMEOUT_MS = 8000;
 const API_TIMEOUT_MS = 20000;
 
@@ -112,6 +113,38 @@ export async function runVisionEvidence(
   foreignImageUrl: string | null | undefined,
   domesticImageUrl: string | null | undefined,
 ): Promise<VisionEvidence | null> {
+  const r = await observeVision(foreignImageUrl, domesticImageUrl);
+  if (r.status !== "OK" || r.score == null) return null;
+  return {
+    model: r.model,
+    promptVersion: r.promptVersion,
+    mediaResolution: r.mediaResolution,
+    score: r.score,
+    reason: r.reason,
+    imageRefs: [foreignImageUrl as string, domesticImageUrl as string],
+    checkedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * P0-A.30.2(CEO 결정, 2026-09-20) — **왜 점수가 없는지까지 돌려준다.**
+ *
+ * 위 runVisionEvidence 는 «성공했을 때만» 값을 내는 기존 계약을 그대로 지킨다
+ * (호출부가 null 을 「같다」로 읽으면 안 되는 것이 그 계약의 핵심이다). 이
+ * 함수는 그 아래층으로, 실패를 «행으로 남기기» 위해 종류를 구분해 돌려준다 —
+ * score=NULL 인 관측이 「실패」인지 「아직 안 봄」인지 표에서 갈리게 하려면
+ * 이 구분이 있어야 한다.
+ *
+ * 🔴 API key 값은 어디에도 넣지 않는다. 있다/없다만 status 로 나간다.
+ */
+export async function observeVision(
+  foreignImageUrl: string | null | undefined,
+  domesticImageUrl: string | null | undefined,
+): Promise<VisionObservation> {
+  const base = { model: VISION_MODEL, promptVersion: VISION_PROMPT_VERSION, mediaResolution: MEDIA_RESOLUTION };
+  const fail = (status: VisionObservation["status"], failureDetail: string | null = null): VisionObservation => ({
+    ...base, status, score: null, reason: null, failureDetail,
+  });
   /* P0-A.29-F 후속(CEO 지시, 2026-09-20) — 🔴 **왜 null 인지 말한다.**
      전에는 키가 없어도, 이미지를 못 받아도, API 가 거절해도 전부 조용히 null 이었다.
      그래서 「Vision 이 왜 0건인가」에 코드로 답할 방법이 없었다.
@@ -119,14 +152,14 @@ export async function runVisionEvidence(
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.warn("[vision-evidence] GEMINI_API_KEY 없음 — 관측을 건너뛴다(가격 판정에는 영향 없음)");
-    return null;
+    return fail("NO_API_KEY");
   }
-  if (!foreignImageUrl || !domesticImageUrl) return null;
+  if (!foreignImageUrl || !domesticImageUrl) return fail("IMAGE_FETCH_FAILED", "이미지 URL 자체가 없음");
 
   const [a, b] = await Promise.all([fetchAsInlineData(foreignImageUrl), fetchAsInlineData(domesticImageUrl)]);
   if (!a || !b) {
     console.warn(`[vision-evidence] 이미지를 받지 못함 — 원상품=${Boolean(a)} 국내=${Boolean(b)}`);
-    return null;
+    return fail("IMAGE_FETCH_FAILED", `원상품=${Boolean(a)} 국내=${Boolean(b)}`);
   }
 
   try {
@@ -151,27 +184,27 @@ export async function runVisionEvidence(
     );
     if (!res.ok) {
       console.warn(`[vision-evidence] Gemini 응답 거절 status=${res.status}`);
-      return null;
+      return fail("API_REJECTED", `status=${res.status}`);
     }
     const body = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
     const text = body.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) {
       console.warn("[vision-evidence] 응답에 본문이 없음 — thinking 예산이 출력을 먹었을 때의 증상과 같다");
-      return null;
+      return fail("EMPTY_RESPONSE");
     }
     const parsed = JSON.parse(text) as { score?: unknown; reason?: unknown };
     const score = Number(parsed.score);
-    if (!Number.isFinite(score) || score < 0 || score > 100) return null;
+    if (!Number.isFinite(score) || score < 0 || score > 100) {
+      return fail("PARSE_FAILED", `score=${String(parsed.score)}`);
+    }
     return {
-      model: VISION_MODEL,
-      promptVersion: VISION_PROMPT_VERSION,
-      mediaResolution: MEDIA_RESOLUTION,
+      ...base,
+      status: "OK",
       score: Math.round(score),
       reason: typeof parsed.reason === "string" ? parsed.reason.slice(0, 200) : null,
-      imageRefs: [foreignImageUrl, domesticImageUrl],
-      checkedAt: new Date().toISOString(),
+      failureDetail: null,
     };
-  } catch {
-    return null;
+  } catch (e) {
+    return fail("PARSE_FAILED", e instanceof Error ? e.message.slice(0, 120) : null);
   }
 }

@@ -24,7 +24,17 @@ import {
   upsertDomesticProductLink,
 } from "../../domestic-price-sources/_lib/domestic-product-link";
 import { buildMatchProvenanceReasons } from "../../domestic-price-sources/_lib/match-provenance";
-import { findCachedVisionEvidence, runVisionEvidence, type VisionEvidence } from "./vision-evidence";
+import {
+  findCachedVisionEvidence,
+  MEDIA_RESOLUTION as VISION_MEDIA_RESOLUTION,
+  observeVision,
+  runVisionEvidence,
+  VISION_MODEL as VISION_MODEL_NAME,
+  VISION_PROMPT_VERSION,
+  type VisionEvidence,
+} from "./vision-evidence";
+// P0-A.30.2 ㉠ — 관측 전용 저장소. 🔴 가격 경로는 이 표를 읽지 않는다.
+import { hasVisionObservation, pickE1Candidate, recordVisionObservation } from "./vision-observation";
 import { hasObservationToday, recordPriceObservations } from "./price-observations";
 
 /**
@@ -302,6 +312,66 @@ export async function selectDomesticCandidate(
   return { ...evaluated[winnerIndex], skippedConflictCount: winnerIndex };
 }
 
+/**
+ * P0-A.30.2 §C(CEO 지시, 2026-09-20) — **실제 Gemini 호출 상한.**
+ *
+ * 🔴 서버리스에서는 요청마다 프로세스가 새로 뜨므로 이 카운터는 «한 번의 가격
+ *    조사 안에서만» 유효하다. 전역 상한을 만들려면 DB 카운터가 필요한데, 그건
+ *    관측을 위해 또 다른 쓰기 경로를 만드는 일이다. 대신 더 강한 보호를 택했다:
+ *    VISION_GATE_MODE 를 켜지 않으면 이 경로 자체가 돌지 않는다. 켜는 순간에도
+ *    한 상품이 한 번에 부를 수 있는 최대는 이 숫자다.
+ */
+const VISION_TEST_CAP = Number(process.env.VISION_TEST_CAP ?? 30);
+
+/**
+ * E1 후보 «하나» 를 관측해서 vision_observations 에 남긴다.
+ *
+ * 🔴 링크를 만들지 않는다. 가격 경로에 닿는 것이 한 줄도 없다. 실패해도 삼킨다 —
+ *    관측이 실패했다고 가격 조사가 멈추면 그건 관측이 아니라 의존이다.
+ */
+async function observeE1Candidate(args: {
+  snapshotId: string;
+  sourceId: string;
+  shopDomain: string;
+  candidate: { url: string; imageUrl: string | null; crossSellerVerdict?: string };
+  originImageUrl: string;
+  callCount: { n: number };
+}): Promise<void> {
+  if (args.callCount.n >= VISION_TEST_CAP) {
+    console.warn("VISION_TEST_CAP_REACHED");
+    return;
+  }
+  const candidateImageUrl = args.candidate.imageUrl;
+  if (!candidateImageUrl) return;
+  try {
+    const seen = await hasVisionObservation({
+      snapshotId: args.snapshotId,
+      candidateUrl: args.candidate.url,
+      model: VISION_MODEL_NAME,
+      promptVersion: VISION_PROMPT_VERSION,
+      mediaResolution: VISION_MEDIA_RESOLUTION,
+      originImageUrl: args.originImageUrl,
+      candidateImageUrl,
+    });
+    if (seen) return;
+    args.callCount.n += 1;
+    const observation = await observeVision(args.originImageUrl, candidateImageUrl);
+    await recordVisionObservation({
+      snapshotId: args.snapshotId,
+      sourceId: args.sourceId,
+      shopDomain: args.shopDomain,
+      candidateUrl: args.candidate.url,
+      originImageUrl: args.originImageUrl,
+      candidateImageUrl,
+      crossSellerVerdict: args.candidate.crossSellerVerdict ?? null,
+      gate: "E1_TEST",
+      observation,
+    });
+  } catch (e) {
+    console.warn("[vision-observation] 관측 실패(가격 경로에는 영향 없음):", e instanceof Error ? e.message : e);
+  }
+}
+
 export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Promise<DomesticPriceCheckResult> {
   const sourceErrors: string[] = [];
   let linksCreatedOrUpdated = 0;
@@ -315,6 +385,12 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     : false;
   if (alreadyChecked)
     return { linksCreatedOrUpdated: 0, pricesRecorded: 0, sourceErrors: [], domesticModelCodeFetchCount: 0 };
+
+  /* P0-A.30.2 — 기본값은 «꺼짐». 환경변수를 켜지 않으면 이 배선은 한 줄도
+     실행되지 않고, 따라서 Production 일반 사용자 경로는 그대로다(CEO §12). */
+  const visionGateMode = process.env.VISION_GATE_MODE ?? null;
+  const visionCallCount = { n: 0 };
+  const snapshotThumbnailUrl = input.dna.imageUrls[0] ?? null;
 
   const searchTitle = stripLeadingDevTag(input.dna.title);
   const sku = input.dna.identifier?.tier === "SKU" ? input.dna.identifier.value : undefined;
@@ -432,6 +508,33 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     }
 
     void recordDomesticSourceCheckAttempt(result.shopId, "OK");
+
+    /**
+     * P0-A.30.2 ㉠(CEO 결정, 2026-09-20) — **E1 관측. 링크를 만들지 않는다.**
+     *
+     * 🔴 아래 가드보다 «먼저» 선다. 그게 이 배선의 목적이다 — 가드는 「가격에
+     *    쓸 만한 후보인가」를 묻고, 여기는 「눈으로 볼 가치가 있는가」를 묻는다.
+     *    E1 후보(교차판매처 SIMILAR 이상)는 대부분 가드에서 떨어지기 때문에,
+     *    가드 뒤에 두면 Vision 은 영영 애매한 구간을 못 본다(P0-A.30 실측:
+     *    가드를 통과한 3쌍이 «전부 포레포레» 였다).
+     *
+     * 🔴 이 블록은 가격 경로에 «아무것도» 하지 않는다. 링크를 만들지 않고,
+     *    matchType 도 priceTier 도 건드리지 않으며, 예외가 나도 삼켜서
+     *    가격 조사를 멈추지 않는다. 기본값은 «꺼짐» 이다.
+     */
+    if (visionGateMode === "E1_TEST" && snapshotThumbnailUrl) {
+      const e1 = pickE1Candidate(result.candidates);
+      if (e1?.imageUrl) {
+        await observeE1Candidate({
+          snapshotId: input.snapshotId,
+          sourceId: result.shopId,
+          shopDomain: result.domain,
+          candidate: e1,
+          originImageUrl: snapshotThumbnailUrl,
+          callCount: visionCallCount,
+        });
+      }
+    }
 
     // N-4.18-Q3 PART H-3-11 — 어차피 NOT_MATCHED로 끝날 검색결과는 Evidence
     // HTTP 비용을 쓰지 않는다(isEvidenceEvaluationWorthwhile 주석 참고).
