@@ -396,6 +396,15 @@ export interface DomesticPriceRefreshResult {
    */
   shippingPolicyStatus?: ShippingPolicyStatus | null;
   shippingPolicyNote?: string | null;
+  /**
+   * P0-C STEP 2(CEO 승인, 2026-09-20) — 바로 위 두 칸과 «같은 규칙»이다. 금액을
+   * 하나로 좁혀 읽은 사이트만 채우고, 나머지 어댑터는 값을 넘기지 않는다.
+   *
+   * 🔴 이 칸이 채워지는 것은 status 가 FLAT 일 때뿐이다. 다른 상태에 숫자가
+   *    실리면 저장 계층이 배치를 «통째로» 거절한다 — 그 모순은 어댑터의 유니온
+   *    타입(ForetforetShippingPolicy)이 애초에 만들 수 없게 막는다.
+   */
+  shippingCostAmount?: number | null;
 }
 
 /** N-4.07 2차 — domestic_product_links로 이미 매칭이 확정된 특정 상품 1건의 "지금"
@@ -470,6 +479,8 @@ export async function refreshDomesticProductPrice(
       const shipping = {
         shippingPolicyStatus: result.shippingPolicyStatus,
         shippingPolicyNote: result.shippingPolicyNote,
+        // P0-C STEP 2 — 금액도 같은 자리에서 같은 원칙으로 옮긴다(해석하지 않는다).
+        shippingCostAmount: result.shippingCostAmount,
       };
       return result.available && result.price
         ? { status: "OK", price: result.price, soldOut: result.soldOut, ...shipping }

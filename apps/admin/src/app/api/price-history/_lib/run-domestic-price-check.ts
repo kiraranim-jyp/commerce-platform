@@ -805,12 +805,25 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
         // 모양, 같은 규칙»이다: 배송 정책을 실측한 사이트(foretforet.com)만 값이
         // 오고, 나머지 5개 어댑터는 undefined → null로 저장된다(추측 없음).
         //
-        // 🔴 shippingCostAmount는 «여기서도 넘기지 않는다». 포레포레의 「3,000원」은
-        //    무조건 붙는 배송비가 아니라 「70,000원 미만일 때만」이다 — 그 숫자를
-        //    금액 칸에 넣으면 조건이 사라진 채로 이 상품의 배송비가 되어 버린다.
-        //    조건 원문은 shippingPolicyNote에 판매처가 쓴 그대로 남는다.
+        // 🔴 P0-C STEP 2(CEO 승인, 2026-09-20) — 이 자리의 규칙이 «좁아졌다».
+        //
+        //    여기 있던 문장은 「shippingCostAmount는 여기서도 넘기지 않는다」였고,
+        //    그 이유는 포레포레의 「3,000원」이 「70,000원 미만일 때만」이기
+        //    때문이었다. 그 판단은 «(조건)» 라벨에 대해서는 지금도 그대로 옳다.
+        //
+        //    바뀐 것은 실측이다. 2026-09-20에 같은 판매처에서 «(고정)» 라벨과
+        //    「주문금액에 상관없이 배송비가 3,500원」이라는 문장을 확인했다.
+        //    그건 조건이 없는 배송비이고, 그때는 금액 칸이 비어 있는 것이 오히려
+        //    아는 것을 모른다고 적는 일이 된다.
+        //
+        //    🔴 이 줄은 여전히 «해석하지 않는다». 어댑터가 (고정)+숫자 하나를
+        //    동시에 확인했을 때만 값이 오고, 그 외에는 undefined → null이다.
+        //    FLAT과 금액의 동반은 ForetforetShippingPolicy 유니온이 타입으로
+        //    보장하므로, 금액 없는 FLAT이 저장 계층에 도달해 배치를 통째로
+        //    거절시키는 일은 여기서 생길 수 없다.
         shippingPolicyStatus: priceResult.shippingPolicyStatus ?? null,
         shippingPolicyNote: priceResult.shippingPolicyNote ?? null,
+        shippingCostAmount: priceResult.shippingCostAmount ?? null,
       });
     } else if (priceResult.status === "ERROR") {
       sourceErrors.push(`${source.name} 가격 재조회 실패: ${priceResult.error ?? "알 수 없는 오류"}`);

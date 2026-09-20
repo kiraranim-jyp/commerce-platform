@@ -65,13 +65,33 @@ describe("DOMESTIC-SHIPPING-03 ①: 포레포레 실측 원문 → CONDITIONAL_F
     expect(FORETFORET_HTML).toContain("배송조건 : (조건)");
   });
 
-  it("🔴 파서가 돌려주는 값에 «금액» 칸 자체가 없다 — 3,000원을 뽑지 않는다", () => {
+  /**
+   * P0-C STEP 2(CEO 승인, 2026-09-20) — 🔴 **단언 «방식» 만 바뀌었다. 지키는
+   * 사실은 한 글자도 바뀌지 않았다.**
+   *
+   * 원래 이 자리는 「파서가 돌려주는 값에 금액 «칸 자체» 가 없다」였다. 그때는
+   * 실측된 라벨이 `(조건)` 하나뿐이라 금액을 담을 이유가 없었다. 2026-09-20 에
+   * 같은 판매처에서 `(고정)` + 「주문금액에 상관없이 3,500원」을 실측해 FLAT 을
+   * 열면서 칸이 생겼다.
+   *
+   * 그래서 이제는 「칸이 없다」가 아니라 **「칸은 있는데 (조건) 에서는 비어
+   * 있다」** 를 지킨다. 이쪽이 더 강한 단언이다 — 칸이 없으면 「안 뽑았다」와
+   * 「뽑을 수 없었다」가 구분되지 않지만, null 은 그 자리에서 명시적이다.
+   */
+  it("🔴 (조건) 에서는 금액을 뽑지 않는다 — 3,000원이 숫자 칸으로 승격되지 않는다", () => {
     const policy = extractForetforetShippingPolicy(FORETFORET_HTML);
-    expect(Object.keys(policy).sort()).toEqual(["note", "status"]);
+    expect(policy.status).toBe("CONDITIONAL_FREE");
+    // 🔴 조건을 숫자 한 칸에 욱여넣지 않는다. 「70,000원 미만일 때만」이 사라진
+    //    채 3,000원이 이 상품의 배송비가 되는 것이 막으려는 사고다.
+    expect(policy.amountKrw).toBeNull();
     // 원문에 「3,000원」이 여러 번 나오지만, 그건 note 안의 «판매처 문장»으로만
-    // 존재한다. 숫자로 승격된 칸은 어디에도 없다.
+    // 존재한다.
     expect(policy.note).toContain("3,000원");
-    expect(JSON.parse(JSON.stringify(policy))).toEqual({ status: "CONDITIONAL_FREE", note: MEASURED_NOTE });
+    expect(JSON.parse(JSON.stringify(policy))).toEqual({
+      status: "CONDITIONAL_FREE",
+      amountKrw: null,
+      note: MEASURED_NOTE,
+    });
   });
 });
 
@@ -112,6 +132,9 @@ describe("DOMESTIC-SHIPPING-03 ③: «모른다»의 종류를 섞지 않는다"
   it("읽었는데 배송비 필드가 없으면 UNREAD·note null이다", () => {
     expect(extractForetforetShippingPolicy("<html><body>배송비 얘기가 없는 페이지</body></html>")).toEqual({
       status: "UNREAD",
+      // P0-C STEP 2 — 금액 칸이 생겼지만 UNREAD 에서는 언제나 비어 있다
+      // (「못 찾았다」에 숫자가 붙으면 그 숫자를 설명할 근거가 없다).
+      amountKrw: null,
       note: null,
     });
   });

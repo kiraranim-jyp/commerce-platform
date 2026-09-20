@@ -56,6 +56,12 @@ export interface ForetforetProductPrice {
    */
   shippingPolicyStatus?: ShippingPolicyStatus | null;
   shippingPolicyNote?: string | null;
+  /**
+   * P0-C STEP 2(CEO 승인, 2026-09-20) — 🔴 **FLAT 일 때만 값이 있다.**
+   * 다른 상태에서 숫자가 들어오면 저장 계층이 배치를 거절한다(그것이 054 의
+   * 목적이다). 위 ForetforetShippingPolicy 유니온이 그 모순을 만들 수 없게 한다.
+   */
+  shippingCostAmount?: number | null;
 }
 
 /** N-4.18-Q3 PART S(대표님 지시, 2026-08-26) — domestic_product_links로 이미 연결된
@@ -142,6 +148,42 @@ const SHIPPING_FIELD_ALERT_RE = /javascript:alert\('([\s\S]*?)'\)/;
 const VENDOR_SHIPPING_BLOCK_RE = /<dt>\s*입점사 배송비\s*<\/dt>\s*<dd>([\s\S]*?)<\/dd>/;
 /** MakeShop이 찍는 «조건부 무료배송» 라벨. 이 한 값만 실측했다. */
 const CONDITIONAL_SHIPPING_LABEL = "(조건)";
+/**
+ * P0-C STEP 2(CEO 승인, 2026-09-20) — MakeShop 이 «고정 배송비» 에 찍는 라벨.
+ *
+ * 2026-09-20 실측 12건에서 배송조건 라벨은 «둘뿐» 이었다:
+ *     배송조건 : (조건)  × 11   "총 결제금액이 70,000원 미만시 …"
+ *     배송조건 : (고정)  ×  1   "주문금액에 상관없이 배송비가 3,500원 …"
+ * 세 번째 라벨은 나오지 않았다 — 그래서 이번에도 그 칸을 «만들지 않는다».
+ *
+ * 🔴 문장 하나만 보고 승격한 것이 아니다. 라벨 「고정」과 본문 「주문금액에
+ *    상관없이」가 서로 «독립적으로» 같은 말을 한다. 하나뿐이었다면 UNREAD 로
+ *    두었을 것이다.
+ */
+const FLAT_SHIPPING_LABEL = "(고정)";
+
+/** 「3,500원」 · 「4000원」 처럼 판매처가 «원» 을 붙여 쓴 금액만 센다. */
+const MONEY_RE = /(\d{1,3}(?:,\d{3})+|\d+)\s*원/g;
+
+/**
+ * 🔴 **금액이 «정확히 하나» 일 때만 답한다.** 이것이 이 함수의 전부다.
+ *
+ * 실측(uid 10278273)에서 같은 정책이 두 자리에 있고 숫자 개수가 다르다:
+ *
+ *     alert   "… 배송비가 3,500원 청구됩니다."                 숫자 1개  ← 기본 배송비
+ *     입점사  "… 3,500원 … 제주 및 도서산간 지역 4000원"       숫자 2개  ← 지역 할증 포함
+ *
+ * 입점사 블록에서 뽑으면 **제주 할증 4,000 이 이 상품의 배송비가 된다.**
+ * 그래서 호출부는 alert 만 넘기고, 여기서는 후보가 둘 이상이면 «모른다» 고
+ * 답한다 — 둘 중 하나를 고르는 규칙을 만들지 않는다. 고르는 순간 그것은
+ * 관측이 아니라 우리의 해석이다.
+ */
+function soleAmountKrw(text: string): number | null {
+  const found = [...text.matchAll(MONEY_RE)].map((m) => Number(m[1]!.replace(/,/g, "")));
+  if (found.length !== 1) return null;
+  const amount = found[0]!;
+  return Number.isInteger(amount) && amount > 0 ? amount : null;
+}
 
 /** 판매처가 쓴 문장만 남긴다 — 태그를 지우고 <br>은 줄바꿈으로 둔다. */
 function shippingBlockToText(html: string): string {
@@ -153,26 +195,50 @@ function shippingBlockToText(html: string): string {
     .join("\n");
 }
 
-export interface ForetforetShippingPolicy {
-  /** 🔴 HTML을 읽은 이상 «상태 없음(null)»은 나오지 않는다 — 못 읽은 것과 읽고도
-   *  못 찾은 것(UNREAD)은 다른 사실이고, 여기 온 시점에 이미 읽은 뒤다. */
-  status: ShippingPolicyStatus;
+/**
+ * 🔴 **`FLAT` 이면 금액이 «반드시» 있다 — 타입이 그것을 강제한다.**
+ *
+ * 「대체로 잘 뽑힌다」로는 안 되는 이유가 있다. recordPriceObservations 는 상태와
+ * 금액이 모순되면 **그 배치를 통째로 거절한다**(price-observations.ts). 그리고
+ * FLAT 의 amountRule 은 REQUIRED_POSITIVE 다. 즉 금액 없는 FLAT 이 한 건이라도
+ * 나오면 **그 실행의 국내 관측 전부가 0행이 되고**, 그 상품만이 아니라 같이
+ * 돌던 다른 판매처 가격까지 사라진다.
+ *
+ * 그 설계는 옳다(모순된 행을 막는 것이 054 의 목적이다). 그래서 그 모순을
+ * «만들 수 없게» 여기서 유니온으로 잠근다 — 금액을 못 구하면 FLAT 을 아예
+ * 표현할 수 없고, 호출부는 UNREAD 로 떨어진다.
+ */
+export type ForetforetShippingPolicy = {
   /** 판매처 원문. 아무 문장도 못 찾으면 null(빈 문자열로 "근거를 적었다"고 하지 않는다). */
   note: string | null;
-}
+} & (
+  | { status: "FLAT"; amountKrw: number }
+  /** 🔴 HTML을 읽은 이상 «상태 없음(null)»은 나오지 않는다 — 못 읽은 것과 읽고도
+   *  못 찾은 것(UNREAD)은 다른 사실이고, 여기 온 시점에 이미 읽은 뒤다. */
+  | { status: Exclude<ShippingPolicyStatus, "FLAT">; amountKrw: null }
+);
 
 export function extractForetforetShippingPolicy(html: string): ForetforetShippingPolicy {
   const fieldBlock = SHIPPING_FIELD_RE.exec(html)?.[1] ?? null;
   const fieldLabel = fieldBlock ? shippingBlockToText(fieldBlock) : "";
   const alertText = fieldBlock ? shippingBlockToText(SHIPPING_FIELD_ALERT_RE.exec(fieldBlock)?.[1] ?? "") : "";
   const vendorText = shippingBlockToText(VENDOR_SHIPPING_BLOCK_RE.exec(html)?.[1] ?? "");
+  // ②(상위집합) → ①의 문장 → ①의 라벨 순으로 «한 자리»를 고른다. 이어 붙이지
+  // 않는다 — 두 자리를 합치는 순간 그 문장은 판매처 원문이 아니라 우리 편집물이다.
+  const note = vendorText || alertText || fieldLabel || null;
 
-  return {
-    status: fieldLabel.includes(CONDITIONAL_SHIPPING_LABEL) ? "CONDITIONAL_FREE" : "UNREAD",
-    // ②(상위집합) → ①의 문장 → ①의 라벨 순으로 «한 자리»를 고른다. 이어 붙이지
-    // 않는다 — 두 자리를 합치는 순간 그 문장은 판매처 원문이 아니라 우리 편집물이다.
-    note: vendorText || alertText || fieldLabel || null,
-  };
+  // 조건부 무료는 예전 그대로다 — 조건을 숫자 한 칸에 욱여넣지 않는다.
+  if (fieldLabel.includes(CONDITIONAL_SHIPPING_LABEL)) return { status: "CONDITIONAL_FREE", amountKrw: null, note };
+
+  if (fieldLabel.includes(FLAT_SHIPPING_LABEL)) {
+    // 🔴 금액은 «alert 만» 본다. note 는 지역 할증까지 든 상위집합이라 그쪽에서
+    //    뽑으면 「제주 4,000」이 기본 배송비가 된다.
+    const amountKrw = soleAmountKrw(alertText);
+    if (amountKrw != null) return { status: "FLAT", amountKrw, note };
+    // 라벨은 「고정」인데 금액이 하나로 좁혀지지 않았다. 그건 «못 읽은 것»이다.
+  }
+
+  return { status: "UNREAD", amountKrw: null, note };
 }
 
 /** N-4.18-Q3 PART H-3-2(대표님 지시, 2026-08-27) — 상세페이지 JSON-LD(schema.org/
@@ -218,6 +284,7 @@ export async function fetchForetforetProductPrice(url: string): Promise<Foretfor
         soldOut,
         shippingPolicyStatus: shipping.status,
         shippingPolicyNote: shipping.note,
+        shippingCostAmount: shipping.amountKrw,
       }
     : {
         price: null,
@@ -225,6 +292,7 @@ export async function fetchForetforetProductPrice(url: string): Promise<Foretfor
         soldOut,
         shippingPolicyStatus: shipping.status,
         shippingPolicyNote: shipping.note,
+        shippingCostAmount: shipping.amountKrw,
       };
 }
 
