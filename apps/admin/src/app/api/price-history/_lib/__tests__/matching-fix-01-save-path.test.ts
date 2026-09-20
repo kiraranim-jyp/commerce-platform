@@ -29,6 +29,22 @@ const WORKSPACE_ID = "11111111-1111-1111-1111-111111111111";
 const SNAPSHOT_ID = "0767b19b-0000-0000-0000-0000000000bb";
 const BOBO_DOMAIN = "bobochoses.com";
 const BOBO_KRW = 168000;
+/**
+ * MI-REAL-05(CEO 지시, 2026-09-20) — **원본과 후보가 «다른 listing» 이 되게 한다.**
+ *
+ * 이 파일의 boboProduct/boboCandidate 는 같은 fixture 에서 URL 을 만든다. 그래서
+ * 같은 품번을 넣으면 원본과 후보가 **문자 그대로 같은 URL** 이 됐다. 그 상태로
+ * 「동일 품번 → EXACT」를 검증하고 있었다 — 의도는 맞지만 재료가 자기참조였다.
+ *
+ * 🔴 자기참조 차단(isSelfReferenceCandidate)을 위한 «예외»가 아니다. 실제
+ *    Production 에서 관측된 모양으로 fixture 를 교정하는 것이다 — 원본은 글로벌
+ *    스토어프런트(`/en-kr/products/…`), 후보는 KR 스토어프런트(`/products/…`)다
+ *    (MI-REAL-04 #1 에서 실물 검증한 그 쌍의 URL 모양 그대로).
+ *
+ * 품번 추출은 양쪽 다 경로의 **마지막 세그먼트**만 읽으므로(extractUrlSlug /
+ * extractBobochosesModelCode) 이 접두사는 품번 판정에 영향을 주지 않는다.
+ */
+const BOBO_ORIGIN_MARKET_PATH = "/en-kr";
 
 const FIXTURES = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -176,10 +192,13 @@ const field = <T,>(value: T, source: "ORIGINAL" | "USER_EDITED" = "ORIGINAL") =>
 
 /** 등록상품(Bobo 공식몰). 공식몰 URL 앞머리에 브랜드 품번이 그대로 들어 있어
  *  resolveBrandModelCode 가 그 조각을 읽는다 — 그게 이 테스트의 출발점이다. */
-function boboProduct(code: string, opts?: { colorSource?: "ORIGINAL" | "USER_EDITED"; color?: string }): CanonicalProduct {
+function boboProduct(
+  code: string,
+  opts?: { colorSource?: "ORIGINAL" | "USER_EDITED"; color?: string; marketPath?: string },
+): CanonicalProduct {
   const p = boboFixture(code);
   return {
-    sourceUrl: `https://${BOBO_DOMAIN}${p.url}`,
+    sourceUrl: `https://${BOBO_DOMAIN}${opts?.marketPath ?? ""}${p.url}`,
     title: field(p.title),
     brand: field("Bobo Choses"),
     sku: field(""),
@@ -308,13 +327,16 @@ describe("MATCHING-FIX-01 ①: B226AC042 ↔ B226AC043 이 저장까지 가면 �
   });
 
   /**
-   * 🔴 위 결과가 «우연히» 그런 게 아니라는 것. 같은 상품 자신이 후보로 오면
-   * 링크가 생기고 동일상품 가격에 들어간다 — 즉 이 파이프라인은 살아 있고,
-   * 위에서 막힌 것은 품번 충돌 때문이다(역방향 증명).
+   * 🔴 위 결과가 «우연히» 그런 게 아니라는 것. 같은 품번(B226AC043)이 «다른
+   * listing» 으로 후보에 오면 링크가 생기고 동일상품 가격에 들어간다 — 즉 이
+   * 파이프라인은 살아 있고, 위에서 막힌 것은 품번 충돌 때문이다(역방향 증명).
+   *
+   * MI-REAL-05 — 원본은 글로벌 스토어프런트, 후보는 KR 스토어프런트다.
+   * 예전에는 둘이 같은 URL 이어서 자기참조였다(BOBO_ORIGIN_MARKET_PATH 주석 참고).
    */
-  it("역: 같은 상품(B226AC043) 자신이 오면 링크가 생기고 EXACT 로 저장된다", async () => {
+  it("역: 같은 품번(B226AC043)이 다른 listing 으로 오면 링크가 생기고 EXACT 로 저장된다", async () => {
     hoisted.candidatesForSearch = [boboCandidate("B226AC043")];
-    const result = await runCheck(boboProduct("B226AC043"));
+    const result = await runCheck(boboProduct("B226AC043", { marketPath: BOBO_ORIGIN_MARKET_PATH }));
 
     expect(result.linksCreatedOrUpdated).toBe(1);
     const link = hoisted.storedLinks[0]!;
@@ -452,7 +474,8 @@ describe("MATCHING-FIX-01 ③: verified 가 «사람의 확인»처럼 보이지
 
   it("품번 근거로 확정된 행과 아닌 행을 구분해서 말한다", async () => {
     hoisted.candidatesForSearch = [boboCandidate("B226AC043")];
-    await runCheck(boboProduct("B226AC043"));
+    // MI-REAL-05 — 같은 품번이되 «다른 listing»(원본=글로벌, 후보=KR 스토어프런트).
+    await runCheck(boboProduct("B226AC043", { marketPath: BOBO_ORIGIN_MARKET_PATH }));
 
     const standing = describeVerification(hoisted.storedLinks[0]!);
     expect(standing.autoDecided).toBe(true);
@@ -487,7 +510,14 @@ describe("MATCHING-FIX-01 ③: verified 가 «사람의 확인»처럼 보이지
 describe("MATCHING-FIX-01 ④: 셀러가 고친 값(USER_EDITED)이 저장 경로 판정에 쓰인다", () => {
   it("색을 USER_EDITED 로 고치면 그 값이 DNA → 질의 → 판정까지 그대로 간다", async () => {
     hoisted.candidatesForSearch = [boboCandidate("B226AC114")];
-    await runCheck(boboProduct("B226AC114", { colorSource: "USER_EDITED", color: "Heather grey" }));
+    // MI-REAL-05 — 같은 품번이되 «다른 listing»(원본=글로벌, 후보=KR 스토어프런트).
+    await runCheck(
+      boboProduct("B226AC114", {
+        colorSource: "USER_EDITED",
+        color: "Heather grey",
+        marketPath: BOBO_ORIGIN_MARKET_PATH,
+      }),
+    );
 
     // 🔴 buildProductIdentityDna 는 .source 를 보지 않는다 — 셀러가 고친 값도
     //    크롤러가 읽어온 값과 «완전히 같은 취급»을 받는다. 그 사실을 질의에서 본다.

@@ -67,6 +67,10 @@ export type { DomesticCandidateTrust } from "./display-priority";
  * 구조화 코드 완전일치만으로 별도 판정을 얹는다. */
 export { attachProductMatchTruth, deriveProductMatchTruth, PRODUCT_MATCH_TRUTH_RANK } from "./product-identity";
 export type { ProductMatchTruth } from "./product-identity";
+/** MI-REAL-05(CEO 지시, 2026-09-20) — 원본과 «같은 listing» 인 후보를 빼기 위한
+ * 순수 판정. host 동일만으로는 제외하지 않는다(같은 브랜드 도메인의 다른 상품은
+ * 정상 후보다). 점수/판정 로직은 전혀 건드리지 않는다. */
+export { canonicalListingKey, isSelfReferenceCandidate } from "./self-reference";
 /** MATCHING-2.0-CORE(CEO 지시, 2026-09-13) — 판매처가 달라도 같은 물건인지
  * 판정하는 계층. 방향을 바꿔도 같은 답이 나오고, 강한 반증은 점수로 뒤집히지
  * 않는다. scoreCandidateMatch/confidence/matchLevel은 전혀 재계산하지 않는다. */

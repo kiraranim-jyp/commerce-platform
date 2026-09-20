@@ -3,6 +3,7 @@ import {
   decideCandidateEvidence,
   extractForeignModelCode,
   fetchDomesticModelCode,
+  isSelfReferenceCandidate,
   refreshDomesticProductPrice,
   searchDomesticShops,
   supportsDomesticIdentifierExtraction,
@@ -536,9 +537,32 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       }
     }
 
+    /**
+     * MI-REAL-05(CEO 지시, 2026-09-20) — **원본과 «같은 listing» 인 후보를 뺀다.**
+     *
+     * 실측(MI-REAL-04 #5): 원본이 `foretforet.com/shop/shopdetail.html?branduid=10278273`
+     * 이고 후보도 «같은 branduid» 였다. 본문 해시까지 같았고(차이는 검색 추적
+     * 파라미터뿐), 그래서 「국내 경쟁가격 ₩70,000」이 자기 자신의 가격이 됐다.
+     *
+     * 🔴 여기가 자리인 이유: 점수(scoreCandidateMatch)도 선택 규칙
+     *    (selectDomesticCandidate)도 건드리지 않고, **선택에 들어가는 목록에서만**
+     *    뺀다. 남은 후보의 순서·confidence·판정은 전과 완전히 같다.
+     *
+     * 🔴 `recordDomesticSourceCheckAttempt(OK)` «뒤» 에 둔다. 그 사이트는 실제로
+     *    응답했다 — 자기참조를 거절한 것을 「그 사이트에 그 상품이 없다」(NO_RESULT)로
+     *    DB 에 굳히면 안 된다(위 GOLF-01.5 주석과 같은 이유).
+     */
+    const candidates = result.candidates.filter((c) => !isSelfReferenceCandidate(query.sourceUrl, c.url));
+    if (candidates.length < result.candidates.length) {
+      console.log(
+        `[MI-REAL-05] self-reference excluded (${result.domain}): ${result.candidates.length - candidates.length}건 · origin=${query.sourceUrl}`,
+      );
+    }
+    if (candidates.length === 0) continue;
+
     // N-4.18-Q3 PART H-3-11 — 어차피 NOT_MATCHED로 끝날 검색결과는 Evidence
     // HTTP 비용을 쓰지 않는다(isEvidenceEvaluationWorthwhile 주석 참고).
-    if (!isEvidenceEvaluationWorthwhile(result.candidates, foreignModelCode, result.domain)) continue;
+    if (!isEvidenceEvaluationWorthwhile(candidates, foreignModelCode, result.domain)) continue;
 
     // N-4.18-Q3 PART H-3-9(대표님 지시, 2026-08-27) — 기존엔 candidates[0](confidence
     // 1위)만 무조건 대표 후보로 썼다. H-3-7 실측(PèPè)에서 1위가 실제로는 다른
@@ -549,7 +573,7 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     // P-28(2026-09-03) — fetchModelCode를 result.domain에 맞는 추출기로 위임한다
     // (fetchDomesticModelCode 레지스트리, foretforet.com 하드코딩 제거).
     const { candidate: best, modelCodeEvidence, domesticModelCode, skippedConflictCount } = await selectDomesticCandidate(
-      result.candidates,
+      candidates,
       result.domain,
       foreignModelCode,
       (url) => {

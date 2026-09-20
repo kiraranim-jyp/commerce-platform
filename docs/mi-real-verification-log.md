@@ -498,3 +498,403 @@ MI 정확도  🔴 HOLD
 
 **「검증 가능한 상품이 3개면 3개, 2개면 2개다.」** 숫자를 늘리는 것보다
 고유 상품 + 실제 확인 가능성을 유지하는 것이 이 트랙의 목적이다.
+
+---
+
+## [MI-REAL-04 #3 보강] `Stamp Bloom ↔ B226AC070` — PASS 와 «별개로» 남겨야 할 두 가지
+
+판정은 `PASS`(CEO 확정)다. 아래는 정확도가 아니라 **근거 품질**의 기록이다.
+
+### 중요한 발견 1 — `match_truth = null` 인데 EXACT 로 갔다
+
+`B226AC070` 은 **해외·국내 두 페이지 본문에 모델코드가 모두 박혀 있다**
+(해외 `Product code B226AC070` / 국내 `Ref.B226AC070`). 그런데 저장된 근거는
+
+```text
+match_truth = null      verified = true       Vision 관측 0건
+reasons     = 모델명 유사도 100% | 카테고리 일치
+```
+
+`EXACT` 에 도달한 경로는 `EXACT_IDENTIFIER` 가 아니라 `priceTierFromLink` 의
+**`null + verified=true` fallback** 이었다. #2 가 모델코드로 `EXACT_IDENTIFIER` 를
+받은 것과 대비된다.
+
+🔴 **이번엔 결과가 맞았다. 그러나 맞은 이유가 「코드가 같아서」가 아니다.**
+같은 fallback 은 코드가 **다른** 쌍에도 `EXACT` 를 줄 수 있다. 정확도 FAIL 은
+아니고, **잠재적 근거 취약점**이다. 지금 코드는 고치지 않는다(CEO 지시).
+
+### 중요한 발견 2 — 「`B226AC070` 스냅샷 0건」은 «내 조회의 오류» 였다
+
+이전 세션에서 내가 `0건` 이라고 보고했다. 실제로는 **22건** 있다.
+원인은 조회 조건이었다 — `source_url` / `sku` 만 뒤졌는데, 해외 URL 은
+`/products/stamp-bloom-all-over-denim-pants` 라서 코드가 **본문에만** 있다.
+
+> **`0건` 이라는 과거 판단은 잘못된 조회 결과였으며, 실제 Production 데이터
+> 부재를 의미하지 않는다.**
+
+**교훈(CEO 지시로 규칙화):** DB 컬럼 하나의 값이나 특정 URL 패턴만으로
+실제 상품 관계·존재 여부를 확정하지 않는다.
+
+---
+
+## [MI-REAL-04 #4] `Smallable ↔ B226AC060` — 🔴 **UNRESOLVED**
+
+프로토콜 6단계. 가격·과거 판정은 ⑥ 전까지 보지 않았다.
+
+### ② 해외 원본 — **독립 확인 실패(차단)**
+
+| 시도 | 결과 |
+|---|---|
+| Node `fetch` | `TypeError: fetch failed` |
+| `curl -L` | **HTTP 403** (919 bytes) |
+| 실제 브라우저(Chrome 확장) | **미연결** — 세션에서 사용 불가 |
+
+우회(UA 위장·프록시·헤드리스)는 **금지**이므로 여기서 멈춘다.
+확보한 것은 URL 슬러그뿐이다 — `…organic-cotton-ample-joggers-lavender…430663`.
+
+### ③ 국내 후보 — 확인 완료
+
+`bobochoses.com/products/b226ac060-bobo-choses-straight-jogging-pants` (HTTP 200)
+
+```text
+Ref.B226AC060 · "Bobo Choses straight violet jogging pants"
+Lavender pants · Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%
+Loose fit · Responsibly made in Spain
+```
+
+### ③-보강 — 슬러그만으로 특정되는지 «반증» 을 찾아봤다
+
+브랜드 공식 카탈로그에 `straight jogging pants` 가 **3종**이고 색만 다르다.
+
+| Ref | 색 | 핏 |
+|---|---|---|
+| `B226AC059` | Dark green | Relaxed fit |
+| **`B226AC060`** | **Lavender** | **Loose fit** |
+| `B226AC061` | Electric blue | Loose fit |
+
+여기까지는 `lavender` + `ample`(佛 = 넉넉한 ≒ Loose fit) 가 `B226AC060` 을
+가리키는 것처럼 보였다. 그런데 —
+
+🔴 **`B999CD005` 「Lavender Pace joggers」가 따로 있다.**
+
+```text
+Ref.B999CD005 · Lavender pants
+Organic Cotton 66%, Recycled Cotton 17%, Cotton 17%   ← B226AC060 과 «완전히 동일»
+Responsibly made in Spain · Model: 168 cm 착용        ← 성인 라인
+```
+
+색도 같고 **원단 조성까지 소수점 없이 동일**하다. 다른 것은 라인(키즈 `B226` /
+성인 `B999`)뿐이다. 그리고 Smallable 슬러그는 `jogging pants` 가 아니라
+**`joggers`** 라고 쓴다 — `Pace joggers` 쪽 표기와 더 가깝다.
+
+### ④ 이미지 대조 — **불가**
+
+국내 이미지(`B226AC060_1_1.webp`)는 받았다. 해외 이미지는 페이지가 403 이라
+URL 자체를 얻을 수 없다. **URL 을 추측해서 받는 행위는 하지 않았다.**
+
+### ⑤ ACTUAL_TRUTH = **UNRESOLVED**
+
+> 해외 원본을 독립적으로 열지 못했고, 국내에는 **같은 색·같은 원단 조성**의
+> 후보가 키즈/성인 **두 개** 있다. 슬러그 문자열만으로는 어느 쪽인지 정할 수 없다.
+
+🔴 이것이 바로 #3 에서 CEO 가 규칙으로 못 박은 상황이다 —
+**「특정 URL 패턴만으로 실제 상품 관계를 확정하지 않는다.」**
+슬러그만 보고 `SAME` 을 적었다면 성인 상품을 키즈 상품으로 확정할 뻔했다.
+
+### ⑥ 시스템 결과 (여기서 처음 열었다)
+
+```text
+match_truth = SIMILAR     verified = false     confidence = 0.84
+reasons     = 모델명 유사도 75% | 카테고리 일치 | 브랜드 일치(제목 내 확인)
+cross_seller_verdict = null
+→ priceTier = COMPARISON      (SIMILAR → COMPARISON)
+```
+
+**시스템도 `EXACT` 라고 말하지 않았다.** 정책 A(EXACT 만 판매판정에 사용) 아래서
+이 쌍은 **판매판정에 들어가지 않는다.** 독립 검증이 불가능했던 그 불확실성을
+시스템도 `SIMILAR` 로 유지하고 있다 — 이번 건에 한해 **방향이 일치**한다.
+
+⚠️ 다만 이것을 `PASS` 로 세지 않는다. **내가 정답을 못 만들었으므로 비교 자체가
+성립하지 않는다.** 「시스템이 보수적이었다」는 관찰이지 정확도 검증이 아니다.
+
+*(참고 · truth 로 쓰지 않음)* 저장된 해외 스냅샷 제목은
+`Bobo Choses 26FW Straight Jogging Pants` 다. 키즈(`26FW`=AW26) 쪽을 가리키지만,
+이건 **시스템이 수집한 데이터**라 프로토콜상 정답 근거로 쓸 수 없다.
+
+### 판정
+
+| 항목 | 값 |
+|---|---|
+| ACTUAL_TRUTH | **UNRESOLVED** — 해외 원본 접근 차단 |
+| 시스템 | `SIMILAR` / `COMPARISON` |
+| 비교 | **성립 불가** (PASS 도 FAIL 도 아님) |
+| 판매판정 영향 | 없음 — 정책 A 로 애초에 제외 |
+
+---
+
+## 🔴 누적 (MI-REAL-04 #4 종료 시점)
+
+```text
+■ 실물 상품쌍 검증
+  PASS          7
+  FAIL          0
+  UNRESOLVED    2      ← Curious Turnip(국내 404) · #4 Smallable(해외 403)
+  미착수        1      ← #5 FORETFORET ↔ FORETFORET
+  NOT AVAILABLE 1      ← SAME_MODEL_OPTION_DIFF
+
+■ 별도 UI 검증
+  UNVERIFIED    1      ← Product 화면 14항목 (렌더 경로 재현 불가)
+
+MI 정확도  🔴 HOLD
+코드 / DB / fixture 변경  0건
+```
+
+🔴 **UNRESOLVED 2건의 원인은 서로 다르다** — 하나는 국내 페이지 소멸(404),
+하나는 해외 판매처 차단(403). 같은 숫자로 묶어 읽으면 안 된다.
+
+---
+
+## [MI-REAL-04 #4-A] Smallable 대체 수집경로 조사 — 6단계 전수
+
+「사이트 접근 실패 = 수집 실패」로 끝내지 않는다(CEO 지시). 합의된 우선순위를
+**순서대로 전부** 밟았다. 코드·DB 변경 0.
+
+| # | 경로 | 결과 |
+|---|---|---|
+| ① | 공식 API | `api.smallable.com` → **robots.txt = `Disallow: *`** · **사용 중단** |
+| ② | 공식 feed / sitemap | `sitemap.xml` · `sitemap_index.xml` · `/en/sitemap.xml` 전부 **403** |
+| ③ | 공개 검색 인덱스 | 해당 상품 페이지가 **인덱스에 없음** · 요약은 **상호 모순** |
+| ④ | 일반 HTTP | `www` · `en.` · `fr.` **전 호스트 403** |
+| ⑤ | 브라우저 정상 접근 | Chrome 확장 **미연결** |
+| ⑤-b | 브랜드 공식 역추적 | 판별표는 확보했으나 **대조할 Smallable 값이 없음** |
+| ⑥ | → | **UNRESOLVED 확정** |
+
+### ① 🔴 `api.smallable.com` 은 robots.txt 가 전면 금지다
+
+```
+User-agent: *
+Disallow: *
+```
+
+정책을 읽기 **전에** 호스트 루트 1회를 받았다(탐색 목적). 정책을 확인한 시점에
+중단했고, **그 응답은 증거로 사용하지 않았다.** 기록해 둔다.
+
+### ④ 차단의 «성격» — 경로 규칙이 아니라 전면 차단
+
+`robots.txt` **조차 403**이다(CloudFront). 즉 Smallable 의 크롤 정책이 무엇인지
+읽을 방법 자체가 없다. 특정 경로를 막은 게 아니라 이 네트워크를 막은 것이다.
+UA 위장·프록시·403 우회는 하지 않는다.
+
+### ⑤-b 브랜드 공식 역추적 — «판별표» 는 만들었다
+
+키즈/성인을 가르는 깨끗한 식별자를 브랜드 공식에서 확보했다.
+
+| | `B226AC060` (키즈) | `B999CD005` (성인) |
+|---|---|---|
+| 사이즈 | **2-3Y · 4-5Y · 6-7Y · 8-9Y · 10-11Y · 12-13Y** | **XS · S · M · L · XL** |
+| 가격 | **€65,00** | **€95,00** |
+| 색·소재 | Lavender / Organic 66·Recycled 17·Cotton 17 | **완전히 동일** |
+
+**색과 소재로는 절대 못 가른다. 사이즈와 가격이면 한 번에 갈린다.**
+문제는 Smallable 쪽 사이즈·가격을 허용 경로로 얻을 수 없다는 것이다.
+
+### ③ 🔴 검색 요약을 truth 로 쓰지 않은 이유 — 실제로 모순됐다
+
+| 질의 | 요약이 말한 것 |
+|---|---|
+| 1차 | 「€65.00 · 2 colours · 2/3~12/13 years」 → **키즈** |
+| 2차 | `bobochoses.com/es/products/**b999cd005**-lavender-pace-joggers` 를 매칭 → **성인** |
+
+같은 상품에 대해 **두 요약이 서로 다른 결론**을 냈다. 게다가 1차의 값(€65 ·
+키즈 사이즈)은 내가 직전에 조회한 **브랜드 공식 페이지에서도 그대로 나오는 값**이라,
+Smallable 페이지에서 온 것인지 구분할 수 없다 — **순환논증 위험**.
+
+→ **검색엔진 요약은 이번 건에서 독립 증거로 성립하지 않는다.**
+
+### 정황은 있으나 증거는 아니다 (기록만)
+
+검색 결과 «링크 목록»(요약이 아니라 실제 URL)에서 확인된 사실:
+Smallable 은 성인 상품 슬러그에 **`women-s-collection`** 을 박는다 —
+예: `…/product/trousers-women-s-collection-lavender-bobo-choses-229788`.
+우리 대상 슬러그에는 그 표시가 **없다**.
+
+⚠️ 이것은 **명명 관행에서 온 정황**이지 상품 증거가 아니다. `ACTUAL_TRUTH` 로
+승격하지 않는다. #4 에서 slug 만 믿었다가 반증당한 것과 같은 종류의 근거다.
+
+### #4 최종
+
+```text
+Smallable ↔ B226AC060
+ACTUAL_TRUTH = UNRESOLVED   (허용된 수집경로 6종 전부 소진)
+SYSTEM       = SIMILAR / verified=false / COMPARISON
+결과         = UNRESOLVED   (PASS 아님 · FAIL 아님)
+```
+
+**사유(다른 UNRESOLVED 와 반드시 분리):**
+
+```text
+Curious Turnip → 국내 후보 페이지 소멸 (404)
+Smallable      → 해외 원본 호스트 전면 차단 (CloudFront 403, robots.txt 포함)
+```
+
+### 🔴 이번 조사가 드러낸 것은 검증 문제가 아니라 «수집 아키텍처» 문제다
+
+`페이지 HTTP 200` 하나에 수집 가능 여부가 걸려 있다. source 별로
+`acquisition_method(API·FEED·SEARCH·SCRAPE·MANUAL)` / `availability` /
+`last_success` / `fallback_method` 를 관리해야 한다는 CEO 지적이 맞다.
+**단, 지금 코드로 만들지 않는다.** MI-REAL 은 정확도 검증 단계다.
+(MANUAL 7곳 · `rulii`/`looxloo` 후보 0건 · Smallable 403 이 같은 뿌리로 보인다.)
+
+---
+
+## [MI-REAL-04 #5] `FORETFORET ↔ FORETFORET` — 두 층으로 기록
+
+CEO 지시대로 **상품 동일성**과 **후보 품질**을 분리한다. 코드·DB 변경 0.
+
+### 먼저 갈라야 할 두 종류 — 「자기 도메인」은 5건이지만 성격이 다르다
+
+전체 ACTIVE 링크 71건 중 원본 host == 후보 host 인 것이 **5건**이다.
+
+| 층 | 쌍 | 경로 | 판정 |
+|---|---|---|---|
+| **A** | `bobochoses.com` ↔ `bobochoses.com` (4건) | 원본 `/en-kr/…b226ac043` · 후보 `/…b226ac042` | **서로 다른 listing** |
+| **B** | `www.foretforet.com` ↔ `www.foretforet.com` (1건) | 양쪽 `shopdetail.html?branduid=**10278273**` | 🔴 **동일 listing** |
+
+**A 는 결함이 아니다.** 같은 도메인이지만 상품코드가 `B226AC043` vs `B226AC042` 로
+다르고 listing 도 다르다(MI-REAL-04 #1 에서 이미 실물 검증한 그 쌍이다).
+브랜드 공식의 글로벌 스토어프런트(`/en-kr`)와 KR 스토어프런트를 비교한 것으로,
+**정상적인 cross-listing** 이다.
+
+### ①~④ B 가 동일 listing 이라는 확정
+
+```text
+host      www.foretforet.com  ==  www.foretforet.com
+path      /shop/shopdetail.html  ==  /shop/shopdetail.html
+branduid  10278273            ==  10278273
+모델코드  MYM2609004          ==  MYM2609004
+상품명    26FW1차 [마이마이]532 캐너피슈즈 canopy shoes_실버  (동일)
+```
+
+**본문 텍스트 SHA-256 완전 일치** — `4f10497a1b6c7d70c7666bb5f0b3baed` / 9,324자.
+두 응답의 차이 20줄은 전부 **URL 에코**(`og:url`, 검색창 `value="신발"`,
+Q&A `returnurl`, 요청마다 새로 발급되는 `GfDT` 추적 토큰)다.
+
+→ **차이는 검색 추적 파라미터뿐이고, 상품 페이지는 같은 것이다.**
+
+### ⑤ 시스템 결과
+
+```text
+match_truth = TEXT_CONFIRMED   verified = false   confidence = 1.0
+→ priceTier = COMPARISON
+```
+
+정책 A(EXACT 만 판매판정) 아래서 **판매판정에는 들어가지 않는다.**
+다만 COMPARISON 티어(국내 경쟁가격)에는 들어간다.
+
+🔴 **그리고 실제로 자기 가격을 자기 경쟁가로 들고 있다.** 이 스냅샷의 가격 관측은
+
+```text
+[DOMESTIC_SHOP] 포레포레  KRW 70,000   ← 중복 2건
+해외 원본 관측                0건
+```
+
+즉 「원본 가격」이 없고 「국내 경쟁가격」만 있는데, 그 둘이 같은 페이지다.
+
+### ⑥ 후보가 생성된 원인 — 🔴 스키마에 「해외」라는 개념이 없다
+
+`product_snapshots` 의 컬럼 전부:
+
+```text
+id, source_url, title, thumbnail_url, status, workspace,
+created_at, updated_at, last_opened_at, job_key, workspace_id
+```
+
+**market / country / source_type / is_overseas 같은 필드가 하나도 없다.**
+원본이 해외인지 국내인지 기록하는 자리 자체가 없으므로, 국내 쇼핑몰 URL 이
+그대로 「원본」이 될 수 있고, 그 다음 국내 후보 탐색이 **같은 쇼핑몰을 다시 찾는다.**
+
+보강 사실: `포레포레` 는 `domestic_price_sources` 에 `seller_type=DOMESTIC` /
+`AUTO_SCRAPE` / `enabled=true` 로 등록된 **국내 판매처**다. 그 판매처의 상품
+페이지가 원본으로 들어왔고, 같은 판매처에서 후보를 찾았다.
+
+### 판정 — 두 층
+
+```text
+상품 동일성 : SAME        (같은 페이지이므로 자명하다)
+후보 품질   : 🔴 SELF-REFERENCE / INVALID CANDIDATE
+```
+
+🔴 **이 SAME 을 「매칭 PASS」로 세지 않는다.** 우리가 검증하려는 능력은
+**서로 다른 판매처의 독립 listing 에서 동일상품을 찾아내는 것**인데,
+동일 URL 자기참조는 그 능력을 전혀 검증하지 않는다.
+
+```text
+정확도 표본     → 제외
+후보 생성 결함  → 별도 기록 (이 항목)
+```
+
+### 별도 backlog (지금 코드로 만들지 않는다)
+
+`domestic_price_sources` 에는 이미 `collection_strategy` 가 있다 —
+`MANUAL 10곳 · AUTO_SCRAPE 5곳 · AUTO_API 1곳 · NOT_AVAILABLE 1곳`.
+그러나 `source_role` 은 **18곳 중 16곳이 null**, `access_status` 는 **전부 null** 이다.
+#4-A 의 수집경로 문제(API/Feed/Search/정상 페이지)와 같은 자리에서 만난다.
+**MI-REAL 검증 중에는 수집 시스템을 고치지 않는다는 원칙을 유지한다.**
+
+### ⑥-보강 — 코드에서 확인한 원인 (읽기만 함, 수정 0)
+
+**자기참조를 막는 필터가 «없다».** 후보 생성 경로
+`searchDomesticShops → scoreCandidateMatch → selectDomesticCandidate →
+upsertDomesticProductLink` 어디에도 **host 비교가 한 줄도 없다.**
+필터가 있어야 할 자리는 `run-domestic-price-check.ts` 의
+`selectDomesticCandidate()` 직후, `upsertDomesticProductLink()` 직전이다.
+
+#### 저장된 `match_reasons` 원문
+
+```text
+["모델명 유사도 100%", "카테고리 일치", "URL slug 일치", "브랜드 일치",
+ "근거: 핵심 상품명 26fw1차/532/canopy/마이마이/실버",
+ "판정방법: CROSS_SELLER_AXES — 품번을 비교할 수 없어 교차판매처 축과 텍스트 등급으로 판단",
+ "판정근거: 입력 텍스트등급=very_high · 품번증거=unavailable
+            (해외 없음 ↔ 국내 MYM2609004) · 교차판매처=PRESUMED_SAME → TEXT_CONFIRMED"]
+```
+
+🔴 **`품번증거=unavailable (해외 없음 ↔ 국내 MYM2609004)`** —
+**같은 페이지인데 「국내 후보」로 읽을 때만 품번이 나왔다.**
+국내 쪽에는 `fetchForetforetModelCode`(`domestic-identifiers.ts`) 추출기가 붙고
+원본 쪽에는 안 붙기 때문이다. 그래서 품번 비교를 건너뛰고 텍스트 등급으로
+내려갔다. 양쪽을 같은 방식으로 읽었다면 `MYM2609004` 로 품번이 일치했을 것이다.
+
+#### 🔴 `"URL slug 일치"` 가 발화한 이유 — slug 가 «상수» 로 붕괴한다
+
+`extractSlug`(`match.ts:80`)는 **pathname 만** 쓰고 쿼리스트링을 버린다.
+
+```ts
+const { pathname } = new URL(url);          // ?branduid=10278273 은 버려진다
+const last = segments[segments.length - 1];
+return last ? normalizeText(last.replace(/\.html$/i, "")) : null;
+```
+
+포레포레는 `/shop/shopdetail.html?branduid=…` 구조다 →
+**모든 상품의 slug 가 `shopdetail` 하나다.** 그리고 slug 가 같으면
+`score = Math.max(score, 0.95)`(match.ts:402)로 **0.95 가 강제**된다.
+
+ACTIVE 링크 71건의 slug 분포:
+
+| slug | 링크 | host |
+|---|---|---|
+| `shopdetail` | **21건** | www.foretforet.com |
+| `detail` | **18건** | www.deuxbebe.com |
+| (나머지는 bobochoses 의 품번 포함 handle) | | |
+
+**71건 중 39건(55%)** 이 slug 가 상수로 붕괴하는 쇼핑몰에 있다.
+
+⚠️ **과장하지 않는다.** 이 신호는 `원본 slug == 후보 slug` 일 때만 발화한다.
+오늘 원본들은 대부분 bobochoses/junioredition 의 품번 포함 handle 이라
+**실제로 발화한 것은 이 자기참조 1건뿐**이다. 또 `shopdetail` ≠ `detail` 이므로
+두 쇼핑몰 «사이» 의 충돌도 현재는 없다.
+
+🔴 그러나 **원본이 이런 쇼핑몰에서 들어오는 순간**(이번처럼) 또는
+**두 번째 쇼핑몰이 같은 마지막 경로 세그먼트를 쓰는 순간**,
+`URL slug 일치` 는 **상품과 무관하게** 0.95 를 얹는 신호가 된다.
+지금 고치지 않는다 — 기록만 한다.

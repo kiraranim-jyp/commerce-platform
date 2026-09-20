@@ -186,3 +186,21 @@ DB 만으로는 「실제 무료배송」과 「사용자가 입력칸을 비움
 삭제    → UNKNOWN           (모른다)
 ```
 이 항목은 「할 일」이 아니라 **「건드리지 말 것」** 으로 등록한다.
+
+## MI-REAL-05-B 🟡 Vision observation 단계의 self-reference 노출 여부
+
+MI-REAL-05 는 **후보 선택 경로**에서 자기참조를 차단했다
+(`run-domestic-price-check.ts`, `isSelfReferenceCandidate`). 그런데 Vision 관측
+블록(`visionGateMode === "E1_TEST"`)은 그 필터보다 **앞**에 서 있고
+`result.candidates` 를 그대로 쓴다 — 켜져 있으면 자기참조도 관측 대상이 된다.
+
+🟢 **지금 영향 없음:** 기본값이 꺼짐이고, Vision 결과는 가격/매칭 판정에
+쓰이지 않는다(그 블록은 링크도 만들지 않는다).
+
+CEO 판정(2026-09-20): **이번 작업에서 건드리지 않는다.** 요구사항은 후보 선택
+경로의 차단이고, Vision 블록을 같이 손대면 범위가 다시 넓어진다.
+**MI-REAL-05 배포를 막을 사유가 아니다.**
+
+관련: 같은 시점의 P1 두 건 — ㉡ `extractSlug` 가 쿼리스트링을 버려 slug 가
+상수로 붕괴하는 문제(`shopdetail` 21건 · `detail` 18건) · ㉢ source 별
+acquisition/fallback 관리(`source_role` 18곳 중 16곳 null).
