@@ -48,6 +48,7 @@
  * 임계값은 한 칸도 움직이지 않았다.
  */
 import {
+  brandIdentitiesCompatible,
   buildSizeProfile,
   extractUrlSlug,
   materialCompositionKey,
@@ -56,6 +57,7 @@ import {
   resolveAdultGender,
   resolveAudienceGroup,
   resolveAudienceLine,
+  resolveBrandIdentity,
   resolveColorHueGroups,
   resolveGarmentForms,
   tokenizeFactText,
@@ -217,11 +219,16 @@ function sharedTokens(a: Set<string>, b: Set<string>): string[] {
 /** 브랜드 이름은 판매처마다 표기가 조금씩 다르다(대소문자, 구두점). 한쪽이 다른
  * 쪽을 품는 경우까지 같은 것으로 본다 — includes는 양방향을 둘 다 확인하므로
  * 대칭이다. */
+/**
+ * P0-A.35 ④(CEO 지시, 2026-09-20) — 판정은 여기서 하지 않는다. 브랜드 표준화
+ * 계층(@commerce/shared brand-identity)이 낸 핵심명을 «받아서» 비교만 한다.
+ *
+ * 전에는 vendor 원문을 그대로 놓고 `includes` 로 견줬다. 그래서
+ * "Konges Sløjd A/S" ↔ "Konges Sløjd Clothing 30% Off Sale" 가 불일치였고,
+ * 그것이 SAME 도달을 막는 단일 최대 원인이었다(실측: core>=5 인 7쌍 «전부»).
+ */
 function brandsCompatible(a: string, b: string): boolean {
-  const na = normalizeFactText(a).replace(/\s+/g, " ");
-  const nb = normalizeFactText(b).replace(/\s+/g, " ");
-  if (!na || !nb) return false;
-  return na === nb || na.includes(nb) || nb.includes(na);
+  return brandIdentitiesCompatible(resolveBrandIdentity(a), resolveBrandIdentity(b));
 }
 
 /**
@@ -844,7 +851,14 @@ export function compareCrossSellerProducts(
     });
   }
 
-  if (!brandOk) {
+  /**
+   * P0-A.35 ④ — 🔴 **「다르다」와 「확인 못 했다」를 같이 말하지 않는다.**
+   *
+   * 전에는 `!brandOk` 하나로 여기까지 내려와서, 브랜드를 «읽었는데 달랐던»
+   * 경우에 BRAND_MISMATCH 와 BRAND_UNCONFIRMED 가 «동시에» 쌓였다(실측:
+   * COCO 쌍에서 둘 다 발생). 두 상태는 배타적이다 — 읽었으면 확인한 것이다.
+   */
+  if (!brandKnown) {
     blockers.push({ blocker: "BRAND_UNCONFIRMED", detail: "양쪽 브랜드를 확인하지 못했다" });
   }
 
@@ -853,8 +867,25 @@ export function compareCrossSellerProducts(
   const totalPoints = axes.reduce((sum, axis) => sum + axis.points, 0);
   // 이미지 축은 SAME의 정원에 넣지 않는다(위 CROSS_SELLER_IMAGE_STRONG_MAX_DISTANCE
   // 주석 참고) — 실측 표본이 3쌍뿐이라 가격에 쓰이는 등급을 혼자 만들게 둘 수 없다.
+  /**
+   * P0-A.35 ⑤(CEO 지시, 2026-09-20) — 🔴 **「핵심 상품명 «일부»」는 동일상품
+   * 정원에 넣지 않는다.**
+   *
+   * 실측 오탐(브랜드 blocker 를 고친 직후 터진 것):
+   *
+   *   "Coco Dress in Cherry Blue Coeur"  ↔  "CHARLENE DRESS - coeur navy"
+   *      TITLE«1»(coeur 한 단어만 겹침) + CATEGORY1 + COLOR1 + AUDIENCE1 + SIZE1 = 5
+   *      → 문턱 5 에 정확히 닿아 SAME 이 됐다. 전혀 다른 상품이다.
+   *
+   *   정답 "COCO DRESS - cherry blue coeur" 는 TITLE«2»(핵심어 전체 겹침) = 6 이다.
+   *
+   * 🔴 점수를 «낮추지» 않는다(CEO 명시). 축은 그대로 2점/1점을 낸다. 다만 1점짜리
+   *    부분 일치는 IMAGE 축과 같은 이유로 SAME 정원에서만 뺀다 — 단어 하나가
+   *    겹쳤다는 사실은 「닮았다」의 근거이지 「같다」의 근거가 아니다.
+   *    PRESUMED_SAME 이하(totalPoints)에서는 그대로 센다.
+   */
   const corePoints = axes
-    .filter((axis) => axis.axis !== "IMAGE")
+    .filter((axis) => axis.axis !== "IMAGE" && !(axis.axis === "TITLE" && axis.points === 1))
     .reduce((sum, axis) => sum + axis.points, 0);
 
   // 품번이 일치해도 여기를 지나간다. 예외가 없다 — 그 예외가 MATCHING-3.1이

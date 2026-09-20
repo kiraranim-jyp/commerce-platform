@@ -403,7 +403,14 @@ export type GarmentForm =
   | "PANTS"
   | "JACKET"
   | "OVERALL"
-  | "SOCKS";
+  | "SOCKS"
+  /** P0-A.35 ①(CEO 지시, 2026-09-20) — 실측으로 확인된 «형태 축의 공백».
+   *  Konges 3,533건에서 제목이 형태를 말하는데 어느 축도 못 읽던 것들이다.
+   *    TOP 33건 0% · ROMPER 29건 7% · BODYSUIT 105건 4%
+   *  그래서 COCO DRESS ↔ COCO TOP ↔ COCO ROMPER 가 갈리지 않았다. */
+  | "TOP"
+  | "ROMPER"
+  | "BODYSUIT";
 
 const GARMENT_FORM_WORDS: Record<GarmentForm, string[]> = {
   // hoodie(12) / hooded(1). 이 저장소가 형태를 갈라 두는 **유일한** 자리다.
@@ -413,14 +420,53 @@ const GARMENT_FORM_WORDS: Record<GarmentForm, string[]> = {
   SWEATSHIRT: ["sweatshirt", "sweatshirts", "sweat", "sweats", "jumper", "jumpers", "맨투맨", "스웨트셔츠"],
   // shirt(146, "T-shirt"의 shirt 포함 — 토큰으로 쪼개면 t는 한 글자라 사라진다).
   // 티셔츠와 셔츠를 굳이 가르지 않는다. 가르지 않으면 차단이 안 일어날 뿐이다.
-  SHIRT: ["shirt", "shirts", "blouse", "polo", "셔츠", "티셔츠"],
+  // P0-A.35 ① — "tee" 71건이 어느 축에도 안 잡혔다. 🔴 TEE 를 «별도 형태» 로
+  // 만들지 않는다 — 그러면 "MINNIE TEE" ↔ "MINNIE T-SHIRT" 가 서로 다른 형태가
+  // 되어 «없던 충돌» 이 생긴다. 티셔츠와 셔츠를 가르지 않는다는 기존 결정 그대로,
+  // 같은 SHIRT 안에 둔다.
+  SHIRT: ["shirt", "shirts", "blouse", "polo", "tee", "tees", "셔츠", "티셔츠"],
   DRESS: ["dress", "dresses", "원피스"],
   SKIRT: ["skirt", "skirts", "스커트"],
   PANTS: ["pants", "trousers", "leggings", "shorts", "bermuda", "jogging", "바지", "팬츠", "레깅스"],
   JACKET: ["jacket", "jackets", "cardigan", "cardigans", "coat", "coats", "자켓", "재킷", "카디건"],
   OVERALL: ["overall", "overalls", "jumpsuit", "dungarees"],
   SOCKS: ["socks", "sock", "양말"],
+  // P0-A.35 ① — 상의. "tank top" 처럼 수식어가 붙어도 토큰으로 잡힌다.
+  TOP: ["top", "tops", "상의"],
+  // romper / playsuit 은 같은 형태를 가리키는 두 표기다(실측: Konges 는 romper,
+  // 일부 편집샵은 playsuit). 🔴 onesie 는 여기 넣지 않는다 — CATEGORY taxon 이
+  // 이미 ONE_PIECE 로 쓰고 있어 축이 겹친다.
+  ROMPER: ["romper", "rompers", "playsuit", "playsuits"],
+  // 🔴 "body" 단독을 넣는다. Konges 는 바디수트를 "BODY" 로만 적는다(실측 105건).
+  //    "BASIC BODY/PANTS SET" 처럼 둘을 같이 말하는 제목은 두 형태를 다 담게 되고,
+  //    그건 교집합 판정에서 «차단하지 않는» 쪽으로 안전하게 작동한다.
+  BODYSUIT: ["bodysuit", "bodysuits", "body", "바디수트"],
 };
+
+/**
+ * P0-A.35 ②(CEO 지시, 2026-09-20) — **색상 문자열을 옷의 형태로 읽지 않는다.**
+ *
+ * 실측 사고(Konges, 2026-09-20):
+ *
+ *     "MANON SWIMSUIT - dress blue"    → 형태 DRESS   🔴 수영복이 원피스가 된다
+ *     "MANON SWIM SHOES - dress blue"  → 형태 DRESS   🔴 수영신발이 원피스가 된다
+ *
+ * 색상명 `dress blue` 안의 `dress` 를 형태로 읽은 것이다. 어휘를 늘려도 고쳐지지
+ * 않는다 — 색상 축과 형태 축이 «같은 문자열» 을 두고 다투는 문제다.
+ *
+ * Shopify 상품명은 `이름 - 색상` 이 관행이다(실측: Konges 3,533건 중 대다수).
+ * 그래서 마지막 " - " 뒤 조각은 형태를 읽는 입력에서 뺀다.
+ *
+ * 🔴 앞 조각이 비면 자르지 않는다. 자르는 것이 목적이 아니라 «색상 자리를 피하는
+ *    것» 이 목적이고, 앞이 비면 피할 자리가 없다는 뜻이다.
+ */
+export function garmentFormSourceText(title: string | null | undefined): string {
+  const t = (title ?? "").trim();
+  const idx = t.lastIndexOf(" - ");
+  if (idx <= 0) return t;
+  const head = t.slice(0, idx).trim();
+  return head || t;
+}
 
 /** 어휘 목록은 토큰과 **같은 파이프라인**을 통과시킨다(이 파일 위쪽
  * normalizedWordSet 주석의 실측 사고 그대로 — 한쪽만 NFC로 합치면 한글이 죽는다). */
@@ -442,7 +488,8 @@ const NORMALIZED_GARMENT_FORM_WORDS: [GarmentForm, Set<string>][] = (
 export function resolveGarmentForms(text: string | null | undefined): Set<GarmentForm> {
   const found = new Set<GarmentForm>();
   if (!text) return found;
-  const tokens = new Set(tokenizeFactText(text));
+  // 🔴 색상 자리를 피한 뒤에 읽는다(garmentFormSourceText 주석 참고).
+  const tokens = new Set(tokenizeFactText(garmentFormSourceText(text)));
   for (const [form, words] of NORMALIZED_GARMENT_FORM_WORDS) {
     for (const token of tokens) {
       if (words.has(token)) {
