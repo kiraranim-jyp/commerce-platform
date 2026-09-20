@@ -988,3 +988,121 @@ MI-REAL-05-B  Vision E1_TEST 단계의 self-reference 노출 (기본값 OFF, 영
 P1 ㉡         extractSlug 가 쿼리를 버려 slug 가 상수로 붕괴 (shopdetail 21 · detail 18)
 P1 ㉢         source 별 acquisition / fallback 관리 (source_role 18곳 중 16곳 null)
 ```
+
+---
+
+## [MI-REAL-13] Vernice Nero 가 🟡 인 «직접 원인» — 실행 증거로 확정
+
+```text
+snapshot 6e2fa9a2-fc43-4d9a-8d94-9d75cb0b6f40   (2026-09-20T23:26:37, 새 스냅샷)
+원인 = marketCase B — 목표마진 미달, 손실은 아님. 예상 마진 9.9%.
+```
+
+### 🔴 같은 스냅샷의 26초 차이가 전부를 설명한다
+
+Production `[MI-REAL-12]` 로그 두 줄이 **링크 저장 전후**를 각각 찍었다.
+
+| | 23:26:39 (저장 «전») | 23:27:05 (저장 «후») |
+|---|---|---|
+| `domesticBasis` | NONE | **EXACT** |
+| `exactSellers` | 0 | **1** |
+| `marketCase` | D | **B** |
+| `sellability` | UNKNOWN | **GREEN** |
+| `representative` | NEEDS_INFO | **REVIEW_PRICE** |
+| `finalVerdict` | CONDITIONAL | **CONDITIONAL** |
+
+**겉은 26초 전후가 똑같은 🟡 조건부 판매인데, 내부 사유는 완전히 다르다.**
+앞은 「원가를 모른다」, 뒤는 「마진이 목표에 못 미친다」다.
+
+### 판정 경로 (코드와 로그가 일치)
+
+```text
+sellability GREEN + domesticBasis EXACT     → representative READY
+   ↓ applyMarketCaseGuard(marketCase = B)
+REVIEW_PRICE
+   ↓ SELLER_FACING_MAP
+CONDITIONAL  🟡
+```
+
+저장된 `reasons` 원문:
+
+```text
+"국내 동일상품 1곳에서 가격 확인됨"
+"예상 마진 9.9%"
+"국내 최저가 ₩258,000 기준으로는 목표마진에 못 미치지만 손실 없이 판매 가능합니다
+ — 예상 마진 약 9.9%"
+```
+
+### 🔴 국내 가격 «때문» 이 아니다 — 정반대다
+
+국내 EXACT 가격이 **생겼기 때문에** 마진 계산이 가능해졌고, 그 마진이 **9.9%** 라서
+조건부가 됐다. 국내 가격이 없던 26초 전에는 마진을 계산조차 못 했다.
+
+**기각된 가설 두 개** (둘 다 내가 유력하다고 적었던 것이다):
+
+```text
+물류비 미확정     → missingComponents = null · unifiedVerdict = null
+                    「어떤 비용이 빠졌나」 목록 자체가 없다. 판정은 recommendation
+                    기반 marketCase 로 났다. 물류비 가설 «기각».
+시장신호 강등     → downgradedByMarket = false · outlook = WATCH.  «기각».
+```
+
+### 가격 4종 (합치지 않는다)
+
+```text
+ORIGIN_FX      GBP 119 → ₩220,424   해외 원본
+KR_MARKET      ₩230,900             판매자가 «직접» 한국에 파는 값
+MARKET_PROBE   AUD 250 → ₩247,089   타시장
+DOMESTIC_SHOP  ₩258,000             국내 «다른» 판매자 — 이것만이 국내 경쟁가격
+```
+
+---
+
+## [MI-REAL-08] LOOXLOO / RULII / DEUXBEBE — **Gate 1 확정 (작동 확인)**
+
+같은 실행에서 `dropGate` 로그 3건이 각각 찍혔다. 하나를 다른 것에 미루지 않았다.
+
+```text
+looxloo.com   sku="35970-011-01"  matchLevel=low  crossSeller=CONFLICT  후보 5건
+rulii.co.kr   sku=null            matchLevel=low  crossSeller=SIMILAR   후보 5건
+deuxbebe.com  sku=null            matchLevel=low  crossSeller=SIMILAR   후보 1건
+→ 셋 다 dropGate = EVIDENCE_NOT_WORTHWHILE  (Gate 1)
+foreignModelCode = "01195-VERNICE-NERO"     ← null 이 «아니다»
+```
+
+🔴 **하드코딩이 실제로 작동했다는 실증이다.** 해외 품번이 추출돼 있었는데도
+`isEvidenceEvaluationWorthwhile` 마지막 줄이 `domain === "foretforet.com"` 을
+요구해서 셋 다 `worthwhile=false` 가 됐다. **도메인만 달랐다면 통과했을 입력이다.**
+
+⚠️ **그러나 「차단이 틀렸다」는 아직 증명되지 않았다.** LOOXLOO 후보는 실제로
+**「아페페양말」**(다른 상품, `crossSeller=CONFLICT`)이었다. 통과했어도 CONFLICT 로
+걸러졌을 것이다.
+
+```text
+MI-REAL-08 = PASS (게이트가 «작동함» 을 확인)
+           ≠ PASS (매칭 «정확성»)     ← 확대하지 않는다
+```
+
+### 이전 보고 정정
+
+내가 「LOOXLOO·RULII 는 후보가 있었는데 버려졌다」고 좁혔던 근거는
+`last_error_code = null(OK)` 하나였다. 그건 **다른 상품 질의**에서 남은 값이었다.
+실제로 직전 마이마이 실행에서는 둘 다 `NO_RESULT`(후보 0건)였다.
+**질의를 구분하지 않은 추론이었고, 정정한다.**
+
+---
+
+## [MI-REAL-05] — **PASS**
+
+> **동일 상품을 새로 실행한 실제 요청 경로에서 자기참조 후보가 차단됨을 확인.**
+
+```text
+[MI-REAL-05] self-reference excluded (foretforet.com): 1건
+  origin=…foretforet.com/shop/shopdetail.html?branduid=10278273&search=신발…GfDT=…
+branduid=10278273 링크  1건 유지 · 신규 0건
+포레포레 last_error_code  null  (NO_RESULT 아님)
+```
+
+🔴 **기존 `f43c931f` 스냅샷이 «갱신된 것은 아니다».** 사장님이 URL 로 새로
+조사하셔서 `cd7f78a6` 가 생겼고, 그 새 실행 경로에서 차단이 확인됐다.
+문장을 바꿔 적지 않는다.
