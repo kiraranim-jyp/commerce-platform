@@ -321,3 +321,44 @@ POC 전체 C 성공률   4/11 = 36%     Bobo Choses 한정   4/5 = 80%
 
 **다음 관문:** 다나와 최저가는 «여러 판매처 집계값» 이라 `DOMESTIC_SHOP`(한 판매처의
 실제 판매가)과 의미가 다르다. **그 매핑을 정하기 전에는 판매판정에 연결하지 않는다.**
+
+### DANAWA-06 — Evidence 설계 완료 / 정책 «미확정»
+
+설계 전문: [danawa-evidence-design.md](./danawa-evidence-design.md)
+
+🔴 **기존 유니온을 확장하면 «조용히» 틀린 결과가 나간다** — 이번 조사의 핵심 발견.
+
+```ts
+DomesticPriceTier  = "EXACT" | "COMPARISON" | "EXCLUDED"
+DomesticPriceBasis = "EXACT" | "COMPARISON" | "NONE"
+```
+
+소비처가 전부 `===` 비교이고 `never` 소진 검사가 **하나도 없다.** 값을 추가해도
+**컴파일 에러가 나지 않고** 다음 두 곳에서 틀린 라벨/문장이 그대로 화면에 나간다.
+
+```text
+price-hierarchy.ts:1054   새 값 → "비교상품 참고가 기준"          (잘못된 라벨)
+market-signals.ts:655-666 새 값 → "국내에서 동일상품을 찾지 못했습니다" (잘못된 문장)
+```
+
+→ **[REC]** `DANAWA_PRICE_COMPARISON` 은 `domesticBasis` 와 «무관한 병렬 축» 으로 둔다.
+그러면 EXACT/COMPARISON/NONE·UNKNOWN 의미가 한 글자도 바뀌지 않는다.
+
+**실측 추가 확인**
+
+```text
+표시 최저가 = data-base-price ≠ 최종 결제금액
+배송비는 data-delivery-price 로 «별도» — purchasablePrice = base + delivery 계산 가능
+B226AC009 ₩60,450 + ₩3,000 = ₩63,450 · B226AC070 ₩162,320 + ₩3,000 = ₩165,320
+페이지 스스로 경고: "※ 배송비가 부정확한 업체의 경우 배송비 미포함 가격으로 안내됩니다."
+```
+
+**[UNVERIFIED]** 병행수입/해외구매대행 표기 0회 · 품절 표기 0회 →
+**판매처 성격과 판매 가능 여부를 페이지로 판별할 수 없다.** 그래서 `EXACT` 승격 불가.
+(실측 1/4 에서 최저가 판매처가 **머스트잇** 이었다.)
+
+**용어** — 「다나와 가격비교 최저가」만 사용. ❌ 국내 최저가 ❌ 한국 최저가.
+다나와 10곳에 포레포레·LOOXLOO 같은 편집샵이 없다 — 국내 전체를 대표하지 않는다.
+
+**상태** 구현 착수 🔴 HOLD. 판매판정 사용 여부는 **CPO 결정 사항**이며 미확정이다.
+지금 아무것도 구현하지 않아도 나중에 추가 가능하다(기존 타입 미변경 설계).
