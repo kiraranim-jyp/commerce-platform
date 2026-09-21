@@ -16,7 +16,26 @@
  * CASE A/B/C/D로 EXACT 동일상품 시장가와 착지원가를 비교해 실제로 "얼마에
  * 팔 수 있는지"를 판단한다 — COMPARISON/NONE(EXACT 아님)일 때는 시장경쟁
  * 추천 자체를 하지 않는다(CASE D, "시장 경쟁력 있음" 같은 확정적 표현 금지).
+ *
+ * ── MI-P0-COST-02(CEO 확정, 2026-09-21) — 손익은 Net, 마진 정보는 Gross 보존 ──
+ *
+ * 실측(Vernice, snapshot 6e2fa9a2): 착지원가 ₩232,424 · 국내 EXACT 최저가
+ * ₩258,000 → CASE B 「손실 없이 판매 가능」 · 예상 마진 9.9%.
+ * 그런데 예상 수수료 10% 를 빼면 **−₩224** 다. 손실이다.
+ *
+ * 원인은 CASE B/C 의 경계가 `landedCost`(수수료 미포함)였기 때문이다.
+ * 「손실」은 셀러가 돈을 잃는지를 말하는 말이므로 **수수료를 뺀 뒤** 판단해야 한다.
+ *
+ * 🔴 그래서 바꾼 것은 «경계» 와 «추가 정보» 뿐이다:
+ *    · 경계  marketPrice − 예상수수료 <= landedCost  →  CASE C(손실)
+ *    · 추가  netProfitKrw · netMarginPercent
+ *    · 보존  estimatedMarginPercent 는 여전히 Gross 다 — 덮어쓰지 않았다.
+ *
+ * 🔴 `expectedFeePercent` 를 주지 않으면 0 으로 동작한다 = 기존과 완전히 동일하다.
+ *    (기존 호출부·테스트 무회귀)
  */
+import { platformFeeKrwAt } from "./landed-cost";
+
 export type MarketCaseCode = "A" | "B" | "C" | "D";
 
 export interface PriceRecommendationInput {
@@ -37,6 +56,11 @@ export interface PriceRecommendationInput {
   /** P-13A(대표님/CPO 지시, 2026-08-31) — EXACT 시장가가 없을 때(CASE D)만
    * 참고치로 쓰는 2차 기준. "시장 경쟁 추천"이라고 부르지 않는다(CASE D). */
   brandMedianPriceKrw?: number | null;
+  /**
+   * MI-P0-COST-02 — «예상» 수수료율(%). 손익 경계와 Net 마진에만 쓴다.
+   * 🔴 특정 채널의 실제 요율이 아니다. 생략하면 0 = 기존 동작 그대로.
+   */
+  expectedFeePercent?: number;
 }
 
 export interface PriceRecommendationResult {
@@ -52,8 +76,16 @@ export interface PriceRecommendationResult {
    * 살짝 낮은 가격, CASE B는 시장가 그대로(목표마진 미달이어도 손실은 아님). */
   recommendedPrice: number | null;
   /** recommendedPrice 기준 실제 마진율(%) — CASE B처럼 목표(targetMarginPercent)에
-   * 못 미쳐도 하드코딩하지 않고 항상 실제 계산값이다. CASE C/D는 null. */
+   * 못 미쳐도 하드코딩하지 않고 항상 실제 계산값이다. CASE C/D는 null.
+   *
+   * 🔴 MI-P0-COST-02 — 이 값은 **Gross** 다(수수료 차감 «전»).
+   *    (recommendedPrice − landedCost) / recommendedPrice. 의미를 바꾸지 않았다. */
   estimatedMarginPercent: number | null;
+  /** MI-P0-COST-02 — 예상 수수료를 뺀 실제 손익(원). 손실이면 음수. CASE C/D는 null. */
+  netProfitKrw: number | null;
+  /** MI-P0-COST-02 — Net 마진율(%). (recommendedPrice − landedCost − 예상수수료) / recommendedPrice.
+   * 🔴 「손실 없이 판매 가능」은 이 값(정확히는 netProfitKrw >= 0)으로 판단한다. */
+  netMarginPercent: number | null;
   /** recommendedPrice가 실제로 어느 근거로 계산됐는지. */
   competitiveBasis: "DOMESTIC_LOWEST" | "BRAND_MEDIAN" | null;
   /** CASE D 전용 — brandMedianPriceKrw가 있을 때만 채워지는 참고치(확정
@@ -73,7 +105,9 @@ function marginPercentAt(priceKrw: number, costKrw: number): number {
   return Number((((priceKrw - costKrw) / priceKrw) * 100).toFixed(1));
 }
 
-export function computePriceRecommendation(input: PriceRecommendationInput): PriceRecommendationResult {
+export function computePriceRecommendation(
+  input: PriceRecommendationInput,
+): PriceRecommendationResult {
   const minimumPrice = priceForMargin(input.totalCostKrw, input.minimumMarginPercent);
   const targetPrice = priceForMargin(input.totalCostKrw, input.targetMarginPercent);
   const landedCost = input.totalCostKrw;
@@ -91,6 +125,8 @@ export function computePriceRecommendation(input: PriceRecommendationInput): Pri
         marketCase: "D",
         recommendedPrice: null,
         estimatedMarginPercent: null,
+        netProfitKrw: null,
+        netMarginPercent: null,
         competitiveBasis: "BRAND_MEDIAN",
         referencePriceKrw: Math.min(targetPrice, brandCeiling),
       };
@@ -101,22 +137,37 @@ export function computePriceRecommendation(input: PriceRecommendationInput): Pri
       marketCase: "D",
       recommendedPrice: null,
       estimatedMarginPercent: null,
+      netProfitKrw: null,
+      netMarginPercent: null,
       competitiveBasis: null,
       referencePriceKrw: null,
     };
   }
 
   const marketPrice = input.domesticLowestPriceKrw;
+  const feePercent = input.expectedFeePercent ?? 0;
+  /** MI-P0-COST-02 — 수수료까지 뺀 실제 손익. 「손실」은 이 값으로 판단한다. */
+  const netProfitAt = (priceKrw: number) =>
+    priceKrw - landedCost - platformFeeKrwAt(priceKrw, feePercent);
+  const netMarginAt = (priceKrw: number) =>
+    Number(((netProfitAt(priceKrw) / priceKrw) * 100).toFixed(1));
 
-  // CASE C — 시장가가 착지원가(0% 마진) 이하 → 시장가로 팔면 손실이다.
-  // 억지 추천가를 만들지 않는다(recommendedPrice: null).
-  if (marketPrice <= landedCost) {
+  // CASE C — 시장가로 팔면 손실이다. 억지 추천가를 만들지 않는다(recommendedPrice: null).
+  //
+  // 🔴 MI-P0-COST-02 — 경계가 `marketPrice <= landedCost` 였다. 수수료를 빼지
+  //    않았기 때문에 Vernice(₩258,000 vs 착지원가 ₩232,424)가 CASE B 로 가서
+  //    「손실 없이 판매 가능」이라고 말했다. 실제로는 수수료 ₩25,800 을 빼면
+  //    −₩224 다. 셀러가 돈을 잃는지가 「손실」의 뜻이므로 수수료를 뺀 뒤 판단한다.
+  //    expectedFeePercent 가 0(미지정)이면 이 식은 예전 경계와 «완전히 동일» 하다.
+  if (netProfitAt(marketPrice) <= 0) {
     return {
       minimumPrice,
       targetPrice,
       marketCase: "C",
       recommendedPrice: null,
       estimatedMarginPercent: null,
+      netProfitKrw: null,
+      netMarginPercent: null,
       competitiveBasis: "DOMESTIC_LOWEST",
       referencePriceKrw: null,
     };
@@ -133,6 +184,8 @@ export function computePriceRecommendation(input: PriceRecommendationInput): Pri
       marketCase: "A",
       recommendedPrice,
       estimatedMarginPercent: marginPercentAt(recommendedPrice, landedCost),
+      netProfitKrw: netProfitAt(recommendedPrice),
+      netMarginPercent: netMarginAt(recommendedPrice),
       competitiveBasis: "DOMESTIC_LOWEST",
       referencePriceKrw: null,
     };
@@ -148,6 +201,8 @@ export function computePriceRecommendation(input: PriceRecommendationInput): Pri
     marketCase: "B",
     recommendedPrice,
     estimatedMarginPercent: marginPercentAt(recommendedPrice, landedCost),
+    netProfitKrw: netProfitAt(recommendedPrice),
+    netMarginPercent: netMarginAt(recommendedPrice),
     competitiveBasis: "DOMESTIC_LOWEST",
     referencePriceKrw: null,
   };

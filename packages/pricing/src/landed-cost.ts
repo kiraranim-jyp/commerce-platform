@@ -35,11 +35,27 @@ export interface LandedCostResult {
   expectedProfitKrw: number;
 }
 
+/**
+ * MI-P0-COST-02(CEO 확정, 2026-09-21) — **예상 수수료 계산의 단일 출처.**
+ *
+ * 이 한 줄은 원래 computeLandedCost 안에만 있었다. price-recommendation 이
+ * 손익 경계를 Net 으로 바꾸려면 같은 식이 필요한데, 거기에 다시 쓰면 같은
+ * 계산이 두 곳에 살게 된다 — 그러면 언젠가 한쪽만 바뀐다. 그래서 «옮기지 않고»
+ * 꺼내서 공유한다. computeLandedCost 의 동작은 한 글자도 달라지지 않는다.
+ *
+ * 🔴 `platformFeePercent` 는 «예상 수수료» 다. 특정 채널의 실제 요율이 아니다
+ *    (profitability.ts 의 정의 그대로 — 셀러가 화면에서 고치는 가정값).
+ *    "네이버 수수료" · "쿠팡 수수료" 라고 부르지 않는다.
+ */
+export function platformFeeKrwAt(sellingPriceKrw: number, platformFeePercent: number): number {
+  return Math.round((sellingPriceKrw * platformFeePercent) / 100);
+}
+
 export function computeLandedCost(input: LandedCostInput, liveRates?: Record<string, number>): LandedCostResult {
   const converted = convertToKrw(input.originalAmount, input.originalCurrency, liveRates);
   const productCostKrw = converted.amountKrw;
-  const platformFeeKrw = Math.round((input.currentSellingPriceKrw * input.platformFeePercent) / 100);
-  const paymentFeeKrw = Math.round((input.currentSellingPriceKrw * input.paymentFeePercent) / 100);
+  const platformFeeKrw = platformFeeKrwAt(input.currentSellingPriceKrw, input.platformFeePercent);
+  const paymentFeeKrw = platformFeeKrwAt(input.currentSellingPriceKrw, input.paymentFeePercent);
   const totalCostKrw =
     productCostKrw +
     input.internationalShippingKrw +

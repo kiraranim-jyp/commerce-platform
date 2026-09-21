@@ -197,20 +197,22 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
   const hasResolvedPrice = resolvedOriginalAmount > 0 && Boolean(resolvedOriginalCurrency);
   const canComputeCost =
     costSource !== "STATIC_SNAPSHOT" ? hasResolvedPrice : product.priceValidity === "VALID" && hasResolvedPrice;
-  const breakdownInput = product.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT;
   /**
-   * 🔴 P0-C STEP 3(CEO 승인, 2026-09-20) — **배송비를 모르면 원가를 만들지 않는다.**
+   * 🔴 MI-P0-COST-02(CEO 확정, 2026-09-21) — **UI 기본값과 MI Evidence 를 가른다.**
    *
-   * 판매자가 해외물류비 입력칸을 «비웠으면»(null) 「모른다」는 의사표시다. 그
-   * 상태로 computePriceBreakdown 을 부르려면 어떤 숫자든 채워 넣어야 하는데,
-   * 그 숫자가 무엇이든 그 순간 「모른다」가 사라진다. 그래서 여기서는 cost 를
-   * null 로 두고, 아래 internationalShippingKrw 가 status="unknown" 으로 내려간다
-   * → computeUnifiedPriceDecision 이 원가·마진·판정을 전부 비운다.
+   * `DEFAULT_PRICE_BREAKDOWN_INPUT` 은 «입력 폼의 초기값» 이다. 그런데 여기서
+   * `product.priceBreakdown ?? DEFAULT` 로 받아 `breakdownInput.shippingKrw` 를
+   * 그대로 원가에 넣고 있었다 — 즉 **아무도 입력한 적 없는 ₩12,000 이
+   * 「확인된 배송비」처럼** 착지원가·마진·판정까지 흘러갔고, 그 사실을 말해 주는
+   * `shippingBasis` 는 아래 unifiedDecision 블록 안에 갇혀 화면에 닿지 못했다.
    *
-   * 🔴 0 은 여기 걸리지 않는다. 판매자가 0 을 «입력» 한 것은 「무료라고
-   *    확인했다」는 유효한 관측이다(CEO 지시). 걸리는 것은 «비운» 경우뿐이다.
+   * 이제 금액은 **사다리(resolveOverseasShipping)가 정한다.** 숫자는 같을 수
+   * 있지만(LEGACY_FALLBACK = ₩12,000) **근거가 함께 움직인다.**
+   *
+   * 🔴 feePercent · marginPercent 는 여전히 폼 기본값을 쓴다 — 그 둘은 셀러가
+   *    고르는 «가정값» 이고, 배송비처럼 「측정했는가」를 다투는 값이 아니다.
    */
-  const shippingKrw = breakdownInput.shippingKrw;
+  const breakdownInput = product.priceBreakdown ?? DEFAULT_PRICE_BREAKDOWN_INPUT;
   /**
    * P0-C STEP 5 — 근거를 한 번만 구해서 아래로 흘린다(두 번 판정하지 않는다).
    * 🔴 method 는 넘기지 않는다 — 확인된 배송방법 데이터가 0건이므로 UNKNOWN 이다.
@@ -224,6 +226,17 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
     //    근거가 아예 없었고, 그래서 아무도 모르는 채 원가에 들어갔다.
     legacyFallbackKrw: DEFAULT_PRICE_BREAKDOWN_INPUT.shippingKrw,
   });
+  /**
+   * 🔴 P0-C STEP 3 + MI-P0-COST-02 — **배송비를 «모르면» 원가를 만들지 않는다.**
+   *
+   * `UNKNOWN` 이면 amountKrw 가 null 이고, 아래 `shippingKrw != null` 게이트가
+   * cost 를 만들지 않는다 → 착지원가·Gross·Net·판정이 전부 비어 있게 된다.
+   *
+   * 🔴 `LEGACY_FALLBACK` 은 «계산 가능» 하다(CEO 확정). 다만 그 금액은
+   *    「확인된 배송비」가 아니므로 basis 를 잃어버리면 안 된다.
+   *    UNKNOWN 과 LEGACY_FALLBACK 을 절대 같은 것으로 합치지 않는다.
+   */
+  const shippingKrw = resolvedShipping.amountKrw;
   if (canComputeCost && shippingKrw != null) {
     const exchangeRates = await fetchLiveExchangeRates();
     liveRates = exchangeRates.rates;
@@ -259,6 +272,9 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
       domesticBasis: domesticMarketSplit.basis,
       minimumMarginPercent: 10,
       targetMarginPercent: breakdownInput.marginPercent,
+      // 🔴 MI-P0-COST-02 — 손익 경계를 Net 으로 옮기는 단 하나의 입력.
+      //    「예상 수수료」이지 특정 채널의 실제 요율이 «아니다».
+      expectedFeePercent: breakdownInput.feePercent,
       // P-13A — EXACT 시장가가 없을 때(CASE D)만 이 값이 실제로 쓰인다.
       brandMedianPriceKrw: usableBrandMarketProfile?.medianPriceKrw ?? null,
     });
@@ -566,6 +582,14 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
       exactSellers: domesticMarketSplit.exact.sellerCount,
       comparisonSellers: domesticMarketSplit.comparison.sellerCount,
       marketCase: recommendation?.marketCase ?? null,
+      // 🔴 MI-P0-COST-02 — 금액과 근거는 «한 세트» 로 움직인다. 예전에는 basis 가
+      //    unifiedDecision(Production 에서 항상 null) 안에만 있어 관측되지 않았다.
+      shippingKrwResolved: resolvedShipping.amountKrw,
+      shippingBasisResolved: resolvedShipping.basis,
+      grossMarginPercent: recommendation?.estimatedMarginPercent ?? null,
+      netProfitKrw: recommendation?.netProfitKrw ?? null,
+      netMarginPercent: recommendation?.netMarginPercent ?? null,
+      expectedFeePercent: breakdownInput.feePercent,
       sellability: sellability.level,
       representative: representativeVerdict.code,
       priceVerdict: sellerFacingVerdict.code,
