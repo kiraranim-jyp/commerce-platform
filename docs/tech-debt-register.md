@@ -378,3 +378,52 @@ DANAWA-06  정책 ✅ 확정 · 문서 ✅ · 코드 0 · DB 0 · migration 0 ·
 HOLD: adapter · PRICE_COMPARISON 구현 · 판매판정 연결 · 신규 국내소스 조사
 유지: 기존 국내소스 데이터
 ```
+
+## P1-COST-01 🟡 `targetPrice` 의 Gross/Net 불일치 — **동결(2026-09-21)**
+
+같은 「목표마진 20%」가 두 곳에서 **서로 다른 경제적 의미**를 갖는다.
+
+```text
+computePriceBreakdown.suggestedPriceKrw = landedCost / (1 − (fee+margin)/100)
+   232,424 / 0.70 = ₩332,034  →  Net 마진 20.0%    수수료 «포함»
+
+price-recommendation.targetPrice        = landedCost / (1 − margin/100)
+   232,424 / 0.80 = ₩290,530  →  Net 마진 10.0%    수수료 «미포함»
+```
+
+🔴 **MI-P0-COST-02 가 만든 문제가 아니다.** 기존부터 있던 불일치이고, 이번 변경은
+**손익 경계만** Net 으로 옮겼다(CEO 지시 §5 「Gross 는 별도 정보로 보존」,
+§18 「손익 ≠ 목표마진 충족」 그대로).
+
+**수정하지 않는 이유**: `targetPrice` 를 건드리면 **CASE A/B 경계가 이동**한다.
+그건 「필요 없으면 건드리지 않는다」(§12)를 위반하고, 「목표마진도 Net 으로 볼
+것인가」는 또 하나의 **정책 결정**이라 CTO 권한 밖이다.
+
+**상태**: 이번 배포에서 동결. 실제 3건 재검증 결과를 본 뒤 판단.
+
+---
+
+### MI-P0-COST-02 배포 기록 (2026-09-21)
+
+```text
+commit      a378d73
+Production  ttaejyo-cyq0r9el9 · Ready · origin/main 일치
+변경        코드 3 + 테스트 1 · DB 0 · migration 0 · UI 0
+테스트      신규 17/17 · pricing+price-history+comparison-search 790/790 (65파일)
+            apps/admin typecheck PASS
+```
+
+**§4 UNKNOWN 실제 사례 — 🔴 NOT_AVAILABLE**
+`priceBreakdown` 보유 행이 **0건**이라 「입력칸을 비운(null)」 상품이 존재할 수 없다.
+모든 상품이 사다리 끝 `LEGACY_FALLBACK`(₩12,000)으로 떨어진다.
+**fixture 로 만들지 않았다.** UNKNOWN 불변식은 단위 테스트로만 고정돼 있다
+(`amountKrw: null` 과 `≠ 12,000` 을 «함께» assert).
+
+**§5 COMPARISON 회귀 — 구조적 차단**
+ACTIVE 링크 EXACT 52 · COMPARISON 25. `computePriceRecommendation` 은
+`domesticBasis !== "EXACT"` 면 CASE D 로 빠져 `recommendedPrice`·`estimatedMargin`·
+`netProfit`·`netMargin` 이 **전부 null** 이다. Net 계산이 COMPARISON 을 끌어 쓰는
+경로는 없다.
+
+🔴 **실제 Production 재검증(Vernice·Tobacco·MyMy)은 아직 «미수행» 이다.**
+790/790 테스트 PASS 를 Production PASS 로 승격하지 않는다.
