@@ -426,6 +426,9 @@ export default function SettingsPage() {
               <CommerceAccountManager
                 account={account}
                 onAccountCleared={loadAll}
+                /* LOTTEON-REG-03 ㉢ — 롯데ON 아코디언의 [배송 프로필 관리]가
+                   같은 화면의 그 탭으로 옮긴다(별도 페이지가 아니다). */
+                onGoToShippingProfile={() => setActiveTab("shipping")}
                 accessKey={accessKey}
                 setAccessKey={setAccessKey}
                 secretKey={secretKey}
@@ -2609,6 +2612,7 @@ function CommerceAccountManager({
   handleSaveLotteOnAccount,
   lotteOnAccountSaving,
   onLotteOnAccountCleared,
+  onGoToShippingProfile,
 }: {
   account: AccountValues;
   onAccountCleared: () => void;
@@ -2632,6 +2636,8 @@ function CommerceAccountManager({
   handleSaveNaverAccount: () => void;
   naverAccountSaving: boolean;
   onNaverAccountCleared: () => void;
+  /** LOTTEON-REG-03 ㉢ — 같은 설정 화면의 「배송 프로필」 탭으로 옮긴다. */
+  onGoToShippingProfile: () => void;
   lotteOnAccount: LotteOnAccountValues;
   lotteOnApiKey: string;
   setLotteOnApiKey: (v: string) => void;
@@ -3042,7 +3048,7 @@ function CommerceAccountManager({
               칸을 나눈다 — 하나는 비밀이고(다시 보여주지 않는다) 하나는 지금
               무엇이 적용 중인지 보여야 하는 값이다. */}
           <div className="rounded-lg border border-border bg-surface px-4 py-3">
-            <LotteOnSellerFixedSettings />
+            <LotteOnSellerFixedSettings onGoToShippingProfile={onGoToShippingProfile} />
           </div>
           {/* 롯데ON만의 두 가지 운영 조건 — 쿠팡/네이버에는 없어서 여기서만 안내한다. */}
           <div className="rounded-lg border border-border bg-surface px-4 py-3">
