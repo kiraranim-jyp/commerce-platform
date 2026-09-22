@@ -28,6 +28,12 @@ export default defineConfig({
       // 없음). 카테고리 프로필은 "아동 동작이 한 점도 안 바뀐다"를 증명해야 하는
       // 코드라 회귀를 반드시 여기서 잡는다.
       "../../packages/category/src/**/__tests__/**/*.test.ts",
+      // COUPANG-REAL-OPTION-01(2026-09-22) — listing도 같은 처지였다. 실제 쿠팡
+      // LIVE 등록이 이 패키지의 payload 빌더에서 죽었는데(attempt a7572b88 ·
+      // API005), 여기 이미 있던 notice-regression.test.ts는 러너에 잡히지 않아
+      // **한 번도 실행된 적이 없었다**. 등록 payload를 만드는 코드는 회귀가 곧
+      // 실제 등록 실패라 반드시 여기서 잡는다.
+      "../../packages/listing/src/**/__tests__/**/*.test.ts",
     ],
   },
 });

@@ -976,13 +976,30 @@ export function buildCoupangCompliance(
       }
       const optionValue = matchOptionValue(attr.attributeTypeName, variantContext.optionGroups, variantContext.variant);
       if (optionValue) {
-        return {
-          fieldName: attr.attributeTypeName,
-          value: optionValue,
-          source: "OPTION_MATCH" as const,
-          critical: false,
-          kind: "ATTRIBUTE" as const,
-        };
+        /* ══ COUPANG-REAL-OPTION-01 ㈁(CEO 확정, 2026-09-22) ══
+           원본 옵션값도 «쿠팡이 허용하는 값인가» 를 한 번 거친다.
+
+           바로 아래 형제 경로(matchProductFieldDetailed)는 Sprint A-4 에서
+           이미 이 검증을 받았다 — 그때 CPO 실측이 「색상에 Pink 가 있는데
+           쿠팡 색상으로 연결이 안 됩니다」였고, 원인은 «원문 값을 그대로
+           돌려줬을 뿐 쿠팡이 허용하는 값 목록에 있는지 확인하지 않은 것»
+           이었다(L759 주석). 같은 수정이 이 경로에는 들어오지 않았다.
+
+           🔴 값을 바꾸지 않는다. resolveEnumValue 는 inputValues 가 비어
+           있으면(= 자유 입력 속성) 받은 값을 «그대로» 돌려준다(L779). 그래서
+           "28 EUR (UK 10)" 같은 원본 옵션값은 한 글자도 달라지지 않는다.
+           허용 목록이 «있는데» 거기 없는 값일 때만 여기서 멈추고, 아래
+           단계들이 이어서 답을 찾는다 — 우리가 지어내지 않는다. */
+        const resolved = resolveEnumValue(optionValue, attr.inputValues);
+        if (resolved) {
+          return {
+            fieldName: attr.attributeTypeName,
+            value: resolved,
+            source: "OPTION_MATCH" as const,
+            critical: false,
+            kind: "ATTRIBUTE" as const,
+          };
+        }
       }
       const fieldMatch = matchProductFieldDetailed(attr.attributeTypeName, context);
       if (fieldMatch.status === "MATCHED") {
@@ -1026,9 +1043,32 @@ export function buildCoupangCompliance(
       }
       const unmappedReason: ComplianceFieldResult["unmappedReason"] =
         fieldMatch.status === "MATCHED" ? "ENUM_MISMATCH" : fieldMatch.status === "NO_VALUE" ? "NO_VALUE" : "NO_RULE";
+      /* ══ COUPANG-REAL-OPTION-01 ㈀(CEO 확정, 2026-09-22) ══
+         여기 있던 `?? NOTICE_DEFAULT_CONTENT` 가 사라졌다.
+
+         그 상수는 바로 위(L583)에서 스스로 «상품정보제공고시» 용이라고 말한다.
+         고시정보(notices)에 쓰는 관용 문구다. 그것이 **구매옵션(attributes)의
+         마지막 폴백**으로도 쓰이고 있었고, 실제 등록이 그 지점에서 죽었다 —
+
+             2026-09-22 10:55  쿠팡 LIVE  attempt a7572b88  API005
+             items[].attributes  색상 = "전체 상품 상세페이지 참조"
+             응답: "유효하지 않은 구매 옵션 값이 존재합니다.
+                    |허용되지 않는 구매옵션 값이 입력되었습니다."
+
+         2026-07-30 성공 건은 이 폴백을 «탄 적이 없다» — 그때 색상은
+         attr.inputValues[0] = "상세페이지 참조", 즉 쿠팡이 «준» 값이었다.
+         구매옵션에 고시 문구가 들어간 첫 사례가 이번 실패다.
+
+         🔴 값을 지어내지 않는다. 쿠팡이 허용값을 줬으면 그 첫 값을 쓰고,
+         주지 않았으면 «비운다». 비운 칸은 아래에서 attributes 배열에 실리지
+         않는다 — 없는 값을 있는 척 보내는 대신 아무 말도 하지 않는다.
+
+         🔴 기록은 남는다. 이 결과 항목 자체는 그대로 attributeResults 에
+         남아(PLACEHOLDER · unmappedReason) 컴플라이언스 리포트가 「이 칸을
+         채우지 못했다」고 계속 말한다 — 조용히 사라지지 않는다. */
       return {
         fieldName: attr.attributeTypeName,
-        value: attr.inputValues[0] ?? NOTICE_DEFAULT_CONTENT,
+        value: attr.inputValues[0] ?? "",
         source: "PLACEHOLDER" as const,
         critical: isComplianceCritical(attr.attributeTypeName),
         kind: "ATTRIBUTE" as const,
@@ -1036,10 +1076,14 @@ export function buildCoupangCompliance(
       };
     })
     .map((r) => ({ ...r, confidence: FIELD_SOURCE_CONFIDENCE[r.source] }));
-  const attributes: CoupangItemAttribute[] = attributeResults.map((r) => ({
-    attributeTypeName: r.fieldName,
-    attributeValueName: truncateAttributeValue(r.value),
-  }));
+  const attributes: CoupangItemAttribute[] = attributeResults
+    // ㈀ — 값이 없는 구매옵션은 «보내지 않는다». 빈 문자열을 보내면 그것도
+    // 쿠팡이 거부하고, 고시 문구를 채워 넣으면 이번 실패가 그대로 재현된다.
+    .filter((r) => r.value.trim().length > 0)
+    .map((r) => ({
+      attributeTypeName: r.fieldName,
+      attributeValueName: truncateAttributeValue(r.value),
+    }));
 
   const chosenNoticeCategory = selectCoupangNoticeCategory(categoryMeta.noticeCategories, context.productName);
 
