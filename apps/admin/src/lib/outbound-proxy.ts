@@ -16,10 +16,52 @@ import { ProxyAgent } from "undici";
  */
 export type OutboundProxyProvider = "OCI" | "FIXIE" | "NONE";
 
+/**
+ * ══ OUTBOUND-PROXY-SWITCH(CEO 지시, 2026-09-22) ══
+ *
+ * **어느 프록시로 나갈지 «명시적으로» 고르는 스위치.** 값은 "FIXIE" 또는 "OCI".
+ * 없거나 모르는 값이면 아래 기존 우선순위 그대로다(= 이 변경 전과 같다).
+ *
+ * ── 왜 생겼나 ──────────────────────────────────────────────────────────────
+ * 2026-09-22, 세 채널(스마트스토어·쿠팡·롯데ON)의 연결 확인이 «동시에» 실패했다.
+ * 셋의 유일한 공통 경로가 이 프록시다. 롯데ON 은 그날 하루 종일 같은 경로에서
+ * 20초 timeout 과 성공을 오갔다(proxy=OCI).
+ *
+ * 위 주석이 적어 둔 원복 절차는 「Vercel 에서 OCI_PROXY_URL 을 제거」였다.
+ * 그런데 그렇게 하면 **그 값이 사라져 되돌릴 수 없다** — OCI 가 살아났을 때
+ * 누군가 URL 을 따로 보관하고 있어야 한다. 그래서 «지우는» 대신 «고르는»
+ * 방식으로 바꾼다.
+ *
+ *     OUTBOUND_PROXY=FIXIE  를 «추가» 하면 FIXIE 로 나간다
+ *     그 한 줄을 지우면 즉시 예전 동작(OCI 우선)으로 돌아온다
+ *     OCI_PROXY_URL 은 그대로 남아 있다
+ *
+ * 🔴 Fixie 는 사용량 상한이 있다(N-3.75 가 OCI 로 옮겨간 이유가 그것이다).
+ * 트래픽이 갑자기 늘면 다시 막힐 수 있으므로 **되돌리기가 «한 줄» 이어야 한다는
+ * 것이 이 설계의 핵심**이다.
+ *
+ * 🔴 «건강 기반» 자동 폴백이 아니다. OCI 가 죽어도 이 함수가 알아서 FIXIE 로
+ * 넘어가지는 않는다 — 그건 등록 경로의 동작을 바꾸는 별건이고 CEO 승인 전이다.
+ * 여기서 하는 일은 «사람이 고른 것을 그대로 따르는 것» 뿐이다.
+ */
+function selectedProvider(): "OCI" | "FIXIE" | null {
+  const raw = process.env.OUTBOUND_PROXY?.trim().toUpperCase();
+  return raw === "FIXIE" || raw === "OCI" ? raw : null;
+}
+
 function resolveProxyUrl(): { provider: OutboundProxyProvider; url: string | null } {
   const ociUrl = process.env.OCI_PROXY_URL;
-  if (ociUrl) return { provider: "OCI", url: ociUrl };
   const fixieUrl = process.env.FIXIE_URL;
+
+  const chosen = selectedProvider();
+  if (chosen === "FIXIE" && fixieUrl) return { provider: "FIXIE", url: fixieUrl };
+  if (chosen === "OCI" && ociUrl) return { provider: "OCI", url: ociUrl };
+  /* 🔴 고른 쪽의 URL 이 «없으면» 조용히 다른 쪽으로 넘어가지 않는 것처럼 보이게
+     하지 않는다. 아래 기존 우선순위로 내려가되, 실제로 어디로 나갔는지는
+     진단(getOutboundProxyDiagnostics)과 실패 로그의 provider 이름이 그대로
+     말한다 — 「FIXIE 를 골랐는데 OCI 로 나가고 있었다」를 숨기지 않는다. */
+
+  if (ociUrl) return { provider: "OCI", url: ociUrl };
   if (fixieUrl) return { provider: "FIXIE", url: fixieUrl };
   return { provider: "NONE", url: null };
 }
