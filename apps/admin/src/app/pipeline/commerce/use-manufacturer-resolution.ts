@@ -24,23 +24,25 @@ import {
  * 한 번 넣으면 세 채널이 같은 값을 쓴다. 그러니 이 조회도 탭이 아니라 **상품**
  * (정확히는 상품의 브랜드명)에만 걸려야 한다.
  *
- * ── 새 API를 만들지 않는다 ───────────────────────────────────────────────
- * 이미 화면이 쓰던 두 라우트를 그대로 읽는다:
- *   /api/settings/coupang/profiles       (SellerProfileSummaryCard가 이미 읽는다)
- *   /api/settings/coupang/brand-profiles (설정 화면의 브랜드 프로필 목록)
- * 경로에 coupang이 들어 있는 것은 저장소가 처음 만들어진 자리 때문이고, 담긴
- * 값은 채널 중립이다(네이버 resolve-context.ts · 롯데ON build-context.ts도
- * 서버에서 같은 두 저장소를 읽는다).
+ * ── 두 라우트를 읽는다 ──────────────────────────────────────────────────
+ *   /api/settings/seller-settings        판매자 공통 제조사
+ *   /api/settings/coupang/brand-profiles 브랜드별 제조사
+ *
+ * 🔴 PIVOT-03 0-4+2-B — 앞엣것이 바뀌었다. 예전에는 판매자 제조사를
+ * `/api/settings/coupang/profiles`(배송 프로필 «목록»)에서 꺼내
+ * `find(isDefault) ?? list[0]` 으로 골랐다. 그 라우트는 프로필마다 한 벌씩
+ * 돌려주므로 화면은 「이 프로필의 제조사」를 보고 있었는데, 서버의 실제 등록
+ * 경로는 이미 seller_settings 하나만 본다. 둘이 갈라지면 화면이 말하는
+ * 제조사와 등록에 나가는 제조사가 달라진다.
+ *
+ * 브랜드 프로필 경로에 coupang이 들어 있는 것은 저장소가 처음 만들어진 자리
+ * 때문이고, 담긴 값은 채널 중립이다(네이버 resolve-context.ts · 롯데ON
+ * build-context.ts도 서버에서 같은 저장소를 읽는다).
  *
  * ── 판정은 여기서 하지 않는다 ────────────────────────────────────────────
  * 우선순위는 `@commerce/listing`의 공통 `resolveManufacturer()` 하나가 정한다 —
  * payload가 쓰는 그 함수다. 이 훅은 값을 모아 그 함수에 넘길 뿐이다.
  */
-
-interface SellerProfileRow {
-  isDefault?: boolean;
-  manufacturer?: string | null;
-}
 
 interface BrandProfileRow {
   name?: string | null;
@@ -138,12 +140,12 @@ export function useManufacturerResolution(
   useEffect(() => {
     let cancelled = false;
     void Promise.all([
-      fetch("/api/settings/coupang/profiles")
+      /* 🔴 고르지 않는다. 판매자 공통 설정은 «하나» 라서 고를 것이 없다 —
+         예전의 `find(isDefault) ?? list[0]` 은 프로필 목록에서 하나를 집는
+         규칙이었고, 그 규칙이 서버 등록 경로에는 존재하지 않았다. */
+      fetch("/api/settings/seller-settings")
         .then((res) => res.json())
-        .then((data: { profiles?: SellerProfileRow[] }) => {
-          const list = data.profiles ?? [];
-          return (list.find((p) => p.isDefault) ?? list[0])?.manufacturer ?? null;
-        })
+        .then((data: { values?: { manufacturer?: string | null } }) => data.values?.manufacturer ?? null)
         .catch(() => null),
       fetch("/api/settings/coupang/brand-profiles")
         .then((res) => res.json())

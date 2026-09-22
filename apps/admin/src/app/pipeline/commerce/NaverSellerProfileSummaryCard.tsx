@@ -35,8 +35,18 @@ function won(value: number | null): string {
  * 플랫폼 공용 SellerProfile 테이블을 그대로 반환한다(Coupang 전용 API가
  * 아니다 — Settings 페이지도 이 하나의 프로필을 두 플랫폼에 같이 쓴다).
  */
+/* PIVOT-03 0-4+2-B — 쿠팡 카드와 같은 분리다. 배송·반품값은 배송 프로필에서,
+   판매자 기본정보 세 칸은 seller_settings 에서 온다. 두 카드가 같은 규칙을
+   쓰지 않으면 탭을 옮길 때 같은 상품의 제조사가 달라 보인다. */
+interface SellerSettingsValues {
+  manufacturer?: string | null;
+  qualityGuarantee?: string | null;
+  asContactNumber?: string | null;
+}
+
 export function NaverSellerProfileSummaryCard() {
   const [profile, setProfile] = useState<SellerProfile | null | undefined>(undefined);
+  const [sellerSettings, setSellerSettings] = useState<SellerSettingsValues | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,12 +60,22 @@ export function NaverSellerProfileSummaryCard() {
       .catch(() => {
         if (!cancelled) setProfile(null);
       });
+    /* 🔴 고르지 않는다 — 판매자 공통 설정은 하나라서 고를 것이 없다. */
+    fetch("/api/settings/seller-settings")
+      .then((res) => res.json())
+      .then((data: { values?: SellerSettingsValues }) => {
+        if (!cancelled) setSellerSettings(data.values ?? {});
+      })
+      .catch(() => {
+        if (!cancelled) setSellerSettings({});
+      });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  if (profile === undefined) return null;
+  /* 둘 다 기다린다 — 한쪽만 먼저 그리면 「미설정」이 번쩍이고 값으로 바뀐다. */
+  if (profile === undefined || sellerSettings === undefined) return null;
 
   if (!profile) {
     return (
@@ -103,7 +123,11 @@ export function NaverSellerProfileSummaryCard() {
           </div>
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5">
             <dt className="text-text-tertiary">전화번호</dt>
-            <dd className="text-text-primary">{profile.asContactNumber || profile.companyContactNumber || "미설정"}</dd>
+            {/* 🔴 A/S 연락처는 판매자 공통 설정, 반품지 연락처는 배송 프로필이다.
+                폴백 순서는 그대로 둔다 — 쿠팡 카드와 같은 규칙이다. */}
+            <dd className="text-text-primary">
+              {sellerSettings.asContactNumber || profile.companyContactNumber || "미설정"}
+            </dd>
           </dl>
         </div>
 
@@ -116,9 +140,9 @@ export function NaverSellerProfileSummaryCard() {
           </div>
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5">
             <dt className="text-text-tertiary">제조자(수입자)</dt>
-            <dd className="text-text-primary">{profile.manufacturer || "미설정"}</dd>
+            <dd className="text-text-primary">{sellerSettings.manufacturer || "미설정"}</dd>
             <dt className="text-text-tertiary">품질보증기준</dt>
-            <dd className="text-text-primary">{profile.qualityGuarantee || "미설정"}</dd>
+            <dd className="text-text-primary">{sellerSettings.qualityGuarantee || "미설정"}</dd>
           </dl>
         </div>
       </div>
