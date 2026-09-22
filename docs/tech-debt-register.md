@@ -427,3 +427,59 @@ ACTIVE 링크 EXACT 52 · COMPARISON 25. `computePriceRecommendation` 은
 
 🔴 **실제 Production 재검증(Vernice·Tobacco·MyMy)은 아직 «미수행» 이다.**
 790/790 테스트 PASS 를 Production PASS 로 승격하지 않는다.
+
+## 🔴 P0-COST-03 — ₩12,000 이 `SELLER_OVERRIDE` 로 저장된다 (2026-09-22 실측)
+
+Production 실행 3건(`a378d73` 배포 후)에서 **기대했던 `LEGACY_FALLBACK` 이 아니라
+`SELLER_OVERRIDE` 가 나왔다.** 세 상품 전부 동일하다.
+
+```text
+Vernice bd1dd215 · Tobacco ca2c72ac · MyMy e15cc26f
+shippingKrwResolved 12000 · shippingBasisResolved 🔴 SELLER_OVERRIDE
+```
+
+### 원인 — `CommerceWorkspace.tsx:758-765`
+
+```ts
+const marginPercent = defaultProfile?.defaultMarginPercent;
+if (marginPercent != null) {
+  setProduct((prev) => prev.priceBreakdown == null
+    ? { ...prev, priceBreakdown: { ...DEFAULT_PRICE_BREAKDOWN_INPUT, marginPercent } }
+    : prev);
+}
+```
+
+셀러가 «목표 마진율» 만 설정해도 `DEFAULT_PRICE_BREAKDOWN_INPUT` 의 배송비
+**₩12,000 이 `priceBreakdown.shippingKrw` 에 함께 저장된다.** 그 뒤 MI 는
+`sellerEnteredKrw = 12000` 으로 읽어 **`SELLER_OVERRIDE`** 라고 판정한다.
+
+🔴 **`LEGACY_FALLBACK` 보다 나쁘다.** 앞은 「기본값을 썼다」지만 뒤는
+**「셀러가 확인했다」는 주장**이다. 아무도 입력한 적 없는 숫자에 그 라벨이 붙는다.
+
+### MI-REAL-16 결론 정정
+
+`product.priceBreakdown` 은 null 이 «아니었다». `registration_attempts.price_breakdown`
+만 0건이고, MI 가 읽는 것은 **워크스페이스에 저장된 `canonicalProduct.priceBreakdown`**
+(`market-intelligence.ts:48` `backfillCanonicalProduct(snapshot.workspace.canonicalProduct)`)이다.
+
+### MI-P0-COST-02 판정 (a378d73)
+
+```text
+PASS          shippingBasisResolved 가 로그에 «나온다» — 근거가 unifiedDecision 밖으로
+              나왔다(이번 변경의 두 번째 핵심). Net 계산도 Production 에서 동작한다.
+              grossMarginPercent 10.6 · netProfitKrw +1,479 · netMarginPercent 0.6
+              산술 내부 일관 확인(landedCost 230,721 역산 일치).
+
+INDETERMINATE marketCase B→C 와 「손실 없이 판매 가능」 제거는 «증명되지 않았다».
+              🔴 환율이 GBP 1852 → 1838 로 내려 착지원가가 232,424 → 230,721 이
+              됐고 Net 이 «양수»(+1,479)가 됐다. 그 구간에서는 신·구 코드가
+              같은 답을 낸다 — Vernice 가 판별 구간을 벗어났다.
+
+UI            🔴 UNVERIFIED
+회귀          self-reference · Gate 판정 · COMPARISON 차단 · Policy A 전부 통과
+
+Final  🔴 HOLD — §23 FAIL 조건은 하나도 걸리지 않았으나 §22 ①이 미증명이다.
+```
+
+**다음에 필요한 것**: ㉠ `SELLER_OVERRIDE` 오라벨 수정(정책 확인 필요 — 마진율만
+저장하고 배송비는 비울 것인가) · ㉡ 판별 구간 상품 확보(`국내 최저가 < 착지원가 + 수수료`).
