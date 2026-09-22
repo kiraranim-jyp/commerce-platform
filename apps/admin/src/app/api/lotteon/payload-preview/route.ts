@@ -33,10 +33,28 @@ import { recordAuditLog } from "@/lib/audit-log";
    조용히 넘어간다 — 진단이 등록 미리보기를 막지 않는다. */
 let noticeItemProbeDone = false;
 
-async function probeNoticeItemCode(standardCategoryNo: string | null | undefined): Promise<void> {
+async function probeNoticeItemCode(
+  standardCategoryNo: string | null | undefined,
+  /**
+   * 🔴 연결이 «살아 있을 때만» 묻는다.
+   *
+   * 1차 시도 실측(2026-09-22 13:42): 단건 조회가 20,201ms timeout 이었는데,
+   * 같은 창에서 207 identity 도 20,283ms timeout 이었다. 즉 filter_1 이 문제가
+   * 아니라 **롯데ON 연결이 그 시점에 끊겨 있었다**(한 시간 전에는 205 목록
+   * 6131건이 성공했다 — 간헐적이다). 실험이 성립하지 않았다.
+   *
+   * 연결이 죽은 동안 계속 찔러 봐야 답을 얻지 못하고, 미리보기에 20초를 더
+   * 얹기만 한다. identity 가 이미 실패했으면 «건너뛴다».
+   */
+  connectionHealthy: boolean,
+): Promise<void> {
   if (noticeItemProbeDone) return;
   const stdCatId = standardCategoryNo?.trim();
   if (!stdCatId) return;
+  // 🔴 연결이 죽었으면 done 으로 «표시하지 않는다» — 살아나면 다음 미리보기에서
+  //    다시 묻는다. 예전에는 실패해도 플래그를 세워서, 한 번 실패하면 그 람다가
+  //    죽을 때까지 두 번 다시 시도하지 않았다.
+  if (!connectionHealthy) return;
   noticeItemProbeDone = true;
   try {
     const probe = await runLotteOnRead({
@@ -102,7 +120,8 @@ export async function POST(request: Request) {
   const validation = validateLotteOnPayload(context.input);
   const payload = buildLotteOnPayload(context.input);
 
-  await probeNoticeItemCode(context.input.channel.standardCategoryNo);
+  // identityError 가 없다 = 이 요청에서 롯데ON 연결이 «실제로» 살아 있었다.
+  await probeNoticeItemCode(context.input.channel.standardCategoryNo, context.identityError == null);
 
   return NextResponse.json({
     ok: true,
