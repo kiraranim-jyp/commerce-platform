@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CanonicalProduct, LotteOnChannelInfo } from "@commerce/shared";
 import { Button } from "@/components/ui/Button";
@@ -555,6 +556,47 @@ export function LotteOnRegistrationPanel({
     data: null,
   });
   const deliveryAppliedRef = useRef(false);
+
+  /**
+   * ══ LOTTEON-REAL-REGISTRATION-02 ①(CEO 확정, 2026-09-22) ══
+   *
+   * 판매자가 설정에 «한 번» 정해 둔 값. 이 칸을 비워 두면 서버가 여기서 채워
+   * 등록한다(build-context 의 사다리) — 화면이 그 사실을 말하지 않으면 셀러는
+   * 빈 칸을 보고 「아직 안 됐다」고 읽고 매 상품마다 다시 고른다. 그게 지금까지
+   * 벌어진 일이다.
+   *
+   * 🔴 이 값으로 폼을 «채우지 않는다». 채우면 상품별 명시값과 구분이 사라지고,
+   * 설정을 바꿨을 때 이미 만들어 둔 상품들이 옛 값을 들고 남는다. 화면은
+   * 「지금 이 자리에 무엇이 적용되는가」를 말하기만 한다 — 실제 합류는 서버
+   * 한 곳에서만 일어난다.
+   */
+  const [sellerFixed, setSellerFixed] = useState<{
+    outboundPlaceNo: string | null;
+    outboundPlaceLabel: string | null;
+    returnPlaceNo: string | null;
+    returnPlaceLabel: string | null;
+    deliveryCostPolicyNo: string | null;
+    deliveryCostPolicyLabel: string | null;
+    deliveryRegionGroupCode: string | null;
+    deliveryRegionGroupLabel: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/settings/lotteon-seller");
+        const data = (await res.json()) as { ok?: boolean; values?: typeof sellerFixed };
+        if (!cancelled && data.ok && data.values) setSellerFixed(data.values);
+      } catch {
+        // 설정을 못 읽어도 화면은 그대로 선다 — 그때는 「설정값 적용됨」을
+        // 말하지 않을 뿐이고, 빈 칸은 검증기가 평소대로 blocker 로 잡는다.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -1198,11 +1240,18 @@ export function LotteOnRegistrationPanel({
             requirement={requirementOf("owhpNo")}
             note="롯데ON에 선등록된 출고지"
             belowInput={
-              <DeliveryOptionPicker
-                options={deliverySettings.data?.outboundPlaces ?? []}
-                current={form.delivery.outboundPlaceNo}
-                onPick={(value) => patch("delivery", { outboundPlaceNo: value })}
-              />
+              <>
+                {/* ① — 비어 있어도 판매자 설정이 채운다는 사실을 그 자리에서 말한다. */}
+                <SellerSettingApplied
+                  value={form.delivery.outboundPlaceNo.trim() ? null : sellerFixed?.outboundPlaceNo}
+                  label={sellerFixed?.outboundPlaceLabel}
+                />
+                <DeliveryOptionPicker
+                  options={deliverySettings.data?.outboundPlaces ?? []}
+                  current={form.delivery.outboundPlaceNo}
+                  onPick={(value) => patch("delivery", { outboundPlaceNo: value })}
+                />
+              </>
             }
             value={form.delivery.outboundPlaceNo}
             onChange={(value) => patch("delivery", { outboundPlaceNo: value })}
@@ -1213,11 +1262,17 @@ export function LotteOnRegistrationPanel({
             requirement={requirementOf("rtrpNo")}
             note="롯데ON에 선등록된 회수지"
             belowInput={
-              <DeliveryOptionPicker
-                options={deliverySettings.data?.returnPlaces ?? []}
-                current={form.delivery.returnPlaceNo}
-                onPick={(value) => patch("delivery", { returnPlaceNo: value })}
-              />
+              <>
+                <SellerSettingApplied
+                  value={form.delivery.returnPlaceNo.trim() ? null : sellerFixed?.returnPlaceNo}
+                  label={sellerFixed?.returnPlaceLabel}
+                />
+                <DeliveryOptionPicker
+                  options={deliverySettings.data?.returnPlaces ?? []}
+                  current={form.delivery.returnPlaceNo}
+                  onPick={(value) => patch("delivery", { returnPlaceNo: value })}
+                />
+              </>
             }
             value={form.delivery.returnPlaceNo}
             onChange={(value) => patch("delivery", { returnPlaceNo: value })}
@@ -1228,11 +1283,17 @@ export function LotteOnRegistrationPanel({
             requirement={requirementOf("dvCstPolNo")}
             note="롯데ON에 선등록된 배송비 정책"
             belowInput={
-              <DeliveryOptionPicker
-                options={(deliverySettings.data?.costPolicies ?? []).map((policy) => ({ ...policy, isDefault: false }))}
-                current={form.delivery.deliveryCostPolicyNo}
-                onPick={(value) => patch("delivery", { deliveryCostPolicyNo: value })}
-              />
+              <>
+                <SellerSettingApplied
+                  value={form.delivery.deliveryCostPolicyNo.trim() ? null : sellerFixed?.deliveryCostPolicyNo}
+                  label={sellerFixed?.deliveryCostPolicyLabel}
+                />
+                <DeliveryOptionPicker
+                  options={(deliverySettings.data?.costPolicies ?? []).map((policy) => ({ ...policy, isDefault: false }))}
+                  current={form.delivery.deliveryCostPolicyNo}
+                  onPick={(value) => patch("delivery", { deliveryCostPolicyNo: value })}
+                />
+              </>
             }
             value={form.delivery.deliveryCostPolicyNo}
             onChange={(value) => patch("delivery", { deliveryCostPolicyNo: value })}
@@ -1243,11 +1304,17 @@ export function LotteOnRegistrationPanel({
             requirement={requirementOf("dvRgsprGrpCd")}
             note="공통코드 DV_RGSPR_GRP_CD"
             belowInput={
-              <CodeOptionPicker
-                options={deliverySettings.data?.deliveryRegionGroups ?? []}
-                current={form.delivery.deliveryRegionGroupCode}
-                onPick={(value) => patch("delivery", { deliveryRegionGroupCode: value })}
-              />
+              <>
+                <SellerSettingApplied
+                  value={form.delivery.deliveryRegionGroupCode.trim() ? null : sellerFixed?.deliveryRegionGroupCode}
+                  label={sellerFixed?.deliveryRegionGroupLabel}
+                />
+                <CodeOptionPicker
+                  options={deliverySettings.data?.deliveryRegionGroups ?? []}
+                  current={form.delivery.deliveryRegionGroupCode}
+                  onPick={(value) => patch("delivery", { deliveryRegionGroupCode: value })}
+                />
+              </>
             }
             value={form.delivery.deliveryRegionGroupCode}
             onChange={(value) => patch("delivery", { deliveryRegionGroupCode: value })}
@@ -2448,6 +2515,48 @@ function DeliveryLookupNote({ state }: { state: DeliverySettingsState }) {
         </p>
       ))}
     </div>
+  );
+}
+
+/**
+ * ══ LOTTEON-REAL-REGISTRATION-02 ①(CEO 확정, 2026-09-22) ══
+ *
+ * 「이 칸은 비어 있지만 «판매자 설정» 이 채운다」를 그 자리에서 말한다.
+ *
+ * 이게 없으면 셀러는 빈 칸을 보고 「아직 안 됐다」고 읽는다. 그래서 매 상품마다
+ * 출고지를 다시 골랐다 — 판매자가 바꾸지 않는 한 상품마다 달라질 일이 없는
+ * 값인데도.
+ *
+ * 🔴 여기서 판정하지 않는다. 폼이 비었고 설정에 값이 있을 때만 서고, 실제로
+ * 그 값을 payload 에 합류시키는 것은 서버 한 곳이다(build-context 의
+ * resolveLotteOnSellerFixedValue). 화면이 따로 계산하면 「화면에는 적용됐다고
+ * 적혀 있는데 payload 는 다른 값」이 생긴다.
+ *
+ * 🔴 번호를 크게 쓰지 않는다. 셀러가 기억해야 하는 것은 「○○ 물류센터」이지
+ * 「12345」가 아니다 — 번호는 확인용으로 작게만 둔다.
+ */
+function SellerSettingApplied({
+  value,
+  label,
+}: {
+  /** 설정에 저장된 «번호/코드». 없으면 이 줄은 서지 않는다. */
+  value: string | null | undefined;
+  /** 고를 때 보였던 사람이 읽는 이름. 없으면 번호만 보여준다. */
+  label: string | null | undefined;
+}) {
+  if (!value) return null;
+  return (
+    <p
+      data-seller-setting-applied="true"
+      className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-text-secondary"
+    >
+      <span className="font-medium text-text-primary">{label || value}</span>
+      <span className="text-success">✓ 설정값 적용됨</span>
+      {label && <span className="text-text-tertiary">({value})</span>}
+      <Link href="/settings" className="text-primary underline-offset-2 hover:underline">
+        설정에서 변경
+      </Link>
+    </p>
   );
 }
 
