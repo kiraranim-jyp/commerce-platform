@@ -8,6 +8,19 @@ import { getSupabaseAdmin } from "./supabase-admin";
  * 원칙과 동일).
  */
 export type AuditEventType =
+  /**
+   * LOTTEON-REAL-REGISTRATION-02(2026-09-22) — **한시 진단용.**
+   *
+   * 롯데ON 205 표준카테고리 응답에 고시 품목코드가 들어 있는지 확인하는 읽기
+   * 전용 계측의 착지점이다. Vercel 런타임 로그는 볼륨 상한이 있어서(실측: 창이
+   * 엔트리 2개까지 줄었다) 셀러가 버튼을 누른 시점과 읽는 시점이 몇 분만
+   * 어긋나도 증거가 사라진다. 한 번 확인하면 끝나는 진단이라 타이밍 싸움을
+   * 하지 않고 이미 있는 표에 적어 둔다.
+   *
+   * 🔴 값이 아니라 «구조»(키 이름 · 길이)만 적는다. 확인이 끝나면 이 값과
+   *    category-recommend 의 계측 블록을 함께 제거한다.
+   */
+  | "LOTTEON_REG_01_PROBE"
   | "PRODUCT_UPDATED"
   | "PRICE_UPDATED"
   | "ATTRIBUTE_UPDATED"

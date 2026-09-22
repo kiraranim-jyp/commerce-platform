@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { CanonicalProduct } from "@commerce/shared";
 import { LOTTEON_READ_PATHS } from "../_lib/client";
 import { runLotteOnRead } from "../_lib/request";
+import { recordAuditLog } from "@/lib/audit-log";
 import {
   parseLotteOnStandardCategory,
   recommendLotteOnStandardCategories,
@@ -182,27 +183,44 @@ export async function POST(request: Request) {
       envelope: "RAW",
       step: `205 표준카테고리 단건 조회(품목코드 확인 · ${probeTarget})`,
     });
+    /* 🔴 결과를 audit_log 에 «남긴다». Vercel 런타임 로그는 볼륨 상한이 있어서
+       (실측: 창이 엔트리 2개까지 줄어든 적이 있다) 셀러가 버튼을 누른 시점과
+       내가 읽는 시점이 몇 분만 어긋나도 증거가 사라진다. 한 번 확인하면 끝나는
+       진단이라 타이밍 싸움을 할 이유가 없다 — 이미 있는 표에 적어 둔다.
+       확인이 끝나면 이 블록 전체를 제거한다. */
+    const remember = (payload: Record<string, unknown>) =>
+      recordAuditLog({
+        eventType: "LOTTEON_REG_01_PROBE",
+        actor: "system",
+        marketplace: "lotteon",
+        field: "pdItmsCd",
+        afterValue: payload,
+        reason: "205 표준카테고리 단건 조회에 품목코드가 들어 있는가(읽기 전용 진단)",
+      });
+
     if (!probe.ok) {
-      console.log(`[LOTTEON-REG-01] ${JSON.stringify({ step: "205_SINGLE", stdCatId: probeTarget, ok: false })}`);
+      const payload = { step: "205_SINGLE", stdCatId: probeTarget, ok: false };
+      console.log(`[LOTTEON-REG-01] ${JSON.stringify(payload)}`);
+      await remember(payload);
     } else {
       const raw = probe.result.raw as { itemList?: unknown } | null;
       const list = Array.isArray(raw?.itemList) ? (raw.itemList as Record<string, unknown>[]) : [];
       const row = (list[0]?.data ?? list[0] ?? null) as Record<string, unknown> | null;
       const itms = row ? ((row["pd_itms_list"] ?? row["pd_Itms_list"]) as unknown) : undefined;
-      console.log(
-        `[LOTTEON-REG-01] ${JSON.stringify({
-          step: "205_SINGLE",
-          stdCatId: probeTarget,
-          ok: true,
-          returnedRows: list.length,
-          rowKeys: row ? Object.keys(row) : null,
-          itmsIsArray: Array.isArray(itms),
-          itmsLength: Array.isArray(itms) ? itms.length : null,
-          // 🔴 값이 아니라 «키 이름» 만 본다.
-          itmsFirstKeys:
-            Array.isArray(itms) && itms[0] && typeof itms[0] === "object" ? Object.keys(itms[0] as object) : null,
-        })}`,
-      );
+      const payload = {
+        step: "205_SINGLE",
+        stdCatId: probeTarget,
+        ok: true,
+        returnedRows: list.length,
+        rowKeys: row ? Object.keys(row) : null,
+        itmsIsArray: Array.isArray(itms),
+        itmsLength: Array.isArray(itms) ? itms.length : null,
+        // 🔴 값이 아니라 «키 이름» 만 본다.
+        itmsFirstKeys:
+          Array.isArray(itms) && itms[0] && typeof itms[0] === "object" ? Object.keys(itms[0] as object) : null,
+      };
+      console.log(`[LOTTEON-REG-01] ${JSON.stringify(payload)}`);
+      await remember(payload);
     }
   }
 
