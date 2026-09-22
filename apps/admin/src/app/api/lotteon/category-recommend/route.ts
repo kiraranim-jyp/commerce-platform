@@ -44,6 +44,8 @@ export async function POST(request: Request) {
   let unrecognizedCount = 0;
   let truncated = false;
   let pages = 0;
+  /** LOTTEON-REG-01 계측용 — 205 응답 첫 항목의 구조(키 이름)만 본다. */
+  let firstRawEntry: Record<string, unknown> | null = null;
 
   for (let page = 0; page < MAX_PAGES; page += 1) {
     const read = await runLotteOnRead({
@@ -67,12 +69,48 @@ export async function POST(request: Request) {
     const itemList = Array.isArray(raw?.itemList) ? (raw.itemList as Record<string, unknown>[]) : [];
     pages += 1;
     for (const entry of itemList) {
-      const parsed = parseLotteOnStandardCategory(entry.data ?? entry);
+      const source = entry.data ?? entry;
+      // LOTTEON-REG-01 계측 — 첫 항목의 «구조» 하나만 들고 있는다(아래 로그용).
+      if (firstRawEntry == null && source && typeof source === "object") {
+        firstRawEntry = source as Record<string, unknown>;
+      }
+      const parsed = parseLotteOnStandardCategory(source);
       if (parsed) categories.push(parsed);
       else unrecognizedCount += 1;
     }
     if (itemList.length < PAGE_SIZE) break;
     if (page === MAX_PAGES - 1) truncated = true;
+  }
+
+  /* ══ LOTTEON-REAL-REGISTRATION-01 STEP 5 계측(읽기 전용, 2026-09-22) ══
+
+     CEO 실측: 「카테고리를 선택했는데 상품품목코드가 안 들어온다」. 그리고 그
+     하나 때문에 등록가능상태도 움직이지 않는다(품목코드가 비면 pdItmsCd 가
+     비고, 서버 검증이 계속 미충족이라 readiness 가 그대로다).
+
+     파서는 `pd_Itms_list` 와 `pd_itms_list` 를 둘 다 읽지만, 그 주석이
+     스스로 「어느 쪽이 실제인지 확인하지 못했다」고 적고 있다(lotteon-category.ts
+     L193). 지금까지 205 응답 «실물» 을 본 적이 없다.
+
+     그래서 추측 대신 **응답이 가진 키 이름을 그대로 적는다.** 표준카테고리
+     메타데이터이고 자격증명이 아니다 — 값이 아니라 «구조» 만 남긴다.
+
+     🔴 한 요청에 한 번만, 첫 페이지 첫 항목에서만 찍는다. 목록 전체를 로그로
+     쏟지 않는다. 확인이 끝나면 이 블록은 제거한다. */
+  if (categories.length > 0) {
+    const sample = (firstRawEntry ?? {}) as Record<string, unknown>;
+    const keys = Object.keys(sample);
+    console.log(
+      `[LOTTEON-REG-01] ${JSON.stringify({
+        step: "205_SHAPE",
+        totalCategories: categories.length,
+        sampleKeys: keys,
+        itmsLikeKeys: keys.filter((k) => /itms|item|pd_/i.test(k)),
+        withNoticeItemCode: categories.filter((c) => c.noticeItemCodes.length > 0).length,
+        withDisplayCategory: categories.filter((c) => c.displayCategories.length > 0).length,
+        withTaxType: categories.filter((c) => c.taxTypeCode != null).length,
+      })}`,
+    );
   }
 
   const recommendation = recommendLotteOnStandardCategories(body.product, categories, { unrecognizedCount });
