@@ -138,6 +138,59 @@ async function probeNoticeItemCode(
       };
     }
 
+    /* ══ 고시 «항목코드»(pdArtlCd) 공급원 조사 (2026-09-22) ══════════════════
+
+       3차 LIVE 등록이 여기서 막혔다.
+
+           resultCode 9999  "상품품목항목코드 필수값이 «누락» 입니다."
+           보낸 것          pdItmsArtlLst: [{ pdArtlCd:"0020", pdArtlCnts:"blue" }]
+
+       품목(pdItmsCd)마다 «필수 항목» 목록이 다른데 하나만 보냈다. 셀러가
+       "0020:blue" 처럼 코드를 직접 타이핑하는 구조라 무엇이 더 필요한지 알
+       방법이 없다 — 오늘 원산지코드에서 본 것과 같은 실패다.
+
+       두 곳을 «묻는다». 둘 다 읽기 전용이고 값을 지어내지 않는다.
+
+         ① PD_ITMS_CD 응답의 refcChrValEpn1~4
+            품목코드 목록을 받을 때 이미 딸려 오던 «참조문자값» 네 칸인데
+            우리가 한 번도 읽지 않았다. 품목별 필수 항목이 여기 실려 있을 수 있다.
+
+         ② PD_ARTL_CD 그룹이 89 에 있는가
+            🔴 이름이 payload 필드(pdArtlCd)와 같다는 «규칙» 으로 단정하지
+            않는다. PD_ITMS_CD 때와 똑같이 실제 응답이 답하게 둔다. 없으면
+            없는 것이고, 그때 다른 공급원을 찾거나 DIRECT 로 확정한다. */
+    const probeCodeGroup = async (grpCd: string) => {
+      const r = await runLotteOnRead({
+        method: "GET",
+        path: LOTTEON_READ_PATHS.detailCodeList,
+        query: { grpCd },
+        step: `89 공통코드 상세 조회(${grpCd} 존재 확인)`,
+      });
+      if (!r.ok) return { grpCd, ok: false as const };
+      const rows = Array.isArray(r.result.data) ? (r.result.data as Record<string, unknown>[]) : [];
+      return {
+        grpCd,
+        ok: true as const,
+        rowCount: rows.length,
+        firstKeys: rows[0] ? Object.keys(rows[0]) : null,
+        /* 🔴 여기서는 «값» 을 본다. 코드표의 참조칸이 무엇을 담고 있는지 알아야
+           품목별 필수 항목을 자동으로 채울 수 있는지 판단할 수 있다. 자격증명이
+           아니라 롯데ON 이 공개한 코드 메타데이터다. 첫 3행만 본다. */
+        sample: rows.slice(0, 3).map((row) => ({
+          cd: row.cd,
+          cdNm: row.cdNm,
+          ref1: row.refcChrValEpn1,
+          ref2: row.refcChrValEpn2,
+          ref3: row.refcChrValEpn3,
+          ref4: row.refcChrValEpn4,
+        })),
+      };
+    };
+    payload.articleCodeProbe = {
+      pdItms: await probeCodeGroup("PD_ITMS_CD"),
+      pdArtl: await probeCodeGroup("PD_ARTL_CD"),
+    };
+
     console.log(`[LOTTEON-REG-01] ${JSON.stringify(payload)}`);
     await recordAuditLog({
       eventType: "LOTTEON_REG_01_PROBE",
