@@ -178,6 +178,83 @@ export function pickSellerSettingFields(body: Record<string, unknown>): Record<s
   return picked;
 }
 
+/** camelCase 다섯 칸을 표의 칸 이름으로 옮긴다. 온 키만 담는다. */
+const COLUMN_OF: Record<string, string> = {
+  manufacturer: "manufacturer",
+  asContactNumber: "as_contact_number",
+  qualityGuarantee: "quality_guarantee",
+  kcExemptionText: "kc_exemption_text",
+  defaultCountryOfOrigin: "default_country_of_origin",
+};
+
+/**
+ * 판매자 공통 설정을 canonical 표에«만» 저장한다 — TTAEJYO-PIVOT-03 0-4+2-C.
+ *
+ * ── 🔴 saveSellerSettingsDual 과 무엇이 다른가 ───────────────────────────
+ * 그쪽은 배송 프로필 편집 화면이 부르고, 프로필 id 를 받아 두 표를 함께 쓴다.
+ * 이쪽은 «판매자 정보 탭» 이 부르고 프로필을 아예 모른다 — 판매자 공통 설정은
+ * 프로필에 속하지 않기 때문이다. 프로필이 하나도 없어도 저장돼야 한다.
+ *
+ * 그래서 트랜잭션도 RPC 도 필요 없다. 표가 하나뿐이라 묶을 것이 없다.
+ *
+ * ── 부분 업데이트 ────────────────────────────────────────────────────────
+ * 기존 PATCH 와 같은 규칙이다(toRowFields · 060 과 한 벌).
+ *
+ *     키 없음  → 건드리지 않는다
+ *     ""       → null (지움)
+ *     값        → 값
+ *
+ * UPDATE 가 온 칸만 바꾸므로 부분 갱신이 자연히 성립한다. 행이 아직 없을
+ * 때만 INSERT 한다 — 그 경우엔 보존할 옛 값이 없어서 upsert 와 같다.
+ *
+ * 🔴 행이 없는 상태에서 «동시에» 두 번 저장하면 뒤엣것이 유니크 인덱스
+ * (seller_settings_legacy_singleton)에 막힌다. 조용히 덮지 않고 오류로
+ * 드러나는 쪽이 맞다 — 지금 실측상 행은 이미 하나 있어서 INSERT 경로 자체가
+ * 거의 타지 않는다.
+ */
+export async function saveSellerSettings(
+  fields: Record<string, unknown>,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const row: Record<string, unknown> = {};
+  for (const [key, column] of Object.entries(COLUMN_OF)) {
+    // 🔴 「값이 있는가」가 아니라 「키가 왔는가」다. 빈 문자열은 «지움» 이라
+    //    거르면 안 된다(pickSellerSettingFields 와 같은 판정).
+    if (key in fields) {
+      const value = fields[key];
+      row[column] = typeof value === "string" && value.length > 0 ? value : null;
+    }
+  }
+  if (Object.keys(row).length === 0) return { ok: true };
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return { ok: false, error: "저장소에 연결하지 못했습니다." };
+
+  const { data, error } = await supabase
+    .from("seller_settings")
+    .update({ ...row, updated_at: new Date().toISOString() })
+    .is("workspace_id", null)
+    .eq("scope_key", "default")
+    .select("id");
+  if (error) {
+    console.warn("[seller-settings] 저장 실패:", error.message);
+    return { ok: false, error: "판매자 정보를 저장하지 못했습니다." };
+  }
+  if (data && data.length > 0) return { ok: true };
+
+  /* 여기까지 왔으면 행이 아직 없다(새 설치). 만든다.
+     🔴 workspace_id = NULL 은 «전역» 이 아니라 «귀속을 확인할 수 없는 레거시»
+     다 — 059 주석과 같은 뜻이고, Beta Security 가 workspace 행을 넣으면
+     그때 reader 1순위가 바뀐다. 여기서 임의의 workspace 를 지어내지 않는다. */
+  const { error: insertError } = await supabase
+    .from("seller_settings")
+    .insert({ workspace_id: null, scope_key: "default", ...row });
+  if (insertError) {
+    console.warn("[seller-settings] 신규 저장 실패:", insertError.message);
+    return { ok: false, error: "판매자 정보를 저장하지 못했습니다." };
+  }
+  return { ok: true };
+}
+
 /**
  * 판매자 공통 설정을 «두 표에 한꺼번에» 저장한다 — TTAEJYO-PIVOT-03 ⑤.
  *

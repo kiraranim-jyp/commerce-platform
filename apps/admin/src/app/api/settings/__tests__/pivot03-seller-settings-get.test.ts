@@ -123,15 +123,40 @@ describe("③ source 는 돌려주되 값이 아니다", () => {
   });
 });
 
-describe("④ 이번 단계의 범위는 읽기 하나다", () => {
-  it.each(["PUT", "POST", "PATCH", "DELETE"])("🔴 %s 를 내보내지 않는다", (method) => {
-    expect(SOURCE).not.toContain(`export async function ${method}`);
+/** 주석을 걷어낸 «실행되는 코드» 만 남긴다.
+ *
+ * 🔴 이 라우트의 주석에는 「여기서는 coupang_seller_profiles 에 쓰지 않는다」
+ * 처럼 «하지 않는 일» 이 적혀 있다. 그건 지워야 할 글이 아니라 남겨야 할
+ * 글이다 — 이름이 파일에 없는지가 아니라 코드가 그것을 부르는지를 본다. */
+function codeOnly(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+}
+
+describe("④ 이 라우트가 여는 문", () => {
+  /* 🔴 A 에서는 여기가 「PUT 을 내보내지 않는다」였다. C(0-4+2)에서 CEO 지시로
+     canonical PUT 이 추가되면서 그 단언이 «의도적으로» 깨졌다 — 약화가 아니라
+     계약이 바뀐 것이다.
+
+     대신 더 조인다: 이 창구가 여는 문은 «정확히 둘» 이고, 나머지는 여전히
+     닫혀 있어야 한다. 특히 POST 가 열리면 「판매자 설정을 여러 개 만든다」는
+     뜻이 되어 셀러당 하나라는 전제가 무너지고, DELETE 는 되돌릴 수 없다. */
+  it("🔴 GET 과 PUT «만» 있다", () => {
+    const methods = (codeOnly(SOURCE).match(/export async function (\w+)/g) ?? [])
+      .map((m) => m.replace("export async function ", ""))
+      .sort();
+    expect(methods).toEqual(["GET", "PUT"]);
   });
 
-  it("🔴 라우트가 스스로 DB 를 부르지 않는다 — resolver 하나만 쓴다", () => {
-    expect(SOURCE).not.toContain("getSupabaseAdmin");
-    expect(SOURCE).not.toContain("coupang_seller_profiles");
-    expect(SOURCE).not.toContain("seller_settings\"");
+  it.each(["POST", "PATCH", "DELETE"])("🔴 %s 는 열지 않는다", (method) => {
+    expect(codeOnly(SOURCE)).not.toContain(`export async function ${method}`);
+  });
+
+  it("🔴 라우트가 스스로 DB 를 부르지 않는다 — lib 함수만 쓴다", () => {
+    // 표 이름과 질의가 라우트로 새어 나오면 「값을 찾는 규칙」이 두 곳에 산다.
+    const code = codeOnly(SOURCE);
+    expect(code).not.toContain("getSupabaseAdmin");
+    expect(code).not.toContain("coupang_seller_profiles");
+    expect(code).not.toContain('from("seller_settings")');
   });
 
   it("profile id 를 받지 않는다 — 판매자 정보는 프로필에 속하지 않는다", () => {

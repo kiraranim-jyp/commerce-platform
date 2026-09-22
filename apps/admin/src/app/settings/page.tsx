@@ -611,6 +611,11 @@ function SellerProfileEditor({
   // null이 아니면 그 프로필을 고치는 중이라는 뜻이고, 폼은 그대로 재사용하되
   // 저장 버튼이 POST(생성) 대신 PATCH(수정)를 부른다.
   const [editingId, setEditingId] = useState<string | null>(null);
+  /* PIVOT-03 0-4+2-C — 판매자 정보 저장의 결과를 «이 탭에서» 말한다.
+     🔴 옆의 handleSave 는 실패해도 아무 말을 하지 않는다(그건 별도 문제다).
+     이번 작업의 취지가 「저장했다고 보이는데 안 저장됨」을 없애는 것이라,
+     적어도 새로 만드는 경로에서는 같은 구멍을 다시 파지 않는다. */
+  const [sellerSaveMessage, setSellerSaveMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [name, setName] = useState("");
   const [deliveryCompanyCode, setDeliveryCompanyCode] = useState("");
   // N-3.6(개정 Part A) — Naver는 출고 택배사 조회/enum API가 없다(공식 스펙 확인,
@@ -697,14 +702,14 @@ function SellerProfileEditor({
     setExchangeDeliveryCharge("");
     setOutboundLeadTimeDays("");
     setDeliveryMethod("구매대행");
-    setManufacturer("");
-    setAsContactNumber("");
-    setQualityGuarantee("");
+    /* 🔴 PIVOT-03 0-4+2-C — 판매자 다섯 칸은 «비우지 않는다». 여기는 「새
+       프로필 만들기」의 초기화이고, 새 배송 프로필을 만든다고 해서 셀러의
+       제조사가 사라질 이유가 없다. 이 줄들이 있던 것이 바로 「프로필을 하나
+       더 만들면 판매자 정보가 빈 채로 생긴다」의 화면 쪽 원인이었다. */
     setDefaultMarginPercent("");
     setDomesticShippingCostKrw("");
     setIncludeShippingInPrice(false);
     setPriceRoundingUnit("10");
-    setDefaultCountryOfOrigin("");
     setTopCommonImageUrl(null);
     setTopCommonImageEnabled(false);
     setBottomCommonImageUrl(null);
@@ -730,15 +735,15 @@ function SellerProfileEditor({
     setExchangeDeliveryCharge(p.exchangeDeliveryCharge != null ? String(p.exchangeDeliveryCharge) : "");
     setOutboundLeadTimeDays(p.outboundLeadTimeDays != null ? String(p.outboundLeadTimeDays) : "");
     setDeliveryMethod(p.deliveryMethod || "구매대행");
-    setManufacturer(p.manufacturer);
-    setAsContactNumber(p.asContactNumber);
-    setQualityGuarantee(p.qualityGuarantee);
-    setKcExemptionText(p.kcExemptionText);
+    /* 🔴 PIVOT-03 0-4+2-C — 판매자 공통 다섯 칸은 «여기서 채우지 않는다».
+       프로필을 바꿔 골라도 판매자 정보는 그대로여야 한다 — 셀러당 하나뿐인
+       값이기 때문이다. 그 다섯은 아래 별도 effect 가 canonical 창구에서
+       한 번 읽는다(manufacturer · asContactNumber · qualityGuarantee ·
+       kcExemptionText · defaultCountryOfOrigin). */
     setDefaultMarginPercent(p.defaultMarginPercent != null ? String(p.defaultMarginPercent) : "");
     setDomesticShippingCostKrw(p.domesticShippingCostKrw != null ? String(p.domesticShippingCostKrw) : "");
     setIncludeShippingInPrice(p.includeShippingInPrice);
     setPriceRoundingUnit(p.priceRoundingUnit != null ? String(p.priceRoundingUnit) : "10");
-    setDefaultCountryOfOrigin(p.defaultCountryOfOrigin);
     setTopCommonImageUrl(p.topCommonImageUrl);
     setTopCommonImageEnabled(p.topCommonImageEnabled);
     setBottomCommonImageUrl(p.bottomCommonImageUrl);
@@ -768,6 +773,33 @@ function SellerProfileEditor({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profiles]);
+
+  /* PIVOT-03 0-4+2-C — 판매자 공통 다섯 칸은 프로필과 «따로» 읽는다.
+     🔴 의존성이 비어 있는 것이 핵심이다. 위 effect 는 profiles 가 바뀔 때마다
+     다시 도는데, 이건 한 번만 돈다 — 프로필을 바꿔 골라도 판매자 정보는
+     그대로여야 한다. 프로필이 0개여도 이 조회는 정상으로 돈다. */
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/settings/seller-settings")
+      .then((res) => res.json())
+      .then((data: { values?: Partial<Record<string, string | null>> }) => {
+        if (cancelled) return;
+        const v = data.values ?? {};
+        // 🔴 canonical 은 null 을 그대로 준다. controlled input 에 null 을
+        //    넣으면 uncontrolled 로 바뀌므로 여기서 빈 문자열로 맞춘다.
+        setManufacturer(v.manufacturer ?? "");
+        setAsContactNumber(v.asContactNumber ?? "");
+        setQualityGuarantee(v.qualityGuarantee ?? "");
+        setKcExemptionText(v.kcExemptionText ?? "");
+        setDefaultCountryOfOrigin(v.defaultCountryOfOrigin ?? "");
+      })
+      .catch(() => {
+        // 조회 실패는 값을 지우지 않는다 — 빈 칸을 보고 저장하면 «지움» 이 된다.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // N-4.08 긴급 P0(CPO 지시, 2026-08-24) — "상단/하단 공통 이미지가 간헐적으로
   // 반영 안 됨" 근본 원인: topCommonImageEnabled/bottomCommonImageEnabled(이
@@ -894,15 +926,19 @@ function SellerProfileEditor({
         exchangeDeliveryCharge: exchangeDeliveryCharge ? Number(exchangeDeliveryCharge) : undefined,
         outboundLeadTimeDays: outboundLeadTimeDays ? Number(outboundLeadTimeDays) : undefined,
         deliveryMethod: deliveryMethod || undefined,
-        manufacturer: manufacturer || undefined,
-        asContactNumber: asContactNumber || undefined,
-        qualityGuarantee: qualityGuarantee || undefined,
-        kcExemptionText: kcExemptionText || undefined,
+        /* 🔴 PIVOT-03 0-4+2-C — 판매자 공통 다섯 칸을 «보내지 않는다».
+           저장 자체를 막은 것이 아니다. 그 다섯은 handleSaveSellerSettings 가
+           canonical 창구로 따로 보낸다. 여기서 같이 보내면 배송값을 고칠
+           때마다 프로필 표에도 한 벌이 남아 두 곳이 다시 갈라진다.
+
+           PATCH·POST 가 같은 body 를 쓰므로 «새 프로필 생성» 경로도 함께
+           닫힌다 — 프로필을 하나 더 만들어도 판매자 정보가 복제되지 않는다.
+           toRowFields 는 손대지 않았다. 키가 안 오면 그 칸을 건드리지 않는
+           기존 동작(`!== undefined`)이 그대로 일을 한다. */
         defaultMarginPercent: defaultMarginPercent ? Number(defaultMarginPercent) : undefined,
         domesticShippingCostKrw: domesticShippingCostKrw ? Number(domesticShippingCostKrw) : undefined,
         includeShippingInPrice,
         priceRoundingUnit: priceRoundingUnit ? Number(priceRoundingUnit) : undefined,
-        defaultCountryOfOrigin: defaultCountryOfOrigin || undefined,
         topCommonImageUrl,
         topCommonImageEnabled,
         bottomCommonImageUrl,
@@ -940,6 +976,54 @@ function SellerProfileEditor({
     }
   }
 
+  /**
+   * 판매자 공통 설정 저장 — PIVOT-03 0-4+2-C.
+   *
+   * 🔴 handleSave 와 «다른 함수» 다. 저 함수는 배송 프로필 하나를 고쳐 쓰고
+   * (PATCH /profiles/[id] 또는 POST /profiles), 이 함수는 프로필을 아예 모른다.
+   * 프로필이 하나도 없어도 저장된다 — 판매자 정보는 프로필에 속하지 않는다.
+   *
+   * 저장 뒤 화면을 «응답으로» 되맞춘다. 자기가 보낸 값을 그대로 믿지 않는다 —
+   * 빈 칸으로 보낸 것은 null 이 되어 돌아오고, 그게 실제로 저장된 모습이다.
+   */
+  async function handleSaveSellerSettings() {
+    setSaving(true);
+    setSellerSaveMessage(null);
+    try {
+      const res = await fetch("/api/settings/seller-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        // 🔴 다섯 칸을 «전부» 보낸다. 화면에서 비운 칸은 빈 문자열로 가고
+        //    그것이 「지움」이다 — 키를 빼면 지울 수 없게 된다.
+        body: JSON.stringify({
+          manufacturer,
+          asContactNumber,
+          qualityGuarantee,
+          kcExemptionText,
+          defaultCountryOfOrigin,
+        }),
+      });
+      const data = (await res.json()) as {
+        ok: boolean;
+        error?: string;
+        values?: Partial<Record<string, string | null>>;
+      };
+      if (!data.ok) {
+        setSellerSaveMessage({ ok: false, text: data.error ?? "판매자 정보를 저장하지 못했습니다." });
+        return;
+      }
+      const v = data.values ?? {};
+      setManufacturer(v.manufacturer ?? "");
+      setAsContactNumber(v.asContactNumber ?? "");
+      setQualityGuarantee(v.qualityGuarantee ?? "");
+      setKcExemptionText(v.kcExemptionText ?? "");
+      setDefaultCountryOfOrigin(v.defaultCountryOfOrigin ?? "");
+      setSellerSaveMessage({ ok: true, text: "판매자 정보가 저장되었습니다." });
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function handleSetDefault(id: string) {
     await fetch(`/api/settings/coupang/profiles/${id}`, {
       method: "PATCH",
@@ -967,7 +1051,12 @@ function SellerProfileEditor({
           아니므로 실제 등록/미리보기에는 전혀 반영되지 않아 "저장은 되는데
           반영이 안 된다"는 정확히 이 증상으로 나타난다. 4개 탭 전부에서 지금
           편집 중인 프로필이 기본 프로필인지 항상 보이게 해서 재발을 막는다. */}
-      {profiles.length > 1 && editingProfile && (
+      {/* 🔴 PIVOT-03 0-4+2-C — 판매자 정보 탭에서는 «띄우지 않는다».
+          이 배너는 「기본 아닌 프로필에 저장하면 등록에 반영되지 않는다」고
+          말하는데, 판매자 정보는 이제 프로필이 아니라 canonical 로 저장되므로
+          어느 프로필을 보고 있든 등록에 반영된다 — 그 탭에서는 거짓말이다.
+          배송·가격·상세페이지에는 여전히 참이라 지우지 않고 조건만 건다. */}
+      {activeTab !== "seller" && profiles.length > 1 && editingProfile && (
         <p className="mt-3 rounded-md bg-background px-3 py-2 text-xs text-text-secondary">
           지금 편집 중: <span className="font-medium text-text-primary">{editingProfile.name}</span>
           {editingProfile.isDefault ? (
@@ -1061,10 +1150,21 @@ function SellerProfileEditor({
             onKcExemptionTextChange={setKcExemptionText}
             defaultCountryOfOrigin={defaultCountryOfOrigin}
             onDefaultCountryOfOriginChange={setDefaultCountryOfOrigin}
-            onSave={handleSave}
+            /* 🔴 PIVOT-03 0-4+2-C — 네 탭이 공유하던 handleSave 에서 떨어져
+               나왔다. 문구도 고정이다 — 「프로필 저장」/「수정 저장」은 이 탭에
+               해당하지 않는 말이었다(판매자 정보는 프로필에 속하지 않는다). */
+            onSave={handleSaveSellerSettings}
             saving={saving}
-            saveButtonLabel={saveButtonLabel}
+            saveButtonLabel={saving ? "저장 중…" : "판매자 정보 저장"}
           />
+          {sellerSaveMessage && (
+            <p
+              className={`mt-2 text-xs ${sellerSaveMessage.ok ? "text-text-secondary" : "text-danger"}`}
+              role="status"
+            >
+              {sellerSaveMessage.text}
+            </p>
+          )}
         </CollapsibleSection>
       </div>
 
