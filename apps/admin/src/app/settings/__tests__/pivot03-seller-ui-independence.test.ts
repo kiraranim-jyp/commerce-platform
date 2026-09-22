@@ -207,24 +207,57 @@ describe("⑤ STOP① 배너 — 지우지 않고 자리를 가렸다", () => {
 });
 
 describe("⑥ 이번에 넘지 않은 선", () => {
-  it("🔴 060 dual-write 가 그대로 살아 있다 — 배송 프로필 편집 경로", () => {
-    // C 배포 중에 기존 편집기의 레거시 경로가 갑자기 끊기면 안 된다. D 의 일이다.
-    expect(LIB).toContain("save_seller_settings_dual");
+  it("🔴 dual-write 가 D 에서 «사라졌다» — 코드 호출 0건", () => {
+    /* C 시점에는 이 검사가 「060 이 그대로 살아 있다」였다. C 배포 중에 기존
+       편집기의 레거시 경로가 갑자기 끊기면 안 됐기 때문이다. D 에서 그 경로를
+       닫았으므로 검사의 방향이 뒤집힌다.
+
+       🔴 주석은 걷어내고 본다. 이 파일들에는 「여기 있던 dual-write 가
+       사라졌다」는 설명이 남아 있고, 그건 지워야 할 글이 아니다 — 사라져야
+       하는 것은 실행되는 코드다. 이 구분을 안 하면 주석 하나 때문에 검사가
+       «거짓으로 통과»한다(실제로 그랬다). */
+    expect(codeOnly(LIB)).not.toContain("save_seller_settings_dual");
+    expect(codeOnly(LIB)).not.toContain("saveSellerSettingsDual");
+    const route = readFileSync(join(__dirname, "../../api/settings/coupang/profiles/[id]/route.ts"), "utf8");
+    expect(codeOnly(route)).not.toContain("saveSellerSettingsDual");
   });
 
-  it("🔴 새 writer 는 레거시 표에 쓰지 않는다", () => {
-    /* 🔴 주석을 걷어내고 본다. 바로 아래 saveSellerSettingsDual 의 JSDoc 이
-       이 함수 «뒤» 에 붙어 있고 거기에 coupang_seller_profiles 가 나온다 —
-       남의 설명글을 이 함수의 코드로 오해하면 안 된다. 사라져야 하는 것은
-       실행되는 코드다. */
-    const fn = codeOnly(
-      LIB.slice(
-        LIB.indexOf("export async function saveSellerSettings("),
-        LIB.indexOf("export async function saveSellerSettingsDual("),
-      ),
-    );
+  it("🔴 그래도 DB 함수는 아직 있다 — DROP 은 별도 단계다", () => {
+    // 되돌릴 수 없는 일을 코드 제거와 같은 배포에 묶지 않는다. E 실측 뒤 F.
+    expect(LIB).toContain("DROP 은 별도 migration");
+  });
+
+  it("🔴 canonical writer 는 레거시 표에 쓰지 않는다", () => {
+    // D 이후 이것이 다섯 칸의 «유일한» writer 다.
+    const fn = codeOnly(LIB.slice(LIB.indexOf("export async function saveSellerSettings(")));
     expect(fn).not.toContain("coupang_seller_profiles");
     expect(fn).not.toContain(".rpc(");
+    expect(fn).toContain('from("seller_settings")');
+  });
+
+  it("🔴 배송 프로필 «계약» 이 다섯 칸을 받지 않는다 — D-2", () => {
+    /* C 는 「화면이 안 보낸다」였다. 그것만으로는 누군가 body 에 다시 넣는
+       순간 되살아난다. D-2 에서 입력 타입과 컬럼 변환을 함께 없애 «넣을 수
+       없게» 만들었다.
+
+       🔴 SellerProfileRow · toProfile 은 그대로 둔다 — 임시 호환층
+       (loadFromLegacyProfile)이 아직 그 컬럼을 «읽는다». 읽기를 먼저 끊고,
+       그다음에 컬럼을 없앤다. */
+    const lib = readFileSync(join(__dirname, "../../api/coupang/_lib/seller-profile.ts"), "utf8");
+    const input = lib.slice(lib.indexOf("export interface SellerProfileInput"), lib.indexOf("function toRowFields"));
+    for (const key of ["manufacturer?", "asContactNumber?", "qualityGuarantee?", "kcExemptionText?", "defaultCountryOfOrigin?"]) {
+      expect(codeOnly(input)).not.toContain(key);
+    }
+
+    const rowFields = codeOnly(lib.slice(lib.indexOf("function toRowFields"), lib.indexOf("export async function createSellerProfile")));
+    for (const column of ["row.manufacturer", "row.as_contact_number", "row.quality_guarantee", "row.kc_exemption_text", "row.default_country_of_origin"]) {
+      expect(rowFields).not.toContain(column);
+    }
+
+    // 배송·가격·상세 스물세 칸은 그대로다.
+    for (const column of ["row.delivery_company_code", "row.return_center_code", "row.delivery_charge", "row.price_rounding_unit", "row.default_detail_blocks"]) {
+      expect(rowFields).toContain(column);
+    }
   });
 
   it("🔴 R6 호환층이 그대로다 — 제거는 별도 단계다", () => {

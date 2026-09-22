@@ -5,7 +5,6 @@ import {
   updateSellerProfile,
   type SellerProfileInput,
 } from "../../../../coupang/_lib/seller-profile";
-import { pickSellerSettingFields, saveSellerSettingsDual } from "@/lib/seller-settings";
 
 /** Sprint A-8(작업2/4) — isDefault:true는 기존처럼 "기본으로 설정" 전용 경로로
  * 두고, 그 외 필드가 하나라도 오면 updateSellerProfile로 보낸다(출고지/반품지
@@ -26,33 +25,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
   const { isDefault: _isDefault, ...fields } = body;
 
-  /* ══ TTAEJYO-PIVOT-03 ⑤(CEO 승인, 2026-09-22) ══════════════════════════
+  /* ══ TTAEJYO-PIVOT-03 D(CEO 승인, 2026-09-23) ══════════════════════════
 
-     059 로 판매자 공통 설정을 seller_settings 로 옮겼고 reader 는 그쪽만 본다.
-     그런데 이 writer 는 아직 coupang_seller_profiles 에만 썼다 — 셀러가 저장하면
-     성공했다고 보이는데 등록에는 «안 나간다»(silent divergence). 그 틈을 닫는다.
+     여기 있던 dual-write 호출이 사라졌다. 이 라우트는 이제 «배송 프로필» 만
+     다룬다 — 판매자 공통 다섯 칸(제조사·A/S·품질보증·KC문구·원산지 기본)은
+     PUT /api/settings/seller-settings 가 seller_settings 에 직접 쓴다.
 
-     🔴 body 를 «건드리지 않는다». 다섯 칸을 빼서 보내면 기존 PATCH 의 partial
-     update semantics 가 달라진다(toRowFields 는 「키가 왔는가」로 판정한다).
-     그래서 아래 updateSellerProfile 호출은 지금까지와 «완전히 같은 fields» 를
-     받는다 — 배송·가격·상세페이지 동작이 한 글자도 바뀌지 않는다.
+     ⑤ 에서 RPC 를 넣었던 이유는 그때 두 표에 «함께» 써야 했기 때문이다.
+     이제 쓸 곳이 하나라서 묶을 것이 없다.
 
-     RPC 가 같은 다섯 칸을 한 번 더 쓰는 것은 같은 값이라 무해하다(멱등).
-     얻는 것은 원자성이다 — coupang_seller_profiles.5칸 ↔ seller_settings.5칸 이
-     한 트랜잭션 안에서 «함께» 성공하거나 «함께» 실패한다(060).
+     🔴 D-2 로 SellerProfileInput 에서도 다섯 칸을 뺐다. 그래서 fields 에
+     그 칸들이 들어올 «수» 가 없다 — 「UI 가 안 보내서 우연히 안 써진다」가
+     아니라 「계약이 받지 않는다」가 됐다.
 
-     🔴 RPC 를 «먼저» 부른다. 실패하면 여기서 끝내고 기존 저장도 하지 않는다 —
-     두 표가 갈라지는 것보다 아무것도 저장되지 않는 편이 낫다.
-
-     temporary dual-write · legacy write removal = Phase ⑨ */
-  const sellerFields = pickSellerSettingFields(fields as Record<string, unknown>);
-  if (Object.keys(sellerFields).length > 0) {
-    const dual = await saveSellerSettingsDual(id, sellerFields);
-    if (!dual.ok) {
-      return NextResponse.json({ ok: false, error: dual.error }, { status: 500 });
-    }
-  }
-
+     남은 것: 060 함수는 DB 에 아직 있다(DROP 은 별도 migration). R6 호환층도
+     그대로다 — 둘 다 E 실측 뒤에 판단한다. */
   const result = await updateSellerProfile(id, fields);
   return NextResponse.json(result);
 }

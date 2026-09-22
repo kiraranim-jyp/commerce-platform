@@ -188,17 +188,16 @@ const COLUMN_OF: Record<string, string> = {
 };
 
 /**
- * 판매자 공통 설정을 canonical 표에«만» 저장한다 — TTAEJYO-PIVOT-03 0-4+2-C.
+ * 판매자 공통 설정을 저장한다 — TTAEJYO-PIVOT-03 0-4+2-C.
  *
- * ── 🔴 saveSellerSettingsDual 과 무엇이 다른가 ───────────────────────────
- * 그쪽은 배송 프로필 편집 화면이 부르고, 프로필 id 를 받아 두 표를 함께 쓴다.
- * 이쪽은 «판매자 정보 탭» 이 부르고 프로필을 아예 모른다 — 판매자 공통 설정은
- * 프로필에 속하지 않기 때문이다. 프로필이 하나도 없어도 저장돼야 한다.
+ * 🔴 PIVOT-03 D 이후 이것이 다섯 칸의 «유일한» writer 다.
  *
- * 그래서 트랜잭션도 RPC 도 필요 없다. 표가 하나뿐이라 묶을 것이 없다.
+ * 프로필 id 를 받지 않는다. 판매자 공통 설정은 배송 프로필에 속하지 않기
+ * 때문이다 — 프로필이 하나도 없어도 저장돼야 한다. 쓸 표가 하나뿐이라
+ * 트랜잭션도 RPC 도 필요 없다(D 에서 사라진 dual-write 가 그것 때문에 있었다).
  *
  * ── 부분 업데이트 ────────────────────────────────────────────────────────
- * 기존 PATCH 와 같은 규칙이다(toRowFields · 060 과 한 벌).
+ * 기존 PATCH 가 쓰던 규칙을 그대로 잇는다.
  *
  *     키 없음  → 건드리지 않는다
  *     ""       → null (지움)
@@ -255,38 +254,16 @@ export async function saveSellerSettings(
   return { ok: true };
 }
 
-/**
- * 판매자 공통 설정을 «두 표에 한꺼번에» 저장한다 — TTAEJYO-PIVOT-03 ⑤.
+/* ── PIVOT-03 D — 여기 있던 saveSellerSettingsDual 이 사라졌다 ─────────────
  *
- *     coupang_seller_profiles.판매자5칸   (레거시. ⑨ 에서 뗀다)
- *     seller_settings.판매자5칸            (canonical reader 가 보는 곳)
+ * ⑤ 에서 만든 임시 다리였다. 그때는 reader 가 이미 seller_settings 를 보는데
+ * writer 는 coupang_seller_profiles 에만 써서, 셀러가 저장하면 성공했다고
+ * 보이는데 등록에는 안 나가는 상태였다. 두 표에 «함께» 써서 그 틈을 닫았고,
+ * supabase-js 에 트랜잭션 API 가 없어 DB 함수(060)를 불렀다.
  *
- * 🔴 두 번의 upsert 로 나누지 않는다. @supabase/supabase-js 에는 둘을 묶는
- * transaction API 가 없어서, 나누면 앞이 성공하고 뒤가 실패할 때 두 표가
- * 갈라진다 — 그게 이 마이그레이션이 없애려는 바로 그 상태다. 그래서 DB 함수
- * 하나를 부른다(060_save_seller_settings_dual.sql). 함수 본문이 한 트랜잭션이라
- * 한쪽이 실패하면 둘 다 롤백된다. 저장소에 이미 같은 rpc 선례가 있다
- * (job-key.ts 의 next_job_key_counter).
+ * 이제 쓸 곳이 하나다(saveSellerSettings → seller_settings). 묶을 것이 없으니
+ * 다리도 필요 없다. 건너간 뒤 치운 것이다.
  *
- * 🔴 값을 손보지 않고 «그대로» 넘긴다. trim 도 여기서 하지 않는다 — 기존 PATCH
- * 경로(toRowFields)가 trim 하지 않기 때문이고, 한쪽만 다듬으면 같은 저장에서
- * 두 표의 값이 달라진다. undefined/""/값 의 판정은 전부 SQL 쪽에 한 벌로 있다.
- */
-export async function saveSellerSettingsDual(
-  profileId: string,
-  fields: Record<string, unknown>,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const supabase = getSupabaseAdmin();
-  if (!supabase) return { ok: false, error: "저장소에 연결하지 못했습니다." };
-  const { error } = await supabase.rpc("save_seller_settings_dual", {
-    p_profile_id: profileId,
-    p_fields: fields,
-  });
-  if (error) {
-    // 🔴 함수가 아직 없을 수도 있다(060 미실행). 조용히 성공으로 넘기지 않는다 —
-    //    저장했다고 보이는데 안 저장되는 상태가 이 작업의 출발점이었다.
-    console.warn("[seller-settings] dual-write 실패:", error.message);
-    return { ok: false, error: "판매자 정보를 저장하지 못했습니다." };
-  }
-  return { ok: true };
-}
+ * 🔴 DB 함수 save_seller_settings_dual 은 «아직 살아 있다». 코드에서 부르는
+ * 곳이 0건이 됐을 뿐이고, DROP 은 별도 migration 이다(E 실측 뒤 F).
+ * 되돌릴 수 없는 일을 코드 제거와 같은 배포에 묶지 않는다. */

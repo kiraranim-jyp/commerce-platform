@@ -190,18 +190,25 @@ export interface SellerProfileInput {
   exchangeDeliveryCharge?: number | null;
   outboundLeadTimeDays?: number | null;
   deliveryMethod?: string;
-  manufacturer?: string;
-  asContactNumber?: string;
-  qualityGuarantee?: string;
+  /* 🔴 PIVOT-03 D — 판매자 «공통» 다섯 칸(제조사 · A/S 연락처 · 품질보증기준 ·
+     KC 문구 · 원산지 기본값)이 여기서 사라졌다.
+
+     그 다섯은 배송 프로필의 속성이 아니다. 셀러당 하나이고 seller_settings 가
+     갖는다. 여기 남겨 두면 프로필을 하나 더 만들 때마다 한 벌씩 복제되고,
+     그게 PIVOT-03 의 출발점이었다 — 「프로필을 추가하면 판매자 정보가 빈 채로
+     생기고, 그 프로필을 기본으로 바꾸면 판매자 정보가 사라진다」.
+
+     C 에서 화면이 안 보내게 했고, D 에서 «계약이 받지 않게» 한다. 앞엣것만
+     하면 누군가 body 에 다시 넣는 순간 되살아난다.
+
+     고치는 곳: PUT /api/settings/seller-settings */
   defaultMarginPercent?: number | null;
   includeShippingInPrice?: boolean;
   priceRoundingUnit?: number;
-  defaultCountryOfOrigin?: string;
   topCommonImageUrl?: string | null;
   topCommonImageEnabled?: boolean;
   bottomCommonImageUrl?: string | null;
   bottomCommonImageEnabled?: boolean;
-  kcExemptionText?: string;
   defaultDetailBlocks?: DetailPageBlock[] | null;
 }
 
@@ -228,18 +235,18 @@ function toRowFields(input: Partial<SellerProfileInput>): Record<string, unknown
   if (input.exchangeDeliveryCharge !== undefined) row.exchange_delivery_charge = input.exchangeDeliveryCharge;
   if (input.outboundLeadTimeDays !== undefined) row.outbound_lead_time_days = input.outboundLeadTimeDays;
   if (input.deliveryMethod !== undefined) row.delivery_method = input.deliveryMethod || null;
-  if (input.manufacturer !== undefined) row.manufacturer = input.manufacturer || null;
-  if (input.asContactNumber !== undefined) row.as_contact_number = input.asContactNumber || null;
-  if (input.qualityGuarantee !== undefined) row.quality_guarantee = input.qualityGuarantee || null;
+  /* 🔴 PIVOT-03 D — 판매자 공통 다섯 칸의 변환이 여기서 사라졌다.
+     컬럼 자체는 표에 «남아 있다»(DROP 은 별도 단계). 다만 이 함수를 통해서는
+     더 이상 값이 들어가지 않는다 — 그 다섯은 seller_settings 가 갖는다.
+     임시 호환층(loadFromLegacyProfile)이 아직 그 컬럼을 «읽으므로» 지우지
+     않는다. 읽기를 먼저 끊고, 그다음에 컬럼을 없앤다. */
   if (input.defaultMarginPercent !== undefined) row.default_margin_percent = input.defaultMarginPercent;
   if (input.includeShippingInPrice !== undefined) row.include_shipping_in_price = input.includeShippingInPrice;
   if (input.priceRoundingUnit !== undefined) row.price_rounding_unit = input.priceRoundingUnit;
-  if (input.defaultCountryOfOrigin !== undefined) row.default_country_of_origin = input.defaultCountryOfOrigin || null;
   if (input.topCommonImageUrl !== undefined) row.top_common_image_url = input.topCommonImageUrl || null;
   if (input.topCommonImageEnabled !== undefined) row.top_common_image_enabled = input.topCommonImageEnabled;
   if (input.bottomCommonImageUrl !== undefined) row.bottom_common_image_url = input.bottomCommonImageUrl || null;
   if (input.bottomCommonImageEnabled !== undefined) row.bottom_common_image_enabled = input.bottomCommonImageEnabled;
-  if (input.kcExemptionText !== undefined) row.kc_exemption_text = input.kcExemptionText || null;
   if (input.defaultDetailBlocks !== undefined) row.default_detail_blocks = input.defaultDetailBlocks;
   return row;
 }
