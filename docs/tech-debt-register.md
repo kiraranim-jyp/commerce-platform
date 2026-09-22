@@ -612,3 +612,59 @@ OCI 프록시가 원인이었음이 사후 확인됐다. 다만 **왜 죽었는�
 
 다음 확인 대상: 같은 응답의 `attr_list`(우리가 한 번도 읽지 않은 세 번째 배열).
 그것도 비어 있으면 DIRECT 로 확정한다. 🔴 카테고리 코드에서 조합해 만들지 않는다.
+
+---
+
+## PIVOT-03 중 발견 — 고치지 않고 기록만 한 것 (CPO 지시, 2026-09-22)
+
+🔴 **PIVOT-03 범위에 섞지 않는다.** 「payload 가 059 전후 동일하다」가
+「현재 payload 가 정상이다」를 뜻하지 않는다는 것을 분리해 두기 위한 기록이다.
+
+### P0? — Seller Setting 값의 «의미» 와 채널 필드의 «의미» 가 어긋난다
+
+```text
+seller_settings.as_contact_number = "해외 구매대행으로 A/S 불가"
+        ↓
+쿠팡 고시정보 「소비자상담 관련 전화번호」
+```
+
+컬럼 이름은 «전화번호» 인데 담긴 값은 «A/S 정책 문구» 다. 그 값이 전화번호를
+요구하는 고시 항목으로 그대로 들어간다.
+
+🔴 이번 분리가 이것을 «드러냈다». 값이 배송 프로필 안에 섞여 있을 때는
+보이지 않던 문제다 — 소유권을 나누니 「이 값이 무엇인가」를 묻게 됐다.
+
+필요한 것: Seller Setting 값에 **semantic type** 을 붙이고, Channel Schema 가
+필드 타입과 대조하는 계층(PIVOT-02 §4 Channel Field Resolver 의 확장).
+
+```text
+as_contact_number
+  현재  string 하나
+  필요  { type: PHONE | POLICY_TEXT, value }
+        → PHONE 을 요구하는 필드에 POLICY_TEXT 를 넣지 않는다
+```
+
+### P1 — 상품 ↔ 카테고리 ↔ 속성 mismatch
+
+```text
+상품    B.C. Embossed tracksuit jacket   (bobochoses)
+카테고리 여아신발 > 여아 구두
+속성    색상=Blue · 신발사이즈=1.5C
+```
+
+트랙수트 재킷인데 신발 카테고리로 잡히고 신발사이즈 속성이 붙었다.
+
+🔴 같은 상품에서 이미 확인된 것: `brand = { value: "", source: "REQUIRED" }`
+(원산지는 `ORIGINAL` 로 읽혔는데 브랜드만 비었다)
+
+→ **브랜드 추출 실패 → 카테고리 오판 → 속성 오판** 이 한 줄로 이어졌을 가능성.
+그리고 이것이 별도로 보고된 유사상품 오매칭(B226AC117 → ICHI Elovera Jacket ·
+Village Kids Grey Logo Tracksuit)과 **같은 뿌리일 수 있다.**
+
+🔴 추측이다. 실제 pipeline 추적으로 확인해야 한다 — 브랜드가 없으면 검색어가
+무엇이 되는지, 카테고리 추천이 무엇을 보고 「여아신발」을 골랐는지.
+
+### P1 — Channel Field Schema semantic validation
+
+위 둘의 공통 해법. 필드명과 값의 «타입·의미» 를 대조하는 계층이 없다.
+지금은 문자열이면 무엇이든 들어간다.
