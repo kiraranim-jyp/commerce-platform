@@ -9,6 +9,7 @@ import { findBrandProfileByName } from "../_lib/brand-profile";
 import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } from "../_lib/shipping-place";
 import { fetchCategoryMeta } from "../_lib/category-meta";
 import { resolveBrand } from "../_lib/brand";
+import { loadSellerSettings } from "@/lib/seller-settings";
 
 /**
  * Sprint A-3(작업6 — Payload Preview) — CPO 요구사항: "등록 버튼을 누르는 순간
@@ -38,6 +39,12 @@ export async function POST(request: Request) {
 
   const vendorUserId = await getVendorUserId();
   const sellerProfile = await getDefaultSellerProfile();
+  /* TTAEJYO-PIVOT-03 — 판매자 «공통» 다섯 값은 배송 프로필이 아니라 여기서 온다.
+     프로필을 하나 더 만들어도 이 값들이 갈라지지 않는다. 🔴 seller_settings 가
+     비어 있는 동안에는 loadSellerSettings 안의 «임시 호환층» 이 기존 프로필을
+     읽는다 — 전환 중에 쿠팡 실등록 경로가 한 번도 끊기지 않게 하려는 것이고,
+     안정화 뒤 제거한다(PIVOT-03 ⑨). */
+  const sellerSettings = await loadSellerSettings();
   if (!sellerProfile) {
     return NextResponse.json({ payload: null, reason: "NO_SELLER_PROFILE" });
   }
@@ -72,15 +79,15 @@ export async function POST(request: Request) {
       deliveryCharge: sellerProfile.deliveryCharge,
       returnDeliveryCharge: sellerProfile.returnDeliveryCharge,
       outboundLeadTimeDays: sellerProfile.outboundLeadTimeDays,
-      manufacturer: sellerProfile.manufacturer,
-      asContactNumber: sellerProfile.asContactNumber,
-      qualityGuarantee: sellerProfile.qualityGuarantee,
-      defaultCountryOfOrigin: sellerProfile.defaultCountryOfOrigin,
+      manufacturer: sellerSettings.manufacturer ?? "",
+      asContactNumber: sellerSettings.asContactNumber ?? "",
+      qualityGuarantee: sellerSettings.qualityGuarantee ?? "",
+      defaultCountryOfOrigin: sellerSettings.defaultCountryOfOrigin ?? "",
       topCommonImageUrl: sellerProfile.topCommonImageUrl,
       topCommonImageEnabled: sellerProfile.topCommonImageEnabled,
       bottomCommonImageUrl: sellerProfile.bottomCommonImageUrl,
       bottomCommonImageEnabled: sellerProfile.bottomCommonImageEnabled,
-      kcExemptionText: sellerProfile.kcExemptionText,
+      kcExemptionText: sellerSettings.kcExemptionText ?? "",
     },
     descriptionTemplate: descriptionTemplate ?? undefined,
     categoryMeta,

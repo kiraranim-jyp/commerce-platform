@@ -24,6 +24,7 @@ import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } 
 import { fetchCategoryMeta } from "../_lib/category-meta";
 import { resolveBrand } from "../_lib/brand";
 import { markSnapshotRegistered } from "../../snapshots/_lib/snapshot";
+import { loadSellerSettings } from "@/lib/seller-settings";
 
 /** 성공/실패 모든 시도를 기록한다 — 관리자 대시보드의 "오늘 등록 N건, 성공/실패"
  * 카운트, 그리고 등록 이력 화면의 Payload/Response 상세가 여기서 나온다
@@ -275,6 +276,12 @@ export async function POST(request: Request) {
 
   const vendorUserId = await getVendorUserId();
   const sellerProfile = await getDefaultSellerProfile();
+  /* TTAEJYO-PIVOT-03 — 판매자 «공통» 다섯 값은 배송 프로필이 아니라 여기서 온다.
+     프로필을 하나 더 만들어도 이 값들이 갈라지지 않는다. 🔴 seller_settings 가
+     비어 있는 동안에는 loadSellerSettings 안의 «임시 호환층» 이 기존 프로필을
+     읽는다 — 전환 중에 쿠팡 실등록 경로가 한 번도 끊기지 않게 하려는 것이고,
+     안정화 뒤 제거한다(PIVOT-03 ⑨). */
+  const sellerSettings = await loadSellerSettings();
   // Sprint A-12(작업3/4) — 제조자/원산지 우선순위: 상품 추출값 > 브랜드
   // 프로필 > SellerProfile 기본값. product.brand.value로 조회해서 없으면
   // null(build-payload.ts가 다음 우선순위로 자동 폴백).
@@ -429,15 +436,15 @@ export async function POST(request: Request) {
       deliveryCharge: sellerProfile.deliveryCharge,
       returnDeliveryCharge: sellerProfile.returnDeliveryCharge,
       outboundLeadTimeDays: sellerProfile.outboundLeadTimeDays,
-      manufacturer: sellerProfile.manufacturer,
-      asContactNumber: sellerProfile.asContactNumber,
-      qualityGuarantee: sellerProfile.qualityGuarantee,
-      defaultCountryOfOrigin: sellerProfile.defaultCountryOfOrigin,
+      manufacturer: sellerSettings.manufacturer ?? "",
+      asContactNumber: sellerSettings.asContactNumber ?? "",
+      qualityGuarantee: sellerSettings.qualityGuarantee ?? "",
+      defaultCountryOfOrigin: sellerSettings.defaultCountryOfOrigin ?? "",
       topCommonImageUrl: sellerProfile.topCommonImageUrl,
       topCommonImageEnabled: sellerProfile.topCommonImageEnabled,
       bottomCommonImageUrl: sellerProfile.bottomCommonImageUrl,
       bottomCommonImageEnabled: sellerProfile.bottomCommonImageEnabled,
-      kcExemptionText: sellerProfile.kcExemptionText,
+      kcExemptionText: sellerSettings.kcExemptionText ?? "",
     },
     descriptionTemplate: descriptionTemplate ?? undefined,
     categoryMeta,
