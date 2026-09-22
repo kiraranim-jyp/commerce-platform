@@ -156,6 +156,56 @@ export async function POST(request: Request) {
 
   const recommendation = recommendLotteOnStandardCategories(body.product, categories, { unrecognizedCount });
 
+  /* ══ LOTTEON-REG-01 3차 계측 — «단건 조회» 가 목록과 다른가 ══════════════
+
+     2차 실측이 판정 B 를 확정했다:
+         pd_itms_list  present 6131 · empty 6131 · nonEmpty 0
+     키도 맞고 파서도 맞다. **목록 응답이 그 배열을 비워서 준다.**
+
+     그런데 이 엔드포인트는 문서상 `filter_1=std_cat_id` 로 «한 건만» 부를 수
+     있다(이 파일 L22 주석의 Request Parameters 원문). 목록 API 가 중첩 배열을
+     비우고 단건 조회에서만 채우는 것은 흔한 설계다 — 그것이 사실인지 «물어본다».
+
+     🔴 새 API 도, 문서에 없는 파라미터도, 우회도 아니다. 같은 host · 같은 path
+     · 같은 job 이고, 바뀌는 것은 filter 하나다. 호출은 «한 번» 뿐이고 추천
+     1위 카테고리에 대해서만 한다(6131건을 단건으로 다시 부르지 않는다).
+
+     결과가 여전히 비어 있으면 205 에는 품목코드가 없다는 뜻이고, 그때는
+     CEO 판정대로 DIRECT 로 확정한다 — 카테고리 코드에서 조합해 만들지 않는다. */
+  const probeTarget = recommendation.candidates[0]?.category.id ?? null;
+  if (probeTarget) {
+    const probe = await runLotteOnRead({
+      host: "onpick",
+      method: "GET",
+      path: LOTTEON_READ_PATHS.onpickCheetah,
+      query: { job: "cheetahStandardCategory", filter_1: probeTarget, skip: "0", limit: "1" },
+      envelope: "RAW",
+      step: `205 표준카테고리 단건 조회(품목코드 확인 · ${probeTarget})`,
+    });
+    if (!probe.ok) {
+      console.log(`[LOTTEON-REG-01] ${JSON.stringify({ step: "205_SINGLE", stdCatId: probeTarget, ok: false })}`);
+    } else {
+      const raw = probe.result.raw as { itemList?: unknown } | null;
+      const list = Array.isArray(raw?.itemList) ? (raw.itemList as Record<string, unknown>[]) : [];
+      const row = (list[0]?.data ?? list[0] ?? null) as Record<string, unknown> | null;
+      const itms = row ? ((row["pd_itms_list"] ?? row["pd_Itms_list"]) as unknown) : undefined;
+      console.log(
+        `[LOTTEON-REG-01] ${JSON.stringify({
+          step: "205_SINGLE",
+          stdCatId: probeTarget,
+          ok: true,
+          returnedRows: list.length,
+          rowKeys: row ? Object.keys(row) : null,
+          itmsIsArray: Array.isArray(itms),
+          itmsLength: Array.isArray(itms) ? itms.length : null,
+          // 🔴 값이 아니라 «키 이름» 만 본다.
+          itmsFirstKeys:
+            Array.isArray(itms) && itms[0] && typeof itms[0] === "object" ? Object.keys(itms[0] as object) : null,
+        })}`,
+      );
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     readOnly: true,
