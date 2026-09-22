@@ -74,6 +74,15 @@ async function probeNoticeItemCode(
       const list = Array.isArray(raw?.itemList) ? (raw.itemList as Record<string, unknown>[]) : [];
       const row = (list[0]?.data ?? list[0] ?? null) as Record<string, unknown> | null;
       const itms = row ? ((row["pd_itms_list"] ?? row["pd_Itms_list"]) as unknown) : undefined;
+      /* 3차 계측(2026-09-22) — 단건 조회까지 pd_itms_list 가 비어 있음을 확인했다
+         (itmsLength 0 · returnedRows 1 · 연결 정상). 그런데 같은 응답에 우리가
+         «한 번도 읽지 않은» 배열이 하나 더 있다 — `attr_list` 다. disp_list(전시
+         카테고리) · pd_itms_list(품목) 옆에 나란히 있는 세 번째 목록이라, 고시
+         품목이 거기 실려 있을 수 있다.
+
+         🔴 새 API 도 새 파라미터도 아니다. 이미 받아 온 응답을 «한 겹 더 볼»
+         뿐이고, 여전히 값이 아니라 구조(길이·키 이름)만 남긴다. */
+      const attrs = row ? (row["attr_list"] as unknown) : undefined;
       payload = {
         ...base,
         ok: true,
@@ -84,6 +93,10 @@ async function probeNoticeItemCode(
         // 🔴 값이 아니라 «키 이름» 만 본다.
         itmsFirstKeys:
           Array.isArray(itms) && itms[0] && typeof itms[0] === "object" ? Object.keys(itms[0] as object) : null,
+        attrsIsArray: Array.isArray(attrs),
+        attrsLength: Array.isArray(attrs) ? attrs.length : null,
+        attrsFirstKeys:
+          Array.isArray(attrs) && attrs[0] && typeof attrs[0] === "object" ? Object.keys(attrs[0] as object) : null,
       };
     }
     console.log(`[LOTTEON-REG-01] ${JSON.stringify(payload)}`);

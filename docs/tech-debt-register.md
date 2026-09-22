@@ -577,3 +577,38 @@ API 가 살아났다고 바로 등록을 보내지 않는다. 순서대로 확�
 
 「UI 는 READY 인데 실제 API 가 20초 timeout」인 상태를 등록 시도로 오인하지
 않기 위해서다.
+
+### 2026-09-22 — LOTTEON connectivity 복구 (OUTBOUND_PROXY=FIXIE)
+
+```text
+09/22 earlier  205 목록 6,131건 success              (OCI)
+09/22 13:42    207 / 205 / delivery-settings 전부 ~20s timeout  (OCI)
+09/22 15:xx    세 채널(스마트스토어·쿠팡·롯데ON) 연결 확인이 «동시에» 실패
+               → 공통 경로가 OCI 프록시 하나뿐임을 확인
+09/22 06:24Z   OUTBOUND_PROXY=FIXIE 전환 후 205 단건 조회 ok:true
+               🟢 20초 timeout 소멸 · returnedRows 1
+```
+
+OCI 프록시가 원인이었음이 사후 확인됐다. 다만 **왜 죽었는지는 여전히 모른다** —
+인스턴스 다운/자원 고갈/네트워크 중 무엇인지 확인하지 않았다. 단정하지 않는다.
+
+🔴 남은 구조 부채: `resolveProxyUrl` 은 «환경변수가 있는가» 만 보고 «살아 있는가»
+는 보지 않는다. OCI 가 죽어도 자동으로 FIXIE 로 넘어가지 않는다. 이번에는 사람이
+`OUTBOUND_PROXY` 한 줄로 고르게 만들어 두었고(되돌리기도 한 줄), 건강 기반 자동
+폴백은 등록 경로의 동작을 바꾸는 별건이라 승인 전까지 하지 않는다.
+
+🔴 Fixie 는 사용량 상한이 있다(N-3.75 가 OCI 로 옮겨간 이유). 트래픽이 늘면 다시
+막힐 수 있으므로 `OUTBOUND_PROXY` 를 지우면 즉시 OCI 로 복귀한다.
+
+### pdItmsCd — 판정 B 최종 확정
+
+```text
+205 목록 6,131건  pd_itms_list  present 6131 · empty 6131 · nonEmpty 0
+205 단건 조회     pd_itms_list  itmsIsArray true · itmsLength 0   ← 연결 정상 상태에서 확인
+```
+
+표준카테고리 API 는 고시 품목코드를 주지 않는다. 키는 있고 항상 빈 배열이다.
+파서는 처음부터 옳았다 — 고칠 것이 없었다.
+
+다음 확인 대상: 같은 응답의 `attr_list`(우리가 한 번도 읽지 않은 세 번째 배열).
+그것도 비어 있으면 DIRECT 로 확정한다. 🔴 카테고리 코드에서 조합해 만들지 않는다.
