@@ -209,7 +209,16 @@ async function probeNoticeItemCode(
       const listRead = await runLotteOnRead({
         method: "POST",
         path: LOTTEON_READ_PATHS.productList,
-        body: { trGrpCd: identity.trGrpCd, trNo: identity.trNo, pageSize: 1, pageNo: 1 },
+        /* 🔴 추측을 뺀다. 1차 시도에서 pageSize/pageNo 를 «지어내서» 넣었고
+           롯데ON 이 RETURN_CODE_INVALID_INPUT 으로 거절했다(745ms — 연결은
+           정상이었다). 문서로 확인된 것은 trGrpCd/trNo 두 개뿐이다
+           (identity.ts 주석: "상품목록 조회(93)는 trGrpCd/trNo를 바디에
+           요구한다 — 문서 원문 필수 O"). 그 둘만 보낸다.
+
+           이것도 거절되면 93 은 접는다 — 파라미터 이름을 계속 바꿔 가며
+           맞혀 보지 않는다(CEO 명시). 그때는 판매자센터의 실제 저장 요청에서
+           pdArtlCd 를 확인하는 순서로 간다. */
+        body: { trGrpCd: identity.trGrpCd, trNo: identity.trNo },
         step: "93 상품목록 조회(고시 항목코드 확인)",
       });
       if (!listRead.ok) {
