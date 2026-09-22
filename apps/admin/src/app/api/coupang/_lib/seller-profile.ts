@@ -9,6 +9,15 @@ import { loadSettingsRow } from "./env";
  * 고를 수 있는 구조다. 지금 당장은 "기본 프로필 하나"만 실제로 쓰이지만, 스키마와
  * API는 처음부터 다중 프로필을 전제로 만든다.
  */
+/* 🔴 PIVOT-03 R6-REMOVE — 판매자 «공통» 다섯 칸(제조사 · A/S · 품질보증 ·
+   KC 문구 · 원산지 기본값)이 이 타입에서도 사라졌다.
+
+   D 에서 «쓰기» 를 막았고(SellerProfileInput · toRowFields), 임시 호환층이
+   그 컬럼을 읽는 동안에는 «읽기» 를 남겨 뒀다. 호환층이 없어졌으므로 이제
+   아무도 읽지 않는다 — 남겨 두면 「여기에도 판매자 정보가 있다」는 모양이
+   타입에 남아, 다음 사람이 그 칸을 다시 채우려 든다.
+
+   표의 컬럼은 아직 있다. 코드가 먼저 0이 되어야 컬럼을 지울 수 있다(G). */
 export interface SellerProfile {
   id: string;
   name: string;
@@ -45,12 +54,6 @@ export interface SellerProfile {
   exchangeDeliveryCharge: number | null;
   outboundLeadTimeDays: number | null;
   deliveryMethod: string;
-  /** Sprint A-8(추가 권장사항) — Sprint A-7 실측에서 30건 중 30건을 막은
-   * 1위 블로커. 원본 사이트가 아니라 판매자(대표님) 본인의 사업자 정보라
-   * SellerProfile에 한 번만 입력하면 된다. */
-  manufacturer: string;
-  asContactNumber: string;
-  qualityGuarantee: string;
   /** Sprint A-11(작업1/2 — CPO 지시: "판매가 = 환율변환가격 × (1+기본마진)")
    * null이면 packages/pricing의 DEFAULT_MARGIN_PERCENT(22%)를 쓴다 — 프로필을
    * 아직 안 만든 판매자도 바로 자동계산이 동작해야 하기 때문이다. */
@@ -61,11 +64,6 @@ export interface SellerProfile {
   /** 최종 판매가를 이 단위로 반올림한다 — 쿠팡의 10원 단위 규칙을 항상
    * 만족시키기 위한 기본값 10, Settings에서 100/1000으로 바꿀 수 있다. */
   priceRoundingUnit: number;
-  /** Sprint A-11(작업4) — 원본 사이트에 원산지 표기가 없는 상품이 많아(구매대행
-   * 특성상) 판매자가 실제로 아는 원산지를 한 번만 입력해두면 상품마다 자동
-   * 적용한다. product.countryOfOrigin(실제 원본에서 추출된 값)이 있으면 그게
-   * 우선이고, 없을 때만 이 기본값을 쓴다(원본 값을 덮어쓰지 않는다). */
-  defaultCountryOfOrigin: string;
   /** Sprint A-11(작업3 — CPO 지시: "상세페이지 공통 이미지") — 브랜드 안내/배송
    * 안내/교환·반품/주의사항/A·S 같이 상품마다 똑같이 붙는 이미지. 실제 업로드된
    * 파일의 공개 URL만 저장한다(파일 자체는 Supabase Storage). enabled가 꺼져
@@ -74,10 +72,6 @@ export interface SellerProfile {
   topCommonImageEnabled: boolean;
   bottomCommonImageUrl: string | null;
   bottomCommonImageEnabled: boolean;
-  /** A-12.3-P0-2(CPO 지시) — 빈 문자열이면 기능이 꺼진 것("KC 항목은 원래처럼
-   * 사용자가 직접 확인해야 함")이다. build-payload.ts의 buildCoupangCompliance
-   * 참고 주석에 이 필드를 켰을 때의 컴플라이언스 책임 소재가 적혀 있다. */
-  kcExemptionText: string;
   /** N-4.08-DetailPage(대표님 지시) — 신규 상품에 적용할 상세페이지 기본 블록
    * 구성(순서+노출여부). null이면 한 번도 설정 안 한 것 — 이때는 코드 상수
    * defaultDetailBlocks()(packages/listing)가 그대로 폴백으로 쓰인다. 이미
@@ -108,18 +102,13 @@ interface SellerProfileRow {
   exchange_delivery_charge: number | null;
   outbound_lead_time_days: number | null;
   delivery_method: string | null;
-  manufacturer: string | null;
-  as_contact_number: string | null;
-  quality_guarantee: string | null;
   default_margin_percent: number | null;
   include_shipping_in_price: boolean | null;
   price_rounding_unit: number | null;
-  default_country_of_origin: string | null;
   top_common_image_url: string | null;
   top_common_image_enabled: boolean | null;
   bottom_common_image_url: string | null;
   bottom_common_image_enabled: boolean | null;
-  kc_exemption_text: string | null;
   default_detail_blocks: DetailPageBlock[] | null;
 }
 
@@ -143,18 +132,13 @@ function toProfile(row: SellerProfileRow): SellerProfile {
     exchangeDeliveryCharge: row.exchange_delivery_charge,
     outboundLeadTimeDays: row.outbound_lead_time_days,
     deliveryMethod: row.delivery_method ?? "",
-    manufacturer: row.manufacturer ?? "",
-    asContactNumber: row.as_contact_number ?? "",
-    qualityGuarantee: row.quality_guarantee ?? "",
     defaultMarginPercent: row.default_margin_percent,
     includeShippingInPrice: row.include_shipping_in_price ?? false,
     priceRoundingUnit: row.price_rounding_unit ?? 10,
-    defaultCountryOfOrigin: row.default_country_of_origin ?? "",
     topCommonImageUrl: row.top_common_image_url,
     topCommonImageEnabled: row.top_common_image_enabled ?? false,
     bottomCommonImageUrl: row.bottom_common_image_url,
     bottomCommonImageEnabled: row.bottom_common_image_enabled ?? false,
-    kcExemptionText: row.kc_exemption_text ?? "",
     defaultDetailBlocks: row.default_detail_blocks ?? null,
   };
 }
@@ -236,10 +220,9 @@ function toRowFields(input: Partial<SellerProfileInput>): Record<string, unknown
   if (input.outboundLeadTimeDays !== undefined) row.outbound_lead_time_days = input.outboundLeadTimeDays;
   if (input.deliveryMethod !== undefined) row.delivery_method = input.deliveryMethod || null;
   /* 🔴 PIVOT-03 D — 판매자 공통 다섯 칸의 변환이 여기서 사라졌다.
-     컬럼 자체는 표에 «남아 있다»(DROP 은 별도 단계). 다만 이 함수를 통해서는
-     더 이상 값이 들어가지 않는다 — 그 다섯은 seller_settings 가 갖는다.
-     임시 호환층(loadFromLegacyProfile)이 아직 그 컬럼을 «읽으므로» 지우지
-     않는다. 읽기를 먼저 끊고, 그다음에 컬럼을 없앤다. */
+     그 다섯은 seller_settings 가 갖는다. 컬럼 자체는 표에 «남아 있고»
+     DROP 은 별도 단계다(G) — 되돌릴 수 없는 일을 코드 제거와 같은 배포에
+     묶지 않는다. */
   if (input.defaultMarginPercent !== undefined) row.default_margin_percent = input.defaultMarginPercent;
   if (input.includeShippingInPrice !== undefined) row.include_shipping_in_price = input.includeShippingInPrice;
   if (input.priceRoundingUnit !== undefined) row.price_rounding_unit = input.priceRoundingUnit;

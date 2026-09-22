@@ -85,17 +85,22 @@ describe("Test 1 — FOUND", () => {
 });
 
 describe("Test 2 — NOT_FOUND (행 없음)", () => {
-  it("호환층이 받는다 — 기존 동작 그대로", async () => {
+  /* 🔴 R6-REMOVE 이전에는 여기서 호환층이 레거시 프로필을 읽었다. 이제 그냥
+     「없다」고 말한다. 그리고 그건 fail-open 이 «아니다» — 조회는 성공했고
+     값이 실제로 없는 것이다. 위의 ERROR 와 구분되기 때문에 그렇게 말할 수 있다. */
+  it("그냥 「없다」고 말한다 — 레거시를 쳐다보지 않는다", async () => {
     const touched = stub({ canonical: { data: null }, legacy: { data: FIVE } });
     const r = await loadSellerSettings();
-    expect(r.manufacturer).toBe("규하맘샵");
-    expect(r.source).toBe("LEGACY_PROFILE");
+    expect(r.source).toBe("NONE");
     expect(r.failed).toBe(false);
-    expect(touched).toEqual(["seller_settings", "coupang_seller_profiles"]);
+    expect(r.manufacturer).toBeNull();
+    expect(touched).toEqual(["seller_settings"]);
   });
 
-  it("레거시도 비었으면 NONE — «ERROR 가 아니다»", async () => {
-    stub({ canonical: { data: null }, legacy: { data: null } });
+  it("🔴 NONE 은 ERROR 가 아니다 — 등록을 막지 않는다", async () => {
+    // 값이 비어서 막으면 멀쩡한 상품이 등록되지 않는다. 그건 채널별
+    // completeness 가 판단할 일이다.
+    stub({ canonical: { data: null } });
     const r = await loadSellerSettings();
     expect(r.source).toBe("NONE");
     expect(r.failed).toBe(false);
@@ -141,12 +146,28 @@ describe("Test 5 — 둘 다 정상이면 canonical 만", () => {
 });
 
 describe("Test 6 — 행은 있는데 다섯 칸이 다 비었다", () => {
-  it("기존 정책대로 호환층으로 내려간다 — completeness 정책을 새로 만들지 않는다", async () => {
+  it("NONE 이다 — 값이 없는 것이지 못 읽은 것이 아니다", async () => {
     const touched = stub({ canonical: { data: EMPTY_ROW }, legacy: { data: FIVE } });
     const r = await loadSellerSettings();
-    expect(r.source).toBe("LEGACY_PROFILE");
+    expect(r.source).toBe("NONE");
     expect(r.failed).toBe(false);
-    expect(touched).toEqual(["seller_settings", "coupang_seller_profiles"]);
+    expect(touched).toEqual(["seller_settings"]);
+  });
+});
+
+describe("R6-REMOVE — 레거시 표를 «어떤 경우에도» 읽지 않는다", () => {
+  it.each([
+    ["값 있음", { data: FIVE }],
+    ["행 없음", { data: null }],
+    ["다섯 칸 빈 행", { data: EMPTY_ROW }],
+    ["조회 실패", { error: { message: "down" } }],
+  ])("%s", async (_label, canonical) => {
+    /* 네 경우 전부다. 하나라도 레거시를 읽으면 G(컬럼 DROP)에서 터진다 —
+       그때는 컬럼이 없어서 조회 자체가 에러가 되고, 그 에러는 ERROR 로
+       올라가 «정상 상품의 등록까지» 막는다. */
+    const touched = stub({ canonical, legacy: { data: FIVE } });
+    await loadSellerSettings();
+    expect(touched).not.toContain("coupang_seller_profiles");
   });
 });
 

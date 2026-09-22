@@ -62,8 +62,11 @@ export const EMPTY_SELLER_SETTINGS: SellerSettings = {
  * 이 둘을 같게 취급하면 DB 장애가 「설정이 비었네」로 둔갑한다. 그러면 등록은
  * 그대로 진행되고, 제조사가 빈 채로 실제 상품이 올라간다. 경고 로그 한 줄만
  * 남고 셀러는 모른다.
+ *
+ * 🔴 PIVOT-03 R6-REMOVE — 여기 있던 "LEGACY_PROFILE" 이 사라졌다. 임시 호환층이
+ * 제거되어 그 출처가 더는 존재하지 않는다. 값은 canonical 한 곳에서만 온다.
  */
-export type SellerSettingsSource = "SELLER_SETTINGS" | "LEGACY_PROFILE" | "NONE" | "ERROR";
+export type SellerSettingsSource = "SELLER_SETTINGS" | "NONE" | "ERROR";
 
 export interface ResolvedSellerSettings extends SellerSettings {
   source: SellerSettingsSource;
@@ -146,35 +149,37 @@ async function loadFromSellerSettings(): Promise<LoadOutcome> {
   }
 }
 
-/**
- * 🔴 **migration compatibility layer.** PIVOT-03 ⑨ 에서 제거한다.
+/* ── PIVOT-03 R6-REMOVE — 여기 있던 loadFromLegacyProfile 이 사라졌다 ────────
  *
- * seller_settings 가 비어 있는 동안에만 기존 배송 프로필의 같은 다섯 칸을 읽는다.
- * 영구 폴백이 아니다.
- */
-async function loadFromLegacyProfile(): Promise<SellerSettings | null> {
-  const supabase = getSupabaseAdmin();
-  if (!supabase) return null;
-  const { data, error } = await supabase
-    .from("coupang_seller_profiles")
-    .select(COLUMNS)
-    .eq("is_default", true)
-    .maybeSingle();
-  if (error) {
-    console.warn("[seller-settings] 레거시 프로필 조회 실패:", error.message);
-    return null;
-  }
-  return data ? fromRow(data as unknown as Row) : null;
-}
+ * 059 부터 마지막까지 살아 있던 «임시 호환층» 이다. canonical 표가 아직 비어
+ * 있을 수 있는 동안, 배송 프로필의 같은 다섯 칸을 대신 읽어서 전환 중에 실등록
+ * 경로가 한 번도 끊기지 않게 했다.
+ *
+ * 이제 뗀다. 근거는 셋이다.
+ *
+ *     A~D    읽기와 쓰기가 전부 canonical 로 옮겨졌다
+ *     F      dual-write DB 함수를 지웠다 — 레거시 값은 그날 이후 얼어붙었다
+ *     R6-FS  조회 «실패» 와 값 «없음» 이 갈렸다
+ *
+ * 🔴 마지막 것이 핵심이다. 이 폴백이 위험했던 이유는 폴백이라서가 아니라,
+ * DB 장애까지 「값이 없네」로 읽고 옛 값을 흘려보냈기 때문이다. 그 경계를
+ * 세워 두지 않은 채 폴백만 없앴다면 장애가 「빈 값으로 등록」이라는 또 다른
+ * fail-open 으로 남았을 것이다.
+ *
+ * 레거시 다섯 «컬럼» 은 아직 표에 있다(G 에서 DROP). 읽는 코드가 먼저 0이 되어야
+ * 컬럼을 지울 수 있다 — 지금이 그 상태다. */
 
 /**
  * 판매자 공통 설정을 읽는다.
  *
- *     seller_settings (workspace → 레거시 NULL)
- *        ↓ 값이 하나도 없으면
- *     coupang_seller_profiles (🔴 임시 호환층)
- *        ↓ 그것도 없으면
- *     전부 null
+ *     seller_settings 를 읽는다
+ *        ├─ 값이 있으면        그 값
+ *        ├─ 정상인데 없으면     전부 null (NONE)
+ *        └─ 🔴 못 읽으면        전부 null + failed (ERROR)
+ *
+ * 🔴 아래 두 줄은 «다른 말» 이다. 셋째 줄에서 호출부는 멈춰야 하고, 둘째
+ * 줄에서는 멈추면 안 된다 — 값이 비어 있는 것은 셀러가 아직 안 넣은 것이고,
+ * 그건 채널별 completeness 가 판단할 일이다.
  *
  * 🔴 값을 «만들지» 않는다. 못 찾으면 못 찾았다고 돌려준다 — 호출부가 그 사실을
  * 셀러에게 말할 수 있어야 한다(제조사 미입력은 쿠팡 등록의 1위 블로커였다).
@@ -195,14 +200,12 @@ export async function loadSellerSettings(): Promise<ResolvedSellerSettings> {
     return { ...primary.values, source: "SELLER_SETTINGS", failed: false };
   }
 
-  /* 여기까지 왔으면 「정상적으로 조회했는데 값이 없다」이다(행이 없거나, 행은
-     있는데 다섯 칸이 다 비었거나). 그때만 임시 호환층이 받는다.
-     🔴 레거시 조회가 실패해도 ERROR 로 올리지 않는다 — canonical 은 이미
-     «정상적으로» 「없다」고 답했다. 레거시는 있으면 좋은 참고값일 뿐이다. */
-  const legacy = await loadFromLegacyProfile();
-  if (legacy && hasAnySellerSetting(legacy)) {
-    return { ...legacy, source: "LEGACY_PROFILE", failed: false };
-  }
+  /* 「정상적으로 조회했는데 값이 없다」 — 행이 없거나, 행은 있는데 다섯 칸이
+     다 비었거나. 예전에는 여기서 레거시 프로필을 대신 읽었다(R6).
+
+     🔴 이제 그냥 「없다」고 말한다. 그리고 그건 fail-open 이 아니다 — 조회는
+     «성공했고» 값이 실제로 없는 것이다. 위의 ERROR 와 구분되기 때문에 이렇게
+     말할 수 있다. */
   return { ...EMPTY_SELLER_SETTINGS, source: "NONE", failed: false };
 }
 

@@ -61,9 +61,9 @@ export async function GET() {
   if (failed) {
     return NextResponse.json({ ok: false, error: SELLER_SETTINGS_UNAVAILABLE_MESSAGE }, { status: 503 });
   }
-  /* source 는 돌려주되 화면에 «띄우지 않는다». 셀러에게는 아무 의미가 없는
-     말이고(어느 표에서 읽었는가), 우리에게는 필요하다 — 여기가 계속
-     LEGACY_PROFILE 이면 임시 호환층을 아직 뗄 수 없다는 뜻이다(⑨ 판단 근거). */
+  /* source 는 돌려주되 화면에 «띄우지 않는다» — 셀러에게는 아무 의미가 없는
+     말이다. 진단용으로 남긴다. R6-REMOVE 이후 값은 SELLER_SETTINGS 아니면
+     NONE 둘뿐이다(ERROR 는 위에서 503 으로 빠진다). */
   return NextResponse.json({ ok: true, values, source });
 }
 
