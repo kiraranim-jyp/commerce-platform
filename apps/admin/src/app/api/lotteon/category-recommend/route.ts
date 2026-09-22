@@ -46,6 +46,15 @@ export async function POST(request: Request) {
   let pages = 0;
   /** LOTTEON-REG-01 계측용 — 205 응답 첫 항목의 구조(키 이름)만 본다. */
   let firstRawEntry: Record<string, unknown> | null = null;
+  /** 2차 계측 — `pd_itms_list` 가 «비어 있는가» vs «안쪽 키가 다른가». */
+  const itmsListStat = {
+    present: 0,
+    empty: 0,
+    nonEmpty: 0,
+    absent: 0,
+    notArray: 0,
+    firstNonEmpty: null as Record<string, unknown> | null,
+  };
 
   for (let page = 0; page < MAX_PAGES; page += 1) {
     const read = await runLotteOnRead({
@@ -73,6 +82,29 @@ export async function POST(request: Request) {
       // LOTTEON-REG-01 계측 — 첫 항목의 «구조» 하나만 들고 있는다(아래 로그용).
       if (firstRawEntry == null && source && typeof source === "object") {
         firstRawEntry = source as Record<string, unknown>;
+      }
+      /* 1차 계측 결과(2026-09-22): `pd_itms_list` 키는 **있는데** 파싱 결과가
+         6131건 전부 0이었다. 같은 readArray 로 읽는 `disp_list` 는 5154건
+         성공했으니 readArray 자체는 정상이다. 그러면 남는 것은 둘뿐이다 —
+         배열이 늘 비어 있거나, 배열 «안쪽» 요소의 키가 `pd_itms_cd` 가 아니거나.
+         그 둘을 가른다. 여전히 «구조» 만 본다. */
+      if (source && typeof source === "object") {
+        const row = source as Record<string, unknown>;
+        const list = row["pd_itms_list"] ?? row["pd_Itms_list"];
+        if (Array.isArray(list)) {
+          itmsListStat.present += 1;
+          if (list.length === 0) itmsListStat.empty += 1;
+          else {
+            itmsListStat.nonEmpty += 1;
+            if (itmsListStat.firstNonEmpty == null && list[0] && typeof list[0] === "object") {
+              itmsListStat.firstNonEmpty = list[0] as Record<string, unknown>;
+            }
+          }
+        } else if (list === undefined) {
+          itmsListStat.absent += 1;
+        } else {
+          itmsListStat.notArray += 1;
+        }
       }
       const parsed = parseLotteOnStandardCategory(source);
       if (parsed) categories.push(parsed);
@@ -106,6 +138,15 @@ export async function POST(request: Request) {
         totalCategories: categories.length,
         sampleKeys: keys,
         itmsLikeKeys: keys.filter((k) => /itms|item|pd_/i.test(k)),
+        // 2차 — 배열이 비어 있는가, 안쪽 키가 다른가.
+        itmsList: {
+          present: itmsListStat.present,
+          empty: itmsListStat.empty,
+          nonEmpty: itmsListStat.nonEmpty,
+          absent: itmsListStat.absent,
+          notArray: itmsListStat.notArray,
+          firstEntryKeys: itmsListStat.firstNonEmpty ? Object.keys(itmsListStat.firstNonEmpty) : null,
+        },
         withNoticeItemCode: categories.filter((c) => c.noticeItemCodes.length > 0).length,
         withDisplayCategory: categories.filter((c) => c.displayCategories.length > 0).length,
         withTaxType: categories.filter((c) => c.taxTypeCode != null).length,
