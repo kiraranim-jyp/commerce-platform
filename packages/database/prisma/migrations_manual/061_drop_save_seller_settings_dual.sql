@@ -1,0 +1,111 @@
+-- ════════════════════════════════════════════════════════════════════════════
+-- TTAEJYO-PIVOT-03 F — dual-write 다리를 치운다
+-- (CEO 승인, 2026-09-23)
+-- ════════════════════════════════════════════════════════════════════════════
+--
+-- ── 왜 지우는가 ────────────────────────────────────────────────────────────
+-- 060 은 «임시 다리» 였다. ⑤ 시점에는 reader 가 이미 seller_settings 를 보는데
+-- writer 는 coupang_seller_profiles 에만 써서, 셀러가 저장하면 성공했다고
+-- 보이는데 등록에는 안 나가는 상태였다. 두 표에 «함께» 써서 그 틈을 닫아야
+-- 했고, @supabase/supabase-js 에 트랜잭션 API 가 없어 DB 함수로 만들었다.
+--
+-- 그 뒤로 읽기와 쓰기를 차례로 옮겼다.
+--
+--     A  canonical GET 을 열었다
+--     B  화면 셋이 canonical 을 읽게 했다
+--     C  쓰기와 폼 상태를 배송 프로필에서 떼어 냈다(PUT)
+--     D  레거시 writer 를 «계약 수준» 에서 닫았다
+--        (SellerProfileInput · toRowFields 에서 다섯 칸 제거)
+--     E  READ/WRITE 전수 검증 — 레거시 write 경로 0건 확인
+--
+-- 이제 쓸 곳이 하나라서 묶을 것이 없다. 건너간 뒤 다리를 치우는 것이다.
+--
+-- ── 실행 전 확인한 것(2026-09-23) ──────────────────────────────────────────
+--   rpc("save_seller_settings_dual") 실행 코드      0건
+--   saveSellerSettingsDual 헬퍼                     삭제됨(D)
+--   pg_depend · 트리거 · 다른 함수 · rule/view      전부 0건
+--   함수는 정확히 1개, signature 확인 후 그대로 사용(추측 아님)
+--
+-- ── 🔴 이 migration 이 하지 «않는» 것 ──────────────────────────────────────
+-- 컬럼을 지우지 않는다. 데이터를 건드리지 않는다. R6 호환층
+-- (loadFromLegacyProfile)이 아직 coupang_seller_profiles 의 다섯 칸을 «읽기»
+-- 때문이다. 읽기를 먼저 끊고, 그다음에 컬럼을 없앤다(G).
+--
+--     F  이 파일 — 함수만
+--     ↓  R6 Fail-safe (조회 실패와 값 없음을 가른다)
+--     ↓  R6 제거
+--     G  레거시 5개 컬럼 DROP — 🔴 되돌릴 수 없다
+--
+-- 실행: CEO 승인하에 CTO 가 실행한다(F STEP 8).
+
+DROP FUNCTION public.save_seller_settings_dual(uuid, jsonb);
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- 되돌리려면 — 아래를 실행한다
+-- ════════════════════════════════════════════════════════════════════════════
+--
+-- 🔴 DROP FUNCTION 은 정의를 지운다. 060 파일에 원문이 남아 있지만, 그 파일이
+-- 지워지거나 옮겨질 수 있으므로 이 자리에 «복구에 필요한 전부» 를 둔다.
+-- 되돌릴 일이 생긴다면 그건 레거시 dual-write 가 다시 필요해졌다는 뜻이고,
+-- 그때는 왜 필요해졌는지부터 적어야 한다 — 그냥 복구하면 같은 자리로 돌아온다.
+--
+-- CREATE OR REPLACE FUNCTION save_seller_settings_dual(
+--   p_profile_id uuid,
+--   p_fields jsonb
+-- )
+-- RETURNS void
+-- LANGUAGE plpgsql
+-- SECURITY INVOKER
+-- AS $$
+-- DECLARE
+--   has_manufacturer   boolean := p_fields ? 'manufacturer';
+--   has_as_contact     boolean := p_fields ? 'asContactNumber';
+--   has_quality        boolean := p_fields ? 'qualityGuarantee';
+--   has_kc             boolean := p_fields ? 'kcExemptionText';
+--   has_origin         boolean := p_fields ? 'defaultCountryOfOrigin';
+--   v_manufacturer text := NULLIF(p_fields->>'manufacturer', '');
+--   v_as_contact   text := NULLIF(p_fields->>'asContactNumber', '');
+--   v_quality      text := NULLIF(p_fields->>'qualityGuarantee', '');
+--   v_kc           text := NULLIF(p_fields->>'kcExemptionText', '');
+--   v_origin       text := NULLIF(p_fields->>'defaultCountryOfOrigin', '');
+-- BEGIN
+--   IF NOT (has_manufacturer OR has_as_contact OR has_quality OR has_kc OR has_origin) THEN
+--     RETURN;
+--   END IF;
+--
+--   UPDATE coupang_seller_profiles
+--   SET
+--     manufacturer              = CASE WHEN has_manufacturer THEN v_manufacturer ELSE manufacturer END,
+--     as_contact_number         = CASE WHEN has_as_contact   THEN v_as_contact   ELSE as_contact_number END,
+--     quality_guarantee         = CASE WHEN has_quality      THEN v_quality      ELSE quality_guarantee END,
+--     kc_exemption_text         = CASE WHEN has_kc           THEN v_kc           ELSE kc_exemption_text END,
+--     default_country_of_origin = CASE WHEN has_origin       THEN v_origin       ELSE default_country_of_origin END,
+--     updated_at                = now()
+--   WHERE id = p_profile_id;
+--
+--   IF NOT FOUND THEN
+--     RAISE EXCEPTION '판매자 프로필을 찾지 못했습니다: %', p_profile_id;
+--   END IF;
+--
+--   INSERT INTO seller_settings (
+--     workspace_id, scope_key,
+--     manufacturer, as_contact_number, quality_guarantee, kc_exemption_text, default_country_of_origin
+--   )
+--   VALUES (
+--     NULL, 'default',
+--     CASE WHEN has_manufacturer THEN v_manufacturer ELSE NULL END,
+--     CASE WHEN has_as_contact   THEN v_as_contact   ELSE NULL END,
+--     CASE WHEN has_quality      THEN v_quality      ELSE NULL END,
+--     CASE WHEN has_kc           THEN v_kc           ELSE NULL END,
+--     CASE WHEN has_origin       THEN v_origin       ELSE NULL END
+--   )
+--   ON CONFLICT (scope_key) WHERE workspace_id IS NULL
+--   DO UPDATE SET
+--     manufacturer              = CASE WHEN has_manufacturer THEN EXCLUDED.manufacturer              ELSE seller_settings.manufacturer END,
+--     as_contact_number         = CASE WHEN has_as_contact   THEN EXCLUDED.as_contact_number         ELSE seller_settings.as_contact_number END,
+--     quality_guarantee         = CASE WHEN has_quality      THEN EXCLUDED.quality_guarantee         ELSE seller_settings.quality_guarantee END,
+--     kc_exemption_text         = CASE WHEN has_kc           THEN EXCLUDED.kc_exemption_text         ELSE seller_settings.kc_exemption_text END,
+--     default_country_of_origin = CASE WHEN has_origin       THEN EXCLUDED.default_country_of_origin ELSE seller_settings.default_country_of_origin END,
+--     updated_at                = now();
+-- END;
+-- $$;
