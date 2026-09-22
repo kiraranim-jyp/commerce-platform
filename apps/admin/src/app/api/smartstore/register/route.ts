@@ -256,6 +256,22 @@ export async function POST(request: Request) {
     brand: product.brand.value || null,
     accessToken,
   });
+  /* 🔴 PIVOT-03 R6-FS — 아래 일반 분기보다 «앞» 에 둔다. 저쪽은 step 을
+     AUTHENTICATION 으로, retryable 을 false 로 박아 두는데 이건 인증 문제도
+     아니고 다시 시도하면 될 일이다. 같은 자리에 흘려보내면 셀러가 네이버
+     계정을 의심하게 된다 — 원인이 우리 쪽인데. */
+  if (context.status === "SELLER_SETTINGS_UNAVAILABLE") {
+    logStep("판매자 정보 확인", "failed", context.message);
+    const result = withMeta({
+      status: "FAILED",
+      platform: "smartstore",
+      mode: "LIVE",
+      retryable: true,
+      error: { step: "VALIDATION", message: context.message, retryable: true },
+    });
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+    return NextResponse.json(result);
+  }
   if (context.status !== "OK") {
     logStep("컨텍스트 조회", "failed", context.message);
     const result = withMeta({

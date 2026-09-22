@@ -142,6 +142,30 @@ export async function POST(request: Request) {
     roundingUnit: body.roundingUnit,
   });
 
+  /* 🔴 PIVOT-03 R6-FS — 검증보다 «앞» 이다. 아래 validateLotteOnPayload 는
+     「값이 있는가」를 보는데, 지금은 값이 있는지 «없는지도 모르는» 상태다.
+     그 상태를 「부족합니다」로 말하면 셀러가 설정을 고치러 가지만 고칠 것이
+     없다 — 원인은 우리 쪽 조회 실패다. */
+  if (context.sellerSettingsError) {
+    const result = finish({
+      status: "FAILED",
+      externalProductId: null,
+      /* payload 를 만들지 «않는다». 지금 만들면 판매자 정보가 빈 칸으로 들어간
+         payload 가 기록에 남고, 나중에 보면 「이 값으로 시도했다」로 읽힌다 —
+         실제로는 값을 몰랐던 것이다. */
+      payload: undefined,
+      message: context.sellerSettingsError,
+      errorCode: "VALIDATION",
+    });
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+    return NextResponse.json({
+      ok: false,
+      result,
+      identityError: context.identityError,
+      sellerSettingsError: context.sellerSettingsError,
+    });
+  }
+
   // 마지막 방어선 — Preview와 같은 검증 함수다. 화면이 이미 막아주는 게 정상
   // 경로지만, 오래된 클라이언트 상태로 요청이 와도 잘못된 등록이 나가지 않게 한다.
   const validation = validateLotteOnPayload(context.input);

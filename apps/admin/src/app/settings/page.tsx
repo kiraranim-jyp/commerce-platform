@@ -782,8 +782,12 @@ function SellerProfileEditor({
     let cancelled = false;
     fetch("/api/settings/seller-settings")
       .then((res) => res.json())
-      .then((data: { values?: Partial<Record<string, string | null>> }) => {
+      .then((data: { ok?: boolean; values?: Partial<Record<string, string | null>> }) => {
         if (cancelled) return;
+        /* 🔴 PIVOT-03 R6-FS — 「읽지 못했다」면 칸을 «건드리지 않는다».
+           여기서 빈 문자열을 넣으면 화면이 「설정이 비었다」로 보이고, 셀러가
+           그대로 저장하면 멀쩡한 값이 지워진다. 조회 실패는 값이 아니다. */
+        if (!data.ok) return;
         const v = data.values ?? {};
         // 🔴 canonical 은 null 을 그대로 준다. controlled input 에 null 을
         //    넣으면 uncontrolled 로 바뀌므로 여기서 빈 문자열로 맞춘다.

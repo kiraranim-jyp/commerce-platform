@@ -48,6 +48,12 @@ export async function POST(request: Request) {
   if (!sellerProfile) {
     return NextResponse.json({ payload: null, reason: "NO_SELLER_PROFILE" });
   }
+  /* 🔴 PIVOT-03 R6-FS — 기존 reason 패턴을 그대로 쓴다(새 오류 계층 없음).
+     미리보기는 등록이 아니지만, 못 읽은 값을 빈 칸으로 그리면 셀러가 그것을
+     「설정이 비었다」로 읽고 실제로 비어 있다고 믿는다. */
+  if (sellerSettings.failed) {
+    return NextResponse.json({ payload: null, reason: "SELLER_SETTINGS_UNAVAILABLE" });
+  }
 
   const descriptionTemplate = await getDefaultDescriptionTemplate();
   const brandProfile = await findBrandProfileByName(product.brand.value);

@@ -24,7 +24,11 @@ import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } 
 import { fetchCategoryMeta } from "../_lib/category-meta";
 import { resolveBrand } from "../_lib/brand";
 import { markSnapshotRegistered } from "../../snapshots/_lib/snapshot";
-import { loadSellerSettings } from "@/lib/seller-settings";
+import {
+  SELLER_SETTINGS_UNAVAILABLE_MESSAGE,
+  SELLER_SETTINGS_UNAVAILABLE_RESOLUTION,
+  loadSellerSettings,
+} from "@/lib/seller-settings";
 
 /** 성공/실패 모든 시도를 기록한다 — 관리자 대시보드의 "오늘 등록 N건, 성공/실패"
  * 카운트, 그리고 등록 이력 화면의 Payload/Response 상세가 여기서 나온다
@@ -282,6 +286,28 @@ export async function POST(request: Request) {
      읽는다 — 전환 중에 쿠팡 실등록 경로가 한 번도 끊기지 않게 하려는 것이고,
      안정화 뒤 제거한다(PIVOT-03 ⑨). */
   const sellerSettings = await loadSellerSettings();
+  /* 🔴 PIVOT-03 R6-FS — 「읽지 못했다」와 「값이 없다」는 다르다.
+     값이 비어 있다고 막지 않는다(그건 채널별 completeness 정책이고 다른 문제다).
+     조회 «자체» 가 실패했을 때만 멈춘다 — 그 상태로 진행하면 제조사가 빈 채로
+     실제 상품이 올라가고, 경고 로그 한 줄만 남는다. */
+  if (sellerSettings.failed) {
+    logStep("판매자 정보 확인", "failed", SELLER_SETTINGS_UNAVAILABLE_MESSAGE);
+    const result: ListingResult = withMeta({
+      status: "FAILED",
+      platform: "coupang",
+      mode: "LIVE",
+      retryable: true,
+      error: {
+        step: "VALIDATION",
+        code: "CP009",
+        message: SELLER_SETTINGS_UNAVAILABLE_MESSAGE,
+        retryable: true,
+        resolution: SELLER_SETTINGS_UNAVAILABLE_RESOLUTION,
+      },
+    });
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+    return NextResponse.json(result);
+  }
   // Sprint A-12(작업3/4) — 제조자/원산지 우선순위: 상품 추출값 > 브랜드
   // 프로필 > SellerProfile 기본값. product.brand.value로 조회해서 없으면
   // null(build-payload.ts가 다음 우선순위로 자동 폴백).

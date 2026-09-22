@@ -53,11 +53,35 @@ export const EMPTY_SELLER_SETTINGS: SellerSettings = {
 };
 
 /** 어디서 온 값인가. 전환이 끝났는지 로그/진단으로 확인하기 위한 것이다. */
-export type SellerSettingsSource = "SELLER_SETTINGS" | "LEGACY_PROFILE" | "NONE";
+/**
+ * 🔴 NONE 과 ERROR 는 «다른 말» 이다.
+ *
+ *     NONE    정상적으로 조회했는데 판매자가 아직 아무것도 안 넣었다
+ *     ERROR   조회 «자체» 가 실패했다 — 값이 있는지 없는지 알 수 없다
+ *
+ * 이 둘을 같게 취급하면 DB 장애가 「설정이 비었네」로 둔갑한다. 그러면 등록은
+ * 그대로 진행되고, 제조사가 빈 채로 실제 상품이 올라간다. 경고 로그 한 줄만
+ * 남고 셀러는 모른다.
+ */
+export type SellerSettingsSource = "SELLER_SETTINGS" | "LEGACY_PROFILE" | "NONE" | "ERROR";
 
 export interface ResolvedSellerSettings extends SellerSettings {
   source: SellerSettingsSource;
+  /**
+   * 🔴 「읽지 못했다」는 뜻이다. 「값이 없다」가 아니다.
+   *
+   * true 면 다섯 칸은 전부 null 이지만 그건 «모른다» 는 뜻이지 «비었다» 는
+   * 뜻이 아니다. 등록 경로는 이 값을 보고 «멈춰야» 한다 — 값이 비었다고
+   * 멈추는 것이 아니다(그건 채널별 completeness 정책이고 다른 문제다).
+   */
+  failed: boolean;
 }
+
+/** loadFromSellerSettings 의 내부 결과. 조회 실패와 행 없음을 가른다. */
+type LoadOutcome =
+  | { status: "FOUND"; values: SellerSettings }
+  | { status: "NOT_FOUND" }
+  | { status: "ERROR"; reason: string };
 
 const COLUMNS =
   "manufacturer, as_contact_number, quality_guarantee, kc_exemption_text, default_country_of_origin";
@@ -89,24 +113,37 @@ export function hasAnySellerSetting(values: SellerSettings): boolean {
   return Object.values(values).some((value) => typeof value === "string" && value.trim().length > 0);
 }
 
-async function loadFromSellerSettings(): Promise<SellerSettings | null> {
+async function loadFromSellerSettings(): Promise<LoadOutcome> {
   const supabase = getSupabaseAdmin();
-  if (!supabase) return null;
+  /* 🔴 클라이언트가 없는 것은 «조회 실패» 가 아니다. 환경변수가 없는 상태이고
+     (로컬 개발 등) 그때는 레거시 조회도 똑같이 못 한다. 이걸 ERROR 로 올리면
+     설정이 안 된 환경에서 등록 화면이 통째로 막힌다 — 지금까지 없던 동작이다. */
+  if (!supabase) return { status: "NOT_FOUND" };
   /* 1순위는 내 workspace 의 행이다. 지금은 그런 행이 «없고» 레거시 NULL 행 하나만
      있다. workspace 인자를 아직 받지 않는 이유는 이번 범위가 격리 구현이 아니기
      때문이다 — 순서만 먼저 지켜 둔다(Beta Security 가 인자를 채운다). */
-  const { data, error } = await supabase
-    .from("seller_settings")
-    .select(COLUMNS)
-    .is("workspace_id", null)
-    .eq("scope_key", "default")
-    .maybeSingle();
-  if (error) {
-    // 🔴 조용히 넘기지 않는다. 다만 등록을 막지도 않는다 — 아래 호환층이 받는다.
-    console.warn("[seller-settings] 조회 실패:", error.message);
-    return null;
+  try {
+    const { data, error } = await supabase
+      .from("seller_settings")
+      .select(COLUMNS)
+      .is("workspace_id", null)
+      .eq("scope_key", "default")
+      .maybeSingle();
+    /* 🔴 여기가 이 작업의 전부다. 예전에는 이 줄도, 아래 「행 없음」도 똑같이
+       null 을 돌려줬다 — 그래서 DB 장애와 「아직 설정 안 함」이 구분되지 않았고
+       둘 다 레거시 폴백으로 흘렀다. 이제 갈린다.
+
+       maybeSingle() 은 행이 둘 이상이어도 error 를 낸다. 그것도 ERROR 다 —
+       「어느 행이 맞는지 모른다」이지 「없다」가 아니다. */
+    if (error) return { status: "ERROR", reason: error.message };
+    return data ? { status: "FOUND", values: fromRow(data as unknown as Row) } : { status: "NOT_FOUND" };
+  } catch (cause) {
+    /* 조사에서 확인한 J 상태 — try/catch 가 없어 호출자로 그대로 전파됐다.
+       터지는 것 자체는 나쁘지 않았지만(조용히 빈 값이 되는 것보다 낫다) 어디서
+       터졌는지가 남지 않았다. 여기서 받아 ERROR 로 이름을 붙인다.
+       🔴 받아서 «삼키는» 것이 아니다 — 등록은 여전히 멈춘다. */
+    return { status: "ERROR", reason: cause instanceof Error ? cause.message : String(cause) };
   }
-  return data ? fromRow(data as unknown as Row) : null;
 }
 
 /**
@@ -144,15 +181,36 @@ async function loadFromLegacyProfile(): Promise<SellerSettings | null> {
  */
 export async function loadSellerSettings(): Promise<ResolvedSellerSettings> {
   const primary = await loadFromSellerSettings();
-  if (primary && hasAnySellerSetting(primary)) {
-    return { ...primary, source: "SELLER_SETTINGS" };
+
+  /* 🔴 ERROR 는 여기서 «끝난다». 레거시를 쳐다보지 않는다.
+     canonical 을 못 읽었는데 레거시 값을 쓰면, 그 값이 맞는지 틀린지 알 방법이
+     없는 채로 실제 상품에 올라간다. 지금 레거시에는 12:52 에 얼어붙은 옛
+     제조사가 남아 있다 — 우연히 같을 뿐이고, 갈라지는 순간 조용히 틀린다. */
+  if (primary.status === "ERROR") {
+    console.warn("[seller-settings] 조회 실패:", primary.reason);
+    return { ...EMPTY_SELLER_SETTINGS, source: "ERROR", failed: true };
   }
+
+  if (primary.status === "FOUND" && hasAnySellerSetting(primary.values)) {
+    return { ...primary.values, source: "SELLER_SETTINGS", failed: false };
+  }
+
+  /* 여기까지 왔으면 「정상적으로 조회했는데 값이 없다」이다(행이 없거나, 행은
+     있는데 다섯 칸이 다 비었거나). 그때만 임시 호환층이 받는다.
+     🔴 레거시 조회가 실패해도 ERROR 로 올리지 않는다 — canonical 은 이미
+     «정상적으로» 「없다」고 답했다. 레거시는 있으면 좋은 참고값일 뿐이다. */
   const legacy = await loadFromLegacyProfile();
   if (legacy && hasAnySellerSetting(legacy)) {
-    return { ...legacy, source: "LEGACY_PROFILE" };
+    return { ...legacy, source: "LEGACY_PROFILE", failed: false };
   }
-  return { ...EMPTY_SELLER_SETTINGS, source: "NONE" };
+  return { ...EMPTY_SELLER_SETTINGS, source: "NONE", failed: false };
 }
+
+/** 등록 경로가 셀러에게 보여 줄 한 줄. 세 채널이 같은 글자를 쓴다. */
+export const SELLER_SETTINGS_UNAVAILABLE_MESSAGE =
+  "판매자 정보를 확인하지 못해 등록을 진행할 수 없습니다.";
+export const SELLER_SETTINGS_UNAVAILABLE_RESOLUTION =
+  "잠시 후 다시 시도해주세요. 계속되면 고객센터로 알려주세요.";
 
 /** 설정 화면이 보내는 다섯 칸. 배송·가격·상세페이지는 여기에 «속하지 않는다». */
 export const SELLER_SETTING_KEYS = [

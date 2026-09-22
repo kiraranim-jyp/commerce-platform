@@ -59,11 +59,23 @@ describe("② 롯데ON 전용 설정과 «섞이지 않는다»", () => {
     expect(SOURCE).toContain(expr);
   });
 
-  it("🔴 공통 설정에서 제조사 말고 다른 칸을 끌어오지 않는다", () => {
-    // LotteON 이 쓰는 것은 제조사 하나뿐이다. 다섯 칸이 다 있다고 해서
-    // 연결하면 그건 이번 범위가 아니라 새 기능이다.
-    const pulled = SOURCE.match(/commonSellerSettings\.\w+/g) ?? [];
-    expect([...new Set(pulled)]).toEqual(["commonSellerSettings.manufacturer"]);
+  it("🔴 공통 설정에서 제조사 말고 다른 «칸» 을 끌어오지 않는다", () => {
+    /* LotteON 이 쓰는 것은 제조사 하나뿐이다. 다섯 칸이 다 있다고 해서
+       연결하면 그건 새 기능이다.
+
+       🔴 `failed` 는 여기서 세지 않는다 — 그건 판매자 설정의 «칸» 이 아니라
+       「읽었는가」라는 조회 상태다(R6-FS). 칸과 상태를 같은 자루에 넣으면,
+       상태를 읽는 것만으로 「없던 설정을 끌어다 쓴다」로 잘못 걸린다. */
+    const FIELDS = ["manufacturer", "asContactNumber", "qualityGuarantee", "kcExemptionText", "defaultCountryOfOrigin"];
+    const pulled = (SOURCE.match(/commonSellerSettings\.(\w+)/g) ?? [])
+      .map((m) => m.replace("commonSellerSettings.", ""))
+      .filter((name) => FIELDS.includes(name));
+    expect([...new Set(pulled)]).toEqual(["manufacturer"]);
+  });
+
+  it("조회 실패는 «값» 이 아니라 상태로 읽는다", () => {
+    // 못 읽은 것을 빈 제조사로 흘려보내면 mfcrNm 이 빈 채로 실제 등록이 나간다.
+    expect(SOURCE).toContain("commonSellerSettings.failed");
   });
 });
 

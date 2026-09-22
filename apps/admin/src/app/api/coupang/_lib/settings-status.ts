@@ -72,8 +72,16 @@ export async function getCoupangSettingsStatus(): Promise<{
        무관하지만, 밖으로 빼면 「프로필이 없을 때」의 출력이 달라진다 —
        그건 reader 교체가 아니라 cardinality 변경이고 0-4+2 의 일이다.
        라벨 순서도 그대로라 화면의 체크리스트가 한 줄도 안 움직인다. */
-    for (const field of RECOMMENDED_SELLER_SETTING_FIELDS) {
-      if (!sellerSettings[field.key]) recommended.push(field.label);
+    /* 🔴 PIVOT-03 R6-FS — 「읽지 못했다」면 아무 말도 하지 않는다.
+       여기서 세 줄을 권장 목록에 넣으면 화면이 「제조자(수입자) 미입력」이라고
+       말한다 — 셀러는 설정을 고치러 가지만 고칠 것이 없다(이미 넣어 뒀다).
+       원인은 우리 쪽 조회 실패이고, 없는 사실을 말하는 것보다 말하지 않는
+       편이 낫다. 게이트(missing/configured)는 건드리지 않는다 — 판매자 공통
+       값은 원래 «권장» 이라 등록 가능성 퍼센트에 들어가지 않는다. */
+    if (!sellerSettings.failed) {
+      for (const field of RECOMMENDED_SELLER_SETTING_FIELDS) {
+        if (!sellerSettings[field.key]) recommended.push(field.label);
+      }
     }
   }
 

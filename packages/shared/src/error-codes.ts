@@ -33,6 +33,7 @@ export type ErrorCode =
   | "CP006"
   | "CP007"
   | "CP008"
+  | "CP009"
   | "API001"
   | "API002"
   | "API003"
@@ -160,6 +161,15 @@ export const ERROR_CODE_INFO: Record<ErrorCode, ErrorCodeInfo> = {
     defaultMessage: "판매가격을 확인할 수 없습니다.",
     autoRetryable: false,
   },
+  /* PIVOT-03 R6-FS — 「판매자 정보가 비었다」가 아니라 「읽지 못했다」이다.
+     값이 없는 것은 등록을 막지 않는다(그건 채널별 completeness 문제다).
+     조회 자체가 실패했을 때만 여기 온다 — 그 상태로 진행하면 제조사가 빈 채로
+     실제 상품이 올라간다. 일시적 장애일 가능성이 높아 재시도 대상이다. */
+  CP009: {
+    category: "CP",
+    defaultMessage: "판매자 정보를 확인하지 못해 등록을 진행할 수 없습니다.",
+    autoRetryable: true,
+  },
   API001: {
     category: "API",
     defaultMessage: "쿠팡 인증 정보가 설정되어 있지 않습니다.",
@@ -211,7 +221,11 @@ export type FailureBucket =
   | "PRICE"
   | "API_ERROR"
   | "RATE_LIMIT"
-  | "NETWORK";
+  | "NETWORK"
+  /* PIVOT-03 R6-FS — 채널 탓이 아니라 «우리 저장소를 못 읽은» 실패다.
+     NETWORK 에 섞으면 대시보드에서 「쿠팡 서버 연결 문제」로 읽힌다 — 원인이
+     우리 쪽인데 채널을 의심하게 만드는 분류는 진단을 늦춘다. */
+  | "SELLER_SETTINGS";
 
 const FAILURE_BUCKET_BY_CODE: Record<ErrorCode, FailureBucket> = {
   IMG001: "IMAGE",
@@ -234,6 +248,7 @@ const FAILURE_BUCKET_BY_CODE: Record<ErrorCode, FailureBucket> = {
   CP006: "IMAGE",
   CP007: "KC",
   CP008: "PRICE",
+  CP009: "SELLER_SETTINGS",
   API001: "NETWORK",
   API002: "NETWORK",
   API003: "NETWORK",

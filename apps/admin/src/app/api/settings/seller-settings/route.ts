@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { loadSellerSettings, pickSellerSettingFields, saveSellerSettings } from "@/lib/seller-settings";
+import {
+  SELLER_SETTINGS_UNAVAILABLE_MESSAGE,
+  loadSellerSettings,
+  pickSellerSettingFields,
+  saveSellerSettings,
+} from "@/lib/seller-settings";
 
 /**
  * TTAEJYO-PIVOT-03 Phase 0-4+2-A — 판매자 «공통» 설정의 canonical 읽기 창구.
@@ -49,7 +54,13 @@ import { loadSellerSettings, pickSellerSettingFields, saveSellerSettings } from 
  */
 export async function GET() {
   const resolved = await loadSellerSettings();
-  const { source, ...values } = resolved;
+  const { source, failed, ...values } = resolved;
+  /* 🔴 PIVOT-03 R6-FS — 「읽지 못했다」를 200 + 빈 값으로 말하지 않는다.
+     그러면 설정 화면이 다섯 칸을 빈칸으로 그리고, 셀러가 그 상태로 저장하면
+     멀쩡한 값이 «지워진다». 값이 없는 것과 모르는 것은 다르다. */
+  if (failed) {
+    return NextResponse.json({ ok: false, error: SELLER_SETTINGS_UNAVAILABLE_MESSAGE }, { status: 503 });
+  }
   /* source 는 돌려주되 화면에 «띄우지 않는다». 셀러에게는 아무 의미가 없는
      말이고(어느 표에서 읽었는가), 우리에게는 필요하다 — 여기가 계속
      LEGACY_PROFILE 이면 임시 호환층을 아직 뗄 수 없다는 뜻이다(⑨ 판단 근거). */
@@ -89,6 +100,6 @@ export async function PUT(request: Request) {
      않게 한다(빈 문자열로 보낸 칸은 null 이 되어 돌아온다). lotteon-seller
      라우트가 같은 이유로 같은 모양이다. */
   const resolved = await loadSellerSettings();
-  const { source, ...values } = resolved;
+  const { source, failed: _failed, ...values } = resolved;
   return NextResponse.json({ ok: true, values, source });
 }

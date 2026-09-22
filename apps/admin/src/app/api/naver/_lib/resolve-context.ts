@@ -5,7 +5,7 @@ import { fetchNaverAllCategories } from "./category";
 import { fetchNaverReturnDeliveryCompanies, resolvePrimaryReturnCompany } from "./delivery";
 import { fetchNaverOriginAreas } from "./origin";
 import { getDefaultSellerProfile } from "../../coupang/_lib/seller-profile";
-import { loadSellerSettings } from "@/lib/seller-settings";
+import { SELLER_SETTINGS_UNAVAILABLE_MESSAGE, loadSellerSettings } from "@/lib/seller-settings";
 import { findBrandProfileByName } from "../../coupang/_lib/brand-profile";
 import { getDefaultDescriptionTemplate } from "../../coupang/_lib/description-template";
 import type { NaverResolveResponse } from "../../../pipeline/commerce/NaverPayloadPreview";
@@ -43,6 +43,9 @@ interface NaverAddressBookEntry {
 export type NaverResolveResult =
   | { status: "NOT_CONFIGURED"; message: string }
   | { status: "AUTH_FAILED"; message: string; debug: { step: string } }
+  /* PIVOT-03 R6-FS — 판매자 정보를 «읽지 못했다». 값이 비었다는 뜻이 아니다.
+     그 상태로 조립하면 제조사·품질보증·A/S 가 빈 채로 실제 상품이 올라간다. */
+  | { status: "SELLER_SETTINGS_UNAVAILABLE"; message: string }
   | (Omit<NaverResolveResponse, "status"> & { status: "OK" });
 
 export async function resolveNaverContext(params: {
@@ -128,6 +131,11 @@ export async function resolveNaverContext(params: {
       brandName ? findBrandProfileByName(brandName) : Promise.resolve(null),
       getDefaultDescriptionTemplate(),
     ]);
+  /* 🔴 PIVOT-03 R6-FS — 여기서 멈춘다. 아래 조립은 다섯 칸이 «있다는 전제» 로
+     돌아가고, 못 읽은 것을 빈 값으로 흘려보내면 고시정보가 빈 채로 나간다. */
+  if (sellerSettings.failed) {
+    return { status: "SELLER_SETTINGS_UNAVAILABLE", message: SELLER_SETTINGS_UNAVAILABLE_MESSAGE };
+  }
   const primaryReturnCompany = returnCompanies ? resolvePrimaryReturnCompany(returnCompanies) : null;
 
   const resolvedCountryText =

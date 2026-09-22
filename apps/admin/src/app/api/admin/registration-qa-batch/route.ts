@@ -14,7 +14,7 @@ import { buildCanonicalProduct } from "../../pipeline/canonical-product";
 import { getCoupangCredentials, getVendorUserId } from "../../coupang/_lib/env";
 import { getDefaultDescriptionTemplate } from "../../coupang/_lib/description-template";
 import { getDefaultSellerProfile } from "../../coupang/_lib/seller-profile";
-import { loadSellerSettings } from "@/lib/seller-settings";
+import { SELLER_SETTINGS_UNAVAILABLE_MESSAGE, loadSellerSettings } from "@/lib/seller-settings";
 import { findBrandProfileByName } from "../../coupang/_lib/brand-profile";
 import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } from "../../coupang/_lib/shipping-place";
 import { fetchCategoryMeta } from "../../coupang/_lib/category-meta";
@@ -277,6 +277,16 @@ export async function POST() {
      자리다. runOne 안으로 들어가면 30건 × DB 왕복이 되고, 배치 도중에 설정이
      바뀌면 앞뒤 상품이 «다른 판매자 정보» 로 검사된다. */
   const sellerSettings = await loadSellerSettings();
+  /* 🔴 PIVOT-03 R6-FS — 이 배치의 «존재 이유» 는 Production 과 같은 조립을
+     검사하는 것이다. 판매자 정보를 못 읽은 채로 30건을 돌리면 전부 빈 값으로
+     조립되고, 결과는 「제조사 미입력 30건」처럼 보인다 — 상품 문제가 아니라
+     조회 실패인데 그 사실이 리포트 어디에도 남지 않는다.
+
+     바로 위 배송 프로필과 «같은 모양» 으로 막는다(400 + error). Production
+     등록의 ListingResult 계약을 여기 복사하지 않는다 — 이건 관리자 도구다. */
+  if (sellerSettings.failed) {
+    return NextResponse.json({ error: SELLER_SETTINGS_UNAVAILABLE_MESSAGE }, { status: 400 });
+  }
   const descriptionTemplate = await getDefaultDescriptionTemplate();
 
   const batch = pickBatch();
