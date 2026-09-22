@@ -10,6 +10,7 @@ import {
   type LotteOnSellerSettingsInput,
 } from "@commerce/listing";
 import { getDefaultSellerProfile, type SellerProfile } from "../../coupang/_lib/seller-profile";
+import { loadSellerSettings } from "@/lib/seller-settings";
 import { getDefaultDescriptionTemplate } from "../../coupang/_lib/description-template";
 import { findBrandProfileByName } from "../../coupang/_lib/brand-profile";
 import { loadLotteOnSellerSettings, resolveLotteOnSellerFixedValue } from "./seller-settings";
@@ -137,6 +138,26 @@ export async function buildLotteOnContext(
    */
   const sellerProfile = await getDefaultSellerProfile();
   /**
+   * PIVOT-03 ⑨ 0-2 — 제조사 «한 칸» 의 출처만 seller_settings 로 옮긴다.
+   *
+   * 🔴 위의 sellerProfile 조회는 그대로 둔다. 이 파일이 쓰는 나머지(배송값 ·
+   * 상세페이지 조립)는 전부 배송 프로필의 것이고 프로필마다 달라야 하는
+   * 값이다. 치환이 아니라 출처 분리다.
+   *
+   * 🔴 폴백 순서는 건드리지 않는다. 판정은 아래 buildLotteOnPayload 안의
+   * 공통 resolveManufacturer()가 그대로 한다 — 여기는 값을 읽어 넘기기만 한다.
+   *
+   * 🔴 이름을 `commonSellerSettings`로 길게 쓴 이유: 이 파일에는 아래에 이미
+   * `sellerSettings`(loadLotteOnSellerSettings)가 있다. 이름은 거의 같은데
+   * 뜻이 반대다.
+   *
+   *     commonSellerSettings  전 채널 공통 판매자 정보(제조사 등)
+   *     sellerSettings        롯데ON «전용» 번호(출고지·반품지·배송비정책)
+   *
+   * 뒤엣것은 다른 채널로 옮길 수 없는 값이라 절대 섞이면 안 된다.
+   */
+  const commonSellerSettings = await loadSellerSettings();
+  /**
    * REWORK-10 A(CEO 지시, 2026-09-15) — 제조사 폴백을 위해 브랜드 프로필을
    * **여기서** 한 번 읽는다. buildDetailHtml() 안에서만 읽던 값이라 payload
    * 쪽에서는 쓸 수가 없었다 — 그래서 롯데ON만 브랜드 프로필의 제조사를 모른 채
@@ -231,7 +252,7 @@ export async function buildLotteOnContext(
          기본정보). 판정은 buildLotteOnPayload 안의 공통 resolveManufacturer()가
          한다 — 여기서는 값을 읽어 넘기기만 한다. */
       brandProfileManufacturer: brandProfile?.manufacturer ?? null,
-      sellerProfileManufacturer: sellerProfile?.manufacturer ?? null,
+      sellerProfileManufacturer: commonSellerSettings.manufacturer,
       liveRates: options?.liveRates,
       roundingUnit: options?.roundingUnit,
     },
