@@ -107,6 +107,27 @@ describe("② 배송·가격·상세페이지는 한 줄도 안 움직였다", (
     expect(PAGE).toContain("profiles.find((p) => p.isDefault) ?? profiles[0]");
   });
 
+  it("🔴 배송 프로필 «목록» 이 제조자를 말하지 않는다", () => {
+    /* 실측에서 놓쳤던 자리다(2026-09-23, CEO 화면 확인). 목록 줄이 프로필마다
+       p.manufacturer 를 찍고 있어서 화면이 이렇게 말했다.
+
+           기본 … 제조자(수입자) 규하맘샵   ← 레거시 컬럼에 남은 값
+           기본 … 제조자(수입자) -          ← 같은 셀러인데 「없다」
+           기본 … 제조자(수입자) -
+
+       셀러당 하나인 값을 프로필마다 다르게 보여준 것이다. D 에서 레거시
+       write 를 끊으면 첫 줄도 낡은 값이 된다. 제조자는 「판매자 정보」 탭
+       한 곳에서만 말한다.
+
+       🔴 목록 요약 줄에 한정해 본다 — 같은 파일의 브랜드 프로필 목록에도
+       「제조자」가 있는데 그건 브랜드별 값이라 그대로 두어야 한다. */
+    const list = PAGE.slice(PAGE.indexOf("택배사 {COURIER_OPTIONS"), PAGE.indexOf("기본으로 설정"));
+    expect(list).not.toContain("p.manufacturer");
+    // 배송값은 그 줄에 그대로 남아 있다 — 그건 프로필마다 다른 것이 맞다.
+    expect(list).toContain("p.deliveryCharge");
+    expect(list).toContain("p.returnDeliveryCharge");
+  });
+
   it("🔴 브랜드 프로필의 제조사는 건드리지 않았다 — 다른 값이다", () => {
     // 브랜드별 제조사(BrandProfileSection)는 판매자 공통 제조사와 무관하다.
     expect(PAGE).toContain("editingId ? `/api/settings/coupang/brand-profiles/${editingId}`");

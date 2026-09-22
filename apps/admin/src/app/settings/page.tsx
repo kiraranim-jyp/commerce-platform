@@ -1417,10 +1417,19 @@ function ShippingSection({
                   {shippingPlaces.find((s) => s.code === p.outboundShippingPlaceCode)?.name ??
                     (p.outboundShippingPlaceCode != null ? `#${p.outboundShippingPlaceCode}` : "-")}
                 </p>
+                {/* 🔴 PIVOT-03 0-4+2-C — 여기 있던 「제조자(수입자)」를 뺐다.
+                    제조자는 «프로필의 속성이 아니다». 셀러당 하나인 값을
+                    프로필마다 보여주면 화면이 이렇게 말하게 된다.
+
+                        기본 … 제조자 규하맘샵     ← 레거시 컬럼에 남은 값
+                        기본 … 제조자 -            ← 같은 셀러인데 「없다」
+                        기본 … 제조자 -
+
+                    게다가 D 에서 레거시 write 를 끊으면 첫 줄도 낡은 값이 된다.
+                    제조자는 「판매자 정보」 탭 한 곳에서만 말한다. */}
                 <p className="text-xs text-text-secondary">
                   배송비 {p.deliveryCharge != null ? `${p.deliveryCharge.toLocaleString()}원` : "-"} · 반품배송비{" "}
-                  {p.returnDeliveryCharge != null ? `${p.returnDeliveryCharge.toLocaleString()}원` : "-"} ·
-                  제조자(수입자) {p.manufacturer || "-"}
+                  {p.returnDeliveryCharge != null ? `${p.returnDeliveryCharge.toLocaleString()}원` : "-"}
                 </p>
               </div>
               <div className="flex items-center gap-2">
