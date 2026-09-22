@@ -47,6 +47,8 @@ async function probeNoticeItemCode(
    * 얹기만 한다. identity 가 이미 실패했으면 «건너뛴다».
    */
   connectionHealthy: boolean,
+  /** 93 상품목록 조회가 바디에 요구하는 거래처 정보(207 identity 가 준 값). */
+  identity: { trGrpCd: string | null; trNo: string | null },
 ): Promise<void> {
   if (noticeItemProbeDone) return;
   const stdCatId = standardCategoryNo?.trim();
@@ -191,6 +193,43 @@ async function probeNoticeItemCode(
       pdArtl: await probeCodeGroup("PD_ARTL_CD"),
     };
 
+    /* ══ 이미 «등록돼 있는» 상품에서 고시 항목코드를 읽는다 ══════════════════
+
+       89 도 205 도 항목코드를 주지 않았다. 그런데 아직 한 번도 안 써 본 읽기
+       경로가 둘 있다 — 93 상품목록 · 94 상품상세.
+
+       판매자센터에 이미 등록된 상품이 하나라도 있으면 그 상품의 pdItmsArtlLst
+       가 **롯데ON 이 직접 돌려주는 실제 항목코드** 다. 우리가 추측할 필요가
+       없고, 셀러가 화면에서 숫자를 옮겨 적을 필요도 없다.
+
+       🔴 읽기 전용이다. 금지 목록(forbidden-endpoints)에 없는 경로이고
+       등록/수정은 하지 않는다. 목록 1건만 받아 그 상세 1건만 본다.
+       🔴 없으면 없는 것이다 — 그때 판매자센터 실물을 보고 결정한다. */
+    if (identity.trGrpCd && identity.trNo) {
+      const listRead = await runLotteOnRead({
+        method: "POST",
+        path: LOTTEON_READ_PATHS.productList,
+        body: { trGrpCd: identity.trGrpCd, trNo: identity.trNo, pageSize: 1, pageNo: 1 },
+        step: "93 상품목록 조회(고시 항목코드 확인)",
+      });
+      if (!listRead.ok) {
+        payload.registeredProductProbe = { step: "93", ok: false };
+      } else {
+        const rows = Array.isArray(listRead.result.data) ? (listRead.result.data as Record<string, unknown>[]) : [];
+        const first = rows[0] ?? null;
+        payload.registeredProductProbe = {
+          step: "93",
+          ok: true,
+          rowCount: rows.length,
+          firstKeys: first ? Object.keys(first) : null,
+          // 상세 조회에 쓸 판매자상품번호가 어떤 키로 오는지 본다.
+          spdNo: first?.spdNo ?? first?.spd_no ?? null,
+        };
+      }
+    } else {
+      payload.registeredProductProbe = { step: "93", ok: false, reason: "NO_IDENTITY" };
+    }
+
     console.log(`[LOTTEON-REG-01] ${JSON.stringify(payload)}`);
     await recordAuditLog({
       eventType: "LOTTEON_REG_01_PROBE",
@@ -226,7 +265,10 @@ export async function POST(request: Request) {
   const payload = buildLotteOnPayload(context.input);
 
   // identityError 가 없다 = 이 요청에서 롯데ON 연결이 «실제로» 살아 있었다.
-  await probeNoticeItemCode(context.input.channel.standardCategoryNo, context.identityError == null);
+  await probeNoticeItemCode(context.input.channel.standardCategoryNo, context.identityError == null, {
+    trGrpCd: context.input.channel.trGrpCd,
+    trNo: context.input.channel.trNo,
+  });
 
   return NextResponse.json({
     ok: true,
