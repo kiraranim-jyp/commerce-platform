@@ -29,12 +29,25 @@ import { buildCoupangCompliance, type CoupangCategoryMeta } from "../build-paylo
  * 없다» — 그때 색상은 attr.inputValues[0] = "상세페이지 참조", 즉 쿠팡이 «준»
  * 값이었다. 구매옵션에 고시 문구가 들어간 첫 사례가 이번 실패다.
  *
- * ── 이번에 고친 것 두 가지뿐이다 ───────────────────────────────────────────
- *   ㈀ 구매옵션 폴백에서 NOTICE_DEFAULT_CONTENT 제거. 값이 없으면 «비운다».
- *   ㈁ matchOptionValue 결과도 resolveEnumValue 를 거친다(형제 경로와 대칭).
+ * ── 실측 3회가 결론을 뒤집은 과정 ──────────────────────────────────────────
+ *   1차 a7572b88  색상="전체 상품 상세페이지 참조" · 신발사이즈="28 EUR (UK 10)"
+ *                 → "허용되지 않는 구매옵션 값이 입력되었습니다."
+ *   2차 e6094f66  색상 «없음» · 신발사이즈="UK 1"/"UK 1"
+ *                 → "중복된 옵션값이 있습니다."
+ *   3차           색상 «없음» · 신발사이즈="UK 10"/"UK 11"
+ *                 → "필수 구매 옵션(미입력시 등록/노출 제한) 존재하지 않습니다."
  *
- * 🔴 ㈂(값 없는 MANDATORY 구매옵션 사전 차단)은 **넣지 않았다** — CEO 판정:
- *    실제 원인 확정 전에 등록 가능 범위를 바꾸지 않는다. 재등록 결과로 결정한다.
+ * 🔴 첫 가설(㈀ — 고시 문구가 구매옵션에 들어간 것이 원인)은 **반증됐다.**
+ *    3차에서 신발사이즈가 유효해지고 서로 달라진 뒤 남은 오류는 색상을 «보내지
+ *    않은 것» 이었다. 1차의 진범은 신발사이즈 하나였고 자리채움 문구는 무고했다.
+ *
+ * ── 그래서 지금 살아 있는 수정은 이것뿐이다 ────────────────────────────────
+ *   ㈁ matchOptionValue 결과도 resolveEnumValue 를 거친다(형제 경로와 대칭).
+ *   ㈁' 부분일치는 «방향» 에 따라 짧은 쪽/긴 쪽을 고른다(2차 회귀 수정).
+ *   ㈀ 철회 — 구매옵션 자리채움은 되돌렸다. 다만 상수 이름을 갈라
+ *      (ATTRIBUTE_FALLBACK_CONTENT) 고시정책과 함께 끌려다니지 않게 했다.
+ *
+ * 🔴 ㈂(값 없는 MANDATORY 구매옵션 사전 차단)은 **넣지 않았다** — CEO 판정.
  */
 
 const CONTEXT = {
@@ -69,29 +82,27 @@ const valueOf = (attributes: { attributeTypeName: string; attributeValueName: st
    ㈀ — 고시 문구는 구매옵션에 «서지 않는다»
    ════════════════════════════════════════════════════════════════════════════ */
 
-describe("㈀ 실패 재현 — 카테고리 70346(색상·신발사이즈 둘 다 자유 입력)", () => {
-  // CEO 실측 답변: 이 카테고리의 두 속성은 «자유 입력란» 이다 = inputValues 비어 있음.
+describe("🔴 MANDATORY 구매옵션은 «자리를 비우면» 안 된다 — 실측 3차가 가르쳐 준 것", () => {
   const built = buildCoupangCompliance(meta([attr("색상"), attr("신발사이즈")]), CONTEXT, VARIANT_CONTEXT);
 
-  it("🔴 「전체 상품 상세페이지 참조」가 구매옵션 어디에도 없다 — 이것이 이번 수정의 전부다", () => {
-    const values = built.attributes.map((a) => a.attributeValueName);
-    expect(values).not.toContain("전체 상품 상세페이지 참조");
-    expect(values.some((v) => v.includes("상세페이지 참조"))).toBe(false);
+  it("🔴 채울 값도 허용값도 없으면 자리채움을 «보낸다» — 빼면 쿠팡이 없다고 거절한다", () => {
+    // 3차 실측: 색상을 빼자 「필수 구매 옵션(미입력시 등록/노출 제한) 존재하지
+    // 않습니다」로 죽었다. 한때 이 단정은 정반대였다 — 실측이 뒤집었다.
+    expect(valueOf(built.attributes, "색상")).toBe("전체 상품 상세페이지 참조");
   });
 
-  it("🔴 채울 값이 없는 색상은 «보내지 않는다» — 빈 문자열도 보내지 않는다", () => {
-    expect(valueOf(built.attributes, "색상")).toBeUndefined();
+  it("빈 문자열은 그래도 나가지 않는다", () => {
     expect(built.attributes.every((a) => a.attributeValueName.trim().length > 0)).toBe(true);
   });
 
-  it("🔴 그래도 «못 채웠다» 는 기록은 남는다 — 조용히 사라지지 않는다", () => {
-    const color = built.attributeResults.find((r) => r.fieldName === "색상");
-    expect(color).toBeDefined();
-    expect(color!.source).toBe("PLACEHOLDER");
-    expect(color!.unmappedReason).toBe("NO_VALUE");
+  it("🔴 자리채움이라는 «사실» 은 기록에 남는다 — 채워졌다고 속이지 않는다", () => {
+    const color = built.attributeResults.find((r) => r.fieldName === "색상")!;
+    expect(color.source).toBe("PLACEHOLDER");
+    expect(color.confidence).toBeLessThanOrEqual(0.1);
+    expect(color.unmappedReason).toBe("NO_VALUE");
   });
 
-  it("🔴 원본 옵션값은 «한 글자도» 바뀌지 않는다 — 자유 입력이므로 그대로 나간다", () => {
+  it("🔴 자유 입력(허용값 없음)이면 원본 옵션값이 한 글자도 안 바뀐다", () => {
     expect(valueOf(built.attributes, "신발사이즈")).toBe("28 EUR (UK 10)");
   });
 

@@ -582,6 +582,21 @@ export interface CoupangCategoryMeta {
 // 참조'를 씁니다") — 쿠팡 판매자들이 관용적으로 쓰는 정식 문구로 맞춘다.
 const NOTICE_DEFAULT_CONTENT = "전체 상품 상세페이지 참조";
 
+/**
+ * COUPANG-REAL-OPTION-01(실측 3회, 2026-09-22) — **구매옵션(attributes)의 자리채움.**
+ *
+ * 글자는 위와 같지만 «쓰이는 자리» 가 다르다. 위는 상품정보제공고시 내용이고,
+ * 이것은 MANDATORY 구매옵션에 채울 실제 값도 쿠팡이 준 허용값도 없을 때 그
+ * 자리를 비우지 않기 위한 값이다.
+ *
+ * 🔴 이 상수를 「그냥 중복」이라고 합치지 마라. 한 번 합쳐져 있었고, 그래서
+ * 「고시 문구가 구매옵션에 들어갔다」는 오진으로 이 값을 빼는 수정을 했다가
+ * 실제 등록이 「필수 구매 옵션이 존재하지 않습니다」로 죽었다. MANDATORY
+ * 구매옵션은 값이 없어도 **자리는 있어야 한다** — 두 정책은 서로 다르고,
+ * 한쪽이 바뀔 때 다른 쪽이 말없이 끌려가면 안 된다.
+ */
+const ATTRIBUTE_FALLBACK_CONTENT = "전체 상품 상세페이지 참조";
+
 // A-12.3-P0-3(CPO 2차 지시: "KC는 DB 저장보다 기본값 우선 — 코드 기본값을
 // 먼저 넣고, Seller Profile은 나중에 덮어쓰는 구조가 더 자연스럽다") — 대부분의
 // 해외구매대행 상품은 실제로 이 문구에 해당한다. Settings(SellerProfile.
@@ -1076,32 +1091,36 @@ export function buildCoupangCompliance(
       }
       const unmappedReason: ComplianceFieldResult["unmappedReason"] =
         fieldMatch.status === "MATCHED" ? "ENUM_MISMATCH" : fieldMatch.status === "NO_VALUE" ? "NO_VALUE" : "NO_RULE";
-      /* ══ COUPANG-REAL-OPTION-01 ㈀(CEO 확정, 2026-09-22) ══
-         여기 있던 `?? NOTICE_DEFAULT_CONTENT` 가 사라졌다.
+      /* ══ COUPANG-REAL-OPTION-01 ㈀ 철회(실측 3회로 반증됨, 2026-09-22) ══
 
-         그 상수는 바로 위(L583)에서 스스로 «상품정보제공고시» 용이라고 말한다.
-         고시정보(notices)에 쓰는 관용 문구다. 그것이 **구매옵션(attributes)의
-         마지막 폴백**으로도 쓰이고 있었고, 실제 등록이 그 지점에서 죽었다 —
+         한때 이 자리에서 `?? NOTICE_DEFAULT_CONTENT` 를 «빼» 봤다. 그 상수가
+         L583 에서 스스로 «상품정보제공고시» 용이라고 말하고 있었고, 첫 실패의
+         payload 에 그 문구가 구매옵션으로 들어가 있었기 때문이다.
 
-             2026-09-22 10:55  쿠팡 LIVE  attempt a7572b88  API005
-             items[].attributes  색상 = "전체 상품 상세페이지 참조"
-             응답: "유효하지 않은 구매 옵션 값이 존재합니다.
-                    |허용되지 않는 구매옵션 값이 입력되었습니다."
+         🔴 **틀렸다.** 실제 쿠팡 LIVE 응답 세 번이 그것을 반증했다.
 
-         2026-07-30 성공 건은 이 폴백을 «탄 적이 없다» — 그때 색상은
-         attr.inputValues[0] = "상세페이지 참조", 즉 쿠팡이 «준» 값이었다.
-         구매옵션에 고시 문구가 들어간 첫 사례가 이번 실패다.
+           1차 a7572b88  색상="전체 상품 상세페이지 참조" · 신발사이즈="28 EUR (UK 10)"
+                         → "허용되지 않는 구매옵션 값이 입력되었습니다."
+           2차 e6094f66  색상 «없음» · 신발사이즈="UK 1"/"UK 1"
+                         → "중복된 옵션값이 있습니다."
+           3차           색상 «없음» · 신발사이즈="UK 10"/"UK 11"
+                         → "필수 구매 옵션(미입력시 등록/노출 제한) 존재하지 않습니다."
 
-         🔴 값을 지어내지 않는다. 쿠팡이 허용값을 줬으면 그 첫 값을 쓰고,
-         주지 않았으면 «비운다». 비운 칸은 아래에서 attributes 배열에 실리지
-         않는다 — 없는 값을 있는 척 보내는 대신 아무 말도 하지 않는다.
+         3차가 결론이다. 신발사이즈가 유효해지고 서로 달라진 «뒤에» 남은 오류는
+         색상을 **보내지 않은 것** 이었다. 즉 1차의 진범은 신발사이즈 하나였고,
+         자리채움 문구는 무고했다. MANDATORY 구매옵션은 «값이 없어도 자리는
+         있어야» 한다 — 빼면 쿠팡이 없다고 거절한다.
 
-         🔴 기록은 남는다. 이 결과 항목 자체는 그대로 attributeResults 에
-         남아(PLACEHOLDER · unmappedReason) 컴플라이언스 리포트가 「이 칸을
-         채우지 못했다」고 계속 말한다 — 조용히 사라지지 않는다. */
+         그래서 문구를 되돌린다. 다만 이름을 갈라 둔다: 같은 글자지만 이건
+         고시정보 문구가 아니라 «구매옵션 자리채움» 이다. 한쪽 정책이 바뀔 때
+         다른 쪽이 말없이 끌려가지 않게 하려는 것뿐이고, 나가는 값은 처음과
+         **한 글자도 다르지 않다**.
+
+         🔴 남는 문제는 그대로 남는다. 이 값은 conf 0.1 짜리 자리채움인데 화면은
+         「확인 필요 0개」라고 말한다 — 별도 P1(docs/tech-debt-register.md). */
       return {
         fieldName: attr.attributeTypeName,
-        value: attr.inputValues[0] ?? "",
+        value: attr.inputValues[0] ?? ATTRIBUTE_FALLBACK_CONTENT,
         source: "PLACEHOLDER" as const,
         critical: isComplianceCritical(attr.attributeTypeName),
         kind: "ATTRIBUTE" as const,
@@ -1110,8 +1129,8 @@ export function buildCoupangCompliance(
     })
     .map((r) => ({ ...r, confidence: FIELD_SOURCE_CONFIDENCE[r.source] }));
   const attributes: CoupangItemAttribute[] = attributeResults
-    // ㈀ — 값이 없는 구매옵션은 «보내지 않는다». 빈 문자열을 보내면 그것도
-    // 쿠팡이 거부하고, 고시 문구를 채워 넣으면 이번 실패가 그대로 재현된다.
+    // 빈 값은 보내지 않는다. 위 사다리가 전부 값을 채우므로 평소에는 아무것도
+    // 걸러지지 않지만, 누군가 빈 문자열을 흘리면 쿠팡까지 가기 전에 멈춘다.
     .filter((r) => r.value.trim().length > 0)
     .map((r) => ({
       attributeTypeName: r.fieldName,
