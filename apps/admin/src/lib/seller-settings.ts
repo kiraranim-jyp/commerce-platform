@@ -154,39 +154,62 @@ export async function loadSellerSettings(): Promise<ResolvedSellerSettings> {
   return { ...EMPTY_SELLER_SETTINGS, source: "NONE" };
 }
 
-/** 빈 문자열은 «지움»(null)으로 읽는다 — 화면에서 비우면 설정이 없어진다. */
-const clean = (value: unknown): string | null => {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
+/** 설정 화면이 보내는 다섯 칸. 배송·가격·상세페이지는 여기에 «속하지 않는다». */
+export const SELLER_SETTING_KEYS = [
+  "manufacturer",
+  "asContactNumber",
+  "qualityGuarantee",
+  "kcExemptionText",
+  "defaultCountryOfOrigin",
+] as const satisfies readonly (keyof SellerSettings)[];
 
 /**
- * 판매자 공통 설정을 저장한다.
+ * 설정 화면이 보낸 body 에서 판매자 다섯 칸«만» 골라낸다.
  *
- * 🔴 레거시 표(coupang_seller_profiles)에는 «쓰지 않는다». 두 곳에 쓰면 어느 쪽이
- * 진짜인지가 갈리고, 그 갈림이 바로 이 마이그레이션이 없애려는 문제다.
+ * 🔴 「값이 있는가」가 아니라 「키가 왔는가」로 고른다. 기존 PATCH 는 partial
+ * update 이고(toRowFields 가 `!== undefined` 로 판정한다), 빈 문자열은 «지움» 을
+ * 뜻한다 — 값으로 거르면 그 두 가지가 같아져 버린다.
  */
-export async function saveSellerSettings(
-  input: Partial<Record<keyof SellerSettings, unknown>>,
+export function pickSellerSettingFields(body: Record<string, unknown>): Record<string, unknown> {
+  const picked: Record<string, unknown> = {};
+  for (const key of SELLER_SETTING_KEYS) {
+    if (key in body) picked[key] = body[key];
+  }
+  return picked;
+}
+
+/**
+ * 판매자 공통 설정을 «두 표에 한꺼번에» 저장한다 — TTAEJYO-PIVOT-03 ⑤.
+ *
+ *     coupang_seller_profiles.판매자5칸   (레거시. ⑨ 에서 뗀다)
+ *     seller_settings.판매자5칸            (canonical reader 가 보는 곳)
+ *
+ * 🔴 두 번의 upsert 로 나누지 않는다. @supabase/supabase-js 에는 둘을 묶는
+ * transaction API 가 없어서, 나누면 앞이 성공하고 뒤가 실패할 때 두 표가
+ * 갈라진다 — 그게 이 마이그레이션이 없애려는 바로 그 상태다. 그래서 DB 함수
+ * 하나를 부른다(060_save_seller_settings_dual.sql). 함수 본문이 한 트랜잭션이라
+ * 한쪽이 실패하면 둘 다 롤백된다. 저장소에 이미 같은 rpc 선례가 있다
+ * (job-key.ts 의 next_job_key_counter).
+ *
+ * 🔴 값을 손보지 않고 «그대로» 넘긴다. trim 도 여기서 하지 않는다 — 기존 PATCH
+ * 경로(toRowFields)가 trim 하지 않기 때문이고, 한쪽만 다듬으면 같은 저장에서
+ * 두 표의 값이 달라진다. undefined/""/값 의 판정은 전부 SQL 쪽에 한 벌로 있다.
+ */
+export async function saveSellerSettingsDual(
+  profileId: string,
+  fields: Record<string, unknown>,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return { ok: false, error: "저장소에 연결하지 못했습니다." };
-  const { error } = await supabase.from("seller_settings").upsert(
-    {
-      workspace_id: null,
-      scope_key: "default",
-      manufacturer: clean(input.manufacturer),
-      as_contact_number: clean(input.asContactNumber),
-      quality_guarantee: clean(input.qualityGuarantee),
-      kc_exemption_text: clean(input.kcExemptionText),
-      default_country_of_origin: clean(input.defaultCountryOfOrigin),
-      updated_at: new Date().toISOString(),
-    },
-    // 레거시 행은 부분 유니크 인덱스(seller_settings_legacy_singleton)가 하나로
-    // 묶고 있다 — scope_key 충돌로 upsert 가 같은 행을 갱신한다.
-    { onConflict: "scope_key" },
-  );
-  if (error) return { ok: false, error: error.message };
+  const { error } = await supabase.rpc("save_seller_settings_dual", {
+    p_profile_id: profileId,
+    p_fields: fields,
+  });
+  if (error) {
+    // 🔴 함수가 아직 없을 수도 있다(060 미실행). 조용히 성공으로 넘기지 않는다 —
+    //    저장했다고 보이는데 안 저장되는 상태가 이 작업의 출발점이었다.
+    console.warn("[seller-settings] dual-write 실패:", error.message);
+    return { ok: false, error: "판매자 정보를 저장하지 못했습니다." };
+  }
   return { ok: true };
 }
