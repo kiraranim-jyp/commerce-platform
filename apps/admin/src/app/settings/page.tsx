@@ -17,6 +17,7 @@ import {
 } from "@commerce/listing";
 import { selectedMarketSourceScopes, sourceFitsScopes } from "@commerce/category";
 import type { ConnectionErrorType } from "@/lib/connection-error";
+import { LotteOnSellerFixedSettings } from "./LotteOnSellerFixedSettings";
 
 /**
  * GOLF-01 축 A(CEO 지시, 2026-09-15) — "해외 편집샵" · "국내 가격비교" 두 탭을
@@ -3035,6 +3036,13 @@ function CommerceAccountManager({
                 계속 연결됨으로 표시될 수 있습니다).
               </p>
             </div>
+          </div>
+          {/* ══ LOTTEON-REAL-REGISTRATION-02 ①(CEO 확정, 2026-09-22) ══
+              판매자 «고정값» 을 한 번만 정하는 자리. 위 인증키와 다른 관심사라
+              칸을 나눈다 — 하나는 비밀이고(다시 보여주지 않는다) 하나는 지금
+              무엇이 적용 중인지 보여야 하는 값이다. */}
+          <div className="rounded-lg border border-border bg-surface px-4 py-3">
+            <LotteOnSellerFixedSettings />
           </div>
           {/* 롯데ON만의 두 가지 운영 조건 — 쿠팡/네이버에는 없어서 여기서만 안내한다. */}
           <div className="rounded-lg border border-border bg-surface px-4 py-3">
