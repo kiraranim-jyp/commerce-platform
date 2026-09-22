@@ -99,6 +99,45 @@ async function probeNoticeItemCode(
           Array.isArray(attrs) && attrs[0] && typeof attrs[0] === "object" ? Object.keys(attrs[0] as object) : null,
       };
     }
+    /* ══ 89 공통코드에 품목코드 «목록» 이 있는가 (CEO 승인, 2026-09-22) ══
+
+       205 는 끝났다 — 목록·단건 모두 pd_itms_list 가 비어 있고, attr_list 는
+       상품 «속성»(attr_id/attr_pi_type)이라 고시 «품목» 과 무관하다.
+
+       남은 길은 89 getDetailCodeList 다. 이미 동작 중인 경로이고(DV_CO_CD 택배사 ·
+       DV_RGSPR_GRP_CD 배송가능지역) 호출 모양도 그대로다 — grpCd 하나만 다르다.
+
+       🔴 코드그룹 이름이 payload 필드명과 같다는 «규칙» 만으로 존재를 단정하지
+       않는다(CEO 명시). 지금까지 실제로 확인된 것은 DV_CO_CD 와 DV_RGSPR_GRP_CD
+       둘뿐이다. 그래서 «확정» 이 아니라 «질문» 으로 던지고, 응답이 답하게 둔다.
+
+           목록 있음   → 셀러가 「어린이제품」을 고른다. 번호를 외우지 않는다.
+           목록 0건    → DIRECT 확정
+           호출 실패   → 🔴 DIRECT 가 아니라 UNRESOLVED
+                         (「직접 입력해야 한다」와 「다른 공급원이 있다」를
+                          아직 구분하지 못한 상태다) */
+    const codeProbe = await runLotteOnRead({
+      // host 를 주지 않으면 기본 호스트(openapi.lotteon.com)다 — 89 는 onpick 이
+      // 아니라 그쪽이고, delivery-settings 가 이미 같은 방식으로 부른다.
+      method: "GET",
+      path: LOTTEON_READ_PATHS.detailCodeList,
+      query: { grpCd: "PD_ITMS_CD" },
+      step: "89 공통코드 상세 조회(PD_ITMS_CD 존재 확인)",
+    });
+    if (!codeProbe.ok) {
+      payload.pdItmsCodeGroup = { ok: false, verdict: "UNRESOLVED" };
+    } else {
+      const data = codeProbe.result.data as unknown;
+      const rows = Array.isArray(data) ? data : [];
+      payload.pdItmsCodeGroup = {
+        ok: true,
+        rowCount: rows.length,
+        // 🔴 값이 아니라 «구조» 만. 목록이 실재하는지, 어떤 필드로 오는지.
+        firstKeys: rows[0] && typeof rows[0] === "object" ? Object.keys(rows[0] as object) : null,
+        verdict: rows.length > 0 ? "AVAILABLE" : "EMPTY",
+      };
+    }
+
     console.log(`[LOTTEON-REG-01] ${JSON.stringify(payload)}`);
     await recordAuditLog({
       eventType: "LOTTEON_REG_01_PROBE",
