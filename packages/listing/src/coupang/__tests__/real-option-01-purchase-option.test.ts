@@ -173,6 +173,72 @@ describe("㈁ matchOptionValue 가 resolveEnumValue 를 거친다", () => {
 });
 
 /* ════════════════════════════════════════════════════════════════════════════
+   실제 2차 실패 재현 — 「중복된 옵션값이 있습니다」
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * registration_attempts e6094f66 · 2026-09-22 11:48 · coupang · FAILED · API005
+ *   응답: "중복된 옵션값이 있습니다."
+ *   item[0] 신발사이즈 = "UK 1"   [OPTION_MATCH]
+ *   item[1] 신발사이즈 = "UK 1"   [OPTION_MATCH]   ← 둘이 «같은 값» 이 됐다
+ *
+ * 이 실패가 두 가지를 동시에 증명했다.
+ *   ① 색상 PLACEHOLDER 가 payload 에서 사라졌다 — ㈀ 이 실제로 동작했고
+ *      「허용되지 않는 구매옵션 값」 오류가 없어졌다.
+ *   ② 쿠팡 신발사이즈는 **자유 입력이 아니라 enum** 이다(허용값에 "UK 1" 이
+ *      있으므로). 즉 원래 보내던 "28 EUR (UK 10)" 도 허용값이 아니었다.
+ *
+ * 그리고 하나를 새로 만들었다: resolveEnumValue 의 부분일치가 «배열에서 먼저
+ * 걸리는 것» 을 골라 "UK 10"/"UK 11" 대신 둘 다 "UK 1" 이 됐다.
+ */
+const UK_SIZES = ["UK 1", "UK 2", "UK 10", "UK 11", "UK 12"];
+
+describe("실제 2차 실패 — 서로 다른 옵션값이 같은 허용값으로 뭉치면 안 된다", () => {
+  const sizeOf = (optionValue: string) =>
+    valueOf(
+      buildCoupangCompliance(meta([attr("신발사이즈", UK_SIZES)]), CONTEXT, {
+        optionGroups: [{ name: "Size", values: ["28 EUR (UK 10)", "29 EUR (UK 11)"] }],
+        variant: { id: "v", optionValues: { Size: optionValue } },
+      }).attributes,
+      "신발사이즈",
+    );
+
+  it("🔴 «가장 구체적인» 허용값을 고른다 — 조각 「UK 1」이 아니라 「UK 10」", () => {
+    expect(sizeOf("28 EUR (UK 10)")).toBe("UK 10");
+  });
+
+  it("🔴 두 번째 단품도 자기 값을 받는다 — 「UK 11」", () => {
+    expect(sizeOf("29 EUR (UK 11)")).toBe("UK 11");
+  });
+
+  it("🔴 두 단품이 «서로 다른» 값을 갖는다 — 이것이 「중복된 옵션값」의 재발 방지다", () => {
+    const a = sizeOf("28 EUR (UK 10)");
+    const b = sizeOf("29 EUR (UK 11)");
+    expect(a).not.toBe(b);
+    expect([a, b]).not.toContain("UK 1");
+  });
+
+  it("🔴 반대 방향은 예전 그대로 — 후보가 더 긴 값의 일부면 «가장 짧은» 것을 고른다", () => {
+    // "네이비" ⊂ "네이비블루" — 여기서 긴 쪽을 고르면 색상이 엉뚱해진다.
+    const built = buildCoupangCompliance(
+      meta([attr("색상", ["네이비블루", "네이비", "네이비그레이"])]),
+      { ...CONTEXT, color: "네이비" },
+      { optionGroups: [] },
+    );
+    expect(valueOf(built.attributes, "색상")).toBe("네이비");
+  });
+
+  it("허용값 어디에도 걸리지 않으면 그 값을 쓰지 않는다 — 지어내지 않는다", () => {
+    const built = buildCoupangCompliance(meta([attr("신발사이즈", ["230", "235", "240"])]), CONTEXT, {
+      optionGroups: [{ name: "Size", values: ["28 EUR (UK 10)"] }],
+      variant: { id: "v", optionValues: { Size: "28 EUR (UK 10)" } },
+    });
+    expect(valueOf(built.attributes, "신발사이즈")).not.toBe("28 EUR (UK 10)");
+    expect(["230", "235", "240"]).toContain(valueOf(built.attributes, "신발사이즈"));
+  });
+});
+
+/* ════════════════════════════════════════════════════════════════════════════
    고시정보(notices)는 이번 수정의 «대상이 아니다»
    ════════════════════════════════════════════════════════════════════════════ */
 

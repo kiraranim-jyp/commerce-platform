@@ -785,8 +785,41 @@ function resolveEnumValue(candidate: string, inputValues: string[]): string | un
     const translatedMatch = inputValues.find((v) => v.includes(translated));
     if (translatedMatch) return translatedMatch;
   }
-  const partial = inputValues.find((v) => v.toLowerCase().includes(normalized) || normalized.includes(v.toLowerCase()));
-  return partial;
+  /* ══ COUPANG-REAL-OPTION-01 후속(실제 재등록 실패 2026-09-22 11:48) ══
+
+     여기 있던 한 줄은 이랬다:
+
+         inputValues.find((v) => v.includes(normalized) || normalized.includes(v))
+
+     `find` 는 **배열에서 처음 걸리는 것**을 돌려준다. 그래서 쿠팡 신발사이즈
+     허용값에 "UK 1" 과 "UK 10" 이 함께 있을 때, 원본 옵션값 두 개가
+
+         "28 EUR (UK 10)" → "UK 1"      ← "UK 10" 이 아니라 «먼저 있는» "UK 1"
+         "29 EUR (UK 11)" → "UK 1"
+
+     로 **둘 다 같은 값에 붙었다**. 쿠팡 응답: 「중복된 옵션값이 있습니다.」
+     (registration_attempts e6094f66 · API005 · 두 item 의 attributes 가 동일)
+
+     🔴 짧은 쪽이 먼저 걸리는 것은 방향에 따라 의미가 정반대다.
+
+         v ⊇ candidate   후보가 «더 긴 값의 일부» 다(예: "네이비" ⊂ "네이비블루").
+                         이때는 후보에 가장 가까운 **가장 짧은** v 가 맞다.
+
+         candidate ⊇ v   후보 안에 허용값이 «들어 있다»(예: "28 EUR (UK 10)" ⊃
+                         "UK 1" · "UK 10"). 이때는 가장 구체적인 **가장 긴** v 가
+                         맞다 — 짧은 것은 긴 것의 조각일 뿐이다.
+
+     값을 지어내지 않는다. 고르는 후보는 여전히 쿠팡이 준 목록 안의 것뿐이고,
+     바뀐 것은 «같은 자격의 후보가 여럿일 때 무엇을 고르는가» 하나다. */
+  const superset = inputValues.filter((v) => v.toLowerCase().includes(normalized));
+  if (superset.length > 0) {
+    return superset.reduce((best, v) => (v.length < best.length ? v : best));
+  }
+  const subset = inputValues.filter((v) => normalized.includes(v.toLowerCase()));
+  if (subset.length > 0) {
+    return subset.reduce((best, v) => (v.length > best.length ? v : best));
+  }
+  return undefined;
 }
 
 /** Sprint A-4(작업2 — 미매핑 필드 리포트) — "자동 입력 실패"를 하나로 뭉치지
