@@ -160,6 +160,7 @@ export function ReadOnlyFieldRow({
   placeholder,
   origin,
   note,
+  referenced = false,
   children,
 }: {
   label: string;
@@ -169,19 +170,45 @@ export function ReadOnlyFieldRow({
   /** 어디서 온 값인가 — 라벨 오른쪽의 작은 글자. */
   origin?: string;
   note?: ReactNode;
+  /**
+   * ══ COMMERCE-UI-PARITY-02 P0-3(CEO 실측 캡처, 2026-09-22) ══
+   *
+   * 이 칸이 «비어 있는» 것이 아니라 **등록 시점에 상세페이지를 가리켜 채워지는**
+   * 상태인가(= 공통 필드의 `source === "DETAIL_PAGE_REFERENCE"`).
+   *
+   * 🔴 빈 값과 같은 자리에 같은 색으로 서면 안 된다. 셀러가 상품 정보 탭에서
+   * 「선택 N건 상세페이지 참조로 일괄 등록」을 이미 눌러 처리를 끝낸 칸인데,
+   * 화면이 「입력 필요 — 상품정보에서 채워주세요」라고 말하면 방금 한 일을
+   * 안 한 일로 되돌려 말하는 것이고 셀러는 같은 일을 또 하러 간다.
+   *
+   * 문구와 껍데기는 쿠팡이 이미 쓰던 것 그대로다(PlatformPreview L117-119 —
+   * 점선 테두리 + selected 계열 + 「상세페이지 참조로 등록됩니다」). 새 문장을
+   * 쓰지 않는다. 세 채널이 같은 상태를 같은 말로 부르는 것이 이 작업의 목적이다.
+   */
+  referenced?: boolean;
   children?: ReactNode;
 }) {
   const filled = value.trim().length > 0;
   return (
     <FieldRow label={label} originLabel={origin} note={note}>
-      <div
-        data-readonly-field="true"
-        className={`${FIELD_INPUT_CLASS} min-h-[1.875rem] break-words bg-background ${
-          filled ? "text-text-primary" : "text-warning"
-        }`}
-      >
-        {filled ? value : placeholder}
-      </div>
+      {referenced && !filled ? (
+        <div
+          data-readonly-field="true"
+          data-field-state="detail-page-reference"
+          className={`${FIELD_INPUT_CLASS} min-h-[1.875rem] break-words border-dashed border-selected-border bg-selected-soft text-selected`}
+        >
+          상세페이지 참조로 등록됩니다
+        </div>
+      ) : (
+        <div
+          data-readonly-field="true"
+          className={`${FIELD_INPUT_CLASS} min-h-[1.875rem] break-words bg-background ${
+            filled ? "text-text-primary" : "text-warning"
+          }`}
+        >
+          {filled ? value : placeholder}
+        </div>
+      )}
       {children}
     </FieldRow>
   );

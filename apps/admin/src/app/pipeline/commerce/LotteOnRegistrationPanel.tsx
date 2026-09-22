@@ -868,6 +868,33 @@ export function LotteOnRegistrationPanel({
          "세 탭이 같은 등록 화면"은 렌더 결과에서 거짓이 된다. */
       required={readinessItems}
       allRequiredPassed={!stale && readiness.allRequiredPassed}
+      /* ══ COMMERCE-UI-PARITY-02 P0-1(CEO 실측 캡처 + Production 로그, 2026-09-22) ══
+
+         CEO가 본 화면: 우측 요약이 「필수 확인 / 확인 중…」에서 멈춰 있고 [등록
+         시작]이 비활성. Production 로그가 그 20초의 정체를 말한다 —
+
+             /api/lotteon/payload-preview → 207 identity
+             NETWORK_ERROR · elapsedMs=20,177 · proxy=OCI · aborted due to timeout
+
+         즉 «멈춘» 것이 아니라 20초를 기다렸다가 **실패**한 것이다. 그런데 그
+         실패가 화면에 도착하지 못했다. 이 자리가 원래 `previewing && preview ==
+         null` 을 직접 읽어 자기 문구(「확인 중…」)를 만들고 있었고, 20초 뒤
+         `preview` 가 `{ok:false, reason:"NETWORK_ERROR"}` 로 채워지면
+         `validation == null` 분기로 떨어져 **「아직 확인하지 않았습니다」** 라고
+         말했다 — 20초를 기다려 실패한 일을 «해보지 않았다» 고 바꿔 말한 것이다.
+         셀러는 [등록 정보 확인]을 눌러도 같은 20초 뒤 같은 문장을 본다.
+
+         🔴 새 상태를 만들지 않았다. 공용 껍데기(ChannelRegistrationSummary →
+         RegistrationReadinessCard)가 `isCalculating`(스피너 + 「확인 중…」)과
+         `errorMessage`(「🔴 등록 가능 여부 확인 실패」 + 사유 + [다시 확인])를
+         **이미** 갖고 있고, 스마트스토어·쿠팡은 둘 다 넘기고 있었다(PlatformPreview
+         L727-729). 셋 중 롯데ON만 안 넘겼다. 배선 하나가 빠져 있었을 뿐이다.
+
+         실패 사유는 서버가 만든 한국어 한 줄을 그대로 쓴다(classifyLotteOnNetworkError
+         → "롯데ON 응답이 제한 시간 안에 오지 않았습니다."). 화면이 다시 쓰지 않는다. */
+      isCalculating={previewing}
+      errorMessage={preview != null && !preview.ok ? (preview.message ?? "등록 정보를 만들지 못했습니다.") : null}
+      onRetry={() => void runValidation(form)}
       status={listingStatus}
       registrationEnabled
       onRegister={() => setConfirmOpen(true)}
@@ -877,9 +904,11 @@ export function LotteOnRegistrationPanel({
          안전인증을 함께 들고 오기 때문에(조사 §14-2), 고르는 순간 필수 항목의
          **목록 자체**가 바뀐다. */
       percentUnavailable={
-        previewing && preview == null ? (
-          <p className="text-xs text-text-tertiary">확인 중…</p>
-        ) : validation == null ? (
+        /* P0-1 — 「확인 중…」 분기가 여기서 빠졌다. 위 `isCalculating` 이 같은 일을
+           스마트스토어·쿠팡과 **같은 모양**(스피너 + 무엇을 기다리는지 한 줄)으로
+           한다. 남은 두 분기는 그대로다: 정말 한 번도 확인하지 않은 상태와,
+           카테고리 전이라 필수 항목 목록 자체가 정해지지 않은 상태(§17). */
+        validation == null ? (
           <p className="text-xs text-text-tertiary">아직 확인하지 않았습니다 — 아래 [등록 정보 확인]을 눌러 주세요.</p>
         ) : !categoryChosen ? (
           <div className="rounded-md bg-warning-soft px-2 py-2 text-xs text-warning">
@@ -1877,6 +1906,10 @@ function CommonInfoSection({
             value={row.value ?? ""}
             placeholder="입력 필요 — 상품정보에서 채워주세요"
             origin={row.origin}
+            /* P0-3 — 값이 비어 있는 이유가 «아직 없어서»인지 «상세페이지를
+               가리키기로 이미 정해서»인지를 여기서 갈라 준다. 판정하지 않는다 —
+               공통 상품정보가 들고 있던 source를 그대로 옮겨 읽을 뿐이다. */
+            referenced={row.source === "DETAIL_PAGE_REFERENCE"}
           />
         ))}
         {children}

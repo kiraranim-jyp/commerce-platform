@@ -1,5 +1,6 @@
 import type {
   CanonicalProduct,
+  FieldSource,
   LotteOnChannelInfo,
   LotteOnSelectedCategoryFacts,
   PlatformId,
@@ -410,6 +411,23 @@ export interface CommonProductRow {
   origin: string;
   /** 등록에 반드시 필요한데 비어 있으면 true — 고치러 갈 곳은 공통 상품정보다. */
   missing: boolean;
+  /**
+   * ══ COMMERCE-UI-PARITY-02 P0-3(CEO 실측 캡처, 2026-09-22) ══
+   *
+   * 공통 상품정보 필드 **하나**가 그대로 이 행이 될 때, 그 필드의 `source`.
+   * 여러 값을 조립해 만든 행(상품명·대표이미지·상세페이지·판매가격·옵션·재고)은
+   * 가리킬 필드가 하나가 아니므로 주지 않는다 — 없는 출처를 지어내지 않는다.
+   *
+   * 🔴 왜 필요한가. 상품 정보 탭의 「선택 N건 상세페이지 참조로 일괄 등록」은
+   * **값을 비우고 `source` 만 `DETAIL_PAGE_REFERENCE` 로 바꾼다**(CommerceWorkspace
+   * L869). 그래서 `value` 만 보는 화면에게 그 상태는 «빈 값» 과 구별되지 않는다.
+   * 쿠팡은 `field.source` 를 보고 「상세페이지 참조로 등록됩니다」를 그리는데
+   * (PlatformPreview L96), 이 요약은 `value.trim() || null` 만 봤다 — 같은 상품
+   * 같은 칸이 쿠팡에서는 «참조로 등록됨», 롯데ON에서는 «입력 필요» 로 갈렸다.
+   *
+   * 새 상태를 만들지 않았다. 이미 있는 `FieldSource` 를 **버리지 않고 옮길 뿐**이다.
+   */
+  source?: FieldSource;
 }
 
 export interface CommonProductSummary {
@@ -459,6 +477,7 @@ export function summarizeCommonProduct(
       value: product.brand.value.trim() || null,
       origin: "상품정보 · 브랜드",
       missing: false,
+      source: product.brand.source,
     },
     {
       label: "대표이미지",
@@ -522,36 +541,42 @@ export function summarizeCommonProduct(
       value: product.sku.value.trim() || null,
       origin: "상품정보 · 상품코드",
       missing: false,
+      source: product.sku.source,
     },
     {
       label: "소재",
       value: product.material.value.trim() || null,
       origin: "상품정보 · 소재",
       missing: false,
+      source: product.material.source,
     },
     {
       label: "색상",
       value: product.color.value.trim() || null,
       origin: "상품정보 · 색상",
       missing: false,
+      source: product.color.source,
     },
     {
       label: "사용연령",
       value: product.recommendedAge.value.trim() || null,
       origin: "상품정보 · 사용연령",
       missing: false,
+      source: product.recommendedAge.source,
     },
     {
       label: "품명",
       value: product.itemName.value.trim() || null,
       origin: "상품정보 · 품명",
       missing: false,
+      source: product.itemName.source,
     },
     {
       label: "모델명",
       value: product.modelName.value.trim() || null,
       origin: "상품정보 · 모델명",
       missing: false,
+      source: product.modelName.source,
     },
   ];
 
