@@ -65,7 +65,17 @@ export function CategoryRecommendationPanel({
   searchAttempted,
   recommendAttempted,
   candidatesLoading,
+  candidatesError,
+  onRetryCandidates,
 }: {
+  /**
+   * COMMERCE-UI-PARITY-02 P1-3 — 후보가 «없는» 것이 아니라 조회가 «실패» 했을
+   * 때의 사유. 있으면 화면은 「추천 못 함」 대신 「조회 실패」를 말한다.
+   * 🔴 판정을 여기서 만들지 않는다 — 조회한 쪽이 준 문장을 그대로 쓴다.
+   */
+  candidatesError?: string | null;
+  /** 같은 입력으로 조회를 다시 쏜다. 쿠팡에는 이미 있던 [다시 확인]과 같은 일. */
+  onRetryCandidates?: () => void;
   candidates: CategoryCandidate[];
   selection: CategorySelection;
   onSelect: (candidate: CategoryCandidate) => void;
@@ -269,7 +279,31 @@ export function CategoryRecommendationPanel({
                 선택하는 fallback을 제공") — 스마트스토어(비-쿠팡)는 검색
                 UI가 없으므로 "검색을 이용해주세요" 대신 아래 카테고리 목록
                 브라우저를 가리킨다. */}
-            {recommendEmpty && (
+            {/* ══ COMMERCE-UI-PARITY-02 P1-3(CEO 지시, 2026-09-22) ══
+                「조회가 실패했다」가 먼저 온다. 예전에는 이 분기가 없어서 실패가
+                아래 「자동으로 결정하지 못했습니다」로 흘러갔다 — 추천기가 상품을
+                보고 «못 고른 것»과 조회가 «닿지도 못한 것»이 한 문장이었다.
+                🔴 실패는 다시 시도하면 풀릴 수 있는 일이므로 [다시 확인]을 함께
+                세운다. 롯데ON 카테고리 실패(REWORK-12 ②)가 이미 쓰는 모양이다. */}
+            {recommendEmpty && candidatesError && !recommendLoading && (
+              <div className="mt-2 rounded-md bg-error/5 px-3 py-2.5">
+                <p className="text-xs font-medium text-error">🔴 카테고리 조회 실패 — {candidatesError}</p>
+                <p className="mt-1 text-[11px] text-text-secondary">
+                  잠시 후 다시 확인하거나, 아래 목록에서 카테고리를 직접 선택해 주세요.
+                </p>
+                {onRetryCandidates && (
+                  <button
+                    type="button"
+                    onClick={onRetryCandidates}
+                    className="mt-2 rounded border border-error/40 px-2 py-0.5 text-[11px] font-medium text-error transition-colors hover:bg-error-soft"
+                  >
+                    다시 확인
+                  </button>
+                )}
+              </div>
+            )}
+
+            {recommendEmpty && !(candidatesError && !recommendLoading) && (
               <p className="mt-2 rounded-md bg-background p-2.5 text-xs text-text-tertiary">
                 {recommendLoading || (isCoupang && !recommendAttempted)
                   ? "AI 추천을 불러오는 중…"

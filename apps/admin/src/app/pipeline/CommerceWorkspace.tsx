@@ -584,6 +584,15 @@ export function CommerceWorkspace({
    * "카테고리가 아예 없다"처럼 보였다. coupangCategoryFetching과 같은 패턴으로
    * 로딩 상태를 노출한다. */
   const [naverCategoryLoading, setNaverCategoryLoading] = useState(false);
+  /**
+   * COMMERCE-UI-PARITY-02 P1-3(CEO 지시, 2026-09-22) — **조회 실패를 「결과
+   * 없음」과 갈라 두는 자리.** 이 값이 있으면 카테고리 패널이 「추천 못 함」이
+   * 아니라 「조회 실패 + [다시 확인]」을 보여준다. 쿠팡에는 이미 [다시 확인]이
+   * 있었고 스마트스토어에만 없었다.
+   */
+  const [naverCategoryError, setNaverCategoryError] = useState<string | null>(null);
+  const [naverCategoryRetryTick, setNaverCategoryRetryTick] = useState(0);
+  const retryNaverCategory = () => setNaverCategoryRetryTick((t) => t + 1);
   /** Sprint A-11(작업8) — 없어도 등록은 되지만 채워두면 좋은 판매자 설정 목록. */
   const [coupangSettingsRecommended, setCoupangSettingsRecommended] = useState<string[] | null>(null);
   /**
@@ -1118,6 +1127,7 @@ export function CommerceWorkspace({
     if (tab !== "smartstore") return;
     let cancelled = false;
     setNaverCategoryLoading(true);
+    setNaverCategoryError(null);
     void (async () => {
       try {
         const res = await fetch("/api/naver/category-search", {
@@ -1125,9 +1135,22 @@ export function CommerceWorkspace({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(product),
         });
-        const data = (await res.json()) as { status: string; candidates?: NaverCategoryCandidate[] };
+        const data = (await res.json()) as { status: string; message?: string; candidates?: NaverCategoryCandidate[] };
         if (cancelled) return;
-        const converted: CategoryCandidate[] = (data.status === "OK" ? (data.candidates ?? []) : []).map((c) => ({
+        /* ══ COMMERCE-UI-PARITY-02 P1-3(CEO 지시, 2026-09-22) ══
+           status가 OK가 아니면 조회가 «실패» 한 것이다. 예전에는 그것을 빈
+           배열로 바꿔 담았고, 화면은 그 빈 배열을 보고 「⚠️ 카테고리를 자동으로
+           결정하지 못했습니다」라고 말했다 — 추천기가 상품을 보고 «못 고른 것»과
+           조회가 «닿지도 못한 것»이 같은 문장이 됐다. 셀러는 다시 시도하면
+           풀릴 일인지 아닌지를 그 문장에서 알 수 없었다.
+           🔴 실패를 결과 없음으로 바꿔 말하지 않는다(롯데ON readiness에서 고친
+           것과 같은 종류다 — N-3.73이 스마트스토어 payload 검증에서 이미 세운 규칙). */
+        if (data.status !== "OK") {
+          setNaverCategoryError(data.message ?? "스마트스토어 카테고리를 조회하지 못했습니다.");
+          setNaverApiCandidates([]);
+          return;
+        }
+        const converted: CategoryCandidate[] = (data.candidates ?? []).map((c) => ({
           id: c.categoryId,
           name: c.categoryPath[c.categoryPath.length - 1] ?? c.categoryId,
           path: c.categoryPath,
@@ -1140,7 +1163,10 @@ export function CommerceWorkspace({
         }));
         setNaverApiCandidates(converted);
       } catch {
-        if (!cancelled) setNaverApiCandidates([]);
+        if (cancelled) return;
+        // P1-3 — 예외도 마찬가지다. 「후보 0건」이 아니라 「조회 실패」다.
+        setNaverCategoryError("스마트스토어 카테고리 조회 중 오류가 발생했습니다.");
+        setNaverApiCandidates([]);
       } finally {
         if (!cancelled) setNaverCategoryLoading(false);
       }
@@ -1148,7 +1174,12 @@ export function CommerceWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [tab, product]);
+    // P1-3 — naverCategoryRetryTick은 «같은 입력으로 다시 쏘기» 위한 트리거
+    // 전용이다(스마트스토어 payload 검증의 smartStoreValidationRetryTick과 같은
+    // 장치). 조회 실패는 코드 상태가 아니라 시간이 지나야 풀리는 일이라,
+    // product/tab이 그대로여도 셀러가 다시 시도할 수 있어야 한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, product, naverCategoryRetryTick]);
 
   const categoryCandidates = useMemo(() => {
     // 롯데ON 탭은 여기 오지 않는다 — 카테고리를 onpick-api(표준+전시 2중)로
@@ -2841,6 +2872,8 @@ export function CommerceWorkspace({
               onFetchCoupangCategory={tab === "coupang" ? fetchCoupangCategoryRecommendation : undefined}
               coupangCategoryFetching={coupangCategoryFetching}
               naverCategoryLoading={naverCategoryLoading}
+              naverCategoryError={naverCategoryError}
+              onRetryNaverCategory={retryNaverCategory}
               coupangSearchCandidates={tab === "coupang" ? coupangSearchCandidates : undefined}
               coupangSearchAttempted={coupangSearchAttempted}
               coupangRecommendAttempted={coupangRecommendAttempted}

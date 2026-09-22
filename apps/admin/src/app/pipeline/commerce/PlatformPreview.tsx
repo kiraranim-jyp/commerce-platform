@@ -312,6 +312,8 @@ export function PlatformPreview({
   onFetchCoupangCategory,
   coupangCategoryFetching,
   naverCategoryLoading,
+  naverCategoryError,
+  onRetryNaverCategory,
   coupangSearchCandidates,
   coupangSearchAttempted,
   coupangRecommendAttempted,
@@ -440,6 +442,9 @@ export function PlatformPreview({
   /** CEO 지시(2026-08-19: "탭 전환 시 로딩 화면") — 스마트스토어 탭 진입 시
    * /api/naver/category-search 응답 전까지 true. */
   naverCategoryLoading?: boolean;
+  /** P1-3 — 스마트스토어 카테고리 «조회 실패» 사유. 후보 0건과 다른 상태다. */
+  naverCategoryError?: string | null;
+  onRetryNaverCategory?: () => void;
   /** A-12.3-P0-4(CPO 3차 지시 — regression 수정: "추천과 검색은 항상 동시에
    * 존재해야 한다") — 검색 결과는 AI 추천(categoryCandidates)과 완전히 분리된
    * 목록이라 별도로 내려받는다. */
@@ -924,6 +929,11 @@ export function PlatformPreview({
             /* REWORK-10 B — 스마트스토어 전용 대기 배너가 없어진 자리. 카테고리
                조회 중이라는 사실은 쿠팡이 이미 쓰던 이 패널 안의 한 줄로 흡수된다. */
             candidatesLoading={naverCategoryLoading}
+            /* P1-3 — 조회 «실패»는 스마트스토어 조회에서만 나온다(쿠팡은 자기
+               [다시 확인] 버튼과 categoryMetaError를 따로 쓴다). 그래서 쿠팡
+               탭에서는 이 자리가 비고, 예전 문구가 그대로 선다. */
+            candidatesError={capabilities.hasNaverPreview ? naverCategoryError : null}
+            onRetryCandidates={capabilities.hasNaverPreview ? onRetryNaverCategory : undefined}
           />
           {/* Sprint A-9(작업2/8) — "검증됨=false" 같은 개발자 로그 문구는 일반
               사용자에게 의미가 없다. Developer Mode를 켰을 때만 원시 추적
