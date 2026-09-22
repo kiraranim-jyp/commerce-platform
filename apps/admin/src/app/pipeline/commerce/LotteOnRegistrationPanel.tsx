@@ -592,33 +592,20 @@ export function LotteOnRegistrationPanel({
    * 🔴 조회 실패를 «목록 없음» 과 같은 얼굴로 두지 않는다. 비어 있으면 셀러는
    * 「고를 것이 없다」고 읽는데 사실은 조회가 닿지 않은 것이다.
    */
-  const [noticeItemCodes, setNoticeItemCodes] = useState<{ code: string; name: string }[]>([]);
-  const [noticeItemCodesError, setNoticeItemCodesError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch("/api/lotteon/notice-item-codes");
-        const data = (await res.json()) as {
-          ok?: boolean;
-          message?: string;
-          items?: { code: string; name: string }[];
-        };
-        if (cancelled) return;
-        if (!data.ok) {
-          setNoticeItemCodesError(data.message ?? "고시 품목코드를 불러오지 못했습니다.");
-          return;
-        }
-        setNoticeItemCodes(data.items ?? []);
-      } catch {
-        if (!cancelled) setNoticeItemCodesError("롯데ON에 연결하지 못했습니다.");
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const noticeItemCodeList = useLotteOnCommonCodes("PD_ITMS_CD", "고시 품목코드");
+  /**
+   * ══ LOTTEON-REAL-REGISTRATION-06(2026-09-22) ══
+   *
+   * 원산지코드. 첫 LIVE 등록이 **이 필드 하나만** 지목하고 거절했다.
+   *
+   *     returnCode 9999  "[원산지코드(oplcCd)] 가 유효하지 않습니다."
+   *     보낸 값          "oplcCd": "OPLC_CD"   ← 코드가 아니라 «코드그룹 이름»
+   *
+   * 우리 코드 어디에도 그 문자열을 넣는 곳은 없다. 화면이 「공통코드 OPLC_CD」
+   * 라는 힌트를 달아 두고 셀러에게 번호를 «적게» 했고, 셀러는 그 힌트를 답으로
+   * 읽었다. 고르게 하면 틀릴 수가 없다.
+   */
+  const originCodeList = useLotteOnCommonCodes("OPLC_CD", "원산지코드");
 
   useEffect(() => {
     let cancelled = false;
@@ -1467,17 +1454,11 @@ export function LotteOnRegistrationPanel({
                🔴 조회가 실패하면 «목록 없음» 인 척하지 않는다. 직접 입력 칸은
                그대로 살아 있으니 셀러가 막히지는 않는다. */
             belowInput={
-              noticeItemCodesError ? (
-                <p className="mt-1 text-[11px] text-error">
-                  🔴 고시 품목코드를 불러오지 못했습니다 — {noticeItemCodesError}
-                </p>
-              ) : (
-                <CodeOptionPicker
-                  options={noticeItemCodes}
-                  current={form.notice.itemCode}
-                  onPick={(value) => patch("notice", { itemCode: value })}
-                />
-              )
+              <CommonCodePicker
+                list={noticeItemCodeList}
+                current={form.notice.itemCode}
+                onPick={(value) => patch("notice", { itemCode: value })}
+              />
             }
             value={form.notice.itemCode}
             onChange={(value) => patch("notice", { itemCode: value })}
@@ -1699,7 +1680,18 @@ export function LotteOnRegistrationPanel({
             label="원산지코드"
             code="oplcCd"
             requirement={requirementOf("oplcCd")}
-            note="공통코드 OPLC_CD"
+            /* 🔴 힌트 문구를 바꿨다. 예전에는 「공통코드 OPLC_CD」였고, 셀러가
+               그것을 «넣어야 할 값» 으로 읽고 그대로 타이핑했다 — 첫 LIVE 등록이
+               그 한 줄로 거절됐다("oplcCd":"OPLC_CD"). 코드 이름을 화면에 두면
+               언젠가 누군가 그것을 적는다. */
+            note="롯데ON이 정한 원산지 중에서 고릅니다."
+            belowInput={
+              <CommonCodePicker
+                list={originCodeList}
+                current={form.codes.originCode}
+                onPick={(value) => patch("codes", { originCode: value })}
+              />
+            }
             value={form.codes.originCode}
             onChange={(value) => patch("codes", { originCode: value })}
           />
@@ -2659,6 +2651,66 @@ function DeliveryOptionPicker({
 }
 
 /** 공통코드(89) 한 건 고르기. 목록이 길 수 있어 select로 받는다. */
+/**
+ * ══ LOTTEON-REAL-REGISTRATION-06 §17(CEO 확정, 2026-09-22) ══
+ *
+ * 롯데ON 공통코드(89) 목록 하나를 읽어 온다. 「공식 Master 가 있으면 고르게
+ * 한다」는 원칙의 실행부다.
+ *
+ * 🔴 조회 «실패» 를 «목록 0건» 과 같은 얼굴로 두지 않는다. 비면 셀러는 「고를
+ * 것이 없다」고 읽는데 사실은 조회가 닿지 않은 것이다. 직접 입력칸은 그대로
+ * 살아 있어서 조회가 실패해도 셀러가 막히지는 않는다.
+ */
+function useLotteOnCommonCodes(group: string, label: string) {
+  const [items, setItems] = useState<{ code: string; name: string }[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/lotteon/common-codes?group=${encodeURIComponent(group)}`);
+        const data = (await res.json()) as {
+          ok?: boolean;
+          message?: string;
+          items?: { code: string; name: string }[];
+        };
+        if (cancelled) return;
+        if (!data.ok) {
+          setError(data.message ?? `${label}를 불러오지 못했습니다.`);
+          return;
+        }
+        setItems(data.items ?? []);
+      } catch {
+        if (!cancelled) setError("롯데ON에 연결하지 못했습니다.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [group, label]);
+  return { items, error, label };
+}
+
+/** 공통코드 선택기 + 조회 실패를 «실패로» 말하는 한 줄. */
+function CommonCodePicker({
+  list,
+  current,
+  onPick,
+}: {
+  list: { items: { code: string; name: string }[]; error: string | null; label: string };
+  current: string;
+  onPick: (value: string) => void;
+}) {
+  if (list.error) {
+    return (
+      <p className="mt-1 text-[11px] text-error">
+        🔴 {list.label}를 불러오지 못했습니다 — {list.error}
+      </p>
+    );
+  }
+  return <CodeOptionPicker options={list.items} current={current} onPick={onPick} />;
+}
+
 function CodeOptionPicker({
   options,
   current,
