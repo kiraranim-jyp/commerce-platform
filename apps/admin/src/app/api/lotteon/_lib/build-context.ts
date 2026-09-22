@@ -12,6 +12,7 @@ import {
 import { getDefaultSellerProfile, type SellerProfile } from "../../coupang/_lib/seller-profile";
 import { getDefaultDescriptionTemplate } from "../../coupang/_lib/description-template";
 import { findBrandProfileByName } from "../../coupang/_lib/brand-profile";
+import { loadLotteOnSellerSettings, resolveLotteOnSellerFixedValue } from "./seller-settings";
 import { fetchLotteOnIdentity } from "./identity";
 
 /**
@@ -144,6 +145,15 @@ export async function buildLotteOnContext(
    */
   const brandProfile = await findBrandProfileByName(product.brand.value);
 
+  /* LOTTEON-REAL-REGISTRATION-02 — 롯데ON 판매자 고정값(출고지·반품지·배송비
+     정책·배송가능지역·발송마감시간). 조회 실패는 «설정 없음» 과 같은 얼굴로
+     돌아오므로 여기서 등록을 막지 않는다 — 비어 있으면 검증기가 평소대로
+     SELLER_PLACE_REQUIRED 로 말한다. */
+  const sellerSettings = await loadLotteOnSellerSettings();
+  /** 사다리를 한 곳에서만 말한다 — 규칙이 여러 줄에 흩어지면 한 줄만 뒤집힌다. */
+  const fixed = (formValue: string | null | undefined, settingValue: string | null) =>
+    resolveLotteOnSellerFixedValue(formValue, settingValue).value;
+
   const channel: LotteOnChannelConfig = {
     ...BLANK_LOTTEON_CHANNEL_CONFIG,
     ...period,
@@ -167,10 +177,24 @@ export async function buildLotteOnContext(
 
     brandNo: trimOrNull(form.brandNo),
 
-    outboundPlaceNo: trimOrNull(form.outboundPlaceNo),
-    returnPlaceNo: trimOrNull(form.returnPlaceNo),
-    deliveryCostPolicyNo: trimOrNull(form.deliveryCostPolicyNo),
-    deliveryRegionGroupCode: trimOrNull(form.deliveryRegionGroupCode),
+    /* ══ LOTTEON-REAL-REGISTRATION-02 §3~§5(CEO 확정, 2026-09-22) ══
+
+       판매자 «고정값» 이 여기서 합류한다. 이 네 개는 롯데ON 판매자센터에 먼저
+       등록돼 있어야 하는 번호라 우리가 만들 수 없고(validate-payload 의
+       SELLER_PLACE_REQUIRED), 판매자가 바꾸지 않는 한 상품마다 달라지지도
+       않는다. 그런데 저장할 곳이 없어서 **상품별 폼에만** 살았다 — 그래서 매
+       상품마다 다시 골라야 했다.
+
+       🔴 사다리 순서를 지킨다: **상품 폼이 먼저다.** 설정은 폼이 비었을 때만
+       들어온다. 셀러가 이 상품에서만 다른 출고지를 골랐다면 그 결정이 설정에
+       덮이면 안 된다(제조사 사다리와 같은 원칙).
+
+       🔴 기존 autoPick(후보가 «정확히 하나» 일 때만 자동 선택)에 기대지 않는다.
+       출고지가 두 곳인 판매자에게 그 규칙은 아무 도움이 안 됐다. */
+    outboundPlaceNo: fixed(form.outboundPlaceNo, sellerSettings.outboundPlaceNo),
+    returnPlaceNo: fixed(form.returnPlaceNo, sellerSettings.returnPlaceNo),
+    deliveryCostPolicyNo: fixed(form.deliveryCostPolicyNo, sellerSettings.deliveryCostPolicyNo),
+    deliveryRegionGroupCode: fixed(form.deliveryRegionGroupCode, sellerSettings.deliveryRegionGroupCode),
     courierCode: trimOrNull(form.courierCode),
     returnCourierCode: trimOrNull(form.returnCourierCode),
 
@@ -186,9 +210,12 @@ export async function buildLotteOnContext(
       typeof form.shipBudgetDays === "number"
         ? form.shipBudgetDays
         : resolveLotteOnShipBudgetDays(toLotteOnSellerSettings(sellerProfile)).days,
-    weekdayCloseTime: trimOrNull(form.weekdayCloseTime) ?? "1400",
+    /* §3 — 발송마감시간도 판매자 운영시간이라 상품마다 달라지지 않는다.
+       폼 → 판매자 설정 → 기존 기본값("1400") 순서다. 기본값을 없애지 않는다 —
+       설정이 비어 있던 상품들의 동작이 이 변경으로 달라지면 안 된다. */
+    weekdayCloseTime: fixed(form.weekdayCloseTime, sellerSettings.weekdayCloseTime) ?? "1400",
     saturdayShippingAvailable: Boolean(form.saturdayShippingAvailable),
-    saturdayCloseTime: trimOrNull(form.saturdayCloseTime),
+    saturdayCloseTime: fixed(form.saturdayCloseTime, sellerSettings.saturdayCloseTime),
 
     externalProductNo: trimOrNull(form.externalProductNo),
     importerName: trimOrNull(form.importerName),
