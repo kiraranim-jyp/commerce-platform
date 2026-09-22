@@ -581,6 +581,45 @@ export function LotteOnRegistrationPanel({
     deliveryRegionGroupLabel: string | null;
   } | null>(null);
 
+  /**
+   * ══ LOTTEON-REAL-REGISTRATION-05(CEO 확정, 2026-09-22) ══
+   *
+   * 고시 품목코드 목록. 89 공통코드 `PD_ITMS_CD` 40건이다.
+   *
+   * 오래 찾았다 — 205 표준카테고리가 줄 것 같았지만 목록·단건 모두 pd_itms_list
+   * 가 비어 있었고, attr_list 는 상품 «속성» 이라 무관했다. 89 에 있었다.
+   *
+   * 🔴 조회 실패를 «목록 없음» 과 같은 얼굴로 두지 않는다. 비어 있으면 셀러는
+   * 「고를 것이 없다」고 읽는데 사실은 조회가 닿지 않은 것이다.
+   */
+  const [noticeItemCodes, setNoticeItemCodes] = useState<{ code: string; name: string }[]>([]);
+  const [noticeItemCodesError, setNoticeItemCodesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/lotteon/notice-item-codes");
+        const data = (await res.json()) as {
+          ok?: boolean;
+          message?: string;
+          items?: { code: string; name: string }[];
+        };
+        if (cancelled) return;
+        if (!data.ok) {
+          setNoticeItemCodesError(data.message ?? "고시 품목코드를 불러오지 못했습니다.");
+          return;
+        }
+        setNoticeItemCodes(data.items ?? []);
+      } catch {
+        if (!cancelled) setNoticeItemCodesError("롯데ON에 연결하지 못했습니다.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -1419,6 +1458,27 @@ export function LotteOnRegistrationPanel({
             code="pdItmsCd"
             requirement={requirementOf("pdItmsCd")}
             note={`고시 품목. ${LOTTEON_CHILD_PRODUCT_ITEM_CODE} = 어린이제품(유아동) — 이 경우 ④ 안전인증이 필수입니다.`}
+            /* ══ LOTTEON-REAL-REGISTRATION-05(CEO 확정, 2026-09-22) ══
+               셀러가 번호를 «찾아 적던» 자리다. 그래서 아무도 등록할 수 없었다.
+               이제 롯데ON 이 준 40건에서 「어린이제품」을 고른다.
+
+               🔴 값을 만들지 않는다 — 보여주는 것은 cdNm, payload 로 가는 것은
+               롯데ON 이 준 cd 그대로다. 매핑도 번역도 하지 않는다.
+               🔴 조회가 실패하면 «목록 없음» 인 척하지 않는다. 직접 입력 칸은
+               그대로 살아 있으니 셀러가 막히지는 않는다. */
+            belowInput={
+              noticeItemCodesError ? (
+                <p className="mt-1 text-[11px] text-error">
+                  🔴 고시 품목코드를 불러오지 못했습니다 — {noticeItemCodesError}
+                </p>
+              ) : (
+                <CodeOptionPicker
+                  options={noticeItemCodes}
+                  current={form.notice.itemCode}
+                  onPick={(value) => patch("notice", { itemCode: value })}
+                />
+              )
+            }
             value={form.notice.itemCode}
             onChange={(value) => patch("notice", { itemCode: value })}
           />
