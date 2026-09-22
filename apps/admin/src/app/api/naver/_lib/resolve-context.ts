@@ -5,6 +5,7 @@ import { fetchNaverAllCategories } from "./category";
 import { fetchNaverReturnDeliveryCompanies, resolvePrimaryReturnCompany } from "./delivery";
 import { fetchNaverOriginAreas } from "./origin";
 import { getDefaultSellerProfile } from "../../coupang/_lib/seller-profile";
+import { loadSellerSettings } from "@/lib/seller-settings";
 import { findBrandProfileByName } from "../../coupang/_lib/brand-profile";
 import { getDefaultDescriptionTemplate } from "../../coupang/_lib/description-template";
 import type { NaverResolveResponse } from "../../../pipeline/commerce/NaverPayloadPreview";
@@ -111,17 +112,26 @@ export async function resolveNaverContext(params: {
     refundAddressBookNo = addressBooks.find((a) => a.addressType === "REFUND_OR_EXCHANGE")?.addressBookNo ?? null;
   }
 
-  const [returnCompanies, sellerProfile, originAreas, brandProfile, descriptionTemplate] = await Promise.all([
-    fetchNaverReturnDeliveryCompanies(accessToken),
-    getDefaultSellerProfile(),
-    fetchNaverOriginAreas(accessToken),
-    brandName ? findBrandProfileByName(brandName) : Promise.resolve(null),
-    getDefaultDescriptionTemplate(),
-  ]);
+  /* PIVOT-03 ⑨ 0-1 — 판매자 «공통» 네 값(제조사·품질보증·A/S·원산지 기본)의
+     출처만 seller_settings 로 옮긴다. sellerProfile 은 «그대로 둔다» — 이 함수가
+     쓰는 나머지(택배사·반품지·배송비·공통이미지 등)는 전부 배송 프로필의 것이고,
+     그건 프로필마다 달라야 하는 값이다. 치환이 아니라 «출처 분리» 다.
+
+     🔴 폴백 순서(상품 → 브랜드 → 판매자)는 한 글자도 바꾸지 않는다. 판매자
+     단계에 «도달했을 때 어느 표에서 읽는가» 만 달라진다. */
+  const [returnCompanies, sellerProfile, sellerSettings, originAreas, brandProfile, descriptionTemplate] =
+    await Promise.all([
+      fetchNaverReturnDeliveryCompanies(accessToken),
+      getDefaultSellerProfile(),
+      loadSellerSettings(),
+      fetchNaverOriginAreas(accessToken),
+      brandName ? findBrandProfileByName(brandName) : Promise.resolve(null),
+      getDefaultDescriptionTemplate(),
+    ]);
   const primaryReturnCompany = returnCompanies ? resolvePrimaryReturnCompany(returnCompanies) : null;
 
   const resolvedCountryText =
-    extractedCountryOfOrigin || brandProfile?.countryOfOrigin || sellerProfile?.defaultCountryOfOrigin || null;
+    extractedCountryOfOrigin || brandProfile?.countryOfOrigin || sellerSettings.defaultCountryOfOrigin || null;
   const originMatch = originAreas
     ? resolveNaverOriginArea(resolvedCountryText, originAreas)
     : { status: "NO_INPUT" as const, code: null, matchedDisplayName: null, requiresImporter: false };
@@ -165,13 +175,15 @@ export async function resolveNaverContext(params: {
         ? ("PRODUCT_FIELD" as const)
         : brandProfile?.countryOfOrigin
           ? ("BRAND_DEFAULT" as const)
-          : sellerProfile?.defaultCountryOfOrigin
+          : sellerSettings.defaultCountryOfOrigin
             ? ("SELLER_DEFAULT" as const)
             : ("NONE" as const),
     },
     notice: {
-      warrantyPolicy: sellerProfile?.qualityGuarantee || null,
-      afterServiceDirector: sellerProfile?.asContactNumber || null,
+      warrantyPolicy: sellerSettings.qualityGuarantee || null,
+      afterServiceDirector: sellerSettings.asContactNumber || null,
+      // 🔴 이 줄은 «배송 프로필» 의 것이다(반품지 연락처). A/S 연락처와 이름이
+      //    비슷하지만 다른 값이라 sellerProfile 에 그대로 둔다.
       companyContactNumber: sellerProfile?.companyContactNumber || null,
       // N-3.83(CPO 지시, "SmartStore 기본정보 완성" 감사에서 발견) — Coupang은
       // register/route.ts:413-417에서 이미 brandProfile.manufacturer/
@@ -180,13 +192,13 @@ export async function resolveNaverContext(params: {
       // 쓰고 manufacturer는 아예 읽지 않았다 — 크롤러가 제조사를 못 찾은
       // 상품(흔한 경우)은 항상 빈칸이었던 원인. brandProfile은 이미 위에서
       // brand 파라미터로 조회해 둔 값을 그대로 재사용한다(추가 DB 조회 없음).
-      manufacturer: brandProfile?.manufacturer || sellerProfile?.manufacturer || null,
+      manufacturer: brandProfile?.manufacturer || sellerSettings.manufacturer || null,
       // N-4.12 STEP4(대표님 지시: "값 옆에 출처를 그대로 노출 — 브랜드
       // 기본값/판매자 기본값") — 위 3단계 우선순위(상품 원문은 build-payload.ts가
       // 이 값보다 먼저 확인, 여기는 원문이 없을 때의 폴백 두 단계만) 계산은
       // 그대로 두고, 어느 단계가 채웠는지만 추가로 알려준다. 새 판정이 아니라
       // 바로 위 줄과 동일한 조건을 그대로 다시 읽은 것뿐이다.
-      manufacturerSource: brandProfile?.manufacturer ? "BRAND_DEFAULT" : sellerProfile?.manufacturer ? "SELLER_DEFAULT" : "NONE",
+      manufacturerSource: brandProfile?.manufacturer ? "BRAND_DEFAULT" : sellerSettings.manufacturer ? "SELLER_DEFAULT" : "NONE",
     },
     detailPage: {
       descriptionTemplate: descriptionTemplate ?? null,
