@@ -14,6 +14,7 @@ import { buildCanonicalProduct } from "../../pipeline/canonical-product";
 import { getCoupangCredentials, getVendorUserId } from "../../coupang/_lib/env";
 import { getDefaultDescriptionTemplate } from "../../coupang/_lib/description-template";
 import { getDefaultSellerProfile } from "../../coupang/_lib/seller-profile";
+import { loadSellerSettings } from "@/lib/seller-settings";
 import { findBrandProfileByName } from "../../coupang/_lib/brand-profile";
 import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } from "../../coupang/_lib/shipping-place";
 import { fetchCategoryMeta } from "../../coupang/_lib/category-meta";
@@ -106,6 +107,9 @@ async function runOne(
   credentials: NonNullable<Awaited<ReturnType<typeof getCoupangCredentials>>>,
   vendorUserId: string,
   sellerProfile: NonNullable<Awaited<ReturnType<typeof getDefaultSellerProfile>>>,
+  /* PIVOT-03 ⑨ 0-3 — 판매자 공통 다섯 값은 배송 프로필이 아니라 여기서 온다.
+     🔴 인자로 «받는다». 안에서 부르면 30건마다 DB 를 왕복한다. */
+  sellerSettings: Awaited<ReturnType<typeof loadSellerSettings>>,
   descriptionTemplate: Awaited<ReturnType<typeof getDefaultDescriptionTemplate>>,
 ): Promise<BatchItemResult> {
   const base: Pick<BatchItemResult, "url" | "bucket" | "group"> = {
@@ -197,15 +201,20 @@ async function runOne(
         deliveryCharge: sellerProfile.deliveryCharge,
         returnDeliveryCharge: sellerProfile.returnDeliveryCharge,
         outboundLeadTimeDays: sellerProfile.outboundLeadTimeDays,
-        manufacturer: sellerProfile.manufacturer,
-        asContactNumber: sellerProfile.asContactNumber,
-        qualityGuarantee: sellerProfile.qualityGuarantee,
-        defaultCountryOfOrigin: sellerProfile.defaultCountryOfOrigin,
+        /* PIVOT-03 ⑨ 0-3 — 이 다섯 줄만 출처가 바뀐다. Production 의
+           register/route.ts 와 «문자 그대로 같은 식» 이다. QA 가 Production 과
+           다른 판매자 정보를 검사하면 검사 자체가 의미를 잃는다.
+           `?? ""` 는 기존 동작 그대로다 — 레거시는 toProfile 이 이미 했고,
+           여기서는 호출부가 한다. sellerConfig 의 다섯 칸은 필수 string 이다. */
+        manufacturer: sellerSettings.manufacturer ?? "",
+        asContactNumber: sellerSettings.asContactNumber ?? "",
+        qualityGuarantee: sellerSettings.qualityGuarantee ?? "",
+        defaultCountryOfOrigin: sellerSettings.defaultCountryOfOrigin ?? "",
         topCommonImageUrl: sellerProfile.topCommonImageUrl,
         topCommonImageEnabled: sellerProfile.topCommonImageEnabled,
         bottomCommonImageUrl: sellerProfile.bottomCommonImageUrl,
         bottomCommonImageEnabled: sellerProfile.bottomCommonImageEnabled,
-        kcExemptionText: sellerProfile.kcExemptionText,
+        kcExemptionText: sellerSettings.kcExemptionText ?? "",
       },
       descriptionTemplate: descriptionTemplate ?? undefined,
       categoryMeta,
@@ -264,6 +273,10 @@ export async function POST() {
     return NextResponse.json({ error: "배송 프로필이 없습니다." }, { status: 400 });
   }
   const vendorUserId = await getVendorUserId();
+  /* PIVOT-03 ⑨ 0-3 — 🔴 루프 «밖» 에서 한 번만 읽는다. sellerProfile 과 같은
+     자리다. runOne 안으로 들어가면 30건 × DB 왕복이 되고, 배치 도중에 설정이
+     바뀌면 앞뒤 상품이 «다른 판매자 정보» 로 검사된다. */
+  const sellerSettings = await loadSellerSettings();
   const descriptionTemplate = await getDefaultDescriptionTemplate();
 
   const batch = pickBatch();
@@ -274,7 +287,7 @@ export async function POST() {
   for (let i = 0; i < batch.length; i += concurrency) {
     const chunk = batch.slice(i, i + concurrency);
     const chunkResults = await Promise.all(
-      chunk.map((item) => runOne(item, credentials, vendorUserId, sellerProfile, descriptionTemplate)),
+      chunk.map((item) => runOne(item, credentials, vendorUserId, sellerProfile, sellerSettings, descriptionTemplate)),
     );
     results.push(...chunkResults);
   }
