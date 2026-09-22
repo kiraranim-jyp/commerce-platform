@@ -562,12 +562,27 @@ describe("표 2행 — 셀러 설정 자동 반영", () => {
    * 1위**가 됐을 때 선다(REWORK-4 §2의 "한 번에 하나" 규칙 그대로) — 그 경로는
    * rework7-summary-shape.test.ts가 요약 컴포넌트 단위로 따로 증명한다.
    */
-  it("coupang — 셀러 설정 누락은 「판매자 설정」 한 줄로 접힌다(이름 나열 없음)", async () => {
+  /* ══ LOTTEON-REAL-REGISTRATION-02 §6(CEO 확정, 2026-09-22) ══
+     계약이 한 군데 넓어졌다. 「✗ 판매자 설정」 한 줄로는 셀러가 무엇을 해야
+     하는지 알 수 없어서, **막는 자리에 한해** 그 이름을 아래 한 줄씩 편다.
+
+     🔴 위 REWORK-7 주석이 지키려던 것은 그대로다 — «자리» 는 여전히 한 줄이고,
+     통과한 자리는 아무것도 펴지 않는다. 그때 지운 것은 이미 통과한 필드까지
+     전부 나열한 좌측과의 중복이었다(✓상품명 ✓브랜드 …). 지금 펴는 것은 막고
+     있는 것뿐이고, 좌측 어디에도 없는 정보다. */
+  it("coupang — 셀러 설정 누락은 「판매자 설정」 한 자리로 모이고, 막는 이름만 편다", async () => {
     const { right } = columnsOf(renderPlatformTab("coupang", { settingsMissing: ["출고지", "반품지"] }));
     const text = stripTags(right);
     expect(text).toContain("판매자 설정");
-    expect(text, "우측 요약이 셀러 설정 항목 이름을 나열한다").not.toContain("출고지");
-    expect(text, "우측 요약이 셀러 설정 항목 이름을 나열한다").not.toContain("반품지");
+    // 자리는 여전히 하나다 — 두 항목이 각각 «자리» 를 차지하지 않는다.
+    const doc = new JSDOM(`<!doctype html><body>${right}</body>`).window.document;
+    const groupRows = Array.from(doc.querySelectorAll("li"))
+      .filter((li) => li.closest("ul")?.parentElement?.tagName !== "LI")
+      .map((li) => (li.querySelector("span")?.textContent ?? "").replace(/\s+/g, ""));
+    expect(groupRows.filter((row) => row.includes("판매자설정"))).toHaveLength(1);
+    // 그리고 막는 이름이 그 아래 선다 — 셀러가 다음 행동을 안다.
+    expect(text, "막는 항목 이름이 없어 무엇을 할지 알 수 없다").toContain("출고지");
+    expect(text).toContain("반품지");
   });
 
   /**

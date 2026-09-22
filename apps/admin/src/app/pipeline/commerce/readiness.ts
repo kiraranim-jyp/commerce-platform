@@ -216,7 +216,12 @@ export function computeNaverPayloadReadiness(validation: NaverPayloadValidationR
     // 묶어둔다. 로딩이 끝나면 실제 validation 결과로 곧바로 대체된다.
     return summarize([
       {
-        label: "Payload 검증 결과 확인 중",
+        /* LOTTEON-REAL-REGISTRATION-02 §6(CEO 지시, 2026-09-22: 「payload 검증
+           메시지 · API 내부 필드명을 그대로 노출하지 않는다」) — 「Payload」는
+           셀러가 읽을 말이 아니다. 우측 요약이 막는 항목을 이름으로 말하기
+           시작하면서 이 글자가 셀러 화면에 그대로 섰다.
+           🔴 뜻도 조건도 판정도 한 글자 바뀌지 않는다 — 부르는 이름만 바꾼다. */
+        label: "등록 가능 여부 확인 중",
         passed: false,
         required: true,
         group: "PRODUCT_INFO",

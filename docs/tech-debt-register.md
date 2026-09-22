@@ -529,3 +529,51 @@ complianceFieldResults
 
 `㈂ 값 없는 MANDATORY 구매옵션 사전 차단` — CEO 판정으로 **이번에는 넣지 않았다**.
 재등록이 성공하면 별도 P1 정책으로 결정한다.
+
+---
+
+## 🔴 LOTTEON connectivity — intermittent / UNRESOLVED
+
+**기록 경위**: CEO 지시(2026-09-22) — LOTTEON-REAL-REGISTRATION-02 중 발견.
+**단정하지 말 것**이 이 기록의 목적이다.
+
+```text
+09/22 earlier  205 표준카테고리 목록 6,131건 success
+09/22 13:42    207 identity      20,283ms timeout   proxy=OCI
+               205 단건 조회      20,201ms timeout   proxy=OCI
+               delivery-settings  20,283ms timeout   proxy=OCI
+current        intermittent / unresolved
+```
+
+같은 배포 · 같은 경로 · 같은 OCI 프록시인데 한 시간 사이에 성공과 timeout 이
+갈렸다. **간헐적이라는 사실까지만 확정한다.**
+
+### 🔴 단정 금지
+
+```text
+❌ IP allowlist(161.33.39.233) 문제다     — 성공한 호출이 같은 IP 로 나갔다
+❌ LotteON 점검이다                        — 공지 확인 안 됨
+❌ filter_1 파라미터가 문제다              — 같은 창에서 207 identity 도 죽었다
+```
+
+### 205_SINGLE 판정
+
+```text
+UNRESOLVED — 연결 장애로 «실험 미성립»
+```
+
+`pdItmsCd` 를 DIRECT 로 확정하지 않는다. `filter_1` 이 실패했다고도 하지 않는다.
+연결이 살아 있는 상태에서 다시 물어야 판정할 수 있다(d83876e 가 그때 자동으로
+다시 묻는다 — 셀러가 누를 것이 없다).
+
+### 실등록 직전 게이트(CEO 확정)
+
+API 가 살아났다고 바로 등록을 보내지 않는다. 순서대로 확인한다.
+
+```text
+207 identity OK → delivery-settings OK → 205 category OK
+  → payload validation READY → registration API → externalProductId
+```
+
+「UI 는 READY 인데 실제 API 가 20초 timeout」인 상태를 등록 시도로 오인하지
+않기 위해서다.

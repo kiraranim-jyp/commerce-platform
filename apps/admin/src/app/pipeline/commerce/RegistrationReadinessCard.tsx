@@ -128,13 +128,44 @@ export function RegistrationReadinessCard({
         ) : (
           <ul className="mt-1.5 space-y-1">
             {checks.map((check) => (
-              <li key={check.label} className="flex items-center gap-1.5 text-xs">
-                <span aria-hidden className={`shrink-0 ${check.passed ? "text-success" : "text-error"}`}>
-                  {check.passed ? "✓" : "✗"}
+              <li key={check.label} className="text-xs">
+                <span className="flex items-center gap-1.5">
+                  <span aria-hidden className={`shrink-0 ${check.passed ? "text-success" : "text-error"}`}>
+                    {check.passed ? "✓" : "✗"}
+                  </span>
+                  <span className={check.passed ? "text-text-secondary" : "font-medium text-text-primary"}>
+                    {check.label}
+                  </span>
                 </span>
-                <span className={check.passed ? "text-text-secondary" : "font-medium text-text-primary"}>
-                  {check.label}
-                </span>
+                {/* ══ LOTTEON-REAL-REGISTRATION-02 §6(CEO 지시, 2026-09-22) ══
+                    막는 항목을 «이름으로» 말한다. 예전에는 「✗ 배송」 한 줄이
+                    전부였고, 배송의 무엇이 왜 막는지는 화면 어디에도 없었다
+                    (「✗ 채널 필수정보」는 특히 아무것도 알려주지 않는다).
+                    검증기는 처음부터 label 과 reason 을 주고 있었는데 자리
+                    단위로 접으면서 버려지고 있었다.
+                    🔴 판정을 새로 만들지 않는다 — 접기 전의 항목을 그대로 편다. */}
+                {!check.passed && check.blocking.length > 0 && (
+                  <ul className="mt-0.5 ml-[1.1rem] space-y-0.5">
+                    {check.blocking.map((blocker) => (
+                      <li key={blocker.label} className="text-[11px] leading-relaxed text-text-secondary">
+                        <span aria-hidden className="mr-1 text-text-tertiary">
+                          └
+                        </span>
+                        <span className="font-medium">{blocker.label}</span>
+                        {blocker.hint && <span className="text-text-tertiary"> — {blocker.hint}</span>}
+                      </li>
+                    ))}
+                    {/* 접었다는 사실을 숨기지 않는다 — 전체는 좌측 상세에 있다. */}
+                    {check.hiddenBlockingCount > 0 && (
+                      <li className="text-[11px] text-text-tertiary">
+                        <span aria-hidden className="mr-1">
+                          └
+                        </span>
+                        외 {check.hiddenBlockingCount}개
+                      </li>
+                    )}
+                  </ul>
+                )}
               </li>
             ))}
           </ul>

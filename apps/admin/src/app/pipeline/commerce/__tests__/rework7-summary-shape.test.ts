@@ -312,26 +312,76 @@ describe("REWORK-7 ① — 🔴 우측 요약에 상세 필드가 나열되지 �
     }
   });
 
-  it("요약의 체크 목록은 **자리 이름**뿐이다 — 알려진 열 개 중에서만 나온다", async () => {
-    const ALLOWED = [
-      "카테고리",
-      "상품정보",
-      "판매가격",
-      "옵션",
-      "상세설명",
-      "배송",
-      "고시정보",
-      "인증",
-      "판매자 설정",
-      "채널 필수정보",
-    ];
+  /**
+   * ══ LOTTEON-REAL-REGISTRATION-02 §6(CEO 확정, 2026-09-22) ══
+   *
+   * 이 검사가 원래 「요약의 줄은 자리 이름 «뿐»」이었다. 그 뒤 CEO 가 다른 것을
+   * 봤다 — 「✗ 배송」 한 줄로는 배송의 «무엇» 이 «왜» 막는지 알 수 없고,
+   * 「✗ 채널 필수정보」는 특히 아무것도 알려주지 않는다.
+   *
+   * 그래서 계약이 한 군데만 넓어진다.
+   *
+   *     ✓ 통과한 자리   자리 이름 «한 줄». 하위 없음.      ← REWORK-7 그대로
+   *     ✗ 막힌 자리     막는 항목만 짧게 편다.             ← 새로 허용
+   *
+   * 🔴 REWORK-7 이 지운 것은 여기로 «돌아오지 않는다». 그때 지운 것은 이미
+   *    통과한 필드까지 전부 나열한 목록이었고(✓상품명 ✓브랜드 ✓대표이미지 …)
+   *    좌측 상세와 중복이라 소음이었다. 지금 펴는 것은 «막고 있는 것» 뿐이고
+   *    좌측 어디에도 없는 정보(왜 막는가)다. 통과 항목을 펴면 이 검사가 다시
+   *    잡는다(바로 아래 ✓ 검사).
+   */
+  const SUMMARY_GROUP_NAMES = [
+    "카테고리",
+    "상품정보",
+    "판매가격",
+    "옵션",
+    "상세설명",
+    "배송",
+    "고시정보",
+    "인증",
+    "판매자 설정",
+    "채널 필수정보",
+  ];
+
+  /** 최상위 체크 줄(자리)만 고른다 — 하위 blocker 줄은 중첩 <ul> 안에 있다. */
+  function summaryGroupRows(right: HTMLElement): string[] {
+    return Array.from(right.querySelectorAll("li"))
+      .filter((li) => li.closest("ul")?.parentElement?.tagName !== "LI")
+      .map((li) => clean(li.querySelector("span")?.textContent ?? "").replace(/^[✓✗]\s*/, ""))
+      .filter(Boolean);
+  }
+
+  it("요약의 «자리» 줄은 알려진 열 개 중에서만 나온다", async () => {
     for (const tab of TABS) {
       const { right } = columnsOf(await mount(tab.element()));
-      const rows = Array.from(right.querySelectorAll("li"))
-        .map((li) => clean(li.textContent ?? "").replace(/^[✓✗]\s*/, ""))
-        .filter(Boolean);
-      for (const row of rows) {
-        expect(ALLOWED, `${tab.label}: 요약에 자리 이름이 아닌 줄이 있다 — ${row}`).toContain(row);
+      for (const row of summaryGroupRows(right)) {
+        expect(SUMMARY_GROUP_NAMES, `${tab.label}: 요약에 자리 이름이 아닌 줄이 있다 — ${row}`).toContain(row);
+      }
+    }
+  });
+
+  it("🔴 ✓ 통과한 자리는 하위 항목을 «펴지 않는다» — REWORK-7 이 지운 그 중복이다", async () => {
+    for (const tab of TABS) {
+      const { right } = columnsOf(await mount(tab.element()));
+      const passedRows = Array.from(right.querySelectorAll("li")).filter((li) =>
+        (li.querySelector("span")?.textContent ?? "").includes("✓"),
+      );
+      for (const li of passedRows) {
+        expect(
+          li.querySelector("ul"),
+          `${tab.label}: 통과한 자리가 하위 목록을 폈다 — ${clean(li.textContent ?? "")}`,
+        ).toBeNull();
+      }
+    }
+  });
+
+  it("🔴 셀러에게 API 내부 필드명·개발 용어가 보이지 않는다", async () => {
+    const FORBIDDEN = ["Payload", "PD_ITMS_CD", "IMP_PRX_CD", "pdItmsCd", "MISSING", "BLOCKED"];
+    for (const tab of TABS) {
+      const { right } = columnsOf(await mount(tab.element()));
+      const text = right.textContent ?? "";
+      for (const word of FORBIDDEN) {
+        expect(text, `${tab.label}: 요약에 내부 용어가 노출됐다 — ${word}`).not.toContain(word);
       }
     }
   });
@@ -527,11 +577,13 @@ describe("REWORK-7 ① — 필수 확인은 자리 단위다(판정이 아니라
         item("브랜드", "section-basic", true),
         item("대표이미지", "section-images", false),
       ]),
-    ).toEqual([{ label: "상품정보", passed: false }]);
+      // §6 — blocking/hiddenBlockingCount 가 붙었다. 이 검사가 지키는 것은
+      // «자리 이름과 통과 판정» 이므로 그 둘만 본다(toMatchObject).
+    ).toMatchObject([{ label: "상품정보", passed: false }]);
   });
 
   it("롯데ON의 lotteon- 접두사 자리도 같은 이름으로 모인다", () => {
-    expect(buildSummaryChecks([item("표준카테고리", "lotteon-section-category", true)])).toEqual([
+    expect(buildSummaryChecks([item("표준카테고리", "lotteon-section-category", true)])).toMatchObject([
       { label: "카테고리", passed: true },
     ]);
   });
@@ -544,7 +596,7 @@ describe("REWORK-7 ① — 필수 확인은 자리 단위다(판정이 아니라
   it("갈 곳이 /settings인 항목은 「판매자 설정」으로 모인다", () => {
     expect(
       buildSummaryChecks([{ label: "출고지", passed: false, required: true, externalHref: "/settings" }]),
-    ).toEqual([{ label: "판매자 설정", passed: false }]);
+    ).toMatchObject([{ label: "판매자 설정", passed: false }]);
   });
 });
 
@@ -580,9 +632,16 @@ describe("REWORK-7 ① — 접힌 이름은 남은 항목 1위가 됐을 때 이
     expect(text, "1위가 됐는데도 이름이 없다").toContain("출고지");
     const links = Array.from(dom.querySelectorAll("a")).map((a) => a.getAttribute("href"));
     expect(links, "갈 곳 없는 안내가 됐다").toContain("/settings");
-    // 그래도 체크 목록은 자리 이름 하나뿐이다.
-    const rows = Array.from(dom.querySelectorAll("li")).map((li) => clean(li.textContent ?? ""));
-    expect(rows).toEqual(["✗ 판매자 설정".replace(" ", "")]);
+    /* §6(2026-09-22) — 체크 목록의 «자리» 는 여전히 하나뿐이다. 달라진 것은 그
+       자리가 막혔을 때 무엇이 막는지를 한 줄 더 말한다는 것뿐이다. 통과한
+       자리였다면 그 한 줄도 없다(바로 위 「✓ 통과한 자리는 펴지 않는다」). */
+    const groupRows = Array.from(dom.querySelectorAll("li"))
+      .filter((li) => li.closest("ul")?.parentElement?.tagName !== "LI")
+      .map((li) => clean(li.querySelector("span")?.textContent ?? ""));
+    expect(groupRows).toEqual(["✗판매자 설정"]);
+    // 그리고 막는 항목의 이름이 그 아래 선다 — 셀러가 무엇을 할지 알 수 있다.
+    const blockerRows = Array.from(dom.querySelectorAll("li li")).map((li) => clean(li.textContent ?? ""));
+    expect(blockerRows).toEqual(["└출고지"]);
   });
 });
 import { manufacturerFixture } from "./manufacturer-fixture";
