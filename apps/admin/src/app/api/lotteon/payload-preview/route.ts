@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import type { CanonicalProduct } from "@commerce/shared";
 import { buildLotteOnPayload, validateLotteOnPayload } from "@commerce/listing";
 import { buildLotteOnContext, type LotteOnChannelFormInput } from "../_lib/build-context";
+import { LOTTEON_READ_PATHS } from "../_lib/client";
+import { runLotteOnRead } from "../_lib/request";
+import { recordAuditLog } from "@/lib/audit-log";
 
 /**
  * LOTTEON COMMERCE SPRINT 2 Phase 3 — Payload Preview(읽기 전용, 부작용 0).
@@ -14,6 +17,71 @@ import { buildLotteOnContext, type LotteOnChannelFormInput } from "../_lib/build
  * 이 라우트는 상품등록(87) 경로를 **호출하지 않는다.** 207 Identity 한 번만
  * 조회한다(거래처번호가 payload 필수값이라서).
  */
+/* ══ LOTTEON-REG-01 계측(읽기 전용 · 한시) ══════════════════════════════════
+
+   왜 여기로 옮겼나. 계측이 category-recommend 에만 있었는데, 그 라우트는
+   **이미 카테고리를 고른 상품에서는 돌지 않는다**(LotteOnRegistrationPanel 의
+   hadCategoryOnMountRef — 셀러의 결정을 덮지 않으려는 기존 규칙). 그래서 CEO 가
+   [다시 확인] 을 눌러야만 찍혔고, 두 번 놓쳤다.
+
+   payload-preview 는 탭에 들어올 때마다 자동으로 돈다. 그리고 여기서는 추천
+   1위가 아니라 **셀러가 실제로 고른 표준카테고리** 를 묻게 된다 — 증거가 더
+   정확하다.
+
+   🔴 한 번만 돈다. 모듈 수준 플래그라 람다 인스턴스마다 최대 1회이고, 이미
+   기록이 있으면 아래 판정이 끝난 뒤 이 블록 전체를 제거한다. 실패해도
+   조용히 넘어간다 — 진단이 등록 미리보기를 막지 않는다. */
+let noticeItemProbeDone = false;
+
+async function probeNoticeItemCode(standardCategoryNo: string | null | undefined): Promise<void> {
+  if (noticeItemProbeDone) return;
+  const stdCatId = standardCategoryNo?.trim();
+  if (!stdCatId) return;
+  noticeItemProbeDone = true;
+  try {
+    const probe = await runLotteOnRead({
+      host: "onpick",
+      method: "GET",
+      path: LOTTEON_READ_PATHS.onpickCheetah,
+      query: { job: "cheetahStandardCategory", filter_1: stdCatId, skip: "0", limit: "1" },
+      envelope: "RAW",
+      step: `205 표준카테고리 단건 조회(품목코드 확인 · ${stdCatId})`,
+    });
+    const base = { step: "205_SINGLE", stdCatId, from: "payload-preview" };
+    let payload: Record<string, unknown>;
+    if (!probe.ok) {
+      payload = { ...base, ok: false };
+    } else {
+      const raw = probe.result.raw as { itemList?: unknown } | null;
+      const list = Array.isArray(raw?.itemList) ? (raw.itemList as Record<string, unknown>[]) : [];
+      const row = (list[0]?.data ?? list[0] ?? null) as Record<string, unknown> | null;
+      const itms = row ? ((row["pd_itms_list"] ?? row["pd_Itms_list"]) as unknown) : undefined;
+      payload = {
+        ...base,
+        ok: true,
+        returnedRows: list.length,
+        rowKeys: row ? Object.keys(row) : null,
+        itmsIsArray: Array.isArray(itms),
+        itmsLength: Array.isArray(itms) ? itms.length : null,
+        // 🔴 값이 아니라 «키 이름» 만 본다.
+        itmsFirstKeys:
+          Array.isArray(itms) && itms[0] && typeof itms[0] === "object" ? Object.keys(itms[0] as object) : null,
+      };
+    }
+    console.log(`[LOTTEON-REG-01] ${JSON.stringify(payload)}`);
+    await recordAuditLog({
+      eventType: "LOTTEON_REG_01_PROBE",
+      actor: "system",
+      marketplace: "lotteon",
+      field: "pdItmsCd",
+      afterValue: payload,
+      reason: "205 표준카테고리 단건 조회에 품목코드가 들어 있는가(읽기 전용 진단)",
+    });
+  } catch {
+    // 진단 실패가 미리보기를 막지 않는다.
+  }
+}
+
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
     product?: CanonicalProduct;
@@ -33,6 +101,8 @@ export async function POST(request: Request) {
 
   const validation = validateLotteOnPayload(context.input);
   const payload = buildLotteOnPayload(context.input);
+
+  await probeNoticeItemCode(context.input.channel.standardCategoryNo);
 
   return NextResponse.json({
     ok: true,
