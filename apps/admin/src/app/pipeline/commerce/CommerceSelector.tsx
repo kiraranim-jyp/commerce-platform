@@ -54,6 +54,48 @@ export function selectionSummary(count: number): string {
   return count === 0 ? "선택된 커머스가 없습니다" : `선택 ${count}개`;
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * N-06-D(CPO 확정, 2026-09-24) — **고른 것들이 지금 등록 가능한가.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 새 판정을 만들지 않는다. 각 채널이 이미 보고한 `state` 를 세기만 한다.
+ *
+ * 세 갈래로만 나눈다 — 이 이상은 지금 데이터가 말해 주지 않는다:
+ *   등록 가능    state === "READY"
+ *   확인 필요    state 는 있는데 READY 가 아니다
+ *   확인 전      state 가 아직 «없다»(보고된 적 없음) → 0 을 「준비됨」으로 읽지 않기 위해
+ */
+export interface SelectionReadinessCounts {
+  selected: number;
+  ready: number;
+  needsReview: number;
+  unknown: number;
+}
+
+export function countSelectionReadiness(
+  channels: RegistrationChannel[],
+  selected: readonly CommerceId[],
+): SelectionReadinessCounts {
+  const picked = channels.filter((channel) => selected.includes(channel.id));
+  return {
+    selected: picked.length,
+    ready: picked.filter((channel) => channel.state === "READY").length,
+    needsReview: picked.filter((channel) => channel.state && channel.state !== "READY").length,
+    unknown: picked.filter((channel) => !channel.state).length,
+  };
+}
+
+/** 위 숫자를 사람이 읽는 한 줄로. 0 인 갈래는 아예 적지 않는다(없는 것을 세지 않는다). */
+export function selectionReadinessSummary(counts: SelectionReadinessCounts): string {
+  if (counts.selected === 0) return "";
+  const parts: string[] = [];
+  if (counts.ready > 0) parts.push(`등록 가능 ${counts.ready}`);
+  if (counts.needsReview > 0) parts.push(`확인 필요 ${counts.needsReview}`);
+  if (counts.unknown > 0) parts.push(`확인 전 ${counts.unknown}`);
+  return parts.join(" · ");
+}
+
 /** 결과가 나온 뒤에는 준비 상태 대신 «결과» 를 적는다. */
 const OUTCOME_NOTE: Record<"SUBMITTED" | "FAILED" | "SKIPPED", string> = {
   SUBMITTED: "✓ 등록 완료",
@@ -148,6 +190,7 @@ export function CommerceSelector({
   const selectable = channels.filter(isSelectableCommerce);
   const selectedCount = selected.length;
   const busy = running !== null;
+  const readinessSummaryText = selectionReadinessSummary(countSelectionReadiness(channels, selected));
 
   return (
     <section className="rounded-lg border border-border bg-surface px-3 py-2.5 shadow-subtle">
@@ -230,7 +273,11 @@ export function CommerceSelector({
       </ul>
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-        <span className="text-xs text-text-secondary">{selectionSummary(selectedCount)}</span>
+        <span className="text-xs text-text-secondary">
+          {selectionSummary(selectedCount)}
+          {/* N-06-D — 고른 것들이 «지금» 등록 가능한지 한 줄로. 판정은 위 줄들과 같다. */}
+          {readinessSummaryText && <span className="ml-1.5 text-text-tertiary">· {readinessSummaryText}</span>}
+        </span>
         {onRegisterSelected && (
           <button
             type="button"
