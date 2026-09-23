@@ -80,7 +80,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   return (
-    <div className="flex h-screen flex-col">
+    /* ════════════════════════════════════════════════════════════════════
+       N-05 QA FIX ②(CEO 실측, 2026-09-23) — **세로 스크롤은 «하나» 다.**
+
+       화면에 스크롤바가 두 개 서 있었다. 원인은 어느 카드가 아니라 이 껍데기다:
+
+         body   min-h-full           → 문서가 «자랄 수 있다»   (스크롤 컨테이너 ①)
+         shell  h-screen             → 100vh 고정
+         main   overflow-y-auto      → 안에서 스크롤한다       (스크롤 컨테이너 ②)
+
+       둘이 공존하면 shell 이 100vh 를 1px 이라도 넘기는 순간(확대/축소 반올림 ·
+       배너 표시 등) 스크롤바가 두 개가 된다. 실제로 그렇게 보였다.
+
+       🔴 고치는 방법은 «컨테이너를 하나로 줄이는 것» 이다. shell 을
+       overflow-hidden 으로 닫아 문서가 자랄 길을 없애고, 스크롤은 main 하나만
+       갖는다. h-screen → h-dvh 는 같은 이유다 — 100vh 는 브라우저 UI/스크롤바를
+       셈에 넣지 않아 뷰포트보다 커질 때가 있다.
+
+       AppShell 을 쓰지 않는 화면(랜딩 · 로그인)은 영향이 없다. 그쪽은 지금도
+       문서 하나만 스크롤한다.
+       ════════════════════════════════════════════════════════════════════ */
+    <div className="flex h-dvh flex-col overflow-hidden">
       {/* BETA-SECURITY-2 FINAL §4 — 전환 중이면 최상단에 항상 보인다. */}
       <ImpersonationBanner />
       <AppHeader />

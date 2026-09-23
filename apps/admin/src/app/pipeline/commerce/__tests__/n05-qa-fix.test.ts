@@ -120,6 +120,30 @@ describe("③ 일반 UI 에 내부 세로 스크롤이 없다", () => {
   });
 });
 
+describe("③-2 🔴 스크롤 컨테이너 자체가 «하나» 다 — 앱 껍데기", () => {
+  /* CEO 실측에서 스크롤바가 두 개였던 진짜 원인. 카드가 아니라 껍데기였다:
+       body   min-h-full        문서가 자랄 수 있다     (컨테이너 ①)
+       main   overflow-y-auto   안에서 스크롤한다        (컨테이너 ②)
+     둘이 공존하면 1px 만 넘쳐도 스크롤바가 두 개가 된다. */
+  const SHELL = readFileSync(join(DIR, "../../../components/layout/AppShell.tsx"), "utf8");
+
+  it("🔴 껍데기가 문서를 늘리지 못하게 닫혀 있다", () => {
+    expect(codeOnly(SHELL)).toContain("flex h-dvh flex-col overflow-hidden");
+  });
+
+  it("스크롤은 main 하나만 갖는다", () => {
+    const code = codeOnly(SHELL);
+    const scrollers = code.match(/overflow-y-auto/g) ?? [];
+    // main + 좌측 네비(짧은 목록) 둘뿐이고, 본문 스크롤은 main 하나다.
+    expect(code).toContain('<main className="min-h-0 flex-1 overflow-y-auto">');
+    expect(scrollers.length).toBeLessThanOrEqual(2);
+  });
+
+  it("🔴 100vh 를 쓰지 않는다 — 브라우저 UI/스크롤바를 셈에 넣지 않아 뷰포트보다 커진다", () => {
+    expect(codeOnly(SHELL)).not.toContain("h-screen");
+  });
+});
+
 describe("④ viewer 의 내부 스크롤은 그대로 둔다(예외)", () => {
   it.each(VIEWERS)("%s 는 %s 를 유지한다", (file, className) => {
     expect(read(file)).toContain(className);
