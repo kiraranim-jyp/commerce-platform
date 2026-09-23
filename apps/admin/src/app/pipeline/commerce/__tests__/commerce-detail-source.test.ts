@@ -399,6 +399,8 @@ describe("🔴 최종 payload 문자열 — 상단 템플릿 · 본문 · 하단
       sellerConfig: { ...COMMON_IMAGES } as never,
       descriptionTemplate: TEMPLATE,
       detailBlocks: blocksForAll,
+      // NEXT-04d Phase B-2 — 이 검사는 상세페이지 조립만 본다(채널 override 없음).
+      binding: {},
     });
     return payload.items
       .flatMap((item) => item.contents.flatMap((content) => content.contentDetails.map((d) => d.content)))

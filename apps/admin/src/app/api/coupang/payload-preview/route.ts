@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct } from "@commerce/shared";
-import { buildComplianceReport, buildCoupangPayload, resolveDetailBlocks, resolveVerifiedCategoryCode } from "@commerce/listing";
+import {
+  buildComplianceReport,
+  buildCoupangPayload,
+  resolveDetailBlocks,
+  resolveVerifiedCategoryCode,
+  toCoupangBinding,
+} from "@commerce/listing";
 import { getCoupangCredentials, getVendorUserId } from "../_lib/env";
 import { getDefaultDescriptionTemplate } from "../_lib/description-template";
 import { getDefaultSellerProfile } from "../_lib/seller-profile";
@@ -71,6 +77,9 @@ export async function POST(request: Request) {
   const resolvedBrand = listing.brand ? await resolveBrand(credentials, listing.brand) : null;
 
   const payload = buildCoupangPayload(product, listing, {
+    /* NEXT-04d Phase B-2 — 쿠팡 채널값(카테고리 동적 입력폼에 셀러가 채운
+       답)은 이제 상품이 아니라 이 통로로 간다. 저장 위치는 그대로다. */
+    binding: toCoupangBinding(product),
     sellerConfig: {
       vendorId: credentials.vendorId,
       vendorUserId,

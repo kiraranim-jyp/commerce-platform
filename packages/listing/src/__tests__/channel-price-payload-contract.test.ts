@@ -92,11 +92,16 @@ const NAVER_FIXTURE = {
   originAreaRequiresContent: false,
 } as const;
 
+/* NEXT-04d Phase B-2 — 쿠팡 채널 바인딩은 «필수 인자» 다. 빠뜨리면 셀러가
+   화면에서 채운 구매옵션·고시 값이 조용히 사라지기 때문이다. 이 테스트들은
+   override 가 없는 상태를 재는 것이라 빈 바인딩을 «명시» 한다. */
+const NO_BINDING = { binding: {} } as const;
+
 describe("PHASE 3.2 ⑥: 실제 payload의 salePrice가 최종 resolved price와 정확히 같다", () => {
   it("⑥-쿠팡: 쿠팡에만 ₩145,000을 지정하면 CoupangPayload.items[].salePrice가 ₩145,000이다(상품정보 ₩143,500이 아니다)", () => {
     const product = applyChannelPriceOverride(makeMockProduct(), "coupang", 145000);
     const listing = listingFor(product, "coupang");
-    const payload = buildCoupangPayload(product, listing);
+    const payload = buildCoupangPayload(product, listing, NO_BINDING);
 
     expect(listing.priceKrw).toBe(145000);
     for (const item of payload.items) {
@@ -126,7 +131,7 @@ describe("PHASE 3.2 ⑥: 실제 payload의 salePrice가 최종 resolved price와
 
   it("⑥-채널값 없음: 아무 채널도 지정하지 않으면 두 payload 모두 상품정보 최종 판매가격을 싣는다", () => {
     const product = makeMockProduct();
-    const coupangPayload = buildCoupangPayload(product, listingFor(product, "coupang"));
+    const coupangPayload = buildCoupangPayload(product, listingFor(product, "coupang"), NO_BINDING);
     const naverPayload = buildNaverProductPayload({
       product,
       listing: listingFor(product, "smartstore"),
@@ -140,7 +145,7 @@ describe("PHASE 3.2 ⑥: 실제 payload의 salePrice가 최종 resolved price와
 describe("PHASE 3.2 ⑦: 쿠팡 가격 validation(10원 단위 · 반품배송비)이 채널 최종가에도 그대로 적용된다", () => {
   it("⑦-10원 단위: 채널 최종가가 ₩145,003이면 10원 단위 위반으로 잡힌다(상품정보 가격이 정상이어도 통과시키지 않는다)", () => {
     const product = applyChannelPriceOverride(makeMockProduct(), "coupang", 145003);
-    const payload = buildCoupangPayload(product, listingFor(product, "coupang"));
+    const payload = buildCoupangPayload(product, listingFor(product, "coupang"), NO_BINDING);
     const issues = validateCoupangPricing(payload, product);
 
     expect(issues.some((i) => i.field === "salePrice" && i.message.includes("10원 단위"))).toBe(true);
@@ -148,7 +153,7 @@ describe("PHASE 3.2 ⑦: 쿠팡 가격 validation(10원 단위 · 반품배송�
 
   it("⑦-정상값: 채널 최종가가 10원 단위면 가격 관련 이슈가 없다", () => {
     const product = applyChannelPriceOverride(makeMockProduct(), "coupang", 145000);
-    const payload = buildCoupangPayload(product, listingFor(product, "coupang"));
+    const payload = buildCoupangPayload(product, listingFor(product, "coupang"), NO_BINDING);
     expect(validateCoupangPricing(payload, product)).toHaveLength(0);
   });
 
@@ -158,6 +163,7 @@ describe("PHASE 3.2 ⑦: 쿠팡 가격 validation(10원 단위 · 반품배송�
     const product = applyChannelPriceOverride(makeMockProduct(), "coupang", 1000);
     const payload = buildCoupangPayload(product, listingFor(product, "coupang"), {
       sellerConfig: { ...BLANK_COUPANG_SELLER_CONFIG, returnDeliveryCharge: 5000 },
+      ...NO_BINDING,
     });
     expect(payload.returnCharge).toBeGreaterThan(1000);
     const issues = validateCoupangPricing(payload, product);
@@ -168,7 +174,7 @@ describe("PHASE 3.2 ⑦: 쿠팡 가격 validation(10원 단위 · 반품배송�
     // 채널 최종가는 "얼마로 등록할지"만 정한다 — "이 상품의 원본 가격이
     // 실재하는지"라는 별개 판정을 우회하는 뒷문이 되어선 안 된다.
     const product = applyChannelPriceOverride(makeMockProduct({ priceValidity: "INVALID" }), "coupang", 145000);
-    const payload = buildCoupangPayload(product, listingFor(product, "coupang"));
+    const payload = buildCoupangPayload(product, listingFor(product, "coupang"), NO_BINDING);
     const issues = validateCoupangPricing(payload, product);
     expect(issues.some((i) => i.code === "PRICE_UNRESOLVED")).toBe(true);
   });

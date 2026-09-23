@@ -1,6 +1,12 @@
 import type { ListingModel } from "@commerce/marketplace";
 import type { CategorySelection } from "@commerce/category";
-import type { CanonicalProduct, CanonicalProductOptionGroup, CanonicalProductVariant } from "@commerce/shared";
+import type {
+  CanonicalProductOptionGroup,
+  CanonicalProductVariant,
+  CommerceBinding,
+  MasterProduct,
+  SellingConditions,
+} from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
 import { computeVariantFinalPriceKrw } from "@commerce/pricing";
 import { manufacturerInputFromProduct, resolveManufacturer } from "../common/manufacturer";
@@ -633,6 +639,44 @@ const COUNTRY_SYNONYMS = ["제조국", "원산지", "country"];
  * "브랜드"가 원래 빠져 있었다(구매옵션/고시정보 이름에 "브랜드"가 나오는
  * 카테고리가 있다 — 예: 잡화류). */
 const BRAND_SYNONYMS = ["브랜드", "brand"];
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * NEXT-04d Phase B-2(CPO 승인, 2026-09-23) — 쿠팡이 «볼 수 있는» 범위
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ *   CoupangProductInput      이 상품은 무엇인가 + 우리가 어떤 조건으로 파는가
+ *   CoupangCommerceBinding   이 상품을 «쿠팡에서» 어떻게 팔 것인가
+ *
+ * 🔴 둘이 갈라진 이유: 지금까지 쿠팡 빌더는 `product.categoryFieldOverrides`
+ * 를 «상품에서 직접» 읽었다. 그 값은 상품의 사실이 아니라 쿠팡 카테고리가
+ * 물어본 칸에 셀러가 적어 넣은 답이다 — 쿠팡에만 있는 값이 상품 객체를 타고
+ * 빌더로 들어오고 있었다는 뜻이다.
+ *
+ * 🔴 의미는 한 글자도 바꾸지 않았다(CPO 지시). 값도 여전히 같은 자리에
+ * 저장된다. 바뀐 것은 «전달 통로» 뿐이다: 상품이 아니라 binding 으로 온다.
+ */
+export type CoupangProductInput = MasterProduct & SellingConditions;
+
+/**
+ * 쿠팡 채널 바인딩. Phase A 의 `CommerceBinding` 에서 쿠팡이 실제로 쓰는 칸만
+ * 가져온다 — 타입을 그쪽에서 끌어오므로 저장 타입이 바뀌면 여기가 따라 깨진다.
+ */
+export interface CoupangCommerceBinding {
+  /** 카테고리 동적 입력폼(구매옵션/고시정보)에 셀러가 직접 채운 값. */
+  categoryFieldOverrides?: CommerceBinding["categoryFieldOverrides"];
+}
+
+/**
+ * 저장된 상품에서 쿠팡 바인딩을 «꺼내는» 한 곳.
+ *
+ * 🔴 지금은 값이 `CanonicalProduct` 안에 있다(Phase A 조사 그대로). 나중에 그
+ * 값이 물리적으로 다른 자리로 옮겨가면 **이 함수 하나만** 바뀐다 — 빌더도
+ * 라우트도 그대로다. 그게 통로를 분리하는 이유다.
+ */
+export function toCoupangBinding(source: Pick<CommerceBinding, "categoryFieldOverrides">): CoupangCommerceBinding {
+  return { categoryFieldOverrides: source.categoryFieldOverrides };
+}
+
 /** P0 Epic 1/4(Resolver 확장) — color/recommendedAge/manufacturer/careInstructions도
  * material/countryOfOrigin과 같은 패턴으로 matchProductField에 추가한다. COLOR_SYNONYMS는
  * matchOptionValue(옵션 그룹 매칭)에서도 이미 쓰고 있으므로 재사용 — 옵션에 색상 그룹이
@@ -1244,7 +1288,9 @@ export function buildCoupangCompliance(
  * itemName/가격/SKU/재고/구매옵션값을 쓰고, 없으면(옵션 없는 상품, 또는 아직
  * variant를 못 뽑는 소스) 상품 전체 값을 그대로 쓴다(기존 동작과 100% 동일). */
 function buildCoupangItem(args: {
-  product: CanonicalProduct;
+  product: CoupangProductInput;
+  /** NEXT-04d Phase B-2 — 쿠팡 채널값은 상품이 아니라 여기로 온다. */
+  binding: CoupangCommerceBinding;
   listing: ListingModel;
   sellerConfig: CoupangSellerConfig;
   categoryMeta?: CoupangCategoryMeta | null;
@@ -1264,7 +1310,7 @@ function buildCoupangItem(args: {
    *  P0 에서 실제로 일어난 일이다(한쪽은 값을, 한쪽은 출처를 봤다). */
   manufacture?: string;
 }): { item: CoupangItem; complianceResults: ComplianceFieldResult[] } {
-  const { product, listing, sellerConfig, categoryMeta, images, contents, optionGroups, variant, brandProfile, manufacture } =
+  const { product, listing, sellerConfig, categoryMeta, images, contents, optionGroups, variant, brandProfile, manufacture, binding } =
     args;
 
   const compliance = buildCoupangCompliance(
@@ -1295,7 +1341,10 @@ function buildCoupangItem(args: {
       manufacturer: manufacture,
       careInstructions: product.careInstructions.value || undefined,
       qualityGuarantee: sellerConfig.qualityGuarantee || undefined,
-      userOverrides: product.categoryFieldOverrides,
+      /* 🔴 NEXT-04d Phase B-2 — 예전에는 `product.categoryFieldOverrides` 였다.
+         같은 값이지만 «상품에서» 가 아니라 «바인딩에서» 온다. 이제 상품 타입에는
+         그 칸이 없어서 예전 방식으로 되돌리면 컴파일이 멈춘다. */
+      userOverrides: binding.categoryFieldOverrides,
       kcExemptionText: sellerConfig.kcExemptionText || undefined,
     },
     { optionGroups, variant },
@@ -1364,7 +1413,7 @@ function buildCoupangItem(args: {
 }
 
 export function buildCoupangPayload(
-  product: CanonicalProduct,
+  product: CoupangProductInput,
   listing: ListingModel,
   options: {
     sellerConfig?: CoupangSellerConfig;
@@ -1380,7 +1429,16 @@ export function buildCoupangPayload(
      * 그대로 쓴다 — 에디터를 한 번도 안 연 세션은 오늘과 100% 동일하게
      * 동작해야 한다(회귀 없음). */
     detailBlocks?: DetailPageBlock[];
-  } = {},
+    /**
+     * NEXT-04d Phase B-2 — 쿠팡 채널 바인딩.
+     *
+     * 🔴 **필수다.** optional 로 두면 호출부가 빠뜨렸을 때 셀러가 화면에서 채운
+     * 구매옵션·고시 값이 «조용히» 사라진다 — 지금까지 이 저장소가 반복해서
+     * 닫아 온 실패 방식이 정확히 그것이다. 빠뜨리면 컴파일이 멈춰야 한다.
+     * 값이 없는 호출은 `{}` 를 명시한다(= 이 등록에는 override 가 없다).
+     */
+    binding: CoupangCommerceBinding;
+  },
 ): CoupangPayload {
   const sellerConfig = options.sellerConfig ?? BLANK_COUPANG_SELLER_CONFIG;
   const description = mergeCoupangDescription(listing.description, options.descriptionTemplate);
@@ -1496,6 +1554,7 @@ export function buildCoupangPayload(
       variant,
       brandProfile: options.brandProfile,
       manufacture: productManufacture,
+      binding: options.binding,
     }),
   );
   const items: CoupangItem[] = built.map((b) => b.item);
@@ -1568,7 +1627,10 @@ export interface CoupangPricingIssue {
  * 실패) 등록을 막는다. 기존 10원단위/반품배송비 체크는 salePrice의
  * "형식"만 보고 "이 값의 근거가 실재하는지"는 보지 않았다 — Naver
  * validate-payload.ts와 동일한 게이트를 Coupang에도 그대로 적용한다. */
-export function validateCoupangPricing(payload: CoupangPayload, product: CanonicalProduct): CoupangPricingIssue[] {
+export function validateCoupangPricing(
+  payload: CoupangPayload,
+  product: Pick<CoupangProductInput, "priceValidity">,
+): CoupangPricingIssue[] {
   const issues: CoupangPricingIssue[] = [];
   if (product.priceValidity !== "VALID") {
     issues.push({

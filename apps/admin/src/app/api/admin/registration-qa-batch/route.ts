@@ -9,7 +9,12 @@ import {
 } from "@commerce/category";
 import type { CategoryCandidate, CategorySelection } from "@commerce/category";
 import { coupangAdapter } from "@commerce/marketplace";
-import { buildComplianceReport, buildCoupangPayload, resolveVerifiedCategoryCode } from "@commerce/listing";
+import {
+  buildComplianceReport,
+  buildCoupangPayload,
+  resolveVerifiedCategoryCode,
+  toCoupangBinding,
+} from "@commerce/listing";
 import { buildCanonicalProduct } from "../../pipeline/canonical-product";
 import { getCoupangCredentials, getVendorUserId } from "../../coupang/_lib/env";
 import { getDefaultDescriptionTemplate } from "../../coupang/_lib/description-template";
@@ -187,6 +192,9 @@ async function runOne(
     if (selectedPlace?.code != null) outboundShippingPlaceCode = selectedPlace.code;
 
     const payload = buildCoupangPayload(product, listing, {
+      /* NEXT-04d Phase B-2 — 쿠팡 채널값(카테고리 동적 입력폼에 셀러가 채운
+         답)은 이제 상품이 아니라 이 통로로 간다. 저장 위치는 그대로다. */
+      binding: toCoupangBinding(product),
       sellerConfig: {
         vendorId: credentials.vendorId,
         vendorUserId,

@@ -88,6 +88,11 @@ function makeListing(product: CanonicalProduct): ListingModel {
   };
 }
 
+/* NEXT-04d Phase B-2 — 쿠팡 채널 바인딩은 «필수 인자» 다. 빠뜨리면 셀러가
+   화면에서 채운 구매옵션·고시 값이 조용히 사라지기 때문이다. 이 테스트들은
+   override 가 없는 상태를 재는 것이라 빈 바인딩을 «명시» 한다. */
+const NO_BINDING = { binding: {} } as const;
+
 describe("N-3.45 STEP14: Coupang 회귀 — DETAIL_PAGE_REFERENCE는 Coupang payload에 영향 없음", () => {
   it("material/color/manufacturer/careInstructions/recommendedAge/importer를 REQUIRED+빈값 vs DETAIL_PAGE_REFERENCE+빈값으로 각각 빌드해도 결과가 동일하다", () => {
     const baseline = makeMockProduct();
@@ -103,8 +108,8 @@ describe("N-3.45 STEP14: Coupang 회귀 — DETAIL_PAGE_REFERENCE는 Coupang pay
       weight: field("", "DETAIL_PAGE_REFERENCE"),
     });
 
-    const baselinePayload = buildCoupangPayload(baseline, makeListing(baseline));
-    const referencedPayload = buildCoupangPayload(referenced, makeListing(referenced));
+    const baselinePayload = buildCoupangPayload(baseline, makeListing(baseline), NO_BINDING);
+    const referencedPayload = buildCoupangPayload(referenced, makeListing(referenced), NO_BINDING);
 
     /* 🔴 PIVOT NEXT-04c-2 — 제조사 한 칸만 «달라야 한다».
        이 테스트가 처음 쓰였을 때 쿠팡 payload 에는 제조사 칸 자체가 없었다
@@ -123,7 +128,7 @@ describe("N-3.45 STEP14: Coupang 회귀 — DETAIL_PAGE_REFERENCE는 Coupang pay
 
   it("실제 값이 있는 필드는 source와 무관하게 여전히 Coupang payload에 반영된다(회귀 아님을 재확인)", () => {
     const withValue = makeMockProduct({ material: field("면 100%", "USER_EDITED") });
-    const payload = buildCoupangPayload(withValue, makeListing(withValue));
+    const payload = buildCoupangPayload(withValue, makeListing(withValue), NO_BINDING);
     const item = payload.items[0];
     const materialAttr = item.attributes?.find((a) => a.attributeTypeName === "소재") ?? null;
     // 카테고리 메타가 없어(categoryMeta 미전달) attribute 매핑 자체가 비어있을

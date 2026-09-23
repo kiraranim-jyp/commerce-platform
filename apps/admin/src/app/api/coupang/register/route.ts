@@ -9,6 +9,7 @@ import {
   validateCoupangPricing,
   type ComplianceReport,
   type CoupangPayload,
+  toCoupangBinding,
 } from "@commerce/listing";
 import type { ListingResult, RegistrationStepLog } from "@commerce/listing";
 import { buildChannelPriceAuditRecord, buildPriceBreakdownSnapshot } from "@/lib/channel-price-audit";
@@ -448,6 +449,9 @@ export async function POST(request: Request) {
   );
 
   const payload = buildCoupangPayload(product, listing, {
+    /* NEXT-04d Phase B-2 — 쿠팡 채널값(카테고리 동적 입력폼에 셀러가 채운
+       답)은 이제 상품이 아니라 이 통로로 간다. 저장 위치는 그대로다. */
+    binding: toCoupangBinding(product),
     sellerConfig: {
       vendorId: credentials.vendorId,
       vendorUserId,

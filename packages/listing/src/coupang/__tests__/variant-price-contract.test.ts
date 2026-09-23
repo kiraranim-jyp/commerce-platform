@@ -87,6 +87,11 @@ function makeListing(product: CanonicalProduct, priceKrw: number): ListingModel 
   };
 }
 
+/* NEXT-04d Phase B-2 — 쿠팡 채널 바인딩은 «필수 인자» 다. 빠뜨리면 셀러가
+   화면에서 채운 구매옵션·고시 값이 조용히 사라지기 때문이다. 이 테스트들은
+   override 가 없는 상태를 재는 것이라 빈 바인딩을 «명시» 한다. */
+const NO_BINDING = { binding: {} } as const;
+
 describe("Sprint A-4: Coupang buildCoupangItem 옵션별 최종가 — computeVariantFinalPriceKrw 적용 확인", () => {
   it("마진이 걸린 최종가(salePrice) 기준으로 옵션마다 서로 다른 최종가가 나온다(가격 차별화 유지)", () => {
     const product = makeMockProduct({
@@ -98,7 +103,7 @@ describe("Sprint A-4: Coupang buildCoupangItem 옵션별 최종가 — computeVa
     });
     // CPO 참조 케이스(breakdown.test.ts와 동일) — $44 → ₩105,674(마진 20%+수수료10% 반영된 최종가).
     const listing = makeListing(product, 105674);
-    const payload = buildCoupangPayload(product, listing);
+    const payload = buildCoupangPayload(product, listing, NO_BINDING);
 
     expect(payload.items).toHaveLength(2);
     // 옛 버그(priceOverrideKrw 없을 때)라면 마진 없는 convertToKrw(44)로 두
@@ -120,7 +125,7 @@ describe("Sprint A-4: Coupang buildCoupangItem 옵션별 최종가 — computeVa
     });
     const manuallyConfirmedPriceKrw = 120000; // 판매자가 직접 확정한 최종가.
     const listing = makeListing(product, manuallyConfirmedPriceKrw);
-    const payload = buildCoupangPayload(product, listing);
+    const payload = buildCoupangPayload(product, listing, NO_BINDING);
 
     expect(payload.items[0].salePrice).toBe(120000);
     expect(payload.items[1].salePrice).toBeLessThan(120000); // B가 $5 더 쌈.
@@ -129,7 +134,7 @@ describe("Sprint A-4: Coupang buildCoupangItem 옵션별 최종가 — computeVa
   it("옵션이 없는 상품(variants=[])은 기존과 동일하게 listing.priceKrw를 그대로 쓴다(회귀 없음)", () => {
     const product = makeMockProduct();
     const listing = makeListing(product, 105674);
-    const payload = buildCoupangPayload(product, listing);
+    const payload = buildCoupangPayload(product, listing, NO_BINDING);
     expect(payload.items).toHaveLength(1);
     expect(payload.items[0].salePrice).toBe(105674);
   });
