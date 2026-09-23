@@ -108,9 +108,14 @@ export function buildCanonicalProduct(
      가른다. 예전에는 ②(설명문 문구)만 있었다.
        ① 원본 URL 이 구조화 데이터로 «제조사»라고 명시한 값(crawler 가 채운다)
        ② 상품정보 원문에서 "Manufactured by X" / "제조자: X" 로 확인된 값
-     🔴 브랜드명은 어느 쪽에도 오지 않는다(CEO 금지 항목). 둘 다 없으면 값을
-     지어내지 않고 REQUIRED 로 남긴다 — 그 뒤는 ③브랜드 관리 → ④판매자 기본값
-     → ⑤직접 입력이 답하고, 그 순서는 resolveManufacturer() 하나가 정한다. */
+     🔴 브랜드명은 어느 쪽에도 오지 않는다 — «추출» 단계에서 브랜드를 제조사
+     칸에 적지 않는다는 뜻이고, 이건 지금도 그대로다. 둘 다 없으면 값을
+     지어내지 않고 REQUIRED 로 남긴다.
+
+     🔴 PIVOT NEXT-04c-2(CPO 확정, 2026-09-23) — 그 «뒤» 의 순서가 바뀌었다.
+     여기 적혀 있던 「④판매자 기본값」 단계는 사라졌다(판매 사업자는 제조사가
+     아니다). 지금은 ③브랜드 프로필 → ④브랜드명 → 확인 필요이고, 3커머스가
+     같은 규칙을 쓴다. 그 순서는 여전히 resolveManufacturer() 하나가 정한다. */
   const sourceUrlManufacturer = (productData.manufacturer ?? "").trim();
   const productInfoManufacturer = sourceUrlManufacturer ? "" : (extractManufacturer(productData.description) ?? "");
   const resolvedManufacturer = sourceUrlManufacturer || productInfoManufacturer;
