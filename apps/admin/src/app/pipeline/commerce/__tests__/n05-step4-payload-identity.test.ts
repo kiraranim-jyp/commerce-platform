@@ -293,7 +293,11 @@ describe("⑤ 🔴 선택된 커머스만, 화면 순서대로, 독립적으로"
 
 describe("⑥ 🔴 누르자마자 나가지 않는다", () => {
   it("[선택한 커머스 등록]은 최종 확인 화면을 연다", () => {
-    expect(WORKSPACE).toContain("onRegisterSelected={() => setMultiConfirmOpen(true)}");
+    /* N-05 QA FIX — 이 버튼은 ③ 의 선택기가 아니라 ④ 의 «실행 줄» 에 있다.
+       ③ 은 「어디에」, ④ 는 「실제로 등록」 — 역할이 갈렸다. */
+    const runner = WORKSPACE.slice(WORKSPACE.indexOf("commerceRunner={"));
+    expect(runner).toContain("onClick={() => setMultiConfirmOpen(true)}");
+    expect(runner).toContain("선택한 커머스 등록");
   });
 
   it("실제 실행은 모달의 onConfirm 에서만 일어난다", () => {

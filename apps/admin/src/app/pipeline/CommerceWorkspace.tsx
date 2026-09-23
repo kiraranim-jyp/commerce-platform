@@ -2846,10 +2846,42 @@ export function CommerceWorkspace({
                   channels={registrationChannels}
                   selected={selectedCommerces}
                   onToggle={toggleCommerce}
-                  onRegisterSelected={() => setMultiConfirmOpen(true)}
                   running={multiRunning}
                   outcomes={commerceOutcomes}
+                  /* 🔴 ③ 에는 등록 버튼이 없다 — 여기서 정하는 것은 «어디에» 뿐이다.
+                     [등록 준비 확인]은 고른 커머스 중 «확인이 남은 첫 채널» 로
+                     데려간다(없으면 첫 선택 채널). 새 판정을 만들지 않고 이미
+                     계산된 blockingCount 를 읽는다. */
+                  onConfirm={() => {
+                    const picked = registrationChannels.filter((channel) =>
+                      selectedCommerces.includes(channel.id),
+                    );
+                    const target = picked.find((channel) => channel.blockingCount > 0) ?? picked[0];
+                    if (target) setTab(target.id);
+                  }}
                 />
+              }
+              /* N-05-C — ④ 의 실행 줄. 체크박스를 복제하지 않는다(CPO 지시 D). */
+              commerceRunner={
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2">
+                  <span className="text-xs text-text-secondary">
+                    {selectedCommerces.length === 0
+                      ? "③ 등록 준비에서 등록할 커머스를 먼저 고릅니다"
+                      : `선택한 커머스 ${selectedCommerces.length}곳 — ${COMMERCE_ORDER.filter((id) =>
+                          selectedCommerces.includes(id),
+                        )
+                          .map(commerceLabel)
+                          .join(" · ")}`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setMultiConfirmOpen(true)}
+                    disabled={selectedCommerces.length === 0 || multiRunning !== null}
+                    className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-border disabled:text-text-tertiary"
+                  >
+                    {multiRunning ? "등록 중…" : "선택한 커머스 등록"}
+                  </button>
+                </div>
               }
               /* UX 2.5 — 바깥(판단 카드·해외 가격비교·상단 Flow)에서 온 "가격 좀
                  보자"는 요청. 카운터가 올라가면 StageBody가 가격 작업면을 펼친다. */

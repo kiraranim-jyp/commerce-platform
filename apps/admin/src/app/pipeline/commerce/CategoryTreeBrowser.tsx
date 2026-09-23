@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+
+/** N-05 QA FIX — 목록을 접는 기준. 스크롤 대신 「더 보기」로 길이를 «말한다». */
+const SEARCH_PREVIEW_COUNT = 8;
+const COLUMN_PREVIEW_COUNT = 12;
 import type { CategoryCandidate } from "@commerce/category";
 import type { CommerceCategoryTreeNode, CommerceCategoryTreeResult } from "@commerce/shared";
 import type { PlatformId } from "@commerce/shared";
@@ -46,6 +50,18 @@ export function CategoryTreeBrowser({
   const [error, setError] = useState<string | null>(null);
   const [path, setPath] = useState<CommerceCategoryTreeNode[]>([]);
   const [treeSearch, setTreeSearch] = useState("");
+  /**
+   * N-05 QA FIX(CPO 확정, 2026-09-23) — **내부 스크롤을 만들지 않는다.**
+   *
+   * 여기 있던 `max-h-* overflow-y-auto` 가 페이지 안에 두 번째 세로 스크롤을
+   * 만들고 있었다. 긴 목록은 이 저장소가 이미 쓰는 「더 보기 / 접기」로 접는다
+   * (ComparisonShopSearch 의 그 패턴 — 새 컴포넌트를 만들지 않는다).
+   *
+   * 🔴 스크롤 대신 «접는» 이유: 스크롤은 목록이 얼마나 긴지 숨기지만, 「더 보기
+   * (35건)」은 그 사실을 숫자로 말한다.
+   */
+  const [showAllSearch, setShowAllSearch] = useState(false);
+  const [expandedColumns, setExpandedColumns] = useState<number[]>([]);
 
   async function handleOpen() {
     setOpen(true);
@@ -127,11 +143,11 @@ export function CategoryTreeBrowser({
           )}
 
           {trimmedSearch && (
-            <ul className="mt-1.5 max-h-40 overflow-y-auto rounded-md border border-border bg-white">
+            <ul className="mt-1.5 rounded-md border border-border bg-white">
               {searchResults.length === 0 ? (
                 <li className="px-2 py-1.5 text-xs text-text-tertiary">일치하는 카테고리가 없습니다.</li>
               ) : (
-                searchResults.map(({ node, path: nodePath }) => (
+                (showAllSearch ? searchResults : searchResults.slice(0, SEARCH_PREVIEW_COUNT)).map(({ node, path: nodePath }) => (
                   <li key={node.id}>
                     <button
                       type="button"
@@ -149,17 +165,25 @@ export function CategoryTreeBrowser({
                   </li>
                 ))
               )}
+              {searchResults.length > SEARCH_PREVIEW_COUNT && (
+                <li className="border-t border-border px-2 py-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowAllSearch((v) => !v)}
+                    className="text-xs text-primary underline hover:text-primary-hover"
+                  >
+                    {showAllSearch ? "접기" : `더 보기 (${searchResults.length - SEARCH_PREVIEW_COUNT}건)`}
+                  </button>
+                </li>
+              )}
             </ul>
           )}
 
           {columns.length > 0 && (
             <div className="mt-2 flex gap-1.5 overflow-x-auto rounded-md border border-border bg-background p-1.5">
               {columns.map((column, columnIndex) => (
-                <ul
-                  key={columnIndex}
-                  className="max-h-64 w-40 shrink-0 overflow-y-auto rounded border border-border bg-white"
-                >
-                  {column.map((node) => {
+                <ul key={columnIndex} className="w-40 shrink-0 rounded border border-border bg-white">
+                  {(expandedColumns.includes(columnIndex) ? column : column.slice(0, COLUMN_PREVIEW_COUNT)).map((node) => {
                     const selected = path[columnIndex]?.id === node.id;
                     const hasChildren = (node.children?.length ?? 0) > 0;
                     return (
@@ -177,6 +201,25 @@ export function CategoryTreeBrowser({
                       </li>
                     );
                   })}
+                  {column.length > COLUMN_PREVIEW_COUNT && (
+                    <li className="border-t border-border px-2 py-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedColumns((prev) =>
+                            prev.includes(columnIndex)
+                              ? prev.filter((index) => index !== columnIndex)
+                              : [...prev, columnIndex],
+                          )
+                        }
+                        className="text-[11px] text-primary underline hover:text-primary-hover"
+                      >
+                        {expandedColumns.includes(columnIndex)
+                          ? "접기"
+                          : `더 보기 (${column.length - COLUMN_PREVIEW_COUNT}건)`}
+                      </button>
+                    </li>
+                  )}
                 </ul>
               ))}
             </div>

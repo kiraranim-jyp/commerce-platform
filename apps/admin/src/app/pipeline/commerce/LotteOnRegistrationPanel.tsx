@@ -2389,6 +2389,12 @@ function CategoryDirectPicker({
   }, [current, byId]);
 
   const rows = childrenOf.get(cursor ?? DIRECT_PICK_ROOT) ?? [];
+  /* N-05 QA FIX(CPO 확정, 2026-09-23) — 여기 있던 `max-h-72 overflow-y-auto` 가
+     페이지 안에 두 번째 세로 스크롤을 만들고 있었다. 긴 목록은 이 저장소가 이미
+     쓰는 「더 보기 / 접기」로 접는다 — 스크롤은 목록이 얼마나 긴지 숨기지만
+     「더 보기 (35건)」은 그 사실을 숫자로 말한다. */
+  const [showAllRows, setShowAllRows] = useState(false);
+  const DIRECT_PICK_PREVIEW_COUNT = 12;
 
   return (
     <div className="mb-3 rounded-md border border-border bg-background px-3 py-2.5">
@@ -2438,8 +2444,8 @@ function CategoryDirectPicker({
               이 아래에는 더 고를 카테고리가 없습니다 — 위 경로에서 다른 갈래를 골라 주세요.
             </p>
           ) : (
-            <ul className="mt-2 max-h-72 space-y-0.5 overflow-y-auto">
-              {rows.map((category) => {
+            <ul className="mt-2 space-y-0.5">
+              {(showAllRows ? rows : rows.slice(0, DIRECT_PICK_PREVIEW_COUNT)).map((category) => {
                 const hasChildren = (childrenOf.get(category.id) ?? []).length > 0;
                 // 리프 판정은 롯데ON이 말한 leaf_yn을 먼저 믿는다. 트리를 다 읽지
                 // 못했을 때(truncated) 자식이 안 보인다는 이유로 리프라고 단정하지
@@ -2467,6 +2473,17 @@ function CategoryDirectPicker({
                   </li>
                 );
               })}
+              {rows.length > DIRECT_PICK_PREVIEW_COUNT && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setShowAllRows((v) => !v)}
+                    className="px-2 py-1.5 text-[11px] text-primary underline hover:text-primary-hover"
+                  >
+                    {showAllRows ? "접기" : `더 보기 (${rows.length - DIRECT_PICK_PREVIEW_COUNT}건)`}
+                  </button>
+                </li>
+              )}
             </ul>
           )}
         </>

@@ -73,6 +73,7 @@ export function StageBody({
   channels,
   onGoToChannel,
   commerceSelector,
+  commerceRunner,
   openPriceSurfaceRequest = 0,
   openMarketEvidenceRequest = 0,
 }: {
@@ -84,8 +85,10 @@ export function StageBody({
   /** 변경 이력·백로그처럼 단계와 무관한 기록. 항상 맨 아래 접힘. */
   archive: React.ReactNode;
   channels: RegistrationChannel[];
-  /** N-05-A — ④ 커머스 등록 맨 위의 「등록할 커머스」 선택기. 없으면 그리지 않는다. */
+  /** N-05-A — ③ 등록 준비 맨 위의 「등록할 커머스」 선택기. 없으면 그리지 않는다. */
   commerceSelector?: React.ReactNode;
+  /** N-05-C — ④ 커머스 등록의 실행 줄. 🔴 여기에는 체크박스를 다시 세우지 않는다. */
+  commerceRunner?: React.ReactNode;
   /*
    * REWORK-4 §1(CEO 지시, 2026-09-14) — 여기 있던 `commerceManagement` 슬롯이
    * 사라졌다. 상품정보 탭의 「🛒 커머스 관리정보」 접힘을 통째로 없앤다.
@@ -180,15 +183,19 @@ export function StageBody({
           surfaces={surfaces}
           channels={channels}
           onGoToChannel={onGoToChannel}
+          commerceSelector={commerceSelector}
         />
       )}
 
+      {/* 🔴 ④ 에는 선택기를 «복제하지 않는다». ③ 은 「어디에 등록할 것인가」,
+          ④ 는 「고른 곳에 실제로 등록한다」 — 같은 체크박스가 두 번 서면 셀러는
+          「여기서 다시 골라야 하나」로 읽는다(CPO 지시 D). */}
       {focus.main === "REGISTER" && (
         <RegisterStage
           workflow={workflow}
           channels={channels}
           onGoToChannel={onGoToChannel}
-          commerceSelector={commerceSelector}
+          commerceRunner={commerceRunner}
         />
       )}
 
@@ -393,6 +400,7 @@ function PrepareStage({
   surfaces,
   channels,
   onGoToChannel,
+  commerceSelector,
 }: {
   subSteps: SubStep[];
   headline: string;
@@ -402,6 +410,8 @@ function PrepareStage({
   surfaces: StageSurfaces;
   channels: RegistrationChannel[];
   onGoToChannel: (id: CommerceId) => void;
+  /** N-05 QA FIX(CPO 확정, 2026-09-23) — 「등록할 커머스」. 없으면 그리지 않는다. */
+  commerceSelector?: React.ReactNode;
 }) {
   const doneCount = subSteps.filter((s) => s.status === "DONE" || s.status === "DONE_NO_DATA").length;
 
@@ -412,6 +422,10 @@ function PrepareStage({
       headline={headline}
       badge={`${doneCount}/${subSteps.length} 확인 완료`}
     >
+      {/* 🔴 준비 항목보다 «먼저» 묻는다. 어디에 팔지 정해야 무엇을 채워야 하는지가
+          정해진다 — 준비를 다 끝낸 ④ 에서 처음 고르는 것은 순서가 뒤집힌 것이다
+          (CPO 확정, 2026-09-23). */}
+      {commerceSelector && <div className="mb-3">{commerceSelector}</div>}
       <ul className="space-y-1.5">
         {subSteps.map((sub) => {
           const active = sub.key === activeKey;
@@ -497,19 +511,18 @@ function RegisterStage({
   workflow,
   channels,
   onGoToChannel,
-  commerceSelector,
+  commerceRunner,
 }: {
   workflow: Workflow;
   channels: RegistrationChannel[];
   onGoToChannel: (id: CommerceId) => void;
-  commerceSelector?: React.ReactNode;
+  commerceRunner?: React.ReactNode;
 }) {
   const byId = new Map(channels.map((c) => [String(c.id), c]));
   return (
     <StagePanel index={4} title="커머스 등록" headline={workflow.current.headline}>
-      {/* N-05-A — 「어디에 등록할 것인가」를 채널 줄보다 «먼저» 묻는다. 아래
-          줄들은 고른 결과의 준비 상태다. */}
-      {commerceSelector && <div className="mb-2">{commerceSelector}</div>}
+      {/* 고른 곳에 «실제로 등록하는» 줄. 무엇을 고를지는 ③ 에서 이미 정했다. */}
+      {commerceRunner && <div className="mb-2">{commerceRunner}</div>}
       <div className="space-y-2">
         {workflow.current.subSteps.map((sub) => {
           const channel = byId.get(sub.key);
