@@ -292,7 +292,14 @@ export function LotteOnRegistrationPanel({
   /** 탭 줄/준비상태 줄이 롯데ON 상태를 함께 보여주기 위한 보고 채널.
    * 스마트스토어/쿠팡의 onReadinessChange와 같은 자리다 — 여기서 새 판정을
    * 만들지 않고 이미 계산된 값을 올려보내기만 한다. */
-  onReadinessChange?: (percent: number, allRequiredPassed: boolean, missingCount: number) => void;
+  /* N-06 C-5 — 네 번째 인자 `total` 이 늘었다. 서버 검증이 이미 센 값
+     (computeLotteOnRegistrationReadiness().total)을 그대로 올린다. */
+  onReadinessChange?: (
+    percent: number,
+    allRequiredPassed: boolean,
+    missingCount: number,
+    total: number,
+  ) => void;
   /**
    * N-05 STEP 2 — **등록이 실제로 끝났다**는 사실만 위로 올린다.
    *
@@ -418,7 +425,12 @@ export function LotteOnRegistrationPanel({
   const safetyMissing = safetyRequired && !form.certification.safetyText.trim();
 
   useEffect(() => {
-    onReadinessChange?.(stale ? 0 : readiness.percent, !stale && readiness.allRequiredPassed, missingInfo.length);
+    onReadinessChange?.(
+      stale ? 0 : readiness.percent,
+      !stale && readiness.allRequiredPassed,
+      missingInfo.length,
+      readiness.total,
+    );
   }, [onReadinessChange, readiness.percent, readiness.allRequiredPassed, missingInfo.length, stale]);
 
   /**

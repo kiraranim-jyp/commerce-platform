@@ -90,13 +90,26 @@ function formatAttemptTime(iso: string): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+/**
+ * N-06 C-5(CPO 확정, 2026-09-24) — **아는 것만 적는다.**
+ *
+ * 필수 항목 전체 수를 알면 「필수 21 · 확인 2건」처럼 «몇 개 중 몇 개» 인지
+ * 말한다. 그 수를 모르면(아직 보고 전이거나 롯데ON 이 카테고리 전) 예전처럼
+ * 「확인 2건」만 적는다.
+ *
+ * 🔴 「자동 해결 19」를 적지 «않는다». 21 − 2 = 19 는 산수로는 맞지만, 그 19가
+ * 「자동으로 해결됐다」는 뜻인지 「애초에 요구되지 않았다」는 뜻인지 지금
+ * 데이터로는 가를 수 없다. 가르는 축은 N-07 Requirement Engine 에서 만든다 —
+ * 추정한 숫자를 화면에 적으면 그때부터 이 화면의 모든 숫자를 의심하게 된다.
+ */
 function statusNote(channel: RegistrationChannel): string {
   if (channel.availability === "COMING_SOON") return "준비중";
   if (!channel.state) return "아직 확인하지 않았습니다";
+  const scope = channel.requiredTotal > 0 ? `필수 ${channel.requiredTotal} · ` : "";
   if (channel.blockingCount > 0) {
-    return `확인 ${channel.blockingCount}건${channel.provisional ? " (사전 점검)" : ""}`;
+    return `${scope}확인 ${channel.blockingCount}건${channel.provisional ? " (사전 점검)" : ""}`;
   }
-  return channel.state === "READY" ? "준비됨" : "확인 필요";
+  return channel.state === "READY" ? `${scope}준비됨` : `${scope}확인 필요`;
 }
 
 export function CommerceSelector({

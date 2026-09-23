@@ -338,13 +338,29 @@ export function CommerceWorkspace({
   // STEP 범위에서 하지 않는다), 한 번도 연 적 없는 탭은 배지가 비어있다 — 탭을
   // 한 번 열면 그 이후로는 다른 탭에 가 있어도 마지막 계산값이 남는다.
   const [platformReadiness, setPlatformReadiness] = useState<
-    Partial<Record<PlatformId, { state: RegistrationReadinessState; priorityItems: PriorityItem[] }>>
+    Partial<
+      Record<PlatformId, { state: RegistrationReadinessState; priorityItems: PriorityItem[]; requiredTotal: number }>
+    >
   >({});
-  function handleReadinessChange(platformId: PlatformId, state: RegistrationReadinessState, priorityItems: PriorityItem[]) {
+  /* N-06 C-5 — `requiredTotal` 이 늘었다. 🔴 새 판정이 아니라, 채널 화면이 이미
+     계산해 둔 필수 항목 수를 올려 보내기만 하는 것이다. */
+  function handleReadinessChange(
+    platformId: PlatformId,
+    state: RegistrationReadinessState,
+    priorityItems: PriorityItem[],
+    requiredTotal: number,
+  ) {
     setPlatformReadiness((prev) => {
       const existing = prev[platformId];
-      if (existing && existing.state === state && existing.priorityItems.length === priorityItems.length) return prev;
-      return { ...prev, [platformId]: { state, priorityItems } };
+      if (
+        existing &&
+        existing.state === state &&
+        existing.priorityItems.length === priorityItems.length &&
+        existing.requiredTotal === requiredTotal
+      ) {
+        return prev;
+      }
+      return { ...prev, [platformId]: { state, priorityItems, requiredTotal } };
     });
   }
 
@@ -430,7 +446,7 @@ export function CommerceWorkspace({
       const validation = data.validation ?? null;
       const readiness = computeLotteOnRegistrationReadiness(validation);
       const missing = buildLotteOnMissingInfo(validation);
-      handleLotteOnReadinessChange(readiness.percent, readiness.allRequiredPassed, missing.length);
+      handleLotteOnReadinessChange(readiness.percent, readiness.allRequiredPassed, missing.length, readiness.total);
       /* 🔴 목록을 «지어내지» 않는다 — 서버 검증이 준 항목을 그대로 옮긴다.
          where 가 COMMON_PRODUCT 면 롯데ON 탭이 아니라 상품정보에서 고쳐야 한다. */
       setLotteOnMissing(
@@ -499,19 +515,23 @@ export function CommerceWorkspace({
     percent: number;
     allRequiredPassed: boolean;
     missingCount: number;
+    /** C-5 — 서버 검증이 센 «요구 항목 전체 수»(validation.fields). 0 이면 아직
+     *  카테고리를 고르지 않아 요구조건 자체를 모르는 상태다. */
+    total: number;
   } | null>(null);
   const handleLotteOnReadinessChange = useCallback(
-    (percent: number, allRequiredPassed: boolean, missingCount: number) => {
+    (percent: number, allRequiredPassed: boolean, missingCount: number, total: number) => {
       setLotteOnReadiness((prev) => {
         if (
           prev &&
           prev.percent === percent &&
           prev.allRequiredPassed === allRequiredPassed &&
-          prev.missingCount === missingCount
+          prev.missingCount === missingCount &&
+          prev.total === total
         ) {
           return prev;
         }
-        return { percent, allRequiredPassed, missingCount };
+        return { percent, allRequiredPassed, missingCount, total };
       });
     },
     [],
@@ -1454,7 +1474,9 @@ export function CommerceWorkspace({
    * 구분한다.
    */
   const provisionalReadiness = useMemo(() => {
-    const out: Partial<Record<PlatformId, { state: RegistrationReadinessState; priorityItems: PriorityItem[] }>> = {};
+    const out: Partial<
+      Record<PlatformId, { state: RegistrationReadinessState; priorityItems: PriorityItem[]; requiredTotal: number }>
+    > = {};
     const priceValid = product.priceValidity === "VALID";
     for (const platformId of WORKSPACE_PLATFORM_ORDER) {
       try {
@@ -1471,6 +1493,8 @@ export function CommerceWorkspace({
         out[platformId] = {
           state: resolveRegistrationReadinessState(summary, priceValid),
           priorityItems: buildPriorityItems(summary, priceValid, "section-price"),
+          // C-5 — 여기서도 이미 있는 값이다(summary.required). 버리지 않는다.
+          requiredTotal: summary.required.length,
         };
       } catch {
         // 어댑터가 이 상품을 다룰 수 없으면 잠정치를 만들지 않는다 —
@@ -1489,7 +1513,15 @@ export function CommerceWorkspace({
    * 잠정치를 만들 경로가 없고, 없는 것을 추측해서 채우지 않는다. */
   const mergedReadiness = useMemo(() => {
     const out: Partial<
-      Record<CommerceId, { state: RegistrationReadinessState; priorityItems: PriorityItem[]; provisional: boolean }>
+      Record<
+        CommerceId,
+        {
+          state: RegistrationReadinessState;
+          priorityItems: PriorityItem[];
+          provisional: boolean;
+          requiredTotal: number;
+        }
+      >
     > = {};
     for (const platformId of WORKSPACE_PLATFORM_ORDER) {
       const actual = platformReadiness[platformId];
@@ -1507,6 +1539,10 @@ export function CommerceWorkspace({
         state: lotteOnReadiness.allRequiredPassed ? "READY" : "NEEDS_REVIEW",
         priorityItems: Array.from({ length: lotteOnReadiness.missingCount }, () => LOTTEON_MISSING_ITEM),
         provisional: false,
+        /* 롯데ON 도 서버 검증이 이미 세어 둔 값이 있다(validation.fields 전체).
+           🔴 카테고리를 고르기 전에는 «요구조건 자체를 모르는» 상태라 0 이고,
+           화면은 그때 숫자를 말하지 않는다. */
+        requiredTotal: lotteOnReadiness.total,
       };
     }
     return out;
@@ -3236,7 +3272,9 @@ export function CommerceWorkspace({
               compliancePreview={complianceReportPreview}
               payloadPreview={payloadPreviewEligible ? payloadPreview : null}
               payloadPreviewUnavailableReason={payloadPreviewEligible ? payloadPreviewUnavailableReason : null}
-              onReadinessChange={(state, priorityItems) => handleReadinessChange(tab, state, priorityItems)}
+              onReadinessChange={(state, priorityItems, requiredTotal) =>
+                handleReadinessChange(tab, state, priorityItems, requiredTotal)
+              }
               onUpdateField={updateField}
               /* UX 2.5 — [상품정보 가격 계산 →]은 상품의 기준가를 고치러 간다. */
               onRequestPriceReview={handleRequestPriceReview}

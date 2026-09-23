@@ -98,8 +98,17 @@ const CHANNELS: RegistrationChannel[] = [
     state: null,
     blockingCount: 0,
     provisional: false,
+    requiredTotal: 0,
   },
-  { id: "coupang", label: "쿠팡", availability: "AVAILABLE", state: null, blockingCount: 0, provisional: false },
+  {
+    id: "coupang",
+    label: "쿠팡",
+    availability: "AVAILABLE",
+    state: null,
+    blockingCount: 0,
+    provisional: false,
+    requiredTotal: 0,
+  },
 ];
 
 const MARKET_DONE = {

@@ -56,6 +56,9 @@ describe("buildRegistrationChannels()", () => {
           { key: "legal", label: "원산지", sourceItems: [] },
         ],
         provisional: true,
+        /* N-06 C-5 — 채널이 요구하는 «필수 항목 전체 수». 새로 세지 않고
+           computeChecklistReadiness 가 이미 만든 값을 옮긴다. */
+        requiredTotal: 9,
       },
     });
     const coupang = channels.find((c) => c.id === "coupang")!;

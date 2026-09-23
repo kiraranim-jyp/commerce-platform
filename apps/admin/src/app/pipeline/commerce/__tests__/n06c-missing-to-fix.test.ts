@@ -94,6 +94,7 @@ describe("④ 단계마다 버튼이 «그 자리에서 일어나는 일» 을 �
     state: "READY",
     blockingCount: 0,
     provisional: false,
+    requiredTotal: 0,
     ...over,
   });
 

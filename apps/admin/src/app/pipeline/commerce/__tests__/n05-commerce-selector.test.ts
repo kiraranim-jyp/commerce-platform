@@ -67,11 +67,12 @@ describe("② 채널 목록에 롯데ON 이 «실제로» 선다", () => {
     isComingSoon: (id) => isPlatformCommerce(id) && id === "elevenst",
     isPreviewOnly: (id) => id === "smartstore",
     readiness: {
-      coupang: { state: "READY", priorityItems: [], provisional: false },
+      coupang: { state: "READY", priorityItems: [], provisional: false, requiredTotal: 7 },
       [LOTTEON_COMMERCE_ID]: {
         state: "NEEDS_REVIEW",
         priorityItems: [{ key: "lotteon-missing", label: "확인 필요", sourceItems: [] }],
         provisional: false,
+        requiredTotal: 12,
       },
     },
   });
@@ -130,6 +131,7 @@ describe("④ 선택기 — 고르는 것은 등록이 «아니다»", () => {
     state: "READY",
     blockingCount: 0,
     provisional: false,
+    requiredTotal: 0,
     ...over,
   });
 

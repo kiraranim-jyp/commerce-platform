@@ -501,7 +501,18 @@ export function PlatformPreview({
    * 하기 위함 — payloadPreview/naverValidation 자체는 지금도 활성 탭에서만
    * 계산되므로, 두 플랫폼을 동시에 강제로 미리 계산하는 구조 변경 없이도 한 번
    * 방문한 탭의 상태는 계속 보인다). */
-  onReadinessChange?: (state: RegistrationReadinessState, priorityItems: PriorityItem[]) => void;
+  /**
+   * N-06 C-5(CPO 확정, 2026-09-24) — 세 번째 인자 `requiredTotal` 이 늘었다.
+   *
+   * 🔴 새로 세지 않는다. 바로 위 `readinessSummary.required` 는 이미 계산돼
+   * 있었고, 부모로 올릴 때만 버려지고 있었다 — 그래서 Master 화면은 「확인 2건」
+   * 은 알아도 「그게 몇 개 중 2건인지」는 말할 수 없었다.
+   */
+  onReadinessChange?: (
+    state: RegistrationReadinessState,
+    priorityItems: PriorityItem[],
+    requiredTotal: number,
+  ) => void;
   /** PHASE 3.2 — 이 채널의 최종 등록가격을 정하거나(숫자) 지운다(null).
    * null을 넘기면 상품정보 최종 판매가격으로 되돌아간다 — 0을 저장하지 않는다.
    * 이 핸들러는 상품정보 가격(priceOverrideKrw)을 절대 건드리지 않고, MI
@@ -574,10 +585,11 @@ export function PlatformPreview({
   // setState를 유발하도록 참조가 아니라 상태 문자열/우선순위 라벨로 비교해도
   // 되지만, 이 값들은 매 렌더마다 새로 만들어지는 배열/객체라 참조가 항상
   // 달라진다 — 부모(CommerceWorkspace)가 setState 안에서 얕은 비교로 방어한다.
+  const requiredTotal = readinessSummary.required.length;
   useEffect(() => {
-    onReadinessChange?.(registrationState, priorityItems);
+    onReadinessChange?.(registrationState, priorityItems, requiredTotal);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [registrationState, priorityItems]);
+  }, [registrationState, priorityItems, requiredTotal]);
 
   /* REWORK-4 §2(CEO 지시, 2026-09-14) — 여기 있던 `guideOpen` state와
      GuidedResolutionModal이 사라졌다. 그 모달을 여는 유일한 버튼이

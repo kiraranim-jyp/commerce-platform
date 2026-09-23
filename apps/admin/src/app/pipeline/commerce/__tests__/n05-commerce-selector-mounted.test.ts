@@ -37,7 +37,7 @@ const CHANNELS = buildRegistrationChannels({
   labelOf: commerceLabel,
   isComingSoon: (id) => isPlatformCommerce(id) && id === "elevenst",
   isPreviewOnly: (id) => id === "smartstore",
-  readiness: { coupang: { state: "READY", priorityItems: [], provisional: false } },
+  readiness: { coupang: { state: "READY", priorityItems: [], provisional: false, requiredTotal: 7 } },
 });
 
 async function render(selected: CommerceId[], onToggle: (id: CommerceId, next: boolean) => void = () => {}) {

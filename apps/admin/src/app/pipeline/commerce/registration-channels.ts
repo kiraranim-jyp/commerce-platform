@@ -29,6 +29,17 @@ export interface RegistrationChannel {
   state: RegistrationReadinessState | null;
   /** 아직 채워야 하는 필수 항목 수. 상태를 모르면 0이다(0을 "준비됨"으로 읽지 않게 state를 함께 본다). */
   blockingCount: number;
+  /**
+   * N-06 C-5(CPO 확정, 2026-09-24) — 이 채널이 요구하는 **필수 항목 전체 수**.
+   *
+   * 🔴 새로 세지 않는다. `computeChecklistReadiness()` 의 `required` 길이(롯데ON 은
+   * 서버 검증의 `fields` 수)를 그대로 옮긴 값이다 — 그동안 상위 레이어로 올라올
+   * 때만 버려지고 있었다.
+   *
+   * 0 이면 «모른다»(아직 보고되지 않았거나 롯데ON 이 카테고리 전이다). 그때
+   * 화면은 숫자를 말하지 않는다 — 0 을 「필수 0개」로 읽으면 안 된다.
+   */
+  requiredTotal: number;
   /** 탭을 아직 열지 않아 사전 점검값으로만 계산된 상태인가. */
   provisional: boolean;
 }
@@ -42,7 +53,15 @@ export interface RegistrationChannelsInput {
   /** 등록은 아직이지만 미리보기는 되는 채널. */
   isPreviewOnly: (id: CommerceId) => boolean;
   readiness: Partial<
-    Record<CommerceId, { state: RegistrationReadinessState; priorityItems: PriorityItem[]; provisional: boolean }>
+    Record<
+      CommerceId,
+      {
+        state: RegistrationReadinessState;
+        priorityItems: PriorityItem[];
+        provisional: boolean;
+        requiredTotal: number;
+      }
+    >
   >;
 }
 
@@ -61,6 +80,7 @@ export function buildRegistrationChannels(input: RegistrationChannelsInput): Reg
       state: r?.state ?? null,
       blockingCount: r?.priorityItems.length ?? 0,
       provisional: r?.provisional ?? false,
+      requiredTotal: r?.requiredTotal ?? 0,
     };
   });
 }

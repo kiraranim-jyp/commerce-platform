@@ -439,9 +439,10 @@ const CHANNELS: RegistrationChannel[] = [
     state: null,
     blockingCount: 0,
     provisional: false,
+    requiredTotal: 0,
   },
-  { id: "coupang", label: "쿠팡", availability: "COMING_SOON", state: null, blockingCount: 0, provisional: false },
-  { id: "elevenst", label: "11번가", availability: "COMING_SOON", state: null, blockingCount: 0, provisional: false },
+  { id: "coupang", label: "쿠팡", availability: "COMING_SOON", state: null, blockingCount: 0, provisional: false, requiredTotal: 0 },
+  { id: "elevenst", label: "11번가", availability: "COMING_SOON", state: null, blockingCount: 0, provisional: false, requiredTotal: 0 },
 ];
 
 /**
