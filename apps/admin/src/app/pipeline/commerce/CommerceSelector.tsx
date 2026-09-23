@@ -1,6 +1,6 @@
 "use client";
 
-import type { CommerceId } from "./commerce-registry";
+import type { CommerceId, CommerceOutcomes } from "./commerce-registry";
 import type { RegistrationChannel } from "./registration-channels";
 import { readinessStateToLevel, type ReadinessLevel } from "./readiness-state";
 
@@ -45,6 +45,13 @@ export function selectionSummary(count: number): string {
   return count === 0 ? "선택된 커머스가 없습니다" : `선택 ${count}개`;
 }
 
+/** 결과가 나온 뒤에는 준비 상태 대신 «결과» 를 적는다. */
+const OUTCOME_NOTE: Record<"SUBMITTED" | "FAILED" | "SKIPPED", string> = {
+  SUBMITTED: "✓ 등록 완료",
+  FAILED: "✕ 등록 실패",
+  SKIPPED: "— 실행하지 않음",
+};
+
 function statusNote(channel: RegistrationChannel): string {
   if (channel.availability === "COMING_SOON") return "준비중";
   if (!channel.state) return "아직 확인하지 않았습니다";
@@ -59,15 +66,25 @@ export function CommerceSelector({
   selected,
   onToggle,
   onConfirm,
+  onRegisterSelected,
+  running = null,
+  outcomes,
 }: {
   channels: RegistrationChannel[];
   selected: readonly CommerceId[];
   onToggle: (id: CommerceId, next: boolean) => void;
   /** 선택을 확정하고 준비 상태를 확인하러 간다. 여기서 등록하지 «않는다». */
   onConfirm?: () => void;
+  /** N-05-C — 선택한 커머스에 차례로 등록한다. 누르면 최종 확인 화면이 뜬다. */
+  onRegisterSelected?: () => void;
+  /** 지금 등록 중인 커머스. 실행 중에는 선택을 바꿀 수 없다. */
+  running?: CommerceId | null;
+  /** N-05-D — 채널별 결과. 실패한 채널 때문에 성공한 채널을 지우지 않는다. */
+  outcomes?: CommerceOutcomes;
 }) {
   const selectable = channels.filter(isSelectableCommerce);
   const selectedCount = selected.length;
+  const busy = running !== null;
 
   return (
     <section className="rounded-lg border border-border bg-surface px-3 py-2.5 shadow-subtle">
@@ -82,6 +99,7 @@ export function CommerceSelector({
                 <input
                   type="checkbox"
                   checked={checked}
+                  disabled={busy}
                   onChange={(event) => onToggle(channel.id, event.target.checked)}
                   className="h-4 w-4 shrink-0 accent-primary"
                 />
@@ -93,15 +111,33 @@ export function CommerceSelector({
                   )}
                   <span className="truncate text-sm font-medium text-text-primary">{channel.label}</span>
                 </span>
-                <span className="shrink-0 text-[11px] text-text-tertiary">{statusNote(channel)}</span>
+                {/* 🔴 결과가 있으면 결과가 이긴다 — 등록이 끝난 줄에 「준비됨」이
+                    그대로 남으면 셀러는 아직 안 나간 줄로 읽는다. */}
+                <span className="shrink-0 text-[11px] text-text-tertiary">
+                  {running === channel.id
+                    ? "등록 중…"
+                    : outcomes?.[channel.id]
+                      ? OUTCOME_NOTE[outcomes[channel.id]!.status]
+                      : statusNote(channel)}
+                </span>
               </label>
             </li>
           );
         })}
       </ul>
 
-      <div className="mt-2 flex items-center justify-between gap-2">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs text-text-secondary">{selectionSummary(selectedCount)}</span>
+        {onRegisterSelected && (
+          <button
+            type="button"
+            onClick={onRegisterSelected}
+            disabled={selectedCount === 0 || busy}
+            className="rounded-md border border-primary px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary-soft disabled:cursor-not-allowed disabled:border-border disabled:text-text-tertiary"
+          >
+            {busy ? "등록 중…" : "선택한 커머스 등록"}
+          </button>
+        )}
         {onConfirm && (
           <button
             type="button"
@@ -117,7 +153,9 @@ export function CommerceSelector({
       </div>
       {/* 고르는 것과 등록하는 것을 화면이 직접 갈라 말한다. */}
       <p className="mt-1 text-[11px] text-text-tertiary">
-        고른 커머스의 준비 상태를 확인합니다 — 여기서 바로 등록되지 않습니다.
+        {onRegisterSelected
+          ? "선택한 커머스에 차례로 등록합니다 — 한 곳이 실패해도 나머지는 그대로 진행됩니다."
+          : "고른 커머스의 준비 상태를 확인합니다 — 여기서 바로 등록되지 않습니다."}
       </p>
     </section>
   );

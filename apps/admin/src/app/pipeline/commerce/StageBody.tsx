@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import type { PlatformId } from "@commerce/shared";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { readinessStateToLevel, type ReadinessLevel } from "./readiness-state";
 import type { RegistrationChannel } from "./registration-channels";
@@ -540,7 +539,7 @@ function RegisterStage({
               <button
                 type="button"
                 disabled={comingSoon || sub.target == null}
-                onClick={() => sub.target && onGoToChannel(sub.target as PlatformId)}
+                onClick={() => sub.target && onGoToChannel(sub.target as CommerceId)}
                 title={comingSoon ? "다음 스프린트에 제공될 예정입니다" : undefined}
                 className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                   comingSoon || sub.target == null

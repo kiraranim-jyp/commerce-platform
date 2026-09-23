@@ -80,7 +80,11 @@ import type { MarketEvidenceSummary } from "./commerce/market-evidence";
 import { ImageInlineEditor } from "./ImageInlineEditor";
 import { ListingConfirmationModal, type ListingProgressStep } from "./commerce/ListingConfirmationModal";
 import { LotteOnRegistrationPanel } from "./commerce/LotteOnRegistrationPanel";
-import { resolveCommonCategorySources } from "./commerce/lotteon-channel-form";
+import {
+  fromLotteOnChannelInfo,
+  resolveCommonCategorySources,
+  toLotteOnChannelPayload,
+} from "./commerce/lotteon-channel-form";
 import { MissingFieldsBulkPanel } from "./commerce/MissingFieldsBulkPanel";
 import type { NaverResolveResponse } from "./commerce/NaverPayloadPreview";
 import { PlatformPreview } from "./commerce/PlatformPreview";
@@ -99,6 +103,8 @@ import {
   commerceLabel,
   isPlatformCommerce,
   type CommerceId,
+  type CommerceOutcome,
+  type CommerceOutcomes,
 } from "./commerce/commerce-registry";
 import { WorkflowPanel } from "./commerce/WorkflowPanel";
 import { PRICE_SURFACE_ANCHOR_ID, StageBody } from "./commerce/StageBody";
@@ -357,6 +363,12 @@ export function CommerceWorkspace({
    * 나갈 수 있고, 고르는 행위 자체가 의사표시라는 이 화면의 전제가 무너진다.
    */
   const [selectedCommerces, setSelectedCommerces] = useState<CommerceId[]>([]);
+  /** 지금 등록 중인 커머스(순차 실행). null 이면 실행 중이 아니다. */
+  const [multiRunning, setMultiRunning] = useState<CommerceId | null>(null);
+  /** 채널별 결과 요약. 선택하지 «않은» 커머스는 키 자체가 없다. */
+  const [commerceOutcomes, setCommerceOutcomes] = useState<CommerceOutcomes>({});
+  /** 🔴 [선택한 커머스 등록]을 눌러도 «바로 나가지 않는다» — 최종 확인이 먼저다. */
+  const [multiConfirmOpen, setMultiConfirmOpen] = useState(false);
   const toggleCommerce = useCallback((id: CommerceId, next: boolean) => {
     setSelectedCommerces((prev) => {
       if (next) return prev.includes(id) ? prev : [...prev, id];
@@ -1385,6 +1397,30 @@ export function CommerceWorkspace({
     return out;
   }, [platformReadiness, provisionalReadiness, lotteOnReadiness]);
 
+  /**
+   * N-05 STEP 4(CPO 승인, 2026-09-23) — **채널 하나의 ListingModel 을 만드는 곳.**
+   *
+   * 🔴 다중 등록이 «다른 경로» 를 타면 안 된다. 그래서 아래 `listing`(지금 보고
+   * 있는 탭)도 이 함수를 부른다 — 단독 등록과 다중 등록이 **같은 함수, 같은
+   * 인자**를 쓰므로 payload 가 갈릴 자리가 구조적으로 없다.
+   *
+   * 카테고리만 한 가지가 갈린다: 지금 보고 있는 탭은 「추천을 임시로 승격한」
+   * 선택(effectiveCategorySelection)을 쓰고, 다른 탭은 저장된 선택을 쓴다.
+   * 그것이 «지금 그 탭이 실제로 쓰는 값» 이라서다(승격은 탭 안에서만 일어난다).
+   * 🔴 승격된 RECOMMENDED 는 어차피 등록 게이트(isVerifiedCategorySelected)를
+   * 통과하지 못하므로, 이 차이로 «등록되는» payload 가 달라지지 않는다.
+   */
+  const listingModelFor = useCallback(
+    (platformId: PlatformId) =>
+      PLATFORM_ADAPTERS[platformId].toListingModel(
+        product,
+        platformId === tab ? effectiveCategorySelection : categoryMappings[platformId],
+        { liveRates: exchangeRates?.rates, roundingUnit: priceRoundingUnit ?? undefined },
+        platformId,
+      ),
+    [tab, product, effectiveCategorySelection, categoryMappings, exchangeRates, priceRoundingUnit],
+  );
+
   const listing = useMemo(() => {
     // 롯데ON은 ListingModel(Preview 모델) 경로를 쓰지 않는다 — 서버 라우트가
     // CanonicalProduct에서 바로 87 payload를 만든다.
@@ -1395,13 +1431,8 @@ export function CommerceWorkspace({
     // listing이 이 useMemo 하나이므로, 여기서만 맞추면 전체가 맞는다).
     // PHASE 3.2 — 등록에 실제로 쓰이는 listing은 이 useMemo 하나뿐이고, 네 번째
     // 인자 tab이 "지금 어느 채널의 최종 등록가격을 해석하는가"를 결정한다.
-    return PLATFORM_ADAPTERS[tab].toListingModel(
-      product,
-      effectiveCategorySelection,
-      { liveRates: exchangeRates?.rates, roundingUnit: priceRoundingUnit ?? undefined },
-      tab,
-    );
-  }, [tab, product, effectiveCategorySelection, exchangeRates, priceRoundingUnit]);
+    return listingModelFor(tab);
+  }, [tab, listingModelFor]);
 
   /**
    * UX 2.5(CEO 지시, 2026-09-11) — ③ 등록 준비의 "판매가격" 항목이 읽는 값.
@@ -2401,9 +2432,21 @@ export function CommerceWorkspace({
     return "DRY_RUN";
   }
 
-  async function confirmListing() {
-    if (!confirmingPlatform || !listing) return;
-    const platform = confirmingPlatform;
+  /**
+   * N-05 STEP 4(CPO 승인 ③) — **플랫폼을 인자로 받는다.**
+   *
+   * 예전에는 `confirmingPlatform`(모달 state)만 읽어서, 모달을 거치지 않는
+   * 다중 등록에서는 재사용할 수 없었다. 기본값이 그 state 라 기존 단일 채널
+   * 등록 경로는 호출부도 동작도 그대로다.
+   *
+   * 🔴 `listing` 대신 `listingModelFor(platform)` 을 쓴다 — 지금 보고 있는 탭이
+   * 아닌 채널도 등록할 수 있어야 하고, 그 값은 그 탭이 쓰는 것과 같은 함수에서
+   * 나온다(payload 동일성의 근거).
+   */
+  async function confirmListing(target?: PlatformId): Promise<ListingResult | null> {
+    const platform = target ?? confirmingPlatform;
+    if (!platform) return null;
+    const listing = listingModelFor(platform);
     /* REWORK-5 ⑤(CEO 지시, 2026-09-14) — 모달을 **여기서 닫지 않는다.**
        예전에는 이 자리에서 곧바로 닫아서, 셀러는 몇 초 동안 아무 변화도 없는
        화면을 보고 "눌렀는데 아무 일도 안 일어났다"로 읽었다(등록은 실제로
@@ -2433,7 +2476,7 @@ export function CommerceWorkspace({
       if (existing) {
         setListingResults((prev) => ({ ...prev, [platform]: existing.result }));
         setListingStates((prev) => ({ ...prev, [platform]: existing.result.status }));
-        return;
+        return existing.result;
       }
     }
 
@@ -2470,12 +2513,98 @@ export function CommerceWorkspace({
       ...prev,
     ]);
     setListingStates((prev) => ({ ...prev, [platform]: result.status }));
+    return result;
     } finally {
       /* 성공·실패·중복 LIVE 조기 반환 어느 쪽으로 끝나든 진행 화면은 닫힌다.
          결과 자체는 기존 그대로 listingResults/listingStates가 화면에 알린다. */
       setListingProgress(null);
       setConfirmingPlatform(null);
     }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     N-05-C(CPO 승인, 2026-09-23) — **선택한 커머스에 차례로 등록한다.**
+     ══════════════════════════════════════════════════════════════════════ */
+
+  /**
+   * 롯데ON 한 채널. 🔴 패널을 «마운트하지 않고» 같은 요청을 만든다 —
+   * 본문 조립이 순수 함수(fromLotteOnChannelInfo → toLotteOnChannelPayload)라
+   * 가능하고, 이 두 함수는 패널이 쓰는 바로 그 함수다(경로가 갈리지 않는다).
+   */
+  async function registerLotteOn(): Promise<CommerceOutcome> {
+    const res = await fetch("/api/lotteon/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        product,
+        channel: toLotteOnChannelPayload(fromLotteOnChannelInfo(product.lotteOnChannelInfo)),
+        snapshotId: snapshotId ?? undefined,
+        jobKey: jobKey ?? undefined,
+        liveRates: exchangeRates?.rates,
+        roundingUnit: priceRoundingUnit ?? undefined,
+      }),
+    });
+    const data = (await res.json()) as {
+      ok?: boolean;
+      message?: string;
+      result?: { status: "SUBMITTED" | "FAILED"; externalProductId: string | null; message: string };
+    };
+    if (data.result?.status === "SUBMITTED") {
+      setLotteOnRegistered(true);
+      setListingStates((prev) => ({ ...prev, [LOTTEON_COMMERCE_ID]: "SUBMITTED" }));
+      return {
+        status: "SUBMITTED",
+        message: data.result.message,
+        externalProductId: data.result.externalProductId,
+      };
+    }
+    /* 🔴 「응답이 안 온 것」과 「거부된 것」을 같은 문장으로 말하지 않는다 —
+       서버가 준 사유가 있으면 그대로 옮기고, 없을 때만 일반 문장을 쓴다. */
+    return { status: "FAILED", message: data.result?.message ?? data.message ?? "등록하지 못했습니다." };
+  }
+
+  /**
+   * 🔴 순차 실행 · 채널별 독립 try/catch.
+   *
+   * 한 채널이 실패해도 다음 채널은 그대로 간다. 성공한 채널을 되돌리지도
+   * 않는다(rollback 없음) — 이미 마켓에 올라간 상품을 우리가 임의로 내리는
+   * 것이 더 위험하다. 실패는 그 채널 줄에만 남는다.
+   *
+   * 순서는 `COMMERCE_ORDER` 가 정한다 — 셀러가 체크한 순서가 아니라 화면이
+   * 보여주는 순서 그대로여야 결과 목록과 눈으로 맞출 수 있다.
+   */
+  async function registerSelected() {
+    if (selectedCommerces.length === 0 || multiRunning) return;
+    const targets = COMMERCE_ORDER.filter((id) => selectedCommerces.includes(id));
+    setCommerceOutcomes({});
+    for (const id of targets) {
+      setMultiRunning(id);
+      try {
+        if (isPlatformCommerce(id)) {
+          const result = await confirmListing(id);
+          setCommerceOutcomes((prev) => ({
+            ...prev,
+            [id]: result
+              ? {
+                  status: result.status === "SUBMITTED" ? "SUBMITTED" : "FAILED",
+                  message: result.error?.message,
+                  externalProductId: result.externalProductId ?? null,
+                }
+              : { status: "SKIPPED", message: "등록을 실행하지 못했습니다." },
+          }));
+        } else {
+          const outcome = await registerLotteOn();
+          setCommerceOutcomes((prev) => ({ ...prev, [id]: outcome }));
+        }
+      } catch (error) {
+        // 🔴 여기서 루프를 멈추지 않는다 — 한 채널의 사고가 나머지를 막지 않는다.
+        setCommerceOutcomes((prev) => ({
+          ...prev,
+          [id]: { status: "FAILED", message: error instanceof Error ? error.message : "등록 중 오류가 발생했습니다." },
+        }));
+      }
+    }
+    setMultiRunning(null);
   }
 
   function retryListing() {
@@ -2717,6 +2846,9 @@ export function CommerceWorkspace({
                   channels={registrationChannels}
                   selected={selectedCommerces}
                   onToggle={toggleCommerce}
+                  onRegisterSelected={() => setMultiConfirmOpen(true)}
+                  running={multiRunning}
+                  outcomes={commerceOutcomes}
                 />
               }
               /* UX 2.5 — 바깥(판단 카드·해외 가격비교·상단 Flow)에서 온 "가격 좀
@@ -3012,6 +3144,44 @@ export function CommerceWorkspace({
           )}
         </div>
       </div>
+
+      {/* N-05-C — 다중 등록의 최종 확인. 🔴 «같은 모달» 을 쓴다 — 단독 등록과
+          다른 확인 절차를 만들면 어느 쪽이 진짜 게이트인지 알 수 없어진다.
+          모달이 실제로 읽는 네 칸만 채워 넣는다(그 계약은 REWORK-7 ⑤에서 이미
+          롯데ON 때문에 좁혀져 있다). */}
+      {multiConfirmOpen && (
+        <ListingConfirmationModal
+          listing={{
+            platformLabel: `선택한 커머스 ${selectedCommerces.length}곳 (${COMMERCE_ORDER.filter((id) =>
+              selectedCommerces.includes(id),
+            )
+              .map(commerceLabel)
+              .join(" · ")})`,
+            title: product.titleKo.value.trim() || product.title.value,
+            priceKrw: listingPrice.priceKrw ?? 0,
+            priceSource: listingPrice.source,
+          }}
+          /* 🔴 한 채널이라도 실제 API 를 부르면 LIVE 다 — 「전송 안 됨」으로
+             읽히는 문구를 띄운 채 실등록이 나가지 않게 한다. */
+          mode={
+            COMMERCE_ORDER.filter((id) => selectedCommerces.includes(id)).some(
+              (id) => !isPlatformCommerce(id) || resolveExecutionMode(id) === "LIVE",
+            )
+              ? "LIVE"
+              : "DRY_RUN"
+          }
+          progress={multiRunning ? "SENDING" : null}
+          snapshotId={snapshotId}
+          jobKey={jobKey}
+          onCancel={() => {
+            if (multiRunning) return; // 전송이 시작된 뒤에는 닫지 않는다(단독 등록과 같은 규칙).
+            setMultiConfirmOpen(false);
+          }}
+          onConfirm={() => {
+            void registerSelected().finally(() => setMultiConfirmOpen(false));
+          }}
+        />
+      )}
 
       {confirmingPlatform && listing && (
         <ListingConfirmationModal

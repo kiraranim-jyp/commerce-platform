@@ -1,9 +1,8 @@
-import type { CommerceId } from "./commerce-registry";
 "use client";
 
-import type { PlatformId } from "@commerce/shared";
 import { readinessStateToLevel, type ReadinessLevel } from "./readiness-state";
 import { channelActionLabel, type RegistrationChannel } from "./registration-channels";
+import type { CommerceId } from "./commerce-registry";
 import type { PanelMode } from "./stage-focus";
 
 /**

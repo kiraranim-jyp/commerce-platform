@@ -67,3 +67,26 @@ export const COMMERCE_ORDER: readonly CommerceId[] = [
 export function commerceLabel(id: CommerceId): string {
   return isPlatformCommerce(id) ? PLATFORM_ADAPTERS[id].label : "롯데ON";
 }
+
+/**
+ * N-05-C/D — 한 커머스의 등록 «결과».
+ *
+ * 🔴 `ListingResult`(packages/listing)를 넓히지 않는다. 그 타입의 `platform` 은
+ * `PlatformId` 이고, 롯데ON 을 넣으려면 패키지 계약을 건드려야 한다 — 이번
+ * 범위가 아니다. 화면이 세 커머스를 나란히 보여주는 데 필요한 것은 네 칸뿐이라
+ * 화면 레이어에서 그 네 칸만 정의한다.
+ *
+ * 채널별 «원본» 결과는 지금처럼 각자의 자리에 그대로 남는다(스마트스토어·쿠팡은
+ * listingResults, 롯데ON 은 패널). 이것은 그 위에 서는 «요약» 이다.
+ */
+export interface CommerceOutcome {
+  /** SUBMITTED = 실제로 제출됨. SKIPPED = 준비가 안 돼 호출조차 하지 않음. */
+  status: "SUBMITTED" | "FAILED" | "SKIPPED";
+  /** 셀러가 읽는 한 줄. 실패 사유이거나 건너뛴 이유다. */
+  message?: string;
+  /** 채널이 돌려준 상품 번호. 없으면 null — 지어내지 않는다. */
+  externalProductId?: string | null;
+}
+
+/** 등록 실행 결과 묶음. 선택하지 «않은» 커머스는 키 자체가 없다. */
+export type CommerceOutcomes = Partial<Record<CommerceId, CommerceOutcome>>;
