@@ -1,6 +1,6 @@
-import type { CanonicalProduct } from "@commerce/shared";
+
 import { hasRealProductOptions } from "./build-payload";
-import type { NaverPayloadInput } from "./build-payload";
+import type { NaverPayloadInput, SmartStoreProductInput } from "./build-payload";
 import type { NaverProductRegistrationPayload } from "./types";
 import { isNoticeFieldSatisfied } from "../notice/reference-eligibility";
 import {
@@ -672,7 +672,9 @@ export function validateNaverPayload(
   // 처리하지 않는다. 대신 Naver 자신이 명시한 실제 제약(옵션 선택 시 최종
   // 판매가가 0원 미만이 되면 안 됨)을 직접 계산해서 검사한다 — 이건 추측이
   // 아니라 공식 답변에 나온 검증 규칙 그대로다.
-  const product = input.product as CanonicalProduct;
+  /* NEXT-04d Phase B-3 — 빌더와 «같은 경계» 를 쓴다. 검증기가 더 넓게 보면
+     「payload 에는 안 들어가는데 검증은 본다」는 상태가 생긴다. */
+  const product = input.product as SmartStoreProductInput;
   // N-3.32(CPO 지시) — build-payload.ts와 동일한 hasRealProductOptions 기준을
   // 쓴다. Shopify의 단일 SKU placeholder({name:"Title",values:["Default
   // Title"]}, variants=[])는 이제 여기서도 "옵션 없음"으로 정확히 판정된다.

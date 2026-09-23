@@ -1,5 +1,27 @@
 import type { ListingModel } from "@commerce/marketplace";
-import type { CanonicalProduct } from "@commerce/shared";
+import type { CanonicalProduct, MasterProduct, SellingConditions } from "@commerce/shared";
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * NEXT-04d Phase B-3(CPO 승인, 2026-09-23) — 스마트스토어가 «볼 수 있는» 범위
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 여기에 «새 통로를 만들지 않았다». 조사에서 확인된 것은 스마트스토어가
+ * 세 채널 중 경계가 가장 깨끗하다는 것이었다 — 채널값은 이미 상품 밖에 있다:
+ *
+ *   카테고리        categoryMappings → ListingModel.category → leafCategoryId
+ *   채널 컨텍스트    /api/naver/resolve → resolvedManufacturer · 주소록번호 ·
+ *                   원산지코드 · 인증ID · A/S 문구 … (아래 입력 21칸)
+ *   채널 가격        resolveChannelListingPrice() — 3채널 «공통» seam
+ *
+ * 그래서 이번 작업은 울타리 하나뿐이다: 상품 인자에서 CommerceBinding 을 뺀다.
+ *
+ * 🔴 `channelPriceOverrides` 는 여기서 차단하지 «않는다». 그건 스마트스토어의
+ * 문제가 아니라 smartstore·coupang·elevenst 가 공유하는 가격 seam 이고, 이번
+ * 작업으로 바꾸면 3채널 공통 refactor 가 된다(CPO 확정 — ㉮). 대신 그 seam 이
+ * «의도된 유일한 가격 통로» 라는 것을 양성 테스트로 고정한다.
+ */
+export type SmartStoreProductInput = MasterProduct & SellingConditions;
 import { getSelectedImageUrl } from "@commerce/shared";
 import { computeVariantFinalPriceKrw } from "@commerce/pricing";
 import { resolveProductSignals } from "@commerce/category";
@@ -37,7 +59,7 @@ import { resolveNoticeFieldValue, DETAIL_PAGE_REFERENCE_TEXT } from "../notice/r
  */
 
 export interface NaverPayloadInput {
-  product: CanonicalProduct;
+  product: SmartStoreProductInput;
   listing: ListingModel;
   /** N-2.4 확인 — 리프 카테고리 ID(예: "50000535"). */
   leafCategoryId: string;
@@ -230,7 +252,7 @@ export function assembleNaverDetailContent(
  * 흐름에서는 id를 절대 채우지 않는다. SKU는 부작용 없는 sellerManagerCode
  * (판매자 관리 코드)로 옮긴다. optionName1..4는 product.optionGroups
  * 순서대로 variant.optionValues 값을 채운다. */
-function buildOptionCombinations(product: CanonicalProduct, salePrice: number): NaverOptionCombination[] {
+function buildOptionCombinations(product: SmartStoreProductInput, salePrice: number): NaverOptionCombination[] {
   const groupNames = product.optionGroups.map((g) => g.name);
   return product.variants.map((variant) => {
     const values = groupNames.map((name) => variant.optionValues[name] ?? "");
@@ -309,7 +331,7 @@ function toImageRef(url: string): NaverImageRef {
  * 있으면 그건 진짜 옵션 상품이지 Shopify의 무옵션 기본상태가 아니다 — 이 둘을
  * 구조만 보고 섞으면 안 된다는 게 이번 작업의 핵심 전제(CPO 지시 Case C).
  */
-export function hasRealProductOptions(product: CanonicalProduct): boolean {
+export function hasRealProductOptions(product: SmartStoreProductInput): boolean {
   // N-3.82(CPO 지시, N-3.78 STEP2에서 발견한 Case E 처리 방침 확정) —
   // optionGroups만 보고 "실제 옵션 있음"으로 판단하면, variants가 비어 있을
   // 때(예: 원본 파싱이 절반만 성공해 실제 SKU 조합을 못 만든 경우) "옵션
@@ -333,7 +355,7 @@ export function hasRealProductOptions(product: CanonicalProduct): boolean {
  * 입력 UI를 만들지 않는다(CPO 지시). SIZE 옵션이 없으면 undefined를 반환해서
  * validate-payload.ts가 지금처럼 MISSING으로 남기게 한다(임의값 금지).
  */
-export function resolveSizeFromOptions(product: CanonicalProduct): string | undefined {
+export function resolveSizeFromOptions(product: SmartStoreProductInput): string | undefined {
   const sizeGroup = product.optionGroups.find((g) => /size|사이즈/i.test(g.name));
   if (!sizeGroup || sizeGroup.values.length === 0) return undefined;
   return sizeGroup.values.join(", ");
@@ -403,7 +425,7 @@ function targetLabelFromSignals(ageGroup: string, gender: string): string {
  * 중간에서 끊지 않는다). */
 const NAVER_PRODUCT_NAME_MAX_LENGTH = 100;
 
-export function generateSmartStoreProductName(product: CanonicalProduct): string {
+export function generateSmartStoreProductName(product: SmartStoreProductInput): string {
   const brand = product.brand.value.trim();
   const season = resolveSeasonFromText(`${product.title.value} ${product.description.value}`);
   const signals = resolveProductSignals(product);

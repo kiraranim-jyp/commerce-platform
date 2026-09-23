@@ -1,5 +1,5 @@
 import type { ListingModel } from "@commerce/marketplace";
-import type { CanonicalProduct } from "@commerce/shared";
+import type { SmartStoreProductInput } from "../naver/build-payload";
 
 /**
  * 이번 Mission은 실제 네이버 커머스 API 요청 바디를 그대로 흉내내지 않는다 —
@@ -41,7 +41,7 @@ export interface SmartStorePayload {
 }
 
 export function buildSmartStorePayload(
-  product: CanonicalProduct,
+  product: SmartStoreProductInput,
   listing: ListingModel,
 ): SmartStorePayload {
   return {

@@ -1,5 +1,5 @@
 import type { ListingModel } from "@commerce/marketplace";
-import type { CanonicalProduct } from "@commerce/shared";
+import type { SmartStoreProductInput } from "../naver/build-payload";
 import type { ListingExecutor } from "../executor";
 import { buildSmartStorePayload } from "../smartstore/build-payload";
 import { validateSmartStoreListing } from "../smartstore/validate-listing";
@@ -16,7 +16,10 @@ export const smartstoreExecutor: ListingExecutor = {
   platform: "smartstore",
 
   async execute(
-    product: CanonicalProduct,
+    /* NEXT-04d Phase B-3 — 이 얇은 클라이언트도 같은 경계를 쓴다.
+       🔴 ListingExecutor 공통 계약의 시그니처는 바꾸지 않는다(다른 채널이
+       같이 흔들린다) — 이 구현체가 «더 좁게» 받을 뿐이다. */
+    product: SmartStoreProductInput,
     listing: ListingModel,
     mode: ExecutionMode,
     // Sprint B-1(CPO 지시) — 이 executor는 그동안 context 파라미터 자체를
