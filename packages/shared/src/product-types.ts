@@ -25,13 +25,83 @@ import type { CommerceCategoryPathResult } from "./category-path";
  */
 export type FieldSource = "ORIGINAL" | "AI_GENERATED" | "USER_EDITED" | "DEFAULT" | "REQUIRED" | "DETAIL_PAGE_REFERENCE";
 
+/**
+ * 🔴 PIVOT NEXT-04c — 「이 값을 «어떤 방식으로» 쓰는가」.
+ *
+ * `FieldSource` 와 다른 질문에 답한다. 저쪽은 「어디서 왔는가」다.
+ * 두 질문이 한 union 에 섞여 있어서 실제 사고가 났다 —
+ *
+ *     product.manufacturer = { value: "", source: "DETAIL_PAGE_REFERENCE" }
+ *        resolveManufacturer()    value 만 보고 → 「없다」 → 판매자 기본값으로 폴백
+ *        resolveNoticeFieldValue() source 를 보고 → 「상세페이지 참조」
+ *
+ * 같은 화면에서 ①기본정보는 「규하맘샵」, 고시정보는 「상세페이지 참조」가 됐다.
+ * 어느 쪽도 버그가 아니다 — 같은 필드의 «다른 면» 을 본 것이다.
+ */
+export type InputMode = "VALUE" | "REQUIRES_INPUT" | "DETAIL_REFERENCE";
+
 export interface ProvenanceField<T> {
   value: T;
   source: FieldSource;
+  /**
+   * 🔴 **optional 이다.** 부재는 「지정되지 않음」이지 「UNSPECIFIED 라는 상태」가
+   * 아니다 — legacy 스냅샷 361건 중 3,565개 필드가 「그 외 + 빈 값」이고, 그
+   * 안에 «AI 생성 전 초기화 · 추출 실패 · 원문 부재» 가 섞여 있다(실측). 하나로
+   * 단정할 근거가 없으므로 아무 주장도 하지 않는다.
+   *
+   * 🔴 이 값을 «직접» 읽지 마라. `interpretField()` 를 거쳐라 — 각자
+   * `inputMode ?? …` 로 해석하면 legacy 규칙이 코드에 흩어진다.
+   */
+  inputMode?: InputMode;
   /** 0~1. 원본 추출값은 어떤 소스에서 왔는지(JSON-LD/OpenGraph/DOM)에 따라 다르게
    * 매겨진다 — packages/crawler의 product-data-extractor.ts 참고. 사람이 직접
    * 수정한 값(EDITED)은 항상 1이다. */
   confidence: number;
+}
+
+/**
+ * 해석을 마친 필드 — 여기서부터는 아무도 `undefined` 를 보지 않는다.
+ *
+ * 🔴 `UNRESOLVED` 는 «저장되지 않는다». 해석 결과에만 있고 「legacy 라 판단을
+ * 유보했다」는 뜻이다. 소비자는 이 상태에서 지금까지와 똑같이 행동해야 한다 —
+ * 새 의미를 부여하는 순간 3,565개 필드에 없던 주장을 하게 된다.
+ */
+export interface InterpretedField<T> {
+  value: T;
+  source: FieldSource;
+  inputMode: InputMode | "UNRESOLVED";
+  confidence: number;
+}
+
+/** 값이 비었는가 — 문자열은 trim 후 길이 0, 배열은 길이 0, null/undefined. 숫자 0 은 «있는 값» 이다. */
+function isEmptyValue(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (typeof value === "string") return value.trim().length === 0;
+  if (Array.isArray(value)) return value.length === 0;
+  return false;
+}
+
+/**
+ * 저장된 필드를 «해석» 한다 — legacy 규칙이 사는 유일한 곳.
+ *
+ * ── 실측 근거(스냅샷 361건 · ProvenanceField 9,434개) ─────────────────────
+ *   DETAIL_PAGE_REFERENCE   627건 · 전부 value="" · confidence=1   → 예외 0
+ *   REQUIRED              2,429건 · 전부 value="" · confidence=0   → 예외 0
+ *   그 외 + 값 있음        3,440건
+ *   그 외 + 빈 값          3,565건  🔴 그중 1,780건이 AI 생성 5필드의 초기화
+ *
+ * 마지막 줄을 `REQUIRES_INPUT` 으로 올리면 상품마다 「확인 필요」가 5개씩
+ * 늘어난다. `VALUE` 로 내려도 「이 빈 값은 의도된 것」이라는 없던 주장이 된다.
+ * 그래서 «판단하지 않는다».
+ */
+export function interpretField<T>(field: ProvenanceField<T>): InterpretedField<T> {
+  const base = { value: field.value, source: field.source, confidence: field.confidence };
+  // 새 데이터가 이미 말했으면 그대로 쓴다 — legacy 규칙을 거치지 않는다.
+  if (field.inputMode) return { ...base, inputMode: field.inputMode };
+  if (field.source === "DETAIL_PAGE_REFERENCE") return { ...base, inputMode: "DETAIL_REFERENCE" };
+  if (field.source === "REQUIRED") return { ...base, inputMode: "REQUIRES_INPUT" };
+  if (!isEmptyValue(field.value)) return { ...base, inputMode: "VALUE" };
+  return { ...base, inputMode: "UNRESOLVED" };
 }
 
 /**

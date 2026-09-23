@@ -7,6 +7,7 @@ import {
   type ManufacturerOrigin,
   type ManufacturerResolution,
 } from "@commerce/listing";
+import type { InputMode } from "@commerce/shared";
 
 /**
  * REWORK-10 A(CEO 지시, 2026-09-15) — **화면이 resolver 결과를 받는 배선.**
@@ -116,12 +117,19 @@ function findBrandManufacturer(rows: BrandProfileRow[], brandName: string): stri
  */
 export type ProductManufacturerInput =
   | string
-  | { value: string; source: string; origin?: ManufacturerOrigin };
+  | { value: string; source: string; origin?: ManufacturerOrigin; inputMode?: InputMode };
 
 function splitProductManufacturer(input: ProductManufacturerInput) {
   if (typeof input === "string") return { productInfoManufacturer: input };
+  /* 🔴 PIVOT NEXT-04c — 입력 «방식» 을 잃지 않는다.
+     이 화면이 P0 를 드러낸 자리다: 값이 비었다는 이유로 {} 를 돌려주면
+     resolver 가 판매자 기본값까지 내려가 「규하맘샵」을 말하는데, 바로 아래
+     고시정보는 「상세페이지 참조」를 말했다. 두 곳이 같은 필드의 다른 면을
+     본 것이다. 이제 같은 사실을 넘긴다. */
+  const inputMode: InputMode | undefined =
+    input.inputMode ?? (input.source === "DETAIL_PAGE_REFERENCE" ? "DETAIL_REFERENCE" : undefined);
   const value = (input.value ?? "").trim();
-  if (!value) return {};
+  if (!value) return inputMode ? { productInputMode: inputMode } : {};
   if (input.source === "USER_EDITED") return { manualManufacturer: value };
   if (input.origin === "SOURCE_URL") return { sourceUrlManufacturer: value };
   return { productInfoManufacturer: value };

@@ -57,6 +57,8 @@
  */
 
 /** 제조사를 채운 단계. 화면이 "어디서 온 값인가"를 말할 때 쓰는 유일한 축이다. */
+import type { InputMode } from "@commerce/shared";
+
 export type ManufacturerSource =
   /** ⑤ 셀러가 이 상품에 직접 입력한 값 — 추정이 아니라 확정이라 항상 최우선. */
   | "MANUAL"
@@ -68,6 +70,13 @@ export type ManufacturerSource =
   | "BRAND_DEFAULT"
   /** ④ 판매자 기본 제조사. */
   | "SELLER_DEFAULT"
+  /** 🔴 PIVOT NEXT-04c — 셀러가 «상세페이지 참조로 등록하겠다» 고 정한 상태.
+   *
+   * 「값이 없다」가 아니다. 이미 «채워진» 것이고, 그래서 아래 단계로 내려가지
+   * 않는다. 예전에는 value 가 비어 있다는 이유로 브랜드·판매자 기본값까지
+   * 내려갔고, 그 결과 같은 화면에서 ①기본정보는 판매자 기본값을, 고시정보는
+   * 참조 문구를 보여 줬다. */
+  | "DETAIL_REFERENCE"
   /** 어느 단계도 답하지 못했다. */
   | "NONE";
 
@@ -97,6 +106,11 @@ export interface ManufacturerResolverInput {
   brandProfileManufacturer?: string | null;
   /** ④ 판매자 기본정보(SellerProfile.manufacturer). */
   sellerProfileManufacturer?: string | null;
+  /** 🔴 상품의 제조사 칸이 «어떤 입력 방식» 인가(interpretField 결과).
+   *
+   * 값이 아니라 «방식» 이라 다른 후보들과 같은 줄에 둘 수 없다. 이것이
+   * DETAIL_REFERENCE 면 폴백 자체가 일어나지 않는다. */
+  productInputMode?: InputMode | "UNRESOLVED";
   /**
    * @deprecated REWORK-13A 이전의 이름. «상품이 들고 있는 제조사»를 ①/②/⑤로
    * 나누기 전에는 이 한 칸이 전부였다. 출처를 모르는 값이므로 ②로 취급한다 —
@@ -127,6 +141,19 @@ export function resolveManufacturer(input: ManufacturerResolverInput): Manufactu
   const productInfo = clean(input.productInfoManufacturer) || clean(input.productManufacturer);
   if (productInfo) return { value: productInfo, source: "PRODUCT_INFO", resolved: true };
 
+  /* 🔴 PIVOT NEXT-04c — 여기서 «멈춘다».
+     셀러가 「상세페이지 참조로 등록」을 고른 상태다. 값이 비어 있지만 그건
+     「아직 없다」가 아니라 «이미 채웠다» 는 뜻이다. 아래로 내려가면 브랜드·
+     판매자 기본값이 잡히고, 그러면 같은 화면에서 ①기본정보와 고시정보가 서로
+     다른 제조사를 말하게 된다(실측으로 확인된 P0).
+
+     상품 단계(①②⑤)보다 «뒤» 에 두는 이유: 셀러가 실제 값을 넣어 뒀다면 그게
+     참조보다 우선이다. 참조는 「값을 못/안 넣기로 한 선택」이라 값이 있으면
+     애초에 성립하지 않는다. */
+  if (input.productInputMode === "DETAIL_REFERENCE") {
+    return { value: "", source: "DETAIL_REFERENCE", resolved: true };
+  }
+
   const brand = clean(input.brandProfileManufacturer);
   if (brand) return { value: brand, source: "BRAND_DEFAULT", resolved: true };
 
@@ -144,14 +171,26 @@ export function resolveManufacturer(input: ManufacturerResolverInput): Manufactu
  * 매핑이 두 벌이 되는 순간 "화면은 ①이라는데 payload는 ②"가 다시 생긴다.
  */
 export function manufacturerInputFromProduct(product: {
-  manufacturer: { value: string; source: string };
+  manufacturer: { value: string; source: string; inputMode?: InputMode };
   manufacturerOrigin?: ManufacturerOrigin;
 }): Pick<
   ManufacturerResolverInput,
-  "manualManufacturer" | "sourceUrlManufacturer" | "productInfoManufacturer"
+  "manualManufacturer" | "sourceUrlManufacturer" | "productInfoManufacturer" | "productInputMode"
 > {
+  /* 🔴 PIVOT NEXT-04c — 입력 «방식» 을 여기서 잃지 않는다.
+     예전에는 값이 비면 {} 를 돌려줘서, 「참조로 정했다」는 사실이 resolver 에
+     도달하지 못했다. 그래서 폴백이 돌았다.
+
+     interpretField 를 여기서 부르지 않고 «필드 모양 그대로» 읽는 이유: 이
+     패키지는 shared 의 ProvenanceField 전체가 아니라 세 칸만 받는 느슨한
+     구조체를 받는다(세 채널 빌더가 각자 다른 모양을 넘긴다). legacy 규칙
+     자체는 아래 한 줄로 충분하다 — 나머지는 interpretField 가 맡는다. */
+  const inputMode: InputMode | undefined =
+    product.manufacturer.inputMode ??
+    (product.manufacturer.source === "DETAIL_PAGE_REFERENCE" ? "DETAIL_REFERENCE" : undefined);
+
   const value = clean(product.manufacturer.value);
-  if (!value) return {};
+  if (!value) return inputMode ? { productInputMode: inputMode } : {};
   /* 셀러가 직접 고친 값(USER_EDITED)이면 ⑤. 그 외에는 크롤러가 채운 값이고,
      어디서 읽었는지는 canonical 단계가 이미 기록해 뒀다(manufacturerOrigin).
      기록이 없으면 ②로 본다 — ①("원본이 명시했다")이라고 단정할 근거가 없다. */
@@ -171,6 +210,9 @@ export const MANUFACTURER_SOURCE_LABEL: Record<ManufacturerSource, string> = {
      (settings/page.tsx:388 탭 · 1987 카드). 값이 담긴 그릇의 이름을 쓴다. */
   BRAND_DEFAULT: "브랜드 프로필",
   SELLER_DEFAULT: "판매자 기본정보",
+  /* 다른 라벨은 「값이 어디서 왔는가」인데 이것만 「어떻게 등록하는가」다.
+     셀러에게는 둘 다 「이 칸이 지금 어떤 상태인가」라 같은 자리에서 읽힌다. */
+  DETAIL_REFERENCE: "상세페이지 참조",
   NONE: "확인된 출처 없음",
 };
 
