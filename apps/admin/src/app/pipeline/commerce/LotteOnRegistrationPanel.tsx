@@ -257,6 +257,7 @@ export function LotteOnRegistrationPanel({
   onChannelInfoChange,
   onEditCommonInfo,
   onReadinessChange,
+  onRegistered,
   manufacturerResolution,
 }: {
   product: CanonicalProduct;
@@ -292,6 +293,15 @@ export function LotteOnRegistrationPanel({
    * 스마트스토어/쿠팡의 onReadinessChange와 같은 자리다 — 여기서 새 판정을
    * 만들지 않고 이미 계산된 값을 올려보내기만 한다. */
   onReadinessChange?: (percent: number, allRequiredPassed: boolean, missingCount: number) => void;
+  /**
+   * N-05 STEP 2 — **등록이 실제로 끝났다**는 사실만 위로 올린다.
+   *
+   * 🔴 결과 화면을 옮기는 것이 아니다(그건 이 패널이 계속 그린다). ④ 커머스
+   * 등록 목록이 세 채널을 나란히 보여주려면 부모가 「롯데ON 은 끝났는가」를
+   * 알아야 하는데, 그 사실이 이 컴포넌트 안에만 있었다 — 그래서 목록에서
+   * 롯데ON 만 영영 「등록할 수 있습니다」로 남았다.
+   */
+  onRegistered?: () => void;
   /**
    * REWORK-10 A(CEO 지시, 2026-09-15) — 전 채널 공통 제조사 resolver의 결과.
    * 스마트스토어·쿠팡 탭(PlatformPreview)이 받는 것과 **같은 값**이다 —
@@ -818,6 +828,8 @@ export function LotteOnRegistrationPanel({
       setRegisterProgress("CONFIRMING");
       const data = (await res.json()) as RegisterResponse;
       setRegisterResult(data);
+      // 🔴 실제로 제출된 경우에만 올린다 — 실패/검증거부를 「등록됨」으로 말하지 않는다.
+      if (data.result?.status === "SUBMITTED") onRegistered?.();
     } catch {
       setError("서버에 연결하지 못했습니다.");
     } finally {

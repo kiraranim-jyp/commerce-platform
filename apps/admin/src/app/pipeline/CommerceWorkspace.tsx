@@ -92,6 +92,14 @@ import type { PriorityItem, ReadinessLevel, RegistrationReadinessState } from ".
 import { computeChecklistReadiness } from "./commerce/readiness";
 import { buildPriorityItems, resolveRegistrationReadinessState } from "./commerce/RegistrationStatusBanner";
 import { RegistrationHistoryPanel } from "./commerce/RegistrationHistoryPanel";
+import { CommerceSelector } from "./commerce/CommerceSelector";
+import {
+  COMMERCE_ORDER,
+  LOTTEON_COMMERCE_ID,
+  commerceLabel,
+  isPlatformCommerce,
+  type CommerceId,
+} from "./commerce/commerce-registry";
 import { WorkflowPanel } from "./commerce/WorkflowPanel";
 import { PRICE_SURFACE_ANCHOR_ID, StageBody } from "./commerce/StageBody";
 import { PriceEditor } from "./commerce/PriceEditor";
@@ -120,8 +128,10 @@ import type { WorkspaceItem } from "./types";
  * isPlatformTab()이 "이 탭이 기존 플랫폼 어댑터 경로를 타는가"의 유일한 판정이고,
  * 롯데ON 탭은 자체 패널(LotteOnRegistrationPanel) + 서버 라우트만 쓴다.
  */
-const LOTTEON_TAB = "lotteon" as const;
-type CommerceTab = "source" | "content" | PlatformId | typeof LOTTEON_TAB;
+/* N-05 STEP 2 — 탭 키와 커머스 식별자는 «같은 글자» 다. 따로 적어 두면 언젠가
+   한쪽만 바뀐다(그리고 그때 탭은 열리는데 등록 목록에는 없는 채널이 생긴다). */
+const LOTTEON_TAB = LOTTEON_COMMERCE_ID;
+type CommerceTab = "source" | "content" | CommerceId;
 
 /** 기존 어댑터/Executor 경로를 타는 탭인지. false면 PLATFORM_ADAPTERS를
  * 인덱싱하면 안 된다(undefined가 되어 렌더 중에 터진다). */
@@ -132,6 +142,19 @@ function isPlatformTab(tab: CommerceTab): tab is PlatformId {
 /** 아직 구현되지 않아 탭에서 비활성화하고 SOON 배지로 표시하는 플랫폼/기능 —
  * 백로그 패널에도 같은 목록을 보여준다. */
 const SOON_PLATFORMS = new Set<PlatformId>(["smartstore", "elevenst"]);
+
+/**
+ * N-05 STEP 2 — 롯데ON 의 「아직 채워야 하는 항목」 자리표.
+ *
+ * 🔴 롯데ON 패널은 부족 항목의 **개수만** 보고한다(목록은 패널 안에서만 산다).
+ * 화면의 채널 목록은 개수(`blockingCount`)만 읽으므로 자리만 채우면 되고,
+ * 없는 항목 이름을 지어내지 않는다 — 그래서 label 이 「확인 필요」 한 마디다.
+ */
+const LOTTEON_MISSING_ITEM: PriorityItem = {
+  key: "lotteon-missing",
+  label: "확인 필요",
+  sourceItems: [],
+};
 
 /**
  * LOTTEON COMMERCE SPRINT 3(CEO 확정, 2026-09-14) — 상품등록 화면이 **보여주는**
@@ -322,6 +345,29 @@ export function CommerceWorkspace({
    * 센 값을 그대로 받는다 — 탭 배지가 탭 안의 숫자보다 낙관적으로 말할 경로가
    * 없다.
    */
+  /**
+   * N-05-A(CPO 확정, 2026-09-23) — **이번에 등록할 커머스.**
+   *
+   * 🔴 저장하지 않는다. workspace jsonb 에도 DB 에도 넣지 않고, 새로고침하면
+   * 비워진다(CPO 확정 ② ㉮). 「어디에 등록할 것인가」는 상품의 속성이 아니라
+   * **지금 이 순간의 의도**라서다. 실제로 써 본 뒤 저장이 필요하다고 확인되면
+   * 그때 별도 결정한다.
+   *
+   * 🔴 빈 상태로 시작한다. 미리 켜 두면 셀러가 «고른 적 없는» 채널로 등록이
+   * 나갈 수 있고, 고르는 행위 자체가 의사표시라는 이 화면의 전제가 무너진다.
+   */
+  const [selectedCommerces, setSelectedCommerces] = useState<CommerceId[]>([]);
+  const toggleCommerce = useCallback((id: CommerceId, next: boolean) => {
+    setSelectedCommerces((prev) => {
+      if (next) return prev.includes(id) ? prev : [...prev, id];
+      return prev.filter((value) => value !== id);
+    });
+  }, []);
+
+  /** N-05 STEP 2 — 롯데ON 이 «실제로 제출됐는가». 스마트스토어·쿠팡의
+   *  listingStates[id] === "SUBMITTED" 와 같은 자리다(패널이 보고한다). */
+  const [lotteOnRegistered, setLotteOnRegistered] = useState(false);
+  const handleLotteOnRegistered = useCallback(() => setLotteOnRegistered(true), []);
   const [lotteOnReadiness, setLotteOnReadiness] = useState<{
     percent: number;
     allRequiredPassed: boolean;
@@ -1307,10 +1353,16 @@ export function CommerceWorkspace({
     return out;
   }, [product, categoryMappings, exchangeRates, priceRoundingUnit]);
 
-  /** 방문한 탭의 실제 값이 항상 우선하고, 없으면 잠정치를 쓴다. */
+  /** 방문한 탭의 실제 값이 항상 우선하고, 없으면 잠정치를 쓴다.
+   *
+   * N-05 STEP 2 — 롯데ON 이 여기 합류한다. 🔴 새 판정을 만들지 않는다: 패널이
+   * 서버 검증(validateLotteOnPayload) 결과로 이미 보고한 값
+   * (allRequiredPassed · missingCount)을 **같은 어휘로 옮겨 적을 뿐**이다.
+   * 탭을 아직 안 연 상태(null)는 그대로 «상태 없음» 으로 둔다 — 롯데ON 에는
+   * 잠정치를 만들 경로가 없고, 없는 것을 추측해서 채우지 않는다. */
   const mergedReadiness = useMemo(() => {
     const out: Partial<
-      Record<PlatformId, { state: RegistrationReadinessState; priorityItems: PriorityItem[]; provisional: boolean }>
+      Record<CommerceId, { state: RegistrationReadinessState; priorityItems: PriorityItem[]; provisional: boolean }>
     > = {};
     for (const platformId of WORKSPACE_PLATFORM_ORDER) {
       const actual = platformReadiness[platformId];
@@ -1321,8 +1373,17 @@ export function CommerceWorkspace({
       const guess = provisionalReadiness[platformId];
       if (guess) out[platformId] = { ...guess, provisional: true };
     }
+    if (lotteOnReadiness) {
+      /* 부족 항목의 «개수» 만 서버가 보고한다(목록은 패널 안에 있다). 목록을
+         지어내지 않고 개수만큼 자리를 만든다 — 화면은 개수만 읽는다. */
+      out[LOTTEON_COMMERCE_ID] = {
+        state: lotteOnReadiness.allRequiredPassed ? "READY" : "NEEDS_REVIEW",
+        priorityItems: Array.from({ length: lotteOnReadiness.missingCount }, () => LOTTEON_MISSING_ITEM),
+        provisional: false,
+      };
+    }
     return out;
-  }, [platformReadiness, provisionalReadiness]);
+  }, [platformReadiness, provisionalReadiness, lotteOnReadiness]);
 
   const listing = useMemo(() => {
     // 롯데ON은 ListingModel(Preview 모델) 경로를 쓰지 않는다 — 서버 라우트가
@@ -1597,13 +1658,22 @@ export function CommerceWorkspace({
       (sum, id) => sum + (mergedReadiness[id]?.priorityItems.length ?? 0),
       0,
     );
-    const channels: WorkflowChannel[] = WORKSPACE_PLATFORM_ORDER.map((id) => ({
+    /* N-05 STEP 2 — 목록이 COMMERCE_ORDER 로 바뀌었다. 오른쪽 Action Center 와
+       ④ 본문이 **같은 세 채널**을 본다(둘이 다른 목록을 쓰면 「탭에는 없는데
+       카드에는 있는」 채널이 생긴다 — 이 화면이 이미 겪은 불일치다). */
+    const channels: WorkflowChannel[] = COMMERCE_ORDER.map((id) => ({
       id,
-      label: PLATFORM_ADAPTERS[id].label,
-      availability: !SOON_PLATFORMS.has(id) ? "AVAILABLE" : id === "smartstore" ? "PREVIEW_ONLY" : "COMING_SOON",
+      label: commerceLabel(id),
+      availability: !isPlatformCommerce(id)
+        ? "AVAILABLE" // 🔴 롯데ON 은 실제 등록이 동작하는 채널이다.
+        : !SOON_PLATFORMS.has(id)
+          ? "AVAILABLE"
+          : id === "smartstore"
+            ? "PREVIEW_ONLY"
+            : "COMING_SOON",
       // 실제로 마켓에 제출이 끝난 상태만 "등록 완료"다 — READY(화면 표시용
       // 파생값)를 등록 완료로 읽으면 등록하지도 않은 상품이 ✓가 된다.
-      registered: listingStates[id] === "SUBMITTED",
+      registered: isPlatformCommerce(id) ? listingStates[id] === "SUBMITTED" : lotteOnRegistered,
     }));
 
     return resolveWorkflow({
@@ -1636,7 +1706,7 @@ export function CommerceWorkspace({
       },
       register: { channels },
     });
-  }, [product, items, mergedReadiness, listingStates, marketSignal, snapshotId, listingPrice]);
+  }, [product, items, mergedReadiness, listingStates, lotteOnRegistered, marketSignal, snapshotId, listingPrice]);
 
   /** 작업 Flow의 항목을 눌렀을 때의 이동. 탭 전환과 스크롤은 이미 있는 경로를 그대로 쓴다. */
   function navigateWorkflow(target: WorkflowNavTarget) {
@@ -1686,9 +1756,12 @@ export function CommerceWorkspace({
   /** 채널 목록은 한 번만 만든다 — 오른쪽 Action Center와 ④ 본문이 같은 배열을
    * 본다(둘이 각자 만들면 준비 상태가 두 벌 계산되어 서로 다른 말을 한다). */
   const registrationChannels = buildRegistrationChannels({
-    order: WORKSPACE_PLATFORM_ORDER,
-    labelOf: (id) => PLATFORM_ADAPTERS[id].label,
-    isComingSoon: (id) => SOON_PLATFORMS.has(id),
+    /* N-05 STEP 2 — 목록이 COMMERCE_ORDER 하나로 바뀌었다. 그전까지 이 배열에는
+       롯데ON 이 «없어서», 오른쪽 「커머스 등록」 카드가 두 채널만 보여줬다. */
+    order: COMMERCE_ORDER,
+    labelOf: commerceLabel,
+    // 🔴 롯데ON 은 준비중이 아니다 — 실제 등록이 동작하는 채널이다.
+    isComingSoon: (id) => isPlatformCommerce(id) && SOON_PLATFORMS.has(id),
     isPreviewOnly: (id) => id === "smartstore",
     readiness: mergedReadiness,
   });
@@ -2637,6 +2710,15 @@ export function CommerceWorkspace({
                  돌아온다. 없앤 것은 그 값을 상품정보에서 한 번 더 읽어주던
                  읽기 전용 화면 하나뿐이다. */
               onGoToChannel={setTab}
+              /* N-05-A — 「등록할 커머스」. 채널 목록은 오른쪽 Action Center 와
+                 같은 배열(registrationChannels)이다 — 두 벌로 갈리지 않는다. */
+              commerceSelector={
+                <CommerceSelector
+                  channels={registrationChannels}
+                  selected={selectedCommerces}
+                  onToggle={toggleCommerce}
+                />
+              }
               /* UX 2.5 — 바깥(판단 카드·해외 가격비교·상단 Flow)에서 온 "가격 좀
                  보자"는 요청. 카운터가 올라가면 StageBody가 가격 작업면을 펼친다. */
               openPriceSurfaceRequest={priceSurfaceRequest}
@@ -2825,6 +2907,7 @@ export function CommerceWorkspace({
               /* 탭 배지/준비상태 줄이 쓸 값. 패널이 서버 검증 결과를 센 값을
                  그대로 올려보낸다 — 여기서 다시 판정하지 않는다. */
               onReadinessChange={handleLotteOnReadinessChange}
+              onRegistered={handleLotteOnRegistered}
               /* REWORK-10 A — 스마트스토어·쿠팡과 **같은 값**이다. */
               manufacturerResolution={manufacturerResolution}
             />

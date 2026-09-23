@@ -1,3 +1,4 @@
+import type { CommerceId } from "./commerce-registry";
 "use client";
 
 import type { PlatformId } from "@commerce/shared";
@@ -82,7 +83,7 @@ export function ActionCenter({
   /** 지금 해야 하는 한 가지. workflow.ts의 currentSubStep에서 그대로 온다. */
   currentTodo?: string | null;
   onOpenVerdict: () => void;
-  onGoToChannel: (id: PlatformId) => void;
+  onGoToChannel: (id: CommerceId) => void;
 }) {
   /** 접힌 체크리스트가 보여주는 유일한 숫자. 목록과 같은 배열에서 센다. */
   const doneCount = checklist.filter((item) => item.ok).length;

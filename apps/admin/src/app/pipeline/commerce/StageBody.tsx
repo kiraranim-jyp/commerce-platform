@@ -5,6 +5,7 @@ import type { PlatformId } from "@commerce/shared";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { readinessStateToLevel, type ReadinessLevel } from "./readiness-state";
 import type { RegistrationChannel } from "./registration-channels";
+import type { CommerceId } from "./commerce-registry";
 import {
   PREPARE_SURFACE_LABEL,
   prepareSurfaceOf,
@@ -72,6 +73,7 @@ export function StageBody({
   archive,
   channels,
   onGoToChannel,
+  commerceSelector,
   openPriceSurfaceRequest = 0,
   openMarketEvidenceRequest = 0,
 }: {
@@ -83,6 +85,8 @@ export function StageBody({
   /** 변경 이력·백로그처럼 단계와 무관한 기록. 항상 맨 아래 접힘. */
   archive: React.ReactNode;
   channels: RegistrationChannel[];
+  /** N-05-A — ④ 커머스 등록 맨 위의 「등록할 커머스」 선택기. 없으면 그리지 않는다. */
+  commerceSelector?: React.ReactNode;
   /*
    * REWORK-4 §1(CEO 지시, 2026-09-14) — 여기 있던 `commerceManagement` 슬롯이
    * 사라졌다. 상품정보 탭의 「🛒 커머스 관리정보」 접힘을 통째로 없앤다.
@@ -95,7 +99,7 @@ export function StageBody({
    */
   /** 채널 화면으로 데려간다. 등록을 여기서 실행하지 않는다 — 등록 게이트는
    * 지금까지와 같이 그 화면 하나가 책임진다(ActionCenter와 같은 원칙). */
-  onGoToChannel: (id: PlatformId) => void;
+  onGoToChannel: (id: CommerceId) => void;
   /**
    * UX 2.5 — "가격을 보여달라"는 요청이 바깥에서 올 때마다 1씩 올라가는 값.
    *
@@ -181,7 +185,12 @@ export function StageBody({
       )}
 
       {focus.main === "REGISTER" && (
-        <RegisterStage workflow={workflow} channels={channels} onGoToChannel={onGoToChannel} />
+        <RegisterStage
+          workflow={workflow}
+          channels={channels}
+          onGoToChannel={onGoToChannel}
+          commerceSelector={commerceSelector}
+        />
       )}
 
       {/* ── 이 단계에서 주인공이 아닌 것들 ──────────────────────────────
@@ -393,7 +402,7 @@ function PrepareStage({
   onPick: (key: string) => void;
   surfaces: StageSurfaces;
   channels: RegistrationChannel[];
-  onGoToChannel: (id: PlatformId) => void;
+  onGoToChannel: (id: CommerceId) => void;
 }) {
   const doneCount = subSteps.filter((s) => s.status === "DONE" || s.status === "DONE_NO_DATA").length;
 
@@ -457,7 +466,7 @@ function PrepareWorkSurface({
   subStepKey: string;
   surfaces: StageSurfaces;
   channels: RegistrationChannel[];
-  onGoToChannel: (id: PlatformId) => void;
+  onGoToChannel: (id: CommerceId) => void;
 }) {
   const surface = prepareSurfaceOf(subStepKey);
   if (surface === "IMAGES") return <>{surfaces.images}</>;
@@ -489,14 +498,19 @@ function RegisterStage({
   workflow,
   channels,
   onGoToChannel,
+  commerceSelector,
 }: {
   workflow: Workflow;
   channels: RegistrationChannel[];
-  onGoToChannel: (id: PlatformId) => void;
+  onGoToChannel: (id: CommerceId) => void;
+  commerceSelector?: React.ReactNode;
 }) {
   const byId = new Map(channels.map((c) => [String(c.id), c]));
   return (
     <StagePanel index={4} title="커머스 등록" headline={workflow.current.headline}>
+      {/* N-05-A — 「어디에 등록할 것인가」를 채널 줄보다 «먼저» 묻는다. 아래
+          줄들은 고른 결과의 준비 상태다. */}
+      {commerceSelector && <div className="mb-2">{commerceSelector}</div>}
       <div className="space-y-2">
         {workflow.current.subSteps.map((sub) => {
           const channel = byId.get(sub.key);
@@ -593,7 +607,7 @@ function ChannelJumpList({
 }: {
   channels: RegistrationChannel[];
   note?: string;
-  onGoToChannel: (id: PlatformId) => void;
+  onGoToChannel: (id: CommerceId) => void;
 }) {
   return (
     <div>

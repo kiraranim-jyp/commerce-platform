@@ -1,5 +1,5 @@
 import { formatKrw } from "@commerce/pricing";
-import type { PlatformId } from "@commerce/shared";
+import type { CommerceId } from "./commerce-registry";
 
 /**
  * UX 2.1(CEO 지시, 2026-09-11) — 따져에는 작업 Flow가 **하나만** 존재한다.
@@ -78,7 +78,7 @@ export type BigStepStatus = "LOCKED" | "IN_PROGRESS" | "ATTENTION" | "COMPLETED"
  * "market"/"price"는 탭이 아니라 스크롤 의도다 — CommerceWorkspace가 이미
  * 갖고 있는 focusMarketVerdict()/handleRequestPriceReview()에 그대로 이어진다.
  */
-export type WorkflowNavTarget = "source" | "content" | "market" | "price" | PlatformId;
+export type WorkflowNavTarget = "source" | "content" | "market" | "price" | CommerceId;
 
 export interface SubStep {
   key: string;
@@ -208,7 +208,9 @@ export interface PrepareSignal {
 export type ChannelAvailability = "AVAILABLE" | "PREVIEW_ONLY" | "COMING_SOON";
 
 export interface WorkflowChannel {
-  id: PlatformId;
+  /* N-05 STEP 2 — PlatformId 였다. 롯데ON 이 ④ 커머스 등록 목록에 서지 못하던
+     이유가 이 한 줄이다(화면 식별자만 넓힌다 — 어댑터 계약은 그대로). */
+  id: CommerceId;
   label: string;
   availability: ChannelAvailability;
   /** 이 채널에 실제로 등록이 끝났는가(listingStates === "REGISTERED"). */
