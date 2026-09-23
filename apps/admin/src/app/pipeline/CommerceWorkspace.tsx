@@ -81,9 +81,12 @@ import { ImageInlineEditor } from "./ImageInlineEditor";
 import { ListingConfirmationModal, type ListingProgressStep } from "./commerce/ListingConfirmationModal";
 import { LotteOnRegistrationPanel } from "./commerce/LotteOnRegistrationPanel";
 import {
+  buildLotteOnMissingInfo,
+  computeLotteOnRegistrationReadiness,
   fromLotteOnChannelInfo,
   resolveCommonCategorySources,
   toLotteOnChannelPayload,
+  type LotteOnValidationSnapshot,
 } from "./commerce/lotteon-channel-form";
 import { MissingFieldsBulkPanel } from "./commerce/MissingFieldsBulkPanel";
 import type { NaverResolveResponse } from "./commerce/NaverPayloadPreview";
@@ -100,6 +103,7 @@ import { CommerceSelector } from "./commerce/CommerceSelector";
 import {
   COMMERCE_ORDER,
   LOTTEON_COMMERCE_ID,
+  type CommerceLastAttempts,
   commerceLabel,
   isPlatformCommerce,
   type CommerceId,
@@ -367,6 +371,72 @@ export function CommerceWorkspace({
   const [multiRunning, setMultiRunning] = useState<CommerceId | null>(null);
   /** 채널별 결과 요약. 선택하지 «않은» 커머스는 키 자체가 없다. */
   const [commerceOutcomes, setCommerceOutcomes] = useState<CommerceOutcomes>({});
+  /**
+   * N-06-B — 이 상품이 «실제로» 어느 커머스에 올라가 있나.
+   *
+   * 🔴 화면 state 는 세션 한정이라 새로고침하면 방금 등록한 상품도 「미등록」으로
+   * 보였다(N-06-A 조사). 영속 사실은 registration_attempts 하나뿐이라 그것을 읽는다.
+   * 새 저장소를 만들지 않는다.
+   */
+  const [commerceLastAttempts, setCommerceLastAttempts] = useState<CommerceLastAttempts>({});
+  const refreshAttempts = useCallback(async () => {
+    if (!snapshotId) return;
+    try {
+      const res = await fetch(`/api/snapshots/${snapshotId}/attempts`);
+      const data = (await res.json()) as { ok?: boolean; lastAttempts?: CommerceLastAttempts };
+      // 🔴 실패를 «이력 없음» 으로 덮지 않는다 — 등록된 상품이 미등록으로 보이면
+      //    셀러가 두 번 등록할 수 있다. 못 읽었으면 직전 값을 그대로 둔다.
+      if (data.ok && data.lastAttempts) setCommerceLastAttempts(data.lastAttempts);
+    } catch {
+      /* 그대로 둔다 */
+    }
+  }, [snapshotId]);
+  useEffect(() => {
+    void refreshAttempts();
+  }, [refreshAttempts]);
+
+  /**
+   * N-06-B-3 — **롯데ON 준비 확인은 «부를 때만» 한다.**
+   *
+   * 🔴 화면을 열자마자 호출하지 않는다. 롯데ON 검증은 서버가 매번 207 Identity 를
+   * 조회하는 비용이 있고, 셀러가 «고르지도 않은» 채널 때문에 그 비용을 치르게
+   * 할 이유가 없다(CPO 확정 ㉯). 고르고 [등록 준비 확인]을 눌렀을 때만 돈다.
+   */
+  const [checkingReadiness, setCheckingReadiness] = useState(false);
+  async function checkSelectedReadiness() {
+    if (checkingReadiness) return;
+    /* 스마트스토어·쿠팡은 사전 점검이 이미 돌고 있어 여기서 더 할 일이 없다.
+       남은 것은 롯데ON 하나뿐이고, «선택된 경우에만» 확인한다. */
+    if (!selectedCommerces.includes(LOTTEON_COMMERCE_ID)) return;
+    setCheckingReadiness(true);
+    try {
+      const res = await fetch("/api/lotteon/payload-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product,
+          channel: toLotteOnChannelPayload(fromLotteOnChannelInfo(product.lotteOnChannelInfo)),
+          liveRates: exchangeRates?.rates,
+          roundingUnit: priceRoundingUnit ?? undefined,
+        }),
+      });
+      const data = (await res.json()) as { validation?: LotteOnValidationSnapshot | null };
+      /* 🔴 판정을 새로 만들지 않는다 — 롯데ON 탭이 쓰는 그 두 함수를 그대로 쓴다.
+         탭에서 본 숫자와 여기 숫자가 갈릴 자리가 없다. */
+      const validation = data.validation ?? null;
+      const readiness = computeLotteOnRegistrationReadiness(validation);
+      handleLotteOnReadinessChange(
+        readiness.percent,
+        readiness.allRequiredPassed,
+        buildLotteOnMissingInfo(validation).length,
+      );
+    } catch {
+      // 못 읽었으면 상태를 만들지 않는다 — 「확인 전」 그대로 둔다.
+    } finally {
+      setCheckingReadiness(false);
+    }
+  }
+
   /** 🔴 [선택한 커머스 등록]을 눌러도 «바로 나가지 않는다» — 최종 확인이 먼저다. */
   const [multiConfirmOpen, setMultiConfirmOpen] = useState(false);
   const toggleCommerce = useCallback((id: CommerceId, next: boolean) => {
@@ -2513,6 +2583,8 @@ export function CommerceWorkspace({
       ...prev,
     ]);
     setListingStates((prev) => ({ ...prev, [platform]: result.status }));
+    // N-06-B — 방금 생긴 이력을 화면이 바로 읽는다(영속 사실은 DB 가 갖는다).
+    void refreshAttempts();
     return result;
     } finally {
       /* 성공·실패·중복 LIVE 조기 반환 어느 쪽으로 끝나든 진행 화면은 닫힌다.
@@ -2552,6 +2624,7 @@ export function CommerceWorkspace({
     if (data.result?.status === "SUBMITTED") {
       setLotteOnRegistered(true);
       setListingStates((prev) => ({ ...prev, [LOTTEON_COMMERCE_ID]: "SUBMITTED" }));
+      void refreshAttempts();
       return {
         status: "SUBMITTED",
         message: data.result.message,
@@ -2853,12 +2926,12 @@ export function CommerceWorkspace({
                      데려간다(없으면 첫 선택 채널). 새 판정을 만들지 않고 이미
                      계산된 blockingCount 를 읽는다. */
                   onConfirm={() => {
-                    const picked = registrationChannels.filter((channel) =>
-                      selectedCommerces.includes(channel.id),
-                    );
-                    const target = picked.find((channel) => channel.blockingCount > 0) ?? picked[0];
-                    if (target) setTab(target.id);
+                    /* N-06-B — 먼저 «확인» 을 돌린다(롯데ON 은 여기서만 검증한다).
+                       그 다음 확인이 남은 첫 채널로 데려간다. */
+                    void checkSelectedReadiness();
                   }}
+                  lastAttempts={commerceLastAttempts}
+                  checking={checkingReadiness}
                 />
               }
               /* N-05-C — ④ 의 실행 줄. 체크박스를 복제하지 않는다(CPO 지시 D). */

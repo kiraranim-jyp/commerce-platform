@@ -151,7 +151,9 @@ describe("④ 선택기 — 고르는 것은 등록이 «아니다»", () => {
 
   it("🔴 하나도 고르지 않으면 다음 단계로 갈 수 없다", () => {
     const source = readFileSync(join(DIR, "CommerceSelector.tsx"), "utf8");
-    expect(codeOnly(source)).toContain("disabled={selectedCount === 0}");
+    /* N-06-B — [등록 준비 확인]이 롯데ON 검증을 «실행» 하게 되면서 확인 중에도
+       잠긴다. 잠그는 조건이 늘었을 뿐, 0개 선택이면 못 누르는 것은 그대로다. */
+    expect(codeOnly(source)).toContain("disabled={selectedCount === 0 || checking}");
   });
 
   it("🔴 이 화면이 등록을 «하지 않는다» — 등록 경로를 부르지 않는다", () => {

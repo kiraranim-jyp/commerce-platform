@@ -1,6 +1,6 @@
 "use client";
 
-import type { CommerceId, CommerceOutcomes } from "./commerce-registry";
+import type { CommerceId, CommerceLastAttempts, CommerceOutcomes } from "./commerce-registry";
 import type { RegistrationChannel } from "./registration-channels";
 import { readinessStateToLevel, type ReadinessLevel } from "./readiness-state";
 
@@ -52,6 +52,35 @@ const OUTCOME_NOTE: Record<"SUBMITTED" | "FAILED" | "SKIPPED", string> = {
   SKIPPED: "— 실행하지 않음",
 };
 
+/**
+ * N-06-B — 등록 «이력» 한 줄. 준비 상태와 다른 축이라 따로 적는다.
+ *
+ * 🔴 체크(선택)와 등록은 다른 개념이다. 「☑ 쿠팡」은 «이번에 등록할 곳» 이고,
+ * 「✓ 등록됨」은 «이미 올라가 있다» 이다. 한 줄에 섞어 쓰면 셀러가 체크만 하고
+ * 등록된 줄로 읽는다.
+ *
+ * 🔴 이력이 없으면 «미등록» 이라고만 말한다. 「등록 실패」가 아니다 — 시도한
+ * 적이 없다. 없는 사실을 지어내지 않는다.
+ */
+export function registrationNote(attempt: CommerceLastAttempts[CommerceId]): string {
+  if (!attempt) return "○ 미등록";
+  const when = formatAttemptTime(attempt.at);
+  if (attempt.status === "SUBMITTED") {
+    return attempt.externalProductId
+      ? `✓ 등록됨 · ${when} · 상품번호 ${attempt.externalProductId}`
+      : `✓ 등록됨 · ${when}`;
+  }
+  return attempt.errorCode ? `✕ 최근 등록 실패 · ${when} · ${attempt.errorCode}` : `✕ 최근 등록 실패 · ${when}`;
+}
+
+/** 「2026-09-22 14:32」. 지어낸 상대시간("3일 전")을 쓰지 않는다 — 대조할 때 쓰는 값이다. */
+function formatAttemptTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 function statusNote(channel: RegistrationChannel): string {
   if (channel.availability === "COMING_SOON") return "준비중";
   if (!channel.state) return "아직 확인하지 않았습니다";
@@ -69,6 +98,8 @@ export function CommerceSelector({
   onRegisterSelected,
   running = null,
   outcomes,
+  lastAttempts,
+  checking = false,
 }: {
   channels: RegistrationChannel[];
   selected: readonly CommerceId[];
@@ -81,6 +112,10 @@ export function CommerceSelector({
   running?: CommerceId | null;
   /** N-05-D — 채널별 결과. 실패한 채널 때문에 성공한 채널을 지우지 않는다. */
   outcomes?: CommerceOutcomes;
+  /** N-06-B — registration_attempts 에서 읽은 «채널별 마지막 시도». */
+  lastAttempts?: CommerceLastAttempts;
+  /** [등록 준비 확인] 이 도는 중. */
+  checking?: boolean;
 }) {
   const selectable = channels.filter(isSelectableCommerce);
   const selectedCount = selected.length;
@@ -103,22 +138,30 @@ export function CommerceSelector({
                   onChange={(event) => onToggle(channel.id, event.target.checked)}
                   className="h-4 w-4 shrink-0 accent-primary"
                 />
-                <span className="flex min-w-0 flex-1 items-center gap-1.5">
-                  {level ? (
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${LEVEL_DOT_CLASS[level]}`} aria-label={level} />
-                  ) : (
-                    <span className="h-2 w-2 shrink-0 rounded-full bg-border" aria-hidden />
-                  )}
-                  <span className="truncate text-sm font-medium text-text-primary">{channel.label}</span>
-                </span>
-                {/* 🔴 결과가 있으면 결과가 이긴다 — 등록이 끝난 줄에 「준비됨」이
-                    그대로 남으면 셀러는 아직 안 나간 줄로 읽는다. */}
-                <span className="shrink-0 text-[11px] text-text-tertiary">
-                  {running === channel.id
-                    ? "등록 중…"
-                    : outcomes?.[channel.id]
-                      ? OUTCOME_NOTE[outcomes[channel.id]!.status]
-                      : statusNote(channel)}
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="flex items-center gap-1.5">
+                    {level ? (
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${LEVEL_DOT_CLASS[level]}`} aria-label={level} />
+                    ) : (
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-border" aria-hidden />
+                    )}
+                    <span className="truncate text-sm font-medium text-text-primary">{channel.label}</span>
+                    {/* 🔴 결과가 있으면 결과가 이긴다 — 등록이 끝난 줄에 「준비됨」이
+                        그대로 남으면 셀러는 아직 안 나간 줄로 읽는다. */}
+                    <span className="ml-auto shrink-0 text-[11px] text-text-tertiary">
+                      {running === channel.id
+                        ? "등록 중…"
+                        : outcomes?.[channel.id]
+                          ? OUTCOME_NOTE[outcomes[channel.id]!.status]
+                          : checked && checking && !channel.state
+                            ? "확인 중…"
+                            : statusNote(channel)}
+                    </span>
+                  </span>
+                  {/* N-06-B — 준비 상태와 «다른 축». 이미 올라가 있는가. */}
+                  <span className="pl-3.5 text-[11px] text-text-tertiary">
+                    {registrationNote(lastAttempts?.[channel.id])}
+                  </span>
                 </span>
               </label>
             </li>
@@ -144,10 +187,10 @@ export function CommerceSelector({
             onClick={onConfirm}
             /* 🔴 하나도 고르지 않으면 다음 단계가 성립하지 않는다. 버튼을
                숨기지 않고 잠근다 — 사라지면 셀러는 기능이 없다고 읽는다. */
-            disabled={selectedCount === 0}
+            disabled={selectedCount === 0 || checking}
             className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-border disabled:text-text-tertiary"
           >
-            등록 준비 확인
+            {checking ? "확인 중…" : "등록 준비 확인"}
           </button>
         )}
       </div>

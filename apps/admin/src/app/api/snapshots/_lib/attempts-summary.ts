@@ -29,6 +29,48 @@ export interface AttemptRow {
 }
 
 /**
+ * ════════════════════════════════════════════════════════════════════════════
+ * N-06-B(CPO 승인, 2026-09-23) — **상품 하나의 «채널별 마지막 시도».**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 위 집계(`aggregateAttemptRows`)는 목록 화면용이라 「등록된 적 있는가」까지만
+ * 센다. Master 상태 카드는 그보다 한 칸 더 말해야 한다 — 언제 · 상품번호 ·
+ * 마지막에 왜 실패했는가.
+ *
+ * 🔴 새 판정을 만들지 않는다. 시각 내림차순으로 정렬된 행에서 채널마다 «처음
+ * 만나는 행» 이 그 채널의 마지막 시도다 — 위 함수가 쓰는 규칙 그대로다.
+ *
+ * 🔴 없는 것을 지어내지 않는다. 이력이 없는 채널은 키 자체가 없고, 화면은 그때
+ * 「미등록」이라고만 말한다(「등록 실패」가 아니다 — 시도한 적이 없다).
+ */
+export interface LastAttempt {
+  status: "SUBMITTED" | "FAILED";
+  at: string;
+  externalProductId: string | null;
+  errorCode: string | null;
+}
+
+export interface LastAttemptRow extends AttemptRow {
+  external_product_id: string | null;
+  error_code: string | null;
+}
+
+/** 채널 키는 `PlatformId` 가 아니라 DB 의 platform 문자열 그대로다 — 롯데ON 포함. */
+export function latestAttemptByPlatform(rows: LastAttemptRow[]): Record<string, LastAttempt> {
+  const out: Record<string, LastAttempt> = {};
+  for (const row of rows) {
+    if (out[row.platform]) continue; // 이미 더 최근 것을 봤다(내림차순 정렬 전제).
+    out[row.platform] = {
+      status: row.status,
+      at: row.created_at,
+      externalProductId: row.external_product_id ?? null,
+      errorCode: row.error_code ?? null,
+    };
+  }
+  return out;
+}
+
+/**
  * Sprint D(CPO 지시: "SmartStore/Coupang 실제 등록 상태 분리") — 스냅샷 하나가
  * 두 플랫폼 모두에 시도 이력을 가질 수 있고, 한쪽만 성공/실패해도 서로 절대
  * 섞이면 안 된다(플랫폼별 registeredPlatforms/hasError가 독립적으로 계산돼야

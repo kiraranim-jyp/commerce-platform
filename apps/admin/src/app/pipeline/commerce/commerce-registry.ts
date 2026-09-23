@@ -90,3 +90,20 @@ export interface CommerceOutcome {
 
 /** 등록 실행 결과 묶음. 선택하지 «않은» 커머스는 키 자체가 없다. */
 export type CommerceOutcomes = Partial<Record<CommerceId, CommerceOutcome>>;
+
+/**
+ * N-06-B — 이 커머스에 «마지막으로» 무슨 일이 있었나(registration_attempts).
+ *
+ * 🔴 이력이 «없는» 커머스는 키 자체가 없다. 없는 것을 「미등록」이라는 값으로
+ * 만들지 않는다 — 화면이 키의 부재를 보고 그렇게 «말할» 뿐이다.
+ */
+export interface CommerceLastAttempt {
+  status: "SUBMITTED" | "FAILED";
+  /** ISO 시각. 화면이 사람이 읽는 꼴로 바꾼다. */
+  at: string;
+  /** 채널이 돌려준 상품번호. 실패했으면 없다. */
+  externalProductId: string | null;
+  errorCode: string | null;
+}
+
+export type CommerceLastAttempts = Partial<Record<CommerceId, CommerceLastAttempt>>;
