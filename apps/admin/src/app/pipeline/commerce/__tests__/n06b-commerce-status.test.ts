@@ -120,7 +120,9 @@ describe("③ 🔴 롯데ON 은 «부를 때만» 확인한다 (CPO 확정 ㉯)"
 
   it("🔴 판정을 새로 만들지 않는다 — 롯데ON 탭이 쓰는 그 함수를 그대로 쓴다", () => {
     expect(WORKSPACE).toContain("computeLotteOnRegistrationReadiness(validation)");
-    expect(WORKSPACE).toContain("buildLotteOnMissingInfo(validation).length");
+    /* N-06-C — 개수만 쓰던 것이 «목록» 으로 확장됐다(같은 함수, 같은 호출). */
+    expect(WORKSPACE).toContain("const missing = buildLotteOnMissingInfo(validation);");
+    expect(WORKSPACE).toContain("missing.length");
   });
 });
 

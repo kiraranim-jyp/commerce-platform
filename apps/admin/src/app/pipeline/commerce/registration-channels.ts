@@ -65,8 +65,20 @@ export function buildRegistrationChannels(input: RegistrationChannelsInput): Reg
   });
 }
 
-/** 버튼 문구 — 채널 이름 + 동작. 상태어("READY")를 그대로 쓰지 않는다. */
-export function channelActionLabel(channel: RegistrationChannel): string {
+/**
+ * 버튼 문구 — 채널 이름 + 동작. 상태어("READY")를 그대로 쓰지 않는다.
+ *
+ * 🔴 N-06-C(CPO 지시, 2026-09-23) — ③ 등록 준비에서 이 버튼은 «탭으로 데려갈
+ * 뿐» 인데 「등록」이라고 적혀 있었다. 누르면 등록되는 줄 알고 못 누르거나,
+ * 눌렀는데 등록이 안 됐다고 읽는다. 단계마다 그 자리에서 «실제로 일어나는
+ * 일» 을 적는다:
+ *
+ *     ③ 등록 준비   확인하기   (탭으로 이동한다)
+ *     ④ 커머스 등록  등록       (실제로 나간다)
+ */
+export type ChannelActionMode = "CHECK" | "REGISTER";
+
+export function channelActionLabel(channel: RegistrationChannel, mode: ChannelActionMode = "REGISTER"): string {
   if (channel.availability === "COMING_SOON") return `${channel.label} 준비중`;
-  return `${channel.label} 등록`;
+  return mode === "CHECK" ? `${channel.label} 확인하기` : `${channel.label} 등록`;
 }

@@ -67,7 +67,9 @@ describe("buildRegistrationChannels()", () => {
 
 describe("channelActionLabel()", () => {
   it("내부 상태명을 버튼 문구에 쓰지 않는다", () => {
-    const labels = build().map(channelActionLabel);
+    /* N-06-C — 두 번째 인자(mode)가 생겼다. map 에 그대로 넘기면 index 가 mode 로
+       들어간다 — 화살표로 감싸 «기본값(등록)» 을 그대로 쓴다. */
+    const labels = build().map((channel) => channelActionLabel(channel));
     expect(labels).toContain("쿠팡 등록");
     expect(labels).toContain("11번가 준비중");
     for (const label of labels) {

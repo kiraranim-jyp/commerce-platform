@@ -104,6 +104,8 @@ import {
   COMMERCE_ORDER,
   LOTTEON_COMMERCE_ID,
   type CommerceLastAttempts,
+  type CommerceMissingByChannel,
+  type CommerceMissingItem,
   commerceLabel,
   isPlatformCommerce,
   type CommerceId,
@@ -403,6 +405,8 @@ export function CommerceWorkspace({
    * 할 이유가 없다(CPO 확정 ㉯). 고르고 [등록 준비 확인]을 눌렀을 때만 돈다.
    */
   const [checkingReadiness, setCheckingReadiness] = useState(false);
+  /** C-3 — 롯데ON 부족 항목 «목록». 개수만 올리던 것을 이름까지 올린다. */
+  const [lotteOnMissing, setLotteOnMissing] = useState<CommerceMissingItem[]>([]);
   async function checkSelectedReadiness() {
     if (checkingReadiness) return;
     /* 스마트스토어·쿠팡은 사전 점검이 이미 돌고 있어 여기서 더 할 일이 없다.
@@ -425,10 +429,17 @@ export function CommerceWorkspace({
          탭에서 본 숫자와 여기 숫자가 갈릴 자리가 없다. */
       const validation = data.validation ?? null;
       const readiness = computeLotteOnRegistrationReadiness(validation);
-      handleLotteOnReadinessChange(
-        readiness.percent,
-        readiness.allRequiredPassed,
-        buildLotteOnMissingInfo(validation).length,
+      const missing = buildLotteOnMissingInfo(validation);
+      handleLotteOnReadinessChange(readiness.percent, readiness.allRequiredPassed, missing.length);
+      /* 🔴 목록을 «지어내지» 않는다 — 서버 검증이 준 항목을 그대로 옮긴다.
+         where 가 COMMON_PRODUCT 면 롯데ON 탭이 아니라 상품정보에서 고쳐야 한다. */
+      setLotteOnMissing(
+        missing.map((item) => ({
+          commerceId: LOTTEON_COMMERCE_ID,
+          key: `lotteon:${item.key}`,
+          label: item.label,
+          sectionId: item.where === "COMMON_PRODUCT" ? undefined : item.sectionId,
+        })),
       );
     } catch {
       // 못 읽었으면 상태를 만들지 않는다 — 「확인 전」 그대로 둔다.
@@ -436,6 +447,40 @@ export function CommerceWorkspace({
       setCheckingReadiness(false);
     }
   }
+
+  /**
+   * N-06-C — 채널별 부족 항목에 «어느 커머스의» 를 붙인다.
+   *
+   * 🔴 새 판정을 만들지 않는다. mergedReadiness 가 이미 들고 있는 priorityItems
+   * (채널 검증이 만든 값)를 한 겹 감쌀 뿐이다. 롯데ON 은 목록이 패널 안에만
+   * 있었는데, 준비 확인이 그 목록을 그대로 올려 준다(아래 lotteOnMissing).
+   */
+
+  /**
+   * C-2 — 그 항목을 고치러 «바로» 간다.
+   *
+   * 탭을 옮긴 직후에는 그 화면이 아직 DOM 에 없다. 그래서 목적지를 요청으로
+   * 남겨 두고, 렌더가 끝난 뒤 스크롤한다 — 화면이 이미 쓰는 방식(가격 작업면
+   * 열기 요청)과 같은 모양이다.
+   */
+  const [fixScrollRequest, setFixScrollRequest] = useState<string | null>(null);
+  function requestFix(item: CommerceMissingItem) {
+    if (item.externalHref) {
+      // 설정 화면처럼 «채널 밖» 에서만 고칠 수 있는 값이다.
+      window.location.href = item.externalHref;
+      return;
+    }
+    setTab(item.commerceId);
+    setFixScrollRequest(item.sectionId ?? null);
+  }
+  useEffect(() => {
+    if (!fixScrollRequest) return;
+    const timer = setTimeout(() => {
+      document.getElementById(fixScrollRequest)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setFixScrollRequest(null);
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [fixScrollRequest, tab]);
 
   /** 🔴 [선택한 커머스 등록]을 눌러도 «바로 나가지 않는다» — 최종 확인이 먼저다. */
   const [multiConfirmOpen, setMultiConfirmOpen] = useState(false);
@@ -1867,6 +1912,26 @@ export function CommerceWorkspace({
     readiness: mergedReadiness,
   });
 
+  const missingByCommerce = useMemo(() => {
+    const out: CommerceMissingByChannel = {};
+    for (const id of COMMERCE_ORDER) {
+      if (id === LOTTEON_COMMERCE_ID) {
+        if (lotteOnMissing.length > 0) out[id] = lotteOnMissing;
+        continue;
+      }
+      const items = mergedReadiness[id]?.priorityItems ?? [];
+      if (items.length === 0) continue;
+      out[id] = items.map((item) => ({
+        commerceId: id,
+        key: `${id}:${item.key}`,
+        label: item.label,
+        sectionId: item.sectionId,
+        externalHref: item.externalHref,
+      }));
+    }
+    return out;
+  }, [mergedReadiness, lotteOnMissing]);
+
   /** 판단을 펼쳐 본다 — 판단 카드는 좁은 Flow 줄에 들어가지 않으므로 본문에서 연다. */
   function openMarketDetail() {
     setMarketDetailOpen(true);
@@ -2932,6 +2997,8 @@ export function CommerceWorkspace({
                   }}
                   lastAttempts={commerceLastAttempts}
                   checking={checkingReadiness}
+                  missingByCommerce={missingByCommerce}
+                  onFixRequest={requestFix}
                 />
               }
               /* N-05-C — ④ 의 실행 줄. 체크박스를 복제하지 않는다(CPO 지시 D). */
@@ -3234,6 +3301,7 @@ export function CommerceWorkspace({
         <div className={channelOwnsPillar ? "hidden" : "order-1 lg:order-2"}>
           {!channelOwnsPillar && (
           <ActionCenter
+            channelActionMode={workflow.currentStepKey === "COMMERCE_REGISTERING" ? "REGISTER" : "CHECK"}
             verdict={sellVerdict ? FINAL_VERDICT_COPY[sellVerdict] : null}
             verdictPending={!verdictReported}
             verdictMode={stageFocus.actionCenter.verdict}

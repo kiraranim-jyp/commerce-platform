@@ -1,7 +1,11 @@
 "use client";
 
 import { readinessStateToLevel, type ReadinessLevel } from "./readiness-state";
-import { channelActionLabel, type RegistrationChannel } from "./registration-channels";
+import {
+  channelActionLabel,
+  type ChannelActionMode,
+  type RegistrationChannel,
+} from "./registration-channels";
 import type { CommerceId } from "./commerce-registry";
 import type { PanelMode } from "./stage-focus";
 
@@ -55,6 +59,7 @@ export function ActionCenter({
   currentTodo,
   onOpenVerdict,
   onGoToChannel,
+  channelActionMode = "REGISTER",
 }: {
   /** 서버가 낸 판매 판단 3단계. 아직 분석 중이거나 근거가 없으면 null. */
   verdict: { icon: string; title: string; tone: "GOOD" | "CAUTION" | "STOP" } | null;
@@ -83,6 +88,8 @@ export function ActionCenter({
   currentTodo?: string | null;
   onOpenVerdict: () => void;
   onGoToChannel: (id: CommerceId) => void;
+  /** N-06-C — ③ 에서는 「확인하기」, ④ 에서는 「등록」. 기본은 기존 그대로. */
+  channelActionMode?: ChannelActionMode;
 }) {
   /** 접힌 체크리스트가 보여주는 유일한 숫자. 목록과 같은 배열에서 센다. */
   const doneCount = checklist.filter((item) => item.ok).length;

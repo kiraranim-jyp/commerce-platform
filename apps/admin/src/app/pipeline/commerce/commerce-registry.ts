@@ -107,3 +107,23 @@ export interface CommerceLastAttempt {
 }
 
 export type CommerceLastAttempts = Partial<Record<CommerceId, CommerceLastAttempt>>;
+
+/**
+ * N-06-C(CPO 승인, 2026-09-23) — **어느 커머스의 무엇이 비었는가.**
+ *
+ * 🔴 `PriorityItem`(채널 검증이 이미 만든 값)을 고치지 않는다. 그 타입에는
+ * 「어느 커머스의」가 없는데, 채널별 «배열» 에 담겨 있어서 배열 밖으로 나오는
+ * 순간 출처를 잃는다. 그래서 화면 레이어에서 한 겹만 감싼다 — 새 판정도,
+ * 새 저장소도 만들지 않는다.
+ */
+export interface CommerceMissingItem {
+  commerceId: CommerceId;
+  key: string;
+  label: string;
+  /** 그 채널 화면 안의 스크롤 목적지. 없으면 채널 화면 맨 위로 간다. */
+  sectionId?: string;
+  /** 설정 화면 등 «채널 밖» 으로 가야 하는 항목(sectionId 와 배타). */
+  externalHref?: string;
+}
+
+export type CommerceMissingByChannel = Partial<Record<CommerceId, CommerceMissingItem[]>>;

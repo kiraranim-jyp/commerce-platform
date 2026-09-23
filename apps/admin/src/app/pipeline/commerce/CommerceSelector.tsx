@@ -1,6 +1,12 @@
 "use client";
 
-import type { CommerceId, CommerceLastAttempts, CommerceOutcomes } from "./commerce-registry";
+import type {
+  CommerceId,
+  CommerceLastAttempts,
+  CommerceMissingByChannel,
+  CommerceMissingItem,
+  CommerceOutcomes,
+} from "./commerce-registry";
 import type { RegistrationChannel } from "./registration-channels";
 import { readinessStateToLevel, type ReadinessLevel } from "./readiness-state";
 
@@ -28,6 +34,9 @@ import { readinessStateToLevel, type ReadinessLevel } from "./readiness-state";
  * 「쿠팡 때문에 스마트스토어도 못 넣는」 상태가 된다 — CPO 가 명시한 채널
  * 독립성이 화면에서 먼저 깨진다. 대신 그 줄에 무엇이 부족한지 적는다.
  */
+
+/** 줄마다 몇 개까지 이름을 적을지. 나머지는 「외 N건」으로 말한다 — 숨기지 않는다. */
+const MISSING_PREVIEW_COUNT = 3;
 
 const LEVEL_DOT_CLASS: Record<ReadinessLevel, string> = {
   GREEN: "bg-success",
@@ -100,6 +109,8 @@ export function CommerceSelector({
   outcomes,
   lastAttempts,
   checking = false,
+  missingByCommerce,
+  onFixRequest,
 }: {
   channels: RegistrationChannel[];
   selected: readonly CommerceId[];
@@ -116,6 +127,10 @@ export function CommerceSelector({
   lastAttempts?: CommerceLastAttempts;
   /** [등록 준비 확인] 이 도는 중. */
   checking?: boolean;
+  /** N-06-C — 채널별로 «무엇이» 비었는가. 이름을 적어야 셀러가 찾아갈 수 있다. */
+  missingByCommerce?: CommerceMissingByChannel;
+  /** N-06-C — 그 항목을 고치러 «바로» 간다(채널 + 섹션까지). */
+  onFixRequest?: (item: CommerceMissingItem) => void;
 }) {
   const selectable = channels.filter(isSelectableCommerce);
   const selectedCount = selected.length;
@@ -164,6 +179,38 @@ export function CommerceSelector({
                   </span>
                 </span>
               </label>
+
+              {/* ── N-06-C — 「확인 2건」에서 끝내지 않는다 ─────────────────
+                  무엇이 비었는지 «이름» 을 적고, 그 자리로 데려간다. 이름 없이
+                  개수만 적으면 셀러는 채널 화면을 처음부터 다시 읽어야 한다.
+
+                  🔴 고를 때만 펼친다 — 고르지도 않은 채널의 부족 목록이 길게
+                  늘어지면 정작 고른 채널이 묻힌다. */}
+              {checked && (missingByCommerce?.[channel.id]?.length ?? 0) > 0 && (
+                <ul className="mb-1 ml-9 space-y-0.5">
+                  {missingByCommerce![channel.id]!.slice(0, MISSING_PREVIEW_COUNT).map((item) => (
+                    <li key={item.key} className="flex items-center gap-1.5 text-[11px] text-text-secondary">
+                      <span className="text-warning">•</span>
+                      <span className="truncate">{item.label}</span>
+                      {onFixRequest && (
+                        <button
+                          type="button"
+                          onClick={() => onFixRequest(item)}
+                          className="shrink-0 text-primary underline underline-offset-2 hover:text-primary-hover"
+                        >
+                          바로 수정
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                  {missingByCommerce![channel.id]!.length > MISSING_PREVIEW_COUNT && (
+                    <li className="text-[11px] text-text-tertiary">
+                      외 {missingByCommerce![channel.id]!.length - MISSING_PREVIEW_COUNT}건 —{" "}
+                      {channel.label} 화면에서 이어서 확인합니다
+                    </li>
+                  )}
+                </ul>
+              )}
             </li>
           );
         })}
