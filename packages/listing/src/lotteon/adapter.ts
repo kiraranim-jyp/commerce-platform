@@ -8,6 +8,7 @@ import {
   resolveLotteOnImageUrls,
   type LotteOnChannelConfig,
   type LotteOnPayloadInput,
+  type LotteOnProductInput,
 } from "./build-payload";
 import { validateLotteOnPayload } from "./validate-payload";
 import type { LotteOnProductRegistrationPayload } from "./types";
@@ -36,7 +37,11 @@ export const LOTTEON_ADAPTER_ID = "lotteon";
 /** 어댑터의 순수 판정용 입력 — 채널 설정이 아직 없을 때 "무엇이 비어 있는지"를
  * 보여주기 위한 최소 구성. 실제 등록은 서버가 완전한 LotteOnPayloadInput을 만든다. */
 export function buildLotteOnPreviewInput(
-  product: CanonicalProduct,
+  /* NEXT-04d Phase B-1 — 여기도 Master + 판매 조건까지만 본다. 아래
+     `resolveOptions`/`buildPayload` 는 NextGenMarketplaceAdapter «공통 계약» 의
+     시그니처라 그대로 둔다 — 계약을 좁히는 것은 어댑터 계열 통합 작업이고
+     이번 범위가 아니다(CPO 확정). */
+  product: LotteOnProductInput,
   channel: Partial<LotteOnChannelConfig> = {},
   detailHtml = "",
 ): LotteOnPayloadInput {

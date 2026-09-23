@@ -1,4 +1,3 @@
-import type { CanonicalProduct } from "@commerce/shared";
 import {
   assembleNaverDetailContent,
   resolveDetailBlocks,
@@ -8,6 +7,7 @@ import {
   type LotteOnChannelConfig,
   type LotteOnPayloadInput,
   type LotteOnSellerSettingsInput,
+  type LotteOnProductInput,
 } from "@commerce/listing";
 import { getDefaultSellerProfile, type SellerProfile } from "../../coupang/_lib/seller-profile";
 import { SELLER_SETTINGS_UNAVAILABLE_MESSAGE, loadSellerSettings } from "@/lib/seller-settings";
@@ -95,7 +95,7 @@ export function toLotteOnSellerSettings(profile: SellerProfile | null): LotteOnS
  * 만들지 않는다).
  */
 async function buildDetailHtml(
-  product: CanonicalProduct,
+  product: LotteOnProductInput,
   sellerProfile: SellerProfile | null,
   /* REWORK-10 A — 호출부가 이미 읽어 둔 브랜드 프로필을 그대로 받는다(여기서
      다시 조회하면 같은 요청 안에서 DB를 두 번 왕복한다). */
@@ -126,7 +126,10 @@ async function buildDetailHtml(
 }
 
 export async function buildLotteOnContext(
-  product: CanonicalProduct,
+  /* NEXT-04d Phase B-1 — 라우트도 같은 경계를 쓴다. 롯데ON 전용 값은 이미
+     `form`(LotteOnChannelFormInput)으로 들어오므로, 상품 쪽에서 채널 칸을
+     읽을 «수 있어야 할» 이유가 없다. */
+  product: LotteOnProductInput,
   form: LotteOnChannelFormInput,
   options?: { liveRates?: Record<string, number>; roundingUnit?: number; now?: Date },
 ): Promise<LotteOnBuildContext> {

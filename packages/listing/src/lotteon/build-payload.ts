@@ -1,4 +1,4 @@
-import type { CanonicalProduct } from "@commerce/shared";
+import type { MasterProduct, SellingConditions } from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
 import { computeVariantFinalPriceKrw, resolveListingPrice } from "@commerce/pricing";
 import { manufacturerInputFromProduct, resolveManufacturer } from "../common/manufacturer";
@@ -30,11 +30,34 @@ import type {
  * **절대 판매가**다 — Naver optionCombinations.price(차액)와 반대라 여기서만
  * 최종가를 그대로 싣는다.
  *
+ * ── NEXT-04d Phase B-1(CPO 승인, 2026-09-23) — 이 파일이 «볼 수 있는» 것 ──
+ * 입력 타입이 `CanonicalProduct` 에서 `LotteOnProductInput`(= Master + 판매
+ * 조건)으로 좁혀졌다. 저장 구조는 한 바이트도 바뀌지 않았다 — 호출부는 지금도
+ * `CanonicalProduct` 를 그대로 넘기고, 구조적 타이핑이 그것을 받는다.
+ *
+ * 바뀐 것은 «읽을 수 있는 범위» 다. 이제 이 파일 안에서
+ * `product.lotteOnChannelInfo` 를 읽으면 **타입 에러가 난다.** 채널 값은
+ * 반드시 `channel`(LotteOnChannelConfig)로 들어와야 한다 — 그래야 Master 가
+ * 커머스를 모르는 상태가 유지된다.
+ *
  * 🔴 이 함수는 값을 **지어내지 않는다.** 채널 전용 값(표준/전시 카테고리,
  * 고시 항목, 안전인증, 출고지/반품지/배송비정책 번호 등)이 없으면 그 자리를
  * 빈 값으로 두고 validate-payload.ts가 MISSING/BLOCKED로 잡는다. 임의의 기본값을
  * 넣어 "성공한 것처럼 보이는 등록"을 만들지 않는다.
  */
+
+/**
+ * NEXT-04d Phase A/B-1 — 롯데ON 빌더가 상품에서 «볼 수 있는» 범위.
+ *
+ *   MasterProduct       이 상품은 무엇인가(core · facts · variants · attributes
+ *                       · content · source)
+ *   SellingConditions   우리가 어떤 조건으로 파는가(판매가 · 배송비 · 반품)
+ *
+ * 🔴 `CommerceBinding` 이 «없다». lotteOnChannelInfo · channelPriceOverrides ·
+ * categoryFieldOverrides 는 이 타입에 존재하지 않으므로 이 파일에서 읽을 수
+ * 없다. 롯데ON 전용 값은 아래 `LotteOnChannelConfig` 한 통로로만 들어온다.
+ */
+export type LotteOnProductInput = MasterProduct & SellingConditions;
 
 /** 롯데ON에만 있는, 상품 데이터에서 파생할 수 없는 값 전부. */
 export interface LotteOnChannelConfig {
@@ -130,7 +153,7 @@ export const BLANK_LOTTEON_CHANNEL_CONFIG: LotteOnChannelConfig = {
 };
 
 export interface LotteOnPayloadInput {
-  product: CanonicalProduct;
+  product: LotteOnProductInput;
   channel: LotteOnChannelConfig;
   /** 상세페이지 HTML(상품기술서). 조립은 기존 공통 경로가 하고 이 함수는 받기만 한다. */
   detailHtml: string;
@@ -164,7 +187,7 @@ export function isLotteOnSupportedImageUrl(url: string): boolean {
 
 /** 갤러리에 쓰기로 선택된 이미지들(대표 우선). getSelectedImageUrl로 원본/처리본
  * 선택 규칙은 공통 함수 하나만 쓴다. */
-export function resolveLotteOnImageUrls(product: CanonicalProduct): { representative: string | null; gallery: string[] } {
+export function resolveLotteOnImageUrls(product: LotteOnProductInput): { representative: string | null; gallery: string[] } {
   const gallery = product.images.filter((image) => image.useInProductGallery);
   const representativeEntry = gallery.find((image) => image.isRepresentative) ?? gallery[0] ?? null;
   const representative = representativeEntry ? getSelectedImageUrl(representativeEntry) : null;
@@ -186,7 +209,7 @@ function toItemImages(urls: string[]): LotteOnItemImage[] {
 }
 
 /** 옵션 그룹이 실제로 등록 가능한 형태인지(이름과 값이 둘 다 있는지). */
-export function hasLotteOnSellableOptions(product: CanonicalProduct): boolean {
+export function hasLotteOnSellableOptions(product: LotteOnProductInput): boolean {
   return product.optionGroups.some((group) => group.name.trim() && group.values.some((value) => value.trim()));
 }
 
@@ -198,7 +221,7 @@ export function hasLotteOnSellableOptions(product: CanonicalProduct): boolean {
  * 실제로 확인한 variants만 쓴다(조합을 곱해서 만들면 원본에 없던 SKU가 생긴다).
  */
 function buildItems(
-  product: CanonicalProduct,
+  product: LotteOnProductInput,
   /**
    * 🔴 P0-D.3(CEO 지시, 2026-09-20) — **null 일 수 있다.** 가격이 확정되지 않은
    * 상태를 0 으로 바꾸지 않는다. 0 은 「0원에 판다」는 값이고, 「모른다」와 다르다.
@@ -284,7 +307,7 @@ function buildItems(
 }
 
 /** 검색키워드는 5개 이하만 등록 가능(문서 원문). */
-function resolveSearchKeywords(product: CanonicalProduct): string[] {
+function resolveSearchKeywords(product: LotteOnProductInput): string[] {
   return product.keywords.value
     .map((keyword) => keyword.trim())
     .filter(Boolean)
@@ -292,7 +315,7 @@ function resolveSearchKeywords(product: CanonicalProduct): string[] {
 }
 
 /** 등록 상품명 — AI 한국어 제목이 있으면 그것, 없으면 원문 제목. 롯데ON 상한 150자. */
-export function resolveLotteOnProductName(product: CanonicalProduct): string {
+export function resolveLotteOnProductName(product: LotteOnProductInput): string {
   const korean = product.titleKo.value.trim();
   const fallback = product.title.value.trim();
   return (korean || fallback).slice(0, 150);
