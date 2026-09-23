@@ -26,8 +26,11 @@ import { resolveManufacturer } from "@commerce/listing";
 const SOURCE = readFileSync(join(__dirname, "../_lib/build-context.ts"), "utf8");
 
 describe("① 제조사는 이제 seller_settings 에서 온다", () => {
-  it("공통 resolver 에 넘기는 판매자 제조사가 공통 설정에서 온다", () => {
-    expect(SOURCE).toContain("sellerProfileManufacturer: commonSellerSettings.manufacturer");
+  it("🔴 판매자 제조사를 resolver 에 «넘기지 않는다» (PIVOT NEXT-04c-2)", () => {
+    /* 0-2 시점에는 이 줄이 «있어야» 했다. 04c-1 조사에서 그 단계 자체가
+       잘못된 semantic 임이 확인돼 방향이 뒤집혔다 — seller_settings.manufacturer
+       에 실제로 들어 있는 것은 판매 사업자(규하맘샵)다. */
+    expect(SOURCE).not.toContain("sellerProfileManufacturer:");
   });
 
   it("loadSellerSettings 를 실제로 부른다", () => {
@@ -66,11 +69,13 @@ describe("② 롯데ON 전용 설정과 «섞이지 않는다»", () => {
        🔴 `failed` 는 여기서 세지 않는다 — 그건 판매자 설정의 «칸» 이 아니라
        「읽었는가」라는 조회 상태다(R6-FS). 칸과 상태를 같은 자루에 넣으면,
        상태를 읽는 것만으로 「없던 설정을 끌어다 쓴다」로 잘못 걸린다. */
+    /* 🔴 PIVOT NEXT-04c-2 — 이제 «하나도» 안 끌어온다. 제조사조차 판매자
+       공통 설정에서 오지 않는다(판매 사업자를 제조사로 쓰지 않는다). */
     const FIELDS = ["manufacturer", "asContactNumber", "qualityGuarantee", "kcExemptionText", "defaultCountryOfOrigin"];
     const pulled = (SOURCE.match(/commonSellerSettings\.(\w+)/g) ?? [])
       .map((m) => m.replace("commonSellerSettings.", ""))
       .filter((name) => FIELDS.includes(name));
-    expect([...new Set(pulled)]).toEqual(["manufacturer"]);
+    expect([...new Set(pulled)]).toEqual([]);
   });
 
   it("조회 실패는 «값» 이 아니라 상태로 읽는다", () => {
@@ -108,43 +113,46 @@ describe("④ 빈 값의 모양이 달라져도 판정이 같다", () => {
     ["프로필 없음 undefined", undefined],
     ["공백만", "   "],
   ])("%s 이면 제조사를 못 찾은 것으로 본다", (_label, empty) => {
-    expect(resolveManufacturer({ sellerProfileManufacturer: empty })).toEqual({
-      value: "",
-      source: "NONE",
-      resolved: false,
-    });
-  });
-
-  it("값이 있으면 SELLER_DEFAULT 다", () => {
-    expect(resolveManufacturer({ sellerProfileManufacturer: "규하맘샵" })).toEqual({
-      value: "규하맘샵",
-      source: "SELLER_DEFAULT",
-      resolved: true,
-    });
+    expect(resolveManufacturer({ brandProfileManufacturer: empty }).source).toBe("NONE");
   });
 });
 
-describe("⑤ 폴백 순서는 바뀌지 않았다", () => {
-  it("🔴 브랜드가 판매자보다 앞선다", () => {
-    expect(
-      resolveManufacturer({
-        brandProfileManufacturer: "Bobo Choses S.L.",
-        sellerProfileManufacturer: "규하맘샵",
-      }).source,
-    ).toBe("BRAND_DEFAULT");
+describe("⑤ 🔴 판매 사업자는 제조사 후보가 «아니다» (PIVOT NEXT-04c-2)", () => {
+  /* 이 파일이 처음 쓰였을 때는 「판매자 기본값은 마지막 단계다」를 지켰다.
+     04c-1 조사에서 그 단계 자체가 잘못된 semantic 임이 확인됐다 —
+     어느 채널도 판매 사업자를 제조사로 쓰라고 하지 않고, 쿠팡은 공식 API 와
+     화면에 «브랜드명» 이라고 명시한다. 그래서 검사의 방향을 뒤집는다. */
+  it("🔴 계약이 판매자 제조사를 «받지 않는다»", () => {
+    // 타입 수준에서 사라졌다 — 「안 넘긴다」가 아니라 「넘길 수 없다」.
+    const input: Record<string, unknown> = { sellerProfileManufacturer: "규하맘샵" };
+    expect(resolveManufacturer(input as never).source).toBe("NONE");
   });
 
-  it("🔴 상품 원문이 둘보다 앞선다", () => {
-    expect(
-      resolveManufacturer({
-        productInfoManufacturer: "원문제조사",
-        brandProfileManufacturer: "Bobo Choses S.L.",
-        sellerProfileManufacturer: "규하맘샵",
-      }).source,
-    ).toBe("PRODUCT_INFO");
+  it("브랜드 프로필은 그대로 후보다 — 다만 «상품 사실이 아니다»", () => {
+    const r = resolveManufacturer({ brandProfileManufacturer: "Bobo Choses S.L." });
+    expect(r.source).toBe("BRAND_DEFAULT");
+    expect(r.resolutionType).toBe("BRAND_DEFAULT");
+    // 🔴 「Bobo Choses 의 기본 제조자가 X」라고 해서 «이 상품» 의 제조자가
+    //    X라고 확정할 수는 없다. 값이 채워져도 확인이 필요하다.
+    expect(r.requiresReview).toBe(true);
   });
 
-  it("판매자 기본값은 «마지막» 이다 — 앞이 다 비었을 때만 쓰인다", () => {
-    expect(resolveManufacturer({ sellerProfileManufacturer: "규하맘샵" }).source).toBe("SELLER_DEFAULT");
+  it("🔴 상품 원문이 브랜드보다 앞선다 — 순서는 그대로", () => {
+    const r = resolveManufacturer({
+      productInfoManufacturer: "원문제조사",
+      brandProfileManufacturer: "Bobo Choses S.L.",
+    });
+    expect(r.source).toBe("PRODUCT_INFO");
+    expect(r.resolutionType).toBe("PRODUCT_FACT");
+    expect(r.requiresReview).toBe(false);
+  });
+
+  it("🔴 브랜드명이 마지막 대체값이다 — 3커머스 공통", () => {
+    expect(resolveManufacturer({}).source).toBe("NONE");
+    const r = resolveManufacturer({ brandName: "Bobo Choses" });
+    expect(r.source).toBe("PRODUCT_BRAND");
+    // 🔴 「브랜드가 제조사다」가 아니다 — 등록에 넣을 값일 뿐이라 확인이 남는다.
+    expect(r.resolutionType).toBe("LISTING_FALLBACK");
+    expect(r.requiresReview).toBe(true);
   });
 });

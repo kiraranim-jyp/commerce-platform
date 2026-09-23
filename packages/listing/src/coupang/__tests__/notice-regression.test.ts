@@ -106,7 +106,19 @@ describe("N-3.45 STEP14: Coupang 회귀 — DETAIL_PAGE_REFERENCE는 Coupang pay
     const baselinePayload = buildCoupangPayload(baseline, makeListing(baseline));
     const referencedPayload = buildCoupangPayload(referenced, makeListing(referenced));
 
-    expect(referencedPayload).toEqual(baselinePayload);
+    /* 🔴 PIVOT NEXT-04c-2 — 제조사 한 칸만 «달라야 한다».
+       이 테스트가 처음 쓰였을 때 쿠팡 payload 에는 제조사 칸 자체가 없었다
+       (최상위 `manufacture` 를 아무도 싣지 않았다). 지금은 싣고, 그 칸은
+       source 를 실제로 읽는다:
+
+         baseline    제조사 없음 → 브랜드명으로 대체 → "TestBrand"
+         referenced  「상세페이지 참조」를 고른 칸 → 폴백을 «타지 않는다» → 없음
+
+       이것이 P0 의 해소 조건이다. 여기서 두 값이 같아지면 셀러가 참조로
+       등록하기로 한 칸에 브랜드명이 박힌다. 나머지 필드는 전부 같아야 한다. */
+    expect(baselinePayload.manufacture).toBe("TestBrand");
+    expect(referencedPayload.manufacture).toBeUndefined();
+    expect({ ...referencedPayload, manufacture: null }).toEqual({ ...baselinePayload, manufacture: null });
   });
 
   it("실제 값이 있는 필드는 source와 무관하게 여전히 Coupang payload에 반영된다(회귀 아님을 재확인)", () => {

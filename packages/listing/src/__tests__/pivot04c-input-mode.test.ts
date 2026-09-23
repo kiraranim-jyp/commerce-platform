@@ -87,9 +87,9 @@ describe("② 🔴 P0 — 「참조」가 폴백을 타지 않는다", () => {
     const r = resolveManufacturer({
       ...manufacturerInputFromProduct({ manufacturer: REFERENCED }),
       brandProfileManufacturer: "Bobo Choses S.L.",
-      sellerProfileManufacturer: "규하맘샵",
+      brandName: "Bobo Choses",
     });
-    expect(r.value).not.toBe("규하맘샵");
+    expect(r.value).not.toBe("Bobo Choses");
     expect(r.value).not.toBe("Bobo Choses S.L.");
     expect(r.source).toBe("DETAIL_REFERENCE");
   });
@@ -111,19 +111,19 @@ describe("② 🔴 P0 — 「참조」가 폴백을 타지 않는다", () => {
     expect(r.value).toBe("Nike");
   });
 
-  it("참조가 «아니면» 폴백은 그대로 돈다 — 기존 동작 무회귀", () => {
+  it("참조가 «아니면» 폴백은 그대로 돈다 — 브랜드명까지 내려간다", () => {
     const r = resolveManufacturer({
       ...manufacturerInputFromProduct({ manufacturer: { value: "", source: "REQUIRED" } }),
-      sellerProfileManufacturer: "규하맘샵",
+      brandName: "Bobo Choses",
     });
-    expect(r.source).toBe("SELLER_DEFAULT");
-    expect(r.value).toBe("규하맘샵");
+    expect(r.source).toBe("PRODUCT_BRAND");
+    expect(r.value).toBe("Bobo Choses");
   });
 
-  it("브랜드 → 판매자 순서도 그대로", () => {
+  it("브랜드 프로필 → 브랜드명 순서", () => {
     const r = resolveManufacturer({
       brandProfileManufacturer: "Bobo Choses S.L.",
-      sellerProfileManufacturer: "규하맘샵",
+      brandName: "Bobo Choses",
     });
     expect(r.source).toBe("BRAND_DEFAULT");
   });
@@ -133,7 +133,7 @@ describe("② 🔴 P0 — 「참조」가 폴백을 타지 않는다", () => {
       ...manufacturerInputFromProduct({
         manufacturer: { value: "", source: "USER_EDITED", inputMode: "DETAIL_REFERENCE" },
       }),
-      sellerProfileManufacturer: "규하맘샵",
+      brandName: "Bobo Choses",
     });
     expect(r.source).toBe("DETAIL_REFERENCE");
   });
@@ -145,9 +145,9 @@ describe("③ 이번에 넘지 않은 선", () => {
        등록되거나 화면이 갑자기 「확인 필요」로 뒤덮인다. */
     const r = resolveManufacturer({
       ...manufacturerInputFromProduct({ manufacturer: { value: "", source: "ORIGINAL" } }),
-      sellerProfileManufacturer: "규하맘샵",
+      brandName: "Bobo Choses",
     });
-    expect(r.source).toBe("SELLER_DEFAULT");
+    expect(r.source).toBe("PRODUCT_BRAND");
   });
 
   it("저장 형식은 그대로다 — inputMode 는 optional 이고 기존 필드가 살아 있다", () => {

@@ -3,6 +3,7 @@ import type { CategorySelection } from "@commerce/category";
 import type { CanonicalProduct, CanonicalProductOptionGroup, CanonicalProductVariant } from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
 import { computeVariantFinalPriceKrw } from "@commerce/pricing";
+import { manufacturerInputFromProduct, resolveManufacturer } from "../common/manufacturer";
 
 /**
  * 쿠팡 Open API "상품 생성"(POST .../v1/marketplace/seller-products) 요청 바디를
@@ -172,6 +173,20 @@ export interface CoupangPayload {
    * 실등록 시도로 확인) — Wing 브랜드 관리에 등록된 brandId가 있어야 한다.
    * register 라우트가 Brand Search API로 조회해서 채운다. */
   brandId?: string;
+  /**
+   * 🔴 PIVOT NEXT-04c-2 — «신규». 쿠팡 공식 상품 생성 API 의 최상위 「제조사」다.
+   *
+   * 이 칸을 한 번도 보낸 적이 없었다(실측: 등록 시도 48건 중 0건). 그래서
+   * 판매자센터 「상품 주요 정보 > 제조사」가 늘 비어 있었다. 지금까지 쿠팡에
+   * 나가던 제조사는 items[].notices[] 의 «고시정보» 하나뿐이다.
+   *
+   * 🔴 두 자리는 «다른 것» 이다. 여기에 값을 넣는다고 고시가 해결되지 않고,
+   * 고시에 「전체 상품 상세페이지 참조」를 넣는다고 이 칸이 해결되지도 않는다.
+   * 하나의 manufacturer 로 합쳐 다루면 같은 사고가 다시 난다.
+   *
+   * 이름은 `manufacture` 다 — 끝에 r 이 없다(공식 스펙).
+   */
+  manufacture?: string;
   generalProductName?: string;
   /** SEQUENCIAL(일반배송)/COLD_FRESH(신선냉동)/MAKE_ORDER(주문제작)/AGENT_BUY(구매대행)/
    * VENDOR_DIRECT(설치배송/판매자직배송) 중 하나 — CartPilot은 전량 해외구매대행이라
@@ -1243,8 +1258,14 @@ function buildCoupangItem(args: {
    * (build-payload.ts는 DB에 접근하지 않는다 — register/route.ts 등 호출부의
    * 책임). */
   brandProfile?: { countryOfOrigin: string; manufacturer: string } | null;
+  /** 🔴 PIVOT NEXT-04c-2 — 제조사 «판정 결과» 를 받는다(다시 정하지 않는다).
+   *  최상위 `manufacture` 와 고시정보 「제조자(수입자)」는 «다른 칸» 이지만
+   *  같은 판정을 쓴다. 여기서 한 번 더 계산하면 두 칸이 갈릴 수 있고, 그게
+   *  P0 에서 실제로 일어난 일이다(한쪽은 값을, 한쪽은 출처를 봤다). */
+  manufacture?: string;
 }): { item: CoupangItem; complianceResults: ComplianceFieldResult[] } {
-  const { product, listing, sellerConfig, categoryMeta, images, contents, optionGroups, variant, brandProfile } = args;
+  const { product, listing, sellerConfig, categoryMeta, images, contents, optionGroups, variant, brandProfile, manufacture } =
+    args;
 
   const compliance = buildCoupangCompliance(
     categoryMeta,
@@ -1264,7 +1285,14 @@ function buildCoupangItem(args: {
       // 그게 우선(상품 Override > 브랜드 프로필 > SellerProfile). Sprint A-7
       // 실측에서 이 필드가 30건 중 30건을 막았는데, 대부분 상품마다 다른
       // 정보가 아니라 브랜드 또는 판매자 본인의 사업자 정보였다.
-      manufacturer: product.manufacturer.value || brandProfile?.manufacturer || sellerConfig.manufacturer || undefined,
+      /* 🔴 PIVOT NEXT-04c-2 — 3커머스 공통 규칙: 실제 제조사 → 브랜드명 → 확인 필요.
+         판매 사업자(sellerConfig.manufacturer)가 «사라졌다» — 판매자라는 이유만으로
+         제조자가 되지 않는다. 최상위 manufacture 와 «같은 값» 을 쓴다.
+
+         🔴 「상세페이지 참조」를 고른 상품은 여기서도 비어 있어야 한다. 값을
+         채우면 셀러가 참조로 등록하기로 한 칸에 브랜드명이 박힌다. 판정이
+         한 곳이라 그 규칙이 두 칸에 자동으로 같이 걸린다. */
+      manufacturer: manufacture,
       careInstructions: product.careInstructions.value || undefined,
       qualityGuarantee: sellerConfig.qualityGuarantee || undefined,
       userOverrides: product.categoryFieldOverrides,
@@ -1436,6 +1464,26 @@ export function buildCoupangPayload(
   // 상품) 기존처럼 단일 item 하나만 만든다.
   const variantSlots: (CanonicalProductVariant | undefined)[] =
     product.variants.length > 0 ? product.variants : [undefined];
+  /* 🔴 PIVOT NEXT-04c-2 — 제조사는 «여기 한 곳» 에서 정한다.
+     최상위 `manufacture` 와 고시정보 「제조자(수입자)」 두 칸이 같은 값을 쓴다
+     — 한쪽을 채운다고 다른 쪽이 해결되지는 않지만, 두 칸이 «다른 말» 을 하면
+     안 된다.
+
+     쿠팡 공식 API 가 「정확한 제조사를 기입할 수 없는 경우 brand 와 동일하게
+     입력 가능」이라고 명시한다. CPO 확정(2026-09-23)으로 이 대체는 쿠팡 전용이
+     아니라 3커머스 공통 규칙이 됐다 — 실제 제조사 → 브랜드명 → 확인 필요.
+
+     🔴 판매 사업자(규하맘샵)는 후보가 아니다. 판매자라는 이유만으로 제조자가
+     되지 않고, 그렇게 말하는 채널도 없다. */
+  const manufactureResolution = resolveManufacturer({
+    ...manufacturerInputFromProduct(product),
+    brandProfileManufacturer: options.brandProfile?.manufacturer,
+    brandName: options.resolvedBrand?.brandName ?? listing.brand,
+  });
+  /* 값이 없으면 키를 «보내지 않는다». 빈 문자열을 보내면 쿠팡 쪽에 「제조사를
+     빈 값으로 지정했다」로 남는다 — 「아직 모른다」와 다른 말이다. */
+  const productManufacture = manufactureResolution.value || undefined;
+
   const built = variantSlots.map((variant) =>
     buildCoupangItem({
       product,
@@ -1447,6 +1495,7 @@ export function buildCoupangPayload(
       optionGroups: product.optionGroups,
       variant,
       brandProfile: options.brandProfile,
+      manufacture: productManufacture,
     }),
   );
   const items: CoupangItem[] = built.map((b) => b.item);
@@ -1464,6 +1513,7 @@ export function buildCoupangPayload(
     saleEndedAt: formatCoupangDateTime(twoYearsLater),
     brand: options.resolvedBrand?.brandName ?? listing.brand,
     brandId: options.resolvedBrand?.brandId,
+    manufacture: productManufacture,
     generalProductName: listing.title,
     deliveryMethod: "AGENT_BUY",
     deliveryCompanyCode: sellerConfig.deliveryCompanyCode,

@@ -234,7 +234,8 @@ async function renderPlatform(
 function resolution(input: {
   productManufacturer?: string;
   brandProfileManufacturer?: string | null;
-  sellerProfileManufacturer?: string | null;
+  /** 🔴 PIVOT NEXT-04c-2 — 여기 있던 `sellerProfileManufacturer` 가 사라졌다. */
+  brandName?: string | null;
 }) {
   /* REWORK-12 ④ — `brand`는 조회에 쓴 브랜드 이름이다(판정에 들어가지 않는다).
      화면이 "브랜드 X로 찾아봤는데 없었다"라고 말하는 데만 쓴다. */
@@ -282,15 +283,12 @@ describe("DELTA-A ② — 화면이 «어디까지 찾아봤는지»를 말한�
     expect(screen).not.toContain("제조사 정보가 없습니다");
   });
 
-  it("판매자 기본정보가 채웠으면 그렇게 말한다 — 브랜드 프로필이라고 하지 않는다", async () => {
-    await renderPlatform(
-      makeProduct(),
-      undefined,
-      resolution({ sellerProfileManufacturer: "따져코리아" }),
-    );
+  it("브랜드명이 채웠으면 그렇게 말한다 — 브랜드 프로필이라고 하지 않는다 (PIVOT NEXT-04c-2)", async () => {
+    /* 🔴 원래는 「판매자 기본정보」였다. 판매 사업자를 제조사라고 말하던 문구다. */
+    await renderPlatform(makeProduct(), undefined, resolution({ brandName: "Bobo Choses" }));
     const screen = text();
-    expect(screen).toContain("판매자 기본정보의 제조사");
-    expect(screen).toContain("따져코리아");
+    expect(screen).toContain("브랜드명의 제조사");
+    expect(screen).toContain("Bobo Choses");
   });
 
   /**
@@ -306,10 +304,14 @@ describe("DELTA-A ② — 화면이 «어디까지 찾아봤는지»를 말한�
    * 즉 "정보가 사라지지 않았다"는 성질은 그대로 지킨다.
    */
   it("🔴 셋 다 없을 때만 직접 입력을 안내하고, 확인한 세 단계를 전부 적는다", async () => {
+    /* 🔴 PIVOT NEXT-04c-2 — 이 판정(NONE + 브랜드 이름은 있음)은 이제 훅에서는
+       거의 나오지 않는다. 브랜드명이 있으면 그것이 마지막 단계를 채우기
+       때문이다. 그래도 화면은 NONE 을 받았을 때 «무엇을 말하는가» 를 계속
+       지켜야 해서, 여기서는 판정을 직접 만들어 넣는다. */
     await renderPlatform(makeProduct(), undefined, resolution({}));
     const screen = text();
     // ⓘ — 어디까지 찾아봤는가(세 단계를 전부 적는다).
-    expect(screen).toContain("상품 원문 · 브랜드 프로필 · 판매자 기본정보 어디에도 제조사가 없습니다");
+    expect(screen).toContain("상품 원문 · 브랜드 프로필 · 브랜드명 어디에도 제조사가 없습니다");
     // 화면 한 줄 — 어느 브랜드로 찾았고, 다음에 무엇을 하면 되는가.
     expect(screen).toContain("브랜드 「Bobo Choses」에 등록된 제조사가 없습니다");
     expect(screen).toContain("브랜드 프로필에 등록하세요");

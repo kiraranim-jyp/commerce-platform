@@ -256,7 +256,10 @@ export async function buildLotteOnContext(
          기본정보). 판정은 buildLotteOnPayload 안의 공통 resolveManufacturer()가
          한다 — 여기서는 값을 읽어 넘기기만 한다. */
       brandProfileManufacturer: brandProfile?.manufacturer ?? null,
-      sellerProfileManufacturer: commonSellerSettings.manufacturer,
+      /* 🔴 PIVOT NEXT-04c-2 — 판매자 기본정보를 제조사로 넘기던 줄이 사라졌다.
+         seller_settings.manufacturer 에 실제로 들어 있는 것은 «판매 사업자»
+         (규하맘샵)이고, 판매자라는 이유만으로 제조자가 되지 않는다. 컬럼
+         이름이 legacy 라 그렇게 보였을 뿐이다(PIVOT-03 직후라 이름은 그대로 둔다). */
       liveRates: options?.liveRates,
       roundingUnit: options?.roundingUnit,
     },

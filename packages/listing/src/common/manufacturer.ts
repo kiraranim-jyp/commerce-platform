@@ -43,9 +43,18 @@
  * 원칙), 직접 입력한 값은 항상 모든 추정을 이긴다.
  *
  * ── 🔴 절대 하지 않는 것 ─────────────────────────────────────────────────
- *   ❌ 브랜드명을 제조사로 복사하지 않는다("Bobo Choses" → "Bobo Choses S.L."
- *      같은 추론 금지). ③은 셀러가 브랜드 관리에 **직접 적어 둔** 제조사이지
- *      브랜드명이 아니다.
+ *   ❌ 브랜드명에서 «제조사명을 지어내지» 않는다("Bobo Choses" → "Bobo Choses
+ *      S.L." 같은 추론 금지). ③은 셀러가 브랜드 관리에 **직접 적어 둔** 제조사다.
+ *
+ *   🔴 CPO 결정(2026-09-23) — 다만 «브랜드명 그대로» 를 등록용 제조사 값으로
+ *      쓰는 것은 허용한다. 예전 금지가 세워질 때는 쿠팡 공식 규칙을 몰랐다.
+ *      쿠팡 상품 생성 API 는 「정확한 제조사를 기입할 수 없는 경우 brand 와
+ *      동일하게 입력 가능」이라고 명시한다 — 그래서 이것은 «추론» 이 아니라
+ *      «채널이 정해 둔 입력 규칙» 이다.
+ *
+ *      🔴 그렇다고 브랜드가 제조사라는 뜻은 아니다. Master 의 사실은 그대로
+ *      두고(productManufacturer 는 여전히 비어 있다), «등록에 넣을 값» 만
+ *      결정한다. resolutionType 이 그 차이를 들고 다닌다.
  *   ❌ 근거 없는 제조사명을 만들지 않는다. NONE 은 "빈 문자열"이 아니라
  *      **판정**이다 — 화면은 이 판정을 보고 "어디까지 찾아봤는지"를 말한다.
  *
@@ -68,8 +77,10 @@ export type ManufacturerSource =
   | "PRODUCT_INFO"
   /** ③ 설정 > 브랜드 관리의 제조사. */
   | "BRAND_DEFAULT"
-  /** ④ 판매자 기본 제조사. */
-  | "SELLER_DEFAULT"
+  /** 🔴 PIVOT NEXT-04c-2 — 등록용 «브랜드명» 대체(3커머스 공통).
+   *
+   * 값은 브랜드명 그대로다. 상품 사실이 아니라 «등록에 넣을 값» 이다. */
+  | "PRODUCT_BRAND"
   /** 🔴 PIVOT NEXT-04c — 셀러가 «상세페이지 참조로 등록하겠다» 고 정한 상태.
    *
    * 「값이 없다」가 아니다. 이미 «채워진» 것이고, 그래서 아래 단계로 내려가지
@@ -87,12 +98,39 @@ export type ManufacturerSource =
  */
 export type ManufacturerOrigin = "SOURCE_URL" | "PRODUCT_INFO";
 
+/** 이 값이 «무엇으로서» 들어갔는가 — 값만으로는 알 수 없는 것을 남긴다. */
+export type ManufacturerResolutionType =
+  /** 상품 자체의 사실이다. */
+  | "PRODUCT_FACT"
+  /** 브랜드의 기본값이다 — 🔴 이 상품의 실제 제조자라는 뜻이 «아니다». */
+  | "BRAND_DEFAULT"
+  /** 🔴 등록용 대체값이다 — 브랜드명을 그대로 썼다. «상품 사실이 아니다». */
+  | "LISTING_FALLBACK"
+  /** 셀러가 「상세페이지 참조」로 등록하기로 정했다. */
+  | "DETAIL_REFERENCE"
+  /** 아무것도 답하지 못했다. */
+  | "NONE";
+
 export interface ManufacturerResolution {
   /** 실제로 payload에 들어갈 값. NONE이면 빈 문자열이다(지어낸 값이 아니다). */
   value: string;
   source: ManufacturerSource;
   /** 값을 찾았는가. `source !== "NONE"`과 같은 뜻 — 호출부의 조건문을 짧게 하려고 둔다. */
   resolved: boolean;
+  /** 🔴 왜 이 값이 됐는가. 「빈칸을 채웠다」와 「사실을 찾았다」를 구분한다. */
+  resolutionType: ManufacturerResolutionType;
+  /**
+   * 🔴 이 값이 «상품 사실이 아니다» — 사람이 확인하는 편이 낫다.
+   *
+   * 브랜드 기본값과 채널 대체값이 여기 해당한다. 값이 채워졌다고 판단이 끝난
+   * 것이 아니다 — 화면을 초록으로 만드는 것이 목적이 아니라 «팔아도 되는지»
+   * 를 말하는 것이 목적이다.
+   *
+   * 🔴 이번 단계에서는 «노출만» 한다. 어떤 화면 카운트에도 연결하지 않았다 —
+   * 연결하는 순간 255건이 갑자기 「확인 필요」로 바뀐다(실측). 그 판단은
+   * 별도 단계에서 한다.
+   */
+  requiresReview: boolean;
 }
 
 export interface ManufacturerResolverInput {
@@ -104,8 +142,17 @@ export interface ManufacturerResolverInput {
   productInfoManufacturer?: string | null;
   /** ③ 브랜드 관리(BrandProfile.manufacturer). */
   brandProfileManufacturer?: string | null;
-  /** ④ 판매자 기본정보(SellerProfile.manufacturer). */
-  sellerProfileManufacturer?: string | null;
+  /**
+   * 🔴 PIVOT NEXT-04c-2 — 상품의 브랜드명. 등록용 마지막 대체값이다.
+   *
+   * 여기 있던 `sellerProfileManufacturer` 가 «사라졌다». 판매 사업자(규하맘샵)를
+   * 제조사로 쓰라고 말하는 채널이 하나도 없다 — 쿠팡은 명시적으로 «브랜드명»
+   * 이라고 화면과 공식 문서에 적어 뒀다. 판매자라는 이유만으로 제조자가 되지
+   * 않는다.
+   *
+   * 3커머스 공통 규칙이다(CPO 확정): 실제 제조사 → 브랜드명 → 확인 필요.
+   */
+  brandName?: string | null;
   /** 🔴 상품의 제조사 칸이 «어떤 입력 방식» 인가(interpretField 결과).
    *
    * 값이 아니라 «방식» 이라 다른 후보들과 같은 줄에 둘 수 없다. 이것이
@@ -132,14 +179,23 @@ function clean(value: string | null | undefined): string {
  * "자동으로는 못 찾았다"는 뜻이다(REWORK-13A).
  */
 export function resolveManufacturer(input: ManufacturerResolverInput): ManufacturerResolution {
+  /** 상품 «사실» 로 답한 경우 — 확인이 더 필요하지 않다. */
+  const fact = (value: string, source: ManufacturerSource): ManufacturerResolution => ({
+    value,
+    source,
+    resolved: true,
+    resolutionType: "PRODUCT_FACT",
+    requiresReview: false,
+  });
+
   const manual = clean(input.manualManufacturer);
-  if (manual) return { value: manual, source: "MANUAL", resolved: true };
+  if (manual) return fact(manual, "MANUAL");
 
   const sourceUrl = clean(input.sourceUrlManufacturer);
-  if (sourceUrl) return { value: sourceUrl, source: "SOURCE_URL", resolved: true };
+  if (sourceUrl) return fact(sourceUrl, "SOURCE_URL");
 
   const productInfo = clean(input.productInfoManufacturer) || clean(input.productManufacturer);
-  if (productInfo) return { value: productInfo, source: "PRODUCT_INFO", resolved: true };
+  if (productInfo) return fact(productInfo, "PRODUCT_INFO");
 
   /* 🔴 PIVOT NEXT-04c — 여기서 «멈춘다».
      셀러가 「상세페이지 참조로 등록」을 고른 상태다. 값이 비어 있지만 그건
@@ -151,16 +207,43 @@ export function resolveManufacturer(input: ManufacturerResolverInput): Manufactu
      참조보다 우선이다. 참조는 「값을 못/안 넣기로 한 선택」이라 값이 있으면
      애초에 성립하지 않는다. */
   if (input.productInputMode === "DETAIL_REFERENCE") {
-    return { value: "", source: "DETAIL_REFERENCE", resolved: true };
+    return {
+      value: "",
+      source: "DETAIL_REFERENCE",
+      resolved: true,
+      resolutionType: "DETAIL_REFERENCE",
+      requiresReview: false,
+    };
   }
 
+  /* 🔴 여기부터는 «상품 사실이 아니다». 값이 채워져도 requiresReview 가 남는다 —
+     화면을 초록으로 만드는 것이 목적이 아니라 「팔아도 되는지」를 말하는 것이
+     목적이다. */
   const brand = clean(input.brandProfileManufacturer);
-  if (brand) return { value: brand, source: "BRAND_DEFAULT", resolved: true };
+  if (brand) {
+    /* 브랜드 프로필의 기본 제조자다. 「Bobo Choses 의 기본 제조자가 X」라고 해서
+       «이 상품» 의 실제 제조자가 X라고 확정할 수는 없다. */
+    return { value: brand, source: "BRAND_DEFAULT", resolved: true, resolutionType: "BRAND_DEFAULT", requiresReview: true };
+  }
 
-  const seller = clean(input.sellerProfileManufacturer);
-  if (seller) return { value: seller, source: "SELLER_DEFAULT", resolved: true };
+  /* 🔴 마지막 단계 — 브랜드명을 그대로 등록값으로 쓴다(3커머스 공통).
+     쿠팡 공식 API 가 「정확한 제조사를 기입할 수 없는 경우 brand 와 동일하게
+     입력 가능」이라고 명시한 규칙을 따른다.
 
-  return { value: "", source: "NONE", resolved: false };
+     🔴 이것은 「브랜드가 제조사다」가 아니다. Master 의 productManufacturer 는
+     여전히 비어 있고, requiresReview 가 「이 값은 사실이 아니다」를 들고 다닌다. */
+  const brandName = clean(input.brandName);
+  if (brandName) {
+    return {
+      value: brandName,
+      source: "PRODUCT_BRAND",
+      resolved: true,
+      resolutionType: "LISTING_FALLBACK",
+      requiresReview: true,
+    };
+  }
+
+  return { value: "", source: "NONE", resolved: false, resolutionType: "NONE", requiresReview: true };
 }
 
 /**
@@ -209,7 +292,7 @@ export const MANUFACTURER_SOURCE_LABEL: Record<ManufacturerSource, string> = {
   /* 「브랜드 프로필」은 설정 > 브랜드 관리 탭 안의 카드 제목이다
      (settings/page.tsx:388 탭 · 1987 카드). 값이 담긴 그릇의 이름을 쓴다. */
   BRAND_DEFAULT: "브랜드 프로필",
-  SELLER_DEFAULT: "판매자 기본정보",
+  PRODUCT_BRAND: "브랜드명",
   /* 다른 라벨은 「값이 어디서 왔는가」인데 이것만 「어떻게 등록하는가」다.
      셀러에게는 둘 다 「이 칸이 지금 어떤 상태인가」라 같은 자리에서 읽힌다. */
   DETAIL_REFERENCE: "상세페이지 참조",
@@ -224,7 +307,11 @@ export const MANUFACTURER_LOOKUP_ORDER: ManufacturerSource[] = [
   "SOURCE_URL",
   "PRODUCT_INFO",
   "BRAND_DEFAULT",
-  "SELLER_DEFAULT",
+  /* 🔴 PIVOT NEXT-04c-2 — 여기 있던 "SELLER_DEFAULT" 가 사라졌다.
+     셀러에게 「판매자 기본정보까지 찾아봤습니다」라고 말하면 안 된다 —
+     그 자리에 앉을 값이 애초에 제조사가 아니었다. 대신 채널이 허용한
+     브랜드명 대체가 마지막 단계다(지금은 쿠팡만). */
+  "PRODUCT_BRAND",
 ];
 
 /** 상품 자체가 들고 있는 값으로 채워진 단계(①·②·⑤) — 화면이 "자동 적용됨"

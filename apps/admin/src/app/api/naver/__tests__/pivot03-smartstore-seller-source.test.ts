@@ -27,7 +27,6 @@ const SOURCE = readFileSync(join(__dirname, "../_lib/resolve-context.ts"), "utf8
 
 describe("① 판매자 공통 네 값은 이제 seller_settings 에서 온다", () => {
   it.each([
-    ["제조사", "sellerSettings.manufacturer"],
     ["품질보증기준", "sellerSettings.qualityGuarantee"],
     ["A/S 연락처", "sellerSettings.asContactNumber"],
     ["원산지 기본값", "sellerSettings.defaultCountryOfOrigin"],
@@ -79,14 +78,13 @@ describe("③ 폴백 순서는 바뀌지 않았다", () => {
   });
 
   it("제조사 — 브랜드 → 판매자 (상품 원문은 build-payload 가 더 앞에서 본다)", () => {
-    expect(SOURCE).toContain("brandProfile?.manufacturer || sellerSettings.manufacturer || null");
+    // PIVOT NEXT-04c-2 — 판매 사업자가 빠지고 브랜드명이 그 자리에 왔다.
+    expect(SOURCE).toContain("brandProfile?.manufacturer || brandName || null");
   });
 
   it("🔴 출처 표시도 같은 조건을 그대로 읽는다 — 값과 라벨이 갈리면 안 된다", () => {
-    // 값은 seller_settings 에서 오는데 라벨만 레거시를 보고 판정하면, 화면은
-    // 「판매자 기본값」이라고 말하면서 다른 표의 값을 보여주게 된다.
     expect(SOURCE).toContain(
-      'manufacturerSource: brandProfile?.manufacturer ? "BRAND_DEFAULT" : sellerSettings.manufacturer ? "SELLER_DEFAULT" : "NONE"',
+      'manufacturerSource: brandProfile?.manufacturer ? "BRAND_DEFAULT" : brandName ? "PRODUCT_BRAND" : "NONE"',
     );
   });
 });
@@ -112,13 +110,13 @@ describe("④ 빈 값의 «모양» 이 달라져도 결과가 같다", () => {
     expect(empty || null).toBeNull();
   });
 
-  it.each(SHAPES)("%s 이면 출처는 SELLER_DEFAULT 가 아니다", (_label, empty) => {
-    expect(empty ? "SELLER_DEFAULT" : "NONE").toBe("NONE");
+  it.each(SHAPES)("%s 이면 출처는 PRODUCT_BRAND 가 아니다", (_label, empty) => {
+    expect(empty ? "PRODUCT_BRAND" : "NONE").toBe("NONE");
   });
 
-  it("값이 있으면 SELLER_DEFAULT 다", () => {
-    const filled: string | null | undefined = "규하맘샵";
-    expect(filled ? "SELLER_DEFAULT" : "NONE").toBe("SELLER_DEFAULT");
+  it("값이 있으면 PRODUCT_BRAND 다", () => {
+    const filled: string | null | undefined = "Bobo Choses";
+    expect(filled ? "PRODUCT_BRAND" : "NONE").toBe("PRODUCT_BRAND");
   });
 });
 

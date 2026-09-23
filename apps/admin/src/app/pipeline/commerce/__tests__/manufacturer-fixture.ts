@@ -20,6 +20,9 @@ export function manufacturerFixture(
     value: "보보쇼즈",
     source: "PRODUCT_INFO",
     resolved: true,
+    /* PIVOT NEXT-04c-2 — 기본값은 상품 사실이다. 확인이 더 필요하지 않다. */
+    resolutionType: "PRODUCT_FACT",
+    requiresReview: false,
     loading: false,
     /* REWORK-12 ④ — 조회에 쓴 브랜드 이름. 화면이 «브랜드 X로 찾아봤다»라고
        말하는 데 쓴다(판정에는 들어가지 않는다). */

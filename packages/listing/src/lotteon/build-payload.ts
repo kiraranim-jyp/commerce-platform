@@ -145,7 +145,9 @@ export interface LotteOnPayloadInput {
    * 프로필을 넘겨받고, 우선순위 판정은 공통 `resolveManufacturer()` 하나가 한다.
    */
   brandProfileManufacturer?: string | null;
-  sellerProfileManufacturer?: string | null;
+  /* 🔴 PIVOT NEXT-04c-2 — sellerProfileManufacturer 가 사라졌다. 계약에서
+     빼야 호출부가 다시 넣을 수 없다(C 에서 배운 것 — 「안 보낸다」로는 부족하고
+     「받지 않는다」여야 한다). */
   /** PriceEditor가 쓰는 것과 같은 환율/반올림 — resolveListingPrice에 그대로 넘긴다. */
   liveRates?: Record<string, number>;
   roundingUnit?: number;
@@ -325,10 +327,17 @@ export function buildLotteOnPayload(input: LotteOnPayloadInput): LotteOnProductR
      `product.manufacturer.value.trim()` 하나였다(브랜드/판매자 폴백 없음).
      REWORK-13A — 상품이 들고 있는 값을 ①(원본 명시) · ②(상품정보 확인) ·
      ⑤(직접 입력)으로 나누는 일도 공통 함수가 한다. */
+  /* 🔴 PIVOT NEXT-04c-2 — 판매자 기본정보 단계가 사라졌다. 판매 사업자를
+     제조사로 쓰라고 말하는 채널이 없다.
+
+     🔴 그리고 brand 대체도 «넣지 않는다». 쿠팡 공식 API 에는 「정확한 제조사를
+     기입할 수 없으면 brand 와 동일하게」라는 문구가 있지만 그건 «쿠팡의 정책»
+     이다. 롯데ON 의 mfcrNm 규칙은 아직 확인되지 않았다(문서 0 · 실측 0) —
+     남의 채널 정책을 복사해 오면 그게 곧 추측이다. */
   const manufacturer = resolveManufacturer({
     ...manufacturerInputFromProduct(product),
     brandProfileManufacturer: input.brandProfileManufacturer,
-    sellerProfileManufacturer: input.sellerProfileManufacturer,
+    brandName: product.brand.value,
   }).value;
   const modelNo = product.modelName.value.trim();
   const importerName = (channel.importerName ?? product.importer.value).trim();

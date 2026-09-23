@@ -124,8 +124,11 @@ function listingOf(product: CanonicalProduct) {
  * 단계를 이미 합쳐서 하나로 내려주므로(notice.manufacturer) payload 호출부도
  * 그 모양 그대로 받는다 — 여기서 새 경로를 만들지 않는다.
  */
-function naverResolvedOf(brandProfile?: string | null, sellerProfile?: string | null) {
-  return (brandProfile ?? "").trim() || (sellerProfile ?? "").trim() || null;
+function naverResolvedOf(product: CanonicalProduct, brandProfile?: string | null) {
+  /* 🔴 PIVOT NEXT-04c-2 — 서버 resolve-context.ts 의 사슬을 글자 그대로 옮긴
+     것이다: `brandProfile?.manufacturer || brandName || null`. 예전에는 뒤가
+     판매 사업자였다. */
+  return (brandProfile ?? "").trim() || (product.brand.value ?? "").trim() || null;
 }
 
 function naverPayloadOf(
@@ -137,7 +140,7 @@ function naverPayloadOf(
     product,
     listing: listingOf(product),
     ...PAYLOAD_ARGS,
-    resolvedManufacturer: naverResolvedOf(brandProfile, sellerProfile),
+    resolvedManufacturer: naverResolvedOf(product, brandProfile),
   } as never);
 }
 
@@ -163,7 +166,6 @@ function lotteOnManufacturer(
     channel: { ...BLANK_LOTTEON_CHANNEL_CONFIG, trGrpCd: "1", trNo: "2", taxTypeCode: "TDF" },
     detailHtml: "<p>상세</p>",
     brandProfileManufacturer: brandProfile ?? null,
-    sellerProfileManufacturer: sellerProfile ?? null,
   } as never);
   return (payload.spdLst[0] as { mfcrNm?: string }).mfcrNm;
 }
@@ -258,7 +260,9 @@ function ManufacturerHarness({
     ...resolveManufacturer({
       ...manufacturerInputFromProduct(current),
       brandProfileManufacturer: brandProfile ?? null,
-      sellerProfileManufacturer: sellerProfile ?? null,
+      /* 🔴 훅(use-manufacturer-resolution)이 넘기는 것과 «같은 입력» 이다.
+         하나만 빠져도 화면과 payload 가 다시 갈린다. */
+      brandName: current.brand.value,
     }),
     loading: false,
     brand: current.brand.value,
@@ -339,12 +343,19 @@ const LADDER: Array<{
     expectedSource: "BRAND_DEFAULT",
   },
   {
-    step: "④ 판매자 기본 제조사",
+    /* 🔴 PIVOT NEXT-04c-2 — 여기는 원래 「④ 판매자 기본 제조사」였다.
+       판매 사업자(규하맘샵)를 제조사로 쓰라고 말하는 채널이 하나도 없다 —
+       쿠팡은 공식 API·화면에 «브랜드명» 이라고 적어 뒀다. 그래서 그 단계를
+       없앴고, 이 검사는 「없어졌다」를 지킨다.
+
+       🔴 값을 지어내지 않고 「확인 필요」로 남기는 것이 맞다. 빈칸을 채워
+       화면을 초록으로 만드는 것은 판단을 숨기는 것이다. */
+    step: "④ 브랜드 프로필에도 없으면 «브랜드명» — 판매자 기본정보는 후보가 아니다",
     product: () => makeProduct(),
     brandProfile: null,
     sellerProfile: SELLER_VALUE,
-    expected: SELLER_VALUE,
-    expectedSource: "SELLER_DEFAULT",
+    expected: "Bobo Choses",
+    expectedSource: "PRODUCT_BRAND",
   },
 ];
 
@@ -356,7 +367,7 @@ describe("REWORK-13A A — 다섯 단계가 화면과 payload에서 똑같이 �
     const resolution = resolveManufacturer({
       ...manufacturerInputFromProduct(p),
       brandProfileManufacturer: row.brandProfile,
-      sellerProfileManufacturer: row.sellerProfile,
+      brandName: p.brand.value,
     });
     expect(resolution.source, row.step).toBe(row.expectedSource);
     expect(resolution.value).toBe(row.expected);
@@ -372,19 +383,23 @@ describe("REWORK-13A A — 다섯 단계가 화면과 payload에서 똑같이 �
     expect(lotteOnManufacturer(p, row.brandProfile, row.sellerProfile)).toBe(row.expected);
   });
 
-  it("⑤ 네 단계가 전부 비면 화면이 «어디까지 찾아봤는지»와 다음 행동을 말한다", async () => {
-    await renderField(makeProduct(), null, null);
+  it("⑤ 브랜드조차 없으면 화면이 «어디까지 찾아봤는지»와 다음 행동을 말한다", async () => {
+    /* 🔴 PIVOT NEXT-04c-2 — 「네 단계가 전부 빈다」의 «조건이» 달라졌다.
+       마지막 단계가 브랜드명이 됐으므로, 브랜드가 있는 한 판정은 비지 않는다.
+       정말로 아무것도 없는 상태는 «브랜드조차 없을 때» 뿐이다. */
+    const noBrand = makeProduct({ brand: field("") });
+    await renderField(noBrand, null, null);
     const screen = text();
-    expect(screen).toContain("상품 원문 · 브랜드 프로필 · 판매자 기본정보 어디에도 제조사가 없습니다");
-    expect(screen).toContain("브랜드 「Bobo Choses」에 등록된 제조사가 없습니다");
-    expect(screen).toContain("설정 > 브랜드 관리의 브랜드 프로필에 등록하세요");
+    expect(screen).toContain("상품 원문 · 브랜드 프로필 · 브랜드명 어디에도 제조사가 없습니다");
+    expect(screen).toContain("브랜드가 확인되지 않아 브랜드 프로필을 조회하지 못했습니다");
+    expect(screen).toContain("제조사를 직접 입력해주세요");
     /* 🔴 REWORK-13A — ⚠ 만 보여 주면 셀러는 «등록이 차단됐다»로 읽는다.
        화면이 «막히지 않는다»를 직접 말하는지 확인한다. */
     expect(screen).toContain("제조사가 비어 있어도 상품 분석과 등록 준비는 계속됩니다");
     // 🔴 값을 지어내지 않는다 — 칸은 비어 있다.
     expect(shownValue()).toBe("");
-    expect(naverManufacturer(makeProduct(), null, null) ?? "").toBe("");
-    expect(lotteOnManufacturer(makeProduct(), null, null)).toBeUndefined();
+    expect(naverManufacturer(noBrand, null, null) ?? "").toBe("");
+    expect(lotteOnManufacturer(noBrand, null, null)).toBeUndefined();
   });
 
   it("🔴 ⑤ 직접 입력은 실제 타이핑으로 들어가고, 네 단계를 전부 이긴다", async () => {
@@ -406,7 +421,7 @@ describe("REWORK-13A A — 다섯 단계가 화면과 payload에서 똑같이 �
       resolveManufacturer({
         ...manufacturerInputFromProduct(product),
         brandProfileManufacturer: BRAND_VALUE,
-        sellerProfileManufacturer: SELLER_VALUE,
+        brandName: product.brand.value,
       }).source,
     ).toBe("MANUAL");
     // 화면
@@ -421,10 +436,13 @@ describe("REWORK-13A A — 다섯 단계가 화면과 payload에서 똑같이 �
     expect(text()).toContain(`${MANUFACTURER_SOURCE_LABEL.BRAND_DEFAULT}의 제조사 ${BRAND_VALUE}가 자동 적용됩니다`);
   });
 
-  it("④가 채웠으면 ③이라고 말하지 않는다", async () => {
+  it("🔴 판매자 기본정보를 제조사라고 «말하지 않는다»", async () => {
+    /* 전에는 이 자리에서 「판매자 기본정보의 제조사 규하맘샵가 자동
+       적용됩니다」라고 말했다. 실측상 362건 중 255건이 그 경로였다 —
+       브랜드 프로필이 2행뿐이라 곧장 판매 사업자까지 내려갔다. */
     await renderField(makeProduct(), null, SELLER_VALUE);
     const screen = text();
-    expect(screen).toContain(`${MANUFACTURER_SOURCE_LABEL.SELLER_DEFAULT}의 제조사 ${SELLER_VALUE}`);
+    expect(screen).not.toContain(SELLER_VALUE);
     expect(screen).not.toContain(MANUFACTURER_SOURCE_LABEL.BRAND_DEFAULT);
   });
 });
@@ -433,7 +451,8 @@ describe("REWORK-13A A — 다섯 단계가 화면과 payload에서 똑같이 �
 
 describe("REWORK-13A B — 제조사가 비어도 등록 준비가 막히지 않는다", () => {
   it("🔴 롯데ON — 제조사가 없어도 payload 가 만들어진다(필드만 빠진다, 던지지 않는다)", () => {
-    const p = makeProduct();
+    // 🔴 브랜드도 비워야 «정말로» 빈 상태다(04c-2 — 브랜드명이 마지막 단계다).
+    const p = makeProduct({ brand: field("") });
     expect(() => lotteOnManufacturer(p, null, null)).not.toThrow();
     expect(lotteOnManufacturer(p, null, null)).toBeUndefined();
   });
@@ -457,18 +476,23 @@ describe("REWORK-13A B — 제조사가 비어도 등록 준비가 막히지 않
     expect(payload.originProduct.images.representativeImage.url).toBeTruthy();
   });
 
-  it("🔴 브랜드 프로필이 채워 주면 스마트스토어도 더 이상 «제조자»를 막지 않는다", () => {
-    const p = makeProduct();
+  it("🔴 폴백이 채워 주면 스마트스토어도 더 이상 «제조자»를 막지 않는다", () => {
     /* BEFORE(REWORK-13A 이전): validator 가 input.product.manufacturer 만 봐서
-       브랜드 프로필이 payload 를 채워도 「제조자」가 필수 미충족으로 남았다. */
-    expect(naverMissingLabels(p, null, null), "빈 상태에서는 스마트스토어가 실제로 요구한다").toContain("제조자");
-    expect(naverMissingLabels(p, BRAND_VALUE, null), "payload 에 값이 있는데 화면이 없다고 말한다").not.toContain("제조자");
-    expect(naverMissingLabels(p, null, SELLER_VALUE)).not.toContain("제조자");
+       브랜드 프로필이 payload 를 채워도 「제조자」가 필수 미충족으로 남았다.
+
+       🔴 PIVOT NEXT-04c-2 — 「빈 상태」의 조건이 브랜드까지 비는 것으로 좁아졌다. */
+    const noBrand = makeProduct({ brand: field("") });
+    expect(naverMissingLabels(noBrand, null, null), "빈 상태에서는 스마트스토어가 실제로 요구한다").toContain("제조자");
+    expect(naverMissingLabels(noBrand, BRAND_VALUE, null), "payload 에 값이 있는데 화면이 없다고 말한다").not.toContain(
+      "제조자",
+    );
+    // 브랜드명만 있어도 payload 가 채워진다 — 그러면 막지 않는다.
+    expect(naverMissingLabels(makeProduct(), null, null)).not.toContain("제조자");
   });
 
   it("스마트스토어가 막을 때는 해결 경로를 문장으로 준다 — 값을 지어내지 않는다", () => {
     const reason = String(
-      naverValidationOf(makeProduct(), null, null).fields.find((f) =>
+      naverValidationOf(makeProduct({ brand: field("") }), null, null).fields.find((f) =>
         f.field.endsWith("productInfoProvidedNotice(KIDS).manufacturer".split(".").pop() as string),
       )?.reason ?? "",
     );

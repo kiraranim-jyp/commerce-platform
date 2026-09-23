@@ -50,11 +50,11 @@ import type { ManufacturerResolutionState } from "./use-manufacturer-resolution"
  *  할 수 있는 행동은 어느 쪽이든 같다. 늘어난 단계는 payload·판정이 알면 되지
  *  안내 문장을 길게 만들 이유가 아니다(REWORK-12 ⑤ — 문장은 짧게). */
 export const MANUFACTURER_NONE_DETAIL =
-  "상품 원문 · 브랜드 프로필 · 판매자 기본정보 어디에도 제조사가 없습니다.";
+  "상품 원문 · 브랜드 프로필 · 브랜드명 어디에도 제조사가 없습니다.";
 
 /** 조회가 아직 안 끝났을 때. */
 export const MANUFACTURER_LOADING_DETAIL =
-  "상품 원문 → 브랜드 프로필 → 판매자 기본정보 순서로 찾는 중입니다.";
+  "상품 원문 → 브랜드 프로필 → 브랜드명 순서로 찾는 중입니다.";
 
 /**
  * REWORK-13A(CEO 지시, 2026-09-15) — **제조사가 비어도 등록 준비는 막히지 않는다.**

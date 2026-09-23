@@ -47,46 +47,40 @@ const ALL_FIVE: ManufacturerResolverInput = {
 
 describe("REWORK-13A — 다섯 단계가 차례로 내려간다(위에서부터 하나씩 뺀다)", () => {
   it("⑤ 셀러가 직접 입력한 값은 어떤 자동 추정도 이긴다", () => {
-    expect(resolveManufacturer(ALL_FIVE)).toEqual({
-      value: "셀러가직접입력",
-      source: "MANUAL",
-      resolved: true,
-    });
+    expect(resolveManufacturer(ALL_FIVE)).toMatchObject({ value: "셀러가직접입력", source: "MANUAL", resolved: true });
   });
 
   it("① 직접 입력을 빼면 원본 URL 의 명시적 제조사", () => {
-    expect(resolveManufacturer({ ...ALL_FIVE, manualManufacturer: null })).toEqual({
-      value: "원본명시제조사",
-      source: "SOURCE_URL",
-      resolved: true,
-    });
+    expect(resolveManufacturer({ ...ALL_FIVE, manualManufacturer: null })).toMatchObject({ value: "원본명시제조사", source: "SOURCE_URL", resolved: true });
   });
 
   it("② 원본 명시까지 빼면 원본 상품정보에서 확인된 제조사", () => {
     expect(
       resolveManufacturer({ ...ALL_FIVE, manualManufacturer: null, sourceUrlManufacturer: null }),
-    ).toEqual({ value: "상품정보제조사", source: "PRODUCT_INFO", resolved: true });
+    ).toMatchObject({ value: "상품정보제조사", source: "PRODUCT_INFO", resolved: true });
   });
 
   it("③ 상품이 아무것도 안 들고 있으면 설정 > 브랜드 관리", () => {
     expect(
       resolveManufacturer({
         brandProfileManufacturer: "브랜드관리제조사",
-        sellerProfileManufacturer: "판매자기본제조사",
       }),
-    ).toEqual({ value: "브랜드관리제조사", source: "BRAND_DEFAULT", resolved: true });
+    ).toMatchObject({ value: "브랜드관리제조사", source: "BRAND_DEFAULT", resolved: true });
   });
 
-  it("④ 브랜드 관리에도 없으면 판매자 기본 제조사", () => {
-    expect(resolveManufacturer({ sellerProfileManufacturer: "판매자기본제조사" })).toEqual({
-      value: "판매자기본제조사",
-      source: "SELLER_DEFAULT",
-      resolved: true,
-    });
+  it("④ 브랜드 관리에도 없으면 «브랜드명» 을 등록값으로 쓴다 (PIVOT NEXT-04c-2)", () => {
+    /* 🔴 원래는 「판매자 기본 제조사」였다. 판매 사업자(규하맘샵)를 제조사로
+       쓰라고 말하는 채널이 하나도 없다 — 쿠팡 공식 API 는 「정확한 제조사를
+       기입할 수 없는 경우 brand 와 동일하게 입력 가능」이라고 명시한다.
+       3커머스 공통 규칙: 실제 제조사 → 브랜드명 → 확인 필요. */
+    const r = resolveManufacturer({ brandName: "Bobo Choses" });
+    expect(r).toMatchObject({ value: "Bobo Choses", source: "PRODUCT_BRAND", resolved: true });
+    expect(r.resolutionType).toBe("LISTING_FALLBACK");
+    expect(r.requiresReview).toBe(true);
   });
 
   it("🔴 다섯 단계가 전부 비면 값을 지어내지 않는다 — 판정으로 남긴다", () => {
-    expect(resolveManufacturer({})).toEqual({ value: "", source: "NONE", resolved: false });
+    expect(resolveManufacturer({})).toMatchObject({ value: "", source: "NONE", resolved: false });
   });
 
   it("공백만 있는 값은 값이 아니다 — 다음 단계로 넘어간다", () => {
@@ -96,19 +90,31 @@ describe("REWORK-13A — 다섯 단계가 차례로 내려간다(위에서부터
         sourceUrlManufacturer: "\t",
         productInfoManufacturer: "\n ",
         brandProfileManufacturer: "  ",
-        sellerProfileManufacturer: " 따져코리아 ",
+        brandName: " Bobo Choses ",
       }),
-    ).toEqual({ value: "따져코리아", source: "SELLER_DEFAULT", resolved: true });
+    ).toMatchObject({ value: "Bobo Choses", source: "PRODUCT_BRAND", resolved: true });
   });
 
   /**
-   * 🔴 CEO 금지 항목의 기계적 증거: 브랜드명은 resolver 의 **입력이 아니다.**
-   * 어떤 입력 조합으로도 브랜드명이 제조사가 되는 경로가 없다는 것을,
-   * "브랜드만 아는 상태"에서 NONE 이 나오는 것으로 고정한다.
+   * 🔴 이 자리에는 「브랜드명은 제조사가 되지 않는다」가 있었다(REWORK-13A).
+   * CPO 결정(2026-09-23)으로 뒤집혔다 — 쿠팡 공식 API 가 「정확한 제조사를
+   * 기입할 수 없는 경우 brand 와 동일하게 입력 가능」이라고 명시하기 때문이다.
+   * 옛 금지가 세워질 때는 그 근거를 몰랐다.
+   *
+   * 🔴 그래도 원래 금지의 «핵심» 은 살아 있다: 브랜드명에서 제조사명을
+   * «지어내지» 않는다. 브랜드명 그대로를 등록값으로 쓸 뿐이고, 그 사실을
+   * resolutionType 과 requiresReview 가 들고 다닌다.
    */
-  it("🔴 브랜드명은 제조사가 되지 않는다 — 브랜드밖에 모르면 NONE 이다", () => {
-    const input = { brand: "Bobo Choses" } as unknown as ManufacturerResolverInput;
-    expect(resolveManufacturer(input)).toEqual({ value: "", source: "NONE", resolved: false });
+  it("🔴 브랜드명을 써도 «상품 사실» 로 승격하지 않는다", () => {
+    const r = resolveManufacturer({ brandName: "Bobo Choses" });
+    expect(r.value).toBe("Bobo Choses");
+    // 값을 «지어내지» 않았다 — "Bobo Choses S.L." 같은 추론은 여전히 금지다.
+    expect(r.resolutionType).not.toBe("PRODUCT_FACT");
+    expect(r.requiresReview).toBe(true);
+  });
+
+  it("브랜드조차 없으면 값을 지어내지 않는다 — 확인 필요로 남긴다", () => {
+    expect(resolveManufacturer({})).toMatchObject({ value: "", source: "NONE", resolved: false });
   });
 });
 
@@ -165,39 +171,49 @@ describe("REWORK-13A — 단계 이름은 셀러가 읽는 말로 한 곳에서 
     expect(MANUFACTURER_SOURCE_LABEL.SOURCE_URL).toBe("원본 페이지");
     expect(MANUFACTURER_SOURCE_LABEL.PRODUCT_INFO).toBe("상품 원문");
     expect(MANUFACTURER_SOURCE_LABEL.BRAND_DEFAULT).toBe("브랜드 프로필");
-    expect(MANUFACTURER_SOURCE_LABEL.SELLER_DEFAULT).toBe("판매자 기본정보");
+    /* 🔴 PIVOT NEXT-04c-2 — 「판매자 기본정보」가 사라지고 「브랜드명」이 그
+       자리에 왔다. 셀러에게 「판매자 기본정보의 제조사」라고 말하던 화면이
+       이제 「브랜드명」이라고 말한다. */
+    expect(MANUFACTURER_SOURCE_LABEL.PRODUCT_BRAND).toBe("브랜드명");
   });
 });
 
-describe("REWORK-10 A — 🔴 쿠팡 기존 사슬과 결과가 같다(쿠팡 payload diff 0)", () => {
+describe("🔴 PIVOT NEXT-04c-2 — 쿠팡 사슬과 공통 resolver 가 «같은 규칙» 을 쓴다", () => {
+  /* 원래 이 묶음은 「쿠팡 기존 사슬(product||brandProfile||seller)과 diff 0」을
+     지켰다. 그 사슬의 마지막 단계가 «판매 사업자» 였고, 04c-1 조사에서 그것이
+     잘못된 semantic 임이 확인됐다. 이제 셋 다 같은 규칙을 쓴다:
+
+         실제 제조사 → 브랜드 프로필 → 브랜드명 → 확인 필요 */
   const CASES: [string, string, string][] = [
-    ["원문", "브랜드", "판매자"],
-    ["", "브랜드", "판매자"],
-    ["", "", "판매자"],
+    ["원문", "브랜드프로필", "브랜드명"],
+    ["", "브랜드프로필", "브랜드명"],
+    ["", "", "브랜드명"],
     ["", "", ""],
     ["원문", "", ""],
-    ["", "브랜드", ""],
+    ["", "브랜드프로필", ""],
   ];
 
-  it.each(CASES)("product=%s brand=%s seller=%s", (product, brand, seller) => {
-    const chain = coupangChain(product, brand || undefined, seller) ?? "";
+  it.each(CASES)("product=%s brandProfile=%s brand=%s", (product, brandProfile, brandName) => {
+    const expected = product || brandProfile || brandName || "";
     expect(
-      resolveManufacturer({
-        productManufacturer: product,
-        brandProfileManufacturer: brand,
-        sellerProfileManufacturer: seller,
-      }).value,
-    ).toBe(chain);
+      resolveManufacturer({ productManufacturer: product, brandProfileManufacturer: brandProfile, brandName }).value,
+    ).toBe(expected);
   });
 
-  /**
-   * 🔴 쿠팡 쪽 사슬이 조용히 바뀌면 위 동치 검사가 무의미해진다. 그 줄을
-   * 글자로 고정한다 — 쿠팡 payload를 바꾸지 않겠다는 약속의 기계적 증거이기도 하다.
-   */
-  it("쿠팡 build-payload의 제조사 줄이 그대로다", () => {
+  /** 🔴 쿠팡 사슬이 조용히 되돌아가면 이 검사가 잡는다 — 판매 사업자가 다시 들어오는 것을 막는다. */
+  it("쿠팡 build-payload 가 제조사를 «한 곳에서» 정하고 판매 사업자를 보지 않는다", () => {
     const source = readFileSync(new URL("../coupang/build-payload.ts", import.meta.url), "utf8");
-    expect(source).toContain(
-      "manufacturer: product.manufacturer.value || brandProfile?.manufacturer || sellerConfig.manufacturer || undefined,",
-    );
+    // 판정은 공통 resolver 한 번, 그 결과를 아이템 빌더에 내려보낸다.
+    expect(source).toContain("const manufactureResolution = resolveManufacturer({");
+    expect(source).toContain("manufacture: productManufacture,");
+    expect(source).toContain("manufacturer: manufacture,");
+    expect(source).not.toContain("sellerConfig.manufacturer ||");
+  });
+
+  /** 🔴 최상위 manufacture 는 고시와 «다른 칸» 이다 — 둘 다 «같은 결정값» 을 쓰되 자리가 다르다. */
+  it("쿠팡 payload 에 최상위 manufacture 가 실리고, 고시정보와 같은 값을 쓴다", () => {
+    const source = readFileSync(new URL("../coupang/build-payload.ts", import.meta.url), "utf8");
+    const decisions = source.match(/resolveManufacturer\(\{/g) ?? [];
+    expect(decisions.length, "제조사를 두 번 판정하면 두 칸이 갈릴 수 있다").toBe(1);
   });
 });

@@ -88,7 +88,10 @@ export interface NaverResolveResponse {
     companyContactNumber: string | null;
     manufacturer: string | null;
     /** N-4.12 STEP4 — resolve-context.ts 주석 참고, 새 판정이 아니라 표시용. */
-    manufacturerSource: "BRAND_DEFAULT" | "SELLER_DEFAULT" | "NONE";
+    /* 🔴 PIVOT NEXT-04c-2 — "SELLER_DEFAULT" 가 "PRODUCT_BRAND" 로 바뀌었다.
+       판매 사업자를 제조사로 쓰라고 말하는 채널이 없다 — 3커머스 공통 규칙은
+       실제 제조사 → 브랜드명 → 확인 필요다. */
+    manufacturerSource: "BRAND_DEFAULT" | "PRODUCT_BRAND" | "NONE";
   };
   // N-3.13 Part J — detailContent 조립에 필요한 재료. Coupang용으로 이미 있는
   // DescriptionTemplate/SellerProfile 공통이미지/BrandProfile.brandIntro를
@@ -312,8 +315,10 @@ export function NaverPayloadPreview({
     ? "상품 원본에서 추출"
     : resolved?.notice?.manufacturerSource === "BRAND_DEFAULT"
       ? "브랜드 기본값"
-      : resolved?.notice?.manufacturerSource === "SELLER_DEFAULT"
-        ? "판매자 기본값"
+      : resolved?.notice?.manufacturerSource === "PRODUCT_BRAND"
+        ? /* 🔴 PIVOT NEXT-04c-2 — 여기 있던 「판매자 기본값」이 사라졌다.
+             판매 사업자를 제조사라고 말하던 문구다. */
+          "브랜드명"
         : null;
   // N-3.13 Part J — resolve route가 내려준 재료(Coupang과 동일 소스)로
   // detailBlocks가 있을 때만 assembleContentsFromBlocks를 태운다. resolved가

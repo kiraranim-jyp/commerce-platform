@@ -320,13 +320,15 @@ describe("REWORK-10 A — 롯데ON도 전 채널 공통 제조사 resolver를 �
     );
   });
 
-  it("③ 브랜드 프로필도 없으면 판매자 기본정보", () => {
-    const product = makeProduct({ manufacturer: field("") });
-    expect(manufacturerOf({ sellerProfileManufacturer: "따져코리아" }, product)).toBe("따져코리아");
+  it("③ 브랜드 프로필도 없으면 «브랜드명» (PIVOT NEXT-04c-2)", () => {
+    /* 🔴 원래는 「판매자 기본정보」였다. 판매 사업자를 제조사로 쓰라고 말하는
+       채널이 없다 — 3커머스 공통 규칙은 실제 제조사 → 브랜드명 → 확인 필요다. */
+    const product = makeProduct({ manufacturer: field(""), brand: field("Bobo Choses") });
+    expect(manufacturerOf({}, product)).toBe("Bobo Choses");
   });
 
-  it("④ 셋 다 없으면 값을 지어내지 않는다 — mfcrNm을 아예 싣지 않는다", () => {
-    const product = makeProduct({ manufacturer: field("") });
+  it("④ 브랜드조차 없으면 값을 지어내지 않는다 — mfcrNm을 아예 싣지 않는다", () => {
+    const product = makeProduct({ manufacturer: field(""), brand: field("") });
     expect(manufacturerOf({}, product)).toBeUndefined();
   });
 });

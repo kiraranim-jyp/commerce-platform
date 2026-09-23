@@ -252,12 +252,13 @@ describe("REWORK-10 A — 제조사는 세 탭에서 같은 문장을 낸다", (
     }
   });
 
-  it("판매자 기본정보가 채운 경우도 세 탭이 같은 말을 한다", async () => {
-    for (const tab of tabs(resolution({ sellerProfileManufacturer: "따져코리아" }))) {
+  it("🔴 판매 사업자를 제조사로 말하지 않는다 — 세 탭 모두 (PIVOT NEXT-04c-2)", async () => {
+    /* 이 검사는 원래 「판매자 기본정보가 채운 경우도 세 탭이 같은 말」을
+       지켰다. 04c-1 조사에서 그 단계 자체가 잘못된 semantic 임이 확인됐다. */
+    for (const tab of tabs(resolution({ brandProfileManufacturer: null }))) {
       const text = clean((await mount(tab.element())).textContent ?? "");
-      expect(text, tab.label).toContain("판매자 기본정보의 제조사");
-      expect(text, tab.label).toContain("따져코리아");
-      expect(text, tab.label).not.toContain("제조사 정보가 없습니다");
+      expect(text, tab.label).not.toContain("따져코리아");
+      expect(text, tab.label).not.toContain("판매자 기본정보의 제조사");
     }
   });
 
@@ -267,7 +268,7 @@ describe("REWORK-10 A — 제조사는 세 탭에서 같은 문장을 낸다", (
       /* REWORK-12 ④·⑤(CEO 판정, 2026-09-15) — 같은 두 가지를 계속 요구한다:
          «어디까지 찾아봤는가»와 «다음에 무엇을 하는가». 바뀐 것은 서는 자리다 —
          전자는 ⓘ(여전히 textContent에 있다), 후자는 **화면에 보이는 한 줄**. */
-      expect(text, tab.label).toContain("상품 원문 · 브랜드 프로필 · 판매자 기본정보 어디에도 제조사가 없습니다");
+      expect(text, tab.label).toContain("상품 원문 · 브랜드 프로필 · 브랜드명 어디에도 제조사가 없습니다");
       expect(text, tab.label).toContain("브랜드 「Bobo Choses」에 등록된 제조사가 없습니다");
       expect(text, tab.label).toContain("브랜드 프로필에 등록하세요");
     }

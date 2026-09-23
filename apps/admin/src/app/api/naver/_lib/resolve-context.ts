@@ -200,13 +200,19 @@ export async function resolveNaverContext(params: {
       // 쓰고 manufacturer는 아예 읽지 않았다 — 크롤러가 제조사를 못 찾은
       // 상품(흔한 경우)은 항상 빈칸이었던 원인. brandProfile은 이미 위에서
       // brand 파라미터로 조회해 둔 값을 그대로 재사용한다(추가 DB 조회 없음).
-      manufacturer: brandProfile?.manufacturer || sellerSettings.manufacturer || null,
+      /* 🔴 PIVOT NEXT-04c-2 — 3커머스 공통 규칙: 실제 제조사 → 브랜드명 → 확인 필요.
+         (상품 원문 제조사는 build-payload 가 이 값보다 앞에서 본다)
+         판매 사업자(sellerSettings.manufacturer)가 «사라졌다» — 판매자라는 이유만으로
+         제조자가 되지 않는다. */
+      manufacturer: brandProfile?.manufacturer || brandName || null,
       // N-4.12 STEP4(대표님 지시: "값 옆에 출처를 그대로 노출 — 브랜드
       // 기본값/판매자 기본값") — 위 3단계 우선순위(상품 원문은 build-payload.ts가
       // 이 값보다 먼저 확인, 여기는 원문이 없을 때의 폴백 두 단계만) 계산은
       // 그대로 두고, 어느 단계가 채웠는지만 추가로 알려준다. 새 판정이 아니라
       // 바로 위 줄과 동일한 조건을 그대로 다시 읽은 것뿐이다.
-      manufacturerSource: brandProfile?.manufacturer ? "BRAND_DEFAULT" : sellerSettings.manufacturer ? "SELLER_DEFAULT" : "NONE",
+      /* 🔴 PIVOT NEXT-04c-2 — 값과 «같은 조건» 을 그대로 다시 읽는다. 판매
+         사업자가 빠졌으므로 라벨도 브랜드명으로 바뀐다. */
+      manufacturerSource: brandProfile?.manufacturer ? "BRAND_DEFAULT" : brandName ? "PRODUCT_BRAND" : "NONE",
     },
     detailPage: {
       descriptionTemplate: descriptionTemplate ?? null,

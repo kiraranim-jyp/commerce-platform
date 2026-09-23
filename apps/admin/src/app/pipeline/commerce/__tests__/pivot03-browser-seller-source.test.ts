@@ -55,8 +55,20 @@ describe("① 배송 프로필에서 판매자 칸을 읽는 곳이 없다", () 
     expect(codeOnly(source).match(pattern)).toBeNull();
   });
 
-  it.each(ALL)("%s — canonical 창구를 부른다", (_label, source) => {
+  it.each([
+    ["쿠팡 요약카드", COUPANG_CARD],
+    ["네이버 요약카드", NAVER_CARD],
+  ])("%s — canonical 창구를 부른다", (_label, source) => {
     expect(source).toContain('fetch("/api/settings/seller-settings")');
+  });
+
+  it("🔴 제조사 훅은 판매자 설정을 «아예 읽지 않는다» (PIVOT NEXT-04c-2)", () => {
+    /* 0-4+2-B 시점에는 이 훅도 canonical 창구를 부르는 것이 맞았다. 04c-1
+       조사에서 그 단계 자체가 잘못된 semantic 임이 확인돼(거기 들어 있는 것은
+       판매 사업자다) 단계가 없어졌고, 그러면 조회도 없어야 한다 — 남겨 두면
+       언제든 다시 배선된다. 요약카드 두 곳은 그대로 부른다(그건 판매자
+       정보를 «판매자 정보로» 보여 주는 화면이다). */
+    expect(codeOnly(HOOK)).not.toContain("seller-settings");
   });
 });
 
