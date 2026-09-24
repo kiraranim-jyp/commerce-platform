@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   CanonicalProduct,
   CanonicalProductCertification,
+  SmartStoreKcDeclaration,
   CanonicalProductVariant,
   CommerceCategoryPathResult,
   FieldSource,
@@ -1130,6 +1131,28 @@ export function CommerceWorkspace({
    * 하위값(번호/업체명/취득일자)이라 updateField의 단순 string 패턴과
    * 다르게 patch 형태로 부분 수정한다. 값을 전혀 만들어내지 않는다 — 사용자가
    * 입력한 값만 그대로 저장한다. */
+  /**
+   * P0-KC-11 ⑤ — 판매자가 «고른» 인증 대상 축을 그대로 담는다.
+   *
+   * 🔴 ProvenanceField 로 감싸지 않는다. 크롤러가 채우는 값이 아니라 판매자만
+   * 고를 수 있는 선언이라 source/confidence 가 의미를 갖지 않는다
+   * (lotteOnChannelInfo 와 같은 취급).
+   *
+   * 🔴 고르지 않은 축을 대신 채우지 않는다. 두 축을 자동 결합하지도 않는다 —
+   * 「어린이제품 대상 아님」이 「KC 대상 아님」을 뜻하지 않는다.
+   *
+   * 🔴 KC 축을 면제가 «아닌» 값으로 바꾸면 면제 사유는 «지운다». 남겨 두면
+   * 「대상 아님 + 면제 사유」라는 반쪽 신고가 되어 payload 가 통째로 막힌다
+   * (kc-declaration 의 F 케이스).
+   */
+  function updateKcDeclaration(patch: Partial<SmartStoreKcDeclaration>) {
+    setProduct((prev) => {
+      const next: SmartStoreKcDeclaration = { ...(prev.smartStoreKcDeclaration ?? {}), ...patch };
+      if (next.kc !== "EXEMPTION") delete next.exemptionReason;
+      return { ...prev, smartStoreKcDeclaration: next };
+    });
+  }
+
   function updateChildCertification(patch: Partial<CanonicalProductCertification>) {
     setProduct((prev) => {
       const current = prev.childCertification.value ?? {
@@ -3431,6 +3454,7 @@ export function CommerceWorkspace({
               onFixTextField={updateField}
               onSetFieldReference={setFieldReference}
               onUpdateChildCertification={updateChildCertification}
+              onUpdateKcDeclaration={updateKcDeclaration}
               onFixNumberField={updateNumberField}
               onUpdateOptions={updateOptions}
               onUpdateVariant={updateVariant}

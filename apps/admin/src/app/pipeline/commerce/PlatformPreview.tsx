@@ -11,9 +11,10 @@ import type {
   ListingStatus,
   NaverPayloadValidationResult,
 } from "@commerce/listing";
+import { validateKcDeclaration } from "@commerce/listing";
 import { isVerifiedCategorySelected, MARKETPLACE_DESCRIPTORS } from "@commerce/marketplace";
 import type { ListingModel } from "@commerce/marketplace";
-import type { CanonicalProduct, CanonicalProductCertification, CanonicalProductOptionGroup, FieldSource } from "@commerce/shared";
+import type { CanonicalProduct, CanonicalProductCertification, CanonicalProductOptionGroup, FieldSource, SmartStoreKcDeclaration } from "@commerce/shared";
 import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
 import { ChannelPriceSection } from "./ChannelPriceSection";
 import { CategoryRequirementsEditor } from "./CategoryRequirementsEditor";
@@ -152,17 +153,56 @@ function ReferenceEligibleFieldRow({
  * 등록" 버튼이 KC 필드에 절대 노출되지 않는다는 걸 코드 구조로 고정한다
  * (STEP10 영구 가드, packages/listing/src/notice/reference-eligibility.ts와
  * 동일한 원칙을 UI 레벨에서도 반복). */
+
+/**
+ * P0-KC-11 ⑤ — 한 축을 그리는 라디오. 🔴 «기본 선택이 없다» — 고르지 않은
+ * 상태가 실재하고, 그것을 「대상 아님」으로 읽으면 안 되기 때문이다.
+ */
+function KcAxisRadio({
+  label,
+  name,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  name: string;
+  value: string | undefined;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <span className="w-24 shrink-0 text-xs font-medium text-text-secondary">{label}</span>
+      {options.map((option) => (
+        <label key={option.value} className="flex cursor-pointer items-center gap-1 text-xs text-text-primary">
+          <input
+            type="radio"
+            name={name}
+            checked={value === option.value}
+            onChange={() => onChange(option.value)}
+          />
+          <span>{option.label}</span>
+        </label>
+      ))}
+      {value === undefined && <span className="text-[11px] text-text-tertiary">— 아직 고르지 않음</span>}
+    </div>
+  );
+}
+
 function KcCertificationBlock({
   product,
   naverValidation,
   fix,
   onUpdateChildCertification,
+  onUpdateKcDeclaration,
   onGoToSection,
 }: {
   product: CanonicalProduct;
   naverValidation: NaverPayloadValidationResult | null | undefined;
   fix?: (field: "certificationType", value: string) => void;
   onUpdateChildCertification: (patch: Partial<CanonicalProductCertification>) => void;
+  onUpdateKcDeclaration: (patch: Partial<SmartStoreKcDeclaration>) => void;
   onGoToSection: () => void;
 }) {
   const [requestCopied, setRequestCopied] = useState(false);
@@ -171,6 +211,17 @@ function KcCertificationBlock({
     (f) => f.code === "KC_CERTIFICATION_REQUIRED" && f.status !== "READY",
   );
   const isBlocked = kcIssues.length > 0;
+
+  /* P0-KC-11 — 🔴 화면이 «자기 규칙» 을 만들지 않는다. 조합 판정은
+     validateKcDeclaration() 한 곳에만 있고 여기서는 부르기만 한다.
+
+     capability 는 「이 카테고리가 어린이제품 인증을 요구하는가」다. 이 컴포넌트가
+     가진 유일한 신호는 검증이 낸 KC 이슈 존재 여부이므로 그것을 쓴다 — 새
+     판정을 만들지 않는다. */
+  const declaration = product.smartStoreKcDeclaration ?? {};
+  const declarationProblems = validateKcDeclaration(declaration, {
+    childCertificationRequired: isBlocked,
+  });
 
   async function copyRequestText() {
     const productName = product.title.value || "(상품명 미확인)";
@@ -246,6 +297,67 @@ function KcCertificationBlock({
           </div>
         </div>
       )}
+      {/* ══════════════════════════════════════════════════════════════════
+          P0-KC-11 ⑤(CPO 확정, 2026-09-24) — **판매자가 «고르는» 인증 대상 축.**
+
+          스마트스토어 판매자센터에는 이 두 축이 원래 있는데 따져에는 없었다.
+          그래서 인증서가 없는 판매자는 빠져나갈 길이 없어 아무 값이나 넣었다.
+
+          🔴 여기서 판정하지 않는다. 기본 선택도 두지 않는다 — 「고르지 않음」과
+          「대상 아님」은 다른 상태다. 고르지 않으면 인증정보를 예전 그대로 요구한다.
+          🔴 두 축을 자동 결합하지 않는다. 한쪽을 골라도 다른 쪽은 그대로다. */}
+      <div className="space-y-2 rounded-md border border-border bg-surface px-3 py-2.5">
+        <KcAxisRadio
+          label="어린이제품 인증"
+          name="kc-child"
+          value={declaration.child}
+          options={[
+            { value: "TARGET", label: "인증 대상" },
+            { value: "EXCLUDED", label: "인증 대상 아님" },
+          ]}
+          onChange={(v) => onUpdateKcDeclaration?.({ child: v as "TARGET" | "EXCLUDED" })}
+        />
+        <KcAxisRadio
+          label="KC 인증"
+          name="kc-main"
+          value={declaration.kc}
+          options={[
+            { value: "TARGET", label: "인증 대상" },
+            { value: "EXCLUDED", label: "인증 대상 아님" },
+            { value: "EXEMPTION", label: "면제 대상" },
+          ]}
+          onChange={(v) => onUpdateKcDeclaration?.({ kc: v as "TARGET" | "EXCLUDED" | "EXEMPTION" })}
+        />
+        {/* 면제 사유는 «면제를 고른 경우에만» 묻는다. 그 밖에는 값도 지운다
+            (updateKcDeclaration) — 남아 있으면 반쪽 신고가 된다. */}
+        {declaration.kc === "EXEMPTION" && (
+          <KcAxisRadio
+            label="면제 사유"
+            name="kc-exemption"
+            value={declaration.exemptionReason}
+            options={[
+              { value: "OVERSEAS", label: "구매대행" },
+              { value: "SAFE_CRITERION", label: "안전기준 준수" },
+              { value: "PARALLEL_IMPORT", label: "병행수입" },
+            ]}
+            onChange={(v) =>
+              onUpdateKcDeclaration?.({
+                exemptionReason: v as "OVERSEAS" | "SAFE_CRITERION" | "PARALLEL_IMPORT",
+              })
+            }
+          />
+        )}
+        {declarationProblems.length > 0 && (
+          <p className="text-[11px] text-warning">
+            {declarationProblems.includes("KC_EXEMPTION_REASON_MISSING")
+              ? "면제 사유를 골라야 신고가 완성됩니다."
+              : declarationProblems.includes("CHILD_CHOICE_MISSING")
+                ? "이 카테고리는 어린이제품 인증 대상 여부를 골라야 합니다."
+                : "선택 조합이 맞지 않습니다 — 대상 아님과 면제는 함께 신고할 수 없습니다."}
+          </p>
+        )}
+      </div>
+
       <p className="text-xs font-medium text-text-secondary">
         실제로 취득한 인증서 값만 입력해주세요 — 값이 없으면 비워둡니다(임의 값 금지).
       </p>
@@ -331,6 +443,7 @@ export function PlatformPreview({
   onSetFieldReference,
   onFixNumberField,
   onUpdateChildCertification,
+  onUpdateKcDeclaration,
   onUpdateOptions,
   onUpdateVariant,
   onOpenListingModal,
@@ -453,6 +566,7 @@ export function PlatformPreview({
    * 문자열 필드(onFixTextField)와 달리 3개 하위 값을 한 번에 patch로 받는다 —
    * 값이 없으면 null(임의 값 생성 없음). */
   onUpdateChildCertification?: (patch: Partial<CanonicalProductCertification>) => void;
+  onUpdateKcDeclaration?: (patch: Partial<SmartStoreKcDeclaration>) => void;
   /** Sprint A-3(작업1 — 옵션도 Editable) */
   onUpdateOptions?: (raw: string) => void;
   /** Sprint A-12(작업6) — 옵션 조합별 SKU/재고/가격 편집. */
@@ -1249,6 +1363,7 @@ export function PlatformPreview({
                 naverValidation={naverValidation}
                 fix={fix}
                 onUpdateChildCertification={onUpdateChildCertification}
+                onUpdateKcDeclaration={onUpdateKcDeclaration ?? (() => {})}
                 onGoToSection={() => goToSection("section-kc")}
               />
             )}

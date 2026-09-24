@@ -863,6 +863,41 @@ export function NaverPayloadPreview({
           {showJson ? "전송 데이터 원문 닫기" : "▶ 전송 데이터 원문 보기 (Naver v2 Request)"}
         </button>
       </div>
+      {/* ══════════════════════════════════════════════════════════════════
+          P0-KC-11 ⑥(CPO 확정, 2026-09-24) — **화면에서 고른 것과 실제로 나가는
+          것이 같은지 눈으로 대조한다.**
+
+          🔴 화면 state 가 아니라 «payload» 에서 읽는다. 선택값을 그대로 다시
+          그리면 「고른 것」만 두 번 보여줄 뿐, 빌더가 실제로 무엇을 만들었는지는
+          알 수 없다 — 반쪽 조합이면 빌더가 통째로 undefined 를 내는데 그것도
+          여기서 드러나야 한다. */}
+      {(() => {
+        const exclude = payload.originProduct?.detailAttribute?.certificationTargetExcludeContent;
+        if (!exclude) return null;
+        const rows: [string, string][] = [];
+        if (exclude.childCertifiedProductExclusionYn !== undefined) {
+          rows.push(["childCertifiedProductExclusionYn", String(exclude.childCertifiedProductExclusionYn)]);
+        }
+        if (exclude.kcCertifiedProductExclusionYn !== undefined) {
+          rows.push(["kcCertifiedProductExclusionYn", exclude.kcCertifiedProductExclusionYn]);
+        }
+        rows.push(["kcExemptionType", exclude.kcExemptionType ?? "없음"]);
+        return (
+          <div className="mt-2 rounded-md border border-border bg-background px-3 py-2">
+            <p className="text-[11px] font-medium text-text-tertiary">
+              certificationTargetExcludeContent — 실제 전송값
+            </p>
+            <dl className="mt-1 space-y-0.5">
+              {rows.map(([k, v]) => (
+                <div key={k} className="flex gap-2 text-[11px]">
+                  <dt className="w-64 shrink-0 text-text-tertiary">{k}</dt>
+                  <dd className="font-medium text-text-primary">{v}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        );
+      })()}
       {showJson && (
         <pre className="max-h-96 overflow-auto rounded-md bg-background p-2 text-[11px] text-text-secondary">
           {JSON.stringify(payload, payloadReplacer, 2)}
