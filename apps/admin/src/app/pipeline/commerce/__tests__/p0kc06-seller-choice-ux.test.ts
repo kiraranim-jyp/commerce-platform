@@ -114,7 +114,13 @@ describe("⑤ 회귀 — Gate 자체는 건드리지 않았다", () => {
 
   it("미확인 → 차단 · 확인 → 통과 식이 그대로다", () => {
     expect(MODAL).toContain("const kcRegistrable = !hasSmartstoreKcCard || !kcBlocked && (!kcNeedsReview || reviewConfirmed);");
-    expect(MODAL).toContain("kcRegistrable && coupangNoticeRegistrable && !submitting");
+    /* 🔴 `canConfirm` 문자열 전체를 박아두지 않는다 — 조건이 하나 늘 때마다
+       무관한 테스트가 깨진다(P0-KC-08 에서 readinessOk 가 붙으며 실제로 깨졌다).
+       «각 조건이 걸려 있는가» 만 본다. */
+    const canConfirm = MODAL.slice(MODAL.indexOf("const canConfirm ="), MODAL.indexOf("async function handleConfirmClick"));
+    for (const cond of ["kcRegistrable", "coupangNoticeRegistrable", "!submitting"]) {
+      expect(canConfirm).toContain(cond);
+    }
   });
 
   it("NOT_APPLICABLE · BLOCKED 규칙 그대로", () => {

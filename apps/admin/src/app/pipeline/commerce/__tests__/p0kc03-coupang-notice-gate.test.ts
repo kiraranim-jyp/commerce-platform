@@ -67,7 +67,13 @@ describe("① Test 1/2 — 확인 전 차단 · 확인 후 허용", () => {
   });
 
   it("등록 버튼이 이 게이트를 실제로 탄다", () => {
-    expect(MODAL).toContain("kcRegistrable && coupangNoticeRegistrable && !submitting");
+    /* 🔴 `canConfirm` 문자열 전체를 박아두지 않는다 — 조건이 하나 늘 때마다
+       무관한 테스트가 깨진다(P0-KC-08 에서 readinessOk 가 붙으며 실제로 깨졌다).
+       «각 조건이 걸려 있는가» 만 본다. */
+    const canConfirm = MODAL.slice(MODAL.indexOf("const canConfirm ="), MODAL.indexOf("async function handleConfirmClick"));
+    for (const cond of ["kcRegistrable", "coupangNoticeRegistrable", "!submitting"]) {
+      expect(canConfirm).toContain(cond);
+    }
     expect(MODAL).toContain("disabled={!canConfirm}");
     expect(MODAL).toContain("if (!canConfirm) return;");
   });

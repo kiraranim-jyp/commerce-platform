@@ -2637,7 +2637,24 @@ export function CommerceWorkspace({
     // 사용성 버그였다). 판정 로직을 버튼마다 복제하지 않고 이 공용 진입점
     // 하나에서만 게이트한다 — effectiveListingStatus가 이미 RegistrationReadinessCard의
     // canRegister와 같은 신호(필수 항목 통과 + 카테고리 확정)를 담고 있다.
-    if (effectiveListingStatus === "DRAFT") return;
+    /* ══════════════════════════════════════════════════════════════════════
+       P0-KC-08(CPO 확정, 2026-09-24) — **모달 OPEN ≠ 등록 허용.**
+
+       위 N-3.60 게이트가 KC 를 교착시켰다:
+
+         KC 미확인 → 필수 미통과 → DRAFT → 모달 차단 → KC 확인 불가 → 계속 DRAFT
+
+       KC 를 푸는 «유일한» 경로가 ④ 모달인데 그 모달이 KC 때문에 안 열렸다.
+       그리고 조용히 return 해서 셀러에게는 「버튼이 고장났다」로 보였다.
+
+       🔴 DRAFT 를 통째로 열지 «않는다»(N-3.60 회귀). KC 판매자 확인이
+       필요한 경우에만 연다. 그 밖의 DRAFT 는 예전 그대로 막힌다.
+
+       🔴 열어 주는 것은 «확인할 자리» 이지 등록 허가가 아니다. 모달 안에서는
+       readinessBlockers 가 [등록 시작]을 계속 막고 부족 항목을 적는다. */
+    const kcReviewNeeded =
+      tab === "smartstore" && smartStoreValidation?.kcStatus === "SELLER_REVIEW_REQUIRED";
+    if (effectiveListingStatus === "DRAFT" && !kcReviewNeeded) return;
     if (wasEditingDraftFieldRef.current) {
       wasEditingDraftFieldRef.current = false;
       const proceed = window.confirm(
@@ -3559,6 +3576,13 @@ export function CommerceWorkspace({
           smartstoreKcStatus={confirmingPlatform === "smartstore" ? (smartStoreValidation?.kcStatus ?? null) : undefined}
           smartstoreChildCertification={
             confirmingPlatform === "smartstore" ? (product.childCertification.value ?? null) : undefined
+          }
+          /* P0-KC-08 — KC 확인 때문에 열렸을 수 있으므로, 등록을 막는 이유를
+             모달이 «직접» 들고 있어야 한다. 비어 있으면 등록 가능. */
+          readinessBlockers={
+            effectiveListingStatus === "DRAFT"
+              ? (mergedReadiness[confirmingPlatform]?.priorityItems ?? []).map((i) => i.label)
+              : []
           }
           coupangKcNotices={confirmingPlatform === "coupang" ? coupangKcNotices : undefined}
           smartstoreCategoryCode={

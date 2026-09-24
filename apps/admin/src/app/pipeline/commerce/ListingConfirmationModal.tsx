@@ -56,6 +56,7 @@ export function ListingConfirmationModal({
   smartstoreCategoryCode,
   smartstoreChildCertification,
   coupangKcNotices,
+  readinessBlockers,
   snapshotId,
   jobKey,
   progress = null,
@@ -85,6 +86,12 @@ export function ListingConfirmationModal({
    * 읽지 않고, 빌더가 등록 시점에 같은 규칙으로 다시 만든다.
    */
   coupangKcNotices?: { fieldName: string; value: string; autoFilled: boolean }[];
+  /**
+   * P0-KC-08 — 등록을 막고 있는 필수 항목 이름들. 비어 있으면 등록 가능.
+   * 🔴 이 모달은 KC 확인을 위해 «준비가 덜 된 상태에서도» 열릴 수 있다.
+   * 열렸다는 것이 등록해도 된다는 뜻이 아니므로, 그 판단을 여기서 다시 한다.
+   */
+  readinessBlockers?: string[];
   /** P0-KC-SAFETY — 판매자가 «무엇을» 보증하는지 보여주기 위한 표시 전용 값. */
   smartstoreChildCertification?: {
     name?: string; companyName?: string; certificationNumber?: string; certificationDate?: string;
@@ -134,8 +141,11 @@ export function ListingConfirmationModal({
   const kcBlocked = smartstoreKcStatus === "BLOCKED";
   const kcRegistrable = !hasSmartstoreKcCard || !kcBlocked && (!kcNeedsReview || reviewConfirmed);
   const coupangNoticeRegistrable = !coupangNoticeNeedsReview || coupangNoticeConfirmed;
+  /* 🔴 P0-KC-08 — 모달이 열린 것과 등록해도 되는 것은 다르다. */
+  const blockers = readinessBlockers ?? [];
+  const readinessOk = blockers.length === 0;
   const canConfirm =
-    generalConfirmed && priceInfoConfirmed && responsibilityConfirmed && kcRegistrable && coupangNoticeRegistrable && !submitting;
+    generalConfirmed && priceInfoConfirmed && responsibilityConfirmed && kcRegistrable && coupangNoticeRegistrable && readinessOk && !submitting;
 
   async function handleConfirmClick() {
     if (!canConfirm) return;
@@ -357,6 +367,28 @@ export function ListingConfirmationModal({
               />
               <span>위 입력값을 확인했습니다.</span>
             </label>
+          </div>
+        )}
+
+        {/* P0-KC-08 — 왜 아직 등록할 수 없는지 «적는다». 조용히 막지 않는다. */}
+        {!readinessOk && (
+          <div className="mt-4 rounded-md border border-warning/40 bg-warning-soft p-3">
+            <p className="text-xs font-medium text-text-tertiary">
+              ⚠ 아직 등록할 수 없습니다 — 먼저 채워야 할 항목이 {blockers.length}개 있습니다
+            </p>
+            <ul className="mt-1.5 space-y-0.5">
+              {blockers.slice(0, 5).map((label) => (
+                <li key={label} className="text-xs text-text-secondary">
+                  • {label}
+                </li>
+              ))}
+              {blockers.length > 5 && (
+                <li className="text-xs text-text-tertiary">외 {blockers.length - 5}건</li>
+              )}
+            </ul>
+            <p className="mt-1.5 text-xs text-text-secondary">
+              KC 확인은 지금 하실 수 있습니다 — 확인한 뒤 위 항목을 채우면 등록이 열립니다.
+            </p>
           </div>
         )}
 
