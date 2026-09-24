@@ -555,7 +555,27 @@ export function validateNaverPayload(
        🔴 위 N-3.45 가드(「상세페이지 참조」로 대체 금지)는 «그대로» 다. 여기서
        푸는 것은 참조 대체가 아니라, 판매자가 명시적으로 «대상이 아니라고
        선언한» 경우뿐이다. 선언이 없으면 예전처럼 실제 값을 요구한다. */
-    if (requiresChildCertificationData(declaration, { childCertificationRequired: true })) {
+    /* 🔴 P0-KC-12(CEO Production 실측, 2026-09-24) — 여기에 잠깐
+       requiresChildCertificationData() 게이트를 걸었다가 «되돌린다».
+
+       실제 네이버 응답이 그 가정을 부쉈다:
+
+         HTTP 400
+         originProduct.detailAttribute.productInfoProvidedNotice.kids
+           .certificationType: 데이터를 입력해 주세요.
+
+       certificationTargetExcludeContent(인증 대상 제외 «신고»)를 보내도
+       네이버는 KIDS 고시의 certificationType 을 여전히 요구한다. 둘은 같은
+       「인증」이라는 말을 쓰지만 «다른 축» 이다:
+
+         certificationTargetExcludeContent   규제 신고
+         kids.certificationType              소비자 고시(카테고리가 KIDS 면 항상)
+
+       게이트를 걸어 두면 화면은 READY 라고 말하는데 네이버가 거부한다 —
+       이 프로젝트가 반복해서 경계해 온 바로 그 패턴이다. 화면이 먼저
+       막는 편이 낫다. 실제 고시값을 무엇으로 채울지는 P0-KC-12 에서
+       공식 허용값을 확인한 뒤 정한다(추측 금지). */
+    {
       check(
         fields,
         "productInfoProvidedNotice(KIDS).certificationType",

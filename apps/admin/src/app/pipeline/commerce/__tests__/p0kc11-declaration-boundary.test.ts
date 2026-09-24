@@ -204,29 +204,66 @@ describe("⑦ validateNaverPayload 호출부 전수 — 선언을 실제로 넘�
  * 등록이 막혔다. 인증서가 없다고 선언한 상품에 「인증서에 적힌 유형」을 적으라고
  * 하면 남는 길은 또 아무 값이나 넣는 것뿐이다 — 이번 사고의 형태 그대로다.
  */
-describe("⑧ certificationType 도 선언을 따른다", () => {
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * ⑧ P0-KC-12 — **실제 네이버 400 을 고정한다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 2026-09-24 17:25, Bubble Sweatshirt / Main Story, 실제 Production 응답:
+ *
+ *   HTTP 400
+ *   originProduct.detailAttribute.productInfoProvidedNotice.kids.certificationType
+ *     → 데이터를 입력해 주세요.
+ *
+ * 🔴 이 한 줄이 «추측으로는 얻을 수 없던» 사실을 확정했다:
+ * certificationTargetExcludeContent(인증 대상 제외 신고)를 보내도 네이버는
+ * KIDS 고시의 certificationType 을 여전히 요구한다. 둘은 같은 「인증」이라는
+ * 말을 쓰지만 다른 축이다 — 규제 «신고» 와 소비자 «고시».
+ *
+ * 나는 이 둘을 한 게이트로 묶었다가(cda18cd) 화면만 통과시키고 네이버에서
+ * 거부당했다. 그 가정이 다시 들어오지 못하게 여기서 못 박는다.
+ */
+describe("⑧ 실측 고정 — kids.certificationType 은 «항상» 필수다", () => {
   const VALIDATE = codeOnly(readFileSync(join(ROOT, "validate-payload.ts"), "utf8"));
 
-  it("🔴 인증 «유형» 요구가 requiresChildCertificationData 뒤에 걸려 있다", () => {
+  it("🔴 certificationType 요구가 선언 뒤에 «걸려 있지 않다»", () => {
+    /* 실측이 부순 가정: 「대상 아님을 선언하면 고시 인증유형도 면제된다」.
+       이 문자열이 다시 나타나면 같은 400 이 재발한다. */
     const flat = VALIDATE.replace(/\s+/g, " ");
-    expect(flat).toContain(
+    expect(flat).not.toContain(
       "if (requiresChildCertificationData(declaration, { childCertificationRequired: true })) { check( fields, \"productInfoProvidedNotice(KIDS).certificationType\"",
     );
   });
 
-  it("🔴 「상세페이지 참조」 대체 금지는 그대로다 — 푼 것은 선언뿐이다", () => {
-    expect(VALIDATE).toContain("로 대체할 수 없습니다");
-    /* 🔴 certificationType 은 «참조 금지 목록» 에 이름이 남아 있어야 한다.
-       내가 처음 쓴 「파일에 이 이름이 없어야 한다」는 검사는 틀렸다 — 금지
-       목록에 있는 것이 정상이고, 없어지는 것이 사고다. */
+  it("고시 인증유형은 여전히 검사된다 — 화면이 먼저 막는다", () => {
+    expect(VALIDATE).toContain('"productInfoProvidedNotice(KIDS).certificationType"');
+    expect(VALIDATE).toContain("Boolean(input.product.certificationType?.value)");
+  });
+
+  it("🔴 실측 응답 원문을 기록해 둔다 — 다음 사람이 추측하지 않도록", () => {
+    const NAVER_400 = {
+      at: "2026-09-24T17:25+09:00",
+      product: "Bubble Sweatshirt in Grey Melange by Main Story",
+      status: 400,
+      field: "originProduct.detailAttribute.productInfoProvidedNotice.kids.certificationType",
+      message: "데이터를 입력해 주세요.",
+    };
+    /* certificationTargetExcludeContent 는 «거부 사유가 아니었다» — 인증번호
+       계열 오류가 사라졌다는 것이 그 증거다. 남은 것은 고시 한 칸이다. */
+    expect(NAVER_400.field).not.toContain("certificationTargetExcludeContent");
+    expect(NAVER_400.field).toContain("productInfoProvidedNotice.kids.certificationType");
+    // 🔴 이 문구는 «네이버» 가 낸 것이다 — 우리 코드에 있으면 안 된다(지어낸 것이 된다).
+    expect(VALIDATE).not.toContain("데이터를 입력해 주세요");
+  });
+
+  it("인증 «번호» 쪽 선언 연동은 유지된다 — 그건 실측이 부수지 않았다", () => {
+    expect(VALIDATE).toContain("requiresChildCertificationData(declaration");
+  });
+
+  it("🔴 「상세페이지 참조」 대체 금지는 그대로다", () => {
     const ref = readFileSync(join(ROOT, "../notice/reference-eligibility.ts"), "utf8");
     expect(ref).toContain(
       'export const NOTICE_KC_FIELDS_NEVER_REFERENCE_ELIGIBLE = ["certificationType", "childCertification"]',
     );
-  });
-
-  it("번호와 유형이 «같은» 판단을 쓴다 — 하나만 풀리는 일이 없다", () => {
-    const uses = VALIDATE.split("requiresChildCertificationData(").length - 1;
-    expect(uses).toBeGreaterThanOrEqual(2);
   });
 });
