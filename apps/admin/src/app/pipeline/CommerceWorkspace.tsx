@@ -385,6 +385,10 @@ export function CommerceWorkspace({
    * 🔴 빈 상태로 시작한다. 미리 켜 두면 셀러가 «고른 적 없는» 채널로 등록이
    * 나갈 수 있고, 고르는 행위 자체가 의사표시라는 이 화면의 전제가 무너진다.
    */
+  /** N-07-01 — 스마트스토어 추가 이미지에 대표 이미지를 포함할지. 🔴 기본 OFF.
+   *  저장하지 않는다(새 snapshot 칸을 만들지 않는다) — 새로고침하면 기본값으로
+   *  돌아가고, 그때 나가는 payload 는 지금 Production 과 같다. */
+  const [includeRepresentativeInAdditional, setIncludeRepresentativeInAdditional] = useState(false);
   const [selectedCommerces, setSelectedCommerces] = useState<CommerceId[]>([]);
   /** 지금 등록 중인 커머스(순차 실행). null 이면 실행 중이 아니다. */
   const [multiRunning, setMultiRunning] = useState<CommerceId | null>(null);
@@ -1582,14 +1586,41 @@ export function CommerceWorkspace({
    * 통과하지 못하므로, 이 차이로 «등록되는» payload 가 달라지지 않는다.
    */
   const listingModelFor = useCallback(
-    (platformId: PlatformId) =>
-      PLATFORM_ADAPTERS[platformId].toListingModel(
+    (platformId: PlatformId) => {
+      const model = PLATFORM_ADAPTERS[platformId].toListingModel(
         product,
         platformId === tab ? effectiveCategorySelection : categoryMappings[platformId],
         { liveRates: exchangeRates?.rates, roundingUnit: priceRoundingUnit ?? undefined },
         platformId,
-      ),
-    [tab, product, effectiveCategorySelection, categoryMappings, exchangeRates, priceRoundingUnit],
+      );
+      /* ══════════════════════════════════════════════════════════════════
+         N-07-01(CEO 확정, 2026-09-24) — **대표 이미지를 추가 이미지에 포함.**
+
+         🔴 기본값은 OFF 다. 지금 Production 에서 실제로 나가는 모양
+         (대표 1 + 추가 2)을 기본 동작에서 바꾸지 않는다 — 기본값을 켜는 것은
+         그 자체로 기존 등록 payload 변경이다.
+
+         🔴 스마트스토어에만 적용한다. 조사 결과 쿠팡(imageOrder 0 =
+         REPRESENTATION)과 롯데ON(gallery[0], rprtImgYn="Y")은 이미 대표를
+         목록 맨 앞에 넣고 있다 — 거기에 또 넣으면 «중복» 이 된다.
+
+         🔴 어댑터 계약을 바꾸지 않는다. 어댑터가 낸 결과 위에서 «구성» 만
+         바꾼다(Master 이미지 원본은 한 장도 복제되지 않는다). 그래서 단독
+         등록과 다중 등록이 여전히 이 함수 하나를 지나고 payload 도 같다. */
+      if (!includeRepresentativeInAdditional || platformId !== "smartstore") return model;
+      if (!model.representativeImage) return model;
+      if (model.additionalImages.includes(model.representativeImage)) return model;
+      return { ...model, additionalImages: [model.representativeImage, ...model.additionalImages] };
+    },
+    [
+      tab,
+      product,
+      effectiveCategorySelection,
+      categoryMappings,
+      exchangeRates,
+      priceRoundingUnit,
+      includeRepresentativeInAdditional,
+    ],
   );
 
   const listing = useMemo(() => {
@@ -3176,7 +3207,24 @@ export function CommerceWorkspace({
                   />
                 ),
                 images: (
-                  <ImageInlineEditor
+                  <div className="space-y-2">
+                    {/* N-07-01 — 「추가 이미지에 대표 이미지 포함」. 🔴 기본 OFF 이고
+                        스마트스토어에만 적용된다(쿠팡·롯데ON 은 이미 포함한다). */}
+                    <label className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs text-text-secondary">
+                      <input
+                        type="checkbox"
+                        checked={includeRepresentativeInAdditional}
+                        onChange={(event) => setIncludeRepresentativeInAdditional(event.target.checked)}
+                        className="h-4 w-4 accent-primary"
+                      />
+                      <span>
+                        스마트스토어 추가 이미지에 <b className="font-medium text-text-primary">대표 이미지 포함</b>
+                        <span className="ml-1 text-text-tertiary">
+                          — 쿠팡·롯데ON 은 이미 포함해서 보냅니다(이 설정과 무관)
+                        </span>
+                      </span>
+                    </label>
+                    <ImageInlineEditor
                     product={product}
                     items={items}
                     thumbnails={thumbnails}
@@ -3189,7 +3237,8 @@ export function CommerceWorkspace({
                     onAddImage={onAddImage}
                     onRemoveImage={onRemoveImage}
                     addingImage={addingImage}
-                  />
+                    />
+                  </div>
                 ),
                 /* UX 2.5(CEO 지시, 2026-09-11) — 화면 전체에서 **유일한**
                    PriceEditor 마운트 지점. 예전엔 PlatformPreview(채널 화면)
@@ -3419,6 +3468,31 @@ export function CommerceWorkspace({
             )
               ? "LIVE"
               : "DRY_RUN"
+          }
+          /* ════════════════════════════════════════════════════════════════
+             🔴 N-07-01(CEO 확정, 2026-09-24) — **다중 등록도 KC 확인을 거친다.**
+
+             여기 이 두 줄이 없어서 단독 등록과 다중 등록의 «등록 가능 여부» 가
+             갈리고 있었다. 모달이 KC 카드를 못 그리니 확인 체크박스도 없고,
+             seller_compliance_confirmations 기록도 남지 않는다. 그러면 서버의
+             isKcStatusRegistrable(SELLER_REVIEW_REQUIRED, null) 이 false 라
+             **단독으로는 되는 상품이 다중으로는 거절된다.**
+
+             payload 는 같은데 등록 결과가 갈리는 상태였다(Single ≠ Multi).
+             E-1 은 단독 경로였고 인증정보가 이미 채워져 있어 드러나지 않았다.
+
+             🔴 스마트스토어를 «고른 경우에만» 넘긴다 — 고르지 않았는데 KC 카드가
+             뜨면 셀러는 지금 하지도 않을 등록의 확인을 요구받는다. */
+          smartstoreKcStatus={
+            selectedCommerces.includes("smartstore") ? (smartStoreValidation?.kcStatus ?? null) : undefined
+          }
+          smartstoreCategoryCode={
+            selectedCommerces.includes("smartstore")
+              ? isVerifiedCategorySelected(categoryMappings.smartstore) &&
+                categoryMappings.smartstore.candidate?.platform === "smartstore"
+                ? categoryMappings.smartstore.candidate.id
+                : null
+              : undefined
           }
           progress={multiRunning ? "SENDING" : null}
           snapshotId={snapshotId}
