@@ -242,7 +242,25 @@ function KcCertificationBlock({
         실제로 취득한 인증서 값만 입력해주세요 — 값이 없으면 비워둡니다(임의 값 금지).
       </p>
       <div className={FIELD_GRID_NARROW_CLASS}>
-        <FieldRow label="인증 대상 여부/유형" field={product.certificationType}>
+        {/* 🔴 N-07-01 2차(CEO 확정, 2026-09-24) — 라벨이 「인증 대상 여부/유형」
+            이었다. 「여부」까지 자유 텍스트로 답하라는 것처럼 읽혀서, 빈 값이
+            「비대상」인지 「미입력」인지 구분되지 않았다.
+
+            🔴 여기에 「○ 인증 대상 / ○ 해당 없음」 라디오를 «만들지 않는다».
+            그 축은 이미 있다 — 대상 여부는 카테고리가 정하고(resolveKcStatus →
+            NOT_APPLICABLE), 셀러가 「대상이 아니다」라고 판단하는 경로는 위
+            KcSellerStatusBanner 의 확인(seller_compliance_confirmations)이다.
+            라디오를 새로 만들면 KcStatus 와 두 벌이 되어 두 화면이 다른 말을
+            하게 된다(CEO 확정 2번: 새 KC 상태 모델 금지).
+
+            그래서 이 칸은 «유형» 만 받는다 — payload 의
+            productInfoProvidedNotice.kids.certificationType 에 그대로 실리는
+            값이고, 값 자체는 한 글자도 바뀌지 않는다. */}
+        <FieldRow
+          label="인증 유형"
+          field={product.certificationType}
+          note="대상 여부는 위 상태가 말합니다 — 이 칸은 인증서에 적힌 유형만 적습니다."
+        >
           <EditableText
             value={product.certificationType.value}
             onCommit={(v) => fix?.("certificationType", v)}

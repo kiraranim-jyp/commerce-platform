@@ -108,6 +108,7 @@ import {
   type CommerceMissingItem,
   commerceLabel,
   isAlreadyRegistered,
+  classifyMissing,
   isPlatformCommerce,
   type CommerceId,
   type CommerceOutcome,
@@ -2014,6 +2015,10 @@ export function CommerceWorkspace({
         label: item.label,
         sectionId: item.sectionId,
         externalHref: item.externalHref,
+        /* N-07-01 2차 — 「확인 필요」와 「입력 필요」를 가른다. 판정은
+           classifyMissing 한 곳에서만 하고, 여기서는 이미 있는 근거
+           (sourceStatus)를 넘겨줄 뿐이다. */
+        kind: classifyMissing(item.sourceItems.map((s) => s.sourceStatus)),
       }));
     }
     return out;
@@ -3105,6 +3110,10 @@ export function CommerceWorkspace({
                   checking={checkingReadiness}
                   missingByCommerce={missingByCommerce}
                   onFixRequest={requestFix}
+                  /* N-07-01 2차 — ④ 모달이 보는 «그 값» 을 ③ 도 본다. 두 화면이
+                     다른 KC 상태를 말할 수 없다. 탭을 안 열었으면 null 이고,
+                     화면은 그때 「확인 전」이라고 «말한다»(해당 없음이 아니다). */
+                  smartstoreKcStatus={smartStoreValidation?.kcStatus ?? null}
                 />
               }
               /* N-05-C — ④ 의 실행 줄. 체크박스를 복제하지 않는다(CPO 지시 D). */

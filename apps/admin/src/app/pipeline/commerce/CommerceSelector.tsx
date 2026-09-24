@@ -7,8 +7,11 @@ import type {
   CommerceMissingItem,
   CommerceOutcomes,
 } from "./commerce-registry";
+import { missingKindLabel } from "./commerce-registry";
 import type { RegistrationChannel } from "./registration-channels";
 import { readinessStateToLevel, type ReadinessLevel } from "./readiness-state";
+import { kcStatusNote } from "./kc-status-note";
+import type { KcStatus } from "@commerce/listing";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -166,6 +169,7 @@ export function CommerceSelector({
   checking = false,
   missingByCommerce,
   onFixRequest,
+  smartstoreKcStatus,
 }: {
   channels: RegistrationChannel[];
   selected: readonly CommerceId[];
@@ -186,6 +190,12 @@ export function CommerceSelector({
   missingByCommerce?: CommerceMissingByChannel;
   /** N-06-C — 그 항목을 고치러 «바로» 간다(채널 + 섹션까지). */
   onFixRequest?: (item: CommerceMissingItem) => void;
+  /**
+   * N-07-01 2차 — 스마트스토어 KC 상태(`resolveKcStatus()` 결과 그대로).
+   * 🔴 여기서 판정하지 않는다. `null` 은 「해당 없음」이 아니라 «아직 판정이
+   * 없다»(탭을 안 열었다)는 뜻이다.
+   */
+  smartstoreKcStatus?: KcStatus | null;
 }) {
   const selectable = channels.filter(isSelectableCommerce);
   const selectedCount = selected.length;
@@ -242,12 +252,62 @@ export function CommerceSelector({
 
                   🔴 고를 때만 펼친다 — 고르지도 않은 채널의 부족 목록이 길게
                   늘어지면 정작 고른 채널이 묻힌다. */}
+              {/* ── N-07-01 2차 — KC 한 줄 ────────────────────────────────
+                  🔴 고른 채널에만, 그리고 스마트스토어에만 보여준다. 쿠팡·롯데ON
+                  에는 이 4-state 가 «존재하지 않는다» — 조사 결과 각 커머스의
+                  조건부 요구사항은 서로 다르고, 공통 UI 패턴만 재사용한다. */}
+              {checked && channel.id === "smartstore" && (
+                <div className="mb-1 ml-9 flex items-center gap-1.5 text-[11px]">
+                  {(() => {
+                    const note = kcStatusNote(smartstoreKcStatus);
+                    return (
+                      <>
+                        <span className={note.tone === "OK" ? "text-success" : note.tone === "ATTENTION" ? "text-warning" : "text-text-tertiary"}>
+                          {note.tone === "OK" ? "✓" : note.tone === "ATTENTION" ? "⚠" : "—"}
+                        </span>
+                        <span className="text-text-secondary">{note.text}</span>
+                        {note.actionLabel && onFixRequest && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onFixRequest({
+                                commerceId: "smartstore",
+                                key: "smartstore:kc",
+                                label: "KC 인증",
+                                sectionId: "section-kc",
+                              })
+                            }
+                            className="text-primary underline underline-offset-2 hover:text-primary-hover"
+                          >
+                            {note.actionLabel}
+                          </button>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+
               {checked && (missingByCommerce?.[channel.id]?.length ?? 0) > 0 && (
                 <ul className="mb-1 ml-9 space-y-0.5">
                   {missingByCommerce![channel.id]!.slice(0, MISSING_PREVIEW_COUNT).map((item) => (
                     <li key={item.key} className="flex items-center gap-1.5 text-[11px] text-text-secondary">
                       <span className="text-warning">•</span>
                       <span className="truncate">{item.label}</span>
+                      {/* N-07-01 2차 — 「확인만 하면 되는 것」과 「직접 적어야 하는
+                          것」은 셀러가 들이는 품이 다르다. 근거가 없으면 이 칸은
+                          아예 나오지 않는다(missingKindLabel → null). */}
+                      {missingKindLabel(item.kind) && (
+                        <span
+                          className={`shrink-0 rounded px-1 py-px text-[10px] ${
+                            item.kind === "INPUT"
+                              ? "bg-warning-soft text-warning"
+                              : "bg-surface-hover text-text-tertiary"
+                          }`}
+                        >
+                          {missingKindLabel(item.kind)}
+                        </span>
+                      )}
                       {onFixRequest && (
                         <button
                           type="button"

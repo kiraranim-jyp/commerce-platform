@@ -116,6 +116,31 @@ export type CommerceLastAttempts = Partial<Record<CommerceId, CommerceLastAttemp
  * 순간 출처를 잃는다. 그래서 화면 레이어에서 한 겹만 감싼다 — 새 판정도,
  * 새 저장소도 만들지 않는다.
  */
+export type MissingKind = "CONFIRM" | "INPUT";
+
+/**
+ * 🔴 새 축을 만들지 않는다. `ReadinessItem.sourceStatus` 가 이미 「이 값이 어디서
+ * 오는가」를 말하고 있고, 그중 `MANUAL_REQUIRED` 만이 «셀러가 직접 적어야»
+ * 하는 것이다. 나머지(AUTO · SETTINGS_DEFAULT · DEFAULT_VALUE)는 채울 근거가
+ * 있으니 셀러는 «맞는지 보기만» 하면 된다.
+ *
+ * 🔴 근거가 없으면 `undefined` 를 준다 — 가격/카테고리처럼 sourceItems 가 비어
+ * 있는 항목까지 「확인」으로 싸잡아 적으면, 확인하지 않은 것을 확인했다고
+ * 말하는 것이 된다.
+ */
+export function classifyMissing(
+  sourceStatuses: readonly (string | undefined)[],
+): MissingKind | undefined {
+  if (sourceStatuses.length === 0) return undefined;
+  if (sourceStatuses.some((s) => s === undefined)) return undefined;
+  return sourceStatuses.every((s) => s === "MANUAL_REQUIRED") ? "INPUT" : "CONFIRM";
+}
+
+export function missingKindLabel(kind: MissingKind | undefined): string | null {
+  if (!kind) return null;
+  return kind === "INPUT" ? "입력 필요" : "확인 필요";
+}
+
 export interface CommerceMissingItem {
   commerceId: CommerceId;
   key: string;
@@ -124,6 +149,9 @@ export interface CommerceMissingItem {
   sectionId?: string;
   /** 설정 화면 등 «채널 밖» 으로 가야 하는 항목(sectionId 와 배타). */
   externalHref?: string;
+  /** N-07-01 2차 — 「확인하면 되는 것」과 「직접 적어야 하는 것」은 셀러가 들이는
+   * 품이 다르다. 근거가 없으면 «비워 둔다» — 추정해서 적지 않는다. */
+  kind?: MissingKind;
 }
 
 export type CommerceMissingByChannel = Partial<Record<CommerceId, CommerceMissingItem[]>>;
