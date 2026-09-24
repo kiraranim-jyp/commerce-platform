@@ -65,13 +65,24 @@ export interface CoupangSellerConfig {
   topCommonImageEnabled: boolean;
   bottomCommonImageUrl: string | null;
   bottomCommonImageEnabled: boolean;
-  /** A-12.3-P0-2(CPO 지시: "인증/허가 사항 — 대부분 구매대행은 KC마크 없이
-   * 구매대행 가능한 품목입니다. Seller Profile 기본값으로 자동 입력") — 빈
-   * 문자열이면 기능이 꺼진 것과 같다(기존 동작 그대로 PLACEHOLDER+critical로
-   * 남는다). 판매자가 이 문구를 직접 확인하고 설정했을 때만 적용한다 — 실제로
-   * KC 인증이 법적으로 필요한 카테고리/상품에도 무조건 이 문구를 채우면
-   * 컴플라이언스 리스크가 된다는 걸 판매자가 인지해야 하는 값이라, CartPilot이
-   * 임의로 강제 기본값을 넣지 않고 Settings에서 명시적으로 켜야만 쓴다. */
+  /**
+   * 🔴 이 주석은 한동안 «사실이 아니었다»(P0-KC-03 에서 정정, 2026-09-24).
+   *
+   * A-12.3-P0-2 는 「빈 문자열이면 기능이 꺼진 것과 같다 — Settings 에서
+   * 명시적으로 켜야만 쓴다」였다. 그런데 A-12.3-P0-3(CPO 2차 지시)이 그것을
+   * 뒤집어 「코드 기본값을 먼저 넣는다」로 바꿨고(아래 DEFAULT_KC_EXEMPTION_TEXT),
+   * P0-2 주석만 옛 말을 한 채 남아 있었다. 실제 등록 11건이 전부 코드 기본값
+   * 경로였고 사람이 이 값을 덮어쓴 건은 0건이었다.
+   *
+   * ── 현재 정책(A-12.3-P0-3 + P0-KC-03) ───────────────────────────────────
+   * 이 값은 «선택적 상위 레이어» 다. 비어 있으면 코드 기본값
+   * `DEFAULT_KC_EXEMPTION_TEXT` 가 대신 들어간다 — 기능이 꺼지는 것이 아니다.
+   *
+   * 그 대신 P0-KC-03 이 붙인 조건: 따져가 «대신 넣은» 문장(source=DEFAULT_VALUE)은
+   * 판매 전 최종 확인 화면에서 판매자에게 그대로 보여주고 확인을 받는다.
+   * 🔴 그 확인의 뜻은 「지금 등록될 문구를 봤다」뿐이다 — 「이 상품이 법적으로
+   * KC 면제다」도, 「따져가 면제를 확인했다」도 아니다.
+   */
   kcExemptionText: string;
 }
 
@@ -626,7 +637,7 @@ const ATTRIBUTE_FALLBACK_CONTENT = "전체 상품 상세페이지 참조";
 // 실제로 KC 인증이 법적으로 필요한 상품은 사용자가 "카테고리 필수 입력" 화면에서
 // 이 필드를 직접 다른 값으로 override하면 된다(USER_INPUT이 이 기본값보다 항상
 // 먼저 확인됨).
-const DEFAULT_KC_EXEMPTION_TEXT = "KC마크 없이 구매대행 가능한 품목";
+export const DEFAULT_KC_EXEMPTION_TEXT = "KC마크 없이 구매대행 가능한 품목";
 
 /** 쿠팡 구매옵션/고시정보 이름(예: "패션의류/잡화 사이즈", "색상", "재질")과 원본
  * 데이터(옵션 그룹명 또는 CanonicalProduct 필드)를 동의어로 느슨하게 매칭한다 —
@@ -698,7 +709,10 @@ const QUALITY_GUARANTEE_SYNONYMS = ["품질보증기준", "품질보증"];
  * Compliance Report가 다른 필드보다 무겁게(FAIL 수준으로) 취급해야 한다. */
 const COMPLIANCE_CRITICAL_SYNONYMS = ["kc", "인증"];
 
-function isComplianceCritical(fieldName: string): boolean {
+/* P0-KC-03(CPO 확정, 2026-09-24) — 화면이 「어느 고시 칸이 KC 칸인가」를
+   «다시 정하지 않도록» 내보낸다. 이 규칙이 두 벌이 되면, 등록에는 실리는데
+   확인 화면에는 안 보이는 칸이 생긴다. */
+export function isComplianceCritical(fieldName: string): boolean {
   const lower = fieldName.toLowerCase();
   return COMPLIANCE_CRITICAL_SYNONYMS.some((s) => lower.includes(s));
 }

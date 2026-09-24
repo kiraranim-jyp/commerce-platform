@@ -25,6 +25,7 @@ import { mockProductContentProvider } from "@commerce/content";
 import {
   buildComplianceReport,
   buildCoupangCompliance,
+  isComplianceCritical,
   buildNaverProductPayload,
   LISTING_EXECUTORS,
   validateNaverPayload,
@@ -2040,7 +2041,11 @@ export function CommerceWorkspace({
    * 안내만 하므로, 여기서 어떤 variant를 대표로 쓰든 최종 등록 결과에는 영향이
    * 없다(실제 등록은 품목마다 buildCoupangItem이 자기 variant로 다시 계산한다). */
   const compliancePreview = useMemo(() => {
-    if (tab !== "coupang" || !categoryMeta || !listing) return null;
+    /* P0-KC-03 — 전에는 쿠팡 «탭» 을 열어야만 계산했다. 그러면 다중 등록에서
+       쿠팡을 골라도 KC 고시 문구를 보여줄 수 없다(스마트스토어 KC 가 탭을
+       열어야만 보였던 것과 같은 구멍). 골랐으면 계산한다. */
+    if (!categoryMeta || !listing) return null;
+    if (tab !== "coupang" && !selectedCommerces.includes("coupang")) return null;
     return buildCoupangCompliance(
       categoryMeta,
       {
@@ -2057,7 +2062,30 @@ export function CommerceWorkspace({
       },
       { optionGroups: product.optionGroups, variant: product.variants[0] },
     );
-  }, [tab, categoryMeta, listing, product, defaultContactNumber]);
+  }, [tab, selectedCommerces, categoryMeta, listing, product, defaultContactNumber]);
+
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * P0-KC-03(CPO 확정, 2026-09-24) — **따져가 대신 적은 문장을 판매자가 본다.**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 쿠팡의 KC 관련 고시 칸은 사람이 아무것도 안 하면 따져가
+   * 「KC마크 없이 구매대행 가능한 품목」을 넣는다(A-12.3-P0-3). 실제 등록 11건이
+   * 전부 이 경로였고, 그 문장을 판매자가 본 적은 «한 번도» 없다.
+   *
+   * 🔴 값을 바꾸지 않는다. payload 는 한 글자도 그대로다. 바뀌는 것은
+   * 「자동 입력 → 자동 등록」이 「자동 입력 → 판매자가 봄 → 등록」이 되는 것뿐이다.
+   *
+   * 🔴 여기서 KC 면제 여부를 판정하지 «않는다». 어느 칸이 KC 칸인지조차
+   * 새로 정하지 않고 빌더의 isComplianceCritical() 을 그대로 쓴다 — 규칙이 두
+   * 벌이 되면 등록에는 실리는데 화면에는 안 보이는 칸이 생긴다.
+   */
+  const coupangKcNotices = useMemo(() => {
+    if (!compliancePreview) return [];
+    return compliancePreview.noticeResults
+      .filter((r) => isComplianceCritical(r.fieldName))
+      .map((r) => ({ fieldName: r.fieldName, value: r.value, autoFilled: r.source === "DEFAULT_VALUE" }));
+  }, [compliancePreview]);
 
   const resolvedCategoryFields = useMemo(() => {
     if (!compliancePreview) return undefined;
@@ -3500,6 +3528,9 @@ export function CommerceWorkspace({
           smartstoreChildCertification={
             selectedCommerces.includes("smartstore") ? (product.childCertification.value ?? null) : undefined
           }
+          /* P0-KC-03 — 쿠팡을 «고른 경우에만» 묻는다. 고르지 않은 채널의
+             고시 문구를 확인하라고 하지 않는다. */
+          coupangKcNotices={selectedCommerces.includes("coupang") ? coupangKcNotices : undefined}
           smartstoreCategoryCode={
             selectedCommerces.includes("smartstore")
               ? isVerifiedCategorySelected(categoryMappings.smartstore) &&
@@ -3529,6 +3560,7 @@ export function CommerceWorkspace({
           smartstoreChildCertification={
             confirmingPlatform === "smartstore" ? (product.childCertification.value ?? null) : undefined
           }
+          coupangKcNotices={confirmingPlatform === "coupang" ? coupangKcNotices : undefined}
           smartstoreCategoryCode={
             confirmingPlatform === "smartstore"
               ? (isVerifiedCategorySelected(listing.category) &&

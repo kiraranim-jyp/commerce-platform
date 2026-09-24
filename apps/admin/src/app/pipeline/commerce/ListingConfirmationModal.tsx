@@ -55,6 +55,7 @@ export function ListingConfirmationModal({
   smartstoreKcStatus,
   smartstoreCategoryCode,
   smartstoreChildCertification,
+  coupangKcNotices,
   snapshotId,
   jobKey,
   progress = null,
@@ -78,6 +79,12 @@ export function ListingConfirmationModal({
    * (Coupang 등 다른 플랫폼). */
   smartstoreKcStatus?: KcStatus | null;
   smartstoreCategoryCode?: string | null;
+  /**
+   * P0-KC-03 — 쿠팡 KC 관련 고시 칸에 «지금 등록될» 문장. 따져가 대신 넣은
+   * 것이면 autoFilled=true. 🔴 표시 전용이다 — payload 는 이 값을 여기서
+   * 읽지 않고, 빌더가 등록 시점에 같은 규칙으로 다시 만든다.
+   */
+  coupangKcNotices?: { fieldName: string; value: string; autoFilled: boolean }[];
   /** P0-KC-SAFETY — 판매자가 «무엇을» 보증하는지 보여주기 위한 표시 전용 값. */
   smartstoreChildCertification?: {
     name?: string; companyName?: string; certificationNumber?: string; certificationDate?: string;
@@ -106,6 +113,7 @@ export function ListingConfirmationModal({
   const [priceInfoConfirmed, setPriceInfoConfirmed] = useState(false);
   const [responsibilityConfirmed, setResponsibilityConfirmed] = useState(false);
   const [reviewConfirmed, setReviewConfirmed] = useState(false);
+  const [coupangNoticeConfirmed, setCoupangNoticeConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
 
@@ -117,10 +125,17 @@ export function ListingConfirmationModal({
   const kcNeedsReview =
     smartstoreKcStatus === "SELLER_REVIEW_REQUIRED" || smartstoreKcStatus === "CERTIFIED_REFERENCE";
   const kcHasEnteredCertification = smartstoreKcStatus === "CERTIFIED_REFERENCE";
+
+  /* P0-KC-03 — 따져가 «대신 적은» 쿠팡 고시 문장이 있으면 판매자가 그것을
+     보고 확인해야 한다. 사람이 직접 넣은 값(autoFilled=false)은 이미 판매자의
+     문장이므로 다시 묻지 않는다. */
+  const autoFilledCoupangNotices = (coupangKcNotices ?? []).filter((n) => n.autoFilled);
+  const coupangNoticeNeedsReview = autoFilledCoupangNotices.length > 0;
   const kcBlocked = smartstoreKcStatus === "BLOCKED";
   const kcRegistrable = !hasSmartstoreKcCard || !kcBlocked && (!kcNeedsReview || reviewConfirmed);
+  const coupangNoticeRegistrable = !coupangNoticeNeedsReview || coupangNoticeConfirmed;
   const canConfirm =
-    generalConfirmed && priceInfoConfirmed && responsibilityConfirmed && kcRegistrable && !submitting;
+    generalConfirmed && priceInfoConfirmed && responsibilityConfirmed && kcRegistrable && coupangNoticeRegistrable && !submitting;
 
   async function handleConfirmClick() {
     if (!canConfirm) return;
@@ -297,6 +312,42 @@ export function ListingConfirmationModal({
                 </div>
               </>
             )}
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════
+            P0-KC-03(CPO 확정, 2026-09-24) — **따져가 대신 적은 문장을 보여준다.**
+
+            쿠팡 KC 고시 칸은 사람이 아무것도 안 하면 따져가 문장을 넣는다.
+            실제 등록 11건이 전부 그 경로였고, 판매자가 그 문장을 본 적은 없다.
+
+            🔴 확인의 뜻은 「이 상품이 KC 면제 대상임을 판매자가 증명했다」가
+            «아니다». 「지금 등록될 문구가 무엇인지 확인했다」 하나뿐이다.
+            payload 값은 확인 전후가 같다 — 바뀌는 것은 「봤는가」뿐이다. */}
+        {coupangNoticeNeedsReview && (
+          <div className="mt-4 rounded-md border border-warning/40 bg-warning-soft p-3">
+            <p className="text-xs font-medium text-text-tertiary">⚠ 쿠팡 상품고시 — 자동 입력값 확인</p>
+            <dl className="mt-2 space-y-1">
+              {autoFilledCoupangNotices.map((notice) => (
+                <div key={notice.fieldName} className="text-xs">
+                  <dt className="text-text-tertiary">{notice.fieldName}</dt>
+                  <dd className="break-all font-medium text-text-primary">「{notice.value}」</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-2 text-xs text-text-secondary">
+              위 문구는 따져가 «자동으로» 입력한 기본값입니다. TTAEJYO는 이 상품의 KC 적용 여부나 면제
+              여부를 법적으로 판정하지 않습니다 — 실제 등록될 값을 확인해주세요.
+            </p>
+            <label className="mt-2 flex cursor-pointer items-start gap-2 text-xs text-text-primary">
+              <input
+                type="checkbox"
+                checked={coupangNoticeConfirmed}
+                onChange={(e) => setCoupangNoticeConfirmed(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>위 입력값을 확인했습니다.</span>
+            </label>
           </div>
         )}
 

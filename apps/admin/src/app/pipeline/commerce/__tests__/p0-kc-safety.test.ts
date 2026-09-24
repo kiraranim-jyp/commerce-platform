@@ -72,7 +72,10 @@ describe("② 채웠다고 확인 절차가 사라지지 않는다", () => {
 
   it("확인 전에는 [등록]이 눌리지 않는다 — 기존 게이트를 그대로 탄다", () => {
     expect(MODAL).toContain("(!kcNeedsReview || reviewConfirmed)");
-    expect(MODAL).toContain("kcRegistrable && !submitting");
+    /* P0-KC-03(2026-09-24)에서 쿠팡 고시 확인이 같은 식에 «추가» 됐다.
+       KC 게이트가 사라진 게 아니라 한 겹이 더 붙은 것이므로, 두 조건이
+       모두 걸려 있는지를 본다. */
+    expect(MODAL).toContain("kcRegistrable && coupangNoticeRegistrable && !submitting");
   });
 
   it("BLOCKED 는 확인으로도 못 넘는다 — 이 규칙은 그대로다", () => {
