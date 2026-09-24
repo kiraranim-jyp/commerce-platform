@@ -165,7 +165,6 @@ function KcCertificationBlock({
   onUpdateChildCertification: (patch: Partial<CanonicalProductCertification>) => void;
   onGoToSection: () => void;
 }) {
-  const [showUploadNote, setShowUploadNote] = useState(false);
   const [requestCopied, setRequestCopied] = useState(false);
 
   const kcIssues = (naverValidation?.fields ?? []).filter(
@@ -201,11 +200,29 @@ function KcCertificationBlock({
     <div className="mt-3 space-y-3 rounded-md border border-border bg-background p-3">
       {isBlocked && (
         <div className="space-y-2 rounded-md border border-error/30 bg-error-soft p-3">
-          <p className="text-sm font-semibold text-error">⚠ KC 인증정보 확인 필요</p>
+          <p className="text-sm font-semibold text-error">⚠ KC 인증 · 판매자 확인 필요</p>
+          {/* 🔴 P0-KC-06(CPO 확정, 2026-09-24) — 전에는 「실제 인증정보를 직접
+              입력해야 합니다」 한 줄이었다. 그런데 ④ 최종 확인에서는 «입력 없이»
+              판매자 확인만으로도 등록된다. ③ 이 「입력 외에 길이 없다」고 말하니
+              셀러는 칸을 채우려 했고, 그래서 아무 값이나 들어갔다 —
+              「12313ㄹㅇ」이 실제 상품에 붙은 행동 경로가 바로 이것이다.
+              두 갈래를 «둘 다» 적는다. */}
           <p className="text-xs text-text-secondary">
-            이 상품은 KC 인증정보가 확인되지 않았습니다. 상세페이지에 정보가 없으므로
-            &ldquo;상품 상세페이지 참조&rdquo;로 등록할 수 없습니다 — 실제 인증정보를 직접
-            입력해야 합니다.
+            이 상품은 KC 관련 확인이 필요합니다. KC 항목은
+            &ldquo;상품 상세페이지 참조&rdquo;로 대체할 수 없습니다.
+          </p>
+          <ul className="space-y-1 text-xs text-text-secondary">
+            <li>
+              <span className="font-medium text-text-primary">① 실제 인증정보가 있는 경우</span> —
+              인증정보를 직접 입력합니다.
+            </li>
+            <li>
+              <span className="font-medium text-text-primary">② 입력하지 않는 경우</span> — 최종 확인
+              단계에서 인증자료를 확인한 뒤 판매 가능 여부를 «직접» 확인해야 합니다.
+            </li>
+          </ul>
+          <p className="text-xs font-medium text-text-secondary">
+            🔴 TTAEJYO는 KC 인증의 진위나 법적 적용 여부를 판정하지 않습니다.
           </p>
           <div className="flex flex-wrap gap-2 pt-1">
             <button
@@ -215,27 +232,18 @@ function KcCertificationBlock({
             >
               인증정보 직접 입력
             </button>
-            <button
-              type="button"
-              onClick={() => setShowUploadNote((v) => !v)}
-              className="rounded border border-border px-2 py-1 text-xs font-medium text-text-secondary hover:bg-surface"
-            >
-              인증자료 업로드
-            </button>
+            {/* 🔴 P0-KC-06 — 「인증자료 업로드」를 «제거» 했다. 누르면
+                「다음 스프린트에서 지원 예정」 안내만 펼쳐지는 미구현 기능이었다.
+                되는 것처럼 보이는 버튼은 안내가 아니라 거짓말이다. 실제 업로드
+                기능이 생기면 그때 다시 넣는다. */}
             <button
               type="button"
               onClick={copyRequestText}
               className="rounded border border-border px-2 py-1 text-xs font-medium text-text-secondary hover:bg-surface"
             >
-              {requestCopied ? "복사됨" : "판매자에게 확인 요청"}
+              {requestCopied ? "복사됨" : "요청 문구 복사"}
             </button>
           </div>
-          {showUploadNote && (
-            <p className="rounded bg-background px-2 py-1 text-[11px] text-text-tertiary">
-              인증자료 업로드(파일 첨부 + 확인)는 다음 스프린트에서 지원될 예정입니다 —
-              지금은 아래 필드에 실제 인증정보를 직접 입력해주세요.
-            </p>
-          )}
         </div>
       )}
       <p className="text-xs font-medium text-text-secondary">

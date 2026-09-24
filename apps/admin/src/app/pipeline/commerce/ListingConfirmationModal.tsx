@@ -305,9 +305,18 @@ export function ListingConfirmationModal({
                     onClick={() => setReviewConfirmed(true)}
                     className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-text-secondary hover:bg-surface"
                   >
+                    {/* 🔴 P0-KC-06(CPO 확정, 2026-09-24) — 아래 문구는
+                        SELLER_REVIEW_REQUIRED 일 때 「인증자료 확인 — 판매 가능
+                        여부 확인 완료」였다. 그런데 이 상태는 «인증자료가 없는»
+                        상태다. 없는 자료를 확인했다고 적게 하면, 기록의 뜻이
+                        실제보다 커진다.
+
+                        seller_compliance_confirmations 가 실제로 담는 것은
+                        「이 상품/카테고리/정책버전에 대해 판매자가 판매 전 최종
+                        확인을 했다」 하나다. 문구를 거기에 맞춘다. */}
                     {kcHasEnteredCertification
                       ? "실제 인증서와 같습니다 — 확인 완료"
-                      : "인증자료 확인 — 판매 가능 여부 확인 완료"}
+                      : "이 상품을 판매해도 되는지 직접 확인했습니다"}
                   </button>
                 </div>
               </>
