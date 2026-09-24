@@ -3495,6 +3495,11 @@ export function CommerceWorkspace({
           smartstoreKcStatus={
             selectedCommerces.includes("smartstore") ? (smartStoreValidation?.kcStatus ?? null) : undefined
           }
+          /* P0-KC-SAFETY — 판매자가 무엇을 보증하는지 «보고» 확인하게 한다.
+             표시 전용이다 — payload 는 이 값을 여기서 읽지 않는다. */
+          smartstoreChildCertification={
+            selectedCommerces.includes("smartstore") ? (product.childCertification.value ?? null) : undefined
+          }
           smartstoreCategoryCode={
             selectedCommerces.includes("smartstore")
               ? isVerifiedCategorySelected(categoryMappings.smartstore) &&
@@ -3521,6 +3526,9 @@ export function CommerceWorkspace({
           listing={listing}
           mode={resolveExecutionMode(confirmingPlatform)}
           smartstoreKcStatus={confirmingPlatform === "smartstore" ? (smartStoreValidation?.kcStatus ?? null) : undefined}
+          smartstoreChildCertification={
+            confirmingPlatform === "smartstore" ? (product.childCertification.value ?? null) : undefined
+          }
           smartstoreCategoryCode={
             confirmingPlatform === "smartstore"
               ? (isVerifiedCategorySelected(listing.category) &&

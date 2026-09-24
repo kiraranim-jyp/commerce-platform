@@ -25,11 +25,17 @@ describe("① 네 상태를 셀러의 말로 옮긴다", () => {
     expect(note.actionLabel).toBeUndefined();
   });
 
-  it("CERTIFIED_REFERENCE → 인증정보 확인됨(행동 없음)", () => {
+  /* 🔴 P0-KC-SAFETY(2026-09-24)로 «뜻이 바뀐» 항목이다. N-07-01 에서는
+     「인증정보 확인됨 · 행동 없음」이었다. 그 전제가 틀렸다 — 따져가 확인한
+     것은 없고, 세 칸이 비어 있지 않다는 것뿐이다. 그 표현 때문에 인증번호
+     「12313ㄹㅇ」인 어린이제품이 Production 에 등록됐다. 기대값을 그냥
+     뒤집는 게 아니라, 무엇이 왜 바뀌었는지 여기에 남긴다. */
+  it("CERTIFIED_REFERENCE → 입력값 확인 필요(판매자 행동 있음)", () => {
     const note = kcStatusNote("CERTIFIED_REFERENCE");
-    expect(note.text).toBe("KC 인증 · 인증정보 확인됨");
-    expect(note.tone).toBe("OK");
-    expect(note.actionLabel).toBeUndefined();
+    expect(note.text).toBe("KC 인증 · 입력값 확인 필요");
+    expect(note.text).not.toContain("확인됨");
+    expect(note.tone).toBe("ATTENTION");
+    expect(note.actionLabel).toBe("확인하기");
   });
 
   it("🔴 SELLER_REVIEW_REQUIRED → «판매자 확인» 필요 — 「입력 필요」가 아니다", () => {
@@ -61,7 +67,8 @@ describe("① 네 상태를 셀러의 말로 옮긴다", () => {
     expect(kcNeedsAction("SELLER_REVIEW_REQUIRED")).toBe(true);
     expect(kcNeedsAction("BLOCKED")).toBe(true);
     expect(kcNeedsAction("NOT_APPLICABLE")).toBe(false);
-    expect(kcNeedsAction("CERTIFIED_REFERENCE")).toBe(false);
+    // 🔴 P0-KC-SAFETY — 인증정보가 «입력돼 있어도» 판매자 확인을 기다린다.
+    expect(kcNeedsAction("CERTIFIED_REFERENCE")).toBe(true);
     // 확인 전은 ⚠ 가 아니다 — 아직 아무것도 판정되지 않았다.
     expect(kcNeedsAction(null)).toBe(false);
   });

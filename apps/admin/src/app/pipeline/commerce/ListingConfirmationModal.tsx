@@ -22,7 +22,11 @@ const PRICE_SOURCE_LABEL: Record<ListingModel["priceSource"], string> = {
  * 흩어지면 나중에 말이 안 맞는 문제가 재발한다). */
 const KC_STATUS_LABEL: Record<KcStatus, { label: string; className: string }> = {
   NOT_APPLICABLE: { label: "✓ 이 카테고리는 어린이제품 인증 대상이 아닙니다", className: "text-success" },
-  CERTIFIED_REFERENCE: { label: "✓ KC 인증정보 확인됨(실제 자료 근거)", className: "text-success" },
+  /* 🔴 P0-KC-SAFETY(2026-09-24) — 전에는 「✓ KC 인증정보 확인됨(실제 자료 근거)」
+     이었다. 따져는 «실제 자료» 를 본 적이 없다. 이 상태의 근거는 세 칸이
+     비어 있지 않다는 것 하나뿐이고(resolveKcStatus), 그것을 「확인됨」이라
+     적는 순간 따져가 규제 판단을 한 것처럼 말하게 된다. */
+  CERTIFIED_REFERENCE: { label: "⚠ 입력된 KC 인증정보를 확인해주세요", className: "text-warning" },
   SELLER_REVIEW_REQUIRED: { label: "⚠ 판매 전 확인이 필요한 상품입니다", className: "text-warning" },
   BLOCKED: { label: "⚠ 카테고리가 아직 확정되지 않아 확인할 수 없습니다", className: "text-error" },
 };
@@ -50,6 +54,7 @@ export function ListingConfirmationModal({
   mode = "DRY_RUN",
   smartstoreKcStatus,
   smartstoreCategoryCode,
+  smartstoreChildCertification,
   snapshotId,
   jobKey,
   progress = null,
@@ -73,6 +78,10 @@ export function ListingConfirmationModal({
    * (Coupang 등 다른 플랫폼). */
   smartstoreKcStatus?: KcStatus | null;
   smartstoreCategoryCode?: string | null;
+  /** P0-KC-SAFETY — 판매자가 «무엇을» 보증하는지 보여주기 위한 표시 전용 값. */
+  smartstoreChildCertification?: {
+    name?: string; companyName?: string; certificationNumber?: string; certificationDate?: string;
+  } | null;
   snapshotId?: string | null;
   /** Sprint B-1(CPO 지시) — seller_compliance_confirmations 감사 로그에도
    * 같은 Job Key를 남긴다. */
@@ -101,7 +110,13 @@ export function ListingConfirmationModal({
   const [confirmError, setConfirmError] = useState<string | null>(null);
 
   const hasSmartstoreKcCard = smartstoreKcStatus != null;
-  const kcNeedsReview = smartstoreKcStatus === "SELLER_REVIEW_REQUIRED";
+  /* 🔴 P0-KC-SAFETY — 전에는 SELLER_REVIEW_REQUIRED 만 확인을 받았다. 그래서
+     KC 칸을 «채우기만» 하면 확인 절차가 사라졌다 — 인센티브가 거꾸로였다.
+     아무 글자나 넣은 상품이 빈 상품보다 쉽게 나갔고, 실제로 그렇게 나갔다.
+     두 상태 모두 판매자의 명시적 확인을 받는다. 새 상태를 만들지 않는다. */
+  const kcNeedsReview =
+    smartstoreKcStatus === "SELLER_REVIEW_REQUIRED" || smartstoreKcStatus === "CERTIFIED_REFERENCE";
+  const kcHasEnteredCertification = smartstoreKcStatus === "CERTIFIED_REFERENCE";
   const kcBlocked = smartstoreKcStatus === "BLOCKED";
   const kcRegistrable = !hasSmartstoreKcCard || !kcBlocked && (!kcNeedsReview || reviewConfirmed);
   const canConfirm =
@@ -239,9 +254,28 @@ export function ListingConfirmationModal({
             )}
             {kcNeedsReview && !reviewConfirmed && (
               <>
+                {/* 🔴 P0-KC-SAFETY — 값을 «보여주고» 확인받는다. 지금까지 판매자는
+                    자기가 무엇을 보증하는지 이 화면에서 볼 수 없었다. 인증번호가
+                    「12313ㄹㅇ」인 상품이 실제로 등록된 이유다. */}
+                {kcHasEnteredCertification && smartstoreChildCertification && (
+                  <dl className="mt-2 space-y-0.5 rounded border border-border bg-surface px-2.5 py-2 text-xs">
+                    {[
+                      ["인증번호", smartstoreChildCertification.certificationNumber],
+                      ["업체명", smartstoreChildCertification.companyName],
+                      ["인증기관", smartstoreChildCertification.name],
+                      ["취득일자", smartstoreChildCertification.certificationDate],
+                    ].map(([label, value]) => (
+                      <div key={label} className="flex gap-2">
+                        <dt className="w-14 shrink-0 text-text-tertiary">{label}</dt>
+                        <dd className="break-all font-medium text-text-primary">{value || "—"}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
                 <p className="mt-1 text-xs text-text-secondary">
-                  현재 인증정보: 확인되지 않음. 아래 중 실제 해당하는 항목을 확인해주세요 — TTAEJYO가 대신
-                  판단하지 않습니다.
+                  {kcHasEnteredCertification
+                    ? "위 값은 판매자가 입력한 것입니다 — TTAEJYO는 인증번호의 진위를 확인할 수 없습니다. 실제 인증서와 같은지 보고 확인해주세요."
+                    : "현재 인증정보: 확인되지 않음. 아래 중 실제 해당하는 항목을 확인해주세요 — TTAEJYO가 대신 판단하지 않습니다."}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button
@@ -249,14 +283,16 @@ export function ListingConfirmationModal({
                     onClick={onCancel}
                     className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-text-secondary hover:bg-surface"
                   >
-                    KC 인증정보 직접 입력하기
+                    {kcHasEnteredCertification ? "KC 인증정보 고치기" : "KC 인증정보 직접 입력하기"}
                   </button>
                   <button
                     type="button"
                     onClick={() => setReviewConfirmed(true)}
                     className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-text-secondary hover:bg-surface"
                   >
-                    인증자료 확인 — 판매 가능 여부 확인 완료
+                    {kcHasEnteredCertification
+                      ? "실제 인증서와 같습니다 — 확인 완료"
+                      : "인증자료 확인 — 판매 가능 여부 확인 완료"}
                   </button>
                 </div>
               </>

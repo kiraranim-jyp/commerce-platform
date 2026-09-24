@@ -50,7 +50,12 @@ export function kcStatusNote(status: KcStatus | null | undefined): KcStatusNote 
     case "NOT_APPLICABLE":
       return { tone: "OK", text: "KC 인증 · 해당 없음" };
     case "CERTIFIED_REFERENCE":
-      return { tone: "OK", text: "KC 인증 · 인증정보 확인됨" };
+      /* 🔴 P0-KC-SAFETY(2026-09-24) — 전에는 「인증정보 확인됨」 + tone OK 였다.
+         따져가 «확인» 한 것은 없다. 세 칸이 비어 있지 않다는 것뿐이고, 그
+         값이 실제 인증서와 같은지는 판매자만 안다. ④ 최종 확인이 이 상태에도
+         명시적 확인을 요구하므로, ③ 도 같은 말을 해야 한다(두 화면이 다른
+         말을 하면 셀러는 ④ 에서 처음 막힌다). */
+      return { tone: "ATTENTION", text: "KC 인증 · 입력값 확인 필요", actionLabel: "확인하기" };
     case "SELLER_REVIEW_REQUIRED":
       /* 🔴 「입력 필요」가 아니라 「판매자 확인 필요」다. 값을 채우는 것만이
          답이 아니고, 「이 상품은 인증 대상이 아니다」라는 판단도 답이다 —
