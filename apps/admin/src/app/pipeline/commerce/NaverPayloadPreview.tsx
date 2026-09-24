@@ -335,6 +335,10 @@ export function NaverPayloadPreview({
     () =>
       buildNaverProductPayload({
         product,
+        /* P0-KC-12 — 빌더에도 선언을 넘긴다. validator 호출부만 고치고
+           여기를 빼서, 실제 payload 에 certificationTargetExcludeContent 와
+           kids.certificationType 이 «둘 다 없는» 채로 나갔다(실측 400). */
+        smartStoreKcDeclaration: product.smartStoreKcDeclaration,
         listing,
         leafCategoryId,
         releaseAddressBookNo,

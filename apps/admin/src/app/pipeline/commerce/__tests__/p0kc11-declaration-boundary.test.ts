@@ -188,6 +188,27 @@ describe("⑦ validateNaverPayload 호출부 전수 — 선언을 실제로 넘�
     expect(src).toContain("smartStoreKcDeclaration: product.smartStoreKcDeclaration,");
   });
 
+  /**
+   * 🔴 P0-KC-12 — 같은 실수를 «세 번» 했다:
+   *   1. types.ts 에 certificationTargetExcludeContent 를 «선언만» 하고 아무도 안 씀
+   *   2. validator 에 인자를 «만들고» 호출부에서 안 넘김
+   *   3. 빌더에 인자를 «만들고» 호출부에서 안 넘김 → payload 에 두 값이 통째로 없음
+   *
+   * 전부 「인자를 만든 것」과 「넘기는 것」을 같다고 여긴 것이다. 그래서 이번엔
+   * 빌더 호출부도 전수로 고정한다.
+   */
+  it.each([
+    ["CommerceWorkspace.tsx", join(__dirname, "../../CommerceWorkspace.tsx")],
+    ["NaverPayloadPreview.tsx", join(__dirname, "../NaverPayloadPreview.tsx")],
+    ["smartstore/register/route.ts", join(__dirname, "../../../api/smartstore/register/route.ts")],
+    ["compute-readiness.ts", join(__dirname, "../../../api/snapshots/_lib/compute-readiness.ts")],
+  ] as const)("🔴 %s 가 «빌더» 에도 선언을 넘긴다", (_name, path) => {
+    const src = codeOnly(readFileSync(path, "utf8"));
+    expect(src).toContain("buildNaverProductPayload(");
+    const call = src.slice(src.indexOf("buildNaverProductPayload("));
+    expect(call.slice(0, 3000)).toContain("smartStoreKcDeclaration: product.smartStoreKcDeclaration,");
+  });
+
   it("🔴 호출부가 4곳뿐이다 — 새 호출부가 생기면 이 목록도 같이 늘어야 한다", () => {
     /* 목록이 실제와 어긋나면 「전수 검사」라는 이름이 거짓이 된다. */
     for (const [, path] of CALLERS) {
