@@ -1252,10 +1252,22 @@ export function PlatformPreview({
                 onGoToSection={() => goToSection("section-kc")}
               />
             )}
-          <p className="text-xs text-text-tertiary">
-            어린이제품/전기용품 등 KC 인증이 필요한 카테고리는 인증번호를 반드시
-            입력해야 승인됩니다. 해당 없는 카테고리는 비워두면 됩니다.
-          </p>
+          {/* 🔴 P0-KC-07(CPO 확정, 2026-09-24) — 여기 있던 한 줄이 위의 두
+              블록과 «정반대» 말을 하고 있었다:
+
+                「인증번호를 반드시 입력해야 승인됩니다」
+
+              바로 위 KcSellerStatusBanner 는 「판매 가능 여부를 확인해주세요」 +
+              [판매 가능 상품으로 확인] 을 띄우고, KcCertificationBlock 은
+              「입력하지 않는 경우 최종 확인에서 직접 확인」이라고 적는데, 그
+              아래에서 이 줄이 「반드시 입력」이라고 덮어썼다.
+
+              🔴 P0-KC-06 은 KcCertificationBlock «한 컴포넌트만» 고치고 테스트도
+              그 파일만 봤다. 같은 화면의 다른 문구가 정반대를 말하는 것을
+              못 잡았다 — 실제 화면을 열지 않고 PASS 를 낸 결과다.
+
+              그리고 이 문장은 사실도 아니다. KC 는 판매자 확인으로도 등록된다
+              (isKcStatusRegistrable + seller_compliance_confirmations). 지운다. */}
         </CollapsibleSection>
 
         <CollapsibleSection title={sectionTitle("DESCRIPTION")} badge={sectionCompletionBadge("section-description")} {...sectionProps("section-description")}>
