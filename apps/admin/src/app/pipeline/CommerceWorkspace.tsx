@@ -107,6 +107,7 @@ import {
   type CommerceMissingByChannel,
   type CommerceMissingItem,
   commerceLabel,
+  isAlreadyRegistered,
   isPlatformCommerce,
   type CommerceId,
   type CommerceOutcome,
@@ -497,6 +498,25 @@ export function CommerceWorkspace({
     }, 120);
     return () => clearTimeout(timer);
   }, [fixScrollRequest, tab]);
+
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * N-06-D 후속(CEO 확정, 2026-09-24) — **중복 등록의 마지막 방어선은 DB 다.**
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 그동안 중복 LIVE 차단은 세션 안의 `registrationHistory` 하나였다. 그래서
+   * 새로고침하면 그 기억이 비워지고, **이미 등록된 채널로 한 번 더 쏠 수
+   * 있었다.** 화면은 「✓ 등록됨」이라고 말하는데 코드는 막지 않는 상태였다.
+   *
+   * 🔴 세션 기억이 아니라 `registration_attempts`(영속)를 기준으로 삼는다.
+   * 그 표에 이 스냅샷·이 채널로 SUBMITTED 가 한 번이라도 있으면 다시 보내지
+   * 않는다. 실패(FAILED)는 막지 않는다 — 재시도는 정상 흐름이다.
+   *
+   * 🔴 「의도적 재등록」은 이번에 만들지 않는다(CEO 확정). 지금 필요한 것은
+   * «실수로 두 번 나가지 않는 것» 이고, 다시 보내는 기능은 그 자체로 정책
+   * 결정이 필요한 별개의 일이다.
+   */
+  const alreadyRegistered = (id: CommerceId) => isAlreadyRegistered(commerceLastAttempts, id);
 
   /** 🔴 [선택한 커머스 등록]을 눌러도 «바로 나가지 않는다» — 최종 확인이 먼저다. */
   const [multiConfirmOpen, setMultiConfirmOpen] = useState(false);
@@ -2617,6 +2637,13 @@ export function CommerceWorkspace({
   async function confirmListing(target?: PlatformId): Promise<ListingResult | null> {
     const platform = target ?? confirmingPlatform;
     if (!platform) return null;
+    /* 🔴 DB 가 이미 「등록됨」이라고 말하면 여기서 끝난다 — 단독 등록도 다중
+       등록도 같은 문 하나를 지난다(한쪽만 막으면 다른 쪽으로 새 나간다). */
+    if (alreadyRegistered(platform)) {
+      setListingStates((prev) => ({ ...prev, [platform]: "SUBMITTED" }));
+      setConfirmingPlatform(null);
+      return null;
+    }
     const listing = listingModelFor(platform);
     /* REWORK-5 ⑤(CEO 지시, 2026-09-14) — 모달을 **여기서 닫지 않는다.**
        예전에는 이 자리에서 곧바로 닫아서, 셀러는 몇 초 동안 아무 변화도 없는
@@ -2754,6 +2781,18 @@ export function CommerceWorkspace({
     for (const id of targets) {
       setMultiRunning(id);
       try {
+        if (alreadyRegistered(id)) {
+          /* 실행하지 «않았다» 는 사실을 그대로 적는다 — 성공으로 세지 않는다. */
+          setCommerceOutcomes((prev) => ({
+            ...prev,
+            [id]: {
+              status: "SKIPPED",
+              message: "이미 등록된 커머스라 다시 보내지 않았습니다.",
+              externalProductId: commerceLastAttempts[id]?.externalProductId ?? null,
+            },
+          }));
+          continue;
+        }
         if (isPlatformCommerce(id)) {
           const result = await confirmListing(id);
           setCommerceOutcomes((prev) => ({

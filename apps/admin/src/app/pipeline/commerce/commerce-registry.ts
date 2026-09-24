@@ -127,3 +127,16 @@ export interface CommerceMissingItem {
 }
 
 export type CommerceMissingByChannel = Partial<Record<CommerceId, CommerceMissingItem[]>>;
+
+/**
+ * N-06-D 후속(CEO 확정, 2026-09-24) — **이 커머스에 이미 등록됐는가.**
+ *
+ * 🔴 판정 기준은 세션 기억이 아니라 `registration_attempts`(영속)다. 그 표에
+ * 이 스냅샷·이 채널로 SUBMITTED 가 한 번이라도 있으면 다시 보내지 않는다.
+ *
+ * 🔴 실패(FAILED)는 막지 않는다 — 재시도는 정상 흐름이다. 이력이 «없는» 것도
+ * 막지 않는다(최초 등록). 막는 것은 「이미 성공했다」 하나뿐이다.
+ */
+export function isAlreadyRegistered(lastAttempts: CommerceLastAttempts, id: CommerceId): boolean {
+  return lastAttempts[id]?.status === "SUBMITTED";
+}
