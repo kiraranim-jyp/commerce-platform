@@ -3,6 +3,7 @@ import { hasRealProductOptions } from "./build-payload";
 import type { NaverPayloadInput, SmartStoreProductInput } from "./build-payload";
 import type { NaverProductRegistrationPayload } from "./types";
 import { isNoticeFieldSatisfied } from "../notice/reference-eligibility";
+import { requiresChildCertificationData, validateKcDeclaration } from "./kc-declaration";
 import {
   resolveKcStatus,
   isKcStatusRegistrable,
@@ -147,6 +148,7 @@ export function validateNaverPayload(
     | "returnDeliveryFee"
     | "exchangeDeliveryFee"
     | "childCertificationInfoId"
+    | "smartStoreKcDeclaration"
     | "originAreaCode"
     | "deliveryCompany"
     | "warrantyPolicy"
@@ -292,7 +294,44 @@ export function validateNaverPayload(
     "교환 배송비 정책이 설정되어 있지 않습니다 — Settings에서 판매자 배송 정책 입력 필요.",
   );
 
-  if (categoryRequiresChildCertification) {
+  /* ══════════════════════════════════════════════════════════════════════════
+     P0-KC-11(CPO 확정, 2026-09-24) — **「대상 아님」을 «고른» 상품은 인증정보를
+     요구하지 않는다.**
+
+     지금까지는 「어린이제품 카테고리면 무조건 인증정보 3값 요구」였다. 그래서
+     실제 인증서가 없는 판매자에게 남은 길이 «아무 값이나 넣기» 뿐이었고,
+     실제로 그렇게 됐다(「12313ㄹㅇ」).
+
+     🔴 선언이 «없으면» 예전 그대로 요구한다. 없는 것을 「대상 아님」으로 읽지
+     않는다 — 확인하지 않은 것을 확인했다고 말하는 것이 된다.
+
+     🔴 여기서 규칙을 다시 쓰지 않는다. requiresChildCertificationData() 가
+     build-payload 와 «같은» 판단을 내린다 — 두 벌이 되면 「등록은 되는데 화면은
+     막는」(또는 그 반대) 상태가 생긴다. */
+  const declaration = input.smartStoreKcDeclaration;
+  const declarationProblems = validateKcDeclaration(declaration, {
+    childCertificationRequired: categoryRequiresChildCertification,
+  });
+  for (const problem of declarationProblems) {
+    if (problem === "CHILD_CHOICE_MISSING") continue; // 아래 기존 KC 경로가 이미 말한다
+    blocked(
+      fields,
+      "certificationTargetExcludeContent",
+      problem === "KC_EXEMPTION_REASON_MISSING"
+        ? "KC 면제 대상으로 선택했지만 면제 사유(구매대행/안전기준 준수/병행수입)를 고르지 않았습니다."
+        : "KC 인증 대상 아님을 선택했는데 면제 사유가 함께 들어 있습니다 — 둘 중 하나만 신고할 수 있습니다.",
+      "KC_CERTIFICATION_REQUIRED",
+    );
+  }
+
+  if (
+    categoryRequiresChildCertification &&
+    !requiresChildCertificationData(declaration, { childCertificationRequired: true })
+  ) {
+    /* 판매자가 「어린이제품 인증 대상 아님」을 직접 골랐다. 인증정보 3값이
+       없다는 이유만으로 막지 않는다 — 네이버도 이 경우를
+       childCertifiedProductExclusionYn 으로 받는다(공식 스키마). */
+  } else if (categoryRequiresChildCertification) {
     if (input.childCertificationInfoId === null) {
       blocked(fields, "productCertificationInfos", "이 카테고리는 어린이제품 인증(CHILD_CERTIFICATION)이 필요하지만 카테고리 인증 유형 정보를 확인하지 못했습니다.");
     } else if (

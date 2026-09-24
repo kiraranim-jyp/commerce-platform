@@ -89,6 +89,11 @@ function makeProductWithBinding(): CanonicalProduct {
     /* ── 🔴 여기부터가 COMMERCE_BINDING. 롯데ON 빌더는 이것을 «읽을 수 없다». ── */
     channelPriceOverrides: { coupang: field(999999, "USER_EDITED") },
     categoryFieldOverrides: { 제조자: "쿠팡화면에서입력한값" },
+    /* P0-KC-11 — 판매자가 «신고» 하는 인증 대상 축(COMMERCE_BINDING). 픽스처에
+       이 값을 «실제로» 넣어야 아래 「지워도 payload 가 같다」 검사가 이 칸까지
+       덮는다. 스마트스토어 payload 는 이것을 상품에서 읽지 않고 옵션으로 받으므로
+       지워도 결과가 같아야 한다. */
+    smartStoreKcDeclaration: { child: "EXCLUDED", kc: "EXEMPTION", exemptionReason: "OVERSEAS" },
     lotteOnChannelInfo: {
       category: { standardCategoryNo: "XX99999999", displayCategoryNos: ["XX111"], selected: null },
       notice: { itemCode: "99", articlesText: "상품에 저장된 고시 원문" },

@@ -1,4 +1,7 @@
+import type { SmartStoreKcDeclaration } from "@commerce/shared";
 import type { NaverCertificationTargetExcludeContent } from "./types";
+
+export type { SmartStoreKcDeclaration };
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -30,25 +33,12 @@ import type { NaverCertificationTargetExcludeContent } from "./types";
  * 되지 않는다.
  */
 
-/** 어린이제품 인증 축 — 판매자 선택. */
-export type ChildCertificationChoice = "TARGET" | "EXCLUDED";
-
-/** KC 인증 축 — 판매자 선택. 네이버 enum 과 1:1 로 대응한다. */
-export type KcCertificationChoice = "TARGET" | "EXCLUDED" | "EXEMPTION";
-
-/** 면제 사유 — KC 축이 EXEMPTION 일 때만 의미가 있다. */
-export type KcExemptionReason = "OVERSEAS" | "SAFE_CRITERION" | "PARALLEL_IMPORT";
-
-/**
- * 판매자가 이 상품/채널에 대해 선언한 것. 🔴 세 값을 «항상» 채우지 않는다 —
- * 고르지 않은 축은 `undefined` 로 남고, 그대로 payload 에서도 빠진다.
- */
-export interface SmartStoreKcDeclaration {
-  child?: ChildCertificationChoice;
-  kc?: KcCertificationChoice;
-  /** kc === "EXEMPTION" 일 때만 쓰인다. */
-  exemptionReason?: KcExemptionReason;
-}
+/* 🔴 선언 «타입» 은 packages/shared 의 CanonicalProduct 옆에 하나만 둔다
+   (COMMERCE_BINDING 군). 여기서 다시 정의하면 두 벌이 되어 갈라진다.
+   이 파일이 갖는 것은 «규칙» 이다 — 조합 검사와 payload 변환. */
+export type ChildCertificationChoice = NonNullable<SmartStoreKcDeclaration["child"]>;
+export type KcCertificationChoice = NonNullable<SmartStoreKcDeclaration["kc"]>;
+export type KcExemptionReason = NonNullable<SmartStoreKcDeclaration["exemptionReason"]>;
 
 /** 이 카테고리가 무엇을 요구하는지 — 네이버 카테고리 API 가 알려준 사실. */
 export interface KcDeclarationCapability {

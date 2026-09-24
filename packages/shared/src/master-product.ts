@@ -158,6 +158,7 @@ export const MASTER_FIELD_GROUP = {
      xxxChannelInfo 가 하나씩 더 붙는다. 물리적으로는 아직 여기 있지만,
      타입에서는 Master 밖이다. */
   lotteOnChannelInfo: "COMMERCE_BINDING",
+  smartStoreKcDeclaration: "COMMERCE_BINDING",
   /* 이름은 중립인데 실제 소비자는 쿠팡 build-payload 하나다(고시/구매옵션). */
   categoryFieldOverrides: "COMMERCE_BINDING",
   categoryResolverKpi: "COMMERCE_BINDING",

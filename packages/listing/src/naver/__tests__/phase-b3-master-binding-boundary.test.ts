@@ -94,6 +94,11 @@ function makeProduct(overrides: Partial<CanonicalProduct> = {}): CanonicalProduc
     categoryFieldOverrides: { 제조자: FAKE_FROM_PRODUCT },
     categoryResolverKpi: { manualOverride: true, evidence: [FAKE_FROM_PRODUCT] },
     categoryRecommendationCache: { sourceUrlKey: FAKE_FROM_PRODUCT, status: "READY" },
+    /* P0-KC-11 — 판매자가 «신고» 하는 인증 대상 축(COMMERCE_BINDING). 픽스처에
+       이 값을 «실제로» 넣어야 아래 「지워도 payload 가 같다」 검사가 이 칸까지
+       덮는다. 스마트스토어 payload 는 이것을 상품에서 읽지 않고 옵션으로 받으므로
+       지워도 결과가 같아야 한다. */
+    smartStoreKcDeclaration: { child: "EXCLUDED", kc: "EXEMPTION", exemptionReason: "OVERSEAS" },
     lotteOnChannelInfo: {
       category: { standardCategoryNo: FAKE_FROM_PRODUCT, displayCategoryNos: [FAKE_FROM_PRODUCT], selected: null },
       notice: { itemCode: FAKE_FROM_PRODUCT, articlesText: FAKE_FROM_PRODUCT },

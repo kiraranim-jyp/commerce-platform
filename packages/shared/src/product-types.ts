@@ -256,6 +256,20 @@ export interface LotteOnSelectedCategoryFacts {
  * 셀러가 롯데ON에서 본 코드를 그대로 적고, 우리는 그것을 해석하지 않고 보관해
  * 그대로 등록 payload에 넣는다. 그래서 jsonb 직렬화가 손실 없이 왕복한다.
  */
+/**
+ * P0-KC-11 — 판매자가 «고른 것» 만 담는다. 세 값을 항상 채우지 않는다.
+ * 🔴 따져가 판정하지 않는다 — 고르지 않은 축은 undefined 로 남는다.
+ * 판정 규칙과 payload 변환은 `@commerce/listing` 의 kc-declaration.ts 한 곳에만 있다.
+ */
+export interface SmartStoreKcDeclaration {
+  /** 어린이제품 인증 축. */
+  child?: "TARGET" | "EXCLUDED";
+  /** KC 인증 축. */
+  kc?: "TARGET" | "EXCLUDED" | "EXEMPTION";
+  /** kc === "EXEMPTION" 일 때만 의미가 있다. */
+  exemptionReason?: "OVERSEAS" | "SAFE_CRITERION" | "PARALLEL_IMPORT";
+}
+
 export interface LotteOnChannelInfo {
   /** 🔴 롯데ON 탭 전용. 상품 정보 화면은 이 키를 읽지도 보여주지도 않는다. */
   category: {
@@ -399,6 +413,28 @@ export interface CanonicalProduct {
    * 초기화하지 않는 이유도 같다 — "입력한 적 없음"과 "전부 빈 값으로 입력함"은
    * 화면에서 다른 문장이다. */
   lotteOnChannelInfo?: LotteOnChannelInfo;
+  /**
+   * P0-KC-11(CPO 확정, 2026-09-24) — **스마트스토어에 «신고»하는 인증 대상 축.**
+   *
+   * 스마트스토어 화면에는 「어린이제품 인증대상 / 대상 아님」과 「KC인증
+   * 있음 / 없음(+사유)」이 별도 축으로 있는데 따져에는 그 축이 없었다.
+   * 그래서 실제 인증서가 없는 판매자는 빠져나갈 길이 없었고 — 아무 값이나
+   * 넣었다(「12313ㄹㅇ」이 실제 어린이제품에 붙은 뿌리).
+   *
+   * 🔴 Master 가 아니라 **COMMERCE_BINDING** 이다. enum 어휘가 네이버 전용이고
+   * (TRUE/FALSE/KC_EXEMPTION_OBJECT), 「대상 아님」은 상품의 «사실» 이 아니라
+   * 이 채널에 «어떻게 신고하는가» 이기 때문이다. 쿠팡은 고시 텍스트 한 칸,
+   * 롯데ON 은 sftyAthnLst 로 표현이 전부 다르다.
+   *
+   * 🔴 `lotteOnChannelInfo` 와 같은 규칙: **키가 없다 = 아직 고른 적이 없다.**
+   * 빈 객체로 초기화하지 않는다 — 「고른 적 없음」과 「전부 비워서 골랐음」은
+   * 다른 문장이고, 전자를 「대상 아님」으로 읽으면 확인하지 않은 것을
+   * 확인했다고 말하는 것이 된다.
+   *
+   * ProvenanceField 로 감싸지 «않는다». 크롤러가 채우는 값이 아니라 판매자만
+   * 고를 수 있는 선언이라, source/confidence 가 의미를 갖지 않는다.
+   */
+  smartStoreKcDeclaration?: SmartStoreKcDeclaration;
   /** P-3-2(대표님 지시, 2026-08-28)에서 상품별 입력으로 추가됐던 관세/부가세.
    *
    * MI-COST-POLICY-1(대표님 결정, 2026-09-12) — **읽는 코드가 한 곳도 없다.**

@@ -1,3 +1,4 @@
+import { buildCertificationTargetExcludeContent, type SmartStoreKcDeclaration } from "./kc-declaration";
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct, MasterProduct, SellingConditions } from "@commerce/shared";
 
@@ -99,6 +100,11 @@ export interface NaverPayloadInput {
    * 만들고, validate-payload.ts가 인증 필요 카테고리인데 실제 값이 없으면
    * BLOCKED 처리한다(임의 값 생성은 여전히 금지). */
   childCertificationInfoId: number | null;
+  /* P0-KC-11 — 🔴 판매자 «선언» 은 COMMERCE_BINDING 이지 Master 가 아니다.
+     그래서 product 에서 직접 읽지 않고, 쿠팡(CoupangCommerceBinding)과 같이
+     옵션으로 받는다 — 빌더가 Binding 칸을 상품에서 꺼내 쓰면 Master 경계가
+     조용히 무너진다(Phase B 회귀 테스트가 실제로 이것을 잡았다). */
+  smartStoreKcDeclaration?: SmartStoreKcDeclaration;
   /** N-2.7 추가 — 카테고리 detail의 exceptionalCategories에 CHILD_CERTIFICATION이
    * 있는지(호출부 판단, 이 함수는 카테고리 API를 다시 호출하지 않는다). 상품정보
    * 제공고시는 인증서 실제 보유 여부(childCertificationInfoId)와 무관하게 항상
@@ -484,6 +490,7 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
     returnDeliveryFee,
     exchangeDeliveryFee,
     childCertificationInfoId,
+    smartStoreKcDeclaration,
     categoryRequiresChildCertification,
     originAreaCode,
     originAreaRequiresContent,
@@ -837,6 +844,22 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
                 },
               ]
             : undefined,
+        /* P0-KC-11(CPO 확정, 2026-09-24) — 판매자가 «신고» 한 인증 대상 축.
+           productCertificationInfos 와 «같은 자리»(detailAttribute 의 자식)다 —
+           N-3.67 에서 위치를 5번 틀려 5연속 거부당한 그 구조체이므로 여기서
+           벗어나지 않는다.
+
+           🔴 규칙을 여기서 다시 쓰지 «않는다». 조합 검사와 값 변환은
+           kc-declaration.ts 한 곳에만 있고 이 줄은 그 결과를 옮길 뿐이다 —
+           화면과 빌더가 각자 규칙을 가지면 「화면에서 고른 것과 실제로 나간
+           것이 다른」 상태가 된다.
+
+           🔴 고르지 않았으면 undefined 라 키 자체가 만들어지지 않는다. 기존
+           상품의 payload 는 한 글자도 바뀌지 않는다. */
+        certificationTargetExcludeContent: buildCertificationTargetExcludeContent(
+          smartStoreKcDeclaration,
+          { childCertificationRequired: categoryRequiresChildCertification },
+        ),
         productAttributes: resolvedAttributes && resolvedAttributes.length > 0 ? resolvedAttributes : undefined,
       },
     },

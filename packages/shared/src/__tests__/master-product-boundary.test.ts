@@ -89,9 +89,9 @@ describe("① 분류되지 않은 필드는 «없다»", () => {
     expect(stale, `지운 필드가 지도에 남아 있다: ${stale.join(", ")}`).toEqual([]);
   });
 
-  it("두 목록의 개수가 같다 — 현재 50칸", () => {
+  it("두 목록의 개수가 같다 — 현재 51칸", () => {
     expect(DECLARED.length).toBe(MAPPED.length);
-    expect(MAPPED.length).toBe(50);
+    expect(MAPPED.length).toBe(51);
   });
 });
 
@@ -106,7 +106,7 @@ describe("② 층별 구성이 CPO 확정 구조와 같다", () => {
     ["MASTER", 27],
     ["CONTENT", 5],
     ["SELLING", 4],
-    ["COMMERCE_BINDING", 5],
+    ["COMMERCE_BINDING", 6],
     ["SOURCE", 7],
     ["LEGACY", 2],
   ])("%s = %d칸", (layer, expected) => {
