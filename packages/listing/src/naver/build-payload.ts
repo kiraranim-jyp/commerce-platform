@@ -1,4 +1,8 @@
-import { buildCertificationTargetExcludeContent, type SmartStoreKcDeclaration } from "./kc-declaration";
+import {
+  buildCertificationTargetExcludeContent,
+  resolveKidsCertificationTypeNotice,
+  type SmartStoreKcDeclaration,
+} from "./kc-declaration";
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct, MasterProduct, SellingConditions } from "@commerce/shared";
 
@@ -665,7 +669,13 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
                 weight: resolveNoticeFieldValue("weight", product.weight),
                 // KC 인증정보 설명 텍스트 — N-3.45 STEP10(CPO 지시)에 따라 절대
                 // "상세페이지 참조"로 대체하지 않는다. 실제 값만 채운다.
-                certificationType: product.certificationType?.value || undefined,
+                /* P0-KC-12 — 🔴 여기서 판정하지 않는다. 판매자가 ⑧에서 고른
+                   「어린이제품 인증 대상 아님」을 고시 문자열로 옮길 뿐이고,
+                   실제 값을 적었으면 그것이 언제나 우선이다. */
+                certificationType: resolveKidsCertificationTypeNotice(
+                  smartStoreKcDeclaration,
+                  product.certificationType?.value || undefined,
+                ),
                 // N-3.51 STEP1(6차 실등록 시도로 발견) — releaseDate(YearMonth,
                 // 구조화된 출시연월)는 CartPilot이 알 방법이 없다(크롤러가
                 // 추출하지 않음, 임의 날짜를 지어내지 않는다는 원칙 유지).

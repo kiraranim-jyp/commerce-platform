@@ -237,7 +237,14 @@ describe("⑧ 실측 고정 — kids.certificationType 은 «항상» 필수다"
 
   it("고시 인증유형은 여전히 검사된다 — 화면이 먼저 막는다", () => {
     expect(VALIDATE).toContain('"productInfoProvidedNotice(KIDS).certificationType"');
-    expect(VALIDATE).toContain("Boolean(input.product.certificationType?.value)");
+    /* P0-KC-12 — 검사 «대상» 이 raw 입력값에서 «빌더가 실제로 만들 값» 으로
+       바뀌었다. 판매자가 「어린이제품 인증 대상 아님」을 골랐으면 고시값
+       (「해당사항 없음」)이 만들어지므로 빈 칸이라고 막지 않는다.
+       🔴 핵심은 그대로다 — validator 와 빌더가 «같은 함수» 를 쓴다. 규칙이
+       두 벌이 되면 화면과 payload 가 갈라진다. */
+    expect(VALIDATE).toContain("resolveKidsCertificationTypeNotice(declaration");
+    const build = codeOnly(readFileSync(join(ROOT, "build-payload.ts"), "utf8"));
+    expect(build).toContain("resolveKidsCertificationTypeNotice(");
   });
 
   it("🔴 실측 응답 원문을 기록해 둔다 — 다음 사람이 추측하지 않도록", () => {

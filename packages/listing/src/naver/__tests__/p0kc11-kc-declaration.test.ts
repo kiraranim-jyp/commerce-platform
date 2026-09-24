@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  KIDS_CERTIFICATION_NOT_APPLICABLE,
+  resolveKidsCertificationTypeNotice,
   buildCertificationTargetExcludeContent,
   requiresChildCertificationData,
   validateKcDeclaration,
@@ -143,5 +145,73 @@ describe("⑤ 네이버 enum 을 그대로 쓴다 — 우리 어휘를 만들지
     expect(
       buildCertificationTargetExcludeContent({ child: "TARGET" }, KIDS)?.childCertifiedProductExclusionYn,
     ).toBe(false);
+  });
+});
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * P0-KC-12(CPO 확정 ㉠, 2026-09-24) — **KIDS 고시의 「KC 인증정보」**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 실측 400 이 확정한 것: 규제 «신고» 와 소비자 «고시» 는 다른 축이고, 고시는
+ * KIDS 카테고리면 «항상» 값을 요구한다.
+ *
+ * 🔴 따져가 「대상이 아니다」라고 판단하는 것이 아니다. 판매자가 ⑧에서 고른
+ * 선언을 고시 문자열로 옮겨 적을 뿐이다.
+ */
+describe("⑥ 고시값 — Child 축 «하나만» 기준이다", () => {
+  const T = (d: SmartStoreKcDeclaration | undefined, entered?: string) =>
+    resolveKidsCertificationTypeNotice(d, entered);
+
+  it("CPO 매트릭스 1 — 미선택 · 미선택 → 기존 입력 요구(값 없음)", () => {
+    expect(T(undefined)).toBeUndefined();
+    expect(T({})).toBeUndefined();
+  });
+
+  it("CPO 매트릭스 2 — 대상 · 대상 → 기존 입력 요구", () => {
+    expect(T({ child: "TARGET", kc: "TARGET" })).toBeUndefined();
+  });
+
+  it("🔴 CPO 매트릭스 3 — 대상 아님 · KC 대상 → 「해당사항 없음」", () => {
+    expect(T({ child: "EXCLUDED", kc: "TARGET" })).toBe(KIDS_CERTIFICATION_NOT_APPLICABLE);
+  });
+
+  it("🔴 CPO 매트릭스 4 — 대상 아님 · KC 대상 아님 → 「해당사항 없음」", () => {
+    expect(T({ child: "EXCLUDED", kc: "EXCLUDED" })).toBe(KIDS_CERTIFICATION_NOT_APPLICABLE);
+  });
+
+  it("🔴 CPO 매트릭스 5 — 대상 아님 · KC 면제/OVERSEAS → 「해당사항 없음」", () => {
+    expect(T({ child: "EXCLUDED", kc: "EXEMPTION", exemptionReason: "OVERSEAS" })).toBe(
+      KIDS_CERTIFICATION_NOT_APPLICABLE,
+    );
+  });
+
+  it("🔴 KC 축«만» 으로는 만들지 않는다 — 금지선", () => {
+    /* 「KC 대상 아님」이 「어린이제품 대상 아님」을 뜻하지 않는다. */
+    expect(T({ kc: "EXCLUDED" })).toBeUndefined();
+    expect(T({ kc: "EXEMPTION", exemptionReason: "OVERSEAS" })).toBeUndefined();
+    expect(T({ kc: "EXEMPTION", exemptionReason: "SAFE_CRITERION" })).toBeUndefined();
+    expect(T({ kc: "EXEMPTION", exemptionReason: "PARALLEL_IMPORT" })).toBeUndefined();
+  });
+
+  it("🔴 판매자가 적은 실제 값이 언제나 우선이다 — 선언이 입력을 덮지 않는다", () => {
+    expect(T({ child: "EXCLUDED" }, "공급자적합성확인대상 어린이제품")).toBe(
+      "공급자적합성확인대상 어린이제품",
+    );
+    expect(T({ child: "TARGET" }, "안전확인대상 어린이제품")).toBe("안전확인대상 어린이제품");
+  });
+
+  it("문자열은 판매자센터가 쓰는 표현 그대로다", () => {
+    expect(KIDS_CERTIFICATION_NOT_APPLICABLE).toBe("해당사항 없음");
+  });
+
+  it("🔴 고시와 신고는 서로를 만들지 않는다", () => {
+    /* 고시값이 생겼다고 certificationTargetExcludeContent 가 달라지지 않는다. */
+    const d: SmartStoreKcDeclaration = { child: "EXCLUDED", kc: "TARGET" };
+    expect(buildCertificationTargetExcludeContent(d, KIDS)).toEqual({
+      childCertifiedProductExclusionYn: true,
+      kcCertifiedProductExclusionYn: "FALSE",
+    });
+    expect(T(d)).toBe(KIDS_CERTIFICATION_NOT_APPLICABLE);
   });
 });

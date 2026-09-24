@@ -128,3 +128,42 @@ export function requiresChildCertificationData(
   if (!capability.childCertificationRequired) return false;
   return declaration?.child !== "EXCLUDED";
 }
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * P0-KC-12(CPO 확정 ㉠, 2026-09-24) — **KIDS 고시의 「KC 인증정보」 값**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 실측으로 확정된 것: `certificationTargetExcludeContent`(규제 «신고»)를 보내도
+ * 네이버는 KIDS 고시의 `certificationType` 을 «따로» 요구한다.
+ *
+ *   HTTP 400 · productInfoProvidedNotice.kids.certificationType
+ *             → 데이터를 입력해 주세요.
+ *
+ * 판매자센터 실물 확인: 이 칸은 자유 입력이고, 안내문이 범위를 한정한다 —
+ * 「어린이제품 안전 특별법」에 따른 안전인증·안전확인·공급자적합성확인«대상»
+ * 어린이제품에 «한함». 즉 대상이 아니면 해당사항이 없다. 같은 고시 화면의
+ * 「크기·체중의 한계」가 「해당사항 없음」을 공식 표현으로 쓴다.
+ *
+ * ── 🔴 여기서 판정하지 «않는다» ───────────────────────────────────────────
+ * 따져가 「이 상품은 어린이제품 인증 대상이 아니다」라고 판단하는 것이 아니다.
+ * 판매자가 ⑧에서 직접 고른 「어린이제품 인증 → 인증 대상 아님」을 고시의 필수
+ * 문자열로 «옮겨 적는» 것뿐이다.
+ *
+ * ── 🔴 Child 축 «하나만» 기준이다 ─────────────────────────────────────────
+ * KC 축(kcCertifiedProductExclusionYn)이나 면제 사유(OVERSEAS 등)로는 이 값을
+ * 만들지 않는다. 그 둘은 다른 축이고, 「KC 대상 아님」이 「어린이제품 대상
+ * 아님」을 뜻하지 않는다.
+ */
+export const KIDS_CERTIFICATION_NOT_APPLICABLE = "해당사항 없음";
+
+export function resolveKidsCertificationTypeNotice(
+  declaration: SmartStoreKcDeclaration | undefined,
+  enteredValue: string | undefined,
+): string | undefined {
+  /* 판매자가 실제 값을 적었으면 그것이 우선이다 — 선언이 입력을 덮지 않는다. */
+  if (enteredValue) return enteredValue;
+  /* 🔴 Child 축만 본다. declaration?.kc 는 «의도적으로» 쓰지 않는다. */
+  if (declaration?.child === "EXCLUDED") return KIDS_CERTIFICATION_NOT_APPLICABLE;
+  return undefined;
+}

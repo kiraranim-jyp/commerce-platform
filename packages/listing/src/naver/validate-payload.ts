@@ -3,7 +3,11 @@ import { hasRealProductOptions } from "./build-payload";
 import type { NaverPayloadInput, SmartStoreProductInput } from "./build-payload";
 import type { NaverProductRegistrationPayload } from "./types";
 import { isNoticeFieldSatisfied } from "../notice/reference-eligibility";
-import { requiresChildCertificationData, validateKcDeclaration } from "./kc-declaration";
+import {
+  requiresChildCertificationData,
+  resolveKidsCertificationTypeNotice,
+  validateKcDeclaration,
+} from "./kc-declaration";
 import {
   resolveKcStatus,
   isKcStatusRegistrable,
@@ -579,7 +583,13 @@ export function validateNaverPayload(
       check(
         fields,
         "productInfoProvidedNotice(KIDS).certificationType",
-        Boolean(input.product.certificationType?.value),
+        /* P0-KC-12 — 🔴 빌더와 «같은 함수» 로 판단한다. 여기서 규칙을 다시 쓰면
+           「화면은 막는데 payload 엔 값이 있는」(또는 그 반대) 상태가 생긴다.
+           판매자가 「어린이제품 인증 대상 아님」을 골랐으면 고시값이 만들어지므로
+           빈 칸이라고 막지 않는다. */
+        Boolean(
+          resolveKidsCertificationTypeNotice(declaration, input.product.certificationType?.value || undefined),
+        ),
         "MISSING",
         "KC 인증정보(대상 여부)가 없습니다 — 실제 값을 직접 입력해야 합니다(\"상세페이지 참조\"로 대체할 수 없습니다).",
         "KC_CERTIFICATION_REQUIRED",
