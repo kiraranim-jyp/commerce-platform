@@ -195,3 +195,38 @@ describe("⑦ validateNaverPayload 호출부 전수 — 선언을 실제로 넘�
     }
   });
 });
+
+/**
+ * ⑧ P0-KC-11 후속 2(CEO Production 확인, 2026-09-24) — **인증 «유형» 도 같은
+ * 게이트를 탄다.**
+ *
+ * 인증서 «번호» 는 풀었는데 «유형»(certificationType)만 남아 있어서 실제로
+ * 등록이 막혔다. 인증서가 없다고 선언한 상품에 「인증서에 적힌 유형」을 적으라고
+ * 하면 남는 길은 또 아무 값이나 넣는 것뿐이다 — 이번 사고의 형태 그대로다.
+ */
+describe("⑧ certificationType 도 선언을 따른다", () => {
+  const VALIDATE = codeOnly(readFileSync(join(ROOT, "validate-payload.ts"), "utf8"));
+
+  it("🔴 인증 «유형» 요구가 requiresChildCertificationData 뒤에 걸려 있다", () => {
+    const flat = VALIDATE.replace(/\s+/g, " ");
+    expect(flat).toContain(
+      "if (requiresChildCertificationData(declaration, { childCertificationRequired: true })) { check( fields, \"productInfoProvidedNotice(KIDS).certificationType\"",
+    );
+  });
+
+  it("🔴 「상세페이지 참조」 대체 금지는 그대로다 — 푼 것은 선언뿐이다", () => {
+    expect(VALIDATE).toContain("로 대체할 수 없습니다");
+    /* 🔴 certificationType 은 «참조 금지 목록» 에 이름이 남아 있어야 한다.
+       내가 처음 쓴 「파일에 이 이름이 없어야 한다」는 검사는 틀렸다 — 금지
+       목록에 있는 것이 정상이고, 없어지는 것이 사고다. */
+    const ref = readFileSync(join(ROOT, "../notice/reference-eligibility.ts"), "utf8");
+    expect(ref).toContain(
+      'export const NOTICE_KC_FIELDS_NEVER_REFERENCE_ELIGIBLE = ["certificationType", "childCertification"]',
+    );
+  });
+
+  it("번호와 유형이 «같은» 판단을 쓴다 — 하나만 풀리는 일이 없다", () => {
+    const uses = VALIDATE.split("requiresChildCertificationData(").length - 1;
+    expect(uses).toBeGreaterThanOrEqual(2);
+  });
+});

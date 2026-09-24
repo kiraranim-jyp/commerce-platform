@@ -545,14 +545,26 @@ export function validateNaverPayload(
     // 채 등록될 위험이 있어, 여기서도 항상 실제 값만 READY로 인정한다. CEO의
     // "필수 아닌 값은 전부 optional" 지시에도 KC는 명시적으로 예외다(CPO
     // 원본 분류표: KC=조건부 필수 🔴) — optional:true를 붙이지 않는다.
-    check(
-      fields,
-      "productInfoProvidedNotice(KIDS).certificationType",
-      Boolean(input.product.certificationType?.value),
-      "MISSING",
-      "KC 인증정보(대상 여부)가 없습니다 — 실제 값을 직접 입력해야 합니다(\"상세페이지 참조\"로 대체할 수 없습니다).",
-      "KC_CERTIFICATION_REQUIRED",
-    );
+    /* 🔴 P0-KC-11 후속(CEO Production 확인, 2026-09-24) — 판매자가
+       「어린이제품 인증 대상 아님」을 «골랐으면» 인증 «유형» 도 요구하지 않는다.
+
+       인증서가 없다고 선언한 상품에 「인증서에 적힌 유형」을 적으라고 하면,
+       남는 길은 또 아무 값이나 넣는 것뿐이다 — 이번 사고의 형태 그대로다.
+       인증서 번호는 이미 풀었는데 유형만 남아 있어서 실제로 등록이 막혔다.
+
+       🔴 위 N-3.45 가드(「상세페이지 참조」로 대체 금지)는 «그대로» 다. 여기서
+       푸는 것은 참조 대체가 아니라, 판매자가 명시적으로 «대상이 아니라고
+       선언한» 경우뿐이다. 선언이 없으면 예전처럼 실제 값을 요구한다. */
+    if (requiresChildCertificationData(declaration, { childCertificationRequired: true })) {
+      check(
+        fields,
+        "productInfoProvidedNotice(KIDS).certificationType",
+        Boolean(input.product.certificationType?.value),
+        "MISSING",
+        "KC 인증정보(대상 여부)가 없습니다 — 실제 값을 직접 입력해야 합니다(\"상세페이지 참조\"로 대체할 수 없습니다).",
+        "KC_CERTIFICATION_REQUIRED",
+      );
+    }
     // N-3.45(CPO 지시) — itemName/modelName은 실제 값이 없어도 "상세페이지
     // 참조"를 선택했으면 READY다.
     check(
