@@ -325,6 +325,10 @@ async function computeSmartstoreReadiness(
       exchangeDeliveryFee,
       returnCompaniesFetchFailed: context.delivery.returnCompaniesFetchFailed,
       childCertificationInfoId,
+      /* P0-KC-11 — 판매자 «선언» 을 검증에도 넘긴다. 이걸 빼면 validator 가
+         인자를 받아도 항상 undefined 라, 화면에서 「대상 아님」을 골라도 준비
+         상태는 계속 「인증정보 없음」이라고 말한다(실제로 그랬다). */
+      smartStoreKcDeclaration: product.smartStoreKcDeclaration,
       originAreaCode,
       originAreaRequiresImporter: context.origin.match.requiresImporter,
       deliveryCompany,

@@ -160,3 +160,38 @@ describe("⑥ Preview 는 화면 state 가 아니라 payload 를 읽는다", () 
     expect(PV).toContain('exclude.kcExemptionType ?? "없음"');
   });
 });
+
+/**
+ * ⑦ P0-KC-11 후속(CEO Production 확인, 2026-09-24) — **인자를 만든 것과 «넘기는»
+ * 것은 다르다.**
+ *
+ * validator 에 smartStoreKcDeclaration 인자를 «만들어 두고» 호출부에서 넘기지
+ * 않았다. 그래서 화면에서 「인증 대상 아님 / 면제 대상 / 구매대행」을 다 골라도
+ * 오른쪽 등록 준비 상태는 계속 「KC 인증정보(대상 여부)가 없습니다」라고 말했다.
+ * types.ts 에 certificationTargetExcludeContent 가 «선언만 되고» 아무도 안 쓰던
+ * 것과 정확히 같은 실수다.
+ *
+ * 🔴 그래서 이 블록은 «호출부» 를 검사한다. 한 곳이라도 빠지면 그 화면만 조용히
+ * 옛 판정을 계속 말한다.
+ */
+describe("⑦ validateNaverPayload 호출부 전수 — 선언을 실제로 넘긴다", () => {
+  const CALLERS = [
+    ["CommerceWorkspace.tsx", join(__dirname, "../../CommerceWorkspace.tsx")],
+    ["NaverPayloadPreview.tsx", join(__dirname, "../NaverPayloadPreview.tsx")],
+    ["smartstore/register/route.ts", join(__dirname, "../../../api/smartstore/register/route.ts")],
+    ["compute-readiness.ts", join(__dirname, "../../../api/snapshots/_lib/compute-readiness.ts")],
+  ] as const;
+
+  it.each(CALLERS)("%s 가 선언을 넘긴다", (_name, path) => {
+    const src = codeOnly(readFileSync(path, "utf8"));
+    expect(src).toContain("validateNaverPayload(");
+    expect(src).toContain("smartStoreKcDeclaration: product.smartStoreKcDeclaration,");
+  });
+
+  it("🔴 호출부가 4곳뿐이다 — 새 호출부가 생기면 이 목록도 같이 늘어야 한다", () => {
+    /* 목록이 실제와 어긋나면 「전수 검사」라는 이름이 거짓이 된다. */
+    for (const [, path] of CALLERS) {
+      expect(codeOnly(readFileSync(path, "utf8")).includes("validateNaverPayload(")).toBe(true);
+    }
+  });
+});

@@ -425,6 +425,10 @@ export async function POST(request: Request) {
     payload,
     {
       product,
+      /* P0-KC-11 — 판매자 «선언» 을 서버 검증에도 넘긴다. 화면이 보낸 것을
+         믿는 게 아니라, 이 라우트가 DB 에서 읽은 product 의 값을 쓴다
+         (이 라우트의 다른 모든 조회와 같은 원칙). */
+      smartStoreKcDeclaration: product.smartStoreKcDeclaration,
       ...payloadInputCommon,
       returnCompaniesFetchFailed: context.delivery.returnCompaniesFetchFailed,
       originAreaRequiresImporter: context.origin.match.requiresImporter,
