@@ -2550,11 +2550,15 @@ export function CommerceWorkspace({
       );
       const data = (await response.json()) as
         | { ok: true; model: ChannelEditModel }
-        | { ok: false; message?: string };
+        /* 🔴 `error` 도 읽는다. 권한 게이트(requireRegistrationAccess)는 «error»
+           키로 사유를 주고, 이 라우트는 «message» 로 준다. message 만 읽으면
+           「등록 권한이 설정되지 않았습니다」처럼 «해결 방법이 분명한» 사유가
+           「읽지 못했습니다」로 뭉개진다 — 아는 이유를 모른다고 말하지 않는다. */
+        | { ok: false; message?: string; error?: string };
       if (!data.ok) {
         /* 🔴 실패를 빈 화면으로 만들지 않는다. 읽지 못했다는 «사실» 을 말한다. */
         setChannelEdit(null);
-        setChannelEditNote(data.message ?? "지금 등록된 내용을 읽지 못했습니다.");
+        setChannelEditNote(data.message ?? data.error ?? "지금 등록된 내용을 읽지 못했습니다.");
         return;
       }
       setChannelEdit({ model: data.model, basePayload: smartStorePayload });
@@ -3028,6 +3032,24 @@ export function CommerceWorkspace({
       ...prev,
     ]);
     setListingStates((prev) => ({ ...prev, [platform]: result.status }));
+    /* ══════════════════════════════════════════════════════════════════════
+       P0-CHANNEL-03 F-14-5 — 🔴 보냈으면 «기준값을 버린다».
+
+       수정이 나간 순간 채널의 현재값은 우리가 들고 있던 기준값이 아니다. 그대로
+       두면 요약은 계속 「변경사항 1건」이라고 말하고 버튼도 열려 있어, 셀러가 한
+       번 더 누르면 «같은 수정이 다시» 나간다 — 네이버 수정은 전체 교체이므로
+       상품 전체가 이유 없이 또 등록된다.
+
+       🔴 여기서 자동으로 다시 읽지 «않는다». 방금 보낸 값이 반영됐는지는 채널의
+       검수 상태에 달려 있어 바로 읽으면 옛 값이 올 수 있고, 그것을 「현재값」
+       이라고 보여주면 셀러는 수정이 안 됐다고 읽는다. 다시 불러오는 것은 셀러가
+       «직접» 누른다. */
+    if (platform === "smartstore" && result.status === "SUBMITTED" && channelEdit) {
+      setChannelEdit(null);
+      setChannelEditNote(
+        "수정을 보냈습니다. 반영된 내용을 확인하려면 [등록된 내용 불러오기]를 다시 눌러주세요.",
+      );
+    }
     // N-06-B — 방금 생긴 이력을 화면이 바로 읽는다(영속 사실은 DB 가 갖는다).
     void refreshAttempts();
     return result;

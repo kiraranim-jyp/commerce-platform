@@ -230,3 +230,31 @@ describe("⑤ 🔴 기존 등록 흐름을 대체하지 않는다", () => {
     expect(FRAME).toContain("editSummary?: ReactNode");
   });
 });
+
+describe("⑥ 🔴 CTO 자체 검토에서 찾은 두 구멍", () => {
+  it("보냈으면 기준값을 «버린다» — 같은 수정이 두 번 나가지 않는다", () => {
+    /* 수정이 나간 순간 채널의 현재값은 우리가 들고 있던 기준값이 아니다.
+       그대로 두면 요약은 계속 「변경사항 1건」이라 하고 버튼도 열려 있다. */
+    expect(WORKSPACE).toContain(
+      'if (platform === "smartstore" && result.status === "SUBMITTED" && channelEdit) {',
+    );
+    expect(WORKSPACE).toContain("수정을 보냈습니다.");
+    const after = WORKSPACE.slice(WORKSPACE.indexOf('result.status === "SUBMITTED" && channelEdit'));
+    expect(after).toContain("setChannelEdit(null);");
+  });
+
+  it("🔴 자동으로 다시 읽지 않는다 — 검수 중이면 옛 값이 온다", () => {
+    const after = WORKSPACE.slice(
+      WORKSPACE.indexOf('result.status === "SUBMITTED" && channelEdit'),
+      WORKSPACE.indexOf("void refreshAttempts();"),
+    );
+    expect(after).not.toContain("loadChannelEdit");
+    expect(WORKSPACE).toContain("[등록된 내용 불러오기]를 다시 눌러주세요");
+  });
+
+  it("권한 게이트가 «준 사유» 를 삼키지 않는다", () => {
+    /* requireRegistrationAccess 는 error 키로, 이 라우트는 message 키로 답한다.
+       message 만 읽으면 해결 방법이 분명한 사유가 「읽지 못했습니다」로 뭉개진다. */
+    expect(WORKSPACE).toContain("data.message ?? data.error ??");
+  });
+});
