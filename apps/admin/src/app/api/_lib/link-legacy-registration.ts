@@ -170,6 +170,11 @@ export async function linkLegacyRegistration(
       .insert({
         /* 🔴 sourceUrl 을 채우지 않는다 — 식별자가 아니고, 채우면 다음 사람이
            그것으로 매칭하고 싶어진다(PHASE D-2 §2·3). */
+        /* 🔴 F-12d — `id`·`updatedAt` 은 DB 에 DEFAULT 가 없다(Prisma 가 앱에서
+           채우는 값이다). 비우면 NOT NULL 위반으로 «항상» 실패한다.
+           snapshot.ts 의 createProductIdentity 와 «같은» 이유·같은 처리다. */
+        id: crypto.randomUUID(),
+        updatedAt: new Date().toISOString(),
         title: snap.title ?? "(제목 없음)",
         workspace_id: snap.workspace_id,
       })
@@ -188,6 +193,9 @@ export async function linkLegacyRegistration(
 
   /* ── §3 ChannelProduct ──────────────────────────────────────────────── */
   const { error: cpErr } = await db.from("channel_products").insert({
+    /* 🔴 F-12d — 063 이 `id TEXT PRIMARY KEY` 로 만들었고 DEFAULT 가 없다.
+       비우면 NOT NULL 위반이다(channel-product.ts 와 같은 처리). */
+    id: crypto.randomUUID(),
     product_id: productId,
     channel,
     external_product_id: externalProductId,

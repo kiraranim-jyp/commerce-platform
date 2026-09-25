@@ -206,6 +206,25 @@ async function createProductIdentity(
        063 에서 이 칸을 빠뜨려 products 만 무주공산이었고, snapshot-ownership
        보안 테스트(CASE G)가 그것을 잡았다. 066 으로 칸을 만들고 여기서 채운다. */
     .insert({
+      /* ════════════════════════════════════════════════════════════════════
+         🔴 F-12d — `id` 와 `updatedAt` 을 «직접» 채운다.
+
+         products 는 Prisma 모델이고 초기 migration 이 이렇게 만들었다:
+             "id" TEXT NOT NULL,                ← DEFAULT «없음»
+             "updatedAt" TIMESTAMP(3) NOT NULL  ← DEFAULT «없음»
+         Prisma 가 @default(cuid()) · @updatedAt 으로 «앱에서» 채우는 값이라 DB
+         쪽 기본값이 없다. 그런데 여기는 Supabase raw insert 다 — 두 칸을 비우면
+         NOT NULL 위반으로 «항상» 실패한다.
+
+         🔴 그 실패는 아래에서 console.warn 하고 조용히 넘어간다. 그래서 E-2
+         이후 products 행이 «한 건도» 만들어지지 않았고, 모든 snapshot 의
+         product_id 가 NULL 로 남았으며, 그 결과 ChannelProduct 도 영영 생기지
+         않았다. 13714803530 이 연결 없이 떠 있던 진짜 이유가 이것이다.
+
+         바로 아래 product_snapshots 는 `default gen_random_uuid()` 라 비워도
+         됐다 — 그래서 같은 파일 안에서 한쪽만 조용히 죽어 있었다. */
+      id: crypto.randomUUID(),
+      updatedAt: new Date().toISOString(),
       sourceUrl: input.sourceUrl,
       title: input.title ?? "(제목 미확인)",
       workspace_id: input.workspaceId,

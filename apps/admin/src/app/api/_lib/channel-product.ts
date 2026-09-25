@@ -74,6 +74,12 @@ export async function linkChannelProduct(input: {
   const { data, error } = await supabase
     .from("channel_products")
     .insert({
+      /* 🔴 F-12d — `id` 를 «직접» 채운다. 063 이 `id TEXT PRIMARY KEY` 로
+         만들었고 DEFAULT 가 없다(product_snapshots 와 달리 gen_random_uuid()
+         가 붙어 있지 않다). 비우면 NOT NULL 위반으로 «항상» 실패하고, 아래
+         에서 console.warn 후 null 을 내므로 조용히 지나간다 —
+         그래서 ChannelProduct 가 지금까지 «한 건도» 만들어지지 않았다. */
+      id: crypto.randomUUID(),
       product_id: input.productId,
       channel: input.channel,
       external_product_id: input.externalProductId,
