@@ -70,6 +70,16 @@ export async function fetchRegisteredProduct(
       detailAttribute?: {
         productInfoProvidedNotice?: unknown;
         optionInfo?: { optionCombinations?: unknown[] };
+        /* P0-CHANNEL-03 F-11b — F-11 GET probe 가 «있음» 을 확인한 세 축.
+           🔴 이제 대칭 «가정» 이 아니라 실측이다. 그래도 optional 로 둔다 —
+           상품마다 없을 수 있고, 없는 것을 읽지 못한 것과 섞지 않는다. */
+        naverShoppingSearchInfo?: { modelName?: string; manufacturerName?: string; brandName?: string };
+        originAreaInfo?: { originAreaCode?: string; content?: string; importer?: string };
+        certificationTargetExcludeContent?: {
+          childCertifiedProductExclusionYn?: boolean;
+          kcCertifiedProductExclusionYn?: string;
+          kcExemptionType?: string;
+        };
       };
     };
   } | null;
@@ -91,6 +101,12 @@ export async function fetchRegisteredProduct(
       leafCategoryId: origin.leafCategoryId,
       name: origin.name,
       stockQuantity: origin.stockQuantity,
+      /* P0-CHANNEL-03 F-11b — 🔴 `?? null` 이나 `?? {}` 로 메우지 않는다.
+         빈 객체로 채우면 compareRegisteredProduct 가 「읽었는데 값이 없었다」로
+         읽어 있던 값이 사라졌다는 거짓 MISSING 을 만든다. 없으면 undefined. */
+      naverShoppingSearchInfo: origin.detailAttribute?.naverShoppingSearchInfo,
+      originAreaInfo: origin.detailAttribute?.originAreaInfo,
+      certificationTargetExcludeContent: origin.detailAttribute?.certificationTargetExcludeContent,
     },
   };
 }

@@ -47,6 +47,41 @@ export interface RegisteredProductSnapshot {
    * 모르는 채로 어느 쪽에 밀어넣어도 틀린다.
    */
   leafCategoryId?: string | null;
+
+  /* ════════════════════════════════════════════════════════════════════════
+     P0-CHANNEL-03 F-11b — 실측(F-11 GET probe)으로 «있음» 이 확인돼 비교로
+     승격된 축들. 🔴 `detectUpdateDataLoss()` 는 이 칸들을 «보지 않는다» —
+     손실 방지 6축은 한 줄도 바뀌지 않았다(ChangeSet 과 역할 분리, CTO 명시).
+
+     🔴 전부 optional 이고, 못 읽으면 `undefined` 로 둔다. 없는 것을 `null` 이나
+     빈 객체로 메우면 「있던 값이 사라졌다」는 거짓 MISSING 이 난다.
+  ════════════════════════════════════════════════════════════════════════ */
+
+  /** 모델명·제조사명·브랜드명. 평평한 문자열 3개라 칸별로 비교할 수 있다. */
+  naverShoppingSearchInfo?: {
+    modelName?: string;
+    manufacturerName?: string;
+    brandName?: string;
+  } | null;
+
+  /** 🔴 «코드만» 비교한다. content/importer 는 조건부 필드라 제외(registered-change.ts). */
+  originAreaInfo?: {
+    originAreaCode?: string;
+    content?: string;
+    importer?: string;
+  } | null;
+
+  /**
+   * 인증 «대상 제외 신고».
+   * 🔴 `productCertificationInfos`(실제 인증정보)와 «다른 것» 이다 — 이름이
+   * 비슷해 섞기 쉬운데, 하나는 「대상이 아니라고 신고한 내용」이고 다른 하나는
+   * 「실제로 받은 인증서」다. 후자는 비교 계약 근거가 없어 승격하지 않았다.
+   */
+  certificationTargetExcludeContent?: {
+    childCertifiedProductExclusionYn?: boolean;
+    kcCertifiedProductExclusionYn?: string;
+    kcExemptionType?: string;
+  } | null;
 }
 
 /**
