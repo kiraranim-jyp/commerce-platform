@@ -16,6 +16,7 @@ import {
 } from "@commerce/listing";
 import { buildChannelPriceAuditRecord } from "@/lib/channel-price-audit";
 import { requireRegistrationAccess } from "@/lib/auth/require-registration-access";
+import { linkChannelProduct } from "@/app/api/_lib/channel-product";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { recordAuditLog } from "@/lib/audit-log";
 import { getNaverCredentials } from "../../naver/_lib/env";
@@ -67,11 +68,48 @@ function extractNaverErrorReason(body: unknown): string | null {
   return raw && raw !== "{}" ? raw.slice(0, 500) : null;
 }
 
+
+/**
+ * P0-CHANNEL-03 F-5 — snapshot 이 속한 Product 를 찾아 ChannelProduct 를 잇는다.
+ *
+ * 🔴 snapshot 이 아니라 «Product» 에 잇는다. 그래야 재분석으로 새 snapshot 이
+ * 생겨도 연결이 끊어지지 않는다 — 그 끊김이 SmartStore 외부번호 6개를 만들었다.
+ *
+ * 🔴 조용히 실패한다. 등록은 이미 성공했고, 상품은 네이버에 나가 있다.
+ * DB 기록 실패로 그 사실을 뒤집지 않는다.
+ */
+async function linkSmartStoreChannelProduct(
+  snapshotId: string | null | undefined,
+  externalProductId: string | undefined,
+): Promise<string | null> {
+  if (!snapshotId || !externalProductId) return null;
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return null;
+  const { data } = await supabase
+    .from("product_snapshots")
+    .select("product_id")
+    .eq("id", snapshotId)
+    .maybeSingle();
+  const productId = (data as { product_id?: string | null } | null)?.product_id;
+  /* 기존 381건은 product_id 가 NULL 이다 — 예전과 똑같이 attempt 만 남는다. */
+  if (!productId) return null;
+  const linked = await linkChannelProduct({
+    productId,
+    channel: "smartstore",
+    externalProductId,
+  });
+  return linked?.id ?? null;
+}
+
 async function logRegistrationAttempt(
   result: ListingResult,
   apiResponseBody?: unknown,
   snapshotId?: string | null,
   jobKey?: string | null,
+  /* P0-CHANNEL-03 — 이 시도가 «무엇» 이었는가. resolveLifecycle() 이 정한 값을
+     그대로 받는다. 🔴 여기서 추론하지 않는다 — 「external_product_id 가 있으면
+     UPDATE」 같은 추론을 하면 판단이 두 벌이 된다. */
+  lifecycle?: { operation: "CREATE" | "UPDATE" | "RECREATE"; channelProductId: string | null } | null,
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return;
@@ -92,11 +130,24 @@ async function logRegistrationAttempt(
     // 완전히 같은 구조를 같은 함수(buildChannelPriceAuditRecord)로 만든다 —
     // 채널마다 감사 기록 모양이 달라지면 나중에 두 번 읽어야 한다.
     channel_price_record: result.channelPriceRecord ?? null,
+    /* 🔴 모르면 «비운다». 기존 97건이 NULL 인 것과 같은 상태가 될 뿐이고,
+       없는 것을 'CREATE' 로 채우면 확인하지 않은 것을 확인했다고 적는 셈이다
+       (그중 일부는 실제로 같은 상품의 중복 등록이었다). */
+    operation: lifecycle?.operation ?? null,
+    channel_product_id: lifecycle?.channelProductId ?? null,
   };
   // Coupang register route와 같은 이유(마이그레이션 016/025/048 미실행 환경 대비) —
   // 해당 컬럼이 없으면 그 필드만 제외하고 재시도한다. channel_price_record가
   // 맨 앞인 이유도 쿠팡 route와 같다(가장 새 컬럼 = 가장 먼저 포기).
-  const optionalColumns = ["channel_price_record", "snapshot_id", "job_key"];
+  /* 가장 새 컬럼이 가장 먼저 포기된다 — 마이그레이션 063 미적용 환경에서도
+     등록 «이력 기록» 자체가 실패하지 않게. */
+  const optionalColumns = [
+    "channel_product_id",
+    "operation",
+    "channel_price_record",
+    "snapshot_id",
+    "job_key",
+  ];
   for (let attempt = 0; attempt <= optionalColumns.length; attempt++) {
     const { error } = await supabase.from("registration_attempts").insert(row);
     if (!error) return;
@@ -564,7 +615,23 @@ export async function POST(request: Request) {
         submittedAt: new Date().toISOString(),
         externalProductId: originProductNo != null ? String(originProductNo) : undefined,
       });
-      await logRegistrationAttempt(result, response.body, snapshotId, jobKey);
+      /* ══════════════════════════════════════════════════════════════════
+         P0-CHANNEL-03 F-5 — 등록이 «성공했을 때만» 현재 연결을 만든다.
+
+         🔴 실패한 시도로 ChannelProduct 를 만들면 다음 CREATE 가 막혀 셀러가
+         영영 등록하지 못한다. 그래서 이 자리(SUBMITTED 경로)에만 있다.
+
+         🔴 product_id 가 없으면 연결하지 않는다 — 기존 381 snapshot 은
+         product_id 가 NULL 이다(backfill 금지). 그 경우 예전과 똑같이
+         attempt 만 남는다. 정체성이 없다고 등록을 막지 않는다.
+
+         🔴 실패해도 등록 결과를 뒤집지 않는다. 상품은 이미 네이버에 나갔다 —
+         DB 기록이 안 됐다고 「실패」라고 말하면 그것이 거짓이다. */
+      const channelProductId = await linkSmartStoreChannelProduct(snapshotId, result.externalProductId);
+      await logRegistrationAttempt(result, response.body, snapshotId, jobKey, {
+        operation: "CREATE",
+        channelProductId,
+      });
       if (snapshotId) await markSnapshotRegistered(snapshotId);
       await recordAuditLog({
         eventType: "MARKETPLACE_REGISTERED",
