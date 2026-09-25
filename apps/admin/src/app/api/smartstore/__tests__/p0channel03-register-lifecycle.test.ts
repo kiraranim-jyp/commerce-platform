@@ -80,7 +80,9 @@ describe("③ 🔴 읽지 못하면 «정하지 않는다» — fail-closed", ()
 
 describe("④ 🔴 중복 CREATE 를 구조적으로 막는다", () => {
   it("POST «앞» 에 마지막 빗장이 있다", () => {
-    const iGuard = SRC.indexOf("if (blocksCreate(Boolean(existing)) && plannedOperation !== \"RECREATE\")");
+    /* F-12a 에서 이 빗장의 «판단» 을 resolveCreateGate() 한 곳으로 모았다.
+       여기서 지키는 것은 그대로다 — 빗장이 POST 앞에 선다. */
+    const iGuard = SRC.indexOf("resolveCreateGate({");
     const iCreate = SRC.indexOf("path: CREATE_PRODUCT_PATH");
     expect(iGuard).toBeGreaterThan(-1);
     expect(iGuard).toBeLessThan(iCreate);

@@ -230,3 +230,66 @@ export function resolveLifecycle(
 export function blocksCreate(hasChannelProduct: boolean): boolean {
   return hasChannelProduct;
 }
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * P0-CHANNEL-03 F-12a(CTO 지시, 2026-09-25) — **새 상품을 만들어도 되는가.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * F-12 후속에서 세 라우트에 같은 빗장을 «복제» 했다. 복제된 판단은 반드시
+ * 갈라진다 — 이 스프린트가 내내 고쳐 온 실수이고, 실제로 그때도 한 채널의
+ * 채널 이름만 안 고치면 조용히 틀리는 상태였다. 판단을 여기로 모은다.
+ *
+ * ── 🔴 두 가지 「이미 나가 있음」이 있다 ─────────────────────────────────
+ *     hasChannelProduct  연결을 «안다»       → 고칠 수 있다(UPDATE/RECREATE)
+ *     priorSuccess       연결은 «모르는데»   → 고칠 수도 없고 만들어서도 안 된다
+ *                        성공 이력이 있다
+ * 뒤쪽이 F-12 준비 중 드러난 구멍이다. 기존 381 snapshot(product_id NULL)과
+ * 연결 기록이 유실된 경우가 여기 해당하고, 13713593585 가 바로 그 상태였다.
+ *
+ * ── 🔴 `priorSuccess: null`(확인 못 함)은 «막는 쪽» 이다 ──────────────────
+ * 조회 실패를 「성공한 적 없다」로 읽으면 DB 가 흔들릴 때마다 중복 등록의 문이
+ * 열린다. 중복은 되돌리기 어렵고, 셀러가 잠시 후 다시 누르는 것은 싸다.
+ *
+ * ── 🔴 RECREATE 는 지나간다 ──────────────────────────────────────────────
+ * 「이미 있다」를 알고도 셀러가 «새로 만들기로» 정한 경우다. 여기서 막으면
+ * 카테고리를 바꿀 방법이 영영 없어진다(쿠팡은 그 길뿐이다).
+ */
+export type CreateGateVerdict =
+  /** 만들어도 된다. */
+  | "ALLOW"
+  /** 연결을 안다 — 새로 만들지 말고 UPDATE/RECREATE 로 가야 한다. */
+  | "BLOCKED_LINKED"
+  /** 🔴 연결은 모르는데 이미 나가 있다 — 만들면 중복이다. */
+  | "BLOCKED_PRIOR_SUCCESS"
+  /** 🔴 이미 나가 있는지 «확인하지 못했다». 모르면 만들지 않는다. */
+  | "BLOCKED_UNKNOWN";
+
+export function resolveCreateGate(input: {
+  /** `channel_products` 에 현재 연결이 있는가. */
+  hasChannelProduct: boolean;
+  /** 이 snapshot × 이 채널로 한 번이라도 성공했는가. `null` = 확인 못 함. */
+  priorSuccess: boolean | null;
+  /** 이 요청이 수행하기로 «정해진» 작업. */
+  plannedOperation: "CREATE" | "RECREATE";
+}): CreateGateVerdict {
+  /* 🔴 동의받은 재등록은 두 빗장 모두 지나간다 — 순서상 가장 먼저 본다. */
+  if (input.plannedOperation === "RECREATE") return "ALLOW";
+  if (blocksCreate(input.hasChannelProduct)) return "BLOCKED_LINKED";
+  if (input.priorSuccess === null) return "BLOCKED_UNKNOWN";
+  return input.priorSuccess ? "BLOCKED_PRIOR_SUCCESS" : "ALLOW";
+}
+
+/** 셀러가 읽는 문장. 🔴 막힌 이유마다 «할 수 있는 일» 이 달라 말도 다르다. */
+export function createGateMessage(verdict: CreateGateVerdict, channelLabel: string, externalProductId?: string | null): string {
+  switch (verdict) {
+    case "ALLOW":
+      return "";
+    case "BLOCKED_LINKED":
+      return `이미 ${channelLabel}에 등록된 상품입니다(${externalProductId ?? "번호 확인 불가"}) — 새로 만들지 않았습니다.`;
+    case "BLOCKED_PRIOR_SUCCESS":
+      return `이미 ${channelLabel}에 등록된 상품입니다 — 연결 정보를 찾지 못해 수정할 수 없고, 새로 만들면 중복이 되어 막았습니다.`;
+    case "BLOCKED_UNKNOWN":
+      return "이미 등록된 상품인지 확인하지 못해 새로 만들지 않았습니다.";
+  }
+}

@@ -77,7 +77,9 @@ describe("③ 🔴 읽지 못하면 CREATE 로 «내려가지 않는다»", () =
 
 describe("④ 🔴 중복 CREATE 를 구조적으로 막는다", () => {
   it("POST 앞에 마지막 빗장이 있다", () => {
-    const iGuard = SRC.indexOf('if (blocksCreate(Boolean(existing)) && plannedOperation !== "RECREATE")');
+    /* F-12a 에서 «판단» 은 resolveCreateGate() 한 곳으로 모였다 — 세 채널이
+       같은 함수를 쓴다(p0channel03-f12a-create-gate.test.ts 가 표로 검증). */
+    const iGuard = SRC.indexOf("resolveCreateGate({");
     expect(iGuard).toBeGreaterThan(-1);
     expect(iGuard).toBeLessThan(SRC.indexOf("path: CREATE_PRODUCT_PATH"));
   });

@@ -88,14 +88,11 @@ describe("② 🔴 빗장이 «CREATE 호출 앞» 이다", () => {
 });
 
 describe("③ 🔴 확인하지 «못한» 경우도 막는다", () => {
-  it("false 일 때만 지나간다 — true·null 은 막는다", () => {
-    /* `!== false` 여야 한다. `=== true` 로 쓰면 「확인 실패(null)」가 통과해,
-       DB 가 흔들릴 때마다 중복 등록의 문이 열린다. */
-    for (const src of Object.values(ROUTES)) {
-      expect(src).toContain("priorSuccess !== false");
-      expect(src).not.toContain("priorSuccess === true");
-    }
-  });
+  /* 🔴 「true·null 은 막고 false 만 지나간다」는 판정 자체는 F-12a 에서
+     resolveCreateGate() 한 곳으로 옮겼고, 표로 검증한다
+     (p0channel03-f12a-create-gate.test.ts). 여기서 소스 문자열로 또 보면
+     판정이 두 곳에서 검사되고, 리팩터 때 한쪽만 고쳐져 조용히 약해진다.
+     이 파일은 «이력을 읽는 쪽»(lib)의 계약만 지킨다. */
 
   it("조회 실패를 「성공한 적 없다」로 내려보내지 않는다", () => {
     const fn = priorSuccessFn();
@@ -115,11 +112,14 @@ describe("③ 🔴 확인하지 «못한» 경우도 막는다", () => {
   });
 });
 
-describe("④ 🔴 RECREATE 는 이 빗장에 걸리지 않는다", () => {
-  it.each(["smartstore", "coupang"] as const)("%s — 동의받은 재등록은 지나간다", (channel) => {
-    /* RECREATE 는 「이미 있다」를 알고도 «새로 만들기로» 셀러가 정한 경우다.
-       여기서 막으면 카테고리를 바꿀 방법이 영영 없어진다. */
-    expect(ROUTES[channel]).toContain('if (plannedOperation !== "RECREATE") {');
+describe("④ 🔴 RECREATE 면 이력을 «조회하지도» 않는다", () => {
+  it.each(["smartstore", "coupang"] as const)("%s — 막지 않을 것을 확인하려고 DB 를 때리지 않는다", (channel) => {
+    /* RECREATE 는 게이트를 지나가는 것이 이미 정해져 있다. 그런데도 이력을
+       읽으면 쓸데없는 쿼리가 매번 나가고, 그 쿼리가 실패하면 «지나갈 것» 이
+       막힐 수도 있다(null 이 막는 쪽이므로). 아예 묻지 않는다. */
+    expect(ROUTES[channel]).toContain(
+      'plannedOperation === "RECREATE" ? false : await hasPriorSuccessfulAttempt(',
+    );
   });
 });
 
