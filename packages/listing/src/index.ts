@@ -18,6 +18,7 @@ export * from "./naver/validate-payload";
 export * from "./naver/compliance";
 export * from "./naver/kc-declaration";
 export * from "./naver/update-preflight";
+export * from "./naver/registered-change";
 export * from "./naver/category-match";
 export * from "./naver/category-hierarchy";
 export * from "./naver/origin-match";

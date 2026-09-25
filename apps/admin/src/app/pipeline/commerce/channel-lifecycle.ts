@@ -83,6 +83,26 @@ export interface ChangeSet {
   fields: readonly string[];
   /** 카테고리가 바뀌었는가. */
   category: boolean;
+  /**
+   * 🔴 카테고리를 «비교하지 못했다». `category: false` 와 «다르다» — 바뀌지
+   * 않은 것이 아니라 모르는 것이다. F-6 이 추가했다.
+   *
+   * 두 필드로 나눈 이유: boolean 하나면 「모름」이 자동으로 「안 바뀜」이 되고,
+   * 그 순간 카테고리 변경이 조용히 UPDATE 로 나간다.
+   */
+  categoryUnknown: boolean;
+  /**
+   * 🔴 이 비교가 «전수» 였는가.
+   *
+   * false 면 「fields 가 비었다」가 「바뀐 게 없다」를 뜻하지 «않는다» —
+   * 우리가 본 범위에서 차이가 없었다는 뜻일 뿐이다. 그 둘을 같게 다루면
+   * 비교하지 못한 축의 수정이 NOOP 으로 조용히 사라지고, 셀러는 고쳤다고
+   * 믿는다. 이 저장소에서 가장 비싼 종류의 거짓말이다.
+   *
+   * 🔴 optional 로 두지 않는다. 생략하면 「전수였다」가 기본이 되는데, 그것이
+   * 정확히 위험한 쪽이다. 부르는 쪽이 «무엇을 아는지 말하게» 강제한다.
+   */
+  comparedEverything: boolean;
 }
 
 export type LifecycleOperation = "CREATE" | "UPDATE" | "RECREATE" | "NOOP" | "BLOCKED";
@@ -115,10 +135,32 @@ export function resolveLifecycle(
       : { operation: "BLOCKED", reason: "이 커머스는 아직 등록을 지원하지 않습니다.", needsAttention: true };
   }
 
+  /* ── 🔴 카테고리를 «모르면» 여기서 멈춘다(F-6) ───────────────────────────
+     카테고리는 UPDATE 와 RECREATE 를 가르는 축이다. 모르는 채로
+       · UPDATE 로 밀면 → 카테고리 변경이 조용히 나가거나 조용히 무시된다.
+                          어느 쪽인지 우리가 모른다.
+       · RECREATE 로 밀면 → 새 상품이 생긴다. 그것이 이 스프린트가 고치려는
+                          «SmartStore 외부번호 6개» 그 자체다.
+     어느 쪽에 밀어넣어도 틀린다. 그래서 «정하지 않고 말한다». 이 분기가
+     NOOP 보다 앞인 이유도 같다 — 카테고리를 못 읽은 채로 「달라진 것이
+     없습니다」라고 말하면 확인하지 않은 것을 확인했다고 적는 셈이다. */
+  if (change.categoryUnknown) {
+    return {
+      operation: "BLOCKED",
+      reason: "지금 등록돼 있는 카테고리를 확인하지 못했습니다 — 수정할지 새로 등록할지 정할 수 없습니다.",
+      needsAttention: true,
+    };
+  }
+
   /* 🔴 이미 나가 있는데 바뀐 것이 없으면 «아무것도 하지 않는다». 같은 값을
      다시 보내면 마켓 쪽에 불필요한 심사가 걸릴 수 있고, 무엇보다 셀러에게
-     「했다」고 말할 근거가 없다. */
-  if (change.fields.length === 0 && !change.category) {
+     「했다」고 말할 근거가 없다.
+
+     🔴 단, «전수로 비교했을 때만» 그렇게 말할 수 있다(F-6). 부분 비교에서
+     차이가 없었다는 것은 「같다」가 아니다 — 여기서 NOOP 을 내면 비교하지
+     못한 축(브랜드·옵션 내용·속성)의 수정이 조용히 사라진다. 그 경우는
+     아래 일반 수정 분기로 «흘려보내» 등록된 내용 전체를 다시 보낸다. */
+  if (change.fields.length === 0 && !change.category && change.comparedEverything) {
     return { operation: "NOOP", reason: "등록된 내용과 달라진 것이 없습니다.", needsAttention: false };
   }
 
@@ -150,7 +192,17 @@ export function resolveLifecycle(
 
   switch (cap.update) {
     case "SUPPORTED":
-      return { operation: "UPDATE", reason: `${change.fields.length}개 항목을 수정합니다.`, needsAttention: false };
+      return {
+        operation: "UPDATE",
+        /* 🔴 「0개 항목을 수정합니다」라고 말하지 않는다. 여기에 fields 가 빈
+           채로 도달했다는 것은 «전수로 보지 못했다» 는 뜻이고(위 NOOP 분기가
+           전수일 때만 잡는다), 그 사실을 그대로 말하는 편이 정확하다. */
+        reason:
+          change.fields.length > 0
+            ? `${change.fields.length}개 항목을 수정합니다.`
+            : "달라진 곳을 전부 확인하지는 못해, 등록된 내용 전체를 다시 보냅니다.",
+        needsAttention: false,
+      };
     case "NOT_SUPPORTED":
       return {
         operation: "RECREATE",

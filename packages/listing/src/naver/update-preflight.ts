@@ -36,6 +36,17 @@ export interface RegisteredProductSnapshot {
   optionCombinationCount?: number;
   hasProvidedNotice?: boolean;
   salePrice?: number | null;
+  /** 지금 등록돼 있는 상품명. 🔴 셀러가 가장 자주 고치는 값이고, 비교하지
+   *  않으면 그 수정이 «조용히 사라진다». */
+  name?: string | null;
+  stockQuantity?: number | null;
+  /**
+   * 지금 등록돼 있는 카테고리. 🔴 `undefined`(읽지 못함)와 `null`(응답에 없음)을
+   * 「안 바뀌었다」로 읽으면 안 된다 — `compareRegisteredProduct()` 가 그 경우를
+   * `UNKNOWN` 으로 낸다. 카테고리는 UPDATE 와 RECREATE 를 가르는 축이라,
+   * 모르는 채로 어느 쪽에 밀어넣어도 틀린다.
+   */
+  leafCategoryId?: string | null;
 }
 
 /**

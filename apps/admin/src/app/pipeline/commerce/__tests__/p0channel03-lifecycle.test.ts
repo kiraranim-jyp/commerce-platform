@@ -19,10 +19,14 @@ import {
  * 확인했다고 말하지 않는다.
  */
 
-const NO_CHANGE: ChangeSet = { fields: [], category: false };
-const PRICE: ChangeSet = { fields: ["salePrice"], category: false };
-const CATEGORY: ChangeSet = { fields: [], category: true };
-const BOTH: ChangeSet = { fields: ["title", "salePrice"], category: true };
+/* 🔴 F-6 — 아래 넷은 전부 «전수로 비교했고 카테고리도 읽었다» 는 전제다.
+   그것이 아닌 경우는 ⑧ 이 따로 다룬다. 생략할 수 있게 두지 않은 이유가
+   거기 있다 — 모르는 것이 조용히 「안 바뀜」이 되면 안 된다. */
+const SEEN = { categoryUnknown: false, comparedEverything: true } as const;
+const NO_CHANGE: ChangeSet = { fields: [], category: false, ...SEEN };
+const PRICE: ChangeSet = { fields: ["salePrice"], category: false, ...SEEN };
+const CATEGORY: ChangeSet = { fields: [], category: true, ...SEEN };
+const BOTH: ChangeSet = { fields: ["title", "salePrice"], category: true, ...SEEN };
 
 describe("① 아직 안 나간 상품 → CREATE", () => {
   it.each(["smartstore", "coupang", "lotteon"] as const)("%s", (id) => {
@@ -140,6 +144,68 @@ describe("⑥ 중복 방지 기준이 snapshot → ChannelProduct 로 옮겼다"
     /* 이 함수는 snapshot 을 «인자로 받지도» 않는다 — 구조적으로 섞일 수 없다. */
     expect(blocksCreate.length).toBe(1);
     expect(resolveLifecycle.length).toBe(3); // (commerceId, hasChannelProduct, change)
+  });
+});
+
+describe("⑧ 🔴 F-6 — 「모른다」를 「안 바뀌었다」로 만들지 않는다", () => {
+  /* ChangeSet 을 «만드는 곳» 이 생기면서 드러난 것: 우리 비교는 전수가 아니고
+     (GET 응답 모양을 실측한 적이 없다), 카테고리는 아예 못 읽을 수 있다.
+     그 두 가지를 조용히 「안 바뀜」으로 접으면 셀러의 수정이 사라진다. */
+
+  it("🔴 카테고리를 못 읽었으면 BLOCKED — UPDATE 도 RECREATE 도 아니다", () => {
+    /* UPDATE 로 밀면 카테고리 변경이 조용히 나가거나 무시되고, RECREATE 로
+       밀면 새 상품이 생긴다(= 고치려던 외부번호 6개). 정하지 않고 «말한다». */
+    const d = resolveLifecycle("smartstore", true, {
+      fields: ["salePrice"],
+      category: false,
+      categoryUnknown: true,
+      comparedEverything: false,
+    });
+    expect(d.operation).toBe("BLOCKED");
+    expect(d.reason).toContain("카테고리를 확인하지 못했습니다");
+    expect(d.needsAttention).toBe(true);
+  });
+
+  it("🔴 카테고리 미확인은 NOOP «보다 앞» 이다 — 못 읽고 「같다」고 말할 수 없다", () => {
+    const d = resolveLifecycle("smartstore", true, {
+      fields: [],
+      category: false,
+      categoryUnknown: true,
+      comparedEverything: true,
+    });
+    expect(d.operation).toBe("BLOCKED");
+  });
+
+  it("🔴 부분 비교에서 차이가 없으면 NOOP 이 «아니다» — 전체를 다시 보낸다", () => {
+    /* 여기서 NOOP 을 내면 비교하지 못한 축(브랜드·옵션 내용·속성)의 수정이
+       조용히 사라지고 셀러는 고쳤다고 믿는다. */
+    const d = resolveLifecycle("smartstore", true, {
+      fields: [],
+      category: false,
+      categoryUnknown: false,
+      comparedEverything: false,
+    });
+    expect(d.operation).toBe("UPDATE");
+    expect(d.reason).toContain("전부 확인하지는 못해");
+    expect(d.reason).not.toContain("0개");
+  });
+
+  it("전수로 봤을 때만 NOOP 이다", () => {
+    expect(resolveLifecycle("smartstore", true, NO_CHANGE).operation).toBe("NOOP");
+  });
+
+  it("🔴 수정을 못 하는 채널은 부분 비교여도 UPDATE 로 새지 않는다", () => {
+    /* comparedEverything:false 가 「일단 보내자」로 번역되면 안 된다 —
+       채널이 할 수 있는 것은 그대로 capability 표가 정한다. */
+    for (const id of ["coupang", "lotteon"] as const) {
+      const d = resolveLifecycle(id, true, {
+        fields: [],
+        category: false,
+        categoryUnknown: false,
+        comparedEverything: false,
+      });
+      expect(d.operation).toBe("BLOCKED");
+    }
   });
 });
 

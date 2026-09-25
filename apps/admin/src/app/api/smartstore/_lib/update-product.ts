@@ -59,6 +59,13 @@ export async function fetchRegisteredProduct(
     originProduct?: {
       detailContent?: string;
       salePrice?: number;
+      /* P0-CHANNEL-03 F-6 — 변경 감지가 쓰는 세 값. 🔴 요청 payload 와 «같은
+         이름일 것» 이라는 대칭 가정 위에 있다(위 필드들과 똑같은 가정이다).
+         가정이 틀리면 undefined 로 오고, 그러면 「못 읽었다」로 흘러간다 —
+         「안 바뀌었다」로 새지 않는다. 그 처리는 compareRegisteredProduct 에. */
+      leafCategoryId?: string;
+      name?: string;
+      stockQuantity?: number;
       images?: { representativeImage?: { url?: string }; optionalImages?: unknown[] };
       detailAttribute?: {
         productInfoProvidedNotice?: unknown;
@@ -78,6 +85,12 @@ export async function fetchRegisteredProduct(
       optionCombinationCount: origin.detailAttribute?.optionInfo?.optionCombinations?.length ?? 0,
       hasProvidedNotice: Boolean(origin.detailAttribute?.productInfoProvidedNotice),
       salePrice: typeof origin.salePrice === "number" ? origin.salePrice : null,
+      /* 🔴 `?? null` 을 쓰지 않는다. 여기서 null 로 메우면 「응답에 없었다」와
+         「읽었는데 비어 있었다」가 같아진다 — 앞의 것은 우리 가정이 틀렸다는
+         뜻이고 뒤의 것은 실제 데이터다. undefined 로 그대로 둔다. */
+      leafCategoryId: origin.leafCategoryId,
+      name: origin.name,
+      stockQuantity: origin.stockQuantity,
     },
   };
 }
@@ -93,9 +106,22 @@ export async function updateRegisteredProduct(
   accessToken: string,
   originProductNo: string,
   payload: NaverProductRegistrationPayload,
+  /**
+   * 이미 읽어 둔 «지금 나가 있는 것»(P0-CHANNEL-03 F-6).
+   *
+   * 🔴 라우트는 UPDATE 인지 RECREATE 인지 정하려고 이미 GET 을 한다. 그것을
+   * 그대로 넘겨 같은 요청에서 두 번 읽지 않게 한다 — 두 번 읽으면 그 사이에
+   * 값이 바뀔 수 있고(셀러가 관리자에서 동시에 수정), 그러면 «판단한 상태»
+   * 와 «preflight 가 검사한 상태» 가 달라진다. 같은 것을 보고 정하고 보낸다.
+   *
+   * 생략하면 여기서 직접 읽는다 — 단독 호출도 그대로 안전하다.
+   */
+  prefetched?: RegisteredProductSnapshot,
 ): Promise<UpdateProductResult> {
   // ① 지금 나가 있는 것
-  const current = await fetchRegisteredProduct(accessToken, originProductNo);
+  const current = prefetched
+    ? ({ ok: true as const, snapshot: prefetched })
+    : await fetchRegisteredProduct(accessToken, originProductNo);
   if (!current.ok) return { ok: false, step: "FETCH", message: current.message };
 
   // ② 사라지는 것이 있는가
