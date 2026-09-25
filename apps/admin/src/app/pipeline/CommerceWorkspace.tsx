@@ -104,6 +104,7 @@ import { RegistrationHistoryPanel } from "./commerce/RegistrationHistoryPanel";
 import { CommerceSelector } from "./commerce/CommerceSelector";
 import { RecreateConsentPanel } from "./commerce/RecreateConsentPanel";
 import { UpdateConfirmPanel } from "./commerce/UpdateConfirmPanel";
+import { LegacyLinkPanel } from "./commerce/LegacyLinkPanel";
 import {
   COMMERCE_ORDER,
   LOTTEON_COMMERCE_ID,
@@ -2812,7 +2813,31 @@ export function CommerceWorkspace({
        정한다. 예전처럼 「등록됨」을 전부 막으면 셀러는 등록한 상품을 영영
        고칠 수 없다. 단독 등록도 다중 등록도 같은 문 하나를 지난다. */
     if (blockedFromSending(platform)) {
-      setListingStates((prev) => ({ ...prev, [platform]: "SUBMITTED" }));
+      /* 🔴 F-12b — 여기서 «조용히» SUBMITTED 로 적고 끝내던 자리다. 그래서
+         셀러가 가격을 고치고 등록을 눌러도 아무 일도 일어나지 않았고, 화면은
+         「등록됨」이라고 말했으며, attempt 행조차 남지 않았다(executor 를 부르지
+         않으므로). 대표님이 ₩156,900 으로 겪은 것이 정확히 이 상태다.
+
+         이제 «왜 못 보냈는지» 를 결과로 남긴다. 연결을 복구하는 방법은 아래
+         LegacyLinkPanel 이 같은 화면에서 보여준다. */
+      const state = registrationStateFor(platform);
+      setListingResults((prev) => ({
+        ...prev,
+        [platform]: {
+          status: "FAILED",
+          platform,
+          mode: "LIVE",
+          retryable: false,
+          error: {
+            step: "VALIDATION",
+            message:
+              registrationBasisNote(state) ?? "이미 등록된 상품이라 다시 보내지 않았습니다.",
+            retryable: false,
+            resolution: "아래 «연결 확인»으로 기존 상품과의 연결을 복구하면 수정할 수 있습니다.",
+          },
+        },
+      }));
+      setListingStates((prev) => ({ ...prev, [platform]: "FAILED" }));
       setConfirmingPlatform(null);
       return null;
     }
@@ -3519,6 +3544,25 @@ export function CommerceWorkspace({
               누를 때까지 아무것도 만들지 않는다.
               🔴 지금 보고 있는 탭의 질문만 보여준다 — 다른 채널의 동의를 이
               화면에서 받으면 무엇에 답하는지 알 수 없다. */}
+          {/* ══════════════════════════════════════════════════════════════
+              P0-CHANNEL-03 F-12b — 🔴 「이미 나가 있는데 연결이 없는」 상태를
+              화면에서 «풀 수 있게» 한다.
+
+              063 이전에 등록된 상품이 여기 해당한다. 예전에는 등록을 눌러도
+              조용히 막히기만 해서 셀러가 할 수 있는 일이 없었다 — 콘솔도 SQL 도
+              쓰지 않고 버튼 하나로 끝나야 한다.
+
+              🔴 자동으로 잇지 않는다. 근거를 보여주고 «사람이» 누른다
+              (PHASE D-2: 기존 snapshot 은 사람이 확인한 뒤에만 연결한다). */}
+          {isPlatformTab(tab) && registrationStateFor(tab).basis === "ATTEMPT_ONLY" && (
+            <LegacyLinkPanel
+              commerceId={tab}
+              commerceLabel={commerceLabel(tab)}
+              externalProductId={registrationStateFor(tab).externalProductId}
+              onLinked={() => void refreshAttempts()}
+            />
+          )}
+
           {recreateConsent && recreateConsent.platform === tab && (() => {
             const target = recreateConsent.platform;
             /* 🔴 먼저 닫고 나서 보낸다 — 열어 둔 채로 두면 한 번 더 눌러
