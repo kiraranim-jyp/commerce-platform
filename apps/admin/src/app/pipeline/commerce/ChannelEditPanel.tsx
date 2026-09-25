@@ -3,6 +3,7 @@
 import {
   editorFieldSchema,
   evaluateEditGate,
+  toComparable,
   type ChannelEditModel,
   type EditBaseline,
   type EditorField,
@@ -23,10 +24,11 @@ import type { EditableField } from "./channel-field-capability";
  * Snapshot 을 현재값으로 그리면 셀러가 스마트스토어 관리자에서 직접 고친 값이
  * 화면에서 사라진다.
  *
- * ── 🔴 초안을 «소유하지» 않는다 ──────────────────────────────────────────
- * `draft` 와 `touched` 를 props 로 받는다. 이 패널이 자기 초안을 들고 있으면
- * 등록 payload 를 만드는 값과 «두 벌» 이 되고, 화면에서 고친 것이 실제로는
- * 나가지 않는 상태가 된다 — 이 프로젝트가 계속 고쳐 온 모양이다.
+ * ── 🔴 여기에 입력칸을 두지 «않는다»(CEO 확정, 2026-09-26) ────────────────
+ * 초안은 «보낼 payload» 에서 온다. 그 값을 이 패널에서 되받아 쓰면 상품명
+ * 파생 규칙이 두 번 적용되고, 화면의 값과 실제로 나가는 값이 갈린다. 값은
+ * 각자의 편집기(가격·이미지·옵션…)에서 고치고, 이 화면은 «지금 값과 보낼 값»
+ * 을 나란히 보여주고 보낼지를 묻는다.
  *
  * ── 🔴 버튼은 «있고», 꺼져 있다 ──────────────────────────────────────────
  * 변경이 0개면 disabled 다(숨기지 않는다). 손실 게이트와 다르다 — 그쪽은
@@ -37,32 +39,35 @@ export interface ChannelEditPanelProps {
   commerceLabel: string;
   /** 🔴 채널에서 GET 한 기준값. 수집 Snapshot 이 아니다. */
   model: ChannelEditModel;
-  /** 지금 화면이 들고 있는 값. 🔴 등록 payload 를 만드는 «그» 값이어야 한다. */
+  /** 보낼 payload 를 투영한 값. 🔴 등록 payload 를 만드는 «그» 값이어야 한다. */
   draft: Partial<Record<EditableField, unknown>>;
   /** 셀러가 손댄 항목. 🔴 대조하지 못하는 항목의 변경을 아는 유일한 근거다. */
   touched?: readonly EditableField[];
   busy?: boolean;
-  onChange: (field: EditableField, value: unknown) => void;
   onSubmit: () => void;
 }
-
-/** 이 항목은 이 패널에서 «직접» 입력받는다. 나머지는 각자의 편집기에서 고친다. */
-const INLINE_INPUT: Partial<Record<EditableField, "text" | "number">> = {
-  name: "text",
-  salePrice: "number",
-  stockQuantity: "number",
-};
 
 /** 지금 채널에 나가 있는 값을 셀러의 말로. 🔴 못 읽은 것을 값으로 만들지 않는다. */
 function baselineText(baseline: EditBaseline, field: EditableField): string {
   if (baseline.state === "UNREAD") return "읽지 못했습니다";
-  if (baseline.state === "OBSERVED") {
-    if (baseline.value === "") return "비어 있습니다";
-    /* 상세설명은 길다 — 값을 그대로 쏟지 않고 길이만 말한다. */
-    if (field === "detailContent") return `${baseline.value.length}자`;
-    return baseline.value;
-  }
+  if (baseline.state === "OBSERVED") return valueText(baseline.value, field);
   return baseline.unit === "COUNT" ? `${baseline.value}개` : baseline.value;
+}
+
+/** 보낼 값. 🔴 «대조하는 단위» 그대로 보여준다 — 화면과 판단이 같은 것을 본다. */
+function draftText(field: EditorField, draft: Partial<Record<EditableField, unknown>>): string {
+  const value = toComparable(field.compareUnit, draft[field.field]);
+  /* 🔴 「값이 없다」가 아니라 «아직 정해지지 않았다» 다 — 「-」로 채우지 않는다. */
+  if (value === undefined) return "아직 없습니다";
+  if (field.compareUnit === "COUNT") return `${value}개`;
+  return valueText(value, field.field);
+}
+
+function valueText(value: string, field: EditableField): string {
+  if (value === "") return "비어 있습니다";
+  /* 상세설명은 길다 — 값을 그대로 쏟지 않고 길이만 말한다. */
+  if (field === "detailContent") return `${value.length}자`;
+  return value;
 }
 
 export function ChannelEditPanel({
@@ -71,11 +76,11 @@ export function ChannelEditPanel({
   draft,
   touched = [],
   busy = false,
-  onChange,
   onSubmit,
 }: ChannelEditPanelProps) {
   const fields = editorFieldSchema(model);
   const gate = evaluateEditGate(model, draft, touched);
+  const changed = new Set(gate.changes.map((change) => change.field));
 
   return (
     <section
@@ -89,18 +94,29 @@ export function ChannelEditPanel({
       {/* 🔴 「지금 값」이 어디서 온 것인지 밝힌다 — 셀러가 스마트스토어에서 직접
           고쳤다면 그 값이 여기 보이는 것이 맞고, 그것이 이 화면의 근거다. */}
       <p className="mt-1 text-xs text-slate-500">
-        아래 「지금 값」은 {commerceLabel}에서 방금 읽어 온 것입니다.
+        아래 「지금 값」은 {commerceLabel}에서 방금 읽어 온 것입니다. 값은 각 항목의 편집 화면에서 고치시면
+        여기에 「보낼 값」으로 반영됩니다.
       </p>
 
       <ul className="mt-3 divide-y divide-slate-200">
         {fields.map((field) => (
-          <EditorRow
-            key={field.field}
-            field={field}
-            draftValue={draft[field.field]}
-            busy={busy}
-            onChange={onChange}
-          />
+          <li key={field.field} className="py-2">
+            <div className="flex flex-wrap items-baseline gap-x-2">
+              <span className="font-medium">{field.label}</span>
+              {changed.has(field.field) && (
+                <span className="rounded bg-slate-900 px-1.5 py-0.5 text-[10px] text-white">바뀝니다</span>
+              )}
+            </div>
+            <p className="mt-0.5 text-xs text-slate-600">
+              지금 값 {baselineText(field.baseline, field.field)}
+              {/* 🔴 고칠 수 없는 항목에는 「보낼 값」을 쓰지 않는다 — 나가지도
+                  않는 값을 나란히 두면 반영된다고 읽힌다. */}
+              {field.editable ? <> · 보낼 값 {draftText(field, draft)}</> : null}
+            </p>
+            {/* 🔴 한 줄 설명은 schema 가 준 것을 그대로 쓴다. 화면이 다시 쓰면
+                「수정할 수 있습니다」와 capability 가 갈라진다. */}
+            <p className="mt-1 text-xs text-slate-500">{field.note}</p>
+          </li>
         ))}
       </ul>
 
@@ -154,52 +170,5 @@ export function ChannelEditPanel({
         </span>
       </div>
     </section>
-  );
-}
-
-function EditorRow({
-  field,
-  draftValue,
-  busy,
-  onChange,
-}: {
-  field: EditorField;
-  draftValue: unknown;
-  busy: boolean;
-  onChange: (field: EditableField, value: unknown) => void;
-}) {
-  const inputKind = field.editable ? INLINE_INPUT[field.field] : undefined;
-  return (
-    <li className="py-2">
-      <div className="flex flex-wrap items-baseline gap-x-2">
-        <span className="font-medium">{field.label}</span>
-        <span className="text-xs text-slate-500">
-          지금 값 {baselineText(field.baseline, field.field)}
-        </span>
-      </div>
-      {inputKind ? (
-        <input
-          type={inputKind}
-          disabled={busy}
-          value={draftValue === undefined || draftValue === null ? "" : String(draftValue)}
-          onChange={(event) =>
-            /* 🔴 숫자 칸은 숫자로 넘긴다 — 문자열로 넘기면 대조가 「157100」과
-               「157100 」을 다르게 볼 수 있고, 그것이 거짓 변경이 된다. */
-            onChange(
-              field.field,
-              inputKind === "number"
-                ? event.target.value === ""
-                  ? undefined
-                  : Number(event.target.value)
-                : event.target.value,
-            )
-          }
-          className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1 disabled:bg-slate-100"
-        />
-      ) : null}
-      {/* 🔴 한 줄 설명은 schema 가 준 것을 그대로 쓴다. 화면이 다시 쓰면
-          「수정할 수 있습니다」와 capability 가 갈라진다. */}
-      <p className="mt-1 text-xs text-slate-500">{field.note}</p>
-    </li>
   );
 }

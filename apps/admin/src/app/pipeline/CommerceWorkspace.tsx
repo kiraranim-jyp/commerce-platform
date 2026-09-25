@@ -40,6 +40,7 @@ import {
   type LotteOnSellerSettingsInput,
   type NaverCategoryCandidate,
   type NaverPayloadValidationResult,
+  type NaverProductRegistrationPayload,
   type NoticeReferenceEligibleField,
   type PlatformConnectionStatus,
   type RegistrationHistoryEntry,
@@ -104,6 +105,12 @@ import { RegistrationHistoryPanel } from "./commerce/RegistrationHistoryPanel";
 import { CommerceSelector } from "./commerce/CommerceSelector";
 import { RecreateConsentPanel } from "./commerce/RecreateConsentPanel";
 import { UpdateConfirmPanel } from "./commerce/UpdateConfirmPanel";
+import { ChannelEditPanel } from "./commerce/ChannelEditPanel";
+import {
+  channelEditDraftFromNaverPayload,
+  localTouchSignals,
+  type ChannelEditModel,
+} from "./commerce/channel-edit-model";
 import { LegacyLinkPanel } from "./commerce/LegacyLinkPanel";
 import {
   COMMERCE_ORDER,
@@ -2493,6 +2500,74 @@ export function CommerceWorkspace({
   // resolve 결과(data)를 여기 하나에만 저장하고 NaverPayloadPreview는 이 값을
   // prop으로 받기만 한다 — fetch 지점이 하나면 입력 데이터가 갈라질 수 없다.
   const [smartStoreResolved, setSmartStoreResolved] = useState<NaverResolveResponse | null>(null);
+  /**
+   * P0-CHANNEL-03 F-14-3 — 「보낼 payload」 그 자체.
+   *
+   * 🔴 지금까지 이 effect 는 payload 를 만들어 검증만 하고 «버렸다». 수정 화면의
+   * 초안은 그 payload 에서 나오므로(CEO 확정: product·listing 이 아니라 보낼
+   * payload 를 투영한다 — 상품명 파생 규칙이 화면과 전송을 갈라 놓는다) 여기서
+   * 같이 들고 있는다. 같은 자리에서 만든 «같은» payload 라, 화면이 보여주는
+   * 값과 실제로 나가는 값이 어긋날 수 없다.
+   *
+   * 🔴 계산이 실패하면 null 로 «비운다». 옛 payload 를 남겨 두면 지금 화면과
+   * 다른 값을 「보낼 값」이라고 보여준다.
+   */
+  const [smartStorePayload, setSmartStorePayload] = useState<NaverProductRegistrationPayload | null>(null);
+
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * P0-CHANNEL-03 F-14-3 — 「등록된 상품을 불러와 고친다」.
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 기준값은 채널에서 «방금» 읽은 것이다. 자동으로 읽지 않는다 — 셀러가
+   * 「불러오기」를 누를 때만 외부 GET 이 나간다(화면을 열기만 해도 판매자
+   * 계정으로 요청이 나가면, 무엇이 언제 나갔는지 아무도 모른다).
+   *
+   * 🔴 `basePayload` 는 «불러온 순간» 의 payload 다. 대조할 수 없는 축(대표이미지
+   * 교체 등)에서 셀러가 이번에 고쳤는지를 이것과 비교해 안다 — 채널 값과의
+   * 비교가 아니라 «우리 화면에서 달라졌는가» 다.
+   */
+  const [channelEdit, setChannelEdit] = useState<{
+    model: ChannelEditModel;
+    basePayload: NaverProductRegistrationPayload;
+  } | null>(null);
+  const [channelEditLoading, setChannelEditLoading] = useState(false);
+  const [channelEditNote, setChannelEditNote] = useState<string | null>(null);
+
+  const loadChannelEdit = useCallback(async () => {
+    /* 🔴 payload 가 없으면 불러오지 않는다. 기준값만 있고 「보낼 값」이 없으면
+       화면이 대조를 못 하고, 그 상태의 수정 버튼은 근거 없이 열린다. */
+    if (!smartStorePayload) {
+      setChannelEditNote("등록 정보를 계산하는 중입니다. 잠시 뒤 다시 눌러주세요.");
+      return;
+    }
+    setChannelEditLoading(true);
+    setChannelEditNote(null);
+    try {
+      const response = await fetch(
+        `/api/smartstore/registered-product?snapshotId=${encodeURIComponent(snapshotId ?? "")}`,
+      );
+      const data = (await response.json()) as
+        | { ok: true; model: ChannelEditModel }
+        | { ok: false; message?: string };
+      if (!data.ok) {
+        /* 🔴 실패를 빈 화면으로 만들지 않는다. 읽지 못했다는 «사실» 을 말한다. */
+        setChannelEdit(null);
+        setChannelEditNote(data.message ?? "지금 등록된 내용을 읽지 못했습니다.");
+        return;
+      }
+      setChannelEdit({ model: data.model, basePayload: smartStorePayload });
+    } catch (error) {
+      setChannelEdit(null);
+      setChannelEditNote(
+        error instanceof Error
+          ? `지금 등록된 내용을 읽지 못했습니다: ${error.message}`
+          : "지금 등록된 내용을 읽지 못했습니다.",
+      );
+    } finally {
+      setChannelEditLoading(false);
+    }
+  }, [smartStorePayload, snapshotId]);
   // N-3.72(CEO/사용자 지시: "0%는 값이 없어서가 아니라 검증이 아직 안 끝나서인
   // 경우가 있다 — 계산 중과 실패를 구분하라") — 이전에는 이 effect가 값을
   // 계산하기 전까지 smartStoreValidation이 계속 null이었고, readiness.ts의
@@ -2567,6 +2642,9 @@ export function CommerceWorkspace({
             // Settings 게이트가 그 경우를 안내한다).
             setSmartStoreValidation(null);
             setSmartStoreResolved(null);
+            /* 🔴 F-14-3 — payload 도 «비운다». 남겨 두면 수정 화면이 지금 화면과
+               다른 값을 「보낼 값」이라고 보여준다. */
+            setSmartStorePayload(null);
             setSmartStoreValidationError(
               data.status === "AUTH_FAILED"
                 ? `네이버 연결에 실패했습니다: ${data.message}`
@@ -2648,6 +2726,9 @@ export function CommerceWorkspace({
           );
           setSmartStoreValidation(validation);
           setSmartStoreResolved(data);
+          /* 🔴 F-14-3 — 검증한 «그» payload 를 그대로 들고 있는다. 수정 화면의
+             「보낼 값」이 이것이고, 다시 만들면 두 벌이 된다. */
+          setSmartStorePayload(payload);
           setSmartStoreValidationLoading(false);
         })
         .catch((err: unknown) => {
@@ -2661,6 +2742,9 @@ export function CommerceWorkspace({
           // 다시 계산될 일이 없는 상태였다. 진짜 에러는 콘솔에 남긴다.
           if (err instanceof DOMException && err.name === "AbortError") return;
           console.error("[SmartStore] payload validation 계산 실패:", err);
+          /* 🔴 F-14-3 — 계산이 던졌으면 payload 는 «지난 것» 이다. 그대로 두면
+             수정 화면이 옛 값을 「보낼 값」이라고 말한다. */
+          setSmartStorePayload(null);
           setSmartStoreValidationError(
             err instanceof Error ? `등록 가능성 계산 중 오류가 발생했습니다: ${err.message}` : "등록 가능성 계산 중 알 수 없는 오류가 발생했습니다.",
           );
@@ -3561,6 +3645,59 @@ export function CommerceWorkspace({
               externalProductId={registrationStateFor(tab).externalProductId}
               onLinked={() => void refreshAttempts()}
             />
+          )}
+
+          {/* ══════════════════════════════════════════════════════════════
+              P0-CHANNEL-03 F-14-3 — 🔴 «연결을 아는» 상품만 고칠 수 있다.
+
+              연결이 없으면 위 LegacyLinkPanel 이 먼저 서고(그것을 풀어야
+              어느 외부 상품을 고치는지 알 수 있다), 여기는 나오지 않는다.
+
+              🔴 SmartStore 만이다. Coupang·LotteON 의 수정은 아직 UNKNOWN 이고
+              (channel-lifecycle 의 capability 표), 「확인되지 않았다」를
+              「수정 가능」으로 올리지 않는다. */}
+          {tab === "smartstore" && registrationStateFor("smartstore").basis === "CHANNEL_PRODUCT" && (
+            <section className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+              {channelEdit ? (
+                <ChannelEditPanel
+                  commerceLabel={commerceLabel("smartstore")}
+                  model={channelEdit.model}
+                  /* 🔴 초안은 «보낼 payload» 의 투영이다 — product·listing 을
+                     다시 읽으면 상품명 파생 규칙이 빠져 화면과 전송이 갈린다. */
+                  draft={channelEditDraftFromNaverPayload(smartStorePayload ?? channelEdit.basePayload)}
+                  /* 🔴 대조할 수 없는 축은 «우리 payload 끼리» 비교해 손댔는지만
+                     안다. 채널 값과 다르다는 말이 아니다. */
+                  touched={localTouchSignals(
+                    channelEdit.basePayload,
+                    smartStorePayload ?? channelEdit.basePayload,
+                  )}
+                  busy={listingProgress != null}
+                  /* 🔴 여기서 PUT 하지 않는다. 등록과 «같은 문» 을 지나 서버가
+                     UPDATE 인지 정하고, 전체 교체 확인 화면(F-13)이 한 번 더
+                     묻는다 — 이 버튼이 곧 전송이 되면 확인 절차가 사라진다. */
+                  onSubmit={() => void confirmListing("smartstore")}
+                />
+              ) : (
+                <div>
+                  <p className="font-medium text-slate-900">등록된 상품 수정</p>
+                  <p className="mt-1 text-xs text-slate-600">
+                    {commerceLabel("smartstore")}에 지금 등록돼 있는 내용을 불러와, 무엇이 바뀌는지 보고 수정할 수
+                    있습니다.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={channelEditLoading}
+                    onClick={() => void loadChannelEdit()}
+                    className="mt-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium disabled:opacity-50"
+                  >
+                    {channelEditLoading ? "불러오는 중…" : "등록된 내용 불러오기"}
+                  </button>
+                </div>
+              )}
+              {/* 🔴 실패한 이유를 화면에 남긴다 — 「아무 일도 안 일어남」이
+                  되면 셀러는 다시 등록을 눌러 중복을 만든다. */}
+              {channelEditNote && <p className="mt-2 text-xs text-slate-700">{channelEditNote}</p>}
+            </section>
           )}
 
           {recreateConsent && recreateConsent.platform === tab && (() => {

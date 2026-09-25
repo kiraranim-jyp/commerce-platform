@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { RegisteredProductSnapshot } from "@commerce/listing";
+import type { NaverProductRegistrationPayload, RegisteredProductSnapshot } from "@commerce/listing";
 import { FIELD_ORDER } from "../channel-field-capability";
 import {
   buildChannelEditModel,
+  channelEditDraftFromNaverPayload,
   editorFieldSchema,
   evaluateEditGate,
+  localTouchSignals,
   toComparable,
   type ChannelEditModel,
   type ChannelEditSource,
@@ -193,7 +195,127 @@ describe("④ 🔴 단위가 어긋나 거짓 변경이 생기지 않는다", ()
   });
 });
 
-describe("⑤ 🔴 물음표를 ○ 로 만들지 않는다 — capability 는 F-14-2 가 정한다", () => {
+describe("⑤ 🔴 초안은 «보낼 payload» 에서 온다 — 화면과 전송이 갈리지 않는다", () => {
+  /** 기준값 READ_ALL 과 «똑같은 것» 을 보내는 payload. 아무것도 고치지 않은 상태다. */
+  const SAME_PAYLOAD = {
+    originProduct: {
+      name: READ_ALL.name,
+      salePrice: READ_ALL.salePrice,
+      stockQuantity: READ_ALL.stockQuantity,
+      detailContent: READ_ALL.detailContent,
+      leafCategoryId: READ_ALL.leafCategoryId,
+      images: {
+        representativeImage: { url: "https://shop-phinf.pstatic.net/new.jpg" },
+        optionalImages: [{ url: "1" }, { url: "2" }, { url: "3" }],
+      },
+      detailAttribute: {
+        productInfoProvidedNotice: { wear: {} },
+        optionInfo: { optionCombinations: [{}, {}] },
+      },
+    },
+  } as unknown as NaverProductRegistrationPayload;
+
+  it("🔴 아무것도 고치지 않았으면 버튼이 «닫혀 있다» — 단위 계약이 맞다는 증거다", () => {
+    /* 이 테스트가 깨지면 기준값과 초안의 단위가 어긋난 것이다. 그 상태에서는
+       셀러가 수정 화면을 열자마자 버튼이 열려 있고, 아무 이유 없이 상품 전체가
+       다시 등록된다(네이버 수정은 전체 교체다). */
+    const gate = evaluateEditGate(model(), channelEditDraftFromNaverPayload(SAME_PAYLOAD));
+    expect(gate.changes).toEqual([]);
+    expect(gate.canSubmit).toBe(false);
+  });
+
+  it("🔴 대표이미지 URL 이 달라도 「바뀜」이 아니다 — 매번 재업로드된다", () => {
+    /* 위 payload 의 대표이미지 URL 은 기준값과 «다르다». 그래도 장수가 같으니
+       변경으로 세지 않는다 — 이것이 F-13 표의 「감지 ✗」 축이다. */
+    const draft = channelEditDraftFromNaverPayload(SAME_PAYLOAD);
+    expect(draft.images).toBe(4);
+    expect(evaluateEditGate(model(), draft).changes).toEqual([]);
+  });
+
+  it("초안의 상품명은 payload 의 «보낼» 이름이다 — 원본 title 이 아니다", () => {
+    const derived = { ...SAME_PAYLOAD, originProduct: { ...SAME_PAYLOAD.originProduct, name: "테스트 상품 (정품)" } } as NaverProductRegistrationPayload;
+    const gate = evaluateEditGate(model(), channelEditDraftFromNaverPayload(derived));
+    expect(gate.changes).toHaveLength(1);
+    expect(gate.changes[0]).toMatchObject({ label: "상품명", to: "테스트 상품 (정품)" });
+  });
+
+  it("payload 가 비어 있으면 «거짓 변경» 을 만들지 않는다", () => {
+    const empty = { originProduct: {} } as NaverProductRegistrationPayload;
+    const gate = evaluateEditGate(model(), channelEditDraftFromNaverPayload(empty));
+    /* 🔴 개수 축은 0 으로 떨어지므로 「이미지 4 → 0」은 «진짜» 변경이다 —
+       실제로 이미지 없는 payload 를 보내면 이미지가 없어진다.
+       값 축(상품명·가격)과 존재 축(고시)은 undefined 이므로 «사라졌다고 말하지
+       않는다» — 화면이 담지 않은 것이지 셀러가 비운 것이 아니다. 그 payload 가
+       실제로 나가려 하면 detectUpdateDataLoss 가 PUT 직전에 막는다(F-2). */
+    expect(gate.changes.map((c) => c.field).sort()).toEqual(["images", "options"]);
+  });
+});
+
+describe("⑥ 🔴 대조 못 하는 축은 «우리 payload 끼리» 비교해 손댔는지 안다", () => {
+  const base = {
+    originProduct: {
+      images: {
+        representativeImage: { url: "https://x/a.jpg" },
+        optionalImages: [{ url: "https://x/b.jpg" }],
+      },
+      detailAttribute: {
+        optionInfo: { optionCombinations: [{ optionName1: "빨강" }] },
+        productInfoProvidedNotice: { wear: { material: "면" } },
+      },
+    },
+  } as unknown as NaverProductRegistrationPayload;
+
+  const edit = (mutate: (draft: Record<string, unknown>) => void): NaverProductRegistrationPayload => {
+    const copy = JSON.parse(JSON.stringify(base)) as Record<string, unknown>;
+    mutate(copy);
+    return copy as unknown as NaverProductRegistrationPayload;
+  };
+
+  it("아무것도 고치지 않았으면 신호가 없다", () => {
+    expect(localTouchSignals(base, edit(() => {}))).toEqual([]);
+  });
+
+  it("🔴 대표이미지를 «같은 장수로» 교체하면 잡힌다 — 개수로는 안 잡히는 축이다", () => {
+    const after = edit((draft) => {
+      const origin = draft.originProduct as { images: { representativeImage: { url: string } } };
+      origin.images.representativeImage.url = "https://x/NEW.jpg";
+    });
+    expect(localTouchSignals(base, after)).toEqual(["images"]);
+    /* 그리고 그 신호가 버튼을 연다 — 장수(4장)가 그대로라 개수 대조로는 0개다. */
+    const gate = evaluateEditGate(model(), { images: 4 }, localTouchSignals(base, after));
+    expect(gate.changes).toEqual([]);
+    expect(gate.canSubmit).toBe(true);
+  });
+
+  it("옵션 «내용» 만 바꿔도 잡힌다", () => {
+    const after = edit((draft) => {
+      const origin = draft.originProduct as {
+        detailAttribute: { optionInfo: { optionCombinations: { optionName1: string }[] } };
+      };
+      origin.detailAttribute.optionInfo.optionCombinations[0].optionName1 = "파랑";
+    });
+    expect(localTouchSignals(base, after)).toEqual(["options"]);
+  });
+
+  it("고시 «항목의 값» 만 바꿔도 잡힌다", () => {
+    const after = edit((draft) => {
+      const origin = draft.originProduct as {
+        detailAttribute: { productInfoProvidedNotice: { wear: { material: string } } };
+      };
+      origin.detailAttribute.productInfoProvidedNotice.wear.material = "폴리에스터";
+    });
+    expect(localTouchSignals(base, after)).toEqual(["providedNotice"]);
+  });
+
+  it("🔴 대조 «가능한» 축은 이 신호에 들어가지 않는다 — 되돌리면 닫혀야 한다", () => {
+    const after = edit((draft) => {
+      (draft.originProduct as { name?: string }).name = "다른 이름";
+    });
+    expect(localTouchSignals(base, after)).toEqual([]);
+  });
+});
+
+describe("⑦ 🔴 물음표를 ○ 로 만들지 않는다 — capability 는 F-14-2 가 정한다", () => {
   it("카테고리는 읽어도 «고칠 수 있다» 고 말하지 않는다", () => {
     const category = editorFieldSchema(model()).find((f) => f.field === "category");
     expect(category?.baseline).toEqual({ state: "OBSERVED", value: "50000167" });

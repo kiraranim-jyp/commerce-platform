@@ -1,4 +1,4 @@
-import type { RegisteredProductSnapshot } from "@commerce/listing";
+import type { NaverProductRegistrationPayload, RegisteredProductSnapshot } from "@commerce/listing";
 import {
   FIELD_LABEL,
   FIELD_ORDER,
@@ -164,6 +164,66 @@ export function buildChannelEditModel(
       },
     },
   };
+}
+
+/**
+ * 보낼 payload 를 편집 화면의 초안으로 «투영» 한다.
+ *
+ * 🔴 초안의 출처는 `product`·`listing` 이 아니라 «보낼 payload» 다(CEO 확정,
+ * 2026-09-26). 상품명은 빌더 안에서 파생 규칙을 거치는데(`smartStoreProductName`),
+ * 원본 title 로 대조하면 화면은 「A → B」라고 말하고 실제로는 `B'` 가 나간다.
+ * 화면과 전송이 갈리고, 그 갈림은 화면에 보이지 않는다.
+ *
+ * 🔴 이 함수가 `buildChannelEditModel` 과 «같은 파일에» 있는 이유: 두 곳이
+ * 만드는 값은 단위가 같아야 한다(개수는 개수로, 존재는 같은 두 글자로).
+ * 떨어져 있으면 한쪽만 고쳐져 아무것도 안 고쳐도 「바뀜」이 된다.
+ */
+export function channelEditDraftFromNaverPayload(
+  payload: NaverProductRegistrationPayload,
+): Partial<Record<EditableField, unknown>> {
+  const origin = payload.originProduct;
+  const images = origin?.images;
+  return {
+    name: origin?.name,
+    salePrice: origin?.salePrice,
+    stockQuantity: origin?.stockQuantity,
+    detailContent: origin?.detailContent,
+    /* 🔴 기준값과 «같은 셈» 이다 — 추가 이미지 + 대표 이미지 한 장. */
+    images: (images?.optionalImages?.length ?? 0) + (images?.representativeImage ? 1 : 0),
+    options: origin?.detailAttribute?.optionInfo?.optionCombinations?.length ?? 0,
+    /* 존재 축 — 값이 아니라 «있는지» 가 초안이다. toComparable 이 두 글자로 바꾼다. */
+    providedNotice: origin?.detailAttribute?.productInfoProvidedNotice,
+    category: origin?.leafCategoryId,
+  };
+}
+
+/**
+ * 채널과 대조할 수 «없는» 축에서, 셀러가 이번에 «고쳤는지» 만 본다.
+ *
+ * 🔴 이것은 「채널 값과 다르다」가 아니다. 「우리 화면에서 달라졌다」다 —
+ * 두 payload 가 «둘 다 우리 것» 이라 할 수 있는 말이고, 그래서 채널에 대한
+ * 주장을 하지 않는다. 대표이미지를 같은 장수로 교체한 셀러는 개수로는 잡히지
+ * 않고 이 신호로만 잡힌다(F-13 §표 「반영 ○ · 감지 ✗」).
+ *
+ * 🔴 여기서 JSON 비교를 쓰는 것이 `registered-change.ts` 가 금지한 것과
+ * «다른» 이유: 그쪽은 서버가 정규화한 값과 우리 값을 비교해서 키 순서 하나로
+ * 거짓 CHANGED 가 났다. 여기는 «같은 빌더가 같은 세션에서» 만든 두 payload 라
+ * 정규화도 서버 개입도 없다. 그 조건이 깨지면 이 비교도 쓸 수 없다.
+ *
+ * @param before 수정 화면을 열 때의 payload  @param after 지금의 payload
+ */
+export function localTouchSignals(
+  before: NaverProductRegistrationPayload,
+  after: NaverProductRegistrationPayload,
+): EditableField[] {
+  const axes: { field: EditableField; of: (p: NaverProductRegistrationPayload) => unknown }[] = [
+    { field: "images", of: (p) => p.originProduct?.images },
+    { field: "options", of: (p) => p.originProduct?.detailAttribute?.optionInfo },
+    { field: "providedNotice", of: (p) => p.originProduct?.detailAttribute?.productInfoProvidedNotice },
+  ];
+  return axes
+    .filter(({ of }) => JSON.stringify(of(before) ?? null) !== JSON.stringify(of(after) ?? null))
+    .map(({ field }) => field);
 }
 
 /** 초안을 기준값과 «같은 단위» 로 만든다. 🔴 단위가 어긋나면 항상 「바뀜」이 된다. */
