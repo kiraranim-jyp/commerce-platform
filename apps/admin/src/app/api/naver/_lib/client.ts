@@ -297,7 +297,13 @@ export async function getFixieOutboundIp(): Promise<string | null> {
  * resolve route 등)는 body를 안 넘기므로 동작이 그대로 유지된다. */
 export async function callNaverApi(
   accessToken: string,
-  { method, path, body }: { method: "GET" | "POST"; path: string; body?: unknown },
+  /* P0-CHANNEL-03 F-2 — PUT 추가. 🔴 「타입만 늘린 것」이 아니다:
+     상품 «수정» 이 PUT 이고(공식 OpenAPI), 아래 본문 직렬화·인증·타임아웃·
+     프록시·오류 처리가 POST 와 «완전히 같은» 경로를 탄다. 따로 만들 이유가
+     없고, 따로 만들면 인증이나 타임아웃이 한쪽만 바뀌는 사고가 난다.
+     🔴 DELETE 는 «넣지 않는다» — 이 프로젝트에 외부 상품을 지우는 경로는
+     없어야 한다(기존 Production 상품 삭제 금지). */
+  { method, path, body }: { method: "GET" | "POST" | "PUT"; path: string; body?: unknown },
 ): Promise<NaverApiResponse | NaverApiError> {
   try {
     const res = await naverFetch(`${NAVER_API_BASE}${path}`, {
