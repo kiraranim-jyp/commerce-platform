@@ -57,6 +57,27 @@ export interface FieldComparison {
   verdict: FieldVerdict;
   /** 🔴 NOT_COMPARED 면 «왜 못 봤는지». 이유 없는 미비교를 남기지 않는다. */
   reason?: string;
+  /**
+   * P0-CHANNEL-03 F-12 — 「₩159,000 → ₩149,000」처럼 «무엇이 무엇으로» 바뀌는지.
+   *
+   * 🔴 실제로 대조한 스칼라 칸에만 채운다. 개수 축이나 NOT_COMPARED 에는 없다 —
+   * 없는 것을 「-」로 채우면 화면이 「빈 값으로 바뀐다」로 읽는다.
+   * PUT 직전 확인 화면이 이 값을 그대로 보여준다(화면이 다시 계산하지 않는다).
+   */
+  from?: string;
+  to?: string;
+  /**
+   * P0-CHANNEL-03 F-12 — 값은 대조하지 못했지만 `detectUpdateDataLoss()` 가
+   * «사라지지는 않는다» 를 지키는 축인가.
+   *
+   * 🔴 「같다」는 뜻이 «아니다». 두 보장은 종류가 다르다:
+   *     UNCHANGED    값이 같음을 «확인했다»
+   *     lossProtected 값은 모르지만 «없어지지는 않는다»
+   * 확인 화면에서 이 둘을 한 줄에 「유지됨」으로 합치면, 확인하지 않은 것을
+   * 확인했다고 말하는 것이 된다. 그래서 플래그를 이유 옆에 «같이» 둔다 —
+   * 화면이 나중에 자기 목록을 따로 만들면 반드시 갈라진다.
+   */
+  lossProtected?: boolean;
 }
 
 /**
@@ -92,21 +113,30 @@ export interface RegisteredComparison {
  * 🔴 구조적으로 비교할 수 없는 축 — 실측을 해도 줄지 않는다(이유가 실측 부족이
  * 아니기 때문). 각 줄에 «왜» 를 붙인다.
  */
-const STRUCTURALLY_NOT_COMPARABLE: { path: string; label: string; reason: string }[] = [
+const STRUCTURALLY_NOT_COMPARABLE: {
+  path: string;
+  label: string;
+  reason: string;
+  /** 🔴 값은 모르지만 detectUpdateDataLoss 가 «사라짐» 은 막는 축. */
+  lossProtected?: boolean;
+}[] = [
   {
     path: "originProduct.images",
     label: "이미지",
     reason: "등록할 때마다 네이버에 재업로드돼 URL 이 항상 새 것이다 — 개수만 본다.",
+    lossProtected: true,
   },
   {
     path: "originProduct.detailAttribute.optionInfo.optionCombinations[]",
     label: "옵션의 내용",
     reason: "개수만 본다 — 조합별 값까지 대조하려면 옵션 동일성 정의가 먼저 필요하다.",
+    lossProtected: true,
   },
   {
     path: "originProduct.detailAttribute.productInfoProvidedNotice",
     label: "상품정보제공고시의 내용",
     reason: "있는지만 본다 — 카테고리마다 필드 집합이 달라 같은 잣대로 볼 수 없다.",
+    lossProtected: true,
   },
   {
     path: "originProduct.deliveryInfo",
@@ -180,13 +210,19 @@ export function compareRegisteredProduct(
     }
     const hadEmpty = isAbsent(had);
     const hasEmpty = isAbsent(has);
+    /* 🔴 F-12 — 대조한 칸에만 from/to 를 싣는다. 「값 없음」은 문자열로 만들지
+       않고 생략한다 — 화면이 빈 문자열을 「빈 값으로 바뀐다」로 읽지 않게. */
+    const from = hadEmpty ? undefined : String(had).trim();
+    const to = hasEmpty ? undefined : String(has).trim();
     if (hadEmpty && hasEmpty) return void fields.push({ path, label, verdict: "UNCHANGED" });
-    if (!hadEmpty && hasEmpty) return void fields.push({ path, label, verdict: "MISSING" });
-    if (hadEmpty && !hasEmpty) return void fields.push({ path, label, verdict: "ADDED" });
+    if (!hadEmpty && hasEmpty) return void fields.push({ path, label, verdict: "MISSING", from });
+    if (hadEmpty && !hasEmpty) return void fields.push({ path, label, verdict: "ADDED", to });
     fields.push({
       path,
       label,
-      verdict: String(had).trim() === String(has).trim() ? "UNCHANGED" : "CHANGED",
+      verdict: from === to ? "UNCHANGED" : "CHANGED",
+      from,
+      to,
     });
   };
 
@@ -293,7 +329,13 @@ export function compareRegisteredProduct(
 
   /* ── ③ 구조적으로 볼 수 없는 축 — 이유와 함께 그대로 들고 간다 ────────── */
   for (const entry of STRUCTURALLY_NOT_COMPARABLE) {
-    fields.push({ path: entry.path, label: entry.label, verdict: "NOT_COMPARED", reason: entry.reason });
+    fields.push({
+      path: entry.path,
+      label: entry.label,
+      verdict: "NOT_COMPARED",
+      reason: entry.reason,
+      lossProtected: entry.lossProtected,
+    });
   }
 
   return {

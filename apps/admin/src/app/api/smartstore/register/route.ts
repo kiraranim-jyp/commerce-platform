@@ -11,6 +11,9 @@ import {
   getNaverCategoryAttributeMeta,
   COMPLIANCE_POLICY_VERSION,
   compareRegisteredProduct,
+  /* P0-CHANNEL-03 F-12 — PUT 직전 보고서에 손실검사 결과를 싣기 위해 «미리»
+     돌린다. 🔴 updateRegisteredProduct 안쪽 검사는 그대로 남는다(이중 확인). */
+  detectUpdateDataLoss,
   type NaverProductRegistrationPayload,
   type RegistrationStepLog,
   type ListingResult,
@@ -195,6 +198,17 @@ export async function POST(request: Request) {
      * 고치려는 «중복» 이다.
      */
     confirmRecreate?: boolean;
+    /**
+     * P0-CHANNEL-03 F-12 — UPDATE 를 «실행해도 되는가» 에 대한 확인.
+     *
+     * 🔴 confirmRecreate 와 같은 성질이다: lifecycle 을 정하지 않고, 서버가
+     * UPDATE 라고 «정한 뒤» 「이대로 보낼까요」에 답하는 값이다.
+     *
+     * 🔴 없으면 PUT 하지 «않는다». 네이버 수정은 전체 교체라, 무엇이 바뀌고
+     * 무엇이 유지되는지 보여주지 않고 보내는 것 자체가 사고다. 대신 서버가
+     * needsConfirmation.diff 에 PUT 직전 보고서를 실어 되묻는다(외부 호출 0회).
+     */
+    confirmUpdate?: boolean;
   } | null;
 
   if (!body?.product || !body?.listing) {
@@ -206,6 +220,8 @@ export async function POST(request: Request) {
   /* 🔴 `=== true` 로 받는다. 문자열 "false" 나 0 이 동의로 읽히면 안 된다 —
      동의의 기본값은 «안 함» 이어야 한다(아래 F-7 블록 참고). */
   const confirmRecreate = body.confirmRecreate === true;
+  /* 🔴 F-12 — 같은 규칙. 기본값은 «안 함» 이다. */
+  const confirmUpdate = body.confirmUpdate === true;
 
   // P0-C PRE-REGISTER SECURITY GATE(CEO 승인, 2026-09-17) — 쿠팡/롯데ON register와
   // **같은 함수**를 같은 자리(자격증명 조회 직전)에 둔다. 네이버 계정은
@@ -624,6 +640,74 @@ export async function POST(request: Request) {
     logStep("작업 판단", "success", `${decision.operation} — ${decision.reason}`);
 
     if (decision.operation === "UPDATE") {
+      /* ══════════════════════════════════════════════════════════════════
+         P0-CHANNEL-03 F-12 — 🔴 PUT 은 «보여준 뒤에만» 나간다.
+
+         네이버 수정은 PATCH 가 아니라 «전체 교체» 다. 바뀐 것만 보내면 나머지가
+         지워지고 응답은 200 이다. preflight 가 「사라지는 것」은 막지만,
+         「의도하지 않은 변경」은 막지 못한다 — 그것은 사람만 알아볼 수 있다.
+         그래서 무엇이 바뀌고 무엇이 유지되는지 «먼저 보여주고» 명시적 실행을
+         받는다(CTO 지시 §3·§4).
+
+         🔴 여기서 preflight 를 «미리» 돌려 결과를 보고서에 싣는다. 그렇다고
+         updateRegisteredProduct 안쪽 검사를 빼지 «않는다» — 보여준 시점과 보내는
+         시점 사이에 상품이 바뀔 수 있고, fail-closed 는 보내기 직전에 한 번 더
+         서 있어야 의미가 있다. 두 번 도는 것이 맞다(순수 함수라 비용도 없다).
+
+         🔴 별도 dry-run 구현을 만들지 않는다. 이 보고서는 «실제로 보낼 그
+         payload» 를 놓고 만든 값이다 — 미리보기와 실제가 갈라질 길이 없다. */
+      if (!confirmUpdate) {
+        const risks = detectUpdateDataLoss(current.snapshot, payload);
+        logStep(
+          "수정 내용 확인",
+          "success",
+          `변경 ${comparison.changedFields.length}건 · 손실검사 ${risks.length === 0 ? "PASS" : "BLOCKED"} — 아직 보내지 않았습니다.`,
+        );
+        const result = withMeta({
+          status: "FAILED",
+          platform: "smartstore",
+          mode: "LIVE",
+          retryable: true,
+          payload,
+          externalProductId: existing.externalProductId,
+          needsConfirmation: {
+            operation: "UPDATE",
+            currentExternalProductId: existing.externalProductId,
+            reason: decision.reason,
+            diff: {
+              changed: comparison.fields
+                .filter((f) => f.verdict === "CHANGED" || f.verdict === "MISSING" || f.verdict === "ADDED")
+                .map((f) => ({ label: f.label, from: f.from, to: f.to, verdict: f.verdict })),
+              unchanged: comparison.fields.filter((f) => f.verdict === "UNCHANGED").map((f) => f.label),
+              /* 🔴 「값이 같다」와 「사라지지는 않는다」를 «나눠서» 싣는다.
+                 한 줄에 「유지됨」으로 합치면 확인하지 않은 것을 확인했다고
+                 말하는 것이 된다. 어느 축이 어느 쪽인지는 비교 계층이 안다. */
+              lossChecked: comparison.fields
+                .filter((f) => f.verdict === "NOT_COMPARED" && f.lossProtected)
+                .map((f) => f.label),
+              notCompared: comparison.fields
+                .filter((f) => f.verdict === "NOT_COMPARED" && !f.lossProtected)
+                .map((f) => ({ label: f.label, reason: f.reason })),
+              dataLossCheck: risks.length === 0 ? "PASS" : "BLOCKED",
+              dataLossRisks: risks.length > 0 ? risks.map((r) => ({ label: r.label, field: r.field })) : undefined,
+              category: comparison.category,
+            },
+          },
+          error: {
+            step: "VALIDATION",
+            message:
+              risks.length === 0
+                ? `수정할 내용을 확인해주세요 — 아직 스마트스토어에 보내지 않았습니다(${existing.externalProductId}).`
+                : `수정하면 사라지는 항목이 ${risks.length}개 있습니다 — 보내지 않았습니다.`,
+            retryable: true,
+            resolution: "변경 내용을 확인한 뒤 '이대로 수정' 을 선택해주세요.",
+          },
+        });
+        /* 🔴 operation 을 적지 않는다 — 아무것도 하지 않았다(네이버 호출 0회). */
+        await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+        return NextResponse.json(result);
+      }
+
       /* 🔴 ①에서 읽은 스냅샷을 그대로 넘긴다. 다시 읽으면 그 사이에 값이 바뀔
          수 있고, 그러면 «판단한 상태» 와 «preflight 가 검사한 상태» 가 달라진다.
          같은 것을 보고 정하고 보낸다. */

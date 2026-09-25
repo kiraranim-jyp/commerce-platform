@@ -42,6 +42,14 @@ export interface ListingExecutor {
        * 실어 되묻고, 외부 API 호출은 0회다.
        */
       confirmRecreate?: boolean;
+      /**
+       * P0-CHANNEL-03 F-12 — UPDATE 를 «이대로 보내도 되는가» 에 대한 확인.
+       *
+       * 🔴 confirmRecreate 와 같은 성질이고 기본값도 같다(안 함). 네이버 수정은
+       * «전체 교체» 라, 무엇이 바뀌고 무엇이 유지되는지 보여주지 않고 보내는
+       * 것 자체가 사고다 — 서버가 needsConfirmation.diff 로 되묻는다.
+       */
+      confirmUpdate?: boolean;
     },
   ): Promise<ListingResult>;
 }

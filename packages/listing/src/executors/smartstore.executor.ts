@@ -91,6 +91,8 @@ export const smartstoreExecutor: ListingExecutor = {
           /* P0-CHANNEL-03 F-10 — 셀러가 「새 상품으로 다시 등록」에 동의한
              경우에만 실린다. 🔴 보내지 않으면 서버가 되묻고 API 는 0회다. */
           confirmRecreate: context?.confirmRecreate,
+          /* P0-CHANNEL-03 F-12 — 「이대로 수정」을 누른 경우에만 실린다. */
+          confirmUpdate: context?.confirmUpdate,
         }),
       });
       const result = (await response.json()) as ListingResult;

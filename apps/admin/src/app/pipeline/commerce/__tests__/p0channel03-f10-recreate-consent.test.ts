@@ -73,13 +73,22 @@ describe("③ 🔴 두 번 눌러 두 개 만들지 않는다", () => {
   });
 
   it("누르는 순간 패널을 «먼저» 닫는다", () => {
-    const handler = WORKSPACE.slice(
-      WORKSPACE.indexOf("onConfirm={() => {"),
-      WORKSPACE.indexOf("onCancel={() => setRecreateConsent(null)}"),
+    /* P0-CHANNEL-03 F-12 에서 RECREATE·UPDATE 두 패널이 «같은» 실행 함수를
+       쓰도록 묶였다. 지키려는 것은 그대로다 — 보내기 전에 닫는다. 닫는 일이
+       한 곳에 모였으므로 그 함수 본문을 본다. */
+    const confirmFn = WORKSPACE.slice(
+      WORKSPACE.indexOf("const confirm = (options:"),
+      WORKSPACE.indexOf("const shared = {"),
     );
-    expect(handler.indexOf("setRecreateConsent(null);")).toBeLessThan(
-      handler.indexOf("confirmListing(target, { confirmRecreate: true })"),
+    expect(confirmFn).toContain("setRecreateConsent(null);");
+    expect(confirmFn.indexOf("setRecreateConsent(null);")).toBeLessThan(
+      confirmFn.indexOf("confirmListing(target, options)"),
     );
+  });
+
+  it("🔴 두 패널이 «같은» 실행 함수를 지난다 — 한쪽만 닫히는 일이 없게", () => {
+    expect(WORKSPACE).toContain("onConfirm={() => confirm({ confirmUpdate: true })}");
+    expect(WORKSPACE).toContain("onConfirm={() => confirm({ confirmRecreate: true })}");
   });
 });
 

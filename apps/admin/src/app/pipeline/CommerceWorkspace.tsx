@@ -103,6 +103,7 @@ import { buildPriorityItems, resolveRegistrationReadinessState } from "./commerc
 import { RegistrationHistoryPanel } from "./commerce/RegistrationHistoryPanel";
 import { CommerceSelector } from "./commerce/CommerceSelector";
 import { RecreateConsentPanel } from "./commerce/RecreateConsentPanel";
+import { UpdateConfirmPanel } from "./commerce/UpdateConfirmPanel";
 import {
   COMMERCE_ORDER,
   LOTTEON_COMMERCE_ID,
@@ -2802,7 +2803,7 @@ export function CommerceWorkspace({
     target?: PlatformId,
     /* P0-CHANNEL-03 F-10 — 셀러가 「새 상품으로 다시 등록」에 동의한 재요청.
        🔴 기본은 undefined(=안 함)다. 동의는 «명시적으로만» 실린다. */
-    options?: { confirmRecreate?: boolean },
+    options?: { confirmRecreate?: boolean; confirmUpdate?: boolean },
   ): Promise<ListingResult | null> {
     const platform = target ?? confirmingPlatform;
     if (!platform) return null;
@@ -2860,6 +2861,9 @@ export function CommerceWorkspace({
       /* 🔴 셀러가 동의한 «그 요청에만» 실린다. 이 값을 state 에 눌러 두고
          재사용하면, 다음 상품·다음 채널의 RECREATE 가 묻지도 않고 나간다. */
       confirmRecreate: options?.confirmRecreate,
+      /* 🔴 F-12 — 동의와 같은 규칙: «그 요청에만» 실린다. state 에 눌러 두면
+         다음 상품의 전체 교체가 확인 없이 나간다. */
+      confirmUpdate: options?.confirmUpdate,
     });
     setListingProgress("CONFIRMING");
     setListingResults((prev) => ({ ...prev, [platform]: result }));
@@ -3515,21 +3519,29 @@ export function CommerceWorkspace({
               누를 때까지 아무것도 만들지 않는다.
               🔴 지금 보고 있는 탭의 질문만 보여준다 — 다른 채널의 동의를 이
               화면에서 받으면 무엇에 답하는지 알 수 없다. */}
-          {recreateConsent && recreateConsent.platform === tab && (
-            <RecreateConsentPanel
-              commerceLabel={commerceLabel(recreateConsent.platform)}
-              request={recreateConsent.request}
-              busy={listingProgress != null}
-              onConfirm={() => {
-                const target = recreateConsent.platform;
-                /* 🔴 먼저 닫는다 — 열어 둔 채로 두면 셀러가 한 번 더 눌러
-                   상품을 두 개 만들 수 있다. */
-                setRecreateConsent(null);
-                void confirmListing(target, { confirmRecreate: true });
-              }}
-              onCancel={() => setRecreateConsent(null)}
-            />
-          )}
+          {recreateConsent && recreateConsent.platform === tab && (() => {
+            const target = recreateConsent.platform;
+            /* 🔴 먼저 닫고 나서 보낸다 — 열어 둔 채로 두면 한 번 더 눌러
+               상품을 두 개 만들거나 전체 교체를 두 번 보낼 수 있다. */
+            const confirm = (options: { confirmRecreate?: boolean; confirmUpdate?: boolean }) => {
+              setRecreateConsent(null);
+              void confirmListing(target, options);
+            };
+            const shared = {
+              commerceLabel: commerceLabel(target),
+              request: recreateConsent.request,
+              busy: listingProgress != null,
+              onCancel: () => setRecreateConsent(null),
+            };
+            /* 🔴 물어보는 «내용» 이 다르므로 화면도 다르다. RECREATE 는
+               「상품이 하나 더 생긴다」를 묻고, UPDATE 는 「전체를 교체한다」를
+               묻는다 — 같은 문구로 물으면 둘 중 하나는 거짓이 된다. */
+            return recreateConsent.request.operation === "UPDATE" ? (
+              <UpdateConfirmPanel {...shared} onConfirm={() => confirm({ confirmUpdate: true })} />
+            ) : (
+              <RecreateConsentPanel {...shared} onConfirm={() => confirm({ confirmRecreate: true })} />
+            );
+          })()}
 
           {listing && isPlatformTab(tab) && (
             <PlatformPreview

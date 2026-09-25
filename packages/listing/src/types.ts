@@ -138,12 +138,46 @@ export interface ListingResult {
    * 않았고(외부 API 0회), 셀러가 답하면 이어서 할 수 있는 상태다.
    */
   needsConfirmation?: {
-    /** 지금은 RECREATE 하나뿐이다 — 없는 것을 미리 열어 두지 않는다. */
-    operation: "RECREATE";
+    /**
+     * P0-CHANNEL-03 F-12 — UPDATE 가 늘었다.
+     *
+     * 🔴 RECREATE 는 「상품이 하나 더 생긴다」를 묻고, UPDATE 는 「전체를
+     * 교체한다」를 묻는다. 네이버 수정은 PATCH 가 아니라 «전체 교체» 라,
+     * 무엇이 바뀌고 무엇이 유지되는지 보여주지 않고 보내면 그 자체가 사고다.
+     */
+    operation: "UPDATE" | "RECREATE";
     /** 🔴 지금 나가 있는 외부 상품. «지우지 않는다» — 그대로 남는다. */
     currentExternalProductId: string | null;
     /** resolveLifecycle 이 말한 이유. 화면이 지어내지 않고 그대로 보여준다. */
     reason: string;
+    /**
+     * P0-CHANNEL-03 F-12 — PUT 직전 보고서.
+     *
+     * 🔴 화면이 «다시 계산하지 않는다». 서버가 실제로 보낼 payload 를 놓고
+     * 만든 값을 그대로 싣는다 — 미리보기와 실제가 갈라질 수 있는 길을 만들지
+     * 않는다(별도 dry-run 구현을 두지 않은 이유이기도 하다).
+     */
+    diff?: {
+      /** 바뀌는 칸. CHANGED · MISSING · ADDED. */
+      changed: { label: string; from?: string; to?: string; verdict: string }[];
+      /** 🔴 «값이 같음을 확인한» 칸. 아래 둘과 보장의 종류가 다르다. */
+      unchanged: string[];
+      /**
+       * 🔴 값은 대조하지 못했지만 «사라지지는 않는다» 고 확인된 축.
+       * detectUpdateDataLoss 의 6축이 지키는 것이고, 「같다」는 뜻이 아니다.
+       * 그 둘을 한 줄에 섞어 「유지됨」이라고 적으면 확인하지 않은 것을
+       * 확인했다고 말하는 것이 된다.
+       */
+      lossChecked: string[];
+      /** 🔴 아예 «보지 못한» 축. 이유와 함께. */
+      notCompared: { label: string; reason?: string }[];
+      /** 데이터 손실 검사 결과. BLOCKED 면 PUT 자체를 하지 않는다. */
+      dataLossCheck: "PASS" | "BLOCKED";
+      /** BLOCKED 일 때 무엇이 사라지는지. */
+      dataLossRisks?: { label: string; field: string }[];
+      /** 카테고리는 lifecycle 이 다른 축이라 따로 적는다. */
+      category: "SAME" | "CHANGED" | "UNKNOWN";
+    };
   };
 }
 
