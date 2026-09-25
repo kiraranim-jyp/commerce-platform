@@ -35,6 +35,7 @@ import { getNaverCredentials } from "../../naver/_lib/env";
 import { issueNaverAccessToken, callNaverApi, uploadNaverProductImages } from "../../naver/_lib/client";
 import { resolveNaverContext } from "../../naver/_lib/resolve-context";
 import { markSnapshotRegistered } from "../../snapshots/_lib/snapshot";
+import { hasPriorSuccessfulAttempt } from "../../snapshots/_lib/attempts-summary";
 import { getLatestSellerComplianceConfirmation } from "../_lib/seller-compliance";
 
 /**
@@ -852,6 +853,56 @@ export async function POST(request: Request) {
      🔴 그래도 둔다. 「도달할 수 없다」에 기대면 capability 표가 한 칸 바뀌거나
      분기가 하나 늘어나는 날 조용히 중복이 생긴다. 막는 쪽이 싸다.
   ══════════════════════════════════════════════════════════════════════════ */
+  /* ══════════════════════════════════════════════════════════════════════════
+     🔴 P0-CHANNEL-03 F-12 후속 — 연결이 «없어도» 이미 나가 있을 수 있다.
+
+     위 빗장은 「연결이 있는가」만 본다. 그런데 연결이 없는데 마켓에는 있는
+     상품이 실재한다 — 기존 381 snapshot(product_id 가 NULL 이라 연결을 가질 수
+     없다)과 연결 기록이 유실된 경우다. 🔴 13713593585 가 바로 그 상태다.
+
+     그 상품으로 등록을 부르면 findChannelProductBySnapshot 이 null 을 내고,
+     여기까지 흘러와 «새 상품을 만든다». 외부번호 6개가 만들어진 경로 그대로다.
+
+     화면(F-10 ATTEMPT_ONLY)은 이미 막고 있었지만 서버는 이력을 읽지도 않았다 —
+     마지막 방어선이 화면에만 있으면 그것은 방어선이 아니다.
+
+     🔴 확인하지 «못한» 경우(null)도 막는다. DB 가 흔들릴 때마다 중복 등록의
+     문이 열리는 것보다, 셀러가 잠시 후 다시 누르는 편이 훨씬 싸다.
+  ══════════════════════════════════════════════════════════════════════════ */
+  if (plannedOperation !== "RECREATE") {
+    const priorSuccess = await hasPriorSuccessfulAttempt(snapshotId, "smartstore");
+    if (priorSuccess !== false) {
+      logStep(
+        "중복 등록 차단",
+        "failed",
+        priorSuccess === null
+          ? "이미 등록된 상품인지 확인하지 못했습니다."
+          : "이 스냅샷으로 이미 등록에 성공한 이력이 있습니다.",
+      );
+      const result = withMeta({
+        status: "FAILED",
+        platform: "smartstore",
+        mode: "LIVE",
+        retryable: priorSuccess === null,
+        payload,
+        error: {
+          step: "VALIDATION",
+          message:
+            priorSuccess === null
+              ? "이미 등록된 상품인지 확인하지 못해 새로 만들지 않았습니다."
+              : "이미 스마트스토어에 등록된 상품입니다 — 연결 정보를 찾지 못해 수정할 수 없고, 새로 만들면 중복이 되어 막았습니다.",
+          retryable: priorSuccess === null,
+          resolution:
+            priorSuccess === null
+              ? "잠시 후 다시 시도해주세요."
+              : "이 상품의 스마트스토어 연결 정보를 먼저 이어야 수정할 수 있습니다(등록 이력의 상품번호 확인 필요).",
+        },
+      });
+      await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+      return NextResponse.json(result);
+    }
+  }
+
   if (blocksCreate(Boolean(existing)) && plannedOperation !== "RECREATE") {
     logStep("중복 등록 차단", "failed", "이미 이 커머스에 나가 있는 상품입니다.");
     const result = withMeta({

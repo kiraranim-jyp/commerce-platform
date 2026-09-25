@@ -25,6 +25,7 @@ import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } 
 import { fetchCategoryMeta } from "../_lib/category-meta";
 import { resolveBrand } from "../_lib/brand";
 import { markSnapshotRegistered } from "../../snapshots/_lib/snapshot";
+import { hasPriorSuccessfulAttempt } from "../../snapshots/_lib/attempts-summary";
 import { blocksCreate, resolveLifecycle } from "@/app/pipeline/commerce/channel-lifecycle";
 import {
   findChannelProductBySnapshot,
@@ -749,6 +750,46 @@ export async function POST(request: Request) {
      「쿠팡에 새 상품을 만든다」 이고, 연결이 있는데 RECREATE 동의 없이 도달했다면
      그것이 중복을 만든 경로다. 지금은 도달할 수 없지만 «도달할 수 없다» 에
      기대지 않는다. */
+  /* 🔴 P0-CHANNEL-03 F-12 후속 — 연결이 «없어도» 이미 나가 있을 수 있다.
+     SmartStore route 와 «같은» 빗장이다. 쿠팡에도 중복 3건이 이미 있고
+     (16336681622 · 16338809221 · 16340176952), 그중 일부가 정확히 이 경로로
+     생겼다. 한 채널만 빠뜨리는 것이 이 스프린트의 반복된 실수라 같이 단다.
+     확인하지 «못한» 경우(null)도 막는다 — 중복보다 재시도가 싸다. */
+  if (plannedOperation !== "RECREATE") {
+    const priorSuccess = await hasPriorSuccessfulAttempt(snapshotId, "coupang");
+    if (priorSuccess !== false) {
+      logStep(
+        "중복 등록 차단",
+        "failed",
+        priorSuccess === null
+          ? "이미 등록된 상품인지 확인하지 못했습니다."
+          : "이 스냅샷으로 이미 등록에 성공한 이력이 있습니다.",
+      );
+      const result: ListingResult = withMeta({
+        status: "FAILED",
+        platform: "coupang",
+        mode: "LIVE",
+        retryable: priorSuccess === null,
+        payload,
+        error: {
+          step: "VALIDATION",
+          code: "CP005",
+          message:
+            priorSuccess === null
+              ? "이미 등록된 상품인지 확인하지 못해 새로 만들지 않았습니다."
+              : "이미 쿠팡에 등록된 상품입니다 — 연결 정보를 찾지 못해 새로 만들면 중복이 되어 막았습니다.",
+          retryable: priorSuccess === null,
+          resolution:
+            priorSuccess === null
+              ? "잠시 후 다시 시도해주세요."
+              : "이 상품의 쿠팡 연결 정보를 먼저 이어야 합니다(등록 이력의 상품번호 확인 필요).",
+        },
+      });
+      await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+      return NextResponse.json(result);
+    }
+  }
+
   if (blocksCreate(Boolean(existing)) && plannedOperation !== "RECREATE") {
     logStep("중복 등록 차단", "failed", "이미 이 커머스에 나가 있는 상품입니다.");
     const result: ListingResult = withMeta({

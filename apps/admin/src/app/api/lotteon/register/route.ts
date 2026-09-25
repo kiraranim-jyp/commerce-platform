@@ -13,6 +13,7 @@ import { callLotteOnApi, LOTTEON_WRITE_PATHS } from "../_lib/client";
 import { classifyLotteOnHttpStatus } from "../_lib/connection-error";
 import { buildLotteOnContext, type LotteOnChannelFormInput } from "../_lib/build-context";
 import { resolveLifecycle } from "@/app/pipeline/commerce/channel-lifecycle";
+import { hasPriorSuccessfulAttempt } from "../../snapshots/_lib/attempts-summary";
 import {
   findChannelProductBySnapshot,
   findProductIdBySnapshot,
@@ -249,6 +250,29 @@ export async function POST(request: Request) {
       payload,
       message: `${decision.reason} 이미 롯데ON 에 등록돼 있습니다(spdNo=${existing.externalProductId}) — 새로 만들지 않았습니다.`,
       errorCode: decision.operation,
+    });
+    /* 🔴 operation 을 적지 않는다 — 아무것도 하지 않았다. */
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+    return NextResponse.json({ ok: false, result, validation });
+  }
+
+  /* 🔴 P0-CHANNEL-03 F-12 후속 — 연결이 «없어도» 이미 나가 있을 수 있다.
+     세 라우트 공통 빗장이다(SmartStore·Coupang 과 같은 이유). 기존 381
+     snapshot 은 product_id 가 NULL 이라 연결을 «가질 수 없고», 연결 기록이
+     유실되는 경로도 설계상 존재한다. 그 상태로 여기 도달하면 위의
+     `if (existing)` 분기를 지나쳐 새 상품을 만든다.
+     확인하지 «못한» 경우(null)도 막는다 — 중복보다 재시도가 싸다. */
+  const priorSuccess = await hasPriorSuccessfulAttempt(snapshotId, LOTTEON_PLATFORM_KEY);
+  if (priorSuccess !== false) {
+    const result = finish({
+      status: "FAILED",
+      externalProductId: null,
+      payload,
+      message:
+        priorSuccess === null
+          ? "이미 등록된 상품인지 확인하지 못해 새로 만들지 않았습니다 — 잠시 후 다시 시도해주세요."
+          : "이미 롯데ON 에 등록에 성공한 이력이 있습니다 — 새로 만들면 중복이 되어 막았습니다.",
+      errorCode: priorSuccess === null ? "PRIOR_SUCCESS_UNKNOWN" : "DUPLICATE_CREATE_BLOCKED",
     });
     /* 🔴 operation 을 적지 않는다 — 아무것도 하지 않았다. */
     await logRegistrationAttempt(result, undefined, snapshotId, jobKey);

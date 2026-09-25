@@ -102,6 +102,61 @@ export function aggregateAttemptRows(rows: AttemptRow[]): Record<string, Snapsho
   return result;
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * P0-CHANNEL-03 F-12 후속(2026-09-25) — **연결이 없어도 «이미 나가 있을» 수 있다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * F-12 준비 중 발견한 구멍이다. 지금까지 세 register 라우트는 중복을
+ * `channel_products` 하나로만 막았다. 그런데 연결이 «없는데» 이미 마켓에 나가
+ * 있는 상품이 실재한다:
+ *
+ *   ① 기존 381 snapshot — product_id 가 NULL 이라 연결을 «가질 수 없다».
+ *      🔴 13713593585 가 바로 이 경우다(063 마이그레이션 이전 등록).
+ *   ② 연결 기록 유실 — 등록은 성공했는데 ChannelProduct insert 가 실패한 경우.
+ *      라우트가 «조용히» 지나가도록 설계돼 있어서 실제로 생길 수 있다.
+ *
+ * 그 상태로 등록을 다시 부르면 `findChannelProductBySnapshot` 이 null 을 내고,
+ * 라우트는 「안 나가 있다」고 읽어 **CREATE 로 내려간다** — 마켓에 상품이 하나
+ * 더 생긴다. SmartStore 외부번호 6개가 만들어진 경로 그대로다.
+ *
+ * 🔴 화면(F-10 `ATTEMPT_ONLY`)은 이미 이것을 막고 있었다. 그러나 서버는 이력을
+ * «읽지도 않았다» — 마지막 방어선이 화면에만 있으면 그것은 방어선이 아니다.
+ *
+ * 🔴 「마지막 시도」가 아니라 «한 번이라도 성공했는가» 를 본다. 화면보다
+ * 엄격하다(화면은 최신 시도만 본다). 성공 뒤 실패가 이어져도 상품은 이미
+ * 마켓에 있기 때문이다.
+ *
+ * 🔴 이력과 상태를 «섞는 것이 아니다». 상태의 근거는 여전히 ChannelProduct 다.
+ * 이력은 오직 「막는 쪽으로만」 일한다 — 이 함수가 내는 답은 CREATE 를
+ * «허용» 하는 데 쓰이지 않는다(true·null 이면 막고, false 일 때만 지나간다).
+ */
+export async function hasPriorSuccessfulAttempt(
+  snapshotId: string | null | undefined,
+  platform: string,
+): Promise<boolean | null> {
+  /* 🔴 snapshot 이 없으면 «이 스냅샷으로» 성공한 적이 있는지 물을 수 없다.
+     여기서 null(확인 불가)을 내면 스냅샷 없이 등록하는 기존 흐름이 전부
+     막힌다 — 이 함수가 고치려는 문제가 아니다. false 를 낸다. */
+  if (!snapshotId) return false;
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("registration_attempts")
+    .select("id")
+    .eq("snapshot_id", snapshotId)
+    .eq("platform", platform)
+    .eq("status", "SUBMITTED")
+    .limit(1);
+  /* 🔴 조회 실패를 「성공한 적 없다」로 내려보내지 않는다. 그렇게 하면 DB 가
+     흔들릴 때마다 중복 등록의 문이 열린다 — 확인하지 «못했다» 고 말한다. */
+  if (error) {
+    console.warn("[attempts-summary] 기등록 확인 실패:", error.message);
+    return null;
+  }
+  return (data?.length ?? 0) > 0;
+}
+
 export async function getAttemptsSummaryBySnapshot(
   snapshotIds: string[],
 ): Promise<Record<string, SnapshotAttemptsSummary>> {
