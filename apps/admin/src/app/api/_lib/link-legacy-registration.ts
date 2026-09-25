@@ -158,7 +158,15 @@ export async function linkLegacyRegistration(
   let productId = snap.product_id;
   if (!productId) {
     const { data: created, error: createErr } = await db
-      .from("Product")
+      /* 🔴 `products` 다 — `"Product"` 가 아니다.
+         migration 065 가 `ALTER TABLE "Product" RENAME TO products` 로 바꿨는데
+         이 파일이 옛 이름을 쓰고 있었다. Production 에서 실제로
+         「Could not find the table 'public.Product'」로 터졌고, 그 바람에
+         레거시 연결 복구가 «전부» 막혔다.
+         🔴 타입 검사가 잡아 주지 않는 자리다 — Supabase 클라이언트는 테이블명을
+         문자열로 받는다. 그래서 아래 테이블명 회귀 테스트로 대신 못 박았다
+         (p0channel03-table-names.test.ts). */
+      .from("products")
       .insert({
         /* 🔴 sourceUrl 을 채우지 않는다 — 식별자가 아니고, 채우면 다음 사람이
            그것으로 매칭하고 싶어진다(PHASE D-2 §2·3). */

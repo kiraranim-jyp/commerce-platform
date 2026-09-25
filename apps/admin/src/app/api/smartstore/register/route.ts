@@ -1026,6 +1026,25 @@ export async function POST(request: Request) {
       } else {
         channelProductId = await linkSmartStoreChannelProduct(snapshotId, result.externalProductId);
       }
+      /* ══════════════════════════════════════════════════════════════════
+         🔴 F-12c STEP5 — 외부 등록은 «성공했는데» 연결을 남기지 못한 경우.
+
+         상품은 이미 네이버에 나가 있으므로 이 결과를 「실패」로 뒤집지 않는다.
+         그러나 «조용히» 넘어가지도 않는다 — 연결이 없으면 다음에 이 상품을
+         고칠 수 없고, 새로 만들면 중복이 된다. 정확히 그 상태로 남은 것이
+         13714803530 이었고, 그것을 푸느라 이 스프린트가 여기까지 왔다.
+
+         복구 경로는 이미 있다: 화면이 이 상태를 ATTEMPT_ONLY 로 읽어
+         LegacyLinkPanel(「연결 확인」)을 세운다. 여기서는 그 사실이 등록
+         리포트에 «보이도록» 단계 로그를 남긴다 — 나중에 「왜 연결이 없지」를
+         되짚을 때 이 한 줄이 출발점이 된다. */
+      if (!channelProductId) {
+        logStep(
+          "현재 연결 기록",
+          "failed",
+          `상품은 등록됐지만(${result.externalProductId ?? "번호 미확인"}) 연결 정보를 남기지 못했습니다 — 수정하려면 등록 화면에서 «연결 확인»으로 복구해야 합니다.`,
+        );
+      }
       await logRegistrationAttempt(result, response.body, snapshotId, jobKey, {
         /* 🔴 여기서 추론하지 않는다 — 위에서 resolveLifecycle() 이 정하고
            동의까지 받은 값을 그대로 적는다. */
