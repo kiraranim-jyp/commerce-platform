@@ -12,6 +12,12 @@ import { getLotteOnCredentials } from "../_lib/env";
 import { callLotteOnApi, LOTTEON_WRITE_PATHS } from "../_lib/client";
 import { classifyLotteOnHttpStatus } from "../_lib/connection-error";
 import { buildLotteOnContext, type LotteOnChannelFormInput } from "../_lib/build-context";
+import { resolveLifecycle } from "@/app/pipeline/commerce/channel-lifecycle";
+import {
+  findChannelProductBySnapshot,
+  findProductIdBySnapshot,
+  linkChannelProduct,
+} from "@/app/api/_lib/channel-product";
 
 /**
  * LOTTEON COMMERCE SPRINT 2 Phase 3 — 롯데ON 실제 상품등록.
@@ -65,6 +71,11 @@ async function logRegistrationAttempt(
   apiResponseBody: unknown,
   snapshotId: string | null,
   jobKey: string | null,
+  /* P0-CHANNEL-03 F-9 — 이 시도가 «무엇» 이었는가.
+     🔴 'CREATE' 만 받는다. 롯데ON 은 update·categoryUpdate 가 둘 다 UNKNOWN
+     이라 UPDATE 도 RECREATE 도 «실행 경로가 없다» — 받을 수 없는 값을 타입에
+     열어 두면 다음 사람이 「적을 수 있으니 할 수 있다」고 읽는다. */
+  lifecycle?: { operation: "CREATE"; channelProductId: string | null } | null,
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return;
@@ -77,10 +88,15 @@ async function logRegistrationAttempt(
     external_product_id: result.externalProductId,
     payload: result.payload ?? null,
     response: apiResponseBody ?? null,
+    /* 🔴 모르면 비운다 — 세 라우트 공통 규약(SmartStore F-5 · Coupang F-8). */
+    operation: lifecycle?.operation ?? null,
+    channel_product_id: lifecycle?.channelProductId ?? null,
     snapshot_id: snapshotId,
     job_key: jobKey,
   };
-  const optionalColumns = ["snapshot_id", "job_key"];
+  /* 가장 새 컬럼이 가장 먼저 포기된다 — 063 미적용 환경에서도 이력 기록
+     «자체» 가 실패하지 않게(세 라우트 공통 규약). */
+  const optionalColumns = ["channel_product_id", "operation", "snapshot_id", "job_key"];
   for (let attempt = 0; attempt <= optionalColumns.length; attempt++) {
     const { error } = await supabase.from("registration_attempts").insert(row);
     if (!error) return;
@@ -186,6 +202,59 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, result, validation, identityError: context.identityError });
   }
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     P0-CHANNEL-03 F-9 — 롯데ON 은 «만들기 하나» 다. 그리고 그것이 정직한 상태다.
+
+     capability(channel-lifecycle.ts, CTO 지시로 2026-09-25 정정):
+         update         UNKNOWN   apiNo 90 은 「승인 상품 수정」이고 계약 미확인
+         categoryUpdate UNKNOWN   근거 없음
+     둘 다 UNKNOWN 이므로 이미 나가 있는 상품에 대해 이 라우트가 «실행할 수
+     있는 것이 없다». 그래서 UPDATE 도 RECREATE 도 만들지 않았다.
+
+     ── 🔴 왜 「지금 나가 있는 카테고리」를 읽지 않는가 ──────────────────────
+     SmartStore·Coupang 은 읽어서 대조한다. 롯데ON 만 읽지 않는 이유는 게을러서가
+     아니라 «읽어도 비교할 수 없어서» 다:
+       · 롯데ON 카테고리는 표준(`scatNo`) + 전시(`dcatLst[]`) «2중 구조» 다
+         (조사 §7-2). 네이버/쿠팡의 leaf 1개와 달리 「카테고리 하나」를 견줄 수
+         없고, 무엇이 같아야 같은 것인지부터 정해진 바 없다.
+       · apiNo 94 상품상세조회는 읽기라서 «부르는 것» 자체는 안전하지만, 응답
+         모양을 실측한 적이 없다. 실측 없이 필드명을 찍으면 거의 확실히
+         undefined 가 오고, 그러면 결국 여기와 «같은 결론»(UNKNOWN)에 이른다 —
+         API 만 한 번 더 부르고.
+     🔴 그래서 categoryUnknown: true 를 «그대로» 넘긴다. 그 결과가 BLOCKED 다.
+     이 라우트가 이 상품에 대해 확인한 것이 정말로 그것뿐이기 때문이다.
+
+     올리는 조건: 2중 카테고리의 동일성 정의 + apiNo 94 응답 실측. 그 전에는
+     늘리지 않는다 — 이번 스프린트가 apiNo 90 에서 배운 것이 그것이다.
+  ══════════════════════════════════════════════════════════════════════════ */
+  const existing = await findChannelProductBySnapshot(snapshotId, LOTTEON_PLATFORM_KEY);
+  /* 🔴 중복 CREATE 차단이 «이 분기 자체» 다. SmartStore·Coupang 은 RECREATE 가
+     아래 POST 로 흘러가므로 POST 직전에 blocksCreate() 빗장을 따로 뒀지만,
+     여기는 연결이 있으면 «무조건 반환» 한다 — 「연결 있음 → 새로 만들기」로
+     가는 경로가 문법적으로 존재하지 않는다. 그래서 빗장을 한 번 더 두면
+     도달할 수 없는 죽은 코드가 되고, 읽는 사람에게 「여기로 올 수도 있다」는
+     잘못된 인상을 준다. 빗장 대신 이 주석을 둔다. */
+  if (existing) {
+    const decision = resolveLifecycle(LOTTEON_PLATFORM_KEY, true, {
+      /* 🔴 비교하지 «않았다». 「바뀐 게 없다」가 아니다 — 바로 아래
+         comparedEverything:false 가 그 차이를 말한다(F-6). */
+      fields: [],
+      category: false,
+      categoryUnknown: true,
+      comparedEverything: false,
+    });
+    const result = finish({
+      status: "FAILED",
+      externalProductId: existing.externalProductId,
+      payload,
+      message: `${decision.reason} 이미 롯데ON 에 등록돼 있습니다(spdNo=${existing.externalProductId}) — 새로 만들지 않았습니다.`,
+      errorCode: decision.operation,
+    });
+    /* 🔴 operation 을 적지 않는다 — 아무것도 하지 않았다. */
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+    return NextResponse.json({ ok: false, result, validation });
+  }
+
   const response = await callLotteOnApi(credentials.apiKey, {
     method: "POST",
     path: LOTTEON_WRITE_PATHS.productRegistration,
@@ -253,7 +322,34 @@ export async function POST(request: Request) {
     errorCode: null,
     optionIdNote: OPTION_ID_NOTE,
   });
-  await logRegistrationAttempt(result, response.raw, snapshotId, jobKey);
+  /* ══════════════════════════════════════════════════════════════════════
+     P0-CHANNEL-03 F-9 — 등록이 «성공했을 때만» 현재 연결을 만든다.
+     세 라우트 공통 규약이고 이유도 같다:
+
+     🔴 실패한 시도로 ChannelProduct 를 만들면 다음 CREATE 가 막혀 셀러가
+        영영 등록하지 못한다 — 그래서 이 자리(SUBMITTED 경로)에만 있다.
+        롯데ON 은 특히 「HTTP 200 ≠ 성공」이라 returnCode 0000 + spdNo 가
+        둘 다 확인된 «뒤» 여야 한다. 위 분기가 이미 그것을 보장한다.
+     🔴 snapshot 이 아니라 «Product» 에 잇는다 — 재분석으로 새 snapshot 이
+        생겨도 연결이 끊어지지 않게.
+     🔴 product_id 가 없으면(기존 381건) 잇지 않는다. 예전과 똑같이 attempt
+        만 남는다.
+     🔴 DB 기록 실패가 등록 결과를 뒤집지 않는다. 상품은 이미 롯데ON 에
+        나갔다 — 기록이 안 됐다고 「실패」라고 말하면 그것이 거짓이다. */
+  let channelProductId: string | null = null;
+  const productId = await findProductIdBySnapshot(snapshotId);
+  if (productId) {
+    const linked = await linkChannelProduct({
+      productId,
+      channel: LOTTEON_PLATFORM_KEY,
+      externalProductId: spdNo,
+    });
+    channelProductId = linked?.id ?? null;
+  }
+  await logRegistrationAttempt(result, response.raw, snapshotId, jobKey, {
+    operation: "CREATE",
+    channelProductId,
+  });
 
   return NextResponse.json({
     ok: true,
