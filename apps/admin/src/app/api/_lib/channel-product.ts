@@ -134,3 +134,48 @@ export async function touchChannelProduct(channelProductId: string): Promise<boo
     .eq("id", channelProductId);
   return !error;
 }
+
+/**
+ * P0-CHANNEL-03 F-5 후속 — snapshot 으로부터 «현재 연결» 을 찾는다.
+ *
+ * 🔴 라우트가 이 한 함수만 부르면 된다. 세 채널이 각자
+ * 「snapshot → product_id → channel_products」를 다시 짜면 한 채널만 빠뜨리는
+ * 일이 생긴다.
+ *
+ * 🔴 `product_id` 가 없으면(기존 381 snapshot) `null` 을 낸다 — 연결이 없는
+ * 것이지 오류가 아니다. 그 상품은 예전과 똑같이 CREATE 경로를 탄다.
+ */
+export async function findChannelProductBySnapshot(
+  snapshotId: string | null | undefined,
+  channel: string,
+): Promise<ChannelProductRow | null> {
+  if (!snapshotId) return null;
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return null;
+  const { data } = await supabase
+    .from("product_snapshots")
+    .select("product_id")
+    .eq("id", snapshotId)
+    .maybeSingle();
+  const productId = (data as { product_id?: string | null } | null)?.product_id;
+  if (!productId) return null;
+  return findChannelProduct(productId, channel);
+}
+
+/**
+ * snapshot 이 속한 Product. 없으면 null(기존 381건).
+ * 🔴 여기서 «만들지» 않는다 — Product 발급은 최초 수집 한 곳에만 있다.
+ */
+export async function findProductIdBySnapshot(
+  snapshotId: string | null | undefined,
+): Promise<string | null> {
+  if (!snapshotId) return null;
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return null;
+  const { data } = await supabase
+    .from("product_snapshots")
+    .select("product_id")
+    .eq("id", snapshotId)
+    .maybeSingle();
+  return (data as { product_id?: string | null } | null)?.product_id ?? null;
+}

@@ -16,7 +16,7 @@ import {
 } from "@commerce/listing";
 import { buildChannelPriceAuditRecord } from "@/lib/channel-price-audit";
 import { requireRegistrationAccess } from "@/lib/auth/require-registration-access";
-import { linkChannelProduct } from "@/app/api/_lib/channel-product";
+import { findProductIdBySnapshot, linkChannelProduct } from "@/app/api/_lib/channel-product";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { recordAuditLog } from "@/lib/audit-log";
 import { getNaverCredentials } from "../../naver/_lib/env";
@@ -83,14 +83,9 @@ async function linkSmartStoreChannelProduct(
   externalProductId: string | undefined,
 ): Promise<string | null> {
   if (!snapshotId || !externalProductId) return null;
-  const supabase = getSupabaseAdmin();
-  if (!supabase) return null;
-  const { data } = await supabase
-    .from("product_snapshots")
-    .select("product_id")
-    .eq("id", snapshotId)
-    .maybeSingle();
-  const productId = (data as { product_id?: string | null } | null)?.product_id;
+  /* 🔴 조회를 여기서 «다시 짜지» 않는다 — 공통 저장소를 쓴다. 세 채널이 각자
+     같은 조회를 복제하면 한 채널만 빠뜨리는 일이 생긴다. */
+  const productId = await findProductIdBySnapshot(snapshotId);
   /* 기존 381건은 product_id 가 NULL 이다 — 예전과 똑같이 attempt 만 남는다. */
   if (!productId) return null;
   const linked = await linkChannelProduct({
