@@ -10,13 +10,22 @@ import {
   resolveNaverProductAttributes,
   getNaverCategoryAttributeMeta,
   COMPLIANCE_POLICY_VERSION,
+  compareRegisteredProduct,
   type NaverProductRegistrationPayload,
   type RegistrationStepLog,
   type ListingResult,
 } from "@commerce/listing";
 import { buildChannelPriceAuditRecord } from "@/lib/channel-price-audit";
 import { requireRegistrationAccess } from "@/lib/auth/require-registration-access";
-import { findProductIdBySnapshot, linkChannelProduct } from "@/app/api/_lib/channel-product";
+import { blocksCreate, resolveLifecycle } from "@/app/pipeline/commerce/channel-lifecycle";
+import {
+  findChannelProductBySnapshot,
+  findProductIdBySnapshot,
+  linkChannelProduct,
+  replaceChannelProductLink,
+  touchChannelProduct,
+} from "@/app/api/_lib/channel-product";
+import { fetchRegisteredProduct, updateRegisteredProduct } from "../_lib/update-product";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { recordAuditLog } from "@/lib/audit-log";
 import { getNaverCredentials } from "../../naver/_lib/env";
@@ -172,6 +181,20 @@ export async function POST(request: Request) {
     categoryId?: string;
     snapshotId?: string;
     jobKey?: string;
+    /**
+     * P0-CHANNEL-03 F-7 — RECREATE 를 «실행해도 되는가» 에 대한 셀러 동의.
+     *
+     * 🔴 이 값이 lifecycle 을 «정하지» 않는다. 무엇을 할지는 서버가
+     * resolveLifecycle() 로 정하고, 이 필드는 그 결과가 RECREATE 일 때
+     * 「그래도 진행할까요」에 대한 대답일 뿐이다. 클라이언트가 보낸 값을
+     * 신뢰하지 않는다는 이 라우트의 원칙과 충돌하지 않는 이유가 그것이다.
+     *
+     * 🔴 없으면 실행하지 «않는다». RECREATE 는 마켓에 새 상품을 만들고 옛
+     * 상품은 그대로 남는다 — 그것을 어떻게 할지는 셀러의 사업 판단이지
+     * 우리가 대신 정할 일이 아니다. 묻지 않고 만들면 그것이 바로 이번에
+     * 고치려는 «중복» 이다.
+     */
+    confirmRecreate?: boolean;
   } | null;
 
   if (!body?.product || !body?.listing) {
@@ -180,6 +203,9 @@ export async function POST(request: Request) {
   const { product, listing } = body;
   const snapshotId = body.snapshotId ?? null;
   const jobKey = body.jobKey ?? null;
+  /* 🔴 `=== true` 로 받는다. 문자열 "false" 나 0 이 동의로 읽히면 안 된다 —
+     동의의 기본값은 «안 함» 이어야 한다(아래 F-7 블록 참고). */
+  const confirmRecreate = body.confirmRecreate === true;
 
   // P0-C PRE-REGISTER SECURITY GATE(CEO 승인, 2026-09-17) — 쿠팡/롯데ON register와
   // **같은 함수**를 같은 자리(자격증명 조회 직전)에 둔다. 네이버 계정은
@@ -523,6 +549,238 @@ export async function POST(request: Request) {
     return NextResponse.json(result);
   }
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     P0-CHANNEL-03 F-7 — 「만들 것인가 · 고칠 것인가 · 다시 만들 것인가」.
+
+     지금까지 이 라우트에는 «만들기» 하나뿐이었다. 그래서 상품을 고치면 갈 곳이
+     없었고, 재분석으로 새 snapshot 이 생기면 «또» 만들었다 — 그것이 SmartStore
+     외부번호 6개의 뿌리다. 이 블록이 그 갈림길을 만든다.
+
+     🔴 판단을 여기서 «하지 않는다». resolveLifecycle() 이 한다. 이 자리가 하는
+     일은 판단에 필요한 사실(지금 나가 있는 것)을 읽어다 주고, 정해진 것을
+     실행하는 것뿐이다. 라우트가 직접 판단하면 「화면은 UPDATE 라는데 실제로는
+     새 상품이 생기는」 상태가 된다.
+
+     🔴 연결이 없으면 예전과 «완전히 같은» CREATE 경로로 내려간다. 기존 381
+     snapshot 은 product_id 가 NULL 이라 여기서 항상 null 이 나온다 — 그 상품들의
+     등록 동작은 이 스프린트로 한 톨도 바뀌지 않는다.
+  ══════════════════════════════════════════════════════════════════════════ */
+  const existing = await findChannelProductBySnapshot(snapshotId, "smartstore");
+
+  /* 🔴 실행할 operation 을 «변수로 들고 간다». 아래 성공 분기에서 `existing` 을
+     다시 보고 추론하면 판단이 두 벌이 된다(F-5 가 못 박은 것). */
+  let plannedOperation: "CREATE" | "RECREATE" = "CREATE";
+
+  if (existing) {
+    logStep("현재 연결 확인", "success", `이미 등록돼 있습니다(originProductNo=${existing.externalProductId}).`);
+
+    /* ① 지금 나가 있는 것을 읽는다. 🔴 읽지 못하면 «정하지 않는다» — 무엇이
+       바뀌었는지 모르는 채로 UPDATE 를 보내면 전체 교체라 무엇이 지워질지
+       모르고, CREATE 로 내려보내면 중복이 하나 더 생긴다. 막고 말한다. */
+    const current = await fetchRegisteredProduct(accessToken, existing.externalProductId);
+    if (!current.ok) {
+      logStep("현재 내용 조회", "failed", current.message);
+      const result = withMeta({
+        status: "FAILED",
+        platform: "smartstore",
+        mode: "LIVE",
+        retryable: true,
+        payload,
+        externalProductId: existing.externalProductId,
+        error: {
+          step: "VALIDATION",
+          message: `지금 등록돼 있는 내용을 읽지 못해 수정할지 새로 등록할지 정할 수 없습니다: ${current.message}`,
+          retryable: true,
+          resolution:
+            "잠시 후 다시 시도해주세요. 계속 실패하면 스마트스토어에서 해당 상품이 아직 있는지 확인해주세요.",
+        },
+      });
+      await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+      return NextResponse.json(result);
+    }
+
+    /* ② 무엇이 달라졌는가 — 「우리가 보낸 것」이 아니라 「나가 있는 것」 기준. */
+    const comparison = compareRegisteredProduct(current.snapshot, payload);
+    logStep(
+      "변경 확인",
+      "success",
+      `카테고리=${comparison.category} · 변경 ${comparison.changedFields.length}건` +
+        (comparison.changedFields.length > 0 ? `(${comparison.changedFields.join(", ")})` : "") +
+        ` · 비교 못 한 축 ${comparison.notCompared.length}개`,
+    );
+
+    /* ③ 판단 — 한 곳에서. */
+    const decision = resolveLifecycle("smartstore", true, {
+      fields: comparison.changedFields,
+      category: comparison.category === "CHANGED",
+      /* 🔴 UNKNOWN 을 `category: false` 로 접지 않는다. 모르는 것과 안 바뀐
+         것은 다르고, 그 차이가 UPDATE 와 RECREATE 를 가른다. */
+      categoryUnknown: comparison.category === "UNKNOWN",
+      /* 🔴 지금은 «항상 false» 다 — 이미지처럼 구조적으로 못 보는 축이 있어서
+         notCompared 가 빌 수 없다. 그래서 NOOP 은 이 라우트에서 아직 나오지
+         않는다. 그 사실을 숨기지 않고 그대로 넘긴다. */
+      comparedEverything: comparison.notCompared.length === 0,
+    });
+    logStep("작업 판단", "success", `${decision.operation} — ${decision.reason}`);
+
+    if (decision.operation === "UPDATE") {
+      /* 🔴 ①에서 읽은 스냅샷을 그대로 넘긴다. 다시 읽으면 그 사이에 값이 바뀔
+         수 있고, 그러면 «판단한 상태» 와 «preflight 가 검사한 상태» 가 달라진다.
+         같은 것을 보고 정하고 보낸다. */
+      const updated = await updateRegisteredProduct(
+        accessToken,
+        existing.externalProductId,
+        payload,
+        current.snapshot,
+      );
+
+      if (!updated.ok) {
+        const lost = updated.risks?.map((r) => r.label).join(", ");
+        const message = lost ? `${updated.message} (${lost})` : updated.message;
+        logStep("상품 수정", "failed", message);
+        const result = withMeta({
+          status: "FAILED",
+          platform: "smartstore",
+          mode: "LIVE",
+          retryable: true,
+          payload,
+          externalProductId: existing.externalProductId,
+          error: {
+            /* PREFLIGHT 는 «보내지 않았다» 는 뜻이라 데이터 문제(VALIDATION)고,
+               SUBMIT/FETCH/VERIFY 는 네이버와 주고받다 생긴 일이다. */
+            step: updated.step === "PREFLIGHT" ? "VALIDATION" : "NETWORK",
+            message,
+            retryable: true,
+            resolution:
+              updated.step === "PREFLIGHT"
+                ? "수정하면 사라지는 항목이 있어 전송하지 않았습니다 — 표시된 항목을 채운 뒤 다시 시도해주세요."
+                : updated.step === "VERIFY"
+                  ? "🔴 네이버가 다른 상품번호를 돌려줬습니다 — 재시도 전에 스마트스토어에서 상품이 새로 생기지 않았는지 먼저 확인해주세요."
+                  : "잠시 후 다시 시도해주세요.",
+          },
+        });
+        /* 🔴 operation 을 적지 않는다. UPDATE «하려다 못 한» 것이고, 그중
+           PREFLIGHT 실패는 네이버에 아무것도 보내지 않았다. 이력에 'UPDATE' 로
+           적으면 수정을 시도해 실패한 것과 애초에 보내지도 않은 것이 같아진다. */
+        await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+        return NextResponse.json(result);
+      }
+
+      logStep("상품 수정", "success", `수정했습니다(originProductNo=${updated.originProductNo}).`);
+      const result = withMeta({
+        status: "SUBMITTED",
+        platform: "smartstore",
+        mode: "LIVE",
+        retryable: false,
+        payload,
+        submittedAt: new Date().toISOString(),
+        /* 🔴 «같은» 외부번호다. 이것이 UPDATE 가 성공했다는 증거이고,
+           update-product.ts 가 응답 번호를 대조해 이미 확인했다. */
+        externalProductId: updated.originProductNo,
+      });
+      await touchChannelProduct(existing.id);
+      await logRegistrationAttempt(result, undefined, snapshotId, jobKey, {
+        operation: "UPDATE",
+        channelProductId: existing.id,
+      });
+      if (snapshotId) await markSnapshotRegistered(snapshotId);
+      await recordAuditLog({
+        eventType: "MARKETPLACE_REGISTERED",
+        snapshotId,
+        marketplace: "smartstore",
+        afterValue: { originProductNo: updated.originProductNo, operation: "UPDATE" },
+        reason: `기등록 상품을 수정했습니다 — ${decision.reason}`,
+      });
+      return NextResponse.json(result);
+    }
+
+    if (decision.operation === "RECREATE") {
+      /* 🔴 묻지 않고 만들지 않는다. RECREATE 는 마켓에 «새 상품» 을 만들고 옛
+         상품은 그대로 남는다 — 옛 것을 내릴지 둘지는 셀러의 사업 판단이다.
+         동의 없이 진행하면 그것이 바로 이번에 고치려는 중복이다. */
+      if (!confirmRecreate) {
+        logStep("재등록 동의", "failed", "셀러 동의가 없어 진행하지 않았습니다.");
+        const result = withMeta({
+          status: "FAILED",
+          platform: "smartstore",
+          mode: "LIVE",
+          retryable: true,
+          payload,
+          externalProductId: existing.externalProductId,
+          error: {
+            step: "VALIDATION",
+            message: `${decision.reason} 진행하면 기존 상품(${existing.externalProductId})은 스마트스토어에 그대로 남고 새 상품이 하나 더 생깁니다 — 확인 후 다시 요청해주세요.`,
+            retryable: true,
+            resolution: "새로 등록하기로 결정하셨다면 '새 상품으로 다시 등록'을 선택해 다시 시도해주세요.",
+          },
+        });
+        await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+        return NextResponse.json(result);
+      }
+      logStep("재등록 동의", "success", "셀러가 새 상품으로 다시 등록하기를 선택했습니다.");
+      plannedOperation = "RECREATE";
+      /* 아래 CREATE 와 «같은» 호출로 내려간다 — payload 도 호출도 동일하고,
+         다른 것은 성공 뒤 연결을 «새로 만들지, 갈아끼울지» 뿐이다. */
+    }
+
+    /* NOOP · BLOCKED — 네이버에 아무것도 보내지 않는다.
+       🔴 ListingStatus 에는 「하지 않았다」가 없다. 여기서 새 상태를 만들지
+       않는 이유: registration_attempts 97행과 화면이 전부 기존 6개 상태를
+       전제로 읽고 있어, 상태를 늘리면 과거 행의 의미까지 소급해 흔든다.
+       대신 «이유를 그대로» 싣는다 — 셀러가 읽는 것은 상태가 아니라 문장이다.
+       🔴 operation 도 비운다. CREATE/UPDATE/RECREATE 중 아무것도 하지 않았다. */
+    if (decision.operation === "NOOP" || decision.operation === "BLOCKED") {
+      logStep("작업 없음", "failed", decision.reason);
+      const result = withMeta({
+        status: "FAILED",
+        platform: "smartstore",
+        mode: "LIVE",
+        retryable: decision.operation === "BLOCKED",
+        payload,
+        externalProductId: existing.externalProductId,
+        error: {
+          step: "VALIDATION",
+          message: decision.reason,
+          retryable: decision.operation === "BLOCKED",
+        },
+      });
+      await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+      return NextResponse.json(result);
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     🔴 마지막 빗장 — 중복 CREATE 를 «구조적으로» 막는다.
+
+     여기서부터 아래는 「네이버에 새 상품을 만든다」 이다. 연결이 이미 있는데
+     RECREATE 동의도 없이 이 줄에 도달했다면, 그것이 정확히 SmartStore 외부번호
+     6개를 만든 경로다.
+
+     지금은 도달할 수 없다 — resolveLifecycle() 은 hasChannelProduct=true 에서
+     CREATE 를 내지 않고, 위 분기가 UPDATE/RECREATE/NOOP/BLOCKED 를 모두 잡는다.
+     🔴 그래도 둔다. 「도달할 수 없다」에 기대면 capability 표가 한 칸 바뀌거나
+     분기가 하나 늘어나는 날 조용히 중복이 생긴다. 막는 쪽이 싸다.
+  ══════════════════════════════════════════════════════════════════════════ */
+  if (blocksCreate(Boolean(existing)) && plannedOperation !== "RECREATE") {
+    logStep("중복 등록 차단", "failed", "이미 이 커머스에 나가 있는 상품입니다.");
+    const result = withMeta({
+      status: "FAILED",
+      platform: "smartstore",
+      mode: "LIVE",
+      retryable: false,
+      payload,
+      externalProductId: existing?.externalProductId,
+      error: {
+        step: "VALIDATION",
+        message: `이미 스마트스토어에 등록된 상품입니다(${existing?.externalProductId}) — 새로 만들지 않았습니다.`,
+        retryable: false,
+        resolution: "수정하려면 등록 화면에서 다시 시도하고, 새 상품으로 만들려면 '새 상품으로 다시 등록'을 선택해주세요.",
+      },
+    });
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+    return NextResponse.json(result);
+  }
+
   try {
     const response = await callNaverApi(accessToken, {
       method: "POST",
@@ -622,9 +880,35 @@ export async function POST(request: Request) {
 
          🔴 실패해도 등록 결과를 뒤집지 않는다. 상품은 이미 네이버에 나갔다 —
          DB 기록이 안 됐다고 「실패」라고 말하면 그것이 거짓이다. */
-      const channelProductId = await linkSmartStoreChannelProduct(snapshotId, result.externalProductId);
+      /* 🔴 RECREATE 는 «새 연결을 만들지 않고» 현재 연결을 갈아끼운다. 새로
+         만들면 같은 상품 × 같은 채널로 ChannelProduct 가 둘이 되고, 그러면
+         「지금 어느 외부 상품과 연결돼 있는가」에 답이 두 개가 된다 — 이
+         구조를 만든 이유 자체가 없어진다.
+
+         🔴 옛 외부번호는 지우지 않는다. 이 시도가 operation='RECREATE' 행으로
+         registration_attempts 에 남고, 직전 행들이 옛 번호를 들고 있다 —
+         그것이 이력이다(previous_* 칸을 두지 않기로 한 CPO 확정). */
+      let channelProductId: string | null = null;
+      if (plannedOperation === "RECREATE" && existing) {
+        /* 🔴 새 번호를 «못 읽었으면» 갈아끼우지 않는다. String(undefined) 가
+           "undefined" 라서, 그대로 쓰면 external_product_id 에 그 문자열이
+           들어가 현재 연결이 «존재하지 않는 상품» 을 가리키게 된다. 그러면
+           다음 등록은 있지도 않은 상품을 수정하려 든다.
+           못 읽었으면 옛 연결을 그대로 두고 지나간다 — 응답 원문은 attempt 에
+           남아 있으니 사람이 확인할 수 있다. */
+        if (result.externalProductId) {
+          const replaced = await replaceChannelProductLink(existing.id, result.externalProductId);
+          channelProductId = replaced ? existing.id : null;
+        } else {
+          console.warn("[smartstore/register] RECREATE 성공했으나 originProductNo 를 읽지 못해 연결을 갈아끼우지 않았습니다.");
+        }
+      } else {
+        channelProductId = await linkSmartStoreChannelProduct(snapshotId, result.externalProductId);
+      }
       await logRegistrationAttempt(result, response.body, snapshotId, jobKey, {
-        operation: "CREATE",
+        /* 🔴 여기서 추론하지 않는다 — 위에서 resolveLifecycle() 이 정하고
+           동의까지 받은 값을 그대로 적는다. */
+        operation: plannedOperation,
         channelProductId,
       });
       if (snapshotId) await markSnapshotRegistered(snapshotId);
@@ -632,8 +916,21 @@ export async function POST(request: Request) {
         eventType: "MARKETPLACE_REGISTERED",
         snapshotId,
         marketplace: "smartstore",
-        afterValue: { originProductNo, status: response.status },
-        reason: `네이버가 등록 요청을 수락했습니다(HTTP ${response.status}).`,
+        /* 🔴 RECREATE 면 «무엇을 대체했는지» 를 같이 남긴다. 이 한 줄이 없으면
+           감사 기록만 보고는 새 상품이 생긴 것인지 원래 하나뿐이었는지
+           구분할 수 없다 — 지금 Production 의 중복 9건이 정확히 그 상태다. */
+        afterValue: {
+          originProductNo,
+          status: response.status,
+          operation: plannedOperation,
+          ...(plannedOperation === "RECREATE" && existing
+            ? { replacedExternalProductId: existing.externalProductId }
+            : {}),
+        },
+        reason:
+          plannedOperation === "RECREATE" && existing
+            ? `새 상품으로 다시 등록했습니다(HTTP ${response.status}). 기존 상품 ${existing.externalProductId} 은 스마트스토어에 그대로 남아 있습니다.`
+            : `네이버가 등록 요청을 수락했습니다(HTTP ${response.status}).`,
       });
       return NextResponse.json(result);
     }
