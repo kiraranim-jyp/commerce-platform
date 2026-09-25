@@ -298,6 +298,28 @@ function editorFieldNote(capability: FieldCapability, baseline: EditBaseline): s
   return fieldCapabilityNote(capability);
 }
 
+/**
+ * 변경 한 줄을 셀러가 읽는 꼴로.
+ *
+ * 🔴 화면 두 곳(왼쪽 항목 목록 · 우측 요약)이 «같은 함수» 를 쓴다. 각자 형식을
+ * 정하면 같은 변경이 두 자리에서 다른 숫자로 보인다.
+ *
+ * 🔴 상세설명을 그대로 쏟지 않는다 — from/to 에 HTML 전체가 들어 있어서, 그대로
+ * 그리면 요약이 상세설명 본문으로 덮인다.
+ */
+export function describeChange(change: FieldChange): { label: string; from?: string; to?: string } {
+  const show = (value: string | undefined): string | undefined => {
+    if (value === undefined) return undefined;
+    if (change.field === "detailContent") return `${value.length}자`;
+    /* 🔴 천 단위 구분은 «가격에만» 넣는다. 「값이 숫자면 넣는다」로 하면
+       카테고리 코드가 50,000,167 이 된다 — 숫자처럼 생긴 것은 숫자가 아니다. */
+    if (change.field === "salePrice") return Number(value).toLocaleString("ko-KR");
+    /* 상품명은 길 수 있다. 요약에서 줄을 밀어내지 않게 끊고, 끊었음을 보인다. */
+    return value.length > 60 ? `${value.slice(0, 60)}…` : value;
+  };
+  return { label: change.label, from: show(change.from), to: show(change.to) };
+}
+
 /** 수정 버튼을 열어도 되는가 — 그 «근거» 와 함께. */
 export interface EditGate {
   /** 대조해서 확인한 변경. 화면이 「무엇이 무엇으로」를 그대로 보여준다. */

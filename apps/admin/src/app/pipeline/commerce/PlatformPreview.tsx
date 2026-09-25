@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { CategoryCandidate } from "@commerce/category";
 import type {
   ComplianceFieldSource,
@@ -475,6 +475,7 @@ export function PlatformPreview({
   onUpdateChannelPrice,
   productPriceKrw,
   manufacturerResolution,
+  editSummary,
 }: {
   product: CanonicalProduct;
   listing: ListingModel;
@@ -669,6 +670,16 @@ export function PlatformPreview({
    * 내려보낸다(useManufacturerResolution). 이 화면은 판정하지 않는다.
    */
   manufacturerResolution: ManufacturerResolutionState;
+  /**
+   * P0-CHANNEL-03 F-14-5 — 우측 기둥에 서는 «수정 요약»(ChannelEditSummary).
+   *
+   * 🔴 여기서 만들지 않고 «받는다». 기준값(ChannelEditModel)은 CommerceWorkspace
+   * 한 곳이 채널에서 읽어 들고 있고, 좌측 Editor 와 이 요약이 «같은 그것» 을
+   * 본다. 이 화면이 직접 읽으면 좌우가 다른 값을 말할 수 있다.
+   *
+   * 🔴 없으면 서지 않는다 — 불러오지 않았거나 연결이 없는 상태다.
+   */
+  editSummary?: ReactNode;
 }) {
   // isVerifiedPlatformCode까지 확인해야 한다 — state만 보면 미리보기가
   // "선택 완료"로 보이는데 실제 등록은 CP001로 거부되는 버그가 재발한다.
@@ -876,20 +887,28 @@ export function PlatformPreview({
    * 값은 하나도 다시 계산하지 않는다 — 바로 위에서 이미 만든
    * registrationState / priorityItems / readinessSummary 그대로다.
    */
+  /* P0-CHANNEL-03 F-14-5 — 🔴 등록 요약 «아래» 에 수정 요약을 세운다. 등록과
+     수정은 다른 질문이라 카드를 합치지 않는다(「등록할 수 있는가」 vs 「지금
+     나가 있는 것을 무엇으로 고치는가」). 없으면 아무것도 서지 않는다. */
   const summary = (
-    <ChannelRegistrationSummary
-      state={registrationState}
-      priorityItems={priorityItems}
-      onPriorityItemClick={(item) => item.sectionId && goToSection(item.sectionId)}
-      isCalculating={capabilities.hasNaverPreview && Boolean(naverValidationLoading)}
-      errorMessage={capabilities.hasNaverPreview ? naverValidationError : null}
-      onRetry={onRetryNaverValidation}
-      required={readinessSummary.required}
-      allRequiredPassed={readinessSummary.allRequiredPassed}
-      status={listingStatus}
-      registrationEnabled={capabilities.registrationEnabled}
-      onRegister={onOpenListingModal}
-    />
+    /* 🔴 여기에 sticky 를 걸지 않는다 — 등록 요약 카드가 «자기 안에서» 이미
+       sticky 다(ChannelRegistrationFrame). 겹쳐 걸면 둘 다 어긋난다. */
+    <div className="space-y-4">
+      <ChannelRegistrationSummary
+        state={registrationState}
+        priorityItems={priorityItems}
+        onPriorityItemClick={(item) => item.sectionId && goToSection(item.sectionId)}
+        isCalculating={capabilities.hasNaverPreview && Boolean(naverValidationLoading)}
+        errorMessage={capabilities.hasNaverPreview ? naverValidationError : null}
+        onRetry={onRetryNaverValidation}
+        required={readinessSummary.required}
+        allRequiredPassed={readinessSummary.allRequiredPassed}
+        status={listingStatus}
+        registrationEnabled={capabilities.registrationEnabled}
+        onRegister={onOpenListingModal}
+      />
+      {editSummary}
+    </div>
   );
 
   const detail = (

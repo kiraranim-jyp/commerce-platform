@@ -30,9 +30,10 @@ import type { EditableField } from "./channel-field-capability";
  * 각자의 편집기(가격·이미지·옵션…)에서 고치고, 이 화면은 «지금 값과 보낼 값»
  * 을 나란히 보여주고 보낼지를 묻는다.
  *
- * ── 🔴 버튼은 «있고», 꺼져 있다 ──────────────────────────────────────────
- * 변경이 0개면 disabled 다(숨기지 않는다). 손실 게이트와 다르다 — 그쪽은
- * 「보내면 사라진다」라서 버튼을 아예 만들지 않는다. 여기는 「보낼 것이 없다」다.
+ * ── 🔴 변경 목록·수정 버튼은 «여기에 없다»(F-14-5) ───────────────────────
+ * 우측 요약 하나에만 있다. 같은 것을 두 자리에 그리면 하나는 반드시 옛말을
+ * 하게 되고, 셀러는 가까운 쪽을 믿는다. 이 화면이 답하는 질문은 하나다 —
+ * 「항목마다 지금 값과 보낼 값이 무엇인가」.
  */
 
 export interface ChannelEditPanelProps {
@@ -43,8 +44,6 @@ export interface ChannelEditPanelProps {
   draft: Partial<Record<EditableField, unknown>>;
   /** 셀러가 손댄 항목. 🔴 대조하지 못하는 항목의 변경을 아는 유일한 근거다. */
   touched?: readonly EditableField[];
-  busy?: boolean;
-  onSubmit: () => void;
 }
 
 /** 지금 채널에 나가 있는 값을 셀러의 말로. 🔴 못 읽은 것을 값으로 만들지 않는다. */
@@ -75,12 +74,12 @@ export function ChannelEditPanel({
   model,
   draft,
   touched = [],
-  busy = false,
-  onSubmit,
 }: ChannelEditPanelProps) {
   const fields = editorFieldSchema(model);
-  const gate = evaluateEditGate(model, draft, touched);
-  const changed = new Set(gate.changes.map((change) => change.field));
+  /* 🔴 우측 요약과 «같은 입력으로 같은 순수함수» 를 부른다. 같은 입력이면 항상
+     같은 결과라 좌우가 어긋날 수 없다(readiness.ts 가 같은 이유로 그렇게 한다).
+     여기서 쓰는 것은 「어느 항목이 바뀌는가」 하나뿐이다 — 목록과 버튼은 우측. */
+  const changed = new Set(evaluateEditGate(model, draft, touched).changes.map((change) => change.field));
 
   return (
     <section
@@ -120,55 +119,12 @@ export function ChannelEditPanel({
         ))}
       </ul>
 
-      {/* ── 무엇이 바뀌는가 ───────────────────────────────────────────── */}
-      <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-        <p className="font-medium">바뀌는 내용</p>
-        {gate.changes.length > 0 ? (
-          <ul className="mt-1 space-y-1">
-            {gate.changes.map((change) => (
-              <li key={change.field}>
-                {change.label}
-                {/* 🔴 값 없음을 「-」로 채우지 않는다 — 빈 값으로 바뀐다고 읽힌다. */}
-                {change.from !== undefined && change.to !== undefined ? (
-                  <>
-                    {" "}
-                    {change.from} → <strong>{change.to}</strong>
-                  </>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-1 text-slate-600">아직 바뀐 것이 없습니다.</p>
-        )}
-        {/* 🔴 대조하지 못한 항목을 손댔다면 «그렇다고 말한다». 「바뀝니다」라고
-            단정하지 않는다 — 우리는 무엇이 달라졌는지 모르고, 아는 것은
-            셀러가 그 항목을 고쳤다는 사실뿐이다. */}
-        {gate.touched.length > 0 && (
-          <p className="mt-2 text-slate-600">
-            {gate.touched.map((field) => fields.find((f) => f.field === field)?.label).join(" · ")}
-            을(를) 고치셨습니다. 바뀐 내용을 미리 보여드리지는 못하지만 그대로 반영됩니다.
-          </p>
-        )}
-      </div>
-
-      <div className="mt-3 flex items-center gap-2">
-        <button
-          type="button"
-          /* 🔴 변경 1개 이상일 때만 열린다. 무변경 수정을 보내면 네이버 수정은
-             전체 교체라 «아무 이유 없이» 상품 전체가 다시 등록된다. */
-          disabled={busy || !gate.canSubmit}
-          onClick={onSubmit}
-          className="rounded-lg bg-slate-900 px-3 py-2 font-medium text-white disabled:opacity-40"
-        >
-          {busy ? "수정하는 중…" : "상품 수정"}
-        </button>
-        <span className="text-xs text-slate-500">
-          {gate.canSubmit
-            ? `아직 ${commerceLabel}에 아무것도 보내지 않았습니다.`
-            : "고친 내용이 있으면 버튼이 열립니다."}
-        </span>
-      </div>
+      {/* 🔴 변경 목록과 [상품 수정]은 «여기에 없다» — 우측 요약(F-14-5)에
+          하나만 있다. 두 자리에 두면 하나는 반드시 옛말을 하게 되고, 셀러는
+          가까운 쪽을 믿는다. */}
+      <p className="mt-3 text-xs text-slate-500">
+        바뀌는 내용과 [상품 수정]은 오른쪽 요약에 있습니다.
+      </p>
     </section>
   );
 }

@@ -106,6 +106,7 @@ import { CommerceSelector } from "./commerce/CommerceSelector";
 import { RecreateConsentPanel } from "./commerce/RecreateConsentPanel";
 import { UpdateConfirmPanel } from "./commerce/UpdateConfirmPanel";
 import { ChannelEditPanel } from "./commerce/ChannelEditPanel";
+import { ChannelEditSummary } from "./commerce/ChannelEditSummary";
 import {
   channelEditDraftFromNaverPayload,
   localTouchSignals,
@@ -2568,6 +2569,23 @@ export function CommerceWorkspace({
       setChannelEditLoading(false);
     }
   }, [smartStorePayload, snapshotId]);
+
+  /**
+   * P0-CHANNEL-03 F-14-5 — 좌측 Editor 와 우측 Summary 가 보는 «그 값».
+   *
+   * 🔴 한 번만 만든다. 두 화면이 각자 투영하면 한쪽만 옛 payload 를 쥔 순간이
+   * 생기고, 그때 왼쪽과 오른쪽이 다른 변경을 말한다.
+   */
+  const channelEditInput = useMemo(() => {
+    if (!channelEdit) return null;
+    /* 🔴 지금 payload 가 없으면 «불러온 순간의 것» 으로 돌아간다 — 계산이
+       도는 동안 초안을 비우면 화면이 「전부 사라집니다」로 보인다. */
+    const current = smartStorePayload ?? channelEdit.basePayload;
+    return {
+      draft: channelEditDraftFromNaverPayload(current),
+      touched: localTouchSignals(channelEdit.basePayload, current),
+    };
+  }, [channelEdit, smartStorePayload]);
   // N-3.72(CEO/사용자 지시: "0%는 값이 없어서가 아니라 검증이 아직 안 끝나서인
   // 경우가 있다 — 계산 중과 실패를 구분하라") — 이전에는 이 effect가 값을
   // 계산하기 전까지 smartStoreValidation이 계속 null이었고, readiness.ts의
@@ -3658,24 +3676,14 @@ export function CommerceWorkspace({
               「수정 가능」으로 올리지 않는다. */}
           {tab === "smartstore" && registrationStateFor("smartstore").basis === "CHANNEL_PRODUCT" && (
             <section className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
-              {channelEdit ? (
+              {channelEdit && channelEditInput ? (
                 <ChannelEditPanel
                   commerceLabel={commerceLabel("smartstore")}
                   model={channelEdit.model}
-                  /* 🔴 초안은 «보낼 payload» 의 투영이다 — product·listing 을
-                     다시 읽으면 상품명 파생 규칙이 빠져 화면과 전송이 갈린다. */
-                  draft={channelEditDraftFromNaverPayload(smartStorePayload ?? channelEdit.basePayload)}
-                  /* 🔴 대조할 수 없는 축은 «우리 payload 끼리» 비교해 손댔는지만
-                     안다. 채널 값과 다르다는 말이 아니다. */
-                  touched={localTouchSignals(
-                    channelEdit.basePayload,
-                    smartStorePayload ?? channelEdit.basePayload,
-                  )}
-                  busy={listingProgress != null}
-                  /* 🔴 여기서 PUT 하지 않는다. 등록과 «같은 문» 을 지나 서버가
-                     UPDATE 인지 정하고, 전체 교체 확인 화면(F-13)이 한 번 더
-                     묻는다 — 이 버튼이 곧 전송이 되면 확인 절차가 사라진다. */
-                  onSubmit={() => void confirmListing("smartstore")}
+                  /* 🔴 우측 요약과 «같은» 초안이다(channelEditInput 하나에서
+                     온다). 각자 투영하면 좌우가 다른 변경을 말한다. */
+                  draft={channelEditInput.draft}
+                  touched={channelEditInput.touched}
                 />
               ) : (
                 <div>
@@ -3735,6 +3743,30 @@ export function CommerceWorkspace({
               naverValidationLoading={smartStoreValidationEligible ? smartStoreValidationLoading : false}
               naverValidationError={smartStoreValidationEligible ? smartStoreValidationError : null}
               onRetryNaverValidation={retrySmartStoreValidation}
+              /* ══════════════════════════════════════════════════════════════
+                 P0-CHANNEL-03 F-14-5 — 우측 기둥의 «수정 요약».
+
+                 🔴 기준값은 좌측 Editor 와 «같은 것» 이다 — 같은 model, 같은
+                 초안(channelEditInput). 요약이 Snapshot 이나 별도 API 를 읽으면
+                 좌우가 다른 말을 한다.
+
+                 🔴 불러오지 않았으면 서지 않는다 — 읽지 않은 기준값으로 「무엇이
+                 바뀐다」를 말할 수는 없다. */
+              editSummary={
+                tab === "smartstore" && channelEdit && channelEditInput ? (
+                  <ChannelEditSummary
+                    commerceLabel={commerceLabel("smartstore")}
+                    model={channelEdit.model}
+                    draft={channelEditInput.draft}
+                    touched={channelEditInput.touched}
+                    busy={listingProgress != null}
+                    /* 🔴 여기서 PUT 하지 않는다. 등록과 «같은 문» 을 지나 서버가
+                       UPDATE 인지 정하고, 전체 교체 확인 화면(F-13)이 한 번 더
+                       묻는다 — 이 버튼이 곧 전송이 되면 확인 절차가 사라진다. */
+                    onSubmit={() => void confirmListing("smartstore")}
+                  />
+                ) : undefined
+              }
               naverResolved={smartStoreValidationEligible ? smartStoreResolved : undefined}
               compliancePreview={complianceReportPreview}
               payloadPreview={payloadPreviewEligible ? payloadPreview : null}

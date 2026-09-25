@@ -77,31 +77,22 @@ describe("② 🔴 초안을 화면이 소유하지 않는다", () => {
   });
 });
 
-describe("③ 🔴 변경 1개 이상일 때만 열린다", () => {
-  it("게이트는 evaluateEditGate 가 정한다 — 화면이 세지 않는다", () => {
+describe("③ 🔴 변경 목록과 수정 버튼은 «여기에 없다»(F-14-5)", () => {
+  it("버튼도 변경 목록도 이 화면에는 없다 — 우측 요약 하나뿐이다", () => {
+    /* 같은 것을 두 자리에 그리면 하나는 반드시 옛말을 하게 되고, 셀러는
+       가까운 쪽을 믿는다. */
+    expect(PANEL).not.toContain("<button");
+    expect(PANEL).not.toContain("gate.changes.map(");
+    expect(PANEL).toContain("오른쪽 요약에 있습니다");
+  });
+
+  it("어느 항목이 바뀌는지는 «게이트에게» 묻는다 — 화면이 세지 않는다", () => {
     expect(PANEL).toContain("evaluateEditGate(model, draft, touched)");
-    expect(PANEL).toContain("disabled={busy || !gate.canSubmit}");
-  });
-
-  it("🔴 버튼을 «숨기지» 않는다 — 꺼져 있는 것과 없는 것은 다르다", () => {
-    /* 손실 게이트(UpdateConfirmPanel)는 버튼을 만들지 않는다 —
-       「보내면 사라진다」이기 때문이다. 여기는 「보낼 것이 없다」다. */
-    expect(PANEL).toContain("고친 내용이 있으면 버튼이 열립니다.");
-    expect(PANEL).not.toContain("{gate.canSubmit && (");
-  });
-
-  it("변경 목록도 게이트가 준 것을 쓴다", () => {
-    expect(PANEL).toContain("gate.changes.map(");
     expect(PANEL).not.toContain("detectFieldChanges");
   });
 });
 
 describe("④ 🔴 모르는 것을 안다고 말하지 않는다", () => {
-  it("대조하지 못한 항목은 「고치셨습니다」라고만 말한다", () => {
-    expect(PANEL).toContain("고치셨습니다");
-    expect(PANEL).toContain("미리 보여드리지는 못하지만 그대로 반영됩니다");
-  });
-
   it("🔴 읽지 못한 값을 「없음」으로 그리지 않는다", () => {
     expect(PANEL).toContain('if (baseline.state === "UNREAD") return "읽지 못했습니다";');
     /* 빈 값과 못 읽은 것을 «다른 말» 로 한다. */
@@ -150,7 +141,7 @@ describe("⑤ 🔴 화면에 «붙어 있다» — 그리고 SmartStore 에만",
 
   it("🔴 수정 버튼이 곧 전송이 아니다 — 등록과 같은 문을 지나 확인을 한 번 더 받는다", () => {
     expect(WORKSPACE).toContain('onSubmit={() => void confirmListing("smartstore")}');
-    const mount = WORKSPACE.slice(WORKSPACE.indexOf("<ChannelEditPanel"), WORKSPACE.indexOf("onSubmit="));
+    const mount = WORKSPACE.slice(WORKSPACE.indexOf("<ChannelEditPanel"), WORKSPACE.indexOf("</section>"));
     expect(mount).not.toContain("fetch(");
     expect(mount).not.toContain("PUT");
   });
