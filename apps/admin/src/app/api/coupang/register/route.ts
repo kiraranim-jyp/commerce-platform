@@ -25,6 +25,14 @@ import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } 
 import { fetchCategoryMeta } from "../_lib/category-meta";
 import { resolveBrand } from "../_lib/brand";
 import { markSnapshotRegistered } from "../../snapshots/_lib/snapshot";
+import { blocksCreate, resolveLifecycle } from "@/app/pipeline/commerce/channel-lifecycle";
+import {
+  findChannelProductBySnapshot,
+  findProductIdBySnapshot,
+  linkChannelProduct,
+  replaceChannelProductLink,
+} from "@/app/api/_lib/channel-product";
+import { fetchRegisteredCoupangCategory } from "../_lib/registered-product";
 import {
   SELLER_SETTINGS_UNAVAILABLE_MESSAGE,
   SELLER_SETTINGS_UNAVAILABLE_RESOLUTION,
@@ -45,6 +53,11 @@ async function logRegistrationAttempt(
   apiResponseBody?: unknown,
   snapshotId?: string | null,
   jobKey?: string | null,
+  /* P0-CHANNEL-03 F-8 — 이 시도가 «무엇» 이었는가. SmartStore register route 와
+     같은 계약이다. 🔴 여기서 추론하지 않는다 — resolveLifecycle() 이 정한 값을
+     그대로 받는다. 쿠팡에는 UPDATE 가 없다(update 근거 «없음») — 그래서
+     받을 수 있는 값도 CREATE 와 RECREATE 둘뿐이다. 타입으로 못 박는다. */
+  lifecycle?: { operation: "CREATE" | "RECREATE"; channelProductId: string | null } | null,
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return;
@@ -69,6 +82,11 @@ async function logRegistrationAttempt(
     // 않는다 — 이 컬럼은 배포 시점 이후 등록부터만 채워진다.
     channel_price_record: result.channelPriceRecord ?? null,
     category_resolver_kpi: result.categoryResolverKpi ?? null,
+    /* 🔴 모르면 «비운다». 없는 것을 'CREATE' 로 채우면 확인하지 않은 것을
+       확인했다고 적는 셈이고, 기존 행 중 일부는 실제로 같은 상품의 중복
+       등록이었다(쿠팡 16336681622 · 16338809221 · 16340176952). */
+    operation: lifecycle?.operation ?? null,
+    channel_product_id: lifecycle?.channelProductId ?? null,
     snapshot_id: snapshotId ?? null,
     // Sprint B-1(CPO 지시: "등록 시도까지 동일 Job Key로 추적") — snapshot_id로도
     // 이미 product_snapshots까지 조인해서 찾을 수 있지만, "Job Key 하나만
@@ -87,7 +105,11 @@ async function logRegistrationAttempt(
   // PHASE 3.2 — channel_price_record를 맨 앞에 둔다: 048이 아직 실행 전이면
   // 이 컬럼 하나 때문에 나머지 감사 데이터가 전부 날아가면 안 되므로 가장 먼저
   // 포기하는 필드여야 한다(마이그레이션 미실행 환경에서도 우아하게 저하).
+  /* P0-CHANNEL-03 F-8 — 063 미적용 환경에서도 등록 «이력 기록» 자체가 실패하지
+     않게, 가장 새 컬럼이 가장 먼저 포기된다(SmartStore route 와 같은 규약). */
   const optionalColumns = [
+    "channel_product_id",
+    "operation",
     "channel_price_record",
     "brand_resolution",
     "price_breakdown",
@@ -208,6 +230,16 @@ export async function POST(request: Request) {
     listing?: ListingModel;
     snapshotId?: string;
     jobKey?: string;
+    /**
+     * P0-CHANNEL-03 F-8 — RECREATE 를 «실행해도 되는가» 에 대한 셀러 동의.
+     * SmartStore register route 와 같은 의미·같은 기본값(안 함)이다.
+     *
+     * 🔴 쿠팡은 이 동의가 특히 무겁다. 공식 가이드가 「이미 등록된 상품의
+     * 카테고리는 수정 불가」라고 «명시» 했으므로 카테고리를 바꾸려면 새
+     * 상품밖에 길이 없고, 그러면 옛 상품이 쿠팡에 그대로 남는다. 묻지 않고
+     * 만들면 그것이 지금 Production 의 쿠팡 중복 3건과 같은 상태다.
+     */
+    confirmRecreate?: boolean;
   } | null;
 
   if (!body?.product || !body?.listing) {
@@ -222,6 +254,8 @@ export async function POST(request: Request) {
   // 받는다(서버에서 snapshotId로 다시 조회하지 않는다 — pipeline/page.tsx가
   // 스냅샷 저장 응답에서 이미 job_key를 받아 상태로 갖고 있다).
   const jobKey = body.jobKey ?? null;
+  /* 🔴 `=== true` 로 받는다 — 동의의 기본값은 «안 함» 이다(F-8). */
+  const confirmRecreate = body.confirmRecreate === true;
 
   // P0-C PRE-REGISTER SECURITY GATE(CEO 승인, 2026-09-17) — 이 라우트에는
   // 사용자 검증이 **하나도 없었다**. 쿠팡 자격증명(coupang_seller_settings의
@@ -588,6 +622,147 @@ export async function POST(request: Request) {
   }
   logStep("가격 사전 검증", "success", "판매가 10원 단위 · 반품배송비 상한 확인 완료");
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     P0-CHANNEL-03 F-8 — 「만들 것인가 · 다시 만들 것인가」.
+
+     🔴 쿠팡에는 «고치기» 가 없다. SmartStore 와 다른 점이 그것이고, 그것은
+     구현을 덜 한 것이 아니라 근거가 없는 것이다(channel-lifecycle.ts):
+         update         UNKNOWN        수정 엔드포인트 근거 «없음» → BLOCKED
+         categoryUpdate NOT_SUPPORTED  공식 가이드가 「불가」로 «명시» → RECREATE
+     그래서 UPDATE 경로를 «만들지 않았다». 없는 것을 만들어 두면 다음 사람이
+     「있으니까 쓸 수 있다」고 읽는다.
+
+     🔴 판단은 여기서 하지 않는다 — resolveLifecycle() 이 한다. 이 자리는 사실을
+     읽어다 주고 정해진 것을 실행할 뿐이다.
+
+     🔴 연결이 없으면 예전과 «완전히 같은» CREATE 경로로 내려간다(기존 381
+     snapshot 은 product_id 가 NULL 이라 항상 여기서 null 이다).
+  ══════════════════════════════════════════════════════════════════════════ */
+  const existing = await findChannelProductBySnapshot(snapshotId, "coupang");
+  let plannedOperation: "CREATE" | "RECREATE" = "CREATE";
+
+  if (existing) {
+    logStep("현재 연결 확인", "success", `이미 등록돼 있습니다(sellerProductId=${existing.externalProductId}).`);
+
+    const registered = await fetchRegisteredCoupangCategory(credentials, existing.externalProductId);
+    if (!registered.ok) {
+      /* 🔴 읽지 못하면 «정하지 않는다». 여기서 CREATE 로 내려보내면 중복이
+         하나 더 생긴다 — 쿠팡 중복 3건이 그렇게 생겼다. */
+      logStep("현재 카테고리 조회", "failed", registered.message);
+      const result: ListingResult = withMeta({
+        status: "FAILED",
+        platform: "coupang",
+        mode: "LIVE",
+        retryable: true,
+        payload,
+        externalProductId: existing.externalProductId,
+        error: {
+          step: "COUPANG_API",
+          code: "API004",
+          message: `지금 등록돼 있는 내용을 읽지 못해 다시 등록할지 정할 수 없습니다: ${registered.message}`,
+          retryable: true,
+          resolution: "잠시 후 다시 시도해주세요. 계속 실패하면 Wing 에서 해당 상품이 아직 있는지 확인해주세요.",
+        },
+      });
+      await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+      return NextResponse.json(result);
+    }
+
+    /* 🔴 카테고리 «하나만» 본다. 쿠팡은 그것으로 판단이 갈리고, 다른 필드를
+       더 읽어도 결과가 달라지지 않는다 — 결과를 바꾸지 않는 비교를 실측한 적
+       없는 응답 모양 위에 지어 올리지 않는다(_lib/registered-product.ts). */
+    const sending = payload.displayCategoryCode == null ? null : String(payload.displayCategoryCode);
+    const both = registered.displayCategoryCode != null && sending != null;
+    const decision = resolveLifecycle("coupang", true, {
+      /* 🔴 fields 를 «비워서» 넘긴다. 비교하지 않았다는 뜻이고, 바로 아래
+         comparedEverything:false 가 그 사실을 말한다. 「바뀐 게 없다」가
+         아니다 — 그렇게 읽히면 NOOP 이 나올 텐데, 나오지 않는 이유가 이것이다. */
+      fields: [],
+      category: both && registered.displayCategoryCode !== sending,
+      categoryUnknown: !both,
+      comparedEverything: false,
+    });
+    logStep(
+      "작업 판단",
+      "success",
+      `${decision.operation} — 등록된 카테고리=${registered.displayCategoryCode ?? "읽지 못함"} · 보내려는 카테고리=${sending ?? "없음"}`,
+    );
+
+    if (decision.operation === "RECREATE") {
+      if (!confirmRecreate) {
+        /* 🔴 묻지 않고 만들지 않는다. 진행하면 옛 상품이 쿠팡에 그대로 남고
+           새 상품이 하나 더 생긴다 — 그것을 어떻게 할지는 셀러의 사업 판단이다. */
+        logStep("재등록 동의", "failed", "셀러 동의가 없어 진행하지 않았습니다.");
+        const result: ListingResult = withMeta({
+          status: "FAILED",
+          platform: "coupang",
+          mode: "LIVE",
+          retryable: true,
+          payload,
+          externalProductId: existing.externalProductId,
+          error: {
+            step: "VALIDATION",
+            code: "CP001",
+            message: `${decision.reason} 진행하면 기존 상품(${existing.externalProductId})은 쿠팡에 그대로 남고 새 상품이 하나 더 생깁니다 — 확인 후 다시 요청해주세요.`,
+            retryable: true,
+            resolution: "새로 등록하기로 결정하셨다면 '새 상품으로 다시 등록'을 선택해 다시 시도해주세요.",
+          },
+        });
+        await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+        return NextResponse.json(result);
+      }
+      logStep("재등록 동의", "success", "셀러가 새 상품으로 다시 등록하기를 선택했습니다.");
+      plannedOperation = "RECREATE";
+    } else {
+      /* NOOP · BLOCKED — 쿠팡에 아무것도 보내지 않는다.
+         🔴 여기 오는 대부분은 「수정 지원 여부가 확인되지 않았습니다」다.
+         「안 된다」가 아니라 「모른다」 — 그 문장을 그대로 셀러에게 보낸다.
+         🔴 operation 을 비운다. 아무것도 하지 않았다. */
+      logStep("작업 없음", "failed", decision.reason);
+      const result: ListingResult = withMeta({
+        status: "FAILED",
+        platform: "coupang",
+        mode: "LIVE",
+        retryable: decision.operation === "BLOCKED",
+        payload,
+        externalProductId: existing.externalProductId,
+        error: {
+          step: "VALIDATION",
+          code: "CP005",
+          message: decision.reason,
+          retryable: decision.operation === "BLOCKED",
+        },
+      });
+      await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+      return NextResponse.json(result);
+    }
+  }
+
+  /* 🔴 마지막 빗장 — SmartStore route 와 같은 이유로 둔다. 여기서부터 아래는
+     「쿠팡에 새 상품을 만든다」 이고, 연결이 있는데 RECREATE 동의 없이 도달했다면
+     그것이 중복을 만든 경로다. 지금은 도달할 수 없지만 «도달할 수 없다» 에
+     기대지 않는다. */
+  if (blocksCreate(Boolean(existing)) && plannedOperation !== "RECREATE") {
+    logStep("중복 등록 차단", "failed", "이미 이 커머스에 나가 있는 상품입니다.");
+    const result: ListingResult = withMeta({
+      status: "FAILED",
+      platform: "coupang",
+      mode: "LIVE",
+      retryable: false,
+      payload,
+      externalProductId: existing?.externalProductId,
+      error: {
+        step: "VALIDATION",
+        code: "CP005",
+        message: `이미 쿠팡에 등록된 상품입니다(${existing?.externalProductId}) — 새로 만들지 않았습니다.`,
+        retryable: false,
+        resolution: "새 상품으로 만들려면 '새 상품으로 다시 등록'을 선택해주세요.",
+      },
+    });
+    await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+    return NextResponse.json(result);
+  }
+
   try {
     const { value: response, attempts } = await withRetry(
       () => callCoupangApi(credentials, { method: "POST", path: CREATE_PRODUCT_PATH, body: payload }),
@@ -632,7 +807,44 @@ export async function POST(request: Request) {
         externalProductId: parsed.data != null ? String(parsed.data) : undefined,
         submittedAt: new Date().toISOString(),
       });
-      await logRegistrationAttempt(result, response.body, snapshotId, jobKey);
+      /* ══════════════════════════════════════════════════════════════════
+         P0-CHANNEL-03 F-8 — 등록이 «성공했을 때만» 현재 연결을 반영한다.
+         SmartStore F-5/F-7 과 같은 규약이고, 이유도 같다:
+
+         🔴 실패한 시도로 ChannelProduct 를 만들면 다음 CREATE 가 막혀 셀러가
+            영영 등록하지 못한다 — 그래서 이 자리(성공 경로)에만 있다.
+         🔴 snapshot 이 아니라 «Product» 에 잇는다. 그래야 재분석으로 새
+            snapshot 이 생겨도 연결이 끊어지지 않는다.
+         🔴 product_id 가 없으면(기존 381건) 잇지 않는다 — 예전과 똑같이
+            attempt 만 남는다. 정체성이 없다고 등록을 막지 않는다.
+         🔴 DB 기록 실패가 등록 결과를 뒤집지 않는다. 상품은 이미 쿠팡에
+            나갔다 — 기록이 안 됐다고 「실패」라고 말하면 그것이 거짓이다. */
+      let channelProductId: string | null = null;
+      if (plannedOperation === "RECREATE" && existing) {
+        /* 🔴 새 번호를 못 읽었으면 갈아끼우지 않는다 — 없는 상품을 가리키는
+           연결이 생기면 다음 등록이 그것을 기준으로 판단한다. */
+        if (result.externalProductId) {
+          const replaced = await replaceChannelProductLink(existing.id, result.externalProductId);
+          channelProductId = replaced ? existing.id : null;
+        } else {
+          console.warn("[coupang/register] RECREATE 성공했으나 sellerProductId 를 읽지 못해 연결을 갈아끼우지 않았습니다.");
+        }
+      } else if (result.externalProductId) {
+        const productId = await findProductIdBySnapshot(snapshotId);
+        if (productId) {
+          const linked = await linkChannelProduct({
+            productId,
+            channel: "coupang",
+            externalProductId: result.externalProductId,
+          });
+          channelProductId = linked?.id ?? null;
+        }
+      }
+      await logRegistrationAttempt(result, response.body, snapshotId, jobKey, {
+        /* 🔴 추론하지 않는다 — 위에서 정해진 값을 그대로 적는다. */
+        operation: plannedOperation,
+        channelProductId,
+      });
       if (snapshotId) await markSnapshotRegistered(snapshotId);
       return NextResponse.json(result);
     }

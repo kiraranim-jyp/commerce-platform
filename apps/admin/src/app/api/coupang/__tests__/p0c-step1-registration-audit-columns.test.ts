@@ -44,9 +44,25 @@ const routeSource = readFileSync(ROUTE, "utf-8");
 function migratedColumns(): Set<string> {
   const cols = new Set<string>();
   for (const file of readdirSync(MIGRATIONS).filter((f) => f.endsWith(".sql"))) {
-    const sql = readFileSync(path.join(MIGRATIONS, file), "utf-8");
-    for (const m of sql.matchAll(/alter\s+table\s+registration_attempts\s+add\s+column\s+if\s+not\s+exists\s+(\w+)/gi)) {
-      cols.add(m[1]!);
+    const raw = readFileSync(path.join(MIGRATIONS, file), "utf-8");
+    /* 🔴 `--` 주석을 «먼저» 걷어낸다. 이 디렉터리의 마이그레이션들은 롤백 SQL을
+       통째로 주석으로 달아 두는 관례라(063 등), 걷어내지 않으면 주석 안의
+       ALTER/DROP 까지 읽어 「있지도 않은 칸이 있다」고 말하게 된다. */
+    const sql = raw.replace(/--.*$/gm, "");
+
+    /* P0-CHANNEL-03 F-8 — 한 ALTER 문이 칸을 «여러 개» 만드는 형태를 읽는다:
+           ALTER TABLE registration_attempts
+             ADD COLUMN IF NOT EXISTS channel_product_id TEXT NULL …,
+             ADD COLUMN IF NOT EXISTS operation TEXT NULL;
+       🔴 전에는 `ALTER TABLE … ADD COLUMN …` 을 한 덩어리로 찾아서 «첫 칸만»
+       보였다. 그래서 063 이 만든 operation 이 「마이그레이션 없는 칸」으로
+       잡혔다 — 칸은 실제로 있는데 테스트가 못 본 것이다.
+       이런 거짓 경보를 그때그때 예외로 빼면 이 파일이 지키려는 계약 자체가
+       녹는다. 예외가 아니라 «읽는 법» 을 고친다. */
+    for (const stmt of sql.matchAll(/alter\s+table\s+registration_attempts\b([\s\S]*?);/gi)) {
+      for (const m of stmt[1]!.matchAll(/add\s+column\s+(?:if\s+not\s+exists\s+)?(\w+)/gi)) {
+        cols.add(m[1]!);
+      }
     }
     // create table 본문의 칸들(003).
     const created = /create\s+table\s+if\s+not\s+exists\s+registration_attempts\s*\(([\s\S]*?)\n\)/i.exec(sql);
