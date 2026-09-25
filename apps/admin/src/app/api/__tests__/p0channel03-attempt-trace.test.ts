@@ -78,9 +78,36 @@ describe("③ 🔴 판정을 지어내지 않는다", () => {
   });
 });
 
-describe("④ 몇 건을 봤는지 숨기지 않는다", () => {
-  it("scanned · matched 를 같이 낸다 — 「없다」와 「못 찾았다」를 구분할 수 있게", () => {
+describe("④ 🔴 잘못된 결론을 «유도하지» 않는다", () => {
+  it("fetched · scanned · matched 를 같이 낸다", () => {
+    /* 「이력이 없다」 · 「내 것이 아니다」 · 「그 가격이 아니다」는 전혀 다른
+       답인데, 숫자를 하나만 주면 셋이 구분되지 않는다. */
+    expect(SRC).toContain("fetched: all.length");
     expect(SRC).toContain("scanned: owned.length");
     expect(SRC).toContain("matched: filtered.length");
+  });
+
+  it("🔴 salePrice 필터가 0건이면 최근 이력을 «같이» 보여준다", () => {
+    /* payload 가 만들어지기 «전» 에 실패한 시도는 판매가가 없어 절대
+       매칭되지 않는다. matched:0 만 보여주면 「요청이 서버까지 오지도
+       않았다」로 결론 내리게 된다 — 실제로는 들어와서 초기에 죽은 것인데. */
+    expect(SRC).toContain("salePriceFilter && filtered.length === 0");
+    expect(SRC).toContain("recentUnfiltered");
+  });
+
+  it("payload 유무를 그대로 말한다 — 「가격이 없다」의 이유가 거기 있다", () => {
+    expect(SRC).toContain("payloadPresent: row.payload != null");
+  });
+
+  it("🔴 소유권에서 걸러진 경우를 «따로» 말한다", () => {
+    expect(SRC).toContain("all.length > 0 && owned.length === 0");
+    expect(RAW).toContain("현재 워크스페이스 소유가 아니거나");
+  });
+
+  it("🔴 두 목록이 «같은 모양» 이다 — 대조하게 만들지 않는다", () => {
+    /* describe() 하나로 만든다. 모양이 다르면 읽는 사람이 두 표를 맞춰봐야
+       하고, 그 순간 진단의 쓸모가 줄어든다. */
+    expect(SRC).toContain("attempts: picked.map(describe)");
+    expect(SRC).toContain("recentUnfiltered: fallback.map(describe)");
   });
 });

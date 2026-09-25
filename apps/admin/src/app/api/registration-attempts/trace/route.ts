@@ -111,43 +111,71 @@ export async function GET(request: Request) {
     }
   }
 
+  /**
+   * 🔴 필터가 «0건» 이어도 최근 이력을 같이 보여준다.
+   *
+   * salePrice 필터는 `payload.originProduct.salePrice` 를 읽는데, payload 가
+   * 만들어지기 «전» 에 실패한 시도(인증·카테고리·컨텍스트 실패)는 payload 자체가
+   * 없어서 절대 매칭되지 않는다. 그 상태로 `matched: 0` 만 보여주면 읽는 사람은
+   * 「요청이 서버까지 오지도 않았다」로 결론 내린다 — 실제로는 들어와서 초기에
+   * 죽은 것인데. 진단이 잘못된 결론을 «유도하면» 진단이 아니다.
+   */
+  const fallback =
+    salePriceFilter && filtered.length === 0
+      ? owned.slice(0, limit)
+      : [];
+
+  const describe = (row: Row) => {
+    const snap = ownedSnapshots.get(row.snapshot_id!)!;
+    const links = snap.productId ? (linksByProduct.get(snap.productId) ?? []) : [];
+    return {
+      attemptId: row.id,
+      at: row.created_at,
+      status: row.status,
+      /** 🔴 라우트가 «적은» 값 그대로. NULL 이면 NULL 이다 — 추론하지 않는다. */
+      operation: row.operation,
+      errorCode: row.error_code,
+      /** payload 에 실제로 실린 판매가. 🔴 null 이면 payload 이전에 끝난 시도다. */
+      sentSalePrice: readSalePrice(row.payload),
+      payloadPresent: row.payload != null,
+      externalProductId: row.external_product_id,
+      respondedProductNo: readRespondedProductNo(row.response),
+      channelProductId: row.channel_product_id,
+      snapshot: { id: row.snapshot_id, title: snap.title, productId: snap.productId },
+      currentLinks: links,
+      observed: {
+        operationRecorded:
+          row.operation ?? "(비어 있음 — CREATE/UPDATE/RECREATE 중 아무것도 실행되지 않았다는 뜻)",
+        naverReturnedProductNo: readRespondedProductNo(row.response) !== null,
+        linkedToChannelProduct: row.channel_product_id !== null,
+      },
+    };
+  };
+
   return NextResponse.json({
     ok: true,
     platform,
     /** 필터를 걸었으면 몇 건 중 몇 건인지 그대로 말한다. */
+    fetched: all.length,
     scanned: owned.length,
     matched: filtered.length,
-    attempts: picked.map((row) => {
-      const snap = ownedSnapshots.get(row.snapshot_id!)!;
-      const links = snap.productId ? (linksByProduct.get(snap.productId) ?? []) : [];
-      return {
-        attemptId: row.id,
-        at: row.created_at,
-        status: row.status,
-        /** 🔴 라우트가 «적은» 값 그대로. NULL 이면 NULL 이다 — 추론하지 않는다. */
-        operation: row.operation,
-        errorCode: row.error_code,
-        /** payload 에 실제로 실린 판매가. */
-        sentSalePrice: readSalePrice(row.payload),
-        /** attempt 에 기록된 외부 상품번호. */
-        externalProductId: row.external_product_id,
-        /** 네이버 응답이 돌려준 번호 — 위와 다르면 그 자체가 신호다. */
-        respondedProductNo: readRespondedProductNo(row.response),
-        channelProductId: row.channel_product_id,
-        snapshot: { id: row.snapshot_id, title: snap.title, productId: snap.productId },
-        /** 지금 이 Product 가 이 채널에 나가 있는 연결(들). */
-        currentLinks: links,
-        /**
-         * 🔴 해석이 아니라 «관찰» 이다. operation 이 무엇으로 적혔는지,
-         * 응답 번호가 있는지만 말한다. 「그러므로 PUT 이 갔다」는 결론은
-         * 사람이 내린다.
-         */
-        observed: {
-          operationRecorded: row.operation ?? "(비어 있음 — CREATE/UPDATE/RECREATE 중 아무것도 실행되지 않았다는 뜻)",
-          naverReturnedProductNo: readRespondedProductNo(row.response) !== null,
-          linkedToChannelProduct: row.channel_product_id !== null,
-        },
-      };
-    }),
+    /**
+     * 🔴 `scanned: 0` 인데 `fetched > 0` 이면 «소유권에서 걸러진» 것이다.
+     * 「이력이 없다」와 「내 것이 아니다」는 전혀 다른 답이라 구분해서 말한다.
+     */
+    note:
+      all.length > 0 && owned.length === 0
+        ? "이 플랫폼의 최근 이력은 있으나 현재 워크스페이스 소유가 아니거나 snapshot_id 가 없어 제외했습니다."
+        : salePriceFilter && filtered.length === 0
+          ? "해당 판매가로 기록된 시도가 없습니다 — payload 가 만들어지기 «전» 에 끝난 시도는 판매가가 없으므로, 아래 recentUnfiltered 를 함께 보세요."
+          : undefined,
+    /** 🔴 필터가 0건일 때만 채워진다 — 최근 이력 그대로(필터 없음). */
+    recentUnfiltered: fallback.map(describe),
+    /**
+     * 🔴 `describe()` «하나» 로 만든다. 필터 결과와 fallback 이 서로 다른
+     * 모양이면 읽는 사람이 두 표를 대조해야 하고, 그 순간 이 진단은 쓸모가
+     * 줄어든다. 같은 칸, 같은 이름.
+     */
+    attempts: picked.map(describe),
   });
 }
