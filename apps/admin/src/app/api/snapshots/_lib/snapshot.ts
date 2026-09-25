@@ -187,6 +187,39 @@ export interface SaveSnapshotInput {
 /** id가 있으면 update, 없으면 insert — pipeline/page.tsx가 분석 완료 시점에
  * id 없이 첫 저장을 하고, 이후 편집마다 받은 id로 계속 upsert한다(matches
  * "워크스페이스는 항상 최신 상태 하나만 유지" — 버전 이력 없음, 계획서 참고). */
+
+/**
+ * P0-CHANNEL-03 E-2 — `products` 에 정체성 한 줄을 만든다.
+ *
+ * 🔴 앱 runtime 은 Supabase 로만 DB 에 닿는다(Prisma 는 schema·migration·스크립트
+ * 전용). 이 경계를 넘지 않는다.
+ *
+ * 실패하면 `null` 을 내고 «조용히 넘어간다» — 호출부가 그 뜻을 알고 있다.
+ */
+async function createProductIdentity(
+  supabase: NonNullable<ReturnType<typeof getSupabaseAdmin>>,
+  input: SaveSnapshotInput,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("products")
+    /* 🔴 BETA-SECURITY-2 §11/§13 — 소유자는 «세션에서» 결정된 workspaceId 다.
+       063 에서 이 칸을 빠뜨려 products 만 무주공산이었고, snapshot-ownership
+       보안 테스트(CASE G)가 그것을 잡았다. 066 으로 칸을 만들고 여기서 채운다. */
+    .insert({
+      sourceUrl: input.sourceUrl,
+      title: input.title ?? "(제목 미확인)",
+      workspace_id: input.workspaceId,
+    })
+    .select("id")
+    .single();
+  if (error || !data) {
+    /* 마이그레이션 063 미적용 환경 등 — 스냅샷 저장을 막지 않는다. */
+    console.warn("[snapshot] products insert 실패 — product_id 없이 계속합니다:", error?.message);
+    return null;
+  }
+  return (data as { id: string }).id;
+}
+
 export async function saveSnapshot(
   input: SaveSnapshotInput,
 ): Promise<{ ok: true; snapshot: ProductSnapshot } | { ok: false; error: string }> {
@@ -221,10 +254,36 @@ export async function saveSnapshot(
   // 끊긴다). 마이그레이션 025 미실행 환경(컬럼 없음)에서는 job_key 없이 insert
   // 재시도한다 — 다른 optional 컬럼들과 같은 원칙, job_key가 없다고 스냅샷
   // 저장 자체를 막지 않는다.
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * P0-CHANNEL-03 E-2(CPO 확정, 2026-09-25) — **상품 정체성을 여기서 발급한다.**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * job_key 와 «같은 자리» 다 — 새 Job 이 처음 생기는 순간, 딱 한 번.
+   * 편집(update 경로)에서는 다시 만들지 않는다. 그래야
+   *
+   *     Product A ─┬─ Snapshot 1
+   *                ├─ Snapshot 2   (재분석)
+   *                └─ Snapshot 3
+   *
+   * 가 성립하고, 재분석해도 기존 채널 등록과의 연결이 끊어지지 않는다.
+   * 지금까지는 이 자리가 없어서 한 상품이 SmartStore 외부번호 6개로 갈라졌다.
+   *
+   * 🔴 sourceUrl 로 «기존 Product 를 찾지 않는다». URL 은 식별자가 아니다 —
+   * 같은 상품이 URL 을 바꿀 수 있고, 같은 URL 에서 상품이 바뀔 수 있다.
+   * 그래서 여기서는 «항상 새로 발급» 한다. 같은 상품의 두 수집을 하나로 묶는
+   * 것은 사람이 확인해야 하는 별도 작업이다(자동 merge 금지, CPO 확정).
+   *
+   * 🔴 실패해도 스냅샷 저장을 막지 않는다 — job_key 와 같은 원칙이다.
+   * product_id 는 nullable 이고, 없으면 기존 381건과 같은 상태가 될 뿐이다.
+   * 정체성이 없다고 셀러의 분석 결과를 버리지 않는다.
+   */
+  const productId = await createProductIdentity(supabase, input);
+
   const jobKey = await generateJobKey();
   const { data, error } = await supabase
     .from("product_snapshots")
-    .insert({ ...row, job_key: jobKey })
+    .insert({ ...row, job_key: jobKey, product_id: productId })
     .select()
     .single();
   if (error) {

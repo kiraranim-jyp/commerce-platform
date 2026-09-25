@@ -28,6 +28,9 @@ model Product {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // 🔴 066 — 소유자. 이 스키마의 다른 표와 «같은» 격리를 쓴다.
+  workspaceId String?  @map("workspace_id") @db.Uuid
+
   channelProducts ChannelProduct[]
 
   /// 🔴 065 — 실제 표 이름은 snake_case `products` 다. 이 스키마의 다른 표가
