@@ -332,3 +332,50 @@ describe("REWORK-10 A — 롯데ON도 전 채널 공통 제조사 resolver를 �
     expect(manufacturerOf({}, product)).toBeUndefined();
   });
 });
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * P0-CHANNEL-03 §6 — **판매자 인프라 번호는 «먼저 등록돼 있어야» 한다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 출고지·반품지·배송비정책·배송가능지역은 롯데ON 판매자센터(또는 거래처 API)에
+ * 선등록돼 있어야 하는 값이다. 🔴 임의 값을 지어내 보낼 수 없고, 없는 채로
+ * 87(상품등록)을 부르면 마켓 쪽에서 무엇이 만들어질지 우리가 모른다.
+ *
+ * 🔴 그렇다고 «신규 등록 기능 자체» 를 막지 않는다(CTO 명시). 값이 채워지면
+ * 그 축은 READY 로 바뀌고 등록이 진행된다 — 아래 마지막 케이스가 그것이다.
+ */
+describe("P0-CHANNEL-03 §6 — 롯데ON 판매자 선결조건", () => {
+  const PREREQ = [
+    ["owhpNo", "outboundPlaceNo"],
+    ["rtrpNo", "returnPlaceNo"],
+    ["dvCstPolNo", "deliveryCostPolicyNo"],
+    ["dvRgsprGrpCd", "deliveryRegionGroupCode"],
+  ] as const;
+
+  it.each(PREREQ)("%s 가 없으면 BLOCKED — 등록 API 를 부르지 않는다", (field, configKey) => {
+    const result = validateLotteOnPayload(
+      inputFor(makeProduct(), completeChannel({ [configKey]: null })),
+    );
+    const hit = result.fields.find((f) => f.field === field);
+    expect(hit?.status).toBe("BLOCKED");
+    expect(hit?.code).toBe("SELLER_PLACE_REQUIRED");
+    /* 🔴 BLOCKED 가 하나라도 있으면 라우트가 멈춘다(register/route.ts 가
+       validation.ok 를 87 호출 «앞» 에서 본다). */
+    expect(result.ok).toBe(false);
+  });
+
+  it("🔴 네 값이 다 있으면 READY 다 — 선결조건이 신규 등록을 «같이 막지» 않는다", () => {
+    const result = validateLotteOnPayload(inputFor(makeProduct(), completeChannel()));
+    for (const [field] of PREREQ) {
+      expect(result.fields.find((f) => f.field === field)?.status).toBe("READY");
+    }
+  });
+
+  it("🔴 빈 문자열도 «없는 것» 으로 본다 — 공백을 값으로 인정하면 그대로 나간다", () => {
+    const result = validateLotteOnPayload(
+      inputFor(makeProduct(), completeChannel({ outboundPlaceNo: "" })),
+    );
+    expect(result.fields.find((f) => f.field === "owhpNo")?.status).toBe("BLOCKED");
+  });
+});
