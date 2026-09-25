@@ -51,11 +51,24 @@ export async function fetchRegisteredProduct(
   if (res.status >= 400) {
     return { ok: false, message: `네이버가 상품 조회를 거부했습니다(HTTP ${res.status}).` };
   }
+  return toRegisteredProductSnapshot(res.body);
+}
 
+/**
+ * GET 응답 본문 → 우리가 읽는 칸.
+ *
+ * 🔴 `fetchRegisteredProduct` 에서 «꺼내 둔» 이유(P0-CHANNEL-03 F-14-6): 실측
+ * probe 가 이 매핑을 «다시 적으면» probe 는 통과하는데 실제 코드는 실패하는
+ * 상태가 생긴다. 실측이 코드와 무관해지는 순간이 그때다. 그래서 라우트와 probe
+ * 가 «같은 함수» 를 쓴다 — 네트워크만 다르고 읽는 방법은 하나다.
+ */
+export function toRegisteredProductSnapshot(
+  body: unknown,
+): { ok: true; snapshot: RegisteredProductSnapshot } | { ok: false; message: string } {
   /* 🔴 응답 모양을 넓게 받는다. 우리가 필요한 것은 「무엇이 있었는가」 뿐이고,
      없는 필드를 «있었다» 고 읽으면 안 된다 — 그러면 preflight 가 거짓
      경보를 낸다. optional chaining 으로 없으면 없는 대로 둔다. */
-  const body = res.body as {
+  const parsed = body as {
     originProduct?: {
       detailContent?: string;
       salePrice?: number;
@@ -83,7 +96,7 @@ export async function fetchRegisteredProduct(
       };
     };
   } | null;
-  const origin = body?.originProduct;
+  const origin = parsed?.originProduct;
   if (!origin) return { ok: false, message: "상품 조회 응답에서 원상품을 찾지 못했습니다." };
 
   return {
