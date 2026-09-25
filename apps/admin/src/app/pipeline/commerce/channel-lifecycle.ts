@@ -44,8 +44,29 @@ export type CapabilityState = "SUPPORTED" | "NOT_SUPPORTED" | "UNKNOWN";
  *               문구로 확인). 카테고리 변경 가부는 «근거 없음».
  *   Coupang     수정 엔드포인트 근거 «없음». 카테고리는 공식 가이드가
  *               「이미 등록된 상품의 카테고리 수정 불가」로 «명시».
- *   LotteON     apiNo 90(상품수정)·91(가격)·92/111(판매상태)이 문서에 있고
- *               전부 미구현. 카테고리 변경은 근거 없음.
+ *   LotteON     🔴 UNKNOWN. 아래 참조 — 「apiNo 90 이 있다」는 근거가 아니다.
+ *
+ * ── 🔴 LotteON update 를 SUPPORTED 로 올리지 않는 이유(CTO 지시, 2026-09-25) ──
+ * 앞선 판이 `SUPPORTED` 였고 그 근거가 「apiNo 90·91·92/111 이 문서에 있다」였다.
+ * 그것은 «존재» 이지 «확인» 이 아니다 — 이 파일이 막으려던 바로 그 혼동이다.
+ * 조사 문서(docs/lotteon-commerce-sprint-2-survey.md)가 실제로 말하는 것:
+ *
+ *   §5-2  apiNo 90 의 이름은 「상품 수정」이 아니라 «승인 상품 수정»
+ *         (POST /v1/openapi/product/v1/product/modification/request).
+ *         어떤 «상태» 의 어떤 «필드» 를 바꿀 수 있는지는 인용된 바 없다.
+ *   §7-2  🔴 「롯데ON «만» 옵션명·옵션값 사후 수정 불가」 — 수정이 안 되는 축이
+ *         문서로 «확인돼» 있다. 전체를 SUPPORTED 라고 말할 수 없다.
+ *   §6-3  상품 쓰기가 허용된 근거는 「등록(87)은 92 판매중지로 되돌릴 수 있다」
+ *         였다. 90 수정에는 그런 되돌림 수단이 «기록돼 있지 않다».
+ *
+ * 🔴 `forbidden-endpoints.ts` 가 90 을 막고 있는 것이 «아니다». 그 목록은 주문·
+ * 배송·클레임 축뿐이고 상품 축은 의도적으로 열려 있다. 즉 가드는 이 판단의
+ * 근거가 아니다 — 근거는 위 세 줄이다. 가드를 읽고 안심하지 말 것.
+ *
+ * UNKNOWN 이므로 일반 수정은 BLOCKED 로 간다(아래 cap.update 분기). 셀러는
+ * 「안 된다」가 아니라 「확인되지 않았다」는 말을 듣는다 — 그것이 사실이다.
+ * 올리려면: 90 의 대상 상태·수정 가능 필드·되돌림 수단이 공식 문서로 확인되고,
+ * 옵션 축 제약과의 관계가 정리돼야 한다. 실측 없이 올리지 않는다.
  *
  * 🔴 근거가 생기면 «이 표만» 고친다. 판단 로직은 건드리지 않는다.
  */
@@ -53,7 +74,7 @@ export const CHANNEL_CAPABILITY: Record<CommerceId, ChannelCapability> = {
   smartstore: { create: true, update: "SUPPORTED", categoryUpdate: "UNKNOWN" },
   coupang: { create: true, update: "UNKNOWN", categoryUpdate: "NOT_SUPPORTED" },
   elevenst: { create: true, update: "UNKNOWN", categoryUpdate: "UNKNOWN" },
-  lotteon: { create: true, update: "SUPPORTED", categoryUpdate: "UNKNOWN" },
+  lotteon: { create: true, update: "UNKNOWN", categoryUpdate: "UNKNOWN" },
 };
 
 /** 무엇이 바뀌었는가. 🔴 카테고리는 «따로» 센다 — lifecycle 이 다르다. */

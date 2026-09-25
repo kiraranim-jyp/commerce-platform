@@ -51,8 +51,17 @@ describe("③ 일반 변경 — 채널이 할 수 있는 만큼만", () => {
     expect(d.needsAttention).toBe(false);
   });
 
-  it("LotteON: apiNo 90 이 문서로 확인됐다 → UPDATE", () => {
-    expect(resolveLifecycle("lotteon", true, PRICE).operation).toBe("UPDATE");
+  it("🔴 LotteON: 「apiNo 90 이 있다」는 근거가 아니다 → BLOCKED", () => {
+    /* 앞선 판은 SUPPORTED 였고 근거가 「문서에 apiNo 90 이 있다」였다. 그것은
+       «존재» 이지 «확인» 이 아니다(CTO 지시, 2026-09-25).
+         · 90 의 이름은 「상품 수정」이 아니라 «승인 상품 수정» 이다
+         · 🔴 「롯데ON 만 옵션명·옵션값 사후 수정 불가」가 문서로 확인돼 있다
+         · 등록(87)과 달리 90 에는 되돌림 수단(92 판매중지) 기록이 없다
+       확인되지 않은 UPDATE 를 임의로 구현하지 않는다 — 막고 «말한다». */
+    const d = resolveLifecycle("lotteon", true, PRICE);
+    expect(d.operation).toBe("BLOCKED");
+    expect(d.reason).toContain("확인되지 않았습니다");
+    expect(d.needsAttention).toBe(true);
   });
 
   it("🔴 Coupang: 수정 근거가 «없다» → RECREATE 가 아니라 BLOCKED", () => {
@@ -101,6 +110,10 @@ describe("⑤ 🔴 UNKNOWN 과 NOT_SUPPORTED 를 같게 다루지 않는다", ()
     expect(CHANNEL_CAPABILITY.smartstore.categoryUpdate).toBe("UNKNOWN");
     expect(CHANNEL_CAPABILITY.lotteon.categoryUpdate).toBe("UNKNOWN");
     expect(CHANNEL_CAPABILITY.coupang.update).toBe("UNKNOWN");
+    /* 🔴 「문서에 API 가 있다」로 SUPPORTED 가 되지 않는다. 세 채널 중 수정이
+       «확인된» 것은 SmartStore 하나뿐이다. */
+    expect(CHANNEL_CAPABILITY.lotteon.update).toBe("UNKNOWN");
+    expect(CHANNEL_CAPABILITY.smartstore.update).toBe("SUPPORTED");
   });
 
   it("같은 RECREATE 라도 «이유가 다르다»", () => {
