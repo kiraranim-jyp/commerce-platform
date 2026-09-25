@@ -20,12 +20,20 @@ datasource db {
 /// 「동일성 판단 후보 정보」로만 남기고, 🔴 URL 로 자동 merge 하지 않는다.
 model Product {
   id        String   @id @default(cuid())
+  // 🔴 컬럼은 camelCase 다(sourceUrl · createdAt · updatedAt). 표 이름만
+  // snake_case 로 바꿨고 컬럼은 건드리지 않았다 — @map 을 붙이면 없는 컬럼을
+  // 가리키게 된다(한 번 잘못 붙였다가 실측으로 확인하고 되돌렸다).
   sourceUrl String?
   title     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   channelProducts ChannelProduct[]
+
+  /// 🔴 065 — 실제 표 이름은 snake_case `products` 다. 이 스키마의 다른 표가
+  /// 전부 그렇고, "Product" 만 대문자 단수로 혼자 달랐다(Prisma 초기 잔재).
+  /// 행 0건일 때 바꿨다 — 행이 생긴 뒤에는 훨씬 무거워진다.
+  @@map("products")
 }
 
 /// P0-CHANNEL-03 PHASE E — **«현재» 외부 채널 상품과의 연결.**

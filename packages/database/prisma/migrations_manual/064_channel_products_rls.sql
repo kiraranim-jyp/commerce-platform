@@ -1,0 +1,15 @@
+-- ════════════════════════════════════════════════════════════════════════════
+-- 064 — channel_products 에 RLS 를 켠다 (063 보완)
+-- ════════════════════════════════════════════════════════════════════════════
+--
+-- 🔴 063 에서 CREATE TABLE 만 하고 RLS 를 켜지 않았다. 같은 스키마의
+-- "Product" · product_snapshots · registration_attempts 는 전부
+-- relrowsecurity = true 인데 새로 만든 이 표만 false 였다 — 기존 보안 경계를
+-- «넓힌» 것이다(CPO 명시 금지: "기존 보안 경계를 임의로 확대하지 않습니다").
+--
+-- 🔴 정책(POLICY)은 «만들지 않는다». 이 스키마의 기존 표들도 정책 0개이고,
+-- 앱은 service_role(getSupabaseAdmin)로 접근해 RLS 를 우회한다. 정책을 새로
+-- 만들면 그것 또한 기존과 다른 경계가 된다 — 목적은 기존과 «같게» 맞추는 것이다.
+--
+-- 데이터 변경 없음(이 표는 0건).
+ALTER TABLE channel_products ENABLE ROW LEVEL SECURITY;

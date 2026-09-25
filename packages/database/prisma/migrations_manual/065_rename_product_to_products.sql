@@ -1,0 +1,14 @@
+-- ════════════════════════════════════════════════════════════════════════════
+-- 065 — "Product" → products  (P0-CHANNEL-03, CPO 확정 2026-09-25)
+-- ════════════════════════════════════════════════════════════════════════════
+--
+-- 이 스키마의 다른 표는 전부 snake_case 다(product_snapshots ·
+-- registration_attempts · channel_products · seller_settings …). "Product" 만
+-- 대문자 단수로 혼자 달랐다 — Prisma 초기 잔재다.
+--
+-- 🔴 «지금» 바꾼다. 행이 0건이라 rename 이 값 이동 없이 끝난다. 행이 생긴 뒤에는
+-- FK·인덱스·앱 코드가 모두 옛 이름에 묶여 훨씬 무거워진다.
+--
+-- RENAME 은 FK 를 «따라간다» — product_snapshots.product_id 와
+-- channel_products.product_id 의 참조는 자동으로 새 이름을 가리킨다. 데이터 변경 0.
+ALTER TABLE "Product" RENAME TO products;

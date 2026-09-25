@@ -34,7 +34,7 @@ const check = (label, actual, expected) => {
   if (!ok) fail.push(label);
 };
 
-const product = await one(`select count(*)::int as n from "Product"`);
+const product = await one(`select count(*)::int as n from products`);
 check("Product 행", product, BASELINE.product);
 check("product_snapshots 행", await one("select count(*)::int as n from product_snapshots"), BASELINE.snapshots);
 check("registration_attempts 행", await one("select count(*)::int as n from registration_attempts"), BASELINE.attempts);
