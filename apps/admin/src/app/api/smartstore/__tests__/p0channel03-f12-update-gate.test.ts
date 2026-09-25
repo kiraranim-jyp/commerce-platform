@@ -171,10 +171,23 @@ describe("⑥ 🔴 보고서가 「유지됨」을 뭉개지 않는다", () => {
     expect(ROUTE).toContain("f.lossProtected");
   });
 
-  it("화면에도 세 칸이 그대로 있다", () => {
-    expect(PANEL).toContain("그대로입니다");
-    expect(PANEL).toContain("사라지지 않습니다");
-    expect(PANEL).toContain("확인하지 못했습니다");
+  it("화면에도 세 구분이 그대로 있다", () => {
+    /* F-13 에서 앞면을 셀러 말투로 바꾸면서 이 세 구분은 «자세히» 안으로
+       접었다. 🔴 접는 것과 없애는 것은 다르다 — 일이 잘못됐을 때 원인을 가르는
+       유일한 근거라서, 문구가 바뀌어도 «세 갈래가 남아 있는지» 는 계속 본다. */
+    expect(PANEL).toContain("그대로인 항목");
+    expect(PANEL).toContain("사라지지 않도록 지킨 항목");
+    expect(PANEL).toContain("대조하지 못한 항목");
+    /* 셋을 한 줄로 합쳐 「유지됨」이라고 적지 않는다. */
+    expect(PANEL).not.toContain("유지되는 주요 정보");
+  });
+
+  it("🔴 개발용 낱말이 앞면에 없다 — 셀러가 쓰는 말이 아니다", () => {
+    /* 앞면 = <details> «앞» 까지. 접힌 안쪽의 이유 문구까지 막지는 않는다. */
+    const front = PANEL.slice(0, PANEL.indexOf("<details"));
+    for (const jargon of ["ChangeSet", "preflight", "Data Loss", "comparedEverything", "NOT_COMPARED"]) {
+      expect(front, `앞면에 「${jargon}」이 보인다`).not.toContain(jargon);
+    }
   });
 
   it("🔴 화면이 diff 를 «다시 계산하지» 않는다", () => {
