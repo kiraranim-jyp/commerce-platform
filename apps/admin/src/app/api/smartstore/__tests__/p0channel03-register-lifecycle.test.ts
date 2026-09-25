@@ -33,9 +33,17 @@ describe("① 판단은 한 곳이다 — 라우트가 직접 정하지 않는�
        되고, 화면과 실제가 갈라진다. */
     expect(SRC).toContain("operation: plannedOperation,");
     expect(SRC).toContain('operation: "UPDATE",');
-    /* CREATE 를 «문자열로» 박아 넣던 자리가 사라졌다. */
-    expect(SRC).not.toContain('operation: "CREATE",');
-    expect(SRC).not.toContain('operation: "RECREATE",');
+    /* 🔴 «이력에 적는 자리» 만 본다. F-10 이 needsConfirmation 에
+       `operation: "RECREATE"` 를 쓰는데 그것은 「무엇을 물어보는가」이지
+       「무엇을 했다고 적는가」가 아니다 — 파일 전체를 훑으면 그 둘이 섞인다. */
+    const logged = [...SRC.matchAll(/await logRegistrationAttempt\([^;]*?operation: ([^,\n]+)/g)].map(
+      (m) => m[1]!.trim(),
+    );
+    expect(logged.length).toBeGreaterThan(0);
+    /* CREATE/RECREATE 를 문자열로 박아 넣던 자리가 사라졌다 — 정해진 변수뿐. */
+    for (const value of logged) {
+      expect(['"CREATE"', '"RECREATE"']).not.toContain(value);
+    }
   });
 });
 

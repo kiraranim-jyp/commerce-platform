@@ -707,6 +707,13 @@ export async function POST(request: Request) {
           retryable: true,
           payload,
           externalProductId: existing.externalProductId,
+          /* 🔴 화면이 error.message 를 문자열로 뒤지지 않게 «구조화해서» 준다.
+             문구가 바뀌면 동의 UI 가 조용히 사라지는 결합을 만들지 않는다. */
+          needsConfirmation: {
+            operation: "RECREATE",
+            currentExternalProductId: existing.externalProductId,
+            reason: decision.reason,
+          },
           error: {
             step: "VALIDATION",
             message: `${decision.reason} 진행하면 기존 상품(${existing.externalProductId})은 스마트스토어에 그대로 남고 새 상품이 하나 더 생깁니다 — 확인 후 다시 요청해주세요.`,

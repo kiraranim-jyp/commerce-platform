@@ -30,6 +30,18 @@ export interface ListingExecutor {
        * registration_attempts.job_key에 남긴다(감사 로그를 조인 없이 검색하기
        * 위한 복제값 — snapshotId가 구조적 연결의 원본이다). */
       jobKey?: string;
+      /**
+       * P0-CHANNEL-03 F-10 — RECREATE 를 «실행해도 되는가» 에 대한 셀러 동의.
+       *
+       * 🔴 이 값이 lifecycle 을 «정하지» 않는다. 무엇을 할지는 서버가
+       * resolveLifecycle() 로 정하고, 이것은 서버가 RECREATE 라고 정한 «뒤»
+       * 「그래도 진행할까요」에 대한 대답일 뿐이다 — 그래서 「클라이언트가 보낸
+       * 값을 신뢰하지 않는다」는 register 라우트들의 원칙과 충돌하지 않는다.
+       *
+       * 🔴 기본값은 «안 함» 이다. 보내지 않으면 서버가 needsConfirmation 을
+       * 실어 되묻고, 외부 API 호출은 0회다.
+       */
+      confirmRecreate?: boolean;
     },
   ): Promise<ListingResult>;
 }

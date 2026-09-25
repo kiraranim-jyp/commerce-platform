@@ -102,14 +102,19 @@ import { computeChecklistReadiness } from "./commerce/readiness";
 import { buildPriorityItems, resolveRegistrationReadinessState } from "./commerce/RegistrationStatusBanner";
 import { RegistrationHistoryPanel } from "./commerce/RegistrationHistoryPanel";
 import { CommerceSelector } from "./commerce/CommerceSelector";
+import { RecreateConsentPanel } from "./commerce/RecreateConsentPanel";
 import {
   COMMERCE_ORDER,
   LOTTEON_COMMERCE_ID,
   type CommerceLastAttempts,
+  type CommerceChannelConnections,
   type CommerceMissingByChannel,
   type CommerceMissingItem,
   commerceLabel,
   isAlreadyRegistered,
+  blocksRegistrationRequest,
+  registrationBasisNote,
+  resolveRegistrationState,
   classifyMissing,
   isPlatformCommerce,
   type CommerceId,
@@ -405,14 +410,34 @@ export function CommerceWorkspace({
    * 새 저장소를 만들지 않는다.
    */
   const [commerceLastAttempts, setCommerceLastAttempts] = useState<CommerceLastAttempts>({});
+  /**
+   * P0-CHANNEL-03 F-10 — «지금 어디에 나가 있는가»(channel_products).
+   *
+   * 🔴 이력과 «다른 것» 이다. 이력은 무엇을 시도했는가이고, 이쪽은 현재 상태다.
+   * 재분석하면 새 snapshot 이 생겨 이력은 비지만, 연결은 Product 에 매달려
+   * 있어 그대로다 — 그것이 이 값을 따로 들고 오는 이유 전부다.
+   */
+  const [commerceConnections, setCommerceConnections] = useState<CommerceChannelConnections>({});
+  /** 이 snapshot 이 Product 에 속해 있는가. 기존 381건은 false. */
+  const [hasProductIdentity, setHasProductIdentity] = useState(false);
   const refreshAttempts = useCallback(async () => {
     if (!snapshotId) return;
     try {
       const res = await fetch(`/api/snapshots/${snapshotId}/attempts`);
-      const data = (await res.json()) as { ok?: boolean; lastAttempts?: CommerceLastAttempts };
+      const data = (await res.json()) as {
+        ok?: boolean;
+        lastAttempts?: CommerceLastAttempts;
+        connections?: CommerceChannelConnections;
+        hasProductIdentity?: boolean;
+      };
       // 🔴 실패를 «이력 없음» 으로 덮지 않는다 — 등록된 상품이 미등록으로 보이면
       //    셀러가 두 번 등록할 수 있다. 못 읽었으면 직전 값을 그대로 둔다.
-      if (data.ok && data.lastAttempts) setCommerceLastAttempts(data.lastAttempts);
+      if (!data.ok) return;
+      if (data.lastAttempts) setCommerceLastAttempts(data.lastAttempts);
+      /* 🔴 연결도 같은 규칙이다. 「연결이 없다」와 「응답을 못 읽었다」를 섞으면,
+         서버가 못 읽은 것을 「안 나가 있다」로 읽게 된다. */
+      if (data.connections) setCommerceConnections(data.connections);
+      if (typeof data.hasProductIdentity === "boolean") setHasProductIdentity(data.hasProductIdentity);
     } catch {
       /* 그대로 둔다 */
     }
@@ -515,15 +540,42 @@ export function CommerceWorkspace({
    * 새로고침하면 그 기억이 비워지고, **이미 등록된 채널로 한 번 더 쏠 수
    * 있었다.** 화면은 「✓ 등록됨」이라고 말하는데 코드는 막지 않는 상태였다.
    *
-   * 🔴 세션 기억이 아니라 `registration_attempts`(영속)를 기준으로 삼는다.
-   * 그 표에 이 스냅샷·이 채널로 SUBMITTED 가 한 번이라도 있으면 다시 보내지
-   * 않는다. 실패(FAILED)는 막지 않는다 — 재시도는 정상 흐름이다.
+   * 🔴 세션 기억이 아니라 DB 를 기준으로 삼는다. 실패(FAILED)는 막지 않는다 —
+   * 재시도는 정상 흐름이다.
    *
-   * 🔴 「의도적 재등록」은 이번에 만들지 않는다(CEO 확정). 지금 필요한 것은
-   * «실수로 두 번 나가지 않는 것» 이고, 다시 보내는 기능은 그 자체로 정책
-   * 결정이 필요한 별개의 일이다.
+   * ── P0-CHANNEL-03 F-10(CTO 지시, 2026-09-25) — 기준이 옮겨졌다 ───────────
+   * 전: 이 «snapshot» 에 SUBMITTED 이력이 있는가  → 재분석하면 초기화됐다
+   * 후: 이 «상품» 이 이 채널에 나가 있는가         → 재분석해도 그대로다
+   *
+   * 🔴 그리고 「등록됨」과 「보내면 안 됨」이 더 이상 같은 말이 아니다. 그 둘이
+   * 같았기 때문에 등록된 상품을 고칠 방법이 «아예 없었다». 이제 연결을 아는
+   * 상품은 요청을 보내고, 서버가 UPDATE / RECREATE(동의) / BLOCKED 를 정한다.
+   * 막는 것은 「나가 있는데 연결을 모르는」 상태 하나뿐이다 —
+   * 그때만 서버가 CREATE 로 내려가 중복을 만들기 때문이다(blocksRegistrationRequest).
    */
-  const alreadyRegistered = (id: CommerceId) => isAlreadyRegistered(commerceLastAttempts, id);
+  const registrationStateFor = (id: CommerceId) =>
+    resolveRegistrationState(id, {
+      connections: commerceConnections,
+      hasProductIdentity,
+      lastAttempts: commerceLastAttempts,
+    });
+  /** 화면 표시용 — 「✓ 등록됨」이라고 말할 수 있는가. */
+  const alreadyRegistered = (id: CommerceId) =>
+    isAlreadyRegistered({ connections: commerceConnections, hasProductIdentity, lastAttempts: commerceLastAttempts }, id);
+  /** 🔴 요청 자체를 보내면 «안 되는» 상태인가. 위와 다른 질문이다. */
+  const blockedFromSending = (id: CommerceId) => blocksRegistrationRequest(registrationStateFor(id));
+
+  /**
+   * P0-CHANNEL-03 F-10 — 서버가 「새 상품으로 다시 등록할까요」라고 되물은 상태.
+   *
+   * 🔴 이 값이 있는 동안 아무것도 나가지 않았다. 셀러가 «직접» 누를 때까지
+   * 외부 API 호출은 0회다 — 되묻는 이유 자체가 셀러의 사업 판단을 받기
+   * 위해서이므로, 코드가 대신 답하면 물어본 적이 없는 것과 같다.
+   */
+  const [recreateConsent, setRecreateConsent] = useState<{
+    platform: PlatformId;
+    request: NonNullable<ListingResult["needsConfirmation"]>;
+  } | null>(null);
 
   /** 🔴 [선택한 커머스 등록]을 눌러도 «바로 나가지 않는다» — 최종 확인이 먼저다. */
   const [multiConfirmOpen, setMultiConfirmOpen] = useState(false);
@@ -2746,12 +2798,19 @@ export function CommerceWorkspace({
    * 아닌 채널도 등록할 수 있어야 하고, 그 값은 그 탭이 쓰는 것과 같은 함수에서
    * 나온다(payload 동일성의 근거).
    */
-  async function confirmListing(target?: PlatformId): Promise<ListingResult | null> {
+  async function confirmListing(
+    target?: PlatformId,
+    /* P0-CHANNEL-03 F-10 — 셀러가 「새 상품으로 다시 등록」에 동의한 재요청.
+       🔴 기본은 undefined(=안 함)다. 동의는 «명시적으로만» 실린다. */
+    options?: { confirmRecreate?: boolean },
+  ): Promise<ListingResult | null> {
     const platform = target ?? confirmingPlatform;
     if (!platform) return null;
-    /* 🔴 DB 가 이미 「등록됨」이라고 말하면 여기서 끝난다 — 단독 등록도 다중
-       등록도 같은 문 하나를 지난다(한쪽만 막으면 다른 쪽으로 새 나간다). */
-    if (alreadyRegistered(platform)) {
+    /* 🔴 여기서 막는 것은 「나가 있는데 연결을 모르는」 상태 하나뿐이다(F-10).
+       연결을 아는 상품은 «통과시킨다» — 서버가 UPDATE/RECREATE/BLOCKED 를
+       정한다. 예전처럼 「등록됨」을 전부 막으면 셀러는 등록한 상품을 영영
+       고칠 수 없다. 단독 등록도 다중 등록도 같은 문 하나를 지난다. */
+    if (blockedFromSending(platform)) {
       setListingStates((prev) => ({ ...prev, [platform]: "SUBMITTED" }));
       setConfirmingPlatform(null);
       return null;
@@ -2798,9 +2857,24 @@ export function CommerceWorkspace({
       // N-3.86 STEP3(대표님 지시) — register route는 이제 client가 보낸
       // detailBlocks를 아예 읽지 않는다(sellerProfile을 직접 조회해서
       // resolveDetailBlocks()로 계산한다) — 더 이상 여기서 넘길 필요가 없다.
+      /* 🔴 셀러가 동의한 «그 요청에만» 실린다. 이 값을 state 에 눌러 두고
+         재사용하면, 다음 상품·다음 채널의 RECREATE 가 묻지도 않고 나간다. */
+      confirmRecreate: options?.confirmRecreate,
     });
     setListingProgress("CONFIRMING");
     setListingResults((prev) => ({ ...prev, [platform]: result }));
+    /* ══════════════════════════════════════════════════════════════════════
+       P0-CHANNEL-03 F-10 — 서버가 되물었으면 그 질문을 화면에 세운다.
+
+       🔴 error.message 를 문자열로 뒤지지 않는다 — 서버가 needsConfirmation 에
+       구조화해서 실어 준다. 문구가 바뀌어도 동의 UI 가 사라지지 않는다.
+
+       🔴 여기서 «자동으로 다시 보내지 않는다». 되묻는 이유가 셀러의 사업
+       판단을 받기 위해서인데, 코드가 대신 답해 버리면 물어본 적이 없는 것과
+       같다. 셀러가 누를 때까지 외부 API 호출은 0회다. */
+    if (result.needsConfirmation) {
+      setRecreateConsent({ platform, request: result.needsConfirmation });
+    }
     const finishedAt = Date.now();
     setRegistrationHistory((prev) => [
       {
@@ -2893,14 +2967,18 @@ export function CommerceWorkspace({
     for (const id of targets) {
       setMultiRunning(id);
       try {
-        if (alreadyRegistered(id)) {
+        /* 🔴 F-10 — 단독 등록과 «같은» 문을 지난다. 막는 것은 「나가 있는데
+           연결을 모르는」 상태 하나뿐이고, 연결을 아는 상품은 통과해서 서버가
+           UPDATE/RECREATE/BLOCKED 를 정한다. */
+        if (blockedFromSending(id)) {
           /* 실행하지 «않았다» 는 사실을 그대로 적는다 — 성공으로 세지 않는다. */
+          const state = registrationStateFor(id);
           setCommerceOutcomes((prev) => ({
             ...prev,
             [id]: {
               status: "SKIPPED",
-              message: "이미 등록된 커머스라 다시 보내지 않았습니다.",
-              externalProductId: commerceLastAttempts[id]?.externalProductId ?? null,
+              message: registrationBasisNote(state) ?? "이미 등록된 커머스라 다시 보내지 않았습니다.",
+              externalProductId: state.externalProductId,
             },
           }));
           continue;
@@ -3430,6 +3508,29 @@ export function CommerceWorkspace({
               isPlatformTab()으로 명시해 PLATFORM_ADAPTERS를 인덱싱하는 자리와
               완전히 분리한다(listing은 롯데ON에서 항상 null이지만, 그 사실에
               의존하지 않고 조건에 직접 적는다). */}
+          {/* ══════════════════════════════════════════════════════════════
+              P0-CHANNEL-03 F-10 — 서버가 되물었으면 «여기» 에 세운다.
+
+              🔴 이 패널이 보이는 동안 채널로 나간 요청은 0건이다. 셀러가 직접
+              누를 때까지 아무것도 만들지 않는다.
+              🔴 지금 보고 있는 탭의 질문만 보여준다 — 다른 채널의 동의를 이
+              화면에서 받으면 무엇에 답하는지 알 수 없다. */}
+          {recreateConsent && recreateConsent.platform === tab && (
+            <RecreateConsentPanel
+              commerceLabel={commerceLabel(recreateConsent.platform)}
+              request={recreateConsent.request}
+              busy={listingProgress != null}
+              onConfirm={() => {
+                const target = recreateConsent.platform;
+                /* 🔴 먼저 닫는다 — 열어 둔 채로 두면 셀러가 한 번 더 눌러
+                   상품을 두 개 만들 수 있다. */
+                setRecreateConsent(null);
+                void confirmListing(target, { confirmRecreate: true });
+              }}
+              onCancel={() => setRecreateConsent(null)}
+            />
+          )}
+
           {listing && isPlatformTab(tab) && (
             <PlatformPreview
               product={product}

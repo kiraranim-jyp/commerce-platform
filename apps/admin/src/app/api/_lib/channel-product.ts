@@ -163,6 +163,64 @@ export async function findChannelProductBySnapshot(
 }
 
 /**
+ * P0-CHANNEL-03 F-10 — 이 snapshot 의 «모든 채널» 연결을 한 번에.
+ *
+ * 🔴 화면이 세 채널을 각각 물으면 쿼리가 세 번 나가고, 그보다 나쁜 것은 한
+ * 채널만 빠뜨리기 쉬워진다는 것이다. 한 번에 읽어 한 번에 준다.
+ *
+ * 🔴 `hasProductIdentity` 를 «같이» 낸다. 연결이 없다는 사실만으로는
+ * 「이 채널에 안 나가 있다」와 「애초에 정체성이 없어 연결할 수단이 없었다」
+ * (기존 381건)를 구분할 수 없는데, 화면은 그 둘에 다르게 반응해야 한다.
+ */
+export interface SnapshotChannelProducts {
+  /** 🔴 이 snapshot 이 Product 에 속해 있는가. 기존 381건은 false. */
+  hasProductIdentity: boolean;
+  /** 채널 → 현재 연결. 🔴 없는 채널은 «키 자체가 없다» — 없는 것을 값으로 만들지 않는다. */
+  byChannel: Record<string, ChannelProductRow>;
+}
+
+export async function findChannelProductsBySnapshot(
+  snapshotId: string | null | undefined,
+): Promise<SnapshotChannelProducts> {
+  const empty: SnapshotChannelProducts = { hasProductIdentity: false, byChannel: {} };
+  const productId = await findProductIdBySnapshot(snapshotId);
+  if (!productId) return empty;
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return empty;
+  const { data, error } = await supabase
+    .from("channel_products")
+    .select("id, product_id, channel, external_product_id, status")
+    .eq("product_id", productId)
+    /* 🔴 UNIQUE(product_id, channel) 을 아직 걸지 않았다(기존 중복 9건).
+       채널마다 «가장 최근» 한 건을 현재로 본다 — findChannelProduct 와 같은 규칙. */
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    /* 🔴 조회 실패를 「연결 없음」으로 내려보내면 이미 등록된 상품이 화면에서
+       「미등록」이 되고 셀러가 두 번 등록한다. 호출부가 실패를 «실패로» 다룰 수
+       있어야 하므로 여기서 삼키지 않고 던진다. */
+    console.warn("[channel-product] snapshot 연결 조회 실패:", error.message);
+    throw new Error(error.message);
+  }
+
+  const byChannel: Record<string, ChannelProductRow> = {};
+  for (const raw of (data ?? []) as {
+    id: string; product_id: string; channel: string; external_product_id: string; status: string;
+  }[]) {
+    if (byChannel[raw.channel]) continue; // 이미 더 최근 것을 봤다(내림차순 전제).
+    byChannel[raw.channel] = {
+      id: raw.id,
+      productId: raw.product_id,
+      channel: raw.channel,
+      externalProductId: raw.external_product_id,
+      status: raw.status,
+    };
+  }
+  return { hasProductIdentity: true, byChannel };
+}
+
+/**
  * snapshot 이 속한 Product. 없으면 null(기존 381건).
  * 🔴 여기서 «만들지» 않는다 — Product 발급은 최초 수집 한 곳에만 있다.
  */

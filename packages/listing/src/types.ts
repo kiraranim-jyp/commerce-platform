@@ -122,6 +122,29 @@ export interface ListingResult {
    * Result/Final Registered/Manual Override 여부/판단 근거를 남겨 Resolver
    * 정확도를 나중에 분석할 수 있게 한다. brandResolution과 같은 이유로 unknown. */
   categoryResolverKpi?: unknown;
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * P0-CHANNEL-03 F-10 — **서버가 셀러에게 되묻는 자리.**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 서버는 `resolveLifecycle()` 로 RECREATE 라고 «정했지만», 실행하려면 셀러의
+   * 동의가 필요하다. 그 상태를 여기에 «구조화해서» 싣는다.
+   *
+   * 🔴 화면이 error.message 를 문자열로 뒤져서 알아내게 하지 않는다. 문구가
+   * 한 글자만 바뀌어도 동의 UI 가 조용히 사라지고, 그러면 셀러는 카테고리를
+   * 고칠 방법이 영영 없는 채로 막힌다 — 그런 종류의 결합을 만들지 않는다.
+   *
+   * 🔴 이 값이 있다고 해서 «무언가 실패한 것이 아니다». 채널에 아무것도 보내지
+   * 않았고(외부 API 0회), 셀러가 답하면 이어서 할 수 있는 상태다.
+   */
+  needsConfirmation?: {
+    /** 지금은 RECREATE 하나뿐이다 — 없는 것을 미리 열어 두지 않는다. */
+    operation: "RECREATE";
+    /** 🔴 지금 나가 있는 외부 상품. «지우지 않는다» — 그대로 남는다. */
+    currentExternalProductId: string | null;
+    /** resolveLifecycle 이 말한 이유. 화면이 지어내지 않고 그대로 보여준다. */
+    reason: string;
+  };
 }
 
 /** PM 스펙의 VALID/WARNING/ERROR — ListingModel.validations의 PASS/WARNING/ERROR와

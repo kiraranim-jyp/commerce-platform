@@ -241,7 +241,9 @@ describe("④ 🔴 경로가 «하나» 라는 것을 소스로 고정한다", (
   });
 
   it("confirmListing 이 커머스를 인자로 받는다(CPO 승인 ③)", () => {
-    expect(WORKSPACE).toContain("async function confirmListing(target?: PlatformId)");
+    /* P0-CHANNEL-03 F-10 에서 두 번째 인자(RECREATE 동의)가 늘었다. 여기서
+       지키려는 것은 «커머스를 첫 인자로 받는다» 이므로 거기까지만 본다. */
+    expect(WORKSPACE).toMatch(/async function confirmListing\(\s*target\?: PlatformId,?/);
   });
 });
 

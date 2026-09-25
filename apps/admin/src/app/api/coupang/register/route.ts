@@ -700,6 +700,13 @@ export async function POST(request: Request) {
           retryable: true,
           payload,
           externalProductId: existing.externalProductId,
+          /* 🔴 SmartStore 와 «같은» 구조로 준다 — 화면이 채널마다 다른 방식으로
+             동의 상태를 알아내게 하면 한 채널만 빠뜨리는 일이 생긴다. */
+          needsConfirmation: {
+            operation: "RECREATE",
+            currentExternalProductId: existing.externalProductId,
+            reason: decision.reason,
+          },
           error: {
             step: "VALIDATION",
             code: "CP001",

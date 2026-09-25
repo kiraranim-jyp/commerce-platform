@@ -100,7 +100,11 @@ describe("⑤ 네 가지 동작이 각각 있다", () => {
   });
 
   it("🔴 UPDATE 는 external_product_id 를 바꾸지 않는다", () => {
-    const touch = SRC.slice(SRC.indexOf("export async function touchChannelProduct"));
+    /* 🔴 «이 함수 본문만» 잘라 본다. 파일 끝까지 자르면 뒤에 함수가 하나
+       늘어나는 것만으로 검사가 깨지거나(F-10 에서 실제로 깨졌다) 반대로
+       엉뚱한 곳을 보고 통과한다. 검사가 무엇을 보는지 좁혀서 못 박는다. */
+    const start = SRC.indexOf("export async function touchChannelProduct");
+    const touch = SRC.slice(start, SRC.indexOf("\n}", start));
     expect(touch).toContain("updated_at:");
     expect(touch).not.toContain("external_product_id:");
   });

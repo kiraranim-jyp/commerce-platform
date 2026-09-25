@@ -31,7 +31,10 @@ export const coupangExecutor: ListingExecutor = {
     product: CanonicalProduct,
     listing: ListingModel,
     mode: ExecutionMode,
-    context?: { snapshotId?: string; jobKey?: string },
+    /* P0-CHANNEL-03 F-10 — confirmRecreate 가 늘었다. 🔴 인라인으로 다시
+       적지 않고 ListingExecutor 의 계약을 그대로 쓴다 — 두 벌이 되면
+       한쪽만 늘리고 다른 쪽을 빠뜨린다. */
+    context?: Parameters<ListingExecutor["execute"]>[3],
   ): Promise<ListingResult> {
     const errors = listing.validations.filter((v) => v.status === "ERROR");
     if (errors.length > 0) {
@@ -125,6 +128,9 @@ export const coupangExecutor: ListingExecutor = {
           listing,
           snapshotId: context?.snapshotId,
           jobKey: context?.jobKey,
+          /* P0-CHANNEL-03 F-10 — 셀러가 「새 상품으로 다시 등록」에 동의한
+             경우에만 실린다. 🔴 보내지 않으면 서버가 되묻고 API 는 0회다. */
+          confirmRecreate: context?.confirmRecreate,
         }),
       });
       const result = (await response.json()) as ListingResult;

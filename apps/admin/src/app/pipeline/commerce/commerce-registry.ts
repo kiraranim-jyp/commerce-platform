@@ -157,14 +157,143 @@ export interface CommerceMissingItem {
 export type CommerceMissingByChannel = Partial<Record<CommerceId, CommerceMissingItem[]>>;
 
 /**
- * N-06-D 후속(CEO 확정, 2026-09-24) — **이 커머스에 이미 등록됐는가.**
- *
- * 🔴 판정 기준은 세션 기억이 아니라 `registration_attempts`(영속)다. 그 표에
- * 이 스냅샷·이 채널로 SUBMITTED 가 한 번이라도 있으면 다시 보내지 않는다.
- *
- * 🔴 실패(FAILED)는 막지 않는다 — 재시도는 정상 흐름이다. 이력이 «없는» 것도
- * 막지 않는다(최초 등록). 막는 것은 「이미 성공했다」 하나뿐이다.
+ * P0-CHANNEL-03 F-10 — 이 상품 × 이 채널로 «지금» 나가 있는 외부 상품.
+ * 서버가 `channel_products` 에서 읽어 내려준다.
  */
-export function isAlreadyRegistered(lastAttempts: CommerceLastAttempts, id: CommerceId): boolean {
-  return lastAttempts[id]?.status === "SUBMITTED";
+export interface CommerceChannelConnection {
+  externalProductId: string;
+  channelProductId: string;
+  status: string;
+}
+
+export type CommerceChannelConnections = Partial<Record<CommerceId, CommerceChannelConnection>>;
+
+/**
+ * 무엇을 근거로 「등록됨」이라고 말하는가. 🔴 같은 「등록됨」이라도 근거가
+ * 다르면 셀러가 할 수 있는 일이 다르다 — 화면이 이 값을 보고 말을 고른다.
+ */
+export type RegistrationBasis =
+  /** `channel_products` 의 현재 연결. 정상 경로이고 수정/재등록이 가능하다. */
+  | "CHANNEL_PRODUCT"
+  /** 🔴 연결은 «없는데» 성공 이력이 있다. 아래 주석 참고. */
+  | "ATTEMPT_ONLY"
+  /** 등록된 적 없다. */
+  | "NONE";
+
+export interface CommerceRegistrationState {
+  registered: boolean;
+  basis: RegistrationBasis;
+  /** 아는 경우에만. 🔴 모르면 null — 지어내지 않는다. */
+  externalProductId: string | null;
+  /** 🔴 셀러(그리고 우리)가 들여다봐야 하는 상태인가. */
+  needsAttention: boolean;
+}
+
+export interface RegistrationStateInput {
+  /** 서버가 읽은 현재 연결. */
+  connections: CommerceChannelConnections;
+  /** 이 snapshot 이 Product 에 속해 있는가(기존 381건은 false). */
+  hasProductIdentity: boolean;
+  /** 🔴 «막는 쪽으로만» 쓰인다. 상태의 근거로 되돌리지 않는다. */
+  lastAttempts: CommerceLastAttempts;
+}
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * P0-CHANNEL-03 F-10(CTO 지시, 2026-09-25) — **등록 상태 판정을 한 곳에서.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * ── 무엇이 바뀌었나 ───────────────────────────────────────────────────────
+ * 전: 이 «snapshot» 에 SUBMITTED 이력이 있는가   → 재분석하면 초기화됐다
+ * 후: 이 «상품» 이 이 채널에 나가 있는가          → 재분석해도 그대로다
+ *
+ * 재분석하면 새 snapshot 이 생기고, 그 snapshot 에는 이력이 없어 화면이
+ * 「미등록」이라고 말했다. 셀러가 그 말을 믿고 다시 누른 결과가 SmartStore
+ * 외부번호 6개다. 이제 같은 Product 를 가리키는 한 연결은 그대로 보인다.
+ *
+ * ── 🔴 규칙은 한 줄이다 ──────────────────────────────────────────────────
+ *     연결이 있으면 그것이 답이고, 없을 때만 이력이 «막는 쪽으로만» 일한다.
+ *
+ * 이력은 «상태의 근거로 복귀하지 않는다»(CTO 명시). 이력이 할 수 있는 일은
+ * `registered` 를 false → true 로 올리는 것뿐이고, true → false 로 내리는
+ * 길이 없다. 그래서 옛 버그(이력이 없어서 「미등록」)가 되살아날 수 없다.
+ *
+ * ── 🔴 왜 이력을 완전히 버리지 않는가 ────────────────────────────────────
+ * 연결이 없는데 성공 이력이 있는 경우가 «두 가지» 실재한다:
+ *   ① 기존 381 snapshot — product_id 가 NULL 이라 연결을 «가질 수 없다».
+ *      backfill 이 금지선이므로 앞으로도 생기지 않는다.
+ *   ② 연결 기록 유실 — 등록은 성공했는데 ChannelProduct insert 가 실패한
+ *      경우다. 라우트는 그것을 «조용히» 지나가도록 설계돼 있다(상품은 이미
+ *      나갔으므로 DB 실패로 등록을 「실패」라 말하지 않는다).
+ * 두 경우 모두 상품은 «마켓에 있다». 여기서 「미등록」이라고 말하면 셀러가
+ * 다시 눌러 중복을 만든다 — 이번 스프린트가 고치려는 바로 그 일이다.
+ *
+ * ②는 정상이 아니므로 `needsAttention` 으로 «표시» 한다. ①은 예전부터의 정상
+ * 상태라 표시하지 않는다. 그 둘을 가르는 것이 `hasProductIdentity` 다.
+ */
+export function resolveRegistrationState(
+  id: CommerceId,
+  input: RegistrationStateInput,
+): CommerceRegistrationState {
+  const connection = input.connections[id];
+  if (connection) {
+    return {
+      registered: true,
+      basis: "CHANNEL_PRODUCT",
+      externalProductId: connection.externalProductId,
+      needsAttention: false,
+    };
+  }
+
+  const attempt = input.lastAttempts[id];
+  if (attempt?.status === "SUBMITTED") {
+    return {
+      registered: true,
+      basis: "ATTEMPT_ONLY",
+      externalProductId: attempt.externalProductId,
+      /* 🔴 정체성이 «있는데» 연결이 없으면 기록이 유실된 것이다 — 정상이 아니다.
+         정체성이 없으면(기존 381건) 연결을 가질 수 없었던 것이라 정상이다. */
+      needsAttention: input.hasProductIdentity,
+    };
+  }
+
+  return { registered: false, basis: "NONE", externalProductId: null, needsAttention: false };
+}
+
+/**
+ * 「이 커머스에 다시 보내지 않는다」 판정 — 화면의 단일 관문.
+ *
+ * 🔴 `resolveRegistrationState` 를 «거쳐서» 답한다. 여기에 규칙을 따로 쓰면
+ * 판정이 두 벌이 되고, 그것이 이 스프린트 내내 고쳐 온 실수다.
+ */
+export function isAlreadyRegistered(input: RegistrationStateInput, id: CommerceId): boolean {
+  return resolveRegistrationState(id, input).registered;
+}
+
+/**
+ * 화면이 이 채널로 등록 «요청을 보내도 되는가».
+ *
+ * 🔴 「등록됨」과 「보내면 안 됨」은 이제 «다른 질문» 이다. 그 둘이 같았던 것이
+ * F-10 이전의 상태이고, 그래서 등록된 상품은 고칠 방법이 아예 없었다.
+ *
+ *   CHANNEL_PRODUCT  연결을 안다 → 보내도 된다. 서버가 resolveLifecycle 로
+ *                    UPDATE / RECREATE(동의) / BLOCKED 를 정한다. 중복이 생길
+ *                    길은 라우트의 blocksCreate 빗장이 이미 막고 있다.
+ *   🔴 ATTEMPT_ONLY  연결을 «모른다». 이 상태로 보내면 서버도 연결을 찾지 못해
+ *                    CREATE 경로로 내려가고, 마켓에 이미 있는 상품이 하나 더
+ *                    생긴다 — 정확히 이번 스프린트가 고치려는 사고다. 막는다.
+ *   NONE             최초 등록. 보낸다.
+ */
+export function blocksRegistrationRequest(state: CommerceRegistrationState): boolean {
+  return state.basis === "ATTEMPT_ONLY";
+}
+
+/** 화면이 그대로 쓰는 문장. 🔴 근거마다 «할 수 있는 일» 이 달라 말도 다르다. */
+export function registrationBasisNote(state: CommerceRegistrationState): string | null {
+  if (!state.registered) return null;
+  const no = state.externalProductId ? `(${state.externalProductId})` : "";
+  if (state.basis === "CHANNEL_PRODUCT") return `이 커머스에 등록돼 있습니다 ${no}`.trim();
+  return state.needsAttention
+    ? `등록 이력은 있으나 연결 정보를 찾지 못했습니다 ${no} — 다시 등록하면 중복이 될 수 있어 막았습니다.`.trim()
+    : `이 커머스에 등록된 적이 있습니다 ${no}`.trim();
 }
