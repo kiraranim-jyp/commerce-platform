@@ -48,6 +48,37 @@ LotteON payload.dvCstPolNo
 말고 실제 API contract 기준으로 연결」하라고 했고, 지금 상태는 **연결이 없는 것이 아니라
 값이 도착하지 않은 것**으로 보인다.
 
+## 2-A. 🔴 STEP 1 진행 결과 — 가설 ①②가 «둘 다 아니었다». 세 번째가 있다
+
+추적해 보니 LotteON 화면에는 **이름이 거의 같은 「셀러 설정」이 둘** 있고, **서로 다른
+것**이다:
+
+| | 어디서 | 무엇을 담는가 | 어디로 |
+|---|---|---|---|
+**(1)** `lotteOnSellerSettings` | `CommerceWorkspace.tsx:1023` ← `/api/settings/seller-settings` 의 **sellerProfile** | `outboundLeadTimeDays` · `deliveryCompanyCode` · `naverDeliveryCompanyCode` · `outboundShippingPlaceCode` · `returnCenterCode` — 🔴 **쿠팡/네이버 모양의 필드** | 패널 prop `sellerSettings` |
+**(2)** `sellerFixed` | `LotteOnRegistrationPanel.tsx:640` ← `/api/settings/lotteon-seller` | 🔴 **진짜 LotteON 값** — `lotteon_seller_settings` 테이블의 `delivery_cost_policy_no` · `outbound_place_no` · `return_place_no` · `delivery_region_group_code` | 패널 내부 state |
+
+🔴 이름이 거의 같다는 사실을 **저장소가 이미 알고 있다** — `build-context.ts:158` 이
+「`sellerSettings`(loadLotteOnSellerSettings)가 있다. 이름은 거의 같은데…」라고 적어 두었다.
+
+### 그래서 남은 확인은 «하나로» 좁혀졌다
+
+패널은 (2)를 **제대로 부른다**(`:640`). 그러므로 화면이 비어 있는 이유는 셋 중 하나다:
+
+```
+(a) lotteon_seller_settings 행의 delivery_cost_policy_no 가 «비어 있다»
+       → 설정 화면에서 저장한 적이 없다.  고칠 곳: 설정 저장 흐름(또는 그냥 저장하면 끝)
+(b) fetch 는 성공하는데 sellerFixed 가 폼 초기값(dvCstPolNo)으로 «연결되지 않았다»
+       → 고칠 곳: lotteon-channel-form.ts:860 의 초기값 생성
+(c) /api/settings/lotteon-seller 자체가 실패 → catch 가 «조용히» 삼킨다(:645-648)
+       → 고칠 곳: 실패를 드러내기
+```
+
+🔴 **(b)가 가장 유력하다.** (1)과 (2)가 «따로» 존재하고 패널 prop 은 (1)을 받는데,
+폼 초기값이 prop 쪽만 보고 있으면 (2)를 아무리 잘 읽어도 칸은 비어 있다. 다음 CTO 가
+**`lotteon-channel-form.ts:860` 의 `dvCstPolNo` 초기값이 `sellerFixed` 를 보는지**
+한 줄만 확인하면 판별된다. 🔴 확인 전에는 고치지 않는다.
+
 ## 3. 다음 CTO 가 이어서 할 순서
 
 ```
