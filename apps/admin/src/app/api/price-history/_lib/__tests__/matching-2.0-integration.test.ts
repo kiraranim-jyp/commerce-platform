@@ -138,7 +138,7 @@ vi.mock("../price-observations", async (importOriginal) => {
 
 const { runDomesticPriceCheck } = await import("../run-domestic-price-check");
 const { priceTierFromLink } = await import("../../../domestic-price-sources/_lib/domestic-product-link");
-const { summarizeDomesticMarketSplit, DOMESTIC_ANALYSIS_MARKET_COUNTRY } = await import("@commerce/pricing");
+const { summarizeDomesticMarketSplit } = await import("@commerce/pricing");
 const { buildMarketContext } = await import("@/app/pipeline/commerce/price-hierarchy");
 const { buildDomesticMarketEvidence } = await import("@/app/pipeline/commerce/market-evidence");
 const { tierCountsText } = await import("@/app/pipeline/commerce/market-evidence");
@@ -306,9 +306,8 @@ function aggregateLikeMi() {
     if (tier === "EXACT") exact.push(record);
     else if (tier === "COMPARISON") comparison.push(record);
   }
-  return summarizeDomesticMarketSplit(exact, comparison, {
-    analysisMarketCountry: DOMESTIC_ANALYSIS_MARKET_COUNTRY,
-  });
+  /* 🔴 MI-5 / P0-2-B — 판단 시장은 함수 안에서 정한다(DOMESTIC_MARKET_AGGREGATION). */
+  return summarizeDomesticMarketSplit(exact, comparison);
 }
 
 beforeEach(() => {

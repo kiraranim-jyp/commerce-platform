@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_PRICE_BREAKDOWN_INPUT,
   DEFAULT_PRICE_ROUNDING_UNIT,
-  DOMESTIC_ANALYSIS_MARKET_COUNTRY,
   computePriceBreakdown,
   computePriceRecommendation,
   computePriceTrend,
@@ -184,11 +183,10 @@ function miInputsFrom(rows: PriceObservationRecord[]) {
     if (tier === "EXACT") exactShopRecords.push(record);
     else if (tier === "COMPARISON") comparisonShopRecords.push(record);
   }
-  const split = summarizeDomesticMarketSplit(
-    exactShopRecords,
-    [...comparisonShopRecords, ...naverHistory],
-    { analysisMarketCountry: DOMESTIC_ANALYSIS_MARKET_COUNTRY },
-  );
+  /* 🔴 MI-5 / P0-2-B — 판단 시장(KR)은 이제 함수 «안» 에 있다. 이 자리에서
+     넘기던 { analysisMarketCountry } 를 지웠다 — 값은 같고(같은 KR), 호출부가
+     그것을 잊을 수 있는 자리가 없어졌다. */
+  const split = summarizeDomesticMarketSplit(exactShopRecords, [...comparisonShopRecords, ...naverHistory]);
   const latestOrigin = originHistory[0] ?? null;
 
   return {

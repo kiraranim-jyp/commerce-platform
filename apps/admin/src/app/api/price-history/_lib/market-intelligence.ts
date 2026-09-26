@@ -7,7 +7,6 @@ import {
   computePriceAlertSignal,
   summarizeDomesticMarketSplit,
   groupMarketObservations,
-  DOMESTIC_ANALYSIS_MARKET_COUNTRY,
   DEFAULT_PRICE_BREAKDOWN_INPUT,
   computePriceBreakdown,
   computeSellerAction,
@@ -91,12 +90,17 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
   // 내고, 나머지 시장은 markets/sellers에 그대로 남는다(숨기지 않는다).
   // market_code가 전부 null/""인 기존 데이터는 시장 그룹이 하나뿐이라 이 옵션이
   // 있어도 예전과 결과가 같다(basis="SINGLE").
-  const marketOptions = { analysisMarketCountry: DOMESTIC_ANALYSIS_MARKET_COUNTRY };
-  const domesticMarketSplit = summarizeDomesticMarketSplit(
-    exactShopRecords,
-    [...comparisonShopRecords, ...domesticHistory],
-    marketOptions,
-  );
+  //
+  // 🔴 MI-5 / P0-2-B(CEO 지시, 2026-09-26) — 여기 있던 `marketOptions` 를 지웠다.
+  //    판단 시장(KR)은 이제 summarizeDomesticMarketSplit 안에 한 번만 적혀 있다
+  //    (DOMESTIC_MARKET_AGGREGATION). 이 줄이 «호출부의 책임» 이었던 동안
+  //    compute-readiness.ts 는 그것을 넘기지 않았고, 그래서 상품 상세와 대시보드가
+  //    서로 다른 시장의 가격으로 판단할 수 있었다. 넘기는 값을 맞추는 대신
+  //    넘기는 자리를 없앤다 — 값은 한 글자도 바뀌지 않았다(같은 KR).
+  const domesticMarketSplit = summarizeDomesticMarketSplit(exactShopRecords, [
+    ...comparisonShopRecords,
+    ...domesticHistory,
+  ]);
   // 1순위 동일상품가격, 없으면 2순위 비교상품 시장가격(대표님 지시, Sprint 7
   // 우선순위) — 아래 decision/unifiedDecision/sellerAction/sellability/
   // representativeVerdict는 전부 이 하나의 변수만 받으므로, 우선순위 로직을

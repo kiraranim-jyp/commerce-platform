@@ -220,6 +220,29 @@ export interface MarketAggregationOptions {
  * 국내 판매 판단에 들어가야 하는 것은 ₩162,000 하나뿐이다. */
 export const DOMESTIC_ANALYSIS_MARKET_COUNTRY = "KR";
 
+/**
+ * 🔴 MI-5 / P0-2-B(CEO 지시, 2026-09-26) — **국내 집계의 판단 시장은 호출부가
+ * 정하지 않는다.**
+ *
+ * 아래 두 국내 집계 함수는 이 옵션을 «인자로» 받고 있었고, 두 호출부가 서로
+ * 다르게 불렀다 — market-intelligence.ts 는 KR 을 넘겼고 compute-readiness.ts 는
+ * 넘기지 않았다. 같은 상품·같은 관측에서 상품 상세와 대시보드가 «다른 시장의
+ * 가격» 으로 최저/평균을 낼 수 있는 상태였다. 오늘 결과가 같은 것은 국내 가격
+ * 확인 경로(run-domestic-price-check)가 market_code 를 남기지 않아 시장 그룹이
+ * 하나뿐이기 때문일 뿐이다(basis="SINGLE") — 고장이 아니라 **잠긴 결함**이다.
+ *
+ * 그래서 옵션을 «받지 않기로» 했다. 국내 집계의 판단 시장은 언제나
+ * DOMESTIC_ANALYSIS_MARKET_COUNTRY 이고, 그 사실이 여기 한 번만 적혀 있다 —
+ * 같은 문자열을 두 호출부에 하드코딩하는 것은 같은 사고를 한 번 더 기다리는
+ * 것이다. 잊을 수 있는 자리 자체를 없앴다.
+ *
+ * 🔴 국내가 «아닌» 집계(시장을 골라야 하는 해외 관측)는 그대로 summarizeFrom 을
+ *    직접 쓴다 — 그 함수의 options 는 손대지 않았다.
+ */
+export const DOMESTIC_MARKET_AGGREGATION: MarketAggregationOptions = Object.freeze({
+  analysisMarketCountry: DOMESTIC_ANALYSIS_MARKET_COUNTRY,
+});
+
 /** PART G(N-4.06으로 갱신) — 국내 시장 요약. 저장하지 않고 조회 시점에 계산한다
  * (파생값 중복 저장 금지 원칙). 리스팅이 하나도 없으면 null 필드로 정직하게
  * 남긴다 — 0원을 최저가로 지어내지 않는다.
@@ -572,10 +595,16 @@ const EMPTY_SUMMARY: DomesticMarketSummary = {
   checkedAt: null,
 };
 
+/**
+ * 🔴 MI-5 / P0-2-B — 시장 기준을 인자로 받지 않는다(DOMESTIC_MARKET_AGGREGATION
+ * 주석 참고). 이 함수는 오늘 프로덕션 호출부가 «없다»(전수 확인: 정의와 테스트
+ * 뿐) — 그래도 아래 Split 과 규약을 어긋나게 두지 않는다. 한쪽만 옵션을 받으면
+ * 다시 연결되는 날 같은 불일치가 되돌아온다.
+ */
 export function summarizeDomesticMarket(
   records: PriceObservationRecord[],
-  options: MarketAggregationOptions = {},
 ): DomesticMarketSummary {
+  const options = DOMESTIC_MARKET_AGGREGATION;
   const verified = records.filter((r) => r.source === "DOMESTIC_SHOP");
   if (verified.length > 0) return summarizeFrom(verified, "PRIMARY", options);
   const candidates = records.filter((r) => r.source === "NAVER_SHOPPING");
@@ -601,10 +630,14 @@ export interface DomesticMarketSplit {
 export function summarizeDomesticMarketSplit(
   exactRecords: PriceObservationRecord[],
   comparisonRecords: PriceObservationRecord[],
+): DomesticMarketSplit {
   // GLOBAL-MARKET ② — 두 버킷 모두 같은 분석 시장을 기준으로 판단해야 한다.
   // 버킷마다 다른 시장의 가격을 고르면 EXACT/COMPARISON 비교 자체가 무의미해진다.
-  options: MarketAggregationOptions = {},
-): DomesticMarketSplit {
+  //
+  // 🔴 MI-5 / P0-2-B — 그 «같은 시장» 은 이제 호출부가 아니라 여기서 정한다
+  //    (DOMESTIC_MARKET_AGGREGATION 주석 참고). 두 버킷뿐 아니라 **두 호출부**도
+  //    같은 시장을 봐야 한다는 것이 이번에 닫는 구멍이다.
+  const options = DOMESTIC_MARKET_AGGREGATION;
   const exact = exactRecords.length > 0 ? summarizeFrom(exactRecords, "PRIMARY", options) : EMPTY_SUMMARY;
   const comparison =
     comparisonRecords.length > 0 ? summarizeFrom(comparisonRecords, "SECONDARY", options) : EMPTY_SUMMARY;

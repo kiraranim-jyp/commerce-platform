@@ -169,6 +169,18 @@ async function computePriceSummaryForSnapshot(
     else if (tier === "COMPARISON") comparisonShopRecords.push(record);
     // EXCLUDED·링크 없음(레거시)은 어느 버킷에도 넣지 않는다 — 추측으로 분류하지 않는다.
   }
+  /**
+   * 🔴 MI-5 / P0-2-B(CEO 지시, 2026-09-26) — **이 줄이 판단 시장을 잃고 있었다.**
+   *
+   * market-intelligence.ts 는 `{ analysisMarketCountry: "KR" }` 를 넘겼고 이 줄은
+   * 넘기지 않았다. 국내 관측에 market_code 가 생기는 날 상품 상세와 대시보드가
+   * «서로 다른 시장의 가격» 으로 최저/평균을 내게 되는 잠긴 결함이었다(오늘은
+   * 국내 행의 market_code 가 전부 null 이라 결과가 같았다).
+   *
+   * 이제 시장 기준은 summarizeDomesticMarketSplit 안에 한 번만 적혀 있다
+   * (DOMESTIC_MARKET_AGGREGATION) — 이 호출부가 «넘길 수 있는 것이 없다».
+   * 두 곳에 같은 문자열을 적어 맞추는 대신 어긋날 자리를 없앴다.
+   */
   const domesticSplit = summarizeDomesticMarketSplit(exactShopRecords, comparisonShopRecords);
   /**
    * 🔴 표시용은 예전처럼 `resolved` 다. COMPARISON 가격을 화면에서 «지우지»
