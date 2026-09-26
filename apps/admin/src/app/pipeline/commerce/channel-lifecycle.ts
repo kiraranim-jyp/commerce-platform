@@ -42,8 +42,22 @@ export type CapabilityState = "SUPPORTED" | "NOT_SUPPORTED" | "UNKNOWN";
  *
  *   SmartStore  수정 API 존재(공식 OpenAPI 의 「상품 수정 시에만 생략 가능」
  *               문구로 확인). 카테고리 변경 가부는 «근거 없음».
- *   Coupang     수정 엔드포인트 근거 «없음». 카테고리는 공식 가이드가
- *               「이미 등록된 상품의 카테고리 수정 불가」로 «명시».
+ *   Coupang     🔴 UNKNOWN. 카테고리는 공식 가이드가 「이미 등록된 상품의
+ *               카테고리 수정 불가」로 «명시»(NOT_SUPPORTED — 확인된 사실).
+ *
+ *               ── STEP 6 조사로 «이유» 가 바뀌었다(2026-09-26) ─────────────
+ *               전: 「수정 엔드포인트 근거 없음」
+ *               후: 「문서 근거 확보 · 실측 대기」
+ *
+ *               🔴 그런데 값은 «그대로 UNKNOWN» 이다. 문서가 늘었다고 올리지
+ *               않는다 — 그것이 LotteON apiNo 90 에서 겪은 혼동이다.
+ *               확인된 것: PUT .../seller-products(전체 JSON 전문 되보내기) ·
+ *               vendorItemId 별 가격/수량 PUT · 승인불필요 부분수정은 배송·반품
+ *               축뿐. 확인되지 «않은» 것: GET 응답의 실제 모양 · 승인 대기 중
+ *               상품의 수정 가능성 · 수정 후 sellerProductId 유지.
+ *               그리고 `coupang/_lib/client.ts` 가 메서드를 GET|POST 로 타입
+ *               수준에서 막고 있어 지금 코드로는 PUT 을 «보낼 수 없다».
+ *               전문: docs/p0-channel-03-step6-coupang-update-survey.md
  *   LotteON     🔴 UNKNOWN. 아래 참조 — 「apiNo 90 이 있다」는 근거가 아니다.
  *
  * ── 🔴 LotteON update 를 SUPPORTED 로 올리지 않는 이유(CTO 지시, 2026-09-25) ──

@@ -139,3 +139,64 @@ describe("⑤ 🔴 조사 전에는 판정하지 않는다", () => {
     expect(PROBE_RAW).toContain("쓰기는 한 줄도 넣지 않는다");
   });
 });
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * ⑥ STEP 6-6 — **조사 결과를 «문서로» 고정한다. capability 는 그대로다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 문서 근거가 늘었다고 capability 를 올리지 않는다. 이 블록이 지키는 것은
+ * 「무엇을 알아냈는지」와 「무엇을 아직 모르는지」가 코드·문서에 남아 있는가다 —
+ * 다음 사람이 「조사 끝났으니 EDITABLE」로 읽지 않게.
+ */
+describe("⑥ 🔴 STEP 6-6 조사 결과가 남아 있다 — 그리고 판정은 그대로다", () => {
+  const SURVEY = readFileSync(
+    join(__dirname, "../../../../../../../docs/p0-channel-03-step6-coupang-update-survey.md"),
+    "utf8",
+  );
+  const CAPABILITY = readFileSync(join(__dirname, "../../../pipeline/commerce/channel-lifecycle.ts"), "utf8");
+
+  it("등록 ID 축이 «불변인 것» 으로 확정돼 기록됐다", () => {
+    expect(SURVEY).toContain("sellerProductId");
+    /* 🔴 productId 는 묶음/해제로 바뀌므로 키로 쓰면 안 된다 — 그 사실이 남아야 한다. */
+    expect(SURVEY).toContain("`productId` 를 키로 쓰면 안 된다");
+    expect(SURVEY).toContain("vendorItemId");
+  });
+
+  it("🔴 가격·재고가 «다른 ID 축» 이라는 사실이 기록됐다", () => {
+    expect(SURVEY).toContain("vendorItemId` 로 한다");
+    expect(SURVEY).toContain("저장하고 있지 않다");
+  });
+
+  it("전체 수정이 「GET JSON 전문 되보내기」라는 것이 기록됐다", () => {
+    expect(SURVEY).toContain("전체\n> JSON 전문을 전송");
+    /* 🔴 그것이 F-14-7 규칙과 같은 모양이라는 발견도 남긴다. */
+    expect(SURVEY).toContain("F-14-7");
+  });
+
+  it("🔴 «모르는 것» 이 목록으로 남아 있다", () => {
+    for (const unknown of [
+      "GET 응답의 실제 모양",
+      "승인 대기 중 상품",
+      "sellerProductId` 가 유지되는가",
+    ]) {
+      expect(SURVEY, `모르는 것이 빠졌다: ${unknown}`).toContain(unknown);
+    }
+  });
+
+  it("🔴 우리 코드가 PUT 을 «보낼 수 없다» 는 사실이 기록됐다", () => {
+    expect(SURVEY).toContain("타입 수준에서");
+    expect(CAPABILITY).toContain("PUT 을 «보낼 수 없다»");
+  });
+
+  it("🔴 capability 표는 값을 올리지 않고 «이유» 만 갱신했다", () => {
+    expect(CHANNEL_CAPABILITY.coupang.update).toBe("UNKNOWN");
+    expect(CAPABILITY).toContain("문서 근거 확보 · 실측 대기");
+    expect(CAPABILITY).toContain("문서가 늘었다고 올리지");
+  });
+
+  it("등록 축의 위험(2026-02-02 API 변경)도 같이 남겼다", () => {
+    expect(SURVEY).toContain("2026년 2월 2일 시행");
+    expect(SURVEY).toContain("이 조사의\n범위가 아니다");
+  });
+});
