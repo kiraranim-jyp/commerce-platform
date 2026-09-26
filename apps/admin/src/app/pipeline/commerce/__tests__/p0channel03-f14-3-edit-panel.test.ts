@@ -112,9 +112,21 @@ describe("④ 🔴 모르는 것을 안다고 말하지 않는다", () => {
 });
 
 describe("⑤ 🔴 화면에 «붙어 있다» — 그리고 SmartStore 에만", () => {
-  it("연결을 아는 상품에만 나온다", () => {
+  it("연결을 아는 상품에만 나온다 — 그 판정은 «우측 기둥» 이 한다(F-14-7b)", () => {
     expect(WORKSPACE).toContain("<ChannelEditPanel");
-    expect(WORKSPACE).toContain('tab === "smartstore" && registrationStateFor("smartstore").basis === "CHANNEL_PRODUCT"');
+    /* 🔴 「연결을 아는가」는 수정 기능 전체의 관문이고, 그 관문은 불러오기 카드와
+       요약이 서는 우측 한 곳에 있다. 왼쪽 상세는 «불러온 뒤» 에만 선다. */
+    expect(WORKSPACE).toContain('registrationStateFor("smartstore").basis === "CHANNEL_PRODUCT"');
+    expect(WORKSPACE).toContain('tab === "smartstore" && channelEdit && channelEditInput');
+  });
+
+  it("🔴 불러오기 «버튼» 이 한 군데만 있다 — 두 군데면 셀러가 찾아다닌다", () => {
+    /* 워크스페이스에는 버튼이 없다. 「다시 눌러주세요」 같은 안내 문구는 남아
+       있어도 되고(수정을 보낸 뒤 그 말이 필요하다), 버튼은 하나여야 한다. */
+    expect(WORKSPACE).not.toContain('불러오는 중…');
+    expect(WORKSPACE).toContain("<ChannelEditLoaderCard");
+    const SUMMARY = codeOnly(readFileSync(join(__dirname, "../ChannelEditSummary.tsx"), "utf8"));
+    expect(SUMMARY.match(/등록된 내용 불러오기/g) ?? []).toHaveLength(1);
   });
 
   it("🔴 초안은 «지금 등록된 값 + 고친 것» 이다(F-14-7)", () => {

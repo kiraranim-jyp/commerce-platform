@@ -792,6 +792,29 @@ export async function POST(request: Request) {
       }
 
       /* ══════════════════════════════════════════════════════════════════
+         P0-CHANNEL-03 F-14-7b — 🔴 «보낼 payload» 로 다시 대조한다.
+
+         위 ②의 `comparison` 은 되돌리기 «전» 의 payload(전부 Master 값)로 만든
+         것이다. 그것으로 확인 화면을 그리면, 우측 요약은 「상품명 1건」이라고
+         말하는데 확인 창은 「상품명 · 재고 7→999 · 상세설명 1907→1835」를 보여준다
+         — ChangeSet 이 두 벌이 된 것이고, Production 에서 실제로 그랬다.
+
+         🔴 그래서 여기서 «한 번 더» 대조한다. 대조 대상은 지금 이 순간의 payload,
+         즉 실제로 PUT 될 그 내용이다. 이 값 하나가 확인 화면·게이트·전송을 모두
+         설명한다 — 「미리보기와 실제가 갈라질 길이 없다」는 F-12 원칙 그대로다.
+
+         🔴 ②의 comparison 을 «지우지» 않는다. 그것은 「무엇을 할지(UPDATE/RECREATE)」
+         를 정한 근거이고, 이것은 「무엇이 바뀌는지」를 셀러에게 말하는 값이다 —
+         질문이 다르므로 둘 다 남는다. */
+      const outgoing = compareRegisteredProduct(current.snapshot, payload);
+      logStep(
+        "변경 내용 확정",
+        "success",
+        `보낼 내용 기준 변경 ${outgoing.changedFields.length}건` +
+          (outgoing.changedFields.length > 0 ? `(${outgoing.changedFields.join(", ")})` : ""),
+      );
+
+      /* ══════════════════════════════════════════════════════════════════
          P0-CHANNEL-03 F-12 — 🔴 PUT 은 «보여준 뒤에만» 나간다.
 
          네이버 수정은 PATCH 가 아니라 «전체 교체» 다. 바뀐 것만 보내면 나머지가
@@ -812,7 +835,7 @@ export async function POST(request: Request) {
         logStep(
           "수정 내용 확인",
           "success",
-          `변경 ${comparison.changedFields.length}건 · 손실검사 ${risks.length === 0 ? "PASS" : "BLOCKED"} — 아직 보내지 않았습니다.`,
+          `변경 ${outgoing.changedFields.length}건 · 손실검사 ${risks.length === 0 ? "PASS" : "BLOCKED"} — 아직 보내지 않았습니다.`,
         );
         const result = withMeta({
           status: "FAILED",
@@ -826,22 +849,22 @@ export async function POST(request: Request) {
             currentExternalProductId: existing.externalProductId,
             reason: decision.reason,
             diff: {
-              changed: comparison.fields
+              changed: outgoing.fields
                 .filter((f) => f.verdict === "CHANGED" || f.verdict === "MISSING" || f.verdict === "ADDED")
                 .map((f) => ({ label: f.label, from: f.from, to: f.to, verdict: f.verdict })),
-              unchanged: comparison.fields.filter((f) => f.verdict === "UNCHANGED").map((f) => f.label),
+              unchanged: outgoing.fields.filter((f) => f.verdict === "UNCHANGED").map((f) => f.label),
               /* 🔴 「값이 같다」와 「사라지지는 않는다」를 «나눠서» 싣는다.
                  한 줄에 「유지됨」으로 합치면 확인하지 않은 것을 확인했다고
                  말하는 것이 된다. 어느 축이 어느 쪽인지는 비교 계층이 안다. */
-              lossChecked: comparison.fields
+              lossChecked: outgoing.fields
                 .filter((f) => f.verdict === "NOT_COMPARED" && f.lossProtected)
                 .map((f) => f.label),
-              notCompared: comparison.fields
+              notCompared: outgoing.fields
                 .filter((f) => f.verdict === "NOT_COMPARED" && !f.lossProtected)
                 .map((f) => ({ label: f.label, reason: f.reason })),
               dataLossCheck: risks.length === 0 ? "PASS" : "BLOCKED",
               dataLossRisks: risks.length > 0 ? risks.map((r) => ({ label: r.label, field: r.field })) : undefined,
-              category: comparison.category,
+              category: outgoing.category,
             },
           },
           error: {

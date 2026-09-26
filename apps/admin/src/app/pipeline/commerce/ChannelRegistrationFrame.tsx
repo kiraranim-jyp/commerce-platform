@@ -47,8 +47,28 @@ export function ChannelRegistrationFrame({ detail, summary }: { detail: ReactNod
           상세설명 / 채널 고유정보. lg 미만에서는 요약이 먼저 온다(결론과 행동이
           스크롤 아래에 묻히지 않도록 — 기존 워크스페이스 기둥과 같은 규칙). */}
       <div className="order-2 min-w-0 space-y-4 lg:order-1">{detail}</div>
-      {/* 우측 · 등록 요약 */}
-      <div className="order-1 lg:order-2">{summary}</div>
+      {/* ══════════════════════════════════════════════════════════════════
+          우측 · 등록 요약
+
+          🔴 P0-CHANNEL-03 F-14-7b — sticky 를 «기둥» 에 건다(카드가 아니라).
+
+          예전에는 등록 요약 카드 «안쪽» 에만 sticky 가 있었다. 그 아래 수정 요약이
+          서자, 좌측 상세를 내려 편집하는 동안 수정 요약이 화면에서 사라졌다 —
+          셀러가 「무엇이 바뀌는지」와 [상품 수정]을 못 보는 상태다.
+
+          🔴 스크롤 주인은 문서가 아니라 AppShell 의 `main`(overflow-y-auto)이다.
+          그래서 sticky 가 그 컨테이너를 기준으로 붙는다 — `fixed` 로 만들 필요가
+          없고, 만들면 그 원칙이 깨진다.
+
+          🔴 그리고 기둥이 화면보다 길어질 수 있다(등록 요약 + 수정 요약). 그때
+          위만 붙어 있으면 아래쪽 [상품 수정]에 손이 닿지 않으므로, 기둥 «안에서»
+          스크롤되게 둔다. 좌측 스크롤과 충돌하지 않는다 — 서로 다른 축이다. */}
+      {/* 🔴 `calc(100dvh_-_8rem)` — 밑줄이 «공백» 이다. CSS calc 의 뺄셈은 연산자
+          앞뒤 공백이 필수이고, 붙여 쓰면 규칙 전체가 조용히 무시된다(그러면 높이
+          제한이 사라져 기둥이 화면보다 길어질 때 아래가 잘린다). */}
+      <div className="order-1 lg:order-2 lg:sticky lg:top-4 lg:max-h-[calc(100dvh_-_8rem)] lg:overflow-y-auto lg:self-start">
+        {summary}
+      </div>
     </div>
   );
 }
@@ -104,7 +124,10 @@ export function ChannelRegistrationSummary({
        검사가 조용히 무력해진다(data-frame과 같은 이유). */
     <div
       data-summary="channel-registration"
-      className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface text-sm shadow-elevated lg:sticky lg:top-4"
+      /* 🔴 F-14-7b — 여기 있던 `lg:sticky lg:top-4` 를 «기둥으로 올렸다». 카드
+         안쪽에 두면 그 아래 서는 수정 요약이 같이 붙지 못하고 스크롤에 사라진다.
+         겹쳐 걸면 둘 다 어긋나므로 한 곳에만 둔다. */
+      className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface text-sm shadow-elevated"
     >
       {/* ① 등록 준비 상태 · ③ 남은 항목 N개(무엇/왜/어디서/[이동]) */}
       <RegistrationStatusBanner

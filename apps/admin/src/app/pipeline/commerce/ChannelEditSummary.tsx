@@ -37,6 +37,50 @@ import type { EditableField } from "./channel-field-capability";
  * «없애지» 않는다 — 일이 잘못됐을 때 원인을 가르는 유일한 근거이기 때문이다.
  */
 
+/**
+ * 「불러오기 전」 — 아직 채널을 읽지 않은 상태.
+ *
+ * 🔴 불러온 뒤와 «같은 자리»(우측 고정 기둥)에 선다. 버튼만 다른 곳에 두면 셀러는
+ * 수정 기능을 두 군데서 찾는다. 그리고 🔴 열기만 해서는 채널을 부르지 않는다 —
+ * 셀러가 누를 때만 판매자 계정으로 GET 이 나간다.
+ */
+export function ChannelEditLoaderCard({
+  commerceLabel,
+  loading = false,
+  note,
+  onLoad,
+}: {
+  commerceLabel: string;
+  loading?: boolean;
+  note?: string | null;
+  onLoad: () => void;
+}) {
+  return (
+    <div
+      data-summary="channel-edit-loader"
+      className="overflow-hidden rounded-lg border border-border bg-surface p-4 text-sm shadow-elevated"
+    >
+      {/* 머리글 «격» 은 등록 준비와 같다 — 등록 후 관리는 별도 작업이다. */}
+      <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">등록 후 관리</p>
+      <p className="mt-1 text-base font-semibold text-text-primary">등록된 상품 수정</p>
+      <p className="mt-2 text-xs text-slate-600">
+        {commerceLabel}에 지금 등록돼 있는 내용을 불러와, 무엇이 바뀌는지 보고 수정할 수 있습니다.
+      </p>
+      <button
+        type="button"
+        disabled={loading}
+        onClick={onLoad}
+        className="mt-3 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium disabled:opacity-50"
+      >
+        {loading ? "불러오는 중…" : "등록된 내용 불러오기"}
+      </button>
+      {/* 🔴 실패한 이유를 남긴다 — 「아무 일도 안 일어남」이 되면 셀러는 다시
+          등록을 눌러 중복을 만든다. */}
+      {note && <p className="mt-2 text-xs text-slate-700">{note}</p>}
+    </div>
+  );
+}
+
 export interface ChannelEditSummaryProps {
   commerceLabel: string;
   model: ChannelEditModel;

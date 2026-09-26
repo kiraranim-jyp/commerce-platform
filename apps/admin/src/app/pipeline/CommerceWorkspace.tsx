@@ -106,7 +106,7 @@ import { CommerceSelector } from "./commerce/CommerceSelector";
 import { RecreateConsentPanel } from "./commerce/RecreateConsentPanel";
 import { UpdateConfirmPanel } from "./commerce/UpdateConfirmPanel";
 import { ChannelEditPanel } from "./commerce/ChannelEditPanel";
-import { ChannelEditSummary } from "./commerce/ChannelEditSummary";
+import { ChannelEditLoaderCard, ChannelEditSummary } from "./commerce/ChannelEditSummary";
 import {
   channelEditDraft,
   editedFieldsSinceLoad,
@@ -3722,38 +3722,18 @@ export function CommerceWorkspace({
               🔴 SmartStore 만이다. Coupang·LotteON 의 수정은 아직 UNKNOWN 이고
               (channel-lifecycle 의 capability 표), 「확인되지 않았다」를
               「수정 가능」으로 올리지 않는다. */}
-          {tab === "smartstore" && registrationStateFor("smartstore").basis === "CHANNEL_PRODUCT" && (
-            <section className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
-              {channelEdit && channelEditInput ? (
-                <ChannelEditPanel
-                  commerceLabel={commerceLabel("smartstore")}
-                  model={channelEdit.model}
-                  /* 🔴 우측 요약과 «같은» 초안이다(channelEditInput 하나에서
-                     온다). 각자 투영하면 좌우가 다른 변경을 말한다. */
-                  draft={channelEditInput.draft}
-                  touched={channelEditInput.touched}
-                />
-              ) : (
-                <div>
-                  <p className="font-medium text-slate-900">등록된 상품 수정</p>
-                  <p className="mt-1 text-xs text-slate-600">
-                    {commerceLabel("smartstore")}에 지금 등록돼 있는 내용을 불러와, 무엇이 바뀌는지 보고 수정할 수
-                    있습니다.
-                  </p>
-                  <button
-                    type="button"
-                    disabled={channelEditLoading}
-                    onClick={() => void loadChannelEdit()}
-                    className="mt-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium disabled:opacity-50"
-                  >
-                    {channelEditLoading ? "불러오는 중…" : "등록된 내용 불러오기"}
-                  </button>
-                </div>
-              )}
-              {/* 🔴 실패한 이유를 화면에 남긴다 — 「아무 일도 안 일어남」이
-                  되면 셀러는 다시 등록을 눌러 중복을 만든다. */}
-              {channelEditNote && <p className="mt-2 text-xs text-slate-700">{channelEditNote}</p>}
-            </section>
+          {/* 🔴 F-14-7b — 불러오기 버튼과 실패 문구는 «우측 고정 기둥» 으로
+              옮겼다(ChannelEditLoaderCard). 여기 남는 것은 불러온 뒤의 «항목별
+              지금 값 ↔ 보낼 값» 뿐이다 — 한 기능을 두 군데서 찾게 하지 않는다. */}
+          {tab === "smartstore" && channelEdit && channelEditInput && (
+            <ChannelEditPanel
+              commerceLabel={commerceLabel("smartstore")}
+              model={channelEdit.model}
+              /* 🔴 우측 요약과 «같은» 초안이다(channelEditInput 하나에서 온다).
+                 각자 투영하면 좌우가 다른 변경을 말한다. */
+              draft={channelEditInput.draft}
+              touched={channelEditInput.touched}
+            />
           )}
 
           {recreateConsent && recreateConsent.platform === tab && (() => {
@@ -3801,18 +3781,30 @@ export function CommerceWorkspace({
                  🔴 불러오지 않았으면 서지 않는다 — 읽지 않은 기준값으로 「무엇이
                  바뀐다」를 말할 수는 없다. */
               editSummary={
-                tab === "smartstore" && channelEdit && channelEditInput ? (
-                  <ChannelEditSummary
-                    commerceLabel={commerceLabel("smartstore")}
-                    model={channelEdit.model}
-                    draft={channelEditInput.draft}
-                    touched={channelEditInput.touched}
-                    busy={listingProgress != null}
-                    /* 🔴 여기서 PUT 하지 않는다. 등록과 «같은 문» 을 지나 서버가
-                       UPDATE 인지 정하고, 전체 교체 확인 화면(F-13)이 한 번 더
-                       묻는다 — 이 버튼이 곧 전송이 되면 확인 절차가 사라진다. */
-                    onSubmit={() => void confirmListing("smartstore")}
-                  />
+                tab === "smartstore" &&
+                registrationStateFor("smartstore").basis === "CHANNEL_PRODUCT" ? (
+                  channelEdit && channelEditInput ? (
+                    <ChannelEditSummary
+                      commerceLabel={commerceLabel("smartstore")}
+                      model={channelEdit.model}
+                      draft={channelEditInput.draft}
+                      touched={channelEditInput.touched}
+                      busy={listingProgress != null}
+                      /* 🔴 여기서 PUT 하지 않는다. 등록과 «같은 문» 을 지나 서버가
+                         UPDATE 인지 정하고, 전체 교체 확인 화면(F-13)이 한 번 더
+                         묻는다 — 이 버튼이 곧 전송이 되면 확인 절차가 사라진다. */
+                      onSubmit={() => void confirmListing("smartstore")}
+                    />
+                  ) : (
+                    /* 🔴 F-14-7b — 「불러오기 전」도 «같은 자리» 에 선다. 불러오기
+                       버튼만 왼쪽에 두면 셀러는 수정 기능을 두 군데서 찾는다. */
+                    <ChannelEditLoaderCard
+                      commerceLabel={commerceLabel("smartstore")}
+                      loading={channelEditLoading}
+                      note={channelEditNote}
+                      onLoad={() => void loadChannelEdit()}
+                    />
+                  )
                 ) : undefined
               }
               naverResolved={smartStoreValidationEligible ? smartStoreResolved : undefined}

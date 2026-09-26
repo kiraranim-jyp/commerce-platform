@@ -268,3 +268,48 @@ describe("⑥ 🔴 CTO 자체 검토에서 찾은 두 구멍", () => {
     expect(WORKSPACE).toContain("data.message ?? data.error ??");
   });
 });
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * ⑦ P0-CHANNEL-03 F-14-7b — **스크롤해도 우측 요약이 사라지지 않는다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 좌측 상세를 내려 편집하는 동안 「무엇이 바뀌는지」와 [상품 수정]이 화면에서
+ * 사라지면, 셀러는 자기가 무엇을 보내는지 모르는 채로 버튼을 찾으러 올라간다.
+ */
+describe("⑦ 🔴 F-14-7b — 우측 기둥이 고정된다", () => {
+  const FRAME = codeOnly(readFileSync(join(__dirname, "../ChannelRegistrationFrame.tsx"), "utf8"));
+
+  it("sticky 가 «기둥» 에 걸려 있다 — 카드 안쪽이 아니다", () => {
+    const column = FRAME.slice(FRAME.indexOf('className="order-1 lg:order-2'));
+    expect(column).toContain("lg:sticky");
+    expect(column).toContain("lg:top-4");
+  });
+
+  it("🔴 카드 안쪽의 sticky 는 «걷어냈다» — 겹쳐 걸면 둘 다 어긋난다", () => {
+    const card = FRAME.slice(FRAME.indexOf('data-summary="channel-registration"'));
+    expect(card).not.toContain("lg:sticky");
+  });
+
+  it("🔴 기둥이 화면보다 길어지면 «기둥 안에서» 스크롤된다", () => {
+    /* 위만 붙어 있으면 아래쪽 [상품 수정]에 손이 닿지 않는다. */
+    const column = FRAME.slice(FRAME.indexOf('className="order-1 lg:order-2'));
+    expect(column).toContain("lg:overflow-y-auto");
+    expect(column).toContain("lg:max-h-");
+    expect(column).toContain("lg:self-start");
+  });
+
+  it("🔴 `fixed` 로 만들지 않았다 — 스크롤 주인은 AppShell 의 main 이다", () => {
+    expect(FRAME).not.toContain("fixed");
+  });
+
+  it("불러오기 전 카드도 «같은 기둥» 에 선다", () => {
+    expect(SUMMARY).toContain("export function ChannelEditLoaderCard");
+    expect(WORKSPACE).toContain("<ChannelEditLoaderCard");
+    /* 불러오기 전/후가 «같은 자리»(editSummary 슬롯)에서 갈린다. */
+    const iSlot = WORKSPACE.indexOf("editSummary={");
+    const slot = WORKSPACE.slice(iSlot, WORKSPACE.indexOf("naverResolved=", iSlot));
+    expect(slot).toContain("<ChannelEditSummary");
+    expect(slot).toContain("<ChannelEditLoaderCard");
+  });
+});
