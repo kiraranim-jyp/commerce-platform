@@ -16,6 +16,7 @@ import {
   parseLotteOnStandardCategory,
   type LotteOnStandardCategory,
 } from "./lotteon-category";
+import type { MissingKind } from "./commerce-registry";
 
 /**
  * LOTTEON COMMERCE SPRINT 3(CEO 확정, 2026-09-14) — 롯데ON 탭이 **무엇을 다시
@@ -774,6 +775,23 @@ export type LotteOnFixLocation =
   | "SETTINGS"
   /** 롯데ON 판매자센터에 먼저 등록해야 생기는 값 — 우리가 만들 수 없다. */
   | "LOTTEON_SELLER_CENTER";
+
+/**
+ * Commerce-6 Phase E-3 — 「어디서 고치는가」를 상위 목록이 쓰는 축으로 옮긴다.
+ *
+ * 🔴 새 상태 축을 만들지 않는다. 이 값은 지금까지 롯데ON 패널 «안» 에서만 살았고
+ * `CommerceWorkspace` 가 목록을 만들 때 버려져서 롯데ON 항목만 배지가 없었다.
+ *
+ * 매핑의 근거는 「셀러가 어디에 손을 대야 하는가」 하나다:
+ *     COMMON_PRODUCT · LOTTEON_TAB   우리 화면에 «적는다»              → INPUT
+ *     SETTINGS                       설정에 «한 번» 정해 둔다           → CONFIRM
+ *     LOTTEON_SELLER_CENTER          우리 화면으로는 «해결되지 않는다»   → SELLER_CENTER
+ */
+export function lotteOnFixLocationToMissingKind(where: LotteOnFixLocation): MissingKind {
+  if (where === "LOTTEON_SELLER_CENTER") return "SELLER_CENTER";
+  if (where === "SETTINGS") return "CONFIRM";
+  return "INPUT";
+}
 
 export interface LotteOnMissingInfoItem {
   /** validate-payload.ts의 field 값 그대로. */

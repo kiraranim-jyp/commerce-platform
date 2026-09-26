@@ -234,6 +234,21 @@ export function autoPick<T extends { no: string; isDefault?: boolean }>(options:
   return options.length === 1 ? options[0] : null;
 }
 
+/**
+ * Commerce-6 Phase E-5 — 조회 결과에서 «지금» 이 번호의 이름을 찾는다.
+ *
+ * 🔴 이름의 주인은 채널이다. 우리가 저장해 둔 `*_label` 은 고른 순간의 사본이라
+ * 판매자센터에서 이름이 바뀌면 조용히 틀려진다. 조회가 닿았으면 그쪽을 쓴다.
+ * 못 찾으면 null — 그때 화면이 저장된 이름을 「저장 당시」라고 말한다.
+ */
+function liveNameOf(
+  options: readonly { no: string; name: string | null }[] | undefined,
+  no: string | null | undefined,
+): string | null {
+  if (!no) return null;
+  return options?.find((option) => option.no === no)?.name ?? null;
+}
+
 const EMPTY_RECOMMEND: RecommendState = {
   loading: false,
   error: null,
@@ -606,6 +621,14 @@ export function LotteOnRegistrationPanel({
     deliveryRegionGroupCode: string | null;
     deliveryRegionGroupLabel: string | null;
   } | null>(null);
+  /**
+   * Commerce-6 Phase E-1 — 🔴 「설정이 없다」와 「설정을 못 읽었다」는 다른 말이다.
+   *
+   * 지금까지 이 화면은 둘을 구분할 «정보가 없었다» — 서버가 실패해도 `ok:true` 와
+   * 빈 값을 돌려줬기 때문이다. 이제 loader 가 `failed` 를 준다. 여기서 새로
+   * 판정하지 않고 그 값을 받아 두기만 한다.
+   */
+  const [sellerFixedFailed, setSellerFixedFailed] = useState(false);
 
   /**
    * ══ LOTTEON-REAL-REGISTRATION-05(CEO 확정, 2026-09-22) ══
@@ -638,11 +661,19 @@ export function LotteOnRegistrationPanel({
     void (async () => {
       try {
         const res = await fetch("/api/settings/lotteon-seller");
-        const data = (await res.json()) as { ok?: boolean; values?: typeof sellerFixed };
-        if (!cancelled && data.ok && data.values) setSellerFixed(data.values);
+        const data = (await res.json()) as {
+          ok?: boolean;
+          values?: typeof sellerFixed;
+          /** Phase E-1 — 서버가 「읽지 못했다」를 말한다. 값이 비었는지와 별개다. */
+          failed?: boolean;
+        };
+        if (cancelled) return;
+        if (data.ok && data.values) setSellerFixed(data.values);
+        setSellerFixedFailed(Boolean(data.failed));
       } catch {
-        // 설정을 못 읽어도 화면은 그대로 선다 — 그때는 「설정값 적용됨」을
-        // 말하지 않을 뿐이고, 빈 칸은 검증기가 평소대로 blocker 로 잡는다.
+        // 네트워크 자체가 실패했다 — 이것도 「설정 없음」이 아니라 「못 읽었다」다.
+        // 🔴 빈 칸은 검증기가 평소대로 blocker 로 잡는다(게이트는 그대로다).
+        if (!cancelled) setSellerFixedFailed(true);
       }
     })();
     return () => {
@@ -1297,6 +1328,20 @@ export function LotteOnRegistrationPanel({
             이제 롯데ON 판매자센터에 직접 물어본다(150 · 166 · 89). 조회 상태와
             결과는 바로 아래 한 줄이 말한다. */}
         <DeliveryLookupNote state={deliverySettings} />
+        {/* Commerce-6 Phase E-1 — 🔴 설정을 «못 읽은» 것을 「설정 없음」으로 두지 않는다.
+            이 줄이 없으면 셀러는 빈 칸을 보고 설정 화면으로 가지만, 거기엔 값이
+            이미 들어 있다(고칠 것이 없다). 등록 게이트는 건드리지 않는다 —
+            빈 값은 그대로 검증기가 SELLER_PLACE_REQUIRED 로 잡는다. */}
+        {sellerFixedFailed && (
+          <p
+            data-seller-fixed-load-failed="true"
+            className="mb-2 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-[12px] text-text-secondary"
+          >
+            <span className="font-medium text-text-primary">판매자 설정을 불러오지 못했습니다.</span>{" "}
+            설정이 비어 있는 것이 아니라 <b>지금 확인하지 못한 것</b>입니다 — 아래 칸이 비어 보여도 설정을 다시
+            입력하지 마세요. 잠시 후 새로고침해 주세요.
+          </p>
+        )}
         <div className={FIELD_GRID_CLASS}>
           {/* REWORK-14 — 목록에서 고르는 컨트롤이 도움말 줄(`note`) 밖으로 나왔다.
               전에는 조회가 성공하면 회색 안내 문장 자리에 전폭 `select`와 버튼 칩이
@@ -1314,6 +1359,7 @@ export function LotteOnRegistrationPanel({
                 <SellerSettingApplied
                   value={form.delivery.outboundPlaceNo.trim() ? null : sellerFixed?.outboundPlaceNo}
                   label={sellerFixed?.outboundPlaceLabel}
+                  liveName={liveNameOf(deliverySettings.data?.outboundPlaces, sellerFixed?.outboundPlaceNo)}
                 />
                 <DeliveryOptionPicker
                   options={deliverySettings.data?.outboundPlaces ?? []}
@@ -1335,6 +1381,7 @@ export function LotteOnRegistrationPanel({
                 <SellerSettingApplied
                   value={form.delivery.returnPlaceNo.trim() ? null : sellerFixed?.returnPlaceNo}
                   label={sellerFixed?.returnPlaceLabel}
+                  liveName={liveNameOf(deliverySettings.data?.returnPlaces, sellerFixed?.returnPlaceNo)}
                 />
                 <DeliveryOptionPicker
                   options={deliverySettings.data?.returnPlaces ?? []}
@@ -1356,6 +1403,7 @@ export function LotteOnRegistrationPanel({
                 <SellerSettingApplied
                   value={form.delivery.deliveryCostPolicyNo.trim() ? null : sellerFixed?.deliveryCostPolicyNo}
                   label={sellerFixed?.deliveryCostPolicyLabel}
+                  liveName={liveNameOf(deliverySettings.data?.costPolicies, sellerFixed?.deliveryCostPolicyNo)}
                 />
                 <DeliveryOptionPicker
                   options={(deliverySettings.data?.costPolicies ?? []).map((policy) => ({ ...policy, isDefault: false }))}
@@ -1377,6 +1425,11 @@ export function LotteOnRegistrationPanel({
                 <SellerSettingApplied
                   value={form.delivery.deliveryRegionGroupCode.trim() ? null : sellerFixed?.deliveryRegionGroupCode}
                   label={sellerFixed?.deliveryRegionGroupLabel}
+                  /* 배송가능지역은 «공통코드»(CodeOption)라 키가 `code` 다 — 같은 판정을 쓰되 모양만 맞춘다. */
+                  liveName={liveNameOf(
+                    deliverySettings.data?.deliveryRegionGroups.map((g) => ({ no: g.code, name: g.name })),
+                    sellerFixed?.deliveryRegionGroupCode,
+                  )}
                 />
                 <CodeOptionPicker
                   options={deliverySettings.data?.deliveryRegionGroups ?? []}
@@ -2650,21 +2703,39 @@ function DeliveryLookupNote({ state }: { state: DeliverySettingsState }) {
 function SellerSettingApplied({
   value,
   label,
+  liveName,
 }: {
   /** 설정에 저장된 «번호/코드». 없으면 이 줄은 서지 않는다. */
   value: string | null | undefined;
   /** 고를 때 보였던 사람이 읽는 이름. 없으면 번호만 보여준다. */
   label: string | null | undefined;
+  /**
+   * Commerce-6 Phase E-5 — 🔴 «지금» 롯데ON 이 부르는 이름. 조회 결과에서 같은
+   * 번호를 찾아 넘긴다.
+   *
+   * 저장된 `label` 은 058 주석대로 「고른 «순간의» 표시 이름」이라, 판매자센터에서
+   * 이름을 바꾸면 옛 이름으로 남는다. 그런데 화면은 지금까지 그것을 현재 이름처럼
+   * 보여줬다. 이름의 주인은 채널이다 — 조회값이 있으면 그것을 쓰고, 없을 때만
+   * 저장된 이름을 쓰되 «저장 당시» 라고 말한다.
+   */
+  liveName?: string | null;
 }) {
   if (!value) return null;
+  const shownName = liveName || label;
+  const isStale = !liveName && Boolean(label);
   return (
     <p
       data-seller-setting-applied="true"
       className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-text-secondary"
     >
-      <span className="font-medium text-text-primary">{label || value}</span>
+      <span className="font-medium text-text-primary">{shownName || value}</span>
       <span className="text-success">✓ 설정값 적용됨</span>
-      {label && <span className="text-text-tertiary">({value})</span>}
+      {isStale && (
+        <span data-seller-setting-stale-label="true" className="text-text-tertiary">
+          (저장 당시 이름)
+        </span>
+      )}
+      {shownName && <span className="text-text-tertiary">({value})</span>}
       <Link href="/settings" className="text-primary underline-offset-2 hover:underline">
         설정에서 변경
       </Link>

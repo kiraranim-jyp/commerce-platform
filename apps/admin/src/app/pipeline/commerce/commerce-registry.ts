@@ -116,7 +116,18 @@ export type CommerceLastAttempts = Partial<Record<CommerceId, CommerceLastAttemp
  * 순간 출처를 잃는다. 그래서 화면 레이어에서 한 겹만 감싼다 — 새 판정도,
  * 새 저장소도 만들지 않는다.
  */
-export type MissingKind = "CONFIRM" | "INPUT";
+/**
+ * Commerce-6 Phase E-3 — 세 번째 값이 늘었다: `SELLER_CENTER`.
+ *
+ * 🔴 «새 축» 이 아니다. 새 상태 모델을 만드는 대신 이미 있는 이 축에 한 칸을
+ * 넣는다 — 지금까지 이 정보는 롯데ON 쪽 `LotteOnFixLocation` 에만 있었고 상위
+ * 레이어로 올라오면서 «버려지고» 있었다.
+ *
+ * 왜 「입력 필요」로 뭉칠 수 없나: 출고지번호 같은 값은 셀러가 우리 화면 어디에
+ * 무엇을 적어도 해결되지 않는다. 커머스 판매자센터에 먼저 등록해야 «번호가
+ * 생긴다». 「입력 필요」라고 말하면 셀러는 적을 곳을 찾다가 못 찾는다.
+ */
+export type MissingKind = "CONFIRM" | "INPUT" | "SELLER_CENTER";
 
 /**
  * 🔴 새 축을 만들지 않는다. `ReadinessItem.sourceStatus` 가 이미 「이 값이 어디서
@@ -138,7 +149,10 @@ export function classifyMissing(
 
 export function missingKindLabel(kind: MissingKind | undefined): string | null {
   if (!kind) return null;
-  return kind === "INPUT" ? "입력 필요" : "확인 필요";
+  if (kind === "INPUT") return "입력 필요";
+  /* Phase E-3 — 「판매자센터」라고 말해야 셀러가 우리 화면에서 헤매지 않는다. */
+  if (kind === "SELLER_CENTER") return "판매자센터 등록 필요";
+  return "확인 필요";
 }
 
 export interface CommerceMissingItem {

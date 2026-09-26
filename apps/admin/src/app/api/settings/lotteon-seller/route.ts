@@ -16,9 +16,17 @@ import {
  * 🔴 여기에는 비밀이 없다. 창고 번호와 정책 번호이고 화면에 그대로 보여야
  * 하는 값이라 GET 이 값을 그대로 돌려준다.
  */
+/**
+ * Commerce-6 Phase E-1 — 🔴 `ok` 는 「요청이 처리됐는가」이지 「값을 읽었는가」가
+ * 아니다. 지금까지 이 둘이 같은 칸에 있어서, 조회가 실패해도 `ok:true` + 빈 값이
+ * 나갔고 화면은 그것을 「설정 없음」이라고 말했다.
+ *
+ * `failed`/`source` 를 그대로 실어 보낸다 — 판정은 loader 한 곳에서만 하고
+ * 여기서는 옮기기만 한다(형제 라우트 /api/settings/seller-settings 와 같은 모양).
+ */
 export async function GET() {
-  const values = await loadLotteOnSellerSettings();
-  return NextResponse.json({ ok: true, values });
+  const { source, failed, ...values } = await loadLotteOnSellerSettings();
+  return NextResponse.json({ ok: true, values, source, failed });
 }
 
 export async function PUT(request: Request) {
@@ -30,6 +38,6 @@ export async function PUT(request: Request) {
   if (!result.ok) return NextResponse.json(result, { status: 500 });
   // 저장 «후의 실제 값» 을 돌려준다 — 화면이 자기가 보낸 값을 그대로 믿지 않게
   // 한다(발송마감시간은 형식이 맞지 않으면 저장되지 않고 null 이 된다).
-  const values = await loadLotteOnSellerSettings();
-  return NextResponse.json({ ok: true, values });
+  const { source, failed, ...values } = await loadLotteOnSellerSettings();
+  return NextResponse.json({ ok: true, values, source, failed });
 }

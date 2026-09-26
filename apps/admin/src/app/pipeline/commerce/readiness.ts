@@ -247,7 +247,22 @@ export function computeNaverPayloadReadiness(validation: NaverPayloadValidationR
         : NAVER_SETTINGS_FIELD_PREFIXES.some((p) => f.field.startsWith(p))
           ? "BUSINESS_SETTINGS"
           : "PRODUCT_INFO") as ReadinessGroup,
-      sourceStatus: f.status === "READY" ? undefined : ("MANUAL_REQUIRED" as const),
+      /* ══ Commerce-6 Phase E-2 ══
+         🔴 지금까지 여기는 «전 필드» 에 MANUAL_REQUIRED 를 박았다. 그래서
+         classifyMissing()(commerce-registry.ts:131)이 `every(MANUAL_REQUIRED)` 로
+         판정하는 순간 스마트스토어는 «영원히» 「입력 필요」였고, 출고지·반품지·
+         택배사·반품/교환배송비·품질보증·A/S 가 Settings 에 이미 들어 있어도
+         셀러에게 직접 적으라고 말했다.
+
+         🔴 AUTO 를 쓰지 않는다. 그 값은 「채워졌다」는 뜻인데 sourceStatus 는
+         passed 항목에 붙지 않는다(위 타입 주석) — 규칙을 넓히지 않고, 이미
+         뜻이 맞는 SETTINGS_DEFAULT 로만 가른다. */
+      sourceStatus:
+        f.status === "READY"
+          ? undefined
+          : isNaverSettingsResolvedField(f.field)
+            ? ("SETTINGS_DEFAULT" as const)
+            : ("MANUAL_REQUIRED" as const),
       externalHref: naverFieldExternalHref(f.field),
       // N-3.29 — "다음 입력하기" 자동 스크롤(A-10.1-②)이 SmartStore에서도
       // 동작하도록 PlatformPreview accordion의 실제 DOM id로 보낸다.
@@ -412,13 +427,37 @@ const NAVER_NOTICE_FIELD_EXTERNAL_HREF: Record<string, string> = {
   afterServiceDirector: "/settings",
 };
 
-function naverFieldExternalHref(field: string): string | undefined {
-  if (NAVER_SETTINGS_FIELD_PREFIXES.some((p) => field.startsWith(p))) return "/settings";
+/**
+ * Commerce-6 Phase E-2 — 고시 경로가 아닌데도 Settings 에서만 채워지는 필드.
+ *
+ * 🔴 `afterServiceTelephoneNumber` 는 `detailAttribute.` 로 시작해서 위 두 규칙에
+ * 어느 쪽도 걸리지 않았다. 그런데 validate-payload.ts 의 사유는 「Settings 의
+ * 판매자 정보 탭에서 … 입력하면 해결됩니다」다 — 화면은 그 사실을 알면서 셀러를
+ * 아무 데도 보내지 않고 있었다. 새 판정이 아니라 «빠진 한 줄» 이다.
+ */
+const NAVER_SETTINGS_FIELD_EXACT = new Set(["detailAttribute.afterServiceInfo.afterServiceTelephoneNumber"]);
+
+/**
+ * Commerce-6 Phase E-2 — 「이 필드는 Settings 에서 해결되는가」를 «한 곳에서만»
+ * 판정한다.
+ *
+ * 🔴 새 축도 새 목록도 아니다. 이 파일이 이미 갖고 있던 세 가지 근거
+ * (`NAVER_SETTINGS_FIELD_PREFIXES` · `NAVER_NOTICE_FIELD_EXTERNAL_HREF` · 위 exact)를
+ * 한 함수로 모은 것뿐이다. `externalHref` 와 `sourceStatus` 가 같은 답을 쓰게 해서
+ * 「설정으로 보내면서 동시에 직접 입력하라고 말하는」 모순을 없앤다.
+ */
+function isNaverSettingsResolvedField(field: string): boolean {
+  if (NAVER_SETTINGS_FIELD_PREFIXES.some((p) => field.startsWith(p))) return true;
+  if (NAVER_SETTINGS_FIELD_EXACT.has(field)) return true;
   if (field.startsWith("productInfoProvidedNotice")) {
     const suffix = field.split(".").pop() ?? field;
-    return NAVER_NOTICE_FIELD_EXTERNAL_HREF[suffix];
+    return NAVER_NOTICE_FIELD_EXTERNAL_HREF[suffix] !== undefined;
   }
-  return undefined;
+  return false;
+}
+
+function naverFieldExternalHref(field: string): string | undefined {
+  return isNaverSettingsResolvedField(field) ? "/settings" : undefined;
 }
 
 /** N-4.08 STEP6-9(CPO 지시: "사용처가 테스트밖에 없는 코드는 제거") — 이전에

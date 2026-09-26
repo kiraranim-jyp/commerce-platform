@@ -48,6 +48,25 @@ export interface LotteOnSellerSettings {
   saturdayCloseTime: string | null;
 }
 
+/**
+ * Commerce-6 Phase E-1 — 「조회 실패」와 「설정 없음」을 가른다.
+ *
+ * 🔴 새 패턴이 아니다. `lib/seller-settings.ts` 의 `ResolvedSellerSettings` 와
+ * «같은 모양» 이다(PIVOT-03 R6-FS). 그 파일의 주석이 이유를 이미 적어 두었다 —
+ * 「셋째 줄에서 호출부는 멈춰야 하고, 둘째 줄에서는 멈추면 안 된다」.
+ *
+ * 지금까지 이 파일은 세 경우(연결 없음 · 조회 실패 · 값 없음)를 «한 값» 으로
+ * 돌려줬고, 그래서 화면은 장애를 「설정 없음」이라고 말했다. 셀러는 설정을 고치러
+ * 가지만 고칠 것이 없다.
+ */
+export type LotteOnSellerSettingsSource = "SELLER_SETTINGS" | "NONE" | "ERROR";
+
+export interface ResolvedLotteOnSellerSettings extends LotteOnSellerSettings {
+  source: LotteOnSellerSettingsSource;
+  /** 🔴 「값이 비었다」가 아니라 「읽지 못했다」. 호출부는 이때 멈추거나 그 사실을 말해야 한다. */
+  failed: boolean;
+}
+
 export const EMPTY_LOTTEON_SELLER_SETTINGS: LotteOnSellerSettings = {
   outboundPlaceNo: null,
   outboundPlaceLabel: null,
@@ -134,21 +153,44 @@ export function resolveLotteOnSellerFixedValue(
   return { value: null, source: "NONE" };
 }
 
-export async function loadLotteOnSellerSettings(): Promise<LotteOnSellerSettings> {
+/** 행은 있는데 열 개가 전부 비었으면 「없음」이다 — 형제 함수의 `hasAnySellerSetting` 과 같은 판정. */
+function hasAnyLotteOnSellerSetting(values: LotteOnSellerSettings): boolean {
+  return Object.values(values).some((v) => typeof v === "string" && v.trim().length > 0);
+}
+
+/**
+ * Commerce-6 Phase E-1 — 세 갈래를 «가려서» 돌려준다.
+ *
+ *     연결 없음 · 조회 실패   → source ERROR · failed true    (호출부가 말해야 한다)
+ *     정상인데 값이 없음      → source NONE  · failed false   (셀러가 아직 안 정한 것)
+ *     값이 있음              → source SELLER_SETTINGS
+ *
+ * 🔴 값 자체는 예전과 «한 글자도» 달라지지 않는다. 실패해도 빈 값을 돌려주므로
+ * 등록 경로(build-context 의 사다리)는 그대로 동작하고, 빈 값은 검증기가 평소대로
+ * SELLER_PLACE_REQUIRED 로 잡는다. 늘어난 것은 「왜 비었는가」 두 칸뿐이다.
+ */
+export async function loadLotteOnSellerSettings(): Promise<ResolvedLotteOnSellerSettings> {
   const supabase = getSupabaseAdmin();
-  if (!supabase) return EMPTY_LOTTEON_SELLER_SETTINGS;
+  if (!supabase) {
+    console.warn("[lotteon-seller-settings] 저장소에 연결하지 못했습니다.");
+    return { ...EMPTY_LOTTEON_SELLER_SETTINGS, source: "ERROR", failed: true };
+  }
   const { data, error } = await supabase
     .from("lotteon_seller_settings")
     .select(COLUMNS)
     .eq("id", SINGLETON_ID)
     .maybeSingle();
-  // 🔴 조회 실패를 «설정 없음» 과 같은 얼굴로 돌려주지만, 조용히 넘기지는 않는다.
-  //    호출부(등록 미리보기)를 막지 않되 원인은 서버 로그에 남는다.
   if (error) {
     console.warn("[lotteon-seller-settings] 조회 실패:", error.message);
-    return EMPTY_LOTTEON_SELLER_SETTINGS;
+    return { ...EMPTY_LOTTEON_SELLER_SETTINGS, source: "ERROR", failed: true };
   }
-  return data ? fromRow(data as unknown as Row) : EMPTY_LOTTEON_SELLER_SETTINGS;
+  const values = data ? fromRow(data as unknown as Row) : EMPTY_LOTTEON_SELLER_SETTINGS;
+  /* 「정상적으로 조회했는데 값이 없다」 — 행이 없거나, 행은 있는데 다 비었거나.
+     🔴 이건 fail-open 이 아니다. 조회는 «성공했고» 값이 실제로 없는 것이다. */
+  if (!hasAnyLotteOnSellerSetting(values)) {
+    return { ...EMPTY_LOTTEON_SELLER_SETTINGS, source: "NONE", failed: false };
+  }
+  return { ...values, source: "SELLER_SETTINGS", failed: false };
 }
 
 export async function saveLotteOnSellerSettings(

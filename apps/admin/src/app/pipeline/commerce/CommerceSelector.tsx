@@ -302,7 +302,12 @@ export function CommerceSelector({
                           className={`shrink-0 rounded px-1 py-px text-[10px] ${
                             item.kind === "INPUT"
                               ? "bg-warning-soft text-warning"
-                              : "bg-surface-hover text-text-tertiary"
+                              : /* Commerce-6 Phase E-3 — 「판매자센터 등록 필요」는 우리 화면에서
+                                   고칠 수 «없는» 항목이라 「확인 필요」와 같은 회색으로 두지
+                                   않는다. 셀러가 가야 할 곳이 아예 다르다. */
+                                item.kind === "SELLER_CENTER"
+                                ? "bg-primary-soft text-primary"
+                                : "bg-surface-hover text-text-tertiary"
                           }`}
                         >
                           {missingKindLabel(item.kind)}

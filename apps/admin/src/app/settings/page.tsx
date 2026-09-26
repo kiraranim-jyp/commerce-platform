@@ -1555,7 +1555,15 @@ function ShippingSection({
               />
             </Field>
 
-            <Field label="배송방법" hint="현재 따져는 해외구매대행으로만 등록합니다">
+            {/* Commerce-6 Phase E-6 — 🔴 이 칸의 값은 어느 커머스 payload 에도 «가지
+                않는다»(실측: 소비처 0). 세 커머스가 각자 고정값을 쓴다 — 쿠팡
+                AGENT_BUY · 네이버 DELIVERY/NORMAL · 롯데ON LO_ENTP. 값을 지우지도
+                옮기지도 않되, 셀러에게 «전송된다» 고 믿게 두지 않는다.
+                🔴 AGENT_BUY 와 DMST 가 같은 축인지 확정되지 않아 의미 통합은 하지 않는다. */}
+            <Field
+              label="배송방법"
+              hint="현재 따져는 해외구매대행으로만 등록합니다 — 이 칸은 기록용이며, 등록 시에는 커머스별 고정값이 전송됩니다"
+            >
               <input
                 type="text"
                 value={deliveryMethod}
@@ -1718,7 +1726,20 @@ function SellerInfoSection({
         <span className="font-medium text-primary">SmartStore·Coupang 등록 모두</span>에 자동으로 적용됩니다.
       </p>
       <div className="mt-3 space-y-3 text-sm">
-        <Field label="제조자(수입자)" hint="Sprint A-7 실측 1위 블로커 — 여기 입력하면 상품마다 자동 채워집니다">
+        {/* Commerce-6 Phase E-7 — 🔴 예전 문구는 「여기 입력하면 상품마다 자동
+            채워집니다」였는데 사실이 아니다. PIVOT NEXT-04c-2 이후 세 커머스의
+            제조사 사다리(상품 원문 → 브랜드 프로필 → 브랜드명)에서 이 값이 빠졌다 —
+            「판매자라는 이유만으로 제조자가 되지 않는다」. 실제로 이 칸이 받는 것은
+            placeholder 그대로 «판매 사업자명» 이다.
+            🔴 컬럼도 값도 지우지 않는다(LEGACY 판정만 났다). 문구만 사실에 맞춘다. */}
+        {/* 🔴 라벨은 «바꾸지 않는다». 「제조자(수입자)」는 settings-status.ts 의 권장
+            목록 라벨과 같은 글자이고 계약 테스트가 그것을 고정하고 있다
+            (pivot03-settings-status-seller-source.test.ts:38). 이름을 고치는 것은
+            문구 수정이 아니라 두 화면의 계약 변경이라 이번 범위가 아니다. */}
+        <Field
+          label="제조자(수입자)"
+          hint="판매 사업자 정보 기록용입니다 — 상품의 제조사 자동 입력에는 쓰이지 않습니다(제조사는 상품 원문 → 브랜드 관리 순으로 채워집니다)"
+        >
           <input
             type="text"
             value={manufacturer}

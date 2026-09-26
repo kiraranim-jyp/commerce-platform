@@ -85,6 +85,7 @@ import { ListingConfirmationModal, type ListingProgressStep } from "./commerce/L
 import { LotteOnRegistrationPanel } from "./commerce/LotteOnRegistrationPanel";
 import {
   buildLotteOnMissingInfo,
+  lotteOnFixLocationToMissingKind,
   computeLotteOnRegistrationReadiness,
   fromLotteOnChannelInfo,
   resolveCommonCategorySources,
@@ -500,6 +501,15 @@ export function CommerceWorkspace({
           key: `lotteon:${item.key}`,
           label: item.label,
           sectionId: item.where === "COMMON_PRODUCT" ? undefined : item.sectionId,
+          /* ══ Commerce-6 Phase E-3 ══
+             🔴 `where` 를 여기서 «버리고» 있었다. 롯데ON 은 「어디서 고치는가」를
+             네 갈래로 이미 알고 있는데(LotteOnFixLocation), 상위 목록으로 올라오는
+             순간 그 정보가 사라져 롯데ON 만 배지가 «아예» 안 나왔다.
+
+             🔴 새 판정을 만들지 않는다 — 서버가 준 `where` 를 기존 축(MissingKind)
+             한 칸에 옮겨 적을 뿐이다. */
+          kind: lotteOnFixLocationToMissingKind(item.where),
+          externalHref: item.where === "SETTINGS" ? "/settings" : undefined,
         })),
       );
     } catch {
