@@ -428,14 +428,44 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
   });
 
   // N-4.18-Q3 — "가격 유지/조정" 판단(sellerAction)과 별개로 "이 상품을 등록해도
-  // 되는가"를 판단한다. domesticSummary.sellerCount>0이면 실제로 동일상품을
-  // 찾아 가격까지 확인한 것이다(못 찾았으면 0 — summarizeDomesticMarket이
-  // 이미 그렇게 집계한다, 새 상태를 지어내지 않는다).
+  // 되는가"를 판단한다.
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴 MI-7 / P0-2(CPO 결정, 2026-09-26) — **가격판정 입력은 EXACT 뿐이다.**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * ── 무엇이 문제였나 ─────────────────────────────────────────────────────
+   * 여기 있던 것은 `domesticSummary`(= `domesticMarketSplit.resolved`) 였다.
+   * `resolved` 는 EXACT 가 없으면 **COMPARISON 으로 폴백** 하므로, 동일상품이
+   * 확정되지 않은 상품에서 «비교상품 평균가» 가 GREEN/RED 를 만들고 있었다.
+   * 그 등급은 `representativeVerdict` 의 기저 판정이 되고, 음수 마진이면
+   * 최종 🔴 「판매 비추천」까지 갔다 — 검증되지 않은 «다른 상품» 의 가격으로.
+   *
+   * 바로 옆 두 소비자는 이미 EXACT 만 쓴다:
+   *   computePriceDecision       `domesticBasis !== "EXACT"` → 가격을 null 로 (P0-D.2)
+   *   computePriceRecommendation `domesticBasis !== "EXACT"` → CASE D (P-26)
+   * 🔴 즉 이 한 곳만 정책 밖에 있었다. P0-D.3 이 대시보드(compute-readiness)에만
+   *    같은 수정을 넣었고, 이 파일은 그대로였다.
+   *
+   * ── 🔴 `resolved` 를 없애지 «않는다» ───────────────────────────────────
+   * 화면은 계속 `resolved` 를 본다(`domesticCompetition` · sellerAction ·
+   * headline · marketContext). 비교상품 가격을 «지우지» 않는다는 CEO 결정 그대로다.
+   * 바뀐 것은 **판정 입력과 표시 입력을 가른 것** 하나다:
+   *
+   *     표시  resolved   (EXACT 없으면 COMPARISON — 참고자료로 남는다)
+   *     판정  exact      (없으면 「확인 필요」 — 가격으로 단정하지 않는다)
+   *
+   * ── 🔴 `domesticMatched` 는 여기서 바꾸지 않는다 ────────────────────────
+   * 아래 `deriveRepresentativeSellerVerdict` 에 넘기는 `domesticMatched` /
+   * `domesticSellerCount` 는 `domesticReason()` «문장» 에만 쓰인다(코드 분기에
+   * 쓰이지 않는다 — representative-seller-decision.ts 전수 확인). 즉 표시 축이다.
+   * `exact` 로 바꾸면 「비교상품 N곳 시장가격 기준」이라는 사실이 문장에서 사라진다.
+   */
   const sellability = computeSellability({
     costPriceKrw,
     domestic: {
-      matched: domesticSummary.sellerCount > 0,
-      averagePriceKrw: domesticSummary.averagePriceKrw,
+      matched: domesticMarketSplit.exact.sellerCount > 0,
+      averagePriceKrw: domesticMarketSplit.exact.averagePriceKrw,
     },
   });
 
