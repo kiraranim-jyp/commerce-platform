@@ -627,9 +627,17 @@ export async function POST(request: Request) {
      P0-CHANNEL-03 F-8 — 「만들 것인가 · 다시 만들 것인가」.
 
      🔴 쿠팡에는 «고치기» 가 없다. SmartStore 와 다른 점이 그것이고, 그것은
-     구현을 덜 한 것이 아니라 근거가 없는 것이다(channel-lifecycle.ts):
-         update         UNKNOWN        수정 엔드포인트 근거 «없음» → BLOCKED
+     구현을 덜 한 것이 아니라 확인되지 않은 것이다(channel-lifecycle.ts):
+         update         UNKNOWN        문서 근거는 «있고» 실측 대기 → BLOCKED
          categoryUpdate NOT_SUPPORTED  공식 가이드가 「불가」로 «명시» → RECREATE
+
+     🔴 Commerce-3(2026-09-26) — 이 줄이 「수정 엔드포인트 근거 «없음»」이라고
+        적혀 있었다. STEP 6 조사(2026-09-26)가 PUT .../seller-products 와
+        vendorItemId 별 가격/수량 PUT 을 문서로 확보하면서 capability 표는 그 이유를
+        «문서 근거 확보 · 실측 대기» 로 바꿨는데, 이 주석만 옛 이유를 계속 말하고
+        있었다. 같은 사실에 목소리가 둘이면 다음 사람이 여기를 읽고 이미 끝난
+        조사를 다시 한다. 값(UNKNOWN)은 그대로다 — 문서가 늘었다고 올리지 않는다.
+        전문: docs/p0-channel-03-step6-coupang-update-survey.md
      그래서 UPDATE 경로를 «만들지 않았다». 없는 것을 만들어 두면 다음 사람이
      「있으니까 쓸 수 있다」고 읽는다.
 

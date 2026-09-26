@@ -40,7 +40,10 @@ describe("§7-② ChannelProduct 존재 — capability 가 정한다", () => {
     expect(resolveLifecycle("smartstore", true, PRICE).operation).toBe("UPDATE");
   });
 
-  it("🔴 Coupang: 일반 변경 → BLOCKED (수정 근거 «없음» — 추측 구현 안 함)", () => {
+  /* 🔴 Commerce-3 — 이름이 「수정 근거 «없음»」이었다. STEP 6 조사로 문서 근거는
+     확보됐고 지금 없는 것은 «실측» 이다(capability 표의 이유와 같은 말로 맞춘다).
+     값은 그대로 UNKNOWN 이므로 단정은 여전히 BLOCKED 다. */
+  it("🔴 Coupang: 일반 변경 → BLOCKED (문서 근거는 있고 실측 대기 — 추측 구현 안 함)", () => {
     expect(resolveLifecycle("coupang", true, PRICE).operation).toBe("BLOCKED");
   });
 
