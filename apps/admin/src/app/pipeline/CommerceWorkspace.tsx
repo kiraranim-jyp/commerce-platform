@@ -108,11 +108,12 @@ import { UpdateConfirmPanel } from "./commerce/UpdateConfirmPanel";
 import { ChannelEditPanel } from "./commerce/ChannelEditPanel";
 import { ChannelEditLoaderCard, ChannelEditSummary } from "./commerce/ChannelEditSummary";
 import {
+  blindTouchSignals,
   channelEditDraft,
-  editedFieldsSinceLoad,
-  localTouchSignals,
   type ChannelEditModel,
 } from "./commerce/channel-edit-model";
+/* 🔴 Sprint A — 채널 API 모양은 어댑터에서 끝난다. 이 화면은 «중립 통화» 만 본다. */
+import { smartStoreEditAdapter } from "./commerce/edit-adapters/smartstore";
 import { LegacyLinkPanel } from "./commerce/LegacyLinkPanel";
 import {
   COMMERCE_ORDER,
@@ -2593,11 +2594,13 @@ export function CommerceWorkspace({
        Master 값이 전부 들어 있어(재고 999 · 상세설명 1835자), 채널 값과 대조하면
        그것이 몽땅 「변경사항」이 됐다 — 상품명 하나 고친 셀러에게 3건이 떴다.
     ══════════════════════════════════════════════════════════════════════ */
-    const edited = editedFieldsSinceLoad(channelEdit.basePayload, current);
+    /* 🔴 「무엇을 고쳤는가」는 어댑터가 자기 payload 를 보고 답한다. Core 는
+       그 목록으로 초안을 만들고, 대조 불가 축만 「손댔다」 신호로 추린다. */
+    const edited = smartStoreEditAdapter.editedFields(channelEdit.basePayload, current);
     return {
       edited,
-      draft: channelEditDraft(channelEdit.model, current, edited),
-      touched: localTouchSignals(channelEdit.basePayload, current),
+      draft: channelEditDraft(channelEdit.model, smartStoreEditAdapter.projectOutgoing(current), edited),
+      touched: blindTouchSignals(edited),
     };
   }, [channelEdit, smartStorePayload]);
   // N-3.72(CEO/사용자 지시: "0%는 값이 없어서가 아니라 검증이 아직 안 끝나서인

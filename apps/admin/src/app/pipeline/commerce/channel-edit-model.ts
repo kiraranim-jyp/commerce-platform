@@ -1,4 +1,4 @@
-import type { NaverProductRegistrationPayload, RegisteredProductSnapshot } from "@commerce/listing";
+import { CONTENT_BLIND_FIELDS, type ChannelFieldValues } from "./commerce-edit-adapter";
 import {
   FIELD_LABEL,
   FIELD_ORDER,
@@ -105,7 +105,7 @@ function unread(what: string): EditBaseline {
  */
 export function buildChannelEditModel(
   source: ChannelEditSource,
-  snapshot: RegisteredProductSnapshot,
+  values: ChannelFieldValues,
 ): { ok: true; model: ChannelEditModel } | { ok: false; message: string } {
   /* 🔴 상품번호 없이 편집 화면을 열지 않는다. 「무엇을 고치는지」를 모르는
      화면은 아무것도 고치지 못하는 화면보다 위험하다(F-12b). */
@@ -121,9 +121,11 @@ export function buildChannelEditModel(
 
   /* 개수 축. 🔴 읽지 못한 개수를 0 으로 적지 않는다 — 있던 것이 사라진다고
      읽히고, 아무것도 안 고친 셀러에게 「이미지가 없어집니다」가 된다. */
-  const count = (value: number | undefined, what: string, plus: number, blind: string): EditBaseline =>
+  /* 🔴 개수를 «합치는 셈» 은 어댑터가 한다(채널마다 세는 법이 다르다). Core 는
+     받은 수를 그대로 쓴다 — 여기서 한 번 더 더하면 두 곳이 갈라진다. */
+  const count = (value: number | undefined, what: string, blind: string): EditBaseline =>
     typeof value === "number"
-      ? { state: "PARTIAL", value: String(value + plus), unit: "COUNT", blind }
+      ? { state: "PARTIAL", value: String(value), unit: "COUNT", blind }
       : unread(what);
 
   return {
@@ -131,133 +133,74 @@ export function buildChannelEditModel(
     model: {
       source,
       baseline: {
-        name: text(snapshot.name, "상품명"),
-        salePrice: number(snapshot.salePrice, "판매가격"),
-        stockQuantity: number(snapshot.stockQuantity, "재고"),
-        detailContent: text(snapshot.detailContent, "상세설명"),
+        name: text(values.name, "상품명"),
+        salePrice: number(values.salePrice, "판매가격"),
+        stockQuantity: number(values.stockQuantity, "재고"),
+        detailContent: text(values.detailContent, "상세설명"),
         /* 🔴 대표이미지는 «반영은 되고 감지는 안 되는» 축이다(F-13 §표).
            등록할 때마다 네이버에 재업로드돼 URL 이 항상 새 것이라, URL 로
            대조하면 아무것도 안 고쳐도 매번 「바뀜」이 된다. 그래서 개수만
            보고, 개수로는 보이지 않는 것을 `blind` 에 적어 둔다. */
         images: count(
-          snapshot.optionalImageCount,
+          values.imageCount,
           "이미지",
-          snapshot.representativeImageUrl ? 1 : 0,
           "이미지를 «같은 장수로» 교체하면 화면이 미리 알려드리지 못합니다. 바꾸신 내용은 그대로 반영됩니다.",
         ),
         options: count(
-          snapshot.optionCombinationCount,
+          values.optionCount,
           "옵션",
-          0,
           "옵션 «내용» 만 바꾸면 화면이 미리 알려드리지 못합니다. 바꾸신 내용은 그대로 반영됩니다.",
         ),
         providedNotice:
-          typeof snapshot.hasProvidedNotice === "boolean"
+          typeof values.hasProvidedNotice === "boolean"
             ? {
                 state: "PARTIAL",
-                value: snapshot.hasProvidedNotice ? PRESENT : ABSENT,
+                value: values.hasProvidedNotice ? PRESENT : ABSENT,
                 unit: "PRESENCE",
                 blind: "고시 «항목의 값» 만 바꾸면 화면이 미리 알려드리지 못합니다. 바꾸신 내용은 그대로 반영됩니다.",
               }
             : unread("상품정보제공고시"),
-        category: text(snapshot.leafCategoryId, "카테고리"),
+        category: text(values.categoryId, "카테고리"),
       },
     },
   };
 }
 
 /**
- * 보낼 payload 를 편집 화면의 초안으로 «투영» 한다.
+ * 셀러가 고친 항목 중 «대조로는 잡히지 않는» 것만 추린다.
  *
- * 🔴 초안의 출처는 `product`·`listing` 이 아니라 «보낼 payload» 다(CEO 확정,
- * 2026-09-26). 상품명은 빌더 안에서 파생 규칙을 거치는데(`smartStoreProductName`),
- * 원본 title 로 대조하면 화면은 「A → B」라고 말하고 실제로는 `B'` 가 나간다.
- * 화면과 전송이 갈리고, 그 갈림은 화면에 보이지 않는다.
+ * 🔴 어느 축이 그런가는 채널을 가리지 않는 «공통 정책» 이다
+ * (`CONTENT_BLIND_FIELDS` — 이미지·옵션·고시). 어느 항목을 고쳤는지는 채널
+ * 어댑터가 자기 payload 를 비교해 알려 주고(`adapter.editedFields`), 그중
+ * 대조 불가 축만 「손댔다」 신호가 된다.
  *
- * 🔴 이 함수가 `buildChannelEditModel` 과 «같은 파일에» 있는 이유: 두 곳이
- * 만드는 값은 단위가 같아야 한다(개수는 개수로, 존재는 같은 두 글자로).
- * 떨어져 있으면 한쪽만 고쳐져 아무것도 안 고쳐도 「바뀜」이 된다.
+ * 🔴 대조 «가능한» 축을 여기 섞지 않는다. 그러면 고쳤다가 되돌려도 버튼이
+ * 열린 채로 남는다 — 되돌리면 닫혀야 한다.
  */
-export function channelEditDraftFromNaverPayload(
-  payload: NaverProductRegistrationPayload,
-): Partial<Record<EditableField, unknown>> {
-  const origin = payload.originProduct;
-  const images = origin?.images;
+export function blindTouchSignals(edited: readonly EditableField[]): EditableField[] {
+  return edited.filter((field) => CONTENT_BLIND_FIELDS.includes(field));
+}
+
+/**
+ * 중립 통화 → 「대조 가능한 초안」.
+ *
+ * 🔴 `buildChannelEditModel` 과 «같은 단위» 로 옮긴다(개수는 개수, 존재는 같은 두
+ * 글자). 한쪽만 고쳐지면 아무것도 안 고쳐도 「바뀜」이 되므로 두 함수는 같은
+ * 파일에 붙어 있어야 한다.
+ */
+function fieldValuesToDraft(values: ChannelFieldValues): Partial<Record<EditableField, unknown>> {
   return {
-    name: origin?.name,
-    salePrice: origin?.salePrice,
-    stockQuantity: origin?.stockQuantity,
-    detailContent: origin?.detailContent,
-    /* 🔴 기준값과 «같은 셈» 이다 — 추가 이미지 + 대표 이미지 한 장. */
-    images: (images?.optionalImages?.length ?? 0) + (images?.representativeImage ? 1 : 0),
-    options: origin?.detailAttribute?.optionInfo?.optionCombinations?.length ?? 0,
-    /* 존재 축 — 값이 아니라 «있는지» 가 초안이다. toComparable 이 두 글자로 바꾼다. */
-    providedNotice: origin?.detailAttribute?.productInfoProvidedNotice,
-    category: origin?.leafCategoryId,
+    name: values.name ?? undefined,
+    salePrice: values.salePrice ?? undefined,
+    stockQuantity: values.stockQuantity ?? undefined,
+    detailContent: values.detailContent ?? undefined,
+    images: values.imageCount,
+    options: values.optionCount,
+    /* 존재 축 — `toComparable` 이 두 글자로 바꾼다. 🔴 `undefined`(모른다)와
+       `false`(없다)를 구분해 넘긴다. */
+    providedNotice: values.hasProvidedNotice === undefined ? undefined : values.hasProvidedNotice || null,
+    category: values.categoryId ?? undefined,
   };
-}
-
-/**
- * 채널과 대조할 수 «없는» 축에서, 셀러가 이번에 «고쳤는지» 만 본다.
- *
- * 🔴 이것은 「채널 값과 다르다」가 아니다. 「우리 화면에서 달라졌다」다 —
- * 두 payload 가 «둘 다 우리 것» 이라 할 수 있는 말이고, 그래서 채널에 대한
- * 주장을 하지 않는다. 대표이미지를 같은 장수로 교체한 셀러는 개수로는 잡히지
- * 않고 이 신호로만 잡힌다(F-13 §표 「반영 ○ · 감지 ✗」).
- *
- * 🔴 여기서 JSON 비교를 쓰는 것이 `registered-change.ts` 가 금지한 것과
- * «다른» 이유: 그쪽은 서버가 정규화한 값과 우리 값을 비교해서 키 순서 하나로
- * 거짓 CHANGED 가 났다. 여기는 «같은 빌더가 같은 세션에서» 만든 두 payload 라
- * 정규화도 서버 개입도 없다. 그 조건이 깨지면 이 비교도 쓸 수 없다.
- *
- * @param before 수정 화면을 열 때의 payload  @param after 지금의 payload
- */
-export function localTouchSignals(
-  before: NaverProductRegistrationPayload,
-  after: NaverProductRegistrationPayload,
-): EditableField[] {
-  /* 🔴 대조할 수 없는 세 축만 추린다. 나머지는 채널 값과 대조해서 알 수 있고,
-     그 축까지 여기서 세면 「고쳤다」와 「원래 달랐다」가 섞인다. */
-  const blind: EditableField[] = ["images", "options", "providedNotice"];
-  return editedFieldsSinceLoad(before, after).filter((field) => blind.includes(field));
-}
-
-/** 한 축을 우리 payload 에서 꺼낸다. 🔴 `editedFieldsSinceLoad` 하나만 쓴다. */
-const PAYLOAD_AXIS: Record<EditableField, (p: NaverProductRegistrationPayload) => unknown> = {
-  name: (p) => p.originProduct?.name,
-  salePrice: (p) => p.originProduct?.salePrice,
-  stockQuantity: (p) => p.originProduct?.stockQuantity,
-  detailContent: (p) => p.originProduct?.detailContent,
-  images: (p) => p.originProduct?.images,
-  options: (p) => p.originProduct?.detailAttribute?.optionInfo,
-  providedNotice: (p) => p.originProduct?.detailAttribute?.productInfoProvidedNotice,
-  category: (p) => p.originProduct?.leafCategoryId,
-};
-
-/**
- * ════════════════════════════════════════════════════════════════════════════
- * P0-CHANNEL-03 F-14-7 — **셀러가 «이번에» 고친 항목.**
- * ════════════════════════════════════════════════════════════════════════════
- *
- * 🔴 「채널 값과 다르다」가 아니라 「수정 화면을 연 뒤 우리 화면에서 달라졌다」다.
- * 이 둘은 «전혀» 다른 질문이고, 섞은 것이 Production 사고의 원인이었다:
- *
- *   우리 Master 의 재고는 999, 채널의 재고는 7 이다. 셀러가 재고를 건드린 적이
- *   없어도 두 값은 다르다. 그것을 「고쳤다」로 읽으면 상품명 하나 고친 셀러에게
- *   「재고 7 → 999」가 같이 나간다.
- *
- * 그래서 비교 대상은 «둘 다 우리 payload» 다 — 수정 화면을 열 때의 것과 지금 것.
- * 같은 빌더가 같은 세션에서 만든 값이라 서버 정규화도 키 순서 문제도 없다
- * (`registered-change.ts` 가 JSON 비교를 금지한 조건과 다른 이유가 그것이다).
- */
-export function editedFieldsSinceLoad(
-  before: NaverProductRegistrationPayload,
-  after: NaverProductRegistrationPayload,
-): EditableField[] {
-  return FIELD_ORDER.filter((field) => {
-    const read = PAYLOAD_AXIS[field];
-    return JSON.stringify(read(before) ?? null) !== JSON.stringify(read(after) ?? null);
-  });
 }
 
 /**
@@ -275,10 +218,11 @@ export function editedFieldsSinceLoad(
  */
 export function channelEditDraft(
   model: ChannelEditModel,
-  current: NaverProductRegistrationPayload,
+  /** 🔴 «보낼 것» 을 어댑터가 중립 통화로 번역한 값. Core 는 채널 payload 를 모른다. */
+  outgoing: ChannelFieldValues,
   edited: readonly EditableField[],
 ): Partial<Record<EditableField, unknown>> {
-  const projected = channelEditDraftFromNaverPayload(current);
+  const projected = fieldValuesToDraft(outgoing);
   const draft: Partial<Record<EditableField, unknown>> = {};
   for (const field of FIELD_ORDER) {
     if (edited.includes(field)) {

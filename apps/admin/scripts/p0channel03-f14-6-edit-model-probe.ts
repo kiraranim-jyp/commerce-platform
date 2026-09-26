@@ -1,11 +1,11 @@
 import { toRegisteredProductSnapshot } from "../src/app/api/smartstore/_lib/update-product";
 import {
   buildChannelEditModel,
-  channelEditDraftFromNaverPayload,
   describeChange,
   editorFieldSchema,
   evaluateEditGate,
 } from "../src/app/pipeline/commerce/channel-edit-model";
+import { smartStoreEditAdapter } from "../src/app/pipeline/commerce/edit-adapters/smartstore";
 import type { NaverProductRegistrationPayload } from "@commerce/listing";
 
 /**
@@ -81,7 +81,7 @@ async function probeEditModel() {
   }
   const built = buildChannelEditModel(
     { kind: "CHANNEL_GET", commerceId: "smartstore", externalProductId: originProductNo },
-    mapped.snapshot,
+    smartStoreEditAdapter.readRegistered(mapped.snapshot),
   );
   if (!built.ok) {
     console.error(`🔴 ${built.message}`);
@@ -173,7 +173,7 @@ async function probeEditModel() {
       },
     },
   } as unknown as NaverProductRegistrationPayload;
-  const gate = evaluateEditGate(model, channelEditDraftFromNaverPayload(echo));
+  const gate = evaluateEditGate(model, smartStoreEditAdapter.projectOutgoing(echo));
   if (gate.canSubmit) {
     console.log(`  🔴 열려 있다 — 거짓 변경 ${gate.changes.length}건:`);
     for (const change of gate.changes) {

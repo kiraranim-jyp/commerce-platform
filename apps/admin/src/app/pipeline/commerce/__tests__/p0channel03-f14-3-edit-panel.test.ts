@@ -132,8 +132,10 @@ describe("⑤ 🔴 화면에 «붙어 있다» — 그리고 SmartStore 에만",
   it("🔴 초안은 «지금 등록된 값 + 고친 것» 이다(F-14-7)", () => {
     /* 예전에는 payload 를 그대로 초안으로 썼고, 그래서 셀러가 건드린 적 없는
        Master 값(재고 999 · 상세설명 1835자)이 전부 「변경사항」으로 떴다. */
-    expect(WORKSPACE).toContain("editedFieldsSinceLoad(channelEdit.basePayload, current)");
-    expect(WORKSPACE).toContain("channelEditDraft(channelEdit.model, current, edited)");
+    /* 🔴 Sprint A — 「무엇을 고쳤는가」는 «어댑터» 가 답한다(채널 payload 를 아는
+       것은 어댑터뿐이다). Core 는 그 목록으로 초안을 만든다. */
+    expect(WORKSPACE).toContain("smartStoreEditAdapter.editedFields(channelEdit.basePayload, current)");
+    expect(WORKSPACE).toContain("channelEditDraft(channelEdit.model, smartStoreEditAdapter.projectOutgoing(current), edited)");
     /* 검증에 쓴 «그» payload 를 들고 있는다 — 다시 만들면 두 벌이 된다. */
     expect(WORKSPACE).toContain("setSmartStorePayload(payload);");
   });
@@ -144,7 +146,9 @@ describe("⑤ 🔴 화면에 «붙어 있다» — 그리고 SmartStore 에만",
   });
 
   it("대조 못 하는 축은 «불러온 순간의» payload 와 비교한다", () => {
-    expect(WORKSPACE).toContain("localTouchSignals(");
+    /* 🔴 어느 축이 「대조 불가」인가는 채널을 가리지 않는 공통 정책이다
+       (CONTENT_BLIND_FIELDS) — 어댑터가 아니라 Core 가 안다. */
+    expect(WORKSPACE).toContain("blindTouchSignals(edited)");
     expect(WORKSPACE).toContain("channelEdit.basePayload");
   });
 

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireRegistrationAccess } from "@/lib/auth/require-registration-access";
 import { buildChannelEditModel } from "@/app/pipeline/commerce/channel-edit-model";
+import { smartStoreEditAdapter } from "@/app/pipeline/commerce/edit-adapters/smartstore";
 import { findChannelProductBySnapshot } from "../../_lib/channel-product";
 import { getNaverCredentials } from "../../naver/_lib/env";
 import { issueNaverAccessToken } from "../../naver/_lib/client";
@@ -87,9 +88,11 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  /* 🔴 Sprint A — 채널 응답을 «중립 통화» 로 번역해 넘긴다. Core(ChannelEditModel)
+     는 네이버 모양을 모르고, 그래서 쿠팡이 붙을 때 Core 를 고칠 일이 없다. */
   const built = buildChannelEditModel(
     { kind: "CHANNEL_GET", commerceId: "smartstore", externalProductId: link.externalProductId },
-    fetched.snapshot,
+    smartStoreEditAdapter.readRegistered(fetched.snapshot),
   );
   if (!built.ok) {
     return NextResponse.json({

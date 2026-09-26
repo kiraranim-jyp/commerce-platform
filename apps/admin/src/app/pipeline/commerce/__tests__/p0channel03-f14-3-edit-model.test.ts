@@ -3,16 +3,15 @@ import type { NaverProductRegistrationPayload, RegisteredProductSnapshot } from 
 import { FIELD_ORDER } from "../channel-field-capability";
 import {
   buildChannelEditModel,
+  blindTouchSignals,
   channelEditDraft,
-  channelEditDraftFromNaverPayload,
-  editedFieldsSinceLoad,
   editorFieldSchema,
   evaluateEditGate,
-  localTouchSignals,
   toComparable,
   type ChannelEditModel,
   type ChannelEditSource,
 } from "../channel-edit-model";
+import { smartStoreEditAdapter } from "../edit-adapters/smartstore";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -46,7 +45,7 @@ const READ_ALL: RegisteredProductSnapshot = {
 };
 
 function model(snapshot: RegisteredProductSnapshot = READ_ALL, source = SOURCE): ChannelEditModel {
-  const built = buildChannelEditModel(source, snapshot);
+  const built = buildChannelEditModel(source, smartStoreEditAdapter.readRegistered(snapshot));
   if (!built.ok) throw new Error(built.message);
   return built.model;
 }
@@ -221,7 +220,7 @@ describe("⑤ 🔴 초안은 «보낼 payload» 에서 온다 — 화면과 전�
     /* 이 테스트가 깨지면 기준값과 초안의 단위가 어긋난 것이다. 그 상태에서는
        셀러가 수정 화면을 열자마자 버튼이 열려 있고, 아무 이유 없이 상품 전체가
        다시 등록된다(네이버 수정은 전체 교체다). */
-    const gate = evaluateEditGate(model(), channelEditDraftFromNaverPayload(SAME_PAYLOAD));
+    const gate = evaluateEditGate(model(), smartStoreEditAdapter.projectOutgoing(SAME_PAYLOAD));
     expect(gate.changes).toEqual([]);
     expect(gate.canSubmit).toBe(false);
   });
@@ -229,27 +228,40 @@ describe("⑤ 🔴 초안은 «보낼 payload» 에서 온다 — 화면과 전�
   it("🔴 대표이미지 URL 이 달라도 「바뀜」이 아니다 — 매번 재업로드된다", () => {
     /* 위 payload 의 대표이미지 URL 은 기준값과 «다르다». 그래도 장수가 같으니
        변경으로 세지 않는다 — 이것이 F-13 표의 「감지 ✗」 축이다. */
-    const draft = channelEditDraftFromNaverPayload(SAME_PAYLOAD);
-    expect(draft.images).toBe(4);
-    expect(evaluateEditGate(model(), draft).changes).toEqual([]);
+    const values = smartStoreEditAdapter.projectOutgoing(SAME_PAYLOAD);
+    /* 🔴 중립 통화에서는 「장수」가 imageCount 다 — 채널 payload 경로가 아니다. */
+    expect(values.imageCount).toBe(4);
+    expect(evaluateEditGate(model(), channelEditDraft(model(), values, FIELD_ORDER)).changes).toEqual([]);
   });
 
   it("초안의 상품명은 payload 의 «보낼» 이름이다 — 원본 title 이 아니다", () => {
     const derived = { ...SAME_PAYLOAD, originProduct: { ...SAME_PAYLOAD.originProduct, name: "테스트 상품 (정품)" } } as NaverProductRegistrationPayload;
-    const gate = evaluateEditGate(model(), channelEditDraftFromNaverPayload(derived));
+    const gate = evaluateEditGate(
+      model(),
+      channelEditDraft(model(), smartStoreEditAdapter.projectOutgoing(derived), FIELD_ORDER),
+    );
     expect(gate.changes).toHaveLength(1);
     expect(gate.changes[0]).toMatchObject({ label: "상품명", to: "테스트 상품 (정품)" });
   });
 
   it("payload 가 비어 있으면 «거짓 변경» 을 만들지 않는다", () => {
     const empty = { originProduct: {} } as NaverProductRegistrationPayload;
-    const gate = evaluateEditGate(model(), channelEditDraftFromNaverPayload(empty));
-    /* 🔴 개수 축은 0 으로 떨어지므로 「이미지 4 → 0」은 «진짜» 변경이다 —
-       실제로 이미지 없는 payload 를 보내면 이미지가 없어진다.
-       값 축(상품명·가격)과 존재 축(고시)은 undefined 이므로 «사라졌다고 말하지
-       않는다» — 화면이 담지 않은 것이지 셀러가 비운 것이 아니다. 그 payload 가
-       실제로 나가려 하면 detectUpdateDataLoss 가 PUT 직전에 막는다(F-2). */
-    expect(gate.changes.map((c) => c.field).sort()).toEqual(["images", "options"]);
+    /* 🔴 중립 통화(ChannelFieldValues)를 초안 자리에 «그대로» 넣지 않는다. 두
+       모양은 키 몇 개를 공유해서 조용히 반쯤 통하고, 그러면 개수 축이 사라져
+       변경이 0건으로 보인다 — 실제로 이 테스트를 쓰다 한 번 걸렸다. */
+    const gate = evaluateEditGate(
+      model(),
+      channelEditDraft(model(), smartStoreEditAdapter.projectOutgoing(empty), FIELD_ORDER),
+    );
+    /* 🔴 개수·존재 축은 «진짜» 변경이다 — 이미지도 옵션도 고시도 없는 payload 를
+       보내면 그것들이 실제로 없어진다(전체 교체).
+
+       🔴 Sprint A 에서 이 기대값이 하나 늘었다(고시). 예전에는 「우리가 안 담았다」와
+       「없다고 담았다」를 구분하지 못해 고시를 건너뛰었는데, 보낼 payload 에서는
+       그 둘이 «같은 결과» 다 — 담지 않은 것은 지워진다. 어댑터가 그것을 false 로
+       번역하므로 이제 화면도 그렇게 말한다. 값 축(상품명·가격)은 여전히 조용하다:
+       그쪽은 담지 않으면 손실검사가 PUT 직전에 막는다(F-2). */
+    expect(gate.changes.map((c) => c.field).sort()).toEqual(["images", "options", "providedNotice"]);
   });
 });
 
@@ -274,7 +286,7 @@ describe("⑥ 🔴 대조 못 하는 축은 «우리 payload 끼리» 비교해 
   };
 
   it("아무것도 고치지 않았으면 신호가 없다", () => {
-    expect(localTouchSignals(base, edit(() => {}))).toEqual([]);
+    expect(blindTouchSignals(smartStoreEditAdapter.editedFields(base, edit(() => {})))).toEqual([]);
   });
 
   it("🔴 대표이미지를 «같은 장수로» 교체하면 잡힌다 — 개수로는 안 잡히는 축이다", () => {
@@ -282,9 +294,9 @@ describe("⑥ 🔴 대조 못 하는 축은 «우리 payload 끼리» 비교해 
       const origin = draft.originProduct as { images: { representativeImage: { url: string } } };
       origin.images.representativeImage.url = "https://x/NEW.jpg";
     });
-    expect(localTouchSignals(base, after)).toEqual(["images"]);
+    expect(blindTouchSignals(smartStoreEditAdapter.editedFields(base, after))).toEqual(["images"]);
     /* 그리고 그 신호가 버튼을 연다 — 장수(4장)가 그대로라 개수 대조로는 0개다. */
-    const gate = evaluateEditGate(model(), { images: 4 }, localTouchSignals(base, after));
+    const gate = evaluateEditGate(model(), { images: 4 }, blindTouchSignals(smartStoreEditAdapter.editedFields(base, after)));
     expect(gate.changes).toEqual([]);
     expect(gate.canSubmit).toBe(true);
   });
@@ -296,7 +308,7 @@ describe("⑥ 🔴 대조 못 하는 축은 «우리 payload 끼리» 비교해 
       };
       origin.detailAttribute.optionInfo.optionCombinations[0].optionName1 = "파랑";
     });
-    expect(localTouchSignals(base, after)).toEqual(["options"]);
+    expect(blindTouchSignals(smartStoreEditAdapter.editedFields(base, after))).toEqual(["options"]);
   });
 
   it("고시 «항목의 값» 만 바꿔도 잡힌다", () => {
@@ -306,14 +318,14 @@ describe("⑥ 🔴 대조 못 하는 축은 «우리 payload 끼리» 비교해 
       };
       origin.detailAttribute.productInfoProvidedNotice.wear.material = "폴리에스터";
     });
-    expect(localTouchSignals(base, after)).toEqual(["providedNotice"]);
+    expect(blindTouchSignals(smartStoreEditAdapter.editedFields(base, after))).toEqual(["providedNotice"]);
   });
 
   it("🔴 대조 «가능한» 축은 이 신호에 들어가지 않는다 — 되돌리면 닫혀야 한다", () => {
     const after = edit((draft) => {
       (draft.originProduct as { name?: string }).name = "다른 이름";
     });
-    expect(localTouchSignals(base, after)).toEqual([]);
+    expect(blindTouchSignals(smartStoreEditAdapter.editedFields(base, after))).toEqual([]);
   });
 });
 
@@ -394,10 +406,10 @@ describe("⑧ 🔴 F-14-7 — 상품명만 고치면 상품명만 바뀐다", ()
   /** 수정 화면을 연 뒤 지금까지의 변경을 그대로 태운다. */
   const gateFor = (now: NaverProductRegistrationPayload) => {
     const base = master();
-    const edited = editedFieldsSinceLoad(base, now);
+    const edited = smartStoreEditAdapter.editedFields(base, now);
     return {
       edited,
-      gate: evaluateEditGate(channelModel, channelEditDraft(channelModel, now, edited), localTouchSignals(base, now)),
+      gate: evaluateEditGate(channelModel, channelEditDraft(channelModel, smartStoreEditAdapter.projectOutgoing(now), edited), blindTouchSignals(smartStoreEditAdapter.editedFields(base, now))),
     };
   };
 
@@ -441,7 +453,7 @@ describe("⑧ 🔴 F-14-7 — 상품명만 고치면 상품명만 바뀐다", ()
   });
 
   it("🔴 고치지 않은 축의 초안값은 «채널 값» 이다 — 그래서 대조가 조용하다", () => {
-    const draft = channelEditDraft(channelModel, master({ name: "다른 이름" }), ["name"]);
+    const draft = channelEditDraft(channelModel, smartStoreEditAdapter.projectOutgoing(master({ name: "다른 이름" })), ["name"]);
     expect(draft.stockQuantity).toBe("7");
     expect(String(draft.detailContent)).toHaveLength(1907);
     expect(draft.name).toBe("다른 이름");
