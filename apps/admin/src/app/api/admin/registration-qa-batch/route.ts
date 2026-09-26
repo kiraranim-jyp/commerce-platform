@@ -25,6 +25,7 @@ import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } 
 import { fetchCategoryMeta } from "../../coupang/_lib/category-meta";
 import { resolveBrand } from "../../coupang/_lib/brand";
 import { resolveCategoryV3 } from "../../coupang/_lib/category-resolver-v3";
+import { requireRegistrationAccess } from "@/lib/auth/require-registration-access";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -272,6 +273,19 @@ async function runOne(
 }
 
 export async function POST() {
+  /* ══ Commerce-6 C-1c(CPO 지시, 2026-09-26) ══
+     🔴 이 라우트에는 사용자 검증이 «하나도» 없었다. 그런데 loadSellerSettings() 로 판매자 설정을 읽어 30건을 일괄 조립한다. QA 라고 인증을 우회하지 않는다 —
+     남의 판매자 설정을 인증 없이 읽을 수 있는 길이었다.
+
+     🔴 새 인증을 만들지 않는다. register 라우트가 쓰는 그 가드를 그대로 쓴다
+     (P0-C PRE-REGISTER SECURITY GATE). snapshotId 가 오지 않는 경로라 null 을
+     준다 — 그래도 ①인증 ②자격증명 소유 workspace 검사는 그대로 돈다.
+
+     🔴 순서가 이 작업의 전부다: 범위 격리(C-1b) → 접근 차단(여기) →
+     기본값 저장(C-2). 가드가 없으면 C-2 가 저장할 값이 인증 없이 읽힌다. */
+  const access = await requireRegistrationAccess(null);
+  if (!access.ok) return access.response;
+
   const credentials = await getCoupangCredentials();
   if (!credentials) {
     return NextResponse.json({ error: "쿠팡 인증 정보가 설정되어 있지 않습니다." }, { status: 400 });

@@ -5,6 +5,7 @@ import { buildLotteOnContext, type LotteOnChannelFormInput } from "../_lib/build
 import { LOTTEON_READ_PATHS } from "../_lib/client";
 import { runLotteOnRead } from "../_lib/request";
 import { recordAuditLog } from "@/lib/audit-log";
+import { requireRegistrationAccess } from "@/lib/auth/require-registration-access";
 
 /**
  * LOTTEON COMMERCE SPRINT 2 Phase 3 — Payload Preview(읽기 전용, 부작용 0).
@@ -254,6 +255,19 @@ async function probeNoticeItemCode(
 }
 
 export async function POST(request: Request) {
+  /* ══ Commerce-6 C-1c(CPO 지시, 2026-09-26) ══
+     🔴 이 라우트에는 사용자 검증이 «하나도» 없었다. 그런데 buildLotteOnContext() 가 loadSellerSettings() 와 롯데ON 자격증명(207)을 읽어 실제 등록과 «같은» payload 를 만든다 —
+     남의 판매자 설정을 인증 없이 읽을 수 있는 길이었다.
+
+     🔴 새 인증을 만들지 않는다. register 라우트가 쓰는 그 가드를 그대로 쓴다
+     (P0-C PRE-REGISTER SECURITY GATE). snapshotId 가 오지 않는 경로라 null 을
+     준다 — 그래도 ①인증 ②자격증명 소유 workspace 검사는 그대로 돈다.
+
+     🔴 순서가 이 작업의 전부다: 범위 격리(C-1b) → 접근 차단(여기) →
+     기본값 저장(C-2). 가드가 없으면 C-2 가 저장할 값이 인증 없이 읽힌다. */
+  const access = await requireRegistrationAccess(null);
+  if (!access.ok) return access.response;
+
   const body = (await request.json().catch(() => null)) as {
     product?: CanonicalProduct;
     channel?: LotteOnChannelFormInput;

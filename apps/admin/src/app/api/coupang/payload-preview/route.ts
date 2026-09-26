@@ -16,6 +16,7 @@ import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } 
 import { fetchCategoryMeta } from "../_lib/category-meta";
 import { resolveBrand } from "../_lib/brand";
 import { loadSellerSettings } from "@/lib/seller-settings";
+import { requireRegistrationAccess } from "@/lib/auth/require-registration-access";
 
 /**
  * Sprint A-3(작업6 — Payload Preview) — CPO 요구사항: "등록 버튼을 누르는 순간
@@ -28,6 +29,20 @@ import { loadSellerSettings } from "@/lib/seller-settings";
  * 것뿐이다(읽기 전용, 부작용 없음).
  */
 export async function POST(request: Request) {
+  /* ══ Commerce-6 C-1c(CPO 지시, 2026-09-26) ══
+     🔴 이 라우트에는 사용자 검증이 «하나도» 없었다. 그런데 안에서
+     loadSellerSettings() 와 쿠팡 자격증명·배송 프로필을 읽어 실제 등록과 «같은»
+     payload 를 만든다 — 남의 판매자 설정을 인증 없이 읽을 수 있는 길이었다.
+
+     🔴 새 인증을 만들지 않는다. coupang/register 가 쓰는 그 가드를 그대로 쓴다
+     (P0-C PRE-REGISTER SECURITY GATE). snapshotId 가 오지 않는 경로라 null 을
+     준다 — 그래도 ①인증 ②자격증명 소유 workspace 검사는 그대로 돈다.
+
+     🔴 순서가 이 작업의 전부다: 범위 격리(C-1b) → 접근 차단(여기) →
+     기본값 저장(C-2). 가드가 없으면 C-2 가 저장할 값이 인증 없이 읽힌다. */
+  const access = await requireRegistrationAccess(null);
+  if (!access.ok) return access.response;
+
   const body = (await request.json().catch(() => null)) as {
     product?: CanonicalProduct;
     listing?: ListingModel;
