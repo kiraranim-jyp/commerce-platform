@@ -1,5 +1,5 @@
 import type { CanonicalProduct, PlatformId } from "@commerce/shared";
-import { getSelectedImageUrl } from "@commerce/shared";
+import { blocksRegistration, getSelectedImageUrl, resolveSourceStock } from "@commerce/shared";
 import type { CategorySelection } from "@commerce/category";
 import { resolveChannelListingPrice } from "../channel-price";
 import { categoryFieldRule } from "../category-field";
@@ -45,6 +45,8 @@ export const coupangAdapter: PlatformAdapter = {
     const resolution = resolveChannelListingPrice(product, platform, pricingContext);
     const amountKrw = resolution.priceKrw ?? 0;
     const isEstimate = resolution.isEstimate;
+    /* C-2E — 원본 재고 «사실» 은 한 번만 해석하고 두 규칙이 같은 것을 본다. */
+    const stockFact = resolveSourceStock(product);
     const title = effectiveTitle(product);
     const description = effectiveDescription(product);
 
@@ -101,10 +103,22 @@ export const coupangAdapter: PlatformAdapter = {
            본다. 여기서 다른 규칙을 만들면 화면과 등록이 어긋난다(CP001 류). */
         field: "stock",
         label: "재고",
-        check: () =>
-          product.stockQuantity.value > 0 || product.variants.some((v) => (v.stockQuantity ?? 0) > 0),
+        /* 🔴 C-2E — C-2D 에서 쓴 `product.stockQuantity.value > 0` 은 «무효» 였다.
+           그 값은 사실상 언제나 999(파이프라인 DEFAULT)다. 사실은 옵션 레벨에
+           있고, 해석은 shared/source-stock 한 곳에서만 한다. */
+        check: () => !blocksRegistration(stockFact),
         onFail: "ERROR",
-        message: "재고 수량이 없거나 0 이하입니다.",
+        message: stockFact.note,
+      },
+      {
+        /* 🔴 모르는 것을 품절이라고 말하지 않는다(CEO 정책: UNKNOWN 은 막지
+           않는다). 다만 999 를 「재고 있음」으로 보여주지도 않는다 — WARNING
+           으로 사실만 알린다. 등록 가능성 퍼센트를 움직이지 않는다. */
+        field: "stockUnknown",
+        label: "원본 재고 확인",
+        check: () => stockFact.state !== "UNKNOWN",
+        onFail: "WARNING",
+        message: stockFact.note,
       },
       {
         field: "options",

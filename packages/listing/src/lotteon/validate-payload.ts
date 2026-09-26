@@ -1,4 +1,5 @@
 import { resolveListingPrice } from "@commerce/pricing";
+import { blocksRegistration, resolveSourceStock } from "@commerce/shared";
 import type { LotteOnPayloadInput } from "./build-payload";
 import { hasLotteOnSellableOptions, isLotteOnSupportedImageUrl, resolveLotteOnImageUrls } from "./build-payload";
 
@@ -23,7 +24,10 @@ export type LotteOnBlockCode =
   | "SAFETY_CERTIFICATION_REQUIRED"
   | "IMPORT_PROXY_REQUIRED"
   | "SELLER_PLACE_REQUIRED"
-  | "TEMP_IMAGE_URL";
+  | "TEMP_IMAGE_URL"
+  /* Commerce-6 C-2E — 원본 상품이 품절이거나 재고 값이 비정상이다. 🔴 셀러가
+     이 탭에서 채울 수 있는 값이 아니라 «원본의 사실» 이라 BLOCKED 다. */
+  | "SOURCE_STOCK_UNAVAILABLE";
 
 export interface LotteOnFieldCheck {
   field: string;
@@ -293,10 +297,22 @@ export function validateLotteOnPayload(input: LotteOnPayloadInput): LotteOnValid
 
      🔴 옵션 상품을 잘못 막지 않는다. 위 itmLst 와 같은 해석을 쓴다 — 단품은
      상품 재고를, 옵션 상품은 조합 중 하나라도 재고가 있으면 판다고 본다. */
-  const hasStock =
-    product.stockQuantity.value > 0 || product.variants.some((v) => (v.stockQuantity ?? 0) > 0);
-  if (hasStock) ready("itmStkQty", "재고");
-  else missing("itmStkQty", "재고", "재고 수량이 없거나 0 이하입니다 — 상품정보에서 확인해 주세요.");
+  /* 🔴 C-2E — C-2D 에서 쓴 `product.stockQuantity.value > 0` 은 «무효» 였다.
+     그 값은 사실상 언제나 999(파이프라인 DEFAULT)라서 옵션이 전부 품절이어도
+     통과했다. 해석은 shared/source-stock 한 곳에서만 한다.
+
+     BLOCKED 인 이유: 이 탭에서 «채울 수 있는» 값이 아니다. 원본 상품의 사실이라
+     셀러가 여기서 숫자를 고쳐 해결할 일이 아니다(MISSING 의 뜻과 다르다). */
+  const stockFact = resolveSourceStock(product);
+  if (blocksRegistration(stockFact)) {
+    blocked("itmStkQty", "재고", stockFact.note, "SOURCE_STOCK_UNAVAILABLE");
+  } else if (stockFact.state === "UNKNOWN") {
+    /* 🔴 모르는 것을 품절이라고 말하지 않는다(CEO 정책). 막지 않되 라벨이
+       사실을 말한다 — 999 를 「재고 있음」으로 보여주지 않는다. */
+    ready("itmStkQty", "재고(원본 미확인)");
+  } else {
+    ready("itmStkQty", "재고");
+  }
 
   const readyCount = fields.filter((f) => f.status === "READY").length;
   const missingCount = fields.filter((f) => f.status === "MISSING").length;

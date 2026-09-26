@@ -68,7 +68,7 @@ function makeProduct(overrides: Partial<CanonicalProduct> = {}): CanonicalProduc
     countryOfOrigin: field("대한민국"),
     returnPolicy: field("반품 가능"),
     shippingFee: field(0, "DEFAULT"),
-    stockQuantity: field(30, "DEFAULT"),
+    stockQuantity: field(30, "ORIGINAL"),
     certification: field(""),
     importer: field(""),
     childCertification: field(null),
@@ -111,13 +111,13 @@ describe("① 롯데ON — 재고 0 은 더 이상 READY 가 아니다", () => {
     expect(lotteOnStockField(makeProduct())?.status).toBe("READY");
   });
 
-  it("🔴 재고 0 이면 MISSING — 등록이 열리지 않는다", () => {
+  it("🔴 재고 0 이면 BLOCKED — 등록이 열리지 않는다", () => {
     const result = validateLotteOnPayload({
-      product: makeProduct({ stockQuantity: field(0, "DEFAULT") }),
+      product: makeProduct({ stockQuantity: field(0, "ORIGINAL") }),
       channel: completeChannel(),
       detailHtml: "<p>상세</p>",
     });
-    expect(result.fields.find((f) => f.field === "itmStkQty")?.status).toBe("MISSING");
+    expect(result.fields.find((f) => f.field === "itmStkQty")?.status).toBe("BLOCKED");
     expect(result.ok).toBe(false);
   });
 
@@ -125,7 +125,7 @@ describe("① 롯데ON — 재고 0 은 더 이상 READY 가 아니다", () => {
      있으면 파는 것이다 — 상품 레벨 재고가 0 이라고 막으면 정상 상품이 막힌다. */
   it("상품 재고가 0 이어도 옵션 하나에 재고가 있으면 막지 않는다", () => {
     const product = makeProduct({
-      stockQuantity: field(0, "DEFAULT"),
+      stockQuantity: field(0, "ORIGINAL"),
       variants: [
         { id: "v1", optionValues: { 색상: "블루" }, stockQuantity: 0 },
         { id: "v2", optionValues: { 색상: "레드" }, stockQuantity: 5 },
@@ -136,10 +136,10 @@ describe("① 롯데ON — 재고 0 은 더 이상 READY 가 아니다", () => {
 
   it("옵션이 전부 품절이면 막는다", () => {
     const product = makeProduct({
-      stockQuantity: field(0, "DEFAULT"),
+      stockQuantity: field(0, "ORIGINAL"),
       variants: [{ id: "v1", optionValues: { 색상: "블루" }, stockQuantity: 0 }] as CanonicalProduct["variants"],
     });
-    expect(lotteOnStockField(product)?.status).toBe("MISSING");
+    expect(lotteOnStockField(product)?.status).toBe("BLOCKED");
   });
 });
 
@@ -151,8 +151,12 @@ describe("② 🔴 스마트스토어 — 빌더가 재고를 «지어내지» �
     expect(NAVER).not.toMatch(/stockQuantity:\s*product\.stockQuantity\.value\s*\|\|/);
   });
 
-  it("원본 값을 그대로 넘긴다", () => {
-    expect(NAVER).toContain("stockQuantity: product.stockQuantity.value,");
+  /* C-2E — 해석이 shared/source-stock 한 곳으로 옮겨졌다. 채널 빌더는 자기
+     규칙을 만들지 않고 그 함수를 부르기만 한다(C-2D 에서 내가 채널마다 쓴
+     `stockQuantity.value > 0` 이 전부 무효였던 이유가 그것이다). */
+  it("해석을 채널이 «다시» 하지 않는다 — 공용 함수를 부른다", () => {
+    expect(NAVER).toContain("stockQuantity: payloadStockQuantity(product)");
+    expect(NAVER).not.toMatch(/stockQuantity\.value\s*>\s*0/);
   });
 
   it("검증기는 그대로 0 이하를 막는다 — 이제 «도달» 한다", () => {
@@ -173,10 +177,11 @@ describe("③ 쿠팡 — 재고 규칙이 «생겼다»", () => {
     expect(ADAPTER.slice(at, at + 400)).toContain('onFail: "ERROR"');
   });
 
-  /* 🔴 화면과 등록이 같은 해석을 써야 한다 — payload 는 옵션 재고를 먼저 본다. */
-  it("옵션 재고를 함께 본다 — 옵션 상품을 잘못 막지 않는다", () => {
+  /* 🔴 화면과 등록이 같은 해석을 써야 한다 — 둘 다 공용 함수를 본다. */
+  it("옵션 재고를 함께 본다 — 공용 해석(resolveSourceStock)을 쓴다", () => {
+    expect(ADAPTER).toContain("const stockFact = resolveSourceStock(product)");
     const at = ADAPTER.indexOf('field: "stock"');
-    expect(ADAPTER.slice(at, at + 400)).toContain("product.variants.some");
+    expect(ADAPTER.slice(at, at + 600)).toContain("blocksRegistration(stockFact)");
   });
 });
 

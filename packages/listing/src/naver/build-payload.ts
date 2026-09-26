@@ -27,7 +27,7 @@ import type { CanonicalProduct, MasterProduct, SellingConditions } from "@commer
  * «의도된 유일한 가격 통로» 라는 것을 양성 테스트로 고정한다.
  */
 export type SmartStoreProductInput = MasterProduct & SellingConditions;
-import { getSelectedImageUrl } from "@commerce/shared";
+import { getSelectedImageUrl, payloadStockQuantity } from "@commerce/shared";
 import { computeVariantFinalPriceKrw } from "@commerce/pricing";
 import { resolveProductSignals } from "@commerce/category";
 import { assembleContentsFromBlocks, BLANK_COUPANG_SELLER_CONFIG } from "../coupang/build-payload";
@@ -602,17 +602,20 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
       },
       detailContent,
       salePrice: listing.priceKrw,
-      /* ══ Commerce-6 C-2D(CPO 지시, 2026-09-26) — 여기 `|| 1` 이 있었다 ══
+      /* ══ Commerce-6 C-2D→C-2E(CPO/CEO 지시, 2026-09-26) — 여기 `|| 1` 이 있었다 ══
 
          🔴 그 한 글자가 검증기를 «무효» 로 만들고 있었다. validate-payload 는
          `originProduct.stockQuantity > 0` 을 보는데 빌더가 0 을 1 로 바꿔서
          넘기므로 **그 검사는 절대 실패할 수 없었다.** 재고 0 인 상품이
-         「재고 READY」로 표시되고 재고 1 로 등록됐다 — 팔 수 없는 물건을
-         1개 팔 수 있는 것처럼 올린 셈이다.
+         「재고 READY」로 표시되고 재고 1 로 등록됐다.
 
-         `|| 1` 에는 근거 주석이 없다(C-2B 에서 고친 상수와 같은 부류). 값을
-         지어내지 않고 원본을 그대로 넘긴다 — 0 이면 검증기가 제 일을 한다. */
-      stockQuantity: product.stockQuantity.value,
+         C-2D 에서 `product.stockQuantity.value` 로 바꿨지만 그것도 부족했다 —
+         그 값은 사실상 언제나 999(파이프라인 DEFAULT)라서 옵션이 전부 품절인
+         상품도 999 로 나갔다. 🔴 원본의 «사실» 은 옵션 레벨에 있다.
+
+         이제 해석을 한 곳(shared/source-stock)에서만 한다. 품절이면 0 이
+         그대로 나가고 검증기가 막는다 — 보정하지 않는다. */
+      stockQuantity: payloadStockQuantity(product),
       // 대표님 지시(N-3.84, 실등록 화면 대조로 발견) — "판매자상품코드"가
       // 지금까지 아예 채워지지 않았다. 임의 코드를 만들지 않고, 원본 페이지에서
       // 실제 추출된 product.sku가 있을 때만 채운다(없으면 생략 — 다른 모든
