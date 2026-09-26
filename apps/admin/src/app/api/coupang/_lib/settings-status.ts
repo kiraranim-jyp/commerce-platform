@@ -1,3 +1,4 @@
+import { REMOTE_AREA_DELIVERABLE_UNDECIDED_NOTE } from "@commerce/listing";
 import { getCoupangCredentials, getVendorUserId } from "./env";
 import { getDefaultSellerProfile, type SellerProfile } from "./seller-profile";
 import { loadSellerSettings, type SellerSettings } from "@/lib/seller-settings";
@@ -83,6 +84,18 @@ export async function getCoupangSettingsStatus(): Promise<{
         if (!sellerSettings[field.key]) recommended.push(field.label);
       }
     }
+    /* ══ Commerce-6 C-2B(CPO 지시, 2026-09-26) ══
+       🔴 도서산간 배송 가능 여부는 판매자가 정하는 값인데, 지금까지 아무도
+       묻지 않고 「불가」로 등록되고 있었다(build-payload 의 상수 "N").
+
+       값을 저장할 칸이 없으므로 여기서 «결정되지 않았다는 사실» 만 말한다.
+       missing 이 아니라 recommended 다 — 등록 가능성 퍼센트를 움직이지 않고
+       체크리스트에만 뜬다. 게이트를 새로 만들지 않는다는 뜻이고, 동시에
+       「아무도 모르게 정해진 값」이 더는 아니라는 뜻이다.
+
+       🔴 조건이 없다(항상 넣는다). 저장소가 생기기 전까지는 «항상» 미결정이기
+       때문이다. 조건을 흉내 내면 정한 적 없는 것을 정한 것처럼 보이게 된다. */
+    recommended.push(REMOTE_AREA_DELIVERABLE_UNDECIDED_NOTE);
   }
 
   return {

@@ -257,32 +257,35 @@ function requirementBadge(requirement: FieldRequirement, value: string): ReactNo
   return value.trim().length > 0 ? undefined : <ProvenanceBadge source="REQUIRED" />;
 }
 
-/**
- * 라벨 뒤에 접히는 **API 필드명**.
- *
- * REWORK-14 — 지금까지 롯데ON 라벨 14개가 「출고지번호 (owhpNo)」였다. 쿠팡·
- * 스마트스토어 라벨에는 그런 병기가 0건이라 같은 자리의 글자 조판이 탭마다
- * 달랐다(서버 검증이 부르는 이름조차 그냥 「출고지번호」다).
- *
- * 🔴 코드를 버리지 않는다 — 쿠팡이 이미 쓰는 ⓘ(InfoTip) 안으로 들어가
- * `title`과 `sr-only`에 그대로 남는다. 눈에 보이는 라벨만 사람이 읽는 이름이
- * 되고, 형식은 쿠팡도 그대로 쓸 수 있는 것 하나다.
- */
-function apiCodeTip(code: string | undefined): ReactNode {
-  return code ? <InfoTip text={`롯데ON API 필드명 ${code}`} label="API 필드명" /> : undefined;
-}
+/* ════════════════════════════════════════════════════════════════════════════
+   Commerce-6 C-2B(CPO 결정, 2026-09-26) — 여기 있던 `apiCodeTip()` 이 사라졌다.
+   ════════════════════════════════════════════════════════════════════════════
+
+   REWORK-14 가 라벨 병기(「출고지번호 (owhpNo)」)를 ⓘ 안으로 옮기면서 «코드를
+   버리지 않는다» 고 정했고, 그래서 `title` 과 `sr-only` 에 「롯데ON API 필드명
+   owhpNo」가 남아 있었다. 눈에 덜 띄었을 뿐 셀러에게 보이는 자리였다 —
+   스크린리더는 그것을 그대로 읽는다.
+
+   🔴 CPO 결정: **REWORK-14 의 기존 의도보다 현재 제품 원칙이 우선한다.**
+   F-7 이 「내부 LotteON field name 을 seller 에게 노출하지 않는다」를 이미
+   정했으므로 visible text · title · aria-label · sr-only · InfoTip ·
+   placeholder · help text 에 동일하게 적용한다.
+
+   접근성 설명 자체를 없앤 것이 아니다 — 각 칸에는 이미 사람이 읽는 `note`(도움말
+   줄)가 있고, 셀러에게 의미 있는 것은 그쪽이다. 내부 필드명만 없앴다.
+
+   🔴 코드 자체는 버리지 않았다. `lotteOnField` · 검증기 · 로그 · 테스트에는
+   그대로 있다. 없앤 것은 «셀러 UI 로 나가는 통로» 하나다. */
 
 /**
- * 채널 고유 코드 입력 한 줄(롯데ON의 owhpNo · oplcCd 등).
+ * 채널 고유 코드 입력 한 줄(롯데ON의 출고지 · 원산지 등).
  *
  * 값이 바뀌는 즉시 onChange를 부른다(EditableText의 blur-commit이 아니다) —
  * 롯데ON 폼은 입력이 바뀌는 순간 직전 검증 결과를 stale로 표시해야 하고,
  * blur까지 기다리면 "고쳤는데 여전히 통과로 보이는" 창이 생긴다.
  */
 export function ChannelCodeField({
-  label,
-  code,
-  note,
+  label,  note,
   value,
   onChange,
   requirement,
@@ -290,10 +293,7 @@ export function ChannelCodeField({
   belowInput,
   readOnly,
 }: {
-  label: string;
-  /** 이 칸이 실어 보내는 API 필드명. 라벨이 아니라 ⓘ 안에 선다. */
-  code?: string;
-  note?: ReactNode;
+  label: string;  note?: ReactNode;
   value: string;
   onChange: (value: string) => void;
   requirement?: FieldRequirement;
@@ -334,7 +334,6 @@ export function ChannelCodeField({
   return (
     <FieldRow
       label={label}
-      labelSuffix={apiCodeTip(code)}
       required={requirement === "REQUIRED"}
       badge={requirementBadge(requirement, value)}
       note={note}
@@ -352,9 +351,7 @@ export function ChannelCodeField({
 }
 
 export function ChannelCodeTextArea({
-  label,
-  code,
-  note,
+  label,  note,
   value,
   onChange,
   requirement,
@@ -362,9 +359,7 @@ export function ChannelCodeTextArea({
   rows = 4,
   readOnly,
 }: {
-  label: string;
-  code?: string;
-  note?: ReactNode;
+  label: string;  note?: ReactNode;
   value: string;
   onChange: (value: string) => void;
   requirement?: FieldRequirement;
@@ -376,7 +371,6 @@ export function ChannelCodeTextArea({
   return (
     <FieldRow
       label={label}
-      labelSuffix={apiCodeTip(code)}
       required={requirement === "REQUIRED"}
       badge={requirementBadge(requirement, value)}
       note={note}

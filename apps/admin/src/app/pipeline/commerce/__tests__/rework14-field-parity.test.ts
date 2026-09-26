@@ -436,11 +436,24 @@ describe("REWORK-14 ③ — 라벨은 사람이 읽는 이름이다", () => {
     }
   });
 
-  it("🔴 코드가 사라진 것이 아니다 — 문서(title · sr-only)에는 그대로 있다", async () => {
+  /* ══ Commerce-6 C-2B(CPO 결정, 2026-09-26) — 이 줄이 «뒤집혔다» ══
+
+     원래 이 테스트는 반대를 요구했다: 「코드가 사라진 것이 아니다 — 문서
+     (title · sr-only)에는 그대로 있다」. REWORK-14 가 라벨 병기를 ⓘ 안으로
+     옮기면서 «코드를 버리지 않는다» 고 정했고 그 결정을 여기서 지켰다.
+
+     🔴 CPO 가 그 결정을 뒤집었다: 「REWORK-14 의 기존 의도가 있었다는 사실보다
+     현재 제품 원칙을 우선한다 — F-7 에서 내부 LotteON field name 을 seller 에게
+     노출하지 않기로 했으므로 title · sr-only · InfoTip 에도 같은 원칙을
+     적용한다.」 눈에 덜 띌 뿐 셀러에게 가는 자리였고 스크린리더는 그대로 읽는다.
+
+     🔴 테스트를 «지우지» 않고 뒤집는다. 지우면 다음 사람이 ⓘ 를 되살려도 아무도
+     막지 않는다. 코드 자체는 검증기 · lotteOnField · 로그에 그대로 있다. */
+  it("🔴 내부 API 필드명이 문서(title · sr-only)에도 남지 않는다", async () => {
     const left = leftColumn(await mount(lotteOnElement()));
     const text = clean(left.textContent ?? "");
     for (const code of ["owhpNo", "dvCstPolNo", "hdcCd", "pdItmsCd", "brdNo"]) {
-      expect(text.includes(code), `${code}가 화면 문서에서 사라졌다`).toBe(true);
+      expect(text.includes(code), `${code}가 아직 셀러에게 보인다`).toBe(false);
     }
   });
 });

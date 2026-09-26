@@ -39,6 +39,19 @@ export interface CoupangSellerConfig {
   returnAddressDetail: string;
   /** Wing에 등록된 출고지(발송지) 코드. */
   outboundShippingPlaceCode: number | null;
+  /**
+   * ══ Commerce-6 C-2B(CPO 지시, 2026-09-26) — 도서산간·제주 배송 가능 여부 ══
+   *
+   * 🔴 지금까지 이 값은 «여기 없었다». build-payload 안에 `"N"` 리터럴로 박혀
+   * 있었고 — 주변 필드는 전부 왜 그 값인지 주석이 있는데 이 줄만 없었다 —
+   * 그래서 **판매자가 한 번도 결정한 적 없는 배송 정책이 모든 쿠팡 상품에
+   * 「도서산간 배송 불가」로 나가고 있었다.**
+   *
+   * 값이 흘러들어올 자리를 여기 만든다. 아직 이 값을 저장하는 곳이 없으므로
+   * 실제로는 undefined 로 온다 — 그 상태를 «결정되지 않음» 으로 드러내는 것이
+   * 이번 작업이다(resolveRemoteAreaDeliverable 참고).
+   */
+  remoteAreaDeliverable?: "Y" | "N" | null;
   /** Sprint A-8(작업1/5) — 상품마다 다시 입력하지 않는 배송 정책 기본값.
    * product.shippingFee(사용자가 실제로 편집한 값)가 있으면 그게 우선이고
    * (상품 Override > SellerProfile 우선순위), 없을 때만 이 기본값을 쓴다. */
@@ -216,6 +229,7 @@ export interface CoupangPayload {
   deliveryCharge: number;
   freeShipOverAmount: number;
   deliveryChargeOnReturn: number;
+  /** 🔴 판매자가 정한 값이 아닐 수 있다 — resolveRemoteAreaDeliverable 참고. */
   remoteAreaDeliverable: "Y" | "N";
   unionDeliveryType: "UNION_DELIVERY" | "NOT_UNION_DELIVERY";
   returnCenterCode: string;
@@ -237,6 +251,75 @@ export interface CoupangPayload {
   /** 공식 필드가 아니다 — Sprint B Compliance Report(0~100점, "사용자 입력 필요"
    * 목록)를 만드는 재료. items[]가 여러 개(옵션별)면 전부 합쳐서 담는다. */
   complianceFieldResults: ComplianceFieldResult[];
+}
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * Commerce-6 C-2B — **판매자가 결정하지 않은 배송 정책을 우리가 정하지 않는다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * ── 무엇이 있었나 ─────────────────────────────────────────────────────────
+ * `remoteAreaDeliverable: "N"` 이 이 파일 안에 리터럴로 박혀 있었다. 전수 조사
+ * 결과 이 값은 **이 한 줄이 전부**였다 — 설정에도, Common 에도, 화면에도,
+ * 검증기에도 없었다. 도입은 591d0d9(공식 스키마에 맞춰 payload 빌더 재작성)
+ * 였고, 주변 필드(`deliveryMethod: "AGENT_BUY"` · `requested: false` 등)는 전부
+ * 왜 그 값인지 주석으로 근거를 적었는데 **이 줄만 근거가 없다.**
+ *
+ * 즉 스키마의 빈 칸을 메우다 들어온 값이 그대로 남아, 모든 쿠팡 상품이
+ * 「도서산간 배송 불가」로 등록되고 있었다. 판매자는 그런 결정을 한 적이 없다.
+ *
+ * ── 왜 «Y 로 바꾸지» 않았나 ────────────────────────────────────────────────
+ * 🔴 CPO 지시 원문: 「N 이 틀렸으니 Y 로 바꾼다가 아니다. 판매자가 결정하지
+ * 않은 배송 정책을 TTAEJYO 가 임의 결정하지 않는다.」 Y 도 똑같이 우리가 정한
+ * 값이다. 근거 없는 상수를 다른 근거 없는 상수로 바꾸는 것은 교정이 아니다.
+ *
+ * ── 그래서 이 함수가 하는 일 ──────────────────────────────────────────────
+ * 값을 «누가 정했는지» 를 값과 함께 돌려준다. 판매자가 고른 값이 있으면 그대로
+ * 쓰고, 없으면 지금까지 나가던 값을 그대로 쓰되 `decidedBySeller: false` 로
+ * 표시한다 — 그리고 그 사실이 설정 체크리스트에 뜬다(getCoupangSettingsStatus).
+ *
+ * 🔴 지금 나가는 값은 «여전히» N 이다. 그것을 숨기지 않는다. 바꾸지 않은 이유:
+ *    ① 쿠팡이 이 필드를 필수로 요구하는지 확인할 문서 근거가 저장소에 없다
+ *       (UNKNOWN — 추정하지 않는다).
+ *    ② 판매자의 결정을 담을 칸이 없다. 만들려면 migration 이고, 그것은 CPO 가
+ *       지정한 STOP 지점이다.
+ *    이 두 가지가 풀리면 이 함수 한 곳만 고치면 된다.
+ */
+export interface RemoteAreaDeliverableDecision {
+  value: "Y" | "N";
+  /** 🔴 판매자가 실제로 고른 값인가. false 면 «우리가» 채운 것이다. */
+  decidedBySeller: boolean;
+  /** 화면이 그대로 읽는 한 줄. 화면이 따로 문장을 만들지 않게 한다. */
+  note: string;
+}
+
+/**
+ * 결정이 없을 때 지금까지 나가던 값. 🔴 «기본값» 이 아니라 «현재 상태» 다 —
+ * 새로 고른 값이 아니라 교정 전까지 유지되는 값이라는 뜻으로 이름을 붙였다.
+ */
+export const REMOTE_AREA_DELIVERABLE_UNDECIDED_VALUE = "N" as const;
+
+export const REMOTE_AREA_DELIVERABLE_UNDECIDED_NOTE =
+  "도서산간·제주 배송 가능 여부 — 아직 정한 적이 없어 「배송 불가」로 등록되고 있습니다. 판매자가 정하는 값이며, 정하면 그대로 등록됩니다.";
+
+export function resolveRemoteAreaDeliverable(
+  sellerChoice?: "Y" | "N" | null,
+): RemoteAreaDeliverableDecision {
+  if (sellerChoice === "Y" || sellerChoice === "N") {
+    return {
+      value: sellerChoice,
+      decidedBySeller: true,
+      note:
+        sellerChoice === "Y"
+          ? "도서산간·제주 배송 가능으로 등록됩니다(판매자 설정)."
+          : "도서산간·제주 배송 불가로 등록됩니다(판매자 설정).",
+    };
+  }
+  return {
+    value: REMOTE_AREA_DELIVERABLE_UNDECIDED_VALUE,
+    decidedBySeller: false,
+    note: REMOTE_AREA_DELIVERABLE_UNDECIDED_NOTE,
+  };
 }
 
 function formatCoupangDateTime(date: Date): string {
@@ -1594,7 +1677,8 @@ export function buildCoupangPayload(
     deliveryCharge,
     freeShipOverAmount: 0,
     deliveryChargeOnReturn: returnCharge,
-    remoteAreaDeliverable: "N",
+    /* 🔴 C-2B — 리터럴이 아니다. 「누가 정했는가」를 거쳐서 온다. */
+    remoteAreaDeliverable: resolveRemoteAreaDeliverable(sellerConfig.remoteAreaDeliverable).value,
     unionDeliveryType: "NOT_UNION_DELIVERY",
     returnCenterCode: sellerConfig.returnCenterCode,
     returnChargeName: sellerConfig.returnChargeName,

@@ -1493,7 +1493,12 @@ function ShippingSection({
 
           <SettingsSubSection
             title="배송 정책 (SmartStore · Coupang 공통)"
-            hint="배송비/출고 소요일은 두 플랫폼에 동일하게 적용됩니다 — 택배사만 플랫폼별로 따로 관리"
+            /* ══ Commerce-6 C-2B(2026-09-26) — 이 문장의 절반이 사실이 아니었다 ══
+               「배송비/출고 소요일은 두 플랫폼에 동일하게 적용됩니다」였다.
+               배송비는 맞다. 🔴 출고 소요일은 스마트스토어 payload 에 «없다»
+               (naver/build-payload 배송 필드 전수 확인 — 0건). 쿠팡과 롯데ON 만
+               가져간다. 셀러는 여기 값을 넣고 세 곳에 다 적용된다고 읽었다. */
+            hint="배송비는 두 플랫폼에 동일하게 적용됩니다. 출고 소요일은 쿠팡·롯데ON에 적용되고 스마트스토어에는 전송되지 않습니다 — 택배사만 플랫폼별로 따로 관리"
             defaultOpen
           >
             <Field label="출고지">

@@ -1379,7 +1379,6 @@ export function LotteOnRegistrationPanel({
               참조로 등록」 버튼을 두는 자리(입력칸 바로 아래)에 선다. */}
           <ChannelCodeField
             label="출고지번호"
-            code="owhpNo"
             requirement={requirementOf("owhpNo")}
             note="롯데ON에 선등록된 출고지"
             belowInput={
@@ -1402,7 +1401,6 @@ export function LotteOnRegistrationPanel({
           />
           <ChannelCodeField
             label="반품지번호"
-            code="rtrpNo"
             requirement={requirementOf("rtrpNo")}
             note="롯데ON에 선등록된 회수지"
             belowInput={
@@ -1424,7 +1422,6 @@ export function LotteOnRegistrationPanel({
           />
           <ChannelCodeField
             label="배송비정책번호"
-            code="dvCstPolNo"
             requirement={requirementOf("dvCstPolNo")}
             note="롯데ON에 선등록된 배송비 정책"
             belowInput={
@@ -1446,7 +1443,6 @@ export function LotteOnRegistrationPanel({
           />
           <ChannelCodeField
             label="배송 가능 지역"
-            code="dvRgsprGrpCd"
             requirement={requirementOf("dvRgsprGrpCd")}
             /* ══ Commerce-6 F-7 ══
                🔴 여기 「공통코드 DV_RGSPR_GRP_CD」라고 적혀 있었다. 원산지 칸이
@@ -1485,7 +1481,6 @@ export function LotteOnRegistrationPanel({
           />
           <ChannelCodeField
             label="택배사"
-            code="hdcCd"
             requirement={requirementOf("hdcCd")}
             /* 🔴 여기엔 코드 이름에 더해 «예시 값» 까지 박혀 있었다 —
                「공통코드 DV_CO_CD (예: 0001 롯데택배)」. 셀러가 목록을 안 보고
@@ -1508,7 +1503,6 @@ export function LotteOnRegistrationPanel({
           />
           <ChannelCodeField
             label="반품 택배사"
-            code="rtngHdcCd"
             requirement={requirementOf("rtngHdcCd")}
             note="반품을 회수할 택배사입니다. 출고 택배사와 달라도 됩니다."
             readOnly
@@ -1527,7 +1521,6 @@ export function LotteOnRegistrationPanel({
           />
           <ChannelCodeField
             label="평일 발송마감시간"
-            code="nldySndCloseTm"
             requirement={requirementOf("nldySndCloseTm")}
             note="HHMM · 분은 00 또는 30만"
             value={form.delivery.weekdayCloseTime}
@@ -1592,7 +1585,6 @@ export function LotteOnRegistrationPanel({
         <div className={FIELD_GRID_NARROW_CLASS}>
           <ChannelCodeField
             label="상품품목코드"
-            code="pdItmsCd"
             requirement={requirementOf("pdItmsCd")}
             note={`고시 품목. ${LOTTEON_CHILD_PRODUCT_ITEM_CODE} = 어린이제품(유아동) — 이 경우 ④ 안전인증이 필수입니다.`}
             /* ══ LOTTEON-REAL-REGISTRATION-05(CEO 확정, 2026-09-22) ══
@@ -1617,7 +1609,6 @@ export function LotteOnRegistrationPanel({
           />
           <ChannelCodeTextArea
             label="고시 항목"
-            code="pdItmsArtlLst"
             requirement={requirementOf("pdItmsArtlLst")}
             /* ══ Commerce-6 F-8(CPO 지시, 2026-09-26) ══
                🔴 「API 가 코드를 안 준다 → 셀러에게 코드를 입력시킨다」는 결론을
@@ -1710,7 +1701,6 @@ export function LotteOnRegistrationPanel({
         <div className={FIELD_GRID_NARROW_CLASS}>
           <ChannelCodeTextArea
             label="안전인증 목록"
-            code="sftyAthnLst"
             requirement={requirementOf("sftyAthnLst")}
             note="한 줄에 하나씩 `유형코드:인증번호[:기관명]`"
             placeholder={"CHL_CFM:CB123456789"}
@@ -1719,7 +1709,6 @@ export function LotteOnRegistrationPanel({
           />
           <ChannelCodeField
             label="수입대행코드"
-            code="impPrxCd"
             requirement={requirementOf("impPrxCd")}
             note="전기용품·생활용품 계열 KC 인증을 넣으면 필수 — PUR_PRX / PRL_IMP / NONE. 어린이제품(CHL_*)에는 필요 없습니다."
             value={form.certification.importProxyCode}
@@ -1847,7 +1836,6 @@ export function LotteOnRegistrationPanel({
         <div className={FIELD_GRID_CLASS}>
           <ChannelCodeField
             label="원산지코드"
-            code="oplcCd"
             requirement={requirementOf("oplcCd")}
             /* 🔴 힌트 문구를 바꿨다. 예전에는 「공통코드 OPLC_CD」였고, 셀러가
                그것을 «넣어야 할 값» 으로 읽고 그대로 타이핑했다 — 첫 LIVE 등록이
@@ -1886,7 +1874,6 @@ export function LotteOnRegistrationPanel({
           />
           <ChannelCodeField
             label="과세유형코드"
-            code="tdfDvsCd"
             requirement={requirementOf("tdfDvsCd")}
             note="01 과세 · 02 면세 · 03 영세 · 04 해당없음. 표준카테고리를 고르면 그 카테고리 값으로 채워집니다."
             value={form.codes.taxTypeCode}
@@ -1894,7 +1881,6 @@ export function LotteOnRegistrationPanel({
           />
           <ChannelCodeField
             label="브랜드번호"
-            code="brdNo"
             requirement={requirementOf("brdNo")}
             note="속성모듈(204) 조회 결과. 없으면 비워둡니다"
             value={form.codes.brandNo}
@@ -1902,7 +1888,6 @@ export function LotteOnRegistrationPanel({
           />
           <ChannelCodeField
             label="업체상품번호"
-            code="epdNo"
             requirement={requirementOf("epdNo")}
             note="우리 쪽 식별자. 등록 후 상품 상태 조회(93)에 씁니다"
             value={form.codes.externalProductNo}
