@@ -97,6 +97,22 @@ settings 저장
 
 ### 2-3. 「`coupang_brand_profiles` 는 쿠팡 전용」 → **틀렸다** (§1 참조)
 
+🔴 다만 §1 의 판정(「Common 자산」)은 **「3채널이 조회한다」까지만** 참이다.
+조회한 «값» 이 payload 에 도달하는지는 칸마다 다르다 — §3-2 의 CORRECTION 참조.
+`findBrandProfileByName()` 호출 = 사용, 이라고 읽으면 안 된다.
+
+### 2-4. 🔴 F-3 에서 추가로 걸러낸 위임 조사 오류 넷
+
+| # | 위임 보고 | 실제 |
+|---|---|---|
+④ | 「네이버는 `assembleContentsFromBlocks` 를 import 만 하고 호출하지 않는다」 | 🔴 **호출한다** — `naver/build-payload.ts:253` |
+⑤ | 「롯데ON 은 브랜드 프로필을 읽지 않는다」 | 🔴 **읽는다** — `build-context.ts:102·174` |
+⑥ | 「OPLC_CD 응답 예시: `KR`/대한민국, `US`/미국」 | 🔴 **날조다.** 우리 테스트 픽스처의 `originCode: "KR"` 에서 유추한 것 — 실측 0건 |
+⑦ | 「네이버 origin-match 를 그대로 재사용 가능」 | 🔴 매처는 네이버 구조에 묶여 있다(`code.startsWith("02")` · `name.split(">")`). 재사용 가능한 것은 `COUNTRY_NAME_KO` 사전뿐 |
+
+🔴 **판정 기준**: 「파일에 이름이 있다」 · 「타입에 필드가 있다」 · 「함수가 import 돼
+있다」는 전부 «사용» 의 근거가 아니다. **최종 payload 까지 값이 흐르는가**만 본다.
+
 ---
 
 ## 3. F-1 매핑표 — 6단계 기준
@@ -118,11 +134,31 @@ settings 저장
 
 ### 3-2. `coupang_brand_profiles`(014) — 🔴 이름만 쿠팡, 실제는 Common
 
+> ### 🔴 [CORRECTION] `brand_intro` (F-3 에서 발견, 2026-09-26)
+>
+> **아래 표의 `brand_intro` = 「✅ 3채널 사용」은 «틀렸다».**
+> 배선만 보고 판정했다. 배선과 «실제 생성» 을 분리해서 읽어야 한다.
+>
+> ```text
+> 배선   ✅ 세 채널이 전부 brandIntro 를 조립 함수에 넘긴다
+>        쿠팡 build-payload.ts:1500 · 네이버 :253 ·
+>        롯데ON build-context.ts:113(assembleNaverDetailContent)
+> 조립   ✅ assembleContentsFromBlocks:518 이 BRAND_INTRO 블록을 처리한다
+> 블록   🔴 «없다» — defaultDetailBlocks():414-424 에 BRAND_INTRO 가 들어 있지 않고,
+>        그 블록을 만드는 코드가 저장소 전체에 0건이다. 설정 편집기는 순서·노출만
+>        바꾸고 «추가» 는 못 한다.
+> ```
+>
+> 🔴 **그러므로 `brand_intro` 는 현재 어느 payload 에도 «도달하지 않는다».**
+> 설정 화면의 「지금은 저장만 됩니다」가 사실이다.
+> 판정: **연결 후보**(배선 완비 · 블록 미생성). 블록을 기본 목록에 넣으면 모든
+> 상품의 상세페이지가 바뀌므로 CTO 가 임의로 하지 않는다.
+
 | Common 정보 | SmartStore | Coupang | LotteON | 도달 |
 |---|---|---|---|---|
 `name` | ✅ | ✅ | ✅ | `findBrandProfileByName()` 조회 키 |
 `manufacturer` | ✅ | ✅ | ✅ | 제조사 사다리 2단계 |
-`brand_intro` | ✅ | ✅ | ✅ | `resolve-context.ts:225` · `register/route.ts:521` · `build-context.ts:124` |
+`brand_intro` | 🔴 | 🔴 | 🔴 | ~~3채널 사용~~ → **배선만 ✅ · 블록 미생성**(위 CORRECTION) |
 `country_of_origin` | ✅ | ✅ | 🔴 | §4-2 |
 `representative_image_url` | 🔴 | 🔴 | 🔴 | 🔴 **어느 채널도 안 쓴다** |
 `common_description` | 🔴 | 🔴 | 🔴 | 🔴 **어느 채널도 안 쓴다** |
