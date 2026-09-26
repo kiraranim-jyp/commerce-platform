@@ -1780,7 +1780,23 @@ export function LotteOnRegistrationPanel({
                그것을 «넣어야 할 값» 으로 읽고 그대로 타이핑했다 — 첫 LIVE 등록이
                그 한 줄로 거절됐다("oplcCd":"OPLC_CD"). 코드 이름을 화면에 두면
                언젠가 누군가 그것을 적는다. */
-            note="롯데ON이 정한 원산지 중에서 고릅니다."
+            /* ══ Commerce-6 F-3-1 ══
+               🔴 자동 «변환» 이 아니다. 우리가 이미 가진 원산지 텍스트를 도움말
+               줄에 «적어 주기만» 한다 — 셀러가 그 값을 확인하러 상품정보 탭을
+               오가지 않아도 되도록.
+
+               🔴 새 DOM 부품을 만들지 않는다. 처음에 전용 줄을 하나 세웠다가
+               되돌렸다 — rework14-field-parity 가 「롯데ON 칸의 부품은 전부
+               쿠팡·스마트스토어에 이미 있는 것」을 계약으로 지키고 있고, 새 줄은
+               그 계약을 깬다. 말할 것이 늘었다고 모양을 늘리지 않는다.
+
+               코드를 대신 고르지 «않는» 이유: 89 공통코드 OPLC_CD 의 `cdNm` 이
+               어떤 형식인지 이 저장소에 «실측 기록이 0건» 이다. 같은 라우트가
+               PD_ITMS_CD 는 「실제 40건 응답을 보고 인정했다」고 적어 두었는데 이
+               그룹에는 그런 기록이 없다. 이름 형식을 모르는 채 매칭하면 엉뚱한
+               나라로 등록된다 — common-codes/route.ts:69 가 이미 못박았다:
+               「매핑도 번역도 하지 않는다」. */
+            note={originPickerNote(product.countryOfOrigin.value)}
             belowInput={
               <CommonCodePicker
                 list={originCodeList}
@@ -2820,6 +2836,24 @@ function useLotteOnCommonCodes(group: string, label: string) {
     };
   }, [group, label]);
   return { items, error, label };
+}
+
+/**
+ * Commerce-6 F-3-1 — 우리가 «이미 가진» 원산지를 도움말 줄에 실어 준다.
+ *
+ * 🔴 매핑이 아니다. 값을 옮겨 적지도, 코드를 고르지도 않는다. 같은 원산지
+ * 텍스트가 쿠팡·네이버 등록에는 그대로 나가는데 롯데ON 셀러만 그것을 확인하러
+ * 상품정보 탭을 다녀와야 했다. 그 왕복만 없앤다.
+ *
+ * 🔴 문자열 하나로 끝내는 이유: 새 DOM 부품을 만들면 롯데ON 칸이 쿠팡에 없는
+ * 모양을 갖게 된다(rework14-field-parity). 말할 것이 늘었다고 모양을 늘리지 않는다.
+ */
+export function originPickerNote(countryOfOrigin: string | null | undefined): string {
+  const base = "롯데ON이 정한 원산지 중에서 고릅니다.";
+  const value = (countryOfOrigin ?? "").trim();
+  /* 값이 없으면 아무 말도 덧붙이지 않는다 — 「원산지 없음」이라고 말하는 것은
+     이 칸의 일이 아니다(검증기가 상품 쪽에서 이미 말한다). */
+  return value ? `${base} 이 상품의 원산지는 「${value}」입니다 — 목록에서 같은 곳을 고르세요.` : base;
 }
 
 /** 공통코드 선택기 + 조회 실패를 «실패로» 말하는 한 줄. */

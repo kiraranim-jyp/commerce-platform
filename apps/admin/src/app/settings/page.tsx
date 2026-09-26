@@ -2204,6 +2204,20 @@ function BrandProfileSection({
               className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
             />
           </Field>
+          {/* ══ Commerce-6 F-3-3 (조사 기록 · 동작 변경 없음) ══
+              이 hint 를 「세 커머스 모두에 들어갑니다」로 고쳤다가 «되돌렸다».
+              배선만 보고 판단했는데 사실이 아니었다.
+
+                배선   ✅ 세 채널이 전부 brandIntro 를 조립 함수에 넘긴다
+                       (쿠팡 build-payload.ts:1500 · 네이버 :253 ·
+                        롯데ON build-context.ts:113 assembleNaverDetailContent)
+                조립   ✅ assembleContentsFromBlocks:518 이 BRAND_INTRO 를 처리한다
+                블록   🔴 «없다» — defaultDetailBlocks():414-424 에 BRAND_INTRO 가
+                       들어 있지 않고, 이 블록을 만드는 코드가 저장소 전체에 0건이다.
+                       설정 화면 편집기는 순서·노출만 바꾸고 «추가» 는 못 한다.
+
+              🔴 그래서 지금 문구(「저장만 됩니다」)가 «맞다». 블록을 기본 목록에
+              넣으면 모든 상품의 상세페이지가 바뀌므로 CTO 가 임의로 하지 않는다. */}
           <Field label="브랜드 소개" hint="상세설명 템플릿 블록화(다음 작업)에서 사용 예정 — 지금은 저장만 됩니다">
             <textarea
               value={brandIntro}
