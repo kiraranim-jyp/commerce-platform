@@ -83,6 +83,13 @@ const LABEL_TO_SECTION: Record<string, string> = {
   // 같은 자리를 가리킨다 — 같은 섹션의 같은 이미지에 대한 검증이다.
   "이미지 형식": "section-images",
   판매가격: "section-price",
+  /* Commerce-6 C-2F — C-2E 가 만든 재고 규칙이 이 표에 없어서 sectionId 가
+     undefined 였다. REWORK-7 ①이 「이미지 형식」에서 고친 것과 같은 «죽은
+     항목» 이다 — 우측에서 눌러도 아무 데도 가지 않는다.
+     🔴 자리는 확인하고 적는다: 재고 입력칸은 PlatformPreview 의 «가격» 섹션
+     안에 있다(FieldRow label="재고", section-price 블록). 추측이 아니다. */
+  재고: "section-price",
+  "원본 재고 확인": "section-price",
   옵션: "section-options",
   배송정보: "section-shipping",
   상세설명: "section-description",
@@ -400,6 +407,10 @@ function naverFieldSectionId(field: string): string | undefined {
   // 않았다. computeChecklistReadiness(coupang/11번가)가 이미 쓰는 것과 같은
   // DOM id("section-price", PlatformPreview.tsx에 실제로 존재 확인)로 통일한다.
   if (field === "originProduct.salePrice") return "section-price";
+  /* Commerce-6 C-2F — 재고도 같은 자리다(입력칸이 가격 섹션 안에 있다).
+     라벨은 이미 「재고」로 있었는데 sectionId 만 없어서, 위 salePrice 가
+     N-3.55 에서 겪은 것과 똑같이 «눌러도 안 움직이는» 항목이었다. */
+  if (field === "originProduct.stockQuantity") return "section-price";
   // REWORK-5 ②(CEO 지시, 2026-09-14) — 지금까지 이 필드에는 sectionId도
   // externalHref도 없었다. 그래서 describePriorityItem()이 action:null을
   // 돌려줬고, 우선순위 카드에 **[이동] 버튼 자체가 그려지지 않았다**(안내
