@@ -197,7 +197,28 @@ Wing 실시간 조회다. Canonical Carrier 에 넣지 않는다.
 
 ---
 
-## 5. ⑤ `seller_settings.manufacturer` — 🔴 LEGACY 확정 (사용처 0)
+## 5. ⑤ `seller_settings.manufacturer`
+
+> ## 🔴 [CORRECTION] (CPO 확정, 2026-09-26)
+>
+> **아래 §5 의 「LEGACY · 제거 후보」 판정은 «취소한다».**
+>
+> ```text
+> ❌ 취소   manufacturer 가 안 쓰임 → legacy → 제거 후보
+> ✅ 정정   manufacturer 는 Commerce Common 의 유효한 Canonical 개념이다.
+>          판매자 값이 그 컬럼에 들어갈 수 있었던 것은 «의미/소유» 의 문제이지
+>          개념의 폐기 근거가 아니다.
+>          Common 은 manufacturer / importer / seller 를 의미적으로 «분리» 하고,
+>          각 Commerce 는 Adapter 에서 자기 payload 형식으로 mapping 한다.
+> ```
+>
+> §9 의 수정 목록 **D-7 도 같이 정정된다** — 「제조자(수입자) hint 가 사실이
+> 아니다」는 맞았으나, Phase E 가 넣은 대체 문구(「판매 사업자 정보 기록용」)도
+> 틀렸다. 확정 문구는 「실제 상품을 제조한 사업자입니다」다.
+>
+> 🔴 조사 «사실»(소비처 0 · 실측 NULL)은 그대로 보존한다.
+
+### (원문 유지) 추적 결과 — 소비처 0
 
 Phase C 에서 「끝까지 못 쫓았다」고 남긴 것을 닫는다.
 

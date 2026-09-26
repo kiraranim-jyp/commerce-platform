@@ -1726,25 +1726,34 @@ function SellerInfoSection({
         <span className="font-medium text-primary">SmartStore·Coupang 등록 모두</span>에 자동으로 적용됩니다.
       </p>
       <div className="mt-3 space-y-3 text-sm">
-        {/* Commerce-6 Phase E-7 — 🔴 예전 문구는 「여기 입력하면 상품마다 자동
-            채워집니다」였는데 사실이 아니다. PIVOT NEXT-04c-2 이후 세 커머스의
-            제조사 사다리(상품 원문 → 브랜드 프로필 → 브랜드명)에서 이 값이 빠졌다 —
-            「판매자라는 이유만으로 제조자가 되지 않는다」. 실제로 이 칸이 받는 것은
-            placeholder 그대로 «판매 사업자명» 이다.
-            🔴 컬럼도 값도 지우지 않는다(LEGACY 판정만 났다). 문구만 사실에 맞춘다. */}
-        {/* 🔴 라벨은 «바꾸지 않는다». 「제조자(수입자)」는 settings-status.ts 의 권장
-            목록 라벨과 같은 글자이고 계약 테스트가 그것을 고정하고 있다
-            (pivot03-settings-status-seller-source.test.ts:38). 이름을 고치는 것은
-            문구 수정이 아니라 두 화면의 계약 변경이라 이번 범위가 아니다. */}
+        {/* ══ Commerce-6 Phase F(CPO 확정, 2026-09-26) ══
+            🔴 이 칸의 문구를 두 번 고쳤다. 두 번 다 틀렸기 때문이다.
+
+              ① 원래     「여기 입력하면 상품마다 자동 채워집니다」
+                         → 사실이 아니었다. PIVOT NEXT-04c-2 이후 세 커머스의 제조사
+                           사다리(상품 원문 → 브랜드 프로필 → 브랜드명)에서 빠졌다.
+              ② Phase E 「판매 사업자 정보 기록용입니다」
+                         → 🔴 이것도 틀렸다. manufacturer 를 «판매자» 로 정의해 버렸다.
+
+            확정된 원칙은 셋을 «섞지 않는» 것이다:
+
+                제조사(manufacturer) ≠ 수입사(importer) ≠ 판매자(seller)
+
+            이 칸은 그중 «제조사» 다. 판매자 값이 여기 들어와 있었던 것은 값·소유의
+            문제이지 개념의 문제가 아니다 — 🔴 manufacturer 는 Commerce Common 의
+            유효한 Canonical 개념이고 legacy 가 «아니다».
+            🔴 컬럼·값은 건드리지 않았다. 판매자용 칸을 새로 만들지도 않았다
+            (F-1/F-2 매핑 결과를 보고 결정한다). */}
         <Field
-          label="제조자(수입자)"
-          hint="판매 사업자 정보 기록용입니다 — 상품의 제조사 자동 입력에는 쓰이지 않습니다(제조사는 상품 원문 → 브랜드 관리 순으로 채워집니다)"
+          label="제조사"
+          hint="실제 상품을 제조한 사업자입니다. 판매자 또는 수입자와 다른 경우 각각의 정보를 구분해 관리합니다"
         >
           <input
             type="text"
             value={manufacturer}
             onChange={(e) => onManufacturerChange(e.target.value)}
-            placeholder="예: 대표님 사업자명"
+            /* 🔴 예시도 바로잡는다 — 「대표님 사업자명」은 판매자를 적으라는 말이었다. */
+            placeholder="예: 실제 제조한 회사명"
             className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
           />
         </Field>

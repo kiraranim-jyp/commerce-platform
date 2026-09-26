@@ -239,7 +239,30 @@ delivery_method 컬럼        = 사용하지 않는 legacy   ✅ 확정
 
 ---
 
-## 6. C-7 `seller_settings.manufacturer` — ✅ **확정: legacy (넘기지만 소비되지 않는다)**
+## 6. C-7 `seller_settings.manufacturer`
+
+> ## 🔴 [CORRECTION] (CPO 확정, 2026-09-26)
+>
+> **아래 §6 의 「LEGACY · 제거 후보」 판정은 «취소한다».**
+>
+> ```text
+> ❌ 취소된 판정   manufacturer 가 안 쓰임 → legacy → 제거 후보
+>
+> ✅ 정확한 해석   manufacturer 는 Commerce Common 의 유효한 Canonical 개념이다.
+>                 기존 구현에서 «판매자» 정보가 manufacturer 컬럼에 들어갈 수 있었던
+>                 것은 데이터 의미/필드 소유의 문제이며,
+>                 manufacturer «개념» 자체의 폐기 근거가 아니다.
+>
+>                 향후 Common 은 manufacturer / importer / seller 를 의미적으로
+>                 분리하고, 각 Commerce 는 그 Common 값을 자신의 payload 요구에
+>                 맞게 mapping 한다.
+> ```
+>
+> 🔴 **아래의 조사 «사실» 은 그대로 보존한다** — 소비처가 0이라는 것은 실측이고,
+> 그 원인이 「개념이 죽었다」가 아니라 「값과 소유가 어긋나 있다」였을 뿐이다.
+> 방향 전체의 정정은 `commerce-6-phase-f-common-to-commerce-mapping.md` 참조.
+
+### (원문 유지) 추적 결과 — 소비처 0
 
 ### 추적 결과
 
