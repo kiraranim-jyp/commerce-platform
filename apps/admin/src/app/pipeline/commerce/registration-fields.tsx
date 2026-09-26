@@ -360,6 +360,7 @@ export function ChannelCodeTextArea({
   requirement,
   placeholder,
   rows = 4,
+  readOnly,
 }: {
   label: string;
   code?: string;
@@ -369,6 +370,8 @@ export function ChannelCodeTextArea({
   requirement?: FieldRequirement;
   placeholder?: string;
   rows?: number;
+  /** Commerce-6 F-8 — 🔴 코드를 «적게» 하지 않는 칸. 저장된 값은 그대로 보여준다. */
+  readOnly?: boolean;
 }) {
   return (
     <FieldRow
@@ -385,6 +388,7 @@ export function ChannelCodeTextArea({
         rows={rows}
         value={value}
         placeholder={placeholder}
+        readOnly={readOnly}
         onChange={(event) => onChange(event.target.value)}
         className={FIELD_INPUT_CLASS}
       />

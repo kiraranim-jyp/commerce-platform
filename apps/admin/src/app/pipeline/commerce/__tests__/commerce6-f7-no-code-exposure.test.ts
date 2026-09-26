@@ -67,17 +67,24 @@ describe("③ 목록이 있으면 코드를 «적게» 하지 않는다", () => 
     expect(FIELDS).toContain("readOnly={readOnly}");
   });
 
-  it("배송 세 칸과 원산지가 목록이 있을 때 읽기 전용이 된다", () => {
-    expect(PANEL).toContain("readOnly={(deliverySettings.data?.deliveryRegionGroups.length ?? 0) > 0}");
-    expect(PANEL).toContain("readOnly={(deliverySettings.data?.couriers.length ?? 0) > 0}");
-    expect(PANEL).toContain("readOnly={originCodeList.items.length > 0}");
+  /* ══ F-8 로 계약이 «바뀌었다» ══
+     F-7 은 「목록이 있을 때만」 읽기 전용이었다. 즉 조회가 실패하면 코드 입력이
+     되살아났다 — 그것이 곧 「셀러에게 코드를 묻는 마지막 통로」였고, CPO 가
+     그 fallback 을 제거하라고 확정했다. 이제 «조건 없이» 읽기 전용이다. */
+  it("코드 칸은 조건 없이 읽기 전용이다 — 조회 실패해도 되살아나지 않는다", () => {
+    expect(PANEL).not.toMatch(/readOnly=\{[^}]*length[^}]*\}/);
+    /* 4칸(배송지역·택배사·반품택배사·원산지) + 고시 품목 + 고시 항목. */
+    expect((PANEL.match(/^\s+readOnly$/gm) ?? []).length).toBeGreaterThanOrEqual(6);
   });
 
-  /* 🔴 조회가 «실패» 했을 때까지 막지 않는다 — 목록도 없고 입력도 막으면 셀러에게
-     남는 길이 없다. 조건이 «목록이 있을 때» 인 것이 그 뜻이다. */
-  it("조회 실패 시에는 직접 입력이 남는다 — 조건이 길이 0 초과다", () => {
-    expect(PANEL).not.toContain("readOnly={true}");
-    expect(PANEL).not.toContain("readOnly\n");
+  it("고를 것이 없으면 «안내와 재시도» 가 선다 — 입력칸이 아니다", () => {
+    expect(PANEL).toContain("function CodeListUnavailable(");
+    expect(PANEL).toContain("목록을 불러오지 못했습니다.");
+    expect(PANEL).toContain("다시 불러오기");
+    /* 🔴 판정은 「오류일 때」가 아니라 「고를 것이 없을 때」다 — 오류 없이 0건이
+       와도 셀러에게 남는 길이 없기는 마찬가지다. */
+    expect(PANEL).toContain("if (list.items.length === 0)");
+    expect(PANEL).toContain("if (options.length === 0)");
   });
 
   it("드롭다운은 이름으로 고르게 한다 — 「이름 (코드)」가 아니다", () => {

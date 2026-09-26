@@ -705,43 +705,48 @@ export function LotteOnRegistrationPanel({
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch("/api/lotteon/delivery-settings");
-        const data = (await res.json()) as Partial<DeliverySettingsResponse> & { ok?: boolean; message?: string };
-        if (cancelled) return;
-        if (!data.ok) {
-          setDeliverySettings({ loading: false, error: data.message ?? "배송 설정을 조회하지 못했습니다.", data: null });
-          return;
-        }
-        /* 🔴 응답에 없는 배열을 undefined로 들고 다니지 않는다 — 한 곳에서
-           모양을 맞춰 두면 아래 렌더가 매번 `?? []`를 반복하지 않아도 된다.
-           값을 지어내는 것이 아니다(없으면 0건이고, 0건은 위 안내가 말한다). */
-        setDeliverySettings({
-          loading: false,
-          error: null,
-          data: {
-            sentAfflTrCd: data.sentAfflTrCd ?? "",
-            outboundPlaces: data.outboundPlaces ?? [],
-            returnPlaces: data.returnPlaces ?? [],
-            costPolicies: data.costPolicies ?? [],
-            couriers: data.couriers ?? [],
-            deliveryRegionGroups: data.deliveryRegionGroups ?? [],
-            issues: data.issues ?? [],
-          },
-        });
-      } catch {
-        if (!cancelled) {
-          setDeliverySettings({ loading: false, error: "서버에 연결하지 못했습니다.", data: null });
-        }
+  /**
+   * ══ Commerce-6 F-8(CPO 지시) ══
+   * 🔴 조회를 «다시» 할 수 있어야 한다.
+   *
+   * F-7 까지는 실패하면 셀러에게 남는 길이 「코드를 직접 적는 것」뿐이었다.
+   * 그 길을 없앴으므로(코드를 알 수 없는 사람에게 코드를 묻지 않는다),
+   * 대신 «다시 불러오기» 를 준다. 한 번 실패하면 탭을 떠났다 오는 수밖에 없던
+   * 구조로 두면 「막아 두기만 한」 것이 된다.
+   */
+  const loadDeliverySettings = useCallback(async () => {
+    setDeliverySettings({ loading: true, error: null, data: null });
+    try {
+      const res = await fetch("/api/lotteon/delivery-settings");
+      const data = (await res.json()) as Partial<DeliverySettingsResponse> & { ok?: boolean; message?: string };
+      if (!data.ok) {
+        setDeliverySettings({ loading: false, error: data.message ?? "배송 설정을 조회하지 못했습니다.", data: null });
+        return;
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
+      /* 🔴 응답에 없는 배열을 undefined로 들고 다니지 않는다 — 한 곳에서
+         모양을 맞춰 두면 아래 렌더가 매번 `?? []`를 반복하지 않아도 된다.
+         값을 지어내는 것이 아니다(없으면 0건이고, 0건은 위 안내가 말한다). */
+      setDeliverySettings({
+        loading: false,
+        error: null,
+        data: {
+          sentAfflTrCd: data.sentAfflTrCd ?? "",
+          outboundPlaces: data.outboundPlaces ?? [],
+          returnPlaces: data.returnPlaces ?? [],
+          costPolicies: data.costPolicies ?? [],
+          couriers: data.couriers ?? [],
+          deliveryRegionGroups: data.deliveryRegionGroups ?? [],
+          issues: data.issues ?? [],
+        },
+      });
+    } catch {
+      setDeliverySettings({ loading: false, error: "서버에 연결하지 못했습니다.", data: null });
+    }
   }, []);
+
+  useEffect(() => {
+    void loadDeliverySettings();
+  }, [loadDeliverySettings]);
 
   /**
    * 조회 결과를 **비어 있는 칸에만** 넣는다. 셀러가 이미 넣어 둔 값이나 저장돼
@@ -1351,7 +1356,7 @@ export function LotteOnRegistrationPanel({
             채울 수 없습니다」 4줄 안내가 사라졌다. **사실이 아니게 됐기 때문이다** —
             이제 롯데ON 판매자센터에 직접 물어본다(150 · 166 · 89). 조회 상태와
             결과는 바로 아래 한 줄이 말한다. */}
-        <DeliveryLookupNote state={deliverySettings} />
+        <DeliveryLookupNote state={deliverySettings} onRetry={() => void loadDeliverySettings()} />
         {/* Commerce-6 Phase E-1 — 🔴 설정을 «못 읽은» 것을 「설정 없음」으로 두지 않는다.
             이 줄이 없으면 셀러는 빈 칸을 보고 설정 화면으로 가지만, 거기엔 값이
             이미 들어 있다(고칠 것이 없다). 등록 게이트는 건드리지 않는다 —
@@ -1451,7 +1456,9 @@ export function LotteOnRegistrationPanel({
                같은 모양으로 남아 있었다.
                🔴 코드 이름을 화면에 두면 언젠가 누군가 그것을 적는다. */
             note="롯데ON이 정한 배송 지역 중에서 고릅니다."
-            readOnly={(deliverySettings.data?.deliveryRegionGroups.length ?? 0) > 0}
+            /* F-8 — 조건 없이 읽기 전용이다. 조회가 실패해도 코드 입력으로
+               되돌아가지 않는다(아래 belowInput 이 안내와 재시도를 준다). */
+            readOnly
             belowInput={
               <>
                 <SellerSettingApplied
@@ -1463,10 +1470,13 @@ export function LotteOnRegistrationPanel({
                     sellerFixed?.deliveryRegionGroupCode,
                   )}
                 />
-                <CodeOptionPicker
+                <DeliveryCodeChoice
+                  label="배송 가능 지역"
                   options={deliverySettings.data?.deliveryRegionGroups ?? []}
                   current={form.delivery.deliveryRegionGroupCode}
                   onPick={(value) => pickAndRecheck("delivery", { deliveryRegionGroupCode: value })}
+                  state={deliverySettings}
+                  onRetry={() => void loadDeliverySettings()}
                 />
               </>
             }
@@ -1482,12 +1492,15 @@ export function LotteOnRegistrationPanel({
                `0001` 을 적으면 그게 실제로 무슨 택배사인지 아무도 확인하지 않는다.
                예시 코드값은 코드에 넣지 않는다. */
             note="롯데ON이 정한 택배사 중에서 고릅니다."
-            readOnly={(deliverySettings.data?.couriers.length ?? 0) > 0}
+            readOnly
             belowInput={
-              <CodeOptionPicker
+              <DeliveryCodeChoice
+                label="택배사"
                 options={deliverySettings.data?.couriers ?? []}
                 current={form.delivery.courierCode}
                 onPick={(value) => pickAndRecheck("delivery", { courierCode: value })}
+                state={deliverySettings}
+                onRetry={() => void loadDeliverySettings()}
               />
             }
             value={form.delivery.courierCode}
@@ -1498,12 +1511,15 @@ export function LotteOnRegistrationPanel({
             code="rtngHdcCd"
             requirement={requirementOf("rtngHdcCd")}
             note="반품을 회수할 택배사입니다. 출고 택배사와 달라도 됩니다."
-            readOnly={(deliverySettings.data?.couriers.length ?? 0) > 0}
+            readOnly
             belowInput={
-              <CodeOptionPicker
+              <DeliveryCodeChoice
+                label="반품 택배사"
                 options={deliverySettings.data?.couriers ?? []}
                 current={form.delivery.returnCourierCode}
                 onPick={(value) => pickAndRecheck("delivery", { returnCourierCode: value })}
+                state={deliverySettings}
+                onRetry={() => void loadDeliverySettings()}
               />
             }
             value={form.delivery.returnCourierCode}
@@ -1585,8 +1601,10 @@ export function LotteOnRegistrationPanel({
 
                🔴 값을 만들지 않는다 — 보여주는 것은 cdNm, payload 로 가는 것은
                롯데ON 이 준 cd 그대로다. 매핑도 번역도 하지 않는다.
-               🔴 조회가 실패하면 «목록 없음» 인 척하지 않는다. 직접 입력 칸은
-               그대로 살아 있으니 셀러가 막히지는 않는다. */
+               🔴 F-8 — 여기 있던 「조회가 실패해도 직접 입력 칸이 살아 있으니
+               막히지 않는다」는 더 이상 우리 원칙이 아니다. 셀러는 품목«코드» 를
+               알 수 없다. 조회가 실패하면 안내와 [다시 불러오기]가 선다. */
+            readOnly
             belowInput={
               <CommonCodePicker
                 list={noticeItemCodeList}
@@ -1601,12 +1619,29 @@ export function LotteOnRegistrationPanel({
             label="고시 항목"
             code="pdItmsArtlLst"
             requirement={requirementOf("pdItmsArtlLst")}
-            /* REWORK-10 E(CEO 지시, 2026-09-15) — **조회 API가 없는 것은 없는 그대로
-               적는다.** 항목코드(pdArtlCd)는 롯데ON이 목록을 내려주는 API가 없다
-               (직전 조사 확정). 우리가 만들어 채우면 등록이 거절되거나 엉뚱한
-               고시가 올라간다 — 자동 생성하지 않고 그 사실을 셀러에게 말한다. */
-            note="한 줄에 하나씩 `항목코드:내용`. 🔴 항목코드는 롯데ON에 조회 API가 없습니다 — 판매자센터 고시 화면의 코드를 그대로 옮겨 적어주세요(임의로 만들지 않습니다)."
-            placeholder={"0020:색상\n0060:제조국"}
+            /* ══ Commerce-6 F-8(CPO 지시, 2026-09-26) ══
+               🔴 「API 가 코드를 안 준다 → 셀러에게 코드를 입력시킨다」는 결론을
+               «철회» 한다. 제품 원칙과 정면으로 충돌한다 — 셀러는 Commerce 내부
+               코드를 알 수 없다.
+
+               여기 있던 것:
+                 note        「판매자센터 고시 화면의 코드를 그대로 옮겨 적어주세요」
+                 placeholder 「0020:색상 / 0060:제조국」   ← 🔴 예시 «코드값» 까지
+
+               3차 LIVE 등록이 정확히 이 구조에서 막혔다:
+                 resultCode 9999 「상품품목항목코드 필수값이 «누락» 입니다」
+               셀러가 코드를 타이핑하는 한 «무엇이 더 필요한지» 알 방법이 없다.
+
+               🔴 그렇다고 항목코드를 지어내지도 않는다. 공급원은 이미 «묻고»
+               있다 — payload-preview 가 매 호출마다 세 곳을 탐침한다
+               (PD_ITMS_CD refcChrValEpn1~4 · PD_ARTL_CD 그룹 · 93/94 기등록
+               상품의 실제 pdItmsArtlLst). 그 응답을 보기 전까지는 «모른다» 이지
+               «없다» 가 아니다.
+
+               그래서 지금 할 수 있는 정직한 것: 적게 하지 않고, 어디서 풀리는지
+               말한다. 이미 저장된 값이 있으면 그대로 보여준다(지우지 않는다). */
+            note="고시 항목은 롯데ON 판매자센터에서 설정합니다 — 항목 코드 체계를 따져가 만들지 않습니다. 판매자센터에서 이 품목의 고시정보를 저장한 뒤 다시 확인해 주세요."
+            readOnly
             value={form.notice.articlesText}
             onChange={(value) => patch("notice", { articlesText: value })}
           />
@@ -1835,8 +1870,10 @@ export function LotteOnRegistrationPanel({
                나라로 등록된다 — common-codes/route.ts:69 가 이미 못박았다:
                「매핑도 번역도 하지 않는다」. */
             note={originPickerNote(product.countryOfOrigin.value)}
-            /* 🔴 첫 LIVE 등록을 거절시킨 바로 그 칸이다 — 목록이 있으면 적지 않는다. */
-            readOnly={originCodeList.items.length > 0}
+            /* 🔴 첫 LIVE 등록을 거절시킨 바로 그 칸이다. F-8 부터는 «조건 없이»
+               읽기 전용이다 — 목록을 못 불러와도 코드를 적게 하지 않는다.
+               그때는 CommonCodePicker 가 안내와 [다시 불러오기]를 세운다. */
+            readOnly
             belowInput={
               <CommonCodePicker
                 list={originCodeList}
@@ -2703,7 +2740,15 @@ function PickedCategorySummary({
  * 0건이면 그 사실과 **무엇으로 물어봤는지**(소속거래처코드)를 그대로 적는다 —
  * 그 둘은 셀러가 해야 할 일이 완전히 다르다.
  */
-function DeliveryLookupNote({ state }: { state: DeliverySettingsState }) {
+/**
+ * Commerce-6 F-8 — 🔴 [다시 불러오기]가 «칸 밖» 에 선다.
+ *
+ * 칸 «안» 에 두면 rework14-field-parity 가 막는다(롯데ON 칸의 부품은 전부
+ * 쿠팡·스마트스토어에 이미 있는 것이어야 한다). 그리고 의미로도 이쪽이 맞다 —
+ * 조회는 한 번에 출고지·반품지·정책·택배사·지역을 «함께» 가져오므로 재시도도
+ * 칸마다가 아니라 한 번이다.
+ */
+function DeliveryLookupNote({ state, onRetry }: { state: DeliverySettingsState; onRetry: () => void }) {
   if (state.loading) {
     return (
       <p className="mb-3 text-[11px] text-text-tertiary">
@@ -2714,7 +2759,10 @@ function DeliveryLookupNote({ state }: { state: DeliverySettingsState }) {
   if (state.error) {
     return (
       <p className="mb-3 rounded-md bg-error/5 px-3 py-2 text-[11px] text-error">
-        롯데ON 배송 설정을 불러오지 못했습니다 — {state.error}
+        롯데ON 배송 설정을 불러오지 못했습니다 — {state.error}{" "}
+        <button type="button" onClick={onRetry} className="underline underline-offset-2">
+          다시 불러오기
+        </button>
       </p>
     );
   }
@@ -2851,31 +2899,36 @@ function DeliveryOptionPicker({
 function useLotteOnCommonCodes(group: string, label: string) {
   const [items, setItems] = useState<{ code: string; name: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch(`/api/lotteon/common-codes?group=${encodeURIComponent(group)}`);
-        const data = (await res.json()) as {
-          ok?: boolean;
-          message?: string;
-          items?: { code: string; name: string }[];
-        };
-        if (cancelled) return;
-        if (!data.ok) {
-          setError(data.message ?? `${label}를 불러오지 못했습니다.`);
-          return;
-        }
-        setItems(data.items ?? []);
-      } catch {
-        if (!cancelled) setError("롯데ON에 연결하지 못했습니다.");
+  const [loading, setLoading] = useState(true);
+  /* Commerce-6 F-8 — 🔴 «다시 불러오기» 를 준다. 코드 직접 입력을 없앤 뒤에는
+     조회 실패가 곧 막다른 길이 되므로, 셀러가 스스로 다시 시도할 수 있어야 한다. */
+  const reload = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/lotteon/common-codes?group=${encodeURIComponent(group)}`);
+      const data = (await res.json()) as {
+        ok?: boolean;
+        message?: string;
+        items?: { code: string; name: string }[];
+      };
+      if (!data.ok) {
+        setError(data.message ?? `${label}를 불러오지 못했습니다.`);
+        setItems([]);
+        return;
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
+      setItems(data.items ?? []);
+    } catch {
+      setError("롯데ON에 연결하지 못했습니다.");
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
   }, [group, label]);
-  return { items, error, label };
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+  return { items, error, label, loading, reload };
 }
 
 /**
@@ -2897,20 +2950,96 @@ export function originPickerNote(countryOfOrigin: string | null | undefined): st
 }
 
 /** 공통코드 선택기 + 조회 실패를 «실패로» 말하는 한 줄. */
+/**
+ * ══ Commerce-6 F-8(CPO 지시) ══
+ * 목록을 불러오지 «못했을 때» 서는 줄.
+ *
+ * 🔴 여기에 「코드를 직접 입력하세요」를 두지 않는다. 셀러는 Commerce 내부
+ * 코드를 알 수 없다 — 모르는 것을 적으라고 하면 첫 LIVE 등록이 거절된 그 일
+ * (`"oplcCd": "OPLC_CD"`)이 다시 일어난다.
+ *
+ * 대신 사람이 할 수 있는 것을 말한다: ① 다시 불러오기 ② 어디를 봐야 하는지.
+ */
+function CodeListUnavailable({
+  label,
+  reason,
+  onRetry,
+  retrying,
+}: {
+  label: string;
+  reason: string | null;
+  onRetry: () => void;
+  retrying?: boolean;
+}) {
+  return (
+    /* 🔴 부품을 새로 만들지 않는다 — 쿠팡·스마트스토어에 이미 서 있는 두 조각
+       (도움말 줄 `p` 와 밑줄 버튼)만 쓴다. rework14-field-parity 가 「롯데ON 칸의
+       부품은 전부 다른 탭에 이미 있는 것」을 계약으로 지킨다. */
+    <p
+      data-code-list-unavailable="true"
+      className="mt-auto pt-0.5 text-[11px] leading-relaxed text-text-tertiary"
+    >
+      {label} 목록을 불러오지 못했습니다{reason ? ` (${reason})` : ""}. 롯데ON 판매자센터에 해당 설정이
+      등록돼 있는지 확인해 주세요 — 위 안내 줄의 [다시 불러오기]로 재시도할 수 있습니다.
+      {retrying ? " (불러오는 중…)" : ""}
+    </p>
+  );
+}
+
+/**
+ * Commerce-6 F-8 — 배송 칸의 「고르기」. 고를 것이 없으면 «안내» 가 대신 선다.
+ *
+ * 🔴 `CodeOptionPicker` 는 옵션이 0건이면 아무것도 그리지 않는다. 그 자리에
+ * 예전에는 코드 입력칸만 남았다 — 그것이 셀러에게 코드를 묻는 마지막 통로였다.
+ */
+function DeliveryCodeChoice({
+  label,
+  options,
+  current,
+  onPick,
+  state,
+  onRetry,
+}: {
+  label: string;
+  options: CodeOption[];
+  current: string;
+  onPick: (value: string) => void;
+  state: DeliverySettingsState;
+  onRetry: () => void;
+}) {
+  if (options.length === 0) {
+    return (
+      <CodeListUnavailable label={label} reason={state.error} retrying={state.loading} onRetry={onRetry} />
+    );
+  }
+  return <CodeOptionPicker options={options} current={current} onPick={onPick} />;
+}
+
 function CommonCodePicker({
   list,
   current,
   onPick,
 }: {
-  list: { items: { code: string; name: string }[]; error: string | null; label: string };
+  list: {
+    items: { code: string; name: string }[];
+    error: string | null;
+    label: string;
+    loading?: boolean;
+    reload?: () => void;
+  };
   current: string;
   onPick: (value: string) => void;
 }) {
-  if (list.error) {
+  /* 🔴 「오류일 때」가 아니라 「고를 것이 없을 때」로 판정한다 — 오류 없이 0건이
+     온 경우에도 셀러에게 남는 길이 없기는 마찬가지다. */
+  if (list.items.length === 0) {
     return (
-      <p className="mt-1 text-[11px] text-error">
-        🔴 {list.label}를 불러오지 못했습니다 — {list.error}
-      </p>
+      <CodeListUnavailable
+        label={list.label}
+        reason={list.error}
+        retrying={list.loading}
+        onRetry={() => list.reload?.()}
+      />
     );
   }
   return <CodeOptionPicker options={list.items} current={current} onPick={onPick} />;
