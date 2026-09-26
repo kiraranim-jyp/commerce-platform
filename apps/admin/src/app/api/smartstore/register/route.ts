@@ -488,7 +488,11 @@ export async function POST(request: Request) {
     [uploadedRepresentativeUrl, ...uploadedAdditionalUrls] = uploadResult.urls;
   }
 
-  payload = buildNaverProductPayload({
+  /* 🔴 P0-CHANNEL-03 F-14-6a — 빌더 입력을 «변수로» 둔다. UPDATE 로 정해지면
+     여기에 「지금 나가 있는 전시 상태」 한 칸만 더해 같은 빌더를 다시 부른다.
+     별도 payload 조립 경로를 만들지 «않는다» — 두 벌이 되면 「등록은 되는데
+     수정하면 빠지는」 필드가 생긴다(F-2). */
+  const payloadInput = {
     product,
     /* P0-KC-12 — 빌더에도 선언을 넘긴다. validator 호출부만 고치고
        여기를 빼서, 실제 payload 에 certificationTargetExcludeContent 와
@@ -508,7 +512,8 @@ export async function POST(request: Request) {
     brandIntro: context.detailPage.brandIntro,
     resolvedManufacturer: context.notice.manufacturer,
     resolvedAttributes: attributeResolution?.attributes,
-  });
+  };
+  payload = buildNaverProductPayload(payloadInput);
 
   // STEP 5(Readiness Gate) — Payload validation을 API 호출 전 마지막 방어선으로
   // 한 번 더 확인한다. Editor의 Readiness가 화면에서 이미 막아주는 게 정상
@@ -641,6 +646,26 @@ export async function POST(request: Request) {
     logStep("작업 판단", "success", `${decision.operation} — ${decision.reason}`);
 
     if (decision.operation === "UPDATE") {
+      /* ══════════════════════════════════════════════════════════════════
+         P0-CHANNEL-03 F-14-6a — 🔴 «전시 상태를 보존한» payload 로 갈아끼운다.
+
+         지금까지 이 payload 의 전시 상태는 SUSPENSION 고정값이었다(CREATE 기준의
+         안전한 기본값). 네이버 수정은 전체 교체라, 판매 중인 상품을 고치면 그
+         고정값이 전시 상태까지 덮었다 — 셀러는 가격 하나 고치려다 상품이 안
+         보이게 된다. F-14-6 실측에서 GET 최상위 키가 둘이라는 것이 드러나 알았다.
+
+         🔴 여기서 «갈아끼우는» 이유: 아래 확인 화면도, 손실검사도, 실제 PUT 도
+         전부 이 변수를 쓴다. 한 곳에서 바꾸지 않고 PUT 직전에만 손대면 셀러가
+         본 것과 나간 것이 달라진다("미리보기와 실제가 갈라질 길이 없다"는 F-12
+         원칙 그대로다).
+
+         🔴 여기서 상태를 «추정하지» 않는다. 읽지 못했으면 빌더가 비워 두고,
+         바로 아래 손실검사가 그 사실을 보고 전송을 멈춘다. */
+      payload = buildNaverProductPayload({
+        ...payloadInput,
+        registeredChannelProduct: current.snapshot.smartstoreChannelProduct,
+      });
+
       /* ══════════════════════════════════════════════════════════════════
          P0-CHANNEL-03 F-12 — 🔴 PUT 은 «보여준 뒤에만» 나간다.
 

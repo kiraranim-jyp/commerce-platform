@@ -190,6 +190,40 @@ export interface NaverPayloadInput {
    * 않는다 — Naver가 빈 배열과 필드 누락을 다르게 처리할 수 있어 안전하게
    * 아예 생략). */
   resolvedAttributes?: { attributeSeq: number; attributeValueSeq: number }[];
+
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * P0-CHANNEL-03 F-14-6a — **UPDATE 일 때 「지금 나가 있는」 채널 상태.**
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 이 한 칸이 CREATE 와 UPDATE 를 가른다. 빌더는 «하나» 다(F-2: 두 벌이
+   * 되면 「등록은 되는데 수정하면 빠지는」 필드가 생긴다). 갈라지는 것은
+   * payload 의 구성이 아니라 이 입력의 유무뿐이다:
+   *
+   *     없으면(CREATE)  → 전시 상태 SUSPENSION (기존 그대로, N-3.5)
+   *     있으면(UPDATE)  → 읽어 온 그 상태를 «그대로» 되돌려 보낸다
+   *
+   * 🔴 `RegisteredProductSnapshot` 에서 온 값만 넣는다. 그 타입은 「채널에서
+   * GET 으로 읽은 것」만 담고, 그래서 이 칸에 값이 있다는 것 자체가 «실측했다»
+   * 는 뜻이 된다. 화면이나 DB 에서 만든 값을 여기 넣으면 그 보장이 무너진다.
+   */
+  registeredChannelProduct?: { channelProductDisplayStatusType?: string } | null;
+}
+
+/**
+ * 전시 상태를 정한다. 🔴 이 함수가 CREATE/UPDATE 의 «유일한» 분기점이다.
+ *
+ * 🔴 읽었는데 되보낼 수 없는 값이면(WAIT 등 응답 전용) `undefined` 를 낸다 —
+ * SUSPENSION 으로 «대신» 보내지 않는다. 그 대체가 바로 이 작업이 막으려는
+ * 사고이고, 모르는 채로 보내지 않게 손실검사가 그 뒤에 서 있다.
+ */
+function resolveChannelDisplayStatus(
+  registered: NaverPayloadInput["registeredChannelProduct"],
+): "ON" | "SUSPENSION" | undefined {
+  /* CREATE — 새 상품을 등록 즉시 노출시키지 않는다(N-3.5, 한 줄도 바뀌지 않음). */
+  if (registered === undefined || registered === null) return "SUSPENSION";
+  const status = registered.channelProductDisplayStatusType;
+  return status === "ON" || status === "SUSPENSION" ? status : undefined;
 }
 
 function escapeHtmlText(text: string): string {
@@ -880,7 +914,12 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
       // (지금까지 여기 있던 버그 — DRY_RUN이라 실제 POST로 드러난 적은
       // 없음). 새 상품을 등록 즉시 노출시키지 않는 게 안전하므로 유효한
       // 값 중 SUSPENSION(전시 중지)을 기본값으로 쓴다.
-      channelProductDisplayStatusType: "SUSPENSION",
+      //
+      // P0-CHANNEL-03 F-14-6a — 🔴 여기가 고정값이던 자리다. 같은 빌더가 UPDATE
+      // 에도 쓰이는데(F-2), 네이버 수정은 «전체 교체» 라 이 고정값이 판매 중인
+      // 상품의 전시 상태까지 덮었다. 이제 CREATE 에서만 SUSPENSION 이고,
+      // UPDATE 는 GET 으로 읽은 그 상태를 그대로 되돌려 보낸다.
+      channelProductDisplayStatusType: resolveChannelDisplayStatus(input.registeredChannelProduct),
       // N-3.25(STEP 2)에서는 false를 기본값으로 택했지만, 대표님 지시(N-3.84,
       // 실등록 화면 대조로 발견 — "네이버쇼핑 등록(N) -> Y 필요")로 true로
       // 뒤집는다. 스펙상 "네이버쇼핑 광고주가 아니면 무엇을 보내든 서버가

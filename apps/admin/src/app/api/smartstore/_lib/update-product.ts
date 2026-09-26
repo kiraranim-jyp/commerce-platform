@@ -95,6 +95,10 @@ export function toRegisteredProductSnapshot(
         };
       };
     };
+    /* 🔴 P0-CHANNEL-03 F-14-6a — GET 최상위 키는 «둘» 이다. F-14-6 실측에서
+       드러났고, 그동안 우리는 이 두 번째를 읽은 적이 없었다. 전시 상태를
+       모른 채 전체 교체를 보내면 판매 중인 상품이 전시 중지가 된다. */
+    smartstoreChannelProduct?: { channelProductDisplayStatusType?: string };
   } | null;
   const origin = parsed?.originProduct;
   if (!origin) return { ok: false, message: "상품 조회 응답에서 원상품을 찾지 못했습니다." };
@@ -120,6 +124,10 @@ export function toRegisteredProductSnapshot(
       naverShoppingSearchInfo: origin.detailAttribute?.naverShoppingSearchInfo,
       originAreaInfo: origin.detailAttribute?.originAreaInfo,
       certificationTargetExcludeContent: origin.detailAttribute?.certificationTargetExcludeContent,
+      /* 🔴 F-14-6a — `?? {}` 로 메우지 않는다. 빈 객체로 채우면 「읽었는데 상태가
+         없었다」가 되어 그 다음 줄부터 추정이 시작된다. 없으면 undefined 로 두고,
+         손실검사가 「모르면 보내지 않는다」로 막는다. */
+      smartstoreChannelProduct: parsed?.smartstoreChannelProduct,
     },
   };
 }

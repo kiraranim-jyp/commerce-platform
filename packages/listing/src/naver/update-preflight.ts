@@ -25,7 +25,15 @@ export interface UpdateDataLossRisk {
   field: string;
   /** 사람이 읽는 이름 — 화면이 그대로 보여준다. */
   label: string;
-  reason: "MISSING" | "EMPTIED";
+  /**
+   * MISSING  있던 값을 이번에 안 보낸다
+   * EMPTIED  개수가 줄어든다
+   * CHANGED  🔴 P0-CHANNEL-03 F-14-6a — 값이 «지워지는» 것이 아니라 «바뀐다».
+   *          전시 상태가 그렇다: ON 이던 상품에 SUSPENSION 을 보내면 아무것도
+   *          사라지지 않지만 상품이 «안 보이게» 된다. 손실의 한 종류로 같이
+   *          막되, 이름을 나눠 둔다 — 「사라짐」과 「바뀜」은 다른 사고다.
+   */
+  reason: "MISSING" | "EMPTIED" | "CHANGED";
 }
 
 /** GET 으로 읽은 «현재 등록된» 상품에서 preflight 가 보는 부분만. */
@@ -82,6 +90,45 @@ export interface RegisteredProductSnapshot {
     kcCertifiedProductExclusionYn?: string;
     kcExemptionType?: string;
   } | null;
+
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * P0-CHANNEL-03 F-14-6a — 🔴 `originProduct` «밖» 의 축.
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * F-14-6 실측(13714803530, HTTP 200)에서 GET 응답의 최상위 키가 «둘» 이라는
+   * 것이 드러났다 — `originProduct` 와 `smartstoreChannelProduct`. 그동안 이
+   * 타입에는 두 번째가 «아예 없었고», 그래서 손실검사도 변경감지도 그 축을
+   * 본 적이 없다(notCompared 에조차 없다 — 축 자체가 없었다).
+   *
+   * 그런데 수정은 «전체 교체» 이고, 빌더는 그 자리를 고정값으로 채운다. 판매
+   * 중인 상품을 고치면 전시 상태까지 함께 덮인다 — 셀러는 가격 하나 고치려다
+   * 상품이 «안 보이게» 된다.
+   *
+   * 🔴 이 칸이 이 타입에 있다는 것 자체가 «출처» 다. `RegisteredProductSnapshot`
+   * 은 「채널에서 GET 으로 읽은 것」만 담는 타입이고, 다른 데서 만든 값을 여기
+   * 넣으면 그 순간 이 타입의 뜻이 무너진다. 못 읽었으면 `undefined` 로 둔다 —
+   * 빈 객체로 메우면 「읽었는데 상태가 없었다」가 되어 추정이 시작된다.
+   */
+  smartstoreChannelProduct?: {
+    /** 🔴 「ON(판매/전시 중)」인지 「SUSPENSION(전시 중지)」인지. 응답 전용 값
+     *  (WAIT 등)이 올 수 있고, 그 경우는 «보존할 수 없다» — 추정하지 않는다. */
+    channelProductDisplayStatusType?: string;
+  } | null;
+}
+
+/**
+ * 지금 나가 있는 전시 상태를 «그대로 되보낼 수 있는가».
+ *
+ * 🔴 되보낼 수 있는 값은 공식 스펙상 둘뿐이다 — 「ON, SUSPENSION만 입력 가능」.
+ * GET 이 `WAIT` 같은 응답 전용 값을 주면 우리는 그것을 보존할 «수단이 없다».
+ * 그때 SUSPENSION 으로 대신 보내면 그것이 바로 이 작업이 막으려는 사고다.
+ */
+export function preservableDisplayStatus(
+  snapshot: Pick<RegisteredProductSnapshot, "smartstoreChannelProduct">,
+): "ON" | "SUSPENSION" | undefined {
+  const status = snapshot.smartstoreChannelProduct?.channelProductDisplayStatusType;
+  return status === "ON" || status === "SUSPENSION" ? status : undefined;
 }
 
 /**
@@ -157,7 +204,40 @@ export function detectUpdateDataLoss(
     risks.push({ field: "originProduct.salePrice", label: "판매가격", reason: "MISSING" });
   }
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     P0-CHANNEL-03 F-14-6a — 🔴 전시 상태. 여기가 «유일하게» originProduct 밖이다.
+
+     지금까지 이 검사는 「있던 것이 없어지는가」만 물었다. 전시 상태는 없어지지
+     않는다 — «바뀐다». ON 이던 상품에 SUSPENSION 이 나가면 데이터는 그대로인데
+     상품이 안 보이고, 셀러는 가격 하나 고쳤을 뿐이다.
+
+     🔴 그리고 모르면 «보내지 않는다». 읽지 못한 상태를 SUSPENSION 으로도,
+     ON 으로도 추정하지 않는다 — 둘 다 틀릴 수 있고 둘 다 되돌리기 어렵다.
+  ══════════════════════════════════════════════════════════════════════════ */
+  const currentDisplay = preservableDisplayStatus(current);
+  const nextDisplay = next.smartstoreChannelProduct?.channelProductDisplayStatusType;
+  if (!currentDisplay) {
+    risks.push({
+      field: "smartstoreChannelProduct.channelProductDisplayStatusType",
+      label: "전시 상태(지금 상태를 읽지 못했습니다)",
+      reason: "MISSING",
+    });
+  } else if (nextDisplay !== currentDisplay) {
+    risks.push({
+      field: "smartstoreChannelProduct.channelProductDisplayStatusType",
+      label: `전시 상태(${describeDisplayStatus(currentDisplay)} → ${describeDisplayStatus(nextDisplay)})`,
+      reason: "CHANGED",
+    });
+  }
+
   return risks;
+}
+
+/** 🔴 셀러의 말로. 「SUSPENSION」은 우리 말이지 셀러 말이 아니다. */
+function describeDisplayStatus(status: string | undefined): string {
+  if (status === "ON") return "판매 중";
+  if (status === "SUSPENSION") return "전시 중지";
+  return status === undefined || status.trim() === "" ? "값 없음" : status;
 }
 
 /**

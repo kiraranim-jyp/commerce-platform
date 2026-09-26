@@ -2288,3 +2288,67 @@ describe("generateSmartStoreProductName — N-3.77 STEP2", () => {
     expect(name).toContain("키즈");
   });
 });
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * P0-CHANNEL-03 F-14-6a — **CREATE 와 UPDATE 의 유일한 분기**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 빌더는 «하나» 다(F-2: 두 벌이 되면 「등록은 되는데 수정하면 빠지는」 필드가
+ * 생긴다). 갈라지는 것은 payload 구성이 아니라 입력 한 칸의 유무뿐이다.
+ */
+describe("F-14-6a: 전시 상태 — CREATE 기본값 · UPDATE 보존", () => {
+  const build = (registeredChannelProduct?: { channelProductDisplayStatusType?: string } | null) => {
+    const product = makeMinimalProduct();
+    const listing = makeMinimalListing(product);
+    return buildNaverProductPayload({
+      ...baseInput(product, listing),
+      childCertificationInfoId: null,
+      categoryRequiresChildCertification: false,
+      registeredChannelProduct,
+    });
+  };
+
+  it("A. 🔴 CREATE 는 한 줄도 바뀌지 않았다 — 여전히 SUSPENSION", () => {
+    /* 새 상품을 등록 즉시 노출시키지 않는다(N-3.5). 입력을 «주지 않는» 것이
+       CREATE 이고, 기존 호출부는 전부 그대로다. */
+    expect(build().smartstoreChannelProduct.channelProductDisplayStatusType).toBe("SUSPENSION");
+  });
+
+  it("B. UPDATE — 판매 중(ON)이던 상품은 ON 으로 나간다", () => {
+    expect(
+      build({ channelProductDisplayStatusType: "ON" }).smartstoreChannelProduct
+        .channelProductDisplayStatusType,
+    ).toBe("ON");
+  });
+
+  it("C. UPDATE — 전시 중지던 상품은 전시 중지 그대로 나간다", () => {
+    expect(
+      build({ channelProductDisplayStatusType: "SUSPENSION" }).smartstoreChannelProduct
+        .channelProductDisplayStatusType,
+    ).toBe("SUSPENSION");
+  });
+
+  it("D. 🔴 읽었는데 «되보낼 수 없는» 값이면 SUSPENSION 으로 대신 보내지 않는다", () => {
+    /* 스펙상 입력 가능한 값은 ON·SUSPENSION 둘뿐이다. WAIT 를 SUSPENSION 으로
+       바꿔 보내는 것이 바로 이 작업이 막으려는 사고다 — 비워 두고, 손실검사가
+       그 뒤에서 전송을 멈춘다. */
+    expect(
+      build({ channelProductDisplayStatusType: "WAIT" }).smartstoreChannelProduct
+        .channelProductDisplayStatusType,
+    ).toBeUndefined();
+    expect(build({}).smartstoreChannelProduct.channelProductDisplayStatusType).toBeUndefined();
+  });
+
+  it("🔴 CREATE 와 UPDATE 가 «같은 빌더» 를 쓴다 — 다른 칸은 전부 같다", () => {
+    const created = build();
+    const updated = build({ channelProductDisplayStatusType: "ON" });
+    expect(updated.originProduct).toEqual(created.originProduct);
+    expect(updated.smartstoreChannelProduct.channelProductName).toBe(
+      created.smartstoreChannelProduct.channelProductName,
+    );
+    expect(updated.smartstoreChannelProduct.naverShoppingRegistration).toBe(
+      created.smartstoreChannelProduct.naverShoppingRegistration,
+    );
+  });
+});

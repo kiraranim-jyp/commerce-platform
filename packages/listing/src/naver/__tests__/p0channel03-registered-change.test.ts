@@ -33,6 +33,9 @@ const CURRENT: RegisteredProductSnapshot = {
     kcCertifiedProductExclusionYn: "KC_EXEMPTION_OBJECT",
     kcExemptionType: "OVERSEAS",
   },
+  /* 🔴 F-14-6a — 전시 상태. 이 축이 없으면 손실검사가 «막는다»(모르면 안 보낸다).
+     ChangeSet 은 이 축을 보지 않는다 — 역할이 다르다는 것이 아래 ⑦에 그대로 있다. */
+  smartstoreChannelProduct: { channelProductDisplayStatusType: "ON" },
 };
 
 /** 보내려는 것 — 기본은 CURRENT 와 «같은» 내용. */
@@ -63,7 +66,10 @@ function payload(originOver: Record<string, unknown> = {}, detailOver: Record<st
       },
       ...originOver,
     },
-    smartstoreChannelProduct: {},
+    /* 🔴 F-14-6a — 「CURRENT 와 같은 내용」에는 전시 상태도 포함된다. 빈 객체로
+       두면 우리가 읽은 상태를 «안 보내는» payload 가 되고, 전체 교체라 그것
+       자체가 사고다. UPDATE 에서 빌더가 실제로 이 값을 채운다. */
+    smartstoreChannelProduct: { channelProductDisplayStatusType: "ON" },
   } as unknown as NaverProductRegistrationPayload;
 }
 
@@ -269,8 +275,11 @@ describe("⑦ 🔴 ChangeSet 과 detectUpdateDataLoss 는 분리돼 있다", () 
     expect(code).not.toContain("detectUpdateDataLoss");
   });
 
-  it("🔴 손실 방지 6축이 회귀하지 않았다 — F-11b 는 그쪽을 건드리지 않았다", () => {
-    /* 상세설명·대표이미지·추가이미지·옵션·고시·판매가격. */
+  it("🔴 손실 방지 6축이 회귀하지 않았다 — 그리고 F-14-6a 가 «일곱 번째» 를 더했다", () => {
+    /* 상세설명·대표이미지·추가이미지·옵션·고시·판매가격.
+       🔴 여섯은 한 줄도 바뀌지 않았다. 늘어난 하나는 F-14-6a 의 전시 상태이고,
+       그것은 실측(GET 최상위 키가 둘)으로 «없던 축이 있었다» 는 것이 드러나서
+       추가된 것이다 — 기존 축의 판정이 바뀐 것이 아니다. */
     const stripped = {
       originProduct: {
         ...payload().originProduct,
@@ -279,6 +288,8 @@ describe("⑦ 🔴 ChangeSet 과 detectUpdateDataLoss 는 분리돼 있다", () 
         salePrice: 0,
         detailAttribute: { optionInfo: { optionCombinations: [] } },
       },
+      /* 전시 상태는 그대로 보낸다 — 여섯 축만 보기 위해서다. */
+      smartstoreChannelProduct: { channelProductDisplayStatusType: "ON" },
     } as unknown as NaverProductRegistrationPayload;
     const risks = detectUpdateDataLoss(CURRENT, stripped).map((r) => r.field);
     expect(risks).toContain("originProduct.detailContent");
@@ -288,6 +299,15 @@ describe("⑦ 🔴 ChangeSet 과 detectUpdateDataLoss 는 분리돼 있다", () 
     expect(risks).toContain("originProduct.detailAttribute.productInfoProvidedNotice");
     expect(risks).toContain("originProduct.salePrice");
     expect(risks).toHaveLength(6);
+
+    /* 🔴 일곱 번째는 «전시 상태를 건드렸을 때만» 선다 — 기존 여섯과 겹치지 않는다. */
+    const suspended = {
+      ...payload(),
+      smartstoreChannelProduct: { channelProductDisplayStatusType: "SUSPENSION" },
+    } as unknown as NaverProductRegistrationPayload;
+    expect(detectUpdateDataLoss(CURRENT, suspended).map((r) => r.field)).toEqual([
+      "smartstoreChannelProduct.channelProductDisplayStatusType",
+    ]);
   });
 
   it("🔴 F-11b 승격 축은 손실 탐지에 «들어가지 않았다»", () => {
