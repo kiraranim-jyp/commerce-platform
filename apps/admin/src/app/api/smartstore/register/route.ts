@@ -210,6 +210,20 @@ export async function POST(request: Request) {
      * needsConfirmation.diff 에 PUT 직전 보고서를 실어 되묻는다(외부 호출 0회).
      */
     confirmUpdate?: boolean;
+    /**
+     * P0-CHANNEL-03 F-14 — 화면이 «보고 고친» 등록 ID.
+     *
+     * 🔴 이 값으로 대상을 «정하지 않는다». 무엇을 수정할지는 여전히 서버가
+     * `ChannelProduct` 에서 찾는다(수정 대상의 기준은 Snapshot 도, 클라이언트가
+     * 보낸 번호도 아니라 Commerce 등록 ID 다). 이 값이 하는 일은 하나뿐이다 —
+     * 「셀러가 본 상품과 지금 내가 찾은 상품이 같은가」.
+     *
+     * 🔴 다르면 «보내지 않는다». 편집 화면을 연 시점과 수정을 누른 시점 사이에
+     * 연결이 달라질 수 있고(중복 행의 updated_at 순서가 바뀌거나, RECREATE·
+     * 「연결 확인」으로 갈아끼워지거나), 그러면 셀러는 A 를 보고 고쳤는데 B 가
+     * 수정된다. 이 프로젝트가 겪은 「번호가 섞여 남의 상품을 고친다」가 그것이다.
+     */
+    expectedExternalProductId?: string;
   } | null;
 
   if (!body?.product || !body?.listing) {
@@ -223,6 +237,9 @@ export async function POST(request: Request) {
   const confirmRecreate = body.confirmRecreate === true;
   /* 🔴 F-12 — 같은 규칙. 기본값은 «안 함» 이다. */
   const confirmUpdate = body.confirmUpdate === true;
+  /* 🔴 F-14 — 문자열로만 받는다. 없으면 대조하지 않는다(예전 화면과의 호환). */
+  const expectedExternalProductId =
+    typeof body.expectedExternalProductId === "string" ? body.expectedExternalProductId.trim() : "";
 
   // P0-C PRE-REGISTER SECURITY GATE(CEO 승인, 2026-09-17) — 쿠팡/롯데ON register와
   // **같은 함수**를 같은 자리(자격증명 조회 직전)에 둔다. 네이버 계정은
@@ -595,6 +612,46 @@ export async function POST(request: Request) {
 
   if (existing) {
     logStep("현재 연결 확인", "success", `이미 등록돼 있습니다(originProductNo=${existing.externalProductId}).`);
+
+    /* ══════════════════════════════════════════════════════════════════════
+       P0-CHANNEL-03 F-14 — 🔴 «셀러가 본 상품» 과 같은가.
+
+       수정 대상의 기준은 ChannelProduct 이고 그것은 바로 위에서 찾았다. 그런데
+       화면은 편집 화면을 «열 때» 그 연결을 읽어 기준값을 만들었고, 두 시점
+       사이에 가리키는 상품이 달라질 수 있다 — `@@unique([productId, channel])`
+       가 아직 없어 중복 행이 있고(기존 9건), 「현재」는 updated_at 최신 한 건으로
+       고르기 때문이다. RECREATE 나 「연결 확인」으로 갈아끼워질 수도 있다.
+
+       🔴 그러면 셀러는 A 의 값을 보고 고쳤는데 B 가 수정된다. 전체 교체라
+       B 의 내용이 A 의 내용으로 덮인다 — 되돌릴 수 없다.
+
+       🔴 여기서 클라이언트 값을 «믿지» 않는다. 대상은 여전히 `existing` 이고,
+       이 값은 대조에만 쓴다. 다르면 보내지 않고, 무엇이 달랐는지 말한다.
+    ══════════════════════════════════════════════════════════════════════ */
+    if (expectedExternalProductId && expectedExternalProductId !== existing.externalProductId) {
+      logStep(
+        "수정 대상 확인",
+        "failed",
+        `화면이 본 상품(${expectedExternalProductId})과 지금 연결된 상품(${existing.externalProductId})이 다릅니다.`,
+      );
+      const result = withMeta({
+        status: "FAILED",
+        platform: "smartstore",
+        mode: "LIVE",
+        retryable: true,
+        payload,
+        externalProductId: existing.externalProductId,
+        error: {
+          step: "VALIDATION",
+          message: `수정하려던 상품(${expectedExternalProductId})과 지금 연결된 상품(${existing.externalProductId})이 달라 보내지 않았습니다.`,
+          retryable: true,
+          resolution: "화면을 새로 고쳐 지금 등록된 내용을 다시 불러온 뒤 수정해주세요.",
+        },
+      });
+      /* 🔴 operation 을 적지 않는다 — 아무것도 하지 않았다(네이버 호출 0회). */
+      await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+      return NextResponse.json(result);
+    }
 
     /* ① 지금 나가 있는 것을 읽는다. 🔴 읽지 못하면 «정하지 않는다» — 무엇이
        바뀌었는지 모르는 채로 UPDATE 를 보내면 전체 교체라 무엇이 지워질지

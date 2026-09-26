@@ -93,6 +93,10 @@ export const smartstoreExecutor: ListingExecutor = {
           confirmRecreate: context?.confirmRecreate,
           /* P0-CHANNEL-03 F-12 — 「이대로 수정」을 누른 경우에만 실린다. */
           confirmUpdate: context?.confirmUpdate,
+          /* P0-CHANNEL-03 F-14 — 🔴 화면이 «보고 고친» 등록 ID. 대상을 정하는
+             값이 아니라 「내가 본 것과 같은가」를 묻는 대조값이다 — 서버는
+             여전히 ChannelProduct 로 대상을 찾고, 다르면 보내지 않는다. */
+          expectedExternalProductId: context?.expectedExternalProductId,
         }),
       });
       const result = (await response.json()) as ListingResult;

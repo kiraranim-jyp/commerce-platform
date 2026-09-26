@@ -2995,6 +2995,15 @@ export function CommerceWorkspace({
       /* 🔴 F-12 — 동의와 같은 규칙: «그 요청에만» 실린다. state 에 눌러 두면
          다음 상품의 전체 교체가 확인 없이 나간다. */
       confirmUpdate: options?.confirmUpdate,
+      /* 🔴 P0-CHANNEL-03 F-14 — 화면이 «실제로 보고 고친» 등록 ID.
+         수정 기준값(ChannelEditModel)은 이 번호로 GET 한 것이고, 서버는 전송
+         시점에 연결을 다시 찾는다. 그 사이에 가리키는 상품이 달라지면 셀러는
+         A 를 보고 고쳤는데 B 가 수정된다 — 서버가 대조해서 막는다.
+
+         🔴 불러오지 않았으면 «보내지 않는다». 없는 번호를 지어내면 대조가
+         아니라 지시가 된다. */
+      expectedExternalProductId:
+        platform === "smartstore" ? channelEdit?.model.source.externalProductId : undefined,
     });
     setListingProgress("CONFIRMING");
     setListingResults((prev) => ({ ...prev, [platform]: result }));
