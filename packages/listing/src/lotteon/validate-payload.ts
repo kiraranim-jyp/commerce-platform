@@ -283,6 +283,21 @@ export function validateLotteOnPayload(input: LotteOnPayloadInput): LotteOnValid
     ready("itmLst", "옵션(단품)");
   }
 
+  /* ══ 12) 재고 — Commerce-6 C-2D(CPO 지시, 2026-09-26) ══
+
+     🔴 이 검사가 «없었다». 롯데ON 은 단품마다 재고를 실어 보내는데 그 값이
+     0 이어도 막는 곳이 한 곳도 없었다 — 재고 0 인 상품이 「등록 가능」으로
+     표시됐다. 세 채널을 대조해 보니 셋 다 막지 못하고 있었다(스마트스토어는
+     검증기가 «있었지만» 빌더가 0 을 1 로 바꿔 넘겨서 무효였다 — C-2D 에서
+     그 `|| 1` 도 함께 걷어냈다).
+
+     🔴 옵션 상품을 잘못 막지 않는다. 위 itmLst 와 같은 해석을 쓴다 — 단품은
+     상품 재고를, 옵션 상품은 조합 중 하나라도 재고가 있으면 판다고 본다. */
+  const hasStock =
+    product.stockQuantity.value > 0 || product.variants.some((v) => (v.stockQuantity ?? 0) > 0);
+  if (hasStock) ready("itmStkQty", "재고");
+  else missing("itmStkQty", "재고", "재고 수량이 없거나 0 이하입니다 — 상품정보에서 확인해 주세요.");
+
   const readyCount = fields.filter((f) => f.status === "READY").length;
   const missingCount = fields.filter((f) => f.status === "MISSING").length;
   const blockedCount = fields.filter((f) => f.status === "BLOCKED").length;

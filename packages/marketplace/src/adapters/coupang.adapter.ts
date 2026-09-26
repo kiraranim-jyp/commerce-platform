@@ -88,6 +88,25 @@ export const coupangAdapter: PlatformAdapter = {
         message: resolution.reason ?? "판매가격을 확인할 수 없습니다.",
       },
       {
+        /* ══ Commerce-6 C-2D(CPO 지시, 2026-09-26) — 재고 검사가 «없었다» ══
+
+           쿠팡 payload 는 `maximumBuyCount: variant?.stockQuantity ??
+           product.stockQuantity.value` 로 재고를 그대로 실어 보내는데 그 값이
+           0 이어도 막는 규칙이 한 곳도 없었다 — 재고 0 인 상품이 체크리스트
+           100% 로 등록됐다. 스마트스토어는 같은 것을 MISSING 으로 막는다(막는
+           «척» 만 하고 있었지만 — C-2D 에서 함께 고쳤다).
+
+           🔴 옵션 상품을 잘못 막지 않는다. payload 와 «같은 해석» 을 쓴다 —
+           단품은 상품 재고를, 옵션 상품은 옵션 중 하나라도 재고가 있으면 판다고
+           본다. 여기서 다른 규칙을 만들면 화면과 등록이 어긋난다(CP001 류). */
+        field: "stock",
+        label: "재고",
+        check: () =>
+          product.stockQuantity.value > 0 || product.variants.some((v) => (v.stockQuantity ?? 0) > 0),
+        onFail: "ERROR",
+        message: "재고 수량이 없거나 0 이하입니다.",
+      },
+      {
         field: "options",
         label: "옵션",
         check: () => product.options.value.length > 0,
