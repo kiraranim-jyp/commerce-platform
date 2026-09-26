@@ -105,12 +105,31 @@ export const smartstoreExecutor: ListingExecutor = {
       const result = (await response.json()) as ListingResult;
       return result;
     } catch (error) {
+      /* ══════════════════════════════════════════════════════════════════════
+         Commerce-3C(CPO 결정, 2026-09-26) — 🔴 **여기서 `payload` 를 뺐다.**
+
+         이 줄에 실려 있던 것은 위 `buildSmartStorePayload()`(DRY_RUN 전용, 그 파일이
+         스스로 「실제 스키마가 아니다」라고 적어 둔 값)였다. LIVE 에서 실제로 나가는
+         payload 는 서버(`/api/smartstore/register` → `naver/build-payload`)가 만들고,
+         그 값은 응답으로만 돌아온다 — fetch 가 던진 이 자리에서는 서버가 무엇을
+         만들었는지 «우리가 모른다».
+
+         🔴 그런데 smartstore 의 프로덕션 mode 는 항상 LIVE 다(CommerceWorkspace
+            resolveExecutionMode). 즉 이 catch 가 셀러에게 가짜 payload 를 보여 준
+            «유일한» 경로였고, 네트워크 오류 화면에서 「보낼 적이 없는 payload」를
+            등록 내역처럼 읽게 했다.
+
+         모르는 것은 «비워 둔다». `payload` 는 ListingResult 에서 optional 이므로
+         키가 없으면 화면은 payload 블록을 그리지 않는다(지어내지 않는다).
+
+         🔴 성공 경로·LIVE 경로·PREVIEW/DRY_RUN 동작은 한 글자도 바뀌지 않았다.
+            builder 통합도 하지 않았다(CPO: 대규모 통합 금지).
+      ══════════════════════════════════════════════════════════════════════ */
       return {
         status: "FAILED",
         platform: "smartstore",
         mode,
         retryable: true,
-        payload,
         error: {
           step: "NETWORK",
           message: error instanceof Error ? error.message : "등록 서버에 연결할 수 없습니다.",
