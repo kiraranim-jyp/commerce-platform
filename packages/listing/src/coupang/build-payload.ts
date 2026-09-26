@@ -1675,10 +1675,22 @@ export function buildCoupangPayload(
     deliveryCompanyCode: sellerConfig.deliveryCompanyCode,
     deliveryChargeType,
     deliveryCharge,
+    /* C-2C — 근거 있음(구조적). deliveryChargeType 은 위에서 FREE / NOT_FREE
+       둘 중 하나로만 정해진다(`deliveryCharge > 0 ? ... : ...`) — CONDITIONAL_FREE
+       를 한 번도 만들지 않으므로 「N원 이상 무료」 기준금액이 성립하지 않는다.
+       🔴 다만 그 «조건부 무료를 안 쓴다» 는 선택 자체는 셀러에게 물은 적이
+       없다(쿠팡은 지원한다) — 값이 틀린 게 아니라 선택지가 없는 것이다. */
     freeShipOverAmount: 0,
     deliveryChargeOnReturn: returnCharge,
     /* 🔴 C-2B — 리터럴이 아니다. 「누가 정했는가」를 거쳐서 온다. */
     remoteAreaDeliverable: resolveRemoteAreaDeliverable(sellerConfig.remoteAreaDeliverable).value,
+    /* ══ C-2C — 🔴 근거 «없음». 그리고 다른 채널과 «반대» 다 ══
+       네이버는 `deliveryBundleGroupUsable: true` 다 — 대표님 지시(N-3.85 STEP5
+       「묶음배송 = 항상 사용」, 공식 스펙 확인)가 그 줄에 적혀 있다. 쿠팡은
+       그 지시가 반영되지 않은 채 반대값을 보내고 있고 이유가 기록돼 있지 않다.
+
+       🔴 바꾸지 않았다 — 이것은 Production 등록 정책이고 CPO/CEO 결정이다.
+       기록만 남긴다(docs/commerce-6-c2c.md). */
     unionDeliveryType: "NOT_UNION_DELIVERY",
     returnCenterCode: sellerConfig.returnCenterCode,
     returnChargeName: sellerConfig.returnChargeName,
