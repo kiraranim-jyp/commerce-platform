@@ -44,9 +44,23 @@ export function LotteOnSellerFixedSettings({
     <div className="space-y-2" data-lotteon-seller-settings="true">
       <p className="text-sm font-semibold text-text-primary">배송 정보</p>
       <p className="text-xs text-text-tertiary">
-        출고지 · 반품지 · 배송비 정책 · 배송 가능 지역 · 발송 마감시간은{" "}
-        <b className="text-text-secondary">배송 프로필</b>에서 한 곳으로 관리합니다. 롯데ON 등록에는 그 프로필의
-        설정이 자동으로 적용되며, 여기서 다시 입력하지 않습니다.
+        <b className="text-text-secondary">배송 프로필</b>에서 배송비와 출고 소요일을 관리합니다. 롯데ON 등록에는
+        그중 <b className="text-text-secondary">출고 소요일</b>이 적용됩니다.
+      </p>
+      {/* 🔴 Commerce-6 C-2(2026-09-26) — 원래 여기에 「출고지·반품지·배송비 정책·
+          배송 가능 지역·발송 마감시간은 배송 프로필에서 관리되며 롯데ON 등록에
+          자동 적용된다」고 적혀 있었다. **셋 다 사실이 아니었다.**
+
+            · 배송 프로필에 배송 가능 지역·발송 마감시간 칸은 «없다»(grep 0건)
+            · 출고지·반품지·배송비 정책은 프로필에 있어도 쿠팡 것이고,
+              롯데ON build-context 는 프로필에서 출고 소요일만 가져간다
+            · 그래서 셀러는 「설정해 뒀다」고 읽고, 등록 화면에서 매번 다시 고른다
+
+          값을 못 넣는 것보다, 넣었다고 «믿게» 만드는 편이 나쁘다. 문구를
+          사실로 되돌리는 것까지만 한다 — 저장소는 C-2 게이트(아래 안내) 뒤다. */}
+      <p className="text-xs text-text-tertiary">
+        출고지 · 반품지 · 배송비 정책 · 배송 가능 지역은 아직 설정에 저장되지 않습니다. 지금은{" "}
+        <b className="text-text-secondary">상품 등록 화면의 롯데ON 탭</b>에서 상품마다 선택합니다.
       </p>
       <button
         type="button"
