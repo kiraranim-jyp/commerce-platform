@@ -69,11 +69,21 @@ describe("① 🔴 새 판단을 만들지 않는다", () => {
     expect(SUMMARY).toContain("fields.filter((field) => field.editable)");
   });
 
-  it("수정 가능 목록은 «동적으로» 만든다 — 라벨을 적어 두지 않는다", () => {
-    expect(SUMMARY).toContain("editable.map(");
+  it("🔴 F-14-7 — 「수정할 수 있는 항목」 목록을 «지웠다»", () => {
+    /* 같은 사실이 왼쪽 편집 영역에 이미 있다. 두 번 말하면 정작 봐야 할
+       변경사항이 아래로 밀린다(CTO 지시 §1). */
+    expect(SUMMARY).not.toContain("수정할 수 있는 항목");
+    expect(SUMMARY).not.toContain("editable.map(");
     for (const label of ["상품명\"", "판매가격\"", "재고\"", "상세설명\""]) {
       expect(SUMMARY, `라벨을 요약이 다시 적었다: ${label}`).not.toContain(label);
     }
+  });
+
+  it("🔴 그래도 capability 는 «그대로» 쓴다 — 지운 것은 목록 UI 뿐이다", () => {
+    /* 고칠 수 있는 항목이 하나도 없는 채널(Coupang·LotteON)은 그 사실을 한 줄로
+       말한다. 목록을 지웠다고 「수정할 수 있다」로 보이면 안 된다. */
+    expect(SUMMARY).toContain("editable.length === 0");
+    expect(SUMMARY).toContain("others[0]?.note");
   });
 });
 

@@ -108,7 +108,8 @@ import { UpdateConfirmPanel } from "./commerce/UpdateConfirmPanel";
 import { ChannelEditPanel } from "./commerce/ChannelEditPanel";
 import { ChannelEditSummary } from "./commerce/ChannelEditSummary";
 import {
-  channelEditDraftFromNaverPayload,
+  channelEditDraft,
+  editedFieldsSinceLoad,
   localTouchSignals,
   type ChannelEditModel,
 } from "./commerce/channel-edit-model";
@@ -2585,8 +2586,17 @@ export function CommerceWorkspace({
     /* 🔴 지금 payload 가 없으면 «불러온 순간의 것» 으로 돌아간다 — 계산이
        도는 동안 초안을 비우면 화면이 「전부 사라집니다」로 보인다. */
     const current = smartStorePayload ?? channelEdit.basePayload;
+    /* ══════════════════════════════════════════════════════════════════════
+       P0-CHANNEL-03 F-14-7 — 🔴 「고쳤다」의 기준은 «수정 화면을 연 뒤» 다.
+
+       예전에는 payload 를 그대로 초안으로 썼다. 그 안에는 셀러가 건드린 적 없는
+       Master 값이 전부 들어 있어(재고 999 · 상세설명 1835자), 채널 값과 대조하면
+       그것이 몽땅 「변경사항」이 됐다 — 상품명 하나 고친 셀러에게 3건이 떴다.
+    ══════════════════════════════════════════════════════════════════════ */
+    const edited = editedFieldsSinceLoad(channelEdit.basePayload, current);
     return {
-      draft: channelEditDraftFromNaverPayload(current),
+      edited,
+      draft: channelEditDraft(channelEdit.model, current, edited),
       touched: localTouchSignals(channelEdit.basePayload, current),
     };
   }, [channelEdit, smartStorePayload]);
@@ -3004,6 +3014,13 @@ export function CommerceWorkspace({
          아니라 지시가 된다. */
       expectedExternalProductId:
         platform === "smartstore" ? channelEdit?.model.source.externalProductId : undefined,
+      /* 🔴 P0-CHANNEL-03 F-14-7 — 셀러가 «이번에 고친» 항목의 이름. 서버가 이
+         목록으로 나머지 칸을 지금 등록된 값으로 되돌린다. 값은 보내지 않는다.
+
+         🔴 불러오지 않았으면 보내지 «않는다»(undefined). 「빈 배열」은 「하나도
+         안 고쳤다」라서 전부 되돌리라는 뜻이 되고, 그것은 불러온 화면에서만
+         참이다. */
+      editedFields: platform === "smartstore" ? channelEditInput?.edited : undefined,
     });
     setListingProgress("CONFIRMING");
     setListingResults((prev) => ({ ...prev, [platform]: result }));

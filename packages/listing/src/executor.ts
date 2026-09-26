@@ -75,6 +75,17 @@ export interface ListingExecutor {
        * 원칙과 충돌하지 않는 이유가 그것이다(confirmUpdate 와 같은 성질).
        */
       expectedExternalProductId?: string;
+      /**
+       * P0-CHANNEL-03 F-14-7 — 셀러가 «이번에 실제로 고친» 항목의 이름.
+       *
+       * 🔴 값이 아니라 «이름» 만 보낸다. 서버는 이 목록으로 「어느 칸을 지금
+       * 등록된 값으로 되돌릴지」만 고르고, 되돌리는 값은 서버가 채널에서 직접
+       * 읽은 것에서만 온다 — 클라이언트가 값을 밀어 넣을 길이 없다.
+       *
+       * 🔴 보내지 않으면 아무것도 되돌리지 않는다(예전 동작). 「빈 배열」과
+       * 「안 보냄」은 다른 뜻이다 — 전자는 「하나도 안 고쳤다」이다.
+       */
+      editedFields?: string[];
     },
   ): Promise<ListingResult>;
 }

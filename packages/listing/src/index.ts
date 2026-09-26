@@ -19,6 +19,8 @@ export * from "./naver/compliance";
 export * from "./naver/kc-declaration";
 export * from "./naver/update-preflight";
 export * from "./naver/registered-change";
+/* P0-CHANNEL-03 F-14-7 — 수정은 «고친 것만» 바꾼다(나머지는 지금 등록된 값). */
+export * from "./naver/preserve-registered-values";
 export * from "./naver/category-match";
 export * from "./naver/category-hierarchy";
 export * from "./naver/origin-match";

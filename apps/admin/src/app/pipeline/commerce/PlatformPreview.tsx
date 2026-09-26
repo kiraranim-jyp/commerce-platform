@@ -892,8 +892,12 @@ export function PlatformPreview({
      나가 있는 것을 무엇으로 고치는가」). 없으면 아무것도 서지 않는다. */
   const summary = (
     /* 🔴 여기에 sticky 를 걸지 않는다 — 등록 요약 카드가 «자기 안에서» 이미
-       sticky 다(ChannelRegistrationFrame). 겹쳐 걸면 둘 다 어긋난다. */
-    <div className="space-y-4">
+       sticky 다(ChannelRegistrationFrame). 겹쳐 걸면 둘 다 어긋난다.
+
+       🔴 F-14-7(CTO 지시 §2) — 간격을 벌린다(space-y-4 → 6). 두 카드가 붙어
+       있으면 아래 것이 위 것의 «부속» 으로 읽힌다. 등록 준비와 등록 후 관리는
+       같은 격의 «다른 일» 이다. */
+    <div className="space-y-6">
       <ChannelRegistrationSummary
         state={registrationState}
         priorityItems={priorityItems}

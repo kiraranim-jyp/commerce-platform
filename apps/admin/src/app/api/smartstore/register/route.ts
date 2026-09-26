@@ -14,6 +14,8 @@ import {
   /* P0-CHANNEL-03 F-12 — PUT 직전 보고서에 손실검사 결과를 싣기 위해 «미리»
      돌린다. 🔴 updateRegisteredProduct 안쪽 검사는 그대로 남는다(이중 확인). */
   detectUpdateDataLoss,
+  /* P0-CHANNEL-03 F-14-7 — 고치지 않은 값을 지금 등록된 값으로 되돌린다. */
+  preserveRegisteredValues,
   type NaverProductRegistrationPayload,
   type RegistrationStepLog,
   type ListingResult,
@@ -224,6 +226,17 @@ export async function POST(request: Request) {
      * 수정된다. 이 프로젝트가 겪은 「번호가 섞여 남의 상품을 고친다」가 그것이다.
      */
     expectedExternalProductId?: string;
+    /**
+     * P0-CHANNEL-03 F-14-7 — 셀러가 «이번에 실제로 고친» 항목.
+     *
+     * 🔴 이 목록은 판단이 아니라 «의도» 다(confirmUpdate 와 같은 성질). 무엇을
+     * 되돌릴지는 서버가 정하고, 되돌리는 «값» 은 서버가 채널에서 직접 읽은
+     * 스냅샷에서만 온다 — 클라이언트가 값을 넣을 길이 없다.
+     *
+     * 🔴 없으면 아무것도 되돌리지 않는다(예전 동작 그대로). 그래서 이 값을
+     * 보내지 않는 옛 화면은 한 줄도 달라지지 않는다.
+     */
+    editedFields?: string[];
   } | null;
 
   if (!body?.product || !body?.listing) {
@@ -240,6 +253,13 @@ export async function POST(request: Request) {
   /* 🔴 F-14 — 문자열로만 받는다. 없으면 대조하지 않는다(예전 화면과의 호환). */
   const expectedExternalProductId =
     typeof body.expectedExternalProductId === "string" ? body.expectedExternalProductId.trim() : "";
+  /* 🔴 F-14-7 — 문자열 배열로만 받는다. 값은 쓰지 않고 «이름» 만 쓴다(무엇을
+     되돌릴지 고르는 용도) — 그래서 이 목록이 이상해도 남의 값이 들어갈 길이 없다.
+     보내지 않았으면 `undefined` 로 둔다: 「아무것도 안 고쳤다(빈 배열)」와
+     「알려주지 않았다」는 다른 뜻이고, 후자는 예전 동작(되돌리지 않음)이다. */
+  const editedFields = Array.isArray(body.editedFields)
+    ? body.editedFields.filter((field): field is string => typeof field === "string")
+    : undefined;
 
   // P0-C PRE-REGISTER SECURITY GATE(CEO 승인, 2026-09-17) — 쿠팡/롯데ON register와
   // **같은 함수**를 같은 자리(자격증명 조회 직전)에 둔다. 네이버 계정은
@@ -722,6 +742,54 @@ export async function POST(request: Request) {
         ...payloadInput,
         registeredChannelProduct: current.snapshot.smartstoreChannelProduct,
       });
+
+      /* ══════════════════════════════════════════════════════════════════
+         P0-CHANNEL-03 F-14-7 — 🔴 «고치지 않은 값» 을 지금 등록된 값으로 되돌린다.
+
+         빌더가 채우는 값은 전부 우리 Master 다(재고는 product.stockQuantity,
+         상세설명은 블록으로 «생성»). 수정이 전체 교체이므로, 그대로 보내면 상품명
+         한 글자를 고친 셀러에게 재고 7 → 999 와 상세설명 1907자 → 1835자가 같이
+         나간다 — Production 에서 실제로 그렇게 보였다.
+
+         🔴 「바뀐 것만 보낸다」로 바꾸지 않는다(CTO §6). 전체 교체라 그러면
+         나머지가 지워진다. 보내는 것은 여전히 전체 payload 이고, 그 «내용» 이
+         「지금 등록된 값 + 셀러가 고친 값」이 된다.
+
+         🔴 되돌릴 «값» 은 위 ①에서 우리가 직접 읽은 스냅샷에서만 온다. 클라이언트가
+         준 것은 「어느 칸을 고쳤는지」라는 이름뿐이다. */
+      if (editedFields) {
+        const preservation = preserveRegisteredValues(payload, current.snapshot, editedFields);
+        payload = preservation.payload;
+        logStep(
+          "수정 범위 적용",
+          "success",
+          `셀러가 고친 항목 ${editedFields.length}개 · 지금 등록된 값으로 되돌린 항목 ${preservation.preserved.length}개`,
+        );
+
+        /* 🔴 고치지도 않았는데 되돌리지도 못하는 칸이 있으면 «보내지 않는다».
+           그대로 보내면 그 칸이 Master 값으로 덮이고, 그것이 이번 사고다.
+           모르면 멈춘다 — F-14-6a 의 전시 상태와 같은 규칙이다. */
+        if (preservation.unpreservable.length > 0) {
+          const labels = preservation.unpreservable.join(", ");
+          logStep("수정 범위 적용", "failed", `지금 등록된 값을 읽지 못한 항목이 있습니다: ${labels}`);
+          const result = withMeta({
+            status: "FAILED",
+            platform: "smartstore",
+            mode: "LIVE",
+            retryable: true,
+            payload,
+            externalProductId: existing.externalProductId,
+            error: {
+              step: "VALIDATION",
+              message: `고치지 않은 항목(${labels})의 지금 등록된 값을 읽지 못해 보내지 않았습니다 — 그대로 보내면 그 값이 바뀝니다.`,
+              retryable: true,
+              resolution: "잠시 후 [등록된 내용 불러오기]로 다시 읽은 뒤 시도해주세요.",
+            },
+          });
+          await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
+          return NextResponse.json(result);
+        }
+      }
 
       /* ══════════════════════════════════════════════════════════════════
          P0-CHANNEL-03 F-12 — 🔴 PUT 은 «보여준 뒤에만» 나간다.

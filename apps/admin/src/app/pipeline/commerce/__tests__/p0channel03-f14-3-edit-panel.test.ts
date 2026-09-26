@@ -117,8 +117,11 @@ describe("⑤ 🔴 화면에 «붙어 있다» — 그리고 SmartStore 에만",
     expect(WORKSPACE).toContain('tab === "smartstore" && registrationStateFor("smartstore").basis === "CHANNEL_PRODUCT"');
   });
 
-  it("🔴 초안은 보낼 payload 의 투영이다 — product·listing 을 다시 읽지 않는다", () => {
-    expect(WORKSPACE).toContain("channelEditDraftFromNaverPayload(");
+  it("🔴 초안은 «지금 등록된 값 + 고친 것» 이다(F-14-7)", () => {
+    /* 예전에는 payload 를 그대로 초안으로 썼고, 그래서 셀러가 건드린 적 없는
+       Master 값(재고 999 · 상세설명 1835자)이 전부 「변경사항」으로 떴다. */
+    expect(WORKSPACE).toContain("editedFieldsSinceLoad(channelEdit.basePayload, current)");
+    expect(WORKSPACE).toContain("channelEditDraft(channelEdit.model, current, edited)");
     /* 검증에 쓴 «그» payload 를 들고 있는다 — 다시 만들면 두 벌이 된다. */
     expect(WORKSPACE).toContain("setSmartStorePayload(payload);");
   });

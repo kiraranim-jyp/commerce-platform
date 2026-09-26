@@ -140,3 +140,55 @@ describe("⑤ 🔴 등록이 성공하면 ChannelProduct 가 남는다", () => {
     expect(ROUTE).toContain("연결 정보를 남기지 못했습니다");
   });
 });
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * ⑥ P0-CHANNEL-03 F-14-7 — **보내는 payload 도 「지금 등록된 값 + 고친 것」**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 화면이 「상품명 하나만 바뀝니다」라고 말해도, 실제로 나가는 payload 가 Master
+ * 값으로 가득하면 아무것도 고쳐지지 않은 것이다. 화면과 전송이 «같은 규칙» 을
+ * 쓰는지는 여기서 고정한다.
+ */
+describe("⑥ 🔴 F-14-7 — 고치지 않은 값은 그대로 나간다", () => {
+  it("UPDATE payload 에 되돌리기를 «적용» 한다", () => {
+    expect(ROUTE).toContain("preserveRegisteredValues(payload, current.snapshot, editedFields)");
+    expect(ROUTE).toContain("payload = preservation.payload;");
+  });
+
+  it("🔴 되돌리는 값은 «서버가 읽은» 스냅샷에서만 온다", () => {
+    /* 클라이언트가 준 것은 「어느 칸을 고쳤는지」라는 이름뿐이다. */
+    expect(ROUTE).toContain("current.snapshot, editedFields");
+    expect(ROUTE).toContain("typeof field === \"string\"");
+    /* 값을 받아 쓰는 형태가 아니다. */
+    expect(ROUTE).not.toContain("body.editedValues");
+    expect(ROUTE).not.toContain("body.baseline");
+  });
+
+  it("🔴 되돌리지 못하는 칸이 있으면 «보내지 않는다»", () => {
+    const iBlock = ROUTE.indexOf("if (preservation.unpreservable.length > 0)");
+    expect(iBlock).toBeGreaterThan(-1);
+    expect(iBlock).toBeLessThan(ROUTE.indexOf("await updateRegisteredProduct("));
+    const block = ROUTE.slice(iBlock, ROUTE.indexOf("if (!confirmUpdate) {"));
+    expect(block).toContain("return NextResponse.json(result);");
+    expect(block).toContain("그대로 보내면 그 값이 바뀝니다");
+  });
+
+  it("되돌리기가 확인 화면·손실검사 «앞» 이다 — 본 것과 나간 것이 같다", () => {
+    const iPreserve = ROUTE.indexOf("preserveRegisteredValues(");
+    expect(iPreserve).toBeLessThan(ROUTE.indexOf("if (!confirmUpdate) {"));
+    expect(iPreserve).toBeLessThan(ROUTE.indexOf("detectUpdateDataLoss(current.snapshot, payload)"));
+  });
+
+  it("🔴 목록을 «보내지 않은» 화면은 예전 그대로다", () => {
+    /* 「빈 배열」과 「안 보냄」은 다른 뜻이다 — 전자는 「하나도 안 고쳤다」. */
+    expect(ROUTE).toContain("if (editedFields) {");
+    expect(ROUTE).toContain("? body.editedFields.filter(");
+    expect(ROUTE).toContain(": undefined;");
+  });
+
+  it("화면과 executor 도 같은 이름을 실어 보낸다", () => {
+    expect(WORKSPACE).toContain("editedFields: platform === \"smartstore\" ? channelEditInput?.edited : undefined");
+    expect(EXECUTOR).toContain("editedFields: context?.editedFields,");
+  });
+});

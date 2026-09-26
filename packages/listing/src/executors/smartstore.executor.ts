@@ -97,6 +97,9 @@ export const smartstoreExecutor: ListingExecutor = {
              값이 아니라 「내가 본 것과 같은가」를 묻는 대조값이다 — 서버는
              여전히 ChannelProduct 로 대상을 찾고, 다르면 보내지 않는다. */
           expectedExternalProductId: context?.expectedExternalProductId,
+          /* P0-CHANNEL-03 F-14-7 — 🔴 이름만 보낸다. 서버가 「어느 칸을 지금
+             등록된 값으로 되돌릴지」 고르는 데만 쓴다. */
+          editedFields: context?.editedFields,
         }),
       });
       const result = (await response.json()) as ListingResult;

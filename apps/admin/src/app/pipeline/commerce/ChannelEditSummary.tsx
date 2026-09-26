@@ -18,10 +18,13 @@ import type { EditableField } from "./channel-field-capability";
  * 판정을 하나 더 만들면 「요약은 수정 가능이라는데 실제로는 막히는」 상태가
  * 된다 — 이 프로젝트가 CP001 로 겪은 그 모양이다.
  *
- * ── 셀러에게 말하는 것은 셋뿐이다 ────────────────────────────────────────
+ * ── 셀러에게 말하는 것은 둘뿐이다(F-14-7 에서 하나 줄었다) ───────────────
  *     ① 지금 어느 상품을 고치고 있는가
- *     ② 이 커머스에서 무엇을 고칠 수 있는가
- *     ③ 지금 무엇이 바뀌는가            → 그리고 [상품 수정]
+ *     ② 지금 무엇이 바뀌는가            → 그리고 [상품 수정]
+ *
+ * 🔴 「수정할 수 있는 항목」 목록은 «지웠다». 같은 사실이 왼쪽 편집 영역에 이미
+ * 있고, 두 번 말하면 정작 봐야 할 변경사항이 아래로 밀린다. capability 는 그대로
+ * 쓴다 — 지운 것은 목록 UI 뿐이다.
  *
  * ── 🔴 기준값은 Editor 와 «같은 것» 이다 ─────────────────────────────────
  *     Channel GET → ChannelEditModel ┬→ Editor(좌)
@@ -63,40 +66,41 @@ export function ChannelEditSummary({
       data-summary="channel-edit"
       className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface text-sm shadow-elevated"
     >
-      {/* ── ① 지금 어느 상품을 고치는가 ───────────────────────────────── */}
-      <div className="p-3">
-        <p className="font-semibold text-slate-900">등록된 상품 수정</p>
+      {/* ── ① 지금 어느 상품을 고치는가 ─────────────────────────────────
+          🔴 F-14-7(CTO 지시 §2) — 머리글 «격» 을 등록 준비와 같게 맞춘다.
+          (RegistrationStatusBanner 의 「등록 준비 상태」와 같은 형식이다.)
+          등록 후 «관리» 는 등록 준비의 부속 정보가 아니라 별도 작업이다. */}
+      <section className="px-4 py-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">등록 후 관리</p>
+        <p className="mt-1 text-base font-semibold text-text-primary">등록된 상품 수정</p>
         <p className="mt-1 text-xs text-slate-600">
           {commerceLabel} · 상품번호 {model.source.externalProductId}
         </p>
-      </div>
+      </section>
 
-      {/* ── ② 무엇을 고칠 수 있는가 ───────────────────────────────────── */}
-      <div className="p-3">
-        <p className="font-medium text-slate-900">수정할 수 있는 항목</p>
-        {editable.length > 0 ? (
-          <ul className="mt-1 space-y-0.5 text-xs text-slate-700">
-            {editable.map((field) => (
-              <li key={field.field}>✓ {field.label}</li>
-            ))}
-          </ul>
-        ) : (
-          /* 🔴 「수정할 수 없습니다」라고 말하지 않는다 — Coupang·LotteON 은
-             확인되지 «않았을» 뿐이다. 문구는 capability 가 준 것을 쓴다. */
-          <p className="mt-1 text-xs text-slate-600">{others[0]?.note}</p>
-        )}
-        {editable.length > 0 && others.length > 0 && (
-          <ul className="mt-2 space-y-0.5 text-xs text-slate-500">
-            {others.map((field) => (
-              <li key={field.field}>
-                {field.label} — {field.note}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      {/* ══════════════════════════════════════════════════════════════════
+          🔴 F-14-7(CTO 지시 §1) — 「수정할 수 있는 항목」 목록이 «있던 자리» 다.
 
-      {/* ── ③ 무엇이 바뀌는가 ────────────────────────────────────────── */}
+          지웠다. 같은 사실이 두 군데 있었다 — 항목마다 고칠 수 있는지는 왼쪽
+          편집 영역이 이미 말하고 있고(schema 의 note), 우측이 그것을 한 번 더
+          나열하면 화면이 길어지는 만큼 «정작 봐야 할» 변경사항이 밀린다.
+
+          🔴 capability 자체는 «그대로» 쓴다. 지운 것은 목록 UI 뿐이고, 무엇을
+          고칠 수 있는지는 여전히 editorFieldSchema 가 정하며 아래 게이트도
+          그 판단을 따른다(고칠 수 없는 항목의 변화는 세지 않는다).
+
+          🔴 고칠 수 «있는 항목이 하나도 없는» 채널은 그 사실만 한 줄로 말한다 —
+          Coupang·LotteON 이 그렇다. 목록을 지웠다고 「수정할 수 있다」로 보이면
+          안 된다. */}
+      {editable.length === 0 && (
+        <div className="p-3">
+          {/* 🔴 「수정할 수 없습니다」가 아니다 — 확인되지 «않았을» 뿐이고,
+              문구는 capability 가 준 것을 그대로 쓴다. */}
+          <p className="text-xs text-slate-600">{others[0]?.note}</p>
+        </div>
+      )}
+
+      {/* ── ② 무엇이 바뀌는가 ────────────────────────────────────────── */}
       <div className="p-3">
         {gate.changes.length > 0 ? (
           <>

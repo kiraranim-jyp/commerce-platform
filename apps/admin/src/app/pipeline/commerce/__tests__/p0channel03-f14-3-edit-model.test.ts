@@ -3,7 +3,9 @@ import type { NaverProductRegistrationPayload, RegisteredProductSnapshot } from 
 import { FIELD_ORDER } from "../channel-field-capability";
 import {
   buildChannelEditModel,
+  channelEditDraft,
   channelEditDraftFromNaverPayload,
+  editedFieldsSinceLoad,
   editorFieldSchema,
   evaluateEditGate,
   localTouchSignals,
@@ -338,5 +340,123 @@ describe("⑦ 🔴 물음표를 ○ 로 만들지 않는다 — capability 는 F
     expect(gate.changes).toEqual([]);
     expect(gate.touched).toEqual([]);
     expect(gate.canSubmit).toBe(false);
+  });
+});
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * ⑧ P0-CHANNEL-03 F-14-7 — **고치지 않은 것은 변경사항이 아니다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * Production 사고 재현: 셀러가 상품명에 「!」 하나를 붙였는데 재고 7 → 999,
+ * 상세설명 1907자 → 1835자가 같이 「변경사항」으로 떴다.
+ *
+ * 🔴 원인은 초안을 payload 그대로 쓴 것이다. 그 안에는 셀러가 건드린 적 없는
+ * Master 값이 전부 들어 있고, 채널 값과 대조하면 그것이 몽땅 변경이 된다.
+ * 「고쳤다」의 기준은 «수정 화면을 연 뒤 우리 화면에서 달라졌는가» 여야 한다.
+ */
+describe("⑧ 🔴 F-14-7 — 상품명만 고치면 상품명만 바뀐다", () => {
+  /** 지금 채널에 나가 있는 것. */
+  const CHANNEL: RegisteredProductSnapshot = {
+    name: "Bobo Choses Tag Woven Pants",
+    salePrice: 157100,
+    stockQuantity: 7,
+    detailContent: "가".repeat(1907),
+    representativeImageUrl: "https://shop-phinf.pstatic.net/a.jpg",
+    optionalImageCount: 7,
+    optionCombinationCount: 6,
+    hasProvidedNotice: true,
+    leafCategoryId: "50000167",
+  };
+
+  /** 우리 빌더가 만드는 것 — 전부 Master 값이다(재고 999 · 상세설명 1835자). */
+  const master = (over: Record<string, unknown> = {}): NaverProductRegistrationPayload =>
+    ({
+      originProduct: {
+        name: "Bobo Choses Tag Woven Pants",
+        salePrice: 157100,
+        stockQuantity: 999,
+        detailContent: "나".repeat(1835),
+        leafCategoryId: "50000167",
+        images: {
+          representativeImage: { url: "https://shop-phinf.pstatic.net/NEW.jpg" },
+          optionalImages: Array.from({ length: 7 }, () => ({ url: "x" })),
+        },
+        detailAttribute: {
+          productInfoProvidedNotice: { productInfoProvidedNoticeType: "WEAR" },
+          optionInfo: { optionCombinations: Array.from({ length: 6 }, () => ({})) },
+        },
+        ...over,
+      },
+    }) as unknown as NaverProductRegistrationPayload;
+
+  const channelModel = model(CHANNEL);
+  /** 수정 화면을 연 뒤 지금까지의 변경을 그대로 태운다. */
+  const gateFor = (now: NaverProductRegistrationPayload) => {
+    const base = master();
+    const edited = editedFieldsSinceLoad(base, now);
+    return {
+      edited,
+      gate: evaluateEditGate(channelModel, channelEditDraft(channelModel, now, edited), localTouchSignals(base, now)),
+    };
+  };
+
+  it("Case 5. 아무것도 고치지 않으면 «변경사항 없음» 이고 버튼이 닫혀 있다", () => {
+    /* 🔴 Master 의 재고·상세설명이 채널과 다르지만 셀러는 건드린 적이 없다. */
+    const { edited, gate } = gateFor(master());
+    expect(edited).toEqual([]);
+    expect(gate.changes).toEqual([]);
+    expect(gate.canSubmit).toBe(false);
+  });
+
+  it("Case 1. 🔴 상품명만 고치면 «상품명 하나» 만 나온다", () => {
+    const { edited, gate } = gateFor(master({ name: "Bobo Choses Tag Woven Pants !" }));
+    expect(edited).toEqual(["name"]);
+    expect(gate.changes.map((c) => c.field)).toEqual(["name"]);
+    expect(gate.changes[0]).toMatchObject({
+      label: "상품명",
+      from: "Bobo Choses Tag Woven Pants",
+      to: "Bobo Choses Tag Woven Pants !",
+    });
+    expect(gate.canSubmit).toBe(true);
+  });
+
+  it("Case 2. 재고만 고치면 재고 하나만 나온다 — 채널의 7 을 기준으로 센다", () => {
+    const { gate } = gateFor(master({ stockQuantity: 12 }));
+    expect(gate.changes.map((c) => c.field)).toEqual(["stockQuantity"]);
+    expect(gate.changes[0]).toMatchObject({ from: "7", to: "12" });
+  });
+
+  it("Case 3. 상세설명만 고치면 상세설명 하나만 나온다", () => {
+    const { gate } = gateFor(master({ detailContent: "다".repeat(2000) }));
+    expect(gate.changes.map((c) => c.field)).toEqual(["detailContent"]);
+  });
+
+  it("Case 6. 🔴 고쳤다가 원래대로 되돌리면 버튼이 닫힌다", () => {
+    const edited = gateFor(master({ name: "Bobo Choses Tag Woven Pants !" }));
+    expect(edited.gate.canSubmit).toBe(true);
+    const reverted = gateFor(master());
+    expect(reverted.gate.canSubmit).toBe(false);
+    expect(reverted.gate.changes).toEqual([]);
+  });
+
+  it("🔴 고치지 않은 축의 초안값은 «채널 값» 이다 — 그래서 대조가 조용하다", () => {
+    const draft = channelEditDraft(channelModel, master({ name: "다른 이름" }), ["name"]);
+    expect(draft.stockQuantity).toBe("7");
+    expect(String(draft.detailContent)).toHaveLength(1907);
+    expect(draft.name).toBe("다른 이름");
+  });
+
+  it("🔴 이미지를 «같은 장수로» 교체한 것은 여전히 잡힌다 — 손댄 사실로 연다", () => {
+    const swapped = master({
+      images: {
+        representativeImage: { url: "https://shop-phinf.pstatic.net/SWAP.jpg" },
+        optionalImages: Array.from({ length: 7 }, () => ({ url: "x" })),
+      },
+    });
+    const { gate } = gateFor(swapped);
+    expect(gate.changes).toEqual([]);
+    expect(gate.touched).toEqual(["images"]);
+    expect(gate.canSubmit).toBe(true);
   });
 });

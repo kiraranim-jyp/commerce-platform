@@ -216,14 +216,82 @@ export function localTouchSignals(
   before: NaverProductRegistrationPayload,
   after: NaverProductRegistrationPayload,
 ): EditableField[] {
-  const axes: { field: EditableField; of: (p: NaverProductRegistrationPayload) => unknown }[] = [
-    { field: "images", of: (p) => p.originProduct?.images },
-    { field: "options", of: (p) => p.originProduct?.detailAttribute?.optionInfo },
-    { field: "providedNotice", of: (p) => p.originProduct?.detailAttribute?.productInfoProvidedNotice },
-  ];
-  return axes
-    .filter(({ of }) => JSON.stringify(of(before) ?? null) !== JSON.stringify(of(after) ?? null))
-    .map(({ field }) => field);
+  /* 🔴 대조할 수 없는 세 축만 추린다. 나머지는 채널 값과 대조해서 알 수 있고,
+     그 축까지 여기서 세면 「고쳤다」와 「원래 달랐다」가 섞인다. */
+  const blind: EditableField[] = ["images", "options", "providedNotice"];
+  return editedFieldsSinceLoad(before, after).filter((field) => blind.includes(field));
+}
+
+/** 한 축을 우리 payload 에서 꺼낸다. 🔴 `editedFieldsSinceLoad` 하나만 쓴다. */
+const PAYLOAD_AXIS: Record<EditableField, (p: NaverProductRegistrationPayload) => unknown> = {
+  name: (p) => p.originProduct?.name,
+  salePrice: (p) => p.originProduct?.salePrice,
+  stockQuantity: (p) => p.originProduct?.stockQuantity,
+  detailContent: (p) => p.originProduct?.detailContent,
+  images: (p) => p.originProduct?.images,
+  options: (p) => p.originProduct?.detailAttribute?.optionInfo,
+  providedNotice: (p) => p.originProduct?.detailAttribute?.productInfoProvidedNotice,
+  category: (p) => p.originProduct?.leafCategoryId,
+};
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * P0-CHANNEL-03 F-14-7 — **셀러가 «이번에» 고친 항목.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 「채널 값과 다르다」가 아니라 「수정 화면을 연 뒤 우리 화면에서 달라졌다」다.
+ * 이 둘은 «전혀» 다른 질문이고, 섞은 것이 Production 사고의 원인이었다:
+ *
+ *   우리 Master 의 재고는 999, 채널의 재고는 7 이다. 셀러가 재고를 건드린 적이
+ *   없어도 두 값은 다르다. 그것을 「고쳤다」로 읽으면 상품명 하나 고친 셀러에게
+ *   「재고 7 → 999」가 같이 나간다.
+ *
+ * 그래서 비교 대상은 «둘 다 우리 payload» 다 — 수정 화면을 열 때의 것과 지금 것.
+ * 같은 빌더가 같은 세션에서 만든 값이라 서버 정규화도 키 순서 문제도 없다
+ * (`registered-change.ts` 가 JSON 비교를 금지한 조건과 다른 이유가 그것이다).
+ */
+export function editedFieldsSinceLoad(
+  before: NaverProductRegistrationPayload,
+  after: NaverProductRegistrationPayload,
+): EditableField[] {
+  return FIELD_ORDER.filter((field) => {
+    const read = PAYLOAD_AXIS[field];
+    return JSON.stringify(read(before) ?? null) !== JSON.stringify(read(after) ?? null);
+  });
+}
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * P0-CHANNEL-03 F-14-7 — **화면이 보는 초안 = 지금 등록된 값 + 고친 것.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 payload 를 «그대로» 초안으로 쓰면 안 된다. 그 안에는 셀러가 건드린 적 없는
+ * Master 값이 전부 들어 있고(재고 999·상세설명 1835자), 채널 값과 대조하면 그것이
+ * 몽땅 「변경사항」이 된다 — Production 에서 실제로 그렇게 보였다.
+ *
+ * 🔴 서버도 «같은 규칙» 으로 실제 payload 를 만든다(preserveRegisteredValues).
+ * 화면이 보여주는 변경사항과 실제로 나가는 내용이 같아야 하므로, 규칙은 한
+ * 문장이어야 한다 — 「고친 축은 내 값, 나머지는 지금 등록된 값」.
+ */
+export function channelEditDraft(
+  model: ChannelEditModel,
+  current: NaverProductRegistrationPayload,
+  edited: readonly EditableField[],
+): Partial<Record<EditableField, unknown>> {
+  const projected = channelEditDraftFromNaverPayload(current);
+  const draft: Partial<Record<EditableField, unknown>> = {};
+  for (const field of FIELD_ORDER) {
+    if (edited.includes(field)) {
+      draft[field] = projected[field];
+      continue;
+    }
+    /* 고치지 않은 축은 «지금 등록된 값» 그대로다 — 그래서 변경으로 잡히지 않는다.
+       🔴 읽지 못한 축(UNREAD)은 비워 둔다. 대조하지 않는다는 뜻이고, 그 처리는
+       evaluateEditGate 가 이미 한다(한쪽만 비우면 거짓 변경이 난다). */
+    const baseline = model.baseline[field];
+    if (baseline.state !== "UNREAD") draft[field] = baseline.value;
+  }
+  return draft;
 }
 
 /** 초안을 기준값과 «같은 단위» 로 만든다. 🔴 단위가 어긋나면 항상 「바뀜」이 된다. */
