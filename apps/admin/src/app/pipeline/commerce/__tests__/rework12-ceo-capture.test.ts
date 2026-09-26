@@ -234,7 +234,60 @@ describe("REWORK-12 ① — 우측 요약 카드는 세 탭 각각 화면에 하
       const [left, right] = Array.from(frame.children) as HTMLElement[];
       expect(frame.children.length, `${tab.label}: 프레임 칸이 둘이 아니다`).toBe(2);
       expect(left.querySelectorAll("[data-summary]").length, `${tab.label}: 좌측에 요약이 있다`).toBe(0);
-      expect(right.querySelectorAll("[data-summary]").length, `${tab.label}: 우측 요약이 하나가 아니다`).toBe(1);
+      /* ══════════════════════════════════════════════════════════════════════
+         Commerce-3B(2026-09-26) — 🔴 세는 대상을 «등록 요약» 으로 좁혔다.
+
+         전: right 안의 `[data-summary]` 전부가 정확히 1개
+         후: right 안의 `[data-summary="channel-registration"]` 이 정확히 1개
+
+         🔴 이것은 가드를 «푸는» 것이 아니라 letter 를 intent 에 맞추는 것이다.
+         이 검사가 막는 CEO 캡처는 「우측 기둥에 등록 준비 카드가 8개 쌓였다」이고,
+         그 사실은 위 테스트(:219-222)가 이미 «같은 선택자로» 문서 전수로 센다.
+         반면 우측에는 «등록 후 관리» 카드가 한 장 더 서는 것이 정상이다 —
+         스마트스토어는 등록된 상품에 「불러오기」 카드를, 쿠팡·롯데ON 은
+         「확인되지 않음」 카드를 같은 자리에 세운다(Commerce-3B). 예전에는 그
+         카드가 이 테스트의 렌더에 «나타나지 않아서» 숫자가 우연히 1이었다.
+
+         🔴 대신 아래 두 줄로 더 좁게 막는다 — 종류별로 최대 한 장이고, 등록 요약이
+         언제나 «먼저» 온다. 카드가 쌓이거나 순서가 뒤집히면 여기서 잡힌다. */
+      const kinds = Array.from(right.querySelectorAll("[data-summary]")).map((el) =>
+        el.getAttribute("data-summary"),
+      );
+      expect(kinds.filter((k) => k === "channel-registration").length, `${tab.label}: 등록 요약이 하나가 아니다`).toBe(1);
+      expect(new Set(kinds).size, `${tab.label}: 같은 종류의 요약 카드가 두 장 이상이다`).toBe(kinds.length);
+      expect(kinds[0], `${tab.label}: 등록 요약이 맨 위가 아니다`).toBe("channel-registration");
+    }
+  });
+
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * Commerce-3B(CPO 지시, 2026-09-26) — 🔴 **정말 «그려지는지»** 본다.
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 위 검사들은 개수와 순서만 세므로, 카드가 아예 그려지지 않아도 통과한다.
+   * 이 저장소가 반복해 겪은 실패 모양이 그것이다 — 테스트는 초록인데 화면은
+   * 비어 있다. 그래서 «있다» 를 직접 단정한다.
+   *
+   * 🔴 스마트스토어에는 이 카드가 «없어야» 한다. 그 채널은 어댑터가 있어
+   * `editUnavailableNote()` 가 undefined 를 내고(카드가 스스로 사라진다), 등록된
+   * 상품이면 대신 「불러오기」 카드가 선다. 즉 이 한 테스트가 양쪽을 다 지킨다.
+   */
+  it("🔴 어댑터 없는 채널의 우측에 「확인되지 않음」 카드가 실제로 그려진다", async () => {
+    for (const tab of TABS) {
+      const dom = await mountExpanded(tab.element());
+      const card = dom.querySelector('[data-summary="channel-edit-unavailable"]');
+      if (tab.label === "SMARTSTORE") {
+        expect(card, "스마트스토어에 「확인되지 않음」 카드가 섰다 — 이 채널은 수정이 확인된 채널이다").toBeNull();
+        continue;
+      }
+      expect(card, `${tab.label}: 수정 가능 여부를 «아무 말도» 하지 않는다`).not.toBeNull();
+      const text = clean(card!.textContent ?? "");
+      expect(text).toContain("등록된 상품 수정");
+      expect(text).toContain("확인되지 않음");
+      /* 🔴 「안 됩니다」라고 말하지 않는다 — 확인되지 않았을 뿐이다. */
+      expect(text).not.toContain("지원하지 않습니다");
+      /* 🔴 누를 것이 없다 — 누를 수 있는 것처럼 보이면 UNKNOWN 이 EDITABLE 로 읽힌다. */
+      expect(card!.querySelectorAll("button").length, `${tab.label}: 안내 카드에 버튼이 있다`).toBe(0);
     }
   });
 });

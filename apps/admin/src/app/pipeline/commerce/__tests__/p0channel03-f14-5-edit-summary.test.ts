@@ -214,10 +214,26 @@ describe("④ 🔴 개발용 낱말은 앞면에 없고, 근거는 남아 있다
 
 describe("⑤ 🔴 기존 등록 흐름을 대체하지 않는다", () => {
   it("등록 요약 «아래» 에 따로 선다 — 카드를 합치지 않는다", () => {
-    expect(FRAME).toContain("{editSummary}");
+    /* 🔴 Commerce-3B(2026-09-26) — 슬롯이 `{editSummary}` 에서
+       `{editSummary ?? …}` 로 바뀌었다. 자리와 순서는 그대로다(아래 두 줄이 그것을
+       고정한다). 비어 있던 이 자리가 쿠팡·11번가에서 «아무 말도 하지 않던» 것이
+       Commerce-3B 가 고친 것이고, 채워 넣은 것은 수정 «기능» 이 아니라
+       「확인되지 않음」이라는 사실 한 줄이다. */
+    expect(FRAME).toContain("{editSummary ??");
     const iRegistration = FRAME.indexOf("<ChannelRegistrationSummary");
-    const iEdit = FRAME.indexOf("{editSummary}");
+    const iEdit = FRAME.indexOf("{editSummary ??");
     expect(iRegistration).toBeLessThan(iEdit);
+  });
+
+  it("🔴 빈 자리에 들어가는 것은 «수정 기능» 이 아니라 사실 한 줄이다", () => {
+    /* 어댑터가 없는 채널의 대체 카드가 버튼을 갖거나 「불러오기」를 말하면,
+       capability 가 UNKNOWN 인데 화면이 고칠 수 있다고 말하는 것이 된다. */
+    expect(FRAME).toContain("<ChannelEditUnavailableCard");
+    expect(FRAME).toContain("note={editUnavailableNote(listing.platform)}");
+    const iFallback = FRAME.indexOf("<ChannelEditUnavailableCard");
+    const fallback = FRAME.slice(iFallback, FRAME.indexOf("/>", iFallback));
+    expect(fallback).not.toContain("onLoad");
+    expect(fallback).not.toContain("onSubmit");
   });
 
   it("등록 요약의 입력은 하나도 바뀌지 않았다", () => {

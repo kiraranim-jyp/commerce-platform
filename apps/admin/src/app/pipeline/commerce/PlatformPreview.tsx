@@ -19,6 +19,8 @@ import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
 import { ChannelPriceSection } from "./ChannelPriceSection";
 import { CategoryRequirementsEditor } from "./CategoryRequirementsEditor";
 import { ChannelRegistrationFrame, ChannelRegistrationSummary } from "./ChannelRegistrationFrame";
+import { ChannelEditUnavailableCard } from "./ChannelEditSummary";
+import { editUnavailableNote } from "./edit-adapters";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { ComplianceBreakdown } from "./ComplianceBreakdown";
 import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
@@ -911,7 +913,25 @@ export function PlatformPreview({
         registrationEnabled={capabilities.registrationEnabled}
         onRegister={onOpenListingModal}
       />
-      {editSummary}
+      {/* ══════════════════════════════════════════════════════════════════════
+          Commerce-3B(CPO 지시, 2026-09-26) — 🔴 **이 자리가 비어 있었다.**
+
+          `editSummary` 는 어댑터가 있는 채널(지금은 SmartStore)만 채운다. 그래서
+          쿠팡·11번가 탭에서는 이 자리에 «아무것도» 서지 않았고, 셀러는 「등록된
+          상품을 수정할 수 있는가」에 대해 아무 말도 듣지 못했다 — 「확인되지
+          않았습니다」조차. 빈 칸은 「없다」가 아니라 「말하지 않은 것」이다.
+
+          🔴 문구는 capability 계층이 정한 것을 그대로 쓴다(editUnavailableNote).
+             그 함수는 어댑터가 «있으면» undefined 를 내므로, 이 카드는 어댑터가
+             없는 채널에서만 선다 — 조건을 여기서 따로 쓰지 않는다(채널 이름을
+             화면에 박으면 표가 바뀌어도 화면은 옛말을 계속 한다).
+      ══════════════════════════════════════════════════════════════════════ */}
+      {editSummary ?? (
+        <ChannelEditUnavailableCard
+          commerceLabel={listing.platformLabel}
+          note={editUnavailableNote(listing.platform)}
+        />
+      )}
     </div>
   );
 

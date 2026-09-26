@@ -81,6 +81,66 @@ export function ChannelEditLoaderCard({
   );
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * Commerce-3B(CPO 지시, 2026-09-26) — **「수정할 수 있는지 모른다」도 말한다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * ── 무엇이 문제였나 ───────────────────────────────────────────────────────
+ * Core 는 이 문장을 «이미 갖고 있었다»(`editUnavailableNote`). 그런데 프로덕션
+ * 호출부가 0건이라, 쿠팡·롯데ON 을 연 셀러는 「등록된 상품을 수정할 수 있는가」에
+ * 대해 **아무 말도 듣지 못했다** — 「확인되지 않았습니다」조차 못 들었다.
+ * 그 자리에는 빈 칸이 있었고, 빈 칸은 「없다」가 아니라 「아무 말도 안 한 것」이다.
+ *
+ * ── 🔴 새 UX 를 «만들지» 않는다 ──────────────────────────────────────────
+ * 자리는 이미 있다 — 우측 요약의 `editSummary` 슬롯이고, SmartStore 는 그 자리에
+ * 「등록된 내용 불러오기」 카드를 세운다. 어댑터가 없는 채널은 «같은 자리에»
+ * 같은 격의 카드로 사실만 적는다. 화면을 하나 더 만들면 셀러는 수정 관련 정보를
+ * 두 군데서 찾게 된다(ChannelEditLoaderCard 주석과 같은 이유).
+ *
+ * ── 🔴 문구를 여기서 «지어내지» 않는다 ──────────────────────────────────
+ * `note` 를 그대로 받는다. capability 계층(`editUnavailableNote` ·
+ * `fieldCapabilityNote`)이 이미 정한 문장이고, 여기서 다시 쓰면 같은 사실이 두
+ * 목소리로 갈라진다. 「안 됩니다」가 아니라 「확인되지 않았습니다」인 것도 그
+ * 계층의 결정이다.
+ *
+ * 🔴 버튼이 없다. 누를 것이 없는 상태이므로 누를 수 있는 것처럼 보이면 안 된다.
+ *
+ * 🔴 「무엇이 확인되면 열리는가」(예: 「등록 상품 GET 실측 후 지원 범위 확정」)는
+ * 이 카드가 «받지 않는다». 그 문장은 채널마다 다른 사실이고, 화면이 그것을 알면
+ * 채널 지식이 UI 로 새어 나온다 — 있어야 할 자리는 `CHANNEL_CAPABILITY` 표다
+ * (지금은 그 표의 «주석» 에만 있어서 화면까지 못 온다). 필드로 올릴지는 CPO
+ * 결정이므로 여기서 미리 인자를 만들어 두지 않는다.
+ */
+export function ChannelEditUnavailableCard({
+  commerceLabel,
+  note,
+}: {
+  commerceLabel: string;
+  /**
+   * 🔴 `undefined` 면 «아무것도 그리지 않는다». `editUnavailableNote()` 는 어댑터가
+   * 있는 채널에서 undefined 를 내므로, 호출부는 채널을 가려낼 조건을 따로 쓰지
+   * 않고 그 결과를 그대로 넘기면 된다 — 조건이 두 곳에 생기면 갈라진다.
+   */
+  note: string | undefined;
+}) {
+  if (!note) return null;
+  return (
+    <div
+      data-summary="channel-edit-unavailable"
+      className="overflow-hidden rounded-lg border border-border bg-surface p-4 text-sm shadow-elevated"
+    >
+      {/* 머리글은 SmartStore 의 수정 카드와 «같은 격» 이다 — 같은 일의 다른 상태다. */}
+      <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">등록 후 관리</p>
+      <p className="mt-1 text-base font-semibold text-text-primary">등록된 상품 수정</p>
+      <p className="mt-2 text-xs text-slate-600">
+        {commerceLabel} — <span className="font-medium text-text-primary">확인되지 않음</span>
+      </p>
+      <p className="mt-2 text-xs text-slate-700">{note}</p>
+    </div>
+  );
+}
+
 export interface ChannelEditSummaryProps {
   commerceLabel: string;
   model: ChannelEditModel;

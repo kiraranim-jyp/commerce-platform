@@ -67,6 +67,10 @@ import {
   sectionTitle,
 } from "./registration-sections";
 import { ChannelRegistrationFrame, ChannelRegistrationSummary } from "./ChannelRegistrationFrame";
+/* Commerce-3B — 🔴 스마트스토어가 쓰는 «그 카드» 와 «그 문구» 를 그대로 쓴다. */
+import { ChannelEditUnavailableCard } from "./ChannelEditSummary";
+import { editUnavailableNote } from "./edit-adapters";
+import { LOTTEON_COMMERCE_ID, commerceLabel } from "./commerce-registry";
 import { ListingConfirmationModal, type ListingProgressStep } from "./ListingConfirmationModal";
 import type { ReadinessItem } from "./readiness";
 import { resolveRegistrationReadinessState, type PriorityItem } from "./readiness-state";
@@ -944,7 +948,17 @@ export function LotteOnRegistrationPanel({
           ? "READY"
           : "DRAFT";
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     Commerce-3B(CPO 지시, 2026-09-26) — 🔴 롯데ON 도 «같은 자리에» 같은 말을 한다.
+
+     스마트스토어는 우측 요약 아래에 「등록된 상품 수정」 카드를 세운다. 롯데ON 은
+     그 자리가 비어 있었고, 그래서 셀러는 수정 가능 여부를 «어디서도» 듣지 못했다.
+     🔴 문구는 capability 계층이 정한 것을 그대로 쓴다 — 여기서 지어내지 않는다.
+        어댑터가 생기는 날 `editUnavailableNote` 가 undefined 를 내고 카드는 스스로
+        사라진다(조건을 이 파일에 쓰지 않는 이유가 그것이다).
+  ══════════════════════════════════════════════════════════════════════════ */
   const summary = (
+    <div className="space-y-6">
     <ChannelRegistrationSummary
       state={registrationState}
       priorityItems={priorityItems}
@@ -1045,6 +1059,11 @@ export function LotteOnRegistrationPanel({
         </div>
       }
     />
+      <ChannelEditUnavailableCard
+        commerceLabel={commerceLabel(LOTTEON_COMMERCE_ID)}
+        note={editUnavailableNote(LOTTEON_COMMERCE_ID)}
+      />
+    </div>
   );
 
   /*
