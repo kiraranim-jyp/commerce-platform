@@ -31,6 +31,9 @@ export * from "./notice/reference-eligibility";
 // REWORK-10 A(CEO 지시, 2026-09-15) — 제조사 폴백 사슬. 세 채널의 payload와
 // 세 채널의 **화면**이 같은 함수 하나를 본다(common/manufacturer.ts 주석 참고).
 export * from "./common/manufacturer";
+// Commerce-6 C-2A(CPO 지시, 2026-09-26) — 배송/물류 Common 과 채널 binding.
+// 제조사와 같은 자리다: 세 채널이 같은 표 하나를 본다.
+export * from "./common/logistics";
 // LOTTEON COMMERCE SPRINT 2 — 롯데ON은 PlatformId에 들어가지 않는다(CPO 확정).
 // 그래서 registry.ts(PLATFORM_ADAPTERS / LISTING_EXECUTORS)에는 등록하지 않고,
 // 필요한 곳(서버 라우트)이 이 export를 직접 import한다. 기존 export 표면은

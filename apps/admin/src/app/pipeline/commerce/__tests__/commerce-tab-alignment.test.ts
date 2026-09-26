@@ -692,9 +692,11 @@ describe("표 4행 — 채널 고유값 입력", () => {
     expect(text).toContain("셀러 설정에 있지만 롯데ON 코드체계가 다름");
     // 개념 자체가 없는 것.
     expect(text).toContain("셀러 설정에 없는 개념 — 롯데ON 고유값");
-    expect(text).toContain("배송비정책번호");
-    expect(text).toContain("배송가능지역코드");
-    expect(text).toContain("반품택배사코드");
+    /* 🔴 C-2A — 라벨에서 「번호」·「코드」를 뺐다(셀러가 보는 이름은 의미다).
+       이 줄들이 보는 것은 «이유가 화면에 있는가» 이고 그건 그대로다. */
+    expect(text).toContain("배송비 정책");
+    expect(text).toContain("배송 가능 지역");
+    expect(text).toContain("반품 택배사");
   });
 
   for (const platform of PLATFORM_TABS) {
@@ -803,10 +805,12 @@ describe("셀러 설정 판정표 — 화면과 payload가 같은 함수를 본�
     expect(byLabel["반품지"].usage).toBe("CHANNEL_CODE_DIFFERS");
     expect(byLabel["택배사"].usage).toBe("CHANNEL_CODE_DIFFERS");
 
-    // 셀러 설정에 **개념 자체가 없는** 것 — 롯데ON 고유값으로 남긴다.
-    expect(byLabel["배송비정책번호"].usage).toBe("NO_SETTING_CONCEPT");
-    expect(byLabel["배송가능지역코드"].usage).toBe("NO_SETTING_CONCEPT");
-    expect(byLabel["반품택배사코드"].usage).toBe("NO_SETTING_CONCEPT");
+    /* 셀러 설정에 **개념 자체가 없는** 것 — 롯데ON 고유값으로 남긴다.
+       🔴 C-2A — 라벨에서 「코드」·「번호」를 뺐다. 셀러가 보는 이름은 의미여야
+       한다(F-7). 판정(usage)은 한 글자도 바뀌지 않았다. */
+    expect(byLabel["배송비 정책"].usage).toBe("NO_SETTING_CONCEPT");
+    expect(byLabel["배송 가능 지역"].usage).toBe("NO_SETTING_CONCEPT");
+    expect(byLabel["반품 택배사"].usage).toBe("NO_SETTING_CONCEPT");
     expect(byLabel["평일 발송마감시간"].usage).toBe("NO_SETTING_CONCEPT");
 
     // 실제로 자동 반영되는 것.

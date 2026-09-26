@@ -2051,10 +2051,15 @@ function SellerSettingRow({ row }: { row: LotteOnSellerSettingRow }) {
   const usage = SELLER_SETTING_USAGE_LABEL[row.usage];
   return (
     <div className="grid gap-0.5 py-2 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-3">
-      <dt className="font-medium text-text-secondary">
-        {row.label}
-        {row.lotteOnField && <span className="ml-1 text-[11px] text-text-tertiary">→ {row.lotteOnField}</span>}
-      </dt>
+      {/* ══ Commerce-6 C-2A(CPO 지시, 2026-09-26) ══
+          🔴 여기가 F-7 이 놓친 자리다. 입력칸의 코드 노출은 F-7 에서 다 걷어
+          냈는데, 이 판정표만 라벨 옆에 `→ owhpNo` `→ hdcCd` `→ dvCstPolNo` 를
+          그대로 찍고 있었다 — 셀러에게 Commerce 내부 필드명을 보여주지 않는다는
+          원칙이 한 컴포넌트에서만 지켜지지 않았다.
+
+          `lotteOnField` 는 데이터에 그대로 둔다. 어느 필드를 말하는지는 «코드가»
+          알아야 하고 테스트도 그것을 본다. 화면에는 셀러가 아는 이름만 선다. */}
+      <dt className="font-medium text-text-secondary">{row.label}</dt>
       <dd>
         <p>
           <span className={usage.tone}>{usage.mark}</span>{" "}

@@ -152,19 +152,31 @@ export interface LotteOnSellerSettingRow {
  */
 export const LOTTEON_ONLY_DELIVERY_VALUES: { label: string; lotteOnField: string; note: string }[] = [
   {
-    label: "배송비정책번호",
+    label: "배송비 정책",
     lotteOnField: "dvCstPolNo",
-    note: "셀러 설정은 배송비를 **금액**(배송비/반품배송비)으로 갖고 있고, 롯데ON은 판매자센터에 등록된 **정책 번호**를 요구합니다 — 같은 개념이 아니라 금액에서 번호를 만들 수 없습니다.",
+    note: "셀러 설정은 배송비를 **금액**(배송비/반품배송비)으로 갖고 있고, 롯데ON은 판매자센터에 등록된 **정책**을 요구합니다 — 같은 개념이 아니라 금액에서 정책을 만들 수 없습니다.",
   },
   {
-    label: "배송가능지역코드",
+    /* ══ Commerce-6 C-2A(CPO 지시, 2026-09-26) — 이 문장은 사실이 아니었다 ══
+       「쿠팡·스마트스토어도 이 값을 쓰지 않습니다」로 적혀 있었다. 쿠팡은 쓴다 —
+       다만 셀러에게 묻지 않고 상수로 「배송 불가」를 보내고 있다
+       (coupang/build-payload.ts:1597 remoteAreaDeliverable: "N").
+       네이버는 타입만 선언돼 있고 payload 가 채우지 않으며, 애초에 묻는 것이
+       «추가 배송비» 라 같은 질문이 아니다. 전수는 common/logistics.ts 에 있다. */
+    label: "배송 가능 지역",
     lotteOnField: "dvRgsprGrpCd",
-    note: "배송 가능 지역(전국/제주·도서산간)을 구분해 저장하는 자리가 셀러 설정에 없습니다 — 쿠팡·스마트스토어도 이 값을 쓰지 않습니다.",
+    note: "배송 가능 지역을 저장하는 자리가 셀러 설정에 없습니다. 쿠팡은 이 개념을 쓰지만 셀러에게 묻지 않고 「도서산간 배송 불가」로 고정해 보내고 있고, 스마트스토어가 묻는 것은 지역이 아니라 제주·도서산간 추가 배송비입니다 — 세 곳이 같은 질문을 하지 않아 한 값으로 합칠 수 없습니다.",
   },
   {
-    label: "반품택배사코드",
+    /* ══ C-2A — 이 문장도 사실이 아니었다 ══
+       「쿠팡·스마트스토어는 반품 택배사를 구분하지 않습니다」로 적혀 있었다.
+       스마트스토어는 구분할 뿐 아니라 목록 API 까지 있다
+       (GET /v2/product-delivery-info/return-delivery-companies →
+        resolvePrimaryReturnCompany 가 PRIMARY 를 고른다). 구분하지 않는 것은
+       쿠팡 하나뿐이다(payload 에 필드 0건). */
+    label: "반품 택배사",
     lotteOnField: "rtngHdcCd",
-    note: "반품 택배사를 따로 저장하는 자리가 셀러 설정에 없습니다(쿠팡·스마트스토어는 반품 택배사를 구분하지 않습니다).",
+    note: "반품 택배사를 저장하는 자리가 셀러 설정에 없습니다. 스마트스토어는 판매자센터에 등록된 반품 택배사를 그대로 가져다 쓰고(설정에 저장하지 않습니다), 쿠팡은 반품 택배사를 구분하지 않습니다.",
   },
   {
     label: "평일 발송마감시간",
@@ -233,7 +245,9 @@ export function describeLotteOnSellerSettings(
           .join(" · ") || null,
       usage: "CHANNEL_CODE_DIFFERS",
       lotteOnField: "hdcCd",
-      note: "셀러 설정이 이미 택배사를 **플랫폼별로 따로** 저장하고 있습니다(설정 화면 원문: \"플랫폼별로 요구하는 코드 체계가 달라 … 별도로 저장됩니다\"). 롯데ON은 공통코드 DV_CO_CD를 쓰므로 쿠팡/스마트스토어 값을 옮겨 적을 수 없습니다.",
+      /* 🔴 C-2A — 여기 있던 `DV_CO_CD` 를 지웠다. 셀러가 볼 문장에 우리 내부
+         코드그룹 이름을 적을 이유가 없다(F-7). 사실 자체는 그대로다. */
+      note: "셀러 설정이 이미 택배사를 **플랫폼별로 따로** 저장하고 있습니다(설정 화면 원문: \"플랫폼별로 요구하는 코드 체계가 달라 … 별도로 저장됩니다\"). 롯데ON은 자체 택배사 목록을 쓰므로 쿠팡/스마트스토어 값을 옮겨 적을 수 없습니다 — 아래 배송 정보에서 목록을 받아 고릅니다.",
     },
     ...LOTTEON_ONLY_DELIVERY_VALUES.map((row) => ({
       label: row.label,
