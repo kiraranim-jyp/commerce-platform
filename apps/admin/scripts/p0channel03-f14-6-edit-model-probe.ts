@@ -89,6 +89,40 @@ async function probeEditModel() {
   }
   const model = built.model;
 
+  /* ── ①-b 🔴 originProduct «밖» — 우리가 한 번도 본 적 없는 축 ───────────
+     F-14-6 실측에서 최상위 키가 두 개(originProduct · smartstoreChannelProduct)
+     라는 것이 드러났다. 수정은 «전체 교체» 인데 우리 payload 는 이쪽을 고정값
+     으로 채워 보낸다 — 그 값이 지금 나가 있는 값과 다르면 «조용히» 바뀐다.
+     RegisteredProductSnapshot 에는 이 축이 없어 손실검사도 보지 못한다. */
+  const channel = (envelope.result?.body as { smartstoreChannelProduct?: Record<string, unknown> } | null)
+    ?.smartstoreChannelProduct;
+  console.log("\n── ①-b 🔴 smartstoreChannelProduct — 손실검사가 «보지 않는» 축 ──");
+  if (!channel) {
+    console.log("  응답에 없다. (없는 것을 있다고 읽지 않는다)");
+  } else {
+    for (const [key, value] of Object.entries(channel)) {
+      const shape =
+        value === null
+          ? "null"
+          : Array.isArray(value)
+            ? `배열(${value.length}개)`
+            : typeof value === "object"
+              ? `객체(키 ${Object.keys(value as object).length}개)`
+              : String(value);
+      console.log(`  ${key.padEnd(34)} ${shape}`);
+    }
+    const display = channel.channelProductDisplayStatusType;
+    console.log(
+      display === undefined
+        ? "\n  🔴 전시 상태를 읽지 못했다 — 수정이 그것을 바꾸는지 판단할 수 없다."
+        : display === "SUSPENSION"
+          ? "\n  ⚠ 지금 «전시 중지» 다. 수정을 보내도 그대로 SUSPENSION 이다."
+          : `\n  🔴 지금 «${display}» 다. 우리 payload 는 SUSPENSION 고정이므로,\n` +
+            "     지금 상태로 [상품 수정]을 누르면 판매 중인 상품이 «전시 중지» 가 된다.\n" +
+            "     손실검사(detectUpdateDataLoss)는 originProduct 축만 보므로 막지 못한다.",
+    );
+  }
+
   console.log("\n── ② 화면이 「지금 값」으로 보여줄 것(STEP 3) ──────────────────");
   console.log("  🔴 이 값들의 출처는 채널 GET 하나뿐이다 — 수집 Snapshot 이 아니다.\n");
   const fields = editorFieldSchema(model);
