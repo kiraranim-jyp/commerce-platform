@@ -1,3 +1,4 @@
+import type { CrossSellerBlocker } from "./cross-seller";
 import type { ProductFacts } from "@commerce/shared";
 
 export interface ComparisonCandidate {
@@ -84,6 +85,14 @@ export interface ComparisonCandidate {
   crossSellerVerdict?: "SAME" | "PRESUMED_SAME" | "SIMILAR" | "UNKNOWN" | "CONFLICT";
   /** 그 판정의 근거/보류 사유(사람이 읽는 문장). */
   crossSellerReasons?: string[];
+  /**
+   * MI-3 / P0-1(CPO 지시, 2026-09-26) — 그 판정의 보류 사유를 «기계가 읽는 꼴» 로.
+   *
+   * 🔴 위 `crossSellerReasons` 는 사람이 읽는 문장이라 판정에 쓸 수 없다(문자열을
+   * 다시 파싱하는 것이 이 저장소가 반복해서 고쳐 온 실수다). 품번 재사용을
+   * 가려내려면 「같은 판매처가 두 상품으로 진열했다」를 «값» 으로 읽어야 한다.
+   */
+  crossSellerBlockers?: { blocker: CrossSellerBlocker }[];
   /**
    * P0-A.29-E ㉮ — **이 가격이 어느 옵션의 가격인가.**
    *

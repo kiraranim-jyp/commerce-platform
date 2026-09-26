@@ -74,7 +74,11 @@ const realModelCode = (a: ProductFacts, b: ProductFacts) => compareModelCode(a.b
  *  가 곧 EXACT tier 다. 삭제된 isSameProductForPricing 이 물으려던 질문을,
  *  이제 실제로 그 답을 내는 경로에 그대로 묻는다. */
 function goesIntoSameProductPrice(a: ProductFacts, b: ProductFacts, level: "low" | "medium" | "high" | "very_high") {
-  const truth = deriveMatchTruth(level, realModelCode(a, b), compareCrossSellerProducts(a, b).verdict);
+  const cross = compareCrossSellerProducts(a, b);
+  /* 🔴 MI-3 / P0-1 — 보류 사유를 «함께» 넘긴다. 실제 파이프라인
+     (run-domestic-price-check → decideCandidateEvidence)이 지금 그렇게 부른다.
+     등급만 넘기던 예전 호출이 이 사고를 재현하던 자리였다. */
+  const truth = deriveMatchTruth(level, realModelCode(a, b), cross.verdict, cross.blockers);
   return { truth, exactTier: truth === "EXACT_IDENTIFIER" || truth === "STRONG_IDENTIFIER" };
 }
 const { productFactsFromShopifyProduct } = await import("../comparison-search/seller-facts");
@@ -185,42 +189,56 @@ describe("거짓 SAME 7건 — 판매처가 같은 품번을 여러 상품에 �
   });
 
   /**
-   * 🔴🔴 MATCHING-FIX-01 Phase E — **이 단언은 «옳은 동작»이 아니라 «오늘의 사실»이다.**
+   * ════════════════════════════════════════════════════════════════════════
+   * 🟢 MI-3 / P0-1(CPO 지시, 2026-09-26) — **여기 있던 「🔴 미해결」이 닫혔다.**
+   * ════════════════════════════════════════════════════════════════════════
    *
-   * 바로 위 테스트가 "막혔다"고 말하는 것은 modelCode 를 "unavailable" 이라고
-   * 손으로 적어 넣었을 때의 이야기다. 실제 파이프라인이 넣는 값을 그대로 쓰면
-   * 답이 뒤집힌다(2026-09-16, 픽스처 실측):
+   * 예전 단언은 이랬다 — 「실제 modelCode 를 넣으면 7건이 동일상품 «가격» 에
+   * 들어간다」, `exactTier === true`, 그리고 「true 가 정상이라는 뜻이 아니다」.
+   * 그 테스트는 사고를 «사실» 로 못박아 두고, 고치는 날 빨개지라고 적혀 있었다.
+   * 실제로 빨개졌고, 아래가 그 «무엇을 바꿨는지» 다.
    *
-   *   Minnie Body ↔ Onesie          modelCode=exact    → high 이상이면 EXACT_IDENTIFIER
-   *   Bubble Grey Melange ↔ Graystone  modelCode=exact → high 이상이면 EXACT_IDENTIFIER
-   *   Misha&Puff 두 쌍              modelCode=partial  → 모든 등급에서 STRONG_IDENTIFIER
-   *   Giulia 세 쌍                  modelCode=exact    → high 이상이면 EXACT_IDENTIFIER
+   * ── 무엇이 문제였나 ────────────────────────────────────────────────────
+   * 교차판매처 비교는 이미 알고 있었다 — `SAME_SELLER_DISTINCT_LISTING` 보류를
+   * 남기고 verdict 를 PRESUMED_SAME 으로 내렸다. 그런데 `deriveMatchTruth` 가
+   * 그 «보류 사유» 를 받지 못하고 등급만 받았고, 품번이 exact 이면 보류를
+   * 지나쳐 EXACT_IDENTIFIER 를 줬다. 그 등급은 priceTierFromLink 에서 EXACT 다.
    *
-   * EXACT_IDENTIFIER/STRONG_IDENTIFIER 는 priceTierFromLink 에서 **EXACT** 다.
-   * 즉 «같은 판매처가 두 상품으로 진열해 둔 서로 다른 상품 7쌍이 지금도 동일상품
-   * 가격에 들어간다». MATCHING-3.1 이 막은 것은 `verdict === "SAME"` 한 경로뿐이고,
-   * deriveMatchTruth 는 modelCode 를 **교차판매처 보류보다 먼저** 본다
-   * (match-truth.ts:77-80 — crossSeller 는 CONFLICT 일 때만 먼저 이긴다).
+   * ── 무엇을 바꿨나 ──────────────────────────────────────────────────────
+   * ① blocker 를 «관측된 차이» 와 «확인 못 했다» 로 나눴다(cross-seller.ts).
+   *    BRAND_UNCONFIRMED 만 뒤쪽이다 — 모르는 것으로 식별자를 깎지 않는다.
+   * ② 식별자 «단독» 승격은 관측된 차이가 없을 때만 한다(match-truth.ts).
+   * ③ 그 보류 사유를 후보 → 저장 파이프라인까지 «값» 으로 실어 보냈다
+   *    (types.ts · match.ts · decision.ts · run-domestic-price-check.ts).
    *
-   * 🔴 이 테스트를 통과시키려고 단언을 약화하지 않았다. 반대로, 사고가 사고인
-   *    채로 **실행되는 사실**로 못박는다. 고치는 날 이 테스트는 빨개져야 하고,
-   *    그때 «무엇을 바꿨는지»를 의식적으로 적게 된다.
-   * 🔴 이번 작업에서 고치지 않는 이유: 고치려면 deriveMatchTruth 의 우선순위를
-   *    바꿔야 하고, 그건 기존 판정을 바꾸는 일이다(이 저장소 최상위 금지사항).
-   *    판정 «정의» 단계의 과제다.
+   * 🔴 점수를 깎지 않았고 threshold 도 건드리지 않았다. CONFLICT 로 보내지도
+   * 않는다 — 「다른 상품이다」라고 단정할 근거는 여전히 없기 때문이다. 7쌍은
+   * 이제 TEXT_CONFIRMED(참고 가격)로 내려가고, «동일상품 가격» 에는 못 들어간다.
    */
-  it("🔴 미해결 — 실제 modelCode 를 넣으면 7건이 «동일상품 가격»에 들어간다", () => {
-    const landed: string[] = [];
+  it("🟢 해결 — 실제 modelCode 를 넣어도 7건이 «동일상품 가격»에 들어가지 않는다", () => {
+    const blocked: string[] = [];
     for (const [handle, collection, other] of FALSE_SAME_PAIRS) {
       const a = registered(handle, collection);
       const b = candidate(other);
       // 손으로 적은 "unavailable" 이 아니라 픽스처가 실제로 가진 품번으로 비교한다.
       expect(realModelCode(a, b)).not.toBe("unavailable");
-      const { exactTier } = goesIntoSameProductPrice(a, b, "low");
-      expect(exactTier).toBe(true); // ← 여기가 사고다. true 가 정상이라는 뜻이 아니다.
-      landed.push(`${handle} ↔ ${other}`);
+      // 🔴 품번은 여전히 일치한다 — 가려서 막은 것이 아니다.
+      const { exactTier, truth } = goesIntoSameProductPrice(a, b, "low");
+      expect(exactTier).toBe(false);
+      // 「다른 상품이다」라고 «단정하지도» 않는다 — 참고 가격으로 남는다.
+      expect(truth).not.toBe("CONFLICT");
+      blocked.push(`${handle} ↔ ${other}`);
     }
-    expect(landed).toHaveLength(FALSE_SAME_PAIRS.length);
+    expect(blocked).toHaveLength(FALSE_SAME_PAIRS.length);
+  });
+
+  it("🟢 텍스트 등급이 아무리 높아도 마찬가지다 — 품번 + high 조합이 뚫던 자리", () => {
+    for (const [handle, collection, other] of FALSE_SAME_PAIRS) {
+      const a = registered(handle, collection);
+      const b = candidate(other);
+      expect(goesIntoSameProductPrice(a, b, "very_high").exactTier).toBe(false);
+      expect(goesIntoSameProductPrice(a, b, "high").exactTier).toBe(false);
+    }
   });
 
   it("품번은 여전히 글자 하나까지 같다 — 검색어나 추출을 바꿔서 가린 것이 아니다", () => {
@@ -360,16 +378,16 @@ describe("8번째 거짓 SAME — AW26MS185 는 세 상품이 나눠 쓴다", ()
     }
   });
 
-  /** 🔴 위 「🔴 미해결」과 **같은 사고**다. Conker Stripe 쌍도 modelCode 가
-   *  exact(AW26MS185)라, 실제 입력을 넣으면 동일상품 가격에 들어간다. */
-  it("🔴 미해결 — 실제 modelCode 를 넣으면 이 두 쌍도 «동일상품 가격»에 들어간다", () => {
+  /** 🟢 위 7쌍과 **같은 사고**였고 같은 수정으로 함께 닫혔다. Conker Stripe 쌍도
+   *  modelCode 가 exact(AW26MS185)이지만, 같은 판매처가 세 상품으로 진열했다는
+   *  보류 사유가 이제 판정까지 전달된다. */
+  it("🟢 해결 — 실제 modelCode 를 넣어도 이 두 쌍은 «동일상품 가격»에 못 들어간다", () => {
     for (const [handle, collection] of CONKER_PAIRS) {
       const a = registered(handle, collection);
       const b = candidate(CONKER);
-      expect(realModelCode(a, b)).toBe("exact");
-      expect(goesIntoSameProductPrice(a, b, "low").truth).toBe("STRONG_IDENTIFIER");
-      expect(goesIntoSameProductPrice(a, b, "very_high").truth).toBe("EXACT_IDENTIFIER");
-      expect(goesIntoSameProductPrice(a, b, "low").exactTier).toBe(true); // ← 사고다
+      expect(realModelCode(a, b)).toBe("exact"); // 품번은 그대로 일치한다
+      expect(goesIntoSameProductPrice(a, b, "low").exactTier).toBe(false);
+      expect(goesIntoSameProductPrice(a, b, "very_high").exactTier).toBe(false);
     }
   });
 });

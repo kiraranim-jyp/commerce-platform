@@ -486,7 +486,14 @@ export function withConfidence(query: ComparisonQuery, candidates: ComparisonCan
       const cross =
         query.facts && c.facts ? compareCrossSellerProducts(query.facts, c.facts) : null;
       const withCross: ComparisonCandidate = cross
-        ? { ...withMatch, crossSellerVerdict: cross.verdict, crossSellerReasons: cross.reasons }
+        ? {
+            ...withMatch,
+            crossSellerVerdict: cross.verdict,
+            crossSellerReasons: cross.reasons,
+            /* MI-3 / P0-1 — 보류 사유를 «값» 으로 함께 싣는다. 이것이 없으면
+               품번 재사용을 가려낼 근거가 저장 경로에서 사라진다. */
+            crossSellerBlockers: cross.blockers,
+          }
         : withMatch;
       return { ...withCross, ...derivePriceStatus(withCross) };
     })

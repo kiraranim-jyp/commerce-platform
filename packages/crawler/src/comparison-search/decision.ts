@@ -30,7 +30,7 @@
  *    아무리 높아도(SIMILAR/TEXT_CONFIRMED) 절대 이 함수가 임의로 승격하지
  *    않는다(듀베베 72%가 자동으로 동일상품 취급되지 않아야 하는 이유).
  */
-import type { CrossSellerVerdict } from "./cross-seller";
+import type { CrossSellerBlocker, CrossSellerVerdict } from "./cross-seller";
 import type { MatchResult } from "./match";
 import type { ImageEvidenceResult, ModelEvidenceResult, OptionEvidenceResult } from "./evidence";
 import { deriveMatchTruth, type MatchTruth } from "./match-truth";
@@ -62,6 +62,18 @@ export interface CandidateEvidenceInput {
    * 똑같이 동작한다.
    */
   crossSeller?: CrossSellerVerdict;
+  /**
+   * MI-3 / P0-1(CPO 지시, 2026-09-26) — 교차판매처 비교가 남긴 «보류 사유».
+   *
+   * 🔴 `crossSeller`(등급) 하나만 넘기면 「같은 판매처가 두 상품으로 진열했다」는
+   * 사실이 여기서 사라진다. 그 자리에서 품번만 보고 EXACT 가 나갔고, 서로 다른
+   * 상품 7쌍이 동일상품 «가격» 에 들어갔다.
+   *
+   * 🔴 이 파일 맨 위 원칙 그대로다 — 실시간 검색과 저장 파이프라인이 서로 다른
+   * 상품 진실 판정 기준을 가지면 안 된다. 새 판정 로직이 아니라 그 기준을 실어
+   * 나르는 칸 하나이고, 없으면(undefined) 예전과 똑같이 동작한다.
+   */
+  crossSellerBlockers?: readonly { blocker: CrossSellerBlocker }[];
 }
 
 export interface CandidateEvidenceDecision {
@@ -79,7 +91,12 @@ export interface CandidateEvidenceDecision {
 
 export function decideCandidateEvidence(input: CandidateEvidenceInput): CandidateEvidenceDecision {
   const reasons: string[] = [];
-  const truth = deriveMatchTruth(input.match.level, input.modelCode, input.crossSeller);
+  const truth = deriveMatchTruth(
+    input.match.level,
+    input.modelCode,
+    input.crossSeller,
+    input.crossSellerBlockers,
+  );
   // 근거 문장은 truth가 실제로 어디서 왔는지를 말해야 한다. 품번을 비교조차 못 한
   // 쌍(판매처마다 자기 SKU를 쓰는 경우)에 "modelCode 일치"라고 적으면 화면이 없는
   // 사실을 말하게 된다 — MATCHING-2.0-CORE가 match-display.ts에서 고친 것과 같은 자리다.

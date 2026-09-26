@@ -102,6 +102,63 @@ export type CrossSellerBlocker =
   | "AUDIENCE_LINE"
   | "SAME_SELLER_DISTINCT_LISTING";
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * MI-3 / P0-1(CPO 지시, 2026-09-26) — **「관측된 차이」와 「확인 못 했다」를 가른다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 바로 위 주석이 blocker 를 「다르다고 말할 만큼은 아니지만, 같다고 «확정할 수는
+ * 없다»」로 정의한다. 그런데 `EXACT_IDENTIFIER` 가 바로 그 «확정» 이다 — 품번이
+ * 같으면 blocker 를 지나쳐 확정 등급이 나갔다(match-truth.ts 의 식별자 우선 return).
+ *
+ * 🔴 그래서 blocker 를 두 부류로 나눈다. 기준은 하나다:
+ *
+ *     관측된 차이    두 상품에서 «서로 다른 값을 읽었다»
+ *     확인 못 했다    읽지 못해서 비교 자체를 하지 못했다
+ *
+ * 앞의 것은 「확정하지 말라」는 근거가 되고, 뒤의 것은 되지 않는다. 읽지 못한 것을
+ * 반증으로 쓰면 정보가 부족한 판매처의 «진짜 동일상품» 이 식별자가 있는데도
+ * 깎인다 — 실측 골든케이스(포레포레 PP24KASHE1195NER: partial 식별자 + 낮은 텍스트
+ * 점수)가 정확히 그 모양이고, 그것은 지켜야 한다.
+ *
+ * 🔴 blocker 를 새로 추가할 때는 이 표에도 넣어야 한다. 빠지면 조용히 「확인 못
+ * 했다」로 취급되고 그 순간 이 결함이 되살아난다 — 테스트가 누락을 센다.
+ */
+const OBSERVED_DIFFERENCE_BLOCKERS: ReadonlySet<CrossSellerBlocker> = new Set([
+  /* 소재·핏·사이즈 체계·상품 형태 — 양쪽에서 서로 다른 값을 «읽었다». */
+  "MATERIAL",
+  "FIT",
+  "SIZE_SYSTEM",
+  "GARMENT_FORM",
+  /* 브랜드를 읽었는데 달랐다. BRAND_UNCONFIRMED 와 «다른» 사실이다. */
+  "BRAND_MISMATCH",
+  /* 양쪽이 서로 다른 아동 연령 라인을 직접 말했다. */
+  "AUDIENCE_LINE",
+  /* 제목이 하나도 겹치지 않는다 — 겹침이 «없다» 는 관측이다. */
+  "NO_TITLE_OVERLAP",
+  /* 🔴 같은 판매처가 서로 다른 두 상품으로 진열했다. 품번 재사용의 직접 증거다 —
+     판매처 «스스로» 다른 상품이라고 말하고 있다. */
+  "SAME_SELLER_DISTINCT_LISTING",
+]);
+
+/**
+ * 이 보류들 중 «관측된 차이» 가 하나라도 있는가.
+ *
+ * 🔴 `BRAND_UNCONFIRMED` 는 여기에 «들어가지 않는다». 「양쪽 브랜드를 확인하지
+ * 못했다」는 모름이고, 모르는 것을 반증으로 쓰지 않는다.
+ */
+export function hasObservedDifference(
+  blockers: readonly { blocker: CrossSellerBlocker }[] | undefined | null,
+): boolean {
+  if (!blockers) return false;
+  return blockers.some((entry) => OBSERVED_DIFFERENCE_BLOCKERS.has(entry.blocker));
+}
+
+/** 🔴 테스트가 「새 blocker 가 분류표에서 빠졌는지」를 세는 지점. */
+export const OBSERVED_DIFFERENCE_BLOCKER_LIST: readonly CrossSellerBlocker[] = [
+  ...OBSERVED_DIFFERENCE_BLOCKERS,
+];
+
 export type CrossSellerAxis =
   | "TITLE"
   | "MODEL_CODE"

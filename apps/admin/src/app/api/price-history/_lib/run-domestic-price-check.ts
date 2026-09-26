@@ -674,6 +674,10 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       // 등급만 보고 🟢 동일상품을 SIMILAR로 깎아 저장했고, MI 집계는 그 깎인
       // 값을 읽어 동일상품 가격에서 제외했다.
       crossSeller: best.crossSellerVerdict,
+      /* 🔴 MI-3 / P0-1 — 보류 사유를 «함께» 넘긴다. 등급만 넘기면 「같은 판매처가
+         두 상품으로 진열했다」가 여기서 사라지고, 그 자리에서 품번만 보고 EXACT 가
+         나갔다(서로 다른 상품 7쌍이 동일상품 가격에 들어간 경로). */
+      crossSellerBlockers: best.crossSellerBlockers,
     });
 
     const { verified: finalVerified, matchReasons: evidenceMatchReasons } = applyEvidenceDecision(

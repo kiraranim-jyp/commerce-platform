@@ -1,4 +1,4 @@
-import type { CrossSellerVerdict } from "./cross-seller";
+import { hasObservedDifference, type CrossSellerBlocker, type CrossSellerVerdict } from "./cross-seller";
 import type { MatchLevel } from "./match";
 import type { ModelEvidenceResult } from "./evidence";
 
@@ -60,6 +60,26 @@ export function deriveMatchTruth(
   level: MatchLevel,
   modelCode: ModelEvidenceResult,
   crossSeller?: CrossSellerVerdict,
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * MI-3 / P0-1(CPO 지시, 2026-09-26) — **식별자는 「확정」의 근거가 못 될 때가 있다.**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 교차판매처 비교가 남긴 보류 사유. 🔴 «값» 이 아니라 «있었는가» 만 쓴다.
+   *
+   * 왜 필요한가: 판매처가 한 품번을 여러 상품에 재사용한다. 실측 7쌍 —
+   * 바디수트↔우주복(KS106168-P05261) · 색만 다른 스웨트셔츠(AW26MS185) ·
+   * 색만 다른 샌들 3종(01325) · 카디건↔롬퍼. 품번이 글자 하나까지 같고,
+   * 그래서 아래 식별자 우선 return 이 이들을 EXACT_IDENTIFIER 로 통과시켰다.
+   * 그 등급은 `priceTierFromLink` 에서 **EXACT** 이고, 곧 «동일상품 가격» 이다.
+   *
+   * 교차판매처 비교는 이미 그 사실을 보고 있었다 — `SAME_SELLER_DISTINCT_LISTING`
+   * 보류를 남기고 verdict 를 PRESUMED_SAME 으로 내렸다. 그런데 이 함수가 그
+   * 보류를 «받지 못해서» 품번만 보고 확정했다. 이 인자가 그 칸이다.
+   *
+   * 🔴 생략하면 예전과 «똑같이» 동작한다. 넘기지 않는 호출부는 그대로 둔다.
+   */
+  blockers?: readonly { blocker: CrossSellerBlocker }[] | null,
 ): MatchTruth {
   // MATCHING-2.0-CORE(CEO 지시, 2026-09-13) — 교차판매처 반증은 여기서도 먼저,
   // 그리고 무조건 이긴다. 대상 연령·성별·상품군·색상·품번 중 하나라도 서로
@@ -74,10 +94,29 @@ export function deriveMatchTruth(
   // 라이브 검색 라우트에서는 confidence 42%(low)로 나오는데도 SKU가 partial
   // 일치한다 — 이걸 INSUFFICIENT_EVIDENCE로 깔아뭉개면 실제로는 다른 상품인
   // 듀베베(SIMILAR)한테 다시 역전당한다(회귀 재현, 2026-08-29 production 실측).
-  if (modelCode === "exact") {
-    return HIGH_OR_ABOVE.has(level) ? "EXACT_IDENTIFIER" : "STRONG_IDENTIFIER";
+  /**
+   * 🔴 MI-3 / P0-1 — 식별자 «단독» 승격은 「관측된 차이」가 없을 때만.
+   *
+   * `hasObservedDifference()` 가 참이라는 것은 두 상품에서 «서로 다른 값을 읽었다»
+   * 는 뜻이다(형태·소재·색 라인·연령·브랜드 불일치, 그리고 같은 판매처가 둘로
+   * 진열했다는 사실). 그 상태에서 품번이 같다는 것은 「같은 상품」이 아니라
+   * 「판매처가 품번을 재사용한다」는 뜻일 수 있고, 둘을 구분할 근거가 우리에게
+   * 없다 — 그러면 «확정하지 않는다».
+   *
+   * 🔴 점수를 깎는 것이 아니다. 아래 텍스트·교차판매처 경로로 «내려보낼 뿐» 이고,
+   * 그 경로가 PRESUMED_SAME 이면 TEXT_CONFIRMED(=참고 가격)가 된다. 「다른
+   * 상품이다」라고 단정하지도 않는다 — CONFLICT 로 보내지 않는 이유가 그것이다.
+   *
+   * 🔴 그리고 「확인 못 했다」는 여기 들어오지 않는다(BRAND_UNCONFIRMED 제외).
+   * 모르는 것으로 식별자를 깎으면, 정보가 부족한 판매처의 진짜 동일상품이 사라진다.
+   */
+  const observedDifference = hasObservedDifference(blockers);
+  if (!observedDifference) {
+    if (modelCode === "exact") {
+      return HIGH_OR_ABOVE.has(level) ? "EXACT_IDENTIFIER" : "STRONG_IDENTIFIER";
+    }
+    if (modelCode === "partial") return "STRONG_IDENTIFIER";
   }
-  if (modelCode === "partial") return "STRONG_IDENTIFIER";
 
   // modelCode === "unavailable" — 식별자 증거가 아예 없다. 여기가 판매처마다
   // 자기 SKU를 쓰는 상황의 기본값이고, 지금까지 텍스트 점수 말고는 볼 것이
