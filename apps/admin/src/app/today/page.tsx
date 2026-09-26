@@ -431,6 +431,30 @@ export default function TodayPage() {
                         return (
                           <span className="text-text-secondary" title={sellability.reason}>
                             판매판단 {meta.icon} {meta.label}
+                            {/* ══════════════════════════════════════════════════
+                                MI-6 / P0-2 7-5(CPO 지시, 2026-09-26) — 🔴 **근거를 밝힌다.**
+
+                                이 배지는 `computeSellability`(국내 시장 «평균가» ·
+                                해외물류비·수수료 미포함)만 보고 서 있었다. 상품 상세의
+                                최종 판정은 그 뒤에 CASE(국내 «최저가» · 착지원가 +
+                                예상수수료)로 한 번 더 검사된다(applyMarketCaseGuard) —
+                                그런데 이 목록은 그 검사를 «하지 않는다»
+                                (compute-readiness 는 computePriceRecommendation 을
+                                부르지 않는다. 상품 30개마다 환율/원가 계산을 돌리지
+                                않기로 한 기존 비용 판단이다).
+
+                                🔴 그래서 같은 상품이 목록에서는 🟢, 상세로 들어가면
+                                🟡/🔴 가 될 수 있었고, 두 화면 중 무엇이 최종인지
+                                셀러가 알 방법이 없었다.
+
+                                🔴 판정 기준을 바꾸지 않는다(GREEN 이 뜨는 조건 · 문턱 ·
+                                   레벨 전부 그대로다). 이 배지가 «무엇을 근거로 한
+                                   판단인지» 를 한 마디 덧붙여, 목록과 상세가 같은 것을
+                                   주장하지 않게 한다. 최종 판정은 상세에 있다.
+                            ══════════════════════════════════════════════════ */}
+                            {sellability.level !== "UNKNOWN" && (
+                              <span className="ml-1 text-text-tertiary">· 시장 평균가 기준</span>
+                            )}
                           </span>
                         );
                       })()}

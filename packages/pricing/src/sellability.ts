@@ -60,6 +60,27 @@ export function computeSellability(input: SellabilityInput): SellabilityResult {
     };
   }
 
+  /**
+   * ════════════════════════════════════════════════════════════════════════
+   * MI-6 / P0-2(CPO 결정, 2026-09-26) — **이 숫자를 「국내 판매가」라고 부르지 않는다.**
+   * ════════════════════════════════════════════════════════════════════════
+   *
+   * 아래 문장들이 이 값을 「국내 판매가」로 적고 있었다. 실제로 들어오는 것은
+   * «국내 동일상품 시장 평균가» 이고, 그 둘은 다른 것이다:
+   *
+   *   국내 판매가        내가 팔 가격 · 실제로 성립하는 가격(CASE 는 최저가로 본다)
+   *   시장 평균가         관측된 판매처들의 평균 — 최저가보다 «항상 높거나 같다»
+   *
+   * 🔴 대시보드(`/today`)가 이 문장을 tooltip 으로 그대로 보여 주므로, 셀러는
+   * 평균가를 「국내 판매가」로 읽고 그 마진을 실제 마진으로 읽었다.
+   *
+   * 🔴 그리고 이 마진은 «해외물류비·수수료를 빼지 않은» 값이다. CASE 는
+   * landedCost + 예상수수료로 손익을 보므로 두 숫자는 같은 기준이 아니다 —
+   * 그 사실을 문장이 말하지 않으면 같은 상품에서 두 마진이 모순으로 보인다.
+   *
+   * 🔴 판정식은 한 줄도 바꾸지 않았다. GREEN/RED 경계 · marginFloor · 입력 필드
+   *    전부 그대로다. 바뀐 것은 «무엇을 근거로 했는지 말하는 방식» 뿐이다.
+   */
   const marginFloor = input.marginFloorPercent ?? DEFAULT_MARGIN_FLOOR_PERCENT;
   const referencePrice = input.domestic.averagePriceKrw;
   const marginPercent = Number((((referencePrice - input.costPriceKrw) / referencePrice) * 100).toFixed(1));
@@ -70,8 +91,8 @@ export function computeSellability(input: SellabilityInput): SellabilityResult {
       title: "판매 비추천",
       reason:
         marginPercent < 0
-          ? `실제 구매원가(₩${input.costPriceKrw.toLocaleString()})가 국내 판매가(₩${referencePrice.toLocaleString()})보다 높습니다 — 마진을 남길 수 없습니다.`
-          : `국내 판매가(₩${referencePrice.toLocaleString()}) 기준 예상 마진이 ${marginPercent}%로 최소 기준(${marginFloor}%) 미만입니다.`,
+          ? `실제 구매원가(₩${input.costPriceKrw.toLocaleString()})가 국내 시장 평균가(₩${referencePrice.toLocaleString()})보다 높습니다 — 마진을 남길 수 없습니다.`
+          : `국내 시장 평균가(₩${referencePrice.toLocaleString()}) 기준 예상 마진이 ${marginPercent}%로 최소 기준(${marginFloor}%) 미만입니다(해외물류비·수수료 제외).`,
       estimatedMarginPercent: marginPercent,
     };
   }
@@ -79,7 +100,11 @@ export function computeSellability(input: SellabilityInput): SellabilityResult {
   return {
     level: "GREEN",
     title: "판매 추천",
-    reason: `실제 구매원가 ₩${input.costPriceKrw.toLocaleString()}, 국내 판매가 ₩${referencePrice.toLocaleString()} — 예상 마진 ${marginPercent}%로 가격 경쟁력이 있습니다.`,
+    /* 🔴 「가격 경쟁력이 있습니다」를 «단정하지» 않는다. 이 마진은 해외물류비와
+       수수료를 빼지 않은 값이라, 같은 상품에서 CASE 가 손실로 볼 수도 있다
+       (평균가 ≥ 최저가 이므로 이 값이 «항상 더 낙관적» 이다). 판정(GREEN)은
+       그대로 두고, 그 GREEN 이 무엇을 근거로 한 것인지만 사실대로 적는다. */
+    reason: `실제 구매원가 ₩${input.costPriceKrw.toLocaleString()}, 국내 시장 평균가 ₩${referencePrice.toLocaleString()} 기준 예상 마진 ${marginPercent}% — 해외물류비·수수료를 제외한 값입니다.`,
     estimatedMarginPercent: marginPercent,
   };
 }
