@@ -117,6 +117,35 @@ export function hasAnySellerSetting(values: SellerSettings): boolean {
 }
 
 /**
+ * ══ Commerce-6 C-1b — workspace 를 «한 곳에서» 해석한다 ══
+ *
+ * 🔴 호출부 여덟 곳에 인자를 손으로 꽂지 «않는다». 하나라도 빠뜨리면
+ * 「쓰기는 workspace 행, 읽기는 레거시 행」이 되어 셀러가 저장한 값이 등록에
+ * 반영되지 않는다 — 지금보다 나쁜 상태다. 배선 누락이 «구조적으로 불가능» 하게
+ * 해석을 이 파일 안으로 넣는다.
+ *
+ * 🔴 여기서 «막지» 않는다. 이 함수는 workspace 를 읽기만 하고, 접근 차단(401/403)은
+ * 여전히 라우트의 requireUser()/requireRegistrationAccess() 가 한다. 데이터 범위와
+ * 접근 권한은 다른 일이고, 그 둘을 한 곳에 섞으면 라이브러리가 조용히 게이트가 된다.
+ *
+ * 🔴 세션이 없으면(배치·크론·미인증) null 이고, 그때는 예전 그대로 레거시 행을
+ * 본다. 추정으로 workspace 를 고르지 않는다.
+ */
+async function resolveCurrentWorkspaceId(): Promise<string | null> {
+  try {
+    /* 동적 import — 요청 바깥(스크립트/크론)에서 모듈 로드만으로 인증 코드가
+       끌려오지 않게 한다. */
+    const { requireUser } = await import("@/lib/auth/require-user");
+    const auth = await requireUser();
+    return auth.ok ? auth.user.workspaceId : null;
+  } catch {
+    /* 요청 컨텍스트가 아니거나 인증 계층이 없다 — 「workspace 를 모른다」이지
+       「오류」가 아니다. 레거시 경로로 간다. */
+    return null;
+  }
+}
+
+/**
  * ══ Commerce-6 C-1(2026-09-26) — 「Beta Security 가 인자를 채운다」의 그 인자 ══
  *
  * 059 주석과 이 함수의 옛 주석이 순서를 미리 적어 두었다: **1순위는 내 workspace
@@ -126,10 +155,10 @@ export function hasAnySellerSetting(values: SellerSettings): boolean {
  * 로만 backfill 했다), 폴백을 먼저 끊으면 지금 설정이 통째로 사라진다. 읽기
  * «순서» 만 바꾼다 — 그것이 migration compatibility 의 뜻이다.
  *
- * 🔴 `workspaceId` 를 주지 «않으면» 예전과 한 글자도 다르지 않게 동작한다.
- * 호출부 여덟 곳을 한꺼번에 바꾸기 전까지 읽기와 쓰기가 갈라지지 않게 하려는
- * 것이다 — 일부만 바꾸면 「쓰기는 workspace 행, 읽기는 레거시 행」이 되어
- * 지금보다 «나빠진다».
+ * 🔴 C-1b — 인자의 뜻이 «셋» 이다. 호출부가 실수로 범위를 넓히지 못하게 한다.
+ *     undefined  세션에서 «해석한다»(기본) — 호출부 여덟 곳이 이 경로를 탄다
+ *     문자열      그 workspace 로 «고정»(테스트·배치)
+ *     null       레거시 행만 — 옛 동작을 명시적으로 고를 때
  */
 async function loadFromSellerSettings(workspaceId?: string | null): Promise<LoadOutcome> {
   const supabase = getSupabaseAdmin();
@@ -207,7 +236,10 @@ async function readSellerSettingsRow(workspaceId: string | null): Promise<LoadOu
  * 셀러에게 말할 수 있어야 한다(제조사 미입력은 쿠팡 등록의 1위 블로커였다).
  */
 export async function loadSellerSettings(workspaceId?: string | null): Promise<ResolvedSellerSettings> {
-  const primary = await loadFromSellerSettings(workspaceId);
+  /* C-1b — 인자를 «주지 않으면» 세션에서 해석한다. 호출부 일곱 곳이 이 경로다.
+     🔴 `null` 을 명시하면 해석하지 않고 레거시만 본다(옛 동작을 고르는 길). */
+  const scope = workspaceId === undefined ? await resolveCurrentWorkspaceId() : workspaceId;
+  const primary = await loadFromSellerSettings(scope);
 
   /* 🔴 ERROR 는 여기서 «끝난다». 레거시를 쳐다보지 않는다.
      canonical 을 못 읽었는데 레거시 값을 쓰면, 그 값이 맞는지 틀린지 알 방법이
@@ -321,9 +353,13 @@ export async function saveSellerSettings(
   const supabase = getSupabaseAdmin();
   if (!supabase) return { ok: false, error: "저장소에 연결하지 못했습니다." };
 
+  /* 🔴 C-1b — 읽기와 «같은 규칙» 으로 해석한다. 이 한 줄이 다르면 저장한 곳과
+     읽는 곳이 갈라진다(이 작업이 막으려는 바로 그것). */
+  const scope = workspaceId === undefined ? await resolveCurrentWorkspaceId() : workspaceId;
+
   const update = supabase.from("seller_settings").update({ ...row, updated_at: new Date().toISOString() });
-  const { data, error } = await (workspaceId
-    ? update.eq("workspace_id", workspaceId)
+  const { data, error } = await (scope
+    ? update.eq("workspace_id", scope)
     : update.is("workspace_id", null)
   )
     .eq("scope_key", "default")
@@ -342,7 +378,7 @@ export async function saveSellerSettings(
     .from("seller_settings")
     /* 🔴 C-1 — workspaceId 를 «받았을 때만» 그 값을 쓴다. 없으면 NULL 그대로다.
        여전히 임의의 workspace 를 지어내지 않는다. */
-    .insert({ workspace_id: workspaceId ?? null, scope_key: "default", ...row });
+    .insert({ workspace_id: scope ?? null, scope_key: "default", ...row });
   if (insertError) {
     console.warn("[seller-settings] 신규 저장 실패:", insertError.message);
     return { ok: false, error: "판매자 정보를 저장하지 못했습니다." };

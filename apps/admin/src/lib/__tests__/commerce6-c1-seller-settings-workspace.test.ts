@@ -112,26 +112,81 @@ describe("② workspaceId 를 주면 «내 행» 이 1순위다", () => {
   });
 });
 
-describe("③ 이번에 «하지 않은» 것 — 호출부를 일부만 바꾸지 않았다", () => {
+describe("③ C-1b — 해석을 «한 곳에서» 한다(배선 누락이 불가능하다)", () => {
   const LIB = readFileSync(join(__dirname, "..", "seller-settings.ts"), "utf8");
 
-  it("쓰기도 같은 인자를 받는다 — 읽기만 바뀌면 값이 갈라진다", () => {
-    expect(LIB).toContain("workspaceId?: string | null,");
-    expect(LIB).toContain("workspace_id: workspaceId ?? null");
+  /* 🔴 이것이 이 작업의 핵심이다. 호출부 여덟 곳에 인자를 손으로 꽂으면 하나만
+     빠져도 「쓰기는 workspace 행, 읽기는 레거시 행」이 된다 — 셀러가 저장한 값이
+     등록에 반영되지 않는 상태. 해석을 라이브러리 안에 두면 그 사고가 구조적으로
+     일어날 수 없다. */
+  it("읽기와 쓰기가 «같은 한 줄» 로 범위를 정한다", () => {
+    const resolveLine = "workspaceId === undefined ? await resolveCurrentWorkspaceId() : workspaceId";
+    expect((LIB.match(new RegExp(resolveLine.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? [])).toHaveLength(2);
+  });
+
+  it("해석은 기존 인증(requireUser)을 재사용한다 — 새 ownership 을 만들지 않았다", () => {
+    expect(LIB).toContain('await import("@/lib/auth/require-user")');
+    expect(LIB).toContain("auth.ok ? auth.user.workspaceId : null");
+  });
+
+  /* 🔴 라이브러리가 조용히 «게이트» 가 되지 않는다 — 401/403 은 라우트의 일이다. */
+  it("여기서 접근을 막지 않는다 — 범위만 정한다", () => {
+    const fn = LIB.slice(LIB.indexOf("async function resolveCurrentWorkspaceId"));
+    const body = fn.slice(0, fn.indexOf("\n}"));
+    expect(body).not.toContain("NextResponse");
+    expect(body).not.toContain("401");
+    expect(body).not.toContain("throw");
   });
 
   it("🔴 임의의 workspace 를 지어내지 않는다", () => {
     expect(LIB).not.toMatch(/workspace_id:\s*["'][0-9a-f-]{8,}/i);
+    /* 세션이 없으면 null 이고, 그때는 레거시 행이다 — 추정하지 않는다. */
+    expect(LIB).toContain("return null;");
   });
 
-  /* 🔴 호출부 8곳(읽기 7 · 쓰기 1)은 «아직» 인자를 넘기지 않는다. 한꺼번에
-     바꾸는 것이 다음 단계다 — 그때까지 동작은 오늘과 같다. */
-  it("호출부가 아직 인자를 넘기지 않는다 — 동작이 오늘과 같다", () => {
-    const route = readFileSync(
-      join(__dirname, "..", "..", "app", "api", "settings", "seller-settings", "route.ts"),
-      "utf8",
-    );
-    expect(route).toContain("loadSellerSettings()");
-    expect(route).toContain("saveSellerSettings(fields)");
+  it("🔴 레거시 행을 지우거나 backfill 하지 않는다", () => {
+    expect(LIB).not.toContain(".delete()");
+    expect(LIB).not.toMatch(/update\([^)]*workspace_id/);
+  });
+});
+
+/**
+ * ══ CPO §7 — cross-workspace 계약 ══
+ * 🔴 Production DB 로 확인할 수 없다(C-1 에서 확인: 자격증명 접근 불가).
+ * 그래서 «질의 조건» 수준에서 고정한다 — A 요청이 B 조건을 만들지 않는다는 것.
+ */
+describe("④ A 와 B 가 서로를 읽지 않는다", () => {
+  it("A 요청은 A 조건만, B 요청은 B 조건만 만든다", async () => {
+    for (const ws of ["ws-A", "ws-B"]) {
+      vi.resetModules();
+      maybeSingle.mockReset();
+      const calls = stub();
+      maybeSingle.mockResolvedValue({ data: { ...EMPTY_ROW, manufacturer: ws }, error: null });
+      const result = await load(ws);
+      expect(result.manufacturer).toBe(ws);
+      expect(calls.filter((c) => c.column === "workspace_id")).toEqual([{ column: "workspace_id", value: ws }]);
+    }
+  });
+
+  it("A 가 저장해도 B 조건이 만들어지지 않는다", async () => {
+    vi.resetModules();
+    const calls: { column: string; value: unknown }[] = [];
+    const chain = {
+      eq(column: string, value: unknown) {
+        calls.push({ column, value });
+        return chain;
+      },
+      is(column: string, value: unknown) {
+        calls.push({ column, value });
+        return chain;
+      },
+      select: () => Promise.resolve({ data: [{ id: "row-A" }], error: null }),
+    };
+    getSupabaseAdmin.mockReturnValue({ from: () => ({ update: () => chain }) });
+    const mod = await import("../seller-settings");
+    const result = await mod.saveSellerSettings({ manufacturer: "A 제조사" }, "ws-A");
+    expect(result).toEqual({ ok: true });
+    expect(calls).toContainEqual({ column: "workspace_id", value: "ws-A" });
+    expect(calls).not.toContainEqual({ column: "workspace_id", value: "ws-B" });
   });
 });
