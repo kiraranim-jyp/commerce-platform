@@ -481,6 +481,30 @@ export function LotteOnRegistrationPanel({
   }
 
   /**
+   * ══ Commerce-6 F-7(CPO 지시: 「입력 후 readiness 즉시 갱신」) ══
+   *
+   * **목록에서 «고른» 값**은 고르자마자 다시 확인한다. 셀러가 택배사를 고르고도
+   * 「다시 확인하세요」를 눌러야 상태가 바뀌는 것은 고른 일을 두 번 시키는 것이다.
+   *
+   * 🔴 그런데 «모든 입력» 마다 쏘지는 않는다. 이 확인은 서버에서 207 Identity 를
+   * 매번 호출하고(runValidation 주석), 아웃바운드 프록시의 CONNECT 가 느린 것이
+   * 실측돼 있다(delivery-settings 주석: 8회 중 3회가 60초 초과). 타이핑마다 쏘면
+   * 화면이 느려지고 롯데ON 에 불필요한 부하를 준다.
+   *
+   * 그래서 경계는 「고르기 ↔ 타이핑」이다:
+   *   목록에서 고름  → 즉시 재확인  (이 함수 — 카테고리 선택이 이미 쓰던 방식)
+   *   자유 입력      → stale 표시 + [등록 정보 확인]  (그대로)
+   */
+  function pickAndRecheck<K extends keyof LotteOnChannelForm>(
+    section: K,
+    changes: Partial<LotteOnChannelForm[K]>,
+  ) {
+    const next = { ...form, [section]: { ...form[section], ...changes } };
+    commitForm(next);
+    void runValidation(next);
+  }
+
+  /**
    * 카테고리 **추천**(CEO 신규 요건). 조회가 아니다.
    *
    * 서버(/api/lotteon/category-recommend)가 onpick 205 표준카테고리 목록을
@@ -1364,7 +1388,7 @@ export function LotteOnRegistrationPanel({
                 <DeliveryOptionPicker
                   options={deliverySettings.data?.outboundPlaces ?? []}
                   current={form.delivery.outboundPlaceNo}
-                  onPick={(value) => patch("delivery", { outboundPlaceNo: value })}
+                  onPick={(value) => pickAndRecheck("delivery", { outboundPlaceNo: value })}
                 />
               </>
             }
@@ -1386,7 +1410,7 @@ export function LotteOnRegistrationPanel({
                 <DeliveryOptionPicker
                   options={deliverySettings.data?.returnPlaces ?? []}
                   current={form.delivery.returnPlaceNo}
-                  onPick={(value) => patch("delivery", { returnPlaceNo: value })}
+                  onPick={(value) => pickAndRecheck("delivery", { returnPlaceNo: value })}
                 />
               </>
             }
@@ -1408,7 +1432,7 @@ export function LotteOnRegistrationPanel({
                 <DeliveryOptionPicker
                   options={(deliverySettings.data?.costPolicies ?? []).map((policy) => ({ ...policy, isDefault: false }))}
                   current={form.delivery.deliveryCostPolicyNo}
-                  onPick={(value) => patch("delivery", { deliveryCostPolicyNo: value })}
+                  onPick={(value) => pickAndRecheck("delivery", { deliveryCostPolicyNo: value })}
                 />
               </>
             }
@@ -1416,10 +1440,18 @@ export function LotteOnRegistrationPanel({
             onChange={(value) => patch("delivery", { deliveryCostPolicyNo: value })}
           />
           <ChannelCodeField
-            label="배송가능지역코드"
+            label="배송 가능 지역"
             code="dvRgsprGrpCd"
             requirement={requirementOf("dvRgsprGrpCd")}
-            note="공통코드 DV_RGSPR_GRP_CD"
+            /* ══ Commerce-6 F-7 ══
+               🔴 여기 「공통코드 DV_RGSPR_GRP_CD」라고 적혀 있었다. 원산지 칸이
+               바로 그 모양(「공통코드 OPLC_CD」)이었고, 셀러가 그 힌트를 답으로
+               읽어 `"oplcCd": "OPLC_CD"` 를 보내는 바람에 첫 LIVE 등록이 거절됐다
+               (LOTTEON-REAL-REGISTRATION-06). 원산지만 고쳐졌고 배송 세 칸은
+               같은 모양으로 남아 있었다.
+               🔴 코드 이름을 화면에 두면 언젠가 누군가 그것을 적는다. */
+            note="롯데ON이 정한 배송 지역 중에서 고릅니다."
+            readOnly={(deliverySettings.data?.deliveryRegionGroups.length ?? 0) > 0}
             belowInput={
               <>
                 <SellerSettingApplied
@@ -1434,7 +1466,7 @@ export function LotteOnRegistrationPanel({
                 <CodeOptionPicker
                   options={deliverySettings.data?.deliveryRegionGroups ?? []}
                   current={form.delivery.deliveryRegionGroupCode}
-                  onPick={(value) => patch("delivery", { deliveryRegionGroupCode: value })}
+                  onPick={(value) => pickAndRecheck("delivery", { deliveryRegionGroupCode: value })}
                 />
               </>
             }
@@ -1442,30 +1474,36 @@ export function LotteOnRegistrationPanel({
             onChange={(value) => patch("delivery", { deliveryRegionGroupCode: value })}
           />
           <ChannelCodeField
-            label="택배사코드"
+            label="택배사"
             code="hdcCd"
             requirement={requirementOf("hdcCd")}
-            note="공통코드 DV_CO_CD (예: 0001 롯데택배)"
+            /* 🔴 여기엔 코드 이름에 더해 «예시 값» 까지 박혀 있었다 —
+               「공통코드 DV_CO_CD (예: 0001 롯데택배)」. 셀러가 목록을 안 보고
+               `0001` 을 적으면 그게 실제로 무슨 택배사인지 아무도 확인하지 않는다.
+               예시 코드값은 코드에 넣지 않는다. */
+            note="롯데ON이 정한 택배사 중에서 고릅니다."
+            readOnly={(deliverySettings.data?.couriers.length ?? 0) > 0}
             belowInput={
               <CodeOptionPicker
                 options={deliverySettings.data?.couriers ?? []}
                 current={form.delivery.courierCode}
-                onPick={(value) => patch("delivery", { courierCode: value })}
+                onPick={(value) => pickAndRecheck("delivery", { courierCode: value })}
               />
             }
             value={form.delivery.courierCode}
             onChange={(value) => patch("delivery", { courierCode: value })}
           />
           <ChannelCodeField
-            label="반품택배사코드"
+            label="반품 택배사"
             code="rtngHdcCd"
             requirement={requirementOf("rtngHdcCd")}
-            note="공통코드 DV_CO_CD"
+            note="반품을 회수할 택배사입니다. 출고 택배사와 달라도 됩니다."
+            readOnly={(deliverySettings.data?.couriers.length ?? 0) > 0}
             belowInput={
               <CodeOptionPicker
                 options={deliverySettings.data?.couriers ?? []}
                 current={form.delivery.returnCourierCode}
-                onPick={(value) => patch("delivery", { returnCourierCode: value })}
+                onPick={(value) => pickAndRecheck("delivery", { returnCourierCode: value })}
               />
             }
             value={form.delivery.returnCourierCode}
@@ -1553,7 +1591,7 @@ export function LotteOnRegistrationPanel({
               <CommonCodePicker
                 list={noticeItemCodeList}
                 current={form.notice.itemCode}
-                onPick={(value) => patch("notice", { itemCode: value })}
+                onPick={(value) => pickAndRecheck("notice", { itemCode: value })}
               />
             }
             value={form.notice.itemCode}
@@ -1797,11 +1835,13 @@ export function LotteOnRegistrationPanel({
                나라로 등록된다 — common-codes/route.ts:69 가 이미 못박았다:
                「매핑도 번역도 하지 않는다」. */
             note={originPickerNote(product.countryOfOrigin.value)}
+            /* 🔴 첫 LIVE 등록을 거절시킨 바로 그 칸이다 — 목록이 있으면 적지 않는다. */
+            readOnly={originCodeList.items.length > 0}
             belowInput={
               <CommonCodePicker
                 list={originCodeList}
                 current={form.codes.originCode}
-                onPick={(value) => patch("codes", { originCode: value })}
+                onPick={(value) => pickAndRecheck("codes", { originCode: value })}
               />
             }
             value={form.codes.originCode}
@@ -2895,9 +2935,13 @@ function CodeOptionPicker({
       className={FIELD_INPUT_CLASS}
     >
       <option value="">선택 안 함</option>
+      {/* ══ Commerce-6 F-7 ══
+          🔴 전에는 `이름 (코드)` 였다. 셀러가 고르는 것은 «우체국택배» 이지
+          «0001» 이 아니다 — 코드는 바로 위 읽기전용 칸에 이미 보인다.
+          이름이 없을 때만(롯데ON 이 cdNm 을 안 준 항목) 코드로 떨어진다. */}
       {options.map((option) => (
         <option key={option.code} value={option.code}>
-          {option.name ? `${option.name} (${option.code})` : option.code}
+          {option.name || option.code}
         </option>
       ))}
     </select>

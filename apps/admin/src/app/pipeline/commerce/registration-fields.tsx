@@ -288,6 +288,7 @@ export function ChannelCodeField({
   requirement,
   placeholder,
   belowInput,
+  readOnly,
 }: {
   label: string;
   /** 이 칸이 실어 보내는 API 필드명. 라벨이 아니라 ⓘ 안에 선다. */
@@ -306,12 +307,26 @@ export function ChannelCodeField({
    * 서는 롯데ON 전용 모양이 됐다 — 쿠팡의 `note`는 글자만 담는다.
    */
   belowInput?: ReactNode;
+  /**
+   * ══ Commerce-6 F-7(CPO 지시) ══
+   * 🔴 「셀러에게 Commerce 내부 코드를 «직접 입력»시키지 않는다」.
+   *
+   * 목록 조회가 닿아서 아래 `belowInput` 에 고를 것이 실제로 있을 때만 켠다.
+   * 그때 이 칸은 «고른 결과가 무엇으로 나가는지» 보여주는 증거가 되고,
+   * 고르는 일은 목록이 한다.
+   *
+   * 🔴 조회가 실패했을 때는 «끄고» 직접 입력을 남긴다 — 목록도 없고 입력도
+   * 막으면 셀러에게 남는 길이 없다. 「코드를 숨긴다」가 「등록을 막는다」가
+   * 되어서는 안 된다.
+   */
+  readOnly?: boolean;
 }) {
   const input = (
     <input
       type="text"
       value={value}
       placeholder={placeholder}
+      readOnly={readOnly}
       onChange={(event) => onChange(event.target.value)}
       className={FIELD_INPUT_CLASS}
     />

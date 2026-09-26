@@ -46,10 +46,15 @@ describe("F-3-1 — 롯데ON 원산지: 보여준다, 고르지는 않는다", (
   it("🔴 원산지 텍스트를 OPLC_CD 코드로 «변환» 하지 않는다", () => {
     expect(PANEL).not.toContain("resolveNaverOriginArea");
     expect(PANEL).not.toContain("COUNTRY_NAME_KO");
-    /* 🔴 원산지 칸에 값을 쓰는 곳은 «셀러가 고른 값» 둘뿐이다(onPick · onChange).
-       텍스트에서 코드를 유도해 써 넣는 경로가 생기면 여기서 깨진다. */
-    const writes = PANEL.match(/patch\("codes", \{ originCode: [^}]+\}/g) ?? [];
-    expect(writes).toEqual(['patch("codes", { originCode: value }', 'patch("codes", { originCode: value }']);
+    /* 🔴 원산지 칸에 값을 쓰는 곳은 «셀러가 고른 값» 둘뿐이다.
+       텍스트에서 코드를 유도해 써 넣는 경로가 생기면 여기서 깨진다.
+       F-7 — 목록에서 고르는 쪽이 `pickAndRecheck`(고르는 즉시 재확인)로 바뀌었다.
+       쓰는 «값» 은 그대로 셀러가 고른 `value` 하나뿐이다. */
+    const writes = PANEL.match(/(patch|pickAndRecheck)\("codes", \{ originCode: [^}]+\}/g) ?? [];
+    expect(writes).toEqual([
+      'pickAndRecheck("codes", { originCode: value }',
+      'patch("codes", { originCode: value }',
+    ]);
   });
 
   /* 표시 전용이다 — 이 함수는 문자열만 돌려주고 아무것도 «쓰지» 않는다. */
