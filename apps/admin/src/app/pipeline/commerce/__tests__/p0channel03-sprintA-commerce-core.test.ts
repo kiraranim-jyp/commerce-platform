@@ -168,3 +168,77 @@ describe("⑤ 🔴 Core 는 어느 커머스로도 같은 흐름을 돈다", () 
     expect(editorFieldSchema(built.model).every((f) => f.editable === false)).toBe(true);
   });
 });
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * ⑥ 두 축 설계 검토(①~⑦) — **조사 결과와 «하지 않은 결정» 을 고정한다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * Coupang·LotteON 은 「상품 전체 수정」과 「아이템 단위 가격/재고」 두 축이고,
+ * 아이템 ID 를 등록 시점에 알 수 없다. SmartStore 에는 없는 제약이다 — 그래서
+ * SmartStore 어댑터를 복사하면 두 채널 모두 틀린다.
+ *
+ * 🔴 이 블록은 «결정» 을 지킨다. 다음 사람이 「저장해 두면 편하지」로 되돌리거나
+ * 「인터페이스에 미리 적어 두자」로 되돌리지 않게.
+ */
+describe("⑥ 🔴 두 축 설계 — 결정을 되돌리지 않는다", () => {
+  const DESIGN = readFileSync(
+    join(COMMERCE_DIR, "../../../../../../docs/p0-channel-03-commerce-core-two-axis-design.md"),
+    "utf8",
+  );
+
+  it("아이템 ID 는 등록 시점에 «얻을 수 없다» 는 사실이 기록됐다", () => {
+    expect(DESIGN).toContain("등록 시점에는 «불가능»");
+    expect(DESIGN).toContain("sitmNoLst");
+  });
+
+  it("🔴 아이템 ID 를 저장하지 «않는다» — 이유 셋과 함께", () => {
+    expect(DESIGN).toContain("저장하지 «않는다»");
+    expect(DESIGN).toContain("캐시해 기준값으로 쓰지 않는다");
+    expect(DESIGN).toContain("스키마 변경 없음");
+  });
+
+  it("ChannelProduct 스키마가 실제로 그대로다 — 자식 표가 생기지 않았다", () => {
+    const schema = readFileSync(
+      join(COMMERCE_DIR, "../../../../../../packages/database/prisma/schema.prisma"),
+      "utf8",
+    );
+    expect(schema).not.toContain("vendorItemId");
+    expect(schema).not.toContain("ChannelProductItem");
+    /* 표는 셋 그대로다(Product · ChannelProduct). */
+    expect(schema.match(/^model /gm) ?? []).toHaveLength(2);
+  });
+
+  it("🔴 Core 인터페이스에 «빈 계약» 을 넣지 않았다", () => {
+    const adapter = readFileSync(join(COMMERCE_DIR, "commerce-edit-adapter.ts"), "utf8");
+    for (const notYet of ["planUpdate", "recreate(", "validate(", "register("]) {
+      expect(adapter, `구현 없는 계약이 들어왔다: ${notYet}`).not.toContain(notYet);
+    }
+    expect(DESIGN).toContain("빈 계약");
+  });
+
+  it("🔴 발견된 Core 한계(LotteON 2중 카테고리)를 «숨기지 않았다»", () => {
+    expect(DESIGN).toContain("2중 구조");
+    expect(DESIGN).toContain("이 칸으로는 표현할 수 없다");
+    /* 그런데 지금 늘리지도 않았다 — 쓰지 않는 구조도 부채다. */
+    expect(DESIGN).toContain("미리 늘리지 않는다");
+  });
+
+  it("🔴 LotteON 의 «확인된» 제약이 기록됐다 — 옵션명·옵션값 수정 불가", () => {
+    expect(DESIGN).toContain("옵션값/옵션명은 수정이 불가능");
+    expect(DESIGN).toContain("확인된 제약");
+  });
+
+  it("🔴 가장 위험한 칸을 미리 적어 뒀다 — client 메서드 제한 넓히기", () => {
+    expect(DESIGN).toContain("가장 위험한 칸");
+    expect(DESIGN).toContain("경로 목록으로");
+  });
+
+  it("두 채널 capability 와 어댑터 부재가 유지된다", () => {
+    for (const id of ["coupang", "lotteon"] as const) {
+      expect(CHANNEL_CAPABILITY[id].update).toBe("UNKNOWN");
+      expect(editAdapterFor(id)).toBeUndefined();
+    }
+    expect(EDIT_ADAPTER_COMMERCE_IDS).toEqual(["smartstore"]);
+  });
+});
