@@ -116,22 +116,44 @@ export function hasAnySellerSetting(values: SellerSettings): boolean {
   return Object.values(values).some((value) => typeof value === "string" && value.trim().length > 0);
 }
 
-async function loadFromSellerSettings(): Promise<LoadOutcome> {
+/**
+ * ══ Commerce-6 C-1(2026-09-26) — 「Beta Security 가 인자를 채운다」의 그 인자 ══
+ *
+ * 059 주석과 이 함수의 옛 주석이 순서를 미리 적어 두었다: **1순위는 내 workspace
+ * 의 행**, 레거시 NULL 행은 그 다음. 이제 그 인자를 받는다.
+ *
+ * 🔴 레거시 폴백을 «없애지 않는다». workspace 행은 아직 하나도 없고(059 는 NULL
+ * 로만 backfill 했다), 폴백을 먼저 끊으면 지금 설정이 통째로 사라진다. 읽기
+ * «순서» 만 바꾼다 — 그것이 migration compatibility 의 뜻이다.
+ *
+ * 🔴 `workspaceId` 를 주지 «않으면» 예전과 한 글자도 다르지 않게 동작한다.
+ * 호출부 여덟 곳을 한꺼번에 바꾸기 전까지 읽기와 쓰기가 갈라지지 않게 하려는
+ * 것이다 — 일부만 바꾸면 「쓰기는 workspace 행, 읽기는 레거시 행」이 되어
+ * 지금보다 «나빠진다».
+ */
+async function loadFromSellerSettings(workspaceId?: string | null): Promise<LoadOutcome> {
   const supabase = getSupabaseAdmin();
   /* 🔴 클라이언트가 없는 것은 «조회 실패» 가 아니다. 환경변수가 없는 상태이고
      (로컬 개발 등) 그때는 레거시 조회도 똑같이 못 한다. 이걸 ERROR 로 올리면
      설정이 안 된 환경에서 등록 화면이 통째로 막힌다 — 지금까지 없던 동작이다. */
   if (!supabase) return { status: "NOT_FOUND" };
-  /* 1순위는 내 workspace 의 행이다. 지금은 그런 행이 «없고» 레거시 NULL 행 하나만
-     있다. workspace 인자를 아직 받지 않는 이유는 이번 범위가 격리 구현이 아니기
-     때문이다 — 순서만 먼저 지켜 둔다(Beta Security 가 인자를 채운다). */
+  if (workspaceId) {
+    const mine = await readSellerSettingsRow(workspaceId);
+    /* 🔴 NOT_FOUND 일 때«만» 레거시로 내려간다. ERROR 를 폴백으로 흘리면
+       「장애를 설정 없음으로 위장」이 다시 살아난다(R6-FS 가 없앤 그것). */
+    if (mine.status !== "NOT_FOUND") return mine;
+  }
+  return readSellerSettingsRow(null);
+}
+
+/** 조건만 다르고 «판정» 은 한 곳이다 — workspace 행과 레거시 행이 같은 규칙을 쓴다. */
+async function readSellerSettingsRow(workspaceId: string | null): Promise<LoadOutcome> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return { status: "NOT_FOUND" };
   try {
-    const { data, error } = await supabase
-      .from("seller_settings")
-      .select(COLUMNS)
-      .is("workspace_id", null)
-      .eq("scope_key", "default")
-      .maybeSingle();
+    const base = supabase.from("seller_settings").select(COLUMNS);
+    const scoped = workspaceId ? base.eq("workspace_id", workspaceId) : base.is("workspace_id", null);
+    const { data, error } = await scoped.eq("scope_key", "default").maybeSingle();
     /* 🔴 여기가 이 작업의 전부다. 예전에는 이 줄도, 아래 「행 없음」도 똑같이
        null 을 돌려줬다 — 그래서 DB 장애와 「아직 설정 안 함」이 구분되지 않았고
        둘 다 레거시 폴백으로 흘렀다. 이제 갈린다.
@@ -184,8 +206,8 @@ async function loadFromSellerSettings(): Promise<LoadOutcome> {
  * 🔴 값을 «만들지» 않는다. 못 찾으면 못 찾았다고 돌려준다 — 호출부가 그 사실을
  * 셀러에게 말할 수 있어야 한다(제조사 미입력은 쿠팡 등록의 1위 블로커였다).
  */
-export async function loadSellerSettings(): Promise<ResolvedSellerSettings> {
-  const primary = await loadFromSellerSettings();
+export async function loadSellerSettings(workspaceId?: string | null): Promise<ResolvedSellerSettings> {
+  const primary = await loadFromSellerSettings(workspaceId);
 
   /* 🔴 ERROR 는 여기서 «끝난다». 레거시를 쳐다보지 않는다.
      canonical 을 못 읽었는데 레거시 값을 쓰면, 그 값이 맞는지 틀린지 알 방법이
@@ -274,6 +296,16 @@ const COLUMN_OF: Record<string, string> = {
  */
 export async function saveSellerSettings(
   fields: Record<string, unknown>,
+  /**
+   * ══ Commerce-6 C-1 ══
+   * 🔴 주면 «그 workspace 의 행» 에 쓴다. 주지 않으면 예전 그대로 레거시 NULL
+   * 행에 쓴다.
+   *
+   * 🔴 읽기와 «같은 시점에» 켜야 한다. 쓰기만 workspace 로 옮기면 다른 읽기
+   * 경로(등록 payload 조립 일곱 곳)는 레거시 행을 계속 읽어서, 셀러가 저장한
+   * 값이 실제 등록에 반영되지 않는다 — 지금보다 나쁜 상태다.
+   */
+  workspaceId?: string | null,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const row: Record<string, unknown> = {};
   for (const [key, column] of Object.entries(COLUMN_OF)) {
@@ -289,10 +321,11 @@ export async function saveSellerSettings(
   const supabase = getSupabaseAdmin();
   if (!supabase) return { ok: false, error: "저장소에 연결하지 못했습니다." };
 
-  const { data, error } = await supabase
-    .from("seller_settings")
-    .update({ ...row, updated_at: new Date().toISOString() })
-    .is("workspace_id", null)
+  const update = supabase.from("seller_settings").update({ ...row, updated_at: new Date().toISOString() });
+  const { data, error } = await (workspaceId
+    ? update.eq("workspace_id", workspaceId)
+    : update.is("workspace_id", null)
+  )
     .eq("scope_key", "default")
     .select("id");
   if (error) {
@@ -307,7 +340,9 @@ export async function saveSellerSettings(
      그때 reader 1순위가 바뀐다. 여기서 임의의 workspace 를 지어내지 않는다. */
   const { error: insertError } = await supabase
     .from("seller_settings")
-    .insert({ workspace_id: null, scope_key: "default", ...row });
+    /* 🔴 C-1 — workspaceId 를 «받았을 때만» 그 값을 쓴다. 없으면 NULL 그대로다.
+       여전히 임의의 workspace 를 지어내지 않는다. */
+    .insert({ workspace_id: workspaceId ?? null, scope_key: "default", ...row });
   if (insertError) {
     console.warn("[seller-settings] 신규 저장 실패:", insertError.message);
     return { ok: false, error: "판매자 정보를 저장하지 못했습니다." };
