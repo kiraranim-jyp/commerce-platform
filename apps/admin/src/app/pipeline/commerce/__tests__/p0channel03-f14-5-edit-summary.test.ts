@@ -293,26 +293,38 @@ describe("⑥ 🔴 CTO 자체 검토에서 찾은 두 구멍", () => {
  * 좌측 상세를 내려 편집하는 동안 「무엇이 바뀌는지」와 [상품 수정]이 화면에서
  * 사라지면, 셀러는 자기가 무엇을 보내는지 모르는 채로 버튼을 찾으러 올라간다.
  */
-describe("⑦ 🔴 F-14-7b — 우측 기둥이 고정된다", () => {
+describe("⑦ 🔴 Commerce-6 F-8 D — 스크롤 주인이 «하나» 다", () => {
   const FRAME = codeOnly(readFileSync(join(__dirname, "../ChannelRegistrationFrame.tsx"), "utf8"));
 
-  it("sticky 가 «기둥» 에 걸려 있다 — 카드 안쪽이 아니다", () => {
-    const column = FRAME.slice(FRAME.indexOf('className="order-1 lg:order-2'));
-    expect(column).toContain("lg:sticky");
-    expect(column).toContain("lg:top-4");
+  /* ══ 계약이 «바뀌었다» — 기록을 남긴다 ══
+     F-14-7b 는 우측 기둥에 `lg:sticky` + `lg:max-h-… lg:overflow-y-auto` 를
+     걸었다. 좌측을 내려 편집하는 동안 [상품 수정]이 사라지지 않게 하려는 것이고,
+     기둥이 길 때 아래가 잘리지 않게 «기둥 안에서» 스크롤되게 한 것이다.
+
+     🔴 그런데 그 둘을 합치면 스크롤이 둘이 된다 — AppShell:96 이 「스크롤은
+     main 하나만 갖는다」고 적어 둔 그 안에서.
+     CPO 결정(2026-09-26): ① 이중 스크롤 제거 ② 요약 전체 접근
+     ③ [상품 수정] 접근 ④ 그 «다음» 이 sticky.
+     sticky 를 지키려고 이중 스크롤을 남기지 않는다. */
+  it("🔴 우측 기둥이 두 번째 스크롤을 만들지 않는다", () => {
+    expect(FRAME).not.toContain("lg:overflow-y-auto");
+    expect(FRAME).not.toContain("lg:max-h-");
   });
 
-  it("🔴 카드 안쪽의 sticky 는 «걷어냈다» — 겹쳐 걸면 둘 다 어긋난다", () => {
-    const card = FRAME.slice(FRAME.indexOf('data-summary="channel-registration"'));
-    expect(card).not.toContain("lg:sticky");
+  it("🔴 sticky 도 걸지 않는다 — 내부 스크롤 없이 sticky 만 남기면 아래가 잘린다", () => {
+    /* 내부 스크롤만 빼고 sticky 를 남기면 기둥이 길 때 [상품 수정]에 영구히
+       손이 닿지 않는다(F-14-7b 가 고쳤던 바로 그 버그). 그래서 둘 다 뺀다. */
+    expect(FRAME).not.toContain("lg:sticky");
+    expect(FRAME).not.toContain("lg:top-4");
   });
 
-  it("🔴 기둥이 화면보다 길어지면 «기둥 안에서» 스크롤된다", () => {
-    /* 위만 붙어 있으면 아래쪽 [상품 수정]에 손이 닿지 않는다. */
+  it("기둥은 여전히 위에서 시작한다 — 늘어나 붙지 않는다", () => {
     const column = FRAME.slice(FRAME.indexOf('className="order-1 lg:order-2'));
-    expect(column).toContain("lg:overflow-y-auto");
-    expect(column).toContain("lg:max-h-");
     expect(column).toContain("lg:self-start");
+  });
+
+  it("🔴 요약은 페이지와 «함께» 흐른다 — 세 채널이 같은 컴포넌트를 쓴다", () => {
+    expect(FRAME).toContain('data-frame="channel-registration"');
   });
 
   it("🔴 `fixed` 로 만들지 않았다 — 스크롤 주인은 AppShell 의 main 이다", () => {
