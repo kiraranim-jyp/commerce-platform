@@ -1418,11 +1418,18 @@ export function LotteOnRegistrationPanel({
                   label={sellerFixed?.outboundPlaceLabel}
                   liveName={liveNameOf(deliverySettings.data?.outboundPlaces, sellerFixed?.outboundPlaceNo)}
                 />
-                <DeliveryOptionPicker
-                  options={deliverySettings.data?.outboundPlaces ?? []}
-                  current={form.delivery.outboundPlaceNo}
-                  onPick={(value) => pickAndRecheck("delivery", { outboundPlaceNo: value })}
-                />
+                {/* 🔴 설정이 이미 채운 칸에서는 «고르는 컨트롤을 숨긴다».
+                    S-8/9 로 판매자 설정이 자동 적용되므로 셀러가 상품마다
+                    다시 고를 일이 없다 — 컨트롤이 남아 있으면 「또 골라야
+                    하나」로 읽히고, 쿠팡 ⑤배송(2칸)과 달라 보이는 원인이다.
+                    설정이 비어 있을 때만 고르는 길을 연다. */}
+                {!(!form.delivery.outboundPlaceNo.trim() && sellerFixed?.outboundPlaceNo) && (
+                  <DeliveryOptionPicker
+                    options={deliverySettings.data?.outboundPlaces ?? []}
+                    current={form.delivery.outboundPlaceNo}
+                    onPick={(value) => pickAndRecheck("delivery", { outboundPlaceNo: value })}
+                  />
+                )}
               </>
             }
             value={form.delivery.outboundPlaceNo}
@@ -1446,11 +1453,18 @@ export function LotteOnRegistrationPanel({
                   label={sellerFixed?.returnPlaceLabel}
                   liveName={liveNameOf(deliverySettings.data?.returnPlaces, sellerFixed?.returnPlaceNo)}
                 />
-                <DeliveryOptionPicker
-                  options={deliverySettings.data?.returnPlaces ?? []}
-                  current={form.delivery.returnPlaceNo}
-                  onPick={(value) => pickAndRecheck("delivery", { returnPlaceNo: value })}
-                />
+                {/* 🔴 설정이 이미 채운 칸에서는 «고르는 컨트롤을 숨긴다».
+                    S-8/9 로 판매자 설정이 자동 적용되므로 셀러가 상품마다
+                    다시 고를 일이 없다 — 컨트롤이 남아 있으면 「또 골라야
+                    하나」로 읽히고, 쿠팡 ⑤배송(2칸)과 달라 보이는 원인이다.
+                    설정이 비어 있을 때만 고르는 길을 연다. */}
+                {!(!form.delivery.returnPlaceNo.trim() && sellerFixed?.returnPlaceNo) && (
+                  <DeliveryOptionPicker
+                    options={deliverySettings.data?.returnPlaces ?? []}
+                    current={form.delivery.returnPlaceNo}
+                    onPick={(value) => pickAndRecheck("delivery", { returnPlaceNo: value })}
+                  />
+                )}
               </>
             }
             value={form.delivery.returnPlaceNo}
@@ -1474,11 +1488,15 @@ export function LotteOnRegistrationPanel({
                   label={sellerFixed?.deliveryCostPolicyLabel}
                   liveName={liveNameOf(deliverySettings.data?.costPolicies, sellerFixed?.deliveryCostPolicyNo)}
                 />
-                <DeliveryOptionPicker
-                  options={(deliverySettings.data?.costPolicies ?? []).map((policy) => ({ ...policy, isDefault: false }))}
-                  current={form.delivery.deliveryCostPolicyNo}
-                  onPick={(value) => pickAndRecheck("delivery", { deliveryCostPolicyNo: value })}
-                />
+                {/* 🔴 설정이 채운 칸에서는 고르는 컨트롤을 숨긴다(위 둘과 같은 규칙).
+                    CEO 확정: 해외직구라 상품마다 배송비 정책을 고를 필요가 없다. */}
+                {!(!form.delivery.deliveryCostPolicyNo.trim() && sellerFixed?.deliveryCostPolicyNo) && (
+                  <DeliveryOptionPicker
+                    options={(deliverySettings.data?.costPolicies ?? []).map((policy) => ({ ...policy, isDefault: false }))}
+                    current={form.delivery.deliveryCostPolicyNo}
+                    onPick={(value) => pickAndRecheck("delivery", { deliveryCostPolicyNo: value })}
+                  />
+                )}
               </>
             }
             value={form.delivery.deliveryCostPolicyNo}
