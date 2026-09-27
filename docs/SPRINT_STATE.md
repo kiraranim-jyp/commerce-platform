@@ -320,3 +320,26 @@ S-7(재고 자리 통일) · C-2B(내부 코드 비노출) · C-2A(배송 라벨
                  화면 «모양» 은 통일됐지만(추천 → 고르기) 단계 수는 채널이
                  요구하는 것이라 없앨 수 없다.
 ```
+
+---
+
+## 🟢 배포 완료 (2026-09-27)
+
+```
+push        67e7d49   origin/main 확인
+배포        ttaejyo-6q9i1xokm…   ● Ready (Production)
+별칭        ttaejyo.vercel.app · commerce-platform-mocha.vercel.app
+smoke       두 주소 HTTP 200
+SQL 067     CEO 가 실행 완료
+```
+
+🔴 **CTO 는 067 반영을 독립적으로 «확인할 수 없다».** DB 자격증명이 없고
+`/api/settings/lotteon-seller` 는 401(로그인 뒤)이다. 다만 67e7d49 가 순서
+의존을 없앴으므로 067 적용 전/후 어느 쪽이든 앱은 정상이다 — 적용 전이면
+택배사가 비어 있을 뿐이고, 적용 후면 값이 흐른다.
+
+## 다음 — Production E2E (CEO 화면 확인 1회)
+
+`docs/CEO-TEST-GUIDE.md` — 🔴 개발 용어 없이 탭/화면/라벨 이름만 사용.
+가장 확인이 필요한 곳은 **MI 원본 판매처**다(S-12 는 코드상 재현 불가로
+닫혔고 Production 확인 대기 상태다).
