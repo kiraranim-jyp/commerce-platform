@@ -1471,7 +1471,18 @@ function buildCoupangItem(args: {
     itemName,
     originalPrice: priceKrw,
     salePrice: priceKrw,
-    externalVendorSku: variant?.sku,
+    /* ══ 장기 스프린트 S-11(CEO 지시, 2026-09-26) — 상품코드가 «사라지고» 있었다 ══
+
+       `variant?.sku` 하나만 봤다. 옵션 없는 단품에는 variant 가 없으므로
+       판매자 상품코드가 쿠팡에 **아예 나가지 않았다** — 바로 아래 재고는
+       이미 상품 값으로 폴백하고 있는데 이 줄만 빠져 있었다.
+
+       🔴 다른 두 채널은 이미 상품 값을 쓴다(네이버 sellerManagementCode ·
+       롯데ON eitmNo). 쿠팡만 단품에서 비는 것은 「한 번 확보한 정보를 다음
+       단계에서 잃는다」는 이번 스프린트의 표적 그 자체다.
+
+       🔴 sku 를 «모델명» 으로 옮기지 않는다 — 그건 다른 개념이다(S-11 원칙). */
+    externalVendorSku: variant?.sku ?? (product.sku.value.trim() || undefined),
     // variant.stockQuantity가 없으면(재고 추적 안 하는 매장, 또는 옵션 없는
     // 상품) 상품 전체 기본 재고로 폴백한다.
     maximumBuyCount: variant?.stockQuantity ?? product.stockQuantity.value,

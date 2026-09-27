@@ -205,3 +205,41 @@ CEO 가 SmartStore 에서 본 누락을 코드로 대조했다.
    보존되며 LotteON 이 요구하는 코드와 어떤 관계인지 확정
 3. 그 결과로 ②를 연결하거나 「원본에 없음」으로 확정
 ```
+
+---
+
+## 🟢 S-11 완료 — 그리고 «상품코드가 사라지는» 실제 결함을 잡았다
+
+```
+sku(B126AC096 SS26)  원본에서 추출 ✅ → Common product.sku 에 보존 ✅
+   네이버   sellerManagementCode(판매자상품코드)
+   롯데ON   eitmNo(업체단품번호)
+   쿠팡     externalVendorSku   🔴 variant?.sku 만 봤다 → 옵션 «없는» 단품에서
+            상품코드가 통째로 빠졌다. 바로 아래 재고는 이미 상품 값으로
+            폴백하는데 이 줄만 빠져 있었다 → 고쳤다.
+
+modelName            네이버 고시 modelName · 네이버쇼핑 검색정보
+                     🔴 쿠팡·롯데ON payload 에는 «없다»
+채널 발급 번호        롯데ON epdNo/spdNo — 우리가 만들거나 sku 로 대신할 수 없다
+```
+
+🔴 CEO 경고가 정확했다: **셋은 다른 개념이다.** 그래서 `sku → modelName` 자동
+매핑은 금지이고, 테스트가 세 빌더 모두에서 그 대입을 막는다.
+
+화면 표기: 「상품코드(SKU)」 그대로 둔다 — 이미 셀러가 아는 약어이고 쿠팡·
+스마트스토어가 쓰던 라벨이다.
+
+## S-4/5/6 ②갈래 판정 (S-11 확정 뒤)
+
+```
+품명 · 모델명 · 중량   원본에 없고 resolver 도 없다. 🔴 sku 로 대신할 수 없다(S-11).
+                      네이버는 이미 «상세페이지 참조로 등록» 경로를 준다 —
+                      셀러가 «선택» 하는 것이라 값을 지어내지 않는다. 유지.
+수입사명(importer)     🔴 여기가 진짜 결함이다. 상품마다 다른 값이 아니라
+                      «판매자 정보» 인데 product.importer(상품 필드)로 남아
+                      상품마다 다시 입력하게 된다. seller_settings 에는
+                      manufacturer·asContactNumber·qualityGuarantee·
+                      kcExemptionText·defaultCountryOfOrigin 5칸이 있는데
+                      importer 만 «없다».
+                      → S-8/9 migration 과 «같은 배치» 로 처리한다(다음 작업).
+```
