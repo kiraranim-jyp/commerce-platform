@@ -68,15 +68,15 @@ const ALL_READY = snapshot([
   { field: "spdNm", label: "상품명", status: "READY" },
   { field: "scatNo", label: "표준카테고리", status: "READY" },
   { field: "dcatLst", label: "전시카테고리", status: "READY" },
-  { field: "owhpNo", label: "출고지번호", status: "READY" },
+  { field: "owhpNo", label: "출고지", status: "READY" },
 ]);
 
 /** 필수 누락 — 롯데ON 🔴. */
 const NOT_READY = snapshot([
   { field: "spdNm", label: "상품명", status: "READY" },
   { field: "scatNo", label: "표준카테고리", status: "READY" },
-  { field: "owhpNo", label: "출고지번호", status: "MISSING", reason: "출고지번호가 없습니다." },
-  { field: "dvCstPolNo", label: "배송비정책번호", status: "BLOCKED", reason: "판매자센터에 먼저 등록해야 합니다." },
+  { field: "owhpNo", label: "출고지", status: "MISSING", reason: "출고지번호가 없습니다." },
+  { field: "dvCstPolNo", label: "배송비 정책", status: "BLOCKED", reason: "판매자센터에 먼저 등록해야 합니다." },
 ]);
 
 /**
@@ -218,7 +218,7 @@ describe("§17·§18 — 카테고리 전에는 등록 가능성을 숫자로 �
   it("막는 조건의 문장은 서버가 준 것 그대로다 — 화면이 다시 쓰지 않는다", () => {
     const ordered = listLotteOnBlockingConditions(NOT_READY);
     expect(ordered[0].reason).toBe("판매자센터에 먼저 등록해야 합니다.");
-    expect(ordered[0].label).toBe("배송비정책번호");
+    expect(ordered[0].label).toBe("배송비 정책");
   });
 
   it("전부 통과하면 막는 조건이 하나도 없다", () => {

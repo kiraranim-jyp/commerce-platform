@@ -142,7 +142,7 @@ beforeEach(() => {
                   { field: "pdNm", label: "상품명", status: "READY" },
                   { field: "salePrc", label: "판매가", status: "READY" },
                   // 서버가 이름을 올린 채널 필드 — 🔴 필수 배지의 근거가 된다.
-                  { field: "owhpNo", label: "출고지번호", status: "READY" },
+                  { field: "owhpNo", label: "출고지", status: "READY" },
                 ],
               },
             }),
@@ -522,7 +522,7 @@ describe("REWORK-7 ④ / REWORK-14 — 롯데ON 고유 필드의 필수·선택�
   it("서버 검증이 이름을 올린 필드는 라벨에 빨간 별표가 선다", async () => {
     const dom = await mount(lotteOnElement());
     await act(async () => expandAllSections(dom));
-    const row = fieldRowFor(dom, "출고지번호");
+    const row = fieldRowFor(dom, "출고지");
     expect(isRequired(row), "출고지번호에 필수 표시가 없다").toBe(true);
     // 비어 있는 필수 칸이라 쿠팡과 같은 「입력 필요」 알약이 함께 선다.
     expect(clean(row.textContent ?? "")).toContain("입력 필요");
@@ -531,7 +531,7 @@ describe("REWORK-7 ④ / REWORK-14 — 롯데ON 고유 필드의 필수·선택�
   it("검증이 아예 보지 않는 값에는 아무 표시도 붙이지 않는다 — 쿠팡이 그러하듯", async () => {
     const dom = await mount(lotteOnElement());
     await act(async () => expandAllSections(dom));
-    for (const field of ["브랜드번호", "업체상품번호", "과세유형코드"]) {
+    for (const field of ["브랜드", "업체 상품코드", "과세 유형"]) {
       const row = fieldRowFor(dom, field);
       expect(isRequired(row), `${field}: 선택인데 필수 표시가 붙었다`).toBe(false);
       const text = clean(row.textContent ?? "");
@@ -557,7 +557,7 @@ describe("REWORK-7 ④ / REWORK-14 — 롯데ON 고유 필드의 필수·선택�
     const text = clean(dom.textContent ?? "");
     expect(text, "검증 전인데 필수라고 단정했다").not.toContain("🔴 필수");
     expect(text, "검증 전인데 선택이라고 단정했다").not.toContain("⚪ 선택");
-    for (const field of ["출고지번호", "브랜드번호"]) {
+    for (const field of ["출고지", "브랜드"]) {
       expect(isRequired(fieldRowFor(dom, field)), `${field}: 검증 전인데 필수 표시가 붙었다`).toBe(false);
     }
   });

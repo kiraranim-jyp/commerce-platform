@@ -134,13 +134,13 @@ describe("롯데ON 탭 — 실제로 그려지는 화면", () => {
        두 줄은 "있어야 한다"가 아니라 **"없어야 한다"**로 뒤집힌다. */
     expect(labels).not.toContain("표준카테고리번호 (scatNo)");
     expect(labels).not.toContain("전시카테고리번호 (dcatLst)");
-    expect(labels).toContain("상품품목코드");
+    expect(labels).toContain("고시 품목");
     expect(labels).toContain("고시 항목");
     expect(labels).toContain("안전인증 목록");
     expect(labels).toContain("수입대행코드");
-    expect(labels).toContain("출고지번호");
-    expect(labels).toContain("반품지번호");
-    expect(labels).toContain("배송비정책번호");
+    expect(labels).toContain("출고지");
+    expect(labels).toContain("반품지");
+    expect(labels).toContain("배송비 정책");
     /* Commerce-6 F-7 — 「배송가능지역코드」에서 「코드」가 빠졌다. 라벨에 코드
        이름을 두면 셀러가 그것을 답으로 적는다(첫 LIVE 등록이 그렇게 거절됐다).
        🔴 칸이 «선다» 는 사실을 보는 이 검사의 뜻은 그대로다. */

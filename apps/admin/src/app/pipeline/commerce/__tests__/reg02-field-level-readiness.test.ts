@@ -37,7 +37,7 @@ const LOTTEON_FIELDS: ReadinessItem[] = [
   item({ label: "표준카테고리", passed: true, sectionId: "lotteon-section-category" }),
   item({ label: "판매자상품명", passed: true, sectionId: "lotteon-section-basic" }),
   item({
-    label: "출고지번호",
+    label: "출고지",
     hint: "출고지번호는 롯데ON 판매자센터(또는 거래처 API)에 먼저 등록돼 있어야 합니다. 임의 값을 보낼 수 없습니다.",
     sectionId: "lotteon-section-shipping",
   }),
@@ -62,7 +62,7 @@ describe("§6 필드 단위 blocker — 「✗ 배송」에서 멈추지 않는�
   it("🔴 배송이 막는 «이유» 가 항목 이름으로 나온다", () => {
     const shipping = find(checks, "배송");
     expect(shipping.passed).toBe(false);
-    expect(shipping.blocking.map((b) => b.label)).toEqual(["출고지번호", "회수지(반품지)번호"]);
+    expect(shipping.blocking.map((b) => b.label)).toEqual(["출고지", "회수지(반품지)번호"]);
   });
 
   it("🔴 왜 막는지가 따라온다 — 다만 API 내부 필드명은 «걷어낸다»", () => {

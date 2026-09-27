@@ -1407,7 +1407,7 @@ export function LotteOnRegistrationPanel({
               도움말은 언제나 글자 한 줄이고, 고르는 컨트롤은 쿠팡이 「상세페이지
               참조로 등록」 버튼을 두는 자리(입력칸 바로 아래)에 선다. */}
           <ChannelCodeField
-            label="출고지번호"
+            label="출고지"
             requirement={requirementOf("owhpNo")}
             note="롯데ON에 선등록된 출고지"
             belowInput={
@@ -1436,7 +1436,7 @@ export function LotteOnRegistrationPanel({
             onChange={(value) => patch("delivery", { outboundPlaceNo: value })}
           />
           <ChannelCodeField
-            label="반품지번호"
+            label="반품지"
             requirement={requirementOf("rtrpNo")}
             note="롯데ON에 선등록된 회수지"
             belowInput={
@@ -1464,7 +1464,7 @@ export function LotteOnRegistrationPanel({
             onChange={(value) => patch("delivery", { returnPlaceNo: value })}
           />
           <ChannelCodeField
-            label="배송비정책번호"
+            label="배송비 정책"
             requirement={requirementOf("dvCstPolNo")}
             note="롯데ON에 선등록된 배송비 정책"
             belowInput={
@@ -1634,7 +1634,7 @@ export function LotteOnRegistrationPanel({
         )}
         <div className={FIELD_GRID_NARROW_CLASS}>
           <ChannelCodeField
-            label="상품품목코드"
+            label="고시 품목"
             requirement={requirementOf("pdItmsCd")}
             note={`고시 품목. ${LOTTEON_CHILD_PRODUCT_ITEM_CODE} = 어린이제품(유아동) — 이 경우 ④ 안전인증이 필수입니다.`}
             /* ══ LOTTEON-REAL-REGISTRATION-05(CEO 확정, 2026-09-22) ══
@@ -1885,7 +1885,7 @@ export function LotteOnRegistrationPanel({
         )}
         <div className={FIELD_GRID_CLASS}>
           <ChannelCodeField
-            label="원산지코드"
+            label="원산지 선택"
             requirement={requirementOf("oplcCd")}
             /* 🔴 힌트 문구를 바꿨다. 예전에는 「공통코드 OPLC_CD」였고, 셀러가
                그것을 «넣어야 할 값» 으로 읽고 그대로 타이핑했다 — 첫 LIVE 등록이
@@ -1923,21 +1923,21 @@ export function LotteOnRegistrationPanel({
             onChange={(value) => patch("codes", { originCode: value })}
           />
           <ChannelCodeField
-            label="과세유형코드"
+            label="과세 유형"
             requirement={requirementOf("tdfDvsCd")}
             note="01 과세 · 02 면세 · 03 영세 · 04 해당없음. 표준카테고리를 고르면 그 카테고리 값으로 채워집니다."
             value={form.codes.taxTypeCode}
             onChange={(value) => patch("codes", { taxTypeCode: value })}
           />
           <ChannelCodeField
-            label="브랜드번호"
+            label="브랜드 선택"
             requirement={requirementOf("brdNo")}
             note="속성모듈(204) 조회 결과. 없으면 비워둡니다"
             value={form.codes.brandNo}
             onChange={(value) => patch("codes", { brandNo: value })}
           />
           <ChannelCodeField
-            label="업체상품번호"
+            label="업체 상품코드"
             requirement={requirementOf("epdNo")}
             note="우리 쪽 식별자. 등록 후 상품 상태 조회(93)에 씁니다"
             value={form.codes.externalProductNo}

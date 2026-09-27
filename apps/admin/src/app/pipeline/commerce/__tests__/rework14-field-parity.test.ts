@@ -141,8 +141,8 @@ beforeEach(() => {
                 blockedCount: 0,
                 fields: [
                   { field: "pdNm", label: "상품명", status: "READY" },
-                  { field: "owhpNo", label: "출고지번호", status: "MISSING", reason: "값이 없습니다" },
-                  { field: "dvCstPolNo", label: "배송비정책번호", status: "MISSING" },
+                  { field: "owhpNo", label: "출고지", status: "MISSING", reason: "값이 없습니다" },
+                  { field: "dvCstPolNo", label: "배송비 정책", status: "MISSING" },
                 ],
               },
             }),

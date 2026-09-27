@@ -103,7 +103,7 @@ describe("등록 가능성 — 서버 검증 결과를 세기만 한다", () => 
         { field: "spdNm", label: "판매자상품명", status: "READY" },
         { field: "slPrc", label: "판매가", status: "READY" },
         { field: "scatNo", label: "표준카테고리", status: "BLOCKED", reason: "x" },
-        { field: "oplcCd", label: "원산지코드", status: "MISSING", reason: "y" },
+        { field: "oplcCd", label: "원산지", status: "MISSING", reason: "y" },
       ]),
     );
     expect(readiness.total).toBe(4);
@@ -132,7 +132,7 @@ describe("부족한 정보 — 왜 필요한지 + 무엇을 어디서", () => {
       { field: "spdNm", label: "판매자상품명", status: "READY" },
       { field: "scatNo", label: "표준카테고리", status: "BLOCKED", reason: "표준카테고리번호가 선택되지 않았습니다." },
       { field: "itmImgLst", label: "대표 이미지", status: "MISSING", reason: "대표 이미지가 없습니다." },
-      { field: "owhpNo", label: "출고지번호", status: "BLOCKED", reason: "선등록 필요" },
+      { field: "owhpNo", label: "출고지", status: "BLOCKED", reason: "선등록 필요" },
       { field: "sftyAthnLst", label: "안전인증", status: "BLOCKED", reason: "어린이제품은 필수입니다." },
     ]),
   );
