@@ -122,6 +122,26 @@ export function selectVisualCheckCandidates(rows: CandidateWithShop[]): Candidat
   return rows.filter((r) => isVisualCheckTier(r.tier)).sort((a, b) => order(a.tier) - order(b.tier));
 }
 
+/**
+ * 원상품 카드에 적을 «판매처» 이름.
+ *
+ * 🔴 브랜드가 아니라 판매처다. 후보 쪽이 `shopName`(판매처)을 적으므로 왼쪽도
+ * 같은 축이어야 한다 — 축이 다르면 나란히 놓였을 때 원본과 후보가 뒤집혀
+ * 읽힌다(S-12 에서 실제로 그랬다).
+ *
+ * 🔴 이름을 «지어내지 않는다». 주소에서 읽을 수 있는 것은 호스트뿐이고, 그
+ * 호스트를 그대로 보여준다(`junioredition.com`). 첫 라벨만 떼어 대문자로
+ * 바꾸면 「Junioredition」 같은 실제로 존재하지 않는 이름이 만들어진다.
+ */
+export function originSellerLabel(origin: { sourceUrl?: string }): string | null {
+  if (!origin.sourceUrl) return null;
+  try {
+    return new URL(origin.sourceUrl).hostname.replace(/^www\./i, "");
+  } catch {
+    return null;
+  }
+}
+
 export interface OriginProduct {
   title: string;
   brand?: string;
@@ -221,7 +241,24 @@ export function CandidateComparison({
                 <p className="text-[10px] font-medium text-text-tertiary">원상품</p>
                 <ProductImage url={origin.imageUrl} alt={origin.title} />
                 <p className="line-clamp-2 text-[11px] text-text-primary">{origin.title}</p>
-                {origin.brand && <p className="text-[10px] text-text-tertiary">{origin.brand}</p>}
+                {/* ══ 장기 스프린트 S-12(CEO 실화면 재현, 2026-09-27) ══
+
+                    🔴 여기가 「원본과 후보가 뒤집혀 보인다」의 자리였다.
+                    왼쪽(원상품)은 «브랜드»(Bobo Choses)를, 오른쪽(후보)은
+                    «판매처»(Junior Edition)를 적고 있었다. 축이 다른 두 값이
+                    나란히 서니 「원본 = Bobo Choses / 후보 = Junior Edition」
+                    으로 읽혔다 — 실제로는 정반대다. 원본 판매처가 Junior
+                    Edition 이고 Bobo Choses 는 그 상품의 «브랜드» 다.
+
+                    🔴 코드가 틀린 값을 넣은 게 아니라 «다른 축» 을 나란히
+                    놓았다. 그래서 서버 여섯 곳과 MI 카드를 다 뒤져도 원인이
+                    안 나왔다(S-12 1차 조사). 대표님 화면 한 장이 답이었다.
+
+                    이제 양쪽 다 «판매처» 를 적는다. 브랜드는 두 상품이 같으니
+                    비교에 쓸모가 없다 — 판매처가 달라야 비교가 성립한다. */}
+                {originSellerLabel(origin) && (
+                  <p className="text-[10px] text-text-tertiary">{originSellerLabel(origin)}</p>
+                )}
                 {origin.price && (
                   <p className="text-[11px] font-medium text-text-primary">
                     {formatMoney(origin.price.amount, origin.price.currency)}
