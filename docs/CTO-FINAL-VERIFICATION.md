@@ -1,6 +1,7 @@
 # CTO FINAL VERIFICATION — 3-Commerce 등록 준비
 
-> 대상 커밋 `e27c604` · Production 반영 완료 · 2026-09-28
+> 대상 커밋 `d4d548a` · Production 반영 완료 · 2026-09-28
+> **Render 🟡 → 🟢** (S-24, 아래 §3B) — CPO 가 보류한 한 항목을 닫았다.
 > 🔴 **「소스에 조건이 있으니 PASS」를 쓰지 않는다.** 이 스프린트에서 그 방식으로
 > 두 번 틀렸고(아래 §7), 그래서 아래 항목은 전부 «실행 결과» 다.
 
@@ -38,6 +39,68 @@ migration | `067` — `lotteon_seller_settings` workspace 축 + 택배사 4칸 �
 🔴 섹션 골격은 이미 같았다. 라벨의 「번호/코드」를 걷어냈다(출고지번호→출고지 등).
 🔴 `원산지코드→원산지`·`브랜드번호→브랜드` 는 **되돌렸다** — 공통 필드와 개념이
 섞인다(테스트가 막았다). → `원산지 선택` · `브랜드 선택`.
+
+## 3B. 🟢 Render RECHECK (S-24) — **그려진 DOM 으로 닫았다**
+
+CPO 판정이 맞았다. 마운트해 보니 **소스 검사가 전부 PASS 였던 자리에서 셋이 나왔다.**
+
+### 수정 전 — 실제로 그려지던 ⑤배송
+
+```
+출고지          Hessen 물류센터 · PLO3837441      🔴 코드가 화면에 있다
+반품지          반품주소지 · PLO3837441_R         🔴
+배송비 정책      업체배송 19800원 · 4279402        🔴
+배송 가능 지역   전국 ✓ 설정값 적용됨(GN101)        🔴
+택배사          (값 없음, 안내문만)                🔴 빈 칸 — 숨기기만 했다
+반품 택배사      (값 없음, 안내문만)                🔴 빈 칸
+```
+
+🔴 `s19-lotteon-no-code-on-screen` · `s23-delivery-collapse` 는 **PASS 였다.**
+소스에 조건이 있는 것과 화면에 그렇게 그려지는 것은 다른 일이다 — CPO 가 보류한
+이유가 정확히 이것이고, 이 스프린트에서 세 번째로 같은 자리다.
+
+### 고친 것
+
+```
+① 코드 노출 세 경로
+   DeliveryOptionPicker  `name · no` → 이름만 (코드는 data-channel-code 로만)
+   SellerSettingApplied  `({value})` 삭제
+   SellerSettingApplied  `shownName || value` → sellerFacingName
+                          (§262 가 이미 금지한 «코드 fallback» 을 이 줄만 하고 있었다)
+
+② 택배사 두 칸에 「설정값 적용됨」 줄
+   숨기는 것과 「어디서 온 값인지 말하는 것」은 다른 일이다.
+   위 네 칸은 처음부터 이 줄을 갖고 있었고 택배사 둘만 빠져 있었다.
+```
+
+### 검증 — 마운트한 DOM
+
+```
+settings/final-mapping-render          11건   「롯데ON 연결」
+  여섯 줄이 DOM 에 선다 · 롯데ON 이 준 이름으로 보인다                 PASS
+  저장값 → ✓ 연결됨 + 이름 / 저장값 없음 → 연결 필요                  PASS
+  🔴 조회 실패 → 「불러오지 못했습니다 + 다시 불러오기」               PASS
+     («선택 안 함» 으로 위장하지 않는다 · 실패 시 select 0개)
+  코드 노출 0 · 코드 입력칸 0                                         PASS
+  고르면 즉시 PUT(여섯 값 통째로) · 언마운트 후 다시 열어도 유지        PASS
+
+commerce/s24-delivery-collapse-render   6건   ⑤배송
+  여섯 칸 전부 「설정값 적용됨」 (택배사 둘 포함)                       PASS
+  사람이 읽는 이름으로 보인다                                          PASS
+  🔴 PLO3837441 · 4279402 · GN101 · DV_CO_CD · OPLC_CD  화면에 0건    PASS
+  설정이 비면 고르는 길이 그대로 열린다(적용됨 0줄 · 컨트롤 남음)       PASS
+```
+
+### 🔴 이 검사가 «실제로 실패할 수 있는가» — 음성 대조
+
+조용한 fallback 을 일부러 되살려(`if (!listRes.ok …)` → `if (false)`) 돌렸더니
+그 두 건이 **즉시 실패**했다. 되돌린 뒤 다시 통과. 빈 DOM 에서 저절로 통과하는
+`not.toContain` 에는 앞에 「그려졌는가」를 먼저 세웠다.
+
+### 함께 잡힌 것
+
+`commerce6-phase-e-seller-settings-source` 가 「네 칸」을 세고 있어서 여섯으로
+늘어난 것을 막았다 — **가드가 맞게 반응했다.** 6으로 고쳤다.
 
 ## 4. 실제 데이터 저장/재조회 — 실제 함수 왕복
 
@@ -100,7 +163,7 @@ Common 에 채널 코드를 넣지 않는다.
 ## 9. 회귀 — SmartStore · Coupang
 
 ```
-admin       347 파일 / 4,683건   PASS
+admin       349 파일 / 4,700건   PASS  (S-24 렌더 17건 추가)
 listing 530 · pricing 538 · shared 133 · marketplace 42 · category 22   PASS
 ```
 🔴 SmartStore/Coupang 등록 로직은 **건드리지 않았다**(변경 파일 목록 §2 참조).
@@ -111,9 +174,23 @@ listing 530 · pricing 538 · shared 133 · marketplace 42 · category 22   PASS
 typecheck   admin 0 · shared 0 · marketplace 0 · pricing 0 · category 0
             listing 5 → origin/main 에서 온 기존 오류(전부 테스트 파일, 내 파일 아님)
 build       next build 성공
-deploy      ttaejyo-rjpcpuxap… ● Ready (Production)
+deploy      ttaejyo-mff62ediw… ● Ready (Production)
 반영 확인    ttaejyo.vercel.app · commerce-platform-mocha.vercel.app  HTTP 200
-git         origin/main = e27c604 · 미푸시 0 · tree clean
+git         origin/main = d4d548a · 미푸시 0 · tree clean
+```
+
+### 🔴 배포 중 내가 낸 사고 — 숨기지 않는다
+
+첫 배포가 **엉뚱한 프로젝트로 나갔다.** Bash 에서 `cd` 한 디렉터리가 PowerShell
+에도 남아 있어서 `apps/admin/src/app/api/lotteon/__tests__` 에서 `vercel` 이
+실행됐고, 폴더 이름으로 **`__tests__` 라는 새 Vercel 프로젝트**가 만들어져
+`tests-silk-delta.vercel.app` 으로 Production 배포됐다.
+
+```
+정리한 것   그 폴더의 .vercel/ · .gitignore 삭제 → tree clean (커밋에 안 들어갔다)
+재배포      repo 루트에서 다시 실행 → ttaejyo 정상
+남은 것     🔴 Vercel 에 `__tests__` 프로젝트와 그 배포가 «그대로 살아 있다»
+            — 지우는 것은 되돌릴 수 없어 CEO/CPO 판단을 받는다
 ```
 
 ## 14. 🔴 미검증 항목 — 정직하게
@@ -123,10 +200,8 @@ git         origin/main = e27c604 · 미푸시 0 · tree clean
    자격증명이 로컬에 없다(실행으로 확인: .env.local 에 QA_PROXY_TO_PROD ·
    OCI_PROXY_URL 둘뿐). 외부 실행 제약이다.
 
-2. 「롯데ON 연결」 화면의 «실제 렌더»
-   useEffect + fetch 구성이라 마운트 검증을 못 했다. 계약 11건은 구조를
-   보지만 «그려진 DOM» 은 아니다. 🔴 이 스프린트에서 두 번 틀린 것이 바로
-   그 차이라 «검증했다고 말하지 않는다».
+2. ✅ **닫혔다** — 「롯데ON 연결」 실제 렌더는 §3B 에서 마운트로 확인했다.
+   닫는 과정에서 결함 셋이 나왔고 전부 고쳤다.
 
 3. 롯데ON 150/166/89 «실응답»
    목록이 실제로 몇 건 오는지, cdNm 형식이 무엇인지 본 적이 없다.
