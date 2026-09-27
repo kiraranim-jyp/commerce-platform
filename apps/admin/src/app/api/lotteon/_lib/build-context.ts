@@ -223,8 +223,15 @@ export async function buildLotteOnContext(
     returnPlaceNo: fixed(form.returnPlaceNo, sellerSettings.returnPlaceNo),
     deliveryCostPolicyNo: fixed(form.deliveryCostPolicyNo, sellerSettings.deliveryCostPolicyNo),
     deliveryRegionGroupCode: fixed(form.deliveryRegionGroupCode, sellerSettings.deliveryRegionGroupCode),
-    courierCode: trimOrNull(form.courierCode),
-    returnCourierCode: trimOrNull(form.returnCourierCode),
+    /* ══ 장기 스프린트 S-9(CEO 정책 결정, 2026-09-26) ══
+       택배사·반품택배사도 «사다리» 를 탄다. 지금까지 이 둘만 `trimOrNull(form…)`
+       이라 상품 폼이 비면 그대로 비었고 셀러는 상품마다 다시 골라야 했다
+       (C-2A 가 이 비대칭을 찾았고 E2E 가 반복 비용을 확인했다).
+
+       🔴 순서는 위 네 값과 «같다»: 상품 폼이 먼저다. 이 상품에서만 다른 택배사를
+       골랐다면 설정이 그 결정을 덮지 않는다. */
+    courierCode: fixed(form.courierCode, sellerSettings.courierCode),
+    returnCourierCode: fixed(form.returnCourierCode, sellerSettings.returnCourierCode),
 
     /**
      * 발송예정일수 — **셀러 설정의 "출고 소요일"이 그대로 온다.**

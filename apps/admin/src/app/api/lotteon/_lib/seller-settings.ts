@@ -42,6 +42,19 @@ export interface LotteOnSellerSettings {
   /** dvRgsprGrpCd — 배송가능지역코드. */
   deliveryRegionGroupCode: string | null;
   deliveryRegionGroupLabel: string | null;
+  /* ══ 장기 스프린트 S-8/9(CEO 정책 결정, 2026-09-26) ══
+     「배송가능지역 · 택배사 · 반품택배사 · 해외직구 배송비 정책은 판매자 설정에서
+     관리하고 상품 등록 시 자동 적용한다. 상품마다 다시 고르지 않는다.」
+
+     🔴 code 와 label 을 «함께» 둔다. label 이 있어야 셀러에게 코드를 보여주지
+     않고(F-7) 「우체국택배」라고 말할 수 있다. code 만 저장하면 화면이 코드를
+     드러내거나 매번 89 를 다시 불러야 한다. */
+  /** hdcCd — 택배사. 89 목록에서 셀러가 «고른» 값. 🔴 이름으로 맞추지 않는다. */
+  courierCode: string | null;
+  courierLabel: string | null;
+  /** rtngHdcCd — 반품 택배사. 출고 택배사와 달라도 된다. */
+  returnCourierCode: string | null;
+  returnCourierLabel: string | null;
   /** nldySndCloseTm — 평일 발송마감시간(HH24MI). */
   weekdayCloseTime: string | null;
   /** satSndCloseTm — 토요일 발송마감시간(HH24MI). */
@@ -76,6 +89,10 @@ export const EMPTY_LOTTEON_SELLER_SETTINGS: LotteOnSellerSettings = {
   deliveryCostPolicyLabel: null,
   deliveryRegionGroupCode: null,
   deliveryRegionGroupLabel: null,
+  courierCode: null,
+  courierLabel: null,
+  returnCourierCode: null,
+  returnCourierLabel: null,
   weekdayCloseTime: null,
   saturdayCloseTime: null,
 };
@@ -89,6 +106,10 @@ interface Row {
   delivery_cost_policy_label: string | null;
   delivery_region_group_code: string | null;
   delivery_region_group_label: string | null;
+  courier_code: string | null;
+  courier_label: string | null;
+  return_courier_code: string | null;
+  return_courier_label: string | null;
   weekday_close_time: string | null;
   saturday_close_time: string | null;
 }
@@ -96,7 +117,8 @@ interface Row {
 const COLUMNS =
   "outbound_place_no, outbound_place_label, return_place_no, return_place_label, " +
   "delivery_cost_policy_no, delivery_cost_policy_label, delivery_region_group_code, " +
-  "delivery_region_group_label, weekday_close_time, saturday_close_time";
+  "delivery_region_group_label, courier_code, courier_label, return_courier_code, return_courier_label, " +
+  "weekday_close_time, saturday_close_time";
 
 function fromRow(row: Row): LotteOnSellerSettings {
   return {
@@ -108,6 +130,10 @@ function fromRow(row: Row): LotteOnSellerSettings {
     deliveryCostPolicyLabel: row.delivery_cost_policy_label,
     deliveryRegionGroupCode: row.delivery_region_group_code,
     deliveryRegionGroupLabel: row.delivery_region_group_label,
+    courierCode: row.courier_code,
+    courierLabel: row.courier_label,
+    returnCourierCode: row.return_courier_code,
+    returnCourierLabel: row.return_courier_label,
     weekdayCloseTime: row.weekday_close_time,
     saturdayCloseTime: row.saturday_close_time,
   };
@@ -209,6 +235,12 @@ export async function saveLotteOnSellerSettings(
       delivery_cost_policy_label: clean(input.deliveryCostPolicyLabel),
       delivery_region_group_code: clean(input.deliveryRegionGroupCode),
       delivery_region_group_label: clean(input.deliveryRegionGroupLabel),
+      /* S-8/9 — 셀러가 89 목록에서 «고른» 값만 들어온다. 🔴 이름으로 맞추거나
+         추정하지 않는다. label 을 함께 저장해야 화면이 코드를 보여주지 않는다. */
+      courier_code: clean(input.courierCode),
+      courier_label: clean(input.courierLabel),
+      return_courier_code: clean(input.returnCourierCode),
+      return_courier_label: clean(input.returnCourierLabel),
       weekday_close_time: cleanCloseTime(input.weekdayCloseTime),
       saturday_close_time: cleanCloseTime(input.saturdayCloseTime),
       updated_at: new Date().toISOString(),

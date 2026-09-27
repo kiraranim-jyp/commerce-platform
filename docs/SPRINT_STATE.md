@@ -41,10 +41,10 @@ Pickles The Dog All Over Light Denim Pants by Bobo Choses
 |---|---|---|
 S-12 | MI 원본 판매처 방향 뒤집힘 | 🟢 «재현 불가» 로 닫음 |
 S-7 | 재고 위치 — 배송 → 상품/옵션 | 🟢 완료(렌더 검증 5건) |
-S-4/5/6 | 공통 자동수집 → 3채널 고시 | **진행 중** |
-S-8/9 | LotteON 배송 기본값 + Seller Settings migration | 대기 |
+S-4/5/6 | 공통 자동수집 → 3채널 고시 | 🟢 판정 완료(수입사명은 S-8/9 에 포함) |
+S-8/9 | LotteON 배송 기본값 + Seller Settings migration | 🟢 코드 완료 · migration «미실행» |
 S-1/2/3 | 3채널 UI 쿠팡 기준 통일 | 대기 |
-S-11/13/14 | 고유코드 + MI 국내/해외 가격 | 대기 |
+S-11/13/14 | 고유코드 🟢 · MI 국내/해외 가격 | **다음** |
 
 ### S-12 — 조사 기록
 
@@ -242,4 +242,37 @@ modelName            네이버 고시 modelName · 네이버쇼핑 검색정보
                       kcExemptionText·defaultCountryOfOrigin 5칸이 있는데
                       importer 만 «없다».
                       → S-8/9 migration 과 «같은 배치» 로 처리한다(다음 작업).
+```
+
+---
+
+## 🟢 S-8/9 — 코드 완료 · migration 은 «작성만»
+
+```
+067_lotteon_seller_settings_workspace_and_courier.sql  (작성 · 🔴 실행 안 함)
+   ① workspace_id + scope_key       043/059 패턴 그대로
+      workspace 당 1행 · 레거시(NULL) 도 1행 — 부분 유니크 인덱스 둘
+   ② courier_code/label · return_courier_code/label
+      🔴 code 와 label 을 «함께» 둔다. label 이 없으면 화면이 코드를 보여주거나
+         매번 89 를 다시 불러야 한다(F-7 로 되돌아가는 길)
+   ③ seller_settings.importer  — 수입사명은 상품이 아니라 «판매자» 의 것이다
+
+코드 배선
+   seller-settings.ts   타입 · COLUMNS · fromRow · writer 에 택배사 4칸
+   build-context.ts     courierCode/returnCourierCode 가 fixed() 사다리를 탄다
+                        🔴 상품 폼이 «먼저» — 이 상품만 다른 택배사가 가능하다
+
+계약 14건. 레거시 삭제·backfill·임의 workspace·코드 값 기본값 전부 «없음» 을
+테스트가 본다.
+```
+
+🔴 **migration 은 실행하지 않았다** — 자격증명이 없고(실행으로 확인), 실행은
+배포 환경의 일이다. 배포 후 067 을 적용해야 이 배선이 실제로 값을 읽는다.
+적용 전에는 새 컬럼이 없으므로 select 가 실패할 수 있다 — 🔴 **배포 순서는
+migration 먼저, 그다음 앱이다.**
+
+## 다음 작업
+
+```
+S-13/14 (MI 국내/해외 가격)  →  S-1/2/3 (3채널 UI 쿠팡 기준 통일)
 ```
