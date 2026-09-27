@@ -75,8 +75,9 @@ describe("차단 표시는 그대로 유지된다", () => {
 describe("🔴 죽은 항목이 없다 — 눌렀을 때 갈 곳이 있다", () => {
   /* REWORK-7 ①(이미지 형식) · N-3.55(판매가)가 겪은 것과 같은 결함이다:
      라벨은 보이는데 sectionId 가 없어 눌러도 아무 데도 가지 않는다.
-     🔴 자리는 확인하고 적었다 — 재고 입력칸은 PlatformPreview 의 가격 섹션
-     안에 있다(FieldRow label="재고"). */
+     🔴 S-7 에서 재고를 «옵션» 섹션으로 옮겼다. C-2F 때 내가 section-price 라고
+     적은 것은 틀렸다 — 가장 가까운 주석만 보고 감싼 CollapsibleSection 을
+     확인하지 않았다. 이제 화면과 매핑이 같은 자리를 가리킨다. */
   it("쿠팡 체크리스트의 재고가 갈 곳을 갖는다", async () => {
     const mod = await import("../readiness");
     const summary = mod.computeChecklistReadiness(
@@ -84,7 +85,7 @@ describe("🔴 죽은 항목이 없다 — 눌렀을 때 갈 곳이 있다", () 
       { state: "CONFIRMED", candidate: null } as never,
     );
     const item = summary.items.find((i) => i.label === "재고");
-    expect(item?.sectionId).toBe("section-price");
+    expect(item?.sectionId).toBe("section-options");
   });
 
   it("스마트스토어 재고도 같은 자리로 간다", async () => {
@@ -96,6 +97,6 @@ describe("🔴 죽은 항목이 없다 — 눌렀을 때 갈 곳이 있다", () 
       ],
     } as never);
     const item = summary.items.find((i) => i.label === "재고");
-    expect(item?.sectionId).toBe("section-price");
+    expect(item?.sectionId).toBe("section-options");
   });
 });

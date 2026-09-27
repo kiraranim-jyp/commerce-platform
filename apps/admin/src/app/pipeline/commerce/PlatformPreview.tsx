@@ -1202,6 +1202,29 @@ export function PlatformPreview({
               ))}
             </div>
           )}
+          {/* ══ 장기 스프린트 S-7(CEO 지시, 2026-09-26) — 재고가 «배송» 에 있었다 ══
+
+              재고 입력칸이 배송 섹션(section-shipping) 안에 배송비·반품안내와
+              나란히 서 있었다. 재고는 배송 «조건» 이 아니라 「팔 물건이 몇 개인가」
+              이고, 옵션이 있으면 옵션마다 달라지는 값이다 — 옵션 바로 아래가
+              그 자리다. 세 탭이 같은 자리를 쓴다.
+
+              🔴 C-2F 에서 내가 readiness 의 sectionId 를 section-price 로 적은
+              것도 «틀렸다». 가장 가까운 주석(id="section-price" 설명)만 보고
+              감싼 CollapsibleSection 을 확인하지 않았다 — 옮기면서 그 매핑도
+              section-options 로 함께 고친다(readiness.ts). */}
+          <div className={FIELD_GRID_CLASS}>
+            <FieldRow label="재고">
+              <div className="flex items-center gap-1">
+                <EditableText
+                  value={String(product.stockQuantity.value)}
+                  onCommit={(v) => onFixNumberField?.("stockQuantity", Math.max(0, Number(v) || 0))}
+                  className={FIELD_INPUT_CLASS}
+                />
+                <span className="text-xs text-text-secondary">개</span>
+              </div>
+            </FieldRow>
+          </div>
         </CollapsibleSection>
 
         {/* PHASE 3.2(CPO 확정, 2026-09-11) — 채널별 최종 등록가격.
@@ -1254,16 +1277,6 @@ export function PlatformPreview({
 
         <CollapsibleSection title={sectionTitle("SHIPPING")} badge={sectionCompletionBadge("section-shipping")} {...sectionProps("section-shipping")}>
           <div className={FIELD_GRID_CLASS}>
-            <FieldRow label="재고">
-              <div className="flex items-center gap-1">
-                <EditableText
-                  value={String(product.stockQuantity.value)}
-                  onCommit={(v) => onFixNumberField?.("stockQuantity", Math.max(0, Number(v) || 0))}
-                  className={FIELD_INPUT_CLASS}
-                />
-                <span className="text-xs text-text-secondary">개</span>
-              </div>
-            </FieldRow>
             <FieldRow label="배송비">
               <div className="flex items-center gap-1">
                 <span className="text-xs text-text-secondary">₩</span>
