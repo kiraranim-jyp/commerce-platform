@@ -33,7 +33,6 @@ const TAB_KEYS = [
   "brand",
   "detail",
   "marketSources",
-  "platformStatus",
 ] as const;
 type SettingsTabKey = (typeof TAB_KEYS)[number];
 
@@ -359,7 +358,7 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <>
-        <PageHeader title="설정" subtitle="쿠팡/스마트스토어 판매에 필요한 정보를 관리합니다." />
+        <PageHeader title="설정" subtitle="상품 판매에 필요한 공통 정보를 관리합니다." />
         <PageContainer size="lg">
           <p className="text-sm text-text-secondary">불러오는 중...</p>
         </PageContainer>
@@ -369,7 +368,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="설정" subtitle="쿠팡/스마트스토어 판매에 필요한 정보를 관리합니다." />
+      <PageHeader title="설정" subtitle="상품 판매에 필요한 공통 정보를 관리합니다." />
       {/* N-3.13 P0(CPO 지시) — N-3.10에서 세로 사이드바로 바꿨던 것을 되돌린다.
           왼쪽 글로벌 메뉴(Dashboard/상품등록/최근 작업/이미지/설정) 옆에 이 세로
           nav가 또 생기면서 "이중 좌측 메뉴"로 보였다 — 실사용 관점에서는 화면
@@ -384,7 +383,10 @@ export default function SettingsPage() {
           }`}
         >
           {configured
-            ? "✓ 쿠팡 등록에 필요한 설정이 모두 준비되어 있습니다."
+            /* 🔴 S-15(CEO 실화면, 2026-09-27) — Commerce 이름을 문구에 박지
+               않는다. Commerce 가 30개가 되면 유지할 수 없고, 지금도 롯데ON 이
+               빠져 있어 이 문장은 «사실이 아니었다». */
+            ? "✓ 상품 등록에 필요한 설정이 모두 준비되어 있습니다."
             : `⚠ 아직 준비되지 않은 항목: ${missing.join(", ")}`}
         </div>
         {saveMessage && <p className="mt-2 text-xs text-text-secondary">{saveMessage}</p>}
@@ -403,7 +405,6 @@ export default function SettingsPage() {
                 { value: "brand", label: "브랜드 관리" },
                 { value: "detail", label: "상세페이지 관리" },
                 { value: "marketSources", label: "시장조사 사이트 관리" },
-                { value: "platformStatus", label: "플랫폼 지원 현황" },
               ]}
             />
           </div>
@@ -491,14 +492,16 @@ export default function SettingsPage() {
             />
             <MarketResearchSourcesSection />
           </div>
-          <div className={activeTab === "platformStatus" ? "mt-5" : "hidden"}>
-            <SectionHeader
-              title="플랫폼 지원 현황"
-              description="필드별로 SmartStore/Coupang/11번가/ESM에서 실제 지원되는 범위와, 11번가·ESM(SOON) 연동 준비 상태를 보여줍니다."
-              className="mb-3"
-            />
-            <PlatformStatusSection />
-          </div>
+          {/* ══ S-15(CEO 지시, 2026-09-27) — 「플랫폼 지원 현황」이 여기 있었다 ══
+
+              🔴 Commerce 를 20~30개 이상으로 늘리는 것이 목표다. 그 구조에서
+              «셀러용 고정 지원 목록» 을 화면에 두면 Commerce 가 하나 늘 때마다
+              이 표를 손봐야 한다 — 셀러의 관리 부담을 줄이는 방향과 반대다.
+
+              필드별 지원 범위는 시스템 내부 capability/schema 로 관리한다
+              (CHANNEL_CAPABILITY · EDIT_ADAPTERS 가 이미 그 자리다).
+              🔴 PlatformStatusSection 컴포넌트 자체는 «지우지 않았다» —
+              개발자용으로 다시 쓸 수 있고, 여기서는 셀러 화면의 «탭» 만 없앴다. */}
 
             <DeveloperModeSection />
           </div>
