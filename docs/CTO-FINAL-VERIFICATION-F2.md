@@ -132,7 +132,13 @@ listing 530 · pricing 538 · shared 133 · marketplace 42   PASS
 
 ## 10. Build   `next build` 성공 (22.0s)
 
-## 11. Production Deploy   — §15 이후 수행, 아래에 갱신
+## 11. Production Deploy
+
+```
+deploy   ttaejyo-kx3w87rq0… ● READY (Production)
+alias    ttaejyo.vercel.app 200 · commerce-platform-mocha.vercel.app 200
+🔴 repo 루트에서 실행했다(지난번 __tests__ 사고 재발 방지 — 실행 전 위치 확인)
+```
 
 ## 12. Actual Production API
 
@@ -157,7 +163,10 @@ commerce/__tests__/s24-delivery-collapse-render.test.ts  6건 (S-24, 유지)
 
 ## 15. Commit
 
-`<이 문서 커밋 시 갱신>`
+```
+bc03bd3   코드 + 가드 16건 + 이 문서   ← 🔴 새 검증 대상
+d4d548a   이전 검증 대상 — 종료
+```
 
 ---
 
