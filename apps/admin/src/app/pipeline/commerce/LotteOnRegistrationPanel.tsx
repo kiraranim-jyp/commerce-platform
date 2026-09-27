@@ -673,6 +673,12 @@ export function LotteOnRegistrationPanel({
     deliveryCostPolicyLabel: string | null;
     deliveryRegionGroupCode: string | null;
     deliveryRegionGroupLabel: string | null;
+    /* S-8/9 — 067 로 설정에 택배사 두 칸이 생겼다. 화면도 그것을 읽어야
+       「설정이 채웠으니 다시 고르지 않는다」를 판단할 수 있다. */
+    courierCode: string | null;
+    courierLabel: string | null;
+    returnCourierCode: string | null;
+    returnCourierLabel: string | null;
   } | null>(null);
   /**
    * Commerce-6 Phase E-1 — 🔴 「설정이 없다」와 「설정을 못 읽었다」는 다른 말이다.
@@ -1534,14 +1540,19 @@ export function LotteOnRegistrationPanel({
                     sellerFixed?.deliveryRegionGroupCode,
                   )}
                 />
-                <DeliveryCodeChoice
-                  label="배송 가능 지역"
-                  options={deliverySettings.data?.deliveryRegionGroups ?? []}
-                  current={form.delivery.deliveryRegionGroupCode}
-                  onPick={(value) => pickAndRecheck("delivery", { deliveryRegionGroupCode: value })}
-                  state={deliverySettings}
-                  onRetry={() => void loadDeliverySettings()}
-                />
+                {/* 🔴 설정이 채운 칸은 고르는 컨트롤을 숨긴다(출고지·반품지·
+                    배송비정책과 같은 규칙). S-8/9 가 설정값을 자동 적용하므로
+                    상품마다 다시 고를 일이 없다. 설정이 비면 그대로 열린다. */}
+                {!(!form.delivery.deliveryRegionGroupCode.trim() && sellerFixed?.deliveryRegionGroupCode) && (
+                  <DeliveryCodeChoice
+                    label="배송 가능 지역"
+                    options={deliverySettings.data?.deliveryRegionGroups ?? []}
+                    current={form.delivery.deliveryRegionGroupCode}
+                    onPick={(value) => pickAndRecheck("delivery", { deliveryRegionGroupCode: value })}
+                    state={deliverySettings}
+                    onRetry={() => void loadDeliverySettings()}
+                  />
+                )}
               </>
             }
             value={form.delivery.deliveryRegionGroupCode}
@@ -1557,14 +1568,20 @@ export function LotteOnRegistrationPanel({
             note="롯데ON이 정한 택배사 중에서 고릅니다."
             readOnly
             belowInput={
-              <DeliveryCodeChoice
-                label="택배사"
-                options={deliverySettings.data?.couriers ?? []}
-                current={form.delivery.courierCode}
-                onPick={(value) => pickAndRecheck("delivery", { courierCode: value })}
-                state={deliverySettings}
-                onRetry={() => void loadDeliverySettings()}
-              />
+              /* 🔴 설정이 채운 칸은 고르는 컨트롤을 숨긴다(출고지·반품지·
+                 배송비정책·배송가능지역과 같은 규칙). S-8/9 가 설정값을
+                 자동 적용하므로 상품마다 다시 고를 일이 없다. 설정이
+                 비어 있으면 그대로 열린다. */
+              !form.delivery.courierCode.trim() && sellerFixed?.courierCode ? null : (
+                <DeliveryCodeChoice
+                  label="택배사"
+                  options={deliverySettings.data?.couriers ?? []}
+                  current={form.delivery.courierCode}
+                  onPick={(value) => pickAndRecheck("delivery", { courierCode: value })}
+                  state={deliverySettings}
+                  onRetry={() => void loadDeliverySettings()}
+                />
+              )
             }
             value={form.delivery.courierCode}
             onChange={(value) => patch("delivery", { courierCode: value })}
@@ -1575,14 +1592,20 @@ export function LotteOnRegistrationPanel({
             note="반품을 회수할 택배사입니다. 출고 택배사와 달라도 됩니다."
             readOnly
             belowInput={
-              <DeliveryCodeChoice
-                label="반품 택배사"
-                options={deliverySettings.data?.couriers ?? []}
-                current={form.delivery.returnCourierCode}
-                onPick={(value) => pickAndRecheck("delivery", { returnCourierCode: value })}
-                state={deliverySettings}
-                onRetry={() => void loadDeliverySettings()}
-              />
+              /* 🔴 설정이 채운 칸은 고르는 컨트롤을 숨긴다(출고지·반품지·
+                 배송비정책·배송가능지역과 같은 규칙). S-8/9 가 설정값을
+                 자동 적용하므로 상품마다 다시 고를 일이 없다. 설정이
+                 비어 있으면 그대로 열린다. */
+              !form.delivery.returnCourierCode.trim() && sellerFixed?.returnCourierCode ? null : (
+                <DeliveryCodeChoice
+                  label="반품 택배사"
+                  options={deliverySettings.data?.couriers ?? []}
+                  current={form.delivery.returnCourierCode}
+                  onPick={(value) => pickAndRecheck("delivery", { returnCourierCode: value })}
+                  state={deliverySettings}
+                  onRetry={() => void loadDeliverySettings()}
+                />
+              )
             }
             value={form.delivery.returnCourierCode}
             onChange={(value) => patch("delivery", { returnCourierCode: value })}
