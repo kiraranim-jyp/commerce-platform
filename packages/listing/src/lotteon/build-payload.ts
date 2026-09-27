@@ -1,5 +1,5 @@
 import type { MasterProduct, SellingConditions } from "@commerce/shared";
-import { getSelectedImageUrl } from "@commerce/shared";
+import { getSelectedImageUrl, payloadStockQuantity } from "@commerce/shared";
 import { computeVariantFinalPriceKrw, resolveListingPrice } from "@commerce/pricing";
 import { manufacturerInputFromProduct, resolveManufacturer } from "../common/manufacturer";
 import type {
@@ -231,7 +231,9 @@ function buildItems(
 ): { items: LotteOnItem[]; optionSorts: LotteOnOptionSort[]; usesOptions: boolean } {
   const { gallery } = resolveLotteOnImageUrls(product);
   const images = toItemImages(gallery);
-  const defaultStock = product.stockQuantity.value ?? 0;
+  /* 🔴 S-17 — 999(파이프라인 DEFAULT)를 재고로 싣지 않는다. 옵션 실측이 있으면
+     그 합계가, 없으면 기존 값이 온다(shared/source-stock 한 곳에서 해석). */
+  const defaultStock = payloadStockQuantity(product);
 
   const usesOptions = hasLotteOnSellableOptions(product) && product.variants.length > 0;
   if (!usesOptions) {

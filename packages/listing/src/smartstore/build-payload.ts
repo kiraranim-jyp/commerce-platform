@@ -1,3 +1,4 @@
+import { payloadStockQuantity } from "@commerce/shared";
 import type { ListingModel } from "@commerce/marketplace";
 import type { SmartStoreProductInput } from "../naver/build-payload";
 
@@ -60,7 +61,8 @@ export function buildSmartStorePayload(
     priceAndStock: {
       salePrice: listing.priceKrw,
       priceIsEstimate: listing.priceIsEstimate,
-      stockQuantity: product.stockQuantity.value,
+      /* 🔴 S-17 — 공용 해석을 쓴다(999 를 실제 재고로 싣지 않는다). */
+      stockQuantity: payloadStockQuantity(product),
       saleStatus: "SALE",
     },
     shipping: {

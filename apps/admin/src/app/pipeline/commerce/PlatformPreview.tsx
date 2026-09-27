@@ -15,6 +15,7 @@ import { validateKcDeclaration } from "@commerce/listing";
 import { isVerifiedCategorySelected, MARKETPLACE_DESCRIPTORS } from "@commerce/marketplace";
 import type { ListingModel } from "@commerce/marketplace";
 import type { CanonicalProduct, CanonicalProductCertification, CanonicalProductOptionGroup, FieldSource, SmartStoreKcDeclaration } from "@commerce/shared";
+import { resolveSourceStock } from "@commerce/shared";
 import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
 import { ChannelPriceSection } from "./ChannelPriceSection";
 import { CategoryRequirementsEditor } from "./CategoryRequirementsEditor";
@@ -1214,15 +1215,36 @@ export function PlatformPreview({
               감싼 CollapsibleSection 을 확인하지 않았다 — 옮기면서 그 매핑도
               section-options 로 함께 고친다(readiness.ts). */}
           <div className={FIELD_GRID_CLASS}>
+            {/* ══ 장기 스프린트 S-17(CEO 실화면, 2026-09-27) ══
+
+                🔴 옵션이 0·0·3·0·0 인데 전체 재고가 999 로 떠 있었다.
+                999 는 파이프라인이 넣은 «모른다» 의 표시이지 재고가 아니다.
+
+                옵션에 실측이 하나라도 있으면 전체는 «합계» 이고 사람이 고칠
+                값이 아니다 — 고치게 두면 화면의 합(3)과 입력(999)이 갈라진다.
+                실측이 없을 때만(UNKNOWN) 셀러가 직접 적는다. */}
             <FieldRow label="재고">
-              <div className="flex items-center gap-1">
-                <EditableText
-                  value={String(product.stockQuantity.value)}
-                  onCommit={(v) => onFixNumberField?.("stockQuantity", Math.max(0, Number(v) || 0))}
-                  className={FIELD_INPUT_CLASS}
-                />
-                <span className="text-xs text-text-secondary">개</span>
-              </div>
+              {(() => {
+                const fact = resolveSourceStock(product);
+                if (fact.from === "VARIANTS") {
+                  return (
+                    <p className="text-xs text-text-primary">
+                      {fact.quantity}개 <span className="text-text-tertiary">· 옵션 재고 합계</span>
+                    </p>
+                  );
+                }
+                return (
+                  <div className="flex items-center gap-1">
+                    <EditableText
+                      value={fact.state === "UNKNOWN" ? "" : String(product.stockQuantity.value)}
+                      placeholder="원본 재고 미확인"
+                      onCommit={(v) => onFixNumberField?.("stockQuantity", Math.max(0, Number(v) || 0))}
+                      className={FIELD_INPUT_CLASS}
+                    />
+                    <span className="text-xs text-text-secondary">개</span>
+                  </div>
+                );
+              })()}
             </FieldRow>
           </div>
         </CollapsibleSection>

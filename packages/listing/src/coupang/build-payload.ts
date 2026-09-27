@@ -9,6 +9,7 @@ import type {
 } from "@commerce/shared";
 import { getSelectedImageUrl } from "@commerce/shared";
 import { computeVariantFinalPriceKrw } from "@commerce/pricing";
+import { payloadStockQuantity } from "@commerce/shared";
 import { manufacturerInputFromProduct, resolveManufacturer } from "../common/manufacturer";
 
 /**
@@ -1485,7 +1486,10 @@ function buildCoupangItem(args: {
     externalVendorSku: variant?.sku ?? (product.sku.value.trim() || undefined),
     // variant.stockQuantity가 없으면(재고 추적 안 하는 매장, 또는 옵션 없는
     // 상품) 상품 전체 기본 재고로 폴백한다.
-    maximumBuyCount: variant?.stockQuantity ?? product.stockQuantity.value,
+    /* 🔴 S-17 — 단품 폴백이 product.stockQuantity.value 였다. 그 값은 사실상
+       언제나 999(파이프라인 DEFAULT)라 «모른다» 는 뜻인데 재고 999개로
+       나갔다. 해석은 shared/source-stock 한 곳에서만 한다. */
+    maximumBuyCount: variant?.stockQuantity ?? payloadStockQuantity(product),
     maximumBuyForPerson: 0,
     // 0을 보내면 실제 쿠팡 API가 "최소 1이상 입력해야 합니다"로 거부한다(실제
     // 등록 시도로 확인) — maximumBuyForPerson(1인당 최대구매수량)이 0(무제한)
