@@ -1521,13 +1521,15 @@ function ShippingSection({
                   ))}
                 </select>
               )}
-              <input
-                type="text"
-                value={outboundShippingPlaceCode}
-                onChange={(e) => onOutboundShippingPlaceCodeChange(e.target.value)}
-                placeholder="출고지 코드 직접 입력(폴백용 — 실제 등록 때는 상품 소싱 국가에 맞는 출고지가 자동 선택됩니다)"
-                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-              />
+              {/* ══ 장기 스프린트 S-19(CEO 지시, 2026-09-27) ══
+                  🔴 여기 «코드 직접 입력» 칸이 있었다. 화면에 출고지 코드가
+                  그대로 떴고(CEO 실화면: Hessen (24496935) · 반품주소지
+                  (1002578446)) 셀러가 그것을 관리하게 돼 있었다.
+
+                  그 번호는 «채널이 발급» 한다. Common 은 「서울 물류센터」
+                  같은 사람이 아는 사실만 갖고, 번호는 Adapter/Mapping 영역이다.
+                  🔴 위 목록에서 «고르면» 코드는 우리가 보관한다 — 셀러가
+                  외워서 적을 값이 아니다. */}
             </Field>
 
             {/* ══ 장기 스프린트 S-16(CEO 지시, 2026-09-27) — 택배사 칸이 «둘» 이었다 ══
@@ -1628,13 +1630,15 @@ function ShippingSection({
                   ))}
                 </select>
               )}
-              <input
-                type="text"
-                value={returnCenterCode}
-                onChange={(e) => onReturnCenterCodeChange(e.target.value)}
-                placeholder="반품지 코드 직접 입력"
-                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-              />
+              {/* ══ 장기 스프린트 S-19(CEO 지시, 2026-09-27) ══
+                  🔴 여기 «코드 직접 입력» 칸이 있었다. 화면에 반품지 코드가
+                  그대로 떴고(CEO 실화면: Hessen (24496935) · 반품주소지
+                  (1002578446)) 셀러가 그것을 관리하게 돼 있었다.
+
+                  그 번호는 «채널이 발급» 한다. Common 은 「서울 물류센터」
+                  같은 사람이 아는 사실만 갖고, 번호는 Adapter/Mapping 영역이다.
+                  🔴 위 목록에서 «고르면» 코드는 우리가 보관한다 — 셀러가
+                  외워서 적을 값이 아니다. */}
             </Field>
 
             <Field label="반품지명">
