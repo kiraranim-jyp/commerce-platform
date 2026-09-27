@@ -91,3 +91,19 @@ S-11/13/14 | 고유코드 + MI 국내/해외 가격 | 대기 |
    2. sellerNameFromUrl() 이 junioredition.com 을 무엇으로 읽는지 확인.
       브랜드명 표(brand-identity)와 충돌하면 그 자리가 범인이다.
 ```
+
+### 🔴 S-12 중 발견한 «별건» 결함 (같은 스프린트 안에서 처리)
+
+```
+sellerNameFromUrl("https://junioredition.com/…")
+   → host "junioredition.com" → label "junioredition"
+   → 화면 표기 «Junioredition»          ← 한 단어, 띄어쓰기 없음
+
+실제 판매처 이름은 "Junior Edition" 이다. 셀러는 자기가 넣은 주소의
+판매처를 화면에서 «다른 이름» 으로 보게 된다. 이것만으로도 「원본이 이상하다」는
+인상을 준다 — CEO 가 본 뒤집힘의 «일부» 일 수 있다.
+
+🔴 고칠 때 주의: 호스트에서 사람 이름을 «지어내지» 않는다. 알 수 없는 호스트는
+   호스트 그대로 보여주는 편이 낫다(브랜드 표에 있는 것만 예쁜 이름을 쓴다).
+   brand-identity 표가 이미 있으므로 새 표를 만들지 않는다.
+```
