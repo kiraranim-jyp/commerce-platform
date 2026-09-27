@@ -169,11 +169,15 @@ describe("E-5 — 저장된 표시이름을 «현재 이름» 으로 말하지 �
     expect(panel).toContain("(저장 당시 이름)");
   });
 
-  it("네 칸 모두 조회 결과와 대조한다", () => {
+  /* S-24 — 넷이 아니라 «여섯» 이다. 택배사 두 칸은 설정이 채우면 고르는 컨트롤만
+     사라지고 그 자리에 아무 말도 남지 않아 셀러에게는 빈 칸이었다(렌더 실측에서
+     잡혔다). 같은 줄을 붙이면서 조회 대조도 함께 받는다 — 이 가드가 그 확장을
+     정확히 알아채고 막았다. */
+  it("여섯 칸 모두 조회 결과와 대조한다", () => {
     const panel = readFileSync(
       join(__dirname, "..", "..", "..", "pipeline", "commerce", "LotteOnRegistrationPanel.tsx"),
       "utf8",
     );
-    expect(panel.match(/liveName=\{liveNameOf\(/g) ?? []).toHaveLength(4);
+    expect(panel.match(/liveName=\{liveNameOf\(/g) ?? []).toHaveLength(6);
   });
 });

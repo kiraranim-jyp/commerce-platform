@@ -1421,6 +1421,7 @@ export function LotteOnRegistrationPanel({
                 {/* ① — 비어 있어도 판매자 설정이 채운다는 사실을 그 자리에서 말한다. */}
                 <SellerSettingApplied
                   value={form.delivery.outboundPlaceNo.trim() ? null : sellerFixed?.outboundPlaceNo}
+                  what="출고지"
                   label={sellerFixed?.outboundPlaceLabel}
                   liveName={liveNameOf(deliverySettings.data?.outboundPlaces, sellerFixed?.outboundPlaceNo)}
                 />
@@ -1456,6 +1457,7 @@ export function LotteOnRegistrationPanel({
               <>
                 <SellerSettingApplied
                   value={form.delivery.returnPlaceNo.trim() ? null : sellerFixed?.returnPlaceNo}
+                  what="반품지"
                   label={sellerFixed?.returnPlaceLabel}
                   liveName={liveNameOf(deliverySettings.data?.returnPlaces, sellerFixed?.returnPlaceNo)}
                 />
@@ -1491,6 +1493,7 @@ export function LotteOnRegistrationPanel({
               <>
                 <SellerSettingApplied
                   value={form.delivery.deliveryCostPolicyNo.trim() ? null : sellerFixed?.deliveryCostPolicyNo}
+                  what="배송비 정책"
                   label={sellerFixed?.deliveryCostPolicyLabel}
                   liveName={liveNameOf(deliverySettings.data?.costPolicies, sellerFixed?.deliveryCostPolicyNo)}
                 />
@@ -1533,6 +1536,7 @@ export function LotteOnRegistrationPanel({
               <>
                 <SellerSettingApplied
                   value={form.delivery.deliveryRegionGroupCode.trim() ? null : sellerFixed?.deliveryRegionGroupCode}
+                  what="배송 가능 지역"
                   label={sellerFixed?.deliveryRegionGroupLabel}
                   /* 배송가능지역은 «공통코드»(CodeOption)라 키가 `code` 다 — 같은 판정을 쓰되 모양만 맞춘다. */
                   liveName={liveNameOf(
@@ -1568,20 +1572,33 @@ export function LotteOnRegistrationPanel({
             note="롯데ON이 정한 택배사 중에서 고릅니다."
             readOnly
             belowInput={
-              /* 🔴 설정이 채운 칸은 고르는 컨트롤을 숨긴다(출고지·반품지·
-                 배송비정책·배송가능지역과 같은 규칙). S-8/9 가 설정값을
-                 자동 적용하므로 상품마다 다시 고를 일이 없다. 설정이
-                 비어 있으면 그대로 열린다. */
-              !form.delivery.courierCode.trim() && sellerFixed?.courierCode ? null : (
-                <DeliveryCodeChoice
-                  label="택배사"
-                  options={deliverySettings.data?.couriers ?? []}
-                  current={form.delivery.courierCode}
-                  onPick={(value) => pickAndRecheck("delivery", { courierCode: value })}
-                  state={deliverySettings}
-                  onRetry={() => void loadDeliverySettings()}
+              <>
+                {/* 🔴 S-24 렌더 실측 — 이 줄이 «없었다». 설정이 채우면 고르는 컨트롤만
+                    사라지고 그 자리에 아무 말도 남지 않아 셀러에게는 «빈 칸» 이었다. 숨기는 것과
+                    「어디서 온 값인지 말하는 것」은 다른 일이다 — 위 네 칸은 처음부터 이 줄을
+                    갖고 있었고 택배사 둘만 빠져 있었다. */}
+                <SellerSettingApplied
+                  value={form.delivery.courierCode.trim() ? null : sellerFixed?.courierCode}
+                  what="택배사"
+                  label={sellerFixed?.courierLabel}
+                  liveName={liveNameOf(
+                    deliverySettings.data?.couriers.map((c) => ({ no: c.code, name: c.name })),
+                    sellerFixed?.courierCode,
+                  )}
                 />
-              )
+                {/* 설정이 채운 칸은 고르는 컨트롤을 숨긴다(위 네 칸과 같은 규칙).
+                    설정이 비어 있으면 그대로 열린다 — 등록할 방법을 잃지 않는다. */}
+                {!form.delivery.courierCode.trim() && sellerFixed?.courierCode ? null : (
+                  <DeliveryCodeChoice
+                    label="택배사"
+                    options={deliverySettings.data?.couriers ?? []}
+                    current={form.delivery.courierCode}
+                    onPick={(value) => pickAndRecheck("delivery", { courierCode: value })}
+                    state={deliverySettings}
+                    onRetry={() => void loadDeliverySettings()}
+                  />
+                )}
+              </>
             }
             value={form.delivery.courierCode}
             onChange={(value) => patch("delivery", { courierCode: value })}
@@ -1592,20 +1609,33 @@ export function LotteOnRegistrationPanel({
             note="반품을 회수할 택배사입니다. 출고 택배사와 달라도 됩니다."
             readOnly
             belowInput={
-              /* 🔴 설정이 채운 칸은 고르는 컨트롤을 숨긴다(출고지·반품지·
-                 배송비정책·배송가능지역과 같은 규칙). S-8/9 가 설정값을
-                 자동 적용하므로 상품마다 다시 고를 일이 없다. 설정이
-                 비어 있으면 그대로 열린다. */
-              !form.delivery.returnCourierCode.trim() && sellerFixed?.returnCourierCode ? null : (
-                <DeliveryCodeChoice
-                  label="반품 택배사"
-                  options={deliverySettings.data?.couriers ?? []}
-                  current={form.delivery.returnCourierCode}
-                  onPick={(value) => pickAndRecheck("delivery", { returnCourierCode: value })}
-                  state={deliverySettings}
-                  onRetry={() => void loadDeliverySettings()}
+              <>
+                {/* 🔴 S-24 렌더 실측 — 이 줄이 «없었다». 설정이 채우면 고르는 컨트롤만
+                    사라지고 그 자리에 아무 말도 남지 않아 셀러에게는 «빈 칸» 이었다. 숨기는 것과
+                    「어디서 온 값인지 말하는 것」은 다른 일이다 — 위 네 칸은 처음부터 이 줄을
+                    갖고 있었고 택배사 둘만 빠져 있었다. */}
+                <SellerSettingApplied
+                  value={form.delivery.returnCourierCode.trim() ? null : sellerFixed?.returnCourierCode}
+                  what="반품 택배사"
+                  label={sellerFixed?.returnCourierLabel}
+                  liveName={liveNameOf(
+                    deliverySettings.data?.couriers.map((c) => ({ no: c.code, name: c.name })),
+                    sellerFixed?.returnCourierCode,
+                  )}
                 />
-              )
+                {/* 설정이 채운 칸은 고르는 컨트롤을 숨긴다(위 네 칸과 같은 규칙).
+                    설정이 비어 있으면 그대로 열린다 — 등록할 방법을 잃지 않는다. */}
+                {!form.delivery.returnCourierCode.trim() && sellerFixed?.returnCourierCode ? null : (
+                  <DeliveryCodeChoice
+                    label="반품 택배사"
+                    options={deliverySettings.data?.couriers ?? []}
+                    current={form.delivery.returnCourierCode}
+                    onPick={(value) => pickAndRecheck("delivery", { returnCourierCode: value })}
+                    state={deliverySettings}
+                    onRetry={() => void loadDeliverySettings()}
+                  />
+                )}
+              </>
             }
             value={form.delivery.returnCourierCode}
             onChange={(value) => patch("delivery", { returnCourierCode: value })}
@@ -2889,6 +2919,7 @@ function SellerSettingApplied({
   value,
   label,
   liveName,
+  what,
 }: {
   /** 설정에 저장된 «번호/코드». 없으면 이 줄은 서지 않는다. */
   value: string | null | undefined;
@@ -2904,6 +2935,8 @@ function SellerSettingApplied({
    * 저장된 이름을 쓰되 «저장 당시» 라고 말한다.
    */
   liveName?: string | null;
+  /** 이름을 모를 때 뭐라고 부를지 — 「출고지 확인 필요」의 그 「출고지」. */
+  what: string;
 }) {
   if (!value) return null;
   const shownName = liveName || label;
@@ -2913,14 +2946,18 @@ function SellerSettingApplied({
       data-seller-setting-applied="true"
       className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-text-secondary"
     >
-      <span className="font-medium text-text-primary">{shownName || value}</span>
+      {/* 🔴 `{shownName || value}` 였다 — 이름을 못 찾으면 코드가 그대로 떴다.
+          §262 가 이미 정한 규칙(코드 fallback 금지)을 이 줄만 안 따르고 있었다. */}
+      <span className="font-medium text-text-primary">{sellerFacingName(value, liveName, label, what)}</span>
       <span className="text-success">✓ 설정값 적용됨</span>
       {isStale && (
         <span data-seller-setting-stale-label="true" className="text-text-tertiary">
           (저장 당시 이름)
         </span>
       )}
-      {shownName && <span className="text-text-tertiary">({value})</span>}
+      {/* 🔴 S-24 렌더 실측 — 여기 `({value})` 가 있었다. 「전국 ✓ 설정값 적용됨(GN101)」.
+          이름을 찾아 놓고 그 옆에 코드를 다시 적으면 F-7·S-19 가 없앤 것이 돌아온다.
+          이름이 없을 때는 위 줄이 이미 「확인 필요」를 말한다 — 코드는 어디에도 안 선다. */}
       <Link href="/settings" className="text-primary underline-offset-2 hover:underline">
         설정에서 변경
       </Link>
@@ -2952,6 +2989,8 @@ function DeliveryOptionPicker({
         <button
           key={option.no}
           type="button"
+          /* 코드는 폼·payload 에 그대로 간다 — 검사만 여기서 값을 볼 수 있게 둔다. */
+          data-channel-code={option.no}
           onClick={() => onPick(option.no)}
           className={`rounded border px-1.5 py-0.5 text-[11px] ${
             current === option.no
@@ -2959,7 +2998,10 @@ function DeliveryOptionPicker({
               : "border-border text-text-secondary hover:bg-background"
           }`}
         >
-          {option.name ? `${option.name} · ${option.no}` : option.no}
+          {/* 🔴 S-24 렌더 실측 — 여기가 「Hessen 물류센터 · PLO3837441」을 그리고 있었다.
+              이름 옆에 코드를 붙이면 F-7·S-19 가 지운 것이 고르는 버튼으로 되살아난다.
+              이름을 모르면 코드로 «되돌아가지 않고» 확인이 필요하다고 말한다. */}
+          {option.name?.trim() || "이름 없음 — 판매자센터에서 확인"}
         </button>
       ))}
     </span>
