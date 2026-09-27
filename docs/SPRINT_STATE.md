@@ -742,3 +742,39 @@ LotteON payload (owhpNo · rtrpNo · dvCstPolNo · dvRgsprGrpCd · hdcCd · rtng
 ```
 
 앞서 넣은 6개 picker 숨김 조건(`sellerFixed?.X`)이 **이제 비로소 발동한다**.
+
+---
+
+## 🟢 FINAL — CTO 가 «먼저» 끝까지 검증했다 (2026-09-28)
+
+🔴 CEO 가 끊은 순서: 「구현 → 부분 확인 → CEO 테스트 → 문제 발견 → 재수정」.
+이번엔 실제 함수를 통과시켜 검증하고, 발견된 것을 직접 고친 뒤 보고한다.
+
+```
+저장 왕복(실제 함수 · Supabase 만 흉내)
+  saveLotteOnSellerSettings(고른 6값) → 컬럼 6+6(이름)  ✅
+  loadLotteOnSellerSettings()         → 6값 그대로 복귀  ✅
+  067 «적용 전» (새 컬럼 없음)        → undefined→null, 죽지 않음  ✅
+  조회 실패                            → source=ERROR·failed=true(「설정 없음」 아님) ✅
+
+사다리
+  폼 비었으면 설정값       ✅      폼에 값 있으면 «덮지 않음»  ✅
+  둘 다 없으면 null → 검증기가 막음  ✅
+
+체인 전수
+  build-context  fixed() 6/6 ✅      payload  owhpNo·rtrpNo·dvCstPolNo·
+                                     dvRgsprGrpCd·hdcCd·rtngHdcCd 6/6 ✅
+```
+
+🔴 **「소스에 조건이 있으니 PASS」로 두 번 틀렸다** — ⑤배송 숨김이 발동한 적이
+없었고, 067 컬럼을 화면 타입이 몰랐다. 둘 다 «모양» 만 봤기 때문이다. 이제
+값이 실제로 흐르는지를 본다.
+
+### 🔴 남은 단 하나
+
+```
+Production API 실제 등록 호출만 자격증명 부재로 검증 불가
+```
+
+그 «앞» 단계는 전부 검증했다. 상품 → Common → LotteON UI → Readiness →
+Payload → API 호출 직전까지.
