@@ -107,3 +107,29 @@ sellerNameFromUrl("https://junioredition.com/…")
    호스트 그대로 보여주는 편이 낫다(브랜드 표에 있는 것만 예쁜 이름을 쓴다).
    brand-identity 표가 이미 있으므로 새 표를 만들지 않는다.
 ```
+
+### 🔴 S-12 결론 — 코드에서 «재현되지 않는다»
+
+실제 렌더 덤프를 떴다(Junior Edition sourceUrl + Bobo Choses brand).
+
+```
+화면 출력:  「Pickles The Dog … 🔗 원본 상품 보기 junioredition.com/products/…」
+Bobo 등장:  idx = -1   ← 화면에 «한 번도» 나오지 않는다
+```
+
+원본은 정확히 Junior Edition 으로 섰다. 서버 5곳 + 화면 모두 무죄다.
+→ 남은 가능성 둘. 둘 다 지금 확인할 수 없다:
+   ① Production 스냅샷의 `canonicalProduct.sourceUrl` 자체가 bobochoses 로
+      저장돼 있다(화면은 그 값을 «정직하게» 보여준 것) — DB 접근 필요
+   ② CEO 가 본 곳이 MI 카드가 아니라 «🌎 해외 판매처 가격 표» 다
+      (fixture 에서는 「검색 데이터 없음」이라 그 표를 못 그렸다)
+
+🔴 없는 결함을 고치지 않는다. S-12 는 «재현 불가» 로 닫고 Production 배포 후
+   실제 화면에서 ①②를 확인한다. 그때 재현되면 그 자리를 고친다.
+
+### S-12 부산물 → P2 backlog (이번에 고치지 않는다)
+
+`sellerNameFromUrl` 이 host 첫 라벨을 대문자화한다 → `Junioredition`.
+🔴 고치려면 「호스트 그대로 표기」가 유일하게 지어내지 않는 방법인데, 그러면
+지금 올바른 `Smallable` 까지 `smallable.com` 으로 퇴행한다. CEO 가 보고한
+증상도 아니다 — 회귀 위험 있는 미요청 변경은 하지 않는다.
