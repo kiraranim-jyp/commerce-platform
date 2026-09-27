@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 /* S-16 — 택배사 Common 하나 + 채널 Mapping. 셀러는 하나만 고른다. */
 import { COMMON_CARRIERS, findCommonCarrier } from "@commerce/shared";
+import { LotteOnDeliveryMapping } from "./LotteOnDeliveryMapping";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
@@ -1080,6 +1081,15 @@ function SellerProfileEditor({
         </p>
       )}
       <div className={activeTab === "shipping" ? "mt-5" : "hidden"}>
+        {/* ══ FINAL-3COMMERCE(CEO 지시, 2026-09-28) ══
+            🔴 lotteon_seller_settings 에 «값을 넣는 화면» 이 없어서, 배송
+            프로필에 Hessen·우체국택배·반품주소지가 있어도 롯데ON 탭은 전부
+            「선택 안 함」이었다. 그 단절을 여기서 잇는다.
+            🔴 «배송 프로필 안» 이다. 별도 탭을 만들면 ㉢(2026-09-22)가
+            「중복」이라며 지운 구조가 그대로 되살아난다. */}
+        <div className="mb-5 rounded-lg border border-border bg-surface p-4">
+          <LotteOnDeliveryMapping />
+        </div>
         <ShippingSection
           profiles={profiles}
           formOpen={formOpen}
