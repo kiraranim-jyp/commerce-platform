@@ -18,3 +18,6 @@ export * from "./source-stock";
 /* 장기 스프린트 S-16 — 택배사 Common 하나 + 채널 Mapping. 🔴 채널마다 칸을
    만들지 않는다(Commerce 30개면 택배사 30칸이 된다). */
 export * from "./common-carrier";
+/* 장기 스프린트 S-20/21/22 — 필드 상태 표준 · 값의 출처 · 공통 Readiness.
+   🔴 새 채널을 붙일 때의 «순서» 를 타입으로 고정한다. */
+export * from "./field-requirement";
