@@ -106,19 +106,24 @@ interface Row {
   delivery_cost_policy_label: string | null;
   delivery_region_group_code: string | null;
   delivery_region_group_label: string | null;
-  courier_code: string | null;
-  courier_label: string | null;
-  return_courier_code: string | null;
-  return_courier_label: string | null;
+  /* 🔴 067 «적용 전» 에도 앱이 살아야 한다. 041(domestic_shipping_cost_krw)이
+     쓴 것과 같은 패턴 — select("*") 가 아직 없는 컬럼을 undefined 로 주므로
+     optional 로 받는다. 이 네 줄이 optional 이 아니면 migration 과 배포의
+     «순서» 가 강제되고, 앱이 먼저 나가는 날 모든 셀러가 「설정을 불러오지
+     못했습니다」를 본다. */
+  courier_code?: string | null;
+  courier_label?: string | null;
+  return_courier_code?: string | null;
+  return_courier_label?: string | null;
   weekday_close_time: string | null;
   saturday_close_time: string | null;
 }
 
-const COLUMNS =
-  "outbound_place_no, outbound_place_label, return_place_no, return_place_label, " +
-  "delivery_cost_policy_no, delivery_cost_policy_label, delivery_region_group_code, " +
-  "delivery_region_group_label, courier_code, courier_label, return_courier_code, return_courier_label, " +
-  "weekday_close_time, saturday_close_time";
+/* 🔴 컬럼을 «열거하지 않는다». 열거하면 067 이 아직 적용되지 않은 환경에서
+   PostgREST 가 「column does not exist」로 실패하고, 우리 코드는 그것을
+   source="ERROR" 로 읽어 화면이 「설정을 불러오지 못했습니다」라고 말한다.
+   041 이 같은 문제를 select("*") + optional 필드로 풀었다 — 같은 길을 쓴다. */
+const COLUMNS = "*";
 
 function fromRow(row: Row): LotteOnSellerSettings {
   return {
@@ -130,10 +135,10 @@ function fromRow(row: Row): LotteOnSellerSettings {
     deliveryCostPolicyLabel: row.delivery_cost_policy_label,
     deliveryRegionGroupCode: row.delivery_region_group_code,
     deliveryRegionGroupLabel: row.delivery_region_group_label,
-    courierCode: row.courier_code,
-    courierLabel: row.courier_label,
-    returnCourierCode: row.return_courier_code,
-    returnCourierLabel: row.return_courier_label,
+    courierCode: row.courier_code ?? null,
+    courierLabel: row.courier_label ?? null,
+    returnCourierCode: row.return_courier_code ?? null,
+    returnCourierLabel: row.return_courier_label ?? null,
     weekdayCloseTime: row.weekday_close_time,
     saturdayCloseTime: row.saturday_close_time,
   };

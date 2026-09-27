@@ -34,7 +34,9 @@ describe("① 택배사 두 값이 설정에 «자리» 를 갖는다", () => {
     (field) => {
       const column = field.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
       expect(SETTINGS, `타입에 ${field}`).toContain(`${field}: string | null`);
-      expect(SETTINGS, `COLUMNS 에 ${column}`).toContain(column);
+      /* 🔴 COLUMNS 는 «"*"» 다 — 067 적용 전에도 앱이 살아야 하기 때문이다.
+         그래서 열거 대신 Row 타입이 그 컬럼을 아는지로 검사한다. */
+      expect(SETTINGS, `Row 에 ${column}`).toContain(`${column}?: string | null`);
       expect(SETTINGS, `writer 에 ${column}`).toContain(`${column}: clean(input.${field})`);
     },
   );
@@ -99,5 +101,28 @@ describe("④ 수입사명 — 상품이 아니라 «판매자» 의 것이다",
 
   it("🔴 제조사와 «다른» 개념이라고 적혀 있다", () => {
     expect(MIGRATION).toContain("제조사≠수입사≠판매자");
+  });
+});
+
+describe("⑤ 🔴 migration 과 배포의 «순서» 가 강제되지 않는다", () => {
+  /* 067 이 아직 적용되지 않은 Production 에 앱이 «먼저» 나갈 수 있다. 그때
+     컬럼을 열거해 select 하면 PostgREST 가 실패하고, 우리 코드는 그것을
+     source="ERROR" 로 읽어 모든 셀러가 「설정을 불러오지 못했습니다」를 본다.
+
+     041(domestic_shipping_cost_krw)이 같은 문제를 select("*") + optional 필드로
+     풀었다. 같은 길을 쓴다 — 새 패턴을 만들지 않는다. */
+  it("컬럼을 열거하지 않는다", () => {
+    expect(SETTINGS).toContain('const COLUMNS = "*"');
+    expect(SETTINGS).not.toContain("courier_code, courier_label");
+  });
+
+  it("새 컬럼 넷이 optional 이다 — 없으면 undefined 로 온다", () => {
+    for (const column of ["courier_code", "courier_label", "return_courier_code", "return_courier_label"]) {
+      expect(SETTINGS, column).toContain(`${column}?: string | null`);
+    }
+  });
+
+  it("undefined 를 null 로 바꿔 내보낸다 — 화면이 undefined 를 보지 않는다", () => {
+    expect(SETTINGS).toContain("courierCode: row.courier_code ?? null");
   });
 });
