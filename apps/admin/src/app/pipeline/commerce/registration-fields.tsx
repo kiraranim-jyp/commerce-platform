@@ -292,6 +292,7 @@ export function ChannelCodeField({
   placeholder,
   belowInput,
   readOnly,
+  displayValue,
 }: {
   label: string;  note?: ReactNode;
   value: string;
@@ -320,11 +321,27 @@ export function ChannelCodeField({
    * 되어서는 안 된다.
    */
   readOnly?: boolean;
+  /**
+   * ══ 장기 스프린트 S-19(CEO 실화면, 2026-09-27) ══
+   *
+   * 🔴 화면에 «보여줄» 값. 주면 이 값이 그려지고, 등록에 나가는 `value` 는
+   * 그대로 유지된다.
+   *
+   * 대표님 화면에 출고지번호 칸의 `PLO3837441` 과 배송비정책번호 `4279402` 가
+   * 그대로 떠 있었다. F-7 이 «입력» 은 막았지만 «표시» 는 코드 그대로였다 —
+   * 셀러가 관리할 정보가 아니다.
+   *
+   * 🔴 값을 «바꾸지 않는다». 코드는 payload 로 그대로 나가고, 사람은 이름을
+   * 본다. 이름을 모르면(조회 실패 등) 빈 칸이 아니라 코드를 보여주는 편이
+   * 낫다 — 그때는 호출부가 displayValue 를 주지 않으면 된다.
+   */
+  displayValue?: string | null;
 }) {
+  const shown = displayValue ?? value;
   const input = (
     <input
       type="text"
-      value={value}
+      value={shown}
       placeholder={placeholder}
       readOnly={readOnly}
       onChange={(event) => onChange(event.target.value)}

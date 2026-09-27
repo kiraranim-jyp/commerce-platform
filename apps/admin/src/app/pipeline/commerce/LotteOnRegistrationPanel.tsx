@@ -1397,6 +1397,11 @@ export function LotteOnRegistrationPanel({
               </>
             }
             value={form.delivery.outboundPlaceNo}
+            /* S-19 — 코드가 아니라 «이름» 을 보여준다. 값은 그대로 payload 로 간다. */
+            displayValue={
+              liveNameOf(deliverySettings.data?.outboundPlaces, form.delivery.outboundPlaceNo) ??
+              (form.delivery.outboundPlaceNo.trim() ? undefined : (sellerFixed?.outboundPlaceLabel ?? undefined))
+            }
             onChange={(value) => patch("delivery", { outboundPlaceNo: value })}
           />
           <ChannelCodeField
@@ -1418,6 +1423,11 @@ export function LotteOnRegistrationPanel({
               </>
             }
             value={form.delivery.returnPlaceNo}
+            /* S-19 — 코드가 아니라 «이름» 을 보여준다. 값은 그대로 payload 로 간다. */
+            displayValue={
+              liveNameOf(deliverySettings.data?.returnPlaces, form.delivery.returnPlaceNo) ??
+              (form.delivery.returnPlaceNo.trim() ? undefined : (sellerFixed?.returnPlaceLabel ?? undefined))
+            }
             onChange={(value) => patch("delivery", { returnPlaceNo: value })}
           />
           <ChannelCodeField
@@ -1439,6 +1449,11 @@ export function LotteOnRegistrationPanel({
               </>
             }
             value={form.delivery.deliveryCostPolicyNo}
+            /* S-19 — 코드가 아니라 «이름» 을 보여준다. 값은 그대로 payload 로 간다. */
+            displayValue={
+              liveNameOf(deliverySettings.data?.costPolicies, form.delivery.deliveryCostPolicyNo) ??
+              (form.delivery.deliveryCostPolicyNo.trim() ? undefined : (sellerFixed?.deliveryCostPolicyLabel ?? undefined))
+            }
             onChange={(value) => patch("delivery", { deliveryCostPolicyNo: value })}
           />
           <ChannelCodeField
