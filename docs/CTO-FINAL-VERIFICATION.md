@@ -16,6 +16,47 @@
 
 ---
 
+## 0. CPO 2차 검증용 색인 — 15절 양식 ↔ 이 문서
+
+> 이 문서는 15절 양식([TTAEJYO-VERIFICATION-GATE.md](TTAEJYO-VERIFICATION-GATE.md) §3)
+> **확정 전**에 쓰였다. 다시 쓰지 않고 **어디를 보면 되는지만** 적는다 —
+> 증거를 나중에 재편집하면 그 자체가 신뢰를 깎는다. 다음 스프린트부터 15절로 쓴다.
+
+| 15절 | 이 문서 | 상태 |
+|---|---|---|
+| 1. Scope | §1 목표 | 🟢 |
+| 2. 변경사항 | §2 | 🟢 |
+| 3. Render Evidence | **§3B** (마운트 17건 · 수정 전 화면 · 음성 대조) | 🟢 |
+| 4. Data Evidence | §4 (save→load 왕복 7건) | 🟢 |
+| 5. Payload Evidence | §5 (Common→Mapping→UI→Payload 6/6) | 🟢 |
+| 6. Axis Check | **§0A 아래** — 이 문서에 절이 없어 신설 | 🟢 |
+| 7. Failure-path | §3B 「음성 대조」 | 🟢 |
+| 8. Regression | §9 (349파일 / 4,700건) | 🟢 |
+| 9. Typecheck | §10~13 | 🟢 |
+| 10. Build | §10~13 | 🟢 |
+| 11. Production Deploy | §10~13 + 배포 사고 기록 | 🟢 |
+| 12. Actual Production API | §14-1 | 🟡 자격증명 없음 |
+| 13. Known Unknowns | §14 (3건) | 🟢 정직하게 유지 |
+| 14. Evidence Links | §3B · §4 · §8 의 테스트 파일명 | 🟢 |
+| 15. Commit | `d4d548a` (코드) · `e24e1b4` · `d81137b` (문서) | 🟢 |
+
+**CTO SELF-VERIFICATION — 🟡 PARTIAL**
+개발·Render·Data·Payload·Axis·Regression 은 🟢. **12번(외부 API 실호출)이 🟡**
+이므로 전체를 🟢 라고 쓰지 않는다.
+
+### §0A. Axis Check — 이번 스프린트에서 실제로 분리한 축
+
+| 섞일 뻔한 쌍 | 어떻게 갈랐나 |
+|---|---|
+| 브랜드 ≠ 판매처 | S-12 `originSellerLabel()` — 「Bobo Choses」(브랜드)와 「Junior Edition」(수집처)이 같은 줄에 있었다. 호스트는 있는 그대로, 이름은 지어내지 않는다 |
+| Common 출고지 ≠ LotteON 출고지 ID | 이름이 같아도 **자동으로 잇지 않는다.** 쿠팡 Wing `24496935` 와 롯데ON `PLO3837441` 은 다른 채널이 발급한 번호다 — 장소의 동일성은 셀러가 선언한다 |
+| 설정값 ≠ 우연히 자동 선택된 목록값 | 🔴 S-24 렌더 검증에서 갈랐다. 후보가 1건이면 autopick 이 폼을 채우는데 그것은 「설정에서 온 값」이 아니다. 테스트 fixture 를 **후보 2건**으로 바꿔 두 경로를 분리했다 |
+| 상품 원본 재고 ≠ MI 경쟁상품 재고 | `resolveSourceStock` 은 `variants`→product 순으로 **측정된 값**(ORIGINAL·USER_EDITED)만 본다. 999/DEFAULT 는 재고가 아니라 UNKNOWN |
+| 국제배송비 ≠ Commerce 고객배송비 | `deliveryCharge`(금액)와 `dvCstPolNo`(판매자센터 등록 «정책»)는 같은 개념이 아니다 — 금액에서 정책을 만들 수 없다 |
+| 제조사 ≠ 수입사 ≠ 판매자 | 끝난 사안. `manufacturer` 를 지우거나 이름을 바꾸지 않는다 |
+
+---
+
 ## 1. 목표
 
 Common/판매자 설정에서 «한 번» 정한 값이 롯데ON 등록에 자동으로 쓰이고,
@@ -105,6 +146,22 @@ commerce/s24-delivery-collapse-render   6건   ⑤배송
 조용한 fallback 을 일부러 되살려(`if (!listRes.ok …)` → `if (false)`) 돌렸더니
 그 두 건이 **즉시 실패**했다. 되돌린 뒤 다시 통과. 빈 DOM 에서 저절로 통과하는
 `not.toContain` 에는 앞에 「그려졌는가」를 먼저 세웠다.
+
+### 🔴 결함 B 의 범위를 정확히 적는다 — «UX 결함» 이지 «데이터 결함» 이 아니다
+
+택배사 두 칸이 빈 칸이었던 것은 **화면만** 그랬다. payload 경로는 멀쩡했다 —
+사다리가 서버 쪽 `build-context` 에 있어서 화면 렌더와 무관하기 때문이다.
+
+```
+build-context   courierCode: fixed(form.courierCode, sellerSettings.courierCode)
+                returnCourierCode: fixed(form.returnCourierCode, sellerSettings.returnCourierCode)
+build-payload   ...(channel.courierCode ? { hdcCd: channel.courierCode } : {})
+                ...(channel.returnCourierCode ? { rtngHdcCd: channel.returnCourierCode } : {})
+```
+
+🔴 이 구분을 적어 두는 이유: 「값이 적용되지 않았다」로 기록되면 나중에 누군가
+**멀쩡한 payload 경로를 고치려 든다.** 셀러가 「안 들어갔나」 의심하게 만든 것이
+실제 피해이고, 고친 것도 그 자리다.
 
 ### 함께 잡힌 것
 
