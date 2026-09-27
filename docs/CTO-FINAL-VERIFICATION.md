@@ -2,6 +2,15 @@
 
 > 대상 커밋 `d4d548a` · Production 반영 완료 · 2026-09-28
 > **Render 🟡 → 🟢** (S-24, 아래 §3B) — CPO 가 보류한 한 항목을 닫았다.
+>
+> ## 🟢 CPO PRE-CHECK PASS (2026-09-28)
+>
+> Render · Data · Payload · Axis · Regression · Deploy · Evidence 전부 🟢.
+> 남은 🟡 셋(외부 API 실호출 · 150/166/89 실응답 · 재고 0 건수)은 **CEO 테스트
+> 이후** 항목이다. → CEO 안내: [CEO-FINAL-TEST.md](CEO-FINAL-TEST.md)
+>
+> 🔴 **CPO 판정 인용** — 「소스/계약 PASS ≠ Render PASS」를 실제로 검증한 사례.
+> 이 문장을 앞으로의 완료 기준으로 삼는다.
 > 🔴 **「소스에 조건이 있으니 PASS」를 쓰지 않는다.** 이 스프린트에서 그 방식으로
 > 두 번 틀렸고(아래 §7), 그래서 아래 항목은 전부 «실행 결과» 다.
 
@@ -190,8 +199,23 @@ git         origin/main = d4d548a · 미푸시 0 · tree clean
 정리한 것   그 폴더의 .vercel/ · .gitignore 삭제 → tree clean (커밋에 안 들어갔다)
 재배포      repo 루트에서 다시 실행 → ttaejyo 정상
 남은 것     🔴 Vercel 에 `__tests__` 프로젝트와 그 배포가 «그대로 살아 있다»
-            — 지우는 것은 되돌릴 수 없어 CEO/CPO 판단을 받는다
 ```
+
+**CPO 처리 지시(2026-09-28) — 지금 건드리지 않는다.**
+잘못된 프로젝트가 이미 생겼으므로 **추가 Vercel 관리 작업을 현재 Production 검증과
+섞지 않는다.** CEO 테스트가 끝난 뒤 별도 Cleanup 으로 아래 순서로만 처리한다.
+
+```
+1. `__tests__` 프로젝트 존재 확인
+2. 실제 Production 프로젝트와 연결 관계 «없음» 확인
+3. 환경변수 0 확인
+4. 최근 배포가 잘못된 테스트 배포 1건인지 확인
+5. 삭제
+```
+
+🔴 재발 방지 — Bash 의 `cd` 가 PowerShell 세션의 작업 디렉터리에도 남는다.
+배포는 **repo 루트에서만** 실행한다(`apps/admin` 에서도 실패한다 — 프로젝트
+Root Directory 설정이 `apps/admin` 이라 경로가 겹친다).
 
 ## 14. 🔴 미검증 항목 — 정직하게
 
