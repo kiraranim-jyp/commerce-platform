@@ -79,7 +79,25 @@ const EMPTY: Saved = {
 const SELECT_CLASS =
   "w-full rounded-md border border-border px-3 py-1.5 text-sm focus:border-primary focus:outline-none";
 
-/** 한 줄. 🔴 고른 «이름» 만 보여주고 번호는 값으로만 들고 있는다. */
+/**
+ * 한 줄. 🔴 고른 «이름» 만 보여주고 번호는 값으로만 들고 있는다.
+ *
+ * ── 🔴 F2(CPO 2차 검증 BLOCK, 2026-09-28) ────────────────────────────────
+ * 이 줄이 «거짓말» 을 했다. 저장을 서버에 묻기 전에 화면을 먼저 바꿔서,
+ * PUT 이 실패해도 초록 「✓ 연결됨 · Hessen 물류센터」가 그대로 서 있었다.
+ * 아래에 「저장하지 못했습니다」가 같이 떠 있어도 셀러는 초록 체크를 믿는다.
+ * 실제로는 서버가 `{}` 였고, 다시 열면 여섯 칸이 전부 비어 있었다.
+ *
+ * 그래서 이 줄이 말하는 상태는 이제 **서버가 확인해 준 것** 하나뿐이다.
+ *
+ *     저장 중      「저장 중…」        — 아직 아무것도 확정하지 않았다
+ *     저장 실패    「저장하지 못했습니다 + 다시 시도」  🔴 ✓ 연결됨 없음
+ *     저장 성공    「✓ 연결됨 · 이름」  — 서버에 있는 값과 같다
+ *     저장한 적 없음「연결 필요」
+ *
+ * 조회 실패를 «선택 안 함» 으로 위장하지 않는 규칙과 **같은 모양** 이다 —
+ * 조회 쪽만 지키고 저장 쪽을 안 지키고 있었다.
+ */
 function MappingRow({
   label,
   hint,
@@ -87,20 +105,42 @@ function MappingRow({
   value,
   onPick,
   savedLabel,
+  pendingValue,
+  failed,
+  onRetry,
 }: {
   label: string;
   hint: string;
   options: { value: string; name: string }[];
+  /** 🔴 «서버가 확인해 준» 값. 저장에 성공하기 전에는 절대 바뀌지 않는다. */
   value: string | null;
   onPick: (value: string, name: string) => void;
   savedLabel: string | null;
+  /** 저장 요청이 날아가 있는 동안 셀러가 고른 값. 확정이 아니다. */
+  pendingValue?: string | null;
+  failed?: boolean;
+  onRetry?: () => void;
 }) {
-  const connected = Boolean(value);
+  const saving = pendingValue !== undefined;
+  /* 고르는 순간의 선택은 보여 주되(그래야 화면이 튀지 않는다) 「연결됨」이라고
+     말하지는 않는다. 실패하면 pendingValue 가 사라져 서버 값으로 되돌아간다. */
+  const shown = saving ? pendingValue : value;
   return (
     <div className="space-y-1">
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-xs font-medium text-text-secondary">{label}</span>
-        {connected ? (
+        {failed ? (
+          <span className="text-[11px] text-warning">
+            저장하지 못했습니다
+            {onRetry && (
+              <button type="button" onClick={onRetry} className="ml-1.5 underline">
+                다시 시도
+              </button>
+            )}
+          </span>
+        ) : saving ? (
+          <span className="text-[11px] text-text-tertiary">저장 중…</span>
+        ) : value ? (
           <span className="text-[11px] text-success">✓ 연결됨{savedLabel ? ` · ${savedLabel}` : ""}</span>
         ) : (
           <span className="text-[11px] text-warning">연결 필요</span>
@@ -108,7 +148,7 @@ function MappingRow({
       </div>
       <select
         className={SELECT_CLASS}
-        value={value ?? ""}
+        value={shown ?? ""}
         onChange={(e) => {
           const picked = options.find((o) => o.value === e.target.value);
           onPick(e.target.value, picked?.name ?? "");
@@ -128,7 +168,11 @@ function MappingRow({
 
 export function LotteOnDeliveryMapping() {
   const [lists, setLists] = useState<DeliveryLists | null>(null);
+  /** 🔴 F2 — «서버가 확인해 준» 값만 들어온다(GET 결과 또는 PUT 성공). */
   const [saved, setSaved] = useState<Saved>(EMPTY);
+  /** 저장 요청이 날아가 있는 동안의 선택. 확정이 아니라서 따로 들고 있는다. */
+  const [pending, setPending] = useState<Partial<Saved> | null>(null);
+  const [saveFailed, setSaveFailed] = useState<Partial<Saved> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -169,22 +213,46 @@ export function LotteOnDeliveryMapping() {
     void load();
   }, [load]);
 
-  /** 🔴 고르는 즉시 저장한다. 「저장」을 따로 누르게 하면 셀러는 골라 놓고 나가고,
-      다음에 와서 또 고른다 — 이 화면이 없앴어야 할 바로 그 반복이다. */
+  /**
+   * 🔴 고르는 즉시 저장한다. 「저장」을 따로 누르게 하면 셀러는 골라 놓고 나가고,
+   * 다음에 와서 또 고른다 — 이 화면이 없앴어야 할 바로 그 반복이다.
+   *
+   * 🔴 F2 — **서버가 「저장했다」고 한 뒤에만 `saved` 를 바꾼다.**
+   * 예전에는 `setSaved(next)` 를 PUT «전에» 했다. 그래서 저장이 실패해도 화면은
+   * 연결된 것처럼 보였고, 서버에는 아무것도 없었다. 화면이 서버보다 앞서 나가면
+   * 셀러는 다음에 와서 「분명 연결했는데」가 된다.
+   */
   const pick = useCallback(
     async (patch: Partial<Saved>) => {
-      const next = { ...saved, ...patch };
-      setSaved(next);
+      setPending(patch);
+      setSaveFailed(null);
       setMessage(null);
-      const res = await fetch("/api/settings/lotteon-seller", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(next),
-      });
-      setMessage(res.ok ? "저장했습니다 — 이후 상품에 자동 적용됩니다." : "저장하지 못했습니다.");
+      try {
+        const res = await fetch("/api/settings/lotteon-seller", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...saved, ...patch }),
+        });
+        if (!res.ok) throw new Error("save failed");
+        setSaved({ ...saved, ...patch });
+        setMessage("저장했습니다 — 이후 상품에 자동 적용됩니다.");
+      } catch {
+        /* 🔴 `saved` 를 «건드리지 않는다». 화면은 서버에 있는 그대로로 되돌아가고,
+           그 줄이 「저장하지 못했습니다 + 다시 시도」를 말한다. */
+        setSaveFailed(patch);
+      } finally {
+        setPending(null);
+      }
     },
     [saved],
   );
+
+  /** 이 칸이 지금 어떤 상태인가 — 저장 중 / 실패 / 서버가 확인해 준 값. */
+  const rowState = (key: keyof Saved) => ({
+    pendingValue: pending && key in pending ? ((pending[key] as string | null) ?? "") : undefined,
+    failed: Boolean(saveFailed && key in saveFailed),
+    onRetry: saveFailed && key in saveFailed ? () => void pick(saveFailed) : undefined,
+  });
 
   const asOptions = (items: Option[]) => items.map((i) => ({ value: i.no, name: i.name ?? i.no }));
   const asCodeOptions = (items: CodeOption[]) => items.map((i) => ({ value: i.code, name: i.name ?? i.code }));
@@ -217,6 +285,7 @@ export function LotteOnDeliveryMapping() {
             hint="🔴 이름이 같아도 자동으로 잇지 않습니다 — 롯데ON이 발급한 장소는 별개라 같은 곳인지 판단은 판매자만 할 수 있습니다."
             options={asOptions(lists.outboundPlaces)}
             value={saved.outboundPlaceNo}
+            {...rowState("outboundPlaceNo")}
             savedLabel={saved.outboundPlaceLabel}
             onPick={(v, n) => void pick({ outboundPlaceNo: v || null, outboundPlaceLabel: n || null })}
           />
@@ -225,6 +294,7 @@ export function LotteOnDeliveryMapping() {
             hint="반품을 받을 곳입니다. 출고지와 달라도 됩니다."
             options={asOptions(lists.returnPlaces)}
             value={saved.returnPlaceNo}
+            {...rowState("returnPlaceNo")}
             savedLabel={saved.returnPlaceLabel}
             onPick={(v, n) => void pick({ returnPlaceNo: v || null, returnPlaceLabel: n || null })}
           />
@@ -233,6 +303,7 @@ export function LotteOnDeliveryMapping() {
             hint="해외직구는 상품마다 정책이 달라지지 않습니다 — 하나만 정해 두면 됩니다."
             options={asOptions(lists.costPolicies)}
             value={saved.deliveryCostPolicyNo}
+            {...rowState("deliveryCostPolicyNo")}
             savedLabel={saved.deliveryCostPolicyLabel}
             onPick={(v, n) => void pick({ deliveryCostPolicyNo: v || null, deliveryCostPolicyLabel: n || null })}
           />
@@ -241,6 +312,7 @@ export function LotteOnDeliveryMapping() {
             hint="롯데ON이 정한 지역 구분 중에서 고릅니다."
             options={asCodeOptions(lists.deliveryRegionGroups)}
             value={saved.deliveryRegionGroupCode}
+            {...rowState("deliveryRegionGroupCode")}
             savedLabel={saved.deliveryRegionGroupLabel}
             onPick={(v, n) =>
               void pick({ deliveryRegionGroupCode: v || null, deliveryRegionGroupLabel: n || null })
@@ -251,6 +323,7 @@ export function LotteOnDeliveryMapping() {
             hint="위에서 고른 기본 택배사와 같은 곳을 롯데ON 목록에서 골라 주세요."
             options={asCodeOptions(lists.couriers)}
             value={saved.courierCode}
+            {...rowState("courierCode")}
             savedLabel={saved.courierLabel}
             onPick={(v, n) => void pick({ courierCode: v || null, courierLabel: n || null })}
           />
@@ -259,6 +332,7 @@ export function LotteOnDeliveryMapping() {
             hint="반품을 회수할 택배사입니다. 출고 택배사와 달라도 됩니다."
             options={asCodeOptions(lists.couriers)}
             value={saved.returnCourierCode}
+            {...rowState("returnCourierCode")}
             savedLabel={saved.returnCourierLabel}
             onPick={(v, n) => void pick({ returnCourierCode: v || null, returnCourierLabel: n || null })}
           />
