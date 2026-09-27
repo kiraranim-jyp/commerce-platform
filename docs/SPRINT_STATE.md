@@ -73,3 +73,21 @@ S-11/13/14 | 고유코드 + MI 국내/해외 가격 | 대기 |
 `docs/commerce-6-*.md` 참조. Commerce-6 기본 필수정보 정합성은 닫혔고
 40커밋이 `origin/main`(2c34346)에 반영됐다. 재고 사실 해석은
 `packages/shared/src/source-stock.ts` 한 곳이다.
+
+### S-12 — 추가 진척 (comparison/search 확인)
+
+```
+🟢 comparison/search/route.ts 도 올바르다
+   body.sourceUrl → verifySourcePriceDirect(원본 «직접» 재조회)
+   그것과 «별개로» 타 판매처를 검색한다 — 원본과 후보가 코드에서 분리돼 있다
+
+→ 서버 경로 다섯 곳이 전부 무죄다. 그러므로 뒤집힘은 «서버 판정» 이 아니라
+  화면이 그 둘을 그리는 «자리/라벨» 이다.
+
+🔴 다음 확인(여기서 이어서 시작한다)
+   1. 실제 렌더 덤프를 뜬다 — DomesticPriceIntelligencePanel 을 이 상품으로
+      마운트해 「원본」 라벨 옆에 무엇이 그려지는지 «문자열로» 본다.
+      (추측하지 않는다. 지금까지 소스 읽기로는 원인이 안 나왔다.)
+   2. sellerNameFromUrl() 이 junioredition.com 을 무엇으로 읽는지 확인.
+      브랜드명 표(brand-identity)와 충돌하면 그 자리가 범인이다.
+```
