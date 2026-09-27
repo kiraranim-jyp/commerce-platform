@@ -15,3 +15,6 @@ export * from "./master-product";
    listing 을 import 하지 않는다(넣으면 순환이 된다). 그리고 이것은 등록의
    성질이 아니라 «상품의 사실» 이다. */
 export * from "./source-stock";
+/* 장기 스프린트 S-16 — 택배사 Common 하나 + 채널 Mapping. 🔴 채널마다 칸을
+   만들지 않는다(Commerce 30개면 택배사 30칸이 된다). */
+export * from "./common-carrier";

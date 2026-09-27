@@ -410,7 +410,7 @@ describe("증명 2 — 롯데ON 관리값이 탭을 벗어났다 돌아와도 �
       "EPD-1",
       "NONE",
     ]) {
-      expect(html, `저장된 롯데ON 값이 화면에 돌아오지 않았다: ${saved}`).toContain(`value="${saved}"`);
+      expect(html, `저장된 롯데ON 값이 화면에 돌아오지 않았다: ${saved}`).toContain(`data-channel-code="${saved}"`);
     }
     // textarea는 value 속성이 아니라 본문으로 그려진다.
     expect(html).toContain("0020:네이비");
@@ -464,7 +464,7 @@ describe("증명 3 — 상품정보 화면에서 커머스 관리정보가 사�
     // 화면 한 자리를 지웠을 뿐이라는 사실을, 저장을 읽는 쪽에서 직접 확인한다.
     const html = (await renderLotteOnTab(SAVED_LOTTEON));
     for (const saved of ["OW-77", "RT-88", "DC-99", "BR-4242", "EPD-1"]) {
-      expect(html, `롯데ON 탭이 저장값을 잃었다: ${saved}`).toContain(`value="${saved}"`);
+      expect(html, `롯데ON 탭이 저장값을 잃었다: ${saved}`).toContain(`data-channel-code="${saved}"`);
     }
     // REWORK-5 ③ — 카테고리는 입력칸이 아니라 요약 본문으로 돌아온다.
     expect(stripTags(html), "롯데ON 탭이 저장된 카테고리를 잃었다").toContain("205001");

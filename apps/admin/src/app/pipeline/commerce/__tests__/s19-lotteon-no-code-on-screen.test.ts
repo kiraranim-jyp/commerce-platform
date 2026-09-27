@@ -43,11 +43,19 @@ describe("② 롯데ON 배송 세 칸이 «이름» 을 보여준다", () => {
     expect(PANEL).toContain(`liveNameOf(deliverySettings.data?.${list}, form.delivery.${field})`);
   });
 
-  /* 이름을 모를 때(조회 실패 등)는 빈 칸이 아니라 코드를 보여준다 — 아무것도
-     안 보이는 것보다 낫다. displayValue 가 undefined 면 value 가 그려진다. */
-  it("이름을 모르면 코드로 되돌아간다 — 빈 칸이 되지 않는다", () => {
-    expect(PANEL).toContain("?? undefined)");
-    expect(FIELDS).toContain("displayValue ?? value");
+  /* 🔴 CEO 가 «바로» 잡은 부분이다. 처음에 「이름을 못 찾으면 코드로 되돌아간다」로
+     만들었는데 그것은 내부 코드가 fallback 으로 다시 살아나는 길이다.
+     PLO3837441 은 셀러에게 «아무것도 아닌 것보다 나쁘다» — 관리할 수 없는
+     값을 관리하라고 보여준다. */
+  it("🔴 이름을 모르면 «코드가 아니라» 확인 필요다", () => {
+    expect(PANEL).toContain("function sellerFacingName");
+    expect(PANEL).toContain("`${what} 확인 필요`");
+    /* 코드로 되돌아가는 옛 경로가 사라졌다. */
+    expect(PANEL).not.toContain("?? undefined)");
+  });
+
+  it("고른 적이 없으면 빈 칸이다 — 「확인 필요」라고 겁주지 않는다", () => {
+    expect(PANEL).toContain('return code.trim() ? `${what} 확인 필요` : "";');
   });
 });
 

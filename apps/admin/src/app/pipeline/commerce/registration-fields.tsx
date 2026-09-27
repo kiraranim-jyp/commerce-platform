@@ -342,6 +342,11 @@ export function ChannelCodeField({
     <input
       type="text"
       value={shown}
+      /* 🔴 S-19 — 셀러는 «이름» 을 보지만 저장된 값은 그대로 살아 있다.
+         그 사실을 검사가 볼 수 있어야 한다 — 화면에서 코드를 없앤 뒤로는
+         「값이 사라졌다」와 「보여주지 않는다」를 구분할 길이 없다.
+         셀러 눈에는 보이지 않는 속성이다. */
+      data-channel-code={value}
       placeholder={placeholder}
       readOnly={readOnly}
       onChange={(event) => onChange(event.target.value)}

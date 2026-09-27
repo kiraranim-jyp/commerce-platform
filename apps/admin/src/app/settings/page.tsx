@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+/* S-16 — 택배사 Common 하나 + 채널 Mapping. 셀러는 하나만 고른다. */
+import { COMMON_CARRIERS, findCommonCarrier } from "@commerce/shared";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
@@ -1528,39 +1530,47 @@ function ShippingSection({
               />
             </Field>
 
-            <Field label="택배사 (Coupang)" hint="쿠팡 API가 요구하는 코드로 저장됩니다 — 아래 SmartStore 택배사와는 별도 관리">
+            {/* ══ 장기 스프린트 S-16(CEO 지시, 2026-09-27) — 택배사 칸이 «둘» 이었다 ══
+
+                택배사 (Coupang) · 택배사 (SmartStore) 두 칸이 같은 사실을
+                말하고 있었다 — 「이 판매자는 우체국택배로 보낸다」. 셀러는 그것을
+                두 번 골랐다.
+
+                🔴 Commerce 를 20~30개로 늘리는 것이 목표다. 이 구조를 그대로
+                두면 «택배사 30칸» 이 된다 — 셀러 부담이 Commerce 수만큼 늘어난다.
+                우리가 만들려는 것과 정반대다.
+
+                이제 하나를 고르면 채널이 각자 자기 코드로 읽는다
+                (shared/common-carrier.ts). 🔴 롯데ON 코드는 «지어내지 않는다» —
+                89 실응답을 본 적이 없고, 그 값은 셀러가 목록에서 고른 것만
+                쓴다(S-8/9 · migration 067). */}
+            <Field
+              label="기본 택배사"
+              hint="한 번 고르면 쿠팡·스마트스토어에 각각 맞는 값으로 나갑니다 — 채널마다 다시 고르지 않습니다. 롯데ON은 판매자센터 목록에서 따로 고릅니다."
+            >
               <select
-                value={deliveryCompanyCode}
-                onChange={(e) => onDeliveryCompanyCodeChange(e.target.value)}
-                className="mb-1.5 w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+                value={findCommonCarrier(deliveryCompanyCode)?.key ?? ""}
+                onChange={(e) => {
+                  const carrier = findCommonCarrier(e.target.value);
+                  /* 🔴 값 두 개를 «동시에» 쓴다. 한쪽만 바뀌면 화면은 하나인데
+                     채널마다 다른 택배사로 등록되는 상태가 만들어진다. */
+                  onDeliveryCompanyCodeChange(carrier?.coupang ?? "");
+                  onNaverDeliveryCompanyCodeChange(carrier?.smartstore ?? "");
+                }}
+                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
               >
                 <option value="">선택...</option>
-                {COURIER_OPTIONS.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.label} ({c.code})
+                {COMMON_CARRIERS.map((c) => (
+                  <option key={c.key} value={c.key}>
+                    {c.name}
                   </option>
                 ))}
               </select>
-              <input
-                type="text"
-                value={deliveryCompanyCode}
-                onChange={(e) => onDeliveryCompanyCodeChange(e.target.value)}
-                placeholder="목록에 없으면 코드 직접 입력"
-                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-              />
-            </Field>
-
-            <Field
-              label="택배사 (SmartStore)"
-              hint="네이버 공식 API에는 택배사 조회 기능이 없어(확인됨) 직접 입력이 필요합니다 — 예: CJ대한통운. 플랫폼별로 요구하는 코드 체계가 달라 위 쿠팡 택배사와 별도로 저장됩니다"
-            >
-              <input
-                type="text"
-                value={naverDeliveryCompanyCode}
-                onChange={(e) => onNaverDeliveryCompanyCodeChange(e.target.value)}
-                placeholder="예: CJ대한통운"
-                className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
-              />
+              {deliveryCompanyCode && !findCommonCarrier(deliveryCompanyCode) && (
+                <p className="mt-1 text-xs text-warning">
+                  저장된 택배사를 목록에서 찾지 못했습니다 — 다시 골라 주세요.
+                </p>
+              )}
             </Field>
 
             {/* Commerce-6 Phase E-6 — 🔴 이 칸의 값은 어느 커머스 payload 에도 «가지

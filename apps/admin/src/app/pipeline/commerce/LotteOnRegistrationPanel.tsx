@@ -241,6 +241,35 @@ export function autoPick<T extends { no: string; isDefault?: boolean }>(options:
  * 판매자센터에서 이름이 바뀌면 조용히 틀려진다. 조회가 닿았으면 그쪽을 쓴다.
  * 못 찾으면 null — 그때 화면이 저장된 이름을 「저장 당시」라고 말한다.
  */
+/**
+ * ══ 장기 스프린트 S-19 잔여(CEO 지시, 2026-09-27) ══
+ *
+ * 셀러 화면에 «설 수 있는» 문자열만 돌려준다.
+ *
+ * 🔴 처음 구현을 「이름을 못 찾으면 코드로 되돌아간다」로 만들었다. CEO 가 바로
+ * 잡았다 — 그것은 내부 코드가 fallback 으로 «다시 살아나는» 길이다. 아무것도
+ * 안 보이는 것보다 낫다고 생각했지만, `PLO3837441` 은 셀러에게 아무것도 아닌
+ * 것보다 «나쁘다». 관리할 수 없는 값을 관리하라고 보여주는 셈이다.
+ *
+ * 그래서 셋 중 하나만 나간다.
+ *
+ *     이름을 안다           「서울 물류센터」
+ *     코드는 있는데 모른다   「출고지 확인 필요」  ← 코드를 «보여주지 않는다»
+ *     고른 적이 없다         빈 칸(아래 목록에서 고르면 된다)
+ *
+ * 🔴 코드는 폼과 payload 에 그대로 있다. 없애는 것은 «화면에 뜨는 길» 하나다.
+ */
+function sellerFacingName(
+  code: string,
+  liveName: string | null | undefined,
+  savedLabel: string | null | undefined,
+  what: string,
+): string {
+  const name = liveName?.trim() || savedLabel?.trim();
+  if (name) return name;
+  return code.trim() ? `${what} 확인 필요` : "";
+}
+
 function liveNameOf(
   options: readonly { no: string; name: string | null }[] | undefined,
   no: string | null | undefined,
@@ -1398,10 +1427,12 @@ export function LotteOnRegistrationPanel({
             }
             value={form.delivery.outboundPlaceNo}
             /* S-19 — 코드가 아니라 «이름» 을 보여준다. 값은 그대로 payload 로 간다. */
-            displayValue={
-              liveNameOf(deliverySettings.data?.outboundPlaces, form.delivery.outboundPlaceNo) ??
-              (form.delivery.outboundPlaceNo.trim() ? undefined : (sellerFixed?.outboundPlaceLabel ?? undefined))
-            }
+            displayValue={sellerFacingName(
+              form.delivery.outboundPlaceNo,
+              liveNameOf(deliverySettings.data?.outboundPlaces, form.delivery.outboundPlaceNo),
+              sellerFixed?.outboundPlaceLabel,
+              "출고지",
+            )}
             onChange={(value) => patch("delivery", { outboundPlaceNo: value })}
           />
           <ChannelCodeField
@@ -1424,10 +1455,12 @@ export function LotteOnRegistrationPanel({
             }
             value={form.delivery.returnPlaceNo}
             /* S-19 — 코드가 아니라 «이름» 을 보여준다. 값은 그대로 payload 로 간다. */
-            displayValue={
-              liveNameOf(deliverySettings.data?.returnPlaces, form.delivery.returnPlaceNo) ??
-              (form.delivery.returnPlaceNo.trim() ? undefined : (sellerFixed?.returnPlaceLabel ?? undefined))
-            }
+            displayValue={sellerFacingName(
+              form.delivery.returnPlaceNo,
+              liveNameOf(deliverySettings.data?.returnPlaces, form.delivery.returnPlaceNo),
+              sellerFixed?.returnPlaceLabel,
+              "반품지",
+            )}
             onChange={(value) => patch("delivery", { returnPlaceNo: value })}
           />
           <ChannelCodeField
@@ -1450,10 +1483,12 @@ export function LotteOnRegistrationPanel({
             }
             value={form.delivery.deliveryCostPolicyNo}
             /* S-19 — 코드가 아니라 «이름» 을 보여준다. 값은 그대로 payload 로 간다. */
-            displayValue={
-              liveNameOf(deliverySettings.data?.costPolicies, form.delivery.deliveryCostPolicyNo) ??
-              (form.delivery.deliveryCostPolicyNo.trim() ? undefined : (sellerFixed?.deliveryCostPolicyLabel ?? undefined))
-            }
+            displayValue={sellerFacingName(
+              form.delivery.deliveryCostPolicyNo,
+              liveNameOf(deliverySettings.data?.costPolicies, form.delivery.deliveryCostPolicyNo),
+              sellerFixed?.deliveryCostPolicyLabel,
+              "배송비 정책",
+            )}
             onChange={(value) => patch("delivery", { deliveryCostPolicyNo: value })}
           />
           <ChannelCodeField
