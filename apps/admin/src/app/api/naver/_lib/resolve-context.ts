@@ -1,4 +1,9 @@
-import { buildNaverCategoryPath, resolveDetailBlocks, resolveNaverOriginArea } from "@commerce/listing";
+import {
+  buildNaverCategoryPath,
+  resolveCommonOrigin,
+  resolveDetailBlocks,
+  resolveNaverOriginArea,
+} from "@commerce/listing";
 import { getNaverCredentials } from "./env";
 import { callNaverApi, issueNaverAccessToken } from "./client";
 import { fetchNaverAllCategories } from "./category";
@@ -138,8 +143,16 @@ export async function resolveNaverContext(params: {
   }
   const primaryReturnCompany = returnCompanies ? resolvePrimaryReturnCompany(returnCompanies) : null;
 
-  const resolvedCountryText =
-    extractedCountryOfOrigin || brandProfile?.countryOfOrigin || sellerSettings.defaultCountryOfOrigin || null;
+  /* ══ COMMERCE-COMMON-WIRE-01 ═══════════════════════════════════════════
+     여기 있던 사다리는 쿠팡(coupang/build-payload.ts)에도 «똑같이» 쓰여 있었다.
+     한쪽만 고치면 두 채널의 원산지가 갈라진다 — 이제 Common 하나를 본다.
+     🔴 순서를 바꾸지 않았다(상품 → 브랜드 → 판매자). 결과가 같아야 한다. */
+  const commonOrigin = resolveCommonOrigin({
+    product: { value: extractedCountryOfOrigin },
+    brandDefault: brandProfile?.countryOfOrigin,
+    sellerDefault: sellerSettings.defaultCountryOfOrigin,
+  });
+  const resolvedCountryText = commonOrigin.value;
   const originMatch = originAreas
     ? resolveNaverOriginArea(resolvedCountryText, originAreas)
     : { status: "NO_INPUT" as const, code: null, matchedDisplayName: null, requiresImporter: false };

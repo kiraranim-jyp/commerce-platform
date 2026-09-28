@@ -23,7 +23,23 @@ import type {
  * 제조사에서 한 것을 원산지에서도 한다).
  */
 
-/** 🔴 제조국에 관용 기본값을 채우지 않는다 — 법률상 중요정보다. */
+/**
+ * 🔴 제조국에 관용 기본값을 채우지 않는다 — 법률상 중요정보다.
+ *
+ * 🔴 그리고 «브랜드 기본값이 판매자 기본값보다 먼저» 다. 처음에 반대로 썼다가
+ * 실측에서 잡혔다 — Production 두 채널이 이미 같은 순서로 돌고 있다:
+ *
+ *     coupang/build-payload.ts:1425
+ *       product.countryOfOrigin.value || brandProfile?.countryOfOrigin || sellerConfig.defaultCountryOfOrigin
+ *     naver/_lib/resolve-context.ts:141
+ *       extractedCountryOfOrigin || brandProfile?.countryOfOrigin || sellerSettings.defaultCountryOfOrigin
+ *
+ * 순서를 내 쪽으로 맞췄다면 «지금 나가는 payload 가 조용히 바뀐다». 이 함수는
+ * 기존 동작을 한 곳으로 모으는 것이지 바꾸는 것이 아니다.
+ *
+ * 🔴 둘 다 `FieldValueSource` 로는 `SELLER_SETTINGS` 다 — 판매자가 관리하는
+ * 기본값이라 계층이 같다. 계층이 같아도 «우선순위» 는 구체적인 쪽(브랜드)이 먼저다.
+ */
 export const ORIGIN_SOURCE_POLICY: CommonFieldSourcePolicy = {
   allowedSources: ["USER_CONFIRMED", "COMMON_PRODUCT", "SELLER_SETTINGS"],
   defaultAllowed: false,
@@ -101,10 +117,11 @@ function pick(
     return value ? { value, provenance: input.product?.source, reason: "상품정보에서 확인된 원산지입니다." } : null;
   }
   if (source === "SELLER_SETTINGS") {
-    const seller = clean(input.sellerDefault);
-    if (seller) return { value: seller, reason: "상품정보에 없어 판매자 설정의 기본 원산지를 사용했습니다." };
+    /* 🔴 브랜드가 먼저다 — Production 두 채널의 순서 그대로다(위 주석). */
     const brand = clean(input.brandDefault);
     if (brand) return { value: brand, reason: "상품정보에 없어 브랜드 기본 원산지를 사용했습니다." };
+    const seller = clean(input.sellerDefault);
+    if (seller) return { value: seller, reason: "상품정보에 없어 판매자 설정의 기본 원산지를 사용했습니다." };
     return null;
   }
   return null;

@@ -86,7 +86,19 @@ describe("② 롯데ON 전용 설정과 «섞이지 않는다»", () => {
        쪽이다 — 이 가드가 실제로 그 실수를 한 번 잡았다(고시의 「제조자」는
        법률상 정보라 판매 사업자를 넣으면 안 된다). `kcExemptionText` 와
        `defaultCountryOfOrigin` 도 값을 지어내는 통로라 열지 않는다. */
-    const STILL_FORBIDDEN = ["manufacturer", "kcExemptionText", "defaultCountryOfOrigin"];
+    /* ══ COMMERCE-COMMON-WIRE-01(2026-09-28) ═══════════════════════════
+       `defaultCountryOfOrigin` 이 금지에서 빠진다. 🔴 롯데ON 에서는 «동작
+       변화» 다 — 지금까지 고시 제조국이 상품 값만 봐서, 브랜드·판매자 기본값이
+       있어도 비었다.
+
+       그런데 쿠팡·스마트스토어는 이미 같은 사다리를 쓰고 있었다. 세 채널이
+       같은 원산지를 보게 하는 것이 Common 의 목적이고, 여기만 빼면 「원산지가
+       채널마다 다른」 상태가 남는다.
+
+       🔴 `manufacturer` 와 `kcExemptionText` 는 그대로 금지다. 앞엣것은 판매
+       사업자를 제조자로 쓰지 않는다는 끝난 사안이고(이 가드가 실제로 한 번
+       잡았다), 뒤엣것은 KC 문구를 기본값으로 채우는 통로가 된다. */
+    const STILL_FORBIDDEN = ["manufacturer", "kcExemptionText"];
     const pulled = (SOURCE.match(/commonSellerSettings\.(\w+)/g) ?? [])
       .map((m) => m.replace("commonSellerSettings.", ""))
       .filter((name) => STILL_FORBIDDEN.includes(name));

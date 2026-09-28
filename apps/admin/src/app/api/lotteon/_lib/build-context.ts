@@ -9,6 +9,7 @@ import {
   type LotteOnSellerSettingsInput,
   type LotteOnProductInput,
   resolveLotteOnNotice,
+  resolveCommonOrigin,
   type LotteOnNoticeResolution,
 } from "@commerce/listing";
 import { getDefaultSellerProfile, type SellerProfile } from "../../coupang/_lib/seller-profile";
@@ -211,7 +212,16 @@ export async function buildLotteOnContext(
   const noticeResolution = resolveLotteOnNotice(trimOrNull(form.noticeItemCode), {
     color: product.color.value,
     material: product.material.value,
-    countryOfOrigin: product.countryOfOrigin.value,
+    /* ══ COMMERCE-COMMON-WIRE-01 ══════════════════════════════════════════
+       고시 「제조국」도 쿠팡·스마트스토어와 «같은 사다리» 를 본다. 여기만
+       상품 값을 직접 읽고 있어서, 브랜드·판매자 기본값이 있어도 비었다.
+       🔴 이것은 롯데ON 에서는 «동작 변화» 다 — 다만 등록 건수가 0이라
+       깨질 Production 이 없고, 세 채널이 같은 값을 보게 하는 쪽이 맞다. */
+    countryOfOrigin: resolveCommonOrigin({
+      product: { value: product.countryOfOrigin.value, source: product.countryOfOrigin.source },
+      brandDefault: brandProfile?.countryOfOrigin,
+      sellerDefault: commonSellerSettings.defaultCountryOfOrigin,
+    }).value,
     /* 🔴 옵션에서 «치수» 만 고른다. 공식 가이드라인이 품목 23 의 크기·중량을
        「섬유제품 등의 경우 치수 정보로 대체 가능」이라고 적어 둔 그 자리다.
        사용연령으로는 넘기지 않는다 — 사이즈 축과 연령 축은 다르다. */

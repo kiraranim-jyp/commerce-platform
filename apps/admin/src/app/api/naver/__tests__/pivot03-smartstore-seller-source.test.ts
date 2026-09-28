@@ -72,9 +72,19 @@ describe("② 배송 프로필은 그대로 남는다", () => {
 
 describe("③ 폴백 순서는 바뀌지 않았다", () => {
   it("원산지 — 상품 → 브랜드 → 판매자", () => {
-    expect(SOURCE).toContain(
-      "extractedCountryOfOrigin || brandProfile?.countryOfOrigin || sellerSettings.defaultCountryOfOrigin || null",
-    );
+    /* ══ COMMERCE-COMMON-WIRE-01(2026-09-28) ═══════════════════════════════
+       이 사다리는 `resolveCommonOrigin` «안으로» 들어갔다. 같은 세 줄이 쿠팡
+       (coupang/build-payload.ts)에도 따로 있어서, 한쪽만 고치면 두 채널의
+       원산지가 갈라지는 구조였다.
+
+       🔴 지키려는 것은 «순서» 이고 그것은 그대로다. 그리고 순서가 실제로
+       같은지는 문자열이 아니라 «값» 으로 잰다 —
+       packages/listing/src/common/__tests__/wire01-origin-production-path.test.ts
+       가 옛 사다리와 새 resolver 를 7가지 조합에서 대조한다(소스 PASS 가
+       Render/동작 PASS 가 아니라는 것을 이 스프린트에서 두 번 겪었다). */
+    expect(SOURCE).toContain("resolveCommonOrigin({");
+    expect(SOURCE).toContain("brandDefault: brandProfile?.countryOfOrigin");
+    expect(SOURCE).toContain("sellerDefault: sellerSettings.defaultCountryOfOrigin");
   });
 
   it("제조사 — 브랜드 → 판매자 (상품 원문은 build-payload 가 더 앞에서 본다)", () => {

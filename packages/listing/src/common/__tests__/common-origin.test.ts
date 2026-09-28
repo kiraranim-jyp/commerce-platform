@@ -24,15 +24,15 @@ describe("① 사다리 — 상품이 먼저, 없으면 판매자, 그다음 브
     expect(field.provenance).toBe("ORIGINAL");
   });
 
-  it("상품에 없으면 판매자 설정 기본값", () => {
+  it("🔴 상품에 없으면 «브랜드» 기본값이 먼저다 — Production 순서 그대로다", () => {
     const field = resolveCommonOrigin({ sellerDefault: "스페인", brandDefault: "이탈리아" });
-    expect(field.value).toBe("스페인");
+    expect(field.value).toBe("이탈리아");
     expect(field.source).toBe("SELLER_SETTINGS");
   });
 
-  it("판매자 설정에도 없으면 브랜드 기본값", () => {
-    const field = resolveCommonOrigin({ brandDefault: "이탈리아" });
-    expect(field.value).toBe("이탈리아");
+  it("브랜드에도 없으면 판매자 설정 기본값", () => {
+    const field = resolveCommonOrigin({ sellerDefault: "스페인" });
+    expect(field.value).toBe("스페인");
     expect(field.source).toBe("SELLER_SETTINGS");
   });
 

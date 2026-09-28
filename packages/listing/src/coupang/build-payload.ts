@@ -11,6 +11,7 @@ import { getSelectedImageUrl } from "@commerce/shared";
 import { computeVariantFinalPriceKrw } from "@commerce/pricing";
 import { payloadStockQuantity } from "@commerce/shared";
 import { manufacturerInputFromProduct, resolveManufacturer } from "../common/manufacturer";
+import { resolveCommonOrigin } from "../common/origin";
 
 /**
  * 쿠팡 Open API "상품 생성"(POST .../v1/marketplace/seller-products) 요청 바디를
@@ -1422,7 +1423,16 @@ function buildCoupangItem(args: {
       // 기본값. 브랜드 프로필이 없거나 값이 비어 있으면 자동으로 다음 단계로
       // 넘어간다(빈 문자열은 falsy라 || 체인이 그대로 스킵한다).
       countryOfOrigin:
-        product.countryOfOrigin.value || brandProfile?.countryOfOrigin || sellerConfig.defaultCountryOfOrigin || undefined,
+        /* ══ COMMERCE-COMMON-WIRE-01 ══════════════════════════════════════
+           이 한 줄이 원산지 사다리였다. 같은 사다리가 스마트스토어
+           (naver/_lib/resolve-context.ts:141)에도 «따로» 쓰여 있었다 — 한쪽만
+           고치면 두 채널이 갈라진다. 이제 Common 하나를 본다.
+           🔴 순서는 바꾸지 않았다(상품 → 브랜드 → 판매자). 결과가 같아야 한다. */
+        resolveCommonOrigin({
+          product: { value: product.countryOfOrigin.value, source: product.countryOfOrigin.source },
+          brandDefault: brandProfile?.countryOfOrigin,
+          sellerDefault: sellerConfig.defaultCountryOfOrigin,
+        }).value ?? undefined,
       color: product.color.value || undefined,
       recommendedAge: product.recommendedAge.value || undefined,
       // Sprint A-8(추가 권장사항) — 원본 사이트에서 크롤링한 값이 있으면
