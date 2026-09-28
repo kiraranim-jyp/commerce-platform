@@ -62,12 +62,27 @@ PUT /v2/providers/seller_api/apis/api/v1/marketplace/seller-products
 
 ### 실측 대조 (`CoupangPayload` ↔ GET 응답)
 
-| 층 | 우리가 보내는 칸 | 돌아오는 칸 | 🔴 안 돌아오는 것 |
+| 층 | 우리가 보내는 **공식** 칸 | 돌아오는 칸 | 🔴 안 돌아오는 것 |
 |---|---:|---:|---|
-| 상품 | 29 | 56 | **`displayCategoryPath` 하나** |
-| `items[]` | 19 | 38 | **없음 (100%)** |
+| 상품 | 28 | 56 | **없음** |
+| `items[]` | 19 | 38 | **없음** |
 
-🟢 **상품 28/29 · 옵션 19/19.** baseline 으로 쓸 수 있습니다.
+🟢 **공식 필드 왕복률 100%.** baseline 으로 쓸 수 있습니다.
+
+### 🔴 정정 — 처음에 「28/29」라고 보고했습니다
+
+`displayCategoryPath` 가 안 돌아온다고 적었는데, **그 칸은 공식 필드가 아닙니다.**
+빌더 주석이 직접 그렇게 말합니다(`build-payload.ts:196`) —
+
+> 「공식 스키마 필드가 아니다 — Payload Inspector 가 카테고리 경로를 사람이 읽을
+>  수 있게 보여주기 위한 CartPilot 전용 참고 필드」
+
+`complianceFieldResults` · `priceIsEstimate` 와 **같은 부류**입니다. 저는 앞의 둘만
+제외하고 이것을 빠뜨렸습니다. 쿠팡은 모르는 칸을 무시하므로 **저장한 적이 없어서
+안 돌아온 것**이고, 「왕복이 깨졌다」가 아닙니다.
+
+→ 🟢 **Phase 3(`displayCategoryPath` 처리)은 추측 없이 닫힙니다**:
+변환할 것이 없고, UPDATE 시 보내지 않으면 됩니다.
 
 ### 🟢 쿠팡이 «덧붙여» 주는 것 (우리가 안 보낸 칸)
 
