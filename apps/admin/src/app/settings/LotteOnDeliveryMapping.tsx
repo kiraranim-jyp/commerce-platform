@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { describeLotteOnCarrierMatch, resolveLotteOnCarrier } from "@commerce/listing";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -166,7 +167,7 @@ function MappingRow({
   );
 }
 
-export function LotteOnDeliveryMapping() {
+export function LotteOnDeliveryMapping({ commonCarrier }: { commonCarrier?: string | null }) {
   const [lists, setLists] = useState<DeliveryLists | null>(null);
   /** 🔴 F2 — «서버가 확인해 준» 값만 들어온다(GET 결과 또는 PUT 성공). */
   const [saved, setSaved] = useState<Saved>(EMPTY);
@@ -224,6 +225,47 @@ export function LotteOnDeliveryMapping() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  /**
+   * ══ STEP 3(CPO 승인, 2026-09-28) — **공통 택배사를 «이름이 같을 때만» 잇는다**
+   *
+   * 배송 프로필에 「우체국택배」가 있는데 여기서 또 고르게 하면, 그것이 바로
+   * 이 스프린트가 없애려던 「공통에 있는 값을 다시 묻는」 자리다.
+   *
+   * 🔴 완전 일치만이다. 실응답이 그 이유를 보여준다 —
+   *      0001 롯데택배   vs  0055 롯데택배 해외특송
+   *      0002 CJ대한통운 vs  0056 CJ대한통운 국제특송
+   *    부분 일치를 쓰면 국내 배송이 국제특송으로 등록된다.
+   *
+   * 🔴 «저장값이 없을 때만» 쓴다. 셀러가 이미 고른 값을 덮지 않는다.
+   * 🔴 코드를 «만들지 않는다» — 못 찾으면 「확인 필요」로 남고 셀러가 고른다.
+   */
+  /* 🔴 `useMemo` 가 «필요하다». 처음에 매 렌더마다 resolve 를 불렀는데, 그 결과가
+     새 객체라 아래 useEffect 의 의존성이 매번 바뀌고 → 저장 → 리렌더 → 또 저장으로
+     «무한 루프» 가 됐다(테스트가 9분 만에 타임아웃해서 알았다).
+     lists·commonCarrier 가 그대로면 판정도 그대로다. */
+  const carrierMatch = useMemo(
+    () => (lists ? resolveLotteOnCarrier(commonCarrier, lists.couriers) : null),
+    [lists, commonCarrier],
+  );
+
+  useEffect(() => {
+    if (!lists || !carrierMatch || carrierMatch.status !== "MATCHED") return;
+    /* 이미 정해져 있으면 그대로 둔다 — 출고·반품 둘 중 빈 쪽만 잇는다. */
+    const patch: Partial<Saved> = {};
+    if (!saved.courierCode) {
+      patch.courierCode = carrierMatch.code;
+      patch.courierLabel = carrierMatch.name;
+    }
+    if (!saved.returnCourierCode) {
+      patch.returnCourierCode = carrierMatch.code;
+      patch.returnCourierLabel = carrierMatch.name;
+    }
+    if (Object.keys(patch).length === 0) return;
+    void pick(patch);
+    /* 🔴 `pick` 은 `saved` 를 의존성으로 갖는다. 저장이 끝나면 `saved` 가 채워져
+       위 조건이 거짓이 되므로 다시 돌지 않는다 — 반복 저장하지 않는다. */
+  }, [lists, carrierMatch, saved.courierCode, saved.returnCourierCode]);
 
   /**
    * 🔴 고르는 즉시 저장한다. 「저장」을 따로 누르게 하면 셀러는 골라 놓고 나가고,
@@ -351,6 +393,16 @@ export function LotteOnDeliveryMapping() {
         </div>
       )}
 
+      {/* 🔴 자동으로 이었으면 그렇다고 말한다. 못 이었으면 그것도 말한다 —
+          「선택 안 함」으로 조용히 두지 않는다. */}
+      {carrierMatch && carrierMatch.status !== "NO_COMMON_CARRIER" && (
+        <p
+          data-lotteon-carrier-match={carrierMatch.status}
+          className={`text-[11px] ${carrierMatch.status === "MATCHED" ? "text-success" : "text-warning"}`}
+        >
+          택배사 — {describeLotteOnCarrierMatch(carrierMatch)}
+        </p>
+      )}
       {message && <p className="text-xs text-text-secondary">{message}</p>}
     </div>
   );

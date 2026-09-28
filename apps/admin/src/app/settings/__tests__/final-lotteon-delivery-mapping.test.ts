@@ -88,7 +88,11 @@ describe("④ 자리가 «배송 프로필 안» 이다", () => {
   it("배송 프로필 탭에서 그려진다", () => {
     const at = SETTINGS.indexOf('activeTab === "shipping"');
     expect(at).toBeGreaterThan(-1);
-    expect(SETTINGS.slice(at, at + 900)).toContain("<LotteOnDeliveryMapping />");
+    /* 🔴 STEP 3(2026-09-28) — 여기에 `commonCarrier` prop 이 붙었다. 공통 택배사를
+       넘겨서 이름이 정확히 같을 때만 롯데ON 코드로 잇는다(못 찾으면 「확인 필요」).
+       이 검사의 주장은 «자리» 이므로 태그 이름으로 본다 — 자동 닫는 형태를
+       요구하면 prop 이 하나 붙을 때마다 깨진다. */
+    expect(SETTINGS.slice(at, at + 1400)).toContain("<LotteOnDeliveryMapping");
   });
 
   it("새 탭을 만들지 않았다", () => {

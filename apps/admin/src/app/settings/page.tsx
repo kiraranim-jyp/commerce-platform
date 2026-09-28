@@ -1097,7 +1097,11 @@ function SellerProfileEditor({
             🔴 «배송 프로필 안» 이다. 별도 탭을 만들면 ㉢(2026-09-22)가
             「중복」이라며 지운 구조가 그대로 되살아난다. */}
         <div className="mb-5 rounded-lg border border-border bg-surface p-4">
-          <LotteOnDeliveryMapping />
+          {/* 🔴 STEP 3 — 공통 택배사를 넘긴다. 이름이 정확히 같을 때만 롯데ON
+              코드로 이어지고, 아니면 「확인 필요」로 남는다(코드를 만들지 않는다). */}
+          <LotteOnDeliveryMapping
+            commonCarrier={(profiles.find((p) => p.isDefault) ?? profiles[0])?.deliveryCompanyCode ?? null}
+          />
         </div>
         <ShippingSection
           profiles={profiles}
