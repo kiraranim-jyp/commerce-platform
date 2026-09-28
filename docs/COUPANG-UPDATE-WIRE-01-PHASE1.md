@@ -213,6 +213,75 @@ Q2  §7-B-2 의 옵션별 가격/재고를 이번 스프린트 범위에 넣는�
 🔴 두 질문 모두 **제품 정책·안전 경계**라 CPO 결정 사항이다(헌장 §3 STOP 조건).
 결정 전에는 capability 를 올리지 않는다 — 올리는 순간 화면이 말을 시작한다.
 
+## 9-A. 🟢 CPO 결정 (2026-09-28)
+
+```
+Q1 → (a) fieldCapability 에 쿠팡 예외를 두어 «좁힌다»
+Q2 → 이번 스프린트는 name 하나만 연다 (가격·재고는 다음 스프린트)
+```
+
+그래서 쿠팡의 필드 표는 이렇게 «하나만» 열린다:
+
+```
+name           EDITABLE        ← 이번 스프린트의 전부
+salePrice      UNKNOWN         ← 옵션별 매핑 미결정(§7-B-2)
+stockQuantity  UNKNOWN         ← 〃
+detailContent  UNKNOWN   images UNKNOWN   options UNKNOWN   providedNotice UNKNOWN
+category       RECREATE_ONLY   ← categoryUpdate: NOT_SUPPORTED (기존 그대로)
+```
+
+🔴 UNKNOWN 은 「안 됩니다」가 아니라 「아직 확인되지 않았습니다」로 셀러에게
+나간다(`fieldCapabilityNote`) — 실측하지 않은 것을 못 한다고 말하지 않는다.
+Production 실측 범위(상품명 하나)와 화면이 여는 범위가 **정확히 같아진다.**
+
+## 9-B. Phase 2 설계 — seam 은 생각보다 «작다»
+
+실행기 계약을 읽고 나니 클라이언트에 payload 배선을 새로 깔 필요가 없다.
+기존 수정 계약이 이미 **「값이 아니라 바뀐 항목 «이름»만 보낸다」** 이기 때문이다:
+
+> 🔴 셀러가 «이번에 고친» 항목의 이름. 서버가 이 목록으로 나머지 칸을 지금
+> 등록된 값으로 되돌린다. **값은 보내지 않는다.**
+> — [CommerceWorkspace.tsx:3039](apps/admin/src/app/pipeline/CommerceWorkspace.tsx:3039)
+
+쿠팡도 같은 계약을 쓰면:
+
+```
+클라이언트   editedFields: ["name"]  +  expectedExternalProductId
+      ↓
+서버(register route)  resolveLifecycle → SAVED → UPDATE 분기
+      ↓
+      buildCoupangPayload(product, listing)      ← 값의 «출처» (Master)
+      ↓  editedFields ∩ {name} 만 꺼낸다
+      CoupangProductEdits { name }
+      ↓
+      updateCoupangProduct(creds, sellerProductId, edits)
+        GET baseline → 상태 게이트 → applyCoupangEdits → 손실검사 → PUT → 번호대조
+```
+
+🔴 **Master 는 「바뀐 한 칸의 값」만 공급하고, 전문은 baseline 이 만든다.**
+`buildCoupangPayload` 의 결과가 그대로 PUT 되는 길은 어디에도 생기지 않는다.
+
+### 바꿔야 하는 곳 (최소)
+
+```
+① CommerceWorkspace :2554  basePayload 타입이 네이버다        → 채널별로
+② CommerceWorkspace :2570  GET URL 하드코딩                   → 채널별 라우트
+③ CommerceWorkspace :2608  outgoing 출처가 하나다             → 채널별 출처
+④ CommerceWorkspace :2618/:2621  어댑터 직접 호출             → editAdapterFor()
+⑤ CommerceWorkspace :3038/:3045  두 게이트가 "smartstore" 고정 → 어댑터 有無로
+⑥ CommerceWorkspace :3095  전송 후 기준값 폐기도 "smartstore" 고정 → 〃
+⑦ api/coupang/registered-product (신규 GET 라우트)
+⑧ edit-adapters/coupang.ts (신규) + registry 한 줄
+⑨ channel-field-capability 에 쿠팡 필드 예외(9-A)
+⑩ channel-lifecycle 의 coupang.update → SUPPORTED_WHEN_SAVED
+```
+
+🔴 ⑦~⑩ 은 **한 커밋에서 «같이»** 올린다. 먼저 올리면 죽은 코드이고, 먼저
+capability 만 올리면 화면이 거짓말한다 — 가드 넷이 정확히 그것을 세고 있다.
+
+🔴 Core 세 파일(`commerce-edit-adapter` · `channel-edit-model` ·
+`channel-field-capability` 의 구조)은 **재설계하지 않는다.** ⑨만 예외를 더한다.
+
 ## 10. 이번 조사에서 «하지 않은» 것
 
 * 코드 변경 0줄. 테스트 실행 없음(변경이 없으므로).
