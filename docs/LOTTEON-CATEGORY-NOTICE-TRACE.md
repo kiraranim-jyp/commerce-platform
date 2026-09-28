@@ -54,18 +54,138 @@ else blocked(… "항목코드(pdArtlCd)는 품목마다 코드체계가 달라 
 
 ---
 
-## 2. 코드 경로 추적
+## 2. 코드 경로 추적 — 칸마다 단절점이 «다르다»
 
-*(조사 진행 중 — 두 갈래 조사 결과를 여기에 채운다)*
+CPO 질문: 카테고리→고시를 잇는 코드가 **(a) 있는데 안 도는가, (b) 애초에 없는가.**
+답은 하나가 아니다. **칸마다 다르다.** 이것을 뭉뚱그리면 잘못된 처방이 나온다.
+
+### ① 과세 유형 — 🟢 **있고, 돈다**
+
+```
+205 응답 tdf_cd
+  → lotteon-category.ts:202  readString(source, "tdf_cd","tdfCd","tdf_Cd","tdfDvsCd","tdf_dvs_cd")
+  → lotteon-channel-form.ts:266  codes: { …, taxTypeCode: category.taxTypeCode ?? "" }
+  → LotteOnRegistrationPanel.tsx:2072  displayValue={lotteOnTaxTypeName(form.codes.taxTypeCode)}
+  → build-context.ts:202  taxTypeCode: trimOrNull(form.taxTypeCode) ?? ""
+```
+
+Production 화면이 이 경로를 증명한다 — 카테고리 패널에 `과세구분 tdfCd 01`,
+⑪ 에 「과세」. **CATEGORY_DERIVED, 완결.**
+
+### ② 고시 품목(`pdItmsCd`) — 🟡 **(a) 코드는 있는데 «데이터가 안 온다»**
+
+```
+lotteon-category.ts:195  readArray(source, "pd_Itms_list", "pd_itms_list")
+  → 각 entry 에서 pd_Itms_cd 수집 → noticeItemCodes: string[]
+lotteon-channel-form.ts:265  itemCode: category.noticeItemCodes[0] ?? keptNoticeItemCode(form)
+```
+
+**잇는 코드는 있다.** 그런데 P1-D 실측이 이미 확정했다 —
+
+```
+205 pd_itms_list     항상 empty        (REAL-RESPONSE / CONFIRMED)
+```
+
+그래서 `noticeItemCodes` 는 늘 `[]` 이고 `itemCode` 는 늘 `""` 다.
+**우리 결함이 아니라 롯데ON 이 그 값을 주지 않는 것이다.**
+
+🔴 다만 셀러가 막히지는 않는다. `useLotteOnCommonCodes("PD_ITMS_CD")`(737)가
+**롯데ON 이 준 40건**을 이름으로 내려주고, 셀러가 `CommonCodePicker` 로 고른다
+(입력칸은 `readOnly` — 코드를 적게 하지 않는다). **SELLER_CONFIRMATION, 2클릭.**
+
+### ③ 원산지(`oplcCd`) — 🟡 **(b) 자동 변환은 «없다». 의도적으로 없다.**
+
+```
+Common  countryOfOrigin = "Spain"      (텍스트)
+build-context.ts:198  originCode: trimOrNull(form.originCode)   ← 폼 값 그대로
+```
+
+Common 텍스트를 롯데ON 코드로 바꾸는 코드는 **어디에도 없다.** 검증기가 이유를
+적어 두었다 — 「원산지 텍스트만으로는 코드를 정할 수 없습니다」.
+
+`useLotteOnCommonCodes("OPLC_CD")`(750)가 실제 코드표(239건, ISO 3166-1 alpha-2)를
+이름으로 내려주고 셀러가 고른다. **SELLER_CONFIRMATION, 2클릭.**
+자동화 설계(ISO 축)는 CPO 보류 중이다 — 이 조사가 푸는 대상이 아니다.
+
+### ④ 고시 항목(`pdItmsArtlLst`) — 🔴 **(b) 없다. 그리고 «만들 수도 없다».**
+
+```
+lotteon-channel-form.ts:228-268   articlesText 를 «한 번도 건드리지 않는다»
+LotteOnRegistrationPanel.tsx:1814  readOnly          ← 셀러도 채울 수 없다
+자동 채움 경로                      코드베이스 전체에 0개
+```
+
+항목코드(`pdArtlCd`)의 **어휘 자체가 우리 손에 없다.** P1-D 실측:
+
+```
+89  PD_ARTL_CD        ok:true · rowCount 0     → 그룹이 비어 있다
+89  PD_ITMS_CD 참조칸  ref1 "SELECT" · ref2~4 빈값
+205 pd_itms_list      항상 empty
+```
+
+**판정: 고시 항목코드 조회 API = 없음(CONFIRMED).**
 
 ---
 
-## 3. 분류 — `CATEGORY_DERIVED / COMMON_PRODUCT / SELLER_CONFIRMATION / LOTTEON_ONLY / UNKNOWN`
+## 2-B. 🔴 그래서 지금 진짜 막고 있는 것은 «한 칸» 이다
 
-*(조사 진행 중)*
+| 칸 | 셀러가 지금 끝낼 수 있는가 |
+|---|---|
+| 과세 유형 | ✅ 이미 자동으로 채워져 있다 |
+| 고시 품목 | ✅ 목록에서 고르면 된다(40건, 이름) |
+| 원산지 | ✅ 목록에서 고르면 된다(239건, 이름) |
+| **고시 항목** | 🔴 **어떤 방법으로도 끝낼 수 없다** |
+
+`pdItmsArtlLst` 는 API 87 **필수**다(`commerce-6-phase-a-field-census.md:297`).
+그리고 3차 LIVE 등록이 정확히 여기서 거절됐다 —
+`resultCode 9999 「상품품목항목코드 필수값이 누락입니다」`.
+
+**즉 롯데ON 등록은 현재 우리 화면만으로는 완료할 수 없다.** 이것이 단절점이다.
+
+### 교착의 모양
+
+```
+고시 항목코드를 알아야  →  상품을 등록할 수 있고
+상품이 등록돼 있어야    →  94 로 고시 항목코드를 알 수 있다
+                          (registeredProductCount = 0)
+```
+
+유일하게 남은 읽기 경로 93/94 는 **기등록 상품이 1건이라도 있어야** 열린다.
+`payload-preview` 가 이미 매 호출마다 세 곳을 탐침하고 그 결과를
+`payload.articleCodeProbe` 로 실어 보낸다 — 즉 **새 코드 없이도 답이 나올 수 있는
+자리가 이미 있다.** 다만 등록 0건이면 그 자리도 비어 있다.
 
 ---
 
-## 4. 결론과 다음 판단 요청
+## 3. 분류표
 
-*(조사 진행 중)*
+| 필드 | 분류 | 근거 | 상태 |
+|---|---|---|---|
+| 과세 유형 `tdfDvsCd` | `CATEGORY_DERIVED` | 205 `tdf_cd` → 폼 → payload (실측 연결) | 🟢 완결 |
+| 고시 품목 `pdItmsCd` | `SELLER_CONFIRMATION` | 89 PD_ITMS_CD 40건 실응답 | 🟢 2클릭 |
+| 원산지 `oplcCd` | `SELLER_CONFIRMATION` | 89 OPLC_CD 239건 실응답 | 🟢 2클릭 |
+| 고시 «내용» (소재·색상·치수·원산지) | `COMMON_PRODUCT` | `collectLotteOnNoticeSourceValues` — 이미 상품정보에 있고 화면에 표시됨 | 🟢 값은 있다 |
+| **고시 «항목코드» `pdArtlCd`** | 🔴 `UNKNOWN` | 89 rowCount 0 · 205 empty · 94 등록 0건 | 🔴 **막힘** |
+| 안전인증 `sftyAthnLst` | `SELLER_CONFIRMATION` | 실제 KC 번호 — 만들 수 없음 | (별건) |
+
+🔴 주목할 대칭: **고시 「내용」은 이미 다 있다**(17% Recycled Cotton · Lavender ·
+2-3 Years… · Spain). 없는 것은 그 내용을 **어느 항목코드에 넣을지**뿐이다.
+스마트스토어는 이 값들로 고시를 자동 생성하고, 쿠팡은 이름(`noticeCategoryDetailName`)과
+`MANDATORY` 표시로 내려주어 `selectCoupangNoticeCategory()` 가 화면과 payload
+**양쪽에서 같은 함수**로 고른다. 롯데ON 만 코드로 주고, 그 코드표를 주지 않는다.
+
+---
+
+## 4. 결론
+
+- **(a)/(b) 답**: 과세 = 있고 돈다 · 고시 품목 = **있는데 데이터가 안 온다** ·
+  원산지 = 없다(의도) · **고시 항목 = 없고, 만들 수도 없다**.
+- 카테고리→고시 배선을 «고치는» 작업으로는 이 화면이 풀리지 않는다.
+  배선은 이미 있거나, 없는 것이 옳다.
+- 남은 단 하나는 `pdArtlCd` 어휘의 **부재**이고, 그것은 코드로 해결할 수 없다.
+
+🔴 **이 조사는 여기서 멈춘다.** 다음은 CTO 가 정할 문제가 아니다 —
+`pdArtlCd` 를 얻는 길은 전부 **Production 실행 또는 판매자센터 실물 확인**을
+동반하며, 그것은 CPO/CEO 의 결정 영역이다. 임의 매핑·추정·셀러 코드 입력은
+이미 세 번 금지됐고 한 번 LIVE 에서 거절됐다.
+
