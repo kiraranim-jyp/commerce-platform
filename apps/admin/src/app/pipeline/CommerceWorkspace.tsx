@@ -2181,7 +2181,16 @@ export function CommerceWorkspace({
     if (!compliancePreview) return [];
     return compliancePreview.noticeResults
       .filter((r) => isComplianceCritical(r.fieldName))
-      .map((r) => ({ fieldName: r.fieldName, value: r.value, autoFilled: r.source === "DEFAULT_VALUE" }));
+      /* 🔴 KC-COUPANG-04 — `autoFilled` 의 뜻은 「사람이 이 상품에 대해 직접 적지
+         않았다」이지 「따져가가 지어냈다」가 아니다. 예전엔 `DEFAULT_VALUE` 하나가
+         그 둘을 다 덮고 있었고, 이제 갈렸다. **여기서 한쪽을 빼면 지금 확인을
+         요구하던 건이 조용히 사라진다** — 그것을 막는 것이 이번 작업의 규칙이다. */
+      .map((r) => ({
+        fieldName: r.fieldName,
+        value: r.value,
+        autoFilled: r.source === "DEFAULT_VALUE" || r.source === "SETTINGS_DEFAULT",
+        source: r.source,
+      }));
   }, [compliancePreview]);
 
   const resolvedCategoryFields = useMemo(() => {

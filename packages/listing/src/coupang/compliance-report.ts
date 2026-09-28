@@ -43,11 +43,16 @@ export interface ComplianceReport {
    * 한다 — userInputNeeded(플레이스홀더 목록)의 반대쪽 목록. */
   resolvedFields: { fieldName: string; value: string; source: ComplianceFieldResult["source"] }[];
   /** A-12.3-P0-3(CPO 2차 지시 — "준비도 카드에 자동 적용 상태 표시") —
-   * resolvedFields의 부분집합(source === DEFAULT_VALUE)만 따로 뽑은 목록.
-   * "CartPilot이 실제로 확인한 값"과 "우리가 관용적 기본값을 대신 넣어준 값"은
-   * 사용자에게 다른 신뢰 수준으로 보여야 한다 — 화면(RegistrationReadinessCard)이
-   * ⚠ 배지로 구분해서 그린다. */
-  defaultsApplied: { fieldName: string; value: string }[];
+   * resolvedFields의 부분집합(사람이 상품별로 적은 값이 «아닌» 것)만 따로 뽑은
+   * 목록. "CartPilot이 실제로 확인한 값"과 "대신 채워진 값"은 사용자에게 다른
+   * 신뢰 수준으로 보여야 한다 — 화면(RegistrationReadinessCard)이 ⚠ 배지로
+   * 구분해서 그린다.
+   *
+   * 🔴 KC-COUPANG-04 — `source` 를 함께 싣는다. **목록에 들어가는 항목은 한 건도
+   * 바뀌지 않는다**(예전 `DEFAULT_VALUE` 하나였던 것이 이제 둘로 갈렸을 뿐).
+   * 다만 화면이 「따져가가 넣었다」와 「판매자 설정에서 왔다」를 다르게 적을 수
+   * 있어야 한다 — 그러지 못해서 판매자가 자기 문장을 남의 것으로 읽고 있었다. */
+  defaultsApplied: { fieldName: string; value: string; source: "DEFAULT_VALUE" | "SETTINGS_DEFAULT" }[];
   verdict: "PASS" | "WARNING" | "FAIL";
   reasons: string[];
   /** "High"(score>=90, 컴플라이언스 필수 항목 전부 확보) / "Medium"(실제 값은
@@ -90,6 +95,10 @@ const FIELD_CREDIT: Record<ComplianceFieldResult["source"], number> = {
   // 참조)이 자동 적용된 필드. PLACEHOLDER처럼 "등록은 되지만 비어있다"가
   // 아니라 실제로 값이 채워져 등록에 그대로 나가므로 만점을 준다.
   DEFAULT_VALUE: 1,
+  /* 🔴 KC-COUPANG-04 — `DEFAULT_VALUE` 와 «같은 만점». 판매자가 쓴 값이든
+     우리가 쓴 값이든 «실제로 채워져 등록에 나간다» 는 사실은 같다. 점수를
+     건드리면 이번 작업의 규칙(행동 보존)을 깬다. */
+  SETTINGS_DEFAULT: 1,
   PLACEHOLDER: 0.5,
 };
 
@@ -179,14 +188,17 @@ export function buildComplianceReport(
   // (예: "인증/허가 사항"이 여러 고시 카테고리에 걸쳐 중복될 수 있음).
   const seenDefault = new Set<string>();
   const defaultsApplied = all
-    .filter((r) => r.source === "DEFAULT_VALUE")
+    /* 🔴 KC-COUPANG-04 — 둘 다 담는다. 예전에 `DEFAULT_VALUE` 하나로 잡히던
+       것이 갈린 것이라, 여기서 한쪽을 빼면 준비도 카드에서 항목이 «사라진다» —
+       그것이 바로 이번에 막아야 할 행동 변화다. */
+    .filter((r) => r.source === "DEFAULT_VALUE" || r.source === "SETTINGS_DEFAULT")
     .filter((r) => {
       const key = `${r.fieldName}::${r.value}`;
       if (seenDefault.has(key)) return false;
       seenDefault.add(key);
       return true;
     })
-    .map((r) => ({ fieldName: r.fieldName, value: r.value }));
+    .map((r) => ({ fieldName: r.fieldName, value: r.value, source: r.source as "DEFAULT_VALUE" | "SETTINGS_DEFAULT" }));
 
   const placeholders = all.filter((r) => r.source === "PLACEHOLDER");
   // 같은 필드명이 구매옵션(ATTRIBUTE)과 고시정보(NOTICE) 양쪽에 다 필수라서 자리

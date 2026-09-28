@@ -1050,6 +1050,18 @@ export type ComplianceFieldSource =
   | "PRODUCT_FIELD"
   | "KNOWN_VALUE"
   | "DETERMINISTIC"
+  /**
+   * 🔴 KC-COUPANG-04 — **판매자가 Settings 에 직접 써 넣은 문구.**
+   *
+   * 전에는 이것도 `DEFAULT_VALUE` 였다. 그래서 한 라벨이 두 가지 «다른 사실» 을
+   * 기록했고, 그 라벨이 화면 문구로 그대로 나가 **판매자가 자기가 쓴 문장을 보며
+   * 「따져가가 자동으로 넣은 기본값입니다」를 읽고 있었다**(실측: 최근 13건 전부).
+   *
+   * 🔴 새 개념이 아니다 — `readiness.ts` 의 `sourceStatus` 는 이미
+   * `SETTINGS_DEFAULT` 와 `DEFAULT_VALUE` 를 가르고 있었다. 한 층에서 무너져
+   * 있던 구분을 이 층에도 되돌리는 것이다.
+   */
+  | "SETTINGS_DEFAULT"
   | "DEFAULT_VALUE"
   | "PLACEHOLDER";
 
@@ -1088,6 +1100,13 @@ const FIELD_SOURCE_CONFIDENCE: Record<ComplianceFieldSource, number> = {
   // 다르다 — 업계 관용 문구를 썼다는 확신은 있지만 상품마다 다를 수 있는 값이라
   // PLACEHOLDER보다는 높고 KNOWN_VALUE보다는 낮게 둔다.
   DEFAULT_VALUE: 0.7,
+  /**
+   * 🔴 `DEFAULT_VALUE` 와 «같은 0.7» 이다. 판매자가 쓴 문구이니 더 높여야 한다는
+   * 주장이 가능하지만, 이 숫자는 Compliance Score 와 화면의 「높음/보통/낮음」에
+   * 그대로 들어간다 — 이번 작업의 규칙은 **「라벨은 바뀌지만 행동은 바뀌지
+   * 않는다」** 다. 신뢰도 재조정은 근거를 갖춘 뒤 별도로 판단할 일이다.
+   */
+  SETTINGS_DEFAULT: 0.7,
   PLACEHOLDER: 0.1,
 };
 
@@ -1346,10 +1365,17 @@ export function buildCoupangCompliance(
           // 하나만으로 KC 블로커가 즉시 풀린다 — Settings는 나중에 이 기본값을
           // "덮어쓰는" 선택적 상위 레이어일 뿐, 전제조건이 아니다.
           if (isComplianceCritical(detail.noticeCategoryDetailName)) {
+            /* 🔴 KC-COUPANG-04 — **값은 한 글자도 바뀌지 않는다.** `||` 의 판정도
+               그대로다(공백 문자열이 truthy 인 것까지 포함 — 그 경로를 쿠팡이
+               어떻게 다루는지 재 본 적이 없어 «판정 없이 고치지 않는다»).
+               바뀌는 것은 「누가 이 문장을 넣었는가」를 기록하는 이름뿐이다. */
+            const fromSellerSettings = context.kcExemptionText;
             return {
               fieldName: detail.noticeCategoryDetailName,
-              value: context.kcExemptionText || DEFAULT_KC_EXEMPTION_TEXT,
-              source: "DEFAULT_VALUE" as const,
+              value: fromSellerSettings || DEFAULT_KC_EXEMPTION_TEXT,
+              source: (fromSellerSettings
+                ? "SETTINGS_DEFAULT"
+                : "DEFAULT_VALUE") as ComplianceFieldSource,
               critical: false,
               kind: "NOTICE" as const,
             };

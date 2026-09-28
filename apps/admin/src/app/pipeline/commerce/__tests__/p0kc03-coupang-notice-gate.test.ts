@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_KC_EXEMPTION_TEXT, isComplianceCritical } from "@commerce/listing";
+import { buildCoupangCompliance, DEFAULT_KC_EXEMPTION_TEXT, isComplianceCritical } from "@commerce/listing";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -94,8 +94,38 @@ describe("② Test 3 — payload 값이 바뀌지 않는다", () => {
     expect(BUILDER).toContain('export const DEFAULT_KC_EXEMPTION_TEXT = "KC마크 없이 구매대행 가능한 품목";');
   });
 
-  it("🔴 빌더의 값 결정 로직을 건드리지 않았다", () => {
-    expect(BUILDER).toContain("value: context.kcExemptionText || DEFAULT_KC_EXEMPTION_TEXT,");
+  /**
+   * 🔴 KC-COUPANG-04 에서 이 가드가 나를 «잡았다». 지우지 않고 새 모양으로 옮긴다.
+   *
+   * 원래 문장은 빌더의 한 줄을 통째로 고정하고 있었다. 그런데 04 는 그 줄에서
+   * **출처 이름만** 갈랐다(`DEFAULT_VALUE` → Settings 면 `SETTINGS_DEFAULT`).
+   * 지켜야 하는 것은 그 줄의 «글자» 가 아니라 **「값을 고르는 규칙이 그대로인가」**
+   * 이므로, 문자열 대신 **실제 출력** 으로 잰다 — 그게 원래 이 가드의 뜻이었다.
+   */
+  it("🔴 빌더의 값 결정 «규칙» 이 그대로다 — 문자열이 아니라 출력으로 잰다", () => {
+    const meta = {
+      attributes: [],
+      noticeCategories: [
+        {
+          noticeCategoryName: "기타 재화",
+          noticeCategoryDetailNames: [{ noticeCategoryDetailName: "인증/허가 사항", required: "MANDATORY" as const }],
+        },
+      ],
+    };
+    const ctx = { productName: "Baby Cap", contactNumber: "010-0000-0000" };
+    const valueOf = (kcExemptionText?: string) =>
+      buildCoupangCompliance(meta, { ...ctx, kcExemptionText }, { optionGroups: [] }).notices[0]?.content;
+
+    /* Settings 문구가 있으면 그것, 없으면 코드 기본값 — 04 전과 «같다». */
+    expect(valueOf("KC인증 어린이제품 공급자적합성확인")).toBe("KC인증 어린이제품 공급자적합성확인");
+    expect(valueOf("")).toBe(DEFAULT_KC_EXEMPTION_TEXT);
+    expect(valueOf(undefined)).toBe(DEFAULT_KC_EXEMPTION_TEXT);
+  });
+
+  it("🔴 확인 여부가 값에 영향을 주지 않는다 — 확인 전후 payload 가 같다", () => {
+    /* 원래 가드의 «진짜» 관심사. 확인은 「봤다」이지 「값을 바꾼다」가 아니다. */
+    expect(BUILDER).not.toContain("coupangNoticeConfirmed");
+    expect(BUILDER).not.toContain("confirmed");
   });
 
   it("🔴 화면이 payload 를 만들지 않는다 — 표시 전용이다", () => {

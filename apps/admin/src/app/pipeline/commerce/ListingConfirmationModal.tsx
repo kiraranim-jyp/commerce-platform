@@ -85,7 +85,7 @@ export function ListingConfirmationModal({
    * 것이면 autoFilled=true. 🔴 표시 전용이다 — payload 는 이 값을 여기서
    * 읽지 않고, 빌더가 등록 시점에 같은 규칙으로 다시 만든다.
    */
-  coupangKcNotices?: { fieldName: string; value: string; autoFilled: boolean }[];
+  coupangKcNotices?: { fieldName: string; value: string; autoFilled: boolean; source?: string }[];
   /**
    * P0-KC-08 — 등록을 막고 있는 필수 항목 이름들. 비어 있으면 등록 가능.
    * 🔴 이 모달은 KC 확인을 위해 «준비가 덜 된 상태에서도» 열릴 수 있다.
@@ -337,8 +337,12 @@ export function ListingConfirmationModal({
         {/* ══════════════════════════════════════════════════════════════════
             P0-KC-03(CPO 확정, 2026-09-24) — **따져가 대신 적은 문장을 보여준다.**
 
-            쿠팡 KC 고시 칸은 사람이 아무것도 안 하면 따져가 문장을 넣는다.
-            실제 등록 11건이 전부 그 경로였고, 판매자가 그 문장을 본 적은 없다.
+            쿠팡 KC 고시 칸은 사람이 아무것도 안 하면 «누군가의» 문장이 들어간다.
+
+            🔴 KC-COUPANG-04 정정 — 「전부 따져가 문장」이라던 이 주석은 실측으로
+            틀렸음이 드러났다. 실제로는 2026-08-04 이후 나간 것이 전부 «판매자가
+            Settings 에 쓴 문구» 였고(13건), 코드 기본값은 5건뿐이었다. 그래서
+            여기서 출처를 칸마다 나눠 적는다 — 확인을 요구하는 «조건» 은 그대로다.
 
             🔴 확인의 뜻은 「이 상품이 KC 면제 대상임을 판매자가 증명했다」가
             «아니다». 「지금 등록될 문구가 무엇인지 확인했다」 하나뿐이다.
@@ -351,12 +355,20 @@ export function ListingConfirmationModal({
                 <div key={notice.fieldName} className="text-xs">
                   <dt className="text-text-tertiary">{notice.fieldName}</dt>
                   <dd className="break-all font-medium text-text-primary">「{notice.value}」</dd>
+                  {/* 🔴 KC-COUPANG-04 — 「누가 넣었는가」를 칸마다 적는다. 한 문장으로
+                      뭉쳐 두었더니, 판매자가 Settings 에 직접 쓴 문구까지 「따져가가
+                      자동으로 넣었다」고 말하고 있었다(실측: 최근 13건 전부). */}
+                  <dd className="mt-0.5 text-text-tertiary" data-notice-source={notice.source}>
+                    {notice.source === "SETTINGS_DEFAULT"
+                      ? "→ 판매자 설정에 입력된 문구입니다."
+                      : "→ 따져가가 기본으로 입력한 문구입니다."}
+                  </dd>
                 </div>
               ))}
             </dl>
             <p className="mt-2 text-xs text-text-secondary">
-              위 문구는 따져가 «자동으로» 입력한 기본값입니다. TTAEJYO는 이 상품의 KC 적용 여부나 면제
-              여부를 법적으로 판정하지 않습니다 — 실제 등록될 값을 확인해주세요.
+              등록 전에 내용을 확인해 주세요.
+              {" "}TTAEJYO는 이 상품의 KC 적용 여부나 면제 여부를 법적으로 판정하지 않습니다.
             </p>
             <label className="mt-2 flex cursor-pointer items-start gap-2 text-xs text-text-primary">
               <input

@@ -168,9 +168,16 @@ export function computeChecklistReadiness(
       passed: true,
       required: false,
       sectionId: /인증|KC/i.test(f.fieldName) ? "section-kc" : "section-notice",
-      hint: `기본값 자동 적용: ${f.value}`,
+      /* 🔴 KC-COUPANG-04 — 「누가 넣었는가」가 틀리지 않게 적는다. 판매자가
+         Settings 에 쓴 문구를 「기본값 자동 적용」이라고 적고 있었다.
+         🔴 항목은 그대로 선다 — 문장과 배지만 출처를 따른다. `classifyMissing`
+         은 두 값을 같게 다루므로(둘 다 CONFIRM) 판정도 바뀌지 않는다. */
+      hint:
+        f.source === "SETTINGS_DEFAULT"
+          ? `판매자 설정값 적용: ${f.value}`
+          : `기본값 자동 적용: ${f.value}`,
       group: (/인증|KC/i.test(f.fieldName) ? "LEGAL" : "PRODUCT_INFO") as ReadinessGroup,
-      sourceStatus: "DEFAULT_VALUE" as const,
+      sourceStatus: f.source === "SETTINGS_DEFAULT" ? ("SETTINGS_DEFAULT" as const) : ("DEFAULT_VALUE" as const),
     })),
     ...(settingsMissing ?? []).map((label) => ({
       label,

@@ -85,7 +85,7 @@ describe("🔴 ② B팔 — 「빈 값」은 코드 경로로는 만들어지지
       { optionGroups: [] },
     );
     expect(built.notices).toHaveLength(1);
-    expect(built.notices[0].content.length).toBeGreaterThan(0);
+    expect((built.notices[0]?.content ?? "").length).toBeGreaterThan(0);
   });
 });
 

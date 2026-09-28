@@ -157,7 +157,10 @@ const SOURCE_LABELS: Record<ComplianceFieldSource, string> = {
   PRODUCT_FIELD: "상품 정보에서 추출",
   KNOWN_VALUE: "TTAEJYO가 확인한 값",
   DETERMINISTIC: "카테고리 규칙 기본값",
-  DEFAULT_VALUE: "업계 관용 기본값 자동 적용",
+  /* 🔴 KC-COUPANG-04 — 「업계 관용 기본값」이라는 말은 «우리가 넣은 값» 에만
+     맞다. 판매자가 Settings 에 쓴 문구까지 그렇게 적고 있었다. */
+  SETTINGS_DEFAULT: "판매자 설정에 입력한 문구",
+  DEFAULT_VALUE: "따져가가 넣은 기본 문구",
   PLACEHOLDER: "",
 };
 
