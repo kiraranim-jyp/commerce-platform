@@ -189,6 +189,23 @@ docs/COMMON-COMMERCE-AUTO-MAPPING-P0.md:71  「204 없이는 brdNo ↔ 브랜드
 
 ---
 
+## 5-B. 배포 실측 — 가드가 «실제로» 막는다
+
+```
+커밋   8c263e8
+배포   https://ttaejyo-d8cxp6vb2-truck-grease-reservation.vercel.app
+Alias  https://ttaejyo.vercel.app
+
+$ curl -s -o /dev/null -w "%{http_code}" https://ttaejyo.vercel.app/api/lotteon/code-groups
+401
+```
+
+🔴 이 한 줄이 두 가지를 동시에 증명한다 —
+**① 인증 가드는 Production 에서 실제로 작동한다**(소스 PASS 가 아니라 실측).
+**② 그래서 제가 이 라우트를 부를 수 없다.** §5 의 결정이 필요한 이유다.
+
+---
+
 ## 6. 측정 품질
 
 204 · 87 · 88 · 89 문서 판독은 모두 **`r.jina.ai` 렌더링을 거친 요약**입니다.
