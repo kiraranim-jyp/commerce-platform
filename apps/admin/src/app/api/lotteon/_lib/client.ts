@@ -224,6 +224,21 @@ export const LOTTEON_READ_PATHS = {
   deliveryPlaceList: "/v1/openapi/contract/v1/dvp/getDvpListSr",
   deliveryCostPolicyList: "/v1/openapi/contract/v1/dvl/getDvCstListSr",
   detailCodeList: "/v1/openapi/bocommon/v1/code/getDetailCodeList",
+  /**
+   * ══ LOTTEON-PD-ARTL-02(CPO 승인, 2026-09-28) — 88 `getGroupCodeList` ══
+   *
+   * 🔴 89 와 짝이다. 89 는 「이 그룹의 코드들」을 주고, 88 은 「그룹이 무엇무엇
+   * 있는가」를 준다. 우리는 89 만 갖고 있었고, 그래서 그룹 «이름» 을 알아야
+   * 했다 — 모르면 지어냈다.
+   *
+   * 실제로 지어냈다. `probeCodeGroup("PD_ARTL_CD")` 의 그 이름에는 근거가 없고,
+   * 돌아온 `rowCount 0` 을 우리는 「고시 항목코드 어휘가 없다」로 읽었다.
+   * 그러나 그것은 「그 이름의 그룹이 없다」와 «구분되지 않는다».
+   *
+   * 88 은 요청 파라미터가 없다 — 추측할 것이 없다. 전체 목록을 받아서 본다.
+   * 🔴 조회 전용이고, 조사가 끝나면 존치 여부는 CPO 가 정한다.
+   */
+  groupCodeList: "/v1/openapi/bocommon/v1/code/getGroupCodeList",
 } as const;
 
 /** 이번 스프린트에서 허용된 **유일한** 쓰기(조사 §6-3 — 상품 축은 등록 후
