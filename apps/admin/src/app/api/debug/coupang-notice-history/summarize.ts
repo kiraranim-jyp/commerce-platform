@@ -35,6 +35,22 @@ import { DEFAULT_KC_EXEMPTION_TEXT } from "@commerce/listing";
  */
 export const NOTICE_DEFAULT_CONTENT_MIRROR = "전체 상품 상세페이지 참조";
 
+/**
+ * 🔴 **옛 값**. 같은 상수가 예전에는 이 문자열이었다 —
+ *
+ *     2026-07-30  const NOTICE_DEFAULT_CONTENT = "상세페이지 참조";
+ *     지금        const NOTICE_DEFAULT_CONTENT = "전체 상품 상세페이지 참조";
+ *
+ * 이것을 모르고 «지금 상수» 로만 과거를 분류했다가 「옛 기본값은 쓰인 적이
+ * 없다」는 **반대 결론**을 낼 뻔했다(KC-COUPANG-02B §3-②). 실제로는 그 값이
+ * 12건 나갔고 11건이 성공했다.
+ *
+ * 🔴 교훈은 이 파일보다 크다 — **현재 상수를 기준으로 과거 데이터를 분류하면
+ * 조용히 틀린다.** 그래서 두 값을 «합치지 않고» 따로 센다. 합치면 시대 구분이
+ * 사라지고, 그러면 「언제부터 무엇이 나갔는가」를 다시 물을 수 없다.
+ */
+export const NOTICE_DEFAULT_CONTENT_LEGACY = "상세페이지 참조";
+
 /** 고시 칸 이름이 KC/인증 칸인가. 🔴 빌더의 `isComplianceCritical` 과 같은 규칙이다. */
 const isKcFieldName = (name: string) => name.includes("인증") || name.includes("허가");
 
@@ -45,13 +61,15 @@ const isContactFieldName = (name: string) => /전화|연락처|휴대폰/.test(n
  * 고시 칸 내용의 분류. 🔴 값 대신 이것을 내보낸다.
  *
  *  KC_EXEMPTION_DEFAULT   "KC마크 없이 구매대행 가능한 품목"  (4dbd5eb 이후)
- *  DETAIL_PAGE_REFERENCE  "전체 상품 상세페이지 참조"          (4dbd5eb 이전 · 비KC 기본값)
+ *  DETAIL_PAGE_REFERENCE  "전체 상품 상세페이지 참조"          (지금의 비KC 기본값)
+ *  DETAIL_PAGE_REFERENCE_LEGACY  "상세페이지 참조"             (🔴 2026-07-30 당시의 같은 상수)
  *  BLANK                  공백이거나 비어 있다                 (🔴 지금껏 생성된 적 없다고 본 경로)
  *  OTHER                  위 어느 것도 아니다                  (사람이 넣었거나 상품에서 왔다)
  */
 export type NoticeContentClass =
   | "KC_EXEMPTION_DEFAULT"
   | "DETAIL_PAGE_REFERENCE"
+  | "DETAIL_PAGE_REFERENCE_LEGACY"
   | "BLANK"
   | "OTHER";
 
@@ -59,6 +77,7 @@ export function classifyNoticeContent(content: unknown): NoticeContentClass {
   if (typeof content !== "string" || content.trim().length === 0) return "BLANK";
   if (content === DEFAULT_KC_EXEMPTION_TEXT) return "KC_EXEMPTION_DEFAULT";
   if (content === NOTICE_DEFAULT_CONTENT_MIRROR) return "DETAIL_PAGE_REFERENCE";
+  if (content === NOTICE_DEFAULT_CONTENT_LEGACY) return "DETAIL_PAGE_REFERENCE_LEGACY";
   return "OTHER";
 }
 
@@ -215,6 +234,7 @@ export function summarize(views: AttemptView[]): NoticeHistorySummary {
   const byClass: NoticeHistorySummary["byClass"] = {
     KC_EXEMPTION_DEFAULT: emptyBucket(),
     DETAIL_PAGE_REFERENCE: emptyBucket(),
+    DETAIL_PAGE_REFERENCE_LEGACY: emptyBucket(),
     BLANK: emptyBucket(),
     OTHER: emptyBucket(),
   };

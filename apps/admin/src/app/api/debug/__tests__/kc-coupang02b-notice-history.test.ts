@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_KC_EXEMPTION_TEXT } from "@commerce/listing";
 import {
   classifyNoticeContent,
+  NOTICE_DEFAULT_CONTENT_LEGACY,
   NOTICE_DEFAULT_CONTENT_MIRROR,
   summarize,
   toAttemptView,
@@ -60,10 +61,24 @@ describe("🔴 ① 빌더 상수와 어긋나면 분류가 통째로 틀린다",
     expect(codeOf(SUMMARIZE)).toContain('import { DEFAULT_KC_EXEMPTION_TEXT } from "@commerce/listing"');
   });
 
-  it("네 분류가 실제 값에 대해 맞다", () => {
+  it("분류가 실제 값에 대해 맞다", () => {
     expect(classifyNoticeContent(DEFAULT_KC_EXEMPTION_TEXT)).toBe("KC_EXEMPTION_DEFAULT");
     expect(classifyNoticeContent(NOTICE_DEFAULT_CONTENT_MIRROR)).toBe("DETAIL_PAGE_REFERENCE");
+    expect(classifyNoticeContent(NOTICE_DEFAULT_CONTENT_LEGACY)).toBe("DETAIL_PAGE_REFERENCE_LEGACY");
     expect(classifyNoticeContent("KC 안전확인 제12-345호")).toBe("OTHER");
+  });
+
+  it("🔴 옛 값이 git 이력의 그 문자열과 같다 — 지금 상수로 과거를 재면 틀린다", () => {
+    /* 실측 근거: 2026-07-30 시점 build-payload.ts 에서 직접 읽었다.
+       이 값을 몰라서 「옛 기본값은 쓰인 적 없다」는 반대 결론을 낼 뻔했다. */
+    expect(NOTICE_DEFAULT_CONTENT_LEGACY).toBe("상세페이지 참조");
+    expect(NOTICE_DEFAULT_CONTENT_LEGACY).not.toBe(NOTICE_DEFAULT_CONTENT_MIRROR);
+  });
+
+  it("🔴 두 세대를 «합치지 않는다» — 합치면 시대 구분이 사라진다", () => {
+    const legacy = toAttemptView(row({ notices: [notice("인증/허가 사항", NOTICE_DEFAULT_CONTENT_LEGACY)] }));
+    const current = toAttemptView(row({ notices: [notice("인증/허가 사항", NOTICE_DEFAULT_CONTENT_MIRROR)] }));
+    expect(legacy.kcFields[0].contentClass).not.toBe(current.kcFields[0].contentClass);
   });
 
   it.each([["빈 문자열", ""], ["공백만", "   "], ["없음", undefined], ["null", null]])(
