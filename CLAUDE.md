@@ -169,6 +169,21 @@ git status → 테스트 → typecheck → build → commit → push → deploy
 
 작업트리는 최종적으로 **clean**. commit 은 스프린트 단위로 의미 있게.
 🔴 **push 까지 끝나야 CTO 완료다** — 로컬 commit 으로 끝내지 않는다.
+
+### 🔴 「clean」은 「push 됐다」가 아니다
+
+`git status` 는 커밋되지 않은 변경만 본다. 커밋만 해도 clean 이 된다.
+실제로 이 규칙이 조용히 무력화돼 **커밋 15개가 밀려 있던 적이 있다**(2026-09-28).
+
+```bash
+git fetch origin --quiet                 # 로컬 ref 가 낡으면 숫자도 틀린다
+git rev-list --count origin/main..HEAD   # ahead  — 0 이어야 한다
+git rev-list --count HEAD..origin/main   # behind
+```
+
+종료 보고의 Git 절에는 clean 여부와 **ahead/behind 숫자를 같이** 적는다.
+push 가 Production 배포를 부르므로, 밀린 커밋을 발견하면 임의로 밀지 말고
+CEO 판단을 받는다. 밀 때는 커밋 메시지의 「테스트 통과」를 믿지 말고 **직접 실행**한다.
 배포는 **repo 루트에서만** 실행한다(Bash 의 `cd` 가 PowerShell 작업 디렉터리에 남는다).
 
 ---
