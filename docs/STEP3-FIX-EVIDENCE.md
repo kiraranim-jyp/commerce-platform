@@ -194,4 +194,31 @@ S-19 가 지키려던 것(「세 칸이 코드가 아니라 이름을 보여준�
 
 ---
 
-## CTO SELF-VERIFICATION
+## 9. 배포
+
+| 항목 | 값 |
+|---|---|
+| 커밋 | `92297cd` |
+| 배포 | `https://ttaejyo-q5n22k5xa-truck-grease-reservation.vercel.app` |
+| Alias | `https://ttaejyo.vercel.app` |
+| 위치 | 저장소 루트에서 실행(과거 `__tests__` 프로젝트 사고 이후 고정 규칙) |
+
+---
+
+## CTO SELF-VERIFICATION 🟢 PASS
+
+여섯 축 모두 증거가 있다.
+
+| 축 | 증거 |
+|---|---|
+| Render | jsdom 마운트 실측 14건 — 여섯 칸 전수 |
+| Data | 설정 로더/세이버 여섯 필드 대칭 확인, `sellerFixed` 도달 확인 |
+| Payload | `build-context.ts:225-237` — 여섯 필드 모두 `fixed(form, settings)`, 수정 전후 불변 |
+| Axis | 표시(`displayValue`)와 값(`form.delivery.X`)을 섞지 않음, 「설정값 적용됨」 유지 |
+| Regression | admin 358/4814 · listing 43/557 · tsc 0 · build 0 |
+| Failure-path | 목록 조회 실패 / 라벨 없는 낡은 행 / 목록에 없는 코드 / 설정·폼 둘 다 없음 — 4가지 검사 |
+
+음성 대조 3회(NC-1·NC-2·NC-3) 모두 성립. 그리고 **NC-0 에서 내 테스트가
+공허했다는 것을 보고 전에 스스로 잡았다** — 그 경위를 §6에 남겼다.
+
+🔒 **CEO 테스트는 요청하지 않는다.** 게이트대로 CPO 2차 검증이 다음이다.
