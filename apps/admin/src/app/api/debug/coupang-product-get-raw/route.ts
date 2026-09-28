@@ -26,11 +26,11 @@ import { callCoupangApi } from "../../coupang/_lib/client";
  *   안 한다: POST · PUT · PATCH · DELETE. 한 줄도 없다.
  *   안 한다: 「이 칸이 저 뜻일 것이다」라는 해석. 판정은 사람이 본 뒤에 한다.
  *
- * 🔴 `DEBUG_COUPANG_PROBE_TOKEN` 이 없으면 «존재하지 않는 것처럼» 404 로 닫는다
+ * 🔴 `DEBUG_COUPANG_PRODUCT_PROBE_TOKEN` 이 없으면 «존재하지 않는 것처럼» 404 로 닫는다
  * (naver-product-get-raw 와 같은 fail-closed). 토큰을 코드에 적지 않는다.
  */
 function isAuthorized(request: Request): boolean {
-  const expected = process.env.DEBUG_COUPANG_PROBE_TOKEN;
+  const expected = process.env.DEBUG_COUPANG_PRODUCT_PROBE_TOKEN;
   /* 🔴 설정이 없으면 열지 않는다. 「설정이 없으니 일단 통과」는 이 프로젝트가
      이미 한 번 고친 실수다(requireRegistrationAccess 의 fail-closed 주석 참고). */
   if (!expected) return false;

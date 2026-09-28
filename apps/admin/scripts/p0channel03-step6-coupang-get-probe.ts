@@ -19,7 +19,7 @@
  * (SmartStore probe 와 같은 규칙).
  *
  * 사용법:
- *   DEBUG_COUPANG_PROBE_TOKEN=... npx tsx scripts/p0channel03-step6-coupang-get-probe.ts <sellerProductId> [baseUrl]
+ *   DEBUG_COUPANG_PRODUCT_PROBE_TOKEN=... npx tsx scripts/p0channel03-step6-coupang-get-probe.ts <sellerProductId> [baseUrl]
  */
 
 const DEFAULT_BASE_URL = "https://ttaejyo.vercel.app";
@@ -85,7 +85,7 @@ function describeShape(value: unknown): string {
 async function probeCoupangGet() {
   const sellerProductId = process.argv[2];
   const baseUrl = (process.argv[3] ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
-  const token = process.env.DEBUG_COUPANG_PROBE_TOKEN;
+  const token = process.env.DEBUG_COUPANG_PRODUCT_PROBE_TOKEN;
 
   if (!sellerProductId) {
     console.error(
@@ -97,7 +97,7 @@ async function probeCoupangGet() {
   }
   if (!token) {
     console.error(
-      "DEBUG_COUPANG_PROBE_TOKEN 이 없습니다.\n" +
+      "DEBUG_COUPANG_PRODUCT_PROBE_TOKEN 이 없습니다.\n" +
         "🔴 이 값 없이는 실측할 수 없습니다 — 추측으로 채우지 않습니다.\n" +
         "   Production 환경변수로 한 번 설정돼야 이 통로가 열립니다(없으면 404).",
     );
@@ -110,7 +110,7 @@ async function probeCoupangGet() {
 
   const res = await fetch(url, { headers: { "x-debug-token": token } });
   if (res.status === 404) {
-    console.error("진단 통로가 닫혀 있습니다(404) — DEBUG_COUPANG_PROBE_TOKEN 이 설정되지 않았거나 값이 다릅니다.");
+    console.error("진단 통로가 닫혀 있습니다(404) — DEBUG_COUPANG_PRODUCT_PROBE_TOKEN 이 설정되지 않았거나 값이 다릅니다.");
     process.exit(1);
   }
   const envelope = (await res.json()) as { result?: { status?: number; body?: unknown }; error?: string };

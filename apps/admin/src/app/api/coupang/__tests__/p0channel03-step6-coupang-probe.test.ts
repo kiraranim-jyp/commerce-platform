@@ -62,9 +62,9 @@ describe("② 🔴 토큰이 없으면 없는 것처럼 닫힌다", () => {
   });
 
   it("토큰을 코드에 적지 않는다 — 환경변수 이름만 있다", () => {
-    expect(ROUTE).toContain("process.env.DEBUG_COUPANG_PROBE_TOKEN");
+    expect(ROUTE).toContain("process.env.DEBUG_COUPANG_PRODUCT_PROBE_TOKEN");
     /* 🔴 값처럼 보이는 상수가 없다. */
-    expect(ROUTE).not.toMatch(/DEBUG_COUPANG_PROBE_TOKEN\s*=\s*["'`]/);
+    expect(ROUTE).not.toMatch(/DEBUG_COUPANG_PRODUCT_PROBE_TOKEN\s*=\s*["'`]/);
   });
 
   it("SmartStore 진단 통로와 «같은 방식» 이다 — 두 벌이 아니다", () => {
