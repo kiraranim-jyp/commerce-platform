@@ -77,6 +77,21 @@ export interface KcFieldView {
   contentClass: NoticeContentClass;
   /** 🔴 `OTHER` 일 때만, 120자까지만. 분류로 설명되지 않는 것만 본다. */
   contentSample?: string;
+  /**
+   * 누가 그 문장을 넣었는가 — `ComplianceFieldSource`.
+   *
+   * 🔴 `payload.complianceFieldResults` 는 공식 쿠팡 필드가 «아니고» 우리가
+   * 같이 저장해 둔 채점 재료다(`CoupangPayload` 정의에 그렇게 적혀 있다).
+   * 그래서 「값이 무엇이었나」와 별개로 **「어느 계층이 줬나」** 를 알 수 있다 —
+   *
+   *     USER_INPUT     판매자가 상품별로 직접 넣었다
+   *     DEFAULT_VALUE  코드 기본값 또는 Settings 문구 (🔴 이 둘은 구별 안 된다)
+   *     KNOWN_VALUE / PRODUCT_FIELD / OPTION_MATCH / DETERMINISTIC / PLACEHOLDER
+   *
+   * 🔴 `value` 는 여기서 읽지 않는다 — 이미 `contentClass` 로 다루고 있고,
+   * 두 벌로 꺼내면 그만큼 샐 구멍이 는다.
+   */
+  source?: string;
 }
 
 export interface AttemptView {
@@ -121,8 +136,26 @@ function noticesOf(payload: unknown): { name: string; content: unknown; category
   return out;
 }
 
+/**
+ * 고시 칸 이름 → 그 값을 «준 계층». 🔴 `value` 는 꺼내지 않는다.
+ * 같은 이름이 여러 번 나오면(옵션별 items) 첫 번째만 쓴다 — 빌더가 같은 칸에
+ * 다른 출처를 줄 이유가 없고, 다르다면 그건 별도로 드러나야 할 사고다.
+ */
+function noticeSourcesOf(payload: unknown): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const r of asArray(asRecord(payload)?.complianceFieldResults)) {
+    const row = asRecord(r);
+    if (!row || row.kind !== "NOTICE") continue;
+    const name = typeof row.fieldName === "string" ? row.fieldName : "";
+    const source = typeof row.source === "string" ? row.source : "";
+    if (name && source && !out.has(name)) out.set(name, source);
+  }
+  return out;
+}
+
 export function toAttemptView(row: AttemptRow): AttemptView {
   const notices = noticesOf(row.payload);
+  const sources = noticeSourcesOf(row.payload);
   const kcFields: KcFieldView[] = [];
   let blankNonKcFieldCount = 0;
 
@@ -130,6 +163,8 @@ export function toAttemptView(row: AttemptRow): AttemptView {
     const contentClass = classifyNoticeContent(n.content);
     if (isKcFieldName(n.name)) {
       const view: KcFieldView = { field: n.name, contentClass };
+      const source = sources.get(n.name);
+      if (source) view.source = source;
       /* 🔴 분류로 설명되는 것은 값을 내보내지 않는다. 그리고 연락처 칸은
          이름이 KC 로 걸리더라도 «절대» 값을 싣지 않는다. */
       if (contentClass === "OTHER" && !isContactFieldName(n.name) && typeof n.content === "string") {

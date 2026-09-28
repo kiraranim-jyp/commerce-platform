@@ -134,6 +134,45 @@ describe("🔴 ③ payload/response 원문이 새지 않는다", () => {
   });
 });
 
+describe("🔴 ③-2 출처는 가져오되 «값» 은 가져오지 않는다", () => {
+  const withResults = (source: string, value: string) =>
+    row({
+      notices: [notice("인증/허가 사항", DEFAULT_KC_EXEMPTION_TEXT)],
+      payload: {
+        displayCategoryCode: 70346,
+        items: [{ notices: [notice("인증/허가 사항", DEFAULT_KC_EXEMPTION_TEXT)] }],
+        complianceFieldResults: [
+          { fieldName: "인증/허가 사항", value, source, kind: "NOTICE", critical: false, confidence: 1 },
+          { fieldName: "소비자상담 관련 전화번호", value: "010-5555-6666", source: "KNOWN_VALUE", kind: "NOTICE", critical: false, confidence: 1 },
+          { fieldName: "색상", value: "네이비", source: "OPTION_MATCH", kind: "ATTRIBUTE", critical: false, confidence: 1 },
+        ],
+      },
+    });
+
+  it("KC 칸의 출처가 실린다 — 「누가 그 문장을 넣었나」", () => {
+    const v = toAttemptView(withResults("USER_INPUT", "KC 안전확인 제12-345호"));
+    expect(v.kcFields[0].source).toBe("USER_INPUT");
+  });
+
+  it("🔴 complianceFieldResults 의 value 는 한 칸도 새지 않는다", () => {
+    const s = JSON.stringify(toAttemptView(withResults("DEFAULT_VALUE", "은밀한값")));
+    expect(s).not.toContain("은밀한값");
+    expect(s).not.toContain("010-5555-6666");
+    expect(s).not.toContain("네이비");
+  });
+
+  it("ATTRIBUTE 결과는 고시 출처로 오인되지 않는다", () => {
+    const v = toAttemptView(withResults("DEFAULT_VALUE", "x"));
+    expect(v.kcFields[0].source).toBe("DEFAULT_VALUE");
+    expect(v.kcFields).toHaveLength(1);
+  });
+
+  it("출처 기록이 없으면 칸을 만들지 않는다 — 없는 것을 있는 척하지 않는다", () => {
+    const v = toAttemptView(row({ notices: [notice("인증/허가 사항", DEFAULT_KC_EXEMPTION_TEXT)] }));
+    expect(v.kcFields[0].source).toBeUndefined();
+  });
+});
+
 describe("④ 요약이 CPO 판정표의 입력을 만든다", () => {
   const views = [
     toAttemptView(row({ id: "a", created_at: "2026-07-30T00:00:00Z", status: "SUBMITTED", notices: [notice("인증/허가 사항", NOTICE_DEFAULT_CONTENT_MIRROR)] })),
