@@ -279,6 +279,39 @@ function liveNameOf(
   return options?.find((option) => option.no === no)?.name ?? null;
 }
 
+/**
+ * ══ STEP3-FIX(CPO Production FAIL, 2026-09-28) ═══════════════════════════════
+ * **이 칸이 실제로 «내보낼» 값의 이름.**
+ *
+ * 🔴 CEO 화면: 설정에 여섯 값이 다 저장돼 있는데 상품 화면의 택배사·배송 가능
+ * 지역은 «빈 칸» 이었다. 셀러는 그것을 「입력 필요」로 읽는다.
+ *
+ * 실측으로 나온 원인은 둘이다.
+ *
+ *   ① 여섯 칸 중 «셋에는 `displayValue` 가 아예 없었다» — 배송 가능 지역,
+ *      출고 택배사, 반품 택배사. 그래서 폼이 비면 칸도 빈다.
+ *   ② 있던 셋도 «폼 값만» 봤다. payload 는 `fixed(form, settings)` 사다리로
+ *      설정값을 쓰는데(build-context) 화면은 폼만 봤다 —
+ *      「payload 로는 가는데 화면에는 없는」 상태다.
+ *
+ * 그래서 이 함수는 payload 와 «같은 사다리» 를 탄다. 값을 만들지는 않는다 —
+ * 폼에도 설정에도 없으면 빈 칸 그대로다.
+ *
+ * 🔴 출고지·반품지·배송비정책이 「차 있어 보였던」 이유는 후보가 1건이라
+ * autopick 이 폼을 채웠기 때문이지 설정에서 와서가 아니다. 후보가 둘이 되는
+ * 순간 그 셋도 같이 비었을 것이다.
+ */
+function deliveryFieldDisplay(
+  formValue: string,
+  settingValue: string | null | undefined,
+  liveOptions: readonly { no: string; name: string | null }[] | undefined,
+  savedLabel: string | null | undefined,
+  what: string,
+): string {
+  const code = formValue.trim() || (settingValue ?? "").trim();
+  return sellerFacingName(code, liveNameOf(liveOptions, code), savedLabel, what);
+}
+
 const EMPTY_RECOMMEND: RecommendState = {
   loading: false,
   error: null,
@@ -1442,9 +1475,10 @@ export function LotteOnRegistrationPanel({
             }
             value={form.delivery.outboundPlaceNo}
             /* S-19 — 코드가 아니라 «이름» 을 보여준다. 값은 그대로 payload 로 간다. */
-            displayValue={sellerFacingName(
+            displayValue={deliveryFieldDisplay(
               form.delivery.outboundPlaceNo,
-              liveNameOf(deliverySettings.data?.outboundPlaces, form.delivery.outboundPlaceNo),
+              sellerFixed?.outboundPlaceNo,
+              deliverySettings.data?.outboundPlaces,
               sellerFixed?.outboundPlaceLabel,
               "출고지",
             )}
@@ -1478,9 +1512,10 @@ export function LotteOnRegistrationPanel({
             }
             value={form.delivery.returnPlaceNo}
             /* S-19 — 코드가 아니라 «이름» 을 보여준다. 값은 그대로 payload 로 간다. */
-            displayValue={sellerFacingName(
+            displayValue={deliveryFieldDisplay(
               form.delivery.returnPlaceNo,
-              liveNameOf(deliverySettings.data?.returnPlaces, form.delivery.returnPlaceNo),
+              sellerFixed?.returnPlaceNo,
+              deliverySettings.data?.returnPlaces,
               sellerFixed?.returnPlaceLabel,
               "반품지",
             )}
@@ -1511,9 +1546,10 @@ export function LotteOnRegistrationPanel({
             }
             value={form.delivery.deliveryCostPolicyNo}
             /* S-19 — 코드가 아니라 «이름» 을 보여준다. 값은 그대로 payload 로 간다. */
-            displayValue={sellerFacingName(
+            displayValue={deliveryFieldDisplay(
               form.delivery.deliveryCostPolicyNo,
-              liveNameOf(deliverySettings.data?.costPolicies, form.delivery.deliveryCostPolicyNo),
+              sellerFixed?.deliveryCostPolicyNo,
+              deliverySettings.data?.costPolicies,
               sellerFixed?.deliveryCostPolicyLabel,
               "배송비 정책",
             )}
@@ -1561,6 +1597,13 @@ export function LotteOnRegistrationPanel({
               </>
             }
             value={form.delivery.deliveryRegionGroupCode}
+            displayValue={deliveryFieldDisplay(
+              form.delivery.deliveryRegionGroupCode,
+              sellerFixed?.deliveryRegionGroupCode,
+              deliverySettings.data?.deliveryRegionGroups.map((g) => ({ no: g.code, name: g.name })),
+              sellerFixed?.deliveryRegionGroupLabel,
+              "배송 가능 지역",
+            )}
             onChange={(value) => patch("delivery", { deliveryRegionGroupCode: value })}
           />
           <ChannelCodeField
@@ -1602,6 +1645,13 @@ export function LotteOnRegistrationPanel({
               </>
             }
             value={form.delivery.courierCode}
+            displayValue={deliveryFieldDisplay(
+              form.delivery.courierCode,
+              sellerFixed?.courierCode,
+              deliverySettings.data?.couriers.map((c) => ({ no: c.code, name: c.name })),
+              sellerFixed?.courierLabel,
+              "택배사",
+            )}
             onChange={(value) => patch("delivery", { courierCode: value })}
           />
           <ChannelCodeField
@@ -1639,6 +1689,13 @@ export function LotteOnRegistrationPanel({
               </>
             }
             value={form.delivery.returnCourierCode}
+            displayValue={deliveryFieldDisplay(
+              form.delivery.returnCourierCode,
+              sellerFixed?.returnCourierCode,
+              deliverySettings.data?.couriers.map((c) => ({ no: c.code, name: c.name })),
+              sellerFixed?.returnCourierLabel,
+              "반품 택배사",
+            )}
             onChange={(value) => patch("delivery", { returnCourierCode: value })}
           />
           <ChannelCodeField

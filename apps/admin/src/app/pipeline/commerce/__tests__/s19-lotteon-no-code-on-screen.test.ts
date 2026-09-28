@@ -40,7 +40,23 @@ describe("② 롯데ON 배송 세 칸이 «이름» 을 보여준다", () => {
     ["반품지", "returnPlaceNo", "returnPlaces"],
     ["배송비 정책", "deliveryCostPolicyNo", "costPolicies"],
   ])("%s — 목록에서 살아 있는 이름을 쓴다", (_label, field, list) => {
-    expect(PANEL).toContain(`liveNameOf(deliverySettings.data?.${list}, form.delivery.${field})`);
+    /* ══ STEP3-FIX(2026-09-28) ══
+       이 `liveNameOf` 호출은 `deliveryFieldDisplay` «안으로» 들어갔다 — 화면이
+       payload 와 같은 사다리(폼 → 설정)를 타게 하기 위해서다. 검사 대상은
+       그대로다: 그 행이 «살아 있는 목록» 과 «그 폼 필드» 를 함께 넘기는가.
+
+       🔴 그리고 「이름이 실제로 그려지는가」는 소스로 재지 않는다 — 마운트해서
+       잰다(`step3fix-settings-reach-screen.test.ts`). 소스 PASS 는 Render PASS 가
+       아니라는 것을 이 스프린트에서 두 번 확인했다. */
+    expect(PANEL).toMatch(
+      new RegExp(
+        `deliveryFieldDisplay\\(\\s*form\\.delivery\\.${field},[\\s\\S]{0,240}?deliverySettings\\.data\\?\\.${list}`,
+      ),
+    );
+  });
+
+  it("🔴 살아 있는 목록에서 이름을 찾는 그 한 줄은 헬퍼 «안에» 있다", () => {
+    expect(PANEL).toContain("liveNameOf(liveOptions, code)");
   });
 
   /* 🔴 CEO 가 «바로» 잡은 부분이다. 처음에 「이름을 못 찾으면 코드로 되돌아간다」로
