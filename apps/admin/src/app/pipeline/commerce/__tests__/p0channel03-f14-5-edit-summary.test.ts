@@ -147,7 +147,9 @@ describe("③ 🔴 수정 버튼 — CTO 회귀 목록", () => {
   });
 
   it("🔴 UNKNOWN 을 「수정 가능」으로 표시하지 않는다", () => {
-    for (const id of ["coupang", "lotteon"] as const) {
+    /* 🔴 Phase 3 — 쿠팡은 상품명 한 축이 열렸으므로 «아직 아무것도 확인되지
+       않은» 채널로 잰다. 쿠팡의 부분 개방은 형제 테스트가 따로 센다. */
+    for (const id of ["lotteon", "elevenst"] as const) {
       const fields = editorFieldSchema(model(id));
       expect(fields.every((field) => field.editable === false)).toBe(true);
       /* 🔴 UNKNOWN 은 「확인되지 않았다」로 말한다. 카테고리는 그 축이 아니다 —
@@ -247,8 +249,13 @@ describe("⑤ 🔴 기존 등록 흐름을 대체하지 않는다", () => {
     }
   });
 
-  it("🔴 SmartStore 에만 연결한다 — Coupang·LotteON 은 억지로 붙이지 않는다", () => {
-    expect(WORKSPACE).toContain('tab === "smartstore" && channelEdit && channelEditInput');
+  it("🔴 «불러온 그 채널» 에만 선다 — 탭을 옮기면 옛 기준값이 따라가지 않는다", () => {
+    /* 🔴 Phase 3 — 채널이 둘이 되면서 조건이 이름 고정에서 «일치 검사» 로 바뀌었다.
+       이것이 더 강한 조건이다: 쿠팡을 불러온 채로 스마트스토어 탭에 가도 서지
+       않는다(예전 조건은 탭만 봤다). */
+    expect(WORKSPACE).toContain("channelEdit?.commerceId === tab && channelEditInput");
+    /* 🔴 그리고 어댑터가 없는 채널에는 애초에 자리를 주지 않는다. */
+    expect(WORKSPACE).toContain("editAdapterFor(tab)");
   });
 
   it("불러오지 않았으면 요약이 서지 않는다", () => {
@@ -262,10 +269,10 @@ describe("⑥ 🔴 CTO 자체 검토에서 찾은 두 구멍", () => {
     /* 수정이 나간 순간 채널의 현재값은 우리가 들고 있던 기준값이 아니다.
        그대로 두면 요약은 계속 「변경사항 1건」이라 하고 버튼도 열려 있다. */
     expect(WORKSPACE).toContain(
-      'if (platform === "smartstore" && result.status === "SUBMITTED" && channelEdit) {',
+      'if (channelEdit?.commerceId === platform && result.status === "SUBMITTED") {',
     );
     expect(WORKSPACE).toContain("수정을 보냈습니다.");
-    const after = WORKSPACE.slice(WORKSPACE.indexOf('result.status === "SUBMITTED" && channelEdit'));
+    const after = WORKSPACE.slice(WORKSPACE.indexOf('result.status === "SUBMITTED"'));
     expect(after).toContain("setChannelEdit(null);");
   });
 

@@ -116,8 +116,10 @@ describe("⑤ 🔴 화면에 «붙어 있다» — 그리고 SmartStore 에만",
     expect(WORKSPACE).toContain("<ChannelEditPanel");
     /* 🔴 「연결을 아는가」는 수정 기능 전체의 관문이고, 그 관문은 불러오기 카드와
        요약이 서는 우측 한 곳에 있다. 왼쪽 상세는 «불러온 뒤» 에만 선다. */
-    expect(WORKSPACE).toContain('registrationStateFor("smartstore").basis === "CHANNEL_PRODUCT"');
-    expect(WORKSPACE).toContain('tab === "smartstore" && channelEdit && channelEditInput');
+    /* 🔴 Phase 3 — 관문은 그대로이고 «대상이 탭에서 온다». 커머스 이름을 박으면
+       커머스가 늘 때마다 여기를 고쳐야 한다. */
+    expect(WORKSPACE).toContain('registrationStateFor(tab).basis === "CHANNEL_PRODUCT"');
+    expect(WORKSPACE).toContain("channelEdit?.commerceId === tab && channelEditInput");
   });
 
   it("🔴 불러오기 «버튼» 이 한 군데만 있다 — 두 군데면 셀러가 찾아다닌다", () => {
@@ -159,7 +161,9 @@ describe("⑤ 🔴 화면에 «붙어 있다» — 그리고 SmartStore 에만",
   });
 
   it("🔴 수정 버튼이 곧 전송이 아니다 — 등록과 같은 문을 지나 확인을 한 번 더 받는다", () => {
-    expect(WORKSPACE).toContain('onSubmit={() => void confirmListing("smartstore")}');
+    /* 🔴 Phase 3 — 전송도 «지금 탭» 으로 간다. 채널 이름을 박으면 쿠팡 요약의
+       버튼이 스마트스토어를 부르게 된다. */
+    expect(WORKSPACE).toContain("onSubmit={() => void confirmListing(tab)}");
     const mount = WORKSPACE.slice(WORKSPACE.indexOf("<ChannelEditPanel"), WORKSPACE.indexOf("</section>"));
     expect(mount).not.toContain("fetch(");
     expect(mount).not.toContain("PUT");

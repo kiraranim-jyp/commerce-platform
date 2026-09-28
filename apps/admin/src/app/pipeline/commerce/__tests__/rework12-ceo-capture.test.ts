@@ -276,8 +276,14 @@ describe("REWORK-12 ① — 우측 요약 카드는 세 탭 각각 화면에 하
     for (const tab of TABS) {
       const dom = await mountExpanded(tab.element());
       const card = dom.querySelector('[data-summary="channel-edit-unavailable"]');
-      if (tab.label === "SMARTSTORE") {
-        expect(card, "스마트스토어에 「확인되지 않음」 카드가 섰다 — 이 채널은 수정이 확인된 채널이다").toBeNull();
+      /* 🔴 Phase 3 — 어댑터가 «생긴» 채널은 이 카드를 세우지 않는다. 쿠팡이
+         그렇게 됐다(상품명 한 축이 열렸다). 남은 채널은 그대로 말해야 한다 —
+         침묵으로 바뀌면 셀러는 수정이 되는지 안 되는지 알 수 없다. */
+      if (tab.label === "SMARTSTORE" || tab.label === "COUPANG") {
+        expect(
+          card,
+          `${tab.label}에 「확인되지 않음」 카드가 섰다 — 이 채널은 수정이 확인된 채널이다`,
+        ).toBeNull();
         continue;
       }
       expect(card, `${tab.label}: 수정 가능 여부를 «아무 말도» 하지 않는다`).not.toBeNull();

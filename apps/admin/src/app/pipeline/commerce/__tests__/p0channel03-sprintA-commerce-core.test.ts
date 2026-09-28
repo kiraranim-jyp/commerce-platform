@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { COMMERCE_ORDER } from "../commerce-registry";
 import { CHANNEL_CAPABILITY } from "../channel-lifecycle";
 import { CONTENT_BLIND_FIELDS, sameExternalProductId } from "../commerce-edit-adapter";
+import { fieldCapability, fieldCapabilityNote } from "../channel-field-capability";
 import { EDIT_ADAPTER_COMMERCE_IDS, editAdapterFor, editUnavailableNote } from "../edit-adapters";
 import { buildChannelEditModel, editorFieldSchema } from "../channel-edit-model";
 
@@ -77,9 +78,13 @@ describe("② 🔴 커머스가 늘어나면 어댑터만 늘어난다", () => {
   });
 
   it("등록표는 «부분» 이다 — 모든 커머스가 어댑터를 가질 필요가 없다", () => {
-    expect(EDIT_ADAPTER_COMMERCE_IDS).toEqual(["smartstore"]);
+    /* 🔴 COUPANG-UPDATE-WIRE-01 Phase 3 — 쿠팡이 «배선과 함께» 들어왔다.
+       약화가 아니라 사실이 바뀐 것이다: 라우트·어댑터·capability·화면·UPDATE
+       실행부가 같은 커밋에 있다. 남은 둘은 여전히 어댑터가 없다. */
+    expect([...EDIT_ADAPTER_COMMERCE_IDS].sort()).toEqual(["coupang", "smartstore"]);
     expect(editAdapterFor("smartstore")).toBeDefined();
-    for (const id of ["coupang", "lotteon", "elevenst"] as const) {
+    expect(editAdapterFor("coupang")).toBeDefined();
+    for (const id of ["lotteon", "elevenst"] as const) {
       expect(editAdapterFor(id)).toBeUndefined();
     }
   });
@@ -116,13 +121,33 @@ describe("④ 🔴 어댑터가 없으면 「확인되지 않았다」고 말한
     expect(editUnavailableNote("smartstore")).toBeUndefined();
   });
 
-  it.each(["coupang", "lotteon"] as const)("%s — 「안 됩니다」가 아니라 「확인되지 않았습니다」", (id) => {
-    const note = editUnavailableNote(id);
-    expect(note).toContain("확인되지 않았습니다");
-    expect(note).not.toContain("없습니다");
-    expect(note).not.toContain("불가");
-    /* 🔴 그리고 그 판단의 근거는 capability 표다 — 여기서 새로 만들지 않는다. */
-    expect(CHANNEL_CAPABILITY[id].update).toBe("UNKNOWN");
+  it.each(["lotteon", "elevenst"] as const)(
+    "%s — 「안 됩니다」가 아니라 「확인되지 않았습니다」",
+    (id) => {
+      const note = editUnavailableNote(id);
+      expect(note).toContain("확인되지 않았습니다");
+      expect(note).not.toContain("없습니다");
+      expect(note).not.toContain("불가");
+      /* 🔴 그리고 그 판단의 근거는 capability 표다 — 여기서 새로 만들지 않는다. */
+      expect(CHANNEL_CAPABILITY[id].update).toBe("UNKNOWN");
+    },
+  );
+
+  /* 🔴 Phase 3 — 쿠팡은 이제 «부분적으로» 열렸다. 그 사실을 여기 적어 둔다:
+     어댑터가 생겼으므로 채널 전체를 막는 안내는 사라지고, 대신 «축별» 로
+     「확인되지 않았습니다」가 남는다 — 침묵으로 바뀐 것이 아니다. */
+  it("coupang — 채널 안내는 사라졌지만 «축별» 안내가 그 자리를 지킨다", () => {
+    expect(editUnavailableNote("coupang")).toBeUndefined();
+    expect(CHANNEL_CAPABILITY.coupang.update).toBe("SUPPORTED_WHEN_SAVED");
+    /* 열린 축은 상품명 «하나» 다. */
+    expect(CHANNEL_CAPABILITY.coupang.updateFields).toEqual(["name"]);
+    expect(fieldCapability("coupang", "name")).toBe("EDITABLE");
+    for (const field of ["salePrice", "stockQuantity", "detailContent", "images", "options", "providedNotice"] as const) {
+      expect(fieldCapability("coupang", field), `${field} 가 열렸다`).toBe("UNKNOWN");
+      expect(fieldCapabilityNote(fieldCapability("coupang", field))).toContain("확인되지 않았습니다");
+    }
+    /* 🔴 카테고리는 그대로 «수정 불가» 다 — 공식 가이드가 명시한 사실이다. */
+    expect(fieldCapability("coupang", "category")).toBe("RECREATE_ONLY");
   });
 
   it("🔴 조사 부채를 구현 부채로 «위장하지» 않는다", () => {
@@ -160,12 +185,28 @@ describe("⑤ 🔴 Core 는 어느 커머스로도 같은 흐름을 돈다", () 
   });
 
   it("🔴 capability 가 UNKNOWN 인 커머스는 «수정 가능» 이라고 말하지 않는다", () => {
+    /* 🔴 쿠팡이 부분 개방되었으므로 «아직 아무것도 확인되지 않은» 채널로 잰다.
+       이 축이 사라지면 「UNKNOWN 인데 열린다」를 아무도 세지 않게 된다. */
+    const built = buildChannelEditModel(
+      { kind: "CHANNEL_GET", commerceId: "lotteon", externalProductId: "16394846257" },
+      NEUTRAL,
+    );
+    if (!built.ok) throw new Error(built.message);
+    expect(editorFieldSchema(built.model).every((f) => f.editable === false)).toBe(true);
+  });
+
+  /* 🔴 Phase 3 — 부분 개방 채널은 «연 축만» 열린다. 「하나를 열었더니 일곱이
+     열렸다」가 이 스프린트가 막으려던 바로 그 사고다. */
+  it("🔴 부분 개방 커머스는 «연 축만» editable 이다 — 나머지는 조용히 열리지 않는다", () => {
     const built = buildChannelEditModel(
       { kind: "CHANNEL_GET", commerceId: "coupang", externalProductId: "16394846257" },
       NEUTRAL,
     );
     if (!built.ok) throw new Error(built.message);
-    expect(editorFieldSchema(built.model).every((f) => f.editable === false)).toBe(true);
+    const editable = editorFieldSchema(built.model)
+      .filter((f) => f.editable)
+      .map((f) => f.field);
+    expect(editable).toEqual(["name"]);
   });
 });
 
@@ -234,11 +275,16 @@ describe("⑥ 🔴 두 축 설계 — 결정을 되돌리지 않는다", () => {
     expect(DESIGN).toContain("경로 목록으로");
   });
 
-  it("두 채널 capability 와 어댑터 부재가 유지된다", () => {
-    for (const id of ["coupang", "lotteon"] as const) {
-      expect(CHANNEL_CAPABILITY[id].update).toBe("UNKNOWN");
-      expect(editAdapterFor(id)).toBeUndefined();
-    }
-    expect(EDIT_ADAPTER_COMMERCE_IDS).toEqual(["smartstore"]);
+  it("LotteON 은 그대로다 — 두 축 제약이 풀린 적이 없다", () => {
+    expect(CHANNEL_CAPABILITY.lotteon.update).toBe("UNKNOWN");
+    expect(editAdapterFor("lotteon")).toBeUndefined();
+  });
+
+  /* 🔴 쿠팡은 열렸지만 «두 축 설계의 결론» 은 그대로다 — 아이템 단위 가격/재고는
+     여전히 손대지 않았다. 「상품명이 열렸으니 가격도」로 번지지 않게 센다. */
+  it("🔴 쿠팡이 열려도 «아이템 축» 은 닫힌 채다", () => {
+    expect(CHANNEL_CAPABILITY.coupang.updateFields).toEqual(["name"]);
+    expect(fieldCapability("coupang", "salePrice")).toBe("UNKNOWN");
+    expect(fieldCapability("coupang", "stockQuantity")).toBe("UNKNOWN");
   });
 });

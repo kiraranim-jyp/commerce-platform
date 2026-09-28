@@ -45,17 +45,18 @@ describe("🔴 ① capability 는 «조건부» 다", () => {
    * 배선이 없어 누를 곳이 없다. 대신 «올릴 값이 무엇인지» 를 여기서 고정한다:
    * 조건부이지 SUPPORTED 가 아니다.
    */
-  it("🔴 아직 UNKNOWN 이다 — capability·어댑터·배선은 같은 커밋에서 오른다", () => {
-    expect(CHANNEL_CAPABILITY.coupang.update).toBe("UNKNOWN");
+  it("🔴 배선과 «같은 커밋» 에서 올랐다 — 그리고 조건부다", () => {
+    /* Phase 3(2026-09-29) — 라우트·어댑터·화면·UPDATE 실행부가 함께 왔다.
+       그래도 값은 `SUPPORTED` 가 아니다: 승인 후는 여전히 재 보지 못했다. */
+    expect(CHANNEL_CAPABILITY.coupang.update).toBe("SUPPORTED_WHEN_SAVED");
+    expect(CHANNEL_CAPABILITY.coupang.update).not.toBe("SUPPORTED");
   });
 
-  it("🔴 올릴 값은 SUPPORTED 가 «아니라» 조건부다 — lifecycle 이 그것을 다룰 수 있다", () => {
-    const saved = resolveLifecycle("coupang", true, change());
-    const approved = resolveLifecycle("coupang", true, change());
-    /* 지금은 둘 다 UNKNOWN 분기라 BLOCKED 다. 조건부 분기 자체의 동작은 아래
-       ②에서 SUPPORTED_WHEN_SAVED 채널을 «직접» 만들어 잰다. */
-    expect(saved.operation).toBe("BLOCKED");
-    expect(approved.operation).toBe("BLOCKED");
+  it("🔴 상태를 모르는 호출은 여전히 BLOCKED 다 — 조건부의 «기본값» 은 막힘이다", () => {
+    /* `resolveLifecycle` 은 인자가 셋뿐이라 상품 상태를 받지 못한다. 조건부
+       채널이 여기로 떨어지면 «모르는» 것이고, 모르면 막는다. 상태를 아는
+       호출부(`executeCoupangUpdate`)가 `resolveSavedScopedUpdate` 를 직접 부른다. */
+    expect(resolveLifecycle("coupang", true, change()).operation).toBe("BLOCKED");
   });
 
   it("🔴 카테고리 변경은 그대로 NOT_SUPPORTED — 이번 작업이 건드리지 않았다", () => {
@@ -69,9 +70,14 @@ describe("🔴 ① capability 는 «조건부» 다", () => {
     expect(CHANNEL_CAPABILITY.elevenst.update).toBe("UNKNOWN");
   });
 
-  it("🔴 화면은 아직 「확인되지 않았다」고 말한다 — 배선 전에 ○ 로 바꾸지 않는다", () => {
-    expect(fieldCapability("coupang", "name")).toBe("UNKNOWN");
-    expect(channelEditScope("coupang").unknown).toContain("salePrice");
+  it("🔴 열린 축은 상품명 «하나» 다 — 나머지는 여전히 「확인되지 않았습니다」", () => {
+    expect(fieldCapability("coupang", "name")).toBe("EDITABLE");
+    const scope = channelEditScope("coupang");
+    expect(scope.editable).toEqual(["name"]);
+    /* 🔴 가격·재고는 옵션별 매핑이 정해지지 않아 그대로 닫혀 있다. */
+    expect(scope.unknown).toContain("salePrice");
+    expect(scope.unknown).toContain("stockQuantity");
+    expect(scope.recreateOnly).toContain("category");
   });
 });
 

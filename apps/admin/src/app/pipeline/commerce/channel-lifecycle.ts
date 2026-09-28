@@ -1,4 +1,7 @@
 import type { CommerceId } from "./commerce-registry";
+/* 🔴 타입만 가져온다(`import type`). 값을 가져오면 channel-field-capability 와
+   순환 참조가 되는데, 타입은 컴파일에서 지워지므로 순환이 생기지 않는다. */
+import type { EditableField } from "./channel-field-capability";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -23,6 +26,23 @@ export interface ChannelCapability {
   update: CapabilityState;
   /** 기등록 상품의 «카테고리» 변경. 수정 가능 ≠ 카테고리 수정 가능. */
   categoryUpdate: CapabilityState;
+  /**
+   * 🔴 수정이 열려도 «이 축들만» 확인됐다 (COUPANG-UPDATE-WIRE-01 Phase 3).
+   *
+   * 생략하면 「`update` 가 말하는 것이 전 축에 그대로 적용된다」는 뜻이다 —
+   * SmartStore 가 그렇다. 적으면 **나머지 축은 `UNKNOWN`** 이 된다.
+   *
+   * ── 왜 이 칸이 필요한가 ────────────────────────────────────────────────
+   * 쿠팡은 「전체 교체」라 전문 전체를 보낼 수는 있지만, 우리가 **덮어쓰는 법을
+   * 아는 칸**은 상품명 하나다(`CoupangProductEdits`). 상세·이미지·옵션·고시는
+   * 왕복을 재 본 적이 없다. 이 칸이 없으면 `SUPPORTED_WHEN_SAVED` 하나가 일곱
+   * 축을 전부 「수정할 수 있습니다」로 열고, 셀러가 상세를 고쳐도 baseline 이
+   * 그대로 나간다 — 손실검사도 잡지 못한다(outgoing == baseline 이라 손실이 아니다).
+   *
+   * 🔴 이것은 「쿠팡이 못 한다」가 아니라 **「우리가 확인한 것이 여기까지다」** 다.
+   * 축을 넓히려면 그 칸의 GET/PUT 왕복 실측이 «먼저» 다.
+   */
+  updateFields?: readonly EditableField[];
 }
 
 /**
@@ -107,12 +127,21 @@ export const CHANNEL_CAPABILITY: Record<CommerceId, ChannelCapability> = {
      🔴 그러나 4건이 전부 임시저장이라 «승인 후는 재 보지 못했다» —
      그래서 올릴 값은 SUPPORTED 가 아니라 SUPPORTED_WHEN_SAVED 다.
 
-     🔴 그런데 «지금» 올리면 안 된다. 이 값이 올라가는 순간 화면은 쿠팡 필드를
-     「고칠 수 있다」로 그리는데, CommerceWorkspace 의 수정 orchestration 이 아직
-     smartstore 전용이라 누를 곳이 없다 — 고칠 수 있다고 말하고 아무 일도 일어나지
-     않는 것이 이 파일이 막으려는 바로 그 상태다. **capability·어댑터 등록·화면
-     배선은 «같은 커밋에서» 올라간다.** 그때 이 줄이 SUPPORTED_WHEN_SAVED 가 된다. */
-  coupang: { create: true, update: "UNKNOWN", categoryUpdate: "NOT_SUPPORTED" },
+     🔴 COUPANG-UPDATE-WIRE-01 Phase 3(2026-09-29) — **그 「같은 커밋」이 이것이다.**
+     GET 라우트·어댑터·화면 배선·register 라우트의 UPDATE 실행 경계가 함께 올라왔고,
+     그래서 이제 이 줄이 실제로 누를 곳이 있는 상태를 말한다.
+
+     🔴 `updateFields` 가 상품명 «하나» 인 이유: 전체 교체라 전문은 통째로 보내지만,
+     우리가 «덮어쓰는 법을 아는» 칸은 `CoupangProductEdits.name` 뿐이다. 가격·재고는
+     쿠팡에서 옵션별(`sellerProductItemId`)인데 Core 는 상품 하나의 스칼라라 옵션이
+     둘 이상이면 어느 옵션에 보낼지 정할 근거가 없고, 상세·이미지·고시는 왕복을
+     재 본 적이 없다. 넓히려면 그 축의 실측이 «먼저» 다(CPO 확정). */
+  coupang: {
+    create: true,
+    update: "SUPPORTED_WHEN_SAVED",
+    categoryUpdate: "NOT_SUPPORTED",
+    updateFields: ["name"],
+  },
   elevenst: { create: true, update: "UNKNOWN", categoryUpdate: "UNKNOWN" },
   lotteon: { create: true, update: "UNKNOWN", categoryUpdate: "UNKNOWN" },
 };

@@ -131,20 +131,23 @@ describe("⑤ 🔴 조사 전에는 판정하지 않는다", () => {
    * 채워졌다. 그래서 값이 올라갔는데, **`SUPPORTED` 가 아니라 «조건부»** 다 —
    * 4건이 전부 임시저장이라 승인 후는 여전히 재 보지 못했다.
    */
-  it("🔴 쿠팡 capability 는 아직 UNKNOWN 이다 — 올릴 값만 정해졌다", () => {
-    expect(CHANNEL_CAPABILITY.coupang.update).toBe("UNKNOWN");
-    /* 🔴 올릴 값은 정해졌다 — `SUPPORTED` 가 «아니라» 조건부다. 그 값이 올라가는
-       것은 어댑터 등록·화면 배선과 «같은 커밋» 이다. */
+  it("🔴 쿠팡 capability 는 «조건부» 로 올랐다 — SUPPORTED 가 아니다", () => {
+    /* 🔴 Phase 3(2026-09-29) — 배선과 «같은 커밋» 에서 올랐다. 그래도 전면
+       개방이 아니다: 임시저장 상태 × 상품명 한 축이다. 4건이 전부 임시저장이라
+       승인 후는 여전히 재 보지 못했고, 그 사실이 값에 그대로 남아 있다. */
+    expect(CHANNEL_CAPABILITY.coupang.update).toBe("SUPPORTED_WHEN_SAVED");
+    expect(CHANNEL_CAPABILITY.coupang.update).not.toBe("SUPPORTED");
+    expect(CHANNEL_CAPABILITY.coupang.updateFields).toEqual(["name"]);
     expect(CAPABILITY_SRC).toContain("SUPPORTED_WHEN_SAVED");
     /* 🔴 카테고리는 공식 가이드가 「수정 불가」로 명시한 «확인된» 사실이다 — 그대로. */
     expect(CHANNEL_CAPABILITY.coupang.categoryUpdate).toBe("NOT_SUPPORTED");
   });
 
-  it("🔴 쿠팡 수정 어댑터는 «아직 등록되지 않았다» — 화면 배선이 남아 있다", () => {
-    /* 어댑터 파일과 서버 실행부는 만들어졌고 검증됐지만, CommerceWorkspace 의
-       수정 orchestration 이 아직 smartstore 전용이다. 등록을 먼저 하면 화면이
-       「고칠 수 있다」고 말하는데 누르면 아무 일도 일어나지 않는다. */
-    expect(editAdapterFor("coupang")).toBeUndefined();
+  it("🔴 쿠팡 수정 어댑터가 «배선과 함께» 등록됐다", () => {
+    /* 앞 스프린트에서는 일부러 비워 뒀다 — 어댑터만 있고 부르는 화면이 없으면
+       「고칠 수 있다」고 말하고 누르면 아무 일도 일어나지 않기 때문이다.
+       이제 라우트·어댑터·capability·화면·UPDATE 실행부가 같은 커밋에 있다. */
+    expect(editAdapterFor("coupang")).toBeDefined();
   });
 
   it("🔴 probe 가 capability 를 «정하지 않는다» 고 스스로 적는다", () => {

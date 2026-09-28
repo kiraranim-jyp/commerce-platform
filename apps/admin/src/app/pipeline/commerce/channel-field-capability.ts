@@ -91,6 +91,14 @@ export function fieldCapability(commerceId: CommerceId, field: EditableField): F
   if (field === "category") {
     return cap.categoryUpdate === "SUPPORTED" ? "EDITABLE" : "RECREATE_ONLY";
   }
+  /* 🔴 COUPANG-UPDATE-WIRE-01 Phase 3 — 「수정이 열렸다」와 「이 축이 열렸다」는
+     다른 사실이다. 채널이 `updateFields` 로 «확인한 축» 을 적었으면 그 밖은
+     UNKNOWN 이다 — 「안 된다」가 아니라 「아직 확인되지 않았다」다.
+
+     🔴 여기에 커머스 «이름» 은 없다. 채널별 사실은 capability 표에 있고 Core 는
+     그 데이터를 읽기만 한다 — 그래서 커머스가 늘어도 이 파일은 그대로다. */
+  const narrowed = cap.updateFields;
+  if (narrowed && !narrowed.includes(field)) return "UNKNOWN";
   if (cap.update === "SUPPORTED") return "EDITABLE";
   /* 🔴 COUPANG-UPDATE-IMPLEMENT-01 — 조건부 채널도 «필드 자체» 는 고칠 수 있다.
      막히는 것은 필드가 아니라 «상품 상태» 이고, 그 판정은 상태를 아는 곳

@@ -89,7 +89,12 @@ describe("③ 🔴 UPDATE 대상 ID 를 재추론하지 않는다", () => {
 describe("④ 🔴 화면이 본 ID 와 다르면 보내지 않는다", () => {
   it("화면은 «실제로 GET 한» 번호를 실어 보낸다", () => {
     expect(WORKSPACE).toContain("expectedExternalProductId:");
-    expect(WORKSPACE).toContain("channelEdit?.model.source.externalProductId");
+    /* 🔴 Phase 3 — 「불러온 채널 == 지금 보내는 채널」일 때만 실린다. 예전에는
+       탭 이름을 봤는데 이제 «일치 검사» 라 더 강하다: 쿠팡을 불러온 채로
+       스마트스토어로 보내면 번호가 실리지 않는다. */
+    expect(WORKSPACE).toContain(
+      "channelEdit?.commerceId === platform ? channelEdit.model.source.externalProductId : undefined",
+    );
     expect(EXECUTOR).toContain("expectedExternalProductId: context?.expectedExternalProductId,");
   });
 
@@ -122,7 +127,11 @@ describe("④ 🔴 화면이 본 ID 와 다르면 보내지 않는다", () => {
     /* 불러오지 않은 화면(기존 등록 흐름)은 이 값을 보내지 않는다. 그 경우까지
        막으면 예전 경로가 통째로 끊긴다. */
     expect(ROUTE).toContain("if (expectedExternalProductId && expectedExternalProductId !== existing.externalProductId)");
-    expect(WORKSPACE).toContain('platform === "smartstore" ? channelEdit?.model.source.externalProductId : undefined');
+    /* 🔴 Phase 3 — 불러오지 않았으면 `channelEdit` 이 null 이라 일치 검사가
+       false 가 되고 `undefined` 가 실린다. 예전 경로는 그대로다. */
+    expect(WORKSPACE).toContain(
+      "channelEdit?.commerceId === platform ? channelEdit.model.source.externalProductId : undefined",
+    );
   });
 });
 
@@ -188,7 +197,10 @@ describe("⑥ 🔴 F-14-7 — 고치지 않은 값은 그대로 나간다", () =
   });
 
   it("화면과 executor 도 같은 이름을 실어 보낸다", () => {
-    expect(WORKSPACE).toContain("editedFields: platform === \"smartstore\" ? channelEditInput?.edited : undefined");
+    /* 🔴 Phase 3 — 채널 이름이 «일치 검사» 로 바뀌었다(위 ④와 같은 이유). */
+    expect(WORKSPACE).toContain(
+      "editedFields: channelEdit?.commerceId === platform ? channelEditInput?.edited : undefined",
+    );
     expect(EXECUTOR).toContain("editedFields: context?.editedFields,");
   });
 });

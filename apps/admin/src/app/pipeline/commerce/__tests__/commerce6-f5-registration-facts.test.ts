@@ -56,17 +56,21 @@ describe("③ 쿠팡 옵션 — variant 마다 item 을 만든다", () => {
 
 describe("④ 등록 lifecycle — Commerce-6 이 건드리지 않았다", () => {
   /* 🔴 UNKNOWN 은 실패가 아니라 «조사 부채» 다. 억지로 SUPPORTED 로 올리지 않는다. */
-  it("capability 가 그대로다 — SmartStore 만 update SUPPORTED", () => {
+  it("«전면» SUPPORTED 는 여전히 SmartStore 하나다", () => {
     expect(CHANNEL_CAPABILITY.smartstore.update).toBe("SUPPORTED");
-    expect(CHANNEL_CAPABILITY.coupang.update).toBe("UNKNOWN");
+    /* 🔴 Phase 3 — 쿠팡은 «조건부» 로 올랐다(임시저장 상태 × 상품명 한 축).
+       전면 SUPPORTED 로 «번지지 않았다» 는 것이 이 줄이 지키는 사실이다. */
+    expect(CHANNEL_CAPABILITY.coupang.update).toBe("SUPPORTED_WHEN_SAVED");
+    expect(CHANNEL_CAPABILITY.coupang.update).not.toBe("SUPPORTED");
     expect(CHANNEL_CAPABILITY.lotteon.update).toBe("UNKNOWN");
   });
 
-  it("어댑터가 등록된 채널은 SmartStore 하나다", () => {
+  it("어댑터가 등록된 채널은 SmartStore 와 Coupang 둘이다", () => {
     const adapters = readFileSync(join(__dirname, "..", "edit-adapters", "index.ts"), "utf8");
     const registry = adapters.slice(adapters.indexOf("EDIT_ADAPTERS"));
     expect(registry).toContain("smartstore:");
-    expect(registry.slice(0, 600)).not.toMatch(/^\s*coupang:/m);
-    expect(registry.slice(0, 600)).not.toMatch(/^\s*lotteon:/m);
+    expect(registry).toContain("coupang:");
+    /* 🔴 롯데ON 은 그대로 없다 — 두 축 제약이 풀린 적이 없다. */
+    expect(registry).not.toMatch(/^\s*lotteon:/m);
   });
 });

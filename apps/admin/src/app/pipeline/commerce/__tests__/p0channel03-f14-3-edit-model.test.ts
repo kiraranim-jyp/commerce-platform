@@ -343,15 +343,38 @@ describe("⑦ 🔴 물음표를 ○ 로 만들지 않는다 — capability 는 F
     expect(gate.canSubmit).toBe(false);
   });
 
-  it.each(["coupang", "lotteon"] as const)("%s — 아무 항목도 고칠 수 없고, 손대도 열리지 않는다", (id) => {
-    const m = model(READ_ALL, { ...SOURCE, commerceId: id });
+  it.each(["lotteon", "elevenst"] as const)(
+    "%s — 아무 항목도 고칠 수 없고, 손대도 열리지 않는다",
+    (id) => {
+      const m = model(READ_ALL, { ...SOURCE, commerceId: id });
+      const schema = editorFieldSchema(m);
+      expect(schema.every((f) => f.editable === false)).toBe(true);
+      expect(
+        schema.filter((f) => f.capability === "UNKNOWN").every((f) => f.note.includes("확인되지 않았")),
+      ).toBe(true);
+      const gate = evaluateEditGate(m, { name: "다른 이름", images: [1] }, ["images"]);
+      expect(gate.changes).toEqual([]);
+      expect(gate.touched).toEqual([]);
+      expect(gate.canSubmit).toBe(false);
+    },
+  );
+
+  /* 🔴 Phase 3 — 쿠팡은 «상품명만» 열렸다. 닫힌 축을 손대도 버튼이 열리지
+     않는다는 것이 핵심이다 — 열리면 셀러는 보냈다고 믿는데 아무 일도 없다. */
+  it("coupang — 상품명만 열리고, 닫힌 축은 «손대도» 열리지 않는다", () => {
+    const m = model(READ_ALL, { ...SOURCE, commerceId: "coupang" });
     const schema = editorFieldSchema(m);
-    expect(schema.every((f) => f.editable === false)).toBe(true);
-    expect(schema.filter((f) => f.capability === "UNKNOWN").every((f) => f.note.includes("확인되지 않았"))).toBe(true);
-    const gate = evaluateEditGate(m, { name: "다른 이름", images: [1] }, ["images"]);
-    expect(gate.changes).toEqual([]);
-    expect(gate.touched).toEqual([]);
-    expect(gate.canSubmit).toBe(false);
+    expect(schema.filter((f) => f.editable).map((f) => f.field)).toEqual(["name"]);
+
+    /* 이미지(UNKNOWN)를 «손댔다» 고 신호해도 열리지 않는다. */
+    const blind = evaluateEditGate(m, { images: [1] }, ["images"]);
+    expect(blind.touched).toEqual([]);
+    expect(blind.canSubmit).toBe(false);
+
+    /* 상품명이 달라지면 «그것만» 으로 열린다. */
+    const named = evaluateEditGate(m, { name: "다른 이름" }, []);
+    expect(named.changes.map((c) => c.field)).toEqual(["name"]);
+    expect(named.canSubmit).toBe(true);
   });
 });
 

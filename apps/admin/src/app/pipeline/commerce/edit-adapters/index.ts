@@ -2,6 +2,7 @@ import { channelEditScope } from "../channel-field-capability";
 import type { CommerceId } from "../commerce-registry";
 import type { CommerceEditAdapter } from "../commerce-edit-adapter";
 import { smartStoreEditAdapter } from "./smartstore";
+import { coupangEditAdapter } from "./coupang";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -27,15 +28,18 @@ import { smartStoreEditAdapter } from "./smartstore";
  */
 const EDIT_ADAPTERS: Partial<Record<CommerceId, CommerceEditAdapter>> = {
   smartstore: smartStoreEditAdapter as CommerceEditAdapter,
-  /* 🔴 COUPANG-UPDATE-IMPLEMENT-01(2026-09-28) — 쿠팡 어댑터는 «만들어졌고
-     검증됐지만 아직 여기 없다».
-       [x] GET 실측 4건 · 공식 수정 스펙 · 전체 교체 규칙
-       [x] 어댑터(edit-adapters/coupang.ts) · 서버 실행부(_lib/update-product.ts)
+  /* 🔴 COUPANG-UPDATE-WIRE-01 Phase 3(2026-09-29) — **그 「이어지는 커밋」이 이것이다.**
+     앞 스프린트에서 이 줄을 «일부러 비워 뒀다» — 어댑터만 있고 부르는 화면이
+     없으면 「고칠 수 있다」고 말하고 아무 일도 일어나지 않기 때문이다.
+     이제 다섯이 «같은 커밋에» 있다:
        [x] 읽기 라우트(api/coupang/registered-product)
-       [ ] 🔴 CommerceWorkspace 의 수정 orchestration 이 아직 smartstore 전용이다
-     여기 한 줄을 지금 더하면 화면이 「고칠 수 있다」고 말하는데 누르면 아무 일도
-     일어나지 않는다. 형제 가드(commerce3-capability-parity ⑤)가 정확히 그것을
-     세고 있고, 이번에 «나를 잡았다». 배선이 이어지는 커밋에서 같이 더한다. */
+       [x] 어댑터(edit-adapters/coupang.ts) · 서버 실행부(_lib/update-product.ts)
+       [x] capability — 🔴 상품명 «하나» 만 EDITABLE(updateFields: ["name"])
+       [x] CommerceWorkspace 의 채널별 수정 orchestration
+       [x] register 라우트의 UPDATE 실행 경계(_lib/update-execution.ts)
+     🔴 열린 축이 상품명 하나인 것은 「쿠팡이 못 한다」가 아니라 «우리가 확인한
+     것이 거기까지» 라서다. 넓히려면 그 축의 GET/PUT 왕복 실측이 먼저다. */
+  coupang: coupangEditAdapter as CommerceEditAdapter,
 };
 
 /** 이 커머스의 「등록된 상품 수정」이 지금 가능한가. 없으면 `undefined`. */

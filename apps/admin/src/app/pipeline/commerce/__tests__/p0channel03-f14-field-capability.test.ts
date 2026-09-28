@@ -27,9 +27,21 @@ describe("① 🔴 물음표를 ○ 로 만들지 않는다", () => {
     }
   });
 
-  it.each(["coupang", "lotteon"] as const)("%s — 일반 필드는 UNKNOWN (수정 가능이 «아니다»)", (id) => {
-    for (const field of FIELD_ORDER.filter((f) => f !== "category")) {
-      expect(fieldCapability(id, field)).toBe("UNKNOWN");
+  it.each(["lotteon", "elevenst"] as const)(
+    "%s — 일반 필드는 UNKNOWN (수정 가능이 «아니다»)",
+    (id) => {
+      for (const field of FIELD_ORDER.filter((f) => f !== "category")) {
+        expect(fieldCapability(id, field)).toBe("UNKNOWN");
+      }
+    },
+  );
+
+  /* 🔴 Phase 3 — 쿠팡은 «확인한 축만» 열렸다. 「하나를 열었더니 일곱이 열렸다」가
+     이 스프린트가 막으려던 사고이고, 그것을 여기서 직접 센다. */
+  it("Coupang — 상품명만 EDITABLE, 나머지 일반 필드는 UNKNOWN", () => {
+    expect(fieldCapability("coupang", "name")).toBe("EDITABLE");
+    for (const field of FIELD_ORDER.filter((f) => f !== "category" && f !== "name")) {
+      expect(fieldCapability("coupang", field), `${field} 가 조용히 열렸다`).toBe("UNKNOWN");
     }
   });
 
@@ -103,8 +115,18 @@ describe("③ F-14-4 변경 감지 — 하나라도 달라지면 열린다", () 
   });
 
   it("🔴 수정이 확인되지 않은 채널은 아무것도 열리지 않는다", () => {
-    for (const id of ["coupang", "lotteon"] as const) {
+    for (const id of ["lotteon", "elevenst"] as const) {
       expect(detectFieldChanges(id, before, { ...before, name: "B 상품" })).toEqual([]);
     }
+  });
+
+  /* 🔴 Phase 3 — 쿠팡은 «상품명만» 열렸다. 열린 축은 감지되고, 닫힌 축은
+     값이 달라져도 감지되지 않는다 — 감지되면 나가지도 않는 변경을 셀러에게
+     「바뀝니다」로 보여주게 된다. */
+  it("Coupang — 상품명 변경은 감지되고, 닫힌 축의 변경은 감지되지 않는다", () => {
+    expect(detectFieldChanges("coupang", before, { ...before, name: "B 상품" }).map((c) => c.field)).toEqual([
+      "name",
+    ]);
+    expect(detectFieldChanges("coupang", before, { ...before, salePrice: "99999" })).toEqual([]);
   });
 });

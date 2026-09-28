@@ -209,7 +209,14 @@ describe("소비자 — ERROR 가 등록을 막는다", () => {
     expect(src).toContain("if (sellerSettings.failed)");
     expect(src).toContain('code: "CP009"');
     // 🔴 멈추는 위치가 조립보다 앞이어야 한다. 뒤면 빈 값 payload 가 기록에 남는다.
-    expect(src.indexOf("if (sellerSettings.failed)")).toBeLessThan(src.indexOf("buildCoupangPayload("));
+    // 🔴 «주석을 벗기고» 잰다 — 이 저장소가 여덟 번 걸린 함정이다. 주석이 함수
+    //    이름을 언급했다고 「여기서 조립한다」가 되지 않는다. 실제로
+    //    COUPANG-UPDATE-WIRE-01 Phase 3 의 UPDATE 분기 «설명 주석» 이 이 검사를
+    //    뒤집었다(동작은 그대로인데 위치 비교만 거짓이 됐다).
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+    expect(code.indexOf("if (sellerSettings.failed)")).toBeLessThan(
+      code.indexOf("buildCoupangPayload("),
+    );
   });
 
   it("SmartStore 가 «인증 실패» 로 오해하지 않는다", () => {

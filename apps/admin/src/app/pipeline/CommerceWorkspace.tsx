@@ -115,6 +115,11 @@ import {
 } from "./commerce/channel-edit-model";
 /* 🔴 Sprint A — 채널 API 모양은 어댑터에서 끝난다. 이 화면은 «중립 통화» 만 본다. */
 import { smartStoreEditAdapter } from "./commerce/edit-adapters/smartstore";
+/* 🔴 Phase 3 — 「이 커머스가 수정 화면을 가질 수 있는가」는 «등록표» 가 답한다.
+   화면이 커머스 이름을 나열하면 커머스가 늘 때마다 여기를 고쳐야 한다. */
+import { editAdapterFor } from "./commerce/edit-adapters";
+import type { EditableField } from "./commerce/channel-field-capability";
+import type { ChannelFieldValues } from "./commerce/commerce-edit-adapter";
 import { LegacyLinkPanel } from "./commerce/LegacyLinkPanel";
 import {
   COMMERCE_ORDER,
@@ -2549,17 +2554,32 @@ export function CommerceWorkspace({
    * 교체 등)에서 셀러가 이번에 고쳤는지를 이것과 비교해 안다 — 채널 값과의
    * 비교가 아니라 «우리 화면에서 달라졌는가» 다.
    */
+  /* 🔴 COUPANG-UPDATE-WIRE-01 Phase 3 D — **채널마다 「보낼 값」의 출처가 다르다.**
+     두 채널을 한 모양으로 억지로 합치지 않는다:
+       SmartStore  Master 재생성 payload 가 곧 보낼 값 → `basePayload` 로 대조
+       Coupang     보낼 전문은 «서버가» GET baseline 에서 만든다 → 화면은 중립
+                   통화만 다루고, 「이번에 고쳤는가」는 `baseTitle` 로 안다
+     🔴 화면이 쿠팡 전문을 만들지 «않는» 것이 요점이다. 만들 수 있게 두면
+     그것이 PUT 되는 길이 생긴다(CPO 최우선 금지). */
   const [channelEdit, setChannelEdit] = useState<{
+    commerceId: CommerceId;
     model: ChannelEditModel;
-    basePayload: NaverProductRegistrationPayload;
+    /** SmartStore 전용 — 불러온 순간의 payload. 🔴 쿠팡에는 없다(null). */
+    basePayload: NaverProductRegistrationPayload | null;
+    /** 쿠팡 전용 — 불러온 순간의 Master 상품명. 🔴 SmartStore 에는 없다(null). */
+    baseTitle: string | null;
   } | null>(null);
   const [channelEditLoading, setChannelEditLoading] = useState(false);
   const [channelEditNote, setChannelEditNote] = useState<string | null>(null);
 
   const loadChannelEdit = useCallback(async () => {
-    /* 🔴 payload 가 없으면 불러오지 않는다. 기준값만 있고 「보낼 값」이 없으면
-       화면이 대조를 못 하고, 그 상태의 수정 버튼은 근거 없이 열린다. */
-    if (!smartStorePayload) {
+    /* 🔴 어느 채널의 수정 화면인지는 «지금 보고 있는 탭» 이 정한다. 상태에
+       박아 두면 탭을 옮겨도 옛 채널의 기준값이 남는다. */
+    const commerceId: CommerceId = tab === "coupang" ? "coupang" : "smartstore";
+    /* 🔴 SmartStore 만 payload 가 있어야 한다. 기준값만 있고 「보낼 값」이 없으면
+       화면이 대조를 못 하고, 그 상태의 수정 버튼은 근거 없이 열린다.
+       🔴 쿠팡은 이 조건이 «없다» — 보낼 전문을 화면이 만들지 않기 때문이다. */
+    if (commerceId === "smartstore" && !smartStorePayload) {
       setChannelEditNote("등록 정보를 계산하는 중입니다. 잠시 뒤 다시 눌러주세요.");
       return;
     }
@@ -2567,7 +2587,7 @@ export function CommerceWorkspace({
     setChannelEditNote(null);
     try {
       const response = await fetch(
-        `/api/smartstore/registered-product?snapshotId=${encodeURIComponent(snapshotId ?? "")}`,
+        `/api/${commerceId}/registered-product?snapshotId=${encodeURIComponent(snapshotId ?? "")}`,
       );
       const data = (await response.json()) as
         | { ok: true; model: ChannelEditModel }
@@ -2582,7 +2602,15 @@ export function CommerceWorkspace({
         setChannelEditNote(data.message ?? data.error ?? "지금 등록된 내용을 읽지 못했습니다.");
         return;
       }
-      setChannelEdit({ model: data.model, basePayload: smartStorePayload });
+      setChannelEdit({
+        commerceId,
+        model: data.model,
+        basePayload: commerceId === "smartstore" ? smartStorePayload : null,
+        /* 🔴 쿠팡의 기준점은 «불러온 순간의 Master 상품명» 이다. 채널 값과
+           비교하는 것이 아니라 「우리 화면에서 달라졌는가」를 보는 것이고,
+           그 의미는 SmartStore 의 `basePayload` 와 정확히 같다. */
+        baseTitle: commerceId === "coupang" ? (listing?.title ?? "") : null,
+      });
     } catch (error) {
       setChannelEdit(null);
       setChannelEditNote(
@@ -2593,7 +2621,7 @@ export function CommerceWorkspace({
     } finally {
       setChannelEditLoading(false);
     }
-  }, [smartStorePayload, snapshotId]);
+  }, [smartStorePayload, snapshotId, tab, listing]);
 
   /**
    * P0-CHANNEL-03 F-14-5 — 좌측 Editor 와 우측 Summary 가 보는 «그 값».
@@ -2603,6 +2631,29 @@ export function CommerceWorkspace({
    */
   const channelEditInput = useMemo(() => {
     if (!channelEdit) return null;
+    /* ══════════════════════════════════════════════════════════════════════
+       🔴 쿠팡 — 화면은 «중립 통화» 만 다룬다.
+
+       보낼 전문은 서버가 GET baseline 에서 만든다. 여기서 쿠팡 payload 를
+       조립하면 그것이 PUT 되는 길이 열린다(CPO 최우선 금지). 그래서 이 갈래는
+       상품명 «하나» 만 다루고, 나머지 축은 `channelEditDraft` 가 기준값
+       (지금 등록된 값) 그대로 채운다 — 변경으로 잡히지 않는다.
+    ══════════════════════════════════════════════════════════════════════ */
+    if (channelEdit.commerceId === "coupang") {
+      const title = listing?.title ?? channelEdit.baseTitle ?? "";
+      /* 🔴 「고쳤다」의 기준은 «수정 화면을 연 뒤» 다 — SmartStore 와 같은 규칙.
+         채널 값과 비교하지 않는다(그러면 고치지도 않은 것이 변경으로 뜬다). */
+      const edited: EditableField[] =
+        channelEdit.baseTitle !== null && title !== channelEdit.baseTitle ? ["name"] : [];
+      const outgoing: ChannelFieldValues = { name: title };
+      return {
+        edited,
+        draft: channelEditDraft(channelEdit.model, outgoing, edited),
+        touched: blindTouchSignals(edited),
+      };
+    }
+    /* 🔴 SmartStore — 기존 Production 검증 경로 그대로다. 한 줄도 바꾸지 않는다. */
+    if (!channelEdit.basePayload) return null;
     /* 🔴 지금 payload 가 없으면 «불러온 순간의 것» 으로 돌아간다 — 계산이
        도는 동안 초안을 비우면 화면이 「전부 사라집니다」로 보인다. */
     const current = smartStorePayload ?? channelEdit.basePayload;
@@ -2621,7 +2672,7 @@ export function CommerceWorkspace({
       draft: channelEditDraft(channelEdit.model, smartStoreEditAdapter.projectOutgoing(current), edited),
       touched: blindTouchSignals(edited),
     };
-  }, [channelEdit, smartStorePayload]);
+  }, [channelEdit, smartStorePayload, listing]);
   // N-3.72(CEO/사용자 지시: "0%는 값이 없어서가 아니라 검증이 아직 안 끝나서인
   // 경우가 있다 — 계산 중과 실패를 구분하라") — 이전에는 이 effect가 값을
   // 계산하기 전까지 smartStoreValidation이 계속 null이었고, readiness.ts의
@@ -3035,14 +3086,17 @@ export function CommerceWorkspace({
          🔴 불러오지 않았으면 «보내지 않는다». 없는 번호를 지어내면 대조가
          아니라 지시가 된다. */
       expectedExternalProductId:
-        platform === "smartstore" ? channelEdit?.model.source.externalProductId : undefined,
+        channelEdit?.commerceId === platform ? channelEdit.model.source.externalProductId : undefined,
       /* 🔴 P0-CHANNEL-03 F-14-7 — 셀러가 «이번에 고친» 항목의 이름. 서버가 이
          목록으로 나머지 칸을 지금 등록된 값으로 되돌린다. 값은 보내지 않는다.
 
          🔴 불러오지 않았으면 보내지 «않는다»(undefined). 「빈 배열」은 「하나도
          안 고쳤다」라서 전부 되돌리라는 뜻이 되고, 그것은 불러온 화면에서만
          참이다. */
-      editedFields: platform === "smartstore" ? channelEditInput?.edited : undefined,
+      /* 🔴 «불러온 그 채널» 에만 실린다. 탭을 옮겨 다른 채널로 등록을 누를 때
+         옛 채널의 변경 목록이 따라가면, 쿠팡에서는 그것이 UPDATE 분기를 열어
+         엉뚱한 상품을 고치려 든다. 채널이 일치할 때만 보낸다. */
+      editedFields: channelEdit?.commerceId === platform ? channelEditInput?.edited : undefined,
     });
     setListingProgress("CONFIRMING");
     setListingResults((prev) => ({ ...prev, [platform]: result }));
@@ -3092,7 +3146,7 @@ export function CommerceWorkspace({
        검수 상태에 달려 있어 바로 읽으면 옛 값이 올 수 있고, 그것을 「현재값」
        이라고 보여주면 셀러는 수정이 안 됐다고 읽는다. 다시 불러오는 것은 셀러가
        «직접» 누른다. */
-    if (platform === "smartstore" && result.status === "SUBMITTED" && channelEdit) {
+    if (channelEdit?.commerceId === platform && result.status === "SUBMITTED") {
       setChannelEdit(null);
       setChannelEditNote(
         "수정을 보냈습니다. 반영된 내용을 확인하려면 [등록된 내용 불러오기]를 다시 눌러주세요.",
@@ -3747,9 +3801,11 @@ export function CommerceWorkspace({
           {/* 🔴 F-14-7b — 불러오기 버튼과 실패 문구는 «우측 고정 기둥» 으로
               옮겼다(ChannelEditLoaderCard). 여기 남는 것은 불러온 뒤의 «항목별
               지금 값 ↔ 보낼 값» 뿐이다 — 한 기능을 두 군데서 찾게 하지 않는다. */}
-          {tab === "smartstore" && channelEdit && channelEditInput && (
+          {channelEdit?.commerceId === tab && channelEditInput && (
             <ChannelEditPanel
-              commerceLabel={commerceLabel("smartstore")}
+              /* 🔴 라벨도 «지금 채널» 이다. 고정하면 쿠팡 탭에서 화면이
+                 「스마트스토어」라고 말한다. */
+              commerceLabel={commerceLabel(channelEdit.commerceId)}
               model={channelEdit.model}
               /* 🔴 우측 요약과 «같은» 초안이다(channelEditInput 하나에서 온다).
                  각자 투영하면 좌우가 다른 변경을 말한다. */
@@ -3803,11 +3859,15 @@ export function CommerceWorkspace({
                  🔴 불러오지 않았으면 서지 않는다 — 읽지 않은 기준값으로 「무엇이
                  바뀐다」를 말할 수는 없다. */
               editSummary={
-                tab === "smartstore" &&
-                registrationStateFor("smartstore").basis === "CHANNEL_PRODUCT" ? (
-                  channelEdit && channelEditInput ? (
+                /* 🔴 커머스 «이름» 을 나열하지 않는다 — 어댑터가 있는 커머스만
+                   수정 화면을 가진다(`editAdapterFor`). 커머스가 늘어도 이 줄은
+                   그대로이고, 어댑터가 없으면 아무 약속도 하지 않는다. */
+                isPlatformCommerce(tab) &&
+                editAdapterFor(tab) &&
+                registrationStateFor(tab).basis === "CHANNEL_PRODUCT" ? (
+                  channelEdit?.commerceId === tab && channelEditInput ? (
                     <ChannelEditSummary
-                      commerceLabel={commerceLabel("smartstore")}
+                      commerceLabel={commerceLabel(tab)}
                       model={channelEdit.model}
                       draft={channelEditInput.draft}
                       touched={channelEditInput.touched}
@@ -3815,13 +3875,13 @@ export function CommerceWorkspace({
                       /* 🔴 여기서 PUT 하지 않는다. 등록과 «같은 문» 을 지나 서버가
                          UPDATE 인지 정하고, 전체 교체 확인 화면(F-13)이 한 번 더
                          묻는다 — 이 버튼이 곧 전송이 되면 확인 절차가 사라진다. */
-                      onSubmit={() => void confirmListing("smartstore")}
+                      onSubmit={() => void confirmListing(tab)}
                     />
                   ) : (
                     /* 🔴 F-14-7b — 「불러오기 전」도 «같은 자리» 에 선다. 불러오기
                        버튼만 왼쪽에 두면 셀러는 수정 기능을 두 군데서 찾는다. */
                     <ChannelEditLoaderCard
-                      commerceLabel={commerceLabel("smartstore")}
+                      commerceLabel={commerceLabel(tab)}
                       loading={channelEditLoading}
                       note={channelEditNote}
                       onLoad={() => void loadChannelEdit()}

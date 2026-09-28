@@ -21,6 +21,9 @@ import { getDefaultSellerProfile } from "../_lib/seller-profile";
 import { findBrandProfileByName } from "../_lib/brand-profile";
 import { callCoupangApi, type CoupangApiResponse } from "../_lib/client";
 import { withRetry } from "../_lib/retry";
+/* 🔴 UPDATE 실행부는 «별도 모듈» 이다 — 그 파일에는 `buildCoupangPayload` 가
+   없고, 형제 테스트가 소스에서 그 부재를 센다(CREATE ≠ UPDATE). */
+import { executeCoupangUpdate } from "../_lib/update-execution";
 import { fetchShippingPlaces, inferSourceCountry, selectOutboundShippingPlace } from "../_lib/shipping-place";
 import { fetchCategoryMeta } from "../_lib/category-meta";
 import { resolveBrand } from "../_lib/brand";
@@ -241,6 +244,25 @@ export async function POST(request: Request) {
      * 만들면 그것이 지금 Production 의 쿠팡 중복 3건과 같은 상태다.
      */
     confirmRecreate?: boolean;
+    /**
+     * ════════════════════════════════════════════════════════════════════════
+     * COUPANG-UPDATE-WIRE-01 Phase 3 E — **이 칸이 UPDATE 를 «가른다».**
+     * ════════════════════════════════════════════════════════════════════════
+     *
+     * 셀러가 이번에 고친 항목의 «이름» 이다. SmartStore 와 같은 계약이고,
+     * 🔴 **값은 오지 않는다** — 값은 서버가 자기가 아는 곳에서 꺼낸다.
+     *
+     * 🔴 이 칸이 «없으면» 예전과 완전히 같은 CREATE/RECREATE 경로로 내려간다.
+     * 지금 이 칸을 보내는 화면은 쿠팡 수정 화면 하나뿐이라, 기존 등록 트래픽의
+     * 동작은 비트 단위로 그대로다.
+     */
+    editedFields?: string[];
+    /**
+     * P0-CHANNEL-03 F-14 — 화면이 «실제로 보고 고친» 등록 ID.
+     * 🔴 이 번호로 «읽지» 않는다. 서버가 찾은 번호와 «대조만» 한다 —
+     * 번호를 받아 그대로 읽으면 남의 상품을 고치는 길이 열린다(F-12b).
+     */
+    expectedExternalProductId?: string;
   } | null;
 
   if (!body?.product || !body?.listing) {
@@ -257,6 +279,12 @@ export async function POST(request: Request) {
   const jobKey = body.jobKey ?? null;
   /* 🔴 `=== true` 로 받는다 — 동의의 기본값은 «안 함» 이다(F-8). */
   const confirmRecreate = body.confirmRecreate === true;
+  /* 🔴 `undefined` 와 `[]` 를 «구분해서» 둔다(F-14-7 과 같은 계약).
+       undefined  수정 화면을 거치지 않았다 → 예전 그대로 CREATE/RECREATE
+       []         불러왔는데 고친 것이 없다 → UPDATE 경로로 «들어가서» 막힌다
+     🔴 둘을 같게 다루면 「고친 것 없음」이 CREATE 로 흘러 중복 상품이 생긴다. */
+  const editedFields = body.editedFields;
+  const expectedExternalProductId = body.expectedExternalProductId ?? null;
 
   // P0-C PRE-REGISTER SECURITY GATE(CEO 승인, 2026-09-17) — 이 라우트에는
   // 사용자 검증이 **하나도 없었다**. 쿠팡 자격증명(coupang_seller_settings의
@@ -313,6 +341,75 @@ export async function POST(request: Request) {
     return NextResponse.json(result);
   }
   logStep("인증 확인", "success", "쿠팡 인증 정보 확인 완료");
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     COUPANG-UPDATE-WIRE-01 Phase 3 E — 🔴 **UPDATE 실행 경계.**
+     ══════════════════════════════════════════════════════════════════════════
+
+     🔴 여기가 `buildCoupangPayload()` «앞» 인 것이 설계다. UPDATE 는 CREATE
+     payload 를 만들 이유가 없고, 만들 수 있게 두면 언젠가 그것을 PUT 한다 —
+     「Master → 전체 payload → PUT」이 CPO 최우선 금지다. 이 분기는 곧바로
+     반환하므로 UPDATE 요청은 아래 CREATE 조립을 **지나가지 않는다.**
+
+     🔴 `editedFields` 가 없으면 이 블록 자체가 없는 것과 같다. 그 칸을 보내는
+     화면은 쿠팡 수정 화면 하나뿐이라, 기존 등록 트래픽은 예전 경로 그대로다.
+  ══════════════════════════════════════════════════════════════════════════ */
+  if (editedFields !== undefined) {
+    /* 🔴 번호는 «우리가» 찾는다. 클라이언트가 준 번호로 읽지 않는다. */
+    const link = await findChannelProductBySnapshot(snapshotId, "coupang");
+    const execution = await executeCoupangUpdate({
+      credentials,
+      sellerProductId: link?.externalProductId ?? null,
+      expectedExternalProductId,
+      editedFields,
+      /* 🔴 Master 에서 오는 것은 이 문자열 «하나» 다 — 전문이 아니다.
+         `buildCoupangPayload` 도 같은 값을 쓴다(build-payload.ts: sellerProductName:
+         listing.title). 같은 값을 빌더 «없이» 얻는다. */
+      title: listing.title,
+    });
+
+    if (!execution.ok) {
+      logStep("상품 수정", "failed", execution.message);
+      const failed: ListingResult = withMeta({
+        status: "FAILED",
+        platform: "coupang",
+        mode: "LIVE",
+        retryable: execution.retryable,
+        externalProductId: link?.externalProductId,
+        error: {
+          /* 읽기 실패·전송 실패는 쿠팡 쪽 사정이고, 나머지는 우리가 «보내지
+             않기로 정한» 것이다 — 셀러가 할 일이 다르므로 구분해서 적는다. */
+          step:
+            execution.failure === "FETCH" ||
+            execution.failure === "SUBMIT" ||
+            execution.failure === "VERIFY"
+              ? "COUPANG_API"
+              : "VALIDATION",
+          code:
+            execution.failure === "FETCH" ||
+            execution.failure === "SUBMIT" ||
+            execution.failure === "VERIFY"
+              ? "API004"
+              : "CP005",
+          message: execution.message,
+          retryable: execution.retryable,
+        },
+      });
+      await logRegistrationAttempt(failed, undefined, snapshotId, jobKey);
+      return NextResponse.json(failed);
+    }
+
+    logStep("상품 수정", "success", `${execution.changed.length}개 항목을 수정했습니다.`);
+    const updated: ListingResult = withMeta({
+      status: "SUBMITTED",
+      platform: "coupang",
+      mode: "LIVE",
+      retryable: false,
+      externalProductId: execution.sellerProductId,
+    });
+    await logRegistrationAttempt(updated, undefined, snapshotId, jobKey);
+    return NextResponse.json(updated);
+  }
 
   const vendorUserId = await getVendorUserId();
   const sellerProfile = await getDefaultSellerProfile();

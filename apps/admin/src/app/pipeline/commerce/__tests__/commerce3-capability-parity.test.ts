@@ -50,19 +50,24 @@ const ROUTES: Record<string, string> = {
 };
 
 describe("① 🔴 어댑터 등록은 «확인된» 채널만 — 문구가 조용히 사라지지 않는다", () => {
-  it("등록된 어댑터의 채널은 전부 update === SUPPORTED 다", () => {
+  /** 🔴 「확인됐다」에 해당하는 값. 임시저장 범위까지 실측한 것도 확인이다. */
+  const CONFIRMED = ["SUPPORTED", "SUPPORTED_WHEN_SAVED"] as const;
+
+  it("등록된 어댑터의 채널은 수정 가능이 «확인된» 채널이다", () => {
     for (const id of EDIT_ADAPTER_COMMERCE_IDS) {
+      /* 🔴 Phase 3 — 확인되지 «않은» 값으로 어댑터를 등록하는 것만 막으면 된다.
+         그 상태로는 화면에서 「확인되지 않았습니다」가 사라지고 수정 가능한
+         것처럼 보인다. */
       expect(
-        CHANNEL_CAPABILITY[id].update,
-        `${id} 어댑터가 등록돼 있는데 capability.update 가 SUPPORTED 가 아니다 — ` +
-          "이 상태로는 화면에서 「확인되지 않았습니다」가 사라지고 수정 가능한 것처럼 보인다.",
-      ).toBe("SUPPORTED");
+        CONFIRMED as readonly string[],
+        `${id} 어댑터가 등록돼 있는데 capability.update 가 확인된 값이 아니다.`,
+      ).toContain(CHANNEL_CAPABILITY[id].update);
     }
   });
 
-  it("update === SUPPORTED 인 채널은 «배선이 있어야» 한다", () => {
+  it("수정 가능이라고 «선언한» 채널은 배선이 있어야 한다", () => {
     for (const id of COMMERCE_ORDER) {
-      if (CHANNEL_CAPABILITY[id].update !== "SUPPORTED") continue;
+      if (!(CONFIRMED as readonly string[]).includes(CHANNEL_CAPABILITY[id].update)) continue;
       expect(
         editAdapterFor(id),
         `${id} 는 수정 가능이라고 선언했는데 어댑터가 없다 — 화면이 고칠 수 있다고 말하고 누르면 아무 일도 없다.`,
@@ -70,9 +75,20 @@ describe("① 🔴 어댑터 등록은 «확인된» 채널만 — 문구가 조
     }
   });
 
+  /* 🔴 Phase 3 — 부분 개방 채널은 «연 축» 을 반드시 적는다. `updateFields` 없이
+     `SUPPORTED_WHEN_SAVED` 만 올리면 category 를 뺀 일곱 축이 한꺼번에 열린다. */
+  it("🔴 SUPPORTED_WHEN_SAVED 채널은 «연 축» 을 명시한다", () => {
+    for (const id of COMMERCE_ORDER) {
+      if (CHANNEL_CAPABILITY[id].update !== "SUPPORTED_WHEN_SAVED") continue;
+      const fields = CHANNEL_CAPABILITY[id].updateFields;
+      expect(fields, `${id} 가 어느 축을 확인했는지 적지 않았다`).toBeTruthy();
+      expect(fields?.length ?? 0, `${id} 가 빈 축 목록으로 열렸다`).toBeGreaterThan(0);
+    }
+  });
+
   it("🔴 확인되지 «않은» 채널은 반드시 문장을 갖는다 — 침묵하지 않는다", () => {
     for (const id of COMMERCE_ORDER) {
-      if (CHANNEL_CAPABILITY[id].update === "SUPPORTED") continue;
+      if ((CONFIRMED as readonly string[]).includes(CHANNEL_CAPABILITY[id].update)) continue;
       const note = editUnavailableNote(id);
       expect(note, `${id} 에 수정 불가 안내 문장이 없다`).toBeTruthy();
       /* 🔴 「안 됩니다」라고 말하지 않는다 — 확인되지 않았을 뿐이다. */
@@ -182,11 +198,17 @@ describe("⑤ 🔴 수정 배선이 있는 채널은 «하나» 이고, 그 사�
     readFileSync(join(__dirname, "../../CommerceWorkspace.tsx"), "utf8"),
   );
 
-  it("수정 기준값을 읽는 라우트 호출이 지금은 smartstore 하나뿐이다", () => {
-    const calls = [...workspace.matchAll(/\/api\/(\w+)\/registered-product/g)].map((m) => m[1]);
-    expect(calls.length).toBeGreaterThan(0);
-    expect([...new Set(calls)]).toEqual(["smartstore"]);
-    expect([...new Set(calls)]).toEqual(EDIT_ADAPTER_COMMERCE_IDS);
+  /* 🔴 Phase 3 — 채널이 둘이 되면서 URL 이 «채널에서 파생» 된다. 채널 이름을
+     화면에 나열하면 커머스가 늘 때마다 여기를 고쳐야 하기 때문이다. 그래서
+     이 가드가 세는 것도 「어느 이름이 박혀 있나」에서 「이름을 박지 «않았나»」로
+     바뀐다 — 실제로 어느 채널이 열리는지는 아래 라우트 존재 검사가 잰다. */
+  it("수정 기준값 라우트를 «채널에서 파생» 한다 — 이름을 박지 않는다", () => {
+    expect(workspace).toContain("/registered-product?snapshotId=");
+    const hardcoded = [...workspace.matchAll(/\/api\/(\w+)\/registered-product/g)].map((m) => m[1]);
+    expect(
+      hardcoded,
+      `화면이 ${hardcoded.join("·")} 를 이름으로 박았다 — 커머스가 늘면 여기를 또 고쳐야 한다.`,
+    ).toEqual([]);
   });
 
   it("registered-product 라우트가 존재하는 채널도 그 하나뿐이다", () => {

@@ -68,13 +68,18 @@ describe("③ 일반 변경 — 채널이 할 수 있는 만큼만", () => {
     expect(d.needsAttention).toBe(true);
   });
 
-  it("🔴 Coupang: 수정 근거가 «없다» → RECREATE 가 아니라 BLOCKED", () => {
+  it("🔴 Coupang: 상태를 «모르면» RECREATE 가 아니라 BLOCKED", () => {
     /* 여기서 RECREATE 로 넘기면, 확인도 안 된 채로 «새 상품을 만드는» 길이
        열린다 — 그것이야말로 이번에 고치려는 중복을 다시 만드는 짓이다.
-       막고 «말한다». */
+       막고 «말한다».
+
+       🔴 Phase 3 에서 쿠팡이 `SUPPORTED_WHEN_SAVED` 가 되면서, 이 함수로 오면
+       «상태를 모르는» 경우가 됐다 — 인자가 셋뿐이라 상품 상태를 받지 못한다.
+       결론은 그대로 BLOCKED 이고 이유만 정확해졌다: 「지원 여부를 모른다」에서
+       「이 상품이 지금 어떤 상태인지 모른다」로. */
     const d = resolveLifecycle("coupang", true, PRICE);
     expect(d.operation).toBe("BLOCKED");
-    expect(d.reason).toContain("확인되지 않았습니다");
+    expect(d.reason).toContain("어떤 상태인지 확인하지 못해");
     expect(d.needsAttention).toBe(true);
   });
 });
@@ -113,11 +118,15 @@ describe("⑤ 🔴 UNKNOWN 과 NOT_SUPPORTED 를 같게 다루지 않는다", ()
     expect(CHANNEL_CAPABILITY.coupang.categoryUpdate).toBe("NOT_SUPPORTED");
     expect(CHANNEL_CAPABILITY.smartstore.categoryUpdate).toBe("UNKNOWN");
     expect(CHANNEL_CAPABILITY.lotteon.categoryUpdate).toBe("UNKNOWN");
-    expect(CHANNEL_CAPABILITY.coupang.update).toBe("UNKNOWN");
-    /* 🔴 「문서에 API 가 있다」로 SUPPORTED 가 되지 않는다. 세 채널 중 수정이
-       «확인된» 것은 SmartStore 하나뿐이다. */
+    /* 🔴 Phase 3 — 쿠팡은 «실측한 만큼만» 올라갔다. 전면 SUPPORTED 가 아니다:
+       임시저장 상태(SUPPORTED_WHEN_SAVED) × 상품명 한 축(updateFields). */
+    expect(CHANNEL_CAPABILITY.coupang.update).toBe("SUPPORTED_WHEN_SAVED");
+    expect(CHANNEL_CAPABILITY.coupang.updateFields).toEqual(["name"]);
+    /* 🔴 「문서에 API 가 있다」로 SUPPORTED 가 되지 않는다. 롯데ON 은 그대로다. */
     expect(CHANNEL_CAPABILITY.lotteon.update).toBe("UNKNOWN");
     expect(CHANNEL_CAPABILITY.smartstore.update).toBe("SUPPORTED");
+    /* 🔴 전면 SUPPORTED 로 «번지지» 않았다는 것을 직접 센다. */
+    expect(CHANNEL_CAPABILITY.coupang.update).not.toBe("SUPPORTED");
   });
 
   it("같은 RECREATE 라도 «이유가 다르다»", () => {
