@@ -103,13 +103,23 @@ ChannelEdit
 ⑦ 여기서 «1회용» PUT token 발급        ← 🔴 그 전에 발급하지 않는다
 ⑧ GET → PUT → GET
 ⑨ 증거 확보
-⑩ route 삭제 → 재배포 → «토큰이 유효한 동안» 404 확인 → 그 다음 token 폐기
+⑩ token 즉시 폐기 → route 삭제 → 재배포 → 삭제 증명(source + deployment)
 ```
 
-🔴 **⑩ 의 순서가 규칙이다** — 토큰을 먼저 버리면 삭제를 증명할 수 없다.
-미들웨어가 `/api/*` 를 인증 앞단에서 막아 **존재하지 않는 라우트도 401** 을 준다
-(2026-09-28 실측: `/api/coupang/zzz-not-a-route-9x8y7z` → 401). 인증 없는 curl 은
-「삭제됨」과 「살아 있지만 보호됨」을 구분하지 못한다. 전문은 루트 `CLAUDE.md` §10.
+🔴 **「404 확인」으로 닫지 않는다**(2026-09-28 실측으로 폐기된 규칙).
+미들웨어가 `/api/*` 를 인증 앞단에서 막아 **존재하지 않는 라우트도 401** 을 준다 —
+`/api/coupang/zzz-not-a-route-9x8y7z` → 401, 소스에 없는
+`/api/coupang/registered-product` → 401. 즉 401 도 unauthenticated 404 도
+route existence 와 무관해서 **삭제 증거가 되지 못한다.**
+
+```
+① 소스에서 route 파일 / registry 존재 여부 확인
+② 해당 route 의 호출 참조 제거 확인
+③ 배포된 커밋 기준으로 ①②를 재확인
+④ 인증 가능한 최소 probe 는 «보조» — 단독 증거로 쓰지 않는다
+```
+
+전문은 루트 `CLAUDE.md` §10.
 
 ---
 

@@ -170,20 +170,29 @@ git status → 테스트 → typecheck → build → commit → push → deploy
 작업트리는 최종적으로 **clean**. commit 은 스프린트 단위로 의미 있게.
 🔴 **push 까지 끝나야 CTO 완료다** — 로컬 commit 으로 끝내지 않는다.
 
-### 🔴 「clean」은 「push 됐다」가 아니다
+### 🔴 WORKTREE CLEAN ≠ REMOTE SYNCED
 
-`git status` 는 커밋되지 않은 변경만 본다. 커밋만 해도 clean 이 된다.
-실제로 이 규칙이 조용히 무력화돼 **커밋 15개가 밀려 있던 적이 있다**(2026-09-28).
+`git status` 는 커밋되지 않은 변경만 본다. **커밋만 해도 clean 이 된다.**
+실제로 이 규칙이 조용히 무력화돼 **커밋 15개가 clean 상태로 밀려 있었다**(2026-09-28).
+실전에서 검증된 규칙이다 — 추정이 아니다.
+
+CTO 완료 기준은 «둘 다» 다:
 
 ```bash
-git fetch origin --quiet                 # 로컬 ref 가 낡으면 숫자도 틀린다
-git rev-list --count origin/main..HEAD   # ahead  — 0 이어야 한다
-git rev-list --count HEAD..origin/main   # behind
+git fetch origin --quiet          # 로컬 ref 가 낡으면 아래 숫자도 틀린다
+git status                        # → clean
+git rev-list --left-right --count origin/main...HEAD
+                                  # → 0       0
+                                  #   behind  ahead
 ```
 
 종료 보고의 Git 절에는 clean 여부와 **ahead/behind 숫자를 같이** 적는다.
-push 가 Production 배포를 부르므로, 밀린 커밋을 발견하면 임의로 밀지 말고
+「clean」만 적는 것은 완료 보고가 아니다.
+
+🔴 push 가 Production 배포를 부르므로, 밀린 커밋을 발견하면 임의로 밀지 말고
 CEO 판단을 받는다. 밀 때는 커밋 메시지의 「테스트 통과」를 믿지 말고 **직접 실행**한다.
+
+🔴 **`clean` · `push` · `deploy` · `Production PASS` 를 같은 의미로 취급하지 않는다.**
 배포는 **repo 루트에서만** 실행한다(Bash 의 `cd` 가 PowerShell 작업 디렉터리에 남는다).
 
 ---
@@ -211,26 +220,39 @@ token 값을 보고서에 출력 · token 을 소스에 hardcode · debug token 
 ```
 ① CTO 가 1회용 token 생성        ② Production Sensitive env 등록
 ③ 해당 debug/probe route 에만 사용 ④ 실제 GET/PUT 수행
-⑤ 필요한 데이터만 반환            ⑥ route 삭제
-⑦ 재배포                         ⑧ 「삭제됐다」를 증명 (아래)
-⑨ token 폐기                     ⑩ 환경변수 잔존 확인
+⑤ 필요한 데이터만 반환            ⑥ token 즉시 폐기
+⑦ route 삭제                     ⑧ 재배포
+⑨ 삭제 증명 — source + deployment (아래)
+⑩ 환경변수 잔존 확인
 ```
+
+증명이 토큰에 의존하지 않으므로 **토큰은 ⑥에서 가장 이르게 폐기한다.**
 
 🔴 **토큰은 스프린트 시작에 발급하지 않는다.** 실제 write 실측 «직전» 에 발급한다.
 
-### 🔴 ⑧ — 401 로는 삭제를 증명할 수 없다 (2026-09-28 실측)
+### 🔴 ⑧ — HTTP 상태코드를 삭제 증거로 «단독 사용하지 않는다» (2026-09-28 실측)
 
 미들웨어가 `/api/*` 전체를 인증 앞단에서 막는다. **존재하지 않는 라우트도 401 이다.**
 
 ```
-/api/coupang/zzz-not-a-route-9x8y7z   401   ← 존재하지 «않는» 것
-/api/coupang/registered-product       401   ← 역시 존재하지 않는다(소스 확인)
+/api/실존 route      → 401
+/api/없는 route      → 401     ← 401 은 route existence 와 «무관» 하다
 ```
 
-즉 인증 없는 curl 로는 「삭제됨」과 「살아 있지만 보호됨」을 **구분할 수 없다.**
-그래서 삭제 증명은 둘로 한다 — ⓐ 배포된 커밋에서 라우트 파일 부재를 확인하고,
-ⓑ **토큰이 아직 유효한 동안** 호출해 404 를 받는다. 그 다음에 ⑨로 토큰을 폐기한다.
-🔴 토큰을 먼저 버리면 ⑧이 영원히 401 이라 증명이 불가능해진다 — 순서가 규칙이다.
+실측: `/api/coupang/zzz-not-a-route-9x8y7z` → 401 ·
+`/api/coupang/registered-product` → 401 (소스에 «없음» 이 확인된 라우트).
+
+🔴 **「401 이면 삭제 확인」을 사용하지 않는다. unauthenticated 404 도 증거가 아니다.**
+이 프로젝트의 `/api/*` 인증 middleware 구조에서는 둘 다 유효한 삭제 증거가 아니다.
+
+대신 **source + deployment 기준**으로 판단한다:
+
+```
+① 소스에서 route 파일 / registry 존재 여부 확인
+② 해당 route 의 호출 참조 제거 확인
+③ 배포된 커밋 기준으로 ①②를 재확인
+④ 인증 가능한 최소 probe 가 «필요하면» 보조로 수행 — 단독 증거로 쓰지 않는다
+```
 
 ---
 
