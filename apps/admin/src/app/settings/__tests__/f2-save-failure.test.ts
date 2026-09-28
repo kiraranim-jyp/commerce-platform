@@ -3,6 +3,7 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LotteOnDeliveryMapping } from "../LotteOnDeliveryMapping";
+import { stubRoutes } from "./route-contract";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -43,25 +44,26 @@ let root: Root;
 let serverValues: Record<string, unknown>;
 let putCount: number;
 
+/**
+ * 🔴 P0-2 — 스텁이 «계약대로» 대답한다. URL 만 보고 대답하면 메서드가 어긋난
+ * 호출(실제로 405 로 죽어 있던 그 호출)을 그대로 통과시킨다.
+ */
 function stub(putOk: boolean) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn((input: unknown, init?: { method?: string; body?: string }) => {
-      const url = String(input);
-      if (url.includes("/api/lotteon/delivery-settings")) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(LISTS) });
-      }
-      if (url.includes("/api/settings/lotteon-seller")) {
-        if (init?.method === "PUT") {
+  return stubRoutes([
+    { path: "/api/lotteon/delivery-settings", handlers: { GET: () => ({ body: LISTS }) } },
+    {
+      path: "/api/settings/lotteon-seller",
+      handlers: {
+        GET: () => ({ body: { ok: true, values: serverValues } }),
+        PUT: ({ body }) => {
           putCount += 1;
-          if (putOk) serverValues = JSON.parse(init.body ?? "{}");
-          return Promise.resolve({ ok: putOk, json: () => Promise.resolve({ ok: putOk }) });
-        }
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, values: serverValues }) });
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-    }),
-  );
+          if (putOk) serverValues = body as Record<string, unknown>;
+          /* 🔴 저장 실패는 «상태 코드» 로 온다 — 본문만 보고 판단하지 않는다. */
+          return putOk ? { body: { ok: true } } : { status: 500, body: { ok: false } };
+        },
+      },
+    },
+  ]);
 }
 
 async function mount(): Promise<HTMLElement> {

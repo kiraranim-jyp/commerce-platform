@@ -3,6 +3,7 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LotteOnDeliveryMapping } from "../LotteOnDeliveryMapping";
+import { stubRoutes } from "./route-contract";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -32,29 +33,38 @@ let container: HTMLDivElement;
 let root: Root;
 const puts: unknown[] = [];
 
+/**
+ * 🔴 P0-2(CPO, 2026-09-28) — 스텁이 «URL 만» 보고 대답하면 안 된다.
+ *
+ * 예전 이 스텁은 URL 만 맞으면 POST 로 부르든 GET 으로 부르든 목록을 돌려줬다.
+ * 그래서 Production 에서 405 로 죽어 있던 화면이 여기서는 «11건 전부 통과» 했다.
+ * 라우트가 실제로 내보내는 핸들러만 응답하게 바꾼다 — 없는 메서드는 405.
+ */
 function stubFetch(opts: { listsOk?: boolean; saved?: Record<string, unknown> } = {}) {
   const { listsOk = true, saved = {} } = opts;
-  vi.stubGlobal(
-    "fetch",
-    vi.fn((input: unknown, init?: { method?: string; body?: string }) => {
-      const url = String(input);
-      if (url.includes("/api/lotteon/delivery-settings")) {
-        return Promise.resolve(
+  const calls = stubRoutes([
+    {
+      path: "/api/lotteon/delivery-settings",
+      // 라우트 파일이 내보내는 것은 GET 하나뿐이다(route.ts:140).
+      handlers: {
+        GET: () =>
           listsOk
-            ? { ok: true, json: () => Promise.resolve(LISTS) }
-            : { ok: false, json: () => Promise.resolve({ ok: false, message: "롯데ON에 연결하지 못했습니다." }) },
-        );
-      }
-      if (url.includes("/api/settings/lotteon-seller")) {
-        if (init?.method === "PUT") {
-          puts.push(JSON.parse(init.body ?? "{}"));
-          return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, values: saved }) });
-        }
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, values: saved }) });
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-    }),
-  );
+            ? { body: LISTS }
+            : { ok: false, status: 200, body: { ok: false, message: "롯데ON에 연결하지 못했습니다." } },
+      },
+    },
+    {
+      path: "/api/settings/lotteon-seller",
+      handlers: {
+        GET: () => ({ body: { ok: true, values: saved } }),
+        PUT: ({ body }) => {
+          puts.push(body);
+          return { body: { ok: true, values: saved } };
+        },
+      },
+    },
+  ]);
+  return calls;
 }
 
 async function mount(): Promise<HTMLElement> {
@@ -85,6 +95,52 @@ afterEach(async () => {
 });
 
 const text = (el: HTMLElement) => (el.textContent ?? "").replace(/\s+/g, " ");
+
+describe("⓪ 🔴 HTTP 계약 — 화면이 부르는 메서드가 라우트에 «있는가»", () => {
+  /*
+   * 이 한 칸이 없어서 Production 에서 화면이 죽어 있는 동안 아래 11건이 전부
+   * 통과했다. 스텁이 URL 만 보고 대답했기 때문이다.
+   *
+   *   route.ts                 export async function GET()   ← 이것뿐
+   *   LotteOnDeliveryMapping   fetch(..., { method: "POST" }) → 405
+   *
+   * 이제 스텁이 Next.js 처럼 405 를 돌려주므로, 메서드가 어긋나면 아래가 무너진다.
+   * 그래도 «무엇이 어긋났는지» 를 바로 말해 주는 칸을 따로 둔다 — 11건이 한꺼번에
+   * 깨지면 원인을 찾는 데 시간이 걸린다.
+   */
+  it("목록 조회는 GET 이고, 405 를 맞지 않는다", async () => {
+    const calls = stubFetch();
+    await mount();
+    const list = calls.filter((c) => c.path === "/api/lotteon/delivery-settings");
+    expect(list.length, "목록 조회를 부르지 않았다").toBeGreaterThan(0);
+    for (const c of list) {
+      expect(c.method, "라우트에 없는 메서드로 불렀다").toBe("GET");
+      expect(c.status, "405 — 라우트 계약과 어긋난다").not.toBe(405);
+    }
+  });
+
+  it("저장은 PUT 이고, 405 를 맞지 않는다", async () => {
+    const calls = stubFetch();
+    const el = await mount();
+    const first = el.querySelectorAll("select")[0] as HTMLSelectElement;
+    await act(async () => {
+      first.value = "PLO3837441";
+      first.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    const saves = calls.filter((c) => c.path === "/api/settings/lotteon-seller");
+    expect(saves.some((c) => c.method === "PUT"), "저장을 PUT 으로 부르지 않았다").toBe(true);
+    expect(saves.every((c) => c.status !== 405)).toBe(true);
+  });
+
+  /* 🔴 스텁 자체가 «실제로» 405 를 낼 수 있는지 본다. 이것이 참이 아니면
+     위 두 칸은 아무것도 증명하지 않는다(내가 이 스프린트에서 두 번 당했다). */
+  it("스텁은 라우트에 없는 메서드에 405 를 준다", async () => {
+    stubFetch();
+    const res = await fetch("/api/lotteon/delivery-settings", { method: "POST" });
+    expect(res.status).toBe(405);
+    expect(res.ok).toBe(false);
+  });
+});
 
 describe("① 영역이 «실제로» 그려진다", () => {
   it("여섯 줄이 DOM 에 선다", async () => {

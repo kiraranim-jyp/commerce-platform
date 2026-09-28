@@ -182,7 +182,19 @@ export function LotteOnDeliveryMapping() {
     setError(null);
     try {
       const [listRes, savedRes] = await Promise.all([
-        fetch("/api/lotteon/delivery-settings", { method: "POST" }),
+        /* 🔴 P0-1(CPO 2차 감사, 2026-09-28) — 여기가 `{ method: "POST" }` 였다.
+           라우트가 내보내는 핸들러는 `GET` 하나뿐이라(route.ts:140) 405 가 돌아왔고,
+           화면은 그것을 「불러오지 못했습니다」로 읽었다. 그래서 셀러는 «한 번도»
+           목록을 본 적이 없고, 고를 수 없으니 저장도 없었고, 상품 화면의 배송비
+           정책·지역·택배사가 전부 「선택 안 함」이었다.
+
+           POST 를 쓴 이유는 짐작이 간다 — 이 라우트가 «안에서» 롯데ON 150/166 을
+           POST 로 부른다(route.ts:169,211). 상류 API 의 메서드를 우리 라우트의
+           메서드로 착각한 것이다. 둘은 다른 계약이다.
+
+           상품 등록 패널은 처음부터 GET 으로 불렀다(LotteOnRegistrationPanel:755) —
+           그래서 그쪽만 동작했다. 두 캡처가 달랐던 이유가 이것이다. */
+        fetch("/api/lotteon/delivery-settings"),
         fetch("/api/settings/lotteon-seller"),
       ]);
       const listJson = (await listRes.json()) as { ok?: boolean; message?: string } & Partial<DeliveryLists>;
