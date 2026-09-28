@@ -88,14 +88,25 @@ describe("③ 폴백 순서는 바뀌지 않았다", () => {
   });
 
   it("제조사 — 브랜드 → 판매자 (상품 원문은 build-payload 가 더 앞에서 본다)", () => {
-    // PIVOT NEXT-04c-2 — 판매 사업자가 빠지고 브랜드명이 그 자리에 왔다.
-    expect(SOURCE).toContain("brandProfile?.manufacturer || brandName || null");
+    /* ══ COMMERCE-COMMON-WIRE-02(2026-09-28) ═══════════════════════════════
+       PIVOT NEXT-04c-2 에서 판매 사업자가 빠지고 브랜드명이 그 자리에 왔다.
+       그 «순서» 는 그대로이고, 이제 판정은 쿠팡·롯데ON 과 같은 공통 함수가 한다.
+       네이버가 마지막까지 자기 사슬을 갖고 있었다.
+
+       🔴 순서가 실제로 같은지는 문자열이 아니라 «값» 으로 잰다 —
+       packages/listing/src/common/__tests__/wire02-manufacturer-production-path.test.ts
+       가 옛 조건을 그대로 재현해 6가지 조합에서 값과 라벨을 함께 대조한다. */
+    expect(SOURCE).toContain("resolveManufacturer({");
+    expect(SOURCE).toContain("brandProfileManufacturer: brandProfile?.manufacturer");
+    expect(SOURCE).toContain("brandName,");
   });
 
-  it("🔴 출처 표시도 같은 조건을 그대로 읽는다 — 값과 라벨이 갈리면 안 된다", () => {
-    expect(SOURCE).toContain(
-      'manufacturerSource: brandProfile?.manufacturer ? "BRAND_DEFAULT" : brandName ? "PRODUCT_BRAND" : "NONE"',
-    );
+  it("🔴 출처 표시도 «같은 계산» 에서 나온다 — 값과 라벨이 갈리면 안 된다", () => {
+    /* 🔴 예전에는 값 한 줄과 라벨 한 줄이 같은 조건을 «따로» 읽었다(그 파일
+       주석도 「바로 위 줄과 동일한 조건을 그대로 다시 읽은 것」이라고 적었다).
+       조건이 둘이면 언젠가 한쪽만 바뀐다. 이제 한 번 계산해서 둘 다 꺼낸다. */
+    expect(SOURCE).toContain("manufacturer: manufacturerResolution.value || null");
+    expect(SOURCE).toContain("manufacturerResolution.source ===");
   });
 });
 

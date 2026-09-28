@@ -1,6 +1,7 @@
 import {
   buildNaverCategoryPath,
   resolveCommonOrigin,
+  resolveManufacturer,
   resolveDetailBlocks,
   resolveNaverOriginArea,
 } from "@commerce/listing";
@@ -153,6 +154,20 @@ export async function resolveNaverContext(params: {
     sellerDefault: sellerSettings.defaultCountryOfOrigin,
   });
   const resolvedCountryText = commonOrigin.value;
+
+  /* ══ COMMERCE-COMMON-WIRE-02 ═══════════════════════════════════════════
+     제조사 폴백도 Common 하나를 본다. 여기 있던 두 줄은 «같은 조건» 을 따로
+     읽고 있었다(값 한 줄, 라벨 한 줄) — 바로 위 주석이 그렇게 적어 두었고,
+     둘이 갈리면 화면과 payload 가 다른 말을 한다.
+
+     🔴 쿠팡·롯데ON 은 이미 이 함수를 쓴다. 네이버만 자기 사슬을 갖고 있었다.
+     🔴 값은 바뀌지 않는다 — 옛 조건과 같은 결과라는 것을 테스트가 값으로 고정한다.
+        (상품 원문 제조사는 build-payload 가 이 값보다 «앞에서» 본다 — 그 순서는
+         손대지 않았다.) */
+  const manufacturerResolution = resolveManufacturer({
+    brandProfileManufacturer: brandProfile?.manufacturer,
+    brandName,
+  });
   const originMatch = originAreas
     ? resolveNaverOriginArea(resolvedCountryText, originAreas)
     : { status: "NO_INPUT" as const, code: null, matchedDisplayName: null, requiresImporter: false };
@@ -217,7 +232,7 @@ export async function resolveNaverContext(params: {
          (상품 원문 제조사는 build-payload 가 이 값보다 앞에서 본다)
          판매 사업자(sellerSettings.manufacturer)가 «사라졌다» — 판매자라는 이유만으로
          제조자가 되지 않는다. */
-      manufacturer: brandProfile?.manufacturer || brandName || null,
+      manufacturer: manufacturerResolution.value || null,
       // N-4.12 STEP4(대표님 지시: "값 옆에 출처를 그대로 노출 — 브랜드
       // 기본값/판매자 기본값") — 위 3단계 우선순위(상품 원문은 build-payload.ts가
       // 이 값보다 먼저 확인, 여기는 원문이 없을 때의 폴백 두 단계만) 계산은
@@ -225,7 +240,15 @@ export async function resolveNaverContext(params: {
       // 바로 위 줄과 동일한 조건을 그대로 다시 읽은 것뿐이다.
       /* 🔴 PIVOT NEXT-04c-2 — 값과 «같은 조건» 을 그대로 다시 읽는다. 판매
          사업자가 빠졌으므로 라벨도 브랜드명으로 바뀐다. */
-      manufacturerSource: brandProfile?.manufacturer ? "BRAND_DEFAULT" : brandName ? "PRODUCT_BRAND" : "NONE",
+      /* 🔴 이 칸은 «폴백 두 단계» 만 말한다(상품 원문은 build-payload 가 앞에서
+         본다). 공통 resolver 는 MANUAL·SOURCE_URL·PRODUCT_INFO 도 돌려줄 수
+         있지만, 여기서 넘기는 입력이 브랜드 둘뿐이라 그 셋은 나올 수 없다.
+         🔴 캐스팅으로 덮지 않는다 — 좁히고, 예상 밖이면 「못 찾음」으로 둔다.
+         타입이 이 의미 차이를 실제로 잡아 줬다(as 로 눌렀으면 놓쳤다). */
+      manufacturerSource:
+        manufacturerResolution.source === "BRAND_DEFAULT" || manufacturerResolution.source === "PRODUCT_BRAND"
+          ? manufacturerResolution.source
+          : "NONE",
     },
     detailPage: {
       descriptionTemplate: descriptionTemplate ?? null,
