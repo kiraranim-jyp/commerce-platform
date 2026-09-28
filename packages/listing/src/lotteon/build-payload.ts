@@ -131,7 +131,9 @@ export const BLANK_LOTTEON_CHANNEL_CONFIG: LotteOnChannelConfig = {
   standardCategoryNo: null,
   displayCategories: [],
   originCode: null,
-  taxTypeCode: "01",
+  /* 🔴 ② — 「아직 아무것도 설정되지 않은」 설정이다. 과세를 01 로 시작하면
+     비어 있는 상태가 «과세로 정해진» 것처럼 보인다. */
+  taxTypeCode: "",
   noticeItemCode: null,
   noticeArticles: [],
   safetyCertifications: [],

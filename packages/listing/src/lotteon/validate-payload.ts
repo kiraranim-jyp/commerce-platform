@@ -2,6 +2,7 @@ import { resolveListingPrice } from "@commerce/pricing";
 import { blocksRegistration, resolveSourceStock } from "@commerce/shared";
 import type { LotteOnPayloadInput } from "./build-payload";
 import { hasLotteOnSellableOptions, isLotteOnSupportedImageUrl, resolveLotteOnImageUrls } from "./build-payload";
+import { isKnownLotteOnTaxType } from "./tax-type";
 
 /**
  * LOTTEON COMMERCE SPRINT 2 Phase 3 — 실제 POST 없이 87 payload가 등록 가능한
@@ -27,7 +28,10 @@ export type LotteOnBlockCode =
   | "TEMP_IMAGE_URL"
   /* Commerce-6 C-2E — 원본 상품이 품절이거나 재고 값이 비정상이다. 🔴 셀러가
      이 탭에서 채울 수 있는 값이 아니라 «원본의 사실» 이라 BLOCKED 다. */
-  | "SOURCE_STOCK_UNAVAILABLE";
+  | "SOURCE_STOCK_UNAVAILABLE"
+  /* 🔴 과세유형이 우리가 아는 넷(01·02·03·04) 중에 «없다». 셀러가 고칠 수 없는
+     값이라 BLOCKED 다 — 205 가 모르는 값을 줬거나 저장된 값이 손상된 경우다. */
+  | "TAX_TYPE_UNKNOWN";
 
 export interface LotteOnFieldCheck {
   field: string;
@@ -154,6 +158,28 @@ export function validateLotteOnPayload(input: LotteOnPayloadInput): LotteOnValid
       "oplcCd",
       "원산지코드",
       "롯데ON 원산지코드(공통코드 OPLC_CD)가 지정되지 않았습니다. 원산지 텍스트만으로는 코드를 정할 수 없습니다.",
+    );
+
+  /* 4b) 🔴 과세유형 — 검사가 «0줄» 이었다(CPO 2차 감사).
+     그래서 근거 없는 "01"(과세)이 조용히 payload 로 나갔다. tdfDvsCd 는 조건부가
+     아니라 «무조건» 실리는 키라 비워 둘 수도 없다 — 값이 필요하고, 그 값이
+     우리가 지어낸 것이면 안 된다.
+
+     🔴 「모른다」를 01 로 바꾸지 않는다(CPO 확정). 비었으면 여기서 막고,
+     셀러가 ⑪에서 고르거나 카테고리를 추천에서 고르면 205 가 채운다. */
+  if (isKnownLotteOnTaxType(channel.taxTypeCode)) ready("tdfDvsCd", "과세 유형");
+  else if (!channel.taxTypeCode?.trim())
+    missing(
+      "tdfDvsCd",
+      "과세 유형",
+      "과세 유형이 정해지지 않았습니다. 표준카테고리를 추천에서 고르면 자동으로 채워지고, 직접 고를 수도 있습니다.",
+    );
+  else
+    blocked(
+      "tdfDvsCd",
+      "과세 유형",
+      "과세 유형이 롯데ON이 정한 값(과세·면세·영세·해당없음) 중 하나가 아닙니다.",
+      "TAX_TYPE_UNKNOWN",
     );
 
   // 5) 상품정보제공고시 — 품목코드 + 항목 목록.

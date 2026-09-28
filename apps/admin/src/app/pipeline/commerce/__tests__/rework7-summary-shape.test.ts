@@ -135,7 +135,7 @@ beforeEach(() => {
               payload: { pdNm: "테리 버뮤다 반바지" },
               validation: {
                 ok: true,
-                readyCount: 2,
+                readyCount: 4,
                 missingCount: 0,
                 blockedCount: 0,
                 fields: [
@@ -143,6 +143,10 @@ beforeEach(() => {
                   { field: "salePrc", label: "판매가", status: "READY" },
                   // 서버가 이름을 올린 채널 필드 — 🔴 필수 배지의 근거가 된다.
                   { field: "owhpNo", label: "출고지", status: "READY" },
+                  /* 🔴 Sprint A ②(2026-09-28) — 검증기가 과세를 «보게 됐다».
+                     근거 없는 "01" 폴백을 없애고 비면 막는다. 이 스텁이 그 사실을
+                     반영하지 않으면 화면이 표시를 붙일 근거가 없어진다. */
+                  { field: "tdfDvsCd", label: "과세 유형", status: "READY" },
                 ],
               },
             }),
@@ -528,16 +532,31 @@ describe("REWORK-7 ④ / REWORK-14 — 롯데ON 고유 필드의 필수·선택�
     expect(clean(row.textContent ?? "")).toContain("입력 필요");
   });
 
-  it("검증이 아예 보지 않는 값에는 아무 표시도 붙이지 않는다 — 쿠팡이 그러하듯", async () => {
+  /* ══ Sprint A ①②④(CPO 승인, 2026-09-28) — 이 검사의 «대상» 이 바뀌었다 ══════
+     예전에는 「브랜드 · 업체 상품코드 · 과세 유형」 셋이 «검증이 보지 않는» 값이라
+     아무 표시도 붙지 않는 것이 맞았다. 셋 다 바뀌었다 —
+
+       브랜드 · 업체 상품코드   셀러에게 «묻지 않는다». 빈 상품에서는 줄 자체가 없다.
+       과세 유형              🔴 검증기가 «보게 됐다». 근거 없는 "01" 폴백을 없애고
+                              비었으면 막는다 — 그래서 표시가 «붙는 것이 맞다».
+
+     검사의 주장(「화면이 판정을 만들지 않는다 — 서버 검증을 그대로 따른다」)은
+     그대로 두고, 대상만 현재 사실로 바꾼다. */
+  it("묻지 않는 값은 줄 자체가 없다 — 빈 채로 표시만 남기지 않는다", async () => {
     const dom = await mount(lotteOnElement());
     await act(async () => expandAllSections(dom));
-    for (const field of ["브랜드", "업체 상품코드", "과세 유형"]) {
-      const row = fieldRowFor(dom, field);
-      expect(isRequired(row), `${field}: 선택인데 필수 표시가 붙었다`).toBe(false);
-      const text = clean(row.textContent ?? "");
-      expect(text, `${field}: 「선택」이라고 적었다`).not.toContain("선택 — 없어도 등록 가능");
-      expect(text, `${field}: 선택인데 「입력 필요」가 붙었다`).not.toContain("입력 필요");
-    }
+    const text = clean(dom.textContent ?? "");
+    expect(text, "브랜드 선택 칸이 남아 있다").not.toContain("브랜드 선택");
+    expect(text, "업체 상품코드 칸이 남아 있다").not.toContain("업체 상품코드");
+  });
+
+  it("🔴 과세 유형은 검증이 보므로 표시가 붙는다 — 화면이 아니라 서버가 정한다", async () => {
+    const dom = await mount(lotteOnElement());
+    await act(async () => expandAllSections(dom));
+    const row = fieldRowFor(dom, "과세 유형");
+    /* 🔴 서버가 이름을 올렸으므로 «필수» 표시가 붙는다. 이 스텁에서는 READY 라
+       「입력 필요」 알약은 서지 않는다 — 표시의 근거는 화면이 아니라 서버다. */
+    expect(isRequired(row), "과세 유형에 필수 표시가 없다").toBe(true);
   });
 
   it("🔴 판정을 화면이 만들지 않는다 — 검증 전에는 필수도 선택도 적지 않는다", async () => {

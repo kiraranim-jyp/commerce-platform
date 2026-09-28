@@ -87,6 +87,10 @@ function completeChannel(overrides: Partial<LotteOnChannelConfig> = {}): LotteOn
     standardCategoryNo: "BC63080300",
     displayCategories: [{ mallCd: "LTON", lfDcatNo: "FC11130203" }],
     originCode: "KR",
+    /* 🔴 이 fixture 는 「모든 채널 전용 값이 채워진 상태」라고 적어 놓고 과세를
+       «채우지 않았다». BLANK 설정의 조용한 "01"(관행 기본값)에 기대고 있었다 —
+       그래서 주장이 사실이 아니었다. 기본값을 없애니 이 줄이 바로 드러났다. */
+    taxTypeCode: "01",
     noticeItemCode: "01",
     noticeArticles: [{ pdArtlCd: "0020", pdArtlCnts: "블루" }],
     outboundPlaceNo: "115",

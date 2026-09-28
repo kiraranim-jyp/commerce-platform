@@ -196,7 +196,10 @@ export async function buildLotteOnContext(
       .map((lfDcatNo) => ({ mallCd: "LTON", lfDcatNo })),
 
     originCode: trimOrNull(form.originCode),
-    taxTypeCode: trimOrNull(form.taxTypeCode) ?? "01",
+    /* 🔴 ②(CPO 확정) — `?? "01"` 이었다. 205 가 tdf_cd 를 주지 않거나 셀러가
+       카테고리 번호를 직접 넣은 경우에 «과세» 가 조용히 실려 나갔다.
+       비면 빈 문자열로 두고 검증기가 막는다 — UNKNOWN 을 01 로 바꾸지 않는다. */
+    taxTypeCode: trimOrNull(form.taxTypeCode) ?? "",
 
     noticeItemCode: trimOrNull(form.noticeItemCode),
     noticeArticles: (form.noticeArticles ?? []).filter((a) => a.pdArtlCd?.trim() && a.pdArtlCnts?.trim()),

@@ -143,7 +143,10 @@ export const EMPTY_LOTTEON_CHANNEL_FORM: LotteOnChannelForm = {
     // 문서 기본 관행(평일 14:00 마감). 분은 00/30만 허용된다.
     weekdayCloseTime: "1400",
   },
-  codes: { originCode: "", taxTypeCode: "01", brandNo: "", externalProductNo: "" },
+  /* 🔴 ②(CPO 확정) — taxTypeCode 가 "01"(과세)로 시작했다. 우리 코드가 스스로
+     「관행 기본값」이라 부른 값이다(§289). 면세 상품에 01 이 조용히 실리면
+     과세 상품으로 잘못 등록된다 — 「모른다」는 빈 값으로 남기고 검증기가 막는다. */
+  codes: { originCode: "", taxTypeCode: "", brandNo: "", externalProductNo: "" },
 };
 
 /* ── 저장 ↔ 폼 ──────────────────────────────────────────────────────────────

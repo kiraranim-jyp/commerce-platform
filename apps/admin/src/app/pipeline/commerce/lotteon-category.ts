@@ -195,7 +195,11 @@ export function parseLotteOnStandardCategory(raw: unknown): LotteOnStandardCateg
     noticeItemCodes: readArray(source, "pd_Itms_list", "pd_itms_list")
       .map((entry) => readString(entry, "pd_Itms_cd", "pd_itms_cd"))
       .filter((code): code is string => Boolean(code)),
-    taxTypeCode: readString(source, "tdf_cd"),
+    /* 🔴 ②(CPO 확정) — `"tdf_cd"` 한 표기만 읽고 있었다. 바로 위 noticeItemCodes
+       는 `pd_Itms_list`/`pd_itms_list` 둘을 다 읽으면서(문서 표와 응답 샘플의
+       케이싱이 달랐다) 같은 응답의 이 줄만 한 표기였다. 못 읽으면 조용히 null 이
+       되고 그것이 «01 과세» 로 메워졌다 — 같은 방어를 여기에도 한다. */
+    taxTypeCode: readString(source, "tdf_cd", "tdfCd", "tdf_Cd", "tdfDvsCd", "tdf_dvs_cd"),
     ageLimitCode: readString(source, "age_limit_cd"),
     safetyTypeCodes,
   };

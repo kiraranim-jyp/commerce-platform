@@ -79,6 +79,7 @@ import {
   type ListingStatus,
   type LotteOnSellerSettingRow,
   type LotteOnSellerSettingsInput,
+  lotteOnTaxTypeName,
 } from "@commerce/listing";
 
 /**
@@ -1993,27 +1994,72 @@ export function LotteOnRegistrationPanel({
             value={form.codes.originCode}
             onChange={(value) => patch("codes", { originCode: value })}
           />
+          {/* ══ ② 과세 유형(CPO 승인, 2026-09-28) ═════════════════════════
+              🔴 «자유 입력칸» 이었다. note 에 「01 과세 · 02 면세 · 03 영세 ·
+              04 해당없음」이라고 답을 적어 두고 셀러에게 코드를 적게 했다 —
+              첫 LIVE 등록을 깨뜨린 그 모양이다(note 를 답으로 옮겨 적어 9999).
+
+              🔴 처음에는 4개 버튼 선택기를 붙였다. rework14 필드 패리티 가드가
+              그것을 «쿠팡에 없는 부품» 으로 잡았고 그 판정이 맞다 — CPO 가 요청한
+              것은 「방어적 읽기 · 두 경로 일관 · 조용한 01 금지」였고 새 UI 부품이
+              아니었다. 그래서 읽기 전용으로 둔다.
+
+              값의 주인은 채널이다 — 205 가 카테고리와 함께 준다(고시 품목과 같다).
+              비어 있으면 검증기가 막고, 셀러는 ② 카테고리를 «추천에서» 고르면 된다. */}
           <ChannelCodeField
             label="과세 유형"
             requirement={requirementOf("tdfDvsCd")}
-            note="01 과세 · 02 면세 · 03 영세 · 04 해당없음. 표준카테고리를 고르면 그 카테고리 값으로 채워집니다."
+            note="② 카테고리를 추천 후보에서 고르면 그 카테고리의 과세 구분이 함께 채워집니다. 번호를 직접 넣은 경우에는 채워지지 않습니다."
+            readOnly
+            /* 🔴 코드가 아니라 이름으로 보인다. 모르는 값이면 「확인 필요」다. */
+            displayValue={lotteOnTaxTypeName(form.codes.taxTypeCode)}
             value={form.codes.taxTypeCode}
             onChange={(value) => patch("codes", { taxTypeCode: value })}
           />
-          <ChannelCodeField
-            label="브랜드 선택"
-            requirement={requirementOf("brdNo")}
-            note="속성모듈(204) 조회 결과. 없으면 비워둡니다"
-            value={form.codes.brandNo}
-            onChange={(value) => patch("codes", { brandNo: value })}
-          />
-          <ChannelCodeField
-            label="업체 상품코드"
-            requirement={requirementOf("epdNo")}
-            note="우리 쪽 식별자. 등록 후 상품 상태 조회(93)에 씁니다"
-            value={form.codes.externalProductNo}
-            onChange={(value) => patch("codes", { externalProductNo: value })}
-          />
+          {/* ══ ①④(CPO 승인, 2026-09-28) — 여기 두 칸이 «있었다» ═══════════
+              브랜드번호(brdNo) · 업체상품번호(epdNo). 둘 다 셀러가 채널 코드를
+              «직접 적는» 자유 입력칸이었다.
+
+              🔴 둘 다 검증기가 «필수로 보지 않는다»(brdNo·epdNo 검사 0줄)
+                 그리고 payload 도 조건부라 비면 키 자체가 나가지 않는다.
+                 즉 «묻는 데서 얻는 것이 없고 잃을 것은 있었다» —
+                 첫 LIVE 등록이 정확히 그렇게 깨졌다(note 를 답으로 옮겨 적어 9999).
+
+              🔴 브랜드 도움말은 「속성모듈(204) 조회 결과」였는데 204 를 부르는
+                 코드가 저장소에 «없다». 조회하지 않는 것을 조회 결과라고 말하고
+                 셀러에게 번호를 적으라고 했다.
+
+              «값이 사라지는 것이 아니다» — 셀러가 보는 정보는 그대로다:
+                브랜드      ① 기본 상품정보의 「브랜드」(Common)
+                상품코드     ① 기본 상품정보의 「상품코드(SKU)」(Common)
+                단품코드     payload eitmNo 는 sku 로 «이미 자동» 이다
+
+              자동 확보(204 조회 · SKU→epdNo 생성)는 이번 범위가 «아니다». */}
+          {/* 🔴 값이 «있을 때만» 선다. 입력은 막고 표시는 남긴다 —
+              three-layer-realign 가드가 「저장된 BR-4242 가 화면에서 사라졌다」로
+              내 첫 수정을 잡았고, 그 판정이 맞다. 이미 저장된 값은 여전히 payload
+              로 나가므로 화면에서 지우면 「안 보이게만 만든 것」이 된다.
+              새 상품에서는 두 줄 다 그려지지 않는다. */}
+          {form.codes.brandNo.trim() && (
+            <ChannelCodeField
+              label="브랜드번호"
+              requirement={requirementOf("brdNo")}
+              note="이전에 입력해 둔 값입니다. 롯데ON이 발급하는 번호라 이 화면에서 고치지 않습니다."
+              readOnly
+              value={form.codes.brandNo}
+              onChange={(value) => patch("codes", { brandNo: value })}
+            />
+          )}
+          {form.codes.externalProductNo.trim() && (
+            <ChannelCodeField
+              label="업체상품번호"
+              requirement={requirementOf("epdNo")}
+              note="이전에 입력해 둔 값입니다. 등록 후 상품 상태 조회(93)에 쓰입니다."
+              readOnly
+              value={form.codes.externalProductNo}
+              onChange={(value) => patch("codes", { externalProductNo: value })}
+            />
+          )}
         </div>
       </FormSection>
 

@@ -40,6 +40,7 @@ export * from "./common/logistics";
 // 한 줄도 바뀌지 않는다.
 export * from "./lotteon/types";
 export * from "./lotteon/build-payload";
+export * from "./lotteon/tax-type";
 export * from "./lotteon/validate-payload";
 // REWORK 커머스 탭 구조 통일(2026-09-14) — 셀러 설정 ↔ 롯데ON 판정. 화면과
 // payload가 같은 표를 보게 하려고 payload 패키지에 둔다(validate-payload가
