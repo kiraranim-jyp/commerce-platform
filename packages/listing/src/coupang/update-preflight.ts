@@ -1,5 +1,5 @@
 import type { CoupangRegisteredProduct, CoupangRegisteredItem } from "./registered-baseline";
-import { itemKeyOf } from "./registered-baseline";
+import { COUPANG_INTENTIONAL_OMISSIONS, itemKeyOf } from "./registered-baseline";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -71,6 +71,11 @@ export function detectCoupangUpdateLoss(
   for (const key of Object.keys(baseline)) {
     if (key === "items") continue; // 아래에서 따로, 더 엄하게 본다
     if (isBlank(baseline[key])) continue; // 원래 비어 있던 칸은 지킬 것이 없다
+    /* 🔴 «의도적으로» 빼는 칸 하나만 지나간다 — 쿠팡이 다시 만들기 때문이다
+       (COUPANG-DISPLAY-NAME-02/03 실측). 그 목록은 한 칸으로 못 박혀 있고,
+       여기서 이름을 «문자열로 적지 않는다» — 목록이 넓어지면 그때 형제 테스트가
+       깨지도록 출처를 하나로 둔다. */
+    if ((COUPANG_INTENTIONAL_OMISSIONS as readonly string[]).includes(key)) continue;
     if (!(key in outgoing) || outgoing[key] === undefined) {
       risks.push({ field: key, label: key, reason: "MISSING" });
     }

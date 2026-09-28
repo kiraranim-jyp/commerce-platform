@@ -147,12 +147,25 @@ describe("② 🔴 Master 는 «변경값의 출처» 이지 «전문의 출처�
     const outgoing = applyCoupangEdits(baseline, { name: "새 상품명" });
 
     expect(outgoing.sellerProductName).toBe("새 상품명");
-    /* 쿠팡은 노출명을 따로 들고 있다 — 한쪽만 바꾸면 셀러센터에 옛 이름이 남는다. */
-    expect(outgoing.displayProductName).toBe("새 상품명");
+    /* 🔴 COUPANG-DISPLAY-NAME-03 — 노출명의 «입력» 은 generalProductName 이고,
+       노출명 자체는 «보내지 않는다»(쿠팡이 만든다). 예전에는 여기서 두 칸을
+       같이 덮었는데, 그러면 브랜드 접두어가 사라지고 돌아오지 않는다. */
+    expect(outgoing.generalProductName).toBe("새 상품명");
+    expect("displayProductName" in outgoing).toBe(false);
 
     /* 🔴 나머지 «전부» 가 baseline 과 같다. 한 칸이라도 빌더가 손대면 여기서 깨진다. */
-    const { sellerProductName: _a, displayProductName: _b, ...restOut } = outgoing;
-    const { sellerProductName: _c, displayProductName: _d, ...restBase } = baseline;
+    const {
+      sellerProductName: _a,
+      generalProductName: _b,
+      displayProductName: _c,
+      ...restOut
+    } = outgoing;
+    const {
+      sellerProductName: _d,
+      generalProductName: _e,
+      displayProductName: _f,
+      ...restBase
+    } = baseline;
     expect(restOut).toEqual(restBase);
   });
 

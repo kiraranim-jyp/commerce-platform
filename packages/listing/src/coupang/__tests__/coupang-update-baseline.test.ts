@@ -117,13 +117,23 @@ describe("🔴 ① 상태 게이트", () => {
    ② overlay — 고친 것만 바뀌고 나머지는 GET 값 그대로 (CPO PASS 케이스 2개)
    ════════════════════════════════════════════════════════════════════════════ */
 describe("② overlay — 「실제 수정 필드만 변경」 · 「수정 안 한 필드는 GET 값 유지」", () => {
-  it("상품명만 고치면 상품명만 바뀐다", () => {
+  it("상품명만 고치면 «이름 축» 만 움직인다", () => {
     const out = applyCoupangEdits(BASELINE, { name: "새 상품명" });
     expect(out.sellerProductName).toBe("새 상품명");
-    expect(out.displayProductName).toBe("새 상품명");
+    /* 🔴 COUPANG-DISPLAY-NAME-03 — 노출명의 «입력» 은 generalProductName 이다.
+       예전에는 여기서 displayProductName 을 직접 덮었는데, 그러면 쿠팡이 붙인
+       브랜드 접두어와 정규화가 사라지고 «돌아오지 않는다»(Production 실측). */
+    expect(out.generalProductName).toBe("새 상품명");
+    /* 🔴 그리고 노출명은 «보내지 않는다» — 쿠팡이 다시 만든다. */
+    expect("displayProductName" in out).toBe(false);
     /* 나머지는 한 칸도 안 바뀐다. */
-    const { sellerProductName: _a, displayProductName: _b, ...restOut } = out;
-    const { sellerProductName: _c, displayProductName: _d, ...restBase } = BASELINE;
+    const { sellerProductName: _a, generalProductName: _b, displayProductName: _c, ...restOut } = out;
+    const {
+      sellerProductName: _d,
+      generalProductName: _e,
+      displayProductName: _f,
+      ...restBase
+    } = BASELINE;
     expect(restOut).toEqual(restBase);
   });
 

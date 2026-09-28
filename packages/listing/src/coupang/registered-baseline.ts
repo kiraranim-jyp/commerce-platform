@@ -108,6 +108,24 @@ export interface CoupangItemEdits {
   maximumBuyCount?: number;
 }
 
+/**
+ * 🔴 UPDATE 전문에서 «의도적으로» 빼는 칸 — **그리고 이 하나뿐이다.**
+ *
+ * 빼는 이유는 「없어도 된다」가 아니라 **「쿠팡이 다시 만든다」** 다(DN-02 실측).
+ * 우리가 값을 채우면 그 값이 그대로 저장되면서 브랜드 접두어와 정규화가 사라지고,
+ * 그것은 돌아오지 않는다. 그래서 «비워서» 쿠팡이 만들게 한다.
+ *
+ * ── 🔴 이 목록을 넓히지 않는다 ───────────────────────────────────────────
+ * 여기 한 칸을 더하는 것은 「그 칸이 사라져도 좋다」고 선언하는 것이다. 전체
+ * 교체 방식에서 그 선언은 곧 «그 값을 지운다» 는 뜻이다. 넓히려면 그 칸도
+ * 「쿠팡이 다시 만든다」를 **Production 실측으로** 보여야 한다.
+ *
+ * 형제 테스트가 이 목록의 «내용» 과 «길이» 를 둘 다 고정한다.
+ */
+export const COUPANG_INTENTIONAL_OMISSIONS = ["displayProductName"] as const;
+
+export type CoupangIntentionalOmission = (typeof COUPANG_INTENTIONAL_OMISSIONS)[number];
+
 /** `sellerProductItemId` 를 «문자열로» 다룬다 — 숫자로 비교하면 정밀도에서 샌다. */
 export function itemKeyOf(item: CoupangRegisteredItem): string | null {
   const raw = item.sellerProductItemId;
@@ -138,9 +156,27 @@ export function applyCoupangEdits(
 
   if (edits.name !== undefined) {
     next.sellerProductName = edits.name;
-    /* 쿠팡이 «노출명» 을 따로 들고 있다(실측). 상품명을 고쳤는데 한쪽만 바꾸면
-       셀러센터에서 옛 이름이 계속 보인다. */
-    if ("displayProductName" in baseline) next.displayProductName = edits.name;
+    /* ══════════════════════════════════════════════════════════════════════
+       🔴 COUPANG-DISPLAY-NAME-03 — **노출명은 우리가 만들지 않는다.**
+
+       Production 실측으로 확정된 계약(docs/COUPANG-DISPLAY-NAME-0{2,3}.md):
+
+           displayProductName = brand + " " + normalize(generalProductName)
+                                ↑ 쿠팡이 만든다
+           키를 «보내지 않으면» 쿠팡이 다시 만든다(DN-02)
+           그 입력은 sellerProductName 이 «아니라» generalProductName 이다(DN-03)
+
+       예전에는 여기서 `displayProductName` 을 상품명으로 «덮었다». 그러면 쿠팡이
+       등록 때 붙인 브랜드 접두어와 정규화가 사라지고 **다시 돌아오지 않는다**
+       (실제로 Production 상품 하나에서 그렇게 잃었고, DN-02 에서 복구했다).
+
+       🔴 `normalize()` 규칙은 «모른다»(pepe 상품에서 " - " 하나가 줄었다).
+       모르는 규칙을 흉내 내면 나머지에서 조용히 틀린 이름이 나간다. 그래서
+       만들지 않고 «빼서» 쿠팡이 만들게 한다 — 노출명 생성 책임을 우리가
+       가져오지 않는다는 것이 이번 실측의 가장 중요한 결론이다.
+    ══════════════════════════════════════════════════════════════════════ */
+    next.generalProductName = edits.name;
+    delete next.displayProductName;
   }
 
   const itemEdits = edits.items;
