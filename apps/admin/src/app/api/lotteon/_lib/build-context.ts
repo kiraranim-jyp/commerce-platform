@@ -8,6 +8,7 @@ import {
   type LotteOnPayloadInput,
   type LotteOnSellerSettingsInput,
   type LotteOnProductInput,
+  resolveLotteOnNotice,
 } from "@commerce/listing";
 import { getDefaultSellerProfile, type SellerProfile } from "../../coupang/_lib/seller-profile";
 import { SELLER_SETTINGS_UNAVAILABLE_MESSAGE, loadSellerSettings } from "@/lib/seller-settings";
@@ -125,6 +126,20 @@ async function buildDetailHtml(
   });
 }
 
+/**
+ * 폼이 먼저, 공통이 빈 칸을 채운다 — 배송 사다리와 «같은 순서» 다.
+ *
+ * 🔴 셀러가 이 상품에서 직접 확정한 항목을 공통값이 덮지 않는다. 그리고
+ * 공통에서 온 항목이라도 폼에 없는 «코드» 일 때만 들어간다.
+ */
+function mergeNoticeArticles(
+  fromForm: { pdArtlCd: string; pdArtlCnts: string }[],
+  fromCommon: { pdArtlCd: string; pdArtlCnts: string }[],
+): { pdArtlCd: string; pdArtlCnts: string }[] {
+  const taken = new Set(fromForm.map((article) => article.pdArtlCd.trim()));
+  return [...fromForm, ...fromCommon.filter((article) => !taken.has(article.pdArtlCd.trim()))];
+}
+
 export async function buildLotteOnContext(
   /* NEXT-04d Phase B-1 — 라우트도 같은 경계를 쓴다. 롯데ON 전용 값은 이미
      `form`(LotteOnChannelFormInput)으로 들어오므로, 상품 쪽에서 채널 칸을
@@ -182,6 +197,40 @@ export async function buildLotteOnContext(
   const fixed = (formValue: string | null | undefined, settingValue: string | null) =>
     resolveLotteOnSellerFixedValue(formValue, settingValue).value;
 
+  /* 고시 항목을 «이미 가진 값» 으로 푼다. 값을 만들지는 않는다 —
+     resolver 가 FILLED / NEEDS_INPUT / BLOCKED 를 구분해서 돌려준다. */
+  const noticeResolution = resolveLotteOnNotice(trimOrNull(form.noticeItemCode), {
+    color: product.color.value,
+    material: product.material.value,
+    countryOfOrigin: product.countryOfOrigin.value,
+    /* 🔴 옵션에서 «치수» 만 고른다. 공식 가이드라인이 품목 23 의 크기·중량을
+       「섬유제품 등의 경우 치수 정보로 대체 가능」이라고 적어 둔 그 자리다.
+       사용연령으로는 넘기지 않는다 — 사이즈 축과 연령 축은 다르다. */
+    sizeValues: product.optionGroups
+      .filter((group) => /size|사이즈/i.test(group.name))
+      .flatMap((group) => group.values),
+    weight: product.weight.value,
+    careInstructions: product.careInstructions.value,
+    /* 🔴 상품의 제조사«만»이다. 공통 판매자 설정의 제조사 칸으로 폴백하지
+       않는다 — 처음에 그렇게 썼다가 PIVOT NEXT-04c-2 가드에 잡혔다.
+       판매 사업자를 제조사로 쓰지 않는다는 것은 이미 끝난 사안이고,
+       고시의 「제조자」는 법률상 정보라 특히 그렇다.
+
+       🔴 그 칸 이름을 여기 «적지도» 않는다 — 가드가 소스를 문자열로 읽기
+       때문에, 「쓰지 않는다」고 설명한 주석조차 사용으로 잡힌다(실제로 잡혔다). */
+    manufacturer: product.manufacturer.value,
+    importer: product.importer.value,
+    itemName: product.itemName.value,
+    modelName: product.modelName.value,
+    recommendedAge: product.recommendedAge.value,
+    kcCertificationNumber: product.childCertification.value?.certificationNumber ?? null,
+    sellerQualityGuarantee: commonSellerSettings.qualityGuarantee,
+    sellerAsContactNumber: commonSellerSettings.asContactNumber,
+    /* 🔴 A/S «업체명» 칸은 아직 없다(DB 변경은 CPO STOP 중). 판매자명이나
+       제조사로 «대신 넣지 않는다» — 그래서 이 항목은 BLOCKED 로 남는다. */
+    sellerAsCompanyName: null,
+  });
+
   const channel: LotteOnChannelConfig = {
     ...BLANK_LOTTEON_CHANNEL_CONFIG,
     ...period,
@@ -202,7 +251,20 @@ export async function buildLotteOnContext(
     taxTypeCode: trimOrNull(form.taxTypeCode) ?? "",
 
     noticeItemCode: trimOrNull(form.noticeItemCode),
-    noticeArticles: (form.noticeArticles ?? []).filter((a) => a.pdArtlCd?.trim() && a.pdArtlCnts?.trim()),
+    /* ══ LOTTEON-REGISTRATION-01(CPO 전환 지시, 2026-09-28) ═════════════════
+       고시 항목이 **공통 값에서 자동으로** 채워지는 자리.
+
+       여기까지 오는 데 오래 걸렸다. 우리는 「항목코드를 얻을 길이 없다」고
+       적어 뒀는데, 근거가 «우리가 지어낸 코드그룹 이름» 이었다. 실제로는
+       롯데ON 이 품목별 항목표를 공식 문서로 게시하고 있었다(notice-schema.ts).
+
+       🔴 순서는 배송과 «같다» — 폼이 먼저고 공통이 빈 칸을 채운다. 아래 `fixed()`
+       사다리와 같은 규칙이라, 화면이 그 사다리를 그대로 비추면 「payload 로는
+       가는데 화면에는 없는」 상태가 생기지 않는다(STEP3-FIX 에서 겪은 것). */
+    noticeArticles: mergeNoticeArticles(
+      (form.noticeArticles ?? []).filter((a) => a.pdArtlCd?.trim() && a.pdArtlCnts?.trim()),
+      noticeResolution.articles,
+    ),
     safetyCertifications: (form.safetyCertifications ?? []).filter((c) => c.sftyAthnTypCd?.trim() && c.sftyAthnNo?.trim()),
     importProxyCode: trimOrNull(form.importProxyCode),
 

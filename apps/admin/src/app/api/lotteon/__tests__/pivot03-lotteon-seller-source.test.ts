@@ -70,11 +70,26 @@ describe("② 롯데ON 전용 설정과 «섞이지 않는다»", () => {
        「읽었는가」라는 조회 상태다(R6-FS). 칸과 상태를 같은 자루에 넣으면,
        상태를 읽는 것만으로 「없던 설정을 끌어다 쓴다」로 잘못 걸린다. */
     /* 🔴 PIVOT NEXT-04c-2 — 이제 «하나도» 안 끌어온다. 제조사조차 판매자
-       공통 설정에서 오지 않는다(판매 사업자를 제조사로 쓰지 않는다). */
-    const FIELDS = ["manufacturer", "asContactNumber", "qualityGuarantee", "kcExemptionText", "defaultCountryOfOrigin"];
+       공통 설정에서 오지 않는다(판매 사업자를 제조사로 쓰지 않는다).
+
+       ══ LOTTEON-REGISTRATION-01(CPO 승인, 2026-09-28) ═══════════════════
+       예외가 «둘» 생겼다. 상품정보제공고시가 요구하는 두 항목이다 —
+
+           0080 품질보증기준         ← qualityGuarantee
+           0090 A/S 책임자와 전화번호  ← asContactNumber
+
+       쿠팡이 이미 같은 두 값을 쓰고 있고(coupang/build-payload.ts:1131),
+       「상품마다 다른 게 아니라 판매자 본인이 반복 입력할 상수」라는 같은
+       근거로 CPO 가 롯데ON 연결을 승인했다.
+
+       🔴 나머지 셋은 그대로 금지다. 특히 `manufacturer` 는 금지가 «지켜진»
+       쪽이다 — 이 가드가 실제로 그 실수를 한 번 잡았다(고시의 「제조자」는
+       법률상 정보라 판매 사업자를 넣으면 안 된다). `kcExemptionText` 와
+       `defaultCountryOfOrigin` 도 값을 지어내는 통로라 열지 않는다. */
+    const STILL_FORBIDDEN = ["manufacturer", "kcExemptionText", "defaultCountryOfOrigin"];
     const pulled = (SOURCE.match(/commonSellerSettings\.(\w+)/g) ?? [])
       .map((m) => m.replace("commonSellerSettings.", ""))
-      .filter((name) => FIELDS.includes(name));
+      .filter((name) => STILL_FORBIDDEN.includes(name));
     expect([...new Set(pulled)]).toEqual([]);
   });
 
