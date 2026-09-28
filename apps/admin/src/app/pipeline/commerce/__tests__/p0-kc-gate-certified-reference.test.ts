@@ -120,9 +120,19 @@ describe("③ 🔴 서버는 KcStatus 와 «무관하게» 확인 기록을 다�
   });
 
   it("policyVersion · categoryCode 까지 지금 값과 맞아야 유효하다", () => {
-    expect(ROUTE).toContain("sellerComplianceConfirmationRow?.confirmed === true");
-    expect(ROUTE).toContain("sellerComplianceConfirmationRow.policyVersion === COMPLIANCE_POLICY_VERSION");
-    expect(ROUTE).toContain("sellerComplianceConfirmationRow.categoryCode === leafCategoryId");
+    /* ══ COMMERCE-COMMON-KC-WIRE-01(CPO 승인, 2026-09-28) ═══════════════════
+       세 줄 판정이 공통 읽기 계약(`toCommonConfirmation`) «안으로» 들어갔다.
+       🔴 지키려는 것은 그대로다 — 확인 여부 · 정책 버전 · 카테고리가 «지금»
+       값과 맞아야 유효하다. 범위 세 축을 그대로 넘기는지를 본다.
+
+       🔴 그리고 「정말 같은 판정인가」는 문자열이 아니라 «값» 으로 잰다 —
+       api/smartstore/__tests__/kc-wire01-common-confirmation-gate.test.ts 가
+       옛 게이트를 재현한 함수와 CPO 지정 4상태에서 1:1 로 대조한다
+       (소스 PASS 가 동작 PASS 가 아니라는 것을 이 스프린트에서 두 번 겪었다). */
+    expect(ROUTE).toContain("toCommonConfirmation(sellerComplianceConfirmationRow, {");
+    expect(ROUTE).toContain("categoryCode: leafCategoryId");
+    expect(ROUTE).toContain("policyVersion: COMPLIANCE_POLICY_VERSION");
+    expect(ROUTE).toContain("const sellerConfirmationValid = sellerConfirmation !== null;");
   });
 
   it("🔴 유효하지 않으면 «외부 API 를 부르기 전에» 멈춘다", () => {

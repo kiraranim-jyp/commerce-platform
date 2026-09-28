@@ -39,6 +39,7 @@ import { resolveNaverContext } from "../../naver/_lib/resolve-context";
 import { markSnapshotRegistered } from "../../snapshots/_lib/snapshot";
 import { hasPriorSuccessfulAttempt } from "../../snapshots/_lib/attempts-summary";
 import { getLatestSellerComplianceConfirmation } from "../_lib/seller-compliance";
+import { toCommonConfirmation } from "@commerce/shared";
 
 /**
  * N-3.25(STEP 3) — SmartStore 실제 등록. HMAC 대신 OAuth 토큰이지만 원칙은
@@ -419,10 +420,23 @@ export async function POST(request: Request) {
   // 다른 모든 조회와 같은 원칙). validateNaverPayload가 이 기록의
   // policyVersion/categoryCode가 지금과 일치할 때만 KC 게이트를 통과시킨다.
   const sellerComplianceConfirmationRow = await getLatestSellerComplianceConfirmation(snapshotId);
-  const sellerConfirmationValid =
-    sellerComplianceConfirmationRow?.confirmed === true &&
-    sellerComplianceConfirmationRow.policyVersion === COMPLIANCE_POLICY_VERSION &&
-    sellerComplianceConfirmationRow.categoryCode === leafCategoryId;
+  /* ══ COMMERCE-COMMON-KC-WIRE-01(CPO 승인, 2026-09-28) ══════════════════════
+     여기 있던 세 줄 판정을 공통 읽기 계약 하나로 옮긴다. 🔴 «규칙을 바꾸는 것이
+     아니다» — `toCommonConfirmation` 이 하는 일이 바로 이 세 줄이다. 그것이
+     이 게이트를 보고 만들어졌다.
+
+     달라지는 것은 하나뿐이다: 공통 계약은 `platform` 도 대조한다. 이 테이블은
+     지금 `"smartstore"` 하드코딩으로만 쓰이므로(seller-compliance/route.ts) 실제
+     결과는 같고, 다른 채널의 확인이 섞여 들어올 때만 «막는» 쪽으로 다르다.
+
+     🔴 `row.kcStatus` 는 여기서도 판정에 쓰지 않는다. 그것은 감사 기록이고,
+     Readiness 가 쓰는 것은 «지금 계산한» `validation.kcStatus` 다(두 값은 다르다). */
+  const sellerConfirmation = toCommonConfirmation(sellerComplianceConfirmationRow, {
+    platform: "smartstore",
+    categoryCode: leafCategoryId,
+    policyVersion: COMPLIANCE_POLICY_VERSION,
+  });
+  const sellerConfirmationValid = sellerConfirmation !== null;
   logStep(
     "판매 전 확인",
     sellerConfirmationValid ? "success" : "failed",
