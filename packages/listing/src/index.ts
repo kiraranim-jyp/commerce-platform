@@ -31,6 +31,7 @@ export * from "./notice/reference-eligibility";
 // REWORK-10 A(CEO 지시, 2026-09-15) — 제조사 폴백 사슬. 세 채널의 payload와
 // 세 채널의 **화면**이 같은 함수 하나를 본다(common/manufacturer.ts 주석 참고).
 export * from "./common/manufacturer";
+export * from "./common/origin";
 // Commerce-6 C-2A(CPO 지시, 2026-09-26) — 배송/물류 Common 과 채널 binding.
 // 제조사와 같은 자리다: 세 채널이 같은 표 하나를 본다.
 export * from "./common/logistics";
