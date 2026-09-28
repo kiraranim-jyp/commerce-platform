@@ -240,9 +240,44 @@ export function applyLotteOnRecommendedCategory(
         safetyTypeCodes: [...category.safetyTypeCodes],
       },
     },
-    notice: { ...form.notice, itemCode: category.noticeItemCodes[0] ?? form.notice.itemCode },
-    codes: { ...form.codes, taxTypeCode: category.taxTypeCode ?? form.codes.taxTypeCode },
+    /* ══ R3(CPO 승인 B, 2026-09-28) — **이전 카테고리의 값이 남지 않는다** ══════
+       예전에는 둘 다 `?? form.…` 이었다. 새 카테고리가 그 값을 주지 않으면
+       «직전 카테고리» 의 값이 조용히 살아남았다 —
+
+         카테고리 A 고름   →  과세 02 · 고시품목 23
+         카테고리 B 고름   →  B 가 과세를 안 주면 여전히 02 (A 의 값)
+
+       `selected` 는 버리는데 그 «파생값» 은 남는 비대칭이었다. 출처가 사라진
+       값이 payload 로 나가면 잘못된 과세·고시로 등록된다.
+
+       🔴 그런데 무조건 지우지는 않는다(CPO 명시). provenance 를 봐야 한다 —
+       고시 품목은 셀러가 89 목록에서 «직접 고를 수» 있다(CommonCodePicker).
+       그 선택을 화면이 임의로 지우면 셀러가 넣은 값이 사라진다.
+
+       provenance 축을 «새로 만들지 않는다» — 이미 있는 것으로 가른다.
+       `form.category.selected.noticeItemCodes` 가 「직전 카테고리가 알려준 것」의
+       목록이다. 지금 값이 그 안에 있으면 카테고리에서 온 것이고, 없으면 셀러가
+       따로 고른 것이다.
+
+       과세(tdfDvsCd)는 다르다 — 화면이 읽기 전용이고 선택기도 없어서 셀러가
+       값을 넣을 «경로가 없다». 출처는 205 하나뿐이므로 새 카테고리 값으로
+       그대로 덮는다. 🔴 없으면 빈 값이다 — "01" 로 메우지 않는다. */
+    notice: { ...form.notice, itemCode: category.noticeItemCodes[0] ?? keptNoticeItemCode(form) },
+    codes: { ...form.codes, taxTypeCode: category.taxTypeCode ?? "" },
   };
+}
+
+/**
+ * 새 카테고리가 고시 품목을 알려주지 않았을 때 «남겨도 되는» 값.
+ *
+ * 셀러가 직접 고른 값이면 남기고, 직전 카테고리가 준 값이면 버린다 —
+ * 출처가 사라진 값을 남기면 그것이 곧 오등록이다.
+ */
+function keptNoticeItemCode(form: LotteOnChannelForm): string {
+  const current = form.notice.itemCode.trim();
+  if (!current) return "";
+  const fromPreviousCategory = form.category.selected?.noticeItemCodes ?? [];
+  return fromPreviousCategory.includes(current) ? "" : current;
 }
 
 /**
