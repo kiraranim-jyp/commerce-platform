@@ -2369,7 +2369,27 @@ function CommonInfoSection({
             key={row.label}
             label={row.label}
             value={row.value ?? ""}
-            placeholder="입력 필요 — 상품정보에서 채워주세요"
+            /* ══ P0-a(CPO 승인, 2026-09-28) — 「입력 필요」가 «두 종류» 였다 ═══
+               여기 있던 문구는 `placeholder="입력 필요 — 상품정보에서 채워주세요"`
+               «하나» 였다. 그런데 이 표의 행들은 등록을 막는지가 «서로 다르다» —
+
+                 상품명 · 대표이미지 · 상세 · 가격 · 재고   missing: true   막는다
+                 사용연령 · 품명 · 모델명 · SKU · 소재 …    missing: false  막지 않는다
+
+               우측 「등록 준비 상태」의 알약도 「입력 필요」다(commerce-registry:152).
+               그쪽은 «서버 검증» 이 붙이고 실제로 등록을 막는다.
+
+               🔴 같은 글자인데 결과가 달랐다. CEO 께서 「준비됐다는데 왜 등록을
+               못 하지」로 보신 것의 직접 원인이다.
+
+               그래서 «막는 것만» 「입력 필요」라고 부른다. 막지 않는 빈 칸은
+               사실만 말한다 — 상태 배지처럼 보이지 않게 한다.
+               🔴 placeholder 를 필수값 미충족 상태로 «승격하지 않는다»(CPO 명시). */
+            placeholder={
+              row.missing
+                ? "입력 필요 — 상품정보에서 채워주세요"
+                : "상품정보에 아직 없습니다 — 있으면 함께 등록됩니다"
+            }
             origin={row.origin}
             /* P0-3 — 값이 비어 있는 이유가 «아직 없어서»인지 «상세페이지를
                가리키기로 이미 정해서»인지를 여기서 갈라 준다. 판정하지 않는다 —
@@ -2381,7 +2401,8 @@ function CommonInfoSection({
       </div>
       {hasMissing && (
         <p className="mt-2 rounded-md bg-warning-soft px-3 py-2 text-[11px] text-warning">
-          비어 있는 항목은 롯데ON 탭에서 채울 수 없습니다 — 상품정보에서 채우면 이 표와 등록 정보가 함께 갱신됩니다.
+          「입력 필요」로 표시된 항목은 등록을 막습니다. 롯데ON 탭에서는 채울 수 없고, 상품정보에서 채우면 이 표와 등록
+          정보가 함께 갱신됩니다. 그 밖의 빈 칸은 등록을 막지 않습니다.
         </p>
       )}
     </FormSection>
