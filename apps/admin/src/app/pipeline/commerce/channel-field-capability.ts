@@ -92,6 +92,12 @@ export function fieldCapability(commerceId: CommerceId, field: EditableField): F
     return cap.categoryUpdate === "SUPPORTED" ? "EDITABLE" : "RECREATE_ONLY";
   }
   if (cap.update === "SUPPORTED") return "EDITABLE";
+  /* 🔴 COUPANG-UPDATE-IMPLEMENT-01 — 조건부 채널도 «필드 자체» 는 고칠 수 있다.
+     막히는 것은 필드가 아니라 «상품 상태» 이고, 그 판정은 상태를 아는 곳
+     (`resolveLifecycle`)에서 한 번만 한다. 여기서 UNKNOWN 으로 내리면 화면이
+     임시저장 상품까지 「확인되지 않았다」고 말해, 실측으로 확보한 범위를 버린다.
+     🔴 그렇다고 통과하는 것도 아니다 — 제출은 lifecycle 이 BLOCKED 로 막는다. */
+  if (cap.update === "SUPPORTED_WHEN_SAVED") return "EDITABLE";
   if (cap.update === "NOT_SUPPORTED") return "RECREATE_ONLY";
   /* 🔴 「아직 확인 안 됨」을 「수정 가능」으로 올리지 않는다.
      그리고 모르는 값이 새로 생겨도 여기로 떨어진다 — 안전한 쪽이 기본이다. */

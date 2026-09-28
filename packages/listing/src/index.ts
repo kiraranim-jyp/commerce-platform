@@ -10,6 +10,8 @@ export * from "./executors/smartstore.executor";
 export * from "./executors/not-implemented.executor";
 export * from "./coupang/build-payload";
 export * from "./coupang/compliance-report";
+export * from "./coupang/registered-baseline";
+export * from "./coupang/update-preflight";
 export * from "./executors/coupang.executor";
 export * from "./registration-report";
 export * from "./naver/types";

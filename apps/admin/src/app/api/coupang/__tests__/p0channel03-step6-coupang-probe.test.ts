@@ -119,14 +119,31 @@ describe("④ 🔴 응답을 가공하지 않고 싣는다", () => {
   });
 });
 
+const CAPABILITY_SRC = readFileSync(join(__dirname, "../../../pipeline/commerce/channel-lifecycle.ts"), "utf8");
+
 describe("⑤ 🔴 조사 전에는 판정하지 않는다", () => {
-  it("쿠팡 capability 는 여전히 UNKNOWN 이다", () => {
+  /**
+   * 🔴 COUPANG-UPDATE-IMPLEMENT-01 에서 이 가드가 나를 «잡았다». 지우지 않고
+   * 옮긴다 — 이 가드가 지키려던 것은 「UNKNOWN 이라는 글자」가 아니라
+   * **「실측 없이 올리지 않는다」** 였고, 그 규칙은 그대로다.
+   *
+   * 이 파일이 조건으로 적어 둔 것(아래 ⑥ 「실측 대기」)이 2026-09-28 GET 4건으로
+   * 채워졌다. 그래서 값이 올라갔는데, **`SUPPORTED` 가 아니라 «조건부»** 다 —
+   * 4건이 전부 임시저장이라 승인 후는 여전히 재 보지 못했다.
+   */
+  it("🔴 쿠팡 capability 는 아직 UNKNOWN 이다 — 올릴 값만 정해졌다", () => {
     expect(CHANNEL_CAPABILITY.coupang.update).toBe("UNKNOWN");
-    /* 🔴 카테고리는 공식 가이드가 「수정 불가」로 명시한 «확인된» 사실이다. */
+    /* 🔴 올릴 값은 정해졌다 — `SUPPORTED` 가 «아니라» 조건부다. 그 값이 올라가는
+       것은 어댑터 등록·화면 배선과 «같은 커밋» 이다. */
+    expect(CAPABILITY_SRC).toContain("SUPPORTED_WHEN_SAVED");
+    /* 🔴 카테고리는 공식 가이드가 「수정 불가」로 명시한 «확인된» 사실이다 — 그대로. */
     expect(CHANNEL_CAPABILITY.coupang.categoryUpdate).toBe("NOT_SUPPORTED");
   });
 
-  it("쿠팡 수정 어댑터는 «아직 없다»", () => {
+  it("🔴 쿠팡 수정 어댑터는 «아직 등록되지 않았다» — 화면 배선이 남아 있다", () => {
+    /* 어댑터 파일과 서버 실행부는 만들어졌고 검증됐지만, CommerceWorkspace 의
+       수정 orchestration 이 아직 smartstore 전용이다. 등록을 먼저 하면 화면이
+       「고칠 수 있다」고 말하는데 누르면 아무 일도 일어나지 않는다. */
     expect(editAdapterFor("coupang")).toBeUndefined();
   });
 
@@ -189,10 +206,14 @@ describe("⑥ 🔴 STEP 6-6 조사 결과가 남아 있다 — 그리고 판정�
     expect(CAPABILITY).toContain("PUT 을 «보낼 수 없다»");
   });
 
-  it("🔴 capability 표는 값을 올리지 않고 «이유» 만 갱신했다", () => {
-    expect(CHANNEL_CAPABILITY.coupang.update).toBe("UNKNOWN");
-    expect(CAPABILITY).toContain("문서 근거 확보 · 실측 대기");
+  it("🔴 값을 올린 근거가 «문서가 아니라 실측» 이라고 표에 적혀 있다", () => {
+    /* 이 가드의 원래 문장은 「값을 올리지 않았다」였다. 값이 올라간 지금 지켜야
+       하는 것은 «무엇을 근거로 올렸는가» 다 — 이 파일이 막으려던 혼동
+       (「문서에 있다」를 근거로 삼는 것)이 그대로 남아 있는지 본다. */
+    expect(CAPABILITY).toContain("근거는 문서가 아니라 실측이다");
     expect(CAPABILITY).toContain("문서가 늘었다고 올리지");
+    /* 🔴 그리고 «재 보지 못한 범위» 를 표가 스스로 적는다. */
+    expect(CAPABILITY).toContain("승인 후는 재 보지 못했다");
   });
 
   it("등록 축의 위험(2026-02-02 API 변경)도 같이 남겼다", () => {

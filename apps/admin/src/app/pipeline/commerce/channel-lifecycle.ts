@@ -28,14 +28,28 @@ export interface ChannelCapability {
 /**
  * 🔴 `UNKNOWN` 과 `NOT_SUPPORTED` 를 «절대» 같게 다루지 않는다(CPO 명시).
  *
- *   SUPPORTED      공식 근거로 «확인됨»
- *   NOT_SUPPORTED  공식 근거로 «불가함이 확인됨»
- *   UNKNOWN        아직 확인하지 못했다 — 「불가」가 아니다
+ *   SUPPORTED            공식 근거로 «확인됨»
+ *   SUPPORTED_WHEN_SAVED 🔴 «임시저장 상태에서만» 확인됨 — 아래
+ *   NOT_SUPPORTED        공식 근거로 «불가함이 확인됨»
+ *   UNKNOWN              아직 확인하지 못했다 — 「불가」가 아니다
  *
  * 없는 것을 「불가」로 적으면 확인하지 않은 것을 확인했다고 말하는 것이 되고,
  * 「가능」으로 적으면 실제 API 가 거부할 때 셀러가 이유를 알 수 없다.
+ *
+ * ── 🔴 왜 «조건부» 상태가 필요한가 (COUPANG-UPDATE-IMPLEMENT-01) ──────────
+ * 쿠팡 실측에서 확인된 것은 「임시저장 상품의 baseline 을 GET 으로 확보할 수
+ * 있다」까지다. 승인된 상품은 **한 건도 없어서 재 보지 못했고**, 공식 문서상
+ * 승인 후에는 규칙이 다르다(가격·재고가 별도 API, 승인 이력 있는 옵션 삭제 불가).
+ *
+ * 이것을 `SUPPORTED` 로 적으면 «승인 상품까지» 수정 가능하다고 말하게 되고,
+ * `UNKNOWN` 으로 두면 확인한 범위마저 쓰지 못한다. 그래서 세 값 사이에
+ * «확인한 만큼만» 말하는 칸을 하나 더 둔다 — 이 파일이 처음부터 지키려던 규칙
+ * (확인한 것과 확인하지 않은 것을 섞지 않는다)의 연장이다.
  */
-export type CapabilityState = "SUPPORTED" | "NOT_SUPPORTED" | "UNKNOWN";
+export type CapabilityState = "SUPPORTED" | "SUPPORTED_WHEN_SAVED" | "NOT_SUPPORTED" | "UNKNOWN";
+
+/** 🔴 `SUPPORTED_WHEN_SAVED` 가 요구하는 상태값. 쿠팡 GET 의 `status` 그대로다. */
+export const SAVED_PRODUCT_STATUS = "SAVED";
 
 /**
  * 2026-09-25 기준. 근거는 P0-CHANNEL-03 PHASE B 조사:
@@ -86,6 +100,18 @@ export type CapabilityState = "SUPPORTED" | "NOT_SUPPORTED" | "UNKNOWN";
  */
 export const CHANNEL_CAPABILITY: Record<CommerceId, ChannelCapability> = {
   smartstore: { create: true, update: "SUPPORTED", categoryUpdate: "UNKNOWN" },
+  /* 🔴 COUPANG-UPDATE-IMPLEMENT-01(2026-09-28) — 값을 «아직» 올리지 않았다.
+     근거는 문서가 아니라 실측이다: GET 4건이 보낸 공식 필드를 100% 돌려줬고
+     (COUPANG-UPDATE-CAPABILITY-01), 공식 수정 API 가 「조회한 JSON 전문을
+     고쳐서 되보낸다」를 지시한다.
+     🔴 그러나 4건이 전부 임시저장이라 «승인 후는 재 보지 못했다» —
+     그래서 올릴 값은 SUPPORTED 가 아니라 SUPPORTED_WHEN_SAVED 다.
+
+     🔴 그런데 «지금» 올리면 안 된다. 이 값이 올라가는 순간 화면은 쿠팡 필드를
+     「고칠 수 있다」로 그리는데, CommerceWorkspace 의 수정 orchestration 이 아직
+     smartstore 전용이라 누를 곳이 없다 — 고칠 수 있다고 말하고 아무 일도 일어나지
+     않는 것이 이 파일이 막으려는 바로 그 상태다. **capability·어댑터 등록·화면
+     배선은 «같은 커밋에서» 올라간다.** 그때 이 줄이 SUPPORTED_WHEN_SAVED 가 된다. */
   coupang: { create: true, update: "UNKNOWN", categoryUpdate: "NOT_SUPPORTED" },
   elevenst: { create: true, update: "UNKNOWN", categoryUpdate: "UNKNOWN" },
   lotteon: { create: true, update: "UNKNOWN", categoryUpdate: "UNKNOWN" },
@@ -136,6 +162,45 @@ export interface LifecycleDecision {
  *   🔴 snapshot 이 아니라 ChannelProduct 기준이다. 재분석해서 snapshot 이
  *   새로 생겨도 이 값은 그대로다 — 그것이 이 구조를 만든 이유다.
  */
+/**
+ * 🔴 `SUPPORTED_WHEN_SAVED` 채널의 판정 — **확인한 범위 «안» 인지 묻는다.**
+ *
+ * `resolveLifecycle` 에서 떼어낸 것은 로직을 나누기 위해서가 «아니다». 이 분기를
+ * 고르는 채널이 아직 없어서(쿠팡 capability 가 배선과 함께 오른다) 직접 재지
+ * 않으면 검증되지 않은 채로 남기 때문이다. 🔴 로직은 여전히 한 벌이다.
+ */
+export function resolveSavedScopedUpdate(
+  change: ChangeSet,
+  channelProductStatus?: string | null,
+): LifecycleDecision {
+  const status = (channelProductStatus ?? "").trim();
+  /* 🔴 「모른다」가 「괜찮다」로 흐르는 것이 이 파일이 막는 바로 그 일이다. */
+  if (!status) {
+    return {
+      operation: "BLOCKED",
+      reason: "이 상품이 지금 어떤 상태인지 확인하지 못해 수정할 수 없습니다.",
+      needsAttention: true,
+    };
+  }
+  if (status !== SAVED_PRODUCT_STATUS) {
+    return {
+      operation: "BLOCKED",
+      /* 🔴 셀러에게 내부 코드값을 보이지 않는다. 그리고 「안 된다」가 아니라
+         「확인되지 않았다」로 말한다 — 승인 후 경로는 재 본 적이 없다. */
+      reason: "판매 승인이 진행된 상품을 수정할 수 있는지 아직 확인되지 않았습니다.",
+      needsAttention: true,
+    };
+  }
+  return {
+    operation: "UPDATE",
+    reason:
+      change.fields.length > 0
+        ? `${change.fields.length}개 항목을 수정합니다.`
+        : "달라진 곳을 전부 확인하지는 못해, 등록된 내용 전체를 다시 보냅니다.",
+    needsAttention: false,
+  };
+}
+
 export function resolveLifecycle(
   commerceId: CommerceId,
   hasChannelProduct: boolean,
@@ -217,6 +282,12 @@ export function resolveLifecycle(
             : "달라진 곳을 전부 확인하지는 못해, 등록된 내용 전체를 다시 보냅니다.",
         needsAttention: false,
       };
+    case "SUPPORTED_WHEN_SAVED":
+      /* 🔴 이 함수는 상품 «상태» 를 모른다 — 인자가 셋뿐이고, 그 셋이 판단의
+         전부라는 것을 형제 가드가 세고 있다(숨은 입력이 생기면 잡는다).
+         그래서 상태를 아는 호출부가 `resolveSavedScopedUpdate` 를 직접 부른다.
+         여기로 «떨어지면» 상태를 모르는 것이고, 모르면 막는다. */
+      return resolveSavedScopedUpdate(change, undefined);
     case "NOT_SUPPORTED":
       return {
         operation: "RECREATE",

@@ -43,7 +43,24 @@ export async function callCoupangApi(
     path,
     query = "",
     body,
-  }: { method: "GET" | "POST"; path: string; query?: string; body?: unknown },
+  }: {
+    /**
+     * 🔴 이 union 은 «일부러» 좁다. 한동안 `"GET" | "POST"` 였고, 그것이
+     * 「쿠팡 수정은 확인된 바 없다」는 사실을 타입으로 붙들고 있었다
+     * (p0-channel-03-step6 조사 문서가 그 점을 근거로 들었다).
+     *
+     * 🔴 `PUT` 을 더한 근거는 «문서» 가 아니라 «실측» 이다
+     * (COUPANG-UPDATE-CAPABILITY-01): GET 4건이 우리가 보낸 공식 필드를 100%
+     * 돌려줬고, 공식 수정 API 가 그 전문을 되보내라고 지시한다.
+     *
+     * 🔴 그래도 `DELETE` 는 더하지 않는다. 쿠팡에 삭제 API 가 있지만 우리가 쓸
+     * 이유가 없고, 여기 적히는 순간 누군가 쓸 수 있게 된다.
+     */
+    method: "GET" | "POST" | "PUT";
+    path: string;
+    query?: string;
+    body?: unknown;
+  },
 ): Promise<CoupangApiResponse> {
   const { authorization } = signCoupangRequest({
     method,

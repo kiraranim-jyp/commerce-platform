@@ -27,6 +27,15 @@ import { smartStoreEditAdapter } from "./smartstore";
  */
 const EDIT_ADAPTERS: Partial<Record<CommerceId, CommerceEditAdapter>> = {
   smartstore: smartStoreEditAdapter as CommerceEditAdapter,
+  /* 🔴 COUPANG-UPDATE-IMPLEMENT-01(2026-09-28) — 쿠팡 어댑터는 «만들어졌고
+     검증됐지만 아직 여기 없다».
+       [x] GET 실측 4건 · 공식 수정 스펙 · 전체 교체 규칙
+       [x] 어댑터(edit-adapters/coupang.ts) · 서버 실행부(_lib/update-product.ts)
+       [x] 읽기 라우트(api/coupang/registered-product)
+       [ ] 🔴 CommerceWorkspace 의 수정 orchestration 이 아직 smartstore 전용이다
+     여기 한 줄을 지금 더하면 화면이 「고칠 수 있다」고 말하는데 누르면 아무 일도
+     일어나지 않는다. 형제 가드(commerce3-capability-parity ⑤)가 정확히 그것을
+     세고 있고, 이번에 «나를 잡았다». 배선이 이어지는 커밋에서 같이 더한다. */
 };
 
 /** 이 커머스의 「등록된 상품 수정」이 지금 가능한가. 없으면 `undefined`. */
