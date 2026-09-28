@@ -335,6 +335,90 @@ A–E 는 **하나의 Coupang UPDATE 기능 경로**다. E 는 보조 작업이 
 🔴 Core 세 파일(`commerce-edit-adapter` · `channel-edit-model` ·
 `channel-field-capability` 의 구조)은 **재설계하지 않는다.** ⑨만 예외를 더한다.
 
+## 9-C. 🔴 Phase 3 착수 중 확인된 구조적 제약 (2026-09-29)
+
+A(GET 라우트)와 B(어댑터)를 실제로 써 본 뒤 나온 것들이다. **설계가 바뀐다.**
+
+### ① C 를 Core 에 넣을 수 «없다» — 가드가 막는다
+
+```ts
+CORE_FILES = [channel-edit-model.ts, channel-field-capability.ts,
+              commerce-edit-adapter.ts, ChannelEditPanel.tsx, ChannelEditSummary.tsx]
+for (const id of COMMERCE_ORDER)
+  expect(source).not.toContain(`"${id}"`)   // p0channel03-sprintA-commerce-core.test.ts:74
+```
+
+`channel-field-capability.ts` 는 CORE_FILE 이라 **`"coupang"` 문자열을 담을 수 없다.**
+그래서 필드 예외를 거기 if 문으로 넣는 설계는 성립하지 않는다(가드를 약화시켜야만
+가능한데, 그건 금지다).
+
+🔴 **대신 `ChannelCapability` 표를 넓힌다** — 채널별 사실은 `channel-lifecycle.ts`
+(CORE_FILE 아님)에 있고, Core 는 그 «데이터» 를 읽기만 한다:
+
+```ts
+export interface ChannelCapability {
+  create: boolean; update: CapabilityState; categoryUpdate: CapabilityState;
+  /** 🔴 update 가 열려도 «이 축만» 확인됐다. 없으면 전 축이 update 를 따른다. */
+  updateFields?: readonly EditableField[];
+}
+// coupang: { …, update: "SUPPORTED_WHEN_SAVED", updateFields: ["name"] }
+
+// channel-field-capability.ts — 이름 분기 «없이» 데이터만 읽는다
+if (cap.update === "SUPPORTED_WHEN_SAVED") {
+  if (cap.updateFields && !cap.updateFields.includes(field)) return "UNKNOWN";
+  return "EDITABLE";
+}
+```
+
+`EditableField` 는 타입뿐이므로 `import type` 으로 받으면 순환 참조가 생기지 않는다.
+
+### ② 같은 커밋에서 «갱신할» 가드 목록 (약화 금지 · 새 사실로)
+
+```
+p0channel03-sprintA-commerce-core.test.ts
+  :62  어댑터 파일 수 = 등록 커머스 수 + index      → coupang.ts 가 늘어난다
+  :80  EDIT_ADAPTER_COMMERCE_IDS = ["smartstore"]   → coupang 추가
+  :82  editAdapterFor("coupang") = undefined        → defined 로
+  :119 editUnavailableNote("coupang") 안내 존재      → 어댑터가 생기면 안내가 사라진다
+  :125 CHANNEL_CAPABILITY.coupang.update = UNKNOWN  → SUPPORTED_WHEN_SAVED
+commerce3-capability-parity.test.ts ①·⑤ · p0channel03-lifecycle.test.ts ⑥
+```
+
+### ③ E 의 배치 — UPDATE 분기는 payload 생성 «앞» 이다
+
+```
+:296  credentials            :486  buildCoupangPayload(...)   :650  findChannelProductBySnapshot
+```
+
+지시서의 「`buildCoupangPayload` 가 UPDATE 경로에 있으면 FAIL」을 구조로 지키려면
+UPDATE 분기가 **`:486` 보다 앞**이어야 한다. 그리고 그것이 「CREATE ≠ UPDATE」의
+실제 구현이다 — UPDATE 인데 CREATE payload 를 조립할 이유가 없다.
+
+🔴 **새 상품명 값은 `payload.sellerProductName` 이 아니라 `listing.title` 에서 온다.**
+빌더가 그 칸을 그렇게 만든다(`build-payload.ts:1717`) — 같은 값을 빌더 «없이» 얻는다.
+
+🔴 **안전 성질**: UPDATE 분기 전체를 `editedFields !== undefined` 로 막으면, 그 필드를
+보내는 클라이언트가 현재 «하나도 없으므로» 기존 CREATE/RECREATE 트래픽의 동작이
+**비트 단위로 동일**하다. 회귀 위험을 구조로 0 에 가깝게 만든다.
+
+### ④ 진행 상태 — A·B 는 «작성됐고 커밋하지 않았다»
+
+두 파일을 실제로 작성했지만 **리포지터리에 남기지 않았다.** A~E 는 한 커밋이어야
+하고, 부르는 화면 없이 라우트·어댑터만 올리면 죽은 코드이기 때문이다(가드 넷이
+정확히 그것을 센다). 다음 세션이 바로 복원할 수 있게 세션 스크래치패드에 뒀다:
+
+```
+scratchpad/phase3-wip/A-registered-product-route.ts
+scratchpad/phase3-wip/B-edit-adapter-coupang.ts
+```
+
+내용 요지 — A 는 SmartStore 형제 라우트와 같은 계약(`snapshotId` 만 받고 번호는
+서버가 찾는다 · GET 전용 · 실패를 빈 기준값으로 내리지 않는다). B 는
+`CommerceEditAdapter<CoupangRegisteredProduct, CoupangRegisteredProduct>` 로
+**Registered 와 Outgoing 을 같은 타입으로** 둬서 「빌더 산출물을 PUT 한다」를
+타입에서 막고, 가격·재고는 **옵션이 정확히 하나일 때만** 읽는다(둘 이상이면
+어느 값이 그 상품의 가격인지 적을 근거가 없다).
+
 ## 10. 이번 조사에서 «하지 않은» 것
 
 * 코드 변경 0줄. 테스트 실행 없음(변경이 없으므로).
