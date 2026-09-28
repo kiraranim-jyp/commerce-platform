@@ -9,6 +9,7 @@ import {
   type LotteOnSellerSettingsInput,
   type LotteOnProductInput,
   resolveLotteOnNotice,
+  type LotteOnNoticeResolution,
 } from "@commerce/listing";
 import { getDefaultSellerProfile, type SellerProfile } from "../../coupang/_lib/seller-profile";
 import { SELLER_SETTINGS_UNAVAILABLE_MESSAGE, loadSellerSettings } from "@/lib/seller-settings";
@@ -59,6 +60,14 @@ export interface LotteOnChannelFormInput {
 export interface LotteOnBuildContext {
   input: LotteOnPayloadInput;
   identityError: string | null;
+  /**
+   * 고시 13항목이 각각 «어떻게 됐는지». 🔴 화면이 다시 판정하지 않게 하려고
+   * 여기 싣는다 — payload 를 만든 «바로 그» 계산 결과다.
+   *
+   * STEP3-FIX 에서 배운 것이다: 화면이 제 나름대로 판정하면 「payload 로는
+   * 가는데 화면에는 없는」 상태가 생긴다. 출처를 하나로 둔다.
+   */
+  notice: LotteOnNoticeResolution;
   /* PIVOT-03 R6-FS — identityError 와 «같은 모양» 이다. 새 오류 계층을 만들지
      않는다: null 이면 정상, 문자열이면 그 이유다.
      🔴 「판매자 정보가 비었다」가 아니라 「읽지 못했다」일 때만 채워진다. */
@@ -343,5 +352,6 @@ export async function buildLotteOnContext(
        이 값을 보고 멈춘다 — 여기서 throw 하지 않는 이유는 preview 가 부분
        정보라도 보여줘야 하기 때문이다(identityError 와 같은 판단). */
     sellerSettingsError: commonSellerSettings.failed ? SELLER_SETTINGS_UNAVAILABLE_MESSAGE : null,
+    notice: noticeResolution,
   };
 }

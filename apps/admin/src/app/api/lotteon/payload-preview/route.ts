@@ -300,5 +300,8 @@ export async function POST(request: Request) {
     identityError: context.identityError,
     payload,
     validation,
+    /* 🔴 고시 13항목의 상태. 화면이 다시 판정하지 않는다 — payload 를 만든
+       그 계산 결과를 그대로 내려보낸다(같은 출처). */
+    notice: context.notice,
   });
 }

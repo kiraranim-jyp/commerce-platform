@@ -3,15 +3,16 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CanonicalProduct, LotteOnChannelInfo } from "@commerce/shared";
+import type { LotteOnNoticeResolution, LotteOnNoticeFill } from "@commerce/listing";
 import { Button } from "@/components/ui/Button";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import {
   LOTTEON_CHILD_PRODUCT_ITEM_CODE,
   LOTTEON_FIX_LOCATION_LABEL,
+  collectLotteOnNoticeSourceValues,
   applyLotteOnRecommendedCategory,
   buildLotteOnMissingInfo,
   buildLotteOnSafetyLineFromCommon,
-  collectLotteOnNoticeSourceValues,
   computeLotteOnRegistrationReadiness,
   fromLotteOnChannelInfo,
   isLotteOnCategoryChosen,
@@ -133,6 +134,14 @@ interface PreviewResponse {
   identityError?: string | null;
   payload?: unknown;
   validation?: LotteOnValidationSnapshot;
+  /**
+   * 🔴 고시 13항목의 상태. **서버가 payload 를 만들면서 낸 바로 그 결과** 다.
+   *
+   * 화면이 「이 칸은 찼나?」를 다시 따지지 않는다. STEP3-FIX 에서 정확히 그
+   * 갈라짐으로 틀렸다 — payload 는 설정값 사다리를 타는데 화면은 폼만 봐서
+   * 「보내지는데 안 보이는」 칸이 여섯 중 셋이었다. 출처를 하나로 둔다.
+   */
+  notice?: LotteOnNoticeResolution;
 }
 
 interface RegisterResponse {
@@ -326,6 +335,90 @@ const EMPTY_RECOMMEND: RecommendState = {
   pagesFetched: 0,
 };
 
+
+/**
+ * ══ 고시 13항목 상태 ══════════════════════════════════════════════════════
+ *
+ * 🔴 판정을 «만들지 않는다». 서버가 payload 를 만들면서 낸 결과를 그대로 그린다.
+ * 화면이 제 나름대로 「찼나?」를 따지기 시작하면 payload 와 갈라진다 —
+ * STEP3-FIX 에서 여섯 칸 중 셋이 그렇게 어긋났다.
+ *
+ * 🔴 항목«코드»(0020 같은 것)를 보여주지 않는다. 셀러가 관리할 값이 아니다.
+ */
+const NOTICE_STATUS_STYLE: Record<LotteOnNoticeFill["status"], { mark: string; label: string; tone: string }> = {
+  FILLED: { mark: "🟢", label: "자동 입력", tone: "text-text-secondary" },
+  NEEDS_INPUT: { mark: "🟡", label: "입력 필요", tone: "text-warning" },
+  BLOCKED: { mark: "🔴", label: "현재 등록 불가", tone: "text-danger" },
+};
+
+function NoticeArticleStatusList({
+  resolution,
+  itemCodeChosen,
+  onEditCommonInfo,
+}: {
+  resolution: LotteOnNoticeResolution | undefined;
+  itemCodeChosen: boolean;
+  onEditCommonInfo?: () => void;
+}) {
+  if (!resolution) {
+    return (
+      <p className="mt-3 text-[11px] text-text-tertiary">고시 항목 상태를 확인하는 중입니다.</p>
+    );
+  }
+  if (!resolution.schemaKnown) {
+    /* 🔴 「항목이 없다」가 아니라 「이 품목의 표를 아직 모른다」다. 둘을 섞지 않는다. */
+    return (
+      <p className="mt-3 rounded-md bg-background px-3 py-2 text-[11px] text-text-secondary">
+        {itemCodeChosen
+          ? "이 고시 품목의 항목표는 아직 준비되지 않았습니다 — 항목을 임의로 만들지 않습니다."
+          : "위에서 고시 품목을 먼저 고르면 항목별 상태를 보여드립니다."}
+      </p>
+    );
+  }
+
+  const filled = resolution.fills.filter((fill) => fill.status === "FILLED").length;
+  const needsProductInfo = resolution.fills.some(
+    (fill) => fill.status === "NEEDS_INPUT" && fill.reason.includes("상품정보"),
+  );
+
+  return (
+    <div className="mt-3" data-lotteon-notice-status>
+      <p className="text-[11px] font-medium text-text-tertiary">
+        고시 {resolution.fills.length}개 항목 중 <span className="text-text-primary">{filled}개</span>가 상품정보·판매자
+        설정에서 자동으로 채워졌습니다.
+      </p>
+      <ul className="mt-2 space-y-1.5">
+        {resolution.fills.map((fill) => {
+          const style = NOTICE_STATUS_STYLE[fill.status];
+          return (
+            <li key={fill.code} className="text-[11px]" data-notice-status={fill.status}>
+              <span className="mr-1">{style.mark}</span>
+              <span className="font-medium text-text-primary">{fill.label}</span>
+              <span className={`ml-2 ${style.tone}`}>{style.label}</span>
+              {fill.status === "FILLED" ? (
+                <span className="ml-2 text-text-secondary">{fill.value}</span>
+              ) : (
+                <span className="ml-2 text-text-tertiary">{fill.reason}</span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {needsProductInfo && onEditCommonInfo && (
+        <button
+          type="button"
+          onClick={onEditCommonInfo}
+          className="mt-2 text-[11px] font-medium text-primary underline underline-offset-2"
+        >
+          상품정보에서 채우기
+        </button>
+      )}
+      {/* 🔴 「현재 등록 불가」에는 입력칸을 만들지 않는다. 셀러가 채워도 우리가
+          맞는지 판단할 수 없는 값이라, 칸을 열면 틀린 값이 등록으로 나간다. */}
+    </div>
+  );
+}
+
 export function LotteOnRegistrationPanel({
   product,
   snapshotId,
@@ -468,6 +561,7 @@ export function LotteOnRegistrationPanel({
 
   /** ① 공통 상품정보 — 실제 payload를 만드는 함수와 같은 것을 쓴다. */
   const common = useMemo(() => summarizeCommonProduct(product, commonPrice), [product, commonPrice]);
+  const noticeSources = useMemo(() => collectLotteOnNoticeSourceValues(product), [product]);
   /**
    * REWORK-4 §5 — 공통 요약의 행을 **10섹션 골격의 제자리로** 나눠 보낸다.
    *
@@ -480,7 +574,6 @@ export function LotteOnRegistrationPanel({
     [common],
   );
   /** 고시 "내용"으로 그대로 쓸 수 있는 공통 값 — 다시 치지 않게 한다. */
-  const noticeSources = useMemo(() => collectLotteOnNoticeSourceValues(product), [product]);
   /**
    * ② 셀러 설정 정보 — 판정은 화면이 하지 않는다. payload가 쓰는 것과 **같은**
    * 함수(@commerce/listing describeLotteOnSellerSettings)가 준 표를 그대로 그린다.
@@ -1810,17 +1903,23 @@ export function LotteOnRegistrationPanel({
 
                그래서 지금 할 수 있는 정직한 것: 적게 하지 않고, 어디서 풀리는지
                말한다. 이미 저장된 값이 있으면 그대로 보여준다(지우지 않는다). */
-            note="고시 항목은 롯데ON 판매자센터에서 설정합니다 — 항목 코드 체계를 따져가 만들지 않습니다. 판매자센터에서 이 품목의 고시정보를 저장한 뒤 다시 확인해 주세요."
+            note="고시 항목은 상품정보와 판매자 설정에서 «자동으로» 채웁니다 — 아래에서 항목별 상태를 확인하세요."
             readOnly
             value={form.notice.articlesText}
             onChange={(value) => patch("notice", { articlesText: value })}
           />
         </div>
-        {/* 🔴 이 목록은 **입력칸이 아니다.** 상품정보에 이미 있는 값을 읽어서
-            보여주기만 한다 — 셀러가 소재/색상/제조사를 세 번째로 다시 치지
-            않게 하는 것이 목적이다(스마트스토어는 이 값들로 고시를 자동
-            생성한다). 항목코드 체계는 품목마다 달라 여기서 만들지 않는다. */}
-        {noticeSources.length > 0 && (
+        {/* ══ LOTTEON-REGISTRATION-01/3차(CPO 승인, 2026-09-28) ═══════════════
+            여기 있던 것: 빈 textarea 하나와 「상품정보에 이미 있는 값」 목록.
+            둘 다 셀러에게 «무엇을 하면 되는지» 를 말해 주지 못했다.
+
+            🔴 상태는 서버가 준 것을 그대로 쓴다(preview.notice). 화면이 다시
+            판정하지 않는다 — STEP3-FIX 가 그 갈라짐으로 틀린 자리다. */}
+        {/* 🔴 서버 왕복 «전» 에는 상품정보에 무엇이 있는지라도 보여준다.
+            처음에 이 블록을 지웠더니 3채널 정합 가드가 잡았다 — 첫 화면이
+            비어서 「상품정보를 바꾸면 롯데ON 탭이 따라온다」가 깨진 것이다.
+            판정이 아니라 «값 표시» 라서 이중 로직이 아니다. */}
+        {!preview?.notice && noticeSources.length > 0 && (
           <div className="mt-3 rounded-md bg-background px-3 py-2 text-[11px] text-text-secondary">
             <p className="font-medium text-text-tertiary">
               고시 내용으로 그대로 쓸 수 있는 값 — 상품정보에 이미 있습니다(다시 입력하지 마세요)
@@ -1834,6 +1933,11 @@ export function LotteOnRegistrationPanel({
             </ul>
           </div>
         )}
+        <NoticeArticleStatusList
+          resolution={preview?.notice}
+          itemCodeChosen={Boolean(form.notice.itemCode.trim())}
+          onEditCommonInfo={onEditCommonInfo}
+        />
       </FormSection>
 
       {/* ── ⑤ 인증 ──────────────────────────────────────────────────────── */}

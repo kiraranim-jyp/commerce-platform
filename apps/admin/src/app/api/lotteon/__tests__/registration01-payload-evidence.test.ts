@@ -165,7 +165,7 @@ async function pipeline(p = product(), f = form()) {
   const context = await buildLotteOnContext(p, f);
   return {
     validation: validateLotteOnPayload(context.input),
-    payload: buildLotteOnPayload(context.input) as Record<string, unknown>,
+    payload: buildLotteOnPayload(context.input) as unknown as Record<string, unknown>,
   };
 }
 
