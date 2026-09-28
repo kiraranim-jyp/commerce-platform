@@ -183,9 +183,18 @@ docs/COMMON-COMMERCE-AUTO-MAPPING-P0.md:71  「204 없이는 brdNo ↔ 브랜드
 🔴 **제 권고는 ①입니다.** 그리고 ①을 고르시더라도 **제가 먼저 요청하지
 않았습니다** — 결정은 CPO 몫입니다.
 
-참고로 `common-codes` 와 `delivery-settings` 는 **지금도 앱 레벨 인증이 없습니다.**
-그래서 그 둘은 제가 부를 수 있었고, 88 은 부를 수 없습니다. 이 비대칭 자체가
-별도 보안 항목으로 남아 있습니다(이번 범위 아님).
+🔴 **정정(PD-ARTL-04 에서 실측).** 위 문단에서 「`common-codes` 와
+`delivery-settings` 는 앱 레벨 인증이 없어서 제가 부를 수 있었다」고 썼는데
+**틀렸습니다.** `proxy.ts` 가 `/api/*` 를 matcher 로 잡아 전부 막습니다 —
+
+```
+$ curl "https://ttaejyo.vercel.app/api/lotteon/common-codes?group=PD_ITMS_CD"
+401  {"ok":false,"error":"로그인이 필요합니다."}
+```
+
+라우트 소스에 `requireUser()` 가 없다는 것만 보고 단정했습니다. **저는 Production
+API 를 하나도 부를 수 없습니다.** (앱 레벨 가드가 라우트마다 없다는 사실 자체는
+그대로이고, 별도 보안 항목으로 남습니다.)
 
 ---
 
