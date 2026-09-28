@@ -1,4 +1,5 @@
 import type {
+  CommonConfirmation,
   CommonField,
   CommonFieldSourcePolicy,
   FieldSource,
@@ -61,8 +62,12 @@ export interface CommonOriginInput {
    * 계층이 같다. 새 출처 값을 만들지 않는다(중복 축 금지).
    */
   brandDefault?: string | null;
-  /** 판매자가 확인한 기록. 있으면 무엇도 이것을 덮지 않는다. */
-  confirmation?: { confirmedAt: string; policyVersion: string } | null;
+  /**
+   * 판매자가 확인한 기록. 있으면 무엇도 이것을 덮지 않는다.
+   * 🔴 «범위» 까지 들어 있는 `CommonConfirmation` 을 그대로 받는다 — 모양을
+   * 여기서 다시 정의하면 어느 채널·어느 카테고리에 대한 확인인지 잃어버린다.
+   */
+  confirmation?: CommonConfirmation | null;
 }
 
 const clean = (value: string | null | undefined): string => (value ?? "").trim();

@@ -77,7 +77,13 @@ describe("🔴 ③ 값과 확인은 «다른 칸» 이다", () => {
   it("확인 기록은 정책 버전과 함께 실린다", () => {
     const field = resolveCommonOrigin({
       product: { value: "Spain" },
-      confirmation: { confirmedAt: "2026-09-28T00:00:00Z", policyVersion: "2026-08-19" },
+      confirmation: {
+        confirmed: true,
+        confirmedAt: "2026-09-28T00:00:00Z",
+        policyVersion: "2026-08-19",
+        platform: "smartstore",
+        categoryCode: "50000167",
+      },
     });
     expect(field.confirmation?.policyVersion).toBe("2026-08-19");
   });
@@ -125,7 +131,13 @@ describe("⑤ Readiness — 요구도와 결과 상태를 섞지 않는다", () 
   it("확인 기록이 있으면 그때 READY", () => {
     const confirmed = resolveCommonOrigin({
       product: { value: "Spain" },
-      confirmation: { confirmedAt: "2026-09-28T00:00:00Z", policyVersion: "2026-08-19" },
+      confirmation: {
+        confirmed: true,
+        confirmedAt: "2026-09-28T00:00:00Z",
+        policyVersion: "2026-08-19",
+        platform: "smartstore",
+        categoryCode: "50000167",
+      },
     });
     expect(resolveCommonReadiness(confirmed, { requirement: "USER_CONFIRMATION" })).toBe("READY");
   });

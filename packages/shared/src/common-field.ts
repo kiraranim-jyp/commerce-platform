@@ -43,7 +43,44 @@ export type CommonValueState = "VALUE" | "MISSING" | "UNKNOWN" | "INVALID";
  * `COMPLIANCE_POLICY_VERSION`(naver/compliance.ts). 같은 규칙을 이어받는다.
  */
 export interface CommonConfirmation {
+  /**
+   * 🔴 항상 `true` 다. 「확인하지 않음」은 이 객체가 «없는 것»(null)으로
+   * 나타낸다 — `confirmed: false` 인 객체를 만들면 호출부가
+   * `if (confirmation)` 만 보고 확인된 것으로 읽는다.
+   */
+  confirmed: true;
   confirmedAt: string;
+  /**
+   * 🔴 «채널이 정한» 정책 버전이다. 전역 하나로 두지 않는다 — 그러면 한 채널의
+   * 정책이 바뀔 때 아무 관계도 없는 다른 채널의 확인까지 무효가 된다
+   * (KC-03 §3: 상수가 `naver/compliance.ts` 안에 있고 쓰는 곳도 네이버뿐이다).
+   */
+  policyVersion: string;
+
+  /* ── 🔴 여기부터는 «값» 이 아니라 «범위» 다 ─────────────────────────────
+     무엇을 확인했는지가 아니라 «어느 것에 대한 확인인가» 를 말한다.
+     이것이 없으면 다른 채널·다른 카테고리의 확인을 같은 것으로 읽는다. */
+
+  /** 어느 커머스에 대한 확인인가. */
+  platform: string;
+  /**
+   * 어느 카테고리에 대한 확인인가. 🔴 «그 채널의» 카테고리 번호다 —
+   * 네이버 `leafCategoryId` · 롯데ON `scatNo` · 쿠팡 `displayCategoryCode` 는
+   * 서로 비교할 수 없다. 그래서 `platform` 과 «쌍» 으로만 뜻을 갖는다.
+   */
+  categoryCode: string;
+}
+
+/**
+ * 「지금 이 상품/채널/정책에 대한 확인인가」를 판정할 때 쓰는 기준.
+ *
+ * 🔴 스마트스토어 등록 게이트가 이미 이 셋을 본다(`register/route.ts:421`) —
+ * 새 규칙이 아니라 이미 도는 규칙을 이름 붙인 것이다.
+ */
+export interface CommonConfirmationScope {
+  platform: string;
+  categoryCode: string;
+  /** 그 채널이 «지금» 요구하는 정책 버전. */
   policyVersion: string;
 }
 
