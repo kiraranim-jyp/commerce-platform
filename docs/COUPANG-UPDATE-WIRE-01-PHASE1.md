@@ -276,8 +276,61 @@ Production 실측 범위(상품명 하나)와 화면이 여는 범위가 **정�
 ⑩ channel-lifecycle 의 coupang.update → SUPPORTED_WHEN_SAVED
 ```
 
-🔴 ⑦~⑩ 은 **한 커밋에서 «같이»** 올린다. 먼저 올리면 죽은 코드이고, 먼저
+```
+⑪ api/coupang/register/route.ts 에 UPDATE 실행 분기  ← 🔴 E. 가장 크고 위험하다
+```
+
+🔴 ⑦~⑪ 은 **한 커밋에서 «같이»** 올린다. 먼저 올리면 죽은 코드이고, 먼저
 capability 만 올리면 화면이 거짓말한다 — 가드 넷이 정확히 그것을 세고 있다.
+
+### 🔴 E — Coupang register route 의 UPDATE 실행 경계 (CPO 확정 2026-09-29)
+
+기존 Coupang register route 에는 **UPDATE operation 이 존재하지 않는다.** 이는
+의도적으로 CREATE/RECREATE 와 분리되어 있었다. 이번 UPDATE wire 에서 실제 실행
+경계를 연결해야 하므로 **A–D 와 동일한 atomic implementation scope 에 포함한다.**
+CREATE/RECREATE semantics 와 분리하며, UPDATE 는
+`GET baseline → SAVED gate → edited-field overlay → loss detection → PUT` 순서를 쓴다.
+
+**발견 사항(2026-09-28 실측):**
+
+```
+api/coupang/register/route.ts    ≈ 933 lines
+plannedOperation                 = "CREATE" | "RECREATE"      :651
+UPDATE branch                    = 없음
+```
+
+그리고 그것은 사고가 아니라 결정이었다:
+
+> 🔴 그래서 UPDATE 경로를 «만들지 않았다». 없는 것을 만들어 두면 다음 사람이
+> 「있으니까 쓸 수 있다」고 읽는다
+> — [register/route.ts:641](apps/admin/src/app/api/coupang/register/route.ts:641)
+
+**🔴 E 의 절대 금지 — CREATE ≠ UPDATE**
+
+```
+✅ UPDATE → sellerProductId 식별 → GET baseline → SAVED 확인
+          → 상품명 edit «만» overlay → loss detection → PUT
+
+❌ UPDATE → buildCoupangPayload() → POST CREATE
+```
+
+UPDATE 가 CREATE payload 생성 경로에 섞이면, 수정이 아니라 **중복 등록**이 나간다 —
+이 프로젝트가 이미 겪은 「쿠팡 중복 3건」([register/route.ts:659](apps/admin/src/app/api/coupang/register/route.ts:659))이
+그 모양이다.
+
+🔴 **기존 `plannedOperation` 의 `CREATE | RECREATE` 의미를 훼손하지 않는다.**
+UPDATE 를 더하더라도 CREATE/RECREATE 의 기존 lifecycle semantics 변경 금지가
+«우선» 이다.
+
+### E 를 별도 Phase 로 떼지 않는 이유 (CPO)
+
+```
+A~D 만 완료  →  화면·서버에 UPDATE capability 가 «존재»
+             →  실제 실행부는 «없음»          ← 우리가 계속 막아 온 「부분 착지」
+```
+
+A–E 는 **하나의 Coupang UPDATE 기능 경로**다. E 는 보조 작업이 아니라
+「실제 UPDATE 요청이 CREATE 경로와 분리되어 안전하게 실행되는 최종 실행 경계」다.
 
 🔴 Core 세 파일(`commerce-edit-adapter` · `channel-edit-model` ·
 `channel-field-capability` 의 구조)은 **재설계하지 않는다.** ⑨만 예외를 더한다.
