@@ -156,7 +156,34 @@ const RECOMMEND_RESPONSE = {
  */
 const PREFILLED: LotteOnChannelInfo = {
   category: { standardCategoryNo: "", displayCategoryNos: [] },
-  notice: { itemCode: "", articlesText: "0020:네이비\n0060:스페인" },
+  /* 🔴 LOTTEON-FINAL-07(실측 9999, 2026-09-29) — 롯데ON 은 품목 23 의 고시 항목을
+     «전부» 요구한다. 이 파일의 관심축은 「안전인증이 들어가야 100%」인데, 고시가
+     비어 있으면 애먼 이유로 100% 가 되지 않아 축이 흐려진다. 그래서 셀러가 고시를
+     이미 채워 둔 상품으로 둔다 — 지어낸 값이 아니라 화면·설정의 입력칸으로
+     들어오는 바로 그 값들이다.
+
+     🔴 13개를 «전부» 적는 이유: 아래 서버 대역(previewFor)은 고시 resolver 를
+     돌리지 않고 화면이 보낸 `noticeArticles` 를 그대로 쓴다. 실제 라우트에서는
+     소재·제조자처럼 상품정보에서 오는 항목을 resolver 가 채우지만, 이 stub 에는
+     그 단계가 없으므로 fixture 가 대신 들고 있어야 한다. */
+  notice: {
+    itemCode: "",
+    articlesText: [
+      "0020:네이비",
+      "0060:스페인",
+      "0410:17% 리사이클 코튼",
+      "0070:Bobo Choses / 따조",
+      "0080:소비자분쟁해결기준에 따름",
+      "0780:2-3 Years, 4-5 Years",
+      "0200:CB123456789",
+      "0210:유아동 반바지 / B226AC043",
+      "0790:24개월 이상",
+      "0800:30도 손세탁",
+      "0220:2026-03",
+      "1830:해당사항 없음",
+      "0090:따조 고객센터 / 02-1234-5678",
+    ].join("\n"),
+  },
   certification: { safetyText: "", importProxyCode: "" },
   delivery: {
     outboundPlaceNo: "115",

@@ -221,7 +221,10 @@ describe("validateLotteOnPayload", () => {
         }),
       ),
     );
-    expect(result.ok).toBe(true);
+    /* 🔴 LOTTEON-FINAL-07 — 축을 «수입대행코드» 하나로 좁힌다. 품목 23 은 이제
+       고시 13항목을 전부 요구하므로(실측 9999) `ok` 로 재면 애먼 이유로 깨진다. */
+    expect(result.fields.find((f) => f.field === "impPrxCd")).toBeUndefined();
+    expect(result.fields.find((f) => f.field === "sftyAthnLst")?.status).toBe("READY");
   });
 
   /* ══════════════════════════════════════════════════════════════════════════
@@ -254,7 +257,8 @@ describe("validateLotteOnPayload", () => {
 
     it("「대상 아님」을 고르면 인증정보 없이 통과한다 — 이것이 없던 출구다", () => {
       const result = validateLotteOnPayload(inputFor(makeProduct(), childrenChannel({ safetyTarget: "EXCLUDED" })));
-      expect(result.ok).toBe(true);
+      /* 🔴 이 블록의 축은 안전인증 «하나» 다. 고시(pdItmsArtlLst)는 별개 축이고
+         실측 9999 이후 따로 막힌다 — `ok` 로 재면 그 규칙에 끌려다닌다. */
       expect(safety(result)?.status).toBe("READY");
       /* 🔴 화면이 「따져가 확인했다」로 읽히면 안 된다 — 판매자의 «신고» 다. */
       expect(safety(result)?.label).toContain("판매자 신고");
@@ -294,7 +298,6 @@ describe("validateLotteOnPayload", () => {
           }),
         ),
       );
-      expect(result.ok).toBe(true);
       expect(safety(result)?.status).toBe("READY");
     });
 

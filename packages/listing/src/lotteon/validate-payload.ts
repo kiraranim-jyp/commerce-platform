@@ -3,6 +3,9 @@ import { blocksRegistration, resolveSourceStock } from "@commerce/shared";
 import type { LotteOnPayloadInput } from "./build-payload";
 import { hasLotteOnSellableOptions, isLotteOnSupportedImageUrl, resolveLotteOnImageUrls } from "./build-payload";
 import { isKnownLotteOnTaxType } from "./tax-type";
+/* 🔴 LOTTEON-FINAL-07 — 필수 목록을 여기서 «다시 적지» 않는다. 품목별 항목표는
+   공식 문서에서 옮겨 온 notice-schema.ts 한 곳에 있고, 여기서는 읽기만 한다. */
+import { noticeSchemaFor } from "./notice-schema";
 
 /**
  * LOTTEON COMMERCE SPRINT 2 Phase 3 — 실제 POST 없이 87 payload가 등록 가능한
@@ -190,15 +193,47 @@ export function validateLotteOnPayload(input: LotteOnPayloadInput): LotteOnValid
   if (channel.noticeItemCode) ready("pdItmsCd", "상품품목코드(고시)");
   else blocked("pdItmsCd", "상품품목코드(고시)", "상품품목코드(PD_ITMS_CD)가 지정되지 않았습니다.", "NOTICE_REQUIRED");
 
-  if (channel.noticeArticles.length > 0 && channel.noticeArticles.every((a) => a.pdArtlCd && a.pdArtlCnts.trim()))
-    ready("pdItmsArtlLst", "고시 항목");
-  else
+  if (!(channel.noticeArticles.length > 0 && channel.noticeArticles.every((a) => a.pdArtlCd && a.pdArtlCnts.trim()))) {
     blocked(
       "pdItmsArtlLst",
       "고시 항목",
       "상품정보제공고시 항목이 비어 있거나 값이 없는 항목이 있습니다. 항목코드(pdArtlCd)는 품목마다 코드체계가 달라 자동 생성하지 않습니다.",
       "NOTICE_REQUIRED",
     );
+  } else {
+    /* ══ 🔴 LOTTEON-FINAL-07(실측, 2026-09-29) — **전 항목이 필수다** ══════════
+       이 자리는 「값이 있는 항목들이 온전한가」만 봤다. 그래서 13항목 중 10개만
+       실어도 READY 였고, 화면은 「등록 가능」인데 롯데ON 이 거절했다 —
+
+           returnCode 0000 / 9999 상품품목항목코드 필수값이 누락입니다
+           (판매자상품번호 spdNo 없음 = 실제로 등록되지 않았다)
+
+       🔴 이것은 추정이 아니라 **첫 실제 CREATE 응답** 이다. 그전까지 이 저장소는
+       「검증기는 13개를 요구하지 않는다」고 적어 두었고(그 테스트까지 있었다),
+       그 판단이 Production 에서 틀린 것으로 드러났다.
+
+       🔴 항목을 «만들어» 채우지 않는다. 여기서는 막기만 하고, 무엇이 비었는지
+       이름으로 말한다 — 셀러는 고시 섹션(0220·1830)과 판매자 설정(0090 A/S)에서
+       채운다. 두 입구 모두 이미 화면에 있다.
+
+       🔴 품목 표를 «모르면» 예전 그대로다. 모르는 품목에 우리가 필수 목록을
+       지어내지 않는다. */
+    const schema = noticeSchemaFor(channel.noticeItemCode);
+    const present = new Set(channel.noticeArticles.map((a) => a.pdArtlCd.trim()));
+    const missingRequired = (schema ?? []).filter((spec) => spec.required && !present.has(spec.code));
+    if (missingRequired.length > 0) {
+      blocked(
+        "pdItmsArtlLst",
+        "고시 항목",
+        `롯데ON은 이 품목의 고시 항목을 «전부» 요구합니다(실측: 9999 상품품목항목코드 필수값 누락). 아직 비어 있는 항목 ${missingRequired.length}개 — ${missingRequired
+          .map((spec) => spec.label)
+          .join(" · ")}.`,
+        "NOTICE_REQUIRED",
+      );
+    } else {
+      ready("pdItmsArtlLst", "고시 항목");
+    }
+  }
 
   /* ══ 6) 안전인증(KC) — LOTTEON-FINAL-05 #2(CEO 지시, 2026-09-29) ═══════════
      전에는 축이 «하나» 였다: 인증정보가 있는가 없는가. 그래서 품목 23 에서

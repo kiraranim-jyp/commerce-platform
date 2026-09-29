@@ -205,21 +205,78 @@ describe("① API 87 로 나가는 고시 블록", () => {
   });
 });
 
-describe("🔴 ② 검증기는 13개를 요구하지 «않는다» — 내가 틀렸던 부분이다", () => {
-  it("항목이 7개여도 고시 항목(pdItmsArtlLst)은 READY 가 된다", async () => {
-    const { validation, payload } = await pipeline();
-    const list = notice(payload).pdItmsArtlLst ?? [];
-    expect(list.length).toBeLessThan(13);
+/* ════════════════════════════════════════════════════════════════════════════
+   🔴 ② 롯데ON 은 고시 «전 항목» 을 요구한다 — 실측이 내 판단을 뒤집었다
+   ════════════════════════════════════════════════════════════════════════════
 
-    const articles = (validation.fields).find((item) => item.field === "pdItmsArtlLst");
-    expect(articles?.status).toBe("READY");
+   이 자리에는 「검증기는 13개를 요구하지 «않는다»」가 있었다. 근거는 우리
+   검증기가 그렇게 «동작한다» 는 것뿐이었지, 롯데ON 이 그렇다는 근거가 아니었다.
+
+   첫 실제 CREATE 가 답했다(2026-09-29, CEO 실행):
+
+       returnCode 0000  정상 처리되었습니다
+                 9999  상품품목항목코드 필수값이 누락입니다
+       판매자상품번호(spdNo) 없음 = **등록되지 않았다**
+
+   10개를 실어 보냈고 3개(0220 동일모델 출시년월 · 1830 크기·체중의 한계 ·
+   0090 A/S 책임자와 전화번호)가 비어 있었다.
+
+   🔴 그래서 검사를 뒤집는다. 「화면은 통과인데 등록은 실패」가 이 저장소가
+   가장 비싸게 겪어 온 상태이고, 이번이 그 교과서적 사례다.
+   ═══════════════════════════════════════════════════════════════════════════ */
+describe("🔴 ② 고시 항목이 하나라도 비면 «보내기 전에» 막는다", () => {
+  const noticeField = (validation: { fields: { field: string; status: string; reason?: string }[] }) =>
+    validation.fields.find((item) => item.field === "pdItmsArtlLst");
+
+  it("10개만 채워진 지금 상태는 BLOCKED 다 — 9999 를 다시 받지 않는다", async () => {
+    const { validation, payload } = await pipeline();
+    expect((notice(payload).pdItmsArtlLst ?? []).length).toBeLessThan(13);
+    expect(noticeField(validation)?.status).toBe("BLOCKED");
   });
 
-  it("고시 항목이 «하나도 없으면» 그때는 막는다", async () => {
+  it("무엇이 비었는지 «이름으로» 말한다 — 셀러가 어디를 채울지 알아야 한다", async () => {
+    const { validation } = await pipeline();
+    const reason = noticeField(validation)?.reason ?? "";
+    for (const label of ["동일모델의 출시년월", "크기ㆍ체중의 한계", "A/S 책임자와 전화번호"]) {
+      expect(reason, `비어 있는 항목 이름이 안내에 없다: ${label}`).toContain(label);
+    }
+  });
+
+  it("13개를 전부 채우면 READY 가 된다", async () => {
+    const { validation } = await pipeline(
+      product(),
+      form({
+        originCode: "ES",
+        safetyTarget: "EXCLUDED",
+        /* 🔴 값을 «지어내지» 않는다 — 셀러가 화면(0220·1830)과 설정(0090)에서
+           채우는 바로 그 경로로 넣는다. */
+        noticeArticles: [
+          { pdArtlCd: "0220", pdArtlCnts: "2026-03" },
+          { pdArtlCd: "1830", pdArtlCnts: "해당사항 없음" },
+          { pdArtlCd: "0090", pdArtlCnts: "따조 고객센터 / 02-1234-5678" },
+          { pdArtlCd: "0210", pdArtlCnts: "아동 스웨트셔츠 / B226AC040" },
+          { pdArtlCd: "0790", pdArtlCnts: "24개월 이상" },
+          { pdArtlCd: "0800", pdArtlCnts: "30도 손세탁" },
+        ],
+      }),
+    );
+    console.log("DBG reason:", noticeField(validation)?.reason);
+    expect(noticeField(validation)?.status).toBe("READY");
+  });
+
+  it("고시 항목이 «하나도 없으면» 그때도 막는다", async () => {
     /* 품목을 모르는 값으로 두면 resolver 가 아무것도 만들지 않는다. */
     const { validation } = await pipeline(product(), form({ noticeItemCode: "01" }));
-    const articles = (validation.fields).find((item) => item.field === "pdItmsArtlLst");
-    expect(articles?.status).not.toBe("READY");
+    expect(noticeField(validation)?.status).not.toBe("READY");
+  });
+
+  it("🔴 품목 표를 «모르는» 품목에 필수 목록을 지어내지 않는다", async () => {
+    /* 모르는 품목코드라도, 실린 항목이 온전하면 «전 항목 검사» 로 막지 않는다. */
+    const { validation } = await pipeline(
+      product(),
+      form({ noticeItemCode: "77", noticeArticles: [{ pdArtlCd: "9990", pdArtlCnts: "값" }] }),
+    );
+    expect(noticeField(validation)?.status).toBe("READY");
   });
 });
 
@@ -234,18 +291,39 @@ describe("🔴 ③ 그래서 지금 실제로 막는 것은 무엇인가", () =>
     console.log("\n===== 아직 READY 가 아닌 항목 =====\n ", blocked.join(", "));
 
     /* 원산지코드와 안전인증(KC)이다. 고시 «항목» 이 아니다. */
+    /* 🔴 LOTTEON-FINAL-07 — 「고시 «항목» 이 아니다」가 틀렸다. 실측 9999 가
+       고시 전 항목 필수를 확정했고, 이제 그것도 «보내기 전에» 막힌다. */
     expect(blocked).toContain("oplcCd");
     expect(blocked).toContain("sftyAthnLst");
-    expect(blocked).not.toContain("pdItmsArtlLst");
+    expect(blocked).toContain("pdItmsArtlLst");
   });
 
   it("셀러가 원산지와 KC 를 채우면 남는 BLOCK 이 없다", async () => {
     const { validation } = await pipeline(
-      product(),
+      /* 🔴 고시 `0200`(KC 인증정보)은 «상품정보의 실제 인증번호» 에서 온다.
+         이 검사의 뜻이 「셀러가 KC 를 채우면 풀린다」이므로, 그 칸도 채운
+         상품으로 잰다 — 값을 지어내는 것이 아니라 셀러가 입력하는 자리다. */
+      product({
+        childCertification: field({
+          certificationNumber: "CB123456789",
+          companyName: "한국기계전기전자시험연구원",
+          certificationDate: "2026-01-02",
+        }),
+      }),
       form({
         originCode: "ES",
         safetyCertifications: [{ sftyAthnTypCd: "CHL_CFM", sftyAthnNo: "CB123456789" }],
         importProxyCode: "PUR_PRX",
+        /* 🔴 LOTTEON-FINAL-07 — 고시도 «셀러가» 채운다. 지어내는 값이 아니라
+           고시 섹션(0220·1830…)과 판매자 설정(0090)의 입력칸으로 들어오는 값이다. */
+        noticeArticles: [
+          { pdArtlCd: "0220", pdArtlCnts: "2026-03" },
+          { pdArtlCd: "1830", pdArtlCnts: "해당사항 없음" },
+          { pdArtlCd: "0090", pdArtlCnts: "따조 고객센터 / 02-1234-5678" },
+          { pdArtlCd: "0210", pdArtlCnts: "아동 스웨트셔츠 / B226AC040" },
+          { pdArtlCd: "0790", pdArtlCnts: "24개월 이상" },
+          { pdArtlCd: "0800", pdArtlCnts: "30도 손세탁" },
+        ],
       }),
     );
     const blocked = (validation.fields).filter((item) => item.status !== "READY").map((item) => item.field);
@@ -292,7 +370,10 @@ describe("🔴 ⑤ 안전인증 신고가 라우트를 통과해 두 문에 다 
   it("「대상 아님」 — 인증정보 없이도 남는 BLOCK 이 «없다»", async () => {
     const { validation } = await pipeline(product(), form({ originCode: "ES", safetyTarget: "EXCLUDED" }));
     console.log("\n===== 「인증 대상 아님」 신고 뒤 남은 항목 =====\n ", blockedFields(validation).join(", ") || "(없음)");
-    expect(blockedFields(validation)).toHaveLength(0);
+    /* 🔴 이 검사의 축은 KC «하나» 다. 고시(pdItmsArtlLst)는 별개 축이고 실측
+       9999 이후 따로 막힌다 — 「남는 BLOCK 이 0」으로 적으면 고시 규칙이 바뀔
+       때마다 KC 검사가 애먼 이유로 깨진다. */
+    expect(blockedFields(validation)).not.toContain("sftyAthnLst");
   });
 
   it("「대상 아님」 — 고시 0200 이 「해당사항 없음」으로 실려 나간다", async () => {
