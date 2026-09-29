@@ -93,3 +93,30 @@ describe("🔴 ③ 실제 원문은 «문장» 으로 온다", () => {
     expect(autoPickLotteOnOriginCode(listed, "Made in Spain")?.code).toBe("ZZ");
   });
 });
+
+/* ══ LOTTEON-FINAL-04 ③ — 실제 원문 형태 회귀 ══════════════════════════════
+   🔴 이 저장소가 두 번 같은 함정에 걸렸다: fixture 를 «깨끗한 값» 으로 만들면
+   Production 이 주는 «지저분한 값» 을 못 잡는다. 실제로 본 표기만 넣는다. */
+describe("🔴 ④ 모호하면 «고르지 않는다» — 복수 국가 표기", () => {
+  it.each([
+    ["Made in Spain and Portugal", "and 로 이어진 둘"],
+    ["Made in Spain, Portugal", "쉼표로 이어진 둘"],
+    ["Spain / Portugal", "슬래시로 이어진 둘"],
+    ["스페인, 프랑스", "한국어 복수"],
+    ["원산지: 스페인 또는 프랑스", "라벨 + 한국어 복수"],
+  ])("%s → null (%s)", (text) => {
+    expect(autoPickLotteOnOriginCode(ITEMS, text)).toBeNull();
+  });
+
+  it("🔴 복수 표기에서 «앞의 것» 을 집지 않는다 — 그게 가장 그럴듯한 오답이다", () => {
+    for (const text of ["Made in Spain and Portugal", "Spain / Portugal", "스페인, 프랑스"]) {
+      const picked = autoPickLotteOnOriginCode(ITEMS, text);
+      expect(picked, `${text} 에서 무언가를 골랐다`).toBeNull();
+    }
+  });
+
+  it("단일 국가에 꼬리 기호만 붙은 것은 «맞춘다» — 복수와 혼동하지 않는다", () => {
+    expect(autoPickLotteOnOriginCode(ITEMS, "Made in Spain.")?.code).toBe("ES");
+    expect(autoPickLotteOnOriginCode(ITEMS, "스페인,")?.code).toBe("ES");
+  });
+});
