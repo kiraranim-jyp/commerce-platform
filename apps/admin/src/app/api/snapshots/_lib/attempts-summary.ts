@@ -1,5 +1,11 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import type { PlatformId } from "@commerce/shared";
+/* 🔴 COMMERCE-LIFECYCLE-FINAL-02 — 「같은 상품인가」 판정을 새로 만들지 않는다.
+   카테고리 추천 캐시가 같은 목적으로 이미 쓰는 정규화를 그대로 부른다. */
+import { computeSourceUrlKey } from "./category-recommendation-cache";
+
+/** 기등록 확인을 위해 훑는 스냅샷 창. 🔴 다 채우면 «모른다» 로 간다(아래). */
+const SOURCE_SCAN_LIMIT = 1000;
 
 /**
  * Sprint B-2(CPO 지시: "최근 작업 목록에서 플랫폼/현재상태/오류여부를 확인") —
@@ -176,16 +182,39 @@ export async function hasPriorSuccessfulAttempt(
   const sourceUrl = (snap as { source_url?: string | null } | null)?.source_url ?? null;
   if (sourceUrl) {
     const workspaceId = (snap as { workspace_id?: string | null } | null)?.workspace_id ?? null;
-    let query = supabase.from("product_snapshots").select("id").eq("source_url", sourceUrl);
+    /* 🔴 COMMERCE-LIFECYCLE-FINAL-02 ① — 문자열이 «똑같을» 때만 보면 우회된다.
+       `?utm_source=...` 하나만 붙어도 다른 URL 이 되고, 그 순간 중복 차단이
+       열린다(CPO 가 지목한 그 구멍이다).
+
+       🔴 정규화를 새로 만들지 않는다. 같은 폴더의 `computeSourceUrlKey` 가
+       이미 그 일을 하고 있고(`normalizeUrl` 이 쿼리스트링을 통째로 지운다 +
+       Shopify locale 접두 제거), 카테고리 추천 캐시가 «같은 목적»(동일 상품
+       판정)으로 이미 쓰고 있다. 판정 기준이 두 벌이 되면 한쪽만 조용히
+       느슨해진다. */
+    const key = computeSourceUrlKey(sourceUrl);
+    let query = supabase
+      .from("product_snapshots")
+      .select("id, source_url")
+      .order("created_at", { ascending: false })
+      .limit(SOURCE_SCAN_LIMIT);
     /* 🔴 워크스페이스가 있으면 그 «안에서만» 본다 — 남의 등록 이력으로 내 등록을
        막지 않는다. 옛 행은 이 칸이 비어 있어 그때는 URL 만으로 본다. */
     if (workspaceId) query = query.eq("workspace_id", workspaceId);
-    const { data: siblings, error: siblingError } = await query.limit(500);
+    const { data: siblings, error: siblingError } = await query;
     if (siblingError) {
       console.warn("[attempts-summary] 같은 원본 상품 조회 실패:", siblingError.message);
       return null;
     }
-    const ids = ((siblings ?? []) as { id: string }[]).map((row) => row.id);
+    const rows = (siblings ?? []) as { id: string; source_url: string | null }[];
+    /* 🔴 창을 다 채웠다 = 더 오래된 것을 «보지 못했다». 못 본 것을 「없다」로
+       읽으면 그 순간 중복의 문이 열린다 — 이 파일의 다른 실패 경로와 같은
+       규약으로 «모른다»(null)를 낸다. 이 경고가 뜨면 그때가 정규화 컬럼 +
+       인덱스를 만들 시점이다(migration 은 별건). */
+    if (rows.length >= SOURCE_SCAN_LIMIT) {
+      console.warn(`[attempts-summary] 스냅샷 스캔 한도(${SOURCE_SCAN_LIMIT}) 도달 — 기등록 여부를 확정할 수 없다`);
+      return null;
+    }
+    const ids = rows.filter((row) => row.source_url && computeSourceUrlKey(row.source_url) === key).map((row) => row.id);
     if (ids.length > 0) snapshotIds = [...new Set([snapshotId, ...ids])];
   }
 

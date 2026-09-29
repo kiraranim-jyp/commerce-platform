@@ -107,8 +107,14 @@ describe("③ 🔴 확인하지 «못한» 경우도 막는다", () => {
     const fn = priorSuccessFn();
     expect(fn).toContain('.eq("status", "SUBMITTED")');
     /* 최신 한 건만 보면 「성공 뒤 실패」가 「미등록」으로 읽힌다 —
-       상품은 이미 마켓에 있는데. 정렬해서 첫 행을 보는 방식이 아니어야 한다. */
-    expect(fn).not.toContain('.order(');
+       상품은 이미 마켓에 있는데. 정렬해서 첫 행을 보는 방식이 아니어야 한다.
+
+       🔴 COMMERCE-LIFECYCLE-FINAL-02 — 검사 대상을 «이력 조회» 로 좁힌다.
+       스냅샷 스캔은 최신순 정렬을 «쓴다»(창을 최근 쪽으로 자르기 위해서다).
+       그 정렬은 이력을 고르는 것이 아니라 후보 상품을 모으는 것이라 이 가드가
+       말하는 위험과 무관하다 — 함수 전체로 재면 애먼 줄에 걸린다. */
+    const attemptsQuery = fn.slice(fn.indexOf('.from("registration_attempts")'));
+    expect(attemptsQuery, "이력 조회를 정렬해 첫 행만 보고 있다").not.toContain(".order(");
   });
 });
 
@@ -165,11 +171,34 @@ describe("⑥ 상태의 근거는 여전히 ChannelProduct 다", () => {
 describe("🔴 ⑥ 「이 스냅샷」이 아니라 «이 원본 상품» 으로 성공했는지 본다", () => {
   const fn = () => priorSuccessFn();
 
-  it("같은 원본 상품(source_url)의 다른 스냅샷을 함께 본다", () => {
+  it("같은 원본 상품의 다른 스냅샷을 함께 본다", () => {
     const src = fn();
-    expect(src, "source_url 로 형제 스냅샷을 찾지 않는다").toContain('.eq("source_url"');
+    expect(src, "source_url 을 읽지 않는다").toContain("source_url");
     /* 단건이 아니라 목록으로 묻는다 — 스냅샷 하나만 보면 재분석이 빗장을 지나간다. */
     expect(src, "이력 조회가 여전히 스냅샷 «한 건» 만 본다").toContain('.in("snapshot_id"');
+  });
+
+  it("🔴 ①(CPO) 추적 파라미터가 붙어도 우회되지 않는다 — 정규화해서 비교한다", () => {
+    const src = fn();
+    /* `?utm_source=...` 하나만 붙어도 문자열은 달라진다. 문자열 동등 비교만
+       하면 그 순간 중복 차단이 열린다. */
+    expect(src, "URL 을 정규화하지 않고 문자열 그대로 비교한다").toContain("computeSourceUrlKey");
+    expect(src).not.toContain('.eq("source_url"');
+  });
+
+  it("🔴 판정 기준을 «새로 만들지» 않았다 — 기존 공통 정규화를 부른다", () => {
+    /* 같은 「동일 상품인가」 질문에 두 벌의 답이 생기면 한쪽만 조용히 느슨해진다.
+       카테고리 추천 캐시가 쓰던 그 함수를 그대로 쓴다. */
+    expect(LIB).toContain('from "./category-recommendation-cache"');
+    /* utm 목록·정규식을 이 파일이 «직접» 들고 있지 않다. */
+    expect(fn()).not.toContain("utm_");
+  });
+
+  it("🔴 훑는 창을 다 채우면 «모른다» 로 간다 — 못 본 것을 「없다」로 읽지 않는다", () => {
+    const src = fn();
+    expect(src).toContain("SOURCE_SCAN_LIMIT");
+    const saturation = src.slice(src.indexOf("rows.length >= SOURCE_SCAN_LIMIT"));
+    expect(saturation.slice(0, 400), "창 포화를 fail-closed 로 처리하지 않는다").toContain("return null;");
   });
 
   it("🔴 남의 워크스페이스 이력으로 내 등록을 막지 않는다", () => {
