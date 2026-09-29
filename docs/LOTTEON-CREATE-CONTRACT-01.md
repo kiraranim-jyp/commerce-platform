@@ -148,7 +148,7 @@ itmLst[0] 필드    eitmNo · itmImgLst · rprtSitmYn · slPrc · sortSeq · stk
 
 ### 하드코딩 상수 [확정] — 근거 주석이 붙어 있는 것만
 
-`slTypCd:"GNRL"` · `pdTypCd:"GNRL_GNRL"` · `pdStatCd:"NEW"` · `dpYn:"Y"` ·
+`slTypCd:"GNRL"` · `pdTypCd:"GNRL_GNRL"` · `pdStatCd:"NEW"` · `dpYn:"N"`(전시안함 — CEO 결정 2026-09-29, LOTTEON-FINAL-08) ·
 `dmstOvsDvDvsCd:"DMST"` · `dvProcTypCd:"LO_ENTP"` · `dvPdTypCd:"GNRL"` ·
 `dvMnsCd:"DPCL"` · `stkMgtYn:"Y"` · `adtnPdYn:"N"` · `ageLmtCd:"0"` ·
 `prstPckPsbYn/prstMsgPsbYn:"N"` · 이미지 `epsrTypCd:"IMG"`/`epsrTypDtlCd:"IMG_SQRE"` ·

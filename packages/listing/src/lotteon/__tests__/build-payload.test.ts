@@ -312,6 +312,32 @@ describe("validateLotteOnPayload", () => {
     });
   });
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     LOTTEON-FINAL-08(CEO 결정, 2026-09-29) — **등록 ≠ 전시**
+
+     Production 실측: 쿠팡·스마트스토어는 임시저장으로 앉는데 롯데ON 만 등록 즉시
+     매대에 걸렸다. 셀러가 검수하기 전에 팔리기 시작하는 상태다.
+
+     🔴 원인은 버그가 아니라 «우리가 정한 기본값» 이었다 — `dpYn: "Y"`. 문서가
+     그 값을 「근거 0」이라고 스스로 적어 두었는데도 그대로 나갔다.
+     ═══════════════════════════════════════════════════════════════════════ */
+  it("🔴 등록은 «전시안함» 으로 나간다 — 셀러가 확인하기 전에 팔리지 않는다", () => {
+    const payload = buildLotteOnPayload(inputFor(makeProduct(), completeChannel()));
+    expect(payload.spdLst[0].dpYn).toBe("N");
+  });
+
+  it("🔴 어떤 입력으로도 전시로 «뒤집히지» 않는다 — 판매자가 정할 일이다", () => {
+    /* 채널 값을 바꿔도 이 축은 움직이지 않는다. 화면에 토글이 없는 것이 요점이고,
+       생기더라도 그것은 CEO 정책 변경이지 폼 입력이 아니다. */
+    for (const channel of [
+      completeChannel(),
+      completeChannel({ noticeItemCode: LOTTEON_NOTICE_ITEM_CODE_CHILDREN, safetyTarget: "EXCLUDED" }),
+      completeChannel({ originCode: "ES", taxTypeCode: "02" }),
+    ]) {
+      expect(buildLotteOnPayload(inputFor(makeProduct(), channel)).spdLst[0].dpYn).toBe("N");
+    }
+  });
+
   it("출고지/회수지/배송비정책/배송가능지역이 없으면 막는다 — 임의 번호를 보낼 수 없다", () => {
     const result = validateLotteOnPayload(
       inputFor(

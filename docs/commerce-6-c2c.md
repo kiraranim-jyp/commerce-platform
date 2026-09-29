@@ -57,7 +57,7 @@ CEO 가 한 채널에는 지시를 남겼고 다른 채널에는 반영되지 �
 `maxPurLmtTypCd` | PERIOD | 최대구매 제한 기준 | 🟡 제한을 안 쓰는데 유형만 채움 |
 `cnclPsbYn` | Y | 취소 가능 | 🟢 값은 타당(청약철회) · 근거 0 |
 `rtngPsbYn` | Y | 반품 가능 | 🟢 값은 타당 · 근거 0 |
-`dpYn` | Y | 전시 여부 | 🟢 등록=전시, 타당 · 근거 0 |
+`dpYn` | **N** | 전시 여부 | 🟢 **근거 생김** — CEO 결정(2026-09-29): 「모든 커머스 우선은 바로 전시하면 안 된다」. 쿠팡·스마트스토어는 임시저장인데 롯데ON 만 등록 즉시 매대에 걸린 것이 Production 에서 확인됐다(LOTTEON-FINAL-08) |
 `weekdayCloseTime` | 1400 | 평일 발송마감 | 🟡 **폼 기본값** — 셀러가 화면에서 보고 고칠 수 있다 |
 `saturdayShippingAvailable` | false | 토요일 발송 | 🟡 폼 기본값 |
 `shipBudgetDays` | 3 | 발송예정일수 | 🟢 문서화된 폴백(상한 3일) |

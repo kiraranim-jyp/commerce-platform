@@ -428,7 +428,24 @@ export function buildLotteOnPayload(input: LotteOnPayloadInput): LotteOnProductR
     ...(importerName && channel.importDivisionCode ? { impDvsCd: channel.importDivisionCode } : {}),
 
     pdStatCd: "NEW",
-    dpYn: "Y",
+    /* ══ 🔴 LOTTEON-FINAL-08(CEO 결정, 2026-09-29) — **등록 ≠ 전시** ═══════════
+       여기는 `dpYn: "Y"` 였다. 우리 문서가 그 값에 대해 스스로 이렇게 적어 두었다:
+
+           dpYn | Y | 전시 여부 | 🟢 등록=전시, 타당 · **근거 0**
+           (docs/commerce-6-c2c.md)
+
+       「근거 0」이 사실이었다. 판매자가 정한 적 없는 정책을 우리가 정했고, 그
+       결과가 Production 에서 드러났다 — 쿠팡·스마트스토어는 임시저장으로 앉는데
+       **롯데ON 만 등록 즉시 매대에 걸렸다.** 셀러가 검수하기 전에 팔리기 시작하는
+       상태이고, 세 채널이 같은 행동을 하지 않는다는 뜻이기도 하다.
+
+       🔴 CEO 결정: 「모든 커머스 우선은 바로 전시하면 안 된다」. 그래서 이제
+       근거가 있다 — 지어낸 기본값이 아니라 판매자 정책이다.
+
+       🔴 등록이 안 되는 것이 아니다. 상품은 그대로 만들어지고 롯데ON 판매자센터의
+       전시여부만 «전시안함» 으로 앉는다. 셀러가 확인한 뒤 직접 전시로 바꾼다 —
+       그 판단은 우리가 대신하지 않는다. */
+    dpYn: "N",
     ...(keywords.length > 0 ? { scKwdLst: keywords } : {}),
     epnLst: [{ pdEpnTypCd: "DSCRP", cnts: input.detailHtml }],
 
