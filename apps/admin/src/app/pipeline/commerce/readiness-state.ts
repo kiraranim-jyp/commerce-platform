@@ -160,6 +160,24 @@ export const REGISTRATION_SECTION_LABEL: Record<string, string> = {
   "section-notice": "고시정보",
   "section-kc": "KC (어린이제품 등 인증정보)",
   "section-description": "상세설명",
+
+  /* ══ 🔴 UX-FLOW-01(2026-09-30) — 롯데ON 은 이동 버튼이 «한 번도 뜬 적이 없다» ══
+     롯데ON 패널은 이동 장치를 이미 전부 배선해 두었다:
+         readinessItems[].sectionId = "lotteon-section-*"  (LOTTEON_FIX_GUIDE)
+         onPriorityItemClick → goToSection() → scrollIntoView
+     그런데 `describePriorityItem()` 은 **이 표에 있는 id 에만** 버튼을 만든다.
+     `lotteon-section-*` 가 여기 없어서 셀러는 언제나 폴백 문장만 봤다 —
+     「좌측 등록 상세의 해당 섹션에서 찾아 채웁니다 — 이동할 자리를 아직 특정하지
+     못했습니다」. 스크롤은 준비돼 있는데 «누를 것이 없었다».
+
+     🔴 새 장치를 만들지 않는다. 이름을 여기 등록하기만 하면 기존 배선이 그대로
+     동작한다. 라벨은 롯데ON 탭이 실제로 그리는 섹션 제목과 같게 둔다 — 안내가
+     부르는 이름과 화면 제목이 다르면 「거기가 어딘데」가 다시 생긴다. */
+  "lotteon-section-category": "카테고리",
+  "lotteon-section-delivery": "배송",
+  "lotteon-section-notice": "고시정보",
+  "lotteon-section-certification": "KC / 인증",
+  "lotteon-section-codes": "롯데ON 고유 코드",
 };
 
 export type PriorityAction =

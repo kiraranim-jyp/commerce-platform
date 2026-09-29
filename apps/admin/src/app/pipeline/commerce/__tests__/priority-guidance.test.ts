@@ -8,7 +8,9 @@ import { UNRESOLVED_CATEGORY } from "@commerce/category";
 import { PlatformPreview } from "../PlatformPreview";
 import { LotteOnRegistrationPanel } from "../LotteOnRegistrationPanel";
 import { RegistrationStatusBanner } from "../RegistrationStatusBanner";
-import { buildPriorityItems, describePriorityItem } from "../readiness-state";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { buildPriorityItems, describePriorityItem, REGISTRATION_SECTION_LABEL } from "../readiness-state";
 import { computeChecklistReadiness } from "../readiness";
 import { manufacturerFixture } from "./manufacturer-fixture";
 
@@ -246,5 +248,49 @@ describe("§2 — 🔴 이동 경로가 없는 안내를 만들지 않는다", (
       });
       expect(deadLinks.map((a) => a.textContent), `${name}: 갈 곳 없는 링크가 있다`).toEqual([]);
     }
+  });
+});
+
+/* ════════════════════════════════════════════════════════════════════════════
+   🔴 UX-FLOW-01(2026-09-30) — 「이동할 자리를 특정하지 못했습니다」가 막다른 길이다
+   ════════════════════════════════════════════════════════════════════════════
+
+   롯데ON 패널은 이동 장치를 전부 배선해 두었다(`sectionId` · `goToSection` ·
+   `onPriorityItemClick` · `scrollIntoView`). 그런데 `describePriorityItem()` 은
+   `REGISTRATION_SECTION_LABEL` 에 «있는 id 에만» 버튼을 만든다. 롯데ON 이 쓰는
+   `lotteon-section-*` 가 그 표에 없어서, 셀러는 언제나 폴백 문장만 봤다 —
+   스크롤은 준비돼 있는데 «누를 것이 없었다».
+
+   🔴 이 블록이 지키는 것은 「롯데ON 5개를 넣었다」가 아니라 **「패널이 낼 수 있는
+   sectionId 가 전부 풀린다」** 이다. 채널이 늘어도 같은 함정에 빠지지 않는다.
+   ═══════════════════════════════════════════════════════════════════════════ */
+describe("🔴 UX-FLOW-01 — 안내가 «갈 곳» 을 못 찾는 경우가 없다", () => {
+  const FORM_SRC = readFileSync(join(__dirname, "..", "lotteon-channel-form.ts"), "utf8");
+
+  it("롯데ON 이 내보내는 sectionId 가 «전부» 라벨 표에서 풀린다", () => {
+    /* 소스에서 실제로 쓰이는 앵커 id 를 모은다 — 표를 손으로 맞추지 않는다. */
+    const used = [...new Set(FORM_SRC.match(/"lotteon-section-[a-z]+"/g) ?? [])].map((s) => s.slice(1, -1));
+    expect(used.length, "롯데ON 앵커 id 를 하나도 찾지 못했다 — 이 검사가 무력하다").toBeGreaterThan(0);
+    for (const id of used) {
+      expect(REGISTRATION_SECTION_LABEL[id], `${id} 가 라벨 표에 없다 — 이동 버튼이 뜨지 않는다`).toBeTruthy();
+    }
+  });
+
+  it("🔴 롯데ON 항목이 «이동 버튼» 을 받는다 — 폴백 문장으로 떨어지지 않는다", () => {
+    const guidance = describePriorityItem({
+      key: "pdItmsArtlLst",
+      label: "고시 항목",
+      sectionId: "lotteon-section-notice",
+      sourceItems: [],
+    } as never);
+    expect(guidance.action, "이동 액션이 없다 — 셀러가 갈 곳을 못 받는다").toBeTruthy();
+    expect(guidance.action!.kind).toBe("SECTION");
+    expect(guidance.where).not.toContain("이동할 자리를 아직 특정하지 못했습니다");
+  });
+
+  it("라벨은 롯데ON 탭이 실제로 그리는 섹션 제목과 같다", () => {
+    /* 안내가 부르는 이름과 화면 제목이 다르면 「거기가 어딘데」가 다시 생긴다. */
+    expect(REGISTRATION_SECTION_LABEL["lotteon-section-notice"]).toBe("고시정보");
+    expect(REGISTRATION_SECTION_LABEL["lotteon-section-certification"]).toBe("KC / 인증");
   });
 });
