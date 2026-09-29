@@ -266,7 +266,10 @@ export async function POST(request: Request) {
   // **같은 함수**를 같은 자리(자격증명 조회 직전)에 둔다. 네이버 계정은
   // commerce_accounts platform='naver'의 **첫 행**이고 판매자 프로필도 전역이라,
   // 다른 워크스페이스 셀러가 등록하면 대표 계정 스토어에 상품이 생긴다.
-  const access = await requireRegistrationAccess(snapshotId);
+  /* REGISTRATION-INCIDENT-01 — 채널을 넘겨서 «거절도» 등록이력에 남게 한다.
+     이 게이트에서 끊기면 아래 logRegistrationAttempt 는 한 번도 불리지 않아,
+     셀러에게 「등록 안 됨 + 이력 없음」으로 보였다. */
+  const access = await requireRegistrationAccess(snapshotId, { platform: "smartstore" });
   if (!access.ok) return access.response;
 
   // PHASE 3.2 — 실제로 이 채널에 나간 최종 등록가격과 그 근거. 새로 계산하지

@@ -39,10 +39,74 @@ export type RegistrationAccessResult =
   | { ok: true; user: AuthedUser }
   | { ok: false; response: NextResponse };
 
-function deny(message: string, status: 401 | 403, extra?: Record<string, unknown>) {
+/**
+ * ══ REGISTRATION-INCIDENT-01(CPO P0, 2026-09-29) — **거절은 «기록» 된다** ══════
+ *
+ * 실측: 스마트스토어·쿠팡이 동시에 등록되지 않는데 등록이력이 «완전히 비어»
+ * 있었다. Production 런타임 로그가 원인을 말했다 —
+ *
+ *     POST /api/smartstore/register       403
+ *     POST /api/coupang/payload-preview   403
+ *
+ * 이 게이트가 세 라우트 «모두» 의 맨 앞에 있고, 여기서 끊기면
+ * `logRegistrationAttempt()` 는 한 번도 불리지 않는다. 그래서 셀러에게는
+ * 「등록이 안 되는데 이력에도 아무것도 없다」로 보였다 — 장애보다 «보이지 않는
+ * 장애» 가 더 비쌌다.
+ *
+ * 🔴 판정을 바꾸지 않는다. fail-closed 도 그대로다. 바뀌는 것은 «흔적을 남기는
+ * 가» 하나뿐이다.
+ * 🔴 비밀값을 적지 않는다. 남기는 것은 단계 코드와 채널뿐이고, 워크스페이스
+ * ID·토큰·자격증명은 이력에 쓰지 않는다.
+ */
+export type RegistrationAccessDenialCode =
+  | "UNAUTHENTICATED"
+  | "OWNER_WORKSPACE_ENV_MISSING"
+  | "WORKSPACE_NOT_ALLOWED"
+  | "SNAPSHOT_OWNER_UNVERIFIABLE"
+  | "SNAPSHOT_OTHER_WORKSPACE";
+
+/** 이력에 남길 때 쓰는 접두어 — 화면·쿼리가 한 눈에 고를 수 있게. */
+export const ACCESS_DENIED_ERROR_PREFIX = "ACCESS_DENIED_";
+
+async function recordDenial(
+  platform: string | undefined,
+  snapshotId: string | null,
+  code: RegistrationAccessDenialCode,
+): Promise<void> {
+  /* 기록할 채널을 모르면(읽기 전용 라우트 등) 남기지 않는다 — 등록 «시도» 가
+     아닌 것을 등록이력에 넣지 않는다. */
+  if (!platform) return;
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return;
+  const row: Record<string, unknown> = {
+    platform,
+    status: "FAILED",
+    error_code: `${ACCESS_DENIED_ERROR_PREFIX}${code}`,
+    snapshot_id: snapshotId ?? null,
+  };
+  /* 등록 라우트의 logRegistrationAttempt 와 같은 규약 — 컬럼이 없는 환경에서도
+     «기록 자체» 가 실패하지 않게 새 컬럼부터 포기한다. */
+  for (const optional of ["snapshot_id", null]) {
+    const { error } = await supabase.from("registration_attempts").insert(row);
+    if (!error) return;
+    /* 🔴 조용히 삼키지 않는다 — 이력이 비는 두 번째 경로가 바로 이 자리다. */
+    console.error("[registration-access] 거절 기록 실패:", error.message);
+    if (!optional || !(optional in row)) return;
+    delete row[optional];
+  }
+}
+
+async function deny(
+  message: string,
+  status: 401 | 403,
+  code: RegistrationAccessDenialCode,
+  context: { platform?: string; snapshotId: string | null },
+  extra?: Record<string, unknown>,
+) {
+  await recordDenial(context.platform, context.snapshotId, code);
   return {
     ok: false as const,
-    response: NextResponse.json({ ok: false, error: message, ...extra }, { status }),
+    response: NextResponse.json({ ok: false, error: message, errorCode: code, ...extra }, { status }),
   };
 }
 
@@ -69,8 +133,21 @@ function readOwnerWorkspaceIds(): string[] {
  *   3번은 건너뛴다 — 스냅샷 없이 등록하는 기존 흐름을 이번 게이트가 깨지 않는다.
  *   그 경우에도 2번은 그대로 적용되므로 자격증명 축은 열리지 않는다.
  */
-export async function requireRegistrationAccess(snapshotId: string | null): Promise<RegistrationAccessResult> {
+export async function requireRegistrationAccess(
+  snapshotId: string | null,
+  /**
+   * REGISTRATION-INCIDENT-01 — 거절을 등록이력에 남길 채널. 넘기면 남기고,
+   * 생략하면 남기지 않는다(읽기 전용 라우트의 거절은 «등록 시도» 가 아니다).
+   */
+  options?: { platform?: string },
+): Promise<RegistrationAccessResult> {
+  const context = { platform: options?.platform, snapshotId };
   const auth = await requireUser();
+  /* 🔴 미인증은 «기록하지 않는다». 기록하면 로그인하지 않은 호출자가
+     registration_attempts 에 행을 넣는 경로가 생긴다 — 이력을 보이게 하려다
+     인증 없는 쓰기를 여는 것은 바꿔 갈 것이 못 된다. 401 은 화면에 그대로
+     보이고(로그인 화면으로 간다), 셀러가 「등록이 안 되는데 이유를 모르는」
+     상태가 아니다. */
   if (!auth.ok) return auth;
 
   // ── 2) 자격증명 소유 워크스페이스 ──────────────────────────────────────
@@ -84,13 +161,23 @@ export async function requireRegistrationAccess(snapshotId: string | null): Prom
     return deny(
       `등록 권한이 설정되지 않았습니다. 배포 환경변수 ${OWNER_WORKSPACE_ENV}에 등록을 허용할 워크스페이스 ID를 지정해 주세요.`,
       403,
+      "OWNER_WORKSPACE_ENV_MISSING",
+      context,
       { workspaceId: auth.user.workspaceId, requiredEnv: OWNER_WORKSPACE_ENV },
     );
   }
   if (!ownerWorkspaceIds.includes(auth.user.workspaceId)) {
+    /* 🔴 REGISTRATION-INCIDENT-01 — 여기에도 «호출자 자신의» workspaceId 를
+       실어 준다. 위 분기가 이미 같은 이유로 그렇게 하고 있었다: 운영자가 자기
+       워크스페이스 id 를 알 방법이 없으면 환경변수를 «고칠 수도» 없다. 실제로
+       이 분기가 스마트스토어·쿠팡을 동시에 막았는데, 화면에 「권한이 없습니다」만
+       떠서 무엇을 넣어야 하는지 알 수 없었다. 남의 값이 아니라 자기 값이다. */
     return deny(
       "이 워크스페이스에는 커머스 등록 권한이 없습니다. 등록에 사용되는 판매자 계정·배송 프로필은 아직 워크스페이스별로 분리되어 있지 않습니다.",
       403,
+      "WORKSPACE_NOT_ALLOWED",
+      context,
+      { workspaceId: auth.user.workspaceId, requiredEnv: OWNER_WORKSPACE_ENV },
     );
   }
 
@@ -99,20 +186,22 @@ export async function requireRegistrationAccess(snapshotId: string | null): Prom
     const supabase = getSupabaseAdmin();
     // Supabase가 없으면 소유권을 **확인할 수 없다**. 확인 못 한 것을 통과시키지
     // 않는다(2번을 이미 통과했더라도, 이 경로는 "모른다"이지 "내 것이다"가 아니다).
-    if (!supabase) return deny("스냅샷 소유권을 확인할 수 없어 등록을 중단했습니다.", 403);
+    if (!supabase)
+      return deny("스냅샷 소유권을 확인할 수 없어 등록을 중단했습니다.", 403, "SNAPSHOT_OWNER_UNVERIFIABLE", context);
 
     const { data, error } = await supabase
       .from("product_snapshots")
       .select("workspace_id")
       .eq("id", snapshotId)
       .maybeSingle();
-    if (error) return deny("스냅샷 소유권을 확인할 수 없어 등록을 중단했습니다.", 403);
+    if (error)
+      return deny("스냅샷 소유권을 확인할 수 없어 등록을 중단했습니다.", 403, "SNAPSHOT_OWNER_UNVERIFIABLE", context);
     // 🔴 스냅샷이 없으면 막지 않는다. 043 이전에 만들어진 행은 workspace_id가
     //    null이고, 여기서 막으면 대표 계정의 **기존** 등록 흐름이 끊긴다.
     //    이번 게이트의 목적은 그 흐름을 지키면서 다른 셀러만 막는 것이다.
     const ownerWorkspaceId = (data?.workspace_id as string | null | undefined) ?? null;
     if (ownerWorkspaceId && ownerWorkspaceId !== auth.user.workspaceId) {
-      return deny("다른 워크스페이스의 상품은 등록할 수 없습니다.", 403);
+      return deny("다른 워크스페이스의 상품은 등록할 수 없습니다.", 403, "SNAPSHOT_OTHER_WORKSPACE", context);
     }
   }
 

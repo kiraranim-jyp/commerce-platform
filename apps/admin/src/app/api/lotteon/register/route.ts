@@ -133,7 +133,10 @@ export async function POST(request: Request) {
   // 🔴 여기가 특히 중요하다: `_lib/forbidden-endpoints.ts`는 상품 축(87 등록)을
   //    명시적으로 **허용**하므로, 인증키가 들어가는 순간 코드 레벨 STOP이 없다.
   //    오늘 롯데ON이 안전한 유일한 이유가 "키가 없어서"였다.
-  const access = await requireRegistrationAccess(snapshotId);
+  /* REGISTRATION-INCIDENT-01 — 채널을 넘겨서 «거절도» 등록이력에 남게 한다.
+     이 게이트에서 끊기면 아래 logRegistrationAttempt 는 한 번도 불리지 않아,
+     셀러에게 「등록 안 됨 + 이력 없음」으로 보였다. */
+  const access = await requireRegistrationAccess(snapshotId, { platform: "lotteon" });
   if (!access.ok) return access.response;
 
   const finish = (partial: Omit<LotteOnRegisterResult, "traceId" | "durationMs">): LotteOnRegisterResult => ({

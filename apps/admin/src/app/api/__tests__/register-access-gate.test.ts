@@ -137,6 +137,19 @@ afterEach(() => {
   else process.env.COMMERCE_REGISTRATION_WORKSPACE_IDS = savedEnv;
 });
 
+/* ══ REGISTRATION-INCIDENT-01(2026-09-29) — 이 가드가 지키는 것을 «좁힌다» ══════
+   원래 단언은 `hoisted.calls` 가 통째로 비어 있을 것이었다. 그런데 이 가드의
+   뜻은 제목이 말하는 그대로 **「자격증명에 닿지 않는다」** 이지 「DB 를 한 번도
+   만지지 않는다」가 아니다.
+
+   거절이 «등록이력에 남지 않는» 것이 이번 P0 장애의 본체였다(스마트스토어·
+   쿠팡이 동시에 403 인데 이력이 완전히 비어 있었다). 그래서 감사 기록 한 줄은
+   허용하고, 자격증명·프로필 조회는 여전히 0건이어야 한다.
+
+   🔴 약화가 아니다. 아래에서 「감사 기록은 «남는다»」를 따로 단언한다. */
+const AUDIT_CALL = "insert:registration_attempts";
+const credentialCalls = () => hoisted.calls.filter((call) => call !== AUDIT_CALL);
+
 describe("미인증 → 401, 그리고 자격증명에 닿지 않는다", () => {
   beforeEach(() => {
     hoisted.authOk = false;
@@ -147,7 +160,9 @@ describe("미인증 → 401, 그리고 자격증명에 닿지 않는다", () => 
       const { POST } = await channel.load();
       const res = await POST(post(`http://localhost/api/${channel.name}/register`, channel.body));
       expect(res.status).toBe(401);
-      expect(hoisted.calls, "미인증인데 자격증명을 조회했다").toEqual([]);
+      expect(credentialCalls(), "미인증인데 자격증명을 조회했다").toEqual([]);
+      /* 🔴 미인증은 «기록도» 하지 않는다 — 로그인 없는 DB 쓰기 경로를 만들지 않는다. */
+      expect(hoisted.calls, "미인증 요청이 이력에 행을 넣었다").toEqual([]);
     });
   }
 });
@@ -162,7 +177,9 @@ describe("다른 workspace → 403, 그리고 자격증명에 닿지 않는다",
       const { POST } = await channel.load();
       const res = await POST(post(`http://localhost/api/${channel.name}/register`, channel.body));
       expect(res.status).toBe(403);
-      expect(hoisted.calls, "다른 워크스페이스인데 전역 자격증명을 조회했다").toEqual([]);
+      expect(credentialCalls(), "다른 워크스페이스인데 전역 자격증명을 조회했다").toEqual([]);
+      /* 🔴 그리고 «거절은 보인다» — 이력에 남지 않던 것이 이번 장애의 본체다. */
+      expect(hoisted.calls, "거절이 등록이력에 남지 않았다").toContain(AUDIT_CALL);
     });
   }
 });
@@ -177,7 +194,8 @@ describe("🔴 허용 워크스페이스가 설정되지 않으면 fail-closed(4
       const { POST } = await channel.load();
       const res = await POST(post(`http://localhost/api/${channel.name}/register`, channel.body));
       expect(res.status).toBe(403);
-      expect(hoisted.calls).toEqual([]);
+      expect(credentialCalls()).toEqual([]);
+      expect(hoisted.calls, "거절이 등록이력에 남지 않았다").toContain(AUDIT_CALL);
     });
   }
 
@@ -210,7 +228,8 @@ describe("스냅샷 소유권", () => {
       post("http://localhost/api/coupang/register", { ...CHANNELS[0].body, snapshotId: "snap-1" }),
     );
     expect(res.status).toBe(403);
-    expect(hoisted.calls).toEqual([]);
+    expect(credentialCalls()).toEqual([]);
+    expect(hoisted.calls, "거절이 등록이력에 남지 않았다").toContain(AUDIT_CALL);
   });
 
   it("내 스냅샷이면 통과한다", async () => {

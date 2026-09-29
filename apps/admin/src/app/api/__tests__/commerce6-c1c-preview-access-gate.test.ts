@@ -67,7 +67,10 @@ describe("③ 기존 등록 라우트의 가드는 그대로다", () => {
     ["롯데ON 등록", "lotteon/register/route.ts"],
   ] as const)("%s 는 snapshotId 로 소유권까지 본다", (_label, rel) => {
     const source = read(rel);
-    expect(source).toContain("requireRegistrationAccess(snapshotId)");
+    /* 🔴 REGISTRATION-INCIDENT-01 — 두 번째 인자(채널)가 붙었다. 이 검사가
+       지키는 것은 「소유권 축(snapshotId)을 넘긴다」이지 인자 개수가 아니다.
+       채널은 거절을 «등록이력에 남기기» 위한 것이고, 판정은 바뀌지 않았다. */
+    expect(source).toContain("requireRegistrationAccess(snapshotId, {");
   });
 });
 

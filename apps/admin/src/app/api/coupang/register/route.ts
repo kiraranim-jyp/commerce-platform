@@ -292,7 +292,10 @@ export async function POST(request: Request) {
   // 전역 싱글턴이라, 로그인한 다른 워크스페이스 셀러가 등록을 누르면 그 사람 상품이
   // **대표 계정으로** 등록된다. 아래 getCoupangCredentials() 앞에 둔다 — 그 전까지는
   // 순수 계산뿐이고 외부 호출·기록이 없다.
-  const access = await requireRegistrationAccess(snapshotId);
+  /* REGISTRATION-INCIDENT-01 — 채널을 넘겨서 «거절도» 등록이력에 남게 한다.
+     이 게이트에서 끊기면 아래 logRegistrationAttempt 는 한 번도 불리지 않아,
+     셀러에게 「등록 안 됨 + 이력 없음」으로 보였다. */
+  const access = await requireRegistrationAccess(snapshotId, { platform: "coupang" });
   if (!access.ok) return access.response;
 
   // P0-1(가격 계산 투명화) — 이 등록 시도 시점의 배송비/수수료율/마진율 입력값을
