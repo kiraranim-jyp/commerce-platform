@@ -652,6 +652,7 @@ function SellerProfileEditor({
   const [manufacturer, setManufacturer] = useState("");
   const [asContactNumber, setAsContactNumber] = useState("");
   const [asCompanyName, setAsCompanyName] = useState("");
+  const [asPhoneNumber, setAsPhoneNumber] = useState("");
   const [qualityGuarantee, setQualityGuarantee] = useState("");
   // A-12.3-P0-2(CPO 지시: "KC마크 없이 구매대행 가능한 품목 — 기본값 자동
   // 입력") — 빈 문자열이면 기능이 꺼진 것과 같다(기존처럼 사용자가 직접
@@ -810,6 +811,7 @@ function SellerProfileEditor({
         setManufacturer(v.manufacturer ?? "");
         setAsContactNumber(v.asContactNumber ?? "");
         setAsCompanyName(v.asCompanyName ?? "");
+        setAsPhoneNumber(v.asPhoneNumber ?? "");
         setQualityGuarantee(v.qualityGuarantee ?? "");
         setKcExemptionText(v.kcExemptionText ?? "");
         setDefaultCountryOfOrigin(v.defaultCountryOfOrigin ?? "");
@@ -1020,6 +1022,7 @@ function SellerProfileEditor({
           manufacturer,
           asContactNumber,
           asCompanyName,
+          asPhoneNumber,
           qualityGuarantee,
           kcExemptionText,
           defaultCountryOfOrigin,
@@ -1038,6 +1041,7 @@ function SellerProfileEditor({
       setManufacturer(v.manufacturer ?? "");
       setAsContactNumber(v.asContactNumber ?? "");
       setAsCompanyName(v.asCompanyName ?? "");
+      setAsPhoneNumber(v.asPhoneNumber ?? "");
       setQualityGuarantee(v.qualityGuarantee ?? "");
       setKcExemptionText(v.kcExemptionText ?? "");
       setDefaultCountryOfOrigin(v.defaultCountryOfOrigin ?? "");
@@ -1182,6 +1186,8 @@ function SellerProfileEditor({
             onAsContactNumberChange={setAsContactNumber}
             asCompanyName={asCompanyName}
             onAsCompanyNameChange={setAsCompanyName}
+            asPhoneNumber={asPhoneNumber}
+            onAsPhoneNumberChange={setAsPhoneNumber}
             qualityGuarantee={qualityGuarantee}
             onQualityGuaranteeChange={setQualityGuarantee}
             kcExemptionText={kcExemptionText}
@@ -1748,6 +1754,8 @@ function SellerInfoSection({
   onAsContactNumberChange,
   asCompanyName,
   onAsCompanyNameChange,
+  asPhoneNumber,
+  onAsPhoneNumberChange,
   qualityGuarantee,
   onQualityGuaranteeChange,
   kcExemptionText,
@@ -1764,6 +1772,8 @@ function SellerInfoSection({
   onAsContactNumberChange: (v: string) => void;
   asCompanyName: string;
   onAsCompanyNameChange: (v: string) => void;
+  asPhoneNumber: string;
+  onAsPhoneNumberChange: (v: string) => void;
   qualityGuarantee: string;
   onQualityGuaranteeChange: (v: string) => void;
   kcExemptionText: string;
@@ -1812,12 +1822,21 @@ function SellerInfoSection({
             className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
           />
         </Field>
-        <Field label="A/S 연락처" hint="비워두면 반품지 연락처를 대신 씁니다">
+        {/* 🔴 COMMON-AS-PHONE-SEPARATION-01 — 라벨이 «실제 쓰임» 을 말하게 바로잡는다.
+            이 칸의 값은 고시의 자유 텍스트 자리로 나가고(네이버 afterServiceDirector),
+            「해외 구매대행으로 A/S 불가」 같은 문장이 5차 실등록에서 통과했다.
+            예전 라벨(「A/S 연락처」)은 셀러에게 «번호» 를 적으라고 말하고 있었는데,
+            거기에 번호를 넣으면 그 고시 문구가 사라진다. 값은 건드리지 않고
+            이름만 사실에 맞춘다. */}
+        <Field
+          label="A/S 안내 문구"
+          hint="고시에 그대로 실리는 «문장» 입니다(예: 해외 구매대행으로 A/S 불가). 전화번호는 아래 칸에 적어주세요"
+        >
           <input
             type="text"
             value={asContactNumber}
             onChange={(e) => onAsContactNumberChange(e.target.value)}
-            placeholder="02-1234-5678"
+            placeholder="예: 해외 구매대행으로 A/S 불가"
             className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
           />
         </Field>
@@ -1833,6 +1852,22 @@ function SellerInfoSection({
             value={asCompanyName}
             onChange={(e) => onAsCompanyNameChange(e.target.value)}
             placeholder="예: 따조 고객센터"
+            className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+          />
+        </Field>
+        {/* 🔴 업체명과 «한 쌍» 이다 — 롯데ON 고시 0090 이 「업체명과 전화번호를
+            모두」 요구한다. 그리고 위 「안내 문구」와는 «다른 칸» 이다: 거기에
+            번호를 넣으면 고시 문장이 사라지고, 여기에 문장을 넣으면 번호 자리가
+            거짓이 된다. */}
+        <Field
+          label="A/S 전화번호"
+          hint="숫자·하이픈·+ 만 넣어주세요. 안내 문장은 위 「A/S 안내 문구」 칸입니다"
+        >
+          <input
+            type="text"
+            value={asPhoneNumber}
+            onChange={(e) => onAsPhoneNumberChange(e.target.value)}
+            placeholder="02-1234-5678"
             className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
           />
         </Field>

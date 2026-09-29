@@ -250,6 +250,9 @@ export async function buildLotteOnContext(
        🔴 비어 있으면 «비운 채로» 넘긴다 — `manufacturer` 나 판매자명으로 대신
        넣지 않는다(CPO 명시). 그 경우 이 항목은 그대로 BLOCKED 로 남는다. */
     sellerAsCompanyName: commonSellerSettings.asCompanyName,
+    /* 🔴 COMMON-AS-PHONE-SEPARATION-01 — 번호는 «번호 칸» 에서만 온다.
+       `asContactNumber`(안내 문구)도 반품지 연락처도 여기로 끌어오지 않는다. */
+    sellerAsPhoneNumber: commonSellerSettings.asPhoneNumber,
   });
 
   const channel: LotteOnChannelConfig = {

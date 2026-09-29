@@ -131,10 +131,22 @@ describe("🔴 ④ A/S 「업체명」을 지어내지 않는다 — 롯데ON 00
     expect(articles.find((a) => a.pdArtlCd === "0070")?.pdArtlCnts).toContain("Bobo Choses S.L.");
   });
 
-  it("업체명 칸이 생기면 그때 채워진다 — 지금 만들지 않을 뿐이다", () => {
+  /* 🔴 COMMON-AS-PHONE-SEPARATION-01 — 칸이 «둘» 생겼다(068 업체명 · 069 번호).
+     그리고 이 파일이 지키는 경계가 그대로 유효하다: A/S 는 한 개념이 아니다.
+     안내 문구(`sellerAsContactNumber`)는 0090 의 번호 자리로 «가지 않는다». */
+  it("업체명 «과» 번호가 둘 다 있을 때 채워진다", () => {
+    const fill = resolveLotteOnNotice("23", {
+      ...facts,
+      sellerAsCompanyName: "따조 고객센터",
+      sellerAsPhoneNumber: "02-1234-5678",
+    }).fills.find((f) => f.code === "0090")!;
+    expect(fill.status).toBe("FILLED");
+  });
+
+  it("🔴 업체명만 있고 번호 칸이 비면 여전히 막힌다 — 안내 문구로 때우지 않는다", () => {
     const fill = resolveLotteOnNotice("23", { ...facts, sellerAsCompanyName: "따조 고객센터" }).fills.find(
       (f) => f.code === "0090",
     )!;
-    expect(fill.status).toBe("FILLED");
+    expect(fill.status).toBe("BLOCKED");
   });
 });

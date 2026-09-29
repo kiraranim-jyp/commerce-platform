@@ -51,12 +51,25 @@ export interface LotteOnNoticeFacts {
   sellerAsContactNumber?: string | null;
   /** 🔴 아직 우리 어디에도 없는 값. 자리만 둔다(DB 변경은 CPO STOP 중). */
   sellerAsCompanyName?: string | null;
+  /**
+   * A/S «전화번호». 🔴 `sellerAsContactNumber`(안내 문구)와 다른 칸이다.
+   * 둘을 한 칸으로 합치면 고시의 「전화번호」 자리에 문장이 들어간다.
+   */
+  sellerAsPhoneNumber?: string | null;
 }
 
 export type LotteOnNoticeFill =
   | { code: string; label: string; required: boolean; status: "FILLED"; value: string; from: string }
   | { code: string; label: string; required: boolean; status: "NEEDS_INPUT"; reason: string }
-  | { code: string; label: string; required: boolean; status: "BLOCKED"; reason: string };
+  | { code: string; label: string; required: boolean; status: "BLOCKED"; reason: string }
+  /**
+   * 🔴 값은 «있는데» 그 항목이 요구하는 형식이 아니다.
+   *
+   * `NEEDS_INPUT`(비었다)과도 `FILLED`(찼다)와도 다르다. 이 상태가 없으면
+   * 「값이 있으니 자동 입력」이 「요구를 충족했다」로 읽힌다 — 실제로 롯데ON
+   * `0090` 의 전화번호 자리에 «문장» 이 들어간 채 🟢 로 보인 적이 있다.
+   */
+  | { code: string; label: string; required: boolean; status: "INVALID"; value: string; reason: string };
 
 export interface LotteOnNoticeResolution {
   /** 이 품목의 표를 아는가. 모르면 `false` 이고 `fills` 는 빈 배열이다. */
@@ -76,6 +89,30 @@ function needsInput(spec: LotteOnNoticeArticleSpec, reason: string): LotteOnNoti
 }
 function blocked(spec: LotteOnNoticeArticleSpec, reason: string): LotteOnNoticeFill {
   return { code: spec.code, label: spec.label, required: spec.required, status: "BLOCKED", reason };
+}
+
+/** 🔴 값을 «버리지 않고» 싣는다 — 셀러가 무엇을 고쳐야 하는지 화면이 보여준다. */
+function invalid(spec: LotteOnNoticeArticleSpec, value: string, reason: string): LotteOnNoticeFill {
+  return { code: spec.code, label: spec.label, required: spec.required, status: "INVALID", value, reason };
+}
+
+/**
+ * 전화번호처럼 «생겼는가». 🔴 형식을 «만들지» 않는다 — 걸러내기만 한다.
+ *
+ * 근거는 네이버 실측이다(N-3.49 5차 실등록): `afterServiceTelephoneNumber` 는
+ * **숫자/-/+ 만 허용**하고 자유 텍스트는 거부됐다. 롯데ON `0090` 이 요구하는
+ * 형식은 [UNKNOWN] 이라, 같은 기준을 «보수적으로» 빌려 쓴다.
+ *
+ * 🔴 문장에서 숫자를 «추출하지 않는다»(CPO 금지). 「해외 구매대행으로 A/S 불가」는
+ * 번호가 아니고, 거기서 무언가를 뽑아내면 셀러가 확인한 적 없는 번호가 나간다.
+ */
+export function looksLikePhoneNumber(value: string): boolean {
+  const text = value.trim();
+  if (!text) return false;
+  /* 숫자·하이픈·플러스·공백·괄호 말고 다른 글자가 있으면 번호가 아니다. */
+  if (!/^[0-9+\-() ]+$/.test(text)) return false;
+  /* 기호만 있는 것도 번호가 아니다 — 최소한의 자릿수는 있어야 한다. */
+  return (text.match(/[0-9]/g) ?? []).length >= 7;
 }
 
 /** 값이 있으면 채우고, 없으면 「채우면 풀린다」고 말한다. */
@@ -144,17 +181,32 @@ function resolveOne(spec: LotteOnNoticeArticleSpec, facts: LotteOnNoticeFacts): 
       );
     }
     case "0090": {
-      const phone = clean(facts.sellerAsContactNumber);
+      /* 🔴 COMMON-AS-PHONE-SEPARATION-01 — 번호는 «번호 칸» 에서만 온다.
+         `sellerAsContactNumber`(안내 문구)를 여기에 쓰지 않는다: 그 칸에는
+         「해외 구매대행으로 A/S 불가」 같은 문장이 들어 있고(네이버 고시용으로
+         실측 통과한 값이다), 그것을 전화번호 자리에 넣으면 고시가 거짓이 된다. */
+      const phone = clean(facts.sellerAsPhoneNumber);
       const company = clean(facts.sellerAsCompanyName);
-      if (company && phone) return filled(spec, `${company} / ${phone}`, "판매자 설정 · A/S 업체명, 연락처");
+      if (company && phone && looksLikePhoneNumber(phone)) {
+        return filled(spec, `${company} / ${phone}`, "판매자 설정 · A/S 업체명, 전화번호");
+      }
+      /* 🔴 값이 «있는데» 번호가 아니면 「자동 입력」이라고 말하지 않는다.
+         이것이 INVALID 를 만든 이유다 — 있다고 충족된 것이 아니다. */
+      if (phone && !looksLikePhoneNumber(phone)) {
+        return invalid(
+          spec,
+          company ? `${company} / ${phone}` : phone,
+          "A/S 전화번호가 번호 형식이 아닙니다. 안내 문구는 「A/S 안내」 칸에 적어주세요 — 이 항목은 «번호» 를 요구합니다.",
+        );
+      }
       /* 🔴 번호만으로는 「업체명과 전화번호 «모두»」를 만족하지 못한다. 그리고
          업체명을 판매자명이나 제조사로 «대신 넣지 않는다»(CPO 금지). 우리 설정에
          그 칸 자체가 없어서 셀러가 채울 수도 없다 — 그래서 BLOCKED 다. */
       return blocked(
         spec,
         phone
-          ? "A/S 연락처는 있으나 「A/S 업체명」을 담을 칸이 아직 없습니다. 고시는 업체명과 전화번호를 모두 요구합니다."
-          : "A/S 업체명과 연락처가 모두 없습니다.",
+          ? "A/S 전화번호는 있으나 「A/S 책임 업체명」이 비어 있습니다. 고시는 업체명과 전화번호를 모두 요구합니다."
+          : "판매자 설정에 A/S 책임 업체명과 전화번호가 없습니다.",
       );
     }
     case "0220":

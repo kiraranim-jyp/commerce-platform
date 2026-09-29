@@ -70,21 +70,23 @@ describe("① 설정이 «있다» 고 말할 수 있는 조건", () => {
 });
 
 describe("② 빈 설정의 모양", () => {
-  it("🔴 EMPTY 는 여섯 칸이 전부 null 이다 — 빈 문자열이 아니다", () => {
+  it("🔴 EMPTY 는 일곱 칸이 전부 null 이다 — 빈 문자열이 아니다", () => {
     expect(EMPTY_SELLER_SETTINGS).toEqual({
       manufacturer: null,
       asContactNumber: null,
       asCompanyName: null,
+      asPhoneNumber: null,
       qualityGuarantee: null,
       kcExemptionText: null,
       defaultCountryOfOrigin: null,
     });
   });
 
-  it("여섯 칸뿐이다 — 배송/가격이 섞여 들어오면 이 검사가 잡는다", () => {
+  it("일곱 칸뿐이다 — 배송/가격이 섞여 들어오면 이 검사가 잡는다", () => {
     expect(Object.keys(EMPTY_SELLER_SETTINGS).sort()).toEqual([
       "asCompanyName",
       "asContactNumber",
+      "asPhoneNumber",
       "defaultCountryOfOrigin",
       "kcExemptionText",
       "manufacturer",

@@ -35,6 +35,8 @@ describe("① 판매자 공통 칸«만» 골라낸다", () => {
       asContactNumber: "010-0000-0000",
       /* 🔴 연락처와 «한 쌍» 이다(롯데ON 고시 0090). */
       asCompanyName: "따조 고객센터",
+      /* 🔴 «안내문» 과 «번호» 는 다른 칸이다(COMMON-AS-PHONE-SEPARATION-01). */
+      asPhoneNumber: "02-1234-5678",
       qualityGuarantee: "보증",
       kcExemptionText: "KC",
       defaultCountryOfOrigin: "중국",
@@ -121,11 +123,12 @@ describe("④ 판매자 공통 칸의 정의", () => {
    * 그래서 칸이 늘 때 같이 고칠 것은 SQL 함수가 아니라 **컬럼 migration** 이다
    * (068_seller_settings_as_company_name.sql).
    */
-  it("🔴 목록이 정확히 여섯이고, 칸이 늘면 여기서 먼저 깨진다", () => {
-    expect(SELLER_SETTING_KEYS).toHaveLength(6);
+  it("🔴 목록이 정확히 일곱이고, 칸이 늘면 여기서 먼저 깨진다", () => {
+    expect(SELLER_SETTING_KEYS).toHaveLength(7);
     expect([...SELLER_SETTING_KEYS].sort()).toEqual([
       "asCompanyName",
       "asContactNumber",
+      "asPhoneNumber",
       "defaultCountryOfOrigin",
       "kcExemptionText",
       "manufacturer",
@@ -135,8 +138,10 @@ describe("④ 판매자 공통 칸의 정의", () => {
 
   /* 🔴 A/S 는 «한 쌍» 이다 — 고시가 「업체명과 전화번호를 모두」 요구한다.
      한쪽만 남기는 변경이 오면 여기서 잡힌다. */
-  it("🔴 A/S 축은 연락처와 업체명이 «함께» 있다", () => {
+  it("🔴 A/S 축은 «셋» 이다 — 안내문 · 업체명 · 전화번호", () => {
     expect(SELLER_SETTING_KEYS).toContain("asContactNumber");
     expect(SELLER_SETTING_KEYS).toContain("asCompanyName");
+    /* 🔴 번호를 안내문 칸에 합치면 고시의 전화번호 자리에 문장이 들어간다. */
+    expect(SELLER_SETTING_KEYS).toContain("asPhoneNumber");
   });
 });

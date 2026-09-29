@@ -5,9 +5,9 @@ import { getSupabaseAdmin } from "./supabase-admin";
  * TTAEJYO-PIVOT-03 — 판매자 «공통» 설정 Resolver
  * ════════════════════════════════════════════════════════════════════════════
  *
- * 이 여섯 값은 상품이 바뀌어도 그대로다. 채널과도 무관하다.
+ * 이 일곱 값은 상품이 바뀌어도 그대로다. 채널과도 무관하다.
  *
- *     manufacturer · asContactNumber · asCompanyName · qualityGuarantee
+ *     manufacturer · asContactNumber · asCompanyName · asPhoneNumber · qualityGuarantee
  *     · kcExemptionText · defaultCountryOfOrigin
  *
  * 🔴 `asCompanyName` 은 068 이 나중에 더했다 — 롯데ON 고시가 A/S 를 「업체명과
@@ -39,7 +39,16 @@ import { getSupabaseAdmin } from "./supabase-admin";
 export interface SellerSettings {
   /** 판매자 본인의 제조자(수입자). 🔴 브랜드가 아니다 — 절대 브랜드로 채우지 않는다. */
   manufacturer: string | null;
-  /** A/S 연락처. 비면 호출부가 반품지 연락처를 대신 쓴다(기존 동작 그대로). */
+  /**
+   * A/S «안내 문구». 🔴 이름은 「연락처」지만 실제 쓰임은 «문장» 이다.
+   *
+   * 네이버 `afterServiceDirector`(자유 텍스트 고시 항목)로 나가고,
+   * 「해외 구매대행으로 A/S 불가」 같은 문장이 5차 실등록에서 «통과» 했다(N-3.51).
+   * 🔴 그래서 이 칸을 번호로 바꾸지 않는다 — 바꾸면 네이버 고시가 회귀한다.
+   * 실제 번호는 `asPhoneNumber` 다(069).
+   *
+   * 비면 호출부가 반품지 연락처를 대신 쓴다(쿠팡 폴백 — 기존 동작 그대로).
+   */
   asContactNumber: string | null;
   /**
    * A/S 를 «책임지는 업체» 의 이름. `asContactNumber` 와 한 쌍이다.
@@ -50,6 +59,17 @@ export interface SellerSettings {
    * 요구해서 생겼다.
    */
   asCompanyName: string | null;
+  /**
+   * A/S «전화번호». 🔴 `asContactNumber` 와 «다른 칸» 이다.
+   *
+   * 그 칸은 이름이 「연락처」지만 실제로는 **안내 문구** 다 — 네이버
+   * `afterServiceDirector`(자유 텍스트 고시 항목)로 나가고
+   * 「해외 구매대행으로 A/S 불가」 같은 문장이 실등록으로 통과했다(N-3.51).
+   * 그래서 그 칸을 번호로 되돌리지 않고 «번호 자리를 따로» 둔다(CPO 결정 B).
+   *
+   * 🔴 반품지 연락처(`companyContactNumber`)로 대신 채우지 않는다 — 다른 개념이다.
+   */
+  asPhoneNumber: string | null;
   qualityGuarantee: string | null;
   kcExemptionText: string | null;
   /** 상품에서 원산지를 «못 찾았을 때만» 쓰는 기본값. */
@@ -60,6 +80,7 @@ export const EMPTY_SELLER_SETTINGS: SellerSettings = {
   manufacturer: null,
   asContactNumber: null,
   asCompanyName: null,
+  asPhoneNumber: null,
   qualityGuarantee: null,
   kcExemptionText: null,
   defaultCountryOfOrigin: null,
@@ -86,7 +107,7 @@ export interface ResolvedSellerSettings extends SellerSettings {
   /**
    * 🔴 「읽지 못했다」는 뜻이다. 「값이 없다」가 아니다.
    *
-   * true 면 여섯 칸은 전부 null 이지만 그건 «모른다» 는 뜻이지 «비었다» 는
+   * true 면 일곱 칸은 전부 null 이지만 그건 «모른다» 는 뜻이지 «비었다» 는
    * 뜻이 아니다. 등록 경로는 이 값을 보고 «멈춰야» 한다 — 값이 비었다고
    * 멈추는 것이 아니다(그건 채널별 completeness 정책이고 다른 문제다).
    */
@@ -100,15 +121,16 @@ type LoadOutcome =
   | { status: "ERROR"; reason: string };
 
 /**
- * 🔴 `as_company_name` 은 migration 068 이 «나중에» 만든다(CEO 가 Supabase 에서
- * 실행한다). 그래서 이 목록으로 읽다가 컬럼이 없으면 실패할 수 있고, 그러면
+ * 🔴 `as_company_name`(068) · `as_phone_number`(069) 는 «나중에» 생긴다
+ * (CEO 가 Supabase 에서 실행한다). 그래서 이 목록으로 읽다가 컬럼이 없으면
+ * 실패할 수 있고, 그러면
  * 판매자 설정 전체가 안 읽혀 **지금 유일하게 동작하는 쿠팡 실등록 경로가 막힌다.**
  * 아래 `LEGACY_COLUMNS` 로 한 번 더 읽어 그 창을 없앤다.
  */
 const COLUMNS =
-  "manufacturer, as_contact_number, as_company_name, quality_guarantee, kc_exemption_text, default_country_of_origin";
+  "manufacturer, as_contact_number, as_company_name, as_phone_number, quality_guarantee, kc_exemption_text, default_country_of_origin";
 
-/** migration 068 «이전» 의 목록. 🔴 컬럼이 생기면 이 경로는 다시는 쓰이지 않는다. */
+/** 068·069 «이전» 의 목록. 🔴 컬럼이 생기면 이 경로는 다시는 쓰이지 않는다. */
 const LEGACY_COLUMNS =
   "manufacturer, as_contact_number, quality_guarantee, kc_exemption_text, default_country_of_origin";
 
@@ -120,6 +142,8 @@ interface Row {
   as_contact_number: string | null;
   /** 🔴 migration 전에는 «키 자체가 없다». `undefined` 를 null 로 눕혀서 읽는다. */
   as_company_name?: string | null;
+  /** 🔴 migration 069 전에는 «키 자체가 없다». */
+  as_phone_number?: string | null;
   quality_guarantee: string | null;
   kc_exemption_text: string | null;
   default_country_of_origin: string | null;
@@ -129,6 +153,7 @@ const fromRow = (row: Row): SellerSettings => ({
   manufacturer: row.manufacturer,
   asContactNumber: row.as_contact_number,
   asCompanyName: row.as_company_name ?? null,
+  asPhoneNumber: row.as_phone_number ?? null,
   qualityGuarantee: row.quality_guarantee,
   kcExemptionText: row.kc_exemption_text,
   defaultCountryOfOrigin: row.default_country_of_origin,
@@ -299,7 +324,7 @@ export async function loadSellerSettings(workspaceId?: string | null): Promise<R
     return { ...primary.values, source: "SELLER_SETTINGS", failed: false };
   }
 
-  /* 「정상적으로 조회했는데 값이 없다」 — 행이 없거나, 행은 있는데 여섯 칸이
+  /* 「정상적으로 조회했는데 값이 없다」 — 행이 없거나, 행은 있는데 일곱 칸이
      다 비었거나. 예전에는 여기서 레거시 프로필을 대신 읽었다(R6).
 
      🔴 이제 그냥 「없다」고 말한다. 그리고 그건 fail-open 이 아니다 — 조회는
@@ -314,19 +339,21 @@ export const SELLER_SETTINGS_UNAVAILABLE_MESSAGE =
 export const SELLER_SETTINGS_UNAVAILABLE_RESOLUTION =
   "잠시 후 다시 시도해주세요. 계속되면 고객센터로 알려주세요.";
 
-/** 설정 화면이 보내는 여섯 칸. 배송·가격·상세페이지는 여기에 «속하지 않는다». */
+/** 설정 화면이 보내는 일곱 칸. 배송·가격·상세페이지는 여기에 «속하지 않는다». */
 export const SELLER_SETTING_KEYS = [
   "manufacturer",
   "asContactNumber",
   /* 🔴 `asContactNumber` 와 «한 쌍» 이다 — 고시가 업체명과 전화번호를 모두 요구한다. */
   "asCompanyName",
+  /* 🔴 «안내문» 과 «번호» 는 다른 칸이다 — 하나로 합치지 않는다(CPO 결정 B). */
+  "asPhoneNumber",
   "qualityGuarantee",
   "kcExemptionText",
   "defaultCountryOfOrigin",
 ] as const satisfies readonly (keyof SellerSettings)[];
 
 /**
- * 설정 화면이 보낸 body 에서 판매자 여섯 칸«만» 골라낸다.
+ * 설정 화면이 보낸 body 에서 판매자 일곱 칸«만» 골라낸다.
  *
  * 🔴 「값이 있는가」가 아니라 「키가 왔는가」로 고른다. 기존 PATCH 는 partial
  * update 이고(toRowFields 가 `!== undefined` 로 판정한다), 빈 문자열은 «지움» 을
@@ -340,11 +367,12 @@ export function pickSellerSettingFields(body: Record<string, unknown>): Record<s
   return picked;
 }
 
-/** camelCase 여섯 칸을 표의 칸 이름으로 옮긴다. 온 키만 담는다. */
+/** camelCase 일곱 칸을 표의 칸 이름으로 옮긴다. 온 키만 담는다. */
 const COLUMN_OF: Record<string, string> = {
   manufacturer: "manufacturer",
   asContactNumber: "as_contact_number",
   asCompanyName: "as_company_name",
+  asPhoneNumber: "as_phone_number",
   qualityGuarantee: "quality_guarantee",
   kcExemptionText: "kc_exemption_text",
   defaultCountryOfOrigin: "default_country_of_origin",

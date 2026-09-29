@@ -348,6 +348,9 @@ const EMPTY_RECOMMEND: RecommendState = {
 const NOTICE_STATUS_STYLE: Record<LotteOnNoticeFill["status"], { mark: string; label: string; tone: string }> = {
   FILLED: { mark: "🟢", label: "자동 입력", tone: "text-text-secondary" },
   NEEDS_INPUT: { mark: "🟡", label: "입력 필요", tone: "text-warning" },
+  /* 🔴 「값이 있다」와 「요구를 충족했다」를 가른다. 🟡(비었다)와도 🔴(구조적으로
+     막혔다)와도 다르다 — 셀러가 «고치면» 풀린다. */
+  INVALID: { mark: "🟠", label: "형식이 맞지 않음", tone: "text-danger" },
   BLOCKED: { mark: "🔴", label: "현재 등록 불가", tone: "text-danger" },
 };
 

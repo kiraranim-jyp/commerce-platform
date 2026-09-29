@@ -134,20 +134,65 @@ describe("🔴 ④ 금지된 추정을 «하지 않는다»", () => {
     expect(body).not.toContain("해당없음");
   });
 
-  it("🔴 0090 은 번호만 있으면 BLOCKED — 판매자명·제조사로 업체명을 대신하지 않는다", () => {
+  it("🔴 0090 은 업체명이 없으면 BLOCKED — 판매자명·제조사로 대신하지 않는다", () => {
     const fill = resolveLotteOnNotice("23", REAL).fills.find((f) => f.code === "0090")!;
     expect(fill.status).toBe("BLOCKED");
-    if (fill.status === "BLOCKED") expect(fill.reason).toContain("A/S 업체명");
     /* 제조사가 있어도 A/S 업체명으로 새어 나가지 않는다. */
     const articles = resolveLotteOnNotice("23", REAL).articles;
     expect(articles.find((a) => a.pdArtlCd === "0090")).toBeUndefined();
   });
 
-  it("업체명 칸이 생기면 그때 채워진다", () => {
+  /* ══════════════════════════════════════════════════════════════════════════
+     🔴 COMMON-AS-PHONE-SEPARATION-01 — 번호는 «번호 칸» 에서만 온다.
+
+     `sellerAsContactNumber` 는 A/S «안내 문구» 다(네이버 고시에서 자유 텍스트로
+     실측 통과한 값). 그것을 전화번호 자리에 쓰면 고시가 거짓이 된다.
+     Production 에서 실제로 「규하맘샵AS / 해외 구매대행으로 A/S 불가」가 🟢 로
+     보인 적이 있고, 그것이 이 블록이 생긴 이유다.
+  ══════════════════════════════════════════════════════════════════════════ */
+  it("🔴 안내 문구는 0090 으로 «새지 않는다» — 번호 칸이 비면 BLOCKED 다", () => {
+    /* REAL.sellerAsContactNumber 에는 번호처럼 «생긴» 값이 들어 있다. 그래도
+       0090 은 그것을 쓰지 않는다 — 출처가 다르기 때문이다. */
     const fill = resolveLotteOnNotice("23", { ...REAL, sellerAsCompanyName: "따조 고객센터" }).fills.find(
       (f) => f.code === "0090",
     )!;
+    expect(fill.status).toBe("BLOCKED");
+    expect(JSON.stringify(resolveLotteOnNotice("23", REAL).articles)).not.toContain("+821046458306");
+  });
+
+  it("업체명 «과» 전화번호가 둘 다 있어야 채워진다", () => {
+    const fill = resolveLotteOnNotice("23", {
+      ...REAL,
+      sellerAsCompanyName: "따조 고객센터",
+      sellerAsPhoneNumber: "02-1234-5678",
+    }).fills.find((f) => f.code === "0090")!;
     expect(fill.status).toBe("FILLED");
+    if (fill.status === "FILLED") expect(fill.value).toBe("따조 고객센터 / 02-1234-5678");
+  });
+
+  it("🔴 번호 자리에 «문장» 이 오면 INVALID — 「값이 있다」가 「충족했다」가 아니다", () => {
+    const fill = resolveLotteOnNotice("23", {
+      ...REAL,
+      sellerAsCompanyName: "따조 고객센터",
+      sellerAsPhoneNumber: "해외 구매대행으로 A/S 불가",
+    }).fills.find((f) => f.code === "0090")!;
+    expect(fill.status).toBe("INVALID");
+    /* 🔴 그리고 payload 에 실리지 않는다 — 거짓 고시가 나가지 않는다. */
+    const articles = resolveLotteOnNotice("23", {
+      ...REAL,
+      sellerAsCompanyName: "따조 고객센터",
+      sellerAsPhoneNumber: "해외 구매대행으로 A/S 불가",
+    }).articles;
+    expect(articles.find((a) => a.pdArtlCd === "0090")).toBeUndefined();
+  });
+
+  it("🔴 문장에서 숫자를 «뽑아내지» 않는다", () => {
+    const fill = resolveLotteOnNotice("23", {
+      ...REAL,
+      sellerAsCompanyName: "따조 고객센터",
+      sellerAsPhoneNumber: "문의는 02-1234-5678 로 주세요",
+    }).fills.find((f) => f.code === "0090")!;
+    expect(fill.status).toBe("INVALID");
   });
 });
 
