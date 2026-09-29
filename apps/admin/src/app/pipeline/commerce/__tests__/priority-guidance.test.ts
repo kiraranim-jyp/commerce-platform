@@ -294,3 +294,30 @@ describe("🔴 UX-FLOW-01 — 안내가 «갈 곳» 을 못 찾는 경우가 없
     expect(REGISTRATION_SECTION_LABEL["lotteon-section-certification"]).toBe("KC / 인증");
   });
 });
+
+/* ════════════════════════════════════════════════════════════════════════════
+   🔴 REGISTRATION-INCIDENT-02(2026-09-30) — 서버가 말한 이유를 화면이 버리지 않는다
+   ════════════════════════════════════════════════════════════════════════════
+
+   게이트가 막으면 응답은 `{ ok:false, error, errorCode }` 다 — `message` 가 아니다.
+   화면이 `data.message` 만 읽어서, 서버가 「이 워크스페이스에는 커머스 등록 권한이
+   없습니다」라고 정확히 말하는데도 셀러에게는 「등록 정보를 만들지 못했습니다」만
+   갔다. 세 채널이 동시에 막힌 P0 에서 진단을 가린 것이 이 한 줄이었다.
+   ═══════════════════════════════════════════════════════════════════════════ */
+describe("🔴 REGISTRATION-INCIDENT-02 — 실패 이유가 화면까지 온다", () => {
+  const PANEL_SRC = readFileSync(join(__dirname, "..", "LotteOnRegistrationPanel.tsx"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/.*$/gm, "");
+
+  it("preview 응답의 `error` 도 읽는다 — `message` 만 보지 않는다", () => {
+    expect(PANEL_SRC, "게이트 거절 사유(error)가 화면에서 버려진다").toContain("data.error");
+  });
+
+  it("폴백 문장은 «서버가 아무 말도 하지 않았을 때» 만 쓴다", () => {
+    /* `?? "등록 정보를 만들지 못했습니다."` 앞에 반드시 error 폴백이 있어야 한다. */
+    for (const m of PANEL_SRC.matchAll(/등록 정보를 만들지 못했습니다/g)) {
+      const before = PANEL_SRC.slice(Math.max(0, m.index - 160), m.index);
+      expect(before, "서버 사유를 거치지 않고 폴백으로 바로 간다").toMatch(/\.error/);
+    }
+  });
+});

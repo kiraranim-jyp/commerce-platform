@@ -139,6 +139,19 @@ import {
 interface PreviewResponse {
   ok: boolean;
   message?: string;
+  /**
+   * ══ 🔴 REGISTRATION-INCIDENT-02(2026-09-30) — 원인을 «가리던» 칸 ══════════
+   *
+   * 게이트(`requireRegistrationAccess`)가 막으면 응답은 `{ ok:false, error, errorCode }`
+   * 다 — `message` 가 «아니다». 그런데 화면은 `data.message` 만 읽어서 언제나
+   * 폴백 문장(「등록 정보를 만들지 못했습니다」)을 띄웠다.
+   *
+   * 실제로 그 화면을 보고 있었다: 서버는 「이 워크스페이스에는 커머스 등록
+   * 권한이 없습니다」라고 정확히 말하고 있었는데, 셀러에게는 아무 단서도
+   * 없는 문장만 갔다. 진단이 하루를 잃었다.
+   */
+  error?: string;
+  errorCode?: string;
   identityError?: string | null;
   payload?: unknown;
   validation?: LotteOnValidationSnapshot;
@@ -1078,7 +1091,9 @@ export function LotteOnRegistrationPanel({
         setPreview(data);
         // 요청을 보낸 뒤 입력이 또 바뀌었으면 이 결과는 옛 입력에 대한 답이다.
         if (formVersionRef.current === requestedVersion) setStale(false);
-        if (!data.ok) setError(data.message ?? "등록 정보를 만들지 못했습니다.");
+        /* 🔴 서버가 말한 이유를 «버리지 않는다». 폴백은 서버가 아무 말도 하지
+           않았을 때만 쓴다(REGISTRATION-INCIDENT-02). */
+        if (!data.ok) setError(data.message ?? data.error ?? "등록 정보를 만들지 못했습니다.");
       } catch {
         setError("서버에 연결하지 못했습니다.");
       } finally {
@@ -1309,7 +1324,11 @@ export function LotteOnRegistrationPanel({
          실패 사유는 서버가 만든 한국어 한 줄을 그대로 쓴다(classifyLotteOnNetworkError
          → "롯데ON 응답이 제한 시간 안에 오지 않았습니다."). 화면이 다시 쓰지 않는다. */
       isCalculating={previewing}
-      errorMessage={preview != null && !preview.ok ? (preview.message ?? "등록 정보를 만들지 못했습니다.") : null}
+      errorMessage={
+        preview != null && !preview.ok
+          ? (preview.message ?? preview.error ?? "등록 정보를 만들지 못했습니다.")
+          : null
+      }
       onRetry={() => void runValidation(form)}
       status={listingStatus}
       registrationEnabled
