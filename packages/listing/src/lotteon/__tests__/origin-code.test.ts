@@ -147,3 +147,49 @@ describe("🔴 ⑤ 지원 국가를 «우리가» 정하지 않는다", () => {
     expect(autoPickLotteOnOriginCode([{ code: "ES", name: "스페인" }], "Morocco")).toBeNull();
   });
 });
+
+/* ════════════════════════════════════════════════════════════════════════════
+   🔴 LOTTEON-ORIGIN-03(CEO 실측, 2026-09-30) — 실제 목록 이름은 «깨끗하지 않다»
+   ════════════════════════════════════════════════════════════════════════════
+
+   Production 화면의 원산지 드롭다운이 「스페인(에스파냐)」로 떠 있었다. 우리가
+   만드는 후보는 「스페인」이고 매처는 정확 일치만 본다 — 그래서 자동선택이 한 번도
+   되지 않았다. 🔴 이 결함을 놓친 이유는 기존 fixture 가 `{ name: "스페인" }`
+   이라는 깨끗한 값이었기 때문이다. 여기서는 «실제 형태» 로 고정한다.
+   ═══════════════════════════════════════════════════════════════════════════ */
+describe("🔴 실제 OPLC_CD 이름 형태(괄호 설명 포함)에서 고른다", () => {
+  const REAL = [
+    { code: "KR", name: "대한민국(한국)" },
+    { code: "ES", name: "스페인(에스파냐)" },
+    { code: "IT", name: "이탈리아" },
+  ];
+
+  it("Spain → 스페인 → 「스페인(에스파냐)」를 고른다", () => {
+    expect(autoPickLotteOnOriginCode(REAL, "Spain")?.code).toBe("ES");
+  });
+
+  it("「Made in Spain」 같은 문장도 같은 결과다", () => {
+    expect(autoPickLotteOnOriginCode(REAL, "Made in Spain")?.code).toBe("ES");
+  });
+
+  it("한글 원문도 고른다", () => {
+    expect(autoPickLotteOnOriginCode(REAL, "스페인")?.code).toBe("ES");
+  });
+
+  it("괄호가 없는 항목도 그대로 고른다 — 기존 동작이 깨지지 않는다", () => {
+    expect(autoPickLotteOnOriginCode(REAL, "Italy")?.code).toBe("IT");
+  });
+
+  it("🔴 괄호를 떼서 «여럿» 이 되면 고르지 않는다 — 틀린 원산지를 내보내지 않는다", () => {
+    const ambiguous = [
+      { code: "US", name: "미국" },
+      { code: "GU", name: "미국(괌)" },
+    ];
+    expect(autoPickLotteOnOriginCode(ambiguous, "미국")).toBeNull();
+  });
+
+  it("🔴 부분일치로 번지지 않는다 — 「스페인」이 「스페인령 ○○」를 잡지 않는다", () => {
+    const tricky = [{ code: "XX", name: "스페인령 카나리아제도" }];
+    expect(autoPickLotteOnOriginCode(tricky, "Spain")).toBeNull();
+  });
+});

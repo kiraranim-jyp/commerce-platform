@@ -92,10 +92,16 @@ function savedInfo(overrides: Partial<LotteOnChannelInfo["certification"]> = {})
 /** payload-preview 로 나간 요청 본문들 — 화면이 «실제로» 보낸 것. */
 let previewBodies: Record<string, unknown>[] = [];
 
-/** 롯데ON 공통코드 OPLC_CD 응답(실제 모양: code/name). */
+/**
+ * 롯데ON 공통코드 OPLC_CD 응답.
+ *
+ * 🔴 LOTTEON-ORIGIN-03 — 이름을 «더럽게» 둔다. 실제 목록은 「스페인(에스파냐)」처럼
+ * 괄호 설명이 붙어 있고, 여기를 「스페인」으로 깨끗하게 두었던 탓에 자동선택이
+ * Production 에서 한 번도 안 되는 것을 이 테스트가 놓쳤다.
+ */
 const ORIGIN_ITEMS = [
-  { code: "KR", name: "대한민국" },
-  { code: "ES", name: "스페인" },
+  { code: "KR", name: "대한민국(한국)" },
+  { code: "ES", name: "스페인(에스파냐)" },
   { code: "IT", name: "이탈리아" },
 ];
 

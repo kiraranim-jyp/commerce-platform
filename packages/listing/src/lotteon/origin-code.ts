@@ -135,6 +135,31 @@ function candidateNames(originText: string): string[] {
 }
 
 /**
+ * ══ 🔴 LOTTEON-ORIGIN-03(CEO 실측 「1번은 안됨」, 2026-09-30) ═══════════════════
+ *
+ * 롯데ON 목록의 이름이 **「스페인(에스파냐)」** 다. 우리가 만드는 후보는 「스페인」
+ * 이고, 이 함수는 «정확 일치» 만 본다 — 그래서 **영원히 맞지 않았다.**
+ *
+ * 🔴 그런데도 정확 일치를 버리지 않는다. 부분일치를 열면 「스페인」이 「스페인령
+ * ○○」을 잡는다. 대신 **채널이 제 이름에 붙여 둔 괄호 설명만** 떼어 «또 하나의
+ * 정확 일치 후보» 로 쓴다 — 나라 이름을 추측하는 것이 아니라, 같은 항목을
+ * 부르는 두 표기를 둘 다 정확히 보는 것이다.
+ *
+ * 🔴 애매해지면 여전히 고르지 않는다. 「미국」과 「미국(괌)」이 함께 있으면 괄호를
+ * 뗀 순간 둘 다 「미국」이 되고, 아래 `matched.length > 1` 이 null 을 낸다.
+ *
+ * 🔴 이 결함을 못 잡은 이유도 적어 둔다: 내 테스트 fixture 가 `{ name: "스페인" }`
+ * 이라는 **깨끗한 값** 이었다. 실제 목록은 괄호가 붙어 있다. 이 저장소가 이미
+ * 적어 둔 규칙(fixture 는 «더럽게» 만든다)을 내가 또 어겼다.
+ */
+function originCodeNameKeys(name: string): string[] {
+  const full = normalize(name).toLowerCase();
+  /* 꼬리의 괄호 설명만 떼어 낸다 — 반각·전각 둘 다. 이름 «안» 은 건드리지 않는다. */
+  const base = normalize(name.replace(/\s*[（(][^）)]*[）)]\s*$/, "")).toLowerCase();
+  return base && base !== full ? [full, base] : [full];
+}
+
+/**
  * 원산지 텍스트로 OPLC_CD 를 고른다.
  *
  * @returns 고른 코드 한 줄, 또는 `null`(못 맞췄거나 여럿이 맞았다 → 셀러가 고른다)
@@ -150,7 +175,7 @@ export function autoPickLotteOnOriginCode(
     /* 🔴 정확 일치만 본다. 「스페인」이 「스페인령 ○○」에 부분일치해서 엉뚱한
        코드가 잡히는 것을 막는다. 대소문자는 라틴 문자에서만 의미가 있어 무시한다. */
     const key = candidate.toLowerCase();
-    const matched = items.filter((item) => normalize(item.name).toLowerCase() === key);
+    const matched = items.filter((item) => originCodeNameKeys(item.name).includes(key));
     if (matched.length === 1) return matched[0];
     /* 🔴 여럿이면 «고르지 않는다» — 여기서 하나를 집으면 틀린 원산지가 조용히 나간다. */
     if (matched.length > 1) return null;
