@@ -83,6 +83,18 @@ export interface LotteOnNoticeForm {
   itemCode: string;
   /** 한 줄에 하나씩 `항목코드:내용`. 코드체계는 품목마다 달라 생성하지 않는다. */
   articlesText: string;
+  /**
+   * LOTTEON-NOTICE-SELLER-CONFIRMATION-01 — 셀러가 «항목명으로» 채운 고시 값.
+   *
+   * 키는 항목코드지만 **셀러는 그 키를 보지 않는다** — 화면이 항목명(「동일모델
+   * 출시년월」)으로 묻고 코드 매핑은 우리가 한다. F-8 원칙(셀러에게 내부 코드를
+   * 타이핑시키지 않는다)을 지키면서 «채울 자리» 를 주는 것이 이 칸의 전부다.
+   *
+   * 🔴 담기는 것은 **상품정보에서 파생할 수 없고 셀러가 아는** 값뿐이다. 무엇을
+   * 열지는 resolver 의 화이트리스트(`LOTTEON_SELLER_FILLABLE_ARTICLE_CODES`)가
+   * 정하고, 그 밖의 키는 resolver 가 무시한다 — 판정을 여기 두지 않는다.
+   */
+  articleValues: Record<string, string>;
 }
 
 /** 인증 — sftyAthnLst[] + impPrxCd. */
@@ -131,7 +143,7 @@ export interface LotteOnChannelForm {
 
 export const EMPTY_LOTTEON_CHANNEL_FORM: LotteOnChannelForm = {
   category: { standardCategoryNo: "", displayCategoryNos: [] },
-  notice: { itemCode: "", articlesText: "" },
+  notice: { itemCode: "", articlesText: "", articleValues: {} },
   certification: { safetyText: "", importProxyCode: "" },
   delivery: {
     outboundPlaceNo: "",
@@ -183,7 +195,22 @@ export function toLotteOnChannelInfo(form: LotteOnChannelForm): LotteOnChannelIn
           }
         : {}),
     },
-    notice: { itemCode: form.notice.itemCode, articlesText: form.notice.articlesText },
+    notice: {
+      itemCode: form.notice.itemCode,
+      articlesText: form.notice.articlesText,
+      /* 🔴 빈 값은 «저장하지 않는다» — jsonb 에 빈 문자열이 남으면 「셀러가 비워서
+         골랐다」와 「아직 채운 적 없다」가 구별되지 않는다.
+         🔴 그리고 하나도 없으면 **키째 내보내지 않는다** — 이 필드를 모르던 과거
+         스냅샷과 왕복이 깨진다(`three-layer-realign` 의 왕복 가드가 잡았다).
+         `lotteOnChannelInfo` 전체의 「키가 없다 = 고른 적 없다」 규칙과 같다. */
+      ...(Object.entries(form.notice.articleValues).some(([, value]) => value.trim())
+        ? {
+            articleValues: Object.fromEntries(
+              Object.entries(form.notice.articleValues).filter(([, value]) => value.trim()),
+            ),
+          }
+        : {}),
+    },
     certification: {
       safetyText: form.certification.safetyText,
       importProxyCode: form.certification.importProxyCode,
@@ -202,7 +229,9 @@ export function fromLotteOnChannelInfo(info: LotteOnChannelInfo | undefined | nu
   if (!info) return EMPTY_LOTTEON_CHANNEL_FORM;
   return {
     category: { ...EMPTY_LOTTEON_CHANNEL_FORM.category, ...info.category },
-    notice: { ...EMPTY_LOTTEON_CHANNEL_FORM.notice, ...info.notice },
+    /* 🔴 `articleValues` 를 «명시로» 되살린다. 스프레드에만 맡기면 옛 스냅샷
+       (이 키가 없다)에서 undefined 가 되어 화면이 터진다. */
+    notice: { ...EMPTY_LOTTEON_CHANNEL_FORM.notice, ...info.notice, articleValues: { ...(info.notice?.articleValues ?? {}) } },
     certification: { ...EMPTY_LOTTEON_CHANNEL_FORM.certification, ...info.certification },
     delivery: { ...EMPTY_LOTTEON_CHANNEL_FORM.delivery, ...info.delivery },
     codes: { ...EMPTY_LOTTEON_CHANNEL_FORM.codes, ...info.codes },
@@ -420,7 +449,15 @@ export function toLotteOnChannelPayload(form: LotteOnChannelForm) {
     displayCategoryNos: form.category.displayCategoryNos.map((no) => no.trim()).filter(Boolean),
 
     noticeItemCode: form.notice.itemCode.trim(),
-    noticeArticles: parseNoticeArticles(form.notice.articlesText),
+    /* 🔴 LOTTEON-NOTICE-SELLER-CONFIRMATION-01 — 두 입구를 «한 목록» 으로 보낸다.
+       `articleValues`(항목명으로 받은 값)가 레거시 `articlesText` 보다 뒤에 온다 —
+       같은 코드가 둘에 다 있으면 셀러가 «방금 화면에서 채운» 쪽이 이긴다. */
+    noticeArticles: [
+      ...parseNoticeArticles(form.notice.articlesText),
+      ...Object.entries(form.notice.articleValues)
+        .filter(([code, value]) => code.trim() && value.trim())
+        .map(([code, value]) => ({ pdArtlCd: code.trim(), pdArtlCnts: value.trim() })),
+    ],
 
     safetyCertifications: parseSafetyCertifications(form.certification.safetyText),
     importProxyCode: form.certification.importProxyCode.trim(),

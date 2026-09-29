@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CanonicalProduct, LotteOnChannelInfo } from "@commerce/shared";
 import type { LotteOnNoticeResolution, LotteOnNoticeFill } from "@commerce/listing";
+/* 🔴 화이트리스트를 화면이 «다시 정하지» 않는다 — resolver 의 것을 그대로 읽는다.
+   두 곳에 두면 화면과 판정이 갈라지고, 그 갈라짐이 STEP3-FIX 의 병이다. */
+import { isLotteOnSellerFillableArticle } from "@commerce/listing";
 import { Button } from "@/components/ui/Button";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import {
@@ -1094,6 +1097,20 @@ export function LotteOnRegistrationPanel({
     [validation],
   );
 
+  /* ══ LOTTEON-NOTICE-SELLER-CONFIRMATION-01 ═══════════════════════════════════
+     셀러가 직접 채워야 하는 고시 항목만 골라 입력칸을 세운다.
+
+     🔴 **목록을 화면이 만들지 않는다** — 서버가 준 resolution(`preview.notice`)의
+     항목을 resolver 화이트리스트로 거를 뿐이다. 품목을 고르기 «전» 에는
+     resolution 이 없으므로 칸도 서지 않는다(빈 칸부터 들이밀지 않는다).
+
+     🔴 FILLED 도 남긴다 — 셀러가 넣은 값을 «고칠» 수 있어야 한다. 채워지면
+     사라지는 칸은 수정 경로를 없앤다. */
+  const sellerFillableNoticeFills = useMemo(
+    () => (preview?.notice?.fills ?? []).filter((fill) => isLotteOnSellerFillableArticle(fill.code)),
+    [preview?.notice],
+  );
+
   const connectionOk = preview != null && preview.ok && !preview.identityError;
   const canRegister = !stale && readiness.percent === 100 && readiness.allRequiredPassed && !registering && !previewing;
 
@@ -1911,6 +1928,38 @@ export function LotteOnRegistrationPanel({
             value={form.notice.articlesText}
             onChange={(value) => patch("notice", { articlesText: value })}
           />
+          {/* ══ LOTTEON-NOTICE-SELLER-CONFIRMATION-01 ═══════════════════════════
+              🔴 F-8 을 되돌리지 «않는다». 셀러는 여기서도 항목«코드» 를 보지
+              않는다 — 묻는 것은 항목명이고, `0220`/`1830` 매핑은 우리가 한다.
+
+              왜 이 칸이 필요한가: 이 두 항목은 상품정보에서 «파생할 수 없고»
+              (공식 PDF 전수 확인 — 0220 은 14품목 전부 가이드라인 공란), 그런데
+              셀러는 답을 안다. 값이 없다고 등록을 막는 대신 물어본다.
+
+              🔴 우리가 기본값을 넣지 않는다 — 출시년월 추정도, 「해당없음」
+              자동 생성도 없다. 빈 칸은 빈 칸으로 남고 상태는 「입력 필요」다. */}
+          {sellerFillableNoticeFills.length > 0 ? (
+            <div className="sm:col-span-2 flex flex-col gap-3" data-lotteon-seller-notice>
+              {sellerFillableNoticeFills.map((fill) => (
+                <ChannelCodeField
+                  key={fill.code}
+                  label={fill.label}
+                  requirement="REQUIRED"
+                  note={
+                    fill.status === "FILLED"
+                      ? "판매자가 입력한 값입니다."
+                      : fill.status === "NEEDS_INPUT"
+                        ? fill.reason
+                        : "이 항목은 상품정보에서 찾을 수 없어 직접 입력이 필요합니다."
+                  }
+                  value={form.notice.articleValues[fill.code] ?? ""}
+                  onChange={(value) =>
+                    patch("notice", { articleValues: { ...form.notice.articleValues, [fill.code]: value } })
+                  }
+                />
+              ))}
+            </div>
+          ) : null}
         </div>
         {/* ══ LOTTEON-REGISTRATION-01/3차(CPO 승인, 2026-09-28) ═══════════════
             여기 있던 것: 빈 textarea 하나와 「상품정보에 이미 있는 값」 목록.

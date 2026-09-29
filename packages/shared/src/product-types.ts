@@ -281,8 +281,13 @@ export interface LotteOnChannelInfo {
      * (없음 = "이 번호가 무엇을 요구하는지 우리가 들은 적 없다"). */
     selected?: LotteOnSelectedCategoryFacts | null;
   };
-  /** 상품정보제공고시 — pdItmsCd + pdItmsArtlLst[]의 원문 입력. */
-  notice: { itemCode: string; articlesText: string };
+  /** 상품정보제공고시 — pdItmsCd + pdItmsArtlLst[]의 원문 입력.
+   *
+   * `articleValues` — LOTTEON-NOTICE-SELLER-CONFIRMATION-01. 셀러가 «항목명으로»
+   * 채운 고시 값(키는 항목코드이지만 셀러는 그 키를 보지 않는다).
+   * 🔴 optional 이다 — 이 키가 없는 스냅샷이 jsonb 에 이미 있고, 과거 데이터를
+   * 고쳐 쓰지 않는다(`customsDutyKrw` 를 남겨 둔 것과 같은 이유). */
+  notice: { itemCode: string; articlesText: string; articleValues?: Record<string, string> };
   /** 안전인증 — sftyAthnLst[]의 원문 입력 + impPrxCd. 인증번호는 생성하지 않는다. */
   certification: { safetyText: string; importProxyCode: string };
   /** 배송 — 전부 롯데ON 판매자센터에 선등록해야 생기는 번호다. */

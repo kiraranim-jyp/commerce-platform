@@ -46,6 +46,15 @@ export interface LotteOnNoticeFacts {
   /** 실제 KC 인증번호. 🔴 절대 만들 수 없는 값이다. */
   kcCertificationNumber?: string | null;
 
+  /**
+   * 셀러가 «사람이 읽는 값» 으로 직접 채운 고시 항목. 키는 항목코드다.
+   *
+   * 🔴 셀러는 이 키(`0220` 같은 것)를 **보지 않는다** — 화면은 항목명으로 묻고
+   * 코드 매핑은 우리가 한다(`notice-schema.ts` 가 code↔label 을 안다).
+   * 🔴 `LOTTEON_SELLER_FILLABLE_ARTICLE_CODES` 밖의 키는 **무시된다.**
+   */
+  sellerArticleValues?: Readonly<Record<string, string>>;
+
   /** 판매자 공통 설정(`seller_settings`) — 상품마다 다르지 않은 상수들. */
   sellerQualityGuarantee?: string | null;
   sellerAsContactNumber?: string | null;
@@ -121,7 +130,41 @@ function fromFact(spec: LotteOnNoticeArticleSpec, value: string | null | undefin
   return text ? filled(spec, text, from) : needsInput(spec, reason);
 }
 
+/**
+ * 🔴 셀러가 «직접 채울 수 있는» 고시 항목 — **화이트리스트다.**
+ *
+ * 왜 화이트리스트인가: 전 항목을 열면 셀러가 `0200`(KC 인증정보)에 아무 문자열이나
+ * 넣을 수 있다. 이 저장소의 고정 원칙은 「KC 값을 지어내지 않는다」이고(「12313ㄹㅇ」
+ * 사건), 그 원칙이 셀러 입력으로 우회되면 안 된다.
+ *
+ * 이 둘만 여는 근거(공식 PDF 전수 확인, `LOTTEON-CREATE-POLICY-BOUNDARY-01`):
+ *   `0220` 작성 가이드라인이 14개 품목 «전부 공란» — 우리가 정할 근거가 없다
+ *   `1830` 「제한이 있는 품목의 경우 반드시 기재」까지만 규정 — 없을 때는 미규정
+ * 둘 다 **상품정보에서 파생할 수 없고, 셀러는 안다.**
+ *
+ * 🔴 항목을 더할 때는 「우리가 못 만드는가」가 아니라 **「셀러가 실제로 아는가」**
+ * 를 묻는다. KC 인증번호는 셀러가 «가질 수도 있지만» 형식·진위를 우리가 못 보므로
+ * 여기 넣지 않는다 — 별도 축(`sftyAthnLst`)에서 다룬다.
+ */
+export const LOTTEON_SELLER_FILLABLE_ARTICLE_CODES = ["0220", "1830"] as const;
+
+export function isLotteOnSellerFillableArticle(code: string): boolean {
+  return (LOTTEON_SELLER_FILLABLE_ARTICLE_CODES as readonly string[]).includes(code);
+}
+
 function resolveOne(spec: LotteOnNoticeArticleSpec, facts: LotteOnNoticeFacts): LotteOnNoticeFill {
+  /* ══ LOTTEON-NOTICE-SELLER-CONFIRMATION-01 ═══════════════════════════════
+     🔴 셀러가 넣은 값이 «있으면» 그것이 먼저다. 화이트리스트 밖은 지나간다.
+
+     🔴 여기가 switch «앞» 이어야 한다. 뒤에 두면 0220/1830 이 자기 case 에서
+     먼저 NEEDS_INPUT 을 돌려주고 셀러 값이 영원히 무시된다 — 그러면 payload 에는
+     값이 가는데(build-context 의 mergeNoticeArticles 가 폼을 우선한다) 화면은
+     「입력 필요」로 남는 «갈라짐» 이 생긴다. 그 갈라짐이 STEP3-FIX 의 병이다. */
+  if (isLotteOnSellerFillableArticle(spec.code)) {
+    const entered = clean(facts.sellerArticleValues?.[spec.code]);
+    if (entered) return filled(spec, entered, "판매자 입력 · 고시 항목");
+  }
+
   switch (spec.code) {
     case "0020":
       return fromFact(spec, facts.color, "상품정보 · 색상", "상품정보에 색상이 없습니다.");
@@ -210,13 +253,16 @@ function resolveOne(spec: LotteOnNoticeArticleSpec, facts: LotteOnNoticeFacts): 
       );
     }
     case "0220":
-      /* 🔴 시즌 코드(`SS26` 등)는 출시년월이 아니다. 우리 상품 모델에 이 값을
-         담을 자리 자체가 없다. */
-      return blocked(spec, "동일모델의 출시년월을 담을 자리가 상품정보에 없습니다. 시즌 코드를 출시년월로 바꾸지 않습니다.");
+      /* 🔴 시즌 코드(`SS26` 등)는 출시년월이 «아니다». 상품정보에 담을 자리도 없다
+         (SOURCE_ABSENT 확정). 그래서 우리가 만들지 않고 «셀러가 넣는다» —
+         공식 PDF 를 전수 확인한 결과 이 항목의 작성 가이드라인은 14개 품목
+         전부 공란이라, 우리가 형식을 정할 근거도 없다. */
+      return needsInput(spec, "동일모델의 출시년월을 입력해 주세요. 상품정보에서 찾을 수 없는 값이라 지어내지 않습니다.");
     case "1830":
       /* 🔴 「착용 또는 탑승용처럼 제한이 있는 품목의 경우」라는 조건부 항목이다.
-         해당하지 않을 때 무엇을 넣어야 하는지(공란/「해당없음」)를 모른다. */
-      return blocked(spec, "해당하지 않는 상품에 무엇을 적어야 하는지 기준을 확인하지 못했습니다.");
+         제한이 «있는지» 는 셀러가 안다. 공식 PDF 에 「해당 없을 때」 규정이 없어
+         우리가 「해당없음」을 자동 생성하지 않는다 — 셀러가 적는다. */
+      return needsInput(spec, "크기·체중에 제한이 있으면 그 내용을, 없으면 없다는 사실을 입력해 주세요.");
     default:
       /* 표에는 있는데 이 파일이 다루지 않는 코드. 조용히 통과시키지 않는다. */
       return blocked(spec, "이 항목을 채우는 규칙이 아직 없습니다.");

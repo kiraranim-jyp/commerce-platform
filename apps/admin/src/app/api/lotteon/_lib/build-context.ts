@@ -243,6 +243,20 @@ export async function buildLotteOnContext(
     modelName: product.modelName.value,
     recommendedAge: product.recommendedAge.value,
     kcCertificationNumber: product.childCertification.value?.certificationNumber ?? null,
+    /* ══ LOTTEON-NOTICE-SELLER-CONFIRMATION-01 ═════════════════════════════
+       셀러가 화면에서 채운 고시 값. 🔴 **새 전송 필드를 만들지 않았다** — 화면은
+       이미 `noticeArticles` 로 보내고 있었고, 아래 `mergeNoticeArticles` 가 그것을
+       payload 에 «폼 우선» 으로 얹는다. 그런데 resolver 는 그 값을 보지 못해서,
+       payload 에는 값이 가는데 화면은 「입력 필요」로 남았다. 같은 입력을
+       resolver 에도 줘서 그 «갈라짐» 을 없앤다.
+
+       🔴 화이트리스트(0220·1830) 밖의 키를 여기서 걸러내지 «않는다» — 판정은
+       resolver 한 곳에만 둔다. 필터를 두 곳에 두면 한쪽만 조용히 넓어진다. */
+    sellerArticleValues: Object.fromEntries(
+      (form.noticeArticles ?? [])
+        .filter((a) => a.pdArtlCd?.trim() && a.pdArtlCnts?.trim())
+        .map((a) => [a.pdArtlCd.trim(), a.pdArtlCnts.trim()]),
+    ),
     sellerQualityGuarantee: commonSellerSettings.qualityGuarantee,
     sellerAsContactNumber: commonSellerSettings.asContactNumber,
     /* 🔴 LOTTEON-NOTICE-FIELD-IMPLEMENT-0090-01 — 칸이 생겼다(migration 068).

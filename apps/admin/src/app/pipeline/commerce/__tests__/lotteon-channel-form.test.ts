@@ -214,12 +214,12 @@ describe("② 공통 카테고리는 읽기만 한다 — 덮어쓰지 않는다
 
 describe("③ 유아동(품목코드 23)은 안전인증 없이 통과하지 못한다", () => {
   it("품목코드 23이면 안전인증이 필수로 표시된다", () => {
-    const form = makeForm({ notice: { itemCode: LOTTEON_CHILD_PRODUCT_ITEM_CODE, articlesText: "" } });
+    const form = makeForm({ notice: { itemCode: LOTTEON_CHILD_PRODUCT_ITEM_CODE, articlesText: "", articleValues: {} } });
     expect(requiresSafetyCertification(form)).toBe(true);
   });
 
   it("다른 품목코드에서는 필수가 아니다", () => {
-    expect(requiresSafetyCertification(makeForm({ notice: { itemCode: "01", articlesText: "" } }))).toBe(false);
+    expect(requiresSafetyCertification(makeForm({ notice: { itemCode: "01", articlesText: "", articleValues: {} } }))).toBe(false);
     expect(requiresSafetyCertification(makeForm())).toBe(false);
   });
 

@@ -121,17 +121,70 @@ describe("🔴 ④ 금지된 추정을 «하지 않는다»", () => {
     expect(fill.status).toBe("FILLED");
   });
 
-  it("0220 출시년월은 «자리가 없어서» BLOCKED 다 — 시즌 코드로 대신하지 않는다", () => {
+  /* ══ LOTTEON-NOTICE-SELLER-CONFIRMATION-01 — 🔴 판정이 «바뀌었다» ════════════
+     예전에는 둘 다 BLOCKED 였다. 근거는 「우리가 만들 수 없다」였는데, 그것은
+     「등록할 수 없다」가 아니라 **「우리가 채울 수 없다」** 였다. 셀러는 자기
+     상품의 출시년월을 알고, 크기·체중 제한이 있는지도 안다.
+
+     공식 PDF 전수 확인(15p·379행): `0220` 작성 가이드라인은 14개 품목 «전부
+     공란» 이고, `1830` 은 「제한이 있는 품목의 경우 반드시 기재」까지만 규정된다.
+     즉 **우리가 값을 정할 근거가 없다** — 그래서 셀러가 넣는다.
+
+     🔴 여전히 우리가 «만들지» 않는다: 시즌 코드→출시년월 변환도, 「해당없음」
+     자동 생성도 없다. 바뀐 것은 «누가 채우는가» 하나다. */
+  it("0220 은 셀러가 채울 항목이다 — 우리가 시즌 코드로 만들지 않는다", () => {
     const fill = resolveLotteOnNotice("23", REAL).fills.find((f) => f.code === "0220")!;
-    expect(fill.status).toBe("BLOCKED");
-    if (fill.status === "BLOCKED") expect(fill.reason).toContain("시즌 코드를 출시년월로 바꾸지 않습니다");
+    expect(fill.status).toBe("NEEDS_INPUT");
+    if (fill.status === "NEEDS_INPUT") expect(fill.reason).toContain("지어내지 않습니다");
+    /* 🔴 SKU 에 시즌 코드가 있어도 payload 에 나가지 않는다. */
+    expect(resolveLotteOnNotice("23", REAL).articles.find((a) => a.pdArtlCd === "0220")).toBeUndefined();
   });
 
-  it("1830 크기·체중 한계는 «규칙을 몰라서» BLOCKED 다 — 「해당없음」을 넣지 않는다", () => {
+  it("1830 도 셀러가 채울 항목이다 — 「해당없음」을 «우리가» 넣지 않는다", () => {
     const fill = resolveLotteOnNotice("23", REAL).fills.find((f) => f.code === "1830")!;
-    expect(fill.status).toBe("BLOCKED");
+    expect(fill.status).toBe("NEEDS_INPUT");
     const body = JSON.stringify(resolveLotteOnNotice("23", REAL).articles);
     expect(body).not.toContain("해당없음");
+  });
+
+  it("🔴 셀러가 넣으면 FILLED 이고 출처가 «판매자 입력» 이다", () => {
+    const res = resolveLotteOnNotice("23", {
+      ...REAL,
+      sellerArticleValues: { "0220": "2026-01", "1830": "체중 25kg 이하" },
+    });
+    for (const [code, value] of [
+      ["0220", "2026-01"],
+      ["1830", "체중 25kg 이하"],
+    ] as const) {
+      const fill = res.fills.find((f) => f.code === code)!;
+      expect(fill.status).toBe("FILLED");
+      if (fill.status === "FILLED") {
+        expect(fill.value).toBe(value);
+        expect(fill.from).toContain("판매자 입력");
+      }
+      /* 🔴 화면 상태와 payload 가 «같이» 움직인다 — 갈라지면 한쪽이 거짓말한다. */
+      expect(res.articles.find((a) => a.pdArtlCd === code)?.pdArtlCnts).toBe(value);
+    }
+  });
+
+  it("🔴🔴 화이트리스트 «밖» 은 셀러 값을 무시한다 — KC 를 셀러 입력으로 우회할 수 없다", () => {
+    const res = resolveLotteOnNotice("23", {
+      ...REAL,
+      /* 0200 = KC 인증정보. 아무 문자열이나 넣어도 통과하면 안 된다
+         (「12313ㄹㅇ」 사건이 이 가드의 이유다). */
+      sellerArticleValues: { "0200": "12313ㄹㅇ", "0080": "아무 품질보증", "0060": "아무 제조국" },
+    });
+    expect(res.fills.find((f) => f.code === "0200")!.status).toBe("NEEDS_INPUT");
+    const body = JSON.stringify(res.articles);
+    expect(body).not.toContain("12313ㄹㅇ");
+    expect(body).not.toContain("아무 품질보증");
+    expect(body).not.toContain("아무 제조국");
+  });
+
+  it("빈 값·공백만 넣은 것은 «넣지 않은 것» 이다", () => {
+    const res = resolveLotteOnNotice("23", { ...REAL, sellerArticleValues: { "0220": "   ", "1830": "" } });
+    expect(res.fills.find((f) => f.code === "0220")!.status).toBe("NEEDS_INPUT");
+    expect(res.fills.find((f) => f.code === "1830")!.status).toBe("NEEDS_INPUT");
   });
 
   it("🔴 0090 은 업체명이 없으면 BLOCKED — 판매자명·제조사로 대신하지 않는다", () => {
