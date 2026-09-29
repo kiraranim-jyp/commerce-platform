@@ -267,3 +267,60 @@ describe("🔴 ④ 채우지 못한 6항목은 payload 에 «흔적도» 없다"
     expect(body).not.toContain('"pdArtlCnts":""');
   });
 });
+
+/* ════════════════════════════════════════════════════════════════════════════
+   🔴 ⑤ LOTTEON-FINAL-05 #2 — 신고가 «라우트를 통과해» 두 문에 다 닿는가
+
+   이 저장소가 세 번 반복한 실수가 있다: **「인자를 만든 것」과 「넘기는 것」을
+   같다고 여기는 것.** 타입 선언만 하고 호출부를 빠뜨리면 화면에서는 골랐는데
+   서버는 못 본 상태가 되고, 그 차이는 실등록에서야 드러난다.
+
+   그래서 여기서는 «라우트와 같은 순서» 로 돌려서 확인한다. 위 fixture 는
+   Production 화면에서 확인된 그 상품이고, 값을 보태지 않았다.
+   ═══════════════════════════════════════════════════════════════════════════ */
+describe("🔴 ⑤ 안전인증 신고가 라우트를 통과해 두 문에 다 닿는다", () => {
+  const blockedFields = (validation: { fields: { field: string; status: string }[] }) =>
+    validation.fields.filter((item) => item.status !== "READY").map((item) => item.field);
+
+  it("미선택 — 예전 그대로 KC 가 막는다(고르지 않은 것을 통과시키지 않는다)", async () => {
+    const { validation, payload } = await pipeline(product(), form({ originCode: "ES" }));
+    expect(blockedFields(validation)).toContain("sftyAthnLst");
+    /* 두 번째 문도 닫혀 있다 — 0200 이 payload 에 실리지 않는다. */
+    expect((notice(payload).pdItmsArtlLst ?? []).find((a) => a.pdArtlCd === "0200")).toBeUndefined();
+  });
+
+  it("「대상 아님」 — 인증정보 없이도 남는 BLOCK 이 «없다»", async () => {
+    const { validation } = await pipeline(product(), form({ originCode: "ES", safetyTarget: "EXCLUDED" }));
+    console.log("\n===== 「인증 대상 아님」 신고 뒤 남은 항목 =====\n ", blockedFields(validation).join(", ") || "(없음)");
+    expect(blockedFields(validation)).toHaveLength(0);
+  });
+
+  it("「대상 아님」 — 고시 0200 이 「해당사항 없음」으로 실려 나간다", async () => {
+    const { payload } = await pipeline(product(), form({ originCode: "ES", safetyTarget: "EXCLUDED" }));
+    const article = (notice(payload).pdItmsArtlLst ?? []).find((a) => a.pdArtlCd === "0200");
+    expect(article?.pdArtlCnts).toBe("해당사항 없음");
+  });
+
+  it("🔴 「대상 아님」이어도 인증번호를 지어내지 않는다 — sftyAthnLst 가 아예 없다", async () => {
+    const { payload } = await pipeline(product(), form({ originCode: "ES", safetyTarget: "EXCLUDED" }));
+    const first = (payload.spdLst as Record<string, unknown>[])[0];
+    expect(first.sftyAthnLst).toBeUndefined();
+  });
+
+  it("「대상」 신고 + 인증정보 없음 — 막힌다(신고와 payload 가 어긋난 상태다)", async () => {
+    const { validation } = await pipeline(product(), form({ originCode: "ES", safetyTarget: "TARGET" }));
+    expect(blockedFields(validation)).toContain("sftyAthnLst");
+  });
+
+  it("「대상 아님」 + 인증정보가 같이 오면 모순으로 막는다", async () => {
+    const { validation } = await pipeline(
+      product(),
+      form({
+        originCode: "ES",
+        safetyTarget: "EXCLUDED",
+        safetyCertifications: [{ sftyAthnTypCd: "CHL_CFM", sftyAthnNo: "CB123456789" }],
+      }),
+    );
+    expect(validation.fields.find((f) => f.field === "sftyAthnLst")?.code).toBe("SAFETY_DECLARATION_CONFLICT");
+  });
+});
