@@ -626,8 +626,18 @@ export function LotteOnRegistrationPanel({
   function chooseSafetyTarget(target: LotteOnSafetyTarget) {
     /* 🔴 「대상 아님」을 골라도 입력해 둔 인증정보를 **지우지 않는다.** 잘못
        누른 셀러가 실제 인증번호를 잃는다 — 다시 칠 수 없는 값이다. 모순은
-       아래에서 «보여주고», 지우는 것은 셀러가 버튼으로 한다. */
-    patch("certification", { safetyTarget: target });
+       아래에서 «보여주고», 지우는 것은 셀러가 버튼으로 한다.
+
+       ══ 🔴 LOTTEON-FINAL-06 1순위(CEO 실측 FAIL, 2026-09-29) ═════════════
+       여기가 `patch()` 였다. 그래서 셀러가 「인증 대상 아님」을 골라도 화면은
+       stale 로만 표시되고 **readiness 가 그대로 남아 등록 버튼이 잠긴 채**
+       였다 — CEO 가 본 그 화면이다.
+
+       이 화면에는 이미 경계가 있었다(F-7): «목록에서 고름» 은 즉시 재확인,
+       «자유 입력» 은 stale 표시. KC 대상 여부는 라디오 «고르기» 이지 타이핑이
+       아니다. 그 분류를 틀린 것이라, 새 규칙을 만들지 않고 원래 있던
+       `pickAndRecheck` 로 옮긴다. */
+    pickAndRecheck("certification", { safetyTarget: target });
   }
 
   function patchSafetyEntries(next: LotteOnSafetyEntry[]) {
@@ -2109,7 +2119,7 @@ export function LotteOnRegistrationPanel({
               <Button variant="secondary" size="sm" onClick={() => chooseSafetyTarget("TARGET")}>
                 인증 대상으로 되돌리기
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => patchSafetyEntries([])}>
+              <Button variant="secondary" size="sm" onClick={() => pickAndRecheck("certification", { safetyText: serializeSafetyEntries([], safetyUnparsed) })}>
                 입력한 인증 정보 지우기
               </Button>
             </div>
@@ -2129,7 +2139,7 @@ export function LotteOnRegistrationPanel({
               onClick={() =>
                 /* 🔴 가져오기는 「대상」 신고와 «같은 동작» 이다 — 인증번호를
                    넣으면서 축을 미선택으로 두면 두 말이 어긋난다. */
-                patch("certification", { safetyTarget: "TARGET", safetyText: commonSafetyLine })
+                pickAndRecheck("certification", { safetyTarget: "TARGET", safetyText: commonSafetyLine })
               }
             >
               상품정보의 인증정보 가져오기

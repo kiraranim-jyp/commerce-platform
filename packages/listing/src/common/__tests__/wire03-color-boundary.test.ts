@@ -49,8 +49,9 @@ describe("① 색상은 «단일 출처» 다 — 세 채널이 상품 값만 �
     expect(codeOf(COUPANG)).toContain("color: product.color.value || undefined");
   });
 
-  it("롯데ON", () => {
-    expect(codeOf(LOTTEON_CTX)).toContain("color: product.color.value");
+  it("롯데ON — 같은 필드를 보되, 이제 네이버처럼 참조 대체를 «거쳐서» 본다", () => {
+    /* LOTTEON-FINAL-06 2순위(CPO 결정, 2026-09-29) — 아래 ② 에 근거를 적었다. */
+    expect(codeOf(LOTTEON_CTX)).toContain('color: referenced("color", product.color)');
   });
 
   it("네이버 — 같은 필드를 보되 참조 대체를 «거쳐서» 본다", () => {
@@ -71,10 +72,43 @@ describe("🔴 ② 「상세페이지 참조」는 네이버 «만» 의 길이�
     expect(resolveNoticeFieldValue("color", { value: "", source: "ORIGINAL", confidence: 1 })).toBeUndefined();
   });
 
-  it("🔴 롯데ON 이 참조 경로를 «쓰지 않는다» — 열려면 CPO 결정이 먼저다", () => {
+  /* ══ 🔴 보류가 «풀렸다» — 기록을 남긴다 (LOTTEON-FINAL-06, 2026-09-29) ═══════
+     이 자리에는 「롯데ON 이 참조 경로를 쓰지 않는다 — 열려면 CPO 결정이 먼저다」가
+     있었다. 그 결정이 왔다:
+
+       「상품고시정보는 자동 처리 우선 — 기존의 '상품상세참조' 일괄 적용 기능을
+        재사용합니다. 입력값을 안전하게 추출할 수 없고 참조 처리가 허용되는
+        항목은 자동으로 상세페이지 참조를 적용합니다. 법적·규제상 임의 대체할 수
+        없는 항목은 별도 규칙을 유지합니다.」(CPO, 2026-09-29)
+
+     🔴 보류의 «근거» 는 아직 해소되지 않았다: 롯데ON 이 그 표기를 받아들이는지
+     실측한 적이 없다. 다만 대안이 「고시 항목을 통째로 빼고 등록」이었고 그것도
+     확인된 적이 없다 — CPO 가 둘 중 하나를 골랐고, 진위는 실제 CREATE 응답으로만
+     확인된다. 거절되면 응답 원문으로 되돌린다(추정으로 바꾸지 않는다).
+
+     🔴 가드를 «지우지 않고 뒤집는다». 열린 것은 화이트리스트뿐이고, 아래 두
+     검사가 그 경계를 계속 지킨다 — 쿠팡은 여전히 닫혀 있고, KC 는 영구 제외다. */
+  it("🔴 롯데ON 은 이제 공통 모듈을 «부른다» — 제 화이트리스트를 만들지 않는다", () => {
     const code = codeOf(LOTTEON_CTX);
-    expect(code).not.toContain("resolveNoticeFieldValue");
+    expect(code).toContain("resolveNoticeFieldValue");
+    /* 판정을 복제하지 않았다는 증거 — 롯데ON 쪽에 필드 목록이 없다. */
+    expect(code).not.toContain("NOTICE_REFERENCE_ELIGIBLE_FIELDS");
     expect(code).not.toContain("DETAIL_PAGE_REFERENCE_TEXT");
+  });
+
+  it("🔴 KC 는 그 길로 오지 않는다 — 화이트리스트에 영원히 없다", () => {
+    for (const key of ["certificationType", "childCertification"]) {
+      /* 타입에서도 막히지만, 문자열로 들어와도 대체되지 않는다는 것을 고정한다. */
+      expect(
+        resolveNoticeFieldValue(key as never, { value: "", source: "DETAIL_PAGE_REFERENCE", confidence: 1 }),
+      ).toBeUndefined();
+    }
+  });
+
+  it("🔴 원산지도 그 길이 아니다 — 법정 표시 항목이다", () => {
+    expect(
+      resolveNoticeFieldValue("countryOfOrigin" as never, { value: "", source: "DETAIL_PAGE_REFERENCE", confidence: 1 }),
+    ).toBeUndefined();
   });
 
   it("🔴 쿠팡도 아직 그 길을 쓰지 않는다 — 결정 기록이 없다", () => {

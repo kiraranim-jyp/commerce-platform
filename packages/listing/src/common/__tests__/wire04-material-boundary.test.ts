@@ -59,8 +59,9 @@ describe("① 고시 소재는 «단일 출처» 다 — Commerce 계층에 사�
     expect(codeOf(COUPANG)).toContain("material: product.material.value || undefined");
   });
 
-  it("롯데ON", () => {
-    expect(codeOf(LOTTEON_CTX)).toContain("material: product.material.value");
+  it("롯데ON — 이제 네이버처럼 참조 대체를 «거쳐서» 본다", () => {
+    /* LOTTEON-FINAL-06 2순위(CPO 결정, 2026-09-29) — 근거는 wire03 ② 에 있다. */
+    expect(codeOf(LOTTEON_CTX)).toContain('material: referenced("material", product.material)');
   });
 
   it("네이버 — 같은 필드를 참조 대체를 거쳐서 본다", () => {
@@ -82,8 +83,11 @@ describe("🔴 ② 「상세페이지 참조」는 네이버 «만» 의 길이�
     expect(resolveNoticeFieldValue("material", { value: "", source: "ORIGINAL", confidence: 1 })).toBeUndefined();
   });
 
-  it("🔴 롯데ON·쿠팡은 그 길을 쓰지 않는다", () => {
-    expect(codeOf(LOTTEON_CTX)).not.toContain("resolveNoticeFieldValue");
+  /* 🔴 LOTTEON-FINAL-06(CPO 결정, 2026-09-29) — 롯데ON 의 보류가 풀렸다.
+     결정 원문과 남은 미확인 사항은 wire03 ② 에 적었다(한 곳에만 적는다).
+     🔴 쿠팡은 «그대로 닫혀 있다» — 이번 결정은 롯데ON 에 대한 것이다. */
+  it("🔴 롯데ON 은 공통 모듈을 부르고, 쿠팡은 아직 그 길을 쓰지 않는다", () => {
+    expect(codeOf(LOTTEON_CTX)).toContain("resolveNoticeFieldValue");
     expect(codeOf(COUPANG)).not.toContain("resolveNoticeFieldValue");
   });
 });

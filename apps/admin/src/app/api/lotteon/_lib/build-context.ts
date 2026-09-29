@@ -10,8 +10,12 @@ import {
   type LotteOnProductInput,
   resolveLotteOnNotice,
   resolveCommonOrigin,
+  /* 🔴 LOTTEON-FINAL-06 2순위 — 「상세페이지 참조」 판정은 이미 있는 공통
+     모듈 하나가 한다. 롯데ON 이 제 기준을 새로 만들지 않는다. */
+  resolveNoticeFieldValue,
   type LotteOnNoticeResolution,
 } from "@commerce/listing";
+import type { ProvenanceField } from "@commerce/shared";
 import { getDefaultSellerProfile, type SellerProfile } from "../../coupang/_lib/seller-profile";
 import { SELLER_SETTINGS_UNAVAILABLE_MESSAGE, loadSellerSettings } from "@/lib/seller-settings";
 import { getDefaultDescriptionTemplate } from "../../coupang/_lib/description-template";
@@ -212,9 +216,30 @@ export async function buildLotteOnContext(
 
   /* 고시 항목을 «이미 가진 값» 으로 푼다. 값을 만들지는 않는다 —
      resolver 가 FILLED / NEEDS_INPUT / BLOCKED 를 구분해서 돌려준다. */
+  /* ══ LOTTEON-FINAL-06 2순위(CPO 지시, 2026-09-29) — 「상품 상세페이지 참조」 ══
+     공통 상품정보 탭의 「선택 N건 상세페이지 참조로 일괄 등록」은 **값을 비우고
+     `source` 만 `DETAIL_PAGE_REFERENCE` 로 바꾼다.** 그런데 롯데ON 은 여기서
+     `product.X.value` «만» 읽고 있어서, 셀러가 참조 처리를 한 칸이 롯데ON 에서는
+     그냥 «빈 값» 이었다 — 쿠팡·스마트스토어에서는 참조로 등록되는 같은 상품이
+     롯데ON 고시에서만 통째로 빠졌다(실측: 0020 색상 · 0410 소재 · 0070 제조사가
+     FILLED → NEEDS_INPUT 으로 후퇴).
+
+     🔴 **새 화이트리스트를 만들지 않는다.** 판정은 이미 있는 공통 모듈
+     (`packages/listing/src/notice/reference-eligibility.ts`) 한 곳에 있고,
+     여기서는 그것을 «부르기만» 한다. 두 곳에 두면 채널마다 기준이 갈라진다.
+
+     🔴 KC 는 이 길로 오지 않는다. `certificationType`/`childCertification` 은
+     화이트리스트에 «영구 제외» 돼 있고(N-3.45 STEP10), 롯데ON 고시 `0200` 은
+     별도 축(안전인증 3상태)이 닫는다 — 실제 인증 취득 여부를 모르는 채
+     「상세페이지 참조」로 얼버무리면 규제 위반이다.
+     🔴 원산지(`0060`)도 이 길이 아니다. 화이트리스트에 없고, 바로 아래
+     `resolveCommonOrigin` 사다리가 따로 본다. */
+  const referenced = (key: Parameters<typeof resolveNoticeFieldValue>[0], value: ProvenanceField<string>) =>
+    resolveNoticeFieldValue(key, value) ?? "";
+
   const noticeResolution = resolveLotteOnNotice(trimOrNull(form.noticeItemCode), {
-    color: product.color.value,
-    material: product.material.value,
+    color: referenced("color", product.color),
+    material: referenced("material", product.material),
     /* ══ COMMERCE-COMMON-WIRE-01 ══════════════════════════════════════════
        고시 「제조국」도 쿠팡·스마트스토어와 «같은 사다리» 를 본다. 여기만
        상품 값을 직접 읽고 있어서, 브랜드·판매자 기본값이 있어도 비었다.
@@ -231,8 +256,8 @@ export async function buildLotteOnContext(
     sizeValues: product.optionGroups
       .filter((group) => /size|사이즈/i.test(group.name))
       .flatMap((group) => group.values),
-    weight: product.weight.value,
-    careInstructions: product.careInstructions.value,
+    weight: referenced("weight", product.weight),
+    careInstructions: referenced("careInstructions", product.careInstructions),
     /* 🔴 상품의 제조사«만»이다. 공통 판매자 설정의 제조사 칸으로 폴백하지
        않는다 — 처음에 그렇게 썼다가 PIVOT NEXT-04c-2 가드에 잡혔다.
        판매 사업자를 제조사로 쓰지 않는다는 것은 이미 끝난 사안이고,
@@ -240,11 +265,11 @@ export async function buildLotteOnContext(
 
        🔴 그 칸 이름을 여기 «적지도» 않는다 — 가드가 소스를 문자열로 읽기
        때문에, 「쓰지 않는다」고 설명한 주석조차 사용으로 잡힌다(실제로 잡혔다). */
-    manufacturer: product.manufacturer.value,
-    importer: product.importer.value,
-    itemName: product.itemName.value,
-    modelName: product.modelName.value,
-    recommendedAge: product.recommendedAge.value,
+    manufacturer: referenced("manufacturer", product.manufacturer),
+    importer: referenced("importer", product.importer),
+    itemName: referenced("itemName", product.itemName),
+    modelName: referenced("modelName", product.modelName),
+    recommendedAge: referenced("recommendedAge", product.recommendedAge),
     kcCertificationNumber: product.childCertification.value?.certificationNumber ?? null,
     /* 🔴 LOTTEON-FINAL-05 #2 — 롯데ON 의 KC 문은 «둘» 이다(sftyAthnLst · 고시
        0200). 같은 신고를 resolver 에도 줘야 「대상 아님」을 고른 셀러가 뒤쪽

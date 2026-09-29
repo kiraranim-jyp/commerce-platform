@@ -324,3 +324,70 @@ describe("🔴 ⑤ 안전인증 신고가 라우트를 통과해 두 문에 다 
     expect(validation.fields.find((f) => f.field === "sftyAthnLst")?.code).toBe("SAFETY_DECLARATION_CONFLICT");
   });
 });
+
+/* ════════════════════════════════════════════════════════════════════════════
+   🔴 ⑥ LOTTEON-FINAL-06 2순위 — 「상품 상세페이지 참조」가 롯데ON 고시에 닿는가
+
+   공통 상품정보의 「선택 N건 상세페이지 참조로 일괄 등록」은 **값을 비우고
+   `source` 만 `DETAIL_PAGE_REFERENCE` 로 바꾼다.** 롯데ON 은 `product.X.value`
+   «만» 읽고 있어서 그 상태를 그냥 «빈 값» 으로 봤다 — 같은 상품이 쿠팡·
+   스마트스토어에서는 참조로 등록되는데 롯데ON 고시에서만 통째로 빠졌다.
+
+   🔴 화이트리스트를 여기서 다시 정하지 않는다. 판정은 공통 모듈
+   (`notice/reference-eligibility.ts`) 하나가 하고, 이 검사는 그 판정이 롯데ON
+   까지 «닿는지» 만 본다.
+   ═══════════════════════════════════════════════════════════════════════════ */
+describe("🔴 ⑥ 상세페이지 참조가 롯데ON 고시까지 닿는다", () => {
+  /** 일괄 참조 처리가 만든 모양 — 값은 비고 source 만 바뀐다. */
+  const referenced = () => ({ value: "", source: "DETAIL_PAGE_REFERENCE", confidence: 1 }) as never;
+  const allReferenced = () =>
+    product({
+      material: referenced(),
+      color: referenced(),
+      careInstructions: referenced(),
+      recommendedAge: referenced(),
+      itemName: referenced(),
+      modelName: referenced(),
+      weight: referenced(),
+      importer: referenced(),
+      manufacturer: referenced(),
+    });
+  const articleCodes = (payload: Record<string, unknown>) =>
+    (notice(payload).pdItmsArtlLst ?? []).map((a) => a.pdArtlCd);
+
+  it("참조 처리한 항목이 「상품 상세페이지 참조」로 실려 나간다", async () => {
+    const { payload } = await pipeline(allReferenced(), form({ originCode: "ES", safetyTarget: "EXCLUDED" }));
+    const articles = notice(payload).pdItmsArtlLst ?? [];
+    /* 색상(0020) · 소재(0410) · 제조자(0070) — 예전에는 셋 다 «빠졌다». */
+    for (const code of ["0020", "0410", "0070", "0210", "0790", "0800"]) {
+      expect(articles.find((a) => a.pdArtlCd === code)?.pdArtlCnts, `고시 ${code} 가 비었다`).toBe(
+        "상품 상세페이지 참조",
+      );
+    }
+  });
+
+  it("참조 처리 뒤 고시 항목 수가 «늘어난다» — 값이 있는 상품보다 적지 않다", async () => {
+    const { payload: referencedPayload } = await pipeline(
+      allReferenced(),
+      form({ originCode: "ES", safetyTarget: "EXCLUDED" }),
+    );
+    const { payload: plainPayload } = await pipeline(product(), form({ originCode: "ES", safetyTarget: "EXCLUDED" }));
+    expect(articleCodes(referencedPayload).length).toBeGreaterThan(articleCodes(plainPayload).length);
+  });
+
+  it("🔴 KC(0200)는 이 길로 오지 않는다 — 인증을 「상세페이지 참조」로 얼버무리지 않는다", async () => {
+    /* 인증 대상 여부를 «고르지 않은» 상태다. 참조 처리를 아무리 해도 0200 은
+       채워지면 안 된다 — 실제 인증 취득 여부를 우리가 알 수 없다(N-3.45 STEP10). */
+    const { payload } = await pipeline(allReferenced(), form({ originCode: "ES" }));
+    expect(articleCodes(payload)).not.toContain("0200");
+  });
+
+  it("🔴 원산지(0060)도 참조로 대체되지 않는다 — 법정 표시 항목이다", async () => {
+    const { payload } = await pipeline(
+      allReferenced(),
+      form({ originCode: "ES", safetyTarget: "EXCLUDED" }),
+    );
+    const origin = (notice(payload).pdItmsArtlLst ?? []).find((a) => a.pdArtlCd === "0060");
+    expect(origin?.pdArtlCnts).not.toBe("상품 상세페이지 참조");
+  });
+});

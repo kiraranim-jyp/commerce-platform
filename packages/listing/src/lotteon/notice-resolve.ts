@@ -245,13 +245,17 @@ function resolveOne(spec: LotteOnNoticeArticleSpec, facts: LotteOnNoticeFacts): 
       const importer = clean(facts.importer);
       if (!maker && !importer) return needsInput(spec, "상품정보·판매자 설정 어디에도 제조자/수입자가 없습니다.");
       /* 🔴 구분자 ` / ` 는 «우리가 정한 표기» 다. 공식 형식이 문서에 없다 —
-         문의에 넣어 두었다. 값 자체를 만들지는 않았다. */
-      return filled(spec, [maker, importer].filter(Boolean).join(" / "), "상품정보 · 제조사/수입사");
+         문의에 넣어 두었다. 값 자체를 만들지는 않았다.
+         🔴 LOTTEON-FINAL-06 — 같은 값이면 «한 번만» 적는다. 둘 다 「상품 상세페이지
+         참조」로 처리된 상품이 「상품 상세페이지 참조 / 상품 상세페이지 참조」로
+         나가고 있었다(중복은 우리가 만든 표기지 셀러가 적은 값이 아니다). */
+      return filled(spec, [...new Set([maker, importer].filter(Boolean))].join(" / "), "상품정보 · 제조사/수입사");
     }
     case "0210": {
       const item = clean(facts.itemName);
       const model = clean(facts.modelName);
-      if (item && model) return filled(spec, `${item} / ${model}`, "상품정보 · 품명, 모델명");
+      /* 🔴 LOTTEON-FINAL-06 — 0070 과 같은 규칙: 같은 값이면 한 번만 적는다. */
+      if (item && model) return filled(spec, [...new Set([item, model])].join(" / "), "상품정보 · 품명, 모델명");
       /* 🔴 상품코드(SKU)를 모델명으로 «간주하지 않는다». 상품명에서 잘라 만들지도
          않는다 — N-3.44 의 결론이고 CPO 가 다시 못박았다. */
       return needsInput(
