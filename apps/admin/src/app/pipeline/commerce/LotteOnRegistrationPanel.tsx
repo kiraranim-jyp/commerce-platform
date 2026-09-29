@@ -6,7 +6,12 @@ import type { CanonicalProduct, LotteOnChannelInfo, LotteOnSafetyTarget } from "
 import type { LotteOnNoticeResolution, LotteOnNoticeFill } from "@commerce/listing";
 /* 🔴 화이트리스트를 화면이 «다시 정하지» 않는다 — resolver 의 것을 그대로 읽는다.
    두 곳에 두면 화면과 판정이 갈라지고, 그 갈라짐이 STEP3-FIX 의 병이다. */
-import { isLotteOnSellerFillableArticle, autoPickLotteOnOriginCode } from "@commerce/listing";
+import {
+  isLotteOnSellerFillableArticle,
+  autoPickLotteOnOriginCode,
+  /* 🔴 참조 문구를 여기서 «만들지» 않는다 — 네이버·쿠팡이 쓰는 그 상수 그대로다. */
+  DETAIL_PAGE_REFERENCE_TEXT,
+} from "@commerce/listing";
 import { Button } from "@/components/ui/Button";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import {
@@ -1008,22 +1013,33 @@ export function LotteOnRegistrationPanel({
      않는다. 못 고르면 검증기가 「원산지코드가 지정되지 않았습니다」로 막고
      셀러가 고른다. 코드를 지어내는 길은 열지 않는다.
      🔴 셀러가 이미 고른 값은 «덮지 않는다». */
+  /* 🔴 LOTTEON-ORIGIN-02(CEO 실측 「원산지 선택은 아직이네」, 2026-09-30)
+     이 효과는 «시도하기도 전에» 다 했다고 표시하고 있었다(ref 대입이 맨 위였다).
+     그래서 공통코드 목록이 «상품 데이터보다 먼저» 오면 빈 원문으로 매칭하고
+     포기했고, ref 가 true 라 다시는 돌지 않았다 — 의존성에 원문도 없었다.
+       ① 「시도했다」 표시를 실제 시도 «뒤» 로 옮긴다
+       ② 원산지 원문을 의존성에 넣어 늦게 와도 그때 돈다
+     🔴 셀러가 이미 고른 값은 여전히 덮지 않는다. */
   const originAppliedRef = useRef(false);
+  const originText = product.countryOfOrigin?.value ?? "";
   useEffect(() => {
     if (originCodeList.loading || originAppliedRef.current) return;
     if (originCodeList.items.length === 0) return;
+    if (form.codes.originCode.trim()) {
+      originAppliedRef.current = true;
+      return;
+    }
+    if (!originText.trim()) return;
+    const picked = autoPickLotteOnOriginCode(originCodeList.items, originText);
     originAppliedRef.current = true;
-    if (form.codes.originCode.trim()) return;
-    const picked = autoPickLotteOnOriginCode(originCodeList.items, product.countryOfOrigin?.value);
     if (!picked) return;
     const next = { ...form, codes: { ...form.codes, originCode: picked.code } };
     setForm(next);
     onChannelInfoChange?.(toLotteOnChannelInfo(next));
     markFormChanged();
     void runValidation(next);
-    // 목록이 «처음 도착했을 때» 한 번만 돈다(originAppliedRef).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [originCodeList.items, originCodeList.loading]);
+  }, [originCodeList.items, originCodeList.loading, originText]);
 
   /**
    * REWORK-6 ②(CEO 판정, 2026-09-14) — **고른 경로가 달라도 반영 경로는 하나다.**
@@ -2070,6 +2086,26 @@ export function LotteOnRegistrationPanel({
                   value={form.notice.articleValues[fill.code] ?? ""}
                   onChange={(value) =>
                     patch("notice", { articleValues: { ...form.notice.articleValues, [fill.code]: value } })
+                  }
+                  belowInput={
+                    /* 🔴 LOTTEON-NOTICE-REFERENCE-01(CEO 지시, 2026-09-30) — 이 칸들은
+                       셀러만 아는 값이라 비면 등록이 막힌다. 그런데 상세페이지에 이미
+                       적어 둔 셀러에게는 같은 말을 또 치게 하는 일이다(쿠팡·스마트스토어
+                       에는 이미 그 길이 있다). 🔴 우리가 판정하지 않는다 — 셀러가 누른다.
+                       누르는 동작이므로 즉시 재검증한다(F-7 경계). */
+                    <ReferenceFillButton
+                      applied={form.notice.articleValues[fill.code] === DETAIL_PAGE_REFERENCE_TEXT}
+                      onApply={() =>
+                        pickAndRecheck("notice", {
+                          articleValues: { ...form.notice.articleValues, [fill.code]: DETAIL_PAGE_REFERENCE_TEXT },
+                        })
+                      }
+                      onClear={() =>
+                        pickAndRecheck("notice", {
+                          articleValues: { ...form.notice.articleValues, [fill.code]: "" },
+                        })
+                      }
+                    />
                   }
                 />
               ))}
@@ -3846,6 +3882,34 @@ function SafetyCertificationRows({
         인증 추가
       </Button>
     </div>
+  );
+}
+
+/**
+ * LOTTEON-NOTICE-REFERENCE-01 — 고시 한 칸을 「상품 상세페이지 참조」로 채우는 버튼.
+ *
+ * 🔴 문구를 만들지 않는다. `DETAIL_PAGE_REFERENCE_TEXT` 는 네이버가 쓰는 관용구이고
+ * 쿠팡·스마트스토어가 이미 같은 자리에서 쓴다 — 롯데ON 전용 표기를 새로 만들면
+ * 같은 사실이 채널마다 다른 문장이 된다.
+ * 🔴 되돌릴 수 있어야 한다. 잘못 누른 셀러가 직접 칠 수 있게 «해제» 를 같이 둔다.
+ */
+function ReferenceFillButton({
+  applied,
+  onApply,
+  onClear,
+}: {
+  applied: boolean;
+  onApply: () => void;
+  onClear: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={applied ? onClear : onApply}
+      className="rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-text-secondary transition-colors hover:bg-background"
+    >
+      {applied ? "상세페이지 참조 해제" : "상품 상세페이지 참조로 넣기"}
+    </button>
   );
 }
 
