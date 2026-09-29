@@ -69,12 +69,52 @@ const LATIN_COUNTRY_NAME_KO: Record<string, string> = {
   usa: "미국",
 };
 
-/** 이름 후보를 만든다 — 원문 그대로, 그리고 영문이면 한국어 표기까지. */
+/**
+ * 🔴 LOTTEON-FINAL-03 A — Production 에서 «여기서» 끊겼다.
+ *
+ * 순수 함수도 DOM 도 PASS 였는데 실제 상품에서 원산지가 비었다. 원인은 매칭이
+ * 아니라 **입력의 모양** 이었다 — 상품 원문은 `"스페인"` 이 아니라
+ * **`"Made in Spain"`** 처럼 «문장» 으로 온다(`resolveCommonOrigin` 은 원문을
+ * 그대로 통과시킨다. 정규화하는 곳이 없다).
+ *
+ * 🔴 네이버가 안 터진 이유: 네이버는 못 맞추면 `OTHER_MANUAL`(코드 04 = 기타)로
+ * 조용히 떨어진다. 롯데ON 에는 그런 폴백이 없어서 «빈 값» 이 된다.
+ *
+ * 그래서 붙이는 것은 «라벨 제거» 뿐이다. 나라 이름을 추측하지 않는다 —
+ * 벗겨낸 나머지를 여전히 «정확 일치» 로만 본다. 못 맞추면 그대로 null 이다.
+ */
+const ORIGIN_LABEL_PATTERNS: RegExp[] = [
+  /^made\s+in\s+/i,
+  /^manufactured\s+in\s+/i,
+  /^origin\s*[:：]\s*/i,
+  /^(?:원산지|제조국|생산지)\s*[:：]?\s*/,
+];
+
+/** 라벨을 벗긴다. 벗길 것이 없으면 원문 그대로다. */
+function stripOriginLabel(value: string): string {
+  let out = value;
+  for (const pattern of ORIGIN_LABEL_PATTERNS) out = out.replace(pattern, "");
+  /* 꼬리의 마침표·쉼표만 떼어 낸다. 🔴 국가명 안의 글자는 건드리지 않는다. */
+  return normalize(out.replace(/[.,·]+$/, ""));
+}
+
+/** 이름 후보를 만든다 — 원문 · 라벨 벗긴 값 · 영문이면 한국어 표기. */
 function candidateNames(originText: string): string[] {
   const raw = normalize(originText);
   if (!raw) return [];
-  const ko = LATIN_COUNTRY_NAME_KO[raw.toLowerCase()];
-  return ko ? [raw, ko] : [raw];
+  const names: string[] = [];
+  const push = (value: string) => {
+    if (value && !names.includes(value)) names.push(value);
+  };
+  /* 🔴 원문을 «먼저» 본다 — 목록에 그 표기가 그대로 있으면 벗길 이유가 없다. */
+  push(raw);
+  const stripped = stripOriginLabel(raw);
+  push(stripped);
+  for (const name of [raw, stripped]) {
+    const ko = LATIN_COUNTRY_NAME_KO[name.toLowerCase()];
+    if (ko) push(ko);
+  }
+  return names;
 }
 
 /**

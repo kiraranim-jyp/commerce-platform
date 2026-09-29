@@ -67,3 +67,29 @@ describe("🔴🔴 ② 틀리게 고르느니 «고르지 않는다»", () => {
     expect(autoPickLotteOnOriginCode(ITEMS, "OPLC_CD")).toBeNull();
   });
 });
+
+/* ══ LOTTEON-FINAL-03 A — 🔴 Production 이 «여기서» 끊겼다 ═══════════════════
+   순수 함수도 DOM 도 PASS 였는데 실제 상품에서 원산지가 비었다. 테스트가 전부
+   `"스페인"` 같은 «깨끗한 국가명» 만 먹였기 때문이다. 실제 원문은 문장이다. */
+describe("🔴 ③ 실제 원문은 «문장» 으로 온다", () => {
+  it("Made in Spain 을 맞춘다 — 실제 상품 페이지의 표기다", () => {
+    expect(autoPickLotteOnOriginCode(ITEMS, "Made in Spain")?.code).toBe("ES");
+    expect(autoPickLotteOnOriginCode(ITEMS, "MADE IN SPAIN")?.code).toBe("ES");
+    expect(autoPickLotteOnOriginCode(ITEMS, "Made in Spain.")?.code).toBe("ES");
+  });
+
+  it("한국어 라벨도 벗긴다", () => {
+    expect(autoPickLotteOnOriginCode(ITEMS, "원산지: 스페인")?.code).toBe("ES");
+    expect(autoPickLotteOnOriginCode(ITEMS, "제조국 스페인")?.code).toBe("ES");
+  });
+
+  it("🔴 라벨을 벗겨도 «정확 일치» 다 — 나라 이름을 추측하지 않는다", () => {
+    expect(autoPickLotteOnOriginCode(ITEMS, "Made in Spain and Portugal")).toBeNull();
+    expect(autoPickLotteOnOriginCode(ITEMS, "Made in Andorra")).toBeNull();
+  });
+
+  it("🔴 목록에 원문 표기가 «그대로» 있으면 그것이 이긴다", () => {
+    const listed = [{ code: "ZZ", name: "Made in Spain" }, { code: "ES", name: "스페인" }];
+    expect(autoPickLotteOnOriginCode(listed, "Made in Spain")?.code).toBe("ZZ");
+  });
+});
