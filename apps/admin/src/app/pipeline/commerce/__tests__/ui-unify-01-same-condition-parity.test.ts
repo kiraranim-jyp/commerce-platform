@@ -335,6 +335,47 @@ describe("UI-UNIFY-01 C ③ 🔴 지원 범위를 «부풀리지» 않는다", (
   });
 });
 
+describe("UI-UNIFY-01 C ③-B 🔴 «등록된» 상품 상태 — 카드가 겹치지 않는다 (CPO 3항)", () => {
+  /* 지금까지의 단언은 전부 «미등록» 상태였다. 실제로 상품이 등록돼 있으면
+     CommerceWorkspace 가 `editSummary`(진짜 수정 요약)를 내려준다 — 그때 폴백
+     카드 둘이 «함께» 서면 「등록된 상품 수정」 머리글이 화면에 두 번 뜬다. */
+  function withEditSummary(platform: PlatformId): ReactElement {
+    const product = makeProduct();
+    return createElement(PlatformPreview, {
+      manufacturerResolution: manufacturerFixture(),
+      product,
+      listing: PLATFORM_ADAPTERS[platform].toListingModel(product, UNRESOLVED_CATEGORY, undefined, platform),
+      categoryCandidates: [],
+      listingStatus: "DRAFT" as const,
+      listingResult: null,
+      /* 실제 수정 요약이 있는 상태를 흉내낸다 — 모양이 아니라 «자리» 가 요점이다. */
+      editSummary: createElement("div", { "data-summary": "channel-edit-real" }, "등록된 상품 수정"),
+      onUpdateField: () => {},
+      onSelectCategory: () => {},
+      onOpenListingModal: () => {},
+      onRetryListing: () => {},
+      developerMode: false,
+    } as never);
+  }
+
+  it.each(["smartstore", "coupang"] as const)("%s — 수정 요약이 있으면 폴백 카드가 «서지 않는다»", async (platform) => {
+    const { right } = columnsOf(await mount(withEditSummary(platform)));
+    expect(right.querySelector('[data-summary="channel-edit-real"]'), "수정 요약이 서지 않았다").toBeTruthy();
+    const fallbacks = right.querySelectorAll(
+      '[data-summary="channel-edit-scope"], [data-summary="channel-edit-unavailable"]',
+    );
+    expect(fallbacks.length, `${platform}: 수정 요약과 폴백 카드가 «같이» 섰다`).toBe(0);
+  });
+
+  it("🔴 「등록된 상품 수정」 머리글이 화면에 두 번 뜨지 않는다", async () => {
+    for (const platform of ["smartstore", "coupang"] as const) {
+      const { right } = columnsOf(await mount(withEditSummary(platform)));
+      const count = (clean(right.textContent ?? "").match(/등록된 상품 수정/g) ?? []).length;
+      expect(count, `${platform}: 같은 머리글이 ${count}번 떴다`).toBe(1);
+    }
+  });
+});
+
 describe("UI-UNIFY-01 C ④ 🔴 «상태 차이» 를 구조 결함으로 읽지 않는다", () => {
   /* 조사 중 두 번 오인했다: 검증 전 롯데ON 에 「남은 항목」이 없는 것과,
      readiness 미계산 스마트스토어에 이동 버튼이 없는 것. 둘 다 정상이다. */
