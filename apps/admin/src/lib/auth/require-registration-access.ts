@@ -172,6 +172,18 @@ export async function requireRegistrationAccess(
        워크스페이스 id 를 알 방법이 없으면 환경변수를 «고칠 수도» 없다. 실제로
        이 분기가 스마트스토어·쿠팡을 동시에 막았는데, 화면에 「권한이 없습니다」만
        떠서 무엇을 넣어야 하는지 알 수 없었다. 남의 값이 아니라 자기 값이다. */
+    /* 🔴 그리고 «런타임 로그에도» 남긴다. 이 줄이 있어야 CTO 가 환경변수를
+       고칠 수 있다 — 값은 Encrypted 라 읽을 수 없고, DB 도 볼 수 없어서
+       넣어야 할 ID 를 알 길이 지금 이것뿐이다(`npx vercel logs`).
+       그래서 CEO 는 «평소처럼 등록을 한 번 누르기만» 하면 되고, 화면의 값을
+       옮겨 적거나 개발자 도구를 열 필요가 없다.
+
+       🔴 비밀값이 아니다. 워크스페이스 ID 는 자격증명이 아니고, 바로 위에서
+       이미 호출자 «자신에게» 응답으로 돌려주는 값이다. 허용 목록은 개수만
+       적는다 — 「비어 있는가 / 안 맞는가」를 가르는 데 그것으로 충분하다. */
+    console.warn(
+      `[registration-access] WORKSPACE_NOT_ALLOWED workspaceId=${auth.user.workspaceId} allowedCount=${ownerWorkspaceIds.length}`,
+    );
     return deny(
       "이 워크스페이스에는 커머스 등록 권한이 없습니다. 등록에 사용되는 판매자 계정·배송 프로필은 아직 워크스페이스별로 분리되어 있지 않습니다.",
       403,
