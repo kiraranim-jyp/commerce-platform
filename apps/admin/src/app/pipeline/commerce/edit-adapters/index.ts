@@ -84,15 +84,35 @@ export function editSupportedScope(commerceId: CommerceId): { status: string; no
   if (scope.editable.length === 0) return undefined;
 
   const editable = scope.editable.map((field) => FIELD_LABEL[field]);
-  const blocked = [...scope.recreateOnly, ...scope.unknown].map((field) => FIELD_LABEL[field]);
+  const recreateOnly = scope.recreateOnly.map((field) => FIELD_LABEL[field]);
+  const unknown = scope.unknown.map((field) => FIELD_LABEL[field]);
 
   /* 🔴 「전 항목」이라고 말할 수 있는 것은 막힌 축이 «하나도» 없을 때뿐이다. */
-  const status = blocked.length === 0 ? "전 항목 수정 가능" : `${editable.join(" · ")} 수정 가능`;
-  const note =
-    blocked.length === 0
-      ? "등록된 상품을 이 화면에서 수정할 수 있습니다."
-      : /* 🔴 나머지를 「불가」로 적지 않는다 — 확인되지 «않은» 것이다(고정 어휘). */
-        `나머지 항목(${blocked.join(" · ")})은 이 커머스에서 수정할 수 있는지 아직 확인되지 않았습니다.`;
+  const status =
+    recreateOnly.length === 0 && unknown.length === 0
+      ? "전 항목 수정 가능"
+      : `${editable.join(" · ")} 수정 가능`;
+
+  /* ══ 🔴 UI-UNIFY-01 A 후속(CPO 1항, 2026-09-30) ═════════════════════════════
+     처음엔 `recreateOnly` 와 `unknown` 을 한 덩어리로 묶어 「확인되지 않았습니다」로
+     적었다. **그것은 아는 것을 모른다고 적는 것이다.**
+
+       RECREATE_ONLY   알려진 제약이다 — 수정으로는 못 바꾸고 새로 등록해야 한다
+       UNKNOWN         우리가 재 본 적이 없다
+
+     스마트스토어의 카테고리가 정확히 RECREATE_ONLY 인데(`categoryUpdate: UNKNOWN`
+     이라 `fieldCapability` 가 RECREATE_ONLY 로 내린다), 그것을 「확인되지 않았다」로
+     적으면 셀러는 «언젠가 될 수도 있는 것» 으로 읽는다. 둘을 갈라 적는다.
+     🔴 문구는 `fieldCapabilityNote()` 가 쓰는 어휘를 그대로 따른다 — 같은 사실이
+     두 목소리로 갈라지지 않게. */
+  const clauses: string[] = [];
+  if (recreateOnly.length > 0) {
+    clauses.push(`${recreateOnly.join(" · ")}은(는) 수정으로 바꿀 수 없어 새 상품으로 다시 등록해야 합니다.`);
+  }
+  if (unknown.length > 0) {
+    clauses.push(`${unknown.join(" · ")}은(는) 이 커머스에서 수정할 수 있는지 아직 확인되지 않았습니다.`);
+  }
+  const note = clauses.length === 0 ? "등록된 상품을 이 화면에서 수정할 수 있습니다." : clauses.join(" ");
   return { status, note };
 }
 

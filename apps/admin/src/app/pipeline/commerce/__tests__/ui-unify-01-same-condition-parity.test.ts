@@ -10,6 +10,7 @@ import { LotteOnRegistrationPanel } from "../LotteOnRegistrationPanel";
 import { PlatformPreview } from "../PlatformPreview";
 import { manufacturerFixture } from "./manufacturer-fixture";
 import { editSupportedScope, editUnavailableNote } from "../edit-adapters";
+import { channelEditScope, FIELD_LABEL } from "../channel-field-capability";
 import { LOTTEON_COMMERCE_ID } from "../commerce-registry";
 
 /**
@@ -292,10 +293,40 @@ describe("UI-UNIFY-01 C ③ 🔴 지원 범위를 «부풀리지» 않는다", (
     expect(scope!.note).toContain("확인되지 않았습니다");
   });
 
-  it("스마트스토어는 막힌 축이 없을 때만 「전 항목」이라고 말한다", () => {
+  /* ══ 🔴 CPO 1항(2026-09-30) — 「전 항목 수정 가능」이 사실인지 «재라» ═══════
+     처음 이 자리의 단언은 `status === "전 항목" || status.includes("수정 가능")`
+     이었다 — **어느 쪽이든 통과하는 빈 단언** 이라, 내가 보고서에 「스마트스토어 =
+     전 항목 수정 가능」이라고 «틀리게» 적는 것을 막지 못했다. 사실이 아니다:
+     `categoryUpdate: "UNKNOWN"` 이라 `fieldCapability` 가 카테고리를 RECREATE_ONLY
+     로 내린다. 막힌 축이 하나라도 있으면 「전 항목」은 거짓이다. */
+  it("🔴 스마트스토어 — 카테고리가 막혀 있으므로 「전 항목」이라고 말하지 «않는다»", () => {
     const scope = editSupportedScope("smartstore");
     expect(scope).toBeDefined();
-    expect(scope!.status === "전 항목 수정 가능" || scope!.status.includes("수정 가능")).toBe(true);
+    expect(scope!.status, "막힌 축이 있는데 «전 항목» 이라고 말한다").not.toBe("전 항목 수정 가능");
+    expect(scope!.status).toContain("수정 가능");
+  });
+
+  it("🔴 RECREATE_ONLY 를 「확인되지 않았다」로 뭉개지 않는다 — 아는 것을 모른다고 적지 않는다", () => {
+    const scope = editSupportedScope("smartstore")!;
+    /* 카테고리는 «알려진 제약» 이다. 「확인되지 않았습니다」로 적으면 셀러는
+       언젠가 될 수도 있는 것으로 읽는다. */
+    expect(scope.note).toContain("카테고리");
+    expect(scope.note).toContain("새 상품으로 다시 등록");
+  });
+
+  it("🔴 화면 문구가 capability 표와 «축 단위로» 일치한다 — 한쪽만 늘면 과장이다", () => {
+    for (const id of ["smartstore", "coupang"] as const) {
+      const scope = editSupportedScope(id)!;
+      const table = channelEditScope(id);
+      if (scope.status === "전 항목 수정 가능") {
+        expect(table.recreateOnly.length + table.unknown.length, `${id}: 막힌 축이 있는데 전 항목이라 말한다`).toBe(0);
+        continue;
+      }
+      const named = scope.status.replace(" 수정 가능", "").split(" · ").filter(Boolean);
+      expect(named, `${id}: 화면이 말한 수정 가능 축이 capability 와 다르다`).toEqual(
+        table.editable.map((f) => FIELD_LABEL[f]),
+      );
+    }
   });
 
   it("🔴 롯데ON 은 UNKNOWN 이다 — 지원 범위를 말하지 않고, 기존 카드가 «확인되지 않음» 을 말한다", () => {
