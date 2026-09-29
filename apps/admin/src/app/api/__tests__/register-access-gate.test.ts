@@ -23,6 +23,8 @@ const hoisted = vi.hoisted(() => ({
   calls: [] as string[],
   /** product_snapshots.workspace_id 로 돌려줄 값. undefined면 행이 없는 것. */
   snapshotWorkspaceId: undefined as string | null | undefined,
+  /** registration_attempts 에 실제로 «들어간 행». 무엇이 기록되는지 재려면 필요하다. */
+  rows: [] as Record<string, unknown>[],
 }));
 
 vi.mock("@/lib/auth/require-user", async () => {
@@ -56,8 +58,9 @@ vi.mock("@/lib/supabase-admin", () => ({
         }),
       }),
       // registration_attempts 기록용 — 게이트가 막으면 여기까지 오지 않는다.
-      insert: async () => {
+      insert: async (row: Record<string, unknown>) => {
         hoisted.calls.push(`insert:${table}`);
+        hoisted.rows.push(row);
         return { error: null };
       },
     }),
@@ -129,6 +132,7 @@ beforeEach(() => {
   hoisted.authOk = true;
   hoisted.workspaceId = OWNER_WS;
   hoisted.calls = [];
+  hoisted.rows = [];
   hoisted.snapshotWorkspaceId = undefined;
 });
 
@@ -178,6 +182,14 @@ describe("다른 workspace → 403, 그리고 자격증명에 닿지 않는다",
       const res = await POST(post(`http://localhost/api/${channel.name}/register`, channel.body));
       expect(res.status).toBe(403);
       expect(credentialCalls(), "다른 워크스페이스인데 전역 자격증명을 조회했다").toEqual([]);
+      /* 🔴 COMMERCE-LIFECYCLE-FINAL-03 — 허용 목록이 어긋났을 때 복구에 필요한
+         값은 «호출자 자신의» workspaceId 하나다. 런타임 로그에만 두면 로그가
+         회전하면서 사라진다(실측). 그래서 이력에도 남는다. */
+      const denial = hoisted.rows.find((row) => String(row.error_code ?? "").includes("WORKSPACE_NOT_ALLOWED"));
+      expect(denial, "거절 행을 찾지 못했다").toBeDefined();
+      expect((denial!.response as { deniedWorkspaceId?: string } | undefined)?.deniedWorkspaceId).toBe(OTHER_WS);
+      /* 🔴 자격증명은 «절대» 실리지 않는다. */
+      expect(JSON.stringify(denial)).not.toMatch(/token|secret|key/i);
       /* 🔴 그리고 «거절은 보인다» — 이력에 남지 않던 것이 이번 장애의 본체다. */
       expect(hoisted.calls, "거절이 등록이력에 남지 않았다").toContain(AUDIT_CALL);
     });

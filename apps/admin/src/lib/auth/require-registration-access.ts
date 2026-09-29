@@ -55,8 +55,13 @@ export type RegistrationAccessResult =
  *
  * 🔴 판정을 바꾸지 않는다. fail-closed 도 그대로다. 바뀌는 것은 «흔적을 남기는
  * 가» 하나뿐이다.
- * 🔴 비밀값을 적지 않는다. 남기는 것은 단계 코드와 채널뿐이고, 워크스페이스
- * ID·토큰·자격증명은 이력에 쓰지 않는다.
+ * 🔴 비밀값을 적지 않는다. 토큰·자격증명은 이력에 «절대» 쓰지 않는다.
+ *
+ * 🔴 COMMERCE-LIFECYCLE-FINAL-03 에서 «워크스페이스 ID 하나» 는 예외가 됐다.
+ * 허용 목록이 어긋났을 때 복구에 필요한 유일한 값인데 런타임 로그에만 있었고,
+ * **로그는 회전한다**(며칠 지난 배포의 로그가 비어 있는 것을 실측했다). 그러면
+ * 막힌 사실은 남는데 「무엇을 허용해야 하는지」는 다시 사라진다. 자격증명이
+ * 아니고, 같은 요청의 403 응답으로 이미 호출자에게 돌려주는 값이다.
  */
 export type RegistrationAccessDenialCode =
   | "UNAUTHENTICATED"
@@ -72,6 +77,19 @@ async function recordDenial(
   platform: string | undefined,
   snapshotId: string | null,
   code: RegistrationAccessDenialCode,
+  /**
+   * 🔴 COMMERCE-LIFECYCLE-FINAL-03 P0 — 거절된 «호출자 자신의» 워크스페이스 ID.
+   *
+   * 왜 이력에까지 적는가: 허용 목록이 어긋나면 그 ID 가 복구에 필요한 유일한
+   * 값인데 지금은 런타임 로그에만 있다. **로그는 회전한다** — 며칠 지난 배포의
+   * 로그가 비어 있는 것을 실제로 확인했다. 그러면 막힌 사실은 남는데 «무엇을
+   * 허용해야 하는지» 는 다시 사라진다.
+   *
+   * 🔴 비밀값이 아니다. 자격증명이 아니고, 같은 요청의 403 응답 본문으로 이미
+   * 호출자에게 돌려주는 값이며, 이 표는 워크스페이스 내부 감사 기록이다.
+   * 🔴 토큰·키는 «절대» 여기 넣지 않는다.
+   */
+  deniedWorkspaceId?: string | null,
 ): Promise<void> {
   /* 기록할 채널을 모르면(읽기 전용 라우트 등) 남기지 않는다 — 등록 «시도» 가
      아닌 것을 등록이력에 넣지 않는다. */
@@ -83,10 +101,12 @@ async function recordDenial(
     status: "FAILED",
     error_code: `${ACCESS_DENIED_ERROR_PREFIX}${code}`,
     snapshot_id: snapshotId ?? null,
+    /* 기존 라우트가 외부 응답 원문을 싣는 바로 그 칸이다 — 새 컬럼을 만들지 않는다. */
+    ...(deniedWorkspaceId ? { response: { deniedWorkspaceId } } : {}),
   };
   /* 등록 라우트의 logRegistrationAttempt 와 같은 규약 — 컬럼이 없는 환경에서도
      «기록 자체» 가 실패하지 않게 새 컬럼부터 포기한다. */
-  for (const optional of ["snapshot_id", null]) {
+  for (const optional of ["response", "snapshot_id", null]) {
     const { error } = await supabase.from("registration_attempts").insert(row);
     if (!error) return;
     /* 🔴 조용히 삼키지 않는다 — 이력이 비는 두 번째 경로가 바로 이 자리다. */
@@ -100,10 +120,10 @@ async function deny(
   message: string,
   status: 401 | 403,
   code: RegistrationAccessDenialCode,
-  context: { platform?: string; snapshotId: string | null },
+  context: { platform?: string; snapshotId: string | null; workspaceId?: string | null },
   extra?: Record<string, unknown>,
 ) {
-  await recordDenial(context.platform, context.snapshotId, code);
+  await recordDenial(context.platform, context.snapshotId, code, context.workspaceId);
   return {
     ok: false as const,
     response: NextResponse.json({ ok: false, error: message, errorCode: code, ...extra }, { status }),
@@ -141,7 +161,12 @@ export async function requireRegistrationAccess(
    */
   options?: { platform?: string },
 ): Promise<RegistrationAccessResult> {
-  const context = { platform: options?.platform, snapshotId };
+  /* 🔴 `workspaceId` 는 인증 «뒤» 에만 채워진다 — 미인증 요청의 것은 적을 수 없고
+     적어서도 안 된다(그 경로는 애초에 기록하지 않는다). */
+  let context: { platform?: string; snapshotId: string | null; workspaceId?: string | null } = {
+    platform: options?.platform,
+    snapshotId,
+  };
   const auth = await requireUser();
   /* 🔴 미인증은 «기록하지 않는다». 기록하면 로그인하지 않은 호출자가
      registration_attempts 에 행을 넣는 경로가 생긴다 — 이력을 보이게 하려다
@@ -149,6 +174,7 @@ export async function requireRegistrationAccess(
      보이고(로그인 화면으로 간다), 셀러가 「등록이 안 되는데 이유를 모르는」
      상태가 아니다. */
   if (!auth.ok) return auth;
+  context = { ...context, workspaceId: auth.user.workspaceId };
 
   // ── 2) 자격증명 소유 워크스페이스 ──────────────────────────────────────
   const ownerWorkspaceIds = readOwnerWorkspaceIds();
