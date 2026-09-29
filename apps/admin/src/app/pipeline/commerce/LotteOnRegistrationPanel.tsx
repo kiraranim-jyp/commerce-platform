@@ -6,7 +6,7 @@ import type { CanonicalProduct, LotteOnChannelInfo } from "@commerce/shared";
 import type { LotteOnNoticeResolution, LotteOnNoticeFill } from "@commerce/listing";
 /* 🔴 화이트리스트를 화면이 «다시 정하지» 않는다 — resolver 의 것을 그대로 읽는다.
    두 곳에 두면 화면과 판정이 갈라지고, 그 갈라짐이 STEP3-FIX 의 병이다. */
-import { isLotteOnSellerFillableArticle } from "@commerce/listing";
+import { isLotteOnSellerFillableArticle, autoPickLotteOnOriginCode } from "@commerce/listing";
 import { Button } from "@/components/ui/Button";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import {
@@ -943,6 +943,32 @@ export function LotteOnRegistrationPanel({
     // 처음 도착했을 때 딱 한 번만 돈다(deliveryAppliedRef).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deliverySettings.data]);
+
+  /* ══ LOTTEON-FINAL-02 P0 — 원산지코드 자동 선택 ═══════════════════════════
+     실제 LotteON 등록이 이 필드에서 막혔다. 원산지는 «이미 갖고 있는» 값인데
+     239개 목록에서 셀러가 손으로 고르게 했다(같은 값이 쿠팡·네이버에는 그대로
+     나간다). CPO 확정(2026-09-29): 기존 목록과 기존 값을 재사용해 정확 매칭만 한다.
+
+     🔴 배송 autopick 과 «같은 규칙» 이다 — 확실할 때만 고르고, 애매하면 고르지
+     않는다. 못 고르면 검증기가 「원산지코드가 지정되지 않았습니다」로 막고
+     셀러가 고른다. 코드를 지어내는 길은 열지 않는다.
+     🔴 셀러가 이미 고른 값은 «덮지 않는다». */
+  const originAppliedRef = useRef(false);
+  useEffect(() => {
+    if (originCodeList.loading || originAppliedRef.current) return;
+    if (originCodeList.items.length === 0) return;
+    originAppliedRef.current = true;
+    if (form.codes.originCode.trim()) return;
+    const picked = autoPickLotteOnOriginCode(originCodeList.items, product.countryOfOrigin?.value);
+    if (!picked) return;
+    const next = { ...form, codes: { ...form.codes, originCode: picked.code } };
+    setForm(next);
+    onChannelInfoChange?.(toLotteOnChannelInfo(next));
+    markFormChanged();
+    void runValidation(next);
+    // 목록이 «처음 도착했을 때» 한 번만 돈다(originAppliedRef).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [originCodeList.items, originCodeList.loading]);
 
   /**
    * REWORK-6 ②(CEO 판정, 2026-09-14) — **고른 경로가 달라도 반영 경로는 하나다.**
