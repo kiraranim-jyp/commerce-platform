@@ -5,10 +5,13 @@ import { getSupabaseAdmin } from "./supabase-admin";
  * TTAEJYO-PIVOT-03 — 판매자 «공통» 설정 Resolver
  * ════════════════════════════════════════════════════════════════════════════
  *
- * 이 다섯 값은 상품이 바뀌어도 그대로다. 채널과도 무관하다.
+ * 이 여섯 값은 상품이 바뀌어도 그대로다. 채널과도 무관하다.
  *
- *     manufacturer · asContactNumber · qualityGuarantee
+ *     manufacturer · asContactNumber · asCompanyName · qualityGuarantee
  *     · kcExemptionText · defaultCountryOfOrigin
+ *
+ * 🔴 `asCompanyName` 은 068 이 나중에 더했다 — 롯데ON 고시가 A/S 를 「업체명과
+ * 전화번호 «모두»」로 묻기 때문이다. 059 가 꺼낸 것은 그 아래 다섯이다.
  *
  * 그런데 지금까지 `coupang_seller_profiles` 에 살았다. 그 표는 이름 그대로
  * «배송 프로필» 이고 여러 개를 갖는다(name + is_default). 그래서 셀러가 배송
@@ -38,6 +41,15 @@ export interface SellerSettings {
   manufacturer: string | null;
   /** A/S 연락처. 비면 호출부가 반품지 연락처를 대신 쓴다(기존 동작 그대로). */
   asContactNumber: string | null;
+  /**
+   * A/S 를 «책임지는 업체» 의 이름. `asContactNumber` 와 한 쌍이다.
+   *
+   * 🔴 `manufacturer` 로 대신하지 «않는다»(CPO 명시). 의미상 가깝고 실제로 같은
+   * 문자열일 수도 있지만, 「제조자 자격」과 「A/S 를 책임지는 업체」는 다른
+   * 사실이다. 롯데ON 고시 품목 23 항목 `0090` 이 「업체명과 전화번호를 «모두»」를
+   * 요구해서 생겼다.
+   */
+  asCompanyName: string | null;
   qualityGuarantee: string | null;
   kcExemptionText: string | null;
   /** 상품에서 원산지를 «못 찾았을 때만» 쓰는 기본값. */
@@ -47,6 +59,7 @@ export interface SellerSettings {
 export const EMPTY_SELLER_SETTINGS: SellerSettings = {
   manufacturer: null,
   asContactNumber: null,
+  asCompanyName: null,
   qualityGuarantee: null,
   kcExemptionText: null,
   defaultCountryOfOrigin: null,
@@ -73,7 +86,7 @@ export interface ResolvedSellerSettings extends SellerSettings {
   /**
    * 🔴 「읽지 못했다」는 뜻이다. 「값이 없다」가 아니다.
    *
-   * true 면 다섯 칸은 전부 null 이지만 그건 «모른다» 는 뜻이지 «비었다» 는
+   * true 면 여섯 칸은 전부 null 이지만 그건 «모른다» 는 뜻이지 «비었다» 는
    * 뜻이 아니다. 등록 경로는 이 값을 보고 «멈춰야» 한다 — 값이 비었다고
    * 멈추는 것이 아니다(그건 채널별 completeness 정책이고 다른 문제다).
    */
@@ -86,12 +99,27 @@ type LoadOutcome =
   | { status: "NOT_FOUND" }
   | { status: "ERROR"; reason: string };
 
+/**
+ * 🔴 `as_company_name` 은 migration 068 이 «나중에» 만든다(CEO 가 Supabase 에서
+ * 실행한다). 그래서 이 목록으로 읽다가 컬럼이 없으면 실패할 수 있고, 그러면
+ * 판매자 설정 전체가 안 읽혀 **지금 유일하게 동작하는 쿠팡 실등록 경로가 막힌다.**
+ * 아래 `LEGACY_COLUMNS` 로 한 번 더 읽어 그 창을 없앤다.
+ */
 const COLUMNS =
+  "manufacturer, as_contact_number, as_company_name, quality_guarantee, kc_exemption_text, default_country_of_origin";
+
+/** migration 068 «이전» 의 목록. 🔴 컬럼이 생기면 이 경로는 다시는 쓰이지 않는다. */
+const LEGACY_COLUMNS =
   "manufacturer, as_contact_number, quality_guarantee, kc_exemption_text, default_country_of_origin";
+
+/** PostgreSQL 「undefined_column」. 이것만 구 목록으로 되돌린다 — 다른 오류는 그대로 올린다. */
+const UNDEFINED_COLUMN = "42703";
 
 interface Row {
   manufacturer: string | null;
   as_contact_number: string | null;
+  /** 🔴 migration 전에는 «키 자체가 없다». `undefined` 를 null 로 눕혀서 읽는다. */
+  as_company_name?: string | null;
   quality_guarantee: string | null;
   kc_exemption_text: string | null;
   default_country_of_origin: string | null;
@@ -100,6 +128,7 @@ interface Row {
 const fromRow = (row: Row): SellerSettings => ({
   manufacturer: row.manufacturer,
   asContactNumber: row.as_contact_number,
+  asCompanyName: row.as_company_name ?? null,
   qualityGuarantee: row.quality_guarantee,
   kcExemptionText: row.kc_exemption_text,
   defaultCountryOfOrigin: row.default_country_of_origin,
@@ -179,11 +208,27 @@ async function loadFromSellerSettings(workspaceId?: string | null): Promise<Load
 async function readSellerSettingsRow(workspaceId: string | null): Promise<LoadOutcome> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return { status: "NOT_FOUND" };
-  try {
-    const base = supabase.from("seller_settings").select(COLUMNS);
+  const read = async (columns: string) => {
+    const base = supabase.from("seller_settings").select(columns);
     const scoped = workspaceId ? base.eq("workspace_id", workspaceId) : base.is("workspace_id", null);
-    const { data, error } = await scoped.eq("scope_key", "default").maybeSingle();
-    /* 🔴 여기가 이 작업의 전부다. 예전에는 이 줄도, 아래 「행 없음」도 똑같이
+    return scoped.eq("scope_key", "default").maybeSingle();
+  };
+  try {
+    let { data, error } = await read(COLUMNS);
+    /* ══════════════════════════════════════════════════════════════════════
+       🔴 migration 068 이 아직 실행되지 않았다면 `as_company_name` 이 없다.
+       그때 여기서 멈추면 판매자 설정 «전체» 를 못 읽고, 그 결과 지금 유일하게
+       동작하는 쿠팡 실등록 경로까지 막힌다. 배포와 SQL 실행의 순서가 서로를
+       깨뜨리지 않게, «그 오류 하나만» 골라 구 목록으로 한 번 더 읽는다.
+
+       🔴 다른 오류는 그대로 ERROR 다 — 장애를 「설정 없음」으로 위장하지 않는다는
+       이 파일의 규칙은 그대로다. 컬럼이 생기고 나면 이 분기는 다시 돌지 않는다.
+    ══════════════════════════════════════════════════════════════════════ */
+    if (error && (error as { code?: string }).code === UNDEFINED_COLUMN) {
+      console.warn("[seller-settings] as_company_name 컬럼이 아직 없습니다(migration 068 대기) — 구 목록으로 읽습니다.");
+      ({ data, error } = await read(LEGACY_COLUMNS));
+    }
+    /* 🔴 여기가 R6-FS 의 전부다. 예전에는 이 줄도, 아래 「행 없음」도 똑같이
        null 을 돌려줬다 — 그래서 DB 장애와 「아직 설정 안 함」이 구분되지 않았고
        둘 다 레거시 폴백으로 흘렀다. 이제 갈린다.
 
@@ -254,7 +299,7 @@ export async function loadSellerSettings(workspaceId?: string | null): Promise<R
     return { ...primary.values, source: "SELLER_SETTINGS", failed: false };
   }
 
-  /* 「정상적으로 조회했는데 값이 없다」 — 행이 없거나, 행은 있는데 다섯 칸이
+  /* 「정상적으로 조회했는데 값이 없다」 — 행이 없거나, 행은 있는데 여섯 칸이
      다 비었거나. 예전에는 여기서 레거시 프로필을 대신 읽었다(R6).
 
      🔴 이제 그냥 「없다」고 말한다. 그리고 그건 fail-open 이 아니다 — 조회는
@@ -269,17 +314,19 @@ export const SELLER_SETTINGS_UNAVAILABLE_MESSAGE =
 export const SELLER_SETTINGS_UNAVAILABLE_RESOLUTION =
   "잠시 후 다시 시도해주세요. 계속되면 고객센터로 알려주세요.";
 
-/** 설정 화면이 보내는 다섯 칸. 배송·가격·상세페이지는 여기에 «속하지 않는다». */
+/** 설정 화면이 보내는 여섯 칸. 배송·가격·상세페이지는 여기에 «속하지 않는다». */
 export const SELLER_SETTING_KEYS = [
   "manufacturer",
   "asContactNumber",
+  /* 🔴 `asContactNumber` 와 «한 쌍» 이다 — 고시가 업체명과 전화번호를 모두 요구한다. */
+  "asCompanyName",
   "qualityGuarantee",
   "kcExemptionText",
   "defaultCountryOfOrigin",
 ] as const satisfies readonly (keyof SellerSettings)[];
 
 /**
- * 설정 화면이 보낸 body 에서 판매자 다섯 칸«만» 골라낸다.
+ * 설정 화면이 보낸 body 에서 판매자 여섯 칸«만» 골라낸다.
  *
  * 🔴 「값이 있는가」가 아니라 「키가 왔는가」로 고른다. 기존 PATCH 는 partial
  * update 이고(toRowFields 가 `!== undefined` 로 판정한다), 빈 문자열은 «지움» 을
@@ -293,10 +340,11 @@ export function pickSellerSettingFields(body: Record<string, unknown>): Record<s
   return picked;
 }
 
-/** camelCase 다섯 칸을 표의 칸 이름으로 옮긴다. 온 키만 담는다. */
+/** camelCase 여섯 칸을 표의 칸 이름으로 옮긴다. 온 키만 담는다. */
 const COLUMN_OF: Record<string, string> = {
   manufacturer: "manufacturer",
   asContactNumber: "as_contact_number",
+  asCompanyName: "as_company_name",
   qualityGuarantee: "quality_guarantee",
   kcExemptionText: "kc_exemption_text",
   defaultCountryOfOrigin: "default_country_of_origin",

@@ -651,6 +651,7 @@ function SellerProfileEditor({
   const [deliveryMethod, setDeliveryMethod] = useState("구매대행");
   const [manufacturer, setManufacturer] = useState("");
   const [asContactNumber, setAsContactNumber] = useState("");
+  const [asCompanyName, setAsCompanyName] = useState("");
   const [qualityGuarantee, setQualityGuarantee] = useState("");
   // A-12.3-P0-2(CPO 지시: "KC마크 없이 구매대행 가능한 품목 — 기본값 자동
   // 입력") — 빈 문자열이면 기능이 꺼진 것과 같다(기존처럼 사용자가 직접
@@ -808,6 +809,7 @@ function SellerProfileEditor({
         //    넣으면 uncontrolled 로 바뀌므로 여기서 빈 문자열로 맞춘다.
         setManufacturer(v.manufacturer ?? "");
         setAsContactNumber(v.asContactNumber ?? "");
+        setAsCompanyName(v.asCompanyName ?? "");
         setQualityGuarantee(v.qualityGuarantee ?? "");
         setKcExemptionText(v.kcExemptionText ?? "");
         setDefaultCountryOfOrigin(v.defaultCountryOfOrigin ?? "");
@@ -1017,6 +1019,7 @@ function SellerProfileEditor({
         body: JSON.stringify({
           manufacturer,
           asContactNumber,
+          asCompanyName,
           qualityGuarantee,
           kcExemptionText,
           defaultCountryOfOrigin,
@@ -1034,6 +1037,7 @@ function SellerProfileEditor({
       const v = data.values ?? {};
       setManufacturer(v.manufacturer ?? "");
       setAsContactNumber(v.asContactNumber ?? "");
+      setAsCompanyName(v.asCompanyName ?? "");
       setQualityGuarantee(v.qualityGuarantee ?? "");
       setKcExemptionText(v.kcExemptionText ?? "");
       setDefaultCountryOfOrigin(v.defaultCountryOfOrigin ?? "");
@@ -1176,6 +1180,8 @@ function SellerProfileEditor({
             onManufacturerChange={setManufacturer}
             asContactNumber={asContactNumber}
             onAsContactNumberChange={setAsContactNumber}
+            asCompanyName={asCompanyName}
+            onAsCompanyNameChange={setAsCompanyName}
             qualityGuarantee={qualityGuarantee}
             onQualityGuaranteeChange={setQualityGuarantee}
             kcExemptionText={kcExemptionText}
@@ -1740,6 +1746,8 @@ function SellerInfoSection({
   onManufacturerChange,
   asContactNumber,
   onAsContactNumberChange,
+  asCompanyName,
+  onAsCompanyNameChange,
   qualityGuarantee,
   onQualityGuaranteeChange,
   kcExemptionText,
@@ -1754,6 +1762,8 @@ function SellerInfoSection({
   onManufacturerChange: (v: string) => void;
   asContactNumber: string;
   onAsContactNumberChange: (v: string) => void;
+  asCompanyName: string;
+  onAsCompanyNameChange: (v: string) => void;
   qualityGuarantee: string;
   onQualityGuaranteeChange: (v: string) => void;
   kcExemptionText: string;
@@ -1808,6 +1818,21 @@ function SellerInfoSection({
             value={asContactNumber}
             onChange={(e) => onAsContactNumberChange(e.target.value)}
             placeholder="02-1234-5678"
+            className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
+          />
+        </Field>
+        {/* 🔴 연락처 «바로 아래» 에 둔다 — 롯데ON 고시가 둘을 한 쌍으로 묻는다
+            (「AS책임자(업체명)와 전화번호를 모두 입력해주세요」). 떨어뜨려 놓으면
+            한쪽만 채운 상태가 정상처럼 보인다. */}
+        <Field
+          label="A/S 책임 업체명"
+          hint="A/S를 실제로 책임지는 업체 이름입니다. 제조사명이나 배송 프로필 이름이 아닙니다"
+        >
+          <input
+            type="text"
+            value={asCompanyName}
+            onChange={(e) => onAsCompanyNameChange(e.target.value)}
+            placeholder="예: 따조 고객센터"
             className="w-full rounded-md border border-border px-3 py-1.5 focus:border-primary focus:outline-none"
           />
         </Field>

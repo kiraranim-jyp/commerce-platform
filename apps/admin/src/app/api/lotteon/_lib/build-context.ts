@@ -245,9 +245,11 @@ export async function buildLotteOnContext(
     kcCertificationNumber: product.childCertification.value?.certificationNumber ?? null,
     sellerQualityGuarantee: commonSellerSettings.qualityGuarantee,
     sellerAsContactNumber: commonSellerSettings.asContactNumber,
-    /* 🔴 A/S «업체명» 칸은 아직 없다(DB 변경은 CPO STOP 중). 판매자명이나
-       제조사로 «대신 넣지 않는다» — 그래서 이 항목은 BLOCKED 로 남는다. */
-    sellerAsCompanyName: null,
+    /* 🔴 LOTTEON-NOTICE-FIELD-IMPLEMENT-0090-01 — 칸이 생겼다(migration 068).
+       고시 `0090` 은 「업체명과 전화번호를 «모두»」를 요구하므로 둘이 한 쌍이다.
+       🔴 비어 있으면 «비운 채로» 넘긴다 — `manufacturer` 나 판매자명으로 대신
+       넣지 않는다(CPO 명시). 그 경우 이 항목은 그대로 BLOCKED 로 남는다. */
+    sellerAsCompanyName: commonSellerSettings.asCompanyName,
   });
 
   const channel: LotteOnChannelConfig = {

@@ -28,11 +28,13 @@ import { SELLER_SETTING_KEYS, pickSellerSettingFields } from "../seller-settings
  * 즉 배송만 고쳐도 판매자 칸이 같은 PATCH 에 실려 온다.
  */
 
-describe("① 다섯 칸«만» 골라낸다", () => {
-  it("판매자 다섯 칸을 전부 고른다", () => {
+describe("① 판매자 공통 칸«만» 골라낸다", () => {
+  it("판매자 공통 칸을 «전부» 고른다", () => {
     const picked = pickSellerSettingFields({
       manufacturer: "제조사",
       asContactNumber: "010-0000-0000",
+      /* 🔴 연락처와 «한 쌍» 이다(롯데ON 고시 0090). */
+      asCompanyName: "따조 고객센터",
       qualityGuarantee: "보증",
       kcExemptionText: "KC",
       defaultCountryOfOrigin: "중국",
@@ -40,7 +42,7 @@ describe("① 다섯 칸«만» 골라낸다", () => {
     expect(Object.keys(picked).sort()).toEqual([...SELLER_SETTING_KEYS].sort());
   });
 
-  it("🔴 배송·가격·상세페이지는 «절대» 딸려가지 않는다 — RPC 는 판매자 5칸만 다룬다", () => {
+  it("🔴 배송·가격·상세페이지는 «절대» 딸려가지 않는다 — 판매자 공통 칸만 다룬다", () => {
     const picked = pickSellerSettingFields({
       manufacturer: "제조사",
       // 아래는 전부 기존 TS 경로(updateSellerProfile)가 맡는다.
@@ -108,15 +110,33 @@ describe("③ 값을 손보지 않고 그대로 넘긴다", () => {
   });
 });
 
-describe("④ 다섯 칸의 정의", () => {
-  it("🔴 정확히 다섯이다 — 여섯 번째가 생기면 SQL(060)도 함께 고쳐야 한다", () => {
-    expect(SELLER_SETTING_KEYS).toHaveLength(5);
+describe("④ 판매자 공통 칸의 정의", () => {
+  /**
+   * 🔴 예전에는 「정확히 다섯이다 — 여섯 번째가 생기면 SQL(060)도 함께 고쳐야
+   * 한다」였다. 그 경고는 **낡았다**: 060 의 dual-write RPC 는 코드에서 더 이상
+   * 호출되지 않는다(형제 테스트 `pivot03-seller-ui-independence` 가
+   * `save_seller_settings_dual` 의 «부재» 를 직접 센다). writer 는
+   * `saveSellerSettings` 하나뿐이고 그것은 `COLUMN_OF` 를 데이터로 읽는다.
+   *
+   * 그래서 칸이 늘 때 같이 고칠 것은 SQL 함수가 아니라 **컬럼 migration** 이다
+   * (068_seller_settings_as_company_name.sql).
+   */
+  it("🔴 목록이 정확히 여섯이고, 칸이 늘면 여기서 먼저 깨진다", () => {
+    expect(SELLER_SETTING_KEYS).toHaveLength(6);
     expect([...SELLER_SETTING_KEYS].sort()).toEqual([
+      "asCompanyName",
       "asContactNumber",
       "defaultCountryOfOrigin",
       "kcExemptionText",
       "manufacturer",
       "qualityGuarantee",
     ]);
+  });
+
+  /* 🔴 A/S 는 «한 쌍» 이다 — 고시가 「업체명과 전화번호를 모두」 요구한다.
+     한쪽만 남기는 변경이 오면 여기서 잡힌다. */
+  it("🔴 A/S 축은 연락처와 업체명이 «함께» 있다", () => {
+    expect(SELLER_SETTING_KEYS).toContain("asContactNumber");
+    expect(SELLER_SETTING_KEYS).toContain("asCompanyName");
   });
 });
