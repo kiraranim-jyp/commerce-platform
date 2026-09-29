@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CanonicalProduct, LotteOnChannelInfo } from "@commerce/shared";
+import type { CanonicalProduct, LotteOnChannelInfo, LotteOnSafetyTarget } from "@commerce/shared";
 import type { LotteOnNoticeResolution, LotteOnNoticeFill } from "@commerce/listing";
 /* 🔴 화이트리스트를 화면이 «다시 정하지» 않는다 — resolver 의 것을 그대로 읽는다.
    두 곳에 두면 화면과 판정이 갈라지고, 그 갈라짐이 STEP3-FIX 의 병이다. */
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import {
   LOTTEON_CHILD_PRODUCT_ITEM_CODE,
+  LOTTEON_CHILD_SAFETY_TYPE_OPTIONS,
   LOTTEON_FIX_LOCATION_LABEL,
   collectLotteOnNoticeSourceValues,
   applyLotteOnRecommendedCategory,
@@ -20,14 +21,18 @@ import {
   fromLotteOnChannelInfo,
   isLotteOnCategoryChosen,
   lotteOnFieldSectionId,
+  needsSafetyTargetChoice,
+  parseSafetyEntries,
   requiresSafetyCertification,
   resolveLotteOnSelectedCategory,
+  serializeSafetyEntries,
   summarizeCommonProduct,
   toLotteOnChannelInfo,
   toLotteOnChannelPayload,
   type CommonCategorySource,
   type CommonProductRow,
   type LotteOnChannelForm,
+  type LotteOnSafetyEntry,
   type LotteOnValidationSnapshot,
 } from "./lotteon-channel-form";
 import {
@@ -604,6 +609,33 @@ export function LotteOnRegistrationPanel({
 
   const safetyRequired = requiresSafetyCertification(form);
   const safetyMissing = safetyRequired && !form.certification.safetyText.trim();
+
+  /* ══ LOTTEON-FINAL-05 #2(CEO 지시, 2026-09-29) — KC 3상태 ═══════════════════
+     🔴 화면이 «판정하지» 않는다. 아래 값들은 전부 폼을 읽기만 하고, 등록을
+     막고 여는 판단은 서버(validate-payload.ts) 한 곳에 있다 — 두 벌이 되면
+     「화면은 통과인데 등록은 실패」가 롯데ON 에서 재발한다. */
+  const safetyTarget = form.certification.safetyTarget;
+  /** 🔴 미선택은 «상태» 다. 「입력 필요」로만 그리면 셀러는 무엇을 해야 하는지
+      모른 채 빈 칸만 본다 — 세 상태가 셋으로 보여야 세 상태다. */
+  const safetyTargetUnchosen = needsSafetyTargetChoice(form);
+  const { entries: safetyEntries, unparsed: safetyUnparsed } = parseSafetyEntries(form.certification.safetyText);
+  /** 「대상 아님」인데 인증정보가 남아 있다 — 서버가 BLOCKED 로 잡는 모순이다.
+      화면이 조용히 지워 주지 않는다(셀러가 적은 값을 우리가 버리지 않는다). */
+  const safetyDeclarationConflict = safetyTarget === "EXCLUDED" && safetyEntries.length > 0;
+
+  function chooseSafetyTarget(target: LotteOnSafetyTarget) {
+    /* 🔴 「대상 아님」을 골라도 입력해 둔 인증정보를 **지우지 않는다.** 잘못
+       누른 셀러가 실제 인증번호를 잃는다 — 다시 칠 수 없는 값이다. 모순은
+       아래에서 «보여주고», 지우는 것은 셀러가 버튼으로 한다. */
+    patch("certification", { safetyTarget: target });
+  }
+
+  function patchSafetyEntries(next: LotteOnSafetyEntry[]) {
+    /* 🔴 못 푼 줄(`safetyUnparsed`)을 같이 넘긴다. 화면을 칸으로 바꾸면서
+       왕복이 생겼는데, 형식이 깨진 줄을 떨어뜨리면 셀러가 적어 둔 글자가
+       «저장을 한 번 더 했다는 이유만으로» 사라진다. */
+    patch("certification", { safetyText: serializeSafetyEntries(next, safetyUnparsed) });
+  }
 
   useEffect(() => {
     onReadinessChange?.(
@@ -2033,17 +2065,58 @@ export function LotteOnRegistrationPanel({
               .join(" · ")}
           </p>
         )}
-        {safetyRequired && (
+        {/* ══ LOTTEON-FINAL-05 #2 — 세 상태를 «셋으로» 묻는다 ═══════════════
+            전에는 이 자리가 「인증번호를 넣어라」 하나뿐이었다. 실제로 인증
+            대상이 아닌 상품에도 출구가 없어서, 등록하려면 아무 값이나 넣는
+            수밖에 없었다 — 스마트스토어에서 「12313ㄹㅇ」을 낳은 그 구조다. */}
+        <SafetyTargetChoice
+          value={safetyTarget}
+          unchosen={safetyTargetUnchosen}
+          onChoose={chooseSafetyTarget}
+        />
+
+        {safetyRequired && safetyTarget === "TARGET" && (
           <p
             className={`mb-3 rounded-md px-3 py-2 text-[11px] ${
               safetyMissing ? "bg-error/5 text-error" : "bg-success/5 text-text-secondary"
             }`}
           >
-            품목코드 {LOTTEON_CHILD_PRODUCT_ITEM_CODE}(어린이제품)이 선택되어 있습니다 —{" "}
-            {safetyMissing ? "안전인증을 입력해야 등록할 수 있습니다." : "안전인증이 입력되어 있습니다."}
+            {safetyMissing
+              ? "인증 대상으로 신고했습니다 — 실제로 취득한 인증 유형과 인증번호를 입력해야 등록할 수 있습니다."
+              : "안전인증이 입력되어 있습니다."}
           </p>
         )}
-        {commonSafetyLine && !form.certification.safetyText.trim() && (
+
+        {safetyTarget === "EXCLUDED" && !safetyDeclarationConflict && (
+          /* 🔴 「따져가 확인했다」로 읽히게 쓰지 않는다. 우리가 판정한 것이
+             아니라 판매자가 신고한 것이고, 화면은 그 사실만 말한다. */
+          <p className="mb-3 rounded-md bg-success/5 px-3 py-2 text-[11px] text-text-secondary">
+            인증 대상이 아니라고 신고하셨습니다 — 안전인증 정보 없이 등록되고, 상품정보제공고시의 KC 인증정보 칸에는
+            「해당사항 없음」이 들어갑니다. 실제로 인증 대상인 상품을 대상 아님으로 등록하면 판매중지 대상이 될 수
+            있습니다.
+          </p>
+        )}
+
+        {safetyDeclarationConflict && (
+          /* 🔴 모순을 «지워서» 해결하지 않는다. 어느 쪽이 셀러의 뜻인지
+             우리가 정할 수 없다 — 둘 다 보여주고 셀러가 고른다. */
+          <div className="mb-3 rounded-md bg-error/5 px-3 py-2 text-[11px] text-error">
+            <p>
+              「인증 대상 아님」으로 신고하셨는데 안전인증 정보 {safetyEntries.length}건이 함께 남아 있습니다. 둘 중
+              하나만 남겨야 등록할 수 있습니다 — 어느 쪽이 맞는지는 저희가 정할 수 없습니다.
+            </p>
+            <div className="mt-1.5 flex gap-1.5">
+              <Button variant="secondary" size="sm" onClick={() => chooseSafetyTarget("TARGET")}>
+                인증 대상으로 되돌리기
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => patchSafetyEntries([])}>
+                입력한 인증 정보 지우기
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {safetyTarget !== "EXCLUDED" && commonSafetyLine && !form.certification.safetyText.trim() && (
           <div className="mb-3 rounded-md bg-background px-3 py-2 text-[11px] text-text-secondary">
             <p>
               상품정보에 어린이제품 인증이 이미 입력돼 있습니다 — 다시 치지 말고 그대로 가져오세요.
@@ -2053,29 +2126,48 @@ export function LotteOnRegistrationPanel({
               variant="secondary"
               size="sm"
               className="mt-1"
-              onClick={() => patch("certification", { safetyText: commonSafetyLine })}
+              onClick={() =>
+                /* 🔴 가져오기는 「대상」 신고와 «같은 동작» 이다 — 인증번호를
+                   넣으면서 축을 미선택으로 두면 두 말이 어긋난다. */
+                patch("certification", { safetyTarget: "TARGET", safetyText: commonSafetyLine })
+              }
             >
               상품정보의 인증정보 가져오기
             </Button>
           </div>
         )}
-        <div className={FIELD_GRID_NARROW_CLASS}>
-          <ChannelCodeTextArea
-            label="안전인증 목록"
-            requirement={requirementOf("sftyAthnLst")}
-            note="한 줄에 하나씩 `유형코드:인증번호[:기관명]`"
-            placeholder={"CHL_CFM:CB123456789"}
-            value={form.certification.safetyText}
-            onChange={(value) => patch("certification", { safetyText: value })}
-          />
-          <ChannelCodeField
-            label="수입대행코드"
-            requirement={requirementOf("impPrxCd")}
-            note="전기용품·생활용품 계열 KC 인증을 넣으면 필수 — PUR_PRX / PRL_IMP / NONE. 어린이제품(CHL_*)에는 필요 없습니다."
-            value={form.certification.importProxyCode}
-            onChange={(value) => patch("certification", { importProxyCode: value })}
-          />
-        </div>
+
+        {/* 🔴 「대상 아님」을 고른 셀러에게 인증 입력칸을 보여주지 않는다.
+            칸이 남아 있으면 「그래도 채워야 하나」로 읽힌다 — 요구하지 않는
+            것을 요구하는 것처럼 보이는 것이 이 스프린트가 고치려는 병이다.
+            🔴 단, 모순 상태에서는 보여준다. 지워야 할 값을 숨기면 셀러가
+            무엇을 지우는지 모르는 채 버튼을 누르게 된다. */}
+        {(safetyTarget !== "EXCLUDED" || safetyDeclarationConflict) && (
+          <>
+            <SafetyCertificationRows
+              entries={safetyEntries}
+              requirement={requirementOf("sftyAthnLst")}
+              onChange={patchSafetyEntries}
+            />
+            {safetyUnparsed.length > 0 && (
+              /* 🔴 형식이 깨진 옛 입력. payload 로는 나가지 않지만 «버리지도»
+                 않는다 — 셀러가 적어 둔 글자를 우리가 지우지 않는다. */
+              <p className="mt-2 rounded-md border border-dashed border-border px-3 py-2 text-[11px] text-text-tertiary">
+                형식을 알아볼 수 없어 등록에 쓰이지 않는 줄 {safetyUnparsed.length}건이 저장돼 있습니다(지우지 않고
+                그대로 두었습니다): <span className="font-mono">{safetyUnparsed.join(" / ")}</span>
+              </p>
+            )}
+            <div className={`mt-3 ${FIELD_GRID_NARROW_CLASS}`}>
+              <ChannelCodeField
+                label="수입대행코드"
+                requirement={requirementOf("impPrxCd")}
+                note="전기용품·생활용품 계열 KC 인증을 넣으면 필수 — PUR_PRX / PRL_IMP / NONE. 어린이제품 인증에는 필요 없습니다."
+                value={form.certification.importProxyCode}
+                onChange={(value) => patch("certification", { importProxyCode: value })}
+              />
+            </div>
+          </>
+        )}
       </FormSection>
 
       {/* ── ⑨ 상세설명 — 읽기 전용(공통값) ──────────────────────────────── */}
@@ -3503,6 +3595,200 @@ function CodeOptionPicker({
         </option>
       ))}
     </select>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * LOTTEON-FINAL-05 #2(CEO 지시, 2026-09-29) — KC 인증 3상태
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * 미선택 / 대상 / 대상 아님 — **세 상태를 셋으로 보여준다.**
+ *
+ * 🔴 라디오 «두 개» 와 「아직 고르지 않음」 안내로 만든다. 세 번째 라디오를
+ * 두지 않는 이유는 저장 쪽과 같다 — 「미선택을 골랐다」는 상태를 만들면
+ * 「고른 적 없다」와 구별되지 않고, 셀러가 그것을 고를 이유도 없다.
+ *
+ * 🔴 여기서 판정하지 않는다. 어떤 상품이 인증 대상인지는 법적 판단이고 따져는
+ * 모른다 — 기본 선택도 두지 않는다(기본값을 두는 순간 우리가 고른 것이 된다).
+ */
+function SafetyTargetChoice({
+  value,
+  unchosen,
+  onChoose,
+}: {
+  value: LotteOnSafetyTarget | undefined;
+  unchosen: boolean;
+  onChoose: (target: LotteOnSafetyTarget) => void;
+}) {
+  const options: { target: LotteOnSafetyTarget; label: string; note: string }[] = [
+    {
+      target: "TARGET",
+      label: "인증 대상",
+      note: "실제로 취득한 인증 유형과 인증번호를 입력합니다.",
+    },
+    {
+      target: "EXCLUDED",
+      label: "인증 대상 아님",
+      note: "안전인증 정보 없이 등록되고, 고시의 KC 인증정보는 「해당사항 없음」으로 나갑니다.",
+    },
+  ];
+  return (
+    <div className="mb-3 rounded-md border border-border bg-background px-3 py-2.5">
+      <p className="text-[11px] font-medium text-text-primary">
+        이 상품은 안전인증 대상입니까? <span className="text-error">*</span>
+      </p>
+      <p className="mt-0.5 text-[11px] text-text-tertiary">
+        판매자가 롯데ON에 «신고»하는 값입니다 — 따져가 대상 여부를 판단하지 않습니다.
+      </p>
+      <div className="mt-2 flex flex-col gap-1.5">
+        {options.map((option) => (
+          /* 🔴 설명문은 <label> «밖» 이다. 안에 두면 이 칸의 «이름» 이
+             「인증 대상 실제로 취득한 …」 한 덩어리가 되고, 화면 낭독기도
+             입력칸 전수 검사도 그 긴 문장을 칸 이름으로 읽는다. */
+          <div key={option.target} className="flex flex-wrap items-baseline gap-x-2 text-[11px]">
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="radio"
+                name="lotteon-safety-target"
+                value={option.target}
+                checked={value === option.target}
+                onChange={() => onChoose(option.target)}
+              />
+              <span className="font-medium text-text-primary">{option.label}</span>
+            </label>
+            <span className="text-text-tertiary">{option.note}</span>
+          </div>
+        ))}
+      </div>
+      {unchosen && (
+        /* 🔴 「미선택」을 «말한다». 빈 칸만 보여주고 「입력 필요」라고만 하면
+           셀러는 무엇을 해야 하는지 모른 채 인증번호 칸만 들여다본다. */
+        <p className="mt-2 rounded-md bg-error/5 px-2.5 py-1.5 text-[11px] text-error">
+          아직 고르지 않았습니다 — 어린이제품(고시 품목코드 {LOTTEON_CHILD_PRODUCT_ITEM_CODE})은 둘 중 하나를 골라야
+          등록할 수 있습니다. 고르지 않은 것을 「대상 아님」으로 처리하지 않습니다.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 안전인증 입력 — **줄 문자열이 아니라 칸으로** 받는다.
+ *
+ * 전에는 `CHL_CFM:CB123456789` 를 셀러가 통째로 타이핑했다. F-8 원칙(셀러에게
+ * 내부 코드를 타이핑시키지 않는다)이 이 칸에만 적용되지 않고 있었다.
+ *
+ * 🔴 저장 형식은 «그대로» 다. 화면만 칸으로 바꾸고 같은 `safetyText` 문자열로
+ * 왕복한다 — 새 저장 구조를 만들면 두 벌이 생기고, 둘이 다르게 답하는 순간이
+ * 곧 오등록이다.
+ *
+ * 🔴 셀러가 고르는 것은 «안전인증/안전확인/공급자적합성확인» 이지 `CHL_ATHN`
+ * 이 아니다. 코드는 화면에 쓰지 않는다 — 단, 목록 밖의 코드가 이미 저장돼
+ * 있으면 그 코드를 «지우지 않고» 그대로 표시한다.
+ */
+function SafetyCertificationRows({
+  entries,
+  requirement,
+  onChange,
+}: {
+  entries: LotteOnSafetyEntry[];
+  requirement: FieldRequirement;
+  onChange: (next: LotteOnSafetyEntry[]) => void;
+}) {
+  const rows = entries.length > 0 ? entries : [{ typeCode: "", number: "", orgName: "" }];
+  const update = (index: number, changes: Partial<LotteOnSafetyEntry>) => {
+    onChange(rows.map((row, i) => (i === index ? { ...row, ...changes } : row)));
+  };
+  return (
+    <div>
+      <p className="mb-1.5 text-[11px] font-medium text-text-primary">
+        안전인증 정보{requirement === "REQUIRED" && <span className="ml-0.5 text-error">*</span>}
+        <span className="ml-1 font-normal text-text-tertiary">
+          인증번호는 실제 인증서의 값만 씁니다 — 어떤 경우에도 만들어 넣지 않습니다.
+        </span>
+      </p>
+      <div className="flex flex-col gap-1.5">
+        {rows.map((row, index) => {
+          /* 🔴 저장된 코드가 목록 밖이면 «그 코드를» 선택지로 함께 세운다.
+             목록에 없다고 값을 버리면 셀러가 이미 넣어 둔 인증이 사라진다. */
+          const known = LOTTEON_CHILD_SAFETY_TYPE_OPTIONS.some((option) => option.code === row.typeCode);
+          return (
+            <div key={index} className="flex flex-wrap items-center gap-1.5">
+              {/* 🔴 세 칸 모두 «자기 라벨» 을 갖는다. sr-only 로 둔 이유는 한 줄
+                  안에서 라벨을 반복해 보여 줄 자리가 없기 때문이고, 라벨 자체를
+                  빼면 화면 낭독기에서 이름 없는 칸이 된다 — 그리고 이 탭의 입력칸
+                  전수 검사(three-layer-realign)가 «바로 앞 라벨» 을 이름으로 삼기
+                  때문에, 라벨이 없으면 바로 위 「고시 항목」의 칸으로 잘못 세어진다. */}
+              {/* 🔴 <select> 만 라벨을 «형제» 로 둔다. 감싸면 <option> 글자까지
+                  라벨 본문이 되어 이 칸의 이름이 「안전인증 유형인증 유형 선택
+                  안전인증안전확인…」이 된다(화면 낭독기가 그렇게 읽는다). */}
+              <div className="flex-none">
+                <label htmlFor={`lotteon-safety-type-${index}`}>
+                  <span className="sr-only">안전인증 유형</span>
+                </label>
+                <select
+                  id={`lotteon-safety-type-${index}`}
+                  aria-label="안전인증 유형"
+                  value={row.typeCode}
+                  onChange={(event) => update(index, { typeCode: event.target.value })}
+                  className={`${FIELD_INPUT_CLASS} w-auto min-w-[10rem]`}
+                >
+                  <option value="">인증 유형 선택</option>
+                  {LOTTEON_CHILD_SAFETY_TYPE_OPTIONS.map((option) => (
+                    <option key={option.code} value={option.code}>
+                      {option.label}
+                    </option>
+                  ))}
+                  {row.typeCode && !known && (
+                    <option value={row.typeCode}>
+                      {LOTTEON_SAFETY_TYPE_LABEL[row.typeCode] ?? `기존 입력값 (${row.typeCode})`}
+                    </option>
+                  )}
+                </select>
+              </div>
+              <label className="min-w-[12rem] flex-1">
+                <span className="sr-only">인증번호</span>
+                <input
+                  aria-label="인증번호"
+                  value={row.number}
+                  placeholder="인증번호 (예: CB123456789)"
+                  onChange={(event) => update(index, { number: event.target.value })}
+                  className={FIELD_INPUT_CLASS}
+                />
+              </label>
+              <label className="min-w-[9rem] flex-1">
+                <span className="sr-only">인증기관명</span>
+                <input
+                  aria-label="인증기관명"
+                  value={row.orgName}
+                  placeholder="인증기관명 (선택)"
+                  onChange={(event) => update(index, { orgName: event.target.value })}
+                  className={FIELD_INPUT_CLASS}
+                />
+              </label>
+              {rows.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => onChange(rows.filter((_, i) => i !== index))}
+                  className="rounded-md border border-border px-2 py-1 text-[11px] text-text-secondary transition-colors hover:bg-background"
+                >
+                  삭제
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <Button
+        variant="secondary"
+        size="sm"
+        className="mt-1.5"
+        onClick={() => onChange([...rows, { typeCode: "", number: "", orgName: "" }])}
+      >
+        인증 추가
+      </Button>
+    </div>
   );
 }
 

@@ -23,6 +23,10 @@ export type LotteOnBlockCode =
   | "CATEGORY_REQUIRED"
   | "NOTICE_REQUIRED"
   | "SAFETY_CERTIFICATION_REQUIRED"
+  /* LOTTEON-FINAL-05 #2 — 「대상 아님」이라고 신고하면서 인증정보를 함께 보낸다.
+     둘 다 보내면 어느 쪽으로 신고한 것인지 알 수 없다(네이버의
+     KC_EXEMPTION_REASON_NOT_ALLOWED 와 같은 종류의 «반쪽 신고» 다). */
+  | "SAFETY_DECLARATION_CONFLICT"
   | "IMPORT_PROXY_REQUIRED"
   | "SELLER_PLACE_REQUIRED"
   | "TEMP_IMAGE_URL"
@@ -196,9 +200,41 @@ export function validateLotteOnPayload(input: LotteOnPayloadInput): LotteOnValid
       "NOTICE_REQUIRED",
     );
 
-  // 6) 안전인증(KC) — 유아동(23)이면 필수다.
+  /* ══ 6) 안전인증(KC) — LOTTEON-FINAL-05 #2(CEO 지시, 2026-09-29) ═══════════
+     전에는 축이 «하나» 였다: 인증정보가 있는가 없는가. 그래서 품목 23 에서
+     실제로 인증 대상이 아닌 상품에도 출구가 없었고, 등록하려면 아무 값이나
+     넣는 수밖에 없었다 — 스마트스토어에서 「12313ㄹㅇ」을 낳은 바로 그 구조다.
+
+       정직한 판매자는 막히고, 아무 값이나 넣은 판매자는 통과한다.
+       출구가 없으면 시스템은 거짓말을 보상한다.
+
+     그래서 판매자가 «신고하는» 축을 하나 더 읽는다. 셋을 구별한다:
+
+       미선택(null)  아직 고른 적 없다  → 품목 23 이면 예전과 «똑같이» 막는다
+       TARGET        대상이다           → 실제 인증정보가 있어야 한다
+       EXCLUDED      대상이 아니다      → 인증정보를 요구하지 않는다
+
+     🔴 여기서 «판정하지» 않는다. 어떤 상품이 인증 대상인지는 법적 판단이고
+     따져는 그것을 모른다 — 판매자가 고른 것을 그대로 받아 적을 뿐이다.
+     🔴 미선택을 EXCLUDED 로 읽지 않는다. 확인하지 않은 것을 확인했다고 말하는
+     것이 되고, 그 한 줄이 이 섹션 전체의 안전장치다. */
   const isChildrenNotice = channel.noticeItemCode === LOTTEON_NOTICE_ITEM_CODE_CHILDREN;
-  if (channel.safetyCertifications.length > 0) {
+  const hasCertifications = channel.safetyCertifications.length > 0;
+
+  if (channel.safetyTarget === "EXCLUDED" && hasCertifications) {
+    /* 🔴 두 주장이 겹친다. 어느 쪽으로 신고한 것인지 알 수 없는 payload 를
+       롯데ON 으로 보내지 않는다 — 셀러가 하나를 지워야 한다. */
+    blocked(
+      "sftyAthnLst",
+      "안전인증",
+      "「인증 대상 아님」으로 신고하면서 안전인증 정보가 함께 들어 있습니다. 대상이면 대상으로 고치고, 대상이 아니면 인증 정보를 비워 주세요.",
+      "SAFETY_DECLARATION_CONFLICT",
+    );
+  } else if (channel.safetyTarget === "EXCLUDED") {
+    /* 🔴 판매자의 «신고» 다. 따져가 면제를 판정한 것이 아니므로 라벨이 그렇게
+       말한다 — 화면이 「따져가 확인했다」로 읽히면 안 된다. */
+    ready("sftyAthnLst", "안전인증(인증 대상 아님 — 판매자 신고)");
+  } else if (hasCertifications) {
     const incomplete = channel.safetyCertifications.some((c) => !c.sftyAthnTypCd || !c.sftyAthnNo?.trim());
     if (incomplete) {
       blocked(
@@ -224,11 +260,20 @@ export function validateLotteOnPayload(input: LotteOnPayloadInput): LotteOnValid
     } else if (needsImportProxy) {
       ready("impPrxCd", "수입대행코드");
     }
+  } else if (channel.safetyTarget === "TARGET") {
+    /* 🔴 품목코드와 무관하게 막는다. 판매자가 «대상이다» 라고 말한 상품을
+       인증정보 없이 내보내지 않는다 — 신고와 payload 가 어긋난 상태다. */
+    blocked(
+      "sftyAthnLst",
+      "안전인증",
+      "「인증 대상」으로 신고했습니다 — 실제로 취득한 인증 유형과 인증번호를 입력해야 등록할 수 있습니다. 인증번호는 어떤 경우에도 만들어 넣지 않습니다.",
+      "SAFETY_CERTIFICATION_REQUIRED",
+    );
   } else if (isChildrenNotice) {
     blocked(
       "sftyAthnLst",
       "안전인증",
-      "품목코드 23(어린이제품)은 표준카테고리에 따라 안전인증목록이 필수입니다. 실제 KC 인증 정보를 입력해야 합니다.",
+      "품목코드 23(어린이제품)은 안전인증 대상 여부를 먼저 신고해야 합니다. 인증 대상이면 실제 인증 유형과 인증번호를, 대상이 아니면 「인증 대상 아님」을 선택해 주세요.",
       "SAFETY_CERTIFICATION_REQUIRED",
     );
   }

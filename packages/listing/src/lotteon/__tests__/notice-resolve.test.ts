@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { noticeSchemaFor, knownNoticeItemCodes, LOTTEON_NOTICE_SCHEMA_SOURCE } from "../notice-schema";
-import { resolveLotteOnNotice, type LotteOnNoticeFacts } from "../notice-resolve";
+import { resolveLotteOnNotice, type LotteOnNoticeFacts, type LotteOnNoticeFill } from "../notice-resolve";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -269,5 +269,60 @@ describe("⑥ 출처를 코드가 «직접» 말한다", () => {
   it("🔴 0200 가이드라인에 구매대행 제한 문장이 «그대로» 남아 있다", () => {
     const kc = noticeSchemaFor("23")!.find((spec) => spec.code === "0200")!;
     expect(kc.guideline).toContain("구매대행/병행수입을 선택할 수 없습니다");
+  });
+});
+
+/* ════════════════════════════════════════════════════════════════════════════
+   LOTTEON-FINAL-05 #2(CEO 지시, 2026-09-29) — 고시 `0200` 은 **두 번째 KC 문**이다
+
+   롯데ON 에서 KC 를 막는 자리는 하나가 아니다:
+
+     sftyAthnLst   안전인증 목록      (validate-payload.ts)
+     고시 0200     KC 인증정보 칸     (여기)
+
+   「인증 대상 아님」을 고른 셀러가 앞의 문만 통과하고 이 문에서 다시 막히면,
+   화면은 「고르면 된다」고 말해 놓고 실제로는 고를 수 없는 상태가 된다 —
+   부분 구현으로 화면이 거짓말하게 만드는 바로 그 모양이다.
+
+   🔴 여기서 판정하지 «않는다». 판매자가 고른 신고를 고시의 필수 문자열로
+   옮겨 적을 뿐이고, 고르지 않았으면 아무것도 하지 않는다.
+   ═══════════════════════════════════════════════════════════════════════════ */
+describe("⑦ 고시 0200(KC 인증정보) — 안전인증 신고와 이어져 있다", () => {
+  const kcFill = (facts: LotteOnNoticeFacts) =>
+    resolveLotteOnNotice("23", facts).fills.find((fill) => fill.code === "0200")!;
+  /* `LotteOnNoticeFill` 은 판별 유니온이라 `value`/`from` 은 채워진 갈래에만
+     있다. 「없으면 undefined」로 읽어서 «비어 있음» 도 그대로 주장할 수 있게 한다. */
+  const valueOf = (fill: LotteOnNoticeFill) => ("value" in fill ? fill.value : undefined);
+  const fromOf = (fill: LotteOnNoticeFill) => ("from" in fill ? fill.from : undefined);
+
+  it("🔴 미선택은 「대상 아님」이 아니다 — 예전 그대로 「입력 필요」로 남는다", () => {
+    const fill = kcFill(REAL);
+    expect(fill.status).toBe("NEEDS_INPUT");
+    expect(valueOf(fill)).toBeUndefined();
+  });
+
+  it("「대상 아님」을 고르면 「해당사항 없음」이 채워진다", () => {
+    const fill = kcFill({ ...REAL, safetyTarget: "EXCLUDED" });
+    expect(fill.status).toBe("FILLED");
+    expect(valueOf(fill)).toBe("해당사항 없음");
+    /* 🔴 화면이 출처를 «사실대로» 말한다 — 우리가 판정한 것이 아니다. */
+    expect(fromOf(fill)).toContain("판매자 신고");
+  });
+
+  it("「대상」을 골랐다고 값이 생기지는 않는다 — 인증번호는 만들 수 없다", () => {
+    const fill = kcFill({ ...REAL, safetyTarget: "TARGET" });
+    expect(fill.status).toBe("NEEDS_INPUT");
+  });
+
+  it("실제 인증번호가 있으면 선언이 그것을 «덮지 않는다»", () => {
+    const fill = kcFill({ ...REAL, kcCertificationNumber: "CB123456789", safetyTarget: "EXCLUDED" });
+    expect(valueOf(fill)).toBe("CB123456789");
+  });
+
+  it("「대상 아님」이면 0200 이 실제 고시 항목으로 나간다", () => {
+    const article = resolveLotteOnNotice("23", { ...REAL, safetyTarget: "EXCLUDED" }).articles.find(
+      (a) => a.pdArtlCd === "0200",
+    );
+    expect(article?.pdArtlCnts).toBe("해당사항 없음");
   });
 });

@@ -270,6 +270,26 @@ export interface SmartStoreKcDeclaration {
   exemptionReason?: "OVERSEAS" | "SAFE_CRITERION" | "PARALLEL_IMPORT";
 }
 
+/**
+ * LOTTEON-FINAL-05 #2(CEO 지시, 2026-09-29) — **롯데ON 에 «신고»하는 안전인증
+ * 대상 축.**
+ *
+ * 🔴 새 KC 상태 모델이 «아니다». 위 `SmartStoreKcDeclaration.child` 와 같은
+ * 축을 롯데ON 어휘로 놓은 것이다(COMMERCE_BINDING 군). 같은 사실을 스마트스토어는
+ * `childCertifiedProductExclusionYn`, 쿠팡은 고시 텍스트 한 칸, 롯데ON 은
+ * `sftyAthnLst` 의 유무로 표현한다 — 표현이 채널마다 다르므로 하나로 묶이지
+ * 않고, 묶이는 것은 「판매자가 무엇을 골랐는가」뿐이다.
+ *
+ * 🔴 **세 번째 상태는 「키가 없다」이다.** 미선택 · 대상 · 대상 아님 중 미선택은
+ * `undefined` 로만 표현한다. `"UNSELECTED"` 같은 값을 만들면 「고른 적 없음」과
+ * 「미선택이라고 골랐음」이 저장에서 구별되지 않는다 — 그리고 전자를 「대상
+ * 아님」으로 읽는 순간, 확인하지 않은 것을 확인했다고 말하는 것이 된다.
+ *
+ * 🔴 여기서 **판정하지 않는다.** 어떤 상품이 안전인증 대상인지는 법적 판단이고
+ * 따져가 내리지 않는다 — 판매자가 고른 것을 롯데ON 필드로 옮겨 적을 뿐이다.
+ */
+export type LotteOnSafetyTarget = "TARGET" | "EXCLUDED";
+
 export interface LotteOnChannelInfo {
   /** 🔴 롯데ON 탭 전용. 상품 정보 화면은 이 키를 읽지도 보여주지도 않는다. */
   category: {
@@ -288,8 +308,13 @@ export interface LotteOnChannelInfo {
    * 🔴 optional 이다 — 이 키가 없는 스냅샷이 jsonb 에 이미 있고, 과거 데이터를
    * 고쳐 쓰지 않는다(`customsDutyKrw` 를 남겨 둔 것과 같은 이유). */
   notice: { itemCode: string; articlesText: string; articleValues?: Record<string, string> };
-  /** 안전인증 — sftyAthnLst[]의 원문 입력 + impPrxCd. 인증번호는 생성하지 않는다. */
-  certification: { safetyText: string; importProxyCode: string };
+  /** 안전인증 — sftyAthnLst[]의 원문 입력 + impPrxCd. 인증번호는 생성하지 않는다.
+   *
+   * `safetyTarget` — LOTTEON-FINAL-05 #2. 🔴 **optional 이다, 그리고 그것이
+   * 「미선택」의 표현이다.** `notice.articleValues` 를 optional 로 둔 것과 같은
+   * 이유로 이 키가 없는 스냅샷이 jsonb 에 이미 있고, 과거 데이터를 고쳐 쓰지
+   * 않는다. 키가 없다 = 아직 고른 적 없다 ≠ 대상 아님. */
+  certification: { safetyTarget?: LotteOnSafetyTarget; safetyText: string; importProxyCode: string };
   /** 배송 — 전부 롯데ON 판매자센터에 선등록해야 생기는 번호다. */
   delivery: {
     outboundPlaceNo: string;

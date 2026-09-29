@@ -40,6 +40,9 @@ export interface LotteOnChannelFormInput {
   taxTypeCode?: string;
   noticeItemCode?: string;
   noticeArticles?: { pdArtlCd: string; pdArtlCnts: string }[];
+  /** LOTTEON-FINAL-05 #2 — 판매자가 신고한 안전인증 대상 여부. 🔴 키가 없으면
+   * 미선택이다(「대상 아님」이 아니다). */
+  safetyTarget?: "TARGET" | "EXCLUDED";
   safetyCertifications?: { sftyAthnTypCd: string; sftyAthnOrgnNm?: string; sftyAthnNo: string }[];
   importProxyCode?: string;
   brandNo?: string;
@@ -243,6 +246,10 @@ export async function buildLotteOnContext(
     modelName: product.modelName.value,
     recommendedAge: product.recommendedAge.value,
     kcCertificationNumber: product.childCertification.value?.certificationNumber ?? null,
+    /* 🔴 LOTTEON-FINAL-05 #2 — 롯데ON 의 KC 문은 «둘» 이다(sftyAthnLst · 고시
+       0200). 같은 신고를 resolver 에도 줘야 「대상 아님」을 고른 셀러가 뒤쪽
+       문에서 다시 막히지 않는다 — 한쪽만 열면 화면이 거짓말을 하게 된다. */
+    safetyTarget: form.safetyTarget ?? null,
     /* ══ LOTTEON-NOTICE-SELLER-CONFIRMATION-01 ═════════════════════════════
        셀러가 화면에서 채운 고시 값. 🔴 **새 전송 필드를 만들지 않았다** — 화면은
        이미 `noticeArticles` 로 보내고 있었고, 아래 `mergeNoticeArticles` 가 그것을
@@ -303,6 +310,11 @@ export async function buildLotteOnContext(
       (form.noticeArticles ?? []).filter((a) => a.pdArtlCd?.trim() && a.pdArtlCnts?.trim()),
       noticeResolution.articles,
     ),
+    /* 🔴 신고를 그대로 넘긴다. 여기서 「EXCLUDED 면 인증 목록을 비운다」 같은
+       정리를 «하지 않는다» — 그러면 셀러가 둘 다 넣은 모순을 검증기가 볼 수
+       없게 되고, 화면에는 인증정보가 남았는데 payload 에서는 사라지는 갈라짐이
+       생긴다. 모순은 지우는 것이 아니라 막는 것이다. */
+    safetyTarget: form.safetyTarget ?? null,
     safetyCertifications: (form.safetyCertifications ?? []).filter((c) => c.sftyAthnTypCd?.trim() && c.sftyAthnNo?.trim()),
     importProxyCode: trimOrNull(form.importProxyCode),
 

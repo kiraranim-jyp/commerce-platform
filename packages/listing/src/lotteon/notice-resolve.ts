@@ -45,6 +45,17 @@ export interface LotteOnNoticeFacts {
   recommendedAge?: string | null;
   /** 실제 KC 인증번호. 🔴 절대 만들 수 없는 값이다. */
   kcCertificationNumber?: string | null;
+  /**
+   * LOTTEON-FINAL-05 #2 — 판매자가 신고한 **안전인증 대상 여부**.
+   *
+   * 🔴 왜 고시 resolver 가 이것을 보는가: 롯데ON 에는 KC 문이 «둘» 이다.
+   * `sftyAthnLst`(안전인증 목록)와 고시 항목 `0200`(KC 인증정보). 대상 아님을
+   * 고른 판매자가 앞의 문만 통과하고 뒤의 문에서 다시 막히면, 화면은
+   * 「고르면 된다」고 말해 놓고 실제로는 고를 수 없는 상태가 된다.
+   *
+   * 🔴 `undefined` 는 「대상 아님」이 아니다 — 아래에서 «EXCLUDED 일 때만» 쓴다.
+   */
+  safetyTarget?: "TARGET" | "EXCLUDED" | null;
 
   /**
    * 셀러가 «사람이 읽는 값» 으로 직접 채운 고시 항목. 키는 항목코드다.
@@ -148,6 +159,19 @@ function fromFact(spec: LotteOnNoticeArticleSpec, value: string | null | undefin
  */
 export const LOTTEON_SELLER_FILLABLE_ARTICLE_CODES = ["0220", "1830"] as const;
 
+/**
+ * LOTTEON-FINAL-05 #2 — 고시 `0200`(KC 인증정보)에 「대상 아님」을 적는 말.
+ *
+ * 🔴 우리가 지어낸 표현이 아니다. 같은 상품정보제공고시 화면이 「크기·체중의
+ * 한계」 같은 칸에 쓰는 공식 표현이고, 스마트스토어 쪽에서 같은 자리에 이미
+ * 쓰고 있다(`KIDS_CERTIFICATION_NOT_APPLICABLE`).
+ *
+ * 🔴 상수를 두 채널이 «공유하지» 않는다. 문자열이 같은 것은 우연이 아니라
+ * 같은 법정 고시라서지만, 한쪽 채널이 표기를 바꿔야 할 때 다른 채널까지
+ * 끌려가면 그것이 곧 「Commerce 가 Common 을 잡아당기는」 방향이다.
+ */
+export const LOTTEON_CERTIFICATION_NOT_APPLICABLE = "해당사항 없음";
+
 export function isLotteOnSellerFillableArticle(code: string): boolean {
   return (LOTTEON_SELLER_FILLABLE_ARTICLE_CODES as readonly string[]).includes(code);
 }
@@ -185,11 +209,23 @@ function resolveOne(spec: LotteOnNoticeArticleSpec, facts: LotteOnNoticeFacts): 
         "상품정보에 사용연령이 없습니다. 옵션의 사이즈 표기(예: 6-7 Years)를 사용연령으로 바꾸지 않습니다.",
       );
     case "0200":
+      /* ══ LOTTEON-FINAL-05 #2 ═══════════════════════════════════════════════
+         🔴 실제 인증번호가 «먼저» 다. 판매자가 번호를 적어 두었다면 선언이
+         그것을 덮지 않는다(스마트스토어 resolveKidsCertificationTypeNotice 와
+         같은 순서다 — 선언이 입력을 이기지 않는다).
+
+         🔴 그리고 여기서 **판정하지 않는다.** 「이 상품은 인증 대상이 아니다」는
+         따져의 판단이 아니라, 판매자가 인증 섹션에서 직접 고른 신고를 고시의
+         필수 문자열로 «옮겨 적는» 것뿐이다. 그래서 EXCLUDED 일 때만 쓰고,
+         미선택(undefined)은 예전 그대로 「입력 필요」로 남는다. */
+      if (!clean(facts.kcCertificationNumber) && facts.safetyTarget === "EXCLUDED") {
+        return filled(spec, LOTTEON_CERTIFICATION_NOT_APPLICABLE, "판매자 신고 · 인증 대상 아님");
+      }
       return fromFact(
         spec,
         facts.kcCertificationNumber,
         "상품정보 · KC 인증번호",
-        "KC 인증번호가 없습니다. 인증번호는 실제 인증서의 값이라 만들 수 없습니다.",
+        "KC 인증번호가 없습니다. 인증번호는 실제 인증서의 값이라 만들 수 없습니다. 이 상품이 인증 대상이 아니라면 인증 섹션에서 「인증 대상 아님」을 선택해 주세요.",
       );
     case "0080":
       return fromFact(

@@ -34,8 +34,22 @@ describe("① 롯데ON 전시카테고리 — 입력 경로가 «있다»", () =
 });
 
 describe("② 롯데ON 안전인증(KC) — 입력 경로가 «있다»", () => {
+  /* 🔴 LOTTEON-FINAL-05 #2(2026-09-29) — 입력칸의 «모양» 이 바뀌었다.
+     전에는 `유형코드:인증번호` 를 통째로 치는 textarea 하나였고, 그래서 이
+     가드가 `value={form.certification.safetyText}` 를 찾았다. 이제는 유형
+     드롭다운 + 인증번호 + 기관명 세 칸이고, 그 편집 결과가 «같은»
+     `safetyText` 문자열로 직렬화된다.
+
+     🔴 가드를 지우지 않고 «옮긴다». F-5 가 못박으려던 것은 textarea 가 아니라
+     「KC 입력 경로가 있다」이고, 그 사실은 그대로다 — 지워 버리면 다음 사람이
+     또 「입력 경로가 없다」고 보고한다. */
   it("안전인증 입력칸이 화면에 있다", () => {
-    expect(PANEL).toContain("value={form.certification.safetyText}");
+    expect(PANEL).toContain("<SafetyCertificationRows");
+    expect(PANEL).toContain('aria-label="인증번호"');
+  });
+
+  it("편집 결과가 같은 저장 필드(safetyText)로 돌아간다", () => {
+    expect(PANEL).toContain('patch("certification", { safetyText: serializeSafetyEntries(next, safetyUnparsed) })');
   });
 
   it("비어 있으면 화면이 그것을 «부족» 으로 센다", () => {

@@ -136,7 +136,13 @@ describe("롯데ON 탭 — 실제로 그려지는 화면", () => {
     expect(labels).not.toContain("전시카테고리번호 (dcatLst)");
     expect(labels).toContain("고시 품목");
     expect(labels).toContain("고시 항목");
-    expect(labels).toContain("안전인증 목록");
+    /* LOTTEON-FINAL-05 #2(CEO 지시, 2026-09-29) — 「안전인증 목록」 자유 입력
+       한 칸이 «신고 축 + 실제 값» 으로 갈라졌다. 칸이 «선다» 는 이 검사의 뜻은
+       그대로이고, 셋 다 확인해야 세 상태가 화면에 있다는 증명이 된다. */
+    expect(labels).toContain("인증 대상");
+    expect(labels).toContain("인증 대상 아님");
+    expect(labels).toContain("안전인증 유형");
+    expect(labels).toContain("인증번호");
     expect(labels).toContain("수입대행코드");
     expect(labels).toContain("출고지");
     expect(labels).toContain("반품지");

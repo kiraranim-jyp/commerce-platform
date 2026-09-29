@@ -81,6 +81,16 @@ export interface LotteOnChannelConfig {
   /** 고시 항목들. pdArtlCd 코드체계는 품목마다 달라 생성하지 않는다. */
   noticeArticles: LotteOnNoticeArticle[];
 
+  /**
+   * LOTTEON-FINAL-05 #2 — 판매자가 신고한 **안전인증 대상 여부**.
+   *
+   * 🔴 `null` 은 「대상 아님」이 아니라 «아직 고르지 않았다» 다. 셋을 구별하지
+   * 않으면 고르지 않은 상품이 조용히 「대상 아님」으로 등록된다.
+   * 🔴 이 값이 payload 에 «직접» 실리는 키는 없다. 롯데ON 에서 이 축의 표현은
+   * `sftyAthnLst` 의 유무이고, 여기서는 그 유무가 «맞는지» 를 검증기가 판단할
+   * 근거로만 쓴다 — 우리가 인증 항목을 만들어 넣거나 지우지 않는다.
+   */
+  safetyTarget: "TARGET" | "EXCLUDED" | null;
   /** 안전인증목록(sftyAthnLst). 품목코드 23에서는 표준카테고리에 따라 필수. */
   safetyCertifications: LotteOnSafetyCertification[];
   /** 수입대행코드(impPrxCd) — KC인증 계열을 넣을 때 필수. */
@@ -136,6 +146,9 @@ export const BLANK_LOTTEON_CHANNEL_CONFIG: LotteOnChannelConfig = {
   taxTypeCode: "",
   noticeItemCode: null,
   noticeArticles: [],
+  /* 🔴 「아직 고르지 않았다」로 시작한다 — 빈 설정이 「대상 아님」을 뜻하면
+     아무것도 입력하지 않은 상품이 인증 없이 통과한다. */
+  safetyTarget: null,
   safetyCertifications: [],
   importProxyCode: null,
   categoryAttributes: [],

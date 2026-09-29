@@ -224,6 +224,91 @@ describe("validateLotteOnPayload", () => {
     expect(result.ok).toBe(true);
   });
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     LOTTEON-FINAL-05 #2(CEO 지시, 2026-09-29) — 안전인증 **3상태**
+
+     바로 위 「안전인증 없이 절대 통과하지 못한다」는 그대로 살아 있다. 달라진
+     것은 그 규칙을 «푸는 길이 하나 더» 생겼다는 것이다:
+
+       미선택   아직 고른 적 없다   → 품목 23 이면 예전과 똑같이 막힌다
+       TARGET   대상이다            → 실제 인증정보가 있어야 한다
+       EXCLUDED 대상이 아니다       → 인증정보를 요구하지 않는다
+
+     🔴 이 블록이 지키는 핵심은 **미선택 ≠ 대상 아님** 하나다. 그 구별이
+     무너지면 아무것도 고르지 않은 상품이 조용히 「대상 아님」으로 등록된다 —
+     스마트스토어에서 「12313ㄹㅇ」이 나간 것과 같은 종류의 사고다.
+     ═══════════════════════════════════════════════════════════════════════ */
+  describe("안전인증 3상태 — 미선택 / 대상 / 대상 아님", () => {
+    const childrenChannel = (overrides: Partial<LotteOnChannelConfig> = {}) =>
+      completeChannel({ noticeItemCode: LOTTEON_NOTICE_ITEM_CODE_CHILDREN, ...overrides });
+    const safety = (result: ReturnType<typeof validateLotteOnPayload>) =>
+      result.fields.find((f) => f.field === "sftyAthnLst");
+
+    it("🔴 미선택은 「대상 아님」이 아니다 — 품목 23 에서 그대로 막힌다", () => {
+      const result = validateLotteOnPayload(inputFor(makeProduct(), childrenChannel()));
+      expect(childrenChannel().safetyTarget, "fixture 가 이미 고른 상태면 이 검사는 아무것도 증명하지 않는다").toBeNull();
+      expect(result.ok).toBe(false);
+      expect(safety(result)?.status).toBe("BLOCKED");
+      expect(safety(result)?.code).toBe("SAFETY_CERTIFICATION_REQUIRED");
+    });
+
+    it("「대상 아님」을 고르면 인증정보 없이 통과한다 — 이것이 없던 출구다", () => {
+      const result = validateLotteOnPayload(inputFor(makeProduct(), childrenChannel({ safetyTarget: "EXCLUDED" })));
+      expect(result.ok).toBe(true);
+      expect(safety(result)?.status).toBe("READY");
+      /* 🔴 화면이 「따져가 확인했다」로 읽히면 안 된다 — 판매자의 «신고» 다. */
+      expect(safety(result)?.label).toContain("판매자 신고");
+    });
+
+    it("「대상 아님」인데 인증정보가 같이 있으면 막는다 — 반쪽 신고를 보내지 않는다", () => {
+      const result = validateLotteOnPayload(
+        inputFor(
+          makeProduct(),
+          childrenChannel({
+            safetyTarget: "EXCLUDED",
+            safetyCertifications: [{ sftyAthnTypCd: "CHL_CFM", sftyAthnNo: "CB-1234" }],
+          }),
+        ),
+      );
+      expect(result.ok).toBe(false);
+      expect(safety(result)?.code).toBe("SAFETY_DECLARATION_CONFLICT");
+    });
+
+    it("「대상」을 골랐는데 인증정보가 없으면 품목코드와 무관하게 막는다", () => {
+      /* 🔴 품목 23 이 «아닌» 상품으로 잰다. 품목코드가 막는 것인지 신고가 막는
+         것인지 구별되지 않으면 이 검사는 아무것도 증명하지 않는다. */
+      const result = validateLotteOnPayload(
+        inputFor(makeProduct(), completeChannel({ noticeItemCode: "01", safetyTarget: "TARGET" })),
+      );
+      expect(result.ok).toBe(false);
+      expect(safety(result)?.code).toBe("SAFETY_CERTIFICATION_REQUIRED");
+    });
+
+    it("「대상」 + 실제 인증정보면 통과한다", () => {
+      const result = validateLotteOnPayload(
+        inputFor(
+          makeProduct(),
+          childrenChannel({
+            safetyTarget: "TARGET",
+            safetyCertifications: [{ sftyAthnTypCd: "CHL_ATHN", sftyAthnNo: "CB-9999" }],
+          }),
+        ),
+      );
+      expect(result.ok).toBe(true);
+      expect(safety(result)?.status).toBe("READY");
+    });
+
+    it("「대상 아님」이어도 인증번호를 지어내지 않는다 — payload 에 sftyAthnLst 가 아예 없다", () => {
+      const payload = buildLotteOnPayload(inputFor(makeProduct(), childrenChannel({ safetyTarget: "EXCLUDED" })));
+      expect(payload.spdLst[0].sftyAthnLst).toBeUndefined();
+    });
+
+    it("품목 23 이 아니면 미선택이어도 이 축을 묻지 않는다(기존 동작 그대로)", () => {
+      const result = validateLotteOnPayload(inputFor(makeProduct(), completeChannel({ noticeItemCode: "01" })));
+      expect(safety(result)).toBeUndefined();
+    });
+  });
+
   it("출고지/회수지/배송비정책/배송가능지역이 없으면 막는다 — 임의 번호를 보낼 수 없다", () => {
     const result = validateLotteOnPayload(
       inputFor(

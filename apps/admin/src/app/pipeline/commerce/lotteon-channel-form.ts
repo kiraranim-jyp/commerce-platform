@@ -2,6 +2,7 @@ import type {
   CanonicalProduct,
   FieldSource,
   LotteOnChannelInfo,
+  LotteOnSafetyTarget,
   LotteOnSelectedCategoryFacts,
   PlatformId,
 } from "@commerce/shared";
@@ -99,6 +100,14 @@ export interface LotteOnNoticeForm {
 
 /** 인증 — sftyAthnLst[] + impPrxCd. */
 export interface LotteOnCertificationForm {
+  /**
+   * LOTTEON-FINAL-05 #2 — 판매자가 고른 **안전인증 대상 여부**.
+   *
+   * 🔴 `undefined` 가 「미선택」이다. 세 상태를 두 개의 값 + 부재로 표현하는
+   * 것이 `SmartStoreKcDeclaration` 과 같은 규칙이다 — 「고른 적 없음」을
+   * 「대상 아님」으로 읽지 않기 위해 세 번째 «값» 을 만들지 않는다.
+   */
+  safetyTarget?: LotteOnSafetyTarget;
   /** 한 줄에 하나씩 `유형코드:인증번호[:기관명]`. */
   safetyText: string;
   /** 수입대행코드(impPrxCd). */
@@ -212,6 +221,11 @@ export function toLotteOnChannelInfo(form: LotteOnChannelForm): LotteOnChannelIn
         : {}),
     },
     certification: {
+      /* 🔴 고른 적이 없으면 **키 자체를 만들지 않는다** — `category.selected` ·
+         `notice.articleValues` 와 같은 규칙이다. `safetyTarget: undefined` 를
+         내보내면 JSON 왕복에서 키가 사라졌다 생겼다 하고, 무엇보다 이 필드를
+         모르던 옛 스냅샷과 「아직 고르지 않은 새 상품」이 다른 모양이 된다. */
+      ...(form.certification.safetyTarget ? { safetyTarget: form.certification.safetyTarget } : {}),
       safetyText: form.certification.safetyText,
       importProxyCode: form.certification.importProxyCode,
     },
@@ -364,8 +378,18 @@ export function summarizeLotteOnManagedValues(
   const rows: LotteOnManagedValueRow[] = [
     { label: "고시 품목코드", value: text(saved?.notice.itemCode) },
     { label: "고시 항목", value: articles.length > 0 ? `${articles.length}건` : null },
-    // 🔴 인증번호 원문은 여기에 적지 않는다 — 건수만 센다.
-    { label: "안전인증", value: certifications.length > 0 ? `${certifications.length}건` : null },
+    /* 🔴 인증번호 원문은 여기에 적지 않는다 — 건수만 센다.
+       🔴 LOTTEON-FINAL-05 #2 — 「대상 아님」은 «0건» 이 아니라 판매자가 고른
+       상태다. 값이 없다고 적으면 아직 고르지 않은 상품과 같아 보인다. */
+    {
+      label: "안전인증",
+      value:
+        saved?.certification.safetyTarget === "EXCLUDED"
+          ? "인증 대상 아님(판매자 선언)"
+          : certifications.length > 0
+            ? `${certifications.length}건`
+            : null,
+    },
     { label: "수입대행코드", value: text(saved?.certification.importProxyCode) },
     { label: "출고지번호", value: text(saved?.delivery.outboundPlaceNo) },
     { label: "반품지번호", value: text(saved?.delivery.returnPlaceNo) },
@@ -413,6 +437,81 @@ export function parseSafetyCertifications(
     .filter((item): item is { sftyAthnTypCd: string; sftyAthnNo: string; sftyAthnOrgnNm?: string } => Boolean(item));
 }
 
+/* ── LOTTEON-FINAL-05 #2 — 안전인증을 «줄 문자열» 이 아니라 칸으로 ──────────
+ *
+ * 저장은 여전히 `safetyText` **하나**다. 구조체를 새로 저장하지 않는 이유는
+ * 두 벌이 생기기 때문이다 — 이미 jsonb 에 있는 `safetyText` 를 놔두고 구조체를
+ * 더하면 어느 쪽이 사실인지 묻는 자리가 생기고, 그 질문에 두 곳이 다르게
+ * 답하는 순간이 곧 오등록이다. 그래서 화면만 칸으로 바꾸고 «같은 문자열» 로
+ * 왕복한다(parse → 편집 → serialize).
+ */
+
+/** 한 줄이 풀어진 모양. 화면의 세 칸과 1:1 이다. */
+export interface LotteOnSafetyEntry {
+  typeCode: string;
+  number: string;
+  orgName: string;
+}
+
+/**
+ * 셀러에게 «보여주는» 안전인증 유형 — 어린이제품 셋뿐이다.
+ *
+ * 🔴 `code` 는 화면에 «쓰지» 않는다(F-8 원칙: 셀러에게 내부 코드를 타이핑시키지
+ * 않는다). 값으로만 쓰고 셀러가 읽는 것은 `label` 이다.
+ *
+ * 🔴 셋으로 한정하는 근거는 이 저장소의 주력 카테고리(어린이제품, 고시 품목 23)
+ * 다. 전기용품·생활용품 계열(ELC · LIFE 접두 코드)은 여기 넣지 않는다 — 그 유형들은
+ * 수입대행코드(impPrxCd)를 함께 요구하고, 그 조건을 이 화면이 아직 묻지
+ * 않는다. 목록에만 올려 두면 고를 수는 있는데 등록은 막히는 칸이 된다.
+ * 🔴 그래도 «이미 저장된» 다른 유형은 버리지 않는다 — 아래 parse 가 그대로
+ * 들고 있고 화면이 원래 코드를 표시한다.
+ */
+export const LOTTEON_CHILD_SAFETY_TYPE_OPTIONS: readonly { code: string; label: string }[] = [
+  { code: "CHL_ATHN", label: "안전인증" },
+  { code: "CHL_CFM", label: "안전확인" },
+  { code: "CHL_SUPS", label: "공급자적합성확인" },
+];
+
+/**
+ * `safetyText` → 화면이 쓰는 칸 + **풀지 못한 줄**.
+ *
+ * 🔴 `unparsed` 를 버리지 않는 이유: 화면을 칸으로 바꾸면서 왕복이 생겼는데,
+ * 형식이 깨진 줄을 조용히 떨어뜨리면 셀러가 적어 둔 글자가 «저장을 한 번 더
+ * 했다는 이유만으로» 사라진다. payload 에 나가지 않는 줄이라도 지우는 것은
+ * 우리 몫이 아니다 — 그대로 들고 있다가 다시 붙여 적는다.
+ */
+export function parseSafetyEntries(raw: string): { entries: LotteOnSafetyEntry[]; unparsed: string[] } {
+  const entries: LotteOnSafetyEntry[] = [];
+  const unparsed: string[] = [];
+  for (const line of raw.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const [typeCode, number, orgName] = trimmed.split(":").map((part) => part.trim());
+    if (!typeCode || !number) {
+      unparsed.push(trimmed);
+      continue;
+    }
+    entries.push({ typeCode, number, orgName: orgName ?? "" });
+  }
+  return { entries, unparsed };
+}
+
+/** 칸 + 못 푼 줄 → `safetyText`. parseSafetyEntries 의 정확한 역이다. */
+export function serializeSafetyEntries(entries: readonly LotteOnSafetyEntry[], unparsed: readonly string[] = []): string {
+  const lines = entries
+    .map((entry) => ({
+      typeCode: entry.typeCode.trim(),
+      number: entry.number.trim(),
+      orgName: entry.orgName.trim(),
+    }))
+    /* 🔴 빈 칸은 줄로 만들지 않는다 — 셀러가 [행 추가] 만 누르고 비워 둔 줄이
+       `":"` 같은 쓰레기로 저장되면 parseSafetyCertifications 가 그것을 버려서
+       화면과 payload 가 갈라진다. */
+    .filter((entry) => entry.typeCode || entry.number || entry.orgName)
+    .map((entry) => [entry.typeCode, entry.number, entry.orgName].filter(Boolean).join(":"));
+  return [...lines, ...unparsed].join("\n");
+}
+
 /** 쉼표/공백으로 구분된 전시카테고리 입력 → 번호 배열(중복 제거). */
 export function parseDisplayCategoryNos(raw: string): string[] {
   const seen = new Set<string>();
@@ -432,6 +531,25 @@ export function parseDisplayCategoryNos(raw: string): string[] {
  * 통과인데 등록은 실패하는 그 상태가 된다. 규칙이 바뀌면 두 곳을 함께 고쳐라.
  */
 export function requiresSafetyCertification(form: LotteOnChannelForm): boolean {
+  /* 🔴 LOTTEON-FINAL-05 #2 — 「대상 아님」을 고른 상품에 인증정보를 요구하지
+     않는다. 판매자의 선언이 «면제» 를 만드는 것이 아니라, 우리가 그 선언을
+     롯데ON 에 그대로 신고하는 것이다(판정은 따져가 내리지 않는다). */
+  if (form.certification.safetyTarget === "EXCLUDED") return false;
+  /* 🔴 반대로 「대상」을 고르면 품목코드와 무관하게 요구한다 — 셀러가 대상이라고
+     말한 상품을 인증정보 없이 내보내지 않는다. */
+  if (form.certification.safetyTarget === "TARGET") return true;
+  /* 🔴 미선택은 «예전 그대로» 다. 고르지 않은 것을 「대상 아님」으로 읽지 않는다. */
+  return form.notice.itemCode.trim() === LOTTEON_CHILD_PRODUCT_ITEM_CODE;
+}
+
+/**
+ * 안전인증 대상 여부를 **골라야 하는가** — 아직 고르지 않았는가.
+ *
+ * 화면이 「미선택」을 말할 수 있어야 세 상태가 셋이 된다. 미선택을 「입력
+ * 필요」로만 그리면 셀러는 «무엇을» 해야 하는지 모른 채 빈 칸만 본다.
+ */
+export function needsSafetyTargetChoice(form: LotteOnChannelForm): boolean {
+  if (form.certification.safetyTarget !== undefined) return false;
   return form.notice.itemCode.trim() === LOTTEON_CHILD_PRODUCT_ITEM_CODE;
 }
 
@@ -459,6 +577,10 @@ export function toLotteOnChannelPayload(form: LotteOnChannelForm) {
         .map(([code, value]) => ({ pdArtlCd: code.trim(), pdArtlCnts: value.trim() })),
     ],
 
+    /* 🔴 LOTTEON-FINAL-05 #2 — 선언을 «보낸다». 화면이 판정해서 인증 목록을
+       비우거나 채우지 않는다: 셋 다 서버(validate-payload.ts) 한 곳에서
+       읽어야 화면과 서버가 다른 말을 할 수 없다. 키가 없으면 미선택이다. */
+    ...(form.certification.safetyTarget ? { safetyTarget: form.certification.safetyTarget } : {}),
     safetyCertifications: parseSafetyCertifications(form.certification.safetyText),
     importProxyCode: form.certification.importProxyCode.trim(),
 
@@ -921,8 +1043,8 @@ const LOTTEON_FIX_GUIDE: Record<string, Omit<LotteOnMissingInfoItem, "key" | "la
     sectionId: "lotteon-section-notice",
   },
   sftyAthnLst: {
-    why: "이 카테고리는 KC 안전인증이 있어야 팔 수 있습니다. 인증 없이 등록하면 판매중지 대상입니다.",
-    what: "실제로 취득한 인증번호를 입력해야 합니다 — 어떤 경우에도 자동으로 만들지 않습니다. 상품정보에 어린이제품 인증을 이미 입력해 두셨다면 그 값을 그대로 가져다 쓸 수 있습니다.",
+    why: "롯데ON은 이 상품이 안전인증 대상인지를 판매자가 신고하도록 요구합니다. 대상인데 인증 없이 등록하면 판매중지 대상입니다.",
+    what: "인증 섹션에서 [인증 대상] / [인증 대상 아님] 중 하나를 먼저 고르세요. 대상이면 실제로 취득한 인증 유형과 인증번호를 입력합니다 — 인증번호는 어떤 경우에도 자동으로 만들지 않습니다(상품정보에 어린이제품 인증을 이미 입력해 두셨다면 그 값을 가져다 쓸 수 있습니다). 대상이 아니면 인증정보를 입력하지 않습니다.",
     where: "LOTTEON_TAB",
     sectionId: "lotteon-section-certification",
   },
