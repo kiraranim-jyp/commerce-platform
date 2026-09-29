@@ -120,3 +120,30 @@ describe("🔴 ④ 모호하면 «고르지 않는다» — 복수 국가 표기
     expect(autoPickLotteOnOriginCode(ITEMS, "스페인,")?.code).toBe("ES");
   });
 });
+
+/* ══ LOTTEON-FINAL-05 — 🔴 «임의의 제한 목록» 이 사라졌다 ═══════════════════
+   예전에는 손으로 적은 19개국 표만 영문을 알아들었다. 즉 «우리가» 지원 국가를
+   정하고 있었다. 이제 ISO-3166 전체를 플랫폼 데이터로 읽는다 —
+   지원 범위를 정하는 것은 롯데ON 이 준 목록 하나다. */
+describe("🔴 ⑤ 지원 국가를 «우리가» 정하지 않는다", () => {
+  const WIDE = [
+    { code: "MA", name: "모로코" },
+    { code: "PE", name: "페루" },
+    { code: "NZ", name: "뉴질랜드" },
+    { code: "ES", name: "스페인" },
+  ];
+
+  it.each([
+    ["Morocco", "MA"],
+    ["Peru", "PE"],
+    ["New Zealand", "NZ"],
+    ["Made in Morocco", "MA"],
+  ])("%s → %s — 옛 19개국 표에 «없던» 나라다", (text, code) => {
+    expect(autoPickLotteOnOriginCode(WIDE, text)?.code).toBe(code);
+  });
+
+  it("🔴 그래도 고르는 것은 «롯데ON 목록 안» 의 코드다 — 목록에 없으면 null", () => {
+    /* 모로코를 알아들어도, 목록에 없으면 코드를 만들어 내지 않는다. */
+    expect(autoPickLotteOnOriginCode([{ code: "ES", name: "스페인" }], "Morocco")).toBeNull();
+  });
+});

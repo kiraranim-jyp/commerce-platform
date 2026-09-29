@@ -36,38 +36,55 @@ function normalize(value: string): string {
 }
 
 /**
- * 영문 국가명 → 롯데ON 목록에 실제로 있는 한국어 표기.
+ * 🔴 LOTTEON-FINAL-05 — «임의의 제한 목록» 을 없앤다.
  *
- * 🔴 이것은 **코드가 아니라 «이름»** 이다. 틀려도 코드가 잘못 나가지 않는다 —
- * 목록에 없는 이름이 되어 그냥 매칭에 실패하고 `null` 이 된다. 그것이 이 표를
- * 두는 것이 안전한 이유다.
+ * 여기 있던 것: 손으로 적은 19개국 표(`spain: "스페인"` …). 우리 소싱 국가만
+ * 담아 두었고, 목록에 없는 나라는 조용히 매칭에 실패했다. **우리가 지원 국가를
+ * 정하는 구조였다** — 그건 롯데ON 목록이 정할 일이다.
  *
- * 🔴 왜 별도로 두는가: `naver/origin-match.ts` 에 같은 성격의 표가 있지만
- * (`COUNTRY_NAME_KO`) export 되지 않고 아시아 10개국뿐이라 우리 소싱 국가
- * (유럽)가 없다. **두 표를 하나로 합치는 것은 별건이다** — 지금 합치면 네이버
- * 실측 매칭까지 건드리게 된다(기록만 하고 하지 않는다).
+ * 대신 **플랫폼이 가진 ISO-3166 국가명**을 쓴다(`Intl.DisplayNames`). 영어 이름과
+ * 한국어 이름을 같은 코드로 이어 역색인을 만든다. 우리가 «번역하지» 않는다 —
+ * 표준 데이터를 읽을 뿐이다.
+ *
+ * 🔴 그래도 고르는 것은 언제나 «롯데ON 이 준 목록» 안의 코드다. 이 색인은
+ * 「Spain 과 스페인이 같은 나라다」만 말하고, 코드는 롯데ON 목록에서 찾는다.
  */
-const LATIN_COUNTRY_NAME_KO: Record<string, string> = {
-  spain: "스페인",
-  france: "프랑스",
-  italy: "이탈리아",
-  portugal: "포르투갈",
-  germany: "독일",
-  netherlands: "네덜란드",
-  denmark: "덴마크",
-  sweden: "스웨덴",
-  poland: "폴란드",
-  turkey: "튀르키예",
-  china: "중국",
-  vietnam: "베트남",
-  india: "인도",
-  indonesia: "인도네시아",
-  japan: "일본",
-  "united kingdom": "영국",
-  uk: "영국",
-  "united states": "미국",
-  usa: "미국",
-};
+function buildCountryNameIndex(): Map<string, string> {
+  const index = new Map<string, string>();
+  try {
+    const ko = new Intl.DisplayNames(["ko"], { type: "region" });
+    const en = new Intl.DisplayNames(["en"], { type: "region" });
+    /* ISO-3166 alpha-2 전체(AA~ZZ). 실재하지 않는 조합은 DisplayNames 가
+       입력을 그대로 돌려주므로 걸러 낸다. */
+    for (let a = 65; a <= 90; a += 1) {
+      for (let b = 65; b <= 90; b += 1) {
+        const code = String.fromCharCode(a, b);
+        let koName: string | undefined;
+        let enName: string | undefined;
+        try {
+          koName = ko.of(code);
+          enName = en.of(code);
+        } catch {
+          continue;
+        }
+        if (!koName || koName === code) continue;
+        /* 한국어 이름 → 한국어 이름(자기 자신), 영어 이름 → 한국어 이름. */
+        index.set(koName.toLowerCase(), koName);
+        if (enName && enName !== code) index.set(enName.toLowerCase(), koName);
+      }
+    }
+  } catch {
+    /* 🔴 Intl 이 없으면 색인 없이 간다 — 원문 그대로만 매칭한다.
+       기능이 조용히 «틀리는» 것이 아니라 «덜 맞추는» 쪽으로 떨어진다. */
+  }
+  return index;
+}
+
+let countryNameIndex: Map<string, string> | null = null;
+function koreanCountryName(name: string): string | undefined {
+  if (!countryNameIndex) countryNameIndex = buildCountryNameIndex();
+  return countryNameIndex.get(name.toLowerCase());
+}
 
 /**
  * 🔴 LOTTEON-FINAL-03 A — Production 에서 «여기서» 끊겼다.
@@ -111,7 +128,7 @@ function candidateNames(originText: string): string[] {
   const stripped = stripOriginLabel(raw);
   push(stripped);
   for (const name of [raw, stripped]) {
-    const ko = LATIN_COUNTRY_NAME_KO[name.toLowerCase()];
+    const ko = koreanCountryName(name);
     if (ko) push(ko);
   }
   return names;
