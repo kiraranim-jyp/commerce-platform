@@ -124,6 +124,22 @@ function stub(notice: unknown = NOTICE) {
             }),
         });
       }
+      if (url.includes("/api/lotteon/common-codes")) {
+        /* 🔴 롯데ON 이 주는 모양 그대로 — 우리가 코드를 만들지 않는다. */
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              ok: true,
+              items: [
+                { code: "KR", name: "대한민국" },
+                { code: "ES", name: "스페인" },
+                { code: "FR", name: "프랑스" },
+              ],
+            }),
+        });
+      }
       return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, values: {} }) });
     }),
   );
@@ -198,5 +214,52 @@ describe("🔴🔴 화이트리스트 밖에는 칸을 만들지 않는다", () 
     stub();
     const block = (await mountExpanded(panel())).querySelector("[data-lotteon-seller-notice]") as HTMLElement;
     expect(block.querySelectorAll("input")).toHaveLength(2);
+  });
+});
+
+
+/* ══ LOTTEON-FINAL-02 P0 — 원산지 자동 선택이 «화면에서» 도는가 ═══════════════
+   순수 함수는 8/8 로 증명했지만 패널 배선은 DOM 으로 재지 않았다고 보고했다.
+   그 구멍을 여기서 닫는다 — 이 저장소 규칙은 「Render PASS ≠ 소스 PASS」다. */
+describe("🔴 원산지코드가 «화면에서» 자동으로 채워진다", () => {
+  it("상품 원산지(스페인)로 OPLC_CD 가 잡혀 입력칸에 선다", async () => {
+    stub();
+    const el = await mountExpanded(panel());
+    const input = [...el.querySelectorAll("input")].find((i) => i.value === "ES");
+    expect(input, "원산지코드 ES 가 채워진 입력칸이 없다").toBeDefined();
+  });
+
+  it("🔴 목록에 없는 원산지는 «채우지 않는다» — 코드를 지어내지 않는다", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: unknown) => {
+        const url = String(input);
+        if (url.includes("/api/lotteon/payload-preview")) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () =>
+              Promise.resolve({
+                ok: true,
+                payload: {},
+                validation: { ok: false, fields: [], readyCount: 0, missingCount: 1, blockedCount: 1 },
+                notice: NOTICE,
+              }),
+          });
+        }
+        if (url.includes("/api/lotteon/common-codes")) {
+          /* 스페인이 «없는» 목록이다. */
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve({ ok: true, items: [{ code: "KR", name: "대한민국" }] }),
+          });
+        }
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ok: true, values: {} }) });
+      }),
+    );
+    const el = await mountExpanded(panel());
+    const values = [...el.querySelectorAll("input")].map((i) => i.value);
+    expect(values).not.toContain("KR");
   });
 });
