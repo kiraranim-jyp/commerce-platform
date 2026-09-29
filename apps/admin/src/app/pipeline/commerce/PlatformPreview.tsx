@@ -20,8 +20,8 @@ import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
 import { ChannelPriceSection } from "./ChannelPriceSection";
 import { CategoryRequirementsEditor } from "./CategoryRequirementsEditor";
 import { ChannelRegistrationFrame, ChannelRegistrationSummary } from "./ChannelRegistrationFrame";
-import { ChannelEditUnavailableCard } from "./ChannelEditSummary";
-import { editUnavailableNote } from "./edit-adapters";
+import { ChannelEditScopeCard, ChannelEditUnavailableCard } from "./ChannelEditSummary";
+import { editSupportedScope, editUnavailableNote } from "./edit-adapters";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { ComplianceBreakdown } from "./ComplianceBreakdown";
 import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
@@ -928,10 +928,20 @@ export function PlatformPreview({
              화면에 박으면 표가 바뀌어도 화면은 옛말을 계속 한다).
       ══════════════════════════════════════════════════════════════════════ */}
       {editSummary ?? (
-        <ChannelEditUnavailableCard
-          commerceLabel={listing.platformLabel}
-          note={editUnavailableNote(listing.platform)}
-        />
+        <>
+          <ChannelEditUnavailableCard
+            commerceLabel={listing.platformLabel}
+            note={editUnavailableNote(listing.platform)}
+          />
+          {/* 🔴 UI-UNIFY-01 A — 어댑터가 «있는» 채널은 위 카드가 침묵한다(그 함수가
+              undefined 를 낸다). 그 자리를 비워 두면 셀러는 스마트스토어·쿠팡에서
+              「등록 후 관리」라는 말을 아예 듣지 못한다 — 롯데ON 만 말하고 있었다.
+              두 카드는 서로 배타라 한 자리에 하나만 선다. */}
+          <ChannelEditScopeCard
+            commerceLabel={listing.platformLabel}
+            scope={editSupportedScope(listing.platform)}
+          />
+        </>
       )}
     </div>
   );

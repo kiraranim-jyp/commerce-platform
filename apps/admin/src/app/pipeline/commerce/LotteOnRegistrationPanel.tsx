@@ -77,8 +77,8 @@ import {
 } from "./registration-sections";
 import { ChannelRegistrationFrame, ChannelRegistrationSummary } from "./ChannelRegistrationFrame";
 /* Commerce-3B — 🔴 스마트스토어가 쓰는 «그 카드» 와 «그 문구» 를 그대로 쓴다. */
-import { ChannelEditUnavailableCard } from "./ChannelEditSummary";
-import { editUnavailableNote } from "./edit-adapters";
+import { ChannelEditScopeCard, ChannelEditUnavailableCard } from "./ChannelEditSummary";
+import { editSupportedScope, editUnavailableNote } from "./edit-adapters";
 import { LOTTEON_COMMERCE_ID, commerceLabel } from "./commerce-registry";
 import { ListingConfirmationModal, type ListingProgressStep } from "./ListingConfirmationModal";
 import type { ReadinessItem } from "./readiness";
@@ -1372,6 +1372,14 @@ export function LotteOnRegistrationPanel({
       <ChannelEditUnavailableCard
         commerceLabel={commerceLabel(LOTTEON_COMMERCE_ID)}
         note={editUnavailableNote(LOTTEON_COMMERCE_ID)}
+      />
+      {/* 🔴 UI-UNIFY-01 A — 지금은 롯데ON 에 어댑터가 없어 이 카드가 «그리지
+          않는다»(위 카드가 말한다). 그래도 세 탭이 같은 쌍을 두는 이유는, 훗날
+          롯데ON 어댑터가 붙는 순간 위 카드가 침묵하면서 이 자리가 «통째로 비는»
+          함정이 있기 때문이다 — 스마트스토어·쿠팡이 정확히 그 상태였다. */}
+      <ChannelEditScopeCard
+        commerceLabel={commerceLabel(LOTTEON_COMMERCE_ID)}
+        scope={editSupportedScope(LOTTEON_COMMERCE_ID)}
       />
     </div>
   );

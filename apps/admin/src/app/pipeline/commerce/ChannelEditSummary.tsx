@@ -141,6 +141,42 @@ export function ChannelEditUnavailableCard({
   );
 }
 
+/**
+ * ══ UI-UNIFY-01 A(CPO 결정, 2026-09-30) — **같은 자리가 채널마다 비지 않는다** ══
+ *
+ * 위 카드는 어댑터가 «없는» 채널만 세운다. 그래서 스마트스토어·쿠팡은 아직 등록
+ * 전일 때 이 자리가 **통째로 비어 있었다** — 롯데ON 만 「확인되지 않음」을 말했다.
+ * 셀러에게는 같은 자리가 채널을 옮길 때마다 나타났다 사라지는 것으로 보인다.
+ *
+ * 🔴 마크업을 위 카드와 «같은 틀» 로 둔다 — 그래야 「같은 형식의 안내」가 된다.
+ * 🔴 문장을 여기서 «만들지 않는다». capability 계층(`editSupportedScope`)이 낸
+ * 것을 그대로 받는다 — 그래서 쿠팡의 「상품명 하나」가 화면에서 부풀 수 없다.
+ * 🔴 위 카드와 «배타» 다: 어댑터가 있으면 이 카드, 없으면 위 카드.
+ */
+export function ChannelEditScopeCard({
+  commerceLabel,
+  scope,
+}: {
+  commerceLabel: string;
+  /** `undefined` 면 아무것도 그리지 않는다 — 호출부가 채널을 가리지 않아도 되게. */
+  scope: { status: string; note: string } | undefined;
+}) {
+  if (!scope) return null;
+  return (
+    <div
+      data-summary="channel-edit-scope"
+      className="overflow-hidden rounded-lg border border-border bg-surface p-4 text-sm shadow-elevated"
+    >
+      <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">등록 후 관리</p>
+      <p className="mt-1 text-base font-semibold text-text-primary">등록된 상품 수정</p>
+      <p className="mt-2 text-xs text-slate-600">
+        {commerceLabel} — <span className="font-medium text-text-primary">{scope.status}</span>
+      </p>
+      <p className="mt-2 text-xs text-slate-700">{scope.note}</p>
+    </div>
+  );
+}
+
 export interface ChannelEditSummaryProps {
   commerceLabel: string;
   model: ChannelEditModel;

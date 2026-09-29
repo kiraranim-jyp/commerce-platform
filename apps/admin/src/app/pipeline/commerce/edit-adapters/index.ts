@@ -1,4 +1,4 @@
-import { channelEditScope } from "../channel-field-capability";
+import { channelEditScope, FIELD_LABEL } from "../channel-field-capability";
 import type { CommerceId } from "../commerce-registry";
 import type { CommerceEditAdapter } from "../commerce-edit-adapter";
 import { smartStoreEditAdapter } from "./smartstore";
@@ -62,6 +62,38 @@ export function editUnavailableNote(commerceId: CommerceId): string | undefined 
     : /* 🔴 capability 는 고칠 수 있다는데 어댑터가 없다 — 우리 쪽 미비다.
          그 둘을 같은 문구로 뭉개면 조사 부채와 구현 부채가 섞인다. */
       "이 커머스의 수정 기능은 아직 연결되지 않았습니다.";
+}
+
+/**
+ * ══ UI-UNIFY-01 A(CPO 결정, 2026-09-30) — **지원 «되는» 채널도 말한다** ═══════
+ *
+ * 위 `editUnavailableNote()` 는 어댑터가 «없는» 채널만 말한다. 그래서 어댑터가
+ * 생긴 채널(스마트스토어·쿠팡)은 아직 등록 전일 때 우측 요약에서 **아무 말도
+ * 하지 않았다** — 롯데ON 만 「확인되지 않음」 카드를 세우고 있었다. 셀러에게는
+ * 같은 자리가 채널마다 비었다 찼다 하는 것으로 보인다.
+ *
+ * 🔴 여기서 capability 를 «다시 판정하지 않는다». `channelEditScope()` 가 이미
+ * 낸 결과를 문장으로 옮길 뿐이라, 쿠팡의 「상품명 하나」가 「전 항목」으로 부풀
+ * 수 없다(CPO 명시).
+ * 🔴 어댑터가 없으면 `undefined` — 그 자리는 기존 카드가 계속 말한다. 두 카드가
+ * 한 자리에 서지 않도록 «서로 배타» 다.
+ */
+export function editSupportedScope(commerceId: CommerceId): { status: string; note: string } | undefined {
+  if (!editAdapterFor(commerceId)) return undefined;
+  const scope = channelEditScope(commerceId);
+  if (scope.editable.length === 0) return undefined;
+
+  const editable = scope.editable.map((field) => FIELD_LABEL[field]);
+  const blocked = [...scope.recreateOnly, ...scope.unknown].map((field) => FIELD_LABEL[field]);
+
+  /* 🔴 「전 항목」이라고 말할 수 있는 것은 막힌 축이 «하나도» 없을 때뿐이다. */
+  const status = blocked.length === 0 ? "전 항목 수정 가능" : `${editable.join(" · ")} 수정 가능`;
+  const note =
+    blocked.length === 0
+      ? "등록된 상품을 이 화면에서 수정할 수 있습니다."
+      : /* 🔴 나머지를 「불가」로 적지 않는다 — 확인되지 «않은» 것이다(고정 어휘). */
+        `나머지 항목(${blocked.join(" · ")})은 이 커머스에서 수정할 수 있는지 아직 확인되지 않았습니다.`;
+  return { status, note };
 }
 
 /** 🔴 테스트가 「Core 를 고치지 않고 늘어났는가」를 세는 지점. */
