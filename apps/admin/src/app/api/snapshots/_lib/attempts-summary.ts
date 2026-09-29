@@ -141,10 +141,58 @@ export async function hasPriorSuccessfulAttempt(
   if (!snapshotId) return false;
   const supabase = getSupabaseAdmin();
   if (!supabase) return null;
+
+  /* ══ 🔴 COMMERCE-LIFECYCLE-FINAL(CPO P0, 2026-09-29) ══════════════════════
+     「이 스냅샷」이 아니라 «이 원본 상품» 으로 성공한 적이 있는가.
+
+     Production 실측: 롯데ON 에 같은 상품이 «하나 더» 등록됐다. 추적해 보니
+     버그가 아니라 설계의 빈틈이었다 —
+
+       「새 상품 분석」 → 새 Product 정체성 발급(snapshot.ts 가 sourceUrl 로
+       기존 Product 를 찾지 «않는다» — 자동 merge 금지, CPO 확정)
+         → 새 Product 에는 channel_products 연결이 없다
+         → resolveLifecycle 이 CREATE 로 내려간다
+         → 이 함수가 «그 새 스냅샷» 만 보므로 priorSuccess=false
+         → resolveCreateGate 가 ALLOW → 중복 등록
+
+     마지막 빗장이 바로 여기였는데 재는 범위가 한 칸 좁았다.
+
+     🔴 자동 merge 를 하는 것이 «아니다». 두 수집을 하나로 묶는 것은 여전히
+     사람이 확인할 일이고(연결 복구 도구가 그 자리다), 이 함수는 여전히 «막는
+     쪽으로만» 일한다. 바뀐 것은 질문의 범위 하나다.
+     🔴 CPO 요구 그대로다: 「과거 등록 성공 기록이 있는데 연결 정보가 없으면,
+     무조건 새로 등록해서는 안 된다.」 */
+  const { data: snap, error: snapError } = await supabase
+    .from("product_snapshots")
+    .select("source_url, workspace_id")
+    .eq("id", snapshotId)
+    .maybeSingle();
+  if (snapError) {
+    console.warn("[attempts-summary] 원본 상품 확인 실패:", snapError.message);
+    return null;
+  }
+
+  let snapshotIds = [snapshotId];
+  const sourceUrl = (snap as { source_url?: string | null } | null)?.source_url ?? null;
+  if (sourceUrl) {
+    const workspaceId = (snap as { workspace_id?: string | null } | null)?.workspace_id ?? null;
+    let query = supabase.from("product_snapshots").select("id").eq("source_url", sourceUrl);
+    /* 🔴 워크스페이스가 있으면 그 «안에서만» 본다 — 남의 등록 이력으로 내 등록을
+       막지 않는다. 옛 행은 이 칸이 비어 있어 그때는 URL 만으로 본다. */
+    if (workspaceId) query = query.eq("workspace_id", workspaceId);
+    const { data: siblings, error: siblingError } = await query.limit(500);
+    if (siblingError) {
+      console.warn("[attempts-summary] 같은 원본 상품 조회 실패:", siblingError.message);
+      return null;
+    }
+    const ids = ((siblings ?? []) as { id: string }[]).map((row) => row.id);
+    if (ids.length > 0) snapshotIds = [...new Set([snapshotId, ...ids])];
+  }
+
   const { data, error } = await supabase
     .from("registration_attempts")
     .select("id")
-    .eq("snapshot_id", snapshotId)
+    .in("snapshot_id", snapshotIds)
     .eq("platform", platform)
     .eq("status", "SUBMITTED")
     .limit(1);

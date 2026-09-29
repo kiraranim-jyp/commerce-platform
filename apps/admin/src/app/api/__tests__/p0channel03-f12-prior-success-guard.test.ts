@@ -148,3 +148,46 @@ describe("⑥ 상태의 근거는 여전히 ChannelProduct 다", () => {
     expect(store).not.toContain("registration_attempts");
   });
 });
+
+/* ════════════════════════════════════════════════════════════════════════════
+   🔴 ⑥ COMMERCE-LIFECYCLE-FINAL(CPO P0, 2026-09-29) — 빗장이 «상품» 단위다
+   ════════════════════════════════════════════════════════════════════════════
+
+   Production 실측: 롯데ON 에 같은 상품이 하나 더 등록됐다. 버그가 아니라 빈틈이었다 —
+
+       「새 상품 분석」 → 새 Product 정체성(자동 merge 금지라 sourceUrl 로 찾지 않는다)
+         → 새 Product 에 channel_products 연결 없음 → CREATE 로 내려감
+         → 이 빗장이 «그 새 스냅샷» 만 봐서 priorSuccess=false → ALLOW → 중복
+
+   빗장 자체는 옳았고 재는 «범위» 가 한 칸 좁았다. 이제 같은 원본 상품의 다른
+   스냅샷까지 본다. 🔴 묶는 것이 아니라 막는 것이다 — merge 는 여전히 사람 일이다.
+   ═══════════════════════════════════════════════════════════════════════════ */
+describe("🔴 ⑥ 「이 스냅샷」이 아니라 «이 원본 상품» 으로 성공했는지 본다", () => {
+  const fn = () => priorSuccessFn();
+
+  it("같은 원본 상품(source_url)의 다른 스냅샷을 함께 본다", () => {
+    const src = fn();
+    expect(src, "source_url 로 형제 스냅샷을 찾지 않는다").toContain('.eq("source_url"');
+    /* 단건이 아니라 목록으로 묻는다 — 스냅샷 하나만 보면 재분석이 빗장을 지나간다. */
+    expect(src, "이력 조회가 여전히 스냅샷 «한 건» 만 본다").toContain('.in("snapshot_id"');
+  });
+
+  it("🔴 남의 워크스페이스 이력으로 내 등록을 막지 않는다", () => {
+    expect(fn()).toContain('.eq("workspace_id", workspaceId)');
+  });
+
+  it("🔴 조회가 실패하면 «모른다»(null) — 실패를 「성공한 적 없다」로 읽지 않는다", () => {
+    const src = fn();
+    /* 새로 생긴 두 조회도 같은 규약을 따라야 한다. 하나라도 false 로 흘리면
+       DB 가 흔들릴 때마다 중복 등록의 문이 열린다. */
+    const returns = src.match(/return null;/g) ?? [];
+    expect(returns.length, "새 조회가 fail-closed 가 아니다").toBeGreaterThanOrEqual(3);
+  });
+
+  it("🔴 여기서 «묶지» 않는다 — 자동 merge 금지가 유지된다", () => {
+    const src = fn();
+    for (const forbidden of ["update(", "upsert(", "insert("]) {
+      expect(src, `빗장이 데이터를 쓰고 있다: ${forbidden}`).not.toContain(forbidden);
+    }
+  });
+});
