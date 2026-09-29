@@ -135,7 +135,11 @@ describe("롯데ON 탭 — 실제로 그려지는 화면", () => {
     expect(labels).not.toContain("표준카테고리번호 (scatNo)");
     expect(labels).not.toContain("전시카테고리번호 (dcatLst)");
     expect(labels).toContain("고시 품목");
-    expect(labels).toContain("고시 항목");
+    /* 🔴 LOTTEON-FINAL-09 — 「고시 항목」 자유 입력 상자는 «이전 형식으로 저장된
+       값이 있을 때만» 선다. 새 상품에는 서지 않는 것이 맞다 — 읽기 전용인데
+       「입력 필요」를 달고 있어 셀러가 그 앞에서 막혔다. 채우는 곳은 아래 항목별
+       칸이고, 저장값이 그대로 보인다는 것은 three-layer-realign 증명 2 가 지킨다. */
+    expect(labels).not.toContain("고시 항목");
     /* LOTTEON-FINAL-05 #2(CEO 지시, 2026-09-29) — 「안전인증 목록」 자유 입력
        한 칸이 «신고 축 + 실제 값» 으로 갈라졌다. 칸이 «선다» 는 이 검사의 뜻은
        그대로이고, 셋 다 확인해야 세 상태가 화면에 있다는 증명이 된다. */

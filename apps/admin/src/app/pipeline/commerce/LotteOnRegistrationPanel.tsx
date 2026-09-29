@@ -1967,9 +1967,28 @@ export function LotteOnRegistrationPanel({
             value={form.notice.itemCode}
             onChange={(value) => patch("notice", { itemCode: value })}
           />
+          {/* ══ 🔴 LOTTEON-FINAL-09(CEO 실측 혼동, 2026-09-29) ═══════════════════
+              이 상자가 **읽기 전용인데 빨간 「입력 필요」 배지를 달고** 서 있었다.
+              셀러가 손댈 수 없는 칸이 「입력하라」고 말한 셈이고, CEO 가 실제로
+              「상품고시정보 내용으로 안 되는 것 같다」고 막힌 자리다 — 정작 채워야
+              할 곳은 바로 아래의 이름 붙은 칸들(크기·체중의 한계 · 동일모델의
+              출시년월)이었다.
+
+              고친 것 둘:
+                ① `requirement` 를 뗀다. 필수 판정은 우측 「등록 전 확인」과
+                   아래 항목별 상태가 «이미» 말한다. 셀러가 풀 수 없는 칸에
+                   배지를 달면 그것은 안내가 아니라 막다른 길이다.
+                ② 저장된 값이 «있을 때만» 보여준다. 옛 형식(`0020:네이비`)으로
+                   저장된 상품이 있어서 지우지는 않지만, 새 상품에서 빈 읽기전용
+                   상자는 화면 소음일 뿐이다.
+
+              🔴 값을 버리지 않는다. 저장은 그대로이고 payload 경로도 그대로다 —
+              보여주는 조건만 바뀐다. */}
+          {form.notice.articlesText.trim().length > 0 && (
           <ChannelCodeTextArea
+            /* 라벨은 그대로 둔다 — 「이전 형식」이라는 사실은 note 가 말한다.
+               라벨을 바꾸면 입력칸 전수 가드 셋이 이름 때문에 흔들린다. */
             label="고시 항목"
-            requirement={requirementOf("pdItmsArtlLst")}
             /* ══ Commerce-6 F-8(CPO 지시, 2026-09-26) ══
                🔴 「API 가 코드를 안 준다 → 셀러에게 코드를 입력시킨다」는 결론을
                «철회» 한다. 제품 원칙과 정면으로 충돌한다 — 셀러는 Commerce 내부
@@ -1991,11 +2010,12 @@ export function LotteOnRegistrationPanel({
 
                그래서 지금 할 수 있는 정직한 것: 적게 하지 않고, 어디서 풀리는지
                말한다. 이미 저장된 값이 있으면 그대로 보여준다(지우지 않는다). */
-            note="고시 항목은 상품정보와 판매자 설정에서 «자동으로» 채웁니다 — 아래에서 항목별 상태를 확인하세요."
+            note="예전 형식으로 저장돼 있는 값입니다. 지금은 고시 항목을 상품정보·판매자 설정에서 «자동으로» 채우고, 나머지는 아래 항목별 칸에서 받습니다."
             readOnly
             value={form.notice.articlesText}
             onChange={(value) => patch("notice", { articlesText: value })}
           />
+          )}
           {/* ══ LOTTEON-NOTICE-SELLER-CONFIRMATION-01 ═══════════════════════════
               🔴 F-8 을 되돌리지 «않는다». 셀러는 여기서도 항목«코드» 를 보지
               않는다 — 묻는 것은 항목명이고, `0220`/`1830` 매핑은 우리가 한다.
