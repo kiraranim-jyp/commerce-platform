@@ -607,6 +607,43 @@ function magroTop(overrides: Partial<CanonicalProduct> = {}): CanonicalProduct {
   } as unknown as Partial<CanonicalProduct>);
 }
 
+/* 🔴 상속 «없음». 페이지에서 관측한 칸만 채우고 나머지는 전부 비운다.
+   magroTop() 은 tennisProduct() 를 상속해 관측하지 않은 값(상세설명·반품정책·
+   중량 등)을 물려받는다 — 그것이 차단 목록을 실제보다 짧게 보이게 했다. */
+function magroTopObserved(overrides: Partial<CanonicalProduct> = {}): CanonicalProduct {
+  return {
+    sourceUrl: "https://www.tennis-warehouse.com/Sergio_Tacchini_Mens_Fall_Magro_Top/descpageMASGT-STMFMT0.html",
+    title: field("Sergio Tacchini Men's Fall Magro Top"),
+    brand: field("Sergio Tacchini"),
+    price: field({ amount: 68, currency: "USD" }),
+    priceValidity: "VALID",
+    sku: field("STMFMT0-WH"),
+    modelName: field("STF26M51684-050"),
+    material: field("65% Cotton, 30% Polyester, 5% Elastane"),
+    color: field("Brilliant White"),
+    /* 페이지에 «없는» 것들 — 비운다. */
+    description: field(""), manufacturer: field(""), careInstructions: field(""),
+    countryOfOrigin: field(""), recommendedAge: field(""), returnPolicy: field(""),
+    weight: field(""), certification: field(""), certificationType: field(""),
+    importer: field(""), itemName: field(""), childCertification: field(null),
+    titleKo: field(""), descriptionKo: field(""), keywords: field([]),
+    seoTitle: field(""), seoDescription: field(""),
+    options: field([]),
+    optionGroups: [{ name: "Size", values: ["S", "M", "L", "XL", "XXL"] }],
+    variants: [
+      { optionValues: { Size: "S" }, stockQuantity: 3, sku: "STMFMT0-WH-S" },
+      { optionValues: { Size: "M" }, stockQuantity: null, sku: "STMFMT0-WH-M" },
+      { optionValues: { Size: "L" }, stockQuantity: null, sku: "STMFMT0-WH-L" },
+      { optionValues: { Size: "XL" }, stockQuantity: null, sku: "STMFMT0-WH-XL" },
+      { optionValues: { Size: "XXL" }, stockQuantity: 3, sku: "STMFMT0-WH-XXL" },
+    ],
+    images: [image({ id: "rep", originalUrl: "https://cdn.example/rep.jpg", isRepresentative: true })],
+    shippingFee: field(0, "DEFAULT"), stockQuantity: field(6),
+    priceBreakdown: { shippingKrw: 12000, feePercent: 10, marginPercent: 12 },
+    ...overrides,
+  } as unknown as CanonicalProduct;
+}
+
 /** 원산지 텍스트가 채워진 뒤의 상태 — 브랜드 기본값이 채우는 자리다. */
 const ORIGIN_FILLED = { ...NAVER_BUILD, originAreaCode: "0200037" } as const;
 const ORIGIN_FILLED_V = { ...NAVER_VALIDATE, originAreaCode: "0200037" } as const;
@@ -633,21 +670,45 @@ describe("⑤ 지정 상품 — 원산지 하나가 문을 막는다", () => {
     expect(blocked).not.toContain("detailAttribute.originAreaInfo.originAreaCode");
   });
 
-  /* ══ 🔴 남은 차단이 «정확히 둘» 이다 ════════════════════════════════════
-     원산지를 채운 뒤 SmartStore 가 막는 것을 전수로 세어 확정한다. 「대충 통과할
-     것」이 아니라 이름으로 적는다 — 셀러가 화면에서 채울 칸이 몇 개인지가
-     등록 착수 여부를 정한다.
+  /* ══ 🔴 상속을 «끊고» 다시 잰다 (CPO 정정, 2026-09-30) ════════════════════
+     직전에 나는 「남은 차단은 제조사·세탁방법 둘뿐」이라고 단정해 커밋했다.
+     그 단정이 «fixture 산물» 이었다 — magroTop() 이 tennisProduct() 를 상속해
+     description·returnPolicy·weight 같은 칸을 물려받고 있었다. 페이지에서
+     관측한 칸만 채운 독립 fixture 로 재면 «세» 개다(상세설명이 더 나온다).
 
-     🔴 처음 이 측정을 할 때 기반 fixture 의 제조사("Lacoste Operations SAS")를
-     물려받아 «1건» 으로 나왔다. 실제 페이지에는 제조사가 없다 — 비우고 다시
-     재서 2건임을 확인했다. fixture 상속이 사실을 덮은 자리다. */
-  it("🔴 원산지를 채우면 남는 차단은 «제조사·세탁방법 둘뿐» 이다", () => {
-    const product = magroTop({ manufacturer: field("") } as unknown as Partial<CanonicalProduct>);
-    const blocked = blockedOf(naverWith(product, ORIGIN_FILLED, ORIGIN_FILLED_V));
+     🔴 그래서 이 단정은 「운영 환경의 최종 차단 목록」이 아니다. 이 입력에서
+     이 결과가 나온다는 것뿐이다 — 실제 수집 데이터·운영 설정으로 다시 재야
+     한다. 테스트 이름에 그 범위를 적어 둔다. */
+  it("🔴 [probe 범위] 관측값만 채운 지정 상품 — 차단 3건: 상세설명·제조사·세탁방법", () => {
+    const blocked = blockedOf(naverWith(magroTopObserved(), ORIGIN_FILLED, ORIGIN_FILLED_V));
     expect(blocked.sort()).toEqual([
+      "originProduct.detailContent",
       "productInfoProvidedNotice(WEAR).caution",
       "productInfoProvidedNotice(WEAR).manufacturer",
     ]);
+  });
+
+  it("🔴 제조사는 «상세페이지 참조» 가 기존 규칙에서 허용된다 — 임의 값을 넣지 않아도 된다", () => {
+    /* CPO 지시: 「출처에서 확인되지 않으면 임의로 채우지 말고, 기존 고시 검증
+       규칙에서 허용되는 입력값을 확인한다」. 확인 결과 그 값이 통과한다. */
+    const product = magroTopObserved({
+      manufacturer: { value: "상세페이지 참조", source: "USER_EDITED", confidence: 1 },
+    } as unknown as Partial<CanonicalProduct>);
+    const blocked = blockedOf(naverWith(product, ORIGIN_FILLED, ORIGIN_FILLED_V));
+    expect(blocked).not.toContain("productInfoProvidedNotice(WEAR).manufacturer");
+  });
+
+  it("🔴 Settings 가 비면 차단이 «더 늘어난다» — fixture 가 공급한 값의 크기를 적는다", () => {
+    const noSettings = { warrantyPolicy: undefined, afterServiceDirector: undefined,
+      afterServiceTelephoneNumber: undefined, deliveryCompany: undefined };
+    const blocked = blockedOf(naverWith(magroTopObserved(),
+      { ...ORIGIN_FILLED, ...noSettings }, { ...ORIGIN_FILLED_V, ...noSettings }));
+    for (const f of ["deliveryInfo.deliveryCompany",
+      "productInfoProvidedNotice(WEAR).warrantyPolicy",
+      "productInfoProvidedNotice(WEAR).afterServiceDirector",
+      "detailAttribute.afterServiceInfo.afterServiceTelephoneNumber"]) {
+      expect(blocked, `${f} 가 Settings 없이도 통과하면 안 된다`).toContain(f);
+    }
   });
 
   it("사이즈 5개가 옵션 5건으로 실리고 빈 옵션값 가드가 서지 않는다", () => {
