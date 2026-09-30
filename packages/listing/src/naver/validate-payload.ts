@@ -1,4 +1,4 @@
-import { isRegistrationSafeImageUrl } from "@commerce/shared";
+import { getSelectedImageUrl, isRegistrationSafeImageUrl } from "@commerce/shared";
 
 import { hasRealProductOptions } from "./build-payload";
 import type { NaverPayloadInput, SmartStoreProductInput } from "./build-payload";
@@ -200,24 +200,45 @@ export function validateNaverPayload(
     "MISSING",
     "대표 이미지가 없습니다.",
   );
-  /* ══ MI-DATA-URI-FIX-01 B (CEO 승인, 2026-09-30) ═══════════════════════════
-     🔴 위 한 줄은 «대표 이미지 한 장» 만 본다. 실측된 유출 3건은 전부 «비대표» 였고
-     그래서 이 게이트를 그대로 통과해 optionalImages 로 나갔다.
+  /* ══ MI-STORAGE-FEEDBACK-02 (CEO 확정, 2026-09-30) ════════════════════════
+     🔴 여기 있던 것: 대표와 추가 이미지를 «한 칸» 에 담아 하나라도 안전하지 않으면
+     등록을 «막았다». 그것이 CEO 결정 2 를 위반했다 — 대표가 정상이고 추가 이미지
+     일부만 제외되는 경우는 «등록을 허용하고 경고» 해야 한다.
 
-     「있는가」와 「보낼 수 있는 형태인가」는 다른 질문이다 — 전송되는 «모든» URL 을 본다.
-     🔴 판정은 새로 만들지 않고 공통 함수(isRegistrationSafeImageUrl)를 부른다.
-     롯데ON 이 갤러리 전수 검사로 유일하게 이것을 잡아 왔고, 그 기준을 같이 쓴다. */
-  const outgoingImageUrls = [
-    originProduct.images.representativeImage.url,
-    ...(originProduct.images.optionalImages ?? []).map((img) => img.url),
-  ].filter((url) => Boolean(url));
-  const unsafeImageUrls = outgoingImageUrls.filter((url) => !isRegistrationSafeImageUrl(url));
+     그래서 두 칸으로 «가른다»:
+       대표가 안전하지 않다   → 차단 (required)
+       추가 이미지만 제외된다 → 🔴 경고 (optional: true)
+
+     🔴 optional 을 쓰는 근거: :881 의 blockingMissingCount 와 readiness.ts:257 이
+     «같은 플래그» 를 읽는다(주석이 「둘 다 같은 기준이어야 한다」고 못박아 두었다).
+     그래서 optional 하나로 「경고로 보이고 등록은 막지 않는다」가 두 곳에서 일치한다.
+     🔴 N-3.71 이 optional 을 size 하나로 좁혔는데 이 칸이 정당한 이유: 추가 이미지
+     부재는 네이버가 400 을 주는 축이 «아니다»(대표만 필수다). size 와 성질이 다르다. */
+  const representativeUrlPresent = Boolean(originProduct.images.representativeImage.url);
   check(
     fields,
-    "originProduct.images",
-    unsafeImageUrls.length === 0,
+    "originProduct.images.representativeImage.url",
+    !representativeUrlPresent || isRegistrationSafeImageUrl(originProduct.images.representativeImage.url),
     "MISSING",
-    `공개 URL 이 아닌 이미지 ${unsafeImageUrls.length}건이 있습니다 — 이미지 업로드가 끝나지 않았습니다.`,
+    "대표 이미지가 등록할 수 없는 형태입니다. 이미지 업로드 상태를 확인해 주세요.",
+  );
+  /* 🔴 제외 «장수» 는 payload 를 세지 않고 product 를 센다 — 어댑터가 이미 버린
+     뒤라 payload 에는 그 흔적이 없다. 어댑터와 «같은 조건·같은 공통 함수» 로
+     다시 세므로 두 곳이 갈라지지 않는다. */
+  const excludedOptionalImageCount = input.product.images.filter(
+    (img) =>
+      img.useInProductGallery &&
+      !img.isRepresentative &&
+      !isRegistrationSafeImageUrl(getSelectedImageUrl(img)),
+  ).length;
+  check(
+    fields,
+    "originProduct.images.optionalImages",
+    excludedOptionalImageCount === 0,
+    "MISSING",
+    `추가 이미지 ${excludedOptionalImageCount}건이 등록에서 제외됐습니다. 안전한 이미지 URL을 확인해 주세요.`,
+    undefined,
+    true,
   );
   // N-3.5 — detailContent는 공식 OpenAPI에서 "상품 수정 시에만 생략 가능"이라고
   // 명시된 필수 필드(ExternalApiOriginProductVo.product required 목록)인데

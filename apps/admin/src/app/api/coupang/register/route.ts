@@ -156,7 +156,9 @@ interface CreateProductResponse {
   errorItems?: unknown[] | null;
 }
 
-function missingSellerConfigFields(payload: CoupangPayload): string[] {
+/* 🔴 export 는 «테스트를 위해» 열었다 — 런타임 동작은 바뀌지 않는다. payload 하나만
+   읽는 순수 함수라 route 를 띄우지 않고 그대로 잴 수 있다. */
+export function missingSellerConfigFields(payload: CoupangPayload): string[] {
   const missing: string[] = [];
   if (payload.displayCategoryCode == null) missing.push("쿠팡 카테고리 코드");
   if (!payload.deliveryCompanyCode) missing.push("택배사");
@@ -167,15 +169,30 @@ function missingSellerConfigFields(payload: CoupangPayload): string[] {
   if (!payload.returnAddress) missing.push("반품지 주소");
   if (payload.outboundShippingPlaceCode == null) missing.push("출고지");
   if (!payload.vendorUserId) missing.push("Wing 계정 ID");
-  if (payload.items[0]?.images.length === 0) missing.push("대표 이미지");
-  /* ══ MI-DATA-URI-FIX-01 B (CEO 승인, 2026-09-30) ═══════════════════════════
-     🔴 위 한 줄은 «개수» 만 본다. 실측된 유출 3건은 전부 비대표 이미지였고,
-     대표가 정상이면 length > 0 이라 그대로 통과해 vendorPath 로 나갔다.
-     전송되는 모든 vendorPath 를 본다 — 판정은 공통 함수를 부른다(새 규칙 아님). */
-  const unsafeVendorPaths = (payload.items ?? []).flatMap((item) =>
-    (item.images ?? []).map((img) => img.vendorPath).filter((path) => !isRegistrationSafeImageUrl(path)),
-  );
-  if (unsafeVendorPaths.length > 0) missing.push("대표 이미지");
+  /* ══ MI-STORAGE-FEEDBACK-02 (CEO 확정, 2026-09-30) ════════════════════════
+     🔴 직전 커밋(215c3a6)에 있던 것: 모든 vendorPath 를 검사해 «하나라도» 안전하지
+     않으면 CP006 으로 전체 등록을 막았다. CEO 결정 2 를 위반한다 — 추가 이미지
+     문제만으로 전체 등록을 차단하지 않는다. 추가 이미지의 안전하지 않은 URL 은
+     어댑터(getRegistrationImageUrl)가 이미 payload 에서 «버렸다».
+
+     🔴 그리고 좁히다가 «구멍» 을 찾았다. 여기 있던 원래 한 줄은
+         if (payload.items[0]?.images.length === 0) missing.push("대표 이미지");
+     로 «장수» 만 셌다. 대표가 안전하지 않아 어댑터에서 빠지고 추가 이미지가 남으면
+     length 는 0 이 «아니라서», 대표(imageOrder 0)가 없는 payload 가 그대로 통과했다.
+     장수가 아니라 «대표 자리» 를 본다 — 없거나 형태가 틀리면 둘 다 CP006 이다.
+     (items[] 자체가 빈 경우의 판정은 «건드리지 않았다» — 기존과 같다.)
+
+     🔴 제외 «장수» 를 응답에 담지 «않았다»: 이 라우트의 응답은 공용 `ListingResult`
+     타입이고 칸을 더하는 것은 계약 변경이다(작업지시서 B-3 의 「호환성이 깨지거나
+     기존 계약 변경이 필요하면 보류하고 별도 보고」에 해당). 별도 보고했다.
+     🔴 CP001~CP006 코드 계약은 한 글자도 바뀌지 않았다. */
+  const firstItem = payload.items[0];
+  if (firstItem) {
+    const representativeImage = firstItem.images?.find((img) => img.imageOrder === 0);
+    if (!representativeImage || !isRegistrationSafeImageUrl(representativeImage.vendorPath)) {
+      missing.push("대표 이미지");
+    }
+  }
   return missing;
 }
 
