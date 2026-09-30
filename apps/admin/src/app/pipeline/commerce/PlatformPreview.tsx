@@ -1461,6 +1461,27 @@ export function PlatformPreview({
           <p className={SECTION_NOTE_CLASS}>
             🔵 원산지·세탁방법은 상품정보 탭과 공유됩니다 — 어느 탭에서 고쳐도 모든 커머스에 동일하게 적용됩니다.
           </p>
+          {/* ══ NAVER-CHANNEL-NOTICE-OVERRIDES-03 ═══════════════════════════════
+              🔴 여기가 «고시» 섹션이다. 처음에 KC 섹션 안에 넣었는데, 검증 마운트가
+              「칸이 화면에 없다」로 잡았다 — KC 접힘 안에 있어 셀러가 찾을 수 없었고,
+              애초에 KC 가 아니라 고시 항목이다. 두 칸은 payload 에 «항상» 실린다
+              (분기만 갈린다: KIDS→출시연월 / WEAR→제조연월). */}
+          {capabilities.hasNaverPreview && onUpdateNoticeOverride && (
+            <div className="flex flex-col gap-2" data-notice-override-section>
+              <ChannelNoticeDateRow
+                label="제조연월 (고시)"
+                noticeKey={NOTICE_KEY_PACK_DATE}
+                override={product.channelNoticeOverrides?.smartstore}
+                onUpdate={onUpdateNoticeOverride}
+              />
+              <ChannelNoticeDateRow
+                label="동일모델의 출시연월 (고시)"
+                noticeKey={NOTICE_KEY_RELEASE_DATE}
+                override={product.channelNoticeOverrides?.smartstore}
+                onUpdate={onUpdateNoticeOverride}
+              />
+            </div>
+          )}
           <div className={FIELD_GRID_NARROW_CLASS}>
             <FieldRow label="원산지" field={product.countryOfOrigin} required>
               <EditableText
@@ -1546,27 +1567,6 @@ export function PlatformPreview({
               옮겨서 KC 관련 4개 필드(대상 여부/번호/업체명/취득일자)를 한
               곳에 모았다 — 전부 같은 categoryRequiresChildCertification
               조건에서만 검사되는 필드라 조건도 그대로 재사용한다. */}
-          {/* ══ NAVER-CHANNEL-NOTICE-OVERRIDES-03 ═══════════════════════════════
-              🔴 KC 블록과 «다른» 조건이다. KC 는 카테고리가 인증을 요구할 때만
-              서지만, 고시 제조연월·출시연월은 스마트스토어 payload 에 «항상» 실린다
-              (분기만 갈린다: KIDS→출시연월 / WEAR→제조연월). 그래서 네이버 미리보기가
-              있으면 항상 보여준다 — 지금 나가는 값을 숨기지 않는 것이 이 블록의 일이다. */}
-          {capabilities.hasNaverPreview && onUpdateNoticeOverride && (
-            <div className="flex flex-col gap-2" data-notice-override-section>
-              <ChannelNoticeDateRow
-                label="제조연월 (고시)"
-                noticeKey={NOTICE_KEY_PACK_DATE}
-                override={product.channelNoticeOverrides?.smartstore}
-                onUpdate={onUpdateNoticeOverride}
-              />
-              <ChannelNoticeDateRow
-                label="동일모델의 출시연월 (고시)"
-                noticeKey={NOTICE_KEY_RELEASE_DATE}
-                override={product.channelNoticeOverrides?.smartstore}
-                onUpdate={onUpdateNoticeOverride}
-              />
-            </div>
-          )}
           {capabilities.hasNaverPreview &&
             naverValidation?.fields.some((f) => f.field.startsWith("productCertificationInfos")) &&
             onUpdateChildCertification && (
