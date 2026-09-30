@@ -71,6 +71,7 @@ import {
   PRICE_COMPARISON_ANCHOR_ID,
 } from "./commerce/DomesticPriceIntelligencePanel";
 import type { PriceLevel, SellerFinalVerdict } from "./commerce/DomesticPriceIntelligencePanel";
+import { resolveSellVerdict, type ScopedSellVerdict } from "./commerce/sell-verdict-scope";
 import { ActionCenter, type ChecklistItem } from "./commerce/ActionCenter";
 import { AuditLogPanel } from "./commerce/AuditLogPanel";
 import { DomesticShopSearch } from "./commerce/DomesticShopSearch";
@@ -671,12 +672,28 @@ export function CommerceWorkspace({
    *
    * 여기서 새 판정을 만들지 않는다. 패널이 서버 응답의
    * sellerDecision.finalVerdict를 그대로 올려보내는 값을 받기만 한다. */
-  const [sellVerdict, setSellVerdict] = useState<SellerFinalVerdict | null>(null);
-  /** 판정이 아직 안 온 것과 "판단 불가"를 구분한다 — 패널이 한 번이라도 보고했는가. */
-  const [verdictReported, setVerdictReported] = useState(false);
+  /* 🔴 P0-SELL-VERDICT-SNAPSHOT-ISOLATION-01(CEO 지시, 2026-09-30) — 판정을
+     «어느 상품의 것인지» 와 «같이» 담는다.
+
+     이전에는 `sellVerdict` 하나만 들고 있었고 snapshotId 가 바뀔 때 초기화되지
+     않았다. 분석 패널은 `if (loading) return` 으로 로딩 중엔 보고하지 않으므로,
+     상품 A → B 로 넘어가면 요약(ActionCenter)이 **A 의 판정을 B 의 판정처럼**
+     보여줬다. `verdictReported` 도 true 로 남아 「⏳ 시장 분석 중」조차 뜨지 않았다.
+
+     🔴 초기화 effect 로 고치지 않는다 — effect 는 렌더 «뒤» 에 돌아서 바뀐 첫
+     프레임에 이전 판정이 그대로 그려진다. 그 프레임이 정확히 이 결함이다.
+     대신 읽을 때 snapshotId 를 대조한다(파생값이라 같은 프레임에 결정된다).
+
+     🔴 탭 간 sticky 는 그대로다 — 탭 이동은 snapshotId 를 바꾸지 않는다. */
+  const [reportedSellVerdict, setReportedSellVerdict] = useState<ScopedSellVerdict | null>(null);
+  const { verdict: sellVerdict, reported: verdictReported } = resolveSellVerdict(reportedSellVerdict, snapshotId);
   function handleSellerVerdictChange(verdict: SellerFinalVerdict | null) {
-    setVerdictReported(true);
-    setSellVerdict((prev) => (prev === verdict ? prev : verdict));
+    /* 보고 «시점의» snapshotId 를 같이 새긴다 — 나중에 그 상품이 맞는지 볼 수 있게. */
+    setReportedSellVerdict((prev) =>
+      prev && prev.snapshotId === (snapshotId ?? null) && prev.verdict === verdict
+        ? prev
+        : { snapshotId: snapshotId ?? null, verdict },
+    );
   }
 
   /**
