@@ -333,6 +333,31 @@ describe("② 롯데ON — 성인 의류는 품목 01「의류」로 간다", ()
     expect(notice?.status, "🔴 이제 READY 가 아니라면 구멍이 닫혔다는 뜻이다").toBe("READY");
   });
 
+  /* ══ TENNIS-READY-TO-REGISTER-03 STEP 2.4 ═══════════════════════════════
+     「검증기가 READY 라고 한다」와 「payload 에 실제로 실린다」는 다른 질문이다.
+     9항목이 pdItmsArtlLst 로 «그대로» 나가는지 payload 원문에서 확인한다. */
+  it("🔴 품목 01 의 9항목이 등록 payload(pdItmsArtlLst)에 그대로 실린다", () => {
+    const payload = buildLotteOnPayload({
+      product: tennisProduct(),
+      channel: lotteOnChannel({ noticeItemCode: "01", noticeArticles: ARTICLES_01_FULL }),
+      detailHtml: "<p>상세</p>",
+    } as never) as unknown as {
+      spdLst: { pdItmsInfo?: { pdItmsCd?: string; pdItmsArtlLst?: { pdArtlCd: string; pdArtlCnts: string }[] } }[];
+    };
+    /* 🔴 고시는 spdLst[0] 직속이 아니라 pdItmsInfo 안에 중첩돼 있다
+       (build-payload.ts:415). 처음에 직속이라고 짚었고 실행이 바로잡았다. */
+    const info = payload.spdLst[0]!.pdItmsInfo;
+    expect(info?.pdItmsCd).toBe("01");
+    const sent = info?.pdItmsArtlLst ?? [];
+    expect(sent).toHaveLength(9);
+    /* 순서도 내용도 우리가 넣은 것 그대로다 — 재정렬·가공하지 않는다. */
+    expect(sent.map((a) => a.pdArtlCd)).toEqual(ARTICLES_01_FULL.map((a) => a.pdArtlCd));
+    expect(sent.map((a) => a.pdArtlCnts)).toEqual(ARTICLES_01_FULL.map((a) => a.pdArtlCnts));
+    /* 필수 9개가 «전부» 실렸는가 — 스키마와 대조한다(개수만 세지 않는다). */
+    const required = noticeSchemaFor("01")!.filter((x) => x.required).map((x) => x.code);
+    expect(new Set(sent.map((a) => a.pdArtlCd))).toEqual(new Set(required));
+  });
+
   it("품목코드를 아예 비우면 막는다 — 「모른다」와 「없다」는 갈려 있다", () => {
     const { notice, ok } = lotteOnCheck(lotteOnChannel({ noticeItemCode: "", noticeArticles: [] }));
     expect(ok).toBe(false);
