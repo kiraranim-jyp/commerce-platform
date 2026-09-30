@@ -17,6 +17,8 @@ import {
   productFactsFromIdentityDna,
   type ProductIdentityDna,
 } from "@commerce/shared";
+import { isCollectableAccess } from "../../comparison-shops/_lib/comparison-shop";
+import type { DomesticPriceSource } from "../../domestic-price-sources/_lib/domestic-price-source";
 import { listDomesticPriceSources, recordDomesticSourceCheckAttempt } from "../../domestic-price-sources/_lib/domestic-price-source";
 import {
   listDomesticProductLinks,
@@ -373,6 +375,39 @@ async function observeE1Candidate(args: {
   }
 }
 
+/**
+ * ══ 배치 조사 대상 선정 (BATCH-ACCESS-FILTER-01, CPO 승인 2026-09-30) ══════
+ *
+ * 🔴 여기 있던 인라인 필터에 `isCollectableAccess` 가 «빠져» 있었다. 그래서
+ * 라이브 검색(domestic-price-sources/search/route.ts:187)은 막힌 사이트를 걸러
+ * 내는데 **배치는 매일 계속 두드렸다** — comparison-shop.ts:50 이
+ * 「막힌 사이트를 반복 호출하지 않는다(CEO 명시) — 조사 대상을 고르는 모든
+ * 자리가 이 함수 하나를 쓴다」고 적어 둔 약속을 이 자리가 지키지 않았다.
+ *
+ * 🔴 조건을 «새로 쓰지 않는다». 공통 함수를 그대로 부른다 — 그 함수의 계약이
+ * 곧 정책이고, 여기서 다시 판단하면 두 곳이 갈라진다.
+ *
+ * 🔴 `null`(= 확인 안 함)은 «통과» 다. 053 실측 분포가 「국내: null 16 · OK 1 ·
+ * LOGIN_REQUIRED 1」이므로, null 을 막으면 국내 조사가 통째로 멈춘다.
+ * `MarketSourceAccessStatus` 에 "UNKNOWN" 이라는 값은 «없고» null 이 그 자리다.
+ *
+ * 🔴 다른 축(enabled · status · category_scope)은 한 글자도 바꾸지 않았다.
+ *
+ * 이름 있는 함수로 꺼낸 이유: 테스트가 조건을 «베껴 쓰지» 않고 이것을 직접 재게
+ * 하기 위해서다(replica 를 만들면 원본이 바뀔 때 테스트가 조용히 거짓이 된다).
+ */
+export function isBatchSurveyTarget(
+  source: Pick<DomesticPriceSource, "enabled" | "status" | "accessStatus" | "categoryScope">,
+  categoryScopes: string[] | null,
+): boolean {
+  return (
+    source.enabled &&
+    source.status === "ACTIVE" &&
+    isCollectableAccess(source.accessStatus) &&
+    sourceFitsScopes(source.categoryScope, categoryScopes)
+  );
+}
+
 export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Promise<DomesticPriceCheckResult> {
   const sourceErrors: string[] = [];
   let linksCreatedOrUpdated = 0;
@@ -430,8 +465,8 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
   // 이 루프가 한 번도 읽지 않았다 — 그래서 어떤 상품이든 아동복 편집샵 전부를
   // 매일 크롤링했고, 맞지 않는 샵의 0건이 화면에서는 "국내 비교상품 없음"으로
   // 읽혔다. 범위를 못 정하면(undefined) 필터는 걸리지 않는다(= 오늘 동작 그대로).
-  const allSources = (await listDomesticPriceSources(input.workspaceId)).filter(
-    (s) => s.enabled && s.status === "ACTIVE" && sourceFitsScopes(s.categoryScope, input.categoryScopes ?? null),
+  const allSources = (await listDomesticPriceSources(input.workspaceId)).filter((s) =>
+    isBatchSurveyTarget(s, input.categoryScopes ?? null),
   );
   const p0Sources = allSources.filter((s) => s.priority === "P0");
   const otherSources = allSources.filter((s) => s.priority !== "P0");
