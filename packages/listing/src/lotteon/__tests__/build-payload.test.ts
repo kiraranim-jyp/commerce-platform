@@ -91,8 +91,23 @@ function completeChannel(overrides: Partial<LotteOnChannelConfig> = {}): LotteOn
        «채우지 않았다». BLANK 설정의 조용한 "01"(관행 기본값)에 기대고 있었다 —
        그래서 주장이 사실이 아니었다. 기본값을 없애니 이 줄이 바로 드러났다. */
     taxTypeCode: "01",
+    /* 🔴 TENNIS-03 — 이 fixture 는 「모든 채널 전용 값이 채워진 상태」라고 적어 놓고
+       고시 항목을 «한 개» 만 넣고 있었다. 품목 01 의 표를 모르던 동안에는 그것이
+       통과했고(필수 목록이 빈 배열), 그래서 「모든 값이 채워지면 통과한다」는 이
+       파일의 주장이 사실이 아니었다 — 롯데ON 은 9999 로 거절할 상태였다.
+       품목 01 표(9항목, 전부 필수)를 들여오면서 드러났다. 이제 실제로 채운다. */
     noticeItemCode: "01",
-    noticeArticles: [{ pdArtlCd: "0020", pdArtlCnts: "블루" }],
+    noticeArticles: [
+      { pdArtlCd: "0010", pdArtlCnts: "면 100%" },
+      { pdArtlCd: "0020", pdArtlCnts: "블루" },
+      { pdArtlCd: "0030", pdArtlCnts: "S / M / L" },
+      { pdArtlCd: "0070", pdArtlCnts: "테스트제조사 / 따조" },
+      { pdArtlCd: "0060", pdArtlCnts: "대한민국" },
+      { pdArtlCd: "0050", pdArtlCnts: "찬물 손세탁" },
+      { pdArtlCd: "0040", pdArtlCnts: "상세페이지 참조" },
+      { pdArtlCd: "0080", pdArtlCnts: "소비자분쟁해결기준에 따름" },
+      { pdArtlCd: "0090", pdArtlCnts: "따져 고객센터 / 02-000-0000" },
+    ],
     outboundPlaceNo: "115",
     returnPlaceNo: "115",
     deliveryCostPolicyNo: "335",

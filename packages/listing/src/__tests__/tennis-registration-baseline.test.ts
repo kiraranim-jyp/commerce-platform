@@ -234,13 +234,77 @@ const lotteOnCheck = (channel: never) => {
   };
 };
 
-describe("② 🔴 롯데ON — 성인 의류 품목의 고시 항목 표가 «없다»", () => {
-  it("우리가 표를 들여온 품목은 23(어린이제품) 하나뿐이다", () => {
+const ARTICLES_01_FULL = [
+  { pdArtlCd: "0010", pdArtlCnts: "폴리에스터 92% 엘라스테인 8%" },
+  { pdArtlCd: "0020", pdArtlCnts: "화이트/네이비" },
+  { pdArtlCd: "0030", pdArtlCnts: "S / M / L" },
+  { pdArtlCd: "0070", pdArtlCnts: "Lacoste Operations SAS / 따조" },
+  { pdArtlCd: "0060", pdArtlCnts: "베트남" },
+  { pdArtlCd: "0050", pdArtlCnts: "30도 이하 세탁" },
+  { pdArtlCd: "0040", pdArtlCnts: "상세페이지 참조" },
+  { pdArtlCd: "0080", pdArtlCnts: "소비자분쟁해결기준에 따름" },
+  { pdArtlCd: "0090", pdArtlCnts: "따져 고객센터 / 02-000-0000" },
+];
+
+describe("② 롯데ON — 성인 의류는 품목 01「의류」로 간다", () => {
+  it("표에 들여온 품목은 01(의류)·23(어린이제품) 둘이다", () => {
+    expect(noticeSchemaFor("01")).not.toBeNull();
     expect(noticeSchemaFor("23")).not.toBeNull();
-    /* 성인 의류로 고를 만한 품목은 어느 것도 표가 없다. */
-    for (const code of ["01", "02", "10", "24", "99"]) {
+    /* 🔴 나머지는 여전히 «모른다». 이번 변경은 품목 01 만 열었다. */
+    for (const code of ["02", "10", "24", "99"]) {
       expect(noticeSchemaFor(code), `품목 ${code} 표가 생겼다면 이 테스트를 고쳐라`).toBeNull();
     }
+  });
+
+  it("🔴 품목 01 은 9항목이고 «표의 순서» 그대로다 — 숫자 오름차순이 아니다", () => {
+    expect(noticeSchemaFor("01")!.map((s) => s.code)).toEqual([
+      "0010",
+      "0020",
+      "0030",
+      "0070",
+      "0060",
+      "0050",
+      "0040",
+      "0080",
+      "0090",
+    ]);
+  });
+
+  it("🔴 9항목 전부 필수다 — PDF 「필수여부」 열이 9행 모두 Y 였다", () => {
+    expect(noticeSchemaFor("01")!.every((s) => s.required)).toBe(true);
+  });
+
+  it("🔴 품목 01 의 0090 이름을 품목 23 에서 «가져오지 않았다» — 코드가 같아도 이름은 갈릴 수 있다", () => {
+    const a01 = noticeSchemaFor("01")!.find((s) => s.code === "0090")!;
+    const a23 = noticeSchemaFor("23")!.find((s) => s.code === "0090")!;
+    expect(a01.label).toBe("A/S");
+    expect(a23.label).toBe("A/S 책임자와 전화번호");
+  });
+
+  it("품목 01 을 «전부» 채우면 고시 항목이 통과한다", () => {
+    const { notice } = lotteOnCheck(
+      lotteOnChannel({ noticeItemCode: "01", noticeArticles: ARTICLES_01_FULL }),
+    );
+    expect(notice?.status).toBe("READY");
+  });
+
+  it("🔴 품목 01 에서 필수 항목이 하나라도 빠지면 «막는다» — 빠진 이름을 말한다", () => {
+    const { notice, ok } = lotteOnCheck(
+      lotteOnChannel({
+        noticeItemCode: "01",
+        noticeArticles: ARTICLES_01_FULL.filter((a) => a.pdArtlCd !== "0050"),
+      }),
+    );
+    expect(ok).toBe(false);
+    expect(notice?.status).toBe("BLOCKED");
+    expect(notice?.reason).toContain("세탁방법");
+  });
+
+  it("🔴 항목 «한 개» 만 채운 품목 01 은 이제 막힌다 — 테니스가 타던 구멍이 닫혔다", () => {
+    const { notice } = lotteOnCheck(
+      lotteOnChannel({ noticeItemCode: "01", noticeArticles: [{ pdArtlCd: "0020", pdArtlCnts: "화이트" }] }),
+    );
+    expect(notice?.status).toBe("BLOCKED");
   });
 
   it("품목 23 은 항목이 모자라면 «막는다» — 실측 9999 거절을 반영한 가드", () => {
@@ -250,20 +314,21 @@ describe("② 🔴 롯데ON — 성인 의류 품목의 고시 항목 표가 «�
     expect(notice?.status).toBe("BLOCKED");
   });
 
-  it("🔴 DEFECT — 표를 «모르는» 품목은 항목 «한 개» 로도 READY 가 된다", () => {
+  it("🔴 DEFECT (남아 있음) — 표를 «모르는» 품목은 항목 «한 개» 로도 READY 가 된다", () => {
     /* ── 무엇이 문제인가 ──────────────────────────────────────────────────
-       롯데ON 은 품목의 고시 항목을 «전부» 요구한다. 그 사실은 추정이 아니라
+       롯데ON 은 품목의 고시 항목을 «전부» 요구한다. 추정이 아니라
        LOTTEON-FINAL-07 의 «첫 실제 CREATE 응답» 으로 확인됐다:
            returnCode 0000 / 9999 상품품목항목코드 필수값이 누락입니다
-       품목 23 은 그래서 표를 들여와 막게 고쳤다. 그런데 표를 «모르는» 품목은
-       필수 목록이 빈 배열이 되어(validate-payload.ts:223) 한 개만 채워도
-       READY 가 된다 — 화면은 「등록 가능」이라 말하고 롯데ON 은 9999 로 거절한다.
+       표를 «모르는» 품목은 필수 목록이 빈 배열이 되어(validate-payload.ts:223)
+       한 개만 채워도 READY 가 된다 — 화면은 「등록 가능」, 롯데ON 은 9999 거절.
 
-       🔴 성인 의류(테니스)는 품목 23 이 아니다. 즉 테니스는 «항상» 이 경로다.
-       🔴 이 단정이 실패하는 날은 그 구멍이 닫힌 날이다 — 그때 이 테스트를
-          뒤집는 것이 그 작업의 일부다. 지금 「통과」라고 적어 두지 않는다. */
+       🔴 테니스는 이제 이 경로를 «타지 않는다»(품목 01 표를 들여왔다). 그러나
+          구멍 자체는 남아 있고, 이번 승인 범위가 아니어서 고치지 않았다.
+          그래서 코드를 «아직 모르는» 02 로 바꿔 계속 고정해 둔다 — 결함을
+          「테니스가 해결됐으니 없다」로 위장하지 않는다.
+       🔴 이 단정이 실패하는 날이 그 구멍이 닫힌 날이다. */
     const { notice } = lotteOnCheck(
-      lotteOnChannel({ noticeItemCode: "01", noticeArticles: [{ pdArtlCd: "0020", pdArtlCnts: "화이트" }] }),
+      lotteOnChannel({ noticeItemCode: "02", noticeArticles: [{ pdArtlCd: "0020", pdArtlCnts: "화이트" }] }),
     );
     expect(notice?.status, "🔴 이제 READY 가 아니라면 구멍이 닫혔다는 뜻이다").toBe("READY");
   });

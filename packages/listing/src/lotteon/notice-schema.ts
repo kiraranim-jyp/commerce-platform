@@ -107,8 +107,45 @@ const NOTICE_ITEM_23_CHILDREN: readonly LotteOnNoticeArticleSpec[] = [
   { code: "0090", label: "A/S 책임자와 전화번호", required: true, guideline: "AS책임자(업체명)와 전화번호를 모두 입력해주세요." },
 ] as const;
 
+/**
+ * 품목 01 「의류」 — 9항목. **표의 순서 그대로다**(숫자 오름차순이 아니다 —
+ * 고시 항목 번호 1~9 순서이고, 그래서 0070 이 0060 보다 앞이다. 재정렬하지 않는다).
+ *
+ * ── 출처와 교차검증(TENNIS-READY-TO-REGISTER-03, 2026-09-30) ───────────────
+ * 위 §SOURCE 와 «같은 PDF» 에서 품목 01 행만 읽었다. 두 출처가 일치한다:
+ *
+ *   ① `docs/LOTTEON-PD-ARTL-04.md:93` 의 전사 — 코드 9개와 이름
+ *   ② PDF 원문 직접 추출 — 품목 01 이 «9행» 이고, 코드 순서가 ①과 같으며,
+ *      「필수여부」 열이 **9행 모두 Y**
+ *
+ * 🔴 `required: true` 는 ②에서 온 것이다 — 「23 이 전부 Y 였으니 01 도 그럴 것」
+ * 이라는 추정이 아니다. 그 추정만 있었다면 넣지 않았다.
+ *
+ * 🔴 label 은 ①의 전사를 그대로 쓴다. PDF 의 한글은 CID 폰트라 글리프가 소실돼
+ * 추출되지 않았고(코드·번호·Y 만 살아남았다), 그래서 이름의 «전체 문구» 는
+ * 확인하지 못했다. 특히 `0090` 은 ①이 「A/S」로 줄여 적었다 — 품목 23 의
+ * 같은 코드가 「A/S 책임자와 전화번호」지만 **그 이름을 옮겨오지 않았다.**
+ * 이 파일이 맨 위에 적어 둔 대로 항목코드는 품목마다 이름이 갈릴 수 있다.
+ *
+ * 🔴 guideline 은 «하나도» 넣지 않았다. 추출되지 않은 것을 지어내지 않는다.
+ */
+const NOTICE_ITEM_01_CLOTHING: readonly LotteOnNoticeArticleSpec[] = [
+  { code: "0010", label: "제품 소재", required: true },
+  { code: "0020", label: "색상", required: true },
+  { code: "0030", label: "치수", required: true },
+  { code: "0070", label: "제조자·수입자", required: true },
+  { code: "0060", label: "제조국", required: true },
+  { code: "0050", label: "세탁방법", required: true },
+  { code: "0040", label: "제조연월", required: true },
+  { code: "0080", label: "품질보증기준", required: true },
+  { code: "0090", label: "A/S", required: true },
+];
+
 /** 지금 표에 들여온 품목. 늘어나면 여기에 «출처를 확인한 뒤» 추가한다. */
 const SCHEMAS: Record<string, readonly LotteOnNoticeArticleSpec[]> = {
+  /* 🔴 성인 의류(테니스웨어 등)가 여기로 온다. 품목 23 은 «어린이제품» 이라
+     성인 상품에 쓰면 사용연령 같은 항목이 필수가 된다 — 다른 품목이다. */
+  "01": NOTICE_ITEM_01_CLOTHING,
   "23": NOTICE_ITEM_23_CHILDREN,
 };
 

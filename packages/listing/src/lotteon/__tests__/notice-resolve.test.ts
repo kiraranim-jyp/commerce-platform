@@ -31,7 +31,9 @@ const REAL: LotteOnNoticeFacts = {
 
 describe("① 품목 표를 «모를» 때 — 빈 배열로 통과시키지 않는다", () => {
   it("모르는 품목은 schemaKnown=false 이고 항목을 만들지 않는다", () => {
-    const result = resolveLotteOnNotice("01", REAL);
+    /* 🔴 TENNIS-03 — 「01」은 이제 «아는» 품목이다(의류 9항목을 들여왔다).
+       모르는 품목의 성질을 재려면 «아직 모르는» 코드로 재야 한다. */
+    const result = resolveLotteOnNotice("02", REAL);
     expect(result.schemaKnown).toBe(false);
     expect(result.fills).toHaveLength(0);
     expect(result.articles).toHaveLength(0);
@@ -42,10 +44,13 @@ describe("① 품목 표를 «모를» 때 — 빈 배열로 통과시키지 않
     expect(resolveLotteOnNotice(null, REAL).schemaKnown).toBe(false);
   });
 
-  it("우리가 들여온 품목은 23 하나다 — 「40품목을 안다」고 말하지 않는다", () => {
-    expect(knownNoticeItemCodes()).toEqual(["23"]);
+  it("우리가 들여온 품목은 01·23 둘이다 — 「40품목을 안다」고 말하지 않는다", () => {
+    /* 🔴 TENNIS-03 — 성인 의류(테니스웨어)가 품목 01 이라서 그 표만 더 들여왔다.
+       나머지 38품목은 여전히 «모른다». 개수를 늘리는 것이 목적이 아니다. */
+    expect(knownNoticeItemCodes().sort()).toEqual(["01", "23"]);
     expect(noticeSchemaFor("23")).toHaveLength(13);
-    expect(noticeSchemaFor("01")).toBeNull();
+    expect(noticeSchemaFor("01")).toHaveLength(9);
+    expect(noticeSchemaFor("02")).toBeNull();
   });
 });
 

@@ -201,9 +201,25 @@ describe("③ 셀러가 확정한 값이 «먼저» 다", () => {
 });
 
 describe("🔴 ④ 모르는 품목이면 아무것도 만들지 않는다", () => {
-  it("품목 01 은 표를 아직 들이지 않았다 — 빈 목록이 나간다", async () => {
-    const list = await articles(product(), form({ noticeItemCode: "01" }));
+  /* 🔴 TENNIS-03 — 「01」은 이제 «아는» 품목이다(의류 9항목). 모르는 품목의
+     성질을 재려면 아직 모르는 코드로 재야 한다. 02 는 여전히 표가 없다. */
+  it("표를 모르는 품목(02)은 빈 목록이 나간다", async () => {
+    const list = await articles(product(), form({ noticeItemCode: "02" }));
     expect(list).toHaveLength(0);
+  });
+
+  it("🔴 품목 01(의류)은 표가 있으니 «채울 수 있는 만큼» 채운다 — 무엇이 남는지 센다", async () => {
+    /* 성인 의류 등록의 실제 출발선이다. 자동으로 채워지는 칸과 셀러가 채워야 하는
+       칸을 «숫자로» 남긴다 — 「대충 되더라」로 두지 않는다. */
+    const list = await articles(product(), form({ noticeItemCode: "01" }));
+    const filled = new Set(list.map((a) => a.pdArtlCd));
+    expect(filled.size).toBe(list.length);
+    /* 9항목 중 자동으로 채워진 것만 나간다 — 우리가 항목을 «만들지» 않는다. */
+    expect(list.length).toBeGreaterThan(0);
+    expect(list.length).toBeLessThanOrEqual(9);
+    for (const code of filled) {
+      expect(["0010", "0020", "0030", "0070", "0060", "0050", "0040", "0080", "0090"]).toContain(code);
+    }
   });
 
   it("품목코드가 비어 있어도 마찬가지다", async () => {
