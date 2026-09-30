@@ -552,6 +552,7 @@ export async function POST(request: Request) {
        여기를 빼서, 실제 payload 에 certificationTargetExcludeContent 와
        kids.certificationType 이 «둘 다 없는» 채로 나갔다(실측 400). */
     smartStoreKcDeclaration: product.smartStoreKcDeclaration,
+      noticeOverride: product.channelNoticeOverrides?.smartstore,
     listing: { ...listing, representativeImage: uploadedRepresentativeUrl, additionalImages: uploadedAdditionalUrls },
     leafCategoryId,
     ...payloadInputCommon,

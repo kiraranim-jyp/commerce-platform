@@ -11,10 +11,23 @@ import type {
   ListingStatus,
   NaverPayloadValidationResult,
 } from "@commerce/listing";
-import { validateKcDeclaration } from "@commerce/listing";
+import {
+  validateKcDeclaration,
+  resolveChannelNoticeField,
+  NAVER_NOTICE_REQUIRED_CONFIRMED,
+  NOTICE_KEY_PACK_DATE,
+  NOTICE_KEY_RELEASE_DATE,
+} from "@commerce/listing";
 import { isVerifiedCategorySelected, MARKETPLACE_DESCRIPTORS } from "@commerce/marketplace";
 import type { ListingModel } from "@commerce/marketplace";
-import type { CanonicalProduct, CanonicalProductCertification, CanonicalProductOptionGroup, FieldSource, SmartStoreKcDeclaration } from "@commerce/shared";
+import type {
+  CanonicalProduct,
+  CanonicalProductCertification,
+  CanonicalProductOptionGroup,
+  ChannelNoticeOverride,
+  FieldSource,
+  SmartStoreKcDeclaration,
+} from "@commerce/shared";
 import { resolveSourceStock } from "@commerce/shared";
 import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
 import { ChannelPriceSection } from "./ChannelPriceSection";
@@ -146,6 +159,90 @@ function ReferenceEligibleFieldRow({
         </div>
       )}
     </FieldRow>
+  );
+}
+
+/**
+ * ══ NAVER-CHANNEL-NOTICE-OVERRIDES-03 (CPO 확정 「㉡」, 2026-09-30) ═══════════
+ * **「지금 무엇이 나가고, 그것을 누가 정했는가」를 셀러에게 보여준다.**
+ *
+ * 여기 있던 것: «아무것도». `packDateText`·`releaseDateText` 는 화면에 존재하지
+ * 않는 칸이었고, payload 에는 「상품 상세페이지 참조」가 무조건 실려 나갔다.
+ * 셀러는 자기 이름으로 그 말이 채널에 가는 것을 몰랐다.
+ *
+ * 🔴 payload 를 바꾸지 «않는다». 셀러가 아무것도 하지 않으면 지금과 같은 값이
+ * 나간다(golden-success fixture 그대로). 이 블록이 하는 일은 그 사실을 «드러내고»
+ * 바꿀 길을 주는 것이다.
+ *
+ * 🔴 세 상태를 화면에서도 가른다 — 특히 뒤의 둘은 payload 가 같아서 합치기 쉽다:
+ *   SELLER_VALUE       셀러가 적은 연월
+ *   SELLER_REFERENCED  셀러가 «고른» 참조
+ *   DISCLOSED_DEFAULT  우리가 기본값으로 보내는 참조  ← 이 말을 반드시 한다
+ */
+function ChannelNoticeDateRow({
+  label,
+  noticeKey,
+  override,
+  onUpdate,
+}: {
+  label: string;
+  noticeKey: string;
+  override: ChannelNoticeOverride | undefined;
+  onUpdate: (key: string, next: { value?: string; referenced?: boolean }) => void;
+}) {
+  /* 🔴 화면이 다시 판정하지 않는다 — payload 가 쓰는 «같은» 함수를 부른다.
+     두 곳에서 따로 판정하면 「화면은 참조라는데 payload 는 값」이 생긴다. */
+  const resolved = resolveChannelNoticeField(override, noticeKey);
+  const requiredConfirmed = NAVER_NOTICE_REQUIRED_CONFIRMED[noticeKey] === true;
+  const entered = override?.values?.[noticeKey] ?? "";
+
+  return (
+    <div className="rounded-md border border-border bg-surface p-3 text-sm" data-notice-override={noticeKey}>
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-medium text-text-primary">{label}</p>
+        <span className="text-[11px] text-text-tertiary" data-notice-state={resolved.state}>
+          {resolved.state === "SELLER_VALUE"
+            ? "판매자 입력"
+            : resolved.state === "SELLER_REFERENCED"
+              ? "판매자 선택 · 상세페이지 참조"
+              : "기본값으로 전송"}
+        </span>
+      </div>
+      {/* 🔴 「지금 나가는 값」을 그대로 보여준다 — 셀러가 추측하지 않게. */}
+      <p className="mt-1 text-xs text-text-secondary">
+        현재 전송: <span className="font-medium text-text-primary">{resolved.outgoing}</span>
+      </p>
+      {resolved.state === "DISCLOSED_DEFAULT" && (
+        <p className="mt-1 text-xs text-warning" data-notice-disclosure>
+          판매자가 정하지 않아 「상품 상세페이지 참조」로 보냅니다. 실제 연월을 아시면 입력해 주세요.
+        </p>
+      )}
+      {!requiredConfirmed && (
+        /* 🔴 「선택 항목」이라고 말하지 «않는다». 빼고 등록해 본 적이 없어서
+           모르는 것이고, 모르는 것을 선택이라고 적으면 또 다른 거짓말이다. */
+        <p className="mt-1 text-xs text-text-tertiary" data-notice-unknown>
+          이 항목을 네이버가 필수로 요구하는지는 확인되지 않았습니다 — 비우지 않고 보냅니다.
+        </p>
+      )}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <input
+          type="text"
+          value={entered}
+          placeholder="예: 2025-03"
+          aria-label={label}
+          onChange={(e) => onUpdate(noticeKey, { value: e.target.value })}
+          className="w-36 rounded border border-border px-2 py-1 text-xs"
+        />
+        <button
+          type="button"
+          data-notice-reference-toggle
+          onClick={() => onUpdate(noticeKey, { referenced: resolved.state !== "SELLER_REFERENCED" })}
+          className="rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-text-secondary transition-colors hover:bg-background"
+        >
+          {resolved.state === "SELLER_REFERENCED" ? "상세페이지 참조 해제" : "상품 상세페이지 참조로 넣기"}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -446,6 +543,7 @@ export function PlatformPreview({
   onSetFieldReference,
   onFixNumberField,
   onUpdateChildCertification,
+  onUpdateNoticeOverride,
   onUpdateKcDeclaration,
   onUpdateOptions,
   onUpdateVariant,
@@ -571,6 +669,11 @@ export function PlatformPreview({
    * 값이 없으면 null(임의 값 생성 없음). */
   onUpdateChildCertification?: (patch: Partial<CanonicalProductCertification>) => void;
   onUpdateKcDeclaration?: (patch: Partial<SmartStoreKcDeclaration>) => void;
+  /** NAVER-CHANNEL-NOTICE-OVERRIDES-03(CPO 확정, 2026-09-30) — 스마트스토어 고시
+   * 칸(제조연월·출시연월)에 대한 셀러 결정. 🔴 위 `onSetFieldReference` 와 «다른»
+   * 경로다: 저 아홉 칸은 상품의 «사실»(Master)이고, 이 둘은 채널 고시 전용
+   * override(COMMERCE_BINDING)다. 같은 화이트리스트를 쓰지 않는다. */
+  onUpdateNoticeOverride?: (key: string, next: { value?: string; referenced?: boolean }) => void;
   /** Sprint A-3(작업1 — 옵션도 Editable) */
   onUpdateOptions?: (raw: string) => void;
   /** Sprint A-12(작업6) — 옵션 조합별 SKU/재고/가격 편집. */
@@ -1443,6 +1546,27 @@ export function PlatformPreview({
               옮겨서 KC 관련 4개 필드(대상 여부/번호/업체명/취득일자)를 한
               곳에 모았다 — 전부 같은 categoryRequiresChildCertification
               조건에서만 검사되는 필드라 조건도 그대로 재사용한다. */}
+          {/* ══ NAVER-CHANNEL-NOTICE-OVERRIDES-03 ═══════════════════════════════
+              🔴 KC 블록과 «다른» 조건이다. KC 는 카테고리가 인증을 요구할 때만
+              서지만, 고시 제조연월·출시연월은 스마트스토어 payload 에 «항상» 실린다
+              (분기만 갈린다: KIDS→출시연월 / WEAR→제조연월). 그래서 네이버 미리보기가
+              있으면 항상 보여준다 — 지금 나가는 값을 숨기지 않는 것이 이 블록의 일이다. */}
+          {capabilities.hasNaverPreview && onUpdateNoticeOverride && (
+            <div className="flex flex-col gap-2" data-notice-override-section>
+              <ChannelNoticeDateRow
+                label="제조연월 (고시)"
+                noticeKey={NOTICE_KEY_PACK_DATE}
+                override={product.channelNoticeOverrides?.smartstore}
+                onUpdate={onUpdateNoticeOverride}
+              />
+              <ChannelNoticeDateRow
+                label="동일모델의 출시연월 (고시)"
+                noticeKey={NOTICE_KEY_RELEASE_DATE}
+                override={product.channelNoticeOverrides?.smartstore}
+                onUpdate={onUpdateNoticeOverride}
+              />
+            </div>
+          )}
           {capabilities.hasNaverPreview &&
             naverValidation?.fields.some((f) => f.field.startsWith("productCertificationInfos")) &&
             onUpdateChildCertification && (

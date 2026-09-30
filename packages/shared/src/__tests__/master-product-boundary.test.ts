@@ -89,9 +89,14 @@ describe("① 분류되지 않은 필드는 «없다»", () => {
     expect(stale, `지운 필드가 지도에 남아 있다: ${stale.join(", ")}`).toEqual([]);
   });
 
-  it("두 목록의 개수가 같다 — 현재 51칸", () => {
+  /* NAVER-CHANNEL-NOTICE-OVERRIDES-03(2026-09-30) — 51 → 52.
+     🔴 이 가드가 «제 일을 했다». `channelNoticeOverrides` 를 추가하자 여기서
+     막혔고, 그래서 「이게 어느 층인가」를 다시 생각했다(COMMERCE_BINDING —
+     상품의 사실이 아니라 채널에 무엇을 보낼지에 대한 셀러의 결정이다).
+     숫자를 «지우지» 않고 새 진실로 올린다. */
+  it("두 목록의 개수가 같다 — 현재 52칸", () => {
     expect(DECLARED.length).toBe(MAPPED.length);
-    expect(MAPPED.length).toBe(51);
+    expect(MAPPED.length).toBe(52);
   });
 });
 
@@ -106,7 +111,8 @@ describe("② 층별 구성이 CPO 확정 구조와 같다", () => {
     ["MASTER", 27],
     ["CONTENT", 5],
     ["SELLING", 4],
-    ["COMMERCE_BINDING", 6],
+    /* NAVER-CHANNEL-NOTICE-OVERRIDES-03 — 6 → 7 (channelNoticeOverrides). */
+    ["COMMERCE_BINDING", 7],
     ["SOURCE", 7],
     ["LEGACY", 2],
   ])("%s = %d칸", (layer, expected) => {

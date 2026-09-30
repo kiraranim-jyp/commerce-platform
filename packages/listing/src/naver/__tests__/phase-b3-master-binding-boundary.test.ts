@@ -99,6 +99,13 @@ function makeProduct(overrides: Partial<CanonicalProduct> = {}): CanonicalProduc
        덮는다. 스마트스토어 payload 는 이것을 상품에서 읽지 않고 옵션으로 받으므로
        지워도 결과가 같아야 한다. */
     smartStoreKcDeclaration: { child: "EXCLUDED", kc: "EXEMPTION", exemptionReason: "OVERSEAS" },
+    /* NAVER-CHANNEL-NOTICE-OVERRIDES-03 — 새 COMMERCE_BINDING 칸. 🔴 이 가드가
+       요구하는 것이 정확히 옳다: 새 바인딩 칸을 넣었으면 그것이 payload 로
+       «새지 않음» 을 증명해야 한다. 가짜 값을 심어 두면 아래 ②(payload 전수
+       검색)가 유출을 잡는다. */
+    channelNoticeOverrides: {
+      smartstore: { values: { packDate: FAKE_FROM_PRODUCT }, referenced: [FAKE_FROM_PRODUCT] },
+    },
     lotteOnChannelInfo: {
       category: { standardCategoryNo: FAKE_FROM_PRODUCT, displayCategoryNos: [FAKE_FROM_PRODUCT], selected: null },
       notice: { itemCode: FAKE_FROM_PRODUCT, articlesText: FAKE_FROM_PRODUCT },

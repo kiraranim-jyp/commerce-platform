@@ -4,7 +4,12 @@ import {
   type SmartStoreKcDeclaration,
 } from "./kc-declaration";
 import type { ListingModel } from "@commerce/marketplace";
-import type { CanonicalProduct, MasterProduct, SellingConditions } from "@commerce/shared";
+import type {
+  CanonicalProduct,
+  ChannelNoticeOverride,
+  MasterProduct,
+  SellingConditions,
+} from "@commerce/shared";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -40,6 +45,11 @@ import type {
   NaverProductRegistrationPayload,
 } from "./types";
 import { resolveNoticeFieldValue, DETAIL_PAGE_REFERENCE_TEXT } from "../notice/reference-eligibility";
+import {
+  resolveChannelNoticeField,
+  NOTICE_KEY_PACK_DATE,
+  NOTICE_KEY_RELEASE_DATE,
+} from "../notice/channel-notice-override";
 
 /**
  * Sprint N-2.6 — CartPilot canonical product → Naver v2 payload 변환.
@@ -109,6 +119,12 @@ export interface NaverPayloadInput {
      옵션으로 받는다 — 빌더가 Binding 칸을 상품에서 꺼내 쓰면 Master 경계가
      조용히 무너진다(Phase B 회귀 테스트가 실제로 이것을 잡았다). */
   smartStoreKcDeclaration?: SmartStoreKcDeclaration;
+  /* NAVER-CHANNEL-NOTICE-OVERRIDES-03(CPO 확정, 2026-09-30) — 고시 칸에 대한
+     셀러의 결정. 🔴 바로 위 주석과 «같은 이유» 로 product 에서 직접 읽지 않는다:
+     `channelNoticeOverrides` 는 COMMERCE_BINDING 이고 `MasterProduct` 에 없다.
+     처음에 `product.channelNoticeOverrides` 로 짰더니 타입이 «즉시» 막았다 —
+     Phase B 경계가 실제로 작동하는 자리다. 호출부가 꺼내서 넘긴다. */
+  noticeOverride?: ChannelNoticeOverride;
   /** N-2.7 추가 — 카테고리 detail의 exceptionalCategories에 CHILD_CERTIFICATION이
    * 있는지(호출부 판단, 이 함수는 카테고리 API를 다시 호출하지 않는다). 상품정보
    * 제공고시는 인증서 실제 보유 여부(childCertificationInfoId)와 무관하게 항상
@@ -529,6 +545,7 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
     exchangeDeliveryFee,
     childCertificationInfoId,
     smartStoreKcDeclaration,
+    noticeOverride,
     categoryRequiresChildCertification,
     originAreaCode,
     originAreaRequiresContent,
@@ -729,7 +746,18 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
                 // 공식 스펙에 releaseDateText("동일 모델 출시연월 직접 입력",
                 // fieldType String)가 releaseDate의 자유 텍스트 대체 필드로
                 // 존재해, material/color처럼 상세페이지 참조 관용구를 쓴다.
-                releaseDateText: DETAIL_PAGE_REFERENCE_TEXT,
+                /* 🔴 NAVER-CHANNEL-NOTICE-OVERRIDES-03(CPO 확정, 2026-09-30) —
+                   여기 있던 것: `releaseDateText: DETAIL_PAGE_REFERENCE_TEXT` «무조건».
+                   셀러가 고르지 않았는데 우리가 「상세페이지에 있다」고 주장했다.
+
+                   🔴 payload 는 바뀌지 «않는다». 셀러가 아무것도 안 하면 지금도
+                   참조 문구가 나간다(golden-success-02-kids.json 그대로). 바뀐 것은
+                   ① 셀러가 실제 출시연월을 적으면 그 값이 나가고
+                   ② 그 상태를 화면이 「기본값으로 나갑니다」로 «드러낸다» 는 것이다.
+
+                   🔴 이 칸의 필수 여부는 UNKNOWN 이다 — 빼고 등록해 본 적이 없다.
+                   그래서 비우지 않는다(NAVER_NOTICE_REQUIRED_CONFIRMED 참고). */
+                releaseDateText: resolveChannelNoticeField(noticeOverride, NOTICE_KEY_RELEASE_DATE).outgoing,
               },
             }
           : {
@@ -764,7 +792,11 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
                 // String)가 packDate의 자유 텍스트 대체 필드로 존재해,
                 // material/color처럼 상세페이지 참조 관용구를 쓴다
                 // (docs/naver-provided-notice-types-raw.json 실측 확인).
-                packDateText: DETAIL_PAGE_REFERENCE_TEXT,
+                /* 🔴 NAVER-CHANNEL-NOTICE-OVERRIDES-03 — 위 KIDS 와 같은 이유다.
+                   🔴 다만 이 칸은 «생략할 수 없음이 실측됐다» (attempt 6 NotEmpty).
+                   그래서 폴백이 사라지면 등록이 깨진다 — resolveChannelNoticeField 는
+                   어떤 상태에서도 빈 문자열을 돌려주지 않는 것이 계약이다. */
+                packDateText: resolveChannelNoticeField(noticeOverride, NOTICE_KEY_PACK_DATE).outgoing,
               },
             },
         // N-3.4 — originAreaCode는 GET /v1/product-origin-areas로 실측 확인한

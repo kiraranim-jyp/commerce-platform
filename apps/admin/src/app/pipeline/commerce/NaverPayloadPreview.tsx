@@ -339,6 +339,7 @@ export function NaverPayloadPreview({
            여기를 빼서, 실제 payload 에 certificationTargetExcludeContent 와
            kids.certificationType 이 «둘 다 없는» 채로 나갔다(실측 400). */
         smartStoreKcDeclaration: product.smartStoreKcDeclaration,
+      noticeOverride: product.channelNoticeOverrides?.smartstore,
         listing,
         leafCategoryId,
         releaseAddressBookNo,

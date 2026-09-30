@@ -419,6 +419,38 @@ export interface CanonicalProduct {
    * 필요 없다 — 대신 이 필드를 모르는 과거 스냅샷을 위해
    * backfillCanonicalProduct()가 빈 객체로 초기화한다. */
   channelPriceOverrides?: Partial<Record<PlatformId, ProvenanceField<number>>>;
+  /**
+   * ══ NAVER-CHANNEL-NOTICE-OVERRIDES-03 (CPO 확정 「㉡」, 2026-09-30) ═════════
+   * **채널 고시 칸에 셀러가 «직접» 정한 것.**
+   *
+   * ── 왜 생겼나 ────────────────────────────────────────────────────────────
+   * `naver/build-payload.ts` 가 `packDateText`(제조연월)·`releaseDateText`
+   * (동일모델 출시연월)에 **「상품 상세페이지 참조」를 무조건 박고 있었다.**
+   * 다른 고시 칸(material·color…)은 `resolveNoticeFieldValue` 를 거쳐 셀러가
+   * 고른 `source` 를 보는데, 이 둘만 조건 없이 우리가 주장했다 — 상세페이지에
+   * 그 연월이 없으면 채널에 «없는 사실» 을 보내는 것이다.
+   *
+   * 🔴 그런데 값을 그냥 비울 수 없다. 실측 기록이 있다
+   * (`apps/admin/fixtures/smartstore/golden-success-01.json` attempt 6):
+   *   「productInfoProvidedNotice.wear.packDate 가 NotEmpty 로 거부」
+   * 그래서 이 구조가 바꾸는 것은 **payload 가 아니라 «누가 정했는지»** 다.
+   *
+   * ── 🔴 왜 `naverChannelInfo` 가 «아닌가» ────────────────────────────────
+   * `master-product.ts` 가 이미 경고해 두었다 — 「두면 신규 커머스마다
+   * `xxxChannelInfo` 가 하나씩 더 붙는다」, 그리고 `lotteOnChannelInfo` 는
+   * 정리 대상으로 ❌ 표시돼 있다. 반면 `channelPriceOverrides` 의 채널 키
+   * 모양은 ✅ 다. 그래서 그 ✅ 를 따른다 — 커머스가 20~30개로 늘어도
+   * 필드는 «하나» 다(CPO 확정).
+   *
+   * 🔴 채널 «키» 를 공유하는 것이 「고시 의미를 통합하는 것」은 아니다(CPO 명시).
+   * 어떤 칸이 있는지는 채널마다 다르고, 이 구조는 그 칸들을 담는 자리일 뿐이다.
+   *
+   * 🔴 `lotteOnChannelInfo` 를 이관하지 않는다 — Phase B 검토 사안이다.
+   *
+   * Partial 인 이유는 `channelPriceOverrides` 와 같다: 셀러가 손댄 채널만 키가
+   * 있다. 키가 없다 = 그 채널은 기존 동작 그대로다.
+   */
+  channelNoticeOverrides?: Partial<Record<PlatformId, ChannelNoticeOverride>>;
   /** 3층 구조 재정렬(CEO 지시, 2026-09-14) — 롯데ON **커머스 관리정보**.
    *
    * 왜 여기인가: 이 값들은 그때까지 LotteOnRegistrationPanel의 컴포넌트 로컬
@@ -684,6 +716,11 @@ export function backfillCanonicalProduct(raw: CanonicalProduct): CanonicalProduc
     // 개념을 모른다"가 코드에서 구분되지 않아, 나중에 값을 넣는 쪽이 undefined를
     // 매번 방어해야 한다. 값을 지어내는 게 아니다 — 빈 객체 = override 없음이다.
     channelPriceOverrides: raw.channelPriceOverrides ?? {},
+    /* NAVER-CHANNEL-NOTICE-OVERRIDES-03 — 위와 «같은 이유» 로 빈 객체로 둔다:
+       「셀러가 손댄 채널이 없다」와 「이 스냅샷은 이 개념을 모른다」를 구분하지
+       않으면 읽는 쪽이 매번 undefined 를 방어해야 한다. 🔴 값을 지어내는 것이
+       아니다 — 빈 객체 = override 없음이고, 그때 payload 는 기존과 «동일» 하다. */
+    channelNoticeOverrides: raw.channelNoticeOverrides ?? {},
     careInstructions: raw.careInstructions ?? emptyField(""),
     options: raw.options ?? emptyField([]),
     optionGroups: raw.optionGroups ?? [],
@@ -735,3 +772,35 @@ export interface CanonicalProductCertification {
  * PlatformId는 둘 다의 하위 의존인 shared에 있어야 한다.
  */
 export type PlatformId = "smartstore" | "coupang" | "elevenst";
+
+/**
+ * ══ NAVER-CHANNEL-NOTICE-OVERRIDES-03 (CPO 확정, 2026-09-30) ═══════════════════
+ * 한 채널의 고시 칸들에 대해 **셀러가 직접 정한 것** 만 담는다.
+ *
+ * ── 🔴 상태가 «넷» 이고, 넷째를 저장하지 «않는» 것이 핵심이다 ─────────────
+ *
+ *   VALUE               `values[key]` 에 값이 있다        셀러가 실제 연월을 적었다
+ *   REFERENCED          `referenced` 에 key 가 있다       셀러가 참조를 «골랐다»
+ *   UNSET/DISCLOSED     둘 다 «없다»                      셀러가 아무것도 안 했다
+ *
+ * `DISCLOSED_DEFAULT`(= 우리가 기본값으로 참조 문구를 보내는 상태)는 **저장하지
+ * 않는다. 부재 그 자체다.** 저장하면 `REFERENCED` 와 구분할 수 없게 되고, 그
+ * 순간 「셀러가 확인한 것」과 「우리가 정한 것」이 한 값으로 뭉친다 — 이 작업이
+ * 없애려는 바로 그 혼동이다. 부재는 자동저장·재로딩에서 그대로 부재로 남으므로
+ * 왕복해도 구분이 보존된다.
+ *
+ * 🔴 payload 는 REFERENCED 와 DISCLOSED_DEFAULT 에서 «같다». 다른 것은 화면이
+ * 셀러에게 하는 말이다. 그 둘이 같아 보인다고 합치면 안 된다.
+ */
+export interface ChannelNoticeOverride {
+  /**
+   * 셀러가 적은 «실제» 값. 🔴 빈 문자열은 담지 않는다 — 담으면 「적었는데 비웠다」와
+   * 「안 적었다」가 구분되지 않는다.
+   *
+   * 키는 의미 이름이다(`packDate` · `releaseDate`). 채널 payload 필드 이름
+   * (`packDateText` …)은 어댑터가 정한다 — 저장 구조가 payload 를 알 필요가 없다.
+   */
+  values?: Record<string, string>;
+  /** 🔴 셀러가 「상세페이지 참조」를 **명시적으로 고른** 칸. 기본값은 여기 없다. */
+  referenced?: string[];
+}

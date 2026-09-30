@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   CanonicalProduct,
+  ChannelNoticeOverride,
   CanonicalProductCertification,
   SmartStoreKcDeclaration,
   CanonicalProductVariant,
@@ -1213,6 +1214,57 @@ export function CommerceWorkspace({
    * 처리한다(리렌더 1회). 로직 자체(빈 값 + DETAIL_PAGE_REFERENCE로 전환)는
    * setFieldReference와 완전히 동일 — 화이트리스트(NOTICE_REFERENCE_ELIGIBLE_FIELDS)
    * 밖의 필드는 애초에 MissingFieldsBulkPanel이 넘겨주지 않는다. */
+  /**
+   * ══ NAVER-CHANNEL-NOTICE-OVERRIDES-03 (CPO 확정 「㉡」, 2026-09-30) ═══════════
+   * 스마트스토어 고시 칸(제조연월·출시연월)에 대한 셀러 결정을 상품에 저장한다.
+   *
+   * 🔴 위 `setFieldReference` 와 «다른» 자리다. 저 아홉 칸은 상품의 «사실»(Master)
+   * 이라 `product[key].source` 를 바꾸지만, 이 둘은 채널 고시 전용 override
+   * (COMMERCE_BINDING)라 `channelNoticeOverrides.smartstore` 에 들어간다.
+   *
+   * 🔴 「기본값으로 전송(DISCLOSED_DEFAULT)」은 «저장하지 않는다» — 부재 그 자체다.
+   * 저장하면 셀러가 «고른» 참조(REFERENCED)와 구분할 수 없게 되고, 그것이 이
+   * 작업이 없애려는 혼동이다. 그래서 해제는 «키를 지운다», 빈 값도 «지운다».
+   */
+  function updateNoticeOverride(key: string, next: { value?: string; referenced?: boolean }) {
+    setProduct((prev) => {
+      const current = prev.channelNoticeOverrides?.smartstore ?? {};
+      const values = { ...(current.values ?? {}) };
+      let referenced = [...(current.referenced ?? [])];
+
+      if (next.value !== undefined) {
+        const trimmed = next.value.trim();
+        /* 🔴 빈 값은 담지 않는다 — 「적었는데 비웠다」와 「안 적었다」를 같게 둔다.
+           그리고 실제 값을 적는 순간 참조 선택은 의미가 없으므로 함께 거둔다
+           (값이 언제나 우선이라는 resolveChannelNoticeField 의 순서와 일치). */
+        if (trimmed) values[key] = trimmed;
+        else delete values[key];
+        if (trimmed) referenced = referenced.filter((k) => k !== key);
+      }
+
+      if (next.referenced !== undefined) {
+        if (next.referenced) {
+          if (!referenced.includes(key)) referenced.push(key);
+          /* 🔴 셀러가 «참조를 고르는» 동작이다. 이미 적어 둔 값을 지우지 않는다 —
+             지우면 되돌릴 수 없고, 값이 우선이라 참조가 먹지도 않는다. 그래서
+             값이 있으면 참조 선택을 «받지 않는다». */
+          if ((values[key] ?? "").trim()) referenced = referenced.filter((k) => k !== key);
+        } else {
+          referenced = referenced.filter((k) => k !== key);
+        }
+      }
+
+      const nextOverride: ChannelNoticeOverride = {
+        ...(Object.keys(values).length > 0 ? { values } : {}),
+        ...(referenced.length > 0 ? { referenced } : {}),
+      };
+      return {
+        ...prev,
+        channelNoticeOverrides: { ...(prev.channelNoticeOverrides ?? {}), smartstore: nextOverride },
+      };
+    });
+  }
+
   function bulkSetFieldReference(keys: NoticeReferenceEligibleField[]) {
     setProduct((prev) => {
       const next = { ...prev };
@@ -3926,6 +3978,7 @@ export function CommerceWorkspace({
               onSelectCategory={(candidate) => selectCategory(tab, candidate)}
               onFixTextField={updateField}
               onSetFieldReference={setFieldReference}
+              onUpdateNoticeOverride={updateNoticeOverride}
               onUpdateChildCertification={updateChildCertification}
               onUpdateKcDeclaration={updateKcDeclaration}
               onFixNumberField={updateNumberField}

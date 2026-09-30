@@ -153,6 +153,14 @@ export const MASTER_FIELD_GROUP = {
 
   /* ── CommerceBinding — 🔴 Master 가 커머스를 «알지 않게» 하는 자리 ─────── */
   channelPriceOverrides: "COMMERCE_BINDING",
+  /* NAVER-CHANNEL-NOTICE-OVERRIDES-03(CPO 확정 「㉡」, 2026-09-30) — 채널 고시
+     칸에 대한 «셀러의 결정». 🔴 상품의 사실이 아니다: 「제조연월이 무엇인가」가
+     아니라 「이 채널에 무엇을 보낼지 셀러가 어떻게 정했는가」다.
+
+     🔴 바로 위 `lotteOnChannelInfo` 주석이 경고한 길을 «피해서» 만들었다 —
+     `naverChannelInfo` 를 새로 두지 않고, 바로 윗줄 `channelPriceOverrides` 와
+     같은 채널 키 모양을 쓴다. 커머스가 20~30개로 늘어도 이 칸은 하나다. */
+  channelNoticeOverrides: "COMMERCE_BINDING",
   /* 🔴 이 한 칸이 이번 분류의 이유다. 이름에 채널이 박혀 있고, Master 에
      두면 「Master 가 롯데ON 을 안다」가 된다 — 그러면 신규 커머스마다
      xxxChannelInfo 가 하나씩 더 붙는다. 물리적으로는 아직 여기 있지만,
