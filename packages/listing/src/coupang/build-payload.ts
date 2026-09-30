@@ -859,11 +859,34 @@ export function selectCoupangNoticeCategory(
       const keywords = NOTICE_CATEGORY_NAME_KEYWORDS[c.noticeCategoryName];
       return keywords?.some((k) => productName.toLowerCase().includes(k));
     });
+  /* ══ TENNIS-READY-TO-REGISTER-01(측정으로 발견, 2026-09-30) ═══════════════
+     🔴 `isLikelyChildrenProduct` 가 어린이 고시를 «올릴» 때만 쓰이고 «내릴» 때는
+     쓰이지 않았다. 그래서 아래 fallback(「필드 수 최소」)이 성인 상품에
+     어린이제품 고시를 그냥 고를 수 있었다 — 실제로 성인 테니스 원피스 이름으로
+     재보니 「어린이제품」이 선택됐다(조사 단계에서 나는 반대로 예측했고, 실행이
+     그 예측을 뒤집었다).
+
+     성인 상품에 어린이제품 고시가 붙으면 사용연령 같은 아동 항목이 필수가 되고
+     KC/인증 칸이 남아 CP007 로 이어진다. 테니스는 성인이라 «항상» 이 경로다.
+
+     🔴 새 어휘를 만들지 않았다. 이 함수가 이미 가진 두 판정
+     (`isLikelyChildrenProduct` · `name.includes("어린이")`)을 «대칭으로» 쓸 뿐이다
+     — 올릴 때 쓰는 기준으로 내릴 때도 판단한다.
+     🔴 배제했더니 후보가 «하나도» 남지 않으면 예전 그대로 둔다. 고시 카테고리가
+     어린이제품 하나뿐인 카테고리에서 undefined 를 돌려주면 그게 더 나쁘다.
+     🔴 kcFreeMatch 는 손대지 않았다 — 그쪽은 NOTICE_CATEGORY_NAME_KEYWORDS 에
+     이름이 «있어야» 승격되고, 그 표에 어린이 계열이 없어 애초에 못 올라온다. */
+  const looksLikeChildrenProduct = isLikelyChildrenProduct(productName);
+  const isChildrenNoticeCategory = (c: CoupangCategoryNoticeMeta) => c.noticeCategoryName.includes("어린이");
+  const fallbackCandidates = looksLikeChildrenProduct
+    ? noticeCategories
+    : noticeCategories.filter((c) => !isChildrenNoticeCategory(c));
+  const fallbackPool = fallbackCandidates.length > 0 ? fallbackCandidates : noticeCategories;
   const simplestNoticeCategory =
     kcFreeMatch ??
-    [...noticeCategories].sort((a, b) => a.noticeCategoryDetailNames.length - b.noticeCategoryDetailNames.length)[0];
-  const childrenNoticeCategory = noticeCategories.find((c) => c.noticeCategoryName.includes("어린이"));
-  return isLikelyChildrenProduct(productName) && childrenNoticeCategory ? childrenNoticeCategory : simplestNoticeCategory;
+    [...fallbackPool].sort((a, b) => a.noticeCategoryDetailNames.length - b.noticeCategoryDetailNames.length)[0];
+  const childrenNoticeCategory = noticeCategories.find(isChildrenNoticeCategory);
+  return looksLikeChildrenProduct && childrenNoticeCategory ? childrenNoticeCategory : simplestNoticeCategory;
 }
 
 /** 실제 LIVE 등록 실패(2026-08-03, API005) — "사이즈 옵션값은 최대 30자까지만
