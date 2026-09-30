@@ -459,3 +459,103 @@ describe("③ 🔴 쿠팡 — 의류는 고시 카테고리 키워드 표에 «�
     );
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ④ TENNIS-FIRST-PRODUCT-DISCOVERY-02 — 첫 등록 대상은 «성인 남성 테니스 상의» 다
+   ══════════════════════════════════════════════════════════════════════════
+
+   🔴 이 fixture 는 «상품 유형» 을 재기 위한 것이고, 실제 등록 상품이 아니다.
+   CPO 가 준 샘플(Sergio Tacchini Men's Fall Magro Top)의 «유형» 만 따른다 —
+   남성 · 상의 · 테니스웨어 · 사이즈 축 하나. 그 페이지를 수집하지 «않았다»
+   (지시: 샘플을 자동 수집하거나 재고·사이즈를 추정해 등록하지 않는다).
+
+   🔴 그래서 아래 재고·사이즈 값은 «샘플의 실제 값이 아니다». 코드 경로를 재기
+   위한 임의값이고, 이 fixture 로 실제 등록을 판정하지 않는다. 실제 등록 상품의
+   재고·사이즈는 DB 의 snapshot 에서 확인해야 하며 그것은 아직 못 봤다.
+
+   재는 것은 하나다: 「여성 원피스」와 「남성 상의」가 채널 분류에서 갈리는가.
+   성별·품목이 달라지면 고시 유형이 바뀔 수 있고, 그것이 첫 등록의 위험이다. */
+function mensTennisTop(overrides: Partial<CanonicalProduct> = {}): CanonicalProduct {
+  return tennisProduct({
+    sourceUrl: "https://example.com/products/mens-tennis-top",
+    title: field("Men's Fall Magro Top"),
+    brand: field("Sergio Tacchini"),
+    titleKo: field("남성 폴 마그로 테니스 상의"),
+    itemName: field("남성 테니스 상의"),
+    sku: field("STMFMT0-WH"),
+    modelName: field("STMFMT0"),
+    color: field("White"),
+    material: field("100% Polyester"),
+    optionGroups: [{ name: "Size", values: ["S", "M", "L", "XL"] }],
+    variants: [
+      { optionValues: { Size: "S" }, stockQuantity: 2, sku: "STMFMT0-WH-S" },
+      { optionValues: { Size: "M" }, stockQuantity: 5, sku: "STMFMT0-WH-M" },
+      { optionValues: { Size: "L" }, stockQuantity: 3, sku: "STMFMT0-WH-L" },
+      { optionValues: { Size: "XL" }, stockQuantity: 1, sku: "STMFMT0-WH-XL" },
+    ],
+    ...overrides,
+  } as unknown as Partial<CanonicalProduct>);
+}
+
+describe("④ 성인 남성 테니스 상의 — 3채널 분류가 여성 원피스와 «같은가»", () => {
+  it("SmartStore: 남성 상의도 WEAR 다 — 성별이 고시 유형을 바꾸지 않는다", () => {
+    const notice = naverOf(mensTennisTop()).payload.originProduct.detailAttribute?.productInfoProvidedNotice;
+    expect(notice?.productInfoProvidedNoticeType).toBe("WEAR");
+  });
+
+  it("🔴 SmartStore: 아동 칸이 새지 않고, KIDS 사유로 막히지도 않는다", () => {
+    const { payload, validation } = naverOf(mensTennisTop());
+    expect(JSON.stringify(payload)).not.toContain('"kids"');
+    expect(blockingFields(validation).filter((f) => f.includes("KIDS"))).toEqual([]);
+  });
+
+  it("SmartStore: 사이즈 4개가 옵션으로 실리고 치수 고시를 채운다", () => {
+    const { payload, validation } = naverOf(mensTennisTop());
+    const combos = payload.originProduct.detailAttribute?.optionInfo?.optionCombinations ?? [];
+    expect(combos).toHaveLength(4);
+    /* 옵션값이 하나도 비지 않았다 — 빈 옵션 가드가 서지 않아야 한다. */
+    expect(blockingFields(validation)).not.toContain(
+      "detailAttribute.optionInfo.optionCombinations[].optionName",
+    );
+  });
+
+  it("🔴 쿠팡: 「Men's」 상품이 어린이제품 고시로 가지 않는다", () => {
+    const children = {
+      noticeCategoryName: "어린이제품",
+      noticeCategoryDetailNames: [{ noticeCategoryDetailName: "사용연령", required: "MANDATORY" }],
+    } as never;
+    const misc = {
+      noticeCategoryName: "기타 재화",
+      noticeCategoryDetailNames: [
+        { noticeCategoryDetailName: "품명 및 모델명", required: "MANDATORY" },
+        { noticeCategoryDetailName: "인증/허가 사항", required: "MANDATORY" },
+      ],
+    } as never;
+    const name = mensTennisTop().title.value;
+    expect(selectCoupangNoticeCategory([children, misc], name)?.noticeCategoryName).toBe("기타 재화");
+  });
+
+  it("🔴 롯데ON: 남성 상의도 품목 01 의 9항목이 payload 에 그대로 실린다", () => {
+    const payload = buildLotteOnPayload({
+      product: mensTennisTop(),
+      channel: lotteOnChannel({ noticeItemCode: "01", noticeArticles: ARTICLES_01_FULL }),
+      detailHtml: "<p>상세</p>",
+    } as never) as unknown as {
+      spdLst: { pdItmsInfo?: { pdItmsCd?: string; pdItmsArtlLst?: { pdArtlCd: string }[] } }[];
+    };
+    const info = payload.spdLst[0]!.pdItmsInfo;
+    expect(info?.pdItmsCd).toBe("01");
+    expect(info?.pdItmsArtlLst).toHaveLength(9);
+  });
+
+  it("🔴 재고가 «전부 0» 이면 남성 상의도 막힌다 — 임의 수량으로 채우지 않는다", () => {
+    const product = mensTennisTop({
+      variants: [
+        { optionValues: { Size: "S" }, stockQuantity: 0 },
+        { optionValues: { Size: "M" }, stockQuantity: 0 },
+      ],
+      stockQuantity: field(0),
+    } as unknown as Partial<CanonicalProduct>);
+    expect(blockingFields(naverOf(product).validation)).toContain("originProduct.stockQuantity");
+  });
+});
