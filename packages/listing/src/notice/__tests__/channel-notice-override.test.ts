@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ChannelNoticeOverride } from "@commerce/shared";
 import { DETAIL_PAGE_REFERENCE_TEXT } from "../reference-eligibility";
 import {
+  applyChannelNoticeOverride,
   NAVER_NOTICE_REQUIRED_CONFIRMED,
   NOTICE_KEY_PACK_DATE,
   NOTICE_KEY_RELEASE_DATE,
@@ -140,5 +141,81 @@ describe("⑤ 키는 payload 필드명이 아니라 «의미» 다", () => {
 
   it("모르는 키는 기본값으로 떨어진다 — 예외를 던지지 않는다", () => {
     expect(resolveChannelNoticeField({}, "존재하지않는칸").state).toBe("DISCLOSED_DEFAULT");
+  });
+});
+
+/* ══ FINAL GATE (CPO 지시, 2026-09-30) ═══════════════════════════════════════
+   🔴 여기까지는 «읽는» 쪽(resolve)만 쟀다. 아래는 «쓰는» 쪽(apply) — 컴포넌트가
+   실제로 부르는 그 함수다. CPO 가 「복제 규약이 아니라 운영 함수를 검증하라」고
+   지목한 공백이 이 블록이다. */
+
+describe("⑥ 쓰는 쪽 — applyChannelNoticeOverride (운영 함수)", () => {
+  it("실제 값을 적으면 담긴다", () => {
+    const next = applyChannelNoticeOverride(undefined, NOTICE_KEY_PACK_DATE, { value: "2025-03" });
+    expect(next.values?.[NOTICE_KEY_PACK_DATE]).toBe("2025-03");
+  });
+
+  it("🔴 값을 적으면 기존 참조 선택이 «제거된다»", () => {
+    const before: ChannelNoticeOverride = { referenced: [NOTICE_KEY_PACK_DATE] };
+    const next = applyChannelNoticeOverride(before, NOTICE_KEY_PACK_DATE, { value: "2025-03" });
+    expect(next.referenced ?? []).not.toContain(NOTICE_KEY_PACK_DATE);
+    expect(next.values?.[NOTICE_KEY_PACK_DATE]).toBe("2025-03");
+  });
+
+  it("🔴 값이 있는 칸에는 참조 선택을 «받지 않고», 값을 지우지도 않는다", () => {
+    const before: ChannelNoticeOverride = { values: { [NOTICE_KEY_PACK_DATE]: "2025-03" } };
+    const next = applyChannelNoticeOverride(before, NOTICE_KEY_PACK_DATE, { referenced: true });
+    expect(next.referenced ?? []).not.toContain(NOTICE_KEY_PACK_DATE);
+    expect(next.values?.[NOTICE_KEY_PACK_DATE]).toBe("2025-03");
+    expect(resolveChannelNoticeField(next, NOTICE_KEY_PACK_DATE).state).toBe("SELLER_VALUE");
+  });
+
+  it("참조를 고르면 referenced 에 담기고, 중복되지 않는다", () => {
+    const once = applyChannelNoticeOverride(undefined, NOTICE_KEY_RELEASE_DATE, { referenced: true });
+    const twice = applyChannelNoticeOverride(once, NOTICE_KEY_RELEASE_DATE, { referenced: true });
+    expect(twice.referenced).toEqual([NOTICE_KEY_RELEASE_DATE]);
+  });
+
+  it("🔴 해제하면 키가 «사라진다» — 부재로 표현된다", () => {
+    const on = applyChannelNoticeOverride(undefined, NOTICE_KEY_RELEASE_DATE, { referenced: true });
+    const off = applyChannelNoticeOverride(on, NOTICE_KEY_RELEASE_DATE, { referenced: false });
+    expect(off.referenced).toBeUndefined();
+    expect(JSON.stringify(off)).not.toContain(NOTICE_KEY_RELEASE_DATE);
+    expect(resolveChannelNoticeField(off, NOTICE_KEY_RELEASE_DATE).state).toBe("DISCLOSED_DEFAULT");
+  });
+
+  it("🔴 값을 지우면 기본 참조 상태로 복귀한다 — 빈 문자열을 담지 않는다", () => {
+    const filled = applyChannelNoticeOverride(undefined, NOTICE_KEY_PACK_DATE, { value: "2025-03" });
+    const cleared = applyChannelNoticeOverride(filled, NOTICE_KEY_PACK_DATE, { value: "" });
+    expect(cleared.values?.[NOTICE_KEY_PACK_DATE]).toBeUndefined();
+    expect(cleared).toEqual({});
+    expect(resolveChannelNoticeField(cleared, NOTICE_KEY_PACK_DATE).state).toBe("DISCLOSED_DEFAULT");
+  });
+
+  it("공백만 남겨도 지운 것으로 본다", () => {
+    const filled = applyChannelNoticeOverride(undefined, NOTICE_KEY_PACK_DATE, { value: "2025-03" });
+    expect(applyChannelNoticeOverride(filled, NOTICE_KEY_PACK_DATE, { value: "   " })).toEqual({});
+  });
+
+  it("🔴 다른 칸을 건드리지 않는다", () => {
+    const before: ChannelNoticeOverride = {
+      values: { [NOTICE_KEY_PACK_DATE]: "2025-03" },
+      referenced: [NOTICE_KEY_RELEASE_DATE],
+    };
+    const next = applyChannelNoticeOverride(before, NOTICE_KEY_PACK_DATE, { value: "" });
+    expect(next.referenced).toEqual([NOTICE_KEY_RELEASE_DATE]);
+  });
+
+  it("🔴 원본을 변형하지 않는다", () => {
+    const before: ChannelNoticeOverride = { values: { [NOTICE_KEY_PACK_DATE]: "2025-03" }, referenced: [] };
+    applyChannelNoticeOverride(before, NOTICE_KEY_PACK_DATE, { value: "" });
+    expect(before.values?.[NOTICE_KEY_PACK_DATE]).toBe("2025-03");
+  });
+
+  it("🔴 값과 참조가 한 상품에서 «각각» 살아 있다", () => {
+    let o = applyChannelNoticeOverride(undefined, NOTICE_KEY_PACK_DATE, { value: "2025-03" });
+    o = applyChannelNoticeOverride(o, NOTICE_KEY_RELEASE_DATE, { referenced: true });
+    expect(resolveChannelNoticeField(o, NOTICE_KEY_PACK_DATE).state).toBe("SELLER_VALUE");
+    expect(resolveChannelNoticeField(o, NOTICE_KEY_RELEASE_DATE).state).toBe("SELLER_REFERENCED");
   });
 });

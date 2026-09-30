@@ -5,7 +5,12 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { CanonicalProduct, ChannelNoticeOverride, FieldSource } from "@commerce/shared";
 import { PLATFORM_ADAPTERS } from "@commerce/marketplace";
 import { UNRESOLVED_CATEGORY } from "@commerce/category";
-import { DETAIL_PAGE_REFERENCE_TEXT, NOTICE_KEY_PACK_DATE, NOTICE_KEY_RELEASE_DATE } from "@commerce/listing";
+import {
+  applyChannelNoticeOverride,
+  DETAIL_PAGE_REFERENCE_TEXT,
+  NOTICE_KEY_PACK_DATE,
+  NOTICE_KEY_RELEASE_DATE,
+} from "@commerce/listing";
 import { PlatformPreview } from "../PlatformPreview";
 import { manufacturerFixture } from "./manufacturer-fixture";
 import { expandAllSections } from "./mount-registration-tab";
@@ -23,8 +28,8 @@ import { expandAllSections } from "./mount-registration-tab";
  *   naver-notice-override-ui.test.ts        저장 왕복(JSON + backfill)
  *   이 파일                                  🔴 셀러의 «손동작» — 실제 DOM 이벤트
  *
- * 🔴 상태를 이 파일이 다시 계산하지 않는다. `CommerceWorkspace` 가 하는 일과 같은
- * 모양으로 상위 state 를 두고, 화면이 올려보낸 것을 그대로 저장한 뒤 «다시 마운트»
+ * 🔴 상태를 이 파일이 다시 계산하지 않는다. `CommerceWorkspace` 가 «부르는 바로 그»
+ * 함수로 상위 state 를 갱신하고, 화면이 올려보낸 것을 저장한 뒤 «다시 마운트»
  * 한다 — 새로고침 복구가 그것이다.
  */
 
@@ -91,33 +96,15 @@ afterEach(async () => {
 });
 
 /**
- * 🔴 `CommerceWorkspace.updateNoticeOverride` 와 «같은 규약» 을 상위에서 재현한다:
- * 빈 값은 담지 않고, 실제 값을 적으면 참조 선택을 거둔다.
+ * 🔴 FINAL GATE(CPO 지시, 2026-09-30) — 여기 있던 것: `updateNoticeOverride` 의
+ * **복제 규약** 이었다. CPO 가 「실제 운영 함수가 아닌 복제를 검증한다」를 남은
+ * 리스크로 지목했고, 그 지적이 맞았다.
  *
- * 🔴 이것은 그 함수의 «복제» 이고 그 함수 자체의 테스트가 아니다 — 이 파일이
- * 증명하는 것은 「화면이 올려보내는 이벤트가 그 규약을 만족시킬 수 있는 모양인가」
- * 다. 보고서에 이 한계를 적었다.
+ * 지금은 컴포넌트가 실제로 부르는 **바로 그 함수** 를 부른다. 복제가 사라졌으므로
+ * 「복제는 맞는데 운영 코드는 틀린」 경우가 구조적으로 불가능하다.
  */
 function applyToStore(key: string, next: { value?: string; referenced?: boolean }) {
-  const current = saved ?? {};
-  const values = { ...(current.values ?? {}) };
-  let referenced = [...(current.referenced ?? [])];
-  if (next.value !== undefined) {
-    const trimmed = next.value.trim();
-    if (trimmed) values[key] = trimmed;
-    else delete values[key];
-    if (trimmed) referenced = referenced.filter((k) => k !== key);
-  }
-  if (next.referenced !== undefined) {
-    if (next.referenced) {
-      if (!referenced.includes(key)) referenced.push(key);
-      if ((values[key] ?? "").trim()) referenced = referenced.filter((k) => k !== key);
-    } else referenced = referenced.filter((k) => k !== key);
-  }
-  saved = {
-    ...(Object.keys(values).length > 0 ? { values } : {}),
-    ...(referenced.length > 0 ? { referenced } : {}),
-  };
+  saved = applyChannelNoticeOverride(saved, key, next);
 }
 
 function Harness({ initial }: { initial?: ChannelNoticeOverride }) {

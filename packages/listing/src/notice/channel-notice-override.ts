@@ -72,6 +72,69 @@ export function resolveChannelNoticeField(
   return { outgoing: DETAIL_PAGE_REFERENCE_TEXT, state: "DISCLOSED_DEFAULT" };
 }
 
+/** 셀러의 한 동작. 둘 중 «준 것만» 반영한다 — 안 준 축은 건드리지 않는다. */
+export interface ChannelNoticeOverrideEdit {
+  /** 입력칸에 적힌 것. 빈 문자열/공백은 「지운다」는 뜻이다. */
+  value?: string;
+  /** 참조 토글. `false` 는 해제다. */
+  referenced?: boolean;
+}
+
+/**
+ * ══ FINAL GATE(CPO 지시, 2026-09-30) — 여기로 «옮겨 온» 함수다 ══════════════
+ *
+ * 원래 `CommerceWorkspace.updateNoticeOverride` 의 `setProduct` 콜백 «안» 에
+ * 있었다. 본문이 이미 순수했는데(현재 override + 한 동작 → 새 override) 컴포넌트
+ * 안에 갇혀 있어서 «실제 함수» 를 테스트할 수 없었고, 그래서 마운트 테스트가
+ * 같은 규약의 «복제본» 을 돌렸다. CPO 가 그 공백을 남은 리스크로 지목했다.
+ *
+ * 🔴 옮기기만 했다. 계산은 한 글자도 바뀌지 않았고, `setProduct` 와 상품 수준
+ * 병합은 컴포넌트에 그대로 남는다 — payload 생성 경계(`resolveChannelNoticeField`
+ * → `naver/build-payload.ts`)는 이 함수를 «부르지 않는다». 그래서 이 이동이
+ * 등록 경로에 닿는 곳이 없다.
+ *
+ * ── 🔴 이 함수가 지키는 규칙 ────────────────────────────────────────────────
+ *   ① 빈 값/공백은 «담지 않는다» — 「적었다가 비웠다」와 「안 적었다」를 같게 둔다
+ *   ② 실제 값을 적으면 참조 선택을 «거둔다» — 값이 언제나 우선이므로 남겨 두면
+ *      저장된 상태가 화면과 다른 말을 한다
+ *   ③ 값이 있는 칸에는 참조 선택을 «받지 않는다» — 값을 지우지도 않는다.
+ *      지우면 되돌릴 수 없고, 값이 우선이라 참조가 먹지도 않는다
+ *   ④ 비어 있는 축은 키를 «두지 않는다» — DISCLOSED_DEFAULT 는 부재로만 표현된다
+ */
+export function applyChannelNoticeOverride(
+  current: ChannelNoticeOverride | undefined,
+  key: string,
+  next: ChannelNoticeOverrideEdit,
+): ChannelNoticeOverride {
+  const base = current ?? {};
+  const values = { ...(base.values ?? {}) };
+  let referenced = [...(base.referenced ?? [])];
+
+  if (next.value !== undefined) {
+    const trimmed = next.value.trim();
+    if (trimmed) values[key] = trimmed;
+    else delete values[key];
+    /* ② 값을 적는 순간 참조 선택은 의미가 없다. */
+    if (trimmed) referenced = referenced.filter((k) => k !== key);
+  }
+
+  if (next.referenced !== undefined) {
+    if (next.referenced) {
+      if (!referenced.includes(key)) referenced.push(key);
+      /* ③ 값이 있으면 참조 선택을 받지 않는다. */
+      if (clean(values[key])) referenced = referenced.filter((k) => k !== key);
+    } else {
+      referenced = referenced.filter((k) => k !== key);
+    }
+  }
+
+  /* ④ 빈 축은 키 자체를 두지 않는다. */
+  return {
+    ...(Object.keys(values).length > 0 ? { values } : {}),
+    ...(referenced.length > 0 ? { referenced } : {}),
+  };
+}
+
 /** 셀러가 이 칸을 직접 정했는가 — 화면이 「기본값으로 나갑니다」를 붙일지 가른다. */
 export function isSellerDecidedNoticeState(state: ChannelNoticeFieldState): boolean {
   return state !== "DISCLOSED_DEFAULT";

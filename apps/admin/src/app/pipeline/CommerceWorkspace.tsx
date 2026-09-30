@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   CanonicalProduct,
-  ChannelNoticeOverride,
   CanonicalProductCertification,
   SmartStoreKcDeclaration,
   CanonicalProductVariant,
@@ -73,6 +72,7 @@ import {
 } from "./commerce/DomesticPriceIntelligencePanel";
 import type { PriceLevel, SellerFinalVerdict } from "./commerce/DomesticPriceIntelligencePanel";
 import { resolveSellVerdict, type ScopedSellVerdict } from "./commerce/sell-verdict-scope";
+import { applyChannelNoticeOverride, type ChannelNoticeOverrideEdit } from "@commerce/listing";
 import { ActionCenter, type ChecklistItem } from "./commerce/ActionCenter";
 import { AuditLogPanel } from "./commerce/AuditLogPanel";
 import { DomesticShopSearch } from "./commerce/DomesticShopSearch";
@@ -1226,43 +1226,18 @@ export function CommerceWorkspace({
    * 저장하면 셀러가 «고른» 참조(REFERENCED)와 구분할 수 없게 되고, 그것이 이
    * 작업이 없애려는 혼동이다. 그래서 해제는 «키를 지운다», 빈 값도 «지운다».
    */
-  function updateNoticeOverride(key: string, next: { value?: string; referenced?: boolean }) {
-    setProduct((prev) => {
-      const current = prev.channelNoticeOverrides?.smartstore ?? {};
-      const values = { ...(current.values ?? {}) };
-      let referenced = [...(current.referenced ?? [])];
-
-      if (next.value !== undefined) {
-        const trimmed = next.value.trim();
-        /* 🔴 빈 값은 담지 않는다 — 「적었는데 비웠다」와 「안 적었다」를 같게 둔다.
-           그리고 실제 값을 적는 순간 참조 선택은 의미가 없으므로 함께 거둔다
-           (값이 언제나 우선이라는 resolveChannelNoticeField 의 순서와 일치). */
-        if (trimmed) values[key] = trimmed;
-        else delete values[key];
-        if (trimmed) referenced = referenced.filter((k) => k !== key);
-      }
-
-      if (next.referenced !== undefined) {
-        if (next.referenced) {
-          if (!referenced.includes(key)) referenced.push(key);
-          /* 🔴 셀러가 «참조를 고르는» 동작이다. 이미 적어 둔 값을 지우지 않는다 —
-             지우면 되돌릴 수 없고, 값이 우선이라 참조가 먹지도 않는다. 그래서
-             값이 있으면 참조 선택을 «받지 않는다». */
-          if ((values[key] ?? "").trim()) referenced = referenced.filter((k) => k !== key);
-        } else {
-          referenced = referenced.filter((k) => k !== key);
-        }
-      }
-
-      const nextOverride: ChannelNoticeOverride = {
-        ...(Object.keys(values).length > 0 ? { values } : {}),
-        ...(referenced.length > 0 ? { referenced } : {}),
-      };
-      return {
-        ...prev,
-        channelNoticeOverrides: { ...(prev.channelNoticeOverrides ?? {}), smartstore: nextOverride },
-      };
-    });
+  function updateNoticeOverride(key: string, next: ChannelNoticeOverrideEdit) {
+    /* 🔴 FINAL GATE(CPO 지시) — 계산을 `applyChannelNoticeOverride` 로 «옮겼다».
+       본문이 이미 순수했는데 이 콜백 안에 갇혀 있어서 «실제 함수» 를 테스트할 수
+       없었고, 마운트 테스트가 복제 규약을 돌리고 있었다. 계산은 한 글자도 바뀌지
+       않았고 여기 남는 것은 상품 수준 병합뿐이다. */
+    setProduct((prev) => ({
+      ...prev,
+      channelNoticeOverrides: {
+        ...(prev.channelNoticeOverrides ?? {}),
+        smartstore: applyChannelNoticeOverride(prev.channelNoticeOverrides?.smartstore, key, next),
+      },
+    }));
   }
 
   function bulkSetFieldReference(keys: NoticeReferenceEligibleField[]) {
