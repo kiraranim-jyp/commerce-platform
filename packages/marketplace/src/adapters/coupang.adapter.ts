@@ -42,6 +42,21 @@ export const coupangAdapter: PlatformAdapter = {
       /* 🔴 보낼 수 없는 것은 «버린다» — 대신 validate 가 그 사실을 말한다. */
       .filter((url): url is string => url !== null)
       .slice(0, MAX_ADDITIONAL_IMAGES);
+    /* ══ MI-COUPANG-IMAGE-WARNING-03 (CPO 방향 승인, 2026-09-30) ══════════════
+       🔴 바로 위 주석이 "대신 validate 가 그 사실을 말한다" 고 적어 두었는데
+       실제로는 «아무도 말하지 않았다». 버린 장수를 여기서 센다.
+
+       🔴 같은 조건·같은 공통 함수다 — naver/validate-payload.ts 의
+       excludedOptionalImageCount 와 한 글자도 다르지 않다. 두 채널이 서로 다른
+       숫자를 말하면 그것이 CP001 류 불일치다.
+       🔴 `.slice()` «앞» 에서 센다. 쿠팡 한도(9장) 때문에 잘린 것은 「제외」가
+       아니라 「한도」다 — 두 사실을 한 숫자에 섞지 않는다. */
+    const excludedAdditionalImageCount = product.images.filter(
+      (img) =>
+        !img.isRepresentative &&
+        img.useInProductGallery &&
+        getRegistrationImageUrl(img) === null,
+    ).length;
     // P-4-H1-2-2(대표님 지시) — override가 없을 때 원본가를 마진 0%로 그냥
     // 환산해서 쓰던 버그를 고친 지점. resolveListingPrice() 하나로 통일한다
     // (스마트스토어 어댑터도 동일하게 이 함수를 쓴다 — 각자 계산하지 않는다).
@@ -79,6 +94,33 @@ export const coupangAdapter: PlatformAdapter = {
         message: "대표 이미지가 지정되지 않았습니다.",
       },
       imageFormatFieldRule(product),
+      {
+        /* ══ MI-COUPANG-IMAGE-WARNING-03 (CPO 방향 승인, 2026-09-30) ══════════
+           🔴 «등록 전» 에 말한다. ListingResult(등록 후)는 건드리지 않았다 —
+           이미 나간 상품에 대한 사후 통보는 셀러가 고칠 기회를 주지 않는다.
+
+           🔴 WARNING 인 이유: CEO 결정 2 — 추가 이미지 문제만으로 등록을 막지
+           않는다. runValidation 이 WARNING 을 내면 readiness.ts:130 이
+           `required: v.status !== "WARNING"` 로 받아 required:false 가 되고,
+           등록 버튼 게이트(allRequiredPassed)와 「등록 가능성」 퍼센트(required
+           분모)를 «둘 다» 움직이지 않는다. 선례는 같은 파일의 stockUnknown 이다
+           — 「모르는 것을 품절이라고 말하지 않는다. 사실만 알린다.」
+
+           🔴 공유 모듈(image-field.ts)에 넣지 «않았다». 그것은 3채널이 같이
+           쓰므로 11번가·스마트스토어까지 동반 노출된다. 이번 승인 범위는 쿠팡
+           하나다 — 지시서 3항(「의도하지 않은 동반 노출이 있다면 확대하지 말고
+           보고」)에 따라 어댑터 안에 둔다.
+
+           🔴 label 에 sectionId 가 없다(readiness.ts 의 LABEL_TO_SECTION 에
+           「추가 이미지」가 없다). WARNING 은 required 가 아니므로 「required 면
+           반드시 sectionId」 계약에 걸리지 않는다 — 이동 앵커 문제는
+           MI-IMAGE-SECTION-NAVIGATION-PRECHECK-01 의 몫이다. */
+        field: "excludedAdditionalImages",
+        label: "추가 이미지",
+        check: () => excludedAdditionalImageCount === 0,
+        onFail: "WARNING",
+        message: `추가 이미지 ${excludedAdditionalImageCount}건이 등록에서 제외됐습니다. 안전한 이미지 URL을 확인해 주세요.`,
+      },
       categoryFieldRule(categorySelection),
       {
         field: "price",

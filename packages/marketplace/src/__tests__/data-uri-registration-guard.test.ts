@@ -204,3 +204,93 @@ describe("⑥ 갤러리 제외 이미지는 애초에 대상이 아니다", () =
     expect(listingOf(product).additionalImages).toEqual([]);
   });
 });
+
+/* ══ MI-COUPANG-IMAGE-WARNING-03 (CPO 방향 승인, 2026-09-30) ══════════════════
+   🔴 등록 «전» 에 제외 사실을 말한다. 재는 것은 넷이다 —
+   정상 / 추가 일부 제외 / 추가 전부 제외 / 대표 오류. */
+
+const warnOf = (listing: ReturnType<typeof listingOf>) =>
+  listing.validations.find((v) => v.field === "excludedAdditionalImages");
+const blocking = (listing: ReturnType<typeof listingOf>) =>
+  listing.validations.filter((v) => v.status === "ERROR").map((v) => v.field);
+
+function coupangOf(product: CanonicalProduct) {
+  return PLATFORM_ADAPTERS.coupang.toListingModel(product, UNRESOLVED_CATEGORY, undefined, "coupang");
+}
+
+describe("⑩ 쿠팡 등록 전 경고 — 제외 장수를 말한다", () => {
+  it("정상: 대표 + 추가 2장 모두 안전하면 PASS 고 메시지가 없다", () => {
+    const listing = coupangOf(
+      productWith([
+        image({ id: "rep", originalUrl: "https://a/rep.jpg", isRepresentative: true }),
+        image({ id: "a1", originalUrl: "https://a/1.jpg" }),
+        image({ id: "a2", originalUrl: "https://a/2.jpg" }),
+      ]),
+    );
+    expect(warnOf(listing)?.status).toBe("PASS");
+    expect(warnOf(listing)?.message).toBeUndefined();
+  });
+
+  it("🔴 추가 일부 제외: WARNING 이고 «장수» 를 말한다", () => {
+    const listing = coupangOf(
+      productWith([
+        image({ id: "rep", originalUrl: PUBLIC_URL, isRepresentative: true }),
+        image({ id: "0004", originalUrl: DATA_URI }),
+        image({ id: "a1", originalUrl: "https://a/1.jpg" }),
+      ]),
+    );
+    expect(warnOf(listing)?.status).toBe("WARNING");
+    expect(warnOf(listing)?.message).toContain("1건");
+  });
+
+  it("🔴 추가 전부 제외: 그래도 ERROR 가 아니다 — CEO 결정 2", () => {
+    const listing = coupangOf(
+      productWith([
+        image({ id: "rep", originalUrl: PUBLIC_URL, isRepresentative: true }),
+        image({ id: "0004", originalUrl: DATA_URI }),
+        image({ id: "0006", originalUrl: DATA_URI }),
+      ]),
+    );
+    expect(warnOf(listing)?.status).toBe("WARNING");
+    expect(warnOf(listing)?.message).toContain("2건");
+    /* 🔴 등록 버튼 게이트는 ERROR 만 본다(CommerceWorkspace.tsx:2934).
+       이 경고가 거기 섞이면 CEO 결정 2 가 다시 깨진다. */
+    expect(blocking(listing)).not.toContain("excludedAdditionalImages");
+  });
+
+  it("🔴 대표 오류: 기존 차단이 그대로 유지된다", () => {
+    const listing = coupangOf(
+      productWith([
+        image({ id: "rep", originalUrl: DATA_URI, isRepresentative: true }),
+        image({ id: "a1", originalUrl: "https://a/1.jpg" }),
+      ]),
+    );
+    expect(blocking(listing)).toContain("representativeImage");
+    /* 대표만 문제고 추가는 멀쩡하니 «추가» 경고는 뜨지 않는다 — 사유를 섞지 않는다. */
+    expect(warnOf(listing)?.status).toBe("PASS");
+  });
+
+  it("갤러리에서 «셀러가» 뺀 이미지는 제외 장수에 들어가지 않는다", () => {
+    const listing = coupangOf(
+      productWith([
+        image({ id: "rep", originalUrl: PUBLIC_URL, isRepresentative: true }),
+        image({ id: "x", originalUrl: DATA_URI, useInProductGallery: false }),
+      ]),
+    );
+    expect(warnOf(listing)?.status).toBe("PASS");
+  });
+
+  it("🔴 11번가·스마트스토어에는 이 경고가 «없다» — 동반 노출 금지", () => {
+    const product = productWith([
+      image({ id: "rep", originalUrl: PUBLIC_URL, isRepresentative: true }),
+      image({ id: "0004", originalUrl: DATA_URI }),
+    ]);
+    for (const platform of ["elevenst", "smartstore"] as const) {
+      const listing = PLATFORM_ADAPTERS[platform].toListingModel(product, UNRESOLVED_CATEGORY, undefined, platform);
+      expect(
+        listing.validations.some((v) => v.field === "excludedAdditionalImages"),
+        `${platform} 에 쿠팡 전용 경고가 번졌다`,
+      ).toBe(false);
+    }
+  });
+});
