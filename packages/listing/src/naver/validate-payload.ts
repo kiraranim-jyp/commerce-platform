@@ -1,3 +1,4 @@
+import { isRegistrationSafeImageUrl } from "@commerce/shared";
 
 import { hasRealProductOptions } from "./build-payload";
 import type { NaverPayloadInput, SmartStoreProductInput } from "./build-payload";
@@ -198,6 +199,25 @@ export function validateNaverPayload(
     Boolean(originProduct.images.representativeImage.url),
     "MISSING",
     "대표 이미지가 없습니다.",
+  );
+  /* ══ MI-DATA-URI-FIX-01 B (CEO 승인, 2026-09-30) ═══════════════════════════
+     🔴 위 한 줄은 «대표 이미지 한 장» 만 본다. 실측된 유출 3건은 전부 «비대표» 였고
+     그래서 이 게이트를 그대로 통과해 optionalImages 로 나갔다.
+
+     「있는가」와 「보낼 수 있는 형태인가」는 다른 질문이다 — 전송되는 «모든» URL 을 본다.
+     🔴 판정은 새로 만들지 않고 공통 함수(isRegistrationSafeImageUrl)를 부른다.
+     롯데ON 이 갤러리 전수 검사로 유일하게 이것을 잡아 왔고, 그 기준을 같이 쓴다. */
+  const outgoingImageUrls = [
+    originProduct.images.representativeImage.url,
+    ...(originProduct.images.optionalImages ?? []).map((img) => img.url),
+  ].filter((url) => Boolean(url));
+  const unsafeImageUrls = outgoingImageUrls.filter((url) => !isRegistrationSafeImageUrl(url));
+  check(
+    fields,
+    "originProduct.images",
+    unsafeImageUrls.length === 0,
+    "MISSING",
+    `공개 URL 이 아닌 이미지 ${unsafeImageUrls.length}건이 있습니다 — 이미지 업로드가 끝나지 않았습니다.`,
   );
   // N-3.5 — detailContent는 공식 OpenAPI에서 "상품 수정 시에만 생략 가능"이라고
   // 명시된 필수 필드(ExternalApiOriginProductVo.product required 목록)인데

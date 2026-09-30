@@ -1,5 +1,5 @@
 import type { CanonicalProduct, PlatformId } from "@commerce/shared";
-import { blocksRegistration, getSelectedImageUrl, resolveSourceStock } from "@commerce/shared";
+import { blocksRegistration, getRegistrationImageUrl, getSelectedImageUrl, resolveSourceStock } from "@commerce/shared";
 import type { CategorySelection } from "@commerce/category";
 import { resolveChannelListingPrice } from "../channel-price";
 import { categoryFieldRule } from "../category-field";
@@ -28,13 +28,19 @@ export const coupangAdapter: PlatformAdapter = {
     pricingContext: ListingPricingContext | undefined,
     platform: PlatformId,
   ): ListingModel {
+    /* 🔴 MI-DATA-URI-FIX-01 — 등록 payload 는 «보낼 수 있는» URL 만 받는다.
+       업로드 실패 시 originalUrl 에 data: URI 가 들어 있을 수 있고(실측 3건),
+       그 3건은 전부 «비대표» 였다 — 그래서 대표만 보던 게이트가 못 잡았다.
+       🔴 getSelectedImageUrl 은 그대로 둔다 — 미리보기가 그것을 쓴다. */
     const representativeImageEntry = product.images.find((img) => img.isRepresentative);
     const representativeImage = representativeImageEntry
-      ? getSelectedImageUrl(representativeImageEntry)
+      ? (getRegistrationImageUrl(representativeImageEntry) ?? undefined)
       : undefined;
     const additionalImages = product.images
       .filter((img) => !img.isRepresentative && img.useInProductGallery)
-      .map((img) => getSelectedImageUrl(img))
+      .map((img) => getRegistrationImageUrl(img))
+      /* 🔴 보낼 수 없는 것은 «버린다» — 대신 validate 가 그 사실을 말한다. */
+      .filter((url): url is string => url !== null)
       .slice(0, MAX_ADDITIONAL_IMAGES);
     // P-4-H1-2-2(대표님 지시) — override가 없을 때 원본가를 마진 0%로 그냥
     // 환산해서 쓰던 버그를 고친 지점. resolveListingPrice() 하나로 통일한다

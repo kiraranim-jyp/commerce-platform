@@ -32,7 +32,7 @@ import type {
  * «의도된 유일한 가격 통로» 라는 것을 양성 테스트로 고정한다.
  */
 export type SmartStoreProductInput = MasterProduct & SellingConditions;
-import { getSelectedImageUrl, payloadStockQuantity } from "@commerce/shared";
+import { getRegistrationImageUrl, getSelectedImageUrl, payloadStockQuantity } from "@commerce/shared";
 import { computeVariantFinalPriceKrw } from "@commerce/pricing";
 import { resolveProductSignals } from "@commerce/category";
 import { assembleContentsFromBlocks, BLANK_COUPANG_SELLER_CONFIG } from "../coupang/build-payload";
@@ -572,10 +572,14 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
   // HTML을, 없으면(회귀 방지) 지금까지처럼 listing.description을 그대로 쓴다.
   const productImageUrls = product.images
     .filter((img) => img.useInDescription && img.classification !== "SIZE_CHART")
-    .map((img) => getSelectedImageUrl(img));
+    .map((img) => getRegistrationImageUrl(img))
+    /* 🔴 MI-DATA-URI-FIX-01 — 상세설명 HTML 도 «전송» 이다. data: 를 싣지 않는다. */
+    .filter((url): url is string => url !== null);
   const sizeChartImageUrls = product.images
     .filter((img) => img.useInDescription && img.classification === "SIZE_CHART")
-    .map((img) => getSelectedImageUrl(img));
+    .map((img) => getRegistrationImageUrl(img))
+    /* 🔴 MI-DATA-URI-FIX-01 — 상세설명 HTML 도 «전송» 이다. data: 를 싣지 않는다. */
+    .filter((url): url is string => url !== null);
   const detailContent =
     detailBlocks && detailBlocks.length > 0
       ? assembleNaverDetailContent(detailBlocks, {

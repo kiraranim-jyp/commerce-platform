@@ -13,6 +13,7 @@ import {
 } from "@commerce/listing";
 import type { ListingResult, RegistrationStepLog } from "@commerce/listing";
 import { buildChannelPriceAuditRecord, buildPriceBreakdownSnapshot } from "@/lib/channel-price-audit";
+import { isRegistrationSafeImageUrl } from "@commerce/shared";
 import { requireRegistrationAccess } from "@/lib/auth/require-registration-access";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getCoupangCredentials, getVendorUserId } from "../_lib/env";
@@ -167,6 +168,14 @@ function missingSellerConfigFields(payload: CoupangPayload): string[] {
   if (payload.outboundShippingPlaceCode == null) missing.push("출고지");
   if (!payload.vendorUserId) missing.push("Wing 계정 ID");
   if (payload.items[0]?.images.length === 0) missing.push("대표 이미지");
+  /* ══ MI-DATA-URI-FIX-01 B (CEO 승인, 2026-09-30) ═══════════════════════════
+     🔴 위 한 줄은 «개수» 만 본다. 실측된 유출 3건은 전부 비대표 이미지였고,
+     대표가 정상이면 length > 0 이라 그대로 통과해 vendorPath 로 나갔다.
+     전송되는 모든 vendorPath 를 본다 — 판정은 공통 함수를 부른다(새 규칙 아님). */
+  const unsafeVendorPaths = (payload.items ?? []).flatMap((item) =>
+    (item.images ?? []).map((img) => img.vendorPath).filter((path) => !isRegistrationSafeImageUrl(path)),
+  );
+  if (unsafeVendorPaths.length > 0) missing.push("대표 이미지");
   return missing;
 }
 

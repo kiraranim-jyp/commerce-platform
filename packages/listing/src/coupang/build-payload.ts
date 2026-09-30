@@ -7,7 +7,7 @@ import type {
   MasterProduct,
   SellingConditions,
 } from "@commerce/shared";
-import { getSelectedImageUrl } from "@commerce/shared";
+import { getRegistrationImageUrl, getSelectedImageUrl } from "@commerce/shared";
 import { computeVariantFinalPriceKrw } from "@commerce/pricing";
 import { payloadStockQuantity } from "@commerce/shared";
 import { manufacturerInputFromProduct, resolveManufacturer } from "../common/manufacturer";
@@ -1595,16 +1595,22 @@ export function buildCoupangPayload(
 
   const descriptionImageUrls = product.images
     .filter((img) => img.useInDescription)
-    .map((img) => getSelectedImageUrl(img));
+    .map((img) => getRegistrationImageUrl(img))
+    /* 🔴 MI-DATA-URI-FIX-01 — 상세설명 HTML 도 «전송» 이다. data: 를 싣지 않는다. */
+    .filter((url): url is string => url !== null);
   // Detail Page Editor의 SIZE_CHART_IMAGES/PRODUCT_IMAGES 블록이 쓰는 분리된
   // 목록 — classification으로 나눈다(기존 하드코딩 경로는 안 나누고 그대로
   // descriptionImageUrls를 쓴다, 위 변수 그대로 유지).
   const sizeChartImageUrls = product.images
     .filter((img) => img.useInDescription && img.classification === "SIZE_CHART")
-    .map((img) => getSelectedImageUrl(img));
+    .map((img) => getRegistrationImageUrl(img))
+    /* 🔴 MI-DATA-URI-FIX-01 — 상세설명 HTML 도 «전송» 이다. data: 를 싣지 않는다. */
+    .filter((url): url is string => url !== null);
   const nonSizeChartDescriptionImageUrls = product.images
     .filter((img) => img.useInDescription && img.classification !== "SIZE_CHART")
-    .map((img) => getSelectedImageUrl(img));
+    .map((img) => getRegistrationImageUrl(img))
+    /* 🔴 MI-DATA-URI-FIX-01 — 상세설명 HTML 도 «전송» 이다. data: 를 싣지 않는다. */
+    .filter((url): url is string => url !== null);
 
   const images: CoupangItemImage[] = [];
   if (listing.representativeImage) {

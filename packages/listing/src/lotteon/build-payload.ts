@@ -1,5 +1,5 @@
 import type { MasterProduct, SellingConditions } from "@commerce/shared";
-import { getSelectedImageUrl, payloadStockQuantity } from "@commerce/shared";
+import { getRegistrationImageUrl, isRegistrationSafeImageUrl, payloadStockQuantity } from "@commerce/shared";
 import { computeVariantFinalPriceKrw, resolveListingPrice } from "@commerce/pricing";
 import { manufacturerInputFromProduct, resolveManufacturer } from "../common/manufacturer";
 import type {
@@ -197,6 +197,11 @@ export interface LotteOnPayloadInput {
 const IMAGE_EXTENSION_PATTERN = /\.(jpe?g|png)(\?.*)?$/i;
 
 export function isLotteOnSupportedImageUrl(url: string): boolean {
+  /* 🔴 MI-DATA-URI-FIX-01 — 공통 판정을 «먼저» 본다.
+     이 함수가 여태 data: URI 를 잡아 온 것은 «확장자가 없어서» 였다 — 우연히 맞은 것이다.
+     보낼 수 있는 형태인지(http/https)는 롯데ON 만의 규칙이 아니므로 공통 함수로 묻고,
+     jpg/jpeg/png 제약은 롯데ON 고유 규칙이라 여기 남긴다. */
+  if (!isRegistrationSafeImageUrl(url)) return false;
   return IMAGE_EXTENSION_PATTERN.test(url);
 }
 
@@ -205,9 +210,11 @@ export function isLotteOnSupportedImageUrl(url: string): boolean {
 export function resolveLotteOnImageUrls(product: LotteOnProductInput): { representative: string | null; gallery: string[] } {
   const gallery = product.images.filter((image) => image.useInProductGallery);
   const representativeEntry = gallery.find((image) => image.isRepresentative) ?? gallery[0] ?? null;
-  const representative = representativeEntry ? getSelectedImageUrl(representativeEntry) : null;
+  const representative = representativeEntry ? getRegistrationImageUrl(representativeEntry) : null;
   // 단품당 최대 10개(문서 원문). 대표를 맨 앞에 두고 나머지를 순서대로.
-  const rest = gallery.filter((image) => image !== representativeEntry).map((image) => getSelectedImageUrl(image));
+  const rest = gallery.filter((image) => image !== representativeEntry).map((image) => getRegistrationImageUrl(image))
+    /* 🔴 보낼 수 없는 것은 버리고, validate 가 그 사실을 말한다. */
+    .filter((url): url is string => url !== null);
   return { representative, gallery: [...(representative ? [representative] : []), ...rest].slice(0, 10) };
 }
 

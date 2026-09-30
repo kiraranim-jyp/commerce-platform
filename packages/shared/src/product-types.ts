@@ -215,6 +215,44 @@ export function getSelectedImageUrl(image: CanonicalProductImage): string {
   }
   return image.originalUrl;
 }
+/**
+ * ══ MI-DATA-URI-FIX-01 (CEO 승인 A, 2026-09-30) ═══════════════════════════════
+ * **등록 payload 에 실어도 되는 URL 인가.**
+ *
+ * ── 실측으로 확인된 결함 ────────────────────────────────────────────────────
+ * `canonical-product.ts` 가 Supabase 업로드 실패 시 «미리보기용» data: URI 를
+ * `originalUrl` 로 폴백한다(그 자체는 미리보기를 살리기 위한 의도된 동작이다).
+ * 그런데 등록 payload 도 같은 칸을 읽어서 base64 덩어리가 채널로 나갔다.
+ *
+ * 실데이터(2026-09-30): data: URI 3건 · 전부 `selectedVariant="ORIGINAL"` ·
+ * `processedUrl` 없음 · `useInProductGallery=true` ·
+ * 🔴 전부 `isRepresentative=false` — 그래서 «대표 이미지» 만 보던 SmartStore·쿠팡
+ * 게이트가 구조적으로 못 잡았다(롯데ON 만 갤러리 전수 검사로 잡았다).
+ *
+ * ── 🔴 이 함수가 하는 일과 하지 않는 일 ─────────────────────────────────────
+ *   한다:    등록 경로가 «보낼 수 있는» URL 인지 판정한다
+ *   안 한다: `getSelectedImageUrl` 을 바꾸지 «않는다» — 미리보기가 그것을 쓴다
+ *            (`CommerceWorkspace` 의 originImageUrl · page.tsx 의 WorkspaceItem 경로)
+ *   안 한다: 저장된 값을 고치지 않는다. `originalUrl` 은 «실제로 얻은 것» 을 그대로 둔다
+ *
+ * 🔴 http(s) «만» 허용한다(allowlist). data:·blob:·file: 를 하나씩 막는
+ * denylist 로 만들면 다음 스킴이 생길 때 또 뚫린다.
+ */
+export function isRegistrationSafeImageUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return /^https?:\/\//i.test(url.trim());
+}
+
+/**
+ * 등록 payload 용 이미지 URL. 보낼 수 없는 형태면 `null` 이다.
+ *
+ * 🔴 `getSelectedImageUrl` 과 «짝» 이다 — 같은 선택 규칙(PROCESSED 우선)을 쓰고,
+ * 마지막에 형태만 한 번 더 본다. 선택 규칙을 두 벌로 만들지 않는다.
+ */
+export function getRegistrationImageUrl(image: CanonicalProductImage): string | null {
+  const url = getSelectedImageUrl(image);
+  return isRegistrationSafeImageUrl(url) ? url : null;
+}
 
 /**
  * 셀러가 고른 표준카테고리가 **함께 알려준** 값(205 응답 한 건에 같이 실려 온다).
