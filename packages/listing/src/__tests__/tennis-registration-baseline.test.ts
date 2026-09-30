@@ -559,3 +559,144 @@ describe("④ 성인 남성 테니스 상의 — 3채널 분류가 여성 원피
     expect(blockingFields(naverOf(product).validation)).toContain("originProduct.stockQuantity");
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ⑤ 지정 상품 «실제 값» 으로 — 무엇을 채우면 열리는가
+   ══════════════════════════════════════════════════════════════════════════
+
+   Sergio Tacchini Men's Fall Magro Top (CPO 지정, 2026-09-30).
+   아래 값은 공개 상품 페이지에서 «읽은» 사실이다 — 지어낸 것이 없다:
+
+     가격      $68.00 USD              소재    65% Cotton, 30% Polyester, 5% Elastane
+     색상      Brilliant White         모델    STF26M51684-050
+     사이즈    S · M · L · XL · XXL    재고    S:3 · M:4+ · L:4+ · XL:4+ · XXL:3
+     성별      Men's                   원산지  «없음»      세탁방법 «없음»
+
+   🔴 수집 파이프라인을 돌리지 «않았다». 이것은 상품을 등록하는 코드가 아니라,
+   「이 값들이면 채널이 무엇을 막는가」를 미리 재는 자리다.
+
+   🔴 재고 「4+」는 수량이 아니다. 그래서 M·L·XL 을 null 로 둔다 — 4 로 적으면
+   그 순간 우리의 추정이 된다. 셀러가 OptionVariantEditor 에서 정할 칸이다. */
+function magroTop(overrides: Partial<CanonicalProduct> = {}): CanonicalProduct {
+  return tennisProduct({
+    sourceUrl: "https://www.tennis-warehouse.com/Sergio_Tacchini_Mens_Fall_Magro_Top/descpageMASGT-STMFMT0.html",
+    title: field("Sergio Tacchini Men's Fall Magro Top"),
+    brand: field("Sergio Tacchini"),
+    titleKo: field("세르지오 타키니 남성 폴 마그로 상의"),
+    itemName: field("남성 테니스 상의"),
+    sku: field("STMFMT0-WH"),
+    modelName: field("STF26M51684-050"),
+    price: field({ amount: 68, currency: "USD" }),
+    priceValidity: "VALID",
+    material: field("65% Cotton, 30% Polyester, 5% Elastane"),
+    color: field("Brilliant White"),
+    /* 🔴 페이지에 없다. 비운다 — 채널이 무엇을 막는지 보려는 것이다. */
+    countryOfOrigin: field(""),
+    careInstructions: field(""),
+    recommendedAge: field(""),
+    optionGroups: [{ name: "Size", values: ["S", "M", "L", "XL", "XXL"] }],
+    variants: [
+      { optionValues: { Size: "S" }, stockQuantity: 3, sku: "STMFMT0-WH-S" },
+      /* 「4+」 — 모른다. null 이다. */
+      { optionValues: { Size: "M" }, stockQuantity: null, sku: "STMFMT0-WH-M" },
+      { optionValues: { Size: "L" }, stockQuantity: null, sku: "STMFMT0-WH-L" },
+      { optionValues: { Size: "XL" }, stockQuantity: null, sku: "STMFMT0-WH-XL" },
+      { optionValues: { Size: "XXL" }, stockQuantity: 3, sku: "STMFMT0-WH-XXL" },
+    ],
+    ...overrides,
+  } as unknown as Partial<CanonicalProduct>);
+}
+
+/** 원산지 텍스트가 채워진 뒤의 상태 — 브랜드 기본값이 채우는 자리다. */
+const ORIGIN_FILLED = { ...NAVER_BUILD, originAreaCode: "0200037" } as const;
+const ORIGIN_FILLED_V = { ...NAVER_VALIDATE, originAreaCode: "0200037" } as const;
+/** 원산지를 «아직 모르는» 상태 — resolveCommonOrigin 이 셋 다 비면 코드가 null 이다. */
+const ORIGIN_EMPTY = { ...NAVER_BUILD, originAreaCode: null } as const;
+const ORIGIN_EMPTY_V = { ...NAVER_VALIDATE, originAreaCode: null } as const;
+
+function naverWith(product: CanonicalProduct, build: object, validate: object) {
+  const listing = PLATFORM_ADAPTERS.smartstore.toListingModel(product, UNRESOLVED_CATEGORY, undefined, "smartstore");
+  const payload = buildNaverProductPayload({ product, listing, ...build } as never);
+  return validateNaverPayload(payload, { product, ...validate } as never, false);
+}
+const blockedOf = (v: ReturnType<typeof naverWith>) =>
+  v.fields.filter((f) => f.status !== "READY" && !f.optional).map((f) => f.field);
+
+describe("⑤ 지정 상품 — 원산지 하나가 문을 막는다", () => {
+  it("🔴 원산지가 비면 SmartStore 가 막는다 — 실제 차단 항목 ①의 실행 확인", () => {
+    const blocked = blockedOf(naverWith(magroTop(), ORIGIN_EMPTY, ORIGIN_EMPTY_V));
+    expect(blocked).toContain("detailAttribute.originAreaInfo.originAreaCode");
+  });
+
+  it("🔴 원산지를 채우면 그 항목이 «사라진다» — 브랜드 기본값 한 칸의 효과", () => {
+    const blocked = blockedOf(naverWith(magroTop(), ORIGIN_FILLED, ORIGIN_FILLED_V));
+    expect(blocked).not.toContain("detailAttribute.originAreaInfo.originAreaCode");
+  });
+
+  /* ══ 🔴 남은 차단이 «정확히 둘» 이다 ════════════════════════════════════
+     원산지를 채운 뒤 SmartStore 가 막는 것을 전수로 세어 확정한다. 「대충 통과할
+     것」이 아니라 이름으로 적는다 — 셀러가 화면에서 채울 칸이 몇 개인지가
+     등록 착수 여부를 정한다.
+
+     🔴 처음 이 측정을 할 때 기반 fixture 의 제조사("Lacoste Operations SAS")를
+     물려받아 «1건» 으로 나왔다. 실제 페이지에는 제조사가 없다 — 비우고 다시
+     재서 2건임을 확인했다. fixture 상속이 사실을 덮은 자리다. */
+  it("🔴 원산지를 채우면 남는 차단은 «제조사·세탁방법 둘뿐» 이다", () => {
+    const product = magroTop({ manufacturer: field("") } as unknown as Partial<CanonicalProduct>);
+    const blocked = blockedOf(naverWith(product, ORIGIN_FILLED, ORIGIN_FILLED_V));
+    expect(blocked.sort()).toEqual([
+      "productInfoProvidedNotice(WEAR).caution",
+      "productInfoProvidedNotice(WEAR).manufacturer",
+    ]);
+  });
+
+  it("사이즈 5개가 옵션 5건으로 실리고 빈 옵션값 가드가 서지 않는다", () => {
+    const v = naverWith(magroTop(), ORIGIN_FILLED, ORIGIN_FILLED_V);
+    expect(blockedOf(v)).not.toContain("detailAttribute.optionInfo.optionCombinations[].optionName");
+  });
+
+  it("🔴 재고를 «모르는» 옵션이 섞여 있어도 등록 자체는 막히지 않는다", () => {
+    /* S:3 · XXL:3 이 확인됐으므로 이 상품은 품절이 아니다. M·L·XL 의 null 은
+       「모른다」이고, 그것 때문에 상품 전체가 막히면 셀러가 팔 수 있는 것을
+       못 팔게 된다. 수량 결정은 셀러 몫으로 남는다. */
+    expect(blockedOf(naverWith(magroTop(), ORIGIN_FILLED, ORIGIN_FILLED_V))).not.toContain(
+      "originProduct.stockQuantity",
+    );
+  });
+
+  it("🔴 성인 남성이라 KIDS 경로를 타지 않는다 — WEAR 고시다", () => {
+    const listing = PLATFORM_ADAPTERS.smartstore.toListingModel(
+      magroTop(), UNRESOLVED_CATEGORY, undefined, "smartstore",
+    );
+    const payload = buildNaverProductPayload({ product: magroTop(), listing, ...ORIGIN_FILLED } as never);
+    const notice = payload.originProduct.detailAttribute?.productInfoProvidedNotice;
+    expect(notice?.productInfoProvidedNoticeType).toBe("WEAR");
+    expect(JSON.stringify(payload)).not.toContain('"kids"');
+  });
+
+  it("🔴 쿠팡: 이 상품명이 어린이제품 고시로 가지 않는다", () => {
+    const children = {
+      noticeCategoryName: "어린이제품",
+      noticeCategoryDetailNames: [{ noticeCategoryDetailName: "사용연령", required: "MANDATORY" }],
+    } as never;
+    const misc = {
+      noticeCategoryName: "기타 재화",
+      noticeCategoryDetailNames: [{ noticeCategoryDetailName: "품명 및 모델명", required: "MANDATORY" }],
+    } as never;
+    expect(
+      selectCoupangNoticeCategory([children, misc], magroTop().title.value)?.noticeCategoryName,
+    ).toBe("기타 재화");
+  });
+
+  it("🔴 롯데ON: 품목 01 9항목이 이 상품 payload 에도 그대로 실린다", () => {
+    const payload = buildLotteOnPayload({
+      product: magroTop(),
+      channel: lotteOnChannel({ noticeItemCode: "01", noticeArticles: ARTICLES_01_FULL }),
+      detailHtml: "<p>상세</p>",
+    } as never) as unknown as {
+      spdLst: { pdItmsInfo?: { pdItmsCd?: string; pdItmsArtlLst?: { pdArtlCd: string }[] } }[];
+    };
+    expect(payload.spdLst[0]!.pdItmsInfo?.pdItmsCd).toBe("01");
+    expect(payload.spdLst[0]!.pdItmsInfo?.pdItmsArtlLst).toHaveLength(9);
+  });
+});
