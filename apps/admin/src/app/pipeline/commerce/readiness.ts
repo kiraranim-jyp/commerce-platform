@@ -299,6 +299,20 @@ const NAVER_FIELD_LABEL: Record<string, string> = {
   "originProduct.name": "상품명",
   "originProduct.detailContent": "상세설명",
   "originProduct.images.representativeImage": "대표이미지",
+  /* ══ MI-STORAGE-FEEDBACK-02 후속(CTO 자체 발견, 2026-09-30) ═══════════════
+     🔴 dfe3e9b 가 이 «두 필드를 새로 만들었는데» 여기에 넣지 않았다. 그러면
+     naverFieldLabel() 의 `?? field` 폴백이 걸려서 셀러 화면에 날것 경로
+     (`originProduct.images.representativeImage.url`)가 그대로 뜬다 —
+     N-3.66·N-3.55 가 반복해서 고쳐 온 것과 같은 유형이다.
+
+     🔴 sectionId 는 «주지 않는다». 이미지 축에는 PlatformPreview 에 앵커가
+     아예 없다(readiness-state.ts:147 이 "section-images 는 PlatformPreview 에
+     존재하지 않는다" 고 이미 적어 두었다). 없는 앵커를 매달면
+     REGISTRATION_SECTION_LABEL 에 없어서 버튼이 그려지지 않을 뿐이지만,
+     「이동 경로가 없는 안내를 만들지 않는다」는 그 파일의 원칙에 맞춰
+     추측 앵커를 만들지 않는다 — 이미지 섹션 신설은 별도 결정이다. */
+  "originProduct.images.representativeImage.url": "대표이미지 형식",
+  "originProduct.images.optionalImages": "추가 이미지",
   "originProduct.salePrice": "판매가",
   "originProduct.stockQuantity": "재고",
   "claimDeliveryInfo.shippingAddressId": "출고지 주소",

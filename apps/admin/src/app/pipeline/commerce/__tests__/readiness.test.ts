@@ -53,6 +53,39 @@ describe("computeNaverPayloadReadiness — 필드→섹션 네비게이션 계�
     expect(item!.sectionId).toBe("section-basic");
   });
 
+  /* ══ MI-STORAGE-FEEDBACK-02 후속(CTO 자체 발견, 2026-09-30) ═══════════════
+     🔴 dfe3e9b 가 새 필드 둘을 만들면서 NAVER_FIELD_LABEL 에 넣지 않았다.
+     아래 「일반 계약」 테스트는 `representativeFields` 라는 «손으로 적은 목록» 을
+     쓰기 때문에 새 필드를 자동으로 잡지 못한다(그 목록의 주석도 "새 required
+     필드를 추가하는 PR은 여기도 함께 갱신해야 한다" 고 적어 두었는데 지키지
+     못했다). 목록 의존을 줄이는 방향으로, 라벨 축은 «필드 이름이 그대로 새는가»
+     로 잰다 — 경로가 라벨로 새면 그 자체가 실패다. */
+  it("🔴 MI-STORAGE-FEEDBACK-02 이미지 필드 둘이 날것 경로로 새지 않는다", () => {
+    const imageFields = ["originProduct.images.representativeImage.url", "originProduct.images.optionalImages"];
+    const summary = computeNaverPayloadReadiness(
+      makeValidation([
+        fieldCheck({ field: imageFields[0]! }),
+        fieldCheck({ field: imageFields[1]!, optional: true }),
+      ]),
+    );
+    for (const field of imageFields) {
+      const item = summary.items.find((i) => i.label === field);
+      expect(item, `${field} 가 라벨 자리에 경로째로 떴다 — naverFieldLabel 폴백`).toBeUndefined();
+    }
+    expect(summary.items.map((i) => i.label).sort()).toEqual(["대표이미지 형식", "추가 이미지"]);
+  });
+
+  it("🔴 대표이미지 형식은 차단이고 추가 이미지는 경고다 — 판정이 라벨과 같이 간다", () => {
+    const summary = computeNaverPayloadReadiness(
+      makeValidation([
+        fieldCheck({ field: "originProduct.images.representativeImage.url" }),
+        fieldCheck({ field: "originProduct.images.optionalImages", optional: true }),
+      ]),
+    );
+    expect(summary.items.find((i) => i.label === "대표이미지 형식")!.required).toBe(true);
+    expect(summary.items.find((i) => i.label === "추가 이미지")!.required).toBe(false);
+  });
+
   it("일반 계약: required(optional 아님)이고 READY가 아닌 모든 항목은 sectionId 또는 externalHref 중 하나는 반드시 있다", () => {
     // 실제 validateNaverPayload가 만들어내는 필드들을 대표로 모았다 — 새 필드가
     // 추가될 때 이 목록에 없으면 이 테스트가 잡아내지 못하니, 새 required
