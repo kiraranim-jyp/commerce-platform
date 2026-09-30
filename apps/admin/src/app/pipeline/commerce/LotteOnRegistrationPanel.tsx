@@ -11,6 +11,8 @@ import {
   autoPickLotteOnOriginCode,
   /* 🔴 참조 문구를 여기서 «만들지» 않는다 — 네이버·쿠팡이 쓰는 그 상수 그대로다. */
   DETAIL_PAGE_REFERENCE_TEXT,
+  planLotteOnBulkReference,
+  planLotteOnBulkReferenceClear,
 } from "@commerce/listing";
 import { Button } from "@/components/ui/Button";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
@@ -2071,6 +2073,24 @@ export function LotteOnRegistrationPanel({
               자동 생성도 없다. 빈 칸은 빈 칸으로 남고 상태는 「입력 필요」다. */}
           {sellerFillableNoticeFills.length > 0 ? (
             <div className="sm:col-span-2 flex flex-col gap-3" data-lotteon-seller-notice>
+              {/* ══ LOTTEON-NOTICE-BULK-REFERENCE-01 (CPO 승인 「E」, 2026-09-30) ══
+                  칸별 버튼은 이미 있다. 여기 더하는 것은 «클릭 수» 뿐이다 —
+                  판정은 여전히 셀러가 하고, 우리가 값을 지어내지 않는다.
+
+                  🔴 Common 으로 승격하지 «않는다». 이 두 항목은 다른 두 채널에서
+                  대응 필드가 확인되지 않았고(SmartStore 에 1830 없음 · Coupang 은
+                  런타임 카테고리 메타), 확인되지 않은 것을 재사용 가능하다고
+                  추정하지 않는다(CPO 가 A 안을 철회한 근거다). 그래서 Common
+                  스키마·DB·어댑터 매핑·공통 상품정보 패널은 한 줄도 바뀌지 않는다.
+
+                  🔴 「비어 있는 칸만」 채운다. 규칙은 JSX 가 아니라
+                  `planLotteOnBulkReference` 안에 있다 — 셀러가 적어 둔
+                  「최대 체중 20kg」을 참조 문구로 덮는 사고를 화면에 맡기지 않는다. */}
+              <BulkReferenceControl
+                codes={sellerFillableNoticeFills.map((fill) => fill.code)}
+                articleValues={form.notice.articleValues}
+                onPlan={(next) => pickAndRecheck("notice", { articleValues: next })}
+              />
               {sellerFillableNoticeFills.map((fill) => (
                 <ChannelCodeField
                   key={fill.code}
@@ -3910,6 +3930,67 @@ function ReferenceFillButton({
     >
       {applied ? "상세페이지 참조 해제" : "상품 상세페이지 참조로 넣기"}
     </button>
+  );
+}
+
+/**
+ * LOTTEON-NOTICE-BULK-REFERENCE-01 — 위 칸별 버튼을 «한 번에» 누르는 것.
+ *
+ * 🔴 새 판정을 만들지 않는다. 무엇이 바뀌고 무엇이 지켜지는지는 전부
+ * `planLotteOnBulkReference` 가 값으로 돌려주고, 이 컴포넌트는 그것을 «읽어서»
+ * 문구를 만들 뿐이다. 화면이 규칙을 두 번째로 구현하면 두 곳이 갈라진다.
+ *
+ * 🔴 적용할 «빈 칸» 이 없으면 버튼을 그리지 않는다. 누를 수 없는 버튼을 두면
+ * 셀러는 「눌렀는데 아무 일도 안 났다」를 겪는다. 대신 셀러가 이미 값을 적어 둔
+ * 항목이 있으면 그 사실을 한 줄로 말한다 — 「건드리지 않았다」가 정보다.
+ */
+function BulkReferenceControl({
+  codes,
+  articleValues,
+  onPlan,
+}: {
+  codes: readonly string[];
+  articleValues: Record<string, string>;
+  onPlan: (next: Record<string, string>) => void;
+}) {
+  const plan = planLotteOnBulkReference(articleValues, codes);
+  const clearPlan = planLotteOnBulkReferenceClear(articleValues, codes);
+  /* 채울 것도 되돌릴 것도 없으면(전부 셀러가 직접 적었다) 아무것도 두지 않는다. */
+  if (plan.applied.length === 0 && clearPlan.applied.length === 0) return null;
+
+  return (
+    <div
+      className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-background px-3 py-2"
+      data-lotteon-notice-bulk
+    >
+      {plan.applied.length > 0 && (
+        <button
+          type="button"
+          onClick={() => onPlan(plan.next)}
+          className="rounded-md border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-text-secondary transition-colors hover:bg-background"
+          data-action="bulk-apply"
+        >
+          빈 칸 {plan.applied.length}건 상세페이지 참조로 일괄 등록
+        </button>
+      )}
+      {clearPlan.applied.length > 0 && (
+        <button
+          type="button"
+          onClick={() => onPlan(clearPlan.next)}
+          className="rounded-md border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-text-secondary transition-colors hover:bg-background"
+          data-action="bulk-clear"
+        >
+          참조 {clearPlan.applied.length}건 일괄 해제
+        </button>
+      )}
+      {plan.skipped.length > 0 && (
+        /* 🔴 「덮지 않았다」를 말한다. 조용히 건너뛰면 셀러는 일괄이 전부 처리한
+           줄 알고 넘어간다. */
+        <span className="text-[11px] text-text-tertiary" data-bulk-skipped={plan.skipped.length}>
+          이미 입력한 {plan.skipped.length}건은 그대로 둡니다
+        </span>
+      )}
+    </div>
   );
 }
 
