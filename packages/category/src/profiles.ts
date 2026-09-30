@@ -49,7 +49,8 @@ export type CategoryProfileId =
   | "WOMEN_FASHION"
   | "FASHION_ACCESSORIES"
   | "HOME_LIFESTYLE"
-  | "GOLF";
+  | "GOLF"
+  | "TENNIS";
 
 /**
  * 이 카테고리가 스마트스토어에서 법적으로 써야 하는 상품정보제공고시 유형.
@@ -300,6 +301,48 @@ export const CATEGORY_PROFILES: Record<CategoryProfileId, CategoryProfile> = {
     // 아직 0개라 오늘은 아무 소스도 이 값으로 걸리지 않는다.
     marketSourceScopes: ["GOLF"],
     naverNoticeType: "SPORTS_EQUIPMENT",
+  },
+  /**
+   * ── TENNIS (CPO 확정, 2026-09-30) ─────────────────────────────────────────
+   * **시장조사용 카테고리다.** 테니스 전문 조사 사이트를 여기에 연결하고,
+   * 여러 카테고리를 함께 지원하는 공통 사이트는 `category_scope = []` 로 남긴다
+   * (빈 배열이 「전 카테고리」라는 뜻이라 sourceFitsScopes 가 그대로 통과시킨다 —
+   * 공통 사이트를 테니스에 «중복 등록하지 않는다»).
+   *
+   * ── 자동 감지를 «하지 않는다» ────────────────────────────────────────────
+   * 키워드 배열을 전부 비운다 — GOLF 와 같은 수동 선택 방식이다. detectCategory
+   * 의 네 경로(productTypes.includes · brandHints.find · ageGroups.includes ·
+   * subProfiles)가 전부 빈 값에서 false 이므로 **오늘의 자동 판정 결과가 한 건도
+   * 바뀌지 않는다.** 「남성패션」을 넣으려면 `"남성"` 키워드가 필요하고 그것은
+   * 기존 감지 결과를 바꾸므로 이번 범위에서 «제외» 했다(CPO 지시).
+   *
+   * ── 🔴 고시유형이 GOLF 와 «다른» 이유 ────────────────────────────────────
+   * GOLF 는 골프«용품»이라 SPORTS_EQUIPMENT 이고, 그것은
+   * NAVER_SUPPORTED_NOTICE_TYPES 에 없어 「아직 지원하지 않음」이다.
+   * 테니스는 «의류» 축이라 WEAR 다 — 그리고 WEAR 는 지원 목록에 «있다».
+   * 근거 없이 올린 것이 아니다: TENNIS-READY-TO-REGISTER 스프린트가 성인 의류
+   * 등록 경로를 3채널에서 실제로 재서 고정했다(SmartStore WEAR 고시 · 쿠팡
+   * 비아동 고시 · 롯데ON 고시 품목 01「의류」 9항목).
+   *
+   * 🔴 이것은 «시장조사» 카테고리이고 «채널 등록용 상품 카테고리»가 아니다.
+   * 채널 카테고리는 각 채널의 카테고리 체계(네이버 leafCategoryId · 쿠팡
+   * displayCategoryCode · 롯데ON 표준카테고리)에서 따로 정해진다 — 여기 값이
+   * 그것을 바꾸지 않는다.
+   */
+  TENNIS: {
+    id: "TENNIS",
+    label: "테니스",
+    platformPathKeywords: [],
+    conflictPathKeywords: [],
+    ageGroups: [],
+    genders: [],
+    productTypes: [],
+    brandHints: [],
+    productKeywords: [],
+    /* category_scope 어휘에 문자열 하나를 더하는 것뿐이다. 두 표(domestic_price_sources
+       · comparison_shops) 모두 그 컬럼에 CHECK/FK 가 없어 마이그레이션이 필요 없다. */
+    marketSourceScopes: ["TENNIS"],
+    naverNoticeType: "WEAR",
   },
 };
 

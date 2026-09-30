@@ -45,7 +45,11 @@ export type CostPolicyId =
   | "WOMEN_FASHION"
   | "FASHION_ACCESSORIES"
   | "HOME_LIFESTYLE"
-  | "GOLF";
+  | "GOLF"
+  /* 🔴 이 union 은 CategoryProfileId 에서 «유도되지 않는다» — 손으로 맞춰 둔 것이고,
+     category-cost-policy-wiring 테스트가 둘이 어긋나면 잡는다. 실제로 TENNIS 를
+     프로필에만 더했을 때 그 테스트가 먼저 실패했다. */
+  | "TENNIS";
 
 export interface CategoryCostPolicy {
   id: CostPolicyId;
@@ -237,6 +241,19 @@ export const CATEGORY_COST_POLICIES: Record<CostPolicyId, CategoryCostPolicy> = 
   WOMEN_FASHION: { id: "WOMEN_FASHION", label: "여성 패션", ...UNCLASSIFIED_ITEM },
   FASHION_ACCESSORIES: { id: "FASHION_ACCESSORIES", label: "패션 잡화", ...UNCLASSIFIED_ITEM },
   HOME_LIFESTYLE: { id: "HOME_LIFESTYLE", label: "라이프스타일", ...UNCLASSIFIED_ITEM },
+  /**
+   * 🔴 테니스(시장조사 카테고리, 2026-09-30) — **의류 계열과 같은 값이다.**
+   *
+   * 계약 테스트가 「카테고리를 하나 더 만들면 비용 정책을 «결정» 하지 않고는 통과할
+   * 수 없다」고 막았고(category-cost-policy-wiring), 그 결정이 이것이다:
+   * **품목/HS 를 확정하지 않는다.** 테니스 의류의 HS 코드를 우리가 아직 모르고,
+   * 모르는 것을 적으면 관세율을 «말할 수 있다» 고 화면이 거짓말한다.
+   *
+   * 🔴 GOLF 와 일부러 다르다. 골프는 품목/HS 를 확정한 «유일한» 카테고리라 관세율을
+   * 말한다. 테니스는 의류라 KIDS_FASHION·WOMEN_FASHION 과 같은 「확인 필요」 상태고,
+   * 그 상태가 사실이다.
+   */
+  TENNIS: { id: "TENNIS", label: "테니스", ...UNCLASSIFIED_ITEM },
   /**
    * 골프는 **품목/HS를 확정한 유일한 카테고리**다. 그 한 가지가 참고 블록에서
    * 갈린다 — 관세율을 말할 수 있는가, 아니면 «확인 필요»인가.
