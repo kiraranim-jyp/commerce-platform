@@ -16,6 +16,7 @@ import type {
   FieldSource,
   ProvenanceField,
 } from "@commerce/shared";
+import { resolveCareInstructions } from "@commerce/listing";
 import type { WorkspaceItem } from "./response.types";
 
 const CONFIDENCE_BY_SOURCE: Record<ProductDataSource, number> = {
@@ -208,9 +209,14 @@ export function buildCanonicalProduct(
     // 설명문에 없는 경우가 흔하다 → REQUIRED가 아니라 DEFAULT(등록은 막지 않되
     // 확인 필요)로 시작한다. countryOfOrigin/color/manufacturer와 달리 고시정보의
     // "필수" 항목이 아닌 카테고리도 많다.
-    careInstructions: resolvedCareInstructions
-      ? { value: resolvedCareInstructions, source: "ORIGINAL", confidence: 0.7 }
-      : { value: "", source: "DEFAULT", confidence: 0 },
+    /* ══ CARE-LABEL-REFERENCE (CPO 확정, 2026-10-01) ═══════════════════════
+       🔴 여기 있던 것: 원본에 세탁정보가 없으면 «빈 문자열» 로 두었다. 그래서
+       셀러가 상품마다 손으로 적어야 했다 — 그것이 없애려는 반복 작업이다.
+       이제 빈 자리에 「케어라벨 참조」를 넣는다(source: DEFAULT).
+       🔴 「상품 상세페이지 참조」와 «다른 문구» 다. 세탁정보는 상세페이지가
+       아니라 옷에 달린 라벨에 있고, 상세페이지를 가리키면 거짓이 된다.
+       🔴 원본이 있으면 원본이 이긴다 — 판정은 resolveCareInstructions 한 곳이다. */
+    careInstructions: resolveCareInstructions(resolvedCareInstructions),
     options: field(productData.options ?? [], "options", sources),
     optionGroups: productData.optionGroups ?? [],
     variants: productData.variants ?? [],

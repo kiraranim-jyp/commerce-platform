@@ -31,6 +31,7 @@ export * from "./naver/attribute-coverage";
 export * from "./naver/attribute-metadata/index";
 export * from "./notice/reference-eligibility";
 export * from "./notice/bulk-reference";
+export * from "./notice/care-instructions";
 export * from "./notice/channel-notice-override";
 // REWORK-10 A(CEO 지시, 2026-09-15) — 제조사 폴백 사슬. 세 채널의 payload와
 // 세 채널의 **화면**이 같은 함수 하나를 본다(common/manufacturer.ts 주석 참고).
