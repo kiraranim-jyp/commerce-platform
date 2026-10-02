@@ -110,9 +110,33 @@ describe("③ 🔴 화면은 «아는 것만» 적는다", () => {
     }
   });
 
-  it("전체 수를 모르면 예전처럼 「확인 N건」만 적는다", () => {
+  it("전체 수를 모르면 수 접두사 없이 문구만 적는다", () => {
     // requiredTotal 이 0 이면 접두사가 빈 문자열이라 문구가 그대로 남는다.
-    expect(SELECTOR).toContain("`${scope}확인 ${channel.blockingCount}건");
+    expect(SELECTOR).toContain("const scope = channel.requiredTotal > 0");
+  });
+
+  /* ══ URGENT ① (CPO 확정, 2026-10-01) ══════════════════════════════════
+     🔴 이 테스트가 옛 문구 「확인 ${blockingCount}건」을 소스 문자열로 고정하고
+     있었다. RED 와 YELLOW 가 그 한 문구를 «공유» 했기 때문인데, 그것이 바로
+     고친 결함이다 — 등록을 «막는 것» 과 «봐야 하는 것» 이 같은 말을 쓰고 있었다.
+     문구를 가른 뒤이므로 단정도 가른다. */
+  it("🔴 RED 와 YELLOW 가 «다른» 문구를 쓴다", () => {
+    expect(SELECTOR).toContain("필수 입력");
+    expect(SELECTOR).toContain("확인 필요");
+    /* 두 분기가 한 줄에서 갈린다 — level 을 보고 고른다. */
+    expect(SELECTOR).toContain('level === "RED" ?');
+  });
+
+  it("🔴 점과 문구가 «같은 함수» 를 본다 — 둘이 어긋날 수 없다", () => {
+    /* readinessStateToLevel 을 문구 쪽에서도 부른다. 따로 판단하면 색과 글자가
+       다른 말을 하는 날이 온다. */
+    expect(SELECTOR).toContain("const level = readinessStateToLevel(channel.state)");
+  });
+
+  it("합산 요약을 만들지 않았다 — 어느 채널이 막혔는지를 지우지 않는다", () => {
+    for (const forbidden of ["등록 가능 여부 합산", "totalBlocking", "aggregateReadiness"]) {
+      expect(SELECTOR, forbidden).not.toContain(forbidden);
+    }
   });
 });
 

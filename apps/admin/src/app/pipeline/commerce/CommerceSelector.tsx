@@ -147,14 +147,31 @@ function formatAttemptTime(iso: string): string {
  * 데이터로는 가를 수 없다. 가르는 축은 N-07 Requirement Engine 에서 만든다 —
  * 추정한 숫자를 화면에 적으면 그때부터 이 화면의 모든 숫자를 의심하게 된다.
  */
+/* ══ URGENT ① (CPO 확정, 2026-10-01) ══════════════════════════════════════
+   🔴 여기 있던 것: 🔴(BLOCKED)과 🟡(확인 필요)이 «같은 문구» 「확인 N건」을
+   썼다. 그래서 색상 점을 보지 않으면 「지금 못 넘어가는 것」과 「넘어갈 수는
+   있지만 봐야 하는 것」이 구분되지 않았다 — 셀러가 등록 버튼을 누르기 전에
+   알아야 하는 바로 그 차이다.
+
+       RED     필수 입력 N건      ← 등록을 «막는다»
+       YELLOW  확인 필요 N건      ← 막지 않는다. 셀러가 판단한다
+       GREEN   준비됨
+
+   🔴 점과 문구가 «같은 함수» 를 본다(readinessStateToLevel). 따로 판단하면
+   둘이 어긋나는 날이 오고, 그러면 화면이 두 가지 말을 한다.
+   🔴 새 판정을 만들지 않았다 — state 를 읽어 문구만 가른다. 합산도 하지 않는다
+   (어느 채널이 막혔는지를 지우기 때문이다). */
 function statusNote(channel: RegistrationChannel): string {
   if (channel.availability === "COMING_SOON") return "준비중";
   if (!channel.state) return "아직 확인하지 않았습니다";
   const scope = channel.requiredTotal > 0 ? `필수 ${channel.requiredTotal} · ` : "";
-  if (channel.blockingCount > 0) {
-    return `${scope}확인 ${channel.blockingCount}건${channel.provisional ? " (사전 점검)" : ""}`;
-  }
-  return channel.state === "READY" ? `${scope}준비됨` : `${scope}확인 필요`;
+  const provisional = channel.provisional ? " (사전 점검)" : "";
+  const level = readinessStateToLevel(channel.state);
+  if (level === "GREEN") return `${scope}준비됨`;
+  /* 🔴 수를 모르면 수를 적지 않는다 — 0 을 「준비됨」으로 읽히게 두지 않고,
+     없는 숫자를 지어내지도 않는다(바로 위 「자동 해결 19」와 같은 이유). */
+  const count = channel.blockingCount > 0 ? ` ${channel.blockingCount}건` : "";
+  return level === "RED" ? `${scope}필수 입력${count}${provisional}` : `${scope}확인 필요${count}${provisional}`;
 }
 
 export function CommerceSelector({
