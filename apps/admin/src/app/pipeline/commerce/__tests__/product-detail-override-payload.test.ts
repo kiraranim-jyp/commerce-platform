@@ -322,3 +322,117 @@ describe("⑥ 🔴 식별자가 기본 9블록에서 충돌하지 않는다 — 
     }
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ⑦ SELLER-UX-FINAL — 상품별 이미지가 «세 채널 모두» 에 같은 자리로 들어간다
+   ══════════════════════════════════════════════════════════════════════════
+
+   🔴 조립기는 «하나» 다: assembleNaverDetailContent 가 내부에서
+   assembleContentsFromBlocks 를 부른다(naver/build-payload.ts:269). 그래서
+   롯데ON=스마트스토어 계약이 이미지에서도 구조적으로 유지된다. */
+describe("⑦ 상품별 이미지 — 3채널", () => {
+  const OWN = "https://cdn.example.com/own/worn.jpg";
+  const CAPTION = "실제 착용 사진입니다 — 모델 신장 180cm, M 착용";
+
+  const imageOnly: ProductDetailOverride = {
+    added: [{ id: "p0", kind: "CUSTOM_IMAGE", url: OWN, enabled: true, customImageId: "ci-0" }],
+  };
+  const imageWithText: ProductDetailOverride = {
+    added: [{ id: "p0", kind: "CUSTOM_IMAGE", url: OWN, caption: CAPTION, enabled: true, customImageId: "ci-0" }],
+  };
+
+  it.each(CHANNELS)("%s — 이미지 URL 이 payload 에 들어간다", (channel) => {
+    expect(payloads(SELLER_SAVED, imageOnly)[channel]).toContain(OWN);
+  });
+
+  it.each(CHANNELS)("%s — 문구를 적으면 이미지와 «둘 다» 들어간다", (channel) => {
+    const out = payloads(SELLER_SAVED, imageWithText)[channel];
+    expect(out).toContain(OWN);
+    expect(out).toContain(CAPTION);
+  });
+
+  it("🔴 문구가 이미지 «아래» 에 온다 — 위에 두려면 텍스트 블록을 앞 순서에 놓는다", () => {
+    const out = payloads(SELLER_SAVED, imageWithText).smartstore;
+    expect(out.indexOf(OWN)).toBeLessThan(out.indexOf(CAPTION));
+  });
+
+  it("🔴 롯데ON === 스마트스토어 (문자 단위) — 이미지가 있어도 유지된다", () => {
+    for (const ov of [imageOnly, imageWithText]) {
+      const p = payloads(SELLER_SAVED, ov);
+      expect(p.lotteon).toBe(p.smartstore);
+    }
+  });
+
+  it("🔴 이미지를 빼면 payload 가 기존과 «문자 단위로» 같다 — 초기화 복귀", () => {
+    const legacy = legacyPayloads(SELLER_SAVED);
+    for (const channel of CHANNELS) {
+      expect(payloads(SELLER_SAVED, imageWithText)[channel]).not.toBe(legacy[channel]);
+      expect(payloads(SELLER_SAVED, undefined)[channel]).toBe(legacy[channel]);
+    }
+  });
+
+  it("🔴 순서 변경이 이미지에도 걸린다", () => {
+    const out = payloads(SELLER_SAVED, {
+      ...imageWithText,
+      order: ["CUSTOM_IMAGE:ci-0", "AI_DESCRIPTION"],
+    }).smartstore;
+    expect(out.indexOf(OWN)).toBeLessThan(out.indexOf(CTX.aiDescription));
+  });
+
+  it("🔴 꺼진 이미지 블록은 payload 에 «안» 들어간다", () => {
+    const out = payloads(SELLER_SAVED, {
+      ...imageWithText,
+      patches: { "CUSTOM_IMAGE:ci-0": { enabled: false } },
+    }).smartstore;
+    expect(out).not.toContain(OWN);
+    expect(out).not.toContain(CAPTION);
+  });
+
+  /* ── 🔴 안전하지 않은 URL — 등록 payload 에 «닿지 않아야» 한다 ──────────
+     data: URI 가 채널 payload 에 닿은 전례가 있다(유입은 `?? 폴백` 한 줄이었다).
+     그래서 조립 직전에 `isRegistrationSafeImageUrl`(http(s) allowlist)로 막는다. */
+  for (const [label, url] of [
+    ["data: URI", "data:image/jpeg;base64,/9j/4AAQSkZJRg=="],
+    ["blob:", "blob:http://localhost/abcd"],
+    ["file:", "file:///C:/secret.jpg"],
+    ["스킴 없음", "cdn.example.com/x.jpg"],
+    ["빈 문자열", ""],
+    ["공백만", "   "],
+    ["javascript:", "javascript:alert(1)"],
+  ] as [string, string][]) {
+    it.each(CHANNELS)(`🔴 ${label} 은 %s payload 에 들어가지 않는다`, (channel) => {
+      const unsafe: ProductDetailOverride = {
+        added: [{ id: "p0", kind: "CUSTOM_IMAGE", url, caption: "불안전", enabled: true, customImageId: "ci-0" }],
+      };
+      const out = payloads(SELLER_SAVED, unsafe)[channel];
+      if (url.trim()) expect(out).not.toContain(url.trim());
+      /* 🔴 그리고 문구도 함께 빠진다 — 이미지 없는 캡션만 남으면
+         구매자가 「무엇에 대한 설명인지」 알 수 없는 문장을 보게 된다. */
+      expect(out).not.toContain("불안전");
+    });
+  }
+
+  it("🔴 안전하지 않은 이미지 하나 때문에 «나머지가 멈추지 않는다»", () => {
+    const mixed: ProductDetailOverride = {
+      added: [
+        { id: "bad", kind: "CUSTOM_IMAGE", url: "data:image/png;base64,AAA", enabled: true, customImageId: "ci-0" },
+        { id: "good", kind: "CUSTOM_IMAGE", url: OWN, caption: CAPTION, enabled: true, customImageId: "ci-1" },
+      ],
+    };
+    const out = payloads(SELLER_SAVED, mixed).smartstore;
+    expect(out).not.toContain("data:image");
+    expect(out).toContain(OWN);
+    expect(out).toContain(CAPTION);
+  });
+
+  it("🔴 가드가 기존 공용 함수다 — 새 판정을 만들지 않았다", () => {
+    const src = readFileSync(
+      join(__dirname, "../../../../../../../packages/listing/src/coupang/build-payload.ts"),
+      "utf8",
+    );
+    expect(src).toContain("if (!isRegistrationSafeImageUrl(block.url)) continue;");
+    /* 자체 정규식으로 다시 판정하지 않는다. */
+    const seg = src.slice(src.indexOf('block.kind === "CUSTOM_IMAGE"'), src.indexOf("TEMPLATE_SECTION\")"));
+    expect(seg).not.toMatch(/https\?:/);
+  });
+});

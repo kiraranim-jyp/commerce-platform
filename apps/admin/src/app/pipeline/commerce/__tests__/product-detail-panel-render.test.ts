@@ -34,7 +34,9 @@ const SELLER: DetailPageBlock[] = [
 ];
 
 /** 패널을 띄우고, 바뀐 override 를 한 칸에 모은다. */
-function mount(initial?: ProductDetailOverride) {
+const PRODUCT_IMAGES = ["https://cdn.example.com/own/1.jpg", "https://cdn.example.com/own/2.jpg"];
+
+function mount(initial?: ProductDetailOverride, productImageUrls: string[] = PRODUCT_IMAGES) {
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
@@ -48,6 +50,7 @@ function mount(initial?: ProductDetailOverride) {
       root.render(
         createElement(ProductDetailBlocksPanel, {
           sellerDefaultBlocks: SELLER,
+          productImageUrls,
           override: state.override,
           onChange: (next) => {
             state.override = next;
@@ -164,19 +167,35 @@ describe("④ 추가 — 텍스트 블록이 added 로 들어간다", () => {
     expect(p.all("ol > li")).toHaveLength(SELLER.length);
   });
 
-  it("🔴 추가 버튼에 «모델에 없는» 것이 올라와 있지 않다 — 화면이 거짓말하지 않는다", () => {
+  it("🔴 추가 버튼의 이름이 목록 행의 이름과 «같다» — 같은 블록을 두 이름으로 부르지 않는다", () => {
+    const p = mount();
+    p.open();
+    /* 🔴 같은 블록을 추가 버튼과 목록 행에서 다르게 부르면 셀러가 같은 것을
+       둘로 센다(실제로 그렇게 짰다가 테스트가 잡았다). */
+    p.click(p.byText("button", "+ 직접 입력 텍스트"));
+    expect(p.all("ol > li").at(-1)?.textContent).toContain("직접 입력 텍스트");
+  });
+
+  it("🔴 「이미지」와 「이미지+텍스트」를 «두 버튼» 으로 만들지 않았다 — kind 가 하나다", () => {
     const p = mount();
     p.open();
     const addButtons = p.all("button").map((b) => b.textContent?.trim() ?? "");
-    /* 상품별 이미지 삽입은 아직 모델에 자리가 없다. */
-    expect(addButtons).not.toContain("+ 이미지");
+    /* caption 유무로 갈리므로 버튼은 하나다. 둘로 쪼개면 조립기에 같은 분기가
+       두 벌 생기고 셀러도 무엇을 고를지 헷갈린다. */
+    expect(addButtons).toContain("+ 이 상품 이미지");
     expect(addButtons).not.toContain("+ 이미지+텍스트");
-    /* 🔴 그리고 추가 버튼의 이름이 목록 행의 이름과 «같다» — 같은 블록을 두
-       이름으로 부르면 셀러가 같은 것을 둘로 센다(실제로 그렇게 짰다가 잡혔다). */
-    p.click(p.byText("button", "+ 직접 입력 텍스트"));
-    expect(p.all("ol > li").at(-1)?.textContent).toContain("직접 입력 텍스트");
-    /* 그리고 「없다」고 화면에 적혀 있다. */
-    expect(p.text()).toContain("아직 없습니다");
+
+    /* 🔴 「이미지 아래에 넣을 문구」는 고르기 화면이 아니라 «추가된 행» 의
+       placeholder 다(처음에 고르기 화면에서 찾다가 헛되이 실패했다). 이미지를
+       한 장 넣으면 그 한 행에 미리보기와 문구 칸이 «같이» 생긴다 — 그래서 블록
+       둘이 필요하지 않다. */
+    const q = mount({
+      added: [{ id: "p0", kind: "CUSTOM_IMAGE", url: PRODUCT_IMAGES[0], enabled: true, customImageId: "ci-0" }],
+    });
+    q.open();
+    const row = q.all("ol > li").at(-1)!;
+    expect(row.querySelector("img")).not.toBeNull();
+    expect(row.querySelector("textarea")?.getAttribute("placeholder")).toContain("이미지 아래에 넣을 문구");
   });
 });
 
@@ -287,5 +306,115 @@ describe("⑧ 🔴 패널이 상품정보(source) 탭에 «한 번만» 마운�
     const page = readFileSync(join(__dirname, "../../page.tsx"), "utf8");
     expect(page).toContain("detailOverride,");
     expect(page).toContain("setDetailOverride(ws.detailOverride ?? undefined)");
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ⑨ SELLER-UX-FINAL — 상품별 이미지 추가 흐름 (마운트한 DOM)
+   ══════════════════════════════════════════════════════════════════════════ */
+describe("⑨ 이미지 추가 — 외부 주소를 적는 칸이 «없다»", () => {
+  it("[+ 이 상품 이미지] 가 고르기 화면을 연다 — 누르자마자 블록이 생기지 «않는다»", () => {
+    const p = mount();
+    p.open();
+    p.click(p.byText("button", "+ 이 상품 이미지"));
+    /* 🔴 URL 을 고르기 «전» 에는 override 가 안 생긴다 — 빈 URL 블록은 조립에서
+       조용히 사라져 「추가했는데 안 나온다」가 된다. */
+    expect(p.state.override).toBeUndefined();
+    expect(p.text()).toContain("이미지 고르기");
+  });
+
+  it("🔴 URL 을 직접 입력하는 칸이 없다 — 외부 사이트 이미지를 적어 넣을 수 없다", () => {
+    const p = mount();
+    p.open();
+    p.click(p.byText("button", "+ 이 상품 이미지"));
+    const textInputs = p.all('input[type="text"], input[type="url"]');
+    expect(textInputs).toHaveLength(0);
+    /* 받는 입력은 파일 하나뿐이다. */
+    expect(p.all('input[type="file"]')).toHaveLength(1);
+    expect(p.text()).toContain("외부 사이트 이미지 주소를 직접 넣을 수는");
+  });
+
+  it("이 상품의 수집된 이미지를 골라 넣는다", () => {
+    const p = mount();
+    p.open();
+    p.click(p.byText("button", "+ 이 상품 이미지"));
+    const thumbs = p.all("img");
+    expect(thumbs.length).toBeGreaterThanOrEqual(PRODUCT_IMAGES.length);
+    p.click(thumbs[0].parentElement as HTMLElement);
+
+    const added = p.state.override?.added ?? [];
+    expect(added).toHaveLength(1);
+    expect(added[0].kind).toBe("CUSTOM_IMAGE");
+    expect(added[0].kind === "CUSTOM_IMAGE" && added[0].url).toBe(PRODUCT_IMAGES[0]);
+    expect(added[0].kind === "CUSTOM_IMAGE" && added[0].customImageId).toBeTruthy();
+    /* 고르면 화면이 닫힌다. */
+    expect(p.text()).not.toContain("이미지 고르기");
+  });
+
+  it("추가된 이미지 행에 미리보기와 문구 칸이 함께 있다", () => {
+    const p = mount({
+      added: [
+        { id: "p0", kind: "CUSTOM_IMAGE", url: PRODUCT_IMAGES[0], enabled: true, customImageId: "ci-0" },
+      ],
+    });
+    p.open();
+    const row = p.all("ol > li").at(-1)!;
+    expect(row.querySelector("img")).not.toBeNull();
+    expect(row.querySelector("textarea")).not.toBeNull();
+    /* 문구가 비면 「이미지」, 차면 「이미지+문구」로 이름이 갈린다. */
+    expect(row.textContent).toContain("이 상품 이미지");
+    expect(row.textContent).not.toContain("이미지+문구");
+  });
+
+  it("🔴 문구를 적으면 라벨이 「이미지+문구」로 바뀐다 — 블록은 여전히 하나다", () => {
+    const p = mount({
+      added: [
+        { id: "p0", kind: "CUSTOM_IMAGE", url: PRODUCT_IMAGES[0], enabled: true, customImageId: "ci-0" },
+      ],
+    });
+    p.open();
+    const before = p.all("ol > li").length;
+    p.click(p.byText("button", "되돌리기")); // 추가 블록은 되돌리면 빠진다
+    expect(p.state.override).toBeUndefined();
+
+    const q = mount({
+      added: [
+        {
+          id: "p0",
+          kind: "CUSTOM_IMAGE",
+          url: PRODUCT_IMAGES[0],
+          caption: "착용 사진",
+          enabled: true,
+          customImageId: "ci-0",
+        },
+      ],
+    });
+    q.open();
+    expect(q.all("ol > li")).toHaveLength(before);
+    expect(q.all("ol > li").at(-1)!.textContent).toContain("이미지+문구");
+  });
+
+  it("이미지 블록도 순서 변경·끄기·되돌리기가 된다", () => {
+    const p = mount({
+      added: [
+        { id: "p0", kind: "CUSTOM_IMAGE", url: PRODUCT_IMAGES[0], enabled: true, customImageId: "ci-0" },
+      ],
+    });
+    p.open();
+    /* 끄기 */
+    const boxes = p.all('input[type="checkbox"]');
+    act(() => (boxes[boxes.length - 1] as HTMLInputElement).click());
+    expect(p.state.override?.patches?.["CUSTOM_IMAGE:ci-0"]).toEqual({ enabled: false });
+    /* 위로 올리기 */
+    p.click(p.all('button[aria-label="위로"]').at(-1)!);
+    expect(p.state.override?.order).toContain("CUSTOM_IMAGE:ci-0");
+  });
+
+  it("🔴 라이브러리를 «펼칠 때만» 읽는다 — 패널을 열기만 해서는 요청이 없다", () => {
+    const src = readFileSync(join(__dirname, "../ProductDetailBlocksPanel.tsx"), "utf8");
+    expect(src).toContain("if (!picking || assets !== null) return;");
+    /* 업로드는 상품정보 탭이 쓰는 그 라우트다 — 새 경로를 만들지 않았다. */
+    expect(src).toContain('fetch("/api/pipeline/upload-image"');
+    expect(src).toContain('fetch("/api/assets")');
   });
 });

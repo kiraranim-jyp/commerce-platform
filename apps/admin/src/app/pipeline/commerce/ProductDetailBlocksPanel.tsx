@@ -1,14 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   detailBlockIdentities,
   detailBlockIdentity,
   detailBlockLabel,
   isEmptyDetailOverride,
   mergeProductDetailBlocks,
+  newCustomImageId,
   newCustomTextId,
   type DetailBlockIdentity,
+  type DetailBlockPatch,
   type DetailPageBlock,
   type ProductDetailOverride,
 } from "@commerce/listing";
@@ -36,11 +38,18 @@ import {
  * 되살리는 것은 patch 를 지우는 것이다. 지금 화면에서도 꺼진 블록은 흐리게
  * «보인다» — 사라지면 다시 켤 방법이 없어진다.
  *
- * ── 🔴 추가할 수 있는 것 ─────────────────────────────────────────────────
- * 상품별 «이미지» 블록은 현재 `DetailPageBlock` 유니온에 자기 URL 칸이 없다
- * (COMMON_IMAGE 는 셀러 프로필 URL 을 쓴다). 그래서 이번 패널은 **모델에 이미
- * 있는 것만** 다룬다 — 안 되는 것을 「지원」으로 보이게 하지 않는다
- * (부분 구현으로 화면이 거짓말하게 만들지 않는다).
+ * ── 🔴 상품별 이미지 (SELLER-UX-FINAL) ──────────────────────────────────
+ * 「이미지」와 「이미지+텍스트」는 `CUSTOM_IMAGE` **하나** 로 표현한다 — 문구가
+ * 비면 이미지만, 차 있으면 이미지 아래에 문구가 붙는다. 90% 가 같은 kind 를
+ * 둘로 쪼개면 조립기에 같은 분기가 두 벌 생긴다.
+ *
+ * 🔴 **새 이미지 저장 시스템을 만들지 않았다.** 셋 중 하나에서 URL 을 얻는다:
+ *     ① 이 상품의 수집된 이미지 (이미 우리 스토리지에 있다)
+ *     ② 이미지 라이브러리 (`/api/assets` — 설정·브랜드가 쓰는 그 테이블)
+ *     ③ 직접 업로드 (`/api/pipeline/upload-image` — 상품정보 탭이 쓰는 그 라우트)
+ *
+ * 🔴 외부 사이트 이미지 주소를 «적어 넣는 칸이 없다». 조립 직전에
+ * `isRegistrationSafeImageUrl`(http(s) allowlist)이 한 번 더 막는다.
  */
 
 /**
@@ -58,6 +67,13 @@ const ADDABLE: { kind: DetailPageBlock["kind"]; label: string; hint: string }[] 
   { kind: "AI_DESCRIPTION", label: "AI 생성 설명", hint: "상세설명 칸의 본문" },
   { kind: "BRAND_INTRO", label: "브랜드 소개", hint: "브랜드 관리에 저장된 소개글" },
 ];
+
+/** 라이브러리 목록 응답 — `/api/assets` 가 돌려주는 모양 그대로. */
+interface AssetOption {
+  id: string;
+  url: string;
+  fileName: string | null;
+}
 
 function makeBlock(kind: DetailPageBlock["kind"], customTextSeed: number): DetailPageBlock | null {
   switch (kind) {
@@ -77,6 +93,11 @@ function makeBlock(kind: DetailPageBlock["kind"], customTextSeed: number): Detai
       return { id: "product-description", kind: "AI_DESCRIPTION", enabled: true };
     case "BRAND_INTRO":
       return { id: "product-brand-intro", kind: "BRAND_INTRO", enabled: true };
+    case "CUSTOM_IMAGE":
+      /* 🔴 url 없이 만들지 않는다 — 빈 URL 블록은 조립에서 조용히 사라져서
+         셀러에게는 「추가했는데 안 나온다」로 보인다. addImage() 가 url 을
+         받아 직접 만든다. */
+      return null;
     default:
       /* TEMPLATE_SECTION · COMMON_IMAGE 는 셀러 설정에 이미 있는 자리라 «추가» 가
          아니라 켜고 끄는 것이다 — 목록에서 토글로 다룬다. */
@@ -88,13 +109,20 @@ export function ProductDetailBlocksPanel({
   sellerDefaultBlocks,
   override,
   onChange,
+  productImageUrls = [],
 }: {
   /** 셀러 설정의 기본 구성. 🔴 서버가 계산해 내려준 값이고 여기서 수정하지 않는다. */
   sellerDefaultBlocks: DetailPageBlock[];
   override: ProductDetailOverride | undefined;
   onChange: (next: ProductDetailOverride | undefined) => void;
+  /** 이 상품의 수집된 이미지 URL. 🔴 이미 우리 스토리지에 올라간 것들이다. */
+  productImageUrls?: string[];
 }) {
   const [open, setOpen] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [assets, setAssets] = useState<AssetOption[] | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   /** 🔴 화면 목록은 «계산» 이다 — 상태가 아니다(위 주석 참고). */
   const blocks = useMemo(
@@ -104,6 +132,25 @@ export function ProductDetailBlocksPanel({
   const identities = useMemo(() => detailBlockIdentities(blocks), [blocks]);
   const defaultIdentities = useMemo(() => new Set(detailBlockIdentities(sellerDefaultBlocks)), [sellerDefaultBlocks]);
 
+  /* 라이브러리는 «펼칠 때» 한 번만 읽는다 — 패널을 열기만 해도 요청이 나가면
+     목록 화면이 아닌 곳에서 불필요한 호출이 생긴다. */
+  useEffect(() => {
+    if (!picking || assets !== null) return;
+    let alive = true;
+    void (async () => {
+      try {
+        const res = await fetch("/api/assets");
+        const data = (await res.json()) as { assets?: AssetOption[] };
+        if (alive) setAssets(data.assets ?? []);
+      } catch {
+        if (alive) setAssets([]);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [picking, assets]);
+
   const changedCount =
     Object.keys(override?.patches ?? {}).length + (override?.added ?? []).length + (override?.order ? 1 : 0);
 
@@ -112,7 +159,10 @@ export function ProductDetailBlocksPanel({
     onChange(isEmptyDetailOverride(next) ? undefined : next);
   }
 
-  function patch(identity: DetailBlockIdentity, value: { enabled?: boolean; content?: string }) {
+  /* 🔴 인라인 타입을 쓰지 않는다 — 공용 `DetailBlockPatch` 를 그대로 받는다.
+     처음에 `{ enabled?, content? }` 로 적었더니 caption 이 빠져 타입이 막았다
+     (막아 준 것이 맞다: 목록이 두 벌로 갈리면 한쪽이 조용히 안 먹는다). */
+  function patch(identity: DetailBlockIdentity, value: DetailBlockPatch) {
     const patches = { ...(override?.patches ?? {}) };
     patches[identity] = { ...patches[identity], ...value };
     commit({ ...override, patches });
@@ -143,6 +193,45 @@ export function ProductDetailBlocksPanel({
       return;
     }
     commit({ ...override, added: [...(override?.added ?? []), block] });
+  }
+
+  /** 이미지 블록을 «URL 을 갖고» 만든다. 🔴 url 없이 만들지 않는다. */
+  function addImage(url: string) {
+    const seed = blocks.filter((b) => b.kind === "CUSTOM_IMAGE").length;
+    const block: DetailPageBlock = {
+      id: `product-image-${seed}`,
+      kind: "CUSTOM_IMAGE",
+      url,
+      caption: "",
+      enabled: true,
+      customImageId: newCustomImageId(seed),
+    };
+    /* 같은 이미지를 두 번 넣는 것은 막지 않는다 — 상세페이지에 같은 사진을
+       두 자리에 쓰는 것은 정상이고, 식별자는 순번으로 갈린다. */
+    commit({ ...override, added: [...(override?.added ?? []), block] });
+    setPicking(false);
+    setUploadError(null);
+  }
+
+  async function upload(file: File) {
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      /* 🔴 상품정보 탭이 쓰는 그 라우트다 — 새 업로드 경로를 만들지 않았다. */
+      const res = await fetch("/api/pipeline/upload-image", { method: "POST", body });
+      const data = (await res.json()) as { ok?: boolean; url?: string; error?: string };
+      if (!data.ok || !data.url) {
+        setUploadError(data.error ?? "업로드에 실패했습니다.");
+        return;
+      }
+      addImage(data.url);
+    } catch {
+      setUploadError("업로드 중 오류가 발생했습니다.");
+    } finally {
+      setUploading(false);
+    }
   }
 
   function move(index: number, direction: -1 | 1) {
@@ -255,6 +344,25 @@ export function ProductDetailBlocksPanel({
                       className="mt-2 w-full rounded border border-border bg-background px-2 py-1.5 text-xs text-text-primary"
                     />
                   ) : null}
+                  {block.kind === "CUSTOM_IMAGE" ? (
+                    <div className="mt-2 flex gap-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={block.url}
+                        alt=""
+                        className="h-16 w-16 shrink-0 rounded border border-border object-cover"
+                      />
+                      {/* 문구를 비우면 「이미지」, 채우면 「이미지+문구」다 — 블록이
+                          둘이 아니라 하나이고 라벨이 그것을 말해 준다. */}
+                      <textarea
+                        value={block.caption ?? ""}
+                        onChange={(e) => patch(identity, { caption: e.target.value })}
+                        rows={2}
+                        placeholder="이미지 아래에 넣을 문구(비워도 됩니다)"
+                        className="w-full rounded border border-border bg-background px-2 py-1.5 text-xs text-text-primary"
+                      />
+                    </div>
+                  ) : null}
                 </li>
               );
             })}
@@ -273,12 +381,99 @@ export function ProductDetailBlocksPanel({
                 + {item.label}
               </button>
             ))}
+            {/* 이미지는 «URL 을 고른 뒤» 에 블록이 생긴다 — 빈 이미지 블록을
+                만들지 않는다(조립에서 조용히 사라져 「추가했는데 안 나온다」가 된다). */}
+            <button
+              type="button"
+              onClick={() => setPicking((v) => !v)}
+              title="이 상품에만 넣는 이미지 — 문구를 같이 적으면 이미지+문구가 된다"
+              className="rounded border border-border px-2 py-1 text-xs text-text-secondary hover:bg-background"
+            >
+              + 이 상품 이미지
+            </button>
           </div>
 
-          {/* 🔴 상품별 이미지 삽입은 모델에 자리가 없다 — 「지원」으로 보이게 하지 않는다. */}
+          {picking ? (
+            <div className="mt-2 rounded-md border border-border bg-background p-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-text-primary">이미지 고르기</span>
+                <button
+                  type="button"
+                  onClick={() => setPicking(false)}
+                  className="rounded px-2 py-1 text-xs text-text-secondary hover:bg-surface"
+                >
+                  닫기
+                </button>
+              </div>
+
+              <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded border border-border px-2 py-1 text-xs text-text-secondary hover:bg-surface">
+                {uploading ? "업로드 중…" : "파일 올리기"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void upload(file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              {uploadError ? <p className="mt-1.5 text-xs text-error">{uploadError}</p> : null}
+
+              {productImageUrls.length > 0 ? (
+                <>
+                  <p className="mt-2.5 text-[11px] text-text-tertiary">이 상품의 이미지</p>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {productImageUrls.map((url) => (
+                      <button key={url} type="button" onClick={() => addImage(url)} title="이 이미지 넣기">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={url}
+                          alt=""
+                          className="h-14 w-14 rounded border border-border object-cover hover:border-primary"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+
+              <p className="mt-2.5 text-[11px] text-text-tertiary">이미지 라이브러리</p>
+              {assets === null ? (
+                <p className="mt-1 text-xs text-text-tertiary">불러오는 중…</p>
+              ) : assets.length === 0 ? (
+                <p className="mt-1 text-xs text-text-tertiary">
+                  저장된 이미지가 없습니다. 파일을 올리거나 이미지 관리에서 먼저 등록해 주세요.
+                </p>
+              ) : (
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {assets.map((asset) => (
+                    <button
+                      key={asset.id}
+                      type="button"
+                      onClick={() => addImage(asset.url)}
+                      title={asset.fileName ?? "이 이미지 넣기"}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={asset.url}
+                        alt=""
+                        className="h-14 w-14 rounded border border-border object-cover hover:border-primary"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {/* 상단·하단 «공통» 이미지는 여기서 다루지 않는다 — 셀러 설정의 것이고
+              상품마다 다르지 않다(CEO 지시 2026-08-24 의 경계). */}
           <p className="mt-2 text-[11px] text-text-tertiary">
-            상단·하단 공통 이미지는 설정에서 관리합니다. 이 상품만의 이미지를 중간에 넣는 기능은
-            아직 없습니다.
+            상단·하단 공통 이미지는 설정에서 관리합니다. 외부 사이트 이미지 주소를 직접 넣을 수는
+            없습니다 — 올린 파일이나 수집된 이미지에서 고릅니다.
           </p>
 
           {changedCount > 0 ? (

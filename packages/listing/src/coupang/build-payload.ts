@@ -7,7 +7,7 @@ import type {
   MasterProduct,
   SellingConditions,
 } from "@commerce/shared";
-import { getRegistrationImageUrl, getSelectedImageUrl } from "@commerce/shared";
+import { getRegistrationImageUrl, getSelectedImageUrl, isRegistrationSafeImageUrl } from "@commerce/shared";
 import { computeVariantFinalPriceKrw } from "@commerce/pricing";
 import { payloadStockQuantity } from "@commerce/shared";
 import { manufacturerInputFromProduct, resolveManufacturer } from "../common/manufacturer";
@@ -461,6 +461,32 @@ export type DetailPageBlock =
        * (common/detail-override.ts 주석 참고). 이 기능 이전에 저장된 셀러
        * 기본값에는 없으므로 optional 이고, 없으면 순서 기반 폴백을 쓴다. */
       customTextId?: string;
+    }
+  /**
+   * SELLER-UX-FINAL — **이 상품에만** 넣는 이미지. 「이미지」와 「이미지+텍스트」를
+   * 둘 다 이 «하나» 로 표현한다 — `caption` 이 비면 이미지만, 차 있으면 이미지
+   * 아래에 그 문구가 붙는다. 90% 가 같은 kind 를 둘로 쪼개면 조립기 세 곳에
+   * 같은 분기가 두 벌씩 생긴다.
+   *
+   * 🔴 `url` 은 **우리 스토리지의 공개 URL** 이다. 셀러가 직접 올리거나
+   * (`/api/assets`) 이미 수집돼 업로드된 상품 이미지에서 고른 것이고, 외부
+   * 사이트 이미지 주소를 그대로 적어 넣는 자리가 «아니다». 조립 시점에
+   * `isRegistrationSafeImageUrl`(http(s) allowlist)로 한 번 더 걸러진다.
+   *
+   * 🔴 `COMMON_IMAGE` 와 다르다 — 그것은 셀러 프로필의 상단/하단 배너이고
+   * URL 을 자기가 갖지 않는다. 이 블록은 상품마다 다른 이미지를 «중간» 에
+   * 넣기 위한 것이다.
+   */
+  | {
+      id: string;
+      kind: "CUSTOM_IMAGE";
+      /** 우리 스토리지 공개 URL. 비었거나 http(s) 가 아니면 조립에서 건너뛴다. */
+      url: string;
+      /** 이미지 아래에 붙는 문구. 비면 이미지만 들어간다(= 「이미지」 블록). */
+      caption?: string;
+      enabled: boolean;
+      /** `customTextId` 와 같은 이유의 안정 식별자 — 같은 종류를 여러 개 넣는다. */
+      customImageId?: string;
     };
 
 const TEMPLATE_SECTION_LABELS: Record<
@@ -482,11 +508,17 @@ const DETAIL_BLOCK_LABELS: Record<DetailPageBlock["kind"], string> = {
   SIZE_CHART_IMAGES: "사이즈표",
   PRODUCT_IMAGES: "상품 상세이미지",
   CUSTOM_TEXT: "직접 입력 텍스트",
+  CUSTOM_IMAGE: "이 상품 이미지",
 };
 
 export function detailBlockLabel(block: DetailPageBlock): string {
   if (block.kind === "TEMPLATE_SECTION") return TEMPLATE_SECTION_LABELS[block.section];
   if (block.kind === "COMMON_IMAGE") return block.position === "top" ? "상단 공통 이미지" : "하단 공통 이미지";
+  /* SELLER-UX-FINAL — 「이미지」와 「이미지+텍스트」는 같은 kind 다(caption 유무로
+     갈린다). 화면이 그 둘을 다른 이름으로 불러야 셀러가 무엇을 넣었는지 안다. */
+  if (block.kind === "CUSTOM_IMAGE") {
+    return block.caption?.trim() ? "이 상품 이미지+문구" : DETAIL_BLOCK_LABELS.CUSTOM_IMAGE;
+  }
   return DETAIL_BLOCK_LABELS[block.kind];
 }
 
@@ -641,6 +673,26 @@ export function assembleContentsFromBlocks(
 
   for (const block of blocks) {
     if (!block.enabled) continue;
+
+    /* SELLER-UX-FINAL — 상품별 이미지. 🔴 `TEMPLATE_SECTION` 과 같은 자리에서
+       따로 다룬다: 아래 일반 경로는 «텍스트 아니면 이미지» 분기라서
+       「이미지 + 문구」를 한 블록으로 낼 수 없다(text 가 있으면 continue 한다).
+
+       🔴 URL 을 여기서 검증한다 — `isRegistrationSafeImageUrl` 은 http(s) 만
+       허용하는 기존 allowlist 다. data:/blob: 가 등록 payload 에 닿은 전례가
+       있어서(유입은 `?? 폴백` 한 줄이었다) 조립 «직전» 에 한 번 더 막는다.
+       값을 고치지 않고 «건너뛴다» — 빈 content 를 보내면 실제 쿠팡 API 가
+       거부하므로, 못 쓰는 블록을 조용히 빼는 것이 이 함수의 기존 규칙이다. */
+    if (block.kind === "CUSTOM_IMAGE") {
+      if (!isRegistrationSafeImageUrl(block.url)) continue;
+      flushText();
+      contents.push({ contentsType: "IMAGE", contentDetails: [{ content: block.url.trim(), detailType: "IMAGE" }] });
+      /* 문구는 이미지 «아래» 에 온다 — 위에 두고 싶으면 CUSTOM_TEXT 블록을
+         앞 순서에 놓으면 된다(순서 변경이 이미 있다). 규칙을 두 벌로 만들지 않는다. */
+      const caption = block.caption?.trim();
+      if (caption) pendingText.push(caption);
+      continue;
+    }
 
     if (block.kind === "TEMPLATE_SECTION") {
       for (const item of resolveTemplateSectionItems(block.section, ctx.template)) {

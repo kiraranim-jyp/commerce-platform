@@ -68,6 +68,12 @@ export function detailBlockIdentity(block: DetailPageBlock, customTextOrdinal = 
       const stable = block.customTextId;
       return stable ? `CUSTOM_TEXT:${stable}` : `CUSTOM_TEXT#${customTextOrdinal}`;
     }
+    case "CUSTOM_IMAGE": {
+      /* SELLER-UX-FINAL — `CUSTOM_TEXT` 와 «같은 이유» 의 안정 식별자다.
+         상품별 이미지도 여러 장 넣으므로 kind 로 구분되지 않는다. */
+      const stable = block.customImageId;
+      return stable ? `CUSTOM_IMAGE:${stable}` : `CUSTOM_IMAGE#${customTextOrdinal}`;
+    }
     default:
       /* AI_DESCRIPTION · BRAND_INTRO · SIZE_CHART_IMAGES · PRODUCT_IMAGES —
          한 상세페이지에 한 번만 의미가 있는 블록들. */
@@ -75,10 +81,31 @@ export function detailBlockIdentity(block: DetailPageBlock, customTextOrdinal = 
   }
 }
 
-/** 배열 전체의 식별자를 «순서대로» 만든다 — `CUSTOM_TEXT` 폴백 번호를 맞춰 준다. */
+/**
+ * 같은 상세페이지에 «여러 개» 올 수 있는 kind. 이것들만 안정 ID(또는 순서
+ * 폴백)가 필요하다 — 나머지는 kind 하나로 유일하다.
+ * 🔴 목록을 두 벌로 적지 않는다: 아래 `detailBlockIdentities` 와
+ * `mergeProductDetailBlocks` 가 같은 상수를 본다.
+ */
+export const REPEATABLE_BLOCK_KINDS = ["CUSTOM_TEXT", "CUSTOM_IMAGE"] as const;
+
+function isRepeatable(kind: DetailPageBlock["kind"]): boolean {
+  return (REPEATABLE_BLOCK_KINDS as readonly string[]).includes(kind);
+}
+
+/**
+ * 배열 전체의 식별자를 «순서대로» 만든다 — 반복 가능한 kind 의 폴백 번호를
+ * 맞춰 준다. 🔴 번호는 **kind 별로 따로** 센다. 하나의 카운터를 공유하면
+ * 텍스트를 한 줄 추가했을 때 이미지의 식별자가 밀려 override 가 고아가 된다.
+ */
 export function detailBlockIdentities(blocks: readonly DetailPageBlock[]): DetailBlockIdentity[] {
-  let customTextSeq = 0;
-  return blocks.map((b) => detailBlockIdentity(b, b.kind === "CUSTOM_TEXT" ? customTextSeq++ : 0));
+  const seq = new Map<string, number>();
+  return blocks.map((b) => {
+    if (!isRepeatable(b.kind)) return detailBlockIdentity(b, 0);
+    const n = seq.get(b.kind) ?? 0;
+    seq.set(b.kind, n + 1);
+    return detailBlockIdentity(b, n);
+  });
 }
 
 /**
@@ -86,6 +113,12 @@ export function detailBlockIdentities(blocks: readonly DetailPageBlock[]): Detai
  * `customTextId` 가 있는 블록은 그대로 두고, 없는 «새» 블록에만 붙인다.
  * 그래야 기존 override 가 깨지지 않는다(CEO 지시).
  */
+export function newCustomImageId(seed: number): string {
+  /* 🔴 `newCustomTextId` 와 «같은 이유» 로 결정적이다 — Date.now()/random 을
+     쓰면 같은 입력에서 다른 payload 가 나와 byte 동일성을 잴 수 없다. */
+  return `ci-${seed}`;
+}
+
 export function newCustomTextId(seed: number): string {
   /* 🔴 Date.now()/Math.random() 을 쓰지 않는다 — 같은 입력에서 같은 payload 가
      나와야 테스트가 byte 동일성을 잴 수 있다. 호출부가 배열 길이 같은
@@ -99,6 +132,8 @@ export interface DetailBlockPatch {
   enabled?: boolean;
   /** `CUSTOM_TEXT` 본문. 다른 kind 에서는 무시된다. */
   content?: string;
+  /** `CUSTOM_IMAGE` 의 이미지 아래 문구. 다른 kind 에서는 무시된다. */
+  caption?: string;
 }
 
 /** 상품 하나의 상세페이지 override. 🔴 아무것도 안 바꿨으면 이 객체 자체가 없다. */
@@ -128,13 +163,23 @@ export function isEmptyDetailOverride(override: ProductDetailOverride | null | u
 function applyPatch(block: DetailPageBlock, patch: DetailBlockPatch | undefined): DetailPageBlock {
   if (!patch) return block;
   const nextEnabled = patch.enabled ?? block.enabled;
-  const nextContent = block.kind === "CUSTOM_TEXT" ? (patch.content ?? block.content) : undefined;
   const enabledChanged = nextEnabled !== block.enabled;
-  const contentChanged = block.kind === "CUSTOM_TEXT" && nextContent !== block.content;
-  if (!enabledChanged && !contentChanged) return block;
-  return block.kind === "CUSTOM_TEXT"
-    ? { ...block, enabled: nextEnabled, content: nextContent as string }
-    : { ...block, enabled: nextEnabled };
+
+  if (block.kind === "CUSTOM_TEXT") {
+    const nextContent = patch.content ?? block.content;
+    if (!enabledChanged && nextContent === block.content) return block;
+    return { ...block, enabled: nextEnabled, content: nextContent };
+  }
+  if (block.kind === "CUSTOM_IMAGE") {
+    /* 🔴 `url` 은 patch 로 바꾸지 «않는다». 이미지를 갈아끼우는 것은 블록을
+       지우고 다시 넣는 일이고, url 을 덮게 열어 두면 셀러 기본값에 있는
+       이미지를 상품 override 가 가리키는 모순 상태가 생긴다. */
+    const nextCaption = patch.caption ?? block.caption ?? "";
+    if (!enabledChanged && nextCaption === (block.caption ?? "")) return block;
+    return { ...block, enabled: nextEnabled, caption: nextCaption };
+  }
+  if (!enabledChanged) return block;
+  return { ...block, enabled: nextEnabled };
 }
 
 /**
@@ -160,11 +205,17 @@ export function mergeProductDetailBlocks(
   const seen = new Set(identities);
   const addedIdentities: DetailBlockIdentity[] = [];
   const added: DetailPageBlock[] = [];
-  let customTextSeq = patched.filter((b) => b.kind === "CUSTOM_TEXT").length;
+  /* 🔴 반복 kind 의 폴백 번호를 «kind 별로» 이어 센다 — 하나의 카운터를 쓰면
+     텍스트를 추가했을 때 이미지 식별자가 밀린다. */
+  const addSeq = new Map<string, number>();
+  for (const b of patched) {
+    if (isRepeatable(b.kind)) addSeq.set(b.kind, (addSeq.get(b.kind) ?? 0) + 1);
+  }
   for (const block of ov.added ?? []) {
-    const id = detailBlockIdentity(block, block.kind === "CUSTOM_TEXT" ? customTextSeq : 0);
+    const repeatable = isRepeatable(block.kind);
+    const id = detailBlockIdentity(block, repeatable ? (addSeq.get(block.kind) ?? 0) : 0);
     if (seen.has(id)) continue;
-    if (block.kind === "CUSTOM_TEXT") customTextSeq++;
+    if (repeatable) addSeq.set(block.kind, (addSeq.get(block.kind) ?? 0) + 1);
     seen.add(id);
     addedIdentities.push(id);
     added.push(applyPatch(block, ov.patches?.[id]));

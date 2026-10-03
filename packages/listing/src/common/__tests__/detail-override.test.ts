@@ -7,7 +7,9 @@ import {
   detailBlockIdentity,
   isEmptyDetailOverride,
   mergeProductDetailBlocks,
+  newCustomImageId,
   newCustomTextId,
+  REPEATABLE_BLOCK_KINDS,
   resolveProductDetailBlocks,
   type ProductDetailOverride,
 } from "../detail-override";
@@ -241,5 +243,98 @@ describe("⑦ 🔴 입력을 변형하지 않는다 (셀러 설정이 오염되�
     });
     expect(JSON.stringify(SELLER_SAVED)).toBe(snapshot);
     expect(SELLER_SAVED).toHaveLength(4);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ⑧ SELLER-UX-FINAL — 상품별 이미지 (CUSTOM_IMAGE)
+   ══════════════════════════════════════════════════════════════════════════
+
+   「이미지」와 「이미지+텍스트」를 kind «하나» 로 표현한다 — caption 유무로 갈린다.
+   🔴 재는 것은 「이미지가 들어가는가」가 아니라 **「들어가면 안 되는 URL 이
+   막히는가」** 와 **「식별자가 텍스트 추가에 밀리지 않는가」** 다. */
+describe("⑧ 상품별 이미지 — CUSTOM_IMAGE", () => {
+  const img = (n: number, caption?: string): DetailPageBlock => ({
+    id: `p-${n}`,
+    kind: "CUSTOM_IMAGE",
+    url: `https://cdn.example.com/own/${n}.jpg`,
+    caption,
+    enabled: true,
+    customImageId: newCustomImageId(n),
+  });
+
+  it("식별자가 customImageId 로 만들어진다 — block.id 가 아니다", () => {
+    expect(detailBlockIdentity(img(0))).toBe("CUSTOM_IMAGE:ci-0");
+    expect(detailBlockIdentity(img(0))).not.toContain("p-0");
+  });
+
+  it("🔴 customImageId 가 없는 블록은 순서 폴백으로 서로 구분된다", () => {
+    const blocks: DetailPageBlock[] = [
+      { id: "a", kind: "CUSTOM_IMAGE", url: "https://x/1.jpg", enabled: true },
+      { id: "b", kind: "CUSTOM_IMAGE", url: "https://x/2.jpg", enabled: true },
+    ];
+    expect(detailBlockIdentities(blocks)).toEqual(["CUSTOM_IMAGE#0", "CUSTOM_IMAGE#1"]);
+  });
+
+  it("🔴 텍스트와 이미지의 폴백 번호가 «따로» 센다 — 텍스트를 추가해도 이미지 식별자가 밀리지 않는다", () => {
+    const withoutText: DetailPageBlock[] = [
+      { id: "i1", kind: "CUSTOM_IMAGE", url: "https://x/1.jpg", enabled: true },
+      { id: "i2", kind: "CUSTOM_IMAGE", url: "https://x/2.jpg", enabled: true },
+    ];
+    const withText: DetailPageBlock[] = [
+      { id: "t1", kind: "CUSTOM_TEXT", content: "앞에 끼운 문구", enabled: true },
+      ...withoutText,
+    ];
+    const before = detailBlockIdentities(withoutText);
+    const after = detailBlockIdentities(withText).filter((id) => id.startsWith("CUSTOM_IMAGE"));
+    /* 🔴 하나의 카운터를 공유했다면 ["CUSTOM_IMAGE#1","CUSTOM_IMAGE#2"] 로 밀려서
+       기존 override 가 전부 고아가 된다. */
+    expect(after).toEqual(before);
+  });
+
+  it("caption 을 patch 로 바꾼다", () => {
+    const base = [img(0)];
+    const merged = mergeProductDetailBlocks(base, {
+      patches: { "CUSTOM_IMAGE:ci-0": { caption: "실제 착용 사진입니다" } },
+    });
+    expect(merged[0]).toMatchObject({ kind: "CUSTOM_IMAGE", caption: "실제 착용 사진입니다" });
+  });
+
+  it("🔴 url 은 patch 로 «바꿀 수 없다» — 이미지 교체는 지우고 다시 넣는 일이다", () => {
+    const base = [img(0)];
+    const merged = mergeProductDetailBlocks(base, {
+      patches: { "CUSTOM_IMAGE:ci-0": { caption: "x" } },
+    });
+    expect(merged[0]).toMatchObject({ url: "https://cdn.example.com/own/0.jpg" });
+    /* patch 타입에 url 칸 자체가 없다. */
+    const src = readFileSync(join(__dirname, "../detail-override.ts"), "utf8");
+    const patchBlock = src.slice(src.indexOf("interface DetailBlockPatch"), src.indexOf("ProductDetailOverride {"));
+    expect(patchBlock).not.toMatch(/^\s*url\?:/m);
+  });
+
+  it("같은 caption 이면 새 객체를 만들지 않는다", () => {
+    const base = [img(0, "그대로")];
+    const merged = mergeProductDetailBlocks(base, {
+      patches: { "CUSTOM_IMAGE:ci-0": { caption: "그대로" } },
+      added: [img(1)],
+    });
+    expect(merged[0]).toBe(base[0]);
+  });
+
+  it("추가된 이미지의 폴백 번호가 기존 이미지 수에서 «이어진다»", () => {
+    const base = [img(0)];
+    const merged = mergeProductDetailBlocks(base, {
+      added: [{ id: "new", kind: "CUSTOM_IMAGE", url: "https://x/9.jpg", enabled: true }],
+    });
+    expect(detailBlockIdentities(merged)).toEqual(["CUSTOM_IMAGE:ci-0", "CUSTOM_IMAGE#1"]);
+  });
+
+  it("🔴 newCustomImageId 는 결정적이고 텍스트 ID 와 «섞이지 않는다»", () => {
+    expect(newCustomImageId(2)).toBe(newCustomImageId(2));
+    expect(newCustomImageId(2)).not.toBe(newCustomTextId(2));
+  });
+
+  it("반복 가능한 kind 목록이 «한 곳» 에만 있다", () => {
+    expect(REPEATABLE_BLOCK_KINDS as readonly string[]).toEqual(["CUSTOM_TEXT", "CUSTOM_IMAGE"]);
   });
 });

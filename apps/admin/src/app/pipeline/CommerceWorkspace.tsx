@@ -3807,6 +3807,9 @@ export function CommerceWorkspace({
                         sellerDefaultBlocks={sellerDefaultDetailBlocks}
                         override={detailOverride}
                         onChange={setDetailOverride}
+                        productImageUrls={product.images
+                          .map((img) => getSelectedImageUrl(img))
+                          .filter((url): url is string => !!url)}
                       />
                     )}
                     {/* ══ URGENT ④ (CPO 확정, 2026-10-03) ═══════════════════
