@@ -2,6 +2,7 @@ import {
   buildNaverCategoryPath,
   resolveCommonOrigin,
   resolveManufacturer,
+  resolveDetailBlocks,
   resolveProductDetailBlocks,
   type ProductDetailOverride,
   resolveNaverOriginArea,
@@ -271,6 +272,11 @@ export async function resolveNaverContext(params: {
       // 여기 한 곳에서만 resolveDetailBlocks()를 호출하면 세 곳 모두 항상
       // 동일한 값을 쓰게 된다 — 클라이언트가 보낸 detailBlocks는 더 이상 읽지 않는다.
       detailBlocks: resolveProductDetailBlocks(sellerProfile?.defaultDetailBlocks, params.detailOverride),
+      /* PRODUCT-INFO-UX-06 — 상품별 편집기의 «기준선». 위 detailBlocks 는 이미
+         override 가 얹힌 결과라서, 화면이 「무엇이 공통이고 무엇을 내가 바꿨나」를
+         가르려면 override 를 «적용하지 않은» 구성도 필요하다.
+         🔴 payload 에는 쓰이지 않는다 — 화면 표시 전용이다. */
+      sellerDefaultDetailBlocks: resolveDetailBlocks(sellerProfile?.defaultDetailBlocks),
     },
   };
 }

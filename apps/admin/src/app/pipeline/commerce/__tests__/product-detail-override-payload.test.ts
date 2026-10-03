@@ -31,11 +31,14 @@ import {
  * 통과하기 때문에 구조적으로 같아야 하고, 아니면 어딘가에 전용 경로가 생긴 것이다.
  */
 
+/* 🔴 `as never` 를 값 선언에 붙이지 않는다 — 붙이면 테스트가 자기 fixture 를
+   읽을 수 없다(TEMPLATE.shippingInfo 가 타입 오류가 된다). 조립기 인자 자리에서만
+   좁힌다. */
 const TEMPLATE = {
   shippingInfo: "평일 14시 이전 주문은 당일 출고됩니다.",
   exchangeInfo: "교환은 수령 후 7일 이내입니다.",
   returnInfo: "반품은 수령 후 7일 이내입니다.",
-} as never;
+};
 
 const COMMON_IMAGES = {
   topCommonImageUrl: "https://cdn.example.com/seller/top-banner.jpg",
@@ -46,7 +49,7 @@ const COMMON_IMAGES = {
 
 const CTX = {
   aiDescription: "65% 코튼 혼방 테니스 상의입니다.",
-  template: TEMPLATE,
+  template: TEMPLATE as never,
   productImageUrls: ["https://cdn.example.com/product/1.jpg"],
   sizeChartImageUrls: ["https://cdn.example.com/product/size.jpg"],
   brandIntro: "세르지오 타키니는 이탈리아 테니스 브랜드입니다.",
@@ -213,6 +216,11 @@ describe("⑤ 🔴 세 채널이 «같은» 최종 블록 소스를 쓴다 — �
 
   /* 🔴 소스 문자열 검사는 주석을 벗기고 한다 — 이 파일들의 주석에 함수 이름이
      설명으로 여러 번 나온다(여덟 번 걸린 함정). */
+
+  /* 🔴 codeOnly() 가 줄을 chr(10) 으로 다시 이어 주므로 CR 은 남지 않는다 —
+     그래서 개행 하나로 가른다. */
+  const SPLIT_NEWLINE = String.fromCharCode(10);
+
   const SEAMS = [
     ["쿠팡 등록", "coupang/register/route.ts"],
     ["쿠팡 미리보기", "coupang/payload-preview/route.ts"],
@@ -224,8 +232,63 @@ describe("⑤ 🔴 세 채널이 «같은» 최종 블록 소스를 쓴다 — �
     expect(read(rel)).toContain("resolveProductDetailBlocks(");
   });
 
-  it.each(SEAMS)("🔴 %s 에 옛 resolveDetailBlocks 호출이 «남아 있지 않다» — 통로가 둘로 갈리면 안 된다", (_label, rel) => {
-    expect(read(rel)).not.toMatch(/[^t]resolveDetailBlocks\(/);
+  /**
+   * 🔴 처음에 「옛 resolveDetailBlocks 호출이 한 건도 없다」로 박았더니 실패했다 —
+   * 그리고 그 실패가 «맞았다». naver/resolve-context.ts 는 호출이 «둘» 이다:
+   *
+   *     detailBlocks:              resolveProductDetailBlocks(...)   ← payload 가 쓴다
+   *     sellerDefaultDetailBlocks: resolveDetailBlocks(...)          ← 화면 기준선
+   *
+   * 후자는 상품별 편집기가 「무엇이 공통이고 무엇을 내가 바꿨나」를 가르기 위해
+   * override 를 «적용하지 않은» 구성을 받아야 해서 있는 것이고, payload 에는
+   * 쓰이지 않는다. 그래서 계약을 「호출이 없다」가 아니라 **「payload 로 가는
+   * 칸은 반드시 resolveProductDetailBlocks 가 채운다」** 로 고친다.
+   */
+  it.each(SEAMS)("🔴 %s 의 payload 칸은 resolveProductDetailBlocks 가 «만» 채운다", (_label, rel) => {
+    const src = read(rel);
+    for (const line of src.split(SPLIT_NEWLINE)) {
+      if (!/resolveDetailBlocks\(/.test(line)) continue;
+      /* 옛 함수가 남아 있다면 그 줄은 «화면 기준선» 한 칸뿐이어야 한다. */
+      expect(line, `${rel}: payload 경로에 옛 통로가 남아 있다 — ${line.trim()}`).toContain(
+        "sellerDefaultDetailBlocks:",
+      );
+    }
+  });
+
+  /**
+   * 🔴 네 seam 의 «모양이 서로 다르다». 하나의 규칙으로 재려다 두 번 틀렸다:
+   *
+   *   ① 쿠팡 등록       변수를 거친다        const resolvedDetailBlocks = 새통로(...)
+   *   ② 쿠팡 미리보기   속성에 직접          detailBlocks: 새통로(...)
+   *   ③ 롯데ON 상세조립 **위치 인자**        assembleNaverDetailContent(새통로(...), {
+   *   ④ 네이버 resolver 속성에 직접          detailBlocks: 새통로(...)
+   *
+   * ③ 은 `detailBlocks:` 라는 글자가 «아예 없다» — 속성으로 찾는 규칙은 거기서
+   * 공허하게 통과하거나(0건) 거짓 실패한다. 그래서 각 seam 이 블록을 «어떻게»
+   * 먹이는지 표로 적고 그 모양을 그대로 확인한다. 통로를 바꾸면 깨진다.
+   */
+  const FEEDS = [
+    ["쿠팡 등록", "coupang/register/route.ts", "const resolvedDetailBlocks = resolveProductDetailBlocks("],
+    ["쿠팡 미리보기", "coupang/payload-preview/route.ts", "detailBlocks: resolveProductDetailBlocks("],
+    ["롯데ON 상세조립", "lotteon/_lib/build-context.ts", "assembleNaverDetailContent(resolveProductDetailBlocks("],
+    ["네이버 공통 resolver", "naver/_lib/resolve-context.ts", "detailBlocks: resolveProductDetailBlocks("],
+  ] as const;
+
+  it.each(FEEDS)("🔴 %s 가 블록을 새 통로에서 «그대로» 먹인다", (_label, rel, feed) => {
+    expect(read(rel), `${rel}: 통로가 바뀌었다`).toContain(feed);
+  });
+
+  it("🔴 쿠팡 등록의 payload 칸이 그 변수를 쓴다 — 중간에 다른 값으로 갈리지 않는다", () => {
+    const src = read("coupang/register/route.ts");
+    expect(src).toContain("detailBlocks: resolvedDetailBlocks");
+    /* 그 변수에 다시 대입하는 곳이 없다(한 번만 정해진다). */
+    expect((src.match(/resolvedDetailBlocks\s*=/g) ?? []).length).toBe(1);
+  });
+
+  it("🔴 화면 기준선은 payload 에 «쓰이지 않는다» — 등록 라우트가 그 칸을 읽지 않는다", () => {
+    for (const rel of ["coupang/register/route.ts", "smartstore/register/route.ts", "lotteon/register/route.ts"]) {
+      expect(read(rel), `${rel} 가 화면 전용 기준선을 읽는다`).not.toContain("sellerDefaultDetailBlocks");
+    }
   });
 
   it("🔴 네이버 통로가 «하나» 다 — 미리보기·실등록·readiness 가 같은 함수를 본다", () => {

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { backfillCanonicalProduct, type CanonicalProduct, type PlatformId } from "@commerce/shared";
+import type { ProductDetailOverride } from "@commerce/listing";
 import type { CategoryProfileId, CategorySelection } from "@commerce/category";
 import type { MarketCategoryOption } from "@/app/api/market-categories/route";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -169,6 +170,10 @@ export default function PipelinePage() {
   // 알려주는 카테고리 선택 상태. null이면 "아직 CommerceWorkspace가 마운트 전"이거나
   // "복원할 저장값이 없음" — 이 경우 CommerceWorkspace가 자체 기본값을 쓴다.
   const [categoryMappings, setCategoryMappings] = useState<Record<PlatformId, CategorySelection> | null>(null);
+  /* PRODUCT-INFO-UX-06 — 상품별 상세페이지 override. categoryMappings 와 «같은»
+     방식으로 다룬다: CommerceWorkspace 가 주인이고 여기로 미러링해서 스냅샷
+     workspace(jsonb)에 저장한다. 🔴 새 컬럼을 만들지 않았다. */
+  const [detailOverride, setDetailOverride] = useState<ProductDetailOverride | undefined>(undefined);
 
   /** items에는 상세/원본/누끼후보 3장 분량의 base64 data URI가 다 들어있어서
    * (1500x2000 JPG 기준 장당 수백 KB~1MB대) 5장만 있어도 sessionStorage
@@ -215,6 +220,7 @@ export default function PipelinePage() {
             setThumbnails(ws.thumbnails ?? {});
             setRepresentativeId(ws.representativeId);
             setCategoryMappings(ws.categoryMappings ?? null);
+            setDetailOverride(ws.detailOverride ?? undefined);
             // MARKET-CATEGORY-1 — 이어서 작업/재오픈 때도 이 상품을 어느
             // 카테고리로 조사했는지 그대로 복원한다(없으면 이 기능 이전 스냅샷).
             setMarketCategoryId(ws.marketCategoryProfileId ?? "");
@@ -237,6 +243,7 @@ export default function PipelinePage() {
             thumbnails?: Record<string, string>;
             representativeId?: string | null;
             categoryMappings?: Record<PlatformId, CategorySelection>;
+            detailOverride?: ProductDetailOverride;
             marketCategoryProfileId?: CategoryProfileId;
           };
           if (saved.result && saved.product) {
@@ -248,6 +255,7 @@ export default function PipelinePage() {
             setThumbnails(saved.thumbnails ?? {});
             setRepresentativeId(saved.representativeId ?? null);
             setCategoryMappings(saved.categoryMappings ?? null);
+            setDetailOverride(saved.detailOverride ?? undefined);
           }
         }
       } catch {
@@ -287,7 +295,7 @@ export default function PipelinePage() {
       // 영향 없게 조용히 무시한다.
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated, url, result, product, items, thumbnails, representativeId, categoryMappings, marketCategoryId]);
+  }, [hydrated, url, result, product, items, thumbnails, representativeId, categoryMappings, marketCategoryId, detailOverride]);
 
   async function saveSnapshotToServer() {
     if (!result || !product) return;
@@ -333,6 +341,7 @@ export default function PipelinePage() {
             developerMode,
             platformSettings: {},
             categoryMappings: categoryMappings ?? undefined,
+            detailOverride,
             // MARKET-CATEGORY-1 — 셀러가 고른 조사 카테고리. 이 필드가 서버에
             // 도착해야 분석 직후 국내 조사와 이후 "지금 확인"이 같은 사이트
             // 집합을 뒤진다(api/snapshots/route.ts 참고).
@@ -1090,6 +1099,8 @@ export default function PipelinePage() {
             jobKey={jobKey}
             initialCategoryMappings={categoryMappings ?? undefined}
             onCategoryMappingsChange={setCategoryMappings}
+            initialDetailOverride={detailOverride}
+            onDetailOverrideChange={setDetailOverride}
             categoryCachePriming={categoryCachePriming}
             priceCheckPriming={priceCheckPriming}
           />

@@ -42,6 +42,8 @@ import {
   type NaverPayloadValidationResult,
   type NaverProductRegistrationPayload,
   type BulkReferenceField,
+  type DetailPageBlock,
+  type ProductDetailOverride,
   type PlatformConnectionStatus,
   type RegistrationHistoryEntry,
 } from "@commerce/listing";
@@ -95,6 +97,7 @@ import {
   type LotteOnValidationSnapshot,
 } from "./commerce/lotteon-channel-form";
 import { MissingFieldsBulkPanel } from "./commerce/MissingFieldsBulkPanel";
+import { ProductDetailBlocksPanel } from "./commerce/ProductDetailBlocksPanel";
 import type { NaverResolveResponse } from "./commerce/NaverPayloadPreview";
 import { PlatformPreview } from "./commerce/PlatformPreview";
 import { useManufacturerResolution } from "./commerce/use-manufacturer-resolution";
@@ -267,6 +270,8 @@ export function CommerceWorkspace({
   jobKey,
   initialCategoryMappings,
   onCategoryMappingsChange,
+  initialDetailOverride,
+  onDetailOverrideChange,
   categoryCachePriming,
   priceCheckPriming,
 }: {
@@ -315,6 +320,10 @@ export function CommerceWorkspace({
    * 완전히 옮기면 변경 범위가 커진다). */
   initialCategoryMappings?: Record<PlatformId, CategorySelection>;
   onCategoryMappingsChange?: (mappings: Record<PlatformId, CategorySelection>) => void;
+  /** PRODUCT-INFO-UX-06 — 상품별 상세페이지 override. categoryMappings 와 «같은»
+   * 방식으로 page.tsx 에 미러링해서 스냅샷 workspace 에 저장한다. */
+  initialDetailOverride?: ProductDetailOverride;
+  onDetailOverrideChange?: (override: ProductDetailOverride | undefined) => void;
   /** P-13C-2 NEXT Sprint 2(CPO 지시, 2026-09-01) — page.tsx가 스냅샷 최초 저장
    * 직후 백그라운드로 categoryRecommendationCache를 확보하는 중(fetch가 아직
    * 안 끝남)에는 true다. 이 값이 true인 동안 쿠팡 탭 자동 하이드레이트
@@ -828,6 +837,20 @@ export function CommerceWorkspace({
   const [categoryMappings, setCategoryMappings] = useState(
     () => initialCategoryMappings ?? INITIAL_CATEGORY_MAPPINGS,
   );
+  /* PRODUCT-INFO-UX-06 — 상품별 상세페이지 override. 🔴 블록 배열이 아니라
+     «바꾼 것만» 담는 delta 다(packages/listing/src/common/detail-override.ts). */
+  const [detailOverride, setDetailOverride] = useState<ProductDetailOverride | undefined>(
+    () => initialDetailOverride,
+  );
+  /* 🔴 편집기의 «기준선». 서버(resolve-context.ts)가 override 를 적용하지 «않은»
+     셀러 공통 구성을 따로 내려준다 — 이것이 없으면 화면이 「무엇이 공통이고
+     무엇을 내가 바꿨나」를 가를 수 없다. 서버가 안 내려주면 패널을 숨긴다
+     (추측해서 기본값을 그려 넣지 않는다). */
+  const [sellerDefaultDetailBlocks, setSellerDefaultDetailBlocks] = useState<DetailPageBlock[] | null>(null);
+  useEffect(() => {
+    onDetailOverrideChange?.(detailOverride);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detailOverride]);
   // N-3.12 Phase 2 P0① — page.tsx로 미러링해서 스냅샷에 저장한다(위 props 주석 참고).
   useEffect(() => {
     onCategoryMappingsChange?.(categoryMappings);
@@ -2832,6 +2855,7 @@ export function CommerceWorkspace({
             setSmartStoreValidationLoading(false);
             return;
           }
+          setSellerDefaultDetailBlocks(data.detailPage.sellerDefaultDetailBlocks ?? null);
           const releaseAddressBookNo = data.address.releaseAddressBookNo;
           const refundAddressBookNo = data.address.refundAddressBookNo;
           const childCertificationInfoId = data.category?.childCertificationInfoId ?? null;
@@ -3771,6 +3795,20 @@ export function CommerceWorkspace({
                       product={product}
                       onBulkApply={bulkSetFieldReference}
                     />
+                    {/* ══ PRODUCT-INFO-UX-06 ⑤ (CEO 확정, 2026-10-03) ════════
+                        이 상품만 상세페이지를 바꾼다. 🔴 설정 화면이 이미
+                        「상품 등록 화면에서 이 상품만 다르게 바꿀 수도 있습니다」
+                        라고 약속해 뒀는데 그 화면이 없었다.
+                        🔴 커머스 탭이 아니라 «상품정보» 탭에 둔다 — 상세페이지는
+                        세 채널 공통이고, CEO 지시(2026-08-24)가 채널별 이미지
+                        관리를 일부러 걷어낸 자리다. */}
+                    {sellerDefaultDetailBlocks && (
+                      <ProductDetailBlocksPanel
+                        sellerDefaultBlocks={sellerDefaultDetailBlocks}
+                        override={detailOverride}
+                        onChange={setDetailOverride}
+                      />
+                    )}
                     {/* ══ URGENT ④ (CPO 확정, 2026-10-03) ═══════════════════
                         🔴 문구에 「AI」를 쓰지 않는다 — 이것은 LLM 이 아니라
                         기존 상품 데이터(브랜드·종류·소재·옵션·원문)를 조립하는
