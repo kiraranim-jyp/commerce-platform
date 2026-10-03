@@ -133,8 +133,20 @@ describe("MI-COUPANG-IMAGE-WARNING-03 — 어댑터 경고 → 준비도", () =>
     const clean = readinessOf([REP_OK, image({ id: "a1", originalUrl: "https://a/1.jpg" })]);
     const warned = readinessOf([REP_OK, image({ id: "0004", originalUrl: DATA_URI })]);
     expect(warned.summary.allRequiredPassed).toBe(clean.summary.allRequiredPassed);
-    /* 화면의 실제 게이트(CommerceWorkspace.tsx:2934)는 ERROR 만 본다. */
-    expect(warned.listing.validations.every((v) => v.status !== "ERROR")).toBe(true);
+    /* 화면의 실제 게이트(CommerceWorkspace.tsx:2934)는 ERROR 만 본다.
+       🔴 「ERROR 가 0건」으로 재지 «않는다» — 이 fixture 는 UNRESOLVED_CATEGORY 를
+       쓰고, SELLER-UX-FINAL 에서 카테고리 미확정이 WARNING→ERROR 로 올라갔다
+       (실제로 CP001 로 등록이 막히므로). 그것은 이 테스트가 재려는 「이미지 경고」와
+       무관하다. 재야 하는 것은 **경고가 ERROR 를 «늘리지» 않는가** 이므로 정상
+       상품과 ERROR 목록이 같은지를 본다 — 「0건」보다 강한 단정이다. */
+    const errorFields = (r: typeof warned) =>
+      r.listing.validations
+        .filter((v) => v.status === "ERROR")
+        .map((v) => v.field)
+        .sort();
+    expect(errorFields(warned)).toEqual(errorFields(clean));
+    /* 그리고 그 목록에 이미지 규칙이 들어 있지 않다. */
+    expect(errorFields(warned).filter((f) => f.toLowerCase().includes("image"))).toEqual([]);
   });
 
   it("🔴 대표 오류는 여전히 required 로 막는다", () => {

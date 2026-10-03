@@ -31,7 +31,22 @@ export function categoryFieldRule(categorySelection: CategorySelection): FieldRu
     field: "category",
     label: "카테고리",
     check: () => isVerifiedCategorySelected(categorySelection),
-    onFail: "WARNING",
+    /* ══ SELLER-UX-FINAL PHASE 4 (CEO 지시 2026-10-03) ════════════════════════
+       🔴 `WARNING` 이었다. 그런데 이 검사가 실패하면 등록이 «실제로 막힌다» —
+       `resolveVerifiedCategoryCode()` 가 null 을 돌려주고,
+       `missingSellerConfigFields()` 가 「쿠팡 카테고리 코드」를 missing 에 넣고,
+       `classifyMissingSellerConfig()` 가 **CP001** 로 등록을 끝낸다.
+
+       즉 화면은 🟡「확인 필요」라고 말하는데 실제로는 🔴「등록 불가」였다.
+       「등록을 막는 것과 봐야 하는 것을 다른 말로 적는다」가 이번 요구사항의
+       ① 이고, 이 한 줄이 그것을 정면으로 어기고 있었다. 바로 위 함수 주석이
+       이미 *"API가 CP001(카테고리 코드 없음)로 거부"* 라고 적어 두고 있었다 —
+       근거가 코드 안에 있었는데 등급만 틀려 있었다.
+
+       🔴 세 어댑터가 모두 이 규칙 하나를 쓰고, 세 채널 모두 플랫폼이 실제로
+       돌려준 카테고리 코드 없이는 등록할 수 없다. 그래서 채널별로 가르지 않고
+       공통으로 올린다. */
+    onFail: "ERROR",
     message: !isSelected
       ? categorySelection.state === "RECOMMENDED"
         ? "추천된 카테고리를 확인하고 선택해주세요."

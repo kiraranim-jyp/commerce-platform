@@ -73,11 +73,16 @@ describe("① 🔴 셀러가 채운 값은 «사라지지 않는다»", () => {
     expect(fact.quantity).toBe(12);
   });
 
-  it("다 채우면 쿠팡에 ERROR 가 하나도 남지 않는다(카테고리는 별도 게이트)", () => {
+  it("다 채우면 쿠팡에 남는 ERROR 가 «카테고리 하나» 다 — 상품 값은 전부 채워졌다", () => {
+    /* 🔴 이 테스트 이름은 전부터 「카테고리는 별도 게이트」라고 적어 뒀는데 단정은
+       `[]` 였다 — 그때 카테고리가 WARNING 이었기 때문이다. SELLER-UX-FINAL 에서
+       그것을 ERROR 로 올렸다(미확정이면 실제로 CP001 로 등록이 막힌다). 그래서
+       이제 그 약속을 «단정으로» 적는다: 남는 ERROR 는 카테고리 하나여야 하고,
+       상품정보에서 채울 수 있는 것은 하나도 남지 않아야 한다 — `[]` 보다 강하다. */
     const errors = coupang(filledProduct())
       .validations.filter((v) => v.status === "ERROR")
       .map((v) => v.label);
-    expect(errors).toEqual([]);
+    expect(errors).toEqual(["카테고리"]);
   });
 
   /* 🔴 롯데ON 에 남는 차단은 «전부» 채널이 발급하는 코드다. 상품정보에서 채울
