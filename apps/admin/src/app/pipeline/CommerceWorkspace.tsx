@@ -96,6 +96,12 @@ import {
   toLotteOnChannelPayload,
   type LotteOnValidationSnapshot,
 } from "./commerce/lotteon-channel-form";
+/* 🔴 `@/lib/seller-settings` 가 아니라 `-messages` 다 — 전자는 supabase-admin 을
+   끌고 와서 클라이언트 번들을 깨뜨린다(실측: build 실패). */
+import {
+  SELLER_SETTINGS_UNAVAILABLE_MESSAGE,
+  SELLER_SETTINGS_UNAVAILABLE_RESOLUTION,
+} from "@/lib/seller-settings-messages";
 import { MissingFieldsBulkPanel } from "./commerce/MissingFieldsBulkPanel";
 import { ProductDetailBlocksPanel } from "./commerce/ProductDetailBlocksPanel";
 import type { NaverResolveResponse } from "./commerce/NaverPayloadPreview";
@@ -2355,11 +2361,17 @@ export function CommerceWorkspace({
             } else {
               setPayloadPreview(null);
               setPayloadPreviewUnavailableReason(
+                /* 🔴 PHASE 3 — `SELLER_SETTINGS_UNAVAILABLE` 이 마지막 폴백으로
+                   떨어져 「Payload를 생성하지 못했습니다」가 됐다. 그것은 조립
+                   실패가 «아니고» 판매자 정보 «읽기» 실패다 — 셀러가 상품
+                   데이터를 고치러 가게 만드는 문구였다. */
                 data.reason === "NOT_CONFIGURED"
                   ? "쿠팡 인증 정보가 설정되어 있지 않습니다."
                   : data.reason === "NO_SELLER_PROFILE"
                     ? "배송 프로필이 아직 없습니다 — 설정 페이지에서 먼저 만들어주세요."
-                    : (data.error ?? "Payload를 생성하지 못했습니다."),
+                    : data.reason === "SELLER_SETTINGS_UNAVAILABLE"
+                      ? `${SELLER_SETTINGS_UNAVAILABLE_MESSAGE} ${SELLER_SETTINGS_UNAVAILABLE_RESOLUTION}`
+                      : (data.error ?? "Payload를 생성하지 못했습니다."),
               );
             }
           },
@@ -2847,10 +2859,27 @@ export function CommerceWorkspace({
             /* 🔴 F-14-3 — payload 도 «비운다». 남겨 두면 수정 화면이 지금 화면과
                다른 값을 「보낼 값」이라고 보여준다. */
             setSmartStorePayload(null);
+            /* ══ SELLER-UX-FINAL PHASE 3 (CEO 지시 2026-10-03) ══════════════
+               🔴 `AUTH_FAILED` «만» 문구를 만들고 나머지는 null 로 떨어뜨리고
+               있었다. 그래서 「판매자 정보를 읽지 못했다」(DB 장애)일 때 화면이
+               **아무 말도 하지 않았다** — readiness 가 갱신되지 않는 이유를
+               셀러가 알 길이 없었다.
+
+               🔴 서버는 이미 넷을 갈라 돌려준다(resolve-context.ts:51-57).
+               새 상태를 만들지 않고 그 구분을 화면에 그대로 옮긴다.
+
+               🔴 `SELLER_SETTINGS_UNAVAILABLE` 은 「설정이 비었다」가 아니라
+               「읽지 못했다」다(seller-settings.ts:91-98 — *「이 둘을 같게
+               취급하면 DB 장애가 「설정이 비었네」로 둔갑한다」*). 그래서
+               「설정을 채우세요」라고 말하지 «않고» 재시도를 안내한다. */
             setSmartStoreValidationError(
               data.status === "AUTH_FAILED"
                 ? `네이버 연결에 실패했습니다: ${data.message}`
-                : null,
+                : data.status === "SELLER_SETTINGS_UNAVAILABLE"
+                  ? `${data.message} ${SELLER_SETTINGS_UNAVAILABLE_RESOLUTION}`
+                  : data.status === "NOT_CONFIGURED"
+                    ? `${data.message} 설정 > 커머스 계정 관리에서 네이버 인증 정보를 먼저 등록해 주세요.`
+                    : null,
             );
             setSmartStoreValidationLoading(false);
             return;

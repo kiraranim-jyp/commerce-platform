@@ -333,11 +333,15 @@ export async function loadSellerSettings(workspaceId?: string | null): Promise<R
   return { ...EMPTY_SELLER_SETTINGS, source: "NONE", failed: false };
 }
 
-/** 등록 경로가 셀러에게 보여 줄 한 줄. 세 채널이 같은 글자를 쓴다. */
-export const SELLER_SETTINGS_UNAVAILABLE_MESSAGE =
-  "판매자 정보를 확인하지 못해 등록을 진행할 수 없습니다.";
-export const SELLER_SETTINGS_UNAVAILABLE_RESOLUTION =
-  "잠시 후 다시 시도해주세요. 계속되면 고객센터로 알려주세요.";
+/* 🔴 문구는 `seller-settings-messages.ts`(import 0건)에 있고 여기서 그대로
+   re-export 한다. 이 파일은 `supabase-admin` 을 끌고 오므로 클라이언트
+   컴포넌트가 import 할 수 없다 — 화면이 같은 글자를 쓰려면 문구가 서버 의존
+   없는 자리에 있어야 한다(그렇게 하지 않았다가 build 가 깨졌다).
+   기존 서버 import 경로(`@/lib/seller-settings`)는 한 줄도 바뀌지 않는다. */
+export {
+  SELLER_SETTINGS_UNAVAILABLE_MESSAGE,
+  SELLER_SETTINGS_UNAVAILABLE_RESOLUTION,
+} from "./seller-settings-messages";
 
 /** 설정 화면이 보내는 일곱 칸. 배송·가격·상세페이지는 여기에 «속하지 않는다». */
 export const SELLER_SETTING_KEYS = [
