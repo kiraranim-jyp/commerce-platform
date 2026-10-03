@@ -22,6 +22,7 @@ import {
 } from "@commerce/listing";
 import { buildChannelPriceAuditRecord } from "@/lib/channel-price-audit";
 import { requireRegistrationAccess } from "@/lib/auth/require-registration-access";
+import { loadProductDetailOverride } from "@/lib/product-detail-override";
 import { createGateMessage, resolveCreateGate, resolveLifecycle } from "@/app/pipeline/commerce/channel-lifecycle";
 import {
   findChannelProductBySnapshot,
@@ -380,11 +381,16 @@ export async function POST(request: Request) {
   // 공유하지 않으면 한쪽만 고치고 다른 쪽을 놓치는 드리프트 위험이 있다(오늘
   // registration-report.ts에서 실제로 같은 종류의 버그가 있었다). 이미 발급된
   // accessToken을 그대로 넘겨 불필요한 재발급 API 호출은 만들지 않는다.
+  /* PRODUCT-INFO-UX-06 — 상품별 상세페이지 override. 🔴 서버가 DB 에서 읽고
+     resolveNaverContext 하나에만 넘긴다 — 그 함수가 Preview·실등록·readiness
+     세 곳의 유일한 통로라서 세 곳이 자동으로 같은 값을 본다. */
+  const detailOverride = await loadProductDetailOverride(snapshotId, access.user.workspaceId);
   const context = await resolveNaverContext({
     categoryId: leafCategoryId,
     countryOfOrigin: product.countryOfOrigin.value || null,
     brand: product.brand.value || null,
     accessToken,
+    detailOverride,
   });
   /* 🔴 PIVOT-03 R6-FS — 아래 일반 분기보다 «앞» 에 둔다. 저쪽은 step 을
      AUTHENTICATION 으로, retryable 을 false 로 박아 두는데 이건 인증 문제도

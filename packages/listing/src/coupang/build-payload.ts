@@ -449,7 +449,19 @@ export type DetailPageBlock =
   | { id: string; kind: "COMMON_IMAGE"; position: "top" | "bottom"; enabled: boolean }
   | { id: string; kind: "SIZE_CHART_IMAGES"; enabled: boolean }
   | { id: string; kind: "PRODUCT_IMAGES"; enabled: boolean }
-  | { id: string; kind: "CUSTOM_TEXT"; content: string; enabled: boolean };
+  | {
+      id: string;
+      kind: "CUSTOM_TEXT";
+      content: string;
+      enabled: boolean;
+      /** PRODUCT-INFO-UX-06 — 상품별 override 가 이 블록을 가리키는 «안정» 식별자.
+       * `id` 는 `defaultDetailBlocks()` 가 `default-${seq++}` 로 매번 새로 만들어
+       * override 키로 쓸 수 없다. `CUSTOM_TEXT` 만 같은 종류를 여러 개 넣을 수
+       * 있어 kind 로도 구분되지 않으므로 이 블록 하나에만 둔다
+       * (common/detail-override.ts 주석 참고). 이 기능 이전에 저장된 셀러
+       * 기본값에는 없으므로 optional 이고, 없으면 순서 기반 폴백을 쓴다. */
+      customTextId?: string;
+    };
 
 const TEMPLATE_SECTION_LABELS: Record<
   Extract<DetailPageBlock, { kind: "TEMPLATE_SECTION" }>["section"],

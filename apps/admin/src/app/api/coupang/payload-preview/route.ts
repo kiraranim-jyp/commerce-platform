@@ -4,7 +4,7 @@ import type { CanonicalProduct } from "@commerce/shared";
 import {
   buildComplianceReport,
   buildCoupangPayload,
-  resolveDetailBlocks,
+  resolveProductDetailBlocks,
   resolveVerifiedCategoryCode,
   toCoupangBinding,
 } from "@commerce/listing";
@@ -17,6 +17,7 @@ import { fetchCategoryMeta } from "../_lib/category-meta";
 import { resolveBrand } from "../_lib/brand";
 import { loadSellerSettings } from "@/lib/seller-settings";
 import { requireRegistrationAccess } from "@/lib/auth/require-registration-access";
+import { loadProductDetailOverride } from "@/lib/product-detail-override";
 
 /**
  * Sprint A-3(작업6 — Payload Preview) — CPO 요구사항: "등록 버튼을 누르는 순간
@@ -40,13 +41,20 @@ export async function POST(request: Request) {
 
      🔴 순서가 이 작업의 전부다: 범위 격리(C-1b) → 접근 차단(여기) →
      기본값 저장(C-2). 가드가 없으면 C-2 가 저장할 값이 인증 없이 읽힌다. */
-  const access = await requireRegistrationAccess(null);
-  if (!access.ok) return access.response;
-
+  /* 🔴 PRODUCT-INFO-UX-06 — snapshotId 를 «먼저» 읽어 가드에 넘긴다. 이전에는
+     null 을 주어 ③스냅샷 소유권 검사가 돌지 않았다(위 주석의 "snapshotId 가
+     오지 않는 경로"). 상품별 상세페이지 override 를 읽으려면 어느 상품인지
+     알아야 하고, 그러면 그 검사를 «켤 수 있다» — 가드가 약해지지 않고 강해진다.
+     🔴 body 에서 받는 것은 id 하나이고 블록이 아니다. 내용은 서버가 DB 에서
+     읽는다(N-3.86 의 「클라이언트 블록을 읽지 않는다」가 그대로 유지된다). */
   const body = (await request.json().catch(() => null)) as {
     product?: CanonicalProduct;
     listing?: ListingModel;
+    snapshotId?: string | null;
   } | null;
+
+  const access = await requireRegistrationAccess(body?.snapshotId ?? null);
+  if (!access.ok) return access.response;
 
   if (!body?.product || !body?.listing) {
     return NextResponse.json({ error: "product와 listing이 필요합니다." }, { status: 400 });
@@ -65,6 +73,8 @@ export async function POST(request: Request) {
      비어 있는 동안에는 loadSellerSettings 안의 «임시 호환층» 이 기존 프로필을
      읽는다 — 전환 중에 쿠팡 실등록 경로가 한 번도 끊기지 않게 하려는 것이고,
      안정화 뒤 제거한다(PIVOT-03 ⑨). */
+  /* PRODUCT-INFO-UX-06 — 미리보기가 실등록과 «같은» 블록을 쓴다. */
+  const detailOverride = await loadProductDetailOverride(body.snapshotId ?? null, access.user.workspaceId);
   const sellerSettings = await loadSellerSettings();
   if (!sellerProfile) {
     return NextResponse.json({ payload: null, reason: "NO_SELLER_PROFILE" });
@@ -132,7 +142,7 @@ export async function POST(request: Request) {
     // N-3.86 STEP3(대표님 지시) — 클라이언트가 보낸 detailBlocks는 더 이상
     // 읽지 않는다. register/route.ts와 동일하게 resolveDetailBlocks()로
     // sellerProfile.defaultDetailBlocks를 직접 조회해서 조립한다.
-    detailBlocks: resolveDetailBlocks(sellerProfile.defaultDetailBlocks),
+    detailBlocks: resolveProductDetailBlocks(sellerProfile.defaultDetailBlocks, detailOverride),
   });
 
   const attributeResults = payload.complianceFieldResults.filter((r) => r.kind === "ATTRIBUTE");

@@ -4,7 +4,7 @@ import type { CanonicalProduct, ErrorCode } from "@commerce/shared";
 import {
   buildComplianceReport,
   buildCoupangPayload,
-  resolveDetailBlocks,
+  resolveProductDetailBlocks,
   resolveVerifiedCategoryCode,
   validateCoupangPricing,
   type ComplianceReport,
@@ -12,6 +12,7 @@ import {
   toCoupangBinding,
 } from "@commerce/listing";
 import type { ListingResult, RegistrationStepLog } from "@commerce/listing";
+import { loadProductDetailOverride } from "@/lib/product-detail-override";
 import { buildChannelPriceAuditRecord, buildPriceBreakdownSnapshot } from "@/lib/channel-price-audit";
 import { isRegistrationSafeImageUrl } from "@commerce/shared";
 import { requireRegistrationAccess } from "@/lib/auth/require-registration-access";
@@ -497,7 +498,11 @@ export async function POST(request: Request) {
   // N-3.86 STEP3(대표님 지시: "설정이 공통 상세페이지의 유일한 기준") —
   // 클라이언트가 POST한 detailBlocks는 더 이상 읽지 않는다. 서버가 방금 조회한
   // sellerProfile.defaultDetailBlocks만으로 조립 순서를 결정한다.
-  const resolvedDetailBlocks = resolveDetailBlocks(sellerProfile.defaultDetailBlocks);
+  /* PRODUCT-INFO-UX-06 — 상품별 override 를 «서버가» 읽어 얹는다. override 가
+     없으면 resolveProductDetailBlocks 가 기존 배열을 그대로 돌려주므로 payload
+     가 byte 단위로 같다(클라이언트가 보낸 블록은 여전히 읽지 않는다). */
+  const detailOverride = await loadProductDetailOverride(snapshotId, access.user.workspaceId);
+  const resolvedDetailBlocks = resolveProductDetailBlocks(sellerProfile.defaultDetailBlocks, detailOverride);
 
   const descriptionTemplate = await getDefaultDescriptionTemplate();
   logStep(

@@ -1,6 +1,7 @@
 import {
   assembleNaverDetailContent,
-  resolveDetailBlocks,
+  resolveProductDetailBlocks,
+  type ProductDetailOverride,
   resolveLotteOnShipBudgetDays,
   BLANK_LOTTEON_CHANNEL_CONFIG,
   buildLotteOnSalePeriod,
@@ -118,6 +119,8 @@ async function buildDetailHtml(
   /* REWORK-10 A — 호출부가 이미 읽어 둔 브랜드 프로필을 그대로 받는다(여기서
      다시 조회하면 같은 요청 안에서 DB를 두 번 왕복한다). */
   brandProfile: { brandIntro: string } | null,
+  /** PRODUCT-INFO-UX-06 — 상품별 override. 없으면 기존과 동일하다. */
+  detailOverride?: ProductDetailOverride | null,
 ): Promise<string> {
   const descriptionTemplate = await getDefaultDescriptionTemplate();
 
@@ -128,7 +131,7 @@ async function buildDetailHtml(
     .filter((image) => image.classification === "SIZE_CHART")
     .map((image) => image.originalUrl);
 
-  return assembleNaverDetailContent(resolveDetailBlocks(sellerProfile?.defaultDetailBlocks), {
+  return assembleNaverDetailContent(resolveProductDetailBlocks(sellerProfile?.defaultDetailBlocks, detailOverride), {
     aiDescription: product.descriptionKo.value || product.description.value,
     template: descriptionTemplate,
     commonImages: {
@@ -163,7 +166,13 @@ export async function buildLotteOnContext(
      읽을 «수 있어야 할» 이유가 없다. */
   product: LotteOnProductInput,
   form: LotteOnChannelFormInput,
-  options?: { liveRates?: Record<string, number>; roundingUnit?: number; now?: Date },
+  options?: {
+    liveRates?: Record<string, number>;
+    roundingUnit?: number;
+    now?: Date;
+    /** PRODUCT-INFO-UX-06 — 상품별 상세페이지 override. 없으면 기존과 동일. */
+    detailOverride?: ProductDetailOverride | null;
+  },
 ): Promise<LotteOnBuildContext> {
   // 거래처 정보는 저장하지 않고 매번 207로 조회한다 — 인증키를 교체했을 때
   // 옛 거래처로 조용히 등록되는 일을 막는다.
@@ -401,7 +410,7 @@ export async function buildLotteOnContext(
     input: {
       product,
       channel,
-      detailHtml: await buildDetailHtml(product, sellerProfile, brandProfile),
+      detailHtml: await buildDetailHtml(product, sellerProfile, brandProfile, options?.detailOverride),
       /* REWORK-10 A — 제조사 폴백(① 상품 원문 → ② 브랜드 프로필 → ③ 판매자
          기본정보). 판정은 buildLotteOnPayload 안의 공통 resolveManufacturer()가
          한다 — 여기서는 값을 읽어 넘기기만 한다. */

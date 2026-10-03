@@ -2,7 +2,8 @@ import {
   buildNaverCategoryPath,
   resolveCommonOrigin,
   resolveManufacturer,
-  resolveDetailBlocks,
+  resolveProductDetailBlocks,
+  type ProductDetailOverride,
   resolveNaverOriginArea,
 } from "@commerce/listing";
 import { getNaverCredentials } from "./env";
@@ -65,6 +66,11 @@ export async function resolveNaverContext(params: {
    * 재사용한다(없으면 기존처럼 이 함수가 직접 발급한다 — /api/naver/resolve
    * route처럼 토큰이 아직 없는 호출부는 그대로 동작). */
   accessToken?: string;
+  /** PRODUCT-INFO-UX-06 — 상품별 상세페이지 override. 🔴 넘기지 않으면(또는
+   * null) 기존과 «완전히 같은» 블록이 나온다 — mergeProductDetailBlocks 가
+   * 입력 배열을 그대로 돌려준다. 내용은 서버가 DB 에서 읽은 것이고 클라이언트가
+   * 보낸 블록이 아니다(loadProductDetailOverride 주석 참고). */
+  detailOverride?: ProductDetailOverride | null;
 }): Promise<NaverResolveResult> {
   const { categoryId, countryOfOrigin: extractedCountryOfOrigin, brand: brandName, accessToken: providedAccessToken } = params;
 
@@ -264,7 +270,7 @@ export async function resolveNaverContext(params: {
       // readiness(compute-readiness.ts) 세 곳 모두 이 함수 하나를 거치므로,
       // 여기 한 곳에서만 resolveDetailBlocks()를 호출하면 세 곳 모두 항상
       // 동일한 값을 쓰게 된다 — 클라이언트가 보낸 detailBlocks는 더 이상 읽지 않는다.
-      detailBlocks: resolveDetailBlocks(sellerProfile?.defaultDetailBlocks),
+      detailBlocks: resolveProductDetailBlocks(sellerProfile?.defaultDetailBlocks, params.detailOverride),
     },
   };
 }

@@ -63,6 +63,7 @@ export async function GET(request: Request) {
             snapshot.id,
             product,
             snapshot.workspace.categoryMappings,
+            snapshot.workspace.detailOverride,
           );
           const priorityTier = classifyPriorityTier(snapshot.status, readiness);
           return {

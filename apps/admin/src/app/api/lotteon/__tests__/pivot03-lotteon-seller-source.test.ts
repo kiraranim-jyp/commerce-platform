@@ -119,7 +119,12 @@ describe("③ 배송 프로필은 그대로 남는다", () => {
   it("상세페이지 조립에 같은 프로필을 그대로 넘긴다", () => {
     // 셀러 설정을 한 번만 읽어서 상세페이지와 배송값이 같은 프로필을 보게
     // 한다는 기존 계약(REWORK 커머스 탭 구조 통일)을 깨지 않는다.
-    expect(SOURCE).toContain("buildDetailHtml(product, sellerProfile, brandProfile)");
+    /* 🔴 PRODUCT-INFO-UX-06 — 네 번째 인자(상품별 상세페이지 override)가 붙었다.
+       이 계약이 지키는 것은 「상세페이지 조립이 «같은» 프로필을 그대로 받는다」
+       이지 인자 개수가 아니다. 앞의 세 인자를 그대로 확인하고, 네 번째가
+       셀러 프로필을 «대체하지» 않는다는 것까지 본다. */
+    expect(SOURCE).toContain("buildDetailHtml(product, sellerProfile, brandProfile,");
+    expect(SOURCE).toContain("options?.detailOverride");
   });
 });
 

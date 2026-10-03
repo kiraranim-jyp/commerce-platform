@@ -1,5 +1,5 @@
 import type { CategoryProfileId, CategorySelection } from "@commerce/category";
-import type { DetailPageBlock } from "@commerce/listing";
+import type { DetailPageBlock, ProductDetailOverride } from "@commerce/listing";
 import type { CanonicalProduct, PlatformId, ProductMetadata } from "@commerce/shared";
 import type { ProcessingReport, WorkspaceItem } from "../../pipeline/response.types";
 
@@ -45,6 +45,18 @@ export interface SnapshotWorkspaceState {
   /** Detail Page Editor(2026-08-04) — 없으면(레거시 세션) defaultDetailBlocks()로
    * 대체한다(apps/admin/src/app/pipeline/commerce/detail-blocks.ts). */
   detailBlocks?: DetailPageBlock[];
+  /**
+   * PRODUCT-INFO-UX-06(CEO 확정, 2026-10-03) — 상품 «하나» 의 상세페이지 편집.
+   *
+   * 🔴 블록 배열을 통째로 담지 «않는다». N-3.86 이 상품별 detailBlocks 를 끊은
+   * 이유(「설정이 공통 상세페이지의 유일한 기준」)가 그대로 유효해서, 상품은
+   * 셀러 설정과 «다른 것만» delta 로 갖는다. 그래서 이 키가 없으면 payload 가
+   * 기존과 byte 단위로 같다(packages/listing/src/common/detail-override.ts).
+   *
+   * 🔴 새 컬럼/새 테이블을 만들지 않는다 — 바로 위 detailBlocks·categoryMappings·
+   * marketCategory 가 이미 같은 이유로 쓰는 자리다.
+   */
+  detailOverride?: ProductDetailOverride;
   /** N-3.12 Phase 2 P0① — 플랫폼별(coupang/smartstore/elevenst) 카테고리 선택 상태.
    * 없으면(레거시 세션) CommerceWorkspace가 자체 기본값(UNRESOLVED_CATEGORY)으로
    * 대체한다. */

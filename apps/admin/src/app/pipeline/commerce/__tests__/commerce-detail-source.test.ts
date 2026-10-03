@@ -180,7 +180,7 @@ describe("배선 — 롯데ON이 공통 Source를 실제로 부른다(전용 경
   const lotteOn = readSource("app/api/lotteon/_lib/build-context.ts");
 
   it("롯데ON 상세페이지는 공통 조립기 두 개를 그대로 부른다", () => {
-    expect(lotteOn).toContain("assembleNaverDetailContent(resolveDetailBlocks(");
+    expect(lotteOn).toContain("assembleNaverDetailContent(resolveProductDetailBlocks(");
   });
 
   it("롯데ON이 읽는 템플릿 · 셀러 설정은 스마트스토어/쿠팡과 같은 저장소다", () => {

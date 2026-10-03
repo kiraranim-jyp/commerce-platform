@@ -8,6 +8,7 @@ import {
 } from "@commerce/listing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { requireRegistrationAccess } from "@/lib/auth/require-registration-access";
+import { loadProductDetailOverride } from "@/lib/product-detail-override";
 import { getLotteOnCredentials } from "../_lib/env";
 import { callLotteOnApi, LOTTEON_WRITE_PATHS } from "../_lib/client";
 import { classifyLotteOnHttpStatus } from "../_lib/connection-error";
@@ -157,9 +158,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, result });
   }
 
+  /* PRODUCT-INFO-UX-06 — 상품별 상세페이지 override. 🔴 서버가 DB 에서 읽는다.
+     없으면 기존과 «문자 단위로» 같은 상세 HTML 이 나온다(스마트스토어와 같은
+     merge 함수 하나를 통과하므로 둘의 일치 계약도 그대로 유지된다). */
+  const detailOverride = await loadProductDetailOverride(snapshotId, access.user.workspaceId);
   const context = await buildLotteOnContext(body.product, body.channel ?? {}, {
     liveRates: body.liveRates,
     roundingUnit: body.roundingUnit,
+    detailOverride,
   });
 
   /* 🔴 PIVOT-03 R6-FS — 검증보다 «앞» 이다. 아래 validateLotteOnPayload 는

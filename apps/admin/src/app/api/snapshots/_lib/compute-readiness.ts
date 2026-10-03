@@ -1,6 +1,6 @@
 import { PLATFORM_ADAPTERS, isVerifiedCategorySelected } from "@commerce/marketplace";
 import { UNRESOLVED_CATEGORY, type CategorySelection } from "@commerce/category";
-import { buildNaverProductPayload, validateNaverPayload } from "@commerce/listing";
+import { buildNaverProductPayload, validateNaverPayload, type ProductDetailOverride } from "@commerce/listing";
 import type { CanonicalProduct, PlatformId } from "@commerce/shared";
 import {
   computePriceDecision,
@@ -239,6 +239,8 @@ async function computeSmartstoreReadiness(
   product: CanonicalProduct,
   category: CategorySelection,
   registered: boolean,
+  /** PRODUCT-INFO-UX-06 — 없으면 기존과 동일한 블록이 나온다. */
+  detailOverride?: ProductDetailOverride | null,
 ): Promise<PlatformReadiness> {
   const categoryConfirmed = isVerifiedCategorySelected(category);
   const leafCategoryId = categoryConfirmed && category.candidate?.platform === "smartstore" ? category.candidate.id : "";
@@ -247,6 +249,7 @@ async function computeSmartstoreReadiness(
     categoryId: leafCategoryId || null,
     countryOfOrigin: product.countryOfOrigin.value || null,
     brand: product.brand.value || null,
+    detailOverride,
   });
 
   if (context.status !== "OK") {
@@ -397,6 +400,9 @@ export async function computeSnapshotReadiness(
   snapshotId: string,
   product: CanonicalProduct,
   categoryMappings: Partial<Record<PlatformId, CategorySelection>> | undefined,
+  /* PRODUCT-INFO-UX-06 — 호출부가 이미 읽어 둔 workspace 에서 그대로 받는다
+     (여기서 다시 조회하면 대시보드가 스냅샷마다 DB 를 한 번 더 왕복한다). */
+  detailOverride?: ProductDetailOverride | null,
 ): Promise<SnapshotReadiness> {
   const priceValid = product.priceValidity === "VALID";
   const [registeredPlatforms, price] = await Promise.all([
@@ -409,7 +415,7 @@ export async function computeSnapshotReadiness(
       const category = categoryMappings?.[platform] ?? UNRESOLVED_CATEGORY;
       const registered = registeredPlatforms.has(platform);
       if (platform === "smartstore") {
-        return computeSmartstoreReadiness(product, category, registered);
+        return computeSmartstoreReadiness(product, category, registered, detailOverride);
       }
       return computeMarketplaceReadiness(product, category, platform, registered);
     }),

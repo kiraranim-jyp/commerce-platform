@@ -6,6 +6,7 @@ import { LOTTEON_READ_PATHS } from "../_lib/client";
 import { runLotteOnRead } from "../_lib/request";
 import { recordAuditLog } from "@/lib/audit-log";
 import { requireRegistrationAccess } from "@/lib/auth/require-registration-access";
+import { loadProductDetailOverride } from "@/lib/product-detail-override";
 
 /**
  * LOTTEON COMMERCE SPRINT 2 Phase 3 — Payload Preview(읽기 전용, 부작용 0).
@@ -265,23 +266,35 @@ export async function POST(request: Request) {
 
      🔴 순서가 이 작업의 전부다: 범위 격리(C-1b) → 접근 차단(여기) →
      기본값 저장(C-2). 가드가 없으면 C-2 가 저장할 값이 인증 없이 읽힌다. */
-  const access = await requireRegistrationAccess(null);
-  if (!access.ok) return access.response;
-
+  /* 🔴 PRODUCT-INFO-UX-06 — body 를 «먼저» 읽어 snapshotId 를 가드에 넘긴다.
+     이전에는 null 을 주어 ③스냅샷 소유권 검사가 돌지 않았다(위 주석의
+     "snapshotId 가 오지 않는 경로"). 상품별 override 를 읽으려면 어느 상품인지
+     알아야 하고, 그러면 그 검사를 «켤 수 있다» — 가드가 약해지지 않고 강해진다.
+     🔴 body 에서 받는 것은 id 하나이고 블록이 아니다. 내용은 서버가 DB 에서
+     읽는다(N-3.86 의 「클라이언트 블록을 읽지 않는다」가 그대로 유지된다).
+     🔴 JSON 파싱은 부작용이 없다 — 자격증명·판매자 설정을 읽는 호출은 전부
+     가드 «뒤» 에 그대로 남아 있다(commerce6-c1c-preview-access-gate 계약). */
   const body = (await request.json().catch(() => null)) as {
     product?: CanonicalProduct;
     channel?: LotteOnChannelFormInput;
     liveRates?: Record<string, number>;
     roundingUnit?: number;
+    snapshotId?: string | null;
   } | null;
+
+  const access = await requireRegistrationAccess(body?.snapshotId ?? null);
+  if (!access.ok) return access.response;
 
   if (!body?.product) {
     return NextResponse.json({ ok: false, reason: "INVALID_REQUEST", message: "product가 필요합니다." }, { status: 400 });
   }
 
+  /* PRODUCT-INFO-UX-06 — 미리보기가 실등록과 «같은» 상세 HTML 을 보여야 한다. */
+  const detailOverride = await loadProductDetailOverride(body.snapshotId ?? null, access.user.workspaceId);
   const context = await buildLotteOnContext(body.product, body.channel ?? {}, {
     liveRates: body.liveRates,
     roundingUnit: body.roundingUnit,
+    detailOverride,
   });
 
   const validation = validateLotteOnPayload(context.input);
