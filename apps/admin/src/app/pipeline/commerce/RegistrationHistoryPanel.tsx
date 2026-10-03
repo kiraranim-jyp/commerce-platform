@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import type { RegistrationHistoryEntry } from "@commerce/listing";
+import { failedBeforeSending } from "@commerce/listing";
+import { errorStepLabel } from "./ListingSection";
 import { PLATFORM_ADAPTERS } from "@commerce/marketplace";
 
 const COLLAPSED_LIMIT = 5;
@@ -80,7 +82,19 @@ export function RegistrationHistoryPanel({ history }: { history: RegistrationHis
                 · {formatTime(entry.executedAt)}
               </p>
               {entry.result.status === "FAILED" && entry.result.error && (
-                <p className="mt-0.5 text-error">{entry.result.error.message}</p>
+                <>
+                  <p className="mt-0.5 text-error">{entry.result.error.message}</p>
+                  {/* 🔴 SELLER-UX-FINAL PHASE 4 — 이력에서도 「어디서」 실패했는지
+                      말한다. 등록 결과 화면(ListingSection)은 이미 단계를 보여주는데
+                      이력은 메시지 한 줄만 남겨서, 나중에 돌아봤을 때 같은 실패가
+                      값 문제였는지 채널 장애였는지 구분할 수 없었다.
+                      🔴 라벨을 새로 짓지 않고 ListingSection 의 그 함수를 그대로
+                      가져다 쓴다 — 두 화면이 같은 실패를 다른 이름으로 부르면 안 된다. */}
+                  <p className="mt-0.5 text-xs text-text-tertiary">
+                    {failedBeforeSending(entry.result.error.step) ? "전송 전" : "전송 후"} ·{" "}
+                    {errorStepLabel(entry.result.error.step, PLATFORM_ADAPTERS[entry.platform].label)}
+                  </p>
+                </>
               )}
               {/* N-3.70 STEP7 — 위 ListingSection.tsx와 같은 이유로 플랫폼별
                * 라벨을 분기한다(등록 이력에서도 SmartStore 건에 "쿠팡 상품

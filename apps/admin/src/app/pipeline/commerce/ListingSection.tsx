@@ -10,7 +10,7 @@ import type {
   RegistrationStepLog,
   SmartStorePayload,
 } from "@commerce/listing";
-import { buildRegistrationReport } from "@commerce/listing";
+import { buildRegistrationReport, listingFailureOrigin, listingFailureOriginLabel } from "@commerce/listing";
 import type { PlatformId } from "@commerce/shared";
 import { APP_VERSION } from "@/lib/app-version";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
@@ -38,7 +38,7 @@ const STATUS_LABELS: Record<ListingStatus, string> = {
  * 실제로 쓰는 공용 step이라(쿠팡 전용이 아님) 플랫폼 이름을 하드코딩하면
  * SmartStore 실패에도 "쿠팡 연결 확인"이 뜨는 오해를 준다 — platformLabel을
  * 그대로 끼워 넣는다(이 파일이 이미 다른 곳에서 쓰는 패턴과 동일). */
-function errorStepLabel(step: ListingErrorStep, platformLabel: string): string {
+export function errorStepLabel(step: ListingErrorStep, platformLabel: string): string {
   const labels: Record<ListingErrorStep, string> = {
     VALIDATION: "상품 정보 확인",
     CATEGORY: "카테고리 확인",
@@ -343,7 +343,15 @@ export function ListingSection({
             </span>
           )}
         </div>
-        <p className="mt-2 text-xs text-text-secondary">
+        {/* ══ SELLER-UX-FINAL PHASE 4 (CEO 지시 2026-10-03) ══════════════
+            🔴 「보내기 전」과 「보낸 뒤」를 «먼저» 말한다. 이 한 줄이 없으면
+            셀러는 값을 고쳐야 하는지, 고쳐도 안 풀리는 외부 문제인지 모른 채
+            상품 데이터를 계속 손본다. 단계 이름만으로는 그것이 안 갈린다
+            (예: 「이미지 처리」는 이름과 달리 채널 업로드 호출이다). */}
+        <p className="mt-2 text-xs font-medium text-text-primary">
+          {listingFailureOriginLabel(listingFailureOrigin(result.error.step))}
+        </p>
+        <p className="mt-1 text-xs text-text-secondary">
           실패 단계: {errorStepLabel(result.error.step, platformLabel)}
         </p>
         <p className="mt-1 text-xs text-text-secondary">원인: {result.error.message}</p>

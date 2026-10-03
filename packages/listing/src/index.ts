@@ -43,6 +43,8 @@ export * from "./common/logistics";
 // PRODUCT-INFO-UX-06(CEO 확정, 2026-10-03) — 상품별 상세페이지 override.
 // 세 채널이 같은 merge 함수 하나를 본다(common/detail-override.ts 주석 참고).
 export * from "./common/detail-override";
+// SELLER-UX-FINAL PHASE 4 — 「보내기 전」과 「채널이 거부」를 가르는 공용 분류.
+export * from "./failure-origin";
 // LOTTEON COMMERCE SPRINT 2 — 롯데ON은 PlatformId에 들어가지 않는다(CPO 확정).
 // 그래서 registry.ts(PLATFORM_ADAPTERS / LISTING_EXECUTORS)에는 등록하지 않고,
 // 필요한 곳(서버 라우트)이 이 export를 직접 import한다. 기존 export 표면은
