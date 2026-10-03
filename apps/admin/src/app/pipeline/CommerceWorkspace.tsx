@@ -1485,6 +1485,33 @@ export function CommerceWorkspace({
     });
   }
 
+  /* ══ URGENT ④ (CPO 확정, 2026-10-03) ══════════════════════════════════════
+     상품정보 탭의 [상세설명 자동 작성] 전용. 🔴 위 `generateContent` 를 그대로
+     쓰지 «않는다» — 그것은 titleKo·keywords·seoTitle·seoDescription «넷을 더»
+     덮어서, 셀러가 고쳐 둔 한국어 상품명까지 사라진다. 버튼 이름이 「상세설명」인데
+     다른 칸을 바꾸는 것은 화면이 거짓말하는 것이다.
+
+     🔴 새 «생성기» 를 만든 것이 아니다. `generateContent` 가 부르는 바로 그
+     `mockProductContentProvider.generateDescription` 를 그대로 부른다 — 문장을
+     만드는 규칙은 한 곳에 있고, 여기서 다시 쓰지 않는다.
+
+     🔴 셀러가 직접 쓴 문장은 덮지 않는다(source === "USER_EDITED"). 보존 계약이
+     코드에 «없다» 는 것은 확인했지만(테스트 전수 조사), 그렇다고 사람이 쓴 글을
+     버튼 한 번으로 날리는 것은 다른 문제다. 자동으로 만든 값(AI_GENERATED)과
+     빈 값은 다시 쓴다 — 그것이 이 버튼의 목적이다.
+
+     🔴 LLM 을 부르지 않는다. provider 는 브랜드·상품종류·소재·옵션·원문 설명을
+     «조립» 하는 결정론적 템플릿이고, 재료가 하나도 없으면 빈 문자열을 돌려준다
+     (mock.provider.ts:63 — 없는 정보를 지어내지 않는다). */
+  function generateDescriptionOnly() {
+    setProduct((prev) => {
+      if (prev.descriptionKo.source === "USER_EDITED" && prev.descriptionKo.value.trim() !== "") {
+        return prev;
+      }
+      return { ...prev, descriptionKo: mockProductContentProvider.generateDescription(prev) };
+    });
+  }
+
   // N-3.15 Phase 3(STEP 2-C) — Naver 리프 카테고리 4999건과 실제로 대조한
   // 결과(generateNaverCategoryCandidates, packages/listing)를 CategoryCandidate로
   // 변환해서 공유 state로 흘린다. score는 0~100 스케일(scoreCategoryCandidate)이라
@@ -3739,10 +3766,38 @@ export function CommerceWorkspace({
                      본다. 브랜드 프로필이 채운 제조사를 이 목록이 계속 «불러오지
                      못한 항목»으로 세우면, 같은 상품에 대해 화면 두 곳이 반대로
                      말하게 된다. */
-                  <MissingFieldsBulkPanel
-                    product={product}
-                    onBulkApply={bulkSetFieldReference}
-                  />
+                  <>
+                    <MissingFieldsBulkPanel
+                      product={product}
+                      onBulkApply={bulkSetFieldReference}
+                    />
+                    {/* ══ URGENT ④ (CPO 확정, 2026-10-03) ═══════════════════
+                        🔴 문구에 「AI」를 쓰지 않는다 — 이것은 LLM 이 아니라
+                        기존 상품 데이터(브랜드·종류·소재·옵션·원문)를 조립하는
+                        결정론적 템플릿이다. 「AI 로 작성」이라 적으면 셀러가
+                        문장의 출처를 잘못 믿는다.
+                        🔴 content("AI 콘텐츠") 탭은 준비중 그대로 두었다 —
+                        이 버튼은 그 탭을 켜는 것이 아니라 상품정보에서 상세설명
+                        하나만 채우는 자리다. */}
+                    <section className="rounded-lg border border-border p-4 text-sm">
+                      <h3 className="text-base font-medium">상세설명</h3>
+                      <p className="mt-1 text-xs text-text-secondary">
+                        브랜드 · 상품 종류 · 소재 · 옵션 · 원문 설명을 모아 한국어 상세설명을 만듭니다.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={generateDescriptionOnly}
+                        className="mt-3 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white"
+                      >
+                        상세설명 자동 작성
+                      </button>
+                      {product.descriptionKo.value.trim() !== "" && (
+                        <p className="mt-2 whitespace-pre-line text-xs text-text-secondary">
+                          {product.descriptionKo.value}
+                        </p>
+                      )}
+                    </section>
+                  </>
                 ),
               }}
               archive={
