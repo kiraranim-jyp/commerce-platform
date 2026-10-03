@@ -8,6 +8,11 @@ import { selectCoupangNoticeCategory } from "../coupang/build-payload";
 import { buildLotteOnPayload, BLANK_LOTTEON_CHANNEL_CONFIG } from "../lotteon/build-payload";
 import { validateLotteOnPayload } from "../lotteon/validate-payload";
 import { noticeSchemaFor } from "../lotteon/notice-schema";
+/* PHASE 3-1(이번 스프린트) — ②③④ 가 만든 함수를 «그대로» 쓴다. 지어낸 값이 없다. */
+import { resolveCareInstructions } from "../notice/care-instructions";
+import { BULK_REFERENCE_FIELDS, planProductBulkReference } from "../notice/bulk-reference";
+import { resolveProductDetailBlocks } from "../common/detail-override";
+import { assembleNaverDetailContent } from "../naver/build-payload";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -759,5 +764,137 @@ describe("⑤ 지정 상품 — 원산지 하나가 문을 막는다", () => {
     };
     expect(payload.spdLst[0]!.pdItmsInfo?.pdItmsCd).toBe("01");
     expect(payload.spdLst[0]!.pdItmsInfo?.pdItmsArtlLst).toHaveLength(9);
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ⑥ PHASE 3-1 — **이번 스프린트 UX ①~④ 가 이 상품을 실제로 여는가**
+   ══════════════════════════════════════════════════════════════════════════
+
+   ⑤ 가 못박은 차단 3건은 공교롭게도 URGENT UX 번들이 겨냥한 그 셋이다:
+
+       originProduct.detailContent                   ← ④ 상세설명 자동 작성
+       productInfoProvidedNotice(WEAR).caution       ← ③ 케어라벨 참조 기본값
+       productInfoProvidedNotice(WEAR).manufacturer  ← ② 개별 「상세페이지 참조」
+
+   🔴 그래서 「기능을 만들었다」가 아니라 **「그 기능을 통과시킨 뒤 차단이 실제로
+   줄어드는가」** 를 잰다. 줄지 않으면 ①~④ 는 셀러에게 쓸모가 없다.
+
+   🔴 여기서 임의 값을 넣지 않는다. 쓰는 것은 전부 «이번에 만든 함수의 출력» 이다:
+       resolveCareInstructions(null)                    → "케어라벨 참조"
+       mockProductContentProvider 는 listing 에서 못 쓴다(의존 방향) — 그래서
+       descriptionKo 는 ④ 가 채운 «뒤의 상태» 를 모사하지 않고, 상세 블록이
+       실제로 조립된 detailContent 를 넣어 ④ 의 효과를 잰다.
+   🔴 원산지·제조사는 추정하지 않는다 — ⑤ 가 확인한 «허용되는 입력값» 만 쓴다. */
+describe("⑥ PHASE 3-1 — 이번 UX 가 차단을 실제로 줄이는가", () => {
+  /** ③ 이 수집 시점에 넣는 값. 지어낸 문자열이 아니라 함수 출력이다. */
+  const careFromUx3 = resolveCareInstructions(null);
+
+  it("🔴 ③ 케어라벨 기본값이 세탁방법 차단을 «없앤다»", () => {
+    const before = blockedOf(naverWith(magroTopObserved(), ORIGIN_FILLED, ORIGIN_FILLED_V));
+    expect(before).toContain("productInfoProvidedNotice(WEAR).caution");
+
+    const after = blockedOf(
+      naverWith(
+        magroTopObserved({ careInstructions: careFromUx3 } as unknown as Partial<CanonicalProduct>),
+        ORIGIN_FILLED,
+        ORIGIN_FILLED_V,
+      ),
+    );
+    expect(after).not.toContain("productInfoProvidedNotice(WEAR).caution");
+  });
+
+  it("🔴 ③ 이 넣은 값은 「케어라벨 참조」다 — 「상세페이지 참조」로 거짓말하지 않는다", () => {
+    expect(careFromUx3.value).toBe("케어라벨 참조");
+    expect(careFromUx3.source).toBe("DEFAULT");
+    const payload = naverWith(
+      magroTopObserved({ careInstructions: careFromUx3 } as unknown as Partial<CanonicalProduct>),
+      ORIGIN_FILLED,
+      ORIGIN_FILLED_V,
+    );
+    /* 세탁정보는 케어라벨에 있다 — 상세페이지에 없는 것을 있다고 적지 않는다. */
+    expect(JSON.stringify(payload)).not.toContain("세탁방법은 상품 상세페이지 참조");
+  });
+
+  it("🔴 ② 개별 참조가 제조사 차단을 «없앤다» — bulk 에서는 제외된 그 칸이다", () => {
+    const product = magroTopObserved({
+      careInstructions: careFromUx3,
+      /* ② 패널의 개별 참조 경로가 만드는 상태 그대로. */
+      manufacturer: { value: "", source: "DETAIL_PAGE_REFERENCE", confidence: 1 },
+    } as unknown as Partial<CanonicalProduct>);
+    const blocked = blockedOf(naverWith(product, ORIGIN_FILLED, ORIGIN_FILLED_V));
+    expect(blocked).not.toContain("productInfoProvidedNotice(WEAR).manufacturer");
+  });
+
+  it("🔴 그리고 제조사는 bulk 전체적용 대상이 «아니다» — 이 상품에서도 그렇다", () => {
+    /* resolveManufacturer 의 5단 폴백을 참조가 멈추기 때문이다(CPO 확정 ⓐ).
+       셀러가 «고를» 수는 있지만 버튼 하나로 일괄 적용되지는 않는다. */
+    expect(BULK_REFERENCE_FIELDS as readonly string[]).not.toContain("manufacturer");
+    const plan = planProductBulkReference(magroTopObserved());
+    expect(plan.applied).not.toContain("manufacturer" as never);
+    /* 반대로 이 상품에서 «실제로» 적용되는 칸이 있다 — 공허하지 않다. */
+    expect(plan.applied.length).toBeGreaterThan(0);
+  });
+
+  it("🔴 ② 가 이 상품에서 여는 칸을 센다 — 빈칸만 바꾸고 관측값은 유지한다", () => {
+    const plan = planProductBulkReference(magroTopObserved());
+    /* 관측된 값(소재·색상)은 건드리지 않는다. */
+    expect(plan.skipped.map((s) => s.field)).toContain("material");
+    expect(plan.skipped.map((s) => s.field)).toContain("color");
+    expect(plan.applied).toContain("itemName");
+    expect(plan.applied).toContain("weight");
+    expect(plan.applied).toContain("importer");
+  });
+
+  it("🔴 ④ 상세 블록이 조립되면 detailContent 차단이 «없어진다»", () => {
+    /* 상세 블록은 셀러 설정에서 오고 상품이 아니라 서버가 조립한다.
+       ⑤ 에서 detailContent 가 막힌 것은 NAVER_BUILD 에 블록이 없어서다 —
+       실제 등록 경로는 resolveProductDetailBlocks 를 반드시 거친다. */
+    const blocks = resolveProductDetailBlocks(null);
+    const detailContent = assembleNaverDetailContent(blocks, {
+      aiDescription: "65% 코튼 혼방 남성 테니스 상의입니다.",
+      template: null,
+      productImageUrls: ["https://cdn.example/rep.jpg"],
+      sizeChartImageUrls: [],
+      brandIntro: null,
+      commonImages: {
+        topCommonImageUrl: null,
+        topCommonImageEnabled: false,
+        bottomCommonImageUrl: null,
+        bottomCommonImageEnabled: false,
+      },
+    } as never);
+    expect(detailContent.length).toBeGreaterThan(20);
+
+    const blocked = blockedOf(
+      naverWith(
+        magroTopObserved({ careInstructions: careFromUx3 } as unknown as Partial<CanonicalProduct>),
+        { ...ORIGIN_FILLED, detailBlocks: blocks },
+        ORIGIN_FILLED_V,
+      ),
+    );
+    expect(blocked).not.toContain("originProduct.detailContent");
+  });
+
+  it("🔴 셋을 모두 적용하면 SmartStore 차단이 «0건» 이 된다 — probe 범위", () => {
+    /* 🔴 이것은 「운영에서 등록된다」가 아니다. 이 입력·이 셀러 설정에서
+       SmartStore 검증이 막는 항목이 없다는 뜻이다. 쿠팡 카테고리와 실제
+       인증은 별개로 남아 있다(§H). */
+    const product = magroTopObserved({
+      careInstructions: careFromUx3,
+      manufacturer: { value: "", source: "DETAIL_PAGE_REFERENCE", confidence: 1 },
+    } as unknown as Partial<CanonicalProduct>);
+    const blocked = blockedOf(
+      naverWith(product, { ...ORIGIN_FILLED, detailBlocks: resolveProductDetailBlocks(null) }, ORIGIN_FILLED_V),
+    );
+    expect(blocked).toEqual([]);
+  });
+
+  it("🔴 그래도 재고 「4+」는 «여전히 모른다» — 열렸다고 4 로 채우지 않는다", () => {
+    const product = magroTopObserved();
+    const unknownStock = product.variants.filter((v) => v.stockQuantity === null);
+    expect(unknownStock).toHaveLength(3); // M · L · XL
+    /* 🔴 어디에도 4 가 들어가 있지 않다. */
+    expect(JSON.stringify(product.variants)).not.toContain('"stockQuantity":4');
   });
 });
