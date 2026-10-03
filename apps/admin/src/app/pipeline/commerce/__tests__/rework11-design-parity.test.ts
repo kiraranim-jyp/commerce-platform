@@ -392,33 +392,27 @@ describe("REWORK-11 ② — 제조사는 네 화면과 payload가 같은 값을 
     );
   });
 
-  it("🔴 네 번째 화면(상품정보)이 그 제조사를 «불러오지 못한 항목»으로 세우지 않는다", async () => {
-    const product = makeProduct();
-    await act(async () => {
-      root.render(
-        createElement(MissingFieldsBulkPanel, {
-          product,
-          onBulkApply: () => {},
-          manufacturerResolution: resolved,
-        } as never),
-      );
-    });
-    const labels = Array.from(container.querySelectorAll("label")).map((el) => clean(el.textContent ?? ""));
-    expect(labels, "브랜드 프로필이 채운 제조사를 아직 «못 불러왔다»고 말한다").not.toContain("제조사");
+  /* ══ URGENT ②ⓐ (CPO 확정, 2026-10-03) ══════════════════════════════════
+     이 단정의 원래 뜻은 「패널이 제조사에 대해 거짓말하지 않는다」였다 —
+     브랜드 프로필이 채운 제조사를 «못 불러왔다»고 세우지 않는 것.
 
-    // 🔴 반대쪽도 참이어야 한다 — 정말 없으면 그대로 목록에 선다.
-    await act(async () => {
-      root.render(
-        createElement(MissingFieldsBulkPanel, {
-          product,
-          onBulkApply: () => {},
-          manufacturerResolution: resolution({}),
-        } as never),
-      );
-    });
-    expect(
-      Array.from(container.querySelectorAll("label")).map((el) => clean(el.textContent ?? "")),
-    ).toContain("제조사");
+     🔴 그 뜻은 이제 «더 강하게» 충족된다. 제조사가 일괄 참조 대상에서 빠졌으므로
+     패널은 제조사를 «아예 언급하지 않는다» — 브랜드로 채워졌든 아니든 상관없이.
+     그래서 「해결됐으면 빼고 아니면 세운다」는 조건부 단정을 「어느 쪽이든 나오지
+     않는다」로 바꾼다. 제조사의 표시와 입력은 채널 탭의 ManufacturerField 와
+     PlatformPreview 의 개별 행이 담당한다(그 경로는 손대지 않았다).
+
+     🔴 manufacturerResolution prop 도 함께 사라졌다 — 패널이 제조사를 보지
+     않으므로 그 판정을 넘길 이유가 없다. */
+  it("🔴 상품정보 패널이 제조사를 «어느 쪽이든» 세우지 않는다 — 일괄 대상이 아니다", async () => {
+    const product = makeProduct();
+    for (const label of ["브랜드로 해결됨", "해결 안 됨"]) {
+      await act(async () => {
+        root.render(createElement(MissingFieldsBulkPanel, { product, onBulkApply: () => {} } as never));
+      });
+      const labels = Array.from(container.querySelectorAll("label")).map((el) => clean(el.textContent ?? ""));
+      expect(labels, `${label}: 제조사가 일괄 목록에 다시 들어왔다`).not.toContain("제조사");
+    }
   });
 
   it("🔴 화면이 보여준 값이 쿠팡 · 롯데ON payload에 그대로 도착한다", async () => {

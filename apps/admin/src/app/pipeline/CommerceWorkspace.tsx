@@ -41,7 +41,7 @@ import {
   type NaverCategoryCandidate,
   type NaverPayloadValidationResult,
   type NaverProductRegistrationPayload,
-  type NoticeReferenceEligibleField,
+  type BulkReferenceField,
   type PlatformConnectionStatus,
   type RegistrationHistoryEntry,
 } from "@commerce/listing";
@@ -1240,7 +1240,10 @@ export function CommerceWorkspace({
     }));
   }
 
-  function bulkSetFieldReference(keys: NoticeReferenceEligibleField[]) {
+  /* 🔴 URGENT ②ⓐ — 타입을 BulkReferenceField(8개)로 «좁힌다». 전에는 9개
+     타입이라 manufacturer 를 넘기는 것이 타입으로 막히지 않았다. 이제
+     컴파일러가 막는다 — 호출부를 다 뒤지지 않아도 된다. */
+  function bulkSetFieldReference(keys: BulkReferenceField[]) {
     setProduct((prev) => {
       const next = { ...prev };
       for (const key of keys) {
@@ -3739,7 +3742,6 @@ export function CommerceWorkspace({
                   <MissingFieldsBulkPanel
                     product={product}
                     onBulkApply={bulkSetFieldReference}
-                    manufacturerResolution={manufacturerResolution}
                   />
                 ),
               }}

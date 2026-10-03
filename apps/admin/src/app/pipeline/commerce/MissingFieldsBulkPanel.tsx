@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import type { CanonicalProduct } from "@commerce/shared";
-import { NOTICE_REFERENCE_ELIGIBLE_FIELDS, type NoticeReferenceEligibleField } from "@commerce/listing";
+import {
+  BULK_REFERENCE_FIELDS,
+  describeBulkReferencePlan,
+  planProductBulkReference,
+  type BulkReferenceField,
+} from "@commerce/listing";
 import { InfoTip } from "./registration-fields";
 
 /** P-6 P1(CEO 지시, 2026-08-29) — "기본정보에서 값을 불러오지 못한 항목들을
@@ -21,7 +26,7 @@ import { InfoTip } from "./registration-fields";
  * 영구 가드가 여기서도 그대로 적용된다 — 별도 체크 불필요, 화이트리스트를
  * 벗어난 필드를 순회하지 않는다). */
 
-const FIELD_LABEL: Record<NoticeReferenceEligibleField, string> = {
+const FIELD_LABEL: Record<BulkReferenceField, string> = {
   itemName: "품명",
   /* DELTA-B(CEO 판정, 2026-09-15) — 이 패널이 다루는 것은 **고시정보** 쪽
      모델명뿐이다. 여기서 «상세페이지 참조»로 채워지는 자리가 정확히 그것이고,
@@ -31,7 +36,6 @@ const FIELD_LABEL: Record<NoticeReferenceEligibleField, string> = {
   weight: "중량",
   material: "소재",
   color: "색상",
-  manufacturer: "제조사",
   careInstructions: "세탁방법/취급주의",
   recommendedAge: "사용연령",
   importer: "수입사명",
@@ -40,31 +44,27 @@ const FIELD_LABEL: Record<NoticeReferenceEligibleField, string> = {
 export function MissingFieldsBulkPanel({
   product,
   onBulkApply,
-  manufacturerResolution,
 }: {
   product: CanonicalProduct;
-  onBulkApply: (fields: NoticeReferenceEligibleField[]) => void;
-  /**
-   * REWORK-11 ②(CEO 지시, 2026-09-15: "네 화면 실제 표시값을 전부 확인하라") —
-   * **상품정보 화면이 네 번째 화면이다.**
-   *
-   * 브랜드 프로필이 제조사를 채워 주는 상품에서 세 커머스 탭은 그 값을 보여주는데,
-   * 이 패널만 `product.manufacturer.source === "REQUIRED"`를 보고 「불러오지 못한
-   * 항목」에 **제조사**를 계속 세우고 있었다. 같은 상품에 대해 화면 두 곳이
-   * 반대로 말하는 상태다 — 셀러는 채워져 있는 값을 또 채우러 간다.
-   *
-   * 🔴 판정을 여기서 만들지 않는다. 세 탭이 받는 그 resolver 결과를 그대로
-   * 받아서, **이미 답이 있는 항목만 목록에서 뺀다.**
-   */
-  manufacturerResolution?: { resolved: boolean; loading: boolean };
+  onBulkApply: (fields: BulkReferenceField[]) => void;
 }) {
-  const manufacturerAutoFilled =
-    Boolean(manufacturerResolution?.resolved) && !manufacturerResolution?.loading;
-  const missingFields = NOTICE_REFERENCE_ELIGIBLE_FIELDS.filter(
-    (key) =>
-      product[key].source === "REQUIRED" && !(key === "manufacturer" && manufacturerAutoFilled),
-  );
-  const [checked, setChecked] = useState<Set<NoticeReferenceEligibleField>>(new Set());
+  /* ══ URGENT ②ⓐ (CPO 확정, 2026-10-03) ═══════════════════════════════════
+     🔴 여기 있던 것: NOTICE_REFERENCE_ELIGIBLE_FIELDS(9개)를 직접 순회해서
+     **제조사도 일괄 참조 대상**이었다. 참조를 넣으면 resolveManufacturer 의
+     5단 폴백이 «멈춘다»(DETAIL_REFERENCE 분기) — 브랜드 관리·판매자 기본값에
+     더 정확한 제조사가 있는데 참조가 그것을 덮는다. 체크박스로 «고르는» 경우에도
+     위험은 같다(CPO: "체크박스 방식이라고 해서 이 위험이 달라지지 않는다").
+
+     그래서 대상을 BULK_REFERENCE_FIELDS(8개 = 화이트리스트 − manufacturer)로
+     바꾼다. 🔴 목록을 여기서 또 적지 «않는다» — 그 상수가 화이트리스트에서
+     빼서 만들어지므로 둘이 갈라지지 않는다.
+     🔴 제조사의 «개별» 「상세페이지 참조」 선택은 그대로다(PlatformPreview 의
+     ReferenceEligibleFieldRow). 없앤 것은 «일괄» 경로 하나다.
+     🔴 KC 필드는 애초에 화이트리스트에 없어 여기 올 수 없다(N-3.45 영구 가드). */
+  const missingFields = BULK_REFERENCE_FIELDS.filter((key) => product[key].source === "REQUIRED");
+  const [checked, setChecked] = useState<Set<BulkReferenceField>>(new Set());
+  /* 🔴 새 상태 «체계» 를 만든 것이 아니다 — 방금 누른 결과 한 줄을 담는 칸이다. */
+  const [lastResult, setLastResult] = useState<string | null>(null);
 
   // 누락 항목이 없으면(전부 값이 있거나 이미 참조 처리됨) 패널 자체를 숨긴다 —
   // "처리할 게 없는데 빈 패널이 보이는" 혼란을 막는다.
@@ -72,7 +72,7 @@ export function MissingFieldsBulkPanel({
 
   const allChecked = missingFields.every((f) => checked.has(f));
 
-  function toggle(field: NoticeReferenceEligibleField) {
+  function toggle(field: BulkReferenceField) {
     setChecked((prev) => {
       const next = new Set(prev);
       if (next.has(field)) next.delete(field);
@@ -89,6 +89,21 @@ export function MissingFieldsBulkPanel({
     if (checked.size === 0) return;
     onBulkApply(Array.from(checked));
     setChecked(new Set());
+  }
+
+  /* ══ URGENT ② (CPO 확정, 2026-10-03) — 「버튼 한 번」 ═══════════════════
+     체크박스로 고르는 기존 경로는 «그대로» 둔다(개별 선택 유지 지시). 이 버튼은
+     그 위에 하나를 더하는 것이고, 하는 일은 planProductBulkReference 가 정한다 —
+     여기서 규칙을 다시 쓰지 «않는다»(빈 칸만 · 기존값 보존 · 멱등 · 8개 한정).
+     🔴 적용은 기존 onBulkApply(setProduct 일괄) 를 그대로 쓴다. 개별 state
+     업데이트를 새로 만들지 않는다. */
+  const bulkPlan = planProductBulkReference(product);
+
+  function applyAll() {
+    if (bulkPlan.applied.length === 0) return;
+    onBulkApply(bulkPlan.applied);
+    setChecked(new Set());
+    setLastResult(describeBulkReferencePlan(bulkPlan));
   }
 
   return (
@@ -135,14 +150,25 @@ export function MissingFieldsBulkPanel({
         ))}
       </div>
 
-      <button
-        type="button"
-        onClick={apply}
-        disabled={checked.size === 0}
-        className="mt-3 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
-      >
-        선택 {checked.size}건 상세페이지 참조로 일괄 등록
-      </button>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={applyAll}
+          disabled={bulkPlan.applied.length === 0}
+          className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+        >
+          상세페이지 참조 전체 적용
+        </button>
+        <button
+          type="button"
+          onClick={apply}
+          disabled={checked.size === 0}
+          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-text-secondary disabled:opacity-50"
+        >
+          선택 {checked.size}건 상세페이지 참조로 일괄 등록
+        </button>
+      </div>
+      {lastResult && <p className="mt-2 text-xs text-text-secondary">{lastResult}</p>}
     </section>
   );
 }

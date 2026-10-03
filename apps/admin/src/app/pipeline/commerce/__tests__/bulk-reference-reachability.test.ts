@@ -3,7 +3,7 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { CanonicalProduct } from "@commerce/shared";
-import { NOTICE_REFERENCE_ELIGIBLE_FIELDS } from "@commerce/listing";
+import { BULK_REFERENCE_FIELDS, NOTICE_REFERENCE_ELIGIBLE_FIELDS } from "@commerce/listing";
 import { StageBody } from "../StageBody";
 import { MissingFieldsBulkPanel } from "../MissingFieldsBulkPanel";
 import { resolveStageFocus } from "../stage-focus";
@@ -290,31 +290,42 @@ describe("REWORK-4 §1 — 상세페이지 참조 일괄등록은 6개 상태 �
   });
 });
 
-describe("REWORK-4 §1 — 대상 필드를 한 건도 줄이지 않았다", () => {
+/* ══ URGENT ②ⓐ (CPO 확정, 2026-10-03) ══════════════════════════════════════
+   🔴 이 describe 의 원래 단정은 「9개를 한 건도 줄이지 않았다」(REWORK-4 §1)였다.
+   CPO 가 그중 «제조사 하나» 를 의도적으로 줄였다 — 일괄 참조가
+   resolveManufacturer 의 5단 폴백을 우회하기 때문이고, 체크박스로 고르는 경우에도
+   위험이 같기 때문이다. 그래서 단정을 8개로 바꾼다.
+
+   🔴 「임의로 줄이지 않았다」는 뜻은 그대로 지킨다 — 개수를 손으로 적지 않고
+   BULK_REFERENCE_FIELDS.length 로 재고, 제조사가 «의도적으로» 빠진 것임을
+   별도 단정으로 못박는다. 그래야 다음 사람이 실수로 하나 더 줄여도 걸린다. */
+describe("REWORK-4 §1 + URGENT ②ⓐ — 대상 필드를 «임의로» 줄이지 않았다", () => {
   const LABELS = [
     "품명",
     "모델명",
     "중량",
     "소재",
     "색상",
-    "제조사",
     "세탁방법/취급주의",
     "사용연령",
     "수입사명",
   ];
 
-  it(`9개 화이트리스트 필드가 전부 나온다 (${NOTICE_REFERENCE_ELIGIBLE_FIELDS.length}개)`, async () => {
+  it(`일괄 대상 필드가 전부 나온다 (${BULK_REFERENCE_FIELDS.length}개)`, async () => {
     // S5(④) — BEFORE에서 도달조차 못 하던 상태에서 전수를 확인한다.
     await act(async () => root.render(stageBodyElement(STATES[4].input)));
     clickButtonContaining("필수 정보");
     const text = container.textContent ?? "";
-    expect(text).toContain(`불러오지 못한 항목 (${NOTICE_REFERENCE_ELIGIBLE_FIELDS.length}개)`);
+    expect(text).toContain(`불러오지 못한 항목 (${BULK_REFERENCE_FIELDS.length}개)`);
+    /* 🔴 제조사는 «의도적으로» 빠졌다 — 화이트리스트보다 정확히 하나 적다. */
+    expect(BULK_REFERENCE_FIELDS.length).toBe(NOTICE_REFERENCE_ELIGIBLE_FIELDS.length - 1);
+    expect(text, "제조사가 일괄 목록에 다시 들어왔다").not.toContain("제조사");
     for (const label of LABELS) {
       expect(text, `대상 필드가 빠졌다: ${label}`).toContain(label);
     }
     // 체크박스도 필드 수만큼 실제로 서 있다(전체 선택 1개 + 9개).
     const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-    expect(checkboxes.length).toBe(NOTICE_REFERENCE_ELIGIBLE_FIELDS.length + 1);
+    expect(checkboxes.length).toBe(BULK_REFERENCE_FIELDS.length + 1);
   });
 
   it("🔴 KC/인증은 여기에 절대 나오지 않는다 — 상세페이지 참조 대체가 영구 금지다", async () => {
