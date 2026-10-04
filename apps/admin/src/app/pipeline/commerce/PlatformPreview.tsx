@@ -62,6 +62,8 @@ import { OptionVariantEditor } from "./OptionVariantEditor";
 import { computeChecklistReadiness, computeNaverPayloadReadiness } from "./readiness";
 import { buildPriorityItems, resolveRegistrationReadinessState } from "./RegistrationStatusBanner";
 import type { PriorityItem, RegistrationReadinessState } from "./readiness-state";
+/* P2-2 ① — 부족 항목이 가리키는 «실제 입력칸» 앵커. 필드별 핸들러를 만들지 않는다. */
+import { registrationFieldAnchor } from "./readiness-state";
 import { SellerProfileSummaryCard } from "./SellerProfileSummaryCard";
 import { NaverSellerProfileSummaryCard } from "./NaverSellerProfileSummaryCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -863,20 +865,32 @@ export function PlatformPreview({
     initialOpenSections("section-basic"),
   );
 
-  function goToSection(sectionId: string) {
+  /**
+   * @param fieldAnchorId P2-2 ① — 「그 칸」까지 간다. 섹션의 첫 입력칸이 아니라
+   *   이 id 안의 입력칸을 포커스한다. 없으면 지금까지와 동일하게 동작한다.
+   */
+  function goToSection(sectionId: string, fieldAnchorId?: string) {
     setOpenSections((prev) => ({ ...prev, [sectionId]: true }));
     requestAnimationFrame(() => {
       const section = document.getElementById(sectionId);
-      section?.scrollIntoView({ behavior: "smooth", block: "start" });
+      /* ══ P2-2 ① (CEO 실측) ═══════════════════════════════════════════════
+         🔴 섹션까지만 가면 「이동」이 아니다. 기본정보의 첫 입력칸은 «상품명»
+         이어서, 원산지를 누른 셀러가 상품명에 포커스된 채 직접 스크롤해야 했다.
+         앵커가 있으면 그 칸으로 간다 — 섹션 스크롤을 «대신» 한다(두 번 스크롤하면
+         브라우저가 위치를 끌어당겨 화면이 흔들린다, 아래 400ms 주석과 같은 이유). */
+      const anchor = fieldAnchorId ? document.getElementById(fieldAnchorId) : null;
+      (anchor ?? section)?.scrollIntoView({ behavior: "smooth", block: anchor ? "center" : "start" });
       // A-10.1-②(CEO 지시: "다음 입력하기 → 해당 Accordion이 열리고 해당 입력칸에
       // 포커스") — 필드마다 고유 id를 새로 붙이는 대신, 방금 연 섹션 안에서 첫
       // 번째 입력 가능한 요소를 찾아 포커스한다(스크롤 애니메이션이 끝나길
       // 기다려야 해서 약간 지연시킨다 — 스크롤 도중 포커스하면 브라우저가 다시
       // 그 위치로 스크롤을 끌어당겨서 사용자가 보던 위치가 흔들린다).
       window.setTimeout(() => {
-        const input = section?.querySelector<HTMLElement>(
-          'input:not([type="checkbox"]):not([disabled]), textarea:not([disabled])',
-        );
+        const INPUT_SELECTOR = 'input:not([type="checkbox"]):not([disabled]), textarea:not([disabled])';
+        /* P2-2 ① — 앵커가 있으면 «그 안» 의 입력칸을 포커스한다. 없으면 기존 그대로
+           섹션의 첫 입력칸이다(회귀 없음). */
+        const input =
+          anchor?.querySelector<HTMLElement>(INPUT_SELECTOR) ?? section?.querySelector<HTMLElement>(INPUT_SELECTOR);
         input?.focus();
       }, 400);
     });
@@ -1007,7 +1021,7 @@ export function PlatformPreview({
       <ChannelRegistrationSummary
         state={registrationState}
         priorityItems={priorityItems}
-        onPriorityItemClick={(item) => item.sectionId && goToSection(item.sectionId)}
+        onPriorityItemClick={(item) => item.sectionId && goToSection(item.sectionId, registrationFieldAnchor(item))}
         isCalculating={capabilities.hasNaverPreview && Boolean(naverValidationLoading)}
         errorMessage={capabilities.hasNaverPreview ? naverValidationError : null}
         onRetry={onRetryNaverValidation}
@@ -1483,14 +1497,18 @@ export function PlatformPreview({
             </div>
           )}
           <div className={FIELD_GRID_NARROW_CLASS}>
-            <FieldRow label="원산지" field={product.countryOfOrigin} required>
-              <EditableText
-                value={product.countryOfOrigin.value}
-                onCommit={(v) => fix?.("countryOfOrigin", v)}
-                placeholder="원산지 미확인"
-                className={FIELD_INPUT_CLASS}
-              />
-            </FieldRow>
+            {/* P2-2 ① — 「원산지 직접입력」 안내가 «이 칸» 으로 온다.
+                앵커 id 는 REGISTRATION_FIELD_ANCHOR 의 그 값이다(한 곳에서 잇는다). */}
+            <div id="field-countryOfOrigin">
+              <FieldRow label="원산지" field={product.countryOfOrigin} required>
+                <EditableText
+                  value={product.countryOfOrigin.value}
+                  onCommit={(v) => fix?.("countryOfOrigin", v)}
+                  placeholder="원산지 미확인"
+                  className={FIELD_INPUT_CLASS}
+                />
+              </FieldRow>
+            </div>
             <ReferenceEligibleFieldRow
               label="세탁방법/취급주의"
               field={product.careInstructions}

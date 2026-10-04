@@ -149,6 +149,43 @@ export function buildPriorityItems(
  * 는 PlatformPreview에 존재하지 않는다) 눌러도 아무 데도 가지 않는다. 그런
  * 버튼은 「부족한 정보 한 번에 해결하기」와 같은 종류의 거짓말이다.
  */
+/**
+ * ══ P2-2 ① (CPO 지시, 2026-10-04 — CEO 실측) ════════════════════════════════
+ * **부족 항목 → 실제 입력칸** 앵커. 섹션까지가 아니라 «그 칸» 까지 간다.
+ *
+ * 실측 사고: 「기본정보에서 입력하기」를 눌러도 원산지로 가지 않았다. `goToSection`
+ * 은 섹션을 열고 그 안의 **첫 번째 입력 요소** 를 포커스하는데(PlatformPreview.tsx
+ * 의 A-10.1-② 주석), 기본정보의 첫 칸은 «상품명» 이다. 그래서 셀러는 원산지를
+ * 찾아 스스로 스크롤해야 했다 — 「이동」이라고 말하면서 이동하지 않은 것이다.
+ *
+ * 🔴 **공통 패턴으로 만든다**(CPO ⑥). 필드마다 새 핸들러를 만들지 않는다:
+ *     ① 이 표에 「라벨 → DOM id」 한 줄을 더하고
+ *     ② 그 입력칸을 `<div id="…">` 로 감싼다
+ * 끝이다. 다른 필수 항목도 같은 두 단계로 붙는다.
+ *
+ * 🔴 라벨로 잇는다 — readiness 라벨(NAVER_FIELD_LABEL 등)은 이미 셀러가 화면에서
+ * 읽는 이름과 같은 어휘로 통일돼 있다(MATCHING-UNIFY-1 이 맞춰 둔 그것). 필드 경로
+ * 문자열로 이으면 채널마다 다른 키를 다시 쓰게 된다.
+ *
+ * 🔴 이 표에 없는 항목은 지금까지와 «똑같이» 동작한다(섹션까지만 이동) — 회귀 없음.
+ */
+export const REGISTRATION_FIELD_ANCHOR: Record<string, string> = {
+  /* 원산지는 입력칸이 «하나» 다(product.countryOfOrigin). 코드로 매칭되지 않아
+     04(직접입력)로 떨어진 경우에도 셀러가 적는 곳은 같은 칸이다 — 그래서 두
+     라벨이 같은 앵커를 가리킨다(P2-1 A 가 두 이름으로 가른 그 둘이다). */
+  원산지: "field-countryOfOrigin",
+  "원산지 직접입력": "field-countryOfOrigin",
+};
+
+/** 부족 항목이 가리키는 실제 입력칸 DOM id. 없으면 undefined(섹션까지만 이동). */
+export function registrationFieldAnchor(item: PriorityItem): string | undefined {
+  for (const source of item.sourceItems) {
+    const anchor = REGISTRATION_FIELD_ANCHOR[source.label];
+    if (anchor) return anchor;
+  }
+  return REGISTRATION_FIELD_ANCHOR[item.label];
+}
+
 export const REGISTRATION_SECTION_LABEL: Record<string, string> = {
   // PlatformPreview.tsx의 CollapsibleSection 제목 그대로다 — 안내가 부르는
   // 이름과 셀러가 화면에서 읽는 제목이 달라지면 "거기가 어딘데"가 다시 생긴다.

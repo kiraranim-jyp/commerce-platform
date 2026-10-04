@@ -474,6 +474,31 @@ async function extractFromMicrodata(page: Page): Promise<Partial<ExtractedProduc
        사이트는 그 안의 itemprop="name" 이 회사명이라 그것을 먼저 본다. */
     const manufacturerEl = document.querySelector('[itemprop="manufacturer"]');
     const manufacturerNameEl = manufacturerEl?.querySelector('[itemprop="name"]');
+    /* ══ P2-2 ② (CPO 지시, 2026-10-04 — 실측에서 역산) ═════════════════════════
+       🔴 이 함수는 name·brand·sku·price·manufacturer 를 읽으면서 **description 만
+       읽지 않았다.** 그래서 구조화 데이터가 «아예 없는» 사이트에서 상세설명이
+       항상 비었다.
+
+       실측(tennis-warehouse, Magro Long Sleeve):
+         JSON-LD 블록 0개 · og:* meta 0개 → 그 두 경로는 줄 것이 없다
+         그런데 본문은 schema.org microdata 로 있다:
+           <div class="fixed-width" itemprop="description">
+             <span id="product_chars"><h2>Overview</h2> …
+               <p>This Sergio Tacchini Men's Magro Long Sleeve has sporty style…</p>
+               <ul><li><b>Content: </b>96% Polyester, 4% Elastane</li>…
+       즉 **공통 extractor 로 처리된다** — 사이트 전용 전략이 필요하지 않다.
+
+       🔴 selector 를 추측하지 않는다. 같은 함수가 이미 쓰는 microdata 규약
+       (`[itemprop="…"]` 첫 요소)을 그대로 따른다 — `class="product-description"`
+       같은 사이트 전용 class 를 여기 적지 «않는다».
+
+       🔴 「상세설명이 비었다」를 AI 생성으로 덮지 않는다. 원본에 있으면 원본을
+       가져오고, 없으면 없는 채로 둔다(그때 비로소 자동 작성이 답할 차례다). */
+    const descEl = document.querySelector('[itemprop="description"]');
+    /* innerText 를 쓴다 — textContent 는 <li>·<p> 경계가 붙어 한 덩어리가 된다
+       (「Crewneck」「Pique construction」이 「CrewneckPique construction」이 됐다).
+       사람이 읽을 글이므로 줄바꿈이 의미다. */
+    const descriptionRaw = (descEl as HTMLElement | null)?.innerText?.trim() || undefined;
 
     return {
       title: text(nameEl),
@@ -481,6 +506,7 @@ async function extractFromMicrodata(page: Page): Promise<Partial<ExtractedProduc
       priceRaw: attr(priceEl, "content") || text(priceEl),
       currency: attr(currencyEl, "content") || text(currencyEl),
       sku: attr(skuEl, "content") || text(skuEl),
+      description: attr(descEl, "content") || descriptionRaw,
       manufacturer:
         attr(manufacturerEl, "content") || text(manufacturerNameEl) || text(manufacturerEl),
     };
@@ -494,6 +520,10 @@ async function extractFromMicrodata(page: Page): Promise<Partial<ExtractedProduc
     title: raw.title,
     brand: raw.brand,
     sku: raw.sku,
+    /* P2-2 ② — microdata 가 description 을 들고 있으면 그대로 올린다. `pick()` 이
+       json-ld → microdata → open-graph → dom 순으로 고르므로, JSON-LD 가 있는
+       기존 사이트(아동의류 포함)에서는 **이 값이 선택되지 않는다** — 회귀 없음. */
+    description: raw.description,
     manufacturer: raw.manufacturer,
     price: priceResolution.validity === "VALID" ? { amount: priceResolution.amount as number, currency: priceResolution.currency as string } : undefined,
     priceValidity: raw.priceRaw ? priceResolution.validity : undefined,

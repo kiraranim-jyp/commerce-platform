@@ -89,7 +89,11 @@ export function extractMaterial(description: string | undefined): string | undef
 /** "Colour - Green.", "Color: Blue" — 라벨이 명시적이라(material의 "%"와 달리
  * 이 문구가 다른 맥락에서 우연히 등장할 일이 거의 없다) 화이트리스트 없이도
  * 오탐 위험이 낮다. */
-const COLOR_PATTERNS = [/colou?r\s*[-:]\s*([a-z][a-z\s/]{1,20}?)(?:[.,;\n]|$)/i];
+/* P2-2 ③ — `Colors:` «복수형» 을 더한다. 실측(tennis-warehouse, Magro Long Sleeve)의
+   원문이 `Colors: Brilliant White` 였고 단수형만 보던 이 패턴이 놓쳤다.
+   🔴 새 추출기를 만들지 않는다 — 기존 패턴에 `s?` 한 글자다. 「라벨이 명시적이라
+   오탐 위험이 낮다」는 위 전제는 복수형에서도 그대로다. */
+const COLOR_PATTERNS = [/colou?rs?\s*[-:]\s*([a-z][a-z\s/]{1,20}?)(?:[.,;\n]|$)/i];
 
 /** Sprint A-7(작업2) — 실측 확인(allbirds.com "Men's Cruiser Terralux -
  * Anthracite (Dark Gum Sole)"): 색상이 설명문 라벨이 아니라 **제목**에 대시로
