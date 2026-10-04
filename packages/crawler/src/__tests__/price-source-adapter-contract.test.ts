@@ -383,8 +383,19 @@ describe("GOLF-01.5-C ④ 아동복 수집 회귀 0", () => {
       expect(supportsDomesticShopSearch(d), `${d} 국내 파서가 사라졌다`).toBe(true);
     }
 
-    // 등록부 전체 = 아동복 18 + Rakuten 1. 새 소스를 조용히 끼워 넣지 않았다.
-    expect(listPriceSourceAdapters()).toHaveLength(19);
+    // 등록부 전체 = 아동복 18 + Rakuten 1 + 스카이스포츠 1(TENNIS AUTO 1호).
+    // 🔴 이 계약의 뜻은 「총원이 19」가 아니라 **「새 소스를 «조용히» 끼워 넣지
+    //    않았다」** 다. 2026-10-04 에 스카이스포츠를 더하면서 이 숫자를 함께
+    //    올렸고, 바로 아래에서 그 한 곳이 «무엇인지» 도 못박는다 — 숫자만 올리고
+    //    지나가면 다음에 또 아무도 모르게 늘어난다.
+    expect(listPriceSourceAdapters()).toHaveLength(20);
+    const added = listPriceSourceAdapters().filter(
+      (a) => ![...overseasKids, ...domesticKids, "rakuten.co.jp"].includes(a.domain),
+    );
+    expect(added.map((a) => a.domain)).toEqual(["skysport.co.kr"]);
+    expect(supportsDomesticShopSearch("skysport.co.kr")).toBe(true);
+    /* 🔴 그리고 그것이 국내 파서다 — 해외로 섞이지 않았다. */
+    expect(supportsComparisonShopSearch("skysport.co.kr")).toBe(false);
 
     // 🔴 카탈로그를 섞지 않는다: 국내 도메인을 해외 파서로, 해외 도메인을 국내
     //    파서로 답하지 않는다(comparison_shops 와 domestic_price_sources 는

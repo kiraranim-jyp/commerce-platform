@@ -8,6 +8,7 @@ import { fetchLooxlooProductPrice, searchLooxloo } from "./looxloo";
 import { selectCandidatesForDetailConfirmation } from "./price-confirmation";
 import { missingRakutenCredentials, searchRakutenIchiba } from "./rakuten-ichiba";
 import { fetchRuliiProductPrice, searchRulii } from "./rulii";
+import { searchSkysport } from "./skysport";
 import { searchShopifySuggest } from "./shopify-suggest";
 import type { CanonicalProductVariant } from "@commerce/shared";
 import type { ComparisonCandidate, ComparisonQuery } from "./types";
@@ -406,6 +407,18 @@ const PRICE_SOURCE_ADAPTERS: PriceSourceAdapter[] = [
     readiness: ALWAYS_READY,
     search: ({ term }) => searchRulii(term),
     enrichScored: (candidates) => enrichSoldOutViaDetail(candidates, fetchRuliiProductPrice),
+  },
+  /* ══ TENNIS AUTO 1호 (CPO 확정 2026-10-04) ══════════════════════════════
+     스카이스포츠 — 국내 테니스 전문점. 후보 11곳을 같은 기준으로 재서 통과한
+     곳이다(skysport.ts 주석에 robots·약관·실측 근거). 🔴 `enrichScored` 를
+     붙이지 «않았다» — 목록의 `data-price` 가 이미 판매가·소비자가를 주므로
+     상세 재조회가 필요 없다. 필요 없는 요청을 사이트에 보내지 않는다. */
+  {
+    domain: "skysport.co.kr",
+    catalog: "DOMESTIC",
+    method: "WEB",
+    readiness: ALWAYS_READY,
+    search: ({ term }) => searchSkysport(term),
   },
   {
     domain: "deuxbebe.com",

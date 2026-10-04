@@ -24,6 +24,9 @@ import { isBatchSurveyTarget } from "../../price-history/_lib/run-domestic-price
  * 올렸다. 여기서 고정하는 것은 «필터 계약» 이다.
  */
 const ROOT = join(__dirname, "../../../../..");
+/* 🔴 개행 상수 — 정규식 리터럴을 생성 과정에서 세 번 깨뜨린 뒤 상수로 뺐다. */
+const SPLIT_NEWLINE = String.fromCharCode(10);
+
 const SQL_072 = readFileSync(
   join(ROOT, "../../packages/database/prisma/migrations_manual/072_domestic_common_comparison_sites_seed.sql"),
   "utf8",
@@ -251,5 +254,76 @@ describe("⑦ 🔴 해외 공통 5개는 «적용해도 표시되지 않는다»
   it("🔴 072 가 해외를 켜지 «않았다» — 그 결정은 CEO 몫이다", () => {
     expect(SQL_ONLY).not.toMatch(/is_active\s*=\s*true/i);
     expect(SQL_ONLY).not.toContain("setComparisonShopActive");
+  });
+});
+
+describe("⑪ 🔴 074 — 스카이스포츠 TENNIS AUTO 소스 (CPO 확정 2026-10-04)", () => {
+  const SQL_074_RAW = readFileSync(
+    join(ROOT, "../../packages/database/prisma/migrations_manual/074_skysport_tennis_auto_source.sql"),
+    "utf8",
+  );
+  const SQL_074 = SQL_074_RAW.split(SPLIT_NEWLINE)
+    .filter((l) => !l.trimStart().startsWith("--"))
+    .join(SPLIT_NEWLINE);
+
+  it("TENNIS 전용 scope 로 넣는다 — 공통으로 넣지 않았다", () => {
+    expect(SQL_074).toContain("array['TENNIS']");
+    expect(SQL_074).not.toContain("'{}', 'P0'");
+  });
+
+  it("🔴 파서가 있으므로 AUTO_SCRAPE·enabled=true 다 — 070/072 와 다른 이유", () => {
+    expect(SQL_074).toContain("'AUTO_SCRAPE', 'ACTIVE'");
+    expect(SQL_074).toContain("true,");
+  });
+
+  it("🔴 access_status='OK' 는 «실측했을 때만» 적는다", () => {
+    expect(SQL_074).toContain("'OK',");
+    expect(SQL_074).toContain("2026-10-04 실측");
+    expect(SQL_074_RAW).toContain("파서: packages/crawler/src/comparison-search/skysport.ts");
+  });
+
+  it("가격 «관측 대상 판매처» 로 분류한다 — 비교 매체가 아니다", () => {
+    expect(SQL_074).toContain("'PRICE_COLLECTION'");
+    expect(SQL_074).not.toContain("'PRICE_COMPARISON'");
+    expect(SQL_074).toContain("'RETAILER'");
+  });
+
+  it("🔴 기존 행을 UPDATE/DELETE 하지 않는다 — insert 하나뿐", () => {
+    expect(SQL_074).not.toMatch(/\bupdate\s+domestic_price_sources/i);
+    expect(SQL_074).not.toMatch(/\bdelete\s+from/i);
+    expect((SQL_074.match(/\binsert into\b/gi) ?? []).length).toBe(1);
+    expect(SQL_074).toContain("on conflict do nothing");
+  });
+
+  it("🔴 공통 소스·KIDS·해외 표를 건드리지 않는다", () => {
+    for (const d of ["danawa.com", "enuri.com", "shoppinghow.kakao.com", "looxloo.com", "comparison_shops"]) {
+      expect(SQL_074, d).not.toContain(d);
+    }
+  });
+
+  it("🔴 세영스포츠를 «아직» 넣지 않았다 — 2순위 판단 대기", () => {
+    expect(SQL_074).not.toContain("seyoungsports");
+    expect(SQL_074_RAW).toContain("세영스포츠");
+  });
+
+  it("🔴 TENNIS 는 «이미 있는» 프로필 id 다 — 새 카테고리를 만들지 않았다", () => {
+    expect(ALL_PROFILE_IDS).toContain("TENNIS");
+    for (const m of SQL_074.matchAll(/array\['([A-Z_]+)'/g)) {
+      expect(ALL_PROFILE_IDS as readonly string[], m[1]).toContain(m[1]);
+    }
+  });
+
+  it("🔴 TENNIS 전용이므로 다른 카테고리에서 «빠진다»", () => {
+    for (const id of ALL_PROFILE_IDS) {
+      expect(sourceFitsScopes(["TENNIS"], selectedMarketSourceScopes(id)), id).toBe(id === "TENNIS");
+    }
+  });
+
+  it("🔴 TENNIS 에서는 공통 소스와 «함께» 조사 대상이 된다", () => {
+    const scopes = selectedMarketSourceScopes("TENNIS");
+    /* 공통(다나와·카카오)과 전용(스카이스포츠)이 동시에 통과한다 — 「테니스니까
+       테니스 사이트만 본다」가 아니라는 그 구조다. */
+    expect(isBatchSurveyTarget(src({ categoryScope: [] }), scopes)).toBe(true);
+    expect(isBatchSurveyTarget(src({ categoryScope: ["TENNIS"], accessStatus: "OK" }), scopes)).toBe(true);
   });
 });
