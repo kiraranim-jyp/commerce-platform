@@ -42,6 +42,7 @@ import {
   type NaverPayloadValidationResult,
   type NaverProductRegistrationPayload,
   type BulkReferenceField,
+  resolveDetailBlocks,
   type DetailPageBlock,
   type ProductDetailOverride,
   type PlatformConnectionStatus,
@@ -848,11 +849,43 @@ export function CommerceWorkspace({
   const [detailOverride, setDetailOverride] = useState<ProductDetailOverride | undefined>(
     () => initialDetailOverride,
   );
-  /* 🔴 편집기의 «기준선». 서버(resolve-context.ts)가 override 를 적용하지 «않은»
-     셀러 공통 구성을 따로 내려준다 — 이것이 없으면 화면이 「무엇이 공통이고
-     무엇을 내가 바꿨나」를 가를 수 없다. 서버가 안 내려주면 패널을 숨긴다
-     (추측해서 기본값을 그려 넣지 않는다). */
+  /* ══ P0 수정 (CEO 실측 2026-10-04) ════════════════════════════════════════
+     🔴 상세페이지 편집기의 «기준선» 을 네이버 resolve 에서 받고 있었다. 그런데
+     그 effect 는 `tab === "smartstore"` 일 때만 돈다(smartStoreValidationEligible).
+     패널은 «상품정보» 탭에 있으므로 이 값이 **영원히 null** 이었고, 그래서
+     Production 에서 진입점이 보이지 않았다. 네이버 연결이 실패해도(status!=="OK"
+     early return) 같은 결과였다.
+
+     🔴 상세페이지 블록은 애초에 네이버와 «무관» 하다 — `coupang_seller_profiles`
+     에 있고 세 채널이 공통으로 쓴다. 그래서 설정 화면이 쓰는 그 라우트
+     (`/api/settings/coupang/profiles`)에서 직접 읽는다. 새 엔드포인트를 만들지
+     않았고, 네이버 자격증명·카테고리 확정과 무관하게 항상 채워진다. */
   const [sellerDefaultDetailBlocks, setSellerDefaultDetailBlocks] = useState<DetailPageBlock[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      try {
+        const res = await fetch("/api/settings/coupang/profiles");
+        const data = (await res.json().catch(() => null)) as {
+          profiles?: { isDefault?: boolean; defaultDetailBlocks?: DetailPageBlock[] | null }[];
+        } | null;
+        if (!alive) return;
+        const list = data?.profiles ?? [];
+        const profile = list.find((x) => x.isDefault) ?? list[0];
+        /* 🔴 셀러가 설정을 한 번도 저장하지 않았으면(null·빈 배열) 코드 상수
+           폴백을 쓴다 — resolveDetailBlocks 와 «같은» 규칙이고, 그래야 설정을
+           건드린 적 없는 셀러도 편집기를 열 수 있다. 패널을 숨기지 않는다. */
+        setSellerDefaultDetailBlocks(resolveDetailBlocks(profile?.defaultDetailBlocks ?? null));
+      } catch {
+        /* 🔴 조회 실패에도 편집기를 «열어 둔다». 코드 상수가 세 채널의 실제
+           폴백이므로(resolveDetailBlocks) 화면이 거짓을 보여주는 것이 아니다. */
+        if (alive) setSellerDefaultDetailBlocks(resolveDetailBlocks(null));
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
   useEffect(() => {
     onDetailOverrideChange?.(detailOverride);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2884,7 +2917,6 @@ export function CommerceWorkspace({
             setSmartStoreValidationLoading(false);
             return;
           }
-          setSellerDefaultDetailBlocks(data.detailPage.sellerDefaultDetailBlocks ?? null);
           const releaseAddressBookNo = data.address.releaseAddressBookNo;
           const refundAddressBookNo = data.address.refundAddressBookNo;
           const childCertificationInfoId = data.category?.childCertificationInfoId ?? null;

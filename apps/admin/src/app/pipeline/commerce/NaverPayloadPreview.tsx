@@ -109,11 +109,6 @@ export interface NaverResolveResponse {
     };
     brandIntro: string | null;
     detailBlocks: DetailPageBlock[];
-    /** PRODUCT-INFO-UX-06 — 상품별 편집기의 «기준선»(override 를 적용하지 «않은»
-     * 셀러 공통 구성). 바로 위 detailBlocks 는 이미 override 가 얹힌 결과라서,
-     * 화면이 「무엇이 공통이고 무엇을 내가 바꿨나」를 가르려면 둘 다 필요하다.
-     * 🔴 payload 에는 쓰이지 않는다 — 화면 표시 전용이다. */
-    sellerDefaultDetailBlocks?: DetailPageBlock[];
   };
 }
 

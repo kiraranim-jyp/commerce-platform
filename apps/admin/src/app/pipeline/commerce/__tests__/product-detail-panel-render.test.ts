@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   defaultDetailBlocks,
   mergeProductDetailBlocks,
+  resolveDetailBlocks,
   type DetailPageBlock,
   type ProductDetailOverride,
 } from "@commerce/listing";
@@ -416,5 +417,68 @@ describe("⑨ 이미지 추가 — 외부 주소를 적는 칸이 «없다»", (
     /* 업로드는 상품정보 탭이 쓰는 그 라우트다 — 새 경로를 만들지 않았다. */
     expect(src).toContain('fetch("/api/pipeline/upload-image"');
     expect(src).toContain('fetch("/api/assets")');
+  });
+});
+
+describe("⑩ 🔴 P0 — 진입점이 «네이버와 무관하게» 항상 보인다 (CEO 실측 2026-10-04)", () => {
+  /* 🔴 주석을 «벗기지 않는다». 아래 단정이 찾는 것은 `data.detailPage.
+     sellerDefaultDetailBlocks` 같은 «정확한 코드 체인» 이고, 그 체인은 설명
+     주석에 나오지 않는다(주석은 「네이버 resolve 에서 받고 있었다」로만 쓴다).
+     주석 제거 정규식을 세 번 깨뜨린 뒤 내린 결론이다 — 필요 없는 가공을 하지
+     않는 쪽이 더 안전하다. */
+  const WS = readFileSync(join(__dirname, "../../CommerceWorkspace.tsx"), "utf8");
+
+  /* 🔴 CEO 가 Production 에서 상세페이지 편집 진입점을 찾을 수 없었다. 원인은
+     기준선(sellerDefaultDetailBlocks)을 네이버 resolve 응답에서 받고 있었고, 그
+     effect 는 `tab === "smartstore"` 일 때만 돌기 때문이다 — 패널은 «상품정보»
+     탭에 있으니 그 값이 영원히 null 이었다. 네이버 연결 실패도 같은 결과였다.
+     상세페이지 블록은 애초에 네이버와 무관하다(coupang_seller_profiles). */
+
+  it("🔴 기준선을 네이버 resolve 에서 받지 «않는다»", () => {
+    expect(WS).not.toContain("data.detailPage.sellerDefaultDetailBlocks");
+  });
+
+  it("설정 프로필 라우트에서 직접 읽는다 — 새 엔드포인트를 만들지 않았다", () => {
+    expect(WS).toContain('fetch("/api/settings/coupang/profiles")');
+    expect(WS).toContain("setSellerDefaultDetailBlocks(resolveDetailBlocks(");
+  });
+
+  it("🔴 그 effect 가 탭·카테고리·자격증명에 «묶이지 않는다» — deps 가 비어 있다", () => {
+    const at = WS.indexOf('fetch("/api/settings/coupang/profiles")');
+    expect(at).toBeGreaterThan(-1);
+    /* 🔴 그 fetch 를 품은 useEffect «블록만» 떼어 본다. 처음에 앞 900자를
+       뭉텅이로 봤는데 그 범위에 «다른» effect 의 `tab === "smartstore"` 가
+       들어와 거짓 실패했다 — 파일에 그 문자열이 여러 번 나온다. */
+    const effectStart = WS.lastIndexOf("useEffect(", at);
+    const effectEnd = WS.indexOf("}, []);", at);
+    expect(effectStart).toBeGreaterThan(-1);
+    expect(effectEnd).toBeGreaterThan(at);
+    const block = WS.slice(effectStart, effectEnd + 7);
+
+    /* 빈 deps = 마운트 한 번 — 탭·카테고리·자격증명과 무관하다. */
+    expect(block).toContain("}, []);");
+    /* 🔴 그 블록 안에 탭/네이버 조건이 «하나도» 없다. */
+    for (const gate of ['tab === "smartstore"', "smartStoreValidationEligible", "leafCategoryId", "accessToken"]) {
+      expect(block, gate).not.toContain(gate);
+    }
+  });
+
+  it("🔴 조회가 실패해도 편집기를 «열어 둔다» — 코드 상수 폴백", () => {
+    const at = WS.indexOf('fetch("/api/settings/coupang/profiles")');
+    const after = WS.slice(at, at + 1400);
+    expect(after).toContain("catch");
+    expect(after).toContain("setSellerDefaultDetailBlocks(resolveDetailBlocks(null))");
+  });
+
+  it("🔴 셀러가 설정을 저장한 적 없어도 폴백으로 열린다 — resolveDetailBlocks 규칙 그대로", () => {
+    /* resolveDetailBlocks 는 null·빈 배열에 코드 상수 9블록을 돌려준다. */
+    expect(resolveDetailBlocks(null).length).toBeGreaterThan(0);
+    expect(resolveDetailBlocks([]).length).toBeGreaterThan(0);
+  });
+
+  it("패널은 여전히 상품정보(source) 탭에 «한 번만» 마운트된다", () => {
+    expect((WS.match(/<ProductDetailBlocksPanel/g) ?? []).length).toBe(1);
+    const sourceTab = WS.indexOf('tab === "source" &&');
+    expect(WS.indexOf("<ProductDetailBlocksPanel")).toBeGreaterThan(sourceTab);
   });
 });
