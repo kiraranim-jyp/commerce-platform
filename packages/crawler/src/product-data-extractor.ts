@@ -650,6 +650,129 @@ async function extractOptionsFromDescriptionText(page: Page): Promise<CanonicalP
   });
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * P2-3 A (CPO 확정, 2026-10-04) — **schema.org `Offer` 단위 옵션/재고/SKU**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 실측 사고: 성인 테니스 의류(Magro Long Sleeve)의 사이즈가 `[]` 였다. 기존
+ * `extractOptionsFromDom` 은 `<select>` «전용» 인데, 이 페이지의 `<select>` 는
+ * 사이트 내비게이션 하나뿐이고 사이즈는 **행마다 하나의 Offer** 로 있다:
+ *
+ *   <tr itemprop="offers" itemscope itemtype="http://schema.org/Offer">
+ *     <strong itemprop="itemOffered">… Magro Long Sleeve White S</strong>
+ *     <strong>In Stock:</strong> <span>1</span>
+ *     <meta itemprop="sku" content="STMMLSWH1">
+ *     <meta itemprop="availability" content="InStock">
+ *
+ * 🔴 **기존 경로를 대체하지 않는다**(CPO A). `<select>` 추출이 먼저이고, 그것이
+ * 0건일 때 이 경로가 답한다 — select 가 있는 사이트의 동작은 한 점도 바뀌지 않는다.
+ *
+ * 🔴 **사이트 전용 selector 를 쓰지 않는다.** 읽는 것은 전부 schema.org 규약
+ * (`[itemprop="offers"]` · `itemOffered` · `sku` · `availability`)이고, 재고만
+ * 규약에 없어서 **Offer 범위 «안» 의 텍스트 패턴**(`In Stock: 1`)으로 읽는다 —
+ * `.js-ordering-available` 같은 사이트 class 를 박는 것보다 이식 가능하다.
+ *
+ * 🔴 **옵션값을 지어내지 않는다.** itemOffered 들의 «최장 공통 접두사» 를 지운
+ * 나머지가 옵션값이다 — 데이터에서 파생된다. 접두사가 안 잡히면(한 행뿐이거나
+ * 이름이 제각각) 아무것도 돌려주지 않는다.
+ */
+interface OfferRow {
+  name: string;
+  sku?: string;
+  availability?: string;
+  stock?: number;
+}
+
+/** 의류 사이즈 토큰. 🔴 이 집합에 «전부» 맞을 때만 축 이름을 「사이즈」로 붙인다. */
+const APPAREL_SIZE_TOKENS = new Set([
+  "xxs", "xs", "s", "m", "l", "xl", "xxl", "xxxl",
+  "2xl", "3xl", "4xl",
+  "free", "onesize", "one size",
+]);
+
+/** 모든 값이 의류 사이즈 토큰인가. 하나라도 아니면 false — 억지로 사이즈로 분류하지 않는다. */
+export function looksLikeApparelSizes(values: string[]): boolean {
+  if (values.length === 0) return false;
+  return values.every((v) => APPAREL_SIZE_TOKENS.has(v.trim().toLowerCase()));
+}
+
+/** 최장 공통 접두사 — 옵션값은 「이름에서 공통부를 뺀 나머지」다. */
+export function longestCommonPrefix(values: string[]): string {
+  if (values.length < 2) return "";
+  let prefix = values[0];
+  for (const v of values.slice(1)) {
+    let i = 0;
+    while (i < prefix.length && i < v.length && prefix[i] === v[i]) i++;
+    prefix = prefix.slice(0, i);
+    if (!prefix) break;
+  }
+  return prefix;
+}
+
+/**
+ * Offer 행들을 옵션 그룹 + variant 로 바꾼다.
+ *
+ * 🔴 순수 함수다 — 네트워크도 DOM 도 쓰지 않는다. 그래서 실제 응답에서 떠 온
+ * 행으로 테스트할 수 있다.
+ */
+export function offerRowsToOptions(rows: OfferRow[]): {
+  optionGroups: CanonicalProductOptionGroup[];
+  variants: CanonicalProductVariant[];
+} | null {
+  const named = rows.filter((r) => r.name.trim().length > 0);
+  if (named.length < 2) return null;
+
+  const prefix = longestCommonPrefix(named.map((r) => r.name));
+  const values = named.map((r) => r.name.slice(prefix.length).trim());
+  /* 빈 값이 섞이면 공통 접두사가 이름 전체를 먹은 것이다 — 그때는 포기한다
+     (빈 옵션값을 등록 payload 에 넣으면 채널이 거절한다). */
+  if (values.some((v) => v.length === 0)) return null;
+  if (new Set(values).size !== values.length) return null;
+
+  /* 🔴 축 이름의 근거. 전부 사이즈 토큰이면 「사이즈」다 — 그러면
+     resolveSizeFromOptions(/size|사이즈/i)가 치수 고시를 채운다. 아니면
+     「옵션」으로 둔다: 틀린 이름을 붙이는 대신 치수 고시가 비는 쪽으로
+     안전하게 실패한다(그 실패는 readiness 가 셀러에게 말한다). */
+  const name = looksLikeApparelSizes(values) ? "사이즈" : "옵션";
+
+  return {
+    optionGroups: [{ name, values }],
+    variants: named.map((row, i) => ({
+      /* 🔴 id 는 지어내지 않는다 — Offer 가 준 SKU 가 가장 안정적인 식별자이고,
+         없으면 옵션값 자체를 쓴다(값은 위에서 중복이 없음을 확인했다). */
+      id: row.sku ?? values[i],
+      optionValues: { [name]: values[i] },
+      ...(row.sku ? { sku: row.sku } : {}),
+      /* 🔴 재고 0 은 「품절」이라는 정보다 — falsy 라고 지우지 않는다.
+         못 읽었으면 «넣지 않는다»(수량을 지어내지 않는다). */
+      ...(typeof row.stock === "number" && Number.isFinite(row.stock) ? { stockQuantity: row.stock } : {}),
+    })),
+  };
+}
+
+async function extractOffersFromMicrodata(page: Page): Promise<OfferRow[]> {
+  return page.evaluate(() => {
+    const scopes = Array.from(document.querySelectorAll('[itemprop="offers"][itemscope]'));
+    const read = (scope: Element, prop: string) => {
+      const el = scope.querySelector(`[itemprop="${prop}"]`);
+      return el?.getAttribute("content")?.trim() || el?.textContent?.trim() || undefined;
+    };
+    return scopes.map((scope) => {
+      /* 재고는 schema.org 규약에 없어서 Offer 범위 «안» 의 문구로 읽는다.
+         범위 밖을 보면 다른 상품의 숫자를 집어온다. */
+      const text = (scope as HTMLElement).innerText ?? scope.textContent ?? "";
+      const stockMatch = /(?:in\s*stock|available|재고)\s*:?\s*(\d{1,5})\b/i.exec(text);
+      return {
+        name: read(scope, "itemOffered") ?? "",
+        sku: read(scope, "sku"),
+        availability: read(scope, "availability"),
+        stock: stockMatch ? Number.parseInt(stockMatch[1], 10) : undefined,
+      };
+    });
+  });
+}
+
 /** JSON-LD → Microdata → OpenGraph → DOM 순으로 시도하고, 필드 단위로 부족한 부분을
  * 다음 소스로 보강한다(예: JSON-LD에 title은 있는데 price가 없으면 Microdata의
  * price로 채운다). Microdata를 OpenGraph보다 앞에 두는 이유: 둘 다 "구조화 데이터"로
@@ -672,8 +795,28 @@ export async function extractProductData(
   // 폴백한다(회귀 없음, 우선순위만 추가).
   const productGroupOptions = extractProductGroupOptions(html);
   const domOptionGroups = productGroupOptions ? [] : await extractOptionsFromDom(page);
-  const textOptionGroups = domOptionGroups.length === 0 && !productGroupOptions ? await extractOptionsFromDescriptionText(page) : [];
-  const resolvedOptionGroups = productGroupOptions?.optionGroups ?? (domOptionGroups.length > 0 ? domOptionGroups : textOptionGroups);
+  /* ══ P2-3 A — Offer microdata 경로 (CPO 확정) ═══════════════════════════════
+     🔴 **기존 경로를 대체하지 않는다.** ProductGroup 도 없고 `<select>` 도 0건일
+     때만 묻는다. 그래서 select 가 있는 사이트(아동의류 포함)의 동작은 한 점도
+     바뀌지 않는다 — 우선순위만 «더한» 것이다.
+
+     🔴 본문 텍스트 스캔(textOptionGroups)보다 «앞» 이다. Offer 는 상품이 실제로
+     파는 단위이고 sku·재고·availability 가 함께 오는 구조화 데이터인데, 본문
+     스캔은 문장에서 패턴을 긁는 가장 약한 신호다. 그리고 이 순서가 중요한
+     실제 이유가 있다 — 이 페이지의 본문에는 「Small / True to Size / Large」
+     라는 **핏 척도** 가 있어서, 본문 스캔이 먼저 답하면 그것이 사이즈로
+     들어갈 길이 생긴다(아래 회귀 테스트가 그 길을 막는다). */
+  const offerOptions =
+    !productGroupOptions && domOptionGroups.length === 0
+      ? offerRowsToOptions(await extractOffersFromMicrodata(page))
+      : null;
+  const textOptionGroups =
+    domOptionGroups.length === 0 && !productGroupOptions && !offerOptions
+      ? await extractOptionsFromDescriptionText(page)
+      : [];
+  const resolvedOptionGroups =
+    productGroupOptions?.optionGroups ??
+    (domOptionGroups.length > 0 ? domOptionGroups : (offerOptions?.optionGroups ?? textOptionGroups));
 
   const sources: Record<string, ProductDataSource> = {};
   const pick = <K extends keyof ExtractedProductData>(
@@ -743,11 +886,17 @@ export async function extractProductData(
     // ProductGroup/hasVariant처럼 실제 조합별 데이터가 있을 때만 채운다. 없으면
     // 빈 배열로 둔다(CanonicalProductVariant 주석의 "옵션은 있는데 조합 정보를
     // 못 가져옴" 상태 — 임의로 만들어내지 않는다).
-    variants: productGroupOptions?.variants ?? [],
+    /* P2-3 A — Offer 행은 조합별 sku·재고를 «실제로» 들고 있다. 그래서 variants 를
+       채운다(select 스캔은 여전히 못 채운다 — 그 사실은 바뀌지 않았다).
+       🔴 「4+」처럼 모호한 값과는 다른 경로다: 여기 들어오는 수량은 Offer 가
+       숫자로 적어 둔 값이고, 못 읽은 행은 stockQuantity 를 «넣지 않는다». */
+    variants: productGroupOptions?.variants ?? offerOptions?.variants ?? [],
     breadcrumbPath: jsonLd?.breadcrumbPath,
     jsonLdCategory: jsonLd?.jsonLdCategory,
   };
-  if (resolvedOptionGroups.length > 0) sources.optionGroups = productGroupOptions ? "json-ld" : "dom";
+  if (resolvedOptionGroups.length > 0) {
+    sources.optionGroups = productGroupOptions ? "json-ld" : offerOptions ? "microdata" : "dom";
+  }
 
   return { data, sources };
 }
