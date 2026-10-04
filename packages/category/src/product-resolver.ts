@@ -119,7 +119,39 @@ const PRODUCT_TYPE_KEYWORDS: { type: string; terms: string[] }[] = [
   },
   { type: "모자", terms: ["hat", "hats", "beanie", "cap", "caps", "trucker"] },
   { type: "원피스", terms: ["dress", "dresses"] },
-  { type: "티셔츠", terms: ["t-shirt", "tshirt", "tee"] },
+  /* ══ P2-5a-1 (CPO 확정, 2026-10-04 — 실측에서 역산) ═══════════════════════════
+     🔴 성인 테니스 상의의 `productType` 이 **null** 이었다. 그 결과가 실측된
+     오추천이다 — 「가방/지갑 > 남성가방 53점」이 「스포츠 > 테니스 > 테니스의류
+     50점」보다 위에 섰다. 산수까지 확인했다:
+
+       productType null  → candidate-scoring.ts 「유형 대조를 생략」 50점
+                         → 카테고리 이름에 「남성」이 있어 성별 보너스 +3 = 53
+       테니스의류        → 보너스 대상 문자열이 없어                    = 50
+
+     🔴 **필터를 새로 만들 필요가 없었다.** `APPAREL_CONFLICT` 에 「가방」·「신발」이
+     이미 있어서, productType 이 의류로 잡히면 그 후보는 5점 · conflict=true 로
+     떨어진다(candidate-scoring.ts 의 DOMAIN_PROFILES). 비어 있던 것은 **어휘** 다.
+
+     ── 넣은 것과 넣지 않은 것 ─────────────────────────────────────────────
+     `long sleeve`  실측: "Sergio Tacchini Men's Magro Long Sleeve" (STMMLS)
+     `polo`         실측: "Sergio Tacchini Men's Trattino Polo"      (STMFTP)
+     🔴 `top` 은 이번에 넣지 «않는다» — haystack 에 description 이 들어가서
+        「Top Rated」류 문구 오인식을 먼저 재야 한다(CPO 보류 결정).
+     🔴 `긴팔`·`반팔` 은 한국어 원문을 관측한 적이 «없어» 넣지 않는다.
+
+     ── 🔴 알려진 한계를 숨기지 않는다 ──────────────────────────────────────
+     `polo` 는 브랜드명 「Polo Ralph Lauren」에도 들어 있다. haystack 에 브랜드
+     필드 자체는 «없지만»(title+description+shopifyTags) 상품명에 브랜드가 붙는
+     것이 보통이다. 다만 이 표는 **순서대로 첫 매치**를 쓰고 `신발`·`가방` 이
+     티셔츠보다 «앞» 이라, conflict 를 유발하는 그 두 상품군은 보호된다 —
+     "Polo Ralph Lauren Backpack" 은 「backpack」이 먼저 잡힌다. 아래 테스트가
+     그 순서를 고정한다.
+
+     🔴 「티셔츠」 키에 넣는 것은 **카테고리 매칭 분류** 이고 「폴로는 티셔츠다」는
+     의복 주장이 아니다 — 국내 채널 분류가 폴로/긴팔티를 티셔츠 아래 두고, 그 키의
+     expect/conflict 가 우리가 필요한 바로 그 값이다. 새 키를 만들면 DOMAIN_PROFILES
+     에 짝을 더해야 하고 회귀 면적이 넓어진다(그쪽은 P2-5a-2 의 테니스 항목이다). */
+  { type: "티셔츠", terms: ["t-shirt", "tshirt", "tee", "long sleeve", "polo"] },
   { type: "아우터", terms: ["jacket", "coat", "parka", "outerwear"] },
   { type: "니트", terms: ["sweater", "jumper", "knit", "cardigan", "sweatshirt"] },
   { type: "바지", terms: ["pants", "trousers", "jeans", "leggings", "denim"] },
