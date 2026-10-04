@@ -326,6 +326,12 @@ const NAVER_FIELD_LABEL: Record<string, string> = {
   "detailAttribute.optionInfo": "옵션 정보",
   "detailAttribute.optionInfo.optionCombinations[].optionName": "옵션 값",
   "detailAttribute.originAreaInfo.originAreaCode": "원산지",
+  /* P2-1 A — 🔴 이 한 줄이 없으면 `naverFieldLabel()` 의 `?? field` 폴백이 걸려서
+     셀러 화면에 날것 경로(`detailAttribute.originAreaInfo.content`)가 그대로 뜬다.
+     이 파일이 REWORK-5 ②·N-3.66 에서 반복해 고쳐 온 그 누락이다 — 새 필드를
+     만들면서 같은 함정을 다시 밟지 않는다. 「원산지」와 «다른 이름» 이어야 한다:
+     둘이 동시에 설 수 있고, 같은 이름이면 셀러가 하나만 처리하고 끝냈다고 믿는다. */
+  "detailAttribute.originAreaInfo.content": "원산지 직접입력",
   "detailAttribute.originAreaInfo.importer": "수입사명",
   "smartstoreChannelProduct.naverShoppingRegistration": "네이버쇼핑 연동",
   // REWORK-5 ②(CEO 지시, 2026-09-14) — 이 한 줄이 없어서 부족정보가 필드
@@ -413,6 +419,11 @@ function naverFieldSectionId(field: string): string | undefined {
   // sectionId가 아예 없어서 "다음 입력하기"를 눌러도 아무 데도 이동하지
   // 않았다 — 실제 입력칸(countryOfOrigin)이 있는 기본정보 섹션으로 보낸다.
   if (field === "detailAttribute.originAreaInfo.originAreaCode") return "section-basic";
+  /* P2-1 A — 원산지 직접입력도 같은 자리다. 셀러가 채우는 입력칸은
+     `product.countryOfOrigin`(기본정보의 「원산지」 FieldRow) 하나이고,
+     04 로 떨어졌을 때 그 칸에 적는 말이 그대로 content 가 된다.
+     🔴 「이동 경로가 없는 안내를 만들지 않는다」 — 바로 위 줄과 같은 근거다. */
+  if (field === "detailAttribute.originAreaInfo.content") return "section-basic";
   if (field === "detailAttribute.originAreaInfo.importer") return "section-notice";
   if (field.startsWith("productCertificationInfos")) return "section-kc";
   // N-3.66(회귀 테스트로 발견 — "required면 반드시 sectionId/externalHref가

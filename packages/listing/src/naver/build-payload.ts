@@ -141,6 +141,20 @@ export interface NaverPayloadInput {
   /** N-3.4 — originAreaCode가 04(직접입력)로 폴백된 경우에만 true. 이때만
    * content가 스펙상 필수라서 이 값이 true일 때만 content를 채운다. */
   originAreaRequiresContent: boolean;
+  /**
+   * ══ P2-1 A 결함 ② (CPO 지시, 2026-10-04) ══════════════════════════════════
+   * 코드 매칭에 «실제로 쓰인» 원산지 텍스트(resolveCommonOrigin 결과).
+   *
+   * 🔴 여기 있던 content 는 `product.countryOfOrigin.value` 하나만 읽었다. 그런데
+   * 매칭에 쓰인 텍스트는 **상품 → 브랜드 → 판매자** 사다리의 결과다
+   * (resolve-context.ts:157). 그래서 브랜드/판매자 기본값에서 온 원산지로 04 가
+   * 되면, **우리가 값을 알고 있는데도** content 가 비어서 나갔다 — 실측 400 조건.
+   *
+   * 🔴 추측이 아니다. 셀러/브랜드가 설정한 값을 그대로 싣는 것이고, 어디에도
+   * 값이 없으면 애초에 `NO_INPUT`(code null)이라 기존 검증이 막는다.
+   * optional 이므로 이 필드를 모르는 기존 호출부는 동작이 바뀌지 않는다.
+   */
+  originAreaContent?: string | null;
   /** N-3.6(개정 Part A) — 출고 택배사 조회 API는 여전히 없다(확인 유지).
    * SellerProfile.naverDeliveryCompanyCode에 판매자가 직접 입력한 값이 있으면
    * 그 값을 그대로 채운다(Coupang deliveryCompanyCode와 같은 수동 입력 패턴) —
@@ -549,6 +563,7 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
     categoryRequiresChildCertification,
     originAreaCode,
     originAreaRequiresContent,
+    originAreaContent,
     deliveryCompany,
     warrantyPolicy,
     afterServiceDirector,
@@ -818,7 +833,13 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
         originAreaInfo: originAreaCode
           ? {
               originAreaCode,
-              content: originAreaRequiresContent ? product.countryOfOrigin.value || undefined : undefined,
+              /* 🔴 P2-1 A 결함 ② — 매칭에 쓰인 텍스트를 «먼저» 본다. 상품 원문이
+                 비어 있어도 브랜드/판매자 기본값이 있으면 그것이 그 상품의
+                 원산지다(그 사다리가 코드를 만든 근거이기도 하다). 둘 다 없으면
+                 undefined 그대로 — 그때는 검증이 막는다(아래 validate-payload). */
+              content: originAreaRequiresContent
+                ? originAreaContent?.trim() || product.countryOfOrigin.value || undefined
+                : undefined,
               importer: resolveNoticeFieldValue("importer", product.importer),
             }
           : undefined,

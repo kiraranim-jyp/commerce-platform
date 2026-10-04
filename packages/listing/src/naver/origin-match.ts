@@ -111,6 +111,17 @@ const COUNTRY_NAME_KO: Record<string, string> = {
 
 const KOREA_NAMES = new Set(["korea", "south korea", "republic of korea", "대한민국", "한국"]);
 
+/**
+ * ══ P2-1 A (CPO 지시, 2026-10-04 — 실제 400 에서 역산) ═══════════════════════
+ * 네이버 원산지 「기타(직접입력)」 코드.
+ *
+ * 🔴 이 코드가 실린 payload 는 `originAreaInfo.content` 가 **스펙상 필수** 다.
+ * 그런데 그 사실이 지금까지 «세 파일에 흩어진 문자열 "04"» 로만 존재했고,
+ * 검증 쪽에는 아예 없었다 — 그래서 사전 검증이 READY 를 주고 실제 API 가 400 을
+ * 줬다. 이름을 하나 만들어, 「이 코드 ⇒ content 필수」를 한 곳에서 참조한다.
+ */
+export const NAVER_ORIGIN_MANUAL_CODE = "04";
+
 export function resolveNaverOriginArea(
   countryText: string | null | undefined,
   areas: NaverOriginAreaCode[],
@@ -138,5 +149,5 @@ export function resolveNaverOriginArea(
     return { status: "MATCHED", code: match.code, matchedDisplayName: match.name, requiresImporter: true };
   }
 
-  return { status: "OTHER_MANUAL", code: "04", matchedDisplayName: null, requiresImporter: false };
+  return { status: "OTHER_MANUAL", code: NAVER_ORIGIN_MANUAL_CODE, matchedDisplayName: null, requiresImporter: false };
 }

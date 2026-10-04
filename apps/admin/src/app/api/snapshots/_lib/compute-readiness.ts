@@ -317,6 +317,10 @@ async function computeSmartstoreReadiness(
     categoryRequiresChildCertification,
     originAreaCode,
     originAreaRequiresContent,
+    /* P2-1 A 결함 ② — 화면 readiness 와 등록 라우트가 «같은 payload» 를 만들어야
+       한다. 여기를 빼면 화면은 content 가 빈 payload 를 재서 「원산지 직접입력
+       필요」를 띄우고, 실제 등록은 값을 실어 통과한다 — 두 말이 갈린다. */
+    originAreaContent: context.origin.resolvedCountryText,
     deliveryCompany,
     warrantyPolicy,
     afterServiceDirector,

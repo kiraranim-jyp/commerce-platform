@@ -564,6 +564,10 @@ export async function POST(request: Request) {
     ...payloadInputCommon,
     categoryRequiresChildCertification,
     originAreaRequiresContent: context.origin.match.status === "OTHER_MANUAL",
+    /* P2-1 A 결함 ② — 코드 매칭에 «실제로 쓰인» 텍스트를 content 로 보낸다.
+       상품 원문이 비어 있고 브랜드/판매자 기본값에서 온 경우, 지금까지 이 값이
+       버려져서 04 + content 없음으로 나갔다(실측 400). */
+    originAreaContent: context.origin.resolvedCountryText,
     descriptionTemplate: context.detailPage.descriptionTemplate,
     // N-3.86 STEP3(대표님 지시) — 클라이언트가 보낸 detailBlocks는 더 이상
     // 읽지 않는다. resolveNaverContext()가 이미 resolveDetailBlocks()로

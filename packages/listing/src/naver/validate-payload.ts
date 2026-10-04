@@ -1,6 +1,8 @@
 import { getSelectedImageUrl, isRegistrationSafeImageUrl } from "@commerce/shared";
 
 import { hasRealProductOptions } from "./build-payload";
+/* P2-1 A — 「이 코드면 content 필수」를 문자열 "04" 로 다시 적지 않는다. */
+import { NAVER_ORIGIN_MANUAL_CODE } from "./origin-match";
 import type { NaverPayloadInput, SmartStoreProductInput } from "./build-payload";
 import type { NaverProductRegistrationPayload } from "./types";
 import { isNoticeFieldSatisfied } from "../notice/reference-eligibility";
@@ -836,6 +838,33 @@ export function validateNaverPayload(
     "MISSING",
     "원산지 텍스트를 확인하지 못했습니다 — 상품 원본/브랜드 설정/판매자 기본값 중 어느 것도 없습니다.",
   );
+  /* ══ P2-1 A 결함 ① (CPO 지시, 2026-10-04 — 실제 400 에서 역산) ═════════════
+     🔴 **「READY → API 400」을 없앤다.**
+
+     실측: 실제 네이버 API 가 `originProduct.detailAttribute.originAreaInfo.content`
+     직접입력을 요구하며 400 을 줬는데, 이 파일은 바로 위 `originAreaCode !== null`
+     하나만 보고 READY 를 줬다. 코드가 `04`(기타/직접입력)라는 것은 그 자체로
+     「값은 content 에 적는다」는 선언이므로, content 가 비면 **보낼 수 없는
+     payload** 다. 그 사실을 사전 검증이 몰랐다.
+
+     🔴 플래그를 새로 받지 «않는다». `originAreaRequiresContent` 는 빌더에만
+     전달되고 검증에는 전달되지 않았는데, 「호출부 하나가 빼먹는」 그 방식이
+     바로 이 결함을 만들었다(route.ts:556 의 P0-KC-12 주석이 같은 사고를
+     기록한다 — 거기서도 validator 호출부만 고치고 빌더를 빼서 400 이 났다).
+     그래서 **이미 받은 payload 를 본다** — 실제로 보낼 그 값이 판정 근거다.
+     호출부가 무엇을 잊어도 이 판정은 따라 틀어지지 않는다.
+
+     🔴 여기서 국가를 «추측하지 않는다». 막기만 한다 — 채우는 것은 셀러다. */
+  const sentOriginArea = originProduct.detailAttribute?.originAreaInfo;
+  if (sentOriginArea?.originAreaCode === NAVER_ORIGIN_MANUAL_CODE) {
+    check(
+      fields,
+      "detailAttribute.originAreaInfo.content",
+      Boolean(sentOriginArea.content?.trim()),
+      "MISSING",
+      "원산지가 네이버 원산지 목록에 없어 「기타(직접입력)」로 등록됩니다 — 원산지를 직접 입력해야 합니다.",
+    );
+  }
   // N-3.29(CPO 지시) — product.importer에 사용자가 Editor에서 직접 입력한
   // 값이 있으면 READY. 다른 필드(manufacturer/브랜드/원산지)에서 자동 추론하지
   // 않는다(임의 필드 재활용 금지).
