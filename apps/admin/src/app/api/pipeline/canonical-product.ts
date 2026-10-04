@@ -73,12 +73,29 @@ export function toCanonicalProductImage(item: WorkspaceItem): CanonicalProductIm
     processedUrl,
     selectedVariant: usedOriginal ? "ORIGINAL" : "PROCESSED",
     isRepresentative: item.isRepresentative,
-    // 기본값: 대표 이미지가 아닌 모든 이미지는 추가 갤러리/상세설명 둘 다에
-    // 자연스럽게 쓰인다고 가정한다. 대표 이미지는 상세설명에서 또 반복해서
-    // 보여줄 필요가 적어 기본 off — 둘 다 사용자가 이미지 카드에서 언제든
-    // 켜고 끌 수 있다(자동 결정이 아니라 기본값일 뿐).
+    /* ══ P2-1 D (CPO 확정, 2026-10-04) ═══════════════════════════════════════
+       🔴 **대표 이미지도 상세설명에 들어간다.**
+
+       여기 있던 기본값은 **대표 이미지만 상세설명에서 빼는 것** 이었다
+       (「대표는 상세설명에서 또 반복할 필요가 적다」는 가정). CPO 가 그 가정을
+       뒤집었다: 상품 이미지 전체(대표 + 추가)가 상세설명에 들어간다.
+
+       🔴 옛 식을 주석에 그대로 적지 «않는다» — 적으면 「그 식이 남아 있지 않다」를
+       재는 가드가 이 설명문에 걸려 거짓 실패한다(열 번째로 걸린 함정).
+
+       🔴 이 한 줄이 **공통 지점** 이다. 세 채널의 상세설명 조립이 전부
+       `useInDescription` 을 필터로 쓰므로(naver/build-payload.ts:589 ·
+       coupang/build-payload.ts:1697 · lotteon/_lib/build-context.ts:128), 여기서
+       정하면 SmartStore·Coupang·LotteON 이 **같은 집합** 을 받는다. 채널별로
+       「대표 포함」 옵션을 다시 만들지 않는다.
+
+       🔴 갤러리 축은 건드리지 않는다 — 세 채널 모두 이미 대표를 목록 맨 앞에
+       싣는다(쿠팡 imageOrder 0 · 롯데ON gallery[0] rprtImgYn="Y" · 스마트스토어는
+       representativeImage 칸이 따로 있다). 거기에 또 넣으면 «중복» 이다.
+
+       사용자는 여전히 이미지 카드에서 끌 수 있다 — 자동 결정이 아니라 기본값이다. */
     useInProductGallery: true,
-    useInDescription: !item.isRepresentative,
+    useInDescription: true,
     classification: item.type,
   };
 }

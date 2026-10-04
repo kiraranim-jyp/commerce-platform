@@ -56,48 +56,61 @@ describe("① 🔴 다중 등록도 KC 확인을 거친다", () => {
   });
 });
 
-describe("② 대표 이미지 포함 — 기본 OFF · 스마트스토어 한정", () => {
-  it("🔴 기본값이 꺼져 있다 — 기존 Production payload 를 바꾸지 않는다", () => {
-    expect(WORKSPACE).toContain("useState(false);");
-    expect(WORKSPACE).toContain("const [includeRepresentativeInAdditional, setIncludeRepresentativeInAdditional] = useState(false);");
+describe("② 🔴 P2-1 B — 채널별 「대표 이미지 포함」 옵션은 «폐기됐다»", () => {
+  /* ══ CPO 확정 2026-10-04 — N-07-01 의 그 옵션을 뒤집는다 ═══════════════════
+     🔴 이 describe 는 원래 그 옵션이 «존재함» 을 소스 문자열로 못박고 있었다.
+     정책이 바뀌었으므로 단정을 «뒤집는다» — 테스트를 지우지 않는다. 지우면
+     다음 사람이 같은 옵션을 다시 만들어도 아무것도 걸리지 않는다.
+
+     폐기 이유: 그 옵션은 「모든 이미지를 보낸다」가 아니라 **스마트스토어 추가
+     이미지에 대표를 한 번 더 넣는 것** 이었다. 세 채널 모두 이미 대표를 싣는다. */
+
+  it("🔴 상태도 UI 도 남아 있지 않다", () => {
+    expect(WORKSPACE).not.toContain("setIncludeRepresentativeInAdditional");
+    expect(WORKSPACE).not.toContain("대표 이미지 포함</b>");
   });
 
-  it("🔴 스마트스토어에만 적용한다 — 쿠팡·롯데ON 은 이미 포함한다", () => {
-    expect(WORKSPACE).toContain('if (!includeRepresentativeInAdditional || platformId !== "smartstore") return model;');
+  it("🔴 채널 분기가 사라졌다 — listingModelFor 가 어댑터 결과를 그대로 돌려준다", () => {
+    expect(WORKSPACE).not.toContain('platformId !== "smartstore") return model;');
+    expect(WORKSPACE).not.toContain("additionalImages: [model.representativeImage, ...model.additionalImages]");
   });
 
-  it("🔴 중복해서 넣지 않는다", () => {
-    expect(WORKSPACE).toContain("if (model.additionalImages.includes(model.representativeImage)) return model;");
-  });
-
-  it("대표 이미지가 없으면 아무것도 하지 않는다 — 빈 값을 넣지 않는다", () => {
-    expect(WORKSPACE).toContain("if (!model.representativeImage) return model;");
-  });
-
-  it("맨 «앞» 에 넣는다 — 대표가 첫 장이다", () => {
-    expect(WORKSPACE).toContain("additionalImages: [model.representativeImage, ...model.additionalImages]");
-  });
-
-  it("🔴 어댑터 계약을 바꾸지 않았다 — 어댑터가 낸 결과 위에서 구성만 바꾼다", () => {
+  it("🔴 어댑터 계약은 여전히 그대로다 — 갤러리 축을 건드리지 않았다", () => {
     const adapter = readFileSync(
       join(__dirname, "../../../../../../../packages/marketplace/src/adapters/smartstore.adapter.ts"),
       "utf8",
     );
-    // 어댑터는 여전히 대표를 추가 목록에서 «제외» 한다(기존 동작 그대로).
+    /* 스마트스토어는 representativeImage 칸이 따로 있으므로 추가 목록에서 대표를
+       제외하는 것이 «맞다». 거기에 또 넣으면 중복 전송이다. */
     expect(adapter).toContain("!img.isRepresentative && img.useInProductGallery");
     expect(adapter).not.toContain("includeRepresentative");
   });
 
-  it("🔴 단독 등록과 다중 등록이 같은 함수를 지난다 — 구성이 갈리지 않는다", () => {
-    // 이 옵션은 listingModelFor 안에 있으므로 두 경로에 똑같이 걸린다.
+  it("🔴 단독 등록과 다중 등록이 여전히 같은 함수를 지난다", () => {
     expect(WORKSPACE).toContain("const listingModelFor = useCallback(");
     expect(WORKSPACE).toContain("const listing = listingModelFor(platform);");
   });
 
-  it("저장하지 않는다 — snapshot 에 새 칸을 만들지 않았다", () => {
+  it("snapshot 에 그 칸이 생긴 적이 없다 — 폐기 후에도 없다", () => {
     const types = readFileSync(join(__dirname, "../../../api/snapshots/_lib/types.ts"), "utf8");
     expect(types).not.toContain("includeRepresentative");
     const page = readFileSync(join(__dirname, "../../page.tsx"), "utf8");
     expect(page).not.toContain("includeRepresentative");
+  });
+
+  it("🔴 대신 상세설명이 «전체» 를 받는다 — 공통 지점 한 곳에서 정한다", () => {
+    const canonical = readFileSync(join(__dirname, "../../../api/pipeline/canonical-product.ts"), "utf8");
+    expect(canonical).toContain("useInDescription: true,");
+    /* 🔴 **주석을 벗기고** 본다. 옛 기본값을 «설명하는» 주석이 그 파일에 들어
+       있어서, 벗기지 않으면 그 설명문이 걸려 거짓 실패한다 — 이 저장소에서
+       열 번째로 걸린 함정이다. 가드가 실패하면 주석부터 의심한다. */
+    const code = canonical
+      .split(String.fromCharCode(10))
+      .filter((line) => {
+        const t = line.trimStart();
+        return !t.startsWith("//") && !t.startsWith("*") && !t.startsWith("/*");
+      })
+      .join(String.fromCharCode(10));
+    expect(code).not.toContain("useInDescription: !item.isRepresentative");
   });
 });

@@ -429,10 +429,17 @@ export function CommerceWorkspace({
    * 🔴 빈 상태로 시작한다. 미리 켜 두면 셀러가 «고른 적 없는» 채널로 등록이
    * 나갈 수 있고, 고르는 행위 자체가 의사표시라는 이 화면의 전제가 무너진다.
    */
-  /** N-07-01 — 스마트스토어 추가 이미지에 대표 이미지를 포함할지. 🔴 기본 OFF.
-   *  저장하지 않는다(새 snapshot 칸을 만들지 않는다) — 새로고침하면 기본값으로
-   *  돌아가고, 그때 나가는 payload 는 지금 Production 과 같다. */
-  const [includeRepresentativeInAdditional, setIncludeRepresentativeInAdditional] = useState(false);
+  /* ══ P2-1 B (CPO 확정, 2026-10-04) — N-07-01 의 채널별 옵션을 «폐기했다» ══════
+     여기 있던 `includeRepresentativeInAdditional` 상태를 지웠다.
+
+     🔴 그 옵션은 「모든 이미지를 보낸다」가 아니었다. 실제 동작은 **스마트스토어
+     추가 이미지 목록 맨 앞에 대표를 한 번 더 넣는 것** 이었다 — 세 채널 모두 이미
+     대표를 싣고 있으므로(쿠팡 imageOrder 0 · 롯데ON gallery[0] rprtImgYn="Y" ·
+     스마트스토어는 representativeImage 칸이 따로 있다) 그것은 «중복 전송» 이다.
+
+     CPO 가 요구한 「대표 + 추가 전체」는 **상세설명** 축이고, 공통 지점 한 곳에서
+     해결했다(canonical-product.ts 의 `useInDescription: true`). 그래서 채널별
+     선택 개념 자체가 필요 없어졌다 — 화면에서 고르게 하지 않는다. */
   const [selectedCommerces, setSelectedCommerces] = useState<CommerceId[]>([]);
   /** 지금 등록 중인 커머스(순차 실행). null 이면 실행 중이 아니다. */
   const [multiRunning, setMultiRunning] = useState<CommerceId | null>(null);
@@ -1833,24 +1840,16 @@ export function CommerceWorkspace({
         { liveRates: exchangeRates?.rates, roundingUnit: priceRoundingUnit ?? undefined },
         platformId,
       );
-      /* ══════════════════════════════════════════════════════════════════
-         N-07-01(CEO 확정, 2026-09-24) — **대표 이미지를 추가 이미지에 포함.**
+      /* ══ P2-1 B (CPO 확정, 2026-10-04) — N-07-01 의 채널별 분기를 «지웠다» ════
+         여기 있던 네 줄은 스마트스토어일 때만 `additionalImages` 맨 앞에 대표를
+         한 번 더 끼워 넣었다. 🔴 그것은 「전체 이미지 전송」이 아니라 **대표 중복
+         전송** 이다 — 세 채널 모두 이미 대표를 싣는다(쿠팡 imageOrder 0 ·
+         롯데ON gallery[0] rprtImgYn="Y" · 스마트스토어 representativeImage 칸).
 
-         🔴 기본값은 OFF 다. 지금 Production 에서 실제로 나가는 모양
-         (대표 1 + 추가 2)을 기본 동작에서 바꾸지 않는다 — 기본값을 켜는 것은
-         그 자체로 기존 등록 payload 변경이다.
-
-         🔴 스마트스토어에만 적용한다. 조사 결과 쿠팡(imageOrder 0 =
-         REPRESENTATION)과 롯데ON(gallery[0], rprtImgYn="Y")은 이미 대표를
-         목록 맨 앞에 넣고 있다 — 거기에 또 넣으면 «중복» 이 된다.
-
-         🔴 어댑터 계약을 바꾸지 않는다. 어댑터가 낸 결과 위에서 «구성» 만
-         바꾼다(Master 이미지 원본은 한 장도 복제되지 않는다). 그래서 단독
-         등록과 다중 등록이 여전히 이 함수 하나를 지나고 payload 도 같다. */
-      if (!includeRepresentativeInAdditional || platformId !== "smartstore") return model;
-      if (!model.representativeImage) return model;
-      if (model.additionalImages.includes(model.representativeImage)) return model;
-      return { ...model, additionalImages: [model.representativeImage, ...model.additionalImages] };
+         이제 이 함수는 어댑터 결과를 **그대로** 돌려준다 — 채널 분기가 0 이다.
+         「대표 + 추가 전체」는 상세설명 축에서 공통으로 정한다
+         (canonical-product.ts 의 `useInDescription: true`). */
+      return model;
     },
     [
       tab,
@@ -1859,7 +1858,6 @@ export function CommerceWorkspace({
       categoryMappings,
       exchangeRates,
       priceRoundingUnit,
-      includeRepresentativeInAdditional,
     ],
   );
 
@@ -3785,22 +3783,7 @@ export function CommerceWorkspace({
                 ),
                 images: (
                   <div className="space-y-2">
-                    {/* N-07-01 — 「추가 이미지에 대표 이미지 포함」. 🔴 기본 OFF 이고
-                        스마트스토어에만 적용된다(쿠팡·롯데ON 은 이미 포함한다). */}
-                    <label className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs text-text-secondary">
-                      <input
-                        type="checkbox"
-                        checked={includeRepresentativeInAdditional}
-                        onChange={(event) => setIncludeRepresentativeInAdditional(event.target.checked)}
-                        className="h-4 w-4 accent-primary"
-                      />
-                      <span>
-                        스마트스토어 추가 이미지에 <b className="font-medium text-text-primary">대표 이미지 포함</b>
-                        <span className="ml-1 text-text-tertiary">
-                          — 쿠팡·롯데ON 은 이미 포함해서 보냅니다(이 설정과 무관)
-                        </span>
-                      </span>
-                    </label>
+
                     <ImageInlineEditor
                     product={product}
                     items={items}

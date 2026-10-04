@@ -17,6 +17,7 @@ import { openGraphStrategy } from "./strategies/open-graph.strategy";
 import { shopifyStrategy } from "./strategies/shopify.strategy";
 import { nextDataStrategy } from "./strategies/next-data.strategy";
 import { domScanStrategy } from "./strategies/dom-scan.strategy";
+import { tennisWarehouseStrategy } from "./strategies/tennis-warehouse.strategy";
 import type { ExtractionContext, ExtractionStrategy, ImageCandidate, StrategySource } from "./strategies/types";
 import { withTimeout } from "./with-timeout";
 
@@ -25,6 +26,11 @@ const STRATEGIES: ExtractionStrategy[] = [
   openGraphStrategy,
   shopifyStrategy,
   nextDataStrategy,
+  /* P2-1 C — 사이트 전용 갤러리. 🔴 `canHandle()` 이 호스트+마커를 둘 다 보므로
+     다른 사이트에서는 돌지 않는다. 범용 전략을 «대체하지» 않고 후보를 더한다
+     (제목·가격·옵션은 그대로 범용 경로가 만든다 — tryFastPath 처럼 파이프라인을
+     단축하지 않는 것이 이 자리를 고른 이유다). */
+  tennisWarehouseStrategy,
   domScanStrategy,
 ];
 
@@ -76,6 +82,7 @@ function countBySource(candidates: ImageCandidate[]): Record<StrategySource, num
     shopify: 0,
     "next-data": 0,
     "dom-scan": 0,
+    "tennis-warehouse": 0,
     prestashop: 0,
   };
   for (const candidate of candidates) counts[candidate.source]++;

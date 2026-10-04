@@ -66,6 +66,15 @@ const SOURCE_BASE_SCORE: Record<StrategySource, number> = {
   // PrestaShop 전용 경로는 상품 페이지의 갤러리 이미지를 구조적으로 가져오므로
   // shopify와 같은 신뢰도로 둔다 — 둘 다 플랫폼 마크업이 보장하는 상품 이미지다.
   prestashop: 90,
+  /* P2-1 C — tennis-warehouse 갤러리(`prod_view-multiview-image`)도 같은 이유로 90 이다:
+     사이트 전용 마크업이 「이것이 이 상품의 이미지 목록」이라고 보장한다.
+
+     🔴 이 한 줄이 없어서 실측에서 **수집이 1장 → 0장** 이 됐다. `SOURCE_BASE_SCORE[s]`
+     가 undefined → 점수 NaN → MIN_SCORE 미달로 탈락하고, 대표 이미지는 URL 이 같아
+     dom-scan 후보와 «병합» 되므로 **원래 살아 있던 1장까지 함께 죽었다**
+     (trace: `기본 NaN점(tennis-warehouse+dom-scan)`).
+     StrategySource 에 값을 더하면 이 표와 `countBySource()` 를 «같이» 고친다. */
+  "tennis-warehouse": 90,
   "next-data": 70,
   "open-graph": 60,
   "dom-scan": 50,
@@ -96,12 +105,48 @@ interface MergedCandidate {
   sources: Set<StrategySource>;
 }
 
+/** 경로가 실제 이미지 «파일» 을 가리키는지. 가리키면 쿼리는 부가정보다. */
+const IMAGE_FILE_PATH_RE = /\.(?:jpg|jpeg|png|webp|gif|avif|bmp|svg)$/i;
+
+/**
+ * ══ P2-1 C (CPO 지시, 2026-10-04 — 실측에서 역산) ════════════════════════════
+ * **이미지 URL 전용** 정규화. 🔴 공용 `normalizeUrl()` 을 바꾸지 않는 이유가 있다.
+ *
+ * 쿼리가 언제나 노이즈인 것은 아니다. 리사이저/프록시형 CDN 은 「어떤 이미지인가」를
+ * **쿼리에** 적는다:
+ *
+ *   https://img.tennis-warehouse.com/watermark/rs.php?path=STMFTP-BL-2.jpg&nw=1486
+ *   https://example.com/_next/image?url=%2Fp%2F2.jpg&w=1920
+ *
+ * 쿼리를 지우면 서로 다른 사진 5장이 같은 `rs.php` 하나가 되어 **한 장으로 합쳐진다.**
+ * 실측: 테니스창고 갤러리 5장이 전부 뭉개져 최종 1장이었다.
+ *
+ * 🔴 그런데 같은 규칙을 공용 `normalizeUrl()` 에 넣었더니 **상품 식별이 깨졌다**
+ * (회귀 4건). 상품 «페이지» URL 에는 당연히 이미지 확장자가 없으므로 쿼리가 보존되고,
+ * `?utm_source=…`·`?fbclid=…` 만 다른 URL 이 다른 상품이 되어 중복등록 가드가
+ * 우회됐다(lifecycle-final-02 §② — CPO 가 명시한 가드). 그래서 **축을 갈랐다**:
+ * 상품 신원은 공용 함수, 이미지 중복제거는 이 함수.
+ *
+ * 규칙은 하나다 — 사이트 이름을 적지 않는다:
+ *   경로가 이미지 파일을 가리킨다   → 쿼리는 노이즈다 (지운다, 기존 동작 그대로)
+ *   경로가 파일을 가리키지 «않는다» → 쿼리가 곧 신원이다 (유지한다)
+ */
+export function normalizeImageUrl(url: string): string {
+  try {
+    const parsed = new URL(toParsableUrl(url));
+    if (IMAGE_FILE_PATH_RE.test(parsed.pathname)) return normalizeUrl(url);
+    return parsed.toString();
+  } catch {
+    return normalizeUrl(url);
+  }
+}
+
 function mergeByNormalizedUrl(candidates: ImageCandidate[]): Map<string, MergedCandidate> {
   const merged = new Map<string, MergedCandidate>();
 
   for (const candidate of candidates) {
     const url = toParsableUrl(candidate.url);
-    const key = normalizeUrl(url);
+    const key = normalizeImageUrl(url);
     const existing = merged.get(key);
     if (!existing) {
       merged.set(key, {
@@ -142,9 +187,19 @@ function collapseByCdnId(merged: MergedCandidate[]): MergedCandidate[] {
 
   const collapsed = [...ungrouped];
   for (const group of groups.values()) {
-    const best = group.reduce((a, b) =>
-      (b.width ?? 0) * (b.height ?? 0) > (a.width ?? 0) * (a.height ?? 0) ? b : a,
-    );
+    /* 🔴 P2-1 C — 여기 있던 비교는 `w * h` 였다. 높이를 «모르는» 후보는 곱이 0 이
+       되어 «항상 진다** — 그래서 폭 1486 짜리(높이 미상)가 폭 656 짜리(높이 확인됨)에
+       밀려 저해상도가 대표로 뽑혔다. 높이를 모른다는 것은 해상도가 0 이라는 뜻이
+       아니다. 폭을 먼저 보고, 폭이 같을 때만 높이로 가른다 — 리사이저는 폭을 바꾸므로
+       이 순서가 실제 변형 축과 맞는다. 종횡비가 같은 기존 변형들(PrestaShop·
+       Smallable)에서는 폭 순서와 면적 순서가 일치하므로 결과가 바뀌지 않는다.
+       🔴 높이를 «지어내지» 않는다 — 비교 방식만 고친다. */
+    const best = group.reduce((a, b) => {
+      const aw = a.width ?? 0;
+      const bw = b.width ?? 0;
+      if (bw !== aw) return bw > aw ? b : a;
+      return (b.height ?? 0) > (a.height ?? 0) ? b : a;
+    });
     const allSources = new Set<StrategySource>();
     for (const item of group) for (const source of item.sources) allSources.add(source);
     collapsed.push({ ...best, sources: allSources });
