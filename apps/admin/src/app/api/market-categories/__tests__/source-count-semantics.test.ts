@@ -230,3 +230,88 @@ describe("⑧ 🔴 072 의 on conflict 가 기존 행을 덮지 않았다 — �
     expect(SQL_073_RAW).toContain("072 의 값을 버렸다");
   });
 });
+
+describe("⑨ 🔴 두 숫자가 다를 때 원인은 «하나» 뿐이다 (CEO 판정 기준)", () => {
+  /* CEO 실측(2026-10-04, 073 적용 후):
+   *     설정 화면   「테니스 — 국내 2곳」 = 다나와 + 카카오 쇼핑하우
+   *     시장조사    「조사 대상 N곳」     ← 이것을 확인하려 한다
+   *
+   * 🔴 두 값은 «같은 fitting 배열» 에서 세므로, 앞의 세 조건
+   * (status='ACTIVE' · isCollectableAccess · sourceFitsScopes)은 이미 2곳이
+   * 통과했음이 증명돼 있다. 따라서 N 이 2보다 작다면 원인은 **workspaceEnabled
+   * 하나** 다 — 다른 원인이 «있을 수 없다».
+   *
+   *     N = 2   정상
+   *     N = 1   둘 중 하나가 workspaceEnabled=false (셀러가 체크 해제)
+   *     N = 0   둘 다 해제
+   *
+   * 이 테스트는 그 추론이 코드에서 참임을 고정한다 — 화면을 받으면 바로 판정된다.
+   */
+  it("🔴 두 값이 «같은 배열» 에서 나온다 — 앞 세 조건이 공유된다", () => {
+    /* 🔴 slice 의 끝을 `indexOf("overseasSourceCount")` 로 잡았더니 **주석에
+       먼저 나온 그 단어** 를 집어서 끝이 시작보다 앞이 됐고 빈 문자열이 됐다.
+       fromIndex 를 주어 시작점 «뒤» 에서만 찾는다. */
+    const from = ROUTE.indexOf("const fitting =");
+    const block = ROUTE.slice(from, ROUTE.indexOf("available:", from));
+    expect(block.length).toBeGreaterThan(100);
+    /* fitting 을 한 번 만들고 그 위에서 두 번 센다. */
+    expect((block.match(/const fitting =/g) ?? []).length).toBe(1);
+    expect(block).toContain("fitting.filter((s) => s.catalogEnabled)");
+    expect(block).toContain("fitting.filter((s) => s.enabled)");
+  });
+
+  it("🔴 두 값의 «유일한» 차이가 workspaceEnabled 다", () => {
+    const lib = readFileSync(join(HERE, "../../domestic-price-sources/_lib/domestic-price-source.ts"), "utf8");
+    /* enabled 와 catalogEnabled 는 같은 원본에서 나오고, 전자에만 한 항이 더 붙는다. */
+    expect(lib).toContain("enabled: row.enabled && workspaceEnabled");
+    expect(lib).toContain("catalogEnabled: row.enabled");
+  });
+
+  it("🔴 설정 행이 없으면 workspaceEnabled 는 true 다 — 기본은 ON 이다", () => {
+    const lib = readFileSync(join(HERE, "../../domestic-price-sources/_lib/domestic-price-source.ts"), "utf8");
+    expect(lib).toContain("설정 행이 없으면 true");
+    /* 그래서 「새로 추가한 공통 소스가 기존 셀러에게 안 보인다」가 되지 않는다.
+       즉 072·073 으로 들어온 두 행은 기본적으로 조사 대상에 «든다». */
+    expect(lib).toContain('"설정 행 없음 = ON"');
+  });
+});
+
+describe("⑩ 🔴 판매채널이 국내 소스 목록에 있는 것은 «사고가 아니다»", () => {
+  /* CEO 화면에 쿠팡·네이버 스마트스토어·11번가·G마켓·롯데ON·옥션 등이 보인다.
+   * 「판매채널을 조사 소스로 임의 등록하지 않는다」(지시 10)와 충돌해 보이지만,
+   * 034 가 «과거 CEO 지시» 로 넣은 것이고 역할이 다르다:
+   *
+   *     PRICE_COMPARISON   가격비교 «매체»   (다나와 · 카카오 쇼핑하우)
+   *     PRICE_COLLECTION   가격 관측 «대상 판매처» (쿠팡 등)
+   *
+   * 「비교 사이트로 등록」이 아니라 「국내 최저가를 보려면 그 판매처 가격을
+   * 봐야 한다」는 뜻이다. 그리고 전부 수집 불가/수동으로 정직하게 표시돼 있다. */
+  it("034 가 쿠팡을 넣었고 그 지시가 주석에 있다", () => {
+    const m034 = readFileSync(
+      join(HERE, "../../../../../../../packages/database/prisma/migrations_manual/034_domestic_price_sources_coupang.sql"),
+      "utf8",
+    );
+    expect(m034).toContain("대표님 지시");
+    expect(m034).toContain("'쿠팡', 'coupang.com'");
+    /* 🔴 실측으로 403 차단을 확인하고 MANUAL 로 넣었다 — 추정이 아니었다. */
+    expect(m034).toContain("HTTP 403");
+    expect(m034).toContain("추정 아님");
+  });
+
+  it("🔴 화면이 역할을 «배지로» 구분해 보여 준다 — 구분 수단이 이미 있다", () => {
+    expect(SETTINGS).toContain("const SOURCE_ROLE_LABEL: Record<MarketSourceRole, string>");
+    expect(SETTINGS).toContain("<SourceRoleBadge role={source.role} />");
+  });
+
+  it("🔴 072·073 은 판매채널을 «새로» 넣지 않았다", () => {
+    const seed = sqlOnly("072_domestic_common_comparison_sites_seed.sql");
+    for (const d of ["coupang.com", "11st", "gmarket", "auction", "lotteon", "musinsa"]) {
+      expect(seed.toLowerCase(), d).not.toContain(d);
+      expect(SQL_073.toLowerCase(), d).not.toContain(d);
+    }
+  });
+
+  it("두 공통 소스는 가격비교 «매체» 로 분류돼 있다", () => {
+    expect(sqlOnly("072_domestic_common_comparison_sites_seed.sql")).toContain("'PRICE_COMPARISON'");
+  });
+});
