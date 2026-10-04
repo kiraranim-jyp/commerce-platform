@@ -17,6 +17,7 @@ import {
   type ProcessedImageResult,
 } from "@commerce/image";
 import type { ErrorCode } from "@commerce/shared";
+import { classifyExtractionFailure } from "@commerce/shared";
 import { NextResponse } from "next/server";
 import { uploadPublicImage } from "@/lib/image-storage";
 import { buildCanonicalProduct } from "./canonical-product";
@@ -41,6 +42,9 @@ const MIME_BY_EXT: Record<string, string> = {
 /** 파이프라인 전체를 감싸는 catch에서 error.message만 보고 최선의 ErrorCode를
  * 추정한다 — 완벽한 분류는 아니지만(문자열 매칭 기반), 문의하기/Registration
  * Report가 "알 수 없는 오류" 대신 대략적인 영역이라도 보여줄 수 있게 한다. */
+/* 🔴 MARKET-RESEARCH-ERROR-UX-01 — 이 함수는 «남겨 둔다». 이미지/429 분류는
+   여기가 더 정확하다(다운로드·변환 단계를 안다). 외부 사이트 접속 실패만
+   classifyExtractionFailure 가 가른다 — 둘은 보는 것이 다르다. */
 function classifyPipelineError(message: string): ErrorCode {
   const lower = message.toLowerCase();
   if (lower.includes("429") || lower.includes("rate limit") || lower.includes("rate_limited")) {
@@ -314,7 +318,29 @@ export async function POST(request: Request) {
       } catch (error) {
         console.error("[pipeline] 실행 실패", error);
         const message = error instanceof Error ? error.message : "알 수 없는 오류";
-        send({ type: "error", error: message, code: classifyPipelineError(message) });
+        /* ══ MARKET-RESEARCH-ERROR-UX-01 (CEO 실측 2026-10-04) ═══════════════
+           🔴 여기서 `message` 를 그대로 내보내고 있었다. 그래서 Zalando 분석
+           실패 때 화면에 `page.goto: Timeout 30000ms exceeded … waiting until
+           "domcontentloaded"` 가 그대로 떴다 — 셀러가 읽을 수 있는 문장이 아니고,
+           게다가 classifyPipelineError 가 timeout 을 몰라 EXT001(재시도 불가)로
+           떨궜다. 「다시 시도하면 되는 일」을 「불가」라고 말한 것이다.
+
+           🔴 raw 를 «지우지는» 않는다 — 개발자 모드·서버 로그에는 필요하다.
+           다만 셀러가 보는 칸(failure)을 따로 만들어 거기에는 분류된 문장만 넣는다.
+           timeout 초를 늘리지 않았다(2단 재시도가 이미 있고 둘 다 실패했다). */
+        const failure = classifyExtractionFailure(message, url);
+        send({
+          type: "error",
+          error: failure.message,
+          code: failure.code,
+          failure: {
+            kind: failure.kind,
+            message: failure.message,
+            resolution: failure.resolution,
+            retryable: failure.retryable,
+            siteName: failure.siteName,
+          },
+        });
       } finally {
         controller.close();
       }

@@ -10,6 +10,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import type { ProductSnapshot } from "@/app/api/snapshots/_lib/types";
+import type { PipelineFailure } from "@/app/api/pipeline/response.types";
 import { CommerceWorkspace } from "./CommerceWorkspace";
 import { ImageCard } from "./ImageCard";
 import { ImageUsageTable } from "./ImageUsageTable";
@@ -62,6 +63,9 @@ export default function PipelinePage() {
   }, []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /* MARKET-RESEARCH-ERROR-UX-01 — 서버가 «분류한» 실패. 있으면 raw 대신 이것을
+     보여준다(해결 방법 + 재시도 가능 여부까지). 없으면 예전 동작 그대로다. */
+  const [failure, setFailure] = useState<PipelineFailure | null>(null);
   const [result, setResult] = useState<PipelineResponse | null>(null);
   // product는 CommerceWorkspace가 아니라 여기서 소유한다(controlled) — 이미지 카드의
   // 원본/누끼 후보 전환(swapVariant)이 등록 화면에도 그대로 반영되려면 두 UI가 같은
@@ -294,7 +298,10 @@ export default function PipelinePage() {
       // 용량 초과(QuotaExceededError) 등 — 복원 기능만 못 쓸 뿐 화면 동작에는
       // 영향 없게 조용히 무시한다.
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    /* 🔴 exhaustive-deps disable 을 «지웠다». PRODUCT-INFO-UX-06 에서
+       detailOverride 를 deps 에 넣으면서 목록이 완전해졌고, 그때부터 이 주석이
+       「불필요한 disable」 경고를 냈다(lint 57W). 억제가 필요 없으면 억제를
+       남기지 않는다 — 남아 있으면 다음 사람이 「여기 뭔가 빠져 있다」고 읽는다. */
   }, [hydrated, url, result, product, items, thumbnails, representativeId, categoryMappings, marketCategoryId, detailOverride]);
 
   async function saveSnapshotToServer() {
@@ -500,6 +507,7 @@ export default function PipelinePage() {
     setAnalysisStartedAt(Date.now());
     setLoading(true);
     setError(null);
+    setFailure(null);
     setResult(null);
     setProduct(null);
     setItems([]);
@@ -532,6 +540,7 @@ export default function PipelinePage() {
           setProgressLog((prev) => [...prev, event]);
         } else if (event.type === "error") {
           setError(event.error);
+          setFailure(event.failure ?? null);
         } else if (event.type === "complete") {
           setResult(event);
           setProduct(event.canonicalProduct);
@@ -1066,9 +1075,26 @@ export default function PipelinePage() {
       )}
 
       {error && (
-        <p className="mt-4 rounded-md border border-error/20 bg-error-soft p-3 text-sm text-error">
-          {error}
-        </p>
+        /* ══ MARKET-RESEARCH-ERROR-UX-01 (CEO 실측 2026-10-04) ═══════════════
+           🔴 여기에 서버 raw 문구가 그대로 찍혔다 — Zalando 분석 실패 때
+           `page.goto: Timeout 30000ms exceeded … waiting until
+           "domcontentloaded"` 가 셀러 화면에 떴다.
+           이제 서버가 분류해서 내려주고, 화면은 ①무슨 일인지 ②무엇을 하면
+           되는지 ③다시 시도할 수 있는지 셋을 갈라 말한다.
+           🔴 재시도는 기존 runPipeline() 을 그대로 부른다 — 새 retry 시스템을
+           만들지 않았다. */
+        <div className="mt-4 rounded-md border border-error/20 bg-error-soft p-3 text-sm">
+          <p className="font-medium text-error">
+            {failure?.kind === "TIMEOUT" ? "⚠️ " : ""}
+            {error}
+          </p>
+          {failure?.resolution && <p className="mt-1 text-xs text-text-secondary">{failure.resolution}</p>}
+          {failure?.retryable && (
+            <Button variant="secondary" size="sm" className="mt-2.5" onClick={runPipeline} disabled={loading}>
+              다시 시도
+            </Button>
+          )}
+        </div>
       )}
 
       {result && product && (

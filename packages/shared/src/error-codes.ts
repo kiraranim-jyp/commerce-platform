@@ -22,6 +22,7 @@ export type ErrorCode =
   | "EXT002"
   | "EXT003"
   | "EXT004"
+  | "EXT005"
   | "AI001"
   | "AI002"
   | "AI003"
@@ -100,6 +101,15 @@ export const ERROR_CODE_INFO: Record<ErrorCode, ErrorCodeInfo> = {
     category: "EXT",
     defaultMessage: "지원하지 않는 사이트 구조입니다.",
     autoRetryable: false,
+  },
+  /* MARKET-RESEARCH-ERROR-UX-01 — 외부 사이트가 제때 응답하지 않았다.
+     🔴 EXT001~004 는 전부 autoRetryable:false 라서 timeout 을 담을 칸이
+     없었다. timeout 을 그 넷에 넣으면 「다시 시도하면 되는 일」을
+     「재시도 불가」라고 말하게 된다 — Zalando 실측에서 실제로 그랬다. */
+  EXT005: {
+    category: "EXT",
+    defaultMessage: "상품 페이지 접속 시간이 초과됐습니다.",
+    autoRetryable: true,
   },
   AI001: {
     category: "AI",
@@ -237,6 +247,8 @@ const FAILURE_BUCKET_BY_CODE: Record<ErrorCode, FailureBucket> = {
   EXT002: "ATTRIBUTE",
   EXT003: "PRICE",
   EXT004: "NETWORK",
+  /* 접속 시간 초과도 네트워크 문제다 — EXT001·004 와 같은 버킷. */
+  EXT005: "NETWORK",
   AI001: "CATEGORY",
   AI002: "ATTRIBUTE",
   AI003: "IMAGE",

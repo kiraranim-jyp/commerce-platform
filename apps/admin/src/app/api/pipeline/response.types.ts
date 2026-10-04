@@ -1,5 +1,6 @@
 import type { CanonicalProduct, ErrorCode, ImageType, ProductMetadata } from "@commerce/shared";
 import type { PipelineProgressEvent, QualityScore } from "@commerce/image";
+import type { ExtractionFailureKind } from "@commerce/shared";
 
 /**
  * 이미지 1장(사진 1장) 단위의 Workspace 카드 데이터.
@@ -83,7 +84,26 @@ export interface PipelineResponse {
  * 형태이고, JSON은 아래 셋 중 하나다 — progress가 여러 번 오다가 마지막에 complete
  * 또는 error가 정확히 한 번 온다.
  */
+/** MARKET-RESEARCH-ERROR-UX-01 — 셀러에게 보여 줄 «분류된» 실패. 화면이 이
+ * 타입을 그대로 재사용한다(서버와 화면이 같은 모양을 본다). */
+export interface PipelineFailure {
+  kind: ExtractionFailureKind;
+  message: string;
+  resolution: string;
+  retryable: boolean;
+  siteName: string | null;
+}
+
 export type PipelineSSEEvent =
   | ({ type: "progress" } & PipelineProgressEvent)
   | ({ type: "complete" } & PipelineResponse)
-  | { type: "error"; error: string; code?: ErrorCode };
+  /* MARKET-RESEARCH-ERROR-UX-01 — `error` 는 기존 칸 그대로 두고(하위호환),
+     셀러에게 보여 줄 값을 «따로» 싣는다. 화면은 failure 가 있으면 그것을
+     쓰고 없으면 예전처럼 error 를 쓴다. 🔴 raw 문구를 error 에 넣지 않는다 —
+     서버가 분류한 뒤의 문장을 넣는다. */
+  | {
+      type: "error";
+      error: string;
+      code?: ErrorCode;
+      failure?: PipelineFailure;
+    };
