@@ -142,26 +142,43 @@ describe("② 🔴 전제를 못박는다 — toSnapshot 을 먹이는 쿼리는
   });
 });
 
-describe("③ 🔴 목록(Summary)에는 «넣지 않았다» — 넣으려면 폴백도 같이 고쳐야 한다", () => {
-  it("Summary 에 productId 가 없거나, 있다면 «두» 컬럼 목록이 모두 product_id 를 담는다", async () => {
+/**
+ * 🔴 **미래 회귀 방지 가드다. 「지금 Summary 에 productId 가 없는 것이 옳다」를
+ * 단정하는 테스트가 «아니다»**(CPO 지적 2, 2026-10-05). 그 판단은 CPO 가 했고
+ * 테스트의 일이 아니다 — 여기서 지키는 것은 **둘이 갈라지지 않는다** 하나다.
+ *
+ * 🔴 처음 쓴 판에는 `else { expect(summaryHasProductId).toBe(false) }` 가 있었다.
+ * 분기 «조건» 을 그대로 다시 단정하는 공허한 줄이라 절대 실패할 수 없었고,
+ * 바로 CPO 가 경고한 혼동을 코드가 저지르고 있었다.
+ */
+describe("③ 🔴 Summary 의 productId 와 컬럼 목록은 «함께» 움직인다", () => {
+  it("Summary 가 productId 를 가지면 «두» 컬럼 목록이 모두 product_id 를 담는다", async () => {
     const types = await source("types.ts");
     const code = await source("snapshot.ts");
 
     const summaryBlock = types.slice(types.indexOf("export interface ProductSnapshotSummary"));
     const summaryHasProductId = /\bproductId\b/.test(summaryBlock.slice(0, summaryBlock.indexOf("\n}")));
 
+    const primary = /const SUMMARY_COLUMNS\s*=\s*"([^"]*)"/.exec(code)?.[1] ?? "";
+    const fallback = /const SUMMARY_COLUMNS_FALLBACK\s*=\s*"([^"]*)"/.exec(code)?.[1] ?? "";
+
+    /* 🔴 가드가 공허해지는 «진짜» 경로는 여기다 — 정규식이 못 맞으면 둘이 빈
+       문자열이 되고, 아래 단정이 전부 조용히 통과한다. 먼저 못박는다. */
+    expect(primary, "SUMMARY_COLUMNS 를 찾지 못했다 — 상수 이름이 바뀌었나").toContain("source_url");
+    expect(fallback, "SUMMARY_COLUMNS_FALLBACK 를 찾지 못했다").toContain("source_url");
+
     if (summaryHasProductId) {
-      /* 🔴 목록은 명시 컬럼 목록 + 폴백 둘로 조회한다. 폴백에 칸을 안 넣으면
+      /* 목록은 명시 컬럼 목록 + 폴백 둘로 조회한다. 폴백에 칸을 안 넣으면
          구버전 경로에서 undefined → null 이 되어 «상품이 있는데 없다» 가 된다. */
-      const primary = /const SUMMARY_COLUMNS\s*=\s*"([^"]*)"/.exec(code)?.[1] ?? "";
-      const fallback = /const SUMMARY_COLUMNS_FALLBACK\s*=\s*"([^"]*)"/.exec(code)?.[1] ?? "";
       expect(primary, "SUMMARY_COLUMNS 에 product_id 가 없다").toContain("product_id");
       expect(fallback, "SUMMARY_COLUMNS_FALLBACK 에 product_id 가 없다").toContain("product_id");
-    } else {
-      /* 현재 선택: 넣지 않는다. 목록 카드는 이 값을 쓰지 않고, 폴백 경로가
-         조용히 거짓을 말할 위험만 생긴다. */
-      expect(summaryHasProductId).toBe(false);
+      return;
     }
+
+    /* 타입에 없는 상태. 🔴 그것이 «옳다» 고 말하지 않는다 — 두 목록이 서로
+       갈라져 있지 않은지만 본다. 한쪽에만 들어가 있으면 누군가 반쯤 바꾼 것이고,
+       다음 사람이 타입만 더하는 순간 폴백 경로가 거짓을 말하게 된다. */
+    expect(primary.includes("product_id"), "목록 둘이 갈라졌다").toBe(fallback.includes("product_id"));
   });
 });
 
