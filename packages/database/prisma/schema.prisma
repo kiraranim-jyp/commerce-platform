@@ -31,7 +31,22 @@ model Product {
   // 🔴 066 — 소유자. 이 스키마의 다른 표와 «같은» 격리를 쓴다.
   workspaceId String?  @map("workspace_id") @db.Uuid
 
-  channelProducts ChannelProduct[]
+  /// ══ PIVOT-03-A (CPO 확정, 2026-10-05) — **셀러의 명시적 소싱 결정.** ═══════
+  ///
+  /// 🔴 파생이 «아니다». `Master Ready`(= Product ∧ 이 값 ∧ 기존 readiness)는
+  /// 애플리케이션이 계산하지만, 「어디서 사올지」는 사람의 의사표시라 저장한다.
+  ///
+  /// 🔴 Product 에 두는 이유: snapshot workspace jsonb 에 넣으면 재분석 때
+  /// 사라진다. snapshot 은 「수집·분석 1회」이고, 그 소실이 이 모델 머리 주석이
+  /// 기록한 사고 구조다(외부번호 6개로 갈라진 일).
+  ///
+  /// 🔴 품절로는 비우지 «않는다» — 후보의 availability 를 OUT_OF_STOCK 으로 두고
+  /// 선택은 유지한다. 자동으로 풀면 셀러가 «왜» 풀렸는지 알 수 없다.
+  selectedSourcingCandidateId String?            @map("selected_sourcing_candidate_id") @db.Uuid
+  selectedSourcingCandidate   SourcingCandidate? @relation("SelectedSource", fields: [selectedSourcingCandidateId], references: [id], onDelete: SetNull)
+
+  channelProducts    ChannelProduct[]
+  sourcingCandidates SourcingCandidate[] @relation("ProductCandidates")
 
   /// 🔴 065 — 실제 표 이름은 snake_case `products` 다. 이 스키마의 다른 표가
   /// 전부 그렇고, "Product" 만 대문자 단수로 혼자 달랐다(Prisma 초기 잔재).
@@ -65,4 +80,81 @@ model ChannelProduct {
   @@index([productId, channel])
   @@index([channel, externalProductId])
   @@map("channel_products")
+}
+
+/// ══════════════════════════════════════════════════════════════════════════
+/// PIVOT-03-A (CPO 확정, 2026-10-05) — **소싱 후보 = 「무엇을 어디서 얼마에 사오나」**
+/// ══════════════════════════════════════════════════════════════════════════
+///
+/// 책임 경계(PIVOT-01/02 조사로 확정):
+///   Product            persistent identity
+///   ProductSnapshot    collection / analysis run
+///   SourcingCandidate  sourcing evidence          ← 이 모델
+///   Selected Source    seller's explicit decision ← Product.selected…Id
+///   Master Ready       derived application state  (저장하지 않는다)
+///   ChannelProduct     channel registration result
+///
+/// 🔴 **소유자는 Product 다.** snapshot 에 매달면 재분석 때 후보가 사라진다 —
+/// snapshot 은 「수집·분석 1회」다. 「어느 수집에서 봤는가」는
+/// `originatingSnapshotId` 로 따로 남긴다(provenance).
+///
+/// 🔴 **MI 결과가 여기 없다.** CASE A/B/C/D · 마진 · radar · 최종판정 칸이 없는
+/// 것은 의도다. 그 값들은 가격·환율·배송비·수수료·판매가가 바뀌면 달라지는
+/// **현재 시점의 계산**이고, 박아 두면 「22.4%」가 지금 판단인지 과거인지
+/// 모호해진다. 감사용 이력이 필요해지면 `Decision History` 라는 «별도» 개념으로
+/// 확장한다 — 이 모델에 그 책임을 억지로 넣지 않는다.
+///
+/// 🔴 **판매가가 아니다.** 국내 판매가는 `price_observations` 축이고, 둘을 한 칸에
+/// 합치면 원가와 판매가가 섞인다.
+///
+/// 🔴 **어휘를 새로 만들지 않았다.** `availability` 는 shared 의 SourceStockState,
+/// `identityMatchTruth` 는 030 이 domestic_product_links 에 쓴 목록 그대로다.
+model SourcingCandidate {
+  id String @id @default(uuid()) @db.Uuid
+
+  productId String  @map("product_id")
+  product   Product @relation("ProductCandidates", fields: [productId], references: [id], onDelete: Cascade)
+
+  /// 🔴 provenance. snapshot 이 지워져도 후보는 산다(소유자는 Product 다).
+  /// NULL 허용 — 수집 밖에서 셀러가 직접 넣은 후보가 있을 수 있다.
+  originatingSnapshotId String? @map("originating_snapshot_id") @db.Uuid
+
+  /// 066 과 같은 격리.
+  workspaceId String? @map("workspace_id") @db.Uuid
+
+  /// ── 소싱처 정체성 ──────────────────────────────────────────────────────
+  sourceUrl  String  @map("source_url")
+  sourceSite String  @map("source_site")
+  /// 🔴 추론하지 않는다 — 모르면 null 이다(「알 수 없음」과 「없음」을 섞지 않는다).
+  sourceCountry String? @map("source_country")
+
+  /// ── 원가 근거(관측값) ──────────────────────────────────────────────────
+  priceAmount Decimal? @map("price_amount") @db.Decimal
+  currency    String?
+
+  /// 'IN_STOCK' | 'OUT_OF_STOCK' | 'INVALID' | 'UNKNOWN' — SourceStockState 그대로.
+  availability String?
+
+  /// 숫자를 지어내지 않는다 — 원문/메모를 그대로 남긴다.
+  shippingNote String? @map("shipping_note")
+
+  /// 030 의 MatchTruth 6값 그대로.
+  identityMatchTruth String? @map("identity_match_truth")
+
+  /// 🔴 「언제 본 가격인가」. 없으면 후보가 낡았는지 말할 수 없다.
+  observedAt DateTime? @map("observed_at") @db.Timestamptz
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  /// 이 후보를 「선택한」 Product 들(역방향). 실제로는 0 또는 1 이다.
+  selectedBy Product[] @relation("SelectedSource")
+
+  /// 🔴 같은 Product 안에서 같은 소싱처 URL 이 두 번 서지 않는다. 가격이 바뀌면
+  /// 행을 더하지 않고 그 행을 갱신한다 — 가격 «이력» 은 price_observations 의 일이다.
+  @@unique([productId, sourceUrl])
+  @@index([productId])
+  @@index([workspaceId])
+  @@index([originatingSnapshotId])
+  @@map("sourcing_candidates")
 }

@@ -246,8 +246,22 @@ describe("⑥ 🔴 두 축 설계 — 결정을 되돌리지 않는다", () => {
     );
     expect(schema).not.toContain("vendorItemId");
     expect(schema).not.toContain("ChannelProductItem");
-    /* 표는 셋 그대로다(Product · ChannelProduct). */
-    expect(schema.match(/^model /gm) ?? []).toHaveLength(2);
+    /* ══ PIVOT-03-A 로 «재조준» 한다 (CPO 승인, 2026-10-05) ════════════════════
+       원래 단정: `schema.match(/^model /gm)` 가 정확히 2개.
+       의도는 바로 위 두 줄이 말하는 것 — **ChannelProduct 에 아이템 자식 표를
+       만들어 vendorItemId 를 캐시하지 않았다**(등록 시점에 얻을 수 없는 값을
+       기준값으로 쓰지 않는다는 그 결정).
+
+       🔴 그런데 «개수» 로 박아서 그 축과 «무관한» 모델까지 막고 있었다.
+       SourcingCandidate(소싱 후보 — Product 소유, 채널과 무관)가 들어오면서
+       드러났다. 개수는 의도의 대리물일 뿐이고 의도는 위 두 줄이 이미 정확히
+       지킨다. 그래서 개수 대신 **ChannelProduct 의 자식이 없다** 를 직접 본다. */
+    const channelChildren = (schema.match(/^model \w+/gm) ?? []).filter((line) =>
+      /^model ChannelProduct\w+/.test(line),
+    );
+    expect(channelChildren, `ChannelProduct 자식 표가 생겼다: ${channelChildren.join(", ")}`).toEqual([]);
+    /* 🔴 가드가 공허하지 않다 — ChannelProduct 자신은 그대로 있어야 한다. */
+    expect(schema).toContain("model ChannelProduct {");
   });
 
   it("🔴 Core 인터페이스에 «빈 계약» 을 넣지 않았다", () => {
