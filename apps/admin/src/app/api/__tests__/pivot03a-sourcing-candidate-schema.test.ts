@@ -237,3 +237,75 @@ describe("🔴 076 — Selected 는 «그 Product 의» 후보여야 한다", ()
     expect(SQL).toContain("REFERENCES sourcing_candidates(id) ON DELETE SET NULL");
   });
 });
+
+/* ════════════════════════════════════════════════════════════════════════════
+   PIVOT-03-B ③ — source_kind: 출처 «사실» (077)
+   ════════════════════════════════════════════════════════════════════════════
+   🔴 075 가 남긴 결함: originating_snapshot_id 가 ON DELETE SET NULL 이라
+   NULL 이 두 가지를 뜻했다 — ①셀러 직접 입력 ②수집 발견인데 snapshot 삭제됨.
+   ②는 실재하는 경로다(DELETE /api/snapshots/[id]). 그 상태로 「NULL = 직접
+   입력」이라 적으면 snapshot 을 지운 셀러에게 거짓말이 된다. */
+const SQL_077 = readFileSync(
+  join(__dirname, "../../../../../../packages/database/prisma/migrations_manual/077_sourcing_candidate_source_kind.sql"),
+  "utf8",
+);
+const sql077Code = SQL_077.replace(/^\s*--.*$/gm, "");
+
+describe("🔴 077 — source_kind 는 출처 «사실» 이다", () => {
+  it("두 값만 허용한다 — 기존 패턴(text + CHECK) 그대로", () => {
+    expect(sql077Code).toContain("ADD COLUMN IF NOT EXISTS source_kind TEXT NULL");
+    expect(sql077Code).toContain("source_kind IN ('DISCOVERED', 'SELLER_ENTERED')");
+    /* 🔴 Postgres enum 을 들이지 않았다 — 이 저장소는 text + CHECK 다(030·075). */
+    expect(sql077Code).not.toMatch(/CREATE\s+TYPE/i);
+  });
+
+  it("🔴 NULL 을 허용한다 — legacy 미확정(UNKNOWN)", () => {
+    expect(sql077Code).toContain("source_kind IS NULL OR");
+  });
+
+  it("🔴 기존 행을 backfill 하지 «않았다» — 추측이 사실로 굳지 않게", () => {
+    expect(sql077Code).not.toMatch(/UPDATE\s+sourcing_candidates/i);
+    expect(sql077Code).not.toContain("'SELLER_ENTERED'::text");
+  });
+
+  it("🔴 지킬 수 있는 invariant «하나» 만 CHECK 로 넣었다", () => {
+    /* SELLER_ENTERED 에 수집 provenance 가 붙어 있으면 그 자체로 모순이고
+       «언제나» 참이므로 CHECK 다. */
+    expect(sql077Code).toContain("CHECK (source_kind <> 'SELLER_ENTERED' OR originating_snapshot_id IS NULL)");
+  });
+
+  it("🔴 DISCOVERED 의 snapshot 필수를 CHECK 로 넣지 «않았다» — 생성 시점 조건이다", () => {
+    /* snapshot 삭제 후 DISCOVERED + NULL 은 «정상» 이다. CHECK 는 「언제나」를
+       요구하므로 이 규칙을 표현할 수 없다 — API 가 생성 시점에만 검증한다.
+       🔴 이 비대칭을 모르고 CHECK 를 추가하면 snapshot 삭제가 깨진다. */
+    expect(sql077Code).not.toMatch(/source_kind\s*<>\s*'DISCOVERED'\s*OR\s*originating_snapshot_id\s*IS\s*NOT\s*NULL/i);
+    expect(sql077Code).not.toContain("originating_snapshot_id IS NOT NULL)");
+  });
+
+  it("🔴 ON DELETE SET NULL 을 그대로 뒀다 — DB 안전망과 API 정책은 별개", () => {
+    /* 🔴 needle 을 좁힌다 — 처음에 `/DROP CONSTRAINT.*snapshot/` 로 적었더니
+       077 자신의 «멱등성 가드»(seller_entered_has_no_snapshot 재생성 전 DROP)가
+       걸려 거짓 실패했다. 의도는 「originating_snapshot_id 의 FK 를 떼지
+       않았다」이므로 그 FK 이름 모양만 본다. */
+    expect(sql077Code).not.toMatch(/DROP\s+CONSTRAINT[^;]*originating_snapshot[^;]*fkey/i);
+    expect(sql077Code).not.toContain("REFERENCES product_snapshots");
+    expect(sql077Code).not.toContain("ON DELETE RESTRICT");
+    expect(sql077Code).not.toContain("ON DELETE CASCADE");
+  });
+
+  it("Prisma 가 같은 컬럼을 가리키고, 비대칭을 적어 뒀다", () => {
+    expect(PRISMA).toContain('sourceKind String? @map("source_kind")');
+    expect(PRISMA).toContain("출처 사실");
+    expect(PRISMA).toContain("API 가 생성 시점에만");
+  });
+
+  it("되돌리는 방법이 적혀 있다 — 제약·인덱스·컬럼 순서", () => {
+    expect(SQL_077).toContain("DROP CONSTRAINT IF EXISTS sourcing_candidates_seller_entered_has_no_snapshot;");
+    expect(SQL_077).toContain("DROP COLUMN IF EXISTS source_kind;");
+  });
+
+  it("🔴 075/076 을 «고치지» 않았다 — 이미 적용됐으므로 077 로 더한다", () => {
+    expect(SQL).not.toContain("source_kind");
+    expect(SQL_076).not.toContain("source_kind");
+  });
+});

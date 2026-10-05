@@ -141,6 +141,20 @@ model SourcingCandidate {
   /// 030 의 MatchTruth 6값 그대로.
   identityMatchTruth String? @map("identity_match_truth")
 
+  /// ══ 077 (PIVOT-03-B ③) — **출처 «사실».** ═══════════════════════════════
+  /// 'DISCOVERED' | 'SELLER_ENTERED'. 🔴 NULL 은 legacy 미확정(UNKNOWN)이고
+  /// 신규 정상 상태가 «아니다» — 기존 행을 backfill 하지 않았다.
+  ///
+  /// 🔴 `originatingSnapshotId` 와 «다른 일» 을 한다:
+  ///     originatingSnapshotId  provenance 링크 — snapshot 삭제로 사라질 수 있다
+  ///     sourceKind             출처 사실      — 사라지지 않는다
+  /// 그래서 `DISCOVERED + snapshot NULL` 은 **정상** 이다(삭제된 뒤의 상태).
+  ///
+  /// 🔴 DB CHECK 는 한쪽만 지킨다: SELLER_ENTERED → snapshot 은 NULL.
+  /// 「DISCOVERED 는 생성 시점에 snapshot 이 있어야 한다」는 생성 시점 조건이라
+  /// CHECK 로 표현할 수 없고, **API 가 생성 시점에만** 검증한다.
+  sourceKind String? @map("source_kind")
+
   /// 🔴 「언제 본 가격인가」. 없으면 후보가 낡았는지 말할 수 없다.
   observedAt DateTime? @map("observed_at") @db.Timestamptz
 
