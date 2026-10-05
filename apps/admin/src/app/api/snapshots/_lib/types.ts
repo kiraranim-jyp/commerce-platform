@@ -108,6 +108,27 @@ export interface ProductSnapshot {
    * workspaceId(requireUser)로 판단하고, 이 필드는 이미 소유권 검사를 통과해
    * 읽어온 스냅샷을 다시 저장할 때 소유자를 유지하는 용도로만 쓴다. */
   workspaceId: string | null;
+  /**
+   * 🔴 PIVOT-03-C 선행(CPO 승인 2026-10-05) — **상품 정체성.** 063 이 만든
+   * `product_snapshots.product_id` 이고, 03-B ②④ 의
+   * `/api/products/[productId]/…` 를 부를 때 쓰는 «키» 다. 이 칸이 없어서
+   * 화면이 그 API 를 부를 방법이 없었다.
+   *
+   * 🔴 `null` 은 「소싱 후보가 없다」가 **아니다** — 「상품 정체성이 아직 없어
+   * 소싱을 시작할 수 없다」는 뜻이다. 화면이 둘을 같게 그리면 「조사해 보니
+   * 후보가 없다」는 거짓이 된다. 네 상태를 가른다(CPO 확정):
+   *
+   *     productId = null                 상품 정체성이 없어 소싱을 시작할 수 없음
+   *     productId 있음 + candidates 0     상품은 있고 후보가 아직 없음
+   *     candidates > 0 + selected null    후보 중에서 골라야 함
+   *     selected 있음                     Source Selected / Master 확정
+   *
+   * 문구는 `computeMasterReady()` 가 이미 가진 것을 쓴다 — 새 상태도 새 어휘도
+   * 만들지 않는다(CPO 확정).
+   *
+   * 주의: `workspaceId` 와 같은 원칙으로, 이 값을 권한 판단 근거로 쓰지 않는다.
+   */
+  productId: string | null;
 }
 
 /** 목록 화면(최근 작업)은 workspace 전체를 안 내려준다 — 카드 하나에 대표

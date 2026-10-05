@@ -18,6 +18,19 @@ interface SnapshotRow {
   /** BETA-SECURITY-2 — 소유 workspace. 마이그레이션 043 실행 전에는 컬럼이
    * 없으므로 optional로 둔다(job_key와 같은 이유). */
   workspace_id?: string | null;
+  /**
+   * 🔴 PIVOT-03-C 선행(CPO 승인 2026-10-05) — 063 이 만든 칸을 DTO 가 «버리고»
+   * 있었다. 그래서 화면은 상품 정체성을 알 수 없었고, 03-B ②④ 가 Product 로 키를
+   * 거는 `/api/products/[productId]/…` 를 «부를 키가 없었다».
+   *
+   * 🔴 optional 인 이유는 「없음」이 «둘» 이기 때문이다:
+   *     쿼리가 이 칸을 select 하지 않았다       → undefined
+   *     상품 정체성 발급이 실패했다(저장은 됨)   → null
+   * `toSnapshot` 은 둘을 null 로 합친다. 합쳐도 되는 것은 toSnapshot 을 먹이는
+   * 쿼리가 «전부» 전체 컬럼 select 이기 때문이고, 그 사실을 테스트가 못박는다 —
+   * 깨지면 화면이 「상품이 있는데 없다」고 말한다.
+   */
+  product_id?: string | null;
 }
 
 function toSnapshot(row: SnapshotRow): ProductSnapshot {
@@ -35,6 +48,10 @@ function toSnapshot(row: SnapshotRow): ProductSnapshot {
     // 이 값을 실어두면 스냅샷을 이미 읽은 호출부가 소유자를 다시 조회하거나
     // 인자로 넘겨받지 않고도 저장 시 소유권을 유지할 수 있다.
     workspaceId: row.workspace_id ?? null,
+    /* 🔴 권한 근거로 쓰지 «않는다» — workspaceId 와 같은 원칙이다. 이 값은
+       화면이 `/api/products/[productId]/…` 를 부를 «키» 로만 쓰고, 그 라우트가
+       세션 workspace 로 소유권을 다시 판단한다. */
+    productId: row.product_id ?? null,
   };
 }
 
