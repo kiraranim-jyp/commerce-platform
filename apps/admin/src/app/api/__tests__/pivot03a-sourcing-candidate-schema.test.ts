@@ -179,3 +179,61 @@ describe("🔴 기존 경로를 건드리지 않았다", () => {
     expect(SQL).toContain("ALTER TABLE products DROP COLUMN IF EXISTS selected_sourcing_candidate_id;");
   });
 });
+
+/* ════════════════════════════════════════════════════════════════════════════
+   PIVOT-03-B ① — cross-product 선택을 DB 가 막는다 (076)
+   ════════════════════════════════════════════════════════════════════════════
+   CPO 지시 9번: Product A.selected = Candidate B 를 허용하면 안 된다.
+   075 의 단일 FK 로는 막히지 않는다 — 복합 FK 로 바꾼 것이 076 이다. */
+const SQL_076 = readFileSync(
+  join(__dirname, "../../../../../../packages/database/prisma/migrations_manual/076_selected_candidate_same_product.sql"),
+  "utf8",
+);
+const sql076Code = SQL_076.replace(/^\s*--.*$/gm, "");
+
+describe("🔴 076 — Selected 는 «그 Product 의» 후보여야 한다", () => {
+  it("피참조 측 UNIQUE(product_id, id) 를 만든다", () => {
+    expect(sql076Code).toContain("CREATE UNIQUE INDEX IF NOT EXISTS sourcing_candidates_product_id_id_key");
+    expect(sql076Code).toContain("ON sourcing_candidates(product_id, id)");
+  });
+
+  it("🔴 복합 FK 다 — (id, selected…) → (product_id, id)", () => {
+    expect(sql076Code).toContain("FOREIGN KEY (id, selected_sourcing_candidate_id)");
+    expect(sql076Code).toContain("REFERENCES sourcing_candidates(product_id, id)");
+  });
+
+  it("🔴 ON DELETE SET NULL 에 컬럼을 «지정» 했다 — products.id 를 NULL 로 만들지 않는다", () => {
+    /* 지정하지 않으면 참조 컬럼 전부를 NULL 로 만들려 하고, products.id 는
+       PK(NOT NULL) 이라 후보 삭제가 에러로 실패한다. PG 15+ 문법이고
+       실측(17.6)으로 버전을 확인한 뒤 골랐다. */
+    expect(sql076Code).toContain("ON DELETE SET NULL (selected_sourcing_candidate_id)");
+  });
+
+  it("🔴 기존 FK 이름을 «추측해서» DROP 하지 않는다 — 찾아서 뗀다", () => {
+    /* 자동 생성 이름에 의존하면 환경에 따라 0건 삭제가 되고, 그러면 단일 FK 와
+       복합 FK 가 «둘 다» 남아 남의 후보가 여전히 통과한다. */
+    expect(sql076Code).toContain("FROM pg_constraint con");
+    expect(sql076Code).toContain("fref.relname = 'sourcing_candidates'");
+    expect(sql076Code).toContain("DROP CONSTRAINT %I");
+  });
+
+  it("🔴 데이터를 고치지 않는다", () => {
+    expect(sql076Code).not.toMatch(/\bUPDATE\s+products\s+SET\b/i);
+    expect(sql076Code).not.toMatch(/\bDELETE\s+FROM\b/i);
+  });
+
+  it("🔴 자동 선택/자동 해제를 만들지 않았다 — 트리거 0", () => {
+    expect(sql076Code).not.toMatch(/CREATE\s+TRIGGER/i);
+    expect(sql076Code).not.toMatch(/CREATE\s+OR\s+REPLACE\s+FUNCTION/i);
+  });
+
+  it("되돌리는 방법이 적혀 있다 — 단일 FK 복원까지", () => {
+    expect(SQL_076).toContain("DROP CONSTRAINT IF EXISTS products_selected_candidate_same_product_fkey;");
+    expect(SQL_076).toContain("DROP INDEX IF EXISTS sourcing_candidates_product_id_id_key;");
+  });
+
+  it("🔴 075 를 «고치지» 않았다 — 이미 적용됐으므로 076 으로 더한다", () => {
+    expect(SQL).not.toContain("FOREIGN KEY (id, selected_sourcing_candidate_id)");
+    expect(SQL).toContain("REFERENCES sourcing_candidates(id) ON DELETE SET NULL");
+  });
+});
