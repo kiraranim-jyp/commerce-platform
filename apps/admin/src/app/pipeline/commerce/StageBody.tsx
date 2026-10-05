@@ -74,6 +74,7 @@ export function StageBody({
   onGoToChannel,
   commerceSelector,
   commerceRunner,
+  sourcing,
   openPriceSurfaceRequest = 0,
   openMarketEvidenceRequest = 0,
 }: {
@@ -89,6 +90,12 @@ export function StageBody({
   commerceSelector?: React.ReactNode;
   /** N-05-C — ④ 커머스 등록의 실행 줄. 🔴 여기에는 체크박스를 다시 세우지 않는다. */
   commerceRunner?: React.ReactNode;
+  /**
+   * PIVOT-03-C — ③ 소싱 선택면. price·images·source 와 **같은 규칙**이다:
+   * 그 단계에서 본문이고, 다른 단계에서는 접힘으로 남아 언제든 열 수 있다.
+   * 🔴 소싱처를 바꾸는 일은 ④⑤ 로 넘어간 뒤에도 생긴다 — 돌아갈 길을 닫지 않는다.
+   */
+  sourcing?: React.ReactNode;
   /*
    * REWORK-4 §1(CEO 지시, 2026-09-14) — 여기 있던 `commerceManagement` 슬롯이
    * 사라졌다. 상품정보 탭의 「🛒 커머스 관리정보」 접힘을 통째로 없앤다.
@@ -174,6 +181,10 @@ export function StageBody({
 
       {focus.main === "MARKET" && <MarketStage marketEvidence={marketEvidence} />}
 
+      {/* 🔴 ③의 본문. 새 Stepper 를 만들지 않았으므로 단계 전환이 그대로
+          이 본문을 고른다 — 화면에 진행 표시가 둘이 되지 않는다. */}
+      {focus.main === "SOURCING" && sourcing}
+
       {focus.main === "PREPARE" && (
         <PrepareStage
           subSteps={prepareSubSteps}
@@ -254,6 +265,14 @@ export function StageBody({
             summary={focus.images === "EDIT" ? "등록용 이미지 선택·정렬" : "판단·등록에 쓰는 참고 이미지"}
           >
             {surfaces.images}
+          </CollapsibleSection>
+        )}
+        {/* PIVOT-03-C — ③ 소싱이 본문이 아닌 단계에서는 접힘으로 남긴다.
+            🔴 본문에 이미 떠 있으면 여기 또 두지 않는다 — 같은 패널이 한 화면에
+            두 벌 뜨면 어느 쪽 [선택] 이 진짜인지 알 수 없다(images/source 와 같은 규칙). */}
+        {sourcing && focus.sourcing === "COLLAPSED" && (
+          <CollapsibleSection title="소싱 선택" summary="어디서 사올지 — 선택하면 상품이 확정됩니다">
+            {sourcing}
           </CollapsibleSection>
         )}
         {/* Source Data는 어느 단계에서도 기본 접힘이다(UX 2.2 명시 지시). */}

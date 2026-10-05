@@ -11,7 +11,7 @@ import { SourceDataView } from "../SourceDataView";
 import { MissingFieldsBulkPanel } from "../MissingFieldsBulkPanel";
 import { computeNaverPayloadReadiness } from "../readiness";
 import { resolveStageFocus } from "../stage-focus";
-import { MARKET_SIGNAL_NOT_STARTED, resolveWorkflow } from "../workflow";
+import { MARKET_SIGNAL_NOT_STARTED, resolveWorkflow, type SourcingSignal } from "../workflow";
 
 /**
  * REWORK-8 ①(CEO 지시, 2026-09-15) — **모델명을 상품정보에서 입력할 수 있는가.**
@@ -203,6 +203,7 @@ function Harness({ initial }: { initial: CanonicalProduct }) {
       resolveWorkflow({
         collection: { running: false, percent: 100, productReady: true, imageCount: 6, failedImageCount: 0 },
         market: MARKET_SIGNAL_NOT_STARTED,
+        sourcing: SOURCED,
         prepare: {
           productInfoOk: true,
           productInfoMissing: null,
@@ -317,6 +318,20 @@ async function type(input: HTMLInputElement, value: string): Promise<void> {
 }
 
 /* ── 0. 근본 원인 — 참조로는 이 자리를 못 채운다(판정 유지) ─────────────────── */
+
+/**
+ * PIVOT-03-C — ③ 소싱 선택이 «끝난» 기본값. 이 파일의 단정들은 ④⑤에 관한
+ * 것이라, ③을 미완으로 두면 current 가 ③에 머물러 의도와 다른 것을 재게 된다.
+ */
+const SOURCED: SourcingSignal = {
+  notStarted: false,
+  productMissing: false,
+  candidateCount: 2,
+  masterConfirmed: true,
+  warning: null,
+  nextAction: null,
+  loadFailed: false,
+};
 
 describe("REWORK-8 ① — 근본 원인은 문구가 아니라 자리다", () => {
   it("🔴 SKU가 있어도 카탈로그 모델명은 비어 있다 — SKU를 복사하지 않는다(B 판정 유지)", () => {

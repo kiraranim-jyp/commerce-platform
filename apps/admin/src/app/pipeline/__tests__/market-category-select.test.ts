@@ -27,6 +27,8 @@ vi.mock("../CommerceWorkspace", () => ({ CommerceWorkspace: () => null }));
 vi.mock("../commerce/WorkflowPanel", () => ({ WorkflowPanel: () => null }));
 vi.mock("../commerce/workflow", () => ({
   MARKET_SIGNAL_NOT_STARTED: "NOT_STARTED",
+  /* PIVOT-03-C — 3 소싱 선택이 끼워지면서 page.tsx 가 이 기본값도 쓴다. */
+  SOURCING_SIGNAL_NOT_STARTED: "SOURCING_NOT_STARTED",
   resolveWorkflow: () => ({ steps: [] }),
 }));
 vi.mock("next/link", () => ({ default: ({ children }: { children?: unknown }) => children ?? null }));

@@ -19,7 +19,21 @@ import { ImageInlineEditor } from "../../ImageInlineEditor";
 import { StageBody } from "../StageBody";
 import type { MarketEvidenceVariant } from "../market-evidence-frame";
 import { resolveStageFocus } from "../stage-focus";
-import { resolveWorkflow } from "../workflow";
+import { resolveWorkflow, type SourcingSignal } from "../workflow";
+
+/**
+ * PIVOT-03-C — ③ 소싱 선택이 «끝난» 기본값. 이 파일이 재는 것은 상품정보 탭의
+ * 구성이라, ③을 미완으로 두면 current 가 ③으로 옮겨가 의도와 다른 것을 잰다.
+ */
+const SOURCED: SourcingSignal = {
+  notStarted: false,
+  productMissing: false,
+  candidateCount: 2,
+  masterConfirmed: true,
+  warning: null,
+  nextAction: null,
+  loadFailed: false,
+};
 import { computeProfitabilityNumbers } from "../profitability";
 import type { RegistrationChannel } from "../registration-channels";
 import {
@@ -503,6 +517,7 @@ function ProductTab(options: TabOptions): ReactElement {
       verdictLabel: "조건부 판매",
       loadFailed: false,
     },
+    sourcing: SOURCED,
     prepare: {
       productInfoOk: true,
       productInfoMissing: null,

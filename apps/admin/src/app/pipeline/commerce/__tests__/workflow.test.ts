@@ -6,6 +6,7 @@ import {
   type CollectionSignal,
   type MarketSignal,
   type PrepareSignal,
+  type SourcingSignal,
   type RegisterSignal,
   type WorkflowInput,
 } from "../workflow";
@@ -76,10 +77,25 @@ const CHANNELS: RegisterSignal = {
   ],
 };
 
+/**
+ * PIVOT-03-C — ③ 소싱 선택이 «끝난» 기본값. 이 파일의 단정들은 ④⑤에 관한
+ * 것이라, ③을 미완으로 두면 current 가 ③에 머물러 의도와 다른 것을 재게 된다.
+ */
+const SOURCED: SourcingSignal = {
+  notStarted: false,
+  productMissing: false,
+  candidateCount: 2,
+  masterConfirmed: true,
+  warning: null,
+  nextAction: null,
+  loadFailed: false,
+};
+
 function input(overrides: Partial<WorkflowInput> = {}): WorkflowInput {
   return {
     collection: COLLECTED,
     market: JUDGED,
+    sourcing: SOURCED,
     prepare: PREPARED,
     register: CHANNELS,
     ...overrides,
@@ -87,10 +103,13 @@ function input(overrides: Partial<WorkflowInput> = {}): WorkflowInput {
 }
 
 describe("resolveWorkflow() — 단 하나의 작업 Flow", () => {
-  it("큰 단계는 수집 → 시장 판단 → 등록 준비 → 커머스 등록 넷뿐이다", () => {
+  it("큰 단계는 수집 → 시장 판단 → 소싱 선택 → 등록 준비 → 커머스 등록 다섯뿐이다", () => {
+    /* PIVOT-03-C — ③ 소싱 선택이 «끼워졌다». 🔴 새 Stepper 를 만들지 않았으므로
+       이 목록이 여전히 화면의 유일한 단계 목록이다. */
     expect(BIG_STEP_ORDER).toEqual([
       "COLLECTING",
       "MARKET_JUDGING",
+      "SOURCE_SELECTING",
       "REGISTRATION_PREPARING",
       "COMMERCE_REGISTERING",
     ]);
@@ -158,14 +177,15 @@ describe("resolveWorkflow() — 단 하나의 작업 Flow", () => {
     expect(resolveWorkflow(input()).currentStepKey).toBe("COMMERCE_REGISTERING");
   });
 
-  it("수집이 끝나기 전에는 ②③④가 전부 잠겨 있다", () => {
+  it("수집이 끝나기 전에는 ②③④⑤가 전부 잠겨 있다", () => {
     const wf = resolveWorkflow(
       input({
         collection: { running: true, percent: 40, productReady: false, imageCount: 0, failedImageCount: 0 },
         market: MARKET_SIGNAL_NOT_STARTED,
       }),
     );
-    expect(wf.steps.slice(1).map((s) => s.status)).toEqual(["LOCKED", "LOCKED", "LOCKED"]);
+    /* PIVOT-03-C — ③이 끼워져 넷이 됐다. ③도 ①에 매달려 있으므로 같이 잠긴다. */
+    expect(wf.steps.slice(1).map((s) => s.status)).toEqual(["LOCKED", "LOCKED", "LOCKED", "LOCKED"]);
   });
 
   it("판단 화면을 한 번도 열지 않아도 흐름이 ②에 갇히지 않는다", () => {
@@ -178,8 +198,8 @@ describe("resolveWorkflow() — 단 하나의 작업 Flow", () => {
     expect(wf.steps[1].subSteps.every((s) => s.status === "UPCOMING")).toBe(true);
     expect(wf.steps[1].headline).toContain("아직 확인하지 않았습니다");
     // ③은 ②가 아니라 ①에 매달려 있어서, 지금 바로 남은 항목을 고칠 수 있다.
-    expect(wf.steps[2].status).toBe("ATTENTION");
-    expect(wf.steps[2].subSteps.find((s) => s.key === "required_fields")?.target).toBe("coupang");
+    expect(wf.steps[3].status).toBe("ATTENTION");
+    expect(wf.steps[3].subSteps.find((s) => s.key === "required_fields")?.target).toBe("coupang");
   });
 });
 
@@ -252,6 +272,7 @@ describe("데이터 없음은 단계 실패가 아니다", () => {
       input({
         collection: { ...COLLECTED, failedImageCount: 8 },
         market: MARKET_LOAD_FAILED,
+        sourcing: SOURCED,
         prepare: {
           productInfoOk: false,
           productInfoMissing: "상품명을 확인해주세요",
@@ -280,20 +301,20 @@ describe("데이터 없음은 단계 실패가 아니다", () => {
   });
 });
 
-describe("④ 커머스 등록", () => {
-  it("③에 남은 항목이 있으면 잠겨 있다", () => {
+describe("⑤ 커머스 등록", () => {
+  it("④에 남은 항목이 있으면 잠겨 있다", () => {
     const wf = resolveWorkflow(input({ prepare: { ...PREPARED, requiredFieldBlockingCount: 2 } }));
-    expect(wf.steps[2].subSteps.find((s) => s.key === "required_fields")?.status).toBe("ATTENTION");
-    expect(wf.steps[2].done).toBe(false);
-    expect(wf.steps[3].status).toBe("LOCKED");
+    expect(wf.steps[3].subSteps.find((s) => s.key === "required_fields")?.status).toBe("ATTENTION");
     expect(wf.steps[3].done).toBe(false);
+    expect(wf.steps[4].status).toBe("LOCKED");
+    expect(wf.steps[4].done).toBe(false);
     // 채널 항목도 전부 "아직 차례가 아님"이다 — 눌러 들어갈 자리를 주지 않는다.
-    expect(wf.steps[3].subSteps.filter((s) => s.status === "RUNNING")).toHaveLength(0);
+    expect(wf.steps[4].subSteps.filter((s) => s.status === "RUNNING")).toHaveLength(0);
   });
 
-  it("③이 끝나면 열린다", () => {
+  it("④가 끝나면 열린다", () => {
     const wf = resolveWorkflow(input());
-    expect(wf.steps[3].status).toBe("IN_PROGRESS");
+    expect(wf.steps[4].status).toBe("IN_PROGRESS");
     expect(wf.currentStepKey).toBe("COMMERCE_REGISTERING");
   });
 
@@ -310,20 +331,20 @@ describe("④ 커머스 등록", () => {
    * 그대로 남는다(CommerceWorkspace.effectiveListingStatus ·
    * readiness.computeChecklistReadiness · 롯데ON 서버 검증).
    */
-  it("커머스 카테고리를 하나도 확정하지 않아도 ③이 끝나고 ④가 열린다", () => {
+  it("커머스 카테고리를 하나도 확정하지 않아도 ④가 끝나고 ⑤가 열린다", () => {
     const wf = resolveWorkflow(input());
-    expect(wf.steps[2].subSteps.map((s) => s.key)).not.toContain("category");
-    expect(wf.steps[2].done).toBe(true);
-    expect(wf.steps[3].status).toBe("IN_PROGRESS");
+    expect(wf.steps[3].subSteps.map((s) => s.key)).not.toContain("category");
+    expect(wf.steps[3].done).toBe(true);
+    expect(wf.steps[4].status).toBe("IN_PROGRESS");
   });
 
-  it("네이버·쿠팡은 각자의 Flow가 아니라 ④ 안의 채널 항목이다", () => {
+  it("네이버·쿠팡은 각자의 Flow가 아니라 ⑤ 안의 채널 항목이다", () => {
     const wf = resolveWorkflow(input());
     // 채널이 늘어도 큰 단계 수는 그대로 넷이다.
-    expect(wf.steps).toHaveLength(4);
-    expect(wf.steps[3].subSteps.map((s) => s.key)).toEqual(["smartstore", "coupang", "elevenst"]);
+    expect(wf.steps).toHaveLength(5);
+    expect(wf.steps[4].subSteps.map((s) => s.key)).toEqual(["smartstore", "coupang", "elevenst"]);
     // 아직 등록 기능이 없는 채널은 목록에서 빼지 않는다 — 없는 것과 준비중은 다르다.
-    expect(wf.steps[3].subSteps.find((s) => s.key === "elevenst")?.message).toBe("준비중");
+    expect(wf.steps[4].subSteps.find((s) => s.key === "elevenst")?.message).toBe("준비중");
   });
 
   it("실제로 등록 가능한 채널이 전부 끝나야 흐름이 완료된다", () => {
@@ -332,7 +353,7 @@ describe("④ 커머스 등록", () => {
     );
     // 준비중(11번가)이 남아 있다고 해서 흐름이 영원히 미완으로 남지 않는다.
     expect(registered.completed).toBe(true);
-    expect(registered.steps[3].summary).toBe("쿠팡 등록 완료");
+    expect(registered.steps[4].summary).toBe("쿠팡 등록 완료");
     expect(resolveWorkflow(input()).completed).toBe(false);
   });
 });

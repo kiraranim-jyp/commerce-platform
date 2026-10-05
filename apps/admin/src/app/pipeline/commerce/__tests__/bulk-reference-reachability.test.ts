@@ -7,7 +7,22 @@ import { BULK_REFERENCE_FIELDS, NOTICE_REFERENCE_ELIGIBLE_FIELDS } from "@commer
 import { StageBody } from "../StageBody";
 import { MissingFieldsBulkPanel } from "../MissingFieldsBulkPanel";
 import { resolveStageFocus } from "../stage-focus";
-import { resolveWorkflow, type WorkflowInput } from "../workflow";
+import { resolveWorkflow, type SourcingSignal, type WorkflowInput } from "../workflow";
+
+/**
+ * PIVOT-03-C — 3 소싱 선택이 «끝난» 기본값. 이 파일이 재는 것은 「상세페이지 참조
+ * 일괄등록에 도달할 수 있는가」라, 3을 미완으로 두면 현재 단계가 3으로 옮겨가
+ * CEO 가 지목한 6개 상태 자체가 달라진다.
+ */
+const SOURCED: SourcingSignal = {
+  notStarted: false,
+  productMissing: false,
+  candidateCount: 2,
+  masterConfirmed: true,
+  warning: null,
+  nextAction: null,
+  loadFailed: false,
+};
 import type { RegistrationChannel } from "../registration-channels";
 
 /**
@@ -140,6 +155,7 @@ function signals(overrides: Partial<WorkflowInput>): WorkflowInput {
   return {
     collection: { running: false, percent: 100, productReady: true, imageCount: 6, failedImageCount: 0 },
     market: MARKET_DONE,
+    sourcing: SOURCED,
     prepare: PREPARE_OK,
     register: {
       channels: CHANNELS.map((c) => ({
@@ -150,7 +166,11 @@ function signals(overrides: Partial<WorkflowInput>): WorkflowInput {
       })),
     },
     ...overrides,
-  } as WorkflowInput;
+    /* 🔴 `as WorkflowInput` 캐스트를 «없앴다». 그 캐스트가 WorkflowInput 에
+       새 칸이 생긴 것을 숨겨서, typecheck 는 통과하고 런타임에서야
+       `Cannot read properties of undefined` 로 터졌다. 캐스트가 없으면
+       다음에 칸이 늘 때 컴파일러가 여기를 먼저 잡는다. */
+  };
 }
 
 /**

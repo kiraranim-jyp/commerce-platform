@@ -19,7 +19,7 @@ import { ProcessingReportView } from "./ProcessingReport";
 import { ProgressPanel } from "./ProgressPanel";
 import { readPipelineSSEStream } from "./sse";
 import { WorkflowPanel } from "./commerce/WorkflowPanel";
-import { MARKET_SIGNAL_NOT_STARTED, resolveWorkflow } from "./commerce/workflow";
+import { MARKET_SIGNAL_NOT_STARTED, SOURCING_SIGNAL_NOT_STARTED, resolveWorkflow } from "./commerce/workflow";
 import { isStaleSnapshotResponse, resolveSnapshotSaveAction } from "./snapshot-save-guard";
 import type { PipelineProgressEvent, PipelineResponse, TabKey, WorkspaceItem } from "./types";
 import { WorkspaceTabs } from "./WorkspaceTabs";
@@ -134,6 +134,14 @@ export default function PipelinePage() {
   // id가 없으면(첫 저장 전) POST가 insert, 있으면 update로 동작한다(upsert 패턴 —
   // api/snapshots/_lib/snapshot.ts 참고).
   const [snapshotId, setSnapshotId] = useState<string | null>(null);
+  /**
+   * PIVOT-03-C — 상품 정체성. ③ 소싱 선택이 부르는
+   * `/api/products/[productId]/…` 의 키다(03-C-PRE 가 DTO 에 노출했다).
+   *
+   * 🔴 `null` 은 「후보가 없다」가 아니라 «정체성이 아직 없다» 는 뜻이다. 그
+   * 상태의 문구는 `computeMasterReady()` 가 이미 갖고 있다 — 지어내지 않는다.
+   */
+  const [productId, setProductId] = useState<string | null>(null);
   // P-13C-2 NEXT P0 재조사(2026-09-01, 코드 추적으로 확인 — 실 API 호출 없이 발견) —
   // saveSnapshotToServer()는 "최초 insert vs 이후 update"를 snapshotId state의
   // 클로저 값으로 판단한다. 디바운스 effect가 2번째로 트리거되는 게(예: 배경
@@ -209,6 +217,7 @@ export default function PipelinePage() {
           if (data.ok && data.snapshot) {
             const ws = data.snapshot.workspace;
             setSnapshotId(data.snapshot.id);
+            setProductId(data.snapshot.productId ?? null);
             setJobKey(data.snapshot.jobKey ?? null);
             setSnapshotStatus(data.snapshot.status);
             setUrl(ws.url);
@@ -356,7 +365,12 @@ export default function PipelinePage() {
           },
         }),
       });
-      const data = (await res.json()) as { ok: boolean; snapshot?: { id: string; jobKey?: string | null } };
+      /* 🔴 인라인 타입을 넓힌다 — 서버 응답(toSnapshot)에는 이미 productId 가
+         실려 있는데 타입이 좁아서 «버려지고» 있었다. API 는 고치지 않는다. */
+      const data = (await res.json()) as {
+        ok: boolean;
+        snapshot?: { id: string; jobKey?: string | null; productId?: string | null };
+      };
       if (isStaleSnapshotResponse(startGeneration, sessionGenerationRef.current)) {
         // Sprint 5-A — 이 요청을 쏜 뒤 사용자가 "새 상품 분석"으로 넘어갔다.
         // DB에는 이미 저장됐을 수 있지만(그건 되돌리지 않는다 — 삭제는 별도
@@ -373,6 +387,8 @@ export default function PipelinePage() {
         // null을 보고 두 번째 insert를 시도할 수 있다. ref는 지연이 없다.
         snapshotIdRef.current = data.snapshot.id;
         setSnapshotId(data.snapshot.id);
+        /* 🔴 첫 저장에서 Product 정체성이 «발급» 된다 — 그 순간부터 소싱이 열린다. */
+        setProductId(data.snapshot.productId ?? null);
         // Sprint B-1 — 최초 insert 응답에만 새 job_key가 실려 온다(서버가 그
         // 시점에 한 번만 채번한다) — 이후 update 응답에도 같은 값이 오지만
         // 여기서는 최초 1회만 세팅하면 충분하다(같은 snapshotId로 계속
@@ -624,6 +640,7 @@ export default function PipelinePage() {
     pendingSaveRetryRef.current = false;
     setCategoryCachePriming(false);
     setSnapshotId(null);
+    setProductId(null);
     setJobKey(null);
     setSnapshotStatus(null);
     setUrl("");
@@ -859,6 +876,9 @@ export default function PipelinePage() {
       failedImageCount: items.filter((item) => item.status === "failed").length,
     },
     market: MARKET_SIGNAL_NOT_STARTED,
+    /* 수집이 끝나기 전에는 Product 정체성도 후보도 없다 — 「정체성이 없다」가
+       아니라 「아직 조회하지 않았다」다. 둘을 섞지 않는다. */
+    sourcing: SOURCING_SIGNAL_NOT_STARTED,
     prepare: {
       productInfoOk: false,
       productInfoMissing: null,
@@ -1122,6 +1142,8 @@ export default function PipelinePage() {
             developerMode={developerMode}
             analysisStartedAt={analysisStartedAt}
             snapshotId={snapshotId}
+            /* PIVOT-03-C — ③ 소싱 선택이 쓰는 상품 정체성. */
+            productId={productId}
             jobKey={jobKey}
             initialCategoryMappings={categoryMappings ?? undefined}
             onCategoryMappingsChange={setCategoryMappings}

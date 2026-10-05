@@ -11,7 +11,7 @@ import { MissingFieldsBulkPanel } from "../MissingFieldsBulkPanel";
 import { StageBody } from "../StageBody";
 import { computeChecklistReadiness } from "../readiness";
 import { resolveStageFocus } from "../stage-focus";
-import { MARKET_SIGNAL_NOT_STARTED, resolveWorkflow } from "../workflow";
+import { MARKET_SIGNAL_NOT_STARTED, resolveWorkflow, type SourcingSignal } from "../workflow";
 import {
   EMPTY_LOTTEON_CHANNEL_FORM,
   fromLotteOnChannelInfo,
@@ -294,6 +294,7 @@ function renderProductInfoBody(product: CanonicalProduct): string {
   const workflow = resolveWorkflow({
     collection: { running: false, percent: 100, productReady: true, imageCount: 6, failedImageCount: 0 },
     market: MARKET_SIGNAL_NOT_STARTED,
+    sourcing: SOURCED,
     prepare: {
       productInfoOk: true,
       productInfoMissing: null,
@@ -329,6 +330,20 @@ function renderProductInfoBody(product: CanonicalProduct): string {
 }
 
 /* ─────────────────────────────────────────────────────────────────────── */
+
+/**
+ * PIVOT-03-C — ③ 소싱 선택이 «끝난» 기본값. 이 파일의 단정들은 ④⑤에 관한
+ * 것이라, ③을 미완으로 두면 current 가 ③에 머물러 의도와 다른 것을 재게 된다.
+ */
+const SOURCED: SourcingSignal = {
+  notStarted: false,
+  productMissing: false,
+  candidateCount: 2,
+  masterConfirmed: true,
+  warning: null,
+  nextAction: null,
+  loadFailed: false,
+};
 
 describe("증명 1 — 롯데ON 탭에 공통 상품정보 입력칸이 0개다", () => {
   it("입력칸은 존재하되, 그중 공통 상품정보를 묻는 것은 하나도 없다", async () => {
@@ -633,6 +648,7 @@ describe("증명 5 — 채널 readiness는 자기 카테고리만 본다(상품 
     const wf = resolveWorkflow({
       collection: { running: false, percent: 100, productReady: true, imageCount: 6, failedImageCount: 0 },
       market: MARKET_SIGNAL_NOT_STARTED,
+      sourcing: SOURCED,
       prepare: {
         productInfoOk: true,
         productInfoMissing: null,
@@ -645,7 +661,7 @@ describe("증명 5 — 채널 readiness는 자기 카테고리만 본다(상품 
       },
       register: { channels: [] },
     });
-    const prepare = wf.steps[2];
+    const prepare = wf.steps[3];
     expect(prepare.subSteps.map((s) => s.key)).not.toContain("category");
     // 커머스 카테고리를 하나도 확정하지 않았는데도 ③이 끝나고 ④가 열린다.
     expect(prepare.done).toBe(true);

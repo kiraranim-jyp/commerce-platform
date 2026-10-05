@@ -2,7 +2,12 @@ import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { PREPARE_SURFACE_LABEL, prepareSurfaceOf } from "../stage-focus";
-import { MARKET_SIGNAL_NOT_STARTED, resolveWorkflow, type WorkflowInput } from "../workflow";
+import {
+  MARKET_SIGNAL_NOT_STARTED,
+  resolveWorkflow,
+  type SourcingSignal,
+  type WorkflowInput,
+} from "../workflow";
 import { stripComments } from "./source-text";
 
 /**
@@ -43,6 +48,20 @@ function mountFiles(component: string): string[] {
     .map((name) => `${srcRoot}/${name}`);
   return files.filter((file) => new RegExp(`<${component}\\b`).test(readFileSync(file, "utf8")));
 }
+
+/**
+ * PIVOT-03-C — ③ 소싱 선택이 «끝난» 기본값. 이 파일의 단정들은 ④⑤에 관한
+ * 것이라, ③을 미완으로 두면 current 가 ③에 머물러 의도와 다른 것을 재게 된다.
+ */
+const SOURCED: SourcingSignal = {
+  notStarted: false,
+  productMissing: false,
+  candidateCount: 2,
+  masterConfirmed: true,
+  warning: null,
+  nextAction: null,
+  loadFailed: false,
+};
 
 describe("① 판매가격 확정 카드는 상품정보 ③ 등록 준비에만 있다", () => {
   it("<PriceEditor> 마운트 지점이 코드 전체에서 정확히 하나다", () => {
@@ -159,6 +178,7 @@ describe("③ 가격으로 가는 길은 전부 같은 한 곳으로 모인다",
   const input: WorkflowInput = {
     collection: { running: false, percent: 100, productReady: true, imageCount: 8, failedImageCount: 0 },
     market: MARKET_SIGNAL_NOT_STARTED,
+    sourcing: SOURCED,
     prepare: {
       productInfoOk: true,
       productInfoMissing: null,
@@ -173,7 +193,7 @@ describe("③ 가격으로 가는 길은 전부 같은 한 곳으로 모인다",
   };
 
   it("③ 체크리스트의 '판매가격' 항목이 price로 데려간다", () => {
-    const price = resolveWorkflow(input).steps[2].subSteps.find((s) => s.key === "price");
+    const price = resolveWorkflow(input).steps[3].subSteps.find((s) => s.key === "price");
     expect(price).toBeDefined();
     expect(price!.label).toBe("판매가격");
     expect(price!.target).toBe("price");
@@ -189,7 +209,7 @@ describe("③ 가격으로 가는 길은 전부 같은 한 곳으로 모인다",
       ...input,
       prepare: { ...input.prepare, priceResolved: false, priceKrw: null },
     });
-    const price = unresolved.steps[2].subSteps.find((s) => s.key === "price");
+    const price = unresolved.steps[3].subSteps.find((s) => s.key === "price");
     expect(price!.status).toBe("ATTENTION");
     expect(price!.target).toBe("price");
   });

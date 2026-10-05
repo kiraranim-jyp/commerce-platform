@@ -48,7 +48,7 @@ export type WorkSurface =
 export type MiPresentation = "FULL" | "SUMMARY" | "HIDDEN";
 
 /** 본문의 주인공. 큰 단계와 1:1이다 — 여기에 5번째 값이 생기면 단계가 늘어난 것이다. */
-export type StageMain = "COLLECTION" | "MARKET" | "PREPARE" | "REGISTER";
+export type StageMain = "COLLECTION" | "MARKET" | "SOURCING" | "PREPARE" | "REGISTER";
 
 /** 이미지가 이 단계에서 갖는 성격. 같은 컴포넌트를 다른 무게로 놓는다. */
 export type ImageRole =
@@ -136,6 +136,14 @@ export interface StageFocus {
    * (③에서 상품정보 항목을 고르면 그 항목의 작업 UI로 따로 펼쳐진다.)
    */
   sourceData: SectionWeight;
+  /**
+   * PIVOT-03-C — 소싱 선택면. ③에서 본문이고 나머지 단계에서는 접힌다.
+   *
+   * 🔴 price·images·source 와 «같은 규칙» 이다: ③의 작업면이지만 어느 단계에서도
+   * 열 수 있다. 소싱처를 바꾸는 일은 ④⑤ 로 넘어간 뒤에도 생긴다 — 그때 돌아갈
+   * 길이 없으면 셀러는 처음부터 다시 해야 한다.
+   */
+  sourcing: SectionWeight;
   actionCenter: {
     /**
      * REWORK-2(CEO 지시, 2026-09-14) — **오른쪽 기둥이 지금 무엇의 요약인가.**
@@ -174,6 +182,7 @@ export interface StageFocus {
 const MAIN_BY_STAGE: Record<BigStepKey, StageMain> = {
   COLLECTING: "COLLECTION",
   MARKET_JUDGING: "MARKET",
+  SOURCE_SELECTING: "SOURCING",
   REGISTRATION_PREPARING: "PREPARE",
   COMMERCE_REGISTERING: "REGISTER",
 };
@@ -181,6 +190,8 @@ const MAIN_BY_STAGE: Record<BigStepKey, StageMain> = {
 const IMAGE_ROLE_BY_STAGE: Record<BigStepKey, ImageRole> = {
   COLLECTING: "CORE",
   MARKET_JUDGING: "REFERENCE",
+  /* 소싱은 「어디서 사올지」다 — 이미지는 상품을 확인하는 참고일 뿐이다. */
+  SOURCE_SELECTING: "REFERENCE",
   REGISTRATION_PREPARING: "EDIT",
   COMMERCE_REGISTERING: "REFERENCE",
 };
@@ -249,6 +260,7 @@ export function resolveStageFocus(input: StageFocusInput): StageFocus {
     images: IMAGE_ROLE_BY_STAGE[stage],
     marketEvidence: stage === "MARKET_JUDGING" ? "MAIN" : "COLLAPSED",
     sourceData: "COLLAPSED",
+    sourcing: stage === "SOURCE_SELECTING" ? "MAIN" : "COLLAPSED",
     actionCenter: {
       // 채널 화면에서는 오른쪽 기둥의 주인이 바뀐다(그 화면이 직접 세운다).
       pillar: surface === "CHANNEL" ? "CHANNEL_REGISTRATION" : "PRODUCT",
