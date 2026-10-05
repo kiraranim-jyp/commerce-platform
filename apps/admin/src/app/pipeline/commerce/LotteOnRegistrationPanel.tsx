@@ -45,7 +45,6 @@ import {
 import {
   LOTTEON_SAFETY_TYPE_LABEL,
   buildLotteOnCategoryPath,
-  parseLotteOnStandardCategory,
   type LotteOnCategoryCandidate,
   type LotteOnStandardCategory,
 } from "./lotteon-category";
@@ -3088,9 +3087,9 @@ function isRecommendDeadEnd(state: RecommendState): boolean {
   return state.decision === "REJECT" || state.candidates.length === 0;
 }
 
-/** 목록을 몇 장까지 읽는가 — /api/lotteon/category-recommend와 같은 상한이다. */
-const DIRECT_PICK_PAGE_SIZE = 500;
-const DIRECT_PICK_MAX_PAGES = 20;
+/* P2-5b 정리 — 여기 있던 DIRECT_PICK_PAGE_SIZE / DIRECT_PICK_MAX_PAGES 를 지웠다.
+   페이징은 이제 서버(/api/lotteon/category-tree) 한 곳에서만 한다. 🔴 상한이 두
+   곳에 있으면 「트리에는 있는데 직접 선택에는 없는」 카테고리가 생긴다. */
 
 /** 최상위(부모 없음) 묶음의 키. */
 const DIRECT_PICK_ROOT = "";
@@ -3110,9 +3109,10 @@ const DIRECT_PICK_ROOT = "";
  * 그때 셀러다.
  *
  * ── 새 조회 경로를 만들지 않는다 ─────────────────────────────────────────────
- * 이미 있는 조회 라우트(/api/lotteon/categories, job=cheetahStandardCategory)를
- * 그대로 쓰고, 응답을 읽는 파서도 추천 라우트와 같은 parseLotteOnStandardCategory
- * 하나다 — 같은 응답을 두 군데서 다르게 읽을 경로가 없다.
+ * P2-5b 정리 이후: `/api/lotteon/category-tree` 하나만 부른다. 그 라우트가 205 를
+ * 페이징하고 추천 라우트와 «같은» parseLotteOnStandardCategory 로 읽어서, 트리와
+ * 평면 목록을 함께 내려준다 — 🔴 이 컴포넌트는 파싱도 페이징도 하지 않는다.
+ * (전에는 여기서 직접 페이징·파싱해서 서버와 두 곳이 됐다.)
  *
  * ── 고른 뒤 ──────────────────────────────────────────────────────────────────
  * onPick은 추천 후보를 고를 때와 **같은 함수**(applyCategory)다. 표준·전시·고시
@@ -3132,52 +3132,49 @@ function CategoryDirectPicker({
   /** 지금 펼쳐 보고 있는 상위 카테고리 id. null이면 최상위 목록이다. */
   const [cursor, setCursor] = useState<string | null>(null);
 
+  /* ══ P2-5b 정리 (CPO 지시, 2026-10-05) — **데이터 경로를 하나로** ═══════════
+     여기 있던 것: `/api/lotteon/categories` 를 500건씩 최대 20장 «클라이언트에서»
+     돌며 `parseLotteOnStandardCategory` 로 직접 파싱했다.
+
+     🔴 같은 페이징·같은 파싱이 서버(`/api/lotteon/category-tree`)에도 생기면서
+     **두 곳이 됐다** — 한쪽만 고치면 「트리에는 있는데 직접 선택에는 없는」
+     카테고리가 생긴다. 그래서 서버 하나로 모은다.
+
+     🔴 서버가 «평면 목록» 도 같이 준다. 트리(id·name·children 세 칸)만 받으면
+     `displayCategories`·`noticeItemCodes`·`taxTypeCode`·`safetyTypeCodes` 가
+     버려지고, 아래 `onPick → applyCategory` 가 채우는 **고시 품목·과세·요구
+     안전인증이 조용히 빈다**(전환 직전에 이 함정을 발견했다). 그래서 평면
+     목록을 쓰고 탐색 구조(childrenOf)는 그대로 둔다 — 탐색 UX 는 바뀌지 않는다.
+
+     🔴 실패 처리 원칙도 그대로다: 인증/네트워크 실패를 「카테고리 없음」으로
+     바꾸지 않는다. 서버가 `PARSE_EMPTY`(응답은 받았지만 못 읽음)를 돌려주면
+     그 사유를 그대로 보여준다. */
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const collected: LotteOnStandardCategory[] = [];
-      let cut = false;
       try {
-        for (let page = 0; page < DIRECT_PICK_MAX_PAGES; page += 1) {
-          const params = new URLSearchParams({
-            job: "cheetahStandardCategory",
-            skip: String(page * DIRECT_PICK_PAGE_SIZE),
-            limit: String(DIRECT_PICK_PAGE_SIZE),
-          });
-          const res = await fetch(`/api/lotteon/categories?${params.toString()}`);
-          const data = (await res.json()) as { ok?: boolean; message?: string; items?: unknown[] };
-          if (!data.ok) {
-            // 첫 장부터 실패하면 그 실패를 그대로 보여준다 — 인증/네트워크
-            // 실패를 "카테고리 없음"으로 바꾸지 않는다(추천 라우트와 같은 원칙).
-            if (page === 0) {
-              if (!cancelled) {
-                setError(data.message ?? "롯데ON 카테고리 목록을 불러오지 못했습니다.");
-                setLoading(false);
-              }
-              return;
-            }
-            cut = true;
-            break;
-          }
-          const items = data.items ?? [];
-          for (const item of items) {
-            const parsed = parseLotteOnStandardCategory(item);
-            if (parsed) collected.push(parsed);
-          }
-          if (items.length < DIRECT_PICK_PAGE_SIZE) break;
-          if (page === DIRECT_PICK_MAX_PAGES - 1) cut = true;
+        const res = await fetch("/api/lotteon/category-tree");
+        const data = (await res.json()) as {
+          status?: string;
+          error?: string;
+          categories?: LotteOnStandardCategory[];
+          truncated?: boolean;
+        };
+        if (cancelled) return;
+        if (data.status !== "OK" || !Array.isArray(data.categories)) {
+          setError(data.error ?? "롯데ON 카테고리 목록을 불러오지 못했습니다.");
+          setLoading(false);
+          return;
         }
+        setCategories(data.categories);
+        setTruncated(Boolean(data.truncated));
+        setLoading(false);
       } catch {
         if (!cancelled) {
           setError("서버에 연결하지 못했습니다.");
           setLoading(false);
         }
-        return;
       }
-      if (cancelled) return;
-      setCategories(collected);
-      setTruncated(cut);
-      setLoading(false);
     })();
     return () => {
       cancelled = true;

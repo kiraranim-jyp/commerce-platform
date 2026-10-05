@@ -155,6 +155,21 @@ export async function GET() {
   return NextResponse.json({
     status: "OK",
     tree: buildLotteOnCategoryTree(categories),
+    /* ══ P2-5b 정리 (CPO 지시, 2026-10-05) ════════════════════════════════════
+       🔴 **평면 목록도 함께 돌려준다.** `CommerceCategoryTreeNode` 는 세 칸
+       (id·name·children)뿐이라, 트리만 주면 `displayCategories` ·
+       `noticeItemCodes` · `taxTypeCode` · `safetyTypeCodes` 가 통째로 버려진다.
+
+       그 값들이 꼭 필요한 이유: `CategoryDirectPicker` 의 `onPick` 은 완전한
+       `LotteOnStandardCategory` 를 `applyCategory` 에 넘겨 **표준·전시·고시 품목·
+       과세·요구 안전인증을 한 번에 채운다**(REWORK-6 ② 가 만든 그 동작).
+       트리만 내려보내면 셀러가 카테고리를 골라도 그 네 가지가 비고, 그것은
+       조용히 깨지는 종류의 실패다 — 실제로 전환 직전에 이 함정을 발견했다.
+
+       🔴 공통 타입(CommerceCategoryTreeNode)을 넓히지 «않는다» — 쿠팡·네이버가
+       같은 타입을 쓰므로 롯데ON 사정으로 공용 계약을 늘리면 그 둘에 빚이 생긴다.
+       한 응답에 두 모양을 같이 담는 쪽이 싸다. */
+    categories,
     /* 진단용 — 화면이 「몇 개를 읽었고 몇 개를 못 읽었는가」를 말할 수 있게 한다. */
     parsed: categories.length,
     unrecognized,

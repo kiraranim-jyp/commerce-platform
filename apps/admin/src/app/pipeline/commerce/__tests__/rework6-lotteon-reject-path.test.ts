@@ -11,6 +11,7 @@ import {
   type LotteOnChannelConfig,
   type LotteOnPayloadInput,
 } from "@commerce/listing";
+import { parseLotteOnStandardCategory } from "../lotteon-category";
 import { LotteOnRegistrationPanel } from "../LotteOnRegistrationPanel";
 import { manufacturerFixture } from "./manufacturer-fixture";
 import { expandAllSections } from "./mount-registration-tab";
@@ -276,17 +277,24 @@ beforeEach(() => {
         if (recommendPending) return new Promise(() => {});
         return Promise.resolve({ ok: true, json: () => Promise.resolve(REJECT_RESPONSE) });
       }
-      if (url.includes("/api/lotteon/categories")) {
+      /* ══ P2-5b 정리 (CPO 지시, 2026-10-05) ════════════════════════════════
+         직접 선택이 이제 `/api/lotteon/category-tree` «하나» 를 부른다. 전에는
+         이 컴포넌트가 `/api/lotteon/categories` 를 직접 페이징·파싱해서 서버와
+         두 곳이 됐다 — 한쪽만 고치면 「트리에는 있는데 직접 선택에는 없는」
+         카테고리가 생기는 상태였다.
+
+         🔴 205 «원문» fixture(STANDARD_CATEGORY_ITEMS)는 그대로 둔다 — 그것이 이
+         파일의 값이다. 다만 새 라우트는 «파싱된» 목록을 주므로, 라우트가 쓰는
+         그 파서로 여기서 변환해 넘긴다(두 모양을 따로 만들지 않는다). */
+      if (url.includes("/api/lotteon/category-tree")) {
         categoryQueries.push(url);
         return Promise.resolve({
           ok: true,
           json: () =>
             Promise.resolve({
-              ok: true,
-              readOnly: true,
-              job: "cheetahStandardCategory",
-              items: STANDARD_CATEGORY_ITEMS,
-              count: STANDARD_CATEGORY_ITEMS.length,
+              status: "OK",
+              categories: STANDARD_CATEGORY_ITEMS.map(parseLotteOnStandardCategory).filter(Boolean),
+              truncated: false,
             }),
         });
       }
@@ -430,15 +438,23 @@ describe("REWORK-6 ② — 폐기된 번호 입력 UX를 되살리지 않는다"
     expect(text()).not.toContain("전시카테고리번호 (dcatLst)");
   });
 
-  it("기존 조회 라우트를 그대로 쓴다 — 새 조회 경로를 만들지 않았다", async () => {
+  /* ══ P2-5b 정리로 «재조준» 한다 (CPO 승인, 2026-10-05) ════════════════════
+     원래 단정: 「기존 조회 라우트를 그대로 쓴다 — 새 조회 경로를 만들지 않았다」.
+     그 뜻은 «병렬 데이터 경로를 만들지 말라» 였고, 그 뜻은 지금도 유효하다.
+
+     🔴 그런데 실제로는 반대가 됐다. 서버에 category-tree 가 생기면서 페이징·파싱이
+     «두 곳» 이 됐고, 그게 바로 원래 단정이 막으려던 상태다. 그래서 CPO 승인 아래
+     서버 하나로 모았다 — 단정도 그 뜻에 맞춰 「경로가 하나다」로 바꾼다. */
+  it("🔴 조회 경로가 «하나» 다 — 직접 선택도 서버 트리 라우트만 부른다", async () => {
     saved = { ...PREFILLED };
     await enterTab(makeProduct());
     await recommendAndFail();
     await click("롯데ON 카테고리 선택");
 
     expect(categoryQueries.length).toBeGreaterThan(0);
-    expect(categoryQueries[0]).toContain("/api/lotteon/categories");
-    expect(categoryQueries[0]).toContain("job=cheetahStandardCategory");
+    for (const url of categoryQueries) expect(url).toContain("/api/lotteon/category-tree");
+    /* 🔴 클라이언트가 페이징하지 않는다 — skip/limit 를 붙이지 않는다. */
+    for (const url of categoryQueries) expect(url).not.toContain("skip=");
   });
 
   it("셀러가 하는 일은 목록을 눌러 내려가는 것뿐이다 — 최상위부터 리프까지", async () => {

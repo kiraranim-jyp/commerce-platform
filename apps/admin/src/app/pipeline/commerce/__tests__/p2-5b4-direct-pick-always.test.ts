@@ -199,3 +199,51 @@ describe("🔴 바꾼 것은 «조건» 하나다 — 수렴 함수와 트리를
     expect(source).toContain("isRecommendDeadEnd(recommend)");
   });
 });
+
+/* ════════════════════════════════════════════════════════════════════════════
+   P2-5b 정리 — 직접 선택이 /api/lotteon/category-tree «하나» 를 쓴다
+   ════════════════════════════════════════════════════════════════════════════ */
+describe("🔴 데이터 경로가 하나다 — 클라이언트 페이징을 제거했다", () => {
+  const panelSource = async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    return readFileSync(join(__dirname, "..", "LotteOnRegistrationPanel.tsx"), "utf8")
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^[ \t]*\/\/.*$/gm, "");
+  };
+
+  it("새 라우트를 부른다", async () => {
+    expect(await panelSource()).toContain('fetch("/api/lotteon/category-tree")');
+  });
+
+  it("🔴 클라이언트 페이징이 «없다» — 상한 상수도 사라졌다", async () => {
+    const code = await panelSource();
+    expect(code).not.toContain("DIRECT_PICK_PAGE_SIZE");
+    expect(code).not.toContain("DIRECT_PICK_MAX_PAGES");
+    expect(code).not.toContain("job: \"cheetahStandardCategory\"");
+  });
+
+  it("🔴 이 컴포넌트가 파싱하지 않는다 — 파서는 서버 한 곳이다", async () => {
+    expect(await panelSource()).not.toContain("parseLotteOnStandardCategory");
+  });
+
+  it("🔴 라우트가 «평면 목록» 도 돌려준다 — 고시·과세·안전인증이 버려지지 않는다", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const route = readFileSync(join(__dirname, "../../../api/lotteon/category-tree/route.ts"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^[ \t]*\/\/.*$/gm, "");
+    /* 트리만 주면 CommerceCategoryTreeNode 가 세 칸뿐이라 applyCategory 가
+       채우는 네 가지(전시·고시 품목·과세·요구 안전인증)가 조용히 빈다. */
+    expect(route).toContain("categories,");
+    expect(route).toContain("tree: buildLotteOnCategoryTree(categories)");
+  });
+
+  it("🔴 onPick 수렴 함수는 그대로다", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const raw = readFileSync(join(__dirname, "..", "LotteOnRegistrationPanel.tsx"), "utf8");
+    expect(raw).toContain("<CategoryDirectPicker onPick={applyCategory}");
+  });
+});
