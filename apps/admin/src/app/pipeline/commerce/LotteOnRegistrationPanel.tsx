@@ -1545,18 +1545,47 @@ export function LotteOnRegistrationPanel({
             CategoryDirectPicker에는 입력칸이 하나도 없다 — 롯데ON이 돌려준
             목록을 위에서부터 눌러 내려가 고르는 것뿐이고, 고르면 추천에서
             고른 것과 **완전히 같은 경로**(applyCategory)를 탄다. */}
-        {isRecommendDeadEnd(recommend) && !directPickOpen && (
-          <div className="mb-3 rounded-md border border-warning/40 bg-warning-soft px-3 py-2.5">
-            <p className="text-[11px] font-medium text-warning">카테고리를 자동 추천하지 못했습니다.</p>
-            <p className="mt-1 text-[11px] text-text-secondary">
-              롯데ON 카테고리를 직접 선택해주세요 — 롯데ON이 제공하는 표준카테고리 목록에서 고르면 됩니다. 번호를
-              찾아 적지 않습니다.
-            </p>
-            <Button variant="primary" size="sm" className="mt-2" onClick={() => setDirectPickOpen(true)}>
-              롯데ON 카테고리 선택
-            </Button>
-          </div>
-        )}
+        {/* ══ P2-5b-④ (CPO 지시, 2026-10-05 — CEO 실측) ═══════════════════════
+            🔴 여기 있던 조건은 `isRecommendDeadEnd(recommend) && !directPickOpen`
+            이었다. 즉 **추천이 막혔을 때만** 직접 선택을 열 수 있었다.
+
+            실측 사고가 그 구멍이다: 추천이 「가방/지갑 > 남성가방 53점」을 «냈기»
+            때문에 dead end 가 아니었고, 그래서 셀러는 틀린 추천을 보면서도
+            직접 선택을 **열 수조차 없었다.** CEO 요건은 「추천 카테고리가 마음에
+            안 들면 직접 선택」이다.
+
+            🔴 그래서 버튼은 «항상» 선다. 안내 문구만 상황에 따라 갈린다 —
+            추천이 막혔으면 경고 색으로 「자동 추천하지 못했습니다」, 후보가
+            있으면 조용한 색으로 「추천이 맞지 않으면 직접 고르세요」.
+            두 상황을 같은 문구로 말하면 셀러가 추천 실패를 못 알아챈다.
+
+            🔴 되살리지 않는 것: scatNo/dcatLst **번호 직접 입력**. 아래
+            CategoryDirectPicker 에는 입력칸이 하나도 없고(테스트가 고정한다),
+            고르면 추천에서 고른 것과 **완전히 같은 경로**(applyCategory)를 탄다 —
+            그 수렴 함수는 한 글자도 바꾸지 않았다. */}
+        {!directPickOpen &&
+          (isRecommendDeadEnd(recommend) ? (
+            <div className="mb-3 rounded-md border border-warning/40 bg-warning-soft px-3 py-2.5">
+              <p className="text-[11px] font-medium text-warning">카테고리를 자동 추천하지 못했습니다.</p>
+              <p className="mt-1 text-[11px] text-text-secondary">
+                롯데ON 카테고리를 직접 선택해주세요 — 롯데ON이 제공하는 표준카테고리 목록에서 고르면 됩니다. 번호를
+                찾아 적지 않습니다.
+              </p>
+              <Button variant="primary" size="sm" className="mt-2" onClick={() => setDirectPickOpen(true)}>
+                롯데ON 카테고리 선택
+              </Button>
+            </div>
+          ) : (
+            <div className="mb-3 rounded-md border border-border bg-surface px-3 py-2.5">
+              <p className="text-[11px] text-text-secondary">
+                추천 카테고리가 이 상품과 맞지 않으면 직접 고를 수 있습니다 — 롯데ON 표준카테고리 목록에서 고르면
+                되고, 번호를 찾아 적지 않습니다.
+              </p>
+              <Button variant="secondary" size="sm" className="mt-2" onClick={() => setDirectPickOpen(true)}>
+                롯데ON 카테고리 직접 선택
+              </Button>
+            </div>
+          ))}
 
         {directPickOpen && (
           <CategoryDirectPicker onPick={applyCategory} onClose={() => setDirectPickOpen(false)} />
