@@ -330,8 +330,27 @@ export function recommendLotteOnStandardCategories(
       const result = scoreCategoryCandidate(category.name, path.slice(0, -1), signals);
       return { category, path, score: result.score, reason: result.reason, conflict: result.conflict };
     })
+    /* ══ P2-5b (CPO 확정, 2026-10-05 — 실측 오추천에서 역산) ═══════════════════
+       실측: Magro Long Sleeve 추천 1순위가 「가방/지갑 > 남성가방 53점」이었다.
+
+       🔴 여기 있던 흐름은 «정렬 → 10개» 뿐이고 **conflict 를 걸러내지 않았다.**
+       conflict 후보는 5점으로 내려가기만 해서 목록에 그대로 남고, 적합한 후보가
+       못 나온 상품에서는 그 5점짜리가 상위에 섰다.
+
+       순서를 지시대로 못박는다: **conflict 제거 → 점수 내림차순 → 최대 5개.**
+
+       🔴 안전장치가 깨지지 않는지 확인했다. 아래 decision 은 `best.conflict` 를
+       「쓸 만한 것을 못 찾았다」 신호로 쓴다(→ REJECT → 셀러가 직접 고른다).
+       conflict 를 먼저 걸러내면 **전부 conflict 였던 경우 candidates 가 비고**
+       `!best → "REJECT"` 가 같은 결론을 낸다 — 결과가 보존된다.
+       `best.conflict` 분기는 «지우지 않는다»: 지금은 닿지 않지만, 나중에 누가
+       conflict 를 목록에 되살리면 그 가드가 다시 필요하다.
+
+       🔴 기본값을 10 → 5 로 내린다. 호출부(category-recommend/route.ts)는 limit 를
+       넘기지 않으므로 이 기본값이 곧 실제 노출 개수다. */
+    .filter((candidate) => !candidate.conflict)
     .sort((a, b) => b.score - a.score)
-    .slice(0, options?.limit ?? 10);
+    .slice(0, options?.limit ?? 5);
 
   const best = candidates[0];
   const decision: LotteOnCategoryRecommendation["decision"] = !best

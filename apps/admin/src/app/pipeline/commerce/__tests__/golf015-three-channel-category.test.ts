@@ -173,9 +173,25 @@ describe("GOLF-01.5 축 B ① 골프 드라이버 — 세 채널이 각자 «자
     const result = recommendLotteOnStandardCategories(golfDriver(), LOTTEON_CATEGORIES, { limit: 5 });
     expect(result.candidates[0]!.path).toEqual(["골프클럽", "드라이버"]);
     expect(result.decision).toBe("AUTO_SELECT");
-    // 옛 증상: 상위 후보 점수가 전부 같아 순위가 "점수"가 아니라 "트리 순서"였다.
-    const scores = new Set(result.candidates.map((c) => c.score));
-    expect(scores.size, "상위 후보 점수가 전부 같다 — 순위가 트리 순서일 뿐이다").toBeGreaterThan(1);
+    /* ══ P2-5b 로 «재조준» 한다 (CPO 확정, 2026-10-05) ═══════════════════════
+       원래 단정: `new Set(scores).size > 1` — 「상위 후보 점수가 전부 같으면
+       순위가 점수가 아니라 트리 순서다」를 막는 가드였다.
+
+       🔴 그 다양성이 «어디서 왔는지» 가 문제였다. 골프 형제(아이언·퍼터)가
+       conflict 로 5점을 받아 목록에 남아 있어서 95/5 두 값이 생긴 것이다.
+       P2-5b 가 conflict 후보를 목록에서 «제거» 하므로(실측 오추천 「남성가방
+       53점」 대응) 그 다양성은 더 이상 존재하지 않는다 — 즉 옛 단정은
+       「conflict 가 목록에 남아 있다」를 간접적으로 요구하고 있었다.
+
+       의도는 그대로 지킨다: **순위가 트리 순서로 결정되지 않는다.** 그것은
+       위 174 줄(1순위가 정답)이 이미 증명한다. 여기서는 그 가드를 «정면» 으로
+       바꾼다 — 틀린 형제가 목록에 아예 없다는 것. 동점이 남더라도 그 동점은
+       「전부 올바른 후보끼리」이므로 셀러가 무엇을 골라도 틀리지 않는다. */
+    for (const candidate of result.candidates) {
+      expect(candidate.conflict, `충돌 후보가 목록에 남아 있다: ${candidate.path.join(" > ")}`).toBe(false);
+    }
+    const siblings = result.candidates.filter((c) => /아이언|퍼터|골프공|골프백/.test(c.path.join(" ")));
+    expect(siblings, "드라이버 상품에 다른 클럽 종류가 후보로 남아 있다").toEqual([]);
   });
 });
 
