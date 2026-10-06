@@ -33,6 +33,44 @@ import { getSnapshot } from "../../snapshots/_lib/snapshot";
 import { getPriceHistory, selectCostBasisOriginObservations } from "./price-observations";
 import { computeBrandMarketProfileFor } from "./brand-market";
 import { listDomesticProductLinks, priceTierFromLink } from "../../domestic-price-sources/_lib/domestic-product-link";
+import { listDomesticPriceSources } from "../../domestic-price-sources/_lib/domestic-price-source";
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * MI-URL-INPUT-UNIFICATION(CPO 결정, 2026-10-06) — **이 상품을 해외에서
+ * 들여오는가.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **통화로 판별하지 않는다.** 해외 사이트가 원화로 파는 경우가 실재한다 —
+ * 이 저장소의 실측 기록: Bobo Choses `/en-kr` ₩162,000 · `/en-de` €75.
+ * `currency === "KRW"` 로 가르면 그 상품이 국내 소싱으로 «오판» 된다.
+ *
+ * 그래서 **등록된 국내 판매처 도메인** 과 맞춰 본다. 이미 있는 데이터다
+ * (`domestic_price_sources.domain`, 029~074 가 조사해서 채운 카탈로그).
+ *
+ * 🔴 **카탈로그에 없는 호스트는 「해외」로 둔다.** 「모르는 곳이니 국내일 수도」
+ * 로 열면 해외 상품의 착지원가에서 국제배송비가 조용히 빠진다 — 기존 숫자가
+ * 변하는 쪽이라 그 방향으로는 틀리지 않는다(해외 회귀 0 보장).
+ */
+/* 🔴 테스트가 «동작으로» 재도록 export 한다 — 소스 문자열 검사만으로는
+   「통화로 판별하지 않는다」를 증명할 수 없다. */
+export async function isDomesticSourcedProduct(sourceUrl: string, workspaceId: string): Promise<boolean> {
+  let host: string;
+  try {
+    host = new URL(sourceUrl).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    /* URL 을 못 읽으면 판별하지 않는다 — 기존 동작(해외)을 유지한다. */
+    return false;
+  }
+  if (!host) return false;
+  const sources = await listDomesticPriceSources(workspaceId);
+  return sources.some((source) => {
+    const domain = (source.domain ?? "").replace(/^www\./, "").toLowerCase();
+    if (!domain) return false;
+    /* 서브도메인도 같은 판매처다(shop.example.com ↔ example.com). */
+    return host === domain || host.endsWith(`.${domain}`);
+  });
+}
 
 /**
  * N-4.18-K STEP K-2(대표님 지시, 2026-08-26: "새로운 가격판정 엔진을 만들지
@@ -221,7 +259,17 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
    * P0-C STEP 5 — 근거를 한 번만 구해서 아래로 흘린다(두 번 판정하지 않는다).
    * 🔴 method 는 넘기지 않는다 — 확인된 배송방법 데이터가 0건이므로 UNKNOWN 이다.
    */
+  /**
+   * 🔴 MI-URL-INPUT-UNIFICATION — 「이 상품을 해외에서 들여오는가」를 여기서
+   * 한 번만 구해 아래로 흘린다. 두 번 판정하면 배송비 축과 세금 축이 서로
+   * 다른 답을 들고 갈 수 있다.
+   */
+  const domesticSourced = await isDomesticSourcedProduct(product.sourceUrl, workspaceId);
+
   const resolvedShipping = resolveOverseasShipping({
+    /* 🔴 국내 소싱이면 해외물류비 축이 «적용되지 않는다»(NOT_APPLICABLE).
+       ₩0 이 아니다 — 0 은 「확인했더니 0원」이라는 다른 사실이다. */
+    overseasInbound: !domesticSourced,
     // 🔴 저장된 priceBreakdown 이 «있을 때만» 판매자 값이다. 없으면 아래
     //    legacyFallbackKrw 가 답한다 — 실측 328건 중 89건이 이 경우다.
     sellerEnteredKrw: product.priceBreakdown ? product.priceBreakdown.shippingKrw : undefined,
@@ -240,7 +288,14 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
    *    「확인된 배송비」가 아니므로 basis 를 잃어버리면 안 된다.
    *    UNKNOWN 과 LEGACY_FALLBACK 을 절대 같은 것으로 합치지 않는다.
    */
-  const shippingKrw = resolvedShipping.amountKrw;
+  /**
+   * 🔴 「해당 없음」은 계산을 멈추는 이유가 «아니다». 국내 소싱 상품의 착지원가는
+   * 「국내 소싱가」 하나이고, 국제배송 구간이 없으니 더할 항이 없을 뿐이다.
+   * 산술에는 0 을 쓰지만 **근거는 NOT_APPLICABLE 로 따로 흐른다** — 화면이
+   * 「₩0 으로 확인됨」이라고 말하지 않게 하는 장치가 그 분리다.
+   */
+  const shippingNotApplicable = resolvedShipping.basis === "NOT_APPLICABLE";
+  const shippingKrw = shippingNotApplicable ? 0 : resolvedShipping.amountKrw;
   if (canComputeCost && shippingKrw != null) {
     const exchangeRates = await fetchLiveExchangeRates();
     liveRates = exchangeRates.rates;
@@ -342,7 +397,11 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
    * «확인 필요»로 그대로 나오는 것이 맞다.
    */
   const buyerImportCharge =
-    cost != null
+    /* 🔴 국내에서 사오는 상품에는 «수입» 이 없다 — 관세·부가세 참고정보를
+       만들지 않는다. 띄우면 존재하지 않는 비용을 셀러에게 말하는 것이 된다.
+       세금 계산 «구조» 는 건드리지 않는다(CEO GOLF-01-TAX 결정 그대로
+       착지원가 인자가 아니다). */
+    cost != null && !domesticSourced
       ? resolveBuyerImportCharge({
           categoryProfileId: marketCategoryProfileId,
           // 이 제품의 판단 시장은 한국 하나다(KR_TARGET_MARKET).
@@ -383,11 +442,16 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
            *    경우는 애초에 여기 오지 않는다: 위에서 cost 가 null 이 되고,
            *    그러면 이 블록 자체가 실행되지 않는다.
            */
-          internationalShippingKrw: {
-            value: cost.shippingKrw,
-            status: "estimated",
-            source: resolvedShipping.basis === "SELLER_OVERRIDE" ? "seller_input" : "seller_default",
-          },
+          /* 🔴 국내 소싱이면 금액을 «비운다». 위 산술에서는 0 을 더했지만 그
+             0 을 성분으로 내보내면 화면이 「국제배송비 ₩0」이라고 말하게 된다.
+             합산은 아래 shippingBasis 를 보고 이 항을 건너뛴다(결정 A). */
+          internationalShippingKrw: shippingNotApplicable
+            ? { value: null, status: "unknown", source: "국내 소싱 — 국제배송 구간 없음" }
+            : {
+                value: cost.shippingKrw,
+                status: "estimated",
+                source: resolvedShipping.basis === "SELLER_OVERRIDE" ? "seller_input" : "seller_default",
+              },
           /**
            * P0-C STEP 5 — 금액 옆에 «근거» 를 함께 보낸다. landedCostKrw 가
            * 이 둘을 그대로 달고 나가므로, 화면이 「왜 이 값인가」에 답할 수 있다.

@@ -251,6 +251,19 @@ export function computeUnifiedPriceDecision(input: UnifiedPriceInput): UnifiedPr
   const missingComponents: string[] = [];
 
   for (const part of LANDED_COST_PARTS) {
+    /**
+     * 🔴 MI-URL-INPUT-UNIFICATION 결정 A(CPO 2026-10-06) — **「해당 없음」은
+     * 「모름」이 아니다.** 국내에서 사오는 상품에는 국제배송 구간 자체가 없으므로
+     * 그 항목은 합계에서 «빠지되» `hasUnknownCost` 로 세지 않는다.
+     *
+     * 이 줄이 없으면 국내 소싱 상품의 착지원가가 전부 `incomplete` 가 되고
+     * 예상이익·마진·판정이 비어 버린다 — 그래서 ₩0 을 넣어 「배송비 0원으로
+     * 확인됐다」는 없는 사실을 만들고 싶어진다. 둘 다 거짓이다.
+     *
+     * 🔴 해외 경로(`shippingBasis !== "NOT_APPLICABLE"`)는 이 조건을 지나치므로
+     * 아래 로직이 지금까지와 완전히 동일하게 돈다.
+     */
+    if (part.key === "internationalShippingKrw" && input.shippingBasis === "NOT_APPLICABLE") continue;
     const component = input[part.key] as PriceComponent | undefined;
     if (component == null || component.status === "unknown" || component.value == null) {
       hasUnknownCost = true;

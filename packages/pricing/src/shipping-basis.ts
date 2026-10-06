@@ -42,8 +42,20 @@
  *   LEGACY_FALLBACK   ₩12,000. 🔴 이번에 의미를 재정의하지 «않는다» — 지금까지
  *                     쓰이던 그 자리를 그대로 이름만 붙였다(CEO: 의미 확정은 조사 후).
  *   UNKNOWN           금액이 없다. 🔴 0 이 아니다. 「모른다」는 관측이다.
+ *   NOT_APPLICABLE    🔴 이 상품에는 «해외물류비라는 비용 항목 자체가» 없다.
+ *                     국내 소싱(등록된 국내 판매처 URL)이라 국제배송 구간이
+ *                     존재하지 않는다. **UNKNOWN 과 다르고 ₩0 과도 다르다**:
+ *                       UNKNOWN         항목은 있는데 금액을 모른다
+ *                       ₩0              금액을 «확인했고» 0원이었다
+ *                       NOT_APPLICABLE  항목 자체가 없다
+ *                     (MI-URL-INPUT-UNIFICATION 결정 A, CPO 2026-10-06)
  */
-export type ShippingBasis = "SELLER_OVERRIDE" | "CATEGORY_DEFAULT" | "LEGACY_FALLBACK" | "UNKNOWN";
+export type ShippingBasis =
+  | "SELLER_OVERRIDE"
+  | "CATEGORY_DEFAULT"
+  | "LEGACY_FALLBACK"
+  | "NOT_APPLICABLE"
+  | "UNKNOWN";
 
 /**
  * P0-C STEP 4(CEO 지시, 2026-09-20) — **상품이 어떤 경로로 한국에 오는가.**
@@ -96,6 +108,8 @@ export const SHIPPING_BASIS_LABEL: Readonly<Record<ShippingBasis, string>> = {
   SELLER_OVERRIDE: "판매자가 입력한 해외물류비",
   CATEGORY_DEFAULT: "카테고리 기본 해외물류비 — 실제 배송비로 확인된 값이 아닙니다",
   LEGACY_FALLBACK: "기본 해외물류비 적용 — 실제 배송비로 확인된 값이 아닙니다",
+  /* 🔴 「0원」이라고 말하지 않는다. 항목이 없다는 사실만 말한다. */
+  NOT_APPLICABLE: "국내에서 사오는 상품이라 해외물류비가 들지 않습니다",
   UNKNOWN: "해외물류비가 확인되지 않았습니다",
 };
 
@@ -105,6 +119,16 @@ export function shippingBasisIsConfirmed(basis: ShippingBasis): boolean {
 }
 
 export interface ResolveOverseasShippingInput {
+  /**
+   * 🔴 이 상품을 «해외에서 들여오는가». `false` 면 해외물류비 축이 아예
+   * 적용되지 않는다(NOT_APPLICABLE) — 금액은 null 이고 0 이 아니다.
+   *
+   * 🔴 호출부가 «확인한» 사실만 넘긴다. 통화(KRW)로 추측하지 않는다 — 해외
+   * 사이트가 원화로 파는 경우가 실재한다(저장소 실측: Bobo Choses `/en-kr`
+   * ₩162,000). 등록된 국내 판매처 도메인과 일치하는지로 판별한다.
+   * 넘기지 않으면 기존과 완전히 동일하게 동작한다(해외 경로 회귀 0).
+   */
+  overseasInbound?: boolean;
   /**
    * 판매자가 «명시적으로» 넣은 금액. 입력칸을 비웠으면 `null` 을 넘긴다 —
    * 🔴 0 을 넘기지 않는다. 0 은 「무료라고 확인했다」는 뜻이고 그건 다른 사실이다.
@@ -151,6 +175,9 @@ export function resolveOverseasShipping(input: ResolveOverseasShippingInput): Re
     label: SHIPPING_BASIS_LABEL[basis],
   });
 
+  /* 🔴 **가장 먼저** 본다. 항목 자체가 없으면 판매자 입력값도 카테고리 기본값도
+     의미가 없다 — 국내에서 사오는 상품에 「해외물류비」를 적을 자리가 없다. */
+  if (input.overseasInbound === false) return withBasis(null, "NOT_APPLICABLE");
   if (input.sellerEnteredKrw != null) return withBasis(input.sellerEnteredKrw, "SELLER_OVERRIDE");
   // 🔴 비운 것과 손대지 않은 것을 가른다. null 은 「모른다」, undefined 는 「아직 안 봤다」.
   if (input.sellerEnteredKrw === null) return withBasis(null, "UNKNOWN");

@@ -30,6 +30,16 @@ export interface KrwPrice {
  * 실패 등) FIXED_RATES_TO_KRW로 폴백하고 isEstimate=true. */
 export function convertToKrw(amount: number, currency: string, liveRates?: Record<string, number>): KrwPrice {
   const code = currency.toUpperCase();
+  /**
+   * 🔴 MI-URL-INPUT-UNIFICATION 결정 B(CPO 2026-10-06) — KRW → KRW 는 «환산이
+   * 아니다». 1:1 이라 추정할 것이 없는데 아래 고정표 경로를 타면서
+   * `isEstimate: true` 가 붙어, 화면이 환산하지 않은 값을 「추정 환율」이라고
+   * 말하고 있었다. 국내 소싱 상품이 들어오면 매번 그 거짓말을 한다.
+   *
+   * 🔴 다른 통화의 정책은 한 줄도 바꾸지 않는다 — liveRates 우선, 없으면
+   * 고정표 + isEstimate=true 그대로다.
+   */
+  if (code === "KRW") return { amountKrw: Math.round(amount), isEstimate: false };
   const liveRate = liveRates?.[code];
   if (liveRate != null) {
     return { amountKrw: Math.round(amount * liveRate), isEstimate: false };
