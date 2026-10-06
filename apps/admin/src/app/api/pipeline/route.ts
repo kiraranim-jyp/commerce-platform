@@ -1,7 +1,12 @@
 import fs from "node:fs";
 import { requireUser } from "@/lib/auth/require-user";
 import path from "node:path";
-import { resolveBrandName, universalExtract } from "@commerce/crawler";
+import {
+  findSourceRepresentativeIndex,
+  representativeIdForIndex,
+  resolveBrandName,
+  universalExtract,
+} from "@commerce/crawler";
 import {
   CompositeClassifierProvider,
   GeminiClassifierProvider,
@@ -262,11 +267,22 @@ export async function POST(request: Request) {
           (item) => item.type === "PRODUCT" && item.status === "success" && item.usedOriginal === false,
         ).length;
 
+        /* ══ A-1 — 원소스가 «명시한» 대표 이미지를 최우선으로 쓴다 ═════════
+           🔴 추출 배열의 인덱스가 다운로드 파일명(`0000`…)이고 그것이 그대로
+           이미지 id 다(`downloader.service.ts`). 그래서 「몇 번째」만 구해 넘기면
+           되고, 레이어마다 플래그를 들고 다니는 구조가 필요하지 않다.
+           🔴 못 찾으면 `null` 이고, 그때는 기존 선정 로직(PRODUCT+해상도 →
+           images[0])이 그대로 돈다 — 여기서 비슷한 것을 «고르지» 않는다. */
+        const sourceRepresentativeId = representativeIdForIndex(
+          findSourceRepresentativeIndex(images, extraction.sourceRepresentativeUrl),
+        );
+
         const canonicalProduct = buildCanonicalProduct(
           url,
           extraction.productData,
           extraction.productDataSources,
           items,
+          sourceRepresentativeId,
         );
 
         // P1-1(Brand Resolver) 검증 요구사항 — CPO가 "Raw → Rule Applied →

@@ -22,3 +22,9 @@ export {
   type SearchTrendStatus,
   type SearchTrendOutcome,
 } from "./market-signals/naver-datalab";
+/* A-1 — 원소스가 «명시한» 대표 이미지 1장을 찾는다(단일 선언만 인정). */
+export {
+  findSourceRepresentativeImageUrl,
+  findSourceRepresentativeIndex,
+  representativeIdForIndex,
+} from "./source-representative";

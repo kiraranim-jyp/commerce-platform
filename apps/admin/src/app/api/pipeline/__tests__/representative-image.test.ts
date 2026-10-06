@@ -20,10 +20,15 @@ import { ensureRepresentativeImage } from "../canonical-product";
  *     images.length >= 1   → isRepresentative 가 «정확히 1개»
  *     이미 1개면            → 손대지 않는다 (셀러 선택 보호)
  *
- * 🔴 「원소스 대표 계승」은 1순위로 넣지 «않았다». §2-3 이 「image[0] 이라는
- * 이유만으로 대표로 간주하지 않는다」고 못박았고, og:image/JSON-LD 가 «어느
- * 장이 대표인지» 를 규정한다는 근거를 조사에서 찾지 못했다. 확인되지 않은 의미를
- * 1순위로 올리면 그것이 §14 가 금지한 「임의 선택」이 된다.
+ * ── 🔴 우선순위는 셋이다 (A-1 완료, 2026-10-06) ───────────────────────────
+ *     ① 원소스가 «명시한» 대표  (schema.org Product 의 image 단일 선언)
+ *     ② 기존 PRODUCT 분류 + 해상도
+ *     ③ images[0]
+ * 🔴 ①의 인정 조건과 거부 조건(배열·0개·2개 이상·og:image)은
+ * `packages/crawler/src/source-representative.ts` 주석에 근거와 함께 있다.
+ * 「image[0] 이라서」가 아니라 «후보가 하나뿐이라» 대표다.
+ * 🔴 그리고 ①은 «셀러 선택을 이기지 못한다» — 아래 「원소스 대표가 1순위다」
+ * 블록의 Case D 가 그 순서를 고정한다.
  */
 const img = (id: string, isRepresentative = false): CanonicalProductImage =>
   ({
@@ -142,5 +147,53 @@ describe("🔴 불변식 — 이미지가 있으면 대표는 «정확히 1개»
       const count = marked(ensureRepresentativeImage(input)).length;
       expect(count, `입력 ${input.length}장에서 대표가 ${count}개`).toBe(input.length === 0 ? 0 : 1);
     }
+  });
+});
+
+/* ════════════════════════════════════════════════════════════════════════════
+   A-1 ① 원소스 대표 우선 (CPO 확정 2026-10-06)
+   ════════════════════════════════════════════════════════════════════════════
+
+   🔴 우선순위는 셋이다: 원소스 대표 → 기존 PRODUCT+해상도 → images[0].
+   여기서 재는 것은 «첫째가 둘째·셋째를 이기는가» 와 «셀러 선택을 이기지 못하는가»
+   다. id 는 downloader 의 파일명 규칙(`0000`…)에서 온다. */
+describe("🔴 A-1 — 원소스 대표가 1순위다", () => {
+  it("Case A — 대표 미지정 + 원소스 대표 → 그 이미지가 대표", () => {
+    const input = [img("0000"), img("0001"), img("0002")];
+    expect(marked(ensureRepresentativeImage(input, "0001"))).toEqual(["0001"]);
+  });
+
+  it("🔴 첫 장 폴백을 «이긴다» — images[0] 이 아니라 원소스가 대표다", () => {
+    const out = ensureRepresentativeImage([img("0000"), img("0001")], "0001");
+    expect(out.map((i) => i.isRepresentative)).toEqual([false, true]);
+  });
+
+  it("🔴 Case D — 셀러가 이미 고른 대표를 «덮지 않는다»", () => {
+    /* markedCount===1 보호가 원소스 분기 «앞» 에 있다 — 순서가 계약이다. */
+    const chosen = [img("0000", true), img("0001")];
+    expect(marked(ensureRepresentativeImage(chosen, "0001"))).toEqual(["0000"]);
+    expect(ensureRepresentativeImage(chosen, "0001")).toBe(chosen);
+  });
+
+  it("🔴 목록에 «없는» id 면 무시하고 기존 로직으로 간다", () => {
+    /* 없는 것을 가리키는 대표를 만들지 않는다. */
+    expect(marked(ensureRepresentativeImage([img("0000"), img("0001")], "9999"))).toEqual(["0000"]);
+  });
+
+  it("대표가 둘이던 상태에서도 원소스가 이기고 나머지는 꺼진다", () => {
+    const two = [img("0000", true), img("0001", true), img("0002")];
+    const out = ensureRepresentativeImage(two, "0002");
+    expect(marked(out)).toEqual(["0002"]);
+    expect(out.filter((i) => i.isRepresentative)).toHaveLength(1);
+  });
+
+  it("원소스 대표가 없으면(null/undefined) 기존 동작과 «완전히» 같다", () => {
+    const input = [img("0000"), img("0001")];
+    expect(marked(ensureRepresentativeImage(input, null))).toEqual(marked(ensureRepresentativeImage(input)));
+    expect(marked(ensureRepresentativeImage(input, undefined))).toEqual(["0000"]);
+  });
+
+  it("이미지 0장이면 원소스 대표가 있어도 대표 없음이다", () => {
+    expect(ensureRepresentativeImage([], "0000")).toEqual([]);
   });
 });

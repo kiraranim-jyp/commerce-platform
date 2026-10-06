@@ -9,6 +9,7 @@ import {
 } from "./product-data-extractor";
 import { acquireDomainSlot, recordRateLimitResponse } from "./rate-limit/domain-rate-limiter";
 import { scoreAndFilter, type ExtractionTrace } from "./scoring";
+import { findSourceRepresentativeImageUrl } from "./source-representative";
 import { fetchHtmlDirect } from "./utils/direct-html-fetch";
 import { expectedCurrencyFor, withSourceCurrency } from "./source-currency-policy";
 import { trySiteStrategies } from "./site-strategies/registry";
@@ -45,6 +46,24 @@ export interface UniversalExtractResult {
   strategyCounts?: Record<StrategySource, number>;
   productData: ExtractedProductData;
   productDataSources: Record<string, ProductDataSource>;
+  /**
+   * A-1 — 원소스가 **명시한** 대표 이미지 URL. 없으면 `null`/`undefined`.
+   *
+   * 🔴 조건은 「schema.org Product 의 image 가 «단일 선언»」 하나다 — 근거와
+   * 한계는 `findSourceRepresentativeImageUrl` 주석에 있다. 배열 · 0개 · 2개 이상
+   * · og:image 는 **대표로 확정하지 않는다**. 그때 이 값은 비고, 호출부는 기존
+   * 선정 로직(PRODUCT+해상도 → images[0])을 그대로 쓴다.
+   *
+   * 🔴 `images[]` 와 «짝지을» 값이다. 호출부가 이 URL 의 인덱스를 찾아 다운로드
+   * 파일명(`0000`·`0001`…)과 맞춘다 — `downloader.service.ts` 가 배열 인덱스를
+   * 파일명으로 쓰고 그것이 그대로 이미지 id 가 되므로, 레이어마다 플래그를 들고
+   * 다니는 구조를 만들 필요가 없다.
+   *
+   * 🔴 site-strategy 빠른 경로(아래 첫 `return`)에서는 채우지 않는다 — 그 경로는
+   * 원문 HTML 을 들고 있지 않다. 비면 기존 로직으로 내려가므로 회귀가 아니라
+   * «적용 범위» 의 차이다.
+   */
+  sourceRepresentativeUrl?: string | null;
 }
 
 async function autoScroll(page: Page, passes: number): Promise<void> {
@@ -325,6 +344,9 @@ export async function universalExtract(
       strategyCounts,
       productData,
       productDataSources,
+      /* A-1 — 원소스가 «명시한» 대표가 있으면 그 URL 을 같이 올린다. 없으면 null
+         이고, 그때 호출부는 기존 선정 로직을 그대로 쓴다(여기서 «고르지» 않는다). */
+      sourceRepresentativeUrl: findSourceRepresentativeImageUrl(html, url),
     };
   } finally {
     await browser.close();

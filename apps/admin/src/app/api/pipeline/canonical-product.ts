@@ -137,7 +137,10 @@ export function toCanonicalProductImage(item: WorkspaceItem): CanonicalProductIm
  * 🔴 「정확히 1개면 손대지 않는다」가 사용자 선택 보호의 전부다. 이 함수는 순수
  * 함수라 재분석 때 다시 돌아도, 이미 하나면 no-op 이다.
  */
-export function ensureRepresentativeImage(images: CanonicalProductImage[]): CanonicalProductImage[] {
+export function ensureRepresentativeImage(
+  images: CanonicalProductImage[],
+  sourceRepresentativeId?: string | null,
+): CanonicalProductImage[] {
   if (images.length === 0) return images;
 
   const firstMarked = images.findIndex((image) => image.isRepresentative);
@@ -145,6 +148,26 @@ export function ensureRepresentativeImage(images: CanonicalProductImage[]): Cano
 
   /* 🔴 이미 하나면 건드리지 않는다 — 배열 자체를 그대로 돌려준다(참조까지 동일). */
   if (markedCount === 1) return images;
+
+  /* ══ A-1 ① 원소스가 «명시한» 대표가 최우선이다 (CPO 확정 2026-10-06) ═══
+     🔴 `markedCount === 1` 보호 «뒤» 에 둔다. 셀러가 이미 고른 것이 있으면
+     위에서 그대로 반환되므로, 원소스 대표가 그것을 덮지 않는다 — 순서가
+     계약이다(Case D).
+     🔴 id 는 `downloader.service.ts` 의 파일명 규칙(`0000`…)에서 온다.
+     그 id 가 실제 목록에 «없으면» 무시하고 기존 로직으로 내려간다 —
+     없는 것을 가리키는 대표를 만들지 않는다. */
+  const sourceIndex = sourceRepresentativeId
+    ? images.findIndex((image) => image.id === sourceRepresentativeId)
+    : -1;
+  if (sourceIndex >= 0) {
+    return images.map((image, index) =>
+      index === sourceIndex
+        ? { ...image, isRepresentative: true }
+        : image.isRepresentative
+          ? { ...image, isRepresentative: false }
+          : image,
+    );
+  }
 
   if (markedCount === 0) {
     /* §2-4 — 원소스 대표를 식별하지 못했을 때의 «명시적» fallback. */
@@ -168,12 +191,15 @@ export function buildCanonicalProduct(
   productData: ExtractedProductData,
   sources: Record<string, ProductDataSource>,
   items: WorkspaceItem[],
+  /** A-1 — 원소스가 명시한 대표 이미지의 id(`0000`…). 없으면 기존 로직. */
+  sourceRepresentativeId?: string | null,
 ): CanonicalProduct {
   /* 🔴 대표 보장은 «여기 한 곳» 에서만 한다 — images 가 조립되는 유일한 지점이다.
      채널 어댑터에 두면 채널마다 다른 대표가 생긴다(LotteON 이 이미 gallery[0]
      폴백을 따로 갖고 있는 것이 그 증상이다). */
   const images = ensureRepresentativeImage(
     items.map(toCanonicalProductImage).filter((image): image is CanonicalProductImage => image !== null),
+    sourceRepresentativeId,
   );
   const resolvedCountryOfOrigin = extractCountryOfOrigin(productData.description);
   // Sprint A-7(작업2) — 실측 확인(allbirds.com): 설명문엔 색상 라벨이 없어도
