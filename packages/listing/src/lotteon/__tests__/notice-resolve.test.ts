@@ -331,3 +331,123 @@ describe("⑦ 고시 0200(KC 인증정보) — 안전인증 신고와 이어져 
     expect(article?.pdArtlCnts).toBe("해당사항 없음");
   });
 });
+
+/* ════════════════════════════════════════════════════════════════════════════
+   ⑦ 🔴 품목 01「의류」 — **코드가 품목 23 과 다르다** (P0-3, 2026-10-06)
+   ════════════════════════════════════════════════════════════════════════════
+
+   CEO 보고: 테니스 의류가 `9999 상품품목항목코드 필수값 누락` 으로 등록 불가.
+   셀러가 지목한 넷 — 제품 소재 · 치수 · 세탁방법 · 제조연월.
+
+   원인은 값이 없는 것이 «아니었다». 이 파일이 품목 01 의 «해석» 을 한 번도 재지
+   않았고(위 ①은 스키마 «개수» 만 봤다), resolver 가 품목 23 어휘로만 짜여 있어서
+   넷이 `default:` → BLOCKED 로 떨어졌다. 셀러 화면에는 「이 항목을 채우는 규칙이
+   아직 없습니다」가 떴다 — 값을 채워도 뚫리지 않는 상태였다.
+
+       소재      01:0010  ↔  23:0410「재질」
+       치수      01:0030  ↔  23:0780「크기, 중량」
+       세탁방법  01:0050  ↔  23:0800「취급방법…안전표시」
+       제조연월  01:0040  ↔  23:0220「동일모델의 출시년월」 ← 🔴 다른 사실이다
+*/
+describe("⑦ 🔴 품목 01「의류」 — 셀러가 보고한 넷", () => {
+  const fillsFor = (facts: LotteOnNoticeFacts) => resolveLotteOnNotice("01", facts).fills;
+  const find = (facts: LotteOnNoticeFacts, code: string) => fillsFor(facts).find((f) => f.code === code)!;
+  const value = (fill: LotteOnNoticeFill) => (fill.status === "FILLED" ? fill.value : undefined);
+
+  it("🔴 아홉 항목이 나오고 «규칙 없음(BLOCKED)» 이 하나도 없다", () => {
+    /* 🔴 이것이 이 블록의 핵심 단정이다. 9개가 나오는 것은 ①이 이미 보지만,
+       그중 몇이 「규칙이 없다」로 떨어지는지는 아무도 보지 않았다. */
+    const fills = fillsFor(REAL);
+    expect(fills).toHaveLength(9);
+    const ruleless = fills.filter((f) => f.status === "BLOCKED" && f.reason.includes("규칙이 아직 없습니다"));
+    expect(ruleless.map((f) => f.code), "규칙 없는 항목이 남아 있다").toEqual([]);
+  });
+
+  it("0010 제품 소재 ← 상품정보 소재", () => {
+    const fill = find(REAL, "0010");
+    expect(value(fill)).toBe("17% Recycled Cotton");
+    expect(fill.status === "FILLED" && fill.from).toContain("소재");
+  });
+
+  it("0030 치수 ← 사이즈 옵션", () => {
+    expect(value(find(REAL, "0030"))).toBe("2-3 Years, 4-5 Years, 6-7 Years");
+  });
+
+  it("0050 세탁방법 ← 상품정보 취급 정보", () => {
+    expect(value(find(REAL, "0050"))).toBe("30도 손세탁");
+  });
+
+  it("🔴 0040 제조연월은 «자동으로 차지 않는다» — source 가 전수 0 이다", () => {
+    const fill = find(REAL, "0040");
+    expect(fill.status).toBe("NEEDS_INPUT");
+    /* BLOCKED 가 아니라 NEEDS_INPUT 이어야 한다 — 셀러가 채우면 풀린다. */
+    expect(fill.status === "NEEDS_INPUT" && fill.reason).toContain("지어내지 않습니다");
+  });
+
+  it("🔴 0040 은 셀러가 넣으면 FILLED 이고 출처가 «판매자 입력» 이다", () => {
+    const fill = find({ ...REAL, sellerArticleValues: { "0040": "2026-03" } }, "0040");
+    expect(value(fill)).toBe("2026-03");
+    expect(fill.status === "FILLED" && fill.from).toContain("판매자 입력");
+  });
+});
+
+describe("🔴 ⑧ 품목 01 의 금지된 대체를 «하지 않는다»", () => {
+  const find = (facts: LotteOnNoticeFacts, code: string) =>
+    resolveLotteOnNotice("01", facts).fills.find((f) => f.code === code)!;
+
+  it("🔴🔴 0030 치수에 «중량» 을 넣지 않는다 — 0780 과 다른 항목이다", () => {
+    /* 품목 23 의 0780「크기, 중량」은 공식 가이드라인 근거로 치수→중량 폴백이
+       있다. 품목 01 의 0030 은 항목명 자체가 「치수」다. 폴백을 넣으면 셀러가
+       확인한 적 없는 「500g」이 치수 칸으로 나간다. */
+    const fill = find({ ...REAL, sizeValues: [], weight: "500g" }, "0030");
+    expect(fill.status).toBe("NEEDS_INPUT");
+    expect(JSON.stringify(fill)).not.toContain("500g");
+  });
+
+  it("🔴 0040 에 시즌코드·오늘 날짜 같은 추정값이 들어가지 않는다", () => {
+    const fill = find({ ...REAL, modelName: "SS26-ABC" }, "0040");
+    expect(fill.status).toBe("NEEDS_INPUT");
+    expect(JSON.stringify(fill)).not.toContain("SS26");
+  });
+
+  it("🔴 0040 에 0220 의 셀러 입력값이 «새지 않는다» — 두 코드는 다른 사실이다", () => {
+    const facts = { ...REAL, sellerArticleValues: { "0220": "2025-09" } };
+    expect(find(facts, "0040").status).toBe("NEEDS_INPUT");
+  });
+
+  it("빈 facts 에서도 0010·0030·0050 이 «규칙 없음» 이 아니라 «입력 필요» 다", () => {
+    for (const code of ["0010", "0030", "0050"]) {
+      expect(find({}, code).status, `${code} 가 NEEDS_INPUT 이 아니다`).toBe("NEEDS_INPUT");
+    }
+  });
+
+  it("🔴 품목 23 의 동작이 한 글자도 바뀌지 않았다 — 0780 은 여전히 중량으로 대체한다", () => {
+    /* 의류 쪽을 열면서 어린이제품 쪽 규칙을 건드리지 않았다는 대조군이다. */
+    const fill = resolveLotteOnNotice("23", { ...REAL, sizeValues: [], weight: "500g" }).fills.find(
+      (f) => f.code === "0780",
+    )!;
+    expect(fill.status === "FILLED" && fill.value).toBe("500g");
+  });
+});
+
+describe("🔴 ⑨ 의류 고시가 실제 payload 항목까지 간다", () => {
+  it("articles 에 0010·0030·0050 이 실리고 0040 은 «실리지 않는다»", () => {
+    /* payload 의 `pdItmsInfo.pdItmsArtlLst` 가 되는 배열이다. 미입력 항목을
+       빈 값으로 실어 보내지 않는다 — 그것이 「값 있음 ≠ 충족」 사고다. */
+    const articles = resolveLotteOnNotice("01", REAL).articles;
+    const codes = articles.map((a) => a.pdArtlCd);
+    expect(codes).toContain("0010");
+    expect(codes).toContain("0030");
+    expect(codes).toContain("0050");
+    expect(codes, "미입력 제조연월이 payload 에 실렸다").not.toContain("0040");
+    expect(articles.find((a) => a.pdArtlCd === "0010")?.pdArtlCnts).toBe("17% Recycled Cotton");
+  });
+
+  it("셀러가 제조연월을 넣으면 그때 0040 이 실린다", () => {
+    const articles = resolveLotteOnNotice("01", {
+      ...REAL,
+      sellerArticleValues: { "0040": "2026-03" },
+    }).articles;
+    expect(articles.find((a) => a.pdArtlCd === "0040")?.pdArtlCnts).toBe("2026-03");
+  });
+});

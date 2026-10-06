@@ -7,6 +7,7 @@ import type { LotteOnNoticeResolution, LotteOnNoticeFill } from "@commerce/listi
 /* 🔴 화이트리스트를 화면이 «다시 정하지» 않는다 — resolver 의 것을 그대로 읽는다.
    두 곳에 두면 화면과 판정이 갈라지고, 그 갈라짐이 STEP3-FIX 의 병이다. */
 import {
+  isLotteOnBulkReferenceArticle,
   isLotteOnSellerFillableArticle,
   autoPickLotteOnOriginCode,
   /* 🔴 참조 문구를 여기서 «만들지» 않는다 — 네이버·쿠팡이 쓰는 그 상수 그대로다. */
@@ -2114,8 +2115,15 @@ export function LotteOnRegistrationPanel({
                   🔴 「비어 있는 칸만」 채운다. 규칙은 JSX 가 아니라
                   `planLotteOnBulkReference` 안에 있다 — 셀러가 적어 둔
                   「최대 체중 20kg」을 참조 문구로 덮는 사고를 화면에 맡기지 않는다. */}
+              {/* 🔴 일괄 참조 대상은 «입력 가능» 목록과 다른 집합이다(CPO ⓑ, 2026-10-06).
+                  `0040`(제조연월)은 입력칸은 그리지만 참조로는 채우지 않는다 —
+                  상세페이지에도 없는 값이라 참조가 거짓이 된다. 안쪽 `planLotteOn…` 이
+                  이중 게이트로 또 막지만, 화면이 «세는 목록» 도 맞춰 둔다. 그러지
+                  않으면 버튼 문구가 적용되지도 않을 항목까지 세어 말한다. */}
               <BulkReferenceControl
-                codes={sellerFillableNoticeFills.map((fill) => fill.code)}
+                codes={sellerFillableNoticeFills
+                  .map((fill) => fill.code)
+                  .filter((code) => isLotteOnBulkReferenceArticle(code))}
                 articleValues={form.notice.articleValues}
                 onPlan={(next) => pickAndRecheck("notice", { articleValues: next })}
               />

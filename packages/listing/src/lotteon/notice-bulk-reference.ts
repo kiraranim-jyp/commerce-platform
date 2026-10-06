@@ -1,5 +1,5 @@
 import { DETAIL_PAGE_REFERENCE_TEXT } from "../notice/reference-eligibility";
-import { LOTTEON_SELLER_FILLABLE_ARTICLE_CODES, isLotteOnSellerFillableArticle } from "./notice-resolve";
+import { LOTTEON_BULK_REFERENCE_ARTICLE_CODES, isLotteOnBulkReferenceArticle } from "./notice-resolve";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -21,10 +21,20 @@ import { LOTTEON_SELLER_FILLABLE_ARTICLE_CODES, isLotteOnSellerFillableArticle }
  *   ⑤ 실제 값과 참조를 구분              → 값이 참조 문구인지 여부로만 판단한다
  *   ⑥ payload/검증 불변                  → 이 파일은 폼 값만 만든다. 어댑터를 모른다
  *
- * 🔴 ②는 «이중 게이트» 다. 부르는 쪽이 코드 목록을 넘기더라도 화이트리스트 밖은
+ * 🔴 ②는 «이중 게이트» 다. 부르는 쪽이 코드 목록을 넘기더라도 목록 밖은
  * 여기서 다시 떨어진다 — 「화면이 안 보여주니까 안전하다」에 기대지 않는다.
  * KC 를 상세페이지 참조로 얼버무리면 규제 위반이고, 그 가드는 화면 하나에
  * 맡길 것이 아니다(「12313ㄹㅇ」 사건).
+ *
+ * ── 🔴 기준 목록이 «바뀌었다» (CPO 결정 ⓑ, 2026-10-06) ────────────────────
+ * 전에는 `LOTTEON_SELLER_FILLABLE_ARTICLE_CODES` 를 썼다. 그 상수가
+ * 「셀러가 입력할 수 있다」와 「참조로 일괄 채워도 된다」를 **동시에** 뜻하고
+ * 있었고, 그래서 `0040`(제조연월)을 입력 가능하게 열면 참조까지 따라왔다.
+ *
+ * 이제 기준은 `LOTTEON_BULK_REFERENCE_ARTICLE_CODES` 다. `0220`·`1830` 의
+ * 동작은 **한 글자도 바뀌지 않고**, `0040` 만 이 경로에서 빠진다.
+ * 근거: 상세페이지에도 제조연월이 없어서 참조가 「없는 정보를 가리키는 것」이
+ * 된다. 두 목록의 부분집합 불변식(bulk ⊆ sellerFillable)은 테스트가 지킨다.
  */
 
 /** 일괄 적용이 무엇을 했는지 — 화면이 문구를 만들 수 있게 «사실» 로 돌려준다. */
@@ -50,7 +60,7 @@ function clean(value: string | undefined): string {
  */
 export function planLotteOnBulkReference(
   articleValues: Record<string, string>,
-  codes: readonly string[] = LOTTEON_SELLER_FILLABLE_ARTICLE_CODES,
+  codes: readonly string[] = LOTTEON_BULK_REFERENCE_ARTICLE_CODES,
 ): LotteOnBulkReferencePlan {
   const next = { ...articleValues };
   const applied: string[] = [];
@@ -58,7 +68,7 @@ export function planLotteOnBulkReference(
 
   for (const code of codes) {
     /* 🔴 이중 게이트 — 화이트리스트 밖은 여기서 끝난다. */
-    if (!isLotteOnSellerFillableArticle(code)) continue;
+    if (!isLotteOnBulkReferenceArticle(code)) continue;
     const current = clean(articleValues[code]);
     if (current === DETAIL_PAGE_REFERENCE_TEXT) continue; /* 이미 참조 — 멱등 */
     if (current) {
@@ -82,13 +92,13 @@ export function planLotteOnBulkReference(
  */
 export function planLotteOnBulkReferenceClear(
   articleValues: Record<string, string>,
-  codes: readonly string[] = LOTTEON_SELLER_FILLABLE_ARTICLE_CODES,
+  codes: readonly string[] = LOTTEON_BULK_REFERENCE_ARTICLE_CODES,
 ): LotteOnBulkReferencePlan {
   const next = { ...articleValues };
   const applied: string[] = [];
 
   for (const code of codes) {
-    if (!isLotteOnSellerFillableArticle(code)) continue;
+    if (!isLotteOnBulkReferenceArticle(code)) continue;
     if (clean(articleValues[code]) !== DETAIL_PAGE_REFERENCE_TEXT) continue;
     next[code] = "";
     applied.push(code);

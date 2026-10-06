@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { DETAIL_PAGE_REFERENCE_TEXT } from "../../notice/reference-eligibility";
-import { LOTTEON_SELLER_FILLABLE_ARTICLE_CODES } from "../notice-resolve";
+import {
+  LOTTEON_BULK_REFERENCE_ARTICLE_CODES,
+  LOTTEON_SELLER_FILLABLE_ARTICLE_CODES,
+} from "../notice-resolve";
 import { planLotteOnBulkReference, planLotteOnBulkReferenceClear } from "../notice-bulk-reference";
 
 /**
@@ -20,6 +23,8 @@ import { planLotteOnBulkReference, planLotteOnBulkReferenceClear } from "../noti
 /** 1830 = 크기ㆍ체중의 한계 · 0220 = 동일모델의 출시년월 (notice-schema.ts:87-92) */
 const SIZE_WEIGHT_LIMIT = "1830";
 const MODEL_RELEASE = "0220";
+/** 품목 01「의류」의 제조연월. 🔴 `0220`(출시년월)과 **다른 사실** 이다. */
+const MANUFACTURE_DATE = "0040";
 
 describe("① 기존 셀러 입력값을 덮지 않는다", () => {
   it("🔴 실제 값이 있는 칸은 건드리지 않고 skipped 로 보고한다", () => {
@@ -50,8 +55,47 @@ describe("① 기존 셀러 입력값을 덮지 않는다", () => {
 });
 
 describe("② 허용 목록 — 0220·1830 뿐이고 0200·0060 은 제외된다", () => {
-  it("화이트리스트가 두 항목 그대로다", () => {
-    expect([...LOTTEON_SELLER_FILLABLE_ARTICLE_CODES]).toEqual([MODEL_RELEASE, SIZE_WEIGHT_LIMIT]);
+  it("🔴 일괄 참조 목록이 두 항목 그대로다 — 늘어나면 여기서 멈춘다", () => {
+    expect([...LOTTEON_BULK_REFERENCE_ARTICLE_CODES]).toEqual([MODEL_RELEASE, SIZE_WEIGHT_LIMIT]);
+  });
+
+  /* ══ P0-3 (CPO 결정 ⓑ, 2026-10-06) ═══════════════════════════════════════
+     전에는 이 자리에서 `LOTTEON_SELLER_FILLABLE_ARTICLE_CODES` 가 두 항목임을
+     단정했다. 그 상수가 「입력 가능」과 「참조로 채워도 됨」을 동시에 뜻했기
+     때문이다. 이제 둘이 갈라졌으므로 **각각** 잰다. */
+  it("🔴 입력 가능 목록에는 0040(제조연월)이 «있다»", () => {
+    expect([...LOTTEON_SELLER_FILLABLE_ARTICLE_CODES]).toContain(MANUFACTURE_DATE);
+  });
+
+  it("🔴 그런데 일괄 참조 목록에는 «없다» — 두 권한이 다르다", () => {
+    expect([...LOTTEON_BULK_REFERENCE_ARTICLE_CODES]).not.toContain(MANUFACTURE_DATE);
+  });
+
+  it("🔴 0040 은 «넘겨도» 참조로 채워지지 않는다 — 이중 게이트", () => {
+    /* 화면이 실수로 넘기는 상황을 일부러 만든다. 상세페이지에도 제조연월이
+       없어서, 참조 문구를 넣으면 «없는 정보를 가리키는» 것이 된다. */
+    const plan = planLotteOnBulkReference({ [MANUFACTURE_DATE]: "" }, [MANUFACTURE_DATE]);
+    expect(plan.next[MANUFACTURE_DATE]).toBe("");
+    expect(plan.applied).toEqual([]);
+    expect(plan.skipped).toEqual([]);
+  });
+
+  it("🔴 해제 경로로도 0040 을 건드리지 않는다", () => {
+    /* 해제는 「우리가 넣은 참조를 되돌리는 것」이다. 애초에 넣을 수 없으므로
+       지우지도 않는다 — 셀러가 적은 실제 제조연월을 지우면 안 된다. */
+    const clear = planLotteOnBulkReferenceClear({ [MANUFACTURE_DATE]: DETAIL_PAGE_REFERENCE_TEXT }, [
+      MANUFACTURE_DATE,
+    ]);
+    expect(clear.next[MANUFACTURE_DATE]).toBe(DETAIL_PAGE_REFERENCE_TEXT);
+    expect(clear.applied).toEqual([]);
+  });
+
+  it("🔴 불변식 — 일괄 참조 가능한 것은 «전부» 입력 가능하다 (bulk ⊆ sellerFillable)", () => {
+    /* 두 목록을 손으로 따로 적으므로 엇나갈 수 있다. 참조만 가능하고 입력은
+       불가능한 항목이 생기면 셀러가 그 값을 «고칠 수 없는» 칸이 된다. */
+    for (const code of LOTTEON_BULK_REFERENCE_ARTICLE_CODES) {
+      expect([...LOTTEON_SELLER_FILLABLE_ARTICLE_CODES], `${code} 가 입력 가능 목록에 없다`).toContain(code);
+    }
   });
 
   it("🔴 KC(0200) 은 «넘겨도» 적용되지 않는다 — 이중 게이트", () => {

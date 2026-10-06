@@ -157,7 +157,36 @@ function fromFact(spec: LotteOnNoticeArticleSpec, value: string | null | undefin
  * 를 묻는다. KC 인증번호는 셀러가 «가질 수도 있지만» 형식·진위를 우리가 못 보므로
  * 여기 넣지 않는다 — 별도 축(`sftyAthnLst`)에서 다룬다.
  */
-export const LOTTEON_SELLER_FILLABLE_ARTICLE_CODES = ["0220", "1830"] as const;
+export const LOTTEON_SELLER_FILLABLE_ARTICLE_CODES = ["0220", "1830", "0040"] as const;
+
+/**
+ * 🔴 **「상품 상세페이지 참조」로 일괄 채워도 되는 항목** — 위와 «다른 집합» 이다.
+ *
+ * ── 왜 갈라야 했나 (CPO 결정 ⓑ, 2026-10-06) ───────────────────────────────
+ * 하나의 상수가 세 권한을 동시에 열고 있었다:
+ *     ① resolveOne 이 셀러 입력값을 먼저 읽는다
+ *     ② 화면이 입력칸을 그린다
+ *     ③ 🔴 일괄 「상세페이지 참조」 대상이 된다
+ * 그래서 `0040`(제조연월)을 ①②를 위해 더하면 ③까지 따라왔다. 그런데
+ *
+ *     셀러 입력 가능   ≠   상세페이지 참조 가능
+ *
+ * 이다. 제조연월은 **상세페이지에도 없다**(source 전수 0). 거기에 참조 문구를
+ * 넣으면 실제 정보를 채우는 것이 아니라 **없는 정보를 「참조」라는 말로
+ * 우회하는 것**이 된다 — 「임의 기본값 금지」를 상투어로 세탁하는 모양이다.
+ *
+ * ── 🔴 왜 «빼서» 만들지 않는가 ────────────────────────────────────────────
+ * 공통 쪽(`notice/bulk-reference.ts`)은 `화이트리스트 − 제외` 로 만든다. 그쪽
+ * 화이트리스트는 `reference-eligibility.ts` 가 **「참조로 대체해도 되는가」**
+ * 를 이미 검증한 목록이라 그 방향이 안전하다.
+ *
+ * 여기는 다르다. `SELLER_FILLABLE` 이 검증한 것은 **「셀러가 실제로 아는가」**
+ * 이고 그것은 다른 질문이다. 빼서 만들면 **나중에 더해지는 항목이 기본으로
+ * 참조 가능**해진다 — 규제 값에서 안전한 기본값은 «열림» 이 아니라 «닫힘» 이다.
+ * 그래서 명시적 opt-in 으로 둔다. 두 목록이 엇나가지 않게 **부분집합 불변식을
+ * 테스트가 지킨다**(bulk ⊆ sellerFillable).
+ */
+export const LOTTEON_BULK_REFERENCE_ARTICLE_CODES = ["0220", "1830"] as const;
 
 /**
  * LOTTEON-FINAL-05 #2 — 고시 `0200`(KC 인증정보)에 「대상 아님」을 적는 말.
@@ -174,6 +203,11 @@ export const LOTTEON_CERTIFICATION_NOT_APPLICABLE = "해당사항 없음";
 
 export function isLotteOnSellerFillableArticle(code: string): boolean {
   return (LOTTEON_SELLER_FILLABLE_ARTICLE_CODES as readonly string[]).includes(code);
+}
+
+/** 🔴 일괄 「상세페이지 참조」 대상인가. 입력 가능 여부와 «다른 질문» 이다. */
+export function isLotteOnBulkReferenceArticle(code: string): boolean {
+  return (LOTTEON_BULK_REFERENCE_ARTICLE_CODES as readonly string[]).includes(code);
 }
 
 function resolveOne(spec: LotteOnNoticeArticleSpec, facts: LotteOnNoticeFacts): LotteOnNoticeFill {
@@ -292,6 +326,52 @@ function resolveOne(spec: LotteOnNoticeArticleSpec, facts: LotteOnNoticeFacts): 
           : "판매자 설정에 A/S 책임 업체명과 전화번호가 없습니다.",
       );
     }
+    /* ══════════════════════════════════════════════════════════════════════
+       품목 01「의류」 — 🔴 **품목 23 과 «코드가 다르다»** (P0-3, 2026-10-06)
+       ══════════════════════════════════════════════════════════════════════
+
+       CEO 보고: 테니스 의류가 `9999 상품품목항목코드 필수값 누락` 으로 막힘.
+       원인은 값이 없는 것이 «아니라» 이 switch 가 품목 23 어휘로만 짜여 있던
+       것이다. `notice-schema.ts` 는 품목 01 을 제대로 담고 있었고(9항목),
+       resolver 가 따라가지 않아 넷이 `default:` → BLOCKED 로 떨어졌다:
+
+           소재      의류 0010  ↔  어린이 0410「재질」
+           치수      의류 0030  ↔  어린이 0780「크기, 중량」
+           세탁방법  의류 0050  ↔  어린이 0800「취급방법…안전표시」
+           제조연월  의류 0040  ↔  어린이 0220「동일모델의 출시년월」
+
+       🔴 그래서 **품목 23 case 를 재사용하지 않는다.** 코드가 같은 뜻이라는
+       보장이 없다 — `notice-schema.ts` 맨 위가 그 함정을 미리 적어 두었다
+       (164개 코드를 40품목이 공유하지만 이름이 갈리는 것들이 실제로 있다). */
+    case "0010":
+      /* 품목 23 의 `0410`「재질」과 «같은 출처» 다. 코드만 다르다. */
+      return fromFact(spec, facts.material, "상품정보 · 소재", "상품정보에 소재가 없습니다.");
+    case "0030": {
+      /* 🔴 `0780`「크기, 중량」과 **다르다.** 0780 은 공식 가이드라인이
+         「섬유제품 등의 경우 치수 정보로 대체 가능」이라고 적어 두어 치수→중량
+         폴백이 있다. 0030 은 항목명 자체가 「치수」다 — **중량은 치수가 아니므로
+         폴백하지 않는다**(CPO 확정). 폴백을 넣으면 셀러가 확인한 적 없는
+         「500g」이 치수 칸에 들어간다. */
+      const sizes = (facts.sizeValues ?? []).map((value) => value.trim()).filter(Boolean);
+      if (sizes.length > 0) return filled(spec, sizes.join(", "), "상품정보 · 치수(사이즈 옵션)");
+      return needsInput(spec, "상품정보에 치수(사이즈 옵션)가 없습니다. 중량을 치수로 대신 적지 않습니다.");
+    }
+    case "0050":
+      /* 🔴 `0800`「취급방법 및 취급시 주의사항, 안전표시」보다 **좁다** —
+         이것은 「세탁방법」이다. `careInstructions` 가 그 자리의 값이다. */
+      return fromFact(spec, facts.careInstructions, "상품정보 · 세탁방법", "상품정보에 세탁방법이 없습니다.");
+    case "0040":
+      /* 🔴 source 가 전수 0 이다(Master·crawler·DB·3채널). 크롤러의 시즌코드는
+         `brand-resolver.ts` 가 브랜드명에서 지울 쓰레기로 쓰고 버린다.
+
+         🔴 `0220`「동일모델의 출시년월」의 case 를 재사용하지 «않는다» —
+         **만든 때 ≠ 모델이 나온 때** 다. 다른 사실이다.
+
+         🔴 셀러 입력은 열려 있고(`LOTTEON_SELLER_FILLABLE_ARTICLE_CODES`),
+         일괄 「상세페이지 참조」는 **닫혀 있다**(`LOTTEON_BULK_REFERENCE_…` 에
+         없다). 상세페이지에도 제조연월이 없어서 참조가 「없는 정보를 가리키는
+         것」이 되기 때문이다(CPO 결정 ⓑ). */
+      return needsInput(spec, "제조연월을 입력해 주세요. 상품정보에서 찾을 수 없는 값이라 지어내지 않습니다.");
     case "0220":
       /* 🔴 시즌 코드(`SS26` 등)는 출시년월이 «아니다». 상품정보에 담을 자리도 없다
          (SOURCE_ABSENT 확정). 그래서 우리가 만들지 않고 «셀러가 넣는다» —
