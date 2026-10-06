@@ -153,6 +153,80 @@ describe("⑤ 🔴 앵커가 매핑된 섹션 «안» 에 있다 — 두 사실�
   }
 });
 
+/* ════════════════════════════════════════════════════════════════════════════
+   ⑥ 🔴 readiness 가 보내는 «모든» 자리가 실재한다 (STEP 1-a, 2026-10-06)
+   ════════════════════════════════════════════════════════════════════════════
+
+   §⑤ 는 앵커 표에 등록된 것(원산지 둘)만 봤다. 그 범위가 좁아서, 같은 종류의
+   결함이 하나 더 살아 있는 것을 못 잡았다 — `section-images` 는 readiness 에만
+   있고 화면에 «없다»(대표이미지 바로가기가 죽은 링크였다).
+
+   🔴 그래서 「원산지만 특별히 검사」를 그만두고 **전수** 로 바꾼다.
+   🔴 그리고 알려진 미해결을 «PASS 로 숨기지 않는다» — 목록으로 세고, 그 목록이
+      낡으면(고쳐졌는데 남아 있으면) 그것도 실패로 만든다. */
+describe("⑥ 🔴 readiness → 섹션 전수 — 알려진 미해결과 신규 결함을 가른다", () => {
+  /**
+   * 🔴 **알려진 미해결 1건.** STEP 2(대표이미지 자동 선정)가 실제 편집 위치를
+   * 확정한 뒤 target 을 정하기로 CPO 가 보류했다(2026-10-06). 영구 예외가
+   * 아니다 — 아래 마지막 테스트가 「고쳐졌으면 이 목록에서 빼라」고 말한다.
+   */
+  const EXPECTED_UNRESOLVED = ["section-images"] as const;
+
+  const strip = (code: string) =>
+    code
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^[ \t]*\/\/.*$/gm, "");
+
+  async function read(rel: string) {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    return strip(readFileSync(join(__dirname, "..", rel), "utf8"));
+  }
+
+  /** readiness 쪽 소스가 «낼 수 있는» 섹션 id. */
+  const emitted = (code: string, prefix: string) =>
+    new Set([...code.matchAll(new RegExp(`"(${prefix}-[a-z-]+)"`, "g"))].map((m) => m[1]!));
+
+  /** 화면에 «실재하는» 섹션 id — 전 섹션이 sectionProps 표기를 쓴다. */
+  const present = (code: string) =>
+    new Set([...code.matchAll(/sectionProps\("([a-z-]+)"\)/g)].map((m) => m[1]!));
+
+  const CHANNELS = [
+    { label: "SmartStore/Coupang", from: "readiness.ts", screen: "PlatformPreview.tsx", prefix: "section" },
+    { label: "LotteON", from: "lotteon-channel-form.ts", screen: "LotteOnRegistrationPanel.tsx", prefix: "lotteon-section" },
+  ] as const;
+
+  for (const channel of CHANNELS) {
+    it(`${channel.label} — 보내는 자리가 모두 화면에 있다 (알려진 미해결 제외)`, async () => {
+      const emittedIds = emitted(await read(channel.from), channel.prefix);
+      const presentIds = present(await read(channel.screen));
+
+      /* ── 공허 방지: 양쪽을 «실제로» 찾았는지 먼저 못박는다 ─────────────── */
+      expect(emittedIds.size, `${channel.from} 에서 섹션 id 를 못 찾았다`).toBeGreaterThan(3);
+      expect(presentIds.size, `${channel.screen} 에서 섹션을 못 찾았다`).toBeGreaterThan(3);
+
+      const broken = [...emittedIds].filter((id) => !presentIds.has(id));
+      const unexpected = broken.filter((id) => !(EXPECTED_UNRESOLVED as readonly string[]).includes(id));
+      expect(
+        unexpected,
+        `${channel.label}: readiness 가 «없는 자리» 로 보낸다 — 바로가기가 죽은 링크가 된다`,
+      ).toEqual([]);
+    });
+  }
+
+  it("🔴 알려진 미해결 목록이 낡지 않았다 — 고쳐졌으면 목록에서 빼라", async () => {
+    /* 예외를 적어 두고 잊으면 그것이 「결함을 PASS 로 숨기는」 것이 된다.
+       고쳐진 순간 여기서 실패해서, 목록을 줄이도록 강제한다. */
+    const emittedIds = emitted(await read("readiness.ts"), "section");
+    const presentIds = present(await read("PlatformPreview.tsx"));
+    for (const id of EXPECTED_UNRESOLVED) {
+      expect(emittedIds.has(id), `${id} 를 readiness 가 더 이상 쓰지 않는다 — 목록에서 빼라`).toBe(true);
+      expect(presentIds.has(id), `${id} 가 화면에 생겼다 — 목록에서 빼라`).toBe(false);
+    }
+  });
+});
+
 describe("④ 🔴 클릭 지점이 앵커를 «실제로 넘긴다»", () => {
   it("goToSection 이 두 번째 인자를 받고 호출부가 그것을 넘긴다", async () => {
     const { readFileSync } = await import("node:fs");

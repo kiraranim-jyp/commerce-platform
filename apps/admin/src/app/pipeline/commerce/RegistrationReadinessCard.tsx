@@ -137,35 +137,28 @@ export function RegistrationReadinessCard({
                     {check.label}
                   </span>
                 </span>
-                {/* ══ LOTTEON-REAL-REGISTRATION-02 §6(CEO 지시, 2026-09-22) ══
-                    막는 항목을 «이름으로» 말한다. 예전에는 「✗ 배송」 한 줄이
-                    전부였고, 배송의 무엇이 왜 막는지는 화면 어디에도 없었다
-                    (「✗ 채널 필수정보」는 특히 아무것도 알려주지 않는다).
-                    검증기는 처음부터 label 과 reason 을 주고 있었는데 자리
-                    단위로 접으면서 버려지고 있었다.
-                    🔴 판정을 새로 만들지 않는다 — 접기 전의 항목을 그대로 편다. */}
-                {!check.passed && check.blocking.length > 0 && (
-                  <ul className="mt-0.5 ml-[1.1rem] space-y-0.5">
-                    {check.blocking.map((blocker) => (
-                      <li key={blocker.label} className="text-[11px] leading-relaxed text-text-secondary">
-                        <span aria-hidden className="mr-1 text-text-tertiary">
-                          └
-                        </span>
-                        <span className="font-medium">{blocker.label}</span>
-                        {blocker.hint && <span className="text-text-tertiary"> — {blocker.hint}</span>}
-                      </li>
-                    ))}
-                    {/* 접었다는 사실을 숨기지 않는다 — 전체는 좌측 상세에 있다. */}
-                    {check.hiddenBlockingCount > 0 && (
-                      <li className="text-[11px] text-text-tertiary">
-                        <span aria-hidden className="mr-1">
-                          └
-                        </span>
-                        외 {check.hiddenBlockingCount}개
-                      </li>
-                    )}
-                  </ul>
-                )}
+                {/* ══ 🔴 REG-SUMMARY-OWNERSHIP-01 (CPO 「안 ①」, 2026-10-06) ══════
+                    여기 있던 «막는 필드 이름 펴기» 를 걷어냈다.
+
+                    ── 폐기가 «아니다» ─────────────────────────────────────────
+                    그 확장은 `LOTTEON-REAL-REGISTRATION-02 §6`(CEO 지시,
+                    2026-09-22)이 만든 것이고, 요구 자체는 그대로 유효하다:
+                    「✗ 채널 필수정보」 한 줄은 무엇이 왜 막는지 알려주지 않는다.
+
+                    바뀐 것은 **그 정보를 누가 소유하는가** 다. 당시엔 상단
+                    배너가 남은 항목을 «하나만» 그려서 둘째부터는 설명할 곳이
+                    여기뿐이었다. 이제 상단이 `priorityItems` «전부» 를 네 문장
+                    (무엇/왜/어디서)과 [바로가기]로 그린다 — 그래서 여기서 또
+                    펴면 같은 사실이 두 자리에 나오고, 그것이 CEO 가 본 중복이다.
+
+                    🔴 데이터는 지우지 않았다. `check.blocking` ·
+                    `hiddenBlockingCount` 는 `summary-checklist.ts` 가 계속
+                    계산하고 `reg02-field-level-readiness.test.ts` 가 계속
+                    검증한다 — 표시만 상단으로 옮겼다. 되돌릴 때 데이터를 다시
+                    만들 필요가 없게 둔 것이다.
+
+                    🔴 이 자리는 «자리 단위» 다. 필드를 다시 나열하려면 먼저
+                    상단에서 그것을 빼야 한다 — 두 곳이 같이 말하면 중복이다. */}
               </li>
             ))}
           </ul>

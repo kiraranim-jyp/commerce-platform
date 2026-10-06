@@ -658,9 +658,23 @@ describe("REWORK-7 ① — 접힌 이름은 남은 항목 1위가 됐을 때 이
       .filter((li) => li.closest("ul")?.parentElement?.tagName !== "LI")
       .map((li) => clean(li.querySelector("span")?.textContent ?? ""));
     expect(groupRows).toEqual(["✗판매자 설정"]);
-    // 그리고 막는 항목의 이름이 그 아래 선다 — 셀러가 무엇을 할지 알 수 있다.
+    /* ══ 🔴 REG-SUMMARY-OWNERSHIP-01 (CPO 「안 ①」, 2026-10-06) ═══════════════
+       여기는 `expect(blockerRows).toEqual(["└출고지"])` 였다 — 하단 카드가 막는
+       필드 이름을 펴는 것을 단정했다(§6, 2026-09-22).
+
+       🔴 그 요구는 폐기되지 않았다. 위 651·653 이 그대로 통과하는 것이 근거다 —
+       이름과 /settings 이동 경로는 «상단» 에 있다. 바뀐 것은 소유 화면이고,
+       상단이 이제 priorityItems «전부» 를 그리므로 하단이 또 펴면 중복이다.
+
+       🔴 그래서 651·653 을 «조인다». 그 둘은 DOM 전체를 봤기 때문에 하단에만
+       있어도 통과했다 — 소유가 상단으로 옮겨진 것을 증명하지 못한다. */
     const blockerRows = Array.from(dom.querySelectorAll("li li")).map((li) => clean(li.textContent ?? ""));
-    expect(blockerRows).toEqual(["└출고지"]);
+    expect(blockerRows, "하단이 필드명을 다시 펴낸다 — 상단과 중복이다").toEqual([]);
+
+    /* 🔴 이름과 이동 경로가 «상단» 에 있다 — 「필수 확인」보다 앞이다. */
+    const ownerBoundary = text.indexOf("필수 확인");
+    expect(ownerBoundary, "필수 확인 블록을 찾지 못했다").toBeGreaterThan(-1);
+    expect(text.indexOf("출고지"), "이름이 상단에 없다 — 소유가 옮겨지지 않았다").toBeLessThan(ownerBoundary);
   });
 });
 import { manufacturerFixture } from "./manufacturer-fixture";

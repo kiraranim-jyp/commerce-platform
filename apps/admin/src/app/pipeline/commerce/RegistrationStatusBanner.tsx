@@ -80,7 +80,6 @@ export function RegistrationStatusBanner({
   checkedItems?: ReadinessItem[];
 }) {
   const meta = STATE_META[state];
-  const [first] = priorityItems;
   const remaining = (checkedItems ?? []).filter((i) => !i.passed).length;
 
   return (
@@ -94,15 +93,37 @@ export function RegistrationStatusBanner({
         </p>
       </section>
 
-      {/* ③ 남은 항목 — 지금 등록을 막는 것 하나. 전부 통과했으면 이 블록 자체가
-          서지 않는다(빈 목록을 "0개"라고 적어 두면 읽을 것이 하나 더 는다). */}
-      {state !== "READY" && first && (
+      {/* ══ ③ 남은 항목 ═══════════════════════════════════════════════════════
+          전부 통과했으면 이 블록 자체가 서지 않는다(빈 목록을 "0개"라고 적어
+          두면 읽을 것이 하나 더 는다).
+
+          ══ 🔴 REG-SUMMARY-OWNERSHIP-01 (CPO 「안 ①」 확정, 2026-10-06) ══════
+          예전에는 `const [first] = priorityItems` 로 **하나만** 그렸다. 그런데
+          라벨은 「남은 항목 2개」라고 세고 있어서, 둘째 항목의 「무엇/왜/어디서/
+          바로가기」를 설명하는 곳이 화면에 «없었다». 그 공백을 아래 카드의
+          「필수 확인」이 막는 필드명을 펴서 메우고 있었고(CEO 지시 2026-09-22),
+          그래서 같은 사실이 두 자리에 나와 «중복» 으로 읽혔다.
+
+          🔴 그 지시를 폐기하는 것이 아니다 — 「막는 필드의 이름을 알려라」는
+          유지하고 **그 책임을 이 자리로 옮긴다.** 그래서 아래 카드는 자리
+          단위 ✓/✗ 로 돌아가고, 필드 설명은 여기가 «전부» 소유한다.
+
+          🔴 번호(①②)를 붙이지 않는다. `priorityItems` 는 «묶음» 이다 —
+          `buildPriorityItems` 가 LEGAL 여러 개를 `legal` 하나로, 나머지를
+          `product-info` 하나로 접는다(`sourceItems`). 그래서 블록 수 ≤ 라벨의
+          N 이고, 번호를 박으면 「2개」라고 적힌 아래에 ①만 서는 일이 생긴다.
+          묶음이라는 사실은 묶음 자신의 라벨이 말한다(「법적 필수정보 2개 확인: …」).
+          🔴 그래서 집계 규칙(`remaining`)도 바꾸지 않았다 — 셈을 새로 만들면
+          판정이 두 곳에 생기고, 그것이 이 파일이 맨 위에서 경고하는 CP001 이다. */}
+      {state !== "READY" && priorityItems.length > 0 && (
         <section className="border-t border-border px-4 py-3">
           <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">
             남은 항목 {Math.max(remaining, 1)}개
           </p>
-          <div className="mt-1.5">
-            <FirstPriorityBlock item={first} onItemClick={onItemClick} />
+          <div className="mt-1.5 space-y-2">
+            {priorityItems.map((item) => (
+              <PriorityBlock key={item.key} item={item} onItemClick={onItemClick} />
+            ))}
           </div>
         </section>
       )}
@@ -111,11 +132,15 @@ export function RegistrationStatusBanner({
 }
 
 /**
- * 지금 해야 하는 한 개. **네 가지가 전부 있어야 이 블록이 성립한다** —
+ * 남은 항목 하나. **네 가지가 전부 있어야 이 블록이 성립한다** —
  * 그중 [바로 이동]만은 갈 곳이 확실할 때만 그린다(없는 곳으로 보내는 버튼은
  * 이번에 없앤 추상 버튼과 같은 종류다).
+ *
+ * 🔴 REG-SUMMARY-OWNERSHIP-01 — 이름이 `FirstPriorityBlock` 이었다. 「첫 항목
+ * 전용」이라는 뜻이 이름에 남아 있으면 다음 사람이 다시 하나만 그린다.
+ * 내용은 한 줄도 바꾸지 않았다 — 쓰이는 «횟수» 만 바뀌었다.
  */
-function FirstPriorityBlock({
+function PriorityBlock({
   item,
   onItemClick,
 }: {
