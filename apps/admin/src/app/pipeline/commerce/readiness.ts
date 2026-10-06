@@ -412,18 +412,29 @@ const NAVER_NOTICE_FIELD_SECTION: Record<string, string> = {
 };
 
 function naverFieldSectionId(field: string): string | undefined {
-  // CEO 지시(2026-08-19: "스마트스토어 원산지는 입력할 곳이 없는데 원산지
-  // 에러로 등록이 안 됨") — originAreaCode는 자유입력 필드가 아니라
-  // product.countryOfOrigin(기본정보 Accordion의 "원산지" FieldRow, 이미
-  // 입력 UI 존재)을 Naver의 535개 원산지 코드와 매칭한 결과다. 이 필드에는
-  // sectionId가 아예 없어서 "다음 입력하기"를 눌러도 아무 데도 이동하지
-  // 않았다 — 실제 입력칸(countryOfOrigin)이 있는 기본정보 섹션으로 보낸다.
-  if (field === "detailAttribute.originAreaInfo.originAreaCode") return "section-basic";
+  /* CEO 지시(2026-08-19: "스마트스토어 원산지는 입력할 곳이 없는데 원산지
+     에러로 등록이 안 됨") — originAreaCode 는 자유입력 필드가 아니라
+     product.countryOfOrigin 을 Naver 의 535개 원산지 코드와 매칭한 결과다.
+     그래서 셀러를 «실제 입력칸» 이 있는 섹션으로 보낸다.
+
+     ══ 🔴 정정 (2026-10-06, CEO 보고 「바로가기가 기본정보로 보내는데 실제
+        입력 위치는 7. 고시정보다」) ═══════════════════════════════════════
+     이 두 줄은 `section-basic` 이었다. 2026-08-19 에는 «맞았다» — 그때
+     「원산지」 FieldRow 가 기본정보 Accordion 에 있었다. 그 뒤 칸이 고시정보로
+     옮겨졌고 이 매핑이 따라가지 않아서, 바로가기가 **원산지 칸이 없는 섹션** 을
+     열었다. 실측: `PlatformPreview.tsx` 에서 `id="field-countryOfOrigin"` 은
+     1502 행 한 곳뿐이고, 그것은 NOTICE 섹션(1474) 과 KC 섹션(1554) 사이다.
+
+     🔴 그래서 이 주석이 위치를 «단정하는» 것을 그만둔다. 위치는 주석이 아니라
+     테스트가 지킨다 — `p2-2-origin-anchor.test.ts` §⑤ 가 「앵커가 이 함수가
+     돌려준 섹션 «안» 에 있는가」를 DOM 구조로 재고, 칸이 또 옮겨지면 거기서
+     깨진다. 주석만 믿었던 것이 이 버그가 7주 넘게 남아 있던 이유다. */
+  if (field === "detailAttribute.originAreaInfo.originAreaCode") return "section-notice";
   /* P2-1 A — 원산지 직접입력도 같은 자리다. 셀러가 채우는 입력칸은
-     `product.countryOfOrigin`(기본정보의 「원산지」 FieldRow) 하나이고,
-     04 로 떨어졌을 때 그 칸에 적는 말이 그대로 content 가 된다.
-     🔴 「이동 경로가 없는 안내를 만들지 않는다」 — 바로 위 줄과 같은 근거다. */
-  if (field === "detailAttribute.originAreaInfo.content") return "section-basic";
+     `product.countryOfOrigin` 하나이고, 04 로 떨어졌을 때 그 칸에 적는 말이
+     그대로 content 가 된다. 🔴 두 라벨이 같은 앵커를 쓰므로 섹션도 같아야 한다
+     (`REGISTRATION_FIELD_ANCHOR` 가 둘 다 field-countryOfOrigin 으로 보낸다). */
+  if (field === "detailAttribute.originAreaInfo.content") return "section-notice";
   if (field === "detailAttribute.originAreaInfo.importer") return "section-notice";
   if (field.startsWith("productCertificationInfos")) return "section-kc";
   // N-3.66(회귀 테스트로 발견 — "required면 반드시 sectionId/externalHref가

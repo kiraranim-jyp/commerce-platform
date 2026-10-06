@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
+import type { NaverPayloadFieldCheck, NaverPayloadValidationResult } from "@commerce/listing";
 import { REGISTRATION_FIELD_ANCHOR, registrationFieldAnchor } from "../readiness-state";
 import type { PriorityItem } from "../readiness-state";
 /* `ReadinessItem` 은 readiness-state 가 re-export 하지 않는다 — 원래 자리에서 가져온다. */
-import type { ReadinessItem } from "../readiness";
+import { computeNaverPayloadReadiness, type ReadinessItem } from "../readiness";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -67,6 +68,89 @@ describe("③ 🔴 앵커 id 가 화면에 «실제로» 있다 — 이동 경�
       expect(code, `${anchor} 앵커가 화면에 없다 — 눌러도 아무 데도 가지 않는다`).toContain(`id="${anchor}"`);
     }
   });
+});
+
+/* ════════════════════════════════════════════════════════════════════════════
+   ⑤ 🔴 앵커가 «그 섹션 안» 에 있다 (2026-10-06, CEO 보고로 추가)
+   ════════════════════════════════════════════════════════════════════════════
+
+   §③ 은 「앵커 id 가 화면에 있는가」까지만 봤다. 그것이 통과하는 동안 실제 버그가
+   7주 넘게 살아 있었다: 앵커도 있었고 섹션 id 도 있었는데 **서로 다른 곳을
+   가리켰다.** `naverFieldSectionId` 는 `section-basic` 을 돌려줬고 원산지 칸은
+   고시정보 섹션에 있었다 — 바로가기가 원산지 칸이 «없는» 섹션을 열었다.
+
+   🔴 두 사실이 짝이라는 것을 아무도 재지 않았다. 여기서 잰다. */
+describe("⑤ 🔴 앵커가 매핑된 섹션 «안» 에 있다 — 두 사실이 갈라지지 않게", () => {
+  const ORIGIN_FIELDS = [
+    { field: "detailAttribute.originAreaInfo.originAreaCode", label: "원산지" },
+    { field: "detailAttribute.originAreaInfo.content", label: "원산지 직접입력" },
+  ] as const;
+
+  /** `PlatformPreview.tsx` 에서 그 앵커를 담고 있는 섹션 id 를 «구조로» 읽는다. */
+  async function sectionContainingAnchor(anchor: string): Promise<string> {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    /* 🔴 주석을 벗긴다 — §③ 과 같은 이유다(이 저장소에서 반복해 걸린 함정). */
+    const code = readFileSync(join(__dirname, "../PlatformPreview.tsx"), "utf8")
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^[ \t]*\/\/.*$/gm, "");
+
+    /* 섹션 경계는 `sectionProps("section-…")` 다 — 전 섹션이 이 표기를 쓴다. */
+    const bounds = [...code.matchAll(/sectionProps\("(section-[a-z-]+)"\)/g)].map((m) => ({
+      id: m[1]!,
+      at: m.index!,
+    }));
+    const anchorAt = code.indexOf(`id="${anchor}"`);
+
+    /* ── 공허 방지: 둘 다 «실제로 찾았는지» 먼저 못박는다 ───────────────────
+       이것이 없으면 정규식이 하나도 못 맞춰도 아래가 조용히 통과한다. */
+    expect(bounds.length, "섹션 경계를 하나도 못 찾았다 — 표기가 바뀌었다").toBeGreaterThan(5);
+    expect(anchorAt, `${anchor} 앵커를 화면에서 못 찾았다`).toBeGreaterThan(-1);
+
+    /* 앵커보다 앞에 있는 마지막 경계가 그 앵커를 담은 섹션이다.
+       🔴 형제 섹션 기준이다 — 중첩 섹션(section-payload)은 이 셈으로 판별하지
+       않는다. 앵커가 그쪽으로 옮겨지면 이 단정이 틀리므로 그때 셈을 고친다. */
+    const owner = bounds.filter((b) => b.at < anchorAt).pop();
+    expect(owner, `${anchor} 앞에 섹션 경계가 없다`).toBeDefined();
+    return owner!.id;
+  }
+
+  /** 그 필드 하나만 MISSING 인 validation. 🔴 readiness.test.ts 와 같은 shape 다. */
+  function validationFor(field: string): NaverPayloadValidationResult {
+    const fields: NaverPayloadFieldCheck[] = [{ field, status: "MISSING", reason: "테스트 사유" }];
+    return {
+      ok: false,
+      readyCount: 0,
+      missingCount: 1,
+      blockedCount: 0,
+      fields,
+      issues: [{ field, reason: "테스트 사유", severity: "MISSING" }],
+      advisoryNotes: [],
+      kcStatus: "SELLER_REVIEW_REQUIRED",
+    } as unknown as NaverPayloadValidationResult;
+  }
+
+  for (const { field, label } of ORIGIN_FIELDS) {
+    it(`「${label}」의 이동 섹션이 앵커가 «실제로 있는» 섹션과 같다`, async () => {
+      const summary = computeNaverPayloadReadiness(validationFor(field));
+      const readinessItem = summary.items.find((i) => i.label === label);
+      expect(readinessItem, `${label} 항목이 없다 — 라벨 표가 바뀌었다`).toBeDefined();
+
+      const mapped = readinessItem!.sectionId;
+      expect(mapped, `${label} 에 이동 섹션이 없다`).toBeTruthy();
+
+      /* 앵커는 §① 이 쓰는 그 표에서 온다 — 여기서 이름을 손으로 적지 않는다. */
+      const anchor = registrationFieldAnchor(item(label, [label]));
+      expect(anchor, `${label} 의 앵커가 표에 없다`).toBeDefined();
+
+      const actual = await sectionContainingAnchor(anchor!);
+      expect(
+        mapped,
+        `「${label}」 안내는 ${mapped} 로 보내는데 입력칸(${anchor})은 ${actual} 에 있다 — 바로가기가 빈 섹션을 연다`,
+      ).toBe(actual);
+    });
+  }
 });
 
 describe("④ 🔴 클릭 지점이 앵커를 «실제로 넘긴다»", () => {

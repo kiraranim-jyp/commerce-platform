@@ -44,13 +44,26 @@ describe("computeNaverPayloadReadiness — 필드→섹션 네비게이션 계�
     expect(item!.sectionId).toBe("section-kc");
   });
 
-  it("detailAttribute.originAreaInfo.originAreaCode(required, MISSING) → sectionId='section-basic'(N-3.65 회귀 방지)", () => {
+  /* ══ 🔴 정정 (2026-10-06) ══════════════════════════════════════════════════
+     이 단정은 `section-basic` 이었고 「N-3.65 회귀 방지」라고 적혀 있었다.
+     N-3.65 가 고친 것은 **「sectionId 가 아예 없다」** 였고 그 교훈은 유효하다 —
+     그런데 그때 적어 둔 «섹션 이름» 이 그 뒤 화면 변경을 따라가지 못하고,
+     이 테스트가 **틀린 위치를 지키는 가드** 가 됐다(원산지 칸이 고시정보로
+     옮겨졌다). 라벨을 「회귀 방지」로 적으면 그 안의 값도 같이 신성해진다.
+
+     🔴 그래서 여기서는 「없지 않다」까지만 지키고, **어느 섹션인지는 DOM 구조로
+     재는 쪽**(`p2-2-origin-anchor.test.ts` §⑤)에 맡긴다. 같은 사실을 두 곳에서
+     손으로 적으면 둘이 갈라지고, 갈라진 쪽이 조용히 이긴다. */
+  it("detailAttribute.originAreaInfo.originAreaCode(required, MISSING) → 이동 섹션이 «있다»(N-3.65 회귀 방지)", () => {
     const validation = makeValidation([fieldCheck({ field: "detailAttribute.originAreaInfo.originAreaCode" })]);
     const summary = computeNaverPayloadReadiness(validation);
     const item = summary.items.find((i) => i.label === "원산지");
     expect(item).toBeDefined();
     expect(item!.required).toBe(true);
-    expect(item!.sectionId).toBe("section-basic");
+    /* N-3.65 가 고친 그것 — 필수인데 갈 곳이 없으면 안내가 거짓이 된다. */
+    expect(item!.sectionId, "원산지에 이동 섹션이 없다 — N-3.65 회귀").toBeTruthy();
+    /* 🔴 실제 입력칸이 있는 곳이다. 칸이 옮겨지면 §⑤ 가 먼저 깨진다. */
+    expect(item!.sectionId).toBe("section-notice");
   });
 
   /* ══ MI-STORAGE-FEEDBACK-02 후속(CTO 자체 발견, 2026-09-30) ═══════════════
