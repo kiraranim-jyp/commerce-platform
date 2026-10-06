@@ -101,6 +101,63 @@ export function toCanonicalProductImage(item: WorkspaceItem): CanonicalProductIm
 }
 
 /**
+ * ════════════════════════════════════════════════════════════════════════════
+ * A-1 — **이미지가 있는데 대표가 없는 상태를 허용하지 않는다.** (CPO 확정 2026-10-06)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * ── 🔴 회귀가 «아니다». 폴백이 처음부터 없었다 ────────────────────────────
+ * git 추적 결과 `isRepresentative` 는 최초 도입(`6a13015`)부터 **thumbnail
+ * selector 에 전적으로 의존** 했고, `images[0]` 폴백이 있던 이력이 «한 번도 없다»
+ * (`setRepresentativeId(items[0]…)` 도 전수 0건). 그 의존은 이렇게 끊긴다:
+ *
+ *     AI 분류가 PRODUCT 를 하나도 못 냄(2중 실패·파싱·타임아웃·키 부재 → UNKNOWN)
+ *       → thumbnailCandidates 0 → `thumbnail=""` → 전 이미지 isRepresentative=false
+ *       → 「이미지 5장 있는데 대표 없음」
+ *
+ * 즉 고장난 것이 아니라 **방어선이 하나뿐이었다.** 그 하나가 멈추면 대표가 없다.
+ *
+ * ── 🔴 왜 「원소스 대표 계승」을 1순위로 넣지 않았는가 ────────────────────
+ * 작업지시서 §2-3 이 「`JSON-LD image[0]` / `og:image[0]` «이라는 이유만으로»
+ * 대표로 간주하지 않는다 — 대표라는 «의미» 가 확인되는 경우에만」이라고 못박았다.
+ * 조사 결과 그 의미를 **확인하지 못했다**:
+ *     og:image      「보통 대표 이미지 1~2장」 — 여러 장일 때 어느 것인지 미규정
+ *     JSON-LD image 배열이고 «순서가 대표를 뜻한다는 보장이 스키마에 없다»
+ * 🔴 그래서 §2-4(명시적 fallback)를 작동 규칙으로 쓴다. 확인되지 않은 의미를
+ * 1순위로 올리면 그것이 곧 「임의 선택」이고, §14 가 금지한 것이다.
+ *
+ * 🟢 다만 재료는 크롤러에 이미 있다 — `ImageCandidate.source`(StrategySource)와
+ * `scoring.ts` 의 `SOURCE_BASE_SCORE`(json-ld 90 · open-graph 60). 의미가 확인되면
+ * **점수 체계를 새로 만들지 않고** 그것을 쓰면 된다(별도 트랙).
+ *
+ * ── 세 경우 ───────────────────────────────────────────────────────────────
+ *     0장          그대로 — 대표 없음이 «정상» 이다
+ *     정확히 1개   🔴 **그대로 둔다** — 셀러가 고른 것을 자동 판정이 덮지 않는다
+ *     0개 / 2개+   첫 장을 대표로 / 첫 표시만 남기고 나머지를 끈다
+ *
+ * 🔴 「정확히 1개면 손대지 않는다」가 사용자 선택 보호의 전부다. 이 함수는 순수
+ * 함수라 재분석 때 다시 돌아도, 이미 하나면 no-op 이다.
+ */
+export function ensureRepresentativeImage(images: CanonicalProductImage[]): CanonicalProductImage[] {
+  if (images.length === 0) return images;
+
+  const firstMarked = images.findIndex((image) => image.isRepresentative);
+  const markedCount = images.reduce((sum, image) => sum + (image.isRepresentative ? 1 : 0), 0);
+
+  /* 🔴 이미 하나면 건드리지 않는다 — 배열 자체를 그대로 돌려준다(참조까지 동일). */
+  if (markedCount === 1) return images;
+
+  if (markedCount === 0) {
+    /* §2-4 — 원소스 대표를 식별하지 못했을 때의 «명시적» fallback. */
+    return images.map((image, index) => (index === 0 ? { ...image, isRepresentative: true } : image));
+  }
+
+  /* 2개 이상 — 첫 표시만 남긴다. 🔴 id 로 고르지 않는다(중복 id 에 흔들린다). */
+  return images.map((image, index) =>
+    index === firstMarked || !image.isRepresentative ? image : { ...image, isRepresentative: false },
+  );
+}
+
+/**
  * universalExtract()가 이미지 추출과 같은 페이지 방문에서 뽑아온 상품 정보
  * (title/brand/price/...)와, 그 뒤 이미지 파이프라인이 실제로 처리한 이미지
  * 목록을 하나의 CanonicalProduct로 합친다. 이게 모든 플랫폼 Preview의 유일한
@@ -112,9 +169,12 @@ export function buildCanonicalProduct(
   sources: Record<string, ProductDataSource>,
   items: WorkspaceItem[],
 ): CanonicalProduct {
-  const images = items
-    .map(toCanonicalProductImage)
-    .filter((image): image is CanonicalProductImage => image !== null);
+  /* 🔴 대표 보장은 «여기 한 곳» 에서만 한다 — images 가 조립되는 유일한 지점이다.
+     채널 어댑터에 두면 채널마다 다른 대표가 생긴다(LotteON 이 이미 gallery[0]
+     폴백을 따로 갖고 있는 것이 그 증상이다). */
+  const images = ensureRepresentativeImage(
+    items.map(toCanonicalProductImage).filter((image): image is CanonicalProductImage => image !== null),
+  );
   const resolvedCountryOfOrigin = extractCountryOfOrigin(productData.description);
   // Sprint A-7(작업2) — 실측 확인(allbirds.com): 설명문엔 색상 라벨이 없어도
   // 제목에 "- Anthracite (Dark Gum Sole)"처럼 색상이 그대로 들어있는 경우가
