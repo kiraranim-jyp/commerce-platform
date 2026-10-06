@@ -25,6 +25,12 @@ import { planProductBulkReference } from "../notice/bulk-reference";
  *
  * 🔴 「4+」와는 다른 경로다 — 여기 수량은 Offer 가 숫자로 적어 둔 값이다.
  *    그 구분을 테스트가 지킨다(아래 ④).
+ *
+ * ── 🔴 이 파일의 «한계» (A-1 조사, 2026-10-06) ─────────────────────────────
+ * 아래 `MEASURED_VARIANTS` 는 **손으로 적은 값** 이다. 이름이 「chain」이지만
+ * 체인의 «첫 칸»(실제 HTML → 행 추출)을 건너뛴다. 그 칸은
+ * `packages/crawler/.../real-html-offer-extraction.test.ts` 와
+ * `naver/__tests__/real-offer-chain.test.ts` 가 맡는다.
  */
 const f = <T,>(value: T, source: FieldSource = "ORIGINAL"): ProvenanceField<T> =>
   ({ value, source, confidence: 1 }) as ProvenanceField<T>;

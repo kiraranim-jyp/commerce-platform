@@ -16,6 +16,16 @@ import { extractColor } from "../description-facts";
  * 🔴 **함정 하나를 테스트가 지킨다**: 같은 페이지 본문에 「Small / True to Size /
  * Large」라는 **핏 척도** 가 있다(Overall Sizing 패널). 그것이 사이즈로 들어가면
  * 셀러는 존재하지 않는 사이즈를 파는 상품을 등록한다.
+ *
+ * ── 🔴 이 파일의 «한계» (A-1 조사, 2026-10-06) ─────────────────────────────
+ * 아래 `MAGRO_OFFERS` 는 **손으로 적은 값** 이다. 그래서 이 파일은
+ * `offerRowsToOptions` 의 «변환 규칙» 만 증명하고, **「실제 페이지에서 그 행을
+ * 찾는가」는 증명하지 않는다.** 셀러가 「사이즈가 안 들어온다」고 했을 때 이
+ * 파일은 초록이었고, 그래서 원인을 가릴 수 없었다.
+ *
+ * 그 공백은 `real-html-offer-extraction.test.ts` 가 메운다 — 실제 저장된 HTML 을
+ * 추출기에 통과시킨다. 🔴 이 파일을 지우지 않는다(역할이 다르다). 다만 이 파일이
+ * 통과하는 것을 「추출이 된다」로 읽지 않는다.
  */
 const MAGRO_OFFERS = [
   { name: "Sergio Tacchini Men's Magro Long Sleeve White S", sku: "STMMLSWH1", availability: "InStock", stock: 1 },
