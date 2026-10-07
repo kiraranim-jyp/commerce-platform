@@ -1,10 +1,13 @@
 import {
   compareModelCode,
+  confirmBrandCodeInTitle,
   deriveMatchTruth,
   extractForeignModelCode,
   fetchDomesticModelCode,
+  isColorUnverified,
   searchDomesticShops,
   supportsDomesticIdentifierExtraction,
+  type ComparisonCandidate,
   type ComparisonSearchResult,
 } from "@commerce/crawler";
 import { sourceFitsScopes } from "@commerce/category";
@@ -58,23 +61,52 @@ async function extractModelCodeFromSourceUrl(sourceUrl: string | undefined): Pro
   return fetchDomesticModelCode(domain, sourceUrl).catch(() => null);
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * MI-DISCOVERY-P5.2(CPO 지시, 2026-10-07) — **실시간 검색 화면과 저장 파이프라인이
+ * 서로 다른 상품 진실 판정 기준을 가지면 안 된다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * decision.ts 맨 위의 P-7-C 원칙이 바로 그것인데, 이 라우트는 `deriveMatchTruth` 를
+ * **인자 셋** 으로만 불렀다. 그래서 그 뒤에 추가된 보호장치들이 화면에서 발화하지
+ * 않았다(실측 확인, 2026-10-07):
+ *
+ *   blockers   미전달 → MI-3/P0-1 「같은 판매처가 둘로 진열」 보류가 사라진다
+ *   conflicts  미전달 → P4 변경 B 「같은 모델·색상만 다름」 이 CONFLICT 로 남는다
+ *
+ * 🔴 CEO 가 색상 변형을 눈으로 가르는 자리가 이 화면이다. 여기서 발화하지 않으면
+ *    「화면에서 확인한다」가 성립하지 않는다.
+ * 🔴 새 판정 로직이 아니다 — 저장 경로가 이미 넘기고 있는 값을 같이 넘기는 것뿐이다.
+ */
 async function attachMatchTruth(
   results: ComparisonSearchResult[],
   foreignModelCode: string | null,
+  foreignColor: string | null,
 ): Promise<ComparisonSearchResult[]> {
+  /** 저장 경로(selectDomesticCandidate)와 «같은 순서» 로 품번을 정한다 — 제목에서
+   *  확인되면 그것, 아니면 도메인 추출기. 두 경로가 다른 품번을 쓰면 화면과 DB가
+   *  갈린다. */
+  const truthOf = (c: ComparisonCandidate, domesticModelCode: string | null) =>
+    deriveMatchTruth(
+      c.matchLevel!,
+      compareModelCode(foreignModelCode, domesticModelCode),
+      c.crossSellerVerdict,
+      c.crossSellerBlockers,
+      c.crossSellerConflicts,
+      isColorUnverified(foreignColor, c.facts?.colorText),
+    );
+
   return Promise.all(
     results.map(async (result) => {
       if (result.status !== "ok" || result.candidates.length === 0) return result;
-      // 국내측 modelCode 추출기가 없는 도메인은 fetchModelCode 자체가 없으므로
-      // compareModelCode(x, null)="unavailable"이 되고, deriveMatchTruth가 이를
-      // 정직하게 TEXT_CONFIRMED/SIMILAR로 처리한다 — "식별자가 없다"를 "다른
-      // 상품이다"로 지어내지 않는다.
+      // 🔴 P5.2 Step 1 — 제목 확인은 HTTP 가 없으므로 추출기 등록 여부와 무관하게
+      //    모든 도메인에서 먼저 시도한다. 확인되지 않으면 예전과 똑같이 null 이고,
+      //    deriveMatchTruth 가 이를 정직하게 TEXT_CONFIRMED/SIMILAR 로 처리한다 —
+      //    "식별자가 없다"를 "다른 상품이다"로 지어내지 않는다.
       if (!supportsDomesticIdentifierExtraction(result.domain)) {
         const candidates = result.candidates.map((c) => ({
           ...c,
-          matchTruth: c.matchLevel
-            ? deriveMatchTruth(c.matchLevel, compareModelCode(foreignModelCode, null), c.crossSellerVerdict)
-            : undefined,
+          matchTruth: c.matchLevel ? truthOf(c, confirmBrandCodeInTitle(foreignModelCode, c.title)) : undefined,
         }));
         return { ...result, candidates };
       }
@@ -85,10 +117,11 @@ async function attachMatchTruth(
       const candidates = await Promise.all(
         result.candidates.map(async (c, i) => {
           if (!c.matchLevel) return c;
+          const confirmed = confirmBrandCodeInTitle(foreignModelCode, c.title);
           const domesticModelCode =
-            i < MAX_MODEL_CODE_FETCH_PER_SHOP ? await fetchDomesticModelCode(result.domain, c.url) : null;
-          const modelCodeEvidence = compareModelCode(foreignModelCode, domesticModelCode);
-          return { ...c, matchTruth: deriveMatchTruth(c.matchLevel, modelCodeEvidence, c.crossSellerVerdict) };
+            confirmed ??
+            (i < MAX_MODEL_CODE_FETCH_PER_SHOP ? await fetchDomesticModelCode(result.domain, c.url) : null);
+          return { ...c, matchTruth: truthOf(c, domesticModelCode) };
         }),
       );
       return { ...result, candidates };
@@ -252,7 +285,7 @@ export async function POST(request: Request) {
   // 원본 URL에도 그대로 통한다. 새 추출기를 만들지 않고 있는 것을 재사용한다.
   const foreignModelCode =
     extractForeignModelCode(body.description) ?? (await extractModelCodeFromSourceUrl(body.sourceUrl));
-  const results = await attachMatchTruth(rawResults, foreignModelCode);
+  const results = await attachMatchTruth(rawResults, foreignModelCode, dna.color ?? null);
 
   logDomesticFunnel(searchTerm, rawResults, results);
 

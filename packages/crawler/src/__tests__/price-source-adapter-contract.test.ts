@@ -356,7 +356,7 @@ describe("GOLF-01.5-C ③ Rakuten 매핑은 문서에서 확인한 필드만 읽
 /* ══════════════ ④ 아동복 회귀 — 등록부 통합이 한 곳도 떨어뜨리지 않았다 ══════════════ */
 
 describe("GOLF-01.5-C ④ 아동복 수집 회귀 0", () => {
-  it("🔴 해외 12곳 · 국내 6곳 파서가 그대로 살아 있고, 등록부 총원이 19다", () => {
+  it("🔴 해외 12곳 · 국내 7곳 파서가 그대로 살아 있고, 등록부 총원이 21다", () => {
     const overseasKids = [
       "junioredition.com",
       "nickis.com",
@@ -378,17 +378,28 @@ describe("GOLF-01.5-C ④ 아동복 수집 회귀 0", () => {
       expect(comparisonShopCollectability(d).credentialsConfigured, `${d}가 키를 요구하기 시작했다`).toBe(true);
     }
 
-    const domesticKids = ["looxloo.com", "bobochoses.com", "rulii.co.kr", "deuxbebe.com", "chocoel.co.kr", "foretforet.com"];
+    const domesticKids = [
+      "looxloo.com",
+      "bobochoses.com",
+      "rulii.co.kr",
+      "deuxbebe.com",
+      "chocoel.co.kr",
+      "foretforet.com",
+      // 🔴 MI-DISCOVERY-P5.2 Step 3(CPO 지시, 2026-10-07) — 상품명에 브랜드 품번을
+      //    그대로 적는 국내 아동복 판매처다(littleluna.ts 주석의 실측 4건). 이
+      //    목록에 적는 것이 「조용히 끼워 넣지 않았다」의 증명이다.
+      "littleluna.co.kr",
+    ];
     for (const d of domesticKids) {
       expect(supportsDomesticShopSearch(d), `${d} 국내 파서가 사라졌다`).toBe(true);
     }
 
-    // 등록부 전체 = 아동복 18 + Rakuten 1 + 스카이스포츠 1(TENNIS AUTO 1호).
+    // 등록부 전체 = 아동복 19(국내 littleluna 포함) + Rakuten 1 + 스카이스포츠 1(TENNIS AUTO 1호).
     // 🔴 이 계약의 뜻은 「총원이 19」가 아니라 **「새 소스를 «조용히» 끼워 넣지
     //    않았다」** 다. 2026-10-04 에 스카이스포츠를 더하면서 이 숫자를 함께
     //    올렸고, 바로 아래에서 그 한 곳이 «무엇인지» 도 못박는다 — 숫자만 올리고
     //    지나가면 다음에 또 아무도 모르게 늘어난다.
-    expect(listPriceSourceAdapters()).toHaveLength(20);
+    expect(listPriceSourceAdapters()).toHaveLength(21);
     const added = listPriceSourceAdapters().filter(
       (a) => ![...overseasKids, ...domesticKids, "rakuten.co.jp"].includes(a.domain),
     );

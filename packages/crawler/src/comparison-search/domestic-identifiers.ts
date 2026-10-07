@@ -35,6 +35,51 @@ export function extractBobochosesModelCode(url: string): string | null {
   return match ? match[1].toUpperCase() : null;
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * MI-DISCOVERY-P5.2 Step 1(CPO 지시, 2026-10-07) — **품번을 «추출» 하지 않는다.
+ * 이미 확정된 품번이 국내 제목에 있는지 «확인» 한다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 위 추출기 레지스트리는 도메인마다 「이 사이트는 품번을 어디에 적는가」를 알아야
+ * 한다. 그런데 실측(2026-10-07)에서 두 판매처가 품번을 **상품명에 그대로** 적고
+ * 있었고, 그 자리는 `sellerSku` 칸도 URL 앞머리도 아니었다:
+ *
+ *   deuxbebe    `AW26MS185 - Bubble Sweatshirt - Fern Green`        품번이 첫 토큰
+ *   littleluna  `[메인스토리]  AW26MS185 - Bubble Sweatshirt - Grey Melange`
+ *   foretforet  `AW26 2차[메인스토리]멜란지 …-MA26KASST0577356`      자체코드만
+ *
+ * 🔴 `productFactsFromListing` 이 `brandModelCode: null` 을 하드코딩한 것은 옳다 —
+ *    포레포레 `MA26KASST0577356` 를 품번 칸에 넣으면 compareModelCode 가 접두사부터
+ *    갈라져 「모델코드 충돌」을 **지어낸다**(seller-facts.ts 주석). 이 함수는 그
+ *    위험의 «반대 방향» 이다.
+ *
+ * 왜 오염되지 않는가 — 구조가 보장한다:
+ *   ① 해외에서 **이미 확정된** 문자열만 받는다. 국내에서 품번을 새로 추측하지 않는다.
+ *   ② 돌려주는 값은 `foreignCode` 그 자체 아니면 `null` «둘뿐» 이다. 그래서
+ *      `compareModelCode` 는 `exact` 아니면 `unavailable` 밖에 낼 수 없다 —
+ *      🔴 `partial` 도 `conflict` 도 **구조적으로 만들 수 없다.**
+ *   ③ 판매처 자체코드는 해외 품번과 같을 수 없으므로 절대 채택되지 않는다.
+ *
+ * 🔴 **토큰 «전체» 가 같아야 한다.** 부분 일치를 허용하면 안 되는 이유가 실측에
+ *    있다 — Mini Rodini 품번 `2672014894` 는 순수 숫자 10자리다. 문자열 포함으로
+ *    재면 국내 목록의 가격·상품번호 같은 숫자열에 우연히 걸린다. 그래서 제목을
+ *    영숫자 아닌 모든 문자로 쪼갠 뒤 **한 토큰이 품번과 완전히 같을 때만** 인정한다.
+ *    `AW26MS185` 는 `AW26MS185 - Bubble …` 에서 첫 토큰이고, littleluna 의
+ *    `메인스토리-aw26ms185-bubble-…` 에서도 한 토큰이다(실측 둘 다 통과).
+ */
+export function confirmBrandCodeInTitle(foreignCode: string | null, title: string): string | null {
+  const code = foreignCode?.trim();
+  if (!code) return null;
+  const needle = code.toUpperCase();
+  // 영숫자 아닌 모든 문자(공백·하이픈·대괄호·한글)로 쪼갠다 — 한글은 품번 토큰의
+  // 일부가 될 수 없으므로 경계로 쓰는 것이 정확하다(`[메인스토리]  AW26MS185 - …`).
+  for (const token of title.toUpperCase().split(/[^A-Z0-9]+/)) {
+    if (token === needle) return code;
+  }
+  return null;
+}
+
 /** 도메인별 국내 상품 식별자 추출기 레지스트리. 새 판매처를 여기 한 줄만
  * 추가하면 run-domestic-price-check.ts/domestic-price-sources/search/route.ts
  * 양쪽 호출부 모두 코드 변경 없이 그 도메인을 지원하게 된다 — 호출부는

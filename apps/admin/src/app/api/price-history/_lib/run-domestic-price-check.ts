@@ -1,8 +1,10 @@
 import {
   compareModelCode,
+  confirmBrandCodeInTitle,
   decideCandidateEvidence,
   extractForeignModelCode,
   fetchDomesticModelCode,
+  isColorUnverified,
   isSelfReferenceCandidate,
   refreshDomesticProductPrice,
   searchDomesticShops,
@@ -218,6 +220,23 @@ export function isEvidenceEvaluationWorthwhile(
   // 닿을 자리가 없다 — MI에서 Bobo가 아예 사라지던 경로 중 하나가 여기였다.
   if (candidates.some((c) => c.crossSellerVerdict === "SAME" || c.crossSellerVerdict === "PRESUMED_SAME")) return true;
   if (candidates[0].matchLevel !== "low") return true;
+  /**
+   * MI-DISCOVERY-P5.2 Step 1(CPO 지시, 2026-10-07) — 이 가드가 지키는 것은 **HTTP
+   * 비용** 이다(아래 줄의 도메인 하드코딩이 그 증거다 — 품번을 fetch 로 읽는
+   * 도메인만 통과시킨다). 그런데 `confirmBrandCodeInTitle` 은 이미 손에 있는
+   * 제목을 보는 순수 함수라 요청을 하나도 쓰지 않는다 — 가드의 전제가 성립하지
+   * 않는다.
+   *
+   * 🔴 실측(2026-10-07): deuxbebe 후보 제목이 `AW26MS185 - Bubble Sweatshirt -
+   *    Fern Green` 인데, 이 줄이 foretforet 만 허용해서 **눈에 보이는 품번을 비교조차
+   *    못 하고** 후보 전체가 EVIDENCE_NOT_WORTHWHILE 로 버려졌다.
+   *
+   * 🔴 추가 전용이다 — false 를 true 로만 바꾼다. 기존에 통과했던 입력은 모두
+   *    그대로 통과한다(아래 줄을 지우지 않는다).
+   */
+  if (foreignModelCode !== null && candidates.some((c) => confirmBrandCodeInTitle(foreignModelCode, c.title) !== null)) {
+    return true;
+  }
   return foreignModelCode !== null && domain === "foretforet.com";
 }
 
@@ -277,7 +296,25 @@ export async function selectDomesticCandidate(
   // 입력 그대로). 아래 두 분기가 모두 이 목록을 쓰므로, 식별자 추출을 지원하지
   // 않는 도메인에서도 반증된 후보가 대표가 되지 않는다.
   const ordered = orderByCrossSellerVerdict(candidates);
-  if (!supportsDomesticIdentifierExtraction(domain)) {
+  /**
+   * MI-DISCOVERY-P5.2 Step 1(CPO 지시, 2026-10-07) — 제목에서 «이미 확정된» 품번을
+   * 확인하는 경로는 **도메인 등록부와 무관** 하다. HTTP 요청이 필요 없고
+   * (`confirmBrandCodeInTitle` 은 순수 함수), 돌려주는 값이 해외 품번 아니면 null
+   * 둘뿐이라 어떤 도메인에서도 `conflict` 를 만들 수 없다.
+   *
+   * 🔴 그래서 예전처럼 「추출기 없는 도메인 → 즉시 unavailable」 로 끊지 않는다.
+   *    실측(2026-10-07): deuxbebe 가 `AW26MS185 - Bubble Sweatshirt - Fern Green`
+   *    처럼 품번을 제목에 그대로 적는데, 추출기 등록부에 없다는 이유만으로 품번을
+   *    비교조차 못 하고 있었다.
+   *
+   * 🔴 HTTP 를 쓰는 기존 추출기는 **제목 확인이 실패했을 때만** 부른다 — 요청 수가
+   *    늘지 않고, 기존 도메인(foretforet/bobochoses)은 제목에 품번이 없으면 예전과
+   *    «완전히 동일한» 경로를 탄다.
+   */
+  const canExtract = supportsDomesticIdentifierExtraction(domain);
+  if (ordered.length === 0) {
+    // 🔴 예전 코드는 후보가 없을 때 `ordered[0]`(undefined)을 그대로 돌려줬다. 그
+    //    동작을 바꾸지 않는다 — 여기서 throw 하면 호출부 가드가 달라진다.
     return {
       candidate: ordered[0],
       modelCodeEvidence: compareModelCode(foreignModelCode, null),
@@ -292,12 +329,15 @@ export async function selectDomesticCandidate(
     domesticModelCode: string | null;
   }[] = [];
   for (const candidate of ordered.slice(0, MAX_EVIDENCE_CANDIDATES)) {
-    // N-4.18-Q3 PART H-3-11 STEP 7(대표님 지시, 2026-08-27: "실제로 네트워크
-    // 요청이 생략됐는지 확인한다") — isEvidenceEvaluationWorthwhile 가드가
-    // 실제로 이 fetch 자체를 막는지 Vercel 로그로 관측할 수 있게 하는 관측용
-    // 로그 한 줄. 판정 로직에는 전혀 관여하지 않는다.
-    console.log(`[H-3-11] domestic modelCode fetch (${domain}): ${candidate.url}`);
-    const domesticModelCode = await fetchModelCode(candidate.url);
+    let domesticModelCode = confirmBrandCodeInTitle(foreignModelCode, candidate.title);
+    if (domesticModelCode === null && canExtract) {
+      // N-4.18-Q3 PART H-3-11 STEP 7(대표님 지시, 2026-08-27: "실제로 네트워크
+      // 요청이 생략됐는지 확인한다") — isEvidenceEvaluationWorthwhile 가드가
+      // 실제로 이 fetch 자체를 막는지 Vercel 로그로 관측할 수 있게 하는 관측용
+      // 로그 한 줄. 판정 로직에는 전혀 관여하지 않는다.
+      console.log(`[H-3-11] domestic modelCode fetch (${domain}): ${candidate.url}`);
+      domesticModelCode = await fetchModelCode(candidate.url);
+    }
     // MATCHING-FIX-01 Phase C — 판정에 쓴 그 값을 그대로 함께 들고 나간다(재계산 없음).
     evaluated.push({
       candidate,
@@ -717,6 +757,10 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
          「같은 모델·색상만 다름」이 「상품군까지 다름」과 같은 CONFLICT 가 되어
          색상 변형이 후보에서 사라진다(실측: main-story AW26MS185 색상 4종). */
       crossSellerConflicts: best.crossSellerConflicts,
+      /* 🔴 MI-DISCOVERY-P5.2 Step 2 — 색상을 «읽지 못한» 사실도 함께 넘긴다. 변경 B가
+         색상이 어긋난 쪽을 막고, 이 칸이 색상을 모르는 쪽을 막는다. 없으면 품번만
+         보고 EXACT 가 나간다(실측: littleluna Graystone·Rose Shadow 는 colorText=null). */
+      colorUnverified: isColorUnverified(input.dna.color, best.facts?.colorText),
     });
 
     const { verified: finalVerified, matchReasons: evidenceMatchReasons } = applyEvidenceDecision(

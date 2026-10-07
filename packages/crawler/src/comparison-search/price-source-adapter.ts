@@ -4,6 +4,7 @@ import { searchChildrensalon } from "./childrensalon";
 import { fetchChocoelProductPrice, searchChocoel } from "./chocoel";
 import { fetchDeuxbebeProductPrice, searchDeuxbebe } from "./deuxbebe";
 import { fetchForetforetProductPrice, searchForetforet } from "./foretforet";
+import { searchLittleluna } from "./littleluna";
 import { fetchLooxlooProductPrice, searchLooxloo } from "./looxloo";
 import { selectCandidatesForDetailConfirmation } from "./price-confirmation";
 import { missingRakutenCredentials, searchRakutenIchiba } from "./rakuten-ichiba";
@@ -426,6 +427,16 @@ const PRICE_SOURCE_ADAPTERS: PriceSourceAdapter[] = [
     method: "WEB",
     readiness: ALWAYS_READY,
     search: ({ term }) => searchDeuxbebe(term),
+  },
+  /** MI-DISCOVERY-P5.2 Step 3 — 상품명에 브랜드 품번을 그대로 적는 판매처다
+   *  (littleluna.ts 주석의 실측). enrichScored 를 달지 않는다 — 목록에서 품절을
+   *  이미 읽으므로(`<span class="soldOut">`) 상세 재조회가 필요 없다. */
+  {
+    domain: "littleluna.co.kr",
+    catalog: "DOMESTIC",
+    method: "WEB",
+    readiness: ALWAYS_READY,
+    search: ({ term }) => searchLittleluna(term),
   },
   {
     domain: "chocoel.co.kr",

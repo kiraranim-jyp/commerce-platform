@@ -33,10 +33,16 @@ export { compareModelCode, extractForeignModelCode } from "./model-code";
 /** P-28(CPO 지시, 2026-09-03) — 도메인별 국내 식별자 추출기 레지스트리.
  * fetchForetforetModelCode 하드코딩을 일반화한 것 — foretforet.com/
  * bobochoses.com 둘 다 여기로 흡수된다. */
-export { extractBobochosesModelCode, fetchDomesticModelCode, supportsDomesticIdentifierExtraction } from "./domestic-identifiers";
+export {
+  confirmBrandCodeInTitle,
+  extractBobochosesModelCode,
+  fetchDomesticModelCode,
+  supportsDomesticIdentifierExtraction,
+} from "./domestic-identifiers";
 /** N-4.18-Q3 PART H-3-3 — Cafe24 3개 사이트(RULII/LOOXLOO/DEUXBEBE) JSON-LD offers[]
  * 추출. 아직 옵션 유사도 판정/confidence/matchLevel에는 연결하지 않는다(다음 단계). */
 export { extractRuliiOptions } from "./rulii";
+export { searchLittleluna } from "./littleluna";
 export { extractLooxlooOptions } from "./looxloo";
 export { extractDeuxbebeOptions } from "./deuxbebe";
 /** N-4.18-Q3 PART H-3-4 — dHash 이미지 교차비교(Evidence 저장까지만, confidence/
@@ -54,7 +60,7 @@ export { normalizeMatchingTitle } from "./title-normalize";
 /** P-7-B(CPO 지시, 2026-08-29) — "점수와 Match Truth 분리". decideCandidateEvidence와
  * 같은 입력을 쓰지만 목적이 다르다(자동확정 여부가 아니라 화면 표시 신뢰 등급).
  * scoreCandidateMatch/classifyMatchLevel/decideCandidateEvidence 전부 미변경. */
-export { deriveMatchTruth, MATCH_TRUTH_RANK } from "./match-truth";
+export { deriveMatchTruth, isColorUnverified, MATCH_TRUTH_RANK } from "./match-truth";
 export type { MatchTruth } from "./match-truth";
 /** P-9-A(대표님 지시, 2026-08-30) — 국내 동일상품 후보를 verified 우선(그 안에서
  * 식별자 근거 우선, 그다음 confidence)으로 화면에 보여준다. 새 판정 로직이 아니라

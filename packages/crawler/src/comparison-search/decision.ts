@@ -84,6 +84,14 @@ export interface CandidateEvidenceInput {
    *    없으면(undefined) 예전과 똑같이 동작한다.
    */
   crossSellerConflicts?: readonly { conflict: CrossSellerConflict }[];
+  /**
+   * MI-DISCOVERY-P5.2 Step 2(CPO 지시, 2026-10-07) — 위 두 칸과 같은 이유, 같은 모양.
+   *
+   * 🔴 이 함수가 계산하지 않는다. `isColorUnverified(해외색상, 국내 facts.colorText)`
+   *    가 유일한 규칙이고, 호출부가 그 함수로 만든 결과를 옮기는 칸이다.
+   * 🔴 없으면(undefined) 예전과 똑같이 동작한다.
+   */
+  colorUnverified?: boolean;
 }
 
 export interface CandidateEvidenceDecision {
@@ -108,6 +116,8 @@ export function decideCandidateEvidence(input: CandidateEvidenceInput): Candidat
     input.crossSellerBlockers,
     // MI-DISCOVERY-P4 변경 B — 전달만. 이 함수는 conflicts 를 해석하지 않는다.
     input.crossSellerConflicts,
+    // MI-DISCOVERY-P5.2 Step 2 — 전달만. 색상 비교도 여기서 하지 않는다.
+    input.colorUnverified,
   );
   // 근거 문장은 truth가 실제로 어디서 왔는지를 말해야 한다. 품번을 비교조차 못 한
   // 쌍(판매처마다 자기 SKU를 쓰는 경우)에 "modelCode 일치"라고 적으면 화면이 없는

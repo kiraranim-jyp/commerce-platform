@@ -53,6 +53,22 @@ export const MATCH_TRUTH_RANK: Record<MatchTruth, number> = {
 const HIGH_OR_ABOVE: ReadonlySet<MatchLevel> = new Set(["high", "very_high"]);
 
 /**
+ * MI-DISCOVERY-P5.2 Step 2 — `deriveMatchTruth` 의 `colorUnverified` 인자를 만드는
+ * **유일한** 규칙. 호출부가 둘(저장 경로 · 실시간 검색 경로)이므로 각자 짜면
+ * 두 화면이 다른 기준을 갖는다 — decision.ts 맨 위가 적어 둔 그 금지 사항이다.
+ *
+ * 🔴 「해외에 색상이 적혀 있는데 국내 후보에서 색상을 읽지 못한 상태」만 참이다.
+ *    해외에도 색상이 없으면 색상은 애초에 판단 축이 아니므로 거짓이다 — 모르는
+ *    것으로 식별자를 깎지 않는다는 이 파일의 원칙 그대로다.
+ */
+export function isColorUnverified(
+  foreignColor: string | null | undefined,
+  domesticColorText: string | null | undefined,
+): boolean {
+  return Boolean(foreignColor?.trim()) && !domesticColorText?.trim();
+}
+
+/**
  * decision.ts의 decideCandidateEvidence()와 같은 입력(match level + modelCode
  * 증거)을 받지만, 목적이 다르다 — decideCandidateEvidence는 "자동확정해도
  * 되는가"(verified 플래그, 3단계)를 결정하고, 이 함수는 "화면에 어떤 신뢰
@@ -110,6 +126,34 @@ export function deriveMatchTruth(
    * 🔴 생략하면(undefined) 예전과 «똑같이» 동작한다. 넘기지 않는 호출부는 그대로 둔다.
    */
   conflicts?: readonly { conflict: CrossSellerConflict }[] | null,
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * MI-DISCOVERY-P5.2 Step 2(CPO 지시, 2026-10-07) — **「품번이 같다」 + 「색상을
+   * 읽지 못했다」 는 동일상품 확정의 근거가 못 된다.**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 바로 위 변경 B 는 색상이 «어긋났을 때» 를 다룬다. 그 반대편에 구멍이 있다 —
+   * 색상을 **아예 읽지 못한** 후보다. 반증이 없으므로 아래 식별자 단독 승격이
+   * 품번만 보고 EXACT 로 통과시킨다.
+   *
+   * 실측(2026-10-07, littleluna.co.kr · 같은 품번 `AW26MS185` 4색상):
+   *
+   *   Grey Melange     colorText="Grey"   🟢 읽혔다 → 해외 "Grey Melange" 와 맞는다
+   *   Chocolate Brown  colorText="Brown"  🟢 읽혔다 → 어긋난다 → 변경 B 가 SIMILAR
+   *   Graystone        colorText=null     🔴 못 읽었다 → 반증이 «없다»
+   *   Rose Shadow      colorText=null     🔴 못 읽었다 → 반증이 «없다»
+   *
+   * 🔴 가드가 없으면 Graystone·Rose Shadow 가 품번 하나로 EXACT 가 되고, 그 등급은
+   *    `priceTierFromLink` 에서 **EXACT** 이며 곧 «동일상품 가격» 이다. 다른 색상이
+   *    동일상품 가격에 들어간다.
+   *
+   * 🔴 색상 추출기를 **개선하지 않는다**(CPO 금지). 못 읽는다는 사실을 그대로 두고,
+   *    그 상태에서 «확정하지 않을» 뿐이다.
+   * 🔴 CONFLICT 로 만들지 **않는다.** 아래 텍스트·교차판매처 경로로 내려보낸다 —
+   *    「다른 상품이다」가 아니라 「같은 상품이라고 확정할 근거가 모자라다」다.
+   * 🔴 생략하면(undefined) 예전과 «똑같이» 동작한다. 넘기지 않는 호출부는 그대로 둔다.
+   */
+  colorUnverified?: boolean | null,
 ): MatchTruth {
   /**
    * 🔴 변경 B — 아래 CONFLICT 조기반환 «앞» 에 있어야 한다. 뒤에 두면 이미
@@ -193,7 +237,10 @@ export function deriveMatchTruth(
    *    같은 이유). 둘은 계속 식별자 경로로 EXACT 에 닿는다.
    */
   const crossSellerReserved = crossSeller === "PRESUMED_SAME";
-  if (!observedDifference && !crossSellerReserved) {
+  // 🔴 P5.2 Step 2 — 색상 미확인은 `observedDifference`/`crossSellerReserved` 와
+  //    «같은 자리» 에서 막는다(점수를 깎지 않고 아래 경로로 내려보낸다). 세 조건의
+  //    성격이 모두 「확정하지 않을 이유」이므로 한 분기에 모으는 것이 맞다.
+  if (!observedDifference && !crossSellerReserved && !colorUnverified) {
     if (modelCode === "exact") {
       return HIGH_OR_ABOVE.has(level) ? "EXACT_IDENTIFIER" : "STRONG_IDENTIFIER";
     }
