@@ -1,4 +1,4 @@
-import type { CrossSellerBlocker } from "./cross-seller";
+import type { CrossSellerBlocker, CrossSellerConflict } from "./cross-seller";
 import type { ProductFacts } from "@commerce/shared";
 
 export interface ComparisonCandidate {
@@ -93,6 +93,20 @@ export interface ComparisonCandidate {
    * 가려내려면 「같은 판매처가 두 상품으로 진열했다」를 «값» 으로 읽어야 한다.
    */
   crossSellerBlockers?: { blocker: CrossSellerBlocker }[];
+  /**
+   * MI-DISCOVERY-P4 변경 B(CPO 승인, 2026-10-07) — 그 판정의 **반증** 사유도 «값» 으로.
+   *
+   * 바로 위 `crossSellerBlockers` 와 같은 이유, 같은 모양이다. 보류(blocker)는 이미
+   * 값으로 실려 있었는데 충돌(conflict)은 `crossSellerReasons` 문자열에만 있었다.
+   * 그래서 「같은 모델인데 색상만 다르다」와 「상품군까지 다르다」를 판정기가 구분할
+   * 수 없었다 — 둘 다 그냥 `CONFLICT` 였다.
+   *
+   * 🔴 **새로 계산하지 않는다.** `compareCrossSellerProducts` 가 이미 낸
+   *    `conflicts` 를 그대로 실어 나르는 칸이다. `deriveMatchTruth` 안에서 색상을
+   *    다시 추론하거나 제목을 재분석하지 않는다(CPO 금지 — 판정 로직 중복 방지).
+   * 🔴 없으면(undefined) 예전과 똑같이 동작한다.
+   */
+  crossSellerConflicts?: { conflict: CrossSellerConflict }[];
   /**
    * P0-A.29-E ㉮ — **이 가격이 어느 옵션의 가격인가.**
    *

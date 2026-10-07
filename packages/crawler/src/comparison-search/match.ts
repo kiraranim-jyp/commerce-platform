@@ -493,6 +493,11 @@ export function withConfidence(query: ComparisonQuery, candidates: ComparisonCan
             /* MI-3 / P0-1 — 보류 사유를 «값» 으로 함께 싣는다. 이것이 없으면
                품번 재사용을 가려낼 근거가 저장 경로에서 사라진다. */
             crossSellerBlockers: cross.blockers,
+            /* MI-DISCOVERY-P4 변경 B — 반증 사유도 «값» 으로. 🔴 새로 계산하지 않고
+               compareCrossSellerProducts 가 낸 것을 그대로 옮긴다. 이것이 없으면
+               「같은 모델·색상만 다름」과 「상품군까지 다름」이 판정기에서 같은
+               CONFLICT 가 된다. */
+            crossSellerConflicts: cross.conflicts,
           }
         : withMatch;
       return { ...withCross, ...derivePriceStatus(withCross) };

@@ -945,12 +945,58 @@ export function compareCrossSellerProducts(
     .filter((axis) => axis.axis !== "IMAGE" && !(axis.axis === "TITLE" && axis.points === 1))
     .reduce((sum, axis) => sum + axis.points, 0);
 
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * MI-DISCOVERY-P4 변경 A(CPO 승인, 2026-10-07) — **동일상품 «추정» 에도 식별
+   * 증거가 최소 하나 있어야 한다.**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 실측(2026-10-07, main-story.com):
+   *
+   *   원상품   Bubble Sweatshirt - Grey Melange   (AW26MS185)
+   *   후보     Polo Sweatshirt - Gray Lilac       (SS26MS252)   ← 전혀 다른 상품
+   *
+   *   axes = CATEGORY+1 COLOR+1 MATERIAL+1 SIZE+1 = 4  ≥ PRESUMED_SAME_MIN_AXES(3)
+   *   TITLE = «핵심 상품명에 겹치는 말이 0» → 점수 없음, NO_TITLE_OVERLAP blocker 만
+   *   → PRESUMED_SAME → TEXT_CONFIRMED → COMPARISON(가격 참고)  🔴
+   *
+   * 네 축 전부 «부수 증거» 다. 같은 브랜드 카탈로그 안에서는 카테고리·색계열·소재·
+   * 사이즈 체계가 거의 항상 맞으므로 문턱 3은 사실상 자동 통과였다. 즉 이 등급은
+   * 「같을 수도 있다」가 아니라 「같은 브랜드의 아무 상품이나」였다.
+   *
+   * 🔴 **`!blocked` 를 그대로 걸지 않는다.** `SAME_SELLER_DISTINCT_LISTING` 은 정상
+   *    variant 에도 항상 붙는다(실측: graystone 이 그 blocker 하나로 PRESUMED_SAME).
+   *    `!blocked` 로 막으면 정상 후보가 함께 죽는다 — CPO 가 금지한 해법이다.
+   *
+   * 🔴 그래서 막는 축을 바꾼다 — **식별 증거(TITLE·MODEL_CODE)가 없고 «같은 판매처의
+   *    다른 진열» 이면 추정하지 않는다.** 점수를 «깎지» 않는다 — totalPoints 는
+   *    그대로다(P0-A.35 ⑤ 와 같은 원칙).
+   *
+   * 🔴 왜 「같은 판매처」 조건이 함께 있어야 하는가 — **구현 중 측정이 가르쳐 줬다.**
+   *    식별 증거만 요구했더니 실제 동일상품 한 쌍이 함께 떨어졌다:
+   *
+   *      430701 ↔ B226AC114 (진짜 SAME)   TITLE+1 있음           → 영향 0 🟢
+   *      430700 ↔ B226AC112              NO_TITLE_OVERLAP       → 🔴 SIMILAR 로 추락
+   *      Polo    (고쳐야 할 대상)          NO_TITLE_OVERLAP
+   *                                      + SAME_SELLER_DISTINCT_LISTING
+   *
+   *    이 저장소의 출발점이 「판매처마다 상품명이 다르다」 이므로 **다른 판매처** 의
+   *    제목 불일치는 정상이다(그래서 430701 은 TITLE 없이도 SAME 에 닿는 설계다).
+   *    반대로 **같은 판매처** 가 한 상품을 전혀 다른 이름으로 두 번 진열하지는
+   *    않는다 — 그 경우의 제목 0 겹침은 「다른 상품」이다.
+   *
+   * 🔴 SAME 문턱은 한 글자도 건드리지 않는다.
+   */
+  const hasIdentifyingEvidence = axes.some((axis) => axis.axis === "TITLE" || axis.axis === "MODEL_CODE");
+  const sameSellerWithoutIdentity =
+    !hasIdentifyingEvidence && blockers.some((b) => b.blocker === "SAME_SELLER_DISTINCT_LISTING");
+
   // 품번이 일치해도 여기를 지나간다. 예외가 없다 — 그 예외가 MATCHING-3.1이
   // 폐기한 것이고, 폐기했다는 사실이 코드에서 보여야 한다.
   const verdict = ((): CrossSellerVerdict => {
     const blocked = blockers.length > 0;
     if (!blocked && brandOk && corePoints >= SAME_MIN_AXES) return "SAME";
-    if (totalPoints >= PRESUMED_SAME_MIN_AXES) return "PRESUMED_SAME";
+    if (totalPoints >= PRESUMED_SAME_MIN_AXES && !sameSellerWithoutIdentity) return "PRESUMED_SAME";
     if (totalPoints >= 1) return "SIMILAR";
     return "UNKNOWN";
   })();

@@ -1,4 +1,9 @@
-import { hasObservedDifference, type CrossSellerBlocker, type CrossSellerVerdict } from "./cross-seller";
+import {
+  hasObservedDifference,
+  type CrossSellerBlocker,
+  type CrossSellerConflict,
+  type CrossSellerVerdict,
+} from "./cross-seller";
 import type { MatchLevel } from "./match";
 import type { ModelEvidenceResult } from "./evidence";
 
@@ -80,7 +85,52 @@ export function deriveMatchTruth(
    * 🔴 생략하면 예전과 «똑같이» 동작한다. 넘기지 않는 호출부는 그대로 둔다.
    */
   blockers?: readonly { blocker: CrossSellerBlocker }[] | null,
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * MI-DISCOVERY-P4 변경 B(CPO 승인, 2026-10-07) — **「같은 모델·색상만 다름」은
+   * 「다른 상품」이 아니다.**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 바로 아래 `crossSeller === "CONFLICT"` 는 반증 «종류» 를 보지 않는다. 그래서
+   * 이 둘이 같은 값이 됐다:
+   *
+   *   같은 브랜드 품번 + 색상만 다름        → CONFLICT → EXCLUDED  🔴
+   *   상품군·대상까지 다름                  → CONFLICT → EXCLUDED
+   *
+   * 실측(2026-10-07, main-story.com): `AW26MS185` Grey Melange ↔ Graystone/
+   * Rose Shadow/Chocolate Brown. 같은 모델의 색상 변형인데 후보에서 «사라졌다».
+   * 그러면 CPO 가 요구한 「variant 를 후보로 보존한 뒤 Identity 가 판단하게 한다」를
+   * 지킬 수 없다.
+   *
+   * 🔴 **새 state 를 만들지 않는다.** 기존 `SIMILAR` 로 보낸다 — 6568fb2 이후
+   *    `SIMILAR → REFERENCE`(경쟁상품 참고, **가격비교 아님**)이므로 뜻이 정확히 맞고,
+   *    EXACT 에는 닿지 않는다.
+   * 🔴 **conflicts 를 여기서 계산하지 않는다.** compareCrossSellerProducts 가 이미
+   *    낸 값을 받기만 한다(CPO 금지 — 판정 로직 중복 방지).
+   * 🔴 생략하면(undefined) 예전과 «똑같이» 동작한다. 넘기지 않는 호출부는 그대로 둔다.
+   */
+  conflicts?: readonly { conflict: CrossSellerConflict }[] | null,
 ): MatchTruth {
+  /**
+   * 🔴 변경 B — 아래 CONFLICT 조기반환 «앞» 에 있어야 한다. 뒤에 두면 이미
+   *    CONFLICT 로 끝난 뒤라 도달하지 못한다(cross-seller.ts 의 P0-A.27 주석이
+   *    같은 제약을 적어 둔 것과 같은 자리다).
+   *
+   * 조건 셋을 «모두» 요구한다 — 하나라도 빠지면 기존 CONFLICT 그대로다:
+   *   ① 브랜드 품번이 exact      «같은 모델» 이라는 적극적 근거
+   *   ② 반증이 «정확히» COLOR 하나  색상 외에 다른 축이 어긋나면 다른 상품이다
+   *   ③ conflicts 를 실제로 받았다   모르면 의심하지 않는다(모르는 것으로 바꾸지 않는다)
+   */
+  if (
+    crossSeller === "CONFLICT" &&
+    modelCode === "exact" &&
+    conflicts != null &&
+    conflicts.length > 0 &&
+    conflicts.every((c) => c.conflict === "COLOR")
+  ) {
+    return "SIMILAR";
+  }
+
   // MATCHING-2.0-CORE(CEO 지시, 2026-09-13) — 교차판매처 반증은 여기서도 먼저,
   // 그리고 무조건 이긴다. 대상 연령·성별·상품군·색상·품번 중 하나라도 서로
   // 반증하면 텍스트 점수가 얼마든 상관없다.

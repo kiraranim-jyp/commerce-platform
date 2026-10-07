@@ -22,15 +22,19 @@ function normalize(code: string): string {
   return code.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
-/** 문자열 a, b 사이의 최장 연속 공통 부분문자열 길이. 두 코드 길이가 항상
- * 30자 이하(PRODUCT_CODE_PATTERN 캡처 상한)라 O(n*m) 이중루프로 충분하다. */
-function longestCommonSubstringLength(a: string, b: string): number {
-  let best = 0;
+/** 문자열 a, b 사이의 최장 연속 공통 «부분문자열». 두 코드 길이가 항상 30자
+ * 이하(PRODUCT_CODE_PATTERN 캡처 상한)라 O(n*m) 이중루프로 충분하다.
+ *
+ * 🔴 MI-DISCOVERY-P4 변경 C — 전에는 «길이» 만 돌려줬다. 이제 문자열을 돌려준다 —
+ *    「얼마나 겹쳤는가」만으로는 부족하고 「무엇이 겹쳤는가」를 봐야 하기 때문이다
+ *    (sharesNumericCore 참고). 길이는 `.length` 로 그대로 얻는다. */
+function longestCommonSubstring(a: string, b: string): string {
+  let best = "";
   for (let i = 0; i < a.length; i++) {
     for (let j = 0; j < b.length; j++) {
       let k = 0;
       while (i + k < a.length && j + k < b.length && a[i + k] === b[j + k]) k++;
-      if (k > best) best = k;
+      if (k > best.length) best = a.slice(i, i + k);
     }
   }
   return best;
@@ -42,6 +46,48 @@ function longestCommonSubstringLength(a: string, b: string): number {
  * 우연이라 보기엔 너무 긴 공통 부분("1195" 같은 4자리 숫자)이 있으면 partial로
  * 본다 — 3자 이하는 우연한 겹침일 가능성이 커서 매칭 근거로 쓰지 않는다. */
 const PARTIAL_MATCH_MIN_LENGTH = 4;
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * MI-DISCOVERY-P4 변경 C(CPO 승인, 2026-10-07) — **공유 부분이 「숫자 코어」일 때만
+ * LCS partial 을 인정한다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 바로 위 주석이 LCS 분기의 목적을 이미 적어 두었다 — 「표기법이 다른 같은 상품」에서
+ * **공통 숫자 코어가 유일한 단서**인 경우다(`01195-VERNICE-NERO` ↔
+ * `PP24KASHE1195NER` 의 `1195`). 🔴 그런데 규칙은 「숫자 코어」가 아니라 「길이 4」만
+ * 봤다. 그래서 숫자가 아닌 공유도 통과했다:
+ *
+ *   실측(2026-10-07, main-story.com):
+ *     AW26MS185  ↔  SS26MS252       LCS = "26MS"  →  partial  🔴
+ *     「26」은 시즌연도, 「MS」는 브랜드 약자다. 둘 다 상품을 식별하지 않는다.
+ *     실제로 식별하는 말미 숫자(185 ↔ 252)는 «다르다» — 전혀 다른 상품이다.
+ *
+ * 그 partial 이 `run-domestic-price-check.ts` 의 식별자 우회로(`exact || partial`)에
+ * 걸려 Polo Sweatshirt 가 가격 참고 후보로 살아남았다(P2.5.2 실측).
+ *
+ * 🔴 **문턱(4)을 바꾸지 않는다.** 길이는 그대로 두고 「무엇이 겹쳤는가」만 묻는다 —
+ *    P-10-F 가 「가르는 기준은 얼마나 겹치는가가 아니라 **어디가** 겹치는가」라고 적은
+ *    것과 같은 축이다.
+ *
+ * 🔴 기존 단언 전수 대조(8쌍 실측, 2026-10-07) — 바뀌는 것은 위 한 쌍뿐이다:
+ *     01195…↔PP24KASHE1195NER    LCS `1195`    숫자런 4  → partial 유지
+ *     B1408F26-670↔B1453F26-670  LCS `F26670`  숫자런 5  → partial 유지
+ *     B1408F26-670↔K1408F26-1A8  LCS `1408F26` 숫자런 4  → partial 유지
+ *     B126AI018↔B126AI01831152 · B226AC043↔B226AC04341101   startsWith 분기 → 영향 0
+ *     B226AC042↔B226AC043 · B126AC050↔B126AC999             prefix 분기     → 영향 0
+ *
+ * 🔴 먼저 「말미 숫자군이 다르면 conflict」 안을 재어 봤고, 그것은
+ *    B1408F26-670↔K1408F26-1A8 을 깨뜨려서 폐기했다. **측정이 설계를 골랐다.**
+ */
+const NUMERIC_CORE_MIN_LENGTH = 3;
+
+function sharesNumericCore(shared: string): boolean {
+  for (const run of shared.match(/\d+/g) ?? []) {
+    if (run.length >= NUMERIC_CORE_MIN_LENGTH) return true;
+  }
+  return false;
+}
 
 /** exact=정규화 후 완전 일치, partial=의미있는 부분 일치(4자 이상 공통
  * 부분문자열), unavailable=한쪽(또는 양쪽) modelCode가 없어 비교 자체를 못 함,
@@ -81,6 +127,9 @@ export function compareModelCode(foreignCode: string | null, domesticCode: strin
   while (prefix < a.length && prefix < b.length && a[prefix] === b[prefix]) prefix++;
   if (prefix >= PARTIAL_MATCH_MIN_LENGTH) return "conflict";
 
-  const shared = longestCommonSubstringLength(a, b);
-  return shared >= PARTIAL_MATCH_MIN_LENGTH ? "partial" : "conflict";
+  // 🔴 변경 C — 길이 문턱은 그대로(4). 더해서 공유 부분이 «숫자 코어» 인지 묻는다.
+  //    `26MS` 처럼 시즌연도+브랜드 약자만 겹친 것은 상품을 식별하지 않는다.
+  const shared = longestCommonSubstring(a, b);
+  if (shared.length < PARTIAL_MATCH_MIN_LENGTH) return "conflict";
+  return sharesNumericCore(shared) ? "partial" : "conflict";
 }

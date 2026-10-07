@@ -30,7 +30,7 @@
  *    아무리 높아도(SIMILAR/TEXT_CONFIRMED) 절대 이 함수가 임의로 승격하지
  *    않는다(듀베베 72%가 자동으로 동일상품 취급되지 않아야 하는 이유).
  */
-import type { CrossSellerBlocker, CrossSellerVerdict } from "./cross-seller";
+import type { CrossSellerBlocker, CrossSellerConflict, CrossSellerVerdict } from "./cross-seller";
 import type { MatchResult } from "./match";
 import type { ImageEvidenceResult, ModelEvidenceResult, OptionEvidenceResult } from "./evidence";
 import { deriveMatchTruth, type MatchTruth } from "./match-truth";
@@ -74,6 +74,16 @@ export interface CandidateEvidenceInput {
    * 나르는 칸 하나이고, 없으면(undefined) 예전과 똑같이 동작한다.
    */
   crossSellerBlockers?: readonly { blocker: CrossSellerBlocker }[];
+  /**
+   * MI-DISCOVERY-P4 변경 B(CPO 승인, 2026-10-07) — 바로 위 `crossSellerBlockers` 와
+   * 같은 이유, 같은 모양. 반증 «종류» 를 값으로 실어 나른다.
+   *
+   * 🔴 이것이 없으면 「같은 모델·색상만 다름」과 「상품군까지 다름」이 저장 경로에서
+   *    같은 CONFLICT 가 되고, 색상 변형이 후보에서 사라진다.
+   * 🔴 새로 계산하지 않는다 — compareCrossSellerProducts 가 낸 값을 옮기는 칸이다.
+   *    없으면(undefined) 예전과 똑같이 동작한다.
+   */
+  crossSellerConflicts?: readonly { conflict: CrossSellerConflict }[];
 }
 
 export interface CandidateEvidenceDecision {
@@ -96,6 +106,8 @@ export function decideCandidateEvidence(input: CandidateEvidenceInput): Candidat
     input.modelCode,
     input.crossSeller,
     input.crossSellerBlockers,
+    // MI-DISCOVERY-P4 변경 B — 전달만. 이 함수는 conflicts 를 해석하지 않는다.
+    input.crossSellerConflicts,
   );
   // 근거 문장은 truth가 실제로 어디서 왔는지를 말해야 한다. 품번을 비교조차 못 한
   // 쌍(판매처마다 자기 SKU를 쓰는 경우)에 "modelCode 일치"라고 적으면 화면이 없는

@@ -713,6 +713,10 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
          두 상품으로 진열했다」가 여기서 사라지고, 그 자리에서 품번만 보고 EXACT 가
          나갔다(서로 다른 상품 7쌍이 동일상품 가격에 들어간 경로). */
       crossSellerBlockers: best.crossSellerBlockers,
+      /* 🔴 MI-DISCOVERY-P4 변경 B — 반증 «종류» 도 함께 넘긴다. 이것이 없으면
+         「같은 모델·색상만 다름」이 「상품군까지 다름」과 같은 CONFLICT 가 되어
+         색상 변형이 후보에서 사라진다(실측: main-story AW26MS185 색상 4종). */
+      crossSellerConflicts: best.crossSellerConflicts,
     });
 
     const { verified: finalVerified, matchReasons: evidenceMatchReasons } = applyEvidenceDecision(
