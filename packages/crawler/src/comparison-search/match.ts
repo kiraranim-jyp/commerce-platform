@@ -1,4 +1,5 @@
 import { compareCrossSellerProducts } from "./cross-seller";
+import { confirmBrandCodeInTitle } from "./domestic-identifiers";
 import type { ComparisonCandidate, ComparisonQuery } from "./types";
 import { normalizeMatchingTitle } from "./title-normalize";
 
@@ -478,13 +479,50 @@ export function withConfidence(query: ComparisonQuery, candidates: ComparisonCan
     .map((c) => {
       const normalizedCandidate: ComparisonCandidate = { ...c, title: normalizeMatchingTitle(c.title) };
       const { confidence, level, reasons } = scoreCandidateMatch(normalizedQuery, normalizedCandidate);
-      const withMatch: ComparisonCandidate = { ...c, confidence, matchLevel: level, matchReasons: reasons };
+      /**
+       * ══════════════════════════════════════════════════════════════════════
+       * MI-DISCOVERY-P5.3(CPO 지시, 2026-10-07) — **확인된 품번을 판정기가 «보는»
+       * 칸에 싣는다.**
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * P5.2 가 `confirmBrandCodeInTitle` 로 품번을 확인하고도 그 값을
+       * `compareModelCode` 에만 썼다. 🔴 그런데 `compareCrossSellerProducts` 는
+       * `facts` 만 본다(seller-facts.ts 주석이 적어 둔 그 함정 그대로 —
+       * 「데이터가 없어서가 아니라 담는 칸이 비어 있어서였다」).
+       *
+       * 그래서 MODEL_CODE 축이 생기지 않아 corePoints 가 모자라고, 정답 후보가
+       * SAME 이 아니라 PRESUMED_SAME 으로 내려앉았다. 실측(littleluna AW26MS185):
+       *
+       *   facts 에 싣지 않음  axes=[TITLE,CATEGORY]            → PRESUMED_SAME
+       *   facts 에 실음        axes=[TITLE,MODEL_CODE,CATEGORY,COLOR] → SAME
+       *
+       * 🔴 값을 **지어내지 않는다.** `confirmBrandCodeInTitle` 은 원본(해외)에서
+       *    이미 확정된 문자열이 후보 제목에 토큰으로 그대로 있을 때만 그 문자열을
+       *    돌려준다 — 아니면 null 이고, null 이면 아래가 예전과 완전히 같다.
+       * 🔴 후보가 **자기 품번을 이미 갖고 있으면 건드리지 않는다**(해외↔해외 쌍).
+       * 🔴 `6568fb2` 가드도 `hasObservedDifference` 도 건드리지 않는다. 같은
+       *    판매처가 품번을 재사용한 쌍은 blocker 로 계속 막힌다 — 전수 측정에서
+       *    거짓 SAME 10쌍 전부 변동 0 으로 확인했다.
+       */
+      const candidateFacts =
+        c.facts && c.facts.brandModelCode === null && query.facts?.brandModelCode
+          ? { ...c.facts, brandModelCode: confirmBrandCodeInTitle(query.facts.brandModelCode, c.title) }
+          : c.facts;
+      const withMatch: ComparisonCandidate = {
+        ...c,
+        confidence,
+        matchLevel: level,
+        matchReasons: reasons,
+        // 🔴 판정에 쓴 facts 를 그대로 내보낸다 — 저장 경로·화면이 다른 값을 보면
+        //    「화면과 DB가 갈린다」가 다시 생긴다(decision.ts 맨 위 P-7-C 원칙).
+        facts: candidateFacts,
+      };
       // MATCHING-2.0-CORE(CEO 지시, 2026-09-13) — 양쪽에서 사실 묶음을 읽어낸
       // 경우에만 교차판매처 판정을 얹는다. confidence도 matchLevel도 손대지
       // 않는다(기존 계산을 다시 하지 않는다는 이 저장소의 계층 분리 원칙 그대로) —
       // 새 필드로만 답을 남기고, 그 답을 쓸지는 화면/가격 정책이 정한다.
       const cross =
-        query.facts && c.facts ? compareCrossSellerProducts(query.facts, c.facts) : null;
+        query.facts && candidateFacts ? compareCrossSellerProducts(query.facts, candidateFacts) : null;
       const withCross: ComparisonCandidate = cross
         ? {
             ...withMatch,
