@@ -33,7 +33,8 @@ import { priceTierFromLink } from "../domestic-product-link";
  *   scoreCandidateMatch        → 텍스트등급 ┘                        │
  *                                                priceTierFromLink ←┘
  *                                                       │
- *                          EXACT = 동일상품 가격 · COMPARISON = 참고 · EXCLUDED = 버림
+ *            EXACT = 동일상품 가격 · COMPARISON = 제한적 가격 참고
+ *            REFERENCE = 경쟁상품 참고(가격비교에 쓰지 않는다) · EXCLUDED = 버림
  *
  * 그 길을 통째로 확인하는 테스트가 없어서, 두 체계가 30%의 입력에서 갈라져 있는
  * 것을 아무도 잡지 못했다. 이 파일이 그 자리를 메운다.
@@ -91,8 +92,9 @@ function chain(
   const modelCode = compareModelCode(a.brandModelCode, b.brandModelCode);
   const truth = deriveMatchTruth(level, modelCode, verdict);
   // 저장되는 행은 verified 도 함께 갖는다. matchTruth 가 있으면 priceTierFromLink 는
-  // verified 를 «보지 않는다»(domestic-product-link.ts:52-55) — 그 사실을 양쪽
-  // verified 로 한 번에 확인한다.
+  // verified 를 «보지 않는다»(domestic-product-link.ts 의 priceTierFromLink — 네
+  // 단계 분기가 전부 matchTruth 로 끝나고, verified 는 레거시 null 행에서만 쓰인다)
+  // — 그 사실을 양쪽 verified 로 한 번에 확인한다.
   const withTrue = priceTierFromLink({ matchTruth: truth, verified: true });
   const withFalse = priceTierFromLink({ matchTruth: truth, verified: false });
   expect(withTrue).toBe(withFalse);
@@ -236,25 +238,62 @@ describe("MATCHING-FIX-01 ②: 삭제된 isSameProductForPricing 의 의도", ()
   });
 
   /**
-   * 🔴 흡수되지 «않은» 것도 사실로 적는다. 품번이 exact/partial 이면 교차판매처
-   * 판정이 PRESUMED_SAME 이어도 EXACT tier 에 닿는다(match-truth.ts:77-80).
-   * 삭제된 함수와 실제 경로가 갈리던 24개 조합의 정체가 이것이고,
-   * **고치지 않았다** — 고치면 기존 판정이 바뀐다. 판정 «정의» 단계의 과제다.
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🟢 해결됨 — MI P0 IDENTITY PRECISION FIX(CPO 결정 1, 2026-10-07).
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 여기 있던 단언은 `toHaveLength(24)` 였고, 그 24개가 **「품번이 맞으면 교차판매처
+   * 보류를 넘어 EXACT 가 된다」는 사고의 크기**였다. CPO 가 `PRESUMED_SAME ≠ EXACT`
+   * 를 확정해 그중 8개(PRESUMED_SAME × 2 modelCode × 4 level)가 닫혔다.
+   *
+   * 🔴 남은 16개는 «고치지 못한 것» 이 아니라 **CPO 가 범위에서 제외한 것** 이다 —
+   *    SIMILAR 는 축 하나만 맞은 약한 긍정이고 UNKNOWN 은 「근거가 없다」다. 둘 다
+   *    «보류» 가 아니므로 식별자를 깎지 않는다. 그 사실을 수로 고정해 둔다:
+   *    누군가 그 둘까지 막으면 이 테스트가 실패하면서 «정책 변경» 임을 알린다.
    */
-  it("🔴 미해결 — 품번이 맞으면 교차판매처 보류(PRESUMED_SAME)를 넘어 EXACT 가 된다", () => {
-    const mismatches: string[] = [];
-    for (const verdict of ["PRESUMED_SAME", "SIMILAR", "UNKNOWN"] as const) {
+  it("🟢 PRESUMED_SAME 은 품번이 맞아도 EXACT 에 닿지 않는다", () => {
+    const reachedExact: string[] = [];
+    for (const modelCode of ["exact", "partial"] as const) {
+      for (const level of ["low", "medium", "high", "very_high"] as const) {
+        const truth = deriveMatchTruth(level, modelCode, "PRESUMED_SAME");
+        if (priceTierFromLink({ matchTruth: truth, verified: false }) === "EXACT") {
+          reachedExact.push(`${level}/${modelCode}`);
+        }
+        // 🔴 EXACT 가 아니라는 것만으로는 부족하다 — CONFLICT 로 흘러가지도 않아야
+        //    한다(「증거가 약하다」 ≠ 「다른 상품이다」). 보수적 non-EXACT 하나로
+        //    모인다: 제한적 가격 참고.
+        expect(truth).toBe("TEXT_CONFIRMED");
+        expect(priceTierFromLink({ matchTruth: truth, verified: false })).toBe("COMPARISON");
+      }
+    }
+    expect(reachedExact).toEqual([]);
+  });
+
+  it("🔴 범위 밖 — SIMILAR · UNKNOWN 은 식별자 경로로 계속 EXACT 에 닿는다(CPO 제외)", () => {
+    const reachedExact: string[] = [];
+    for (const verdict of ["SIMILAR", "UNKNOWN"] as const) {
       for (const modelCode of ["exact", "partial"] as const) {
         for (const level of ["low", "medium", "high", "very_high"] as const) {
           const truth = deriveMatchTruth(level, modelCode, verdict);
           if (priceTierFromLink({ matchTruth: truth, verified: false }) === "EXACT") {
-            mismatches.push(`${level}/${modelCode}/${verdict}`);
+            reachedExact.push(`${level}/${modelCode}/${verdict}`);
           }
         }
       }
     }
-    // 3 verdict × 2 modelCode × 4 level = 24. 감사가 센 그 24개와 같은 수다.
-    expect(mismatches).toHaveLength(24);
+    // 2 verdict × 2 modelCode × 4 level = 16. 24 에서 PRESUMED_SAME 8개가 빠진 수다.
+    expect(reachedExact).toHaveLength(16);
+  });
+
+  /** 🔴 반대 방향의 대조군 — 막은 것이 «보류» 하나뿐이라는 증거. 보류가 없으면
+   *  품번은 여전히 확정 근거다(이것까지 깎였다면 과잉 수정이다). */
+  it("보류가 없으면 품번은 그대로 EXACT 다 — 과잉 차단이 아니다", () => {
+    expect(deriveMatchTruth("very_high", "exact", "SAME")).toBe("EXACT_IDENTIFIER");
+    expect(deriveMatchTruth("low", "exact", undefined)).toBe("STRONG_IDENTIFIER");
+    expect(deriveMatchTruth("low", "partial", undefined)).toBe("STRONG_IDENTIFIER");
+    for (const truth of ["EXACT_IDENTIFIER", "STRONG_IDENTIFIER"] as const) {
+      expect(priceTierFromLink({ matchTruth: truth, verified: false })).toBe("EXACT");
+    }
   });
 
   /** 반대 방향(동일상품인데 가격에서 빠지는 쪽)은 구조적으로 만들 수 없다 —
@@ -273,13 +312,17 @@ describe("MATCHING-FIX-01 ②: 삭제된 isSameProductForPricing 의 의도", ()
 
 describe("MATCHING-FIX-01 ③: 같은 품번을 여러 상품이 나눠 쓴다", () => {
   /**
-   * 🔴 이 단언은 «옳은 동작»이 아니라 «오늘의 사실»이다 — packages/crawler 의
-   * identifier-safety.test.ts 「🔴 미해결」과 같은 사고를, 이번에는 가격 티어까지
-   * 이어서 기록한다. junioredition.com 은 서로 다른 상품에 같은 Product code 를
-   * 적고(AW26MS185 세 상품), 교차판매처 판정은 그것을 PRESUMED_SAME 으로
-   * 막아내는데, 품번이 exact 라 deriveMatchTruth 가 그 보류를 넘어간다.
+   * 🟢 해결됨 — MI P0 IDENTITY PRECISION FIX(CPO 결정 1, 2026-10-07).
+   *
+   * 이 네 쌍이 **사고의 실물**이었다. junioredition.com 은 서로 다른 상품에 같은
+   * Product code 를 적고(AW26MS185 세 상품 등), 교차판매처 판정기는 그것을
+   * PRESUMED_SAME 으로 「같다고 확정하지 않았다」고 말했는데, 품번이 exact 라
+   * deriveMatchTruth 가 그 보류를 넘어 EXACT 로 통과시켰다 — 곧 동일상품 가격이다.
+   *
+   * 🔴 이제 네 쌍 전부 EXACT 에서 빠진다. 그리고 CONFLICT 로 가지도 않는다 —
+   *    색만 다른 스웨트셔츠는 «다른 상품이라고 확정된» 것이 아니다.
    */
-  it("🔴 미해결 — 같은 품번을 쓰는 다른 상품이 동일상품 가격(EXACT)에 들어간다", () => {
+  it("🟢 같은 품번을 쓰는 다른 상품이 동일상품 가격(EXACT)에서 빠진다", () => {
     const pairs: [string, string][] = [
       ["bubble-sweatshirt-in-grey-melange-by-main-story", "bubble-sweatshirt-in-graystone-by-main-story"],
       ["bubble-sweatshirt-in-grey-melange-by-main-story", "bubble-sweatshirt-in-conker-stripe-by-main-story"],
@@ -290,7 +333,65 @@ describe("MATCHING-FIX-01 ③: 같은 품번을 여러 상품이 나눠 쓴다",
       const r = chain(junior(left), junior(right), "low");
       expect(r.modelCode).toBe("exact");
       expect(r.verdict).toBe("PRESUMED_SAME"); // 판정기는 「같다고 확정하지 않았다」
-      expect(r.tier).toBe("EXACT"); // ← 그런데 가격은 들어간다. 여기가 사고다.
+      expect(r.tier).not.toBe("EXACT"); // ← 사고가 닫힌 자리
+      expect(r.truth).toBe("TEXT_CONFIRMED"); // 보수적 non-EXACT
+      expect(r.tier).toBe("COMPARISON"); // 제한적 가격 참고
     }
+  });
+});
+
+/* ═════════════ ④ 네 단계 — TEXT_CONFIRMED ≠ SIMILAR ═════════════ */
+
+describe("MI P0 IDENTITY PRECISION FIX ④: 가격 근거는 네 단계다", () => {
+  /** CPO 결정 2(2026-10-07)의 표를 값 전수로 고정한다. 여섯 identity state 가
+   *  정확히 어디로 가는지 — 빠진 state 가 생기면 이 테스트가 먼저 깨진다. */
+  it("여섯 state 가 네 단계로 «전수» 매핑된다", () => {
+    const table: Record<MatchTruth, string> = {
+      EXACT_IDENTIFIER: "EXACT",
+      STRONG_IDENTIFIER: "EXACT",
+      TEXT_CONFIRMED: "COMPARISON",
+      SIMILAR: "REFERENCE",
+      CONFLICT: "EXCLUDED",
+      INSUFFICIENT_EVIDENCE: "EXCLUDED",
+    };
+    for (const [truth, expected] of Object.entries(table) as [MatchTruth, string][]) {
+      expect(priceTierFromLink({ matchTruth: truth, verified: false })).toBe(expected);
+      expect(priceTierFromLink({ matchTruth: truth, verified: true })).toBe(expected);
+    }
+    // 🔴 두 state 가 같은 칸에 들어가면 분리가 무의미하다 — 그것 자체를 단언한다.
+    expect(priceTierFromLink({ matchTruth: "TEXT_CONFIRMED", verified: false })).not.toBe(
+      priceTierFromLink({ matchTruth: "SIMILAR", verified: false }),
+    );
+  });
+
+  /**
+   * 🔴 「분리했다」의 의미를 downstream «속성» 으로 확인한다. 파일명이 아니라 속성으로
+   *    본다 — market-intelligence.ts 와 compute-readiness.ts 는 둘 다
+   *
+   *        if (tier === "EXACT")        → 동일상품 가격 버킷
+   *        else if (tier === "COMPARISON") → 비교상품 가격 버킷
+   *
+   *    두 긍정 비교뿐이고, run-domestic-price-check.ts 는 `!== "EXCLUDED"` 로
+   *    가격 재조회 대상을 고른다. 그래서 REFERENCE 가 만족해야 하는 속성은 셋이다.
+   */
+  it("REFERENCE 는 두 가격 버킷에 «모두» 들어가지 않고, 가격 재조회에는 남는다", () => {
+    const tier = priceTierFromLink({ matchTruth: "SIMILAR", verified: false });
+    expect(tier).toBe("REFERENCE");
+    expect(tier).not.toBe("EXACT"); // 동일상품 가격 버킷 조건
+    expect(tier).not.toBe("COMPARISON"); // 비교상품 가격 버킷 조건
+    expect(tier).not.toBe("EXCLUDED"); // 가격 재조회는 계속된다(경쟁 참고 자료)
+  });
+
+  /** 🔴 verified=true 가 SIMILAR 을 EXACT 로 끌어올리지 못한다 — 사람이 승인한
+   *  링크라도 matchTruth 가 있으면 그 값이 이긴다. 「SIMILAR → EXACT 경로가 새로
+   *  생기면 작업 실패」(지시서 §6)의 가장 그럴듯한 샛길이 이것이다. */
+  it("사람이 승인(verified)해도 SIMILAR 은 EXACT 가 되지 않는다", () => {
+    expect(priceTierFromLink({ matchTruth: "SIMILAR", verified: true })).toBe("REFERENCE");
+  });
+
+  /** 레거시(matchTruth=null) 는 예전 그대로다 — 과거 판단의 근거를 소급해 바꾸지 않는다. */
+  it("레거시 null 행은 예전과 똑같이 verified 로만 갈린다", () => {
+    expect(priceTierFromLink({ matchTruth: null, verified: true })).toBe("EXACT");
+    expect(priceTierFromLink({ matchTruth: null, verified: false })).toBe("COMPARISON");
   });
 });

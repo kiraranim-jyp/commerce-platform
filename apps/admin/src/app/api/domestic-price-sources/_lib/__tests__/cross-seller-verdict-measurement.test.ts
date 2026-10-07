@@ -126,9 +126,12 @@ describe("🔴 가격 경로는 이 값을 읽지 않는다", () => {
       const link = { matchTruth: "EXACT_IDENTIFIER" as const, verified: true, crossSellerVerdict: v };
       expect(priceTierFromLink(link), `verdict=${v} 에서 가격 티어가 흔들렸다`).toBe("EXACT");
     }
-    // CONFLICT verdict 라도 matchTruth 가 SIMILAR 면 COMPARISON 그대로다.
+    // CONFLICT verdict 라도 matchTruth 가 SIMILAR 면 그 matchTruth 의 티어 그대로다.
+    // MI P0 IDENTITY PRECISION FIX(CPO 결정 2, 2026-10-07) — SIMILAR 의 티어가
+    // COMPARISON 에서 REFERENCE 로 «갈라졌다». 이 테스트가 지키는 성질은 「verdict 가
+    // 티어를 흔들지 않는다」이고, 그 성질은 한 글자도 바뀌지 않았다.
     const conflicting = { matchTruth: "SIMILAR" as const, verified: true, crossSellerVerdict: "CONFLICT" };
-    expect(priceTierFromLink(conflicting)).toBe("COMPARISON");
+    expect(priceTierFromLink(conflicting)).toBe("REFERENCE");
   });
 
   it("레거시 행(verdict 없음)의 티어가 기존과 같다 — 회귀", async () => {

@@ -45,12 +45,48 @@ export function toDomesticMatchType(matchLevel: "very_high" | "high" | "medium" 
  * 쪽에도 쓰지 않는다. matchTruth가 null인 행(마이그레이션 030 이전 레거시 —
  * domestic-product-link.ts 기존 주석과 동일한 "일괄 backfill 없음" 원칙)은
  * 기존 verified 플래그로만 EXACT/COMPARISON을 구분한다.
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * MI P0 IDENTITY PRECISION FIX(CPO 결정 2, 2026-10-07) — **네 단계다. 셋이 아니다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 여기 있던 3단계는 `TEXT_CONFIRMED` 와 `SIMILAR` 를 **같은 칸(COMPARISON)** 에
+ * 넣었다. 그래서 downstream 에서 둘을 구분할 방법이 없었다 — 「텍스트 근거가
+ * 확인됐다」와 「닮았을 뿐이다」가 똑같은 가격 근거로 섰다.
+ *
+ * CPO 가 확정한 네 단계:
+ *
+ *     EXACT_IDENTIFIER · STRONG_IDENTIFIER   → EXACT       가격비교 허용
+ *     TEXT_CONFIRMED                         → COMPARISON  제한적 가격 참고
+ *     SIMILAR                                → REFERENCE   경쟁상품 참고
+ *     CONFLICT · INSUFFICIENT_EVIDENCE       → EXCLUDED    가격비교 제외
+ *
+ * 🔴 `COMPARISON` 의 «이름» 을 바꾸지 않았다. 그 값을 읽는 세 곳(market-intelligence
+ *    ·compute-readiness 의 비교상품 버킷, run-domestic-price-check 의 가격 재조회)이
+ *    전부 **긍정 비교**(`=== "COMPARISON"`, `!== "EXCLUDED"`)라서, 이름을 그대로 두면
+ *    새 값 하나를 더하는 것만으로 의도한 분리가 끝난다. 호출부는 한 줄도 바뀌지
+ *    않는다 — 최소 변경의 정의다.
+ *
+ * 🔴 그래서 `REFERENCE` 가 실제로 하는 일:
+ *      ① 비교상품 «가격» 버킷에 들어가지 않는다(market-intelligence.ts 의
+ *         `else if (tier === "COMPARISON")` 에 걸리지 않으므로 — 그 블록의 기존
+ *         주석대로 「추측으로 분류하지 않는다」에 해당한다).
+ *      ② 그러면서 가격 재조회 대상에는 «남는다»(`!== "EXCLUDED"`). 경쟁상품을
+ *         참고하려면 그 가격을 계속 알아야 한다. 관측을 끊는 것이 아니다.
+ *      ③ 후보 목록 표시는 영향받지 않는다 — 화면 배지는 matchTruth 를 직접 읽는
+ *         match-display.ts 가 담당하고(SIMILAR = ⚪ 유사상품), 이 tier 와 별개다.
+ *
+ * 🔴 레거시(matchTruth=null, 마이그레이션 030 이전)는 **예전 그대로** COMPARISON 이다.
+ *    REFERENCE 로 내리지 않는다 — 그 행들은 SIMILAR 이라고 «관측된» 것이 아니라
+ *    판정을 거친 적이 없는 것이고, 과거 판단의 근거를 소급해 바꾸지 않는다
+ *    (이 파일이 반복해서 지켜 온 "일괄 backfill 없음" 원칙과 같다).
  */
-export type DomesticPriceTier = "EXACT" | "COMPARISON" | "EXCLUDED";
+export type DomesticPriceTier = "EXACT" | "COMPARISON" | "REFERENCE" | "EXCLUDED";
 
 export function priceTierFromLink(link: Pick<DomesticProductLink, "matchTruth" | "verified">): DomesticPriceTier {
   if (link.matchTruth === "EXACT_IDENTIFIER" || link.matchTruth === "STRONG_IDENTIFIER") return "EXACT";
-  if (link.matchTruth === "TEXT_CONFIRMED" || link.matchTruth === "SIMILAR") return "COMPARISON";
+  if (link.matchTruth === "TEXT_CONFIRMED") return "COMPARISON";
+  if (link.matchTruth === "SIMILAR") return "REFERENCE";
   if (link.matchTruth === "CONFLICT" || link.matchTruth === "INSUFFICIENT_EVIDENCE") return "EXCLUDED";
   return link.verified ? "EXACT" : "COMPARISON";
 }

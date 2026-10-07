@@ -43,7 +43,8 @@ const LEVELS: readonly MatchLevel[] = ["low", "medium", "high", "very_high"];
 function judge(level: MatchLevel, modelCode: ModelEvidenceResult, crossSeller?: CrossSellerVerdict) {
   const truth = deriveMatchTruth(level, modelCode, crossSeller);
   // 저장되는 행은 verified 도 함께 갖는다. matchTruth 가 있으면 priceTierFromLink 는
-  // verified 를 «보지 않는다»(domestic-product-link.ts:52-54) — 양쪽으로 확인한다.
+  // verified 를 «보지 않는다»(네 단계 분기가 전부 matchTruth 로 끝나고, verified 는
+  // 레거시 null 행에서만 쓰인다) — 양쪽으로 확인한다.
   const tier = priceTierFromLink({ matchTruth: truth, verified: false });
   expect(priceTierFromLink({ matchTruth: truth, verified: true })).toBe(tier);
   return { truth, tier };
@@ -55,20 +56,25 @@ describe("P0-A ①: CASE A/B/C/D — 오늘의 판정과 오늘의 가격 티어
   /**
    * CASE A — modelCode=exact · crossSeller=PRESUMED_SAME
    *
-   * 교차판매처 판정이 **「같다고 확정하지 않았다」**고 말한 쌍이다. 그런데도 네
-   * 등급 전부에서 동일상품 가격(EXACT)에 들어간다. level 은 «어떤 이름표를 붙일지»
-   * 만 가르고(STRONG vs EXACT_IDENTIFIER), 돈이 들어가는지 여부는 가르지 못한다.
+   * 교차판매처 판정이 **「같다고 확정하지 않았다」**고 말한 쌍이다. 직전까지는
+   * 그런데도 네 등급 전부가 동일상품 가격(EXACT)에 들어갔다 — level 은 이름표만
+   * 가르고(STRONG vs EXACT_IDENTIFIER) 돈이 들어가는지는 가르지 못했다.
    *
-   * 🔴 이것이 실측 사고의 정체다 — junioredition.com 이 서로 다른 두 상품에 같은
-   *    Product Code 를 적는 7쌍이 정확히 이 모양으로 EXACT 에 들어간다
-   *    (identifier-safety.test.ts 「🔴 미해결」).
+   * 🔴 그것이 실측 사고의 정체였다 — junioredition.com 이 서로 다른 두 상품에 같은
+   *    Product Code 를 적는 7쌍이 정확히 이 모양으로 EXACT 에 들어갔다
+   *    (identifier-safety.test.ts).
+   *
+   * 🟢 MI P0 IDENTITY PRECISION FIX(CPO 결정 1, 2026-10-07) 으로 **네 등급 전부가
+   *    EXACT 에서 빠졌다.** 그리고 level 이 더 이상 이름표를 가르지도 않는다 —
+   *    보류가 있으면 식별자 경로를 아예 타지 않으므로 네 칸이 한 값으로 모인다.
+   *    🔴 CONFLICT 가 아니다. 「확정 못 했다」와 「다른 상품이다」는 다르다.
    */
-  it("CASE A: exact + PRESUMED_SAME → 네 등급 전부 EXACT 티어", () => {
+  it("🟢 CASE A: exact + PRESUMED_SAME → 네 등급 전부 EXACT 에서 빠진다", () => {
     expect(LEVELS.map((l) => judge(l, "exact", "PRESUMED_SAME"))).toEqual([
-      { truth: "STRONG_IDENTIFIER", tier: "EXACT" }, // low
-      { truth: "STRONG_IDENTIFIER", tier: "EXACT" }, // medium
-      { truth: "EXACT_IDENTIFIER", tier: "EXACT" }, // high
-      { truth: "EXACT_IDENTIFIER", tier: "EXACT" }, // very_high
+      { truth: "TEXT_CONFIRMED", tier: "COMPARISON" }, // low
+      { truth: "TEXT_CONFIRMED", tier: "COMPARISON" }, // medium
+      { truth: "TEXT_CONFIRMED", tier: "COMPARISON" }, // high
+      { truth: "TEXT_CONFIRMED", tier: "COMPARISON" }, // very_high
     ]);
   });
 
@@ -132,24 +138,29 @@ describe("P0-A ②: 같은 crossSeller 판정이 modelCode 유무로 갈린다",
    * 사실이 하나도 없는데» 티어가 통째로 달라진다 — 품번을 비교할 수 있느냐 없느냐는
    * 「두 상품이 같은가」가 아니라 「이 판매처가 품번을 싣느냐」에 대한 사실이다.
    */
-  it("PRESUMED_SAME: 품번 있으면 EXACT, 없으면 COMPARISON", () => {
+  /**
+   * 🟢 PRESUMED_SAME 에서는 이 비대칭이 **사라졌다**(CPO 결정 1, 2026-10-07).
+   *    품번이 있든 없든 같은 값이다 — 「이 판매처가 품번을 싣느냐」가 「두 상품이
+   *    같은가」를 더 이상 가르지 못한다. 이것이 결정 1 이 노린 바로 그 효과다.
+   */
+  it("🟢 PRESUMED_SAME: 품번이 있으나 없으나 «같은 값» 이다", () => {
     for (const level of LEVELS) {
-      expect(judge(level, "exact", "PRESUMED_SAME").tier).toBe("EXACT");
-      expect(judge(level, "partial", "PRESUMED_SAME").tier).toBe("EXACT");
-      // 같은 판정, 같은 등급 — 품번 칸만 비었다.
-      expect(judge(level, "unavailable", "PRESUMED_SAME")).toEqual({
-        truth: "TEXT_CONFIRMED",
-        tier: "COMPARISON",
-      });
+      const expected = { truth: "TEXT_CONFIRMED", tier: "COMPARISON" };
+      expect(judge(level, "exact", "PRESUMED_SAME")).toEqual(expected);
+      expect(judge(level, "partial", "PRESUMED_SAME")).toEqual(expected);
+      expect(judge(level, "unavailable", "PRESUMED_SAME")).toEqual(expected);
     }
   });
 
-  it("UNKNOWN: 품번 있으면 EXACT, 없으면 low 에서 EXCLUDED 까지 내려간다", () => {
+  /** 🔴 UNKNOWN 에서는 비대칭이 **그대로 남아 있다** — CPO 결정 범위가 아니다.
+   *  「모른다」로 식별자를 깎지 않는다는 기존 원칙이고, 그 사실을 숨기지 않는다. */
+  it("🔴 UNKNOWN: 비대칭이 남아 있다 — 품번 있으면 EXACT, 없으면 등급대로 내려간다", () => {
     expect(judge("low", "unavailable", "UNKNOWN")).toEqual({
       truth: "INSUFFICIENT_EVIDENCE",
       tier: "EXCLUDED",
     });
-    expect(judge("medium", "unavailable", "UNKNOWN")).toEqual({ truth: "SIMILAR", tier: "COMPARISON" });
+    // 🔴 medium 의 SIMILAR 는 이제 REFERENCE 다(결정 2) — 가격비교가 아니라 경쟁 참고.
+    expect(judge("medium", "unavailable", "UNKNOWN")).toEqual({ truth: "SIMILAR", tier: "REFERENCE" });
     expect(judge("high", "unavailable", "UNKNOWN")).toEqual({ truth: "TEXT_CONFIRMED", tier: "COMPARISON" });
     // 같은 UNKNOWN 인데 품번이 partial 이면 low 에서도 EXACT 다.
     expect(judge("low", "partial", "UNKNOWN").tier).toBe("EXACT");
@@ -180,7 +191,7 @@ const CROSS: readonly (CrossSellerVerdict | undefined)[] = [
 describe("P0-A ③: 96개 입력 전수 — 오늘의 티어 분포를 숫자로 고정한다", () => {
   /** 입력 전수를 돌려 티어별 개수를 센다. 숫자가 움직이면 무언가 바뀐 것이다. */
   it("전수 96칸의 티어 분포", () => {
-    const count = { EXACT: 0, COMPARISON: 0, EXCLUDED: 0 };
+    const count = { EXACT: 0, COMPARISON: 0, REFERENCE: 0, EXCLUDED: 0 };
     for (const level of LEVELS) {
       for (const modelCode of MODEL_CODES) {
         for (const crossSeller of CROSS) {
@@ -189,34 +200,61 @@ describe("P0-A ③: 96개 입력 전수 — 오늘의 티어 분포를 숫자로
       }
     }
     expect(LEVELS.length * MODEL_CODES.length * CROSS.length).toBe(96);
-    // EXACT 44 = 품번 있고 crossSeller≠CONFLICT 40 + (unavailable × SAME) 4
-    //            → 🔴 EXACT 의 91%(40/44)가 «품번 한 축»에서 나온다.
+    // ══ MI P0 IDENTITY PRECISION FIX(CPO 결정 1·2, 2026-10-07) ═══════════════
+    // 직전 분포는 { EXACT 44, COMPARISON 13, EXCLUDED 39 } 였다. 두 결정이
+    // «어느 칸을» 움직였는지 전부 유도해서 적는다 — 숫자를 받아쓰지 않는다.
     //
-    // P0-A.29-F R1(2026-09-20) — COMPARISON 14 → 13, EXCLUDED 38 → 39.
-    // 96칸 중 «정확히 한 칸» 이 움직였다: low / unavailable / SIMILAR.
-    // 전수 대조로 확인했고 EXACT 는 44 에서 움직이지 않았다(아래 별도 검증).
-    expect(count).toEqual({ EXACT: 44, COMPARISON: 13, EXCLUDED: 39 });
+    //  결정 1 (PRESUMED_SAME ≠ EXACT):
+    //     EXACT 44 → 36.  빠진 8칸 = PRESUMED_SAME × {exact, partial} × 4 level.
+    //     그 8칸은 전부 TEXT_CONFIRMED 로 내려가므로 COMPARISON 으로 간다.
+    //     🔴 EXACT 의 품번 편중이 함께 풀린다 — 40/44(91%) → 32/36(89%).
+    //
+    //  결정 2 (TEXT_CONFIRMED ≠ SIMILAR):
+    //     COMPARISON 에 있던 matchTruth=SIMILAR 3칸이 REFERENCE 로 갈라진다
+    //     (medium/unavailable × {undefined, SIMILAR, UNKNOWN} — 텍스트가 스스로
+    //      SIMILAR 인 칸들이다).
+    //
+    //  합치면 COMPARISON 13 − 3 + 8 = 18.  EXCLUDED 는 한 칸도 움직이지 않는다
+    //  (두 결정 모두 «확정을 낮추는» 쪽이고, 어느 것도 CONFLICT 를 만들지 않는다).
+    expect(count).toEqual({ EXACT: 36, COMPARISON: 18, REFERENCE: 3, EXCLUDED: 39 });
   });
 
   /**
-   * 🔴 **가장 중요한 한 줄.** 품번이 exact/partial 이고 교차판매처가 CONFLICT 만
-   *    아니면, 나머지 입력이 무엇이든 **예외 없이** 동일상품 가격에 들어간다.
-   *    「보류」라는 뜻을 가진 판정(PRESUMED_SAME)도, 「아무것도 모른다」(UNKNOWN)도
-   *    이 문을 막지 못한다.
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🟢 여기가 **이번 수정의 핵심 자리**다.
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 직전까지 이 테스트의 제목은 「🔴 품번이 있으면 CONFLICT 외에는 어떤 교차판매처
+   * 판정도 EXACT 를 막지 못한다」였고, 40칸 전부가 EXACT 임을 단언했다. 그 문장이
+   * 바로 사고의 정의였다 — 「보류」라는 뜻을 가진 PRESUMED_SAME 조차 동일상품
+   * 가격을 막지 못했다.
+   *
+   * MI P0 IDENTITY PRECISION FIX(CPO 결정 1, 2026-10-07) 이후 **문이 하나 생겼다.**
+   * 🔴 그리고 «그 하나뿐» 이라는 것까지 같이 고정한다 — UNKNOWN 은 여전히 막지
+   *    못한다(모르는 것으로 식별자를 깎지 않는다는 기존 원칙, CPO 범위 밖).
    */
-  it("🔴 품번이 있으면 CONFLICT 외에는 어떤 교차판매처 판정도 EXACT 를 막지 못한다", () => {
+  it("🟢 품번이 있어도 PRESUMED_SAME «하나만» EXACT 를 막는다", () => {
+    const blocked: string[] = [];
     const notBlocked: string[] = [];
     for (const level of LEVELS) {
       for (const modelCode of ["exact", "partial"] as const) {
         for (const crossSeller of CROSS) {
           if (crossSeller === "CONFLICT") continue;
-          expect(judge(level, modelCode, crossSeller).tier).toBe("EXACT");
-          notBlocked.push(`${level}/${modelCode}/${crossSeller ?? "none"}`);
+          const tier = judge(level, modelCode, crossSeller).tier;
+          const cell = `${level}/${modelCode}/${crossSeller ?? "none"}`;
+          if (tier === "EXACT") notBlocked.push(cell);
+          else blocked.push(cell);
         }
       }
     }
     // 4 level × 2 modelCode × 5 crossSeller(CONFLICT 제외) = 40
-    expect(notBlocked).toHaveLength(40);
+    expect(blocked.length + notBlocked.length).toBe(40);
+    // 막힌 8칸은 «전부» PRESUMED_SAME 이다 — 다른 판정이 섞여 있으면 과잉 차단이다.
+    expect(blocked).toHaveLength(8);
+    expect(blocked.every((c) => c.endsWith("/PRESUMED_SAME"))).toBe(true);
+    // 그리고 PRESUMED_SAME 은 «하나도» 통과하지 못한다.
+    expect(notBlocked.some((c) => c.endsWith("/PRESUMED_SAME"))).toBe(false);
+    expect(notBlocked).toHaveLength(32);
   });
 
   /** CONFLICT 는 어느 축에서 오든 항상 최하위다 — 이 성질에는 예외가 없다. */
@@ -231,15 +269,18 @@ describe("P0-A ③: 96개 입력 전수 — 오늘의 티어 분포를 숫자로
     }
   });
 
-  /** 랭크표는 6단계인데 가격은 3단계다 — 어디서 정보가 뭉개지는지 고정한다. */
-  it("6단계 판정이 3단계 티어로 뭉개지는 지점", () => {
-    const byTier: Record<string, MatchTruth[]> = { EXACT: [], COMPARISON: [], EXCLUDED: [] };
+  /** 랭크표는 6단계이고 가격은 **4단계**다(CPO 결정 2, 2026-10-07 — 전에는 3단계였고
+   *  TEXT_CONFIRMED 와 SIMILAR 가 한 칸에 뭉개져 있었다). 어디서 정보가 접히는지
+   *  고정한다 — 이제 접히는 곳은 양 끝 둘뿐이다. */
+  it("6단계 판정이 4단계 티어로 접히는 지점", () => {
+    const byTier: Record<string, MatchTruth[]> = { EXACT: [], COMPARISON: [], REFERENCE: [], EXCLUDED: [] };
     for (const truth of Object.keys(MATCH_TRUTH_RANK) as MatchTruth[]) {
       byTier[priceTierFromLink({ matchTruth: truth, verified: false })].push(truth);
     }
     expect(byTier).toEqual({
       EXACT: ["EXACT_IDENTIFIER", "STRONG_IDENTIFIER"],
-      COMPARISON: ["TEXT_CONFIRMED", "SIMILAR"],
+      COMPARISON: ["TEXT_CONFIRMED"], // 🔴 혼자다 — 이것이 결정 2 의 내용이다
+      REFERENCE: ["SIMILAR"],
       EXCLUDED: ["INSUFFICIENT_EVIDENCE", "CONFLICT"],
     });
   });

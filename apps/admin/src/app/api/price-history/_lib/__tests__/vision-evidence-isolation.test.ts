@@ -68,8 +68,11 @@ describe("🔴 안전속성 1·3 — Vision 점수가 판정 칸에 «닿지 않
          (055 cross_seller_verdict 때와 같은 우회를 여기서도 쓴다.) */
       const link = { matchTruth: "EXACT_IDENTIFIER" as const, verified: true, visionScore: score };
       expect(priceTierFromLink(link), `Vision ${label} 이 가격 티어를 바꿨다`).toBe("EXACT");
+      /* MI P0 IDENTITY PRECISION FIX(CPO 결정 2, 2026-10-07) — SIMILAR 의 티어가
+         COMPARISON → REFERENCE 로 갈라졌다. 이 테스트가 지키는 성질(「Vision 점수가
+         티어를 흔들지 않는다」)은 그대로고, 오히려 승격 여지가 한 칸 더 멀어졌다. */
       const weak = { matchTruth: "SIMILAR" as const, verified: false, visionScore: score };
-      expect(priceTierFromLink(weak), `Vision ${label} 이 SIMILAR 를 승격시켰다`).toBe("COMPARISON");
+      expect(priceTierFromLink(weak), `Vision ${label} 이 SIMILAR 를 승격시켰다`).toBe("REFERENCE");
     });
   }
 

@@ -111,7 +111,39 @@ export function deriveMatchTruth(
    * 모르는 것으로 식별자를 깎으면, 정보가 부족한 판매처의 진짜 동일상품이 사라진다.
    */
   const observedDifference = hasObservedDifference(blockers);
-  if (!observedDifference) {
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * MI P0 IDENTITY PRECISION FIX(CPO 결정 1, 2026-10-07) — **PRESUMED_SAME ≠ EXACT.**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 바로 위 MI-3 / P0-1 이 `blockers` 로 막으려던 사고가 **남아 있었다.** 그 가드는
+   * 호출부가 blockers 를 «넘겨줄 때만» 작동한다(L80 — 생략하면 예전과 똑같이
+   * 동작한다). 그래서 verdict 는 PRESUMED_SAME 인데 blockers 를 받지 못한 경로에서
+   * 품번 하나로 EXACT_IDENTIFIER 가 계속 나왔다.
+   *
+   * 실측 고정(match-truth-to-price-tier.test.ts ②③): junioredition.com 이 서로 다른
+   * 상품에 같은 Product code 를 적는다 — AW26MS185 스웨트셔츠 3종 · 미니 바디수트↔
+   * 우주복 · 줄리아 샌들 색만 다른 2종. 교차판매처 판정기는 그것을 보고
+   * **PRESUMED_SAME 으로 「확정하지 않았다」** 고 말했는데, 품번이 exact 라
+   * 이 분기가 그 보류를 넘어 EXACT 로 통과시켰다. 그 등급은 `priceTierFromLink`
+   * 에서 EXACT 이고, 곧 «동일상품 가격» 이다.
+   *
+   * 🔴 그래서 PRESUMED_SAME 은 식별자 «단독» 확정을 막는다. 품번이 같다는 것은
+   *    「같은 상품」이 아니라 「판매처가 품번을 재사용한다」는 뜻일 수 있다.
+   *
+   * 🔴 CONFLICT 로 만들지 «않는다». 증거가 약해져 EXACT 가 아닌 것이고, 다른
+   *    상품이라고 확정된 것이 아니다 — 아래 경로로 내려보내면 PRESUMED_SAME 은
+   *    이미 TEXT_CONFIRMED(제한적 가격 참고)로 매핑돼 있다(L163-164). 새 identity
+   *    state 를 만들지 않는 이유도 그것이다. 이미 자리가 있다.
+   *
+   * 🔴 SIMILAR · UNKNOWN 은 여기 넣지 «않는다» — CPO 결정 범위가 PRESUMED_SAME
+   *    하나다. 그리고 그 둘은 «보류» 가 아니다: SIMILAR 는 축 하나만 맞은
+   *    약한 긍정이고(L136-158), UNKNOWN 은 「판단 근거가 없다」다. 모르는 것으로
+   *    식별자를 깎으면 정보가 부족한 판매처의 진짜 동일상품이 사라진다(L110-111과
+   *    같은 이유). 둘은 계속 식별자 경로로 EXACT 에 닿는다.
+   */
+  const crossSellerReserved = crossSeller === "PRESUMED_SAME";
+  if (!observedDifference && !crossSellerReserved) {
     if (modelCode === "exact") {
       return HIGH_OR_ABOVE.has(level) ? "EXACT_IDENTIFIER" : "STRONG_IDENTIFIER";
     }

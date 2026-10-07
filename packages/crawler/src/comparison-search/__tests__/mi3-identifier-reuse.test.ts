@@ -59,13 +59,34 @@ describe("① 🔴 품번 재사용 — 관측된 차이가 있으면 식별자 
 });
 
 describe("② 🔴 「확인 못 했다」로는 깎지 않는다", () => {
-  it("BRAND_UNCONFIRMED 하나만 있으면 식별자 승격이 «그대로» 다", () => {
-    /* 🔴 모르는 것을 반증으로 쓰면, 정보가 부족한 판매처의 진짜 동일상품이
-       식별자가 있는데도 사라진다(포레포레 골든케이스가 그 모양이다). */
-    expect(deriveMatchTruth("very_high", "exact", "PRESUMED_SAME", b("BRAND_UNCONFIRMED"))).toBe(
-      "EXACT_IDENTIFIER",
-    );
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴 이 원칙은 **살아 있지만 범위가 좁아졌다** — MI P0 IDENTITY PRECISION FIX
+   *    (CPO 결정 1, 2026-10-07).
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * MI-3 의 원칙은 「모르는 것(BRAND_UNCONFIRMED)을 반증으로 쓰지 않는다」였고,
+   * 지키려던 것은 **포레포레 골든케이스** — 정보가 부족한 판매처의 진짜 동일상품이
+   * 식별자가 있는데도 사라지는 일이다.
+   *
+   * 🟢 그 골든케이스는 그대로 산다. 그것은 `partial + SIMILAR` 이고(아래 둘째 줄),
+   *    CPO 결정 1 은 SIMILAR 을 건드리지 않는다.
+   *
+   * 🔴 좁아진 칸은 «하나» 다 — verdict 가 **PRESUMED_SAME** 일 때. 이제는 보류 사유가
+   *    BRAND_UNCONFIRMED 하나뿐이어도 식별자 단독 확정을 막는다. 이유: PRESUMED_SAME
+   *    자체가 「교차판매처 판정기가 같다고 확정하지 않았다」는 뜻이고, CPO 가
+   *    Precision 우선으로 `PRESUMED_SAME ≠ EXACT` 를 확정했다. 그리고 「브랜드를
+   *    확인하지 못했다」는 EXACT 를 «지킬» 근거가 되기에는 더 약한 사실이다.
+   *
+   * 🔴 CONFLICT 로 가지는 않는다 — 여전히 「다른 상품이다」가 아니다.
+   */
+  it("BRAND_UNCONFIRMED — SIMILAR 에서는 승격이 그대로, PRESUMED_SAME 에서는 막힌다", () => {
+    // 🔴 좁아진 칸: PRESUMED_SAME 은 보류 사유가 「확인 못 함」뿐이어도 EXACT 가 아니다.
+    expect(deriveMatchTruth("very_high", "exact", "PRESUMED_SAME", b("BRAND_UNCONFIRMED"))).toBe("TEXT_CONFIRMED");
+    // 🟢 포레포레 골든케이스는 그대로 산다 — 모르는 것으로 식별자를 깎지 않는다.
     expect(deriveMatchTruth("low", "partial", "SIMILAR", b("BRAND_UNCONFIRMED"))).toBe("STRONG_IDENTIFIER");
+    // 그리고 UNKNOWN 에서도 그대로다(CPO 범위 밖).
+    expect(deriveMatchTruth("very_high", "exact", "UNKNOWN", b("BRAND_UNCONFIRMED"))).toBe("EXACT_IDENTIFIER");
   });
 
   it("hasObservedDifference 가 그 구분을 그대로 말한다", () => {
@@ -101,11 +122,22 @@ describe("② 🔴 「확인 못 했다」로는 깎지 않는다", () => {
 });
 
 describe("③ 🔴 기존 정책이 그대로다", () => {
-  it("보류가 «없으면» 식별자 승격은 예전과 같다", () => {
-    expect(deriveMatchTruth("very_high", "exact", "PRESUMED_SAME", [])).toBe("EXACT_IDENTIFIER");
+  /** 🔴 MI P0 IDENTITY PRECISION FIX(CPO 결정 1, 2026-10-07) — 이제 가드가 둘이다.
+   *  ① blockers 가 「관측된 차이」를 담고 있으면 막는다(MI-3, 호출부가 넘길 때만).
+   *  ② verdict 가 PRESUMED_SAME 이면 막는다(결정 1, blockers 와 «무관하게»).
+   *
+   *  ②가 필요한 이유는 실측이다: 운영 호출부 둘 중 `domestic-price-sources/search`
+   *  route 는 blockers 를 **넘기지 않는다**(인자 3개). 그 경로에서 ①은 영구히
+   *  무력하고, 그래서 품번 하나로 EXACT 가 계속 나왔다. ②는 blockers 에 의존하지
+   *  않으므로 두 경로 모두에서 선다. */
+  it("보류가 «없어도» PRESUMED_SAME 은 막히고, 그 밖의 식별자 승격은 예전과 같다", () => {
+    // 🔴 결정 1 — blockers 가 비어 있어도 verdict 만으로 막는다.
+    expect(deriveMatchTruth("very_high", "exact", "PRESUMED_SAME", [])).toBe("TEXT_CONFIRMED");
+    // 🟢 나머지는 한 글자도 바뀌지 않았다 — 과잉 차단이 아니라는 대조군.
     expect(deriveMatchTruth("high", "exact", undefined, undefined)).toBe("EXACT_IDENTIFIER");
     expect(deriveMatchTruth("low", "exact")).toBe("STRONG_IDENTIFIER");
     expect(deriveMatchTruth("low", "partial")).toBe("STRONG_IDENTIFIER");
+    expect(deriveMatchTruth("very_high", "exact", "SAME", [])).toBe("EXACT_IDENTIFIER");
   });
 
   it("🔴 인자를 «생략하면» 한 글자도 달라지지 않는다 — 옛 호출부 보호", () => {
