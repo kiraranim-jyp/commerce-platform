@@ -1,3 +1,4 @@
+import { CRAWLER_USER_AGENT } from "../utils/user-agent";
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
 import type { PageProbe } from "./url-resolver";
 
@@ -34,8 +35,7 @@ import type { PageProbe } from "./url-resolver";
  * `factsFromProductUrl` 이 **같은 페이지를 다시 받는다**. Shopify 는 두 번째가
  * 8KB(`.json`)지만 비-Shopify 는 같은 HTML 을 두 번 받는다. 지우지 않고 남긴다.
  */
-const CHROME_UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+const CHROME_UA = CRAWLER_USER_AGENT;
 const DEFAULT_TIMEOUT_MS = 15000;
 
 /** 🔴 `rel="canonical"` 은 속성 순서가 사이트마다 다르다. 두 순서를 다 본다 —

@@ -1,3 +1,4 @@
+import { CRAWLER_USER_AGENT } from "./utils/user-agent";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -49,11 +50,16 @@ export async function launchChromium(): Promise<Browser> {
 
     return chromium.launch({
       executablePath: await chromiumBinary.executablePath(),
-      args: chromiumBinary.args,
+      /* 🔴 UA 를 «설정» 한다 — 미설정이면 HeadlessChrome 이 나가고 406 을 받는다
+         (실측: tennis-warehouse 406 → UA 만 바꿔 200). 차단 우회가 아니라
+         robots 가 금지하지 않는 우리 UA 를 밝히는 것이다. */
+      args: [...chromiumBinary.args, `--user-agent=${CRAWLER_USER_AGENT}`],
       headless: true,
     });
   }
 
   const { chromium } = await import("playwright");
-  return chromium.launch({ headless: true });
+  /* 🔴 serverless 쪽과 «같은» UA 다 — 두 경로가 다른 UA 를 보내면 로컬에서만
+     되는 상태가 생긴다. */
+  return chromium.launch({ headless: true, args: [`--user-agent=${CRAWLER_USER_AGENT}`] });
 }

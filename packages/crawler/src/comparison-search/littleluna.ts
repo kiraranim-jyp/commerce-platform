@@ -1,3 +1,4 @@
+import { CRAWLER_USER_AGENT } from "../utils/user-agent";
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
 import { decodeHtmlEntities } from "./html-entities";
 import { productFactsFromListing } from "./seller-facts";
@@ -42,8 +43,7 @@ import type { ComparisonCandidate } from "./types";
  */
 const DOMAIN = "littleluna.co.kr";
 const FETCH_TIMEOUT_MS = 10000;
-const CHROME_UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+const CHROME_UA = CRAWLER_USER_AGENT;
 
 /** 사이트별 실측 한도. 다른 국내 어댑터와 같은 값(상위 5건)을 쓴다 — 이 숫자가
  *  달라지면 판매처마다 다른 깊이로 보게 되어 비교가 불공정해진다. */

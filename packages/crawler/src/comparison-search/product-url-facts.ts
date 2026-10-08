@@ -1,3 +1,4 @@
+import { CRAWLER_USER_AGENT } from "../utils/user-agent";
 import { decodeHtmlEntities } from "./html-entities";
 import { productFactsFromListing, productFactsFromShopifyProduct } from "./seller-facts";
 import { classifyUrlShape, toCrawlerUrl } from "../discovery-benchmark/url-resolver";
@@ -65,8 +66,7 @@ export interface ProductUrlFactsResult {
   fetchPath: "SHOPIFY_JSON" | "PLAIN_HTML" | "NONE";
 }
 
-const CHROME_UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+const CHROME_UA = CRAWLER_USER_AGENT;
 const FETCH_TIMEOUT_MS = 10000;
 
 /** Shopify `/products/{handle}.json` 의 상품 객체 중 이 seam 이 읽는 칸만. */
