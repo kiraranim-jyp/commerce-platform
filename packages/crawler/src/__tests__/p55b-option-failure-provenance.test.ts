@@ -1,5 +1,10 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import { offerRowsToOptions, type OptionExtractionFailure } from "../product-data-extractor";
+import {
+  isSuccessfulHttpStatus,
+  offerRowsToOptions,
+  type OptionExtractionFailure,
+} from "../product-data-extractor";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -128,5 +133,59 @@ describe("🔴 ③ 콜백이 없으면 로그로 남는다 — 관찰 자체가 
     } finally {
       warn.mockRestore();
     }
+  });
+});
+
+/* ─────────────────────────────────────────────────────────────────────────
+   🔴🔴 ㉠ 보강 — 접근 거부를 「옵션 없음」으로 적지 않는다.
+
+   실측: tennis-warehouse 를 Playwright 로 열었더니 **406 · 본문 171B** 였고
+   microdata offer 0 이라 INSUFFICIENT_NAMED_OFFERS 가 떴다. 그 값은 「이 상품에
+   offer 가 2개 미만」과 완전히 같아서 다음 실패도 오진하게 된다.
+   ───────────────────────────────────────────────────────────────────────── */
+describe("🔴🔴 ④ SOURCE_ACCESS_BLOCKED — 접근 실패와 데이터 부재를 가른다", () => {
+  it("2xx 만 성공이다", () => {
+    expect(isSuccessfulHttpStatus(200)).toBe(true);
+    expect(isSuccessfulHttpStatus(204)).toBe(true);
+    /* 🔴 실측 두 건 — Smallable 403 · tennis-warehouse 406 */
+    expect(isSuccessfulHttpStatus(403)).toBe(false);
+    expect(isSuccessfulHttpStatus(406)).toBe(false);
+    expect(isSuccessfulHttpStatus(500)).toBe(false);
+    /* 3xx 는 추적이 끝난 뒤의 최종 상태여야 하므로 성공이 아니다. */
+    expect(isSuccessfulHttpStatus(302)).toBe(false);
+  });
+
+  it("🔴 사유 어휘에 SOURCE_ACCESS_BLOCKED 가 «있다» — 기존 3개도 그대로다", () => {
+    const all: OptionExtractionFailure[] = [
+      "SOURCE_ACCESS_BLOCKED",
+      "INSUFFICIENT_NAMED_OFFERS",
+      "EMPTY_OPTION_VALUE",
+      "DUPLICATE_OPTION_VALUE",
+    ];
+    expect(new Set(all).size).toBe(4);
+  });
+
+  it("🔴 호출부가 상태를 보고 사유를 «바꿔 적는다» — 결과는 바뀌지 않는다", () => {
+    /* extractProductData 는 Playwright page 를 요구해 여기서 마운트할 수 없다.
+       🔴 그래서 「무엇을 보고 바꾸는가」를 소스로 확인한다 — 이 파일이 보장하는
+          것과 못 하는 것을 숨기지 않는다(실제 406 재현은 ㉡ 실측 몫이다). */
+    const src = readFileSync(
+      new URL("../product-data-extractor.ts", import.meta.url),
+      "utf8",
+    )
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/(^|[^:])\/\/.*$/gm, "$1");
+    const block = src.slice(src.indexOf("const offerOptions ="), src.indexOf("const textOptionGroups"));
+    expect(block).toContain("isSuccessfulHttpStatus(options.httpStatus)");
+    expect(block).toContain('"SOURCE_ACCESS_BLOCKED"');
+    /* 🔴 상태를 모르면 기존 사유를 그대로 쓴다 — 지어내지 않는다. */
+    expect(block).toContain("blocked ? \"SOURCE_ACCESS_BLOCKED\" : reason");
+    /* 🟡 offerRowsToOptions 를 «여전히 부른다» — 분기를 건너뛰지 않았다.
+       🔴 다만 이 단언은 «하중을 받지 않는다»: mutation Y4(단축회로를 끼워
+          넣어도 문자열이 남는다)가 통과했다. 동작으로 잠그려면 Playwright
+          page 를 마운트해야 하고 그건 새 harness 다(CPO 금지).
+          🔴 그래서 「결과 불변」의 실제 근거는 위 ②의 반환값 비교이고,
+             이 줄은 «읽는 사람을 위한 표시» 로만 남긴다. */
+    expect(block).toContain("offerRowsToOptions(");
   });
 });

@@ -749,6 +749,19 @@ export function longestCommonPrefix(values: string[]): string {
  *    증명 가능해지는 것이 이 작업의 전부다.
  */
 export type OptionExtractionFailure =
+  /**
+   * 🔴 ㉠ 보강(CPO 승인, 2026-10-08) — **접근 거부를 「옵션 없음」으로 적지 않는다.**
+   *
+   * 실측: tennis-warehouse 를 Playwright 로 열었더니 **406 · 본문 171B** 였고,
+   * microdata offer 가 0이라 `INSUFFICIENT_NAMED_OFFERS` 가 떴다. 그 값은
+   * 「이 상품에 offer 가 2개 미만」과 «완전히 같아서» 다음 실패도 오진하게 된다.
+   * 이 저장소는 다른 곳에서 바로 이 함정을 피한다(`resolveCandidate` 는
+   * 네트워크 실패를 「상품 없음」으로 적지 않고 UNUSABLE 로 적는다).
+   *
+   * 🔴 판정 결과는 바뀌지 않는다 — 막힌 페이지는 어차피 옵션이 없다.
+   *    바뀌는 것은 «무엇을 보고 그렇게 됐는지» 하나다.
+   */
+  | "SOURCE_ACCESS_BLOCKED"
   /** ① 이름 있는 offer 가 2개 미만 — 고를 축이 성립하지 않는다. */
   | "INSUFFICIENT_NAMED_OFFERS"
   /** ② 공통 접두사가 이름 전체를 먹었다 — 빈 옵션값은 채널이 거절한다. */
@@ -834,9 +847,17 @@ async function extractOffersFromMicrodata(page: Page): Promise<OfferRow[]> {
  * price로 채운다). Microdata를 OpenGraph보다 앞에 두는 이유: 둘 다 "구조화 데이터"로
  * 신뢰도가 비슷하지만, 실제로 많은 사이트가 og:price를 아예 안 넣는 반면 상품
  * 페이지의 itemprop="offers"는 결제 흐름에 실제로 쓰이는 값이라 더 정확하다. */
+/** 🔴 「정상 상품 HTML 을 받았는가」. 2xx 만 성공으로 본다 — 3xx 는 추적이
+ *  끝난 뒤 최종 상태여야 하고, 4xx/5xx 는 본문이 상품이 아니다. */
+export function isSuccessfulHttpStatus(status: number): boolean {
+  return status >= 200 && status < 300;
+}
+
 export async function extractProductData(
   html: string,
   page: Page,
+  /** 🔴 선택 인자다 — 기존 호출부를 한 곳도 고치지 않는다. 주면 사유가 정확해진다. */
+  options?: { httpStatus?: number },
 ): Promise<{
   data: ExtractedProductData;
   sources: Record<string, ProductDataSource>;
@@ -864,7 +885,20 @@ export async function extractProductData(
      들어갈 길이 생긴다(아래 회귀 테스트가 그 길을 막는다). */
   const offerOptions =
     !productGroupOptions && domOptionGroups.length === 0
-      ? offerRowsToOptions(await extractOffersFromMicrodata(page))
+      ? offerRowsToOptions(
+          await extractOffersFromMicrodata(page),
+          /* 🔴 ㉠ — 사유만 바꿔 적는다. 반환값·분기는 그대로다(막힌 페이지는
+             어차피 옵션이 없으므로 결과가 달라질 수 없다). 상태를 모르면
+             (= httpStatus 미전달) 기존 사유를 그대로 쓴다 — 지어내지 않는다. */
+          (reason, rows) => {
+            const blocked = options?.httpStatus != null && !isSuccessfulHttpStatus(options.httpStatus);
+            const finalReason: OptionExtractionFailure = blocked ? "SOURCE_ACCESS_BLOCKED" : reason;
+            console.warn(
+              `[option-extraction] null 사유=${finalReason} offers=${rows.length}` +
+                (options?.httpStatus != null ? ` status=${options.httpStatus}` : ""),
+            );
+          },
+        )
       : null;
   const textOptionGroups =
     domOptionGroups.length === 0 && !productGroupOptions && !offerOptions
