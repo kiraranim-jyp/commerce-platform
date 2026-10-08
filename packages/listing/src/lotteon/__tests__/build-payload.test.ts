@@ -512,3 +512,60 @@ describe("P0-CHANNEL-03 §6 — 롯데ON 판매자 선결조건", () => {
     expect(result.fields.find((f) => f.field === "owhpNo")?.status).toBe("BLOCKED");
   });
 });
+
+/* ─────────────────────────────────────────────────────────────────────────
+   P5.6 P0-5(CPO 지시, 2026-10-09) — 🔴 **999 를 재고로 싣지 않는다.**
+
+   CEO 실측: 롯데ON 만 재고가 999 로 들어갔다. 999 는 파이프라인 DEFAULT 이고
+   원본의 사실이 아니다. 지금까지 이 저장소에 `stkQty` 회귀 테스트가 «없었다» —
+   그래서 되돌아가도 아무도 모른다. 여기서 고정한다.
+
+   실측 모양: Tennis Magro 사이즈 5개 · 재고 1/4/2/3/1 (합계 11)
+   ───────────────────────────────────────────────────────────────────────── */
+describe("🔴🔴 P5.6 P0-5 재고 — 999 를 싣지 않는다", () => {
+  const sizes = ["S", "M", "L", "XL", "XXL"];
+  const stocks = [1, 4, 2, 3, 1];
+  const withVariants = () =>
+    makeProduct({
+      stockQuantity: { value: 999, source: "DEFAULT" as FieldSource, confidence: 0 } as ProvenanceField<number>,
+      optionGroups: [{ name: "사이즈", values: sizes }],
+      variants: sizes.map((sz, i) => ({
+        id: `STMMLSWH${i + 1}`,
+        optionValues: { 사이즈: sz },
+        sku: `STMMLSWH${i + 1}`,
+        stockQuantity: stocks[i],
+      })),
+    });
+
+  it("🔴 옵션별 재고가 «그대로» 실린다 — 합계로 뭉개지 않는다", () => {
+    const items = buildLotteOnPayload(inputFor(withVariants(), completeChannel())).spdLst[0].itmLst;
+    expect(items.map((i) => i.stkQty)).toEqual(stocks);
+  });
+
+  it("🔴 어느 항목에도 999 가 없다", () => {
+    const items = buildLotteOnPayload(inputFor(withVariants(), completeChannel())).spdLst[0].itmLst;
+    expect(items.map((i) => i.stkQty)).not.toContain(999);
+  });
+
+  it("🔴 옵션이 없으면 DEFAULT 999 가 «그대로» 나가지 않는다 — 원본 사실만 쓴다", () => {
+    const bare = makeProduct({
+      stockQuantity: { value: 999, source: "DEFAULT" as FieldSource, confidence: 0 } as ProvenanceField<number>,
+      optionGroups: [],
+      variants: [],
+    });
+    const items = buildLotteOnPayload(inputFor(bare, completeChannel())).spdLst[0].itmLst;
+    /* 🔴 payloadStockQuantity 가 원본 실측을 못 찾으면 상품 레벨 값을 쓴다.
+       그 값이 DEFAULT 999 라면 그것은 «재고 정보 없음» 이지 재고 999 가 아니다 —
+       이 단언이 FAIL 하면 999 가 채널로 나가고 있다는 뜻이다. */
+    expect(items[0].stkQty, "DEFAULT 999 가 채널로 나간다").not.toBe(999);
+  });
+
+  it("옵션 재고가 전부 0이면 등록을 막는다 — 품절을 재고로 포장하지 않는다", () => {
+    const soldOut = makeProduct({
+      optionGroups: [{ name: "사이즈", values: sizes }],
+      variants: sizes.map((sz, i) => ({ id: `x${i}`, optionValues: { 사이즈: sz }, stockQuantity: 0 })),
+    });
+    const items = buildLotteOnPayload(inputFor(soldOut, completeChannel())).spdLst[0].itmLst;
+    expect(items.every((i) => i.stkQty === 0)).toBe(true);
+  });
+});

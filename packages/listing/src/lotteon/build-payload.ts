@@ -1,5 +1,5 @@
 import type { MasterProduct, SellingConditions } from "@commerce/shared";
-import { getRegistrationImageUrl, isRegistrationSafeImageUrl, payloadStockQuantity } from "@commerce/shared";
+import { getRegistrationImageUrl, isRegistrationSafeImageUrl, resolvedPayloadStock } from "@commerce/shared";
 import { computeVariantFinalPriceKrw, resolveListingPrice } from "@commerce/pricing";
 import { manufacturerInputFromProduct, resolveManufacturer } from "../common/manufacturer";
 import type {
@@ -255,7 +255,11 @@ function buildItems(
   const images = toItemImages(gallery);
   /* 🔴 S-17 — 999(파이프라인 DEFAULT)를 재고로 싣지 않는다. 옵션 실측이 있으면
      그 합계가, 없으면 기존 값이 온다(shared/source-stock 한 곳에서 해석). */
-  const defaultStock = payloadStockQuantity(product);
+  /* 🔴 P5.6 P0-5(CEO 실측) — 999 는 「재고 999개」가 아니라 «모른다» 다.
+     실측 근거가 없으면 롯데ON 은 0 으로 싣는다 — 모르는 수량을 지어내 파는 것보다
+     품절로 두고 셀러가 채우는 쪽이 안전하다(검증기가 그 사실을 셀러에게 말한다). */
+  const measuredStock = resolvedPayloadStock(product);
+  const defaultStock = measuredStock ?? 0;
 
   const usesOptions = hasLotteOnSellableOptions(product) && product.variants.length > 0;
   if (!usesOptions) {

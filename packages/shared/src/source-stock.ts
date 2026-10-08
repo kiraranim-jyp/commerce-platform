@@ -132,9 +132,36 @@ export function blocksRegistration(fact: SourceStockFact): boolean {
  * 그 한 글자가 검증기를 무효로 만들었다(C-2D). 품절이면 0 을 그대로 실어야
  * 검증기가 제 일을 한다 — 막힌 상품은 애초에 전송되지 않는다.
  */
+/**
+ * 🔴 P5.6 P0-5(CEO 실측, 2026-10-09) — **파이프라인 DEFAULT 를 재고로 싣지 않는다.**
+ *
+ * CEO 가 롯데ON 등록에서 재고 999 를 봤다. 추적해 보니 원본에 재고 정보가 없는
+ * 상품에서 `product.stockQuantity` 의 **DEFAULT 999**(파이프라인 초기값)가 그대로
+ * 채널로 나갔다. 999 는 「재고가 999개」가 아니라 「재고를 모른다」는 뜻이다.
+ *
+ * 🔴 모르는 것을 숫자로 지어내지 않는다 — 이 저장소의 상수 규칙 그대로다
+ *    (payload 상수에는 근거가 있어야 한다).
+ * 🔴 그렇다고 0 으로 적지도 않는다 — 0 은 「품절」이라는 «다른 사실» 이고,
+ *    실측 품절(OUT_OF_STOCK)과 구분되지 않으면 멀쩡한 상품이 품절로 등록된다.
+ * 🔴 그래서 «실측이 아닌 값» 은 null 로 돌려주고, 채널 빌더가 자기 정책으로
+ *    정하게 한다. 보정은 여기서 하지 않는다(C-2D 의 `|| 1` 이 그 실수였다).
+ */
+export const PIPELINE_DEFAULT_STOCK = 999;
+
 export function payloadStockQuantity(product: CanonicalProduct): number {
+  return resolvedPayloadStock(product) ?? PIPELINE_DEFAULT_STOCK;
+}
+
+/**
+ * 🔴 실측에 근거한 수량만 돌려준다. 근거가 없으면 `null` —
+ *    「모른다」를 숫자로 바꾸지 않는다.
+ */
+export function resolvedPayloadStock(product: CanonicalProduct): number | null {
   const fact = resolveSourceStock(product);
   if (fact.state === "OUT_OF_STOCK") return 0;
   if (fact.quantity != null) return fact.quantity;
-  return product.stockQuantity.value;
+  /* 🔴 상품 레벨 값이 파이프라인 DEFAULT 면 그것은 실측이 아니다. */
+  const level = product.stockQuantity;
+  if (level.source === "DEFAULT" || level.value === PIPELINE_DEFAULT_STOCK) return null;
+  return level.value;
 }
