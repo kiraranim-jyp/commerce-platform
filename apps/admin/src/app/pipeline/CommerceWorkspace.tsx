@@ -4053,6 +4053,64 @@ export function CommerceWorkspace({
             />
           )}
 
+          {/* ══════════════════════════════════════════════════════════════════
+              P5.5-H(CPO 결정 ㉮, 2026-10-08) — **「이미 등록됨」의 다음 칸.**
+
+              실측(JOB-261008-003): 중복은 맞게 막혔는데 거기서 끝이라 수정도
+              등록도 못 했다. 기존 연결은 형제 작업(JOB-261008-002)에 있었다.
+
+              🔴 여기서 «연결하지 않는다». 연결을 옮기면 두 Product 가 한
+                 외부상품을 가리켜 다음 UPDATE 의 기준이 사라진다. 형제 작업은
+                 연결을 이미 갖고 있으므로 그쪽으로 «보낸다» — DB 쓰기 0.
+              🔴 error.message 를 문자열로 뒤지지 않는다. 서버가
+                 existingRegistration 에 구조화해 실어 준다(F-10 과 같은 규약).
+              🔴 siblingJobKey/snapshotId 가 없으면 버튼을 만들지 않는다 —
+                 갈 곳 없는 「이동」은 고치기 전과 같은 막다른 길이다.
+          ══════════════════════════════════════════════════════════════════ */}
+          {(() => {
+            /* 🔴 `tab` 은 "source"·"content"·롯데ON 도 될 수 있다. 기존
+               `isPlatformTab` 을 쓴다 — 새 narrowing 을 만들면 한쪽만 갈라진다.
+               🔴 롯데ON 은 `listingResults` 에 자리가 «없다»(결과 모양이 다르다).
+                  서버는 이미 같은 칸을 내려보내지만 화면 배선은 별 작업이다 —
+                  없는 것을 있는 척하지 않고 여기서는 제외한다. */
+            if (!isPlatformTab(tab)) return null;
+            const commerceTab = tab;
+            const found = listingResults[commerceTab]?.existingRegistration;
+            if (!found || found.kind !== "EXISTING_CONNECTION_FOUND") return null;
+            const moveTo = found.siblingJobKey && found.siblingSnapshotId ? found.siblingSnapshotId : null;
+            return (
+              <div
+                data-testid="existing-registration-notice"
+                className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4"
+              >
+                <p className="text-sm font-semibold text-amber-900">
+                  이미 {commerceLabel(commerceTab)}에 등록된 상품입니다.
+                </p>
+                <p className="mt-1 text-sm text-amber-900">
+                  상품번호 <b>{found.externalProductId}</b>
+                  {found.siblingJobKey ? (
+                    <>
+                      {" · 기존 등록 작업 "}
+                      <b>{found.siblingJobKey}</b>
+                      {" 에서 수정할 수 있습니다."}
+                    </>
+                  ) : (
+                    " · 기존 등록 작업을 찾았지만 작업 번호를 확인하지 못했습니다."
+                  )}
+                </p>
+                {moveTo && (
+                  <a
+                    data-testid="existing-registration-move"
+                    href={`/pipeline?resume=${encodeURIComponent(moveTo)}`}
+                    className="mt-3 inline-block rounded-md bg-amber-600 px-3 py-2 text-sm font-semibold text-white"
+                  >
+                    기존 등록 작업으로 이동
+                  </a>
+                )}
+              </div>
+            );
+          })()}
+
           {recreateConsent && recreateConsent.platform === tab && (() => {
             const target = recreateConsent.platform;
             /* 🔴 먼저 닫고 나서 보낸다 — 열어 둔 채로 두면 한 번 더 눌러

@@ -267,15 +267,44 @@ describe("🔴🔴 ⑦ 형제 탐색 기준이 한 벌이다", () => {
   });
 
 
-  it("🔴 라우트가 복구 조립을 복제하지 않는다 — 공용 헬퍼를 부른다", () => {
-    const src = strippedSource("../../../api/smartstore/register/route.ts");
-    expect(src).toContain("buildExistingRegistrationNotice");
-    expect(src).not.toContain("findSiblingChannelConnections");
+  /**
+   * 🔴🔴 **세 채널 전수**(CPO 지시). 한 채널만 빠뜨리는 것이 이 저장소가
+   *    반복해 고친 실수다 — 채널 목록을 하드코딩해 전수로 돌린다.
+   */
+  const CHANNEL_ROUTES = ["smartstore", "coupang", "lotteon"] as const;
+
+  it.each(CHANNEL_ROUTES)("%s — 복구 조립을 복제하지 않고 공용 헬퍼를 부른다", (channel) => {
+    const src = strippedSource(`../../../api/${channel}/register/route.ts`);
+    expect(src, `${channel} 가 공용 헬퍼를 쓰지 않는다`).toContain("buildExistingRegistrationNotice");
+    /* 🔴 라우트가 resolver 를 «직접» 부르면 조립이 채널마다 갈라진다. */
+    expect(src, `${channel} 가 resolver 를 직접 부른다`).not.toContain("findSiblingChannelConnections");
+    expect(src, `${channel} 가 형제 탐색을 다시 짠다`).not.toContain("resolveSameSourceSnapshotIds");
   });
 
-  it("🔴 복구 조회는 BLOCKED_PRIOR_SUCCESS 에서만 한다 — 막지 않을 것에 DB 를 더 때리지 않는다", () => {
-    const src = strippedSource("../../../api/smartstore/register/route.ts");
-    expect(src).toMatch(/gate === "BLOCKED_PRIOR_SUCCESS"\s*\?\s*await buildExistingRegistrationNotice/);
+  it.each(CHANNEL_ROUTES)("%s — 복구 조회는 BLOCKED_PRIOR_SUCCESS 에서만 한다", (channel) => {
+    const src = strippedSource(`../../../api/${channel}/register/route.ts`);
+    expect(src).toMatch(/gate === "BLOCKED_PRIOR_SUCCESS"\s*$|gate === "BLOCKED_PRIOR_SUCCESS"\s*\?/m);
+    expect(src).toMatch(/BLOCKED_PRIOR_SUCCESS"[\s\S]{0,80}await buildExistingRegistrationNotice/);
+  });
+
+  it.each(CHANNEL_ROUTES)("%s — 자기 채널 키로만 조회한다 (채널 혼입 차단)", (channel) => {
+    const src = strippedSource(`../../../api/${channel}/register/route.ts`);
+    const call = /buildExistingRegistrationNotice\(\{[\s\S]{0,240}?\}\)/.exec(src)?.[0] ?? "";
+    expect(call, `${channel} 의 호출을 찾지 못했다`).not.toBe("");
+    /* 롯데ON 은 상수(LOTTEON_PLATFORM_KEY)를 쓴다 — 리터럴을 강요하지 않는다. */
+    const ownKey = channel === "lotteon" ? /LOTTEON_PLATFORM_KEY/ : new RegExp(`channel: "${channel}"`);
+    expect(call).toMatch(ownKey);
+    for (const other of CHANNEL_ROUTES.filter((c) => c !== channel)) {
+      expect(call, `${channel} 가 ${other} 키로 조회한다`).not.toContain(`"${other}"`);
+    }
+  });
+
+  it("🔴 세 채널이 «모두» 물렸다 — 목록이 줄어들면 FAIL 한다", () => {
+    expect(CHANNEL_ROUTES).toHaveLength(3);
+    const wired = CHANNEL_ROUTES.filter((c) =>
+      strippedSource(`../../../api/${c}/register/route.ts`).includes("buildExistingRegistrationNotice"),
+    );
+    expect(wired).toEqual([...CHANNEL_ROUTES]);
   });
 
   /**

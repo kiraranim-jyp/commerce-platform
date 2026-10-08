@@ -32,6 +32,7 @@ import { resolveBrand } from "../_lib/brand";
 import { markSnapshotRegistered } from "../../snapshots/_lib/snapshot";
 import { hasPriorSuccessfulAttempt } from "../../snapshots/_lib/attempts-summary";
 import { createGateMessage, resolveCreateGate, resolveLifecycle } from "@/app/pipeline/commerce/channel-lifecycle";
+import { buildExistingRegistrationNotice } from "@/app/api/_lib/existing-registration";
 import {
   findChannelProductBySnapshot,
   findProductIdBySnapshot,
@@ -901,11 +902,18 @@ export async function POST(request: Request) {
   });
   if (gate !== "ALLOW") {
     const message = createGateMessage(gate, "쿠팡", existing?.externalProductId);
-    logStep("중복 등록 차단", "failed", message);
+    /* 🔴 P5.5-H(CPO ㉮) — 세 채널이 «같은» 헬퍼를 쓴다. 채널별로 복제하면
+       반드시 갈라진다(이 스프린트가 반복해 고친 실수). */
+    const notice =
+      gate === "BLOCKED_PRIOR_SUCCESS"
+        ? await buildExistingRegistrationNotice({ snapshotId, channel: "coupang", channelLabel: "쿠팡" })
+        : null;
+    logStep("중복 등록 차단", "failed", notice ? `${message} ${notice.message}` : message);
     const result: ListingResult = withMeta({
       status: "FAILED",
       platform: "coupang",
       mode: "LIVE",
+      ...(notice ? { existingRegistration: notice.existingRegistration } : {}),
       retryable: gate === "BLOCKED_UNKNOWN",
       payload,
       externalProductId: existing?.externalProductId,
@@ -918,7 +926,9 @@ export async function POST(request: Request) {
           gate === "BLOCKED_UNKNOWN"
             ? "잠시 후 다시 시도해주세요."
             : gate === "BLOCKED_PRIOR_SUCCESS"
-              ? "이 상품의 쿠팡 연결 정보를 먼저 이어야 합니다(등록 이력의 상품번호 확인 필요)."
+              ? /* 🔴 「상품번호를 확인하세요」로 끝내지 않는다 — 셀러는 그 번호를 모른다. */
+                (notice?.message ??
+                "이 상품의 쿠팡 연결 정보를 먼저 이어야 합니다(등록 이력의 상품번호 확인 필요).")
               : "새 상품으로 만들려면 '새 상품으로 다시 등록'을 선택해주세요.",
       },
     });

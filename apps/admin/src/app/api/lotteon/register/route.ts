@@ -5,6 +5,8 @@ import {
   validateLotteOnPayload,
   type LotteOnProductRegistrationPayload,
   type LotteOnRegistrationResultRow,
+  /* 🔴 P5.5-H — 「이미 등록됨」 칸의 모양을 세 채널이 «공유» 한다. */
+  type ListingResult,
 } from "@commerce/listing";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { requireRegistrationAccess } from "@/lib/auth/require-registration-access";
@@ -14,6 +16,7 @@ import { callLotteOnApi, LOTTEON_WRITE_PATHS } from "../_lib/client";
 import { classifyLotteOnHttpStatus } from "../_lib/connection-error";
 import { buildLotteOnContext, type LotteOnChannelFormInput } from "../_lib/build-context";
 import { createGateMessage, resolveCreateGate, resolveLifecycle } from "@/app/pipeline/commerce/channel-lifecycle";
+import { buildExistingRegistrationNotice } from "@/app/api/_lib/existing-registration";
 import { hasPriorSuccessfulAttempt } from "../../snapshots/_lib/attempts-summary";
 import {
   findChannelProductBySnapshot,
@@ -52,6 +55,11 @@ interface LotteOnRegisterResult {
   rows?: LotteOnRegistrationResultRow[];
   /** 옵션(단품) 단위 채널 ID를 저장하지 못한 이유. 아래 주석 참고. */
   optionIdNote?: string;
+  /**
+   * 🔴 P5.5-H(CPO ㉮) — 「이미 등록됨」 다음에 갈 곳. `ListingResult` 의 같은 이름
+   *    칸과 **모양을 맞춘다** — 화면이 채널마다 다른 모양을 읽게 하지 않는다.
+   */
+  existingRegistration?: NonNullable<ListingResult["existingRegistration"]>;
 }
 
 /**
@@ -281,12 +289,23 @@ export async function POST(request: Request) {
     plannedOperation: "CREATE",
   });
   if (gate !== "ALLOW") {
+    /* 🔴 P5.5-H(CPO ㉮) — SmartStore·쿠팡과 «같은» 헬퍼다. 채널별 복제 금지. */
+    const notice =
+      gate === "BLOCKED_PRIOR_SUCCESS"
+        ? await buildExistingRegistrationNotice({
+            snapshotId,
+            channel: LOTTEON_PLATFORM_KEY,
+            channelLabel: "롯데ON",
+          })
+        : null;
+    const gateMessage = createGateMessage(gate, "롯데ON");
     const result = finish({
       status: "FAILED",
       externalProductId: null,
       payload,
-      message: createGateMessage(gate, "롯데ON"),
+      message: notice ? `${gateMessage} ${notice.message}` : gateMessage,
       errorCode: gate,
+      ...(notice ? { existingRegistration: notice.existingRegistration } : {}),
     });
     /* 🔴 operation 을 적지 않는다 — 아무것도 하지 않았다. */
     await logRegistrationAttempt(result, undefined, snapshotId, jobKey);
