@@ -100,19 +100,52 @@ export type ColorHueGroup =
   | "BLUE"
   | "PURPLE";
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * P5.6(CPO 승인, 2026-10-09) — 🔴 **어휘만 넓힌다. 판정은 그대로 둔다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 실측(JOB-005, 네 색상이 운영 경로에서 갈리는 테스트):
+ *
+ *   Grey Melange     → colorText 읽힘 → compareColor match  → SAME      🟢
+ *   Chocolate Brown  → colorText 읽힘 → compareColor 불일치 → CONFLICT  🟢
+ *   Graystone        → 🔴 colorText = null → 색 확인 불가 → PRESUMED_SAME 에서 정지
+ *   Rose Shadow      → 🔴 colorText = null → 같은 이유로 정지
+ *
+ * 🔴 즉 Recall 결함은 «판정» 이 아니라 «어휘» 였다. compareColor 는 읽히기만 하면
+ *    맞는 답을 낸다(Chocolate Brown 이 그 증거다). 그래서 여기서 하는 일은
+ *    **아는 색 이름을 늘리는 것 하나** 다.
+ *
+ * 🔴 판정 기준을 넓히지 «않는다» — 색이 읽히면 여전히 hue group 교집합이 있어야
+ *    match 이고, 다르면 CONFLICT 로 간다. 「같은 품번 + 다른 색 = SAME 금지」는
+ *    그대로 유지된다(그 가드가 오늘 내 1차 수정안을 실제로 잡았다).
+ *
+ * 🔴 국내 판매처는 색을 음차한다 — "Graystone" → "그레이스톤",
+ *    "Rose Shadow" → "로즈섀도우"/"로즈쉐도우". 표기 흔들림까지 함께 넣는다.
+ *    없는 색을 만들지 않는다: 아래 단어는 전부 실제 색 이름이다.
+ */
 const COLOR_HUE_WORDS: Record<ColorHueGroup, string[]> = {
-  WHITE: ["white", "offwhite", "ivory", "cream", "흰색", "화이트"],
+  WHITE: ["white", "offwhite", "ivory", "cream", "흰색", "화이트", "오프화이트", "아이보리", "크림"],
   BLACK: ["black", "검정", "블랙"],
-  GREY: ["grey", "gray", "charcoal", "anthracite", "회색", "그레이"],
-  BEIGE: ["beige", "sand", "baige", "베이지"],
-  BROWN: ["brown", "chocolate", "camel", "taupe", "갈색", "브라운"],
-  RED: ["red", "crimson", "burgundy", "maroon", "빨강", "레드"],
-  PINK: ["pink", "magenta", "fuchsia", "분홍", "핑크"],
-  ORANGE: ["orange", "rust", "coral", "terracotta", "주황", "오렌지"],
-  YELLOW: ["yellow", "mustard", "gold", "노랑", "옐로우"],
-  GREEN: ["green", "olive", "khaki", "mint", "emerald", "초록", "그린"],
-  BLUE: ["blue", "navy", "indigo", "denim", "파랑", "블루", "네이비"],
-  PURPLE: ["purple", "lavender", "lilac", "violet", "보라", "퍼플"],
+  GREY: [
+    "grey", "gray", "charcoal", "anthracite", "회색", "그레이",
+    /* 🔴 실측: Little Luna "그레이스톤" · "그레이멜란지" */
+    "graystone", "greystone", "그레이스톤", "그레이스톤색",
+    "melange", "그레이멜란지", "멜란지그레이", "차콜", "챠콜",
+  ],
+  BEIGE: ["beige", "sand", "baige", "베이지", "샌드"],
+  BROWN: ["brown", "chocolate", "camel", "taupe", "갈색", "브라운", "초콜릿", "초콜렛", "카멜", "토프"],
+  RED: ["red", "crimson", "burgundy", "maroon", "빨강", "레드", "버건디", "와인"],
+  PINK: [
+    "pink", "magenta", "fuchsia", "분홍", "핑크",
+    /* 🔴 실측: Little Luna "로즈섀도우" */
+    "rose", "로즈", "로즈섀도우", "로즈쉐도우", "마젠타", "푸시아",
+  ],
+  ORANGE: ["orange", "rust", "coral", "terracotta", "주황", "오렌지", "코랄", "테라코타"],
+  YELLOW: ["yellow", "mustard", "gold", "노랑", "옐로우", "머스타드", "골드"],
+  GREEN: ["green", "olive", "khaki", "mint", "emerald", "초록", "그린", "올리브", "카키", "민트"],
+  BLUE: ["blue", "navy", "indigo", "denim", "파랑", "블루", "네이비", "인디고", "데님", "토파즈", "topaz"],
+  PURPLE: ["purple", "lavender", "lilac", "violet", "보라", "퍼플", "라벤더", "라일락"],
 };
 
 const NORMALIZED_COLOR_HUE_WORDS: [ColorHueGroup, Set<string>][] = (
