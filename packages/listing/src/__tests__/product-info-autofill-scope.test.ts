@@ -93,8 +93,12 @@ describe("C) 🔴 쿠팡 searchTags ← keywords 는 «하지 않는다» — �
 
   it("🔴 keywords 를 채우는 유일한 경로가 «비활성» content 탭이다", () => {
     const ws = codeOnly(read("apps/admin/src/app/pipeline/CommerceWorkspace.tsx"));
-    /* generateContent 가 keywords 를 채우는 그 함수다. */
-    expect(ws).toContain("keywords: mockProductContentProvider.generateKeywords(prev)");
+    /* generateContent 가 keywords 를 채우는 그 함수다.
+       P5.6 Phase 4(2026-10-09) — 그 줄이 mergeKeywords 로 감싸졌다. 요지는
+       「keywords 를 채우는 경로가 여기 하나뿐」이고 그것은 그대로다. 그래서
+       «생성기 호출» 과 «병합» 을 둘 다 확인한다 — 느슨해지지 않는다. */
+    expect(ws).toContain("mockProductContentProvider.generateKeywords(prev)");
+    expect(ws, "기존 태그를 덮지 않고 병합하는지").toContain("mergeKeywords(prev.keywords.value");
     /* 그런데 그 탭은 disabled 다 — 셀러가 누를 수 없다. */
     expect(ws).toContain('<TabButton active={tab === "content"} disabled');
   });

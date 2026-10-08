@@ -22,7 +22,7 @@ import {
   type CategoryCandidate,
   type CategorySelection,
 } from "@commerce/category";
-import { mockProductContentProvider } from "@commerce/content";
+import { mergeKeywords, mockProductContentProvider } from "@commerce/content";
 import {
   buildComplianceReport,
   buildCoupangCompliance,
@@ -1574,7 +1574,22 @@ export function CommerceWorkspace({
         ...prev,
         titleKo: mockProductContentProvider.generateTitle(prev),
         descriptionKo: mockProductContentProvider.generateDescription(prev),
-        keywords: mockProductContentProvider.generateKeywords(prev),
+        /* ━━ P5.6 Phase 4(CPO 승인, 2026-10-09) ━━━━━━━━━━━━━━━━
+           🔴 기존 태그를 덮지 않는다. 지금까지 generateKeywords 가 기존 태그를
+              인자로 받지 않아, 「AI 콘텐츠 생성」을 누르면 셀러가 손으로 넣은
+              태그가 사라졌다. mergeKeywords 가 기존을 앞에 두고 중복만 걷어낸다.
+           🔴 반복해 눌러도 태그가 늘지 않는다(멱등). */
+        keywords: (() => {
+          const generated = mockProductContentProvider.generateKeywords(prev);
+          const { merged, added } = mergeKeywords(prev.keywords.value, generated.value);
+          return {
+            ...generated,
+            value: merged,
+            /* 🔴 한 개도 더해지지 않았으면 «AI 가 만든 것» 이 아니다 —
+               출처를 그대로 둔다(셀러가 넣은 값이 AI 것으로 바뀔지 않게). */
+            source: added.length > 0 ? generated.source : prev.keywords.source,
+          };
+        })(),
         seoTitle: seo.title,
         seoDescription: seo.description,
       };
