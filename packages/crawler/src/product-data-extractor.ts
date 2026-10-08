@@ -3,6 +3,7 @@ import type { CanonicalProductOptionGroup, CanonicalProductVariant } from "@comm
 import { resolveSourcePrice, type PriceValidity } from "@commerce/pricing";
 /* 🔴 P5.5-B B-3 — 옵션 축 판정을 복제하지 않는다. Shopify 경로와 «같은» 함수다. */
 import { hasRealOptionAxes } from "./utils/real-option-axes";
+import { extractSmallableSizeOptions } from "./smallable-size-options";
 
 export type ProductDataSource = "json-ld" | "microdata" | "open-graph" | "dom" | "shopify-json";
 
@@ -904,9 +905,26 @@ export async function extractProductData(
     domOptionGroups.length === 0 && !productGroupOptions && !offerOptions
       ? await extractOptionsFromDescriptionText(page)
       : [];
+  /* ══ 🔴 P5.5-B(CPO 승인, 2026-10-08) — **마지막 칸 뒤의 fallback** ════════
+     Smallable 은 어떤 site-strategy 에도 걸리지 않고(실측: shopify 0 ·
+     prestashop 0 · tennis-warehouse 0) 위 네 경로가 전부 빈다 —
+     JSON-LD hasVariant 없음 · itemprop="offers" 0 · <select> 아님 ·
+     본문 텍스트도 아님. 그런데 사이즈는 «화면에 있다»(실측 4상품).
+
+     🔴 기존 우선순위를 «건드리지 않는다». 네 경로 중 하나라도 답하면 이 줄은
+        돌지 않는다 — 다른 사이트의 결과가 바뀔 수 없는 위치다.
+     🔴 안전장치는 extractSmallableSizeOptions 안에 있다: listbox 가 정확히
+        1개이고 `aria-labelledby*=productSize` 일 때만 만든다(기프트카드 금액
+        listbox 는 그래서 배제된다). 값이 2개 미만이거나 중복이면 만들지 않는다. */
+  const smallableOptions =
+    !productGroupOptions && domOptionGroups.length === 0 && !offerOptions && textOptionGroups.length === 0
+      ? await extractSmallableSizeOptions(page)
+      : null;
   const resolvedOptionGroups =
     productGroupOptions?.optionGroups ??
-    (domOptionGroups.length > 0 ? domOptionGroups : (offerOptions?.optionGroups ?? textOptionGroups));
+    (domOptionGroups.length > 0
+      ? domOptionGroups
+      : (offerOptions?.optionGroups ?? (textOptionGroups.length > 0 ? textOptionGroups : (smallableOptions?.optionGroups ?? []))));
 
   const sources: Record<string, ProductDataSource> = {};
   const pick = <K extends keyof ExtractedProductData>(
@@ -980,7 +998,9 @@ export async function extractProductData(
        채운다(select 스캔은 여전히 못 채운다 — 그 사실은 바뀌지 않았다).
        🔴 「4+」처럼 모호한 값과는 다른 경로다: 여기 들어오는 수량은 Offer 가
        숫자로 적어 둔 값이고, 못 읽은 행은 stockQuantity 를 «넣지 않는다». */
-    variants: productGroupOptions?.variants ?? offerOptions?.variants ?? [],
+    /* 🔴 Smallable 은 variants 에 sku·재고를 «넣지 않는다» — DOM 에 없다.
+       옵션 축만 산다(지어내지 않는다). */
+    variants: productGroupOptions?.variants ?? offerOptions?.variants ?? smallableOptions?.variants ?? [],
     breadcrumbPath: jsonLd?.breadcrumbPath,
     jsonLdCategory: jsonLd?.jsonLdCategory,
   };
