@@ -1,3 +1,4 @@
+import { normalizeOptionModel } from "./common-option-model";
 import type { Page } from "playwright-core";
 import type { ExtractedImage } from "@commerce/shared";
 import { launchChromium } from "./browser-launcher";
@@ -148,8 +149,9 @@ async function tryFastPath(
     description: siteResult.productData.description,
     material: siteResult.productData.material,
     options: siteResult.productData.options ?? [],
-    optionGroups: siteResult.productData.optionGroups ?? [],
-    variants: siteResult.productData.variants ?? [],
+    /* 🔴 P5.6 Phase 1 — 사이트 전략 결과도 «같은 문» 을 지난다. 전략을 고치지
+       않고, 쓸 수 없는 축/조합만 떨어낸다(common-option-model.ts). */
+    ...normalizeOptionModel(siteResult.productData.optionGroups, siteResult.productData.variants),
     breadcrumbPath: siteResult.productData.breadcrumbPath,
     jsonLdCategory: siteResult.productData.jsonLdCategory,
     shopifyTags: siteResult.productData.shopifyTags,

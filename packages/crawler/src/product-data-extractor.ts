@@ -3,6 +3,7 @@ import type { CanonicalProductOptionGroup, CanonicalProductVariant } from "@comm
 import { resolveSourcePrice, type PriceValidity } from "@commerce/pricing";
 /* 🔴 P5.5-B B-3 — 옵션 축 판정을 복제하지 않는다. Shopify 경로와 «같은» 함수다. */
 import { hasRealOptionAxes } from "./utils/real-option-axes";
+import { normalizeOptionModel } from "./common-option-model";
 import { extractSmallableSizeOptions } from "./smallable-size-options";
 
 export type ProductDataSource = "json-ld" | "microdata" | "open-graph" | "dom" | "shopify-json";
@@ -988,7 +989,9 @@ export async function extractProductData(
     // (extractFromJsonLd가 options:[]만 세팅) domOptionGroups를 우선 쓴다.
     // Sprint A-10(작업3) — select가 없으면 상세설명 본문 텍스트 스캔(textOptionGroups)으로
     // 폴백한다.
-    optionGroups: resolvedOptionGroups,
+    /* 🔴 P5.6 Phase 1 — 아래 variants 와 «함께» 한 문을 지난다(두 칸이 서로를
+       참조하므로 따로 거르면 축에 없는 값을 가리키는 조합이 남는다). */
+    ...normalizeOptionModel(resolvedOptionGroups, productGroupOptions?.variants ?? offerOptions?.variants ?? smallableOptions?.variants ?? []),
     // SmartStore 플로우 개선 STEP3 — DOM select 스캔은 이름/값만 알 뿐 조합별
     // 가격/SKU는 절대 모른다(그런 정보가 select 옵션 텍스트에 없다) — variants는
     // ProductGroup/hasVariant처럼 실제 조합별 데이터가 있을 때만 채운다. 없으면
@@ -998,9 +1001,7 @@ export async function extractProductData(
        채운다(select 스캔은 여전히 못 채운다 — 그 사실은 바뀌지 않았다).
        🔴 「4+」처럼 모호한 값과는 다른 경로다: 여기 들어오는 수량은 Offer 가
        숫자로 적어 둔 값이고, 못 읽은 행은 stockQuantity 를 «넣지 않는다». */
-    /* 🔴 Smallable 은 variants 에 sku·재고를 «넣지 않는다» — DOM 에 없다.
-       옵션 축만 산다(지어내지 않는다). */
-    variants: productGroupOptions?.variants ?? offerOptions?.variants ?? smallableOptions?.variants ?? [],
+
     breadcrumbPath: jsonLd?.breadcrumbPath,
     jsonLdCategory: jsonLd?.jsonLdCategory,
   };
