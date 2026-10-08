@@ -425,3 +425,91 @@ describe("C8 키가 없으면 CONFIG_MISSING — 「결과 없음」과 가른�
     expect(sentBody).toContain("AW26MS185");
   });
 });
+
+/* ═══════════════ 측정 인프라 보호 (P5.4-C.2) ═══════════════ */
+
+describe("🔴 측정 인프라 — 조용히 썩지 않게 잠근다", () => {
+  const saved = process.env[GEMINI_API_KEY_ENV];
+  const savedModel = process.env.GEMINI_MODEL;
+  beforeEach(() => {
+    process.env[GEMINI_API_KEY_ENV] = "synthetic-not-a-real-key";
+    delete process.env.GEMINI_MODEL;
+  });
+  afterEach(() => {
+    if (saved === undefined) delete process.env[GEMINI_API_KEY_ENV];
+    else process.env[GEMINI_API_KEY_ENV] = saved;
+    if (savedModel === undefined) delete process.env.GEMINI_MODEL;
+    else process.env.GEMINI_MODEL = savedModel;
+    vi.unstubAllGlobals();
+  });
+
+  /**
+   * 🔴 실측(2026-10-07): `gemini-2.5-flash` 를 박아 뒀더니 404 가 왔다 —
+   *    "no longer available to new users". Replay 38회가 전부 API_OTHER_ERROR 로
+   *    떨어졌고, 그 숫자를 「Google 이 못 찾았다」로 읽을 수 있었다.
+   *
+   * 🔴 그래서 **버전 번호를 박지 않는다**. 이 단언이 FAIL 하면 누군가 다시
+   *    고정 버전을 넣은 것이고, 그 모델은 언젠가 조용히 은퇴한다.
+   */
+  it("🔴 기본 모델에 버전 번호를 박지 않는다 — 별칭만 쓴다", () => {
+    const model = createGoogleDiscoveryProvider().modelName();
+    expect(model).toContain("latest");
+    expect(model, "버전 번호를 박으면 모델 은퇴 시 조용히 404 가 된다").not.toMatch(/\d+\.\d+/);
+  });
+
+  it("env 로 모델을 덮을 수 있다 — 기본값을 코드에 고정하지 않는다", () => {
+    process.env.GEMINI_MODEL = "gemini-3.8-flash";
+    expect(createGoogleDiscoveryProvider().modelName()).toBe("gemini-3.8-flash");
+    // 인자가 env 보다 우선이다(측정 하니스가 모델을 바꿔 비교할 수 있어야 한다).
+    expect(createGoogleDiscoveryProvider({ model: "x-model" }).modelName()).toBe("x-model");
+  });
+
+  /**
+   * 🔴 실측: prompt 515 · output 641 인데 **thoughts 807** 이고 total 1,963 이다.
+   *    thinking 토큰이 출력보다 많다 — 「입력+출력」만 세면 원가를 절반 이하로
+   *    잘못 본다. 그래서 thoughtsTokens 를 «따로» 센다.
+   */
+  it("🔴 응답이 보고한 토큰을 그대로 누적한다 — thinking 을 따로 센다", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            ...syntheticGrounding([{ uri: LL.grey, title: "x" }]),
+            // 🔴 합성값이지만 «필드 이름» 은 공식 문서 그대로다.
+            usageMetadata: { promptTokenCount: 11, candidatesTokenCount: 22, thoughtsTokenCount: 33, totalTokenCount: 66 },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      ),
+    );
+    const provider = createGoogleDiscoveryProvider();
+    const query = generateQueries(JOB005_IDENTITY)[0];
+    await provider.discover(JOB005_IDENTITY, query);
+    await provider.discover(JOB005_IDENTITY, query);
+    const usage = provider.usage();
+    expect(usage.requests).toBe(2);
+    // 🔴 두 번 호출했으므로 «누적» 이어야 한다 — 마지막 값으로 덮어쓰면 원가를 잃는다.
+    expect(usage.promptTokens).toBe(22);
+    expect(usage.candidatesTokens).toBe(44);
+    expect(usage.thoughtsTokens).toBe(66);
+    expect(usage.totalTokens).toBe(132);
+  });
+
+  it("usageMetadata 가 없는 응답에서도 깨지지 않는다 — 0 으로 둔다(지어내지 않는다)", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(syntheticGrounding([])), { status: 200 })));
+    const provider = createGoogleDiscoveryProvider();
+    await provider.discover(JOB005_IDENTITY, generateQueries(JOB005_IDENTITY)[0]);
+    expect(provider.usage()).toEqual({ requests: 1, promptTokens: 0, candidatesTokens: 0, thoughtsTokens: 0, totalTokens: 0 });
+  });
+
+  /** 🔴 20초로는 37/38 이 timeout 이었다. 상한을 다시 좁히면 그 사고가 재발한다. */
+  it("🔴 타임아웃이 60초 이상이다 — grounding 은 thinking 때문에 오래 걸린다", () => {
+    const src = readFileSync(path.join(__dirname, "..", "google-discovery.ts"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/(^|[^:])\/\/.*$/gm, "$1");
+    const hit = /FETCH_TIMEOUT_MS\s*=\s*(\d+)/.exec(src);
+    expect(hit).not.toBeNull();
+    expect(Number(hit![1])).toBeGreaterThanOrEqual(60000);
+  });
+});

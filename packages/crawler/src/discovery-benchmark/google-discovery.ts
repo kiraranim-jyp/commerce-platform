@@ -33,10 +33,31 @@ import type { DiscoveredUrl, DiscoveryProvider, DiscoveryQuery, ProductIdentity 
 export const GEMINI_API_KEY_ENV = "GEMINI_API_KEY";
 export const GEMINI_MODEL_ENV = "GEMINI_MODEL";
 
-/** Grounding 을 지원하는 기본 모델. 🔴 값을 코드에 고정하지 않고 env 로 덮을 수 있다. */
-const DEFAULT_MODEL = "gemini-2.5-flash";
+/**
+ * Grounding 을 지원하는 기본 모델.
+ *
+ * 🔴 **버전 번호를 박지 않는다.** 처음에 `gemini-2.5-flash` 를 박았다가 실측에서
+ *    404 를 받았다 — 본문: "This model models/gemini-2.5-flash is no longer
+ *    available to new users. Please update your code to use models/gemini-3.8-flash".
+ *    Replay 38회가 전부 `API_OTHER_ERROR` 로 떨어졌고, 그 숫자를 「Google 이 못
+ *    찾았다」로 읽을 수 있었다(§11 분류가 그것을 막았다).
+ *
+ * 🔴 그래서 **별칭** 을 쓴다. 실측(2026-10-07): `gemini-flash-latest` 200 ·
+ *    groundingChunks 7건 · `gemini-3.8-flash` 도 200 · 7건. 별칭은 모델이
+ *    은퇴해도 따라간다 — 버전 번호는 조용히 썩는다.
+ * 🔴 그리고 이전 세션에서 적어 둔 「Gemini 2.5 = 1,500 RPD 무료」 비용 전제는
+ *    **무효** 다. 그 모델을 쓸 수 없다.
+ */
+const DEFAULT_MODEL = "gemini-flash-latest";
 const ENDPOINT_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const FETCH_TIMEOUT_MS = 20000;
+/**
+ * 🔴 20초로는 부족했다 — 실측(2026-10-07): 38회 중 **37회가 timeout** 이고 1회만
+ *    성공했다. 원인은 thinking 토큰이다(성공 1건: thoughts 496 · total 1,234).
+ *    grounding 은 검색까지 돌리므로 일반 generateContent 보다 오래 걸린다.
+ * 🔴 「0 후보」로 뭉개지 않았기 때문에 이것이 timeout 이라는 것을 알 수 있었다
+ *    (§11 분류). 분류가 없었다면 「Google 이 못 찾았다」로 보고됐을 것이다.
+ */
+const FETCH_TIMEOUT_MS = 90000;
 
 export interface GoogleDiscoveryReadiness {
   state: "READY" | "CONFIG_MISSING";
@@ -82,6 +103,28 @@ interface GeminiGroundingResponse {
       groundingSupports?: { segment?: { text?: string }; groundingChunkIndices?: number[] }[];
     };
   }[];
+  /** 🔴 비용 계측에만 쓴다 — 판정에 쓰지 않는다. 응답이 주는 값을 그대로 더한다. */
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    thoughtsTokenCount?: number;
+    totalTokenCount?: number;
+  };
+}
+
+/**
+ * MI-DISCOVERY-P5.4-C.2 §9 — **Google 비용을 추정하지 않고 응답에서 읽는다.**
+ *
+ * 🔴 `thoughtsTokenCount` 를 따로 센다. 실측(2026-10-07): prompt 515 ·
+ *    candidates 641 인데 **thoughts 807** 이고 total 1,963 이다 — thinking 토큰이
+ *    출력보다 많다. 「입력+출력」만 세면 원가를 절반 이하로 잘못 본다.
+ */
+export interface GoogleDiscoveryUsage {
+  requests: number;
+  promptTokens: number;
+  candidatesTokens: number;
+  thoughtsTokens: number;
+  totalTokens: number;
 }
 
 /**
@@ -166,24 +209,35 @@ export interface GoogleDiscoveryProvider extends DiscoveryProvider {
   readiness(): GoogleDiscoveryReadiness;
   /** 이 provider 가 실제로 보낸 Google 요청 수(비용 계측용). */
   requestCount(): number;
+  /** 🔴 응답이 보고한 토큰 사용량 누적. 추정값이 아니다. */
+  usage(): GoogleDiscoveryUsage;
+  /** 실제로 쓴 모델 이름(기본값이 쓰였는지 확인용). */
+  modelName(): string;
 }
 
 export function createGoogleDiscoveryProvider(options?: { model?: string }): GoogleDiscoveryProvider {
-  let requests = 0;
+  const usage: GoogleDiscoveryUsage = { requests: 0, promptTokens: 0, candidatesTokens: 0, thoughtsTokens: 0, totalTokens: 0 };
   const providerId = "google-search-grounding";
+  const resolveModel = () => options?.model ?? (process.env[GEMINI_MODEL_ENV]?.trim() || DEFAULT_MODEL);
   return {
     id: providerId,
     label: "Google AI(Search Grounding)",
     lane: "EXTERNAL",
     readiness: googleDiscoveryReadiness,
-    requestCount: () => requests,
+    requestCount: () => usage.requests,
+    usage: () => ({ ...usage }),
+    modelName: resolveModel,
     async discover(identity, query) {
       const ready = googleDiscoveryReadiness();
       if (ready.state === "CONFIG_MISSING") throw new GoogleDiscoveryConfigError(ready.missing);
       const apiKey = process.env[GEMINI_API_KEY_ENV]!.trim();
-      const model = options?.model ?? (process.env[GEMINI_MODEL_ENV]?.trim() || DEFAULT_MODEL);
-      requests += 1;
-      const body = await callGemini(buildPrompt(identity, query), apiKey, model);
+      usage.requests += 1;
+      const body = await callGemini(buildPrompt(identity, query), apiKey, resolveModel());
+      const u = body.usageMetadata;
+      usage.promptTokens += u?.promptTokenCount ?? 0;
+      usage.candidatesTokens += u?.candidatesTokenCount ?? 0;
+      usage.thoughtsTokens += u?.thoughtsTokenCount ?? 0;
+      usage.totalTokens += u?.totalTokenCount ?? 0;
       return extractGroundingUrls(body, providerId, query.id);
     },
   };
