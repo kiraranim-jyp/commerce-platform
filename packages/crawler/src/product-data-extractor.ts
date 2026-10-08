@@ -1,6 +1,8 @@
 import type { Page } from "playwright-core";
 import type { CanonicalProductOptionGroup, CanonicalProductVariant } from "@commerce/shared";
 import { resolveSourcePrice, type PriceValidity } from "@commerce/pricing";
+/* 🔴 P5.5-B B-3 — 옵션 축 판정을 복제하지 않는다. Shopify 경로와 «같은» 함수다. */
+import { hasRealOptionAxes } from "./utils/real-option-axes";
 
 export type ProductDataSource = "json-ld" | "microdata" | "open-graph" | "dom" | "shopify-json";
 
@@ -339,6 +341,20 @@ export function extractProductGroupOptions(
     name,
     values: axisValues.get(name)!,
   }));
+
+  /* ══ 🔴 P5.5-B B-3(CPO 승인 ㉯, 2026-10-08) ═══════════════════════════════
+     **1 축 × 1 값은 「고를 수 있는 옵션」이 아니다.**
+
+     실측: Smallable 116건 중 21건이 여기서 `Color=["Pink"]` + variant 1개로
+     저장됐다. 고를 것이 없는데 화면에는 «옵션이 있는 것처럼» 보였고, 그 가짜
+     신호가 롯데ON 고시정보까지 내려갈 수 있었다. 사이즈 축은 116건 중 0건이다.
+
+     🔴 새 기준이 아니다 — Shopify 경로가 쓰던 그 판정을 «같은 함수로» 쓴다.
+        1×N · N×1 · N×M 은 전부 그대로 통과한다(완화도 강화도 아니다).
+     🔴 「옵션 없음」을 null 로 내는 것은 이 함수의 기존 계약이다(호출부가
+        그때 다른 경로로 간다) — 새 상태를 만들지 않는다.
+  ═══════════════════════════════════════════════════════════════════════════ */
+  if (!hasRealOptionAxes(optionGroups)) return null;
 
   const variants: CanonicalProductVariant[] = rawVariants.map((rv, i) => ({
     id: `variant-${i}`,

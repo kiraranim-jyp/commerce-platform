@@ -2,6 +2,7 @@ import type { CanonicalProductOptionGroup, CanonicalProductVariant } from "@comm
 import type { ExtractedProductData, SelectedVariantResolution } from "./product-data-extractor";
 import { fetchWithDomainRateLimit } from "./rate-limit/domain-rate-limiter";
 import type { ImageCandidate } from "./strategies/types";
+import { hasRealOptionAxes } from "./utils/real-option-axes";
 
 const FETCH_TIMEOUT_MS = 10000;
 const CHROME_UA =
@@ -471,7 +472,9 @@ export async function fetchShopifyProductJson(
   // 옵션이 하나뿐이고 값도 하나뿐이면(사실상 "옵션 없음"과 같은 Shopify 기본
   // 상태 — 매장이 옵션을 안 쓰면 항상 {name:"Title", values:["Default Title"]}
   // 하나만 온다) variant를 별도로 만들 필요가 없다.
-  const hasRealOptions = optionGroups.length > 0 && !(optionGroups.length === 1 && optionGroups[0].values.length === 1);
+  /* 🔴 P5.5-B B-3 — 판정을 «여기서 다시 쓰지 않는다». JSON-LD 경로가 같은
+     판정을 써야 해서 공용으로 옮겼다(utils/real-option-axes.ts). 의미는 그대로다. */
+  const hasRealOptions = hasRealOptionAxes(optionGroups);
   const variants: CanonicalProductVariant[] = hasRealOptions
     ? (product.variants ?? [])
         .filter((v) => v.id != null)
