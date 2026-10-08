@@ -732,19 +732,59 @@ export function longestCommonPrefix(values: string[]): string {
  * 🔴 순수 함수다 — 네트워크도 DOM 도 쓰지 않는다. 그래서 실제 응답에서 떠 온
  * 행으로 테스트할 수 있다.
  */
-export function offerRowsToOptions(rows: OfferRow[]): {
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * P5.5-B ㉠(CPO 승인, 2026-10-08) — **왜 옵션이 0 이 됐는지 «기록» 한다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 실측: tennis-warehouse 18 snapshot 중 6건이 옵션 축 0 인데, 같은 상품
+ * (STMMLS)이 축 «있는» snapshot 과 «없는» snapshot 을 둘 다 가진다. SKU·가격·
+ * 재고는 살아 있었으므로 저장 경로 문제가 아니고, `offerRowsToOptions` 가
+ * `null` 을 낸 것이다 — 그런데 **셋 중 어느 조건인지 남는 곳이 없어서** DB 로는
+ * 증명할 수 없었다(snapshot 에 provenance 가 저장되지 않는다).
+ *
+ * 🔴 **무엇을 고르는지는 한 글자도 바꾸지 않는다.** 반환값도 그대로 `| null` 이다.
+ *    더하는 것은 「왜 null 인가」 하나다.
+ * 🔴 과거 snapshot 에 소급해 사유를 채우지 «않는다»(CPO 금지). 다음 수집부터
+ *    증명 가능해지는 것이 이 작업의 전부다.
+ */
+export type OptionExtractionFailure =
+  /** ① 이름 있는 offer 가 2개 미만 — 고를 축이 성립하지 않는다. */
+  | "INSUFFICIENT_NAMED_OFFERS"
+  /** ② 공통 접두사가 이름 전체를 먹었다 — 빈 옵션값은 채널이 거절한다. */
+  | "EMPTY_OPTION_VALUE"
+  /** ③ 옵션값이 중복이다 — 같은 값 둘을 조합으로 보낼 수 없다. */
+  | "DUPLICATE_OPTION_VALUE";
+
+/** 🔴 기록 전용. 기본은 로그 한 줄 — Vercel 런타임 로그에서 grep 할 수 있게
+ *  접두사를 고정한다(이 저장소에서 런타임 로그는 실제로 읽을 수 있다). */
+function reportOptionFailure(
+  reason: OptionExtractionFailure,
+  rows: OfferRow[],
+  onFailure?: (reason: OptionExtractionFailure, rows: OfferRow[]) => void,
+): null {
+  if (onFailure) onFailure(reason, rows);
+  else console.warn(`[option-extraction] null 사유=${reason} offers=${rows.length}`);
+  return null;
+}
+
+export function offerRowsToOptions(
+  rows: OfferRow[],
+  /** 🔴 선택 인자다 — 기존 호출부는 한 곳도 고치지 않는다. */
+  onFailure?: (reason: OptionExtractionFailure, rows: OfferRow[]) => void,
+): {
   optionGroups: CanonicalProductOptionGroup[];
   variants: CanonicalProductVariant[];
 } | null {
   const named = rows.filter((r) => r.name.trim().length > 0);
-  if (named.length < 2) return null;
+  if (named.length < 2) return reportOptionFailure("INSUFFICIENT_NAMED_OFFERS", rows, onFailure);
 
   const prefix = longestCommonPrefix(named.map((r) => r.name));
   const values = named.map((r) => r.name.slice(prefix.length).trim());
   /* 빈 값이 섞이면 공통 접두사가 이름 전체를 먹은 것이다 — 그때는 포기한다
      (빈 옵션값을 등록 payload 에 넣으면 채널이 거절한다). */
-  if (values.some((v) => v.length === 0)) return null;
-  if (new Set(values).size !== values.length) return null;
+  if (values.some((v) => v.length === 0)) return reportOptionFailure("EMPTY_OPTION_VALUE", rows, onFailure);
+  if (new Set(values).size !== values.length) return reportOptionFailure("DUPLICATE_OPTION_VALUE", rows, onFailure);
 
   /* 🔴 축 이름의 근거. 전부 사이즈 토큰이면 「사이즈」다 — 그러면
      resolveSizeFromOptions(/size|사이즈/i)가 치수 고시를 채운다. 아니면
