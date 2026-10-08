@@ -6,6 +6,7 @@ import { fetchDeuxbebeProductPrice } from "./deuxbebe";
 import { fetchForetforetProductPrice } from "./foretforet";
 import { fetchLooxlooProductPrice } from "./looxloo";
 import { splitModelColor, withConfidence } from "./match";
+import { isSelfReferenceCandidate } from "./self-reference";
 import { findPriceSourceAdapter } from "./price-source-adapter";
 import type { PriceSourceCollectionMethod } from "./price-source-adapter";
 import { fetchRuliiProductPrice } from "./rulii";
@@ -43,6 +44,8 @@ export {
  * 추출. 아직 옵션 유사도 판정/confidence/matchLevel에는 연결하지 않는다(다음 단계). */
 export { extractRuliiOptions } from "./rulii";
 export { searchLittleluna } from "./littleluna";
+export { factsFromProductUrl } from "./product-url-facts";
+export type { ProductUrlFactsResult, ProductUrlFactsStatus } from "./product-url-facts";
 export { extractLooxlooOptions } from "./looxloo";
 export { extractDeuxbebeOptions } from "./deuxbebe";
 /** N-4.18-Q3 PART H-3-4 — dHash 이미지 교차비교(Evidence 저장까지만, confidence/
@@ -273,12 +276,64 @@ async function searchOneDomesticShop(
     // 없다"가 아니라 "그 말로는 못 찾았다"일 뿐인데, 지금까지 그 둘이 구분되지
     // 않았다. 이 목록이 없으면(하위호환) 기존처럼 searchTerm 하나만 쓴다.
     const terms = query.searchTerms?.length ? query.searchTerms : [searchTerm];
-    let primary: ComparisonCandidate[] = [];
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * MI-DISCOVERY-P5.4-B.2(CPO 승인, 2026-10-07) — **STOP 은 「후보가 생겼을
+     * 때」가 아니라 「동일상품이 확정됐을 때」다.**
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 바로 위 주석의 `if (primary.length > 0) break` 는 「그 말로는 못 찾았다」를
+     * 고치려고 들어왔고 그 목적은 지금도 맞다. 🔴 그런데 **후보가 나왔다는 것은
+     * 맞는 후보가 나왔다는 뜻이 아니다.**
+     *
+     * 실측(2026-10-07, looxloo.com): 영문 질의가 0건이 되자 brand-alias 폴백이
+     * 「보보쇼즈」로 재검색해 **브랜드 전체 60건** 중 상위 5건을 올렸다. 전부
+     * 다른 상품인데 `length > 0` 이라 더 좁은 뒷 칸이 영원히 실행되지 않았다.
+     *
+     * 🔴 이 break 는 «한 샵의 사다리» 만 멈춘다 — 샵끼리는
+     *    `Promise.allSettled(sources.map(...))` 로 독립 실행되므로 한 샵이 멈춰도
+     *    다른 샵은 자기 사다리를 끝까지 돈다(실측: 사다리 ①칸에서 littleluna
+     *    5건과 deuxbebe 3건이 «동시에» 나왔다).
+     *
+     * 🔴 **새 판정 기준을 만들지 않는다.** 멈추는 조건은 기존 Identity 결과
+     *    `crossSellerVerdict === "SAME"` 하나다. 가격 tier(EXACT)로 멈추지
+     *    않는다 — 그건 Identity 가 아니다(CPO 명시).
+     * 🔴 **자기참조는 멈춤 근거가 못 된다.** 원본 자신이 후보로 올라온 것은
+     *    「외부 판매처를 찾았다」가 아니다(P5.4-A 실측: JOB-005 의 SAME 2건 중
+     *    1건이 원본이었다).
+     * 🔴 **`facts` 가 없는 호출부는 예전과 «똑같이» 동작한다.** 그 경로는
+     *    `crossSellerVerdict` 가 언제나 undefined 라 SAME 이 될 수 없고, 이
+     *    분기가 없으면 모든 칸을 소진해 비용이 조용히 늘어난다.
+     */
+    const canJudgeSame = query.facts != null;
+    const seenUrls = new Set<string>();
+    const collected: ComparisonCandidate[] = [];
     for (const term of terms) {
-      primary = await searchWith(term);
-      if (primary.length > 0) break;
+      const got = await searchWith(term);
+      if (!canJudgeSame) {
+        // 하위호환 — 판정할 근거가 없으면 예전 규칙 그대로 첫 결과에서 멈춘다.
+        if (got.length > 0) {
+          collected.push(...got);
+          break;
+        }
+        continue;
+      }
+      // 🔴 여러 칸이 같은 상품을 다시 집는다 — URL 로 합친다(판매처는 이미 하나다).
+      for (const candidate of withConfidence(query, got)) {
+        if (seenUrls.has(candidate.url)) continue;
+        seenUrls.add(candidate.url);
+        collected.push(candidate);
+      }
+      const confirmedExternalSame = collected.some(
+        (c) => c.crossSellerVerdict === "SAME" && !isSelfReferenceCandidate(query.sourceUrl, c.url),
+      );
+      if (confirmedExternalSame) break;
     }
-    const primaryScored = withConfidence(query, primary);
+    // 🔴 이미 점수를 매긴 후보를 다시 매기지 않는다. 하위호환 경로는 아직 점수가
+    //    없으므로 여기서 한 번 통과시킨다 — 기존과 동일한 결과다.
+    const primaryScored = canJudgeSame
+      ? [...collected].sort((a, b) => b.confidence - a.confidence)
+      : withConfidence(query, collected);
     if (primaryScored.length > 0) {
       return { ...base, status: "ok", candidates: await enrich(primaryScored) };
     }

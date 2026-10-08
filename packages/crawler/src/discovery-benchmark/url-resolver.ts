@@ -57,6 +57,19 @@ export function classifyUrlShape(url: string): ResolutionClass {
   } catch {
     return "UNUSABLE";
   }
+  /**
+   * 🔴 MI-DISCOVERY-P5.4-B.1(2026-10-07) — **상품 경로 안에 목록 파일이 들어 있다.**
+   *
+   * 실측: Cafe24 의 목록 URL 이 `/product/list.html?cate_no=110` 이다. `PRODUCT_PATH`
+   * 가 `product/` + `list.html` 에 그대로 매칭돼 이 URL 이 PRODUCT_PAGE 로 올라갔고,
+   * 그래서 `factsFromProductUrl` 이 목록 페이지에 HTTP 를 썼다(실측으로 걸렸다 —
+   * NOT_PRODUCT_URL 이어야 할 것이 NO_FACTS 로 돌아왔다).
+   *
+   * 🔴 새 어휘를 만들지 않는다. 아래 분기가 이미 들고 있는 `NON_PRODUCT_FILE`
+   *    (`list`·`search`·`category`… 포함)을 **먼저** 본다. 두 분기가 같은 목록을
+   *    쓰므로 한쪽만 고쳐져 갈릴 일이 없다.
+   */
+  if (NON_PRODUCT_FILE.test(pathname)) return "UNKNOWN_PAGE";
   if (PRODUCT_PATH.test(pathname)) return "PRODUCT_PAGE";
   if (PRODUCT_SUFFIX.test(pathname)) {
     // 🔴 확실히 상품이 아닌 파일명은 목록 쪽으로도 올리지 않는다 — «모른다» 가 답이다.
