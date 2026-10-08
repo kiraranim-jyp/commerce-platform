@@ -101,3 +101,66 @@ describe("🔴 커머스 탭에서만 뜬다", () => {
     expect(banner()).toContain("isPlatformTab(tab)");
   });
 });
+
+/* ─────────────────────────────────────────────────────────────────────────
+   🔴🔴 롯데ON 화면도 «같은» 안내를 한다(CPO P5.5-H FINAL).
+   🔴 상태 모델을 개편하지 않았다 — `registerResult.result` 가 이미 그려지는
+      자리에 두 줄을 넓혔다. 그 사실 자체를 아래에서 단언한다.
+   ───────────────────────────────────────────────────────────────────────── */
+const LOTTEON = readFileSync(path.join(__dirname, "..", "LotteOnRegistrationPanel.tsx"), "utf8")
+  .replace(/\/\*[\s\S]*?\*\//g, "")
+  .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
+  .replace(/(^|[^:])\/\/.*$/gm, "$1");
+
+function lotteonBanner(): string {
+  const i = LOTTEON.indexOf('data-testid="lotteon-existing-registration"');
+  expect(i, "롯데ON 이동 배너를 찾지 못했다").toBeGreaterThan(-1);
+  const start = LOTTEON.lastIndexOf("existingRegistration?.kind", i);
+  return LOTTEON.slice(start, i + 1800);
+}
+
+describe("🔴🔴 롯데ON 화면 — 같은 안내 · 같은 규약", () => {
+  it("서버가 내려보내는 existingRegistration 을 읽는다", () => {
+    expect(lotteonBanner()).toContain("EXISTING_CONNECTION_FOUND");
+  });
+
+  it("🔴 갈 곳이 둘 다 있을 때만 이동 버튼을 만든다", () => {
+    const b = lotteonBanner();
+    expect(b).toMatch(/found\.siblingJobKey && found\.siblingSnapshotId/);
+    const iCond = b.indexOf("found.siblingJobKey && found.siblingSnapshotId");
+    const iBtn = b.indexOf('data-testid="lotteon-existing-registration-move"');
+    expect(iBtn).toBeGreaterThan(iCond);
+  });
+
+  it("🔴 이동은 쓰기가 0 이다 — fetch·link·apply 가 없다", () => {
+    const b = lotteonBanner();
+    for (const forbidden of ["fetch(", "linkLegacyRegistration", "apply", "channel-products/link"]) {
+      expect(b, `롯데ON 배너가 ${forbidden} 를 쓴다`).not.toContain(forbidden);
+    }
+  });
+
+  it("🔴 같은 복원 경로(?resume=)를 쓴다 — 롯데ON 전용 경로를 만들지 않았다", () => {
+    expect(lotteonBanner()).toContain("/pipeline?resume=");
+  });
+
+  it("🔴 message 를 문자열로 뒤지지 않는다", () => {
+    const b = lotteonBanner();
+    expect(b).not.toMatch(/\.message\.(includes|match|indexOf)/);
+    expect(b).not.toMatch(/JOB-\d/);
+  });
+
+  it("🔴 롯데ON 상태 모델을 개편하지 않았다 — 기존 registerResult 자리에 얹었다", () => {
+    expect(LOTTEON).toContain("registerResult.result.existingRegistration");
+    expect(LOTTEON).not.toContain("setExistingRegistration");
+  });
+});
+
+describe("🔴🔴 세 화면이 «같은» 문구와 «같은» 경로를 쓴다", () => {
+  it("두 배너가 같은 문장 구조를 쓴다 — 채널마다 다른 말을 하지 않는다", () => {
+    for (const b of [banner(), lotteonBanner()]) {
+      expect(b).toContain("기존 등록 작업");
+      expect(b).toContain("기존 등록 작업으로 이동");
+      expect(b).toContain("작업 번호를 확인하지 못했습니다");
+    }
+  });
+});

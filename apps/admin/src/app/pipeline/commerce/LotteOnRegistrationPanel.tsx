@@ -184,6 +184,24 @@ interface RegisterResponse {
     errorCode: string | null;
     optionIdNote?: string;
     rows?: { spdNo?: string; epdNo?: string; resultCode?: string; resultMessage?: string }[];
+    /**
+     * 🔴 P5.5-H(CPO ㉮, 2026-10-08) — **「이미 등록됨」의 다음 칸.**
+     *
+     * 서버(lotteon/register)는 이 칸을 «이미» 내려보내고 있었고 화면만 안 읽었다.
+     * 🔴 롯데ON 상태 모델을 개편하지 «않는다»(CPO 금지). `registerResult.result`
+     *    가 이미 그려지는 자리에 두 줄을 넓히는 것이 최소 배선이다.
+     * 🔴 모양은 `ListingResult.existingRegistration` 과 같다 — 화면이 채널마다
+     *    다른 모양을 읽게 하지 않는다.
+     */
+    existingRegistration?: {
+      kind: "EXISTING_CONNECTION_FOUND" | "NEEDS_RECONCILIATION";
+      reason?: "NO_CANDIDATE" | "MULTIPLE_CANDIDATES" | "UNKNOWN";
+      externalProductId?: string;
+      status?: string;
+      siblingJobKey?: string | null;
+      siblingSnapshotId?: string;
+      candidates?: string[];
+    };
   };
 }
 
@@ -2570,6 +2588,39 @@ export function LotteOnRegistrationPanel({
           {registerResult.result.optionIdNote && (
             <p className="mt-1 text-[11px] text-text-tertiary">{registerResult.result.optionIdNote}</p>
           )}
+          {/* 🔴 P5.5-H(CPO ㉮) — 「이미 등록됨」에서 끝내지 않고 갈 곳을 준다.
+              🔴 여기서 «연결하지 않는다» — 기존 작업으로 보낼 뿐이다(DB 쓰기 0).
+              🔴 message 를 문자열로 뒤지지 않는다. 서버가 구조화해 실어 준다.
+              🔴 갈 곳(siblingJobKey + snapshotId)이 둘 다 있을 때만 버튼을 만든다. */}
+          {registerResult.result.existingRegistration?.kind === "EXISTING_CONNECTION_FOUND" && (() => {
+            const found = registerResult.result.existingRegistration!;
+            const moveTo = found.siblingJobKey && found.siblingSnapshotId ? found.siblingSnapshotId : null;
+            return (
+              <div data-testid="lotteon-existing-registration" className="mt-3 border-t border-error/20 pt-3">
+                <p className="text-text-primary">
+                  상품번호 <b>{found.externalProductId}</b>
+                  {found.siblingJobKey ? (
+                    <>
+                      {" · 기존 등록 작업 "}
+                      <b>{found.siblingJobKey}</b>
+                      {" 에서 수정할 수 있습니다."}
+                    </>
+                  ) : (
+                    " · 기존 등록 작업을 찾았지만 작업 번호를 확인하지 못했습니다."
+                  )}
+                </p>
+                {moveTo && (
+                  <a
+                    data-testid="lotteon-existing-registration-move"
+                    href={`/pipeline?resume=${encodeURIComponent(moveTo)}`}
+                    className="mt-2 inline-block rounded-md bg-amber-600 px-3 py-2 text-xs font-semibold text-white"
+                  >
+                    기존 등록 작업으로 이동
+                  </a>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 
