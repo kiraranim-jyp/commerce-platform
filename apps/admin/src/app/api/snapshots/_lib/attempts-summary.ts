@@ -148,6 +148,50 @@ export async function hasPriorSuccessfulAttempt(
   const supabase = getSupabaseAdmin();
   if (!supabase) return null;
 
+  /* 🔴 A-IMPLEMENT(CPO 승인, 2026-10-08) — 형제 탐색을 «여기서 다시 짜지 않는다».
+     `resolveSameSourceSnapshotIds` 가 그 일을 하고, 연결 복구(`findSiblingChannelConnections`)도
+     «같은 함수» 를 부른다. 중복 차단과 연결 복구가 다른 기준을 쓰면 지금 고치는
+     비대칭이 모양만 바뀌어 다시 생긴다. */
+  const scan = await resolveSameSourceSnapshotIds(snapshotId);
+  /* 🔴 「못 봤다」를 「없다」로 읽지 않는다 — 기존 규약 그대로 null(모른다). */
+  if (scan.state === "UNKNOWN") return null;
+
+  const { data, error } = await supabase
+    .from("registration_attempts")
+    .select("id")
+    .in("snapshot_id", scan.snapshotIds)
+    .eq("platform", platform)
+    .eq("status", "SUBMITTED")
+    .limit(1);
+  /* 🔴 조회 실패를 「성공한 적 없다」로 내려보내지 않는다. 그렇게 하면 DB 가
+     흔들릴 때마다 중복 등록의 문이 열린다 — 확인하지 «못했다» 고 말한다. */
+  if (error) {
+    console.warn("[attempts-summary] 기등록 확인 실패:", error.message);
+    return null;
+  }
+  return (data?.length ?? 0) > 0;
+}
+
+/**
+ * 🔴 같은 원본 상품으로 수집된 snapshot 들. **자기 자신을 포함한다.**
+ *
+ *   RESOLVED  이 목록이 전부다
+ *   UNKNOWN   확인하지 «못했다» — 조회 실패 또는 스캔 창 포화
+ *
+ * 🔴 `UNKNOWN` 을 빈 목록으로 바꾸지 않는다. 못 본 것을 「없다」로 읽으면
+ *    중복 차단과 연결 복구가 «동시에» 틀린다.
+ */
+export type SameSourceSnapshotScan =
+  | { state: "RESOLVED"; snapshotIds: string[] }
+  | { state: "UNKNOWN" };
+
+export async function resolveSameSourceSnapshotIds(
+  snapshotId: string | null | undefined,
+): Promise<SameSourceSnapshotScan> {
+  if (!snapshotId) return { state: "RESOLVED", snapshotIds: [] };
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return { state: "UNKNOWN" };
+
   /* ══ 🔴 COMMERCE-LIFECYCLE-FINAL(CPO P0, 2026-09-29) ══════════════════════
      「이 스냅샷」이 아니라 «이 원본 상품» 으로 성공한 적이 있는가.
 
@@ -175,7 +219,7 @@ export async function hasPriorSuccessfulAttempt(
     .maybeSingle();
   if (snapError) {
     console.warn("[attempts-summary] 원본 상품 확인 실패:", snapError.message);
-    return null;
+    return { state: "UNKNOWN" };
   }
 
   let snapshotIds = [snapshotId];
@@ -203,7 +247,7 @@ export async function hasPriorSuccessfulAttempt(
     const { data: siblings, error: siblingError } = await query;
     if (siblingError) {
       console.warn("[attempts-summary] 같은 원본 상품 조회 실패:", siblingError.message);
-      return null;
+      return { state: "UNKNOWN" };
     }
     const rows = (siblings ?? []) as { id: string; source_url: string | null }[];
     /* 🔴 창을 다 채웠다 = 더 오래된 것을 «보지 못했다». 못 본 것을 「없다」로
@@ -212,26 +256,13 @@ export async function hasPriorSuccessfulAttempt(
        인덱스를 만들 시점이다(migration 은 별건). */
     if (rows.length >= SOURCE_SCAN_LIMIT) {
       console.warn(`[attempts-summary] 스냅샷 스캔 한도(${SOURCE_SCAN_LIMIT}) 도달 — 기등록 여부를 확정할 수 없다`);
-      return null;
+      return { state: "UNKNOWN" };
     }
     const ids = rows.filter((row) => row.source_url && computeSourceUrlKey(row.source_url) === key).map((row) => row.id);
     if (ids.length > 0) snapshotIds = [...new Set([snapshotId, ...ids])];
   }
 
-  const { data, error } = await supabase
-    .from("registration_attempts")
-    .select("id")
-    .in("snapshot_id", snapshotIds)
-    .eq("platform", platform)
-    .eq("status", "SUBMITTED")
-    .limit(1);
-  /* 🔴 조회 실패를 「성공한 적 없다」로 내려보내지 않는다. 그렇게 하면 DB 가
-     흔들릴 때마다 중복 등록의 문이 열린다 — 확인하지 «못했다» 고 말한다. */
-  if (error) {
-    console.warn("[attempts-summary] 기등록 확인 실패:", error.message);
-    return null;
-  }
-  return (data?.length ?? 0) > 0;
+  return { state: "RESOLVED", snapshotIds };
 }
 
 export async function getAttemptsSummaryBySnapshot(

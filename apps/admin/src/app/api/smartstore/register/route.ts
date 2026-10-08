@@ -24,6 +24,7 @@ import { buildChannelPriceAuditRecord } from "@/lib/channel-price-audit";
 import { requireRegistrationAccess } from "@/lib/auth/require-registration-access";
 import { loadProductDetailOverride } from "@/lib/product-detail-override";
 import { createGateMessage, resolveCreateGate, resolveLifecycle } from "@/app/pipeline/commerce/channel-lifecycle";
+import { buildExistingRegistrationNotice } from "@/app/api/_lib/existing-registration";
 import {
   findChannelProductBySnapshot,
   findProductIdBySnapshot,
@@ -1076,11 +1077,25 @@ export async function POST(request: Request) {
   });
   if (gate !== "ALLOW") {
     const message = createGateMessage(gate, "스마트스토어", existing?.externalProductId);
-    logStep("중복 등록 차단", "failed", message);
+    /* 🔴 A-IMPLEMENT — 「연결을 모르는데 이미 나가 있다」는 여기서 끝나면 막다른
+       길이다(Production 실측 JOB-261008-003). 형제 snapshot 에 매달린 연결을
+       «찾아서 보여준다». 🔴 자동으로 잇지 않는다 — 쓰기는 셀러가 누른다.
+       🔴 다른 verdict 에서는 조회하지 않는다: BLOCKED_LINKED 는 이미 연결을 알고,
+          BLOCKED_UNKNOWN 은 확인 자체가 안 된 상태라 더 물어도 답이 같다. */
+    const notice =
+      gate === "BLOCKED_PRIOR_SUCCESS"
+        ? await buildExistingRegistrationNotice({
+            snapshotId,
+            channel: "smartstore",
+            channelLabel: "스마트스토어",
+          })
+        : null;
+    logStep("중복 등록 차단", "failed", notice ? `${message} ${notice.message}` : message);
     const result = withMeta({
       status: "FAILED",
       platform: "smartstore",
       mode: "LIVE",
+      ...(notice ? { existingRegistration: notice.existingRegistration } : {}),
       /* 🔴 「확인하지 못했다」만 재시도가 뜻이 있다. 나머지는 다시 눌러도 같은
          답이고, 재시도를 권하면 셀러가 중복을 만들려 애쓰게 된다. */
       retryable: gate === "BLOCKED_UNKNOWN",
@@ -1094,7 +1109,10 @@ export async function POST(request: Request) {
           gate === "BLOCKED_UNKNOWN"
             ? "잠시 후 다시 시도해주세요."
             : gate === "BLOCKED_PRIOR_SUCCESS"
-              ? "이 상품의 스마트스토어 연결 정보를 먼저 이어야 수정할 수 있습니다(등록 이력의 상품번호 확인 필요)."
+              ? /* 🔴 「상품번호를 확인하세요」로 끝내지 않는다 — 셀러는 그 번호를
+                   모른다. 찾았으면 번호를 말하고, 못 찾았으면 그 사실을 말한다. */
+                (notice?.message ??
+                "이 상품의 스마트스토어 연결 정보를 먼저 이어야 수정할 수 있습니다(등록 이력의 상품번호 확인 필요).")
               : "수정하려면 등록 화면에서 다시 시도하고, 새 상품으로 만들려면 '새 상품으로 다시 등록'을 선택해주세요.",
       },
     });

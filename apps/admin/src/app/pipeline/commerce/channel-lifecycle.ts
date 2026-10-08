@@ -394,6 +394,112 @@ export function resolveCreateGate(input: {
   return input.priorSuccess ? "BLOCKED_PRIOR_SUCCESS" : "ALLOW";
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * A-IMPLEMENT(CPO 승인, 2026-10-08) — **막은 다음에 «할 수 있는 일» 을 말한다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * Production 실측(JOB-261008-003): `BLOCKED_PRIOR_SUCCESS` 가 맞게 막았는데 거기서
+ * 끝났다 — 수정도 못 하고 등록도 못 하는 막다른 길이었다. 그런데 기존 연결은
+ * **형제 snapshot 에 매달린 채 DB 에 있었다**(smartstore 13737210648).
+ *
+ * 🔴 **이 함수는 CREATE 를 열지 않는다.** 게이트 판정은 그대로 BLOCKED 이고,
+ *    여기서 더하는 것은 「어디에 나가 있는지」와 복구 경로 하나다. 반환 타입에
+ *    ALLOW 에 해당하는 값이 «없다» — 구조적으로 열 수 없다.
+ * 🔴 **후보가 하나여도 자동으로 잇지 않는다.** 두 수집을 하나로 묶는 것은 사람이
+ *    확인할 일이다(자동 merge 금지, CPO 확정). 실제 쓰기는 셀러가 누른다.
+ */
+export type ExistingRegistrationOutcome =
+  /**
+   * 🔴 후보가 «정확히 하나». 셀러를 **기존 등록 작업으로 보낸다**(CPO 결정 ㉮).
+   *
+   * 🔴 처음엔 「이 작업에서 그 번호로 연결한다」로 설계했는데 틀렸다 —
+   *    `linkLegacyRegistration` 은 외부번호로 대상을 고르고, 그 번호는 이미 형제
+   *    Product 에 물려 있어 `alreadyLinked` 로 끝난다. 억지로 옮기면 두 Product 가
+   *    한 외부상품을 가리켜 다음 UPDATE 의 기준이 사라진다.
+   * 🟢 형제 작업은 연결을 이미 갖고 있어 그쪽에서 바로 UPDATE 가 된다 — **쓰기 0**.
+   */
+  | {
+      kind: "EXISTING_CONNECTION_FOUND";
+      channel: string;
+      externalProductId: string;
+      status: string;
+      /** 이동할 작업. 🔴 null 이면 안내할 곳이 없다는 뜻이고, 그때는 FOUND 가 아니다. */
+      siblingJobKey: string | null;
+      siblingSnapshotId: string;
+    }
+  /** 🔴 스스로 정할 수 없다 — 사람이 확인해야 한다. */
+  | {
+      kind: "NEEDS_RECONCILIATION";
+      /** 왜 못 정했는가. 화면이 다르게 말해야 한다. */
+      reason: "NO_CANDIDATE" | "MULTIPLE_CANDIDATES" | "UNKNOWN";
+      /** 후보가 여럿일 때 그 번호들. 🔴 하나를 골라 주지 않는다. */
+      candidates: string[];
+    };
+
+/**
+ * 🔴 **순수 함수.** DB 를 모른다 — 스캔 결과를 받아 분류만 한다. 그래야 테스트가
+ *    네트워크 없이 네 분기를 전부 덮는다(이 저장소의 `resolveCreateGate` 와 같은 규약).
+ */
+export function classifyExistingRegistration(
+  scan:
+    | { state: "NONE" }
+    | {
+        state: "FOUND";
+        connection: { channel: string; externalProductId: string; status: string };
+        target: { jobKey: string | null; snapshotId: string };
+      }
+    | { state: "AMBIGUOUS"; connections: { externalProductId: string }[] }
+    | { state: "UNKNOWN" },
+): ExistingRegistrationOutcome {
+  switch (scan.state) {
+    case "FOUND":
+      return {
+        kind: "EXISTING_CONNECTION_FOUND",
+        channel: scan.connection.channel,
+        externalProductId: scan.connection.externalProductId,
+        status: scan.connection.status,
+        siblingJobKey: scan.target.jobKey,
+        siblingSnapshotId: scan.target.snapshotId,
+      };
+    case "AMBIGUOUS":
+      /* 🔴 실측 사례가 있다 — JOB-260929-014 / -018 이 lotteon 에 후보 2개
+         (LO2782615680 · LO2782636437)다. 임의 선택은 틀린 상품을 고치는 길이다. */
+      return {
+        kind: "NEEDS_RECONCILIATION",
+        reason: "MULTIPLE_CANDIDATES",
+        candidates: scan.connections.map((c) => c.externalProductId),
+      };
+    case "UNKNOWN":
+      return { kind: "NEEDS_RECONCILIATION", reason: "UNKNOWN", candidates: [] };
+    case "NONE":
+      return { kind: "NEEDS_RECONCILIATION", reason: "NO_CANDIDATE", candidates: [] };
+  }
+}
+
+/** 셀러가 읽는 문장. 🔴 여기서도 「다시 시도」를 권하지 않는다 — 같은 답이 나온다. */
+export function existingRegistrationMessage(
+  outcome: ExistingRegistrationOutcome,
+  channelLabel: string,
+): string {
+  if (outcome.kind === "EXISTING_CONNECTION_FOUND") {
+    /* 🔴 「연결하면」이라고 말하지 않는다 — 이 작업에서 연결하는 길은 막혀 있고,
+       막는 것이 옳다(두 Product 가 한 외부상품을 가리키면 안 된다). 갈 곳을 말한다. */
+    const where = outcome.siblingJobKey
+      ? `기존 등록 작업 ${outcome.siblingJobKey}`
+      : "기존 등록 작업";
+    return `이미 ${channelLabel}에 등록된 상품입니다(${outcome.externalProductId}) — ${where}에서 수정할 수 있습니다.`;
+  }
+  switch (outcome.reason) {
+    case "MULTIPLE_CANDIDATES":
+      return `${channelLabel}에 후보 상품이 ${outcome.candidates.length}개 있어 어느 것인지 정할 수 없습니다(${outcome.candidates.join(", ")}) — 확인이 필요합니다.`;
+    case "UNKNOWN":
+      return `${channelLabel}의 기존 등록을 확인하지 못했습니다 — 새로 만들지 않았습니다.`;
+    case "NO_CANDIDATE":
+      return `${channelLabel}에 등록 이력은 있는데 상품번호를 찾지 못했습니다 — 상품번호를 확인해 연결해야 합니다.`;
+  }
+}
+
 /** 셀러가 읽는 문장. 🔴 막힌 이유마다 «할 수 있는 일» 이 달라 말도 다르다. */
 export function createGateMessage(verdict: CreateGateVerdict, channelLabel: string, externalProductId?: string | null): string {
   switch (verdict) {

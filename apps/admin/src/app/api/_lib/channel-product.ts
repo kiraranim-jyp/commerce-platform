@@ -1,4 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+/* 🔴 형제 탐색 기준을 복제하지 않는다 — 중복 차단이 쓰는 그 함수를 그대로 부른다. */
+import { resolveSameSourceSnapshotIds } from "@/app/api/snapshots/_lib/attempts-summary";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -224,6 +226,156 @@ export async function findChannelProductsBySnapshot(
     };
   }
   return { hasProductIdentity: true, byChannel };
+}
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * A-IMPLEMENT(CPO 승인, 2026-10-08) — **「이미 등록됨」 다음 칸을 만든다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 고치는 것은 중복 «감지» 가 아니다. 감지는 정확히 동작했다(Production 실측:
+ *    JOB-261008-003 이 BLOCKED_PRIOR_SUCCESS 로 막혔고, 그게 맞았다). 문제는
+ *    **두 질문의 축이 달랐다** 는 것이다:
+ *
+ *      중복 감지   source URL 키 × workspace × platform  → 형제 전수를 본다 (넓다)
+ *      연결 탐색   snapshot → product_id → channel_products → 자기만 본다 (좁다)
+ *
+ *    그래서 「이미 나가 있다」는 알아도 「어디에 나가 있는지」는 말할 수 없었다.
+ *    실측: 74개 (JOB, 채널) 쌍 · 36 JOB 이 이 상태다.
+ *
+ * 🔴 **새 기준을 만들지 않는다.** `resolveSameSourceSnapshotIds` 를 그대로 쓴다 —
+ *    중복 차단이 쓰는 그 함수다. 두 벌이 되면 한쪽만 조용히 느슨해진다.
+ * 🔴 **Product 를 합치지 않는다.** 자동 merge 금지(CPO 확정)는 그대로다. 여기서
+ *    하는 일은 연결을 «찾아 보여주는» 것뿐이고, 실제 연결은 셀러가 누른다.
+ */
+/**
+ * 🔴 CPO 결정 ㉮(2026-10-08) — **연결을 «옮기지» 않고, 기존 작업으로 보낸다.**
+ *
+ * 처음엔 「찾은 외부번호로 link 라우트를 호출한다」로 설계했는데 **틀렸다**.
+ * `linkLegacyRegistration` 은 외부번호로 대상 snapshot 을 고르고(의도된 설계),
+ * 그 번호는 이미 형제 Product 에 물려 있어 `alreadyLinked` 로 끝난다. 그리고
+ * 억지로 옮기면 두 Product 가 한 외부상품을 가리켜 다음 UPDATE 가 어느 기준으로
+ * 나갈지 알 수 없게 된다 — 함수가 그것을 막는 것이 옳다.
+ *
+ * 🟢 쓰기가 «필요 없는» 길이 있다: 형제 JOB 은 연결을 이미 다 갖고 있어
+ *    `resolveLifecycle` 이 바로 UPDATE 로 간다. 그 작업으로 **이동** 시킨다.
+ */
+export interface SiblingConnectionTarget {
+  connection: ChannelProductRow;
+  /** 🔴 셀러가 «이동할» 작업. 이것이 없으면 안내할 곳이 없다. */
+  jobKey: string | null;
+  snapshotId: string;
+}
+
+export type SiblingConnectionScan =
+  /** 형제에도 이 채널 연결이 없다 — 수동 복구가 필요하다. */
+  | { state: "NONE" }
+  /** 🔴 후보가 «정확히 하나». 이것만 이동 안내로 보낸다. */
+  | { state: "FOUND"; connection: ChannelProductRow; target: SiblingConnectionTarget }
+  /** 🔴 후보가 둘 이상 — 어느 쪽이 맞는지 «우리가 정하지 않는다». */
+  | { state: "AMBIGUOUS"; connections: ChannelProductRow[] }
+  /** 🔴 확인하지 «못했다». 모르는 것을 「없다」로 적지 않는다. */
+  | { state: "UNKNOWN" };
+
+export async function findSiblingChannelConnections(
+  snapshotId: string | null | undefined,
+  channel: string,
+): Promise<SiblingConnectionScan> {
+  const scan = await resolveSameSourceSnapshotIds(snapshotId);
+  if (scan.state === "UNKNOWN") return { state: "UNKNOWN" };
+  /* 자기 자신만 있으면 형제가 없다 — 조회할 것이 없다. */
+  const siblingIds = scan.snapshotIds.filter((id) => id !== snapshotId);
+  if (siblingIds.length === 0) return { state: "NONE" };
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return { state: "UNKNOWN" };
+
+  const { data: snaps, error: snapError } = await supabase
+    .from("product_snapshots")
+    /* 🔴 `job_key` 를 «같이» 읽는다 — 셀러에게 「어느 작업으로 가라」를 말하려면
+       번호만으로는 부족하다(CPO ㉮). 없으면 null 로 남긴다, 지어내지 않는다. */
+    .select("id, product_id, job_key")
+    .in("id", siblingIds)
+    /* 가장 최근 형제를 먼저 본다 — 같은 외부상품을 가리키는 형제가 여럿이면
+       최신 작업으로 안내하는 것이 셀러가 기대하는 쪽이다. */
+    .order("created_at", { ascending: false });
+  if (snapError) {
+    console.warn("[channel-product] 형제 snapshot 조회 실패:", snapError.message);
+    return { state: "UNKNOWN" };
+  }
+  const ownProductId = await findProductIdBySnapshot(snapshotId);
+  const siblingRows = ((snaps ?? []) as { id: string; product_id?: string | null; job_key?: string | null }[]).filter(
+    (row) => Boolean(row.product_id) && row.product_id !== ownProductId,
+  );
+  /** productId → 그 상품이 속한 형제 작업. 🔴 이동 안내의 근거다. */
+  const originByProduct = new Map<string, { jobKey: string | null; snapshotId: string }>();
+  for (const row of siblingRows) {
+    if (originByProduct.has(row.product_id!)) continue; // 이미 더 최근 것을 봤다.
+    originByProduct.set(row.product_id!, { jobKey: row.job_key ?? null, snapshotId: row.id });
+  }
+  const productIds = [...originByProduct.keys()];
+  if (productIds.length === 0) return { state: "NONE" };
+
+  const { data, error } = await supabase
+    .from("channel_products")
+    .select("id, product_id, channel, external_product_id, status")
+    .in("product_id", productIds)
+    .eq("channel", channel)
+    .order("updated_at", { ascending: false });
+  if (error) {
+    console.warn("[channel-product] 형제 연결 조회 실패:", error.message);
+    return { state: "UNKNOWN" };
+  }
+
+  return classifySiblingConnectionRows(
+    (data ?? []) as {
+      id: string; product_id: string; channel: string; external_product_id: string; status: string;
+    }[],
+    originByProduct,
+  );
+}
+
+/**
+ * 🔴 **순수 함수로 뽑아 둔다.** DB 모킹 없이 「후보를 무엇으로 세는가」를 동작으로
+ *    검증할 수 있어야 한다 — 소스 문자열 검사로는 이 규칙이 깨져도 통과한다
+ *    (실제로 mutation M4 가 그걸 증명했다).
+ *
+ * 🔴 **외부 상품번호로 센다**, 행 수로 세지 않는다. 형제 Product 가 여러 개여도
+ *    같은 외부 상품을 가리키면 후보는 «하나» 다 — 실측이 바로 그 모양이다
+ *    (JOB-260928-006 의 형제 다수 → smartstore 13719076772 «한 번호»). 행으로
+ *    세면 멀쩡한 1건이 AMBIGUOUS 로 막혀 셀러가 또 막다른 길에 선다.
+ *
+ * 🔴 입력은 `updated_at` 내림차순 전제다 — 같은 번호가 여러 행이면 «가장 최근» 을
+ *    남긴다(`findChannelProduct` 와 같은 규칙).
+ */
+export function classifySiblingConnectionRows(
+  rows: { id: string; product_id: string; channel: string; external_product_id: string | null; status: string }[],
+  /** productId → 그 상품이 속한 형제 작업. 🔴 FOUND 의 «이동 목적지» 근거다. */
+  originByProduct?: Map<string, { jobKey: string | null; snapshotId: string }>,
+): SiblingConnectionScan {
+  const byExternalId = new Map<string, ChannelProductRow>();
+  for (const raw of rows) {
+    if (!raw.external_product_id) continue;
+    if (byExternalId.has(raw.external_product_id)) continue; // 더 최근 것을 이미 봤다.
+    byExternalId.set(raw.external_product_id, {
+      id: raw.id,
+      productId: raw.product_id,
+      channel: raw.channel,
+      externalProductId: raw.external_product_id,
+      status: raw.status,
+    });
+  }
+  const connections = [...byExternalId.values()];
+  if (connections.length === 0) return { state: "NONE" };
+  if (connections.length === 1) {
+    const only = connections[0];
+    const origin = originByProduct?.get(only.productId);
+    /* 🔴 이동할 곳을 모르면 FOUND 로 올리지 않는다. 「찾았다」고 말하고 갈 곳을
+       안 주면 셀러는 또 막다른 길에 선다 — 그건 고치기 전과 같은 상태다. */
+    if (!origin) return { state: "AMBIGUOUS", connections };
+    return { state: "FOUND", connection: only, target: { connection: only, ...origin } };
+  }
+  return { state: "AMBIGUOUS", connections };
 }
 
 /**

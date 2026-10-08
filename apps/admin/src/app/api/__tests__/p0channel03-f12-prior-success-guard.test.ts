@@ -39,12 +39,29 @@ const ROUTES = {
  * `.order()` 로 최신순 정렬한다)까지 딸려 들어와 검사가 엉뚱한 곳을 본다 —
  * 이 세션에서 같은 실수를 세 번째로 했다. 경계를 «이름으로» 박는다.
  */
+function sliceFn(name: string): string {
+  const start = LIB.indexOf(`export async function ${name}`);
+  expect(start, `${name} 를 찾지 못했다`).toBeGreaterThan(-1);
+  /* 🔴 A-IMPLEMENT(2026-10-08) — 경계를 «다음 함수 이름» 으로 박았더니 그 사이에
+     함수가 하나 끼면서 검사가 다시 엉뚱한 곳을 봤다(이 함정의 네 번째다).
+     이제 «바로 다음 top-level export» 까지로 자른다 — 사이에 무엇이 끼어도
+     이 함수 본문만 본다. */
+  const next = LIB.indexOf("\nexport ", start + 1);
+  expect(next, "경계로 쓸 다음 export 를 찾지 못했다").toBeGreaterThan(start);
+  return LIB.slice(start, next);
+}
+
 function priorSuccessFn(): string {
-  const start = LIB.indexOf("export async function hasPriorSuccessfulAttempt");
-  const end = LIB.indexOf("export async function getAttemptsSummaryBySnapshot");
-  expect(start, "hasPriorSuccessfulAttempt 를 찾지 못했다").toBeGreaterThan(-1);
-  expect(end, "경계로 쓸 다음 함수를 찾지 못했다").toBeGreaterThan(start);
-  return LIB.slice(start, end);
+  return sliceFn("hasPriorSuccessfulAttempt");
+}
+
+/**
+ * 🔴 형제 snapshot 탐색은 A-IMPLEMENT 에서 «별 함수» 로 떨어졌다. 연결 복구가
+ *    같은 기준을 쓰게 하려고 뽑은 것이고(기준이 두 벌이 되면 한쪽만 느슨해진다),
+ *    아래 fail-closed 검사는 그래서 이 함수를 본다.
+ */
+function sameSourceFn(): string {
+  return sliceFn("resolveSameSourceSnapshotIds");
 }
 
 describe("① 🔴 세 채널 «전부» 이 빗장을 단다", () => {
@@ -169,13 +186,21 @@ describe("⑥ 상태의 근거는 여전히 ChannelProduct 다", () => {
    스냅샷까지 본다. 🔴 묶는 것이 아니라 막는 것이다 — merge 는 여전히 사람 일이다.
    ═══════════════════════════════════════════════════════════════════════════ */
 describe("🔴 ⑥ 「이 스냅샷」이 아니라 «이 원본 상품» 으로 성공했는지 본다", () => {
-  const fn = () => priorSuccessFn();
+  /* 🔴 A-IMPLEMENT — 형제 탐색이 `resolveSameSourceSnapshotIds` 로 떨어졌다.
+     검사 대상도 거기로 옮긴다. «느슨해지지 않는다» — 아래에서 「그 함수의 결과가
+     실제로 빗장에 쓰이는가」까지 같이 본다. */
+  const fn = () => sameSourceFn();
 
   it("같은 원본 상품의 다른 스냅샷을 함께 본다", () => {
-    const src = fn();
-    expect(src, "source_url 을 읽지 않는다").toContain("source_url");
+    expect(fn(), "source_url 을 읽지 않는다").toContain("source_url");
     /* 단건이 아니라 목록으로 묻는다 — 스냅샷 하나만 보면 재분석이 빗장을 지나간다. */
-    expect(src, "이력 조회가 여전히 스냅샷 «한 건» 만 본다").toContain('.in("snapshot_id"');
+    expect(priorSuccessFn(), "이력 조회가 여전히 스냅샷 «한 건» 만 본다").toContain('.in("snapshot_id"');
+  });
+
+  it("🔴 형제 목록이 실제로 이력 조회에 «쓰인다» — 만들어 놓고 버리지 않는다", () => {
+    const prior = priorSuccessFn();
+    expect(prior, "형제 탐색을 부르지 않는다").toContain("resolveSameSourceSnapshotIds");
+    expect(prior, "형제 목록을 이력 조회에 넘기지 않는다").toContain('.in("snapshot_id", scan.snapshotIds)');
   });
 
   it("🔴 ①(CPO) 추적 파라미터가 붙어도 우회되지 않는다 — 정규화해서 비교한다", () => {
@@ -198,7 +223,16 @@ describe("🔴 ⑥ 「이 스냅샷」이 아니라 «이 원본 상품» 으로
     const src = fn();
     expect(src).toContain("SOURCE_SCAN_LIMIT");
     const saturation = src.slice(src.indexOf("rows.length >= SOURCE_SCAN_LIMIT"));
-    expect(saturation.slice(0, 400), "창 포화를 fail-closed 로 처리하지 않는다").toContain("return null;");
+    /* 🔴 A-IMPLEMENT — fail-closed 어휘가 `null` → `{ state: "UNKNOWN" }` 로 바뀌었다.
+       의미는 같고, 고리가 «둘» 이므로 둘 다 본다: ① 포화를 UNKNOWN 으로 적는가,
+       ② 빗장이 그 UNKNOWN 을 null(모른다)로 옮기는가. 한 고리만 보면 다음 리팩터에
+       조용히 끊긴다. */
+    expect(saturation.slice(0, 400), "창 포화를 fail-closed 로 처리하지 않는다").toContain(
+      'return { state: "UNKNOWN" }',
+    );
+    expect(priorSuccessFn(), "UNKNOWN 을 「모른다」로 옮기지 않는다").toMatch(
+      /scan\.state === "UNKNOWN"\)?\s*return null;/,
+    );
   });
 
   it("🔴 남의 워크스페이스 이력으로 내 등록을 막지 않는다", () => {
@@ -206,11 +240,19 @@ describe("🔴 ⑥ 「이 스냅샷」이 아니라 «이 원본 상품» 으로
   });
 
   it("🔴 조회가 실패하면 «모른다»(null) — 실패를 「성공한 적 없다」로 읽지 않는다", () => {
-    const src = fn();
-    /* 새로 생긴 두 조회도 같은 규약을 따라야 한다. 하나라도 false 로 흘리면
-       DB 가 흔들릴 때마다 중복 등록의 문이 열린다. */
-    const returns = src.match(/return null;/g) ?? [];
-    expect(returns.length, "새 조회가 fail-closed 가 아니다").toBeGreaterThanOrEqual(3);
+    /* 🔴 A-IMPLEMENT — 고리가 둘로 갈렸으므로 «둘 다» 센다. 한쪽만 세면
+       나머지 쪽이 조용히 false 로 흘러도 통과한다.
+         형제 탐색: 실패/포화 → { state: "UNKNOWN" }
+         빗장:      UNKNOWN·실패 → null(모른다)
+       어느 한 고리라도 false 를 내면 DB 가 흔들릴 때마다 중복의 문이 열린다. */
+    const scanUnknowns = fn().match(/return \{ state: "UNKNOWN" \}/g) ?? [];
+    expect(scanUnknowns.length, "형제 탐색이 fail-closed 가 아니다").toBeGreaterThanOrEqual(3);
+    expect(fn(), "형제 탐색이 실패를 「없다」로 내려보낸다").not.toContain("snapshotIds: [] }; // ");
+
+    const prior = priorSuccessFn();
+    const priorNulls = prior.match(/return null;/g) ?? [];
+    expect(priorNulls.length, "빗장이 fail-closed 가 아니다").toBeGreaterThanOrEqual(3);
+    expect(prior, "빗장이 실패를 「성공한 적 없다」로 읽는다").not.toMatch(/if \(error\)[\s\S]{0,120}return false;/);
   });
 
   it("🔴 여기서 «묶지» 않는다 — 자동 merge 금지가 유지된다", () => {

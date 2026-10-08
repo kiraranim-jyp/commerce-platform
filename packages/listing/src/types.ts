@@ -179,6 +179,40 @@ export interface ListingResult {
       category: "SAME" | "CHANGED" | "UNKNOWN";
     };
   };
+
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * A-IMPLEMENT(CPO 승인, 2026-10-08) — **「이미 등록됨」 다음에 갈 곳.**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * Production 실측(JOB-261008-003): 중복은 정확히 막혔는데 그 뒤가 막다른
+   * 길이었다 — 수정도 등록도 못 했다. 그런데 기존 연결은 형제 snapshot 에
+   * 매달린 채 DB 에 «있었다»(smartstore 13737210648).
+   *
+   * 🔴 위 `needsConfirmation` 과 섞지 않는다. 그쪽은 서버가 할 일을 «정한 뒤»
+   *    동의를 묻는 자리다. 여기는 **아직 연결조차 없어서 할 일을 정할 수 없는**
+   *    상태다 — 셀러가 먼저 연결해야 lifecycle 판정 자체가 가능해진다.
+   * 🔴 이 값이 있어도 CREATE 는 열리지 않는다. 채널에 아무것도 보내지 않았다.
+   * 🔴 화면이 error.message 를 문자열로 뒤지게 하지 않는다(F-10 과 같은 이유).
+   */
+  existingRegistration?: {
+    /** 🔴 후보가 «정확히 하나» 일 때만 FOUND. 하나를 골라 주지 않는다. */
+    kind: "EXISTING_CONNECTION_FOUND" | "NEEDS_RECONCILIATION";
+    /** NEEDS_RECONCILIATION 의 사유. 화면이 다르게 말해야 한다. */
+    reason?: "NO_CANDIDATE" | "MULTIPLE_CANDIDATES" | "UNKNOWN";
+    /** FOUND 일 때 그 외부 상품번호. 🔴 이 작업에서 «잇는» 번호가 아니다. */
+    externalProductId?: string;
+    /**
+     * 🔴 FOUND 일 때 **이동할 기존 작업**(CPO 결정 ㉮). 화면은 이 값으로 링크를
+     *    만든다. 연결을 옮기는 것이 아니다 — 그쪽은 이미 연결을 갖고 있다.
+     */
+    siblingJobKey?: string | null;
+    siblingSnapshotId?: string;
+    /** 그 연결의 기록된 상태. 🔴 기본 UNKNOWN — 외부 상태를 조회하지 않는다. */
+    status?: string;
+    /** MULTIPLE_CANDIDATES 일 때 후보 번호 전부. */
+    candidates?: string[];
+  };
 }
 
 /** PM 스펙의 VALID/WARNING/ERROR — ListingModel.validations의 PASS/WARNING/ERROR와
