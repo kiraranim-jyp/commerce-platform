@@ -143,9 +143,20 @@ describe("C) 🔴 쿠팡 searchTags ← keywords 는 «하지 않는다» — �
        검색태그 자리에 그것을 보내면 쿠팡 검색에 쓸모없는 말이 올라간다.
        전제(「태그는 항상 비어 있다」)는 같은 커밋에서 탭을 열며 사라졌다. */
     expect(SRC, "옵션 이름이 다시 검색태그로 간다").not.toContain("searchTags: listing.options");
-    expect(SRC).toContain("searchTags: product.keywords.value");
-    /* 🔴 비면 «빈 배열» 이다 — 없는 것을 다른 값으로 채우지 않는다. */
-    expect(SRC).toContain('.map((t) => t.trim()).filter(Boolean)');
+    /* ══ 🔴 P5.6 P2 실측(2026-10-09) — trim 한 줄을 «공용 함수» 로 올렸다 ══════
+
+       운영 빌더로 payload 를 뽑아 보니 태그가 중복된 채 나갔다 —
+         입력 ["수입원피스"," 아동 ","수입원피스",""] → 출력에 「수입원피스」 두 번.
+       `trim + filter` 만 하고 중복을 걷지 않았고, 네이버 sellerTags 도 «같은»
+       결함이었다. 규칙을 `dedupeSellerTagTexts`(→ keywordDedupeKey) 하나로 모았다.
+
+       🔴 이 단언이 재던 것은 「태그를 보낸다 · 비면 빈 배열이다」이고 그 둘은
+          그대로다. 바뀐 것은 «누가 trim 하는가» 뿐이다. */
+    expect(SRC).toContain("searchTags: dedupeSellerTagTexts(product.keywords.value)");
+    expect(SRC, "빌더가 다시 자기 trim 을 한다").not.toContain(".map((t) => t.trim())");
+    /* 🔴 비면 «빈 배열» 이다 — 공용 함수가 그렇게 돌려준다(그 계약을 거기서 센다). */
+    const SHARED = codeOnly(read("packages/listing/src/naver/seller-tags-update.ts"));
+    expect(SHARED).toContain("export function dedupeSellerTagTexts");
   });
 
   /* 🔴 다만 «별건의 결함» 으로 기록해 둔다: listing.options 는 옵션 그룹 «이름»

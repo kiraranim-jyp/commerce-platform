@@ -80,6 +80,9 @@ describe("🔴🔴 ④ 쿠팡 검색태그가 «태그» 를 보낸다", () => {
   });
 
   it("product.keywords 를 보낸다", () => {
-    expect(COUPANG).toContain("searchTags: product.keywords.value");
+    /* 🔴 P5.6 P2 실측 — trim 을 공용 함수(dedupeSellerTagTexts)로 올렸다.
+       운영 빌더 probe 에서 중복이 그대로 나가는 것이 드러났고, 네이버
+       sellerTags 도 같은 결함이었다. 읽는 값은 여전히 product.keywords 다. */
+    expect(COUPANG).toContain("dedupeSellerTagTexts(product.keywords.value)");
   });
 });

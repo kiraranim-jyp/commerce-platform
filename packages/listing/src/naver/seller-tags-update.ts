@@ -47,6 +47,27 @@ export type SellerTagsUpdateDecision =
    */
   | { action: "UNKNOWN"; reason: string };
 
+/**
+ * ══ 🔴 운영 빌더 실측이 잡은 결함(2026-10-09) ══════════════════════════════
+ *
+ * CREATE payload 를 운영 빌더로 뽑아 보니 태그가 «중복된 채» 나갔다 —
+ *
+ *   입력  ["수입원피스", " 아동 ", "수입원피스", ""]
+ *   출력  [{수입원피스}, {아동}, {수입원피스}]      ← 두 번
+ *
+ * 빌더가 `trim + filter(Boolean)` 만 하고 중복을 걷지 않았다. 화면의
+ * `updateKeywords` 는 mergeKeywords 로 걷지만, DB 에 이미 저장된 상품이나 AI
+ * 생성 경로를 지난 값이 중복을 들고 있으면 그대로 payload 로 간다.
+ *
+ * 🔴 CPO 정책은 「CREATE/UPDATE 모두 동일한 … dedupe」다. CREATE 가 그것을
+ *    위반하고 있었고, 쿠팡 `searchTags` 도 같은 패턴이었다.
+ * 🔴 그래서 규칙을 «한 곳» 으로 올린다 — 빌더가 각자 trim 하지 않고 이 함수를
+ *    쓴다. 두 벌이면 채널마다 다른 개수가 나간다.
+ */
+export function dedupeSellerTagTexts(list: readonly string[] | undefined): string[] {
+  return clean(list);
+}
+
 function clean(list: readonly string[] | undefined): string[] {
   const out: string[] = [];
   const seen = new Set<string>();

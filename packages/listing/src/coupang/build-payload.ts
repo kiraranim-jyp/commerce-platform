@@ -12,6 +12,8 @@ import { computeVariantFinalPriceKrw } from "@commerce/pricing";
 import { payloadStockQuantity } from "@commerce/shared";
 import { manufacturerInputFromProduct, resolveManufacturer } from "../common/manufacturer";
 import { resolveCommonOrigin } from "../common/origin";
+/* 🔴 P5.6 실측 — 태그 중복제거 규칙은 한 곳이다. */
+import { dedupeSellerTagTexts } from "../naver/seller-tags-update";
 
 /**
  * 쿠팡 Open API "상품 생성"(POST .../v1/marketplace/seller-products) 요청 바디를
@@ -1683,7 +1685,10 @@ function buildCoupangItem(args: {
           것이었고, 같은 커밋에서 그 탭을 열었으므로 전제가 바뀌었다.
        🔴 그래도 «비면 옵션 이름으로 되돌리지 않는다». 태그가 없으면 빈 배열이
           맞다 — 없는 것을 다른 것으로 채우는 것이 이 저장소가 반복해 고친 실수다. */
-    searchTags: product.keywords.value.map((t) => t.trim()).filter(Boolean),
+    /* 🔴 P5.6 실측 — 네이버와 «같은» 결함이었다(trim 만 하고 중복을 안 걷는다).
+       운영 빌더 probe 에서 「수입원피스」가 두 번 나갔다. 규칙을 공용 함수
+       하나로 모은다 — 채널마다 다른 개수가 나가지 않게. */
+    searchTags: dedupeSellerTagTexts(product.keywords.value),
   };
 
   return {

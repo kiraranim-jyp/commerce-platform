@@ -96,12 +96,39 @@ export function htmlToText(html: string): string {
     .trim();
 }
 
-/** 제조국 문장이 들어 있던 «주변 한 토막» 을 근거로 남긴다. */
+/**
+ * ══ 🔴 실측이 잡은 결함(bobochoses.com, 2026-10-09) ════════════════════════
+ *
+ * 처음에는 「국가명이 «처음» 나오는 자리」를 근거로 잘랐다. 실제 상품 페이지를
+ * 돌려 보니 그 자리가 **배송 국가 드롭다운** 이었다 —
+ *
+ *   근거(틀림) : "… South Korea (KRW ₩) South Sudan (EUR €) Spain (EUR €) St. Bar …"
+ *   근거(맞음) : "… 100% Cotton. Responsibly made in Spain. Find your perfect fit …"
+ *
+ * 추출값("Spain")은 맞았다. 틀린 것은 «셀러에게 보여 줄 근거» 였다. 그리고 그것이
+ * 더 위험하다 — 셀러가 그 조각을 보고 「배송 국가를 제조국으로 읽었구나」로
+ * 판단할 수도, 반대로 틀린 근거를 믿고 확정할 수도 있다.
+ * ([[smallable-market-is-shipping-destination]] 이 같은 함정을 기록해 뒀다.)
+ *
+ * 🔴 그래서 «단서 뒤에 오는» 국가명만 근거로 자른다. 단서를 못 찾으면 **null** 이다 —
+ *    틀린 근거를 보여주는 것보다 근거 없음이 낫다(그 경우 호출부가 값만 보여준다).
+ * 🔴 단서 목록은 `extractCountryOfOrigin` 의 패턴과 «같은 어휘» 다. 두 벌이 되면
+ *    추출은 됐는데 근거는 못 찾는 상태가 생긴다.
+ */
+const ORIGIN_CUES = ["made in", "country of origin", "origin:", "origin :", "제조국", "원산지"];
+
 export function originSnippet(text: string, country: string): string | null {
-  const at = text.toLowerCase().indexOf(country.toLowerCase());
-  if (at < 0) return null;
-  const from = Math.max(0, at - 70);
-  return text.slice(from, Math.min(text.length, at + country.length + 40)).trim();
+  const lower = text.toLowerCase();
+  const target = country.toLowerCase();
+  /* 🔴 국가명이 나오는 «모든» 자리를 보고, 그중 앞 60자 안에 단서가 있는 것을 고른다.
+     첫 등장만 보면 배송 드롭다운에 걸린다(위 실측). */
+  for (let at = lower.indexOf(target); at >= 0; at = lower.indexOf(target, at + 1)) {
+    const before = lower.slice(Math.max(0, at - 60), at);
+    if (!ORIGIN_CUES.some((cue) => before.includes(cue))) continue;
+    const from = Math.max(0, at - 80);
+    return text.slice(from, Math.min(text.length, at + country.length + 60)).trim();
+  }
+  return null;
 }
 
 /**

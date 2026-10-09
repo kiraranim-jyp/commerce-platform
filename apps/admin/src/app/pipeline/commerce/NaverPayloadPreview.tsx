@@ -774,6 +774,34 @@ export function NaverPayloadPreview({
         )}
       </Section>
 
+      {/* ══ 🔴 P5.6 P2(2026-10-09) — **CEO 가 「태그 반영」을 볼 자리.** ══════
+
+          CPO 최종 테스트 시나리오 ③ 이 「SmartStore 등록 시 태그 반영」을 확인
+          하라고 적는데, 그것을 «화면에서 볼 자리가 없었다». payload 미리보기가
+          태그를 안 그렸다 — 확인할 수 없는 항목을 테스트 절차에 넣으면 안 된다.
+
+          🔴 여기 있는 것은 «실제로 전송될» payload 다(이 컴포넌트의 계약).
+             화면이 다시 계산하지 않고 빌더가 만든 값을 그대로 읽는다.
+          🔴 경로를 그대로 적는다 — originProduct.detailAttribute.seoInfo.
+             sellerTags. productCertificationInfos 가 위치를 틀려 5차 거부를
+             맞은 그 축이라, 어디에 실렸는지가 화면에 보여야 한다. */}
+      <Section id="naver-section-seo-tags" title="검색 태그">
+        {(() => {
+          const tags = payload.originProduct.detailAttribute?.seoInfo?.sellerTags ?? [];
+          return tags.length > 0 ? (
+            <>
+              <Row label="태그" value={tags.map((tag) => tag.text).join(" · ")} />
+              <Row label="개수" value={`${tags.length}개`} />
+              <Row label="payload 경로" value="originProduct.detailAttribute.seoInfo.sellerTags" />
+            </>
+          ) : (
+            /* 🔴 「없음」과 「전송하지 않음」을 같이 적는다 — 네이버는 빈 값을
+               받으면 기존 태그를 지우므로, 비었을 때 «보내지 않는» 것이 사실이다. */
+            <Row label="태그" value="없음 — seoInfo 를 전송하지 않습니다(기존 태그 유지)" />
+          );
+        })()}
+      </Section>
+
       <Section id="naver-section-certification" title="인증정보">
         {categoryRequiresChildCertification ? (
           <>

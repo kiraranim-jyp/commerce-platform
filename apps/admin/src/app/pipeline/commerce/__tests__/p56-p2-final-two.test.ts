@@ -89,6 +89,25 @@ describe("① 🔴 태그 UPDATE — 기존 태그를 «지우지» 않는다", 
     for (const tag of d.tags) expect(Object.keys(tag)).toEqual(["text"]);
   });
 
+  /* ══ 🔴 운영 빌더 실측이 잡은 결함(2026-10-09) ═══════════════════════════
+
+     CREATE payload 를 운영 빌더로 뽑아 보니 태그가 «중복된 채» 나갔다 —
+       입력  ["수입원피스", " 아동 ", "수입원피스", ""]
+       출력  [{수입원피스}, {아동}, {수입원피스}]      ← 두 번
+
+     빌더가 trim + filter 만 하고 중복을 걷지 않았다. 화면의 updateKeywords 는
+     걷지만, DB 에 이미 저장된 상품이나 AI 경로를 지난 값은 그대로 나간다.
+     🔴 쿠팡 searchTags 도 «같은» 패턴이었다. 규칙을 한 곳으로 올렸다. */
+  it("🔴🔴 CREATE 도 중복을 걷는다 — 두 채널이 같은 함수를 쓴다", () => {
+    const naver = strip(read("packages/listing/src/naver/build-payload.ts"));
+    const coupang = strip(read("packages/listing/src/coupang/build-payload.ts"));
+    expect(naver).toContain("dedupeSellerTagTexts(product.keywords.value)");
+    expect(coupang).toContain("dedupeSellerTagTexts(product.keywords.value)");
+    /* 옛 패턴(trim 만)이 돌아오면 FAIL 한다. */
+    expect(naver, "네이버가 다시 자기 trim 을 한다").not.toContain(".map((tag) => tag.trim())");
+    expect(coupang, "쿠팡이 다시 자기 trim 을 한다").not.toContain(".map((t) => t.trim())");
+  });
+
   it("🔴 중복 규칙을 두 벌로 만들지 않았다 — keywordDedupeKey 하나를 쓴다", () => {
     const src = strip(read("packages/listing/src/naver/seller-tags-update.ts"));
     expect(src).toContain('from "@commerce/content"');
@@ -189,6 +208,42 @@ describe("② 🔴 공식몰 제조국 — «확인된 것» 만 쓴다", () => 
   it("🔴 근거 조각을 남긴다 — 요약하지 않는다", () => {
     const snip = originSnippet("Composition 100% cotton. Made in Italy. Care: wash cold.", "Italy");
     expect(snip).toContain("Made in Italy");
+  });
+
+  /* ══ 🔴 Production 실측이 잡은 결함(bobochoses.com, 2026-10-09) ═══════════
+
+     추출값은 맞았는데(「Responsibly made in Spain」) 근거 조각이 **배송 국가
+     드롭다운** 을 가리켰다 — 국가명이 «처음» 나오는 자리를 잘랐기 때문이다:
+
+       "… South Korea (KRW ₩) South Sudan (EUR €) Spain (EUR €) St. Bar …"
+
+     🔴 틀린 근거는 근거 없음보다 나쁘다. 셀러가 그것을 보고 확정한다.
+        [[smallable-market-is-shipping-destination]] 과 같은 함정이다. */
+  it("🔴🔴 배송 국가 목록을 근거로 집지 않는다 — 실측 재현", () => {
+    const real =
+      "Ship to South Korea (KRW ₩) South Sudan (EUR €) Spain (EUR €) St. Barth " +
+      "price / per Ref.B226AC157 Multicolor t-shirt. 100% Cotton. Responsibly made in Spain. " +
+      "Find your perfect fit in our Size guide.";
+    const snip = originSnippet(real, "Spain");
+    expect(snip, "근거를 못 찾았다").not.toBeNull();
+    expect(snip!, "배송 국가 목록을 근거로 집었다").not.toContain("KRW");
+    expect(snip!).toContain("made in Spain");
+  });
+
+  it("🔴 단서 없는 국가명은 근거로 쓰지 «않는다» — null 이 맞다", () => {
+    /* 국가명만 있고 「made in」 류 단서가 없으면 근거가 아니다. */
+    expect(originSnippet("Ships to Spain and France.", "Spain")).toBeNull();
+  });
+
+  it("단서 어휘가 추출기와 «같다» — 추출은 됐는데 근거는 못 찾는 상태를 막는다", () => {
+    for (const [text, country] of [
+      ["Country of Origin: Portugal.", "Portugal"],
+      ["Origin: Italy.", "Italy"],
+      ["제조국: 중국", "중국"],
+      ["원산지: 베트남", "베트남"],
+    ] as const) {
+      expect(originSnippet(text, country), `${country} 근거를 못 찾았다`).not.toBeNull();
+    }
   });
 
   it("🔴 LLM 호출이 없다 — AI 추정으로 제조국을 만들지 않는다", () => {

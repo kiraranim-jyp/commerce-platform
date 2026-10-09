@@ -4,6 +4,8 @@ import {
   type SmartStoreKcDeclaration,
 } from "./kc-declaration";
 import type { ListingModel } from "@commerce/marketplace";
+/* 🔴 P5.6 실측 — 태그 중복제거 규칙은 한 곳이다. */
+import { dedupeSellerTagTexts } from "./seller-tags-update";
 import type {
   CanonicalProduct,
   ChannelNoticeOverride,
@@ -723,10 +725,10 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
               판매자센터 UI 기준의 비공식 정보이고, 근거 없는 정책을 payload
               규칙으로 만들지 않는다. */
         ...(() => {
-          const tags = product.keywords.value
-            .map((tag) => tag.trim())
-            .filter(Boolean)
-            .map((text) => ({ text }));
+          /* 🔴 실측으로 잡혔다 — 여기서 trim 만 하면 중복이 그대로 나간다
+             (운영 빌더 probe: 「수입원피스」가 두 번). 규칙은 한 곳에 있다
+             (dedupeSellerTagTexts → keywordDedupeKey). */
+          const tags = dedupeSellerTagTexts(product.keywords.value).map((text) => ({ text }));
           return tags.length > 0 ? { seoInfo: { sellerTags: tags } } : {};
         })(),
         // 고시 의무는 인증서 보유 여부와 무관하게 항상 존재한다 — 카테고리가
