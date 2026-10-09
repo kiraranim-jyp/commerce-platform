@@ -59,7 +59,6 @@ import {
   sectionTitle,
 } from "./registration-sections";
 import type { NaverResolveResponse } from "./NaverPayloadPreview";
-import { OptionVariantEditor } from "./OptionVariantEditor";
 import { computeChecklistReadiness, computeNaverPayloadReadiness } from "./readiness";
 import { buildPriorityItems, resolveRegistrationReadinessState } from "./RegistrationStatusBanner";
 import type { PriorityItem, RegistrationReadinessState } from "./readiness-state";
@@ -619,8 +618,9 @@ export function PlatformPreview({
   onUpdateChildCertification,
   onUpdateNoticeOverride,
   onUpdateKcDeclaration,
-  onUpdateOptions,
-  onUpdateVariant,
+  /* 🔴 P5.6 P1-5 — onUpdateOptions · onUpdateVariant 를 «지웠다». 옵션 편집은
+     상품정보(SourceDataView)로 옮겼고, 여기 남겨 두면 「받아 놓고 안 쓰는 prop」이
+     된다 — 이 저장소가 certificationTargetExcludeContent 로 세 번 걸린 그 함정이다. */
   onOpenListingModal,
   onRetryListing,
   onFetchCoupangCategory,
@@ -748,13 +748,6 @@ export function PlatformPreview({
    * 경로다: 저 아홉 칸은 상품의 «사실»(Master)이고, 이 둘은 채널 고시 전용
    * override(COMMERCE_BINDING)다. 같은 화이트리스트를 쓰지 않는다. */
   onUpdateNoticeOverride?: (key: string, next: { value?: string; referenced?: boolean }) => void;
-  /** Sprint A-3(작업1 — 옵션도 Editable) */
-  onUpdateOptions?: (raw: string) => void;
-  /** Sprint A-12(작업6) — 옵션 조합별 SKU/재고/가격 편집. */
-  onUpdateVariant?: (
-    variantId: string,
-    patch: Partial<{ sku: string; stockQuantity: number; price: { amount: number; currency: string } | undefined }>,
-  ) => void;
   onOpenListingModal: () => void;
   onRetryListing: () => void;
   /** 쿠팡 탭에서만 넘어온다 — 있으면 카테고리 추천 패널에 "쿠팡 API로 확인"/검색 UI가 보인다. */
@@ -1384,19 +1377,30 @@ export function PlatformPreview({
               </div>
             </>
           ) : null}
-          {onUpdateVariant && (
-            <OptionVariantEditor
-              variants={product.variants}
-              onUpdateVariant={onUpdateVariant}
-              baseProduct={{ amount: product.price.value.amount, currency: product.price.value.currency, finalKrw: listing.priceKrw }}
-            />
+          {/* ══ 🔴 P5.6 P1-5(CPO ①, 2026-10-09) — **채널 탭은 옵션을 «고치지» 않는다.** ══
+
+              여기에 있던 것 둘을 치웠다:
+                ① `OptionVariantEditor`        단품별 SKU·재고·가격 «편집» 표
+                ② `product.options` EditableText  축 이름 «편집» 칸
+
+              둘 다 공통 데이터(CanonicalProduct.variants · .options)를 고치는데
+              세 채널 탭에 각각 떠 있었다 — 셀러가 같은 값을 세 곳에서 고쳤고,
+              그래서 「옵션이 개별 Commerce 에서 관리된다」고 읽혔다(CEO 실측).
+
+              🔴 가격이 이미 이 어휘를 쓴다(PHASE 3.2): 「정하는 곳은 상품정보
+                 하나이고, 채널 화면은 그 값을 이 채널에 그대로 쓴다」. 옵션도
+                 같은 규칙으로 맞춘다 — 상품정보 → 옵션 에서 고친다.
+              🔴 «표시» 는 남긴다. 위 그룹/값 목록은 읽기 전용이고, 이 채널
+                 payload 가 무엇을 받는지 셀러가 확인할 유일한 자리다. 지우면
+                 「무엇이 등록되는가」를 볼 수 없다.
+              🔴 아래 단품 요약도 읽기 전용으로 남긴다 — rework12 가 「③ 옵션에
+                 입력칸이 0개」를 이미 요구하는 그 계약과 같은 방향이다. */}
+          {product.variants.length > 0 && (
+            <p className="text-xs text-text-tertiary">
+              단품 {product.variants.length}개 · SKU·재고·옵션가는{" "}
+              <span className="font-medium text-text-secondary">상품정보 → 옵션</span>에서 관리합니다.
+            </p>
           )}
-          <EditableText
-            value={product.options.value.join(", ")}
-            onCommit={(v) => onUpdateOptions?.(v)}
-            placeholder="옵션 없음 (쉼표로 구분)"
-            className={FIELD_INPUT_CLASS}
-          />
           {(!productOptionGroups || productOptionGroups.length === 0) && listing.options.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {listing.options.map((opt) => (

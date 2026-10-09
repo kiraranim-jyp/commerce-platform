@@ -3851,6 +3851,9 @@ export function CommerceWorkspace({
                     onUpdatePrice={updatePrice}
                     onUpdateOptions={updateOptions}
                     onUpdateKeywords={updateKeywords}
+                    /* 🔴 P5.6 P1-5 — 채널 탭이 쓰던 «그» setter 다. 옵션의
+                       주인이 상품정보로 옮겨졌으므로 배선도 여기로 온다. */
+                    onUpdateVariant={updateVariant}
                     /* DELTA-B(CEO 지시, 2026-09-15) — 「네이버 쇼핑 카탈로그
                        모델명」의 "직접 입력 / 상세페이지에서 찾기" 라디오가 쓰는
                        setter. 채널 탭의 참조 버튼(onSetFieldReference)과 **같은
@@ -4235,8 +4238,6 @@ export function CommerceWorkspace({
               onUpdateChildCertification={updateChildCertification}
               onUpdateKcDeclaration={updateKcDeclaration}
               onFixNumberField={updateNumberField}
-              onUpdateOptions={updateOptions}
-              onUpdateVariant={updateVariant}
               onOpenListingModal={openListingModal}
               onRetryListing={retryListing}
               onFetchCoupangCategory={tab === "coupang" ? fetchCoupangCategoryRecommendation : undefined}

@@ -4,6 +4,7 @@ import type { CanonicalProduct, FieldSource } from "@commerce/shared";
 import { convertToKrw, formatKrw } from "@commerce/pricing";
 import { InfoTip } from "./registration-fields";
 import { EditableText, EditableTextarea } from "./EditableField";
+import { OptionVariantEditor } from "./OptionVariantEditor";
 import { extractionSourceLabel, ProvenanceBadge } from "./provenance";
 
 /**
@@ -40,6 +41,7 @@ export function SourceDataView({
   onUpdatePrice,
   onUpdateOptions,
   onUpdateKeywords,
+  onUpdateVariant,
   onSetModelNameReference,
   exchangeRates,
 }: {
@@ -56,6 +58,25 @@ export function SourceDataView({
   /** 🔴 P5.6 P1-6 — 태그(검색 키워드). 넘기지 않으면 칸을 그리지 «않는다»
    *  (기존 호출부 호환 — onSetModelNameReference 와 같은 규약). */
   onUpdateKeywords?: (raw: string) => void;
+  /**
+   * ══ 🔴 P5.6 P1-5(CPO ①, 2026-10-09) — **옵션의 주인은 상품정보다.** ══════
+   *
+   * CEO 실측: 「옵션은 들어오지만 개별 Commerce 탭에서 보인다」. 맞았다 —
+   * 상품정보에는 축 «이름» 한 줄(`product.options`, deprecated)만 있었고,
+   * 실제 구조(옵션그룹 × 값 · 단품별 SKU/재고/가격)는 세 채널 탭에만 있었다.
+   * 그래서 셀러는 같은 공통 데이터를 채널 탭 세 곳에서 고쳤다.
+   *
+   * 🔴 새 편집기를 만들지 않는다 — 채널 탭이 쓰던 `OptionVariantEditor` «그
+   *    컴포넌트» 를 그대로 옮긴다. 쓰는 setter(onUpdateVariant)도 같은 함수다.
+   *    두 벌을 만들면 둘이 다르게 답하는 순간이 곧 오등록이다.
+   * 🔴 이 자리는 가격이 이미 쓰는 어휘를 따른다(PHASE 3.2): 「정하는 곳은
+   *    상품정보 하나이고, 채널 화면은 그 값을 그대로 쓴다」.
+   * 🔴 넘기지 않으면 표를 그리지 «않는다» — 기존 호출부 호환.
+   */
+  onUpdateVariant?: (
+    variantId: string,
+    patch: Partial<{ sku: string; stockQuantity: number; price: { amount: number; currency: string } | undefined }>,
+  ) => void;
   /** DELTA-B — CommerceWorkspace.setFieldReference("modelName", …) 그대로다.
    * 새 상태 전이를 만들지 않는다(채널 탭의 참조 버튼과 **같은 함수**를 부른다).
    * 넘기지 않으면 라디오 없이 직접 입력칸만 그린다(기존 호출부 호환). */
@@ -225,6 +246,46 @@ export function SourceDataView({
           </tbody>
         </table>
       </div>
+      {/* ══ 🔴 P5.6 P1-5(CPO ①, 2026-10-09) — **옵션의 실제 구조는 여기 있다.** ══
+
+          위 「옵션」 칸은 축 «이름» 한 줄(`product.options`, deprecated)이다.
+          그것만으로는 셀러가 「사이즈가 몇 개 들어왔는지」도 「단품별 재고가
+          얼마인지」도 모른다 — 그 정보가 세 채널 탭에만 있었던 것이 CEO 가 본
+          결함이다.
+
+          🔴 표 «안» 에 넣지 않는다. 위 표는 5열(이름/값/출처/확신도/배지) 격자고,
+             옵션 그룹과 단품 표는 열 수가 다르다. 끼워 넣으면 격자가 깨진다. */}
+      {product.optionGroups.length > 0 || product.variants.length > 0 ? (
+        <div className="mt-4 space-y-2 rounded-md border border-border p-3">
+          <p className="text-xs font-medium text-text-primary">
+            옵션 <span className="font-normal text-text-tertiary">— 모든 Commerce 가 이 값을 그대로 씁니다</span>
+          </p>
+          {product.optionGroups.length > 0 && (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {product.optionGroups.map((group) => (
+                <div key={group.name} className="rounded-md border border-border p-2.5">
+                  <p className="text-xs font-medium text-text-secondary">
+                    {group.name} <span className="text-text-tertiary">({group.values.length}개)</span>
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {group.values.map((v) => (
+                      <span key={v} className="rounded-full bg-background px-2 py-0.5 text-xs text-text-primary">
+                        {v}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* 🔴 baseProduct 를 «넘기지 않는다» — 「가격차이·최종판매가」 두 열은
+              배송비·수수료·마진이 들어간 채널 최종가 기준이고, 그 값은 채널
+              가격 섹션이 가진다. 여기서 환산가(convertToKrw)로 대신 계산하면
+              같은 열이 화면마다 다른 숫자를 말한다(OptionVariantEditor 가 바로
+              그것을 금지한다). 그래서 이 표는 «원본 SKU·재고·옵션가» 만 받는다. */}
+          {onUpdateVariant && <OptionVariantEditor variants={product.variants} onUpdateVariant={onUpdateVariant} />}
+        </div>
+      ) : null}
     </div>
   );
 }
