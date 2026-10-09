@@ -39,6 +39,7 @@ export function SourceDataView({
   onUpdateField,
   onUpdatePrice,
   onUpdateOptions,
+  onUpdateKeywords,
   onSetModelNameReference,
   exchangeRates,
 }: {
@@ -52,6 +53,9 @@ export function SourceDataView({
   ) => void;
   onUpdatePrice: (amount: number, currency: string) => void;
   onUpdateOptions: (raw: string) => void;
+  /** 🔴 P5.6 P1-6 — 태그(검색 키워드). 넘기지 않으면 칸을 그리지 «않는다»
+   *  (기존 호출부 호환 — onSetModelNameReference 와 같은 규약). */
+  onUpdateKeywords?: (raw: string) => void;
   /** DELTA-B — CommerceWorkspace.setFieldReference("modelName", …) 그대로다.
    * 새 상태 전이를 만들지 않는다(채널 탭의 참조 버튼과 **같은 함수**를 부른다).
    * 넘기지 않으면 라디오 없이 직접 입력칸만 그린다(기존 호출부 호환). */
@@ -182,6 +186,20 @@ export function SourceDataView({
                 placeholder="옵션 없음 (쉼표로 구분)"
               />
             </Row>
+            {/* 🔴 P5.6 P1-6(CEO 실측, 2026-10-09) — 태그가 화면에 «없었다».
+                채우는 유일한 경로가 disabled 인 「AI 콘텐츠」 탭이라 셀러가
+                보지도 고치지도 못했고, 쿠팡 검색태그에는 옵션 축 이름이 갔다.
+                🔴 새 편집 패턴을 만들지 않는다 — 바로 위 「옵션」과 같은
+                   Row + EditableText 이고 쉼표로 나눈다. */}
+            {onUpdateKeywords ? (
+              <Row label="태그(검색 키워드)" field={product.keywords}>
+                <EditableText
+                  value={product.keywords.value.join(", ")}
+                  onCommit={onUpdateKeywords}
+                  placeholder="태그 없음 (쉼표로 구분 · 예: 수입원피스, 아동)"
+                />
+              </Row>
+            ) : null}
             <Row label="소재" field={product.material}>
               <EditableText
                 value={product.material.value}

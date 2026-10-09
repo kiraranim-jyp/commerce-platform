@@ -1673,7 +1673,17 @@ function buildCoupangItem(args: {
     attributes: compliance.attributes,
     notices: compliance.notices,
     contents,
-    searchTags: listing.options,
+    /* ━━ 🔴 P5.6 P1-6(CEO 실측, 2026-10-09) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       여기에 들어가던 것은 «태그가 아니라 옵션 이름» 이었다(listing.options 는
+       옵션 축 이름 목록이다 — "사이즈" 같은 값). 검색태그 자리에 옵션 축 이름을
+       보내면 쿠팡 검색에 쓸모없는 말이 올라간다.
+
+       🔴 기존 가드는 「바꾸면 빈 배열이 나간다」는 이유로 이 연결을 묶어 뒀다.
+          그 전제는 «태그를 채우는 유일한 경로(AI 콘텐츠 탭)가 disabled» 라는
+          것이었고, 같은 커밋에서 그 탭을 열었으므로 전제가 바뀌었다.
+       🔴 그래도 «비면 옵션 이름으로 되돌리지 않는다». 태그가 없으면 빈 배열이
+          맞다 — 없는 것을 다른 것으로 채우는 것이 이 저장소가 반복해 고친 실수다. */
+    searchTags: product.keywords.value.map((t) => t.trim()).filter(Boolean),
   };
 
   return {

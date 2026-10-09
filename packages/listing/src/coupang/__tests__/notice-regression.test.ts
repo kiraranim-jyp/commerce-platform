@@ -139,3 +139,48 @@ describe("N-3.45 STEP14: Coupang 회귀 — DETAIL_PAGE_REFERENCE는 Coupang pay
     expect(materialAttr === null || typeof materialAttr === "object").toBe(true);
   });
 });
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   P5.6 P1-6(CEO 실측, 2026-10-09) — 🔴 **검색태그 자리에 «태그» 가 간다.**
+
+   지금까지 `searchTags: listing.options` 였다 — 그것은 옵션 «축 이름»("사이즈")
+   이지 태그가 아니다. 그 상태로는 쿠팡 검색에 쓸모없는 말이 올라간다.
+   그리고 태그를 채우는 유일한 경로(AI 콘텐츠 탭)가 disabled 라 CEO 화면에서
+   태그가 «보이지도» 않았다 — 같은 작업에서 그 탭을 열었다.
+   ───────────────────────────────────────────────────────────────────────── */
+describe("🔴🔴 P5.6 P1-6 쿠팡 searchTags", () => {
+  const withTags = (tags: string[]) =>
+    makeMockProduct({ keywords: field(tags) as never });
+
+  it("상품 태그가 그대로 간다", () => {
+    const p = withTags(["Louise Misha", "수입원피스", "아동"]);
+    const payload = buildCoupangPayload(p, makeListing(p), NO_BINDING);
+    expect(payload.items[0].searchTags).toEqual(["Louise Misha", "수입원피스", "아동"]);
+  });
+
+  it("🔴 옵션 «축 이름» 이 더는 들어가지 않는다", () => {
+    const p = withTags([]);
+    const payload = buildCoupangPayload(p, makeListing(p), NO_BINDING);
+    expect(payload.items[0].searchTags).not.toContain("사이즈");
+    expect(payload.items[0].searchTags).not.toContain("Size");
+  });
+
+  it("🔴 태그가 없으면 «빈 배열» 이다 — 다른 값으로 채우지 않는다", () => {
+    const p = withTags([]);
+    const payload = buildCoupangPayload(p, makeListing(p), NO_BINDING);
+    expect(payload.items[0].searchTags).toEqual([]);
+  });
+
+  it("빈 문자열·공백 태그는 걸러진다", () => {
+    const p = withTags(["", "  ", "유효"]);
+    const payload = buildCoupangPayload(p, makeListing(p), NO_BINDING);
+    expect(payload.items[0].searchTags).toEqual(["유효"]);
+  });
+
+  it("앞뒤 공백을 다듬어 보낸다", () => {
+    const p = withTags(["  수입원피스  "]);
+    const payload = buildCoupangPayload(p, makeListing(p), NO_BINDING);
+    expect(payload.items[0].searchTags).toEqual(["수입원피스"]);
+  });
+});

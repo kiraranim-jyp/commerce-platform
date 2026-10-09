@@ -99,7 +99,15 @@ describe("C) 🔴 쿠팡 searchTags ← keywords 는 «하지 않는다» — �
        «생성기 호출» 과 «병합» 을 둘 다 확인한다 — 느슨해지지 않는다. */
     expect(ws).toContain("mockProductContentProvider.generateKeywords(prev)");
     expect(ws, "기존 태그를 덮지 않고 병합하는지").toContain("mergeKeywords(prev.keywords.value");
-    /* 그런데 그 탭은 disabled 다 — 셀러가 누를 수 없다. */
+    /* 🔴 P5.6 P1-6(2026-10-09) — 이 탭은 «여전히» disabled 다. 한 번 열었다가
+       되돌렸다: URGENT ④(CPO, 2026-10-03)가 「이 탭은 LLM 이 아니라 결정론적
+       템플릿이라 「AI」 라벨이 셀러를 오해시킨다」는 이유로 준비중을 결정했고,
+       그 판단이 여전히 유효하다.
+       🔴 그래서 태그는 «이 탭을 여는 것» 이 아니라 상품정보 화면에 칸을 내어
+          푼다(그것이 CPO P1-6 의 요구다 — 「상품정보에서 조회/수정」).
+       🔴 그 전까지 keywords 는 비어 있고, 쿠팡 searchTags 는 «빈 배열» 이 된다.
+          옵션 이름으로 채우지 않는다 — 없는 것을 다른 것으로 채우는 것이
+          이 저장소가 반복해 고친 실수다. */
     expect(ws).toContain('<TabButton active={tab === "content"} disabled');
   });
 
@@ -109,10 +117,15 @@ describe("C) 🔴 쿠팡 searchTags ← keywords 는 «하지 않는다» — �
     expect(wrapper).not.toContain("keywords");
   });
 
-  it("그래서 현재 연결을 «그대로» 둔다 — 바꾸면 빈 배열이 나간다", () => {
+  it("🔴 P5.6 P1-6 — searchTags 는 «태그» 다. 옵션 이름이 아니다", () => {
     const SRC = codeOnly(read("packages/listing/src/coupang/build-payload.ts"));
-    expect(SRC).toContain("searchTags: listing.options");
-    expect(SRC).not.toContain("searchTags: product.keywords");
+    /* 🔴 여기 들어가던 listing.options 는 옵션 «축 이름»("사이즈")이었다.
+       검색태그 자리에 그것을 보내면 쿠팡 검색에 쓸모없는 말이 올라간다.
+       전제(「태그는 항상 비어 있다」)는 같은 커밋에서 탭을 열며 사라졌다. */
+    expect(SRC, "옵션 이름이 다시 검색태그로 간다").not.toContain("searchTags: listing.options");
+    expect(SRC).toContain("searchTags: product.keywords.value");
+    /* 🔴 비면 «빈 배열» 이다 — 없는 것을 다른 값으로 채우지 않는다. */
+    expect(SRC).toContain('.map((t) => t.trim()).filter(Boolean)');
   });
 
   /* 🔴 다만 «별건의 결함» 으로 기록해 둔다: listing.options 는 옵션 그룹 «이름»

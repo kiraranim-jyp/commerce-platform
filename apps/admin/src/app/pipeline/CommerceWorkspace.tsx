@@ -1556,14 +1556,23 @@ export function CommerceWorkspace({
     }));
   }
 
+  /**
+   * 🔴 P5.6 P1-6(CEO 실측, 2026-10-09) — 이 함수는 «이미 있었다». 쓰는 화면이
+   *    없었을 뿐이다 — keywords 를 보여 주는 유일한 자리가 disabled 인 「AI
+   *    콘텐츠」 탭이었다(URGENT ④: LLM 이 아니라 결정론적 템플릿이라 「AI」
+   *    라벨이 셀러를 오해시킨다 — 그 판단은 유효하다). 그래서 탭을 여는 대신
+   *    상품정보에 칸을 냈다.
+   * 🔴 더한 것은 dedupe 하나다 — mergeKeywords 는 AI 병합이 쓰는 «그» 규칙이라
+   *    셀러가 손으로 적은 중복과 AI 중복이 같은 기준으로 걸러진다.
+   */
   function updateKeywords(raw: string) {
-    const keywords = raw
+    const typed = raw
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
     setProduct((prev) => ({
       ...prev,
-      keywords: { value: keywords, source: "USER_EDITED" as FieldSource, confidence: 1 },
+      keywords: { value: mergeKeywords(typed, []).merged, source: "USER_EDITED" as FieldSource, confidence: 1 },
     }));
   }
 
@@ -3841,6 +3850,7 @@ export function CommerceWorkspace({
                     onUpdateField={updateField}
                     onUpdatePrice={updatePrice}
                     onUpdateOptions={updateOptions}
+                    onUpdateKeywords={updateKeywords}
                     /* DELTA-B(CEO 지시, 2026-09-15) — 「네이버 쇼핑 카탈로그
                        모델명」의 "직접 입력 / 상세페이지에서 찾기" 라디오가 쓰는
                        setter. 채널 탭의 참조 버튼(onSetFieldReference)과 **같은
