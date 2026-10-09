@@ -52,11 +52,29 @@ export function OptionVariantEditor({
 
   return (
     <div className="mt-3 overflow-x-auto">
-      <p className="text-xs font-medium text-text-secondary">옵션 조합별 SKU · 재고 · 가격</p>
+      {/* ══ 🔴 P5.6 재작업(CEO 실측, 2026-10-09) — **어느 값이 「원본」인지 적는다.** ══
+
+          CPO 가 요구한 칸은 「옵션 그룹 · 옵션값 · 원본 옵션값 · SKU · 재고 ·
+          가격 · 판매용 수정값」 일곱이다. 실측 결과 타입에 «원본/수정 두 벌» 은
+          없다(CanonicalProductVariant 에 optionValues 하나뿐) —
+
+            원본 옵션값     optionValues           사이트가 쓴 글자 그대로. 우리가 안 고친다
+            판매용 수정값   sku·재고·가격의 USER_EDITED 배지
+
+          🔴 그래서 「원본값 칸」을 새로 만들지 않는다. 만들면 두 벌이 생기고,
+             둘이 다르게 답하는 순간이 곧 오등록이다(common-option-model.ts 가
+             같은 이유로 축 이름·값을 번역하지 않는다). 대신 «머리글이 그 사실을
+             말한다» — 첫 칸은 원본이고, 오른쪽 세 칸만 셀러가 고친다. */}
+      <p className="text-xs font-medium text-text-secondary">
+        옵션 조합별 SKU · 재고 · 가격{" "}
+        <span className="font-normal text-text-tertiary">
+          — 왼쪽은 원본 사이트의 값(수정하지 않습니다) · 오른쪽 세 칸만 판매용으로 고칩니다
+        </span>
+      </p>
       <table className="mt-1.5 w-full min-w-[480px] border-collapse text-xs">
         <thead>
           <tr className="border-b border-border text-left text-text-tertiary">
-            <th className="py-1.5 pr-2 font-medium">옵션 조합</th>
+            <th className="py-1.5 pr-2 font-medium">옵션 조합(원본값)</th>
             <th className="py-1.5 pr-2 font-medium">SKU</th>
             <th className="py-1.5 pr-2 font-medium">재고</th>
             <th className="py-1.5 pr-2 font-medium">원본가격(비워두면 상품 기본가)</th>

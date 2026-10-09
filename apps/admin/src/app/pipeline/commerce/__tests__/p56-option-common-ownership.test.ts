@@ -251,11 +251,32 @@ describe("③ 🔴 채널 탭에서 옵션을 «고치지» 못한다", () => {
 });
 
 describe("④ 🔴 지운 것이 아니라 «옮긴» 것이다 — 표시는 남는다", () => {
-  it.each(["smartstore", "coupang"] as const)("%s — 옵션 그룹과 값이 여전히 보인다", async (platform) => {
+  /* ══ 🔴 P5.6 재작업(CEO 판정, 2026-10-09) — **이 단언을 뒤집었다.** ══
+
+     여기 있던 것: 「채널 탭에 옵션 그룹·값 «표시» 는 남아 있다」. 근거는
+     「지운 것이 아니라 옮긴 것임을 구별해야 한다」였다.
+
+     CEO 판정: 「못 고치고 보이기만 하지만 제거해야 함」. 그 판정이 맞다 —
+     읽기 전용이어도 같은 값이 네 화면(상품정보 + 세 채널)에 서 있으면 셀러는
+     여전히 「커머스마다 옵션이 있다」고 읽는다. CPO 지시도 「옵션 자체를 중복
+     표시하지 않는 방향 · 안내조차 최소화」다.
+
+     🔴 그래도 「지운 것」과 「옮긴 것」을 구별할 필요는 그대로다. 그래서 값
+        목록이 사라졌음을 재는 «동시에», 개수와 갈 곳이 남아 있음을 센다 —
+        섹션이 통째로 비면 셀러가 「옵션 없는 상품」으로 읽는다. */
+  it.each(["smartstore", "coupang"] as const)("%s — 옵션 값 목록이 «사라졌다»", async (platform) => {
     await mountChannel(platform);
-    const t = text();
-    expect(t, "채널 payload 가 무엇을 받는지 볼 자리가 사라졌다").toContain("사이즈");
-    for (const v of ["2Y", "3Y", "4Y"]) expect(t).toContain(v);
+    const region = container.querySelector("#section-options");
+    expect(region, "옵션 섹션이 없다 — 전제가 깨졌다").not.toBeNull();
+    const t = (region?.textContent ?? "").replace(/\s+/g, " ").trim();
+    for (const v of ["2Y", "3Y", "4Y"]) expect(t, `값 ${v} 가 채널 탭에 아직 있다`).not.toContain(v);
+  });
+
+  it.each(["smartstore", "coupang"] as const)("%s — 개수와 갈 곳은 남는다", async (platform) => {
+    await mountChannel(platform);
+    const t = (container.querySelector("#section-options")?.textContent ?? "").replace(/\s+/g, " ");
+    expect(t).toContain("단품 3개");
+    expect(t).toContain("상품정보 → 옵션");
   });
 
   it.each(["smartstore", "coupang"] as const)("%s — 어디서 고치는지 화면이 말한다", async (platform) => {

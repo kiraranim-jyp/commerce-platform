@@ -39,18 +39,40 @@ function field<T>(value: T, source: FieldSource): ProvenanceField<T> {
   return { value, source, confidence: 0.5 };
 }
 
-describe("① 버튼 — 상품정보 탭에 있고 문구가 정확하다", () => {
+/**
+ * ══ 🔴 P5.6 재작업(CEO 실측, 2026-10-09) — **버튼이 한 칸 더 들어갔다.** ══
+ *
+ * CEO: 「상세설명이 source data · 필수정보 두 곳에 존재한다. Source Data 쪽이
+ * 맞고 필수정보 쪽은 제거. 자동 작성 기능도 Source Data 로 이동」.
+ *
+ * 그래서 이 버튼은 CommerceWorkspace 의 «필수정보 작업면» 에서
+ * SourceDataView 의 「상세설명」 Row «안» 으로 옮겨졌다. 이 블록이 재던 것
+ * 셋(라벨 · 같은 함수 · 상품정보 탭 안)은 «의도가 그대로» 다 — 읽는 파일만
+ * 바뀐다. 느슨해지지 않게 양쪽을 다 센다: 배선은 workspace 에, 버튼은
+ * SourceDataView 에 있어야 한다.
+ */
+describe("① 버튼 — 상품정보(Source Data)에 있고 문구가 정확하다", () => {
+  const SOURCE_VIEW = readFileSync(join(__dirname, "../SourceDataView.tsx"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1");
+
   it("라벨이 정확히 「상세설명 자동 작성」이다", () => {
-    expect(WORKSPACE).toContain("상세설명 자동 작성");
+    expect(SOURCE_VIEW).toContain("상세설명 자동 작성");
   });
 
-  it("onClick 이 descriptionKo 전용 함수를 부른다", () => {
-    expect(WORKSPACE).toContain("onClick={generateDescriptionOnly}");
+  it("onClick 이 descriptionKo 전용 함수를 «그대로» 부른다 — 새 함수를 만들지 않았다", () => {
+    expect(SOURCE_VIEW).toContain("onClick={onGenerateDescription}");
+    expect(WORKSPACE).toContain("onGenerateDescription={generateDescriptionOnly}");
   });
 
-  it("상품정보(source) 탭 안에 있다", () => {
+  it("상품정보(source) 탭 안에 있다 — 그 배선이 source 탭 분기 뒤에 있다", () => {
     const sourceTabStart = WORKSPACE.indexOf('tab === "source" &&');
-    expect(WORKSPACE.indexOf("상세설명 자동 작성")).toBeGreaterThan(sourceTabStart);
+    expect(sourceTabStart).toBeGreaterThan(-1);
+    expect(WORKSPACE.indexOf("onGenerateDescription={generateDescriptionOnly}")).toBeGreaterThan(sourceTabStart);
+  });
+
+  it("🔴 필수정보 영역에 같은 버튼이 «남아 있지 않다» — 두 곳이 되지 않게", () => {
+    expect(WORKSPACE).not.toContain("상세설명 자동 작성");
   });
 
   it("🔴 새 탭을 만들지 않았다 — 탭은 source · content + 채널뿐이다", () => {

@@ -617,7 +617,11 @@ function ProductTab(options: TabOptions): ReactElement {
         product,
         onUpdateField: noop,
         onUpdatePrice: noop,
-        onUpdateOptions: noop,
+        /* 🔴 P5.6 재작업 — onUpdateOptions 가 사라졌다(상품정보의 중복 「옵션」
+           칸을 지웠다). 대신 단품 표 setter 를 넘긴다 — 이 하니스가 그리는
+           상품정보가 실제 화면과 같아야 한다. */
+        onUpdateVariant: noop,
+        onUpdateKeywords: noop,
         exchangeRates: { rates: RATES },
       }),
       images: createElement(ImageInlineEditor, {

@@ -86,9 +86,29 @@ describe("B) 🔴 네이버 modelName 연결은 «이미» 있고, 조건이 «�
 describe("C) 🔴 쿠팡 searchTags ← keywords 는 «하지 않는다» — 근거가 없다", () => {
   /* 조사는 「의도적 미사용인지 누락인지 불명」이라고 했다. 재 보니 답은 셋째였다:
      **연결해도 얻는 것이 없다.** `keywords` 는 실제로 채워지지 않는다. */
-  it("🔴 수집이 keywords 를 «빈 배열» 로 둔다", () => {
+  /* ══ 🔴 P5.6 재작업(CEO 실측, 2026-10-09) — **이 단언의 전제가 «고쳐졌다».** ══
+
+     여기 있던 것: 「수집이 keywords 를 빈 배열로 둔다」를 사실로 고정하는 단언.
+     그 사실 때문에 「searchTags ← keywords 는 연결해도 얻는 것이 없다」가 성립했다.
+
+     CEO 실측: 「태그 값을 불러오지 못함」. 그 «빈 배열» 이 바로 원인이었고,
+     원본 태그(shopifyTags)는 이미 수집되어 올라와 있었다(쓰이던 곳은 카테고리
+     추천 신호 하나). 그래서 전제를 고쳤다 — 이제 수집이 원본 태그를 채운다.
+
+     🔴 단언을 «지우지 않고 뒤집는다». 빈 배열 고정이 돌아오면 FAIL 한다. */
+  it("🔴 수집이 원본 태그를 keywords 로 채운다 — 빈 배열 고정이 사라졌다", () => {
     const pipeline = read("apps/admin/src/app/api/pipeline/canonical-product.ts");
-    expect(pipeline).toContain('keywords: { value: [], source: "ORIGINAL", confidence: 0 }');
+    expect(pipeline).toContain("sourceKeywords(productData.shopifyTags)");
+    expect(pipeline, "빈 배열 고정이 돌아왔다").not.toContain(
+      'keywords: { value: [], source: "ORIGINAL", confidence: 0 },',
+    );
+  });
+
+  it("🔴 지어내지 않는다 — 원본에 태그가 없으면 빈 채로 둔다", () => {
+    const pipeline = read("apps/admin/src/app/api/pipeline/canonical-product.ts");
+    /* 값이 없을 때만 confidence 0 이다. 빈 배열에 확신도를 주면 화면이
+       「원본에서 확인함」이라고 거짓을 말한다. */
+    expect(pipeline).toContain('{ value: [], source: "ORIGINAL" as const, confidence: 0 }');
   });
 
   it("🔴 keywords 를 채우는 유일한 경로가 «비활성» content 탭이다", () => {

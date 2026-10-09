@@ -204,17 +204,26 @@ describe("④ 🔴 상품정보에서 «등록값» 을 고칠 수 있다", () =
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .replace(/(^|[^:])\/\/.*$/gm, "$1");
 
-  it("descriptionKo 를 쓰는 편집기가 있다 — 보여주기만 하지 않는다", () => {
-    const at = WS.indexOf("상세설명 자동 작성");
+  /* ══ 🔴 P5.6 재작업(CEO 실측, 2026-10-09) — **편집기가 Source Data 로 옮겨졌다.** ══
+     CEO: 「상세설명이 두 곳에 있다 · Source Data 쪽이 맞고 필수정보 쪽은 제거」.
+     그래서 이 블록이 읽는 파일이 CommerceWorkspace → SourceDataView 로 바뀐다.
+     재는 «의도» 는 그대로다 — 등록될 값(descriptionKo)을 고칠 수 있는가. */
+  const SV = readFileSync(join(__dirname, "../SourceDataView.tsx"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1");
+
+  it("descriptionKo 를 쓰는 편집기가 Source Data 에 있다 — 보여주기만 하지 않는다", () => {
+    const at = SV.indexOf("상세설명 자동 작성");
     expect(at).toBeGreaterThan(-1);
-    const after = WS.slice(at, at + 900);
-    expect(after, "자동 작성 옆에 편집기가 없다").toContain("<EditableTextarea");
-    expect(after).toContain('updateField("descriptionKo", v)');
+    expect(SV).toContain('onUpdateField("descriptionKo", v)');
+    expect(SV).toContain("<EditableTextarea");
   });
 
-  it("🔴 원문 칸(description)은 그대로 남아 있다 — 두 값을 하나로 접지 않았다", () => {
-    const SV = readFileSync(join(__dirname, "../SourceDataView.tsx"), "utf8");
-    expect(SV).toContain('onUpdateField("description", v)');
+  it("🔴 원문은 지우지 않았다 — 다만 «편집칸» 은 아니다(두 곳이 되지 않게)", () => {
+    expect(SV, "원문을 보는 길이 사라졌다").toContain("원본 상세설명 보기");
+    expect(SV, "원문 편집칸이 남아 있다 — 상세설명이 다시 두 곳이 된다").not.toContain(
+      'onUpdateField("description", v)',
+    );
   });
 
   it("🔴 새 생성기를 만들지 않았다 — 같은 provider 의 같은 메서드다", () => {

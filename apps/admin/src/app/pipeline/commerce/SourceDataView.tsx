@@ -39,9 +39,9 @@ export function SourceDataView({
   product,
   onUpdateField,
   onUpdatePrice,
-  onUpdateOptions,
   onUpdateKeywords,
   onUpdateVariant,
+  onGenerateDescription,
   onSetModelNameReference,
   exchangeRates,
 }: {
@@ -50,11 +50,14 @@ export function SourceDataView({
     /* REWORK-8 ①(CEO 지시, 2026-09-15) — "modelName"이 새로 들어왔다. 이 union은
        CommerceWorkspace.updateField()의 키 집합의 부분집합이고(그쪽에 이미
        "modelName"이 있다), 넓히는 것 말고 새 배선을 만들지 않았다. */
-    key: "title" | "brand" | "sku" | "description" | "material" | "modelName",
+    /* 🔴 P5.6 재작업 — "descriptionKo" 가 들어왔다. CommerceWorkspace.updateField()
+       가 이미 그 키를 받는다(그 함수의 union 부분집합이다) — 새 setter 를
+       만들지 않았다. "description" 은 그대로 둔다: 쓰는 곳은 없어졌지만 이
+       union 은 CommerceWorkspace 쪽과 맞춰 둔 것이고, 좁히면 다른 호출부가 깨진다. */
+    key: "title" | "brand" | "sku" | "description" | "descriptionKo" | "material" | "modelName",
     value: string,
   ) => void;
   onUpdatePrice: (amount: number, currency: string) => void;
-  onUpdateOptions: (raw: string) => void;
   /** 🔴 P5.6 P1-6 — 태그(검색 키워드). 넘기지 않으면 칸을 그리지 «않는다»
    *  (기존 호출부 호환 — onSetModelNameReference 와 같은 규약). */
   onUpdateKeywords?: (raw: string) => void;
@@ -77,6 +80,14 @@ export function SourceDataView({
     variantId: string,
     patch: Partial<{ sku: string; stockQuantity: number; price: { amount: number; currency: string } | undefined }>,
   ) => void;
+  /**
+   * 🔴 P5.6 재작업(CEO 실측) — 「상세설명 자동 작성」 버튼이 여기로 왔다.
+   * CommerceWorkspace 의 `generateDescriptionOnly` «그 함수» 다 — 새 생성기를
+   * 만들지 않았고, mockProductContentProvider.generateDescription 하나만 쓴다
+   * (description-autowrite-ux05 가 그 계약을 이미 고정해 뒀다).
+   * 넘기지 않으면 버튼을 그리지 않는다(기존 호출부 호환).
+   */
+  onGenerateDescription?: () => void;
   /** DELTA-B — CommerceWorkspace.setFieldReference("modelName", …) 그대로다.
    * 새 상태 전이를 만들지 않는다(채널 탭의 참조 버튼과 **같은 함수**를 부른다).
    * 넘기지 않으면 라디오 없이 직접 입력칸만 그린다(기존 호출부 호환). */
@@ -200,13 +211,17 @@ export function SourceDataView({
                 onSetReference={onSetModelNameReference}
               />
             </Row>
-            <Row label="옵션" field={product.options}>
-              <EditableText
-                value={product.options.value.join(", ")}
-                onCommit={onUpdateOptions}
-                placeholder="옵션 없음 (쉼표로 구분)"
-              />
-            </Row>
+            {/* ══ 🔴 P5.6 재작업(CEO 실측, 2026-10-09) — **옵션 칸을 여기서 «지웠다».** ══
+
+                CEO: 「상품정보 탭에 옵션 항목이 2개가 보임」. 맞았다 — 이 줄과
+                아래 옵션 블록이 둘 다 옵션을 말하고 있었다.
+
+                지운 쪽이 «이 줄» 인 이유: 이 칸은 `product.options`(deprecated)
+                이고 축 «이름» 문자열 목록뿐이다. 실제 등록 payload 를 만드는
+                것은 `optionGroups`·`variants` 이고(세 채널 빌더가 그 둘만 읽는다),
+                이 칸을 고치면 «등록에 쓰이지 않는 값» 만 바뀐다. 즉 고칠 수
+                있지만 아무 효과가 없는 칸이었다 — 지우는 것이 맞다.
+                🔴 onUpdateOptions prop 도 함께 지웠다(받아 놓고 안 쓰는 prop 금지). */}
             {/* 🔴 P5.6 P1-6(CEO 실측, 2026-10-09) — 태그가 화면에 «없었다».
                 채우는 유일한 경로가 disabled 인 「AI 콘텐츠」 탭이라 셀러가
                 보지도 고치지도 못했고, 쿠팡 검색태그에는 옵션 축 이름이 갔다.
@@ -228,12 +243,56 @@ export function SourceDataView({
                 placeholder="소재 미확인"
               />
             </Row>
-            <Row label="상세설명" field={product.description}>
-              <EditableTextarea
-                value={product.description.value}
-                onCommit={(v) => onUpdateField("description", v)}
-                placeholder="상세설명 없음"
-              />
+            {/* ══ 🔴 P5.6 재작업(CEO 실측, 2026-10-09) — **상세설명은 여기 한 곳이다.** ══
+
+                CEO: 「source data · 필수정보 두 곳에 상세설명이 존재한다.
+                Source Data 에 있는 것이 맞고 필수정보 쪽은 제거. 자동 작성도
+                Source Data 로 옮기고 글 수정도 되어야 한다」.
+
+                ── 🔴 이 칸이 어느 값을 고치는가 ─────────────────────────────
+                세 채널이 실제로 받는 글은 `descriptionKo || description` 이다
+                (marketplace/content-field.ts:13 — 세 어댑터가 모두 이 함수를 쓴다).
+                그래서 이 칸은 «등록될 글»(descriptionKo)을 고친다.
+
+                🔴 전에 이 칸은 `description`(원문)을 고쳤다. 그러면 자동 작성을
+                   한 번이라도 누른 뒤에는 고쳐도 등록값이 한 글자도 바뀌지 않고
+                   원문만 조용히 덮였다 — 「고쳤는데 그대로」의 원인이다.
+                🔴 원문은 «지우지 않고» 바로 아래 접힘으로 남긴다. 자동 작성의
+                   재료이고 출처이기 때문이다. 단 편집칸은 아니다 — 두 개의
+                   편집칸이 「상세설명」을 말하는 상태로 되돌리지 않는다. */}
+            <Row label="상세설명" field={product.descriptionKo}>
+              <div className="space-y-1.5">
+                <EditableTextarea
+                  value={product.descriptionKo.value}
+                  onCommit={(v) => onUpdateField("descriptionKo", v)}
+                  placeholder="상세설명 없음 — [상세설명 자동 작성]을 누르거나 직접 적어 주세요."
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  {onGenerateDescription ? (
+                    <button
+                      type="button"
+                      onClick={onGenerateDescription}
+                      className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-white"
+                    >
+                      상세설명 자동 작성
+                    </button>
+                  ) : null}
+                  <span className="text-[11px] text-text-tertiary">
+                    브랜드 · 상품 종류 · 색상 · 소재 · 옵션 · 원문을 모아 한국어로 조립합니다 — 만든 뒤 바로 고칠 수
+                    있습니다.
+                  </span>
+                </div>
+                {product.description.value.trim() ? (
+                  <details className="rounded-md border border-dashed border-border px-2 py-1.5">
+                    <summary className="cursor-pointer text-[11px] text-text-tertiary">
+                      원본 상세설명 보기 (수집값 · 등록에는 쓰이지 않습니다)
+                    </summary>
+                    <p className="mt-1.5 whitespace-pre-line text-[11px] text-text-secondary">
+                      {product.description.value}
+                    </p>
+                  </details>
+                ) : null}
+              </div>
             </Row>
             <tr className="border-b border-border align-top">
               <td className="py-2 pr-2 text-text-secondary">이미지</td>
@@ -260,6 +319,29 @@ export function SourceDataView({
           <p className="text-xs font-medium text-text-primary">
             옵션 <span className="font-normal text-text-tertiary">— 모든 Commerce 가 이 값을 그대로 씁니다</span>
           </p>
+          {/* ══ 🔴 P5.6 재작업(CEO 실측) — **「재고 수집이 안 되는 것 같다」에 답한다.** ══
+
+              CEO 가 본 것이 맞다. 다만 원인은 이 화면이 아니라 «원본 사이트» 다 —
+              실측으로 경로마다 갈린다:
+
+                Shopify            inventory_management 가 켜져 있을 때만 수량이 온다
+                                   (shopify-product-json.ts:504 — 꺼져 있으면 숫자를
+                                    신뢰할 수 없어 «일부러» 비운다)
+                PrestaShop         수량이 유한한 숫자일 때만 (prestashop:334)
+                JSON-LD            OutOfStock → 0 만. InStock 은 «수량을 모른다»
+                                   (product-data-extractor.ts:372)
+                Smallable          사이즈만 있고 수량이 페이지에 «없다»
+                                   (smallable-size-options.ts:90)
+
+              🔴 그래서 빈 칸을 0 이나 999 로 채우지 않는다. 「비어 있다」와
+                 「0개」는 다른 사실이고, 0 으로 채우면 팔 수 있는 상품이 품절로
+                 등록된다. 대신 «왜 비었는지» 를 화면이 말한다. */}
+          {product.variants.length > 0 && product.variants.every((v) => v.stockQuantity == null) && (
+            <p className="rounded-md border border-dashed border-border bg-background px-2.5 py-2 text-[11px] text-text-secondary">
+              원본 사이트가 옵션별 재고 수량을 공개하지 않습니다 — 빈 칸은 「0개」가 아니라 「모름」입니다.
+              비워 두면 등록 시 상품 재고로 채워집니다. 직접 알고 있으면 아래에 적어 주세요.
+            </p>
+          )}
           {product.optionGroups.length > 0 && (
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {product.optionGroups.map((group) => (

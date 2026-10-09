@@ -303,3 +303,4 @@ describe("⑥ 🔴 새 KC 상태 모델을 만들지 «않았다»", () => {
     expect(compliance).toContain('return hasFullCert ? "CERTIFIED_REFERENCE" : "SELLER_REVIEW_REQUIRED";');
   });
 });
+

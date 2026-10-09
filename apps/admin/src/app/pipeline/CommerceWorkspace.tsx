@@ -63,8 +63,6 @@ import {
 } from "@commerce/pricing";
 import { resolveCategoryCacheAction } from "./category-cache-hydrate";
 import { AIContentPanel } from "./commerce/AIContentPanel";
-/* 🔴 P5.6 P1-9 — 「AI 콘텐츠」 탭이 쓰는 그 편집기다. 새 입력 패턴을 만들지 않는다. */
-import { EditableTextarea } from "./commerce/EditableField";
 import { BacklogPanel } from "./commerce/BacklogPanel";
 import { ComparisonShopSearch } from "./commerce/ComparisonShopSearch";
 import {
@@ -3851,8 +3849,10 @@ export function CommerceWorkspace({
                     product={product}
                     onUpdateField={updateField}
                     onUpdatePrice={updatePrice}
-                    onUpdateOptions={updateOptions}
                     onUpdateKeywords={updateKeywords}
+                    /* 🔴 P5.6 재작업 — 「상세설명 자동 작성」이 Source Data 로
+                       왔다. 위 필수정보 영역에 있던 «그 함수» 그대로다. */
+                    onGenerateDescription={generateDescriptionOnly}
                     /* 🔴 P5.6 P1-5 — 채널 탭이 쓰던 «그» setter 다. 옵션의
                        주인이 상품정보로 옮겨졌으므로 배선도 여기로 온다. */
                     onUpdateVariant={updateVariant}
@@ -3939,51 +3939,21 @@ export function CommerceWorkspace({
                           .filter((url): url is string => !!url)}
                       />
                     )}
-                    {/* ══ URGENT ④ (CPO 확정, 2026-10-03) ═══════════════════
-                        🔴 문구에 「AI」를 쓰지 않는다 — 이것은 LLM 이 아니라
-                        기존 상품 데이터(브랜드·종류·소재·옵션·원문)를 조립하는
-                        결정론적 템플릿이다. 「AI 로 작성」이라 적으면 셀러가
-                        문장의 출처를 잘못 믿는다.
-                        🔴 content("AI 콘텐츠") 탭은 준비중 그대로 두었다 —
-                        이 버튼은 그 탭을 켜는 것이 아니라 상품정보에서 상세설명
-                        하나만 채우는 자리다. */}
-                    <section className="rounded-lg border border-border p-4 text-sm">
-                      <h3 className="text-base font-medium">상세설명</h3>
-                      <p className="mt-1 text-xs text-text-secondary">
-                        브랜드 · 상품 종류 · 소재 · 옵션 · 원문 설명을 모아 한국어 상세설명을 만듭니다.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={generateDescriptionOnly}
-                        className="mt-3 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white"
-                      >
-                        상세설명 자동 작성
-                      </button>
-                      {/* ══ 🔴 P5.6 P1-9(CPO ⑬, 2026-10-09) — **고칠 수 있어야 한다.** ══
+                    {/* ══ 🔴 P5.6 재작업(CEO 실측, 2026-10-09) — **이 자리의 「상세설명」을 지웠다.** ══
 
-                          여기 있던 것은 `<p>` 였다 — 만들어진 글을 «보여주기만»
-                          했다. 그런데 이 값(descriptionKo)이 세 채널이 실제로
-                          받는 글이고(effectiveDescription = descriptionKo ||
-                          description), 고칠 수 있는 자리는 disabled 인
-                          「AI 콘텐츠」 탭 하나뿐이었다.
+                        CEO: 「source data · 필수정보 두 곳에 상세설명이 존재한다.
+                        Source Data 쪽이 UI/UX 상 맞고 필수정보 쪽은 제거. 자동
+                        작성 기능도 Source Data 로 이동」.
 
-                          🔴 그래서 「롯데ON에서만 엉뚱한 상세정보가 보인다」가
-                             났다 — 엉뚱한 쪽이 롯데ON 이 아니라, 세 채널이
-                             똑같이 받는 템플릿 글을 셀러가 고칠 수 없었던 것이다.
-                          🔴 새 탭을 만들지 않는다 — 「AI 콘텐츠」 탭은 URGENT ④
-                             (CPO, 2026-10-03) 결정대로 준비중 그대로다. 태그를
-                             상품정보로 낸 P5.6 P1-6 과 같은 방식이다.
-                          🔴 새 setter 를 만들지 않는다 — updateField 가 이미
-                             "descriptionKo" 를 받는다(그 탭이 쓰는 그 함수다). */}
-                      <div className="mt-3">
-                        <EditableTextarea
-                          value={product.descriptionKo.value}
-                          onCommit={(v) => updateField("descriptionKo", v)}
-                          placeholder="아직 없습니다 — [상세설명 자동 작성]을 누르거나 직접 적어 주세요."
-                          rows={8}
-                        />
-                      </div>
-                    </section>
+                        여기 있던 것: 「상세설명」 제목 + [상세설명 자동 작성] 버튼
+                        + descriptionKo 편집칸. 전부 SourceDataView 의 「상세설명」
+                        Row 로 옮겼다(같은 `generateDescriptionOnly` · 같은
+                        `updateField("descriptionKo")` — 새 함수를 만들지 않았다).
+
+                        🔴 URGENT ④(CPO 확정, 2026-10-03)의 판단은 그대로 지킨다 —
+                           문구에 「AI」를 쓰지 않고, content("AI 콘텐츠") 탭도
+                           준비중 그대로다. 이것은 LLM 이 아니라 기존 상품
+                           데이터를 조립하는 결정론적 템플릿이기 때문이다. */}
                   </>
                 ),
               }}

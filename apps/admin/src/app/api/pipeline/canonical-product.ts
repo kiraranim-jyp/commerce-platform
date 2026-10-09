@@ -10,6 +10,8 @@ import {
   resolveBrandName,
 } from "@commerce/crawler";
 import type { ExtractedProductData, ProductDataSource } from "@commerce/crawler";
+/* 🔴 P5.6 재작업 — 원본 태그를 «나누는» 공용 함수. 수집하지 않는다. */
+import { sourceKeywords } from "@commerce/crawler/src/source-keywords";
 import type {
   CanonicalProduct,
   CanonicalProductImage,
@@ -201,7 +203,27 @@ export function buildCanonicalProduct(
     items.map(toCanonicalProductImage).filter((image): image is CanonicalProductImage => image !== null),
     sourceRepresentativeId,
   );
-  const resolvedCountryOfOrigin = extractCountryOfOrigin(productData.description);
+  /* ══ 🔴 P5.6 재작업(CEO 실측 — 세르지오 타치니, 2026-10-09) ══════════════
+
+     CEO: 「원산지는 대상 브랜드의 공식 홈페이지에서 찾아서 입력해야 한다」.
+
+     그 전에 먼저 고칠 것이 있었다 — 이 줄은 `description` «하나만» 봤다.
+     실측상 해외몰은 「Made in Italy」를 설명문이 아니라 소재/스펙 줄에 적는
+     경우가 흔하다("100% Cotton. Made in Italy"). 그래서 원본에 «적혀 있는»
+     원산지를 우리가 못 읽고 「미확인」으로 넘긴 뒤 브랜드 기본값으로 채워지는
+     경로가 열려 있었다. 폴백을 타기 «전» 에 원본을 제대로 읽는 것이 먼저다.
+
+     🔴 새 수집을 하지 않는다 — description·material·title 셋 다 «이미 수집된»
+        값이다. 네트워크 호출이 늘지 않는다.
+     🔴 순서가 곧 우선순위다: 설명문 라벨이 가장 명시적이고, 소재/스펙 줄이
+        다음, 제목은 마지막이다(색상 추출이 이미 쓰는 그 순서다 — 아래
+        resolvedColor 가 description → title 로 내려간다).
+     🔴 못 찾으면 «지어내지 않는다». 아래에서 REQUIRED 로 남고, 화면은
+        「원산지 미확인」이라고 말한다. 브랜드 국적을 제조국으로 올리지 않는다. */
+  const resolvedCountryOfOrigin =
+    extractCountryOfOrigin(productData.description) ??
+    extractCountryOfOrigin(productData.material) ??
+    extractCountryOfOrigin(productData.title);
   // Sprint A-7(작업2) — 실측 확인(allbirds.com): 설명문엔 색상 라벨이 없어도
   // 제목에 "- Anthracite (Dark Gum Sole)"처럼 색상이 그대로 들어있는 경우가
   // 흔하다. 설명문에서 못 찾았을 때만 제목에서 찾는다(설명문 라벨이 더
@@ -336,7 +358,26 @@ export function buildCanonicalProduct(
     // CommerceWorkspace의 AI 콘텐츠 생성 버튼을 눌러야 채워진다.
     titleKo: { value: "", source: "ORIGINAL", confidence: 0 },
     descriptionKo: { value: "", source: "ORIGINAL", confidence: 0 },
-    keywords: { value: [], source: "ORIGINAL", confidence: 0 },
+    /* ══ 🔴 P5.6 재작업(CEO 실측, 2026-10-09) — **태그가 비는 것이 「정상 동작」이었다.** ══
+
+       CEO: 「태그 값을 불러오지 못함」. 화면 결함이 아니었다 — 이 줄이 keywords 를
+       «항상 빈 배열» 로 초기화했고, 채우는 경로는 disabled 인 「AI 콘텐츠」 탭
+       하나뿐이었다. 그래서 어떤 상품을 열어도 태그는 비어 있었다.
+
+       🔴 그런데 원본 태그는 «이미 올라와 있었다» — 바로 위 `shopifyTags` 가
+          그것이다(쓰이던 곳은 카테고리 추천 신호 하나뿐). 새로 긁지 않고 그
+          값을 태그로 나눈다.
+       🔴 지어내지 않는다. `sourceKeywords` 는 사이트가 적어 둔 문자열을 나누고
+          기계 키(`__label:new` · `type:shirt`)만 떨어낸다 — 브랜드·상품유형을
+          «합성» 하지 않는다. 그 합성은 generateKeywords 가 하는 별개의 일이다.
+       🔴 source 는 값이 있을 때만 ORIGINAL 이다. 빈 배열에 confidence 를 주면
+          화면이 「원본에서 확인함」이라고 거짓을 말한다. */
+    keywords: (() => {
+      const fromSource = sourceKeywords(productData.shopifyTags);
+      return fromSource.length > 0
+        ? { value: fromSource, source: "ORIGINAL" as const, confidence: 0.9 }
+        : { value: [], source: "ORIGINAL" as const, confidence: 0 };
+    })(),
     seoTitle: { value: "", source: "ORIGINAL", confidence: 0 },
     seoDescription: { value: "", source: "ORIGINAL", confidence: 0 },
     // 원산지/반품정보는 원본 사이트에서 신뢰성 있게 뽑아낼 방법이 거의 없다 —

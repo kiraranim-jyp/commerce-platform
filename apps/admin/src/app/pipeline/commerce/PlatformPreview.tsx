@@ -67,7 +67,6 @@ import { registrationFieldAnchor } from "./readiness-state";
 import { SellerProfileSummaryCard } from "./SellerProfileSummaryCard";
 import { NaverSellerProfileSummaryCard } from "./NaverSellerProfileSummaryCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { ValueBadge } from "@/components/ui/ValueBadge";
 
 /** N-3.45(CPO 지시) — 상품정보제공고시 필드 중 reference-eligibility.ts 화이트리스트에
  * 있는 필드용 FieldRow. "상세페이지 참조"를 선택하면 입력창 대신 참조 상태 배지를
@@ -392,7 +391,27 @@ function KcCertificationBlock({
   }
 
   return (
-    <div className="mt-3 space-y-3 rounded-md border border-border bg-background p-3">
+    /* ══ 🔴 P5.6 재작업(CEO 실측, 2026-10-09) — **덩어리가 둘로 보였다.** ══
+
+       CEO: 「경고판 여전히 2개 존재」. 실측으로 세어 보니 «경고판» 은 하나였다
+       (bg-warning-soft 덩어리 1개). 둘로 보인 것은 다른 이유다 —
+
+         ① KcSellerStatusBanner        색 있는 경고 상자
+         ② 이 컴포넌트의 바깥 래퍼      `rounded-md border bg-background p-3`
+                                        → 라디오·입력칸을 감싼 «또 하나의 카드»
+
+       색만 다른 두 개의 상자가 위아래로 붙어 있으니 「2개」로 읽힌다. 맞는 지적이다.
+
+       🔴 그래서 배너가 있을 때 이 래퍼의 «카드 껍데기를 벗긴다». 내용은 한 글자도
+          지우지 않고 세로 간격만 남긴다 — CPO 지시의 「KC/인증 판단 영역은 하나만
+          존재하고 그 안에서 판매 가능 여부 → KC 대상 여부 → 인증정보 입력으로
+          연결」이 그대로 한 흐름이 된다.
+       🔴 배너가 없을 때(kcStatus 미계산)는 이 블록이 유일한 KC 영역이므로 카드를
+          «유지한다». 벗기면 섹션 안에서 경계가 사라져 다른 칸과 섞인다.
+       🔴 SourceDataView 가 이미 같은 판단을 해 뒀다(UX 2.2): 「두 자리에서 쓰이는데
+          둘 다 제목과 테두리를 갖고 있어서, 여기서 또 두르면 카드 안에 카드가
+          겹쳐 보인다」. 새 규칙이 아니라 그 규칙을 KC 에도 적용한 것이다. */
+    <div className={statusBannerShown ? "mt-3 space-y-3" : "mt-3 space-y-3 rounded-md border border-border bg-background p-3"}>
       {isBlocked && !statusBannerShown && (
         <div className="space-y-2 rounded-md border border-error/30 bg-error-soft p-3">
           <p className="text-sm font-semibold text-error">⚠ KC 인증 · 판매자 확인 필요</p>
@@ -1352,67 +1371,32 @@ export function PlatformPreview({
           summary={optionSummary}
           {...sectionProps("section-options")}
         >
-          {productOptionGroups && productOptionGroups.length > 0 ? (
-            <>
-              <p className="flex flex-wrap items-center gap-1.5 text-xs text-text-tertiary">
-                <ValueBadge kind="original" />
-                원본 사이트의 옵션 구조(사이즈/색상 등 옵션그룹 {productOptionGroups.length}개)가
-                품목별 가격/재고에 그대로 반영됩니다. 값 목록은 아래에서 확인할 수 있습니다.
-              </p>
-              {/* A-10(작업1 — 넓어진 폭을 옵션그룹 여러 개가 나란히 보이는 데 쓴다.
-                  기존엔 그룹 이름/값이 콤마로 뭉친 한 줄 텍스트라 사이즈/색상이
-                  몇 개인지 한눈에 안 보였다. */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {productOptionGroups.map((group) => (
-                  <div key={group.name} className="rounded-md border border-border p-2.5">
-                    <p className="text-xs font-medium text-text-secondary">
-                      {group.name} <span className="text-text-tertiary">({group.values.length}개)</span>
-                    </p>
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      {group.values.map((v) => (
-                        <span key={v} className="rounded-full bg-background px-2 py-0.5 text-xs text-text-primary">
-                          {v}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : null}
-          {/* ══ 🔴 P5.6 P1-5(CPO ①, 2026-10-09) — **채널 탭은 옵션을 «고치지» 않는다.** ══
+          {/* ══ 🔴 P5.6 재작업(CEO 실측, 2026-10-09) — **채널 탭의 옵션 표시를 «지웠다».** ══
 
-              여기에 있던 것 둘을 치웠다:
-                ① `OptionVariantEditor`        단품별 SKU·재고·가격 «편집» 표
-                ② `product.options` EditableText  축 이름 «편집» 칸
+              앞선 수정은 여기서 «편집» 만 걷고 그룹/값 목록과 단품 수를 읽기
+              전용으로 남겼다. CEO 판정: 「못 고치고 보이기만 하지만 제거해야 함」.
+              그 판정이 맞다 — 읽기 전용이어도 같은 값이 네 화면(상품정보 + 세
+              채널)에 서 있으면 셀러는 여전히 「커머스마다 옵션이 있다」고 읽는다.
+              CPO 지시도 같다: 「옵션 자체를 중복 표시하지 않는 방향 · 안내조차
+              최소화」.
 
-              둘 다 공통 데이터(CanonicalProduct.variants · .options)를 고치는데
-              세 채널 탭에 각각 떠 있었다 — 셀러가 같은 값을 세 곳에서 고쳤고,
-              그래서 「옵션이 개별 Commerce 에서 관리된다」고 읽혔다(CEO 실측).
-
-              🔴 가격이 이미 이 어휘를 쓴다(PHASE 3.2): 「정하는 곳은 상품정보
-                 하나이고, 채널 화면은 그 값을 이 채널에 그대로 쓴다」. 옵션도
-                 같은 규칙으로 맞춘다 — 상품정보 → 옵션 에서 고친다.
-              🔴 «표시» 는 남긴다. 위 그룹/값 목록은 읽기 전용이고, 이 채널
-                 payload 가 무엇을 받는지 셀러가 확인할 유일한 자리다. 지우면
-                 「무엇이 등록되는가」를 볼 수 없다.
-              🔴 아래 단품 요약도 읽기 전용으로 남긴다 — rework12 가 「③ 옵션에
-                 입력칸이 0개」를 이미 요구하는 그 계약과 같은 방향이다. */}
-          {product.variants.length > 0 && (
-            <p className="text-xs text-text-tertiary">
-              단품 {product.variants.length}개 · SKU·재고·옵션가는{" "}
-              <span className="font-medium text-text-secondary">상품정보 → 옵션</span>에서 관리합니다.
-            </p>
-          )}
-          {(!productOptionGroups || productOptionGroups.length === 0) && listing.options.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {listing.options.map((opt) => (
-                <span key={opt} className="rounded-full bg-background px-2 py-0.5 text-xs text-text-primary">
-                  {opt}
-                </span>
-              ))}
-            </div>
-          )}
+              🔴 옵션의 Single Source of Truth = 상품정보 → 옵션 한 곳이다.
+              🔴 등록 payload 는 영향이 없다 — 세 채널 빌더가 화면이 아니라
+                 `product.optionGroups`·`product.variants` 를 직접 읽는다
+                 (naver/build-payload.ts:330 · coupang:1839 · lotteon:264 실측).
+              🔴 남기는 것은 «한 줄» 과 아래 재고 한 칸뿐이다. 재고는 S-7(CEO
+                 확정, 2026-09-26)이 이 자리에 둔 것이라 옮기지 않는다 — 옵션
+                 «구조» 가 아니라 「팔 물건이 몇 개인가」다.
+              🔴 그 한 줄을 남기는 이유: 섹션 제목이 「옵션」인데 본문이 통째로
+                 비면 셀러는 「옵션이 없는 상품」으로 읽는다. 개수와 갈 곳만 적는다. */}
+          <p className="text-xs text-text-tertiary">
+            {product.variants.length > 0
+              ? `옵션 ${productOptionGroups?.length ?? 0}종 · 단품 ${product.variants.length}개 — `
+              : productOptionGroups && productOptionGroups.length > 0
+                ? `옵션 ${productOptionGroups.length}종 — `
+                : "옵션 없는 단일 상품 — "}
+            <span className="font-medium text-text-secondary">상품정보 → 옵션</span>에서 확인·수정합니다.
+          </p>
           {/* ══ 장기 스프린트 S-7(CEO 지시, 2026-09-26) — 재고가 «배송» 에 있었다 ══
 
               재고 입력칸이 배송 섹션(section-shipping) 안에 배송비·반품안내와
