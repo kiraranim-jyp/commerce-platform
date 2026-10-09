@@ -305,6 +305,88 @@ function KcAxisRadio({
  */
 export const KC_CERT_NUMBER_ANCHOR = "field-kcCertificationNumber";
 
+/**
+ * ══ 🔴 P5.6 P2(CPO 결정, 2026-10-09) — 브랜드 공식몰 제조국 «확인» 한 줄 ════
+ *
+ * 🔴 판정을 화면이 만들지 않는다 — `/api/origin/verify` 가 돌려준 상태·값·근거를
+ *    그대로 적는다. 네 상태를 그대로 갈라 보여준다(VERIFIED / UNVERIFIED /
+ *    BLOCKED / NO_OFFICIAL_SITE) — 「확인 못 함」을 「해당 없음」으로 뭉개지 않는다.
+ * 🔴 눌러야 돈다. 자동으로 호출하지 않는다(렌더마다 HTTP 가 나가면 그것이
+ *    무차별 수집이다).
+ */
+function OfficialOriginCheck({ brand, onAdopt }: { brand: string; onAdopt: (value: string) => void }) {
+  const [state, setState] = useState<"IDLE" | "LOADING" | "DONE">("IDLE");
+  const [evidence, setEvidence] = useState<{
+    state: string;
+    manufacturingCountry: string | null;
+    sourceUrl: string | null;
+    snippet: string | null;
+    reason: string;
+  } | null>(null);
+
+  if (!brand.trim()) return null;
+
+  async function run() {
+    setState("LOADING");
+    try {
+      const res = await fetch("/api/origin/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brand }),
+      });
+      const json = (await res.json()) as { ok?: boolean; evidence?: typeof evidence; message?: string };
+      setEvidence(
+        json.ok && json.evidence
+          ? json.evidence
+          : { state: "BLOCKED", manufacturingCountry: null, sourceUrl: null, snippet: null, reason: json.message ?? "확인하지 못했습니다." },
+      );
+    } catch {
+      setEvidence({
+        state: "BLOCKED",
+        manufacturingCountry: null,
+        sourceUrl: null,
+        snippet: null,
+        reason: "공식몰 확인 요청이 실패했습니다 — 네트워크를 확인해주세요.",
+      });
+    }
+    setState("DONE");
+  }
+
+  return (
+    <div className="space-y-1">
+      <button
+        type="button"
+        onClick={() => void run()}
+        disabled={state === "LOADING"}
+        className="rounded border border-border px-2 py-1 text-[11px] font-medium text-text-secondary hover:bg-surface disabled:opacity-50"
+      >
+        {state === "LOADING" ? "공식몰 확인 중…" : "공식몰에서 제조국 확인"}
+      </button>
+      {evidence && (
+        <div className="rounded-md border border-dashed border-border bg-background px-2.5 py-2 text-[11px]">
+          <p className={evidence.state === "VERIFIED" ? "text-text-primary" : "text-text-secondary"}>
+            {evidence.reason}
+          </p>
+          {/* 🔴 근거를 «보존해 보여준다» — URL 과 원문 조각. 요약하지 않는다. */}
+          {evidence.sourceUrl && (
+            <p className="mt-1 break-all text-text-tertiary">근거: {evidence.sourceUrl}</p>
+          )}
+          {evidence.snippet && <p className="mt-0.5 text-text-tertiary">「…{evidence.snippet}…」</p>}
+          {evidence.state === "VERIFIED" && evidence.manufacturingCountry && (
+            <button
+              type="button"
+              onClick={() => onAdopt(evidence.manufacturingCountry as string)}
+              className="mt-1.5 rounded border border-primary px-2 py-1 text-[11px] font-medium text-primary hover:bg-primary/10"
+            >
+              「{evidence.manufacturingCountry}」을 원산지로 넣기
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function KcCertificationBlock({
   product,
   naverValidation,
@@ -1604,6 +1686,23 @@ export function PlatformPreview({
                          쿠팡·롯데ON 도 서버에서 같은 폴백을 타지만 화면으로 올라오는
                          통로가 없다. 없는 통로를 지어내 「3채널 지원」처럼 보이게
                          하지 않는다. */}
+                  {/* ══ 🔴 P5.6 P2(CPO 결정, 2026-10-09) — **공식몰에서 «확인» 한다.** ══
+
+                      CEO: 「원산지는 대상 브랜드의 공식 홈페이지에서 찾아서 입력」.
+
+                      🔴 수집 단계에 넣지 않았다 — 상품을 분석할 때마다 공식몰을
+                         받으면 그것이 무차별 크롤링이다(CPO: HTTP 는 후보
+                         브랜드에 한정). 셀러가 «이 상품의 원산지를 확인하려 할
+                         때» 한 번 돈다. HTTP 는 최대 2회(robots.txt + 한 장).
+                      🔴 값을 자동 확정하지 않는다. 확인되면 그 값과 «근거 URL ·
+                         원문 조각» 을 보여주고, 넣는 것은 셀러가 누른다 —
+                         ORIGINAL 로 승격되는 자리는 한 곳이어야 한다.
+                      🔴 못 찾으면 그대로 「미확인」이다. 브랜드 국가를 제조국으로
+                         올리지 않고, AI 로 추정하지 않는다. */}
+                  <OfficialOriginCheck
+                    brand={product.brand.value}
+                    onAdopt={(value) => fix?.("countryOfOrigin", value)}
+                  />
                   {!product.countryOfOrigin.value.trim() &&
                     naverResolved?.origin?.resolvedCountryText &&
                     (naverResolved.origin.resolvedCountryTextSource === "BRAND_DEFAULT" ||

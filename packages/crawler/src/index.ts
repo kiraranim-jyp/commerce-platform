@@ -28,3 +28,6 @@ export {
   findSourceRepresentativeIndex,
   representativeIdForIndex,
 } from "./source-representative";
+/* 🔴 P5.6 P2(CPO 결정) — 브랜드 공식몰에서 «확인된» 제조국만 쓴다. */
+export * from "./official-site-origin";
+export * from "./utils/robots-gate";

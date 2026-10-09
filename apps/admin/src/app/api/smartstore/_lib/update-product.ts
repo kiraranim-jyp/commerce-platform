@@ -87,6 +87,9 @@ export function toRegisteredProductSnapshot(
            🔴 이제 대칭 «가정» 이 아니라 실측이다. 그래도 optional 로 둔다 —
            상품마다 없을 수 있고, 없는 것을 읽지 못한 것과 섞지 않는다. */
         naverShoppingSearchInfo?: { modelName?: string; manufacturerName?: string; brandName?: string };
+        /* 🔴 P5.6 P2 — 지금 등록된 판매자 태그. 경로는 요청과 «같은 자리» 다
+           (originProduct.detailAttribute.seoInfo.sellerTags). */
+        seoInfo?: { sellerTags?: { code?: number; text?: string }[] };
         originAreaInfo?: { originAreaCode?: string; content?: string; importer?: string };
         certificationTargetExcludeContent?: {
           childCertifiedProductExclusionYn?: boolean;
@@ -121,6 +124,12 @@ export function toRegisteredProductSnapshot(
       /* P0-CHANNEL-03 F-11b — 🔴 `?? null` 이나 `?? {}` 로 메우지 않는다.
          빈 객체로 채우면 compareRegisteredProduct 가 「읽었는데 값이 없었다」로
          읽어 있던 값이 사라졌다는 거짓 MISSING 을 만든다. 없으면 undefined. */
+      /* 🔴 P5.6 P2 — `?? []` 로 메우지 않는다. 「응답에 seoInfo 가 없었다」와
+         「읽었는데 태그가 0개였다」는 다른 사실이고, 그 차이가 UPDATE 에서
+         「유지」와 「삭제」를 가른다. code 는 버린다(위 타입 주석 참고). */
+      sellerTags: origin.detailAttribute?.seoInfo?.sellerTags
+        ?.map((tag) => (tag?.text ?? "").trim())
+        .filter(Boolean),
       naverShoppingSearchInfo: origin.detailAttribute?.naverShoppingSearchInfo,
       originAreaInfo: origin.detailAttribute?.originAreaInfo,
       certificationTargetExcludeContent: origin.detailAttribute?.certificationTargetExcludeContent,

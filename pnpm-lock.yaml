@@ -247,6 +247,9 @@ importers:
       '@commerce/category':
         specifier: workspace:*
         version: link:../category
+      '@commerce/content':
+        specifier: workspace:*
+        version: link:../content
       '@commerce/marketplace':
         specifier: workspace:*
         version: link:../marketplace

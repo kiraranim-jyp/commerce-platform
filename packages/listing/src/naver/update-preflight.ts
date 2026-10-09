@@ -65,6 +65,19 @@ export interface RegisteredProductSnapshot {
      빈 객체로 메우면 「있던 값이 사라졌다」는 거짓 MISSING 이 난다.
   ════════════════════════════════════════════════════════════════════════ */
 
+  /**
+   * ══ 🔴 P5.6 P2(CPO 결정, 2026-10-09) — **지금 등록된 판매자 태그.** ════════
+   *
+   * `originProduct.detailAttribute.seoInfo.sellerTags[].text` 를 읽은 것.
+   *
+   * 🔴 `undefined`(응답에서 못 읽음)와 `[]`(읽었는데 없음)를 «섞지 않는다» —
+   *    위 leafCategoryId 주석과 같은 이유다. 태그는 보내면 전체 교체이고 안
+   *    보내면 삭제라(기술지원 #1650), 「모른다」를 「없다」로 읽으면 셀러가
+   *    판매자센터에 넣어 둔 태그가 조용히 사라진다.
+   * 🔴 `code` 는 담지 않는다 — 그 쌍이 지금도 유효한지 확인할 방법이 없고,
+   *    불일치는 요청 «전체» 를 실패시킨다.
+   */
+  sellerTags?: string[];
   /** 모델명·제조사명·브랜드명. 평평한 문자열 3개라 칸별로 비교할 수 있다. */
   naverShoppingSearchInfo?: {
     modelName?: string;
