@@ -1,4 +1,7 @@
 import type { MasterProduct, SellingConditions } from "@commerce/shared";
+import { variantStockForPayload } from "@commerce/shared";
+/* 🔴 P5.6 FINAL — 태그 중복제거 규칙은 세 채널이 한 함수를 본다. */
+import { dedupeSellerTagTexts } from "../naver/seller-tags-update";
 import { getRegistrationImageUrl, isRegistrationSafeImageUrl, resolvedPayloadStock } from "@commerce/shared";
 import { computeVariantFinalPriceKrw, resolveListingPrice } from "@commerce/pricing";
 import { manufacturerInputFromProduct, resolveManufacturer } from "../common/manufacturer";
@@ -307,7 +310,9 @@ function buildItems(
       itmOptLst,
       itmImgLst: images,
       slPrc: finalKrw,
-      stkQty: variant.stockQuantity ?? defaultStock,
+      /* 🔴 P5.6 FINAL(CPO FAIL ①) — 세 채널이 같은 함수를 본다. 여기 `defaultStock`
+         은 실측이 없으면 0 이었고, 그것은 「품절」이라는 주장이다. */
+      stkQty: variantStockForPayload(product, variant) ?? defaultStock,
       ...(variant.sku?.trim() ? { eitmNo: variant.sku.trim() } : {}),
     };
   });
@@ -334,12 +339,18 @@ function buildItems(
   return { items, optionSorts, usesOptions: true };
 }
 
-/** 검색키워드는 5개 이하만 등록 가능(문서 원문). */
+/**
+ * 검색키워드는 5개 이하만 등록 가능(문서 원문).
+ *
+ * 🔴 P5.6 FINAL(CPO FAIL ③) — `trim` 만 하던 자리를 공용 함수로 올렸다. 네이버·
+ *    쿠팡이 같은 결함이었고(중복이 그대로 나갔다), 세 채널이 다른 개수를 보내면
+ *    셀러가 화면에서 센 수와 어긋난다.
+ * 🔴 `.slice(0, 5)` 는 «유지» 한다 — 우리가 정한 정책이 아니라 롯데ON 문서가 적은
+ *    상한이다(네이버는 공식 maxItems 가 없어 상한을 넣지 않았다).
+ *    🔴 중복을 «먼저» 걷는다. 순서가 반대면 「5개를 넣었는데 3개만 갔다」가 난다.
+ */
 function resolveSearchKeywords(product: LotteOnProductInput): string[] {
-  return product.keywords.value
-    .map((keyword) => keyword.trim())
-    .filter(Boolean)
-    .slice(0, 5);
+  return dedupeSellerTagTexts(product.keywords.value).slice(0, 5);
 }
 
 /** 등록 상품명 — AI 한국어 제목이 있으면 그것, 없으면 원문 제목. 롯데ON 상한 150자. */

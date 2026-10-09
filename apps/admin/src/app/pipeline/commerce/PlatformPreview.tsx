@@ -29,7 +29,7 @@ import type {
   FieldSource,
   SmartStoreKcDeclaration,
 } from "@commerce/shared";
-import { resolveSourceStock } from "@commerce/shared";
+import { resolveSourceStock, variantsWithUnknownStock } from "@commerce/shared";
 import { CategoryRecommendationPanel } from "./CategoryRecommendationPanel";
 import { ChannelPriceSection } from "./ChannelPriceSection";
 import { CategoryRequirementsEditor } from "./CategoryRequirementsEditor";
@@ -1502,10 +1502,55 @@ export function PlatformPreview({
               {(() => {
                 const fact = resolveSourceStock(product);
                 if (fact.from === "VARIANTS") {
+                  /* ══ 🔴 P5.6 FINAL(CPO FAIL ①, 2026-10-09) — **합계 한 줄은 재고가 아니다.** ══
+
+                     CEO: 옵션 제거는 PASS · «재고수량 FAIL».
+                     원인이 둘이었고 둘 다 실측으로 잡았다 —
+
+                       ① payload 에 999 가 날조됐다. 재고를 모르는 옵션에
+                          `?? product.stockQuantity.value`(=999, DEFAULT)가 들어가
+                          상품 재고(3)와 옵션 합(3+0+999)이 어긋났다. 세 채널이
+                          같은 모양으로 틀려 있었다 → variantStockForPayload 하나로 모았다.
+                       ② 화면이 «합계 한 줄» 만 보여줬다. 옵션 표시를 걷은 뒤로는
+                          셀러가 어느 옵션에 몇 개인지 볼 자리가 사라졌다 —
+                          CPO 가 「옵션 제거 때문에 재고 데이터까지 끊긴 것이
+                          아닌지」로 지목한 그 지점이다.
+
+                     🔴 그래서 여기서 variant별 재고를 적는다. 옵션 «구조/편집» 이
+                        아니라 재고다 — CPO ① 이 「옵션 상품은 variant별 재고」를
+                        명시한다. 조합명은 그 재고가 «어느 것» 인지 말하는 이름이다.
+                     🔴 모르는 옵션을 0 이나 999 로 적지 않는다. 「모름」으로 적고,
+                        그 옵션은 등록 payload 에서 빠진다는 사실을 같이 말한다. */
+                  const unknown = variantsWithUnknownStock(product);
                   return (
-                    <p className="text-xs text-text-primary">
-                      {fact.quantity}개 <span className="text-text-tertiary">· 옵션 재고 합계</span>
-                    </p>
+                    <div className="space-y-1">
+                      <p className="text-xs text-text-primary">
+                        {fact.quantity}개 <span className="text-text-tertiary">· 옵션 재고 합계</span>
+                      </p>
+                      <ul className="space-y-0.5">
+                        {product.variants.map((variant) => {
+                          const combo = Object.values(variant.optionValues ?? {}).join(" / ") || variant.id;
+                          const measured = typeof variant.stockQuantity === "number";
+                          return (
+                            <li key={variant.id} className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                              <span className="text-text-secondary">{combo}</span>
+                              <span className={measured ? "font-medium text-text-primary" : "text-warning"}>
+                                {measured ? `${variant.stockQuantity}개` : "재고 모름"}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      {unknown.length > 0 && (
+                        <p className="text-[11px] text-warning">
+                          {/* 🔴 「상품정보 → 옵션」이라고 쓰지 않는다 — 그 문구는 옵션 «안내»
+                              로 읽히고, 채널 탭에서 그것을 걷은 것이 CPO ① 이다. 여기서
+                              가리켜야 하는 것은 옵션이 아니라 «재고» 를 채우는 자리다. */}
+                          재고를 모르는 옵션 {unknown.length}개는 등록에서 제외됩니다 — 0개나 999개로 채우지
+                          않습니다. 상품정보에서 그 옵션의 재고를 채우면 함께 등록됩니다.
+                        </p>
+                      )}
+                    </div>
                   );
                 }
                 return (
@@ -1802,7 +1847,21 @@ export function PlatformPreview({
                   patch.exemptionReason = undefined;
                 }
                 if (Object.keys(patch).length > 0) onUpdateKcDeclaration?.(patch);
-                onOpenListingModal();
+                /* ══ 🔴 P5.6 FINAL(CPO FAIL ④ 2차, 2026-10-09) — **등록 팝업을 띄우지 않는다.** ══
+
+                   앞선 수정은 상태를 바꾸고 «그대로» `onOpenListingModal()` 을 불렀다.
+                   CEO: 「클릭 즉시 등록 팝업이 뜨는 UX」가 FAIL.
+
+                   CPO 확정: 「판매 가능 확인 클릭 자체가 «등록 의도» 를 의미하지
+                   않는다 · 실제 등록 버튼에서만 최종 확인」.
+
+                   🔴 그래서 상태 변경과 등록 확인을 분리한다. 이 버튼은 두 축을
+                      「대상 아님」으로 바꾸고 «현재 화면에 머문다».
+                   🔴 등록 팝업은 우측 [등록 시작](onRegister → onOpenListingModal)
+                      에서만 뜬다 — 그 배선은 한 줄도 건드리지 않았다.
+                   🔴 배너의 다른 버튼 [판매 전 최종 확인](onFinalConfirm)은 «그대로»
+                      모달을 연다. 그 버튼은 이름 자체가 최종 확인이고, 셀러가
+                      확인하려고 누르는 자리다 — 둘은 다른 의도다. */
               }}
               /* 🔴 P5.6 P1-7 — 전에는 `goToSection("section-kc")` 였다. 이 버튼은
                  «자기가 들어 있는» 섹션으로 스크롤했으므로 눌러도 아무 일도

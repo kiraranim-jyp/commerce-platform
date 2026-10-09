@@ -165,3 +165,75 @@ export function resolvedPayloadStock(product: CanonicalProduct): number | null {
   if (level.source === "DEFAULT" || level.value === PIPELINE_DEFAULT_STOCK) return null;
   return level.value;
 }
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * P5.6 FINAL(CPO FAIL ①, 2026-10-09) — **옵션별 재고에 999 를 넣지 않는다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 운영 빌더로 실측해서 잡은 결함이다. 옵션 3개 중 하나가 재고를 모를 때 —
+ *
+ *   NAVER_COMBOS = [ {2Y: 3}, {3Y: 0}, {4Y: 999} ]   ← 모르는 옵션에 999
+ *   NAVER_TOP_STOCK = 3                              ← 합계와 어긋난다(3+0+999)
+ *
+ * 세 채널이 «같은 모양» 으로 틀려 있었다:
+ *   naver:353    variant.stockQuantity ?? product.stockQuantity.value ?? 0
+ *   coupang:1652 variant?.stockQuantity ?? payloadStockQuantity(product)   ← 999 포함
+ *   lotteon:310  variant.stockQuantity ?? defaultStock                     ← 0 폴백
+ *
+ * 🔴 앞선 스프린트에서 「재고 999 방지」를 닫았다고 보고했는데, 그것은 **상품
+ *    레벨** 한 줄이었다. 옵션별 경로는 그대로 999 를 쓰고 있었다 — 같은 결함을
+ *    두 번째로 고친다. 그래서 이번에는 세 채널이 «한 함수» 를 보게 만든다.
+ *
+ * ── 🔴 무엇으로 폴백하는가 ───────────────────────────────────────────────
+ * CPO: 「옵션 상품은 variant별 재고, 단일 상품은 기존 기본 재고를 사용 ·
+ *       999 같은 fallback 으로 문제를 가리지 않음」.
+ *
+ *   ① variant 에 실측이 있으면 그 값                      ← 가장 구체적인 사실
+ *   ② 없으면 «상품 레벨 실측»(resolvedPayloadStock)        ← 셀러가 넣은 값 포함
+ *   ③ 둘 다 없으면 **null** — 지어내지 않는다
+ *
+ * ③ 이 되면 호출부가 그 사실을 다룬다. 🔴 0 으로 메우지 않는다 — 0 은 「품절」
+ *    이라는 «사실의 주장» 이고, 팔 수 있는 옵션이 품절로 등록된다.
+ */
+export function variantStockForPayload(
+  product: CanonicalProduct,
+  variant: { stockQuantity?: number } | undefined,
+): number | null {
+  if (typeof variant?.stockQuantity === "number" && Number.isFinite(variant.stockQuantity) && variant.stockQuantity >= 0) {
+    return variant.stockQuantity;
+  }
+  /* ══ 🔴 실측이 잡은 두 번째 결함 — 폴백이 «순환» 이었다 ══════════════════
+     처음에는 `resolvedPayloadStock(product)` 로 내려갔다. 그런데 그 함수는
+     옵션 합계를 «먼저» 본다(resolveSourceStock → from VARIANTS). 그래서
+     옵션 [3, 0, 모름] 에서 모름 칸에 **합계 3** 이 들어가, payload 합이
+     3+0+3 = 6 으로 늘었다 — 원본에 없던 재고를 우리가 만든 것이다.
+
+     🔴 그래서 여기서는 «상품 레벨 실측» 만 본다. 옵션에서 파생된 값을 다시
+        옵션에 넣지 않는다. */
+  const level = product.stockQuantity;
+  if (!isMeasured(level.source)) return null;
+  if (!Number.isFinite(level.value) || level.value < 0) return null;
+  /* 🔴 999 는 파이프라인이 넣은 「모른다」의 표시다 — 실측으로 취급하지 않는다
+     (resolvedPayloadStock 이 같은 이유로 그 값을 걸러낸다). */
+  if (level.value === PIPELINE_DEFAULT_STOCK) return null;
+  return level.value;
+}
+
+/**
+ * 🔴 「이 옵션의 재고를 모른다」 목록 — 화면·검증이 그 사실을 말한다.
+ *
+ * ══ 🔴 같은 순환 결함이 여기에도 있었다(2026-10-09) ═══════════════════════
+ * 처음에는 `resolvedPayloadStock(product) != null` 이면 전부 안다고 보고 빈
+ * 배열을 돌려줬다. 그 함수는 «옵션 합계» 를 먼저 보므로, 옵션이 하나라도 실측이면
+ * 항상 non-null 이 되어 **모르는 옵션이 있어도 빈 배열** 이 나왔다 — 가드가 잡았다.
+ *
+ * 🔴 그래서 판정 기준을 `variantStockForPayload` «하나» 로 맞춘다. payload 에
+ *    실릴 값이 null 인 옵션이 곧 「모르는 옵션」이다 — 화면이 말하는 것과 payload
+ *    가 하는 것이 어긋날 수 없다.
+ */
+export function variantsWithUnknownStock(product: CanonicalProduct): string[] {
+  return product.variants
+    .filter((v) => variantStockForPayload(product, v) == null)
+    .map((v) => Object.values(v.optionValues ?? {}).join(" / ") || v.id);
+}

@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { backfillCanonicalProduct, type CanonicalProduct, type PlatformId } from "@commerce/shared";
+/* 🔴 P5.6 FINAL — 상세설명·태그를 채우는 공용 함수(셀러 수정값은 덮지 않는다). */
+import { seedSeoContent } from "@commerce/content";
 import type { ProductDetailOverride } from "@commerce/listing";
 import type { CategoryProfileId, CategorySelection } from "@commerce/category";
 import type { MarketCategoryOption } from "@/app/api/market-categories/route";
@@ -228,7 +230,22 @@ export default function PipelinePage() {
               storageNote: ws.pipelineResponse.storageNote,
               canonicalProduct: ws.canonicalProduct,
             });
-            setProduct(backfillCanonicalProduct(ws.canonicalProduct));
+            /* ══ 🔴 P5.6 FINAL(CPO FAIL ③, 2026-10-09) — **저장된 상품도 채운다.** ══
+
+               CPO: 「상품정보에서 태그 원본을 못 가져옴」. 생성 지점에는 이미
+               `seedSeoContent` 가 꽂혀 있었는데(canonical-product.ts), 그것은
+               «새로 만드는» 상품만 지난다. **이미 저장된 스냅샷** 은 `keywords: []`
+               그대로이고 source 가 ORIGINAL 이라, 열어도 비어 있었다 —
+               CEO 가 본 상품이 그것이다.
+
+               🔴 복원 지점이 제자리다. `backfillCanonicalProduct` 가 「옛 스냅샷에
+                  없던 칸을 메우는」 바로 그 함수이고, 그 바로 뒤에 한 겹 통과시킨다.
+               🔴 shared 에 넣지 않았다 — `backfillCanonicalProduct` 는
+                  `@commerce/shared` 이고 생성기는 `@commerce/content` 다.
+                  shared → content 의존을 만들면 그 방향이 거꾸로다.
+               🔴 셀러 수정값(USER_EDITED)은 덮지 않고 멱등이다 — 같은 스냅샷을
+                  여러 번 열어도 태그가 늘지 않는다(가드가 센다). */
+            setProduct(seedSeoContent(backfillCanonicalProduct(ws.canonicalProduct)).product);
             setItems(ws.items);
             setThumbnails(ws.thumbnails ?? {});
             setRepresentativeId(ws.representativeId);
@@ -559,7 +576,11 @@ export default function PipelinePage() {
           setFailure(event.failure ?? null);
         } else if (event.type === "complete") {
           setResult(event);
-          setProduct(event.canonicalProduct);
+          /* 🔴 P5.6 FINAL(CPO FAIL ③) — 수집 직후 경로. 서버의
+             `buildCanonicalProduct` 가 이미 통과시키지만, 여기서 한 번 더 지나도
+             «멱등» 이라 값이 늘지 않는다. 두 입구(수집·복원)가 같은 규칙을 보게
+             둔다 — 한쪽만 지나면 어느 쪽으로 들어왔는지에 따라 화면이 달라진다. */
+          setProduct(seedSeoContent(event.canonicalProduct).product);
           setItems(event.items);
           setRepresentativeId(event.items.find((item) => item.isRepresentative)?.id ?? null);
           await precomputeThumbnails(event.items);

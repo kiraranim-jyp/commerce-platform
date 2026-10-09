@@ -269,7 +269,12 @@ describe("④ 🔴 지운 것이 아니라 «옮긴» 것이다 — 표시는 �
     const region = container.querySelector("#section-options");
     expect(region, "옵션 섹션이 없다 — 전제가 깨졌다").not.toBeNull();
     const t = (region?.textContent ?? "").replace(/\s+/g, " ").trim();
-    for (const v of ["2Y", "3Y", "4Y"]) expect(t, `값 ${v} 가 채널 탭에 아직 있다`).not.toContain(v);
+    /* 🔴 P5.6 재오픈 ①(CPO, 2026-10-09) — 값 «칩» 목록은 사라졌다. 다만 재고
+       행의 조합 레이블은 남는다 — CPO 가 「옵션 상품은 variant별 재고」를
+       요구했고, 그 행이 「어느 옵션의 재고인가」를 말해야 한다. 그래서 금지선을
+       축 이름 · 값 칩 · 안내로 다시 그렸다. */
+    expect(t, "옵션 그룹(축) 이름이 아직 있다").not.toContain("사이즈");
+    expect(region!.querySelectorAll("span.rounded-full").length, "옵션 값 칩이 남아 있다").toBe(0);
   });
 
   /* ══ 🔴 P5.6 FINAL(CPO FAIL ①, 2026-10-09) — **이 단언을 또 뒤집었다.** ══
@@ -290,6 +295,7 @@ describe("④ 🔴 지운 것이 아니라 «옮긴» 것이다 — 표시는 �
     const t = ((body ?? region)?.textContent ?? "").replace(/\s+/g, " ");
     /* 양성 대조 — 영역을 실제로 읽고 있다(재고 칸은 남아 있다). */
     expect(t, "옵션 영역을 읽지 못했다").toContain("재고");
+    expect(region!.querySelectorAll("ul > li").length, "variant별 재고 행이 없다").toBeGreaterThan(0);
     expect(t, "단품 수가 아직 채널 탭에 있다").not.toContain("단품");
     expect(t, "안내 문구가 아직 남아 있다").not.toContain("상품정보 → 옵션");
   });
@@ -305,6 +311,7 @@ describe("④ 🔴 지운 것이 아니라 «옮긴» 것이다 — 표시는 �
     const body = region?.querySelector(":scope > div");
     const t = ((body ?? region)?.textContent ?? "").replace(/\s+/g, " ");
     expect(t, "옵션 영역을 읽지 못했다").toContain("재고");
+    expect(region!.querySelectorAll("ul > li").length, "variant별 재고 행이 없다").toBeGreaterThan(0);
     expect(t).not.toContain("상품정보 → 옵션");
   });
 

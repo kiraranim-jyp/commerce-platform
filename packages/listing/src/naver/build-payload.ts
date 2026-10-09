@@ -4,6 +4,8 @@ import {
   type SmartStoreKcDeclaration,
 } from "./kc-declaration";
 import type { ListingModel } from "@commerce/marketplace";
+/* 🔴 P5.6 FINAL — 옵션별 재고 규칙은 한 곳이다(999 금지). */
+import { variantStockForPayload } from "@commerce/shared";
 /* 🔴 P5.6 실측 — 태그 중복제거 규칙은 한 곳이다. */
 import { dedupeSellerTagTexts } from "./seller-tags-update";
 import type {
@@ -349,8 +351,17 @@ function buildOptionCombinations(product: SmartStoreProductInput, salePrice: num
         )
       : { finalKrw: salePrice, applied: false };
     const priceDelta = variantResult.finalKrw - salePrice;
+    /* 🔴 모르면 null 이다 — 아래에서 그 옵션을 «빼낸다»(0 으로 메우지 않는다). */
+    const stock = variantStockForPayload(product, variant);
+    if (stock == null) return null;
     const combo: NaverOptionCombination = {
-      stockQuantity: variant.stockQuantity ?? product.stockQuantity.value ?? 0,
+      /* 🔴 P5.6 FINAL(CPO FAIL ①) — 여기 있던 `?? product.stockQuantity.value ?? 0`
+         이 999(DEFAULT)를 그대로 실어 보냈다. 실측: 옵션 3개 중 하나가 재고를
+         모를 때 그 옵션에 999 가 들어갔고, 상품 재고(3)와 합계가 어긋났다.
+         🔴 규칙은 한 곳이다 — variantStockForPayload(실측 → 상품 실측 → null).
+         null 이면 0 으로 메우지 않고 그 옵션을 «빼서» 보낸다(아래 filter) —
+         0 은 「품절」이라는 사실의 주장이고, 팔 수 있는 옵션이 품절로 등록된다. */
+      stockQuantity: stock,
       price: priceDelta,
       usable: true,
     };
@@ -363,7 +374,17 @@ function buildOptionCombinations(product: SmartStoreProductInput, salePrice: num
     if (values[1]) combo.optionName2 = values[1];
     if (values[2]) combo.optionName3 = values[2];
     return combo;
-  });
+  })
+    /* 🔴 재고를 모르는 옵션은 payload 에서 «빠진다». 네이버 optionCombinations
+       는 숫자를 요구하므로 넣으려면 값을 지어내야 하고, 그 지어낸 값이 바로
+       999(팔 수도 없는 수량) 또는 0(품절 오등록)이었다.
+
+       🔴 조용히 빠지지 않는다 — `variantsWithUnknownStock(product)` 가 그 목록을
+          내고, 화면과 검증이 「이 옵션의 재고를 모른다」를 말한다. 셀러가
+          상품정보 → 옵션에서 채우면 그 옵션이 다시 들어온다.
+       🔴 전부 빠지면 옵션 없는 단일 상품으로 나가고, 그때 상품 재고는
+          `payloadStockQuantity` 가 정한다(그 경로는 건드리지 않았다). */
+    .filter((combo): combo is NaverOptionCombination => combo !== null);
 }
 
 /** N-3.49(실제 등록 시도로 확인, 2026-08-17) — optionCombinationGroupNames는

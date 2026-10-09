@@ -198,9 +198,10 @@ describe("② 🔴 커머스 탭에서 옵션 «목록» 이 사라졌다", () =
     await mountChannel(platform);
     const region = container.querySelector("#section-options");
     expect(region, "옵션 섹션이 없다 — 전제가 깨졌다").not.toBeNull();
-    const t = flat(region);
-    expect(t, "옵션 값이 아직 채널 탭에 서 있다").not.toContain("2Y");
-    expect(t).not.toContain("3Y");
+    /* 🔴 P5.6 재오픈 ①(CPO, 2026-10-09) — 값 «칩» 과 축 이름은 사라졌다. 재고
+       행의 조합 레이블은 CPO 가 요구한 「variant별 재고」의 일부라 남는다. */
+    expect(flat(region), "옵션 그룹(축) 이름이 아직 있다").not.toContain("사이즈");
+    expect(region!.querySelectorAll("span.rounded-full").length, "옵션 값 칩이 남아 있다").toBe(0);
   });
 
   /* 🔴 P5.6 FINAL(CPO FAIL ①) — 그 한 줄조차 지웠다. CPO: 「영역 «자체» 제거 ·
