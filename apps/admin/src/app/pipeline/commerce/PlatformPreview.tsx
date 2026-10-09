@@ -1,5 +1,6 @@
 "use client";
 
+import { CATALOG_MODEL_NAME_ANCHOR } from "./SourceDataView";
 import { useEffect, useState, type ReactNode } from "react";
 import type { CategoryCandidate } from "@commerce/category";
 import type {
@@ -74,6 +75,7 @@ import { ValueBadge } from "@/components/ui/ValueBadge";
  * 보여주고, 다시 직접입력으로 되돌릴 수 있다. KC 필드(certificationType 등)는 이
  * 컴포넌트를 쓰지 않는다 — 항상 일반 FieldRow+EditableText만 쓴다(참조 불가 원칙). */
 function ReferenceEligibleFieldRow({
+  anchorId,
   label,
   field,
   onCommit,
@@ -83,6 +85,8 @@ function ReferenceEligibleFieldRow({
   referenceLimitation,
   referenceLimitationDetail,
 }: {
+  /** 🔴 P5.6 P0-1 — FieldRow root 로 그대로 내려보낸다(여기서 감싸지 않는다). */
+  anchorId?: string;
   label: string;
   field: { value: string; source: FieldSource; confidence: number };
   onCommit: (v: string) => void;
@@ -127,6 +131,7 @@ function ReferenceEligibleFieldRow({
   ) : undefined;
   return (
     <FieldRow
+      anchorId={anchorId}
       label={label}
       field={field}
       required={required}
@@ -1196,6 +1201,10 @@ export function PlatformPreview({
               onCommit={(v) => fix?.("modelName", v)}
               onSetReference={(r) => onSetFieldReference?.("modelName", r)}
               placeholder="예: B226AC043 (상품코드(SKU)와 다른 값)"
+              /* 🔴 P5.6 P0-1(CEO 실측, 2026-10-09) — 「기본정보에서 입력하기」를
+                 눌러도 셀러가 입력 위치를 못 찾았다. 이동 장치(goToSection)는 이미
+                 앵커 기반인데 이 칸에 앵커가 «없어» 섹션 첫 칸(상품명)으로 갔다. */
+              anchorId={CATALOG_MODEL_NAME_ANCHOR}
               /* REWORK-11 ⑤(CEO 지시, 2026-09-15: "설명으로 화면을 채우지 마라") —
                  화면에 남는 것은 **이 칸이 무엇인가** 한 줄이고, "고시정보 모델명과는
                  별도"라는 정책은 ⓘ로 접힌다. 문장 자체는 한 글자도 버리지 않았다 —

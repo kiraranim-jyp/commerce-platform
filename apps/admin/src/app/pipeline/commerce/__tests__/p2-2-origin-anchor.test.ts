@@ -64,8 +64,23 @@ describe("③ 🔴 앵커 id 가 화면에 «실제로» 있다 — 이동 경�
       .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
       .replace(/\/\*[\s\S]*?\*\//g, "")
       .replace(/^[ \t]*\/\/.*$/gm, "");
+    /* 🔴 P5.6 P0-1(2026-10-09) — 리터럴만 인정하면 «공용 상수» 로 단 앵커가 없는
+       것으로 보인다. 상수 쪽이 드리프트에 더 안전하므로(값을 한 곳에서만 고친다)
+       둘 다 인정한다 — 느슨해지지 않는다: 어느 쪽도 없으면 여전히 FAIL 이고,
+       상수형일 때는 그 상수가 «그 값» 으로 정의돼 있는지까지 확인한다.
+       🔴 앵커를 «전달» 만 하고 DOM 에 안 다는 경우도 잡아야 하므로,
+          id={상수} 가 실제로 쓰였는지를 본다. */
+    const constants = readFileSync(join(__dirname, "../SourceDataView.tsx"), "utf8");
+    const definedAs = (value: string): string[] =>
+      [...constants.matchAll(/export const (\w+) = "([^"]+)"/g)]
+        .filter((m) => m[2] === value)
+        .map((m) => m[1]);
     for (const anchor of new Set(Object.values(REGISTRATION_FIELD_ANCHOR))) {
-      expect(code, `${anchor} 앵커가 화면에 없다 — 눌러도 아무 데도 가지 않는다`).toContain(`id="${anchor}"`);
+      if (code.includes(`id="${anchor}"`)) continue;
+      const viaConstant = definedAs(anchor).some(
+        (name) => code.includes(`anchorId={${name}}`) || code.includes(`id={${name}}`),
+      );
+      expect(viaConstant, `${anchor} 앵커가 화면에 없다 — 눌러도 아무 데도 가지 않는다`).toBe(true);
     }
   });
 });

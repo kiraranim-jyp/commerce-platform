@@ -58,6 +58,7 @@ const SOURCE_SLOT_CLASS =
  * 이전과 완전히 같다.
  */
 export function FieldRow({
+  anchorId,
   label,
   labelSuffix,
   field,
@@ -67,6 +68,11 @@ export function FieldRow({
   note,
   children,
 }: {
+  /** 🔴 P5.6 P0-1 — 우선순위 안내가 «이 칸» 으로 이동할 때 쓰는 DOM id.
+   *  🔴 바깥을 <div> 로 감싸지 않는다 — 3열 격자 계약(h-full flex-col · mt-auto)이
+   *     깨져 rework12 가드가 잡는다(실제로 한 번 잡혔다). root 에 직접 단다.
+   *     주지 않으면 undefined 라 DOM 이 한 바이트도 바뀌지 않는다. */
+  anchorId?: string;
   label: string;
   /** 라벨 바로 뒤(ⓘ 툴팁 등). 라벨 글자 자체는 건드리지 않는다 — 테스트와
    *  스크롤 목적지가 라벨 문자열로 자리를 찾는다. */
@@ -112,7 +118,7 @@ export function FieldRow({
      같은 줄의 입력칸들이 같은 높이에서 시작한다. */
   const sourceLabel = field ? extractionSourceLabel(field) : "";
   return (
-    <div className="flex h-full min-w-0 flex-col">
+    <div id={anchorId} className="flex h-full min-w-0 flex-col">
       <div className="flex items-start justify-between gap-2">
         {/* labelSuffix(ⓘ)는 `<label>` **밖**이다 — 안에 넣으면 그 칸의 이름이
             "제조사 + 툴팁 전문"이 되어버린다(라벨 문자열로 자리를 찾는 검사와
@@ -285,7 +291,8 @@ function requirementBadge(requirement: FieldRequirement, value: string): ReactNo
  * blur까지 기다리면 "고쳤는데 여전히 통과로 보이는" 창이 생긴다.
  */
 export function ChannelCodeField({
-  label,  note,
+  label,
+  note,
   value,
   onChange,
   requirement,
@@ -294,7 +301,8 @@ export function ChannelCodeField({
   readOnly,
   displayValue,
 }: {
-  label: string;  note?: ReactNode;
+  label: string;
+  note?: ReactNode;
   value: string;
   onChange: (value: string) => void;
   requirement?: FieldRequirement;
@@ -373,7 +381,8 @@ export function ChannelCodeField({
 }
 
 export function ChannelCodeTextArea({
-  label,  note,
+  label,
+  note,
   value,
   onChange,
   requirement,
@@ -381,7 +390,8 @@ export function ChannelCodeTextArea({
   rows = 4,
   readOnly,
 }: {
-  label: string;  note?: ReactNode;
+  label: string;
+  note?: ReactNode;
   value: string;
   onChange: (value: string) => void;
   requirement?: FieldRequirement;

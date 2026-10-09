@@ -29,6 +29,10 @@ import { extractionSourceLabel, ProvenanceBadge } from "./provenance";
  * 자리로 나간다(sku → sellerManagementCode). 두 줄 모두 "이 값이 어디로
  * 가는가"를 자기 줄에 달고 있는 이유다. */
 export const CATALOG_MODEL_NAME_LABEL = "네이버 쇼핑 카탈로그 모델명";
+/** 🔴 P5.6 P0-1 — 우선순위 안내가 이 칸으로 이동할 때 쓰는 DOM id.
+ *  readiness-state 의 REGISTRATION_FIELD_ANCHOR 와 PlatformPreview 가 같은 상수를
+ *  본다 — 문자열을 두 곳에 적으면 한쪽만 바뀌어 이동이 조용히 깨진다. */
+export const CATALOG_MODEL_NAME_ANCHOR = "field-catalogModelName";
 
 export function SourceDataView({
   product,

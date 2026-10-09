@@ -1,3 +1,4 @@
+import { CATALOG_MODEL_NAME_ANCHOR, CATALOG_MODEL_NAME_LABEL } from "./SourceDataView";
 import type { KcStatus } from "@commerce/listing";
 import type { ReadinessGroup, ReadinessItem, ReadinessSummary } from "./readiness";
 
@@ -175,6 +176,13 @@ export const REGISTRATION_FIELD_ANCHOR: Record<string, string> = {
      라벨이 같은 앵커를 가리킨다(P2-1 A 가 두 이름으로 가른 그 둘이다). */
   원산지: "field-countryOfOrigin",
   "원산지 직접입력": "field-countryOfOrigin",
+
+  /* 🔴 P5.6 P0-1(CEO 실측, 2026-10-09) — 「기본정보에서 입력하기」를 눌러도
+     입력 위치를 찾지 못했다. 앵커가 없어 섹션 첫 칸(상품명)으로 갔다.
+     🔴 두 모델명은 «다른 칸» 이 아니라 «한 칸» 이고(화면 라벨: 모델명(고시+카탈로그)),
+        카탈로그 쪽은 참조로 대체되지 않는다 — 그래서 안내가 이 칸을 가리킨다. */
+  [CATALOG_MODEL_NAME_LABEL]: CATALOG_MODEL_NAME_ANCHOR,
+  "모델명(고시 + 카탈로그)": CATALOG_MODEL_NAME_ANCHOR,
 };
 
 /** 부족 항목이 가리키는 실제 입력칸 DOM id. 없으면 undefined(섹션까지만 이동). */
