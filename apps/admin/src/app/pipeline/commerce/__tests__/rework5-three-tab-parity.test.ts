@@ -322,7 +322,10 @@ describe("REWORK-5 ④ — 롯데ON 탭에 공통 상품정보 값이 실제로 
 
   it("옵션 · 이미지 · 상세설명도 상품정보에서 온 요약으로 선다", async () => {
     const text = await lotteOnText();
-    expect(text).toContain("옵션 없음 — 단품 1건으로 등록");
+    /* 🔴 P5.6 FINAL(CPO FAIL ①) — 옵션 요약이 «재고» 요약으로 바뀌었다.
+       채널 탭에서 옵션을 말하는 자리를 전부 걷었고(요약도 포함 — 본문만 지우면
+       접힌 셀러에게는 제거가 절반이다), 그 자리는 재고를 말한다. */
+    expect(text).toContain("재고");
     expect(text).toContain("대표 1장");
     expect(text).toContain("판매자 공통 안내 포함");
   });

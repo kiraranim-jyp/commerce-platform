@@ -203,11 +203,16 @@ describe("② 🔴 커머스 탭에서 옵션 «목록» 이 사라졌다", () =
     expect(t).not.toContain("3Y");
   });
 
-  it.each(["smartstore", "coupang"] as const)("%s — 개수와 갈 곳만 한 줄로 적는다", async (platform) => {
+  /* 🔴 P5.6 FINAL(CPO FAIL ①) — 그 한 줄조차 지웠다. CPO: 「영역 «자체» 제거 ·
+     read-only 로 남기는 것도 금지 · 안내조차 최소화」. 섹션 이름도 「재고」가 됐다. */
+  it.each(["smartstore", "coupang"] as const)("%s — 개수·갈 곳 한 줄도 사라졌다", async (platform) => {
     await mountChannel(platform);
-    const t = flat(container.querySelector("#section-options"));
-    expect(t).toContain("단품 2개");
-    expect(t).toContain("상품정보 → 옵션");
+    const region = container.querySelector("#section-options");
+    const body = region?.querySelector(":scope > div");
+    const t = ((body ?? region)?.textContent ?? "").replace(/\s+/g, " ").trim();
+    expect(t, "옵션 영역을 읽지 못했다").toContain("재고");
+    expect(t).not.toContain("단품");
+    expect(t).not.toContain("상품정보 → 옵션");
   });
 
   it.each(["smartstore", "coupang"] as const)("%s — 옵션 입력칸은 재고 한 칸뿐이다", async (platform) => {

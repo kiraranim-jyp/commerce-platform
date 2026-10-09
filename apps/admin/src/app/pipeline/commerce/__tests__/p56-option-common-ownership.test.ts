@@ -272,21 +272,47 @@ describe("④ 🔴 지운 것이 아니라 «옮긴» 것이다 — 표시는 �
     for (const v of ["2Y", "3Y", "4Y"]) expect(t, `값 ${v} 가 채널 탭에 아직 있다`).not.toContain(v);
   });
 
-  it.each(["smartstore", "coupang"] as const)("%s — 개수와 갈 곳은 남는다", async (platform) => {
+  /* ══ 🔴 P5.6 FINAL(CPO FAIL ①, 2026-10-09) — **이 단언을 또 뒤집었다.** ══
+
+     이 블록은 두 번 바뀌었다. 기록해 둔다 —
+       1차  「표시는 남는다」(그룹·값 목록)       ← 지운 것과 옮긴 것을 구별하려고
+       2차  「값 목록은 사라지고 개수·갈 곳은 남는다」  ← CEO 「보이기만 해도 제거」
+       3차  「전부 사라졌다」                      ← CPO 「영역 «자체» 제거 ·
+                                                   read-only 로 남기는 것도 금지」
+
+     🔴 그래도 「지운 것」과 「옮긴 것」의 구별은 포기하지 않는다 — 구별하는 자리를
+        화면에서 «상품정보 쪽» 으로 옮겼다(② 블록이 그쪽에 다 있는지 센다).
+        그리고 payload 가 멀쩡한지를 ⑤ 블록이 센다. */
+  it.each(["smartstore", "coupang"] as const)("%s — 개수·갈 곳 안내도 사라졌다", async (platform) => {
     await mountChannel(platform);
-    const t = (container.querySelector("#section-options")?.textContent ?? "").replace(/\s+/g, " ");
-    expect(t).toContain("단품 3개");
-    expect(t).toContain("상품정보 → 옵션");
+    const region = container.querySelector("#section-options");
+    const body = region?.querySelector(":scope > div");
+    const t = ((body ?? region)?.textContent ?? "").replace(/\s+/g, " ");
+    /* 양성 대조 — 영역을 실제로 읽고 있다(재고 칸은 남아 있다). */
+    expect(t, "옵션 영역을 읽지 못했다").toContain("재고");
+    expect(t, "단품 수가 아직 채널 탭에 있다").not.toContain("단품");
+    expect(t, "안내 문구가 아직 남아 있다").not.toContain("상품정보 → 옵션");
   });
 
-  it.each(["smartstore", "coupang"] as const)("%s — 어디서 고치는지 화면이 말한다", async (platform) => {
+  /* 🔴 P5.6 FINAL(CPO FAIL ①) — 이 안내도 지웠다(CPO: 「안내조차 최소화」).
+     그래서 재는 방향을 뒤집는다 — 채널 탭 어디에도 그 문구가 없어야 한다.
+     🔴 「어디서 고치는가」를 셀러가 알 길은 남아 있다: 상세설명 섹션이 여전히
+        「고치는 곳은 상품정보 → 상세설명 하나입니다」를 적고, 옵션은 상품정보
+        탭에 블록으로 서 있다(② 블록이 그것을 센다). */
+  it.each(["smartstore", "coupang"] as const)("%s — 옵션 안내 문구도 채널 탭에 없다", async (platform) => {
     await mountChannel(platform);
-    expect(text()).toContain("상품정보 → 옵션");
+    const region = container.querySelector("#section-options");
+    const body = region?.querySelector(":scope > div");
+    const t = ((body ?? region)?.textContent ?? "").replace(/\s+/g, " ");
+    expect(t, "옵션 영역을 읽지 못했다").toContain("재고");
+    expect(t).not.toContain("상품정보 → 옵션");
   });
 
-  it("단품 수를 숨기지 않는다", async () => {
-    await mountChannel("smartstore");
-    expect(text()).toContain("단품 3개");
+  it("🔴 그 대신 상품정보가 단품을 «전부» 들고 있다 — 구별은 그쪽에서 한다", async () => {
+    await mountSource();
+    const t = text();
+    expect(t).toContain("옵션 조합(원본값)");
+    for (const v of ["2Y", "3Y", "4Y"]) expect(t, `단품 ${v} 가 상품정보에 없다`).toContain(v);
   });
 });
 

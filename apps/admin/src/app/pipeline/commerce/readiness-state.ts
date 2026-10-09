@@ -1,4 +1,12 @@
 import { CATALOG_MODEL_NAME_ANCHOR, CATALOG_MODEL_NAME_LABEL } from "./SourceDataView";
+
+/**
+ * 🔴 P5.6 FINAL — KC 「인증번호」 칸의 DOM id. 여기 두는 이유: PlatformPreview 가
+ * 이 파일을 import 하므로(반대 방향은 순환이다), 두 화면이 «같은 상수» 를 보려면
+ * 이 자리가 맞다. 문자열을 두 곳에 적으면 한쪽만 바뀌어 이동이 조용히 깨진다
+ * (CATALOG_MODEL_NAME_ANCHOR 가 같은 이유로 한 곳에 있다).
+ */
+export const KC_CERT_NUMBER_ANCHOR = "field-kcCertificationNumber";
 import type { KcStatus } from "@commerce/listing";
 import type { ReadinessGroup, ReadinessItem, ReadinessSummary } from "./readiness";
 
@@ -183,15 +191,49 @@ export const REGISTRATION_FIELD_ANCHOR: Record<string, string> = {
         카탈로그 쪽은 참조로 대체되지 않는다 — 그래서 안내가 이 칸을 가리킨다. */
   [CATALOG_MODEL_NAME_LABEL]: CATALOG_MODEL_NAME_ANCHOR,
   "모델명(고시 + 카탈로그)": CATALOG_MODEL_NAME_ANCHOR,
+
+  /* ══ 🔴 P5.6 FINAL(CPO FAIL ④, 2026-10-09) — **KC 가 엉뚱한 곳으로 갔다.** ══
+
+     CEO 실측: 「KC (어린이제품 등 인증정보)」에서 [입력하기] → **기본정보** 로 간다.
+
+     원인 둘이었다:
+       ① 이 표에 KC 항목의 앵커가 «없었다» → 섹션 맨 위로만 갔다.
+       ② `registrationFieldAnchor` 가 `sourceItems` 를 «먼저» 봤다. KC 항목의
+          sourceItems 에 모델명이 섞여 있으면 그 앵커(기본정보)가 먼저 잡혀
+          **셀러가 누른 것과 다른 칸으로** 이동한다. CEO 가 본 그 화면이다.
+
+     🔴 그래서 KC 앵커를 넣고, 아래 함수의 «순서» 를 뒤집는다.
+     🔴 CPO 명시: 「네이버 쇼핑 카탈로그 모델명은 별도 필수정보이므로 KC 와
+        섞지 않는다」 — 그 분리가 이 두 줄이다. */
+  "KC (어린이제품 등 인증정보)": KC_CERT_NUMBER_ANCHOR,
+  "KC 인증정보": KC_CERT_NUMBER_ANCHOR,
+  "KC 인증": KC_CERT_NUMBER_ANCHOR,
+  인증번호: KC_CERT_NUMBER_ANCHOR,
 };
 
-/** 부족 항목이 가리키는 실제 입력칸 DOM id. 없으면 undefined(섹션까지만 이동). */
+/**
+ * 부족 항목이 가리키는 실제 입력칸 DOM id. 없으면 undefined(섹션까지만 이동).
+ *
+ * ══ 🔴 P5.6 FINAL(CPO FAIL ④) — **셀러가 «누른 것» 이 먼저다.** ══════════════
+ *
+ * 전에는 `sourceItems` 를 먼저 훑고 그중 처음 맞는 앵커로 갔다. 그래서 KC 항목이
+ * 모델명을 sourceItem 으로 들고 있으면 [입력하기]가 «기본정보» 로 갔다 —
+ * CEO 가 실제로 그 화면을 봤다.
+ *
+ * 🔴 `item.label` 을 먼저 본다. 그것이 셀러가 화면에서 누른 이름이고, 가장
+ *    구체적인 신호다. sourceItems 는 그 항목이 «무엇들로 이루어졌는가» 이고
+ *    이동 목적지로는 두 번째다.
+ * 🔴 폴백을 없애지 않는다 — 항목 이름에 앵커가 없는 경우는 여전히 많고, 그때는
+ *    sourceItems 가 유일한 단서다.
+ */
 export function registrationFieldAnchor(item: PriorityItem): string | undefined {
+  const own = REGISTRATION_FIELD_ANCHOR[item.label];
+  if (own) return own;
   for (const source of item.sourceItems) {
     const anchor = REGISTRATION_FIELD_ANCHOR[source.label];
     if (anchor) return anchor;
   }
-  return REGISTRATION_FIELD_ANCHOR[item.label];
+  return undefined;
 }
 
 export const REGISTRATION_SECTION_LABEL: Record<string, string> = {

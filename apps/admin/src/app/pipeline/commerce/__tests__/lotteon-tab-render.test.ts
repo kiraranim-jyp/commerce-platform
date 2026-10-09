@@ -161,7 +161,10 @@ describe("롯데ON 탭 — 실제로 그려지는 화면", () => {
     const text = visibleText((await renderTab()));
     expect(text).toContain("테리 버뮤다 반바지"); // 상품명(공통)
     expect(text).toContain("128,000원"); // 판매가격(공통 · 화면이 계산한 값 그대로)
-    expect(text).toContain("옵션 없음 — 단품 1건으로 등록");
+    /* 🔴 P5.6 FINAL(CPO FAIL ①) — 옵션 요약이 «재고» 요약으로 바뀌었다.
+       채널 탭에서 옵션을 말하는 자리를 전부 걷었고(요약도 포함 — 본문만 지우면
+       접힌 셀러에게는 제거가 절반이다), 그 자리는 재고를 말한다. */
+    expect(text).toContain("재고");
     expect(text).toContain("상품정보에서 수정");
     expect(text).toContain("다시 입력하지 않습니다");
   });

@@ -63,7 +63,7 @@ import { computeChecklistReadiness, computeNaverPayloadReadiness } from "./readi
 import { buildPriorityItems, resolveRegistrationReadinessState } from "./RegistrationStatusBanner";
 import type { PriorityItem, RegistrationReadinessState } from "./readiness-state";
 /* P2-2 ① — 부족 항목이 가리키는 «실제 입력칸» 앵커. 필드별 핸들러를 만들지 않는다. */
-import { registrationFieldAnchor } from "./readiness-state";
+import { KC_CERT_NUMBER_ANCHOR, registrationFieldAnchor } from "./readiness-state";
 import { SellerProfileSummaryCard } from "./SellerProfileSummaryCard";
 import { NaverSellerProfileSummaryCard } from "./NaverSellerProfileSummaryCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -303,7 +303,10 @@ function KcAxisRadio({
  * 않는 버튼이었다(P2-2 ① 에서 원산지가 같은 모양으로 틀렸던 그 결함이다).
  * ════════════════════════════════════════════════════════════════════════════
  */
-export const KC_CERT_NUMBER_ANCHOR = "field-kcCertificationNumber";
+/* 🔴 P5.6 FINAL — 이 상수는 readiness-state 로 «옮겼다». 우선순위 안내와 이 화면이
+   같은 문자열을 봐야 하고, PlatformPreview → readiness-state 방향이라 그쪽이
+   제자리다. 여기서 재export 해 기존 import 경로를 깨지 않는다. */
+export { KC_CERT_NUMBER_ANCHOR } from "./readiness-state";
 
 /**
  * ══ 🔴 P5.6 P2(CPO 결정, 2026-10-09) — 브랜드 공식몰 제조국 «확인» 한 줄 ════
@@ -1121,17 +1124,21 @@ export function PlatformPreview({
   // Phase 3-D(CPO 지시: "공통 상품 Editor + 채널별 필드 확장" — 기본정보/가격과
   // 같은 "제목 → 상태 → 요약 → 펼침" 골격을 옵션에도 그대로 적용) — 옵션은
   // 7개 텍스트 필드처럼 개별 FieldSource가 없는 대신, 원본 사이트에서 실제
-  // 옵션그룹 구조를 찾았는지(productOptionGroups) 여부로 "자동 추출" vs
-  // "직접 입력 필요"를 구분한다 — 새 판정 기준을 만들지 않고 이미 옵션 섹션
-  // 본문이 쓰는 조건(productOptionGroups.length > 0)을 요약에도 그대로 쓴다.
-  const optionGroupCount = productOptionGroups?.length ?? 0;
-  const optionValueCount = productOptionGroups?.reduce((sum, g) => sum + g.values.length, 0) ?? 0;
-  const optionSummary =
-    optionGroupCount > 0
-      ? `자동 추출 — 옵션그룹 ${optionGroupCount}개 · 값 ${optionValueCount}개`
-      : listing.options.length > 0
-        ? `직접 입력 — ${listing.options.length}개`
-        : "옵션 없음 — 단일 상품으로 등록됩니다";
+  /* ══ 🔴 P5.6 FINAL(CPO FAIL ①, 2026-10-09) — **접힘 요약도 옵션을 말하지 않는다.** ══
+
+     여기 있던 것: 「자동 추출 — 옵션그룹 2개 · 값 7개」. 섹션을 접어 둔 셀러에게
+     그 줄이 보이면 «접힌 채로도» 채널 탭이 옵션을 들고 있는 것으로 읽힌다 —
+     본문만 지우고 요약을 남기면 제거가 절반이다.
+
+     🔴 이 섹션에 실제로 남은 것은 재고 한 칸이므로 요약도 그것을 말한다.
+     🔴 새 판정을 만들지 않는다 — `resolveSourceStock` 은 아래 재고 칸이 쓰는
+        그 함수다(화면이 두 벌로 세지 않는다). */
+  const stockSummary = (() => {
+    const fact = resolveSourceStock(product);
+    if (fact.from === "VARIANTS") return `옵션 재고 합계 ${fact.quantity}개`;
+    if (fact.state === "UNKNOWN") return "원본 재고 미확인 — 직접 입력";
+    return `${product.stockQuantity.value}개`;
+  })();
 
   const fix = onFixTextField;
 
@@ -1450,35 +1457,27 @@ export function PlatformPreview({
         <CollapsibleSection
           title={sectionTitle("OPTIONS")}
           badge={sectionCompletionBadge("section-options")}
-          summary={optionSummary}
+          summary={stockSummary}
           {...sectionProps("section-options")}
         >
-          {/* ══ 🔴 P5.6 재작업(CEO 실측, 2026-10-09) — **채널 탭의 옵션 표시를 «지웠다».** ══
+          {/* ══ 🔴 P5.6 FINAL(CPO FAIL ①, 2026-10-09) — **옵션 영역을 «통째로» 지웠다.** ══
 
-              앞선 수정은 여기서 «편집» 만 걷고 그룹/값 목록과 단품 수를 읽기
-              전용으로 남겼다. CEO 판정: 「못 고치고 보이기만 하지만 제거해야 함」.
-              그 판정이 맞다 — 읽기 전용이어도 같은 값이 네 화면(상품정보 + 세
-              채널)에 서 있으면 셀러는 여전히 「커머스마다 옵션이 있다」고 읽는다.
-              CPO 지시도 같다: 「옵션 자체를 중복 표시하지 않는 방향 · 안내조차
-              최소화」.
+              CPO 판정: 「개별 커머스 탭의 옵션 영역 «자체» 제거 · 단순히
+              read-only 로 남기는 것도 금지」.
+
+              앞선 두 수정은 단계적으로 걷었다 — ① 편집기를 치우고 표시만 남김
+              ② 값 목록을 치우고 「개수 + 갈 곳」 한 줄만 남김. 그 한 줄조차
+              남기지 않는다. 섹션 이름도 사실에 맞게 「재고」로 바꿨다
+              (registration-sections.ts) — 이제 이 자리에 옵션은 없다.
 
               🔴 옵션의 Single Source of Truth = 상품정보 → 옵션 한 곳이다.
-              🔴 등록 payload 는 영향이 없다 — 세 채널 빌더가 화면이 아니라
+              🔴 등록 payload 는 영향이 «없다» — 세 채널 빌더가 화면이 아니라
                  `product.optionGroups`·`product.variants` 를 직접 읽는다
                  (naver/build-payload.ts:330 · coupang:1839 · lotteon:264 실측).
-              🔴 남기는 것은 «한 줄» 과 아래 재고 한 칸뿐이다. 재고는 S-7(CEO
-                 확정, 2026-09-26)이 이 자리에 둔 것이라 옮기지 않는다 — 옵션
-                 «구조» 가 아니라 「팔 물건이 몇 개인가」다.
-              🔴 그 한 줄을 남기는 이유: 섹션 제목이 「옵션」인데 본문이 통째로
-                 비면 셀러는 「옵션이 없는 상품」으로 읽는다. 개수와 갈 곳만 적는다. */}
-          <p className="text-xs text-text-tertiary">
-            {product.variants.length > 0
-              ? `옵션 ${productOptionGroups?.length ?? 0}종 · 단품 ${product.variants.length}개 — `
-              : productOptionGroups && productOptionGroups.length > 0
-                ? `옵션 ${productOptionGroups.length}종 — `
-                : "옵션 없는 단일 상품 — "}
-            <span className="font-medium text-text-secondary">상품정보 → 옵션</span>에서 확인·수정합니다.
-          </p>
+                 화면에서 지운 것이 payload 를 지우지 않는다는 것을 가드가 센다.
+              🔴 남는 것은 아래 «재고 한 칸» 뿐이다. 재고는 옵션 구조가 아니라
+                 「팔 물건이 몇 개인가」이고, S-7(CEO 확정, 2026-09-26)이 배송
+                 섹션에서 일부러 여기로 옮긴 값이다 — 같이 지우지 않는다. */}
           {/* ══ 장기 스프린트 S-7(CEO 지시, 2026-09-26) — 재고가 «배송» 에 있었다 ══
 
               재고 입력칸이 배송 섹션(section-shipping) 안에 배송비·반품안내와
@@ -1773,7 +1772,38 @@ export function PlatformPreview({
               kcStatus={naverValidation.kcStatus}
               childCertification={product.childCertification.value}
               onFinalConfirm={onOpenListingModal}
-              onConfirmSellable={onOpenListingModal}
+              /* ══ 🔴 P5.6 FINAL(CPO FAIL ④, 2026-10-09) — **확인이 신고로 이어진다.** ══
+
+                 CEO 실측: 「판매 가능한 상품으로 확인」을 눌러도 **상태만 바뀌고
+                 인증 대상 선택은 그대로 미선택** 이었다. 그래서 셀러는 같은 뜻을
+                 두 번 말해야 했다 — 확인 한 번, 라디오 두 번.
+
+                 CPO 확정: 그 클릭이 「어린이제품 인증 = 인증 대상 아님」과
+                 「KC 인증 = 인증 대상 아님」까지 자동 처리한다.
+
+                 🔴 이것은 앞선 「두 축을 자동 결합하지 않는다」(P0-KC-11)를
+                    뒤집는 것이 «아니다». 그 규칙이 막은 것은 「따져가 판정해서
+                    기본 선택을 두는 것」이고, 여기서 값을 만드는 주체는 «셀러» 다 —
+                    셀러가 「이 상품은 판매 가능하다」를 명시적으로 누른 결과다.
+                 🔴 **인증번호·모델명은 건드리지 않는다**(CPO 명시). 확인을
+                    눌렀다고 실제 인증서 값을 만들어 채우는 일은 하지 않는다 —
+                    「12313ㄹㅇ」이 실제 상품에 붙은 그 경로를 다시 열지 않는다.
+                 🔴 이미 고른 축은 덮지 않는다. 셀러가 「인증 대상」으로 골라 둔
+                    것을 확인 버튼이 「대상 아님」으로 되돌리면 그것이 사고다.
+                 🔴 면제 사유는 지운다 — kc 가 EXEMPTION 이 아닌데 사유가 남아
+                    있으면 validateKcDeclaration 이 KC_EXEMPTION_REASON_NOT_ALLOWED
+                    로 막는다(반쪽 신고). */
+              onConfirmSellable={() => {
+                const current = product.smartStoreKcDeclaration ?? {};
+                const patch: Partial<SmartStoreKcDeclaration> = {};
+                if (current.child === undefined) patch.child = "EXCLUDED";
+                if (current.kc === undefined) patch.kc = "EXCLUDED";
+                if (patch.kc === "EXCLUDED" && current.exemptionReason !== undefined) {
+                  patch.exemptionReason = undefined;
+                }
+                if (Object.keys(patch).length > 0) onUpdateKcDeclaration?.(patch);
+                onOpenListingModal();
+              }}
               /* 🔴 P5.6 P1-7 — 전에는 `goToSection("section-kc")` 였다. 이 버튼은
                  «자기가 들어 있는» 섹션으로 스크롤했으므로 눌러도 아무 일도
                  일어나지 않았다. 앵커를 주어 「인증번호」 칸으로 간다 — P2-2 ①

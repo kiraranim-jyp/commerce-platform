@@ -37,7 +37,21 @@ export type RegistrationSectionKey = (typeof REGISTRATION_SECTION_KEYS)[number];
 export const REGISTRATION_SECTION_LABELS: Record<RegistrationSectionKey, string> = {
   BASIC: "기본 상품정보",
   CATEGORY: "카테고리",
-  OPTIONS: "옵션",
+  /**
+   * ══ 🔴 P5.6 FINAL(CPO FAIL ①, 2026-10-09) — **채널 탭에 「옵션」은 없다.** ══
+   *
+   * CPO: 「개별 커머스 탭의 옵션 영역 «자체» 제거 · read-only 로 남기는 것도 금지 ·
+   * 옵션 편집/표시 UI 는 상품정보 → 옵션의 단일 원본만 유지」.
+   *
+   * 🔴 그런데 이 섹션에는 «재고» 한 칸이 같이 있다. 재고는 옵션 «구조» 가 아니라
+   *    「팔 물건이 몇 개인가」이고, S-7(CEO 확정, 2026-09-26)이 배송 섹션에서
+   *    일부러 여기로 옮긴 값이다. 그래서 섹션을 지우지 않고 **이름을 사실에
+   *    맞춘다** — 옵션은 빠졌고 재고만 남는다.
+   * 🔴 키(`OPTIONS`)와 DOM id(`section-options`)는 «그대로» 다. readiness 의
+   *    라벨→섹션 매핑과 우선순위 이동 앵커가 그 id 를 쓴다 — 바꾸면 「해결하러
+   *    가기」가 조용히 깨진다(P2-2 ① 에서 겪은 그 결함이다).
+   */
+  OPTIONS: "재고",
   PRICE: "가격",
   SHIPPING: "배송",
   SHIPPING_POLICY: "배송정책 · 반품/교환",

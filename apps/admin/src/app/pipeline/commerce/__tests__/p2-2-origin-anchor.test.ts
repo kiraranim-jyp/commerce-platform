@@ -70,7 +70,15 @@ describe("③ 🔴 앵커 id 가 화면에 «실제로» 있다 — 이동 경�
        상수형일 때는 그 상수가 «그 값» 으로 정의돼 있는지까지 확인한다.
        🔴 앵커를 «전달» 만 하고 DOM 에 안 다는 경우도 잡아야 하므로,
           id={상수} 가 실제로 쓰였는지를 본다. */
-    const constants = readFileSync(join(__dirname, "../SourceDataView.tsx"), "utf8");
+    /* 🔴 P5.6 FINAL(2026-10-09) — 상수가 «한 파일» 에만 있다고 가정하고 있었다.
+       KC 앵커(`KC_CERT_NUMBER_ANCHOR`)는 readiness-state 에 있다 — 우선순위
+       안내와 화면이 같은 문자열을 봐야 하고 PlatformPreview → readiness-state
+       방향이라 그쪽이 제자리다. 그래서 상수 «출처» 를 넓힌다.
+       🔴 느슨해지지 않는다: 어느 파일에서도 그 값으로 정의돼 있지 않으면
+          여전히 FAIL 이고, 화면이 그 상수를 실제로 단 것까지 확인한다. */
+    const constants = ["../SourceDataView.tsx", "../readiness-state.ts"]
+      .map((rel) => readFileSync(join(__dirname, rel), "utf8"))
+      .join("\n");
     const definedAs = (value: string): string[] =>
       [...constants.matchAll(/export const (\w+) = "([^"]+)"/g)]
         .filter((m) => m[2] === value)

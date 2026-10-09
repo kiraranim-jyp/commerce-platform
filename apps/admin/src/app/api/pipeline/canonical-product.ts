@@ -12,6 +12,8 @@ import {
 import type { ExtractedProductData, ProductDataSource } from "@commerce/crawler";
 /* 🔴 P5.6 재작업 — 원본 태그를 «나누는» 공용 함수. 수집하지 않는다. */
 import { sourceKeywords } from "@commerce/crawler/src/source-keywords";
+/* 🔴 P5.6 FINAL — 생성 직후 상세설명·태그를 채우는 공용 함수(새 생성기 아님). */
+import { seedSeoContent } from "@commerce/content";
 import type {
   CanonicalProduct,
   CanonicalProductImage,
@@ -188,7 +190,32 @@ export function ensureRepresentativeImage(
  * 목록을 하나의 CanonicalProduct로 합친다. 이게 모든 플랫폼 Preview의 유일한
  * 입력이다 — 플랫폼별로 데이터를 따로 만들지 않는다.
  */
+/**
+ * ══ 🔴 P5.6 FINAL(CPO FAIL ②③, 2026-10-09) — **생성 직후 한 번 통과시킨다.** ══
+ *
+ * CPO: 「상품 최초 생성/Source Data 로딩 시 상세설명이 비어 있지 않도록 ·
+ * 최초 생성 시 SEO 태그 자동 생성 · 버튼을 눌러야만 채워지는 구조는 제거」.
+ *
+ * 🔴 아래 `buildCanonicalProduct` 의 «본문을 고치지 않았다». 그 함수는 「수집
+ *    결과를 CanonicalProduct 모양으로 옮긴다」 하나만 하고, 글을 만드는 일은
+ *    content 패키지의 책임이다. 두 일을 한 함수에 섞으면 「수집이 글을 만든다」가
+ *    되어, 다음 사람이 수집 결과를 믿을 수 없게 된다.
+ * 🔴 그래서 래퍼 한 겹이다 — 호출부는 바뀌지 않는다(같은 이름·같은 인자).
+ * 🔴 `seedSeoContent` 는 순수 함수이고 셀러 수정값(USER_EDITED)을 덮지 않는다.
+ */
 export function buildCanonicalProduct(
+  sourceUrl: string,
+  productData: ExtractedProductData,
+  sources: Record<string, ProductDataSource>,
+  items: WorkspaceItem[],
+  sourceRepresentativeId?: string | null,
+): CanonicalProduct {
+  return seedSeoContent(
+    buildCanonicalProductRaw(sourceUrl, productData, sources, items, sourceRepresentativeId),
+  ).product;
+}
+
+function buildCanonicalProductRaw(
   sourceUrl: string,
   productData: ExtractedProductData,
   sources: Record<string, ProductDataSource>,

@@ -88,6 +88,8 @@ import { ChannelEditScopeCard, ChannelEditUnavailableCard } from "./ChannelEditS
 import { editSupportedScope, editUnavailableNote } from "./edit-adapters";
 import { LOTTEON_COMMERCE_ID, commerceLabel } from "./commerce-registry";
 import { suggestLotteOnNoticeItemCode } from "@commerce/listing";
+/* 🔴 P5.6 FINAL — 재고 요약은 스마트스토어·쿠팡과 «같은 함수» 를 본다. */
+import { resolveSourceStock } from "@commerce/shared";
 import { ListingConfirmationModal, type ListingProgressStep } from "./ListingConfirmationModal";
 import type { ReadinessItem } from "./readiness";
 import { resolveRegistrationReadinessState, type PriorityItem } from "./readiness-state";
@@ -1477,12 +1479,14 @@ export function LotteOnRegistrationPanel({
     return path.length > 0 ? path.join(" > ") : facts.name || null;
   };
   const categorySummary = categoryPathText(selectedCategory) ?? "미지정 — 추천 후보에서 선택해주세요.";
-  const optionGroupCount = product.optionGroups?.length ?? 0;
-  const optionValueCount = product.optionGroups?.reduce((sum, group) => sum + group.values.length, 0) ?? 0;
-  const optionSummary =
-    optionGroupCount > 0
-      ? `자동 추출 — 옵션그룹 ${optionGroupCount}개 · 값 ${optionValueCount}개`
-      : "옵션 없음 — 단일 상품으로 등록됩니다";
+  /* 🔴 P5.6 FINAL(CPO FAIL ①) — 옵션 요약을 재고 요약으로 바꿨다. 스마트스토어·
+     쿠팡의 `stockSummary` 와 «같은 어휘» 다(resolveSourceStock 하나를 본다). */
+  const stockSummary = (() => {
+    const fact = resolveSourceStock(product);
+    if (fact.from === "VARIANTS") return `옵션 재고 합계 ${fact.quantity}개`;
+    if (fact.state === "UNKNOWN") return "원본 재고 미확인 — 상품정보에서 입력";
+    return `${product.stockQuantity.value}개`;
+  })();
 
   const detail = (
     <div className="space-y-4">
@@ -1671,23 +1675,37 @@ export function LotteOnRegistrationPanel({
         />
       </FormSection>
 
-      {/* ── ③ 옵션 — 읽기 전용(공통값) ──────────────────────────────────── */}
+      {/* ══ 🔴 P5.6 FINAL(CPO FAIL ①, 2026-10-09) — **③ 옵션 섹션을 지웠다.** ══
+
+          CPO 판정: 「개별 커머스 탭의 옵션 영역 «자체» 제거 · 단순히 read-only 로
+          남기는 것도 금지」.
+
+          여기 있던 것: 「③ 옵션」 CommonInfoSection + `LotteOnOptionDetail`
+          (축 이름 · 값 · 단품 목록, 읽기 전용) + rowsOf("옵션","재고").
+          읽기 전용이어도 같은 값이 네 화면에 서 있으면 셀러는 「커머스마다
+          옵션이 있다」고 읽는다 — 스마트스토어·쿠팡에서 지운 것과 같은 이유다.
+
+          🔴 옵션의 Single Source of Truth = 상품정보 → 옵션 한 곳이다.
+          🔴 등록 payload 는 영향이 «없다» — lotteon/build-payload.ts:264 가
+             화면이 아니라 `product.variants` 를 직접 읽는다.
+          🔴 재고는 상품정보가 관리한다 — 롯데ON 은 이 탭에 재고 입력칸을
+             애초에 갖지 않았고(공통값 읽기 전용), commerce6-c2f 가 「재고는
+             롯데ON 탭이 아니라 상품정보로 보낸다」를 이미 고정해 뒀다.
+
+          🔴 그런데 섹션을 통째로 지우면 **롯데ON 만 9섹션** 이 되어 「세 탭의
+             목차가 글자 그대로 같다」(REWORK-10 ①, CEO 지시)가 깨진다. 전수
+             회귀에서 그 가드 넷이 실제로 잡았다. 스마트스토어·쿠팡은 재고 한 칸
+             때문에 이 자리를 유지하므로, 롯데ON 도 «재고» 섹션으로 남긴다 —
+             CPO 가 지시한 것은 옵션 제거이고 재고 제거가 아니다. */}
       <CommonInfoSection
         badge={sectionCompletionBadge("lotteon-section-options")}
         {...sectionProps("lotteon-section-options")}
         title={sectionTitle("OPTIONS")}
-        summary={optionSummary}
-        description="옵션과 재고는 상품정보의 값을 그대로 씁니다 — 롯데ON에서 조합을 따로 만들지 않습니다."
-        rows={rowsOf("옵션", "재고")}
+        summary={stockSummary}
+        description="재고는 상품정보의 값을 그대로 씁니다 — 롯데ON에서 따로 정하지 않습니다."
+        rows={rowsOf("재고")}
         onEditCommonInfo={onEditCommonInfo}
-      >
-        {/* REWORK-12 ②(CEO 실측 캡처, 2026-09-15) — 이 섹션에 있던 글자는
-            「1개 옵션 · 단품 6건」 한 줄이 전부였다. 쿠팡 ③은 같은 자리에서
-            **무엇이 등록되는지**(축 이름 · 값 · 단품)를 보여준다.
-            🔴 입력칸을 만들지 않는다 — 읽기 전용 목록이고, 값은 상품정보의
-            product.optionGroups / product.variants 그대로다(새로 계산 0). */}
-        <LotteOnOptionDetail product={product} />
-      </CommonInfoSection>
+      />
 
       {/* ── ④ 가격 — 읽기 전용(공통값) ──────────────────────────────────── */}
       <CommonInfoSection

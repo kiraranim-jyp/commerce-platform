@@ -347,22 +347,42 @@ describe("REWORK-12 ② — 롯데ON ① 기본 상품정보가 쿠팡과 같은
   });
 });
 
-describe("REWORK-12 ② — 롯데ON ③ 옵션이 무엇이 등록되는지 보여준다", () => {
-  it("🔴 옵션 축 이름 · 값 · 단품이 화면에 선다(한 줄 요약이 전부가 아니다)", async () => {
+/**
+ * ══ 🔴 P5.6 FINAL(CPO FAIL ①, 2026-10-09) — **이 블록의 전제가 뒤집혔다.** ══
+ *
+ * REWORK-12 ②(CEO 실측 캡처, 2026-09-15)의 요구는 「롯데ON ③ 옵션이 «무엇이
+ * 등록되는지» 를 보여준다」였다. 그때 ③ 에는 「1개 옵션 · 단품 6건」 한 줄이
+ * 전부였고, 쿠팡 ③ 과 격차가 있었다.
+ *
+ * CPO FAIL ①(2026-10-09): 「개별 커머스 탭의 옵션 영역 «자체» 제거 · 단순히
+ * read-only 로 남기는 것도 금지」. 세 탭에서 옵션 표시를 전부 걷었고, 그 섹션은
+ * 이제 «재고» 다(라벨도 바꿨다).
+ *
+ * 🔴 「무엇이 등록되는지 보여준다」는 요구 자체는 죽지 않았다 — 보여주는 «자리» 가
+ *    상품정보 → 옵션 한 곳으로 옮겼다(p56-final-four ② 블록이 그쪽을 센다).
+ * 🔴 그래서 여기서는 방향을 뒤집어, 롯데ON 탭에 옵션이 «없음» 을 센다. 읽기
+ *    전용 계약(입력칸 0개)은 그대로 유지한다.
+ */
+describe("REWORK-12 ② — 롯데ON ③ 은 이제 «재고» 다(옵션은 상품정보로 옮겼다)", () => {
+  it("🔴 옵션 축 이름 · 값이 롯데ON 탭에 «없다»", async () => {
     const dom = await mountExpanded(lotteOnElement());
-    const text = clean(dom.textContent ?? "");
-    expect(text, "옵션 축 이름이 없다").toContain("Size");
+    const section = sectionById(dom, "lotteon-section-options");
+    const text = clean(section.textContent ?? "");
+    /* 양성 대조 — 섹션을 실제로 읽고 있다. */
+    expect(text, "그 섹션을 읽지 못했다 — 아래 단언이 공허해진다").toContain("재고");
+    expect(text, "옵션 축 이름이 아직 있다").not.toContain("Size");
     for (const value of ["2-3Y", "4-5Y", "6-7Y"]) {
-      expect(text, `옵션 값이 없다 — ${value}`).toContain(value);
+      expect(text, `옵션 값이 아직 있다 — ${value}`).not.toContain(value);
     }
   });
 
-  it("재고가 없는 단품을 0개라고 적지 않는다 — 상품 재고로 폴백한다고 말한다", async () => {
+  it("🔴 단품별 폴백 문구도 사라졌다 — 그 설명은 상품정보가 한다", async () => {
     const dom = await mountExpanded(lotteOnElement());
-    expect(clean(dom.textContent ?? "")).toContain("상품 재고 사용");
+    const section = sectionById(dom, "lotteon-section-options");
+    expect(clean(section.textContent ?? "")).not.toContain("상품 재고 사용");
   });
 
-  it("🔴 읽기 전용이다 — ③ 옵션에 입력칸이 0개", async () => {
+  it("🔴 읽기 전용이다 — ③ 에 입력칸이 0개", async () => {
     const dom = await mountExpanded(lotteOnElement());
     const section = sectionById(dom, "lotteon-section-options");
     expect(section.querySelectorAll("input, textarea").length, "롯데ON ③에 입력칸이 생겼다").toBe(0);
