@@ -1778,10 +1778,36 @@ export function PlatformPreview({
                          ORIGINAL 로 승격되는 자리는 한 곳이어야 한다.
                       🔴 못 찾으면 그대로 「미확인」이다. 브랜드 국가를 제조국으로
                          올리지 않고, AI 로 추정하지 않는다. */}
-                  <OfficialOriginCheck
-                    brand={product.brand.value}
-                    onAdopt={(value) => fix?.("countryOfOrigin", value)}
-                  />
+                  {/* ══ 🔴 P5.6 P0-7/8(CPO, 2026-10-09) — **직접 입력이 막다른 길이 아니다.** ══
+
+                      CPO: 「공식몰 확인이 실패해도 판매자가 «바로» 직접 입력할 수
+                      있어야 한다 · 판매자 입력값은 자동 추출로 덮지 않는다」.
+
+                      실측(세르지오 타치니): 공식몰을 모르는 브랜드는
+                      「아직 확인해 두지 않았습니다」로 끝났고, 그 다음 행동이
+                      화면에 없었다 — 위 입력칸이 있지만 그 안내와 이어지지 않았다.
+
+                      🔴 그래서 두 길을 «같은 자리» 에 나란히 둔다. 그리고 셀러가
+                         적은 값은 `USER_EDITED` 가 되어(updateField) 자동 추출이
+                         덮지 않는다 — 수집은 생성 시점에 한 번 돌고, 복원 시딩
+                         (seedSeoContent)은 원산지를 «대상에 넣지 않았다».
+                      🔴 브랜드 국가를 제조국으로 올리지 않는다. 테니스 사이트별
+                         크롤러를 더하지 않는다(CPO 범위 제한). */}
+                  {product.countryOfOrigin.source === "USER_EDITED" ? (
+                    <p className="text-[11px] text-text-tertiary">
+                      판매자가 직접 입력한 값입니다 — 자동 수집이 덮지 않습니다.
+                    </p>
+                  ) : (
+                    <div className="space-y-1">
+                      <OfficialOriginCheck
+                        brand={product.brand.value}
+                        onAdopt={(value) => fix?.("countryOfOrigin", value)}
+                      />
+                      <p className="text-[11px] text-text-tertiary">
+                        공식몰에서 확인되지 않으면 위 칸에 직접 적어 주세요 — 적은 값은 그대로 유지됩니다.
+                      </p>
+                    </div>
+                  )}
                   {!product.countryOfOrigin.value.trim() &&
                     naverResolved?.origin?.resolvedCountryText &&
                     (naverResolved.origin.resolvedCountryTextSource === "BRAND_DEFAULT" ||

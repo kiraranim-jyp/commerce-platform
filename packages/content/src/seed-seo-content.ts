@@ -1,6 +1,7 @@
 import type { CanonicalProduct, ProvenanceField } from "@commerce/shared";
 import { mockProductContentProvider } from "./providers/mock.provider";
 import { mergeKeywords } from "./merge-keywords";
+import { generateSeoKeywords, suggestKoreanProductName } from "./seo-keywords";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -46,9 +47,9 @@ function isSellerEdited<T>(field: ProvenanceField<T> | undefined, hasValue: (v: 
 export interface SeedSeoContentResult {
   product: CanonicalProduct;
   /** 무엇을 채웠는가 — 호출부가 로그/화면에 쓸 수 있게. 🔴 조용히 바꾸지 않는다. */
-  filled: ("descriptionKo" | "keywords")[];
+  filled: ("descriptionKo" | "keywords" | "titleKo")[];
   /** 셀러 수정값이라 건드리지 않은 축. */
-  skipped: ("descriptionKo" | "keywords")[];
+  skipped: ("descriptionKo" | "keywords" | "titleKo")[];
 }
 
 /**
@@ -80,7 +81,12 @@ export function seedSeoContent(product: CanonicalProduct): SeedSeoContentResult 
     skipped.push("keywords");
   } else {
     const existing = product.keywords?.value ?? [];
-    const generated = mockProductContentProvider.generateKeywords(product).value;
+    /* ══ 🔴 P5.6 P0-2(CPO, 2026-10-09) — 생성기를 «바꿨다» ═══════════════════
+       `generateKeywords` 는 브랜드·상품종류·소재 셋만 봤다(속성 나열).
+       실측으로 성별·연령·색상이 다 잡히는 것을 확인했고, 그 축을 쓰는
+       `generateSeoKeywords` 로 교체한다 — 검색 의도형 조합이다.
+       🔴 없는 축은 비운다(브랜드 한글명·시즌). 지어내지 않는다. */
+    const generated = generateSeoKeywords(product);
     /* 🔴 기존(원본 수집 태그)이 «앞» 이다. mergeKeywords 의 불변식 —
        기존 태그는 한 개도 잃지 않고, 중복은 한글/영문을 섞지 않고 걷는다. */
     const merged = mergeKeywords(existing, generated);
@@ -93,6 +99,21 @@ export function seedSeoContent(product: CanonicalProduct): SeedSeoContentResult 
         confidence: existing.length > 0 ? (product.keywords?.confidence ?? 0.9) : 0.6,
       };
       filled.push("keywords");
+    }
+  }
+
+  /* ── 🔴 P0-4(CPO) — 한국어 SEO 상품명 ──────────────────────────────────
+     CPO: 「상품명 = 한국 소비자 검색용」. titleKo 가 비어 있으면 확인된 축으로
+     조립한다.
+     🔴 셀러 수정값은 덮지 않는다. 상품군을 모르면 원상품명이 그대로 들어간다
+        (억지 한국어 제목을 만들지 않는다 — 그 판단은 생성기 안에 있다). */
+  if (isSellerEdited(product.titleKo, (v) => (v ?? "").trim().length > 0)) {
+    skipped.push("titleKo");
+  } else if ((product.titleKo?.value ?? "").trim().length === 0) {
+    const name = suggestKoreanProductName(product);
+    if (name && name.trim()) {
+      next.titleKo = { value: name.trim(), source: "AI_GENERATED", confidence: 0.7 };
+      filled.push("titleKo");
     }
   }
 

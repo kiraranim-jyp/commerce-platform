@@ -37,7 +37,15 @@ const T_SHIRT_MARKERS = /t-shirts?|tshirts?|티셔츠/gi;
 
 export const KEYWORDS: Record<ProductType, string[]> = {
   "T-Shirt": ["t-shirt", "tshirt", "tee", "티셔츠", "반팔"],
-  Shirt: ["shirt", "blouse", "셔츠", "남방", "블라우스"],
+  /* 🔴 P5.6 P0-2(실측, 2026-10-09) — `polo` 를 더한다.
+     tennis-warehouse 「Sergio Tacchini Men's Racchetto Polo」가 제목에 polo 를
+     쓰는데 이 목록에 없어서, 설명문의 "shirt" 로만 0.6 으로 잡혔다(제목 매칭이
+     0.97 이다). 그 결과 상품군 신뢰도가 낮아 SEO 태그에서 상품군 축이 통째로
+     비었다.
+     🔴 새 ProductType 을 만들지 않았다 — 폴로는 셔츠다. 타입을 늘리면
+        candidate-scoring 의 DOMAIN_PROFILES·conflict 목록까지 같이 늘려야 하고,
+        그것은 이번 범위가 아니다. 어휘 한 개가 정확한 최소 변경이다. */
+  Shirt: ["shirt", "blouse", "polo", "셔츠", "남방", "블라우스", "폴로"],
   Pants: ["pants", "trousers", "jeans", "denim", "바지", "팬츠", "청바지"],
   Leggings: ["leggings", "레깅스"],
   Dress: ["dress", "원피스", "드레스"],

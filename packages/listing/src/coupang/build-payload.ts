@@ -9,7 +9,7 @@ import type {
 } from "@commerce/shared";
 import { getRegistrationImageUrl, getSelectedImageUrl, isRegistrationSafeImageUrl } from "@commerce/shared";
 import { computeVariantFinalPriceKrw } from "@commerce/pricing";
-import { payloadStockQuantity, variantStockForPayload } from "@commerce/shared";
+import { payloadStockQuantity, variantStockWithSellerDefault } from "@commerce/shared";
 import { manufacturerInputFromProduct, resolveManufacturer } from "../common/manufacturer";
 import { resolveCommonOrigin } from "../common/origin";
 /* 🔴 P5.6 실측 — 태그 중복제거 규칙은 한 곳이다. */
@@ -1652,7 +1652,7 @@ function buildCoupangItem(args: {
     /* 🔴 P5.6 FINAL(CPO FAIL ①) — `payloadStockQuantity` 는 모르면 999 를 돌려준다.
        옵션별 자리에서는 그 폴백을 쓰지 않는다 — variantStockForPayload 가
        실측 → 상품 실측 → null 로 내려가고, null 은 호출부가 다룬다. */
-    maximumBuyCount: variantStockForPayload(product, variant) ?? payloadStockQuantity(product),
+    maximumBuyCount: variantStockWithSellerDefault(product, variant) ?? payloadStockQuantity(product),
     maximumBuyForPerson: 0,
     // 0을 보내면 실제 쿠팡 API가 "최소 1이상 입력해야 합니다"로 거부한다(실제
     // 등록 시도로 확인) — maximumBuyForPerson(1인당 최대구매수량)이 0(무제한)

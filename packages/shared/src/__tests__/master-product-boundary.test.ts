@@ -94,9 +94,9 @@ describe("① 분류되지 않은 필드는 «없다»", () => {
      막혔고, 그래서 「이게 어느 층인가」를 다시 생각했다(COMMERCE_BINDING —
      상품의 사실이 아니라 채널에 무엇을 보낼지에 대한 셀러의 결정이다).
      숫자를 «지우지» 않고 새 진실로 올린다. */
-  it("두 목록의 개수가 같다 — 현재 52칸", () => {
+  it("두 목록의 개수가 같다 — 현재 53칸", () => {
     expect(DECLARED.length).toBe(MAPPED.length);
-    expect(MAPPED.length).toBe(52);
+    expect(MAPPED.length).toBe(53);
   });
 });
 
@@ -108,7 +108,14 @@ describe("② 층별 구성이 CPO 확정 구조와 같다", () => {
   }, {});
 
   it.each([
-    ["MASTER", 27],
+    /* 🔴 P5.6 P0-1(CPO, 2026-10-09) — 27 → 28. `sellerDefaultStock` 한 칸이
+       늘었다: 원본이 옵션별 재고를 주지 않을 때(Smallable 실측) 판매자가 적는
+       기본 재고다. MASTER_VARIANTS 로 분류했다 — 「몇 개를 팔 것인가」라서
+       재고와 같은 묶음이고, SELLING(가격·배송 같은 «판매 조건»)이 아니다.
+       🔴 `stockQuantity` 와 «다른 칸» 이어야 한다. 그쪽은 「원본에서 읽은 값」
+          이고 모르면 999 가 들어가는 자리다 — 한 칸에 담으면 「판매자가 정한
+          10」과 「파이프라인이 모른다는 999」가 구별되지 않는다. */
+    ["MASTER", 28],
     ["CONTENT", 5],
     ["SELLING", 4],
     /* NAVER-CHANNEL-NOTICE-OVERRIDES-03 — 6 → 7 (channelNoticeOverrides). */

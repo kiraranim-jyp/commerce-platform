@@ -234,6 +234,40 @@ export function variantStockForPayload(
  */
 export function variantsWithUnknownStock(product: CanonicalProduct): string[] {
   return product.variants
-    .filter((v) => variantStockForPayload(product, v) == null)
+    /* 🔴 P5.6 P0-1 — 판매자 기본값까지 «포함해» 판정한다. 기본값을 적었는데도
+       화면이 「재고 모름」이라고 말하면 셀러는 자기가 적은 값이 무시된 줄 안다. */
+    .filter((v) => variantStockWithSellerDefault(product, v) == null)
     .map((v) => Object.values(v.optionValues ?? {}).join(" / ") || v.id);
+}
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * P5.6 P0-1(CPO, 2026-10-09) — **판매자가 정한 기본 재고.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * CPO: 「source stock UNKNOWN → 판매자가 입력한 기본재고 적용 · 기본재고가
+ * source 의 실제 수량을 덮지 않음 · 999/0 임의 생성 금지」.
+ *
+ * 실측 근거: Smallable 은 사이즈만 주고 수량을 «한 칸도» 주지 않는다. 그 상품은
+ * 지금 옵션 전부가 「재고 모름」이고 payload 에서 빠진다 — 팔 수 있는 상품인데
+ * 등록이 안 되는 상태다. 그래서 판매자가 한 번 정하면 그 값을 쓴다.
+ *
+ * 🔴 이것은 «추정값이 아니다» — 판매자가 화면에서 직접 적은 수다. 999 는 파이프
+ *    라인이 넣은 「모른다」의 표시이고, 그것과 섞이지 않게 저장 자리를 따로 둔다
+ *    (`CanonicalProduct.sellerDefaultStock`).
+ * 🔴 실측을 덮지 않는다. 적용 대상은 「variantStockForPayload 가 null 인 옵션」
+ *    하나뿐이다 — 그 판정은 이미 한 곳에 있다.
+ */
+export function variantStockWithSellerDefault(
+  product: CanonicalProduct,
+  variant: { stockQuantity?: number } | undefined,
+): number | null {
+  const measured = variantStockForPayload(product, variant);
+  if (measured != null) return measured;
+  const fallback = product.sellerDefaultStock;
+  if (typeof fallback !== "number" || !Number.isFinite(fallback) || fallback < 0) return null;
+  /* 🔴 999 를 판매자 기본값으로도 허용하지 않는다 — 그 숫자는 이 저장소에서
+     「모른다」를 뜻하고, 화면·payload 가 그렇게 읽는다. */
+  if (fallback === PIPELINE_DEFAULT_STOCK) return null;
+  return fallback;
 }

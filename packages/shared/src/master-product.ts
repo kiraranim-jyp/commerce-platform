@@ -128,6 +128,10 @@ export const MASTER_FIELD_GROUP = {
   variants: "MASTER_VARIANTS",
   selectedVariant: "MASTER_VARIANTS",
   stockQuantity: "MASTER_VARIANTS",
+  /* 🔴 P5.6 P0-1 — 판매자가 정한 기본 재고. 「몇 개를 팔 것인가」라서 재고와 같은
+     묶음(MASTER_VARIANTS)이다. 🔴 SELLING 이 아니다 — SELLING 은 가격·배송처럼
+     «판매 조건» 이고, 이것은 재고 수량 자체다. */
+  sellerDefaultStock: "MASTER_VARIANTS",
 
   /* ── CategoryAttributes — 「이 카테고리가 묻는 속성」 ──────────────────── */
   material: "MASTER_ATTRIBUTES",

@@ -1,5 +1,5 @@
 import type { MasterProduct, SellingConditions } from "@commerce/shared";
-import { variantStockForPayload } from "@commerce/shared";
+import { variantStockWithSellerDefault } from "@commerce/shared";
 /* 🔴 P5.6 FINAL — 태그 중복제거 규칙은 세 채널이 한 함수를 본다. */
 import { dedupeSellerTagTexts } from "../naver/seller-tags-update";
 import { getRegistrationImageUrl, isRegistrationSafeImageUrl, resolvedPayloadStock } from "@commerce/shared";
@@ -312,7 +312,7 @@ function buildItems(
       slPrc: finalKrw,
       /* 🔴 P5.6 FINAL(CPO FAIL ①) — 세 채널이 같은 함수를 본다. 여기 `defaultStock`
          은 실측이 없으면 0 이었고, 그것은 「품절」이라는 주장이다. */
-      stkQty: variantStockForPayload(product, variant) ?? defaultStock,
+      stkQty: variantStockWithSellerDefault(product, variant) ?? defaultStock,
       ...(variant.sku?.trim() ? { eitmNo: variant.sku.trim() } : {}),
     };
   });

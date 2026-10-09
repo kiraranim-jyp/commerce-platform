@@ -698,6 +698,18 @@ export interface CanonicalProduct {
   images: CanonicalProductImage[];
   titleKo: ProvenanceField<string>;
   descriptionKo: ProvenanceField<string>;
+  /**
+   * ══ 🔴 P5.6 P0-1(CPO, 2026-10-09) — **판매자가 정한 기본 재고.** ══════════
+   *
+   * 원본이 옵션별 재고를 주지 않을 때(Smallable 실측) 판매자가 한 번 적는 수.
+   *
+   * 🔴 `stockQuantity` 와 «다른 칸» 이다. 그쪽은 「원본에서 읽은 상품 재고」이고
+   *    파이프라인이 모를 때 999 를 넣는 자리다. 둘을 한 칸에 담으면 「판매자가
+   *    정한 10」과 「파이프라인이 모른다는 999」가 구별되지 않는다.
+   * 🔴 optional 이다 — 이 칸을 모르던 옛 스냅샷은 그대로 「없음」이다.
+   * 🔴 추정값이 아니다. 화면에서 판매자가 직접 적은 값만 들어온다.
+   */
+  sellerDefaultStock?: number;
   keywords: ProvenanceField<string[]>;
   seoTitle: ProvenanceField<string>;
   seoDescription: ProvenanceField<string>;

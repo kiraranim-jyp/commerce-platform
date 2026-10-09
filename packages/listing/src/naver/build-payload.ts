@@ -5,7 +5,7 @@ import {
 } from "./kc-declaration";
 import type { ListingModel } from "@commerce/marketplace";
 /* 🔴 P5.6 FINAL — 옵션별 재고 규칙은 한 곳이다(999 금지). */
-import { variantStockForPayload } from "@commerce/shared";
+import { variantStockWithSellerDefault } from "@commerce/shared";
 /* 🔴 P5.6 실측 — 태그 중복제거 규칙은 한 곳이다. */
 import { dedupeSellerTagTexts } from "./seller-tags-update";
 import type {
@@ -352,7 +352,7 @@ function buildOptionCombinations(product: SmartStoreProductInput, salePrice: num
       : { finalKrw: salePrice, applied: false };
     const priceDelta = variantResult.finalKrw - salePrice;
     /* 🔴 모르면 null 이다 — 아래에서 그 옵션을 «빼낸다»(0 으로 메우지 않는다). */
-    const stock = variantStockForPayload(product, variant);
+    const stock = variantStockWithSellerDefault(product, variant);
     if (stock == null) return null;
     const combo: NaverOptionCombination = {
       /* 🔴 P5.6 FINAL(CPO FAIL ①) — 여기 있던 `?? product.stockQuantity.value ?? 0`

@@ -228,7 +228,10 @@ describe("① 🔴 재고 — 999 를 날조하지 않고 variant별로 연결�
       expect(
         strip(read(`packages/listing/src/${ch}/build-payload.ts`)),
         `${ch} 가 자기 폴백을 쓴다`,
-      ).toContain("variantStockForPayload(product, variant)");
+      /* 🔴 P5.6 P0-1 — 판매자 기본 재고를 포함하는 함수로 올렸다.
+         `variantStockWithSellerDefault` 가 `variantStockForPayload` 를 먼저 보고,
+         null 일 때만 판매자가 적은 기본값으로 내려간다 — 실측을 덮지 않는다. */
+      ).toContain("variantStockWithSellerDefault(product, variant)");
     }
   });
 

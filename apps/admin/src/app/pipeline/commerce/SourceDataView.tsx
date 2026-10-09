@@ -5,6 +5,7 @@ import { convertToKrw, formatKrw } from "@commerce/pricing";
 import { InfoTip } from "./registration-fields";
 import { EditableText, EditableTextarea } from "./EditableField";
 import { OptionVariantEditor } from "./OptionVariantEditor";
+import { variantsWithUnknownStock } from "@commerce/shared";
 import { extractionSourceLabel, ProvenanceBadge } from "./provenance";
 
 /**
@@ -41,6 +42,7 @@ export function SourceDataView({
   onUpdatePrice,
   onUpdateKeywords,
   onUpdateVariant,
+  onUpdateSellerDefaultStock,
   onGenerateDescription,
   onSetModelNameReference,
   exchangeRates,
@@ -76,6 +78,11 @@ export function SourceDataView({
    *    상품정보 하나이고, 채널 화면은 그 값을 그대로 쓴다」.
    * 🔴 넘기지 않으면 표를 그리지 «않는다» — 기존 호출부 호환.
    */
+  /**
+   * 🔴 P5.6 P0-1(CPO) — 판매자 기본 재고. 넘기지 않으면 칸을 그리지 «않는다»
+   * (기존 호출부 호환). `undefined` 를 넘기면 그 값을 «지운다» — 0 이 아니다.
+   */
+  onUpdateSellerDefaultStock?: (value: number | undefined) => void;
   onUpdateVariant?: (
     variantId: string,
     patch: Partial<{ sku: string; stockQuantity: number; price: { amount: number; currency: string } | undefined }>,
@@ -336,6 +343,41 @@ export function SourceDataView({
               🔴 그래서 빈 칸을 0 이나 999 로 채우지 않는다. 「비어 있다」와
                  「0개」는 다른 사실이고, 0 으로 채우면 팔 수 있는 상품이 품절로
                  등록된다. 대신 «왜 비었는지» 를 화면이 말한다. */}
+          {/* ══ 🔴 P5.6 P0-1(CPO, 2026-10-09) — **판매자가 정하는 기본 재고.** ══
+
+              CPO: 「source UNKNOWN → 판매자가 입력한 기본재고 적용 · 기본재고가
+              source 의 실제 수량을 덮지 않음 · 999/0 임의 생성 금지」.
+
+              Smallable 실측: 사이즈만 주고 수량을 한 칸도 주지 않는다. 그 상품은
+              옵션 전부가 「재고 모름」이고 payload 에서 빠져 — 팔 수 있는 상품인데
+              등록이 안 됐다. 그래서 판매자가 한 번 정하면 그 값을 쓴다.
+
+              🔴 추정값이 아니다 — 판매자가 여기서 직접 적은 수다. 저장 자리도
+                 `stockQuantity`(원본 재고, 모르면 999)와 «따로» 둔다
+                 (`sellerDefaultStock`). 한 칸에 담으면 「판매자가 정한 10」과
+                 「파이프라인이 모른다는 999」가 구별되지 않는다.
+              🔴 실측을 덮지 않는다. 적용 대상은 재고를 «모르는» 옵션뿐이다.
+              🔴 커머스 탭에 옵션 UI 를 되살리는 것이 아니다 — 여기 상품정보 한 곳이다. */}
+          {onUpdateSellerDefaultStock && variantsWithUnknownStock(product).length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-warning/40 bg-background px-2.5 py-2">
+              <span className="text-[11px] text-text-secondary">
+                재고를 모르는 옵션 {variantsWithUnknownStock(product).length}개 — 기본 재고수량
+              </span>
+              <EditableText
+                value={product.sellerDefaultStock != null ? String(product.sellerDefaultStock) : ""}
+                onCommit={(v) => {
+                  const n = Number(v.trim());
+                  /* 🔴 빈 값이면 «지운다» — 0 으로 바꾸지 않는다(0 은 품절 주장이다). */
+                  onUpdateSellerDefaultStock(v.trim() === "" || !Number.isFinite(n) || n < 0 ? undefined : n);
+                }}
+                placeholder="예: 10"
+                className="w-20 rounded border border-border px-1.5 py-1 text-xs"
+              />
+              <span className="text-[11px] text-text-tertiary">
+                개 — 이 값은 «모르는 옵션에만» 적용됩니다. 비워 두면 그 옵션은 등록에서 제외됩니다.
+              </span>
+            </div>
+          )}
           {product.variants.length > 0 && product.variants.every((v) => v.stockQuantity == null) && (
             <p className="rounded-md border border-dashed border-border bg-background px-2.5 py-2 text-[11px] text-text-secondary">
               원본 사이트가 옵션별 재고 수량을 공개하지 않습니다 — 빈 칸은 「0개」가 아니라 「모름」입니다.

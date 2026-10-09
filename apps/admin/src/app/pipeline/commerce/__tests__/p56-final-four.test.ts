@@ -284,10 +284,23 @@ describe("② 🔴 상세설명이 «생성 시점» 에 채워진다", () => {
     expect(cp).toContain("buildCanonicalProductRaw(");
   });
 
-  it("🔴 새 생성기를 만들지 않았다 — 버튼이 부르던 그 함수다", () => {
+  /* 🔴 P5.6 P0-2(CPO, 2026-10-09) — 태그 생성기가 «바뀌었다».
+     `generateKeywords` 는 브랜드·상품종류·소재 셋만 봐서 속성 나열이 나왔다.
+     실측으로 성별·연령이 다 잡히는 것을 확인하고 `generateSeoKeywords`(검색
+     의도형 조합)로 교체했다.
+     🔴 상세설명은 «그대로» 다 — 버튼이 부르던 그 함수(generateDescription)이고,
+        ② 는 PASS 로 닫힌 항목이라 건드리지 않았다. */
+  it("🔴 상세설명 생성기는 그대로다 — 버튼이 부르던 그 함수", () => {
     const seed = strip(read("packages/content/src/seed-seo-content.ts"));
     expect(seed).toContain("mockProductContentProvider.generateDescription(product)");
-    expect(seed).toContain("mockProductContentProvider.generateKeywords(product)");
+  });
+
+  it("🔴 태그 생성기는 검색 의도형으로 «교체» 됐다 — 속성 나열이 아니다", () => {
+    const seed = strip(read("packages/content/src/seed-seo-content.ts"));
+    expect(seed).toContain("generateSeoKeywords(product)");
+    expect(seed, "속성 나열 생성기가 아직 태그를 만든다").not.toContain(
+      "mockProductContentProvider.generateKeywords(product)",
+    );
   });
 });
 
