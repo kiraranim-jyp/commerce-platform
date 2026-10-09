@@ -297,10 +297,21 @@ function KcAxisRadio({
   );
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴 P5.6 P1-7 — 「인증번호」 칸의 DOM id. 배너의 [KC 정보 직접 입력하기]가
+ * «그 칸» 으로 간다. 그전까지 그 버튼은 `goToSection("section-kc")` 였고,
+ * 버튼 «자신이 들어 있는» 섹션으로 스크롤했다 — 셀러에게는 아무 일도 일어나지
+ * 않는 버튼이었다(P2-2 ① 에서 원산지가 같은 모양으로 틀렸던 그 결함이다).
+ * ════════════════════════════════════════════════════════════════════════════
+ */
+export const KC_CERT_NUMBER_ANCHOR = "field-kcCertificationNumber";
+
 function KcCertificationBlock({
   product,
   naverValidation,
   fix,
+  statusBannerShown,
   onUpdateChildCertification,
   onUpdateKcDeclaration,
   onGoToSection,
@@ -308,6 +319,33 @@ function KcCertificationBlock({
   product: CanonicalProduct;
   naverValidation: NaverPayloadValidationResult | null | undefined;
   fix?: (field: "certificationType", value: string) => void;
+  /**
+   * ══ 🔴 P5.6 P1-7(CPO ⑥, 2026-10-09) — **같은 의사결정을 두 번 묻지 않는다.** ══
+   *
+   * CEO 실측: 「판매가능상품 확인 + 면제대상 여부 판단」이 중복 설정처럼 보인다.
+   * 실제로 KC 섹션에는 «같은 말을 하는 경고판이 둘» 쌓였다 —
+   *
+   *   KcSellerStatusBanner      🟠 판매 가능 여부를 확인해주세요
+   *                             [판매 가능 상품으로 확인] [KC 정보 직접 입력하기]
+   *   이 블록의 isBlocked 패널   ⚠ KC 인증 · 판매자 확인 필요
+   *                             [인증정보 직접 입력] [요청 문구 복사]
+   *
+   * 두 [직접 입력] 버튼은 «같은 함수» 를 불렀고, 두 제목은 같은 상태를 말했다.
+   *
+   * 🔴 그래서 고친 것은 «어느 쪽을 보여줄지» 다. 배너가 떠 있으면 이 패널을
+   *    그리지 않는다 — 배너가 두 갈래를 모두 들고 있다(확인 버튼 + 입력 버튼).
+   *    배너가 없는 경우(kcStatus 미계산)에는 이 패널이 유일한 경고이므로 그대로
+   *    남는다. 문구·규칙·판정은 한 글자도 바꾸지 않았다.
+   *
+   * 🔴 **합치지 «않은» 것**: CPO 가 적은 `○ 인증 필요 / ○ 인증 면제 / ○ 해당
+   *    없음` 3지 라디오는 만들지 않는다. 그 셋은 서로 다른 두 축(어린이제품
+   *    인증 · KC 인증)과 따져 내부 확인기록을 한 칸으로 접는 «새 KC 상태 모델»
+   *    이고, CEO 확정 2번(새 KC 상태 모델 금지)·아래 N-07-01 주석이 금지한다.
+   *    접으면 `kcCertifiedProductExclusionYn`(채널 신고)과
+   *    `seller_compliance_confirmations`(따져 기록)가 한 값이 되어, 셀러가
+   *    「확인했다」를 누른 것이 채널에 「면제」로 나가게 된다.
+   */
+  statusBannerShown: boolean;
   onUpdateChildCertification: (patch: Partial<CanonicalProductCertification>) => void;
   onUpdateKcDeclaration: (patch: Partial<SmartStoreKcDeclaration>) => void;
   onGoToSection: () => void;
@@ -356,7 +394,7 @@ function KcCertificationBlock({
 
   return (
     <div className="mt-3 space-y-3 rounded-md border border-border bg-background p-3">
-      {isBlocked && (
+      {isBlocked && !statusBannerShown && (
         <div className="space-y-2 rounded-md border border-error/30 bg-error-soft p-3">
           <p className="text-sm font-semibold text-error">⚠ KC 인증 · 판매자 확인 필요</p>
           {/* 🔴 P0-KC-06(CPO 확정, 2026-09-24) — 전에는 「실제 인증정보를 직접
@@ -379,9 +417,6 @@ function KcCertificationBlock({
               단계에서 인증자료를 확인한 뒤 판매 가능 여부를 «직접» 확인해야 합니다.
             </li>
           </ul>
-          <p className="text-xs font-medium text-text-secondary">
-            🔴 TTAEJYO는 KC 인증의 진위나 법적 적용 여부를 판정하지 않습니다.
-          </p>
           <div className="flex flex-wrap gap-2 pt-1">
             <button
               type="button"
@@ -394,14 +429,34 @@ function KcCertificationBlock({
                 「다음 스프린트에서 지원 예정」 안내만 펼쳐지는 미구현 기능이었다.
                 되는 것처럼 보이는 버튼은 안내가 아니라 거짓말이다. 실제 업로드
                 기능이 생기면 그때 다시 넣는다. */}
-            <button
-              type="button"
-              onClick={copyRequestText}
-              className="rounded border border-border px-2 py-1 text-xs font-medium text-text-secondary hover:bg-surface"
-            >
-              {requestCopied ? "복사됨" : "요청 문구 복사"}
-            </button>
           </div>
+        </div>
+      )}
+      {/* 🔴 P5.6 P1-7 — 이 둘은 «경고판 밖» 으로 나왔다. 규제 면책 한 줄과
+          [요청 문구 복사]는 배너가 들고 있지 않으므로, 배너 때문에 위 패널이
+          접혀도 사라지면 안 된다. 경고판 안에 두었더니 접힘과 함께 사라졌다 —
+          「두 번 묻지 않기」를 하다가 «한 번도 말하지 않는» 상태가 되는 것이
+          이 수정에서 가장 쉬운 사고다. */}
+      {isBlocked && (
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex-1 space-y-1">
+            {/* 🔴 상세페이지 참조 금지는 «사실» 이고 배너에 없다 — reference-eligibility.ts
+                가 KC 를 영구 차단하는 그 근거다. 패널이 접히면 같이 사라지므로
+                여기로 옮겼다. */}
+            <p className="text-xs text-text-secondary">
+              KC 항목은 &ldquo;상품 상세페이지 참조&rdquo;로 대체할 수 없습니다.
+            </p>
+            <p className="text-xs font-medium text-text-secondary">
+              🔴 TTAEJYO는 KC 인증의 진위나 법적 적용 여부를 판정하지 않습니다.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={copyRequestText}
+            className="rounded border border-border px-2 py-1 text-xs font-medium text-text-secondary hover:bg-surface"
+          >
+            {requestCopied ? "복사됨" : "요청 문구 복사"}
+          </button>
         </div>
       )}
       {/* ══════════════════════════════════════════════════════════════════
@@ -414,6 +469,17 @@ function KcCertificationBlock({
           「대상 아님」은 다른 상태다. 고르지 않으면 인증정보를 예전 그대로 요구한다.
           🔴 두 축을 자동 결합하지 않는다. 한쪽을 골라도 다른 쪽은 그대로다. */}
       <div className="space-y-2 rounded-md border border-border bg-surface px-3 py-2.5">
+        {/* ══ 🔴 P5.6 P1-7(CPO ⑥) — **이것이 「판매가능 확인」과 다른 결정임을 적는다.** ══
+            CEO 가 중복으로 읽은 핵심이 여기다. 위 배너의 [판매 가능 상품으로
+            확인]은 «따져 안의 기록»(seller_compliance_confirmations)이고, 아래
+            라디오는 «스마트스토어에 나가는 신고값»(kcCertifiedProductExclusionYn ·
+            certificationTargetExcludeContent)이다. 둘은 저장되는 곳도 받는 쪽도
+            다르다 — 그래서 합치지 않고, 대신 무엇인지 한 줄로 말한다.
+            🔴 판정하지 않는다. 이 줄은 설명이고 기본 선택을 만들지 않는다. */}
+        <p className="text-[11px] text-text-tertiary">
+          아래 두 줄은 <span className="font-medium text-text-secondary">스마트스토어에 신고할 값</span>
+          입니다 — 위의 「판매 가능 상품으로 확인」(따져 안의 확인 기록)과는 다른 항목입니다.
+        </p>
         <KcAxisRadio
           label="어린이제품 인증"
           name="kc-child"
@@ -495,7 +561,8 @@ function KcCertificationBlock({
             className={FIELD_INPUT_CLASS}
           />
         </FieldRow>
-        <FieldRow label="인증번호">
+        {/* 🔴 P5.6 P1-7 — 배너의 [KC 정보 직접 입력하기]가 «이 칸» 으로 온다. */}
+        <FieldRow anchorId={KC_CERT_NUMBER_ANCHOR} label="인증번호">
           <EditableText
             value={product.childCertification.value?.certificationNumber ?? ""}
             onCommit={(v) => onUpdateChildCertification({ certificationNumber: v })}
@@ -1571,7 +1638,11 @@ export function PlatformPreview({
               childCertification={product.childCertification.value}
               onFinalConfirm={onOpenListingModal}
               onConfirmSellable={onOpenListingModal}
-              onEnterKcInfo={() => goToSection("section-kc")}
+              /* 🔴 P5.6 P1-7 — 전에는 `goToSection("section-kc")` 였다. 이 버튼은
+                 «자기가 들어 있는» 섹션으로 스크롤했으므로 눌러도 아무 일도
+                 일어나지 않았다. 앵커를 주어 「인증번호」 칸으로 간다 — P2-2 ①
+                 이 원산지에서 쓴 그 경로를 그대로 쓴다(새 navigation 아님). */
+              onEnterKcInfo={() => goToSection("section-kc", KC_CERT_NUMBER_ANCHOR)}
               onGoToCategory={() => goToSection("section-category")}
             />
           )}
@@ -1601,6 +1672,12 @@ export function PlatformPreview({
                 product={product}
                 naverValidation={naverValidation}
                 fix={fix}
+                /* 🔴 P5.6 P1-7 — 위 배너의 «렌더 조건과 똑같은 식» 을 쓴다.
+                   따로 쓰면 둘이 어긋나는 순간 경고가 둘 다 사라지거나 둘 다
+                   뜬다. 한 변수로 묶지 않고 같은 식을 두 번 쓰는 쪽을 고른
+                   이유는, 묶으면 배너 조건을 바꿀 때 이 줄이 조용히 따라가기
+                   때문이다 — 여기서는 「같이 뜨는가」만 알고 싶다. */
+                statusBannerShown={Boolean(capabilities.hasNaverPreview && naverValidation?.kcStatus)}
                 onUpdateChildCertification={onUpdateChildCertification}
                 onUpdateKcDeclaration={onUpdateKcDeclaration ?? (() => {})}
                 onGoToSection={() => goToSection("section-kc")}
