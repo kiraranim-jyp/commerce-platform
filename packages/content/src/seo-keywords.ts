@@ -108,7 +108,12 @@ function koreanMaterial(raw: string): string | undefined {
  * (description-facts.ts 주석의 실측 기록). 있으면 쓰고 없으면 비운다.
  */
 export function extractSeasonCode(product: CanonicalProduct): string | undefined {
-  const haystack = [product.title.value, product.description.value, product.sku.value].join(" ");
+  /* 🔴 `sku`·`description` 은 `backfillCanonicalProduct` 가 «채워 주지 않는» 칸이다
+     — 저장된 옛 스냅샷에는 아예 없다. 무방비로 `.value` 를 읽어 터졌다(실측).
+     순수 함수가 입력 모양 하나로 죽으면 그 위의 사슬 전체가 죽는다. */
+  const haystack = [product.title?.value, product.description?.value, product.sku?.value]
+    .filter((v): v is string => typeof v === "string")
+    .join(" ");
   const m = /\b((?:SS|AW|FW)\s?\d{2})\b|\b(\d{2}\s?(?:SS|AW|FW))\b/i.exec(haystack);
   return m ? m[0].replace(/\s+/g, "").toUpperCase() : undefined;
 }

@@ -148,8 +148,40 @@ export function blocksRegistration(fact: SourceStockFact): boolean {
  */
 export const PIPELINE_DEFAULT_STOCK = 999;
 
+/**
+ * ══ 🔴 D4(라이브 실측, 2026-10-09) — **상품 재고가 옵션과 어긋났다.** ═══════
+ *
+ * 실측: 판매자가 기본 재고 10 을 적은 Smallable 상품의 payload —
+ *   옵션 4개 = 각 10         상품 레벨 stockQuantity = **999**
+ *
+ * `payloadStockQuantity` 가 `resolvedPayloadStock`(실측만) 뒤에서 999 로
+ * 떨어졌고, 판매자 기본값을 «몰랐다». 화면은 10 을 말하고 payload 는 999 를
+ * 말하는 상태다 — 999 날조를 상품 레벨에서 다시 만든 셈이다.
+ *
+ * 🔴 그래서 옵션 합계 → 상품 실측 → 판매자 기본값 순으로 본다. 그 셋이 다
+ *    없을 때만 마지막 폴백이 남는다.
+ */
+export function resolvedPayloadStockWithSellerDefault(product: CanonicalProduct): number | null {
+  const measured = resolvedPayloadStock(product);
+  if (measured != null) return measured;
+  /* 🔴 옵션이 있으면 «판매자 기본값 × 옵션 수» 가 아니라 옵션별 값의 합이다 —
+     variantStockWithSellerDefault 가 옵션마다 같은 값을 돌려주므로 그 합을 센다.
+     옵션이 없으면 기본값 하나가 상품 재고다. */
+  if (product.variants.length > 0) {
+    const perVariant = product.variants.map((v) => variantStockWithSellerDefault(product, v));
+    if (perVariant.some((q) => q == null)) return null;
+    return (perVariant as number[]).reduce((a, b) => a + b, 0);
+  }
+  const fallback = product.sellerDefaultStock;
+  if (typeof fallback !== "number" || !Number.isFinite(fallback) || fallback < 0) return null;
+  if (fallback === PIPELINE_DEFAULT_STOCK) return null;
+  return fallback;
+}
+
 export function payloadStockQuantity(product: CanonicalProduct): number {
-  return resolvedPayloadStock(product) ?? PIPELINE_DEFAULT_STOCK;
+  /* 🔴 D4 — 판매자 기본값까지 «본다». 전에는 `resolvedPayloadStock`(실측만) 뒤에서
+     바로 999 로 떨어져, 옵션이 10 인데 상품 재고가 999 로 나갔다(실측). */
+  return resolvedPayloadStockWithSellerDefault(product) ?? PIPELINE_DEFAULT_STOCK;
 }
 
 /**

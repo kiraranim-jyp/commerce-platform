@@ -550,6 +550,17 @@ export function generateSmartStoreProductName(product: SmartStoreProductInput): 
   const words = [...prefixParts.flatMap((p) => p.split(/\s+/)), ...coreWords].filter(Boolean);
 
   let name = words.join(" ").replace(/\s{2,}/g, " ").trim();
+  return truncateToNaverNameLimit(name);
+}
+
+/**
+ * 🔴 P5.6 P1-12 — 네이버 상품명 100자 상한. `titleKo` 경로와 N-3.77 폴백이
+ * «같은 함수» 로 자른다 — 한쪽만 자르면 그 경로에서만 거절된다.
+ * 글자 중간에서 끊지 않는다(단어 단위로 뒤에서부터 버린다).
+ */
+export function truncateToNaverNameLimit(raw: string): string {
+  const words = raw.replace(/\s{2,}/g, " ").trim().split(/\s+/).filter(Boolean);
+  let name = words.join(" ");
   if (name.length > NAVER_PRODUCT_NAME_MAX_LENGTH) {
     const kept: string[] = [];
     let length = 0;
@@ -647,7 +658,28 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
   // N-3.77 STEP2 — SEO 상품명 생성이 실패하거나 빈 문자열을 돌려주는 예외적인
   // 경우(원문 title 자체가 비어있는 등)에는 지금까지처럼 listing.title로
   // 폴백한다(회귀 방지).
-  const smartStoreProductName = generateSmartStoreProductName(product) || listing.title;
+  /* ══ 🔴 P5.6 P1-12(라이브 실측, 2026-10-09) — **상품명이 두 벌이었다.** ══════
+
+     실측 payload:
+       "Louis Louise 베이비 Holly Hearts Ribbed Velvet Baby Pants | Pale Pink"
+     상품정보 화면(titleKo):
+       "Louis Louise 여아 코튼 바지"
+
+     🔴 두 값이 달랐다. 이 빌더가 `generateSmartStoreProductName`(N-3.77)로 «다시
+        조립» 했고, 상품정보에 보이는 한국어 상품명은 payload 에 닿지 않았다.
+        셀러가 화면에서 고쳐도 등록명이 안 바뀌는 상태였다 — 상세설명에서 겪은
+        그 사고와 «같은 축» 이다.
+
+     🔴 그래서 `titleKo` 가 있으면 그것을 쓴다. 상품정보가 Single Source of Truth
+        이고 채널은 소비만 한다(P5.6 전체 방향 · 가격 PHASE 3.2 와 같은 어휘).
+     🔴 N-3.77 생성기를 «지우지 않는다» — titleKo 가 비었을 때의 폴백으로 남는다.
+        그 안에 CPO 결정이 들어 있다(브랜드 음차 금지 · 카탈로그/모델코드 미포함 ·
+        100자 상한 · 브랜드 중복 제거). 두 벌이 아니라 «한 줄의 우선순위» 다.
+     🔴 길이 상한은 폴백 경로에만 있었다. titleKo 를 쓸 때도 네이버 100자 제한을
+        넘기면 거절되므로 같은 함수로 자른다. */
+  const koreanName = product.titleKo.value.trim();
+  const smartStoreProductName =
+    (koreanName ? truncateToNaverNameLimit(koreanName) : "") || generateSmartStoreProductName(product) || listing.title;
 
   return {
     originProduct: {
@@ -953,9 +985,19 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
           // 사용자가 직접 입력한 값(USER_EDITED)을 대신 쓴다 — 임의 값을 새로
           // 만드는 게 아니라 사용자가 이미 명시적으로 입력한 값을 그대로 연결하는
           // 것뿐이다(원산지/제조사 등 기존 필드들과 같은 원칙).
+          /* 🔴 P5.6 P1-12(라이브 실측) — 전에는 `USER_EDITED` «하나만» 받았다.
+             그래서 원상품명으로 채워진 모델명(ORIGINAL)이 payload 에서 사라져
+             `modelName: undefined` 로 나갔다(실측 TACCHINI/LOUIS 둘 다).
+             🔴 CPO 결정은 「모델명 = 원상품명 우선 · 임의 생성 금지」다. 원상품명은
+                지어낸 값이 아니라 원문 근거이므로 ORIGINAL 도 받는다.
+             🔴 `AI_GENERATED`·`DEFAULT`·`REQUIRED` 는 계속 «받지 않는다» — 그것이
+                임의 생성 금지의 실제 경계다(화이트리스트로 적는다). */
+          const MODEL_NAME_GROUNDED_SOURCES = ["USER_EDITED", "ORIGINAL", "DETAIL_PAGE_REFERENCE"] as const;
           const modelName =
             resolveModelNameFromDescription(product.description.value) ||
-            (product.modelName.source === "USER_EDITED" ? product.modelName.value.trim() || undefined : undefined);
+            ((MODEL_NAME_GROUNDED_SOURCES as readonly string[]).includes(product.modelName.source)
+              ? product.modelName.value.trim() || undefined
+              : undefined);
           const manufacturerName = manufacturerValue || undefined;
           const brandName = product.brand.value.trim() || undefined;
           return modelName || manufacturerName || brandName

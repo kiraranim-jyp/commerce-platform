@@ -62,18 +62,44 @@ describe("A) 🔴 쿠팡 attributes 의 색상·소재 자동 매핑은 «이미
 describe("B) 🔴 네이버 modelName 연결은 «이미» 있고, 조건이 «완전하다»", () => {
   const NAVER = codeOnly(read("packages/listing/src/naver/build-payload.ts"));
 
-  it("원문 추출 1순위 · 사용자 입력 2순위로 연결된다 (N-4.11 STEP7)", () => {
+  /* ══ 🔴 P5.6 P1-12(라이브 실측, 2026-10-09) — **이 가드가 설계대로 터졌다.** ══
+
+     아래 주석이 「수집이 모델명을 뽑기 시작하면 이 테스트가 깨져서 조건을 다시
+     보게 된다」고 적어 뒀다. 실제로 그렇게 됐다 — `seedSeoContent` 가 원상품명을
+     `ORIGINAL` 로 심기 시작했고, 빌더가 `USER_EDITED` «하나만» 받고 있어서
+     실측 payload 의 `modelName` 이 `undefined` 로 나갔다.
+
+     그래서 조건을 넓혔다. 기록을 여기 갱신한다 — 가드를 지우는 것이 아니라
+     «무엇을 받고 무엇을 받지 않는지» 를 화이트리스트로 못박는다. */
+  it("원문 추출 1순위 · 근거 있는 출처 2순위로 연결된다 (N-4.11 STEP7 → P1-12)", () => {
     expect(NAVER).toContain("resolveModelNameFromDescription(product.description.value) ||");
-    expect(NAVER).toContain('product.modelName.source === "USER_EDITED"');
+    expect(NAVER).toContain('const MODEL_NAME_GROUNDED_SOURCES = ["USER_EDITED", "ORIGINAL", "DETAIL_PAGE_REFERENCE"] as const;');
+  });
+
+  it("🔴 AI_GENERATED·DEFAULT·REQUIRED 는 모델명으로 «받지 않는다» — 임의 생성 금지의 경계", () => {
+    const list = /MODEL_NAME_GROUNDED_SOURCES = \[([^\]]*)\]/.exec(NAVER)?.[1] ?? "";
+    expect(list).not.toContain("AI_GENERATED");
+    expect(list).not.toContain("DEFAULT");
+    expect(list).not.toContain("REQUIRED");
   });
 
   /* 🔴 「ORIGINAL 로 수집된 모델명이 떨어진다」고 의심했다. 확인 결과 **수집
      파이프라인은 modelName 을 채우지 않는다** — 항상 REQUIRED(빈 값)로 시작한다.
      그래서 USER_EDITED 조건에 빠진 것이 없다. 이 사실이 바뀌면(수집이 모델명을
      뽑기 시작하면) 이 테스트가 깨져서 조건을 다시 보게 된다. */
-  it("🔴 수집은 modelName 을 채우지 않는다 — 그래서 ORIGINAL 누락이 없다", () => {
+  /* 🔴 위 주석의 「수집은 modelName 을 채우지 않는다」는 **더 이상 사실이 아니다.**
+     추출 자체는 여전히 REQUIRED 빈 값으로 시작하지만, 그 뒤 `seedSeoContent` 가
+     원상품명으로 채운다. 두 사실을 «같이» 못박는다 — 한쪽만 적으면 다시 틀린
+     전제가 남는다. */
+  it("추출 단계는 여전히 modelName 을 비워서 시작한다", () => {
     const pipeline = read("apps/admin/src/app/api/pipeline/canonical-product.ts");
     expect(pipeline).toContain('modelName: { value: "", source: "REQUIRED", confidence: 0 }');
+  });
+
+  it("🔴 그리고 seedSeoContent 가 원상품명으로 «채운다» — 배선이 살아 있다", () => {
+    const seed = read("packages/content/src/seed-seo-content.ts");
+    expect(seed).toContain("suggestModelName(product)");
+    expect(seed).toContain('next.modelName = { value: model, source: "ORIGINAL", confidence: 0.8 }');
   });
 
   it("🔴 모델명을 «지어내는» 생성기를 만들지 않았다", () => {

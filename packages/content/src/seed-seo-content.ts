@@ -1,7 +1,7 @@
 import type { CanonicalProduct, ProvenanceField } from "@commerce/shared";
 import { mockProductContentProvider } from "./providers/mock.provider";
 import { mergeKeywords } from "./merge-keywords";
-import { generateSeoKeywords, suggestKoreanProductName } from "./seo-keywords";
+import { generateSeoKeywords, suggestKoreanProductName, suggestModelName } from "./seo-keywords";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -47,9 +47,9 @@ function isSellerEdited<T>(field: ProvenanceField<T> | undefined, hasValue: (v: 
 export interface SeedSeoContentResult {
   product: CanonicalProduct;
   /** 무엇을 채웠는가 — 호출부가 로그/화면에 쓸 수 있게. 🔴 조용히 바꾸지 않는다. */
-  filled: ("descriptionKo" | "keywords" | "titleKo")[];
+  filled: ("descriptionKo" | "keywords" | "titleKo" | "modelName")[];
   /** 셀러 수정값이라 건드리지 않은 축. */
-  skipped: ("descriptionKo" | "keywords" | "titleKo")[];
+  skipped: ("descriptionKo" | "keywords" | "titleKo" | "modelName")[];
 }
 
 /**
@@ -114,6 +114,24 @@ export function seedSeoContent(product: CanonicalProduct): SeedSeoContentResult 
     if (name && name.trim()) {
       next.titleKo = { value: name.trim(), source: "AI_GENERATED", confidence: 0.7 };
       filled.push("titleKo");
+    }
+  }
+
+  /* ── 🔴 D3(라이브 실측) — 모델명을 «배선» 한다 ─────────────────────────
+     `suggestModelName` 을 만들어 두고 호출부에서 넘기지 않아, 실측 payload 의
+     `naverShoppingSearchInfo.modelName` 이 `undefined` 였다 — 이 저장소가 네
+     번째로 겪는 「인자를 만든 것과 넘기는 것은 다르다」 다.
+     🔴 원상품명 그대로다(SKU·ID·URL·AI 금지 — CPO 명시). 원문이 없으면 비운다.
+     🔴 셀러 수정값·상세페이지 참조를 덮지 않는다. DETAIL_PAGE_REFERENCE 는
+        「참조로 채운다」는 선택이므로 그것도 건드리지 않는다. */
+  const modelSource = product.modelName?.source;
+  if (modelSource === "USER_EDITED" || modelSource === "DETAIL_PAGE_REFERENCE") {
+    skipped.push("modelName");
+  } else if ((product.modelName?.value ?? "").trim().length === 0) {
+    const model = suggestModelName(product);
+    if (model) {
+      next.modelName = { value: model, source: "ORIGINAL", confidence: 0.8 };
+      filled.push("modelName");
     }
   }
 
