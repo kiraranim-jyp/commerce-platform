@@ -63,6 +63,8 @@ import {
 } from "@commerce/pricing";
 import { resolveCategoryCacheAction } from "./category-cache-hydrate";
 import { AIContentPanel } from "./commerce/AIContentPanel";
+/* 🔴 P5.6 P1-9 — 「AI 콘텐츠」 탭이 쓰는 그 편집기다. 새 입력 패턴을 만들지 않는다. */
+import { EditableTextarea } from "./commerce/EditableField";
 import { BacklogPanel } from "./commerce/BacklogPanel";
 import { ComparisonShopSearch } from "./commerce/ComparisonShopSearch";
 import {
@@ -3957,11 +3959,30 @@ export function CommerceWorkspace({
                       >
                         상세설명 자동 작성
                       </button>
-                      {product.descriptionKo.value.trim() !== "" && (
-                        <p className="mt-2 whitespace-pre-line text-xs text-text-secondary">
-                          {product.descriptionKo.value}
-                        </p>
-                      )}
+                      {/* ══ 🔴 P5.6 P1-9(CPO ⑬, 2026-10-09) — **고칠 수 있어야 한다.** ══
+
+                          여기 있던 것은 `<p>` 였다 — 만들어진 글을 «보여주기만»
+                          했다. 그런데 이 값(descriptionKo)이 세 채널이 실제로
+                          받는 글이고(effectiveDescription = descriptionKo ||
+                          description), 고칠 수 있는 자리는 disabled 인
+                          「AI 콘텐츠」 탭 하나뿐이었다.
+
+                          🔴 그래서 「롯데ON에서만 엉뚱한 상세정보가 보인다」가
+                             났다 — 엉뚱한 쪽이 롯데ON 이 아니라, 세 채널이
+                             똑같이 받는 템플릿 글을 셀러가 고칠 수 없었던 것이다.
+                          🔴 새 탭을 만들지 않는다 — 「AI 콘텐츠」 탭은 URGENT ④
+                             (CPO, 2026-10-03) 결정대로 준비중 그대로다. 태그를
+                             상품정보로 낸 P5.6 P1-6 과 같은 방식이다.
+                          🔴 새 setter 를 만들지 않는다 — updateField 가 이미
+                             "descriptionKo" 를 받는다(그 탭이 쓰는 그 함수다). */}
+                      <div className="mt-3">
+                        <EditableTextarea
+                          value={product.descriptionKo.value}
+                          onCommit={(v) => updateField("descriptionKo", v)}
+                          placeholder="아직 없습니다 — [상세설명 자동 작성]을 누르거나 직접 적어 주세요."
+                          rows={8}
+                        />
+                      </div>
                     </section>
                   </>
                 ),

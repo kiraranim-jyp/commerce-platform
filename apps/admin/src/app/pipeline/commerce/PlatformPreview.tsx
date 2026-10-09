@@ -39,7 +39,7 @@ import { editSupportedScope, editUnavailableNote } from "./edit-adapters";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { ComplianceBreakdown } from "./ComplianceBreakdown";
 import { CoupangPayloadInspector } from "./CoupangPayloadInspector";
-import { EditableDate, EditableText, EditableTextarea } from "./EditableField";
+import { EditableDate, EditableText } from "./EditableField";
 import { KcSellerStatusBanner } from "./KcSellerStatusBanner";
 import { ListingSection } from "./ListingSection";
 import { ManufacturerField } from "./ManufacturerResolutionNote";
@@ -687,7 +687,10 @@ export function PlatformPreview({
    * 또 계산하는 것과 다른 결과를 보여주면 CP001과 같은 신뢰 문제가 재발하므로,
    * 여기서 새로 계산하지 않고 그 값을 그대로 보여주기만 한다. */
   compliancePreview?: ComplianceReport | null;
-  onUpdateField: (key: "title" | "brand" | "description", value: string) => void;
+  /** 🔴 P5.6 P1-9 — "description" 을 «뺐다». 채널 탭은 상세설명을 고치지
+   *  않는다(보던 값과 고치던 값이 서로 다른 필드였다). union 에 남겨 두면
+   *  다음 사람이 「여기서 고쳐도 되는 값」으로 읽는다. */
+  onUpdateField: (key: "title" | "brand", value: string) => void;
   /**
    * UX 2.5(CEO 지시, 2026-09-11) — 가격 편집기(PriceEditor)가 이 화면에서
    * 내려간 자리에 남는 유일한 가격 관련 prop. 값을 고치는 setter가 아니라
@@ -1706,14 +1709,33 @@ export function PlatformPreview({
         </CollapsibleSection>
 
         <CollapsibleSection title={sectionTitle("DESCRIPTION")} badge={sectionCompletionBadge("section-description")} {...sectionProps("section-description")}>
+          {/* ══ 🔴 P5.6 P1-9(CPO ⑬, 2026-10-09) — **보는 값과 고치는 값이 달랐다.** ══
+
+              여기 있던 입력칸은 실측으로 틀려 있었다:
+
+                보여준 값   listing.description   = descriptionKo || description
+                고친 값     product.description   = 원문
+
+              descriptionKo 가 있으면(자동 작성을 한 번이라도 눌렀으면 항상 있다)
+              셀러가 이 칸에서 고친 글은 «등록값을 한 글자도 바꾸지 못한다» —
+              대신 원문을 조용히 덮어썼다. 「고쳤는데 그대로」가 여기서 났다.
+              실측: effectiveDescription({description:"셀러가 고친 글",
+              descriptionKo:"생성된 한국어"}) → "생성된 한국어".
+
+              🔴 읽기 전용으로 바꾼다. 고치는 자리는 상품정보 하나다(P1-5 옵션·
+                 PHASE 3.2 가격과 같은 어휘). 롯데ON 탭은 이미 그렇게 돼 있었다 —
+                 세 탭을 그 쪽에 맞춘 것이지 새 규칙을 만든 것이 아니다.
+              🔴 «무엇이 나가는지» 는 계속 보여준다. 등록될 글 그대로다. */}
           <FieldRow label="상세설명" field={product.description}>
-            <EditableTextarea
-              value={listing.description}
-              onCommit={(v) => onUpdateField("description", v)}
-              placeholder="상세설명 없음"
-              rows={10}
-              className={FIELD_INPUT_CLASS}
-            />
+            <div className="space-y-1.5">
+              <p className="whitespace-pre-line rounded-md bg-background p-2.5 text-xs text-text-primary">
+                {listing.description.trim() || "상세설명 없음"}
+              </p>
+              <p className="text-[11px] text-text-tertiary">
+                이 채널에 등록될 글입니다 — 고치는 곳은{" "}
+                <span className="font-medium text-text-secondary">상품정보 → 상세설명</span> 하나입니다.
+              </p>
+            </div>
           </FieldRow>
         </CollapsibleSection>
 
