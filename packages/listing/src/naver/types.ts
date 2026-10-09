@@ -330,7 +330,56 @@ export interface NaverShoppingSearchInfo {
   brandName?: string;
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * P5.6 P2(CPO ②, 2026-10-09) — **판매자 입력 태그.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 공식 근거(커머스API센터 스펙 v2.90.0, `POST /v2/products`):
+ *   originProduct.detailAttribute.seoInfo.sellerTags
+ *   items.required = ["text"] · code 는 선택
+ *
+ * 🔴 **`originProduct` 최상위가 아니다.** `productCertificationInfos` 가 바로 그
+ *    실수로 **5차 연속 같은 거부**를 맞았다(아래 N-3.67 주석). 태그도 같은
+ *    `detailAttribute` 자식이다 — 위치를 옮기지 말 것.
+ *
+ * ── 🔴 code 를 넣지 않는다 ────────────────────────────────────────────────
+ * `code` 는 추천 태그 조회 API(`/v2/tags/recommend-tags`)가 주는 태그 ID 이고,
+ * **code 와 text 가 불일치하면 요청 «전체» 가 실패한다**(공식 스펙 description).
+ * 우리는 그 API 를 부르지 않으므로 code 를 만들 근거가 없다 — 직접 입력 태그는
+ * code 를 «생략» 하는 것이 공식 사용법이다(네이버 기술지원 #1867).
+ *
+ * ── 🔴 개수 상한을 상수로 박지 않는다 ─────────────────────────────────────
+ * 공식 스펙에 `maxItems` 가 **없다**. 「최대 10개」는 판매자센터 UI 기준의
+ * 비공식 정보다. 근거 없는 정책을 payload 규칙으로 만들지 않는다.
+ */
+export interface NaverSellerTag {
+  /** 🔴 쓰지 않는다 — 위 주석 참고(불일치 시 요청 전체 실패). */
+  code?: number;
+  /** 필수. */
+  text: string;
+}
+
+export interface NaverSeoInfo {
+  /** maxLength 100. 🔴 지금은 채우지 않는다 — 근거 있는 입력원이 없다. */
+  pageTitle?: string;
+  /** maxLength 160. 🔴 같은 이유로 채우지 않는다. */
+  metaDescription?: string;
+  /** 배열 maxLength 4000(공식). 🔴 개수 상한은 스펙에 없다. */
+  sellerTags?: NaverSellerTag[];
+}
+
 export interface NaverDetailAttribute {
+  /**
+   * 🔴 P5.6 P2 — 경로는 반드시 `originProduct.detailAttribute.seoInfo` 다.
+   *
+   * 🔴 UPDATE 주의(공식 기술지원 #1650): seoInfo 는 **빈 값/null 이면 기존
+   *    내용을 «제거» 한다**. `detailContent` 처럼 「생략 = 보존」이 아니다.
+   *    그래서 지금은 **CREATE 에서만** 채운다 — UPDATE 경로에서 이 값을
+   *    어떻게 다룰지는 보존 정책(preserve-registered-values.ts)의 결정 사항이고
+   *    공식 문서로 답이 나오지 않는다(CPO 결정 항목).
+   */
+  seoInfo?: NaverSeoInfo;
   productInfoProvidedNotice?: NaverProductInfoProvidedNotice;
   originAreaInfo?: NaverOriginAreaInfo;
   optionInfo?: NaverOptionInfo;

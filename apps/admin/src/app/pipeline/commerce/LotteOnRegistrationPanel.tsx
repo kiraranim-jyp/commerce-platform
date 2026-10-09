@@ -87,6 +87,7 @@ import { ChannelRegistrationFrame, ChannelRegistrationSummary } from "./ChannelR
 import { ChannelEditScopeCard, ChannelEditUnavailableCard } from "./ChannelEditSummary";
 import { editSupportedScope, editUnavailableNote } from "./edit-adapters";
 import { LOTTEON_COMMERCE_ID, commerceLabel } from "./commerce-registry";
+import { suggestLotteOnNoticeItemCode } from "@commerce/listing";
 import { ListingConfirmationModal, type ListingProgressStep } from "./ListingConfirmationModal";
 import type { ReadinessItem } from "./readiness";
 import { resolveRegistrationReadinessState, type PriorityItem } from "./readiness-state";
@@ -843,7 +844,10 @@ export function LotteOnRegistrationPanel({
    * setter는 전부 이 컴포넌트 안의 롯데ON 폼이다.
    */
   function applyRecommendation(candidate: LotteOnCategoryCandidate) {
-    applyCategory(candidate.category);
+    /* 🔴 P5.6 P2(CPO ④) — 후보의 전체 경로를 «같이» 넘긴다. 이 한 줄이 없어서
+       고른 뒤에는 카테고리 «이름 한 토막» 만 남았다. 경로는 추천 목록이 손에
+       있는 이 순간에만 만들 수 있다(205 응답에 상위 이름이 없다). */
+    applyCategory(candidate.category, candidate.path);
   }
 
   /**
@@ -1069,8 +1073,8 @@ export function LotteOnRegistrationPanel({
    * 우측 요약에서 안 사라진다" 같은 갈라짐이 생길 수 없다(627ac53이 고친
    * 재검증 경로를 그대로 탄다).
    */
-  function applyCategory(category: LotteOnStandardCategory) {
-    const next = applyLotteOnRecommendedCategory(form, category);
+  function applyCategory(category: LotteOnStandardCategory, path?: string[]) {
+    const next = applyLotteOnRecommendedCategory(form, category, path);
     setDisplayCategoryText(next.category.displayCategoryNos.join(", "));
     commitForm(next);
     setDirectPickOpen(false);
@@ -1456,9 +1460,23 @@ export function LotteOnRegistrationPanel({
   const basicRows = rowsOf("상품명", "브랜드", "상품코드(SKU)", "소재", "색상", "사용연령", "품명", "모델명");
   const basicNeedsCheck = basicRows.filter((row) => row.missing).length;
   const basicInfoSummary = `자동 입력 ${basicRows.length - basicNeedsCheck}개 · 확인 필요 ${basicNeedsCheck}개`;
-  const categorySummary = selectedCategory
-    ? selectedCategory.name
-    : "미지정 — 추천 후보에서 선택해주세요.";
+  /**
+   * ══ 🔴 P5.6 P2(CPO ④, 2026-10-09) — **전체 경로를 적는다.** ════════════════
+   *
+   * CEO: 「현재 번호만 표시되는 문제 수정 · 대분류 > 중분류 > 소분류 > … 전체
+   * 경로 표시」.
+   *
+   * 🔴 스마트스토어·쿠팡이 쓰는 «그 표현» 을 그대로 쓴다 —
+   *    CategoryRecommendationPanel:158 의 `path.join(" > ")`. 새 말을 만들지 않는다.
+   * 🔴 경로를 모르면 «지어내지 않는다» — 이름으로 폴백한다. 번호를 손으로 친
+   *    상품과 이 칸을 모르던 옛 스냅샷이 그 경우다.
+   */
+  const categoryPathText = (facts: { name: string; path?: string[] } | null): string | null => {
+    if (!facts) return null;
+    const path = (facts.path ?? []).map((part) => part.trim()).filter(Boolean);
+    return path.length > 0 ? path.join(" > ") : facts.name || null;
+  };
+  const categorySummary = categoryPathText(selectedCategory) ?? "미지정 — 추천 후보에서 선택해주세요.";
   const optionGroupCount = product.optionGroups?.length ?? 0;
   const optionValueCount = product.optionGroups?.reduce((sum, group) => sum + group.values.length, 0) ?? 0;
   const optionSummary =
@@ -1547,8 +1565,8 @@ export function LotteOnRegistrationPanel({
           pickedId={form.category.standardCategoryNo}
           /* 스마트스토어·쿠팡 패널의 "선택됨: A > B > C"와 같은 자리·같은 말. */
           subtitle={
-            selectedCategory
-              ? `선택됨: ${selectedCategory.name}`
+            categoryPathText(selectedCategory)
+              ? `선택됨: ${categoryPathText(selectedCategory)}`
               : "추천 후보에서 롯데ON 표준카테고리를 선택하세요."
           }
           onPick={applyRecommendation}
@@ -2050,11 +2068,48 @@ export function LotteOnRegistrationPanel({
                알 수 없다. 조회가 실패하면 안내와 [다시 불러오기]가 선다. */
             readOnly
             belowInput={
-              <CommonCodePicker
-                list={noticeItemCodeList}
-                current={form.notice.itemCode}
-                onPick={(value) => pickAndRecheck("notice", { itemCode: value })}
-              />
+              <>
+                {/* ══ 🔴 P5.6 P2(CPO ③, 2026-10-09) — **채널이 품목코드를 주지 않는다.** ══
+
+                    CPO: 「pd_itms_list 빈 응답 원인 처리 · 의류 카테고리 선택 시
+                    고시정보 자동 구성」.
+
+                    원인은 실측으로 이미 닫혀 있다 — 205 응답의 `pd_itms_list` 는
+                    키는 있는데 배열이 «항상 비어 있다»(목록 6131건 nonEmpty 0 ·
+                    filter_1 단건도 같다, category-recommend/route.ts 1~3차 계측).
+                    우리 파서 결함이 아니고 **채널이 그 값을 주지 않는다.**
+
+                    🔴 그래서 「자동 확정」을 하지 않는다. 고시 품목은 규제 신고
+                       항목이고, 카테고리 이름에서 추론한 값을 조용히 넣으면
+                       「따져가 정한 정책」이 신고로 나간다.
+                    🔴 대신 «제안» 하고 셀러가 누른다 — 상태를 「셀러 확인 필요」로
+                       가른 것이다. 셀러의 선택이 항상 이긴다(아래 picker 그대로).
+                    🔴 아는 스키마 둘(01 의류 · 23 어린이제품)만 제안한다. 모르는
+                       품목을 제안하면 고른 뒤에도 고시 표를 그릴 수 없다. */}
+                {(() => {
+                  const suggestion = suggestLotteOnNoticeItemCode(
+                    selectedCategory?.path ?? (selectedCategory?.name ? [selectedCategory.name] : []),
+                  );
+                  if (!suggestion.code || form.notice.itemCode.trim() === suggestion.code) return null;
+                  return (
+                    <div className="mb-1.5 flex flex-wrap items-center gap-2 rounded-md border border-dashed border-border bg-background px-2.5 py-2">
+                      <span className="flex-1 text-[11px] text-text-secondary">{suggestion.reason}</span>
+                      <button
+                        type="button"
+                        onClick={() => pickAndRecheck("notice", { itemCode: suggestion.code as string })}
+                        className="shrink-0 rounded border border-primary px-2 py-1 text-[11px] font-medium text-primary hover:bg-primary/10"
+                      >
+                        {suggestion.code} 로 설정
+                      </button>
+                    </div>
+                  );
+                })()}
+                <CommonCodePicker
+                  list={noticeItemCodeList}
+                  current={form.notice.itemCode}
+                  onPick={(value) => pickAndRecheck("notice", { itemCode: value })}
+                />
+              </>
             }
             value={form.notice.itemCode}
             onChange={(value) => patch("notice", { itemCode: value })}
@@ -3429,8 +3484,21 @@ function PickedCategorySummary({
       </p>
     );
   }
+  /* 🔴 P5.6 P2(CPO ④) — 위 categoryPathText 와 «같은 규칙» 이다. 이 컴포넌트는
+     스코프가 달라 그 헬퍼를 볼 수 없으므로 한 줄로 같이 둔다 — 규칙이 둘로
+     갈리지 않게 「경로 있으면 경로, 없으면 이름」 그대로다. */
+  const selectedPathText = (() => {
+    const path = (selected?.path ?? []).map((part) => part.trim()).filter(Boolean);
+    return path.length > 0 ? path.join(" > ") : (selected?.name ?? "");
+  })();
   const rows: { label: string; value: string }[] = [
-    { label: "표준카테고리 (scatNo)", value: `${selected?.name ? `${selected.name} · ` : ""}${form.category.standardCategoryNo}` },
+    {
+      label: "표준카테고리 (scatNo)",
+      /* 🔴 P5.6 P2(CPO ④) — 「이름 · 번호」가 아니라 「전체 경로 · 번호」다.
+         CEO 가 「번호만 보인다」고 한 자리가 여기와 위 두 곳이다. 경로를
+         모르면 이름으로 폴백한다(지어내지 않는다). */
+      value: `${selectedPathText ? `${selectedPathText} · ` : ""}${form.category.standardCategoryNo}`,
+    },
     {
       label: "전시카테고리 (dcatLst)",
       value: `${form.category.displayCategoryNos.length}개 — ${displayCategoryText || form.category.displayCategoryNos.join(", ")}`,

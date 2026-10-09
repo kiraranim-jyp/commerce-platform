@@ -276,6 +276,24 @@ export function getRegistrationImageUrl(image: CanonicalProductImage): string | 
 export interface LotteOnSelectedCategoryFacts {
   /** std_cat_nm. 복귀했을 때 셀러가 "무엇을 골랐는지"를 읽을 수 있는 유일한 값. */
   name: string;
+  /**
+   * ══ 🔴 P5.6 P2(CPO ④, 2026-10-09) — **전체 경로를 «저장» 한다.** ══════════
+   *
+   * CEO: 「현재 번호만 표시되는 문제 수정 · 대분류 > 중분류 > … 전체 경로 표시」.
+   *
+   * 경로 자체는 이미 계산되고 있었다 — `LotteOnCategoryCandidate.path`
+   * (lotteon-category.ts:254, buildLotteOnCategoryPath 가 리프에서 부모를
+   * 거슬러 만든다). 그런데 고른 결과를 저장할 때 `name` 한 줄만 남겨서,
+   * 탭을 떠났다 돌아오면 경로가 사라졌다.
+   *
+   * 🔴 205 응답에는 상위 «이름» 이 없다(상위 id 만 온다). 그래서 경로는 추천
+   *    목록이 손에 있을 때만 만들 수 있고, 그 순간에 저장하지 않으면 다시
+   *    만들 길이 없다. 여기 담는 이유가 그것이다.
+   * 🔴 optional 이다 — 이 칸을 모르던 옛 스냅샷과 「번호를 손으로 친 상품」은
+   *    그대로 `name` 으로 읽힌다(화면이 폴백한다).
+   * 🔴 추천 점수·선택 로직은 한 줄도 건드리지 않았다(CPO 명시).
+   */
+  path?: string[];
   /** pd_Itms_cd 후보 — 고시 품목코드(pdItmsCd)를 정하는 근거. */
   noticeItemCodes: string[];
   /** 이 카테고리가 요구하는 안전인증 유형(sftyAthnTypCd). 87 payload에 그대로 들어간다. */

@@ -198,6 +198,10 @@ export function toLotteOnChannelInfo(form: LotteOnChannelForm): LotteOnChannelIn
         ? {
             selected: {
               name: form.category.selected.name,
+              /* 🔴 P5.6 P2 — 경로가 있을 때만 키를 만든다(위 「고른 적 없으면
+                 키 자체를 만들지 않는다」와 같은 규칙). 없는 것을 빈 배열로
+                 저장하면 「경로를 모르는 상품」과 「경로가 없는 상품」이 같아진다. */
+              ...(form.category.selected.path?.length ? { path: [...form.category.selected.path] } : {}),
               noticeItemCodes: [...form.category.selected.noticeItemCodes],
               safetyTypeCodes: [...form.category.selected.safetyTypeCodes],
             },
@@ -271,6 +275,12 @@ export function fromLotteOnChannelInfo(info: LotteOnChannelInfo | undefined | nu
 export function applyLotteOnRecommendedCategory(
   form: LotteOnChannelForm,
   category: LotteOnStandardCategory,
+  /**
+   * 🔴 P5.6 P2(CPO ④) — 후보의 전체 경로. 추천 목록에서 고른 경우에만 있다
+   * (번호를 손으로 친 경우는 경로를 만들 재료가 없다 — 205 응답에 상위 이름이
+   * 없기 때문이다). 넘기지 않으면 `name` 만 저장되고 화면이 그것으로 폴백한다.
+   */
+  path?: string[],
 ): LotteOnChannelForm {
   return {
     ...form,
@@ -279,6 +289,7 @@ export function applyLotteOnRecommendedCategory(
       displayCategoryNos: category.displayCategories.map((entry) => entry.displayCategoryId),
       selected: {
         name: category.name,
+        ...(path?.length ? { path: [...path] } : {}),
         noticeItemCodes: [...category.noticeItemCodes],
         safetyTypeCodes: [...category.safetyTypeCodes],
       },

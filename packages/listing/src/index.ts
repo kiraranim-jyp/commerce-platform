@@ -55,6 +55,8 @@ export * from "./lotteon/carrier-match";
 export * from "./lotteon/tax-type";
 export * from "./lotteon/notice-schema";
 export * from "./lotteon/notice-resolve";
+/* 🔴 P5.6 P2 — 고시 품목 «제안». 확정하지 않는다(채널이 pd_itms_list 를 주지 않는다). */
+export * from "./lotteon/notice-item-suggest";
 export * from "./lotteon/notice-bulk-reference";
 export * from "./lotteon/origin-code";
 export * from "./lotteon/validate-payload";

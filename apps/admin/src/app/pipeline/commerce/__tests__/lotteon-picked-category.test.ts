@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 // @vitest-environment jsdom
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -671,7 +673,14 @@ describe("3 — 저장한 것은 최소 필드뿐이다", () => {
       ["점수", "82"],
       ["추천 이유", "연령대(유아동) 일치"],
       ["신호 근거", "상품유형 반바지"],
-      ["트리 경로", "패션의류"],
+      /* 🔴 P5.6 P2(CPO ④, 2026-10-09) — 「트리 경로」를 이 목록에서 «뺐다».
+         전제가 바뀌었다 — 경로는 더 이상 「추천 결과에만 있고 쓰이지 않는 것」이
+         아니다. CEO 가 「번호만 보인다 · 전체 경로를 표시하라」를 지시했고,
+         205 응답에는 상위 «이름» 이 없어서(상위 id 만 온다) 고른 순간에 저장하지
+         않으면 다시 만들 길이 없다. 그래서 path 는 «등록/판정이 아니라 표시» 에
+         쓰이는 값으로 저장된다. 아래 ⑤ 가 그 사실을 양성으로 고정한다.
+         🔴 나머지 일곱(점수·이유·신호·상위 id·depth·leaf·나이제한)은 그대로
+            금지다 — 쓰이지 않는 것을 저장하지 않는 규칙 자체는 유효하다. */
       ["상위 카테고리", "BC630803\""],
       ["depth", "\"depth\""],
       ["leaf", "\"leaf\""],
@@ -691,9 +700,28 @@ describe("3 — 저장한 것은 최소 필드뿐이다", () => {
     );
     expect(saved!.category.selected).toEqual({
       name: "유아동 반바지",
+      /* 🔴 P5.6 P2(CPO ④) — 전체 경로가 «같이» 저장된다. 이것이 없으면 탭을
+         떠났다 돌아왔을 때 화면이 다시 「이름 한 토막」으로 돌아간다. */
+      /* 하니스의 트리가 만든 실제 경로다 — 손으로 지어내지 않고 돌려서 받은 값. */
+      path: ["패션의류", "유아동", "유아동 하의", "유아동 반바지"],
       noticeItemCodes: ["23"],
       safetyTypeCodes: ["CHL_CFM"],
     });
+  });
+
+  it("🔴 ⑤ 저장된 경로가 «표시용» 임을 분명히 한다 — 등록 payload 로는 나가지 않는다", async () => {
+    saved = { ...PREFILLED };
+    await enterTab(makeProduct());
+    await recommendAndPick();
+    /* path 는 저장되지만 롯데ON payload 는 표준카테고리 «번호» 만 쓴다.
+       경로가 payload 로 새면 채널이 모르는 값이 나간다. */
+    expect(saved!.category.selected?.path?.length).toBeGreaterThan(0);
+    const payloadSrc = readFileSync(
+      join(__dirname, "../../../../../../../packages/listing/src/lotteon/build-payload.ts"),
+      "utf8",
+    );
+    expect(payloadSrc, "경로가 payload 빌더로 흘러갔다").not.toContain("selected.path");
+    expect(payloadSrc).not.toContain("categoryPath");
   });
 
   /**

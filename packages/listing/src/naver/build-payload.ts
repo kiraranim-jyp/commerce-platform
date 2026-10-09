@@ -702,6 +702,33 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
         },
       },
       detailAttribute: {
+        /* ══ 🔴 P5.6 P2(CPO ②, 2026-10-09) — **상품정보 태그 → SmartStore payload** ══
+
+           CEO/CPO: 「상품정보 태그 값을 SmartStore 실제 등록 payload까지 연결.
+           실제 스키마에 존재하는 필드만 사용 · 임의 필드 생성 금지」.
+
+           공식 근거(커머스API센터 스펙 v2.90.0 · POST /v2/products):
+             originProduct.detailAttribute.seoInfo.sellerTags
+             items.required = ["text"] · code 는 선택
+
+           🔴 입력원을 새로 만들지 않았다 — 쿠팡 `searchTags` 가 이미 쓰는 그
+              `product.keywords` 다. 상품정보에서 셀러가 고치고, mergeKeywords 가
+              기존 태그를 보존·중복제거한다(두 벌이 생기지 않는다).
+           🔴 `code` 를 넣지 않는다 — 추천 태그 조회 API 를 부르지 않으므로 ID 를
+              만들 근거가 없고, code/text 불일치는 요청 «전체» 를 실패시킨다.
+           🔴 태그가 없으면 `seoInfo` 자체를 «보내지 않는다». 빈 배열/null 을
+              보내면 네이버가 기존 태그를 «삭제» 한다(기술지원 #1650) — 셀러가
+              판매자센터에서 넣어 둔 태그를 우리가 지우게 된다.
+           🔴 개수 상한을 넣지 않았다 — 공식 스펙에 maxItems 가 없다. 「10개」는
+              판매자센터 UI 기준의 비공식 정보이고, 근거 없는 정책을 payload
+              규칙으로 만들지 않는다. */
+        ...(() => {
+          const tags = product.keywords.value
+            .map((tag) => tag.trim())
+            .filter(Boolean)
+            .map((text) => ({ text }));
+          return tags.length > 0 ? { seoInfo: { sellerTags: tags } } : {};
+        })(),
         // 고시 의무는 인증서 보유 여부와 무관하게 항상 존재한다 — 카테고리가
         // CHILD_CERTIFICATION 대상이면 KIDS, 아니면 일반 의류(WEAR) 타입을 쓴다.
         // N-3.13 Part E-12 — 공식 OpenAPI 스펙(ExternalApiWearInfoProvidedNoticeVo/
