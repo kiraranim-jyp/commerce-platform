@@ -254,6 +254,55 @@ describe("① 🔴 재고 — 999 를 날조하지 않고 variant별로 연결�
     expect(flat(container.querySelector("#section-options"))).toContain("등록에서 제외됩니다");
   });
 
+  /* ══ 🔴 CPO 가 지정한 테스트 대상(Smallable)에서 ①이 헛돌 뻔했다 ═════════
+
+     앞선 수정은 `fact.from === "VARIANTS"`(옵션 중 하나라도 실측)일 때만 옵션별
+     재고를 그렸다. 그런데 Smallable 은 재고를 «한 칸도» 주지 않는다
+     (smallable-size-options.ts:90). 실측:
+
+       resolveSourceStock → from "NONE" · UNKNOWN
+       옵션별 재고 줄      → 0개
+       화면               「원본 재고 미확인 — 직접 입력」 한 줄
+
+     시나리오의 「2Y → 3 / 4Y → 재고 모름」이 아예 나오지 않는 상태였다.
+     기준을 「옵션이 있는가」로 바꿨다. */
+  it("🔴🔴 전부 재고 모름(Smallable)에서도 옵션별 줄을 그린다", async () => {
+    const allUnknown = makeProduct({
+      variants: [
+        { id: "v1", optionValues: { 사이즈: "2Y" } },
+        { id: "v2", optionValues: { 사이즈: "3Y" } },
+        { id: "v3", optionValues: { 사이즈: "4Y" } },
+      ],
+    });
+    expect(resolveSourceStock(allUnknown).from).toBe("NONE");
+    expect(variantsWithUnknownStock(allUnknown)).toEqual(["2Y", "3Y", "4Y"]);
+    await mountChannel("smartstore", { product: allUnknown });
+    const region = container.querySelector("#section-options");
+    const rows = Array.from(region?.querySelectorAll("ul > li") ?? []).map((li) => flat(li));
+    expect(rows.length, `옵션별 줄이 ${rows.length}개 — 3개여야 한다`).toBe(3);
+    for (const r of rows) expect(r).toContain("재고 모름");
+  });
+
+  it("🔴 전부 모를 때 「합계 0개」라고 적지 않는다 — 모름과 품절은 다른 사실이다", async () => {
+    const allUnknown = makeProduct({
+      variants: [{ id: "v1", optionValues: { 사이즈: "2Y" } }, { id: "v2", optionValues: { 사이즈: "3Y" } }],
+    });
+    await mountChannel("smartstore", { product: allUnknown });
+    const t = flat(container.querySelector("#section-options"));
+    expect(t).not.toContain("합계 0개");
+    expect(t).toContain("원본이 옵션별 재고를 공개하지 않습니다");
+  });
+
+  it("🔴 접힘 요약이 본문과 같은 말을 한다 — 접은 셀러만 틀린 안내를 받지 않게", async () => {
+    const allUnknown = makeProduct({
+      variants: [{ id: "v1", optionValues: { 사이즈: "2Y" } }, { id: "v2", optionValues: { 사이즈: "3Y" } }],
+    });
+    await mountChannel("smartstore", { product: allUnknown });
+    const summary = flat(container.querySelector("#section-options > button"));
+    expect(summary).toContain("재고 모름");
+    expect(summary, "요약이 아직 「직접 입력」이라고 말한다").not.toContain("직접 입력");
+  });
+
   it("대조군 — 전부 실측이면 그 안내를 띄우지 않는다", async () => {
     const all = makeProduct({
       variants: [

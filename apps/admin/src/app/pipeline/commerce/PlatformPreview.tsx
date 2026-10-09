@@ -1136,6 +1136,13 @@ export function PlatformPreview({
   const stockSummary = (() => {
     const fact = resolveSourceStock(product);
     if (fact.from === "VARIANTS") return `옵션 재고 합계 ${fact.quantity}개`;
+    /* 🔴 P5.6 재오픈 ① 후속 — 옵션 상품인데 재고를 전부 모르면 「직접 입력」이
+       아니다. 이 섹션은 그 경우 옵션별 「재고 모름」 목록을 그리고, 채우는 자리는
+       상품정보다. 요약이 본문과 다른 말을 하면 접은 셀러만 틀린 안내를 받는다. */
+    if (product.variants.length > 0) {
+      const unknown = variantsWithUnknownStock(product).length;
+      return `옵션 ${product.variants.length}개 중 ${unknown}개 재고 모름`;
+    }
     if (fact.state === "UNKNOWN") return "원본 재고 미확인 — 직접 입력";
     return `${product.stockQuantity.value}개`;
   })();
@@ -1501,7 +1508,28 @@ export function PlatformPreview({
             <FieldRow label="재고">
               {(() => {
                 const fact = resolveSourceStock(product);
-                if (fact.from === "VARIANTS") {
+                /* ══ 🔴 P5.6 재오픈 ① 후속(실측, 2026-10-09) — **조건이 너무 좁았다.** ══
+
+                   앞선 수정은 `fact.from === "VARIANTS"` 일 때만 옵션별 재고를
+                   그렸다. 즉 «옵션 중 하나라도 재고가 실측된» 경우뿐이다.
+
+                   🔴 그런데 CPO 가 테스트 대상으로 지정한 Smallable 은 재고를
+                      «한 칸도» 주지 않는다(smallable-size-options.ts:90 — 사이즈만
+                      있고 수량이 페이지에 없다). 실측으로 확인했다:
+
+                        resolveSourceStock → from "NONE" · state UNKNOWN
+                        옵션별 재고 줄      → 0개
+                        화면               「원본 재고 미확인 — 직접 입력」 한 줄
+
+                      그 화면에서는 「2Y → 3 / 4Y → 재고 모름」이 아예 나오지 않는다.
+                      시나리오를 그대로 돌리면 ①이 헛돌았을 것이다.
+
+                   🔴 그래서 기준을 「옵션이 있는가」로 바꾼다 — 옵션 상품이면 항상
+                      옵션별 줄을 그린다. 전부 모르면 전부 「재고 모름」이고, 그것이
+                      원본의 사실이다. 숨기지 않는다.
+                   🔴 합계는 «실측이 있을 때만» 적는다. 전부 모르는데 「합계 0개」를
+                      적으면 품절로 읽힌다 — 모름과 0 은 다른 사실이다. */
+                if (product.variants.length > 0) {
                   /* ══ 🔴 P5.6 FINAL(CPO FAIL ①, 2026-10-09) — **합계 한 줄은 재고가 아니다.** ══
 
                      CEO: 옵션 제거는 PASS · «재고수량 FAIL».
@@ -1524,9 +1552,16 @@ export function PlatformPreview({
                   const unknown = variantsWithUnknownStock(product);
                   return (
                     <div className="space-y-1">
-                      <p className="text-xs text-text-primary">
-                        {fact.quantity}개 <span className="text-text-tertiary">· 옵션 재고 합계</span>
-                      </p>
+                      {fact.from === "VARIANTS" ? (
+                        <p className="text-xs text-text-primary">
+                          {fact.quantity}개 <span className="text-text-tertiary">· 옵션 재고 합계</span>
+                        </p>
+                      ) : (
+                        /* 🔴 「합계 0개」라고 쓰지 않는다 — 모름과 품절은 다른 사실이다. */
+                        <p className="text-xs text-warning">
+                          원본이 옵션별 재고를 공개하지 않습니다 — 아래 옵션의 재고를 상품정보에서 채워 주세요.
+                        </p>
+                      )}
                       <ul className="space-y-0.5">
                         {product.variants.map((variant) => {
                           const combo = Object.values(variant.optionValues ?? {}).join(" / ") || variant.id;
