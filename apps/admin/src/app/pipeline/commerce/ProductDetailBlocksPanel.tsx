@@ -61,7 +61,7 @@ import {
  * 잡았다). 어휘가 둘로 갈리면 셀러가 같은 것을 두 개로 센다.
  */
 const ADDABLE: { kind: DetailPageBlock["kind"]; label: string; hint: string }[] = [
-  { kind: "CUSTOM_TEXT", label: "직접 입력 텍스트", hint: "이 상품에만 들어가는 안내 문구" },
+  { kind: "CUSTOM_TEXT", label: "직접 입력 텍스트", hint: "제목 + 문구로 한 항목을 만듭니다" },
   { kind: "SIZE_CHART_IMAGES", label: "사이즈표", hint: "수집된 사이즈표 이미지" },
   { kind: "PRODUCT_IMAGES", label: "상품 상세이미지", hint: "상품정보에서 선택한 이미지" },
   { kind: "AI_DESCRIPTION", label: "AI 생성 설명", hint: "상세설명 칸의 본문" },
@@ -335,6 +335,20 @@ export function ProductDetailBlocksPanel({
                       ) : null}
                     </div>
                   </div>
+                  {/* 🔴 P5.6 P0-2(CEO 요구, 2026-10-09) — 항목 «제목».
+                      CEO 가 원한 것은 블록 나열이 아니라 [상품 특징]·[사이즈 정보]
+                      같은 «항목» 이다. 텍스트와 이미지가 같은 제목을 가지면 한
+                      항목으로 묶여 나간다(조립기 withHeading 이 그 일을 한다).
+                      🔴 비워 두면 지금까지와 «완전히 같다» — 기존 상세페이지가
+                         바뀌지 않는다. */}
+                  {block.kind === "CUSTOM_TEXT" || block.kind === "CUSTOM_IMAGE" ? (
+                    <input
+                      value={block.heading ?? ""}
+                      onChange={(e) => patch(identity, { heading: e.target.value })}
+                      placeholder="항목 제목(예: 상품 특징 · 사이즈 정보) — 비워도 됩니다"
+                      className="mt-2 w-full rounded border border-border bg-background px-2 py-1.5 text-xs font-semibold text-text-primary"
+                    />
+                  ) : null}
                   {block.kind === "CUSTOM_TEXT" ? (
                     <textarea
                       value={block.content}
