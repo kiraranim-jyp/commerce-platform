@@ -1584,12 +1584,58 @@ export function PlatformPreview({
                 앵커 id 는 REGISTRATION_FIELD_ANCHOR 의 그 값이다(한 곳에서 잇는다). */}
             <div id="field-countryOfOrigin">
               <FieldRow label="원산지" field={product.countryOfOrigin} required>
-                <EditableText
-                  value={product.countryOfOrigin.value}
-                  onCommit={(v) => fix?.("countryOfOrigin", v)}
-                  placeholder="원산지 미확인"
-                  className={FIELD_INPUT_CLASS}
-                />
+                <div className="space-y-1">
+                  <EditableText
+                    value={product.countryOfOrigin.value}
+                    onCommit={(v) => fix?.("countryOfOrigin", v)}
+                    placeholder="원산지 미확인"
+                    className={FIELD_INPUT_CLASS}
+                  />
+                  {/* ══ 🔴 P5.6 P2-12(CPO ⑧, 2026-10-09) — **칸은 「미확인」인데 payload 는 채워진다.** ══
+
+                      CEO 실측(세르지오 타치니): 「공식 홈페이지에서 확인하도록
+                      했는데 실제 반영되지 않음」. 열어 보니 화면과 payload 가
+                      서로 «다른 말» 을 하고 있었다.
+
+                        이 칸        product.countryOfOrigin → 비면 「원산지 미확인」
+                        실제 등록값  resolveCommonOrigin()   → 상품 → «브랜드 기본값»
+                                                              → 판매자 기본값
+
+                      즉 셀러가 공식 자료를 찾으려 이 칸을 봤을 때 화면은 「없다」고
+                      말하는데, 등록은 브랜드 프로필의 국가로 «이미» 나가고 있었다.
+                      그래서 「반영되지 않았다」로 읽혔다.
+
+                      🔴 폴백을 «없애지 않는다». 그 사다리는 Production 세 채널이
+                         이미 같은 순서로 돌고 있고(common/origin.ts 주석), 순서를
+                         바꾸면 지금 나가는 payload 가 조용히 바뀐다.
+                      🔴 추론을 «더하지도 않는다». 공식 홈페이지를 새로 긁지 않고,
+                         브랜드 국가를 상품 제조국으로 승격시키지도 않는다
+                         (제조국 자동 추론 금지 — 유지).
+                      🔴 하는 일은 하나다 — «이미 서버가 계산해 둔 사실» 을 이 칸
+                         옆에 적는다. 값·출처는 naverResolved.origin 이 N-4.12 후속
+                         P1-1 부터 갖고 있었고, 지금까지는 한참 아래 ⑩ 등록정보에서만
+                         보였다(NaverPayloadPreview #naver-section-origin). 고칠 칸
+                         «옆» 에 없으면 셀러는 그것을 못 본다.
+                      🔴 스마트스토어에만 뜬다 — naverResolved 가 그 탭에만 온다.
+                         쿠팡·롯데ON 도 서버에서 같은 폴백을 타지만 화면으로 올라오는
+                         통로가 없다. 없는 통로를 지어내 「3채널 지원」처럼 보이게
+                         하지 않는다. */}
+                  {!product.countryOfOrigin.value.trim() &&
+                    naverResolved?.origin?.resolvedCountryText &&
+                    (naverResolved.origin.resolvedCountryTextSource === "BRAND_DEFAULT" ||
+                      naverResolved.origin.resolvedCountryTextSource === "SELLER_DEFAULT") && (
+                      <p className="text-[11px] text-warning">
+                        이 칸이 비어 있어{" "}
+                        <span className="font-medium">
+                          {naverResolved.origin.resolvedCountryTextSource === "BRAND_DEFAULT"
+                            ? "브랜드 기본값"
+                            : "판매자 기본 설정"}
+                        </span>
+                        의 「{naverResolved.origin.resolvedCountryText}」이 등록됩니다 — 상품에서 확인된 값이
+                        아닙니다. 공식 자료로 확인한 원산지가 있으면 직접 적어 주세요.
+                      </p>
+                    )}
+                </div>
               </FieldRow>
             </div>
             <ReferenceEligibleFieldRow
