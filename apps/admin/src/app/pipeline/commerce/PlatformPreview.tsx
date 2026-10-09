@@ -844,7 +844,10 @@ export function PlatformPreview({
       | "importer",
     referenced: boolean,
   ) => void;
-  onFixNumberField?: (field: "shippingFee" | "stockQuantity", value: number) => void;
+  /* 🔴 P5.6 후속(CEO FAIL) — `"stockQuantity"` 를 «타입에서» 지운다. 화면만
+     지우면 다음 사람이 같은 칸을 다시 만든다(내가 두 번 그랬다). 재고는
+     상품정보 하나에서만 바뀐다 — 채널 탭에는 손잡이 자체가 없어야 한다. */
+  onFixNumberField?: (field: "shippingFee", value: number) => void;
   /** N-3.29(CPO 지시) — 어린이제품 인증정보(번호/업체명/취득일자) 부분 수정.
    * 문자열 필드(onFixTextField)와 달리 3개 하위 값을 한 번에 patch로 받는다 —
    * 값이 없으면 null(임의 값 생성 없음). */
@@ -1588,15 +1591,30 @@ export function PlatformPreview({
                     </div>
                   );
                 }
+                /* ══ 🔴 P5.6 후속(CEO 실화면 FAIL, 2026-10-10) — **입력칸을 지운다.** ══
+
+                   내가 「채널 탭 옵션/재고 편집 완전 제거」를 두 번 완료 보고했는데
+                   «이 한 칸» 이 남아 있었다. 옵션이 없는 단품에서만 보이기 때문에
+                   옵션 상품으로만 확인하고 「없다」고 단정한 것이다 —
+                   「커버리지는 파일명이 아니라 속성이다」를 또 틀렸다.
+
+                   🔴 재고의 Single Source of Truth 는 상품정보 → 옵션/재고 하나다.
+                      채널은 «소비» 만 한다. 읽기 전용 요약은 허용된다(CPO 명시) —
+                      바꿀 수 있는 UI 만 금지다. */
                 return (
-                  <div className="flex items-center gap-1">
-                    <EditableText
-                      value={fact.state === "UNKNOWN" ? "" : String(product.stockQuantity.value)}
-                      placeholder="원본 재고 미확인"
-                      onCommit={(v) => onFixNumberField?.("stockQuantity", Math.max(0, Number(v) || 0))}
-                      className={FIELD_INPUT_CLASS}
-                    />
-                    <span className="text-xs text-text-secondary">개</span>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={
+                        fact.state === "UNKNOWN" ? "text-xs text-warning" : "text-xs font-medium text-text-primary"
+                      }
+                    >
+                      {fact.state === "UNKNOWN" ? "원본 재고 미확인" : `${product.stockQuantity.value}개`}
+                    </span>
+                    {fact.state === "UNKNOWN" && (
+                      <span className="text-[11px] text-text-tertiary">
+                        상품정보 → 재고에서 기본 재고수량을 채우면 등록됩니다.
+                      </span>
+                    )}
                   </div>
                 );
               })()}

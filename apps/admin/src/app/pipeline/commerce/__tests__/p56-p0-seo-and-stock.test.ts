@@ -221,8 +221,17 @@ describe("② 🔴 SEO 태그 — 속성 나열에서 검색 의도형으로", (
 
 describe("④⑤ 🔴 상품명(한국 검색용) · 모델명(해외 원문)", () => {
   it("상품명은 확인된 축만 조합한다", () => {
-    expect(suggestKoreanProductName(LOUIS())).toBe("Louis Louise 여아 코튼 바지");
-    expect(suggestKoreanProductName(TACCHINI())).toBe("Sergio Tacchini 남성 폴리에스터 셔츠");
+    /* ══ 🔴 P5.6 후속 P0-2(CPO 확정, 2026-10-10) — **규칙이 바뀌었다.** ══════
+
+       전 규칙: 속성만으로 다시 조립    → "Louis Louise 여아 코튼 바지"
+       새 규칙: 브랜드 + 원상품 핵심어 + 한국어 보정어
+
+       CEO 실화면 판정: 속성 조합은 SEO 로는 맞아도 «상품 식별력이 없다».
+       「여아 코튼 바지」는 수천 개 상품의 이름이 될 수 있다.
+       🔴 소재·색상은 «보조» 검색정보이고 모델 식별자를 대체하지 않는다 —
+          그래서 소재를 상품명에서 빼고 태그로만 남긴다. */
+    expect(suggestKoreanProductName(LOUIS())).toBe("Louis Louise Holly Hearts Ribbed Velvet Baby Pants 여아 바지");
+    expect(suggestKoreanProductName(TACCHINI())).toBe("Sergio Tacchini Racchetto Polo 남성 셔츠");
   });
 
   it("🔴 연령과 성별을 «둘 다» 넣지 않는다 — 「베이비 여아」는 사람이 치는 말이 아니다", () => {
@@ -233,7 +242,16 @@ describe("④⑤ 🔴 상품명(한국 검색용) · 모델명(해외 원문)", 
 
   it("🔴 상품군을 모르면 원상품명을 그대로 — 억지 한국어 제목을 만들지 않는다", () => {
     const unknownType = base({ title: f("Mystery Item"), brand: f("Acme"), material: f("") });
-    expect(suggestKoreanProductName(unknownType)).toBe("Mystery Item");
+    /* 🔴 상품군을 모르면 «한국어 보정어를 붙이지 않는다» — 틀린 상품군을 붙이면
+       검색이 아니라 오분류다. 다만 브랜드는 원문 근거이므로 앞에 남는다
+       (P0-2 새 규칙의 첫 토막이고, 지어낸 값이 아니다). */
+    expect(suggestKoreanProductName(unknownType)).toBe("Acme Mystery Item");
+
+    /* 🔴 음성 대조 — 속성(소재)이 상품명에 «들어가지 않는다». 전 규칙의 흔적이
+       남아 있으면 이 단정이 깨진다. */
+    expect(suggestKoreanProductName(LOUIS())).not.toContain("코튼");
+    /* 🔴 그리고 원상품의 핵심 식별어는 «반드시» 남는다. */
+    expect(suggestKoreanProductName(LOUIS())).toContain("Holly Hearts");
   });
 
   it("🔴 모델명은 «원상품명» 이다 — SKU 가 아니다", () => {
@@ -258,7 +276,7 @@ describe("④⑤ 🔴 상품명(한국 검색용) · 모델명(해외 원문)", 
   });
 
   it("상품명이 생성 시점에 채워지고 셀러 수정값은 덮지 않는다", () => {
-    expect(seedSeoContent(LOUIS()).product.titleKo.value).toBe("Louis Louise 여아 코튼 바지");
+    expect(seedSeoContent(LOUIS()).product.titleKo.value).toBe("Louis Louise Holly Hearts Ribbed Velvet Baby Pants 여아 바지");
     const edited = { ...LOUIS(), titleKo: f("내가 정한 이름", "USER_EDITED") } as CanonicalProduct;
     expect(seedSeoContent(edited).product.titleKo.value).toBe("내가 정한 이름");
   });
@@ -343,7 +361,13 @@ describe("① 🔴 재고 — 판매자 기본값은 실측을 덮지 않는다"
   it("🔴 화면 입력칸이 «상품정보» 에 있다 — 커머스 탭이 아니다", () => {
     const sv = strip(read("apps/admin/src/app/pipeline/commerce/SourceDataView.tsx"));
     expect(sv).toContain("onUpdateSellerDefaultStock");
-    expect(sv).toContain("기본 재고수량");
+    /* 🔴 P5.6 후속 P0-1(CEO 실화면 FAIL, 2026-10-10) — 라벨이 「기본 재고 수량」
+       으로 «띄어쓰기와 함께» 제목으로 승격됐다. 전에는 「재고를 모르는 옵션 N개 —
+       기본 재고수량」 한 줄이어서 경고문으로 읽혔고, CEO 는 입력칸을 찾지 못했다. */
+    expect(sv).toContain("기본 재고 수량");
+    /* 🔴 그리고 «조건부가 아니다» — 재고를 모르는 옵션이 생기기 전에도 보인다.
+       전에는 `variantsWithUnknownStock(product).length > 0` 에 가려져 있었다. */
+    expect(sv).not.toContain("onUpdateSellerDefaultStock && variantsWithUnknownStock(product).length > 0");
     const pv = strip(read("apps/admin/src/app/pipeline/commerce/PlatformPreview.tsx"));
     expect(pv, "커머스 탭에 재고 기본값 입력칸이 생겼다").not.toContain("onUpdateSellerDefaultStock");
   });

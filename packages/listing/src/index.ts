@@ -32,6 +32,8 @@ export * from "./naver/attribute-resolver";
 export * from "./naver/attribute-coverage";
 export * from "./naver/attribute-metadata/index";
 export * from "./notice/reference-eligibility";
+/* 🔴 P5.6 후속 P0-6 — 고시품목 «의미» 판정. 채널 코드 변환은 각 builder 가 한다. */
+export * from "./notice/notice-category";
 export * from "./notice/bulk-reference";
 export * from "./notice/care-instructions";
 export * from "./notice/channel-notice-override";

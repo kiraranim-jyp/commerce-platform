@@ -1393,7 +1393,10 @@ export function CommerceWorkspace({
     });
   }
 
-  function updateNumberField(key: "shippingFee" | "stockQuantity", value: number) {
+  /* 🔴 P5.6 후속(CEO FAIL) — `"stockQuantity"` 를 받지 않는다. 채널 탭의 재고
+     입력칸을 지웠고, 여기 손잡이를 남겨 두면 다시 배선된다. 재고는
+     `updateVariant` · `onUpdateSellerDefaultStock`(상품정보) 두 길로만 바뀐다. */
+  function updateNumberField(key: "shippingFee", value: number) {
     setProduct((prev) => ({
       ...prev,
       [key]: { value, source: "USER_EDITED" as FieldSource, confidence: 1 },

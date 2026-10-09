@@ -8,6 +8,8 @@ import type { ListingModel } from "@commerce/marketplace";
 import { variantStockWithSellerDefault } from "@commerce/shared";
 /* 🔴 P5.6 실측 — 태그 중복제거 규칙은 한 곳이다. */
 import { dedupeSellerTagTexts } from "./seller-tags-update";
+/* 🔴 P5.6 후속 P0-6 — 고시품목 판정은 공통 축 하나다(세 채널이 같은 함수를 본다). */
+import { naverNoticeTypeFor, resolveNoticeCategory } from "../notice/notice-category";
 import type {
   CanonicalProduct,
   ChannelNoticeOverride,
@@ -803,7 +805,28 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
         // 한다(types.ts의 NaverProductInfoProvidedNoticeWear/Kids 주석 참고 —
         // 5차 실등록 시도의 실제 NotEmpty 거부 + 공식 GitHub Discussion
         // #241/#516 2개 독립 출처로 확인).
-        productInfoProvidedNotice: categoryRequiresChildCertification
+        /* ══ 🔴 P5.6 후속 P0-6(CPO, 2026-10-10) — **판정을 공통 축으로 옮긴다.** ══
+
+           전에는 `categoryRequiresChildCertification` 플래그 «하나» 로 갈랐다.
+           LotteON 은 카테고리 경로 낱말로 갈랐다. 그래서 같은 상품이 한쪽에서는
+           일반 의류, 다른 쪽에서는 어린이제품으로 신고될 수 있었다(CEO 가 본 것).
+
+           🔴 이제 `resolveNoticeCategory` 하나가 판정하고 여기서는 네이버 어휘로
+              «변환» 만 한다. 플래그는 그 함수의 1순위 신호로 그대로 들어간다 —
+              채널이 적어 준 사실이 추론을 이긴다.
+           🔴 **동작은 넓어지기만 한다.** 플래그가 true 면 전과 똑같이 KIDS 다.
+              플래그가 없고 카테고리 경로/연령축이 아동을 가리키면 이제도 KIDS 다
+              — 전에는 그 상품이 일반 의류로 나갔다. */
+        productInfoProvidedNotice: naverNoticeTypeFor(
+          resolveNoticeCategory({
+            childCertificationRequired: categoryRequiresChildCertification,
+            /* 🔴 `categoryPath` 를 넘기지 «않는다» — 네이버 입력에는 카테고리
+               «경로 이름» 이 없다(`leafCategoryId` 숫자 하나뿐이다). 없는 값을
+               지어내 넘기면 공통 판정이 가짜 근거로 답한다. 네이버가 주는 신호는
+               플래그와 상품 연령축 둘이고, 그 둘로만 판정한다. */
+            ageGroup: resolveProductSignals(product).ageGroup,
+          }).kind,
+        ) === "KIDS"
           ? {
               productInfoProvidedNoticeType: "KIDS",
               kids: {

@@ -211,28 +211,75 @@ export function suggestModelName(product: CanonicalProduct): string | undefined 
 }
 
 /**
- * 한국어 SEO 상품명.
+ * ══════════════════════════════════════════════════════════════════════════
+ *  상품명 — **브랜드 + 원상품 핵심어 + 한국어 검색 보정어**
+ * ══════════════════════════════════════════════════════════════════════════
  *
- * 구조: `브랜드 (시즌) (연령|성별) (소재) 상품군`
- * 🔴 확인된 축만 넣는다. 키워드 나열식 제목을 만들지 않는다 — 축이 다 있어도
- *    다섯 토막을 넘기지 않는다.
- * 🔴 상품군을 모르면 **원상품명을 그대로 돌려준다**. 억지로 한국어 제목을
- *    만들지 않는다(그것이 날조다).
+ * 🔴 CPO 확정(2026-10-10, CEO 실화면 테스트 결과) — 전에는 속성만으로 다시
+ *    조립했다. 그래서 상품 식별력이 사라졌다:
+ *
+ *      ❌ Sergio Tacchini 남성 폴리에스터 셔츠
+ *      ✅ Sergio Tacchini Racchetto Polo 남성 셔츠
+ *
+ *      ❌ Louis Louise 여아 코튼 바지
+ *      ✅ Louis Louise Holly Hearts Ribbed Velvet Baby Pants 여아 바지
+ *
+ * 🔴 **원상품명을 지우지 않는다.** 소재·색상은 «보조» 검색정보이고 모델
+ *    식별자를 «대체하지 않는다». 그래서 소재는 상품명에서 빼고 태그로만 남긴다
+ *    (태그 생성은 `generateSeoKeywords` 가 따로 한다).
+ *
+ * 🔴 CPO 지시문의 규칙은 세 토막("브랜드 + 핵심어 + 한국어 보정어")이고 LOUIS
+ *    예시에는 보정어가 안 붙어 있다. **규칙을 따른다** — 예시는 「원상품명을
+ *    유지한다」를 보이려는 것이고, 한국어 보정어는 규칙에 명시된 축이다.
+ *    한국 소비자는 「바지」로 검색하고 영어 "Pants" 로 검색하지 않는다.
  */
 export function suggestKoreanProductName(product: CanonicalProduct): string | undefined {
   const ax = seoKeywordAxes(product);
   const original = (product.title?.value ?? "").trim();
-  if (!ax.koreanType) return original || undefined;
+  if (!original) return undefined;
 
-  const parts = [
-    ax.brand,
-    ax.season,
-    /* 🔴 연령과 성별을 «둘 다» 넣지 않는다 — 「베이비 여아」는 사람이 치는 말이
-       아니다. 더 구체적인 쪽(성별)이 있으면 그것을, 없으면 연령을 쓴다. */
-    ax.genderLabels[0] ?? ax.ageLabels[0],
-    ax.materialKo,
-    ax.koreanType,
-  ].filter((p): p is string => Boolean(p && p.trim()));
+  const core = productCoreName(original, ax.brand);
+  /* 🔴 상품군을 «확신하지 못하면» 보정어를 붙이지 않는다 — 틀린 상품군을 붙이면
+     검색이 아니라 오분류다(koreanType 은 1·2위 차가 작으면 비어서 온다). */
+  const target = ax.koreanType ? (ax.genderLabels[0] ?? ax.ageLabels[0]) : undefined;
 
-  return parts.join(" ");
+  const parts = [ax.brand, ax.season, core, target, ax.koreanType].filter(
+    (p): p is string => Boolean(p && p.trim()),
+  );
+  /* 폴백 — 조립할 것이 브랜드뿐이면 원문을 그대로 쓴다(빈 상품명 금지). */
+  return parts.length > 1 ? parts.join(" ") : original;
 }
+
+/** 상품명에서 빼는 성별 표기 — 한국어 보정어가 그 뜻을 이미 담는다. */
+const REDUNDANT_GENDER_WORDS =
+  /(?:^|\s)(?:men(?:'|’)?s|women(?:'|’)?s|mens|womens|boys(?:'|’)?|girls(?:'|’)?|unisex)(?=\s|$)/gi;
+
+/**
+ * 원상품명에서 «식별 가능한 핵심어» 를 뽑는다.
+ *
+ * 🔴 지어내지 않는다 — 원문에서 «빼기만» 한다. 빼는 것은 셋뿐이다:
+ *    ① 앞에 붙은 브랜드(중복) ② `|` 뒤의 색상/변형 꼬리 ③ 성별 표기
+ *
+ * 실측:
+ *   "Sergio Tacchini Men's Racchetto Polo"              → "Racchetto Polo"
+ *   "Holly Hearts Ribbed Velvet Baby Pants | Pale Pink" → "Holly Hearts Ribbed Velvet Baby Pants"
+ */
+export function productCoreName(title: string, brand: string | undefined): string {
+  /* 🔴 `|` 뒤를 버린다 — Smallable 류가 색상을 그 뒤에 붙인다. 색상은 옵션이지
+     상품명이 아니다. `|` 가 없으면 아무것도 버리지 않는다. */
+  let core = title.split("|")[0]!.trim();
+
+  if (brand) {
+    /* 🔴 브랜드가 «앞에» 붙었을 때만 벗긴다. 가운데 있는 브랜드는 상품명의
+       일부일 수 있다(예: "Nike Air" 의 Air 처럼). */
+    const lower = core.toLowerCase();
+    const b = brand.toLowerCase();
+    if (lower.startsWith(b)) core = core.slice(brand.length).trim();
+  }
+
+  core = core.replace(REDUNDANT_GENDER_WORDS, " ").replace(/\s{2,}/g, " ").trim();
+  /* 앞뒤에 남은 구분자 정리 — "- Racchetto Polo" 같은 꼴이 생긴다. */
+  core = core.replace(/^[-–—·,:\s]+/, "").replace(/[-–—·,:\s]+$/, "").trim();
+  return core;
+}
+

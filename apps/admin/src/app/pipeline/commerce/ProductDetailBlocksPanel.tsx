@@ -120,6 +120,9 @@ export function ProductDetailBlocksPanel({
 }) {
   const [open, setOpen] = useState(false);
   const [picking, setPicking] = useState(false);
+  /* 🔴 P0-3 — 「고르는 중」이 «추가» 인지 «교체» 인지 구분한다. 한 상태로 합치면
+     교체를 누른 뒤 고른 이미지가 새 블록으로 붙는다(순서가 또 끝으로 밀린다). */
+  const [replacing, setReplacing] = useState<DetailBlockIdentity | null>(null);
   const [assets, setAssets] = useState<AssetOption[] | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -197,6 +200,11 @@ export function ProductDetailBlocksPanel({
 
   /** 이미지 블록을 «URL 을 갖고» 만든다. 🔴 url 없이 만들지 않는다. */
   function addImage(url: string) {
+    /* 🔴 교체 중이면 «추가하지 않는다» — 같은 picker 를 두 동작이 쓴다. */
+    if (replacing) {
+      replaceImage(replacing, url);
+      return;
+    }
     const seed = blocks.filter((b) => b.kind === "CUSTOM_IMAGE").length;
     const block: DetailPageBlock = {
       id: `product-image-${seed}`,
@@ -210,6 +218,29 @@ export function ProductDetailBlocksPanel({
        두 자리에 쓰는 것은 정상이고, 식별자는 순번으로 갈린다. */
     commit({ ...override, added: [...(override?.added ?? []), block] });
     setPicking(false);
+    setUploadError(null);
+  }
+
+  /* ══ 🔴 P5.6 후속 P0-3(CEO 실화면 FAIL, 2026-10-10) — **이미지 교체.** ══════
+
+     CEO: 「블록별로 이미지 + 텍스트 수정 불가」. 확인해 보니 절반만 맞았다 —
+     제목·문구·caption 은 «되고» 있었고, 없던 것은 **이미지를 갈아끼우는 길** 뿐이다.
+     지우고 다시 넣으면 순서가 끝으로 밀리니, 셀러에게는 「수정 불가」였다.
+
+     🔴 `DetailBlockPatch.url` 은 **열지 않는다.** 그 금지에는 이유가 있다 —
+        셀러 기본값에 있는 이미지를 상품 override 가 가리키면, 기본값을 바꿨을 때
+        어느 쪽이 맞는지 알 수 없는 모순이 생긴다(detail-override.ts:180).
+
+     🔴 대신 **상품이 «추가» 한 블록의 url 을 `added` 안에서 직접 고친다.**
+        그 블록의 주인은 이 상품이므로 모순이 생기지 않는다. 셀러 기본값 이미지는
+        여전히 못 바꾼다 — 숨기고(사용 해제) 새 이미지를 넣는 길만 준다. */
+  function replaceImage(identity: DetailBlockIdentity, url: string) {
+    const added = (override?.added ?? []).map((b) =>
+      b.kind === "CUSTOM_IMAGE" && detailBlockIdentity(b, 0) === identity ? { ...b, url } : b,
+    );
+    commit({ ...override, added });
+    setPicking(false);
+    setReplacing(null);
     setUploadError(null);
   }
 
@@ -368,13 +399,35 @@ export function ProductDetailBlocksPanel({
                       />
                       {/* 문구를 비우면 「이미지」, 채우면 「이미지+문구」다 — 블록이
                           둘이 아니라 하나이고 라벨이 그것을 말해 준다. */}
-                      <textarea
-                        value={block.caption ?? ""}
-                        onChange={(e) => patch(identity, { caption: e.target.value })}
-                        rows={2}
-                        placeholder="이미지 아래에 넣을 문구(비워도 됩니다)"
-                        className="w-full rounded border border-border bg-background px-2 py-1.5 text-xs text-text-primary"
-                      />
+                      <div className="flex w-full flex-col gap-1.5">
+                        <textarea
+                          value={block.caption ?? ""}
+                          onChange={(e) => patch(identity, { caption: e.target.value })}
+                          rows={2}
+                          placeholder="이미지 아래에 넣을 문구(비워도 됩니다)"
+                          className="w-full rounded border border-border bg-background px-2 py-1.5 text-xs text-text-primary"
+                        />
+                        {/* 🔴 P0-3 — 교체는 «이 상품이 추가한» 이미지에만 준다.
+                            셀러 기본값 이미지는 주인이 셀러 설정이므로 여기서
+                            바꾸지 않는다(바꾸면 어느 쪽이 맞는지 알 수 없어진다). */}
+                        {isProductOnly ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReplacing(identity);
+                              setPicking(true);
+                            }}
+                            className="self-start rounded border border-border px-2 py-1 text-[11px] text-text-secondary hover:bg-background"
+                          >
+                            이미지 변경
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-text-tertiary">
+                            셀러 기본 상세페이지의 이미지입니다 — 바꾸려면 「사용」을 끄고 이 상품 이미지를
+                            추가하세요.
+                          </span>
+                        )}
+                      </div>
                     </div>
                   ) : null}
                 </li>
@@ -399,7 +452,10 @@ export function ProductDetailBlocksPanel({
                 만들지 않는다(조립에서 조용히 사라져 「추가했는데 안 나온다」가 된다). */}
             <button
               type="button"
-              onClick={() => setPicking((v) => !v)}
+              onClick={() => {
+                setReplacing(null);
+                setPicking((v) => !v);
+              }}
               title="이 상품에만 넣는 이미지 — 문구를 같이 적으면 이미지+문구가 된다"
               className="rounded border border-border px-2 py-1 text-xs text-text-secondary hover:bg-background"
             >
@@ -413,7 +469,11 @@ export function ProductDetailBlocksPanel({
                 <span className="text-xs font-medium text-text-primary">이미지 고르기</span>
                 <button
                   type="button"
-                  onClick={() => setPicking(false)}
+                  onClick={() => {
+                    setPicking(false);
+                    /* 🔴 교체 상태를 «반드시» 푼다 — 안 풀면 다음 「이미지 추가」가 교체로 샌다. */
+                    setReplacing(null);
+                  }}
                   className="rounded px-2 py-1 text-xs text-text-secondary hover:bg-surface"
                 >
                   닫기

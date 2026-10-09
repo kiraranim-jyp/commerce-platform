@@ -109,8 +109,8 @@ function naverOf(product: CanonicalProduct) {
 describe("D2 — 상품정보의 한국어 상품명이 그대로 payload 로 간다(두 벌 금지)", () => {
   const seeded = seedSeoContent(louis()).product;
 
-  it("🔴 실측값 — titleKo 가 'Louis Louise 여아 코튼 바지' 로 채워진다", () => {
-    expect(seeded.titleKo.value).toBe("Louis Louise 여아 코튼 바지");
+  it("🔴 실측값 — titleKo 에 «원상품 핵심어가 남는다»(P0-2 새 규칙)", () => {
+    expect(seeded.titleKo.value).toBe("Louis Louise Holly Hearts Ribbed Velvet Baby Pants 여아 바지");
   });
 
   it("🔴 payload 의 originProduct.name 이 titleKo 와 «글자 그대로» 같다", () => {

@@ -1,3 +1,4 @@
+import { lotteOnNoticeItemCodeFor, resolveNoticeCategory } from "../notice/notice-category";
 /**
  * ════════════════════════════════════════════════════════════════════════════
  * P5.6 P2(CPO ③, 2026-10-09) — **고시 품목코드를 «제안» 한다. 확정하지 않는다.**
@@ -50,80 +51,26 @@ export interface LotteOnNoticeItemSuggestion {
  * 무거운 쪽(23 어린이제품)이 적용된다. 순서를 뒤집으면 아동복이 일반 의류 고시로
  * 신고된다.
  */
-const CHILD_WORDS = ["유아", "아동", "베이비", "주니어", "키즈", "신생아", "영아", "어린이"];
-const APPAREL_WORDS = [
-  "의류",
-  "상의",
-  "하의",
-  "티셔츠",
-  "셔츠",
-  "니트",
-  "원피스",
-  "바지",
-  "스커트",
-  "자켓",
-  "재킷",
-  "점퍼",
-  "코트",
-  "조끼",
-  "트레이닝복",
-  "수영복",
-  "언더웨어",
-  "속옷",
-  "잠옷",
-  "패션의류",
-];
+/* ══ 🔴 P5.6 후속 P0-6(CPO, 2026-10-10) — **낱말 목록이 여기서 «나갔다».** ══
 
-/** 🔴 「의류가 아닌데 의류 낱말이 들어간」 경로를 제안에서 뺀다 — 가방·신발·용품. */
-const NOT_APPAREL_WORDS = ["가방", "지갑", "신발", "슈즈", "모자", "양말", "용품", "장비", "라켓", "공"];
+   세 채널이 각자 고시품목을 판정하고 있었다(SmartStore 는 카테고리 플래그,
+   Coupang 은 상품명 키워드, 여기는 카테고리 경로 낱말). 같은 상품이 채널마다
+   다른 고시로 신고될 수 있는 구조였다 — 규제 신고가 채널마다 다른 것은
+   「UX 가 다르다」가 아니라 «사실이 다르다» 다.
 
-function hit(parts: string[], words: string[]): string[] {
-  return parts.filter((part) => words.some((word) => part.includes(word)));
-}
-
-/**
- * 카테고리 경로(대 > 중 > 소 > 세)에서 고시 품목을 «제안» 한다.
- *
- * @param path 선택된 표준카테고리의 전체 경로 이름. 없으면 이름 한 토막이라도 넣는다.
- *
- * 🔴 점수를 만들지 않는다. 카테고리 추천 랭킹(candidate-scoring.ts)과 섞이면
- *    두 판정이 생긴다 — 여기서는 「두 스키마 중 어느 쪽인가」만 가른다.
- */
+   🔴 그래서 낱말 목록과 우선순위를 `notice/notice-category.ts` «한 곳» 으로
+      올렸다. 이 파일은 그 판정을 롯데ON 코드로 «변환» 만 한다.
+   🔴 함수 이름과 반환 모양은 그대로다 — 호출부와 기존 가드를 깨지 않는다. */
 export function suggestLotteOnNoticeItemCode(path: readonly string[]): LotteOnNoticeItemSuggestion {
-  const parts = path.map((part) => (part ?? "").trim()).filter(Boolean);
-  if (parts.length === 0) {
-    return { code: null, reason: "카테고리를 먼저 선택해주세요.", matched: [] };
-  }
-
-  const notApparel = hit(parts, NOT_APPAREL_WORDS);
-  const apparel = hit(parts, APPAREL_WORDS);
-  /* 🔴 「테니스 가방」처럼 의류 낱말이 없고 비의류 낱말만 있으면 제안하지 않는다.
-     「테니스의류」처럼 둘 다 있으면 의류가 이긴다 — 더 구체적인 낱말이다. */
-  if (apparel.length === 0) {
-    return notApparel.length > 0
-      ? {
-          code: null,
-          reason: `「${notApparel.join(" · ")}」 카테고리입니다 — 의류·어린이제품 고시가 아니라 품목을 직접 골라 주세요.`,
-          matched: notApparel,
-        }
-      : {
-          code: null,
-          reason: "이 카테고리의 고시 품목을 따져가 판단하지 못했습니다 — 직접 골라 주세요.",
-          matched: [],
-        };
-  }
-
-  const child = hit(parts, CHILD_WORDS);
-  if (child.length > 0) {
-    return {
-      code: "23",
-      reason: `카테고리에 「${child.join(" · ")}」가 있어 «어린이제품»(23) 고시로 보입니다 — 확인해 주세요.`,
-      matched: [...child, ...apparel],
-    };
-  }
+  const verdict = resolveNoticeCategory({ categoryPath: path });
+  const code = lotteOnNoticeItemCodeFor(verdict.kind);
   return {
-    code: "01",
-    reason: `카테고리에 「${apparel.join(" · ")}」가 있어 «의류»(01) 고시로 보입니다 — 확인해 주세요.`,
-    matched: apparel,
+    code,
+    /* 🔴 「확인해 주세요」를 여기서 붙인다 — 공통 판정은 사실만 적고, 셀러에게
+       확인을 요구하는 것은 채널 화면의 말투다. 모름일 때는 공통 문구가 이미
+       「직접 골라 주세요」로 끝나므로 덧붙이지 않는다. */
+    reason: code ? `${verdict.reason.replace(/\.$/, "")} — 확인해 주세요.` : verdict.reason,
+    matched: verdict.matched,
   };
 }
+

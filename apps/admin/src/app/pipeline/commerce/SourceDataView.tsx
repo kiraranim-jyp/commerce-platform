@@ -56,7 +56,19 @@ export function SourceDataView({
        가 이미 그 키를 받는다(그 함수의 union 부분집합이다) — 새 setter 를
        만들지 않았다. "description" 은 그대로 둔다: 쓰는 곳은 없어졌지만 이
        union 은 CommerceWorkspace 쪽과 맞춰 둔 것이고, 좁히면 다른 호출부가 깨진다. */
-    key: "title" | "brand" | "sku" | "description" | "descriptionKo" | "material" | "modelName",
+    /* 🔴 P5.6 후속 P0-4/P0-7(CPO, 2026-10-10) — `"countryOfOrigin"` 이 들어왔다.
+       `CommerceWorkspace.updateField()` 가 이미 그 키를 받는다(CommerceWorkspace
+       :1270) — 새 setter 를 만들지 않았다. 원산지를 «상품정보 한 곳» 에서 적게
+       하는 것이 목적이고, 세 채널은 그 값을 그대로 소비한다. */
+    key:
+      | "title"
+      | "brand"
+      | "sku"
+      | "description"
+      | "descriptionKo"
+      | "material"
+      | "modelName"
+      | "countryOfOrigin",
     value: string,
   ) => void;
   onUpdatePrice: (amount: number, currency: string) => void;
@@ -243,6 +255,31 @@ export function SourceDataView({
                 />
               </Row>
             ) : null}
+            {/* ══ 🔴 P5.6 후속 P0-4 / P0-7(CPO, 2026-10-10) — **원산지는 여기 한 곳이다.** ══
+
+                CEO 실화면: 원산지 칸이 «채널 탭에만» 있었다. 채널 탭은 「원산지는
+                상품정보 탭과 공유됩니다」라고 «적어 두고», 정작 상품정보에는 칸이
+                없었다 — 화면이 자기 말과 달랐다.
+
+                🔴 그래서 입력 칸을 상품정보로 옮긴다. 세 채널(SmartStore · Coupang ·
+                   LotteON)은 같은 `product.countryOfOrigin` 하나를 소비한다.
+                   한 번 적으면 세 채널이 같은 값을 쓴다(P0-7).
+                🔴 설명을 줄인다(CPO 명시). 공식몰 확인은 «보조» 로 채널 탭에 남는다 —
+                   여기서 자동 수집을 돌리지 않는다.
+                🔴 USER_EDITED 는 자동 수집이 덮지 않는다 — 그 보호는 이미
+                   wire06-manufacturing-country-boundary 가 지키고 있고 건드리지 않았다. */}
+            <Row label="원산지" field={product.countryOfOrigin}>
+              <div className="space-y-1">
+                <EditableText
+                  value={product.countryOfOrigin.value}
+                  onCommit={(v) => onUpdateField("countryOfOrigin", v)}
+                  placeholder="예: India · Spain · 대한민국"
+                />
+                <p className="text-[11px] text-text-tertiary">
+                  세 Commerce 가 이 값을 그대로 씁니다. 직접 적은 값은 자동 수집이 덮지 않습니다.
+                </p>
+              </div>
+            </Row>
             <Row label="소재" field={product.material}>
               <EditableText
                 value={product.material.value}
@@ -358,24 +395,48 @@ export function SourceDataView({
                  「파이프라인이 모른다는 999」가 구별되지 않는다.
               🔴 실측을 덮지 않는다. 적용 대상은 재고를 «모르는» 옵션뿐이다.
               🔴 커머스 탭에 옵션 UI 를 되살리는 것이 아니다 — 여기 상품정보 한 곳이다. */}
-          {onUpdateSellerDefaultStock && variantsWithUnknownStock(product).length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-warning/40 bg-background px-2.5 py-2">
-              <span className="text-[11px] text-text-secondary">
-                재고를 모르는 옵션 {variantsWithUnknownStock(product).length}개 — 기본 재고수량
-              </span>
-              <EditableText
-                value={product.sellerDefaultStock != null ? String(product.sellerDefaultStock) : ""}
-                onCommit={(v) => {
-                  const n = Number(v.trim());
-                  /* 🔴 빈 값이면 «지운다» — 0 으로 바꾸지 않는다(0 은 품절 주장이다). */
-                  onUpdateSellerDefaultStock(v.trim() === "" || !Number.isFinite(n) || n < 0 ? undefined : n);
-                }}
-                placeholder="예: 10"
-                className="w-20 rounded border border-border px-1.5 py-1 text-xs"
-              />
-              <span className="text-[11px] text-text-tertiary">
-                개 — 이 값은 «모르는 옵션에만» 적용됩니다. 비워 두면 그 옵션은 등록에서 제외됩니다.
-              </span>
+          {/* ══ 🔴 P5.6 후속 P0-1(CEO 실화면 FAIL, 2026-10-10) — **승격한다.** ══
+
+              CEO: 「기본재고를 입력하는 UX 가 없다」. 실제로는 «있었다» —
+              다만 두 가지 때문에 보이지 않았다:
+
+                ① `variantsWithUnknownStock > 0` 조건에 가려졌다. 재고를 모르는
+                   옵션이 생기기 «전에는» 칸 자체가 화면에 없다. 그래서 셀러는
+                   「어디에 적는지」를 찾을 수 없었다.
+                ② 라벨이 「재고를 모르는 옵션 N개 — 기본 재고수량」 한 줄이어서
+                   경고문으로 읽혔다. 입력 «필드» 로 보이지 않았다.
+
+              🔴 그래서 조건을 걷고 라벨을 제목으로 올린다. 값이 비어 있어도 칸은
+                 보인다 — 「입력할 수 있다」는 사실이 조건부면 안 된다.
+              🔴 동작은 바뀌지 않는다. 적용 대상은 여전히 재고를 «모르는» 옵션뿐이고
+                 실측값을 덮지 않는다. 999/0 을 만들지 않는다. */}
+          {onUpdateSellerDefaultStock && (
+            <div className="space-y-1.5 rounded-md border border-border bg-background px-3 py-2.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-medium text-text-primary">기본 재고 수량</span>
+                <EditableText
+                  value={product.sellerDefaultStock != null ? String(product.sellerDefaultStock) : ""}
+                  onCommit={(v) => {
+                    const n = Number(v.trim());
+                    /* 🔴 빈 값이면 «지운다» — 0 으로 바꾸지 않는다(0 은 품절 주장이다). */
+                    onUpdateSellerDefaultStock(v.trim() === "" || !Number.isFinite(n) || n < 0 ? undefined : n);
+                  }}
+                  placeholder="예: 10"
+                  className="w-24 rounded border border-border px-2 py-1 text-xs"
+                />
+                <span className="text-xs text-text-secondary">개</span>
+              </div>
+              <p className="text-[11px] text-text-tertiary">
+                ※ 원본 재고가 없는 옵션에만 적용됩니다 — 원본에 수량이 있는 옵션은 그 값을 그대로 씁니다.
+              </p>
+              {variantsWithUnknownStock(product).length > 0 && (
+                <p className="text-[11px] text-warning">
+                  지금 재고를 모르는 옵션 {variantsWithUnknownStock(product).length}개
+                  {product.sellerDefaultStock == null
+                    ? " — 비워 두면 그 옵션은 등록에서 제외됩니다."
+                    : ` — 이 옵션들은 ${product.sellerDefaultStock}개로 등록됩니다.`}
+                </p>
+              )}
             </div>
           )}
           {product.variants.length > 0 && product.variants.every((v) => v.stockQuantity == null) && (

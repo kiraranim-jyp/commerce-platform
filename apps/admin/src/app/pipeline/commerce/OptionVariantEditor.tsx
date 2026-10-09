@@ -150,7 +150,12 @@ function VariantRow({
             const n = Number(v);
             onUpdateVariant(variant.id, { stockQuantity: Number.isFinite(n) && n >= 0 ? n : undefined });
           }}
-          placeholder="기본값"
+          /* 🔴 P5.6 후속(CEO 실화면 FAIL) — 전에는 `"기본값"` 이었다. 옵션 행마다
+             「기본값」이 반복돼, CEO 는 이것을 «상품 전체 기본재고 입력» 으로 읽고
+             「기본재고 입력 UX 가 없다」고 보고했다. 두 개념이 같은 낱말을 쓰면
+             화면이 거짓말한다 — 여기는 «이 옵션의» 재고이고, 상품 전체 기본값은
+             위 「기본 재고 수량」 한 칸이다. */
+          placeholder="모름"
           className="w-16 rounded border border-border px-1.5 py-1 focus:border-primary focus:outline-none"
         />
         {variantSourceBadge(variant.stockQuantitySource)}
