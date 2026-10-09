@@ -130,6 +130,11 @@ export function newCustomTextId(seed: number): string {
 export interface DetailBlockPatch {
   /** 노출 여부. 🔴 「삭제」도 이것으로 표현한다(위 주석 참고). */
   enabled?: boolean;
+  /**
+   * 🔴 P5.6 P0-2(CEO 요구, 2026-10-09) — 항목 «제목». CUSTOM_TEXT·CUSTOM_IMAGE
+   *    둘 다 쓴다(한 어휘). optional 이라 기존 override 121건은 그대로 읽힌다.
+   */
+  heading?: string;
   /** `CUSTOM_TEXT` 본문. 다른 kind 에서는 무시된다. */
   content?: string;
   /** `CUSTOM_IMAGE` 의 이미지 아래 문구. 다른 kind 에서는 무시된다. */
@@ -167,16 +172,20 @@ function applyPatch(block: DetailPageBlock, patch: DetailBlockPatch | undefined)
 
   if (block.kind === "CUSTOM_TEXT") {
     const nextContent = patch.content ?? block.content;
-    if (!enabledChanged && nextContent === block.content) return block;
-    return { ...block, enabled: nextEnabled, content: nextContent };
+    /* 🔴 P5.6 P0-2 — 제목도 같은 규칙으로 덮는다(미지정이면 기존 유지). */
+    const nextHeading = patch.heading ?? block.heading;
+    if (!enabledChanged && nextContent === block.content && nextHeading === block.heading) return block;
+    return { ...block, enabled: nextEnabled, content: nextContent, heading: nextHeading };
   }
   if (block.kind === "CUSTOM_IMAGE") {
     /* 🔴 `url` 은 patch 로 바꾸지 «않는다». 이미지를 갈아끼우는 것은 블록을
        지우고 다시 넣는 일이고, url 을 덮게 열어 두면 셀러 기본값에 있는
        이미지를 상품 override 가 가리키는 모순 상태가 생긴다. */
     const nextCaption = patch.caption ?? block.caption ?? "";
-    if (!enabledChanged && nextCaption === (block.caption ?? "")) return block;
-    return { ...block, enabled: nextEnabled, caption: nextCaption };
+    /* 🔴 P5.6 P0-2 — 이미지 항목도 제목을 갖는다(같은 어휘). */
+    const nextHeading = patch.heading ?? block.heading;
+    if (!enabledChanged && nextCaption === (block.caption ?? "") && nextHeading === block.heading) return block;
+    return { ...block, enabled: nextEnabled, caption: nextCaption, heading: nextHeading };
   }
   if (!enabledChanged) return block;
   return { ...block, enabled: nextEnabled };

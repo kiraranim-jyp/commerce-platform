@@ -452,6 +452,18 @@ export type DetailPageBlock =
   | {
       id: string;
       kind: "CUSTOM_TEXT";
+      /**
+       * 🔴 P5.6 P0-2(CEO 요구, 2026-10-09) — **항목 제목.**
+       *
+       * CEO 가 원한 것은 블록 나열이 아니라 「항목」이다 —
+       *   [상품 특징] 텍스트 + 이미지 · [사이즈 정보] 텍스트 + 이미지 …
+       * 지금까지는 제목이라는 칸 자체가 없어서 텍스트 블록과 이미지 블록이
+       * 서로를 모르는 두 조각이었다.
+       *
+       * 🔴 optional 이다 — 운영 중인 detailOverride 121건에 이 칸이 없고,
+       *    없으면 지금까지와 «한 글자도 다르지 않게» 조립된다.
+       */
+      heading?: string;
       content: string;
       enabled: boolean;
       /** PRODUCT-INFO-UX-06 — 상품별 override 가 이 블록을 가리키는 «안정» 식별자.
@@ -480,6 +492,8 @@ export type DetailPageBlock =
   | {
       id: string;
       kind: "CUSTOM_IMAGE";
+      /** 🔴 P5.6 P0-2 — 항목 제목. CUSTOM_TEXT 와 «같은 칸» 이다(한 어휘). */
+      heading?: string;
       /** 우리 스토리지 공개 URL. 비었거나 http(s) 가 아니면 조립에서 건너뛴다. */
       url: string;
       /** 이미지 아래에 붙는 문구. 비면 이미지만 들어간다(= 「이미지」 블록). */
@@ -645,7 +659,7 @@ export function assembleContentsFromBlocks(
   const textFor = (block: DetailPageBlock): string | null => {
     if (block.kind === "AI_DESCRIPTION") return ctx.aiDescription.trim() || null;
     if (block.kind === "BRAND_INTRO") return ctx.brandIntro?.trim() || null;
-    if (block.kind === "CUSTOM_TEXT") return block.content.trim() || null;
+    if (block.kind === "CUSTOM_TEXT") return withHeading(block.heading, block.content);
     return null;
   };
 
@@ -658,6 +672,22 @@ export function assembleContentsFromBlocks(
     if (block.kind === "PRODUCT_IMAGES") return ctx.productImageUrls;
     if (block.kind === "SIZE_CHART_IMAGES") return ctx.sizeChartImageUrls;
     return [];
+  };
+
+  /**
+   * 🔴 P5.6 P0-2 — 항목 제목을 본문 «앞 한 줄» 로 붙인다.
+   *
+   * 🔴 HTML 태그를 만들지 않는다 — 이 조립기는 TEXT/IMAGE 두 종류만 내고,
+   *    채널마다 포맷이 다르다(쿠팡은 TEXT 블록, 네이버는 <p>). 여기서 <h3> 를
+   *    박으면 채널 포맷 결정을 조립기가 가로챈다.
+   * 🔴 제목이 없으면 지금까지와 «완전히 같은» 문자열을 돌려준다.
+   */
+  const withHeading = (heading: string | undefined, body: string): string | null => {
+    const title = heading?.trim();
+    const text = body.trim();
+    if (!title) return text || null;
+    return text ? `${title}
+${text}` : title;
   };
 
   const contents: CoupangItemContent[] = [];
@@ -685,6 +715,11 @@ export function assembleContentsFromBlocks(
        거부하므로, 못 쓰는 블록을 조용히 빼는 것이 이 함수의 기존 규칙이다. */
     if (block.kind === "CUSTOM_IMAGE") {
       if (!isRegistrationSafeImageUrl(block.url)) continue;
+      /* 🔴 P5.6 P0-2 — 항목 «제목» 은 이미지 «위» 다. 제목이 아래에 오면
+         그것은 캡션이지 항목 이름이 아니다. 제목만 먼저 흘려보내고, 기존
+         문구(caption)는 종전대로 이미지 아래에 둔다 — 두 규칙이 섞이지 않는다. */
+      const heading = block.heading?.trim();
+      if (heading) pendingText.push(heading);
       flushText();
       contents.push({ contentsType: "IMAGE", contentDetails: [{ content: block.url.trim(), detailType: "IMAGE" }] });
       /* 문구는 이미지 «아래» 에 온다 — 위에 두고 싶으면 CUSTOM_TEXT 블록을
