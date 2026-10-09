@@ -2679,6 +2679,31 @@ export function LotteOnRegistrationPanel({
           }}
           mode="LIVE"
           progress={registerProgress}
+          /* ══ 🔴 P5.6 P1-8(CPO ⑨, 2026-10-09) — **안전망이 이 경로에서만 꺼져 있었다.** ══
+
+             모달은 P0-KC-08 에서 `readinessBlockers` 를 받아 「열린 것 ≠ 등록해도
+             되는 것」을 자기 안에서 한 번 더 판정한다(readinessOk → canConfirm).
+             스마트스토어·쿠팡 경로(CommerceWorkspace)는 그 값을 넘기는데 이
+             롯데ON 경로는 «넘기지 않았다». 넘기지 않으면 `?? []` 로 내려가
+             readinessOk 가 «항상 true» 가 된다 — 조용히 꺼진 가드다.
+
+             🔴 지금 당장 뚫리는 구멍은 «아니다». 이 모달로 오는 길은 위
+                RegistrationReadinessCard 의 버튼 하나뿐이고 그 버튼은
+                `allRequiredPassed && status === "READY"` 로 이미 잠겨 있다.
+                그래서 이것은 버그 수정이 아니라 세 채널의 최종확인을 같은
+                계약으로 맞추는 일이다 — 스마트스토어처럼 다른 입구(KC 배너의
+                [판매 가능 상품으로 확인])가 이 채널에 하나라도 생기는 순간,
+                넘기지 않은 쪽만 확인 없이 통과한다.
+             🔴 판정을 새로 만들지 않는다 — 위 readinessItems(=서버 검증 결과)의
+                실패분을 그대로 쓴다. priorityItems 가 아니라 readinessItems 를
+                쓰는 이유는 priorityItems 가 «상위 N건» 으로 잘린 목록이라,
+                그것으로 게이트를 세우면 N건 밖의 미비가 통과하기 때문이다.
+             🔴 snapshotId · jobKey 는 «넘기지 않는다». 모달이 그 둘을 쓰는 곳은
+                스마트스토어 compliance POST 한 군데이고, 그 분기는
+                `hasSmartstoreKcCard`(= smartstoreKcStatus != null) 뒤에 있다.
+                이 채널은 그 4-state 를 쓰지 않으므로 넘겨도 영원히 안 읽힌다 —
+                「받아 놓고 안 쓰는 prop」을 또 만들지 않는다. */
+          readinessBlockers={readinessItems.filter((item) => item.required && !item.passed).map((item) => item.label)}
           onCancel={() => setConfirmOpen(false)}
           onConfirm={() => void runRegister()}
         />
