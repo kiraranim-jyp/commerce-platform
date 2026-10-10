@@ -118,11 +118,49 @@ Naver     고시·옵션·재고 조립됨 · 🔴 D-OPT 상태였다(위)
 Coupang   items 6건(사이즈별) · itemName "Bobo Choses … 남아 티셔츠 - 2/3 years"
           originalPrice/salePrice 112,290 · maximumBuyCount 999(구매제한, 재고 아님)
           🔴 notices [] — categoryMeta 가 «없어서» 다(자격증명 필요). ②에서 고정한 사실.
-LotteON   이 배치에서 돌리지 않았다 — 🔴 미측정으로 남긴다(PASS 로 적지 않는다)
+LotteON   🟢 측정했다(품목 23). 고시 5건 채워짐:
+            0780 크기,중량  "2/3 years, 4/5 years, … 12/13 years"  ← 사이즈 6개 전부
+            0020 색상       "Blue"
+            0410 재질       "100% Organic Cotton"
+            0060 제조국     "Spain"
+            0800 취급방법   "케어라벨 참조"   ← 🔴 D-CARE 가 «규제 신고 값» 까지 전파된다
+          NEEDS_INPUT 8건: 품명/모델명 · KC · 사용연령 · 크기체중한계 · 출시년월 ·
+            제조자/수입자 · 품질보증 · A/S  (뒤 둘은 판매자 설정을 안 넘긴 내 입력 공백)
+          옵션 6건 · optSrtLst 정상 · slPrc 112,290
+          🔴 stkQty = 0 (6건 전부) → D-LOT-STOCK (아래)
 ```
 
 🔴 **로컬에서 못 받는 축**(지어내지 않는다): 쿠팡 categoryMeta · resolvedBrand ·
 출고지 · 카테고리 Resolver. 전부 Production 자격증명이 필요하다.
+
+---
+
+### 🔴🔴 D-LOT-STOCK — LotteON 은 재고 모름을 「품절」로 싣고, 검증기가 막지 않는다
+
+```
+build-payload.ts:265   const defaultStock = measuredStock ?? 0
+build-payload.ts:315   stkQty: variantStockWithSellerDefault(...) ?? defaultStock
+                       → 실측도 셀러 기본값도 없으면 «0» 이 나간다
+validate-payload.ts:415  stockFact.state === "UNKNOWN"
+                       → ready("itmStkQty", "재고(원본 미확인)")   ← 🔴 READY 다
+```
+
+🔴 `:263` 의 주석은 「품절로 두고 셀러가 채우는 쪽이 안전하다(**검증기가 그 사실을
+셀러에게 말한다**)」고 적혀 있다. **그 전제가 반만 사실이다** — 라벨로는 「원본
+미확인」이라고 말하지만 **등록을 막지 않는다.** C-2D 이력이 「재고 0 인 상품이
+「등록 가능」으로」 되는 것을 막으려 했는데 **UNKNOWN 분기가 그 구멍으로 남았다.**
+
+같은 사실(재고 모름)에 세 채널이 서로 다르게 반응한다:
+
+```
+Naver     옵션을 빼낸다 → (D-OPT 수정으로) 이제 MISSING 으로 막힌다
+Coupang   maximumBuyCount 999 는 «구매제한» 이고 재고 축은 별도
+LotteON   stkQty 0 을 싣는다 → READY → 6사이즈 전부 「품절」로 등록된다
+```
+
+🔴 **고치지 않았다 — CPO 판정 대기.** 세 번째 채널의 등록 가부를 바꾸는 것이고,
+`ready("재고(원본 미확인)")` 가 의도적 선택일 수 있다(막으면 과차단 위험).
+쿠팡 2건(`COUPANG-NOTICE-SEMANTIC-LOSS-01`)과 **같은 기준** 으로 올린다.
 
 ---
 
@@ -139,7 +177,7 @@ LotteON   이 배치에서 돌리지 않았다 — 🔴 미측정으로 남긴�
 ```
 ① D-CARE · D-MODEL 판정 (CPO)              — 위 §P0.4/P0.5
 ② P0.2 MI 판정 실행                         — 후보 수집 경로부터
-③ LotteON payload 측정                      — P0.6 에서 미측정
+③ 🔴🔴 D-LOT-STOCK 판정 (CPO) — 위 §P0.6, 세 채널 재고 정책이 어긋난다
 ④ ④ 3-Commerce 최종 E2E                     — 실등록은 STOP 유지
 ⑤ Seller 요청 5개 실제 상품 기준 검증        — 미착수
 ⑥ COUPANG-NOTICE-SEMANTIC-LOSS-01           — 별도 backlog(②에서 분리)
