@@ -147,6 +147,81 @@ LotteON   lotteon/__tests__/build-payload.test.ts
 
 ---
 
+## 3.5 🟢 CPO 판정 = **(A)** (2026-10-10 확정)
+
+```
+쿠팡 required 는 UNKNOWN 으로 «유지» 하고 ② 를 진행한다
+쿠팡 검증 범위   ✓ notice 구조 · ✓ 항목 대응 · ✓ 값 보존
+                 ✓ 누락/추가 감지 · ✓ semantic mapping
+                 ✗ required 실측 판정 → UNKNOWN
+🔴 UNKNOWN 을 PASS 로 기록하지 않는다. ②-6 게이트의 「Coupang metadata fixture
+   근거 확인」 칸은 «UNKNOWN 종결» 로 적는다.
+```
+
+🔴 그래서 쿠팡 메타 스텁을 **「fixture」로 승격하지 않는다.** 변수 이름에
+`UNVERIFIED` 를 넣고, required 값은 «타입이 요구해서» 적는 것일 뿐 **비교에
+쓰지 않는다.** 판정은 함수 하나가 UNKNOWN 과 «이유» 를 같이 돌려주게 한다.
+
+---
+
+## 3.6 확보된 입력 상수 — 🔴 다시 찾지 않는다
+
+세 builder 를 부르는 데 필요한 값을 실측으로 뽑아 두었다.
+
+```
+Naver  buildNaverProductPayload({ product, listing, …아래 })
+       leafCategoryId "50000535"            (실제 production GET 으로 확인된 리프)
+       releaseAddressBookNo 900000001        🔴 placeholder — 판매자 식별정보는
+       refundAddressBookNo  900000002           코드에 하드코딩하지 않는다
+       primaryReturnDeliveryCompanyPriorityType "PRIMARY"
+       sellerDeliveryFee null · returnDeliveryFee 3000 · exchangeDeliveryFee 5000
+       originAreaCode "00" · originAreaRequiresContent false
+       childCertificationInfoId 1041 · categoryRequiresChildCertification true/false
+
+Coupang buildCoupangPayload(product, listing, { binding: {} })   ← binding 필수
+        categoryMeta 는 선택 — 넘기면 items[].notices[] 가 채워진다
+
+LotteON buildLotteOnPayload({ product, channel, detailHtml })
+        channel = { ...BLANK_LOTTEON_CHANNEL_CONFIG,
+                    ...buildLotteOnSalePeriod(new Date(고정값)),
+                    trGrpCd "SR" · trNo "LO10000" · standardCategoryNo "BC63080300"
+                    displayCategories [{ mallCd:"LTON", lfDcatNo:"FC11130203" }]
+                    originCode · taxTypeCode "01"
+                    noticeItemCode "01"|"23" · noticeArticles [{pdArtlCd,pdArtlCnts}]
+                    outboundPlaceNo "115" · returnPlaceNo "115"
+                    deliveryCostPolicyNo "335" · deliveryRegionGroupCode "GN101" }
+        🔴 noticeArticles 는 «손으로 적지 말고» resolveLotteOnNotice() 결과로
+           채운다 — 그것이 실제 경로이고(관리 앱 build-context 가 그렇게 한다),
+           손으로 적으면 공통 모델이 실제로 쓰였는지 검증하지 못한다.
+        import 위치: BLANK_LOTTEON_CHANNEL_CONFIG · buildLotteOnSalePeriod
+                     ← packages/listing/src/lotteon/types
+```
+
+🔴 **fixture 는 더럽게 만든다.** `careInstructions` · `itemName` · `weight` ·
+`certificationType` · `importer` 를 **비워서 명시** 한다(생략하면 `.value` 로
+터진다 — 3회 걸렸다). 그리고 값은 「면 100%」 같은 흔한 문자열이 아니라
+추적 가능한 값으로 둔다(예: `"코튼 97% 엘라스탄 3%"`) — 세 채널에서 같은 값인지
+확인하려면 구별되는 값이어야 한다.
+
+---
+
+## 3.7 🔴 이 세션이 ② 를 «시작했다가 되돌린» 기록
+
+공용 fixture + parity 테스트 두 파일을 썼다가 **지웠다.** 이유를 남긴다:
+
+```
+그 테스트는 세 builder 를 «실제로 호출하지 않았다» — 모델/adapter 계층만
+비교했고, 그건 channel-notice-adapters.test.ts 가 이미 하는 일이다.
+그런데 파일 이름이 notice-semantic-parity 였다.
+🔴 그건 「테스트가 거짓말하는」 형태다. ②-2 의 본체(3채널 payload 동시 생성)를
+   빼고 이름만 parity 인 파일을 남기면, 다음 사람은 ②가 된 줄 안다.
+```
+
+→ 다음 세션은 **②-2 를 먼저** 한다. 세 builder 를 실제로 부르고 payload 를 손에
+쥔 다음 비교를 쓴다. 비교부터 쓰면 또 같은 함정에 빠진다.
+
+---
+
 ## 4. ② 착수 순서 (CPO 판정 후)
 
 ```
