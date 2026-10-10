@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildNaverNoticePayload,
   coupangNoticeAdapterStatus,
+  naverNoticeFieldOrder,
+  naverNoticeFieldsFromModel,
+  naverNoticeTypeForKind,
   lotteOnNoticeSlots,
   lotteOnNoticeSpecs,
   naverNoticeSlots,
@@ -94,6 +98,109 @@ describe("③ slot 은 필수여부를 «그 채널 기준» 으로 들고 온�
   it("UNKNOWN 품목은 slot 이 하나도 없다", () => {
     expect(lotteOnNoticeSlots("UNKNOWN")).toEqual([]);
     expect(naverNoticeSlots("UNKNOWN")).toEqual([]);
+  });
+});
+
+describe("③-b 🔴 Naver — 집합은 공통 모델, 순서는 채널 (①)", () => {
+  /**
+   * 🔴 「payload shape 유지」를 «순서까지» 못박는다. `toEqual` 은 키 순서를 보지
+   *    않으므로 기존 92건은 순서가 뒤집혀도 통과한다. 그래서 여기서 직접 센다.
+   *
+   * 🔴 순서는 **채널** 이 정한다 — 공통 모델 순서(고시 표 순서)와 «다르다».
+   *    라벨을 공통으로 올리지 않은 것과 같은 이유다.
+   */
+  it.each([
+    ["KIDS" as const, 13],
+    ["WEAR" as const, 8],
+  ])("%s 칸 집합이 공통 모델과 «양방향» 으로 같다 (칸 %d개)", (type, count) => {
+    const fromChannel = [...naverNoticeFieldOrder(type)];
+    const fromModel = naverNoticeFieldsFromModel(type);
+    expect(fromChannel).toHaveLength(count);
+    expect(fromChannel.filter((f) => !fromModel.includes(f))).toEqual([]);
+    expect(fromModel.filter((f) => !fromChannel.includes(f))).toEqual([]);
+  });
+
+  /**
+   * 🔴 **독립 기준이다.** B⑥ 교체 «전» 의 build-payload.ts 객체 리터럴 순서를
+   *    그대로 전사한 것이고, adapter 상수를 참조하지 «않는다».
+   *
+   *    처음에는 기대값도 `naverNoticeFieldOrder()` 로 적었다 — 순환 테스트였고,
+   *    음성 대조에서 KIDS 순서를 뒤집었는데 **걸리지 않았다**(양쪽이 같이
+   *    바뀌니까). 순서를 지키려는 가드가 순서를 하나도 지키지 못하고 있었다.
+   *    그래서 숫자를 손으로 박는다 — 이 배열이 「payload shape」의 정의다.
+   */
+  const SHAPE_BEFORE_B6 = {
+    KIDS: [
+      "material",
+      "color",
+      "size",
+      "manufacturer",
+      "caution",
+      "recommendedAge",
+      "warrantyPolicy",
+      "afterServiceDirector",
+      "itemName",
+      "modelName",
+      "weight",
+      "certificationType",
+      "releaseDateText",
+    ],
+    WEAR: [
+      "material",
+      "color",
+      "size",
+      "manufacturer",
+      "caution",
+      "warrantyPolicy",
+      "afterServiceDirector",
+      "packDateText",
+    ],
+  } as const;
+
+  it("🔴 조립된 payload 의 키 «순서» 가 교체 «전» 과 한 칸도 다르지 않다", () => {
+    const values = Object.fromEntries(
+      [...SHAPE_BEFORE_B6.KIDS, ...SHAPE_BEFORE_B6.WEAR].map((f) => [f, `v-${f}`]),
+    );
+    const kids = buildNaverNoticePayload("KIDS_APPAREL", values);
+    expect(kids.productInfoProvidedNoticeType).toBe("KIDS");
+    expect(Object.keys("kids" in kids ? kids.kids : {})).toEqual([...SHAPE_BEFORE_B6.KIDS]);
+
+    const wear = buildNaverNoticePayload("APPAREL", values);
+    expect(Object.keys("wear" in wear ? wear.wear : {})).toEqual([...SHAPE_BEFORE_B6.WEAR]);
+  });
+
+  it("adapter 상수도 그 순서와 같다 (상수를 건드리면 둘 다 떨어진다)", () => {
+    expect([...naverNoticeFieldOrder("KIDS")]).toEqual([...SHAPE_BEFORE_B6.KIDS]);
+    expect([...naverNoticeFieldOrder("WEAR")]).toEqual([...SHAPE_BEFORE_B6.WEAR]);
+  });
+
+  it("🔴 UNKNOWN 은 WEAR 다 — 「모르니까 닫는다」로 바꾸지 않았다", () => {
+    /* 네이버 입력에는 카테고리 경로가 없어 UNKNOWN 이 흔하고, 그 상품들은 지금
+       일반 의류로 정상 등록된다. 여기서 닫으면 돌고 있는 등록이 깨진다 —
+       한 번 KIDS 로 바꿨다가 선재 테스트 7건이 잡아 되돌린 기록이 있다. */
+    expect(naverNoticeTypeForKind("UNKNOWN")).toBe("WEAR");
+    const payload = buildNaverNoticePayload(
+      "UNKNOWN",
+      Object.fromEntries(naverNoticeFieldOrder("WEAR").map((f) => [f, "v"])),
+    );
+    expect(payload.productInfoProvidedNoticeType).toBe("WEAR");
+  });
+
+  it("🔴 값이 undefined 인 것은 정상이다 — 「키가 없다」와 구별한다", () => {
+    const values = Object.fromEntries(naverNoticeFieldOrder("WEAR").map((f) => [f, undefined]));
+    const payload = buildNaverNoticePayload("APPAREL", values);
+    /* 기존 `warrantyPolicy || undefined` 와 같은 상태다 — 키는 있고 값이 비었다. */
+    expect(Object.keys("wear" in payload ? payload.wear : {})).toEqual([...naverNoticeFieldOrder("WEAR")]);
+  });
+
+  it("🔴 칸이 «아예 빠지면» 부분 payload 를 만들지 않고 던진다 (fail closed)", () => {
+    const values = Object.fromEntries(
+      naverNoticeFieldOrder("WEAR")
+        .filter((f) => f !== "packDateText")
+        .map((f) => [f, "v"]),
+    );
+    expect(() => buildNaverNoticePayload("APPAREL", values)).toThrow(/packDateText/);
+    expect(() => buildNaverNoticePayload("APPAREL", values)).toThrow(/부분 고시/);
   });
 });
 

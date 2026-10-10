@@ -112,16 +112,20 @@ describe("② Naver — build-payload 의 실제 칸 이름과 대조 (주석 �
     expect(absent).toEqual([]);
   });
 
-  it("🔴 네이버 kids/wear 블록의 칸 수가 바뀌면 알아챈다", () => {
-    /* 칸 이름을 블록에서 직접 센다 — 모델이 아니라 제품 코드를 센다. */
-    const block = (name: "kids" | "wear"): string[] => {
-      const start = source.indexOf(`${name}: {`);
-      expect(start).toBeGreaterThan(-1);
-      const slice = source.slice(start, source.indexOf("\n            }", start));
-      return [...slice.matchAll(/^\s{16}([a-zA-Z]+):/gm)].map((m) => m[1]);
-    };
-    expect(block("wear")).toHaveLength(8);
-    expect(block("kids")).toHaveLength(13);
+  it("🔴 builder 가 고시 조립을 adapter 에 «넘겼다» — 리터럴로 되돌아가면 알아챈다", () => {
+    /* ① B⑥(2026-10-10) — 이 자리에 있던 것은 `kids: {` / `wear: {` 객체 리터럴의
+       칸 수를 세는 «소스» 대조였다. 그 리터럴이 adapter 로 옮겨가면서 이 가드가
+       먼저 떨어졌다 — 가드가 «옳게» 반응한 것이다.
+
+       🔴 그래서 가드를 지우지 않고 **감시 대상을 옮겼다.** 칸 수·순서는 이제
+       `channel-notice-adapters.test.ts` 가 «조립된 payload 의 키 순서» 로 센다
+       (소스 대조보다 강한 증거다). 여기서는 builder 가 그 경로를 쓰는지만 본다.
+
+       🔴 누군가 다시 리터럴로 조립하면(= adapter 를 우회하면) 이 테스트가
+       떨어진다. 두 곳에서 조립되는 상태로 돌아가지 않게 막는 것이 목적이다. */
+    expect(source).toContain("buildNaverNoticePayload(");
+    expect(source).not.toMatch(/\bkids:\s*\{/);
+    expect(source).not.toMatch(/\bwear:\s*\{/);
   });
 
   it("🔴 네이버에 «자리가 없는» 것을 「요구하지 않는다」로 적지 않았다", () => {

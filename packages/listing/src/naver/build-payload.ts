@@ -9,7 +9,9 @@ import { variantStockWithSellerDefault } from "@commerce/shared";
 /* 🔴 P5.6 실측 — 태그 중복제거 규칙은 한 곳이다. */
 import { dedupeSellerTagTexts } from "./seller-tags-update";
 /* 🔴 P5.6 후속 P0-6 — 고시품목 판정은 공통 축 하나다(세 채널이 같은 함수를 본다). */
-import { naverNoticeTypeFor, resolveNoticeCategory } from "../notice/notice-category";
+import { resolveNoticeCategory } from "../notice/notice-category";
+/* ① B⑥ — 고시 칸 집합·필수여부·타입은 공통 모델이 정한다. 값 해석은 이 파일에 남는다. */
+import { buildNaverNoticePayload } from "../notice/channel-notice-adapters";
 import type {
   CanonicalProduct,
   ChannelNoticeOverride,
@@ -817,7 +819,17 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
            🔴 **동작은 넓어지기만 한다.** 플래그가 true 면 전과 똑같이 KIDS 다.
               플래그가 없고 카테고리 경로/연령축이 아동을 가리키면 이제도 KIDS 다
               — 전에는 그 상품이 일반 의류로 나갔다. */
-        productInfoProvidedNotice: naverNoticeTypeFor(
+        /* ── ① B⑥ Naver(2026-10-10 CPO 승인) — 공통 모델 → Adapter → payload ──
+           🔴 바뀐 것은 «조립» 뿐이다. 값 해석은 한 줄도 옮기지 않았다 —
+              certificationType · releaseDateText · packDateText 같은 네이버 고유
+              해석은 아래 그대로 남아 있고, adapter 는 그것을 추론하지 않는다.
+           🔴 **칸 순서는 adapter 가 채널 순서로 지킨다.** 공통 모델 순서(고시 표
+              순서)로 바꾸면 payload 의 키 순서가 바뀐다 — 그건 shape 변경이다.
+           🔴 공통 모델이 정하는 것: 칸 «집합» · 필수여부 · KIDS/WEAR 타입.
+              집합이 어긋나면 adapter 가 던진다(부분 고시를 보내지 않는다).
+           🔴 전에는 KIDS/WEAR 두 벌의 객체 리터럴에 같은 주석이 복사돼 있었다.
+              한 벌로 합쳐지면서 두 분기가 어긋날 자리가 사라졌다. */
+        productInfoProvidedNotice: buildNaverNoticePayload(
           resolveNoticeCategory({
             childCertificationRequired: categoryRequiresChildCertification,
             /* 🔴 `categoryPath` 를 넘기지 «않는다» — 네이버 입력에는 카테고리
@@ -826,103 +838,60 @@ export function buildNaverProductPayload(input: NaverPayloadInput): NaverProduct
                플래그와 상품 연령축 둘이고, 그 둘로만 판정한다. */
             ageGroup: resolveProductSignals(product).ageGroup,
           }).kind,
-        ) === "KIDS"
-          ? {
-              productInfoProvidedNoticeType: "KIDS",
-              kids: {
-                material: resolveNoticeFieldValue("material", product.material),
-                color: resolveNoticeFieldValue("color", product.color),
-                // N-3.71 — size는 reference-eligibility.ts 화이트리스트에 없어
-                // (사용자가 선택할 소스 토글 자체가 없다) resolveSizeFromOptions가
-                // undefined면 이전까지 필드 자체가 비어 payload에서 통째로
-                // 빠졌다 — 이게 실제 등록에서 Naver가 거부한 9개 필드 중
-                // 하나였다. size는 같은 productInfoProvidedNotice 안의 다른
-                // 자유텍스트 필드(material/color 등)와 완전히 동일한 스펙
-                // 타입이라 "상세페이지 참조" 대체가 동일하게 허용된다(9개
-                // 필드가 전부 같은 방식으로 거부됐다는 사실 자체가 근거) —
-                // releaseDateText/packDateText와 같은 이유로 실제 SIZE 옵션이
-                // 없을 때는 무조건 참조 문구로 채운다(임의 사이즈 값을
-                // 지어내는 게 아니라 "상세페이지를 보라"는 안전한 대체).
-                size: resolveSizeFromOptions(product) ?? DETAIL_PAGE_REFERENCE_TEXT,
-                manufacturer: resolveNoticeFieldValue(
-                  "manufacturer",
-                  manufacturerValue ? { ...product.manufacturer, value: manufacturerValue } : product.manufacturer,
-                ),
-                caution: resolveNoticeFieldValue("careInstructions", product.careInstructions),
-                recommendedAge: resolveNoticeFieldValue("recommendedAge", product.recommendedAge),
-                warrantyPolicy: warrantyPolicy || undefined,
-                afterServiceDirector: afterServiceDirector || undefined,
-                itemName: resolveNoticeFieldValue("itemName", product.itemName),
-                modelName: resolveNoticeFieldValue("modelName", product.modelName),
-                weight: resolveNoticeFieldValue("weight", product.weight),
-                // KC 인증정보 설명 텍스트 — N-3.45 STEP10(CPO 지시)에 따라 절대
-                // "상세페이지 참조"로 대체하지 않는다. 실제 값만 채운다.
-                /* P0-KC-12 — 🔴 여기서 판정하지 않는다. 판매자가 ⑧에서 고른
-                   「어린이제품 인증 대상 아님」을 고시 문자열로 옮길 뿐이고,
-                   실제 값을 적었으면 그것이 언제나 우선이다. */
-                certificationType: resolveKidsCertificationTypeNotice(
-                  smartStoreKcDeclaration,
-                  product.certificationType?.value || undefined,
-                ),
-                // N-3.51 STEP1(6차 실등록 시도로 발견) — releaseDate(YearMonth,
-                // 구조화된 출시연월)는 CartPilot이 알 방법이 없다(크롤러가
-                // 추출하지 않음, 임의 날짜를 지어내지 않는다는 원칙 유지).
-                // 공식 스펙에 releaseDateText("동일 모델 출시연월 직접 입력",
-                // fieldType String)가 releaseDate의 자유 텍스트 대체 필드로
-                // 존재해, material/color처럼 상세페이지 참조 관용구를 쓴다.
-                /* 🔴 NAVER-CHANNEL-NOTICE-OVERRIDES-03(CPO 확정, 2026-09-30) —
-                   여기 있던 것: `releaseDateText: DETAIL_PAGE_REFERENCE_TEXT` «무조건».
-                   셀러가 고르지 않았는데 우리가 「상세페이지에 있다」고 주장했다.
+          {
+            material: resolveNoticeFieldValue("material", product.material),
+            color: resolveNoticeFieldValue("color", product.color),
+            // N-3.71 — size는 reference-eligibility.ts 화이트리스트에 없어
+            // (사용자가 선택할 소스 토글 자체가 없다) resolveSizeFromOptions가
+            // undefined면 이전까지 필드 자체가 비어 payload에서 통째로
+            // 빠졌다 — 이게 실제 등록에서 Naver가 거부한 9개 필드 중
+            // 하나였다. size는 같은 productInfoProvidedNotice 안의 다른
+            // 자유텍스트 필드(material/color 등)와 완전히 동일한 스펙
+            // 타입이라 "상세페이지 참조" 대체가 동일하게 허용된다(9개
+            // 필드가 전부 같은 방식으로 거부됐다는 사실 자체가 근거).
+            size: resolveSizeFromOptions(product) ?? DETAIL_PAGE_REFERENCE_TEXT,
+            manufacturer: resolveNoticeFieldValue(
+              "manufacturer",
+              manufacturerValue ? { ...product.manufacturer, value: manufacturerValue } : product.manufacturer,
+            ),
+            caution: resolveNoticeFieldValue("careInstructions", product.careInstructions),
+            recommendedAge: resolveNoticeFieldValue("recommendedAge", product.recommendedAge),
+            warrantyPolicy: warrantyPolicy || undefined,
+            afterServiceDirector: afterServiceDirector || undefined,
+            itemName: resolveNoticeFieldValue("itemName", product.itemName),
+            modelName: resolveNoticeFieldValue("modelName", product.modelName),
+            weight: resolveNoticeFieldValue("weight", product.weight),
+            // KC 인증정보 설명 텍스트 — N-3.45 STEP10(CPO 지시)에 따라 절대
+            // "상세페이지 참조"로 대체하지 않는다. 실제 값만 채운다.
+            /* P0-KC-12 — 🔴 여기서 판정하지 않는다. 판매자가 ⑧에서 고른
+               「어린이제품 인증 대상 아님」을 고시 문자열로 옮길 뿐이고,
+               실제 값을 적었으면 그것이 언제나 우선이다. */
+            certificationType: resolveKidsCertificationTypeNotice(
+              smartStoreKcDeclaration,
+              product.certificationType?.value || undefined,
+            ),
+            /* N-3.51 STEP1(6차 실등록 시도로 발견) — releaseDate(YearMonth,
+               구조화된 출시연월)는 CartPilot이 알 방법이 없다(크롤러가 추출하지
+               않음, 임의 날짜를 지어내지 않는다는 원칙 유지). 공식 스펙에
+               releaseDateText(fieldType String)가 자유 텍스트 대체로 존재한다.
 
-                   🔴 payload 는 바뀌지 «않는다». 셀러가 아무것도 안 하면 지금도
-                   참조 문구가 나간다(golden-success-02-kids.json 그대로). 바뀐 것은
-                   ① 셀러가 실제 출시연월을 적으면 그 값이 나가고
-                   ② 그 상태를 화면이 「기본값으로 나갑니다」로 «드러낸다» 는 것이다.
-
-                   🔴 이 칸의 필수 여부는 UNKNOWN 이다 — 빼고 등록해 본 적이 없다.
-                   그래서 비우지 않는다(NAVER_NOTICE_REQUIRED_CONFIRMED 참고). */
-                releaseDateText: resolveChannelNoticeField(noticeOverride, NOTICE_KEY_RELEASE_DATE).outgoing,
-              },
-            }
-          : {
-              productInfoProvidedNoticeType: "WEAR",
-              wear: {
-                material: resolveNoticeFieldValue("material", product.material),
-                color: resolveNoticeFieldValue("color", product.color),
-                // N-3.71 — size는 reference-eligibility.ts 화이트리스트에 없어
-                // (사용자가 선택할 소스 토글 자체가 없다) resolveSizeFromOptions가
-                // undefined면 이전까지 필드 자체가 비어 payload에서 통째로
-                // 빠졌다 — 이게 실제 등록에서 Naver가 거부한 9개 필드 중
-                // 하나였다. size는 같은 productInfoProvidedNotice 안의 다른
-                // 자유텍스트 필드(material/color 등)와 완전히 동일한 스펙
-                // 타입이라 "상세페이지 참조" 대체가 동일하게 허용된다(9개
-                // 필드가 전부 같은 방식으로 거부됐다는 사실 자체가 근거) —
-                // releaseDateText/packDateText와 같은 이유로 실제 SIZE 옵션이
-                // 없을 때는 무조건 참조 문구로 채운다(임의 사이즈 값을
-                // 지어내는 게 아니라 "상세페이지를 보라"는 안전한 대체).
-                size: resolveSizeFromOptions(product) ?? DETAIL_PAGE_REFERENCE_TEXT,
-                manufacturer: resolveNoticeFieldValue(
-                  "manufacturer",
-                  manufacturerValue ? { ...product.manufacturer, value: manufacturerValue } : product.manufacturer,
-                ),
-                caution: resolveNoticeFieldValue("careInstructions", product.careInstructions),
-                warrantyPolicy: warrantyPolicy || undefined,
-                afterServiceDirector: afterServiceDirector || undefined,
-                // N-3.51 STEP1(6차 실등록 시도의 실제 NotEmpty 거부로 발견) —
-                // packDate(YearMonth, 구조화된 제조연월)는 CartPilot이 알 방법이
-                // 없다(해외 구매대행 특성상 개별 상품의 제조연월을 크롤러가
-                // 얻을 수 없고, 임의 날짜를 지어내지 않는다는 원칙 유지).
-                // 공식 스펙에 packDateText("제조연월 직접 입력", fieldType
-                // String)가 packDate의 자유 텍스트 대체 필드로 존재해,
-                // material/color처럼 상세페이지 참조 관용구를 쓴다
-                // (docs/naver-provided-notice-types-raw.json 실측 확인).
-                /* 🔴 NAVER-CHANNEL-NOTICE-OVERRIDES-03 — 위 KIDS 와 같은 이유다.
-                   🔴 다만 이 칸은 «생략할 수 없음이 실측됐다» (attempt 6 NotEmpty).
-                   그래서 폴백이 사라지면 등록이 깨진다 — resolveChannelNoticeField 는
-                   어떤 상태에서도 빈 문자열을 돌려주지 않는 것이 계약이다. */
-                packDateText: resolveChannelNoticeField(noticeOverride, NOTICE_KEY_PACK_DATE).outgoing,
-              },
-            },
+               🔴 NAVER-CHANNEL-NOTICE-OVERRIDES-03(CPO 확정, 2026-09-30) —
+               여기 있던 것: `releaseDateText: DETAIL_PAGE_REFERENCE_TEXT` «무조건».
+               셀러가 고르지 않았는데 우리가 「상세페이지에 있다」고 주장했다.
+               🔴 payload 는 바뀌지 «않는다» — 셀러가 아무것도 안 하면 지금도
+               참조 문구가 나간다(golden-success-02-kids.json 그대로).
+               🔴 이 칸의 필수 여부는 UNKNOWN 이다 — 빼고 등록해 본 적이 없다. */
+            releaseDateText: resolveChannelNoticeField(noticeOverride, NOTICE_KEY_RELEASE_DATE).outgoing,
+            /* N-3.51 STEP1(6차 실등록 시도의 실제 NotEmpty 거부로 발견) —
+               packDate(YearMonth)는 CartPilot이 알 방법이 없다. packDateText가
+               자유 텍스트 대체로 존재한다(docs/naver-provided-notice-types-raw.json
+               실측 확인).
+               🔴 이 칸은 «생략할 수 없음이 실측됐다»(attempt 6 NotEmpty). 그래서
+               폴백이 사라지면 등록이 깨진다 — resolveChannelNoticeField 는 어떤
+               상태에서도 빈 문자열을 돌려주지 않는 것이 계약이다. */
+            packDateText: resolveChannelNoticeField(noticeOverride, NOTICE_KEY_PACK_DATE).outgoing,
+          },
+        ),
         // N-3.4 — originAreaCode는 GET /v1/product-origin-areas로 실측 확인한
         // 535개 코드 중 resolveNaverOriginArea가 매칭한 값을 그대로 쓴다(이
         // 함수는 매칭을 다시 하지 않는다 — Resolver → Payload 단방향 원칙).

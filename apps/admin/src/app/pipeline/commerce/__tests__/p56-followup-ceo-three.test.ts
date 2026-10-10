@@ -200,9 +200,24 @@ describe("P0-6 고시품목 — 의미는 공통, 코드는 채널 변환", () =
 
   it("🔴 네이버 builder 가 플래그 하나로 갈라치지 «않는다» — 공통 판정을 부른다", () => {
     const src = strip(readRepo("packages/listing/src/naver/build-payload.ts"));
-    expect(src).toContain("naverNoticeTypeFor(");
+    /* ① B⑥(2026-10-10) — 🔴 이 가드가 보던 `naverNoticeTypeFor(` 호출이 adapter 로
+       옮겨가면서 이 테스트가 먼저 떨어졌다. 가드가 «옳게» 반응한 것이다 —
+       지우지 않고 **감시 대상을 넓힌다**(약화시키지 않는다). 지키는 것은 셋이다:
+         ① builder 는 여전히 «공통 판정» 을 부른다
+         ② 네이버 어휘(KIDS/WEAR) 변환이 «한 곳에만» 있다
+         ③ 전 코드 모양이 남아 있지 않다 */
     expect(src).toContain("resolveNoticeCategory({");
-    /* 🔴 전 코드 모양이 남아 있으면 안 된다 — 남으면 판정이 두 벌이다. */
+    /* ② 변환·조립을 adapter 에 넘겼다 — builder 가 직접 갈라치지 않는다. */
+    expect(src).toContain("buildNaverNoticePayload(");
+    expect(src).not.toContain("naverNoticeTypeFor(");
+
+    /* 🔴 그 변환이 «실제로» adapter 에 있는지 본다. builder 에서 사라진 것만
+       확인하면 「어디에도 없다」와 구별되지 않는다 — 부정 단정에는 대조군을 둔다. */
+    const adapter = strip(readRepo("packages/listing/src/notice/channel-notice-adapters.ts"));
+    expect(adapter).toContain("naverNoticeTypeForKind");
+    expect(adapter).toContain('kind === "KIDS_APPAREL" ? "KIDS" : "WEAR"');
+
+    /* ③ 전 코드 모양이 남아 있으면 안 된다 — 남으면 판정이 두 벌이다. */
     expect(src).not.toContain("productInfoProvidedNotice: categoryRequiresChildCertification");
   });
 });
