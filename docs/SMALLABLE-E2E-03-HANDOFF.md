@@ -1,5 +1,64 @@
 # ③ Smallable 실상품 E2E — 실측 기록 (CTO 1차, 2026-10-11)
 
+## 🔴 LONG-SPRINT-03 재개 블록 (세션이 끊기면 여기부터)
+
+```
+CURRENT POSITION       ③ Smallable E2E — 결함 판정 단계
+LATEST COMMIT          f5bb9172
+PRODUCTION LIVE        4f8a1c5  (코드 변경 fc3e115 = D-OPT 반영됨)
+
+DONE                   P0.1 수집 · P0.3 옵션/재고 · P0.4/P0.5 승격 · P0.6 3채널 payload
+                       D-OPT 수정+배포 (fc3e115d)
+IN PROGRESS            D-LOT-STOCK 조사 — 🔴 아래 「되돌아본 사실」 때문에 보류
+BLOCKED                D-OPT·D-LOT-STOCK 이 «한 개의 정책 질문» 으로 합쳐졌다 → CPO 판정 필요
+KNOWN DEFECTS          D-LOT-STOCK(P0) · D-CARE · D-MODEL · COUPANG-NOTICE-SEMANTIC-LOSS-01
+NEXT EXACT ACTION      🔴 CPO 판정 먼저: 「원본·셀러 어디서도 재고를 모를 때 등록을
+                       막는가?」 — 막는다면 LotteON 도 Naver(D-OPT)와 같게 닫고,
+                       허용한다면 D-OPT 를 되돌린다. 둘 중 하나를 고른 «뒤» 에
+                       KNOWN_ZERO/SELLER_DEFAULT/UNKNOWN 3종 회귀를 쓴다.
+
+TEST                   d-opt 5 PASS · parity 16 PASS
+REGRESSION             495 files / 7438 passed · exit 0
+TYPECHECK              listing 5 = baseline · admin 0 · crawler 2
+BUILD                  PASS (static 104/104)
+DEPLOY                 PASS (4f8a1c5)
+SMOKE                  / 200 · /pipeline 307 · /settings 307
+CEO ACTION             없음 · 실등록 🔴 STOP
+```
+
+### 🔴🔴 되돌아본 사실 (TTAEJYO 13 커밋 확인, 2026-10-11)
+
+`0871a416`(2026-10-09) 커밋 메시지에 **이미 적혀 있었다**:
+
+> payload 는 바뀌지 않았다 — **전부 모르면 옵션 조합이 모두 빠지고 단일 상품으로
+> 나가며**, 그때 상품 재고는 기존 경로가 정한다.
+
+즉 내가 D-OPT 라고 부르며 막은 상태는 **앞 세션이 「이렇게 나간다」고 기록해 둔
+경로** 다. 내 수정은 순수한 버그픽스가 아니라 **동작 변경** 이다. 중요한 귀결:
+
+```
+Smallable 은 재고를 «한 칸도» 주지 않는다(smallable-size-options.ts:90, 앞 세션 실측)
+→ D-OPT 수정 뒤에는 Smallable 상품은 셀러가 「기본 재고 수량」을 넣기 «전까지»
+  네이버 등록이 막힌다
+```
+
+🟢 셀러 입력은 실제로 배선돼 있다(`SourceDataView.tsx:418` — 「이 옵션들은 N개로
+등록됩니다」). 그래서 막는 것이 셀러가 풀 수 있는 상태이긴 하다.
+🟢 기존 테스트 중 옛 경로를 고정한 것은 «없었다»(회귀 495/7438 green).
+
+🔴 그래도 **CPO 판정 없이 유지할 변경이 아니다.** 그리고 LotteON(D-LOT-STOCK)은
+같은 사실에 다르게 반응하므로, 둘은 **하나의 질문** 이다:
+
+```
+Q.  원본에도 셀러 기본값에도 재고가 없을 때 — 등록을 막는가?
+    (가) 막는다   → Naver 는 이미 그렇게 됐다(D-OPT). LotteON 도 같게 닫는다.
+                    대가: Smallable 류는 셀러가 기본 재고를 넣어야 등록된다.
+    (나) 허용한다 → D-OPT 를 되돌린다. 대가: 6사이즈가 단품으로, LotteON 은 품절로 등록된다.
+🔴 지금은 Naver 만 (가), LotteON 은 (나) 로 «어긋난 상태» 다. 그게 제일 나쁘다.
+```
+
+---
+
 > 🔴 **실제 상품 1건으로 운영 경로를 관통한 기록이다.** 손으로 만든 fixture 가
 > 아니다. 재조사하지 말고 이 숫자를 쓴다.
 
