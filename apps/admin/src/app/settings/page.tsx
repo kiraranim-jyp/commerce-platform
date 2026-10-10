@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 /* S-16 — 택배사 Common 하나 + 채널 Mapping. 셀러는 하나만 고른다. */
 import { COMMON_CARRIERS, findCommonCarrier } from "@commerce/shared";
 import { LotteOnDeliveryMapping } from "./LotteOnDeliveryMapping";
+import { EgressSection } from "./EgressSection";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
@@ -469,6 +470,20 @@ export default function SettingsPage() {
                 lotteOnAccountSaving={lotteOnAccountSaving}
                 onLotteOnAccountCleared={loadAll}
               />
+
+              {/* ══ EGRESS ⑤(2026-10-10) — 세 커머스가 «공유하는» 나가는 길 ══
+                  커머스별 아코디언 «밖» 에 둔다. 이 설정은 한 채널의 것이 아니라
+                  세 채널이 전부 지나가는 공통 경로이고(2026-10-10 에 셋이 동시에
+                  실패한 이유가 그것이다), 특정 채널 안에 넣으면 셀러가 그 채널만의
+                  문제로 읽는다. */}
+              <div className="mt-6">
+                <SectionHeader
+                  title="아웃바운드 연결"
+                  description="커머스 API 로 나가는 경로를 관리합니다 — 세 커머스가 같은 경로를 씁니다."
+                  className="mb-3"
+                />
+                <EgressSection />
+              </div>
             </div>
 
             {/* 배송 프로필/판매자 정보/가격 정책/상세페이지(공통이미지) 4개 탭이

@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
-import { fetch as naverFetch, FormData as UndiciFormData } from "undici";
+import { fetch as naverFetch, FormData as UndiciFormData, type ProxyAgent } from "undici";
 import type { NaverCredentials } from "./env";
-import { createOutboundProxyDispatcher, describeErrorCauseChain } from "@/lib/outbound-proxy";
+import { createOutboundProxyDispatcherAsync, describeErrorCauseChain } from "@/lib/outbound-proxy";
 
 const NAVER_OAUTH_TOKEN_URL = "https://api.commerce.naver.com/external/v1/oauth2/token";
 const NAVER_API_BASE = "https://api.commerce.naver.com/external";
@@ -40,8 +40,22 @@ export function buildClientSecretSign(clientId: string, clientSecret: string, ti
  * N-3.75(사용자 지시) — 여기서 직접 FIXIE_URL을 읽지 않고 공통 리졸버
  * (src/lib/outbound-proxy.ts, OCI_PROXY_URL 우선/FIXIE_URL 폴백)를 쓴다.
  * 프록시 URL 자체(사용자/비밀번호 포함 가능)는 절대 로그로 남기지 않는다.
+ *
+ * ── 🔴 EGRESS ③ (2026-10-10) — 모듈 상수에서 «요청 시점» 해석으로 ────────────
+ *
+ * 전에는 여기서 `const naverProxyDispatcher = createOutboundProxyDispatcher()`
+ * 로 **모듈 로드 시 한 번** 만들었다. 그 값은 그 lambda 인스턴스가 사는 동안
+ * 고정되므로, 셀러가 화면에서 provider 를 바꿔도 이미 로드된 이 모듈은 영원히
+ * 옛 프록시로 나간다 — 078 이 env 를 버리고 DB 로 간 이유(재배포 없이 전환)가
+ * 바로 여기서 무너진다.
+ *
+ * 🔴 그래서 매 요청마다 «고르기» 는 하되, ProxyAgent 자체는 URL 당 하나로
+ *    재사용한다(outbound-proxy.ts 의 dispatcherByUrl). 즉 연결 풀의 수명은
+ *    예전과 같고, 바뀐 것은 「어느 풀을 쓸지 언제 정하는가」뿐이다.
  */
-const naverProxyDispatcher = createOutboundProxyDispatcher();
+async function naverProxyDispatcher(): Promise<ProxyAgent | undefined> {
+  return createOutboundProxyDispatcherAsync();
+}
 
 const NAVER_REQUEST_TIMEOUT_MS = 20_000;
 
@@ -103,7 +117,7 @@ export async function issueNaverAccessToken(
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: body.toString(),
       signal: AbortSignal.timeout(NAVER_REQUEST_TIMEOUT_MS),
-      dispatcher: naverProxyDispatcher,
+      dispatcher: await naverProxyDispatcher(),
     });
   } catch (error) {
     return {
@@ -212,7 +226,7 @@ export async function uploadNaverProductImages(
       headers: { Authorization: `Bearer ${accessToken}` },
       body: formData,
       signal: AbortSignal.timeout(NAVER_REQUEST_TIMEOUT_MS),
-      dispatcher: naverProxyDispatcher,
+      dispatcher: await naverProxyDispatcher(),
     });
     let parsedBody: unknown = null;
     try {
@@ -277,10 +291,11 @@ export interface NaverApiError {
  * 그 프록시를 거쳐 나가는 IP를 알아낸다(naverProxyDispatcher가 공통 리졸버 결과다).
  */
 export async function getFixieOutboundIp(): Promise<string | null> {
-  if (!naverProxyDispatcher) return null;
+  const dispatcher = await naverProxyDispatcher();
+  if (!dispatcher) return null;
   try {
     const res = await naverFetch("https://api.ipify.org?format=json", {
-      dispatcher: naverProxyDispatcher,
+      dispatcher,
       signal: AbortSignal.timeout(NAVER_REQUEST_TIMEOUT_MS),
     });
     const body = (await res.json()) as { ip?: string };
@@ -314,7 +329,7 @@ export async function callNaverApi(
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(NAVER_REQUEST_TIMEOUT_MS),
-      dispatcher: naverProxyDispatcher,
+      dispatcher: await naverProxyDispatcher(),
     });
     let parsedBody: unknown = null;
     try {

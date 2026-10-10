@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getNaverCredentials, getNaverSellerIdForDisplay } from "../_lib/env";
 import { callNaverApi, getFixieOutboundIp, issueNaverAccessToken } from "../_lib/client";
 import { classifyHttpStatus, classifyNetworkError, missingFieldError } from "@/lib/connection-error";
-import { getOutboundProxyDiagnostics } from "@/lib/outbound-proxy";
+import { getOutboundProxyDiagnosticsAsync } from "@/lib/outbound-proxy";
 
 /**
  * "네이버 커머스 API 연결 상태" 확인용 — Sprint N-1.0 범위는 "인증되고 API를
@@ -35,7 +35,7 @@ export async function POST() {
     return NextResponse.json({
       status: "AUTH_FAILED",
       message: tokenResult.message,
-      proxyProvider: getOutboundProxyDiagnostics().provider,
+      proxyProvider: (await getOutboundProxyDiagnosticsAsync()).provider,
       ...(classifyHttpStatus(httpStatus, "네이버") ?? classifyNetworkError(new Error(tokenResult.message))),
       // client_secret/access token 값 자체는 절대 포함하지 않는다 — 실패
       // 단계(step)와 HTTP 상태, 네이버 응답 원문(시크릿 아님)만 진단용으로 내려준다.
@@ -43,7 +43,7 @@ export async function POST() {
         step: tokenResult.step,
         httpStatus,
         naverResponse: "body" in tokenResult ? tokenResult.body : undefined,
-        proxyProvider: getOutboundProxyDiagnostics().provider,
+        proxyProvider: (await getOutboundProxyDiagnosticsAsync()).provider,
         causeChain: "causeChain" in tokenResult ? tokenResult.causeChain : undefined,
       },
     });
@@ -54,7 +54,7 @@ export async function POST() {
     return NextResponse.json({
       status: "AUTH_FAILED",
       message: apiResult.message,
-      proxyProvider: getOutboundProxyDiagnostics().provider,
+      proxyProvider: (await getOutboundProxyDiagnosticsAsync()).provider,
       ...classifyNetworkError(new Error(apiResult.message)),
       debug: { step: apiResult.step },
     });
@@ -64,13 +64,13 @@ export async function POST() {
     return NextResponse.json({
       status: "AUTH_FAILED",
       message: "네이버가 API 호출을 거부했습니다 — 토큰은 발급됐지만 이 API에 대한 권한이 없거나 IP가 허용목록에 없을 수 있습니다.",
-      proxyProvider: getOutboundProxyDiagnostics().provider,
+      proxyProvider: (await getOutboundProxyDiagnosticsAsync()).provider,
       ...(classifyHttpStatus(apiResult.status, "네이버") ?? classifyNetworkError(new Error("permission or IP"))),
       debug: {
         step: "API_PERMISSION_OR_IP",
         httpStatus: apiResult.status,
         naverResponse: apiResult.body,
-        proxyProvider: getOutboundProxyDiagnostics().provider,
+        proxyProvider: (await getOutboundProxyDiagnosticsAsync()).provider,
       },
     });
   }
@@ -79,7 +79,7 @@ export async function POST() {
   return NextResponse.json({
     status: "CONNECTED",
     message: "네이버 커머스 API 인증 및 호출에 성공했습니다.",
-    proxyProvider: getOutboundProxyDiagnostics().provider,
+    proxyProvider: (await getOutboundProxyDiagnosticsAsync()).provider,
     debug: {
       httpStatus: apiResult.status,
       expiresIn: tokenResult.expiresIn,

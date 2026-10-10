@@ -1,5 +1,5 @@
-import { fetch as lotteOnFetch } from "undici";
-import { createOutboundProxyDispatcher, describeErrorCauseChain } from "@/lib/outbound-proxy";
+import { fetch as lotteOnFetch, type ProxyAgent } from "undici";
+import { createOutboundProxyDispatcherAsync, describeErrorCauseChain } from "@/lib/outbound-proxy";
 import { assertLotteOnEndpointAllowed } from "./forbidden-endpoints";
 
 /**
@@ -35,8 +35,18 @@ const LOTTEON_ONPICK_BASE = "https://onpick-api.lotteon.com";
 const LOTTEON_REQUEST_TIMEOUT_MS = 20_000;
 
 /** 네이버/쿠팡 client.ts와 동일 — setGlobalDispatcher를 쓰지 않고 이 파일 전용
- * dispatcher만 만든다(다른 채널 요청 풀과 완전히 분리). */
-const lotteOnProxyDispatcher = createOutboundProxyDispatcher();
+ * dispatcher만 만든다(다른 채널 요청 풀과 완전히 분리).
+ *
+ * ── 🔴 EGRESS ③ (2026-10-10) — 모듈 상수에서 «요청 시점» 해석으로 ────────────
+ * 네이버/쿠팡과 같은 변경이다. 모듈 로드 시 한 번 만들면 셀러의 전환이 이미
+ * 로드된 모듈에 영원히 반영되지 않는다. ProxyAgent 는 URL 당 재사용되므로
+ * 「이 파일 전용 풀」이라는 위 원칙은 그대로다.
+ *
+ * 🔴 롯데ON 은 이 경로에서 CONNECT 가 유독 느렸다(아래 측정 주석). provider 를
+ *    고를 수 있다는 것이 가장 실질적으로 쓰이는 채널이기도 하다. */
+async function lotteOnProxyDispatcher(): Promise<ProxyAgent | undefined> {
+  return createOutboundProxyDispatcherAsync();
+}
 
 /** 조사 §5-1 — 문서가 명시한 필수 헤더. */
 function buildHeaders(apiKey: string, hasBody: boolean): Record<string, string> {
@@ -128,7 +138,7 @@ async function request(
       headers: buildHeaders(apiKey, body !== undefined),
       body: body !== undefined ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(LOTTEON_REQUEST_TIMEOUT_MS),
-      dispatcher: lotteOnProxyDispatcher,
+      dispatcher: await lotteOnProxyDispatcher(),
     });
 
     let parsed: unknown = null;
@@ -176,10 +186,11 @@ export function callLotteOnPickApi(
 /** 실제 아웃바운드 IP(= 롯데ON IP allowlist에 등록해야 할 값). 네이버
  * getFixieOutboundIp와 같은 목적/같은 dispatcher 원칙. */
 export async function getLotteOnOutboundIp(): Promise<string | null> {
-  if (!lotteOnProxyDispatcher) return null;
+  const dispatcher = await lotteOnProxyDispatcher();
+  if (!dispatcher) return null;
   try {
     const res = await lotteOnFetch("https://api.ipify.org?format=json", {
-      dispatcher: lotteOnProxyDispatcher,
+      dispatcher,
       signal: AbortSignal.timeout(LOTTEON_REQUEST_TIMEOUT_MS),
     });
     const body = (await res.json()) as { ip?: string };

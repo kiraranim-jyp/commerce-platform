@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getOutboundProxyDiagnostics } from "@/lib/outbound-proxy";
+import { getOutboundProxyDiagnosticsAsync } from "@/lib/outbound-proxy";
 import { getLotteOnCredentials } from "./env";
 import { callLotteOnApi, callLotteOnPickApi, type LotteOnApiError, type LotteOnApiResponse } from "./client";
 import {
@@ -97,7 +97,11 @@ export async function runLotteOnRead(options: {
 }): Promise<{ ok: true; result: LotteOnApiResponse } | { ok: false; response: NextResponse }> {
   const startedAt = Date.now();
   const step = options.step ?? null;
-  const proxyProvider = getOutboundProxyDiagnostics().provider;
+  /* 🔴 EGRESS ③ — 실패 꼬리표의 provider 는 «실제로 나간» 쪽이어야 한다.
+     동기 진단은 env 만 보므로, 셀러가 DB 로 전환한 뒤에도 옛 provider 이름을
+     보고한다. 그러면 화면이 「OCI 가 실패했다」고 말하는데 실제로는 FIXIE 로
+     나간 상황이 생긴다 — 장애 진단을 정면으로 망치는 거짓말이다. */
+  const proxyProvider = (await getOutboundProxyDiagnosticsAsync()).provider;
   /** 실패 응답마다 똑같이 붙는 꼬리표. 성공 응답에는 붙지 않는다. */
   const context = (): LotteOnReadFailureContext => ({
     step,

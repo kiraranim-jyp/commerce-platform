@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { classifyNetworkError, missingFieldError } from "@/lib/connection-error";
-import { getOutboundProxyDiagnostics } from "@/lib/outbound-proxy";
+import { getOutboundProxyDiagnosticsAsync } from "@/lib/outbound-proxy";
 import { getLotteOnCredentials } from "../_lib/env";
 import { callLotteOnApi, getLotteOnOutboundIp, LOTTEON_READ_PATHS } from "../_lib/client";
 import { classifyLotteOnHttpStatus, classifyLotteOnReturnCode } from "../_lib/connection-error";
@@ -34,7 +34,7 @@ export async function POST() {
     path: LOTTEON_READ_PATHS.identity,
   });
 
-  const proxy = getOutboundProxyDiagnostics();
+  const proxy = (await getOutboundProxyDiagnosticsAsync());
 
   if (!result.ok) {
     return NextResponse.json({

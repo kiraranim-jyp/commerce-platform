@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getOutboundProxyDiagnostics } from "@/lib/outbound-proxy";
+import { getOutboundProxyDiagnosticsAsync } from "@/lib/outbound-proxy";
 
 /**
  * N-3.75 STEP4(사용자 지시) — Naver/Coupang을 실제로 호출하기 전에 "지금
@@ -9,5 +9,5 @@ import { getOutboundProxyDiagnostics } from "@/lib/outbound-proxy";
  * host/port만 파싱해서 돌려준다).
  */
 export async function GET() {
-  return NextResponse.json(getOutboundProxyDiagnostics());
+  return NextResponse.json((await getOutboundProxyDiagnosticsAsync()));
 }

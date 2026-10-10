@@ -1,7 +1,7 @@
-import { fetch as coupangFetch } from "undici";
+import { fetch as coupangFetch, type ProxyAgent } from "undici";
 import { signCoupangRequest } from "./signing";
 import type { CoupangCredentials } from "./env";
-import { createOutboundProxyDispatcher } from "@/lib/outbound-proxy";
+import { createOutboundProxyDispatcherAsync } from "@/lib/outbound-proxy";
 
 const COUPANG_API_BASE = "https://api-gateway.coupang.com";
 
@@ -16,8 +16,17 @@ const COUPANG_API_BASE = "https://api-gateway.coupang.com";
  * N-3.75(사용자 지시) — 여기서 직접 FIXIE_URL을 읽지 않고 공통 리졸버
  * (src/lib/outbound-proxy.ts, OCI_PROXY_URL 우선/FIXIE_URL 폴백)를 쓴다.
  * 프록시 URL 자체는 절대 로그로 남기지 않는다(시크릿과 마찬가지로 취급).
+ *
+ * ── 🔴 EGRESS ③ (2026-10-10) — 모듈 상수에서 «요청 시점» 해석으로 ────────────
+ *
+ * 모듈 로드 시 한 번 만들면 그 lambda 인스턴스는 평생 그 프록시로 나간다.
+ * 셀러가 화면에서 전환해도 반영되지 않으므로(078 이 DB 로 간 이유가 그것이다)
+ * 「어느 프록시를 쓸지」를 요청 시점에 정한다. ProxyAgent 자체는 URL 당 하나로
+ * 재사용되므로 연결 풀의 수명·분리 원칙은 위 설명 그대로다.
  */
-const coupangProxyDispatcher = createOutboundProxyDispatcher();
+async function coupangProxyDispatcher(): Promise<ProxyAgent | undefined> {
+  return createOutboundProxyDispatcherAsync();
+}
 
 /** 이전에는 타임아웃이 전혀 없어 응답이 올 때까지 무한 대기했다 — 프록시를 거치면
  * 왕복이 더 걸릴 수 있어, Vercel 함수 자체 제한에 걸려 죽기 전에 명확한 네트워크
@@ -80,7 +89,7 @@ export async function callCoupangApi(
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
     signal: AbortSignal.timeout(COUPANG_REQUEST_TIMEOUT_MS),
-    dispatcher: coupangProxyDispatcher,
+    dispatcher: await coupangProxyDispatcher(),
   });
 
   let parsedBody: unknown = null;
