@@ -17,10 +17,18 @@ IN PROGRESS            —
 BLOCKED                —
 KNOWN DEFECTS          D-MODEL · COUPANG-NOTICE-SEMANTIC-LOSS-01
                        backlog: 「Wash at 40°C」·「Cold wash」 등 다른 어순(실측 근거 생기면)
-NEXT EXACT ACTION      🔴 D-MODEL 은 조사 끝 — «결함이 아니다»(CPO P5.6 P0-4/5 그대로).
-                       문서 맨 아래 「D-MODEL INVESTIGATION」 §8 의 정책 질문 2개에
-                       CPO 판정을 받는다. 판정 뒤 Commerce 최종 E2E(대표 상품 3~5개)
-                       → 회귀/배포/smoke → COMMERCE CLOSE → MI 국내 SAME 으로.
+NEXT EXACT ACTION      ① Commerce 최종 E2E (대표 상품 3~5개 · 3채널 payload 재생성)
+                       → 회귀/배포/smoke → COMMERCE CLOSE
+                       ② 그 뒤 MI-P0 Replay 하니스 1개
+                       🟢 GEMINI_API_KEY 는 scripts/.env 에 «있다»(실측 READY,
+                          실제 호출 1회 성공 — 후보 6건+ 반환)
+                       🔴 단 Gemini 는 URL+도메인+rank «만» 준다 —
+                          snippet/priceHint 전건 null. 가격·이미지는 Light Fetch 로
+                          채우는 설계여야 한다(CPO Step 3 전제 수정 필요)
+                       🔴 깊은 import · discover(identity, query) 인자 둘 ·
+                          resolveCandidate 필수(grounding URL 은 리다이렉트다)
+                       🔴 D-MODEL Q1/Q2 는 CPO 가 「MI 를 막지 않는다」로 처리 —
+                          Commerce 최종 E2E 에서 payload 확인, Q2 는 Known Unknown
 
 TEST                   d-care 12 · d-lot-stock 10 · d-opt 5 · parity 16 — 전부 PASS
 REGRESSION             497 files / 7461 passed · exit 0
