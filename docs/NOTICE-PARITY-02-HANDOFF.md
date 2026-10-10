@@ -1,7 +1,14 @@
 # ② 3-Commerce Semantic Notice Parity — 착수점 (기준 `8a6733e8`, 2026-10-10)
 
-> 🔴 **새 세션은 이 문서부터 읽고 ②-1 로 들어간다.** 아래 「확보된 근거」는
-> 재조사 금지다. 그리고 **②-3 에는 CPO 판정이 필요한 막힘이 하나 있다**(§3).
+> 🔴 **새 세션은 이 문서부터 읽고 §3.6 → §4 의 ②-2 로 들어간다.**
+> 조사부터 다시 하지 않는다 — 입력 상수(§3.6)와 근거(§1~3)는 **재조사 금지** 다.
+>
+> 🔴 **순서가 고정돼 있다(§4).** ⑤ 실제 payload 3개를 손에 쥐기 «전에» 비교
+> 테스트를 쓰지 않는다. 그리고 §4 의 **금지 6항** 을 먼저 읽는다 —
+> 그중 둘은 내가 이 배치에서 실제로 걸린 것이다(§3.7 · §6).
+>
+> 🟢 쿠팡 `required` 는 **CPO 판정 (A)** 로 `UNKNOWN` 유지가 확정됐다(§3.5).
+> 더 묻지 않는다. 🔴 **UNKNOWN 을 PASS 로 적지 않는다.**
 
 ---
 
@@ -84,7 +91,7 @@ LotteON   lotteon/__tests__/build-payload.test.ts
 
 ---
 
-## 3. 🔴🔴 ②-3 막힘 — 쿠팡 `required` 에 «실측 근거가 없다» (CPO 판정 필요)
+## 3. 🔴 쿠팡 `required` 에 «실측 근거가 없다» (조사 결과 · 판정은 §3.5 에서 완료)
 
 지시서 ②-3 은 「실제 channel metadata 구조에서 확인 가능한 것만 fixture 화 ·
 **required 를 추정하지 않는다** · 확인할 수 없는 항목은 FAIL/CLOSED」다.
@@ -122,7 +129,7 @@ LotteON   lotteon/__tests__/build-payload.test.ts
 ② 공식 문서       developers.coupang.com — 인증 필요 영역이다.
 ```
 
-### CPO 가 고를 것 (둘 중 하나)
+### CPO 가 고른 것 → 🟢 **(A)** (§3.5). 아래는 그 판단의 근거 기록이다
 
 ```
 (A) 쿠팡 required parity 를 UNKNOWN 으로 «남기고» ② 를 진행한다
@@ -222,7 +229,52 @@ LotteON buildLotteOnPayload({ product, channel, detailHtml })
 
 ---
 
-## 4. ② 착수 순서 (CPO 판정 후)
+## 4. 🔴🔴 ② 착수 순서 — **CPO 가 고정했다** (2026-10-10)
+
+순서를 바꾸지 않는다. 특히 ⑥을 ⑤보다 먼저 하지 않는다.
+
+```
+① 동일 CanonicalProduct / ListingModel fixture
+        ↓
+② SmartStore builder «실제» 호출
+        ↓
+③ Coupang builder «실제» 호출
+        ↓
+④ LotteON builder «실제» 호출
+        ↓
+⑤ 실제 payload 3개 확보          ← 🔴 여기까지 오기 전에 비교를 쓰지 않는다
+        ↓
+⑥ semantic parity 비교 테스트 작성
+        ↓
+⑦ 음성 대조
+        ↓
+⑧ 전체 회귀 → build → deploy → smoke
+```
+
+### 🔴 금지 6항 (CPO 명시)
+
+```
+❌ adapter 만 비교하고 parity 라고 부르기        ← 내가 실제로 그렇게 쓰다 지웠다(§3.7)
+❌ builder 를 mock 해서 parity 라고 부르기
+❌ 손으로 만든 noticeArticles 를 expected payload 로 사용하기
+❌ Coupang required 를 추정해서 PASS 처리하기
+❌ 기대값과 실제값을 «같은 함수» 에서 생성하기   ← ①에서 걸렸다(순환이라 순서
+                                                 변조를 못 잡았다)
+❌ 실제 payload 를 확보하기 «전에» 비교 테스트부터 작성하기
+```
+
+### 쿠팡 판정 표기 (그대로 적는다)
+
+```
+구조            PASS
+값 보존         PASS
+semantic mapping PASS
+required        UNKNOWN      🔴 UNKNOWN 은 PASS 가 아니다
+```
+
+---
+
+## 4.1 ② 세부 (판정 (A) 반영)
 
 ```
 ②-1  공용 fixture 추출 — field() + CanonicalProduct/ListingModel 두 개만
