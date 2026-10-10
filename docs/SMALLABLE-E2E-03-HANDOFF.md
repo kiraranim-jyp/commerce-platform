@@ -24,6 +24,10 @@ BUILD                  PASS (static 104/104)
 DEPLOY                 PASS (4f8a1c5)
 SMOKE                  / 200 · /pipeline 307 · /settings 307
 CEO ACTION             없음 · 실등록 🔴 STOP
+CEO TEST SCENARIO      docs/NOTICE-PARITY-02-HANDOFF.md §8 — 확인 항목 12개
+                       🔴 ② 가 PARTIAL CLOSED 돼도 그 12항은 «그대로 유효하다».
+                          ②③④ 전부 끝나고 CPO 검토 뒤 «한 번» 전달한다.
+                          (TTAEJYO 13 의 산출물이다 — 포인터가 끊겨 있던 것을 복구)
 ```
 
 ### 🔴🔴 되돌아본 사실 (TTAEJYO 13 커밋 확인, 2026-10-11)

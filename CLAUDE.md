@@ -302,6 +302,8 @@ docs/SMALLABLE-E2E-03-HANDOFF.md 를 읽는다 — ③ 가 진행 중이다.
 🔴 ② 는 PARTIAL CLOSED 다(재구현 금지). 쿠팡 고시 2건은 별도 backlog
    COUPANG-NOTICE-SEMANTIC-LOSS-01 로 분리됐다 — ③ 와 섞지 않는다.
 🔴 실등록은 STOP 이다.
+🔴 CEO 최종 테스트 시나리오(확인 12항)는 docs/NOTICE-PARITY-02-HANDOFF.md §8 에
+   있다 — 스프린트가 넘어가도 «유효하다». 포인터를 옮길 때 같이 끌고 간다.
 ```
 
 ### 🔴 자동 로드는 «둘» 이다 — 충돌하면 이 문서가 이긴다 (CPO 확정 2026-10-10)
