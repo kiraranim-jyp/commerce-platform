@@ -324,6 +324,9 @@ const NAVER_FIELD_LABEL: Record<string, string> = {
   productCertificationInfos: "인증정보(KC)",
   "productCertificationInfos[].certificationNumber": "인증서 번호(KC)",
   "detailAttribute.optionInfo": "옵션 정보",
+  /* ③ D-OPT — 🔴 이 줄이 없으면 아래 P2-1 A 경고 그대로 셀러 화면에 날것 경로가
+     뜬다. 「옵션 정보」와 «다른 이름» 이어야 한다 — 셀러가 둘을 구별해야 한다. */
+  "detailAttribute.optionInfo.optionCombinations": "옵션별 재고",
   "detailAttribute.optionInfo.optionCombinations[].optionName": "옵션 값",
   "detailAttribute.originAreaInfo.originAreaCode": "원산지",
   /* P2-1 A — 🔴 이 한 줄이 없으면 `naverFieldLabel()` 의 `?? field` 폴백이 걸려서
@@ -455,6 +458,11 @@ function naverFieldSectionId(field: string): string | undefined {
      라벨은 이미 「재고」로 있었는데 sectionId 만 없어서, 위 salePrice 가
      N-3.55 에서 겪은 것과 똑같이 «눌러도 안 움직이는» 항목이었다. */
   if (field === "originProduct.stockQuantity") return "section-options";
+  /* ③ D-OPT(2026-10-11) — 옵션별 재고가 0건으로 떨어진 경우. 바로 위 재고와
+     «같은 자리» 다(셀러가 「기본 재고 수량」을 넣는 칸이 거기에 있다).
+     🔴 추측이 아니라 기존 사용처다 — 이 줄이 없으면 `readiness.test.ts` 의
+     dead-end 계약이 깨진다(실제로 추가하자마자 그 테스트가 잡았다). */
+  if (field === "detailAttribute.optionInfo.optionCombinations") return "section-options";
   // REWORK-5 ②(CEO 지시, 2026-09-14) — 지금까지 이 필드에는 sectionId도
   // externalHref도 없었다. 그래서 describePriorityItem()이 action:null을
   // 돌려줬고, 우선순위 카드에 **[이동] 버튼 자체가 그려지지 않았다**(안내

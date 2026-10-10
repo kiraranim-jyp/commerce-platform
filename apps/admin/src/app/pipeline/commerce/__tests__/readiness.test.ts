@@ -115,6 +115,10 @@ describe("computeNaverPayloadReadiness — 필드→섹션 네비게이션 계�
       "productCertificationInfos[].certificationNumber",
       "productInfoProvidedNotice(KIDS).certificationType",
       "productInfoProvidedNotice(WEAR).certificationType",
+      /* ③ D-OPT(2026-10-11) — 위 주석이 「새 required 필드를 추가하는 PR 은 여기도
+         함께 갱신해야 한다」고 적어 둔 그 줄이다. 지난번엔 지키지 못했다(dfe3e9b).
+         이번에는 지킨다. */
+      "detailAttribute.optionInfo.optionCombinations",
     ];
     const validation = makeValidation(representativeFields.map((field) => fieldCheck({ field })));
     const summary = computeNaverPayloadReadiness(validation);

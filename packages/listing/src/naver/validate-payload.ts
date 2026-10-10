@@ -805,6 +805,33 @@ export function validateNaverPayload(
   const hasOptions = hasRealProductOptions(product);
   if (hasOptions) {
     const combos = originProduct.detailAttribute?.optionInfo?.optionCombinations ?? [];
+    /* ══ ③ P0.3 D-OPT(2026-10-11, 실제 Smallable 상품으로 발견) ══════════════
+       **「옵션 그룹은 선언됐는데 조합이 0개」인 payload 가 그대로 통과했다.**
+
+       `hasRealProductOptions` 는 그 상황을 막으려고 만든 가드인데
+       `variants.length === 0` «만» 본다(build-payload.ts:445). 그런데 P5.6 에서
+       옵션별 재고 규칙이 들어오면서 경로가 하나 더 생겼다 —
+       `variantStockWithSellerDefault` 가 `null` 이면 그 조합을 «빼낸다»
+       (0 으로 메우면 팔 수 있는 옵션이 품절로 등록되기 때문이다). 그래서
+       variants 가 6건이어도 조합이 0건이 될 수 있고, 그 경로는 가드보다 뒤에 있다.
+
+       실측(Smallable 430632, 사이즈 6개 · 원본 재고 미확인):
+         hasRealProductOptions  true
+         optionGroupName1       "사이즈"
+         optionCombinations     []        ← 전부 빠졌다
+         stockQuantity          999       ← READY 로 통과했다
+       → 6사이즈 상품이 «단품 999» 처럼 등록 시도된다.
+
+       🔴 여기서 재고를 숫자로 메우지 않는다. 막고, 셀러가 풀 수 있는 길을 적는다. */
+    if (combos.length === 0) {
+      check(
+        fields,
+        "detailAttribute.optionInfo.optionCombinations",
+        false,
+        "MISSING",
+        "옵션 그룹은 선언됐는데 보낼 옵션 조합이 0개입니다 — 원본에서 옵션별 재고를 확인하지 못했습니다. Settings의 「기본 재고 수량」을 입력하면 조합이 복구됩니다(재고를 0이나 999로 임의로 메우지 않습니다).",
+      );
+    }
     const negativeFinalPriceCombos = combos.filter((c) => originProduct.salePrice + c.price < 0);
     if (negativeFinalPriceCombos.length > 0) {
       blocked(
