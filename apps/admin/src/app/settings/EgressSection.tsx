@@ -85,6 +85,16 @@ type Report = {
   connect: Stage;
   outbound: Stage;
   outboundIp: string | null;
+  connectStatusCode: number | null;
+  connectAuthScheme: string | null;
+  sentAuthHeader: boolean;
+  /**
+   * 🔴 407 의 «조치» 를 한 문장으로. 두 경우가 같은 407 로 보이기 때문에
+   * 이 문구가 없으면 셀러도 CTO 도 어디를 고쳐야 하는지 모른다:
+   *     인증 정보가 불완전하다  → 연결 주소 설정을 고친다
+   *     보냈는데 거절당했다     → 프록시 계정/한도를 확인한다
+   */
+  refusalReason: string | null;
   totalElapsedMs: number;
   checkedAt: string;
 };
@@ -361,6 +371,13 @@ export function EgressSection() {
                 : "연결을 확인했습니다. (설정은 바뀌지 않았습니다)"
               : (result.error ?? "확인에 실패했습니다.")}
           </p>
+          {/* 🔴 「거절됐다」만 보여주면 셀러는 아무것도 할 수 없다. 어디를
+              고쳐야 하는지가 같이 서야 한다(CPO 지시 ④). */}
+          {result.report?.refusalReason && (
+            <p className="mt-1 text-[11px] text-warning" data-egress-refusal-reason="true">
+              {result.report.refusalReason}
+            </p>
+          )}
           {result.report && (
             <table className="mt-2 w-full text-left text-[11px]" data-egress-stages="true">
               <tbody>

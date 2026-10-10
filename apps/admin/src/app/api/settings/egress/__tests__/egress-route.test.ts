@@ -18,6 +18,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const checkEgressHealth = vi.fn();
 const recordEgressHealth = vi.fn();
+const explainConnectRefusal = vi.fn();
 const readEgressSelection = vi.fn();
 const writeEgressSelection = vi.fn();
 const readEgressLog = vi.fn();
@@ -28,6 +29,7 @@ const configuredEgressProviders = vi.fn();
 vi.mock("@/lib/egress-health", () => ({
   checkEgressHealth: (...a: unknown[]) => checkEgressHealth(...a),
   recordEgressHealth: (...a: unknown[]) => recordEgressHealth(...a),
+  explainConnectRefusal: (...a: unknown[]) => explainConnectRefusal(...a),
 }));
 
 vi.mock("@/lib/egress-settings", () => ({
@@ -83,6 +85,7 @@ beforeEach(() => {
   for (const fn of [
     checkEgressHealth,
     recordEgressHealth,
+    explainConnectRefusal,
     readEgressSelection,
     writeEgressSelection,
     readEgressLog,
@@ -102,6 +105,8 @@ beforeEach(() => {
   readEgressLog.mockResolvedValue({ entries: [], store: "READY" });
   configuredEgressProviders.mockReturnValue(["OCI", "FIXIE"]);
   recordEgressHealth.mockResolvedValue({ logged: true });
+  /* 🔴 기본은 null — 「거절이 아니면 문구를 만들지 않는다」가 기본 상태다. */
+  explainConnectRefusal.mockReturnValue(null);
   writeEgressSelection.mockResolvedValue({ ok: true });
 });
 

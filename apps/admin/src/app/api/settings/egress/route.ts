@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import {
   checkEgressHealth,
+  explainConnectRefusal,
   recordEgressHealth,
   type EgressHealthReport,
   type EgressHealthVerdict,
@@ -112,6 +113,16 @@ function publicReport(report: EgressHealthReport) {
     connect: report.connect,
     outbound: report.outbound,
     outboundIp: report.outboundIp,
+    /* 🔴 407 과 403 은 다른 조치다 — 상태코드를 뭉개지 않는다. */
+    connectStatusCode: report.connectStatusCode,
+    /* scheme 토큰만. realm 은 egress-health 가 이미 버렸다. */
+    connectAuthScheme: report.connectAuthScheme,
+    /* 🔴 자격증명의 «모양» 만. 값도 길이도 나가지 않는다 —
+       이것이 「우리 설정 문제」와 「계정 문제」를 가르는 유일한 단서다. */
+    credential: report.credential,
+    sentAuthHeader: report.sentAuthHeader,
+    /** 조치를 한 문장으로. 거절이 아니면 null 이다. */
+    refusalReason: explainConnectRefusal(report),
     totalElapsedMs: report.totalElapsedMs,
     checkedAt: report.checkedAt,
   };

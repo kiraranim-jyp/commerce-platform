@@ -76,6 +76,14 @@ export type EgressHealthReport = {
   outbound: EgressStageResult;
   /** 외부에서 보이는 우리 IP. 채널 allowlist 등록에 쓰는 값이고 비밀이 아니다. */
   outboundIp: string | null;
+  /** 🔴 CONNECT 가 거절됐을 때 그 «상태코드». 407 과 403 은 다른 조치다. */
+  connectStatusCode: number | null;
+  /** `Proxy-Authenticate` scheme 토큰만(realm 은 버린다). */
+  connectAuthScheme: string | null;
+  /** 🔴 값이 아니라 «모양» — 407 이 우리 설정 문제인지 계정 문제인지 가른다. */
+  credential: ProxyCredentialShape;
+  /** 이 시도에서 Proxy-Authorization 을 보냈는가. */
+  sentAuthHeader: boolean;
   totalElapsedMs: number;
   checkedAt: string;
 };
@@ -126,12 +134,189 @@ async function probeTcp(host: string, port: number): Promise<EgressStageResult> 
 }
 
 /**
- * ② CONNECT — 프록시가 터널을 세워 주는가.
+ * ══════════════════════════════════════════════════════════════════════════════
+ * 자격증명의 «모양» — 🔴 값을 읽지 않고 407 의 원인을 가른다 (CPO 지시 ①③④)
+ * ══════════════════════════════════════════════════════════════════════════════
  *
- * 🔴 undici 는 CONNECT 단계만 따로 노출하지 않는다. 그래서 「프록시를 거치는
- *    최소 요청」을 보내고, **실패가 프록시 계층에서 났는지** 를 원인 체인으로
- *    판정한다. 터널이 서지 않으면 외부 응답은 애초에 오지 않으므로, 이 단계의
- *    실패는 ③을 `SKIPPED` 로 남긴다 — NULL 은 「거기까지 가지 못했다」다(078).
+ * 2026-10-10 Production 측정: OCI 는 정상이고 **FIXIE 만 CONNECT 407** 이었다.
+ * 그리고 자격증명이 «필요한» provider 는 FIXIE 하나다(OCI 는 익명 프록시다).
+ *
+ * 그래서 407 의 원인이 둘로 갈린다. **화면에서는 똑같이 407 로 보인다**:
+ *
+ *     ⓐ 자격증명을 «보내지 못했다»   — FIXIE_URL 에 비밀번호 부분이 없거나
+ *                                     파싱이 깨졌다 → 우리 설정 문제
+ *     ⓑ 보냈는데 «거절당했다»        — 자격증명 만료 / 사용량 상한
+ *                                     → Fixie 계정 문제(CEO 사안)
+ *
+ * 🔴 undici 7.29.0 은 URL 의 userinfo 를 제대로 Basic 헤더로 바꾼다
+ *    (proxy-agent.js:126 `else if (username && password)`). 즉 「우리가 안
+ *    보낸다」가 기본값은 아니다. **다만 그 조건이 «둘 다» 다** — 사용자명만
+ *    있으면 헤더가 아예 붙지 않고, 그 결과는 ⓑ와 구별되지 않는 407 이다.
+ *
+ * 🔴 그래서 **값을 읽는 대신 모양만 보고한다.** CTO 는 Production Sensitive
+ *    값을 읽을 수 없고, 읽을 필요도 없다 — 필요한 것은 「비밀번호 부분이 실제로
+ *    들어 있는가」라는 boolean 하나다.
+ */
+export type ProxyCredentialShape = {
+  /** 이 provider 가 자격증명을 들고 있는가(둘 중 하나라도). */
+  present: boolean;
+  hasUsername: boolean;
+  /** 🔴 이 값이 `false` 인데 407 이면 **우리 설정 문제** 다. */
+  hasPassword: boolean;
+  /** userinfo 가 URL 인코딩으로 깨져 있는가 — decodeURIComponent 가 던지는 경우. */
+  decodable: boolean;
+  /** 🔴 undici 가 Proxy-Authorization 을 실제로 붙이는 조건을 그대로 복제한다. */
+  willSendAuthHeader: boolean;
+};
+
+/** 🔴 값은 한 글자도 돌려주지 않는다. 길이도 돌려주지 않는다(추측 재료가 된다). */
+export function describeCredentialShape(url: string): ProxyCredentialShape {
+  const empty: ProxyCredentialShape = {
+    present: false,
+    hasUsername: false,
+    hasPassword: false,
+    decodable: true,
+    willSendAuthHeader: false,
+  };
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { ...empty, decodable: false };
+  }
+  const hasUsername = parsed.username.length > 0;
+  const hasPassword = parsed.password.length > 0;
+  let decodable = true;
+  try {
+    decodeURIComponent(parsed.username);
+    decodeURIComponent(parsed.password);
+  } catch {
+    decodable = false;
+  }
+  return {
+    present: hasUsername || hasPassword,
+    hasUsername,
+    hasPassword,
+    decodable,
+    /* undici proxy-agent.js:126 과 같은 조건이다. 여기서 흉내 내는 것이 아니라
+       «그 조건을 그대로» 적어야 한다 — 다르면 이 보고가 거짓말이 된다. */
+    willSendAuthHeader: hasUsername && hasPassword,
+  };
+}
+
+/**
+ * ② CONNECT — 프록시가 터널을 세워 주는가. **직접 말해 본다.**
+ *
+ * 🔴 전에는 undici fetch 의 실패 원인 체인으로 이 단계를 «추정» 했다. 그러면
+ *    상태코드도 인증 scheme 도 알 수 없어서 407 이 ⓐ인지 ⓑ인지 가를 수 없다.
+ *    그래서 CONNECT 를 직접 보내고 응답의 첫 줄과 `Proxy-Authenticate` 를 읽는다.
+ *
+ * 🔴 **로그·응답에 남기는 것은 상태코드와 인증 scheme 토큰뿐이다**(CPO 지시 ④).
+ *    realm 값도 버린다 — 계정/조직 이름이 섞여 나올 수 있다.
+ */
+function parseProxyAuthScheme(head: string): string | null {
+  const line = head.split(/\r?\n/).find((l) => /^proxy-authenticate:/i.test(l));
+  if (!line) return null;
+  const value = line.slice(line.indexOf(":") + 1).trim();
+  /* scheme 토큰만. `Basic realm="fixie"` → `Basic` */
+  const scheme = value.split(/[\s,]+/)[0];
+  return scheme && /^[A-Za-z-]+$/.test(scheme) ? scheme : null;
+}
+
+export type ConnectProbeResult = EgressStageResult & {
+  /** 프록시가 돌려준 HTTP 상태코드. null = 응답을 받지 못했다(hang/오류). */
+  statusCode: number | null;
+  /** `Proxy-Authenticate` 의 scheme 토큰만. realm 은 버린다. */
+  authScheme: string | null;
+  /** 🔴 우리가 이 시도에서 Proxy-Authorization 을 «보냈는가». */
+  sentAuthHeader: boolean;
+};
+
+/** 🔴 테스트가 이 단계를 «실제 프록시» 로 재기 위해 export 한다 — 운영 함수로 재라. */
+export async function probeConnect(
+  proxy: { host: string; port: number; url: string },
+  target: { host: string; port: number },
+): Promise<ConnectProbeResult> {
+  const startedAt = Date.now();
+  const shape = describeCredentialShape(proxy.url);
+  const net = await import("node:net");
+
+  /* 🔴 undici 와 «같은» 방식으로 헤더를 만든다. 다르게 만들면 이 측정이
+     운영 경로를 재지 않는 것이 된다(운영 함수로 재라 — 한 세션에 네 번 틀렸다). */
+  let authHeader: string | null = null;
+  if (shape.willSendAuthHeader && shape.decodable) {
+    try {
+      const parsed = new URL(proxy.url);
+      const raw = `${decodeURIComponent(parsed.username)}:${decodeURIComponent(parsed.password)}`;
+      authHeader = `Basic ${Buffer.from(raw).toString("base64")}`;
+    } catch {
+      authHeader = null;
+    }
+  }
+
+  return new Promise<ConnectProbeResult>((resolve) => {
+    const socket = new net.Socket();
+    let settled = false;
+    let head = "";
+
+    const finish = (
+      verdict: EgressStageVerdict,
+      detail: string | null,
+      statusCode: number | null,
+      authScheme: string | null,
+    ) => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolve({
+        verdict,
+        elapsedMs: Date.now() - startedAt,
+        detail,
+        statusCode,
+        authScheme,
+        sentAuthHeader: authHeader !== null,
+      });
+    };
+
+    socket.setTimeout(CONNECT_TIMEOUT_MS);
+    socket.once("timeout", () =>
+      /* 🔴 2026-10-10 의 그 양상이다 — 「느리다」가 아니라 「안 온다」. */
+      finish("TIMEOUT", `CONNECT ${CONNECT_TIMEOUT_MS}ms 내 응답이 없습니다.`, null, null),
+    );
+    socket.once("error", (error: Error & { code?: string }) =>
+      finish("ERROR", `${error.code ?? error.name}: ${error.message}`, null, null),
+    );
+    socket.once("connect", () => {
+      socket.write(
+        `CONNECT ${target.host}:${target.port} HTTP/1.1\r\n` +
+          `Host: ${target.host}:${target.port}\r\n` +
+          (authHeader ? `Proxy-Authorization: ${authHeader}\r\n` : "") +
+          `\r\n`,
+      );
+    });
+    socket.on("data", (chunk) => {
+      head += chunk.toString("latin1");
+      if (!head.includes("\r\n\r\n") && head.length < 8192) return;
+      const status = Number(/^HTTP\/\d\.\d (\d{3})/.exec(head)?.[1] ?? NaN);
+      const scheme = parseProxyAuthScheme(head);
+      if (status === 200) return finish("PASS", null, status, scheme);
+      if (!Number.isFinite(status)) {
+        return finish("ERROR", "프록시 응답을 해석할 수 없습니다.", null, scheme);
+      }
+      /* 🔴 상태코드만 적는다. 응답 본문은 담지 않는다 — 프록시가 본문에 계정
+         정보를 적어 보내는 경우가 있다. */
+      finish("REFUSED", `프록시가 CONNECT 를 거절했습니다 (HTTP ${status})`, status, scheme);
+    });
+    socket.connect(proxy.port, proxy.host);
+  });
+}
+
+/**
+ * 원인 체인으로 «외부요청» 단계의 실패를 가른다.
+ *
+ * 🔴 CONNECT 단계는 더 이상 이 함수로 추정하지 않는다 — 위 `probeConnect` 가
+ *    직접 재므로, 여기 남는 역할은 터널이 선 «뒤» 의 실패 분류다. 다만 분류
+ *    어휘는 그대로 둔다(기존 가드가 이 함수를 보고 있다).
  */
 export function classifyProxyFailure(chain: string[]): { verdict: EgressStageVerdict; proxyLayer: boolean } {
   const joined = chain.join(" | ");
@@ -161,9 +346,19 @@ export async function checkEgressHealth(provider: EgressProvider): Promise<Egres
   const checkedAt = new Date().toISOString();
   const url = envProxyUrlFor(provider);
 
+  /* 🔴 자격증명 «모양» 은 측정 결과와 무관하게 언제나 보고한다. 「주소가 없다」
+     일 때도 모양(= present:false)을 적어야 화면이 이유를 말할 수 있다. */
+  const credential = url
+    ? describeCredentialShape(url)
+    : { present: false, hasUsername: false, hasPassword: false, decodable: true, willSendAuthHeader: false };
+
   const base = {
     provider,
     outboundIp: null,
+    connectStatusCode: null,
+    connectAuthScheme: null,
+    credential,
+    sentAuthHeader: false,
     checkedAt,
   };
 
@@ -205,39 +400,68 @@ export async function checkEgressHealth(provider: EgressProvider): Promise<Egres
     };
   }
 
-  /* ── ②③ CONNECT + OUTBOUND ──────────────────────────────────────────────── */
-  const dispatcher = dispatcherForProvider(provider);
-  if (!dispatcher) {
+  /* ── ② CONNECT — 직접 말해 본다 ──────────────────────────────────────────────
+     🔴 전에는 undici fetch 의 실패 원인으로 이 단계를 «추정» 했다. 그러면
+     407 이 「우리가 자격증명을 못 보냈다」인지 「보냈는데 거절당했다」인지
+     구별할 수 없다. CONNECT 를 직접 보내고 상태코드와 인증 scheme 을 읽는다. */
+  const connectProbe = await probeConnect(
+    { host: endpoint.host, port: endpoint.port, url },
+    { host: new URL(OUTBOUND_PROBE_URL).hostname, port: 443 },
+  );
+  const connect: EgressStageResult = {
+    verdict: connectProbe.verdict,
+    elapsedMs: connectProbe.elapsedMs,
+    detail: connectProbe.detail,
+  };
+  const probed = {
+    ...base,
+    connectStatusCode: connectProbe.statusCode,
+    connectAuthScheme: connectProbe.authScheme,
+    sentAuthHeader: connectProbe.sentAuthHeader,
+  };
+
+  if (connectProbe.verdict !== "PASS") {
+    /* 터널이 서지 않았다 → ③은 «실행되지 않았다»(SKIPPED). 🔴 이것을
+       「outbound 실패」로 적으면 2026-10-10 의 원인을 또 가린다. */
     return {
-      ...base,
-      health: "NOT_CONFIGURED",
+      ...probed,
+      health: "DOWN",
       tcp,
-      connect: { verdict: "NOT_CONFIGURED", elapsedMs: null, detail: null },
+      connect,
       outbound: SKIPPED,
       totalElapsedMs: Date.now() - startedAt,
     };
   }
 
-  const tunnelStartedAt = Date.now();
+  /* ── ③ OUTBOUND — 실제 외부 HTTPS ────────────────────────────────────────── */
+  const dispatcher = dispatcherForProvider(provider);
+  if (!dispatcher) {
+    return {
+      ...probed,
+      health: "NOT_CONFIGURED",
+      tcp,
+      connect,
+      outbound: SKIPPED,
+      totalElapsedMs: Date.now() - startedAt,
+    };
+  }
+
+  const outboundStartedAt = Date.now();
   try {
     const res = await undiciFetch(OUTBOUND_PROBE_URL, {
       dispatcher,
-      signal: AbortSignal.timeout(CONNECT_TIMEOUT_MS + OUTBOUND_TIMEOUT_MS),
+      signal: AbortSignal.timeout(OUTBOUND_TIMEOUT_MS),
     });
-    const connectElapsed = Date.now() - tunnelStartedAt;
-    /* 🔴 응답 헤더가 왔다는 것은 터널이 섰다는 «증거» 다 — 여기서 CONNECT PASS 는
-       추측이 아니다. 반대로 상태코드는 외부 쪽 사실이므로 ③에 적는다. */
-    const connect: EgressStageResult = { verdict: "PASS", elapsedMs: connectElapsed, detail: null };
 
     if (!res.ok) {
       return {
-        ...base,
+        ...probed,
         health: "DEGRADED",
         tcp,
         connect,
         outbound: {
           verdict: "ERROR",
-          elapsedMs: connectElapsed,
+          elapsedMs: Date.now() - outboundStartedAt,
           detail: `외부 응답 HTTP ${res.status}`,
         },
         totalElapsedMs: Date.now() - startedAt,
@@ -253,43 +477,62 @@ export async function checkEgressHealth(provider: EgressProvider): Promise<Egres
     }
 
     return {
-      ...base,
+      ...probed,
       outboundIp,
       health: "NORMAL",
       tcp,
       connect,
-      outbound: { verdict: "PASS", elapsedMs: Date.now() - tunnelStartedAt, detail: null },
+      outbound: { verdict: "PASS", elapsedMs: Date.now() - outboundStartedAt, detail: null },
       totalElapsedMs: Date.now() - startedAt,
     };
   } catch (error) {
     const chain = describeErrorCauseChain(error);
     const { verdict, proxyLayer } = classifyProxyFailure(chain);
-    const elapsed = Date.now() - tunnelStartedAt;
+    const elapsed = Date.now() - outboundStartedAt;
     const detail = chain.join(" | ");
 
-    if (proxyLayer) {
-      /* 터널이 서지 않았다 → ③은 «실행되지 않았다»(SKIPPED). 🔴 이것을
-         「outbound 실패」로 적으면 2026-10-10 의 원인을 또 가린다. */
-      return {
-        ...base,
-        health: "DOWN",
-        tcp,
-        connect: { verdict, elapsedMs: elapsed, detail },
-        outbound: SKIPPED,
-        totalElapsedMs: Date.now() - startedAt,
-      };
-    }
-
-    /* 프록시 계층 신호가 없다 → 터널은 섰고 외부 쪽에서 깨진 것으로 본다. */
+    /* 🔴 ②가 PASS 였는데 여기서 프록시 계층 신호가 나오면, 터널은 «섰다가»
+       깨진 것이다. 그것을 ②의 실패로 소급 기록하지 않는다 — 우리가 실제로
+       관측한 것은 「CONNECT 는 됐고 그 뒤가 깨졌다」다. */
     return {
-      ...base,
+      ...probed,
       health: "DEGRADED",
       tcp,
-      connect: { verdict: "PASS", elapsedMs: null, detail: null },
-      outbound: { verdict, elapsedMs: elapsed, detail },
+      connect,
+      outbound: { verdict, elapsedMs: elapsed, detail: proxyLayer ? `터널 이후 프록시 계층 오류 — ${detail}` : detail },
       totalElapsedMs: Date.now() - startedAt,
     };
   }
+}
+
+/**
+ * 🔴 407 의 «조치» 를 한 문장으로 가른다 (CPO 지시 ①③④).
+ *
+ * 화면과 이력이 이것을 그대로 쓴다. 두 경우는 같은 407 이지만 고칠 곳이 다르다.
+ */
+export function explainConnectRefusal(report: EgressHealthReport): string | null {
+  if (report.connect.verdict !== "REFUSED") return null;
+  const status = report.connectStatusCode;
+  const scheme = report.connectAuthScheme ? ` · 요구 방식 ${report.connectAuthScheme}` : "";
+
+  if (status !== 407) {
+    return `프록시가 연결을 거절했습니다 (HTTP ${status ?? "?"}${scheme}).`;
+  }
+  if (!report.credential.present) {
+    return `프록시가 인증을 요구하는데(HTTP 407${scheme}) 이 연결 방식에는 인증 정보가 설정되어 있지 않습니다.`;
+  }
+  if (!report.credential.decodable) {
+    return `인증 정보가 주소 안에서 깨져 있습니다 — 특수문자가 URL 인코딩되지 않은 것으로 보입니다 (HTTP 407${scheme}).`;
+  }
+  if (!report.credential.willSendAuthHeader) {
+    /* 🔴 이것이 「우리 설정 문제」다. 사용자명만 있으면 인증 헤더가 아예
+       붙지 않고, 결과는 「자격증명이 거절됐다」와 구별되지 않는 407 이다. */
+    return `인증 정보가 불완전합니다 — ${
+      report.credential.hasUsername ? "비밀번호" : "사용자명"
+    } 부분이 주소에 없어 인증을 보내지 못했습니다 (HTTP 407${scheme}).`;
+  }
+  /* 보낼 것은 다 보냈는데 거절당했다 → 우리 설정이 아니라 계정 쪽이다. */
+  return `인증 정보를 보냈으나 프록시가 거절했습니다 (HTTP 407${scheme}) — 자격증명 만료 또는 사용량 한도일 수 있습니다.`;
 }
 
 /** 단계 판정 → 078 어휘. 🔴 `SKIPPED`/`NOT_CONFIGURED` 는 NULL 이다 —
@@ -351,6 +594,13 @@ export async function recordEgressHealth(
       `health=${report.health}`,
       `tcp=${report.tcp.verdict}${report.tcp.elapsedMs !== null ? `/${report.tcp.elapsedMs}ms` : ""}`,
       `connect=${report.connect.verdict}`,
+      /* 🔴 상태코드와 인증 scheme 을 이력에 «같이» 남긴다. 그러지 않으면
+         다음 세션이 「왜 407 이었나」를 또 추측에서 시작한다(CPO 지시 ④).
+         🔴 남기는 것은 이 둘과 「인증을 보냈는가」 boolean 뿐이다 —
+         URL·자격증명·realm 은 어디에도 넣지 않는다. */
+      report.connectStatusCode !== null ? `status=${report.connectStatusCode}` : "",
+      report.connectAuthScheme ? `authScheme=${report.connectAuthScheme}` : "",
+      report.credential.present ? `sentAuth=${report.sentAuthHeader}` : "",
       `outbound=${report.outbound.verdict}`,
       report.connect.detail ?? report.outbound.detail ?? "",
     ]

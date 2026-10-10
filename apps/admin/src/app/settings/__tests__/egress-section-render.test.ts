@@ -277,6 +277,75 @@ describe("③ 단계를 펼쳐 보여준다", () => {
   });
 });
 
+describe("③-b 🔴 407 의 «조치» 가 화면에 선다 (CPO 지시 ④)", () => {
+  /**
+   * Production 에서 FIXIE 만 407 이었다. 「거절됐다」만 보여주면 셀러도 CTO 도
+   * 어디를 고쳐야 하는지 모른다 — 같은 407 이 두 가지 다른 원인을 가린다.
+   */
+  const refusal = (reason: string, sentAuthHeader: boolean) => ({
+    ok: false,
+    switched: false,
+    error: "전환하지 않았습니다.",
+    report: {
+      provider: "FIXIE",
+      health: "DOWN",
+      tcp: { verdict: "PASS", elapsedMs: 186, detail: null },
+      connect: { verdict: "REFUSED", elapsedMs: 488, detail: "프록시가 CONNECT 를 거절했습니다 (HTTP 407)" },
+      outbound: { verdict: "SKIPPED", elapsedMs: null, detail: null },
+      outboundIp: null,
+      connectStatusCode: 407,
+      connectAuthScheme: "Basic",
+      sentAuthHeader,
+      refusalReason: reason,
+      totalElapsedMs: 700,
+      checkedAt: "2026-10-10T01:00:00.000Z",
+    },
+  });
+
+  it("🔴 ⓐ 「인증을 보내지 못했다」가 화면에 그대로 선다 — 우리 설정 문제", async () => {
+    stubFetch(
+      baseState(),
+      refusal("인증 정보가 불완전합니다 — 비밀번호 부분이 주소에 없어 인증을 보내지 못했습니다 (HTTP 407 · 요구 방식 Basic).", false),
+    );
+    const el = await mount();
+    await click(el.querySelector('[data-egress-switch="FIXIE"]') as HTMLElement);
+
+    const node = el.querySelector('[data-egress-refusal-reason="true"]');
+    expect(node).not.toBeNull();
+    expect(node?.textContent ?? "").toContain("비밀번호");
+    expect(node?.textContent ?? "").toContain("보내지 못했습니다");
+  });
+
+  it("🔴 ⓑ 「보냈으나 거절」이 화면에 선다 — 계정 문제", async () => {
+    stubFetch(
+      baseState(),
+      refusal("인증 정보를 보냈으나 프록시가 거절했습니다 (HTTP 407 · 요구 방식 Basic) — 자격증명 만료 또는 사용량 한도일 수 있습니다.", true),
+    );
+    const el = await mount();
+    await click(el.querySelector('[data-egress-switch="FIXIE"]') as HTMLElement);
+    expect(el.querySelector('[data-egress-refusal-reason="true"]')?.textContent ?? "").toContain("사용량 한도");
+  });
+
+  it("🔴 거절이 아니면 이 문구가 화면에 «없다» (대조군)", async () => {
+    stubFetch(baseState(), { ok: true, switched: true });
+    const el = await mount();
+    await click(el.querySelector('[data-egress-switch="FIXIE"]') as HTMLElement);
+    expect(el.querySelector('[data-egress-refusal-reason="true"]')).toBeNull();
+  });
+
+  it("🔴 조치 문구와 같이 와도 비밀값·realm 은 화면에 없다", async () => {
+    stubFetch(baseState(), refusal("인증 정보를 보냈으나 프록시가 거절했습니다 (HTTP 407 · 요구 방식 Basic).", true));
+    const el = await mount();
+    await click(el.querySelector('[data-egress-switch="FIXIE"]') as HTMLElement);
+    const text = el.textContent ?? "";
+    for (const secret of ["fixiepw", "fixieuser", "velodrome", "realm", SECRET_URL]) {
+      expect(text).not.toContain(secret);
+    }
+    /* 대조군 — 문구 자체는 떠 있다. */
+    expect(text).toContain("HTTP 407");
+  });
+});
+
 describe("④ 이력에서 「미실행」을 「실패」로 칠하지 않는다", () => {
   it("🔴 connect/outbound 가 NULL 인 행은 「미실행」으로 선다", async () => {
     stubFetch(
