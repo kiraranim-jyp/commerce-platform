@@ -293,14 +293,15 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 
 ---
 
-## 12. 현재 스프린트 — NOTICE-PARITY-02 (갱신 2026-10-10)
+## 12. 현재 스프린트 — ③ SMALLABLE-E2E-03 (갱신 2026-10-11)
 
 🔴 **새 세션의 단일 착수점은 이것이다.**
 
 ```
-docs/NOTICE-PARITY-02-HANDOFF.md §10 을 읽는다 — ② 는 측정이 «끝났고»
-🟡 PARTIAL 이다. 다음은 쿠팡 고시 FAIL 2건의 «CPO 판정» 이고 ③ 이 아니다.
-🔴 ② 를 다시 구현하지 않는다(테스트는 8cddbd17 에 있다).
+docs/SMALLABLE-E2E-03-HANDOFF.md 를 읽는다 — ③ 가 진행 중이다.
+🔴 ② 는 PARTIAL CLOSED 다(재구현 금지). 쿠팡 고시 2건은 별도 backlog
+   COUPANG-NOTICE-SEMANTIC-LOSS-01 로 분리됐다 — ③ 와 섞지 않는다.
+🔴 실등록은 STOP 이다.
 ```
 
 ### 🔴 자동 로드는 «둘» 이다 — 충돌하면 이 문서가 이긴다 (CPO 확정 2026-10-10)
@@ -332,8 +333,8 @@ MEMORY.md                           →  과거 교훈/기록 전용
 | ① Naver Notice Adapter | 🟢 PASS · Production (`8a6733e8`) |
 | LotteON B⑥ | 🟢 PASS · Production (`b5cac1de`) |
 | Coupang `required` | 🟡 **UNKNOWN** — 실측 근거 없음. 🔴 UNKNOWN ≠ PASS |
-| ② Semantic Parity | 🟡 **PARTIAL** (`8cddbd17`) — 공통 5개 PASS · 쿠팡 2건 FAIL |
-| ③ Smallable 실상품 E2E | 🔴 대기 — ② FAIL 2건 판정 뒤 |
+| ② Semantic Parity | 🟡 **PARTIAL CLOSED** (`8cddbd17`) — 재구현 금지 |
+| ③ Smallable 실상품 E2E | 🟡 **진행 중** (`fc3e115d`) — P0.1·P0.3 닫힘 · D-OPT 수정 |
 | ④ 3-Commerce 최종 E2E | 🔴 대기 |
 | 실등록 | 🔴 STOP |
 
