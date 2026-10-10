@@ -1,4 +1,4 @@
-# ② 3-Commerce Semantic Notice Parity — 착수점 (기준 `8a6733e8`, 2026-10-10)
+# ② 3-Commerce Semantic Notice Parity — 착수점 (코드 기준 `8a6733e8`, 문서 `7e42c87e`+, 2026-10-10)
 
 > 🔴 **새 세션은 이 문서부터 읽고 §3.6 → §4 의 ②-2 로 들어간다.**
 > 조사부터 다시 하지 않는다 — 입력 상수(§3.6)와 근거(§1~3)는 **재조사 금지** 다.
@@ -20,7 +20,7 @@
    Coupang                🔴 교체 «대상 아님» — 고정 코드표가 없다(런타임 메타)
 전체 회귀                 🟢 493 files / 7417 passed
 Type / Build / smoke      🟢 (typecheck baseline: listing 5 · crawler 2 는 선재)
-② 3채널 parity            🔴 미착수 — 이 문서가 그 착수점이다
+② 3채널 parity            🔴 미착수 — 이 문서가 그 착수점이다 (§3.6 → §4)
 ③ Smallable 실상품 E2E    🔴 미착수
 ④ 3-Commerce 최종 E2E     🔴 미착수
 실등록                    🔴 STOP
@@ -357,7 +357,47 @@ git rev-list --left-right --count origin/main...HEAD   # → 0  0
 
 ---
 
-## 8. 관련 메모리
+## 8. 🔴 CEO 최종 테스트 — «언제» 와 «무엇을» (CPO 확정 2026-10-10)
+
+### 시점 — 그 전에는 CEO 에게 URL 을 주지 않는다
+
+```
+② Semantic Parity → ③ Smallable 실상품 E2E → ④ 3-Commerce 최종 E2E
+→ Production 반영·검증 → CPO 검토 → 그때 «한 번»
+```
+
+🔴 중간에 CEO 에게 선택지를 묻거나 승인을 요구하지 않는다. 지금 테스트 URL 을
+주면 안 된다.
+
+### 테스트 URL
+
+```
+https://ttaejyo.vercel.app/pipeline
+```
+
+### 확인 항목 12개 (한 번에 전달한다)
+
+```
+ 1 옵션 / 재고                    999·0 생성 없음 · 채널탭 편집 없음
+ 2 상세설명                        AI 생성 · 편집 가능 · 없는 사실 생성 없음
+ 3 SEO 태그                        기존 유지 + 추가 + 중복 제거
+ 4 KC                             「판매 가능 상품으로 확인」에 popup 없음
+ 5 상품명 / 모델명                 원상품 identity 보존 · 모델명 AI 생성 없음
+ 6 원산지                          자동→없으면 입력 · 입력값을 자동이 안 덮는다
+ 7 상세페이지 «추가» 블록 편집      기본 블록 불변
+ 8 상세페이지 일괄 참조             법정/안전 · Naver modelName 제외
+ 9 LotteON category/notice/stock/tag
+10 실제 SmartStore 등록
+11 3-Commerce 동시 등록
+12 SmartStore 실제 태그 반영        🔴 payload GREEN ≠ 채널 반영. 여기서 처음 확인된다
+```
+
+🔴 1~9 는 코드·가드로 닫혀 있고(이전 배치 CPO 검증 PASS), **10~12 는 실등록
+없이는 확인할 수 없다.** 그래서 그 셋이 CEO 테스트의 본체다.
+
+---
+
+## 9. 관련 메모리
 
 ```
 common-notice-model-is-observation-only   B⑥ 현 위치 · 14:13 · 순환 가드 함정

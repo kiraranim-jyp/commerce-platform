@@ -293,18 +293,43 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 
 ---
 
-## 12. 현재 스프린트 — COUPANG-UPDATE-WIRE-01
+## 12. 현재 스프린트 — NOTICE-PARITY-02 (갱신 2026-10-10)
+
+🔴 **새 세션의 단일 착수점은 이것이다.**
 
 ```
-Coupang CREATE          Production 검증됨
-Coupang GET             Production 실측 PASS
-Coupang SAVED UPDATE    실행부 구현 완료 · PUT 미실행 · Not Production Verified
-Coupang APPROVED UPDATE UNKNOWN / BLOCKED
-DEBUG_COUPANG token     0건
+docs/NOTICE-PARITY-02-HANDOFF.md 를 읽고 §3.6 → §4 → ②-2 부터.
+조사 금지 · 순서 변경 금지 · payload 3개 확보 «전» 비교 테스트 금지.
 ```
 
-착수점과 Phase 1~5 · 안전계약 · 실측 범위는 **`docs/COUPANG-UPDATE-WIRE-01-HANDOFF.md`**
-하나에 있다. 새 세션은 그 문서부터 읽고 ①로 들어간다.
+| | |
+|---|---|
+| ① Naver Notice Adapter | 🟢 PASS · Production (`8a6733e8`) |
+| LotteON B⑥ | 🟢 PASS · Production (`b5cac1de`) |
+| Coupang `required` | 🟡 **UNKNOWN** — 실측 근거 없음. 🔴 UNKNOWN ≠ PASS |
+| ② Semantic Parity | 🔴 **다음 착수** |
+| ③ Smallable 실상품 E2E | 🔴 대기 |
+| ④ 3-Commerce 최종 E2E | 🔴 대기 |
+| 실등록 | 🔴 STOP |
+| Egress | 🟢 OCI 운영 경로 · FIXIE 는 사용량 한도로 종료(코드 정상, 재조사 금지) |
+
+### 🔴 ② 금지 6항 — 다음 세션이 먼저 읽는다
+
+```
+① payload 3개 확보 «전» 에 parity 비교 테스트 작성 금지
+② adapter 만 비교하고 parity 라고 부르기 금지   ← 실제로 그렇게 쓰다 지웠다
+③ builder 를 mock 해서 parity 검증 금지
+④ 손으로 쓴 noticeArticles 를 expected payload 로 쓰기 금지
+   (LotteON 은 resolveLotteOnNotice() 결과를 쓴다)
+⑤ Coupang required 추측 금지 — UNKNOWN 유지
+⑥ expected 와 actual 을 «같은 함수» 에서 만드는 circular test 금지
+   ← 실제로 걸렸다. 순서 가드가 순서를 하나도 지키지 못했다
+```
+
+### 끝난 스프린트 (참고용 — 다시 들어가지 않는다)
+
+`COUPANG-UPDATE-WIRE-01` · `EGRESS-NOTICE` 는 종료됐다. 아래 §12 의 Coupang
+UPDATE 안전계약은 **그 기능을 건드릴 때만** 유효한 기록이다.
 
 ### 🔴 두 구조를 억지로 하나로 만들지 않는다
 
