@@ -17,12 +17,10 @@ IN PROGRESS            —
 BLOCKED                —
 KNOWN DEFECTS          D-MODEL · COUPANG-NOTICE-SEMANTIC-LOSS-01
                        backlog: 「Wash at 40°C」·「Cold wash」 등 다른 어순(실측 근거 생기면)
-NEXT EXACT ACTION      D-MODEL 조사(수정 아님): ① Smallable 원문에 model/reference
-                       번호가 실제로 있는가 ② SKU 가 modelName 후보로 허용되는가
-                       ③ canonical 이 title 을 fallback 으로 넣는 이유와 그 범위
-                       ④ 3채널 영향 → CPO 판정용 defect report 로 제출.
-                       🔴 source whitelist(USER_EDITED/ORIGINAL/DETAIL_PAGE_REFERENCE)
-                          정책은 유지한다. 임의 수정 금지.
+NEXT EXACT ACTION      🔴 D-MODEL 은 조사 끝 — «결함이 아니다»(CPO P5.6 P0-4/5 그대로).
+                       문서 맨 아래 「D-MODEL INVESTIGATION」 §8 의 정책 질문 2개에
+                       CPO 판정을 받는다. 판정 뒤 Commerce 최종 E2E(대표 상품 3~5개)
+                       → 회귀/배포/smoke → COMMERCE CLOSE → MI 국내 SAME 으로.
 
 TEST                   d-care 12 · d-lot-stock 10 · d-opt 5 · parity 16 — 전부 PASS
 REGRESSION             497 files / 7461 passed · exit 0
@@ -270,3 +268,120 @@ cd apps/admin && npx vitest run \
 🔴 수집 하니스는 임시 파일이라 **리포에 남기지 않았다**(실행 → 확인 → 삭제).
 운영 수집을 로컬에서 다시 재려면 `tsx` 가 아니라 **vitest** 로 돈다
 ([[local-toolchain-silent-noops]] ④⑤).
+
+---
+
+# D-MODEL INVESTIGATION (CTO 조사, 2026-10-11 · 🔴 수정 0건)
+
+## 1. 원본에 실제 model/reference 존재 여부 — 🔴 **없다**
+
+Smallable 430632 실측(운영 추출기로 측정):
+
+```
+extractProductCode(description)                → null
+resolveModelNameFromDescription(description)   → null
+resolveSeasonFromText(description/title)       → null
+description 에 product/article code · ref 라벨  → 없음 (정규식 false)
+
+있는 것:  sku "AAA1804532"       URL 꼬리 "430632"
+원문:     "SIZE AND FIT  Loose fit  COMPOSITION  100% Organic Cotton
+           Find out more  Wash Cold-30°  Made in Spain"
+```
+
+🔴 즉 **이 상품의 원본에는 제조사 모델번호가 적혀 있지 않다.** junioredition·
+bobochoses 처럼 `Product code AW26MS185` 라벨을 쓰는 사이트와 다르다 —
+Smallable 은 그 라벨을 쓰지 않는다.
+
+## 2. 현재 title fallback 발생 경로 — 🔴 **의도된 동작이다**
+
+```
+buildCanonicalProduct
+  └ buildCanonicalProductRaw   canonical-product.ts:430
+        modelName = { value: "", source: "REQUIRED" }      ← 비워서 시작
+  └ seedSeoContent             seed-seo-content.ts:127-136
+        source 가 USER_EDITED / DETAIL_PAGE_REFERENCE 면 → skip (셀러 보호)
+        값이 비어 있으면 → suggestModelName(product)
+              seo-keywords.ts:208  return product.title.value || undefined
+        → { value: <원상품명>, source: "ORIGINAL", confidence: 0.8 }
+```
+
+🔴 **SKU → title 사다리가 «아니다».** SKU 는 어느 칸에서도 후보로 쓰이지 않는다.
+`suggestModelName` 은 title 하나만 보고, title 이 비면 `undefined` 를 돌려
+**비워 둔다**(지어내지 않는다).
+
+## 3. SKU 의 의미 — 🔴 **판매처 재고번호다 (실측으로 이미 결론)**
+
+```
+product-identity-dna.ts:129-143  Bobo 품번 B226AC114 와 Smallable 재고번호
+                                 AAA1804922 는 «글자 구성이 같아 모양으로 못 가른다»
+                                 → 「어디에 적혀 있었는지」로만 가른다
+seo-keywords.ts:204-206          모델명은 원상품명 그대로. SKU·상품 ID·URL·
+                                 브랜드+임의번호·AI 생성 «전부 금지(CPO 명시)»
+                                 실측 근거: sku 가 STMRPWH2 · AAA1847110
+```
+
+🔴 이번 상품의 `AAA1804532` 는 그 **`AAA18…` 계열**이다 — 같은 Smallable 재고번호
+형식이다. 다른 상품에서도 같은 의미(판매처 식별자)이고 제조사 모델번호가 아니다.
+
+## 4. SKU 를 modelName 으로 사용할 근거 — 🔴 **없다. 이미 금지로 결론난 사안**
+
+```
+P5.6 P0-4/5 (CPO, 2026-10-09)  모델명 = 원상품명 그대로 · SKU 금지 «명시»
+MI-DISCOVERY-P5-1 (2026-10-07) sku 를 brandModelCode 로 쓰면 오염된다
+                               junioredition variant sku = "FF21-2" (자체 코드)
+```
+
+즉 §3·§4 는 **새 조사가 아니라 이미 닫힌 사안의 재확인**이다.
+
+## 5. 3 Commerce 영향 (실측)
+
+| 채널 | 들어가는 자리 | 필수 | 값 |
+|---|---|---|---|
+| Naver | `naverShoppingSearchInfo.modelName` | 🔴 NotEmpty 요구(`build-payload.ts:467`) | 원상품명 |
+| Naver 고시 | KIDS/WEAR `modelName` (품명과 **두 칸**으로 분리, `common-notice-model.ts:237`) | 공통 모델 기준 | 원상품명 |
+| LotteON | `spdLst[].mdlNo` (`build-payload.ts:424·444`) | 값 있으면 실림 | 원상품명 |
+| LotteON 고시 | `0210` 「품명 및 모델명」 | 필수 | 원상품명(없으면 NEEDS_INPUT) |
+| Coupang | 고시 「품명 및 모델명」 ← **`context.productName`** (`:1513`) | 메타 의존 | 🔴 modelName 을 **안 본다** |
+
+🔴 **쿠팡은 이 축의 영향을 받지 않는다** — 자기 productName 을 쓴다.
+🔴 셀러 수정 가능: `USER_EDITED` / `DETAIL_PAGE_REFERENCE` 면 `seedSeoContent` 가
+   건드리지 않는다(화면 입력칸은 「기본정보」의 모델명 행 · `readiness.ts:470`).
+🔴 기존 정상 상품 회귀 위험: **낮다.** 이 경로는 2026-10-09 부터 운영 중이고
+   회귀 497 files / 7461 passed 가 그 동작을 이미 고정하고 있다.
+
+## 6. 실제 상품 증거
+
+```
+상품   Smallable 430632 — All About Monsters Washed T-shirt Organic cotton | Blue
+sku    AAA1804532              (Smallable 재고번호 계열)
+URL id 430632                  (Smallable 자체 상품 ID)
+model  🔴 원본에 없음
+현재값 modelName = 원상품명 전체 (54자), source ORIGINAL, confidence 0.8
+```
+
+## 7. 결론
+
+🔴 **D-MODEL 은 결함이 아니다.** 내가 ③ 에서 「상품명을 모델명으로 쓴다」고
+적은 것은 **2026-10-09 CPO 결정(P5.6 P0-4/5)을 모른 상태의 오판** 이다.
+현재 동작은 그 결정 그대로이고, 금지 목록(SKU·ID·URL·AI)도 지켜지고 있다.
+
+남는 것은 결함이 아니라 **정책 질문 두 개** 다.
+
+## 8. CPO 판정 필요사항
+
+```
+Q1. 채널이 「품명」과 「모델명」을 «두 칸» 으로 요구할 때(네이버 고시가 그렇다),
+    두 칸에 같은 원상품명을 넣는 것이 맞는가?
+    현재: 품명(itemName)은 비어 REQUIRED 로 남고 모델명에만 원상품명이 들어간다.
+    → 「모델번호를 모를 때 모델명 칸을 비우고 셀러 입력으로 돌릴 것인가」가 쟁점.
+    🔴 다만 네이버 naverShoppingSearchInfo.modelName 은 NotEmpty 요구이므로
+       비우면 그 축이 막힌다 — 비우는 선택은 등록 가능성과 맞바꾸는 것이다.
+
+Q2. LotteON `mdlNo` 에 54자 원상품명이 들어가는 것이 허용되는가?
+    🔴 그 필드의 길이 제한·용도 제약을 이 저장소가 «실측한 적이 없다»(Known
+       Unknown). 「모델번호 칸에 상품명」은 형식상 어색할 수 있다.
+    → 실등록 전에 롯데ON 응답으로 확인되어야 할 축이다.
+
+🔴 어느 쪽도 CTO 가 단독으로 바꾸지 않았다. source whitelist 정책
+   (USER_EDITED · ORIGINAL · DETAIL_PAGE_REFERENCE 허용)은 그대로 유지했다.
+```
