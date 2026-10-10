@@ -439,9 +439,64 @@ export function findPlaceholderFields(
  * sellerConfig/template 같은 이 파일의 다른 타입과 강하게 묶여 있어서 여기
  * 정의한다 — apps/admin은 @commerce/listing에서 그대로 가져다 쓴다(반대
  * 방향으로 packages가 apps/admin을 import하면 안 됨). */
+/* ══════════════════════════════════════════════════════════════════════════
+   🔴 P5.6 후속 ③(CPO 확정, 2026-10-10) — **추가 블록의 상품별 편집**
+   ══════════════════════════════════════════════════════════════════════════
+
+   CPO ⑦ 이 물은 것: 「`+ 이 상품 이미지` 만 편집되고 나머지 추가 블록은 노출
+   여부만 결정되는 구조가 설계인가」.
+
+   코드로 가른 답: **설계 의도가 아니라 구조적 한계였다.** 여덟 kind 중 자기
+   데이터를 «가진» 것은 둘뿐이고(CUSTOM_TEXT 의 content · CUSTOM_IMAGE 의 url),
+   나머지 여섯은 조립 시점에 «문맥에서» 읽는다:
+
+     AI_DESCRIPTION      ctx.aiDescription       (상품의 상세설명)
+     BRAND_INTRO         ctx.brandIntro          (브랜드 프로필)
+     PRODUCT_IMAGES      ctx.productImageUrls    (상품 수집 이미지)
+     SIZE_CHART_IMAGES   ctx.sizeChartImageUrls  (상품 사이즈표)
+     TEMPLATE_SECTION    ctx.template            (셀러 설정)
+     COMMON_IMAGE        ctx.sellerConfig        (셀러 설정)
+
+   그래서 「추가했는데 고칠 수가 없다」가 된 것이다 — 고칠 «자리» 가 없었다.
+
+   ── 🔴 이 변경의 경계 ───────────────────────────────────────────────────
+   아래 override 칸은 **전부 optional** 이고, 셀러 기본 블록에는 «들어가지 않는다»
+   (패널이 `override.added` 안의 블록에만 쓴다). 값이 없으면 조립기는 지금까지와
+   «한 글자도 다르지 않게» 문맥값을 읽는다 — 기본 블록 동작·기존 등록 결과가
+   바뀌지 않는다는 뜻이고, CPO 의 「0. 절대 변경하지 않을 범위」가 그것이다.
+
+   🔴 데이터 구조를 «새로 만들지 않았다» — 기존 `DetailPageBlock` union 에 칸을
+      더한 것이고 `ProductDetailOverride.added` 가 그대로 담는다. 운영 중인
+      detailOverride 레코드에 이 칸이 없으므로 읽기도 그대로 호환된다.
+   🔴 TEMPLATE_SECTION · COMMON_IMAGE 에는 칸을 «열지 않는다» — 그 둘은 셀러
+      설정의 소유이고 상품에서 «추가할 수도» 없다(ADDABLE 에 없다).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/** 추가 블록이 공통으로 갖는 상품별 override. 🔴 전부 optional. */
+interface AddedBlockTextOverride {
+  /** 항목 제목. 🔴 없으면 제목 줄을 만들지 않는다(기존과 동일). */
+  heading?: string;
+  /**
+   * 본문을 이 상품에서만 «갈아끼운다». 🔴 없으면 문맥값을 읽는다.
+   * 🔴 빈 문자열은 「비우기」가 아니라 「지정 안 함」과 구별된다 — `undefined`
+   *    면 문맥값, `""` 면 본문 없음이다. 그래서 `?? ` 로 폴백한다(`||` 아니다).
+   */
+  textOverride?: string;
+}
+
+/** 이미지 목록을 갖는 추가 블록의 상품별 override. */
+interface AddedBlockImagesOverride {
+  heading?: string;
+  /**
+   * 이미지 목록을 이 상품에서만 «갈아끼운다»(추가·교체·삭제가 모두 이 한 배열의
+   * 변경이다). 🔴 없으면 문맥값을 읽는다. `[]` 면 이미지 없음이다.
+   */
+  imageUrlsOverride?: string[];
+}
+
 export type DetailPageBlock =
-  | { id: string; kind: "AI_DESCRIPTION"; enabled: boolean }
-  | { id: string; kind: "BRAND_INTRO"; enabled: boolean }
+  | ({ id: string; kind: "AI_DESCRIPTION"; enabled: boolean } & AddedBlockTextOverride)
+  | ({ id: string; kind: "BRAND_INTRO"; enabled: boolean } & AddedBlockTextOverride)
   | {
       id: string;
       kind: "TEMPLATE_SECTION";
@@ -449,8 +504,8 @@ export type DetailPageBlock =
       enabled: boolean;
     }
   | { id: string; kind: "COMMON_IMAGE"; position: "top" | "bottom"; enabled: boolean }
-  | { id: string; kind: "SIZE_CHART_IMAGES"; enabled: boolean }
-  | { id: string; kind: "PRODUCT_IMAGES"; enabled: boolean }
+  | ({ id: string; kind: "SIZE_CHART_IMAGES"; enabled: boolean } & AddedBlockImagesOverride)
+  | ({ id: string; kind: "PRODUCT_IMAGES"; enabled: boolean } & AddedBlockImagesOverride)
   | {
       id: string;
       kind: "CUSTOM_TEXT";
@@ -659,8 +714,13 @@ export function assembleContentsFromBlocks(
   },
 ): CoupangItemContent[] {
   const textFor = (block: DetailPageBlock): string | null => {
-    if (block.kind === "AI_DESCRIPTION") return ctx.aiDescription.trim() || null;
-    if (block.kind === "BRAND_INTRO") return ctx.brandIntro?.trim() || null;
+    /* 🔴 P5.6 후속 ③ — 상품별 override 가 «있으면» 그것, 없으면 문맥값.
+     `??` 다(`||` 가 아니다) — 빈 문자열은 「본문 없음」이라는 셀러의 선택이고
+     「지정 안 함」과 다른 사실이다. heading 도 이제 여기서 붙는다. */
+  if (block.kind === "AI_DESCRIPTION")
+    return withHeading(block.heading, block.textOverride ?? ctx.aiDescription);
+    if (block.kind === "BRAND_INTRO")
+    return withHeading(block.heading, block.textOverride ?? ctx.brandIntro ?? "");
     if (block.kind === "CUSTOM_TEXT") return withHeading(block.heading, block.content);
     return null;
   };
@@ -671,8 +731,8 @@ export function assembleContentsFromBlocks(
       const url = block.position === "top" ? ctx.sellerConfig.topCommonImageUrl : ctx.sellerConfig.bottomCommonImageUrl;
       return enabled && url ? [url] : [];
     }
-    if (block.kind === "PRODUCT_IMAGES") return ctx.productImageUrls;
-    if (block.kind === "SIZE_CHART_IMAGES") return ctx.sizeChartImageUrls;
+    if (block.kind === "PRODUCT_IMAGES") return block.imageUrlsOverride ?? ctx.productImageUrls;
+    if (block.kind === "SIZE_CHART_IMAGES") return block.imageUrlsOverride ?? ctx.sizeChartImageUrls;
     return [];
   };
 
@@ -750,6 +810,15 @@ ${text}` : title;
     }
     const images = imagesFor(block);
     if (images.length > 0) {
+      /* 🔴 P5.6 후속 ③(실측이 잡았다) — **이미지 목록 블록의 제목이 사라졌다.**
+         사이즈표·상품 상세이미지에 「사이즈 정보」 같은 항목 제목을 적을 칸을
+         화면에 열었는데, 이 경로가 `withHeading` 을 타지 않아 payload 에 한
+         글자도 안 나갔다. 칸을 그려 놓고 보내지 않으면 «화면이 거짓말한다».
+         🔴 제목은 이미지 «위» 다 — CUSTOM_IMAGE 와 같은 규칙이다(아래에 오면
+            그것은 캡션이지 항목 이름이 아니다). 규칙을 두 벌로 만들지 않는다.
+         🔴 제목이 없으면(셀러 기본 블록 전부) 지금까지와 완전히 같다. */
+      const listHeading = "heading" in block ? block.heading?.trim() : undefined;
+      if (listHeading) pendingText.push(listHeading);
       flushText();
       for (const url of images) {
         contents.push({ contentsType: "IMAGE", contentDetails: [{ content: url, detailType: "IMAGE" }] });

@@ -123,6 +123,9 @@ export function ProductDetailBlocksPanel({
   /* 🔴 P0-3 — 「고르는 중」이 «추가» 인지 «교체» 인지 구분한다. 한 상태로 합치면
      교체를 누른 뒤 고른 이미지가 새 블록으로 붙는다(순서가 또 끝으로 밀린다). */
   const [replacing, setReplacing] = useState<DetailBlockIdentity | null>(null);
+  /* 🔴 「고르는 중」의 세 번째 뜻 — 파생 추가 블록의 이미지 «목록에 더하기».
+     추가·교체·새 블록을 한 상태로 합치면 셋이 서로 샌다. */
+  const [appendingTo, setAppendingTo] = useState<DetailBlockIdentity | null>(null);
   const [assets, setAssets] = useState<AssetOption[] | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -205,6 +208,16 @@ export function ProductDetailBlocksPanel({
       replaceImage(replacing, url);
       return;
     }
+    /* 🔴 파생 블록의 이미지 목록에 «더한다» — 새 CUSTOM_IMAGE 블록을 만들지 않는다. */
+    if (appendingTo) {
+      const index = identities.indexOf(appendingTo);
+      const target = index >= 0 ? blocks[index] : undefined;
+      patchAdded(appendingTo, { imageUrlsOverride: [...(target ? addedImageList(target) : []), url] });
+      setAppendingTo(null);
+      setPicking(false);
+      setUploadError(null);
+      return;
+    }
     const seed = blocks.filter((b) => b.kind === "CUSTOM_IMAGE").length;
     const block: DetailPageBlock = {
       id: `product-image-${seed}`,
@@ -242,6 +255,39 @@ export function ProductDetailBlocksPanel({
     setPicking(false);
     setReplacing(null);
     setUploadError(null);
+  }
+
+  /* ══ 🔴 P5.6 후속 ③(CPO 확정, 2026-10-10) — **추가 블록을 상품별로 고친다.** ══
+
+     CPO: 「기본 상세페이지 블록은 건드리지 않는다. 상품에 추가한 블록 각각에
+     대해 텍스트와 이미지를 상품별로 수정·추가·교체·삭제할 수 있게 한다.」
+
+     🔴 `patches` 를 쓰지 «않는다». patches 는 셀러 기본 블록에 걸리는 delta 이고,
+        거기에 파생 블록용 칸을 열면 **기본 블록 동작이 바뀐다**(CPO 의 절대
+        금지 범위다). 추가 블록은 `override.added` 안에 «객체 그대로» 들어 있으니
+        그 객체를 고친다 — 기본 블록에는 손이 닿지 않는 구조다.
+     🔴 그래서 이 함수는 added 에 없는 식별자를 만나면 «아무것도 하지 않는다». */
+  function addedIdentityOf(b: DetailPageBlock, textSeq: number, imageSeq: number): DetailBlockIdentity {
+    if (b.kind === "CUSTOM_TEXT") return detailBlockIdentity(b, textSeq);
+    if (b.kind === "CUSTOM_IMAGE") return detailBlockIdentity(b, imageSeq);
+    return detailBlockIdentity(b, 0);
+  }
+
+  function patchAdded(identity: DetailBlockIdentity, patch: Record<string, unknown>) {
+    let textSeq = 0;
+    let imageSeq = 0;
+    const added = (override?.added ?? []).map((b) => {
+      const id = addedIdentityOf(b, b.kind === "CUSTOM_TEXT" ? textSeq++ : 0, b.kind === "CUSTOM_IMAGE" ? imageSeq++ : 0);
+      return id === identity ? ({ ...b, ...patch } as DetailPageBlock) : b;
+    });
+    commit({ ...override, added });
+  }
+
+  /** 추가 블록의 현재 이미지 목록 — override 가 없으면 문맥값(상품 이미지)이다. */
+  function addedImageList(block: DetailPageBlock): string[] {
+    if (block.kind !== "PRODUCT_IMAGES" && block.kind !== "SIZE_CHART_IMAGES") return [];
+    /* 🔴 `??` 다 — `[]`(셀러가 전부 지움)와 `undefined`(지정 안 함)는 다른 사실이다. */
+    return block.imageUrlsOverride ?? (block.kind === "PRODUCT_IMAGES" ? productImageUrls : []);
   }
 
   async function upload(file: File) {
@@ -430,6 +476,101 @@ export function ProductDetailBlocksPanel({
                       </div>
                     </div>
                   ) : null}
+                  {/* ══ 🔴 P5.6 후속 ③ — 파생 추가 블록의 상품별 편집 ══════
+
+                      AI 생성 설명 · 브랜드 소개 · 사이즈표 · 상품 상세이미지는
+                      «자기 데이터가 없는» 블록이다(조립 시점에 문맥에서 읽는다).
+                      그래서 추가해도 고칠 자리가 없었다 — CEO 가 본 그 상태다.
+
+                      🔴 **셀러 기본 블록에는 이 칸을 그리지 않는다**(isProductOnly).
+                         기본 블록을 편집기로 바꾸지 않는 것이 CPO 의 절대 경계다. */}
+                  {isProductOnly && (block.kind === "AI_DESCRIPTION" || block.kind === "BRAND_INTRO") ? (
+                    <div className="mt-2 space-y-1.5">
+                      <input
+                        value={block.heading ?? ""}
+                        onChange={(e) => patchAdded(identity, { heading: e.target.value })}
+                        placeholder="항목 제목(예: 브랜드 소개) — 비워도 됩니다"
+                        className="w-full rounded border border-border bg-background px-2 py-1.5 text-xs font-semibold text-text-primary"
+                      />
+                      <textarea
+                        value={block.textOverride ?? ""}
+                        onChange={(e) => patchAdded(identity, { textOverride: e.target.value })}
+                        rows={3}
+                        placeholder={
+                          block.kind === "AI_DESCRIPTION"
+                            ? "비워 두면 상품정보의 상세설명이 그대로 들어갑니다 — 이 상품만 다르게 쓰려면 적어 주세요"
+                            : "비워 두면 브랜드 관리에 저장된 소개글이 들어갑니다 — 이 상품만 다르게 쓰려면 적어 주세요"
+                        }
+                        className="w-full rounded border border-border bg-background px-2 py-1.5 text-xs text-text-primary"
+                      />
+                      {block.textOverride != null ? (
+                        <button
+                          type="button"
+                          onClick={() => patchAdded(identity, { textOverride: undefined })}
+                          className="rounded border border-border px-2 py-1 text-[11px] text-text-secondary hover:bg-background"
+                        >
+                          기본 문구로 되돌리기
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {isProductOnly && (block.kind === "PRODUCT_IMAGES" || block.kind === "SIZE_CHART_IMAGES") ? (
+                    <div className="mt-2 space-y-1.5">
+                      <input
+                        value={block.heading ?? ""}
+                        onChange={(e) => patchAdded(identity, { heading: e.target.value })}
+                        placeholder="항목 제목(예: 사이즈 정보) — 비워도 됩니다"
+                        className="w-full rounded border border-border bg-background px-2 py-1.5 text-xs font-semibold text-text-primary"
+                      />
+                      <ul className="flex flex-wrap items-center gap-1.5">
+                        {addedImageList(block).map((url, i) => (
+                          <li key={`${url}-${i}`} className="relative">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={url} alt="" className="h-14 w-14 rounded border border-border object-cover" />
+                            <button
+                              type="button"
+                              aria-label="이미지 삭제"
+                              onClick={() =>
+                                patchAdded(identity, {
+                                  imageUrlsOverride: addedImageList(block).filter((_, j) => j !== i),
+                                })
+                              }
+                              className="absolute -right-1 -top-1 rounded-full border border-border bg-surface px-1 text-[10px] text-text-secondary"
+                            >
+                              ×
+                            </button>
+                          </li>
+                        ))}
+                        {addedImageList(block).length === 0 ? (
+                          <li className="text-[11px] text-text-tertiary">
+                            이미지가 없습니다 — 아래에서 추가하면 이 항목에만 들어갑니다.
+                          </li>
+                        ) : null}
+                      </ul>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAppendingTo(identity);
+                            setReplacing(null);
+                            setPicking(true);
+                          }}
+                          className="rounded border border-border px-2 py-1 text-[11px] text-text-secondary hover:bg-background"
+                        >
+                          이미지 추가
+                        </button>
+                        {block.imageUrlsOverride != null ? (
+                          <button
+                            type="button"
+                            onClick={() => patchAdded(identity, { imageUrlsOverride: undefined })}
+                            className="rounded border border-border px-2 py-1 text-[11px] text-text-secondary hover:bg-background"
+                          >
+                            기본 이미지로 되돌리기
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
                 </li>
               );
             })}
@@ -454,6 +595,7 @@ export function ProductDetailBlocksPanel({
               type="button"
               onClick={() => {
                 setReplacing(null);
+                setAppendingTo(null);
                 setPicking((v) => !v);
               }}
               title="이 상품에만 넣는 이미지 — 문구를 같이 적으면 이미지+문구가 된다"
@@ -473,6 +615,7 @@ export function ProductDetailBlocksPanel({
                     setPicking(false);
                     /* 🔴 교체 상태를 «반드시» 푼다 — 안 풀면 다음 「이미지 추가」가 교체로 샌다. */
                     setReplacing(null);
+                    setAppendingTo(null);
                   }}
                   className="rounded px-2 py-1 text-xs text-text-secondary hover:bg-surface"
                 >
