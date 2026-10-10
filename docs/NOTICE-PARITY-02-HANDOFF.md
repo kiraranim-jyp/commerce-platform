@@ -37,8 +37,12 @@ Naver     originProduct.detailAttribute.productInfoProvidedNotice
 Coupang   items[].notices[]
             → { noticeCategoryName, noticeCategoryDetailName, content }
             → packages/listing/src/coupang/build-payload.ts:1594-1600
-LotteON   spdLst[].pdItmsArtlLst
+LotteON   spdLst[].pdItmsInfo.pdItmsArtlLst        🔴 2026-10-10 정정
             → { pdArtlCd, pdArtlCnts }
+            → 이 문서는 한 단계 얕은 `spdLst[].pdItmsArtlLst` 로 적고 있었다.
+              그대로 비교 테스트를 썼다면 양쪽 `undefined` 를 비교하고 «통과»
+              했을 것이다 — ②-2(payload 를 먼저 손에 쥔다)가 이것을 잡았다.
+              실제 자리는 lotteon/build-payload.ts:430 의 `pdItmsInfo` 안이다.
             → 항목 집합·순서는 lotteOnNoticeSpecs() 가 정한다 (B⑥에서 교체)
 ```
 
@@ -337,7 +341,9 @@ p56-followup-ceo-three        `naverNoticeTypeFor(` 존재 검사
 cd apps/admin
 npx vitest run ../../packages/listing/src/naver/__tests__/build-payload.test.ts   # 92
 npx vitest run ../../packages/listing/src/lotteon                                 # 187
-npx vitest run ../../packages/listing/src/notice                                   # 104
+npx vitest run ../../packages/listing/src/notice                                   # 105
+#   🔴 이 문서는 104 로 적고 있었다(2026-10-10 정정). 실측 24+25+20+21+15=105 이고
+#   기준 커밋 이후 그 디렉터리에 커밋이 «없다» — 코드가 변한 것이 아니라 숫자가 틀렸다.
 
 # 전수 — 🔴 PIPESTATUS 로 vitest 종료코드를 본다(head 의 0 을 믿지 않는다)
 npx vitest run 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | grep -E "^ *(FAIL|×)|Test Files|Tests "
@@ -407,4 +413,73 @@ source-scan-must-strip-comments           소스 검사는 주석을 벗기고
 fixtures-must-be-dirty                    깨끗한 fixture 는 공란을 놓친다
 kc-value-is-not-verification              「값 있음」 ≠ 「확인됨」
 measure-with-the-production-function      손으로 만든 요청은 운영 경로가 아니다
+```
+
+---
+
+## 10. 🟡 ② 실행 결과 — **PARTIAL** (CTO 1차, 2026-10-10)
+
+`packages/listing/src/__tests__/notice-semantic-parity.test.ts` · 15 tests PASS.
+세 builder 를 **실제로** 부르고(mock 없음) payload 3개를 손에 쥔 뒤 비교했다.
+
+### 측정된 값 — 같은 상품 하나, 세 채널
+
+| semantic | Naver | Coupang | LotteON 01 / 23 |
+|---|---|---|---|
+| material | 코튼 97% 엘라스탄 3% | 동일 | `0010`/`0410` 동일 |
+| color | 미드나이트 네이비 | 동일 | `0020` 동일 |
+| manufacturer | 파리공방 | 동일 | `0070` 동일 |
+| careInstructions | 30도 이하 손세탁 | 동일 | `0050`/`0800` 동일 |
+| qualityGuarantee | 소비자분쟁해결기준에 따름 | 동일 | `0080` 동일 |
+| countryOfOrigin | 🔵 칸 «없음»(별도 축) | Made in Spain | `0060` Made in Spain |
+| **size** | 4Y, 6Y | 🔴 `전체 상품 상세페이지 참조` | `0030`/`0780` 4Y, 6Y |
+| **asContact** | 따져 고객센터 / 02-000-0000 | 🔴 `02-000-0000` (업체명 누락) | `0090` 동일 |
+
+```
+공통 의미 5개      🟢 PASS   세 채널 동일 값
+원산지             🔵 구조차 네이버 고시에 칸이 없다 — 값 불일치가 아니다
+                             두 채널은 "Made in Spain" 을 «정규화 없이» 싣는다
+size               🔴 FAIL   쿠팡만 값 대신 placeholder
+asContact          🔴 FAIL   쿠팡만 전화번호 한 조각
+Coupang required   ⚪ UNKNOWN 유지 (판정 (A))
+negative 감지      🟢 PASS   변조한 채널만 잡고 나머지는 조용하다
+```
+
+### 🔴 FAIL 2건의 원인 (코드 지점까지 확인)
+
+```
+① size      coupang/build-payload.ts:1205 matchProductFieldDetailed 의 규칙 표에
+            size 축이 «없다». 그래서 「치수」 항목이 사다리 끝 기본 문구로 떨어진다.
+            값이 없어서가 아니라 «있는데» placeholder 가 나간다.
+② asContact coupang/build-payload.ts:1516
+            KNOWN_NOTICE_VALUES["A/S 책임자와 전화번호"] = context.contactNumber
+            전화번호 한 조각만 안다. 항목명이 「책임자와 전화번호」라 업체명 누락은
+            부분 신고다([[common-as-contact-semantics]] — A/S 는 세 칸이다).
+```
+
+🔴 **둘 다 고치지 않았다.** 쿠팡 고시 `content` 를 바꾸는 것은 **운영 중인 모든
+쿠팡 상품의 신고 내용이 바뀌는 것**이고, 이 파일의 쿠팡 구획은 「값은 한 글자도
+바뀌지 않는다」를 반복해서 지켜 온 자리다(`:1561`). 제품 정책 경계라 **CPO 판정이
+먼저다.** 테스트는 현재 동작을 «FAIL 로 명시해» 고정했다 — 고치면 그 두 테스트가
+깨지고, 그때 ②의 판정을 다시 적는다.
+
+### 🔴 Known Unknowns
+
+```
+① 쿠팡 required        실제 응답 샘플 0건. 그리고 builder 가 required==MANDATORY 로
+                       «항목을 걸러낸다»(:1521) → 모르는 것은 플래그가 아니라
+                       «항목 집합 자체» 다. 메타가 없으면 고시는 0건이다(테스트로 고정).
+② LotteON A/S 업체명   `sellerAsCompanyName` 은 운영에 «출처가 없는» 칸이다.
+                       parity 측정에서는 채워서 값 라우팅을 쟀다 — 실제 운영에서는
+                       비어서 `0090` 이 BLOCKED 된다. 측정이 그 사실을 덮지 않는다.
+③ KIDS 23 의 5항목     0210 품명/모델명 · 0200 KC · 0790 사용연령 · 1830 · 0220 은
+                       NEEDS_INPUT 이다(지어내지 않는다). 네이버는 같은 공백을
+                       «조용히 생략» 한다 — payload 값 불일치는 아니지만 게이트
+                       동작이 다르다. 셀러 화면 기준의 판단거리로 남긴다.
+```
+
+### 재현
+
+```bash
+pnpm --filter @commerce/listing test --run notice-semantic-parity   # 15 passed
 ```
