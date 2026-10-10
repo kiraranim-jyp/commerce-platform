@@ -2,7 +2,11 @@ import type { MasterProduct, SellingConditions } from "@commerce/shared";
 import { variantStockWithSellerDefault } from "@commerce/shared";
 /* 🔴 P5.6 FINAL — 태그 중복제거 규칙은 세 채널이 한 함수를 본다. */
 import { dedupeSellerTagTexts } from "../naver/seller-tags-update";
-import { getRegistrationImageUrl, isRegistrationSafeImageUrl, resolvedPayloadStock } from "@commerce/shared";
+import {
+  getRegistrationImageUrl,
+  isRegistrationSafeImageUrl,
+  resolvedPayloadStockWithSellerDefault,
+} from "@commerce/shared";
 import { computeVariantFinalPriceKrw, resolveListingPrice } from "@commerce/pricing";
 import { manufacturerInputFromProduct, resolveManufacturer } from "../common/manufacturer";
 import type {
@@ -258,11 +262,23 @@ function buildItems(
   const images = toItemImages(gallery);
   /* 🔴 S-17 — 999(파이프라인 DEFAULT)를 재고로 싣지 않는다. 옵션 실측이 있으면
      그 합계가, 없으면 기존 값이 온다(shared/source-stock 한 곳에서 해석). */
-  /* 🔴 P5.6 P0-5(CEO 실측) — 999 는 「재고 999개」가 아니라 «모른다» 다.
-     실측 근거가 없으면 롯데ON 은 0 으로 싣는다 — 모르는 수량을 지어내 파는 것보다
-     품절로 두고 셀러가 채우는 쪽이 안전하다(검증기가 그 사실을 셀러에게 말한다). */
-  const measuredStock = resolvedPayloadStock(product);
-  const defaultStock = measuredStock ?? 0;
+  /* ══ ③ D-LOT-STOCK (CPO 정책 확정 2026-10-11) ═══════════════════════════════
+     **「재고를 모르면 막는다. 단 셀러가 입력한 수량/기본 재고는 쓴다.」**
+
+     🔴 이 자리는 「실측 근거가 없으면 0 으로 싣는다 — 검증기가 그 사실을 셀러에게
+     말한다」였다. 실측해 보니 **그 전제가 반만 사실이었다**: 검증기는
+     `ready("재고(원본 미확인)")` 로 «통과» 시켰다. 그래서 Smallable 처럼 재고를
+     한 칸도 주지 않는 상품이 사이즈 6개 전부 `stkQty: 0` 으로, 즉 **품절로 등록**
+     될 수 있었다(2026-10-11 실측).
+
+     🔴 그래서 UNKNOWN 을 0 으로 «만들지 않는다» — 생략한다. 0 은 「품절」이라는
+     사실의 주장이다. 등록 자체는 검증기가 MISSING 으로 막고, 셀러가 「기본 재고
+     수량」을 넣으면 그 값이 쓰인다.
+     🔴 원본이 «실제로» 0 이면 그 0 은 실측이므로 그대로 실린다
+        (`resolvedPayloadStock` 이 OUT_OF_STOCK 에서 0 을 돌려준다).
+     🔴 `WithSellerDefault` 를 쓴다 — 옵션 없는 상품은 셀러 기본값을 보지 «못하고»
+        있었다(실측 → 셀러기본값 사다리가 옵션 상품에만 걸려 있었다). */
+  const productStock = resolvedPayloadStockWithSellerDefault(product);
 
   const usesOptions = hasLotteOnSellableOptions(product) && product.variants.length > 0;
   if (!usesOptions) {
@@ -273,7 +289,8 @@ function buildItems(
           rprtSitmYn: "Y",
           itmImgLst: images,
           slPrc: basePriceKrw,
-          stkQty: defaultStock,
+          /* 🔴 모르면 «생략» 한다 — 0 을 만들지 않는다(위 D-LOT-STOCK). */
+          ...(productStock != null ? { stkQty: productStock } : {}),
           ...(product.sku.value.trim() ? { eitmNo: product.sku.value.trim() } : {}),
         },
       ],
@@ -304,15 +321,18 @@ function buildItems(
       .filter(([name, value]) => name.trim() && String(value).trim())
       .map(([name, value]) => ({ optNm: name.trim(), optVal: String(value).trim() }));
 
+    /* 🔴 P5.6 FINAL(CPO FAIL ①) — 세 채널이 같은 함수를 본다.
+       ③ D-LOT-STOCK — `null`(실측도 셀러 기본값도 없음)이면 **생략** 한다.
+       전에는 `?? defaultStock` 으로 0 이 들어갔고 그것은 품절 주장이었다. */
+    const variantStock = variantStockWithSellerDefault(product, variant);
+
     return {
       sortSeq: index + 1,
       rprtSitmYn: index === 0 ? "Y" : "N",
       itmOptLst,
       itmImgLst: images,
       slPrc: finalKrw,
-      /* 🔴 P5.6 FINAL(CPO FAIL ①) — 세 채널이 같은 함수를 본다. 여기 `defaultStock`
-         은 실측이 없으면 0 이었고, 그것은 「품절」이라는 주장이다. */
-      stkQty: variantStockWithSellerDefault(product, variant) ?? defaultStock,
+      ...(variantStock != null ? { stkQty: variantStock } : {}),
       ...(variant.sku?.trim() ? { eitmNo: variant.sku.trim() } : {}),
     };
   });

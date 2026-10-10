@@ -126,7 +126,19 @@ describe("① 🔴 셀러가 채운 값은 «사라지지 않는다»", () => {
   });
 });
 
-describe("② 원본 재고를 «모를» 때 — 막지 않고 알린다", () => {
+describe("② 원본 재고를 «모를» 때", () => {
+  /* ══ 🔴 ③ D-LOT-STOCK — 정책이 뒤집혔다 (CPO 확정 2026-10-11) ════════════════
+     이 describe 는 「막지 않고 알린다」였다. 정책이 바뀌었다:
+
+         「재고를 모르면 막는다. 단 셀러가 입력한 수량/기본 재고는 쓴다.」
+
+     🔴 왜 뒤집혔는가 — 실측이 전제를 깼다. 롯데ON 은 라벨로 「원본 미확인」이라
+     말하면서 **빌더는 `stkQty: 0` 을 싣고 있었다.** 즉 화면은 「미확인」이라
+     적고 채널에는 「품절」이 나갔다(Smallable 430632, 사이즈 6개 전부 0).
+     「막지 않고 알린다」가 실제로는 「막지 않고 품절로 등록한다」였다.
+
+     🔴 쿠팡 단언은 그대로 둔다 — CPO 지시는 「Naver/LotteON 동일 정책」이고
+        쿠팡 재고 축(maximumBuyCount)은 이 결정의 범위가 아니다. */
   it("UNKNOWN 은 쿠팡 등록을 막지 않는다", () => {
     const blocked = coupang(makeProduct()).validations.filter((v) => v.status === "ERROR" && v.label === "재고");
     expect(blocked).toEqual([]);
@@ -137,10 +149,23 @@ describe("② 원본 재고를 «모를» 때 — 막지 않고 알린다", () =
     expect(warn?.status).toBe("WARNING");
   });
 
-  it("롯데ON 은 라벨로 말한다 — READY 지만 「원본 미확인」이다", () => {
+  it("🔴 롯데ON 은 «막는다» — 셀러가 기본 재고를 넣을 때까지", () => {
     const stock = lotteOn(makeProduct()).fields.find((f) => f.field === "itmStkQty");
+    expect(stock?.status).toBe("MISSING");
+    /* 🔴 셀러가 풀 수 있는 길을 말한다 — 「안 된다」만 적으면 같은 화면을 계속 본다. */
+    expect(stock?.reason).toContain("기본 재고 수량");
+  });
+
+  it("셀러가 기본 재고를 넣으면 롯데ON 이 그 값으로 열린다", () => {
+    /* 🔴 대조군 — 없으면 「언제나 MISSING」인 가드와 구별되지 않는다. */
+    /* 🔴 `makeProduct` 는 overrides 를 받지 «않는다»(다른 파일에서 온다) —
+       그래서 spread 로 얹는다. 처음에 인자로 넘겼다가 조용히 무시돼
+       「대조군이 FAIL」 했다. */
+    const stock = lotteOn({ ...makeProduct(), sellerDefaultStock: 5 } as CanonicalProduct).fields.find(
+      (f) => f.field === "itmStkQty",
+    );
     expect(stock?.status).toBe("READY");
-    expect(stock?.label).toBe("재고(원본 미확인)");
+    expect(stock?.label).toContain("판매자 기본값");
   });
 });
 

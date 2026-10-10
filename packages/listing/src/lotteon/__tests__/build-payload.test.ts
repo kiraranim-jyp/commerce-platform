@@ -63,7 +63,14 @@ function makeProduct(overrides: Partial<CanonicalProduct> = {}): CanonicalProduc
     countryOfOrigin: field("대한민국"),
     returnPolicy: field("반품 가능"),
     shippingFee: field(0, "DEFAULT"),
-    stockQuantity: field(30, "DEFAULT"),
+    /* 🔴 ③ D-LOT-STOCK(2026-10-11) — 이 fixture 는 「모든 채널 전용 값이 채워진
+       상태 = 등록 가능의 기준선」이라고 적어 놓고 재고를 **`DEFAULT`** 로 두고
+       있었다. `DEFAULT` 는 파이프라인 기본값이고 «실측이 아니다» — 즉 원본
+       기준으로는 「재고 모름」이다. 재고 정책이 「모르면 막는다」로 확정되면서
+       그 모순이 드러났다(검증기가 MISSING 하나를 올린다).
+       🔴 기대값을 고쳐 맞추지 «않고» fixture 를 고친다 — 같은 이유로 이 파일의
+       taxTypeCode(:90)와 고시 항목(:94)을 이미 두 번 고쳤다. */
+    stockQuantity: field(30, "ORIGINAL"),
     certification: field(""),
     importer: field(""),
     childCertification: field(null),

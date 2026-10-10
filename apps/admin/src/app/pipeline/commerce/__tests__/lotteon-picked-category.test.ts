@@ -95,7 +95,12 @@ function makeProduct(overrides: Partial<CanonicalProduct> = {}): CanonicalProduc
     countryOfOrigin: field("스페인"),
     returnPolicy: field("반품 가능"),
     shippingFee: field(0, "DEFAULT"),
-    stockQuantity: field(30, "DEFAULT"),
+    /* 🔴 ③ D-LOT-STOCK(CPO 정책 2026-10-11) — 이 fixture 는 「안전인증만 채우면
+       100%」를 주장하는데 재고가 **`DEFAULT`**(= 실측 아님 = 「모름」)였다.
+       「재고를 모르면 막는다」가 확정되면서 그 모순이 드러났다 — 즉 전에는
+       재고 축이 «우연히» 열려 있어서 100% 가 나왔던 것이다.
+       🔴 기대값(100%)을 낮추지 «않고» fixture 가 자기 주장을 만족하게 만든다. */
+    stockQuantity: field(30, "ORIGINAL"),
     certification: field(""),
     importer: field(""),
     childCertification: field(

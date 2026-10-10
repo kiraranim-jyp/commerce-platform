@@ -3,31 +3,36 @@
 ## 🔴 LONG-SPRINT-03 재개 블록 (세션이 끊기면 여기부터)
 
 ```
-CURRENT POSITION       ③ Smallable E2E — 결함 판정 단계
-LATEST COMMIT          f5bb9172
-PRODUCTION LIVE        4f8a1c5  (코드 변경 fc3e115 = D-OPT 반영됨)
+CURRENT POSITION       ③ Smallable E2E — 재고 정책 닫힘, 다음은 D-CARE
+LATEST COMMIT          (아래 커밋 참조)
+PRODUCTION LIVE        4f8a1c5 → 새 커밋 배포 대기
 
 DONE                   P0.1 수집 · P0.3 옵션/재고 · P0.4/P0.5 승격 · P0.6 3채널 payload
-                       D-OPT 수정+배포 (fc3e115d)
-IN PROGRESS            D-LOT-STOCK 조사 — 🔴 아래 「되돌아본 사실」 때문에 보류
-BLOCKED                D-OPT·D-LOT-STOCK 이 «한 개의 정책 질문» 으로 합쳐졌다 → CPO 판정 필요
-KNOWN DEFECTS          D-LOT-STOCK(P0) · D-CARE · D-MODEL · COUPANG-NOTICE-SEMANTIC-LOSS-01
-NEXT EXACT ACTION      🔴 CPO 판정 먼저: 「원본·셀러 어디서도 재고를 모를 때 등록을
-                       막는가?」 — 막는다면 LotteON 도 Naver(D-OPT)와 같게 닫고,
-                       허용한다면 D-OPT 를 되돌린다. 둘 중 하나를 고른 «뒤» 에
-                       KNOWN_ZERO/SELLER_DEFAULT/UNKNOWN 3종 회귀를 쓴다.
+                       🟢 D-OPT (Naver, fc3e115d)
+                       🟢 D-LOT-STOCK (LotteON+Naver 동일 정책, CPO 확정 2026-10-11)
+IN PROGRESS            —
+BLOCKED                —
+KNOWN DEFECTS          D-CARE · D-MODEL · COUPANG-NOTICE-SEMANTIC-LOSS-01
+NEXT EXACT ACTION      D-CARE: extractCareInstructions() 가 원문 "Wash Cold-30°" 를
+                       못 잡아 source=DEFAULT "케어라벨 참조" 로 덮이는 지점을
+                       precedence(원문→extraction→canonical→default) 로 특정하고,
+                       Smallable 430632 기준 "Wash Cold-30°" → canonical
+                       careInstructions → LotteON 고시 0800 까지 전파를 테스트로 고정.
 
-TEST                   d-opt 5 PASS · parity 16 PASS
-REGRESSION             495 files / 7438 passed · exit 0
+TEST                   d-lot-stock-policy 10 PASS · d-opt 5 PASS · parity 16 PASS
+REGRESSION             496 files / 7449 passed · exit 0
 TYPECHECK              listing 5 = baseline · admin 0 · crawler 2
 BUILD                  PASS (static 104/104)
-DEPLOY                 PASS (4f8a1c5)
-SMOKE                  / 200 · /pipeline 307 · /settings 307
+DEPLOY                 (배포 대기)
+SMOKE                  (배포 뒤)
 CEO ACTION             없음 · 실등록 🔴 STOP
 CEO TEST SCENARIO      docs/NOTICE-PARITY-02-HANDOFF.md §8 — 확인 항목 12개
-                       🔴 ② 가 PARTIAL CLOSED 돼도 그 12항은 «그대로 유효하다».
-                          ②③④ 전부 끝나고 CPO 검토 뒤 «한 번» 전달한다.
-                          (TTAEJYO 13 의 산출물이다 — 포인터가 끊겨 있던 것을 복구)
+                       🔴 스프린트가 넘어가도 유효하다. 포인터를 옮길 때 같이 끌고 간다.
+
+재고 정책 (CPO 확정 2026-10-11) — Naver/LotteON 동일
+  원본 실측          → 그 값          원본 «실제» 0  → 0 (실측이므로 그대로)
+  모름 + 셀러기본값  → 셀러 값        모름 + 입력없음 → 🔴 등록 BLOCK
+  🔴 임의 999/0 금지 · UNKNOWN ≠ ZERO · 쿠팡 재고 축은 이 결정의 범위가 아니다
 ```
 
 ### 🔴🔴 되돌아본 사실 (TTAEJYO 13 커밋 확인, 2026-10-11)

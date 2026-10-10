@@ -1,5 +1,9 @@
 import { resolveListingPrice } from "@commerce/pricing";
-import { blocksRegistration, resolveSourceStock } from "@commerce/shared";
+import {
+  blocksRegistration,
+  resolveSourceStock,
+  resolvedPayloadStockWithSellerDefault,
+} from "@commerce/shared";
 import type { LotteOnPayloadInput } from "./build-payload";
 import { hasLotteOnSellableOptions, isLotteOnSupportedImageUrl, resolveLotteOnImageUrls } from "./build-payload";
 import { isKnownLotteOnTaxType } from "./tax-type";
@@ -413,9 +417,29 @@ export function validateLotteOnPayload(input: LotteOnPayloadInput): LotteOnValid
   if (blocksRegistration(stockFact)) {
     blocked("itmStkQty", "재고", stockFact.note, "SOURCE_STOCK_UNAVAILABLE");
   } else if (stockFact.state === "UNKNOWN") {
-    /* 🔴 모르는 것을 품절이라고 말하지 않는다(CEO 정책). 막지 않되 라벨이
-       사실을 말한다 — 999 를 「재고 있음」으로 보여주지 않는다. */
-    ready("itmStkQty", "재고(원본 미확인)");
+    /* ══ ③ D-LOT-STOCK (CPO 정책 확정 2026-10-11) ═════════════════════════════
+       **「재고를 모르면 막는다. 단 셀러가 입력한 수량/기본 재고는 쓴다.」**
+
+       🔴 이 분기는 `ready("재고(원본 미확인)")` 였다 — 「모르는 것을 품절이라고
+       말하지 않는다」는 맞았지만 **등록을 통과시켰다.** 그 사이 빌더는
+       `stkQty: 0` 을 싣고 있었다. 즉 화면은 「미확인」이라 적고 채널에는
+       「품절」이 나갔다(2026-10-11 Smallable 실측 — 사이즈 6개 전부 0).
+
+       🔴 `blocked` 가 아니라 `missing` 이다 — 이 값은 셀러가 «채울 수 있다»
+          (상품정보의 「기본 재고 수량」). blocked 는 「여기서 채울 수 없는
+          원본의 사실」 자리다. 그 구분을 흐리지 않는다.
+       🔴 셀러 기본값이 «있으면» 막지 않는다. UNKNOWN 은 원본 기준 상태일 뿐이고
+          (`resolveSourceStock` 은 셀러 기본값을 보지 않는다), 그것만 보고 막으면
+          기본값을 넣은 셀러까지 막힌다. */
+    if (resolvedPayloadStockWithSellerDefault(product) == null) {
+      missing(
+        "itmStkQty",
+        "재고",
+        "원본이 재고를 공개하지 않습니다 — 상품정보의 「기본 재고 수량」을 입력하면 등록할 수 있습니다. 모르는 재고를 0이나 999로 임의로 채우지 않습니다.",
+      );
+    } else {
+      ready("itmStkQty", "재고(판매자 기본값)");
+    }
   } else {
     ready("itmStkQty", "재고");
   }
