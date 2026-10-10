@@ -3,36 +3,45 @@
 ## 🔴 LONG-SPRINT-03 재개 블록 (세션이 끊기면 여기부터)
 
 ```
-CURRENT POSITION       ③ Smallable E2E — 재고 정책 닫힘, 다음은 D-CARE
-LATEST COMMIT          (아래 커밋 참조)
-PRODUCTION LIVE        4f8a1c5 → 새 커밋 배포 대기
+CURRENT POSITION       ③ Smallable E2E — 재고·D-CARE 닫힘, 다음은 D-MODEL
+LATEST COMMIT          (아래 커밋)
+PRODUCTION LIVE        배포 대기
 
-DONE                   P0.1 수집 · P0.3 옵션/재고 · P0.4/P0.5 승격 · P0.6 3채널 payload
-                       🟢 D-OPT (Naver, fc3e115d)
-                       🟢 D-LOT-STOCK (LotteON+Naver 동일 정책, CPO 확정 2026-10-11)
+DONE                   P0.1 · P0.3 · P0.4/P0.5 · P0.6 3채널 payload
+                       🟢 D-OPT (fc3e115d) · 🟢 D-LOT-STOCK (ccb0145f)
+                       🟢 D-CARE — 🔴 precedence 는 «결함이 아니었다»(조사 결과).
+                          care-instructions.ts 가 CPO 정책과 이미 같다(2026-10-01).
+                          고친 곳은 «수집» 한 곳 — CARE_LABEL_PATTERNS 가 동사구만
+                          알아서 온도만 적는 원본("Wash Cold-30°")을 못 받았다.
 IN PROGRESS            —
 BLOCKED                —
-KNOWN DEFECTS          D-CARE · D-MODEL · COUPANG-NOTICE-SEMANTIC-LOSS-01
-NEXT EXACT ACTION      D-CARE: extractCareInstructions() 가 원문 "Wash Cold-30°" 를
-                       못 잡아 source=DEFAULT "케어라벨 참조" 로 덮이는 지점을
-                       precedence(원문→extraction→canonical→default) 로 특정하고,
-                       Smallable 430632 기준 "Wash Cold-30°" → canonical
-                       careInstructions → LotteON 고시 0800 까지 전파를 테스트로 고정.
+KNOWN DEFECTS          D-MODEL · COUPANG-NOTICE-SEMANTIC-LOSS-01
+                       backlog: 「Wash at 40°C」·「Cold wash」 등 다른 어순(실측 근거 생기면)
+NEXT EXACT ACTION      D-MODEL 조사(수정 아님): ① Smallable 원문에 model/reference
+                       번호가 실제로 있는가 ② SKU 가 modelName 후보로 허용되는가
+                       ③ canonical 이 title 을 fallback 으로 넣는 이유와 그 범위
+                       ④ 3채널 영향 → CPO 판정용 defect report 로 제출.
+                       🔴 source whitelist(USER_EDITED/ORIGINAL/DETAIL_PAGE_REFERENCE)
+                          정책은 유지한다. 임의 수정 금지.
 
-TEST                   d-lot-stock-policy 10 PASS · d-opt 5 PASS · parity 16 PASS
-REGRESSION             496 files / 7449 passed · exit 0
+TEST                   d-care 12 · d-lot-stock 10 · d-opt 5 · parity 16 — 전부 PASS
+REGRESSION             497 files / 7461 passed · exit 0
 TYPECHECK              listing 5 = baseline · admin 0 · crawler 2
 BUILD                  PASS (static 104/104)
-DEPLOY                 (배포 대기)
+DEPLOY                 (대기)
 SMOKE                  (배포 뒤)
 CEO ACTION             없음 · 실등록 🔴 STOP
 CEO TEST SCENARIO      docs/NOTICE-PARITY-02-HANDOFF.md §8 — 확인 항목 12개
                        🔴 스프린트가 넘어가도 유효하다. 포인터를 옮길 때 같이 끌고 간다.
 
+고시 공통 수집 정책 (CPO 재정의 2026-10-11)
+  셀러 명시 → 원본 수집 → 참조 문구 fallback → MISSING
+  🔴 추론·창작 금지 · 품목별 hardcode 금지 · 채널별 다른 fallback 금지
+  🔴 「케어라벨 참조」는 세탁 전용 기본값이고 「상품 상세페이지 참조」와 «다른 뜻» 이다
+
 재고 정책 (CPO 확정 2026-10-11) — Naver/LotteON 동일
-  원본 실측          → 그 값          원본 «실제» 0  → 0 (실측이므로 그대로)
-  모름 + 셀러기본값  → 셀러 값        모름 + 입력없음 → 🔴 등록 BLOCK
-  🔴 임의 999/0 금지 · UNKNOWN ≠ ZERO · 쿠팡 재고 축은 이 결정의 범위가 아니다
+  원본 실측 → 그 값 · 모름+셀러기본값 → 셀러 값 · 모름+입력없음 → 🔴 BLOCK
+  원본 «실제» 0 → 0 · 🔴 임의 999/0 금지 · UNKNOWN ≠ ZERO
 ```
 
 ### 🔴🔴 되돌아본 사실 (TTAEJYO 13 커밋 확인, 2026-10-11)

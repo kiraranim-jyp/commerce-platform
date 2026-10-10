@@ -208,6 +208,26 @@ const CARE_LABEL_PATTERNS = [
   /\bdo\s+not\s+(?:bleach|tumble\s+dry|iron|dry\s+clean)\b/i,
   /\bline\s+dry\b/i,
   /\btumble\s+dry(?:\s+(?:low|medium|high))?\b/i,
+  /* ══ ③ D-CARE (2026-10-11, Smallable 430632 실측) ═══════════════════════════
+     위 여섯 개는 전부 «동사구» 를 요구한다(machine wash · hand wash · …).
+     그런데 실제 원본이 **온도만** 적는 경우가 있다:
+
+         Smallable  "… Find out more  Wash Cold-30°  Made in Spain "
+
+     그래서 수집이 비고 → `resolveCareInstructions` 가 기본값(「케어라벨 참조」)을
+     넣었다. 공통 정책은 「수집 가능하면 최대한 수집」이므로 이 자리는 수집돼야 한다.
+     🔴 precedence 는 손대지 않았다 — 셀러 명시값은 계속 이긴다(care-instructions.ts).
+
+     🔴 `/wash/i` 처럼 느슨하게 잡지 «않는다». 같은 상품의 이름이
+        "All About Monsters **Washed** T-shirt" 다 — 느슨한 패턴은 상품명을
+        세탁방법으로 읽는다. 그래서 **온도 표기를 반드시 요구** 한다.
+        온도 없는 맨 "wash"/"washed" 는 계속 안 잡힌다.
+     🔴 「Wash at 40°C」 / 「Cold wash」 같은 다른 어순은 여기서 다루지 않는다 —
+        실측 근거가 생기면 추가한다(추측으로 패턴을 늘리면 오수집이 늘어난다). */
+  /* 🔴 `°` 뒤의 공백을 «삼키지 않는다». 처음에 `°\s*[CF]?` 로 썼더니 C/F 가 없는
+     경우 `\s*` 가 뒤 공백을 먹어 `"Wash Cold-30°  "` 가 나왔다 — 규제 신고
+     문자열에 공백이 섞인다. C/F 는 자기 앞 공백과 «함께» 선택적이어야 한다. */
+  /\bwash\s*(?:cold|warm|hot)?[\s-]*\d{2}\s*(?:°(?:\s*[CF])?|degrees?)/i,
 ];
 
 export function extractCareInstructions(description: string | undefined): string | undefined {
