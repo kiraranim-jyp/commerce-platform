@@ -34,10 +34,13 @@ export * from "./naver/attribute-metadata/index";
 export * from "./notice/reference-eligibility";
 /* 🔴 P5.6 후속 P0-6 — 고시품목 «의미» 판정. 채널 코드 변환은 각 builder 가 한다. */
 export * from "./notice/notice-category";
-/* 🔴 고시 «항목 + 필수여부» 공통 모델. payload 를 만들지 않는다 — 지금은
-   각 채널의 기존 매핑과 대조하는 관측용이고, builder 교체는 실등록 해제 뒤에
-   채널 하나씩 한다(common-notice-parity.test.ts 가 그 교체를 받친다). */
+/* 🔴 고시 «항목 + 필수여부» 공통 모델. B⑥(2026-10-10 CPO 승인)으로 롯데ON
+   builder 가 이 모델에서 항목·순서·필수여부를 «실제로» 받아 간다.
+   🔴 네이버는 아직 아니다 — parity 가드로만 묶여 있다(채널 하나씩 간다). */
 export * from "./notice/common-notice-model";
+/* B⑥ — Common → Channel Adapter. 🔴 쿠팡은 고정 코드가 없어 adapter 가 코드를
+   만들지 않는다(coupangNoticeAdapterStatus 가 그 사실을 말한다). */
+export * from "./notice/channel-notice-adapters";
 export * from "./notice/bulk-reference";
 export * from "./notice/care-instructions";
 export * from "./notice/channel-notice-override";

@@ -1,4 +1,7 @@
-import { noticeSchemaFor, type LotteOnNoticeArticleSpec } from "./notice-schema";
+import { type LotteOnNoticeArticleSpec } from "./notice-schema";
+/* B⑥(2026-10-10) — 🔴 항목 집합·순서·필수여부는 **공통 모델** 이 정한다.
+   라벨·가이드라인은 여전히 롯데ON 전사본(notice-schema.ts)에서 온다. */
+import { lotteOnNoticeSpecs } from "../notice/channel-notice-adapters";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -399,7 +402,10 @@ export function resolveLotteOnNotice(
   pdItmsCd: string | null | undefined,
   facts: LotteOnNoticeFacts,
 ): LotteOnNoticeResolution {
-  const schema = noticeSchemaFor(pdItmsCd);
+  /* 🔴 B⑥ — 공통 모델이 정한 항목·순서로 받는다. `null` 은 「이 품목을 모른다」
+     이고, 공통 모델과 채널 전사본이 어긋난 경우도 여기로 떨어진다(fail closed).
+     규제 항목을 하나 빼고 내보내는 것은 통과가 아니라 잘못된 신고다. */
+  const schema = lotteOnNoticeSpecs(pdItmsCd);
   if (!schema) return { schemaKnown: false, fills: [], articles: [] };
 
   const fills = schema.map((spec) => resolveOne(spec, facts));
