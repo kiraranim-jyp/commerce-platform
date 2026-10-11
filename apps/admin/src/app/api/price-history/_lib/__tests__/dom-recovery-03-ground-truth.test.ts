@@ -201,6 +201,26 @@ describe.skipIf(!LIVE)("🔴 DOM-RECOVERY-03 — Independent Ground Truth", () =
             labelReason: score == null ? `🔴 Vision 불가 — ${vstatus}` : `Vision ${score}`,
             /** 🔴 TP/FP 판정 — 운영 tier 가 EXACT/COMPARISON 이면 「SAME 으로 썼다」로 본다 */
             usedAsSame: tier === "EXACT" || tier === "COMPARISON",
+            /**
+             * 🔴🔴 STEP 7-① 금액 — FP 가 `domesticLowestPriceKrw` 를 «얼마나» 움직이는가.
+             *    가격이 같으면 영향 0 이다. 🔴 통화를 섞지 않는다.
+             */
+            originPriceKrw: product.priceOverrideKrw?.value ?? null,
+            originPrice: product.price?.value ?? null,
+            candidatePrice: top?.price ?? null,
+            candidateSoldOut: top?.soldOut ?? null,
+            /**
+             * 🔴🔴 STEP 7-② 미회수 원인 — KNOWN_SAME 인데 tier 가 없는 행의 이유.
+             *    「게이트 탈락」과 「대표 후보가 다른 상품」을 가른다.
+             */
+            notRecoveredReason: tier !== null ? null
+              : j.kind === "NO_CANDIDATES" ? "NO_CANDIDATES"
+              : j.kind === "DROPPED" ? `GATE_${j.gate}`
+              : "UNKNOWN_SHAPE",
+            droppedObservedCandidate: j.kind === "DROPPED"
+              ? String(j.observed.candidate.title ?? "").slice(0, 56) : null,
+            droppedModelEvidence: j.kind === "DROPPED" ? (j.observed.modelCodeEvidence ?? null) : null,
+            droppedInitialMatchType: j.kind === "DROPPED" ? (j.observed.initialMatchType ?? null) : null,
           });
           // eslint-disable-next-line no-console
           console.log(`${t.strata} ${String(dna.brand.value).slice(0, 14).padEnd(15)} ${r.domain.split(".")[0].padEnd(11)} ` +
@@ -263,6 +283,31 @@ describe.skipIf(!LIVE)("🔴 DOM-RECOVERY-03 — Independent Ground Truth", () =
           cases: falseSame.map((r) => ({ brand: r.brand, shop: r.shop, tier: r.tier,
                                          origin: r.originTitle, candidate: r.topCandidateTitle,
                                          vision: r.visionScore, reason: r.visionReason })),
+        },
+        /** 🔴🔴 STEP 7-① FP 의 금액 영향 */
+        fpPriceImpact: {
+          note: "🔴 가격이 같으면 FP 의 금액 영향은 0 이다. 통화를 섞지 않았다.",
+          cases: falseSame.map((r) => ({
+            brand: r.brand, shop: r.shop, tier: r.tier,
+            origin: r.originTitle, candidate: r.topCandidateTitle,
+            originPriceKrw: r.originPriceKrw, originPrice: r.originPrice,
+            candidatePrice: r.candidatePrice, candidateSoldOut: r.candidateSoldOut,
+            vision: r.visionScore,
+          })),
+        },
+        /** 🔴🔴 STEP 7-② KNOWN_SAME 인데 회수 못 한 행의 원인 */
+        notRecovered: {
+          note: "🔴 「게이트 탈락」과 「대표 후보가 다른 상품」을 가른다.",
+          count: knownSame.filter((r) => !r.usedAsSame).length,
+          byReason: count(knownSame.filter((r) => !r.usedAsSame), (r) => String(r.notRecoveredReason)),
+          cases: knownSame.filter((r) => !r.usedAsSame).map((r) => ({
+            brand: r.brand, shop: r.shop, origin: r.originTitle,
+            candidate: r.topCandidateTitle, vision: r.visionScore,
+            reason: r.notRecoveredReason,
+            droppedCandidate: r.droppedObservedCandidate,
+            droppedEvidence: r.droppedModelEvidence,
+            droppedMatchType: r.droppedInitialMatchType,
+          })),
         },
         byGate: count(rows, (r) => String(r.gate ?? "-")),
         byTier: count(rows.filter((r) => r.tier), (r) => String(r.tier)),

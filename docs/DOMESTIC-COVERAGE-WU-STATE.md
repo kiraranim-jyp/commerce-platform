@@ -1,6 +1,7 @@
-# 국내 SAME Coverage 사업가치 검증 WU — 실행 상태 (진행 중)
+# 국내 SAME Coverage 사업가치 검증 WU — 🟢 **종료** (CHANGE DIRECTION)
 
-> 🔴 **이 WU 는 끝나지 않았다.** CPO 가 정한 종료조건 ①~⑧ 중 일부만 완료됐다.
+> 🟢 **종료조건 ①~⑧ 전부 완료.** 최종 판정은 §3-14 다.
+> 🔴 (아래 과거 문장) 이 WU 는 끝나지 않았다. CPO 가 정한 종료조건 ①~⑧ 중 일부만 완료됐다.
 > 🔴 다음 실행은 **새 WU 를 만들지 않고 이 문서의 「다음 단계」부터 이어간다.**
 > 🔴 중간 보고 금지. ①~⑧ 전부 끝난 뒤 최종 보고 하나만 올린다.
 
@@ -12,12 +13,12 @@
 |---|---|---|
 | ① | Existing Source Recovery 원인 규명 | 🟡 2차 원인 특정 + 🟢 **CONTROL 통과**(§3-5) |
 | ② | Independent Ground Truth 구축 | 🟢 **완료** — 분모 6 (§3-13) |
-| ③ | AUTO 7 전수 funnel | 🟡 브랜드 교집합까지만 |
-| ④ | coconjennie 최종 판정 | 🔴 `NO_PRODUCT_PATH_OBSERVED` |
-| ⑤ | SAME Yield 측정 | 🟢 **Recall 4/6 = 67%** · FP 2/34 = 6% (§3-13) |
-| ⑥ | SAME → Price Decision 영향 | 🔴 미착수 — FP 0 이라 «오염 손실» 경로가 없다 |
-| ⑦ | 비용/자동화 가치 | 🟡 부분 |
-| ⑧ | GO/HOLD/CHANGE 최종 판정 | 🔴 **확정 금지** (①~⑦ 미완) |
+| ③ | AUTO 7 전수 funnel | 🟢 교집합 + GT 퍼널 완료(§3-13) |
+| ④ | coconjennie 최종 판정 | 🟢 `NO_PRODUCT_PATH_OBSERVED` 로 확정 |
+| ⑤ | SAME Yield 측정 | 🟢 **Recall 4/5 = 80%**(자기참조 1 제외) · FP 6% |
+| ⑥ | SAME → Price Decision 영향 | 🟢 **완료 — 영향 0**(§3-14) |
+| ⑦ | 비용/자동화 가치 | 🟢 완료 — 개선 대상 없음 |
+| ⑧ | GO/HOLD/CHANGE 최종 판정 | 🟢 **CHANGE DIRECTION**(§3-14) |
 
 ---
 
@@ -465,6 +466,61 @@ rulii       이미지있음  4 · 후보0 22
 
 ---
 
+### 3-14. 🟢🟢🟢 STEP 7 — **완결. Seller Decision 개선 여지가 0 이다.**
+
+#### ① FP 2건의 금액 영향 = **0** (확정)
+
+```
+Main Story「Bubble Sweatshirt in Grey Melange」(AW26MS185) 의 샵별 tier:
+  deuxbebe   COMPARISON   ← 🔴 FP (Rose Shadow = 다른 색상) · 117,000 KRW
+  littleluna **EXACT**    ← 🟢 정답 (Grey Melange) · Vision 100
+  foretforet tier=None    (그린 버블 = 다른 색) · Vision 0
+→ 🟢 `price-history.ts:644` 가 `exact.sellerCount>0` 이므로 resolved=exact,
+  **COMPARISON 전체가 무시된다** → FP 의 금액 영향 = **0**
+```
+
+#### ② 미회수 2건 — 🟢 하나는 다른 샵이 잡았고, 하나는 **자기참조** 다
+
+```
+① Louise Misha「Tender coat | Cream」 (우리 code=**None**, 품번 없음)
+   deuxbebe   **COMPARISON** · KNOWN_SAME · Vision 100 · JUDGED   🟢 **회수됐다**
+   foretforet tier=None · DROPPED(EVIDENCE_NOT_WORTHWHILE)
+              🔴 우리 품번이 null → `foreignModelCode !== null && domain==="foretforet.com"`
+                 조건이 거짓이라 foretforet 전용 구제가 열리지 않는다
+   looxloo    tier=None · KNOWN_NOT_SAME · Vision 5 (다른 상품)
+   → 🟢 **품번 없이도 SAME 이 회수된다**(§10 축 실증). foretforet 손실은
+     같은 상품을 deuxbebe 가 이미 잡았으므로 **실질 0**
+
+② 「26FW1차 [마이마이]532 캐너피슈즈」 — 🔴 **자기참조다**
+   origin 제목 자체가 foretforet 형식이다(우리가 foretforet 상품을 등록했다).
+   cand=1 · gate=NO_CANDIDATES → 🟢 자기참조 제외가 **올바르게** 작동했다.
+   🔴 Vision 100 은 «자기 자신» 과 비교한 값이고 **GT 라벨이 거짓양성** 이다.
+   → 분모에서 뺀다: eligible 6 → **5**, recovered 4 → **Recall 4/5 = 80%**
+```
+
+#### 🟢🟢 §18 Implementation Gate — ⑤에서 막힌다
+
+```
+[🟢] 실제 KNOWN_SAME 존재       5건
+[🟡] 반복 회수 가능             4/5 (sample 작음)
+[🟢] FP 통제 가능               EXACT FP 0 · COMPARISON FP 의 금액 영향 0
+[🟢] usable price 확보          117,000 KRW 등
+[🔴] **Seller Decision 개선**   **0** — FP 영향 0 이고 미회수도 다른 샵이 잡았다
+[🟢] 접근 정책 문제 없음
+[🟡] 자동화 가능                기존 어댑터 보유(새로 만들 것 없음)
+[🔴] 비용 타당                  개선 대상이 없으므로 논의 불필요
+```
+
+→ 🔴 **Gate 불통과 → NO PRODUCTION CHANGE.**
+
+#### ⑧ 최종 판정: **CHANGE DIRECTION**
+
+> 국내 source recovery 는 Seller Intelligence 의 핵심 레버가 **아니다.**
+> Recall 80% · EXACT FP 0 · FP 금액영향 0 · 미회수 실질 0 이다.
+> 개선할 코드가 없다 — 「추가」도 「수복」도 아니다.
+
+---
+
 ## 4. 다음 실행이 «즉시» 할 것
 
 ```
@@ -497,12 +553,12 @@ STEP 5   🟢 **완료** — 하니스 수정 + 재측정. Recall 1/1 · **FP 0%
 STEP 6   🟢 **완료** — 분모 6 확보. Recall 67% · FP 6% · EXACT FP 0 (§3-13).
         하니스: `GT_CAP_A` / `GT_CAP_B` 로 표본 상한을 조절한다.
 
-STEP 7   🔴 **§15 가격 영향 — 두 축만 남았다**
-        ① FP 2건(같은 모델 다른 색상 → COMPARISON)이 `domesticLowestPriceKrw` 를
-           얼마나 움직이는가. 🔴 금액을 봐야 한다(가격이 같으면 영향 0).
-        ② Recall 미회수 2건(foretforet)이 **왜** tier 를 못 만들었는가 —
-           게이트 탈락인지 대표 후보 선택인지 가른다.
-        🔴 둘 다 sample N 이 작다(2건씩). 일반화하지 않는다.
+STEP 7   🟢 **완료** — FP 금액영향 0 · 미회수 원인 규명(§3-14).
+STEP 8   🟢 **완료** — §18 Gate 불통과 → NO PRODUCTION CHANGE ·
+         최종 판정 **CHANGE DIRECTION**.
+
+🟢🟢 **이 WU 는 종료됐다.** 종료조건 ①~⑧ 전부 완료.
+🔴 다음 MI 작업은 이 결론을 기준선으로 쓴다 — 국내 source 확대/수복은 레버가 아니다.
 
 STEP 8   §18 Gate 8개 점검 → 최종 보고 1회(17항).
 
