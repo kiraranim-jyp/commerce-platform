@@ -348,19 +348,60 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 🔴 MI 쪽 코드 실험을 더 돌리지 않는다(CPO 확정). 다음 과제는 코드가 아니다.
 ```
 
-### 🟢 Coverage 결론 — 이 문장을 그대로 쓴다 (CPO 확정 표현)
+### 🟢 Coverage 결론 — 이 문장을 그대로 쓴다 (CPO 확정 2026-10-12)
 
 ```
 ❌ 「497 중 428(86%)에 국내 링크가 없다」 → 「국내 후보가 없다」로 읽으면 «틀린다»
-🟢 「확인된 자동 경로에서 후보 회수 자체가 주된 병목이라는 증거가 없으며,
-     SAME 을 확정할 수 있는 국내 판매처 / 식별정보의 구조적 부족이 핵심이다」
+❌ 「looxloo 커버 94」 → 「SAME 후보 94」가 아니다. **브랜드 교집합** 일 뿐이다
+❌ 「후보 0건」 → 「Coverage 없음」이 아니다
 
-실측: NO_LINK 상품 12건 중 10건(83%)이 실제로 후보를 회수한다 (sample N=12)
-자동 커버리지는 «품번을 읽을 수 있는 샵» 에서만 생긴다 —
-  foretforet(HTTP 추출기) · bobochoses(URL handle) · deuxbebe/littleluna(제목 품번)
-looxloo·rulii·chocoel·skysport 는 품번 경로가 «없다»(자체 코드만: 35W70-869-01)
-→ 추출기를 더해도 효과가 0 이다. 레버는 「샵 수」가 아니다.
+🟢 CPO 확정 표현:
+  「국내 Coverage 자체가 나쁜 것이 아니라, **Coverage 를 더 늘리는 것이 현재
+    Seller Intelligence 의 핵심 가치 레버라는 증거가 없다.**」
 ```
+
+### 🟢🟢 국내 SAME Coverage 사업가치 검증 WU — **CLOSED / CHANGE DIRECTION**
+
+전문은 `docs/DOMESTIC-COVERAGE-WU-STATE.md`. 🔴 **다시 열지 않는다.**
+
+```
+§5-B CONTROL        PASS (게이트를 「tier === expectedTier」로 세워 EXACT 축 8/8 재현)
+Independent GT      ESTABLISHED (observeVision — 판정에 입력되지 않는 관측기)
+SAME Recall         4/5 = 80%   🔴 eligible 5 라 «일반화 금지»
+False Positive      2/34 = 6%   — 둘 다 COMPARISON
+🟢 EXACT FP         **0**       (MI-P0-12 이후 3회 확증)
+Price Decision 영향  **0**       exact.sellerCount>0 이면 COMPARISON 전체가 무시된다
+Implementation Gate FAIL — ⑤ Seller Decision 개선 = 0
+Production/DB/정책   변경 0
+```
+
+🔴 **미실행으로 종결된 것들** — 다시 제안하지 않는다:
+```
+looxloo query 변경 · 한글 alias 추가 · rulii query 변경 · SAME threshold 완화 ·
+no-code SAME 승격 · 신규 국내 source 대량 추가 · robots 우회 ·
+UniversalExtract fallback · Registry UI 변경 · Cafe24 공통 리팩터링
+```
+
+🟢 **source 제외 근거가 확보된 것**: `chouchouenfant`(Bobo 품번 50건 전수에
+현행 226 = 0 → 과거시즌 아웃렛) · `skysport`(교집합 0, 테니스 전문 → 0 이 맞다) ·
+`chocoel`(교집합 MYMY 1건).
+🔴 `coconjennie` 는 sixshop product path 미관찰 → **UNKNOWN 유지**(추측 금지).
+
+🔴 **「측정불가 ≠ 0%」** — 남은 Unknown 을 0 이나 100% 로 만들지 않는다:
+`UNKNOWN 90` 의 「미취급 ↔ 검색실패」 · `rulii` 동일 · MANUAL 13 자동성능 ·
+GT 분모 5 · deuxbebe confidence 회귀(0.72→0.58, 단 REFERENCE 라 Decision Value 0).
+
+### 🔴 다음 전략 방향 (CPO 확정) — 국내 source 가 «목적» 이 아니다
+
+```
+Original Product → Discovery(Google/Naver/Gemini) → Candidate URL Pool
+→ Light Fetch → MI Identity → SAME/SIMILAR/NO_MATCH → SAME
+→ Price / Seller Decision → Commerce
+```
+
+> 「국내 판매처를 더 많이 연결하면 Intelligence 가 좋아진다」가 **아니라**,
+> 「좋은 후보를 확보하고 우리 MI 가 정확하게 SAME 을 판정해서 실제 Seller
+>  Decision 에 연결하는 것」이 핵심이다.
 
 ### 🔴 금지된 단기 레버 5항 (측정으로 근거가 부정됐다)
 
