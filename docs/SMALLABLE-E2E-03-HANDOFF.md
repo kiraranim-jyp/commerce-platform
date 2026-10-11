@@ -524,3 +524,72 @@ image·price 도 같은 자리에서 null 여부를 다시 확인해야 한다.
 KPI 9~14(SAME precision · SIMILAR contamination · 국내/해외 가격 매칭 ·
 INSUFFICIENT 비율 · Human Review Rate)는 **측정하지 않았다.** 수집 KPI 3건이
 무효인 상태로 Identity 를 돌리면 그 판정도 무효가 된다 — 순서를 지킨다.
+
+---
+
+# MI-P0 ②~⑥ 재측정 — 🔴 B-CODE 보고를 «정정» 한다 (2026-10-11)
+
+후보 10건을 캐시해 두고(`scratchpad/mi-p0-candidates.json`) 실제 칸으로 다시 셌다.
+🔴 앞 측정이 0 을 낸 이유는 내가 «없는 칸 이름»(`modelCode`·`productCode`)을 센 것이다.
+실제 모양은 소스에서 확인했다 — `ComparisonCandidate{title,url,price,regularPrice,
+imageUrl,confidence,brand?,sku?,facts?}` · `facts{brandModelCode,sellerSku,colorText,
+materialText,categoryText,urlSlug,coreTitleTokens,sizeLabels,imageUrls,…}`.
+
+## 측정값 (칸 이름 확인 후)
+
+```
+Gemini 후보 10건 → resolve usable 6 (🔴 60%) → Light Fetch 6/6 OK (🟢 100%)
+분류            PRODUCT_PAGE 6 · LISTING_PAGE 2 · UNKNOWN_PAGE 2
+수집            title 6/6 🟢 · brand 5/6 🟢 · imageUrl 3/6 🟡
+                🔴 price 0/6 · regularPrice 0/6 · sku(최상위) 0/6
+```
+
+## 🔴🔴 ①번 정정 — B-CODE 는 MI 경로에서 «작동한다»
+
+```
+bobochoses.com(공식몰)  🟢 brandModelCode "B226AC004" · "B226AC018"
+                          colorText "light green" · "midnight blue"
+                          materialText "… Recycled Polyester 50%, Cotton 50% …"
+mustit.co.kr            🔴 전부 null
+4910.kr                 🔴 전부 null
+donokids.com            🔴 전부 null
+```
+
+🔴 **앞서 Commerce E2E 에서 「Bobo 공식몰인데 brand 빈값 · 품번 없음」이라고 적은 것은
+경로가 달랐던 것이다.** `universalExtract`→`buildCanonicalProduct`(Commerce 수집
+경로)는 그 둘을 못 채우는데, `factsFromProductUrl`(MI 경로)은 **채운다.**
+→ B-CODE/B-BRAND 는 「추출기가 없다」가 아니라 **「두 경로가 서로 다른 것을 읽는다」**다.
+   P0-Identity-01/02 의 과제가 «구현» 에서 «경로 통합» 으로 바뀐다.
+
+## 🔴 진짜 P0 결함 — 가격이 한 건도 수집되지 않는다
+
+```
+price 0/6 · regularPrice 0/6   (칸 이름 확인 후의 수치다 — 무효 측정이 아니다)
+```
+
+CPO 의 1순위는 「국내 동일상품이 한국에서 얼마에 팔리는가」인데, **Light Fetch 가
+가격을 한 건도 주지 않는다.** 이것이 국내 가격비교를 막는 실제 지점이다.
+🔴 `factsFromProductUrl` 의 어느 fetchPath 가 가격을 버리는지는 아직 특정하지 않았다.
+
+## 🔴 국내 판매처는 식별 축이 «title+brand» 뿐이다
+
+mustit·4910·donokids 에서 `brandModelCode·colorText·materialText` 전부 null.
+CPO 기준(식별자 > 이미지/특성 > 제목 유사도)에서 **가장 약한 축만 남는다** —
+즉 지금 국내 후보로 SAME 을 판정하면 「SIMILAR→SAME 오판」 위험 구간이다.
+🟢 그래서 Identity 를 아직 붙이지 않은 판단이 맞았다.
+
+## 🟡 Gemini 가 가져온 것은 «같은 상품» 이 아니다
+
+공식몰 후보의 품번은 `B226AC004`(light green) · `B226AC018`(midnight blue) 인데
+원본은 "All About Monsters Washed T-shirt … Blue" 다. 즉 **같은 시리즈의 다른 색/다른
+품번**이다. 🔴 제목 유사도만 보면 SAME 으로 올라갈 수 있는 바로 그 조합이고,
+품번이 있으면 NO_MATCH 로 갈라진다 — B-CODE 가 P0 인 이유가 실측으로 보인다.
+
+## 다음 (순서 고정)
+
+```
+① price 0/6 의 원인 특정 — factsFromProductUrl 의 fetchPath 별로 가격 유실 지점
+② B-CODE/B-BRAND 경로 통합 — Commerce 수집 경로가 MI 경로의 facts 를 못 보는 문제
+③ 그 뒤 Identity 연결 → SAME/SIMILAR → Verified Price → KPI 9~14
+🔴 ①② 전에 Identity 를 붙이면 그 판정이 무효다(수집 축이 title+brand 뿐이므로).
+```
