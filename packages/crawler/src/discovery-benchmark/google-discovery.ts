@@ -1,3 +1,4 @@
+import { supportedPriceSourceDomains } from "./supported-sellers";
 import type { DiscoveredUrl, DiscoveryProvider, DiscoveryQuery, ProductIdentity } from "./types";
 
 /**
@@ -132,8 +133,20 @@ export interface GoogleDiscoveryUsage {
  *    말한다 — Google 에게 동일성 판단을 맡기면 우리 MI 와 역할이 겹친다(§7).
  * 🔴 모델이 무슨 문장을 쓰든 우리는 `groundingChunks` 의 URL 만 읽는다. 답변
  *    텍스트는 파싱하지 않는다 — 모델이 말을 바꿔도 결과가 흔들리지 않는다.
+ *
+ * ── MI-P0-02 STEP B — 가격 owner whitelist 주입 ─────────────────────────────
+ * 병목은 「국내 가격 수집 불능」이 **아니다**. 우리에게 파서가 있는 판매처를
+ * Gemini 가 결과에 넣지 않는 것이다(Discovery Recall ↔ Price Adapter Coverage
+ * 불일치). 그래서 registry 도메인을 **우선 포함 요청** 으로 싣는다.
+ *
+ * 🔴 **「이 목록만」이라고 말하지 않는다.** Gemini 의 역할은 Recall 이고, 목록을
+ *    배타적으로 만들면 아직 어댑터가 없는 판매처를 영구히 못 보게 된다 — 그러면
+ *    「어댑터를 어디에 더 붙여야 하는가」라는 질문의 답을 측정으로 얻을 수 없다.
+ *    false-negative 를 우리가 만들어 넣는 셈이다.
+ * 🔴 **판정 요구를 추가하지 않는다.** 「우선 포함」은 어디를 찾을지에 대한 힌트이고
+ *    동일성 판단이 아니다. 바로 아래 「판단하지 마세요」가 그대로 남아 있다.
  */
-function buildPrompt(identity: ProductIdentity, query: DiscoveryQuery): string {
+function buildPrompt(identity: ProductIdentity, query: DiscoveryQuery, preferredDomains: readonly string[]): string {
   return [
     "다음 상품을 **판매하는 쇼핑몰 상품 페이지**를 최대한 많이 찾아 주세요.",
     "한국 쇼핑몰과 해외 쇼핑몰을 모두 포함해 주세요.",
@@ -142,6 +155,16 @@ function buildPrompt(identity: ProductIdentity, query: DiscoveryQuery): string {
     identity.brand ? `브랜드: ${identity.brand}` : "",
     identity.productCode ? `품번: ${identity.productCode}` : "",
     "",
+    // 🔴 목록이 비면 이 문단 자체를 넣지 않는다 — 「우선 포함: (없음)」 같은
+    //    빈 지시는 baseline arm 의 프롬프트를 오염시킨다.
+    preferredDomains.length > 0
+      ? [
+          "아래 쇼핑몰에 같은 상품 판매 페이지가 있으면 **반드시 함께 포함**해 주세요.",
+          "🔴 아래 목록에만 한정하지 마세요 — 목록 밖의 판매처도 찾으면 모두 포함해 주세요.",
+          ...preferredDomains.map((d) => `- ${d}`),
+          "",
+        ].join("\n")
+      : "",
     "같은 상품인지 판단하지 마세요. 판매 페이지 주소만 찾아 주세요.",
   ]
     .filter(Boolean)
@@ -213,12 +236,37 @@ export interface GoogleDiscoveryProvider extends DiscoveryProvider {
   usage(): GoogleDiscoveryUsage;
   /** 실제로 쓴 모델 이름(기본값이 쓰였는지 확인용). */
   modelName(): string;
+  /**
+   * 🔴 이 provider 가 프롬프트에 **실제로 실은** whitelist. 측정 보고서가
+   *    「whitelist 를 켰다고 생각했는데 안 켜져 있었다」를 만들 수 없게 한다 —
+   *    이 저장소는 화면이 「지원」이라고 말하는데 실제로는 unsupported 였던
+   *    사고를 반복해 왔다.
+   */
+  preferredDomains(): readonly string[];
 }
 
-export function createGoogleDiscoveryProvider(options?: { model?: string }): GoogleDiscoveryProvider {
+export interface GoogleDiscoveryOptions {
+  model?: string;
+  /**
+   * 프롬프트에 「우선 포함」으로 실을 판매처 도메인.
+   *
+   * 🔴 **생략하면 price adapter registry 전체가 들어간다**(안전 기본값). 끄는
+   *    것이 명시적이어야 한다 — 기본값을 「없음」으로 두면 호출부가 한 번
+   *    빠뜨리는 순간 측정이 조용히 baseline 으로 돌아가고, 그 숫자는
+   *    「whitelist 를 켰는데 효과가 없다」로 읽힌다.
+   * 🔴 baseline(대조군)을 재려면 `[]` 를 **명시** 한다.
+   */
+  preferredDomains?: readonly string[];
+}
+
+export function createGoogleDiscoveryProvider(options?: GoogleDiscoveryOptions): GoogleDiscoveryProvider {
   const usage: GoogleDiscoveryUsage = { requests: 0, promptTokens: 0, candidatesTokens: 0, thoughtsTokens: 0, totalTokens: 0 };
   const providerId = "google-search-grounding";
   const resolveModel = () => options?.model ?? (process.env[GEMINI_MODEL_ENV]?.trim() || DEFAULT_MODEL);
+  // 🔴 `??` 다. `||` 로 쓰면 명시한 `[]` 가 falsy 가 아니라 **truthy** 이므로
+  //    문제가 없어 보이지만, 길이 0 을 「없음」으로 바꾸는 코드를 옆에 붙이는
+  //    순간 baseline arm 이 조용히 whitelist arm 이 된다. 분기를 여기 하나만 둔다.
+  const resolvePreferred = (): readonly string[] => options?.preferredDomains ?? supportedPriceSourceDomains();
   return {
     id: providerId,
     label: "Google AI(Search Grounding)",
@@ -227,12 +275,13 @@ export function createGoogleDiscoveryProvider(options?: { model?: string }): Goo
     requestCount: () => usage.requests,
     usage: () => ({ ...usage }),
     modelName: resolveModel,
+    preferredDomains: resolvePreferred,
     async discover(identity, query) {
       const ready = googleDiscoveryReadiness();
       if (ready.state === "CONFIG_MISSING") throw new GoogleDiscoveryConfigError(ready.missing);
       const apiKey = process.env[GEMINI_API_KEY_ENV]!.trim();
       usage.requests += 1;
-      const body = await callGemini(buildPrompt(identity, query), apiKey, resolveModel());
+      const body = await callGemini(buildPrompt(identity, query, resolvePreferred()), apiKey, resolveModel());
       const u = body.usageMetadata;
       usage.promptTokens += u?.promptTokenCount ?? 0;
       usage.candidatesTokens += u?.candidatesTokenCount ?? 0;

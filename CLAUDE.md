@@ -301,7 +301,13 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 docs/MI-P0-02-HANDOFF.md 의 CURRENT POINTER → NEXT EXACT ACTION 을 읽고
 «즉시 실행» 한다. 🔴 「어디부터 할까요」를 묻지 않는다 — CPO 가 범위를 정했다.
 🟢 COMMERCE 는 CLOSE 다(bd81b064). ③ 전문은 docs/SMALLABLE-E2E-03-HANDOFF.md.
-🔴 중간 보고 금지 — STEP A~I 한 묶음 뒤 완료 보고 하나만 올린다.
+🟢 STEP A~I 는 «전부 실측 완료» 다(2026-10-11) — 결과는 그 문서 §8.
+   🔴 재측정·재구현 금지. 하니스는 이미 있다(mi-p0-02-live-measure.test.ts ·
+      mi-p0-02-price-identity.test.ts, 둘 다 MI_P0_02_LIVE=1 로 돈다).
+   🔴 registry 는 **21개** 다. 「10개」·「11개」는 둘 다 틀렸다(테스트로 잠겼다).
+   🔴 국내 가격 매칭 KPI 는 「0%」가 아니라 **측정불가(분모 0)** 다.
+      병목은 가격 파서가 아니라 **Identity 증거(품번 축)** 다 — §8-④.
+🔴 중간 보고 금지 — 한 묶음 뒤 완료 보고 하나만 올린다.
 🔴 ② 는 PARTIAL CLOSED 다(재구현 금지). 쿠팡 고시 2건은 별도 backlog
    COUPANG-NOTICE-SEMANTIC-LOSS-01 로 분리됐다 — ③ 와 섞지 않는다.
 🔴 실등록은 STOP 이다.
