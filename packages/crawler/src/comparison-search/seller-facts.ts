@@ -98,6 +98,74 @@ function shopifySizeLabels(input: ShopifyProductLike): string[] {
   return group?.values ?? [];
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * MI-P0-02l(CPO 지시, 2026-10-11) — **`vendor` 는 브랜드 칸이 아니다.**
+ *     두 독립 출처가 «동의할 때만» 브랜드를 만든다.
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 fixture 전수 실측(27건 · Shopify vendor 보유분)에서 `vendor` 오염이 **5유형**
+ *    으로 나왔다. 기존 가드(`SEASON_CODE_ONLY_RE`)는 ①만 잡는다:
+ *
+ *      ① 전체가 시즌       'AW26'                        🟢 기존 가드가 잡는다
+ *      ② 시즌 섞임         'Main Story AW26'             🔴 통과
+ *      ③ 프로모션          'Bobo Choses 60% Off Sale'    🔴 통과 · «시즌이 아니다»
+ *      ④ 시즌 영문표기      'Misha & Puff Fall 26'        🔴 통과
+ *      ⑤ 라인/카테고리어    'Pèpè Shoes' · '… Clothing'   🔴 오염인지 «불명확»
+ *
+ * 🔴 그래서 **regex 를 넓히는 방식은 쓰지 않는다.** ③④를 잡으려 넓히면 ⑤에 닿고,
+ *    `'Pèpè Shoes'` 가 브랜드 공식명인지 오염인지 판단할 근거가 없다 — 그것이
+ *    False Positive 다(CPO 경고).
+ *
+ * ── 🟢 실측으로 찾은 독립 evidence: title 의 「… by {BRAND}」절 ──────────────
+ *
+ *      junioredition(편집샵)  16/16 = 100%   ← vendor 를 «컬렉션/프로모션 라벨» 로 쓴다
+ *      bobochoses(자사몰)      0/9           ← vendor 를 «시즌» 으로 쓴다
+ *      main-story(자사몰)      0/2           ← vendor 를 «브랜드» 로 쓴다
+ *
+ *    🟢 **정확히 상보적이다.** by절이 있는 곳은 vendor 가 오염돼 있고, by절이 없는
+ *       곳은 기존 가드/도메인 매핑이 담당한다.
+ *
+ * ── 🔴 by절을 «그대로» 쓰지 않는다 — 실측 FP 2/16 ──────────────────────────
+ *
+ *      'Bobo Choses - Last One In Stock - 6 Months'   ← 재고/사이즈 라벨이 붙는다
+ *      'PèPè - Last Ones In Stock - 28-29 EUR'
+ *
+ *    그래서 **vendor 와 by절의 «공통 토큰 접두사»** 만 채택한다. 둘이 서로를
+ *    교정하고, 동의하지 않으면 `null` 이다.
+ *
+ * 🟢 실측 검증: junioredition 16/16 정답. FP 대조군도 안전하다 —
+ *      by절 없음                → null  (기존 경로로 내려간다)
+ *      'Mini-La-Mode'          → 보존   (토큰 단위라 하이픈이 깎이지 않는다)
+ *      by절이 브랜드가 아님      → null
+ *      완전히 다른 값            → null
+ *
+ * 🔴 **추가 전용이다.** 이 함수가 null 을 주면 아래 분기는 예전과 «똑같이»
+ *    동작한다. 기존 가드와 도메인 매핑을 지우지 않았다.
+ * 🔴 표기 차이(`Pèpè` ↔ `PèPè`)는 downstream 이 흡수한다(brand-alias 의
+ *    normalizeBrand 가 NFKD+소문자로 비교한다) — 여기서 통일하지 않는다.
+ */
+const TITLE_BY_CLAUSE_RE = /\bby\s+(.+?)\s*$/i;
+
+/** 🔴 비교 전용 정규화. 값을 바꾸지 않는다 — 채택하는 것은 원문 토큰이다. */
+function normalizeBrandToken(token: string): string {
+  return token.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+
+export function brandFromTitleByClause(title: string, vendor: string | undefined): string | null {
+  const by = TITLE_BY_CLAUSE_RE.exec(title)?.[1]?.trim();
+  if (!by || !vendor) return null;
+  const byTokens = by.split(/\s+/).filter(Boolean);
+  const vendorTokens = vendor.trim().split(/\s+/).filter(Boolean);
+  const agreed: string[] = [];
+  for (let i = 0; i < Math.min(byTokens.length, vendorTokens.length); i += 1) {
+    if (normalizeBrandToken(byTokens[i]) !== normalizeBrandToken(vendorTokens[i])) break;
+    // 🔴 by절 표기를 채택한다 — 그것이 «상품 페이지» 가 말하는 브랜드다.
+    agreed.push(byTokens[i]);
+  }
+  return agreed.length > 0 ? agreed.join(" ") : null;
+}
+
 export function productFactsFromShopifyProduct(input: ShopifyProductLike, domain: string): ProductFacts {
   const title = input.title ?? "";
   const description = plainText(input.description ?? input.body);
@@ -109,8 +177,20 @@ export function productFactsFromShopifyProduct(input: ShopifyProductLike, domain
   // vendor가 시즌코드인 스토어가 실제로 있다(bobochoses.com). 시즌코드를 브랜드로
   // 쓰면 "AW26 ↔ Bobo Choses" 브랜드 불일치가 되어 진짜 동일상품이 깎인다.
   const vendor = input.vendor?.trim();
+  /**
+   * 🔴 MI-P0-02l — Brand Evidence Priority. 근거는 `brandFromTitleByClause` 주석
+   *    (fixture 27건 전수 실측 · vendor 오염 5유형 · by절 상보성 · FP 대조군).
+   *
+   *      ① title by절 ∩ vendor   두 독립 출처가 «동의» 할 때만 (편집샵 16/16)
+   *      ② 검증된 vendor          시즌코드 전체가 아닐 때      (자사몰 main-story)
+   *      ③ 공식몰 도메인 매핑      vendor 가 시즌일 때          (자사몰 bobochoses)
+   *      ④ null                  지어내지 않는다
+   *
+   * 🔴 ①이 null 이면 ②③은 **예전과 똑같이** 동작한다 — 추가 전용이다.
+   */
   const brand =
-    vendor && !SEASON_CODE_ONLY_RE.test(vendor) ? vendor : (OFFICIAL_STORE_BRANDS[domain] ?? null);
+    brandFromTitleByClause(title, vendor) ??
+    (vendor && !SEASON_CODE_ONLY_RE.test(vendor) ? vendor : (OFFICIAL_STORE_BRANDS[domain] ?? null));
 
   // 색상은 설명문 첫 문장에 그대로 나온다(실측: "Light heather grey sweatshirt.").
   // 수식어가 둘 붙는 표기까지 읽는 extractLeadingColorPhrase를 먼저 쓰고, 그래도
