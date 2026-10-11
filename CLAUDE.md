@@ -293,13 +293,15 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 
 ---
 
-## 12. 현재 스프린트 — ③ SMALLABLE-E2E-03 (갱신 2026-10-11)
+## 12. 현재 스프린트 — MI-P0-02 (갱신 2026-10-11)
 
 🔴 **새 세션의 단일 착수점은 이것이다.**
 
 ```
-docs/SMALLABLE-E2E-03-HANDOFF.md 를 읽는다 — 🟢 COMMERCE 는 CLOSE 됐다.
-다음은 MI-P0 Replay harness 다(그 문서의 NEXT EXACT ACTION · 고정 전제 5가지).
+docs/MI-P0-02-HANDOFF.md 의 CURRENT POINTER → NEXT EXACT ACTION 을 읽고
+«즉시 실행» 한다. 🔴 「어디부터 할까요」를 묻지 않는다 — CPO 가 범위를 정했다.
+🟢 COMMERCE 는 CLOSE 다(bd81b064). ③ 전문은 docs/SMALLABLE-E2E-03-HANDOFF.md.
+🔴 중간 보고 금지 — STEP A~I 한 묶음 뒤 완료 보고 하나만 올린다.
 🔴 ② 는 PARTIAL CLOSED 다(재구현 금지). 쿠팡 고시 2건은 별도 backlog
    COUPANG-NOTICE-SEMANTIC-LOSS-01 로 분리됐다 — ③ 와 섞지 않는다.
 🔴 실등록은 STOP 이다.
@@ -337,7 +339,7 @@ MEMORY.md                           →  과거 교훈/기록 전용
 | LotteON B⑥ | 🟢 PASS · Production (`b5cac1de`) |
 | Coupang `required` | 🟡 **UNKNOWN** — 실측 근거 없음. 🔴 UNKNOWN ≠ PASS |
 | ② Semantic Parity | 🟡 **PARTIAL CLOSED** (`8cddbd17`) — 재구현 금지 |
-| ③ Smallable 실상품 E2E | 🟡 **진행 중** (`fc3e115d`) — P0.1·P0.3 닫힘 · D-OPT 수정 |
+| ③ Smallable 실상품 E2E | 🟢 **CLOSE** (`bd81b064`) — Commerce 전체 닫힘 |
 | ④ 3-Commerce 최종 E2E | 🔴 대기 |
 | 실등록 | 🔴 STOP |
 
