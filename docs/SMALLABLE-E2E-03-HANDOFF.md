@@ -593,3 +593,45 @@ CPO 기준(식별자 > 이미지/특성 > 제목 유사도)에서 **가장 약�
 ③ 그 뒤 Identity 연결 → SAME/SIMILAR → Verified Price → KPI 9~14
 🔴 ①② 전에 Identity 를 붙이면 그 판정이 무효다(수집 축이 title+brand 뿐이므로).
 ```
+
+---
+
+# 🔴 ① price 0/6 — 원인 특정: **결함이 아니다. 내가 또 틀렸다** (2026-10-11)
+
+```
+product-url-facts.ts:186   // 🔴 통화를 모르므로 가격을 만들지 않는다
+                           price: null · regularPrice: null      ← SHOPIFY_JSON 경로
+product-url-facts.ts:204-210
+   🔴 비-Shopify 에는 «일반» 상품 사실 추출기가 없다. 목록 수준 사실(상품명·URL)만
+      만든다 — 나머지 축은 null 로 남아 판정기가 「다름」이 아니라 «근거 없음» 으로 읽는다
+   🔴 사이트별 상세 파서를 여기서 만들지 않는다. 그건 «어댑터의 일» 이고, 이 파일이
+      도메인 분기를 갖기 시작하면 price-source-adapter 등록부와 둘로 갈린다
+```
+
+🟢 그 등록부는 실재한다 — `comparison-search/price-source-adapter.ts` · 어댑터 13개 ·
+계약 테스트(`__tests__/price-source-adapter-contract.test.ts`)까지 있다.
+
+🔴 **즉 `factsFromProductUrl` 은 가격을 담당하지 «않는다».** 나는 가격을 담당하지
+않는 함수로 가격을 재고 「P0 결함」이라고 적었다. 이번 스프린트에서 **네 번째**
+같은 오류다:
+
+```
+① stkQty  → stckQty/saleQty 로 재서 「필드 없음」 오판 직전
+② __name  → tsx 실행 방식 문제를 상품 결함으로 오인
+③ modelCode/productCode → 없는 칸을 세서 거짓 0
+④ price   → 담당하지 않는 함수로 재서 「수집 안 된다」 오판
+```
+
+**공통 원인은 하나다 — 「측정 대상이 그 값을 담당하는 함수인지」를 먼저 확인하지
+않았다.** [[measure-with-the-production-function]] 이 적어 둔 그 함정이고, 그 메모는
+「운영 «경로» 로 재라」까지만 적혀 있었다. 축을 하나 더 적어야 한다:
+🔴 **「그 값의 «주인» 함수로 재라」.** 운영 경로 안에도 담당이 갈려 있다.
+
+## 그래서 ②(가격 수집 경로 수정)의 올바른 범위
+
+```
+❌ factsFromProductUrl 에 가격 파서를 넣는다      ← 그 파일 주석이 금지한다(등록부와 갈린다)
+✅ price-source-adapter 등록부에 «국내 판매처» 가 있는지 확인하고,
+   없으면 그 등록부 기준으로 다룬다(mustit·4910·kream 등)
+🔴 그 확인은 아직 하지 않았다 — 다음 작업의 ①이다
+```
