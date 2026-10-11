@@ -638,3 +638,71 @@ product-url-facts.ts:204-210
    없으면 그 등록부 기준으로 다룬다(mustit·4910·kream 등)
 🔴 그 확인은 아직 하지 않았다 — 다음 작업의 ①이다
 ```
+
+---
+
+# 🔴🔴 MI-P0 (B)급 STOP — 국내 가격 축의 owner 와 Gemini 후보가 «교집합 0» (2026-10-11)
+
+CPO 가 지정한 재개점(price-source-adapter 등록부 확인)을 실측한 결과다.
+
+```
+등록부 owner 10개
+  bobochoses.com · childrensalon.com · chocoel.co.kr · deuxbebe.com ·
+  foretforet.com · littleluna.co.kr · looxloo.com · rakuten.co.jp ·
+  rulii.co.kr · skysport.co.kr
+
+Gemini 가 실제로 찾아온 국내 후보 9개
+  4910.kr · babybubble.co.kr · gsshop.com · kream.co.kr · luxboy.com ·
+  mustit.co.kr · petitlouie.co.kr · ssg.com · trenbe.com
+
+🔴 교집합 = 0
+```
+
+## 🔴 그리고 이 간극은 «코드로 메울 수 없다»
+
+Gemini 후보의 국내 상위권은 **kream · mustit · ssg · gsshop · trenbe** — 마켓플레이스/
+포털 계열이다. 그 범주는 **약관 기준으로 이미 제외돼 있고 테스트로 잠겨 있다**:
+
+```
+comparison-search/__tests__/no-portal-scraping.test.ts
+  ① 「포털 파서가 «하나도» 없다」
+  ② 「등록된 어댑터는 전부 «판매처» 다 — 포털이 섞이지 않았다」
+  ③ 약관 조항 번호·인용·출처 URL 이 코드에 남아 있다
+  ④ 「robots 는 «허용» 했다는 사실도 적혀 있다 — 둘을 섞지 않는다」
+```
+
+[[portal-scraping-blocked-by-terms]] · [[auto-source-adoption-standard]] 가 같은 결정을
+기록하고 있다 — 「자동수집은 포털이 아니라 «판매처» 로 늘린다」.
+
+## 🔴 그래서 지금 구조에서 국내 가격비교는 이렇게 끊겨 있다
+
+```
+Gemini      한국 시장의 «실제 유통 구조» 를 찾아온다 → 마켓플레이스가 상위권
+우리        마켓플레이스는 수집할 수 없다 (약관 · 테스트로 잠김)
+등록부      판매처 6곳(.co.kr)은 이 상품의 Gemini 후보에 «나오지 않았다»
+→ 국내 동일상품 «가격» 의 owner 가 이 상품에 대해 0건이다
+```
+
+🔴 **이것은 CTO 가 코드로 풀 문제가 아니다.** 메우려면 마켓플레이스 어댑터를 추가해야
+하고 그것은 약관 결정을 뒤집는 것이다. [[category-expansion-is-blocked-by-catalog-rows]]
+와 같은 모양이다 — **막는 것은 코드가 아니라 «수집원 정책» 이다.**
+
+## CPO 판정이 필요한 것 (B급 — 사업/정책 결정)
+
+```
+Q1. 국내 가격 축을 어떻게 얻는가?
+    (가) 등록부의 «판매처» 를 늘린다 — Gemini 쿼리를 판매처 쪽으로 좁히고
+         (site: 지정 등) 후보 자체를 바꾼다. 🟢 약관 결정을 건드리지 않는다.
+    (나) 마켓플레이스를 «가격 참고» 로만 쓴다 — 수집하지 않고 Gemini 가 준
+         도메인+제목만 evidence 로 남긴다(가격 없음). 🟡 가격 판단은 못 한다.
+    (다) 마켓플레이스 수집을 허용한다 → 🔴 약관 결정 변경. CEO 판단 영역.
+
+Q2. (가)를 고르면 Gemini 쿼리에 판매처 화이트리스트를 주입해야 한다 —
+    그건 Discovery 설계 변경이라 CPO 승인이 필요하다.
+```
+
+🔴 **Identity 이후 단계는 이 판정 없이는 측정해도 무효다** — SAME 후보가 나와도
+그 후보의 가격을 얻을 owner 가 없으면 Verified Price·국내 가격 매칭·cost·MI 판정·
+KPI 11(domestic price match)이 전부 0 으로 고정된다. 그 0 은 결함이 아니라
+**정책의 결과** 이고, 그것을 결함으로 적으면 이번 스프린트에서 네 번 한 오류의
+다섯 번째가 된다.
