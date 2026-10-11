@@ -1,11 +1,29 @@
+import type { UrlShape } from "../comparison-search/url-shape";
+
 /**
  * ════════════════════════════════════════════════════════════════════════════
  * MI-DISCOVERY-LONGSPRINT-P1 / P1.1 — Discovery Benchmark 계약
  * ════════════════════════════════════════════════════════════════════════════
  *
  * 이 디렉터리는 **실험 하니스** 다. Production 런타임이 여기 있는 것을 하나도
- * import 하지 않는다(그 사실을 `__tests__/no-production-coupling.test.ts` 가
- * 지킨다). 그래서 이 파일들이 Production 동작을 바꿀 수 없다.
+ * import 하지 않는다.
+ *
+ * 🔴 **MI-P0-02b ⑥(2026-10-11) 정정.** 이 자리에 원래
+ *    「그 사실을 `__tests__/no-production-coupling.test.ts` 가 지킨다」고 적혀
+ *    있었다. **그 파일은 존재하지 않았고, 그 문장은 거짓이었다.** 실제 가드는
+ *    `discovery-benchmark.test.ts` 하나였고 그것은 `index.ts` 의 **export 만**
+ *    봤다 — 그래서 Production 의 `comparison-search/product-url-facts.ts` 가
+ *    `discovery-benchmark/url-resolver` 를 **직접 import 하는 것을 막지 못했다.**
+ *    가드가 자기보다 나중에 생긴 경로를 몰랐다.
+ *
+ *    지금은 둘 다 고쳐져 있다:
+ *      ① 그 import 를 없앴다 — URL 모양 로직은 Production 이 소유한다
+ *         (`comparison-search/url-shape.ts`). 방향은 benchmark → Production 하나다.
+ *      ② `__tests__/no-production-coupling.test.ts` 를 **실제로 만들었다.**
+ *         파일명이 아니라 **import graph** 를 본다 — 새 역방향 import 가 생기면
+ *         그 테스트가 깨진다.
+ *    🔴 주석이 주장하는 가드가 실재하는지 확인하지 않으면, 그 주석 자체가
+ *       다음 사람에게 거짓 안전감을 준다.
  *
  * 🔴 절대원칙 — CPO 확정:
  *
@@ -103,15 +121,13 @@ export type ResolutionStep =
 /**
  * URL 한 건의 **최종 분류**. 🔴 정확히 하나다.
  *
- * 실측 분포(2026-10-07, 표본 10 · 일반 웹검색):
- *     PRODUCT_PAGE 1 · LISTING_PAGE 7 · NOT_FOUND 1 · UNUSABLE 1(302→홈)
+ * 🔴 MI-P0-02b ⑥(2026-10-11) — 이 타입의 정의는 **Production 이 소유한다**
+ *    (`comparison-search/url-shape.ts` 의 `UrlShape`). 값을 두 군데 적으면
+ *    한쪽만 늘어나는 순간 benchmark 와 Production 의 분류 어휘가 갈린다 —
+ *    이 저장소가 등록부를 세 벌 적었다가 Rakuten 을 unsupported 로 만든 그 실패다.
+ *    이름(`ResolutionClass`)은 benchmark 어휘로 그대로 둔다.
  */
-export type ResolutionClass =
-  | "PRODUCT_PAGE"
-  | "LISTING_PAGE"
-  | "UNKNOWN_PAGE"
-  | "NOT_FOUND"
-  | "UNUSABLE";
+export type ResolutionClass = UrlShape;
 
 export interface ResolvedCandidate {
   /** 검색이 준 «원문» URL. 🔴 보존한다 — 실패 원인을 되짚는 유일한 근거다. */

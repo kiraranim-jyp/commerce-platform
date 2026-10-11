@@ -19,30 +19,43 @@ DONE                COMMERCE CLOSE (bd81b064)
                        A registry 21개 확정 · B whitelist 주입 + 테스트 12개
                        C Gemini A/B 실측 16콜 · D resolve 60건
                        E/F 국내 가격 5분류 16쌍 · G Identity · H/I KPI
+                    🟢 MI-P0-02b ①~⑥ 완료 (2026-10-11) → §10
+                       ① 운영 사슬 전체 재측정(1차 측정 오류 정정)
+                       ② 호출부 둘 확인  ③ 🟢 한글 품번 확인은 «된다»(실측)
+                       ④ 원인 = BRAND_ALIASES 3행  ⑤ 자기참조 결함 수정
+                       ⑥ coupling guard 를 import graph 로 교체
 NOT DONE            🔴 KPI 「Domestic Same-Product Price Match Rate」 = **측정불가**
                        (분모 0 — 외부 SAME 후보가 0건이다. 0% 가 아니다)
+                    🔴 BRAND_ALIASES 등록 — CPO 판정 대기(§10-④)
                     Smallable 원상품 facts 경로(JOB-C 는 Identity 측정에서 빠졌다)
+                    run-domestic-price-check 경로(Master dna 사다리) 미측정
                     arm 순서 교대(counterbalance) 재측정
-NEXT EXACT ACTION   🔴 **Identity 증거 보강 하나만 한다.** §8-③ 이 원인을 특정했다 —
-                    foretforet 가 정답 상품 5건을 113,000~117,000 KRW 로 실제
-                    가져왔는데 `SIMILAR` 로 떨어진다. 판매처 sku 가
-                    `MA26KASST0577356`(판매처 자체 품번)이고 브랜드 품번
-                    `AW26MS185` 가 «양쪽 다» 없어서 식별자 축이 비었다.
-                    → `confirmBrandCodeInTitle` / `domestic-identifiers.ts` 가
-                      이 축을 담당하는 owner 다. 먼저 **owner 를 열어 읽고**,
-                      한글 제목에서 브랜드 품번을 못 찾는 것이 사실인지 확인한다.
-                    🔴 **threshold 를 낮추지 않는다.** SIMILAR→SAME 으로 KPI 를
-                      올리는 것은 §6 금지다. 증거를 «더 찾는» 쪽만 한다.
+NEXT EXACT ACTION   🔴 **CPO 판정 2건을 기다린다. CTO 가 임의로 진행하지 않는다.**
+                    § 10-④ ⑫ 참조 —
+                    ① BRAND_ALIASES 에 「메인스토리」·「보보쇼즈」를 등록하는가.
+                       근거는 다 모였다: 🟢 littleluna 4건이 정확히 그 품번이다
+                       (한글 제목 품번 확인은 «된다» — §10-③ 실측) ·
+                       🔴 bobochoses.com 이 브랜드 무관 2건을 돌려준다(오탐) ·
+                       🟡 그 오탐은 Identity 가 이미 걸러낸다.
+                       「오탐 0」의 해석을 바꾸는 것은 제품 정책 경계다.
+                    ② 등록 후 KPI 재측정 범위.
+                    🔴 **threshold 를 낮추지 않는다.** SIMILAR→SAME 오판 방지가
+                       Recall 보다 우선이다(CPO 확정).
 DO NOT REUSE        🔴 scratchpad/mi-p0-candidates.json — whitelist «적용 전» 결과다.
                     (이 세션에서 확인: 해당 파일은 이미 없다. 새 세션이 찾지 말 것)
                     🔴 「registry 10개」·「11개」 둘 다 틀렸다 — 21개다(§1)
 OWNER VERIFIED      아래 §Owner Mapping (이번까지 실측 확정분)
-TEST STATUS         🟢 회귀 498 files / 7473 passed · 2 skipped(live 전용) ·
-                    targeted 12/12 · 음성대조 변이3→FAIL4→복구 PASS ·
-                    typecheck crawler 2 = baseline(불변) · build 미실행
-DEPLOY              🔴 미배포. 변경은 전부 discovery-benchmark 와 그 테스트다 —
-                    Production 런타임이 import 하지 않는다(§9 주의 참고)
-CEO ACTION          push 승인 1건(아래 §8 끝)
+TEST STATUS         🟢 회귀 500 files / 7487 passed · 3 skipped(live 전용) · 0 FAIL
+                    targeted 12/12 + 14/14 · 음성대조 2라운드 전부 복구 PASS
+                    typecheck admin 0 · crawler 2 · listing 7줄 = 전부 baseline
+                    build PASS
+DEPLOY              🔴 미배포 · 미push.
+                    🔴 MI-P0-02b 는 **Production 코드를 바꿨다** — MI-P0-02 와
+                    다르다. search/route.ts(자기참조 가드) ·
+                    product-url-facts.ts(import 경로) · _lib/attach-match-truth.ts
+                    (route 에서 옮긴 것) · url-shape.ts(신규, 로직 무변경).
+                    「benchmark 만 건드렸다」를 더 쓰지 않는다.
+CEO ACTION          없음 — 🔴 push/deploy 는 CPO 가 §10-⑫ 판정 뒤 결정한다
 STOP CONDITION      외부 서비스 장애 · 인증/권한으로 실행 불가 ·
                     destructive production action · CEO 사업/정책 결정 필요
                     🔴 단순 코드 문제·테스트 실패·schema 불일치는 STOP «아니다» —
@@ -374,11 +387,17 @@ PRICE_NO_CURRENCY         0
 > 🟢 **「국내 가격 수집 불능」은 없는 결함이다.** 후보가 하나라도 나오면 가격
 > 파서는 KRW 절대가를 100% 준다(4/4). 지시서 §0 의 진단이 맞았다.
 
-**Identity(STEP G)** — 외부 후보 16건(자기참조 2건 제외):
+**Identity(STEP G)** — 🔴🔴 **이 측정은 틀렸다. §10-① 이 정정한다.**
 
 ```
+외부 후보 16건(자기참조 2건 제외) — 🔴 crossSellerVerdict 를 셌다
 SAME 0 · PRESUMED_SAME 0 · SIMILAR 6 · CONFLICT 9 · UNKNOWN 1 · 미판정 0
 ```
+
+🔴 `crossSellerVerdict` 는 **최종 판정이 아니라 `deriveMatchTruth` 의 여섯 인자 중
+하나** 다. 운영의 최종 판정은 `matchTruth` 이고 이 측정은 그것을 돌리지 않았다
+(그래서 `matchTruth` 가 전건 null 이었는데 그 null 의 의미를 짚지 못했다).
+**정정된 숫자는 §10-① 에 있다.** 결론(분모 0 → 측정불가)은 바뀌지 않았다.
 
 **핵심 KPI(STEP I)**
 
@@ -446,22 +465,196 @@ build 미실행 · 미배포 · 미push
 
 ---
 
-## 9. CEO 판단 1건 — push
+## 10. 🔴🔴 MI-P0-02b — Long Sprint ①~⑥ (CPO 지시, 2026-10-11)
 
-커밋은 되어 있고 작업트리는 clean 이다. 🔴 **push 하지 않았다** — push 가
-Vercel 배포를 부르기 때문이다(`vercel-deploy-from-repo-root` 메모리).
+CPO 판정: MI-P0-02 는 CLOSE 가 아니다. push 보류. 아래를 끝낸 뒤 CPO 가 결정한다.
 
-판단에 필요한 사실:
+### ① 🔴 1차 측정이 «입력» 을 «결과» 로 보고했다
+
+운영 사슬을 끝까지 열어 보니 최종 Identity 판정은 route 계층에 있었다:
 
 ```
-변경 파일  packages/crawler/src/discovery-benchmark/ 안 5개(1 수정 · 4 신규)
-           + docs/MI-P0-02-HANDOFF.md
-Production 영향  없다 — 수정한 google-discovery.ts 와 신규 supported-sellers.ts 를
-           Production 런타임이 import 하지 않는다
-           🔴 단 §8-⑤ 의 가드 공백 때문에 「benchmark 는 안전하다」를 규칙으로
-              믿지 않는다. 이번 변경 파일을 직접 확인한 결과다
-회귀       498 files / 7473 passed · 0 FAIL
+identityDnaFromFields → buildCrossSellerSearchQueries → searchDomesticShops
+  (안에 lookupBrandAlias 폴백이 있다)
+→ foreignModelCode = extractForeignModelCode(description)
+                     ?? extractModelCodeFromSourceUrl(sourceUrl)
+→ attachMatchTruth
+    confirmBrandCodeInTitle → compareModelCode → deriveMatchTruth(인자 6개)
+→ 🔴 matchTruth  ← 최종 판정은 «이것» 이다
 ```
+
+`attachMatchTruth` 가 `search/route.ts` 안의 비공개 함수여서 하니스가 운영 판정을
+부를 수 없었다. 그래서 `_lib/attach-match-truth.ts` 로 **옮겼다(로직 무변경)** 고
+운영 함수를 직접 부르도록 재측정했다 — 합성을 재구현하면 circular test 가 된다.
+
+**정정된 숫자** (`scratchpad/mi-p0-02b-identity.json`):
+
+```
+foreignModelCode   JOB-JE   AW26MS185  (description 경로)
+                   JOB-BOBO B226AC114  (sourceUrl 폴백 — 두 갈래 다 실제로 돌았다)
+matchTruth         CONFLICT 12 · INSUFFICIENT_EVIDENCE 4 · EXACT_IDENTIFIER 2
+KPI                EXACT 2건은 «자기참조» 다 → 외부 분모 0 → 🔴 측정불가
+```
+
+🔴 **결론은 바뀌지 않았다.** 다만 어휘가 정확해졌다 — 정답 상품
+(foretforet 멜란지)은 `SIMILAR` 가 아니라 `INSUFFICIENT_EVIDENCE` 다. 엔진이
+「비슷하다」고 **주장하지 않고** 「증거가 부족하다」고 말한다. 그게 옳은 동작이다.
+
+🟢 그리고 1차의 「후보 없음 12/16」은 **과대가 아니었다.** 외부 후보는 1차 16건 ·
+2차 16건으로 **같다** — alias 폴백을 건너뛴 것은 하니스의 공백이었지만 이번
+측정에는 영향이 0이었다(이유는 ③). 공백과 영향을 구분해 적는다.
+
+### ② 운영 호출부는 둘이다
+
+```
+domestic-price-sources/search/route.ts:241   실시간 화면 — 이번에 측정한 경로
+price-history/_lib/run-domestic-price-check.ts:486   저장 파이프라인
+  🔴 이쪽은 Master 의 dna 를 쓴다 → 사다리가 더 풍부할 수 있다. 미측정으로 남는다
+```
+
+### ③ 🟢🟢 **한글 제목에서 브랜드 품번 확인은 «된다».** 실측했다
+
+`scratchpad/mi-p0-02b-alias-probe.json`:
+
+```
+메인스토리 @ littleluna.co.kr   5건 · 🟢 품번확인 4건
+   ✅ [메인스토리] AW26MS185 - Bubble Sweatshirt - Grey Melange   ← 원상품과 같은 색
+   ✅ … Graystone / Rose Shadow / Chocolate Brown   ← 같은 품번 «다른 색»
+메인스토리 @ deuxbebe.com       5건 · 품번확인 0  (AW26MS252·231·260 — 다른 상품)
+메인스토리 @ foretforet.com     5건 · 품번확인 0  (자체코드 MA26KA… 만 적는다)
+메인스토리 @ bobochoses.com     2건 · 품번확인 0  🔴 브랜드 무관 상품 = 오탐
+보보쇼즈   @ looxloo/bobochoses/rulii/foretforet  총 16건 · 품번확인 0
+```
+
+🔴 **그래서 「0/18」은 함수의 실패가 아니었다.** 품번을 제목에 적는 판매처가 후보를
+0건 돌려줬을 뿐이고, 그 원인은 하나다:
+
+```
+lookupBrandAlias → BRAND_ALIASES 에 브랜드가 «3개» 뿐이다
+  Pèpè Shoes · Emile et Ida · Konges Slojd Clothing
+  🔴 「Main Story」·「Bobo Choses」 둘 다 없다 → 폴백이 발화할 수 없다
+  littleluna·deuxbebe 는 영문 질의에 0건이고 한글에만 반응한다(실측)
+→ 품번 축은 «비교에 실패한 것이 아니라 비교할 기회가 없었다»
+```
+
+### ④ 🔴 alias 등록은 **하지 않았다** — CPO 판정 사안이다
+
+`brand-alias.ts` 가 스스로 요건을 적어 뒀다: 「실측으로 동일 브랜드 후보가
+돌아오는 것이 확인된 표기만 · **오탐 0건** · 추론/자동번역/유사발음 생성 금지」.
+
+```
+🟢 요건 충족분   메인스토리 → littleluna 4건이 정확히 그 품번이다
+🔴 요건 미충족   메인스토리 → bobochoses.com 이 브랜드 무관 2건을 돌려준다(오탐)
+                alias 는 «브랜드» 단위라 샵을 골라 끌 수 없다
+🟡 판단 재료     그 오탐 2건은 Identity 계층에서 CONFLICT/INSUFFICIENT_EVIDENCE
+                로 «이미» 걸러진다(1차 측정에서 실측). 2026-08-26 당시의
+                「오탐 0」은 검색 계층에서 잰 값이고, 그 뒤 Identity 가 강해졌다
+```
+
+🔴 **「오탐 0」의 해석을 CTO 가 바꾸지 않는다.** 등록하면 그 브랜드를 파는 모든
+셀러의 검색 동작이 바뀐다 — 제품 정책 경계다. 측정까지가 CTO 의 일이다.
+
+🟢 등록했을 때의 가장 큰 위험(같은 품번 다른 색 4건이 전부 SAME 으로 올라가는
+것)은 **이미 테스트로 잠겨 있다** — `p54c-google-discovery.test.ts` 의
+「🔴🔴 C7 JOB-005 — Google 이 네 색상을 다 줘도 MI 가 하나만 SAME 으로 낸다」가
+**바로 이 상품 · 이 판매처** 다.
+
+### ⑤ 🔴 고친 결함 — 자기참조가 셀러 화면에 「국내 동일상품」으로 나갔다
+
+```
+run-domestic-price-check.ts:630   저장 경로 → isSelfReferenceCandidate 로 «걸렀다»
+search/route.ts                   실시간 화면 → 🔴 그 가드가 «없었다»
+```
+
+실측: 원상품이 `bobochoses.com/products/b226ac114-…` 일 때 국내 검색이 **같은
+URL**(쿼리파라미터만 다름)을 2건 돌려주고, 품번이 글자까지 같으니
+`attachMatchTruth` 가 `EXACT_IDENTIFIER` 로 올린다. 즉 셀러가 **자기가 사 온 그
+페이지를 「국내 동일상품 168,000원」으로** 본다. 그리고 그 2건이 KPI 를
+「확보율 100%」로 만든다 — 이번 측정에서 실제로 그 숫자가 나왔다.
+
+🔴 이것은 `search/route.ts` 머리 주석이 「실시간 검색 화면과 저장 파이프라인이
+서로 다른 상품 진실 판정 기준을 가지면 안 된다」고 적어 둔 바로 그 원칙 위반이다.
+
+고침: `_lib/attach-match-truth.ts` 의 `excludeSelfReference`.
+🔴 **threshold 는 한 글자도 바뀌지 않았다** — 외부 후보의 판정이 가드 전후로
+동일하다는 것을 테스트가 단언한다. 뺀 건수는 funnel 로그에 숫자로 남는다
+(조용히 버리지 않는다).
+
+### ⑥ 🔴 coupling guard — 방향을 바로잡았다 (allowlist 가 아니다)
+
+```
+이전   types.ts 주석: 「no-production-coupling.test.ts 가 지킨다」 → 🔴 그 파일 없음
+       실제 가드: discovery-benchmark.test.ts → index.ts «export» 만 봄
+       실제 구멍: comparison-search/product-url-facts.ts:4
+                  → discovery-benchmark/url-resolver 를 «깊은 import»
+```
+
+🔴 benchmark 를 Production 에 연결해 해결하지 «않았다». 반대로 했다 —
+URL 모양 판별은 애초에 Production 로직이므로 Production 이 **소유**하게 했다:
+
+```
+신규  comparison-search/url-shape.ts     ← classifyUrlShape · toCrawlerUrl (로직 무변경)
+      url-resolver.ts 는 re-export 로 기존 import 경로를 살려 둔다
+      types.ts 의 ResolutionClass = UrlShape (어휘를 두 벌 적지 않는다)
+→ 방향이 benchmark → Production 하나로 고정된다
+```
+
+🟢 이동이 동작을 바꾸지 않았음은 **기존 단언들이 증명한다** — benchmark 테스트를
+한 줄도 고치지 않았고 `p54b-product-url-facts.test.ts` 13개가 그대로 통과한다.
+
+신규 가드 `discovery-benchmark/__tests__/no-production-coupling.test.ts` 는
+**파일명이 아니라 import graph** 를 본다: 정적 `from` · 동적 `import()` ·
+`require()` 를 전부 보고, 주석을 벗기고, 상대경로를 해소해 benchmark 안쪽을
+가리키는지 판정한다. 배럴 export 축도 유지하고, 역방향(benchmark → Production)이
+**실제로 존재하는지** 도 같이 잠근다(0건이면 하니스가 기존 MI 를 재는 것이 아니다).
+🔴 「glob 이 0건이면 전부 공짜로 통과」를 막는 단언도 같이 넣었다.
+
+### ⑦~⑪ 테스트·회귀·타입·빌드
+
+```
+targeted      14/14 PASS (coupling 4 · 자기참조 10)
+음성 대조     변이 2건(역방향 import 복원 · 자기참조 필터 무력화)
+              → 가드 4개 FAIL → 원상복구 PASS
+회귀          500 files / 7487 passed · 3 skipped(live) · 0 FAIL
+              직전 498/7473 → +3 파일 +14 테스트. 회귀 0
+typecheck     admin 0 = baseline · crawler 2 = baseline
+              listing 7줄 = baseline (🔴 stash 로 clean 대조해 확인했다.
+              「5」는 줄 수가 아니라 «오류 개수» 였다 — 연속줄 2개 포함 7줄)
+build         PASS
+```
+
+### ⑫ 다음 — 🔴 CTO 가 임의로 진행하지 않는다
+
+```
+CPO 판정 필요 ①  BRAND_ALIASES 에 「메인스토리」·「보보쇼즈」를 등록하는가
+                  (오탐 0 요건의 해석 — 검색 계층 기준인가 Identity 계층 기준인가)
+CPO 판정 필요 ②  등록 후 KPI 재측정 범위
+미측정으로 남음   run-domestic-price-check 경로(Master dna 사다리)
+                  Smallable JOB-C Identity
+                  arm 순서 교대 재측정(§8-② TimeoutError UNKNOWN)
+```
+
+---
+
+## 9. push/deploy — 🔴 CPO 보류 (2026-10-11)
+
+CPO 판정: 「`3624ee0b` 는 지금 push 하지 않는다. CTO 에게 push 여부를 다시 묻지
+않는다. Identity + coupling guard + 회귀까지 끝난 시점에서 CPO 가 결정한다.」
+
+그 세 가지는 §10 에서 끝났다. 현재 상태:
+
+```
+Code/Test       🟢  targeted 14/14 · 음성대조 2라운드 복구 PASS
+Build           🟢
+회귀            🟢  500 files / 7487 passed · 0 FAIL
+Identity        🟢  운영 사슬 전체로 재측정 완료 · 1차 측정 오류 정정 · 원인 특정
+Coupling guard  🟢  import graph 가드로 교체 · 역방향 import 제거
+KPI             🔴  측정불가(분모 0) — BRAND_ALIASES 등록이 CPO 판정 대기
+Push / Deploy   🔴  CPO 결정 대기
+CEO action      없음
+```
+
+🔴 **CTO 는 push 를 묻지 않는다.** CPO 가 그렇게 지시했다.
 
 ---
 

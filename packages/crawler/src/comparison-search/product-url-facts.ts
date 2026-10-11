@@ -1,7 +1,7 @@
 import { CRAWLER_USER_AGENT } from "../utils/user-agent";
 import { decodeHtmlEntities } from "./html-entities";
 import { productFactsFromListing, productFactsFromShopifyProduct } from "./seller-facts";
-import { classifyUrlShape, toCrawlerUrl } from "../discovery-benchmark/url-resolver";
+import { classifyUrlShape, toCrawlerUrl } from "./url-shape";
 import { extractShopifyHandle, fetchPlainHtml } from "../shopify-product-json";
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
 import type { ComparisonCandidate } from "./types";

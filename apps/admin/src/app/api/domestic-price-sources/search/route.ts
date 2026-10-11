@@ -1,15 +1,4 @@
-import {
-  compareModelCode,
-  confirmBrandCodeInTitle,
-  deriveMatchTruth,
-  extractForeignModelCode,
-  fetchDomesticModelCode,
-  isColorUnverified,
-  searchDomesticShops,
-  supportsDomesticIdentifierExtraction,
-  type ComparisonCandidate,
-  type ComparisonSearchResult,
-} from "@commerce/crawler";
+import { extractForeignModelCode, searchDomesticShops } from "@commerce/crawler";
 import { sourceFitsScopes } from "@commerce/category";
 import {
   buildCrossSellerSearchQueries,
@@ -19,6 +8,7 @@ import {
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/require-user";
 import { isCollectableAccess } from "../../comparison-shops/_lib/comparison-shop";
+import { attachMatchTruth, excludeSelfReference, extractModelCodeFromSourceUrl } from "../_lib/attach-match-truth";
 import { resolveCategoryScopes } from "../_lib/category-scope";
 import { listDomesticPriceSources } from "../_lib/domestic-price-source";
 
@@ -44,90 +34,17 @@ import { listDomesticPriceSources } from "../_lib/domestic-price-source";
  * 로 고정해서 EXACT 등급에 절대 도달할 수 없었다 — run-domestic-price-check.ts와
  * 같은 레지스트리를 재사용해 화면(이 라우트가 데이터 원천인 "국내 가격비교" UI)과
  * 자동 확인 파이프라인의 판정이 항상 일치하게 한다(단일 소스). */
-const MAX_MODEL_CODE_FETCH_PER_SHOP = 3;
-
-/** 원본 URL 자체에서 모델코드를 뽑는다 — 설명문에 코드 표기가 없는 자사몰용
- * 폴백이다. 국내 후보에 쓰는 레지스트리를 그대로 재사용하므로, 지원 도메인이
- * 늘어나면 이 경로도 함께 늘어난다(도메인 분기를 여기에 만들지 않는다). */
-async function extractModelCodeFromSourceUrl(sourceUrl: string | undefined): Promise<string | null> {
-  if (!sourceUrl) return null;
-  let domain: string;
-  try {
-    domain = new URL(sourceUrl).hostname.replace(/^www\./, "");
-  } catch {
-    return null;
-  }
-  if (!supportsDomesticIdentifierExtraction(domain)) return null;
-  return fetchDomesticModelCode(domain, sourceUrl).catch(() => null);
-}
-
 /**
- * ════════════════════════════════════════════════════════════════════════════
- * MI-DISCOVERY-P5.2(CPO 지시, 2026-10-07) — **실시간 검색 화면과 저장 파이프라인이
- * 서로 다른 상품 진실 판정 기준을 가지면 안 된다.**
- * ════════════════════════════════════════════════════════════════════════════
+ * 🔴 MI-P0-02 후속(2026-10-11) — `attachMatchTruth` 와
+ *    `extractModelCodeFromSourceUrl` 은 **`_lib/attach-match-truth.ts` 로
+ *    옮겼다. 로직은 한 줄도 바뀌지 않았다.**
  *
- * decision.ts 맨 위의 P-7-C 원칙이 바로 그것인데, 이 라우트는 `deriveMatchTruth` 를
- * **인자 셋** 으로만 불렀다. 그래서 그 뒤에 추가된 보호장치들이 화면에서 발화하지
- * 않았다(실측 확인, 2026-10-07):
- *
- *   blockers   미전달 → MI-3/P0-1 「같은 판매처가 둘로 진열」 보류가 사라진다
- *   conflicts  미전달 → P4 변경 B 「같은 모델·색상만 다름」 이 CONFLICT 로 남는다
- *
- * 🔴 CEO 가 색상 변형을 눈으로 가르는 자리가 이 화면이다. 여기서 발화하지 않으면
- *    「화면에서 확인한다」가 성립하지 않는다.
- * 🔴 새 판정 로직이 아니다 — 저장 경로가 이미 넘기고 있는 값을 같이 넘기는 것뿐이다.
+ *    옮긴 이유: 운영의 최종 Identity 판정(`matchTruth`)이 이 라우트 «안» 에
+ *    갇혀 있어서 측정 하니스가 그것을 부를 수 없었고, 그래서 MI-P0-02 측정이
+ *    `crossSellerVerdict`(=`deriveMatchTruth` 의 입력 하나)를 최종 판정으로
+ *    잘못 보고했다. 하니스가 합성을 다시 구현하면 circular test 가 되므로
+ *    자리를 옮겨 **같은 함수를 부르게** 했다.
  */
-async function attachMatchTruth(
-  results: ComparisonSearchResult[],
-  foreignModelCode: string | null,
-  foreignColor: string | null,
-): Promise<ComparisonSearchResult[]> {
-  /** 저장 경로(selectDomesticCandidate)와 «같은 순서» 로 품번을 정한다 — 제목에서
-   *  확인되면 그것, 아니면 도메인 추출기. 두 경로가 다른 품번을 쓰면 화면과 DB가
-   *  갈린다. */
-  const truthOf = (c: ComparisonCandidate, domesticModelCode: string | null) =>
-    deriveMatchTruth(
-      c.matchLevel!,
-      compareModelCode(foreignModelCode, domesticModelCode),
-      c.crossSellerVerdict,
-      c.crossSellerBlockers,
-      c.crossSellerConflicts,
-      isColorUnverified(foreignColor, c.facts?.colorText),
-    );
-
-  return Promise.all(
-    results.map(async (result) => {
-      if (result.status !== "ok" || result.candidates.length === 0) return result;
-      // 🔴 P5.2 Step 1 — 제목 확인은 HTTP 가 없으므로 추출기 등록 여부와 무관하게
-      //    모든 도메인에서 먼저 시도한다. 확인되지 않으면 예전과 똑같이 null 이고,
-      //    deriveMatchTruth 가 이를 정직하게 TEXT_CONFIRMED/SIMILAR 로 처리한다 —
-      //    "식별자가 없다"를 "다른 상품이다"로 지어내지 않는다.
-      if (!supportsDomesticIdentifierExtraction(result.domain)) {
-        const candidates = result.candidates.map((c) => ({
-          ...c,
-          matchTruth: c.matchLevel ? truthOf(c, confirmBrandCodeInTitle(foreignModelCode, c.title)) : undefined,
-        }));
-        return { ...result, candidates };
-      }
-      // 상위 N개까지만 실제 추출 시도(비용 제한, run-domestic-price-check.ts의
-      // MAX_EVIDENCE_CANDIDATES와 같은 원칙) — 나머지는 modelCode 비교 없이 텍스트
-      // 등급만으로 matchTruth를 매긴다(추측 금지 — 추출 안 한 건 "확인 안 함"이지
-      // "충돌"이 아니다).
-      const candidates = await Promise.all(
-        result.candidates.map(async (c, i) => {
-          if (!c.matchLevel) return c;
-          const confirmed = confirmBrandCodeInTitle(foreignModelCode, c.title);
-          const domesticModelCode =
-            confirmed ??
-            (i < MAX_MODEL_CODE_FETCH_PER_SHOP ? await fetchDomesticModelCode(result.domain, c.url) : null);
-          return { ...c, matchTruth: truthOf(c, domesticModelCode) };
-        }),
-      );
-      return { ...result, candidates };
-    }),
-  );
-}
 
 /**
  * MI-DOMESTIC-FIX-1 §6(CPO 지시, 2026-09-09) — "국내에 정말 없는 것"과
@@ -146,6 +63,9 @@ function logDomesticFunnel(
   searchTerm: string,
   rawResults: { candidates?: unknown[] }[],
   results: { candidates?: { price?: unknown; soldOut?: boolean | null; matchTruth?: string }[] }[],
+  /** 🔴 MI-P0-02b — 자기참조로 뺀 건수. 조용히 버리면 rawResults 와 candidateResults
+   *  차이가 「매칭에서 떨어졌다」로 읽힌다 — 그건 다른 사실이다. */
+  selfReferenceExcluded: number,
 ) {
   const all = results.flatMap((r) => r.candidates ?? []);
   const truth = (t: string) => all.filter((c) => c.matchTruth === t).length;
@@ -154,6 +74,7 @@ function logDomesticFunnel(
     queryLen: searchTerm.length,
     shops: rawResults.length,
     rawResults: rawResults.reduce((n, r) => n + (r.candidates?.length ?? 0), 0),
+    selfReferenceExcluded,
     candidateResults: all.length,
     priceAvailable: all.filter((c) => c.price != null).length,
     // 재고 3분류는 반드시 따로 센다 — soldOut=null(확인 불가)이 판매중으로
@@ -285,9 +206,16 @@ export async function POST(request: Request) {
   // 원본 URL에도 그대로 통한다. 새 추출기를 만들지 않고 있는 것을 재사용한다.
   const foreignModelCode =
     extractForeignModelCode(body.description) ?? (await extractModelCodeFromSourceUrl(body.sourceUrl));
-  const results = await attachMatchTruth(rawResults, foreignModelCode, dna.color ?? null);
+  /**
+   * 🔴 MI-P0-02b(2026-10-11 실측) — 자기참조를 「국내 동일상품」으로 내보내지
+   *    않는다. 저장 파이프라인(`run-domestic-price-check.ts:630`)은 이미 이것을
+   *    걸러 왔고 **이 라우트에만 그 가드가 없었다.** 근거와 실측은
+   *    `_lib/attach-match-truth.ts` 의 `excludeSelfReference` 주석에 있다.
+   */
+  const { results: deduped, excluded: selfReferenceExcluded } = excludeSelfReference(rawResults, body.sourceUrl);
+  const results = await attachMatchTruth(deduped, foreignModelCode, dna.color ?? null);
 
-  logDomesticFunnel(searchTerm, rawResults, results);
+  logDomesticFunnel(searchTerm, rawResults, results, selfReferenceExcluded);
 
   return NextResponse.json({ ok: true, results });
 }
