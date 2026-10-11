@@ -393,3 +393,77 @@ Q2. LotteON `mdlNo` 에 54자 원상품명이 들어가는 것이 허용되는�
 🔴 어느 쪽도 CTO 가 단독으로 바꾸지 않았다. source whitelist 정책
    (USER_EDITED · ORIGINAL · DETAIL_PAGE_REFERENCE 허용)은 그대로 유지했다.
 ```
+
+---
+
+# Commerce 최종 E2E — 대표 실제 상품 3개 × 3채널 (CTO 실측 2026-10-11)
+
+🔴 손으로 만든 fixture 가 아니다. 리포에 실재가 확인된 URL 로 `universalExtract`
+→ `buildCanonicalProduct` → 어댑터 → 세 builder + 검증기를 관통했다.
+
+| | Smallable 430632 | Junior Edition Pupfish | Bobo 공식몰 B226AC043 |
+|---|---|---|---|
+| 가격 | 45 EUR | **31 GBP** | 75 EUR |
+| brand | Bobo Choses | The Animals Observatory | 🔴 **빈값** |
+| sku | AAA1804532 | F26100 | 🔴 없음 |
+| material | 100% Organic Cotton | 100% Organic Cotton | 🔴 없음 |
+| origin | Spain | Portugal | Spain |
+| care | 케어라벨 참조 DEFAULT | 케어라벨 참조 DEFAULT | 케어라벨 참조 DEFAULT |
+| 옵션 | 사이즈×6 | Size×5 | Clothing size×6 |
+| **옵션별 재고** | ∅ 전부 없음 | 🟢 **1,3,2,2,2** | ∅ 전부 없음 |
+| Naver 조합 | **0** | 🟢 **5** | **0** |
+| Naver 재고 | 999 | 🟢 **10**(실측 합계) | 999 |
+| LotteON stkQty | ∅×6 | 🟢 **1,3,2,2,2** | ∅×6 |
+| LotteON 고시 | 7/13 | 7/13 | 6/13 |
+| Coupang items | 6 | 5 | 6 |
+
+## 🟢 재고 정책이 실제 상품에서 증명됐다
+
+```
+재고를 주는 상품(Junior Edition)   조합 5건 통과 · 상품재고 10(실측 합계)
+                                   🔴 productStock 999[DEFAULT] 는 «무시된다»
+재고를 안 주는 상품(2건)           조합 0건 → optionCombinations MISSING (D-OPT)
+                                   stkQty 생략   → itmStkQty MISSING (D-LOT-STOCK)
+```
+
+🟢 **두 가드가 서로 다른 사이트의 실제 상품에서 발화했고, 재고가 있는 상품은
+막지 않았다.** 「언제나 막는 가드」가 아니라는 대조군이 실상품으로 확보됐다.
+
+## 공통으로 남는 차단 (3건 모두 동일 — 상품 결함이 아니다)
+
+```
+Naver   representativeImage   ← 하니스가 items:[] 로 불렀다(이미지 가공 단계 생략)
+        deliveryInfo.deliveryCompany · afterServiceTelephoneNumber  ← 판매자 설정 공백
+        고시 manufacturer·recommendedAge·certificationType·itemName·weight ← 원본에 없음
+        BLOCKED: productCertificationInfos[].certificationNumber    ← 🔴 KC(지어낼 수 없다)
+LotteON MISSING: itmImgLst(같은 이유) · BLOCKED: pdItmsArtlLst · sftyAthnLst(KC)
+Coupang 고시 0건 ← categoryMeta 자격증명이 로컬에 없다(②에서 고정한 사실)
+```
+
+🔴 즉 **실등록을 막는 것은 상품 데이터가 아니라 ① 판매자 설정 ② KC ③ 자격증명**
+세 갈래다. ①②는 셀러 화면에서 채워지고 ③은 Production 에서만 가능하다.
+
+## 🔴 새 backlog 2건 (Commerce 가 아니라 MI 쪽이다)
+
+```
+B-BRAND  Bobo 공식몰에서 brand 가 «빈값» 이다. 브랜드 공식몰인데 브랜드가 비면
+         MI 의 Identity 첫 축(Brand)이 무력해진다. → MI-P0 에서 본다.
+B-CODE   같은 상품 URL 에 품번 `b226ac043` 이 있는데 어느 칸에도 들어오지 않는다.
+         메모리([[brand-code-extraction-already-words]])는 공식몰 URL 앞머리
+         조각이 품번이라고 기록해 두었다 — `extractCodeLikeSlugSegment` 가 이
+         경로에서 호출되지 않는 것으로 보인다. 🔴 MI 의 «가장 강한 식별자» 축이라
+         MI-P0 에서 최우선으로 확인한다.
+```
+
+## COMMERCE CLOSE 게이트
+
+```
+대표 실상품 3개 × 3채널 payload/validation   🟢 측정 완료
+재고 정책 3-state                            🟢 실상품으로 증명
+고시 공통 수집                               🟢 D-CARE 반영 확인
+D-MODEL                                      🟢 조사 완료(결함 아님) · Q1/Q2 는 MI 를 막지 않음
+전수 회귀                                    🟢 497 files / 7461 passed
+typecheck                                    🟢 listing 5 = baseline · admin 0 · crawler 2
+build                                        🟢 PASS
+실등록                                        🔴 STOP (CPO GO 전까지)
+```
