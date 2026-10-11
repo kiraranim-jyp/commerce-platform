@@ -15,7 +15,7 @@
 | ③ | AUTO 7 전수 funnel | 🟡 브랜드 교집합까지만 |
 | ④ | coconjennie 최종 판정 | 🔴 `NO_PRODUCT_PATH_OBSERVED` |
 | ⑤ | SAME Yield 측정 | 🔴 **측정불가(분모 0)** — 0% 로 적지 않는다 |
-| ⑥ | SAME → Price Decision 영향 | 🟡 **손실 경로 특정**(§3-10) · 금액 미측정 |
+| ⑥ | SAME → Price Decision 영향 | 🔴 **FP 판정이 무효화됨**(§3-11) → 미착수 |
 | ⑦ | 비용/자동화 가치 | 🟡 부분 |
 | ⑧ | GO/HOLD/CHANGE 최종 판정 | 🔴 **확정 금지** (①~⑦ 미완) |
 
@@ -349,6 +349,45 @@ extractForetforetModelCode 가 다른 상품 품번을 뽑는다
 
 ---
 
+### 3-11. 🔴🔴 STEP 4b — **「EXACT FP 1건」은 무효다. 내 하니스가 두 후보를 섞었다.**
+
+FP 가 났다던 그 URL 의 JSON-LD 를 직접 받았다:
+
+```
+url            foretforet.com/shop/shopdetail.html?branduid=10249010
+pageTitle      FORETFORET_AW25 3차[페페슈즈]3094 구두_VERNICE NERO-PP25KASHE3094VNE
+JSON-LD 블록   2개 · `@type:Product` **1개**
+  mpn          **PP25KASHE3094VNE**   🟢 제목과 일치한다 — 페이지가 «정상» 이다
+  name         AW25 3차[페페슈즈]3094 구두_…      sku 040000058616
+extractForetforetModelCode(html) = **PP25KASHE3094VNE**   🟢 추출기도 «정상» 이다
+페이지에 「1195」 포함 = **false**
+```
+
+🔴🔴 **그러면 `PP24KASHE1195NER` 는 추출기가 뽑은 값이 아니다.**
+   `judgeDomesticCandidate` 는 내부에서 `selectDomesticCandidate` 로 **대표 후보 1건**
+   을 고른다. 운영이 고른 대표는 `1195`(= 정답 Lulu T Bar)였고, 🔴 **내 Vision 은
+   `scored[0]`(= 3094)에 돌렸다.** 즉 `tier` 와 `visionScore` 가 **서로 다른 후보**
+   를 가리킨다.
+
+🔴 **내 덤프에 그 불일치가 이미 찍혀 있었다** —
+   `judgedDomesticModelCode = PP24KASHE1195NER` vs `topCandidateSku = PP25KASHE3094VNE`.
+   그걸 「추출기가 엉뚱한 품번을 뽑는다」로 **잘못 읽었다.**
+
+→ 🔴 **§3-9/§3-10 의 「EXACT FP 1건」·「추출기 결함」·「사업적 손실 경로 실측」은
+     전부 무효다.** MI-P0-12 의 「EXACT 버킷 FP 0」이 여전히 유효하다.
+→ 🔴 그리고 STEP 3 의 `falsePositive rate 9%` 도 무효다(같은 결함).
+
+### 🔴 하니스를 고칠 지점 (STEP 5 전제)
+
+```
+judgeDomesticCandidate 가 «고른 대표 후보» 에 Vision 을 돌려야 한다.
+  지금: scored[0] 에 돌린다            ← 🔴 운영이 고른 후보와 다를 수 있다
+  고칠 것: DomesticJudgement 의 `observed.candidate` / JUDGED 의 선택 결과를 쓴다
+  🔴 그 칸 이름을 추측하지 말고 타입에서 읽는다(run-domestic-price-check.ts:504~).
+```
+
+---
+
 ## 4. 다음 실행이 «즉시» 할 것
 
 ```
@@ -373,15 +412,15 @@ STEP 3   🟢 **완료** — GT 구축. 🔴 KNOWN_SAME 0건 → SAME Yield 측�
 STEP 4   🟢 **완료** — FP 원인 완전 특정(§3-10). `extractForetforetModelCode` 가
         다른 상품 품번을 뽑는다. `compareModelCode` 는 정상.
 
-STEP 4b 🔴🔴 **최우선 — 빈도와 금액을 잰다**
-        ① 그 상세 HTML 을 받아 `extractForetforetModelCode` 가 **어느 위치** 를
-           긁는지 찍는다(연관상품 섹션 의심). 🔴 추출기를 고치지 «않는다».
-        ② 운영 DB foretforet 링크 32건에 같은 모양이 몇 건인지 센다 —
-           `matched_title` 의 코드 ↔ 저장된 `matched_model_name` 불일치를 본다.
-        ③ §15 금액 — 그 FP 가 들어간 스냅샷의 `domesticLowestPriceKrw` 를
-           FP 포함/제외로 계산해 **Seller Decision 이 바뀌는지** 본다.
-        🟢 §18 Gate 에서 이것은 「source 추가」가 아니라 **「추출기 결함 수정」** 이다 —
-           가치가 입증되면 그 한 곳만 최소 수정 대상이 된다.
+STEP 4b 🟢 **완료 — 그리고 내 FP 판정을 무효화했다**(§3-11).
+        페이지·추출기 둘 다 정상이다. 🔴 추출기를 고칠 것이 «없다».
+
+STEP 5   🔴🔴 **최우선 — 하니스 수정 후 GT 재측정**
+        `judgeDomesticCandidate` 가 «고른 대표 후보» 에 Vision 을 돌리도록 고친다
+        (지금은 `scored[0]` 에 돌려 두 축이 다른 후보를 가리킨다).
+        🔴 칸 이름을 추측하지 말고 `DomesticJudgement` 타입에서 읽는다.
+        → 고친 뒤 STEP 3 을 **다시** 돌려 KNOWN_SAME / FP 를 재산출한다.
+        🔴 그 전에는 §3-9 의 FP 9% 와 §3-10 의 손실 경로를 «쓰지 않는다».
 
 STEP 2  🟡 rulii — arm A/B/C 는 돌았다(후보 10/3/13). 남은 것은 「미취급 ↔ 검색 실패」
         분리이고, STEP 1b 가 통과한 뒤에 본다.
