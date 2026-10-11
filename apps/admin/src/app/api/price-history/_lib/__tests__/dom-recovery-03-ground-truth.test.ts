@@ -96,8 +96,11 @@ describe.skipIf(!LIVE)("🔴 DOM-RECOVERY-03 — Independent Ground Truth", () =
       const withLink = read<SnapRow[]>("cov-withlink.json");
 
       /** strata A(링크 있음) / B(링크 없음) × 브랜드 층화 */
-      const A = stratify(withLink, 3).map((r) => ({ row: r, strata: "A_링크있음" as const }));
-      const B = stratify(noLink, 6).map((r) => ({ row: r, strata: "B_링크없음" as const }));
+      /** 🔴 분모를 키운다(STEP 6). 상한은 env 로 — 버린 건수를 리포트에 적는다. */
+      const capA = Number(process.env.GT_CAP_A ?? 6);
+      const capB = Number(process.env.GT_CAP_B ?? 20);
+      const A = stratify(withLink, capA).map((r) => ({ row: r, strata: "A_링크있음" as const }));
+      const B = stratify(noLink, capB).map((r) => ({ row: r, strata: "B_링크없음" as const }));
       const targets = [...A, ...B];
 
       /** E looxloo · F rulii · G 정상 source(foretforet·deuxbebe·littleluna) */
@@ -225,7 +228,20 @@ describe.skipIf(!LIVE)("🔴 DOM-RECOVERY-03 — Independent Ground Truth", () =
           "🔴 UNKNOWN 규칙": "이미지 없음/후보 0건 → UNKNOWN. Recall 분모에서 제외한다.",
           "🔴 하지 않은 것": "threshold 변경 · no-code SAME 승격 · 가드 완화 · Production 변경",
         },
-        labelCoverage: { pairs: rows.length, labeled: labeled.length, unknown: rows.length - labeled.length },
+        labelCoverage: {
+          pairs: rows.length, labeled: labeled.length, unknown: rows.length - labeled.length,
+          /** 🔴 UNKNOWN 을 한 덩어리로 두지 않는다 — 원인이 다르면 처방이 다르다. */
+          unknownReason: count(rows.filter((r) => r.label === "UNKNOWN"), (r) => {
+            const s2 = String(r.labelReason ?? "");
+            return s2.includes("후보 0건") ? "후보 0건(미취급↔검색실패 미분리)"
+                 : s2.includes("NO_IMAGE") ? "이미지 없음(어댑터가 채우지 않음)"
+                 : s2.includes("UNCERTAIN") || s2.includes("51") ? "Vision UNCERTAIN(51~79)"
+                 : `기타(${s2.slice(0, 40)})`;
+          }),
+          /** 🟢 샵별 이미지 확보율 — 어느 샵에서 GT 를 만들 수 있는가 */
+          imageAvailabilityByShop: count(rows, (r) =>
+            `${r.shop} ${String(r.visionStatus ?? "").startsWith("NO_IMAGE") ? "이미지없음" : r.candidates === 0 ? "후보0" : "이미지있음"}`),
+        },
         byLabel: count(rows, (r) => String(r.label)),
         byStrataLabel: count(rows, (r) => `${r.strata} × ${r.label}`),
         byShopLabel: count(rows, (r) => `${r.shop} × ${r.label}`),
