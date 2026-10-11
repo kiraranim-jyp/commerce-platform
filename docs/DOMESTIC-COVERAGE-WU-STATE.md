@@ -10,7 +10,7 @@
 
 | | 항목 | 상태 |
 |---|---|---|
-| ① | Existing Source Recovery 원인 규명 | 🟢 **원인 특정됨** (아래 §3) |
+| ① | Existing Source Recovery 원인 규명 | 🟡 **1차 가설 반증됨 → 2차 원인 특정** (§3) |
 | ② | Independent Ground Truth 구축 | 🔴 미완 |
 | ③ | AUTO 7 전수 funnel | 🟡 브랜드 교집합까지만 |
 | ④ | coconjennie 최종 판정 | 🔴 `NO_PRODUCT_PATH_OBSERVED` |
@@ -75,46 +75,70 @@ KNOWN_NOT_SAME       0건 — 거부된 후보가 DB 에 저장되지 않는다
 
 ---
 
-## 3. 🟢🟢 ① 원인 특정 — `brand-alias.ts` 에 두 브랜드가 없다
+## 3. ① Recovery 원인 — 🔴 1차 가설은 **반증됐다**
 
-`packages/crawler/src/comparison-search/brand-alias.ts` 가 **이미 owner** 다.
-한글 alias 가 **3개만** 등록돼 있다:
+### 3-1. 1차 가설과 그 근거 (기록용)
+
+`packages/crawler/src/comparison-search/brand-alias.ts` 가 owner 이고 한글 alias 가
+**3개만** 등록돼 있다 — `Pèpè Shoes→페페` · `Emile et Ida→에밀에이다` ·
+`Konges Slojd Clothing→콩제슬래드`. 그 파일 주석이 등록 근거를 적어 뒀다:
+> 「3개 브랜드 모두 **원문 영문 검색 0건** → 한글 alias 검색 4~5건, 오탐 0건 확인」
+> 「새 alias 추론/자동 번역 금지 — 목록에 없는 브랜드는 폴백을 시도하지 않는다」
+
+🔴 `Bobo Choses`·`The Animals Observatory` 는 목록에 없고 그 둘이 looxloo 커버
+94 의 전부다(84+10). → 「alias 두 줄이 없어서 회수가 안 된다」가 1차 가설이었다.
+
+### 3-2. 🔴🔴 실측이 그 가설을 깼다 (STEP 1 · sample N=4 상품)
+
+하니스에서만 alias 를 주입해 세 arm 을 돌렸다(Production 미변경):
 
 ```
-Pèpè Shoes             → 페페
-Emile et Ida           → 에밀에이다
-Konges Slojd Clothing  → 콩제슬래드
+             looxloo  rulii  foretforet      SAME   tier
+arm A 영문      27      10       10            0     none
+arm B 한글      13       3       10            0     none
+arm C canonical 25      13       15            0     none
 ```
 
-🔴 그 파일 머리 주석이 등록 근거를 적어 뒀다 —
-> 「3개 브랜드 모두 **원문 영문 검색 0건** → 브랜드 한글 alias 검색 4~5건,
->   오탐 0건 확인」 · 「새 alias 추론/자동 번역/유사발음 생성 금지 —
->   이 목록에 없는 브랜드는 폴백을 시도하지 않는다」
+🔴 **한글 alias 를 넣으면 후보는 늘지만 SAME 은 0 그대로다.**
 
-🔴🔴 **`Bobo Choses` 와 `The Animals Observatory` 는 목록에 없다.**
-그 둘이 looxloo 커버 94 의 전부다(Bobo 84 + TAO 10).
+### 3-3. 🟢 2차 원인 — 브랜드 교집합 ≠ **상품** 교집합
 
-→ looxloo 링크 0 의 원인은 「샵 부재」도 「Identity 결함」도 아니라
-  **alias 등록부에 두 줄이 없어서 영문 쿼리가 0건을 받는 것** 이다.
+arm B 가 회수한 후보가 전부 「그 브랜드의 **다른** 상품」이었다:
 
-🟢 그리고 Phase 7 이 등록 조건을 이미 충족했다 — 「보보쇼즈」 3/3 · 「타오」 3/3,
-   오탐 0. 🔴 **그래도 지금 등록하지 않는다** — §18 Gate 의 SAME/가격/의사결정이
-   아직 미측정이다. alias 추가는 「query expansion」이 아니지만, 가치 입증 전에는
-   Production 을 바꾸지 않는다.
+```
+우리 상품   Bobo Choses 「Stamp Bloom All Over Denim Pants」 (B226AC070)
+looxloo     「보보쇼즈 보보쇼즈팝조깅팬츠 (76A7D-415-02)」·「팝레깅스」
+foretforet  「SS26LW[보보쇼즈]Reading Crocodile 롱삭스」        ← 양말
+rulii       「[Bobochoses X MiniKyomo] 미니쿄모 X 보보쇼즈」     ← 콜라보
+```
 
----
+→ 브랜드 검색은 **브랜드의 아무 상품**을 돌려준다. 그 샵이 그 «특정 상품» 을
+  취급하지 않으면 SAME 이 될 수 없다. 그리고 `looxloo` 가 전부
+  `DROPPED(EVIDENCE_NOT_WORTHWHILE)` 인 것은 **게이트가 올바르게 버린 것** 이다.
+
+🔴 **그래서 「커버 94」는 「브랜드 교집합」이고 「SAME 가능 상품 수」가 아니다.**
+   이 구분을 다음 실행이 혼동하지 않아야 한다.
+
+### 3-4. 🔴 내 CONTROL 게이트가 약했다 (자체 정정)
+
+`controlGate.passed=true` 는 「foretforet 가 후보를 냈다」만 봤다. 🔴 그런데
+**운영은 foretforet 에서 링크 32건을 만들었는데** 이 측정에서는 tier 가 전부
+`none` 이다. 즉 내가 고른 상품이 foretforet 에 «없는» 상품이라 CONTROL 조건을
+충족하지 못했다 — **게이트가 「tier 재현」을 요구해야 했다.**
 
 ## 4. 다음 실행이 «즉시» 할 것
 
 ```
-STEP 1  looxloo Recovery Funnel (§4) — 하니스에서만 alias 를 주입해 측정한다
-        arm A  현재 Production query (영문, 변경 없음)
-        arm B  한글 alias 주입 (보보쇼즈 / 타오)  🔴 Production 미변경
-        arm C  canonical field 조합 (brand+color+material)
-        각 arm → candidates → product pages → readable → relevant → SAME → tier
-        🔴 CONTROL: foretforet known SAME 을 같이 돌린다. 깨지면 숫자 폐기.
+STEP 1  🟢 완료 — arm A/B/C × 3샵 측정. 결과는 §3-2/3-3. 재실행 금지.
 
-STEP 2  rulii 동일 (§7) — 검색 실행/결과/URL추출/상품명/미취급을 분리
+STEP 1b 🔴 **CONTROL 재구성이 먼저다** (§3-4 가 드러낸 결함)
+        운영이 `domestic_product_links` 를 «실제로 만든» 상품으로 arm A 를 돌려
+        **tier 가 재현되는지** 본다(단순 「후보를 냈다」가 아니다).
+        재현되면 그 위에서 looxloo 숫자를 신뢰한다. 안 되면 하니스를 고친다.
+        대상: foretforet 링크 32건 · deuxbebe 32건 중 상품 3~5개(verified=true 우선)
+
+STEP 2  🟡 rulii — arm A/B/C 는 돌았다(후보 10/3/13). 남은 것은 「미취급 ↔ 검색 실패」
+        분리이고, STEP 1b 가 통과한 뒤에 본다.
 
 STEP 3  Independent Ground Truth (§10·§11)
         strata A~G · KNOWN_SAME / KNOWN_NOT_SAME / UNKNOWN
