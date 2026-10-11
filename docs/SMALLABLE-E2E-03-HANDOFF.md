@@ -23,11 +23,14 @@ KNOWN DEFECTS          COUPANG-NOTICE-SEMANTIC-LOSS-01 (별도 backlog)
                        D-MODEL Q1/Q2 (CPO: MI 를 막지 않는다)
                        care 패턴 다른 어순(실측 근거 생기면)
 
-NEXT EXACT ACTION      🔴 Replay 재측정 1회 — 아래 §MI-P0 Replay 의 «무효 KPI 3건»
-                       (modelCode·color·material)을 `candidate.facts` «안» 에서
-                       다시 센다. 최상위만 읽어 거짓 0 을 냈다. image·price 도
-                       같은 자리에서 null 여부를 확인한다.
-                       그 뒤 Identity(SAME/SIMILAR) 판정을 붙이고 KPI 14개를 완성한다.
+NEXT EXACT ACTION      price-source-adapter.ts 등록부(어댑터 13개)에 국내 판매처
+                       (mustit.co.kr · 4910.kr · kream.co.kr 등)가 있는지 확인하고
+                       owner adapter 로 «직접» 실측한다. 후보는
+                       scratchpad/mi-p0-candidates.json 에 캐시돼 Gemini 재호출 불필요.
+                       그 뒤 ② B-CODE/B-BRAND 경로 통합(추출기는 있다 — Commerce 수집이
+                       MI facts 를 못 본다) → ③ Identity → Verified Price → KPI 9~14.
+                       🔴 측정 규칙 2단계: 운영 경로 «그리고» 그 값의 owner 함수.
+                          담당하지 않는 함수의 null 을 결함으로 적지 않는다.
 
 TEST                   d-care 12 · d-lot-stock 10 · d-opt 5 · parity 16 — 전부 PASS
 REGRESSION             497 files / 7461 passed · exit 0
