@@ -706,3 +706,58 @@ Q2. (가)를 고르면 Gemini 쿼리에 판매처 화이트리스트를 주입�
 KPI 11(domestic price match)이 전부 0 으로 고정된다. 그 0 은 결함이 아니라
 **정책의 결과** 이고, 그것을 결함으로 적으면 이번 스프린트에서 네 번 한 오류의
 다섯 번째가 된다.
+
+---
+
+# 🔴 정정 — price adapter registry 는 «10개» 다 (CPO 지적, 2026-10-11)
+
+내가 앞 보고에서 「11개」·「.co.kr 6곳」이라고 적었다. **둘 다 틀렸다.**
+원인: `grep -c "domain:"` 로 셌고 그 13건에는 타입 선언(`domain: string;` :154)과
+함수 인자(:338 · :464)가 섞여 있었다. 🔴 **owner 는 그 문자열이 아니라 등록 «배열»
+이다** — 방금 고정한 2단계 규칙을 내가 또 건너뛴 것이다.
+
+## 확정 — `PRICE_SOURCE_ADAPTERS` (price-source-adapter.ts:356-460)
+
+```
+ #  도메인                 구분
+ 1  childrensalon.com      해외
+ 2  rakuten.co.jp          해외(JP)
+ 3  looxloo.com            국내
+ 4  bobochoses.com         브랜드 공식몰(해외)
+ 5  rulii.co.kr            국내
+ 6  skysport.co.kr         국내
+ 7  deuxbebe.com           국내
+ 8  littleluna.co.kr       국내
+ 9  chocoel.co.kr          국내
+10  foretforet.com         국내
+
+합계 10개 · 국내 판매처 7곳(.co.kr 은 그중 4곳) · 해외 3곳
+🟢 배열 안에서 shopifySuggestAdapter() 호출은 «0건» — 동적으로 늘어나는 항목이 없다
+   (그 팩토리는 :338 에 정의만 돼 있다). 즉 10개가 전부다.
+```
+
+## 🟢 그리고 CPO 의 분류가 맞다 — 「STOP」이 아니라 「불일치」다
+
+```
+❌ 내 표현   「국내 가격을 얻을 수 없다 (B급 STOP)」
+✅ 정확한 표현 Discovery Recall ↔ Price Adapter Coverage «불일치»
+```
+
+아키텍처가 이미 `Gemini 후보 발견` 과 `adapter 가격 수집` 으로 분리돼 있으므로,
+**Discovery 의 후보 범위를 바꾸는 것만으로 owner 가 있는 판매처를 만날 수 있다.**
+약관 결정을 건드리지 않는다. 내가 「불능」으로 한 단계 과하게 적었다.
+
+## 다음 Long Sprint 의 입력 — whitelist (확정됨)
+
+```
+국내 Discovery 대상 7곳
+  looxloo.com · rulii.co.kr · skysport.co.kr · deuxbebe.com ·
+  littleluna.co.kr · chocoel.co.kr · foretforet.com
+해외 Discovery 대상 3곳
+  childrensalon.com · rakuten.co.jp · bobochoses.com
+```
+
+🔴 이 10개가 **가격 owner 가 존재하는 유일한 도메인** 이다. Discovery 쿼리에
+이 범위를 주입한다(판정 (가) · Q2 승인됨).
+🔴 마켓플레이스(kream·mustit·ssg·gsshop·trenbe)는 (나)로 — 수집하지 않고
+   title/brand/identifier/image 만 Identity evidence 로 남긴다. 가격은 없다.
