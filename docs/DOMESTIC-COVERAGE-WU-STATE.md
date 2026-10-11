@@ -163,11 +163,30 @@ deuxbebe.com     exp=REFERENCE → got=null        🔴 0/4
    «EXACT 축에 한해» 유효로 승격한다.**
 🔴 **REFERENCE 축은 재현되지 않았다** — 그 축 숫자는 승격하지 않는다.
 
-🔴 deuxbebe 불일치의 원인 후보(미확정): `isEvidenceEvaluationWorthwhile` 가 열리는
-   조건은 「matchLevel≠low · SAME/PRESUMED_SAME 있음 · 제목에 품번 · foretforet」 뿐이고
-   「페페 VERNICE NERO」는 제목에 품번이 없다. **운영 링크가 그 가드보다 먼저
-   만들어졌을 가능성** 이 있다(= `guard-predates-the-new-path` 의 반대 방향).
-   🔴 추정이므로 확정하지 않는다. STEP 2 에서 가른다.
+### 🔴🔴 STEP 2 결과 — 내 추정이 틀렸고, **회귀 가능성** 이 나왔다
+
+「운영 링크가 가드보다 먼저 만들어졌다」고 추정했는데 **시점 대조가 그것을 깼다:**
+
+```
+가드 도입    2026-08-27 (`domain === "foretforet.com"` 줄)
+             2026-08-28 (`matchLevel !== "low"` 줄 · 함수 최초 도입)
+             2026-10-07 (P5.2 — confirmBrandCodeInTitle 조건 «추가». 완화 방향)
+deuxbebe 링크 2026-08-29 ~ 2026-10-08   🔴 **가드 이후다**
+샵별 생성 범위 bobochoses 08-23~09-10 · foretforet 08-27~09-22 · littleluna 10-07
+```
+
+🟢 그러면 왜 과거엔 통과했나 — 가드의 **두 번째 조건이 열렸다:**
+   `if (candidates[0].matchLevel !== "low") return true;`
+   과거 링크는 `conf=0.72 · type=REVIEW_REQUIRED` 였고 **low 가 아니다.**
+   reasons: `["모델명 유사도 33%","색상 일치(제목 내 확인)","브랜드 일치"]`
+
+🔴🔴 **그런데 지금 같은 후보를 회수해도 `DROPPED(EVIDENCE_NOT_WORTHWHILE)` 다.**
+   → 원인은 가드가 아니라 **`matchLevel`/confidence 가 떨어진 것** 이다.
+   → 그게 사실이면 **deuxbebe `SIMILAR` 17건은 지금 생성되지 않는다** =
+     **Coverage 회귀 가능성** 이고, 이 WU 가 찾던 것과 «다른» 종류의 손실이다.
+
+🔴 **아직 확정 아니다.** 내 하니스가 `confidence`/`matchLevel` 을 기록하지 않았다.
+   STEP 2b 에서 그 두 칸을 찍어 과거 0.72 와 대조해야 한다.
 
 ### 3-6. 🔴 그래서 looxloo 에는 CONTROL 이 «없다»
 
@@ -185,10 +204,16 @@ STEP 1  🟢 완료 — arm A/B/C × 3샵 측정. 결과는 §3-2/3-3. 재실행
 STEP 1b 🟢 **완료 — EXACT 축 8/8 재현.** 결과는 §3-5. 재실행 금지.
         하니스: dom-recovery-02-control-tier.test.ts
 
-STEP 2  🔴 deuxbebe REFERENCE 재현 실패의 원인을 가른다 (§3-5)
-        「운영 링크가 가드보다 먼저 생성됐다」 ↔ 「지금은 구조적으로 못 만든다」
-        → `domestic_product_links.created_at` 과 가드 도입 커밋 날짜를 대조한다.
-        🔴 그 전에 rulii 「미취급 ↔ 검색 실패」도 같이 가른다.
+STEP 2  🟢 **완료** — 시점 대조로 「가드가 나중」 추정을 반증했다(§3-5 하단).
+        🟢 실제 원인 후보: confidence/matchLevel 하락 (과거 0.72 → 지금 low)
+
+STEP 2b 🔴 **최우선** — `withConfidence` 결과의 `confidence`·`matchLevel` 을 찍어
+        과거 `0.72` 와 대조한다. 떨어졌으면 **Coverage 회귀** 다.
+        대상: deuxbebe 「페페 VERNICE NERO」 ↔ PèPè Lulu T Bar Vernice Nero
+        🔴 이것이 참이면 이 WU 의 결론이 「판매처 확대」가 아니라
+           **「기존 회수의 회귀 수복」** 으로 바뀐다.
+
+STEP 2c 🔴 rulii 「미취급 ↔ 검색 실패」 분리.
 
 STEP 2  🟡 rulii — arm A/B/C 는 돌았다(후보 10/3/13). 남은 것은 「미취급 ↔ 검색 실패」
         분리이고, STEP 1b 가 통과한 뒤에 본다.
