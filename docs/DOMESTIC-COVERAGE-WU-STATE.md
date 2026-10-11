@@ -10,7 +10,7 @@
 
 | | 항목 | 상태 |
 |---|---|---|
-| ① | Existing Source Recovery 원인 규명 | 🟡 **1차 가설 반증됨 → 2차 원인 특정** (§3) |
+| ① | Existing Source Recovery 원인 규명 | 🟡 2차 원인 특정 + 🟢 **CONTROL 통과**(§3-5) |
 | ② | Independent Ground Truth 구축 | 🔴 미완 |
 | ③ | AUTO 7 전수 funnel | 🟡 브랜드 교집합까지만 |
 | ④ | coconjennie 최종 판정 | 🔴 `NO_PRODUCT_PATH_OBSERVED` |
@@ -144,17 +144,51 @@ PèPè 같은 상품 → deuxbebe tier=REFERENCE (C: 「페페 VERNICE NERO」) 
 🟢 CONTROL 대상은 확보됐다 — scratchpad `ctrl-targets.json` **13건**
    (bobochoses 4 · foretforet 4 · littleluna 1 · deuxbebe 4, 각 `expectedTier` 포함).
 
+### 3-5. 🟢🟢 STEP 1b CONTROL — **EXACT 축 8/8 재현. 하니스가 유효하다.**
+
+운영이 실제로 tier 를 만든 (상품×샵) 12건에 arm A 를 돌렸다. 🔴 게이트 조건은
+「후보가 나왔다」가 아니라 **`tier === expectedTier`** 다.
+
+```
+bobochoses.com   exp=EXACT     → got=EXACT       🟢 3/4   (측정 전용 refs override)
+foretforet.com   exp=EXACT     → got=EXACT       🟢 4/4
+littleluna.co.kr exp=EXACT     → got=EXACT       🟢 1/1
+deuxbebe.com     exp=REFERENCE → got=null        🔴 0/4
+                 🔴 후보(「페페 VERNICE NERO」)는 «회수했다» —
+                    DROPPED(EVIDENCE_NOT_WORTHWHILE) 로 떨어진다
+합계 재현 8/12 · **EXACT 축은 8/8**
+```
+
+🟢 **→ 하니스가 운영 EXACT 경로를 재현한다. looxloo/rulii 의 tier/SAME 숫자를
+   «EXACT 축에 한해» 유효로 승격한다.**
+🔴 **REFERENCE 축은 재현되지 않았다** — 그 축 숫자는 승격하지 않는다.
+
+🔴 deuxbebe 불일치의 원인 후보(미확정): `isEvidenceEvaluationWorthwhile` 가 열리는
+   조건은 「matchLevel≠low · SAME/PRESUMED_SAME 있음 · 제목에 품번 · foretforet」 뿐이고
+   「페페 VERNICE NERO」는 제목에 품번이 없다. **운영 링크가 그 가드보다 먼저
+   만들어졌을 가능성** 이 있다(= `guard-predates-the-new-path` 의 반대 방향).
+   🔴 추정이므로 확정하지 않는다. STEP 2 에서 가른다.
+
+### 3-6. 🔴 그래서 looxloo 에는 CONTROL 이 «없다»
+
+운영 링크가 0 이므로 looxloo 에는 「정답이 있는 (상품×샵)」 조합이 **존재하지 않는다.**
+→ looxloo 의 SAME 가능성은 **GT 를 새로 만들어야** 판정된다(STEP 3). STEP 1 의
+  「SAME 0」은 여전히 「정답 없는 조합」일 수 있으므로 단독 근거가 아니다.
+
+---
+
 ## 4. 다음 실행이 «즉시» 할 것
 
 ```
 STEP 1  🟢 완료 — arm A/B/C × 3샵 측정. 결과는 §3-2/3-3. 재실행 금지.
 
-STEP 1b 🟡 CONTROL 대상 «덤프 완료» (`ctrl-targets.json` 13건, expectedTier 포함).
-        🔴 남은 것: 그 13건으로 arm A 를 돌려 **expectedTier 가 재현되는지** 확인.
-           게이트 조건은 「후보를 냈다」가 아니라 **「tier 가 같다」** 다.
-        🔴 refs 를 만들 때 **그 링크의 샵을 반드시 포함** 한다 —
-           STEP 1 은 bobochoses(disabled)를 빼서 정답이 없는 조합이 됐다.
-        🟢 재현되면 그 위에서만 looxloo/rulii 숫자를 신뢰한다.
+STEP 1b 🟢 **완료 — EXACT 축 8/8 재현.** 결과는 §3-5. 재실행 금지.
+        하니스: dom-recovery-02-control-tier.test.ts
+
+STEP 2  🔴 deuxbebe REFERENCE 재현 실패의 원인을 가른다 (§3-5)
+        「운영 링크가 가드보다 먼저 생성됐다」 ↔ 「지금은 구조적으로 못 만든다」
+        → `domestic_product_links.created_at` 과 가드 도입 커밋 날짜를 대조한다.
+        🔴 그 전에 rulii 「미취급 ↔ 검색 실패」도 같이 가른다.
 
 STEP 2  🟡 rulii — arm A/B/C 는 돌았다(후보 10/3/13). 남은 것은 「미취급 ↔ 검색 실패」
         분리이고, STEP 1b 가 통과한 뒤에 본다.
