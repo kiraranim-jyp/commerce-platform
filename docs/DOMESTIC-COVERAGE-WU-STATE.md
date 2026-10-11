@@ -196,6 +196,51 @@ deuxbebe 링크 2026-08-29 ~ 2026-10-08   🔴 **가드 이후다**
 
 ---
 
+### 3-7. 🟢🟢 STEP 2b — **회귀는 실재한다. 단 사업 영향은 0 이다.**
+
+`withConfidence` 의 `confidence`/`matchLevel` 을 찍어 과거값과 대조했다:
+
+```
+deuxbebe 「페페 VERNICE NERO」
+  과거 링크  conf=0.72 · REVIEW_REQUIRED   (2026-08-29 ~ 2026-10-08)
+  지금       conf=0.58 · matchLevel=low · xs=SIMILAR
+  reasons 는 «동일» ["모델명 유사도 33%","색상 일치(제목 내 확인)","브랜드 일치"]
+→ 🔴 **같은 증거에 더 낮은 점수** = confidence 계산이 바뀌었다.
+  matchLevel=low → 가드 둘째 조건이 닫힘 → DROPPED(EVIDENCE_NOT_WORTHWHILE)
+  → **deuxbebe SIMILAR 17건은 지금 생성되지 않는다 = Coverage 회귀 확정**
+```
+
+🔴🔴 **그런데 그것이 «손실» 인지는 별개다 — 그리고 손실이 아니다.**
+그 tier 는 `REFERENCE` 이고, MI-P0-12 가 확인한 대로
+`market-intelligence.ts:118-119` 에 **`REFERENCE` 분기가 없다**
+(`if EXACT … else if COMPARISON …` 뿐). 즉 REFERENCE 링크는 생기든 안 생기든
+`domesticLowestPriceKrw` 에 **도달하지 않는다.**
+
+```
+Coverage Value  🟡 REFERENCE 17건이 안 생긴다
+Decision Value  🔴 **0** — REFERENCE 는 가격 결정에서 버려진다
+Economic Value  🔴 따라서 이 회귀를 고칠 사업 가치가 없다
+```
+
+### 3-8. 🟢 나머지 CONTROL 이 통과한 «이유» 도 갈렸다
+
+```
+foretforet   conf=0.38 · low · xs=SIMILAR  → 🟢 tier=EXACT
+             이유: 가드 넷째 조건 `domain === "foretforet.com"` 이 열리고
+                   fetchDomesticModelCode 가 품번을 뽑아 STRONG_IDENTIFIER 가 된다
+             → 🔴 **confidence 가 낮아도 품번 추출기가 구제한다**
+littleluna   conf=0.69 · low · xs=PRESUMED_SAME → 🟢 tier=EXACT
+             이유: 가드 «첫째» 조건(PRESUMED_SAME 존재)이 열린다 + 제목에 AW26MS185
+bobochoses   3/4 재현. 불일치 1건은 「Bobo Choses denim cap」(conf=0.4 · xs=CONFLICT)
+             → 다른 상품을 1위로 잡은 **검색 순위** 문제
+```
+
+🟢 **즉 「회수 성공」의 실제 메커니즘은 confidence 가 아니라 «품번 경로» 다** —
+   foretforet(HTTP 추출기) · littleluna(제목 품번) · bobochoses(URL handle).
+   이것은 선행 WU 의 결론(「품번을 읽을 수 있는 샵에서만 생긴다」)과 **일치한다.**
+
+---
+
 ## 4. 다음 실행이 «즉시» 할 것
 
 ```
@@ -207,13 +252,15 @@ STEP 1b 🟢 **완료 — EXACT 축 8/8 재현.** 결과는 §3-5. 재실행 금
 STEP 2  🟢 **완료** — 시점 대조로 「가드가 나중」 추정을 반증했다(§3-5 하단).
         🟢 실제 원인 후보: confidence/matchLevel 하락 (과거 0.72 → 지금 low)
 
-STEP 2b 🔴 **최우선** — `withConfidence` 결과의 `confidence`·`matchLevel` 을 찍어
-        과거 `0.72` 와 대조한다. 떨어졌으면 **Coverage 회귀** 다.
-        대상: deuxbebe 「페페 VERNICE NERO」 ↔ PèPè Lulu T Bar Vernice Nero
-        🔴 이것이 참이면 이 WU 의 결론이 「판매처 확대」가 아니라
-           **「기존 회수의 회귀 수복」** 으로 바뀐다.
+STEP 2b 🟢 **완료** — 회귀 확정(0.72→0.58, low). 🔴 단 Decision Value = 0
+        (REFERENCE 는 market-intelligence 에서 버려진다). §3-7.
+        🔴 **그래서 「회귀 수복」도 레버가 아니다.** 방향을 다시 바꾸지 않는다.
 
-STEP 2c 🔴 rulii 「미취급 ↔ 검색 실패」 분리.
+STEP 2c 🔴 rulii 「미취급 ↔ 검색 실패」 분리. (brandOnSearchPage=true 였지만
+        상품 링크 0건 — Cafe24 검색 결과 HTML 을 직접 보고 가른다)
+
+STEP 3   Independent Ground Truth — 🔴 **이것이 남은 최대 블로커다.**
+        looxloo 에 CONTROL 이 없으므로(§3-6) GT 없이는 looxloo SAME 을 판정할 수 없다.
 
 STEP 2  🟡 rulii — arm A/B/C 는 돌았다(후보 10/3/13). 남은 것은 「미취급 ↔ 검색 실패」
         분리이고, STEP 1b 가 통과한 뒤에 본다.

@@ -107,6 +107,8 @@ describe.skipIf(!LIVE)("🔴 DOM-RECOVERY-02 — CONTROL: 운영 tier 재현 게
         const r = results[0];
         let candidates = 0, judged = 0, gate = "NO_RESULT", gotTier: string | null = null;
         let matchedTitleFound = false;
+        let nowConfidence: Record<string, unknown>[] = [];
+        let top0: Record<string, unknown> | null = null;
         if (r?.status === "ok") {
           candidates = r.candidates.length;
           /** 🔴 운영이 고른 그 후보가 «회수 목록에 있는가» — tier 와 별개 축이다. */
@@ -114,6 +116,21 @@ describe.skipIf(!LIVE)("🔴 DOM-RECOVERY-02 — CONTROL: 운영 tier 재현 게
           matchedTitleFound = r.candidates.some((x) => norm(x.title).includes(norm(c.matchedTitle).slice(0, 14)));
           const scored = r.candidates.length > 0 ? withConfidence(query, r.candidates) : [];
           judged = scored.filter((x) => x.crossSellerVerdict).length;
+          /**
+           * 🔴🔴 STEP 2b — 회귀 여부의 직접 증거.
+           *   deuxbebe 과거 링크는 `conf=0.72 · REVIEW_REQUIRED` 였고, 가드의
+           *   `matchLevel !== "low"` 조건이 열려 통과했다. 지금은 떨어지므로
+           *   **confidence 가 내려갔는지** 를 찍어 과거값과 대조한다.
+           *   🔴 가드도 confidence 계산도 바꾸지 않는다 — 기록만 한다.
+           */
+          nowConfidence = scored.map((x) => ({
+            title: String(x.title).slice(0, 48),
+            confidence: typeof x.confidence === "number" ? Number(x.confidence.toFixed(3)) : null,
+            matchLevel: x.matchLevel ?? null,
+            crossSellerVerdict: x.crossSellerVerdict ?? null,
+            matchReasons: (x.matchReasons ?? []).slice(0, 4),
+          }));
+          top0 = nowConfidence[0] ?? null;
           if (scored.length > 0) {
             const j = await judgeDomesticCandidate({
               domain: r.domain, candidates: scored, sourceUrl: dna.sourceUrl,
@@ -137,6 +154,9 @@ describe.skipIf(!LIVE)("🔴 DOM-RECOVERY-02 — CONTROL: 운영 tier 재현 게
           matchedTitleFoundInCandidates: matchedTitleFound,
           topTitles: r?.status === "ok" ? r.candidates.slice(0, 2).map((x) => x.title) : [],
           searchTerms: query.searchTerms,
+          /** 🔴🔴 STEP 2b — 가드가 보는 `candidates[0].matchLevel` 과 현재 confidence */
+          guardSeesTop0: top0,
+          nowConfidence,
         });
         // eslint-disable-next-line no-console
         console.log(`${c.domain.padEnd(18)} exp=${c.expectedTier.padEnd(10)} got=${String(gotTier).padEnd(10)} ` +
@@ -168,6 +188,15 @@ describe.skipIf(!LIVE)("🔴 DOM-RECOVERY-02 — CONTROL: 운영 tier 재현 게
         matchedTitleRecovery: {
           note: "🔴 tier 와 «별개» 축 — 운영이 고른 그 후보를 회수하기는 했는가",
           found: rows.filter((r) => r.matchedTitleFoundInCandidates).length, of: rows.length,
+        },
+        /** 🔴🔴 STEP 2b — 회귀 판정용. 과거 deuxbebe 링크는 conf=0.72 였다. */
+        regressionProbe: {
+          note: "🔴 가드 조건 `candidates[0].matchLevel !== \"low\"` 가 열리는지가 전부다.",
+          historicalDeuxbebe: { confidence: 0.72, matchType: "REVIEW_REQUIRED", createdRange: "2026-08-29 ~ 2026-10-08" },
+          nowTop0ByDomain: rows.map((x) => ({
+            domain: x.domain, expectedTier: x.expectedTier, gotTier: x.gotTier,
+            top0: x.guardSeesTop0,
+          })),
         },
         cost: { shopSearchRequests: requests, elapsedMs: Date.now() - t0 },
         rows,
