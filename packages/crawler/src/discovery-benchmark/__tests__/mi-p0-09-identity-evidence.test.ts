@@ -176,6 +176,9 @@ describe.skipIf(!LIVE)("🔴 MI-P0-09 — Identity 가 SAME 을 놓치는 실제
         /** 🔴 운영 matchTruth/priceTier 계산에 필요한 입력. owner 는 `apps/admin` 에 있어
          *  여기서 tier 를 «계산하지 않는다** — 경계를 넘지 않고 입력만 덤프한다. */
         matchLevel: string | null; originColorText: string | null; candidateColorText: string | null;
+        /** 🔴 MI-P0-10 독립 라벨러(Vision)용. 대표 이미지 1장 + 보유 장수. */
+        originImageUrl: string | null; candidateImageUrl: string | null;
+        originImageCount: number; candidateImageCount: number;
         verdict: string; axes: { axis: string; points: number }[]; blockers: string[]; conflicts: string[];
         corePoints: number; totalPoints: number; brandOk: boolean;
         /** 🔴 SAME 이 안 된 «이유 전부». 하나만 적으면 동시발생이 사라진다. */
@@ -292,6 +295,8 @@ describe.skipIf(!LIVE)("🔴 MI-P0-09 — Identity 가 SAME 을 놓치는 실제
                 ownerVerdict: sc.crossSellerVerdict ?? null,
                 matchLevel: sc.matchLevel ?? null,
                 originColorText: of_.facts.colorText, candidateColorText: cf.colorText,
+                originImageUrl: of_.facts.imageUrls[0] ?? null, candidateImageUrl: cf.imageUrls[0] ?? null,
+                originImageCount: of_.facts.imageUrls.length, candidateImageCount: cf.imageUrls.length,
                 /** 🔴 운영 경로가 제목에서 품번을 채운 쌍인가 — 1차 측정이 놓친 칸 */
                 codeInjected,
                 verdict: m.verdict, axes: m.axes.map((a) => ({ axis: a.axis, points: a.points })),
