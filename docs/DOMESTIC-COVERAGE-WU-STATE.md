@@ -119,23 +119,42 @@ rulii       「[Bobochoses X MiniKyomo] 미니쿄모 X 보보쇼즈」     ← �
 🔴 **그래서 「커버 94」는 「브랜드 교집합」이고 「SAME 가능 상품 수」가 아니다.**
    이 구분을 다음 실행이 혼동하지 않아야 한다.
 
-### 3-4. 🔴 내 CONTROL 게이트가 약했다 (자체 정정)
+### 3-4. 🔴🔴 STEP 1 의 「SAME 0」은 **무효다** (STEP 1b 가 밝혔다)
 
-`controlGate.passed=true` 는 「foretforet 가 후보를 냈다」만 봤다. 🔴 그런데
-**운영은 foretforet 에서 링크 32건을 만들었는데** 이 측정에서는 tier 가 전부
-`none` 이다. 즉 내가 고른 상품이 foretforet 에 «없는» 상품이라 CONTROL 조건을
-충족하지 못했다 — **게이트가 「tier 재현」을 요구해야 했다.**
+`controlGate.passed=true` 는 「후보를 냈다」만 봤다. STEP 1b 에서 운영이 실제로
+tier 를 만든 (상품 × 샵) 을 DB 에서 꺼내 보니 **내 표본이 틀렸다:**
+
+```
+운영 정답                                                        내가 STEP 1 에서 쓴 것
+Stamp Bloom Denim Pants → bobochoses.com  tier=EXACT            같은 상품인데
+  🔴 bobochoses 는 현재 등록부 disabled → **내 refs 에 애초에 없었다**
+PèPè Lulu T Bar «Vernice Nero» → foretforet tier=EXACT          🔴 PèPè «Nevada Tobacco»
+  (C: AW26 RE[페페슈즈]VERNICE NERO T-스트랩 슈즈-PP24KASHE1195NER)      (01195-NEVADA-TOBACCO)
+  verified=true · vision 98~100                                     = **다른 색상**
+Main Story Bubble Sweatshirt «Grey Melange» → littleluna EXACT
+  (C: [메인스토리] AW26MS185 - Bubble Sweatshirt - Grey Melange) verified=true · vision=100
+PèPè 같은 상품 → deuxbebe tier=REFERENCE (C: 「페페 VERNICE NERO」) verified=false
+```
+
+🔴 **즉 「정답이 없는 (상품, 샵) 조합」을 골라서 SAME 0 이 나온 것이다.
+   제품 결함이 아니라 내 표본 선택 결함이다.**
+🔴 **다음 실행은 STEP 1 의 arm A/B/C 숫자를 SAME 판정 근거로 쓰지 않는다.**
+   (후보 회수량 비교에는 쓸 수 있다 — arm B 가 후보를 «줄였다»는 사실은 유효하다.)
+
+🟢 CONTROL 대상은 확보됐다 — scratchpad `ctrl-targets.json` **13건**
+   (bobochoses 4 · foretforet 4 · littleluna 1 · deuxbebe 4, 각 `expectedTier` 포함).
 
 ## 4. 다음 실행이 «즉시» 할 것
 
 ```
 STEP 1  🟢 완료 — arm A/B/C × 3샵 측정. 결과는 §3-2/3-3. 재실행 금지.
 
-STEP 1b 🔴 **CONTROL 재구성이 먼저다** (§3-4 가 드러낸 결함)
-        운영이 `domestic_product_links` 를 «실제로 만든» 상품으로 arm A 를 돌려
-        **tier 가 재현되는지** 본다(단순 「후보를 냈다」가 아니다).
-        재현되면 그 위에서 looxloo 숫자를 신뢰한다. 안 되면 하니스를 고친다.
-        대상: foretforet 링크 32건 · deuxbebe 32건 중 상품 3~5개(verified=true 우선)
+STEP 1b 🟡 CONTROL 대상 «덤프 완료» (`ctrl-targets.json` 13건, expectedTier 포함).
+        🔴 남은 것: 그 13건으로 arm A 를 돌려 **expectedTier 가 재현되는지** 확인.
+           게이트 조건은 「후보를 냈다」가 아니라 **「tier 가 같다」** 다.
+        🔴 refs 를 만들 때 **그 링크의 샵을 반드시 포함** 한다 —
+           STEP 1 은 bobochoses(disabled)를 빼서 정답이 없는 조합이 됐다.
+        🟢 재현되면 그 위에서만 looxloo/rulii 숫자를 신뢰한다.
 
 STEP 2  🟡 rulii — arm A/B/C 는 돌았다(후보 10/3/13). 남은 것은 「미취급 ↔ 검색 실패」
         분리이고, STEP 1b 가 통과한 뒤에 본다.
