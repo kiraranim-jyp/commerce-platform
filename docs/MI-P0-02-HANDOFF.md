@@ -24,21 +24,28 @@ DONE                COMMERCE CLOSE (bd81b064)
                        ② 호출부 둘 확인  ③ 🟢 한글 품번 확인은 «된다»(실측)
                        ④ 원인 = BRAND_ALIASES 3행  ⑤ 자기참조 결함 수정
                        ⑥ coupling guard 를 import graph 로 교체
+                    🟢 MI-P0-02c ①~⑬ 완료 (2026-10-11) → §11
+                       ② 최종 owner = priceTierFromLink(4단계) · 게이트 둘 발견
+                       ③ Smallable FN = 해외 품번 부재(구조적)
+                       ④ 🟢 whitelist 효과 재현(25.5%→31.5%, 순서 교대)
+                       ⑧ 🔴 FN 진짜 원인 = foretforet extractor 가 conflict 를 지어낸다
 NOT DONE            🔴 KPI 「Domestic Same-Product Price Match Rate」 = **측정불가**
                        (분모 0 — 외부 SAME 후보가 0건이다. 0% 가 아니다)
                     🔴 BRAND_ALIASES 등록 — CPO 판정 대기(§10-④)
                     Smallable 원상품 facts 경로(JOB-C 는 Identity 측정에서 빠졌다)
                     run-domestic-price-check 경로(Master dna 사다리) 미측정
-                    arm 순서 교대(counterbalance) 재측정
-NEXT EXACT ACTION   🔴 **CPO 판정 2건을 기다린다. CTO 가 임의로 진행하지 않는다.**
-                    § 10-④ ⑫ 참조 —
-                    ① BRAND_ALIASES 에 「메인스토리」·「보보쇼즈」를 등록하는가.
-                       근거는 다 모였다: 🟢 littleluna 4건이 정확히 그 품번이다
-                       (한글 제목 품번 확인은 «된다» — §10-③ 실측) ·
-                       🔴 bobochoses.com 이 브랜드 무관 2건을 돌려준다(오탐) ·
-                       🟡 그 오탐은 Identity 가 이미 걸러낸다.
-                       「오탐 0」의 해석을 바꾸는 것은 제품 정책 경계다.
-                    ② 등록 후 KPI 재측정 범위.
+NEXT EXACT ACTION   🔴 **CPO 판정을 기다린다. CTO 가 임의로 진행하지 않는다.**
+                    ① 🔴🔴 가장 큰 것 — `fetchForetforetModelCode` 가 판매처
+                       자체코드를 돌려줘 `compareModelCode` 가 **conflict 를
+                       지어낸다**(§11-⑧ 실측 5/5). 그래서 foretforet 의 Main Story
+                       후보가 «전부» 구조적으로 제외된다. 고치기 «전에» 재야 할
+                       것 하나: 🔴 **foretforet 상세에 브랜드 품번이 애초에
+                       있는가.** 있으면 extractor 가 그것을 읽어야 하고, 없으면
+                       `null` 을 돌려줘야 한다(그러면 unavailable 이 되어
+                       텍스트·교차판매처 경로가 살아난다).
+                    ② BRAND_ALIASES 등록 — 🔴 CPO 보류 유지 중(오탐 0 미충족)
+                    ③ Smallable 해외 품번 추출 — JSON-LD 에 mpn·gtin 이 없다.
+                       🔴 SKU 승격은 금지다. 다른 출처가 있는지가 조사 과제다
                     🔴 **threshold 를 낮추지 않는다.** SIMILAR→SAME 오판 방지가
                        Recall 보다 우선이다(CPO 확정).
 DO NOT REUSE        🔴 scratchpad/mi-p0-candidates.json — whitelist «적용 전» 결과다.
@@ -764,6 +771,41 @@ compareModelCode("AW26MS185", "MA26KASST0577356") → 🔴 "conflict"
    (그러면 unavailable 이 되어 텍스트·교차판매처 경로가 살아난다)
    🔴 어느 쪽인지 모른 채 고치면 그게 추측이다
 ```
+
+### ④ 🟢 arm 순서 교대 — whitelist 효과가 **재현**됐다
+
+R1(OFF→ON) · R2(ON→OFF), 같은 query set, 캐시 없음, 총 32콜.
+
+**arm 축 — 🟢 양쪽 다 OK 인 11쌍만 짝지었다(timeout 0)**
+
+```
+OFF   발견 208 · registry 적중 53 (25.5%) · distinct 5
+ON    발견 235 · registry 적중 74 (31.5%) · distinct 6  ← rakuten.co.jp 가 ON 에서만
+```
+
+🟢 **1차(22.3% → 33.3%)와 방향이 같다. 순서를 뒤집어도 같다.**
+독립 2회 측정에서 재현됐으므로 「whitelist 가 registry 판매처 발견을 늘린다」는
+이제 단발 관측이 아니다.
+
+**순서 축 — 🔴 timeout 은 순서만의 효과가 «아니다»**
+
+```
+timeout  arm      OFF 2 · ON 4
+         armOrder first 2 · second 4
+         round    R1 4 · R2 2
+```
+
+교대했는데도 **ON 쪽이 여전히 많다**(4 vs 2). 완전한 순서 효과라면 arm 별로
+균등해야 한다. 그래서 1차의 UNKNOWN 이 한 칸 좁혀진다 —
+**whitelist 가 프롬프트를 길게 만들어 thinking 이 늘어나는 쪽이 더 유력하다.**
+
+🔴 **단정하지 않는다.** timeout 총 6건이라 표본이 작고, 5건 중 **4건이 Q4**
+(브랜드+상품명+색상 = 가장 긴 쿼리)에 쏠려 있다. 그 쏠림은 「프롬프트 총 길이」
+가설과 일관되지만 그것을 증명하지는 않는다. 다음 재측정에서 **쿼리 길이를 축으로**
+가르면 갈린다.
+
+🔴 버린 쌍 5개를 숫자로 남겼다(`droppedPairs`) — 실패한 호출의 0 을
+「못 찾았다」로 세지 않았다.
 
 ### ⑤⑥⑦ 고정된 정의 — 다시 바꾸지 않는다
 
