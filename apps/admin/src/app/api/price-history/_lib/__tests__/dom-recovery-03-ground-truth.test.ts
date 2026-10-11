@@ -149,18 +149,20 @@ describe.skipIf(!LIVE)("🔴 DOM-RECOVERY-03 — Independent Ground Truth", () =
             fetchModelCode: async (u) => fetchDomesticModelCode(r.domain, u),
           });
           const gate = j.kind === "DROPPED" ? `DROPPED(${j.gate})` : j.kind;
-          let tier: string | null = null;
-          if (j.kind === "JUDGED") {
-            const mt = j as unknown as { matchTruth: string; verified: boolean };
-            tier = mt.matchTruth === "EXACT_IDENTIFIER" || mt.matchTruth === "STRONG_IDENTIFIER" ? "EXACT"
-                 : mt.matchTruth === "TEXT_CONFIRMED" ? "COMPARISON"
-                 : mt.matchTruth === "SIMILAR" ? "REFERENCE"
-                 : mt.matchTruth === "CONFLICT" || mt.matchTruth === "INSUFFICIENT_EVIDENCE" ? "EXCLUDED"
-                 : mt.verified ? "EXACT" : "COMPARISON";
-          }
+          /**
+           * 🟢🟢 STEP 5 — tier 를 **복제 계산하지 않는다.** `DomesticJudgement.JUDGED`
+           *    에 `priceTier` 가 있고 주석이 「최종 owner 의 값」이라고 적어 뒀다
+           *    (run-domestic-price-check.ts:504~). 1차에는 matchTruth 로 다시 계산했다.
+           */
+          const tier: string | null = j.kind === "JUDGED" ? j.priceTier : null;
 
-          /** 🟢 독립 라벨 — 대표 후보 1건에만 Vision 을 돌린다(비용 통제) */
-          const top = scored[0];
+          /**
+           * 🔴🔴 STEP 4b 가 잡은 결함을 고친다 — 1차는 Vision 을 `scored[0]` 에
+           *    돌렸고, `tier` 는 `judgeDomesticCandidate` 가 고른 **대표 후보** 기준이라
+           *    **두 축이 서로 다른 후보** 를 가리켰다. 그래서 FP 9% 가 거짓이었다.
+           * 🟢 `JUDGED` 에 `best: ComparisonCandidate` 가 있다 — 그것에 돌린다.
+           */
+          const top = j.kind === "JUDGED" ? j.best : scored[0];
           const candImg = absolute(top?.imageUrl ?? top?.facts?.imageUrls?.[0] ?? null);
           let score: number | null = null, reason: string | null = null, vstatus = "SKIPPED";
           if (originImg && candImg) {
@@ -181,13 +183,12 @@ describe.skipIf(!LIVE)("🔴 DOM-RECOVERY-03 — Independent Ground Truth", () =
             topCandidateUrl: top?.url ?? null,
             topCandidateSku: top?.sku ?? null,
             topCandidateFactsCode: top?.facts?.brandModelCode ?? null,
-            /** 🔴 운영이 실제로 쓴 국내 품번 — judgeDomesticCandidate 안에서 뽑힌 값 */
-            judgedDomesticModelCode: j.kind === "JUDGED"
-              ? ((j as unknown as { domesticModelCode?: string | null }).domesticModelCode ?? null) : null,
-            judgedModelEvidence: j.kind === "JUDGED"
-              ? ((j as unknown as { modelCodeEvidence?: string | null }).modelCodeEvidence ?? null) : null,
-            judgedMatchTruth: j.kind === "JUDGED"
-              ? ((j as unknown as { matchTruth?: string }).matchTruth ?? null) : null,
+            /** 🟢 타입에서 읽은 칸 그대로 — `as unknown as` 캐스트를 쓰지 않는다. */
+            judgedDomesticModelCode: j.kind === "JUDGED" ? j.domesticModelCode : null,
+            judgedModelEvidence: j.kind === "JUDGED" ? j.modelCodeEvidence : null,
+            judgedMatchTruth: j.kind === "JUDGED" ? j.matchTruth : null,
+            /** 🔴 두 축이 같은 후보를 보는지 «확인» 하는 칸. 다르면 그 행은 무효다. */
+            visionTargetIsJudgedBest: j.kind === "JUDGED",
             topConfidence: typeof top?.confidence === "number" ? Number(top.confidence.toFixed(3)) : null,
             topMatchLevel: top?.matchLevel ?? null, crossSellerVerdict: top?.crossSellerVerdict ?? null,
             gate, tier,

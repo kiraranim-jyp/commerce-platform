@@ -11,11 +11,11 @@
 | | 항목 | 상태 |
 |---|---|---|
 | ① | Existing Source Recovery 원인 규명 | 🟡 2차 원인 특정 + 🟢 **CONTROL 통과**(§3-5) |
-| ② | Independent Ground Truth 구축 | 🟡 구축함 — 🔴 **KNOWN_SAME 0건**(§3-9) |
+| ② | Independent Ground Truth 구축 | 🟢 **구축 완료**(§3-12) · 🔴 분모 1 로 작다 |
 | ③ | AUTO 7 전수 funnel | 🟡 브랜드 교집합까지만 |
 | ④ | coconjennie 최종 판정 | 🔴 `NO_PRODUCT_PATH_OBSERVED` |
-| ⑤ | SAME Yield 측정 | 🔴 **측정불가(분모 0)** — 0% 로 적지 않는다 |
-| ⑥ | SAME → Price Decision 영향 | 🔴 **FP 판정이 무효화됨**(§3-11) → 미착수 |
+| ⑤ | SAME Yield 측정 | 🟡 **Recall 1/1** · 🔴 FP 0/10 · 분모가 1 이라 일반화 금지 |
+| ⑥ | SAME → Price Decision 영향 | 🔴 미착수 — FP 0 이라 «오염 손실» 경로가 없다 |
 | ⑦ | 비용/자동화 가치 | 🟡 부분 |
 | ⑧ | GO/HOLD/CHANGE 최종 판정 | 🔴 **확정 금지** (①~⑦ 미완) |
 
@@ -388,6 +388,32 @@ judgeDomesticCandidate 가 «고른 대표 후보» 에 Vision 을 돌려야 한
 
 ---
 
+### 3-12. 🟢🟢 STEP 5 — 하니스 수정 후 재측정. **FP 는 0 이다.**
+
+`DomesticJudgement.JUDGED` 에 `best: ComparisonCandidate` 와 `priceTier` 가 «이미»
+있었다(run-domestic-price-check.ts:504~, 주석 「최종 owner 의 값」).
+→ Vision 을 `j.best` 에 돌리고 tier 복제 계산을 **지웠다.**
+
+```
+재측정 (sample N=9 상품 × 5 샵 = 45쌍)
+  라벨 가능 11 · UNKNOWN 34
+  byLabel   KNOWN_NOT_SAME 10 · 🟢 **KNOWN_SAME 1**
+  SAME Yield   eligibleKnownSame 1 · recovered 1 · **Recall 1/1**
+  🟢 FalsePositive  knownNotSame 10 · falseSame **0** · **rate 0%**
+
+🟢 그 1건이 운영이 실제로 만든 EXACT 다:
+  우리  PèPè「Lulu T Bar Shoes in Vernice Nero」   code=01195-VERNICE-NERO
+  대표  foretforet「AW26 RE[페페슈즈]VERNICE NERO T-스트랩 슈즈-PP24KASHE**1195**NER」
+  국내품번 PP24KASHE1195NER · evidence=partial · truth=STRONG_IDENTIFIER · tier=EXACT
+  독립 라벨 Vision **98** 「Identical PePè patent t-strap shoes」
+```
+
+🔴 **그래서 §3-9/§3-10 은 완전히 폐기한다** — FP 도, 추출기 결함도, 손실 경로도 없다.
+🟢 MI-P0-12 의 「EXACT 버킷 FP 0」이 **독립 라벨러로 재확증됐다.**
+🔴 단 **분모가 1 이다.** Recall 100% 를 일반화하지 않는다.
+
+---
+
 ## 4. 다음 실행이 «즉시» 할 것
 
 ```
@@ -415,12 +441,20 @@ STEP 4   🟢 **완료** — FP 원인 완전 특정(§3-10). `extractForetforet
 STEP 4b 🟢 **완료 — 그리고 내 FP 판정을 무효화했다**(§3-11).
         페이지·추출기 둘 다 정상이다. 🔴 추출기를 고칠 것이 «없다».
 
-STEP 5   🔴🔴 **최우선 — 하니스 수정 후 GT 재측정**
-        `judgeDomesticCandidate` 가 «고른 대표 후보» 에 Vision 을 돌리도록 고친다
-        (지금은 `scored[0]` 에 돌려 두 축이 다른 후보를 가리킨다).
-        🔴 칸 이름을 추측하지 말고 `DomesticJudgement` 타입에서 읽는다.
-        → 고친 뒤 STEP 3 을 **다시** 돌려 KNOWN_SAME / FP 를 재산출한다.
-        🔴 그 전에는 §3-9 의 FP 9% 와 §3-10 의 손실 경로를 «쓰지 않는다».
+STEP 5   🟢 **완료** — 하니스 수정 + 재측정. Recall 1/1 · **FP 0%**(§3-12).
+
+STEP 6   🔴 **GT 분모를 키우는 것이 남은 유일한 블로커다.**
+        지금 `eligibleKnownSame = 1` 이라 Yield/FP 를 일반화할 수 없다.
+        🔴 `UNKNOWN 34` 의 원인은 **이미지 없음 / 후보 0건** 둘이다 —
+           후보 이미지는 어댑터가 채우므로(littleluna.ts:106 등) 샵별로 갈린다.
+        → ① 상품 표본을 늘린다(현재 9 → 브랜드 층화로 20~30)
+          ② 이미지가 있는 샵(foretforet·deuxbebe·littleluna)에 집중해 분모를 만든다
+          ③ 🔴 looxloo 는 이미지 유무를 먼저 확인한다(없으면 GT 를 만들 수 없다)
+
+STEP 7   §15 가격 영향 — 🔴 FP 0 이므로 «오염 손실» 은 없다. 남은 축은
+        「SAME 을 놓쳐서 EXACT 가 비는」 방향이고, 그건 STEP 6 분모가 있어야 잰다.
+
+STEP 8   §18 Gate 8개 점검 → 최종 보고 1회(17항).
 
 STEP 2  🟡 rulii — arm A/B/C 는 돌았다(후보 10/3/13). 남은 것은 「미취급 ↔ 검색 실패」
         분리이고, STEP 1b 가 통과한 뒤에 본다.
