@@ -3,51 +3,59 @@
 ## 🔴 LONG-SPRINT-03 재개 블록 (세션이 끊기면 여기부터)
 
 ```
-CURRENT POSITION       ③ Smallable E2E — 재고·D-CARE 닫힘, 다음은 D-MODEL
-LATEST COMMIT          (아래 커밋)
-PRODUCTION LIVE        배포 대기
+CURRENT POSITION       🟢 COMMERCE CLOSE — 다음은 MI-P0 Replay harness
+LATEST COMMIT          f74e4e14 (문서) · 마지막 «제품 코드» 커밋 001807b0
+PRODUCTION LIVE        da4bc32 — 🔴 001807b0 «이후» 다. 즉 코드 변경 3건
+                       (D-OPT fc3e115 · D-LOT-STOCK ccb0145f · D-CARE 001807b0)이
+                       전부 반영돼 있다. 001807b0..HEAD 는 문서 1개만 변경.
+SMOKE                  / 200 · /login 200 · /terms 200 · /pipeline 307 · /settings 307
+                       🔴 307 은 인증 리다이렉트이고 route 증거가 아니다
 
-DONE                   P0.1 · P0.3 · P0.4/P0.5 · P0.6 3채널 payload
-                       🟢 D-OPT (fc3e115d) · 🟢 D-LOT-STOCK (ccb0145f)
-                       🟢 D-CARE — 🔴 precedence 는 «결함이 아니었다»(조사 결과).
-                          care-instructions.ts 가 CPO 정책과 이미 같다(2026-10-01).
-                          고친 곳은 «수집» 한 곳 — CARE_LABEL_PATTERNS 가 동사구만
-                          알아서 온도만 적는 원본("Wash Cold-30°")을 못 받았다.
+DONE                   ① 재고 정책 CLOSE (ccb0145f) — 실상품 양방향 증명
+                       ② 고시 공통 수집 + D-CARE CLOSE (001807b0)
+                       ③ D-MODEL 조사 완료 — 결함 아님 (b155e885)
+                       ④ 대표 실상품 3개 × 3채널 E2E (f74e4e14)
+                       ⑤ 회귀 497/7461 · typecheck baseline · build PASS · deploy+smoke
+                       🟢 **COMMERCE CLOSE**
 IN PROGRESS            —
-BLOCKED                —
-KNOWN DEFECTS          D-MODEL · COUPANG-NOTICE-SEMANTIC-LOSS-01
-                       backlog: 「Wash at 40°C」·「Cold wash」 등 다른 어순(실측 근거 생기면)
-NEXT EXACT ACTION      ① Commerce 최종 E2E (대표 상품 3~5개 · 3채널 payload 재생성)
-                       → 회귀/배포/smoke → COMMERCE CLOSE
-                       ② 그 뒤 MI-P0 Replay 하니스 1개
-                       🟢 GEMINI_API_KEY 는 scripts/.env 에 «있다»(실측 READY,
-                          실제 호출 1회 성공 — 후보 6건+ 반환)
-                       🔴 단 Gemini 는 URL+도메인+rank «만» 준다 —
-                          snippet/priceHint 전건 null. 가격·이미지는 Light Fetch 로
-                          채우는 설계여야 한다(CPO Step 3 전제 수정 필요)
-                       🔴 깊은 import · discover(identity, query) 인자 둘 ·
-                          resolveCandidate 필수(grounding URL 은 리다이렉트다)
-                       🔴 D-MODEL Q1/Q2 는 CPO 가 「MI 를 막지 않는다」로 처리 —
-                          Commerce 최종 E2E 에서 payload 확인, Q2 는 Known Unknown
+BLOCKED                실등록 🔴 STOP (CPO GO 전까지) — 그 외 없음
+KNOWN DEFECTS          COUPANG-NOTICE-SEMANTIC-LOSS-01 (별도 backlog)
+                       D-MODEL Q1/Q2 (CPO: MI 를 막지 않는다)
+                       care 패턴 다른 어순(실측 근거 생기면)
+
+NEXT EXACT ACTION      MI-P0 Replay harness 1개. 🔴 고정 전제 5가지:
+                       ① DISCOVERY_PRICE 계층 «제거»(CPO 판정 (가)) — Gemini 는
+                          URL+rank+title(도메인) 만 준다. snippet/priceHint 전건 null
+                       ② 깊은 import: @commerce/crawler/src/discovery-benchmark/
+                          google-discovery (배럴에 없다)
+                       ③ discover(identity, query) — 인자가 «둘»
+                       ④ resolveCandidate 필수 — grounding URL 은 vertexaisearch
+                          리다이렉트다. 건너뛰면 전부 UNKNOWN_PAGE → 「후보 0건」 오판
+                       ⑤ GEMINI_API_KEY 는 scripts/.env 에 있다(vitest 가 자동
+                          로드하지 «않는다» — 하니스가 직접 읽어 env 에 올린다)
+                       그리고 Replay 는 후보 수만 세지 않고 **수집 품질** 을 같이 잰다:
+                       brand · product/model code · image · title · color · material
+                       → P0-Identity-01 B-CODE · P0-Identity-02 B-BRAND 가 그 축이다
 
 TEST                   d-care 12 · d-lot-stock 10 · d-opt 5 · parity 16 — 전부 PASS
 REGRESSION             497 files / 7461 passed · exit 0
 TYPECHECK              listing 5 = baseline · admin 0 · crawler 2
 BUILD                  PASS (static 104/104)
-DEPLOY                 (대기)
-SMOKE                  (배포 뒤)
+DEPLOY                 🟢 PASS (da4bc32 — 코드 변경 전부 반영)
 CEO ACTION             없음 · 실등록 🔴 STOP
 CEO TEST SCENARIO      docs/NOTICE-PARITY-02-HANDOFF.md §8 — 확인 항목 12개
                        🔴 스프린트가 넘어가도 유효하다. 포인터를 옮길 때 같이 끌고 간다.
 
-고시 공통 수집 정책 (CPO 재정의 2026-10-11)
-  셀러 명시 → 원본 수집 → 참조 문구 fallback → MISSING
-  🔴 추론·창작 금지 · 품목별 hardcode 금지 · 채널별 다른 fallback 금지
-  🔴 「케어라벨 참조」는 세탁 전용 기본값이고 「상품 상세페이지 참조」와 «다른 뜻» 이다
+## 🔴 MI-P0 Identity 데이터 품질 (CPO 승격, 2026-10-11)
 
-재고 정책 (CPO 확정 2026-10-11) — Naver/LotteON 동일
-  원본 실측 → 그 값 · 모름+셀러기본값 → 셀러 값 · 모름+입력없음 → 🔴 BLOCK
-  원본 «실제» 0 → 0 · 🔴 임의 999/0 금지 · UNKNOWN ≠ ZERO
+P0-Identity-01  B-CODE   Bobo 공식몰 URL 에 품번 `b226ac043` 이 있는데 어느 칸에도
+                         수집되지 않는다. 실제 품번은 가장 강한 Identity evidence 다.
+                         🔴 URL 문자열에서 «무조건 추출하지 않는다» — 그 slug 가
+                            manufacturer/article reference 인지 사이트 내부 slug 인지
+                            source semantics 를 먼저 확인하고, 확인된 경우에만
+                            강한 identifier 로 승격한다(CPO 명시).
+P0-Identity-02  B-BRAND  같은 공식몰 상품에서 brand 가 «빈값» 이다. Brand evidence 가
+                         비면 Identity precision 이 약화된다.
 ```
 
 ### 🔴🔴 되돌아본 사실 (TTAEJYO 13 커밋 확인, 2026-10-11)

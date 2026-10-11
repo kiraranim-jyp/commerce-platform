@@ -298,7 +298,8 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 🔴 **새 세션의 단일 착수점은 이것이다.**
 
 ```
-docs/SMALLABLE-E2E-03-HANDOFF.md 를 읽는다 — ③ 가 진행 중이다.
+docs/SMALLABLE-E2E-03-HANDOFF.md 를 읽는다 — 🟢 COMMERCE 는 CLOSE 됐다.
+다음은 MI-P0 Replay harness 다(그 문서의 NEXT EXACT ACTION · 고정 전제 5가지).
 🔴 ② 는 PARTIAL CLOSED 다(재구현 금지). 쿠팡 고시 2건은 별도 backlog
    COUPANG-NOTICE-SEMANTIC-LOSS-01 로 분리됐다 — ③ 와 섞지 않는다.
 🔴 실등록은 STOP 이다.
