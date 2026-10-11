@@ -23,19 +23,11 @@ KNOWN DEFECTS          COUPANG-NOTICE-SEMANTIC-LOSS-01 (별도 backlog)
                        D-MODEL Q1/Q2 (CPO: MI 를 막지 않는다)
                        care 패턴 다른 어순(실측 근거 생기면)
 
-NEXT EXACT ACTION      MI-P0 Replay harness 1개. 🔴 고정 전제 5가지:
-                       ① DISCOVERY_PRICE 계층 «제거»(CPO 판정 (가)) — Gemini 는
-                          URL+rank+title(도메인) 만 준다. snippet/priceHint 전건 null
-                       ② 깊은 import: @commerce/crawler/src/discovery-benchmark/
-                          google-discovery (배럴에 없다)
-                       ③ discover(identity, query) — 인자가 «둘»
-                       ④ resolveCandidate 필수 — grounding URL 은 vertexaisearch
-                          리다이렉트다. 건너뛰면 전부 UNKNOWN_PAGE → 「후보 0건」 오판
-                       ⑤ GEMINI_API_KEY 는 scripts/.env 에 있다(vitest 가 자동
-                          로드하지 «않는다» — 하니스가 직접 읽어 env 에 올린다)
-                       그리고 Replay 는 후보 수만 세지 않고 **수집 품질** 을 같이 잰다:
-                       brand · product/model code · image · title · color · material
-                       → P0-Identity-01 B-CODE · P0-Identity-02 B-BRAND 가 그 축이다
+NEXT EXACT ACTION      🔴 Replay 재측정 1회 — 아래 §MI-P0 Replay 의 «무효 KPI 3건»
+                       (modelCode·color·material)을 `candidate.facts` «안» 에서
+                       다시 센다. 최상위만 읽어 거짓 0 을 냈다. image·price 도
+                       같은 자리에서 null 여부를 확인한다.
+                       그 뒤 Identity(SAME/SIMILAR) 판정을 붙이고 KPI 14개를 완성한다.
 
 TEST                   d-care 12 · d-lot-stock 10 · d-opt 5 · parity 16 — 전부 PASS
 REGRESSION             497 files / 7461 passed · exit 0
@@ -475,3 +467,60 @@ typecheck                                    🟢 listing 5 = baseline · admin 
 build                                        🟢 PASS
 실등록                                        🔴 STOP (CPO GO 전까지)
 ```
+
+---
+
+# MI-P0 Replay — 1회 측정 (CTO 실측 2026-10-11)
+
+운영 사슬 그대로: `Gemini grounding → resolveCandidate → PageProbe(GET) →
+factsFromProductUrl`. 🔴 코드 추가 0건(임시 하니스 실행 후 삭제, 잔존 0).
+
+## 측정값
+
+```
+Gemini 후보            29건 (쿼리 2개 · requests 2 · totalTokens 10,971)
+resolve 시도           8건 (상위 4건 × 2쿼리 — Discovery STOP 조건)
+resolve usable         4건  → 🔴 50%
+  분류                 PRODUCT_PAGE 4 · LISTING_PAGE 3 · UNKNOWN_PAGE 1
+Light Fetch            4/4 OK → 🟢 100%
+수집 (최상위 키)        title 4/4 🟢 · brand 4/4 🟢
+```
+
+### 🔴 무효 KPI 3건 — 내 측정 오류다 (결함으로 보고하지 않는다)
+
+```
+modelCode · color · material  → 0/4 로 나왔지만 «무효» 다.
+실제 candidate 키:  title · url · price · regularPrice · imageUrl · confidence
+                   · brand · facts        ← 🔴 facts 가 «중첩» 돼 있다
+color/material/modelCode 는 그 facts 안에 있고, 하니스는 최상위만 읽었다.
+image·price 도 같은 자리에서 null 여부를 다시 확인해야 한다.
+```
+
+🔴 이 세션에서 같은 함정에 세 번째로 걸렸다(`stkQty` · `__name` · 여기).
+**필드 이름을 추측하지 말고 키를 먼저 찍는다.**
+
+## 🟢🟢 그래도 중요한 사실 둘이 확보됐다
+
+```
+① 국내 후보가 «실제로» 나온다
+   kream.co.kr        "(Kids) Bobo Choses All About Monsters Short Sleeve"
+   mustit.co.kr ×2    "보보쇼즈 26FW 올 어바우트 몬스터 반팔 남아 티셔츠 B226AC004 331"
+   luxboy.com · petitlouie.co.kr · ssg.com · gsshop.com · trenbe.com
+   → 「국내 후보가 검색에서 안 나온다」는 상태가 «아니다».
+     memory [[domestic-discovery-dies-at-low-not-at-search]] 와 같은 결론이다.
+
+② 🔴🔴 국내 판매처가 «제목에 브랜드 품번을 적는다»
+   mustit 제목에 `B226AC004` 가 그대로 있다. brand 도 "보보쇼즈"(한글)로 수집됐다.
+   → B-CODE 의 해법이 URL slug 가 아니라 **국내 제목 확인** 쪽에 있을 수 있다.
+     [[brand-code-extraction-already-works]] 가 적어 둔 `confirmBrandCodeInTitle`
+     (값을 지어내지 않고 «확인만» 하는 함수)이 이미 그 모양이다.
+   🔴 단 `B226AC004` 가 이 상품의 품번인지는 «확인되지 않았다» — 원본(Smallable)
+      에서 품번을 못 뽑았기 때문이다. 즉 지금은 대조할 기준값이 없다.
+      그것이 B-CODE 가 P0-Identity-01 인 이유다.
+```
+
+## 🔴 Identity 판정은 아직 붙이지 않았다
+
+KPI 9~14(SAME precision · SIMILAR contamination · 국내/해외 가격 매칭 ·
+INSUFFICIENT 비율 · Human Review Rate)는 **측정하지 않았다.** 수집 KPI 3건이
+무효인 상태로 Identity 를 돌리면 그 판정도 무효가 된다 — 순서를 지킨다.
