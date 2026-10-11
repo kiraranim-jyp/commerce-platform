@@ -293,29 +293,101 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 
 ---
 
-## 12. 현재 스프린트 — MI-P0-02 (갱신 2026-10-11)
+## 12. 현재 상태 — MI 측정 트랙 **종료** (CPO 확정 2026-10-12)
 
-🔴 **새 세션의 단일 착수점은 이것이다.**
+🔴 **새 세션은 MI 측정을 처음부터 반복하지 않는다.** 아래가 기준선이다.
 
 ```
-docs/MI-P0-02-HANDOFF.md 의 CURRENT POINTER → NEXT EXACT ACTION 을 읽고
-«즉시 실행» 한다. 🔴 「어디부터 할까요」를 묻지 않는다 — CPO 가 범위를 정했다.
-🟢 COMMERCE 는 CLOSE 다(bd81b064). ③ 전문은 docs/SMALLABLE-E2E-03-HANDOFF.md.
-🟢 STEP A~I «그리고» 02b~02k 까지 전부 완료다(2026-10-11) — 문서 §8·§10·§11 과
-   CURRENT POINTER 의 Evidence Owner Matrix 를 본다.
-   🔴 현재 착수점은 **MI-P0-02l (Brand Evidence Owner 확정)** 이고 §12 에 있다.
-   🔴 Brand Owner 확정 전 Production 수정 금지.
-   🔴 재측정·재구현 금지. 하니스는 이미 있다(mi-p0-02-live-measure.test.ts ·
-      mi-p0-02-price-identity.test.ts, 둘 다 MI_P0_02_LIVE=1 로 돈다).
-   🔴 registry 는 **21개** 다. 「10개」·「11개」는 둘 다 틀렸다(테스트로 잠겼다).
-   🔴 국내 가격 매칭 KPI 는 「0%」가 아니라 **측정불가(분모 0)** 다.
-      병목은 가격 파서가 아니라 **Identity 증거(품번 축)** 다 — §8-④.
+🟢 MI-P0-03 ~ MI-P0-12 «그리고» MI Coverage Work Unit 까지 전부 종료됐다.
+   판정: HOLD / NO PRODUCTION CHANGE. Production 코드 변경 0 · DB 변경 0.
+🔴 이 8개 커밋을 «다시 해석하지 않는다» — 결론만 기준선으로 쓴다.
+🔴 MI 쪽 코드 실험을 더 돌리지 않는다(CPO 확정). 다음 과제는 코드가 아니다.
+```
+
+### 🟢 Coverage 결론 — 이 문장을 그대로 쓴다 (CPO 확정 표현)
+
+```
+❌ 「497 중 428(86%)에 국내 링크가 없다」 → 「국내 후보가 없다」로 읽으면 «틀린다»
+🟢 「확인된 자동 경로에서 후보 회수 자체가 주된 병목이라는 증거가 없으며,
+     SAME 을 확정할 수 있는 국내 판매처 / 식별정보의 구조적 부족이 핵심이다」
+
+실측: NO_LINK 상품 12건 중 10건(83%)이 실제로 후보를 회수한다 (sample N=12)
+자동 커버리지는 «품번을 읽을 수 있는 샵» 에서만 생긴다 —
+  foretforet(HTTP 추출기) · bobochoses(URL handle) · deuxbebe/littleluna(제목 품번)
+looxloo·rulii·chocoel·skysport 는 품번 경로가 «없다»(자체 코드만: 35W70-869-01)
+→ 추출기를 더해도 효과가 0 이다. 레버는 「샵 수」가 아니다.
+```
+
+### 🔴 금지된 단기 레버 5항 (측정으로 근거가 부정됐다)
+
+```
+❌ 검색 query 확대                ❌ judgeDomesticCandidate 완화
+❌ 품번 없는 후보를 SAME 승격       ❌ source / adapter 대량 추가
+❌ UniversalExtract fallback 추가
+```
+
+함께 금지된 것 — ❌ `compareMaterial` 수정 · ❌ `SAME` 문턱에 식별 증거 요구
+(CEO 정답 3쌍 중 2쌍이 식별 증거 없이 SAME 이다. 테스트가 반대 방향으로 잠갔다:
+`mi-p0-11-material-and-same-threshold.test.ts`) · ❌ brand backfill/resolver 변경 ·
+❌ pattern/print 축 신설.
+
+### 🟢🟢 대조군 게이트 — **표준 측정 규칙으로 승격** (CPO 확정)
+
+```
+표본 = 측정 대상 + CONTROL(Production 이 «이미» 결과를 만든 입력)
+  → ownerGate        운영 owner 값 == 내가 축 분해에 쓴 입력의 재계산 값
+  → replicationGate  복제식이 실제 verdict 를 전건 재현 (expect(mismatch).toBe(0))
+  → Production 결과 재현
+```
+
+🔴 **이 게이트를 통과하지 못한 숫자는 전략 판단에 쓰지 않는다.**
+🔴 CONTROL 이 실패하면 제품/하니스 어느 쪽으로도 «단정하지 않고» 순서대로 가른다 —
+   호출 경로 → 설정 상태 → 입력 → Production 결과.
+   (실례: `bobochoses.com` 이 지금 등록부 disabled 라 CONTROL 2건이 재현 실패했다.
+    하니스 결함이 아니었다.)
+
+실제로 이 게이트가 **「운영 경로 누락」을 사전에 잡았다** — 국내 커버리지 하니스가
+`searchDomesticShops + withConfidence` 까지만 불렀는데 운영은 그 뒤에
+`judgeDomesticCandidate`(게이트 ②④ + `fetchDomesticModelCode`)가 더 있었다.
+
+### 🔴 「측정불가」로 남은 것 — 0% 나 「없음」으로 적지 않는다
+
+```
+Domestic SAME Recall     ground truth 가 운영 링크 69건뿐 → 측정불가
+MANUAL 판매처 12개        자동 후보 경로가 없어 성능 판단 불가
+NO_CANDIDATES 72건        「검색이 약함」 ↔ 「그 샵에 그 상품이 없음」 구분 못 함
+```
+
+### 🔴 미push 커밋 8개 — CEO 판단 영역
+
+```
+git status  clean · behind 0 / ahead 8 · Production runtime change 0
+12 files changed · 2,488 insertions · 전부 __tests__ 하위(비테스트 변경 0)
+```
+
+🔴 push 가 Production 배포를 트리거하므로 **CTO 도 CPO 도 임의로 밀지 않는다.**
+🟢 **커밋 push 여부와 Work Unit 완료 여부는 분리해 취급한다**(CPO 확정) — 이 트랙은
+코드 변경 없이 **정상 종료** 다. 미완료가 아니다.
+
+### 다음 전략 과제 (코드 작업이 아니다)
+
+> 「어떤 국내 판매처를 추가하면 실제 SAME yield 가 증가하는가」
+
+판별 기준은 하나다 — **그 판매처가 상품명·URL·설명문에 「해외 브랜드 품번」을
+적는가.** 적지 않으면 추출기를 붙여도 효과가 0 이다(실측). 이것은 판매처 실제
+페이지를 보는 **조사** 이고 MI 코드 실험이 아니다.
+
+### 유지되는 포인터
+
+```
 🔴 중간 보고 금지 — 한 묶음 뒤 완료 보고 하나만 올린다.
-🔴 ② 는 PARTIAL CLOSED 다(재구현 금지). 쿠팡 고시 2건은 별도 backlog
-   COUPANG-NOTICE-SEMANTIC-LOSS-01 로 분리됐다 — ③ 와 섞지 않는다.
 🔴 실등록은 STOP 이다.
 🔴 CEO 최종 테스트 시나리오(확인 12항)는 docs/NOTICE-PARITY-02-HANDOFF.md §8 에
    있다 — 스프린트가 넘어가도 «유효하다». 포인터를 옮길 때 같이 끌고 간다.
+🟢 COMMERCE 는 CLOSE 다(bd81b064). ③ 전문은 docs/SMALLABLE-E2E-03-HANDOFF.md.
+🔴 ② Semantic Parity 는 PARTIAL CLOSED(재구현 금지). 쿠팡 고시 2건은 별도 backlog
+   COUPANG-NOTICE-SEMANTIC-LOSS-01 이다.
+🟢 registry 는 **21개** 다(「10개」·「11개」는 둘 다 틀렸다 — 테스트로 잠겼다).
 ```
 
 ### 🔴 자동 로드는 «둘» 이다 — 충돌하면 이 문서가 이긴다 (CPO 확정 2026-10-10)
