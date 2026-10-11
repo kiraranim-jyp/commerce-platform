@@ -11,10 +11,10 @@
 | | 항목 | 상태 |
 |---|---|---|
 | ① | Existing Source Recovery 원인 규명 | 🟡 2차 원인 특정 + 🟢 **CONTROL 통과**(§3-5) |
-| ② | Independent Ground Truth 구축 | 🔴 미완 |
+| ② | Independent Ground Truth 구축 | 🟡 구축함 — 🔴 **KNOWN_SAME 0건**(§3-9) |
 | ③ | AUTO 7 전수 funnel | 🟡 브랜드 교집합까지만 |
 | ④ | coconjennie 최종 판정 | 🔴 `NO_PRODUCT_PATH_OBSERVED` |
-| ⑤ | SAME Yield 측정 | 🔴 미착수 |
+| ⑤ | SAME Yield 측정 | 🔴 **측정불가(분모 0)** — 0% 로 적지 않는다 |
 | ⑥ | SAME → Price Decision 영향 | 🔴 미착수 |
 | ⑦ | 비용/자동화 가치 | 🟡 부분 |
 | ⑧ | GO/HOLD/CHANGE 최종 판정 | 🔴 **확정 금지** (①~⑦ 미완) |
@@ -241,6 +241,48 @@ bobochoses   3/4 재현. 불일치 1건은 「Bobo Choses denim cap」(conf=0.4 
 
 ---
 
+### 3-9. 🔴🔴 STEP 3 Ground Truth — KNOWN_SAME 0건, 그리고 **EXACT FP 를 찾았다**
+
+독립 라벨러는 `observeVision`(판정에 입력되지 않는 관측기, MI-P0-10 에서 CEO 라벨
+7/7 재현). 🔴 임계값은 PROMPT 구간을 사전등록(≥80 same · ≤50 diff).
+
+```
+sample N=9 상품 × 5 샵 = 45쌍 (strata A 링크있음 3 · B 링크없음 6, 브랜드 층화)
+라벨 가능 11 · 🔴 UNKNOWN 34 (이미지 없음/후보 0건 — 분모에서 뺀다)
+byLabel   KNOWN_NOT_SAME 11 · 🔴🔴 **KNOWN_SAME = 0건**
+샵별      looxloo 7 NOT_SAME + 2 UNKNOWN · 나머지 4샵 각 1 NOT_SAME + 8 UNKNOWN
+품번축    품번없음 × UNKNOWN 34 · 품번있음 × NOT_SAME 9 · 품번없음 × NOT_SAME 2
+```
+
+🔴 **SAME Yield / Recall = 측정불가(분모 0).** 0% 로 적지 않는다.
+🟢 그리고 looxloo 7쌍 전부 `KNOWN_NOT_SAME` 이다 — **그 샵이 우리 «그 상품» 을
+   팔지 않는다**는 선행 결론(§3-3)과 일치한다.
+
+### 🔴🔴 그런데 FP 가 나왔다 — 이것이 이 WU 의 최대 발견이다
+
+```
+falsePositive  knownNotSame 11 · falseSame 1 · rate 9%
+  우리:  PèPè 「Lulu T Bar Shoes in Vernice Nero」   (01195-VERNICE-NERO)
+  후보:  foretforet 「AW25 3차[페페슈즈]**3094** 구두_VERNICE NERO-PP25KASHE3094V」
+  운영 판정: tier=**EXACT** (JUDGED)        독립 라벨: Vision ≤50 = **DIFF**
+  → 🔴 `3094` ≠ `01195`. **다른 모델이고 색상(VERNICE NERO)만 같다.**
+```
+
+🔴🔴 **MI-P0-12 의 「EXACT 버킷 FP 0」은 «DB 에 저장된 링크» 를 본 숫자였다.
+   지금 새로 돌리면 EXACT FP 가 난다.** 그 둘은 다른 모집단이다 —
+   저장된 링크는 `PP24KASHE1195NER`(정답)이었고, 현재 검색은
+   `PP25KASHE3094V`(다른 모델)를 1위로 올린다.
+
+🔴 즉 **검색 결과가 바뀌어 다른 후보가 1위가 되고, 그것이 품번 추출기로 EXACT 에
+   닿는다.** `fetchDomesticModelCode` 가 뽑은 품번과 우리 품번이 `compareModelCode`
+   에서 왜 `STRONG_IDENTIFIER` 가 됐는지는 **아직 미확정** 이다(LCS 매칭 의심).
+
+→ 🔴 이것은 「Coverage 부족」이 아니라 **「EXACT 오염」** 이고, MI-P0-12 가 확인한
+  `summarizeDomesticMarketSplit`(EXACT 하나가 COMPARISON 전체를 덮는다) 구조에서
+  **직접 가격을 오염시킨다.** STEP 4 의 최우선 대상이다.
+
+---
+
 ## 4. 다음 실행이 «즉시» 할 것
 
 ```
@@ -259,8 +301,15 @@ STEP 2b 🟢 **완료** — 회귀 확정(0.72→0.58, low). 🔴 단 Decision V
 STEP 2c 🔴 rulii 「미취급 ↔ 검색 실패」 분리. (brandOnSearchPage=true 였지만
         상품 링크 0건 — Cafe24 검색 결과 HTML 을 직접 보고 가른다)
 
-STEP 3   Independent Ground Truth — 🔴 **이것이 남은 최대 블로커다.**
-        looxloo 에 CONTROL 이 없으므로(§3-6) GT 없이는 looxloo SAME 을 판정할 수 없다.
+STEP 3   🟢 **완료** — GT 구축. 🔴 KNOWN_SAME 0건 → SAME Yield 측정불가(§3-9).
+        🟢 라벨 커버리지 11/45. UNKNOWN 34 는 이미지 없음/후보 0건이고 분모에서 뺐다.
+
+STEP 4   🔴🔴 **최우선 — EXACT FP 의 원인 특정**
+        PèPè `01195-VERNICE-NERO` ↔ foretforet `PP25KASHE3094V` 가 왜
+        `STRONG_IDENTIFIER` → tier=EXACT 가 되는가.
+        → `compareModelCode` 를 그 두 값으로 직접 불러 분기를 찍는다(LCS 의심).
+        🔴 그리고 그 FP 가 `domesticLowestPriceKrw` 를 실제로 바꾸는지 §15 로 연결한다.
+        🔴 threshold/LCS 를 고치지 않는다 — 원인 특정까지만.
 
 STEP 2  🟡 rulii — arm A/B/C 는 돌았다(후보 10/3/13). 남은 것은 「미취급 ↔ 검색 실패」
         분리이고, STEP 1b 가 통과한 뒤에 본다.
