@@ -145,6 +145,50 @@ Coupang 에서 capability 를 먼저 올렸다가 기존 가드 22개가 잡은 
 🔴 소스 문자열 검사는 **주석을 벗기고** 한다(여덟 번 걸린 함정).
 🔴 화면은 **마운트한 DOM** 으로만 완료 선언한다 — Render PASS ≠ 소스 PASS.
 
+### 🔴🔴 5-B. «측정» 에는 선행 검증 절차가 있다 (CPO 확정 2026-10-12)
+
+위 넷은 **기능** 테스트의 축이다. 숫자를 재서 전략 판단에 쓰는 **측정** 에는
+그 앞에 게이트가 하나 더 있다. 🔴 이 절차는 스프린트와 무관하게 **항상** 유효하다.
+
+```
+Production owner 확인
+      ↓
+ownerGate         운영 owner 가 낸 값 == 내가 쓴 입력으로 다시 부른 값
+      ↓
+CONTROL 선정      Production 이 «이미» 결과를 만든 입력을 표본에 섞는다
+      ↓
+replicationGate   복제식이 실제 verdict 를 전건 재현  expect(mismatch).toBe(0)
+      ↓
+Production 결과 재현
+      ↓
+본 측정
+```
+
+🔴 **CONTROL 이 실패하면 그 숫자를 전략 판단에 쓰지 않는다.**
+🔴 단 실패를 곧바로 하니스 결함으로도 제품 결함으로도 **단정하지 않고** 순서대로
+   가른다 — **호출 경로 → 설정 상태 → 입력 → Production 결과.**
+   (실례: `bobochoses.com` 이 등록부 disabled 라 CONTROL 2건이 재현 실패했다.
+    하니스 결함이 아니었다.)
+
+**왜 필요한가.** 한 트랙에서 「운영 경로를 한 단계 빠뜨렸다」가 **여덟 번** 났고
+일곱 번은 **사후** 발견이었다. 여덟 번째만 CONTROL 이 **사전에** 잡았다 —
+`searchDomesticShops + withConfidence` 까지만 불렀는데 운영은 그 뒤에
+`judgeDomesticCandidate`(게이트 + `fetchDomesticModelCode`)가 더 있었다.
+🔴 그리고 그 누락 때문에 MI-P0-03~08 의 verdict 숫자가 전부 과소였다(126쌍).
+
+### 🔴 「측정불가」는 0% 가 아니다
+
+```
+❌ ground truth 가 없는 값을 「0%」·「없음」·「후보 없음」으로 적는다
+✅ **측정불가** 로 적고 분모가 왜 없는지 같이 쓴다
+```
+
+🔴 그리고 표본 기반 숫자는 **그 숫자가 나오는 모든 줄에 `sample N=x`** 를 적는다.
+전수와 표본을 같은 표에 섞지 않는다. 호스트당 대표 1건 추정을 전수처럼 쓰지 않는다.
+
+🔴 보고 전 3문 — ① 전수인가 표본인가 ② 그 숫자가 «다음 단계» 를 통과했는가
+③ 거부 / null / 0 을 「올바른 부재」로 가정했는가. 하나라도 「아니오」면 먼저 잰다.
+
 ---
 
 ## 6. PASS 등급 — 반드시 구분한다
@@ -331,26 +375,17 @@ looxloo·rulii·chocoel·skysport 는 품번 경로가 «없다»(자체 코드�
 `mi-p0-11-material-and-same-threshold.test.ts`) · ❌ brand backfill/resolver 변경 ·
 ❌ pattern/print 축 신설.
 
-### 🟢🟢 대조군 게이트 — **표준 측정 규칙으로 승격** (CPO 확정)
+### 🟢🟢 대조군 게이트 — **§5-B 로 승격했다**
 
-```
-표본 = 측정 대상 + CONTROL(Production 이 «이미» 결과를 만든 입력)
-  → ownerGate        운영 owner 값 == 내가 축 분해에 쓴 입력의 재계산 값
-  → replicationGate  복제식이 실제 verdict 를 전건 재현 (expect(mismatch).toBe(0))
-  → Production 결과 재현
-```
+🔴 이 규칙의 본문은 **§5-B** 에 있다(스프린트와 무관한 영구 규칙이라 그 자리가
+맞다 — §12 는 포인터가 회전하면 교체되는 절이다).
 
-🔴 **이 게이트를 통과하지 못한 숫자는 전략 판단에 쓰지 않는다.**
-🔴 CONTROL 이 실패하면 제품/하니스 어느 쪽으로도 «단정하지 않고» 순서대로 가른다 —
-   호출 경로 → 설정 상태 → 입력 → Production 결과.
-   (실례: `bobochoses.com` 이 지금 등록부 disabled 라 CONTROL 2건이 재현 실패했다.
-    하니스 결함이 아니었다.)
-
-실제로 이 게이트가 **「운영 경로 누락」을 사전에 잡았다** — 국내 커버리지 하니스가
+이 트랙에서 그 게이트가 실제로 잡은 것: 국내 커버리지 하니스가
 `searchDomesticShops + withConfidence` 까지만 불렀는데 운영은 그 뒤에
 `judgeDomesticCandidate`(게이트 ②④ + `fetchDomesticModelCode`)가 더 있었다.
+CONTROL 상품(운영 링크 2건 보유)이 0건을 내서 **본 측정 전에** 드러났다.
 
-### 🔴 「측정불가」로 남은 것 — 0% 나 「없음」으로 적지 않는다
+### 🔴 「측정불가」로 남은 것 — 0% 나 「없음」으로 적지 않는다 (규칙은 §5-B)
 
 ```
 Domestic SAME Recall     ground truth 가 운영 링크 69건뿐 → 측정불가
