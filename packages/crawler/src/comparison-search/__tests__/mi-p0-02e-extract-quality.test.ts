@@ -111,7 +111,23 @@ describe.skipIf(!LIVE)("🔴 MI-P0-02e ① — 원본 Extract 실측(코드 수�
          *    못 준다」로 읽을 뻔했다 — 반환 모양을 확인하지 않고 칸 이름을 추측한
          *    내 결함이다([[measure-with-the-production-function]] ④ signature 확인).
          */
-        const f = light?.candidate?.facts as Record<string, unknown> | undefined;
+        /**
+         * 🔴🔴 **칸 이름을 «타입에서» 읽는다. 추측하지 않는다.**
+         *
+         * 이 하니스는 같은 실수를 **두 번** 했다:
+         *   ① `light.facts` 로 읽었다 → 실제는 `light.candidate.facts` 다
+         *   ② `f.material` · `f.category` 로 읽었다 → 실제 칸 이름은
+         *      **`materialText` · `categoryText`** 다. 그래서 「셋 다 null」이라는
+         *      거짓 결과가 나왔고 그것을 「Extract gap」으로 보고할 뻔했다.
+         *
+         * 🔴 `ProductFacts` 의 실제 칸(packages/shared/src/product-facts.ts):
+         *      urlSlug · brand · brandModelCode · sellerSku · title ·
+         *      coreTitleTokens · categoryText · colorText · materialText ·
+         *      fitText · ageRangeText · sizeLabels · audienceSignals · imageUrls
+         *    🔴 `sizeRange` 라는 칸은 **없다** — `sizeLabels` 다.
+         *    🔴 `price` 도 `facts` 에 **없다** — 가격은 `candidate.price` 다.
+         */
+        const f = light?.candidate?.facts;
 
         const dnaState = (key: string, value: unknown): State => {
           if (NOT_SUPPLIED_BY_FIELDS_PATH.has(key)) return "NOT_SUPPLIED";
@@ -171,10 +187,14 @@ describe.skipIf(!LIVE)("🔴 MI-P0-02e ① — 원본 Extract 실측(코드 수�
             brandModelCode: f?.brandModelCode ?? null,
             sellerSku: f?.sellerSku ?? null,
             colorText: f?.colorText ?? null,
-            material: f?.material ?? null,
-            category: f?.category ?? null,
-            imageCount: Array.isArray(f?.imageUrls) ? (f!.imageUrls as unknown[]).length : null,
-            sizeRange: f?.sizeRange ?? null,
+            // 🔴 아래 넷이 1차 측정에서 칸 이름을 틀려 전건 null 로 나온 축이다.
+            materialText: f?.materialText ?? null,
+            categoryText: f?.categoryText ?? null,
+            sizeLabels: f?.sizeLabels ?? null,
+            audienceSignals: f?.audienceSignals ?? null,
+            fitText: f?.fitText ?? null,
+            ageRangeText: f?.ageRangeText ?? null,
+            imageCount: f?.imageUrls?.length ?? null,
           },
         });
 
@@ -183,7 +203,9 @@ describe.skipIf(!LIVE)("🔴 MI-P0-02e ① — 원본 Extract 실측(코드 수�
         console.log(
           `${job.jobKey}\n` +
             `   DNA(화면경로)  brandCode=${d.brandModelCode.state}(${String(bmc)}) color=${d.color.state} material=${d.material.state} category=${d.category.state} images=${d.imageUrls.state}\n` +
-            `   LightFetch     brandCode=${String(f?.brandModelCode ?? null)} sellerSku=${String(f?.sellerSku ?? null)} color=${String(f?.colorText ?? null)} images=${Array.isArray(f?.imageUrls) ? (f!.imageUrls as unknown[]).length : null}${lightError ? ` err=${lightError}` : ""}`,
+            `   LightFetch     status=${String(light?.status)} brandCode=${String(f?.brandModelCode ?? null)} color=${String(f?.colorText ?? null)} images=${f?.imageUrls?.length ?? null}
+` +
+            `   LightFetch 추가  categoryText=${String(f?.categoryText ?? null)} materialText=${String(f?.materialText ?? null)?.slice(0, 40)} sizeLabels=${JSON.stringify(f?.sizeLabels ?? null)} audience=${f?.audienceSignals?.length ?? null}${lightError ? ` err=${lightError}` : ""}`,
         );
       }
 
@@ -211,4 +233,80 @@ describe.skipIf(!LIVE)("🔴 MI-P0-02e ① — 원본 Extract 실측(코드 수�
     },
     20 * 60 * 1000,
   );
+});
+
+/* ═══════════ MI-P0-02f ② — Smallable UNREACHABLE 의 «원인» ═══════════ */
+
+/**
+ * 🔴 `status=UNREACHABLE · fetchPath=PLAIN_HTML · httpCalls=1` 까지만 알고 있다.
+ *    그것으로 BLOCKED / FETCH_ERROR / PARSER_GAP / SOURCE_UNAVAILABLE 를 가를 수
+ *    없다. **fixture 가 있다는 사실을 production 접근 성공으로 간주하지 않는다**(CPO).
+ *
+ * 🔴 그래서 운영이 쓰는 그 fetcher 를 직접 불러 HTTP 층을 본다.
+ *    `fetchPlainHtml` 이 `factsFromProductUrl` 의 PLAIN_HTML 경로 owner 다.
+ */
+describe.skipIf(!LIVE)("🔴 MI-P0-02f ② — Smallable UNREACHABLE 원인", () => {
+  it("운영 fetcher 와 raw HTTP 를 같이 재서 네 상태로 가른다", async () => {
+    const url =
+      "https://www.smallable.com/en/product/all-about-monsters-washed-t-shirt-organic-cotton-blue-bobo-choses-430632";
+    const { fetchPlainHtml } = await import("../../shopify-product-json");
+    const { CRAWLER_USER_AGENT } = await import("../../utils/user-agent");
+
+    // ① 운영 경로 owner
+    let opHtml: string | null = null;
+    let opError: string | null = null;
+    try {
+      opHtml = await fetchPlainHtml(url);
+    } catch (e) {
+      opError = e instanceof Error ? `${e.name}: ${e.message}` : "unknown";
+    }
+
+    // ② raw HTTP — 상태코드를 «직접» 본다. 이것 없이는 차단과 파서공백을 못 가른다.
+    let rawStatus: number | null = null;
+    let rawBytes: number | null = null;
+    let rawError: string | null = null;
+    let serverHeader: string | null = null;
+    try {
+      const r = await fetch(url, {
+        headers: { Accept: "text/html", "User-Agent": CRAWLER_USER_AGENT },
+        signal: AbortSignal.timeout(20000),
+      });
+      rawStatus = r.status;
+      serverHeader = r.headers.get("server") ?? r.headers.get("cf-ray") ?? null;
+      rawBytes = (await r.text()).length;
+    } catch (e) {
+      rawError = e instanceof Error ? `${e.name}: ${e.message}` : "unknown";
+    }
+
+    /** 🔴 네 상태 중 하나로만 결론 낸다(CPO 지정 어휘). */
+    const cause =
+      rawError !== null
+        ? "FETCH_ERROR"
+        : rawStatus === 403 || rawStatus === 401 || rawStatus === 429
+          ? "BLOCKED"
+          : rawStatus === 404 || rawStatus === 410
+            ? "SOURCE_UNAVAILABLE"
+            : rawStatus === 200 && (opHtml === null || opError !== null)
+              ? "PARSER_GAP"
+              : rawStatus === 200
+                ? "PARSER_GAP"
+                : "UNKNOWN";
+
+    const verdict = {
+      url,
+      operationalFetcher: { gotHtml: opHtml !== null, bytes: opHtml?.length ?? null, error: opError },
+      rawHttp: { status: rawStatus, bytes: rawBytes, server: serverHeader, error: rawError },
+      cause,
+      note:
+        "🔴 raw 가 200 인데 운영 fetcher 가 못 받으면 fetcher 쪽(UA·헤더·타임아웃)이고, " +
+        "raw 가 403/429 면 차단이다. fixture 존재는 근거로 쓰지 않았다.",
+    };
+    mkdirSync(OUT_DIR, { recursive: true });
+    writeFileSync(path.join(OUT_DIR, "mi-p0-02f-smallable-cause.json"), JSON.stringify(verdict, null, 1), "utf8");
+    // eslint-disable-next-line no-console
+    console.log(JSON.stringify(verdict, null, 2));
+
+    // 🔴 결론 방향을 단언하지 않는다. 두 경로를 실제로 불렀다는 것만 단언한다.
+    expect(rawStatus !== null || rawError !== null).toBe(true);
+  }, 5 * 60 * 1000);
 });
