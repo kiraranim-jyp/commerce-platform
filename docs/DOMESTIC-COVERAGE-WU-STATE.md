@@ -262,10 +262,33 @@ byLabel   KNOWN_NOT_SAME 11 · 🔴🔴 **KNOWN_SAME = 0건**
 
 ```
 falsePositive  knownNotSame 11 · falseSame 1 · rate 9%
-  우리:  PèPè 「Lulu T Bar Shoes in Vernice Nero」   (01195-VERNICE-NERO)
-  후보:  foretforet 「AW25 3차[페페슈즈]**3094** 구두_VERNICE NERO-PP25KASHE3094V」
-  운영 판정: tier=**EXACT** (JUDGED)        독립 라벨: Vision ≤50 = **DIFF**
+  우리:  PèPè 「Lulu T Bar Shoes in Vernice Nero」   code=`01195-VERNICE-NERO`
+  후보:  foretforet 「AW25 3차[페페슈즈]**3094** 구두_VERNICE NERO-PP25KASHE3094VNE」
+  운영 경로: confidence 0.38 · matchLevel **low** · crossSellerVerdict **SIMILAR**
+            → gate=JUDGED → tier=**EXACT**
+  독립 라벨: Vision **5점** · 「completely different Mary Jane designs」
   → 🔴 `3094` ≠ `01195`. **다른 모델이고 색상(VERNICE NERO)만 같다.**
+
+🔴🔴 **그리고 이것이 코드 규칙과 모순된다.** `compareModelCode`(model-code.ts:95)의
+   분기를 손으로 따라가면:
+```
+a = 01195VERNICENERO     b = PP25KASHE3094VNE
+a === b                      ✗
+a.startsWith(b)/역        ✗
+공유 접두 길이            0  (`0` vs `P`) → conflict 아님
+longestCommonSubstring    🔴 4자 이상 공통 부분문자열이 보이지 않는다
+                             (b 의 `ASHE`·`3094` 가 a 에 없다)
+→ 규칙대로면 **conflict** 여야 하고, conflict 면 tier=EXCLUDED 다
+```
+   그런데 EXACT 가 났다. 🔴 즉 **`fetchForetforetModelCode` 가 제목의 코드가 아니라
+   «다른 값» 을 뽑았을 가능성이 크다** — 그 함수는 상세 HTML 을 받아
+   `extractForetforetModelCode(html)` 를 쓴다(foretforet.ts:304).
+   🔴 추정이므로 확정하지 않는다. 아래 STEP 4 가 그것을 찍는다.
+
+🟢 참고 — model-code.ts 주석이 **우리 쌍을 직접 적어 뒀다:**
+   「`01195VERNICENERO / PP24KASHE1195NER` 접두사를 전혀 공유하지 않고 숫자
+     코어 `1195` 만 공유한다 → 표기법이 다른 같은 상품」 = 의도된 `partial`.
+   🔴 그런데 `3094` 는 그 코어를 공유하지 «않는다». 그래서 모순이다.
 ```
 
 🔴🔴 **MI-P0-12 의 「EXACT 버킷 FP 0」은 «DB 에 저장된 링크» 를 본 숫자였다.
@@ -304,12 +327,16 @@ STEP 2c 🔴 rulii 「미취급 ↔ 검색 실패」 분리. (brandOnSearchPage=
 STEP 3   🟢 **완료** — GT 구축. 🔴 KNOWN_SAME 0건 → SAME Yield 측정불가(§3-9).
         🟢 라벨 커버리지 11/45. UNKNOWN 34 는 이미지 없음/후보 0건이고 분모에서 뺐다.
 
-STEP 4   🔴🔴 **최우선 — EXACT FP 의 원인 특정**
-        PèPè `01195-VERNICE-NERO` ↔ foretforet `PP25KASHE3094V` 가 왜
-        `STRONG_IDENTIFIER` → tier=EXACT 가 되는가.
-        → `compareModelCode` 를 그 두 값으로 직접 불러 분기를 찍는다(LCS 의심).
-        🔴 그리고 그 FP 가 `domesticLowestPriceKrw` 를 실제로 바꾸는지 §15 로 연결한다.
-        🔴 threshold/LCS 를 고치지 않는다 — 원인 특정까지만.
+STEP 4   🔴🔴 **최우선 — EXACT FP 의 원인 특정** (§3-9)
+        ① 그 후보의 상세 URL 로 `fetchForetforetModelCode(url)` 를 **직접 불러**
+           «실제로 뽑힌 품번» 을 찍는다. 제목의 `PP25KASHE3094VNE` 와 같은가?
+           🔴 GT 하니스가 후보 URL 을 덤프하지 않았다 — 먼저 그 칸을 추가한다.
+        ② 그 값으로 `compareModelCode('01195-VERNICE-NERO', 뽑힌값)` 를 불러
+           `exact/partial/conflict/unavailable` 중 무엇인지 찍는다.
+        ③ `deriveMatchTruth` 를 같은 인자로 불러 EXACT 가 어디서 나오는지 본다.
+        🔴 threshold/LCS/추출기를 고치지 않는다 — 원인 특정까지만.
+        🔴 그 다음 §15 로 연결: 그 FP 가 `domesticLowestPriceKrw` 를 실제로
+           바꾸는가(EXACT 하나가 COMPARISON 전체를 덮는 구조).
 
 STEP 2  🟡 rulii — arm A/B/C 는 돌았다(후보 10/3/13). 남은 것은 「미취급 ↔ 검색 실패」
         분리이고, STEP 1b 가 통과한 뒤에 본다.
