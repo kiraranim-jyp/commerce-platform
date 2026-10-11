@@ -9,66 +9,135 @@
 ## CURRENT POINTER
 
 ```
-SPRINT              MI-P0-02
-HEAD                (git log -1 로 확인)
-WORK                Gemini Discovery 에 «가격 owner 가 있는 판매처» whitelist 주입
-DONE                COMMERCE CLOSE (bd81b064)
-                    Discovery 정책 (가)/(나) CPO 판정 수령
-                    2단계 측정 규칙 고정 (0f448c2f)
-                    🟢 STEP A~I 전부 실측 완료 (2026-10-11) → §8 결과표
-                       A registry 21개 확정 · B whitelist 주입 + 테스트 12개
-                       C Gemini A/B 실측 16콜 · D resolve 60건
-                       E/F 국내 가격 5분류 16쌍 · G Identity · H/I KPI
-                    🟢 MI-P0-02b ①~⑥ 완료 (2026-10-11) → §10
-                       ① 운영 사슬 전체 재측정(1차 측정 오류 정정)
-                       ② 호출부 둘 확인  ③ 🟢 한글 품번 확인은 «된다»(실측)
-                       ④ 원인 = BRAND_ALIASES 3행  ⑤ 자기참조 결함 수정
-                       ⑥ coupling guard 를 import graph 로 교체
-                    🟢 MI-P0-02c ①~⑬ 완료 (2026-10-11) → §11
-                       ② 최종 owner = priceTierFromLink(4단계) · 게이트 둘 발견
-                       ③ Smallable FN = 해외 품번 부재(구조적)
-                       ④ 🟢 whitelist 효과 재현(25.5%→31.5%, 순서 교대)
-                       ⑧ 🔴 FN 진짜 원인 = foretforet extractor 가 conflict 를 지어낸다
-NOT DONE            🔴 KPI 「Domestic Same-Product Price Match Rate」 = **측정불가**
-                       (분모 0 — 외부 SAME 후보가 0건이다. 0% 가 아니다)
-                    🔴 BRAND_ALIASES 등록 — CPO 판정 대기(§10-④)
-                    Smallable 원상품 facts 경로(JOB-C 는 Identity 측정에서 빠졌다)
-                    run-domestic-price-check 경로(Master dna 사다리) 미측정
-NEXT EXACT ACTION   🔴 **CPO 판정을 기다린다. CTO 가 임의로 진행하지 않는다.**
-                    ① 🔴🔴 가장 큰 것 — `fetchForetforetModelCode` 가 판매처
-                       자체코드를 돌려줘 `compareModelCode` 가 **conflict 를
-                       지어낸다**(§11-⑧ 실측 5/5). 그래서 foretforet 의 Main Story
-                       후보가 «전부» 구조적으로 제외된다. 고치기 «전에» 재야 할
-                       것 하나: 🔴 **foretforet 상세에 브랜드 품번이 애초에
-                       있는가.** 있으면 extractor 가 그것을 읽어야 하고, 없으면
-                       `null` 을 돌려줘야 한다(그러면 unavailable 이 되어
-                       텍스트·교차판매처 경로가 살아난다).
-                    ② BRAND_ALIASES 등록 — 🔴 CPO 보류 유지 중(오탐 0 미충족)
-                    ③ Smallable 해외 품번 추출 — JSON-LD 에 mpn·gtin 이 없다.
-                       🔴 SKU 승격은 금지다. 다른 출처가 있는지가 조사 과제다
-                    🔴 **threshold 를 낮추지 않는다.** SIMILAR→SAME 오판 방지가
-                       Recall 보다 우선이다(CPO 확정).
-DO NOT REUSE        🔴 scratchpad/mi-p0-candidates.json — whitelist «적용 전» 결과다.
-                    (이 세션에서 확인: 해당 파일은 이미 없다. 새 세션이 찾지 말 것)
-                    🔴 「registry 10개」·「11개」 둘 다 틀렸다 — 21개다(§1)
-OWNER VERIFIED      아래 §Owner Mapping (이번까지 실측 확정분)
-TEST STATUS         🟢 회귀 500 files / 7487 passed · 3 skipped(live 전용) · 0 FAIL
-                    targeted 12/12 + 14/14 · 음성대조 2라운드 전부 복구 PASS
-                    typecheck admin 0 · crawler 2 · listing 7줄 = 전부 baseline
-                    build PASS
-DEPLOY              🔴 미배포 · 미push.
-                    🔴 MI-P0-02b 는 **Production 코드를 바꿨다** — MI-P0-02 와
-                    다르다. search/route.ts(자기참조 가드) ·
-                    product-url-facts.ts(import 경로) · _lib/attach-match-truth.ts
-                    (route 에서 옮긴 것) · url-shape.ts(신규, 로직 무변경).
-                    「benchmark 만 건드렸다」를 더 쓰지 않는다.
-CEO ACTION          없음 — 🔴 push/deploy 는 CPO 가 §10-⑫ 판정 뒤 결정한다
-STOP CONDITION      외부 서비스 장애 · 인증/권한으로 실행 불가 ·
-                    destructive production action · CEO 사업/정책 결정 필요
-                    🔴 단순 코드 문제·테스트 실패·schema 불일치는 STOP «아니다» —
-                       owner 확인 → 수정 → 테스트 → 회귀까지 같은 Sprint 에서 계속한다
-ACTUAL REGISTRATION 🔴 STOP (CPO GO 전까지)
+SPRINT              MI-P0-02l  (Brand Evidence Owner 확정)
+HEAD                e48aae90 · clean · ahead 9 · behind 0 · 🔴 미push
+NEXT EXACT ACTION   🔴 **MI-P0-02l STEP 1 부터.** §12 를 읽고 즉시 실행한다.
+                    Brand Owner 가 확정되기 «전» 에는 구현으로 넘어가지 않는다.
+CPO 판정 이력        02b 🟢 · 02c 🟢 · 02d 🟢(되돌림 포함) · 02e~02k 🟢 PASS
+PRODUCTION 변경      🔴 없음(02e 이후 전부 측정/문서)
+CEO ACTION          없음
+실등록               🔴 STOP
 ```
+
+### 🔴🔴 이 세션(02b~02k)에서 «확정» 된 것 — 다시 조사하지 않는다
+
+```
+최종 Identity owner   matchTruth  (crossSellerVerdict 는 그 «입력» 중 하나다)
+최종 가격 owner        priceTierFromLink  → EXACT·COMPARISON·REFERENCE·EXCLUDED
+자기참조               분모에 «절대» 넣지 않는다(두 경로 다 제외하도록 고쳤다)
+분모 0                「측정불가」다. 「0%」가 «아니다»
+registry              21개 (OVERSEAS 13 · DOMESTIC 8) — 테스트로 잠겼다
+whitelist 효과         🟢 2회 독립 재현(22.3→33.3% · 25.5→31.5%, arm 교대)
+Extract 품질           🟢 낮지 않다. Light Fetch 가 필요한 축을 이미 준다
+provenance            productDataSources 는 «추출 방법»(json-ld/dom/shopify-json)
+                      이고 SOURCE/DEFAULT/INFERRED 가 «아니다»
+단절 둘                ExtractedProductData ✖ CanonicalProduct ✖ ProductIdentity
+                      → ProductIdentity 를 채우는 운영 경로가 «없다».
+                      🔴 그래서 buildPrompt 를 고쳐도 Production 은 바뀌지 않는다
+```
+
+### 🔴🔴 Evidence Owner Matrix (02k 확정)
+
+| Axis | Master | Light Fetch | Preferred Owner | Discovery |
+|---|---|---|---|---|
+| title | 3/3 | 2/3 | **Master** | 🟢 사용 |
+| brandModelCode | 0/3 | **2/3** | **Light Fetch** | 🟢 사용 |
+| color | **0/3**(칸 없음) | **2/3** | **Light Fetch** | 🟢 사용 |
+| brand | 3/3(2건 오염) | 2/3(1건 오염) | 🔴 **없음** | 🔴 02l 과제 |
+| category | 3/3 칸 상이 | Master 파생 | Master | 🟡 보류 |
+| audience | 3/3 칸 상이 | Master 파생 | Master | 🟡 보류 |
+| season | brand 안 | code 안 | 🔴 없음 | 🔴 미사용 |
+| material | 0/3 | 설명문 전체 | Light(성분만) | 🟡 성분만 |
+| size | 이름만 | 값 2/3 | Light | 🔴 **미사용**(변별력 0) |
+| image | **3/3**+대표 | 2/3 | Master | 🔴 미사용(Gemini 입력 경로 없음) |
+
+```
+Gap   CATEGORY SEMANTICALLY_UNSAFE · AUDIENCE PARTIAL(성별 1/3) ·
+      SEASON SEMANTICALLY_UNSAFE(독립 칸 없음) · MATERIAL NOT_COMPARABLE ·
+      BRAND CONTAMINATED_BOTH · SIZE NO_DISCOVERY_VALUE · IMAGE NOT_APPLICABLE
+```
+
+### 🔴 brand 오판 정정 (02k 에서 내가 뒤집었다)
+
+02j 에서 「Light Fetch brand 가 더 정확하다」고 보고했다. **1/3 에서만 참이다.**
+
+```
+SEASON_CODE_ONLY_RE = /^(ss|aw|fw|pe)\d{2}$/i   ← «문자열 전체» 일치만 본다
+"AW26"            → 가드 발화 🟢 → "Bobo Choses"
+"Main Story AW26" → 🔴 가드 통과 → 오염된 값이 그대로 나간다
+```
+
+### 🔴🔴 반복 패턴 — 「수정이 한쪽 경로에만 있다」 **4건**
+
+```
+① listing 은 brandModelCode:null 로 막고 extractor 경로는 안 막았다
+② 저장경로는 자기참조를 걸렀고 실시간 라우트는 안 걸렀다 (02b 에서 고침)
+③ 가드가 index.ts export 만 보고 deep import 를 못 막았다 (02b 에서 고침)
+④ 시즌코드/공식몰 brand 가드가 Light Fetch 에만 있고 Master 에는 없다
+```
+
+🔴 **「고쳤다」가 「전 경로에서 고쳤다」가 아니었다.** 수정할 때 같은 의미의 다른
+경로를 반드시 같이 본다.
+
+### 🔴🔴 CTO 가 이 세션에서 틀린 5건 — 같은 유형이다
+
+```
+① crossSellerVerdict 를 최종 판정으로 봄        → owner 는 matchTruth
+② foretforet 추출기를 한 브랜드로 일반화해 제거  → PèPè 골든케이스가 잡았다(되돌림)
+③ light.facts 로 읽음                          → candidate.facts
+④ f.material / f.category 로 읽음              → materialText / categoryText
+⑤ 「Light Fetch brand 우위」                    → 1/3 에서만 참
+```
+
+🔴 전부 **2단계 규칙 ④(signature/schema 확인)를 건너뛴** 결과다. 매번 측정값이
+「없다」로 나왔고 그 「없다」를 제품 결함으로 보고할 뻔했다.
+**숫자를 적기 전에 타입을 연다.**
+
+### 🔴 폐기된 가설 — 다시 하지 않는다
+
+```
+❌ 「국내 가격 수집 불능」        가격 파서는 후보가 오면 100% KRW 를 준다
+❌ 「registry 10개/11개」        21개다
+❌ 「평가 상한(3)이 정답을 가렸다」 정답도 conflict 였다. 상한은 원인이 아니다
+❌ 「Smallable 접근 차단」        universalExtract 로는 읽힌다(Light Fetch 한정 문제)
+❌ 「Extract 품질이 낮다」        낮지 않다
+❌ 「foretforet 추출기 제거」     PèPè 가 load-bearing 이다
+```
+
+### 측정 산출물 (scratchpad · 원문 그대로)
+
+```
+mi-p0-02c-whitelist-counterbalanced.json · mi-p0-02c-counterbalance-summary.json
+mi-p0-02c-savepath.json · mi-p0-02c-cap-probe.json
+mi-p0-02d-foretforet-brandcode.json · mi-p0-02e-extract-quality.json
+mi-p0-02f-smallable-cause.json · mi-p0-02i-master-extract.json
+```
+
+---
+
+## 12. 🔴 MI-P0-02l — Brand Evidence Owner 확정 (CPO 지시, 다음 착수점)
+
+🔴 `SEASON_CODE_ONLY_RE` 를 **바로 고치지 않는다.** 먼저 Owner 를 확정한다.
+
+```
+STEP 1  brand evidence 경로 셋 추적 — Master · Light Fetch · Canonical/Identity
+        어디서 처음 생성되고 · 어디서 정규화되고 · 어디서 raw 로 덮이는가
+STEP 2  "Main Story AW26" 이 실제로 vendor 인가 ·
+        "Main Story" 와 "AW26" 을 가를 «독립 evidence» 가 있는가
+        네 값의 source 추적: Main Story · Main Story AW26 · AW26 · AW26MS185
+STEP 3  후보 셋 비교 — A 현재방식 · B vendor 에서 season suffix 제거 ·
+        C 독립 brand evidence 우선(vendor 는 fallback)
+STEP 4  🔴 False Positive — `.*AW26` 식으로 regex 를 넓히지 않는다.
+        상품명/브랜드명이 그 문자열을 포함할 가능성을 배제할 수 없다
+STEP 5  🔴 Golden 3 만으로 결론 내리지 않는다. 기존 fixture 를 재사용해
+        brand 사례를 넓힌다(새 네트워크 호출 불필요)
+STEP 6  종료 조건 — PASS-A(단일 owner) 또는 PASS-B(evidence priority 확정).
+        🔴 「그냥 X 가 더 나음」·「regex 넓히면 될 것 같음」은 FAIL
+```
+
+🔴 금지(02l 에서도): ProductIdentity · buildPrompt · Gemini prompt · Query Planner ·
+alias · compareModelCode · category/audience/season/material 구현 · threshold ·
+Quality Gate · Gemini 후보를 SAME 으로 승격 · **Brand Owner 확정 전 Production 수정**
 
 ---
 
