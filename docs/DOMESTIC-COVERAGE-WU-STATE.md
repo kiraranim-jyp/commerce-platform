@@ -15,7 +15,7 @@
 | ③ | AUTO 7 전수 funnel | 🟡 브랜드 교집합까지만 |
 | ④ | coconjennie 최종 판정 | 🔴 `NO_PRODUCT_PATH_OBSERVED` |
 | ⑤ | SAME Yield 측정 | 🔴 **측정불가(분모 0)** — 0% 로 적지 않는다 |
-| ⑥ | SAME → Price Decision 영향 | 🔴 미착수 |
+| ⑥ | SAME → Price Decision 영향 | 🟡 **손실 경로 특정**(§3-10) · 금액 미측정 |
 | ⑦ | 비용/자동화 가치 | 🟡 부분 |
 | ⑧ | GO/HOLD/CHANGE 최종 판정 | 🔴 **확정 금지** (①~⑦ 미완) |
 
@@ -306,6 +306,49 @@ longestCommonSubstring    🔴 4자 이상 공통 부분문자열이 보이지 �
 
 ---
 
+### 3-10. 🟢🟢🟢 STEP 4 — **FP 원인 완전 특정. Production 결함이다.**
+
+추출기를 직접 부르고 운영이 실제로 쓴 품번을 찍었다:
+
+```
+후보 title  AW25 3차[페페슈즈]**3094** 구두_VERNICE NERO-PP25KASHE3094VNE
+후보 url    https://www.foretforet.com/shop/shopdetail.html?branduid=10249010
+후보 sku    PP25KASHE3094VNE          🟢 제목의 코드와 «일치» 한다
+🔴🔴 운영이 쓴 국내품번  PP24KASHE**1195**NER   ← **다른 상품의 코드다**
+   modelEvidence = partial → matchTruth = STRONG_IDENTIFIER → tier = **EXACT**
+독립 라벨   Vision 10점 「completely different Mary Jane designs」
+```
+
+🔴🔴 **원인은 `compareModelCode` 가 아니다.** 그 함수는 정상 동작했다 —
+`01195VERNICENERO` ↔ `PP24KASHE1195NER` 는 숫자 코어 `1195` 공유로 `partial` 이고,
+**model-code.ts 주석이 그 쌍을 「표기법이 다른 같은 상품」으로 직접 적어 뒀다.**
+
+🔴 **진짜 원인: `extractForetforetModelCode`(foretforet.ts) 가 «3094 구두» 상세
+   페이지에서 «1195 Lulu T Bar» 의 품번을 뽑는다.** 연관/추천상품 섹션이나
+   페이지 다른 영역을 긁는 것으로 보이지만 🔴 그 위치는 **아직 미확정** 이다.
+
+### 🔴🔴 사업적 손실 경로가 «완전히» 연결된다
+
+```
+extractForetforetModelCode 가 다른 상품 품번을 뽑는다
+ → compareModelCode = partial            (정상 동작)
+ → deriveMatchTruth = STRONG_IDENTIFIER
+ → priceTierFromLink = **EXACT**
+ → market-intelligence.ts:118  exactShopRecords 에 들어간다
+ → price-history.ts:644  `exact.sellerCount>0` → resolved=exact,
+                         **COMPARISON 전체가 무시된다**
+ → domesticLowestPriceKrw 가 «다른 상품» 의 가격
+ → computePriceDecision / buildSellerDecision 오판
+```
+
+🟢 이것이 CPO 가 요구한 **「Identity disagreement → 잘못된 priceTier → 잘못된
+   가격 → 잘못된 sourcing 판단」** 경로의 **실측 1건** 이다.
+🔴 단 **금액 영향은 아직 측정하지 않았다**(§15). 그리고 **빈도도 모른다** —
+   sample N=9 상품에서 1건이고, 운영 DB 의 foretforet 링크 32건 중 몇 건이
+   같은 모양인지는 미측정이다.
+
+---
+
 ## 4. 다음 실행이 «즉시» 할 것
 
 ```
@@ -327,16 +370,18 @@ STEP 2c 🔴 rulii 「미취급 ↔ 검색 실패」 분리. (brandOnSearchPage=
 STEP 3   🟢 **완료** — GT 구축. 🔴 KNOWN_SAME 0건 → SAME Yield 측정불가(§3-9).
         🟢 라벨 커버리지 11/45. UNKNOWN 34 는 이미지 없음/후보 0건이고 분모에서 뺐다.
 
-STEP 4   🔴🔴 **최우선 — EXACT FP 의 원인 특정** (§3-9)
-        ① 그 후보의 상세 URL 로 `fetchForetforetModelCode(url)` 를 **직접 불러**
-           «실제로 뽑힌 품번» 을 찍는다. 제목의 `PP25KASHE3094VNE` 와 같은가?
-           🔴 GT 하니스가 후보 URL 을 덤프하지 않았다 — 먼저 그 칸을 추가한다.
-        ② 그 값으로 `compareModelCode('01195-VERNICE-NERO', 뽑힌값)` 를 불러
-           `exact/partial/conflict/unavailable` 중 무엇인지 찍는다.
-        ③ `deriveMatchTruth` 를 같은 인자로 불러 EXACT 가 어디서 나오는지 본다.
-        🔴 threshold/LCS/추출기를 고치지 않는다 — 원인 특정까지만.
-        🔴 그 다음 §15 로 연결: 그 FP 가 `domesticLowestPriceKrw` 를 실제로
-           바꾸는가(EXACT 하나가 COMPARISON 전체를 덮는 구조).
+STEP 4   🟢 **완료** — FP 원인 완전 특정(§3-10). `extractForetforetModelCode` 가
+        다른 상품 품번을 뽑는다. `compareModelCode` 는 정상.
+
+STEP 4b 🔴🔴 **최우선 — 빈도와 금액을 잰다**
+        ① 그 상세 HTML 을 받아 `extractForetforetModelCode` 가 **어느 위치** 를
+           긁는지 찍는다(연관상품 섹션 의심). 🔴 추출기를 고치지 «않는다».
+        ② 운영 DB foretforet 링크 32건에 같은 모양이 몇 건인지 센다 —
+           `matched_title` 의 코드 ↔ 저장된 `matched_model_name` 불일치를 본다.
+        ③ §15 금액 — 그 FP 가 들어간 스냅샷의 `domesticLowestPriceKrw` 를
+           FP 포함/제외로 계산해 **Seller Decision 이 바뀌는지** 본다.
+        🟢 §18 Gate 에서 이것은 「source 추가」가 아니라 **「추출기 결함 수정」** 이다 —
+           가치가 입증되면 그 한 곳만 최소 수정 대상이 된다.
 
 STEP 2  🟡 rulii — arm A/B/C 는 돌았다(후보 10/3/13). 남은 것은 「미취급 ↔ 검색 실패」
         분리이고, STEP 1b 가 통과한 뒤에 본다.

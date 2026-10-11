@@ -177,6 +177,17 @@ describe.skipIf(!LIVE)("🔴 DOM-RECOVERY-03 — Independent Ground Truth", () =
             hasModelCode: !!dna.brandModelCode, modelCode: dna.brandModelCode ?? null,
             shop: r.domain, candidates: r.candidates.length,
             topCandidateTitle: String(top?.title ?? "").slice(0, 56),
+            /** 🔴 STEP 4 가 추출기를 직접 부르려면 URL 이 필요하다(1차에 빠뜨렸다). */
+            topCandidateUrl: top?.url ?? null,
+            topCandidateSku: top?.sku ?? null,
+            topCandidateFactsCode: top?.facts?.brandModelCode ?? null,
+            /** 🔴 운영이 실제로 쓴 국내 품번 — judgeDomesticCandidate 안에서 뽑힌 값 */
+            judgedDomesticModelCode: j.kind === "JUDGED"
+              ? ((j as unknown as { domesticModelCode?: string | null }).domesticModelCode ?? null) : null,
+            judgedModelEvidence: j.kind === "JUDGED"
+              ? ((j as unknown as { modelCodeEvidence?: string | null }).modelCodeEvidence ?? null) : null,
+            judgedMatchTruth: j.kind === "JUDGED"
+              ? ((j as unknown as { matchTruth?: string }).matchTruth ?? null) : null,
             topConfidence: typeof top?.confidence === "number" ? Number(top.confidence.toFixed(3)) : null,
             topMatchLevel: top?.matchLevel ?? null, crossSellerVerdict: top?.crossSellerVerdict ?? null,
             gate, tier,
