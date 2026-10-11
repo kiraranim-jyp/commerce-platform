@@ -113,6 +113,10 @@ const JOBS: { jobKey: string; basis: string; identity: ProductIdentity }[] = [
 const AXES: QueryId[] = ["Q2", "Q4", "Q6"];
 
 interface ArmRecord {
+  /** 🔴 MI-P0-02c ④ — 어느 라운드에서, 그 라운드의 «몇 번째» 로 돌았는가.
+   *  순서 효과를 whitelist 효과와 분리하는 유일한 근거다. */
+  round: 1 | 2;
+  armOrder: 1 | 2;
   arm: "OFF" | "ON";
   jobKey: string;
   queryId: QueryId;
@@ -137,7 +141,12 @@ function titleHits(discovered: DiscoveredUrl[], domains: string[]): string[] {
   return hits;
 }
 
-async function runArm(arm: "OFF" | "ON", domains: string[]): Promise<ArmRecord[]> {
+async function runArm(
+  arm: "OFF" | "ON",
+  domains: string[],
+  round: 1 | 2,
+  armOrder: 1 | 2,
+): Promise<ArmRecord[]> {
   const out: ArmRecord[] = [];
   for (const job of JOBS) {
     const queries = generateQueries(job.identity).filter((q) => AXES.includes(q.id));
@@ -149,6 +158,8 @@ async function runArm(arm: "OFF" | "ON", domains: string[]): Promise<ArmRecord[]
         preferredDomains: arm === "OFF" ? [] : domains,
       });
       let record: ArmRecord = {
+        round,
+        armOrder,
         arm,
         jobKey: job.jobKey,
         queryId: query.id,
@@ -172,16 +183,34 @@ async function runArm(arm: "OFF" | "ON", domains: string[]): Promise<ArmRecord[]
       out.push(record);
       // eslint-disable-next-line no-console
       console.log(
-        `[${arm}] ${job.jobKey} ${query.id} → ${record.outcome} · ${record.discovered.length}건 · registry적중 ${record.supportedTitleHits.length}건 ${record.supportedTitleHits.join(",")}`,
+        `R${round}#${armOrder}[${arm}] ${job.jobKey} ${query.id} → ${record.outcome} · ${record.discovered.length}건 · registry적중 ${record.supportedTitleHits.length}건 ${record.supportedTitleHits.join(",")}`,
       );
     }
   }
   return out;
 }
 
-describe.skipIf(!LIVE)("🔴 MI-P0-02 STEP C — Gemini 실측 A/B (whitelist OFF vs ON)", () => {
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * MI-P0-02c ④(CPO 지시, 2026-10-11) — **arm 순서를 교대한다(counterbalance).**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 1차 측정에서 TimeoutError 3건이 **전부 ON arm 에 몰렸다.** 그것을
+ *    「whitelist 때문에 느려졌다」로 읽을 수도, 「ON 을 나중에 돌린 순서 효과」로
+ *    읽을 수도 있었다 — **근거가 없어 UNKNOWN 으로 남겼다.**
+ *
+ * 그래서 이번에는 같은 query set 을 두 라운드로, 순서를 뒤집어 돈다:
+ *
+ *     R1   OFF → ON
+ *     R2   ON  → OFF
+ *
+ * 🔴 그러면 「arm」과 「순서」가 **직교** 한다. 효과가 whitelist 때문이면 arm 축에
+ *    실리고, 호출 순서나 Gemini 쪽 변동 때문이면 armOrder 축에 실린다.
+ * 🔴 **cache 를 쓰지 않는다.** 네 arm 을 각각 실제로 호출한다.
+ */
+describe.skipIf(!LIVE)("🔴 MI-P0-02c ④ — Gemini A/B · arm 순서 교대", () => {
   it(
-    "arm 둘을 같은 쿼리로 실제 호출하고 원문을 저장한다",
+    "R1(OFF→ON) · R2(ON→OFF) 를 같은 query set 으로 실제 호출한다",
     async () => {
       loadGeminiKey();
       const domains = supportedPriceSourceDomains();
@@ -190,51 +219,82 @@ describe.skipIf(!LIVE)("🔴 MI-P0-02 STEP C — Gemini 실측 A/B (whitelist OF
       console.log(`registry: ${JSON.stringify(coverage)}`);
       expect(domains.length).toBe(coverage.total);
 
-      const off = await runArm("OFF", domains);
-      const on = await runArm("ON", domains);
+      const r1off = await runArm("OFF", domains, 1, 1);
+      const r1on = await runArm("ON", domains, 1, 2);
+      const r2on = await runArm("ON", domains, 2, 1);
+      const r2off = await runArm("OFF", domains, 2, 2);
+      const records = [...r1off, ...r1on, ...r2on, ...r2off];
 
       mkdirSync(OUT_DIR, { recursive: true });
-      const outPath = path.join(OUT_DIR, "mi-p0-whitelist-candidates.json");
+      const outPath = path.join(OUT_DIR, "mi-p0-02c-whitelist-counterbalanced.json");
       writeFileSync(
         outPath,
         // 🔴 URL 을 자르지 않는다. 원문 그대로 저장한다.
-        JSON.stringify({ coverage, whitelist: domains, axes: AXES, jobs: JOBS, records: [...off, ...on] }, null, 1),
+        JSON.stringify({ coverage, whitelist: domains, axes: AXES, jobs: JOBS, records }, null, 1),
         "utf8",
       );
       // eslint-disable-next-line no-console
       console.log(`saved → ${outPath}`);
 
-      const sum = (rs: ArmRecord[], f: (r: ArmRecord) => number) => rs.reduce((a, r) => a + f(r), 0);
-      // eslint-disable-next-line no-console
-      console.log(
-        JSON.stringify(
-          {
-            OFF: {
-              calls: off.length,
-              ok: off.filter((r) => r.outcome === "OK").length,
-              discovered: sum(off, (r) => r.discovered.length),
-              registryHits: sum(off, (r) => r.supportedTitleHits.length),
-              distinctDomains: [...new Set(off.flatMap((r) => r.supportedTitleHits))],
-            },
-            ON: {
-              calls: on.length,
-              ok: on.filter((r) => r.outcome === "OK").length,
-              discovered: sum(on, (r) => r.discovered.length),
-              registryHits: sum(on, (r) => r.supportedTitleHits.length),
-              distinctDomains: [...new Set(on.flatMap((r) => r.supportedTitleHits))],
-            },
-          },
-          null,
-          2,
-        ),
+      /**
+       * 🔴 **짝지어 비교한다.** 한쪽 arm 이 timeout 이면 그 (round, job, query) 쌍은
+       *    양쪽 다 버린다 — 실패한 호출의 0 을 「못 찾았다」로 세면 안 된다.
+       */
+      const key = (r: ArmRecord) => `${r.round}|${r.jobKey}|${r.queryId}`;
+      const byKey = new Map<string, { OFF?: ArmRecord; ON?: ArmRecord }>();
+      for (const r of records) {
+        const slot = byKey.get(key(r)) ?? {};
+        slot[r.arm] = r;
+        byKey.set(key(r), slot);
+      }
+      const paired = [...byKey.entries()].filter(
+        ([, v]) => v.OFF?.outcome === "OK" && v.ON?.outcome === "OK",
+      );
+      const dropped = [...byKey.entries()].filter(
+        ([, v]) => !(v.OFF?.outcome === "OK" && v.ON?.outcome === "OK"),
       );
 
-      // 🔴 「효과가 있었다」를 단언하지 «않는다». 이것은 측정이고, 결과가 어느
-      //    방향이든 사실로 적는다. 단언하는 것은 「실제로 두 arm 을 돌렸다」뿐이다.
-      expect(off.length).toBeGreaterThan(0);
-      expect(on.length).toBe(off.length);
+      const agg = (rs: ArmRecord[]) => ({
+        calls: rs.length,
+        ok: rs.filter((r) => r.outcome === "OK").length,
+        timeouts: rs.filter((r) => r.failureDetail?.includes("Timeout")).length,
+        discovered: rs.reduce((a, r) => a + r.discovered.length, 0),
+        registryHits: rs.reduce((a, r) => a + r.supportedTitleHits.length, 0),
+        distinctRegistryDomains: [...new Set(rs.flatMap((r) => r.supportedTitleHits))],
+      });
+
+      const summary = {
+        /** 🔴 arm 축 — whitelist 효과. 짝지은 쌍만. */
+        pairedByArm: {
+          pairs: paired.length,
+          OFF: agg(paired.map(([, v]) => v.OFF!)),
+          ON: agg(paired.map(([, v]) => v.ON!)),
+        },
+        /** 🔴 순서 축 — 같은 데이터를 armOrder 로 다시 가른다. 교대의 전부다. */
+        byArmOrder: {
+          first: agg(records.filter((r) => r.armOrder === 1)),
+          second: agg(records.filter((r) => r.armOrder === 2)),
+        },
+        /** 🔴 라운드 축 — Gemini 쪽 시간 변동. */
+        byRound: { R1: agg(records.filter((r) => r.round === 1)), R2: agg(records.filter((r) => r.round === 2)) },
+        /** 🔴 timeout 이 어느 축에 실렸는가 — 1차의 UNKNOWN 을 가르는 자리. */
+        timeoutsBy: {
+          arm: { OFF: agg(records.filter((r) => r.arm === "OFF")).timeouts, ON: agg(records.filter((r) => r.arm === "ON")).timeouts },
+          armOrder: { first: agg(records.filter((r) => r.armOrder === 1)).timeouts, second: agg(records.filter((r) => r.armOrder === 2)).timeouts },
+          round: { R1: agg(records.filter((r) => r.round === 1)).timeouts, R2: agg(records.filter((r) => r.round === 2)).timeouts },
+        },
+        /** 🔴 버린 쌍을 숫자로 남긴다 — 조용히 빠지면 「전부 쟀다」로 읽힌다. */
+        droppedPairs: dropped.map(([k, v]) => `${k} (OFF=${v.OFF?.outcome} ON=${v.ON?.outcome})`),
+      };
+      // eslint-disable-next-line no-console
+      console.log(JSON.stringify(summary, null, 2));
+      writeFileSync(path.join(OUT_DIR, "mi-p0-02c-counterbalance-summary.json"), JSON.stringify(summary, null, 1), "utf8");
+
+      // 🔴 결과 방향을 단언하지 «않는다». 네 arm 을 실제로 돌았다는 것만 단언한다.
+      expect(records.length).toBe(r1off.length * 4);
+      expect(new Set(records.map((r) => `${r.round}${r.armOrder}${r.arm}`)).size).toBe(4);
     },
-    30 * 60 * 1000,
+    60 * 60 * 1000,
   );
 });
 
@@ -254,7 +314,7 @@ describe.skipIf(!LIVE)("🔴 MI-P0-02 STEP D — grounding URL 을 resolve 한�
   it(
     "registry 적중 URL 의 분류를 그대로 기록한다",
     async () => {
-      const raw = readFileSync(path.join(OUT_DIR, "mi-p0-whitelist-candidates.json"), "utf8");
+      const raw = readFileSync(path.join(OUT_DIR, "mi-p0-02c-whitelist-counterbalanced.json"), "utf8");
       const saved = JSON.parse(raw) as { whitelist: string[]; records: ArmRecord[] };
       const { createLivePageProbe } = await import("../live-page-probe");
       const { resolveCandidate } = await import("../url-resolver");

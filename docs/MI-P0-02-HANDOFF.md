@@ -636,6 +636,146 @@ CPO 판정 필요 ②  등록 후 KPI 재측정 범위
 
 ---
 
+## 11. 🔴🔴 MI-P0-02c — 재측정 (CPO 지시, 2026-10-11)
+
+원본: `scratchpad/mi-p0-02c-savepath.json` · `mi-p0-02c-cap-probe.json` ·
+`mi-p0-02c-whitelist-counterbalanced.json`
+
+### ① alias 등록 — 🔴 CPO 보류 확정, 유지
+
+「Identity 가 뒤에서 CONFLICT 로 막는 것은 alias 등록 조건의 오탐 0 을 충족시키는
+것이 아니다」(CPO). `BRAND_ALIASES` 를 **건드리지 않았다.** 그리고 그 결정 때문에
+한글 품번 추출 «기능» 도 고칠 필요가 없다 — 코드가 못 찾는 문제가 아니다.
+
+### ② 🔴 최종 owner 는 `priceTierFromLink` 다 (4단계)
+
+`runDomesticPriceCheck` 에는 실시간 라우트에 **없는 판정이 더 있다**:
+
+```
+① 자기참조 제외       isSelfReferenceCandidate            ← 이미 있었다
+② Gate 1              isEvidenceEvaluationWorthwhile      false → 링크 «없음»
+③ 대표 1건 선정        selectDomesticCandidate             ← 샵당 1건만
+④ matchType + rescue 둘 toDomesticMatchType                NOT_MATCHED → 링크 «없음»
+⑤ verified            decideCandidateEvidence → applyEvidenceDecision
+⑥ matchTruth          evidenceDecision.truth
+⑦ 🔴🔴 최종 owner     priceTierFromLink({matchTruth, verified})
+       EXACT · COMPARISON · REFERENCE · EXCLUDED
+```
+
+🔴 **라우트에는 ②④가 없고 ③도 없다.** 라우트는 후보 «전부» 에 matchTruth 를 붙이고,
+저장경로는 게이트 둘을 통과한 **샵당 대표 1건** 만 링크로 만든다.
+→ **두 경로의 KPI 분모가 구조적으로 다르다.** 섞어 쓰면 그게 거짓 보고다.
+
+측정 가능하게 만든 방법: 판정 구간을 `judgeDomesticCandidate` 로 **옮겼다**
+(`run-domestic-price-check.ts` 안, 같은 파일 — 순환 import 를 피했다).
+`runDomesticPriceCheck` 가 그것을 부른다. **사본이 아니다.** 로직 무변경.
+
+**저장경로 실측 — Golden 3 × DOMESTIC 8 = 24**
+
+```
+NO_CANDIDATES                    18
+DROPPED_EVIDENCE_NOT_WORTHWHILE   4   ← Gate 1
+DROPPED_NOT_MATCHED               1   ← Gate 2
+JUDGED                            1   → tier COMPARISON 1 · EXACT 0
+
+KPI(최종 owner 기준)  분모 0 → 🔴 측정불가
+```
+
+🔴 **대조:** 같은 입력에서 라우트는 후보 18건에 matchTruth 를 붙였고, 저장경로는
+**링크 1건** 을 만든다. 라우트 숫자를 「국내 동일상품 후보」로 읽으면 18배 과대다.
+
+🟢 Gate 1 이 떨어뜨린 4건은 **전부 진짜 다른 상품** 이었다(Beast Tag polo ·
+데님윈터캡 · Mystery BC · 트랙수트팬츠). 게이트가 올바르게 일한다.
+
+### ③ Smallable JOB-C — 🔴 해외 품번이 «구조적으로» 없다
+
+fixture JSON-LD 실측(`smallable-430632-product.html`):
+
+```
+name  All About Monsters Washed T-shirt Organic cotton | Blue
+sku   AAA1804532     ← 🔴 Smallable «자체» 재고번호
+brand Bobo Choses    color Blue
+mpn   없음           gtin 없음        ← 🔴 브랜드 품번이 JSON-LD 에 «없다»
+desc  "SIZE AND FIT … COMPOSITION 100% Organic Cotton …"
+      ← 🔴 「Product code」 표기가 «없다»
+→ foreignModelCode = null  (description·sourceUrl 폴백 «둘 다» 실패)
+```
+
+🔴 **SKU 를 model/reference 로 승격하지 않았다**(CPO 금지). null 을 null 로 쟀다.
+
+🟢 그런데 **후보는 나왔고 가격도 나왔다** — bobochoses.com, JUDGED 1건:
+
+```
+title               All About Monsters T-shirt      ← 정답 상품이다
+price               98,000 KRW
+crossSellerVerdict  PRESUMED_SAME
+domesticModelCode   B226AC018      ← 🟢 «국내 쪽은» 품번을 읽었다
+modelCodeEvidence   unavailable    ← 🔴 해외 쪽이 null 이라 비교 자체가 불가
+matchTruth          TEXT_CONFIRMED · verified false
+priceTier           COMPARISON     ← EXACT 가 «아니다»
+```
+
+🔴 즉 Smallable 의 FN 은 국내 수집도 Identity 도 아니라 **해외 품번 부재** 다.
+그리고 `COMPARISON` 은 옳다 — B226AC018 이 같은 상품인지 확인할 근거가 없다.
+
+### ⑧ 🔴🔴 FN 원인 특정 — **내 가설이 실측으로 반증됐다**
+
+처음에 「정답이 후보 #5 인데 `MAX_EVIDENCE_CANDIDATES=3` 이라 평가 기회를 못 받았다」
+고 봤다. **추측하지 않고 다섯 건 품번을 전부 실제로 읽었다:**
+
+```
+#1 그린       cap IN   MA26KASST0577196  conflict
+#2 초코브라운  cap IN   MA26KASST0576878  conflict
+#3 로즈       cap IN   MA26KASST0577592  conflict
+#4 그레이스톤  cap OUT  MA26KASST0577271  conflict
+#5 멜란지(정답) cap OUT  MA26KASST0577356  conflict   ← 🟢 정답도 conflict 다
+```
+
+🟢 **상한은 원인이 «아니다».** 올려도 풀리지 않는다.
+
+🔴🔴 **진짜 원인:** `fetchForetforetModelCode` 가 **판매처 자체코드** 를 돌려주고,
+
+```
+compareModelCode("AW26MS185", "MA26KASST0577356") → 🔴 "conflict"
+사실은                                             → "unavailable" 이어야 한다
+```
+
+`conflict` 는 「품번이 달라서 **다른 상품이다**」라는 뜻이다. 실제 사실은 「비교할
+브랜드 품번을 못 얻었다」다. **없는 반증을 지어내고 있다.**
+
+그래서 구조적이다 — 5건이 전부 conflict 라 `selectDomesticCandidate` 가 conflict
+아닌 후보를 못 찾고 `evaluated[0]` 을 대표로 주며, rescue 도 발화하지 않아
+(modelCode 가 exact/partial 아니고 crossSeller 도 SAME 아님) Gate 2 에서 떨어진다.
+**정답 상품이 117,000원 가격까지 있는데 링크가 만들어지지 않는다.**
+
+🔴 **이 위험은 이미 문서화돼 있었다.** `domestic-identifiers.ts` 주석:
+「포레포레 `MA26KASST0577356` 를 품번 칸에 넣으면 compareModelCode 가 접두사부터
+갈라져 「모델코드 충돌」을 **지어낸다**」 —
+**listing 경로는 막았고(`brandModelCode: null` 하드코딩) extractor 경로는 막지
+않았다.** 가드가 한쪽에만 있는 그 패턴이 이 스프린트에서 세 번째다.
+
+🔴 **CTO 가 고치지 않았다.** 현재 동작을 테스트로 **고정** 했다
+(`mi-p0-02c-cap-probe.test.ts` — 고치면 그 테스트가 깨진다. 그게 신호다).
+고치지 않은 이유 둘:
+```
+① fetchForetforetModelCode 를 바꾸면 foretforet 의 «모든» 상품 판정이 바뀐다
+② 「foretforet 상세에 브랜드 품번이 애초에 있는가」를 아직 재지 않았다
+   있으면 extractor 가 그것을 읽어야 하고, 없으면 null 을 돌려줘야 한다
+   (그러면 unavailable 이 되어 텍스트·교차판매처 경로가 살아난다)
+   🔴 어느 쪽인지 모른 채 고치면 그게 추측이다
+```
+
+### ⑤⑥⑦ 고정된 정의 — 다시 바꾸지 않는다
+
+```
+자기참조   분모에 «절대» 넣지 않는다 (라우트·저장경로 둘 다 이제 제외한다)
+최종 판정  matchTruth → priceTierFromLink. crossSellerVerdict 를 결과로 쓰지 않는다
+분모 0     🔴 「측정불가」. 「0%」가 아니다
+Identity   INSUFFICIENT_EVIDENCE → SIMILAR → SAME 방향으로 threshold 를 낮추지 않는다
+```
+
+---
+
 ## 9. push/deploy — 🔴 CPO 보류 (2026-10-11)
 
 CPO 판정: 「`3624ee0b` 는 지금 push 하지 않는다. CTO 에게 push 여부를 다시 묻지

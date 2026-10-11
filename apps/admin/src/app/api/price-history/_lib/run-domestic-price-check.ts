@@ -11,6 +11,7 @@ import {
   supportsDomesticIdentifierExtraction,
   type CandidateEvidenceDecision,
   type ComparisonCandidate,
+  type MatchTruth,
   type ModelEvidenceResult,
 } from "@commerce/crawler";
 import { sourceFitsScopes } from "@commerce/category";
@@ -27,6 +28,8 @@ import {
   priceTierFromLink,
   toDomesticMatchType,
   upsertDomesticProductLink,
+  type DomesticMatchType,
+  type DomesticPriceTier,
 } from "../../domestic-price-sources/_lib/domestic-product-link";
 import { buildMatchProvenanceReasons } from "../../domestic-price-sources/_lib/match-provenance";
 import {
@@ -448,6 +451,178 @@ export function isBatchSurveyTarget(
   );
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * MI-P0-02c ②(CPO 지시, 2026-10-11) — **저장경로의 최종 판정을 DB 없이 부를 수
+ * 있게 한다.** 아래 `runDomesticPriceCheck` 의 판정 구간을 그대로 옮겼다 —
+ * 로직은 한 줄도 바뀌지 않았고, 그 함수가 이제 이것을 부른다(사본이 아니다).
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **왜 필요한가.** MI-P0-02b 까지 측정한 것은 실시간 라우트의 `matchTruth`
+ *    까지였다. 그런데 Master 가격 사다리인 이 경로에는 **그 뒤에 판정이 더 있다**:
+ *
+ *      ① 자기참조 제외       isSelfReferenceCandidate            ← 이미 있었다
+ *      ② Gate 1              isEvidenceEvaluationWorthwhile      false → 링크 없음
+ *      ③ 대표 1건 선정       selectDomesticCandidate
+ *      ④ matchType + rescue 둘  toDomesticMatchType              NOT_MATCHED → 링크 없음
+ *      ⑤ verified            decideCandidateEvidence → applyEvidenceDecision
+ *      ⑥ matchTruth          evidenceDecision.truth
+ *      ⑦ 🔴🔴 최종 owner     priceTierFromLink
+ *             EXACT · COMPARISON · REFERENCE · EXCLUDED  ← 국내 가격 근거는 이 칸이 정한다
+ *
+ * 🔴 **실시간 라우트에는 ②④가 «없다».** 라우트는 후보 «전부» 에 matchTruth 를
+ *    붙이고, 이 경로는 게이트 둘을 통과한 **샵당 대표 1건** 만 링크로 만든다.
+ *    그래서 두 경로의 KPI 분모가 구조적으로 다르다 — 모르고 한쪽 숫자를 다른 쪽에
+ *    쓰면 그게 그대로 거짓 보고가 된다.
+ *
+ * 🔴 **하니스가 이 합성을 재구현하지 않는다.** `runDomesticPriceCheck` 는 DB·
+ *    Vision·upsert 를 쓰므로 로컬에서 부를 수 없고, 그래서 1차 측정은 이 구간을
+ *    통째로 건너뛰었다. 손으로 다시 쓰면 expected 와 actual 을 같은 손으로 만드는
+ *    circular test 가 된다(MI-P0-02 금지 ⑥).
+ *
+ * 🔴 DB·Vision·upsert 는 옮기지 «않았다» — 판정이 아니고 이 함수 뒤에 온다
+ *    (Vision 주석이 「어떤 판정 칸에도 들어가지 않는다」고 못 박아 뒀다).
+ * 🔴 게이트 로그(MI-REAL-12 Track B)는 호출부가 그대로 남긴다 — 로그 문장을
+ *    바꾸지 않기 위해 필요한 값만 `observed` 로 돌려준다.
+ */
+/** 🔴 유니온 반환에 타입을 «명시» 한다 — 추론에 맡겼다가 판별자가 죽은 전례가 있다. */
+export type DomesticJudgement =
+  | { kind: "NO_CANDIDATES"; selfReferenceExcluded: number }
+  | {
+      kind: "DROPPED";
+      /** 🔴 어느 게이트에서 떨어졌는가. 「후보가 없다」와 섞지 않는다. */
+      gate: "EVIDENCE_NOT_WORTHWHILE" | "NOT_MATCHED";
+      selfReferenceExcluded: number;
+      candidateCount: number;
+      observed: {
+        candidate: ComparisonCandidate;
+        modelCodeEvidence: ModelEvidenceResult | null;
+        initialMatchType: DomesticMatchType | null;
+        orderedRank: number | null;
+      };
+    }
+  | {
+      kind: "JUDGED";
+      selfReferenceExcluded: number;
+      candidateCount: number;
+      best: ComparisonCandidate;
+      modelCodeEvidence: ModelEvidenceResult;
+      domesticModelCode: string | null;
+      skippedConflictCount: number;
+      matchType: DomesticMatchType;
+      verified: boolean;
+      matchTruth: MatchTruth;
+      matchReasons: string[];
+      evidenceDecision: CandidateEvidenceDecision;
+      /** 🔴🔴 **최종 owner 의 값.** */
+      priceTier: DomesticPriceTier;
+    };
+
+export interface JudgeDomesticInput {
+  domain: string;
+  candidates: ComparisonCandidate[];
+  /** 원상품 URL — 자기참조 판정의 기준. */
+  sourceUrl: string | undefined;
+  foreignModelCode: string | null;
+  /** `input.dna.color`. 🔴 색상을 «읽지 못한» 사실이 판정에 들어간다. */
+  foreignColor: string | null;
+  /** 🔴 주입받는다 — 호출부가 fetch 횟수를 센다. */
+  fetchModelCode: (url: string) => Promise<string | null>;
+}
+
+export async function judgeDomesticCandidate(input: JudgeDomesticInput): Promise<DomesticJudgement> {
+  const candidates = input.candidates.filter((c) => !isSelfReferenceCandidate(input.sourceUrl, c.url));
+  const selfReferenceExcluded = input.candidates.length - candidates.length;
+  if (candidates.length === 0) return { kind: "NO_CANDIDATES", selfReferenceExcluded };
+
+  const worthwhile = isEvidenceEvaluationWorthwhile(candidates, input.foreignModelCode, input.domain);
+  const top = candidates[0]!;
+  if (!worthwhile) {
+    return {
+      kind: "DROPPED",
+      gate: "EVIDENCE_NOT_WORTHWHILE",
+      selfReferenceExcluded,
+      candidateCount: candidates.length,
+      observed: { candidate: top, modelCodeEvidence: null, initialMatchType: null, orderedRank: null },
+    };
+  }
+
+  const { candidate: best, modelCodeEvidence, domesticModelCode, skippedConflictCount } =
+    await selectDomesticCandidate(candidates, input.domain, input.foreignModelCode, input.fetchModelCode);
+
+  const { matchType: initialMatchType } = toDomesticMatchType(best.matchLevel ?? "low");
+  let matchType = initialMatchType;
+  // P-7-C STEP 2 P1/P2 — modelCode 가 exact/partial 이면 텍스트 점수가 낮다는
+  // 이유만으로 후보를 버리지 않는다. matchConfidence 는 승격하지 않는다.
+  if (matchType === "NOT_MATCHED" && (modelCodeEvidence === "exact" || modelCodeEvidence === "partial")) {
+    matchType = "REVIEW_REQUIRED";
+  }
+  // MATCHING-2.0-INTEGRATION-1 — 같은 이유, 같은 모양(교차판매처 근거).
+  if (
+    matchType === "NOT_MATCHED" &&
+    (best.crossSellerVerdict === "SAME" || best.crossSellerVerdict === "PRESUMED_SAME")
+  ) {
+    matchType = "REVIEW_REQUIRED";
+  }
+  if (matchType === "NOT_MATCHED") {
+    return {
+      kind: "DROPPED",
+      gate: "NOT_MATCHED",
+      selfReferenceExcluded,
+      candidateCount: candidates.length,
+      observed: { candidate: best, modelCodeEvidence, initialMatchType, orderedRank: skippedConflictCount },
+    };
+  }
+
+  const evidenceDecision = decideCandidateEvidence({
+    match: { confidence: best.confidence, level: best.matchLevel ?? "low", reasons: best.matchReasons ?? [] },
+    modelCode: modelCodeEvidence,
+    options: "unavailable",
+    image: "unavailable",
+    crossSeller: best.crossSellerVerdict,
+    crossSellerBlockers: best.crossSellerBlockers,
+    crossSellerConflicts: best.crossSellerConflicts,
+    colorUnverified: isColorUnverified(input.foreignColor, best.facts?.colorText),
+  });
+
+  const { verified, matchReasons: evidenceMatchReasons } = applyEvidenceDecision(
+    [...(best.matchReasons ?? []), ...(best.crossSellerReasons ?? [])],
+    evidenceDecision,
+  );
+  const selectionReasons =
+    skippedConflictCount > 0
+      ? [...evidenceMatchReasons, `텍스트 유사도 상위 ${skippedConflictCount}건은 modelCode 충돌로 제외하고 이 후보를 선택함`]
+      : evidenceMatchReasons;
+  const matchReasons = [
+    ...selectionReasons,
+    ...buildMatchProvenanceReasons({
+      truth: evidenceDecision.truth,
+      modelCode: modelCodeEvidence,
+      crossSeller: best.crossSellerVerdict,
+      matchLevel: best.matchLevel ?? "low",
+      foreignModelCode: input.foreignModelCode,
+      domesticModelCode,
+    }),
+  ];
+
+  return {
+    kind: "JUDGED",
+    selfReferenceExcluded,
+    candidateCount: candidates.length,
+    best,
+    modelCodeEvidence,
+    domesticModelCode,
+    skippedConflictCount,
+    matchType,
+    verified,
+    matchTruth: evidenceDecision.truth,
+    matchReasons,
+    evidenceDecision,
+    // 🔴 최종 owner. 새로 계산하지 않고 그 함수를 부른다.
+    priceTier: priceTierFromLink({ matchTruth: evidenceDecision.truth, verified }),
+  };
+}
+
 export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Promise<DomesticPriceCheckResult> {
   const sourceErrors: string[] = [];
   let linksCreatedOrUpdated = 0;
@@ -627,178 +802,58 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
      *    응답했다 — 자기참조를 거절한 것을 「그 사이트에 그 상품이 없다」(NO_RESULT)로
      *    DB 에 굳히면 안 된다(위 GOLF-01.5 주석과 같은 이유).
      */
-    const candidates = result.candidates.filter((c) => !isSelfReferenceCandidate(query.sourceUrl, c.url));
-    if (candidates.length < result.candidates.length) {
-      console.log(
-        `[MI-REAL-05] self-reference excluded (${result.domain}): ${result.candidates.length - candidates.length}건 · origin=${query.sourceUrl}`,
-      );
-    }
-    if (candidates.length === 0) continue;
-
-    // N-4.18-Q3 PART H-3-11 — 어차피 NOT_MATCHED로 끝날 검색결과는 Evidence
-    // HTTP 비용을 쓰지 않는다(isEvidenceEvaluationWorthwhile 주석 참고).
-    //
     /**
-     * MI-REAL-12 Track B(CEO 지시, 2026-09-21) — **왜 버려졌는지만 관측한다.**
+     * 🔴 MI-P0-02c ② — 판정 «전체» 를 `judgeDomesticCandidate` 하나로 부른다.
+     *    그 함수는 바로 위에 있고, 여기 있던 구간을 그대로 옮긴 것이다 —
+     *    사본이 아니라 유일한 자리다. 로직은 한 줄도 바뀌지 않았다.
      *
-     * LOOXLOO·RULII 는 검색이 «OK»(후보 있음)인데 링크가 0건이다. 코드 논리상
-     * Gate 1(여기)이 유력하지만, `candidates[0]` 과 `ordered[0]` 이 다를 수 있어
-     * Gate 2 를 배제하지 못했다. 그 중간값은 DB 에 한 글자도 남지 않는다 —
-     * 버려진 후보는 기록될 자리가 없다. 그래서 여기서 «읽기만» 한다.
-     *
-     * 🔴 판정을 바꾸지 않는다. 순수 함수를 const 로 받아 같은 값을 같은 자리에
-     *    쓸 뿐이다(threshold·registry·rescue·저장 조건 전부 그대로).
-     * 🔴 상품 식별은 URL 까지만 — 자격증명·토큰·payload 는 남기지 않는다.
+     * 🔴 게이트 로그(MI-REAL-12 Track B)는 «여기» 남는다 — 로그 문장과 칸 이름을
+     *    바꾸지 않기 위해 판정 함수가 `observed` 로 필요한 값만 돌려준다.
      */
-    const worthwhile = isEvidenceEvaluationWorthwhile(candidates, foreignModelCode, result.domain);
-    const top = candidates[0]!;
-    if (!worthwhile) {
-      console.log(
-        `[MI-REAL-12] ${JSON.stringify({
-          gate: "EVIDENCE_NOT_WORTHWHILE",
-          sourceDomain: result.domain,
-          candidateUrl: top.url,
-          candidateSku: top.sku ?? null,
-          candidateMatchLevel: top.matchLevel ?? null,
-          crossSellerVerdict: top.crossSellerVerdict ?? null,
-          worthwhile,
-          foreignModelCode,
-          candidateCount: candidates.length,
-          dropGate: "EVIDENCE_NOT_WORTHWHILE",
-        })}`,
-      );
-      continue;
-    }
-
-    // N-4.18-Q3 PART H-3-9(대표님 지시, 2026-08-27) — 기존엔 candidates[0](confidence
-    // 1위)만 무조건 대표 후보로 썼다. H-3-7 실측(PèPè)에서 1위가 실제로는 다른
-    // 상품(modelCode conflict)이고 진짜 동일상품은 3위였던 사례가 확인돼, 국내측
-    // 식별자 추출을 지원하는 도메인(supportsDomesticIdentifierExtraction)에 한해
-    // 상위 3개까지 modelCode를 평가하고 conflict가 아닌 후보를 대표로 고른다
-    // (selectDomesticCandidate 주석 참고 — confidence 정렬/threshold는 안 건드림).
-    // P-28(2026-09-03) — fetchModelCode를 result.domain에 맞는 추출기로 위임한다
-    // (fetchDomesticModelCode 레지스트리, foretforet.com 하드코딩 제거).
-    const { candidate: best, modelCodeEvidence, domesticModelCode, skippedConflictCount } = await selectDomesticCandidate(
-      candidates,
-      result.domain,
+    const judgement = await judgeDomesticCandidate({
+      domain: result.domain,
+      candidates: result.candidates,
+      sourceUrl: query.sourceUrl,
       foreignModelCode,
-      (url) => {
+      foreignColor: input.dna.color,
+      fetchModelCode: (url) => {
         domesticModelCodeFetchCount += 1;
         return fetchDomesticModelCode(result.domain, url);
       },
-    );
-    const { matchType: initialMatchType } = toDomesticMatchType(best.matchLevel ?? "low");
-    let matchType = initialMatchType;
-    // P-7-C STEP 2 P1/P2(대표님 지시, 2026-08-29) — matchLevel=low는
-    // toDomesticMatchType 기준으로 항상 NOT_MATCHED다. 하지만 modelCode가
-    // exact/partial로 확인되면(=식별자 증거가 있으면) 텍스트 점수가 낮다는
-    // 이유만으로 후보 자체를 버리지 않는다 — REVIEW_REQUIRED로 살려서 아래
-    // decideCandidateEvidence(deriveMatchTruth 공통 기준)가 verified 여부를
-    // 식별자 증거로 판단하게 한다. matchConfidence는 여전히 best.confidence
-    // 그대로 저장된다(42%를 high로 승격하지 않는다 — P2) — REVIEW_REQUIRED는
-    // medium-tier 후보가 쓰는 것과 동일한 정직한 라벨일 뿐이다.
-    if (matchType === "NOT_MATCHED" && (modelCodeEvidence === "exact" || modelCodeEvidence === "partial")) {
-      matchType = "REVIEW_REQUIRED";
+    });
+    if (judgement.selfReferenceExcluded > 0) {
+      console.log(
+        `[MI-REAL-05] self-reference excluded (${result.domain}): ${judgement.selfReferenceExcluded}건 · origin=${query.sourceUrl}`,
+      );
     }
-    // MATCHING-2.0-INTEGRATION-1 — 바로 위 규칙과 같은 이유, 같은 모양. 텍스트
-    // 점수가 낮다는 이유만으로 "근거가 있는 후보"를 버리지 않는다. matchConfidence는
-    // 여전히 best.confidence 그대로 저장된다(점수를 승격시키지 않는다) — 라벨만
-    // 정직한 REVIEW_REQUIRED가 되고, verified 여부는 아래 decideCandidateEvidence가
-    // 교차판매처 근거로 판단한다.
-    if (
-      matchType === "NOT_MATCHED" &&
-      (best.crossSellerVerdict === "SAME" || best.crossSellerVerdict === "PRESUMED_SAME")
-    ) {
-      matchType = "REVIEW_REQUIRED";
-    }
-    if (matchType === "NOT_MATCHED") {
-      // MI-REAL-12 Track B — Gate 2. 위 Gate 1 로그와 «같은 모양» 으로 남긴다.
-      // orderedRank 는 selectDomesticCandidate 가 몇 번째 후보를 골랐는지다
-      // (0이면 원래도 1위였다는 뜻 — candidates[0] ↔ ordered[0] 판별용).
+    if (judgement.kind === "NO_CANDIDATES") continue;
+    if (judgement.kind === "DROPPED") {
+      const o = judgement.observed;
       console.log(
         `[MI-REAL-12] ${JSON.stringify({
-          gate: "NOT_MATCHED",
+          gate: judgement.gate,
           sourceDomain: result.domain,
-          candidateUrl: best.url,
-          candidateSku: best.sku ?? null,
-          candidateMatchLevel: best.matchLevel ?? null,
-          crossSellerVerdict: best.crossSellerVerdict ?? null,
-          worthwhile: true,
-          orderedRank: skippedConflictCount,
-          topMatchLevel: top.matchLevel ?? null,
-          modelCodeEvidence,
-          matchType: initialMatchType,
-          dropGate: "NOT_MATCHED",
+          candidateUrl: o.candidate.url,
+          candidateSku: o.candidate.sku ?? null,
+          candidateMatchLevel: o.candidate.matchLevel ?? null,
+          crossSellerVerdict: o.candidate.crossSellerVerdict ?? null,
+          worthwhile: judgement.gate === "NOT_MATCHED",
+          ...(judgement.gate === "NOT_MATCHED"
+            ? { orderedRank: o.orderedRank, modelCodeEvidence: o.modelCodeEvidence, matchType: o.initialMatchType }
+            : { foreignModelCode, candidateCount: judgement.candidateCount }),
+          dropGate: judgement.gate,
         })}`,
       );
       continue;
     }
-
-    // N-4.18-Q3 PART H-3-6(대표님 지시, 2026-08-27) — Evidence Decision을
-    // 기존 matchType/matchConfidence/threshold 계산과 완전히 분리된 안전장치로
-    // 얹는다. modelCode만 실제로 연결한다(options/image는 이 흐름에 아직
-    // 배선되지 않았으므로 unavailable로 정직하게 둔다 — H-3-4 실측대로
-    // unavailable/weak_or_no_evidence는 아래에서 verified를 절대 바꾸지 않는다).
-    const evidenceDecision = decideCandidateEvidence({
-      match: { confidence: best.confidence, level: best.matchLevel ?? "low", reasons: best.matchReasons ?? [] },
-      modelCode: modelCodeEvidence,
-      options: "unavailable",
-      image: "unavailable",
-      // MATCHING-2.0-INTEGRATION-1 — 화면이 읽는 판정과 DB에 남는 판정이 같은
-      // 입력에서 나오게 하는 한 줄. 이 값이 없으면 deriveMatchTruth가 텍스트
-      // 등급만 보고 🟢 동일상품을 SIMILAR로 깎아 저장했고, MI 집계는 그 깎인
-      // 값을 읽어 동일상품 가격에서 제외했다.
-      crossSeller: best.crossSellerVerdict,
-      /* 🔴 MI-3 / P0-1 — 보류 사유를 «함께» 넘긴다. 등급만 넘기면 「같은 판매처가
-         두 상품으로 진열했다」가 여기서 사라지고, 그 자리에서 품번만 보고 EXACT 가
-         나갔다(서로 다른 상품 7쌍이 동일상품 가격에 들어간 경로). */
-      crossSellerBlockers: best.crossSellerBlockers,
-      /* 🔴 MI-DISCOVERY-P4 변경 B — 반증 «종류» 도 함께 넘긴다. 이것이 없으면
-         「같은 모델·색상만 다름」이 「상품군까지 다름」과 같은 CONFLICT 가 되어
-         색상 변형이 후보에서 사라진다(실측: main-story AW26MS185 색상 4종). */
-      crossSellerConflicts: best.crossSellerConflicts,
-      /* 🔴 MI-DISCOVERY-P5.2 Step 2 — 색상을 «읽지 못한» 사실도 함께 넘긴다. 변경 B가
-         색상이 어긋난 쪽을 막고, 이 칸이 색상을 모르는 쪽을 막는다. 없으면 품번만
-         보고 EXACT 가 나간다(실측: littleluna Graystone·Rose Shadow 는 colorText=null). */
-      colorUnverified: isColorUnverified(input.dna.color, best.facts?.colorText),
-    });
-
-    const { verified: finalVerified, matchReasons: evidenceMatchReasons } = applyEvidenceDecision(
-      // MATCHING-2.0-INTEGRATION-1 — 교차판매처 판정의 근거 문장을 함께 남긴다.
-      // 이 링크가 곧 price_observations의 sourceRefId가 가리키는 대상이라,
-      // "이 가격이 왜 동일상품 가격인가"의 답은 이 배열 말고 남는 자리가 없다.
-      [...(best.matchReasons ?? []), ...(best.crossSellerReasons ?? [])],
-      evidenceDecision,
-    );
-    // N-4.18-Q3 UI 후속(대표님 지시, 2026-08-27) — selectDomesticCandidate()가
-    // top-1이 아닌 후보를 골랐을 때만("왜 이 후보인지") 설명을 덧붙인다.
-    // skippedConflictCount===0(원래도 top-1)이면 아무것도 추가하지 않는다 —
-    // H-3-9 이전과 화면이 달라 보이면 안 되는 대다수 케이스에서 회귀가 없다.
-    const selectionReasons =
-      skippedConflictCount > 0
-        ? [...evidenceMatchReasons, `텍스트 유사도 상위 ${skippedConflictCount}건은 modelCode 충돌로 제외하고 이 후보를 선택함`]
-        : evidenceMatchReasons;
-    /**
-     * MATCHING-FIX-01 Phase C — 판정에 실제로 들어간 입력을 «판정방법»·«판정근거»
-     * 두 줄로 남긴다. 🔴 판정에는 한 글자도 쓰이지 않는다(아래 upsert 의
-     * matchType/matchConfidence/verified/matchTruth 는 전부 이 줄들보다 먼저
-     * 확정돼 있다).
-     *
-     * MATCHING-FIX-01-A(CEO 조건) — 이 줄들에 함께 적히던 «판정기 버전»은 뺐다.
-     * 마지막 판정이 언제였는지는 이 행의 updated_at 이 말하고, 그게 낡은 것인지는
-     * 사람이 판단한다(match-provenance.ts 머리말 참고).
-     */
-    const finalMatchReasons = [
-      ...selectionReasons,
-      ...buildMatchProvenanceReasons({
-        truth: evidenceDecision.truth,
-        modelCode: modelCodeEvidence,
-        crossSeller: best.crossSellerVerdict,
-        matchLevel: best.matchLevel ?? "low",
-        foreignModelCode,
-        domesticModelCode,
-      }),
-    ];
+    const {
+      best,
+      domesticModelCode,
+      matchType,
+      verified: finalVerified,
+      matchReasons: finalMatchReasons,
+      matchTruth: finalMatchTruth,
+    } = judgement;
 
     /**
      * P0-A.29-B(CEO 승인 ㉮, 2026-09-19) — Vision 을 «관측 데이터 수집기» 로만 부른다.
@@ -881,7 +936,7 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       verified: finalVerified,
       // P-10 STEP 4(대표님/CPO 지시, 2026-08-30) — decideCandidateEvidence()가
       // 이미 계산한 값을 그대로 저장한다(재계산 없음).
-      matchTruth: evidenceDecision.truth,
+      matchTruth: finalMatchTruth,
     });
     if (upsertResult.ok) linksCreatedOrUpdated += 1;
     else sourceErrors.push(`${result.shopName}: 링크 저장 실패 — ${upsertResult.error}`);
