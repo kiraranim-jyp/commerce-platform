@@ -502,6 +502,17 @@ git status  clean · behind 0 / ahead 34 · Production runtime change 0
    git fetch origin --quiet && git rev-list --count origin/main..HEAD
 ```
 
+🔴 **vitest 통과를 typecheck 통과로 쓰지 않는다** — vitest 는 타입을 보지 않는다.
+실제로 내 하니스에 tsc 에러 4개가 숨어 있었고 테스트는 전부 통과하고 있었다
+(`MatchLevel` 을 `@commerce/shared` 에서 받으려 했다. owner 는 crawler 다).
+```
+🟢 apps/admin  tsc 에러 **0**
+🟡 crawler     tsc 에러 **2** — 🔴 baseline 이다(내 35커밋이 그 두 파일을
+               건드리지 않았다: match-truth-priority.test.ts ·
+               domestic-product-link.ts 의 rootDir 위반). 0 을 기준으로 삼지 않는다.
+🔴 패키지별로 «따로» 돌린다. apps/admin 만 보면 crawler 쪽을 놓친다.
+```
+
 🔴 push 가 Production 배포를 트리거하므로 **CTO 도 CPO 도 임의로 밀지 않는다.**
 🟢 **커밋 push 여부와 Work Unit 완료 여부는 분리해 취급한다**(CPO 확정) — 이 트랙은
 코드 변경 없이 **정상 종료** 다. 미완료가 아니다.

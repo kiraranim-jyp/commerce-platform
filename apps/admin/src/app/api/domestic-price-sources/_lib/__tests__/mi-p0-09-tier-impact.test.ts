@@ -27,7 +27,16 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { compareModelCode, deriveMatchTruth, isColorUnverified } from "@commerce/crawler";
 import { priceTierFromLink } from "../domestic-product-link";
-import type { CrossSellerBlocker, CrossSellerConflict, CrossSellerVerdict, MatchLevel } from "@commerce/shared";
+// 🔴 이 넷의 owner 는 `@commerce/crawler` 다 — cross-seller.ts:77/79/90 · match.ts:234,
+//    배럴 `comparison-search/index.ts:93-97` 이 re-export 한다.
+//    `@commerce/shared` 로 적어 tsc 에러 4개를 만들었다. 원인은 `ProductFacts`(owner 가
+//    실제로 shared 다) 때의 교정을 **반대 방향으로 과적용** 한 것이다.
+//    🔴 vitest 는 타입을 보지 않아 테스트는 통과했다 — 그래서 tsc 를 따로 본다.
+import type { CrossSellerBlocker, CrossSellerConflict, CrossSellerVerdict } from "@commerce/crawler";
+// 🔴 `MatchLevel` 은 배럴이 re-export 하지 «않는다»(match.ts:234 에만 있다).
+//    배럴에 추가하면 비테스트 파일 변경이 되고 이 WU 의 「Production 0」이 깨지므로
+//    깊은 경로로 받는다. 로컬에 union 을 베껴 쓰지 않는다 — 값이 늘면 조용히 어긋난다.
+import type { MatchLevel } from "@commerce/crawler/src/comparison-search/match";
 
 const LIVE = process.env.MI_P0_02_LIVE === "1";
 const OUT_DIR = process.env.MI_P0_02_OUT_DIR ?? path.join(os.tmpdir(), "mi-p0-02");
