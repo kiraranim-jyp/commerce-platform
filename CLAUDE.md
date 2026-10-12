@@ -385,6 +385,48 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 | **MI Core E2E**<br>`docs/MI-CORE-E2E-WU-STATE.md` | **PARTIAL GO** | 🟢 계산 사슬은 작동한다 — 🔴 끊기는 곳은 «입구» 하나 (55/498 = 11.0%) |
 | **Domestic Link Coverage**<br>`docs/MI-DOMESTIC-LINK-COVERAGE-WU-STATE.md` | CHANGE DIRECTION | 🔴 원인은 검색이 아니라 **등록부** 다 — 취급 샵이 `MANUAL`/비활성이라 «안 뒤진다» |
 | **Shop Registry 정책**<br>`docs/MI-SHOP-REGISTRY-WU-STATE.md` | HOLD | 🟢 Registry 는 의도대로 작동한다 — 🔴 좁음의 원인은 **사람의 선택** 둘이다 |
+| **MVP 실상품 E2E**<br>`docs/MI-MVP-E2E-WU-STATE.md` | **PARTIAL** | 🟢 공통 구조는 돈다 — 🔴 끊기는 곳은 «후보 확보», GO 는 **0/9** |
+
+### 🟢🟢 열한째 WU — 실상품 9개를 운영 owner 로 «실제로» 돌렸다
+
+```
+아동의류 5 (Bobo 공식 3 · Smallable 2) · 테니스 4 (Sergio Tacchini)
+① 원본 정보        **9/9 PASS**
+② Google/Naver     9/9 **NO_PRODUCTION_PATH** 🔴 FAIL 이 아니다(운영 호출부 0)
+③ 국내 후보 탐색    **4 PASS** / 5 후보 0 → 🟢 검색 호출은 **63/63 정상응답**(오류샵 0)
+④ Identity         9/9 **미도달** — high 이상 후보가 0 이라 판정에 닿지 못했다
+⑤ 가격·통화        **9/9 PASS** 🟢 전부 원본 통화(EUR/USD) · **KRW 오염 0**
+⑥ GO/STOP          9/9 **STOP** 🔴 데이터 없는데 GO 로 추정하지 않았다
+```
+
+🟢 **실효 탐색 샵 7개**(전수 34 → isBatchSurveyTarget 19 → AUTO_* 7):
+CHOCO.EL · LOOXLOO · RULII · 포레포레 · DEUXBEBE · LITTLE LUNA(KIDS) · 스카이스포츠(TENNIS)
+
+🔴 **테니스 4건 전부 후보 0 — 그런데 제품 결함이 아니다**:
+TENNIS scope 샵이 **스카이스포츠 1곳** 뿐이고 선행 WU 가 그 샵의 브랜드 교집합을
+**0** 으로 실측했다(테니스 전문점이 Sergio Tacchini 를 취급하지 않는다).
+🔴 **국내 취급처 부재** 다 → threshold 를 낮추면 오탐만 늘어난다(지시서 §4-① 금지).
+
+🔴 **미규명으로 남긴 것 — 그래서 코드를 고치지 않았다**:
+```
+아동 4건  후보 5~17개가 나왔으나 matchLevel 이 전부 medium 이하(high 이상 0)
+아동 A    B226AB069 만 후보 0 (같은 브랜드 AC002/AC018 은 나왔다)
+🔴 원인을 모르는 상태에서 고치면 **threshold 완화** 가 되고 그것은 금지 사항이다.
+→ 코드 변경 0 · 배포 0 · CEO 테스트 요청 없음.
+```
+
+🔴🔴 **하니스 함정 — 로컬에서 운영 함수를 부를 때**:
+```
+① `listDomesticPriceSources` 는 **로컬에서 못 부른다** — getSupabaseAdmin() 이
+   SUPABASE_SERVICE_ROLE_KEY 를 요구하고(§10) 없으면 조용히 null → `return []`.
+   🔴 그대로 두면 **「후보 0 = 검색 실패」라는 완전히 틀린 결론** 이 난다.
+      실제로 첫 실행이 9/9 FAIL 로 찍혔다.
+   🟢 같은 머지(카탈로그 + workspace 설정 · 없으면 ON)를 **DB 로 재현** 한다.
+② owner 패키지를 grep 으로 추측하지 않는다 — `buildCrossSellerSearchQueries` 와
+   `productFactsFromIdentityDna` 는 둘 다 **@commerce/shared** 다(crawler 아니다).
+   🟢 정답은 **운영 코드의 import 블록을 베끼는 것**
+      (run-domestic-price-check.ts:1-22).
+```
 
 ### 🔴🔴 열째 WU — `enabled` 의 owner 를 잘못 짚으면 틀린 처방이 나온다
 
