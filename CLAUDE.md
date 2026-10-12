@@ -391,6 +391,43 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 | **후보 facts 경로**<br>`docs/MI-CANDIDATE-FACTS-WU-STATE.md` | **E 정상** · 수정 **NO** | 🟢 후보 facts 는 전건 있고 판정도 **전건 돈다** — 열두째 WU 가 틀렸다 |
 | **상세확인 가치**<br>`docs/MI-DETAIL-VALUE-WU-STATE.md` | **목록 경로 유지** | 🔴 SAME 승격 **0건** — 🔴 단 「가치 없음」이 아니라 **측정 불가** 였다 |
 | **Gemini 후보 Identity**<br>`docs/MI-GEMINI-CANDIDATE-001-STATE.md` | **⑤+① · MI 정상** | 🟢🟢 **Dinossi 후보가 `SAME`(0.81)** — MI 는 정보가 있으면 SAME 을 낸다 |
+| **Gemini Integration 재현성**<br>`docs/MI-GEMINI-INTEG-002-STATE.md` | **재현됨** | 🟢🟢 SAME 1(conf **1.0**) + PRESUMED_SAME 3 · FETCH_FAIL **0** |
+
+### 🟢🟢 열일곱째 WU — SAME 이 «재현된다» (서로 다른 3개 브랜드)
+
+```
+sample 상품 N=5(브랜드 전부 다름) · 후보 상한 3 · Gemini 5 · resolve 9 · fetch 14
+후보 단위  SAME **1** · PRESUMED_SAME **3** · SIMILAR 2 · NOT_PRODUCT_PAGE 3
+           FETCH_FAIL **0** · UNKNOWN 0 · CONFLICT 0
+
+Bonjour Tunique   Gemini 20 → 🟢🟢 **SAME (conf 1.0)** · blockers 0 · conflicts 0
+  reasons 핵심 상품명 clip/hair/tunique · 상품군 blouse · 소재 cotton:100 ·
+          대상 KIDS · 사이즈 AGE↔AGE   🟢 **품번 없이** 또 SAME 에 닿았다
+BOSS Baby Top     Gemini 12 → 🟡 **PRESUMED_SAME ×3**(conf 1.0·1.0·0.61)
+  🔴 blocker 1 의 정체가 reasons 에 찍혔다 — 「보류: **양쪽 브랜드를 확인하지 못했다**」
+  🟢 축 5개는 쌓였는데 brand 축이 확인 안 돼 SAME 이 보류됐다(보수적 동작)
+  🟢 같은 상품이 **두 URL 에서 각각** conf 1.0 — 재현성의 직접 증거
+Bobo Choses · Bonpoint  Gemini **0건** — 🔴 둘 다 color 가 null 이다.
+  🔴 단 「색상 null 이 원인」이라고 단정하지 않는다(N=2 · 쿼리 텍스트 미확인).
+  🟢 색상이 있던 3건은 **전부 후보를 받았다.**
+```
+
+🟢 **선행 WU 의 Dinossi(SAME 0.81)를 합치면 서로 다른 «3개 브랜드» 에서 재현됐다.**
+🔴 CPO 세 갈래 중 「여러 상품에서 SAME 가능」 → **Integration 구현 WU 로 이동 가능.**
+🔴 단 그것은 Production 변경이고 **CPO/CEO 결정 영역** 이다.
+🔴 「Fetch 실패가 많다」는 **해당 없다** — `FETCH_FAIL 0` 이다
+   (`NOT_PRODUCT_PAGE 3` 은 fetch 실패가 아니라 **분류 단계** 다).
+
+🔴🔴 **하니스 함정 — `PageProbe` 를 손으로 만들지 않는다**:
+```
+1차 실행이 **12/12 UNKNOWN_PAGE** 를 냈다 → 「Gemini 후보는 못 쓴다」로 읽힐 숫자.
+🔴 원인: PageProbe 를 자작했다. 실제 타입은
+   (url) => Promise<{status, finalUrl, canonicalUrl}> 이고 **리다이렉트를 따라가야**
+   한다. 내 probe 는 finalUrl 을 그대로 돌려줘 vertexaisearch 리다이렉트가 남았다.
+🟢 리포에 실제 구현이 **이미 있다** — `createLivePageProbe`(live-page-probe.ts:87).
+   선행 하니스 둘이 그것을 쓰고 있었다.
+🔴 메모가 그 함정을 글자 그대로 적어 뒀는데 probe 를 자작해서 **다시 밟았다.**
+```
 
 ### 🟢🟢 열여섯째 WU — **MI 는 정상이다. 정보가 있으면 SAME 을 낸다**
 
