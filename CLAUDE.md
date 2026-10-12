@@ -379,6 +379,42 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 | MI Discovery → Identity<br>`docs/MI-DISCOVERY-IDENTITY-WU-STATE.md` | HOLD | External Discovery 에는 **운영 호출부가 없다**(counterfactual) |
 | MI Price Enrichment<br>`docs/MI-PRICE-ENRICHMENT-WU-STATE.md` | HOLD | 후보 가격은 전부 **해외 통화·해외 판매처** 라 국내 축에 못 들어간다 |
 | 해외 매입가 Sourcing Value<br>`docs/MI-SOURCING-VALUE-WU-STATE.md` | HOLD | 🔴 **우리는 이미 원가를 갖고 있다 — 397/397** |
+| Discovery Value Reframing<br>`docs/MI-REFRAME-WU-STATE.md` | CHANGE DIRECTION | 🔴 **병목은 Discovery 가 아니라 «재관측» 이다** |
+
+### 🔴🔴 다섯째 WU 가 찾아낸 것 — 이 문장을 그대로 쓴다
+
+```
+시장 변화 감지(Newness / Price Trend / Availability)의 병목은 Discovery 가 아니다.
+🟢 사슬은 **끝까지 배선돼 있다** — computePriceChange/Trend/AlertSignal →
+   computeSellerAction → computeMarketAlert → DB price_alerts → UI.
+🔴 그런데 **입력이 없다.** 관측 날짜가 1일인 스냅샷이 304/400(76%)다.
+🟢 용량-반응이 단조 증가한다 (FULL POPULATION n=400):
+     1일 **0.0%** → 2일 21.6% → 3일 50.0% → 4일+ **65.0%**
+   → 「가격이 안 변한다」가 아니라 «우리가 다시 보지 않는다» 다.
+🟢 재관측 기능은 **이미 있다** — 「가격 일괄 확인」(today/page.tsx:151, 동시성 3).
+🔴 없는 것은 **자동 스케줄** 이다 — apps/admin/vercel.json 에 crons 가 없다
+   (파일에 $schema 한 줄뿐). 🔴 cron 추가는 Production 변경이라 CPO 판정 사안.
+```
+
+🔴 **owner 가 «없는» 축** (grep 전수 0 — 추측이 아니다):
+```
+RESTOCK · NEW_SELLER · SELLER_DISAPPEARED · NEW(상품 신규성)
+🔴 snapshots/route.ts:59 의 isNewAnalysis 는 「새 분석 요청인가」이고
+   **상품 신규성이 아니다.** 신규성 owner 로 쓰지 않는다.
+🔴 품절 전이 **0/400** · NEW_SELLER 는 created≠updated 가 69/69 라 시점을 못 가른다
+   → 둘 다 **측정불가** 다. 「없다」·「0건」으로 적지 않는다.
+```
+
+🔴 **Observed Production Defect — 고치지 않았다(정책 경계)**:
+```
+운영 price_alerts 의 ORIGIN_TREND 3건(-39.11% · -36.27% · +3.76%)은
+**전부 거짓 신호** 였다 — 「원본 시장가 GBP」와 「판매처 한국 표시가 KRW」를
+시계열로 읽은 것이다. 🟢 §5-B CONTROL 로 세 값을 그대로 재현했다.
+🟢 현재 설계가 막는다 — ORIGIN_FX·KR_MARKET 공존 **136/136** 에서 KR_MARKET 제거.
+🔴 단 ORIGIN_FX 라벨이 없는 **과거 스냅샷 4건** 에는 혼재가 남는다. 그 4건 중 3건이
+   실제로 거짓 알림을 냈다. 🔴 이것은 price-observations.ts:299 가 명시한
+   「과거 행을 다시 계산하지 않는다」 정책과 충돌하는 지점이라 **CPO 판정 사안** 이다.
+```
 
 ### 🔴🔴 마지막 WU 가 뒤집은 전제 — 이 문장을 그대로 쓴다
 
@@ -529,11 +565,14 @@ git status  clean · behind 0 / ahead 34 · Production runtime change 0
 적는가.** 적지 않으면 추출기를 붙여도 효과가 0 이다(실측). 이것은 판매처 실제
 페이지를 보는 **조사** 이고 MI 코드 실험이 아니다.
 
-> ② 🔴 「Discovery 의 가치가 «원가 발견» 이 아니라면 무엇인가」
+> ② 🟢 「Discovery 의 가치가 «원가 발견» 이 아니라면 무엇인가」 — **답이 나왔다**
 
-원가는 이미 397/397 있다. 그러면 Discovery 가 남길 수 있는 축은 가격이 아닐 수
-있다 — 예: 품절/재입고 감시 · 시장 가격 추세 · 신상품 발견. 🔴 **단 그것은 아직
-범위가 아니다.** CPO 가 질문을 주기 전에 코드로 들어가지 않는다.
+🔴 시장 변화 감지(품절/재입고 · 가격 추세 · 신상품)도 **Discovery 의 축이 아니다.**
+다섯째 WU 가 재서 `CHANGE DIRECTION` 으로 닫았다. 남은 질문은 하나다 —
+
+> ③ 🔴 「재관측을 자동화할 것인가, 그리고 과거 혼재 4건을 어떻게 할 것인가」
+
+둘 다 **Production 변경** 이고 CPO/CEO 판정 사안이다. CTO 가 먼저 들어가지 않는다.
 
 ### 유지되는 포인터
 
