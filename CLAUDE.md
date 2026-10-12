@@ -358,15 +358,53 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 
 ---
 
-## 12. 현재 상태 — MI 측정 트랙 **종료** (CPO 확정 2026-10-12)
+## 12. 현재 상태 — MI 측정 트랙 **전부 종료** (갱신 2026-10-12)
 
 🔴 **새 세션은 MI 측정을 처음부터 반복하지 않는다.** 아래가 기준선이다.
+🔴 **착수점이 아니다.** 종료된 결론 모음이다. 새 범위는 CPO 가 준다.
 
 ```
-🟢 MI-P0-03 ~ MI-P0-12 «그리고» MI Coverage Work Unit 까지 전부 종료됐다.
-   판정: HOLD / NO PRODUCTION CHANGE. Production 코드 변경 0 · DB 변경 0.
-🔴 이 8개 커밋을 «다시 해석하지 않는다» — 결론만 기준선으로 쓴다.
-🔴 MI 쪽 코드 실험을 더 돌리지 않는다(CPO 확정). 다음 과제는 코드가 아니다.
+🟢 MI-P0-03 ~ MI-P0-12 · MI Coverage WU «그리고» 그 뒤 롱스프린트 셋까지
+   **전부 종료** 됐다. 전 구간 판정: HOLD / CHANGE DIRECTION.
+   🟢 Production 코드 변경 **0** · DB 변경 **0** (전 트랙 합계).
+🔴 커밋 34개를 «다시 해석하지 않는다» — 결론만 기준선으로 쓴다.
+🔴 MI 쪽 코드 실험을 더 돌리지 않는다. 다음 과제는 코드가 아니다.
+```
+
+### 🟢 종료된 롱스프린트 넷 — 결론 한 줄씩 (전문은 각 문서)
+
+| WU | 판정 | 🔴 한 줄 결론 |
+|---|---|---|
+| 국내 SAME Coverage<br>`docs/DOMESTIC-COVERAGE-WU-STATE.md` | CHANGE DIRECTION | Coverage 를 늘리는 것이 핵심 레버라는 **증거가 없다** |
+| MI Discovery → Identity<br>`docs/MI-DISCOVERY-IDENTITY-WU-STATE.md` | HOLD | External Discovery 에는 **운영 호출부가 없다**(counterfactual) |
+| MI Price Enrichment<br>`docs/MI-PRICE-ENRICHMENT-WU-STATE.md` | HOLD | 후보 가격은 전부 **해외 통화·해외 판매처** 라 국내 축에 못 들어간다 |
+| 해외 매입가 Sourcing Value<br>`docs/MI-SOURCING-VALUE-WU-STATE.md` | HOLD | 🔴 **우리는 이미 원가를 갖고 있다 — 397/397** |
+
+### 🔴🔴 마지막 WU 가 뒤집은 전제 — 이 문장을 그대로 쓴다
+
+```
+Gemini Discovery 로 「더 싼 해외 매입가를 찾자」는 가설은 **반증됐다.**
+이유는 Discovery 가 약해서가 아니라 —
+  🟢 운영 SELLER_ORIGIN 관측 1476행 / 스냅샷 **397개 전부에 원가가 이미 있다**
+     (costBasis: ORIGIN_FX 257 · KR_MARKET 91 · null 49, FULL POPULATION)
+  🔴 그래서 「Discovery 만이 주는 새 가격 정보」 = **0건** (sample N=3)
+  🔴 그리고 1/3 상품에서 **NOT_SAME 후보가 SAME 보다 싸다**
+     (99,360 < 101,135) → 「싸다」를 채택 근거로 쓰면 오염된다
+🔴 이번에 쓴 해외가는 전부 «소매 판매가» 다. 실제 매입가(도매/B2B)가 아니다.
+```
+
+🔴 **오독 금지** — 「incremental 0」은 「Discovery 가 쓸모없다」가 **아니다.**
+표본에 원가 없는 상품이 하나도 없었다는 뜻이고, 원가 없는 모집단에서는 미측정이다.
+
+🟢 **원가 의미론은 운영 코드에 이미 확정돼 있다**(재조사 금지):
+```
+selectCostBasisOriginObservations  price-observations.ts:303 — 순수 함수
+  ORIGIN_FX 가 있으면 KR_MARKET 을 버린다 (원가 = 원본 시장 통화 기준)
+🔴 MARKET_PROBE 는 SELLER_ORIGIN 이지만 **원가가 아니다**(run-price-check:128)
+   실측: 397/397 중 MARKET_PROBE 가 원가로 뽑힌 사례 **0** — 분리가 작동한다
+🟢 환율 owner 도 이미 있다 — convertToKrwStrict(pricing/currency.ts:73) 는
+   모르는 통화에 **null** 을 낸다. DB exchange_rates(frankfurter) 가 살아 있다.
+   → 🔴 FX 를 새로 만들지 않는다 · 임의 환율 하드코딩 금지.
 ```
 
 ### 🟢 Coverage 결론 — 이 문장을 그대로 쓴다 (CPO 확정 2026-10-12)
@@ -455,11 +493,13 @@ MANUAL 판매처 12개        자동 후보 경로가 없어 성능 판단 불�
 NO_CANDIDATES 72건        「검색이 약함」 ↔ 「그 샵에 그 상품이 없음」 구분 못 함
 ```
 
-### 🔴 미push 커밋 8개 — CEO 판단 영역
+### 🔴 미push 커밋 **34개** — CEO 판단 영역
 
 ```
-git status  clean · behind 0 / ahead 8 · Production runtime change 0
-12 files changed · 2,488 insertions · 전부 __tests__ 하위(비테스트 변경 0)
+git status  clean · behind 0 / ahead 34 · Production runtime change 0
+🟢 전부 `__tests__/` 와 `docs/` 하위다 — 비테스트·비문서 변경 **0**
+🔴 「ahead 8」은 2026-10-12 오전 기준이고 낡았다. 숫자는 직접 센다:
+   git fetch origin --quiet && git rev-list --count origin/main..HEAD
 ```
 
 🔴 push 가 Production 배포를 트리거하므로 **CTO 도 CPO 도 임의로 밀지 않는다.**
@@ -468,11 +508,19 @@ git status  clean · behind 0 / ahead 8 · Production runtime change 0
 
 ### 다음 전략 과제 (코드 작업이 아니다)
 
-> 「어떤 국내 판매처를 추가하면 실제 SAME yield 가 증가하는가」
+🔴 측정 넷이 끝난 뒤 남은 질문은 **둘** 이고, 둘 다 조사·판단이지 코드가 아니다.
+
+> ① 「어떤 국내 판매처를 추가하면 실제 SAME yield 가 증가하는가」
 
 판별 기준은 하나다 — **그 판매처가 상품명·URL·설명문에 「해외 브랜드 품번」을
 적는가.** 적지 않으면 추출기를 붙여도 효과가 0 이다(실측). 이것은 판매처 실제
 페이지를 보는 **조사** 이고 MI 코드 실험이 아니다.
+
+> ② 🔴 「Discovery 의 가치가 «원가 발견» 이 아니라면 무엇인가」
+
+원가는 이미 397/397 있다. 그러면 Discovery 가 남길 수 있는 축은 가격이 아닐 수
+있다 — 예: 품절/재입고 감시 · 시장 가격 추세 · 신상품 발견. 🔴 **단 그것은 아직
+범위가 아니다.** CPO 가 질문을 주기 전에 코드로 들어가지 않는다.
 
 ### 유지되는 포인터
 

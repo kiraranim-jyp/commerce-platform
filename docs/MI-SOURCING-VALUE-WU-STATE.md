@@ -2,7 +2,6 @@
 
 > 🟢 **종료.** 최종 판정은 §7 이다 — **CASE B/D 혼합 → HOLD**.
 > 🔴🔴 Discovery 축은 `COUNTERFACTUAL / NON-PRODUCTION`(운영 호출부 0).
-> 🔴🔴 Discovery 축은 `COUNTERFACTUAL / NON-PRODUCTION`(운영 호출부 0).
 > 🟢 선행 WU 셋 CLOSED — 국내 Coverage(CHANGE DIRECTION) · MI Discovery(HOLD) ·
 >    Price Enrichment(HOLD, 「해외 통화·해외 판매처라 국내 축에 못 들어간다」).
 
@@ -93,7 +92,9 @@ NAVER_SHOPPING  어휘만 존재 · DB 0행 (선행 WU 확정)
 
 ---
 
-## 4. 다음 실행이 «즉시» 할 것
+## 4. 🟢 실행 계획 (전부 완료 — 결과는 §6)
+
+🔴 **이것은 착수점이 아니다.** 이 WU 는 종료됐다(§7 HOLD).
 
 ```
 STEP C  CONTROL — 운영 SELLER_ORIGIN 관측(DB 1476행)을
