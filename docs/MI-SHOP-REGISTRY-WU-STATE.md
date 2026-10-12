@@ -181,7 +181,8 @@ Production 0 · DB 0.
 ① Bobo Choses Korea(공식)를 다시 켤 것인가.
    🟢 근거: 링크 36%(32/88)의 출처였고 AUTO_API 다 · GLOBAL seller_type
    🔴 위험: 047 구조상 다시 켜면 **6개 workspace 전부** 에 영향
-   🔴 그리고 끈 이유가 UNKNOWN 이다(감사 로그 미확인)
+   🔴 그리고 끈 이유가 UNKNOWN 이다 — 🟢 `audit_log` 를 **확인했고** 샵 토글을
+      기록하지 않는다(= 「안 봤다」가 아니라 «기록이 없다»)
 ② MARKETPLACE 5곳(29CM·SSF·W컨셉·무신사·OCO)의 OFF 를 유지할 것인가.
    🔴 이들은 MANUAL 이라 켜도 검색되지 않는다 — 켜는 것과 승격이 **둘 다** 필요하다
 ③ coconjennie 를 조사할 것인가(product path 1건 관찰 → AUTO_SCRAPE 승격 판단).
