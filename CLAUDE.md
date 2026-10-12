@@ -995,46 +995,37 @@ Tests      **7520 passed** / 44 skipped (7564)
 🟢 **커밋 push 여부와 Work Unit 완료 여부는 분리해 취급한다**(CPO 확정) — 이 트랙은
 코드 변경 없이 **정상 종료** 다. 미완료가 아니다.
 
-### 🔴🔴 현재 착수점 — **CEO 정책 결정 5건 대기. CTO 작업은 없다.**
+### 🔴🔴 현재 착수점 — **CEO 테스트 1회 + 정책 결정 5건. 배포는 «불필요» 하다.**
 
 ```
-🔴 MI 측정 트랙 열 개가 전부 끝났다. Production 변경은 전 트랙 합계 **0** 이다.
-🔴 지금 남은 것은 코드가 아니라 **CEO 가 정할 정책** 이고, 그 전에는 아래를
-   하지 않는다 — Registry 코드 수정 · MANUAL 일괄 승격 · Discovery 확대 ·
-   cron 추가 · Identity 재구성 · 가격 비교 로직 변경.
+🟢🟢 배포할 것이 **없다** — 미push 커밋 전부가 `__tests__`/`docs`/`CLAUDE.md` 이고
+     **런타임 변경이 한 줄도 없다.** MVP 흐름은 **이미 Production 에 떠 있다.**
+     실측(read-only GET): ttaejyo.vercel.app **200** · /pipeline 307 · /today 307 ·
+     /api/price-history/check 401  → 🟢 307/401 은 **정상 보호** 다
+     (🔴 「route 가 없다」로 읽지 않는다 — 메모 production-307-is-not-route-evidence)
+🔴 그러므로 push 해도 기능이 바뀌지 않는다. 기능 변화 0 인 재배포를 CTO 가
+   임의로 일으키지 않는다(헌장 §8). 🟢 **CEO 테스트는 지금 떠 있는 것으로 가능하다.**
+🔴 조사 트랙은 **CLOSED** — WU 열다섯 개 · Production 변경 합계 **0**.
+   더 조사해도 같은 결론만 반복된다(CPO 확정).
 ```
 
-| | CEO 결정 대기 항목 | 근거 문서 |
-|---|---|---|
-| A | `Bobo Choses Korea` 를 다시 켤 것인가 (🔴 6 workspace 전부에 영향 · 링크 36%의 출처) | `MI-SHOP-REGISTRY-WU-STATE.md` |
-| B | MARKETPLACE 5곳 OFF 유지할 것인가 (🔴 ON 만으로는 효과 0 — 승격이 같이 필요) | 같음 |
-| C | `coconjennie` 를 사이트 구조 조사 대상으로 올릴 것인가 | 같음 |
-| D | 재관측 cron 주기 **2일 ↔ 3일** 선택 + 비용 승인 | `MI-CADENCE-ECONOMICS-WU-STATE.md` |
-| E | 「해외 비교가격」 문구가 환율 변동을 포함해도 되는가 (제품 정책) | `MI-REOBSERVATION-WU-STATE.md` |
-
-🔴 **별 과제로 분리된 것** (CEO 결정과 섞지 않는다):
+🟢 **CEO 테스트 재료는 준비돼 있다** — 전문은 `docs/MI-MVP-DEPLOY-READINESS.md` §5.
+🔴 CTO 가 CEO 에게 직접 요청하지 않는다(§3). CPO 가 한 번에 전달한다.
 ```
-Historical Alert Integrity (과거 혼재 4건) · brand backfill(AW26 40 · 공백 25) ·
-「셀러가 켠 MANUAL 샵이 실제로는 안 뒤져진다」 UX 간극 ·
-국내 sold_out=true 가 0행인 이유 조사
-```
-
-🔴 **미push 커밋이 쌓여 있다 — 숫자는 직접 센다**(배포를 부르므로 임의 push 금지):
-```
-git fetch origin --quiet && git rev-list --count origin/main..HEAD
+URL    https://ttaejyo.vercel.app/today · /pipeline  (로그인 필요)
+상품 A Louise Misha Astrid Jacket(Cream) — 후보 17 · SIMILAR 3/CONFLICT 3/UNKNOWN 11
+상품 B Bobo Choses Boo Bo Choses T-shirt(B226AC002) — 후보 6 · SIMILAR 1/UNKNOWN 4/CONFLICT 1
+🔴 기대 결과 — **「GO」가 나오지 않는 것이 정상이다.**
+   🟢 보여야 할 것: 원본 통화(EUR) · 국내 후보 + 근거 문구 · 「동일상품 확인」 버튼 ·
+      원가가 한국 표시가면 「환율 환산이 아닙니다」
+   🔴 보이면 FAIL: 다른 상품(데님셔츠·쁘띠북·양말)이 동일상품으로 승격되어
+      가격 비교에 들어가는 것 · 데이터 없는데 「추천/GO」가 뜨는 것
+🔴 질문은 「SAME 이 나오는가」가 아니라 **「정보가 부족할 때 제품이 그것을
+   정직하게 말하는가」** 다.
 ```
 
-🔴🔴 **「Production 변경 0」을 확인할 때 `-c core.quotepath=false` 를 «반드시» 붙인다**:
-```
-git -c core.quotepath=false diff --name-only origin/main..HEAD   | grep -avE "__tests__|^docs/|CLAUDE.md"
-```
-🔴 붙이지 않으면 git 이 ASCII 밖 파일명을 **8진 이스케이프**로 내보내
-(`"ã…"`) grep 에도 눈에도 걸리지 않는다. 실제로 `「변화` 라는
-**0바이트 파일**이 `d5d67121` 에 섞여 들어갔고 **WU 보고 5개의 「변경 0」이
-부정확했다**(55748f93 에서 지웠다).
-🟢 그 파일이 생긴 원인은 **인용 없는 heredoc**(`<<PY`)이다 — 백틱이 명령 치환되며
-`>` 가 리다이렉션으로 먹혔다. 🔴 heredoc 은 항상 `<<'PY'` 로 인용하고, 백틱이
-들어가는 본문은 **Write/Edit 도구**로 쓴다.
+🔴 **그 11% 의 상한을 다시 적는다** — 「동일상품 확정 + 가격 비교」까지 가는 상품은
+**55/498 = 11.0%** 이고, 상한은 **국내 샵이 해외 품번을 적는가** 이지 코드가 아니다.
 
 ---
 
