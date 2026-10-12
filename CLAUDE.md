@@ -380,6 +380,55 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 | MI Price Enrichment<br>`docs/MI-PRICE-ENRICHMENT-WU-STATE.md` | HOLD | 후보 가격은 전부 **해외 통화·해외 판매처** 라 국내 축에 못 들어간다 |
 | 해외 매입가 Sourcing Value<br>`docs/MI-SOURCING-VALUE-WU-STATE.md` | HOLD | 🔴 **우리는 이미 원가를 갖고 있다 — 397/397** |
 | Discovery Value Reframing<br>`docs/MI-REFRAME-WU-STATE.md` | CHANGE DIRECTION | 🔴 **병목은 Discovery 가 아니라 «재관측» 이다** |
+| Re-observation Value<br>`docs/MI-REOBSERVATION-WU-STATE.md` | **GO CANDIDATE**(조건부) | 🟢 재관측은 실제로 새 정보를 만든다 — 🔴 단 선행조치 둘 |
+
+### 🟢🟢 여섯째 WU — 재관측은 «가치가 있다». 단 GO 가 아니라 GO CANDIDATE 다
+
+```
+🟢 Before/After 반사실 (sample N=94 — 재관측이 실제로 있었던 상품만)
+   새 신호가 생긴 상품 **42/94 (45%)** · incremental information/product **0.45**
+   verdict  NO_NEW_INFORMATION 52 · PRICE_CHANGE 33 · FALSE_SIGNAL 8 · ACTIONABLE 1
+   🔴 신호가 «사라진» 상품도 3건 있다 — 재관측은 정보를 지우기도 한다
+🟢 변화 품질 정합성 42 = 환율기인 7 + 혼재축 1 + 🟢단일축 실가격 34 → 유효 **81%**
+🔴 actionable signal/product 는 **0.011** (1/94) — 낮다
+🔴 1일만 관측된 306건은 반사실을 만들 수 없다 → **측정불가**(0% 가 아니다)
+```
+
+🔴🔴 **이 WU 가 찾은 구조적 상한 둘** (cron 을 짜기 전에 알아야 한다):
+```
+① 시계열 해상도 상한이 「일」 이다 — hasObservationToday(run-price-check:242) 가
+   (snapshot, source, 날짜) 로 멱등을 잡는다. 🔴 **하루보다 짧은 cron 주기는 무의미** 하다
+   (코드가 버린다). 「시간 단위 감시」의 가치는 이 구조에서 측정 자체가 불가능하다.
+② bulkRecheck(today/page.tsx:156) 가 `status !== "REGISTERED"` 로 등록 상품을 제외한다
+   🔴 단 **지금은 영향 없다** — 실측 반증: IN_PROGRESS 평균 관측일 1.35 ·
+      REGISTERED 1.36 (n=33). 내 가설이었고 데이터가 부정했다.
+```
+
+🔴 **GO CANDIDATE 의 선행조치 둘** (둘 다 제품 정책 경계 → CPO 판정):
+```
+① 환율 기인 변화 7/42(17%) — computePriceChange 는 priceKrw 만 본다. 원통화 금액이
+   같아도 변화가 난다. 🔴 **결함으로 단정하지 않는다** — 셀러가 지불하는 통화는 KRW
+   이므로 「KRW 기준 원가가 올랐다」는 참이다. 문제는 **문구가 「해외 비교가격」이라고
+   말하는 것** 이다(seller-action.ts:131/137).
+② 과거 혼재 스냅샷 4건 — 자동화하면 그 4건에 새 행이 붙어 거짓 신호가 다시 날 수 있다.
+   별 과제 `Historical Alert Integrity` 로 분리됐다(재관측 가치와 **합산 금지**).
+```
+
+🔴 **Availability 는 GO 근거가 아니다 — 측정불가다**:
+```
+seller-action.ts:117 의 soldOutCount 는 **DOMESTIC_SHOP 행만** 센다.
+그런데 DOMESTIC_SHOP 279행 중 sold_out=true 가 **0행** 이다(false 166 · null 113).
+→ 🔴 「경쟁상품 품절」 신호는 **구조적으로 발화 불가** 다.
+🔴 「국내에 품절이 없다」가 아니라 «국내 어댑터가 품절을 true 로 적은 적이 없다» 다.
+🟢 SELLER_ORIGIN 에는 sold_out=true 가 319행/66스냅샷 있고 원가 선택에 쓰인다.
+🔴 그 0행의 «이유» 는 미조사다 — 어댑터 문제인지 실제 부재인지 추측하지 않는다.
+```
+
+🔴 비용은 **금액 측정불가**(외부 API 요금을 CTO 가 읽을 수 없다). 실행 수만:
+```
+현재 실적  41일 / 673회 / 상품당 **1.68회**
+전수 497 기준  매일 월 14,910 · 2일 7,455 · 3일 4,970 · 주1회 2,131
+```
 
 ### 🔴🔴 다섯째 WU 가 찾아낸 것 — 이 문장을 그대로 쓴다
 
@@ -570,9 +619,15 @@ git status  clean · behind 0 / ahead 34 · Production runtime change 0
 🔴 시장 변화 감지(품절/재입고 · 가격 추세 · 신상품)도 **Discovery 의 축이 아니다.**
 다섯째 WU 가 재서 `CHANGE DIRECTION` 으로 닫았다. 남은 질문은 하나다 —
 
-> ③ 🔴 「재관측을 자동화할 것인가, 그리고 과거 혼재 4건을 어떻게 할 것인가」
+> ③ 🟢 「재관측을 자동화할 것인가」 — **측정은 끝났다**(GO CANDIDATE)
 
-둘 다 **Production 변경** 이고 CPO/CEO 판정 사안이다. CTO 가 먼저 들어가지 않는다.
+남은 것은 **판정 셋** 이고 전부 CPO/CEO 몫이다. CTO 가 먼저 들어가지 않는다.
+```
+③-1 cron 주기 선택 (🔴 하루보다 짧게는 의미 없다) + 비용 승인
+③-2 「해외 비교가격」 문구가 환율 변동을 포함해도 되는가 — 제품 정책
+③-3 과거 혼재 4건 처리 — Historical Alert Integrity (별 과제)
+🔴 그리고 국내 sold_out 이 0행인 이유 조사(어댑터 ↔ 실제 부재). 이것만 «조사» 다.
+```
 
 ### 유지되는 포인터
 
