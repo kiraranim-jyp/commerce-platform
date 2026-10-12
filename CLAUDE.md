@@ -506,11 +506,13 @@ git status  clean · behind 0 / ahead 34 · Production runtime change 0
 실제로 내 하니스에 tsc 에러 4개가 숨어 있었고 테스트는 전부 통과하고 있었다
 (`MatchLevel` 을 `@commerce/shared` 에서 받으려 했다. owner 는 crawler 다).
 ```
-🟢 apps/admin  tsc 에러 **0**
-🟡 crawler     tsc 에러 **2** — 🔴 baseline 이다(내 35커밋이 그 두 파일을
-               건드리지 않았다: match-truth-priority.test.ts ·
-               domestic-product-link.ts 의 rootDir 위반). 0 을 기준으로 삼지 않는다.
-🔴 패키지별로 «따로» 돌린다. apps/admin 만 보면 crawler 쪽을 놓친다.
+전 패키지 실측 — `npx pnpm -r --no-bail typecheck` (2026-10-12)
+  listing 5 · pricing 3 · crawler 2 · 🟢 admin **0**   합계 **10**
+🟢 2026-09-30 기록(listing 5 · pricing 3 · crawler 2)과 **정확히 같다.**
+   → 측정 트랙 36커밋이 추가한 typecheck 에러는 **0** 이다.
+🔴 **0 이 기준이 아니다. baseline 10 과 «비교» 한다.**
+🔴 `--no-bail` 없이 `pnpm -r` 을 돌리면 pricing 에서 **멈춘다** — 그 뒤 패키지는
+   「통과」가 아니라 «측정되지 않은 것» 이다.
 ```
 
 🔴 push 가 Production 배포를 트리거하므로 **CTO 도 CPO 도 임의로 밀지 않는다.**
