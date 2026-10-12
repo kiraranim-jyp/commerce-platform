@@ -37,7 +37,12 @@ describe("🔴🔴 UA 문자열이 한 곳에만 있다", () => {
       "browser-launcher.ts",
       "comparison-search/littleluna.ts",
       "comparison-search/product-url-facts.ts",
-      "discovery-benchmark/live-page-probe.ts",
+      // 🔴 MI-DISCOVERY-CORE-004 — 이 파일은 `discovery-core/` 로 옮겨졌다.
+      //    경로를 갱신한다. 🔴 가드를 «빼지» 않았다 — 같은 단언을 새 위치에 건다.
+      // 🔴 google-discovery 를 여기 넣었다가 뺐다 — 그 파일은 UA 를 «쓰지 않는다».
+      //    가드는 「UA 를 쓰는 파일이 공용 상수를 쓰는가」를 보므로 무관 파일을
+      //    넣으면 두 번째 단언(CRAWLER_USER_AGENT 포함)이 거짓으로 깨진다.
+      "discovery-core/live-page-probe.ts",
     ]) {
       expect(src(f), `${f} 에 UA 가 복제됐다`).not.toContain("Chrome/120.0.0.0 Safari/537.36");
       expect(src(f), `${f} 가 공용 상수를 쓰지 않는다`).toContain("CRAWLER_USER_AGENT");

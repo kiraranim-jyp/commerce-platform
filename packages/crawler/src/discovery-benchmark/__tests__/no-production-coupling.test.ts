@@ -125,19 +125,60 @@ describe("🔴 discovery-benchmark ↔ Production coupling (import graph)", () =
    *    하나도 부르지 않으면 그것은 「기존 MI 를 재는 하니스」가 아니라 내 구현을
    *    재는 하니스다(types.ts 의 금지 사항). 그 사실도 숫자로 잠근다.
    */
-  it("🟢 benchmark → Production 방향은 실제로 존재한다", () => {
+  /**
+   * 🔴🔴 MI-DISCOVERY-CORE-IMPLEMENTATION-004 — **대상을 넓혔다. 완화가 아니다.**
+   *
+   * 원래 이 단언은 「benchmark 디렉터리가 `../comparison-search/url-shape` 를
+   * 직접 참조한다」를 봤고, 주석이 「url-shape 이동이 되돌려지면 깨진다」고 적어
+   * 뒀다. 🟢 그 **의도는 「URL 모양 로직을 Production 이 소유한다」** 다.
+   *
+   * 🟢 그 소유권은 그대로다 — 다만 그것을 «참조하는 쪽» 이 benchmark 에서
+   *    `discovery-core` 로 **옮겨졌다**(Core 8 타입을 core 가 소유하게 됐으므로).
+   *    즉 방향은 여전히 ...→ Production 이고, 디렉터리 이름만 달라졌다.
+   *
+   * 🔴 그래서 검사 범위를 `benchmark ∪ discovery-core` 로 넓힌다. **금지 단언
+   *    (Production → benchmark)은 한 글자도 바꾸지 않았다** — 아래 다른 it() 들이
+   *    그대로 지킨다. 넓힌 것은 「이동이 되돌려졌는지」를 보는 **양성** 단언뿐이다.
+   * 🔴 그리고 범위를 넓히면서 **core → benchmark 금지** 를 새로 단언한다 —
+   *    그러지 않으면 core 가 실험 코드에 역으로 묶이는 길이 열린다.
+   */
+  it("🟢 discovery(core ∪ benchmark) → Production 방향은 실제로 존재한다", () => {
+    const CORE_DIR = path.join(CRAWLER_SRC, "discovery-core");
+    const discoveryFiles = [...benchmarkFiles, ...walk(CORE_DIR)];
     const inbound = new Set<string>();
-    for (const file of benchmarkFiles) {
+    for (const file of discoveryFiles) {
       if (file.split(path.sep).includes("__tests__")) continue;
       for (const spec of importSpecifiers(file)) {
         const target = resolveRelative(file, spec);
-        if (target && !isInside(target, BENCHMARK_DIR) && isInside(target, CRAWLER_SRC)) {
+        if (
+          target &&
+          !isInside(target, BENCHMARK_DIR) &&
+          !isInside(target, CORE_DIR) &&
+          isInside(target, CRAWLER_SRC)
+        ) {
           inbound.add(spec);
         }
       }
     }
     expect(inbound.size).toBeGreaterThan(0);
-    // 🔴 url-shape 이동이 되돌려지면 이 단언이 깨진다.
+    // 🔴 url-shape 이동이 되돌려지면 이 단언이 깨진다(의도 보존).
     expect([...inbound]).toContain("../comparison-search/url-shape");
+  });
+
+  /** 🔴🔴 새 단언 — `discovery-core` 가 실험 코드에 역으로 묶이면 안 된다.
+   *     core 는 Production 이 import 할 수 있는 곳이므로, core → benchmark 가
+   *     열리면 **Production → benchmark 금지가 우회된다.** */
+  it("🔴 discovery-core 는 discovery-benchmark 를 import 하지 않는다", () => {
+    const CORE_DIR = path.join(CRAWLER_SRC, "discovery-core");
+    const offenders: string[] = [];
+    for (const file of walk(CORE_DIR)) {
+      for (const spec of importSpecifiers(file)) {
+        const target = resolveRelative(file, spec);
+        if (target && isInside(target, BENCHMARK_DIR)) {
+          offenders.push(`${path.relative(CRAWLER_SRC, file)} → ${spec}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });

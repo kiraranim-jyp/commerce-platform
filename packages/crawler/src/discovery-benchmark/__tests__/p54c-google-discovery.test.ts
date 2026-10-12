@@ -505,7 +505,9 @@ describe("🔴 측정 인프라 — 조용히 썩지 않게 잠근다", () => {
 
   /** 🔴 20초로는 37/38 이 timeout 이었다. 상한을 다시 좁히면 그 사고가 재발한다. */
   it("🔴 타임아웃이 60초 이상이다 — grounding 은 thinking 때문에 오래 걸린다", () => {
-    const src = readFileSync(path.join(__dirname, "..", "google-discovery.ts"), "utf8")
+    const src = // 🔴 MI-DISCOVERY-CORE-004 — 본문이 `discovery-core/google-discovery.ts` 로 옮겨졌다.
+    //    benchmark 쪽은 re-export shim 이라 상수가 없다. 🔴 단언은 그대로 둔다.
+    readFileSync(path.join(__dirname, "..", "..", "discovery-core", "google-discovery.ts"), "utf8")
       .replace(/\/\*[\s\S]*?\*\//g, "")
       .replace(/(^|[^:])\/\/.*$/gm, "$1");
     const hit = /FETCH_TIMEOUT_MS\s*=\s*(\d+)/.exec(src);
