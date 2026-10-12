@@ -1,6 +1,7 @@
 # MI Price Enrichment → Seller Decision Value WU — 실행 상태
 
-> 🔴 **진행 중.** 다음 실행은 새 WU 를 만들지 않고 §4 부터 이어간다. 중간 보고 금지.
+> 🟢 **종료.** 최종 판정은 §7 이다. 종료조건 전부 답했다.
+> 🔴🔴 Discovery 축은 `COUNTERFACTUAL / NON-PRODUCTION` · 가격·결정 축은 운영 owner 그대로.
 > 🟢 선행 WU 둘은 CLOSED — 국내 Coverage(`CHANGE DIRECTION`) · MI Discovery(`HOLD`).
 > 🔴 이 WU 도 Discovery 는 비운영이므로 **Discovery 축 숫자는 COUNTERFACTUAL** 이다.
 
@@ -112,4 +113,121 @@ X 🔴 price:null 을 임의 숫자로 채우기
 X 🔴 선행 WU 의 83%/91% 를 Production KPI 로 기록
 X 🔴 없는 어휘(AUTO_GO/NO_GO)로 보고
 X 보고 후 추가 전수 대조로 새 문서 구멍 만들기
+```
+
+---
+
+## 6. 🟢 STEP 2~5 측정 결과
+
+```
+sample N=7 원상품 · (상품×호스트) 40 · 🔴 비용상한으로 버린 호스트쌍 24
+```
+
+### 🟢 CONTROL PASS — 결정 함수가 «세 칸에만» 반응한다
+
+```
+pureRepeat   같은 입력 → 같은 verdict/margin           🟢 순수
+noneVsExact  basis NONE  → MAINTAIN
+             basis EXACT → **CONSIDER_LOWER**  → 🟢 **바뀐다**
+```
+🔴 즉 「가격이 나왔다」가 아니라 **결정이 가격에 반응한다**는 것을 먼저 고정했다.
+   그래서 아래 「변화 0」은 결정 함수가 둔감해서가 아니다.
+
+### ① 🟢 가격 enrichment 는 «작동한다»
+
+```
+hostPairs 40
+priced  before 0 → after **18**   ·  verifiedCurrent 18
+🟢 「시도했지만 가격 못 붙임」 = **0**  (시도한 건 전부 성공)
+eligibleTotal 22 · hostsWithZeroEligible 28/40
+   🔴 28쌍은 selectCandidatesForDetailConfirmation 이 «아무도 고르지 않았다»
+      (matchLevel 이 medium 미달 + SAME_MODEL_VARIANT 도 아님)
+```
+
+### ② 🟢 KNOWN_SAME 한정 확보율
+
+```
+KNOWN_SAME 호스트쌍 10 · eligible 16 · afterPriced **16**
+```
+
+### ③④ 🔴🔴 그런데 Seller Decision 변화 = **0**
+
+```
+productsGainingAnyKrwPrice  **0**
+basisChanged 0 · verdictChanged 0 · 전환 MAINTAIN→MAINTAIN 7/7
+```
+
+**원인은 가격 부재가 «아니다» — 통화와 시장 축이다:**
+
+```
+가격을 얻은 통화   GBP 7 · EUR 7 · USD 4  →  🔴 **KRW 0건**
+가격을 얻은 호스트 bobochoses.com · dreamsofcuteness.com · gilukids.com ·
+                  junioredition.com · lefanfare.nl · little-wares.com ·
+                  main-story.com · scoutandcokids.com
+                  → 🔴 **여덟 곳 전부 해외 판매처다**
+```
+
+🔴🔴 **`domesticLowestPriceKrw` 는 «국내» 시장가 축이다.** 해외 판매처의 EUR/GBP/USD
+가격을 환산해 그 칸에 넣으면 「국내 최저가」가 아니라 **의미가 깨진 숫자**가 된다.
+🟢 해외가는 `SELLER_ORIGIN`(원가/매입) 축이 담당한다 —
+   `PRICE_OBSERVATION_SOURCES = SELLER_ORIGIN | NAVER_SHOPPING | DOMESTIC_SHOP`.
+
+→ 🟢 **즉 Gemini Discovery 후보는 구조적으로 «해외» 이고, 국내 가격 결정 축에
+   애초에 들어갈 수 없다.** 가격이 없어서가 아니라 **축이 다르다.**
+
+### ⑤ 비용
+
+```
+lightFetch 202 · enrich 호출 40(호스트쌍당 1) · 17초
+🔴 enrich 내부 상세조회는 샵당 최대 2건(MAX_DETAIL_CONFIRMATIONS_PER_SHOP)
+🔴 cost / decision-improving product = **측정불가(분모 0)**
+```
+
+---
+
+## 7. 최종 판정 — **HOLD 유지, 단 이유가 «완전히 달라졌다»**
+
+```
+선행 WU 의 이유   「SAME 후보에 가격이 없다」
+🔴 이번 WU 의 이유  「가격은 붙는다(18건 · 시도 성공률 100%).
+                    그런데 그 가격은 **해외 통화·해외 판매처** 이고
+                    `domesticLowestPriceKrw` 축에 들어갈 수 없다」
+```
+
+### Business Value Gate
+
+```
+[🟢] 가격 enrichment 성공률        시도 대비 **100%** (18/18)
+[🟢] KNOWN_SAME 가격 확보          16/16 eligible
+[🔴] basis 변화                    0 — KRW 가격이 0건이다
+[🔴] Seller Decision 변화          0 — MAINTAIN→MAINTAIN 7/7
+[🟢] 결정 함수 민감도              CONTROL 에서 NONE→EXACT 시 verdict 변함 확인
+[🔴] cost / decision-improving     측정불가(분모 0)
+→ NO PRODUCTION CHANGE
+```
+
+### 🔴 그리고 이것이 Discovery 전략에 주는 함의
+
+```
+Gemini Discovery 가 찾아오는 것은 «해외 판매처» 다(8/8 호스트).
+→ 그것은 **국내 시장가(domesticLowestPriceKrw)** 를 만들 수 없다.
+→ 가치가 있다면 그 축은 **해외 매입가/원가(SELLER_ORIGIN)** 쪽이고,
+  그건 「국내 최저가 비교」와 **다른 질문** 이다.
+🔴 그 질문은 이 WU 의 범위가 아니다. 지시서는 「domesticLowestPriceKrw →
+   computePriceDecision → buildSellerDecision」을 재라고 했고, 그 축에서는 0 이다.
+```
+
+---
+
+## 8. Known Unknowns
+
+```
+🔴 비용상한으로 호스트쌍 24 를 버렸다(40/64). 전수가 아니다
+🔴 28/40 호스트쌍은 selectCandidatesForDetailConfirmation 이 0건을 골랐다 —
+   「matchLevel 이 낮아서」와 「후보가 애초에 부적격」을 가르지 않았다
+🔴 환율 환산을 «의도적으로 하지 않았다». 환산했을 때 결정이 바뀌는지는 미측정이고,
+   🔴 그 이전에 **「해외가를 국내 최저가 칸에 넣는 것이 옳은가」가 정책 질문** 이다
+🔴 `verifySourcePriceDirect` 는 이번에 쓰지 않았다(enrichCandidatePrices 만 썼다)
+🔴 KRW 를 주는 후보가 하나라도 있으면 결과가 달라질 수 있다 — 이번 표본에는 0건
+🔴 sample N=7 · KNOWN_SAME 호스트쌍 10. 일반화 금지
 ```
