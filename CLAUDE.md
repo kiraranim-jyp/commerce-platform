@@ -776,6 +776,17 @@ git status  clean · behind 0 / ahead 34 · Production runtime change 0
    git fetch origin --quiet && git rev-list --count origin/main..HEAD
 ```
 
+🟢 **전체 회귀 기준선** (`apps/admin` 에서 `npx vitest run`, 2026-10-13):
+```
+Test Files **505 passed** / 36 skipped (541)
+Tests      **7520 passed** / 44 skipped (7564)
+🔴 부분 실행(예: price-history 만 313건)을 「전체 회귀」로 보고하지 않는다 —
+   실제로 그렇게 적었다가 전체를 돌려 숫자가 20배 다른 것을 확인했다.
+🔴 그리고 1회차에 1건이 failed 로 떴다가 2·3회차에 재현되지 않았다(exit=0).
+   **flaky** 다 — lotteon/final-mapping-roundtrip 의 `fetch failed` 경로.
+   🔴 단 「flaky 니까 무시」가 아니라 **재현 시도 2회를 근거로** 그렇게 적었다.
+```
+
 🔴 **vitest 통과를 typecheck 통과로 쓰지 않는다** — vitest 는 타입을 보지 않는다.
 실제로 내 하니스에 tsc 에러 4개가 숨어 있었고 테스트는 전부 통과하고 있었다
 (`MatchLevel` 을 `@commerce/shared` 에서 받으려 했다. owner 는 crawler 다).
@@ -793,7 +804,39 @@ git status  clean · behind 0 / ahead 34 · Production runtime change 0
 🟢 **커밋 push 여부와 Work Unit 완료 여부는 분리해 취급한다**(CPO 확정) — 이 트랙은
 코드 변경 없이 **정상 종료** 다. 미완료가 아니다.
 
-### 다음 전략 과제 (코드 작업이 아니다)
+### 🔴🔴 현재 착수점 — **CEO 정책 결정 5건 대기. CTO 작업은 없다.**
+
+```
+🔴 MI 측정 트랙 열 개가 전부 끝났다. Production 변경은 전 트랙 합계 **0** 이다.
+🔴 지금 남은 것은 코드가 아니라 **CEO 가 정할 정책** 이고, 그 전에는 아래를
+   하지 않는다 — Registry 코드 수정 · MANUAL 일괄 승격 · Discovery 확대 ·
+   cron 추가 · Identity 재구성 · 가격 비교 로직 변경.
+```
+
+| | CEO 결정 대기 항목 | 근거 문서 |
+|---|---|---|
+| A | `Bobo Choses Korea` 를 다시 켤 것인가 (🔴 6 workspace 전부에 영향 · 링크 36%의 출처) | `MI-SHOP-REGISTRY-WU-STATE.md` |
+| B | MARKETPLACE 5곳 OFF 유지할 것인가 (🔴 ON 만으로는 효과 0 — 승격이 같이 필요) | 같음 |
+| C | `coconjennie` 를 사이트 구조 조사 대상으로 올릴 것인가 | 같음 |
+| D | 재관측 cron 주기 **2일 ↔ 3일** 선택 + 비용 승인 | `MI-CADENCE-ECONOMICS-WU-STATE.md` |
+| E | 「해외 비교가격」 문구가 환율 변동을 포함해도 되는가 (제품 정책) | `MI-REOBSERVATION-WU-STATE.md` |
+
+🔴 **별 과제로 분리된 것** (CEO 결정과 섞지 않는다):
+```
+Historical Alert Integrity (과거 혼재 4건) · brand backfill(AW26 40 · 공백 25) ·
+「셀러가 켠 MANUAL 샵이 실제로는 안 뒤져진다」 UX 간극 ·
+국내 sold_out=true 가 0행인 이유 조사
+```
+
+🔴 **미push 커밋이 쌓여 있다 — 숫자는 직접 센다**(배포를 부르므로 임의 push 금지):
+```
+git fetch origin --quiet && git rev-list --count origin/main..HEAD
+🟢 전부 `__tests__/` · `docs/` · `CLAUDE.md` 다 — 비테스트·비문서 변경 **0**
+```
+
+---
+
+### 과거 전략 질문 (참고 — 전부 답이 나왔다)
 
 🔴 측정 넷이 끝난 뒤 남은 질문은 **둘** 이고, 둘 다 조사·판단이지 코드가 아니다.
 
