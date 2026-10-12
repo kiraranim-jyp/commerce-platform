@@ -387,6 +387,44 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 | **Shop Registry 정책**<br>`docs/MI-SHOP-REGISTRY-WU-STATE.md` | HOLD | 🟢 Registry 는 의도대로 작동한다 — 🔴 좁음의 원인은 **사람의 선택** 둘이다 |
 | **MVP 실상품 E2E**<br>`docs/MI-MVP-E2E-WU-STATE.md` | **PARTIAL** | 🟢 공통 구조는 돈다 — 🔴 끊기는 곳은 «후보 확보», GO 는 **0/9** |
 | **Identity 원인 규명**<br>`docs/MI-IDENTITY-CAUSE-WU-STATE.md` | 코드수정 **NO** | 🟢 「동일상품인데 high 미달」 **0건** — Identity 는 정상이다 |
+| **Facts 전달 경로**<br>`docs/MI-FACTS-TRANSFER-WU-STATE.md` | **C 정상전달** · 수정 **NO** | 🔴 직전 WU 의 「결함 셋」은 전부 **내 하니스 결함** 이었다 |
+
+### 🔴🔴 열셋째 WU — 열두째 WU 의 「결함 셋」을 «정정» 한다
+
+```
+❌ 「color 전건 null」      → 🟢 ProductFacts 에 `color` 칸이 **없다**.
+                               실제는 **colorText** 이고 값이 정상이다
+❌ 「titleTokens 전건 null」 → 🟢 실제는 **coreTitleTokens** 이고 정상이다
+❌ 「axes 전건 비어 있다」   → 🟢 `match` 칸이 **없다**. match.ts:526-538 이
+                               cross 를 **네 칸으로 펼쳐** 싣는다 —
+                               crossSellerVerdict / Reasons / Blockers / Conflicts.
+                               `axes` 는 아예 실리지 않는다(내부 값이다)
+🔴 원인 하나 — **칸 이름을 owner 타입에서 읽지 않고 추측했다.**
+🔴 이 트랙에서 같은 실수 **네 번**(match_truth 어휘 · canonical_product 칸 ·
+   owner 패키지 2회 · 칸 이름 3개).
+```
+
+🟢 **네 지점 전부 정상 — C. 정상 전달**:
+```
+color  ① canonicalProduct 🟢 → backfill 🟢 → DNA 🟢 → facts.colorText 🟢
+titleTokens → DNA/facts.coreTitleTokens 🟢 (["boo","bo","choses","shirt"])
+brand  🟢 전 구간 동일 · brandModelCode "B226AC002" 🟢
+🟢 productFactsFromIdentityDna(:219)는 **가공이 없다** — 한 줄씩 그대로 옮긴다
+```
+
+🔴 **brand=AW26 은 «추출 단계» 다(A)** — `brand = {value:"AW26", source:"ORIGINAL"}`.
+`source: ORIGINAL` 은 **원본 사이트에서 읽은 값** 이라는 뜻이다 → 변환 오매핑이
+아니다. 🔴 피해 실측: `crossSellerBlockers = [BRAND_MISMATCH "브랜드 AW26 ↔ AW26"]`
+— 🔴 양쪽이 같은데 blocker 가 걸린다. **왜 그런지는 미조사다.**
+
+🟢🟢 **판정기는 실제로 작동한다(대조군)** — 후보에 facts 를 넣으면:
+```
+Boo Bo Choses → crossSellerVerdict **PRESUMED_SAME** (reasons 9 · 품번 일치 · 색상 포함)
+Astrid        → crossSellerVerdict **SAME** (reasons 5 · blockers [] · conflicts [])
+🔴 그러므로 운영에서 판정이 안 도는 이유는 「원상품 facts 가 비어서」가 «아니라»
+   **국내 후보 쪽 facts 가 비어서** 다 — 조건이 query.facts && candidateFacts 이고
+   원상품 쪽은 **정상** 이었다. 🔴 후보 쪽은 이 WU 범위가 아니라 미조사다.
+```
 
 ### 🟢🟢 열두째 WU — Identity 는 «정상» 이다. 고칠 근거가 없다
 
