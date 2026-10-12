@@ -1,4 +1,8 @@
-import { createGoogleDiscoveryProvider, googleDiscoveryReadiness } from "./google-discovery";
+import {
+  createGoogleDiscoveryProvider,
+  googleDiscoveryReadiness,
+  type GoogleDiscoveryUsage,
+} from "./google-discovery";
 import type { DiscoveredUrl, DiscoveryQuery, ProductIdentity } from "./types";
 
 /**
@@ -33,6 +37,28 @@ export interface ProductionDiscoveryResult {
   urls: DiscoveredUrl[];
   /** 🔴 실패 사유를 삼켜 없애지 않는다 — 로그/측정이 읽을 수 있게 남긴다. */
   failureDetail: string | null;
+  /**
+   * 🔴🔴 MI-GEMINI-INTEGRATION-005 §10 — **비용을 재려면 이 칸이 있어야 한다.**
+   *
+   * WU-1 에서 이 wrapper 를 만들 때 `{outcome, urls, failureDetail}` 만 돌려줬고,
+   * `provider.usage()` 를 밖으로 내보내지 않았다. 🔴 그 상태로는 상품당
+   * 토큰/호출 수를 **구조적으로 측정할 수 없다**(provider 인스턴스가 함수 안에서
+   * 죽는다). 그래서 계약에 추가한다.
+   *
+   * 🔴 `null` 은 「호출 자체를 안 했다」는 뜻이다 — `CONFIG_MISSING` 이 그 경우다.
+   *    0 과 구분한다(0 은 「불렀는데 토큰이 0」이고 그런 일은 없어야 한다).
+   *
+   * 🔴 **`groundingQueries` 는 여기에 «없다».** `GoogleDiscoveryUsage` 가 내놓는
+   *    것은 `requests · promptTokens · candidatesTokens · thoughtsTokens ·
+   *    totalTokens` 다섯뿐이고, grounding 쿼리 수는 응답 `usageMetadata` 에
+   *    들어오지 않는다. 🔴 지시서 §10 이 요구한 `groundingQueries` 는
+   *    **현재 구조에서 측정 불가** 다 — 0 으로 적지 않는다.
+   */
+  usage: GoogleDiscoveryUsage | null;
+  /** 🟢 실제로 쓰인 모델 이름 — `provider.modelName()` 을 그대로 적는다.
+   *  🔴 메서드 이름을 `model()` 로 «추측» 했다가 TS2339 를 냈다. 이 트랙에서
+   *     칸/메서드 이름을 추측해 틀린 것이 다섯 번째다 — 타입 선언을 먼저 읽는다. */
+  model: string | null;
 }
 
 export interface ProductionDiscoveryOptions {
@@ -52,14 +78,19 @@ export async function createProductionGoogleDiscovery(
       outcome: "CONFIG_MISSING",
       urls: [],
       failureDetail: `missing: ${readiness.missing.join(", ") || "(unknown)"}`,
+      usage: null,
+      model: null,
     };
   }
+  /** 🔴 provider 를 try 밖에서 만든다 — 안에서 만들면 예외 시 `usage()` 를 읽을
+   *     길이 없고, 그러면 **실패한 호출의 토큰이 집계에서 사라진다.** */
+  let provider: ReturnType<typeof createGoogleDiscoveryProvider> | null = null;
   try {
-    const provider = createGoogleDiscoveryProvider(
+    provider = createGoogleDiscoveryProvider(
       options?.preferredDomains ? { preferredDomains: options.preferredDomains } : {},
     );
     const urls = await provider.discover(identity, query);
-    return { outcome: "OK", urls, failureDetail: null };
+    return { outcome: "OK", urls, failureDetail: null, usage: provider.usage(), model: provider.modelName() };
   } catch (error) {
     const name = error instanceof Error ? error.name : "unknown";
     const message = error instanceof Error ? error.message : String(error);
@@ -67,6 +98,8 @@ export async function createProductionGoogleDiscovery(
       outcome: name === "GoogleDiscoveryConfigError" ? "CONFIG_MISSING" : "API_FAILURE",
       urls: [],
       failureDetail: `${name}: ${message}`,
+      usage: provider ? provider.usage() : null,
+      model: provider ? provider.modelName() : null,
     };
   }
 }
