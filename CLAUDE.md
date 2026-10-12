@@ -384,6 +384,53 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 | Cadence & Economics<br>`docs/MI-CADENCE-ECONOMICS-WU-STATE.md` | **GO · 2~3일** | 🟢 1일은 비효율 · 7일은 너무 느리다 (🔴 「cron 개발 GO」가 아니다) |
 | **MI Core E2E**<br>`docs/MI-CORE-E2E-WU-STATE.md` | **PARTIAL GO** | 🟢 계산 사슬은 작동한다 — 🔴 끊기는 곳은 «입구» 하나 (55/498 = 11.0%) |
 | **Domestic Link Coverage**<br>`docs/MI-DOMESTIC-LINK-COVERAGE-WU-STATE.md` | CHANGE DIRECTION | 🔴 원인은 검색이 아니라 **등록부** 다 — 취급 샵이 `MANUAL`/비활성이라 «안 뒤진다» |
+| **Shop Registry 정책**<br>`docs/MI-SHOP-REGISTRY-WU-STATE.md` | HOLD | 🟢 Registry 는 의도대로 작동한다 — 🔴 좁음의 원인은 **사람의 선택** 둘이다 |
+
+### 🔴🔴 열째 WU — `enabled` 의 owner 를 잘못 짚으면 틀린 처방이 나온다
+
+```
+🔴 직전 WU 에서 「domestic_price_sources.enabled=false 라 검색에서 빠진다」고 썼다.
+   **그 전제가 틀렸다.** 실효값의 owner 는 **workspace_domestic_shop_settings** 다:
+     listDomesticPriceSources(workspaceId)        domestic-price-source.ts:155
+       → toSource(row, settings.get(row.id) ?? true)   :187
+          🔴 **카탈로그의 enabled 칸은 «무시» 된다** · 설정 없으면 ON(fail-open)
+       → run-domestic-price-check:683 이 부르고 :674 주석이 그 사실을 적어 뒀다
+🟢 결론은 안 바뀌었다 — 🔴 그러나 「카탈로그를 true 로 되돌리면 된다」는
+   **틀린 처방**을 낼 자리였다.
+```
+
+🔴🔴 **ON/OFF 와 수집전략은 «서로 다른 두 문» 이다 — 둘 다 통과해야 뒤진다**:
+```
+types.ts:224 — 「AUTO_API/AUTO_SCRAPE 인 것만 실제로 검색을 시도한다」
+실측: COCO & JENNIE 는 ws 설정 null → **실효 ON** 인데 MANUAL 이라 검색 안 됨
+     ws 설정 ON 3개(29CM 키즈·W컨셉·무신사 키즈)도 전부 MANUAL → 켜도 안 뒤짐
+🔴 그래서 「켜는 것」만으로는 아무 일도 일어나지 않는다. 승격이 같이 필요하다.
+```
+
+🟢 **실효로 검색되는 샵 = 7** (링크 보유 workspace 2곳 동일):
+```
+CHOCO.EL · DEUXBEBE · LITTLE LUNA · LOOXLOO · RULII · 스카이스포츠(TENNIS) · 포레포레
+🔴 OFF 1 = Bobo Choses Korea(공식) — 카탈로그·ws 설정(6/6) **둘 다 false**
+🟢 아동의류 대상은 6개이고 실제로 링크를 만든 것은 **3개**(포레포레 32·듀베베 23·리틀루나 1)
+workspace  설정 보유 6 · 스냅샷 보유 4 · 🔴 링크 보유 **2**
+🟢 링크 0 인 2곳은 설정 차이가 아니다 — **스냅샷이 각각 1개뿐** 이다
+```
+
+🔴 **좁음의 원인 둘은 「사람의 선택」이다**(사고가 아니다):
+```
+① Bobo Choses Korea 를 2026-09-10 에 UI 로 껐고(당시 토글이 카탈로그를 직접 바꿨다,
+   [id]/route.ts:16), 다음 날 **047 이 그 값을 모든 workspace 로 복사** 했다
+   🔴 누가 왜 껐는지는 **구조적으로 확인 불가** — audit_log(422행)가 샵 토글을
+      기록하지 않는다(AUTH_*/IMPERSONATION_* 만 남는다)
+② MARKETPLACE 5곳(29CM·SSF·W컨셉·무신사·OCO)을 ws 설정에서 껐다
+🟢 035 가 끈 것은 ssfshop·29cm·musinsa·wconcept·coupang 이고 **bobochoses 가 아니다**
+🟢 apps/admin 코드에 enabled=false 를 쓰는 곳은 **없다**(자동 비활성 경로 아님)
+```
+
+🔴 **조사 우선순위 1위는 `coconjennie`**(우리 브랜드 4개 취급 실측) — 🔴 단
+**sixshop product path 미관찰**이라 `AUTO_SCRAPE` 승격 후보로 **올리지 않았다**.
+🔴 제외 근거 확보: `chouchouenfant`(현 시즌 0) · `nokimore`·`karymarket`(교집합 0).
+🔴 `NOT_AVAILABLE` 12곳은 **약관** 이라 대상이 아니다. 🔴 `MANUAL→AUTO` 일괄 변경 금지.
 
 ### 🔴🔴 아홉째 WU — `NO_LINK` 의 원인은 «검색» 이 아니라 «등록부» 다
 
