@@ -831,8 +831,19 @@ Historical Alert Integrity (과거 혼재 4건) · brand backfill(AW26 40 · 공
 🔴 **미push 커밋이 쌓여 있다 — 숫자는 직접 센다**(배포를 부르므로 임의 push 금지):
 ```
 git fetch origin --quiet && git rev-list --count origin/main..HEAD
-🟢 전부 `__tests__/` · `docs/` · `CLAUDE.md` 다 — 비테스트·비문서 변경 **0**
 ```
+
+🔴🔴 **「Production 변경 0」을 확인할 때 `-c core.quotepath=false` 를 «반드시» 붙인다**:
+```
+git -c core.quotepath=false diff --name-only origin/main..HEAD   | grep -avE "__tests__|^docs/|CLAUDE.md"
+```
+🔴 붙이지 않으면 git 이 ASCII 밖 파일명을 **8진 이스케이프**로 내보내
+(`"ã…"`) grep 에도 눈에도 걸리지 않는다. 실제로 `「변화` 라는
+**0바이트 파일**이 `d5d67121` 에 섞여 들어갔고 **WU 보고 5개의 「변경 0」이
+부정확했다**(55748f93 에서 지웠다).
+🟢 그 파일이 생긴 원인은 **인용 없는 heredoc**(`<<PY`)이다 — 백틱이 명령 치환되며
+`>` 가 리다이렉션으로 먹혔다. 🔴 heredoc 은 항상 `<<'PY'` 로 인용하고, 백틱이
+들어가는 본문은 **Write/Edit 도구**로 쓴다.
 
 ---
 
