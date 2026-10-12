@@ -386,6 +386,48 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 | **Domestic Link Coverage**<br>`docs/MI-DOMESTIC-LINK-COVERAGE-WU-STATE.md` | CHANGE DIRECTION | 🔴 원인은 검색이 아니라 **등록부** 다 — 취급 샵이 `MANUAL`/비활성이라 «안 뒤진다» |
 | **Shop Registry 정책**<br>`docs/MI-SHOP-REGISTRY-WU-STATE.md` | HOLD | 🟢 Registry 는 의도대로 작동한다 — 🔴 좁음의 원인은 **사람의 선택** 둘이다 |
 | **MVP 실상품 E2E**<br>`docs/MI-MVP-E2E-WU-STATE.md` | **PARTIAL** | 🟢 공통 구조는 돈다 — 🔴 끊기는 곳은 «후보 확보», GO 는 **0/9** |
+| **Identity 원인 규명**<br>`docs/MI-IDENTITY-CAUSE-WU-STATE.md` | 코드수정 **NO** | 🟢 「동일상품인데 high 미달」 **0건** — Identity 는 정상이다 |
+
+### 🟢🟢 열두째 WU — Identity 는 «정상» 이다. 고칠 근거가 없다
+
+```
+🔴 matchLevel 이 전건 **low** 다 — medium 도 없다. 「high 문턱에 걸렸다」가 아니라
+   **점수가 거의 0** 이다(confidence 0 · 0.02 · 0.3 · 0.43 · 0.51).
+   → 🔴 threshold 를 낮춰도 해결되지 않는다. low→high 는 한 칸이 아니다.
+🔴 axes 가 **전건 비어 있다** — verdict/identifierConfirmed 도 null.
+   withConfidence(match.ts:476)는 query.facts && candidateFacts 일 때만
+   compareCrossSellerProducts 를 부른다 → **Cross-Seller 판정에 도달조차 못 했다.**
+   (남는 matchReasons 는 scoreCandidateMatch 의 산출이고 다른 함수다)
+```
+
+🟢 **후보를 열어 보니 «정말 다른 상품» 이다** — 그래서 low 가 **옳다**:
+```
+Boo Bo Choses T-shirt      → 데님셔츠 · 쁘띠북 · 참(charm)
+All About Monsters T-shirt → 쁘띠북 · 컬러링북 · BLUEDOG레깅스(다른 브랜드)
+Smallable/Bobo Washed Tee  → 트랙수트팬츠 · 데님윈터캡 · 롱퍼프숏양말
+Smallable/L.Misha Astrid   → 🟡 같은 모델이나 **다른 프린트/시즌**
+                              (Cream Floral Haven SS26 · Cream Rosa Festa SS25)
+🟢 Precision 이 지켜졌다. 「동일상품인데 high 미달」 = **0건**
+```
+
+🔴🔴 **그런데 이 WU 가 새 결함 셋을 드러냈다**(고치지 않았다 — 승인 영역):
+```
+① productFactsFromIdentityDna 가 **color 를 옮기지 못한다**(전건 null).
+   원상품엔 색상이 있다(Heather grey · Midnight blue · Blue · Cream)
+   → 색상 축이 **영구히 죽어 있다**
+② titleTokens 전건 null → 제목 겹침 축도 죽어 있다
+③ AW26 브랜드 오염이 **실제 피해** 를 만든다 — Bobo 공식 3건 brand 가 "AW26" 이고
+   후보 brand 는 "BOBO CHOSES" → matchReasons 에 「브랜드 불일치」가 찍힌다
+🟢 ①②가 살아나면 compareCrossSellerProducts 가 **처음으로 호출된다.**
+   🔴 지금은 match 가 null 이라 Cross-Seller 판정이 **아예 돌지 않는다.**
+🟢 선행 메모 mi-p0-02-whitelist-works-chain-breaks-at-identity 와 정합한다.
+```
+
+🔴 B226AB069 후보 0 — 7샵 전부 0 · 오류샵 0. 같은 브랜드 AC002/AC018 은 나왔으니
+**검색 경로·검색어 문제가 아니다.** 🔴 샵 카탈로그 부재 쪽 증거가 강하지만
+카탈로그를 전수로 세지 않았으므로 **단정하지 않는다**(측정불가).
+🟢 검색어를 바꿔 성공시키지 않았다(금지 사항).
+🔴 후보를 낸 샵은 **LOOXLOO · 포레포레 둘뿐** 이고 나머지 5샵은 전건 0 이다.
 
 ### 🟢🟢 열한째 WU — 실상품 9개를 운영 owner 로 «실제로» 돌렸다
 
