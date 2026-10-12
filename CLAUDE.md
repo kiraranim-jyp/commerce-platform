@@ -382,6 +382,66 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 | Discovery Value Reframing<br>`docs/MI-REFRAME-WU-STATE.md` | CHANGE DIRECTION | 🔴 **병목은 Discovery 가 아니라 «재관측» 이다** |
 | Re-observation Value<br>`docs/MI-REOBSERVATION-WU-STATE.md` | **GO CANDIDATE**(조건부) | 🟢 재관측은 실제로 새 정보를 만든다 — 🔴 단 선행조치 둘 |
 | Cadence & Economics<br>`docs/MI-CADENCE-ECONOMICS-WU-STATE.md` | **GO · 2~3일** | 🟢 1일은 비효율 · 7일은 너무 느리다 (🔴 「cron 개발 GO」가 아니다) |
+| **MI Core E2E**<br>`docs/MI-CORE-E2E-WU-STATE.md` | **PARTIAL GO** | 🟢 계산 사슬은 작동한다 — 🔴 끊기는 곳은 «입구» 하나 (55/498 = 11.0%) |
+
+### 🟢🟢 여덟째 WU — 핵심 KPI 가 정해졌다: **55/498 = 11.0%**
+
+> 「상품 하나를 넣으면 국내/해외 같은 상품을 찾아 가격을 비교할 수 있는가」 → **PARTIAL**
+
+```
+퍼널(전수 N=498)  원상품 498 → 국내 링크 69 → EXACT tier 58 → 국내가 67
+                  → 해외 관측 397 → 둘 다 64 → 🟢 **COMPARABLE 55**
+끊기는 자리       NO_LINK_AT_ALL **331** · NO_EXACT_LINK 11 ·
+                  NO_OVERSEAS_PRICE 2 · NO_DOMESTIC_PRICE 1
+🟢 뒤집어 읽으면 — **링크가 있으면 69→55 = 79.7% 가 비교된다.**
+   즉 계산 사슬은 작동하고 병목은 «입구» 다.
+🟢 비교 결과도 의미가 있다 — 국내 최저가가 해외보다 **중위 +17.0%**
+   (국내가 5%+ 비쌈 36 · ±5% 17 · 국내가 더 쌈 2 · 55/55 둘 다 숫자 있음)
+```
+
+🔴🔴 **E2E 경로 넷 중 운영에 실재하는 것은 «하나» 다**(전수 확인, 추측 아님):
+```
+A 국내 URL 직접 입력  🔴 **없다** — links 는 GET/PATCH 뿐 · search POST 는 title 필수
+B 해외 URL 직접 입력  🔴 **없다** — 같은 이유
+C 국내 후보 탐색      🟢 있다 — searchDomesticShops → withConfidence → judgeDomesticCandidate
+D 해외 AI Discovery   🔴 운영 호출부 0 (counterfactual)
+🟢 MANUAL 은 «샵» 수집전략이고 상품 URL 입력이 아니다(DomesticSourceCollectionStrategy)
+🔴 A/B 성능은 0% 가 아니라 «측정 자체가 불가능» 하다
+```
+
+🔴 **병목의 상한은 브랜드의 국내 유통 여부다** (전수 498 / 브랜드 32):
+```
+🔴 국내 링크가 «한 건도» 없는 브랜드 **26개** → 상품 **204**(41%)
+🟢 링크가 있는 브랜드 6개 → 상품 294, 그중 링크 보유 **69 = 23.5%**
+  Pèpè Shoes 50중31 **62%** 🟢 / Bobo Choses 167중28 17% / AW26 44중4 9%(브랜드 아님)
+  Sergio Tacchini 27중0 🟢(테니스 — 0 이 맞다) / 빈 브랜드 25중0 🔴
+🔴 즉 NO_LINK 331 은 두 층 — ①브랜드가 국내에 없다 204 ②검색이 못 찾았다 ~127
+   ①을 「검색 실패」로 읽으면 틀린다
+```
+
+🟢 **UI 는 가격 의미를 이미 구분한다**(내가 P0 로 올렸다가 반증됐다):
+```
+costBasis → costBasisIsKrMarket(Panel:2362) → price-hierarchy.ts:453 이
+라벨과 기준 문장을 통째로 바꾼다 — 「이 판매처가 한국 방문자에게 직접 보여주는
+가격 · **환율 환산이 아닙니다**」 · landedCostComposition 도 갈린다(:535)
+🔴 그래서 「해외 축이 한국 표시가라 셀러가 오해한다」는 **결함이 아니다.**
+   남는 사실은 COMPARABLE 55 중 42가 KRW/KR_MARKET 이라는 **데이터 구성** 이고
+   원본 시장가(ORIGIN_FX)가 함께 있는 것은 10/55 다. 🔴 이유는 미조사.
+```
+
+🔴 **P0-1 로 남은 것** — 셀러가 상품 URL 을 직접 넣어 비교후보로 등록할 수 없다.
+이 WU 에서 **구현하지 않았다**: `domestic_product_links.source_id` 가 **등록된
+샵을 가리키는 FK** 라 임의 URL 을 넣으려면 **샵 등록부 의미**를 바꿔야 하고,
+그것은 Registry 구조 변경(CPO §15 금지)이다 → **별 WU**.
+
+🔴 어휘 함정 둘 (내가 추측해서 틀렸다):
+```
+❌ match_truth='SAME_PRODUCT'  → 그 어휘는 **없다**. MatchTruth(match-truth.ts:33) 는
+   EXACT_IDENTIFIER | STRONG_IDENTIFIER | TEXT_CONFIRMED | SIMILAR | CONFLICT | …
+❌ product_snapshots.canonical_product 칸 → **없다**. 실제는 `workspace`(jsonb)
+   → workspace->'canonicalProduct'->'brand'->>'value'
+🟢 tier 는 priceTierFromLink(domestic-product-link.ts:86)를 «호출» 한다(복제 금지)
+```
 
 ### 🟢🟢 일곱째 WU — 최적 관측 주기는 **2~3일** 이다
 
