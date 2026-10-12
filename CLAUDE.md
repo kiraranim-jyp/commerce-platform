@@ -389,6 +389,38 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 | **Identity 원인 규명**<br>`docs/MI-IDENTITY-CAUSE-WU-STATE.md` | 코드수정 **NO** | 🟢 「동일상품인데 high 미달」 **0건** — Identity 는 정상이다 |
 | **Facts 전달 경로**<br>`docs/MI-FACTS-TRANSFER-WU-STATE.md` | **C 정상전달** · 수정 **NO** | 🔴 직전 WU 의 「결함 셋」은 전부 **내 하니스 결함** 이었다 |
 | **후보 facts 경로**<br>`docs/MI-CANDIDATE-FACTS-WU-STATE.md` | **E 정상** · 수정 **NO** | 🟢 후보 facts 는 전건 있고 판정도 **전건 돈다** — 열두째 WU 가 틀렸다 |
+| **상세확인 가치**<br>`docs/MI-DETAIL-VALUE-WU-STATE.md` | **목록 경로 유지** | 🔴 SAME 승격 **0건** — 🔴 단 「가치 없음」이 아니라 **측정 불가** 였다 |
+
+### 🔴🔴 열다섯째 WU — 상세확인은 «대상이 없다»
+
+```
+DOMESTIC_IDENTIFIER_EXTRACTORS(domestic-identifiers.ts:88) 등록 도메인 **단 2개**
+  🟢 foretforet.com · 🟢 bobochoses.com(비활성)
+  🔴 looxloo · rulii · chocoel · deuxbebe · littleluna · skysport  **전부 미등록**
+→ fetchDomesticModelCode(:97)는 미등록 도메인에 **null** 을 준다
+🔴 그런데 후보 대부분을 LOOXLOO 가 낸다 → 상세확인을 켜도 **23개 중 20개는 불변**
+
+실측(실상품 2 · 후보 23 전수 · 실제 HTTP)
+  상세확인 가능 **3/23** · 불가 **20/23** · modelCode 획득 **3/3**(추출기는 작동)
+  🟢 verdict 변화 **0** · 🟢🟢 SAME 승격 **0** · 비용 fetch **3회**
+  before/after 완전히 동일 — SIMILAR 4 · UNKNOWN 15 · CONFLICT 4
+```
+
+🔴🔴 **「상세확인은 가치가 없다」로 읽으면 틀린다.** 0 의 이유가 둘로 갈린다:
+```
+① 🔴 추출기가 없다 (20/23) → **실행조차 되지 않았다.** 「효과 0」이 아니라 미측정
+② 🟢 추출기는 돌았는데 **원상품 품번이 null** (3/23)
+   포레포레 3건은 상세 품번을 정상 획득(LM26KSJAC0074CFH 등). 그런데 원상품
+   (Smallable/Louise Misha)의 brandModelCode 가 null → MODEL_CODE 축이 생길 수 없다.
+   🟢 한쪽만 있는 품번으로 SAME 을 만들지 않는 **설계된 동작** 이다
+→ 🟢 상세확인은 「**Bobo 공식 원상품(품번 있음) × foretforet 후보**」 조합에서만
+   의미가 있고 그 조합이 이 표본에 **없었다.** 🔴 그 조합의 가치는 **미측정** 이다.
+```
+
+🔴 **「추출기를 추가하자」는 결론을 내지 않았다** — 선행 WU 가 판별 기준을 확정했고
+`looxloo`/`rulii` 는 상품명·URL 에 해외 품번을 **적지 않는다** 고 실측됐다
+(메모 `domestic-discovery-dies-at-low-not-at-search`). 붙여도 0 이다.
+🔴 `colorText` 는 상세확인으로도 **안 채워진다** — 추출기는 `modelCode` 만 준다.
 
 ### 🟢🟢 열넷째 WU — **Cross-Seller 판정은 처음부터 정상으로 돌고 있었다**
 
