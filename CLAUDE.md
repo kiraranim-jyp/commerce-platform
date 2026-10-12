@@ -388,6 +388,43 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 | **MVP 실상품 E2E**<br>`docs/MI-MVP-E2E-WU-STATE.md` | **PARTIAL** | 🟢 공통 구조는 돈다 — 🔴 끊기는 곳은 «후보 확보», GO 는 **0/9** |
 | **Identity 원인 규명**<br>`docs/MI-IDENTITY-CAUSE-WU-STATE.md` | 코드수정 **NO** | 🟢 「동일상품인데 high 미달」 **0건** — Identity 는 정상이다 |
 | **Facts 전달 경로**<br>`docs/MI-FACTS-TRANSFER-WU-STATE.md` | **C 정상전달** · 수정 **NO** | 🔴 직전 WU 의 「결함 셋」은 전부 **내 하니스 결함** 이었다 |
+| **후보 facts 경로**<br>`docs/MI-CANDIDATE-FACTS-WU-STATE.md` | **E 정상** · 수정 **NO** | 🟢 후보 facts 는 전건 있고 판정도 **전건 돈다** — 열두째 WU 가 틀렸다 |
+
+### 🟢🟢 열넷째 WU — **Cross-Seller 판정은 처음부터 정상으로 돌고 있었다**
+
+```
+실제 운영 검색 2상품 · 후보 23개 전수
+  ① 검색 결과          후보 6 / 17
+  ② candidate 생성     6 / 17 (어댑터가 만든다)
+  ③ facts 생성         **6/6 · 17/17**  (facts 15칸 · brand 🟢 · coreTitleTokens 🟢)
+  ④ facts 주입         **6/6 · 17/17**
+  ⑤ crossSellerVerdict **6/6 · 17/17 생성**
+verdict  Boo Bo Choses: SIMILAR 1 · UNKNOWN 4 · CONFLICT 1
+         Astrid:        SIMILAR 3 · CONFLICT 3 · UNKNOWN 11
+→ 🟢 **A/B/C/D 전부 해당 없음. E(정상) 이다.**
+```
+
+🔴🔴 **열두째 WU 를 정정한다(두 번째 정정)** — 「axes 전건 비어 있다 → 판정에
+도달조차 못 했다」는 **틀렸다.** 판정은 처음부터 돌고 있었고, 내가 `c.match`
+(없는 칸)를 읽은 것이다. 🔴 그리고 열셋째 WU 의 추론(「후보 쪽 facts 가 비어서」)
+도 **반증됐다** — 후보 facts 는 **전건 있었다**(15칸).
+
+🟢 **SAME 이 안 나오는 실제 이유 — 축이 모자라다(설계된 동작)**:
+```
+후보 facts  brand 🟢 · coreTitleTokens 🟢 · 🔴 brandModelCode **null**(전건) ·
+            🔴 colorText **null**(전건)
+🔴 brandModelCode null 에는 «설명이 있다»(match.ts:493-508) —
+   confirmBrandCodeInTitle 은 원본 품번이 후보 제목에 **토큰으로 그대로** 있을
+   때만 채운다. 🟢 값을 지어내지 않는다. 국내 샵 제목은 자체 품번(76A7D-320-01)
+   이라 B226AC002 가 없다 → **null 이 맞다.**
+🟢 SAME_MIN_AXES=5 를 채우려면 품번·색상 축이 필요하고 국내 샵 «목록 페이지» 에
+   그 정보가 없다 → UNKNOWN/SIMILAR 가 **정상 산출** 이다.
+🟢 선행 메모 domestic-discovery-dies-at-low-not-at-search 와 정확히 정합한다.
+```
+
+🔴 **남는 선택지는 하나이고 CPO 정책 결정이다** — 「후보 상세 페이지를 열어
+품번·색상을 더 읽을 것인가」(비용 × 정확도 교환). 🟢 기존 장치가 이미 있다 —
+`fetchDomesticModelCode` · `MAX_DETAIL_CONFIRMATIONS_PER_SHOP = 2`. **신규 개발이 아니다.**
 
 ### 🔴🔴 열셋째 WU — 열두째 WU 의 「결함 셋」을 «정정» 한다
 
