@@ -383,6 +383,50 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 | Re-observation Value<br>`docs/MI-REOBSERVATION-WU-STATE.md` | **GO CANDIDATE**(조건부) | 🟢 재관측은 실제로 새 정보를 만든다 — 🔴 단 선행조치 둘 |
 | Cadence & Economics<br>`docs/MI-CADENCE-ECONOMICS-WU-STATE.md` | **GO · 2~3일** | 🟢 1일은 비효율 · 7일은 너무 느리다 (🔴 「cron 개발 GO」가 아니다) |
 | **MI Core E2E**<br>`docs/MI-CORE-E2E-WU-STATE.md` | **PARTIAL GO** | 🟢 계산 사슬은 작동한다 — 🔴 끊기는 곳은 «입구» 하나 (55/498 = 11.0%) |
+| **Domestic Link Coverage**<br>`docs/MI-DOMESTIC-LINK-COVERAGE-WU-STATE.md` | CHANGE DIRECTION | 🔴 원인은 검색이 아니라 **등록부** 다 — 취급 샵이 `MANUAL`/비활성이라 «안 뒤진다» |
+
+### 🔴🔴 아홉째 WU — `NO_LINK` 의 원인은 «검색» 이 아니라 «등록부» 다
+
+```
+🔴 자동수집 가능 샵이 전수 34 중 **7개** 뿐이다
+   MANUAL 12 · NOT_AVAILABLE 12(포털/오픈마켓 — 약관) · disabled 1 · 기타
+🔴 링크 88건을 실제로 만든 샵은 **4개** — 그중 **Bobo Choses Korea(공식)** 가
+   링크 36%(32/88)의 출처인데 **`enabled=false`** 다(이유 미조사)
+🟢 활성 자동수집 7개 중 실제로 링크를 만든 것은 3개(포레포레·듀베베·리틀루나)
+```
+
+🟢🟢 **`MANUAL` 의 의미를 잘못 읽으면 결론이 뒤집힌다** — owner 주석
+(`domestic-price-source.ts:261`, 대표님 지시 N-4.06 Track 1)이 명시한다:
+> 「임의로 `AUTO_SCRAPE` 로 확정하지 않는다 — **실제 사이트 구조를 조사하기
+>  전까지는 기본값을 `MANUAL` 로 둔다**(추정 금지 원칙).」
+
+🔴 **즉 `MANUAL` 은 「수집 불가」가 아니라 「아직 조사하지 않았다」 다.**
+그리고 선행 WU 가 실측한 MANUAL 샵 4곳 중 **2곳이 우리 링크 0 브랜드를 취급한다**:
+```
+coconjennie.com   (MANUAL) → Louise Misha · Emile et Ida · the new society · Misha&Puff
+chouchouenfant.kr (MANUAL) → Bobo Choses · Bonpoint  🔴 단 현 시즌 0(아웃렛)
+nokimore · karymarket     → 교집합 **0** (열어도 효과 없다)
+🔴 sample N=4 샵. MANUAL 12곳 중 8곳 미측정
+```
+
+🔴 **`NO_LINK` 분해 — 합계를 내지 않는다**(상호배타가 아니고 ②④가 측정불가):
+```
+링크 0 **429** 의 브랜드 상위
+  Bobo Choses 139 · AW26 40 · Sergio Tacchini 27 · (빈 브랜드) 25 ·
+  Pèpè 19 · The Animals Observatory 18 · Louis Louise 18 · Mini Rodini 17
+⑤ 전략상 탐색 안 함   하한 **21** (coconjennie 교집합 중 링크 0)
+⑤-b 대상이 비활성      **32** (Bobo Choses Korea)
+①-b scope 밖이 맞다    **28** (Sergio Tacchini 27 — 테니스, 0 이 맞다)
+③ 식별정보 부족        **25** (브랜드 공백) · ③-b **40** (AW26 은 브랜드가 아니다)
+①  국내 미취급         ~170  🟡 **추정** — 직접 확인 안 됨
+②④ 검색 실패 / reject  🔴 **구조적 측정불가** — status=ACTIVE 88/88 이라
+    떨어진 후보가 DB 에 «행으로 남지 않는다». 0 이 아니다
+```
+
+🔴 **다음은 코드가 아니라 조사·정책이다** — ① Bobo Choses Korea 비활성 이유
+② coconjennie 승격 여부(product path 미관찰 → 조사 먼저) ③ MANUAL 12곳 중
+어디를 조사할지. 🟢 판별 기준은 이미 있다(메모 `auto-source-adoption-standard`).
+🔴 NOT_AVAILABLE 12곳은 **약관**이라 대상이 아니다.
 
 ### 🟢🟢 여덟째 WU — 핵심 KPI 가 정해졌다: **55/498 = 11.0%**
 
