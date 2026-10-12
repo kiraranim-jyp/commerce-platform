@@ -390,6 +390,44 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 | **Facts 전달 경로**<br>`docs/MI-FACTS-TRANSFER-WU-STATE.md` | **C 정상전달** · 수정 **NO** | 🔴 직전 WU 의 「결함 셋」은 전부 **내 하니스 결함** 이었다 |
 | **후보 facts 경로**<br>`docs/MI-CANDIDATE-FACTS-WU-STATE.md` | **E 정상** · 수정 **NO** | 🟢 후보 facts 는 전건 있고 판정도 **전건 돈다** — 열두째 WU 가 틀렸다 |
 | **상세확인 가치**<br>`docs/MI-DETAIL-VALUE-WU-STATE.md` | **목록 경로 유지** | 🔴 SAME 승격 **0건** — 🔴 단 「가치 없음」이 아니라 **측정 불가** 였다 |
+| **Gemini 후보 Identity**<br>`docs/MI-GEMINI-CANDIDATE-001-STATE.md` | **⑤+① · MI 정상** | 🟢🟢 **Dinossi 후보가 `SAME`(0.81)** — MI 는 정보가 있으면 SAME 을 낸다 |
+
+### 🟢🟢 열여섯째 WU — **MI 는 정상이다. 정보가 있으면 SAME 을 낸다**
+
+Gemini 가 준 해외 샵 URL 3개를 운영 owner(`factsFromProductUrl` →
+`withConfidence`)에 그대로 넣었다. 원본은 DB 실재(`sku AAA1847110` · Pale Pink).
+
+```
+Smallable(navy)  🔴 fetch **UNREACHABLE**(PLAIN_HTML) → 판정 불가
+Hive Boutiques   🟡 **PRESUMED_SAME** (0.44) — 제목이 "Holly Trouser" 로 **축약** 돼
+                 hearts/ribbed/velvet/pants 가 없다 → 축 4개로 **한 칸 모자람**(정상)
+Dinossi          🟢🟢 **SAME** (0.81) · blockers [] · conflicts []
+                 reasons: 상품명 5토큰 · 상품군 pants · 색상 PINK · 소재 cotton:100 · KIDS
+                 🟢 축 5개가 SAME_MIN_AXES=5 를 채웠다 — **품번 없이 SAME 에 닿았다**
+전달 손실 0 (키 수 before == after)
+```
+
+🔴🔴 **그래서 판정은 ⑤ + ① 이고, MI 검증 계층을 수정 대상으로 «올리지 않는다».**
+```
+② ProductFacts 추출 문제  🟢 없음(2/3 전 축)   ③ 전달 문제 🟢 없음
+④ Identity 판정 로직 문제  🟢 **없음**
+⑤ 후보가 동일상품이고 MI 도 SAME  🟢🟢 **해당**(Dinossi)
+① 🟡 부분 — Smallable 후보가 **navy** 였다(원본은 Pale Pink · 지시서와 URL 이 어긋났다)
+→ 실제 문제는 **Gemini 결과를 MI 후보 입력으로 «연결하는» Discovery/Integration** 이다
+```
+
+🟢 **이 결과는 「국내 판매처에 식별정보가 부족하다」와 충돌하지 않는다** — 이번
+후보 셋은 전부 **해외 샵** 이고 **Shopify JSON** 을 준다. 🔴 국내 Cafe24 목록에는
+그 JSON 이 없다. 🟢 즉 두 결론이 같은 그림의 다른 부분이다.
+
+🔴 **남은 별 과제 둘**(이 WU 에서 손대지 않았다):
+```
+① Gemini → MI 후보 연결(경로 D)에는 **운영 호출부가 없다**. 🟢 이 WU 가 그 연결의
+   **가치를 처음으로 증명했다**(해외 후보 하나가 품번 없이 SAME).
+   🔴 단 Production 변경이라 CPO/CEO 결정 영역이다.
+② `factsFromProductUrl` 의 PLAIN_HTML 경로가 `maxHeaderSize` 를 쓰는지 —
+   Smallable UNREACHABLE 의 원인 후보다(선행 메모에 CSP 17KB 함정 기록).
+```
 
 ### 🔴🔴 열다섯째 WU — 상세확인은 «대상이 없다»
 
