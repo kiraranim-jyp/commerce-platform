@@ -771,3 +771,75 @@ Production          변경 0 · 미배포
 🔴 CPO 결정 필요    ⒞ Gemini 후보 가격 보강(enrichCandidatePrices 배선)을 할 것인가.
                     🔴 외부 HTTP 비용 증가 · 그리고 유효 국내 EXACT 0 문제는 별개로 남는다
 ```
+
+---
+
+# ◆ WU-010R `CONSUMER-010R` — §2 전수 확인 결과 (설계 확정)
+
+## ① `enrichCandidatePrices` 계약 (price-source-adapter.ts:243)
+
+```
+(candidates: ComparisonCandidate[], shopDomain: string, query?: ComparisonQuery)
+  → Promise<ComparisonCandidate[]>
+🔴 **Shopify 전용** — extractShopifyHandle + fetchShopifyProductJson.
+   handle 이 없으면(= /products/<p> 가 아니면) 그 후보는 **건너뛴다**.
+🟢 URL 을 `${origin}/products/${handle}` 로 **재조립** 한다 → 로케일·목록 접두사가
+   자동으로 떨어진다(008A 와 같은 방향).
+🟢 상한 = selectCandidatesForDetailConfirmation — matchLevel very_high/high 만,
+   샵당 MAX_DETAIL_CONFIRMATIONS_PER_SHOP(=2). 🔴 새 상한을 만들 필요가 없다.
+🟢 fail-soft — try/catch → priceStatus "PRICE_UNAVAILABLE", price 는 건드리지 않는다.
+🟢 성공 시 priceSource "detail" · priceStatus "VERIFIED_CURRENT".
+🔴 통화는 **매장 기준통화** 다(로케일 없는 URL 을 쓰므로). KRW 보장이 아니다.
+🔴 운영 호출부가 없던 이유 — 미확인(국내 경로는 어댑터 내부에서 가격을 채운다).
+```
+
+## ②🟢🟢 기존 집계기가 §3 을 **이미** 보장한다
+
+`summarizeDomesticMarketSplit(exactRecords, comparisonRecords)`
+(packages/pricing/src/price-history.ts:630)는 **런타임 배열**을 받는다 — DB 질의가
+아니다. 🟢 그래서 transient 레코드를 붙이면 **기존 규칙이 그대로** 돈다.
+
+그리고 `summarizeFrom`(:498)이:
+```
+records.filter((r) => r.soldOut !== true && r.priceKrw != null)
+```
+→ 🟢🟢 **`priceKrw` 가 null 인 행은 자동으로 집계에서 빠진다.**
+   지시서 §3 「가격 없으면 승격 금지」가 **내가 만든 규칙이 아니라 기존 규칙** 이다.
+
+## ③🔴🔴 그런데 회귀 위험이 하나 있다 — `marketCode`
+
+`summarizeFrom`(:531)은 `resolvePriceMarketKey(marketKeys, "KR")` 를 쓴다(:436):
+```
+market key 가 1개면      그것을 쓴다(SINGLE)
+2개 이상이면             analysisMarketCountry 와 **정확히 1개** 일치해야 한다
+일치가 0개/2개 이상이면   null → priceRecords = [] → **sellerCount 0**
+```
+🔴 즉 Gemini 레코드의 `marketCode` 가 기존 국내 레코드와 다르면 market key 가
+   늘어나 **기존 증거가 통째로 사라질 수 있다.**
+
+🟢 실측으로 막는다 — 운영 `price_observations` 의 `DOMESTIC_SHOP` 전건:
+```
+market_code = **null** · currency = **KRW** · 279행 (전수)
+```
+→ transient 레코드도 `marketCode: null` · `currency: "KRW"` 로 맞춘다.
+🟢🟢 그리고 **그것이 동시에 정직한 국내 게이트** 다 — 해외 Shopify 샵은 EUR/USD 를
+   주므로 KRW 가 없고, 따라서 **구조적으로 국내 가격 증거가 될 수 없다.**
+   🔴 임의 FX 환산을 하지 않는다(헌장: 모르는 통화에 convertToKrwStrict 는 null).
+
+## ④ 확정된 구현 경로
+
+```
+Gemini 후보
+ → 🟢 isSelfReferenceCandidate 로 **먼저** 제거 (§8 — 자기 자신에 HTTP 낭비 금지)
+ → withConfidence (기존)
+ → 🟢 enrichCandidatePrices(후보, host, query)   ← 기존 owner 재사용
+ → judgeDomesticCandidate (기존)
+ → GeminiTransientEvidence(+ priceAmount/priceCurrency/priceKrw/priceStatus)
+ → market-intelligence 에서 **priceKrw != null 인 것만** transient
+   PriceObservationRecord 로 만들어 tier 별 버킷에 append
+ → summarizeDomesticMarketSplit (기존 규칙 그대로)
+ → domesticMatched / sellerCount / basis / lowestPriceKrw (기존 의미 그대로)
+ → computeSellability → deriveRepresentativeSellerVerdict → toSellerFacingVerdict
+```
+🔴 판정 함수 **0 변경** · threshold **0** · DB 저장 **0** · marketCode/currency 를
+   기존 값에 맞춰 **집계 파괴를 막는다.**
