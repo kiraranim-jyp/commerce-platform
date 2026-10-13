@@ -1,5 +1,15 @@
 # WU-022 `MI-REGISTRATION-UX-WIRING` — Gemini 후보를 등록 화면에 transient 표시
 
+> 🟢 **CPO 판정 2026-10-14 — CLOSED / PASS.** 「새 기능을 만든 것이 아니라, 기존에 이미
+> 존재하던 `POST /check` 응답의 `geminiEvidence` 를 **저장하지 않고 등록 UI 까지 전달한
+> 것**」이 이 WU 의 핵심이라고 CPO 가 정리했다.
+> 🟢 CPO 가 꼽은 가장 중요한 안전장치 — **M6 를 개수 비교가 아니라 «속성 기반» 으로
+> 강화한 것.**
+> 🔴🔴 **이후 추가 개발 WU 는 없다.** 남은 것은 ⒜ Gemini 크레딧/비용 정책을 여는 것
+> ⒝ 그때 Production 에서 한 번 테스트하는 것 — 둘 다 CTO 범위 밖이다.
+> 🔴 그 전까지 flag OFF · deploy HOLD · Registry/카테고리/해외집계/microdata parser/
+> 가격추적 **전부 추가 없음** 으로 고정.
+
 > 🟢 **PASS.** 🔴 Gemini 호출 **0** · flag **OFF** · DB 저장 **0** · schema **0** ·
 > API 변경 **0** · 새 엔드포인트 **0** · Registry **0** · 카테고리 **0** ·
 > 환산 **0** · 해외 집계 **0** · 판매판정/등록판정 로직 변경 **0** · 자동 1회차 배선 **0** ·
