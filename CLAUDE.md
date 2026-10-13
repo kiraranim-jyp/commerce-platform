@@ -1034,39 +1034,71 @@ MANUAL 판매처 12개        자동 후보 경로가 없어 성능 판단 불�
 NO_CANDIDATES 72건        「검색이 약함」 ↔ 「그 샵에 그 상품이 없음」 구분 못 함
 ```
 
-### 🔴 미push 커밋 **63개** — CEO 판단 영역 · 🔴🔴 이제 **런타임 변경이 있다**
+### 🟢 코드는 remote 에 있다 — 🔴 **Production 은 아직 안 받았다** (2026-10-13)
 
 ```
-git status  clean · behind 0 / ahead 63
-🔴🔴 **「Production runtime change 0」은 더 이상 사실이 아니다.**
-   MI-GEMINI-005 가 이 트랙 최초로 운영 파일을 바꿨다(2026-10-13):
-     apps/admin/.../price-history/_lib/gemini-candidate-pool.ts   신규 263줄
-     apps/admin/.../price-history/_lib/run-domestic-price-check.ts  +71/-3
-     packages/crawler/src/discovery-core/*                         신규 8파일
-     packages/crawler/src/discovery-benchmark/*                    shim 으로 축소
-   합계 16파일 / +1,370 -811 (테스트·문서·scripts 제외)
-🟢 **그래도 기능 변화는 0 이다** — `MI_GEMINI_DISCOVERY_ENABLED` 가 "true" 가
-   아니면 새 경로가 한 줄도 돌지 않는다. discovery-core 는 본문을 그대로 옮긴 것이고
-   discovery-benchmark 는 `export *` shim 이라 동작이 같다.
-🔴 숫자는 직접 센다:
-   git fetch origin --quiet && git rev-list --count origin/main..HEAD
+origin/mi-gemini-005   🟢 **66커밋 push 완료** (behind 0 / ahead 0)
+origin/main            🔴 HEAD 그대로 `1f030313` — **한 커밋도 받지 않았다**
+작업트리               clean
 ```
 
-🔴 push 가 Production 배포를 트리거하므로 **CTO 도 CPO 도 임의로 밀지 않는다.**
-🟢 커밋 push 여부와 Work Unit 완료 여부는 분리해 취급한다(CPO 확정).
-### 🔴🔴 현재 착수점 — **CEO/CPO 결정 7건. 🔴 그중 둘이 «비용·배포» 다.**
+🔴🔴 **왜 main 이 아니라 브랜치인가 — 지시 둘이 `main` 에서는 양립하지 않는다.**
+CPO 가 「Push 🟢 승인 · Production Deploy 🔴 보류」로 **분리** 판정했다. 그런데
+이 리포는 `.vercel/project.json`(루트 · `ttaejyo`)로 Vercel Git 연동이 걸려 있고
+GitHub Actions 는 **없다** → **`main` push 가 그대로 Production 배포다**(헌장 §8).
+🟢 그래서 브랜치로 밀었다 — 코드는 remote 에 보존되고(push 충족) Production 은
+   한 글자도 안 바뀐다(deploy 보류 충족). 🔴 둘 중 하나를 포기하지 않았다.
+
+🟢 **배포 트리거가 0 이라는 구조적 증거**: `origin/main..origin/mi-gemini-005` = 66.
+   즉 production branch 가 받은 커밋이 **0** 이다. HTTP 상태코드에 의존하지 않는다
+   (메모 `production-307-is-not-route-evidence`).
+🟢 참고 실측(read-only GET): `/` **200** · `/today` 307 · `/api/price-history/check` 401.
+
+🔴 **배포는 한 줄이면 된다** — 승인 시 `main` 에 머지하면 그때 **한 번** 배포된다.
+   CTO 가 임의로 머지하지 않는다. `vercel --prod` CLI 는 쓰지 않는다
+   (메모 `vercel-deploy-from-repo-root`).
+
+### 🔴 MI-GEMINI-005 상태 — **IMPLEMENTED / ON-AXIS UNMEASURED** (CPO 확정)
 
 ```
-🔴 신규 2건 (MI-GEMINI-005 가 올린 것 — CTO 가 할 수 없는 일이다)
-  ⓐ Gemini 선불 크레딧 충전 여부 — **비용 승인**. 충전 전에는 flag 를 켜도
-     항상 402 다(실측). 🟢 그래도 안전하다 — 국내 경로가 불변임을 실측했다.
-  ⓑ flag 를 Production 에서 켤 것인가 — 켜면 상품당 외부 호출이 늘어난다
-     (실측: 상품당 Gemini 1.6회 · 1,372토큰 · 우리 fetch 3.0회 · sample N=5)
-  🔴 497개 기준 비용 환산은 **하지 않는다**(CPO 폐기 지시).
+WU-1 Core extraction   🟢   Build       🟢 exit 0 · static 104/104
+WU-2 Gemini 배선       🟢   Regression  🟢 506 files / 7,534 tests · failed 0
+Validation-close       🟢   Typecheck   🟢 10 = baseline
+국내 CONTROL           🟢 **2/3 재현** (분모 3 · 실패 1건은 «과거 행» 으로 규명됐다)
+Gemini ON 축           🔴 **미측정** — 402 prepayment credits depleted (16/16)
+Push                   🟢 브랜치   Production Deploy 🔴 보류   CEO 테스트 🔴 없음
+```
+
+🔴🔴 **다음은 코드 작업이 아니다. 코드 변경 0 을 원칙으로 한다.**
+```
+Gemini 선불 크레딧 확보(🔴 **CEO 비용 승인** — 이 트랙 최초의 진짜 사업 결정)
+      ↓ 새 기능 0 · 기존 하니스 재실행만
+mi-gemini-005-e2e.test.ts  (MI_P0_02_LIVE=1 · scripts/.env)
+      ↓ ON 축 실측
+CPO Production Deploy 판정  →  CEO 실상품 테스트
+```
+🔴 크레딧 전에는 **추가 WU 를 만들지 않는다**(CPO 확정). 모델을 바꿔 성공률을
+   만들지 않는다 — grounding 은 `flash-lite` 에서도 402 다.
+
+🔴 아직 모르는 것(0% 로 적지 않는다): Gemini Recall · 후보가 MI 판정을 얼마나
+   늘리는가 · 상품당 실제 Gemini 비용 · grounding 비용.
+### 🔴🔴 현재 착수점 — **CEO 비용 승인 1건이 모든 것을 막고 있다.**
+
+```
+🔴🔴 **ⓐ Gemini 선불 크레딧 충전 — CEO 비용 승인.** 이 트랙 WU 열아홉 개 중
+     **처음 발생한 진짜 사업적 결정** 이다. CTO·CPO 가 임의로 결정할 수 없다.
+     충전 전에는 flag 를 켜도 **항상 402** 다(실측 16/16).
+     🟢 그래도 안전하다 — 402 상태에서 국내 경로가 불변임을 N=8 로 실측했다.
+🔴 그 전까지 **CTO 는 코드를 만지지 않는다**(CPO 확정). 추가 WU 없음.
+🔴 ⓑ flag 를 Production 에서 켤 것인가 — ON 축 실측 **뒤** 에 판단한다.
+   (참고 실측 · sample 성공호출 N=2: 상품당 Gemini 1.6회 · 1,372토큰 · fetch 3.0회)
+🔴 497개 기준 비용 환산은 **하지 않는다**(CPO 폐기 지시).
 ```
 
 ```
-🔴🔴 **2026-10-13 정정 — 「배포할 것이 없다」는 더 이상 사실이 아니다.**
+🔴🔴 **2026-10-13 정정 ②** — 코드는 `origin/mi-gemini-005` 에 **밀려 있고**
+     `origin/main` 은 **안 받았다**(위 절). 배포는 머지 한 줄이고 **CPO 판정 대기** 다.
+🔴🔴 **2026-10-13 정정 ① — 「배포할 것이 없다」는 더 이상 사실이 아니다.**
      MI-GEMINI-005 가 **운영 파일 2개 + crawler 16파일**을 바꿨다(위 미push 절).
      🟢 단 **기능 변화는 0** 이다 — flag `MI_GEMINI_DISCOVERY_ENABLED` 기본 OFF.
      🔴 그래서 배포 판단이 **열려 있다**: 「OFF 상태로 미리 배포할 것인가」는
