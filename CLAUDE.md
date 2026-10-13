@@ -1058,7 +1058,7 @@ GitHub Actions 는 **없다** → **`main` push 가 그대로 Production 배포�
    CTO 가 임의로 머지하지 않는다. `vercel --prod` CLI 는 쓰지 않는다
    (메모 `vercel-deploy-from-repo-root`).
 
-### 🟢 WU-014 `DISCOVERY-QUERY` **완료** — Primary Query 를 코드로 고정했다 (호출 0)
+### 🟢 WU-014 `DISCOVERY-QUERY` **CLOSED / PASS** — Primary Query 를 코드로 고정 (호출 0)
 
 🟢 전문 `docs/MI-GEMINI-DISCOVERY-QUERY-014.md`. 🔴 Gemini 호출 **0** · ₩3,300 보존.
 
@@ -1111,6 +1111,26 @@ negative test 의 grounding **6→3** · 호출 **2→1** 은 **회귀가 아니
 
 🟢 회귀 admin **511 files / 7,614 tests passed · failed 0** · crawler **871 passed ·
 실패 테스트 0** · typecheck **10=baseline** · guard 6/6 · build exit 0.
+
+🔴🔴 **증거 등급을 섞지 않는다** (CPO 확정):
+```
+🟢 **확정** — Query 품질 결함(상품명 단독 15/15 · 품번 Primary 0/3 · 노이즈 11토큰 ·
+   Primary 1개로 축소 · 테스트상 calls 2→1 · grounding 6→3)
+🔴 **미검증 가설** — 「상품명 단독 Query 가 실제 5.5 grounding 확장의 **직접 원인**」
+   → Gemini 를 부르지 않았으므로 **실제 감소량은 측정하지 않았다.**
+     「원인을 잡았다」로 적지 않는다.
+```
+
+🔴 **다음은 최소 probe 뿐이고 Billing 이 먼저다** (CPO 확정):
+```
+선행  **Billing reconciliation 먼저.** ₩3,300 은 보존 자산. 지금 10~15 상품 금지.
+승인 시 `MI-GEMINI-DISCOVERY-QUERY-VALIDATION-015` — **1~2 상품만**
+       1 call/product · Primary 1개 · groundingQueryTexts 전체 기록 · 후보 최대 3 ·
+       기존 MI 판정 · 실제 비용 확인
+확인 **딱 4개** ① grounding query 수 감소 ② 불필요 후보 감소
+             ③ MI 인정 후보 증가 ④ **유효 후보 1개당 비용 하락**
+🟢 넷이 확인된 «뒤에» Children/Tennis 전체 표본으로 확대한다.
+```
 
 ### 🔴🔴 **현재 상태 — Gemini HARD STOP · 다음은 Billing 원장** (CPO 확정 2026-10-13)
 
