@@ -392,6 +392,7 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 | **상세확인 가치**<br>`docs/MI-DETAIL-VALUE-WU-STATE.md` | **목록 경로 유지** | 🔴 SAME 승격 **0건** — 🔴 단 「가치 없음」이 아니라 **측정 불가** 였다 |
 | **Gemini 후보 Identity**<br>`docs/MI-GEMINI-CANDIDATE-001-STATE.md` | **⑤+① · MI 정상** | 🟢🟢 **Dinossi 후보가 `SAME`(0.81)** — MI 는 정보가 있으면 SAME 을 낸다 |
 | **Gemini Integration 재현성**<br>`docs/MI-GEMINI-INTEG-002-STATE.md` | **재현됨** | 🟢🟢 SAME 1(conf **1.0**) + PRESUMED_SAME 3 · FETCH_FAIL **0** |
+| **Gemini Integration 구현**<br>`docs/MI-GEMINI-INTEGRATION-005-STATE.md` | **IMPLEMENTED /<br>PARTIALLY MEASURED** | 🔴🔴 **Gemini 선불 크레딧 소진(402)으로 측정이 닫혔다** — 🟢 그 장애에서 국내 경로가 **불변**(OFF 35 → ON 35) |
 
 ### 🟢🟢 열일곱째 WU — SAME 이 «재현된다» (서로 다른 3개 브랜드)
 
@@ -1033,54 +1034,54 @@ MANUAL 판매처 12개        자동 후보 경로가 없어 성능 판단 불�
 NO_CANDIDATES 72건        「검색이 약함」 ↔ 「그 샵에 그 상품이 없음」 구분 못 함
 ```
 
-### 🔴 미push 커밋 **34개** — CEO 판단 영역
+### 🔴 미push 커밋 **63개** — CEO 판단 영역 · 🔴🔴 이제 **런타임 변경이 있다**
 
 ```
-git status  clean · behind 0 / ahead 34 · Production runtime change 0
-🟢 전부 `__tests__/` 와 `docs/` 하위다 — 비테스트·비문서 변경 **0**
-🔴 「ahead 8」은 2026-10-12 오전 기준이고 낡았다. 숫자는 직접 센다:
+git status  clean · behind 0 / ahead 63
+🔴🔴 **「Production runtime change 0」은 더 이상 사실이 아니다.**
+   MI-GEMINI-005 가 이 트랙 최초로 운영 파일을 바꿨다(2026-10-13):
+     apps/admin/.../price-history/_lib/gemini-candidate-pool.ts   신규 263줄
+     apps/admin/.../price-history/_lib/run-domestic-price-check.ts  +71/-3
+     packages/crawler/src/discovery-core/*                         신규 8파일
+     packages/crawler/src/discovery-benchmark/*                    shim 으로 축소
+   합계 16파일 / +1,370 -811 (테스트·문서·scripts 제외)
+🟢 **그래도 기능 변화는 0 이다** — `MI_GEMINI_DISCOVERY_ENABLED` 가 "true" 가
+   아니면 새 경로가 한 줄도 돌지 않는다. discovery-core 는 본문을 그대로 옮긴 것이고
+   discovery-benchmark 는 `export *` shim 이라 동작이 같다.
+🔴 숫자는 직접 센다:
    git fetch origin --quiet && git rev-list --count origin/main..HEAD
 ```
 
-🟢 **전체 회귀 기준선** (`apps/admin` 에서 `npx vitest run`, 2026-10-13):
-```
-Test Files **505 passed** / 36 skipped (541)
-Tests      **7520 passed** / 44 skipped (7564)
-🔴 부분 실행(예: price-history 만 313건)을 「전체 회귀」로 보고하지 않는다 —
-   실제로 그렇게 적었다가 전체를 돌려 숫자가 20배 다른 것을 확인했다.
-🔴 그리고 1회차에 1건이 failed 로 떴다가 2·3회차에 재현되지 않았다(exit=0).
-   **flaky** 다 — lotteon/final-mapping-roundtrip 의 `fetch failed` 경로.
-   🔴 단 「flaky 니까 무시」가 아니라 **재현 시도 2회를 근거로** 그렇게 적었다.
-```
-
-🔴 **vitest 통과를 typecheck 통과로 쓰지 않는다** — vitest 는 타입을 보지 않는다.
-실제로 내 하니스에 tsc 에러 4개가 숨어 있었고 테스트는 전부 통과하고 있었다
-(`MatchLevel` 을 `@commerce/shared` 에서 받으려 했다. owner 는 crawler 다).
-```
-전 패키지 실측 — `npx pnpm -r --no-bail typecheck` (2026-10-12)
-  listing 5 · pricing 3 · crawler 2 · 🟢 admin **0**   합계 **10**
-🟢 2026-09-30 기록(listing 5 · pricing 3 · crawler 2)과 **정확히 같다.**
-   → 측정 트랙 36커밋이 추가한 typecheck 에러는 **0** 이다.
-🔴 **0 이 기준이 아니다. baseline 10 과 «비교» 한다.**
-🔴 `--no-bail` 없이 `pnpm -r` 을 돌리면 pricing 에서 **멈춘다** — 그 뒤 패키지는
-   「통과」가 아니라 «측정되지 않은 것» 이다.
-```
-
 🔴 push 가 Production 배포를 트리거하므로 **CTO 도 CPO 도 임의로 밀지 않는다.**
-🟢 **커밋 push 여부와 Work Unit 완료 여부는 분리해 취급한다**(CPO 확정) — 이 트랙은
-코드 변경 없이 **정상 종료** 다. 미완료가 아니다.
-
-### 🔴🔴 현재 착수점 — **CEO 테스트 1회 + 정책 결정 5건. 배포는 «불필요» 하다.**
+🟢 커밋 push 여부와 Work Unit 완료 여부는 분리해 취급한다(CPO 확정).
+### 🔴🔴 현재 착수점 — **CEO/CPO 결정 7건. 🔴 그중 둘이 «비용·배포» 다.**
 
 ```
-🟢🟢 배포할 것이 **없다** — 미push 커밋 전부가 `__tests__`/`docs`/`CLAUDE.md` 이고
-     **런타임 변경이 한 줄도 없다.** MVP 흐름은 **이미 Production 에 떠 있다.**
+🔴 신규 2건 (MI-GEMINI-005 가 올린 것 — CTO 가 할 수 없는 일이다)
+  ⓐ Gemini 선불 크레딧 충전 여부 — **비용 승인**. 충전 전에는 flag 를 켜도
+     항상 402 다(실측). 🟢 그래도 안전하다 — 국내 경로가 불변임을 실측했다.
+  ⓑ flag 를 Production 에서 켤 것인가 — 켜면 상품당 외부 호출이 늘어난다
+     (실측: 상품당 Gemini 1.6회 · 1,372토큰 · 우리 fetch 3.0회 · sample N=5)
+  🔴 497개 기준 비용 환산은 **하지 않는다**(CPO 폐기 지시).
+```
+
+```
+🔴🔴 **2026-10-13 정정 — 「배포할 것이 없다」는 더 이상 사실이 아니다.**
+     MI-GEMINI-005 가 **운영 파일 2개 + crawler 16파일**을 바꿨다(위 미push 절).
+     🟢 단 **기능 변화는 0** 이다 — flag `MI_GEMINI_DISCOVERY_ENABLED` 기본 OFF.
+     🔴 그래서 배포 판단이 **열려 있다**: 「OFF 상태로 미리 배포할 것인가」는
+        CEO 판단이고 CTO 가 임의로 밀지 않는다.
+     🔴🔴 그리고 flag 를 **켜도 지금은 항상 `API_FAILURE` 다** — Gemini 선불
+        크레딧이 소진됐다(402 · 실측 10/10). 🟢 그 상태가 안전하다는 것은
+        실측했다(OFF 후보 35 → ON 후보 **35**, 완전 동일).
+     MVP 흐름 자체는 **이미 Production 에 떠 있다.**
      실측(read-only GET): ttaejyo.vercel.app **200** · /pipeline 307 · /today 307 ·
      /api/price-history/check 401  → 🟢 307/401 은 **정상 보호** 다
      (🔴 「route 가 없다」로 읽지 않는다 — 메모 production-307-is-not-route-evidence)
 🔴 그러므로 push 해도 기능이 바뀌지 않는다. 기능 변화 0 인 재배포를 CTO 가
    임의로 일으키지 않는다(헌장 §8). 🟢 **CEO 테스트는 지금 떠 있는 것으로 가능하다.**
-🔴 조사 트랙은 **CLOSED** — WU 열다섯 개 · Production 변경 합계 **0**.
+🔴 조사 트랙은 **CLOSED** — WU 열일곱 개. 🔴 Production 변경 합계가 **0 이었다가
+   MI-GEMINI-005 에서 처음 생겼다**(그 WU 는 조사가 아니라 구현 WU 다).
    더 조사해도 같은 결론만 반복된다(CPO 확정).
 ```
 
