@@ -404,7 +404,7 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 | ② | MI 후보 검증 | 🟢 **CLOSED** (WU-019R) |
 | ③ | MI 상품정보/가격 수집 | 🟡 **PARTIAL** — JSON-LD 범위 CLOSED · microdata-only **보류** |
 | ④ | 최종 판매판정 | 🟢 **CLOSED** (WU-021) |
-| ⑤ | 실제 등록 UX | 🔴 **NEXT WORK 후보** — **UI 배선 설계/구현 필요** |
+| ⑤ | 실제 등록 UX | 🟡 **배선 PASS / Production 미확인** — WU-022 (아래) |
 
 ```
 카테고리 확장        🔴 HOLD 가 «아니다» — Phase A 완료 후 **테스트만** 한다
@@ -420,7 +420,30 @@ Gemini               🔴 flag **OFF 유지**
 🔴 다음 WU 범위는 **「MI 결과 → 등록 화면에서 필요한 상품정보/후보/판정 표시 →
 기존 등록 흐름과 연결」 하나** 다. 새 Registry · 새 카테고리 · 가격 추적은 **불포함**.
 
-##### 🟢 ⑤ 설계는 끝나 있다 — `docs/MI-REGISTRATION-UX-WIRING-DESIGN-022.md` (구현 0)
+##### 🟢🟢 WU-022 — ⑤ 배선 **구현 완료 / PASS** (`docs/MI-REGISTRATION-UX-WIRING-022.md`)
+
+```
+🟢 Gemini 후보가 **등록 화면에 transient 로 표시된다**(실제 마운트 DOM 으로 확인).
+   운영 2파일 — (신규) GeminiTransientCandidates.tsx + Panel 배선 **31줄**.
+   🟢 「🔄 다시 분석」 응답의 `domesticShop.geminiEvidence` 를 state 로 받아 렌더.
+      (그 값은 **이미 응답에 있었고 화면이 버리고 있었다**)
+🔴 저장 0 · schema 0 · API 변경 0 · 환산 0 · 해외 집계 0 · 자동 1회차 배선 0
+   · 판매판정/등록판정 로직 0 · Registry 0 · 카테고리 0 · flag OFF · 배포 0
+🔴 화면 규칙(DOM 으로 잠금): `UNKNOWN` → 시장 뱃지 **없음**(「국내」로 적지 않는다) ·
+   통화 그대로(`EUR 75`) · 가격 없으면 **「가격 미확인」** · 고정 문구 두 문장 ·
+   「동일상품 확인」 버튼 **없음**(DB 승격 금지).
+🟢 mutation 6종 전부 FAIL(원상복구 15 passed) — 특히 **M6「기존 candidates 에 섞기」**.
+   🔴 그 단언은 **개수가 아니라 속성** 으로 썼다(판정/집계 어휘와 같은 줄 금지).
+🟢 회귀 admin **515 files / 7,678 passed · failed 0** · typecheck 10=baseline ·
+   build exit 0 · guard 6/6.
+```
+
+🔴🔴 **「셀러가 실제로 본다」는 아직 아니다** — flag OFF 라 `geminiEvidence === null`
+이고 구역이 **렌더되지 않는다**. 🟢 그래서 **배포해도 현재 화면이 한 픽셀도 안 바뀐다**
+(설계된 안전 성질). 🔴 실제로 보이게 하려면 **① Gemini 크레딧 충전(CEO 비용 승인)** 이
+선행돼야 한다(flag 를 켜도 그 전에는 항상 `API_FAILURE` · 실측 16/16).
+
+##### 🟢 ⑤ 설계 근거 — `docs/MI-REGISTRATION-UX-WIRING-DESIGN-022.md`
 
 🔴🔴 **진단이 「렌더가 없다」가 아니다 — 「데이터 출처가 다르다」 다**:
 ```

@@ -14,6 +14,8 @@ import {
 import { sortDomesticCandidatesByTrust } from "@commerce/crawler/src/comparison-search/display-priority";
 import type { MatchTruth } from "@commerce/crawler/src/comparison-search/match-truth";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
+/** 🔴 WU-022 — transient 후보 구역. 저장되지 않는 값만 다루는 **표시 전용** 컴포넌트다. */
+import { GeminiTransientCandidates, type GeminiTransientRow } from "./GeminiTransientCandidates";
 // MATCHING-UNIFY-1 — 국내 가격비교 표와 같은 라벨을 쓰기 위한 공통 매핑.
 import { domesticEvidenceNote, domesticMatchDisplay } from "./match-display";
 // MI 2.0 PHASE 1 — 판매 판단의 근거를 4축으로 분해해 보여준다(새 판정 아님).
@@ -1789,6 +1791,13 @@ export function DomesticPriceIntelligencePanel({
   const [rechecking, setRechecking] = useState(false);
   const [recheckResult, setRecheckResult] = useState<RecheckResult | null>(null);
   const [candidates, setCandidates] = useState<DomesticCandidate[]>([]);
+  /**
+   * 🔴🔴 WU-022 — Gemini 웹 검색 후보. **저장되지 않는다** → DB 에서 다시 읽을 수 없고
+   *    「지금 확인」 응답에만 존재한다. 그래서 fetch 로 불러오는 `candidates` 와 달리
+   *    **이 state 가 유일한 보관처** 다(새로고침하면 사라지는 것이 맞다).
+   * 🔴 flag OFF 면 서버가 `null` 을 준다 → 구역이 렌더되지 않는다.
+   */
+  const [geminiEvidence, setGeminiEvidence] = useState<GeminiTransientRow[] | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
@@ -1978,9 +1987,22 @@ export function DomesticPriceIntelligencePanel({
           status?: string;
           savedCount?: number;
           errors?: string[];
-          domesticShop?: { pricesRecorded: number; linksCreatedOrUpdated: number; sourceErrors: string[] };
+          domesticShop?: {
+            pricesRecorded: number;
+            linksCreatedOrUpdated: number;
+            sourceErrors: string[];
+            /**
+             * 🔴🔴 WU-022 — 이 칸은 **이미 응답에 있었고 화면이 버리고 있었다**
+             *    (check/route.ts:111 이 `domesticShop` 을 통째로 싣는다).
+             *    저장되지 않는 transient 값이라 **state 에만** 담는다.
+             * 🔴 `null` = Gemini 경로가 돌지 않았다(flag OFF 가 그 상태다) → 구역 미표시.
+             */
+            geminiEvidence?: GeminiTransientRow[] | null;
+          };
         };
         setRecheckResult(summarizeRecheckResult(json));
+        /** 🔴 **덮어쓴다** — 이전 확인의 후보를 화면에 남기지 않는다(「이번 확인」이므로). */
+        setGeminiEvidence(json.domesticShop?.geminiEvidence ?? null);
       }
       await Promise.all([loadPriceHistory(), loadAlerts()]);
     } catch {
@@ -2090,6 +2112,7 @@ export function DomesticPriceIntelligencePanel({
       onRequestPriceReview={onRequestPriceReview}
       rechecking={rechecking}
       recheckResult={recheckResult}
+      geminiEvidence={geminiEvidence}
       onRecheck={() => void recheckNow()}
       confirmingId={confirmingId}
       onConfirmSameProduct={(id) => void confirmSameProduct(id)}
@@ -2134,6 +2157,7 @@ export function MiPanelView({
   onRequestPriceReview,
   rechecking = false,
   recheckResult = null,
+  geminiEvidence = null,
   onRecheck,
   confirmingId = null,
   onConfirmSameProduct,
@@ -2176,6 +2200,8 @@ export function MiPanelView({
   onOpenDetail?: () => void;
   onRequestPriceReview?: () => void;
   rechecking?: boolean;
+  /** 🔴 WU-022 — transient 웹 검색 후보. `null`/빈 배열이면 구역을 렌더하지 않는다. */
+  geminiEvidence?: GeminiTransientRow[] | null;
   recheckResult?: RecheckResult | null;
   onRecheck?: () => void;
   confirmingId?: string | null;
@@ -3075,6 +3101,10 @@ export function MiPanelView({
                 {recheckResult.icon} {recheckResult.message}
               </p>
             )}
+            {/* 🔴🔴 WU-022 — 「지금 확인」이 돌려준 **이번 확인 한정** 후보.
+                기존 후보 카드(DB 링크)와 **다른 구역** 이다 — 데이터 수명이 다르다.
+                🔴 이 구역은 판매판정·국내 최저가에 영향을 주지 않는다. */}
+            <GeminiTransientCandidates evidence={geminiEvidence} />
           </div>
         )}
       </div>
