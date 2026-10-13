@@ -407,7 +407,55 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 | ⑤-a | 실제 등록 UX **배선** | 🟢 **배선 PASS** (WU-022 · CLOSED) |
 | ⑤-b | Production **실화면** | 🔴 **미확인** |
 
-### 🔴🔴 다음 WU 는 **이미 정해져 있고 HOLD 다** — `MI-PRODUCTION-E2E-FINAL-023`
+### 🟡 WU-023 **실행 중 · A 는 HOLD** (CPO 2026-10-14)
+
+```
+①② 계측 로그 + 호출 상한        🟢 완료   (maxQueries 2 → **1** · [MI-023-metrics])
+③  회귀/build                   🟢 완료   516 files / 7,687 passed · typecheck 10=baseline
+④  Production 배포              🟢 **Ready** — 최신 main 배포가 `ttaejyo.vercel.app` 에 alias
+     (🔴 커밋 해시는 CLI 가 안 보여줘 **타임스탬프로만** 대응시켰다 — 단정하지 않는다.
+      확실한 증거는 빌드 로그의 `Commit:` 줄이다 · 메모 production-307-is-not-route-evidence)
+     🟢 기능 변화 **0** — flag 키가 env 에 **없다**
+B   Gemini 1 call 실측           🟢 **완료** (`docs/MI-PRODUCTION-E2E-FINAL-023B-ONECALL.md`)
+A   Production flag ON 테스트    🔴 **HOLD — 비용 미확정**
+```
+
+🟢 **B 결과(실측 · N=1)**:
+```
+Gemini calls **1** · queriesUsed 1 · outcomes {OK:1} · 실패 0
+tokens input 1,899 / output 300 / thoughts 1,790 / **total 3,989** · **grounding 3**
+discovered 5 → usable 2 → MI candidates 2 · **SAME 1 · PRESUMED_SAME 1**
+Primary = **L1_MODEL_CODE** "Bobo Choses B226AC010"(3토큰)
+Gemini 내부 검색어 3개가 **전부 품번** 을 썼고 둘은 스스로 `site:` 로 좁혔다
+  (🔴 그 사이트들은 우리가 넘긴 preferredDomains 에 **없다** — Gemini 자기 판단)
+🟢🟢 후보가 **한국 리세일 플랫폼**(global.trenbe.com SAME 0.53 · m.web.mustit.co.kr
+   PRESUMED_SAME 0.02 · KRW 74,000)이고 **우리 등록부 밖** 이다 — 기존 MI 가 전용 규칙 0 으로 판정
+```
+
+🔴🔴 **CPO 판정 — PASS 범위를 넘겨 읽지 않는다**:
+```
+🟢 PASS 인 것: 「호출 자체가 정상이고 **1-call 상한도 지켰다**」 까지
+🔴 **상품당 실제 비용은 미확정** 이다 — 원화 차감액이 없다(CTO 는 Billing 을 읽을 수 없다)
+🔴 그래서 **A 를 승인하지 않는다.** ₩3,171 → 호출 후 잔액 확인이 **선행** 이다
+🔴 유효 국내 가격 증거는 **여전히 0** — trenbe 는 가격 없음 · mustit 은
+   `priceStatus = UNVERIFIED_SEARCH` 라 운영 게이트(VERIFIED_CURRENT && KRW)를 못 지난다
+   🔴 단 **「0」의 성질이 달라졌다** — 전엔 「국내 후보가 아니었다」, 이번엔
+      「국내 후보를 찾았는데 가격이 검증을 통과하지 못했다」. 🔴 N=1 로 일반화하지 않는다
+🔴 **498 전수 환산을 하지 않는다**(CPO 명시) — 관측값 하나로만 판단한다
+🔴 「grounding 5.5 → 3 으로 줄었다」로 적지 않는다 — 조건·분모가 다르다
+```
+
+🔴 **보류된 제품정책 1건 (고치지 않는다)** — WU-022 transient 구역이 `priceStatus` 와
+무관하게 금액을 보여줘서 **미검증 가격(mustit KRW 74,000)이 확정 가격처럼 보일 수 있다.**
+🟢 판정·국내 최저가에는 들어가지 않는다. 🔴 「미검증」 표시 추가는 **제품정책 판단 대상**
+이고 WU-022 의 PASS 범위를 깨지 않기 위해 **임의로 수정하지 않는다**(CPO 확정).
+
+🔴 **A 를 열 때의 순서**(그때만): 배포 Ready 확인 → flag ON → **CEO 가 특정 상품 1개에서
+「🔄 다시 분석」 1회** → **즉시 flag OFF** → 결과/비용 확인.
+🔴🔴 그리고 그때 CEO 에게 **「`/today` 일괄 확인을 절대 누르지 말 것」** 을 명시해야 한다
+(메모 `gemini-flag-is-a-global-switch-not-a-per-product-control`).
+
+### 🔴🔴 WU-023 지시서 본문 — `MI-PRODUCTION-E2E-FINAL-023`
 
 🔴🔴 **지금 착수하지 않는다.** 조건부 실행 WU 다(CPO 2026-10-14). 전문 지시서는 CPO 가
 줬고 아래는 **착수 판단과 사전조건** 만 남긴 것이다.
