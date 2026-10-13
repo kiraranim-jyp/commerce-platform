@@ -101,12 +101,47 @@ export interface DomesticPriceCheckInput {
   categoryScopes?: string[] | null;
 }
 
+/**
+ * 🔴🔴 **영구 entity 가 아니다.** 등록 «순간» 의 판단 근거로만 쓰고 버린다
+ *    (지시서 §5: DB 저장 ❌ · links 저장 ❌ · 가격 이력 ❌ · 장기 캐시 ❌).
+ *
+ * 🟢 값은 전부 **기존 MI 가 이미 계산한 것** 이다 — 새 판정기를 만들지 않았다
+ *    (`judgeDomesticCandidate` → `priceTierFromLink`). 🔴 Gemini 전용 규칙 0.
+ */
+export interface GeminiTransientEvidence {
+  /** 🔴 출처를 잃지 않는다 — 기존 국내 후보와 섞여도 구분 가능해야 한다(§7). */
+  source: "GEMINI_DISCOVERY";
+  /** 🔴 가상 shopId 가 아니라 **실제 판매처 도메인** 이다. */
+  domain: string;
+  discoveredUrl: string;
+  matchTruth: MatchTruth | null;
+  verified: boolean;
+  /** 🟢 `priceTierFromLink` 를 **호출해서** 얻는다 — 복제 계산 금지(헌장 §12). */
+  priceTier: DomesticPriceTier;
+  matchType: DomesticMatchType | null;
+  crossSellerVerdict: string | null;
+  confidence: number | null;
+  matchReasons: string[];
+  crossSellerBlockers: string[];
+  crossSellerConflicts: string[];
+}
+
 export interface DomesticPriceCheckResult {
   linksCreatedOrUpdated: number;
   pricesRecorded: number;
   sourceErrors: string[];
   /** 🔴 MI-GEMINI-005 §10 — flag OFF 면 `null` 이다(「0 회」가 아니라 「안 돌았다」). */
   geminiMetrics?: GeminiPoolMetrics | null;
+  /**
+   * 🔴🔴 MI-GEMINI-REGISTRATION-DECISION-009 — **transient evidence.**
+   *
+   * Gemini 후보는 `domestic_product_links` 에 저장되지 않는다(§5/§19). 그래서
+   * 판정 결과가 지금까지 `continue` 와 함께 **버려졌다**. 이 칸이 그것을 런타임
+   * 객체로 들고 나온다 — **DB 저장 0 · 캐시 0 · 요청 범위 안에서만 존재한다.**
+   *
+   * 🔴 `null` = flag OFF(경로가 안 돌았다) · `[]` = 켰는데 후보가 없었다. 섞지 않는다.
+   */
+  geminiEvidence?: GeminiTransientEvidence[] | null;
   /** N-4.18-Q3 PART H-3-11 STEP 7(대표님 지시, 2026-08-27: "실제로 네트워크
    * 요청이 생략됐는지 확인한다") — 이번 호출에서 실제로 발생한 국내 식별자
    * (modelCode) 추출 시도 총 횟수. isEvidenceEvaluationWorthwhile 가드가
@@ -759,6 +794,8 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
    *    🔴 「상품당 Gemini N회 고정」이 아니다 — `targetUsable` 이 차면 조기 종료한다.
    */
   let geminiMetrics: GeminiPoolMetrics | null = null;
+  /** 🔴 flag OFF 면 끝까지 `null` 로 나간다 — 「후보 0」과 「경로가 안 돌았다」를 가른다. */
+  const geminiEvidence: GeminiTransientEvidence[] = [];
   if (isGeminiDiscoveryEnabled()) {
     const existingUrls = new Set<string>();
     for (const r of searchResults) {
@@ -939,7 +976,26 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
      *    (host 가 달라도 shopId 가 같으니) 캐시 키까지 오염시킨다.
      * 🟢 판정은 이 줄 «위» 에서 이미 끝났다 — Vision 은 upsert 입력일 뿐이고
      *    matchType·verified·matchTruth·priceTier 에 들어가지 않는다(아래 주석). */
-    if (result.shopId === GEMINI_VIRTUAL_SHOP_ID) continue;
+    if (result.shopId === GEMINI_VIRTUAL_SHOP_ID) {
+      /* 🟢 **버리기 전에 근거만 들고 나온다.** 저장은 여전히 하지 않는다 —
+       * 아래 continue 가 upsert 와 관측 기록을 전부 건너뛴다. */
+      geminiEvidence.push({
+        source: "GEMINI_DISCOVERY",
+        domain: result.domain,
+        discoveredUrl: best.url,
+        matchTruth: finalMatchTruth,
+        verified: finalVerified,
+        /** 🔴 복제 계산하지 않는다 — 운영 owner 를 그대로 부른다. */
+        priceTier: priceTierFromLink({ matchTruth: finalMatchTruth, verified: finalVerified }),
+        matchType,
+        crossSellerVerdict: best.crossSellerVerdict ?? null,
+        confidence: best.confidence ?? null,
+        matchReasons: finalMatchReasons,
+        crossSellerBlockers: (best.crossSellerBlockers ?? []).map((b) => String(b)),
+        crossSellerConflicts: (best.crossSellerConflicts ?? []).map((c) => String(c)),
+      });
+      continue;
+    }
 
     /**
      * P0-A.29-B(CEO 승인 ㉮, 2026-09-19) — Vision 을 «관측 데이터 수집기» 로만 부른다.
@@ -1144,5 +1200,7 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     domesticModelCodeFetchCount,
     /** 🔴 flag OFF 면 `null` — 「Gemini 0회」가 아니라 「경로가 안 돌았다」다(§7). */
     geminiMetrics,
+    /** 🔴 같은 원칙 — flag OFF 면 `null`, 켰는데 후보가 없으면 `[]`. */
+    geminiEvidence: geminiMetrics === null ? null : geminiEvidence,
   };
 }

@@ -1,3 +1,4 @@
+import type { GeminiTransientEvidence } from "./run-domestic-price-check";
 import { backfillCanonicalProduct } from "@commerce/shared";
 import {
   computePriceDecision,
@@ -79,7 +80,28 @@ export async function isDomesticSourcedProduct(sourceUrl: string, workspaceId: s
  * 응답 둘 다 이 함수를 공유해야, "화면에 보이는 값"과 "알림을 만드는 기준값"이
  * 서로 다른 계산을 하는 사고가 나지 않는다.
  */
-export async function computeMarketIntelligence(snapshotId: string, workspaceId: string) {
+/**
+ * 🔴🔴 MI-GEMINI-REGISTRATION-DECISION-009 — `geminiEvidence` 인자 하나를 추가했다.
+ *
+ * 🔴 **왜 인자인가.** 이 함수는 원래 `(snapshotId, workspaceId)` 만 받고 **전부 DB
+ *    에서 읽는다.** 그런데 Gemini 후보는 저장이 금지돼 있어(§5/§19) DB 에 없다 →
+ *    **구조적으로 이 판정면에 닿을 수 없었다.** 그래서 지시서 §5 가 요구한 대로
+ *    「영구 entity 없이 런타임 객체로」 전달한다.
+ *
+ * 🔴🔴 **그리고 이 값은 아래 어떤 계산에도 들어가지 않는다.** 반환 객체의 별도
+ *    칸으로만 나간다. 그것이 설계다:
+ *      · `sellerAction` · tier 버킷 · 가격 · alert 에 **한 글자도 영향이 없다**
+ *      · 그래서 「Gemini `SAME` 하나만으로 자동 STOP」이 **구조적으로 불가능** 하다(§4)
+ *      · 그래서 flag OFF 든 ON 이든 **기존 판정 결과가 동일** 하다(§12 의 즉시 STOP 조건)
+ *    🔴 threshold 를 바꾸지 않았고 Gemini 전용 규칙도 만들지 않았다.
+ *
+ * 🔴 `undefined`/`null` = 경로가 안 돌았다 · `[]` = 켰는데 후보가 없었다. 섞지 않는다.
+ */
+export async function computeMarketIntelligence(
+  snapshotId: string,
+  workspaceId: string,
+  geminiEvidence?: GeminiTransientEvidence[] | null,
+) {
   const snapshot = await getSnapshot(snapshotId, workspaceId);
   if (!snapshot) return null;
   const product = backfillCanonicalProduct(snapshot.workspace.canonicalProduct);
@@ -779,6 +801,13 @@ export async function computeMarketIntelligence(snapshotId: string, workspaceId:
     /** K-1 threshold 판정에 쓸 원재료(가격 알림 저장 로직에서만 사용, GET
      * 응답 스키마에는 그대로 노출하지 않는다 — 화면은 sellerAction만 본다). */
     _alertInputs: { domesticChange: domesticChangeForAlert, originChange: originChangeForAlert },
+    /**
+     * 🔴🔴 **등록 «순간» 의 transient evidence.** 저장되지 않은 Gemini 후보의
+     *    기존-MI 판정 결과다(§5). 🔴 위 어떤 값도 이것을 읽지 않는다 —
+     *    `sellerAction`·tier·가격·alert 는 이 칸과 **독립** 이다.
+     * 🔴 `null` = 경로가 안 돌았다 · `[]` = 켰는데 후보가 없었다.
+     */
+    geminiEvidence: geminiEvidence ?? null,
   };
 }
 

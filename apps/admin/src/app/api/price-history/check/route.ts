@@ -78,7 +78,14 @@ export async function POST(request: Request) {
   // resolveAlertsNotIn이 조용히 no-op이므로 이 블록이 실패해도 위 result는
   // 그대로 반환된다.
   try {
-    const intelligence = await computeMarketIntelligence(snapshotId, auth.user.workspaceId);
+    /* 🔴 MI-GEMINI-009 — 방금 돈 Gemini 판정 근거를 **런타임으로** 넘긴다.
+     *    저장하지 않았으므로 DB 에서는 읽을 수 없다(§5). 🔴 아래 계산에 영향이
+     *    없는 별도 칸으로만 실린다 — Gemini 가 기존 판정을 바꾸지 않는다. */
+    const intelligence = await computeMarketIntelligence(
+      snapshotId,
+      auth.user.workspaceId,
+      domesticShop.geminiEvidence ?? null,
+    );
     if (intelligence) {
       const alert = computeMarketAlert({
         sellerAction: intelligence.sellerAction,
