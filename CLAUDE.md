@@ -1058,6 +1058,60 @@ GitHub Actions 는 **없다** → **`main` push 가 그대로 Production 배포�
    CTO 가 임의로 머지하지 않는다. `vercel --prod` CLI 는 쓰지 않는다
    (메모 `vercel-deploy-from-repo-root`).
 
+### 🟢 WU-014 `DISCOVERY-QUERY` **완료** — Primary Query 를 코드로 고정했다 (호출 0)
+
+🟢 전문 `docs/MI-GEMINI-DISCOVERY-QUERY-014.md`. 🔴 Gemini 호출 **0** · ₩3,300 보존.
+
+🔴🔴 **실측으로 확증된 결함** (sample 상품 N=15 · Gemini 호출 0):
+```
+Primary(queries[0]) = **Q1 15/15** — 상품명 «단독». 브랜드도 품번도 없었다.
+품번 보유 3상품 중 Primary 가 품번 query 인 것 **0**
+  (`generateQueries` 는 SPECS 순서로 열거하고 pool 이 slice(0,1) 을 썼다 →
+   품번 축 Q5/Q6 는 5~6번째라 **도달 불가**)
+Primary 토큰 — PRODUCT_NAME 71 · CATEGORY 13 · MATERIAL 7 ·
+  🔴 노이즈(MARKETING 6 · COLOR 3 · SIZE 1 · PRICE 1) = 11 · IDENTIFIER 단 **1**
+→ 🔴 식별력 거의 없는 긴 상품명을 던지고 있었다. 내부 검색어 확장(5.5)의 원인 후보.
+```
+
+🟢 **고친 것** — `buildPrimaryQuery`(discovery-core/query-generator.ts 신규):
+```
+L1  brand && productCode → `브랜드 품번` 그 둘만(색상·사이즈·마케팅 0)
+L2  brand && core        → `브랜드 + 코어 2~4` (denylist 로 노이즈만 제거)
+L3  core only            → 브랜드 없을 때
+UNAVAILABLE              → **빈 값 · 호출하지 않는다**(NO_PRIMARY_QUERY)
+🔴 denylist 다 — allowlist 가 아니다. 「Holly Hearts」·「T Bar」 같은 **고유 디자인명이
+   곧 식별자** 이고 allowlist 면 모르는 디자인명이 조용히 죽는다.
+🔴 **소재(Ribbed/Velvet)는 제거 목록에 없다** — CPO 예시가 유지한다. 분류기의
+   MATERIAL 과 제거 대상을 섞지 않는다.
+🟢 `generateQueries`(8축)는 **한 줄도 바꾸지 않았다** — 벤치마크가 8축 전부를 쓴다.
+```
+
+🟢 **Prompt v2** — v1 의 첫 줄 「최대한 많이 찾아 주세요」를 **지웠다**(그 지시가 확장을
+부른다). 「최대 3개이고 **반드시 3개가 아니다**」·「확실한 후보가 없으면 **반환하지
+마라**」·우선순위 5단·제외 8항·「**판정하지 마라**」.
+
+🔴🔴 **보장과 비보장을 가른다** (CPO 정정 — 이 문장을 그대로 쓴다):
+```
+🟢 우리가 통제한다   1 상품 = 1 API call = **1 Primary Query** = 최대 3 후보
+🔴 통제하지 못한다   Gemini 가 그 안에서 내부 검색어 **N** 개를 자동 생성한다
+                    (실측 호출당 **5.5**) — API 파라미터로 1 로 **고정할 수 없다**
+→ 목표는 「1회 강제」가 아니라 **N 을 최소화하고 실측** 하는 것이다.
+```
+
+🟢 **측정 스키마** — `primaryQuery` · `primaryQueryLevel` · `primaryQueryTokenCount` ·
+`groundingQueries` · 🔴🔴 **`groundingQueryTexts[]`**(실제 검색어 문자열 전부).
+🔴 「grounding query 는 측정할 수 없다」는 전제는 **폐기됐다.**
+🔴 아직 보존 안 하는 것 — `modelVersion` · `cachedContentTokenCount`.
+   **비용 원인 규명 후** 진행한다(CPO 지시).
+
+🟢 테스트 19건 + **음성대조 4종**(품번우선 제거 2 FAIL · denylist 비우기 7 FAIL ·
+상한 제거 2 FAIL · 빈query 방지 제거 3 FAIL → 복구 19/19).
+🔴 기존 단언 4건을 **문구 → 의도** 로 갱신했다(`/판[단정]하지 마/` 등). 그리고
+negative test 의 grounding **6→3** · 호출 **2→1** 은 **회귀가 아니라 목적** 이다.
+
+🟢 회귀 admin **511 files / 7,614 tests passed · failed 0** · crawler **871 passed ·
+실패 테스트 0** · typecheck **10=baseline** · guard 6/6 · build exit 0.
+
 ### 🔴🔴 **현재 상태 — Gemini HARD STOP · 다음은 Billing 원장** (CPO 확정 2026-10-13)
 
 ```

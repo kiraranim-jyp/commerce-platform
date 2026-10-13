@@ -413,7 +413,12 @@ describe("C8 키가 없으면 CONFIG_MISSING — 「결과 없음」과 가른�
     );
     await createGoogleDiscoveryProvider().discover(JOB005_IDENTITY, generateQueries(JOB005_IDENTITY)[0]);
     expect(sentBody).toContain("google_search");
-    expect(sentBody).toContain("판단하지 마세요");
+    /* 🔴 MI-014 — **문구가 아니라 «의도» 를 잠근다.** Prompt v2 에서 어미가
+     *    「마세요」→「마라」로 바뀌어 리터럴 단언이 깨졌다. 의도는 그대로다 —
+     *    다음 prompt 수정에 또 깨지지 않도록 정규식으로 본다. */
+    /** 🟢 v2 는 「동일상품인지 **판정하지 마라**」로 적는다 — 둘 다 받는다.
+     *     🔴 의도: Gemini 에 SAME 판정을 맡기지 않는다(판정은 기존 MI 가 한다). */
+    expect(sentBody).toMatch(/판[단정]하지 마/);
     // 🔴 「동일상품인지 알려줘」류 요구가 프롬프트에 없어야 한다.
     expect(sentBody).not.toContain("동일한 상품인지");
     /**
@@ -514,6 +519,9 @@ describe("🔴 측정 인프라 — 조용히 썩지 않게 잠근다", () => {
       thoughtsTokens: 0,
       totalTokens: 0,
       groundingQueries: 0,
+      /** 🔴 MI-014 — 실제 검색어 문자열도 보존한다(개수만으로는 확장 원인을 못 본다).
+       *     응답이 주지 않으면 **빈 배열** 이다 — 지어내지 않는다. */
+      groundingQueryTexts: [],
     });
   });
 

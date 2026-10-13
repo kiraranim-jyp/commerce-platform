@@ -178,7 +178,10 @@ describe("🔴 MI-P0-02 STEP B — Discovery 프롬프트의 whitelist", () => {
     const provider = await send({ preferredDomains: [] });
     expect(provider.preferredDomains()).toEqual([]);
     expect(sentBody).not.toContain("반드시 함께 포함");
-    expect(sentBody).not.toContain("목록에만 한정하지 마세요");
+    /* 🔴 MI-014 — **문구가 아니라 «의도» 를 잠근다.** Prompt v2 에서 어미가
+     *    「마세요」→「마라」로 바뀌어 리터럴 단언이 깨졌다. 의도는 그대로다 —
+     *    다음 prompt 수정에 또 깨지지 않도록 정규식으로 본다. */
+    expect(sentBody).not.toMatch(/목록에만 한정하지/);
     // 🔴 registry 도메인이 한 곳도 새어 들어가지 않아야 한다 — 하나라도 남으면
     //    대조군이 대조군이 아니다.
     for (const d of supportedPriceSourceDomains()) {
@@ -193,13 +196,20 @@ describe("🔴 MI-P0-02 STEP B — Discovery 프롬프트의 whitelist", () => {
    */
   it("🔴 「목록에만 한정하지 마세요」가 같이 실린다", async () => {
     await send();
-    expect(sentBody).toContain("목록에만 한정하지 마세요");
+    /* 🔴 MI-014 — **문구가 아니라 «의도» 를 잠근다.** Prompt v2 에서 어미가
+     *    「마세요」→「마라」로 바뀌어 리터럴 단언이 깨졌다. 의도는 그대로다 —
+     *    다음 prompt 수정에 또 깨지지 않도록 정규식으로 본다. */
+    expect(sentBody).toMatch(/목록에만 한정하지/);
   });
 
   /** 🔴 whitelist 를 넣으면서 판정 요구를 끼워 넣지 않았다(P5.4-C §7 유지). */
   it("🔴 판정 금지 문구가 그대로 남아 있다", async () => {
     await send();
-    expect(sentBody).toContain("판단하지 마세요");
+    /* 🔴 MI-014 — **문구가 아니라 «의도» 를 잠근다.** Prompt v2 에서 어미가
+     *    「마세요」→「마라」로 바뀌어 리터럴 단언이 깨졌다. 의도는 그대로다 —
+     *    다음 prompt 수정에 또 깨지지 않도록 정규식으로 본다. */
+    /** 🟢 v2 는 「동일상품인지 **판정하지 마라**」로 적는다 — 둘 다 받는다. */
+    expect(sentBody).toMatch(/판[단정]하지 마/);
     expect(sentBody).not.toContain("동일한 상품인지");
     expect(sentBody).not.toContain("같은 상품인지 알려");
     // 기존 단언(브랜드·품번 적재)도 유지된다.

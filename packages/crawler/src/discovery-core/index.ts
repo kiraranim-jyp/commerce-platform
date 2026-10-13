@@ -23,6 +23,9 @@ export type {
 } from "./types";
 
 export { generateQueries } from "./query-generator";
+/** 🔴 MI-014 — 운영은 **Primary Query 하나** 만 쓴다. `generateQueries`(8축 열거)는
+ *     벤치마크용으로 남겨 둔다 — 둘을 섞지 않는다. */
+export { buildPrimaryQuery, type PrimaryQuery, type PrimaryQueryLevel } from "./query-generator";
 export { resolveCandidate, isCrawlable, type PageProbe } from "./url-resolver";
 export { createLivePageProbe, type LiveProbeResult } from "./live-page-probe";
 /** 🔴 `GoogleDiscoveryUsage` 를 함께 낸다 — MI-GEMINI-005 §10 이 상품당 토큰을

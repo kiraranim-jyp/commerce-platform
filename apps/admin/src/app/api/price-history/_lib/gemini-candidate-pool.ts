@@ -1,10 +1,12 @@
 import {
   createProductionGoogleDiscovery,
   createLivePageProbe,
-  generateQueries,
+  buildPrimaryQuery,
   resolveCandidate,
   type GoogleDiscoveryUsage,
   type ProductIdentity,
+  type DiscoveryQuery,
+  type QueryId,
 } from "@commerce/crawler/src/discovery-core";
 import { factsFromProductUrl, type ComparisonCandidate, type ComparisonSearchResult } from "@commerce/crawler";
 import type { ProductIdentityDna } from "@commerce/shared";
@@ -80,6 +82,12 @@ export interface GeminiPoolMetrics {
    *    (실측: 1 호출 → 6 쿼리). 호출 수로 비용을 계산하면 과소가 된다.
    */
   groundingQueries: number;
+  /** 🔴 MI-014 STEP 7 — 실제 검색어 문자열. 개수만 세면 확장 원인을 못 본다. */
+  groundingQueryTexts: string[];
+  /** 🔴 MI-014 — 우리가 «통제하는» 것: Primary Query 는 언제나 1개다. */
+  primaryQuery: string | null;
+  primaryQueryLevel: string | null;
+  primaryQueryTokenCount: number;
   inputTokens: number;
   outputTokens: number;
   thoughtsTokens: number;
@@ -130,6 +138,10 @@ export interface GeminiPoolResult {
 const EMPTY_METRICS = (): GeminiPoolMetrics => ({
   geminiCalls: 0,
   groundingQueries: 0,
+  groundingQueryTexts: [],
+  primaryQuery: null,
+  primaryQueryLevel: null,
+  primaryQueryTokenCount: 0,
   inputTokens: 0,
   outputTokens: 0,
   thoughtsTokens: 0,
@@ -201,9 +213,46 @@ export async function collectGeminiCandidatePool(input: GeminiPoolInput): Promis
   const metrics = EMPTY_METRICS();
   const identity = identityFromDna(input.dna);
 
-  let queries: ReturnType<typeof generateQueries>;
+  /**
+   * 🔴🔴 MI-014 — **Primary Query 하나** 만 만든다.
+   *
+   * 이전에는 `generateQueries(identity).slice(0, maxQueries)` 였다. 그 함수는 8축을
+   * SPECS 순서로 열거하므로 `maxQueries = 1` 일 때 **항상 `Q1 = productName` 단독**
+   * 이 나갔다 — 브랜드도 품번도 없이. 실측(N=15): Primary 가 Q1 **15/15**,
+   * 품번 보유 3상품 중 품번 query 가 Primary 가 된 것 **0**.
+   *
+   * 🟢 `buildPrimaryQuery` 는 품번이 있으면 `[브랜드] [품번]` 을 쓰고, 없으면
+   *    denylist 로 색상·사이즈·시즌·마케팅만 걷어낸 코어 토큰 2~4개를 쓴다.
+   * 🔴 `maxQueries` 는 **상한으로만** 남는다(1 이면 1회). Primary 는 언제나 하나다.
+   */
+  let queries: DiscoveryQuery[];
   try {
-    queries = generateQueries(identity).slice(0, Math.max(1, input.maxQueries));
+    const primary = buildPrimaryQuery(identity);
+    if (!primary.text) {
+      /** 🔴 검색어를 만들 수 없으면 **호출하지 않는다.** 브랜드만으로 던지면
+       *     브랜드 메인 페이지만 돌아오고 비용만 쓴다. */
+      metrics.outcomes.NO_PRIMARY_QUERY = 1;
+      return { searchResults: [], metrics };
+    }
+    /** 🔴 `DiscoveryQuery.id` 는 `QueryId`(Q1~Q8)로 **이미 고정된 계약** 이다.
+     *     타입을 바꾸지 않고 **의미가 같은 축** 에 매핑한다 — 정확한 level 은
+     *     `axis` 가 들고 간다(보고서가 그 값을 읽는다). */
+    const idByLevel: Record<string, QueryId> = {
+      L1_MODEL_CODE: "Q6", // 브랜드+상품코드
+      L2_BRAND_NAME: "Q2", // 브랜드+상품명
+      L3_NAME_ONLY: "Q1", // 상품명
+    };
+    metrics.primaryQuery = primary.text;
+    metrics.primaryQueryLevel = primary.level;
+    metrics.primaryQueryTokenCount = primary.tokens.length;
+    queries = [
+      {
+        id: idByLevel[primary.level] ?? "Q1",
+        axis: `primary:${primary.level}`,
+        text: primary.text,
+        usedFields: [],
+      },
+    ].slice(0, Math.max(1, input.maxQueries));
   } catch (error) {
     metrics.outcomes.QUERY_GEN_FAILED = 1;
     metrics.failureDetails.push(error instanceof Error ? `${error.name}: ${error.message}` : String(error));
@@ -297,6 +346,7 @@ function accumulateUsage(
   /** 🔴 `requests` 가 실제 Gemini API 호출 수다 — resolve/fetch 와 섞지 않는다. */
   metrics.geminiCalls += usage.requests;
   metrics.groundingQueries += usage.groundingQueries;
+  metrics.groundingQueryTexts.push(...usage.groundingQueryTexts);
   metrics.inputTokens += usage.promptTokens;
   metrics.outputTokens += usage.candidatesTokens;
   metrics.thoughtsTokens += usage.thoughtsTokens;

@@ -135,6 +135,12 @@ export interface GoogleDiscoveryUsage {
   thoughtsTokens: number;
   totalTokens: number;
   /**
+   * 🔴🔴 MI-014 STEP 7 — **실제 검색어 문자열을 그대로 보존한다.**
+   *    개수만 세면 「무엇이 확장을 불렀는가」를 못 본다. 공식 응답 필드
+   *    `groundingMetadata.webSearchQueries[]` 를 그대로 싣는다.
+   */
+  groundingQueryTexts: string[];
+  /**
    * 🔴 Grounded Search 가 **실제로 던진 검색 쿼리 수**(과금 단위).
    *    `usageMetadata` 가 아니라 `candidates[].groundingMetadata.webSearchQueries`
    *    에서 온다 — 두 곳을 혼동하면 「측정 불가」로 잘못 결론 난다(실제로 그랬다).
@@ -160,26 +166,65 @@ export interface GoogleDiscoveryUsage {
  * 🔴 **판정 요구를 추가하지 않는다.** 「우선 포함」은 어디를 찾을지에 대한 힌트이고
  *    동일성 판단이 아니다. 바로 아래 「판단하지 마세요」가 그대로 남아 있다.
  */
+/**
+ * 🔴🔴 MI-014 Prompt v2 — **「많이 찾아라」를 지웠다.**
+ *
+ * v1 은 첫 줄이 「최대한 많이 찾아 주세요」 였고 「한국·해외 모두 포함」이었다.
+ * 🔴 그 지시가 **내부 검색어 확장을 부른다** — 실측 호출당 grounding 쿼리 **5.5**.
+ *    그리고 많이 찾아온 결과의 품질은 실측으로 나빴다(유효 국내 EXACT 0).
+ *
+ * 🟢 v2 의 원칙(CPO STEP 5):
+ * ```
+ * 목표는 「비슷한 상품」을 많이 찾는 것이 아니라
+ * **MI 가 동일상품 여부를 «검증할 가치가 높은» 후보** 를 찾는 것이다.
+ * 🔴 「최대 3개」이고 「반드시 3개」가 아니다.
+ *    좋은 결과 = SAME 후보 1개 · 나쁜 결과 = 억지로 채운 SIMILAR 3개.
+ * 🔴 확실한 후보가 없으면 **반환하지 않는다.**
+ * ```
+ * 🔴 그리고 **SAME 판정을 Gemini 에 맡기지 않는다**(STEP 6). Gemini 는 Discovery 까지고
+ *    동일성 판정은 기존 MI(`compareCrossSellerProducts` → `judgeDomesticCandidate`)가 한다.
+ *    Gemini 가 「Exact Match」라고 써도 그것을 사업 KPI 의 SAME 으로 인정하지 않는다.
+ */
 function buildPrompt(identity: ProductIdentity, query: DiscoveryQuery, preferredDomains: readonly string[]): string {
   return [
-    "다음 상품을 **판매하는 쇼핑몰 상품 페이지**를 최대한 많이 찾아 주세요.",
-    "한국 쇼핑몰과 해외 쇼핑몰을 모두 포함해 주세요.",
+    "당신은 상품 동일성 후보를 찾는 Discovery 엔진이다.",
     "",
     `검색어: ${query.text}`,
     identity.brand ? `브랜드: ${identity.brand}` : "",
     identity.productCode ? `품번: ${identity.productCode}` : "",
     "",
-    // 🔴 목록이 비면 이 문단 자체를 넣지 않는다 — 「우선 포함: (없음)」 같은
-    //    빈 지시는 baseline arm 의 프롬프트를 오염시킨다.
+    "위 검색어로 **실제 상품 상세 판매 페이지**를 **최대 3개까지** 찾아라.",
+    "🔴 목표는 「비슷한 상품」을 많이 찾는 것이 아니다.",
+    "   동일상품 여부를 «검증할 가치가 높은» 후보를 찾는 것이다.",
+    "",
+    "우선순위:",
+    "1. 브랜드 일치",
+    "2. 모델코드 / SKU / 상품코드 일치",
+    "3. 고유 상품명 / 디자인 일치",
+    "4. 실제 상품 상세 페이지",
+    "5. 실제 판매·상품 정보가 존재하는 페이지",
+    "",
+    "제외:",
+    "- 원상품 자기 자신",
+    "- 동일 상품의 단순 URL 변형",
+    "- 카테고리 / 목록 페이지",
+    "- 검색 결과 페이지",
+    "- 브랜드 메인 페이지",
+    "- 동일 브랜드의 «다른» 상품",
+    "- 단순 유사상품",
+    "- 무관한 상품",
+    "",
     preferredDomains.length > 0
       ? [
-          "아래 쇼핑몰에 같은 상품 판매 페이지가 있으면 **반드시 함께 포함**해 주세요.",
-          "🔴 아래 목록에만 한정하지 마세요 — 목록 밖의 판매처도 찾으면 모두 포함해 주세요.",
+          "아래 판매처에 해당 상품 페이지가 있으면 함께 포함하라.",
+          "🔴 목록에만 한정하지 마라 — 목록 밖의 판매처도 해당되면 포함한다.",
           ...preferredDomains.map((d) => `- ${d}`),
           "",
         ].join("\n")
       : "",
-    "같은 상품인지 판단하지 마세요. 판매 페이지 주소만 찾아 주세요.",
+    "🔴 「최대 3개」이고 「반드시 3개」가 아니다.",
+    "🔴 **확실한 후보가 없으면 반환하지 마라.** 억지로 채우지 않는다.",
+    "🔴 동일상품인지 **판정하지 마라** — 판정은 우리 시스템이 한다. 주소만 찾아라.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -274,7 +319,7 @@ export interface GoogleDiscoveryOptions {
 }
 
 export function createGoogleDiscoveryProvider(options?: GoogleDiscoveryOptions): GoogleDiscoveryProvider {
-  const usage: GoogleDiscoveryUsage = { requests: 0, promptTokens: 0, candidatesTokens: 0, thoughtsTokens: 0, totalTokens: 0, groundingQueries: 0 };
+  const usage: GoogleDiscoveryUsage = { requests: 0, promptTokens: 0, candidatesTokens: 0, thoughtsTokens: 0, totalTokens: 0, groundingQueries: 0, groundingQueryTexts: [] };
   const providerId = "google-search-grounding";
   const resolveModel = () => options?.model ?? (process.env[GEMINI_MODEL_ENV]?.trim() || DEFAULT_MODEL);
   // 🔴 `??` 다. `||` 로 쓰면 명시한 `[]` 가 falsy 가 아니라 **truthy** 이므로
@@ -302,7 +347,9 @@ export function createGoogleDiscoveryProvider(options?: GoogleDiscoveryOptions):
       usage.thoughtsTokens += u?.thoughtsTokenCount ?? 0;
       usage.totalTokens += u?.totalTokenCount ?? 0;
       /** 🔴 응답이 주는 값을 그대로 센다 — 추정하지 않는다. */
-      usage.groundingQueries += body.candidates?.[0]?.groundingMetadata?.webSearchQueries?.length ?? 0;
+      const wsq = body.candidates?.[0]?.groundingMetadata?.webSearchQueries ?? [];
+      usage.groundingQueries += wsq.length;
+      usage.groundingQueryTexts.push(...wsq);
       return extractGroundingUrls(body, providerId, query.id);
     },
   };

@@ -179,9 +179,15 @@ describe("MI-GEMINI-005 ⑦ — Gemini 실패가 운영 경로를 깨뜨리지 �
     expect(result.metrics.totalTokens).toBeGreaterThan(0);
     /** 🔴🔴 **호출 수로 비용을 계산하면 과소다** — 1 호출이 쿼리 여럿을 낸다.
      *     실측 probe: 1 호출 → 6 쿼리.
-     *  🔴 여기서는 stub 이 호출마다 3 을 주고 maxQueries=2 라 **누적 6** 이다 —
-     *     그 누적이 실제로 되는지가 이 단언의 요점이다(호출당 3 이 아니라 합계). */
-    expect(result.metrics.groundingQueries).toBe(6);
+     *  🔴🔴 **MI-014 에서 6 → 3 으로 바뀌었다.** 이전에는 `generateQueries` 가 8축을
+     *     열거하고 `maxQueries=2` 가 **호출 2회** 를 만들어 3+3=6 이었다.
+     *     🟢 지금은 **Primary Query 가 언제나 1개** 이므로 호출도 1회다 → 3.
+     *     🔴 그래서 이 숫자가 줄어든 것은 **회귀가 아니라 WU-014 의 목적** 이다
+     *        (상품당 API 호출을 1회로 고정했다). */
+    expect(result.metrics.groundingQueries).toBe(3);
+    /** 🟢 그리고 호출이 실제로 1회임을 같이 잠근다 — 숫자만 바꾸면 의미를 잃는다. */
+    expect(result.metrics.geminiCalls).toBe(1);
+    expect(result.metrics.queriesUsed).toBe(1);
     expect(result.metrics.groundingQueries).toBeGreaterThan(result.metrics.geminiCalls);
   });
 
@@ -198,8 +204,10 @@ describe("MI-GEMINI-005 ⑦ — Gemini 실패가 운영 경로를 깨뜨리지 �
 
     const result = await collectGeminiCandidatePool({ ...POOL_INPUT, maxQueries: 2 });
 
-    expect(result.metrics.queriesUsed).toBeLessThanOrEqual(2);
-    expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(2);
+    /** 🔴 MI-014 — Primary 가 1개라 상한과 무관하게 **1회** 다. 「상한까지만」이
+     *     아니라 「언제나 1회」가 새 계약이다. */
+    expect(result.metrics.queriesUsed).toBe(1);
+    expect(fetchMock.mock.calls.length).toBe(1);
   });
 });
 
