@@ -163,23 +163,7 @@ v2 의 핵심 변경:
 🟡 이번 변경이 N 을 줄일 **기대 근거**: Primary 가 짧고 식별자를 담으면 모델이
 추가 검색어를 만들 이유가 줄어든다. 🔴🔴 **그러나 그것은 가설이고 미측정이다** —
 Gemini HARD STOP 이라 이번 WU 에서 재지 않았다. 다음 실행에서
-`groundingQueryTexts[]` 로 확인한다(아래 §9).
-
-## 9. 다음 단계 — 🔴 **최소 probe 뿐이고 Billing 이 먼저다** (CPO 확정)
-
-```
-🔴 선행 조건  **Billing reconciliation 이 먼저** 다. 잔액 ₩3,300 은 보존 자산이다.
-🔴 지금 10~15 상품을 돌리지 않는다.
-승인 시 `MI-GEMINI-DISCOVERY-QUERY-VALIDATION-015` — **1~2 상품만**:
-   1 API call / product · Primary Query 1개 · groundingQueryTexts **전체 기록** ·
-   후보 최대 3 · 기존 MI 판정 · 실제 비용 확인
-확인할 것 **딱 4개**:
-   ① 기존 Query 대비 실제 grounding query 수가 줄었는가
-   ② 불필요 후보가 줄었는가
-   ③ MI 가 인정하는 후보가 늘었는가
-   ④ **유효 후보 1개당 비용이 내려갔는가**
-🟢 넷이 확인된 «뒤에» Children/Tennis 전체 표본으로 확대한다.
-```
+`groundingQueryTexts[]` 로 확인한다(맨 끝 「다음 단계」 절).
 
 ---
 
@@ -283,4 +267,22 @@ groundingQueryTexts[]   🔴🔴 **실제 검색어 문자열 전부**
 🟢 Registry 추가 0 · 가격추적 0 · MI threshold 0 · 모델 변경 0
 🟢 merge 0 · deploy 0 · flag OFF 유지
 🔴 「검색 결과 많이 찾기」·「Recall 최대화」·「검색어 여러 개」를 목표로 삼지 않았다
+```
+
+---
+
+## 다음 단계 — 🔴 **최소 probe 뿐이고 Billing 이 먼저다** (CPO 확정)
+
+```
+🔴 선행 조건  **Billing reconciliation 이 먼저** 다. 잔액 ₩3,300 은 보존 자산이다.
+🔴 지금 10~15 상품을 돌리지 않는다.
+승인 시 `MI-GEMINI-DISCOVERY-QUERY-VALIDATION-015` — **1~2 상품만**:
+   1 API call / product · Primary Query 1개 · groundingQueryTexts **전체 기록** ·
+   후보 최대 3 · 기존 MI 판정 · 실제 비용 확인
+확인할 것 **딱 4개**:
+   ① 기존 Query 대비 실제 grounding query 수가 줄었는가
+   ② 불필요 후보가 줄었는가
+   ③ MI 가 인정하는 후보가 늘었는가
+   ④ **유효 후보 1개당 비용이 내려갔는가**
+🟢 넷이 확인된 «뒤에» Children/Tennis 전체 표본으로 확대한다.
 ```
