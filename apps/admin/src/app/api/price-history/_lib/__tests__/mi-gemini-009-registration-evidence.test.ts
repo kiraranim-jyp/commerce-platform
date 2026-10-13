@@ -107,24 +107,48 @@ describe("C. 🟢 판정면에 닿지만 기존 판정을 바꾸지 않는다", 
    *    쓰면 Gemini 가 기존 판정을 바꿀 수 있다. 그래서 `geminiEvidence` 가
    *    등장하는 곳이 **시그니처와 반환 두 곳뿐** 임을 숫자로 잠근다.
    */
-  it("🔴🔴 geminiEvidence 를 «읽는» 계산이 없다 — 등장 지점을 전수로 고정한다", () => {
-    /** 🔴 처음엔 「등장 2곳」으로 셌는데 **3곳이었다**(시그니처 1 + 반환줄의
-     *     key/value 2). 숫자를 맞추는 대신 **용도** 를 직접 잠근다 — 숫자는
-     *     주석 한 줄만 바뀌어도 흔들리고, 정작 위험한 것은 «읽는» 코드다. */
-    const hits = INTEL.match(/geminiEvidence/g) ?? [];
-    expect(hits.length).toBe(3);
+  /**
+   * 🔴🔴 **이 단언은 WU-010R(CPO 승인)으로 «대체» 됐다.**
+   *
+   * 009 에서는 「evidence 를 읽는 계산이 0」이었다 — 그때는 Gemini 후보에 **가격이
+   * 없어서** 기존 계약(전부 가격 보유 의미)에 넣으면 화면이 거짓을 말했기 때문이다.
+   * 🟢 010R 이 `enrichCandidatePrices` 를 배선해 **가격이 확인된 후보만** 넣게
+   *    했으므로, 이제 evidence 를 읽는 것이 **올바른 동작** 이다.
+   *
+   * 🔴 그래서 잠그는 대상이 바뀐다 — 「읽지 않는다」가 아니라
+   *    **「읽되 기존 규칙을 바꾸지 않는다」** 다. 아래 세 개가 그 불변식이다.
+   */
+  it("🔴🔴 010R — evidence 는 «가격이 있는 것만» 버킷에 들어간다", () => {
+    expect(INTEL).toContain("if (e.priceKrw == null)");
+    const loop = INTEL.slice(INTEL.indexOf("for (const e of geminiEvidence ?? [])"));
+    const body = loop.slice(0, loop.indexOf("const domesticMarketSplit"));
+    /** 🔴 가격 없는 후보가 sellerCount 를 늘리면 안 된다 — continue 로 빠진다. */
+    expect(body).toContain("droppedNoPrice += 1");
+    expect(body).toContain("continue");
+  });
 
-    /** 🔴🔴 멤버 접근·순회·조건 사용이 하나도 없어야 한다. 하나라도 생기면
-     *     Gemini 가 기존 판정에 개입할 수 있다. */
-    expect(INTEL).not.toMatch(/geminiEvidence\s*\./);
-    expect(INTEL).not.toMatch(/geminiEvidence\s*\[/);
-    expect(INTEL).not.toMatch(/geminiEvidence\s*(&&|\|\||\?\.|===|!==|>|<)/);
-    expect(INTEL).not.toMatch(/if\s*\([^)]*geminiEvidence/);
-    expect(INTEL).not.toMatch(/(for|map|filter|some|every|reduce)[^;\n]*geminiEvidence/);
+  it("🔴🔴 010R — marketCode/currency 를 기존 값에 맞춘다(기존 증거 파괴 방지)", () => {
+    const loop = INTEL.slice(INTEL.indexOf("for (const e of geminiEvidence ?? [])"));
+    const body = loop.slice(0, loop.indexOf("const domesticMarketSplit"));
+    /** 🔴 운영 전수: DOMESTIC_SHOP 279행 전부 market_code=null · KRW.
+     *     다르면 resolvePriceMarketKey 가 null 을 내고 sellerCount 가 0 이 된다. */
+    expect(body).toContain("marketCode: null");
+    expect(body).toContain('currency: "KRW"');
+    /** 🔴 등록부 샵이 아니므로 sourceRefId 는 null 이어야 한다. */
+    expect(body).toContain("sourceRefId: null");
+  });
 
-    /** 🟢 그리고 실제로 쓰이는 두 줄이 **시그니처와 반환** 임을 확인한다. */
-    expect(INTEL).toContain("geminiEvidence?: GeminiTransientEvidence[] | null");
-    expect(INTEL).toContain("geminiEvidence: geminiEvidence ?? null");
+  it("🔴🔴 010R — 기존 집계/판정 함수를 호출만 하고 규칙을 바꾸지 않았다", () => {
+    /** 🟢 append 한 뒤 **기존 함수** 를 그대로 부른다. */
+    expect(INTEL).toContain("summarizeDomesticMarketSplit(exactShopRecords, [");
+    /** 🔴 tier 는 evidence 가 들고 온 값을 쓴다 — 여기서 다시 계산하지 않는다. */
+    const loop = INTEL.slice(INTEL.indexOf("for (const e of geminiEvidence ?? [])"));
+    const body = loop.slice(0, loop.indexOf("const domesticMarketSplit"));
+    expect(body).toContain('e.priceTier === "EXACT"');
+    expect(body).not.toContain("priceTierFromLink(");
+    /** 🔴 REFERENCE/EXCLUDED 를 가격 버킷에 넣지 않는다(기존 루프와 같은 규칙). */
+    expect(body).not.toContain('"REFERENCE"');
+    expect(body).not.toContain('"EXCLUDED"');
   });
 
   it("🔴 sellerAction 계산이 geminiEvidence 를 보지 않는다", () => {

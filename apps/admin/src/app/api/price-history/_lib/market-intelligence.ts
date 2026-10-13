@@ -157,6 +157,68 @@ export async function computeMarketIntelligence(
   //    compute-readiness.ts 는 그것을 넘기지 않았고, 그래서 상품 상세와 대시보드가
   //    서로 다른 시장의 가격으로 판단할 수 있었다. 넘기는 값을 맞추는 대신
   //    넘기는 자리를 없앤다 — 값은 한 글자도 바뀌지 않았다(같은 KR).
+  /* ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴 MI-GEMINI-010R — 가격이 «확인된» Gemini 후보만 기존 증거 계약에 넣는다.
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🟢 **기존 집계 규칙을 한 줄도 바꾸지 않는다.** `summarizeDomesticMarketSplit`
+   *    는 런타임 배열을 받으므로(price-history.ts:630) 레코드를 **같은 버킷에
+   *    append** 하기만 한다. 그 뒤의 `domesticMatched`/`sellerCount`/`basis`/
+   *    `lowestPriceKrw` 의미는 전과 **동일** 하다.
+   *
+   * 🔴 세 가지를 반드시 맞춘다:
+   *   ① `priceKrw != null` — 🟢 사실 이 필터는 집계기가 이미 한다(:498).
+   *      여기서 한 번 더 거르는 것은 **버킷에 쓰레기를 넣지 않기 위해서** 다.
+   *      (가격 없는 Gemini 후보가 `sellerCount` 를 늘리는 일이 **없어야 한다**)
+   *   ② `marketCode: null` · `currency: "KRW"` — 🔴🔴 이것을 틀리면 **기존 증거가
+   *      사라진다.** `resolvePriceMarketKey`(:436)는 market key 가 둘 이상이면
+   *      「KR 과 정확히 1개 일치」를 요구하고, 아니면 `priceRecords = []` 가 된다.
+   *      🟢 운영 전수 실측: `DOMESTIC_SHOP` 279행 전부 `market_code=null`·`KRW`.
+   *   ③ `sourceRefId: null` — 등록부 샵이 아니다. 🔴 tier 조회에 끼지 않는다
+   *      (위 루프는 DB 레코드만 돌고, 이 레코드는 tier 별 버킷에 **직접** 넣는다).
+   *
+   * 🔴 **저장하지 않는다.** 이 배열은 이 함수 안에서만 산다 — `price_observations`
+   *    에 쓰지 않고 `domestic_product_links` 에도 넣지 않는다(§10).
+   */
+  const geminiPricedCount = { exact: 0, comparison: 0, droppedNoPrice: 0 };
+  for (const e of geminiEvidence ?? []) {
+    if (e.priceKrw == null) {
+      geminiPricedCount.droppedNoPrice += 1;
+      continue;
+    }
+    const transient: PriceObservationRecord = {
+      id: `gemini-transient:${e.domain}:${e.discoveredUrl}`,
+      snapshotId,
+      source: "DOMESTIC_SHOP",
+      sourceLabel: e.domain,
+      sourceProductUrl: e.discoveredUrl,
+      sourceRefId: null,
+      currency: "KRW",
+      priceAmount: e.priceAmount,
+      shippingCostAmount: null,
+      taxAmount: null,
+      exchangeRate: null,
+      priceKrw: e.priceKrw,
+      salePriceKrw: null,
+      originalPriceKrw: null,
+      soldOut: null,
+      marketCode: null,
+      marketCountry: null,
+      shippingPolicyStatus: null,
+      shippingPolicyNote: null,
+      checkedAt: new Date().toISOString(),
+    };
+    if (e.priceTier === "EXACT") {
+      exactShopRecords.push(transient);
+      geminiPricedCount.exact += 1;
+    } else if (e.priceTier === "COMPARISON") {
+      comparisonShopRecords.push(transient);
+      geminiPricedCount.comparison += 1;
+    }
+    /** 🔴 REFERENCE/EXCLUDED 는 기존 국내 후보와 **같은 이유로** 가격 버킷에
+     *     들어가지 않는다(위 루프도 EXACT/COMPARISON 만 담는다). */
+  }
+
   const domesticMarketSplit = summarizeDomesticMarketSplit(exactShopRecords, [
     ...comparisonShopRecords,
     ...domesticHistory,
@@ -808,6 +870,9 @@ export async function computeMarketIntelligence(
      * 🔴 `null` = 경로가 안 돌았다 · `[]` = 켰는데 후보가 없었다.
      */
     geminiEvidence: geminiEvidence ?? null,
+    /** 🔴 010R 관측용 — 가격이 붙어 버킷에 들어간 수 / 가격 없어 빠진 수.
+     *    🔴 위 판정 계산은 이 칸을 읽지 않는다. */
+    geminiPricedCount,
   };
 }
 

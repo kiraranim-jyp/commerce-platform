@@ -9,6 +9,7 @@ import {
   refreshDomesticProductPrice,
   searchDomesticShops,
   withConfidence,
+  enrichCandidatePrices,
   supportsDomesticIdentifierExtraction,
   type CandidateEvidenceDecision,
   type ComparisonCandidate,
@@ -124,6 +125,18 @@ export interface GeminiTransientEvidence {
   matchReasons: string[];
   crossSellerBlockers: string[];
   crossSellerConflicts: string[];
+  /**
+   * 🔴🔴 010R — 가격은 **기존 owner 가 확인한 것만** 싣는다
+   *    (`enrichCandidatePrices` → `priceStatus: "VERIFIED_CURRENT"`).
+   * 🔴 `priceKrw` 는 **통화가 KRW 일 때만** 채운다 — 임의 FX 환산을 하지 않는다.
+   *    그래서 해외 샵(EUR/USD)은 `priceKrw: null` 이고, 기존 집계기가
+   *    `priceKrw != null` 필터로 **자동 제외** 한다(price-history.ts:498).
+   *    🟢 즉 「국내 가격 증거」 게이트가 **내 규칙이 아니라 기존 규칙** 이다.
+   */
+  priceAmount: number | null;
+  priceCurrency: string | null;
+  priceKrw: number | null;
+  priceStatus: string | null;
 }
 
 export interface DomesticPriceCheckResult {
@@ -142,6 +155,8 @@ export interface DomesticPriceCheckResult {
    * 🔴 `null` = flag OFF(경로가 안 돌았다) · `[]` = 켰는데 후보가 없었다. 섞지 않는다.
    */
   geminiEvidence?: GeminiTransientEvidence[] | null;
+  /** 🔴 010R §6 — Gemini 가격 보강 호출 수. 국내 상세 fetch 와 **다른 칸** 이다. */
+  geminiPriceEnrichCalls?: number;
   /** N-4.18-Q3 PART H-3-11 STEP 7(대표님 지시, 2026-08-27: "실제로 네트워크
    * 요청이 생략됐는지 확인한다") — 이번 호출에서 실제로 발생한 국내 식별자
    * (modelCode) 추출 시도 총 횟수. isEvidenceEvaluationWorthwhile 가드가
@@ -796,6 +811,8 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
   let geminiMetrics: GeminiPoolMetrics | null = null;
   /** 🔴 flag OFF 면 끝까지 `null` 로 나간다 — 「후보 0」과 「경로가 안 돌았다」를 가른다. */
   const geminiEvidence: GeminiTransientEvidence[] = [];
+  /** 🔴 010R §6 — 국내 검색 HTTP 와 **구분해서** 센다. */
+  let geminiPriceEnrichCalls = 0;
   if (isGeminiDiscoveryEnabled()) {
     const existingUrls = new Set<string>();
     for (const r of searchResults) {
@@ -821,7 +838,24 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
      *       `selectDomesticCandidate` 는 순서/등급을 근거로 고른다.
      *    🟢 같은 함수를 같은 query 로 부르므로 **국내 후보와 동일한 자** 를 쓴다. */
     for (const r of pool.searchResults) {
-      searchResults.push({ ...r, candidates: withConfidence(query, r.candidates) });
+      /* 🔴 010R §8 — 자기참조를 **가격 보강 «전»** 에 뺀다. 그러지 않으면 자기
+       * 자신의 상세 페이지에 HTTP 가격 요청을 낭비한다. 🟢 008A 로 닫힌
+       * `/collections/` 접두사 케이스가 여기서 걸린다. */
+      const notSelf = r.candidates.filter((c) => !isSelfReferenceCandidate(query.sourceUrl, c.url));
+      const scored = withConfidence(query, notSelf);
+      /* 🟢 010R — **기존 owner 로** 가격을 확인한다(price-source-adapter.ts:243).
+       * 새 수집기를 만들지 않았다. 상한도 그 함수가 가진 것을 쓴다
+       * (matchLevel very_high/high · 샵당 MAX_DETAIL_CONFIRMATIONS_PER_SHOP).
+       * 🔴 실패/없음은 `priceStatus: "PRICE_UNAVAILABLE"` 로 돌아온다(fail-soft). */
+      let priced = scored;
+      try {
+        priced = await enrichCandidatePrices(scored, r.domain, query);
+        geminiPriceEnrichCalls += 1;
+      } catch {
+        /* 🔴 가격 보강 실패가 가격확인 전체를 깨뜨리지 않는다 — 점수만 있는
+         * 후보로 계속 간다(그러면 priceKrw 가 null 이라 집계에서 빠진다). */
+      }
+      searchResults.push({ ...r, candidates: priced });
     }
   }
   // H-3-6에서 루프 안에서 매 반복 재계산하던 것을 H-3-9에서 loop 밖으로 뺐다 — result에
@@ -993,6 +1027,14 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
         matchReasons: finalMatchReasons,
         crossSellerBlockers: (best.crossSellerBlockers ?? []).map((b) => String(b)),
         crossSellerConflicts: (best.crossSellerConflicts ?? []).map((c) => String(c)),
+        priceAmount: best.price?.amount ?? null,
+        priceCurrency: best.price?.currency ?? null,
+        /** 🔴 KRW 만 국내 가격 증거가 된다 — 환산하지 않는다(위 타입 주석). */
+        priceKrw:
+          best.priceStatus === "VERIFIED_CURRENT" && best.price?.currency === "KRW"
+            ? best.price.amount
+            : null,
+        priceStatus: best.priceStatus ?? null,
       });
       continue;
     }
@@ -1202,5 +1244,7 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     geminiMetrics,
     /** 🔴 같은 원칙 — flag OFF 면 `null`, 켰는데 후보가 없으면 `[]`. */
     geminiEvidence: geminiMetrics === null ? null : geminiEvidence,
+    /** 🔴 010R §6 — Gemini 가격 보강 HTTP 호출 수(국내 검색과 분리). */
+    geminiPriceEnrichCalls,
   };
 }
