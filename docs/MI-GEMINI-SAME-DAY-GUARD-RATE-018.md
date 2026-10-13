@@ -161,7 +161,8 @@ primary level 분포   L1_MODEL_CODE **6** · L2_BRAND_NAME **20** · UNAVAILABL
 
 ```
 🟢 admin 전체 회귀   Test Files **512 passed** / 47 skipped (559)
-                     Tests      **7635 passed** / 55 skipped (7690) · FAIL **0**
+                     Tests      **7636 passed** / 55 skipped (7691) · FAIL **0**
+                     (🔴 가드 강화 «후» 재실행 값이다 — 강화 전은 7635 였다)
                      🔴 baseline 505/7520 보다 늘어난 것은 **내가 추가한 테스트** 다
 🟢 typecheck         전 패키지 **10** (baseline **10** 과 동일 — 추가 0)
 🟢 build             `Compiled successfully` · exit 0
