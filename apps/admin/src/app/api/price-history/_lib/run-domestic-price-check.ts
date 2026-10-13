@@ -898,10 +898,52 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       categoryScopes: input.categoryScopes ?? null,
       maxCandidates: 3,
       targetUsable: 3,
-      maxQueries: 2,
+      /**
+       * 🔴🔴 WU-023 §2 — **상한을 파라미터가 직접 지키게 한다.**
+       *    전에는 `2` 였고, 실제로 1 call 이 된 이유는 `buildPrimaryQuery` 가
+       *    **1개짜리 배열** 을 만들어 `.slice(0, max(1, maxQueries))` 에 걸리는
+       *    것뿐이었다(gemini-candidate-pool.ts:248-255). 즉 **배열 길이가** 상한을
+       *    지키고 파라미터는 지키지 않았다 — Primary 가 2개를 내면 조용히 2 call 이 된다.
+       * 🟢 `1` 로 못박아 **어느 쪽이 바뀌어도 상품당 1 call** 이 되게 한다.
+       */
+      maxQueries: 1,
       existingNormalizedUrls: existingUrls,
     });
     geminiMetrics = pool.metrics;
+    /**
+     * 🔴🔴 WU-023 §1/§11 — **계측값을 로그로 내보낸다.**
+     *
+     * 왜 필요한가: `geminiMetrics` 는 POST `/check` 응답으로 **브라우저까지만** 간다
+     * (:1329). Production 화면은 로그인 뒤이고 CTO 는 브라우저를 몰 수 없어서,
+     * 그대로 두면 §11 의 「추정하지 않고 **실제 계측값만** 보고한다」를 **충족할 수 없다.**
+     * 🟢 기존 `[MI-016-gate]` 와 같은 규약의 한 줄이고 flag 분기 «안» 이라 OFF 면 안 찍힌다.
+     * 🔴 계산을 하지 않는다 — pool 이 낸 값을 **그대로** 옮긴다(비용 추정 금지).
+     * 🔴 `groundingQueryTexts` 는 길어서 **개수만** 여기 찍고 본문은 응답에 남긴다.
+     */
+    console.log(
+      `[MI-023-metrics] ${JSON.stringify({
+        snapshot: input.snapshotId,
+        model: geminiMetrics.model,
+        geminiCalls: geminiMetrics.geminiCalls,
+        queriesUsed: geminiMetrics.queriesUsed,
+        groundingQueries: geminiMetrics.groundingQueries,
+        groundingQueryTextCount: geminiMetrics.groundingQueryTexts.length,
+        inputTokens: geminiMetrics.inputTokens,
+        outputTokens: geminiMetrics.outputTokens,
+        thoughtsTokens: geminiMetrics.thoughtsTokens,
+        totalTokens: geminiMetrics.totalTokens,
+        primaryQueryLevel: geminiMetrics.primaryQueryLevel,
+        primaryQueryTokenCount: geminiMetrics.primaryQueryTokenCount,
+        discoveredUrls: geminiMetrics.discoveredUrls,
+        usableProductUrls: geminiMetrics.usableProductUrls,
+        miEligibleCandidates: geminiMetrics.miEligibleCandidates,
+        resolveCalls: geminiMetrics.resolveCalls,
+        fetchCalls: geminiMetrics.fetchCalls,
+        outcomes: geminiMetrics.outcomes,
+        earlyStopped: geminiMetrics.earlyStopped,
+        failureDetails: geminiMetrics.failureDetails,
+      })}`,
+    );
     /* 🔴🔴 **점수를 매겨서** 넣는다. 처음엔 `factsFromProductUrl` 산출을 그대로
      *    넣었는데 그것이 틀렸다 — 국내 경로는 `searchDomesticShops` «안에서»
      *    `withConfidence` 를 부른다(comparison-search/index.ts:197). 그래서 국내
