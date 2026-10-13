@@ -21,6 +21,15 @@ import {
   type ProductIdentityDna,
 } from "@commerce/shared";
 import { isCollectableAccess } from "../../comparison-shops/_lib/comparison-shop";
+/* 🔴 MI-GEMINI-INTEGRATION-005 — flag 기본 OFF. OFF 면 아래 분기가 한 줄도 돌지 않고
+ *    기존 동작이 **100% 유지** 된다(§13). */
+import {
+  collectGeminiCandidatePool,
+  isGeminiDiscoveryEnabled,
+  normalizeCandidateUrl,
+  GEMINI_VIRTUAL_SHOP_ID,
+  type GeminiPoolMetrics,
+} from "./gemini-candidate-pool";
 import type { DomesticPriceSource } from "../../domestic-price-sources/_lib/domestic-price-source";
 import { listDomesticPriceSources, recordDomesticSourceCheckAttempt } from "../../domestic-price-sources/_lib/domestic-price-source";
 import {
@@ -95,6 +104,8 @@ export interface DomesticPriceCheckResult {
   linksCreatedOrUpdated: number;
   pricesRecorded: number;
   sourceErrors: string[];
+  /** 🔴 MI-GEMINI-005 §10 — flag OFF 면 `null` 이다(「0 회」가 아니라 「안 돌았다」). */
+  geminiMetrics?: GeminiPoolMetrics | null;
   /** N-4.18-Q3 PART H-3-11 STEP 7(대표님 지시, 2026-08-27: "실제로 네트워크
    * 요청이 생략됐는지 확인한다") — 이번 호출에서 실제로 발생한 국내 식별자
    * (modelCode) 추출 시도 총 횟수. isEvidenceEvaluationWorthwhile 가드가
@@ -728,6 +739,42 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
   const otherResults =
     otherSources.length > 0 && !foundVeryHighInP0 ? await searchDomesticShops(query, otherSources.map(toRef)) : [];
   const searchResults = [...p0Results, ...otherResults];
+
+  /* ─────────── 🔴 MI-GEMINI-INTEGRATION-005 ① — Gemini 후보 합류 ───────────
+   * flag 기본 OFF. OFF 면 아래가 **한 줄도 돌지 않는다** → 기존 동작 100% 유지.
+   *
+   * 🔴 **scope 를 우회하지 않는다**(§3) — `preferredDomains` 에 넣는 도메인은
+   *    바로 위 `allSources`(= `isBatchSurveyTarget(s, input.categoryScopes)` 를
+   *    통과한 샵들)에서 뽑는다. 즉 테니스 상품은 테니스 scope 샵 도메인을,
+   *    아동복 상품은 아동복 scope 샵 도메인을 선호 축으로 받는다.
+   *
+   * 🔴 **저장하지 않는다**(§5/§19) — 가상 샵 id 를 쓰고, 아래 루프가 그 id 를
+   *    보고 `recordDomesticSourceCheckAttempt` 와 `upsertDomesticProductLink` 를
+   *    **건너뛴다**. DB 에 Gemini 후보가 들어가지 않는다.
+   *
+   * 🔴 상한은 **여기서** 준다(§9 — 모듈에 박지 않았다). 근거는 실측이다:
+   *    MI-GEMINI-INTEG-002 에서 상품당 Gemini 가 준 raw URL 이 0~21개였고,
+   *    상한 3 으로 처리했을 때 SAME 1 · PRESUMED_SAME 3 이 나왔다. 그 값을 쓴다.
+   *    🔴 「상품당 Gemini N회 고정」이 아니다 — `targetUsable` 이 차면 조기 종료한다.
+   */
+  let geminiMetrics: GeminiPoolMetrics | null = null;
+  if (isGeminiDiscoveryEnabled()) {
+    const existingUrls = new Set<string>();
+    for (const r of searchResults) {
+      for (const c of r.candidates) existingUrls.add(normalizeCandidateUrl(c.url));
+    }
+    const pool = await collectGeminiCandidatePool({
+      dna: input.dna,
+      scopedDomains: allSources.map((s) => s.domain),
+      categoryScopes: input.categoryScopes ?? null,
+      maxCandidates: 3,
+      targetUsable: 3,
+      maxQueries: 2,
+      existingNormalizedUrls: existingUrls,
+    });
+    geminiMetrics = pool.metrics;
+    if (pool.searchResult) searchResults.push(pool.searchResult);
+  }
   // H-3-6에서 루프 안에서 매 반복 재계산하던 것을 H-3-9에서 loop 밖으로 뺐다 — result에
   // 의존하지 않는 순수 파생값이라 동작은 동일하다(성능/가독성 정리).
   //
@@ -739,12 +786,24 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
   // 채워진 값이다(resolveBrandModelCode).
   const foreignModelCode = extractForeignModelCode(input.description) ?? input.dna.brandModelCode;
 
+  /* 🔴 MI-GEMINI-005 ⑤ — **가상 샵은 등록부에 없다.**
+   * `recordDomesticSourceCheckAttempt` 는 `domestic_price_sources.id` 를 키로
+   * 쓰고, `upsertDomesticProductLink` 의 `source_id` 는 그 표를 가리키는 FK 다
+   * (선행 WU 실측). 즉 가상 id 를 그대로 넘기면 **쓰기가 터지거나 쓰레기 행이
+   * 남는다.** 그래서 둘 다 **건너뛴다** — 「일시 Candidate Pool」의 핵심 조건이다.
+   * 🟢 판정(`withConfidence` / `judgeDomesticCandidate`)은 그대로 돈다.
+   */
+  const recordCheckAttempt = (shopId: string, outcome: Parameters<typeof recordDomesticSourceCheckAttempt>[1]): void => {
+    if (shopId === GEMINI_VIRTUAL_SHOP_ID) return;
+    void recordDomesticSourceCheckAttempt(shopId, outcome);
+  };
+
   for (const result of searchResults) {
     if (result.status === "error") {
       sourceErrors.push(`${result.shopName}: ${result.error ?? "검색 실패"}`);
       // N-4.18-M STEP M-8 — fetch/parser 예외를 같은 catch로 묶어 던지므로 더
       // 세분화된 코드(FETCH_FAILED 등)를 추측하지 않고 실제 예외 메시지만 남긴다.
-      void recordDomesticSourceCheckAttempt(result.shopId, { code: "SEARCH_ERROR", message: result.error ?? "검색 실패" });
+      recordCheckAttempt(result.shopId, { code: "SEARCH_ERROR", message: result.error ?? "검색 실패" });
       continue;
     }
     if (result.status === "unsupported") continue; // 파서 자체가 없음 — 실제 요청을 보내지 않았으므로 "확인"으로 기록하지 않는다
@@ -754,11 +813,11 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     // 그 상품이 없다"로 DB 에 굳는다.
     if (result.status === "not_configured") continue;
     if (result.candidates.length === 0) {
-      void recordDomesticSourceCheckAttempt(result.shopId, "NO_RESULT");
+      recordCheckAttempt(result.shopId, "NO_RESULT");
       continue;
     }
 
-    void recordDomesticSourceCheckAttempt(result.shopId, "OK");
+    recordCheckAttempt(result.shopId, "OK");
 
     /**
      * P0-A.30.2 ㉠(CEO 결정, 2026-09-20) — **E1 관측. 링크를 만들지 않는다.**
@@ -884,6 +943,13 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       // 🔴 실패하면 undefined 그대로 둔다. 「같다」로도 「다르다」로도 읽지 않는다.
       visionEvidence = cached ?? (await runVisionEvidence(foreignImageUrl, domesticImageUrl)) ?? undefined;
     }
+
+    /* 🔴 MI-GEMINI-005 ⑤ — **여기서 멈춘다.** Gemini 후보는 판정까지만 쓰고
+     * `domestic_product_links` 에 **남기지 않는다**(§5 「영구 DB 저장 금지」·
+     * §19 「외부 URL 장기 보관 금지」). 🔴 그래서 flag ON 이어도 Gemini 후보는
+     * `linksCreatedOrUpdated` 를 **올리지 않는다** — 보고에서 그 수를 Gemini
+     * 성과로 읽지 않기 위해 이 자리를 명시한다. */
+    if (result.shopId === GEMINI_VIRTUAL_SHOP_ID) continue;
 
     const upsertResult = await upsertDomesticProductLink({
       snapshotId: input.snapshotId,
@@ -1056,5 +1122,7 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     pricesRecorded: saveResult.ok ? saveResult.count : 0,
     sourceErrors,
     domesticModelCodeFetchCount,
+    /** 🔴 flag OFF 면 `null` — 「Gemini 0회」가 아니라 「경로가 안 돌았다」다(§7). */
+    geminiMetrics,
   };
 }
