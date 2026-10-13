@@ -181,13 +181,21 @@ describe("Case C. 🟢 가격 보강 실패가 전체를 깨뜨리지 않는다"
 
 describe("Case D. 🔴 Gemini OFF 면 가격 보강이 돌지 않는다", () => {
   it("enrichCandidatePrices 가 flag 분기 «안» 에 있다", () => {
-    const flag = RUNNER.indexOf("isGeminiDiscoveryEnabled()");
-    const enrich = RUNNER.indexOf("enrichCandidatePrices(scored");
-    expect(flag).toBeGreaterThan(-1);
-    expect(enrich).toBeGreaterThan(flag);
-    /** 🔴 그 블록이 닫히기 «전» 이어야 한다 — 위치만 보면 속는다. */
-    const block = RUNNER.slice(flag, enrich);
-    expect(block).not.toContain("\n  }\n");
+    /**
+     * 🔴🔴 **내 1차 단언이 속았다.** 「flag 와 enrich 사이에 블록 닫힘이 없다」로
+     *    봤는데, WU-016 이 flag 블록을 **둘** 로 만들면서(게이트 블록 + 실행 블록)
+     *    첫 블록의 닫힘이 그 구간에 들어와 깨졌다. 🔴 「위치만 보면 속는다」고
+     *    주석에 써 놓고 그 함정에 내가 걸렸다.
+     * 🟢 그래서 **실행 블록의 opener 를 정확히 지목** 한다 — 그것이 의도다
+     *    (「Gemini 가 꺼져 있거나 스킵이면 가격 보강이 돌지 않는다」).
+     */
+    const guarded = RUNNER.indexOf("isGeminiDiscoveryEnabled() && geminiSkipReason === null");
+    expect(guarded).toBeGreaterThan(-1);
+    /** 🔴 **호출부** 를 본다 — 식별자만 보면 맨 위 `import` 를 집는다(index 259).
+     *     🔴 그 실수를 이 테스트가 잡았다. 「첫 등장」이 아니라 「호출 위치」가 의도다. */
+    expect(RUNNER.indexOf("enrichCandidatePrices(scored")).toBeGreaterThan(guarded);
+    /** 🟢 pool 호출도 같은 가드 뒤다. */
+    expect(RUNNER.indexOf("collectGeminiCandidatePool(")).toBeGreaterThan(guarded);
   });
 
   it("OFF 면 evidence 가 null 이라 위 루프가 한 번도 돌지 않는다", () => {

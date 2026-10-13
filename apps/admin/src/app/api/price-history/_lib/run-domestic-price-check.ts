@@ -157,6 +157,16 @@ export interface DomesticPriceCheckResult {
   geminiEvidence?: GeminiTransientEvidence[] | null;
   /** 🔴 010R §6 — Gemini 가격 보강 호출 수. 국내 상세 fetch 와 **다른 칸** 이다. */
   geminiPriceEnrichCalls?: number;
+  /**
+   * 🔴 016 — Gemini 를 **부르지 않은 이유**. `null` 이면 불렀거나 flag OFF 다.
+   *    🟢 「0 회」와 「건너뛴 이유가 있다」를 가른다 — 비용 보고가 그것을 구분해야 한다.
+   */
+  geminiSkipReason?: "DETERMINISTIC_HIT" | "ALREADY_CHECKED_TODAY" | null;
+  /**
+   * 🔴 016 ⑥ — **Vision 은 Discovery 와 별도 비용이다.** 같은 `GEMINI_API_KEY` 를
+   *    쓰지만 이미지를 보내므로 단가 구조가 다르다. 합산하지 않는다.
+   */
+  visionCalls?: number;
   /** N-4.18-Q3 PART H-3-11 STEP 7(대표님 지시, 2026-08-27: "실제로 네트워크
    * 요청이 생략됐는지 확인한다") — 이번 호출에서 실제로 발생한 국내 식별자
    * (modelCode) 추출 시도 총 횟수. isEvidenceEvaluationWorthwhile 가드가
@@ -808,12 +818,47 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
    *    상한 3 으로 처리했을 때 SAME 1 · PRESUMED_SAME 3 이 나왔다. 그 값을 쓴다.
    *    🔴 「상품당 Gemini N회 고정」이 아니다 — `targetUsable` 이 차면 조기 종료한다.
    */
+  /* ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴 MI-GEMINI-COST-MINIMUM-ARCHITECTURE-016 — **Gemini 는 최후의 보조층이다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 확정된 개발 원칙(CPO 2026-10-13):
+   * ```
+   * 기존 MI / 국내 검색 → 결정적으로 찾을 수 있는 후보 우선
+   *   → **그래도 못 찾은 경우만** Gemini → 1회 · Primary 1개 · 후보 최대 3
+   * ```
+   * 🔴 즉 Gemini 를 **기본 검색엔진으로 쓰지 않는다.**
+   *
+   * 🟢 **새 threshold 를 만들지 않았다.** 아래 ①은 바로 위 `foundVeryHighInP0`
+   *    가 쓰는 **그 조건 그대로** 다(`matchLevel === "very_high"`) — 이 리포가 이미
+   *    「충분히 찾았으면 더 안 뒤진다」로 쓰고 있는 선례다.
+   * 🟢 ②도 기존 멱등 장치(`hasObservationToday`)를 **읽기만** 한다 — 새 저장 0.
+   */
+  let geminiSkipReason: "DETERMINISTIC_HIT" | "ALREADY_CHECKED_TODAY" | null = null;
   let geminiMetrics: GeminiPoolMetrics | null = null;
   /** 🔴 flag OFF 면 끝까지 `null` 로 나간다 — 「후보 0」과 「경로가 안 돌았다」를 가른다. */
   const geminiEvidence: GeminiTransientEvidence[] = [];
   /** 🔴 010R §6 — 국내 검색 HTTP 와 **구분해서** 센다. */
   let geminiPriceEnrichCalls = 0;
   if (isGeminiDiscoveryEnabled()) {
+    /* ① 🟢 **결정적 후보가 이미 있으면 부르지 않는다.**
+     *    바로 위 `foundVeryHighInP0` 와 **같은 조건** 이다 — 새 threshold 가 아니다.
+     *    🔴 국내 경로가 very_high 를 냈다면 Gemini 를 부를 이유가 없다. */
+    const deterministicHit = searchResults.some((r) =>
+      r.status === "ok" ? r.candidates.some((c) => c.matchLevel === "very_high") : false,
+    );
+    /* ② 🟢 **같은 상품을 같은 날 다시 부르지 않는다.**
+     *    🔴 전체 경로가 아니라 **Gemini 블록만** 막는다 — `skipIfCheckedToday` 를
+     *       켜면 국내 재확인 자체가 막히고 그것은 **기존 제품 동작 변경** 이다
+     *       (「지금 확인」 route 는 그 플래그를 쓰지 않는다). 여기서는 읽기만 한다.
+     *    🔴 그래서 셀러가 「가격 다시 확인」을 여러 번 눌러도 Gemini 비용은 하루 1회다. */
+    const checkedToday = deterministicHit ? false : await hasObservationToday(input.snapshotId, "DOMESTIC_SHOP");
+
+    if (deterministicHit) geminiSkipReason = "DETERMINISTIC_HIT";
+    else if (checkedToday) geminiSkipReason = "ALREADY_CHECKED_TODAY";
+  }
+
+  if (isGeminiDiscoveryEnabled() && geminiSkipReason === null) {
     const existingUrls = new Set<string>();
     for (const r of searchResults) {
       for (const c of r.candidates) existingUrls.add(normalizeCandidateUrl(c.url));
@@ -1246,5 +1291,9 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     geminiEvidence: geminiMetrics === null ? null : geminiEvidence,
     /** 🔴 010R §6 — Gemini 가격 보강 HTTP 호출 수(국내 검색과 분리). */
     geminiPriceEnrichCalls,
+    /** 🔴 016 — 건너뛴 이유. 「0 회」와 구분한다. */
+    geminiSkipReason,
+    /** 🔴 016 ⑥ — Vision 호출 수. Discovery 와 **합산하지 않는다**. */
+    visionCalls: visionCallCount.n,
   };
 }
