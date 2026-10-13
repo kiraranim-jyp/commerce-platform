@@ -525,3 +525,141 @@ cd apps/admin && MI_P0_02_LIVE=1 node --env-file=../../scripts/.env   node_modul
 
 🟢 결과는 `%TEMP%/mi-p0-02/vclose-N.json` 에 **회차별로** 쌓인다(덮어쓰지 않는다).
 🔴 모델은 `gemini-flash-latest` 고정 · threshold 변경 금지 · `main` merge/deploy 금지.
+
+---
+
+# ◆ WU-4 `ON-AXIS-REMEASURE-007` — 🟢 완주 · 🔴🔴 **Precision 결함 발견**
+
+> 🟢 Gemini 실제 호출 성공(OK 10/11) · 후보 24개 · MI 판정 전건 도달.
+> 🔴🔴 **그런데 「추가 EXACT 4」는 전부 쓸 수 없는 후보다** — 2건 자기참조 · 2건
+> 해외 브랜드 공식몰. **합법적 국내 EXACT = 0.**
+> 🔴🔴 그리고 **Registration Increment 는 구조적으로 0** 이다(저장이 막혀 있다).
+> 🔴 코드·하니스·모델·threshold 변경 **0** · merge/deploy **0**.
+
+## 🔴🔴 ① 자기참조 누출 — 공유 Production 함수의 «선재» 결함
+
+```
+원상품  https://www.junioredition.com/collections/bobo-choses/products/booty-ghosts-…
+후보    https://www.junioredition.com/products/booty-ghosts-…          ← 같은 샵·같은 상품
+원상품  https://www.junioredition.com/en-kr/collections/pepe-shoes/products/lulu-t-bar-…
+후보    https://www.junioredition.com/products/lulu-t-bar-…            ← 같은 샵·같은 상품
+```
+
+`canonicalListingKey`(self-reference.ts:70)가 **host·대소문자·끝슬래시·식별 쿼리만**
+정규화하고 **Shopify `/collections/<c>/` 접두사와 `/en-kr/` 로케일 접두사를 떼지
+않는다.** → `origin.host === candidate.host` 는 참인데 `key` 가 달라
+`isSelfReferenceCandidate` 가 **false** 를 낸다.
+
+🔴 **이 결함은 내 배선이 만든 것이 아니라 드러낸 것이다.** 국내 경로에서는 원상품
+host(smallable/junioredition)와 국내 Cafe24 샵 host 가 겹칠 일이 없어 **잠복** 했다.
+Gemini 는 웹 전체를 보므로 **원상품 host 자체를 후보로 물어온다** → 누출이 발화한다.
+
+🔴 실측 누출 **4/24 (17%)** — 전부 「원상품 host == 후보 host」:
+```
+Booty Ghosts  junioredition → junioredition        tier **EXACT**
+Lulu T Bar    junioredition → junioredition        tier **EXACT**
+Damarindo     tennis-warehouse → tennis-warehouse  tier COMPARISON
+Cericho       tennis-warehouse → tennis-warehouse  tier COMPARISON
+```
+
+## 🔴🔴 ② 「추가 EXACT 4」의 정체 — **합법적 국내 EXACT 는 0**
+
+| 원상품 | 후보 host | tier | 판정 |
+|---|---|---|---|
+| Booty Ghosts | `junioredition.com` | EXACT | 🔴 **자기참조** |
+| Lulu T Bar | `junioredition.com` | EXACT | 🔴 **자기참조** |
+| Booty Ghosts | `bobochoses.com` | EXACT | 🔴 브랜드 공식몰(해외 · 등록부 **disabled**) |
+| All About Monsters | `bobochoses.com` | EXACT | 🔴 브랜드 공식몰(해외 · 등록부 **disabled**) |
+
+🔴 `domestic_product_links` 는 **국내 판매처** 표다. 위 넷 중 국내 판매처는 **없다.**
+🔴 그러므로 **「추가 EXACT +4」를 Recall 개선으로 보고하지 않는다.**
+
+## 🟢 ③ 그런데 «국내» 후보를 실제로 찾아냈다 — 그쪽이 진짜 증거다
+
+```
+🟢 looxloo.com(등록부 O) · rulii.co.kr(O) · littleluna.co.kr(O) ·
+   en.petitlouie.co.kr · littlebae.shop
+🔴 musinsa.com — 포털/오픈마켓이라 **약관상 대상 아님**
+```
+🔴 그런데 그 국내 후보들의 tier 는 **EXACT 가 아니다** — `COMPARISON`/`(없음)`/`EXCLUDED` 다.
+🟢 즉 **Discovery 는 늘었고 MI 도 돌았지만, 돈이 움직이는 EXACT 버킷에는 국내 후보가
+   한 건도 못 들어왔다**(price-history.ts:644 — `exact.sellerCount>0` 이면 COMPARISON 무시).
+
+## 🔴🔴 ④ Registration Increment = **0 (구조적)**
+
+```
+Gemini 후보 → withConfidence → judgeDomesticCandidate → 🔴 **여기서 continue**
+  (가상 shopId 는 upsert 전에 걸러진다 — §5/§19 「영구 저장 금지」가 요구한 동작)
+→ linksCreatedOrUpdated 에 **안 들어간다** · price_observations 에 **안 쓴다**
+→ UI/가격비교/등록판단에 **닿는 경로가 없다**
+```
+🔴 그래서 **flag 를 켜도 등록 판단은 바뀌지 않는다.** 버그가 아니라 지시서가 요구한
+   「temporary candidate pool」의 **논리적 귀결** 이다.
+🔴 §9 ③ 의 답: Registration Increment **0**. 「측정했더니 0」이 아니라 **설계상 0** 이다.
+
+## 비용 — 2차 완주분만 (🔴 1차와 합산하지 않았다)
+
+```
+실행 창(UTC)  2차 02:23:27 → 02:36:08 (12분 41초)
+모델          gemini-flash-latest
+API 호출      **11** (OK **10** · API_FAILURE **1** = TimeoutError)
+토큰          prompt **13,600** · candidates **11,253** · thoughts **18,362** · total **43,215**
+우리 HTTP     resolve **61** · fetch **90** · 국내 상세 fetch **8**  ← 🔴 Gemini 비용과 분리
+완주 상품     **8**
+상품당        호출 **1.38** · total **5,402** · prompt 1,700 · candidates 1,407 · thoughts 2,295
+🔴 cachedContentTokenCount  집계 **제외**(타입이 그 칸을 선언하지 않는다 · probe 1,400 관측)
+🔴 grounding 쿼리  **우리 쪽 산출 불가** — 참고 추정 10 × 6 ≈ **60**(🔴 6 은 sample N=1)
+```
+
+### 1차(SIGTERM) — 🔴 비용 KPI 에서 제외
+```
+결과 파일 없음 · 정확한 호출/토큰 **복원 불가**(metrics 를 종료 시점에만 쓴다)
+상한   API 호출 4~10회 · grounding 24~60개 · 데이터 산출 **0**
+```
+
+## 효과 집계 (2차 · `sample 상품 N=8`)
+
+```
+Gemini MI 후보 **24** (상품당 3 = maxCandidates 상한에 전건 도달)
+crossSellerVerdict  SAME **4** · PRESUMED_SAME **9** · SIMILAR 5 · CONFLICT 3 · UNKNOWN 1
+tier(judgeDomesticCandidate)  EXACT 4 · COMPARISON 9 · EXCLUDED 2 · 나머지 (없음)
+OFF tier       EXACT **1**(Pèpè/foretforet) · COMPARISON 1(L.Misha/deuxbebe)
+zero-candidate **0/8** — 🔴 사전 선정하지 않았고 발생하지 않았다(정상)
+API failure    1 (TimeoutError · Children 1건)
+```
+
+## Decision Increment 3분리
+
+```
+① Discovery   🟢 **있다** — OFF 가 못 낸 국내 샵 상품페이지를 Gemini 가 냈다
+② MI          🟢 **있다** — 24건 전건 판정 도달 · SAME 4 · PRESUMED_SAME 9
+③ Registration 🔴 **0 (구조적)** — 저장이 막혀 하류에 닿지 않는다
+🔴 그리고 ①②의 품질에 결함이 있다: 누출 4/24 · EXACT 4건 전부 사용 불가
+```
+
+## §16 검증 — 전부 baseline
+
+```
+🟢 admin regression  506 files / **7,534 passed** / 52 skipped · exit 0 · failed 0
+🟢 typecheck         **10 = baseline 10**
+🟢 guard             no-production-coupling **6/6**
+🟢 build             exit 0 · Compiled successfully 39.8s · static 104
+🟢 git               clean · HEAD `d1d46ec9` · `origin/main` `1f030313`(미변경)
+🟢 DB                schema 0 · 영구 URL 저장 0 · upsert 호출 **0** · 가격추적 0
+🟢 flag              기본 OFF 유지
+```
+
+## 🔴 CTO 기술 의견 (CPO 판정 입력 — 판정은 CPO 몫)
+
+```
+① §10 네 단계 중 **STOP 은 아니다**(비용 이상징후 없음: 상품당 1.38 호출 · 5,402 토큰).
+   🔴 그러나 **PASS 도 아니다** — Registration Increment 0 · EXACT 4건 전부 사용 불가.
+   🟢 현 데이터에는 **HOLD** 가 가장 맞는다고 본다.
+② 🔴 자기참조 누출은 **Gemini 를 켜기 전에 닫아야 한다.** 고칠 자리는 한 곳이다 —
+   `canonicalListingKey` 에 Shopify `/collections/<c>/`·로케일 접두사 정규화 추가.
+   🔴 공유 함수라 영향 범위 조사 + 음성 대조 필요 → **별 WU**.
+③ 🔴 「국내 후보를 찾았는데 EXACT 에 못 들어온다」가 다음 진짜 질문이다.
+   🔴 단 threshold 완화로 풀지 않는다(금지 사항).
+④ 🔴 Registration Increment 를 0 이 아니게 하려면 **저장 정책을 바꿔야** 하고,
+   그것은 §5/§19 금지와 정면 충돌이므로 **CPO 정책 결정** 이다.
+```
