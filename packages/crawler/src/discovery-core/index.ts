@@ -25,5 +25,13 @@ export type {
 export { generateQueries } from "./query-generator";
 export { resolveCandidate, isCrawlable, type PageProbe } from "./url-resolver";
 export { createLivePageProbe, type LiveProbeResult } from "./live-page-probe";
-export { googleDiscoveryReadiness, type GoogleDiscoveryReadiness } from "./google-discovery";
+/** 🔴 `GoogleDiscoveryUsage` 를 함께 낸다 — MI-GEMINI-005 §10 이 상품당 토큰을
+ *  요구하고, 호출부가 그 타입을 읽지 못하면 **비용 측정이 불가능** 하다.
+ *  🟢 surface 최소화 원칙과 충돌하지 않는다 — 이것은 «읽기 전용 계측 타입» 이고
+ *     provider 를 노출하는 것이 아니다. */
+export {
+  googleDiscoveryReadiness,
+  type GoogleDiscoveryReadiness,
+  type GoogleDiscoveryUsage,
+} from "./google-discovery";
 export { createProductionGoogleDiscovery, type ProductionDiscoveryResult } from "./production-discovery";
