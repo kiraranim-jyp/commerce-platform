@@ -1058,7 +1058,70 @@ GitHub Actions 는 **없다** → **`main` push 가 그대로 Production 배포�
    CTO 가 임의로 머지하지 않는다. `vercel --prod` CLI 는 쓰지 않는다
    (메모 `vercel-deploy-from-repo-root`).
 
-### 🔴🔴 WU-011 종결 — **유효 국내 EXACT 는 여전히 0 이고, 이유가 하나로 좁혀졌다**
+### 🟢 WU-011 **CLOSED** · Product Direction **CONFIRMED** · 다음은 **WU-012** (CPO 확정 2026-10-13)
+
+```
+MI-GEMINI-ACCURACY-LONG-SPRINT-011  →  **CLOSED**
+Production                          →  🔴 **HOLD**
+Next WU                             →  **MI-GEMINI-PRICE-EVIDENCE-012**
+CEO Action                          →  **NONE**
+```
+
+🔴🔴 **HOLD 의 이유를 혼동하지 않는다** (CPO 명시):
+> 「코드가 불안해서 HOLD 가 아니라, **사업적 효용이 아직 0 이기 때문에** HOLD 다.」
+지금 켜도 등록 판단은 **0건 변화** 하고 Gemini 비용만 발생한다.
+
+🔴🔴 **KPI 에서 영구히 합치지 않는 구분** (CPO 명시):
+> 「**웹에서 동일상품을 찾는 능력**」 ↔ 「**그 후보가 국내 가격 판단에 쓸 수 있는
+>  증거가 되는 능력**」 — 이 둘 사이의 «연결» 이 현재 병목이다.
+🟢 Gemini 자체가 실패한 것이 아니다.
+
+### 🔴 WU-012 `MI-GEMINI-PRICE-EVIDENCE-012` — 가격 추출 «순서» 가 지시다
+
+CPO 가 선택지 셋 중 **ⓑ 공통 가격 추출 계층** 으로 확정했다(ⓐ 등록부 어댑터 = 사이트
+계속 추가 구조로 회귀 · ⓒ 국내 가격 포기 = 판정 의미 파괴).
+
+```
+🔴 **공통 추출 → 기존 crawler 재사용 → 마지막에만 특정 adapter** 순서다.
+   ① 기존 crawler 의 공통 가격 추출기
+   ② JSON-LD `Product / Offer`
+   ③ 페이지 구조화 데이터
+   ④ 기존 crawler 가 이미 지원하는 가격 source
+   ⑤ Shopify 는 기존 `enrichCandidatePrices` 유지
+   ⑥ 특정 사이트군이 **반복적으로** 막히고 초기 카테고리 정확도를 **크게 제한할 때만**
+      별도 adapter 검토
+🔴 **사이트를 Registry 에 계속 추가하는 방식은 금지.**
+```
+
+🔴 **영구 고정할 안전장치**(regression 으로 잠근다 — 이미 테스트 있음):
+```
+Gemini transient domestic evidence 는 항상
+  marketCode = null · currency = KRW · sourceProductUrl = discoveredUrl
+🔴 **KRW 가 아니면 국내 가격 증거로 승격하지 않는다.**
+🔴 잘못된 marketCode(en-kr)가 들어가면 기존 50,000 이 Gemini 47,000 으로 «교체» 된다
+   — 그 재현 테스트를 지우지 않는다.
+```
+
+🔴 **WU-012 의 성공 기준** — 「가격이 하나 잡혔다」는 성공이 아니다:
+```
+SAME + 유효 KRW 국내 가격 + 기존 aggregation 정상
+  = 기존 MI 가 **domestic EXACT 판단 가능**
+여기까지 가야 사업적 가치로 인정한다(CPO).
+KPI 네 축: A Identity · B Price Evidence · C Domestic Validation · D Registration Decision
+```
+
+🔴 **입력 scope 를 먼저 깨끗하게** (CPO 명시 — 표본 오염의 교훈):
+```
+Product Scope → Category validity → Gemini Discovery
+🔴 category validity 가 실패하면 Gemini 가 아무리 정확해도 의미가 없다.
+🔴 다음 E2E 부터 **입력 fixture/query 자체를 고정** 한다.
+```
+
+🟢 비용 KPI 는 **측정 구조 PASS / 실제 원화 단가 미확정** 으로 닫았다 —
+🔴 실제 KRW 차감액을 **CTO 가 계산해 확정하지 않는다**(AI Studio 가 ground truth).
+🔴 한도 ₩7,607 · 추가 충전 없음 유지.
+
+### 🔴🔴 WU-011 측정 결과 — 유효 국내 EXACT 는 여전히 0 이고, 이유가 하나로 좁혀졌다
 
 🟢 전문은 `docs/MI-GEMINI-CPO-SECOND-REPORT-011.md` **하나** 다. 🔴 CEO 액션 없음.
 
