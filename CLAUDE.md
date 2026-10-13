@@ -1659,6 +1659,73 @@ CPO Production Deploy 판정  →  CEO 실상품 테스트
 
 🔴 아직 모르는 것(0% 로 적지 않는다): Gemini Recall · 후보가 MI 판정을 얼마나
    늘리는가 · 상품당 실제 Gemini 비용 · grounding 비용.
+### 🟢🟢 WU-019R `MI-GLOBAL-E2E-TRACE` — **공통 연결 둘이 빠졌다** (조사 WU · 구현 0)
+
+🟢 전문 `docs/MI-GLOBAL-E2E-TRACE-019R.md`. 🔴 **운영 코드 변경 0 · Gemini 0 · HTTP 0.**
+🔴🔴 **방향이 바뀌었다**(CPO 2026-10-13) — 목표는 「Gemini 를 켜는 것」이 아니라
+**초기 2개 카테고리에서 파이프라인이 어디까지 완성됐는지 닫는 것** 이다.
+
+| 단계 | KIDS | TENNIS |
+|---|---|---|
+| Identity | 🟢 | 🟡 (category 0/9 · brandModelCode 0/9) |
+| Gemini Discovery | 🟡 (구조 ○ · flag OFF) | 🟡 |
+| 국내 Candidate | 🟢 | 🔴 (scope 샵 1곳) |
+| 해외 Candidate | 🟢 | 🟢 |
+| **MI Verification** | 🟢 | 🟢 |
+| 국내 Price Evidence | 🟡 | ⚪ 분모 0 |
+| 해외 Price Evidence | 🟡 Shopify 만 | 🔴 |
+| Aggregation / Final MI | 🟡 국내 KRW 만 | 🔴 |
+| Registration | 🟢 **설계상 분리**(P-32) | 🟢 |
+
+🟢🟢 **Gemini↔MI 연결은 정상이다** — 같은 루프(`run-domestic-price-check.ts:938`)·
+같은 `judgeDomesticCandidate(:1009)` 이고 **Gemini 전용 판정 규칙이 0** 이다
+(분기는 둘뿐 — `:934` 확인기록 skip · `:1067` 저장 차단).
+🟢 **MI 는 후보의 시장을 보지 않으므로 해외 후보도 그대로 판정된다**(실측
+tennis-warehouse · yahoo.co.jp **PRESUMED_SAME**).
+
+🔴🔴 **빠진 «공통» 연결은 둘이고 둘 다 CPO 결정이다 — 구현 0**:
+```
+① 후보 가격 추출 «배선»
+   🟢 추출기는 **이미 있고 운영에서 돈다** — universalExtract(:176) →
+      extractProductData(:858)의 JSON-LD offers.price/priceCurrency(:195-210).
+      운영 호출부 pipeline/route.ts:151 → :280-283(원상품 경로).
+   🔴 그런데 후보 경로는 그걸 안 부른다 — factsFromProductUrl 이 price 를
+      **의도적으로 null** 로 두고(:187·:236) enrich 는 `extractShopifyHandle`(:264)이
+      null 이면 포기한다. 실측 **11 도메인 중 가격 획득 1건**(bobochoses · Shopify · EUR).
+   🔴 비용 축: fast-path 전략이 **shopify·prestashop 둘뿐** → 그 외는 **Playwright** 다.
+      🟢 대안 — PLAIN_HTML 경로가 **이미 HTML 을 받아 온다**(:199-246). JSON-LD 는
+         순수 함수라 **HTTP 추가 0** 으로 읽을 수 있다. 🔴 어느 쪽인지는 CPO 결정.
+② 해외 가격을 담는 «축»
+   PRICE_OBSERVATION_SOURCES = SELLER_ORIGIN · NAVER_SHOPPING · DOMESTIC_SHOP
+   (price-history.ts:21) — 🔴 「해외 **경쟁** 판매처 가격」 값이 **없다.**
+   🟢 schema 변경 **불필요** (source 는 text · CHECK/트리거 0).
+   🔴 필요한 것은 **읽는 쪽** 이다 — 리포의 기존 테스트
+      `overseas-observation-storage-impact.test.ts`(GOLF-01.6 축 B)가 고정해 뒀다:
+        ② 새 source 로 **저장만** 하면 🟢 **한 원도 안 움직인다**(읽기 4곳이 전부 source 필터)
+        ③ `SELLER_ORIGIN` 에 얹으면 🔴 **원가가 오염된다** — 금지
+```
+
+🔴🔴 **§6 의 「Source Market」 칸은 제품에 «없다»** — `ComparisonCandidate` 에
+market/country/locale 칸이 **0건**(types.ts grep). 그래서 국내/해외 분리는 **CTO 의
+사후 추정**(TLD·등록부·통화)이고 **UNKNOWN 6 도메인 / 후보 7** 을 KR 로도 해외로도
+세지 않았다.
+🔴🔴 **그리고 분류 충돌 하나가 실제 위험을 보여줬다** — `bobochoses.com` 은 국내
+등록부에 **「Bobo Choses Korea(공식)」· AUTO_API · KIDS_FASHION** 으로 등록돼 있는데
+그 후보의 가격 증거는 **EUR** 였다. 🟢 국내 KRW 축으로 못 들어가게 막은 것은
+**통화 게이트 하나**(`priceKrw == null` drop :185 · `currency:"KRW"` 고정 :195) 다.
+→ 🔴 **「등록부에 있다」가 「국내 시장이다」를 뜻하지 않는다.**
+
+🔴 **가격 없는 Gemini 후보는 화면에 존재하지 않는다** — `geminiEvidence`(:872)·
+`geminiPricedCount`(:875)를 **소비하는 코드가 0** 이다(apps/admin 전수 grep).
+「identity evidence 로 남는다」로 적지 않는다.
+
+🟢 **Identity confidence 는 «칸이 없어서» 측정 불가** — `ProductFacts` 에 confidence 가
+없고 DNA 의 `brand.confident`(boolean) 하나만 있으며 facts 로 옮겨지지 않는다.
+
+🟢 **TENNIS 는 CASE C 다** — 국내 source 부재이고 **공통 MI 문제로 확대하지 않는다.**
+🔴 §14 일곱 질문: 1🟢 2🟢 3🟢 4🟡(Shopify 만) 5🟡(해외 🔴) 6🟡 7🔴 **NO**.
+🔴 즉 **여성의류 등 다음 카테고리로 넘어가지 않는다**(CPO 지시).
+
 ### 🔴🔴 현재 착수점 — **없다. 다음은 코드가 아니다** (CPO 확정 2026-10-13 · WU-018 종결)
 
 ```
