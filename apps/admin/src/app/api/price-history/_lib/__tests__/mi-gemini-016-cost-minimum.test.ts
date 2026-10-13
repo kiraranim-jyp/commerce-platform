@@ -54,6 +54,19 @@ describe("① 🔴🔴 결정적 후보가 있으면 Gemini 를 부르지 않는
     expect(RUNNER).toContain("geminiSkipReason,");
   });
 
+  /**
+   * 🔴🔴 MI-018 음성 대조에서 **이 가드가 공백이었다.** 조건을 `if (false)` 로
+   *    바꿔 게이트를 통째로 죽여도 42건이 전부 통과했다 — 위 단언이 **대입문의
+   *    문자열만** 보고 «무엇이 그 대입을 일으키는가» 를 보지 않았기 때문이다.
+   *    🔴 그래서 **술어까지** 잠근다(가드 약화가 아니라 강화다).
+   */
+  it("🔴🔴 스킵 대입이 실제 «판정 결과» 에 걸려 있다 — 상수로 바꾸면 깨진다", () => {
+    expect(RUNNER).toContain('if (deterministicHit) geminiSkipReason = "DETERMINISTIC_HIT";');
+    expect(RUNNER).toContain('else if (checkedToday) geminiSkipReason = "ALREADY_CHECKED_TODAY";');
+    /** 🔴 `deterministicHit` 자체가 very_high 후보 탐색으로 «계산» 돼야 한다. */
+    expect(RUNNER).toMatch(/const deterministicHit = searchResults\.some\(/);
+  });
+
   it("🔴 스킵 상태에서는 pool 을 부르지 않는다 — 조건이 함께 걸려 있다", () => {
     expect(RUNNER).toContain("isGeminiDiscoveryEnabled() && geminiSkipReason === null");
   });

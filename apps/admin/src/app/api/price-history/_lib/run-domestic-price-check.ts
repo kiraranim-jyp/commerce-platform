@@ -856,6 +856,15 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
 
     if (deterministicHit) geminiSkipReason = "DETERMINISTIC_HIT";
     else if (checkedToday) geminiSkipReason = "ALREADY_CHECKED_TODAY";
+
+    /* 🔴 MI-018 §5 — **발화를 세려면 찍혀야 한다.** 비용 최적화의 효과를 나중에
+     * 세기 위한 최소 로그 한 줄이다(기존 `[H-3-11]` 규약과 같은 형태).
+     * 🟢 flag 분기 «안» 이라 OFF 면 한 줄도 찍히지 않는다 — 기존 동작 불변.
+     * 🔴 스키마·DB·UI 를 건드리지 않는다. 🔴 `null` 은 「부를 예정」이다. */
+    console.log(
+      `[MI-016-gate] snapshot=${input.snapshotId} skip=${geminiSkipReason ?? "NONE"} ` +
+        `veryHigh=${deterministicHit} checkedToday=${checkedToday}`,
+    );
   }
 
   if (isGeminiDiscoveryEnabled() && geminiSkipReason === null) {
