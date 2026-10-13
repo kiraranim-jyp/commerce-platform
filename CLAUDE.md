@@ -1058,7 +1058,90 @@ GitHub Actions 는 **없다** → **`main` push 가 그대로 Production 배포�
    CTO 가 임의로 머지하지 않는다. `vercel --prod` CLI 는 쓰지 않는다
    (메모 `vercel-deploy-from-repo-root`).
 
-### 🔴🔴 **현재 1순위 — Gemini 전면 STOP · 비용 감사** (CPO 확정 2026-10-13)
+### 🔴🔴 **현재 상태 — Gemini HARD STOP · 다음은 Billing 원장** (CPO 확정 2026-10-13)
+
+```
+MI-GEMINI-ACCURACY-LONG-SPRINT-011   → CLOSED
+MI-GEMINI-COST-AUDIT-012             → CLOSED
+MI-GEMINI-PRICE-EVIDENCE-012         → **HOLD** (비용 원장 확정 전 착수 금지)
+MI-GEMINI-COST-RECONCILIATION-013    → **NEXT**
+Gemini API                           → **HARD STOP**
+현재 잔액 ₩3,300                      → **보존 자산** (테스트 예산이 아니다)
+추가 충전                             → 금지
+Production                           → HOLD
+Search / Intelligence 분리             → **전략 방향 승인**
+```
+
+🔴🔴 **「돈을 더 써서 원인을 알아낸다」는 행동은 금지다**(CPO 명시). ₩3,300 을
+한 푼도 쓰지 않는다. 원장이 맞춰진 뒤에야 Gemini 사용 여부를 다시 판단한다.
+
+🔴🔴 **그때의 판단 기준도 이미 정해졌다**(CPO):
+> 「상품 동일상품 후보 발견이라는 기능 하나를 위해 Gemini Search Grounding 에
+>  상품당 수백~수천 원을 태우는 구조라면, **그 구조 자체를 폐기한다.**」
+
+### 🔴🔴 `₩18,700` 은 «원인» 이 아니라 **미조정 금액** 이다 (CPO 정정)
+
+내가 감사에서 「리포 밖에서 와야 한다」로 적었다. **너무 나갔다** — 「다른 Gemini
+서비스가 썼다」로 읽힌다. 🔴 그렇게 결론 낼 근거가 없다. 확정된 것은 이것뿐:
+
+```
+충전/잔액 기준 소진액                ₩21,700
+우리 저장 로그로 «추정 가능한» 사용량   ≈ ₩3,000
+현재 설명되지 않는 차액               ≈ ₩18,700  ← **미조정(UNACCOUNTED)**
+```
+
+🔴 **그리고 내 산식의 전제가 흔들린다** — CPO 가 **7월 ₩25,000 충전** 을 알려줬고
+나는 그것을 몰랐다. 7월분·기존 잔액·만료가 섞이면 **분모 자체가 다르다.**
+
+🔴 **분리해야 할 원장 항목 10개 — 전부 미확정이고 CTO 가 확정할 수 없다**:
+```
+다른 API 사용 · 다른 프로젝트/API key · modelVersion ↔ alias 차이 ·
+grounding 실제 과금 단위(query 당 ↔ prompt 당) · Billing 집계 지연 ·
+credit balance ↔ 비용화면 회계 기준 차이 · 7월/10월 충전분과 기존 잔액의 관계 ·
+세금·조정·환불·크레딧 만료 · 실패(402) 호출 과금 여부 · 무료 구간 소진 여부
+```
+
+### 🔴 WU-013 `COST-RECONCILIATION` — **코드보다 원장이 먼저다**
+
+```
+조건  Gemini 호출 **0회** · 코드 변경 0
+A. Credit ledger  7월 25,000 / 10월 25,000 / 현재 3,300 사이의 **실제 거래 원장**.
+                  특히 「10/12 ₩25,000 구매 → 실제 잔액에 얼마가 더해졌는가」부터 확정
+B. Billing project  같은 Account 아래 Gemini API · AI Studio · 다른 project ·
+                  다른 API key · 다른 model/service 사용량 **전부 대조**
+C. 실제 모델      requested model / resolved model / **modelVersion** 보존 확인
+D. Grounding      API request → grounding request → web search query →
+                  **실제 billing line item** 을 1:1 로 맞춘다
+🔴 우리가 가진 `44 grounding queries` 는 **일부 실행에서만 측정된 내부 관측값** 이고
+   ₩21,700 전체의 근거로 **쓸 수 없다**(CPO 명시).
+```
+
+### 🔴 비용 상한은 **4중** 이다 — 현재 ①만 있다
+
+```
+① 상품당 Gemini API call 상한      🟢 있다 (maxQueries)
+② 상품당 grounding query 상한      🔴 **없다** — 호출 1회가 **5.5 쿼리**(실측)
+③ 전체 실행 grounding query 상한   🔴 **없다**
+④ 전체 실행 **KRW 비용** 상한       🔴 **없다**
+🔴 금액 상한을 코드로 구현할지는 **Billing 원장 확인 «후»** 결정한다.
+```
+
+### 🔴 계측 보존은 승인 사항 — 지금 실행해 측정하지 않는다
+
+한 실행 단위로 남겨야 할 것(CPO 확정):
+`requestedModel · resolvedModel · modelVersion · promptTokens · candidateTokens ·
+thoughtsTokens · cachedContentTokenCount · groundingQueries`
+🔴 **단 이것을 측정하려고 Gemini 를 다시 실행하지 않는다.** 코드 계측은 비용 원인
+규명이 끝난 «후» 진행한다.
+
+### 🔴 「기존 57 vs Gemini 12」를 비용효율 증거로 쓰지 않는다 (CPO 정정)
+
+내가 그 두 숫자를 구조 지지 근거로 썼다. **쓸 수 없다** — 57 이 실제 동일상품
+후보인지 모르고 12 가 유효 후보인지도 모른다. 🟢 확정된 것은 **유효 국내 EXACT = 0**
+하나다. 🔴 **후보 개수만 비교하지 않는다.** 두 경로 비교는 **여섯 축을 같이** 잰다:
+`발견 후보 · TRUE SAME · 국내 KRW 가격 · 유효 domestic EXACT · 상품당 비용 · 호출/쿼리`
+
+### 🟢 비용 감사에서 확정된 사실 (호출 0 으로 얻었다)
 
 🟢 전문 `docs/MI-GEMINI-COST-AUDIT-012.md`. 🔴 **WU-012 는 가격 증거가 아니라 비용 감사로 바뀌었다.**
 
