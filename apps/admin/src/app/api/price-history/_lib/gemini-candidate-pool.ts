@@ -72,8 +72,14 @@ export interface GeminiPoolInput {
 export interface GeminiPoolMetrics {
   /** ① Gemini API 호출 수 */
   geminiCalls: number;
-  /** 🔴 ② grounding 쿼리 수는 **측정 불가** 다 — usageMetadata 에 안 들어온다. */
-  groundingQueries: null;
+  /**
+   * 🟢🟢 MI-011 — **측정된다.** 이전에 `null`(측정 불가)로 둔 것은 내가
+   *    `usageMetadata` 를 봤기 때문이고, 실제 칸은
+   *    `candidates[].groundingMetadata.webSearchQueries` 다.
+   * 🔴 Grounded Search 의 **과금 단위** 이고 호출 1회가 여러 쿼리를 낸다
+   *    (실측: 1 호출 → 6 쿼리). 호출 수로 비용을 계산하면 과소가 된다.
+   */
+  groundingQueries: number;
   inputTokens: number;
   outputTokens: number;
   thoughtsTokens: number;
@@ -123,7 +129,7 @@ export interface GeminiPoolResult {
 
 const EMPTY_METRICS = (): GeminiPoolMetrics => ({
   geminiCalls: 0,
-  groundingQueries: null,
+  groundingQueries: 0,
   inputTokens: 0,
   outputTokens: 0,
   thoughtsTokens: 0,
@@ -290,6 +296,7 @@ function accumulateUsage(
   if (!usage) return;
   /** 🔴 `requests` 가 실제 Gemini API 호출 수다 — resolve/fetch 와 섞지 않는다. */
   metrics.geminiCalls += usage.requests;
+  metrics.groundingQueries += usage.groundingQueries;
   metrics.inputTokens += usage.promptTokens;
   metrics.outputTokens += usage.candidatesTokens;
   metrics.thoughtsTokens += usage.thoughtsTokens;

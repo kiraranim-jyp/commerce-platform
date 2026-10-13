@@ -1058,6 +1058,38 @@ GitHub Actions 는 **없다** → **`main` push 가 그대로 Production 배포�
    CTO 가 임의로 머지하지 않는다. `vercel --prod` CLI 는 쓰지 않는다
    (메모 `vercel-deploy-from-repo-root`).
 
+### 🔴🔴 WU-011 종결 — **유효 국내 EXACT 는 여전히 0 이고, 이유가 하나로 좁혀졌다**
+
+🟢 전문은 `docs/MI-GEMINI-CPO-SECOND-REPORT-011.md` **하나** 다. 🔴 CEO 액션 없음.
+
+```
+🟢 사슬은 끝까지 배선됐다 — Discovery → self-ref → 가격보강 → 국내집계 → MI 판정
+🔴🔴 **유효 국내 EXACT = 0** (sample 상품 N=6 · 상품당 쿼리 1)
+     이유가 하나다 — **가격이 붙지 않는다.** KRW 가격 증거 **0/12**
+     tier EXACT 2 중 하나는 가격 미확보(tinyapple.net) · 하나는 **EUR**(bobochoses.com)
+🟢 identity 는 작동한다 — SAME 2 · PRESUMED_SAME 4 · DROPPED 4(EVIDENCE_NOT_WORTHWHILE)
+🟢 안전성 확인 — **기존 국내 증거가 줄어든 상품 0** (Gemini 가 덮어쓰지 않는다)
+🟢🟢 **grounding 비용이 처음 측정됐다 — 호출당 5.5 쿼리**(44/8).
+     🔴 「측정 불가」라던 이전 보고는 **틀렸다**(usageMetadata 가 아니라
+        candidates[].groundingMetadata.webSearchQueries 다). 코드에 배선했다.
+🔴 BLOCKER 하나 — `enrichCandidatePrices` 는 **Shopify 전용** 이고 국내 후보 host
+   대부분이 handle 을 못 준다. 이것을 푸는 셋은 **전부 CPO 정책 결정** 이다(보고서 §9-①).
+🔴 Production **HOLD** — 켜도 판정이 안 바뀌고 비용만 발생한다.
+```
+
+🔴🔴 **표본 오염을 내가 찾아 고쳤다 — 숫자를 읽을 때 전제다**:
+```
+덤프가 `brand NOT ILIKE '%sergio%'` 로 넓혀 **비-아동 상품** 이 KIDS scope 에 들어왔다
+ — 일본 라쿠텐 2건, 그중 하나는 **골프 드라이버**. Gemini 호출 2회를 먹었고
+   `store.shopping.yahoo.co.jp`(일본)가 **COMPARISON tier** 를 받았다.
+🟢 KRW 가 없어 집계에는 안 들어갔다 — 가격 게이트가 막았다.
+🟢 덤프 조건 수정 + 그 2건을 **측정에서 제외해 재집계**(추가 Gemini 호출 0).
+```
+
+🔴 **예산이 조건을 바꿨다** — CPO 한도 ₩7,607 · 추가 충전 없음. 호출당 약 ₩670~870
+추정이라 한도가 9~11 호출분이었고, 그래서 **상품당 쿼리를 2→1 로 줄였다.**
+🔴 WU-4 는 쿼리 2 였으므로 **Discovery 계열 KPI 를 1:1 로 비교하지 않는다.**
+
 ### 🟢 008A CLOSED — 자기참조 «목록 세그먼트» 가 닫혔다 (CPO 확정 2026-10-13)
 
 ```

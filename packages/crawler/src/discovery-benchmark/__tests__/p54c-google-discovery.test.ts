@@ -500,7 +500,21 @@ describe("🔴 측정 인프라 — 조용히 썩지 않게 잠근다", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(syntheticGrounding([])), { status: 200 })));
     const provider = createGoogleDiscoveryProvider();
     await provider.discover(JOB005_IDENTITY, generateQueries(JOB005_IDENTITY)[0]);
-    expect(provider.usage()).toEqual({ requests: 1, promptTokens: 0, candidatesTokens: 0, thoughtsTokens: 0, totalTokens: 0 });
+    /**
+     * 🔴 MI-011 — `groundingQueries` 칸이 추가됐다. **이 단언의 의도는 그대로** 다:
+     *    「응답이 값을 주지 않으면 0 으로 둔다(지어내지 않는다)」.
+     * 🟢 `groundingQueries` 는 `usageMetadata` 가 아니라
+     *    `candidates[].groundingMetadata.webSearchQueries` 에서 온다 — 그 배열이
+     *    없는 이 stub 에서도 **0** 이어야 하고, 그것이 여기서 확인된다.
+     */
+    expect(provider.usage()).toEqual({
+      requests: 1,
+      promptTokens: 0,
+      candidatesTokens: 0,
+      thoughtsTokens: 0,
+      totalTokens: 0,
+      groundingQueries: 0,
+    });
   });
 
   /** 🔴 20초로는 37/38 이 timeout 이었다. 상한을 다시 좁히면 그 사고가 재발한다. */

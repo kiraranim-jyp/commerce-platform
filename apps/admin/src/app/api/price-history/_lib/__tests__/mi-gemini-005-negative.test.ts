@@ -91,8 +91,15 @@ describe("MI-GEMINI-005 ⑦ — Gemini 실패가 운영 경로를 깨뜨리지 �
     expect(result.metrics.geminiCalls).toBe(0);
     expect(result.metrics.model).toBeNull();
     expect(result.metrics.totalTokens).toBe(0);
-    /** 🔴 §10 — grounding 쿼리 수는 구조적으로 측정 불가다. 0 으로 적지 않는다. */
-    expect(result.metrics.groundingQueries).toBeNull();
+    /**
+     * 🔴🔴 **MI-011 에서 정정됐다.** 이 단언은 원래 `toBeNull()`(= 측정 불가)
+     *    이었다. 그 전제가 틀렸다 — `webSearchQueries` 는 응답에 **있고**
+     *    `candidates[].groundingMetadata` 에서 온다(`usageMetadata` 가 아니다).
+     *    🟢 지금은 그 값을 센다. 호출을 안 했으면 **0** 이다.
+     * 🔴 「0」과 「측정 불가」를 섞지 않는다 — 여기서는 `outcomes.CONFIG_MISSING`
+     *    이 「호출 자체를 안 했다」를 말하고, 0 은 그 결과다.
+     */
+    expect(result.metrics.groundingQueries).toBe(0);
   });
 
   it("② API_FAILURE — Gemini 가 500 을 주면 throw 하지 않고 API_FAILURE 로 돌려준다", async () => {
@@ -141,7 +148,16 @@ describe("MI-GEMINI-005 ⑦ — Gemini 실패가 운영 경로를 깨뜨리지 �
         async () =>
           new Response(
             JSON.stringify({
-              candidates: [{ groundingMetadata: { groundingChunks: [] } }],
+              candidates: [
+                {
+                  groundingMetadata: {
+                    groundingChunks: [],
+                    /** 🔴🔴 MI-011 — 과금 단위는 **이 배열의 길이** 다.
+                     *    「후보 0건」이어도 검색은 돌았고 비용이 발생한다. */
+                    webSearchQueries: ["q1", "q2", "q3"],
+                  },
+                },
+              ],
               usageMetadata: { promptTokenCount: 120, candidatesTokenCount: 5, totalTokenCount: 125 },
             }),
             { status: 200, headers: { "content-type": "application/json" } },
@@ -161,6 +177,12 @@ describe("MI-GEMINI-005 ⑦ — Gemini 실패가 운영 경로를 깨뜨리지 �
     /** 🟢 그런데 비용은 «발생했다» — 0건이 무료가 아니라는 것을 숫자로 남긴다. */
     expect(result.metrics.geminiCalls).toBeGreaterThan(0);
     expect(result.metrics.totalTokens).toBeGreaterThan(0);
+    /** 🔴🔴 **호출 수로 비용을 계산하면 과소다** — 1 호출이 쿼리 여럿을 낸다.
+     *     실측 probe: 1 호출 → 6 쿼리.
+     *  🔴 여기서는 stub 이 호출마다 3 을 주고 maxQueries=2 라 **누적 6** 이다 —
+     *     그 누적이 실제로 되는지가 이 단언의 요점이다(호출당 3 이 아니라 합계). */
+    expect(result.metrics.groundingQueries).toBe(6);
+    expect(result.metrics.groundingQueries).toBeGreaterThan(result.metrics.geminiCalls);
   });
 
   it("🔴 ⑧ 조기 종료 — 후보가 안 모이면 maxQueries 상한까지만 쓰고 멈춘다(무한 호출 금지)", async () => {

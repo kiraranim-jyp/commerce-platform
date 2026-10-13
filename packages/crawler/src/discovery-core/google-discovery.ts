@@ -102,6 +102,14 @@ interface GeminiGroundingResponse {
     groundingMetadata?: {
       groundingChunks?: { web?: { uri?: string; title?: string } }[];
       groundingSupports?: { segment?: { text?: string }; groundingChunkIndices?: number[] }[];
+      /**
+       * 🔴🔴 MI-011 — **Grounded Search 과금 단위가 이것이다.**
+       *    실측(probe, 2026-10-13): API 호출 **1회 → webSearchQueries 6개.**
+       *    그래서 호출 수만으로 비용을 계산하면 **약 6배 과소** 가 된다.
+       * 🔴 이 칸이 타입에 없어서 지금까지 응답에서 **버려지고 있었다** —
+       *    「응답에 없다」가 아니라 「우리가 보존하지 않았다」였다.
+       */
+      webSearchQueries?: string[];
     };
   }[];
   /** 🔴 비용 계측에만 쓴다 — 판정에 쓰지 않는다. 응답이 주는 값을 그대로 더한다. */
@@ -126,6 +134,12 @@ export interface GoogleDiscoveryUsage {
   candidatesTokens: number;
   thoughtsTokens: number;
   totalTokens: number;
+  /**
+   * 🔴 Grounded Search 가 **실제로 던진 검색 쿼리 수**(과금 단위).
+   *    `usageMetadata` 가 아니라 `candidates[].groundingMetadata.webSearchQueries`
+   *    에서 온다 — 두 곳을 혼동하면 「측정 불가」로 잘못 결론 난다(실제로 그랬다).
+   */
+  groundingQueries: number;
 }
 
 /**
@@ -260,7 +274,7 @@ export interface GoogleDiscoveryOptions {
 }
 
 export function createGoogleDiscoveryProvider(options?: GoogleDiscoveryOptions): GoogleDiscoveryProvider {
-  const usage: GoogleDiscoveryUsage = { requests: 0, promptTokens: 0, candidatesTokens: 0, thoughtsTokens: 0, totalTokens: 0 };
+  const usage: GoogleDiscoveryUsage = { requests: 0, promptTokens: 0, candidatesTokens: 0, thoughtsTokens: 0, totalTokens: 0, groundingQueries: 0 };
   const providerId = "google-search-grounding";
   const resolveModel = () => options?.model ?? (process.env[GEMINI_MODEL_ENV]?.trim() || DEFAULT_MODEL);
   // 🔴 `??` 다. `||` 로 쓰면 명시한 `[]` 가 falsy 가 아니라 **truthy** 이므로
@@ -287,6 +301,8 @@ export function createGoogleDiscoveryProvider(options?: GoogleDiscoveryOptions):
       usage.candidatesTokens += u?.candidatesTokenCount ?? 0;
       usage.thoughtsTokens += u?.thoughtsTokenCount ?? 0;
       usage.totalTokens += u?.totalTokenCount ?? 0;
+      /** 🔴 응답이 주는 값을 그대로 센다 — 추정하지 않는다. */
+      usage.groundingQueries += body.candidates?.[0]?.groundingMetadata?.webSearchQueries?.length ?? 0;
       return extractGroundingUrls(body, providerId, query.id);
     },
   };

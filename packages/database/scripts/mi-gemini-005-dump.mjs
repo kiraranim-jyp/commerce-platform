@@ -18,7 +18,25 @@ const OUT = process.env.MI_P0_02_OUT_DIR ?? path.join(process.env.TEMP ?? ".", "
 
 /** 🔴 아동복 + 테니스 «둘 다» 본다 — 지시서 ⑥ 이 scope 검증을 요구한다. */
 const GROUPS = {
-  kids: `(ps.workspace->'canonicalProduct'->'brand'->>'value') ILIKE ANY (ARRAY['%bobo%','%bonjour%','%louise%','%bonpoint%','%misha%'])`,
+  /* 🔴 WU-011 §12 — 표본을 넓힌다(아동 12 + 테니스 6). 브랜드를 열거하지 않고
+   *    **테니스가 아닌 것** 으로 잡는다 — 열거하면 Pèpè·TAO·Mini Rodini 처럼
+   *    실재하는 브랜드가 조용히 빠진다(실측: 고유상품 104 중 아동계열 95). */
+  /* 🔴🔴 **WU-011 실측에서 이 조건이 표본을 오염시켰다.** `NOT ILIKE '%sergio%'`
+   *    로 넓히니 **아동의류가 아닌 것** 이 KIDS_FASHION scope 로 들어왔다 —
+   *    일본 라쿠텐 리스팅 2건(그중 하나는 **골프 드라이버**)이 Gemini 호출 2회와
+   *    후보 6개를 소모했고, `store.shopping.yahoo.co.jp` 가 COMPARISON tier 를
+   *    받았다(일본 야후가 「국내 비교가격」 증거가 될 뻔했다).
+   * 🟢 그래서 **브랜드가 실제로 있는 아동 브랜드만** 받는다. 브랜드 공백과
+   *    「AW26」(브랜드가 아니다 — 헌장 §12)·라쿠텐/야후 제목을 명시적으로 뺀다.
+   * 🔴 브랜드를 열거하지 않고 「제외」로 가는 이유: 열거하면 Pèpè·TAO·Mini Rodini
+   *    처럼 실재 브랜드가 조용히 빠진다(실측: 고유상품 104 중 아동계열 95). */
+  kids: `
+    (ps.workspace->'canonicalProduct'->'brand'->>'value') NOT ILIKE '%sergio%'
+    AND coalesce(ps.workspace->'canonicalProduct'->'brand'->>'value','') <> ''
+    AND coalesce(ps.workspace->'canonicalProduct'->'brand'->>'value','') NOT ILIKE 'AW26'
+    AND coalesce(ps.workspace->'canonicalProduct'->'title'->>'value','') NOT LIKE '%楽天%'
+    AND coalesce(ps.workspace->'canonicalProduct'->'title'->>'value','') NOT ILIKE '%ゴルフ%'
+  `,
   tennis: `(ps.workspace->'canonicalProduct'->'brand'->>'value') ILIKE '%sergio%'`,
 };
 
@@ -47,12 +65,12 @@ async function main() {
           AND coalesce(ps.workspace->'canonicalProduct'->'title'->>'value', '') NOT ILIKE '[TEST]%'
       ) t
       ORDER BY title, created_at DESC
-      LIMIT 6
+      LIMIT 14
     `);
   }
   /** 🟢 하니스가 kids/kids2/tennis 세 칸을 읽으므로 kids 를 둘로 가른다. */
-  urls.kids2 = urls.kids.slice(3);
-  urls.kids = urls.kids.slice(0, 3);
+  urls.kids2 = urls.kids.slice(7);
+  urls.kids = urls.kids.slice(0, 7);
 
   /* 🔴🔴 §5-B CONTROL 선정 — 「Production 이 «이미» 결과를 만든 입력」을 섞는다.
    *    1차 덤프는 그것을 안 해서 CONTROL 링크가 **0건** 이었다(측정 성립 불가).
@@ -129,6 +147,18 @@ async function main() {
     ORDER BY l.snapshot_id, s.domain
   `, ids);
 
+  /* 🔴 WU-011 §9/§13 — before/after 집계 비교에 **기존 국내 가격 관측** 이 필요하다.
+   *    transient 레코드를 섞기 «전/후» 를 같은 집계기로 돌려야 효과를 말할 수 있다.
+   *    🔴 읽기만 한다. */
+  const obs = await prisma.$queryRawUnsafe(`
+    SELECT o.snapshot_id, o.id, o.source, o.source_label, o.source_product_url,
+           o.source_ref_id, o.currency, o.price_amount, o.price_krw, o.sold_out,
+           o.market_code, o.checked_at
+    FROM price_observations o
+    WHERE o.snapshot_id = ANY($1::uuid[]) AND o.source = 'DOMESTIC_SHOP'
+    ORDER BY o.snapshot_id, o.checked_at DESC
+  `, ids);
+  writeFileSync(path.join(OUT, "e2e-observations.json"), JSON.stringify(obs, null, 1), "utf8");
   writeFileSync(path.join(OUT, "e2e-links.json"), JSON.stringify(links, null, 1), "utf8");
   writeFileSync(path.join(OUT, "e2e-urls.json"), JSON.stringify(urls, null, 1), "utf8");
   writeFileSync(path.join(OUT, "e2e-snapshots.json"), JSON.stringify(snapRows, null, 1), "utf8");
@@ -141,6 +171,7 @@ async function main() {
         snapshots: snapRows.length,
         sources: sources.length,
         "🔴 CONTROL 운영 링크": links.length,
+        "국내 가격 관측": obs.length,
         "enabled=true": sources.filter((s) => s.enabled).length,
         titles: Object.values(urls).flat().map((r) => `${r.brand} / ${r.title}`.slice(0, 70)),
       },
