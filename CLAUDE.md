@@ -1058,7 +1058,80 @@ GitHub Actions 는 **없다** → **`main` push 가 그대로 Production 배포�
    CTO 가 임의로 머지하지 않는다. `vercel --prod` CLI 는 쓰지 않는다
    (메모 `vercel-deploy-from-repo-root`).
 
-### 🟢 WU-011 **CLOSED** · Product Direction **CONFIRMED** · 다음은 **WU-012** (CPO 확정 2026-10-13)
+### 🔴🔴 **현재 1순위 — Gemini 전면 STOP · 비용 감사** (CPO 확정 2026-10-13)
+
+🟢 전문 `docs/MI-GEMINI-COST-AUDIT-012.md`. 🔴 **WU-012 는 가격 증거가 아니라 비용 감사로 바뀌었다.**
+
+```
+🔴🔴 **Gemini 호출 전면 STOP** — API 호출 ❌ grounding ❌ ON-axis 재실행 ❌
+     가격 보강 실험 ❌ 추가 충전 ❌ `MI-GEMINI-PRICE-EVIDENCE-012` 착수 ❌
+🔴 잔액 **₩3,300 은 「남은 테스트 비용」이 아니라 «보존해야 할 잔액»** 이다.
+   비용 원인이 규명되고 새 구조의 예상 비용이 계산되기 전에는 **0원도 쓰지 않는다.**
+🔴 flag 는 계속 OFF.
+```
+
+🔴🔴 **감사 결과 — 차액의 86% 가 설명되지 않는다**:
+```
+충전 ₩25,000 → 잔액 ₩3,300 → 소진 **₩21,700**
+  🟢 우리 측정으로 설명  약 **₩3,000** (grounding ~132 쿼리 + 토큰 71,785)
+  🔴 **UNACCOUNTED      약 ₩18,700 (약 86%)**
+🔴 「토큰이 비싸서」로 닫지 않는다. 추정으로 메우지 않는다.
+```
+
+🟢 **호출 0 으로 배제한 가설들**(DB·소스 증거):
+```
+🔴 Vision 이 **같은 GEMINI_API_KEY·같은 별칭** 을 쓴다(vision-evidence.ts:28) — 사실이다
+   🟢 그러나 **오늘 0건** · vision_checked_at 총 17행(마지막 10-08) · vision_observations 2행(09-20)
+🟢 내 테스트가 Vision 을 돌렸다 → 배제(runDomesticPriceCheck 테스트 호출부 5곳 전부 vi.mock)
+🟢 오늘 운영 가격확인이 Gemini 를 썼다 → 배제(run-price-check 에 Gemini 어휘 0)
+🟢 리포 안 Gemini HTTP 호출부는 **2곳 전수** — discovery-core/google-discovery.ts · vision-evidence.ts
+→ 🔴 **리포 안에서는 설명이 끝났다.** 남은 86% 는 리포 «밖» 이다(Billing · 별칭 · 실패호출 과금).
+```
+
+🔴🔴 **우리는 모델을 고정하지 않았다 — 구조적 위험**:
+```
+"gemini-flash-latest" 는 **별칭** 이다(google-discovery.ts:52 · vision-evidence.ts:28).
+별칭은 Google 쪽에서 움직인다 → **코드가 안 바뀌어도 과금 구조가 바뀔 수 있다.**
+🔴 그리고 응답의 `modelVersion` 을 우리 타입이 선언하지 않아 **버린다** →
+   「Gemini 3 계열이냐 2.5 계열이냐」를 우리 데이터로 **답할 수 없다**(단가 구조가 다르다).
+🔴 `cachedContentTokenCount` 도 집계에 없다(probe 1회에서 1,400 관측).
+```
+
+### 🟢🟢 확정된 방향 — **Search 와 Intelligence 를 분리한다**
+
+> 🔴 「Gemini + Google Grounding 으로 웹 검색까지 전부 맡기는 구조」는 **현 비용
+>  수준에서 Production 후보에서 제외** 한다(CPO). 우리 서비스의 핵심은 동일상품
+>  후보를 찾는 것이고, 매 상품마다 비싼 AI 검색 agent 를 돌리는 것이 아니다.
+
+```
+① deterministic 매칭 (Gemini **0회**)
+     SKU 동일 / 브랜드+brandModelCode 동일 / 상품명+색상+소재+카테고리 강일치
+ ↓ 갈리지 않은 것만
+② 기존 검색 경로로 후보 확보 (Gemini 0회) — 국내 등록부 검색 · Naver · 허용 provider
+ ↓
+③ 우리 crawler / resolver / 가격 추출 (Gemini 0회)
+ ↓ 그래도 애매한 것만
+④ **Gemini 1회 — 판정 보조만.** 검색을 맡기지 않는다
+```
+🟢 Gemini 는 **검색엔진이 아니라 최종 판정 보조자** 다 — MI 의 원래 방향과 일치한다.
+🔴 실측이 이 구조를 지지한다 — Gemini 후보 중 국내 가격 증거가 된 것 **0/12** 인데
+   같은 6상품에서 기존 국내 검색은 후보 **57개** 를 냈다.
+
+🔴 **검색 경로 비교 결론**:
+```
+🟢 기존 Naver/국내 판매처 직접 검색 — Gemini 비용 0 · 운영 실적 있음 → **1차 검색기로 유지**
+🔴 Google Custom Search JSON API — 신규 가입 닫힘 · 2027-01-01 종료 → 장기 해법 아님
+🔴🔴 서버측 SERP 자동화(Playwright 등) — **무허가 자동 검색은 약관 충돌** ·
+     차단 시 Discovery 가 통째로 죽는다 → **Google 대상 자동화 채택 금지**
+     (헌장 메모 portal-scraping-blocked-by-terms 와 같은 원칙)
+```
+
+🔴 **CPO 결정 대기 4건**: ① AI Studio↔usage 1:1 대조로 UNACCOUNTED 규명(같은 Billing
+Account 의 다른 서비스 · 별칭의 실제 모델) ② `modelVersion`/`cachedContentTokenCount`
+보존(비용 0 · 승인 필요) ③ Search↔Intelligence 분리 설계 승인 ④ 상품당 Gemini
+호출/쿼리 **상한을 코드에 박을 것인가**(현재 쿼리당 내부 검색 5.5회를 통제하지 못한다).
+
+### 🟢 WU-011 **CLOSED** · Product Direction **CONFIRMED** (CPO 확정 2026-10-13)
 
 ```
 MI-GEMINI-ACCURACY-LONG-SPRINT-011  →  **CLOSED**
