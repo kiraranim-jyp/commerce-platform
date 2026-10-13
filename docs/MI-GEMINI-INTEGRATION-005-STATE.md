@@ -450,3 +450,78 @@ Type PASS            🟢      Production UI PASS    🔴 해당 없음
 🟢 CONTROL           **2/3** Production API PASS   🔴 402 로 ON 축 측정 불가
 Production PASS      🔴 아니다 — **IMPLEMENTED / ON-AXIS UNMEASURED**
 ```
+
+---
+
+# ◆ WU-3 `ON-AXIS-REMEASURE-006` — 🔴 **미착수** (§2 전제 불충족)
+
+> 🔴 지시서 §2 는 「다음 조건이 **모두** 충족된 경우에만 시작한다」다. 하나가 비었다.
+> 🔴 **코드 변경 0 · 하니스 변경 0 · 덤프 스크립트 변경 0.** 측정도 돌리지 않았다.
+
+## §2 게이트 실측 (2026-10-13)
+
+| 조건 | 상태 |
+|---|---|
+| Gemini 선불 크레딧 | 🔴 **402 Payment Required** — "prepayment credits are depleted" |
+| `mi-gemini-005` 브랜치 | 🟢 `20eb77af` = 로컬 HEAD 동일 |
+| 작업트리 clean | 🟢 0 줄 |
+| flag 기본 OFF | 🟢 `=== "true"` 한 곳뿐 |
+| Production 미배포 | 🟢 `origin/main` `1f030313` · 증분 67 미반영 |
+
+🔴 **1/5 불충족 → 시작하지 않았다.** 크레딧이 유일한 트리거다.
+
+## 🟢 크레딧 없이 «확정해 둔» 것 셋 (읽기 전용 · 코드 0)
+
+지시서가 요구하지만 Gemini 호출과 무관한 항목이라 미리 닫았다. 크레딧이 오면
+보고 25항 중 이 셋은 **이미 채워져 있다.**
+
+### ① §12 비용 산식의 **분모** — 임의 N 을 만들지 않고 실측했다
+
+```
+월별 신규 등록 상품   2026-08 **188** · 2026-09 **240** · 2026-10 **72**(진행 중)
+전수 500건 / 관측 70일 → 일평균 7.2 · **월환산 215**
+→ 산식:  월 비용 = (실측 상품당 Gemini 비용) × **215**
+🔴 215 는 «과거 실적» 이다. 사업 계획상 목표 등록량이 다르면 그 수를 쓴다(CPO 확정).
+🔴 497 기준은 폐기 상태 유지.
+```
+
+### ② §10 샘플 6유형 — **5/6 구조적 충족**, 1개는 사전 보장 불가
+
+```
+① 국내 동일상품 후보 존재   🟢 2건 (JUDGED>0)
+② 국내 후보 없음            🟢 2건 (전 샵 NO_CANDIDATES — 테니스 2)
+③ 운영 링크 보유(CONTROL)   🟢 4건
+⑤ Children                  🟢 **6건**      ⑥ Tennis 🟢 **2건**
+④ Gemini zero-candidate     🟡 **사전에 고를 수 없다** — 그것은 «측정 결과» 이고
+   입력 속성이 아니다. ON 축을 돌린 뒤 사후 분류한다.
+   🟢 근거: 선행 WU 에서 Bobo Choses·Bonpoint 가 Gemini 0건이었고 둘 다 현 표본의
+      Children 군에 같은 브랜드로 들어 있다 → 발생 가능성은 있다. 🔴 보장은 아니다.
+🟢 「성공 사례만 골라 측정하지 않는다」(§10)는 충족 — 현 표본의 OFF tier 는
+   EXACT 1 · COMPARISON 1 이고 나머지 6건은 후보가 없거나 떨어졌다.
+```
+
+### ③ §14 회귀 baseline — 🔴 **지시서의 숫자를 정정한다**
+
+```
+apps/admin   🟢 **506 files passed / 44 skipped (550)** ·
+                **7,534 tests passed / 52 skipped (7,586)** · failed 0
+packages/crawler  Test **Files** 1 failed / 60 passed / **19 skipped** (80)
+                  **Tests 833 passed / 23 skipped (856)** · 실패한 «테스트» 0
+🔴 지시서 §14 의 「832+ tests, 19 skipped」는 **19 가 skipped 파일 수** 다
+   (skipped 테스트는 **23**). 숫자 축을 섞으면 다음 회차에서 거짓 regression 이 난다.
+🔴 crawler 의 파일 1 FAIL 은 **선재 결함** 이다 — 사슬 전건 origin/main 대비 0 변경
+   (match-truth-priority.test.ts → apps/admin 깊은 import → `@/lib` alias 미해석).
+typecheck  🟢 전 패키지 **10** (listing 5 · pricing 3 · **crawler 2** · admin 0)
+guard      🟢 no-production-coupling **6/6**
+build      🟢 next build exit 0 · static 104/104
+```
+
+## 🔴 재개 명령 (크레딧 확보 직후 · 코드 변경 0)
+
+```bash
+cd packages/database && node --env-file=.env scripts/mi-gemini-005-dump.mjs
+cd apps/admin && MI_P0_02_LIVE=1 node --env-file=../../scripts/.env   node_modules/vitest/vitest.mjs run   src/app/api/price-history/_lib/__tests__/mi-gemini-005-e2e.test.ts
+```
+
+🟢 결과는 `%TEMP%/mi-p0-02/vclose-N.json` 에 **회차별로** 쌓인다(덮어쓰지 않는다).
+🔴 모델은 `gemini-flash-latest` 고정 · threshold 변경 금지 · `main` merge/deploy 금지.
