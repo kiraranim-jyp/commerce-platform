@@ -91,6 +91,15 @@ export interface GeminiPoolMetrics {
   outcomes: Record<string, number>;
   queriesUsed: number;
   earlyStopped: boolean;
+  /**
+   * 🔴🔴 실패 «사유» 를 버리지 않는다. `outcomes` 는 개수만 세므로
+   * 「429 rate limit」과 「timeout」과 「500」이 **같은 칸** 에 들어간다.
+   * 실측에서 그 셋이 구분되지 않아 원인을 못 가른 자리가 있었다(⑥ 2차 실행:
+   * API_FAILURE 6건의 정체를 metrics 만으로는 알 수 없었다).
+   * 🔴 비밀값이 섞이지 않는다 — wrapper 가 `${name}: ${message}` 만 담고
+   *    응답 본문을 붙이지 않는다(production-discovery.ts 주석).
+   */
+  failureDetails: string[];
 }
 
 export interface GeminiPoolResult {
@@ -115,6 +124,7 @@ const EMPTY_METRICS = (): GeminiPoolMetrics => ({
   outcomes: {},
   queriesUsed: 0,
   earlyStopped: false,
+  failureDetails: [],
 });
 
 /** 🔴 dedupe 키 — 쿼리스트링·해시·트레일링 슬래시를 떼고 호스트를 소문자로. */
@@ -193,6 +203,7 @@ export async function collectGeminiCandidatePool(input: GeminiPoolInput): Promis
       preferredDomains: input.scopedDomains.length > 0 ? input.scopedDomains : undefined,
     });
     metrics.outcomes[discovery.outcome] = (metrics.outcomes[discovery.outcome] ?? 0) + 1;
+    if (discovery.failureDetail) metrics.failureDetails.push(discovery.failureDetail);
     accumulateUsage(metrics, discovery.usage, discovery.model);
     if (discovery.outcome !== "OK") continue;
     metrics.discoveredUrls += discovery.urls.length;

@@ -114,6 +114,42 @@ describe("🔴 discovery-benchmark ↔ Production coupling (import graph)", () =
     ).toEqual([]);
   });
 
+  /**
+   * 🔴🔴 MI-GEMINI-INTEGRATION-005 ⑧ — **대상을 넓혔다. 완화가 아니다.**
+   *
+   * 🔴 이 가드가 보던 범위는 `packages/crawler/src` 뿐이었다. 그런데 이 WU 가
+   *    **`apps/admin` 에서 discovery-* 를 import 하는 첫 운영 파일** 을 만들었다
+   *    (`gemini-candidate-pool.ts` → `@commerce/crawler/src/discovery-core`).
+   *    → 🔴 그 자리에서 누가 `discovery-benchmark` 로 바꿔 써도 **이 가드는
+   *       아무 말도 하지 않았다.** 「막는 가드가 있다」는 「막힌다」가 아니다
+   *       [[guard-predates-the-new-path]] — 같은 함정을 두 번째로 만난다.
+   *
+   * 🟢 그래서 `apps/admin/src` 전수를 같은 기준으로 본다. 금지 단언의 «문장» 은
+   *    바꾸지 않았다 — **보는 파일을 늘렸을 뿐이다.**
+   */
+  it("🔴 apps/admin 운영 파일이 discovery-benchmark 를 import 하지 않는다", () => {
+    const ADMIN_SRC = path.resolve(CRAWLER_SRC, "..", "..", "..", "apps", "admin", "src");
+    const adminFiles = walk(ADMIN_SRC).filter((f) => !f.split(path.sep).includes("__tests__"));
+    /** 🔴 0건이면 아래 단언이 공짜로 통과한다 — 범위가 실제로 잡혔는지 먼저 본다. */
+    expect(adminFiles.length).toBeGreaterThan(100);
+
+    const violations: string[] = [];
+    for (const file of adminFiles) {
+      for (const spec of importSpecifiers(file)) {
+        /** 🔴 apps/admin 은 패키지 specifier(`@commerce/crawler/src/...`)로 들어온다.
+         *     상대경로만 보면 **이 경로를 전부 놓친다.** 문자열로 직접 본다. */
+        if (spec.includes("discovery-benchmark")) {
+          violations.push(`${path.relative(ADMIN_SRC, file)} → ${spec}`);
+        }
+      }
+    }
+    expect(
+      violations,
+      "apps/admin 운영 코드가 실험 하니스를 import 한다. discovery-core 를 쓴다 " +
+        "(production-discovery.ts 가 fail-soft wrapper 다).",
+    ).toEqual([]);
+  });
+
   /** 🔴 배럴 export 도 같이 막는다 — 기존 가드가 보던 축을 잃지 않는다. */
   it("crawler 배럴(index.ts)이 discovery-benchmark 를 노출하지 않는다", () => {
     const barrel = stripComments(readFileSync(path.join(CRAWLER_SRC, "index.ts"), "utf8"));
