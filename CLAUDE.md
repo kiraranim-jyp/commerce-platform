@@ -1089,17 +1089,65 @@ Gemini ON 축           🔴 **미측정** — 402 prepayment credits depleted (
 Push                   🟢 브랜치   Production Deploy 🔴 보류   CEO 테스트 🔴 없음
 ```
 
-🔴🔴 **다음은 코드 작업이 아니다.** CPO 가 WU-4 결과를 종합해 **다섯 가지** 를
-결정하는 단계다(CTO 가 선제적으로 들어가지 않는다):
+### 🟢🟢 WU-4 종합 판정 — **종결됐다** (CPO 확정 2026-10-13)
+
+🔴 **5항은 전부 답이 나왔다. 다시 열지 않는다.**
+
 ```
-① 유효 «국내» Discovery 가 실제로 얼마나 있었는가
-② 국내 SAME/PRESUMED_SAME 의 품질
-③ Registration Increment = 0 인 현재 구조를 어떻게 볼 것인가
-④ AI Studio 실제 Grounding 비용
-⑤ Gemini 를 등록 판단에 «어느 지점까지» 연결할 것인가
-🔴 threshold 완화와 저장 정책 변경을 CTO 가 선제적으로 하지 않는다.
-   저장 정책은 **제품 정책** 이라 CPO 가 따로 결정한다.
-🔴 CEO 테스트 없음 · Production deploy 없음.
+① 유효 국내 Discovery   **DISCOVERY PASS / BUSINESS VALUE 미확정**
+② SAME/PRESUMED 품질    **탐색 가능성 PASS / 실전 정밀도 HOLD**
+③ Registration 0        **설계상 PASS** — 결함으로 «수정하지 않는다»
+④ Grounding/KRW 비용    **COST HOLD** — CPO 의 AI Studio 판독 대기
+⑤ 연결 지점             🟢 **확정** — 아래 구조로 고정
+전체                    **IMPLEMENTED / VALIDATION PARTIAL / PRODUCTION HOLD**
+```
+
+### 🔴🔴 KPI 에서 «절대» 섞지 않는 구분 둘 (CPO 명시)
+
+```
+❌ 「Gemini 가 국내 후보 URL 을 찾아올 수 있다」
+     ≠
+✅ 「Gemini 가 등록 판단에 유효한 «국내 동일상품» 을 추가로 찾아준다」
+   🟢 증명된 것은 앞의 것까지다. 🔴 유효 국내 EXACT = **0**.
+
+❌ 「SAME 4 = 유효 동일상품 4건」
+   🔴 그 4건에 자기참조(junioredition)·해외 공식몰(bobochoses, Registry 비활성)이
+      포함돼 있다. **유효 국내 EXACT 로 인정하지 않는다**(확정).
+🔴 그리고 008A 로 닫힌 `/collections/` 문제와 정책상 허용되는 `/en-kr/` 시장 전환을
+   **이후 KPI 에서 다시 섞지 않는다.**
+```
+
+### 🟢🟢 확정된 제품 방향 — 이 문장을 그대로 쓴다
+
+> **Gemini 는 「새로운 사이트를 계속 등록하는 시스템」이 아니라, 상품 등록
+> «순간» 에 웹 전체에서 동일/유사 후보를 발견해 기존 MI 의 판단 근거를 확장하는
+> Discovery Layer 다.**
+
+```
+상품 등록 요청 → 기존 국내 탐색 + Gemini Web Discovery → 임시 Candidate Pool
+→ 기존 MI 판정 → **등록 판단용 transient evidence** → 기존 등록 판단
+→ 등록 / 검토 / 차단
+```
+
+🔴 **금지 6항**(CPO 확정):
+```
+❌ 외부 URL 영구 저장            ❌ domestic_product_links 강제 저장
+❌ 가격 추적                      ❌ Gemini 때문에 Registry 사이트 계속 추가
+❌ threshold 완화                 ❌ Gemini `SAME` 하나만으로 자동 STOP
+🔴 마지막 항이 중요하다 — 유효 국내 EXACT 가 **0** 인 상태에서 Gemini 결과만으로
+   자동 STOP 을 걸면 오판 위험이 있다.
+```
+
+### 🔴🔴 다음 순서 — **코드가 아니다**
+
+```
+① CPO 가 AI Studio 에서 실제 KRW 차감액 + Grounding request 수 판독 → 비용 KPI 확정
+     실행창(UTC) 1차 02:13:00~02:23:00 · 2차 02:23:27~02:36:08 · 전 잔액 25,000원
+     🔴 API 호출 1회 = Grounding query **6회** 가 관측됐다(sample N=1) —
+        **호출 수만으로 비용을 계산하지 않는다.**
+② 비용이 정상이면 → **Gemini 후보의 transient MI 결과를 실제 등록 판단에 연결하는
+   구현 WU**. 🔴 영구 저장·가격추적은 그 WU 에서도 건드리지 않는다.
+🔴 CEO 테스트 없음 · Production deploy 없음 · CTO 선제 코드 변경 없음.
 ```
 
 🔴 **그리고 아래 ON 축 재측정은 코드 변경 0 을 원칙으로 한다.**
