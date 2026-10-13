@@ -81,8 +81,44 @@ export function canonicalListingKey(rawUrl: string | null | undefined): { host: 
   const host = url.host.toLowerCase().replace(/^www\./, "");
   if (!host) return null;
 
-  // 경로: 대소문자와 끝 슬래시를 정규화한다(fragment 는 URL 파서가 이미 뗀다).
-  const path = url.pathname.toLowerCase().replace(/\/+$/, "") || "/";
+  /**
+   * 경로: 대소문자와 끝 슬래시를 정규화한다(fragment 는 URL 파서가 이미 뗀다).
+   *
+   * 🔴🔴 MI-GEMINI-SELF-REFERENCE-CLOSE-008A(2026-10-13) — **Shopify 경로 접두사**.
+   *    실측(WU-4 ON-axis)에서 같은 샵·같은 상품이 자기참조를 통과해 `tier EXACT`
+   *    를 받았다:
+   *      원상품  junioredition.com/collections/bobo-choses/products/booty-ghosts-…
+   *      후보    junioredition.com/products/booty-ghosts-…
+   *      원상품  junioredition.com/en-kr/collections/pepe-shoes/products/lulu-t-bar-…
+   *      후보    junioredition.com/products/lulu-t-bar-…
+   *    누출 4/24(17%). 국내 경로에서는 원상품 host 와 국내 샵 host 가 겹치지 않아
+   *    **잠복** 했고, Gemini 가 웹 전체를 보면서 원상품 host 자체를 후보로 물어와
+   *    **발화** 했다.
+   *
+   * 🔴 이 WU 가 닫는 범위는 **목록 세그먼트 하나** 다. 로케일은 아래에 적은
+   *    이유로 **건드리지 않았다**(CPO 정책 결정 대기).
+   */
+  /** 🔴 **목록(collection) 세그먼트만** 떼어 낸다 — 로케일은 건드리지 않는다.
+   *
+   * Shopify 는 같은 상품을 `/products/<p>` 와 `/collections/<c>/products/<p>` 둘로
+   * 서빙한다. 뒤의 `<c>` 는 **어느 목록을 거쳐 왔는가** 일 뿐 상품을 가리지 않는다
+   * (handle 이 샵 안에서 유일하다). 그래서 둘은 **같은 listing** 이다.
+   *
+   * 🔴 **로케일 접두사는 떼지 않는다.** `mi-real-05-self-reference.test.ts:153` 이
+   *    「경로가 다르면 **(시장 전환 포함)** 제외하지 않는다」를 명시적으로 고정해
+   *    뒀다 — `/en-kr/products/X` ↔ `/products/X` 는 **false** 다. 그 결정을 이 WU
+   *    에서 뒤집지 않는다(지시서 §2 「필요한 최소 범위만」).
+   *    🔴 단 리포 안에 상반된 기록이 있다 — `toCrawlerUrl`(url-shape.ts:119) 주석은
+   *       「로케일도 떼어 낸 «정규» 상품 URL」이라 적고, `p54c1-grounding-redirect`
+   *       는 그 정규화 «후» 비교해야 걸린다고 적는다. **CPO 정책 결정 사안이다.**
+   *
+   * 🔴 `products/` 가 뒤따르지 않으면 떼지 않는다 — `/collections/aaa` 같은 목록
+   *    URL 이 `/` 로 뭉개지면 서로 다른 목록이 같은 key 가 된다(collision).
+   * 🔴 쿼리 로직은 한 글자도 건드리지 않는다 — `?variant=` 구분이 그대로 유지된다
+   *    (P0-A.29-E 가 그 구분에 의존한다).
+   */
+  const rawPath = url.pathname.toLowerCase().replace(/\/+$/, "") || "/";
+  const path = rawPath.replace(/\/collections\/[^/]+(?=\/products\/[^/]+)/, "") || "/";
 
   // 값이 빈 파라미터(`sort=`, `scode=`)는 아무것도 가리지 않는다.
   const identifying = [...url.searchParams.entries()]

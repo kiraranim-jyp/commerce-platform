@@ -608,7 +608,19 @@ API 호출      **11** (OK **10** · API_FAILURE **1** = TimeoutError)
 완주 상품     **8**
 상품당        호출 **1.38** · total **5,402** · prompt 1,700 · candidates 1,407 · thoughts 2,295
 🔴 cachedContentTokenCount  집계 **제외**(타입이 그 칸을 선언하지 않는다 · probe 1,400 관측)
-🔴 grounding 쿼리  **우리 쪽 산출 불가** — 참고 추정 10 × 6 ≈ **60**(🔴 6 은 sample N=1)
+🔴 grounding 쿼리  **실행별 metrics 로 보존되지 않는다** — 참고 추정 10 × 6 ≈ **60**
+                   (🔴 6 은 probe sample **N=1**)
+```
+
+### 🔴 CPO 정정(§10) — 두 주장을 섞어 쓰지 않는다
+
+```
+❌ 「Gemini 응답에 webSearchQueries 가 없어서 버려진다」
+✅ `webSearchQueries` 는 **probe 응답에서 실제로 관측됐다**(6개).
+   다만 현재 Production 타입/집계 경로(`GeminiGroundingResponse` ·
+   `GoogleDiscoveryUsage`)가 그 칸을 담지 않아 **실행별 metrics 로 보존되지 않는다.**
+   → 그래서 이 WU 에서는 **AI Studio billing 을 ground truth 로 쓴다.**
+🔴 「응답에 없다」와 「우리가 보존하지 않는다」는 **서로 다른 주장** 이다.
 ```
 
 ### 1차(SIGTERM) — 🔴 비용 KPI 에서 제외
