@@ -32,6 +32,11 @@ import {
   GEMINI_VIRTUAL_SHOP_ID,
   type GeminiPoolMetrics,
 } from "./gemini-candidate-pool";
+import {
+  classifyCandidateMarket,
+  type CandidateMarket,
+  type CandidateMarketBasis,
+} from "./candidate-market";
 import type { DomesticPriceSource } from "../../domestic-price-sources/_lib/domestic-price-source";
 import { listDomesticPriceSources, recordDomesticSourceCheckAttempt } from "../../domestic-price-sources/_lib/domestic-price-source";
 import {
@@ -137,6 +142,15 @@ export interface GeminiTransientEvidence {
   priceCurrency: string | null;
   priceKrw: number | null;
   priceStatus: string | null;
+  /**
+   * 🔴🔴 MI-020 §4 — 이 가격이 «어느 시장» 의 가격인가. `classifyCandidateMarket`
+   *    (candidate-market.ts)이 **증거 둘의 교차** 로만 낸다.
+   * 🔴 `UNKNOWN` 을 국내로 승격하지 않는다 — 그 금지가 집계 게이트에 박혀 있다
+   *    (market-intelligence.ts). 충돌(등록부 ↔ 외화)도 UNKNOWN 이다.
+   */
+  market: CandidateMarket;
+  /** 🔴 왜 그렇게 판정했는지 — 숫자를 해석할 때 이 칸 없이 읽으면 또 추측이 된다. */
+  basis: CandidateMarketBasis;
 }
 
 export interface DomesticPriceCheckResult {
@@ -752,9 +766,15 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
   // 이 루프가 한 번도 읽지 않았다 — 그래서 어떤 상품이든 아동복 편집샵 전부를
   // 매일 크롤링했고, 맞지 않는 샵의 0건이 화면에서는 "국내 비교상품 없음"으로
   // 읽혔다. 범위를 못 정하면(undefined) 필터는 걸리지 않는다(= 오늘 동작 그대로).
-  const allSources = (await listDomesticPriceSources(input.workspaceId)).filter((s) =>
-    isBatchSurveyTarget(s, input.categoryScopes ?? null),
-  );
+  const registrySources = await listDomesticPriceSources(input.workspaceId);
+  /**
+   * 🔴 MI-020 §4 — 시장 **충돌 감지** 에 쓰는 도메인 집합이다. 🔴 `allSources`(아래)가
+   *    아니라 **필터 «전»** 목록을 쓴다 — scope/활성 필터를 거치면 「등록부에 있는데
+   *    외화가 왔다」는 충돌을 그 상품 scope 밖에서는 못 보게 된다.
+   * 🔴 이 집합은 **KR 근거가 아니다**(candidate-market.ts 주석).
+   */
+  const registeredDomains = new Set(registrySources.map((s) => s.domain.trim().toLowerCase()));
+  const allSources = registrySources.filter((s) => isBatchSurveyTarget(s, input.categoryScopes ?? null));
   const p0Sources = allSources.filter((s) => s.priority === "P0");
   const otherSources = allSources.filter((s) => s.priority !== "P0");
   /**
@@ -1089,6 +1109,17 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
             ? best.price.amount
             : null,
         priceStatus: best.priceStatus ?? null,
+        /**
+         * 🔴🔴 MI-020 §4 — 시장을 **같이 닫는다.** 이것 없이 해외 가격을 MI 로 올리면
+         *    그 자리에서 또 시장을 추측하게 된다(WU-019R 이 그 공백을 찾았다).
+         * 🔴 등록부 소속은 KR 근거가 **아니라 충돌 감지용** 이다 — `bobochoses.com`
+         *    (등록부 「Bobo Choses Korea(공식)」)의 가격 증거가 **EUR** 였던 실측 때문이다.
+         */
+        ...classifyCandidateMarket({
+          domain: result.domain,
+          currency: best.price?.currency ?? null,
+          isRegisteredDomesticShop: registeredDomains.has(result.domain.trim().toLowerCase()),
+        }),
       });
       continue;
     }

@@ -1,4 +1,6 @@
 import type { GeminiTransientEvidence } from "./run-domestic-price-check";
+/** 🔴 MI-020 — 해외 가격의 «읽는 쪽». 순수 함수다(DB·환율 없다). */
+import { summarizeCandidateOverseasPrices } from "./candidate-market";
 import { backfillCanonicalProduct } from "@commerce/shared";
 import {
   computePriceDecision,
@@ -180,8 +182,57 @@ export async function computeMarketIntelligence(
    * 🔴 **저장하지 않는다.** 이 배열은 이 함수 안에서만 산다 — `price_observations`
    *    에 쓰지 않고 `domestic_product_links` 에도 넣지 않는다(§10).
    */
-  const geminiPricedCount = { exact: 0, comparison: 0, droppedNoPrice: 0 };
+  /**
+   * 🔴🔴 MI-020 §5/§6 — **해외·UNKNOWN 가격은 여기서 갈라진다.**
+   *
+   * ```
+   * 국내 축   market === "KR" && priceKrw != null && tier EXACT|COMPARISON
+   * 해외 축   그 외의 «가격 있는» 후보 → overseasEvidence (별 축 · 환산 0)
+   * identity  가격이 없는 후보 → 🔴 **버리지 않는다**(§6) · 가격 축에도 넣지 않는다
+   * ```
+   *
+   * 🔴 해외 축을 `SELLER_ORIGIN` 에 얹지 않는다 — 그러면 **원가가 오염된다**
+   *    (리포 기존 테스트 `overseas-observation-storage-impact.test.ts` ③이 고정).
+   * 🔴 그리고 **환율 변환을 하지 않는다**(§2). 통화별로 모아 두기만 한다.
+   * 🔴 저장하지 않는다 — `price_observations` 에 새 source 를 쓰지 않는다(§5·§11).
+   */
+  const geminiPricedCount = { exact: 0, comparison: 0, droppedNoPrice: 0, overseas: 0, marketUnknown: 0 };
+  const overseasEvidence: {
+    domain: string;
+    url: string;
+    market: string;
+    basis: string;
+    currency: string;
+    amount: number | null;
+    priceTier: string;
+    matchTruth: string | null;
+  }[] = [];
   for (const e of geminiEvidence ?? []) {
+    /**
+     * 🔴🔴 국내 축의 자격은 **둘** 이다 — KRW 금액 «그리고» `market === "KR"`.
+     *    통화만 보면 `bobochoses.com`(등록부 샵인데 EUR)처럼 충돌한 후보가
+     *    조용히 국내 최저가가 된다. 그 실측이 이 줄의 근거다(WU-019R §5).
+     */
+    if (e.market !== "KR") {
+      /** 🟢 가격이 있으면 **해외/UNKNOWN 축에 남긴다** — 버리지 않는다. */
+      if (e.priceAmount != null && e.priceCurrency) {
+        overseasEvidence.push({
+          domain: e.domain,
+          url: e.discoveredUrl,
+          market: e.market,
+          basis: e.basis,
+          currency: e.priceCurrency,
+          amount: e.priceAmount,
+          priceTier: e.priceTier,
+          matchTruth: e.matchTruth,
+        });
+        if (e.market === "OVERSEAS") geminiPricedCount.overseas += 1;
+        else geminiPricedCount.marketUnknown += 1;
+      } else {
+        geminiPricedCount.droppedNoPrice += 1;
+      }
+      continue;
+    }
     if (e.priceKrw == null) {
       geminiPricedCount.droppedNoPrice += 1;
       continue;
@@ -873,6 +924,15 @@ export async function computeMarketIntelligence(
     /** 🔴 010R 관측용 — 가격이 붙어 버킷에 들어간 수 / 가격 없어 빠진 수.
      *    🔴 위 판정 계산은 이 칸을 읽지 않는다. */
     geminiPricedCount,
+    /**
+     * 🔴🔴 MI-020 §5/§6 — **해외 가격의 「읽는 쪽」.** 통화별로만 모으고
+     *    **환산하지 않는다.** 🔴 위 국내 판정·원가·마진은 이 칸을 **읽지 않는다** —
+     *    그것이 「해외 가격이 원가/국내 가격을 오염시키지 않는다」의 구현이다.
+     * 🟢 `UNKNOWN` 을 해외로 합치지 않는다(`byMarket` 로 갈라 센다).
+     */
+    candidateOverseasPrice: summarizeCandidateOverseasPrices(overseasEvidence),
+    /** 🔴 원본 목록도 같이 돌려준다 — 집계만 주면 「어느 후보였나」를 잃는다. */
+    candidateOverseasEvidence: overseasEvidence,
   };
 }
 

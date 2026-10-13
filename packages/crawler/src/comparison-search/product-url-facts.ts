@@ -4,6 +4,8 @@ import { productFactsFromListing, productFactsFromShopifyProduct } from "./selle
 import { classifyUrlShape, toCrawlerUrl } from "./url-shape";
 import { extractShopifyHandle, fetchPlainHtml } from "../shopify-product-json";
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
+/** 🔴 MI-020 — **순수 함수** 하나만 가져온다(HTML 문자열 → JSON-LD). Playwright 없다. */
+import { extractFromJsonLd } from "../product-data-extractor";
 import type { ComparisonCandidate } from "./types";
 
 /**
@@ -226,6 +228,7 @@ async function htmlPath(
   }
   const brand = brandFromHtml(html);
   const facts = productFactsFromListing({ title, url: crawlerUrl, brand });
+  const priced = priceFromJsonLd(html);
   return {
     status: "OK",
     crawlerUrl,
@@ -233,14 +236,41 @@ async function htmlPath(
     candidate: {
       title,
       url: crawlerUrl,
-      price: null,
+      /**
+       * 🔴🔴 MI-CANDIDATE-PRICE-EVIDENCE-020 — **이미 받은 `html` 에서만 읽는다.**
+       *    추가 HTTP 0 · Playwright 0 · `universalExtract` 호출 0.
+       *    통화가 같이 오지 않으면 `null` 이다(위 파일 주석의 이유 그대로).
+       */
+      price: priced,
       regularPrice: null,
       imageUrl: null,
       confidence: 0,
       brand: brand ?? undefined,
+      /** 🟢 성공 규약을 `enrichCandidatePrices`(price-source-adapter.ts:275)와 맞춘다. */
+      priceStatus: priced ? "VERIFIED_CURRENT" : "PRICE_UNAVAILABLE",
       facts,
     },
     httpCalls: calls,
     fetchPath: "PLAIN_HTML",
   };
+}
+
+/**
+ * 🔴🔴 **새 추출기를 만들지 않았다.** `extractFromJsonLd`(product-data-extractor.ts:175)는
+ *    HTML 문자열만 받는 **순수 함수** 이고, 운영 원상품 경로가 이미 그것을 쓴다
+ *    (universalExtract → extractProductData → pipeline/route.ts:151).
+ *    여기서는 **같은 함수** 에 **이미 받아 둔 HTML** 을 넘긴다.
+ *
+ * 🔴 통화 없는 금액은 **버린다**. JSON-LD `offers.price` 는 `priceCurrency` 가
+ *    형제 필드이고, 둘 중 하나라도 없으면 「모르는 가격」이다 — 숫자로 만들지 않는다.
+ * 🔴 할인/variant/배송비/세금/환율/KRW 환산을 여기서 하지 않는다(WU-020 §2 범위).
+ */
+function priceFromJsonLd(html: string): { amount: number; currency: string } | null {
+  const extracted = extractFromJsonLd(html);
+  const price = extracted?.price;
+  if (!price) return null;
+  if (!Number.isFinite(price.amount) || price.amount <= 0) return null;
+  const currency = price.currency?.trim().toUpperCase();
+  if (!currency) return null;
+  return { amount: price.amount, currency };
 }

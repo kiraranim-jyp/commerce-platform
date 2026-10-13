@@ -1726,6 +1726,58 @@ market/country/locale 칸이 **0건**(types.ts grep). 그래서 국내/해외 �
 🔴 §14 일곱 질문: 1🟢 2🟢 3🟢 4🟡(Shopify 만) 5🟡(해외 🔴) 6🟡 7🔴 **NO**.
 🔴 즉 **여성의류 등 다음 카테고리로 넘어가지 않는다**(CPO 지시).
 
+### 🟢🟢 WU-020 `MI-CANDIDATE-PRICE-EVIDENCE` — **PARTIAL** (구현 WU · 019R 의 공통 연결 둘)
+
+🟢 전문 `docs/MI-CANDIDATE-PRICE-EVIDENCE-020.md`. 🔴 **Gemini 0 · 추가 HTTP 0 ·
+Playwright 0 · schema 0 · 새 source 값 0 · DB 쓰기 0 · UI 0 · flag OFF · deploy 0.**
+
+```
+① 후보 가격      🟢 **이미 받은 HTML 의 JSON-LD 로 닫았다**
+   htmlPath 가 `priceFromJsonLd(html)` 을 부른다 → candidate.price/priceStatus
+   🟢 `extractFromJsonLd`(product-data-extractor.ts:175)는 **순수 함수** 이고 운영
+      원상품 경로가 이미 쓴다 → **새 추출기 0** · fetch 호출 **1회 그대로**
+   🟢 측정(캡처 fixture 20건 · HTTP 0): 가격 획득 **12** · KRW 4 · EUR 8
+      🔴 분모는 fixture 다 — 「Gemini 후보 가격 획득률」로 쓰지 않는다
+② 해외 축        🟢 **닫았다** — classifyCandidateMarket + summarizeCandidateOverseasPrices
+   (candidate-market.ts · 둘 다 순수) · 국내 축 진입에 **market === "KR"** 추가
+   🟢 통화별로만 집계하고 **환산하지 않는다**(합계 금액 칸이 아예 없다)
+   🔴 `SELLER_ORIGIN` 에 얹지 않았다 — M2 가 그것을 FAIL 로 잠근다
+```
+
+🔴🔴 **시장 분류의 뼈대 — 증거가 «일치» 할 때만 단정한다**:
+```
+                 KRW            외화              통화 없음
+.kr TLD          🟢 KR          🔴 UNKNOWN(충돌)   🔴 UNKNOWN
+등록부 샵         🟢 KR          🔴 UNKNOWN(충돌)   🔴 UNKNOWN
+증거 없음         🔴 UNKNOWN     🟢 OVERSEAS        🔴 UNKNOWN
+🔴 **등록부 소속은 「시장 증거」가 아니다** — bobochoses.com(등록부 공식샵)의 가격이
+   EUR 였던 019R 실측이 그것을 반증했다. 등록부는 **충돌 감지에만** 쓴다.
+🔴 **통화 단독 결정 금지** — KRW 인데 도메인 증거가 없으면 UNKNOWN(예: tinyapple.net).
+```
+
+🟢 **§8 다섯 케이스를 «실제 집계기» 로 금액 단언** 했다 — 국내 KRW 는 합쳐지고
+(최저 198,000 → 150,000), 해외 EUR·Bobo(EUR 충돌)는 국내 숫자를 **한 원도** 안 움직인다.
+
+🔴 **남은 것 하나 — TENNIS 해외 가격 0 이고 원인이 규명됐다**:
+```
+tennis-warehouse: `application/ld+json` **0개** · og:price **0개**
+🟢 가격은 **microdata** 에 있다(`itemprop="price" 120.00` · priceCurrency US…)
+🔴 그런데 기존 `extractFromMicrodata(page: Page)`(:476)는 **Playwright 의존** 이라
+   §1(Playwright 0)과 충돌한다 → **새 파서를 만들지 않았다.**
+🟢 다음 레버: microdata 를 **순수 함수로** 읽는 작은 파서(추가 HTTP 0) — CPO 승인 사안.
+```
+
+🔴 **해외 축은 판매 판정에 «의도적으로» 들어가지 않는다** — 그것이 오염 방지의 구현이다.
+MI 반환까지 와 있고(`candidateOverseasPrice`·`candidateOverseasEvidence`) 🔴 UI 소비자는
+**0** 이다(§11 이 UI 변경을 금지했다). 노출 여부는 CPO 결정.
+
+🔴🔴 **M3 가 처음에 통과했다 — 또 엉뚱한 구간을 단언했다.** slice 를 push «부터»
+잡았는데 변이는 그 **앞** 에 `continue` 를 넣었다. 🟢 분기 «진입»~push 사이에 조기
+이탈이 없음을 단언하도록 고쳐 M3·M3b 가 FAIL 로 바뀌었다. 🔴 WU-018 과 같은 계열이다.
+
+🟢 회귀 admin **514 files / 7,663 passed · failed 0** · typecheck **10=baseline** ·
+build exit 0 · guard 6/6 · mutation M1~M6(+M3b) 전부 FAIL · 원상복구 46 passed.
+
 ### 🔴🔴 현재 착수점 — **없다. 다음은 코드가 아니다** (CPO 확정 2026-10-13 · WU-018 종결)
 
 ```

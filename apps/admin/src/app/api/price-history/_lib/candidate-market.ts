@@ -1,0 +1,155 @@
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * MI-CANDIDATE-PRICE-EVIDENCE-020 §4 — 후보 가격이 «어느 시장» 의 가격인가
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * WU-019R 이 찾은 사실에서 출발한다:
+ *
+ * ```
+ * ComparisonCandidate 에 market/country/locale 칸이 **0개** 다(types.ts grep).
+ * → 해외 가격을 MI 에 넣으려 하면 그때마다 시장을 «추측» 하게 된다.
+ * ```
+ *
+ * 🔴🔴 **그래서 새 국가 판정 시스템을 만들지 않았다.** 이 파일은 순수 함수 하나이고
+ *    규칙은 **증거 둘의 교차** 뿐이다 — 도메인 증거 × 통화 증거.
+ *
+ * ── 🔴 CPO 가 명시한 두 금지가 규칙의 뼈대다 (WU-020 §4) ───────────────────
+ * ```
+ * ❌ 「currency 만으로」 시장을 결정한다
+ *      → KRW 인데 KR 도메인 증거가 없으면 **UNKNOWN** 이다
+ * ❌ 「등록부에 있음 + EUR」 을 국내로 넣는다  ·  「bobochoses + EUR」 을 해외로 단정한다
+ *      → **둘 다 금지.** 등록부 소속과 외화가 **동시에** 관찰되면 그것은 **충돌** 이고
+ *        UNKNOWN 으로 남긴다. 실측 근거: `bobochoses.com` 이 국내 등록부에
+ *        「Bobo Choses Korea(공식)」로 등록돼 있는데 가격 증거가 **EUR** 였다.
+ * ```
+ *
+ * 🔴 **등록부 소속은 「시장 증거」가 아니다.** 위 실측이 그것을 반증했다 —
+ *    등록부는 「우리가 뒤지는 샵인가」이고 「그 샵이 한국 시장인가」가 아니다.
+ *    그래서 이 파일에서 등록부는 **충돌 감지에만** 쓰인다(KR 근거로 쓰지 않는다).
+ *
+ * 🔴 판정의 «목적» 은 가격 귀속 하나다. 그래서 **통화가 없으면 판정하지 않는다** —
+ *    가격이 없는 후보는 귀속시킬 것이 없고, 그때 시장을 적으면 추측이 된다.
+ *    (가격 없는 후보 자체는 **버리지 않는다** — WU-020 §6. identity evidence 로 남는다.)
+ */
+
+/** 🔴 `KR` 과 `OVERSEAS` 는 «증거가 일치할 때만» 쓴다. 나머지는 전부 UNKNOWN 이다. */
+export type CandidateMarket = "KR" | "OVERSEAS" | "UNKNOWN";
+
+export type CandidateMarketBasis =
+  /** `.kr`/`.co.kr` 국가 TLD 와 KRW 가 **함께** 관찰됐다. */
+  | "KR_TLD_AND_KRW"
+  /** 국내 등록부 샵에서 KRW 가 관찰됐다(둘이 일치). */
+  | "REGISTERED_SHOP_AND_KRW"
+  /** 외화 + KR 도메인 증거 **없음** + 등록부 **밖**. */
+  | "FOREIGN_CURRENCY_AND_NO_KR_EVIDENCE"
+  /** 🔴 등록부 소속 ↔ 외화 **충돌**(Bobo Choses 사례). 국내로도 해외로도 쓰지 않는다. */
+  | "CONFLICT_REGISTERED_SHOP_WITH_FOREIGN_CURRENCY"
+  /** 🔴 KR TLD ↔ 외화 충돌. */
+  | "CONFLICT_KR_TLD_WITH_FOREIGN_CURRENCY"
+  /** 🔴 KRW 뿐이고 도메인 증거가 없다 — 통화 단독으로 결정하지 않는다. */
+  | "KRW_WITHOUT_DOMAIN_EVIDENCE"
+  /** 🔴 가격(통화) 증거 자체가 없다 — 귀속시킬 것이 없어 판정하지 않는다. */
+  | "NO_PRICE_EVIDENCE";
+
+export interface CandidateMarketInput {
+  /** 후보의 실제 host. */
+  domain: string;
+  /** 후보 가격의 통화. 가격이 없으면 `null` 이다. */
+  currency: string | null;
+  /** 그 host 가 국내 판매처 등록부에 있는가. 🔴 KR 근거가 아니라 **충돌 감지용** 이다. */
+  isRegisteredDomesticShop: boolean;
+}
+
+export interface CandidateMarketResult {
+  market: CandidateMarket;
+  basis: CandidateMarketBasis;
+}
+
+/** `.kr` 은 국가 TLD 다 — 이것은 실제 시장 증거다(등록부 소속과 다르다). */
+function hasKrTld(domain: string): boolean {
+  const d = domain.trim().toLowerCase().replace(/\.$/, "");
+  return d === "kr" || d.endsWith(".kr");
+}
+
+/**
+ * 🔴 **증거가 일치할 때만** KR / OVERSEAS 를 낸다. 충돌·부족은 전부 UNKNOWN 이다.
+ * 🔴 순수 함수다 — 네트워크·DB·시각을 보지 않는다.
+ */
+export function classifyCandidateMarket(input: CandidateMarketInput): CandidateMarketResult {
+  const currency = input.currency?.trim().toUpperCase() ?? null;
+  const krTld = hasKrTld(input.domain);
+
+  /** ① 통화가 없으면 **판정하지 않는다.** 가격 귀속이 이 판정의 유일한 목적이다. */
+  if (!currency) return { market: "UNKNOWN", basis: "NO_PRICE_EVIDENCE" };
+
+  if (currency === "KRW") {
+    /** ② KR 도메인 증거와 KRW 가 **함께** 있을 때만 KR 이다. */
+    if (krTld) return { market: "KR", basis: "KR_TLD_AND_KRW" };
+    if (input.isRegisteredDomesticShop) return { market: "KR", basis: "REGISTERED_SHOP_AND_KRW" };
+    /** 🔴 ③ 통화 단독으로 결정하지 않는다(CPO §4). */
+    return { market: "UNKNOWN", basis: "KRW_WITHOUT_DOMAIN_EVIDENCE" };
+  }
+
+  /** 🔴 ④ 외화인데 KR 증거가 같이 관찰되면 **충돌** 이다 — 둘 중 하나를 고르지 않는다. */
+  if (input.isRegisteredDomesticShop) {
+    return { market: "UNKNOWN", basis: "CONFLICT_REGISTERED_SHOP_WITH_FOREIGN_CURRENCY" };
+  }
+  if (krTld) return { market: "UNKNOWN", basis: "CONFLICT_KR_TLD_WITH_FOREIGN_CURRENCY" };
+
+  /** ⑤ 외화 + KR 증거 없음 → 해외. */
+  return { market: "OVERSEAS", basis: "FOREIGN_CURRENCY_AND_NO_KR_EVIDENCE" };
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * §5/§6 — 해외 가격의 «읽는 쪽»
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * WU-019R 이 찾은 둘째 공백은 「해외 가격을 담을 축이 없다」였고, 그 WU 가 동시에
+ * 확인한 사실이 **「새 source 로 저장만 하면 한 원도 움직이지 않는다 — 읽는 쪽이
+ * 없기 때문」** 이다(리포 기존 테스트 `overseas-observation-storage-impact.test.ts`).
+ *
+ * 🔴 그래서 이 함수가 그 **읽는 쪽** 이다. 단 범위를 좁게 고정한다:
+ * ```
+ * ❌ 환율 변환 · KRW 환산 · 배송비 · 세금 · variant 최적화 (§2 에서 전부 제외)
+ * ❌ 기존 국내/원가 집계에 섞기 (§5 — 오염 금지)
+ * ❌ DB 저장 (§11 — schema 변경 0)
+ * 🟢 **통화별로 세고, 통화별 최저가만 낸다.** 서로 다른 통화를 더하지 않는다.
+ * ```
+ */
+export interface CandidateOverseasPriceRecord {
+  market: string;
+  currency: string;
+  amount: number | null;
+  priceTier: string;
+}
+
+export interface CandidateOverseasPriceSummary {
+  /** 가격 증거가 있는 해외/UNKNOWN 후보 수. */
+  count: number;
+  /** 🔴 통화를 **섞지 않는다** — 통화별로 갈라 센다. */
+  byCurrency: Record<string, { count: number; lowestAmount: number }>;
+  /** 🔴 시장 판정 분포 — `UNKNOWN` 을 해외로 합치지 않는다. */
+  byMarket: Record<string, number>;
+  /** 🟢 동일상품 축(EXACT/COMPARISON)과 참고 축을 가른다 — 승격이 아니라 분류다. */
+  byPriceTier: Record<string, number>;
+}
+
+export function summarizeCandidateOverseasPrices(
+  records: CandidateOverseasPriceRecord[],
+): CandidateOverseasPriceSummary {
+  const byCurrency: Record<string, { count: number; lowestAmount: number }> = {};
+  const byMarket: Record<string, number> = {};
+  const byPriceTier: Record<string, number> = {};
+  for (const r of records) {
+    byMarket[r.market] = (byMarket[r.market] ?? 0) + 1;
+    byPriceTier[r.priceTier] = (byPriceTier[r.priceTier] ?? 0) + 1;
+    if (r.amount == null || !Number.isFinite(r.amount)) continue;
+    const bucket = byCurrency[r.currency];
+    if (!bucket) byCurrency[r.currency] = { count: 1, lowestAmount: r.amount };
+    else {
+      bucket.count += 1;
+      if (r.amount < bucket.lowestAmount) bucket.lowestAmount = r.amount;
+    }
+  }
+  return { count: records.length, byCurrency, byMarket, byPriceTier };
+}
