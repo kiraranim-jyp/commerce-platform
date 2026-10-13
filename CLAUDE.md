@@ -1726,7 +1726,78 @@ market/country/locale 칸이 **0건**(types.ts grep). 그래서 국내/해외 �
 🔴 §14 일곱 질문: 1🟢 2🟢 3🟢 4🟡(Shopify 만) 5🟡(해외 🔴) 6🟡 7🔴 **NO**.
 🔴 즉 **여성의류 등 다음 카테고리로 넘어가지 않는다**(CPO 지시).
 
-### 🟢🟢 WU-020 `MI-CANDIDATE-PRICE-EVIDENCE` — **PARTIAL** (구현 WU · 019R 의 공통 연결 둘)
+### 🟢🟢 WU-021 `MI-FINAL-DECISION-TRACE` — **공통 사슬은 끝까지 돈다 (26/26)**
+
+🟢 전문 `docs/MI-FINAL-DECISION-TRACE-021.md`. 🔴 **운영 코드 변경 0 · Gemini 0 ·
+외부 HTTP 0 · DB 읽기만 · schema 0 · UI 0 · flag OFF · deploy 0.**
+
+| | KIDS (N=17) | TENNIS (N=9) |
+|---|---|---|
+| 원가 확보 | 13/17 | **9/9** |
+| tier EXACT 레코드 | **2** | **0** |
+| `sellerCount>0` | **3** | **0** |
+| sellability | GREEN 2 · YELLOW 11 · UNKNOWN 4 | YELLOW 9 |
+| representative | READY 2 · MARKET_OPPORTUNITY 11 · NEEDS_INFO 4 | MARKET_OPPORTUNITY 9 |
+| **최종 sellerFacing** | 🟢 RECOMMENDED **2** · 🟡 CONDITIONAL 15 | 🟡 CONDITIONAL **9** |
+
+🟢 **26/26 전건이 최종 판정까지 도달한다** — 사슬이 끊기지 않고, 두 카테고리가 **같은
+함수를 같은 순서로** 통과한다(카테고리 분기 0). 호출부는 운영 `market-intelligence.ts`
+의 `:128 → :303 → :136-146 → :663 → :675 → :698` 과 1:1 이다(복제식 아님).
+
+🟢🟢 **정직성 PASS — 데이터가 없을 때 「추천」이 뜨지 않는다.** TENNIS 9/9(국내 후보 0 ·
+가격 0)가 🟡 **CONDITIONAL** 이고 🟢 RECOMMENDED 는 **0** 이다. 문구도 「국내에 없다」가
+아니라 **「자동으로 찾지 못했습니다」** 다(sellability.ts:58 · representative :245).
+🟢 설계 주석이 그 이유를 적어 뒀다(:26-28 — 「『국내에 없어서 기회』와 『수요가 없어서』를
+시스템이 구분할 수 없다는 점은 문구에서 단정하지 않는다」).
+
+🔴 **주석 하나가 낡았다(코드는 고치지 않았다)** — `representative-seller-decision.ts:260`
+머리 주석은 「MARKET_OPPORTUNITY → 🟢 판매 추천」이라고 적혀 있지만 **실제 map 은
+`MARKET_OPPORTUNITY: "CONDITIONAL"`** 이고 실측이 map 과 일치한다. 🔴 **주석을 근거로
+판정을 설명하면 틀린 답이 나온다**(`:147` 주석은 맞다).
+
+🔴🔴 **CONTROL 을 세울 수 없다 — 그래서 「운영 재현」으로 적지 않는다**:
+```
+운영 최종 verdict 가 **DB 에 저장되지 않는다** — product_snapshots 칸 12개에 판정 칸이
+**없고**(id·source_url·title·thumbnail_url·status·workspace·created_at·updated_at·
+last_opened_at·job_key·workspace_id·product_id) price_alerts 는 이 표본에 **0행** 이다.
+🟢 증명된 것: 「사슬이 끝까지 도는가 + 무엇을 내는가」
+🔴 증명 안 된 것: 「운영이 지금 그 값을 낸다」
+🟢 단 **입력은 운영 실데이터** 다 — 관측 **75행**(SELLER_ORIGIN 59 · DOMESTIC_SHOP 16) ·
+   링크 5행. 🔴 그리고 사슬 한 구간을 **의도적으로 비웠다** — marketCase/landedCost 는
+   `fetchLiveExchangeRates()`(:436)가 필요해 HTTP 0 에서 만들 수 없다. 지어내지 않고
+   `null` 로 넘겼고, 그래서 ⑦⑧은 **「marketCase 없이」 조건의 값** 이다.
+```
+
+🟢 **등록 판정은 설계대로 분리** — `computeRegistrationReadiness`(:109)가 sellVerdict 를
+**인자로 받지 않는다**(P-32 불변식 :15-20). 🔴 「등록 판정이 안 된다」가 아니라
+**「판매 판정과 독립이다」** 가 맞는 표현이다. ⚪ 입력이 채널 상태라 이 하니스로 미측정.
+
+🔴 **병목은 그대로다** — KIDS 17 중 EXACT 레코드 **2** · TENNIS **0**. 헌장의 핵심 KPI
+(55/498 = 11.0%)와 같은 방향이고, **사슬이 아니라 «입구»** 라는 결론이 또 재현됐다.
+🔴 이 표본으로 11.0% 를 다시 계산하지 않았다(분모가 다르다).
+
+🔴 **DB 칸 이름을 또 추측했다가 걸렸다** — `domestic_product_links` 에 `domain`·
+`shop_name`·`price_krw`·`sold_out` 이 **없다**(선행 덤프의 그 칸들은 source 조인 산출).
+🟢 `information_schema` 로 읽어 고쳤다. 🔴 이 트랙 **아홉 번째** 같은 실수다.
+
+🟢 회귀 admin **514 files / 7,663 passed · failed 0** · typecheck **10=baseline** ·
+build exit 0 · guard 6/6. 🔴 typecheck 가 한때 **14** 로 올랐다(내 하니스의 `never` 추론
+4건) — baseline 과 **비교해서** 잡았다.
+
+### 🟢🟢 WU-020 `MI-CANDIDATE-PRICE-EVIDENCE` — **CLOSED / PARTIAL** (CPO 2026-10-13)
+
+🔴🔴 **결과를 적는 «정확한 표현» 이 CPO 가 확정해 줬다. 다른 말로 바꾸지 않는다**:
+```
+공통 후보 가격 배선과 국내/해외 시장 분리 규칙은 **구현·검증 완료**.
+JSON-LD 기반 후보는 **추가 HTTP 없이** 가격 증거를 연결할 수 있다.
+TENNIS 해외처럼 **microdata-only 사이트의 가격은 현재 미지원.**
+```
+🔴 **「해외 가격이 완전히 해결됐다」로 기록하지 않는다.**
+🔴 TENNIS 해외 microdata → **제한사항으로 기록하고 종료.** 새 순수 parser 는 가능하고
+   비용도 거의 없지만 **공통 파이프라인을 닫는 데 반드시 필요하지 않다** — 거기서
+   extractor 범위를 늘리면 WU 가 끝없이 확장된다(CPO 명시).
+🔴 **해외 축의 UI 노출·등록판정 반영도 지금 하지 않는다**(⏸️ 의도적 보류).
+   현재 목표는 가격 추적 서비스가 아니라 **공통 구조를 닫는 것** 이다.
 
 🟢 전문 `docs/MI-CANDIDATE-PRICE-EVIDENCE-020.md`. 🔴 **Gemini 0 · 추가 HTTP 0 ·
 Playwright 0 · schema 0 · 새 source 값 0 · DB 쓰기 0 · UI 0 · flag OFF · deploy 0.**
