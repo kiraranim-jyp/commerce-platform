@@ -54,9 +54,39 @@ async function main() {
   urls.kids2 = urls.kids.slice(3);
   urls.kids = urls.kids.slice(0, 3);
 
+  /* 🔴🔴 §5-B CONTROL 선정 — 「Production 이 «이미» 결과를 만든 입력」을 섞는다.
+   *    1차 덤프는 그것을 안 해서 CONTROL 링크가 **0건** 이었다(측정 성립 불가).
+   *
+   * 🔴 그리고 **아무 링크나 쓰면 안 된다.** 링크 36%의 출처인 bobochoses.com 은
+   *    등록부에서 **disabled** 다(헌장 §12) → 재검색에서 아예 안 뒤지므로 재현이
+   *    구조적으로 불가능하다. 선행 WU 가 바로 그 이유로 CONTROL 2건을 날렸고
+   *    「하니스 결함이 아니었다」고 기록돼 있다.
+   * 🟢 그래서 **실제로 검색되는 AUTO 샵** 의 링크만 고른다. */
+  urls.control = await prisma.$queryRawUnsafe(`
+    SELECT DISTINCT ON (ps.id)
+           ps.id,
+           ps.source_url,
+           coalesce(ps.workspace->'canonicalProduct'->'title'->>'value','') AS title,
+           coalesce(ps.workspace->'canonicalProduct'->'brand'->>'value','')  AS brand
+    FROM domestic_product_links l
+    JOIN product_snapshots ps ON ps.id = l.snapshot_id
+    JOIN domestic_price_sources s ON s.id = l.source_id
+    WHERE s.collection_strategy IN ('AUTO_API','AUTO_SCRAPE')
+      AND s.status = 'ACTIVE'
+      AND coalesce(ps.workspace->'canonicalProduct'->'title'->>'value','') NOT ILIKE '[TEST]%'
+      AND l.match_truth IS NOT NULL
+    ORDER BY ps.id, l.created_at DESC
+    LIMIT 4
+  `);
+
   const ids = Object.values(urls).flat().map((r) => r.id);
   const snapRows = await prisma.$queryRawUnsafe(
-    `SELECT id, workspace->'canonicalProduct' AS "canonicalProduct" FROM product_snapshots WHERE id = ANY($1::uuid[])`,
+    /* 🔴 description 을 같이 싣는다 — 운영은 `extractForeignModelCode(input.description)`
+     *    를 먼저 보고 없을 때만 dna.brandModelCode 로 간다(run-domestic-price-check:787).
+     *    description 을 빠뜨리면 foreignModelCode 가 달라져 **판정이 갈린다.** */
+    `SELECT id, workspace->'canonicalProduct' AS "canonicalProduct",
+            workspace->'canonicalProduct'->'description'->>'value' AS description
+     FROM product_snapshots WHERE id = ANY($1::uuid[])`,
     ids,
   );
 
@@ -78,6 +108,28 @@ async function main() {
     ORDER BY s.name
   `);
 
+  /* 🔴🔴 §5-B CONTROL 재료 — 「운영이 낸 «그 값»」이다.
+   *    VALIDATION-CLOSE 의 ①(judgeDomesticCandidate 까지 타게 한다)을 검증하려면
+   *    내 하니스 산출이 **운영 링크의 match_truth / verified / price_tier 를 재현**
+   *    해야 한다. 「후보가 나왔다」는 통과 조건이 아니다(헌장 §5-B).
+   *    🔴 읽기만 한다. */
+  /* 🔴 price_tier 칸은 **없다**(추측해서 42703 을 냈다 — 이 트랙 일곱 번째).
+   *    tier 는 저장되지 않고 priceTierFromLink({matchTruth, verified}) 가 계산한다
+   *    (헌장 §12: 「복제하지 않고 그 함수를 호출한다」).
+   * 🔴🔴 그리고 이 주석을 처음엔 아래 템플릿 리터럴 «안» 에 넣었는데, 주석 안의
+   *    백틱이 **리터럴을 닫아** SyntaxError 가 났다. 백틱 함정을 또 밟았다 —
+   *    템플릿 리터럴 안에는 백틱을 쓰지 않는다. */
+  const links = await prisma.$queryRawUnsafe(`
+    SELECT l.snapshot_id, l.source_id, s.domain, s.name AS shop_name,
+           l.match_truth, l.verified, l.match_type, l.cross_seller_verdict,
+           l.external_url, l.matched_title, l.match_confidence, l.status
+    FROM domestic_product_links l
+    JOIN domestic_price_sources s ON s.id = l.source_id
+    WHERE l.snapshot_id = ANY($1::uuid[])
+    ORDER BY l.snapshot_id, s.domain
+  `, ids);
+
+  writeFileSync(path.join(OUT, "e2e-links.json"), JSON.stringify(links, null, 1), "utf8");
   writeFileSync(path.join(OUT, "e2e-urls.json"), JSON.stringify(urls, null, 1), "utf8");
   writeFileSync(path.join(OUT, "e2e-snapshots.json"), JSON.stringify(snapRows, null, 1), "utf8");
   writeFileSync(path.join(OUT, "e2e-sources.json"), JSON.stringify(sources, null, 1), "utf8");
@@ -88,6 +140,7 @@ async function main() {
         urls: Object.fromEntries(Object.entries(urls).map(([k, v]) => [k, v.length])),
         snapshots: snapRows.length,
         sources: sources.length,
+        "🔴 CONTROL 운영 링크": links.length,
         "enabled=true": sources.filter((s) => s.enabled).length,
         titles: Object.values(urls).flat().map((r) => `${r.brand} / ${r.title}`.slice(0, 70)),
       },

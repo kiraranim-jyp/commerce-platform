@@ -301,3 +301,152 @@ Production PASS      🔴 **아니다** — Implemented / Partially Measured
    (2차 실측: 상품당 Gemini 1.6회 · 1,372토큰 · 우리 fetch 3.0회)
 🟢 ①②를 하지 않아도 **배포 자체는 안전하다** — 기본 OFF 이고 OFF 면 코드가 안 돈다
 ```
+
+---
+
+# ◆ VALIDATION-CLOSE (CPO 지시, 2026-10-13) — 추가 결과
+
+> 🟢 ①②⑥⑦ **닫혔다.** 🔴 ③④⑤의 **ON 축은 크레딧 소진으로 측정 불가** 유지.
+> 🔴 CPO 가 폐기한 「추가 SAME/PRESUMED 4」는 이 문서에서도 **KPI 로 쓰지 않는다.**
+
+## ①-a 🔴🔴 보정하다가 «추가 결함 셋» 을 더 찾았다
+
+`judgeDomesticCandidate` 를 붙이려고 운영 루프를 다시 읽었더니 내 배선에
+**세 개의 결함** 이 더 있었다. 전부 고쳤다.
+
+| | 무엇이 틀렸나 | 왜 치명적인가 |
+|---|---|---|
+| **A** | Gemini 후보를 **점수 없이** 넘겼다 | 국내 경로는 `searchDomesticShops` «안에서» `withConfidence` 를 부른다(comparison-search/index.ts:197). 점수가 없으면 `isEvidenceEvaluationWorthwhile` 가 `candidates[0].matchLevel !== "low"` 를 보는데 `undefined !== "low"` 는 **참** → **게이트가 공짜로 열린다** |
+| **B** | 후보 전체를 **가상 domain 하나** 로 묶었다 | `judgeDomesticCandidate(domain)` 이 그 값으로 분기한다 — `fetchDomesticModelCode` 가 **영구 null**, 그리고 `selectDomesticCandidate` 가 **샵당 1건** 만 남기므로 서로 다른 판매처 후보들이 한 샵처럼 경쟁해 **최대 1건만** 살아남는다 |
+| **C** | 저장 차단 가드를 **Vision «뒤»** 에 뒀다 | 그 사이의 `findCachedVisionEvidence(snapshotId, shopId, …)` 가 가상 shopId 로 DB 를 뒤지고, 캐시가 없으면 `runVisionEvidence` 가 **실제 외부 모델을 호출** 한다. 저장도 안 할 후보에 비용을 쓰고 캐시 키까지 오염시킨다 |
+
+```
+수정  A → withConfidence(query, r.candidates) 를 합류 지점에서 적용
+      B → host 별로 ComparisonSearchResult 를 쪼갠다(domain=실제 host,
+           shopId=가상 — 저장 차단은 shopId 로 가리므로 그대로 유효)
+      C → 가드를 JUDGED 구조분해 «직후»(Vision 앞) 로 이동
+```
+
+## ①-b 🟢🟢 §5-B CONTROL — **2/3 PASS** (재현 가능한 샵 기준)
+
+> 🔴 통과 조건은 「후보가 나왔다」가 아니라 **`matchTruth === 운영값` && `verified === 운영값`** 이다.
+
+| 상품 | 샵 | 운영 | 내 하니스 | tier | |
+|---|---|---|---|---|---|
+| Louise Misha Tender coat | `deuxbebe.com` | TEXT_CONFIRMED / false | **동일** | COMPARISON = COMPARISON | 🟢 PASS |
+| Pèpè Lulu T Bar | `foretforet.com` | STRONG_IDENTIFIER / true | **동일** | EXACT = EXACT | 🟢 PASS |
+| Pèpè Lulu T Bar | `deuxbebe.com` | SIMILAR / false | `DROPPED` | REFERENCE ↔ 없음 | 🔴 FAIL |
+| Bobo ×2 | `bobochoses.com` | — | 그 샵이 결과를 내지 않았다 | — | 🔴 구조적 재현 불가(disabled) |
+
+### 🔴 FAIL 1건의 원인 — **하니스 결함이 아니다.** 순서대로 갈랐다
+
+```
+① 호출 경로  🟢 정상 — 같은 상품의 foretforet 건이 **정확히 재현** 됐고,
+             다른 상품의 deuxbebe 건도 재현됐다
+② 설정 상태  🟢 정상 — deuxbebe 는 enabled·AUTO 이고 같은 실행에서 JUDGED 를 냈다
+③ 입력       🟢 **동일** — 내가 고른 후보가 운영과 «같은 URL» 이다
+             (`…/detail.html?product_no=8021&cate_no=62&display_group=1`)
+             제목도 같다(「페페 VERNICE NERO」)
+④ Production 결과  🔴🔴 **운영 행이 현재 게이트보다 오래됐다**
+```
+
+🟢 **결정적 증명** — 현재 `isEvidenceEvaluationWorthwhile` 의 네 조건이 이 삼중쌍에
+**전부 불성립**이라 현재 코드는 이 행을 만들 수 **없다**:
+
+```
+① some(verdict === SAME | PRESUMED_SAME)        → verdict 는 SIMILAR        ✗
+② candidates[0].matchLevel !== "low"            → low 다                    ✗
+③ confirmBrandCodeInTitle("01195-VERNICE-NERO",
+     "페페 VERNICE NERO") !== null               → 품번이 제목에 토큰으로 없다  ✗
+④ domain === "foretforet.com"                   → deuxbebe 다               ✗
+```
+
+```
+게이트 최근 변경   675821d2  **2026-10-07** 18:32
+                   「이미 «확정된» 품번을 국내 제목에서 확인하고,
+                     🔴 **색상을 모르면 확정하지 않는다**」
+                   🔴 이 상품의 foreignColor 는 **null** 이다
+그 URL 의 링크 행   18행 전부 updated_at **≤ 2026-09-09**
+→ 🟢 행이 게이트보다 **약 4주 오래됐다.** 「지금 코드가 틀렸다」가 아니다
+```
+
+🔴 **그래서 이 FAIL 을 제품 결함으로도 하니스 결함으로도 적지 않는다.** 남는
+사실은 **DB 에 현재 게이트가 만들지 않을 과거 행이 있다** 는 것이고, 그 tier 는
+`REFERENCE` 라 돈이 움직이는 `EXACT` 버킷에 들어가지 않는다(price-history.ts:644).
+🔴 과거 행 재계산은 정책 사안이라 손대지 않았다(§12 의 Historical Alert Integrity 와 같은 경계).
+
+## ④ 실측 — OFF 축은 **전부 측정됐다** (`sample 상품 N=8`)
+
+> CONTROL 4 · 아동복 2 · 테니스 2. 🔴 전부 **실제 HTTP** · DB 쓰기 **0** · upsert 호출 **0**.
+
+```
+scope 통과 샵   아동복 **6** · 테니스 **1**
+OFF 판정 kind   JUDGED 2 · DROPPED 12 · NO_CANDIDATES 25
+OFF tier        EXACT **1**(Pèpè/foretforet) · COMPARISON 1(L.Misha/deuxbebe) · 나머지 없음
+국내 상세 fetch  3회 (판정 중 품번 확인 — foretforet 추출기)
+```
+
+🔴 **테니스 2건은 후보 0** 이고 그 이유는 선행 WU 가 이미 확정했다 — TENNIS scope
+샵이 **1곳(스카이스포츠)** 뿐이고 그 샵의 Sergio Tacchini 교집합이 **0** 이다.
+**국내 취급처 부재** 이고 코드 결함이 아니다.
+
+## ③⑤ 비용 — 🔴 ON 축은 **측정 불가** 가 유지됐다
+
+```
+Gemini outcome   **API_FAILURE 16/16**
+실패 사유        "GoogleDiscoveryApiError: … (402): Payment Required"
+                 "Your prepayment credits are depleted."
+Gemini API 호출  **16**   ← 🟢 실패한 호출도 집계에 **남았다**
+토큰             전부 **0**  ← 402 는 usageMetadata 를 주지 않는다
+우리 resolve/fetch  0 · 0   ← 후보가 없으니 우리 비용도 0
+```
+
+🟢 **「실패한 호출이 집계에서 사라지지 않는다」가 실증됐다** — `provider` 를
+`try` «밖» 에서 만든 설계(production-discovery.ts:87)가 그 목적이었고, 16회가
+실제로 기록됐다. 🔴 토큰 0 은 「공짜」가 아니라 **402 가 사용량을 안 준다** 는 뜻이다.
+
+🔴 측정 가능한 범위(CPO ⑤ 요구): `calls` 🟢 · `input/output 토큰` 🟡(성공 시에만) ·
+`model` 🟢(`gemini-flash-latest`) · `groundingQueries` 🔴 **계속 측정 불가**.
+🔴 **497 환산 하지 않았다.**
+
+🟢 그리고 **ON == OFF 가 N=8 에서 재확인됐다** — Gemini 가 16/16 실패했는데
+OFF/ON 판정 결과가 완전히 같았다(`ON 추가 EXACT` **0** · Gemini MI 후보 **0**).
+🔴 그 0 을 「Gemini 가 효과 없다」로 읽지 않는다 — **호출이 아예 안 됐다.**
+
+## ⑥ Build — 🟢 **PASS**
+
+```
+npx next build  exit **0** · ✓ Compiled successfully in 27.8s
+                ✓ Generating static pages (104/104)
+```
+
+## ⑦ 회귀 · typecheck · 가드
+
+```
+🟢 apps/admin 전체   506 files / **7,534 tests passed** / 52 skipped · failed **0**
+🟢 전 패키지 typecheck **10 = baseline 10**
+🟢 no-production-coupling **6/6**
+🟢 negative test **12/12** (API 가 배열로 바뀌어 단언도 같이 고쳤다)
+```
+
+## 🔴 VALIDATION-CLOSE 이후 남은 Known Unknowns
+
+```
+🔴🔴 ON 축 전체가 **미측정** — Gemini 선불 크레딧 소진(402). 모델을 바꿔도 안 풀린다
+     (grounding 은 flash-lite 에서도 402). 충전은 비용 승인 사안이다
+🔴 CONTROL 분모가 **3** 이다(재현 가능한 샵 기준). 일반화 금지
+🔴 bobochoses.com 링크 2건은 **구조적 재현 불가** — 실패로도 성공으로도 세지 않았다
+🔴 DB 에 현재 게이트가 만들지 않을 **과거 행** 이 있다(최소 1건 확인). 전수는 미측정
+🔴 테니스는 scope 샵이 1곳뿐이라 OFF 축이 **구조적으로 0** 이다
+🔴 Gemini 후보가 host 별로 쪼개진 뒤의 **실제 판정 분포는 미측정**(후보 0이었다)
+```
+
+## 판정 (VALIDATION-CLOSE 기준)
+
+```
+Code PASS            🟢      Build PASS            🟢 **exit 0**
+Test PASS            🟢      Deploy PASS           🔴 안 함
+Type PASS            🟢      Production UI PASS    🔴 해당 없음
+🟢 CONTROL           **2/3** Production API PASS   🔴 402 로 ON 축 측정 불가
+Production PASS      🔴 아니다 — **IMPLEMENTED / ON-AXIS UNMEASURED**
+```

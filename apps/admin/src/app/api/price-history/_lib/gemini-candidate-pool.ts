@@ -103,8 +103,21 @@ export interface GeminiPoolMetrics {
 }
 
 export interface GeminiPoolResult {
-  /** 🟢 `searchResults` 에 그대로 append 할 수 있는 모양. 비면 호출부는 아무것도 안 한다. */
-  searchResult: ComparisonSearchResult | null;
+  /**
+   * 🟢 `searchResults` 에 그대로 append 할 수 있는 모양. 비면 호출부는 아무것도 안 한다.
+   *
+   * 🔴🔴 **host 별로 «여러 개» 로 쪼갠다.** 처음엔 전부 한 덩어리(가상 domain 하나)로
+   *    돌려줬는데 그것이 틀렸다 — `judgeDomesticCandidate(input.domain)` 가 그 값으로
+   *    분기한다:
+   *      · `isEvidenceEvaluationWorthwhile(..., domain)` — 도메인 하드코딩 가드가 있다
+   *      · `fetchDomesticModelCode(domain, url)` — 도메인별 품번 추출기를 고른다
+   *      · `selectDomesticCandidate(..., domain, ...)` — **샵당 최선 1건** 만 남긴다
+   *    🔴 가상 domain 하나로 묶으면 ① 추출기가 **영구히 null** 이고 ② 서로 다른
+   *       판매처의 후보들이 한 샵처럼 경쟁해 **최대 1건만** 살아남는다.
+   * 🟢 그래서 `domain` 은 **실제 host** 를 쓰고, `shopId` 만 가상으로 둔다 —
+   *    저장 차단은 `shopId` 로 가리므로 그대로 유효하다.
+   */
+  searchResults: ComparisonSearchResult[];
   metrics: GeminiPoolMetrics;
 }
 
@@ -138,6 +151,15 @@ export function normalizeCandidateUrl(raw: string): string {
     return `${host}${path}`;
   } catch {
     return raw.trim().toLowerCase();
+  }
+}
+
+/** 🔴 등록부 도메인과 같은 모양으로 맞춘다(www 제거 · 소문자) — 추출기 조회 키다. */
+function hostOf(raw: string): string {
+  try {
+    return new URL(raw).hostname.replace(/^www\./i, "").toLowerCase();
+  } catch {
+    return GEMINI_VIRTUAL_SHOP_ID;
   }
 }
 
@@ -178,9 +200,8 @@ export async function collectGeminiCandidatePool(input: GeminiPoolInput): Promis
     queries = generateQueries(identity).slice(0, Math.max(1, input.maxQueries));
   } catch (error) {
     metrics.outcomes.QUERY_GEN_FAILED = 1;
-    metrics.outcomes.detail = 0;
-    void error;
-    return { searchResult: null, metrics };
+    metrics.failureDetails.push(error instanceof Error ? `${error.name}: ${error.message}` : String(error));
+    return { searchResults: [], metrics };
   }
 
   const seen = new Set<string>(input.existingNormalizedUrls);
@@ -234,15 +255,29 @@ export async function collectGeminiCandidatePool(input: GeminiPoolInput): Promis
     }
   }
 
-  if (candidates.length === 0) return { searchResult: null, metrics };
+  if (candidates.length === 0) return { searchResults: [], metrics };
+
+  /** 🔴 실제 host 로 가른다 — 위 GeminiPoolResult 주석의 이유. */
+  const byHost = new Map<string, ComparisonCandidate[]>();
+  for (const c of candidates) {
+    const host = hostOf(c.url);
+    const bucket = byHost.get(host);
+    if (bucket) bucket.push(c);
+    else byHost.set(host, [c]);
+  }
   return {
-    searchResult: {
-      shopId: GEMINI_VIRTUAL_SHOP_ID,
-      shopName: GEMINI_VIRTUAL_SHOP_NAME,
-      domain: GEMINI_VIRTUAL_SHOP_ID,
-      status: "ok",
-      candidates,
-    } as ComparisonSearchResult,
+    searchResults: [...byHost.entries()].map(
+      ([host, group]) =>
+        ({
+          /** 🔴 가상 id — 저장 차단의 유일한 기준이다. host 별로 **같은 값** 을 쓴다. */
+          shopId: GEMINI_VIRTUAL_SHOP_ID,
+          shopName: `${GEMINI_VIRTUAL_SHOP_NAME} · ${host}`,
+          /** 🟢 실제 host — 판정 게이트가 이 값으로 분기한다. */
+          domain: host,
+          status: "ok",
+          candidates: group,
+        }) as ComparisonSearchResult,
+    ),
     metrics,
   };
 }

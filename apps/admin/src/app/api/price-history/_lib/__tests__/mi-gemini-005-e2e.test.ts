@@ -1,28 +1,31 @@
 /**
  * ════════════════════════════════════════════════════════════════════════════
- * MI-GEMINI-INTEGRATION-005 ⑥ — 아동복 + 테니스 E2E · OFF/ON 대조 · 비용 실측
+ * MI-GEMINI-005 VALIDATION-CLOSE ①④ — `judgeDomesticCandidate` 까지 «운영 경로»
  * ════════════════════════════════════════════════════════════════════════════
  *
- * 🔴 **DB 쓰기 0.** 읽기 전용 덤프만 쓴다(`mi-gemini-005-dump.mjs`).
- *    🔴 `upsertDomesticProductLink` 를 **부르지 않는다** — 이 하니스는 판정까지만 본다.
- * 🔴 기본값 SKIP(`MI_P0_02_LIVE=1`). GEMINI_API_KEY 는 `scripts/.env` 에 있다.
+ * 🔴🔴 **직전 하니스가 한 단계 짧았다.** `withConfidence` 까지만 불러서
+ *    「추가 SAME/PRESUMED 4」를 냈고, 그것은 **운영 판정 결과가 아니었다**.
+ *    운영은 그 뒤에 `judgeDomesticCandidate`(게이트 + `fetchDomesticModelCode`
+ *    + `selectDomesticCandidate`)가 **더 있다**. §5-B 가 이 트랙에서 이미 한 번
+ *    잡은 함정을 다시 밟았고, CPO 가 그 숫자를 KPI 에서 폐기했다.
  *
- * ── 🔴🔴 OFF/ON 을 «같은 입력» 으로 비교한다 ────────────────────────────
- *   OFF = 국내 후보만 (searchDomesticShops → withConfidence)
- *   ON  = 국내 후보 + Gemini 후보 (collectGeminiCandidatePool 을 **합쳐서** 같은
- *         judge 에 넣는다)
- *   🟢 판정기를 새로 만들지 않았다 — `withConfidence` 하나를 두 번 부른다.
- *   🔴 그래서 「ON 이 더 좋다」를 주장할 때 분모가 같다. 다른 상품을 비교하지 않는다.
+ * 🟢 이 하니스는 운영 루프(run-domestic-price-check.ts)를 그대로 흉내낸다:
+ *      searchDomesticShops → (내부 withConfidence) → **샵별** judgeDomesticCandidate
+ *      → JUDGED.matchTruth / verified → **priceTierFromLink 를 «호출»**
+ *    🔴 tier 를 복제 계산하지 않는다(헌장 §12).
  *
- * ── 🔴 scope 검증이 이 WU 의 선행 조건이다 (§3) ─────────────────────────
- *   아동복 상품에는 아동복 scope 샵 도메인이, 테니스 상품에는 테니스 scope 샵
- *   도메인이 `preferredDomains` 로 들어가야 한다. 🔴 「들어갔다」만 보지 않고
- *   **Gemini 가 실제로 어느 도메인을 돌려줬는지** 를 센다.
+ * ── 🔴🔴 §5-B CONTROL — 「후보가 나왔다」는 통과 조건이 «아니다» ───────────
+ *   통과 조건은 **운영이 낸 그 값이 재현된다** 다:
+ *     `matchTruth === 운영 match_truth` && `verified === 운영 verified`
+ *   🔴 CONTROL 이 실패하면 아래 OFF/ON 숫자를 전략 판단에 쓰지 않는다.
+ *   🔴 실패를 곧바로 하니스 결함으로 단정하지 않고 순서대로 가른다 —
+ *      **호출 경로 → 설정 상태 → 입력 → Production 결과.**
+ *   🟢 `bobochoses.com` 링크는 **구조적 재현 불가** 로 미리 분리한다 — 그 샵은
+ *      등록부에서 disabled 라 재검색에서 아예 안 뒤진다(헌장 §12 · 선행 WU 가
+ *      같은 이유로 CONTROL 2건을 날렸고 「하니스 결함이 아니었다」고 기록됐다).
  *
- * ── 🔴 비용은 네 칸으로 «갈라» 적는다 (§10) ─────────────────────────────
- *   Gemini API 호출 / 토큰 / 우리 resolve / 우리 fetch.
- *   🔴 grounding 쿼리 수는 **측정 불가** 다 — `usageMetadata` 에 안 들어온다.
- *      0 으로 적지 않는다.
+ * 🔴 **DB 쓰기 0** — `upsertDomesticProductLink` 를 부르지 않는다.
+ * 🔴 기본값 SKIP(`MI_P0_02_LIVE=1`).
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -31,15 +34,29 @@ import { describe, expect, it } from "vitest";
 const LIVE = process.env.MI_P0_02_LIVE === "1";
 const OUT_DIR = process.env.MI_P0_02_OUT_DIR ?? path.join(process.env.TEMP ?? ".", "mi-p0-02");
 
-/** 🔴 표본 상한 — 실제 외부 호출이 돈다. 분모를 보고서에 그대로 적는다. */
-const KIDS_N = 3;
-const TENNIS_N = 2;
+/** 🟢 재현 가능한 CONTROL 샵 — 실제로 검색되는 AUTO 샵만. */
+const REPRODUCIBLE_CONTROL_DOMAINS = ["deuxbebe.com", "foretforet.com", "littleluna.co.kr"];
 
 interface UrlRow { id: string; source_url: string; title: string; brand: string }
+interface SnapRow { id: string; canonicalProduct: unknown; description: string | null }
+interface LinkRow {
+  snapshot_id: string; domain: string; shop_name: string;
+  match_truth: string | null; verified: boolean; match_type: string | null;
+  cross_seller_verdict: string | null; external_url: string; matched_title: string | null;
+}
 interface SourceRow {
   id: string; name: string; domain: string; currency: string;
   collectionStrategy: "AUTO_API" | "AUTO_SCRAPE" | "MANUAL" | "NOT_AVAILABLE";
   status: string; accessStatus: string | null; categoryScope: string[] | null; enabled: boolean;
+}
+interface RawResult {
+  shopId: string; shopName: string; domain: string; status: string;
+  candidates: Record<string, unknown>[]; error?: string;
+}
+interface Judged {
+  domain: string; shopId: string; kind: string; gate: string | null;
+  matchTruth: string | null; verified: boolean | null; tier: string | null;
+  verdict: string | null; title: string | null; url: string | null;
 }
 
 const tally = (xs: string[]): Record<string, number> => {
@@ -47,13 +64,10 @@ const tally = (xs: string[]): Record<string, number> => {
   for (const x of xs) t[x] = (t[x] ?? 0) + 1;
   return t;
 };
-const hostOf = (u: string): string => {
-  try { return new URL(u).hostname.replace(/^www\./i, "").toLowerCase(); } catch { return "(bad-url)"; }
-};
 
-describe.skipIf(!LIVE)("🔴 MI-GEMINI-005 ⑥ — OFF/ON E2E", () => {
+describe.skipIf(!LIVE)("🔴 MI-GEMINI-005 VALIDATION-CLOSE — 운영 판정 경로", () => {
   it(
-    "아동복 + 테니스 실상품에서 Gemini 합류가 verdict 와 비용을 어떻게 바꾸는가",
+    "CONTROL 로 경로를 잠근 뒤 OFF/ON 을 judgeDomesticCandidate 까지 비교한다",
     async () => {
       const read = <T>(f: string): T => {
         const p = path.join(OUT_DIR, f);
@@ -61,12 +75,16 @@ describe.skipIf(!LIVE)("🔴 MI-GEMINI-005 ⑥ — OFF/ON E2E", () => {
         return JSON.parse(readFileSync(p, "utf8")) as T;
       };
       const groups = read<Record<string, UrlRow[]>>("e2e-urls.json");
-      const snaps = read<{ id: string; canonicalProduct: unknown }[]>("e2e-snapshots.json");
+      const snaps = read<SnapRow[]>("e2e-snapshots.json");
       const sources = read<SourceRow[]>("e2e-sources.json");
+      const links = read<LinkRow[]>("e2e-links.json");
 
+      /** 🔴 owner 패키지를 추측하지 않는다 — 운영 파일의 import 블록을 베꼈다. */
       const crawler = (await import("@commerce/crawler")) as unknown as {
-        searchDomesticShops: (q: unknown, s: unknown[]) => Promise<{ shopId: string; shopName: string; domain: string; status: string; candidates: Record<string, unknown>[] }[]>;
+        searchDomesticShops: (q: unknown, s: unknown[]) => Promise<RawResult[]>;
         withConfidence: (q: unknown, c: unknown[]) => Record<string, unknown>[];
+        extractForeignModelCode: (d: string | undefined) => string | null;
+        fetchDomesticModelCode: (domain: string, url: string) => Promise<string | null>;
       };
       const shared = (await import("@commerce/shared")) as unknown as {
         buildProductIdentityDna: (p: unknown) => Record<string, unknown>;
@@ -74,35 +92,83 @@ describe.skipIf(!LIVE)("🔴 MI-GEMINI-005 ⑥ — OFF/ON E2E", () => {
         buildCrossSellerSearchQueries: (dna: unknown) => string[];
         productFactsFromIdentityDna: (dna: unknown) => Record<string, unknown>;
       };
-      const { isBatchSurveyTarget } = await import("../run-domestic-price-check");
+      const { isBatchSurveyTarget, judgeDomesticCandidate } = await import("../run-domestic-price-check");
+      const { priceTierFromLink } = await import("../../../domestic-price-sources/_lib/domestic-product-link");
       const { collectGeminiCandidatePool, normalizeCandidateUrl, GEMINI_VIRTUAL_SHOP_ID } =
         await import("../gemini-candidate-pool");
 
-      /** 🔴 scope 는 **운영 함수** 로 가른다 — 내가 다시 구현하지 않는다. */
       const targetsFor = (scopes: string[] | null) =>
         sources
           .filter((s) => isBatchSurveyTarget(s as never, scopes))
           .filter((s) => s.collectionStrategy === "AUTO_API" || s.collectionStrategy === "AUTO_SCRAPE");
 
-      /* 🔴🔴 1차 실행이 **무효** 였다 — scope 를 `"KIDS_CLOTHING"` 으로 **추측** 했고
-       *    그 어휘는 DB 에 **없다**. 그래서 `scope 통과 샵 0` · `OFF 후보 0` 이 나왔고,
-       *    「ON 추가 SAME 9」를 그 0 과 비교하면 **거짓 비교** 가 된다.
-       *    🟢 실제 값은 DB 전수로 확인했다:
-       *       KIDS_FASHION 11 · (빈 배열) 14 · FASHION_ACCESSORIES/KIDS_FASHION/
-       *       WOMEN_FASHION 4 · KIDS_FASHION+KIDS_GOODS 3 · TENNIS 1 · GOLF 1
-       *    🔴 이 트랙에서 **값/칸 이름을 추측해 틀린 것이 여섯 번째** 다. */
+      /** 🔴 scope 어휘는 **DB 에서 확인한 값** 이다 — `KIDS_CLOTHING` 은 없다. */
       const plan = [
-        ...[...groups.kids, ...groups.kids2].slice(0, KIDS_N).map((r) => ({ row: r, scopes: ["KIDS_FASHION"] })),
-        ...groups.tennis.slice(0, TENNIS_N).map((r) => ({ row: r, scopes: ["TENNIS"] })),
+        ...(groups.control ?? []).map((r) => ({ row: r, scopes: ["KIDS_FASHION"], control: true })),
+        ...[...groups.kids, ...groups.kids2].slice(0, 2).map((r) => ({ row: r, scopes: ["KIDS_FASHION"], control: false })),
+        ...groups.tennis.slice(0, 2).map((r) => ({ row: r, scopes: ["TENNIS"], control: false })),
       ];
 
+      /** 🟢 운영 루프와 **같은 순서·같은 인자** 로 샵별 판정을 돌린다. */
+      const judgeAll = async (
+        results: RawResult[],
+        sourceUrl: string | undefined,
+        foreignModelCode: string | null,
+        foreignColor: string | null,
+        counters: { fetch: number },
+      ): Promise<Judged[]> => {
+        const out: Judged[] = [];
+        for (const result of results) {
+          if (result.status !== "ok") continue;
+          const judgement = await judgeDomesticCandidate({
+            domain: result.domain,
+            candidates: result.candidates as never,
+            sourceUrl,
+            foreignModelCode,
+            foreignColor,
+            fetchModelCode: (url: string) => {
+              counters.fetch += 1;
+              return crawler.fetchDomesticModelCode(result.domain, url);
+            },
+          });
+          const base = { domain: result.domain, shopId: result.shopId };
+          if (judgement.kind === "NO_CANDIDATES") {
+            out.push({ ...base, kind: "NO_CANDIDATES", gate: null, matchTruth: null, verified: null, tier: null, verdict: null, title: null, url: null });
+            continue;
+          }
+          if (judgement.kind === "DROPPED") {
+            const c = judgement.observed.candidate as unknown as Record<string, unknown>;
+            out.push({
+              ...base, kind: "DROPPED", gate: judgement.gate, matchTruth: null, verified: null, tier: null,
+              verdict: (c.crossSellerVerdict as string | undefined) ?? null,
+              title: (c.title as string | undefined) ?? null,
+              url: (c.url as string | undefined) ?? null,
+            });
+            continue;
+          }
+          const best = judgement.best as unknown as Record<string, unknown>;
+          out.push({
+            ...base, kind: "JUDGED", gate: null,
+            matchTruth: judgement.matchTruth,
+            verified: judgement.verified,
+            /** 🔴 복제 계산하지 않는다 — owner 를 «호출» 한다. */
+            tier: priceTierFromLink({ matchTruth: judgement.matchTruth, verified: judgement.verified } as never),
+            verdict: (best.crossSellerVerdict as string | undefined) ?? null,
+            title: (best.title as string | undefined) ?? null,
+            url: (best.url as string | undefined) ?? null,
+          });
+        }
+        return out;
+      };
+
       const products: Record<string, unknown>[] = [];
-      const cost = { geminiCalls: 0, inputTokens: 0, outputTokens: 0, thoughtsTokens: 0, totalTokens: 0, resolveCalls: 0, fetchCalls: 0 };
+      const controlRows: Record<string, unknown>[] = [];
+      const cost = { geminiCalls: 0, inputTokens: 0, outputTokens: 0, thoughtsTokens: 0, totalTokens: 0, resolveCalls: 0, fetchCalls: 0, domesticDetailFetch: 0 };
       const allOutcomes: string[] = [];
       const allFailures: string[] = [];
       let modelUsed: string | null = null;
 
-      for (const { row, scopes } of plan) {
+      for (const { row, scopes, control } of plan) {
         const snap = snaps.find((x) => x.id === row.id);
         if (!snap) { products.push({ title: row.title, "🔴": "스냅샷 없음" }); continue; }
 
@@ -113,31 +179,63 @@ describe.skipIf(!LIVE)("🔴 MI-GEMINI-005 ⑥ — OFF/ON E2E", () => {
           title: String(qFacts.title), brand: qFacts.brand ?? undefined, sourceUrl: qFacts.sourceUrl,
           searchTerm: terms[0] ?? row.title, searchTerms: terms, facts: qFacts,
         };
+        /** 🔴 운영과 **같은 식** — description 을 먼저 보고 없을 때만 dna 로 간다. */
+        const foreignModelCode =
+          crawler.extractForeignModelCode(snap.description ?? undefined) ?? (dna.brandModelCode as string | null);
+        const foreignColor = (dna.color as string | null) ?? null;
 
         const targets = targetsFor(scopes);
         const scopedDomains = targets.map((s) => s.domain);
+        const counters = { fetch: 0 };
 
-        /** ── OFF — 현재 운영 경로 ─────────────────────────────────── */
+        /** ── OFF — 현재 운영 경로 «전체» ─────────────────────────── */
         const domestic = await crawler.searchDomesticShops(
           query,
           targets.map((s) => ({ id: s.id, name: s.name, domain: s.domain, currency: s.currency, collectionStrategy: s.collectionStrategy })),
         );
-        const domesticCands = domestic.flatMap((r) => r.candidates);
-        const offScored = crawler.withConfidence(query, domesticCands);
+        const offJudged = await judgeAll(domestic, query.sourceUrl as string | undefined, foreignModelCode, foreignColor, counters);
 
-        /** ── ON — Gemini 후보를 «합쳐서» 같은 judge 에 넣는다 ───────── */
-        const existing = new Set<string>(domesticCands.map((c) => normalizeCandidateUrl(String(c.url))));
+        /** ── CONTROL — 🔴 「운영이 낸 그 값」을 재현하는가 ─────────── */
+        if (control) {
+          for (const link of links.filter((l) => l.snapshot_id === row.id)) {
+            const reproducible = REPRODUCIBLE_CONTROL_DOMAINS.includes(link.domain);
+            const mine = offJudged.find((j) => j.domain === link.domain);
+            controlRows.push({
+              상품: row.title.slice(0, 40),
+              샵: link.domain,
+              "🔴 재현 가능한 샵인가": reproducible,
+              "운영 match_truth": link.match_truth,
+              "내 match_truth": mine?.matchTruth ?? null,
+              "운영 verified": link.verified,
+              "내 verified": mine?.verified ?? null,
+              "내 kind": mine?.kind ?? "(그 샵이 결과를 내지 않았다)",
+              "운영 tier": priceTierFromLink({ matchTruth: link.match_truth, verified: link.verified } as never),
+              "내 tier": mine?.tier ?? null,
+              "내 gate": mine?.gate ?? null,
+              "내가 고른 후보": mine?.title ?? null,
+              "운영이 고른 후보": link.matched_title,
+              "운영 URL": link.external_url,
+              "내 URL": mine?.url ?? null,
+              "🔴🔴 CONTROL PASS": reproducible
+                ? mine?.matchTruth === link.match_truth && mine?.verified === link.verified
+                : "구조적 재현 불가(샵 disabled) — 실패로 세지 않는다",
+            });
+          }
+        }
+
+        /** ── ON — Gemini 후보를 «점수 매겨» 합류시킨 뒤 같은 판정 ── */
+        const existing = new Set<string>(
+          domestic.flatMap((r) => r.candidates.map((c) => normalizeCandidateUrl(String(c.url)))),
+        );
         const pool = await collectGeminiCandidatePool({
-          dna: dna as never,
-          scopedDomains,
-          categoryScopes: scopes,
-          maxCandidates: 3,
-          targetUsable: 3,
-          maxQueries: 2,
-          existingNormalizedUrls: existing,
+          dna: dna as never, scopedDomains, categoryScopes: scopes,
+          maxCandidates: 3, targetUsable: 3, maxQueries: 2, existingNormalizedUrls: existing,
         });
-        const geminiCands = pool.searchResult?.candidates ?? [];
-        const onScored = crawler.withConfidence(query, [...domesticCands, ...geminiCands]);
+        /** 🟢 운영 배선과 **같은 한 줄** — 점수 없이 넘기면 게이트가 틀린 값을 읽는다. */
+        const geminiResults = pool.searchResults.map(
+          (r) => ({ ...r, candidates: crawler.withConfidence(query, r.candidates) }) as unknown as RawResult,
+        );
+        const geminiJudged = await judgeAll(geminiResults, query.sourceUrl as string | undefined, foreignModelCode, foreignColor, counters);
 
         cost.geminiCalls += pool.metrics.geminiCalls;
         cost.inputTokens += pool.metrics.inputTokens;
@@ -146,122 +244,99 @@ describe.skipIf(!LIVE)("🔴 MI-GEMINI-005 ⑥ — OFF/ON E2E", () => {
         cost.totalTokens += pool.metrics.totalTokens;
         cost.resolveCalls += pool.metrics.resolveCalls;
         cost.fetchCalls += pool.metrics.fetchCalls;
+        cost.domesticDetailFetch += counters.fetch;
         if (pool.metrics.model) modelUsed = pool.metrics.model;
         for (const [k, v] of Object.entries(pool.metrics.outcomes)) for (let i = 0; i < v; i += 1) allOutcomes.push(k);
         allFailures.push(...pool.metrics.failureDetails);
 
-        /** 🔴 Gemini 후보만 떼어 verdict 를 본다 — 국내 후보 결과에 섞지 않는다. */
-        const geminiUrls = new Set(geminiCands.map((c) => normalizeCandidateUrl(String(c.url))));
-        const geminiScored = onScored.filter((c) => geminiUrls.has(normalizeCandidateUrl(String(c.url))));
-
-        const vOf = (xs: Record<string, unknown>[]) => xs.map((c) => String(c.crossSellerVerdict ?? "(없음)"));
-
+        const exactish = (xs: Judged[]) => xs.filter((j) => j.tier === "EXACT").length;
         products.push({
-          brand: row.brand,
-          title: row.title.slice(0, 56),
-          scope: scopes,
+          CONTROL: control,
+          brand: row.brand, title: row.title.slice(0, 50), scope: scopes,
           "scope 통과 샵": targets.length,
-          "scopedDomains": scopedDomains,
+          foreignModelCode, foreignColor,
 
-          "OFF 후보": domesticCands.length,
-          "OFF verdict": tally(vOf(offScored)),
-          "OFF matchLevel": tally(offScored.map((c) => String(c.matchLevel))),
+          "OFF 판정 kind": tally(offJudged.map((j) => j.kind)),
+          "OFF matchTruth": tally(offJudged.map((j) => j.matchTruth ?? "(없음)")),
+          "OFF tier": tally(offJudged.map((j) => j.tier ?? "(없음)")),
+          "🟢 OFF EXACT 샵 수": exactish(offJudged),
+          /** 🔴 **게이트 이름을 찍는다.** 1차 CONTROL 에서 1건이 DROPPED 로 났는데
+           *     어느 게이트인지 출력에 없어 원인을 가를 수 없었다 — 「DROPPED」는
+           *     원인이 아니라 결과다(§5-B: 호출경로→설정→입력→결과 순으로 가른다). */
+          "🔴 OFF 판정 상세": offJudged,
 
           "🔴 Gemini outcome": pool.metrics.outcomes,
-          "🔴 Gemini 실패사유": pool.metrics.failureDetails,
-          "Gemini 발견 URL": pool.metrics.discoveredUrls,
-          "Gemini 상품페이지": pool.metrics.usableProductUrls,
+          "🔴 Gemini 실패사유": pool.metrics.failureDetails.slice(0, 2),
+          "Gemini host 그룹": pool.searchResults.map((r) => r.domain),
           "Gemini MI 후보": pool.metrics.miEligibleCandidates,
-          "Gemini 조기종료": pool.metrics.earlyStopped,
-          "Gemini 쿼리 사용": pool.metrics.queriesUsed,
 
-          "ON 후보": domesticCands.length + geminiCands.length,
-          "🟢 Gemini 후보 verdict": tally(vOf(geminiScored)),
-          "🟢 Gemini 후보 matchLevel": tally(geminiScored.map((c) => String(c.matchLevel))),
-          /** 🔴 scope 가 실제로 먹었는가 — 돌려받은 도메인을 센다(가정 금지) */
-          "🔴 Gemini 후보 도메인": geminiCands.map((c) => hostOf(String(c.url))),
-          "🔴 등록부 도메인과 겹치는가": geminiCands
-            .map((c) => hostOf(String(c.url)))
-            .map((h) => scopedDomains.some((d) => h.includes(d.replace(/^www\./, "")) || d.includes(h))),
+          "🟢🟢 ON Gemini 판정 kind": tally(geminiJudged.map((j) => j.kind)),
+          "🟢🟢 ON Gemini matchTruth": tally(geminiJudged.map((j) => j.matchTruth ?? "(없음)")),
+          "🟢🟢 ON Gemini tier": tally(geminiJudged.map((j) => j.tier ?? "(없음)")),
+          "🔴 ON 추가 EXACT": exactish(geminiJudged),
+          "Gemini 판정 상세": geminiJudged,
 
-          "🟢 Gemini 후보가 저장되지 않는 근거": pool.searchResult ? `shopId=${pool.searchResult.shopId}` : "후보 0",
-          "가상 샵 id 확인": pool.searchResult ? pool.searchResult.shopId === GEMINI_VIRTUAL_SHOP_ID : null,
-
-          /** 🔴🔴 이 WU 의 핵심 숫자 — OFF 에 없던 SAME 급 판정이 ON 에서 생겼는가 */
-          "🔴 OFF SAME/PRESUMED": vOf(offScored).filter((v) => v === "SAME" || v === "PRESUMED_SAME").length,
-          "🟢 ON 추가 SAME/PRESUMED": vOf(geminiScored).filter((v) => v === "SAME" || v === "PRESUMED_SAME").length,
-          "Gemini 후보 상세": geminiScored.map((c) => ({
-            url: String(c.url).slice(0, 90),
-            title: String(c.title ?? "").slice(0, 60),
-            verdict: c.crossSellerVerdict ?? null,
-            conf: c.confidence ?? null,
-            reasons: (c.crossSellerReasons as string[] | undefined)?.slice(0, 6) ?? null,
-            blockers: (c.crossSellerBlockers as unknown[] | undefined)?.length ?? null,
-            conflicts: (c.crossSellerConflicts as unknown[] | undefined)?.length ?? null,
-          })),
+          "가상 shopId 유지": geminiResults.every((r) => r.shopId === GEMINI_VIRTUAL_SHOP_ID),
+          "국내 상세 fetch": counters.fetch,
         });
       }
 
       const real = products.filter((p) => !p["🔴"]);
       const sumOf = (k: string) => real.reduce((a, p) => a + Number(p[k] ?? 0), 0);
+      const reproducible = controlRows.filter((c) => c["🔴 재현 가능한 샵인가"] === true);
+      const controlPass = reproducible.filter((c) => c["🔴🔴 CONTROL PASS"] === true).length;
 
       const report = {
         "🔴🔴 DISCLAIMER":
-          `sample 상품 N=${real.length}(아동복 ${KIDS_N} · 테니스 ${TENNIS_N}). ` +
-          "🔴 Production 배포 전이다 — Implemented / Not Production Verified. " +
-          "🔴 DB 쓰기 0 · upsert 를 부르지 않았다. 🔴 497개 기준 비용 환산을 하지 않는다(CPO 폐기).",
-        "① 모델": modelUsed,
-        "② 🔴 비용 — 네 칸으로 갈라 적는다": {
+          `sample 상품 N=${real.length} (CONTROL ${plan.filter((p) => p.control).length} · 아동복 2 · 테니스 2). ` +
+          "🔴 DB 쓰기 0 · upsert 호출 0. 🔴 497개 환산 금지. " +
+          "🔴 Implemented / Not Production Verified.",
+        "①🔴🔴 §5-B CONTROL — 「운영이 낸 그 값」 재현": {
+          "운영 링크 전체": controlRows.length,
+          "재현 가능한 샵의 링크": reproducible.length,
+          "🟢 재현 PASS": `${controlPass}/${reproducible.length}`,
+          "🔴 구조적 재현 불가(샵 disabled)": controlRows.length - reproducible.length,
+          상세: controlRows,
+        },
+        "② 모델": modelUsed,
+        "③ 🔴 비용 — 칸을 섞지 않는다": {
           "Gemini API 호출": cost.geminiCalls,
           "🔴 grounding 쿼리": "측정 불가 — usageMetadata 에 들어오지 않는다(0 이 아니다)",
-          "입력 토큰": cost.inputTokens,
-          "출력 토큰": cost.outputTokens,
-          "thoughts 토큰": cost.thoughtsTokens,
-          "총 토큰": cost.totalTokens,
-          "우리 서버 resolve": cost.resolveCalls,
-          "우리 서버 fetch": cost.fetchCalls,
-          [`상품당(N=${real.length})`]: real.length
-            ? { gemini: +(cost.geminiCalls / real.length).toFixed(2), tokens: Math.round(cost.totalTokens / real.length), fetch: +(cost.fetchCalls / real.length).toFixed(2) }
-            : "측정불가",
+          "입력 토큰": cost.inputTokens, "출력 토큰": cost.outputTokens,
+          "thoughts 토큰": cost.thoughtsTokens, "총 토큰": cost.totalTokens,
+          "우리 resolve": cost.resolveCalls,
+          "우리 fetch(Gemini 후보 확보)": cost.fetchCalls,
+          "🔴 국내 상세 fetch(판정 중 품번 확인)": cost.domesticDetailFetch,
         },
-        "③ outcome 집계 (🔴 0건 과 실패를 섞지 않는다)": tally(allOutcomes),
-        "③-b 🔴 실패 «사유» (개수만 세면 원인을 못 가른다)": tally(allFailures),
-        "④ 퍼널": {
-          "Gemini 발견 URL": sumOf("Gemini 발견 URL"),
-          "상품페이지로 해석": sumOf("Gemini 상품페이지"),
-          "MI 후보 생성": sumOf("Gemini MI 후보"),
-          "OFF 후보 합": sumOf("OFF 후보"),
-          "ON 후보 합": sumOf("ON 후보"),
+        "④ Gemini outcome (🔴 0건 과 실패를 섞지 않는다)": tally(allOutcomes),
+        "④-b 🔴 실패 사유": tally(allFailures),
+        "⑤ 🔴🔴 판정 결과 — judgeDomesticCandidate 기준": {
+          "OFF EXACT 샵 합": sumOf("🟢 OFF EXACT 샵 수"),
+          "ON 추가 EXACT 합": sumOf("🔴 ON 추가 EXACT"),
+          "Gemini MI 후보 합": sumOf("Gemini MI 후보"),
+          "🔴 주의":
+            "이 숫자는 withConfidence 단계의 crossSellerVerdict 가 아니라 " +
+            "judgeDomesticCandidate 의 matchTruth/verified → priceTierFromLink 산출이다.",
         },
-        "⑤ 🔴🔴 핵심 — OFF 에 없던 판정이 생겼는가": {
-          "OFF SAME/PRESUMED 합": sumOf("🔴 OFF SAME/PRESUMED"),
-          "🟢 ON 추가 SAME/PRESUMED 합": sumOf("🟢 ON 추가 SAME/PRESUMED"),
-          "효과가 난 상품 수": real.filter((p) => Number(p["🟢 ON 추가 SAME/PRESUMED"]) > 0).length,
-        },
-        "⑥ scope 검증": real.map((p) => ({
-          brand: p.brand, scope: p.scope, "scope 통과 샵": p["scope 통과 샵"],
-          "Gemini 후보 도메인": p["🔴 Gemini 후보 도메인"],
-          "등록부와 겹침": p["🔴 등록부 도메인과 겹치는가"],
-        })),
-        "⑦ 저장 차단": {
+        "⑥ 저장 차단": {
           "가상 샵 id": GEMINI_VIRTUAL_SHOP_ID,
-          확인: real.map((p) => p["가상 샵 id 확인"]),
+          "모든 Gemini 결과가 가상 shopId 를 유지": real.map((p) => p["가상 shopId 유지"]),
           "🔴 upsertDomesticProductLink 호출": 0,
         },
         products,
       };
 
       mkdirSync(OUT_DIR, { recursive: true });
-      /* 🔴🔴 **덮어쓰지 않는다.** 1차 실행은 고정 파일명을 썼고, 재실행이 그것을
-       *    덮어써서 **1·2차의 후보별 상세가 영구히 사라졌다**(남은 것은 터미널에
-       *    찍힌 집계뿐). 실측은 한 번뿐인 외부 호출에 의존하므로 — 특히 이 WU 는
-       *    3차에서 402 로 **더 이상 재현이 불가능해졌다** — 회차를 분리해 둔다. */
+      /* 🔴 **덮어쓰지 않는다** — 고정 파일명을 써서 1·2차 상세를 영구히 잃었다. */
       let seq = 1;
-      while (existsSync(path.join(OUT_DIR, `gemini-005-e2e-${seq}.json`))) seq += 1;
-      writeFileSync(path.join(OUT_DIR, `gemini-005-e2e-${seq}.json`), JSON.stringify(report, null, 1), "utf8");
+      while (existsSync(path.join(OUT_DIR, `vclose-${seq}.json`))) seq += 1;
+      writeFileSync(path.join(OUT_DIR, `vclose-${seq}.json`), JSON.stringify(report, null, 1), "utf8");
       // eslint-disable-next-line no-console
-      console.log("\n" + JSON.stringify({ ...report, products: `(${products.length}건 — 파일 참조)` }, null, 1));
+      console.log("\n" + JSON.stringify({ ...report, products: `(${products.length}건 — vclose-${seq}.json)` }, null, 1));
+
       expect(real.length).toBeGreaterThan(0);
+      /** 🔴 재현 가능한 CONTROL 이 하나도 없으면 측정이 성립하지 않는다 — 공짜 통과 방지. */
+      expect(reproducible.length).toBeGreaterThan(0);
     },
     90 * 60 * 1000,
   );

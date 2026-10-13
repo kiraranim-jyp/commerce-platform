@@ -54,7 +54,9 @@ const DNA: ProductIdentityDna = {
 const POOL_INPUT = {
   dna: DNA,
   scopedDomains: ["foretforet.com"] as readonly string[],
-  categoryScopes: ["KIDS_CLOTHING"],
+  /** 🔴 DB 의 실제 scope 어휘다 — `KIDS_CLOTHING` 은 **없는 값** 이고, 그것을
+   *     추측해 써서 E2E 1차 측정을 무효로 만들었다. 테스트에도 같은 값을 쓴다. */
+  categoryScopes: ["KIDS_FASHION"],
   maxCandidates: 3,
   targetUsable: 3,
   maxQueries: 2,
@@ -80,7 +82,7 @@ describe("MI-GEMINI-005 ⑦ — Gemini 실패가 운영 경로를 깨뜨리지 �
 
     const result = await collectGeminiCandidatePool(POOL_INPUT);
 
-    expect(result.searchResult).toBeNull();
+    expect(result.searchResults).toEqual([]);
     expect(result.metrics.outcomes.CONFIG_MISSING).toBeGreaterThan(0);
     expect(result.metrics.outcomes.OK).toBeUndefined();
     expect(result.metrics.outcomes.API_FAILURE).toBeUndefined();
@@ -100,7 +102,7 @@ describe("MI-GEMINI-005 ⑦ — Gemini 실패가 운영 경로를 깨뜨리지 �
 
     const result = await collectGeminiCandidatePool(POOL_INPUT);
 
-    expect(result.searchResult).toBeNull();
+    expect(result.searchResults).toEqual([]);
     expect(result.metrics.outcomes.API_FAILURE).toBeGreaterThan(0);
     expect(result.metrics.outcomes.CONFIG_MISSING).toBeUndefined();
     /** 🟢 실제로 Gemini 를 불렀다는 증거 — ① 과 구분된다. */
@@ -123,7 +125,7 @@ describe("MI-GEMINI-005 ⑦ — Gemini 실패가 운영 경로를 깨뜨리지 �
 
     const result = await collectGeminiCandidatePool(POOL_INPUT);
 
-    expect(result.searchResult).toBeNull();
+    expect(result.searchResults).toEqual([]);
     expect(result.metrics.outcomes.API_FAILURE).toBeGreaterThan(0);
     /** 🔴 timeout 을 「설정 문제」로 집계하면 운영에서 키를 다시 넣게 만든다. */
     expect(result.metrics.outcomes.CONFIG_MISSING).toBeUndefined();
@@ -149,7 +151,7 @@ describe("MI-GEMINI-005 ⑦ — Gemini 실패가 운영 경로를 깨뜨리지 �
 
     const result = await collectGeminiCandidatePool(POOL_INPUT);
 
-    expect(result.searchResult).toBeNull();
+    expect(result.searchResults).toEqual([]);
     /** 🔴 여기가 핵심 — outcome 은 **OK** 다. 「실패」가 아니다. */
     expect(result.metrics.outcomes.OK).toBeGreaterThan(0);
     expect(result.metrics.outcomes.API_FAILURE).toBeUndefined();
@@ -234,7 +236,7 @@ describe("MI-GEMINI-005 ③ — 정규화 URL dedupe", () => {
     /** 🟢 발견은 했지만 resolve 로 넘기지 않았다 — fetch 비용이 발생하지 않는다. */
     expect(result.metrics.discoveredUrls).toBeGreaterThan(0);
     expect(result.metrics.resolveCalls).toBe(0);
-    expect(result.searchResult).toBeNull();
+    expect(result.searchResults).toEqual([]);
   });
 });
 

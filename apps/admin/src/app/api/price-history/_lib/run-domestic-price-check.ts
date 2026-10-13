@@ -8,6 +8,7 @@ import {
   isSelfReferenceCandidate,
   refreshDomesticProductPrice,
   searchDomesticShops,
+  withConfidence,
   supportsDomesticIdentifierExtraction,
   type CandidateEvidenceDecision,
   type ComparisonCandidate,
@@ -773,7 +774,18 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       existingNormalizedUrls: existingUrls,
     });
     geminiMetrics = pool.metrics;
-    if (pool.searchResult) searchResults.push(pool.searchResult);
+    /* 🔴🔴 **점수를 매겨서** 넣는다. 처음엔 `factsFromProductUrl` 산출을 그대로
+     *    넣었는데 그것이 틀렸다 — 국내 경로는 `searchDomesticShops` «안에서»
+     *    `withConfidence` 를 부른다(comparison-search/index.ts:197). 그래서 국내
+     *    후보에는 `matchLevel`·`crossSellerVerdict`·`confidence` 가 이미 있다.
+     *    🔴 점수 없는 후보를 그대로 넘기면 바로 아래 게이트가 틀린 값을 읽는다:
+     *       `isEvidenceEvaluationWorthwhile` 가 `candidates[0].matchLevel !== "low"`
+     *       를 보는데 `undefined !== "low"` 는 **참** 이라 게이트가 공짜로 열리고,
+     *       `selectDomesticCandidate` 는 순서/등급을 근거로 고른다.
+     *    🟢 같은 함수를 같은 query 로 부르므로 **국내 후보와 동일한 자** 를 쓴다. */
+    for (const r of pool.searchResults) {
+      searchResults.push({ ...r, candidates: withConfidence(query, r.candidates) });
+    }
   }
   // H-3-6에서 루프 안에서 매 반복 재계산하던 것을 H-3-9에서 loop 밖으로 뺐다 — result에
   // 의존하지 않는 순수 파생값이라 동작은 동일하다(성능/가독성 정리).
@@ -914,6 +926,21 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       matchTruth: finalMatchTruth,
     } = judgement;
 
+    /* 🔴🔴 MI-GEMINI-005 ⑤ — **여기서 멈춘다.** Gemini 후보는 판정까지만 쓰고
+     * `domestic_product_links` 에 **남기지 않는다**(§5 「영구 DB 저장 금지」·
+     * §19 「외부 URL 장기 보관 금지」). 🔴 그래서 flag ON 이어도 Gemini 후보는
+     * `linksCreatedOrUpdated` 를 **올리지 않는다** — 보고에서 그 수를 Gemini
+     * 성과로 읽지 않기 위해 이 자리를 명시한다.
+     *
+     * 🔴🔴 **Vision «앞» 이다.** 처음엔 upsert 바로 앞에 뒀는데 그 사이에 Vision
+     *    블록이 있었다 — `findCachedVisionEvidence(snapshotId, result.shopId, ...)`
+     *    가 **가상 shopId 로 DB 를 뒤지고**, 캐시가 없으면 `runVisionEvidence` 가
+     *    **실제 외부 모델을 호출** 한다. 저장도 안 할 후보에 그 비용을 쓰고
+     *    (host 가 달라도 shopId 가 같으니) 캐시 키까지 오염시킨다.
+     * 🟢 판정은 이 줄 «위» 에서 이미 끝났다 — Vision 은 upsert 입력일 뿐이고
+     *    matchType·verified·matchTruth·priceTier 에 들어가지 않는다(아래 주석). */
+    if (result.shopId === GEMINI_VIRTUAL_SHOP_ID) continue;
+
     /**
      * P0-A.29-B(CEO 승인 ㉮, 2026-09-19) — Vision 을 «관측 데이터 수집기» 로만 부른다.
      *
@@ -943,13 +970,6 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       // 🔴 실패하면 undefined 그대로 둔다. 「같다」로도 「다르다」로도 읽지 않는다.
       visionEvidence = cached ?? (await runVisionEvidence(foreignImageUrl, domesticImageUrl)) ?? undefined;
     }
-
-    /* 🔴 MI-GEMINI-005 ⑤ — **여기서 멈춘다.** Gemini 후보는 판정까지만 쓰고
-     * `domestic_product_links` 에 **남기지 않는다**(§5 「영구 DB 저장 금지」·
-     * §19 「외부 URL 장기 보관 금지」). 🔴 그래서 flag ON 이어도 Gemini 후보는
-     * `linksCreatedOrUpdated` 를 **올리지 않는다** — 보고에서 그 수를 Gemini
-     * 성과로 읽지 않기 위해 이 자리를 명시한다. */
-    if (result.shopId === GEMINI_VIRTUAL_SHOP_ID) continue;
 
     const upsertResult = await upsertDomesticProductLink({
       snapshotId: input.snapshotId,
