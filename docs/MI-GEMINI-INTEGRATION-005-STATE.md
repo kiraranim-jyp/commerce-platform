@@ -675,3 +675,99 @@ API failure    1 (TimeoutError · Children 1건)
 ④ 🔴 Registration Increment 를 0 이 아니게 하려면 **저장 정책을 바꿔야** 하고,
    그것은 §5/§19 금지와 정면 충돌이므로 **CPO 정책 결정** 이다.
 ```
+
+---
+
+# ◆ WU-010 `REGISTRATION-CONSUMER-010` — 🔴🔴 **BLOCKED (구현하지 않았다)**
+
+> 🔴 consumer 를 찾았다. 🔴🔴 **그런데 지금 연결하면 제품이 셀러에게 거짓을 말한다.**
+> 🔴 그래서 코드를 **한 줄도 바꾸지 않았다**(지시서 §16 「코드로 우회하지 말고 보고」).
+> 🟢 막는 것은 하나이고, 그것을 푸는 owner 도 이미 리포에 있다.
+
+## ① consumer 는 찾았다 — 사슬 전체
+
+```
+computeMarketIntelligence (market-intelligence.ts:82)
+  :501  computeSellerAction(...)            ← 가격 집계만 받는다(후보 배열 아님)
+  :540  computeSellability({ costPriceKrw, domestic:{ matched, averagePriceKrw } })
+  :552  deriveRepresentativeSellerVerdict(...)   ← 🔴🔴 **여기가 실제 등록 판단이다**
+        (packages/pricing/src/representative-seller-decision.ts:175)
+  :574  toSellerFacingVerdict(...) → sellerFacingVerdict (최종 3단계)
+```
+
+🟢 「동일상품이 국내에 있는가」가 들어가는 슬롯도 찾았다 —
+`RepresentativeVerdictInput`(representative-seller-decision.ts:54)의
+`domesticMatched` · `domesticSellerCount` · `domesticBasis` · `domesticLowestPriceKrw`.
+
+## ②🔴🔴 그 슬롯은 **전부 「가격 보유」 의미** 다 — 그래서 넣을 수 없다
+
+owner 가 그 의미를 **문구로 못박아** 뒀다(`domesticReason`, :117-123):
+
+```
+!domesticMatched            → 「국내 동일상품을 자동으로 찾지 못함」
+domesticBasis === "EXACT"   → 「국내 동일상품 {N}곳에서 **가격 확인됨**」
+그 외                        → 「… 비교상품(참고용) {N}곳 **시장가격 기준**」
+```
+
+그리고 `VERDICT_COPY.READY` 도 「국내 시장에서 **동일상품 가격을 확인했습니다**」다.
+
+🔴🔴 **Gemini 후보에는 가격이 없다.** 전수 확인:
+```
+gemini-candidate-pool.ts 에 price 어휘 **0건**(grep)
+GeminiTransientEvidence 에도 가격 칸이 **없다**
+WU-4 기록과 일치 — 「후보 가격은 이 경로에서 전건 null(product-url-facts 의 의도된 동작)」
+```
+
+→ 가격 없는 증거를 `domesticMatched = true` 로 넣으면 화면이
+**「국내 동일상품 N곳에서 가격 확인됨」** 이라고 말한다. **확인된 가격이 없는데.**
+🔴 헌장 §4 가 금지하는 바로 그것이다 — 「부분 구현으로 화면이 거짓말하게 만들지 않는다」.
+🔴 `computeSellability` 는 더 직접적이다 — `matched:true` + `averagePriceKrw:null` 이
+   들어간다(마진을 계산할 수 없는 상태에서 「매칭됨」).
+
+## ③ 그래서 이 WU 의 성공 조건은 **현재 계약에서 달성 불가** 다
+
+```
+지시서 요구   「기존 MI evidence + Gemini transient evidence → 기존 판단 규칙」
+🔴 현재 계약  그 입력 슬롯이 **가격 보유 증거만** 받는다
+→ 「기존 규칙 그대로」를 지키면서 Gemini 를 넣을 자리가 **없다**
+→ 넣으려면 ⒜ 규칙/문구를 바꾸거나(=기존 정책 변경 · 금지)
+           ⒝ 별도 슬롯을 신설하거나(=새 판정 입력 · 사실상 새 규칙)
+           ⒞ **Gemini 후보에 가격을 붙인다**
+```
+
+## ④🟢 ⒞ 의 owner 가 이미 있다 — 다음 WU 는 한 걸음이다
+
+```
+enrichCandidatePrices   packages/crawler/src/comparison-search/price-source-adapter.ts:243
+🔴 운영 호출부 **0** (apps/admin 전수 grep · 테스트 제외) — 배선만 없다
+🟢 WU-4 Known Unknowns 가 이미 이것을 가리켰다:
+   「가격 비교까지 가려면 `enrichCandidatePrices` 가 더 필요하다」
+```
+
+가격이 붙으면 Gemini 증거가 **기존 계약과 호환**된다 → 그때 `domesticMatched`/
+`sellerCount`/`lowestPriceKrw` 슬롯에 **기존 규칙 그대로** 들어갈 수 있고,
+화면 문구도 거짓이 아니게 된다.
+
+🔴 **단 그것은 외부 HTTP 비용이 늘어나는 변경이고 CPO 승인 사안이다.**
+🔴 그리고 WU-4 가 남긴 더 앞선 문제가 그대로 있다 — **유효 국내 EXACT = 0**
+   (Gemini 가 낸 국내 host 들의 tier 는 COMPARISON/EXCLUDED 였다). 즉 가격을
+   붙여도 **EXACT 버킷에는 여전히 안 들어갈 가능성이 높다**(미측정).
+
+## ⑤ 이 WU 에서 한 일 / 하지 않은 일
+
+```
+🟢 한 일    consumer 사슬 전수 확인 · 입력 계약 전수 확인 · 가격 부재 전수 확인 ·
+            차단 사유를 owner 의 «문구» 로 확증 · 해결 owner 위치 확인
+🔴 안 한 일 **코드 변경 0** · 테스트 추가 0 · 배선 0 · merge 0 · deploy 0
+            🔴 `domesticMatched` 에 Gemini 를 넣는 구현을 **의도적으로 하지 않았다**
+```
+
+## 판정
+
+```
+consumer 식별       🟢 PASS
+연결 구현           🔴 **BLOCKED** — 지금 연결하면 화면이 거짓을 말한다
+Production          변경 0 · 미배포
+🔴 CPO 결정 필요    ⒞ Gemini 후보 가격 보강(enrichCandidatePrices 배선)을 할 것인가.
+                    🔴 외부 HTTP 비용 증가 · 그리고 유효 국내 EXACT 0 문제는 별개로 남는다
+```
