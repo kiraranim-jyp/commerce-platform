@@ -407,7 +407,52 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 | ⑤-a | 실제 등록 UX **배선** | 🟢 **배선 PASS** (WU-022 · CLOSED) |
 | ⑤-b | Production **실화면** | 🔴 **미확인** |
 
-### 🔴🔴🔴 그래서 — **추가 개발 WU 를 만들지 않는다** (CPO 확정 2026-10-14)
+### 🔴🔴 다음 WU 는 **이미 정해져 있고 HOLD 다** — `MI-PRODUCTION-E2E-FINAL-023`
+
+🔴🔴 **지금 착수하지 않는다.** 조건부 실행 WU 다(CPO 2026-10-14). 전문 지시서는 CPO 가
+줬고 아래는 **착수 판단과 사전조건** 만 남긴 것이다.
+
+```
+착수 조건 둘 — **둘 다** 충족돼야 한다
+  ① Gemini 실운영 호출 비용/크레딧 사용 **승인**
+  ② CPO 가 **Production 배포 + CEO 최종 테스트 개시를 명시적으로 지시**
+승인 기준점(실행 시점에 더 최신 승인 커밋이 있으면 그것으로 갱신해 기록한다)
+  d6b1defd · origin/mi-gemini-005
+🔴 flag `MI_GEMINI_DISCOVERY_ENABLED` 를 **CTO 가 임의로 바꾸지 않는다.**
+🔴 실패하면 **즉시 개발 WU 로 전환하지 않는다** — FAIL 지점 · 재현 로그 · 실제 입출력 ·
+   코드 경로 · 원인 · 영향범위까지만 보고하고 **CPO 가 분류** 한다
+   (수정 필요 / 설정 / 비용 / 데이터 / 제품정책).
+🔴 PASS 는 **8항 전부** 다. 「Gemini 가 후보를 찾았다」를 성공으로 쓰지 않는다 —
+   MI 판정 → 최종 판매판정 → 등록 UX 까지 본다.
+```
+
+#### 🔴🔴 그 WU 를 열기 «전» 에 알아야 할 사전 점검 둘 (CTO 실측 · 코드 변경 0)
+
+```
+① 🟢 비용 상한은 **사실상 충족** 돼 있다 — 상품당 Gemini **1 call** 이다.
+   🔴 그러나 호출부 파라미터는 `maxQueries: 2`(run-domestic-price-check.ts:901) 다.
+   🟢 1 call 이 되는 실제 이유는 pool 이 **1개짜리 배열** 을 만들고
+      `.slice(0, Math.max(1, input.maxQueries))`(gemini-candidate-pool.ts:248-255)
+      를 걸기 때문이다 — 즉 **상한을 배열 길이가 지키고 파라미터가 지키지 않는다.**
+   🔴 나중에 `buildPrimaryQuery` 가 후보 쿼리를 2개 내게 되면 **조용히 2 call** 이 된다.
+   🔴 고치지 않았다(코드 변경 금지 구간) — 열 때 같이 판단할 사안이다.
+
+② 🔴🔴 §11 의 계측표를 **CTO 가 Production 에서 읽을 수 없다.**
+   `geminiMetrics`(토큰·grounding query 수·discovered/usable URL·outcomes)는
+   POST `/check` 응답의 `domesticShop.geminiMetrics` 로 **브라우저까지만** 간다
+   (run-domestic-price-check.ts:1329). 🔴 소비 코드 **0** · `console.log` **0건**.
+   🔴 그런데 Production 화면은 로그인 뒤이고 CTO 는 브라우저를 몰 수 없다
+      (메모 `production-payload-is-unreachable`).
+   → 🔴 **그대로 열면 §11 「실제 계측값만 보고한다」를 충족할 수 없다.**
+   🟢 선택지 셋 (전부 CPO 결정 · CTO 가 임의로 고르지 않는다):
+      ⒜ `[MI-016-gate]` 와 같은 **로그 한 줄** 을 metrics 에 추가 → Vercel 런타임
+         로그로 읽는다(메모 `vercel-runtime-logs-are-reachable`). 🔴 **코드 변경** 이라
+         지금은 금지 — WU 를 열 때 **포함시켜야 한다.**
+      ⒝ CEO/CPO 가 브라우저에서 응답을 복사해 전달한다(코드 변경 0).
+      ⒞ 계측 일부를 「측정 불가」로 받아들인다 — 🔴 단 §11 과 충돌한다.
+```
+
+### 🔴🔴🔴 그 외에는 — **추가 개발 WU 를 만들지 않는다** (CPO 확정 2026-10-14)
 
 ```
 🔴🔴 남은 것은 **개발 문제가 아니다** — 「실제 운영 조건에서의 최종 검증」이다.
