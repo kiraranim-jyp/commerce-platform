@@ -96,8 +96,10 @@ upsert 직전  if (result.shopId === GEMINI_VIRTUAL_SHOP_ID) continue;
 scope 통과 샵     아동복 **6** · 테니스 **1**        🟢 운영 함수로 갈랐다
 퍼널              Gemini 발견 URL 43 → 상품페이지 6 → MI 후보 **6**
 후보 합           OFF **35** → ON **41**
-🟢🟢 핵심          OFF SAME/PRESUMED **0** → ON 추가 SAME/PRESUMED **4**
+🟡 핵심            OFF SAME/PRESUMED **0** → ON 추가 SAME/PRESUMED **4**
                   효과가 난 상품 **2/5**
+🔴🔴 **단 이 4건은 `crossSellerVerdict` 개수다 — 운영 링크 결과가 아니다.**
+      하니스가 `judgeDomesticCandidate` 를 부르지 않았다(§6 Known Unknowns)
 비용              Gemini 호출 8 · 입력 1,364 · 출력 2,715 · thoughts 2,781 ·
                   총 6,860 토큰 · 우리 resolve 9 · 우리 fetch 15
                   상품당 — Gemini 1.6회 · 1,372토큰 · fetch 3.0회
@@ -261,6 +263,15 @@ domestic-product-link.ts 0 · vitest.config/tsconfig **미변경**
 🔴 497개 기준 비용 환산 **하지 않았다**(CPO 폐기 지시)
 🔴 Gemini 후보 가격은 전건 null(product-url-facts 의 의도된 동작) — 가격 비교까지
    가려면 `enrichCandidatePrices` 가 더 필요하고 이 WU 범위가 아니다
+🔴🔴 **하니스가 `judgeDomesticCandidate` 를 부르지 않았다 — 보고 전 자기검증에서
+   내가 찾았다.** `withConfidence` 까지만 불렀다. 즉 「ON 추가 SAME/PRESUMED 4」는
+   **`crossSellerVerdict` 개수** 이고 **운영의 링크/tier 결과가 아니다.**
+   🔴 배선 자체는 올바르다 — Gemini 후보가 `searchResults` 에 들어가므로 운영에서는
+      그 뒤 게이트(`judgeDomesticCandidate` + `fetchDomesticModelCode`)를 **그대로 탄다**.
+      측정만 한 단계 짧다. 🔴 §5-B 가 **이 트랙에서 이미 한 번 잡은 바로 그 함정** 이다
+      (「searchDomesticShops + withConfidence 까지만 불렀는데 운영은 그 뒤가 더 있었다」).
+   🔴 그래서 그 4건이 운영에서 실제로 링크가 될지는 **측정되지 않았다.** 0 도 4 도 아니다.
+   🔴 402 때문에 **지금 다시 잴 수 없다** — 크레딧 충전 후 재측정 대상이다
 🔴 flag ON 상태의 **Production** 동작은 **미검증** — 배포하지 않았다
 🔴 crawler 전체 회귀 baseline 부재(위 §5)
 ```
