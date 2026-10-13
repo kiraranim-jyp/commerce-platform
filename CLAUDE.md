@@ -1058,6 +1058,26 @@ GitHub Actions 는 **없다** → **`main` push 가 그대로 Production 배포�
    CTO 가 임의로 머지하지 않는다. `vercel --prod` CLI 는 쓰지 않는다
    (메모 `vercel-deploy-from-repo-root`).
 
+### 🟢 008A CLOSED — 자기참조 «목록 세그먼트» 가 닫혔다 (CPO 확정 2026-10-13)
+
+```
+🟢 canonicalListingKey 에 목록 세그먼트 제거 1줄 — /collections/<c>/products/X 와
+   /products/X 는 **같은 listing** 이다(WU-4 에서 EXACT 를 받았던 누출).
+   🔴 lookahead 로 `products/` 가 뒤따를 때만 뗀다 → /collections/aaa 같은 목록
+      URL 이 뭉개지지 않는다(collision 금지). 쿼리 로직은 **무변경**.
+🟢🟢 **로케일은 자기참조가 «아니다» — 확정된 제품 정책이다.**
+   /en-kr/products/X ↔ /products/X → **다른 시장** → 자기참조 아님.
+   근거 우선순위: mi-real-05-self-reference.test.ts:153 의 「경로가 다르면
+   (시장 전환 포함) 제외하지 않는다」가 **제품 정책을 직접 말하는 계약** 이고,
+   toCrawlerUrl 의 「로케일 제거」 주석은 **정규화 구현의 성격** 일 뿐이다.
+   🔴 주석을 근거로 그 계약을 뒤집지 않는다. 🔴 로케일 섞인 쌍을 **「누출」로
+      다시 세지 않는다**(CPO 명시).
+🔴 tennis-warehouse 2건은 **URL 구조 미확정** — 추측하지 않는다. 결함으로 세지 않는다.
+🟢 회귀 crawler 852 passed(baseline 833 + 신규 19) · admin 7,553(7,534 + 19) ·
+   typecheck 10 = baseline · guard 6/6 · build exit 0 · 음성대조 **양방향**
+   (collections 제거를 되돌리면 4 FAIL · lookahead 를 지우면 2 FAIL)
+```
+
 ### 🔴 MI-GEMINI-005 상태 — **IMPLEMENTED / ON-AXIS UNMEASURED** (CPO 확정)
 
 ```
@@ -1069,7 +1089,20 @@ Gemini ON 축           🔴 **미측정** — 402 prepayment credits depleted (
 Push                   🟢 브랜치   Production Deploy 🔴 보류   CEO 테스트 🔴 없음
 ```
 
-🔴🔴 **다음은 코드 작업이 아니다. 코드 변경 0 을 원칙으로 한다.**
+🔴🔴 **다음은 코드 작업이 아니다.** CPO 가 WU-4 결과를 종합해 **다섯 가지** 를
+결정하는 단계다(CTO 가 선제적으로 들어가지 않는다):
+```
+① 유효 «국내» Discovery 가 실제로 얼마나 있었는가
+② 국내 SAME/PRESUMED_SAME 의 품질
+③ Registration Increment = 0 인 현재 구조를 어떻게 볼 것인가
+④ AI Studio 실제 Grounding 비용
+⑤ Gemini 를 등록 판단에 «어느 지점까지» 연결할 것인가
+🔴 threshold 완화와 저장 정책 변경을 CTO 가 선제적으로 하지 않는다.
+   저장 정책은 **제품 정책** 이라 CPO 가 따로 결정한다.
+🔴 CEO 테스트 없음 · Production deploy 없음.
+```
+
+🔴 **그리고 아래 ON 축 재측정은 코드 변경 0 을 원칙으로 한다.**
 ```
 Gemini 선불 크레딧 확보(🔴 **CEO 비용 승인** — 이 트랙 최초의 진짜 사업 결정)
       ↓ 새 기능 0 · 기존 하니스 재실행만

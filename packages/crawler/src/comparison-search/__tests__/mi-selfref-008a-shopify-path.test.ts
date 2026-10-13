@@ -18,9 +18,10 @@ import { canonicalListingKey, isSelfReferenceCandidate } from "../self-reference
  *
  *    실측 누출 **4/24 (17%)** — junioredition ×2(EXACT) · tennis-warehouse ×2(COMPARISON).
  *
- * 🔴🔴 **이 WU 가 닫은 것은 목록 세그먼트 하나다.** 로케일 접두사는 리포 안에
- *    상반된 두 결정이 있어 **CPO 판정 대기** 로 남겼다(아래 B 참조). 그래서
- *    누출 4건 중 **2건(collections 만 다른 쌍)이 닫히고 2건이 남는다.**
+ * 🟢 **이 WU 가 닫은 것은 목록 세그먼트 하나이고, 그것으로 종료됐다.**
+ *    로케일 접두사는 CPO 가 **「다른 시장이므로 자기참조 아님」으로 확정** 했다
+ *    (2026-10-13 · 아래 B 참조). 🔴 그래서 로케일이 섞인 쌍은 **결함이 아니다** —
+ *    「남은 누출」로 다시 세지 않는다.
  *
  * 🔴 **원인은 Gemini 가 아니다.** `canonicalListingKey` 가 host·대소문자·끝슬래시·
  *    식별 쿼리만 정규화하고 Shopify 의 `/collections/<c>/` 와 `/en-kr/` **경로
@@ -60,30 +61,33 @@ describe("A. /collections/<c>/products/<p> ↔ /products/<p> → 자기참조", 
 
 /* ══════════════ B. locale + collections 접두사 ══════════════ */
 
-describe("B. 🔴 로케일 접두사 — **이 WU 가 닫지 않았다**(CPO 정책 결정 대기)", () => {
+describe("B. 🟢 로케일 접두사 = «다른 시장» — **확정된 제품 정책**(CPO 2026-10-13)", () => {
   const ORIGIN = "https://www.junioredition.com/en-kr/collections/pepe-shoes/products/lulu-t-bar-shoes-in-vernice-nero-by-pepe";
   const CANDIDATE = "https://www.junioredition.com/products/lulu-t-bar-shoes-in-vernice-nero-by-pepe";
 
   /**
-   * 🔴🔴 **리포 안에 상반된 두 결정이 있다. CTO 가 고르지 않았다.**
+   * 🟢🟢 **CPO 가 확정했다(2026-10-13) — 로케일은 자기참조가 아니다.**
    *
-   *   ① `mi-real-05-self-reference.test.ts:153` — 「경로가 다르면 **(시장 전환 포함)**
-   *      제외하지 않는다」. `/en-kr/products/X` ↔ `/products/X` 를 **false** 로 고정.
-   *   ② `toCrawlerUrl`(url-shape.ts:119) 주석 — 「**로케일도**, 목록 경로도 떼어 낸
-   *      «정규» 상품 URL」. `p54c1-grounding-redirect:164-165` 는 정규화 «후» 비교해야
-   *      걸린다고 적는다.
+   * ```
+   * /collections/<c>/products/X  ↔  /products/X        → SAME LISTING → 자기참조
+   * /en-kr/collections/<c>/products/X ↔ /products/X    → **다른 시장** → 자기참조 아님
+   * ```
    *
-   * 🔴 ①을 뒤집으면 「시장 전환」 결정이 깨지고, ②를 무시하면 아래 누출이 남는다.
-   *    **제품 정책 경계라 CPO 판정 사안이다**(지시서 §2 「최소 범위만」).
+   * 🔴 근거의 우선순위가 정해졌다:
+   *   ① `mi-real-05-self-reference.test.ts:153` 「경로가 다르면 **(시장 전환 포함)**
+   *      제외하지 않는다」 — **제품 정책을 직접 말하는 계약** 이다. 이것이 이긴다.
+   *   ② `toCrawlerUrl`(url-shape.ts:119) 의 「로케일 제거」 주석 — **URL 정규화 구현의
+   *      성격** 을 설명할 뿐, listing 동일성에 대한 제품 정책 근거로는 부족하다.
+   *      🔴 주석을 근거로 ①을 뒤집지 않는다.
    *
-   * 🔴 그래서 이 describe 는 **현재 동작을 그대로 고정** 한다 — 「고쳤다」로 읽히지
-   *    않게 하는 것이 이 테스트의 목적이다. 정책이 정해지면 이 블록을 뒤집는다.
+   * 🔴 따라서 아래 두 케이스는 **결함이 아니라 확정된 동작** 이다. 「남은 누출」로
+   *    다시 세지 않는다(CPO 명시). 로케일 정규화를 추가하지 않는다.
    */
-  it("🔴 WU-4 실측 — 로케일이 섞인 쌍은 **아직 잡히지 않는다**", () => {
+  it("🟢 로케일이 섞인 쌍은 자기참조가 아니다(다른 시장) — 확정 정책", () => {
     expect(isSelfReferenceCandidate(ORIGIN, CANDIDATE)).toBe(false);
   });
 
-  it("🔴 로케일만 다른 경우도 **아직 잡히지 않는다**", () => {
+  it("🟢 로케일만 다른 경우도 자기참조가 아니다 — 확정 정책", () => {
     expect(
       isSelfReferenceCandidate(
         "https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story",
