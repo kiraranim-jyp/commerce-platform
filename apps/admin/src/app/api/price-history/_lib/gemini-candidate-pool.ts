@@ -182,7 +182,7 @@ function hostOf(raw: string): string {
 }
 
 /** 🔴 DNA → ProductIdentity. 값을 **지어내지 않는다** — 없으면 null 이다. */
-function identityFromDna(dna: ProductIdentityDna): ProductIdentity {
+export function identityFromDna(dna: ProductIdentityDna): ProductIdentity {
   let host: string | null = null;
   try {
     host = new URL(dna.sourceUrl).hostname.replace(/^www\./i, "");
