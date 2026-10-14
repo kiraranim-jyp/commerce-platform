@@ -286,3 +286,58 @@ ok 10 중 **후보 0건인 샵 3** — childrensalon · folkberlin · isolabella
 ⒞ 🔴 **재현성** 이 별 사안으로 남는다 — 같은 상품·같은 샵인데 실행마다 후보 집합이
    달라진다(ICHI 1/3). 원인은 미조사다.
 ```
+
+---
+
+# WU-013 — Fetch Cache Audit (**코드 읽기만** · HTTP 0)
+
+🔴 코드 수정 0 · HTTP 재실행 0 · threshold/SIMILAR/brand/Registry/adapter/query/AI 0 · 배포 0.
+
+## 결론
+
+```
+프로세스 내 캐시                    **NO**
+HTTP / Next fetch cache             **NO**
+외부 캐시(Redis/KV/DB)              **NO**
+request dedupe                      **NO**
+WU-012 3회 반복이 캐시 영향을 받을 가능성   **NO** (우리 코드 기준)
+```
+
+## 근거 — 파일 + 함수 + 코드
+
+```
+① fetch 옵션 전수   `cache:`/`revalidate`/`next: {}` → packages/crawler/src 와
+   apps/admin/src/app/api/{comparison,domestic-price-sources} 에 **0건**
+   → Next fetch 캐시에 **opt-in 한 곳이 없다**
+② 외부 캐시        `redis|upstash|@vercel/kv|memcach` → 리포 전체 **0건**
+③ module-level 캐시 crawler 전체에서 `new Map`/`new Set` 상수는 **둘뿐**
+     match.ts:6            `STOPWORDS`      — 불변 단어 집합(응답 아님)
+     domain-rate-limiter.ts:18 `DOMAIN_STATE` — 호스트별 **rate-limit 상태**
+       (`blockedUntil` 등). 🔴 **응답 본문을 담지 않는다** → 캐시가 아니다
+④ 실제 fetch       domain-rate-limiter.ts:162 `fetchWithDomainRateLimit`
+     `let response = await fetch(url, init)` → **매번 네트워크로 나간다**
+     429 일 때만 backoff 재시도 · 🔴 결과 저장/재사용 코드 **없음**
+⑤ shopify fetcher  shopify-product-json.ts · shopify-suggest.ts 에
+     `memo|cached|new Map` **0건**
+⑥ 라우트 선언      `export const revalidate` / `dynamic` / `unstable_cache` →
+     두 API 디렉터리에 **0건**
+```
+
+🟢 **그리고 WU-012 하니스는 Next 런타임이 아니라 vitest/Node 에서 돌았다** — Next 의
+fetch 패치가 **적용되지 않는 환경** 이다. 즉 평범한 undici `fetch` 이고 응답 캐시가 없다.
+
+## 🔴 그래서 WU-012 해석은 **유지** 된다 — 단 원인은 여전히 외부다
+
+```
+🟢 3회가 동일한 것은 **우리 캐시 때문이 아니다**(위 ①~⑥).
+🔴 그러면 남는 설명은 둘이고 **아직 가르지 못했다**:
+   ⒜ 5초 안의 3회라서 **외부 샵/CDN 이 같은 응답을 돌려줬다**(Shopify CDN 캐시 등)
+      🔴 그것은 **그쪽 캐시** 이고 우리가 코드로 확인할 수 없다
+   ⒝ 그 시점의 샵 상태가 실제로 안정적이었다
+🔴 WU-010A(표시 0) → WU-011(표시 0) → WU-012(표시 1) 의 분 단위 변동은
+   위 ⒜/⒝ 중 어느 쪽으로도 설명될 수 있다. **단정하지 않는다.**
+```
+
+🟡 **다음 단계 입력** — 우리 캐시가 없음이 확정됐으므로, CPO 가 지시한 「프로세스를 나눈
+3회 반복」이 **의미 있는 측정** 이 된다(같은 프로세스가 아니어도 결과가 같다면 ⒝,
+간격을 벌리면 달라진다면 ⒜ 쪽이다).
