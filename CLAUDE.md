@@ -475,8 +475,45 @@ Gemini 내부 검색어 3개가 **전부 품번** 을 썼고 둘은 스스로 `s
 007A Shopify Search Evidence Sanitize   🟢 CLOSED / FIX(FP 28/28 → 0) · 🔴 배포됐으나
                                         **Production Acceptance = FAIL**(CEO 테스트)
 008 B226AC117 FAIL 원인 추적             🟢 완료 / 조사 전용
-009 Identity/Market Provenance           🟡 **C 만 구현 · A 전제 반증 · B 이미 구현 · D 보류** ← 지금 여기
+009 Identity/Market Provenance           🟡 C 만 구현 · A 전제 반증 · B 이미 구현 · D 보류
+010 Candidate Display Provenance         🟢 **STEP 1 완료 — 경로 셋 · ③이 원인 성질** ← 지금 여기
 ```
+
+### 🟢🟢 WU-010 STEP 1 — **화면 후보 공급 경로는 «셋» 이고 ③이 무관 상품을 올린다**
+
+🟢 전문 `docs/CANDIDATE-DISPLAY-PROVENANCE-010.md`. 🔴 AI 0 · 검색 API 0 · 키 0 · 결제 0 ·
+Registry 변경 0 · schema 0 · DB 쓰기 0 · 환산 0 · 임계값 0 · **배포 0**.
+
+```
+① 저장된 링크(DB)      GET  /api/domestic-price-sources/links  Panel:1842  → **0행**
+② transient 국내       POST /api/domestic-price-sources/search DomesticShopSearch:180
+                       후보 5 · INSUFFICIENT_EVIDENCE 5/5 → **표시 0**(더 보기에도 없음)
+③ transient **해외**    POST /api/comparison/search             ComparisonShopSearch:218
+                       후보 31 · CONFLICT 18 · SIMILAR 7 · UNKNOWN 6
+                       🔴🔴 **표시 1** — junioredition.com 「Elovera Jacket … by **ICHI**」
+                       **GBP 39** · SIMILAR · confidence **0.33**(≥ 0.2)
+```
+🔴 즉 **CEO 가 본 성질이 ③에서 재현된다** — 원상품은 Bobo Choses `B226AC117` ¥26,400 인데
+**브랜드도 상품도 다른** 후보가 「유사상품」으로 선다.
+🟢 게이트는 **30/31 을 막았다**(SIMILAR 6건은 confidence 0.14~0.17 로 하한 미달).
+🔴 통과한 0.33 은 제목에서 **`jacket` 한 단어** 가 겹친 결과로 보인다.
+
+🔴 **단정하지 않는 것 셋** — ⒜ 「CEO 가 본 것이 바로 그 ICHI 재킷」이라고 단정하지 않는다
+(로그인 뒤 DOM 미열람) ⒝ 🔴 **샵 20/30 이 오류** 였으므로 「표시 1」은 **하한** 이다
+⒞ 「브랜드가 있었으면 CONFLICT 였을 것」도 단정하지 않는다 — 🟡 **같은 HTTP 로 1회 더
+돌려 반사실을 측정할 수 있다**(브랜드만 주입 → ICHI 가 CONFLICT 로 바뀌는지). 그것이
+WU-009-A 의 가치를 **추정 없이** 재는 방법이다.
+
+🟢 **STEP 2 — 저장 게이트는 건드리지 않았다.** CPO 요구 셋은 이미 충족돼 있다.
+🔴🔴 그리고 **「low 를 `matchLevel` 로 빼면 과거 버그가 되돌아온다**」 — 리포 기록
+(`DomesticShopSearch.tsx:60-67`): 진짜 동일상품(STRONG_IDENTIFIER)의 confidence 가
+**0.42(=low)** 라 그 필터가 숨겼고 **의도적으로 제거** 됐다. 현재 축은 `matchTruth` +
+`confidence ≥ MIN_DISPLAY_SIMILARITY(0.2)` 이고 `matchLevel` 은 게이트 입력이 **아니다**
+(하니스 ①-4 가 그 성질을 단언으로 잠갔다).
+
+🔴 **STEP 3 — 「시장 부재」를 기록할 기존 칸이 없다.** `price_observations` 칸 전수 확인:
+관측은 **행의 존재** 로만 표현되므로 「미관측」과 「시장 부재」가 **같은 모양** 이다.
+🟡 기존 자리 후보 둘(⒜ 상태 문자열 칸 ⒝ 샵 축 시도 기록)만 적었고 **새 테이블은 만들지 않았다**.
 
 ### 🟡 WU-009 — 네 항목의 결과가 **서로 다르다** (전문 `docs/IDENTITY-MARKET-PROVENANCE-009.md`)
 
