@@ -36,6 +36,8 @@ export { compareModelCode, extractForeignModelCode } from "./model-code";
  * bobochoses.com 둘 다 여기로 흡수된다. */
 export {
   confirmBrandCodeInTitle,
+  confirmBrandCodeInEvidence,
+  type BrandCodeEvidenceFields,
   extractBobochosesModelCode,
   fetchDomesticModelCode,
   supportsDomesticIdentifierExtraction,

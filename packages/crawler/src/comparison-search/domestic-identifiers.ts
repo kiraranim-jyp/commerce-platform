@@ -80,6 +80,99 @@ export function confirmBrandCodeInTitle(foreignCode: string | null, title: strin
   return null;
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * WU-004 Track A — **건초더미만 넓힌다.** 판정 규칙은 위 함수 그대로다.
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 왜 필요한가 — 구현 «전» 벤치마크 실측(비용 0 · 저장된 후보 15건):
+ * ```
+ * 🔴 title 에서 발견   **0건**   ← 위 함수가 보던 유일한 자리
+ * 🟢 URL 에서 발견     **3건**   bobochoses(공식) · global.trenbe.com · 운영 링크
+ * ```
+ * 🟢 즉 품번은 **URL 경로에 적혀 있었고 제목에는 없었다.** 특히 `global.trenbe.com`
+ *    (등록부 «밖» 리세일 플랫폼)이 그렇고, WU-023B 에서 그 후보가 SAME(0.53)을 받았다.
+ *
+ * ── 🔴 안전 성질 셋을 **그대로 물려받는다** ────────────────────────────────
+ * ```
+ * ① 원본에서 확정된 품번만 받는다 — 후보에서 품번을 «추출» 하지 않는다
+ * ② 반환은 `code` 아니면 `null` 둘뿐 → compareModelCode 가 `exact|unavailable` 만 낸다
+ *    (partial·conflict 를 **구조적으로** 만들 수 없다)
+ * ③ **토큰 전체 일치** — 각 필드를 위 함수에 그대로 넘겨 같은 규칙으로 본다
+ *    (규칙을 복제하지 않는다. 복제하면 둘이 갈라진다)
+ * ```
+ *
+ * ── 🔴🔴 `description` 을 **일부러 넣지 않았다** ────────────────────────────
+ * ```
+ * ① 벤치마크에서 **효과가 측정되지 않았다**(fixture 분모가 무관한 상품이라 0건)
+ * ② 상세설명에는 «관련상품/추천상품» 의 품번이 함께 적히는 경우가 있다 →
+ *    **다른 상품의 품번이 토큰으로 걸리는** FP 벡터다. FP 0 이 이 WU 의 최우선 KPI 다.
+ * 🔴 측정되지 않은 이득을 위해 FP 위험을 먼저 받지 않는다. 필요해지면 그때 **재서** 넣는다.
+ * ```
+ */
+export interface BrandCodeEvidenceFields {
+  /** 후보 상품명. */
+  title?: string | null;
+  /** 🟢 후보 상품 URL — 실측에서 **유일하게 효과가 확인된** 자리다. */
+  url?: string | null;
+  /** 🟡 후보가 노출한 sku/상품코드. 🔴 이것을 품번으로 «승격» 하는 것이 아니다 —
+   *     원본 품번이 그 칸에 적혀 있는지 **확인** 할 뿐이다(판매처 자체코드는 절대 같지 않다). */
+  sku?: string | null;
+}
+
+/**
+ * 원본 품번이 후보의 **title · url · sku** 중 한 곳에라도 토큰으로 있으면 그 품번을,
+ * 아니면 `null` 을 돌려준다. 🔴 `confirmBrandCodeInTitle` 과 **같은 값 공간** 이다.
+ */
+export function confirmBrandCodeInEvidence(
+  foreignCode: string | null,
+  fields: BrandCodeEvidenceFields,
+): string | null {
+  const code = foreignCode?.trim();
+  if (!code) return null;
+  /**
+   * 🔴🔴 품번 자체가 구분자를 품은 경우가 있다 — 실측(원상품 26건 중 **2건**):
+   * ```
+   * Pèpè Shoes    `01195-VERNICE-NERO`
+   * Misha & Puff  `B1408F26-670`
+   * ```
+   * 위 `confirmBrandCodeInTitle` 은 건초더미를 영숫자 아닌 문자로 **쪼갠 뒤 한 토큰이
+   * 품번과 같은지** 본다. 그런데 needle 에 하이픈이 있으면 **어떤 토큰과도 같아질 수
+   * 없다** → URL 에 `.../01195-vernice-nero-shoes` 로 **그대로 적혀 있어도 `null`** 이었다
+   * (실측 확인). 🔴 즉 하이픈 품번은 **구조적 False Negative** 였다.
+   *
+   * 🟢 그래서 품번도 같은 규칙으로 쪼개어 **토큰 «수열» 이 연속으로 일치** 하는지 본다.
+   * 🔴 이것은 **부분일치가 아니다** — 수열의 각 토큰이 **전체 일치** 해야 하고 경계도
+   *    지켜진다. 그래서 `b226ac0100` 은 `B226AC010` 에 걸리지 않고 `12672014894` 도
+   *    `2672014894` 에 걸리지 않는다(음성대조 M1 이 그것을 잠근다).
+   */
+  const parts = code.toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean);
+  if (parts.length === 0) return null;
+  /**
+   * 🔴🔴 **구분자를 「코드용 기호」로만 제한한다.** 토큰 수열을 그냥 이어 붙이면
+   *    실제 FP 가 난다 — 음성대조에서 걸렸다:
+   * ```
+   * code  B1408F26-670
+   * 제목  "B1408F26 사이즈 670"   ← 한글이 영숫자가 아니라 **구분자로 지워져**
+   *                                 두 토큰이 인접해지고 수열이 «거짓으로» 성립했다
+   * ```
+   * 🟢 그래서 품번 조각 사이에 허용하는 것은 `- _ . /` 와 «없음» 뿐이다.
+   *    공백도 허용하지 않는다(「B1408F26 670」을 같은 품번으로 단정하지 않는다).
+   * 🔴 그리고 양 끝에 영숫자가 붙으면 안 된다 — `b1408f26-6700` · `011950-vernice-nero`
+   *    같은 **부분일치를 계속 막는다**.
+   */
+  /* 🟢 `parts` 는 `[^A-Z0-9]+` 로 쪼갠 결과라 **영숫자만** 들어 있다 →
+     정규식 이스케이프가 **필요하지 않다**(특수문자가 들어올 수 없다). */
+  const re = new RegExp(`(?<![A-Z0-9])${parts.join("[-_./]?")}(?![A-Z0-9])`);
+  for (const haystack of [fields.title, fields.url, fields.sku]) {
+    if (!haystack) continue;
+    /* 🔴 돌려주는 것은 **원본 품번 문자열 그대로** 다 — 후보 쪽 문자열을 돌려주면
+       compareModelCode 의 값 공간(`exact|unavailable`)이 깨진다. */
+    if (re.test(haystack.toUpperCase())) return code;
+  }
+  return null;
+}
+
 /** 도메인별 국내 상품 식별자 추출기 레지스트리. 새 판매처를 여기 한 줄만
  * 추가하면 run-domestic-price-check.ts/domestic-price-sources/search/route.ts
  * 양쪽 호출부 모두 코드 변경 없이 그 도메인을 지원하게 된다 — 호출부는

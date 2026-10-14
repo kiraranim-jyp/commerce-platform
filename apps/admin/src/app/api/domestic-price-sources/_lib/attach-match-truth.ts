@@ -1,6 +1,6 @@
 import {
   compareModelCode,
-  confirmBrandCodeInTitle,
+  confirmBrandCodeInEvidence,
   deriveMatchTruth,
   fetchDomesticModelCode,
   isColorUnverified,
@@ -116,7 +116,18 @@ export async function attachMatchTruth(
       if (!supportsDomesticIdentifierExtraction(result.domain)) {
         const candidates = result.candidates.map((c) => ({
           ...c,
-          matchTruth: c.matchLevel ? truthOf(c, confirmBrandCodeInTitle(foreignModelCode, c.title)) : undefined,
+          matchTruth: c.matchLevel
+            ? truthOf(
+                c,
+                /* 🟢 WU-004 — match.ts 와 **같은 건초더미** 를 본다(둘이 갈라지면
+                   화면과 저장이 다른 판정을 낸다). */
+                confirmBrandCodeInEvidence(foreignModelCode, {
+                  title: c.title,
+                  url: c.url,
+                  sku: c.sku ?? c.facts?.sellerSku ?? null,
+                }),
+              )
+            : undefined,
         }));
         return { ...result, candidates };
       }
@@ -127,7 +138,13 @@ export async function attachMatchTruth(
       const candidates = await Promise.all(
         result.candidates.map(async (c, i) => {
           if (!c.matchLevel) return c;
-          const confirmed = confirmBrandCodeInTitle(foreignModelCode, c.title);
+          /* 🟢 WU-004 — 위 분기와 **같은 건초더미**(title+url+sku). 둘이 갈라지면
+             상세확인 경로와 화면 경로가 다른 판정을 낸다. */
+          const confirmed = confirmBrandCodeInEvidence(foreignModelCode, {
+            title: c.title,
+            url: c.url,
+            sku: c.sku ?? c.facts?.sellerSku ?? null,
+          });
           const domesticModelCode =
             confirmed ??
             (i < MAX_MODEL_CODE_FETCH_PER_SHOP ? await fetchDomesticModelCode(result.domain, c.url) : null);

@@ -1,5 +1,5 @@
 import { compareCrossSellerProducts } from "./cross-seller";
-import { confirmBrandCodeInTitle } from "./domestic-identifiers";
+import { confirmBrandCodeInEvidence } from "./domestic-identifiers";
 import type { ComparisonCandidate, ComparisonQuery } from "./types";
 import { normalizeMatchingTitle } from "./title-normalize";
 
@@ -506,7 +506,17 @@ export function withConfidence(query: ComparisonQuery, candidates: ComparisonCan
        */
       const candidateFacts =
         c.facts && c.facts.brandModelCode === null && query.facts?.brandModelCode
-          ? { ...c.facts, brandModelCode: confirmBrandCodeInTitle(query.facts.brandModelCode, c.title) }
+          ? {
+              ...c.facts,
+              /* 🟢 WU-004 — 건초더미를 **title → title+url+sku** 로 넓힌다. 판정 규칙은
+                 같다(confirmBrandCodeInEvidence 가 같은 함수를 필드마다 부른다).
+                 🔴 실측: title 0건 · **URL 3건**(bobochoses·trenbe·운영링크). */
+              brandModelCode: confirmBrandCodeInEvidence(query.facts.brandModelCode, {
+                title: c.title,
+                url: c.url,
+                sku: c.sku ?? c.facts.sellerSku ?? null,
+              }),
+            }
           : c.facts;
       const withMatch: ComparisonCandidate = {
         ...c,
