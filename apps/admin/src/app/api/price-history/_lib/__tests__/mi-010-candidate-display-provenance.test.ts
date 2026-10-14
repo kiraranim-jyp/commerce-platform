@@ -685,3 +685,163 @@ describe.skipIf(!LIVE)("⑤ 🔴🔴 WU-011 해외 검색 신뢰도 — 샵별 �
     60 * 60 * 1000,
   );
 });
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * ⑥ 🔴🔴 WU-012 — 해외 Discovery **재현성: 첫 divergence** (측정만)
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴 threshold 0 · SIMILAR 0 · brand 0 · Registry 0 · adapter 0 · AI 0 ·
+ *    검색 query 개선 0 · 배포 0 · 운영 코드 변경 0.
+ * 🔴 질의를 **매 실행 새로** 만든다 — 축 A 를 설계로 제거하지 않고 **측정** 한다.
+ * 🔴 **3회는 표본이다** — 「항상 그렇다」로 읽지 않는다.
+ * 🟢 새 인프라를 만들지 않았다 — ③④⑤가 쓰던 **같은 경로** 를 재사용한다.
+ */
+describe.skipIf(!LIVE)("⑥ 🔴🔴 WU-012 재현성 — 같은 경로 3회 · A→F 첫 divergence", () => {
+  it(
+    "단계별로 비교해 처음 갈라지는 축을 잡는다",
+    async () => {
+      const prov = read<{ snapshots: ProvSnap[] }>("wu008-provenance.json");
+      const shopRows = read<
+        {
+          id: string; name: string; domain: string; currency: string | null;
+          is_active: boolean; access_status: string | null; category_scope: string[] | null;
+        }[]
+      >("wu010-comparison-shops.json");
+      const crawler = (await import("@commerce/crawler")) as unknown as {
+        searchComparisonShops: (q: unknown, s: unknown[]) => Promise<{ domain: string; status: string; candidates: Record<string, unknown>[] }[]>;
+        attachProductMatchTruth: (q: unknown, r: unknown[]) => { domain: string; status: string; candidates: Record<string, unknown>[] }[];
+      };
+      const shared = (await import("@commerce/shared")) as unknown as {
+        identityDnaFromFields: (f: Record<string, unknown>) => unknown;
+        productFactsFromIdentityDna: (dna: unknown) => Record<string, unknown>;
+        buildProductIdentityDna: (p: unknown) => Record<string, unknown>;
+        backfillCanonicalProduct: (p: unknown) => unknown;
+      };
+      const { isCollectableAccess } = await import("../../../comparison-shops/_lib/comparison-shop");
+      const { sourceFitsScopes } = (await import("@commerce/category")) as unknown as {
+        sourceFitsScopes: (s: string[], p: string[] | null) => boolean;
+      };
+      const { overseasMatchDisplay } = await import("@/app/pipeline/commerce/match-display");
+      const { normalizeCandidateUrl } = await import("../gemini-candidate-pool");
+
+      const snap = prov.snapshots.find((s) => s.source_url.includes("bobochoses.co.jp") && !s.source_url.includes("?"));
+      if (!snap) throw new Error("대상 스냅샷 없음");
+      const shops = shopRows.filter(
+        (s) =>
+          s.is_active &&
+          isCollectableAccess(s.access_status as never) &&
+          sourceFitsScopes(s.category_scope ?? [], ["KIDS_FASHION"]),
+      );
+      const shopRefs = shops.map((s) => ({ id: s.id, name: s.name, domain: s.domain, currency: s.currency }));
+
+      const runOnce = async (n: number) => {
+        const dna = shared.buildProductIdentityDna(shared.backfillCanonicalProduct(snap.canonical_product));
+        const facts = shared.productFactsFromIdentityDna(
+          shared.identityDnaFromFields({
+            title: snap.title,
+            sku: (dna.brandModelCode as string | null) ?? undefined,
+            sourceUrl: snap.source_url,
+            color: (dna.color as string | null) ?? undefined,
+            material: (dna.material as string | null) ?? undefined,
+          }),
+        );
+        const query = { title: snap.title, sourceUrl: snap.source_url, sku: (dna.brandModelCode as string | null) ?? undefined, facts };
+        const raw = await crawler.searchComparisonShops(query, shopRefs);
+        const withTruth = crawler.attachProductMatchTruth(query, raw);
+        const statusByShop: Record<string, string> = {};
+        const rawByShop: Record<string, string[]> = {};
+        const normByShop: Record<string, string[]> = {};
+        for (const r of raw) {
+          statusByShop[r.domain] = r.status;
+          rawByShop[r.domain] = r.candidates.map((c) => String(c.url ?? "")).sort();
+          normByShop[r.domain] = [...new Set(r.candidates.map((c) => normalizeCandidateUrl(String(c.url ?? ""))))].sort();
+        }
+        const cands = withTruth
+          .filter((r) => r.status === "ok")
+          .flatMap((r) =>
+            r.candidates.map((c) => {
+              const truth = c.productMatchTruth as Parameters<typeof overseasMatchDisplay>[0] | undefined;
+              const tier = truth ? overseasMatchDisplay(truth).tier : null;
+              const confidence = Number(c.confidence ?? 0);
+              return {
+                key: normalizeCandidateUrl(String(c.url ?? "")),
+                truth: truth ?? null,
+                confidence,
+                shown: tier ? mayShowCandidate({ tier, confidence }) : null,
+              };
+            }),
+          );
+        return {
+          n,
+          A: JSON.stringify({ t: query.title, s: query.sku, f: query.facts }),
+          B: statusByShop,
+          C: rawByShop,
+          D: normByShop,
+          E: cands.map((c) => `${c.key}=${c.truth}/${c.confidence}`).sort(),
+          F: cands.map((c) => `${c.key}=${String(c.shown)}`).sort(),
+          cands,
+        };
+      };
+
+      /** 🔴 **직렬** 3회(동시 실행하면 같은 샵에 3배 부하가 간다). */
+      const runs = [await runOnce(1), await runOnce(2), await runOnce(3)];
+      const same = (a: unknown, b: unknown) => (JSON.stringify(a) === JSON.stringify(b) ? "SAME" : "DIFF");
+
+      const pairs = [
+        [0, 1],
+        [1, 2],
+        [0, 2],
+      ].map(([i, j]) => {
+        const X = runs[i];
+        const Y = runs[j];
+        const axes = {
+          "A query": same(X.A, Y.A),
+          "B status": same(X.B, Y.B),
+          "C raw": same(X.C, Y.C),
+          "D normalized": same(X.D, Y.D),
+          "E truth": same(X.E, Y.E),
+          "F shown": same(X.F, Y.F),
+        };
+        const first = Object.entries(axes).find(([, v]) => v === "DIFF")?.[0] ?? null;
+        /** 🟢 증거 — 어느 샵에서 갈렸는지(축 C 일 때). */
+        const shopsDiff =
+          first === "C raw" ? Object.keys(X.C).filter((d) => JSON.stringify(X.C[d]) !== JSON.stringify(Y.C[d])) : [];
+        return { pair: `Run ${X.n} <-> Run ${Y.n}`, ...axes, "최초 divergence": first ?? "없음", "C 가 갈린 샵": shopsDiff };
+      });
+
+      const firstOverall = pairs.find((p) => p["최초 divergence"] !== "없음")?.["최초 divergence"] ?? "없음";
+
+      const report = {
+        "🔴🔴 DISCLAIMER":
+          "WU-012 — 같은 경로를 **3회 직렬** 실행해 A→F 단계별로 비교했다. 🔴 질의도 매 실행 " +
+          "새로 만들어 축 A 를 설계로 제거하지 않았다. 🔴 threshold·SIMILAR·brand·Registry· " +
+          "adapter·AI·query 개선·배포 변경 0 · 운영 코드 변경 0. " +
+          "🔴🔴 **3회는 표본이다** — 「항상 그렇다」로 읽지 않는다.",
+        "대상 샵": shopRefs.length,
+        "🔴🔴 최초 divergence(전체)": firstOverall,
+        pairs,
+        "실행별 요약": runs.map((r) => ({
+          run: r.n,
+          ok: Object.values(r.B).filter((s) => s === "ok").length,
+          unsupported: Object.values(r.B).filter((s) => s === "unsupported").length,
+          error: Object.values(r.B).filter((s) => s === "error").length,
+          "후보 수": r.cands.length,
+          "표시 수": r.cands.filter((c) => c.shown).length,
+        })),
+        "🔴 샵별 후보 수(원문) 3회": Object.fromEntries(
+          Object.keys(runs[0].C).map((d) => [d, runs.map((r) => (r.C[d] ?? []).length)]),
+        ),
+        runs,
+      };
+
+      mkdirSync(OUT_DIR, { recursive: true });
+      let seq = 1;
+      while (existsSync(path.join(OUT_DIR, `wu012-repro-${seq}.json`))) seq += 1;
+      writeFileSync(path.join(OUT_DIR, `wu012-repro-${seq}.json`), JSON.stringify(report, null, 1), "utf8");
+      // eslint-disable-next-line no-console
+      console.log("\n" + JSON.stringify({ ...report, runs: `(wu012-repro-${seq}.json)` }, null, 1));
+
+      expect(runs).toHaveLength(3);
+    },
+    60 * 60 * 1000,
+  );
+});
