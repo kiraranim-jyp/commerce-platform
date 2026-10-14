@@ -219,3 +219,70 @@ A→B 전이  CONFLICT→CONFLICT 18 · SIMILAR→SIMILAR 6 · INSUFFICIENT→IN
 
 🔴 **샵 20/30 오류는 P1 로 유지** 한다(CPO). 이 상태에서 나온 표시 숫자를 해외 Discovery
 품질로 일반화하지 않는다.
+
+---
+
+# WU-011 — 해외 검색 **신뢰도: 샵별 원인 분류** (분류만)
+
+🔴 threshold 변경 **0** · SIMILAR 차단 0 · brand resolver 0 · 검색 query 변경 **0** ·
+Registry 0 · AI/API 0 · 배포 0 · 운영 코드 변경 **0** · DB 쓰기 0.
+
+## 🔴🔴 결론 — **「오류 20/30」은 오류가 아니었다**
+
+```
+대상 샵 **30** · 총 소요 **1,261ms**
+status 분류   **unsupported 20** · **ok 10** · 🟢 **error 0** · not_configured 0
+🔴 error 문자열을 들고 온 샵 **0건**
+```
+
+🔴🔴 내가 앞서 적은 「오류 20」은 `status !== "ok"` 였다. 운영 타입이 **네 상태** 를 명시적으로
+가르고(types.ts:139-154) 그 주석이 **바로 이 뭉개기를 금지** 한다:
+> `unsupported` = 이 소스를 읽을 **파서/어댑터가 없다 — 요청을 보내지 않았다**
+> 🔴 「물어보지도 못한 것을 **없다**고 말하지 않는다」
+
+🟢 **교차 증거**: 전체가 **1.26초** 에 끝났다. 20곳이 네트워크 실패/타임아웃이었다면 불가능하다.
+
+### 🔴 그래서 정체는 «실패» 가 아니라 **어댑터 커버리지** 다
+```
+🔴 unsupported 20 — 요청 자체를 보내지 않는다
+   alexandalexa · aliexpress · amazon · babyshop · **bobochoses.com** ·
+   bucketsandspades · cissyweras · ebay · kids-world · kidsdepartment ·
+   kidsroom · luksusbaby · melijoe · mytheresa · pandaandcub · scoutandcokids ·
+   shopping.google · **smallable.com** · studioplay · walmart
+🟢 ok 10 — childrensalon · designerkidswear · folkberlin · isolabellakids ·
+   junioredition · kidbizkid · nickis · petitemaisonkids · shoppiccoliandco · villagekids
+```
+🔴🔴 **`bobochoses.com` 과 `smallable.com` 이 `unsupported` 다** — 등록부에 `is_active`
+여도 **검색되지 않는다.** 🟢 그래서 「Gift Bag 이 bobochoses.com 에서 왔다」는 경로는
+**이 실행에서는 성립하지 않는다**(요청이 나가지 않는다).
+
+## 🟢 ok 샵만의 후보 품질 (분모를 섞지 않았다)
+```
+ok 10 중 **후보 0건인 샵 3** — childrensalon · folkberlin · isolabellakids
+후보 총수 **29** — CONFLICT **18** · SIMILAR **5** · INSUFFICIENT_EVIDENCE **6**
+🔴 표시 대상 **0** — SIMILAR 5건의 confidence 가 **0.14 · 0.17 · 0.17 · 0.17 · 0.17**
+   로 전부 하한(0.2) 미달
+```
+🟢 **「표시 0」이 2회 연속 재현** 됐다(WU-010A ④ · WU-011 ⑤).
+🔴 그리고 ICHI(conf 0.33)는 **3회 실행 중 1회만** 나타났다 → **예외적 관측** 이다.
+🔴 **그 1건으로 임계값을 조작하지 않는다**(CPO 지시와 같은 결론).
+
+## 🔴 이 숫자로 하지 않을 해석
+```
+❌ 「해외 샵이 불안정하다」      → 🟢 error 0 이다. 불안정한 것은 **커버리지** 가 아니라
+                                 **어느 샵이 후보를 내놓는지** 다
+❌ 「30곳을 검색한다」           → 🔴 실제로 요청이 가는 곳은 **10곳** 이다
+❌ 「해외 Discovery 품질 = 29건」 → 🔴 분모가 **ok 10** 이고 등록부 30 이 아니다
+❌ 1회 관측을 재현성으로 사용     → 🔴 ICHI 가 1/3 회만 나타났다
+```
+
+## 🟡 CPO 결정 입력 — 측정으로 좁혀진 선택지
+```
+⒜ 어댑터 없는 20곳 중 **무엇을 열 것인가** 는 🔴 Registry/어댑터 확대라 금지 구간이다
+   🟢 다만 「30곳 중 10곳만 검색된다」는 사실은 **화면이 말하지 않는다** — 셀러는
+      30곳을 봤다고 읽을 수 있다. 그 표시 문제는 코드 확대 없이 고칠 수 있다(CPO 판단).
+⒝ confidence 하한은 **건드리지 않았다.** 🟢 현재 데이터에서 하한이 실제로 일하고 있다
+   (0.17 × 4 · 0.14 를 전부 막았다).
+⒞ 🔴 **재현성** 이 별 사안으로 남는다 — 같은 상품·같은 샵인데 실행마다 후보 집합이
+   달라진다(ICHI 1/3). 원인은 미조사다.
+```

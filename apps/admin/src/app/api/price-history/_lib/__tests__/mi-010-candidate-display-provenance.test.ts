@@ -519,3 +519,169 @@ describe.skipIf(!LIVE)("④ 🔴🔴 WU-010A 브랜드 반사실 — 한 변수�
     60 * 60 * 1000,
   );
 });
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * ⑤ 🔴🔴 WU-011 — **해외 검색 신뢰도: 샵별 원인 분류** (CPO 지시 · 분류만)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 threshold 변경 0 · SIMILAR 차단 0 · brand resolver 0 · 검색 query 변경 0 ·
+ *    Registry 0 · AI/API 0 · 배포 0 · 운영 코드 변경 0.
+ *
+ * 🔴🔴 **앞선 「오류 20/30」을 그대로 쓰지 않는다.** 그 숫자는 `status !== "ok"` 였고,
+ *    운영 타입이 **네 상태** 를 명시적으로 가른다(types.ts:139-154):
+ * ```
+ * ok             자동 수집을 실제로 수행했다(결과 0건일 수도 있다)
+ * unsupported    이 소스를 읽을 파서/어댑터가 **없다 — 요청을 보내지 않았다**
+ * error          수행했는데 실패했다
+ * not_configured 어댑터는 있는데 **자격증명이 없어** 요청을 보내지 않았다
+ * ```
+ * 🔴 그 주석이 **바로 이 뭉개기를 금지** 한다 — 「물어보지도 못한 것을 없다고 말하지
+ *    않는다」. 그래서 이 블록은 넷을 **갈라서** 센다.
+ */
+describe.skipIf(!LIVE)("⑤ 🔴🔴 WU-011 해외 검색 신뢰도 — 샵별 원인 분류", () => {
+  it(
+    "status 넷을 갈라 세고, ok 인 샵만 후보 품질을 집계한다",
+    async () => {
+      const prov = read<{ snapshots: ProvSnap[] }>("wu008-provenance.json");
+      const shopRows = read<
+        {
+          id: string; name: string; domain: string; currency: string | null;
+          is_active: boolean; access_status: string | null; category_scope: string[] | null;
+        }[]
+      >("wu010-comparison-shops.json");
+
+      const crawler = (await import("@commerce/crawler")) as unknown as {
+        searchComparisonShops: (q: unknown, s: unknown[]) => Promise<
+          { shopId: string; shopName: string; domain: string; status: string; candidates: Record<string, unknown>[]; error?: string }[]
+        >;
+        attachProductMatchTruth: (q: unknown, r: unknown[]) => { domain: string; status: string; candidates: Record<string, unknown>[] }[];
+      };
+      const shared = (await import("@commerce/shared")) as unknown as {
+        identityDnaFromFields: (f: Record<string, unknown>) => unknown;
+        productFactsFromIdentityDna: (dna: unknown) => Record<string, unknown>;
+        buildProductIdentityDna: (p: unknown) => Record<string, unknown>;
+        backfillCanonicalProduct: (p: unknown) => unknown;
+      };
+      const { isCollectableAccess } = await import("../../../comparison-shops/_lib/comparison-shop");
+      const { sourceFitsScopes } = (await import("@commerce/category")) as unknown as {
+        sourceFitsScopes: (s: string[], p: string[] | null) => boolean;
+      };
+      const { overseasMatchDisplay } = await import("@/app/pipeline/commerce/match-display");
+
+      const snap = prov.snapshots.find((s) => s.source_url.includes("bobochoses.co.jp") && !s.source_url.includes("?"));
+      if (!snap) throw new Error("대상 스냅샷 없음");
+      const dna = shared.buildProductIdentityDna(shared.backfillCanonicalProduct(snap.canonical_product));
+      const facts = shared.productFactsFromIdentityDna(
+        shared.identityDnaFromFields({
+          title: snap.title,
+          sku: (dna.brandModelCode as string | null) ?? undefined,
+          sourceUrl: snap.source_url,
+          color: (dna.color as string | null) ?? undefined,
+          material: (dna.material as string | null) ?? undefined,
+        }),
+      );
+      /** 🔴 검색 query 를 바꾸지 않았다 — ③④와 **같은 구성** 이다. */
+      const query = { title: snap.title, sourceUrl: snap.source_url, sku: (dna.brandModelCode as string | null) ?? undefined, facts };
+
+      const shops = shopRows.filter(
+        (s) => s.is_active && isCollectableAccess(s.access_status as never) && sourceFitsScopes(s.category_scope ?? [], ["KIDS_FASHION"]),
+      );
+      const t0 = Date.now();
+      const raw = await crawler.searchComparisonShops(
+        query,
+        shops.map((s) => ({ id: s.id, name: s.name, domain: s.domain, currency: s.currency })),
+      );
+      const elapsedMs = Date.now() - t0;
+      const withTruth = crawler.attachProductMatchTruth(query, raw);
+
+      /** 🔴 error 문자열을 **분류** 한다. 🟢 원문도 같이 남긴다(분류가 틀렸을 때 보이게). */
+      const classify = (r: { status: string; error?: string }) => {
+        if (r.status !== "error") return r.status;
+        const e = (r.error ?? "").toLowerCase();
+        if (/timeout|aborted|abort/.test(e)) return "error:timeout";
+        if (/40[13]|forbidden|unauthorized|blocked|captcha/.test(e)) return "error:접근차단";
+        if (/404|not found/.test(e)) return "error:404";
+        if (/50\d|bad gateway|gateway/.test(e)) return "error:5xx";
+        if (/json|parse|unexpected token|invalid/.test(e)) return "error:parse/형식";
+        if (/enotfound|econnrefused|dns|certificate|tls|socket|network|fetch failed/.test(e)) return "error:네트워크";
+        return "error:기타";
+      };
+
+      const perShop = raw.map((r) => ({
+        domain: r.domain,
+        status: r.status,
+        분류: classify(r),
+        "후보 수": r.candidates.length,
+        "error 원문": r.error ? String(r.error).slice(0, 160) : null,
+      }));
+
+      const byClass = perShop.reduce<Record<string, number>>((a, r) => {
+        a[r.분류] = (a[r.분류] ?? 0) + 1;
+        return a;
+      }, {});
+
+      /** 🟢 **ok 인 샵만** 후보 품질을 집계한다 — 물어보지 못한 샵을 분모에 넣지 않는다. */
+      const okRows = withTruth
+        .filter((r) => r.status === "ok")
+        .flatMap((r) =>
+          r.candidates.map((c) => {
+            const truth = c.productMatchTruth as Parameters<typeof overseasMatchDisplay>[0] | undefined;
+            const tier = truth ? overseasMatchDisplay(truth).tier : null;
+            const confidence = Number(c.confidence ?? 0);
+            return {
+              domain: r.domain,
+              title: String(c.title ?? "").slice(0, 56),
+              truth: truth ?? null,
+              confidence,
+              tier,
+              shown: tier ? mayShowCandidate({ tier, confidence }) : null,
+            };
+          }),
+        );
+
+      const okShops = raw.filter((r) => r.status === "ok");
+      const report = {
+        "🔴🔴 DISCLAIMER":
+          "WU-011 — **분류만** 한다. 🔴 threshold·SIMILAR·brand·query·Registry·AI·배포 변경 0. " +
+          "🔴🔴 앞선 「오류 20/30」은 `status !== ok` 였고 운영 타입은 **네 상태** 를 가른다 — " +
+          "`unsupported`(파서 없음 · 요청 안 보냄)와 `error`(실제 실패)를 **같은 숫자로 쓰지 않는다**. " +
+          "🔴 1회 관측이고 해외 응답은 실행마다 달라진다(WU-010A 실측) — 재현성은 별 사안이다.",
+        "대상 샵": shops.length,
+        "총 소요(ms)": elapsedMs,
+        "🔴🔴 status 분류": byClass,
+        "ok 샵": okShops.length,
+        "ok 이지만 후보 0건인 샵": okShops.filter((r) => r.candidates.length === 0).map((r) => r.domain),
+        "🟢 ok 샵만의 후보 품질": {
+          "후보 총수": okRows.length,
+          "truth 분포": okRows.reduce<Record<string, number>>((a, r) => {
+            const k = String(r.truth ?? "(없음)");
+            a[k] = (a[k] ?? 0) + 1;
+            return a;
+          }, {}),
+          "displayTier 분포": okRows.reduce<Record<string, number>>((a, r) => {
+            const k = String(r.tier ?? "(없음)");
+            a[k] = (a[k] ?? 0) + 1;
+            return a;
+          }, {}),
+          "표시 대상": okRows.filter((r) => r.shown).length,
+          "표시되는 후보": okRows.filter((r) => r.shown).map((r) => `${r.domain} | ${r.title} | conf ${r.confidence}`),
+          "confidence 분포(표시 등급만)": okRows
+            .filter((r) => r.tier === "SIMILAR" || r.tier === "PRESUMED_SAME" || r.tier === "SAME")
+            .map((r) => r.confidence)
+            .sort((a, b) => b - a),
+        },
+        "샵별 상세": perShop,
+      };
+
+      mkdirSync(OUT_DIR, { recursive: true });
+      let seq = 1;
+      while (existsSync(path.join(OUT_DIR, `wu011-reliability-${seq}.json`))) seq += 1;
+      writeFileSync(path.join(OUT_DIR, `wu011-reliability-${seq}.json`), JSON.stringify(report, null, 1), "utf8");
+      // eslint-disable-next-line no-console
+      console.log("\n" + JSON.stringify({ ...report, "샵별 상세": `(wu011-reliability-${seq}.json)` }, null, 1));
+
+      expect(shops.length).toBeGreaterThan(0);
+    },
+    60 * 60 * 1000,
+  );
+});
