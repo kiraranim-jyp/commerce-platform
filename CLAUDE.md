@@ -455,6 +455,71 @@ Gemini 내부 검색어 3개가 **전부 품번** 을 썼고 둘은 스스로 `s
 🔴🔴 그리고 그때 CEO 에게 **「`/today` 일괄 확인을 절대 누르지 말 것」** 을 명시해야 한다
 (메모 `gemini-flag-is-a-global-switch-not-a-per-product-control`).
 
+### 🔴🔴 현재 착수점 — **AI 리서치 트랙 WU-006 · 키 대기** (CPO 2026-10-14)
+
+🔴🔴 **방향이 또 바뀌었다** — CPO: 「**지금은 구현보다 기술검토가 먼저다. Gemini API 는
+즉시 OFF 유지, 잔액 ₩1 도 사용하지 않는다.**」 그래서 WU-023-A(Production one-shot)는
+**열렸다가 보류** 됐고, 트랙이 **AI Web Research 기술검토** 로 옮겨갔다.
+
+```
+001 AI-RESEARCH-AUTOMATION-ARCHITECTURE  🟢 CLOSED — 「기술적 가능」과 「약관상 허용」을 가른다
+002 AI-WEB-RESEARCH-AUTOMATION           🟢 CLOSED — 소비자 AI 웹 UI 자동화 **STOP**(1차자료)
+003 AI-DISCOVERY-STRATEGY                🟢 CLOSED — MI 는 «약한» 게 아니라 **증거가 23% 구간에만** 있다
+004 TRACK-A-BRAND-CODE-IDENTITY          🟢 PASS   — 품번을 title «뿐 아니라» URL·sku 에서 찾는다
+005 P0 Provider capability matrix        🟢 PASS   — 호출 0 · 키 0
+005 P1 Exa 벤치마크                      🟡 하니스만 — 🔴 **키 요청 철회됨**(005R)
+005R Hidden AI Web Research 아키텍처      🟢 PASS   — 🔴🔴 채택을 가르는 것은 **가격이 아니라 저장 허용**
+006 Anthropic Controlled Benchmark       🟡 **하니스 준비 완료 / 호출 0 · 키 없음** ← 지금 여기
+```
+
+🔴🔴 **트랙 전체를 가른 한 문장**(005R · 1차자료):
+```
+**자체 검색 인덱스를 가진 사업자는 전부 「그 결과로 DB 를 만들지 말라」를 명시한다.**
+  Google "cache … analyze … Grounded Results" 금지 · Bing "creating a database of
+  Bing Services Output" · Brave "create a database of Search Results" · Exa §4.2(a)
+🟢 자체 인덱스를 팔지 않는 사업자(**Anthropic**)만 Output 소유권을 넘기고 저장을 규율하지 않는다.
+🔴🔴 그래서 Gemini 는 **두 번째 독립 사유로** 닫혔다 — 기존은 «비용», 이번은 «저장 금지».
+   비용이 해결돼도 「Gemini 로 찾아 Registry 에 쌓는다」는 조합이 약관과 충돌한다.
+```
+
+🔴 **판정표 (CPO 확정)** — 🟢 GO 는 **없다**:
+```
+Anthropic web_search + web_fetch    🟡 **CONDITIONAL GO** (실측 전)
+  🔴 CPO 정정: 「Output ownership = GO」 ≠ 「우리 Registry 에 **장기 저장·가격추적
+     자산** 으로 쓸 권리 = GO」. 후자는 **미확정** 이다
+OpenAI web_search + background      🟡 CONDITIONAL — `sources` 가 «방문 URL 전체» 를 공식 반환
+  🔴 정책 4페이지가 403 이라 **사람이 직접 열어야** 저장 조항을 확인할 수 있다
+Gemini / Grounding / Managed Agents 🔴 STOP (비용 + 저장금지)
+Exa · Brave · Bing                  🔴 STOP (저장·DB 생성 금지)
+Perplexity                          🔴 법무 선행 (AUP §3 "competitive with, similar to")
+소비자 AI 웹 UI(Gemini Web·ChatGPT Web) 🔴 STOP
+```
+
+🔴🔴 **승격된 아키텍처 원칙 — 이 문장을 그대로 유지한다**(CPO):
+> 「**AI 가 만들어낸 URL 문자열을 그대로 믿지 않는다. URL 은 Discovery signal 이고,
+> Evidence 는 따져가 직접 검증한다.**」
+
+🟢 WU-006 하니스가 그것을 **코드로 구현하고 음성 대조로 잠갔다** — 후보 URL 을
+`web_search_tool_result` **블록에서만** 뽑고, 산문 URL 은 **개수만** 센다(환각 관측값).
+🟢 provider 쪽 보강도 있다 — `web_fetch` 는 **대화에 이미 등장한 URL 만** fetch 한다
+(Claude 자기 출력에만 있는 URL 은 `url_not_in_prior_context` 로 거부된다).
+🔴 단 `web_fetch` 는 **JS 렌더 사이트를 못 읽는다**(공식) → Evidence 는 여전히 따져가 가져온다.
+
+🟡 **실측을 열려면 필요한 최소 조치**(전문 `docs/AI-WEB-RESEARCH-ANTHROPIC-BENCHMARK-006.md` §6):
+```
+① Anthropic Console API Key → `scripts/.env` 에 `ANTHROPIC_API_KEY=` 한 줄
+   🔴 env 전수 확인 결과 **지금은 없다**(로컬 `GEMINI_API_KEY` 하나뿐 · Production 에도 없음)
+② 🔴🔴 선불 크레딧 구매가 필요한지는 **CTO 가 확인할 수 없다**(Billing 범위 밖)
+   🟢 측정이 쓰는 양은 확정이다 — web_search **최대 18회 = $0.18** · web_fetch 과금 **$0**
+   🔴 즉 측정 비용은 매우 작고, **최소 충전 단위와의 차액** 이 CEO 승인 대상이다
+③ Console 에서 **web search 가 켜져 있어야** 한다(관리자가 끄면 요청이 400)
+🔴 CTO 가 CEO 에게 직접 요청하지 않는다(§3) — CPO 가 전달한다.
+🔴 **유료 API 는 마지막 fallback** 이다(CPO).
+```
+
+🔴 **그 전까지 전부 고정** — Gemini flag **OFF** · 잔액 **₩3,171 보존** · Production **HOLD** ·
+다른 provider 가입 **0** · 운영 코드 변경 **0**(WU-004 이후 없다).
+
 ### 🔴🔴 WU-023 지시서 본문 — `MI-PRODUCTION-E2E-FINAL-023`
 
 🔴🔴 **지금 착수하지 않는다.** 조건부 실행 WU 다(CPO 2026-10-14). 전문 지시서는 CPO 가
