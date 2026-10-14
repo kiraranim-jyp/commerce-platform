@@ -189,18 +189,20 @@ describe("① 🟢 WU-007 분모·도구 사전 검증 (HTTP 0 · AI 0 · 비용
     const wrongProduct =
       "https://bobochoses.com/products/pony-gift-bag?_pos=1&_psq=Bobo+Choses+B226AC010&_psid=x&_ss=sc";
 
-    /** 🔴 현재 운영 동작 — 날것 URL 이면 **품번이 확인된다**(거짓 양성). */
-    expect(confirmBrandCodeInEvidence(code, { url: wrongProduct, title: "Pony gift bag" })).toBe(code);
+    /** 🟢🟢 **WU-007A 에서 CPO 승인으로 고쳤다** — 이 단언은 수정 전에는
+     *    `toBe(code)`(거짓 양성)였고 지금은 `toBeNull()` 이다. 그 뒤집힘이
+     *    **수정이 실제로 들어갔다는 증거** 다(쿠팡 고시 FAIL 고정과 같은 방식). */
+    expect(confirmBrandCodeInEvidence(code, { url: wrongProduct, title: "Pony gift bag" })).toBeNull();
 
-    /** 🟢 쿼리를 벗기면 거짓 양성이 사라진다 — 리포에 이미 있는 정규화기로 된다. */
-    const stripped = normalizeCandidateUrl(wrongProduct);
-    expect(stripped).toBe("bobochoses.com/products/pony-gift-bag");
-    expect(confirmBrandCodeInEvidence(code, { url: stripped, title: "Pony gift bag" })).toBeNull();
+    /** 🟢 입력 자체는 여전히 품번 문자열을 **담고 있다** — 즉 FP 입력이 사라진 게 아니라
+     *    판정기가 그것을 증거로 쓰지 않게 된 것이다. */
+    expect(wrongProduct.toUpperCase()).toContain(code);
 
-    /** 🟢 그리고 **진짜** 양성은 정규화 뒤에도 살아 있어야 한다(과잉 수정 방지). */
+    /** 🟢 그리고 **진짜** 양성은 그대로 살아 있다(과잉 수정 방지). */
     const realProduct =
       "https://bobochoses.com/products/b226ac010-booty-ghosts-t-shirt?_pos=1&_psq=Bobo+Choses+B226AC010";
-    expect(confirmBrandCodeInEvidence(code, { url: normalizeCandidateUrl(realProduct) })).toBe(code);
+    expect(confirmBrandCodeInEvidence(code, { url: realProduct })).toBe(code);
+    expect(normalizeCandidateUrl(wrongProduct)).toBe("bobochoses.com/products/pony-gift-bag");
   });
 
   it("①-3 🔴 Common Crawl 은 «도메인 없이» 질의할 수 없다 (구조적 사실)", () => {
@@ -399,15 +401,15 @@ describe.skipIf(!LIVE)("② 🔴 무키 Discovery 실측", () => {
           "상품상세 비율": pct(hits.filter((h) => h.isProductDetail).length, hits.length),
           "자기참조": hits.filter((h) => h.selfReference).length,
         },
-        "②-b 🔴🔴 운영 결함 노출량 (①-4)": {
-          "날것 URL 기준 Code Hit Rate": pct([...perProductRaw.values()].filter((v) => v > 0).length, coded.length),
-          "날것 기준 품번 확인 후보": hits.filter((h) => h["🔴 날것URL 기준(운영 동작)"]).length,
-          "🔴 거짓 양성(날것 true · 정규화 false)": hits.filter(
+        "②-b 🟢 WU-007A 수정 후 — 검색어 재활용 FP": {
+          "날것 URL 을 그대로 넘겼을 때": pct([...perProductRaw.values()].filter((v) => v > 0).length, coded.length),
+          "품번 확인 후보(날것 입력)": hits.filter((h) => h["🔴 날것URL 기준(운영 동작)"]).length,
+          "🟢 잔존 FP(날것 true · 정규화 false)": hits.filter(
             (h) => h["🔴 날것URL 기준(운영 동작)"] && !h.codeFound,
           ).length,
-          "🔴 의미": "우리 검색어가 `_psq` 로 URL 에 되돌아와 «상대 페이지의 식별 증거» 로 쓰인다. " +
-            "운영 두 호출부(match.ts:514 · attach-match-truth.ts:124·143)가 날것 URL 을 넘긴다. " +
-            "🔴 이 WU 는 Production 변경 금지라 고치지 않았다 — CPO 판정 사안.",
+          "🟢 의미": "WU-007A 가 `confirmBrandCodeInEvidence` 안에서 검색 문맥 파라미터를 걷어낸다. " +
+            "→ 날것 URL 을 넘겨도 우리 검색어가 증거가 되지 않는다(수정 전 실측 FP 27/27 → 0). " +
+            "🔴 수정 전 숫자는 git 이력(WU-007 커밋)에 남아 있다.",
         },
         "③ 이미 보유(axis ③ · HTTP 0)": axis3,
         "④ Common Crawl(도메인 주어진 경우)": ccProbe,

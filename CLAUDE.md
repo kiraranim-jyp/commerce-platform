@@ -471,7 +471,18 @@ Gemini 내부 검색어 3개가 **전부 품번** 을 썼고 둘은 스스로 `s
 005R Hidden AI Web Research 아키텍처      🟢 PASS   — 🔴🔴 채택을 가르는 것은 **가격이 아니라 저장 허용**
 006 Anthropic Controlled Benchmark       🔴 **폐기** — 하니스만 남겼다(키 0 · 항상 SKIP)
 006R 외부 API 0원 AI Web Research        🔴 **STOP** — 8조건 동시 충족 **0건**
-007 Zero-Cost Deterministic Discovery   🔴 **STOP** (증분 0) + 🔴🔴 **운영 FP 결함 1건** ← 지금 여기
+007 Zero-Cost Deterministic Discovery   🔴 **STOP** (증분 0) + 🔴🔴 운영 FP 결함 1건 발견
+007A Shopify Search Evidence Sanitize   🟢 **CLOSED / FIX** — FP 28/28 → **0** ← 지금 여기
+```
+
+🟡 **Zero-cost Discovery 전략은 «폐기가 아니라 보류»** 다(CPO 2026-10-14):
+```
+🟢 증명된 것은 「**무키 구조화 endpoint 의 추가 발견량 = 0/6**」 이고
+🔴 「모든 Zero-cost Discovery = 가치 없음」이 **아니다** — 기존 운영 국내검색은 이미
+   후보 175 · very_high 1/26 을 만들고 있다.
+🔴🔴 **그래서 방향은 「새로 만들기」가 아니라 「이미 있는 Discovery 경로의 정확도와
+   Evidence 오염을 먼저 제거하기」 다.** WU-007A 가 그 첫 건이다.
+🟡 Common Crawl 도 보류 — 역할 후보는 **「아는 도메인 + 특정 경로 확인」** 까지만.
 ```
 
 ### 🔴🔴 WU-007 결과 — 증분 **0** · 그리고 **운영 거짓 양성 1건을 찾았다**
@@ -493,7 +504,30 @@ Gemini 내부 검색어 3개가 **전부 품번** 을 썼고 둘은 스스로 `s
 도메인 목록이 **Registry 뿐** 이다. 즉 커버리지 상한 = **Registry 크기** 이고 §12-0 의
 「Registry 확대가 목적이 아니다」와 **정면으로 만난다**(CPO 가 이미 지적한 그 긴장).
 
-### 🔴🔴🔴 CPO 판정 대기 — **운영 거짓 양성 경로** (고치지 않았다)
+### 🟢🟢 WU-007A **CLOSED / FIX 적용** — FP 28/28 → **0** (CPO GO)
+
+🟢 전문 `docs/SHOPIFY-SEARCH-EVIDENCE-SANITIZATION-007A.md`.
+🔴 AI/외부 API 0 · Gemini 0 · schema 0 · DB 쓰기 0 · **Production 배포 0** · flag OFF.
+
+```
+🟢 고친 곳은 **한 곳** — `confirmBrandCodeInEvidence`(domestic-identifiers.ts) 안에서
+   URL 을 읽기 «전» 에 **검색 문맥 파라미터만** 걷어낸다(신규 순수 함수
+   `stripSearchContextFromUrl` + 로직 1줄). 🔴 호출부 2곳을 각각 고치지 않았다 —
+   두 주석이 「**같은 건초더미**를 본다. 갈라지면 화면과 저장이 다른 판정을 낸다」고 명시한다.
+🔴 **쿼리 전체를 버리지 않았다** — `?variant=` · `?product_no=` · `?branduid=` 는
+   실재하는 식별 정보다. 제거 대상은 ① 🟢측정된 원인 = `_` 로 시작하는 파라미터
+   ② 🟡예방 = 검색어 이름(q·query·keyword·keywords·search·searchword·sq·term·s).
+   🔴 「측정됨」과 「예방」을 섞어 적지 않는다.
+🟢 측정 — FP **0/28**(fixture 는 실제 suggest 응답 28건 · handle 에 품번 있는 것 **0건**) ·
+   진짜 양성 **유지** · 기존 verdict **변화 없음** · 🔴 Before 83%(5/6)는 커밋 `2fcff3fd` 보존
+🟢 음성대조 M1 3 FAIL · **M2(쿼리 전체 삭제 = 과잉 수정) 3 FAIL** · M3 5 FAIL → 복구 10 passed
+🟢 WU-007 하니스 ①-4 가 `toBe(code)` → `toBeNull()` 로 **뒤집혔다** — 그것이 수정의 증거다
+🔴 금지 전수 대조: threshold 0 · Identity 완화 0(방향은 **엄격화**) · 품번 질의 삭제 0 ·
+   provider/어댑터 변경 0 · 배포 0
+🔴 남은 교환(미측정) — 검색어 파라미터에 «진짜» 품번을 싣는 샵의 증거는 사라진다
+```
+
+### 🔴 아래는 WU-007 이 올린 «그 결함» 의 원래 기록이다 (🟢 WU-007A 에서 해결)
 
 ```
 🔴 **우리 검색어가 「상대 페이지의 식별 증거」로 재활용된다.**

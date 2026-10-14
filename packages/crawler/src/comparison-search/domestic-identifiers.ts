@@ -110,6 +110,78 @@ export function confirmBrandCodeInTitle(foreignCode: string | null, title: strin
  * 🔴 측정되지 않은 이득을 위해 FP 위험을 먼저 받지 않는다. 필요해지면 그때 **재서** 넣는다.
  * ```
  */
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * WU-007A — 🔴🔴 **우리 검색어가 「상대의 식별 증거」로 재활용되는 것을 막는다**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 실측(WU-007)에서 **거짓 양성 27/27 = 100%** 가 났다. 원인은 순환 증거다:
+ * ```
+ * buildCrossSellerSearchQueries(product-identity-dna.ts:432) 의 1번 질의 = **품번 단독**
+ *   → Shopify Predictive Search 가 응답 URL 에 **그 질의를 되돌려 넣는다**
+ *       /products/pony-gift-bag?_pos=1&_psq=Bobo+Choses+B226AC010&_ss=sc
+ *                                            └──── 우리 질의 ────┘
+ *   → 그 URL 을 건초더미로 쓰면 「우리가 물어본 품번」이 「상대가 가진 품번」이 된다
+ *   → MODEL_CODE 축 exact → matchTruth EXACT/STRONG → priceTierFromLink EXACT
+ *   → 🔴 **전혀 다른 상품(기프트백)의 가격이 국내 최저가·판매판정에 들어간다**
+ * ```
+ *
+ * 🟢 **새 정책이 아니다** — `self-reference.ts:63-67` 이 이미 같은 말을 적어 뒀다:
+ *    「Shopify 는 검색/컬렉션 문맥을 `_pos` `_psq` `_ss` `_v` `_fid` 처럼 밑줄로
+ *      시작하는 파라미터에 싣는다 — **전부 listing 을 가리지 못한다**」
+ *
+ * 🔴🔴 **쿼리 «전체» 를 버리지 않는다** — 그러면 식별에 쓰이는 파라미터까지 사라진다.
+ *    실측 반례: `?variant=40096037535807`(Shopify 변형 id) · `?product_no=8021`(Cafe24) ·
+ *    `?branduid=10226592`(메이크샵). 그래서 **검색 문맥 파라미터만** 걷어낸다.
+ */
+const SEARCH_TERM_PARAMS = new Set([
+  /* 🟢 실측으로 확인된 FP 원인은 밑줄 계열(`_psq`)이다 — 아래 이름들은 **예방** 이다.
+     근거: `buildCrossSellerSearchQueries` 가 **모든 어댑터에** 품번을 질의로 던지므로,
+     검색어를 URL 에 남기는 플랫폼이면 같은 FP 가 난다. 🔴 「측정됨」과 「예방」을 섞지 않는다. */
+  "q",
+  "query",
+  "keyword",
+  "keywords",
+  "search", // 🟢 self-reference.ts 의 NON_IDENTIFYING_PARAMS 에도 이미 들어 있다(메이크샵)
+  "searchword",
+  "sq",
+  "term",
+  "s",
+]);
+
+/** 🔴 밑줄로 시작하면 Shopify 의 검색/컬렉션 문맥이다(리포 기존 판단). */
+const isSearchContextParam = (name: string): boolean =>
+  name.startsWith("_") || SEARCH_TERM_PARAMS.has(name.toLowerCase());
+
+/**
+ * 식별 증거로 URL 을 읽기 «전» 에 검색 문맥 파라미터를 걷어낸다.
+ *
+ * 🔴 `new URL()` 을 쓰지 않는다 — 상대 경로(`/products/x?...`)도 그대로 처리해야 한다.
+ *    (어댑터에 따라 절대/상대가 섞인다.)
+ */
+export function stripSearchContextFromUrl(raw: string): string {
+  const hashAt = raw.indexOf("#");
+  const base = hashAt >= 0 ? raw.slice(0, hashAt) : raw;
+  const qAt = base.indexOf("?");
+  if (qAt < 0) return base;
+  const path = base.slice(0, qAt);
+  const kept: string[] = [];
+  for (const pair of base.slice(qAt + 1).split("&")) {
+    if (!pair) continue;
+    const eq = pair.indexOf("=");
+    const rawName = eq >= 0 ? pair.slice(0, eq) : pair;
+    let name = rawName;
+    try {
+      name = decodeURIComponent(rawName);
+    } catch {
+      /* 잘못 인코딩된 이름은 날것 그대로 판단한다 — 버리지 않는다. */
+    }
+    if (isSearchContextParam(name)) continue;
+    kept.push(pair);
+  }
+  return kept.length > 0 ? `${path}?${kept.join("&")}` : path;
+}
+
 export interface BrandCodeEvidenceFields {
   /** 후보 상품명. */
   title?: string | null;
@@ -164,7 +236,11 @@ export function confirmBrandCodeInEvidence(
   /* 🟢 `parts` 는 `[^A-Z0-9]+` 로 쪼갠 결과라 **영숫자만** 들어 있다 →
      정규식 이스케이프가 **필요하지 않다**(특수문자가 들어올 수 없다). */
   const re = new RegExp(`(?<![A-Z0-9])${parts.join("[-_./]?")}(?![A-Z0-9])`);
-  for (const haystack of [fields.title, fields.url, fields.sku]) {
+  /* 🔴🔴 WU-007A — URL 은 **검색 문맥 파라미터를 걷어낸 뒤** 읽는다.
+     그러지 않으면 우리가 보낸 질의(`?_psq=<품번>`)가 상대의 증거로 재활용된다
+     (실측 FP 27/27). 🟢 실제 상품 path/handle 의 품번은 그대로 남는다. */
+  const urlHaystack = fields.url ? stripSearchContextFromUrl(fields.url) : null;
+  for (const haystack of [fields.title, urlHaystack, fields.sku]) {
     if (!haystack) continue;
     /* 🔴 돌려주는 것은 **원본 품번 문자열 그대로** 다 — 후보 쪽 문자열을 돌려주면
        compareModelCode 의 값 공간(`exact|unavailable`)이 깨진다. */
