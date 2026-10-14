@@ -470,8 +470,52 @@ Gemini 내부 검색어 3개가 **전부 품번** 을 썼고 둘은 스스로 `s
 005 P1 Exa 벤치마크                      🟡 하니스만 — 🔴 **키 요청 철회됨**(005R)
 005R Hidden AI Web Research 아키텍처      🟢 PASS   — 🔴🔴 채택을 가르는 것은 **가격이 아니라 저장 허용**
 006 Anthropic Controlled Benchmark       🔴 **폐기** — 하니스만 남겼다(키 0 · 항상 SKIP)
-006R 외부 API 0원 AI Web Research        🔴 **STOP** — 8조건 동시 충족 **0건** ← 지금 여기
+006R 외부 API 0원 AI Web Research        🔴 **STOP** — 8조건 동시 충족 **0건**
+007 Zero-Cost Deterministic Discovery   🔴 **STOP** (증분 0) + 🔴🔴 **운영 FP 결함 1건** ← 지금 여기
 ```
+
+### 🔴🔴 WU-007 결과 — 증분 **0** · 그리고 **운영 거짓 양성 1건을 찾았다**
+
+🟢 전문 `docs/ZERO-COST-DETERMINISTIC-DISCOVERY-007.md`. 🔴 AI 호출 **0** · 키 0 · 결제 0 ·
+운영 코드 변경 **0** · 무키 HTTP **58 요청**.
+
+```
+① 질의 가능 도메인 상한   등록부 34 → AUTO_* 8 → 🟢 **무키 구조화 검색 가능 1**(bobochoses.com)
+① 무키 구조화 증분        🔴 **Code Hit Rate 0/6 = 0%**
+② Common Crawl           🔴 **새 도메인 0** — urlkey 가 `com,bobochoses)/…` 라
+                         **역순 도메인이 키 앞부분** → 도메인 없이는 질의 불가(실측)
+③ 기존 보유              링크 4/26 (EXACT_IDENTIFIER 1 · STRONG 1 · TEXT_CONFIRMED 1 · SIMILAR 2)
+기존 운영 국내검색        WU-017 인용 — 후보 175 · very_high **1/26 = 3.8%** (재측정 안 함)
+🔴 품번 없는 20건         **측정불가**(결정적 식별자 부재 · 새 매칭 규칙 만들지 않았다)
+```
+
+🔴 **소매처 직접 경로의 상한이 수치로 확인됐다** — 도메인을 찾아 주는 무키 색인이 **없어서**
+도메인 목록이 **Registry 뿐** 이다. 즉 커버리지 상한 = **Registry 크기** 이고 §12-0 의
+「Registry 확대가 목적이 아니다」와 **정면으로 만난다**(CPO 가 이미 지적한 그 긴장).
+
+### 🔴🔴🔴 CPO 판정 대기 — **운영 거짓 양성 경로** (고치지 않았다)
+
+```
+🔴 **우리 검색어가 「상대 페이지의 식별 증거」로 재활용된다.**
+   Shopify Predictive Search 가 응답 URL 에 우리 질의를 되돌려 넣는다:
+     /products/pony-gift-bag?_pos=1&_psq=Bobo+Choses+B226AC010&_ss=sc
+노출 경로(전수 확인):
+  buildCrossSellerSearchQueries(product-identity-dna.ts:432) **1번 질의 = 품번 단독**
+   → searchShopifySuggest(shopify-suggest.ts:58-60) 쿼리 포함 URL 을 후보에 싣는다
+   → match.ts:514 (WU-004 가 URL 을 건초더미에 넣은 줄) + attach-match-truth.ts:124·143
+   → matchTruth **EXACT/STRONG** → priceTierFromLink **EXACT** → 국내 최저가·판매판정
+   적용 도메인: shopifySuggestAdapter **11(OVERSEAS)** + bobochoses-kr
+실측 노출량: 날것 URL 기준 83%(5/6) · **거짓 양성 27/27 = 100%** · 정규화하면 0/6
+🟢 수정은 **1줄이고 새 정책이 아니다** — self-reference.ts:63-67 이 이미 적어 뒀다
+   「Shopify 는 검색/컬렉션 문맥을 `_pos` `_psq` … 에 싣는다 — 전부 listing 을 가리지 못한다」
+   정규화기도 있다 — normalizeCandidateUrl(gemini-candidate-pool.ts:162 · `u.search=""`)
+🔴 **WU-007 이 Production 변경 금지라 고치지 않았다.** 대신 하니스 ①-4 가 **현재(결함)
+   동작을 단언으로 고정** 했다 → 수정이 들어가면 **그 테스트가 FAIL 로 뒤집힌다**(쿠팡 고시 선례)
+🟡 **CTO 권고: 고치는 쪽.** 현재 상태가 「다른 상품의 가격을 국내 최저가로 들여보낼 수 있는」 경로다
+🔴 교환 하나 — 쿼리에 «진짜» 품번을 싣는 샵의 증거도 사라진다(그런 샵 존재는 **미측정**)
+```
+
+🟢 **CEO Action: NONE.**
 
 ### 🔴🔴 WU-006R 결론 — **외부 AI/검색 API 를 사용하지 않는다** (CPO 확정 2026-10-14)
 
