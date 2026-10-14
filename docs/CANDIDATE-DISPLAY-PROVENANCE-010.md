@@ -501,3 +501,59 @@ hasOverseasRange = false  → "🌎 해외 판매처 가격대는 확인되지 �
 
 🟢 **결론: 등록 체인으로 복귀해도 안전하다.** 해외 후보는 설계대로 **발견 보조/표시**
 축에 머물고, 판매판정·가격·등록 readiness 와는 **코드 경로가 끊겨 있다.**
+
+---
+
+# WU-016 — Registration Decision Chain Final Audit (**조사만** · 1차)
+
+🔴 AI 0 · Gemini 0 · 비용 0 · Registry 0 · threshold 0 · Production 0 · schema 0 ·
+코드 수정 **0** · HTTP 0.
+
+## 1 🟢 판매판정은 등록 경로에 **들어가지 않는다** (확정)
+
+```
+🟢 computeRegistrationReadiness(inputs: PlatformReadinessInput[])
+   — registration-readiness-outcome.ts:109. 인자는 **플랫폼 상태 배열뿐** 이고
+   `sellVerdict` 를 받지 않는다 → **P-32 불변식이 코드로 확인됨**.
+🟢 쿠팡 등록 경로 전수 grep — `sellVerdict` · `sellability` **0건**
+   (`RECOMMENDED` 히트는 settings-status.ts 의 **셀러 설정 필드 목록** 이고 판정이 아니다)
+→ 🟢 「동일상품 판단 실패가 등록을 차단하는가」의 답은 **차단하지 않는다** 이고,
+   그것이 **설계된 분리** 다(P-32).
+```
+
+## 2 🔴🔴 그런데 provenance 에서 **중요한 사실 하나** 가 나왔다
+
+```
+apps/admin/src/app/api/coupang/register/route.ts:299
+    const { product, listing } = body;          ← 🔴 **클라이언트 body**
+  :618
+    const payload = buildCoupangPayload(product, listing, { … })
+```
+
+🔴 즉 **등록 payload 의 상품/리스팅은 서버가 스냅샷에서 다시 읽는 것이 아니라
+클라이언트가 보낸 값** 이다. 🟢 그래서 「UI 가 본 것 == 등록되는 것」이라는 의미에서는
+**provenance 가 하나** 다(UI 상태가 그대로 간다).
+🔴 그러나 같은 성질이 반대 위험도 만든다 — **서버가 그 값을 스냅샷과 대조하지 않는다면**
+화면이 낡은 상태였을 때 그 낡은 값이 그대로 등록된다.
+
+🔴🔴 **이 1차 조사에서 그 대조 여부를 확인하지 못했다.** 그래서 판정을 내리지 않는다:
+```
+🔴 미확인 — route 가 body.snapshotId 로 스냅샷을 다시 읽어 product/listing 을
+   검증/대체하는지, 아니면 body 를 그대로 신뢰하는지
+🔴 미확인 — CPO 요청 4항(국내 가격 · 대표가격 · seller count · sellability ·
+   identity verdict 를 readiness 가 참조하는지)의 **나머지**
+🔴 미확인 — 7항(UI 판정 ↔ 실제 payload 차이) · 9항(stale snapshot 혼입)
+🔴 미확인 — 「중간에 다른 판정 로직이 재실행되는지」 전수
+```
+
+## 3 🟡 그래서 현재 판정은 **부분** 이다
+```
+🟢 PASS   — 판매판정 → 등록 차단 경로 **없음**(P-32 확인) · 해외 후보 → 등록 **없음**(WU-015A)
+🟡 OPEN   — 등록 payload 의 상품/리스팅이 **클라이언트 body** 라는 사실은 확인됐으나,
+            서버측 대조 유무를 확인하지 못해 **DEFECT/OBSERVATION 을 가르지 못했다**
+🔴 그래서 이 WU 를 PASS 로 닫지 않는다.
+```
+
+🔴 **다음 한 걸음**(코드 수정 0) — `register/route.ts` 의 `body` → `payload` 사이에
+스냅샷 재조회·검증이 있는지, 그리고 `expectedExternalProductId`/`confirmRecreate` 가 어떤
+안전장치인지 읽는 것. 그것으로 2·3항이 닫힌다.
