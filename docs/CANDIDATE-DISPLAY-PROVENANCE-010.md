@@ -618,3 +618,66 @@ apps/admin/src/app/api/coupang/register/route.ts:299
 ```
 🔴 **그래서 PASS 로 닫지 않는다.** 남은 한 칸은 **CREATE 경로의 body 대조 유무** 하나이고,
 그것을 확인하면 WU-016 이 닫힌다(코드 읽기만 · `executeCoupangUpdate` 내부 대조도 같이).
+
+---
+
+# WU-016 3차 (마지막) — CREATE 경로의 body 검증 (조사만)
+
+🔴 코드 수정 0 · AI 0 · 비용 0 · Registry 0 · threshold 0 · Production 0 · schema 0.
+🟢 타입 → 호출부 → 구현 → 반환값 순으로만 확인했다(추측 0).
+
+## 1 🔴🔴 결론 — **CREATE 는 스냅샷을 다시 읽지 않는다. 소스가 직접 말한다**
+
+`register/route.ts:304-307` 원문:
+> 「Sprint B-1 — snapshotId 와 함께 클라이언트가 이미 들고 있는 값을 **그대로 받는다**
+>  (**서버에서 snapshotId 로 다시 조회하지 않는다** — pipeline/page.tsx 가 스냅샷 저장
+>  응답에서 이미 job_key 를 받아 상태로 갖고 있다).」
+
+🟢 그리고 CREATE 구간(:299~:618) 의 **모든 `await` 를 전수** 세었다. DB/외부를 읽는 호출은
+있지만 **`product`/`listing` 을 스냅샷과 대조하는 것은 하나도 없다**:
+```
+requireRegistrationAccess(snapshotId, …)   권한 — 🔴 body 값 검증이 아니다
+getCoupangCredentials · getVendorUserId · getDefaultSellerProfile · loadSellerSettings
+findBrandProfileByName(product.brand.value)        ← body 값을 **입력으로 쓴다**
+loadProductDetailOverride(snapshotId, workspaceId) 상세 오버라이드
+getDefaultDescriptionTemplate · fetchShippingPlaces · fetchCategoryMeta
+resolveBrand(credentials, listing.brand)           ← body 값을 **입력으로 쓴다**
+findChannelProductBySnapshot(snapshotId,"coupang") 🔴 **UPDATE 분기 안에만** 있다
+```
+🔴 **snapshot 재조회 0 · body↔snapshot 비교 0 · version/revision 비교 0 ·
+product/listing ID 검증 0 · stale detection 0 · 별도 validation 함수 0.**
+
+## 2 🟡 그래서 판정은 **OBSERVATION** 이다 — DEFECT 로 적지 않는다
+
+```
+🔴 사실: CREATE 는 클라이언트 body 의 product/listing 을 **그대로** payload 로 만든다
+         (:299 → :618). 서버 대조가 없다.
+🟢 그러나 「stale UI 값이 등록된다」가 성립하려면 **UI 가 낡은 상태** 여야 한다.
+   그런데 그 body 를 만드는 쪽은 **같은 화면의 현재 상태** 다 — 셀러가 보고 있는
+   그 값이 그대로 간다. 즉 **「화면에 보이는 것 == 등록되는 것」** 이고,
+   이 성질은 오히려 **provenance 가 하나** 라는 뜻이다(CPO 의 PASS 기준 문장과 일치).
+🔴 **비대칭은 실재한다** — UPDATE 는 번호를 서버가 찾고 `expectedExternalProductId` 로
+   대조하는데, CREATE 에는 그 대조가 **없다**. 🟢 단 그 비대칭에는 이유가 있다:
+   UPDATE 는 **이미 채널에 있는 상품을 건드리므로** 「어느 상품인가」가 틀리면
+   남의 상품을 고친다. CREATE 는 **새로 만드는 것** 이라 그 위험이 없다.
+🔴 그리고 CREATE 의 중복 위험은 **다른 장치가 막는다** — `editedFields`
+   `undefined ↔ []` 구분(:311-315 주석: 「둘을 같게 다루면 「고친 것 없음」이 CREATE 로
+   흘러 **중복 상품이 생긴다**」)과 RECREATE 동의 게이트(:831)다.
+```
+
+🔴 **그래서 STOP 이 아니다** — 「잘못된 상품/가격으로 등록될 수 있는가」의 답은
+**「화면이 그 상품/가격을 보여주고 있었다면 그대로 등록된다」** 이고, 그것은 사양이다.
+🔴 **단 남는 미확인 하나** — 화면 상태가 스냅샷보다 낡을 수 있는 경로(예: 다른 탭에서
+수정 후 이 탭에서 등록)는 **이번 조사 범위 밖** 이다. 그 시나리오를 재현하려면 UI 상태
+관리까지 읽어야 한다. 🔴 「없다」로 적지 않는다.
+
+## 3 WU-016 종합
+```
+🟢 PASS  판매판정 → 등록 **0** (P-32) · 해외 후보 → 등록 **0** (WU-015A)
+🟢 PASS  UPDATE: 번호를 서버가 DB 에서 찾는다 · CREATE payload 를 만들지 않는다
+🟢 PASS  RECREATE: 채널 실측 + 셀러 동의 없이는 만들지 않는다
+🟡 OBSERVATION  CREATE: body 가 그대로 payload 가 된다(서버 대조 0).
+                🟢 「화면 == 등록」이라는 단일 provenance 이고
+                🔴 UPDATE 대비 **대조 비대칭** 이 있다(이유는 설명 가능)
+🔴 미확인  화면 상태가 스냅샷보다 낡을 수 있는 경로(멀티탭 등) — UI 상태관리 미조사
+```
