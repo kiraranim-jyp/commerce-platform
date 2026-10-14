@@ -469,8 +469,79 @@ Gemini 내부 검색어 3개가 **전부 품번** 을 썼고 둘은 스스로 `s
 005 P0 Provider capability matrix        🟢 PASS   — 호출 0 · 키 0
 005 P1 Exa 벤치마크                      🟡 하니스만 — 🔴 **키 요청 철회됨**(005R)
 005R Hidden AI Web Research 아키텍처      🟢 PASS   — 🔴🔴 채택을 가르는 것은 **가격이 아니라 저장 허용**
-006 Anthropic Controlled Benchmark       🟡 **하니스 준비 완료 / 호출 0 · 키 없음** ← 지금 여기
+006 Anthropic Controlled Benchmark       🔴 **폐기** — 하니스만 남겼다(키 0 · 항상 SKIP)
+006R 외부 API 0원 AI Web Research        🔴 **STOP** — 8조건 동시 충족 **0건** ← 지금 여기
 ```
+
+### 🔴🔴 WU-006R 결론 — **외부 AI/검색 API 를 사용하지 않는다** (CPO 확정 2026-10-14)
+
+🔴🔴 **전략이 확정됐다** — ❌ Gemini ❌ Anthropic ❌ OpenAI ❌ Perplexity ❌ Exa/Brave
+❌ 외부 API 비용 ❌ 키 추가 발급/결제. 🔴 **WU-006 Anthropic 실측은 폐기** 다.
+
+🔴 **CPO 8문 전수 판정 — 동시 충족 0건**(전문 `docs/AI-WEB-RESEARCH-ZERO-COST-006R.md`):
+```
+① AI 가 웹 검색을 하는가       🟡 일부 가능(Gemini in Chrome auto browse · Workspace Agents)
+② 결과 URL 을 우리 시스템으로   🟡 **API 경로만** — 비-API 무료 경로엔 인터페이스가 **없다**
+③ 사람 복붙 없이              🔴 아니오    ④ 로그인/승인 없이  🔴 아니오
+⑤ 숨겨진 백그라운드           🔴 아니오    ⑥ 약관상 자동화 허용 🔴🔴 **금지**
+⑦ 따져 파이프라인 연결         🟢 기술상 가능 — 🔴 ⑥이 깨지므로 무의미
+⑧ 외부 API 0원                🔴 불가
+🔴🔴 **②와 ⑧이 만나지 않는다** — 검색 가능한 것은 전부 유료, 0원인 것은 검색 능력이 0.
+```
+
+🔴🔴 **그리고 「구독으로 공짜로 돌린다」가 가장 먼저 닫힌다 — CTO 가 원문을 직접 확인했다**:
+```
+Anthropic Usage Policy (anthropic.com/legal/aup) 원문:
+ 「Resell, proxy, or otherwise provide access to Claude through unauthorized means,
+   **including services that route requests through consumer subscriptions** or
+   misrepresent the product or client being used」
+Claude Code 법적 문서(code.claude.com/docs/en/legal-and-compliance):
+ 「Anthropic does not permit third-party developers to … **route requests through Free,
+   Pro, or Max plan credentials on behalf of their users**」
+ 「Advertised usage limits for Pro and Max plans assume **ordinary, individual usage**」
+🔴 우리가 Claude Code 를 쓰고 있으므로 새 세션이 「그걸 백엔드로 쓰면 0원」으로 갈 수 있다.
+   **금지 문장이 그 행위를 직접 지명한다.** 🟢 반대 경계도 명시 — 「자사 인가 사용자(직원)의
+   내부 용도」는 제한 대상이 아니다. 축은 「상업적인가」가 아니라 **「최종 고객을 대신해
+   요청을 통과시키는가」** 다.
+```
+
+🔴 **구조적 결론 — 업계 설계 방향이 반대다**: MCP 공식 문서가 「**AI 앱이** MCP 서버에 연결
+한다」이고, 역방향 primitive 였던 **Sampling 이 `2026-07-28` 로 폐기** 되며 공식 권고가
+**「New implementations should integrate directly with LLM provider APIs」** 다.
+🔴 즉 「숨겨진 AI Web Research」는 provider 들이 **닫는 방향** 이다.
+🔴 Gemini CLI 의 무료 개인 OAuth 경로도 **2026-06-18 폐지** 됐다(공식 deprecation 공지).
+
+🟢 **남은 0원 경로는 하나이고 AI 가 아니다 — 🔴 제품정책 결정 사안**:
+```
+🟢 소매처 직접 Discovery — robots.txt(RFC 9309) + sitemap.xml(sitemaps.org)
+   + Shopify Predictive Search `/search/suggest.json`(**공식 문서화 · 무키**)
+   + 🟢🟢 Shopify **UCP/MCP** `search_catalog`·**`lookup_catalog`**(품번 조회)·`get_product`
+   🟢 CTO 실측(키 0 · 결제 0 · 읽기만): `/.well-known/ucp` **200** · `tools/list` **200** ·
+      소매처 robots.txt 머리 주석이 **스스로 에이전트를 초대한다**
+   🟢 왜 이것만 남는가 — **금지 조항은 「검색 인덱스를 파는 사업자」에게서 나오고,
+      소매처와 직접 말하는 경로에는 그 사업자가 사슬에 없다.**
+🔴 과장 금지 넷 — ⒜ 명시된 것은 「crawlable」(접근)이고 **저장 허용 명시는 아니다**
+   ⒝ UCP 는 공개 `agent profile` URI 자체 호스팅이 필요하다(키·결제 아님)
+   ⒞ robots.txt 가 조건을 달았다(「identity 로 식별」·「**scripted workarounds 없이**」)
+   ⒟ 🔴🔴 **이것은 「웹 전체 검색」이 아니라 「아는 소매처 안에서 찾기」** 다 →
+      커버리지 상한이 **Registry 크기** 이고 **§12-0 의 「Registry 확대 금지」와 정면으로 만난다**
+🟡 보조 — Common Crawl(0원·무키 실측 200 · ToU 에 저장 금지/허용 **둘 다 없음** ·
+   🔴 색인 약 1~1.5개월 지연 → **가격·재고 축 불가**, 「품번이 어느 도메인에 있는가」만)
+```
+
+🔴 **CPO 결정 둘** — ⒜ 「웹 전체 검색」을 포기하고 소매처 직접으로 갈 것인가(그러면 §12-0
+금지와 충돌을 CPO 가 풀어야 한다) ⒝ Common Crawl 을 1차 후보 발견에만 쓸 것인가.
+🔴 **CTO 는 둘 중 아무것도 구현하지 않았다.**
+
+🔴 배제 근거(1차자료): Marginalia **CC-BY-NC-SA = 비상업 전용** · Mojeek 은 🟢 저장을 명시
+허용하는 유일한 검색 provider 지만 **£3 CPM 유료** · IndexNow/Bing WMT 는 **질의 기능 자체가
+없다** · SearxNG 는 **상위 엔진 약관을 상속**(숨기는 것이지 해결이 아니다) · Wikidata 는
+🟢 CC0 인데 **분모가 없다**(전 세계 GTIN 2,620건 · 소매 URL 매핑 없음) · Chrome 내장 AI 와
+Windows AI 는 **웹검색 능력이 0**(「No data is sent to Google」 = 정의상 검색 불가).
+
+🔴 **미확인 — 사람이 해야 닫힌다**: OpenAI ToU/Usage Policies 본문이 자동 fetch 에 **전 경로
+403** 이다. 「Automatically or programmatically extract data or Output」의 정확한 문구·섹션
+**미판독** 이고 snippet 을 1차 판독으로 쓰지 않았다.
 
 🔴🔴 **트랙 전체를 가른 한 문장**(005R · 1차자료):
 ```
@@ -482,17 +553,20 @@ Gemini 내부 검색어 3개가 **전부 품번** 을 썼고 둘은 스스로 `s
    비용이 해결돼도 「Gemini 로 찾아 Registry 에 쌓는다」는 조합이 약관과 충돌한다.
 ```
 
-🔴 **판정표 (CPO 확정)** — 🟢 GO 는 **없다**:
+🔴 **판정표 (CPO 확정 2026-10-14 — 외부 API 전면 제외로 갱신)**:
 ```
-Anthropic web_search + web_fetch    🟡 **CONDITIONAL GO** (실측 전)
-  🔴 CPO 정정: 「Output ownership = GO」 ≠ 「우리 Registry 에 **장기 저장·가격추적
-     자산** 으로 쓸 권리 = GO」. 후자는 **미확정** 이다
-OpenAI web_search + background      🟡 CONDITIONAL — `sources` 가 «방문 URL 전체» 를 공식 반환
-  🔴 정책 4페이지가 403 이라 **사람이 직접 열어야** 저장 조항을 확인할 수 있다
-Gemini / Grounding / Managed Agents 🔴 STOP (비용 + 저장금지)
-Exa · Brave · Bing                  🔴 STOP (저장·DB 생성 금지)
-Perplexity                          🔴 법무 선행 (AUP §3 "competitive with, similar to")
-소비자 AI 웹 UI(Gemini Web·ChatGPT Web) 🔴 STOP
+🔴 **외부 AI/검색 API 전부 — 전략상 STOP** (가격·약관 판정과 «무관하게» 사용하지 않는다)
+   Anthropic · OpenAI · Gemini · Perplexity · Exa · Brave · Bing · Mojeek
+   🔴 Anthropic 의 직전 등급 「🟡 CONDITIONAL GO」는 **전략 결정으로 대체됐다**
+   🟢 그때 CPO 가 가른 축은 유지된다 — 「Output ownership = GO」 ≠ 「Registry 장기 저장·
+      가격추적 자산으로 쓸 권리 = GO」
+🔴 소비자 구독 우회(Claude Pro/Max · Claude Code)  🔴🔴 **STOP — 약관이 지명 금지**
+🔴 소비자 AI 웹 UI(Gemini Web · ChatGPT Web · Copilot · Comet)  🔴 STOP
+🔴 브라우저 확장으로 AI UI 자동화                  🔴 STOP (CWS 정책 + 2026 AI 조항)
+🟢 Chrome 내장 AI · Windows AI                     🔴 **웹검색 능력 0** (약관 아니라 능력)
+🟢 **소매처 직접**(robots+sitemap+suggest+UCP/MCP)  🟡 **유일한 0원 경로 · 제품정책 결정**
+🟡 Common Crawl                                    🟡 보조(1차 후보 발견만 · 1개월 지연)
+🔴 미확인 — OpenAI 정책 4페이지가 403 이라 **사람이 직접 열어야** 확인된다
 ```
 
 🔴🔴 **승격된 아키텍처 원칙 — 이 문장을 그대로 유지한다**(CPO):
@@ -505,20 +579,15 @@ Perplexity                          🔴 법무 선행 (AUP §3 "competitive wit
 (Claude 자기 출력에만 있는 URL 은 `url_not_in_prior_context` 로 거부된다).
 🔴 단 `web_fetch` 는 **JS 렌더 사이트를 못 읽는다**(공식) → Evidence 는 여전히 따져가 가져온다.
 
-🟡 **실측을 열려면 필요한 최소 조치**(전문 `docs/AI-WEB-RESEARCH-ANTHROPIC-BENCHMARK-006.md` §6):
-```
-① Anthropic Console API Key → `scripts/.env` 에 `ANTHROPIC_API_KEY=` 한 줄
-   🔴 env 전수 확인 결과 **지금은 없다**(로컬 `GEMINI_API_KEY` 하나뿐 · Production 에도 없음)
-② 🔴🔴 선불 크레딧 구매가 필요한지는 **CTO 가 확인할 수 없다**(Billing 범위 밖)
-   🟢 측정이 쓰는 양은 확정이다 — web_search **최대 18회 = $0.18** · web_fetch 과금 **$0**
-   🔴 즉 측정 비용은 매우 작고, **최소 충전 단위와의 차액** 이 CEO 승인 대상이다
-③ Console 에서 **web search 가 켜져 있어야** 한다(관리자가 끄면 요청이 400)
-🔴 CTO 가 CEO 에게 직접 요청하지 않는다(§3) — CPO 가 전달한다.
-🔴 **유료 API 는 마지막 fallback** 이다(CPO).
-```
+🔴🔴 **그 하니스를 실행하지 않는다 — 006 은 폐기됐다**(위 WU-006R 절).
+`ANTHROPIC_API_KEY` 를 **발급하지 않는다.** 🟢 하니스를 남긴 이유는 ① 게이트가 둘이라 키가
+없으면 **항상 SKIP** 이고 ② ①-2 음성대조(「산문 URL 은 후보가 아니다」)가 **provider 와
+무관한 영구 계약** 이라 어떤 Discovery worker 에도 그대로 쓰이기 때문이다.
+🟢 공식 규격 기록(과금 단위·실패 무과금·URL 제약·JS 렌더 미지원)은 참고자료로 유지한다 —
+`docs/AI-WEB-RESEARCH-ANTHROPIC-BENCHMARK-006.md`.
 
-🔴 **그 전까지 전부 고정** — Gemini flag **OFF** · 잔액 **₩3,171 보존** · Production **HOLD** ·
-다른 provider 가입 **0** · 운영 코드 변경 **0**(WU-004 이후 없다).
+🔴 **전부 고정** — Gemini flag **OFF** · 잔액 **₩3,171 보존** · Production **HOLD** ·
+provider 가입 **0** · API 키 발급 **0** · 결제 **0** · 운영 코드 변경 **0**(WU-004 이후 없다).
 
 ### 🔴🔴 WU-023 지시서 본문 — `MI-PRODUCTION-E2E-FINAL-023`
 
