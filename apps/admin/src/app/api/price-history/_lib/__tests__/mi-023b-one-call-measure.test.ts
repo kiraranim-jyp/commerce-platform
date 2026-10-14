@@ -119,7 +119,9 @@ describe.skipIf(!ENABLED)("🔴🔴 WU-023B — Gemini 1 call 실측", () => {
         } as never);
         const kind = (j as { kind: string }).kind;
         if (kind === "JUDGED") {
-          const best = (j as { best: Record<string, unknown> }).best;
+          /** 🔴 `DomesticJudgement` 는 판별 union 이라 직접 단언이 겹치지 않는다(TS2352).
+           *     `unknown` 을 한 번 거쳐 읽는다 — 값을 바꾸지 않는다. */
+          const best = (j as unknown as { best: Record<string, unknown> }).best;
           const v = String(best.crossSellerVerdict ?? best.matchTruth ?? "(없음)");
           verdicts[v] = (verdicts[v] ?? 0) + 1;
           judged.push({
