@@ -89,6 +89,10 @@ export {
   type AiUrlDropReason,
   type AiUrlExtraction,
 } from "./ai-answer-urls";
+/** 🔴 WU-017-2 — 그 URL 들을 **페이지를 열어** 기존 MI 입력으로 바꾼다. AI/API 0 ·
+ *    새 판정 규칙 0 · 새 상태 어휘 0. `withConfidence` 는 **배열 단위 1회** 부른다. */
+export { collectAiAnswerCandidatePool } from "./ai-answer-pool";
+export type { AiAnswerPoolDrop, AiAnswerPoolInput, AiAnswerPoolResult } from "./ai-answer-pool";
 /** MATCHING-2.0-CORE(CEO 지시, 2026-09-13) — 판매처가 달라도 같은 물건인지
  * 판정하는 계층. 방향을 바꿔도 같은 답이 나오고, 강한 반증은 점수로 뒤집히지
  * 않는다. scoreCandidateMatch/confidence/matchLevel은 전혀 재계산하지 않는다. */
