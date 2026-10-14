@@ -557,3 +557,64 @@ apps/admin/src/app/api/coupang/register/route.ts:299
 🔴 **다음 한 걸음**(코드 수정 0) — `register/route.ts` 의 `body` → `payload` 사이에
 스냅샷 재조회·검증이 있는지, 그리고 `expectedExternalProductId`/`confirmRecreate` 가 어떤
 안전장치인지 읽는 것. 그것으로 2·3항이 닫힌다.
+
+---
+
+# WU-016 2차 — 두 안전장치의 정체 (조사만)
+
+🔴 코드 수정 0 · AI 0 · 비용 0 · Registry 0 · threshold 0 · Production 0 · schema 0.
+🟢 규칙대로 **타입 → 호출부 → 실제 검증 경로** 순으로 읽었다(추측 0).
+
+## 1 `expectedExternalProductId` — **UPDATE 전용 낙관적 잠금**
+
+```
+타입   :293  expectedExternalProductId?: string          (body 선택 필드)
+읽기   :315  const expectedExternalProductId = body.expectedExternalProductId ?? null
+호출부 :390-396  if (editedFields !== undefined) { … }   ← **UPDATE 분기 안에서만**
+         const link = await findChannelProductBySnapshot(snapshotId, "coupang");
+         await executeCoupangUpdate({ sellerProductId: link?.externalProductId ?? null,
+                                      expectedExternalProductId, editedFields,
+                                      title: listing.title });
+```
+
+🟢🟢 **결정적** — 바로 위 줄의 주석이 성질을 직접 말한다:
+> 「🔴 **번호는 «우리가» 찾는다. 클라이언트가 준 번호로 읽지 않는다.**」
+
+즉 실제 대상 상품번호는 **서버가 DB 에서** 찾고(`findChannelProductBySnapshot`),
+`expectedExternalProductId` 는 **클라이언트가 보고 있던 번호** 로서 **대조용** 으로만 넘어간다.
+→ 🟢 **stale 화면 보호장치** 다(화면이 다른 상품을 보고 있었으면 어긋난다).
+🔴 그 대조가 실제로 어떻게 처리되는지는 `executeCoupangUpdate` **안** 이고 이번에 열지 않았다.
+
+🟢 그리고 UPDATE 분기는 **`buildCoupangPayload()` 앞에서 즉시 반환** 한다(주석 명시):
+> 「UPDATE 는 CREATE payload 를 만들 이유가 없고, 만들 수 있게 두면 언젠가 그것을 PUT 한다
+>  — 「Master → 전체 payload → PUT」이 CPO 최우선 금지다.」
+→ 🟢 UPDATE 요청은 CREATE 조립을 **지나가지 않는다.**
+→ 🟢 그리고 `editedFields` 가 없으면 **그 블록이 없는 것과 같다** → 기존 등록 트래픽 불변.
+
+## 2 `confirmRecreate` — **RECREATE 동의 게이트** (CREATE 경로)
+
+```
+타입   :274  confirmRecreate?: boolean
+읽기   :309  const confirmRecreate = body.confirmRecreate === true
+호출부 :831-834  if (decision.operation === "RECREATE") { if (!confirmRecreate) { … FAILED } }
+```
+🟢 주석이 이유를 적어 뒀다:
+> 「🔴 묻지 않고 만들지 않는다. 진행하면 **옛 상품이 쿠팡에 그대로 남고 새 상품이 하나 더
+>  생긴다** — 그것을 어떻게 할지는 셀러의 사업 판단이다.」
+
+🟢 그리고 그 `decision` 은 **등록된 상품을 실제로 읽어** 만든다 — `registered.displayCategoryCode`
+(= 채널에서 읽은 값)와 `sending`(= 보내려는 값)을 비교한다. 🟢 즉 **서버가 외부 상태를
+재조회해 판단** 한다. `retryable: true` + 동의 상태를 **SmartStore 와 같은 구조** 로 돌려준다.
+
+## 3 🟡 그래서 WU-016 의 판정 — **부분 PASS · 한 칸 OPEN**
+```
+🟢 PASS  판매판정 → 등록 **경로 0**(P-32) · 해외 후보 → 등록 **0**(WU-015A)
+🟢 PASS  UPDATE 는 CREATE payload 를 **만들지 않는다**(설계 · 즉시 반환)
+🟢 PASS  UPDATE 대상 상품번호를 **서버가 DB 에서 찾는다**(클라이언트 번호를 신뢰하지 않는다)
+🟢 PASS  RECREATE 는 **채널 실측값으로 판단** 하고 셀러 동의 없이는 만들지 않는다
+🟡 OPEN  **CREATE 경로의 `product`/`listing` 은 여전히 클라이언트 body** 다(:299 → :618).
+         🔴 그 값을 스냅샷과 대조하는 코드를 **아직 찾지 못했다.**
+         → 🔴 「stale UI 값이 그대로 CREATE 될 수 있는가」는 **미확정** 이다.
+```
+🔴 **그래서 PASS 로 닫지 않는다.** 남은 한 칸은 **CREATE 경로의 body 대조 유무** 하나이고,
+그것을 확인하면 WU-016 이 닫힌다(코드 읽기만 · `executeCoupangUpdate` 내부 대조도 같이).
