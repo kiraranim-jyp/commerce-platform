@@ -134,6 +134,62 @@ export function canonicalListingKey(rawUrl: string | null | undefined): { host: 
 }
 
 /**
+ * ════════════════════════════════════════════════════════════════════════════
+ * WU-009 C — **저장용 원본 URL 정규화.** 추적·검색 파라미터만 걷어낸다.
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 왜 필요한가 — 실측(WU-008 · `B226AC117`):
+ * ```
+ * product_snapshots 에 **경로가 완전히 같은** 두 행이 있었다.
+ *   bobochoses.co.jp/products/b226ac117-…?utm_source=chatgpt.com
+ *   bobochoses.co.jp/products/b226ac117-…
+ * 🔴 추적 파라미터 하나 때문에 같은 상품이 **별개 스냅샷** 으로 쌓였다.
+ * ```
+ *
+ * 🔴🔴 **`canonicalListingKey` 를 쓰지 않는다** — 그 함수는 비교용 **key**(host+path)
+ *    를 만들고 host/대소문자/목록 세그먼트까지 뭉갠다. 저장용 URL 은 **그대로 열려야**
+ *    하므로 여기서는 **파라미터만** 손댄다.
+ *
+ * 🔴 **합치지 않는 것**(CPO 확정 — 시장은 보존한다):
+ * ```
+ * host  유지 — bobochoses.co.jp ↔ bobochoses.com 은 **다른 스토어** 다
+ * 경로  유지 — /en-kr/products/X ↔ /products/X 는 **다른 시장** 이다
+ * 그 외 파라미터 유지 — ?variant= · ?product_no= · ?branduid= 는 식별 정보다
+ * 🔴 대소문자·끝 슬래시도 건드리지 않는다. URL 을 «여는» 용도이기 때문이다.
+ * ```
+ *
+ * 🟢 제거 대상은 이 파일이 **이미 갖고 있는 두 집합** 뿐이다 —
+ *    `NON_IDENTIFYING_PARAMS`(추적/검색) + `isShopifyContextParam`(밑줄 문맥).
+ *    🔴 새 규칙을 만들지 않았다.
+ *
+ * 판단할 수 없으면(상대 경로·비 HTTP 등) **입력을 그대로** 돌려준다 — 저장을 막지 않는다.
+ */
+export function canonicalizeProductUrl(rawUrl: string): string {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return rawUrl;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return rawUrl;
+
+  let removed = 0;
+  for (const name of [...url.searchParams.keys()]) {
+    const lower = name.toLowerCase();
+    if (NON_IDENTIFYING_PARAMS.has(lower) || isShopifyContextParam(lower)) {
+      url.searchParams.delete(name);
+      removed += 1;
+    }
+  }
+  /* 🔴 제거한 것이 없으면 **입력 문자열을 그대로** 돌려준다 — URL 재직렬화가
+     인코딩을 미묘하게 바꿔 기존 행과 어긋나는 것을 막는다. */
+  if (removed === 0) return rawUrl;
+  /* 🔴 fragment 는 남긴다(서버에 전달되지 않는 값이라 중복의 원인이 아니고,
+     지우면 셀러가 붙여넣은 URL 과 눈에 보이게 달라진다). */
+  return url.toString();
+}
+
+/**
  * 후보가 원본과 «같은 listing» 인가.
  *
  * `true` 일 때만 후보에서 뺀다. 판단할 수 없으면 `false`(기존 동작 유지).

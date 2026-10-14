@@ -1,4 +1,7 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+/** 🟢 WU-009 C — 저장 전 URL 정규화. 🔴 새 규칙이 아니라 crawler 가 이미 갖고 있는
+ *    「가리지 못하는 파라미터」 집합을 그대로 쓴다(추적 + Shopify 밑줄 문맥). */
+import { canonicalizeProductUrl } from "@commerce/crawler";
 import { generateJobKey } from "./job-key";
 import type { ProductSnapshot, ProductSnapshotSummary, SnapshotWorkspaceState } from "./types";
 
@@ -257,10 +260,23 @@ async function createProductIdentity(
 }
 
 export async function saveSnapshot(
-  input: SaveSnapshotInput,
+  inputRaw: SaveSnapshotInput,
 ): Promise<{ ok: true; snapshot: ProductSnapshot } | { ok: false; error: string }> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return { ok: false, error: "Supabase가 설정되어 있지 않습니다." };
+
+  /**
+   * 🟢 WU-009 C — **추적/검색 파라미터만** 걷어낸 URL 로 저장한다.
+   *
+   * 실측(WU-008 · `B226AC117`): `?utm_source=chatgpt.com` 하나 때문에 **경로가 완전히
+   * 같은** 두 스냅샷이 쌓였고, 그 둘이 서로 다른 상품처럼 보였다.
+   *
+   * 🔴 **합치는 것이 아니다** — host·경로·로케일·그 외 파라미터는 **그대로** 둔다.
+   *    `.co.jp` ↔ `.com` ↔ `/en-kr` 는 서로 다른 시장이라 보존해야 한다(CPO 확정).
+   * 🔴 그리고 **기존 스냅샷을 찾아 재사용하지 않는다** — 그것은 셀러의 편집 내용이
+   *    섞이는 제품 정책 변경이라 CPO 결정 사안이다(이 WU 범위 밖).
+   */
+  const input: SaveSnapshotInput = { ...inputRaw, sourceUrl: canonicalizeProductUrl(inputRaw.sourceUrl) };
 
   const row = {
     source_url: input.sourceUrl,

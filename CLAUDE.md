@@ -474,8 +474,52 @@ Gemini 내부 검색어 3개가 **전부 품번** 을 썼고 둘은 스스로 `s
 007 Zero-Cost Deterministic Discovery   🔴 **STOP** (증분 0) + 🔴🔴 운영 FP 결함 1건 발견
 007A Shopify Search Evidence Sanitize   🟢 CLOSED / FIX(FP 28/28 → 0) · 🔴 배포됐으나
                                         **Production Acceptance = FAIL**(CEO 테스트)
-008 B226AC117 FAIL 원인 추적             🟢 **완료 / 조사 전용** ← 지금 여기
+008 B226AC117 FAIL 원인 추적             🟢 완료 / 조사 전용
+009 Identity/Market Provenance           🟡 **C 만 구현 · A 전제 반증 · B 이미 구현 · D 보류** ← 지금 여기
 ```
+
+### 🟡 WU-009 — 네 항목의 결과가 **서로 다르다** (전문 `docs/IDENTITY-MARKET-PROVENANCE-009.md`)
+
+```
+A 브랜드 공백       🔴 **전제 반증** — 상품 데이터에 브랜드가 «없다»
+B low 후보 처리     🟢 **이미 구현돼 있다** — 측정으로 확인
+C 스냅샷 URL 정규화  🟢 **구현 완료**(안전한 절반) · 🔴 중복 «병합» 은 제품 정책이라 제외
+D 시장 표시         🔴 **미구현** — 출처 화면 미확인 + 「시장 부재」 상태 모델 부재
+🔴 AI 0 · Gemini 0 · 검색 API 0 · Registry 0 · 환산 0 · 임계값 0 · 배포 0 · 비용 ₩0
+```
+
+🔴🔴 **A — `og:site_name` 을 브랜드로 쓰면 FP 가 «커진다»**(실측):
+```
+vendor = **"AW26"** · JSON-LD Product.brand.name = **"AW26"** ← 페이지가 그렇게 적어 뒀다
+🟢 og:site_name = "Bobo Choses" ← **사이트 이름** 이고 상품 브랜드가 아니다
+🔴 우리 26건 원본 도메인: smallable 9 · tennis-warehouse 9 · junioredition 6 ·
+   designerkidswear 1 · foretforet 1 → **25/26 이 멀티브랜드/리테일러** 다
+   → 그 전부에 「Smallable」·「Junior Edition」이 브랜드로 박힌다(거짓 일치/거짓 충돌)
+🟢 현재 동작(AW26 을 브랜드로 쓰지 않고 비우는 것)은 **옳다** —
+   brand-resolver.ts 의 SEASON_CODE 규칙이 이미 막는다.
+🟡 CPO 선택지 ⒜ 「브랜드 미확인」을 상태로 노출하고 탐색을 하지 않는다
+   (WU-014 `NO_PRIMARY_QUERY` 선례) ⒝ 공식몰 도메인→브랜드 표(🔴 Registry 성격 →
+   「Registry 확대 금지」와 만난다) ⒞ 현상 유지. 🔴 CTO 가 고르지 않았다.
+```
+
+🟢 **B — 이미 그렇다**: `judgeDomesticCandidate` 가 DROPPED/`NOT_MATCHED` 를 내면
+`run-domestic-price-check.ts:1087·1106` 의 `continue` 가 **upsert 앞에서** 끊는다 →
+저장 0 → 패널 후보 목록(= **DB 링크** · Panel:1842)에 **안 보이고** tier 에도 못 들어간다.
+🔴🔴 **그래서 미확인이 하나 생긴다** — low 가 저장도 표시도 안 되는데 CEO 는 무관한 상품을
+봤다. **그 노출의 출처 화면을 CTO 가 확인할 수 없다.** 🔴 출처를 모르고 UI 를 고치면 엉뚱한
+구역을 고친다. 🔴 「참고 후보로 별도 표시」는 **노출을 늘리는** 변경이라 하지 않았다.
+
+🟢 **C — 구현**: `canonicalizeProductUrl`(self-reference.ts 신규 순수함수) + `saveSnapshot`
+진입 1줄. 🟢 **새 규칙 0** — 그 파일의 기존 두 집합(`NON_IDENTIFYING_PARAMS` + 밑줄 문맥)만
+쓴다. 🔴 host·경로·로케일·식별 파라미터는 **그대로**(시장 보존) · 제거할 것 없으면 **입력
+그대로**. 🔴 **병합은 안 했다** — `saveSnapshot` 은 URL 조회 없이 항상 insert 하고, 합치면
+**셀러 편집이 섞인다**(제품 정책 · 기존 13건 처리 포함).
+🟢 테스트 9 + 음성대조 M1 1 FAIL · **M2(쿼리 전체 삭제=과잉) 3 FAIL** → 복구 9 passed.
+
+🔴 **D 보류 이유 셋** — ① 출처 화면 미확인 ② 「환율 환산이 아니다」류 표시가 **이미 일부
+있다**(price-hierarchy.ts:453 · `costBasisIsKrMarket`) → 관계를 CPO 가 정해야 문구가
+모순되지 않는다 ③ 🔴 관측 테이블에 **「probe 했고 404 였다」를 기록하는 칸이 없다** → 그
+상태 없이 「KR 시장 없음」을 적으면 **미관측을 부재로 단정** 한다(§5-B 위반).
 
 ### 🔴🔴 WU-008 — CEO FAIL 의 **원인 추적 완료** (조사 전용 · 구현 0)
 
