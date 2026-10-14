@@ -443,3 +443,61 @@ Registry(KIDS scope 통과)  30
   ↓ 판정 통과(표시 대상)   **0~1** (시점에 따라 변동 · WU-014)
   ↓ UI 표시              표시 대상 + **나머지 샵은 상태 문구로** 각각 한 행
 ```
+
+---
+
+# WU-015A — **해외 후보가 판매판정에 영향을 줄 수 있는 경로** 최종 audit (조사만)
+
+🔴 코드 수정 0 · 문구 0 · threshold 0 · Registry 0 · adapter 0 · AI 0 · HTTP 0 · 배포 0.
+
+## 🟢 결론 — 통로는 **하나뿐이고, 판정을 바꾸지 않는다**
+
+해외 transient 결과가 화면 밖으로 나가는 경로를 전수 추적했다:
+
+```
+ComparisonShopSearch (POST /api/comparison/search 결과)
+  → onEvidenceChange  ← 🔴 유일한 상향 통로
+  → CommerceWorkspace.tsx:3834  setOverseasMarketEvidence
+  → DomesticPriceIntelligencePanel  prop `overseasMarketEvidence`
+  → :2554  const overseasEvidence = overseasMarketEvidence ?? buildOverseasMarketEvidence({candidates: []})
+  → 소비처 **두 곳뿐**
+       :2871  <OverseasMarketEvidenceView …>        ← **표시 전용**
+       :2594  hasOverseasRange: overseasEvidence.figure != null
+                → mi-verdict-copy.ts:104 overseasLine  ← **문구 한 줄**
+```
+
+### 🔴 그 한 줄이 무엇인지 — 소스가 직접 말한다 (mi-verdict-copy.ts:98-107)
+> 「3번째 줄 — 🌎 해외 시세. **판정을 바꾸는 값이 아니라** 판정이 선 가격대가 시장
+>  전체에서 이상하지 않은가를 확인해 주는 줄이다. 그래서 **나쁜 쪽 문장이 없다**:
+>  해외 가격을 못 본 것은 이 상품을 팔면 안 된다는 뜻이 아니다.」
+
+```
+hasOverseasRange = true   → "🌎 해외에서도 유사한 가격대가 확인됩니다."
+hasOverseasRange = false  → "🌎 해외 판매처 가격대는 확인되지 않았습니다."
+🟢 두 문장 모두 **판정 등급을 바꾸지 않는다** — 분기가 문구에만 있다.
+```
+
+## 🟢 그래서 「해외 후보 → 판매판정」 경로는 **없다**
+```
+🟢 `overseasMarketEvidence` 가 sellVerdict · onSellerVerdictChange · computeSellability ·
+   국내 최저가 · 대표가격 계산에 들어가는 자리는 **0건**(패널 전수 grep).
+🟢 패널 주석도 같은 말을 한다(:2589-2591): 「여기서 판정을 다시 내리지 않는다.」
+🟢 그리고 WU-020 이 서버 쪽에서 같은 성질을 이미 잠가 뒀다 —
+   국내 축 진입에 `market === "KR"` 이 있고, 해외 집계(`candidateOverseasPrice`)는
+   MI 반환까지만 와 있으며 **UI 소비자가 0** 이다(헌장 §12).
+🟢 등록 판정은 설계상 분리돼 있다 — `computeRegistrationReadiness` 가 `sellVerdict` 를
+   **인자로 받지 않는다**(P-32 불변식).
+```
+
+## 🔴 남는 한 가지 — 「영향 0」이 아니라 「**판정 영향 0 · 문구 영향 1**」이다
+```
+🔴 해외 후보가 **하나라도 표시 대상이 되면** `figure` 가 생겨 문구가
+   「해외에서도 유사한 가격대가 확인됩니다」로 바뀐다.
+🔴 WU-014 실측대로 그 표시 대상은 **시점에 따라 0↔1 로 흔들린다**(ICHI 같은 무관 후보).
+   → 즉 **무관한 후보 1건이 그 문구를 켤 수 있다.**
+🟢 그러나 ⒜ 판정 등급은 안 바뀌고 ⒝ 가격/최저가에도 들어가지 않는다.
+🔴 그 문구를 어떻게 다룰지는 **제품 정책** 이다 — 이번에 **고치지 않았다**.
+```
+
+🟢 **결론: 등록 체인으로 복귀해도 안전하다.** 해외 후보는 설계대로 **발견 보조/표시**
+축에 머물고, 판매판정·가격·등록 readiness 와는 **코드 경로가 끊겨 있다.**
