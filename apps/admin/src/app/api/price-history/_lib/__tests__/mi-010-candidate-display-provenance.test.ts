@@ -354,3 +354,168 @@ describe.skipIf(!LIVE)("③ 🔴🔴 해외 비교 후보가 화면 게이트를
     60 * 60 * 1000,
   );
 });
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * ④ 🔴🔴 WU-010A — **브랜드 반사실** (CPO 지시)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 **딱 한 변수만 바꾼다.** 샵 목록·질의 구성·판정 함수·표시 게이트는 ③과 **같은 코드** 다.
+ * ```
+ * A  brand = 공백            (운영 현재 상태 — canonicalProduct.brand.value 가 빈 값)
+ * B  brand = "Bobo Choses"   🟢 **원본 상품 URL 에서 검증된 값**(og:site_name 실측)
+ *                            🔴 **측정 입력** 이고, 운영에 그 규칙을 넣는 것이 아니다.
+ * ```
+ * 🔴🔴 두 실행은 **서로 다른 HTTP 응답** 이다(샵 오류율이 매번 다르다). 그래서 후보를
+ *    **정규화 URL 로 조인** 해 **공통 집합만** 비교한다 — 분모가 다른 숫자를 나란히 적지 않는다.
+ * 🔴 임계값·게이트·판정 로직을 **한 글자도 바꾸지 않았다.**
+ */
+describe.skipIf(!LIVE)("④ 🔴🔴 WU-010A 브랜드 반사실 — 한 변수만 바꾼다", () => {
+  it(
+    "A(brand 공백) vs B(brand 주입) — 같은 후보의 판정이 바뀌는가",
+    async () => {
+      const prov = read<{ snapshots: ProvSnap[] }>("wu008-provenance.json");
+      const shopRows = read<
+        {
+          id: string; name: string; domain: string; currency: string | null;
+          is_active: boolean; access_status: string | null; category_scope: string[] | null;
+        }[]
+      >("wu010-comparison-shops.json");
+
+      const crawler = (await import("@commerce/crawler")) as unknown as {
+        searchComparisonShops: (q: unknown, s: unknown[]) => Promise<{ status: string; domain: string; candidates: Record<string, unknown>[] }[]>;
+        attachProductMatchTruth: (q: unknown, r: unknown[]) => { status: string; domain: string; candidates: Record<string, unknown>[] }[];
+      };
+      const shared = (await import("@commerce/shared")) as unknown as {
+        identityDnaFromFields: (f: Record<string, unknown>) => unknown;
+        productFactsFromIdentityDna: (dna: unknown) => Record<string, unknown>;
+        buildProductIdentityDna: (p: unknown) => Record<string, unknown>;
+        backfillCanonicalProduct: (p: unknown) => unknown;
+      };
+      const { isCollectableAccess } = await import("../../../comparison-shops/_lib/comparison-shop");
+      const { sourceFitsScopes } = (await import("@commerce/category")) as unknown as {
+        sourceFitsScopes: (sourceScope: string[], profileScopes: string[] | null) => boolean;
+      };
+      const { overseasMatchDisplay } = await import("@/app/pipeline/commerce/match-display");
+      /** 🟢 조인 키는 운영 정규화기 — 쿼리 echo 가 붙어 생문자열로는 맞지 않는다. */
+      const { normalizeCandidateUrl } = await import("../gemini-candidate-pool");
+
+      const snap = prov.snapshots.find((s) => s.source_url.includes("bobochoses.co.jp") && !s.source_url.includes("?"));
+      if (!snap) throw new Error("대상 스냅샷 없음");
+      const dnaFromSnapshot = shared.buildProductIdentityDna(shared.backfillCanonicalProduct(snap.canonical_product));
+      const sku = (dnaFromSnapshot.brandModelCode as string | null) ?? undefined;
+      const color = (dnaFromSnapshot.color as string | null) ?? undefined;
+      const material = (dnaFromSnapshot.material as string | null) ?? undefined;
+
+      const shops = shopRows.filter(
+        (s) =>
+          s.is_active &&
+          isCollectableAccess(s.access_status as never) &&
+          sourceFitsScopes(s.category_scope ?? [], ["KIDS_FASHION"]),
+      );
+      const shopRefs = shops.map((s) => ({ id: s.id, name: s.name, domain: s.domain, currency: s.currency }));
+
+      /** 🔴 질의 구성은 route.ts:46-56 과 **같은 모양** 이고 brand 만 인자다. */
+      const buildQuery = (brand: string | undefined) => {
+        const facts = shared.productFactsFromIdentityDna(
+          shared.identityDnaFromFields({ title: snap.title, brand, sku, sourceUrl: snap.source_url, color, material }),
+        );
+        return { title: snap.title, brand, sourceUrl: snap.source_url, sku, facts };
+      };
+
+      const runArm = async (label: string, brand: string | undefined) => {
+        const query = buildQuery(brand);
+        const raw = await crawler.searchComparisonShops(query, shopRefs);
+        const withTruth = crawler.attachProductMatchTruth(query, raw);
+        const rows = withTruth
+          .filter((r) => r.status === "ok")
+          .flatMap((r) =>
+            r.candidates.map((c) => {
+              const truth = c.productMatchTruth as Parameters<typeof overseasMatchDisplay>[0] | undefined;
+              const tier = truth ? overseasMatchDisplay(truth).tier : null;
+              const confidence = Number(c.confidence ?? 0);
+              return {
+                key: normalizeCandidateUrl(String(c.url ?? "")),
+                domain: r.domain,
+                title: String(c.title ?? "").slice(0, 56),
+                truth: truth ?? null,
+                confidence,
+                tier,
+                shown: tier ? mayShowCandidate({ tier, confidence }) : null,
+              };
+            }),
+          );
+        return {
+          label,
+          brand: brand ?? "(공백)",
+          "대상 샵": shopRefs.length,
+          "오류 샵": raw.filter((r) => r.status !== "ok").length,
+          "후보 수": rows.length,
+          "표시 수": rows.filter((r) => r.shown).length,
+          rows,
+        };
+      };
+
+      /** 🔴 A → B **직렬** 실행(동시 실행하면 같은 샵에 두 배 부하가 간다). */
+      const A = await runArm("A(brand 공백)", undefined);
+      const B = await runArm("B(brand 주입)", "Bobo Choses");
+
+      const bByKey = new Map(B.rows.map((r) => [r.key, r]));
+      const common = A.rows
+        .filter((a) => bByKey.has(a.key))
+        .map((a) => {
+          const b = bByKey.get(a.key)!;
+          return {
+            domain: a.domain,
+            title: a.title,
+            "A truth": a.truth,
+            "A conf": a.confidence,
+            "A 표시": a.shown,
+            "B truth": b.truth,
+            "B conf": b.confidence,
+            "B 표시": b.shown,
+            "🔴 판정 변화": a.truth !== b.truth,
+            "🔴 표시 변화": a.shown !== b.shown,
+          };
+        });
+
+      const report = {
+        "🔴🔴 DISCLAIMER":
+          "WU-010A — **브랜드 한 변수만** 바꾼 반사실. 🔴 두 실행은 서로 다른 HTTP 응답이라 " +
+          "후보를 **정규화 URL 로 조인한 공통 집합** 만 비교했다(분모 혼합 금지). " +
+          "🔴 임계값·게이트·판정 로직 변경 0 · AI 0 · 키 0 · 결제 0 · DB 쓰기 0 · 운영 변경 0. " +
+          "🟢 B 의 브랜드는 **원본 상품 URL 의 og:site_name 실측값** 이고 운영 규칙이 아니다.",
+        A: { ...A, rows: undefined },
+        B: { ...B, rows: undefined },
+        "공통 후보 수": common.length,
+        "🔴🔴 판정이 바뀐 후보": common.filter((r) => r["🔴 판정 변화"]).length,
+        "🔴🔴 표시가 바뀐 후보": common.filter((r) => r["🔴 표시 변화"]).length,
+        "A→B truth 전이": common.reduce<Record<string, number>>((acc, r) => {
+          const k = `${String(r["A truth"])} → ${String(r["B truth"])}`;
+          acc[k] = (acc[k] ?? 0) + 1;
+          return acc;
+        }, {}),
+        "🔴 ICHI/Elovera 후보": common.filter((r) => /ichi|elovera/i.test(r.title)),
+        "A 에서만 표시": A.rows.filter((a) => a.shown && !bByKey.get(a.key)?.shown).map((a) => `${a.domain} | ${a.title}`),
+        "B 에서만 표시": B.rows
+          .filter((b) => b.shown)
+          .filter((b) => {
+            const a = A.rows.find((x) => x.key === b.key);
+            return !a || !a.shown;
+          })
+          .map((b) => `${b.domain} | ${b.title}`),
+        공통: common,
+      };
+
+      mkdirSync(OUT_DIR, { recursive: true });
+      let seq = 1;
+      while (existsSync(path.join(OUT_DIR, `wu010a-counterfactual-${seq}.json`))) seq += 1;
+      writeFileSync(path.join(OUT_DIR, `wu010a-counterfactual-${seq}.json`), JSON.stringify(report, null, 1), "utf8");
+      // eslint-disable-next-line no-console
+      console.log("\n" + JSON.stringify({ ...report, 공통: `(wu010a-counterfactual-${seq}.json)` }, null, 1));
+
+      /** 🔴 공통 집합이 0 이면 비교가 성립하지 않는다. */
+      expect(common.length).toBeGreaterThan(0);
+    },
+    60 * 60 * 1000,
+  );
+});
