@@ -472,8 +472,59 @@ Gemini 내부 검색어 3개가 **전부 품번** 을 썼고 둘은 스스로 `s
 006 Anthropic Controlled Benchmark       🔴 **폐기** — 하니스만 남겼다(키 0 · 항상 SKIP)
 006R 외부 API 0원 AI Web Research        🔴 **STOP** — 8조건 동시 충족 **0건**
 007 Zero-Cost Deterministic Discovery   🔴 **STOP** (증분 0) + 🔴🔴 운영 FP 결함 1건 발견
-007A Shopify Search Evidence Sanitize   🟢 **CLOSED / FIX** — FP 28/28 → **0** ← 지금 여기
+007A Shopify Search Evidence Sanitize   🟢 CLOSED / FIX(FP 28/28 → 0) · 🔴 배포됐으나
+                                        **Production Acceptance = FAIL**(CEO 테스트)
+008 B226AC117 FAIL 원인 추적             🟢 **완료 / 조사 전용** ← 지금 여기
 ```
+
+### 🔴🔴 WU-008 — CEO FAIL 의 **원인 추적 완료** (조사 전용 · 구현 0)
+
+🟢 전문 `docs/B226AC117-FAILURE-ROOT-CAUSE-008.md`. 🔴 Gemini 0 · AI 0 · 키 0 · 결제 0 ·
+새 기능 0 · Registry 0 · DB 쓰기 0 · 운영 코드 변경 0 · **재배포 0**.
+
+🔴🔴 **전제 하나가 데이터로 반증됐다 — 이 문장을 그대로 쓴다**:
+```
+`¥26,400` 은 「엉뚱한 판매처 가격」이 **아니라** 테스트에 쓰인 **그 URL 의 원본 시장
+가격** 이다. 테스트 URL 이 **bobochoses.co.jp**(일본 스토어 · `?utm_source=chatgpt.com`)
+였고 canonicalProduct.price = {26400, JPY, source: **ORIGINAL**} 이다.
+→ 🟢 헌장의 「원본 통화 그대로 · 환산 금지」와 **일치** 한다. 가격 오염이 아니다.
+🟢 €120 = bobochoses.com 기본 · ₩258,000 = `.com` 의 **en-kr 시장** — 셋이 다른 시장이다.
+```
+
+🟢 **`₩258,000` 은 이미 갖고 있다** — `.com` 스냅샷 **11/11** 이 `en-kr: KRW 258,000` 보유.
+🔴 `.co.jp` 는 **en-kr 0건** 이고 그 이유는 코드 버그가 **아니다**(실측):
+```
+GET bobochoses.co.jp/en-kr/products/b226ac117-….json → **404**
+GET bobochoses.com /en-kr/products/b226ac117-….json → **200**
+→ 🟢 일본 스토어에 **한국 시장이 없다.** probeOriginAndKrMarkets 는 정상 동작했다.
+🔴 남는 것은 제품 결함 — `.co.jp` URL 을 넣으면 KR 가격을 영구히 못 보고,
+   화면이 **그 이유를 말하지 않는다.**
+```
+
+🟢🟢 **CEO 가 본 「무관한 상품」은 사실이다 — 단 가격에는 들어가지 않는다**(실측):
+```
+운영 searchDomesticShops 재현 — 대상 샵 6 · 오류 0 · 후보 **5건 전부 looxloo.com** ·
+전부 다른 상품(BLUEDOG 레깅스/가디건/우주복 · 플리스 머플러 · 턱받이)
+🟢 matchLevel **전건 low** · 품번 Evidence **0/5** · 저장된 국내 링크 **0건**
+🔴 「무관한 상품이 보인다」 = **사실(UX 결함)**
+🔴 「그 가격이 동일상품 가격·판정에 들어간다」 = **반증**(EXACT 아님 · 링크 0)
+🔴 Gift Bag/Veja 는 이 경로에 **없다** — bobochoses.com 이 두 workspace 모두 ws OFF.
+   그 이름들은 **WU-007 에서 내가 bobochoses.com 에 직접 질의했을 때** 나온 것이다.
+🔴 CEO 화면에 실제로 그려진 것은 **CTO 가 확인 불가**(로그인 뒤).
+```
+
+🔴 **왜 엉뚱한 후보가 나오는가 — 브랜드가 비어 있다**: `brand={value:"",source:"REQUIRED"}`
+가 **12/13**(1건은 `"AW26"` = 시즌). 그래서 실제 검색어 전수에 **「Bobo Choses」가 한 번도
+없다**(`B226AC117` · `embossed tracksuit jacket …` 넷). 🟢 기존 브랜드 오염 문제의 재확증.
+
+🔴 **결함 목록(등급 분리)** — ① 스냅샷 **13개 중복** ①-b **쿼리만 달라도 별개 스냅샷**
+(🟢 WU-007A 와 같은 계열) ② 스토어별 원본 통화 차이를 화면이 설명하지 않음 ③ `.co.jp` KR
+시장 부재(제품 결함 · 코드 버그 아님) ④ 브랜드 공백 ⑤ low 후보 노출(가격 영향 0) ⑥
+`miniboutique`(ljm8481.cafe24.com) 등록부 미등록 ⑦ 🟢 WU-007A FP 경로는 이 상품에서
+**발화하지 않았다**(샵 OFF).
+
+🔴 **CPO 결정 넷**(CTO 구현 0): ⒜ 스냅샷 URL 정규화/중복 ⒝ 스토어·시장 표시 ⒞ 브랜드 공백
+⒟ low 후보 노출. 🔴 **WU-007A 를 되돌릴 근거는 나오지 않았다.**
 
 🟡 **Zero-cost Discovery 전략은 «폐기가 아니라 보류»** 다(CPO 2026-10-14):
 ```
