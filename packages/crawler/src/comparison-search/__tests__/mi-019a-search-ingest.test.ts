@@ -52,7 +52,8 @@ export const SEARCH_TARGETS: {
     knownAnswers: ["https://bobochoses.com/products/b226ac010-booty-ghosts-t-shirt"], knownAnswerReachable: true },
   { searchId: "S2", sourceUrl: "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
     knownAnswers: ["https://bobochoses.com/products/b226ac009-hug-hairy-monster-t-shirt"], knownAnswerReachable: true },
-  /** 🔴 019A 실측에서 이 정답 URL 은 **404** 였다(상품이 사라졌다). */
+  /** 🔴 019A 실측에서 이 정답 **URL 이** 404 였다 → 「검증 가능한 정답 후보 집합에서 제외」.
+   *     🔴🔴 「그 상품 자체가 존재하지 않는다」로 **확대 해석하지 않는다**(CPO). */
   { searchId: "S3", sourceUrl: "https://www.junioredition.com/en-kr/products/curious-turnip-all-over-swim-cap-by-bobo-choses",
     knownAnswers: ["https://bobochoses.com/products/b126ai018-curious-turnip-all-over-swim-cap"], knownAnswerReachable: false },
   { searchId: "S4", sourceUrl: "https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story",
@@ -126,6 +127,8 @@ function sameUrlish(a: string, b: string): boolean {
 export interface DiscoveryRow {
   searchId: string;
   model: string;
+  /** 🔴 AI 가 스스로 적은 상태 — ①검색실패 ↔ ②후보없음 을 가른다. */
+  outcome: SearchOutcome;
   /** 추출된 후보 URL(017-1 통과분). */
   candidates: string[];
   /** 017-1 이 거른 것 + 이유. */
@@ -138,6 +141,27 @@ export interface DiscoveryRow {
   unverifiedNew: string[];
 }
 
+/**
+ * 🔴🔴 **AI 가 「없다」고 한 두 상태를 가른다**(CPO §「없으면 없다고 답하라」).
+ * ```
+ * SEARCH_NO_RESULT     웹 검색 자체가 결과를 주지 않았다      ← Search Failure
+ * NO_SAME_CANDIDATE    결과는 있었지만 동일상품이 없었다       ← Candidate Failure
+ * HAS_CANDIDATES       하나 이상 제시했다
+ * UNLABELED            🔴 접두사를 쓰지 않았다 — **추측하지 않는다**
+ * ```
+ * 🔴 프롬프트가 접두사를 요구하므로 **그것만** 읽는다. 산문을 해석해 상태를 만들지 않는다.
+ * 🔴 `UNLABELED` 를 「후보 없음」으로 **채우지 않는다** — 그러면 두 실패가 한 숫자로 뭉친다.
+ */
+export type SearchOutcome = "SEARCH_NO_RESULT" | "NO_SAME_CANDIDATE" | "HAS_CANDIDATES" | "UNLABELED";
+
+export function classifySearchOutcome(rawAnswer: string): SearchOutcome {
+  const head = rawAnswer.trim().replace(/^["'\s]+/, "");
+  if (/^검색\s*결과\s*없음/.test(head)) return "SEARCH_NO_RESULT";
+  if (/^동일상품\s*후보\s*없음/.test(head)) return "NO_SAME_CANDIDATE";
+  if (/^후보\s*있음/.test(head)) return "HAS_CANDIDATES";
+  return "UNLABELED";
+}
+
 /** 🔴 Search 답변 → 후보 URL. **새 파서를 만들지 않는다**(017-1 재사용). */
 export function discoveryRowsOf(entries: readonly SearchEntry[]): DiscoveryRow[] {
   return entries.map((e) => {
@@ -148,6 +172,7 @@ export function discoveryRowsOf(entries: readonly SearchEntry[]): DiscoveryRow[]
     return {
       searchId: e.searchId,
       model: e.model,
+      outcome: classifySearchOutcome(e.rawAnswer),
       candidates: ex.urls,
       dropped: ex.dropped.map((d) => ({ url: d.url, reason: d.reason })),
       foundCount: ex.foundCount,
@@ -226,6 +251,27 @@ describe("WU-019A-SEARCH ① 수집 파일 검증기 (AI 0 · HTTP 0)", () => {
   });
 });
 
+describe("WU-019A-SEARCH ①-b 「없다」의 두 상태를 가른다", () => {
+  it("🔴 접두사로만 가른다 — 산문을 해석해 상태를 만들지 않는다", () => {
+    expect(classifySearchOutcome("검색 결과 없음")).toBe("SEARCH_NO_RESULT");
+    expect(classifySearchOutcome(" 동일상품 후보 없음 — 설명...")).toBe("NO_SAME_CANDIDATE");
+    expect(classifySearchOutcome("후보 있음 · 1. https://a.com/products/x")).toBe("HAS_CANDIDATES");
+    /** 🔴 접두사가 없으면 **UNLABELED** 다 — 「후보 없음」으로 채우지 않는다. */
+    expect(classifySearchOutcome("죄송합니다, 찾지 못했습니다.")).toBe("UNLABELED");
+    expect(classifySearchOutcome("https://a.com/products/x 입니다")).toBe("UNLABELED");
+  });
+
+  it("🔴 두 실패가 **다른 칸** 으로 들어간다(한 숫자로 뭉치지 않는다)", () => {
+    const rows = discoveryRowsOf([
+      { searchId: "S1", model: "m", rawAnswer: "검색 결과 없음" },
+      { searchId: "S2", model: "m", rawAnswer: "동일상품 후보 없음 — 비슷한 것만 있었습니다" },
+    ]);
+    expect(rows.map((r) => r.outcome)).toEqual(["SEARCH_NO_RESULT", "NO_SAME_CANDIDATE"]);
+    /** 🟢 둘 다 후보 0 이지만 **원인이 다르다** — 그것이 이 칸의 목적이다. */
+    expect(rows.every((r) => r.candidates.length === 0)).toBe(true);
+  });
+});
+
 describe("WU-019A-SEARCH ② Discovery 집계", () => {
   it("Search 결과가 있으면 모델별 발견율을 낸다 — 없으면 **측정불가**", () => {
     const ids = SEARCH_TARGETS.map((t) => t.searchId);
@@ -253,9 +299,12 @@ describe("WU-019A-SEARCH ② Discovery 집계", () => {
         candidatesPerSearch: mine.map((r) => `${r.searchId}:${r.candidates.length}`).join(" "),
         unverifiedNewTotal: mine.reduce((a, r) => a + r.unverifiedNew.length, 0),
         noCandidate: mine.filter((r) => r.candidates.length === 0).map((r) => r.searchId),
+        /** 🔴 ①검색실패 ↔ ②후보없음 ↔ 라벨없음 을 **갈라서** 센다. */
+        outcomes: mine.reduce<Record<string, number>>((a, r) => ({ ...a, [r.outcome]: (a[r.outcome] ?? 0) + 1 }), {}),
       };
       console.log(`  [${model}] 알려진 정답 발견 ${hit.length}/${scopes.length} (🔴 「Recall」로 적지 않는다 · 정답 집합은 하한)`);
       console.log(`     후보수 ${(out[model] as Record<string, string>).candidatesPerSearch}`);
+      console.log(`     상태 ${JSON.stringify((out[model] as Record<string, unknown>).outcomes)} — 🔴 검색실패와 후보없음을 섞지 않는다`);
       console.log(`     미검증 신규 후보 ${(out[model] as Record<string, number>).unverifiedNewTotal}건 — 🔴 오탐으로 세지 않는다`);
     }
     if (v.rejected.length) console.log(`  🔴 거부 ${v.rejected.length}건: ${JSON.stringify(v.rejected)}`);
