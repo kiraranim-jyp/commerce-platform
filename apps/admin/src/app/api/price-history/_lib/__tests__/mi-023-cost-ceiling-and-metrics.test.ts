@@ -115,7 +115,10 @@ describe("③ 🔴 WU-023 §2 — 판정/정책을 건드리지 않았다", () =
   });
 
   it("저장 차단·당일 가드가 그대로다", () => {
-    expect(RUNNER).toContain("if (result.shopId === GEMINI_VIRTUAL_SHOP_ID) {");
+    /** 🟢 WU-024 — 저장 차단이 **술어 하나** 로 모였다(`isTransientShopId`). 일시 샵이
+     *  둘이 됐으므로 id 하나와 비교하면 다른 하나가 **저장으로 샌다** — 성질이
+     *  약해진 것이 아니라 **강해졌다**(WU-024 테스트가 두 id 전부를 단언한다). */
+    expect(RUNNER).toContain("if (isTransientShopId(result.shopId)) {");
     expect(RUNNER).toContain('if (deterministicHit) geminiSkipReason = "DETERMINISTIC_HIT";');
     expect(RUNNER).toContain('else if (checkedToday) geminiSkipReason = "ALREADY_CHECKED_TODAY";');
   });

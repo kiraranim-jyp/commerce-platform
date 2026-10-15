@@ -24,7 +24,8 @@
     "@commerce/shared": "workspace:*",
     "@sparticuz/chromium": "^149.0.0",
     "playwright": "^1.47.0",
-    "playwright-core": "^1.61.1"
+    "playwright-core": "^1.61.1",
+    "undici": "^7.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.15",

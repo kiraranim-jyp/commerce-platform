@@ -81,7 +81,21 @@ export type { ProductMatchTruth } from "./product-identity";
 /** MI-REAL-05(CEO 지시, 2026-09-20) — 원본과 «같은 listing» 인 후보를 빼기 위한
  * 순수 판정. host 동일만으로는 제외하지 않는다(같은 브랜드 도메인의 다른 상품은
  * 정상 후보다). 점수/판정 로직은 전혀 건드리지 않는다. */
-export { canonicalListingKey, isSelfReferenceCandidate } from "./self-reference";
+export { canonicalListingKey, canonicalizeProductUrl, isSelfReferenceCandidate } from "./self-reference";
+/** 🔴 WU-017 — AI 답변 텍스트에서 **URL 만** 꺼낸다. AI 의 「동일상품」 주장은 Evidence 가
+ *    아니고, 판정은 기존 체인(factsFromProductUrl → … → MI)이 **페이지를 열어** 한다. */
+export {
+  extractCandidateUrlsFromAiAnswer,
+  type AiUrlDropReason,
+  type AiUrlExtraction,
+} from "./ai-answer-urls";
+/** 🔴 WU-017-2 — 그 URL 들을 **페이지를 열어** 기존 MI 입력으로 바꾼다. AI/API 0 ·
+ *    새 판정 규칙 0 · 새 상태 어휘 0. `withConfidence` 는 **배열 단위 1회** 부른다. */
+export { collectAiAnswerCandidatePool } from "./ai-answer-pool";
+/** 🔴 WU-019A-ALT ③ — Discovery URL 을 **세 층**(원문 · 열 수 있는 URL · 대조 키)으로
+ *    갈라 적는다. 🔴 KPI 대조는 `identityKey` 로만 한다(실측 왜곡 1/7↔2/7 의 해법). */
+export { discoveryUrlRecord, matchesKnownPositive, type DiscoveryUrlRecord } from "./discovery-url-identity";
+export type { AiAnswerPoolDrop, AiAnswerPoolInput, AiAnswerPoolResult } from "./ai-answer-pool";
 /** MATCHING-2.0-CORE(CEO 지시, 2026-09-13) — 판매처가 달라도 같은 물건인지
  * 판정하는 계층. 방향을 바꿔도 같은 답이 나오고, 강한 반증은 점수로 뒤집히지
  * 않는다. scoreCandidateMatch/confidence/matchLevel은 전혀 재계산하지 않는다. */

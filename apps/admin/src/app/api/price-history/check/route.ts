@@ -6,8 +6,16 @@ import { resolveMarketCategoryScopes } from "../../domestic-price-sources/_lib/c
 import { getSnapshot } from "../../snapshots/_lib/snapshot";
 import { computeMarketIntelligence } from "../_lib/market-intelligence";
 import { openAlertIfNotActive, resolveAlertsNotIn } from "../_lib/price-alerts";
-import { runDomesticPriceCheck } from "../_lib/run-domestic-price-check";
+import { MAX_SUPPLIED_CANDIDATE_URLS, runDomesticPriceCheck } from "../_lib/run-domestic-price-check";
 import { runPriceCheck } from "../_lib/run-price-check";
+
+/**
+ * 🔴 요청 payload 경계 — 상한(`MAX_SUPPLIED_CANDIDATE_URLS`)보다 넉넉하게 받되
+ *    무한히 받지 않는다. 초과분은 pool 이 `notFetchedOverLimit` 으로 **보고** 한다
+ *    (조용히 버리지 않는다). 🔴 URL 길이도 막는다 — 로그/메모리 폭주 방지.
+ */
+const MAX_CANDIDATE_URL_PAYLOAD = MAX_SUPPLIED_CANDIDATE_URLS * 5;
+const MAX_CANDIDATE_URL_LENGTH = 2048;
 
 /**
  * N-4.01 Part I(대표님 지시) — 수동 "지금 확인" 트리거. daily cron
@@ -24,10 +32,40 @@ export async function POST(request: Request) {
   const auth = await requireUser();
   if (!auth.ok) return auth.response;
 
-  const body = (await request.json().catch(() => null)) as { snapshotId?: string } | null;
+  const body = (await request.json().catch(() => null)) as
+    | { snapshotId?: string; candidateUrls?: unknown }
+    | null;
   const snapshotId = body?.snapshotId;
   if (!snapshotId) {
     return NextResponse.json({ ok: false, error: "snapshotId가 필요합니다." }, { status: 400 });
+  }
+
+  /**
+   * 🔴🔴 WU-024 — **Registry 밖 후보 URL 의 공급 진입점.**
+   *
+   * 🔴 여기서 하는 것은 **모양 검사뿐** 이다. 「공개 호스트인가 · 상품 페이지인가 ·
+   *    자기참조인가 · 중복인가」는 `collectUrlCandidatePool` 의 입력 경계가 판단하고
+   *    **이유까지 남긴다**(두 곳에서 같은 판단을 하면 갈라진다).
+   * 🔴 상한 상수는 `run-domestic-price-check` 가 소유한다 — 이 라우트가 **그 값을
+   *    import** 한다(두 곳이 다른 상한을 갖지 않는다).
+   * 🔴 저장되지 않는다 — 이 URL 은 `domestic_product_links` 에도 등록부에도 가지 않는다.
+   */
+  let candidateUrls: string[] | undefined;
+  if (body?.candidateUrls !== undefined) {
+    if (!Array.isArray(body.candidateUrls)) {
+      return NextResponse.json({ ok: false, error: "candidateUrls는 배열이어야 합니다." }, { status: 400 });
+    }
+    /** 🔴 요청 자체의 크기를 막는다(상한 자체는 아래 pool 이 적용하고 초과분을 «보고» 한다). */
+    if (body.candidateUrls.length > MAX_CANDIDATE_URL_PAYLOAD) {
+      return NextResponse.json(
+        { ok: false, error: `candidateUrls는 최대 ${MAX_CANDIDATE_URL_PAYLOAD}개까지 보낼 수 있습니다.` },
+        { status: 400 },
+      );
+    }
+    candidateUrls = body.candidateUrls
+      .filter((u): u is string => typeof u === "string")
+      .map((u) => u.trim())
+      .filter((u) => u.length > 0 && u.length <= MAX_CANDIDATE_URL_LENGTH);
   }
 
   const snapshot = await getSnapshot(snapshotId, auth.user.workspaceId);
@@ -60,6 +98,8 @@ export async function POST(request: Request) {
       // **같은 사이트 집합**을 뒤지게 하는 자리다 — 여기가 자동 추정으로 되돌아가면
       // 같은 상품의 1차 조사와 재확인이 서로 다른 곳을 뒤진 결과를 나란히 보여준다.
       categoryScopes: resolveMarketCategoryScopes(product, snapshot.workspace.marketCategoryProfileId),
+      /** 🔴 WU-024 — 안 보내면 `undefined` 이고 그 경로는 **한 줄도 돌지 않는다**(기존 동작). */
+      candidateUrls,
     });
   } catch (error) {
     domesticShop = {

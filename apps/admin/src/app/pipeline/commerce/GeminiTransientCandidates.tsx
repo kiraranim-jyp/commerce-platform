@@ -66,18 +66,44 @@ export function priceText(row: GeminiTransientRow): string {
   return `${row.priceCurrency} ${row.priceAmount.toLocaleString("ko-KR")}`;
 }
 
+/** 🟢 기본 머리 문구 — Gemini 웹 검색 경로의 것이다(WU-022 에서 CPO 가 지정). */
+export const WEB_SEARCH_HEADING = "🔎 웹 검색 후보";
+/**
+ * 🔴🔴 WU-024 — **출처가 다르면 머리 문구도 달라야 한다.** 셀러가 직접 넣은 URL 을
+ *    「웹 검색 후보」로 적으면 거짓이다(§7 출처 보존). 구역을 가르는 이유가 그것이다.
+ */
+export const SUPPLIED_URL_HEADING = "🔗 직접 입력한 후보";
+/**
+ * 🔴 입력칸 안내문. **두 가지를 반드시 말한다** — ⒜ 이번 확인에만 쓰이고 저장되지
+ *    않는다 ⒝ 동일상품 판정은 **우리가** 한다(셀러가 「동일상품」이라고 선언하는
+ *    칸이 아니다). ⒝ 가 빠지면 셀러가 URL 을 넣는 행위를 「동일상품 확인」으로 읽는다.
+ */
+export const SUPPLIED_URL_INPUT_NOTICE =
+  "등록된 판매처 밖의 상품도 비교할 수 있습니다. 이번 확인에만 쓰이고 저장되지 않으며, 동일상품 여부는 저장된 판매처와 같은 기준으로 다시 판정합니다.";
+
 export interface GeminiTransientCandidatesProps {
   /** 🔴 `null`/빈 배열이면 **구역을 아예 렌더하지 않는다**(flag OFF 가 그 상태다). */
   evidence?: GeminiTransientRow[] | null;
+  /**
+   * 🔴 머리 문구. 기본은 웹 검색 경로다. 🔴 **판정 문구가 아니다** — 이 값이 바뀌어도
+   *    아래 두 고정 안내문과 판정 표시는 한 글자도 바뀌지 않는다.
+   */
+  heading?: string;
+  /** 🟢 두 구역이 같은 화면에 설 수 있으므로 테스트 훅도 가른다. */
+  testId?: string;
 }
 
-export function GeminiTransientCandidates({ evidence }: GeminiTransientCandidatesProps): JSX.Element | null {
+export function GeminiTransientCandidates({
+  evidence,
+  heading = WEB_SEARCH_HEADING,
+  testId = "gemini-transient",
+}: GeminiTransientCandidatesProps): JSX.Element | null {
   if (!evidence || evidence.length === 0) return null;
 
   return (
-    <section data-testid="gemini-transient" className="mt-3 rounded-md border border-border bg-surface/40 p-2">
+    <section data-testid={testId} className="mt-3 rounded-md border border-border bg-surface/40 p-2">
       <p className="text-[11px] font-medium text-text-secondary">
-        🔎 웹 검색 후보 {evidence.length}건
+        {heading} {evidence.length}건
       </p>
       {/* 🔴 두 문구는 CPO 가 지정한 고정 문장이다 — 요약하거나 바꾸지 않는다. */}
       <p className="mt-0.5 text-[11px] text-text-tertiary">{TRANSIENT_NOTICE}</p>

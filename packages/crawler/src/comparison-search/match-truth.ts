@@ -4,6 +4,7 @@ import {
   type CrossSellerConflict,
   type CrossSellerVerdict,
 } from "./cross-seller";
+import { MATCH_TRUTH_RANK, type MatchTruth } from "./match-truth-rank";
 import type { MatchLevel } from "./match";
 import type { ModelEvidenceResult } from "./evidence";
 
@@ -30,26 +31,19 @@ import type { ModelEvidenceResult } from "./evidence";
  *   사이트 포함)이면 텍스트 점수만으로 판단하되, 식별자 확인 후보보다는 절대
  *   위로 올라가지 않는다.
  */
-export type MatchTruth =
-  | "EXACT_IDENTIFIER"
-  | "STRONG_IDENTIFIER"
-  | "TEXT_CONFIRMED"
-  | "SIMILAR"
-  | "CONFLICT"
-  | "INSUFFICIENT_EVIDENCE";
+/**
+ * 🟢🟢 WU-026 — 이 둘의 **선언 자리가 leaf 로 옮겨졌다**(`match-truth-rank.ts`).
+ *    로직은 한 줄도 바뀌지 않았고, **기존 import 경로를 지키기 위해** 여기서 그대로
+ *    re-export 한다(배럴·화면의 깊은 import·테스트 전부 무변경).
+ *
+ * 🔴 왜 옮겼나 — 화면이 쓰는 정렬 함수가 이 파일을 거쳐 **crawler 의 fetch 스택까지**
+ *    값 사슬로 이어져 브라우저 번들에 서버 전용 모듈이 끌려 들어왔다(그 파일 주석에 실측).
+ */
+export { MATCH_TRUTH_RANK, type MatchTruth };
 
 /** 값이 클수록 "더 신뢰할 수 있는 동일상품 근거". 서로 다른 판매처의 후보를
  * 비교할 때(예: 포레포레 vs 듀베베) 이 값으로 우선순위를 매긴다 — CONFLICT는
  * 텍스트 점수와 무관하게 항상 최하위(0)로 취급한다. */
-export const MATCH_TRUTH_RANK: Record<MatchTruth, number> = {
-  EXACT_IDENTIFIER: 5,
-  STRONG_IDENTIFIER: 4,
-  TEXT_CONFIRMED: 3,
-  SIMILAR: 2,
-  INSUFFICIENT_EVIDENCE: 1,
-  CONFLICT: 0,
-};
-
 const HIGH_OR_ABOVE: ReadonlySet<MatchLevel> = new Set(["high", "very_high"]);
 
 /**

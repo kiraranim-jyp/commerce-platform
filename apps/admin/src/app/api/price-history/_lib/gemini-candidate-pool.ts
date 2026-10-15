@@ -10,6 +10,13 @@ import {
 } from "@commerce/crawler/src/discovery-core";
 import { factsFromProductUrl, type ComparisonCandidate, type ComparisonSearchResult } from "@commerce/crawler";
 import type { ProductIdentityDna } from "@commerce/shared";
+/** 🟢 WU-024 — 공용 primitive. re-export 는 지역 binding 을 만들지 않으므로 따로 import 한다. */
+import {
+  groupCandidatesByHost,
+  normalizeCandidateUrl as normalizeUrlKey,
+  GEMINI_VIRTUAL_SHOP_ID as GEMINI_SHOP_ID,
+  GEMINI_VIRTUAL_SHOP_NAME as GEMINI_SHOP_NAME,
+} from "./transient-candidates";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -43,9 +50,21 @@ import type { ProductIdentityDna } from "@commerce/shared";
  *   🔴 threshold 는 건드리지 않는다 — 조기 종료 기준은 «후보 수» 이고 판정값이 아니다.
  */
 
-/** 🔴 등록부에 없는 가상 샵이다 — 호출부가 이 id 로 「저장하지 않을 것」을 가린다. */
-export const GEMINI_VIRTUAL_SHOP_ID = "__gemini_discovery__";
-export const GEMINI_VIRTUAL_SHOP_NAME = "Gemini Web Discovery(일시)";
+/**
+ * 🟢🟢 WU-024 — 아래 셋의 **선언 자리가 leaf 모듈로 옮겨졌다**(`transient-candidates.ts`).
+ *    로직은 한 글자도 바뀌지 않았고, **기존 import 경로를 지키기 위해** 여기서
+ *    그대로 re-export 한다(호출부·테스트 무변경).
+ *
+ * 🔴 왜 옮겼나 — 일시 후보 생산자가 **둘** 이 됐다(Gemini · URL 직접 공급). 두
+ *    생산자가 공유해야 하는 primitive(가상 샵 id · host 묶기 · dedupe 키)가 한쪽
+ *    생산자 파일 «안» 에 있으면 ⒜ 순환 import 가 되거나 ⒝ 사본이 생긴다. 이 저장소는
+ *    둘 다 금지한다(「공용 부품은 양쪽이 import 한다」).
+ */
+export {
+  GEMINI_VIRTUAL_SHOP_ID,
+  GEMINI_VIRTUAL_SHOP_NAME,
+  normalizeCandidateUrl,
+} from "./transient-candidates";
 
 /** 🔴 flag 규약이 기존에 «없었다»(grep 0건). 이것이 첫 사례다. 기본 OFF. */
 export const GEMINI_DISCOVERY_FLAG = "MI_GEMINI_DISCOVERY_ENABLED";
@@ -158,29 +177,6 @@ const EMPTY_METRICS = (): GeminiPoolMetrics => ({
   failureDetails: [],
 });
 
-/** 🔴 dedupe 키 — 쿼리스트링·해시·트레일링 슬래시를 떼고 호스트를 소문자로. */
-export function normalizeCandidateUrl(raw: string): string {
-  try {
-    const u = new URL(raw);
-    u.hash = "";
-    u.search = "";
-    const host = u.hostname.replace(/^www\./i, "").toLowerCase();
-    const path = u.pathname.replace(/\/+$/, "");
-    return `${host}${path}`;
-  } catch {
-    return raw.trim().toLowerCase();
-  }
-}
-
-/** 🔴 등록부 도메인과 같은 모양으로 맞춘다(www 제거 · 소문자) — 추출기 조회 키다. */
-function hostOf(raw: string): string {
-  try {
-    return new URL(raw).hostname.replace(/^www\./i, "").toLowerCase();
-  } catch {
-    return GEMINI_VIRTUAL_SHOP_ID;
-  }
-}
-
 /** 🔴 DNA → ProductIdentity. 값을 **지어내지 않는다** — 없으면 null 이다. */
 export function identityFromDna(dna: ProductIdentityDna): ProductIdentity {
   let host: string | null = null;
@@ -286,7 +282,7 @@ export async function collectGeminiCandidatePool(input: GeminiPoolInput): Promis
 
     for (const found of discovery.urls) {
       if (candidates.length >= input.maxCandidates) break;
-      const key = normalizeCandidateUrl(found.url);
+      const key = normalizeUrlKey(found.url);
       if (seen.has(key)) continue;
       seen.add(key);
       try {
@@ -295,7 +291,7 @@ export async function collectGeminiCandidatePool(input: GeminiPoolInput): Promis
         if (resolved.classification !== "PRODUCT_PAGE") continue;
         const target = resolved.crawlerUrl ?? resolved.finalUrl;
         if (!target) continue;
-        const finalKey = normalizeCandidateUrl(target);
+        const finalKey = normalizeUrlKey(target);
         if (finalKey !== key && seen.has(finalKey)) continue;
         seen.add(finalKey);
         metrics.usableProductUrls += 1;
@@ -312,27 +308,14 @@ export async function collectGeminiCandidatePool(input: GeminiPoolInput): Promis
 
   if (candidates.length === 0) return { searchResults: [], metrics };
 
-  /** 🔴 실제 host 로 가른다 — 위 GeminiPoolResult 주석의 이유. */
-  const byHost = new Map<string, ComparisonCandidate[]>();
-  for (const c of candidates) {
-    const host = hostOf(c.url);
-    const bucket = byHost.get(host);
-    if (bucket) bucket.push(c);
-    else byHost.set(host, [c]);
-  }
+  /** 🔴 실제 host 로 가른다 — 위 GeminiPoolResult 주석의 이유.
+   *  🟢 WU-024 — 그 묶기를 **공용 함수** 로 뺐다(두 생산자가 같은 것을 쓴다).
+   *     로직 동일: Map 삽입 순서 보존 · `domain` 은 실제 host · `shopId` 만 가상. */
   return {
-    searchResults: [...byHost.entries()].map(
-      ([host, group]) =>
-        ({
-          /** 🔴 가상 id — 저장 차단의 유일한 기준이다. host 별로 **같은 값** 을 쓴다. */
-          shopId: GEMINI_VIRTUAL_SHOP_ID,
-          shopName: `${GEMINI_VIRTUAL_SHOP_NAME} · ${host}`,
-          /** 🟢 실제 host — 판정 게이트가 이 값으로 분기한다. */
-          domain: host,
-          status: "ok",
-          candidates: group,
-        }) as ComparisonSearchResult,
-    ),
+    searchResults: groupCandidatesByHost(candidates, {
+      shopId: GEMINI_SHOP_ID,
+      shopNamePrefix: GEMINI_SHOP_NAME,
+    }),
     metrics,
   };
 }

@@ -218,8 +218,11 @@ describe("③ 🔴🔴 §8 다섯 케이스 — 실제 집계기 `summarizeDomes
    *    가드가 막아야 하는 것이다([[source-guard-must-lock-the-predicate]] 와 같은 뿌리).
    */
   it("🟢 CASE 4 — 가격 없는 후보는 **보존** 된다(identity evidence)", () => {
-    const branchStart = RUNNER.indexOf("if (result.shopId === GEMINI_VIRTUAL_SHOP_ID) {");
-    const pushAt = RUNNER.indexOf("geminiEvidence.push({", branchStart);
+    /** 🟢 WU-024 — 가드가 **술어** 로 바뀌고(일시 샵이 둘이 됐다) push 자리는 이름 있는
+     *  sink 가 됐다. 🔴 **검사하는 성질은 그대로** 다 — 「분기 진입부터 push 까지 어떤
+     *  조기 이탈도 없다」. 앵커 문자열만 현재 코드로 갱신했다. */
+    const branchStart = RUNNER.indexOf("if (isTransientShopId(result.shopId)) {");
+    const pushAt = RUNNER.indexOf("transientEvidenceSink.push({", branchStart);
     expect(branchStart).toBeGreaterThan(0);
     expect(pushAt).toBeGreaterThan(branchStart);
     /** 🔴 분기에 들어온 뒤 push 까지 **어떤 조기 이탈도 없어야** 한다. */

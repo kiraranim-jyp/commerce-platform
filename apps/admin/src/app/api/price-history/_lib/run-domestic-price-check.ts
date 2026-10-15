@@ -1,4 +1,5 @@
 import {
+  canonicalizeProductUrl,
   compareModelCode,
   confirmBrandCodeInTitle,
   decideCandidateEvidence,
@@ -13,6 +14,7 @@ import {
   supportsDomesticIdentifierExtraction,
   type CandidateEvidenceDecision,
   type ComparisonCandidate,
+  type ComparisonSearchResult,
   type MatchTruth,
   type ModelEvidenceResult,
 } from "@commerce/crawler";
@@ -29,9 +31,14 @@ import {
   collectGeminiCandidatePool,
   isGeminiDiscoveryEnabled,
   normalizeCandidateUrl,
-  GEMINI_VIRTUAL_SHOP_ID,
   type GeminiPoolMetrics,
 } from "./gemini-candidate-pool";
+/**
+ * 🔴🔴 WU-024 — **두 번째 일시 후보 생산자.** Gemini 와 달리 flag 도 키도 비용도 없다.
+ *    `candidateUrls` 가 비어 있으면 아래 분기가 **한 줄도 돌지 않는다** → 기존 동작 100% 유지.
+ */
+import { collectUrlCandidatePool, type UrlCandidatePoolMetrics } from "./url-candidate-pool";
+import { isTransientShopId, TRANSIENT_URL_SHOP_ID } from "./transient-candidates";
 import {
   classifyCandidateMarket,
   type CandidateMarket,
@@ -105,7 +112,28 @@ export interface DomesticPriceCheckInput {
    * 않는다(workspaceId는 안 넘기면 남의 설정을 무시하게 되므로 필수였다).
    */
   categoryScopes?: string[] | null;
+  /**
+   * 🔴🔴 WU-024 — **Registry 밖 후보 URL 을 이 확인 «한 번» 에만 공급한다.**
+   *
+   * 왜 선택 인자인가: 안 넘기면 **오늘 동작 그대로** 다(`categoryScopes` 와 같은
+   * 성질 · `workspaceId` 와 반대). 넘기지 않은 호출부가 조용히 손해를 보지 않는다.
+   *
+   * 🔴 **저장되지 않는다.** 이 URL 로 만든 후보는 가상 샵 id 를 달고 들어오고
+   *    `isTransientShopId` 가드가 `upsertDomesticProductLink` «앞» 에서 끊는다.
+   *    등록부(`domestic_price_sources`)에 도메인이 추가되지 «않는다».
+   * 🔴 **AI 가 만든 값이 아니다** — 셀러/운영이 공급한 문자열이고, 그 URL 이 그
+   *    상품인지는 여전히 기존 MI 가 **페이지를 열어** 판정한다(승격된 원칙 그대로).
+   */
+  candidateUrls?: readonly string[];
 }
+
+/**
+ * 🔴 상한을 «호출부 계층» 이 소유한다(모듈에 박지 않는다 — `gemini-candidate-pool` §9
+ *    와 같은 규약). 근거: WU-017 하니스가 붙여넣기 1회당 `maxUrls: 10` 으로 측정했고,
+ *    URL 하나당 HTTP 1~2회이므로 10 이면 최악 20요청이다. 🔴 API 라우트도 **이 값을
+ *    import 해서** 쓴다 — 두 곳이 다른 상한을 갖지 않는다.
+ */
+export const MAX_SUPPLIED_CANDIDATE_URLS = 10;
 
 /**
  * 🔴🔴 **영구 entity 가 아니다.** 등록 «순간» 의 판단 근거로만 쓰고 버린다
@@ -115,8 +143,15 @@ export interface DomesticPriceCheckInput {
  *    (`judgeDomesticCandidate` → `priceTierFromLink`). 🔴 Gemini 전용 규칙 0.
  */
 export interface GeminiTransientEvidence {
-  /** 🔴 출처를 잃지 않는다 — 기존 국내 후보와 섞여도 구분 가능해야 한다(§7). */
-  source: "GEMINI_DISCOVERY";
+  /**
+   * 🔴 출처를 잃지 않는다 — 기존 국내 후보와 섞여도 구분 가능해야 한다(§7).
+   *
+   * 🔴🔴 WU-024 — 값이 **둘** 이 됐다. 「웹 검색이 찾았다」와 「사람이 URL 을 줬다」는
+   *    **다른 사실** 이고, 하나로 적으면 화면과 보고서가 거짓을 말한다. 🔴 그래서
+   *    응답에서도 두 배열을 **가른다**(`geminiEvidence` ↔ `urlCandidateEvidence`) —
+   *    같은 칸에 담아 개수만 세면 그 구분이 사라진다.
+   */
+  source: "GEMINI_DISCOVERY" | "SELLER_URL";
   /** 🔴 가상 shopId 가 아니라 **실제 판매처 도메인** 이다. */
   domain: string;
   discoveredUrl: string;
@@ -169,8 +204,21 @@ export interface DomesticPriceCheckResult {
    * 🔴 `null` = flag OFF(경로가 안 돌았다) · `[]` = 켰는데 후보가 없었다. 섞지 않는다.
    */
   geminiEvidence?: GeminiTransientEvidence[] | null;
+  /**
+   * 🔴🔴 WU-024 — **URL 직접 공급 경로의 transient evidence.** 위와 같은 수명(요청
+   *    범위 · DB 저장 0)이고 **같은 판정 함수** 를 통과했지만 **출처가 다르다.**
+   *
+   * 🔴 `geminiEvidence` 에 합치지 않는다 — 합치면 「웹 검색이 찾은 후보 N건」이라는
+   *    문장이 사람이 넣은 URL 까지 포함하게 된다(§7 출처 보존).
+   * 🔴 `null` = URL 을 공급받지 않았다(경로가 안 돌았다) · `[]` = 받았는데 후보가 0.
+   */
+  urlCandidateEvidence?: GeminiTransientEvidence[] | null;
+  /** 🔴 WU-024 — URL 경로의 계측(공급 수 · 제외 사유 · HTTP 수). `null` = 안 돌았다. */
+  urlCandidateMetrics?: UrlCandidatePoolMetrics | null;
   /** 🔴 010R §6 — Gemini 가격 보강 호출 수. 국내 상세 fetch 와 **다른 칸** 이다. */
   geminiPriceEnrichCalls?: number;
+  /** 🔴 WU-024 — URL 경로의 가격 보강 호출 수. Gemini 칸과 **합산하지 않는다**. */
+  urlCandidatePriceEnrichCalls?: number;
   /**
    * 🔴 016 — Gemini 를 **부르지 않은 이유**. `null` 이면 불렀거나 flag OFF 다.
    *    🟢 「0 회」와 「건너뛴 이유가 있다」를 가른다 — 비용 보고가 그것을 구분해야 한다.
@@ -860,6 +908,54 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
   const geminiEvidence: GeminiTransientEvidence[] = [];
   /** 🔴 010R §6 — 국내 검색 HTTP 와 **구분해서** 센다. */
   let geminiPriceEnrichCalls = 0;
+  /* ──────────── 🔴🔴 WU-024 — 일시 후보 생산자가 «둘» 이 됐다 ────────────
+   * 두 생산자는 **다른 입력** 을 받지만 **같은 산출물**(host 별 ComparisonSearchResult)을
+   * 내고, 그 뒤 처리는 **한 줄도 다르지 않아야 한다**(점수 → 가격 보강 → 판정 → 저장 차단).
+   * 🔴 그래서 아래 소비 루프를 Gemini 분기 «밖» 으로 뺐다 — 안에 두면 URL 경로가
+   *    flag 에 묶이거나 사본이 생긴다. 🟢 둘 다 비면 루프가 **한 번도 돌지 않는다**.
+   */
+  const transientPools: ComparisonSearchResult[] = [];
+  let urlCandidateMetrics: UrlCandidatePoolMetrics | null = null;
+  let urlCandidatePriceEnrichCalls = 0;
+  const urlCandidateEvidence: GeminiTransientEvidence[] = [];
+
+  if (input.candidateUrls && input.candidateUrls.length > 0) {
+    /**
+     * 🔴 중복 키는 `canonicalizeProductUrl` 로 만든다 — Gemini 경로가 쓰는
+     *    `normalizeCandidateUrl`(쿼리 **전체** 제거)을 쓰면 국내 Cafe24 계열에서
+     *    `?branduid=A` 와 `?branduid=B` 가 같은 키가 돼 **다른 상품이 접힌다.**
+     *    🟢 그 함수는 추적/검색 파라미터만 걷고 식별 파라미터는 **보존** 한다(WU-009C).
+     */
+    const existingCanonicalUrls = new Set<string>();
+    for (const r of searchResults) {
+      for (const c of r.candidates) existingCanonicalUrls.add(canonicalizeProductUrl(c.url).toLowerCase());
+    }
+    const urlPool = await collectUrlCandidatePool({
+      urls: input.candidateUrls,
+      originUrl: query.sourceUrl,
+      maxUrls: MAX_SUPPLIED_CANDIDATE_URLS,
+      existingCanonicalUrls,
+    });
+    urlCandidateMetrics = urlPool.metrics;
+    /** 🔴 계측값을 로그로 내보낸다 — Production 화면은 로그인 뒤라 CTO 가 응답을
+     *  읽을 수 없다(메모 production-payload-is-unreachable). 기존 `[MI-016-gate]`
+     *  와 같은 규약이고, **계산하지 않는다**(pool 이 낸 값을 그대로 옮긴다). */
+    console.log(
+      `[WU-024-urlpool] ${JSON.stringify({
+        snapshot: input.snapshotId,
+        supplied: urlCandidateMetrics.suppliedUrls,
+        accepted: urlCandidateMetrics.acceptedUrls,
+        usable: urlCandidateMetrics.usableProductUrls,
+        miEligible: urlCandidateMetrics.miEligibleCandidates,
+        fetchCalls: urlCandidateMetrics.fetchCalls,
+        providerCalls: urlCandidateMetrics.providerCalls,
+        overLimit: urlCandidateMetrics.notFetchedOverLimit.length,
+        dropped: urlCandidateMetrics.dropped.map((d) => d.reason),
+      })}`,
+    );
+    transientPools.push(...urlPool.searchResults);
+  }
+
   if (isGeminiDiscoveryEnabled()) {
     /* ① 🟢 **결정적 후보가 이미 있으면 부르지 않는다.**
      *    바로 위 `foundVeryHighInP0` 와 **같은 조건** 이다 — 새 threshold 가 아니다.
@@ -953,26 +1049,36 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
      *       를 보는데 `undefined !== "low"` 는 **참** 이라 게이트가 공짜로 열리고,
      *       `selectDomesticCandidate` 는 순서/등급을 근거로 고른다.
      *    🟢 같은 함수를 같은 query 로 부르므로 **국내 후보와 동일한 자** 를 쓴다. */
-    for (const r of pool.searchResults) {
-      /* 🔴 010R §8 — 자기참조를 **가격 보강 «전»** 에 뺀다. 그러지 않으면 자기
-       * 자신의 상세 페이지에 HTTP 가격 요청을 낭비한다. 🟢 008A 로 닫힌
-       * `/collections/` 접두사 케이스가 여기서 걸린다. */
-      const notSelf = r.candidates.filter((c) => !isSelfReferenceCandidate(query.sourceUrl, c.url));
-      const scored = withConfidence(query, notSelf);
-      /* 🟢 010R — **기존 owner 로** 가격을 확인한다(price-source-adapter.ts:243).
-       * 새 수집기를 만들지 않았다. 상한도 그 함수가 가진 것을 쓴다
-       * (matchLevel very_high/high · 샵당 MAX_DETAIL_CONFIRMATIONS_PER_SHOP).
-       * 🔴 실패/없음은 `priceStatus: "PRICE_UNAVAILABLE"` 로 돌아온다(fail-soft). */
-      let priced = scored;
-      try {
-        priced = await enrichCandidatePrices(scored, r.domain, query);
-        geminiPriceEnrichCalls += 1;
-      } catch {
-        /* 🔴 가격 보강 실패가 가격확인 전체를 깨뜨리지 않는다 — 점수만 있는
-         * 후보로 계속 간다(그러면 priceKrw 가 null 이라 집계에서 빠진다). */
-      }
-      searchResults.push({ ...r, candidates: priced });
+    transientPools.push(...pool.searchResults);
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+   * 🔴 일시 후보 **공통** 소비 — 생산자가 둘이어도 이 구간은 하나다(WU-024)
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🟢 `transientPools` 가 비면 **한 번도 돌지 않는다** → flag OFF + URL 미공급이면
+   *    기존 동작과 완전히 같다. */
+  for (const r of transientPools) {
+    /* 🔴 010R §8 — 자기참조를 **가격 보강 «전»** 에 뺀다. 그러지 않으면 자기
+     * 자신의 상세 페이지에 HTTP 가격 요청을 낭비한다. 🟢 008A 로 닫힌
+     * `/collections/` 접두사 케이스가 여기서 걸린다. */
+    const notSelf = r.candidates.filter((c) => !isSelfReferenceCandidate(query.sourceUrl, c.url));
+    const scored = withConfidence(query, notSelf);
+    /* 🟢 010R — **기존 owner 로** 가격을 확인한다(price-source-adapter.ts:243).
+     * 새 수집기를 만들지 않았다. 상한도 그 함수가 가진 것을 쓴다
+     * (matchLevel very_high/high · 샵당 MAX_DETAIL_CONFIRMATIONS_PER_SHOP).
+     * 🔴 실패/없음은 `priceStatus: "PRICE_UNAVAILABLE"` 로 돌아온다(fail-soft). */
+    let priced = scored;
+    const isUrlPool = r.shopId === TRANSIENT_URL_SHOP_ID;
+    try {
+      priced = await enrichCandidatePrices(scored, r.domain, query);
+      /** 🔴 두 경로의 HTTP 를 **합산하지 않는다** — 비용 보고가 출처를 잃는다. */
+      if (isUrlPool) urlCandidatePriceEnrichCalls += 1;
+      else geminiPriceEnrichCalls += 1;
+    } catch {
+      /* 🔴 가격 보강 실패가 가격확인 전체를 깨뜨리지 않는다 — 점수만 있는
+       * 후보로 계속 간다(그러면 priceKrw 가 null 이라 집계에서 빠진다). */
     }
+    searchResults.push({ ...r, candidates: priced });
   }
   // H-3-6에서 루프 안에서 매 반복 재계산하던 것을 H-3-9에서 loop 밖으로 뺐다 — result에
   // 의존하지 않는 순수 파생값이라 동작은 동일하다(성능/가독성 정리).
@@ -993,7 +1099,10 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
    * 🟢 판정(`withConfidence` / `judgeDomesticCandidate`)은 그대로 돈다.
    */
   const recordCheckAttempt = (shopId: string, outcome: Parameters<typeof recordDomesticSourceCheckAttempt>[1]): void => {
-    if (shopId === GEMINI_VIRTUAL_SHOP_ID) return;
+    /** 🔴🔴 WU-024 — 일시 샵이 **둘** 이 됐으므로 가드를 술어 하나로 모았다
+     *  (`isTransientShopId`, 등록부에 없는 id 전부). 🔴 두 가드(여기 + 아래 upsert
+     *  앞)가 **같은 술어** 를 봐야 한다 — 갈라지면 FK 없는 id 가 저장으로 흘러간다. */
+    if (isTransientShopId(shopId)) return;
     void recordDomesticSourceCheckAttempt(shopId, outcome);
   };
 
@@ -1126,11 +1235,20 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
      *    (host 가 달라도 shopId 가 같으니) 캐시 키까지 오염시킨다.
      * 🟢 판정은 이 줄 «위» 에서 이미 끝났다 — Vision 은 upsert 입력일 뿐이고
      *    matchType·verified·matchTruth·priceTier 에 들어가지 않는다(아래 주석). */
-    if (result.shopId === GEMINI_VIRTUAL_SHOP_ID) {
+    if (isTransientShopId(result.shopId)) {
       /* 🟢 **버리기 전에 근거만 들고 나온다.** 저장은 여전히 하지 않는다 —
-       * 아래 continue 가 upsert 와 관측 기록을 전부 건너뛴다. */
-      geminiEvidence.push({
-        source: "GEMINI_DISCOVERY",
+       * 아래 continue 가 upsert 와 관측 기록을 전부 건너뛴다.
+       *
+       * 🔴🔴 WU-024 — 가드는 **술어** 가 되고(일시 샵 둘 다 막는다), 담는 **배열은
+       *    출처별로 가른다.** 「웹 검색이 찾았다」와 「사람이 URL 을 줬다」를 한 배열에
+       *    담으면 화면·보고서가 그 구분을 잃는다(§7). 🔴 판정은 둘이 **완전히 같은
+       *    함수** 를 통과했다 — 출처별 판정 규칙은 **0** 이다. */
+      const isSuppliedUrl = result.shopId === TRANSIENT_URL_SHOP_ID;
+      /** 🟢 담을 배열을 **이름 있는 변수** 로 고른다 — 가드 소스 검사가 push 자리를
+       *  안정적으로 지목할 수 있어야 한다(테스트가 그 앵커를 쓴다). */
+      const transientEvidenceSink = isSuppliedUrl ? urlCandidateEvidence : geminiEvidence;
+      transientEvidenceSink.push({
+        source: isSuppliedUrl ? "SELLER_URL" : "GEMINI_DISCOVERY",
         domain: result.domain,
         discoveredUrl: best.url,
         matchTruth: finalMatchTruth,
@@ -1371,8 +1489,12 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     geminiMetrics,
     /** 🔴 같은 원칙 — flag OFF 면 `null`, 켰는데 후보가 없으면 `[]`. */
     geminiEvidence: geminiMetrics === null ? null : geminiEvidence,
+    /** 🔴 WU-024 — 같은 원칙. URL 을 공급받지 않았으면 `null`(「후보 0」이 아니다). */
+    urlCandidateEvidence: urlCandidateMetrics === null ? null : urlCandidateEvidence,
+    urlCandidateMetrics,
     /** 🔴 010R §6 — Gemini 가격 보강 HTTP 호출 수(국내 검색과 분리). */
     geminiPriceEnrichCalls,
+    urlCandidatePriceEnrichCalls,
     /** 🔴 016 — 건너뛴 이유. 「0 회」와 구분한다. */
     geminiSkipReason,
     /** 🔴 016 ⑥ — Vision 호출 수. Discovery 와 **합산하지 않는다**. */

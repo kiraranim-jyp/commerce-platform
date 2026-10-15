@@ -7,6 +7,8 @@ import { DOMESTIC_MARKET_DRILL_DOWN, OVERSEAS_MARKET_DRILL_DOWN } from "../marke
 import { MARKET_EVIDENCE_EMPTY } from "../market-evidence-frame";
 import { resetMarketCollectionsForTests } from "../market-collection";
 import { MI_VERDICT_EVIDENCE_TOGGLE_LABEL, buildMiVerdictExplanation } from "../mi-verdict-copy";
+/** 🟢 WU-024 — 화면 문구를 **소유자에서 읽는다**(테스트가 문구를 다시 적지 않는다). */
+import { SUPPLIED_URL_INPUT_NOTICE } from "../GeminiTransientCandidates";
 import {
   headingsInOrder,
   overseasResults,
@@ -449,7 +451,15 @@ describe("마운트하고 effect가 전부 돈 뒤의 첫 화면", () => {
       hasOverseasRange: false,
     });
     expect(explanation).toHaveLength(4);
-    // 레이더 그림의 축 라벨 넷 → 네 줄 → 토글 → 다시 분석. 그 밖에는 없다.
+    /**
+     * 레이더 축 라벨 넷 → 네 줄 → 토글 → **URL 입력 두 줄** → 다시 분석. 그 밖에는 없다.
+     *
+     * 🔴🔴 WU-024 — 줄 둘이 **의도적으로** 늘었다. 「🔄 다시 분석」 바로 위에 Registry
+     *    밖 후보 URL 을 넣는 칸이 생겼다(병목 A 의 생산자). 🔴 자리를 여기로 둔 이유:
+     *    그 칸이 바꾸는 것이 **바로 이 버튼의 동작** 이고, 패널 상단에 두면 접힘 밖
+     *    기본 화면이 길어진다 — 이 파일이 지키려는 바로 그 성질을 깨뜨린다.
+     * 🟢 **판정 문구는 한 줄도 늘지 않았다** — 늘어난 둘은 라벨과 안내문이다.
+     */
     expect(added).toEqual([
       "⚪ 수익성",
       "⚪ 국내 가격 경쟁력",
@@ -457,6 +467,8 @@ describe("마운트하고 effect가 전부 돈 뒤의 첫 화면", () => {
       "상품 판단 신뢰도",
       ...explanation,
       MI_VERDICT_EVIDENCE_TOGGLE_LABEL,
+      "🔗 비교할 판매처 상품 URL (선택)",
+      SUPPLIED_URL_INPUT_NOTICE,
       "🔄 다시 분석",
     ]);
 
