@@ -1,3 +1,9 @@
+/**
+ * 🔴 WU-025 — outbound 경계는 **깊은 경로로** 가져온다. barrel(`@commerce/crawler`)에
+ *    올리면 `node:dns` 가 클라이언트 번들로 끌려가 **빌드가 깨진다**(실측).
+ *    🟢 이 파일은 서버 전용(API route `_lib`)이라 깊은 import 가 안전하다.
+ */
+import { classifyOutboundUrl } from "@commerce/crawler/src/utils/outbound-guard";
 import {
   canonicalizeProductUrl,
   extractCandidateUrlsFromAiAnswer,
@@ -119,61 +125,23 @@ export interface UrlCandidatePoolResult {
 }
 
 /**
- * 🔴🔴 **서버측 fetch 의 안전 경계 (SSRF).**
+ * 🔴🔴 **서버측 fetch 의 안전 경계 (SSRF) — 입력 단계의 «첫» 층.**
  *
  * 왜 필요한가 — 이 경로는 **사용자가 준 문자열로 서버가 HTTP 요청을 보낸다.**
- * 기존 입력 경계(`extractCandidateUrlsFromAiAnswer`)는 **scheme 과 URL 모양만** 본다.
- * 그래서 `http://169.254.169.254/latest/products/x` 나 `http://localhost/products/x`
- * 같은 값이 `PRODUCT_PAGE` 로 분류돼 **내부 네트워크로 요청이 나갈 수 있다.**
+ * 기존 입력 경계(`extractCandidateUrlsFromAiAnswer`)는 **URL 의 모양만** 보므로
+ * `http://169.254.169.254/products/x` 가 `PRODUCT_PAGE` 로 분류된다.
  *
- * 🔴 **DNS 를 조회하지 않는다**(순수 함수 · 비용 0). 그래서 「공개 도메인이
- *    사설 IP 로 해석되는」 rebinding 류는 이 함수가 막지 못한다 — 그 한계를
- *    숨기지 않는다. 막는 것은 **URL 문자열 자체가 사설/로컬을 가리키는** 경우다.
- * 🔴 비표준 포트도 거절한다 — 상품 페이지가 아닌 내부 포트 탐색 통로가 된다.
+ * 🔴🔴 **WU-025 — 사설 IP 규칙을 여기서 «다시 적지 않는다».** WU-024 에서는 이 함수가
+ *    자기 IP 판별을 들고 있었는데, 그러면 outbound 경계(crawler)와 **규칙이 둘** 이 되고
+ *    한쪽만 고쳐진다. 🟢 지금은 **소유자 하나**(`classifyOutboundUrl`)를 호출한다.
+ *
+ * 🔴 이 층은 **DNS 를 보지 않는다**(순수 · 비용 0). 「정상 DNS 이름이 사설 IP 로
+ *    해석되는」 경우와 「리다이렉트가 사설로 가는」 경우는 **요청 직전 층**
+ *    (`assertPublicOutboundTarget` · `guardedLookup`)이 막는다. 🟢 두 층이 다 있다.
+ * 🟢 그래도 이 층을 남기는 이유: 여기서 걸러야 **이유를 남기고 HTTP 를 0 으로** 끝낼 수 있다.
  */
 export function isPubliclyRoutableHttpUrl(raw: string): boolean {
-  let u: URL;
-  try {
-    u = new URL(raw);
-  } catch {
-    return false;
-  }
-  if (u.protocol !== "http:" && u.protocol !== "https:") return false;
-  /** 🔴 기본 포트(빈 문자열)만 허용한다. `:8080` 류는 상품 페이지가 아니다. */
-  if (u.port !== "") return false;
-
-  const host = u.hostname.toLowerCase().replace(/\.$/, "");
-  if (!host) return false;
-  /** IPv6 리터럴은 `[...]` 가 벗겨진 상태로 온다. */
-  if (host.includes(":")) return isPublicIpv6(host);
-  /** 🔴 점이 없는 이름은 내부 호스트다(`localhost` · `intranet` · 컨테이너 이름). */
-  if (!host.includes(".")) return false;
-  if (/(?:^|\.)(?:localhost|local|internal|intranet|home|lan)$/.test(host)) return false;
-  /** 🔴 `2130706433`(=127.0.0.1 의 10진 표기) 처럼 **숫자만** 인 호스트는 거절한다. */
-  if (/^\d+$/.test(host)) return false;
-
-  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
-  if (ipv4) {
-    const [a, b] = [Number(ipv4[1]), Number(ipv4[2])];
-    if (ipv4.slice(1).some((p) => Number(p) > 255)) return false;
-    if (a === 0 || a === 10 || a === 127) return false; // this-network · private · loopback
-    if (a === 169 && b === 254) return false; // link-local(클라우드 메타데이터)
-    if (a === 172 && b >= 16 && b <= 31) return false; // private
-    if (a === 192 && b === 168) return false; // private
-    if (a === 100 && b >= 64 && b <= 127) return false; // CGNAT
-    if (a >= 224) return false; // multicast · reserved
-    return true;
-  }
-  return true;
-}
-
-function isPublicIpv6(host: string): boolean {
-  const h = host.replace(/^\[|\]$/g, "");
-  if (h === "::1" || h === "::") return false;
-  if (/^f[cd][0-9a-f]{2}:/.test(h)) return false; // unique-local fc00::/7
-  if (/^fe[89ab][0-9a-f]:/.test(h)) return false; // link-local fe80::/10
-  if (/^::ffff:/.test(h)) return false; // IPv4-mapped — 위 IPv4 규칙을 우회한다
-  return true;
+  return classifyOutboundUrl(raw).ok;
 }
 
 /**

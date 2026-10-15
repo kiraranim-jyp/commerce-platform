@@ -8,6 +8,18 @@
  */
 
 import { fetchHtmlDirect } from "../utils/direct-html-fetch";
+/**
+ * 🔴🔴 WU-025 — **outbound 목적지 경계.** WU-024 가 「셀러가 준 URL」을 입력으로
+ *    받는 경로를 열었고, 그 URL 은 **이 함수를 통해** 서버의 HTTP 요청이 된다.
+ *    그래서 요청을 내기 직전에 목적지를 검사하고, **리다이렉트 각 홉** 도 같은
+ *    검사를 통과해야 한다(그 둘을 안 하면 302 한 번으로 내부망에 닿는다).
+ */
+import {
+  assertPublicOutboundTarget,
+  isRedirectStatus,
+  MAX_GUARDED_REDIRECTS,
+  OutboundBlockedError,
+} from "../utils/outbound-guard";
 
 interface DomainState {
   lastRequestAt: number;
@@ -159,10 +171,44 @@ async function retryThroughDirectStack(url: string, init?: RequestInit): Promise
 /** plain fetch 하나를 도메인 속도 제어 + 429 시 1회 재시도(Retry-After 우선, 없으면
  * 지수 백오프)까지 포함해서 실행한다. Shopify JSON/HTML plain fetch처럼 도메인별
  * 상태 관리가 필요한 모든 호출부가 이 함수를 통해서만 fetch하도록 한다. */
+/**
+ * 🔴🔴 WU-025 — **리다이렉트를 «우리가» 따라간다.**
+ *
+ * 왜 바꿨나: `fetch` 의 기본값은 `redirect: "follow"` 이고 그 추적은 **undici 안에서**
+ * 일어난다. 그러면 첫 홉만 검사되고 `evil.com → 302 → http://10.0.0.5/` 가 **그대로
+ * 연결된다.** 🔴 문자열 차단이나 첫 홉 DNS 검사만으로는 닫히지 않는 자리다.
+ *
+ * 🟢 **정상 트래픽의 동작은 같다** — 같은 홉을 같은 순서로 따라가고 최종 응답을
+ *    돌려준다. `response.url` 도 최종 URL 이다(각 홉을 실제로 요청하므로).
+ * 🔴 `init.redirect` 는 **덮어쓴다**(호출부가 `"follow"` 를 줘도 우리가 따라간다) —
+ *    그래야 검사 없는 추적 경로가 남지 않는다.
+ * 🔴 막히면 **던진다**(fail-closed). 기존 호출부는 fetch 실패를 이미 try/catch 로
+ *    다루고 있으므로(「상품이 없다」가 아니라 「접근 실패」로 적는다) 그 자리에 그대로 떨어진다.
+ */
+async function fetchGuarded(url: string, init?: RequestInit): Promise<Response> {
+  let target = url;
+  for (let hop = 0; hop <= MAX_GUARDED_REDIRECTS; hop++) {
+    const verdict = await assertPublicOutboundTarget(target);
+    if (!verdict.ok) throw new OutboundBlockedError(verdict.reason, target);
+    const response = await fetch(target, { ...init, redirect: "manual" });
+    if (!isRedirectStatus(response.status)) return response;
+    const location = response.headers.get("location");
+    if (!location) return response;
+    /** 🔴 3xx 본문을 버리고 소켓을 놓아 준다 — 안 읽으면 커넥션이 묶인다. */
+    await response.body?.cancel().catch(() => undefined);
+    try {
+      target = new URL(location, target).toString();
+    } catch {
+      return response;
+    }
+  }
+  throw new OutboundBlockedError("TOO_MANY_REDIRECTS", target);
+}
+
 export async function fetchWithDomainRateLimit(url: string, init?: RequestInit): Promise<Response> {
   const release = await acquireDomainSlot(url);
   try {
-    let response = await fetch(url, init);
+    let response = await fetchGuarded(url, init);
     recordRateLimitResponse(url, response.status, response.headers.get("retry-after"));
 
     let attempt = 0;
@@ -172,7 +218,7 @@ export async function fetchWithDomainRateLimit(url: string, init?: RequestInit):
       const waitMs = Math.max(state.blockedUntil - Date.now(), BACKOFF_BASE_MS * 2 ** attempt);
       await sleep(Math.min(waitMs, BACKOFF_CAP_MS));
       attempt++;
-      response = await fetch(url, init);
+      response = await fetchGuarded(url, init);
       recordRateLimitResponse(url, response.status, response.headers.get("retry-after"));
     }
     if (response.status === 429) {

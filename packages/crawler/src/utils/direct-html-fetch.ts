@@ -1,5 +1,11 @@
 import { request as httpsRequest } from "node:https";
 import { request as httpRequest } from "node:http";
+/**
+ * 🔴🔴 WU-025 — 이 경로도 **사용자가 준 URL** 에 닿는다(`fetchWithDomainRateLimit` 의
+ *    429 폴백이 여기로 내려온다). 🟢 그리고 이 스택은 `lookup` 훅을 꽂을 수 있어서
+ *    **검사한 IP 로 실제 연결된다는 것까지** 보장된다(= 이 경로에서는 DNS rebinding 이 닫힌다).
+ */
+import { classifyOutboundUrl, guardedLookup } from "./outbound-guard";
 
 /**
  * OVERSEAS-PRICE-ORIGINAL-FALLBACK-1(CPO 지시, 2026-09-10) — Playwright가 차단당했을
@@ -50,6 +56,13 @@ export async function fetchHtmlDirect(
     return null;
   }
   if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+  /**
+   * 🔴🔴 WU-025 — **문자열 층을 먼저 통과해야 한다.** 이 함수는 리다이렉트를
+   *    스스로 따라가므로(아래 재귀) 이 검사와 `lookup` 훅이 **모든 홉** 에 적용된다.
+   * 🔴 실패를 `null` 로 돌려준다 — 이 함수의 기존 계약(「절대 throw 하지 않는다」)을
+   *    깨지 않는다. 호출부는 그것을 「가져오지 못했다」로 이미 다룬다.
+   */
+  if (!classifyOutboundUrl(url).ok) return null;
   const req = parsed.protocol === "https:" ? httpsRequest : httpRequest;
 
   return new Promise<DirectHtmlResult | null>((resolve) => {
@@ -66,6 +79,12 @@ export async function fetchHtmlDirect(
         {
           method: "GET",
           maxHeaderSize: MAX_HEADER_SIZE,
+          /**
+           * 🔴🔴 WU-025 — **연결 시점 경계.** `net.connect` 가 쓰는 이름 해석을
+           *    우리가 거른다 → 「검사한 IP 와 연결한 IP 가 다를 수 있다」는 창
+           *    (DNS rebinding)이 이 경로에서는 **존재하지 않는다.**
+           */
+          lookup: guardedLookup,
           headers: {
             "User-Agent": CHROME_UA,
             Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
