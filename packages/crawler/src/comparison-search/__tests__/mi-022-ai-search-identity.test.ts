@@ -28,6 +28,10 @@ import { describe, expect, it } from "vitest";
 import { buildProductIdentityDna, productFactsFromIdentityDna } from "@commerce/shared";
 import { withConfidence } from "../match";
 import { factsFromProductUrl, type ProductUrlFactsResult } from "../product-url-facts";
+/* 🔴 원상품 조회 키를 «문자열 완전일치» 로 쓰면 안 된다 — 덤프의 source_url 에 Shopify
+   검색문맥(`?_pos=1&_sid=…&_ss=r`)이 붙어 있어 S4 가 통째로 빠졌다(WU-022-2 결측).
+   🟢 새 규칙을 만들지 않고 기존 owner 를 쓴다(WU-009-C). */
+import { canonicalizeProductUrl } from "../self-reference";
 import type { ComparisonCandidate, ComparisonQuery } from "../types";
 /* 🟢 ①의 export 를 **그대로** 쓴다 — 작업표·검증기·추출을 다시 쓰지 않는다. */
 import { SEARCH_TARGETS, validateSearchFile, discoveryRowsOf } from "./mi-019a-search-ingest.test";
@@ -261,6 +265,27 @@ describe("WU-022 ② KPI 축 (AI 0 · HTTP 0)", () => {
   });
 });
 
+describe("WU-022 ③-b 원상품 조회 키는 **정규화된 URL** 이다 (WU-022-2 S4 결측의 원인)", () => {
+  /* 🔴 실제로 덤프에 들어 있던 모양이다 — 이 꼬리 때문에 S4 가 11후보째 통째로 빠졌다. */
+  const DUMPED = "https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&_sid=a0738e824&_ss=r";
+  const TARGET = "https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story";
+
+  it("🔴🔴 문자열 완전일치는 **실패한다** — 그것이 결측의 원인이었다", () => {
+    expect(DUMPED).not.toBe(TARGET);
+  });
+
+  it("🟢 canonicalizeProductUrl 로 조회하면 **같은 키** 가 된다 (새 규칙 0 · 기존 owner 재사용)", () => {
+    expect(canonicalizeProductUrl(DUMPED)).toBe(canonicalizeProductUrl(TARGET));
+  });
+
+  it("🔴 로케일·경로·식별 파라미터는 **보존된다** — 시장을 뭉개지 않는다", () => {
+    const k = canonicalizeProductUrl(DUMPED);
+    expect(k).toContain("/en-kr/");
+    expect(k).toContain("bubble-sweatshirt-in-grey-melange-by-main-story");
+    expect(canonicalizeProductUrl("https://x.com/p/1?variant=42")).toContain("variant=42");
+  });
+});
+
 describe("WU-022 ③ 작업표는 019A-SEARCH 와 **같은 배열** 이다 (사본 금지)", () => {
   it("🟢 원상품 6건 · known-positive 분모는 5 (S3 제외)", () => {
     expect(SEARCH_TARGETS).toHaveLength(6);
@@ -297,7 +322,7 @@ describeLive("WU-022 ④ AI 후보 → fetch → MI → GT → KPI (실측)", ()
         source_url: string;
         canonical_product: Record<string, unknown>;
       }[];
-      const byUrl = new Map(originRows.map((r) => [r.source_url, r]));
+      const byUrl = new Map(originRows.map((r) => [canonicalizeProductUrl(r.source_url), r]));
 
       const sv = validateSearchFile(JSON.parse(readFileSync(SEARCH_FILE, "utf8")), ids);
       const drows = discoveryRowsOf(sv.entries);
@@ -322,7 +347,7 @@ describeLive("WU-022 ④ AI 후보 → fetch → MI → GT → KPI (실측)", ()
       const missingOrigin: string[] = [];
       for (const dr of drows) {
         const target = SEARCH_TARGETS.find((t) => t.searchId === dr.searchId)!;
-        const origin = byUrl.get(target.sourceUrl);
+        const origin = byUrl.get(canonicalizeProductUrl(target.sourceUrl));
         if (!origin) { missingOrigin.push(dr.searchId); continue; }
         const dna = buildProductIdentityDna(origin.canonical_product as never);
         const query: ComparisonQuery = {
@@ -356,6 +381,16 @@ describeLive("WU-022 ④ AI 후보 → fetch → MI → GT → KPI (실측)", ()
 
       const gv = validateGtFile(JSON.parse(readFileSync(GT_FILE, "utf8")), ids);
       const gtByKey = new Map(gv.entries.map((e) => [`${e.searchId}::${e.candidateUrl}`, e]));
+
+      /* 🔴 GT 가 «아직 없는» 행을 항상 내보낸다 — 「미검증 후보 별도 분리」가 규격이고,
+         조용히 빠지면 분모가 줄어든 것을 아무도 못 본다. */
+      const ungated = rows.filter((r) => !gtByKey.has(`${r.searchId}::${r.candidateUrl}`));
+      writeFileSync(
+        path.join(OUT_DIR, "mi-022-gt-worklist.json"),
+        JSON.stringify(ungated.map((r) => ({ searchId: r.searchId, candidateUrl: r.candidateUrl, observedTitle: r.observedTitle, factsStatus: r.factsStatus, miRaw: r.miRaw, gt: "<SAME|DIFFERENT>", gtReason: "<독립 증거>" })), null, 2),
+        "utf8",
+      );
+      console.log(`  🟡 GT 미부여 ${ungated.length}건 → mi-022-gt-worklist.json (🔴 분모에서 빠진다)`);
       const broken: string[] = [];
       const joined = rows.flatMap((r) => {
         const g = gtByKey.get(`${r.searchId}::${r.candidateUrl}`);
