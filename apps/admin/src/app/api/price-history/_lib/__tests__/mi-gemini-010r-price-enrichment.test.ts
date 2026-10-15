@@ -169,9 +169,17 @@ describe("Case C. 🟢 가격 보강 실패가 전체를 깨뜨리지 않는다"
   it("enrichCandidatePrices 호출이 try/catch 로 감싸져 있다", () => {
     const i = RUNNER.indexOf("priced = await enrichCandidatePrices(");
     expect(i).toBeGreaterThan(-1);
-    const around = RUNNER.slice(Math.max(0, i - 200), i + 200);
-    expect(around).toContain("try {");
-    expect(around).toContain("catch");
+    /**
+     * 🔴🔴 WU-024 — **±200자 «창» 을 «구조» 로 바꿨다.** 창 기반 단언은 그 구간에 한 줄만
+     *    늘어도 깨지고(이번에 실제로 깨졌다), 반대로 **무관한 try/catch 가 근처에 있으면
+     *    통과** 한다 — 「위치만 보면 속는다」는 이 파일의 교훈과 같은 뿌리다.
+     * 🟢 지금은 **감싸는 블록 자체** 를 본다: 바로 앞 `try {` 와 호출 사이에 블록이
+     *    닫히지 않고(`}` 가 없고), `catch` 가 호출 **뒤** 에 온다. 창 너비에 의존하지 않는다.
+     */
+    const tryAt = RUNNER.lastIndexOf("try {", i);
+    expect(tryAt).toBeGreaterThan(-1);
+    expect(RUNNER.slice(tryAt, i)).not.toContain("}");
+    expect(RUNNER.indexOf("catch", i)).toBeGreaterThan(i);
   });
 
   it("🔴 실패하면 점수만 있는 후보로 계속 간다(그러면 priceKrw 가 null → 집계 제외)", () => {

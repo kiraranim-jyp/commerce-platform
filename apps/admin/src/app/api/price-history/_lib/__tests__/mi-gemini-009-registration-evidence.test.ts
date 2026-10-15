@@ -41,7 +41,8 @@ describe("A. 🔴🔴 Gemini 후보는 저장되지 않는다 (§14 = 0 이어�
   it("upsertDomesticProductLink «앞» 에서 가상 샵이 걸러진다", () => {
     const upsert = RUNNER.indexOf("const upsertResult = await upsertDomesticProductLink(");
     expect(upsert).toBeGreaterThan(-1);
-    const guard = RUNNER.lastIndexOf("result.shopId === GEMINI_VIRTUAL_SHOP_ID", upsert);
+    /** 🟢 WU-024 — 가드가 술어 하나(`isTransientShopId`)로 모였다. 성질 동일 · 범위 확대. */
+    const guard = RUNNER.lastIndexOf("isTransientShopId(result.shopId)", upsert);
     expect(guard).toBeGreaterThan(-1);
     /** 🔴 가드가 upsert «뒤» 면 이미 저장된 뒤다 — 인덱스 순서로 본다. */
     expect(guard).toBeLessThan(upsert);
@@ -49,9 +50,9 @@ describe("A. 🔴🔴 Gemini 후보는 저장되지 않는다 (§14 = 0 이어�
   });
 
   it("🔴 evidence 를 담는 코드가 그 가드 «안» 에 있다 — 저장 경로로 새지 않는다", () => {
-    const guard = RUNNER.indexOf("result.shopId === GEMINI_VIRTUAL_SHOP_ID");
+    const guard = RUNNER.indexOf("isTransientShopId(result.shopId)");
     const upsert = RUNNER.indexOf("const upsertResult = await upsertDomesticProductLink(");
-    const push = RUNNER.indexOf("geminiEvidence.push(");
+    const push = RUNNER.indexOf("transientEvidenceSink.push(");
     expect(push).toBeGreaterThan(guard);
     expect(push).toBeLessThan(upsert);
   });
@@ -69,7 +70,7 @@ describe("A. 🔴🔴 Gemini 후보는 저장되지 않는다 (§14 = 0 이어�
 
 describe("B. 🔴 새 판정 알고리즘을 만들지 않았다 (§3)", () => {
   it("🟢 tier 는 priceTierFromLink 를 «호출» 한다 — 복제 계산이 아니다", () => {
-    const push = RUNNER.slice(RUNNER.indexOf("geminiEvidence.push("));
+    const push = RUNNER.slice(RUNNER.indexOf("transientEvidenceSink.push("));
     const block = push.slice(0, push.indexOf("});"));
     expect(block).toContain("priceTierFromLink({ matchTruth: finalMatchTruth, verified: finalVerified })");
     /** 🔴 tier 문자열을 직접 쓰지 않는다 — 그러면 두 값이 갈라진다. */
@@ -224,7 +225,7 @@ describe("G. 🔴 008A 정책과 scope 정책을 건드리지 않았다", () => 
   it("🔴 Gemini 경로에 자기참조 판정을 새로 만들지 않았다 — 기존 함수가 돈다", () => {
     /** judgeDomesticCandidate 안의 isSelfReferenceCandidate 가 Gemini 후보에도 적용된다. */
     expect(RUNNER).toContain("isSelfReferenceCandidate(input.sourceUrl, c.url)");
-    const push = RUNNER.slice(RUNNER.indexOf("geminiEvidence.push("));
+    const push = RUNNER.slice(RUNNER.indexOf("transientEvidenceSink.push("));
     expect(push.slice(0, 700)).not.toContain("isSelfReference");
   });
 });

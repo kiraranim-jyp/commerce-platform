@@ -15,7 +15,12 @@ import { sortDomesticCandidatesByTrust } from "@commerce/crawler/src/comparison-
 import type { MatchTruth } from "@commerce/crawler/src/comparison-search/match-truth";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 /** 🔴 WU-022 — transient 후보 구역. 저장되지 않는 값만 다루는 **표시 전용** 컴포넌트다. */
-import { GeminiTransientCandidates, type GeminiTransientRow } from "./GeminiTransientCandidates";
+import {
+  GeminiTransientCandidates,
+  SUPPLIED_URL_HEADING,
+  SUPPLIED_URL_INPUT_NOTICE,
+  type GeminiTransientRow,
+} from "./GeminiTransientCandidates";
 // MATCHING-UNIFY-1 — 국내 가격비교 표와 같은 라벨을 쓰기 위한 공통 매핑.
 import { domesticEvidenceNote, domesticMatchDisplay } from "./match-display";
 // MI 2.0 PHASE 1 — 판매 판단의 근거를 4축으로 분해해 보여준다(새 판정 아님).
@@ -407,6 +412,43 @@ export function candidateLabel(c: DomesticCandidate): { icon: string; text: stri
  * 필드(국내 편집샵 domestic_price_sources 기반 runDomesticPriceCheck)가
  * 전담한다 — 둘을 합쳐서 하나의 문장으로 만든다(네이버 쇼핑 검색 경로
  * 제거로 PARTIAL/NOT_CONFIGURED 상태 자체가 더 이상 나오지 않는다). */
+/**
+ * 🔴🔴 WU-024 — 공급한 URL 중 **무엇이 빠졌고 왜 빠졌는지** 한 줄로 적는다.
+ *
+ * 왜 필요한가 — 셀러가 URL 5개를 넣고 후보가 2건만 서면, 나머지 셋이 「상품이 없어서」인지
+ * 「목록 URL 이라서」인지 「페이지를 못 읽어서」인지 알 수 없다. 🔴 그 구분을 잃으면
+ * 셀러가 멀쩡한 URL 을 다시 넣거나, 진짜 문제를 「국내에 없음」으로 읽는다(§5-B 와 같은 원칙).
+ *
+ * 🟢 **새 어휘를 만들지 않는다** — 서버가 낸 `reason` 코드를 그대로 옮기고 개수만 센다.
+ * 🔴 `null` = URL 을 공급하지 않았다(아무 말도 하지 않는다).
+ */
+export function describeUrlCandidateMetrics(
+  metrics:
+    | {
+        suppliedUrls: number;
+        acceptedUrls: number;
+        miEligibleCandidates: number;
+        dropped: { url: string; reason: string }[];
+        notFetchedOverLimit: string[];
+      }
+    | null,
+): string | null {
+  if (!metrics) return null;
+  const parts = [`URL ${metrics.suppliedUrls}개 중 후보 ${metrics.miEligibleCandidates}건`];
+  if (metrics.dropped.length > 0) {
+    const byReason = new Map<string, number>();
+    for (const d of metrics.dropped) byReason.set(d.reason, (byReason.get(d.reason) ?? 0) + 1);
+    parts.push(
+      `제외 ${metrics.dropped.length}건(${[...byReason.entries()].map(([r, n]) => `${r} ${n}`).join(" · ")})`,
+    );
+  }
+  /** 🔴 상한 때문에 **열어 보지 않은** 것은 「상품이 없다」가 아니다 — 따로 적는다. */
+  if (metrics.notFetchedOverLimit.length > 0) {
+    parts.push(`상한 초과로 미확인 ${metrics.notFetchedOverLimit.length}건`);
+  }
+  return parts.join(" · ");
+}
+
 function summarizeRecheckResult(json: {
   status?: string;
   savedCount?: number;
@@ -1798,6 +1840,16 @@ export function DomesticPriceIntelligencePanel({
    * 🔴 flag OFF 면 서버가 `null` 을 준다 → 구역이 렌더되지 않는다.
    */
   const [geminiEvidence, setGeminiEvidence] = useState<GeminiTransientRow[] | null>(null);
+  /**
+   * 🔴🔴 WU-024 — **셀러가 공급하는 후보 URL.** 이것이 Registry 밖 후보의 «생산자» 다.
+   *
+   * 🔴 저장하지 않는다 — 입력값도 결과도 DB 에 가지 않고 state 에만 있다(「이번 확인」).
+   * 🔴 AI 가 아니다 — 서버는 이 문자열에서 **URL 만** 꺼내 페이지를 열어 본다.
+   */
+  const [candidateUrlsText, setCandidateUrlsText] = useState("");
+  const [urlCandidateEvidence, setUrlCandidateEvidence] = useState<GeminiTransientRow[] | null>(null);
+  /** 🔴 제외된 URL 을 **조용히 버리지 않는다** — 서버가 낸 이유를 그대로 한 줄로 적는다. */
+  const [urlCandidateNotice, setUrlCandidateNotice] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
@@ -1975,10 +2027,17 @@ export function DomesticPriceIntelligencePanel({
     setRechecking(true);
     setRecheckResult(null);
     try {
+      /** 🔴 WU-024 — 비어 있으면 칸 자체를 **보내지 않는다**(서버에서 「안 돌았다」가 된다). */
+      const suppliedUrls = candidateUrlsText
+        .split(/\s+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
       const res = await fetch("/api/price-history/check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ snapshotId }),
+        body: JSON.stringify(
+          suppliedUrls.length > 0 ? { snapshotId, candidateUrls: suppliedUrls } : { snapshotId },
+        ),
       });
       if (!res.ok) {
         setRecheckResult({ icon: "🔴", message: "가격 확인 요청이 실패했습니다(서버 오류)." });
@@ -1998,11 +2057,25 @@ export function DomesticPriceIntelligencePanel({
              * 🔴 `null` = Gemini 경로가 돌지 않았다(flag OFF 가 그 상태다) → 구역 미표시.
              */
             geminiEvidence?: GeminiTransientRow[] | null;
+            /**
+             * 🔴🔴 WU-024 — **URL 직접 공급 경로의 결과.** `geminiEvidence` 와 **다른
+             *    칸** 이다 — 합치면 「웹 검색이 찾은 후보」라는 문장이 거짓이 된다.
+             */
+            urlCandidateEvidence?: GeminiTransientRow[] | null;
+            urlCandidateMetrics?: {
+              suppliedUrls: number;
+              acceptedUrls: number;
+              miEligibleCandidates: number;
+              dropped: { url: string; reason: string }[];
+              notFetchedOverLimit: string[];
+            } | null;
           };
         };
         setRecheckResult(summarizeRecheckResult(json));
         /** 🔴 **덮어쓴다** — 이전 확인의 후보를 화면에 남기지 않는다(「이번 확인」이므로). */
         setGeminiEvidence(json.domesticShop?.geminiEvidence ?? null);
+        setUrlCandidateEvidence(json.domesticShop?.urlCandidateEvidence ?? null);
+        setUrlCandidateNotice(describeUrlCandidateMetrics(json.domesticShop?.urlCandidateMetrics ?? null));
       }
       await Promise.all([loadPriceHistory(), loadAlerts()]);
     } catch {
@@ -2113,6 +2186,10 @@ export function DomesticPriceIntelligencePanel({
       rechecking={rechecking}
       recheckResult={recheckResult}
       geminiEvidence={geminiEvidence}
+      candidateUrlsText={candidateUrlsText}
+      onCandidateUrlsChange={setCandidateUrlsText}
+      urlCandidateEvidence={urlCandidateEvidence}
+      urlCandidateNotice={urlCandidateNotice}
       onRecheck={() => void recheckNow()}
       confirmingId={confirmingId}
       onConfirmSameProduct={(id) => void confirmSameProduct(id)}
@@ -2158,6 +2235,10 @@ export function MiPanelView({
   rechecking = false,
   recheckResult = null,
   geminiEvidence = null,
+  candidateUrlsText = "",
+  onCandidateUrlsChange,
+  urlCandidateEvidence = null,
+  urlCandidateNotice = null,
   onRecheck,
   confirmingId = null,
   onConfirmSameProduct,
@@ -2202,6 +2283,16 @@ export function MiPanelView({
   rechecking?: boolean;
   /** 🔴 WU-022 — transient 웹 검색 후보. `null`/빈 배열이면 구역을 렌더하지 않는다. */
   geminiEvidence?: GeminiTransientRow[] | null;
+  /**
+   * 🔴🔴 WU-024 — 셀러가 **직접 넣는** 후보 URL(줄바꿈/공백 구분).
+   *    🔴 이것이 Registry 밖 후보의 생산자다. 🔴 저장되지 않는다.
+   */
+  candidateUrlsText?: string;
+  onCandidateUrlsChange?: (value: string) => void;
+  /** 🔴 그 URL 들의 판정 결과. `geminiEvidence` 와 **다른 구역** 에 선다(출처 보존). */
+  urlCandidateEvidence?: GeminiTransientRow[] | null;
+  /** 🔴 제외/미확인 요약 한 줄. 조용히 버리지 않는다. */
+  urlCandidateNotice?: string | null;
   recheckResult?: RecheckResult | null;
   onRecheck?: () => void;
   confirmingId?: string | null;
@@ -3086,7 +3177,33 @@ export function MiPanelView({
                 화면 이동·탭·접힘은 수집을 부르지 못하므로, 셀러가 "지금 다시
                 확인하겠다"고 말할 수 있는 통로가 화면에 반드시 하나 있어야 한다.
                 없으면 재수집을 막은 것이 아니라 재수집을 없앤 것이 된다. */}
-            <div className="mt-3 flex items-center justify-end">
+            {/* 🔴🔴 WU-024 — **Registry 밖 후보의 생산자.** 등록된 판매처 목록 안에서만
+                뒤지는 기존 검색으로는 영구히 닿지 못하는 판매처가 있고(GT 로 확인된 5곳),
+                그 후보를 이 칸이 **이번 확인에만** 공급한다.
+                🔴 등록부에 추가하지 않는다 · 저장하지 않는다 · AI 를 부르지 않는다.
+                🔴 「동일상품인가」는 셀러가 아니라 **기존 MI 가 페이지를 열어** 판정한다. */}
+            <div className="mt-3">
+              <label
+                htmlFor="wu024-candidate-urls"
+                className="block text-[11px] font-medium text-text-secondary"
+              >
+                🔗 비교할 판매처 상품 URL (선택)
+              </label>
+              <p className="mt-0.5 text-[11px] text-text-tertiary">
+                {SUPPLIED_URL_INPUT_NOTICE}
+              </p>
+              <textarea
+                id="wu024-candidate-urls"
+                data-testid="wu024-candidate-urls"
+                value={candidateUrlsText}
+                onChange={(e) => onCandidateUrlsChange?.(e.target.value)}
+                disabled={rechecking}
+                rows={2}
+                placeholder="https://… (한 줄에 하나)"
+                className="mt-1 w-full rounded-md border border-border bg-surface/40 p-1.5 text-[11px] text-text-primary placeholder:text-text-tertiary disabled:opacity-50"
+              />
+            </div>
+            <div className="mt-2 flex items-center justify-end">
               <button
                 type="button"
                 onClick={onRecheck}
@@ -3105,6 +3222,20 @@ export function MiPanelView({
                 기존 후보 카드(DB 링크)와 **다른 구역** 이다 — 데이터 수명이 다르다.
                 🔴 이 구역은 판매판정·국내 최저가에 영향을 주지 않는다. */}
             <GeminiTransientCandidates evidence={geminiEvidence} />
+            {/* 🔴🔴 WU-024 — **같은 컴포넌트 · 다른 구역 · 다른 머리 문구.**
+                판정 표시 규칙(통화 그대로 · UNKNOWN 은 시장 뱃지 없음 · 가격 없으면
+                「가격 미확인」 · 두 고정 안내문 · 승격 버튼 없음)은 **한 글자도 다르지
+                않다** — 바뀌는 것은 출처뿐이다. */}
+            <GeminiTransientCandidates
+              evidence={urlCandidateEvidence}
+              heading={SUPPLIED_URL_HEADING}
+              testId="url-candidate-transient"
+            />
+            {urlCandidateNotice && (
+              <p data-testid="url-candidate-notice" className="mt-1 text-[11px] text-text-tertiary">
+                {urlCandidateNotice}
+              </p>
+            )}
           </div>
         )}
       </div>

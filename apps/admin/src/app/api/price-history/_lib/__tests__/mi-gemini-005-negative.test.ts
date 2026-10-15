@@ -280,7 +280,8 @@ describe("MI-GEMINI-005 ⑤ — 가상 샵은 «저장되지 않는다»", () =>
   it("upsertDomesticProductLink «앞» 에서 가상 샵이 걸러진다", () => {
     const idx = stripped.indexOf("const upsertResult = await upsertDomesticProductLink(");
     expect(idx).toBeGreaterThan(-1);
-    const guard = stripped.lastIndexOf(`result.shopId === GEMINI_VIRTUAL_SHOP_ID`, idx);
+    /** 🟢 WU-024 — 가드가 술어 하나(`isTransientShopId`)로 모였다. 성질 동일 · 범위 확대. */
+    const guard = stripped.lastIndexOf(`isTransientShopId(result.shopId)`, idx);
     expect(guard).toBeGreaterThan(-1);
     /** 🔴 가드가 upsert «뒤» 에 있으면 이미 저장된 뒤다 — 순서를 본다. */
     expect(guard).toBeLessThan(idx);
@@ -294,7 +295,7 @@ describe("MI-GEMINI-005 ⑤ — 가상 샵은 «저장되지 않는다»", () =>
     expect(stripped).toContain("recordCheckAttempt(result.shopId");
     /** 🔴 래퍼가 실제로 가드를 갖고 있는가 — 이름만 바꾼 것이 아님을 본다. */
     const wrapper = stripped.slice(stripped.indexOf("const recordCheckAttempt"));
-    expect(wrapper.slice(0, 400)).toContain("GEMINI_VIRTUAL_SHOP_ID");
+    expect(wrapper.slice(0, 400)).toContain("isTransientShopId(shopId)");
   });
 
   it("가상 샵 id 는 등록부 id 모양(uuid)이 아니다 — FK 로 들어갈 수 없는 값이다", () => {
