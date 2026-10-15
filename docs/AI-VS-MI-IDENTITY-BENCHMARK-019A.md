@@ -111,6 +111,31 @@ SAME | DIFFERENT | UNCERTAIN
 🔴 **독립성 구조로 보장했다** — MI 측정이 AI 파일을 읽기 **전** 에 끝난다. AI 결과가
 MI 입력에 들어갈 경로가 코드에 **없다**.
 
+
+## 10-B. 🟢 수집용 14쌍 전문 (이 표만 있으면 AI 축을 채울 수 있다)
+
+🔴 이 표를 **문서에 박아 둔다** — 임시 폴더의 시트는 사라질 수 있고, 그러면 남은 단일
+입력을 전달할 수 없다. 🟢  와 한 단어()만 돌려받으면 된다.
+
+| caseId | 유형 | 원상품(sourceUrl) | 후보(candidateUrl) |
+|---|---|---|---|
+| B01 | EXACT_SAME | https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses | https://bobochoses.com/products/b226ac010-booty-ghosts-t-shirt |
+| B02 | SIMILAR | https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses | https://bobochoses.com/products/b226ac009-hug-hairy-monster-t-shirt |
+| B03 | SAME_BRAND_DIFF_MODEL | https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses | https://bobochoses.com/products/b226ac070-stamp-bloom-all-over-denim-pants |
+| B04 | DIFFERENT | https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses | https://www.foretforet.com/shop/shopdetail.html?branduid=10278273 |
+| B05 | EXACT_SAME | https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses | https://bobochoses.com/products/b226ac009-hug-hairy-monster-t-shirt |
+| B06 | SIMILAR | https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses | https://bobochoses.com/products/b226ac010-booty-ghosts-t-shirt |
+| B07 | EXACT_SAME | https://www.junioredition.com/en-kr/products/curious-turnip-all-over-swim-cap-by-bobo-choses | https://bobochoses.com/products/b126ai018-curious-turnip-all-over-swim-cap |
+| B08 | SAME_BRAND_DIFF_MODEL | https://www.junioredition.com/en-kr/products/curious-turnip-all-over-swim-cap-by-bobo-choses | https://bobochoses.com/products/b226ac010-booty-ghosts-t-shirt |
+| B09 | EXACT_SAME | https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&_sid=a0738e824&_ss=r | https://littleluna.co.kr/product/메인스토리-aw26ms185-bubble-sweatshirt-grey-melange/4120/category/2 |
+| B10 | SAME_MODEL_DIFF_COLOR | https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&_sid=a0738e824&_ss=r | https://www.deuxbebe.com/product/detail.html?product_no=18285&cate_no=293&display_group=1 |
+| B11 | EXACT_SAME | https://www.junioredition.com/en-kr/products/lulu-t-bar-shoes-in-vernice-nero-by-pepe | https://www.foretforet.com/shop/shopdetail.html?branduid=10226592 |
+| B12 | EXACT_SAME | https://www.junioredition.com/en-kr/products/lulu-t-bar-shoes-in-vernice-nero-by-pepe | https://www.deuxbebe.com/product/detail.html?product_no=8021&cate_no=62&display_group=1 |
+| B13 | SAME_MODEL_DIFF_COLOR | https://www.junioredition.com/en-kr/products/lulu-t-bar-shoes-in-vernice-nero-by-pepe | https://www.junioredition.com/en-kr/products/lulu-t-bar-shoes-in-tobacco-by-pepe |
+| B14 | SAME_OTHER_MARKET | https://bobochoses.co.jp/products/b226ac117-b-c-embossed-tracksuit-jacket | https://bobochoses.com/products/b226ac117-b-c-embossed-tracksuit-jacket |
+
+🔴 유형 칸은 **GT 가 아니다** — 측정 분류 라벨이고, AI 에게는 **보여주지 않는다**
+(유형을 알려주면 AI 판정이 GT 를 베낀다 · §2 독립성).
 ## 11~15. 결론
 
 ```
