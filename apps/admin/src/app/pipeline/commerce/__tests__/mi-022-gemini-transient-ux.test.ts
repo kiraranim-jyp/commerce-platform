@@ -232,10 +232,17 @@ describe("⑥ 🔴 판정·가격 계산에 손대지 않았다 — 소스 계�
       .filter((line) => line.includes("geminiEvidence"))
       .filter((line) => FORBIDDEN.some((f) => line.toLowerCase().includes(f.toLowerCase())));
     expect(offending).toEqual([]);
-    /** 🟢 그리고 실제로 쓰이는 자리 셋은 **있어야** 한다(배선이 사라지면 FAIL). */
+    /**
+     * 🟢 그리고 실제로 쓰이는 자리 셋은 **있어야** 한다(배선이 사라지면 FAIL).
+     *
+     * 🟢 WU-029 — 마지막 앵커만 갱신했다. 렌더가 **이름 있는 블록**
+     *    (`TransientCandidateSections`)으로 빠졌기 때문이다 — 본문 줄 수 상한을
+     *    올리지 않으면서 결과를 접힘 밖에 세우기 위한 것이고, **배선은 그대로** 다.
+     */
     expect(panel).toContain("const [geminiEvidence, setGeminiEvidence]");
     expect(panel).toContain("geminiEvidence={geminiEvidence}");
-    expect(panel).toContain("<GeminiTransientCandidates evidence={geminiEvidence} />");
+    expect(panel).toContain("<TransientCandidateSections web={geminiEvidence}");
+    expect(panel).toContain("<GeminiTransientCandidates evidence={web} />");
   });
 
   it("🔴 저장 호출 0 — transient 구역에 PATCH/POST 승격 경로가 없다", () => {

@@ -2198,6 +2198,52 @@ export function DomesticPriceIntelligencePanel({
 }
 
 /**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴 WU-029 — 일시 후보 두 구역 + 제외 요약. **본문에는 «한 줄» 로 선다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 왜 묶었나 — 이 셋을 본문에 그대로 펼쳤더니 **본문 줄 수 상한(≤155)에 걸렸다**
+ * (실측 161). 🟢 그 상한은 장식이 아니라 계약이다: 「새 기능이 본문에 줄을 세우려
+ * 하면 여기서 먼저 걸리고, 그때 고를 수 있는 길이 **툴팁이냐 상세냐**로 좁혀진다」
+ * (mi-polish 주석). 🔴 그런데 이번에는 **상세(접힘)로 내리는 것이 바로 CPO 가
+ * 고치라고 한 결함** 이었다(§6 — 결과를 보려고 되물음을 펼치게 하지 말 것).
+ *
+ * 🟢 그래서 **상한을 올리지 않고** 비용을 제대로 치른다 — 이름 있는 블록으로 빼면
+ *    본문은 한 줄이고, 화면은 접힘 밖에 선다. 둘 다 지켜진다.
+ * 🔴 후보도 안내문도 없으면 **아무것도 렌더하지 않는다** — 기본 화면 불변.
+ */
+function TransientCandidateSections({
+  web,
+  supplied,
+  notice,
+}: {
+  web?: GeminiTransientRow[] | null;
+  supplied?: GeminiTransientRow[] | null;
+  notice?: string | null;
+}): React.ReactNode {
+  if (!web?.length && !supplied?.length && !notice) return null;
+  return (
+    <>
+      {/* 🔴 WU-022 — 「지금 확인」이 돌려준 **이번 확인 한정** 후보. DB 링크와
+          데이터 수명이 다르므로 구역을 가른다. 판매판정·국내 최저가에 영향 0. */}
+      <GeminiTransientCandidates evidence={web} />
+      {/* 🔴 WU-024 — 같은 컴포넌트 · 다른 구역 · 다른 머리 문구. 표시 규칙(통화
+          그대로 · UNKNOWN 시장 뱃지 없음 · 승격 버튼 없음)은 한 글자도 다르지 않다. */}
+      <GeminiTransientCandidates
+        evidence={supplied}
+        heading={SUPPLIED_URL_HEADING}
+        testId="url-candidate-transient"
+      />
+      {notice && (
+        <p data-testid="url-candidate-notice" className="mt-1 text-[11px] text-text-tertiary">
+          {notice}
+        </p>
+      )}
+    </>
+  );
+}
+
+/**
  * MI-UX-FINAL-REVIEW(CEO 지시, 2026-09-12) — **패널이 실제로 그리는 화면 전부**.
  *
  * ── 왜 이 컴포넌트가 생겼나 ──────────────────────────────────────────────
@@ -3218,26 +3264,24 @@ export function MiPanelView({
                 {recheckResult.icon} {recheckResult.message}
               </p>
             )}
-            {/* 🔴🔴 WU-022 — 「지금 확인」이 돌려준 **이번 확인 한정** 후보.
-                기존 후보 카드(DB 링크)와 **다른 구역** 이다 — 데이터 수명이 다르다.
-                🔴 이 구역은 판매판정·국내 최저가에 영향을 주지 않는다. */}
-            <GeminiTransientCandidates evidence={geminiEvidence} />
-            {/* 🔴🔴 WU-024 — **같은 컴포넌트 · 다른 구역 · 다른 머리 문구.**
-                판정 표시 규칙(통화 그대로 · UNKNOWN 은 시장 뱃지 없음 · 가격 없으면
-                「가격 미확인」 · 두 고정 안내문 · 승격 버튼 없음)은 **한 글자도 다르지
-                않다** — 바뀌는 것은 출처뿐이다. */}
-            <GeminiTransientCandidates
-              evidence={urlCandidateEvidence}
-              heading={SUPPLIED_URL_HEADING}
-              testId="url-candidate-transient"
-            />
-            {urlCandidateNotice && (
-              <p data-testid="url-candidate-notice" className="mt-1 text-[11px] text-text-tertiary">
-                {urlCandidateNotice}
-              </p>
-            )}
           </div>
         )}
+        {/*
+          ══════════════════════════════════════════════════════════════════════
+          🔴🔴 WU-029 — **결과는 접힘 «밖» 에 선다.**
+          ══════════════════════════════════════════════════════════════════════
+          여기 있던 두 구역은 「왜 이렇게 판단했나요?」(`showMarketDetail`) **안**에
+          있었다. 그래서 셀러가 **자기가 넣은 URL 의 결과** 를 보려면 되물음을 펼쳐야
+          했다 — Production 화면 검토에서 CPO 가 지적한 그 자리다(§6: 「이 정보를
+          찾기 위해 긴 페이지를 내려가야 하지 않도록」).
+
+          🔴 **입력칸은 되물음 «안» 에 그대로 둔다.** 입력은 «행동» 이고 결과는
+             «결론» 이다. 입력까지 올리면 기본 화면이 길어져 이 파일이 지켜 온
+             첫 화면 계약(product-tab-first-screen 18건)을 깨뜨린다.
+          🟢 그리고 후보가 없으면 두 구역 모두 **아무것도 렌더하지 않는다** —
+             기본 화면은 한 픽셀도 바뀌지 않는다(그 성질은 컴포넌트가 보장한다).
+        */}
+        <TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} notice={urlCandidateNotice} />
       </div>
     </CollapsibleSection>
   );

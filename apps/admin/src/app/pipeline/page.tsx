@@ -683,6 +683,32 @@ export default function PipelinePage() {
     setCurrentProgress(null);
     setProgressLog([]);
     setDetailsExpanded(false);
+    /**
+     * ══════════════════════════════════════════════════════════════════════════
+     * 🔴🔴 WU-029 — **여기 빠져 있던 것들이 A 의 값을 B 로 흘려보내고 있었다.**
+     * ══════════════════════════════════════════════════════════════════════════
+     *
+     * `categoryMappings`(채널별 카테고리 선택)와 `detailOverride`(상품별 상세페이지
+     * override)는 **상품마다 다른 값** 이고, `saveSnapshotToServer` 가 그 둘을
+     * **스냅샷 workspace 에 저장** 한다. 즉 리셋하지 않으면
+     *
+     *     A 분석 → 카테고리/상세 지정 → 「새 상품 분석」 → B 분석
+     *     → **B 의 스냅샷에 A 의 값이 저장된다**
+     *
+     * 가 된다. 🔴 화면만 더러워지는 것이 아니라 **서버 기록이 오염** 된다.
+     *
+     * 🔴 `failure`/`analysisStartedAt` 도 같은 성질이다 — A 의 실패 배너와 시작
+     *    시각이 B 화면에 남아 경과 시간이 틀리게 보인다.
+     * 🟢 반대로 `marketCategories`(선택지 목록)·`hydrated`·`developerMode` 는
+     *    **상품에 속한 값이 아니므로 그대로 둔다** — 지우면 B 가 목록을 다시
+     *    받아올 때까지 카테고리를 고를 수 없다.
+     */
+    setCategoryMappings(null);
+    setDetailOverride(undefined);
+    setFailure(null);
+    setAnalysisStartedAt(null);
+    setPriceCheckPriming(false);
+    setActiveTab("original");
   }
 
   /** CommerceWorkspace는 product가 항상 있다고 가정하고 업데이터를 호출한다(그 컴포넌트가
@@ -921,6 +947,12 @@ export default function PipelinePage() {
       <PageHeader
         title="상품 등록"
         subtitle="AI가 해외 상품 정보를 분석하고 국내 판매에 필요한 정보를 준비합니다."
+        /**
+         * 🔴🔴 WU-029 — 이 화면에서만 머리글을 붙여 둔다. 결과가 세로로 길어서
+         *    「새 상품 분석」이 스크롤 밖으로 사라지던 자리다(연속 등록 루프가
+         *    끊기던 유일한 원인). 🟢 버튼을 새로 만들지 않았다.
+         */
+        sticky
         actions={
           started ? (
             <div className="flex items-center gap-3">
