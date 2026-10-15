@@ -45,115 +45,13 @@ const GT_FILE = path.join(OUT_DIR, "mi-022-gt.json");
 const AI_FILE = path.join(OUT_DIR, "mi-022-ai-verdicts.json");
 const ORIGIN_DUMP = path.join(OUT_DIR, "mi-017-e2e-cases.json");
 
-/* ──────────────────────────────────────────────────────────────────────────
- * GT 파일 규격 — 🔴 MI 필드가 **없다**. 구조로 오염을 막는다.
- * ────────────────────────────────────────────────────────────────────────── */
-export interface GtEntry {
-  searchId: string;
-  candidateUrl: string;
-  gt: Gt;
-  /** 🔴 비어 있으면 거부한다 — 「근거 없는 GT」를 측정에 넣지 않는다. */
-  gtReason: string;
-  /** 🔴 관측된 제목과 대조할 토큰(019A §3). 없으면 대조를 건너뛰되 그 사실을 적는다. */
-  gtToken?: { mustInclude?: string[]; mustExclude?: string[] };
-}
-
-export interface GtValidation {
-  entries: GtEntry[];
-  rejected: { index: number; reason: string }[];
-}
-
-/**
- * 🔴 모르는 searchId · 빈 gt/gtReason · 중복 (searchId,url) · 비배열을 **거부** 한다.
- * 🔴 빠진 후보를 **채우지 않는다** — 누락은 누락으로 보고된다.
- */
-export function validateGtFile(raw: unknown, knownIds: readonly string[]): GtValidation {
-  const entries: GtEntry[] = [];
-  const rejected: { index: number; reason: string }[] = [];
-  if (!Array.isArray(raw)) return { entries, rejected: [{ index: -1, reason: "최상위가 배열이 아니다" }] };
-  const seen = new Set<string>();
-  raw.forEach((r, index) => {
-    const row = r as Partial<GtEntry>;
-    if (!row || typeof row !== "object") return void rejected.push({ index, reason: "객체가 아니다" });
-    if (typeof row.searchId !== "string" || !knownIds.includes(row.searchId))
-      return void rejected.push({ index, reason: `모르는 searchId: ${String(row.searchId)}` });
-    if (typeof row.candidateUrl !== "string" || row.candidateUrl.trim() === "")
-      return void rejected.push({ index, reason: "candidateUrl 누락" });
-    if (row.gt !== "SAME" && row.gt !== "DIFFERENT")
-      return void rejected.push({ index, reason: `gt 는 SAME|DIFFERENT 만: ${String(row.gt)}` });
-    if (typeof row.gtReason !== "string" || row.gtReason.trim() === "")
-      return void rejected.push({ index, reason: "gtReason 이 비었다 — 근거 없는 GT 를 받지 않는다" });
-    const key = `${row.searchId}::${row.candidateUrl}`;
-    if (seen.has(key)) return void rejected.push({ index, reason: `중복: ${key}` });
-    seen.add(key);
-    entries.push(row as GtEntry);
-  });
-  return { entries, rejected };
-}
-
-/** 🔴 GT 가 실제 페이지와 어긋나면 **측정 전에** 깨뜨린다(019A §3 장치). */
-export function gtTokenMismatch(entry: GtEntry, observedTitle: string | null): string | null {
-  if (!entry.gtToken || observedTitle == null) return null;
-  const t = observedTitle.toLowerCase();
-  for (const m of entry.gtToken.mustInclude ?? []) if (!t.includes(m.toLowerCase())) return `mustInclude 불일치: ${m}`;
-  for (const m of entry.gtToken.mustExclude ?? []) if (t.includes(m.toLowerCase())) return `mustExclude 위반: ${m}`;
-  return null;
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
- * KPI — 🔴 축 이름을 여기서 고정한다. `recall` 이라는 칸을 만들지 않는다.
- * ────────────────────────────────────────────────────────────────────────── */
-export interface AxisKpi {
-  n: number;
-  accuracy: number | null;
-  /** SAME 으로 «올린» 것 중 GT SAME 비율. 🔴 UNCERTAIN 은 분자·분모 모두에서 뺀다. */
-  precisionSame: number | null;
-  falseSame: number;
-  missedSame: number;
-}
-
-export function axisKpi(rows: { gt: Gt; call: ThreeWay | null }[]): AxisKpi {
-  const scored = rows.filter((r) => r.call != null);
-  const correct = scored.filter((r) => (r.call === "SAME") === (r.gt === "SAME")).length;
-  const saidSame = scored.filter((r) => r.call === "SAME");
-  return {
-    n: scored.length,
-    accuracy: scored.length ? correct / scored.length : null,
-    precisionSame: saidSame.length ? saidSame.filter((r) => r.gt === "SAME").length / saidSame.length : null,
-    falseSame: saidSame.filter((r) => r.gt === "DIFFERENT").length,
-    missedSame: scored.filter((r) => r.call !== "SAME" && r.gt === "SAME").length,
-  };
-}
-
-export interface Quadrant {
-  aiSame_miSame: number;
-  aiSame_miDiff: number;
-  aiDiff_miSame: number;
-  aiDiff_miDiff: number;
-  agreement: number | null;
-  aiOnlyCorrect: number;
-  miOnlyCorrect: number;
-  bothCorrect: number;
-  bothWrong: number;
-}
-
-export function quadrantOf(rows: { gt: Gt; ai: ThreeWay | null; mi: ThreeWay | null }[]): Quadrant {
-  const both = rows.filter((r) => r.ai != null && r.mi != null);
-  const q: Quadrant = {
-    aiSame_miSame: 0, aiSame_miDiff: 0, aiDiff_miSame: 0, aiDiff_miDiff: 0,
-    agreement: both.length ? both.filter((r) => r.ai === r.mi).length / both.length : null,
-    aiOnlyCorrect: 0, miOnlyCorrect: 0, bothCorrect: 0, bothWrong: 0,
-  };
-  for (const r of both) {
-    const a = r.ai === "SAME", m = r.mi === "SAME";
-    if (a && m) q.aiSame_miSame++; else if (a && !m) q.aiSame_miDiff++;
-    else if (!a && m) q.aiDiff_miSame++; else q.aiDiff_miDiff++;
-    const aOk = a === (r.gt === "SAME"), mOk = m === (r.gt === "SAME");
-    if (aOk && mOk) q.bothCorrect++; else if (aOk) q.aiOnlyCorrect++;
-    else if (mOk) q.miOnlyCorrect++; else q.bothWrong++;
-  }
-  return q;
-}
+/* 🔴 KPI·GT 부품은 **fixtures 로 빼냈다** — 022-4 가 같은 함수를 써야 두 보고서의 숫자가
+   같은 뜻을 갖는다(사본 금지). 이 파일의 테스트는 그대로 그 함수들을 검증한다. */
+import {
+  validateGtFile, gtTokenMismatch, axisKpi, quadrantOf,
+  type GtEntry,
+} from "./__fixtures__/mi-022-kpi";
+export { validateGtFile, gtTokenMismatch, axisKpi, quadrantOf };
 
 /* ══════════════════════════════════════════════════════════════════════════
  * ① 계약 — AI 데이터 0 · HTTP 0 에서 항상 돈다
