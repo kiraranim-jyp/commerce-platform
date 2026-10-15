@@ -26,6 +26,14 @@ import { overseasMatchDisplay } from "../../../../pipeline/commerce/match-displa
 /** 🟢 ALT-5 실측값 그대로(원상품 AW26MS185 Grey Melange · Main Story). */
 const ORIGIN_TITLE = "Bubble Sweatshirt in Grey Melange by Main Story";
 const ORIGIN_URL = "https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story";
+/** 🟢 WU-019A-ALT-9 — **B10 3건**(cross=PRESUMED_SAME)을 같은 경로로 통과시킨다.
+ *    🔴 새 검색·새 후보·새 GT 0 — ALT-3 에서 이미 측정된 그 세 건이다. */
+const B10 = [
+  { id: "B10 Rose Shadow", title: "AW26MS185 - Bubble Sweatshirt - Rose Shadow", url: "https://www.deuxbebe.com/product/detail.html?product_no=18285", conf: 0.62 },
+  { id: "B10 Conker(PRESUMED)", title: "Bubble Sweatshirt in Conker Stripe by Main Story", url: "https://junioredition.com/products/bubble-sweatshirt-in-conker-stripe-by-main-story", conf: 0.78 },
+  { id: "B10 Graystone(PRESUMED)", title: "Bubble Sweatshirt in Graystone by Main Story", url: "https://junioredition.com/products/bubble-sweatshirt-in-graystone-by-main-story", conf: 0.78 },
+];
+
 const CASES = [
   { id: "Conker Stripe", title: "Bubble Sweatshirt in Conker Stripe by Main Story", url: "https://junioredition.com/products/bubble-sweatshirt-in-conker-stripe-by-main-story", conf: 0.78 },
   { id: "Graystone", title: "Bubble Sweatshirt in Graystone by Main Story", url: "https://junioredition.com/products/bubble-sweatshirt-in-graystone-by-main-story", conf: 0.78 },
@@ -61,6 +69,30 @@ describe("WU-019A-ALT-8 — CONFLICT + 같은 모델/다른 색상 → 화면 �
           `conf=${out.confidence}\n      productMatchTruth=${truth} → display tier=${display?.tier} 문구="${display?.label}"`,
       );
       expect(truth, `${c.id}: productMatchTruth 가 비어 있다`).toBeTruthy();
+    }
+  });
+
+  /** 🔴🔴 ALT-9 — **`cross=PRESUMED_SAME` 이면 같은 쌍이 어떤 등급이 되는가.**
+   *    rank 표(product-identity.ts:40): SAME_MODEL_VARIANT **4** vs PRESUMED_SAME → ?
+   *    🔴 추측하지 않고 운영 함수로 측정한다. */
+  it("ALT-9: cross=PRESUMED_SAME 인 B10 3건의 화면 등급", () => {
+    const query = { title: ORIGIN_TITLE, brand: "Main Story", sourceUrl: ORIGIN_URL, sku: "AW26MS185" };
+    for (const c of B10) {
+      const base: ComparisonCandidate = {
+        title: c.title, url: c.url, price: null, regularPrice: null, imageUrl: null,
+        confidence: c.conf, crossSellerVerdict: "PRESUMED_SAME",
+      };
+      const result: ComparisonSearchResult = {
+        shopId: "poc", shopName: "poc", domain: "poc", status: "ok", candidates: withConfidence(query, [base]),
+      };
+      const out = attachProductMatchTruth(query, [result])[0].candidates[0];
+      const display = out.productMatchTruth ? overseasMatchDisplay(out.productMatchTruth) : null;
+      console.log(
+        `  [${c.id}] cross=${out.crossSellerVerdict} matchLevel=${out.matchLevel} conf=${out.confidence}` +
+          `
+      productMatchTruth=${out.productMatchTruth} → tier=${display?.tier} 문구="${display?.label}"`,
+      );
+      expect(out.productMatchTruth).toBeTruthy();
     }
   });
 });
