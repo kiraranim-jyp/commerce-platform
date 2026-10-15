@@ -21,7 +21,9 @@
  * 3. matchTruth 없는(레거시) 후보끼리는 예전 방식 그대로: verified 우선(그 안에서
  *    matchReasons의 "식별자 근거" 마커로 재확인), 그다음 matchConfidence 내림차순.
  */
-import { MATCH_TRUTH_RANK, type MatchTruth } from "./match-truth";
+/** 🔴 WU-026 — **leaf 에서 가져온다.** `./match-truth` 로 가면 판정 로직 → fetch 스택이
+ *  값 사슬로 따라와 브라우저 번들에 서버 전용 모듈이 들어간다(실측). */
+import { MATCH_TRUTH_RANK, type MatchTruth } from "./match-truth-rank";
 
 export interface DomesticCandidateTrust {
   verified: boolean;

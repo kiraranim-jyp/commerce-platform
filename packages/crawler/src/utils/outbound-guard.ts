@@ -71,7 +71,18 @@ export type OutboundBlockReason =
   | "NON_PUBLIC_HOST_SHAPE"
   | "RESOLVED_TO_PRIVATE_IP"
   | "DNS_UNRESOLVED"
-  | "TOO_MANY_REDIRECTS";
+  | "TOO_MANY_REDIRECTS"
+  /**
+   * 🔴🔴 WU-026 — connect 시점 훅을 **붙일 수 없다**(undici dispatcher 사용 불가).
+   *
+   * 🔴 이것이 **유일한 fail-closed 사유** 다 — 우리가 «행동할 수 있는» 자리이기 때문이다.
+   * 🔴 반대로 「dispatcher 를 넘겼는데 런타임이 무시했다」는 **환경 사실** 이라 코드가
+   *    고칠 수 없다. 그래서 그쪽은 어휘를 만들지 않고 **로그 한 줄**(`[WU-026-guard]`)로
+   *    남기고, **적용된다는 증명은 LIVE E2E** 가 실 네트워크로 한다.
+   *    처음엔 그것도 `throw` 로 썼는데, `fetch` 를 stub 하는 **기존 테스트 9파일/30건** 이
+   *    전부 깨졌다 — 보안을 더하지 않고 하니스만 묶는 단언이었다(걷어냈다).
+   */
+  | "CONNECT_GUARD_UNAVAILABLE";
 
 export class OutboundBlockedError extends Error {
   constructor(
@@ -254,6 +265,10 @@ type LookupCallback = (
  */
 export function guardedLookup(hostname: string, options: LookupOptions, callback: LookupCallback): void {
   const decide = (err: NodeJS.ErrnoException | null, addresses: LookupAddress[]): void => {
+    /** 🔴🔴 WU-026 — **호출됐다는 사실을 먼저 기록한다.** 통과/차단과 무관하다 —
+     *  이 칸이 비어 있으면 「훅이 붙지 않았다」를 뜻하고 호출부가 그것으로 fail-closed 한다.
+     *  🔴 성공했을 때만 세면 **차단된 홉이 「훅 미적용」으로 오인** 된다. */
+    recordConnectGuardHit(hostname);
     if (err) return callback(err, "");
     if (!addresses.length) {
       return callback(Object.assign(new Error("outbound blocked (DNS_UNRESOLVED)"), { code: "ENOTFOUND" }), "");
@@ -270,6 +285,89 @@ export function guardedLookup(hostname: string, options: LookupOptions, callback
     (lookup) => lookup(hostname, { ...options, all: true, verbatim: true }, decide),
     (err: unknown) => callback(err as NodeJS.ErrnoException, ""),
   );
+}
+
+/* ──────────── ④ connect 시점 고정 — fetch 의 DNS rebinding 을 닫는다 ──────────── */
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴 WU-026 — **`fetch` 는 연결 직전에 «스스로 다시» 해석한다.** 측정값:
+ * ════════════════════════════════════════════════════════════════════════════
+ * ```
+ * 우리 검증 lookup  1회
+ *   → fetch("https://example.com/")
+ * 전체 lookup       **2회**        ← 두 번째는 **undici 의 connector** 가 한 것이고
+ *                                    우리 규칙을 통과하지 않는다
+ * ```
+ * 🔴 그래서 ②(이름 해석)만으로는 **검증한 IP 로 연결된다는 보장이 없다** — 그 사이에
+ *    DNS 응답이 바뀌면 다른 IP 로 간다(DNS rebinding · TOCTOU).
+ *
+ * 🟢 **닫는 방법은 하나다 — connector 의 `lookup` 을 우리 것으로 만든다.**
+ *    `node:http(s)` 는 `lookup` 옵션을 직접 받지만(③), `fetch` 는 **dispatcher** 를
+ *    통해서만 받는다. 그래서 `undici.Agent({ connect: { lookup: guardedLookup } })` 를
+ *    만들어 `fetch(url, { dispatcher })` 로 넘긴다.
+ *    🟢 실측: dispatcher 를 주면 connect 시점 lookup 이 **우리 것** 이 되고, 그 훅이
+ *       에러를 내면 **요청이 나가지 않는다**(패킷 0 — connect 전에 끊긴다).
+ *
+ * 🔴 **왜 `undici` 를 이 패키지의 의존성으로 올렸나** — Node 코어는 dispatcher 를
+ *    만들 API 를 **노출하지 않는다**(`fetch(url,{dispatcher})` 는 받지만 `Agent` 가 없다).
+ *    🟢 추가한 버전은 `apps/admin` 이 이미 쓰던 **같은 7.29.0** 이라 트리에 사본이 늘지 않았다.
+ * 🔴 **동적 import 다** — 정적으로 쓰면 `undici` 가 끌어오는 `node:net`/`node:tls` 가
+ *    클라이언트 번들로 들어가 빌드가 깨진다(`node:dns` 와 같은 계열 · §3-1 실측).
+ */
+type OutboundDispatcher = NonNullable<Parameters<typeof fetch>[1]> extends { dispatcher?: infer D } ? D : unknown;
+
+let cachedDispatcher: unknown | null = null;
+let dispatcherUnavailableReason: string | null = null;
+
+/**
+ * 🔴 **호출된 적이 있는 호스트** 를 기록한다. 「훅이 붙었는가」를 호출부가 사후에
+ *    확인하는 유일한 방법이고, 그것이 **조용한 우회** 를 탐지한다.
+ * 🟢 origin 이 아니라 hostname 으로 센다 — connector 가 받는 값이 그것이다.
+ */
+const connectGuardHits = new Map<string, number>();
+
+function recordConnectGuardHit(hostname: string): void {
+  const key = hostname.toLowerCase();
+  connectGuardHits.set(key, (connectGuardHits.get(key) ?? 0) + 1);
+}
+
+export function connectGuardHitsFor(hostname: string): number {
+  return connectGuardHits.get(hostname.toLowerCase()) ?? 0;
+}
+
+/** 🔴 테스트 전용 — 운영 코드가 이것을 부르면 「훅이 붙었다」 기록이 지워진다. */
+export function resetConnectGuardHitsForTests(): void {
+  connectGuardHits.clear();
+  cachedDispatcher = null;
+  dispatcherUnavailableReason = null;
+}
+
+/** IPv4/IPv6 **리터럴** 호스트는 이름 해석이 없으므로 connect 훅도 호출되지 않는다. */
+export function isIpLiteralHost(hostname: string): boolean {
+  const h = hostname.toLowerCase().replace(/\.$/, "");
+  return IPV4_RE.test(h) || h.startsWith("[") || h.includes(":");
+}
+
+/**
+ * connect 시점 훅이 꽂힌 dispatcher. 🔴 만들 수 없으면 **던진다**(fail-closed) —
+ * 「dispatcher 없이 그냥 보낸다」는 선택지를 두지 않는다(그것이 이 WU 의 차단점이었다).
+ */
+export async function outboundDispatcher(): Promise<OutboundDispatcher> {
+  if (cachedDispatcher) return cachedDispatcher as OutboundDispatcher;
+  if (dispatcherUnavailableReason) {
+    throw new OutboundBlockedError("CONNECT_GUARD_UNAVAILABLE", dispatcherUnavailableReason);
+  }
+  try {
+    const { Agent } = await import("undici");
+    /** 🔴 `guardedLookup` 을 **그대로** 넘긴다 — 사설 IP 규칙의 소유자를 복제하지 않는다. */
+    cachedDispatcher = new Agent({ connect: { lookup: guardedLookup } });
+    return cachedDispatcher as OutboundDispatcher;
+  } catch (error) {
+    /** 🔴 사유 문자열에 응답 본문/비밀값이 섞이지 않는다 — 모듈 이름만 남긴다. */
+    dispatcherUnavailableReason = error instanceof Error ? `undici: ${error.name}` : "undici";
+    throw new OutboundBlockedError("CONNECT_GUARD_UNAVAILABLE", dispatcherUnavailableReason);
+  }
 }
 
 /* ─────────────────────── 리다이렉트 홉 판별 (순수) ─────────────────────── */

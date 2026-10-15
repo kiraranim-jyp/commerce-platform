@@ -2,6 +2,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { canonicalizeProductUrl, withConfidence } from "@commerce/crawler";
+/** 🔴 WU-026 — connect 시점 훅이 실 네트워크에서 적용됐는지 세는 칸(서버 전용 깊은 import). */
+import { connectGuardHitsFor } from "@commerce/crawler/src/utils/outbound-guard";
 import { backfillCanonicalProduct, buildProductIdentityDna, productFactsFromIdentityDna } from "@commerce/shared";
 import { collectUrlCandidatePool } from "../url-candidate-pool";
 import { TRANSIENT_URL_SHOP_ID } from "../transient-candidates";
@@ -126,6 +128,7 @@ describe("WU-024 LIVE — Registry 밖 GT 판매처가 일시 경로로 들어�
 
       const results: Record<string, unknown>[] = [];
       let fetchCalls = 0;
+      let connectGuardObservedHosts = 0;
 
       for (const [searchId, rows] of perSearch) {
         const origin = ORIGINS[searchId];
@@ -163,6 +166,35 @@ describe("WU-024 LIVE — Registry 밖 GT 판매처가 일시 경로로 들어�
         });
         fetchCalls += pool.metrics.fetchCalls;
         expect(pool.metrics.providerCalls).toBe(0);
+        /**
+         * 🔴🔴 WU-026 — **실 네트워크에서 connect 시점 훅이 «실제로» 적용됐다는 증명.**
+         *
+         * 이것이 「런타임이 dispatcher 를 honor 하는가」를 확인하는 자리다(단위 테스트는
+         * `fetch` 를 stub 하므로 증명할 수 없고, 운영 코드에서는 던지지 않고 로그만 남긴다).
+         * 🔴 후보를 하나라도 실제로 열었다면(= usableProductUrls > 0) 그 host 들에 대해
+         *    우리 lookup 이 **최소 한 번** 불렸어야 한다.
+         */
+        if (pool.metrics.usableProductUrls > 0) {
+          /**
+           * 🔴 **connector 가 받은 hostname 으로 센다** — `shopResult.domain` 은 `www.` 를
+           *    떼어 정규화한 값이라 키가 어긋난다(1차 실행이 그것 때문에 0 으로 FAIL 했다).
+           *    실제 요청 URL 의 `hostname` 이 훅에 전달된 그 문자열이다.
+           */
+          const requestHosts = new Set(
+            pool.searchResults.flatMap((s) =>
+              s.candidates.map((c) => {
+                try {
+                  return new URL(c.url).hostname;
+                } catch {
+                  return "";
+                }
+              }),
+            ),
+          );
+          const guarded = [...requestHosts].filter((h) => h && connectGuardHitsFor(h) > 0);
+          expect(guarded.length).toBeGreaterThan(0);
+          connectGuardObservedHosts += guarded.length;
+        }
         /** 🔴 일시 샵 id 를 달고 나온다 — 저장 차단의 기준이다. */
         expect(pool.searchResults.every((s) => s.shopId === TRANSIENT_URL_SHOP_ID)).toBe(true);
 
@@ -211,7 +243,11 @@ describe("WU-024 LIVE — Registry 밖 GT 판매처가 일시 경로로 들어�
 
       mkdirSync(OUT, { recursive: true });
       writeFileSync(path.join(OUT, "wu-024-live-e2e.json"), JSON.stringify(results, null, 2), "utf8");
-      console.log(`[WU-024-live] rows=${results.length} httpCalls=${fetchCalls}`);
+      console.log(
+        `[WU-024-live] rows=${results.length} httpCalls=${fetchCalls} connectGuardHosts=${connectGuardObservedHosts}`,
+      );
+      /** 🔴🔴 실 네트워크를 썼다면 connect 훅이 한 번도 안 불렸을 수 없다. */
+      if (fetchCalls > 0) expect(connectGuardObservedHosts).toBeGreaterThan(0);
 
       /**
        * 🔴🔴 **여기서 단언하는 것은 「후보가 들어왔다」 하나다.**

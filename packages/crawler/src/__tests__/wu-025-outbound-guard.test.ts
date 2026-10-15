@@ -29,6 +29,7 @@ const {
   assertPublicOutboundTarget,
   classifyOutboundUrl,
   guardedLookup,
+  resetConnectGuardHitsForTests,
   isPublicIpv4,
   isPublicIpv6,
   OutboundBlockedError,
@@ -54,6 +55,8 @@ function resolveFails() {
 
 beforeEach(() => {
   lookupMock.mockReset();
+  /** 🔴 WU-026 — connect 훅 호출 기록은 모듈 전역이다. 테스트끼리 새면 사후 검사가 가려진다. */
+  resetConnectGuardHitsForTests();
   resolvePublic();
 });
 afterEach(() => {
@@ -248,7 +251,13 @@ describe("③ 🔴 connect 시점 훅 — 검사한 IP 로만 연결된다", () 
 /* ══════════════════ ④ 🔴🔴 리다이렉트 → 사설 목적지 ══════════════════ */
 
 describe("④ 🔴🔴 리다이렉트로 내부망에 닿지 않는다", () => {
-  /** 🔴 stub 하는 것은 **네트워크** 뿐이다. 시험 대상은 운영 함수의 추적 루프다. */
+  /**
+   * 🔴 stub 하는 것은 **네트워크** 뿐이다. 시험 대상은 운영 함수의 추적 루프다.
+   *
+   * 🔴🔴 WU-026 — stub 이 **connector 의 이름 해석까지 흉내내야 한다.** WU-026 이
+   *    「우리 lookup 이 불리지 않았으면 실패」라는 사후 검사를 넣었고, 그것이 **없던
+   *    stub 을 정확히 잡았다**(= 가드가 의도대로 동작한다는 증거다).
+   */
   function stubFetch(script: { status: number; location?: string }[]) {
     const seen: string[] = [];
     let i = 0;
@@ -259,6 +268,7 @@ describe("④ 🔴🔴 리다이렉트로 내부망에 닿지 않는다", () => 
         seen.push(String(url));
         /** 🔴 우리 루프가 **반드시** manual 로 요청해야 한다 — follow 면 undici 가 몰래 따라간다. */
         expect(init?.redirect).toBe("manual");
+        await new Promise<void>((done) => guardedLookup(new URL(String(url)).hostname, {}, () => done()));
         const step = script[Math.min(i++, script.length - 1)];
         return {
           status: step.status,
@@ -343,7 +353,8 @@ describe("⑤ 🔴 검사 없는 outbound 경로가 남아 있지 않다", () =>
     const raw = LIMITER.match(/await fetch\(/g) ?? [];
     expect(raw).toHaveLength(1);
     const guardLoop = LIMITER.slice(LIMITER.indexOf("async function fetchGuarded"));
-    expect(guardLoop).toContain("await fetch(target, { ...init, redirect: \"manual\" })");
+    /** 🟢 WU-026 — 같은 줄에 `dispatcher` 가 더해졌다. 성질은 그대로 · 보장은 강해졌다. */
+    expect(guardLoop).toContain('await fetch(target, { ...init, redirect: "manual", dispatcher }');
     /** 🔴 요청 «전» 에 검사한다 — 뒤면 이미 나간 뒤다. */
     const assertAt = guardLoop.indexOf("assertPublicOutboundTarget(target)");
     const fetchAt = guardLoop.indexOf("await fetch(target");

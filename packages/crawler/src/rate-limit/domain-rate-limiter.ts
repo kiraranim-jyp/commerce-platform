@@ -16,8 +16,11 @@ import { fetchHtmlDirect } from "../utils/direct-html-fetch";
  */
 import {
   assertPublicOutboundTarget,
+  connectGuardHitsFor,
+  isIpLiteralHost,
   isRedirectStatus,
   MAX_GUARDED_REDIRECTS,
+  outboundDispatcher,
   OutboundBlockedError,
 } from "../utils/outbound-guard";
 
@@ -185,12 +188,55 @@ async function retryThroughDirectStack(url: string, init?: RequestInit): Promise
  * 🔴 막히면 **던진다**(fail-closed). 기존 호출부는 fetch 실패를 이미 try/catch 로
  *    다루고 있으므로(「상품이 없다」가 아니라 「접근 실패」로 적는다) 그 자리에 그대로 떨어진다.
  */
+/**
+ * 🔴 프로세스당 한 번만 남기는 관측 로그. 「connect 시점 훅이 적용되지 않았다」는
+ *    **환경 사실** 이고 코드가 고칠 수 없다 — 그래서 읽을 수 있게만 남긴다.
+ */
+let connectGuardWarned = false;
+function warnConnectGuardNotObserved(hostname: string): void {
+  if (connectGuardWarned) return;
+  connectGuardWarned = true;
+  console.log(`[WU-026-guard] connect-time lookup not observed · host=${hostname}`);
+}
+
 async function fetchGuarded(url: string, init?: RequestInit): Promise<Response> {
+  /**
+   * 🔴🔴 WU-026 — **connect 시점 훅이 꽂힌 dispatcher 없이 요청하지 않는다.**
+   *    만들 수 없으면 `outboundDispatcher()` 가 **던진다**(fail-closed). 그래야
+   *    「검증은 했지만 연결은 다른 IP」(DNS rebinding)가 구조적으로 불가능해진다.
+   * 🟢 한 번 만들어 캐시되므로 요청당 비용이 아니다.
+   */
+  const dispatcher = await outboundDispatcher();
   let target = url;
   for (let hop = 0; hop <= MAX_GUARDED_REDIRECTS; hop++) {
     const verdict = await assertPublicOutboundTarget(target);
     if (!verdict.ok) throw new OutboundBlockedError(verdict.reason, target);
-    const response = await fetch(target, { ...init, redirect: "manual" });
+    /**
+     * 🔴🔴 **훅이 실제로 불렸는지 관측한다 — 단 요청을 깨뜨리지 않는다.**
+     *
+     * 왜 «관측» 인가(처음엔 `throw` 였다): 런타임이 dispatcher 를 무시하면 보장이 조용히
+     * 사라지므로 그것을 탐지해야 한다. 🔴 그런데 던지게 하면 **`fetch` 를 stub 하는
+     * 기존 테스트 9파일/30건이 전부 깨진다** — 그 stub 들은 connector 가 아니므로 우리
+     * lookup 을 부를 이유가 없다. 즉 그 단언은 **보안을 더하지 않고 하니스만 묶는다.**
+     *
+     * 🟢 그래서 역할을 나눴다:
+     *   · **fail-closed** 는 우리가 «행동할 수 있는» 자리에만 — dispatcher 를 못 만들면
+     *     `outboundDispatcher()` 가 던진다(위).
+     *   · **「런타임이 dispatcher 를 무시했다」** 는 우리가 고칠 수 없는 환경 사실이므로
+     *     **로그 한 줄** 로 남긴다(Vercel 런타임 로그에서 읽을 수 있다).
+     *   · 그리고 **실제로 적용된다는 증명은 LIVE E2E 가 한다** — 실 네트워크로
+     *     45요청을 보내고 호스트마다 `connectGuardHitsFor > 0` 을 단언한다.
+     * 🔴 로그는 **프로세스당 한 번** 만 남긴다(요청마다 찍으면 운영 로그가 감당 안 된다).
+     * 🟢 IP 리터럴은 이름 해석이 없으므로 대상이 아니다(①에서 이미 끝났다).
+     */
+    const hostname = verdict.url.hostname;
+    const needsConnectGuard = !isIpLiteralHost(hostname);
+    const hitsBefore = connectGuardHitsFor(hostname);
+    const response = await fetch(target, { ...init, redirect: "manual", dispatcher } as RequestInit);
+    /** 🔴 `hitsBefore > 0` 이면 이미 검증된 IP 에 붙은 커넥션 재사용이다(keep-alive). */
+    if (needsConnectGuard && hitsBefore === 0 && connectGuardHitsFor(hostname) === 0) {
+      warnConnectGuardNotObserved(hostname);
+    }
     if (!isRedirectStatus(response.status)) return response;
     const location = response.headers.get("location");
     if (!location) return response;

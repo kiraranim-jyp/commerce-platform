@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * MI-MATCHING-3.0 STEP 0(CEO 지시, 2026-09-14) — **429는 "재고 없음"이 아니다.**
@@ -32,6 +32,7 @@ vi.mock("node:dns", () => ({
 }));
 
 const { fetchWithDomainRateLimit } = await import("../rate-limit/domain-rate-limiter");
+const { outboundDispatcher } = await import("../utils/outbound-guard");
 
 /**
  * 🔴🔴 WU-025 — 호스트를 `.test` → `.com` 으로 바꿨다. **테스트 의도는 한 글자도
@@ -56,6 +57,17 @@ function response(status: number, body = ""): Response {
     json: async () => JSON.parse(body) as unknown,
   } as unknown as Response;
 }
+
+/**
+ * 🔴🔴 WU-026 — **fake timer 를 켜기 «전» 에 dispatcher 를 데운다.**
+ *
+ * dispatcher 의 첫 생성은 `await import("undici")` 라 **실제 비동기 로드** 다. fake
+ * timer 아래에서 처음 로드하면 끝나지 않는다(실측: 15초 timeout). 🟢 운영에는 fake
+ * timer 가 없고, 캐시되므로 요청당 비용도 아니다 — **하니스 전용 준비**다.
+ */
+beforeAll(async () => {
+  await outboundDispatcher();
+});
 
 beforeEach(() => {
   fetchHtmlDirect.mockReset();
