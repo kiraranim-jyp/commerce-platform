@@ -17,6 +17,14 @@
  * 🟢 **표시만 한다.** 서버가 이미 낸 값을 옮기고, 없는 값은 「미확인」으로 적는다.
  */
 import type { JSX } from "react";
+/**
+ * 🔴🔴 WU-028 — 매칭 등급의 **말(label)** 은 이 파일이 owner 다(`MATCHING-UNIFY-1`).
+ *    국내/해외 화면이 각자 라벨 맵을 들고 있다가 같은 판정이 화면마다 다르게 보였던
+ *    사고를 고친 자리다. 🔴 그래서 여기서 `crossSellerVerdict` 원문(`PRESUMED_SAME`)을
+ *    그대로 찍지 않고 **그 owner 가 정한 말** 을 쓴다 — 새 어휘를 만들지 않는다.
+ */
+import { domesticMatchDisplay, tierDisplay, type MatchDisplayTier } from "./match-display";
+import type { MatchTruth } from "@commerce/crawler/src/comparison-search/match-truth";
 
 /**
  * 🔴 `GeminiTransientEvidence`(run-domestic-price-check.ts)의 **화면이 읽는 칸만**
@@ -26,6 +34,12 @@ import type { JSX } from "react";
  */
 export interface GeminiTransientRow {
   domain: string;
+  /** 🔴 WU-028 — 판매처만으로는 「무엇이 그 가격인가」를 말할 수 없다. */
+  title?: string | null;
+  /** 🔴 WU-028 — 이 후보가 **어디서 왔는가**. 행에서도 출처가 보여야 한다. */
+  source?: "GEMINI_DISCOVERY" | "SELLER_URL" | null;
+  /** 🔴 WU-028 — 가격 «신뢰도». 숫자 옆에 이것이 없으면 가격이 확정처럼 읽힌다. */
+  priceStatus?: string | null;
   discoveredUrl: string;
   /** 🟢 교차판매처 판정. 서버가 낸 값 그대로(SAME / PRESUMED_SAME / SIMILAR / …). */
   crossSellerVerdict?: string | null;
@@ -65,6 +79,56 @@ export function priceText(row: GeminiTransientRow): string {
   if (row.priceAmount == null || !row.priceCurrency) return PRICE_UNKNOWN_TEXT;
   return `${row.priceCurrency} ${row.priceAmount.toLocaleString("ko-KR")}`;
 }
+
+/** 🔴 WU-028 — 행에 붙는 **출처** 배지. 입력부와 결과부를 잇는 유일한 표시다. */
+export const SOURCE_LABEL: Record<"GEMINI_DISCOVERY" | "SELLER_URL", string> = {
+  SELLER_URL: "직접 입력",
+  GEMINI_DISCOVERY: "웹 검색",
+};
+
+/**
+ * 🔴🔴 WU-028 — **가격 숫자 옆에 「이 가격이 어디까지 확인된 것인가」를 붙인다.**
+ *
+ * 왜: Production 화면에 `KRW 117,000` 이 떴는데 판매판정은 「국내 동일상품 가격을
+ * 확인하지 못했습니다」였다. 둘 다 맞는 말인데 **같은 화면에서 모순처럼 읽힌다**
+ * (CPO 화면 검토 ③·④). 원인은 가격의 **검증 상태** 가 화면에 없기 때문이다.
+ *
+ * 🔴 **정책을 바꾸지 않는다.** `UNVERIFIED_SEARCH` 를 verified 로 승격하지 않고,
+ *    집계/판정에 넣지도 않는다 — 바꾸는 것은 **말** 뿐이다.
+ * 🔴 내부 enum 을 그대로 노출하지 않는다. 모르는 값은 **지어내지 않고** null 이다.
+ */
+export function priceConfidenceText(row: GeminiTransientRow): string | null {
+  if (row.priceAmount == null || !row.priceCurrency) return null;
+  if (row.priceStatus === "VERIFIED_CURRENT") return "상세 페이지에서 확인한 가격 · 판매판정 미반영";
+  if (row.priceStatus === "UNVERIFIED_SEARCH") return "판매처 표시가 · 상세 검증 전 · 판매판정 미반영";
+  if (row.priceStatus === "PRICE_UNAVAILABLE") return "가격을 확인하지 못했습니다";
+  return "판매판정 미반영";
+}
+
+/**
+ * 🔴 WU-028 — 판정 배지. **라벨 owner(`domesticMatchDisplay`)를 그대로 부른다.**
+ * 🟢 `matchTruth` 가 그 함수의 입력이다. 없으면(판정 전) **지어내지 않고** null.
+ */
+export function verdictDisplay(row: GeminiTransientRow): { icon: string; label: string; note: string } | null {
+  if (row.matchTruth) {
+    const d = domesticMatchDisplay(row.matchTruth as MatchTruth);
+    return { icon: d.icon, label: d.label, note: d.note };
+  }
+  /**
+   * 🔴 `matchTruth` 가 없을 때 **정보를 잃지 않는다.** 교차판매처 판정값
+   *    (`SAME`/`PRESUMED_SAME`/…)은 `MatchDisplayTier` 와 **같은 어휘** 라 같은
+   *    owner(`tierDisplay`)가 그대로 말로 바꿔 준다 — 새 매핑을 만들지 않는다.
+   */
+  const verdict = row.crossSellerVerdict;
+  if (verdict && (DISPLAYABLE_VERDICTS as readonly string[]).includes(verdict)) {
+    const d = tierDisplay(verdict as MatchDisplayTier);
+    return { icon: d.icon, label: d.label, note: d.note };
+  }
+  return null;
+}
+
+/** 🔴 `MatchDisplayTier` 와 글자가 같은 값만 넘긴다 — 모르는 값은 지어내지 않는다. */
+const DISPLAYABLE_VERDICTS = ["SAME", "SAME_MODEL_OPTION_DIFF", "PRESUMED_SAME", "SIMILAR", "UNKNOWN", "CONFLICT"] as const;
 
 /** 🟢 기본 머리 문구 — Gemini 웹 검색 경로의 것이다(WU-022 에서 CPO 가 지정). */
 export const WEB_SEARCH_HEADING = "🔎 웹 검색 후보";
@@ -112,15 +176,26 @@ export function GeminiTransientCandidates({
       <ul className="mt-2 space-y-2">
         {evidence.map((row) => {
           const market = marketText(row.market);
-          const verdict = row.crossSellerVerdict ?? row.matchTruth ?? null;
+          const verdict = verdictDisplay(row);
+          const confidence = priceConfidenceText(row);
           const reasons = (row.matchReasons ?? []).slice(0, 3);
           const blockers = [...(row.crossSellerBlockers ?? []), ...(row.crossSellerConflicts ?? [])].slice(0, 2);
           return (
             <li key={row.discoveredUrl} className="rounded border border-border/60 p-2">
+              {/* 🔴🔴 WU-028 — 한 줄: **출처 · 판정 · 시장**. 출처가 행에 있어야
+                  「내가 넣은 판매처가 처리된 결과」임이 결과부에서 바로 읽힌다. */}
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                {/* 🟢 판정 — 서버가 낸 값을 그대로 적는다(화면이 새 판정을 만들지 않는다). */}
+                {row.source && (
+                  <span
+                    data-testid="gt-source"
+                    className="rounded bg-primary/10 px-1 text-[10px] font-medium text-primary"
+                  >
+                    {SOURCE_LABEL[row.source]}
+                  </span>
+                )}
+                {/* 🟢 판정 — **라벨 owner 가 정한 말**. 내부 enum 을 노출하지 않는다. */}
                 <span data-testid="gt-verdict" className="text-[11px] font-medium text-text-primary">
-                  {verdict ?? "판정 미확인"}
+                  {verdict ? `${verdict.icon} ${verdict.label}` : "판정 미확인"}
                 </span>
                 {/* 🔴 시장은 확인된 경우에만 — UNKNOWN 이면 이 뱃지가 «없다». */}
                 {market && (
@@ -128,20 +203,42 @@ export function GeminiTransientCandidates({
                     {market}
                   </span>
                 )}
+              </div>
+              {/* 🔴 WU-028 — **무엇이** 그 가격인지. domain 만 있을 때는 링크를 열어야 알았다. */}
+              {row.title && (
+                <p data-testid="gt-title" className="mt-1 truncate text-[11px] text-text-primary">
+                  {row.title}
+                </p>
+              )}
+              {/* 🔴 WU-028 — **판매처와 가격을 같은 줄에** 둔다(흩어지면 연결이 끊긴다). */}
+              <div className="mt-1 flex items-baseline justify-between gap-2">
+                <a
+                  data-testid="gt-url"
+                  href={row.discoveredUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="truncate text-[11px] text-text-tertiary underline"
+                >
+                  {row.domain}
+                </a>
                 {/* 🔴 통화 그대로 · 환산 없음 */}
-                <span data-testid="gt-price" className="text-[11px] text-text-secondary">
+                <span data-testid="gt-price" className="shrink-0 text-[11px] font-medium text-text-secondary">
                   {priceText(row)}
                 </span>
               </div>
-              <a
-                data-testid="gt-url"
-                href={row.discoveredUrl}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="mt-1 block truncate text-[11px] text-text-tertiary underline"
-              >
-                {row.domain}
-              </a>
+              {/* 🔴🔴 WU-028 — 가격 **바로 아래** 에 신뢰도와 미반영 사실을 적는다.
+                  이것이 「가격은 있는데 왜 판매판정엔 없나」를 그 자리에서 답한다. */}
+              {confidence && (
+                <p data-testid="gt-price-confidence" className="text-[11px] text-text-tertiary">
+                  {confidence}
+                </p>
+              )}
+              {/* 🟢 판정의 한 줄 근거도 owner 가 들고 있다 — 화면이 새로 쓰지 않는다. */}
+              {verdict && (
+                <p data-testid="gt-verdict-note" className="mt-0.5 text-[11px] text-text-tertiary">
+                  {verdict.note}
+                </p>
+              )}
               {/* 🔴 근거 없이 판정만 보여주지 않는다(기존 정책 N-4.11 STEP2 와 같은 원칙). */}
               {reasons.length > 0 && (
                 <p data-testid="gt-reasons" className="mt-1 text-[11px] text-text-tertiary">

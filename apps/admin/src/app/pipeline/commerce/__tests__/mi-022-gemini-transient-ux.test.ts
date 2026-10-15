@@ -102,8 +102,19 @@ describe("① 🟢 evidence 가 있으면 구역이 **실제 DOM 에** 나타난
     /** 🔴 CPO 가 글자로 지정한 두 문구 — 둘 다 있어야 한다. */
     expect(text).toContain(TRANSIENT_NOTICE);
     expect(text).toContain(TRANSIENT_SCOPE_NOTICE);
-    expect(text).toContain("SAME");
-    expect(text).toContain("PRESUMED_SAME");
+    /**
+     * 🟢🟢 WU-028 — **판정이 보인다는 성질은 그대로이고, 보이는 «말» 이 바뀌었다.**
+     *
+     * 전에는 내부 enum(`SAME` / `PRESUMED_SAME`)을 화면에 그대로 찍었다. CPO 가
+     * Production 화면 검토에서 「판정의 의미가 즉시 이해되지 않는다」(③)를 병목으로
+     * 확정했고, 그래서 **라벨 owner**(`match-display.ts` · MATCHING-UNIFY-1)가 정한
+     * 말로 바꿨다 — 국내/해외가 같은 판정을 같은 말로 부르게 한 바로 그 owner 다.
+     * 🔴 판정값도 가격 정책도 한 글자 바뀌지 않았다. 바뀐 것은 **표현** 뿐이다.
+     */
+    expect(text).toContain("동일상품");
+    expect(text).toContain("동일상품 추정");
+    /** 🔴 그리고 내부 enum 이 사용자에게 **새지 않는다** — 그것이 이번 변경의 목적이다. */
+    expect(text).not.toContain("PRESUMED_SAME");
     expect(text).toContain("babybubble.co.kr");
     expect(text).toContain("smallable.com");
     /** 🟢 근거 없이 판정만 보여주지 않는다. */

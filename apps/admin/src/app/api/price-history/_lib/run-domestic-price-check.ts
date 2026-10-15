@@ -154,6 +154,11 @@ export interface GeminiTransientEvidence {
   source: "GEMINI_DISCOVERY" | "SELLER_URL";
   /** 🔴 가상 shopId 가 아니라 **실제 판매처 도메인** 이다. */
   domain: string;
+  /**
+   * 🔴 WU-028 — 판정이 고른 후보의 **상품명**. 화면이 「어느 판매처의 무엇인가」를
+   *    말하려면 domain 만으로는 부족하다. 🟢 가공 0 — 후보가 들고 온 제목 그대로다.
+   */
+  title: string;
   discoveredUrl: string;
   matchTruth: MatchTruth | null;
   verified: boolean;
@@ -1250,6 +1255,13 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       transientEvidenceSink.push({
         source: isSuppliedUrl ? "SELLER_URL" : "GEMINI_DISCOVERY",
         domain: result.domain,
+        /**
+         * 🔴🔴 WU-028 — **상품명을 같이 들고 나온다.** 화면이 판매처(domain)만 보여
+         *    줘서 셀러가 「그 판매처의 «무엇» 이 117,000원인가」를 링크를 열어야만
+         *    알 수 있었다(CPO Production 화면 검토 ②).
+         * 🟢 판정이 고른 **바로 그 후보** 의 제목이다 — 새로 만들거나 가공하지 않는다.
+         */
+        title: best.title,
         discoveredUrl: best.url,
         matchTruth: finalMatchTruth,
         verified: finalVerified,
