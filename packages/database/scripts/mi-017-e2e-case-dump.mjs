@@ -28,7 +28,16 @@ const IDS = [
 ];
 
 /** 🟢 id 앞 8자리만 알고 있으므로 prefix 로 찾는다(덤프 출력이 축약형이었다). */
-const PREFIXES = ["d92ba611", "278d4c38", "ba9631b6", "0695a024", "e3aaae5b"];
+const PREFIXES = [
+  /* WU-017-E2E */
+  "d92ba611", "278d4c38", "ba9631b6", "0695a024", "e3aaae5b",
+  /* 🟢 WU-018 — MI 판정 정확도용 원상품(전부 운영 DB 실데이터) */
+  "c0725ecc", // B226AC010 Booty Ghosts Long Sleeve T-Shirt
+  "cd93efd9", // B226AC009 Hug Hairy Monster T-Shirt  (같은 브랜드·같은 상품군·다른 모델)
+  "c5395889", // B126AI018 Curious Turnip Swim Cap    (같은 브랜드·다른 상품군)
+  "c27d4727", // AW26MS185 Bubble Sweatshirt Grey Melange (같은 품번·다른 색상 쌍의 원본)
+  "32f7b651", // 01195-VERNICE-NERO Pèpè Lulu T Bar
+];
 
 async function main() {
   if (!existsSync(OUT)) mkdirSync(OUT, { recursive: true });
