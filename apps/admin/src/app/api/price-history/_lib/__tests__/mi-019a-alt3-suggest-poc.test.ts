@@ -18,10 +18,13 @@ import { buildPrimaryQuery } from "@commerce/crawler/src/discovery-core";
 import {
   discoveryUrlRecord,
   matchesKnownPositive,
-  searchShopifySuggest,
   withConfidence,
   type ComparisonCandidate,
 } from "@commerce/crawler";
+/** 🔴🔴 **barrel 에 미노출** 이라 `@commerce/crawler` 에서 가져오면 `undefined` 다 —
+ *    실제로 그 호출이 66번 `TypeError` 를 냈고 「후보 0」으로 보일 뻔했다.
+ *    🔴 barrel 에 export 를 추가하는 것은 **운영 코드 변경** 이라 하지 않고 직접 경로로 쓴다. */
+import { searchShopifySuggest } from "@commerce/crawler/src/comparison-search/shopify-suggest";
 import { identityFromDna } from "../gemini-candidate-pool";
 
 const LIVE = process.env.MI_019A_ALT3_LIVE === "1";
@@ -91,7 +94,8 @@ describeLive("WU-019A-ALT-3 — Shopify suggest Discovery PoC", () => {
           } catch (e) {
             calls += 1;
             errors += 1;
-            perShop[shop] = `ERR:${e instanceof Error ? e.name : "?"}`;
+            /** 🔴 **메시지를 버리지 않는다** — 이전 실행에서 `e.name` 만 남겨 원인을 못 봤다. */
+            perShop[shop] = `ERR:${e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 80) : "?"}`;
           }
         }
 
