@@ -202,9 +202,11 @@ describe("WU-017-2 ③ 경계 조건", () => {
     expect(r.dropped.map((d) => d.url)).not.toContain(OFFICIAL);
   });
 
-  it("🔴 정규화 **뒤** 에 드러난 자기참조도 빠진다 — 입력 경계는 그것을 알 수 없다", async () => {
+  it("🔴 **열린 페이지** 가 원상품과 같은 listing 이면 빠진다 — 입력 경계는 그것을 모른다", async () => {
     /** 🟢 `?variant=` 는 식별 파라미터라 017-1 이 **통과시킨다**(제외 대상이 아니다).
-     *     🔴 그런데 `crawlerUrl` 은 쿼리를 떼므로 **원본과 같은 listing** 이 된다. */
+     *     🔴 그런데 `crawlerUrl` 은 쿼리를 떼므로 **열린 것이 원본과 같은 listing** 이다.
+     *     🔴 라이브 실측에서 이 그물을 떼 봤더니 **원상품 자기 자신이 SAME/very_high 후보**
+     *        로 섰다(junioredition en-kr → /products/booty-ghosts-…). 그래서 유지한다. */
     const withVariant = `${ORIGIN}?variant=44551`;
     const { fetchFacts, calls } = recordingFetcher({
       [withVariant]: ok(ORIGIN, "B.C. Embossed Tracksuit Jacket", "Bobo Choses"),
@@ -217,19 +219,44 @@ describe("WU-017-2 ③ 경계 조건", () => {
     expect(r.dropped).toEqual([{ url: withVariant, reason: "SELF_REFERENCE" }]);
   });
 
-  it("🔴 서로 다른 입력 URL 이 같은 상품으로 정규화되면 **DUPLICATE** 다", async () => {
-    const withVariant = `${OFFICIAL}?variant=44552`;
-    const same = ok(OFFICIAL, "B.C. Embossed Tracksuit Jacket", "Bobo Choses");
-    const { fetchFacts } = recordingFetcher({ [OFFICIAL]: same, [withVariant]: same });
+  /**
+   * 🔴🔴 **WU-017-E2E 실측 성질 — 고치지 않았다(공용 함수라 CPO 판정 사안).**
+   *
+   * `toCrawlerUrl` 이 **로케일을 떼므로** `/en-kr/` URL 을 넣어도 **Global 페이지** 를
+   * 읽는다. 그래서 로케일만 다른 두 입력은 **같은 페이지** 를 열고 중복으로 접힌다.
+   * 🔴 그 대가가 「이 경로로는 KR 시장 가격 증거를 얻을 수 없다」 다 — WU-008 이
+   *    `.com/en-kr` 에서 `KRW 258,000` 을 실측했는데 그 시장에 **닿지 못한다.**
+   * 🔴 이 테스트는 그 성질을 **현재 동작으로 고정** 할 뿐 「옳다」고 말하지 않는다.
+   *    정규화기를 고치면 이 단언이 FAIL 로 뒤집히고, **그것이 수정의 증거** 다.
+   */
+  it("🔴 로케일만 다른 입력은 **같은 페이지를 열어** DUPLICATE 가 된다(KR 시장에 닿지 못한다)", async () => {
+    const enKr = "https://bobochoses.com/en-kr/products/b226ac117-b-c-embossed-tracksuit-jacket";
+    /** 🟢 fixture 가 실측을 그대로 재현한다 — 두 입력의 `crawlerUrl`·`dedupeKey` 가 같다. */
+    const collapsed = ok(OFFICIAL, "B.C. Embossed Tracksuit Jacket", "Bobo Choses");
+    const { fetchFacts } = recordingFetcher({ [OFFICIAL]: collapsed, [enKr]: collapsed });
     const r = await collectAiAnswerCandidatePool({
-      text: `${OFFICIAL}\n${withVariant}`,
+      text: `${OFFICIAL}\n${enKr}`,
+      query: QUERY,
+      maxUrls: 10,
+      fetchFacts,
+    });
+    expect(r.candidates).toHaveLength(1);
+    expect(r.dropped).toEqual([{ url: enKr, reason: "DUPLICATE" }]);
+  });
+
+  it("🟢 **목록 세그먼트만 다른** 두 입력도 같은 listing 이라 DUPLICATE 다(008A)", async () => {
+    const viaCollection = "https://bobochoses.com/collections/kid/products/b226ac117-b-c-embossed-tracksuit-jacket";
+    const same = ok(OFFICIAL, "B.C. Embossed Tracksuit Jacket", "Bobo Choses");
+    const { fetchFacts } = recordingFetcher({ [OFFICIAL]: same, [viaCollection]: same });
+    const r = await collectAiAnswerCandidatePool({
+      text: `${OFFICIAL}\n${viaCollection}`,
       query: QUERY,
       maxUrls: 10,
       fetchFacts,
     });
     /** 🔴 같은 상품을 두 후보로 세면 MI 가 「판매처 2곳」으로 읽는다. */
     expect(r.candidates).toHaveLength(1);
-    expect(r.dropped).toEqual([{ url: withVariant, reason: "DUPLICATE" }]);
+    expect(r.dropped).toEqual([{ url: viaCollection, reason: "DUPLICATE" }]);
   });
 
   it("🟢 017-1 이 거른 것은 **HTTP 0** 으로 이미 빠져 있다(분모는 남는다)", async () => {

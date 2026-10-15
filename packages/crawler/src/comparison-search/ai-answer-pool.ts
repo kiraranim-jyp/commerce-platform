@@ -127,17 +127,33 @@ export async function collectAiAnswerCandidatePool(input: AiAnswerPoolInput): Pr
       continue;
     }
 
-    /* 🔴 정규화 **뒤** 에 자기참조가 드러나는 경우가 있다 — `toCrawlerUrl` 이
-     *    로케일·목록 경로를 떼면서 원본과 같은 listing 이 된다(008A 로 닫힌
-     *    `/collections/<c>/products/X` 케이스). 🟢 같은 판정 함수를 다시 쓴다. */
+    /**
+     * 🔴🔴 WU-017-E2E 실측 — **판단 기준은 「열린 페이지」(`crawlerUrl`)다.**
+     *
+     * 한 번 **입력 URL 기준으로 바꿔 봤고 그것이 더 나빴다**(라이브 실측 · 되돌렸다):
+     * ```
+     * 입력 bobochoses.com/en-kr/products/b226ac117-…  → 열린 것 .com/products/b226ac117-…
+     * 입력 bobochoses.com/products/b226ac117-…        → 열린 것 .com/products/b226ac117-…
+     *   🔴 **같은 페이지인데 후보 2건** 이 됐다(MI 가 「판매처 2곳」으로 읽는다)
+     * 입력 junioredition.com/en-kr/collections/…/products/booty-ghosts-…
+     *   → 열린 것 /products/booty-ghosts-… = **원상품 자기 자신** 🔴 자기참조가 열렸다
+     * ```
+     * 🔴 그래서 **「열린 것」으로 판단한다** — 자기참조도 중복도 그 기준이 정확하다.
+     *
+     * 🔴🔴 **그 대가를 숨기지 않는다.** `toCrawlerUrl` 이 **로케일을 떼므로** `/en-kr/`
+     *    URL 을 넣어도 **Global 페이지를 읽는다** → KR 시장 증거를 이 경로로는 얻을 수
+     *    없고, 로케일 URL 은 `DUPLICATE` 로 접힌다. 🔴 이것은 **이 모듈의 결함이 아니라
+     *    공용 정규화기의 성질** 이고(같은 함수가 `?branduid=`·`?product_no=` 도 뗀다 —
+     *    그래서 국내 Cafe24·메이크샵 상품 페이지를 못 읽는다), 고치는 자리는 거기다.
+     *    🔴 공용 함수라 운영 전역(국내 검색·Gemini 경로)에 닿으므로 **CPO 판정 사안** 이다.
+     */
     if (originUrl && isSelfReferenceCandidate(originUrl, facts.candidate.url)) {
       dropped.push({ url, reason: "SELF_REFERENCE" });
       continue;
     }
 
-    /* 🔴 서로 다른 입력 URL 이 **같은 상품** 으로 정규화될 수 있다(로케일/목록 경유).
-     *    그대로 두면 MI 가 같은 상품을 두 후보로 센다. 🟢 키는 그 함수가 낸
-     *    `dedupeKey` 를 쓴다 — 새 정규화기를 만들지 않는다. */
+    /* 🔴 서로 다른 입력 URL 이 **같은 페이지** 를 열 수 있다. 그대로 두면 MI 가 같은
+     *    상품을 두 후보로 센다. 🟢 키는 그 함수가 낸 `dedupeKey` 를 쓴다(새 정규화기 0). */
     const key = facts.dedupeKey ?? facts.candidate.url;
     if (seenDedupeKeys.has(key)) {
       dropped.push({ url, reason: "DUPLICATE" });

@@ -1,4 +1,6 @@
 import { extractShopifyHandle, extractShopifyLocalePrefix } from "../shopify-product-json";
+/** 🟢 WU-017-E2E — 추적/검색 파라미터만 걷어 내는 **기존** 정규화기(새 규칙 0). */
+import { canonicalizeProductUrl } from "./self-reference";
 
 /**
  * ════════════════════════════════════════════════════════════════════════════
@@ -104,10 +106,12 @@ export function toCrawlerUrl(finalUrl: string, shape: UrlShape): CrawlerUrlResul
   if (shape !== "PRODUCT_PAGE") return { crawlerUrl: null, localeNormalized: false, dedupeKey: null };
   let origin: string;
   let pathname: string;
+  let search: string;
   try {
     const parsed = new URL(finalUrl);
     origin = parsed.origin;
     pathname = parsed.pathname;
+    search = parsed.search;
   } catch {
     return { crawlerUrl: null, localeNormalized: false, dedupeKey: null };
   }
@@ -124,6 +128,29 @@ export function toCrawlerUrl(finalUrl: string, shape: UrlShape): CrawlerUrlResul
     };
   }
 
-  // Shopify 가 아니면 안전하게 재조립할 규칙이 없다. 쿼리스트링만 떼고 그대로 쓴다.
-  return { crawlerUrl: `${origin}${pathname}`, localeNormalized: false, dedupeKey: `${origin}|${pathname}` };
+  /**
+   * 🔴🔴 WU-017-E2E 실측 — **비-Shopify 에서 쿼리를 통째로 떼면 상품 페이지를 못 읽는다.**
+   * ```
+   * foretforet.com/shop/shopdetail.html?branduid=10226592  → shopdetail.html → 89바이트
+   * deuxbebe.com/product/detail.html?product_no=8021&…     → detail.html     → 응답 없음
+   * ```
+   * 두 URL 은 **직접 열면 200 이고 `og:title` 도 정상** 이다(243,951B / 212,603B 실측).
+   * 🔴 국내 Cafe24·메이크샵 계열은 **상품 식별자가 쿼리스트링에 있다** — 이 한 줄 때문에
+   *    「국내 샵 상품 URL 을 줘도 사실을 읽지 못한다」가 됐다(GT 가 진짜 동일상품인
+   *    쌍 2/2 실패 · WU-017-E2E).
+   *
+   * 🟢 `canonicalizeProductUrl`(WU-009C)을 통과시킨다 — 추적/검색 문맥 파라미터만 걷히고
+   *    `?branduid=`·`?product_no=`·`?variant=` 는 **남는다**. 🔴 **새 규칙 0** — 그 파일이
+   *    이미 「그 셋은 식별 정보다」라고 적어 뒀다. 🔴 utm 으로 dedupe 가 쪼개지는 함정도
+   *    그 함수가 막는다(메모 shared-normalizer-has-two-axes).
+   *
+   * 🔴 **Shopify 분기는 한 글자도 바꾸지 않았다** — 그쪽 로케일 제거는 「원산지 기준가」를
+   *    지키는 **명시적 계약** 이다(discovery-benchmark.test.ts:123-125 가 이유까지 적어 뒀다).
+   */
+  const canonical = canonicalizeProductUrl(`${origin}${pathname}${search}`);
+  return {
+    crawlerUrl: canonical,
+    localeNormalized: false,
+    dedupeKey: `${origin}|${canonical.slice(origin.length)}`,
+  };
 }
