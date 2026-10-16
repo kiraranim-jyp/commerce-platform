@@ -22,7 +22,14 @@ import { describe, expect, it } from "vitest";
 
 const OUT = process.env.MI_P0_02_OUT_DIR ?? path.join(process.env.TEMP ?? ".", "mi-p0-02");
 const HUMAN = path.join(OUT, "wu-036-human-gt.json");
-const LIVE = process.env.WU_036_ANALYZE === "1" && existsSync(HUMAN);
+/**
+ * 🔴 **압축 코드 경로** — 화면의 클립보드/다운로드가 iframe 에서 막혀서(실측)
+ *    한 줄짜리 `WU036|C01=S C02=D …` 를 손으로 복사하는 경로를 만들었다.
+ *    그 줄만 받아도 **P0 두 KPI(False SAME · SAME MISS)는 전부 계산된다** —
+ *    🔴 다만 **판단 근거(humanReason)는 들어오지 않는다.** 그 사실을 보고서에 적는다.
+ */
+const COMPACT = path.join(OUT, "wu-036-human-gt.txt");
+const LIVE = process.env.WU_036_ANALYZE === "1" && (existsSync(HUMAN) || existsSync(COMPACT));
 
 interface HumanRow {
   id: string;
@@ -41,7 +48,52 @@ const maybe = LIVE ? it : it.skip;
 
 describe("WU-036 — 사람 · MI · AI 3-Way 집계", () => {
   maybe("Human GT 기준으로 False SAME 과 SAME MISS 를 전수 분류한다", () => {
-    const rows = JSON.parse(readFileSync(HUMAN, "utf8")) as HumanRow[];
+    /**
+     * 🟢 입력은 둘 중 하나다 — 전체 JSON 이 있으면 그것을 쓰고, 없으면 압축 코드를
+     *    **WU-036 데이터셋과 합쳐** 같은 모양으로 만든다.
+     * 🔴 압축 경로에서는 `humanReason` 이 **null** 이다(없는 것을 지어내지 않는다).
+     */
+    let rows: HumanRow[];
+    let inputMode: "FULL_JSON" | "COMPACT";
+    if (existsSync(HUMAN)) {
+      inputMode = "FULL_JSON";
+      rows = JSON.parse(readFileSync(HUMAN, "utf8")) as HumanRow[];
+    } else {
+      inputMode = "COMPACT";
+      const dataset = JSON.parse(
+        readFileSync(path.join(OUT, "wu-036-review-dataset.json"), "utf8"),
+      ) as {
+        id: string;
+        searchId: string;
+        candidate: { url: string; domain: string };
+        sealed: { aiProviders: string[]; miVerdict: string | null; miBlockers: string[]; priorGt: string };
+      }[];
+      const raw = readFileSync(COMPACT, "utf8").trim();
+      const map: Record<string, HumanRow["humanGt"]> = {};
+      for (const tok of raw.replace(/^WU036\|/, "").split(/\s+/)) {
+        const [id, code] = tok.split("=");
+        if (!id || !code) continue;
+        map[id] =
+          code === "S" ? "SAME" : code === "D" ? "DIFFERENT" : code === "U" ? "UNCERTAIN" : null;
+      }
+      /** 🔴 코드에 없는 id 가 있으면 조용히 넘기지 않는다 — 분모가 틀어진다. */
+      const unknown = Object.keys(map).filter((id) => !dataset.some((d) => d.id === id));
+      expect(unknown, `데이터셋에 없는 id: ${unknown.join(",")}`).toHaveLength(0);
+      rows = dataset.map((d) => ({
+        id: d.id,
+        searchId: d.searchId,
+        candidateUrl: d.candidate.url,
+        domain: d.candidate.domain,
+        aiProviders: d.sealed.aiProviders,
+        miVerdict: d.sealed.miVerdict,
+        miBlockers: d.sealed.miBlockers,
+        priorGt: d.sealed.priorGt,
+        humanGt: map[d.id] ?? null,
+        humanReason: null,
+      }));
+    }
+    // eslint-disable-next-line no-console
+    console.log("[WU-036-INPUT]", inputMode);
     expect(rows.length, "후보 수가 51 이어야 한다").toBe(51);
 
     /** 🔴 미판정은 **분모에서 뺀다** — SAME/DIFFERENT 로 추정하지 않는다. */
