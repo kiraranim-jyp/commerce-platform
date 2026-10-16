@@ -20,6 +20,9 @@ import type {
 
 export * from "./types";
 export { scoreCandidate, withConfidence } from "./match";
+/** 🔴 WU-037 — 「같은 브랜드 스토어의 같은 listing(시장만 다름)」 판별기. 하니스가
+ *  운영과 **같은 술어** 를 쓰게 하려고 노출한다(복제 금지). */
+export { isSameStoreListingAcrossMarkets } from "./match";
 export { MAX_DETAIL_CONFIRMATIONS_PER_SHOP, selectCandidatesForDetailConfirmation } from "./price-confirmation";
 /** N-4.18-Q3 PART H-3-1 — 동일상품 판별 증거 데이터 계약. */
 export * from "./evidence";

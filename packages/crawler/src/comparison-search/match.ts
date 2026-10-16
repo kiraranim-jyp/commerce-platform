@@ -89,6 +89,80 @@ function extractSlug(url: string): string | null {
   }
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * WU-037 — **같은 브랜드 스토어의 «같은 listing, 다른 시장»** 을 알아본다
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 왜 필요한가 (Human GT 실측): 원상품 `bobochoses.co.jp/products/b226ac117-…`
+ *    와 후보 `bobochoses.com/products/b226ac117-…` 는 **같은 상품** 인데
+ *    `BRAND_UNCONFIRMED` 로 막혔다 — 축은 **8개가 전부 일치** 했는데도.
+ *    원인: `.co.jp` 가 JSON-LD `brand` 에 **시즌코드 `SS26`** 을 적고 우리
+ *    resolver 가 그것을 올바르게 거부해 **원상품 brand 가 null** 이기 때문이다.
+ *
+ * 🟢 이미 있는 제품 정책의 «한 단계 위» 다 — 리포 기록:
+ *    「`/en-kr/products/X` ↔ `/products/X` → **다른 시장** → 자기참조 아님」.
+ *    이 경우는 그 관계가 로케일이 아니라 **스토어 TLD** 로 나타난 것뿐이다.
+ *
+ * 🔴🔴 **새 데이터가 0 이다** — Registry 도, 브랜드 사전도, 도메인→브랜드 표도
+ *    아니다. 이미 손에 든 **URL 두 개를 서로 비교** 할 뿐이다.
+ *
+ * 🔴 **좁게 잠근다 — 등록 라벨이 같은 것만으로는 부족하다.** 그러면 멀티브랜드
+ *    리테일러의 «서로 다른 상품» 둘이 같은 라벨을 공유해 브랜드가 번질 수 있다.
+ *    그래서 **상품 경로까지 같을 때만** 적용한다 — 같은 경로에 다른 상품은 없다.
+ */
+/** 🔴 ccTLD 아래의 흔한 2단 라벨. 사전이 아니라 **공용 접미사 규칙**이다(`co.jp` 등). */
+const SECOND_LEVEL_SUFFIXES = new Set(["co", "com", "net", "org", "gov", "edu", "ac", "or", "ne", "go"]);
+
+function registrableLabel(url: string): string | null {
+  let host: string;
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+  host = host.replace(/^(www|m|mobile|global|shop|store)\./, "");
+  const parts = host.split(".");
+  if (parts.length < 2) return null;
+  /**
+   * `co.jp` · `com.au` · `co.kr` 처럼 **2단 공용 접미사** 면 한 칸 더 앞을 쓴다.
+   * 🔴 「조각이 3자 이하」로 재면 **`foo.com` 이 걸려서 null 이 된다**(실제로 걸렸다).
+   *    그래서 **ccTLD(2자) + 알려진 2단 라벨** 일 때만 그 분기로 간다.
+   */
+  const last = parts[parts.length - 1] ?? "";
+  const second = parts[parts.length - 2] ?? "";
+  const twoPartSuffix =
+    parts.length >= 3 && last.length === 2 && SECOND_LEVEL_SUFFIXES.has(second);
+  const idx = twoPartSuffix ? parts.length - 3 : parts.length - 2;
+  return idx >= 0 ? (parts[idx] ?? null) : null;
+}
+
+/** 🔴 로케일 접두사와 컬렉션 세그먼트만 걷는다 — 식별 정보는 그대로 둔다(WU-008A 와 같은 규칙). */
+function marketNeutralPath(url: string): string | null {
+  try {
+    return new URL(url)
+      .pathname.replace(/^\/[a-z]{2}(-[a-z]{2})?\//, "/")
+      .replace(/\/collections\/[^/]+(?=\/products\/)/, "")
+      .replace(/\/+$/, "")
+      .toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 두 URL 이 **같은 브랜드 스토어의 같은 listing**(시장만 다름)인가.
+ * 🔴 라벨 **그리고** 경로가 둘 다 같아야 한다 — 하나만으로는 참이 아니다.
+ */
+export function isSameStoreListingAcrossMarkets(originUrl: string, candidateUrl: string): boolean {
+  const lo = registrableLabel(originUrl);
+  const lc = registrableLabel(candidateUrl);
+  if (!lo || lo !== lc) return false;
+  const po = marketNeutralPath(originUrl);
+  const pc = marketNeutralPath(candidateUrl);
+  return !!po && po.length > 1 && po === pc;
+}
+
 function brandsMatch(a: string, b: string): boolean {
   const na = normalizeText(a);
   const nb = normalizeText(b);
@@ -504,6 +578,22 @@ export function withConfidence(query: ComparisonQuery, candidates: ComparisonCan
        *    판매처가 품번을 재사용한 쌍은 blocker 로 계속 막힌다 — 전수 측정에서
        *    거짓 SAME 10쌍 전부 변동 0 으로 확인했다.
        */
+      /**
+       * 🔴🔴 WU-037 — **브랜드를 «주입» 하는 것이 아니라 «확인» 하는 것이다.**
+       *    같은 브랜드 스토어의 같은 listing(시장만 다름)이면 브랜드가 다를 수
+       *    **없다.** 그 경우에만, 한쪽이 비어 있을 때 다른 쪽 값을 그 자리에 둔다.
+       *
+       * 🔴 WU-034 가 탈락시킨 「도메인→브랜드 표」와 **다른 것이다** — 그것은 호스트로
+       *    브랜드 «이름» 을 찾아 넣는 사전이었고(부작용: 거짓 MISMATCH 3건),
+       *    이것은 **두 URL 이 같은 listing 임을 보고** 양쪽을 일치시킨다.
+       *
+       * 🔴 양쪽 다 비어 있으면 아무것도 하지 않는다 — 없는 값을 만들지 않는다.
+       */
+      const sameStoreListing =
+        !!query.facts && !!c.facts && isSameStoreListingAcrossMarkets(query.facts.sourceUrl, c.url);
+      const brandConfirmedAcrossMarkets =
+        sameStoreListing && !query.facts!.brand && !!c.facts!.brand ? c.facts!.brand : null;
+
       const candidateFacts =
         c.facts && c.facts.brandModelCode === null && query.facts?.brandModelCode
           ? {
@@ -531,8 +621,13 @@ export function withConfidence(query: ComparisonQuery, candidates: ComparisonCan
       // 경우에만 교차판매처 판정을 얹는다. confidence도 matchLevel도 손대지
       // 않는다(기존 계산을 다시 하지 않는다는 이 저장소의 계층 분리 원칙 그대로) —
       // 새 필드로만 답을 남기고, 그 답을 쓸지는 화면/가격 정책이 정한다.
-      const cross =
-        query.facts && candidateFacts ? compareCrossSellerProducts(query.facts, candidateFacts) : null;
+      /* 🔴 WU-037 — 같은 스토어의 같은 listing 일 때만 원상품 brand 를 확인된 값으로
+         채운다. 그 외에는 `query.facts` 를 **한 글자도** 바꾸지 않는다. */
+      const queryFacts =
+        query.facts && brandConfirmedAcrossMarkets
+          ? { ...query.facts, brand: brandConfirmedAcrossMarkets }
+          : query.facts;
+      const cross = queryFacts && candidateFacts ? compareCrossSellerProducts(queryFacts, candidateFacts) : null;
       const withCross: ComparisonCandidate = cross
         ? {
             ...withMatch,
