@@ -945,7 +945,31 @@ export function compareCrossSellerProducts(
   if (garment.outcome === "mismatch") blockers.push({ blocker: "GARMENT_FORM", detail: garment.detail });
 
   const size = compareSize(x, y);
-  if (size.systemOutcome === "mismatch") blockers.push({ blocker: "SIZE_SYSTEM", detail: size.detail });
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴 WU-045 — **사이즈 라인 차이만으로는 SAME 을 막지 않는다** (CPO 확정)
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * `systemOutcome === "mismatch"` 는 「한쪽은 개월 라인, 다른 쪽은 연령 라인」이고
+   * = **같은 모델의 다른 사이즈 라인** 이다. CPO 제품 정의(2026-10-16):
+   * ```
+   * 같은 모델 + 같은 색상/디자인 + 같은 상품군 + **사이즈만 다름** → SAME_PRODUCT
+   * ```
+   *
+   * 🔴🔴 **이것을 WU-043 에서 한 번 시도했다가 되돌렸다.** 그때는 색상 보호가
+   *    없어서 `Grey Melange ↔ Graystone`(C25)이 **새 False SAME** 이 됐다 —
+   *    즉 그 쌍을 막고 있던 것은 사이즈가 아니라 **`SIZE_SYSTEM` 이 «우연히»** 였다.
+   * 🟢 WU-044 가 `COLOR_VARIANT` 보류를 세워 그 구멍을 닫았고, 그 뒤 전수 재측정에서
+   *    **C25 는 색상 하나로 계속 막힌다**(blockers = [COLOR_VARIANT]).
+   *    실측: SAME 11 → **13** · False SAME **1 → 1** · Precision 0.909 → **0.923**.
+   *
+   * 🔴 **무차별 blocker 제거가 아니다** — 「사이즈 라인」 하나만 비차단이다.
+   *    색상(COLOR·COLOR_VARIANT) · 모델(MODEL_CODE) · 구성(COMPOSITION) ·
+   *    상품형태(GARMENT_FORM) · 연령라인(AUDIENCE_LINE) · 소재(MATERIAL) 는
+   *    **전부 그대로** 막는다. 그것들이 CPO 정의의 「DIFFERENT」 쪽이다.
+   * 🟢 사실 자체는 버리지 않는다 — 아래 `reasons` 에 **관측으로 남긴다**.
+   */
+  const sizeLineNote = size.systemOutcome === "mismatch" ? size.detail : null;
   if (size.systemOutcome === "match" && size.valueOutcome === "match") {
     axes.push({ axis: "SIZE", points: 1, detail: size.detail });
   }
@@ -1061,6 +1085,8 @@ export function compareCrossSellerProducts(
   const reasons = [
     ...axes.map((axis) => `근거: ${axis.detail}`),
     ...blockers.map((blocker) => `보류: ${blocker.detail}`),
+    /** 🔴 WU-045 — 사이즈 라인 차이는 **막지 않지만 보이게 둔다**(CPO 정책). */
+    ...(sizeLineNote ? [`관측: ${sizeLineNote} — 사이즈 라인 차이이고 같은 모델로 본다`] : []),
   ];
 
   return { verdict, axes, conflicts, blockers, identifierConfirmed, reasons };

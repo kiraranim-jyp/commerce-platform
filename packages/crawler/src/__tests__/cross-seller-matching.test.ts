@@ -501,7 +501,19 @@ describe("MATCHING-2.0-REGRESSION 회귀 — 아기옷이 아동복의 동일상
   it.each(BABY_FALSE_SAME)("430632 ↔ %#: 아기옷은 SAME이 아니다", (other) => {
     const match = compareCrossSellerProducts(SMALLABLE_430632(), other());
     expect(match.verdict).not.toBe("SAME");
-    expect(match.blockers.map((b) => b.blocker)).toContain("SIZE_SYSTEM");
+    /**
+     * 🔴🔴 **WU-045 에서 갱신했다 — 계약이 아니라 «축 이름» 을 단언하고 있었다.**
+     *
+     * CPO 가 제품 정의를 확정했다(2026-10-16): 「같은 모델에서 **사이즈만 다르면**
+     * SAME_PRODUCT」. 그래서 `SIZE_SYSTEM` 은 보류에서 빠졌다.
+     *
+     * 🟢 **이 테스트의 계약은 한 글자도 약해지지 않았다** — 이 다섯 쌍은
+     *    `AUDIENCE_LINE`(연령 라인: 아기 ↔ 아동)이 **그대로 막는다**. 위 `verdict` 와
+     *    아래 `goesIntoSameProductPrice` 단언이 그것을 직접 증명한다.
+     * 🔴 즉 막는 축이 **사이즈 체계 → 연령 라인** 으로 옮겨간 것이고,
+     *    「아기옷이 아동복의 동일상품 가격에 들어오지 않는다」는 그대로다.
+     */
+    expect(match.blockers.map((b) => b.blocker)).toContain("AUDIENCE_LINE");
     // 이 사고의 실제 피해 — 다른 상품의 가격이 이 상품의 가격으로 쓰이는 것.
     expect(deriveMatchTruth("low", "unavailable", match.verdict)).not.toBe("STRONG_IDENTIFIER");
     expect(goesIntoSameProductPrice(SMALLABLE_430632(), other())).toBe(false);

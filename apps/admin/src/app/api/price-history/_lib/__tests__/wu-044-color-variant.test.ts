@@ -123,8 +123,15 @@ describe("B. 적용 조건이 소스에서 유지된다", () => {
     expect(fn.slice(0, fn.indexOf("\n}"))).toContain("extractCategoryTaxon(t) === null");
   });
 
-  /** 🔴 이 WU 는 SIZE_SYSTEM 을 건드리지 않는다. */
-  it("SIZE_SYSTEM 은 그대로 보류로 남아 있다", () => {
-    expect(src).toContain('blockers.push({ blocker: "SIZE_SYSTEM", detail: size.detail })');
+  /**
+   * 🔴🔴 **WU-045 에서 갱신했다.** 원래는 「이 WU 는 SIZE_SYSTEM 을 건드리지
+   *    않는다」를 고정했는데, 색상 보호가 선 «뒤» CPO 가 제품 정의를 확정했다 —
+   *    「사이즈만 다르면 SAME_PRODUCT」. 그래서 WU-045 가 그 보류를 비차단으로 바꿨다.
+   * 🟢 보장은 약해지지 않았다 — 이 파일의 역할은 **색상 보호가 살아 있는지** 이고,
+   *    그 단언(위 두 개)은 그대로다. 사이즈 쪽 계약은 `wu-045-size-line` 이 갖는다.
+   */
+  it("사이즈 라인은 WU-045 에서 비차단이 됐다 (색상 보호는 그대로)", () => {
+    expect(src).not.toContain('blockers.push({ blocker: "SIZE_SYSTEM"');
+    expect(src).toContain('blockers.push({ blocker: "COLOR_VARIANT"');
   });
 });
