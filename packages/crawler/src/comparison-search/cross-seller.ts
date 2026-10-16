@@ -88,6 +88,22 @@ export type CrossSellerConflict =
 /** SAME으로 올라가는 것을 막지만, CONFLICT로 끌어내리지는 않는 반증. "다르다고
  * 말할 만큼은 아니지만, 같다고 확정할 수는 없다"는 상태다. */
 export type CrossSellerBlocker =
+  /**
+   * 🔴🔴 WU-044 — **색조는 같은데 색상 «이름» 이 다르다.**
+   *
+   * `compareColor` 는 색조 그룹(GREY/BLUE…)을 비교한다. 그래서 같은 모델의 서로
+   * 다른 colorway 가 **같은 색** 으로 읽힌다 — 실측:
+   * ```
+   * Grey Melange ↔ Graystone    둘 다 GREY → match  🔴 Human 은 DIFFERENT
+   * ```
+   * 🟢 그래서 **이미 추출돼 있는 색상 문자열** 을 이름 수준에서 한 번 더 본다.
+   * 🔴 **새 색상 사전이 아니다** — 오히려 색조 사전에 «덜» 기대는 방향이다.
+   * 🔴 **충돌이 아니라 보류** 다 — 다국어/표기 차이(「그레이 멜란지」↔「Grey Melange」)로
+   *    이름이 갈릴 수 있고, 그때 DIFFERENT 로 단정하면 그것이 새 오류가 된다.
+   *    실측 26쌍에서 **「이름다름 × Human SAME」은 0** 이었지만 N 이 작고
+   *    한글 색상 표기가 표본에 **없었다**(미측정).
+   */
+  | "COLOR_VARIANT"
   | "MATERIAL"
   | "FIT"
   | "SIZE_SYSTEM"
@@ -492,14 +508,43 @@ function compareGarmentForm(x: ProductFacts, y: ProductFacts): { outcome: AxisOu
     : { outcome: "mismatch", detail: `옷의 형태 ${show(left)} ↔ ${show(right)}` };
 }
 
+/**
+ * 🟢 색상 «이름» 토큰. 🔴 **새 사전을 만들지 않는다** — 상품군 낱말은 이미 있는
+ *    `extractCategoryTaxon` 으로 걷고(실측 오염: `"sweatshirt in graystone"`),
+ *    두 글자 이하는 조사/전치사라 버린다.
+ */
+function colorNameTokens(text: string | null): Set<string> {
+  if (!text) return new Set();
+  return new Set(
+    normalizeFactText(text)
+      .split(/[^a-z0-9가-힣]+/)
+      .filter((t) => t.length > 2 && extractCategoryTaxon(t) === null),
+  );
+}
+
 function compareColor(x: ProductFacts, y: ProductFacts): {
   outcome: AxisOutcome;
   groups: [Set<ColorHueGroup>, Set<ColorHueGroup>];
+  /** 🔴 색조와 **따로** 센다 — 둘을 한 값으로 합치면 어느 쪽이 갈랐는지 못 읽는다. */
+  nameOutcome: AxisOutcome;
+  nameDetail: string;
 } {
   const left = resolveColorHueGroups(x.colorText);
   const right = resolveColorHueGroups(y.colorText);
-  if (left.size === 0 || right.size === 0) return { outcome: "unknown", groups: [left, right] };
-  return { outcome: intersects(left, right) ? "match" : "mismatch", groups: [left, right] };
+  const nameLeft = colorNameTokens(x.colorText);
+  const nameRight = colorNameTokens(y.colorText);
+  const nameOutcome: AxisOutcome =
+    nameLeft.size === 0 || nameRight.size === 0 ? "unknown" : intersects(nameLeft, nameRight) ? "match" : "mismatch";
+  const nameDetail = `색상 이름 ${x.colorText} ↔ ${y.colorText}`;
+  if (left.size === 0 || right.size === 0) {
+    return { outcome: "unknown", groups: [left, right], nameOutcome, nameDetail };
+  }
+  return {
+    outcome: intersects(left, right) ? "match" : "mismatch",
+    groups: [left, right],
+    nameOutcome,
+    nameDetail,
+  };
 }
 
 function compareMaterial(x: ProductFacts, y: ProductFacts): { outcome: AxisOutcome; detail: string } {
@@ -750,6 +795,18 @@ export function compareCrossSellerProducts(
   }
 
   const color = compareColor(x, y);
+  /**
+   * 🔴🔴 WU-044 — **색조가 같아도 색상 이름이 다르면 보류한다.**
+   *
+   * 색조만 보면 `Grey Melange ↔ Graystone` 이 **같은 색** 이 된다(둘 다 GREY).
+   * 실측에서 그것이 Human DIFFERENT 를 SAME 으로 새게 하는 경로였다(C20·C25).
+   * 🔴 **충돌이 아니라 보류** 다 — 다국어/표기 차이로 이름이 갈릴 수 있어
+   *    DIFFERENT 로 단정하지 않는다. 보류면 SAME 만 막고 CONFLICT 로 내리지 않는다.
+   * 🔴 색조가 이미 불일치면 아래 충돌이 더 강하므로 그때도 보류를 **겹쳐 두지 않는다**.
+   */
+  if (color.outcome === "match" && color.nameOutcome === "mismatch") {
+    blockers.push({ blocker: "COLOR_VARIANT", detail: color.nameDetail });
+  }
   if (color.outcome === "mismatch") {
     const groups = (g: Set<ColorHueGroup>) => [...g].sort().join("/");
     conflicts.push({ conflict: "COLOR", detail: `색상 ${groups(color.groups[0])} ↔ ${groups(color.groups[1])}` });
