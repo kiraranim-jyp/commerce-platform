@@ -15,6 +15,8 @@ import { sortDomesticCandidatesByTrust } from "@commerce/crawler/src/comparison-
 import type { MatchTruth } from "@commerce/crawler/src/comparison-search/match-truth";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 /** 🔴 WU-022 — transient 후보 구역. 저장되지 않는 값만 다루는 **표시 전용** 컴포넌트다. */
+/** 🔴 WU-030 — 결론을 한 덩어리로 모으는 요약 블록(표시 전용 · 계산 0). */
+import { ProductJudgementSummary } from "./ProductJudgementSummary";
 import {
   GeminiTransientCandidates,
   SUPPLIED_URL_HEADING,
@@ -2780,9 +2782,32 @@ export function MiPanelView({
     );
   }
 
+  /**
+   * 🔴🔴 WU-030(CPO 승인, 2026-10-16) — **결론을 한 덩어리로 먼저 말한다.**
+   *
+   * 결론(①팔아도 되는가 ②동일상품인가 ③어디가 얼마인가)은 전에도 상단에 있었지만
+   * **서로 떨어져 있어서** 셀러가 읽어 내려가며 스스로 조합해야 했다.
+   * 🟢 새 판정값을 만들지 않는다 — 이미 다른 owner 가 낸 문자열을 모을 뿐이다.
+   * 🔴 아래 상세는 **한 줄도 사라지지 않는다**(§3).
+   *
+   * 🔴 **입력 조립을 `return` «앞» 에서 한다** — 본문 줄 수 상한(≤155)은 그대로 두고
+   *    본문에는 한 줄만 세우기 위해서다. CPO 가 상한 재조정을 승인했지만, 올리지
+   *    않고도 되면 올리지 않는다(계약은 적게 흔들수록 좋다).
+   */
+  const judgementSummaryInput = {
+    verdictLabel: hasAnyData ? FINAL_VERDICT_COPY[sellerDecision.finalVerdict].title : null,
+    domestic: domesticEvidence,
+    overseas: overseasMarketEvidence ?? null,
+    transient: [
+      { sourceLabel: "직접 입력", rows: urlCandidateEvidence ?? [] },
+      { sourceLabel: "웹 검색", rows: geminiEvidence ?? [] },
+    ],
+  };
+
   return (
     <CollapsibleSection title="Market Intelligence" defaultOpen>
       <div className="space-y-2 text-xs">
+        <ProductJudgementSummary {...judgementSummaryInput} />
         {/* UX 2.2 — 요약에서 [판단 상세보기]로 펼친 경우에만 되돌아갈 길을 둔다.
             ②가 현재 단계일 때는 이 버튼이 없다 — 그때 MI는 접을 수 있는 곁가지가
             아니라 그 단계에서 해야 할 일 자체다. */}
