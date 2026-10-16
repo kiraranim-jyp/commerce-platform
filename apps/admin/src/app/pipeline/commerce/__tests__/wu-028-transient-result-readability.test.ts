@@ -230,3 +230,32 @@ describe("E. 저장 금지·승격 금지·시장 추측 금지가 그대로다"
     expect(render([])).toBe("");
   });
 });
+
+/* ══════════════ F. 🔴🔴 보류 근거가 «값» 으로 나간다 (WU-031 발견) ══════════════ */
+
+describe("F. [object Object] 가 화면에 찍히지 않는다", () => {
+  /**
+   * 🔴🔴 **WU-024 가 심은 버그를 WU-031 감사가 찾았다.**
+   *    `crossSellerBlockers` 는 `{ blocker }` **객체 배열** 인데(types.ts:95) 운영이
+   *    `String(b)` 로 옮기고 있었다 → `"[object Object]"`. 그 문자열이 이 컴포넌트의
+   *    **「보류 근거」로 셀러 화면에 그대로 출력** 되고 있었다(Production 포함).
+   * 🟢 판정에는 영향이 없다 — 이 칸은 표시 전용이고 보류는 이미 verdict 에 반영돼 있다.
+   */
+  it("서버가 보류/충돌을 «값» 으로 싣는다 — String(obj) 가 아니다", () => {
+    const runner = readFileSync(
+      path.join(__dirname, "..", "..", "..", "api", "price-history", "_lib", "run-domestic-price-check.ts"),
+      "utf8",
+    );
+    /** 🔴 주석을 벗길 필요가 없다 — 아래 두 문자열은 주석 어디에도 없다(일부러 그렇게 적었다). */
+    expect(runner).not.toContain(".map((b) => String(b))");
+    expect(runner).not.toContain(".map((c) => String(c))");
+    expect(runner).toContain('typeof b === "string" ? b : b.blocker');
+    expect(runner).toContain('typeof c === "string" ? c : c.conflict');
+  });
+
+  it("화면이 그 값을 그대로 적는다(객체가 오면 그것이 보인다)", () => {
+    const html = render([{ ...DONOKIDS, crossSellerBlockers: ["BRAND_UNCONFIRMED"] }]);
+    expect(html).toContain("BRAND_UNCONFIRMED");
+    expect(html).not.toContain("[object Object]");
+  });
+});

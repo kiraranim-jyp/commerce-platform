@@ -1271,8 +1271,22 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
         crossSellerVerdict: best.crossSellerVerdict ?? null,
         confidence: best.confidence ?? null,
         matchReasons: finalMatchReasons,
-        crossSellerBlockers: (best.crossSellerBlockers ?? []).map((b) => String(b)),
-        crossSellerConflicts: (best.crossSellerConflicts ?? []).map((c) => String(c)),
+        /**
+         * 🔴🔴 WU-031 — **`String(obj)` 는 `"[object Object]"` 다.** WU-024 가 이 두 줄을
+         *    그렇게 썼고, 그 문자열이 셀러 화면의 **「보류 근거」로 그대로 출력되고
+         *    있었다**(GeminiTransientCandidates 가 이 배열을 읽는다).
+         *
+         * 🟢 실제 모양은 `{ blocker }` / `{ conflict }` 객체다(types.ts:95) — 그 **값**
+         *    을 꺼낸다. 🔴 판정에는 영향이 없다(이 칸은 표시 전용이고, 보류 자체는
+         *    `compareCrossSellerProducts` 가 이미 verdict 에 반영했다).
+         * 🔴 하위호환 — 문자열이 들어오던 경로가 있어도 그대로 통과시킨다.
+         */
+        crossSellerBlockers: (best.crossSellerBlockers ?? []).map((b) =>
+          typeof b === "string" ? b : b.blocker,
+        ),
+        crossSellerConflicts: (best.crossSellerConflicts ?? []).map((c) =>
+          typeof c === "string" ? c : c.conflict,
+        ),
         priceAmount: best.price?.amount ?? null,
         priceCurrency: best.price?.currency ?? null,
         /** 🔴 KRW 만 국내 가격 증거가 된다 — 환산하지 않는다(위 타입 주석). */
