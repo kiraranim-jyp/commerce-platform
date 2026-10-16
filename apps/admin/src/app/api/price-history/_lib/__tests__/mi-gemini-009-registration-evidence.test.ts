@@ -165,11 +165,20 @@ describe("C. 🟢 판정면에 닿지만 기존 판정을 바꾸지 않는다", 
 /* ══════════════ D. route 배선 ══════════════ */
 
 describe("D. 운영 route 가 런타임으로 넘긴다", () => {
-  it("check route 가 domesticShop.geminiEvidence 를 전달한다", () => {
+  /**
+   * 🔴🔴 **WU-039 에서 갱신했다 — 단언이 «위치» 였기 때문이다.**
+   *    원래는 「`domesticShop.geminiEvidence` 가 `computeMarketIntelligence(` 뒤에
+   *    나온다」였는데, WU-039 가 두 transient 싱크를 **호출 «앞»** 에서 합치면서
+   *    (`const transientEvidence = …`) 그 위치 단언이 깨졌다.
+   * 🟢 보장은 약해지지 않았고 **넓어졌다** — 이제 `geminiEvidence` «와»
+   *    `urlCandidateEvidence` 가 둘 다 MI 입력이 된다.
+   * 🔴 그래서 위치가 아니라 **계약** 을 단언한다(「위치만 보면 속는다」).
+   */
+  it("check route 가 transient 근거를 MI 로 전달한다 (gemini + 직접 URL)", () => {
     expect(ROUTE).toContain("domesticShop.geminiEvidence");
-    const call = ROUTE.indexOf("computeMarketIntelligence(");
-    expect(call).toBeGreaterThan(-1);
-    expect(ROUTE.indexOf("domesticShop.geminiEvidence")).toBeGreaterThan(call);
+    expect(ROUTE).toContain("domesticShop.urlCandidateEvidence");
+    const call = ROUTE.slice(ROUTE.indexOf("computeMarketIntelligence("));
+    expect(call.slice(0, call.indexOf(")"))).toContain("transientEvidence");
   });
 
   it("🔴 DB 에서 다시 읽어 오려는 시도가 없다", () => {

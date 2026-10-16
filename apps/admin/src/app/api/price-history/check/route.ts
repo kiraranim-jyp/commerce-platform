@@ -121,10 +121,37 @@ export async function POST(request: Request) {
     /* 🔴 MI-GEMINI-009 — 방금 돈 Gemini 판정 근거를 **런타임으로** 넘긴다.
      *    저장하지 않았으므로 DB 에서는 읽을 수 없다(§5). 🔴 아래 계산에 영향이
      *    없는 별도 칸으로만 실린다 — Gemini 가 기존 판정을 바꾸지 않는다. */
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔴🔴 WU-039 — **직접 공급한 URL 후보도 같은 자리로 넘긴다.**
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * WU-024 가 transient 싱크를 **둘로 갈랐는데**(`geminiEvidence` ↔
+     * `urlCandidateEvidence` — 화면이 「웹 검색」과 「직접 입력」을 구분해야 해서),
+     * 여기서는 **`geminiEvidence` 만** 넘기고 있었다. 그래서 직접 입력한 후보는
+     * SAME 이고 가격이 `VERIFIED_CURRENT` 여도 **가격비교에 영원히 들어가지
+     * 못했다**(WU-038 실측: 입력 5 → MI SAME 4 → VERIFIED 3 → 가격비교 **0**).
+     *
+     * 🟢 **저장은 하지 않는다.** `market-intelligence.ts:239` 가 받는 것은
+     *    런타임 배열이고 `price_observations`/`domestic_product_links` 에
+     *    쓰지 않는다 — Registry 도 `source_id` FK 도 건드리지 않는다.
+     * 🟢 **환산도 하지 않는다.** `market !== "KR"` 이면 해외 축(`overseasEvidence`)
+     *    으로 가고 통화별로만 모인다(WU-020 §2).
+     * 🟢 **미검증 가격은 들어가지 못한다.** `priceKrw` 는
+     *    `priceStatus === "VERIFIED_CURRENT" && currency === "KRW"` 일 때만 채워지고
+     *    (run-domestic-price-check.ts), null 이면 `droppedNoPrice` 로 빠진다.
+     *
+     * 🔴 **응답의 두 배열은 그대로 둔다** — 화면의 출처 구분(WU-028)을 깨지 않는다.
+     *    합치는 것은 **MI 입력 한 곳** 뿐이다.
+     */
+    const transientEvidence =
+      domesticShop.geminiEvidence || domesticShop.urlCandidateEvidence
+        ? [...(domesticShop.geminiEvidence ?? []), ...(domesticShop.urlCandidateEvidence ?? [])]
+        : null;
     const intelligence = await computeMarketIntelligence(
       snapshotId,
       auth.user.workspaceId,
-      domesticShop.geminiEvidence ?? null,
+      transientEvidence,
     );
     if (intelligence) {
       const alert = computeMarketAlert({
