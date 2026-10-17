@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { classifyCandidateMarket, summarizeCandidateOverseasPrices } from "../candidate-market";
 import {
@@ -86,31 +88,39 @@ describe("B. 그 귀결 — 국내 축 자격", () => {
 
 describe("C. UNKNOWN 가격의 종착지", () => {
   /**
-   * 🔴🔴 **이 WU 가 찾은 결함이고 WU-049 의 내 작업에서 비롯됐다.**
+   * 🔴🔴 **WU-050 이 찾고 WU-051 이 고친 결함.**
    *
-   * `market !== "KR"` 이고 가격이 있으면 `overseasEvidence` 로 간다
-   * (`market-intelligence.ts:216-228` — UNKNOWN 도 포함된다). 그 배열이 그대로
-   * `candidateOverseasPrice` → WU-049 「🌐 **해외** 참고가격」 구역이 된다.
+   * 발견 당시: `market !== "KR"` 가지가 **UNKNOWN 도 포함** 하므로 한국 샵의 KRW 가격이
+   * `overseasEvidence` → `candidateOverseasPrice` → 「🌐 **해외** 참고가격」으로 떴다.
+   * **제목이 거짓** 이었다.
    *
-   * ⟹ 🔴 **한국 쇼핑몰의 KRW 가격이 「해외 참고가격」이라는 제목 아래 뜬다.**
-   *    제목이 거짓이 된다.
+   * 🟢 수정 방향은 「KRW 면 국내로 본다」가 **아니다**(그것이 금지된 통화 단독 결정이다).
+   *    **어느 가격 축에도 넣지 않는다** — WU-020 §6 과 같은 처리.
    *
-   * 🔴 **고치지 않았다** — CPO 가 WU-050 §1 에서 「기존 WU-049 해외 참고가격 기능
-   *    변경」을 금지했다. 이 테스트는 **현재 동작을 사실로 고정** 한다. 고치면 이
-   *    단언이 FAIL 로 뒤집히고, 그것이 수정의 증거가 된다(쿠팡 고시 선례와 같은 방식).
+   * 🔴 이 단언은 **아래 두 층을 같이** 본다. 집계 함수(`summarizeCandidateOverseasPrices`)는
+   *    순수 요약기라 KRW 를 받으면 KRW 를 낸다 — 그래서 **「주지 않는 쪽」** 을 잠근다.
    */
-  it("🔴🔴 KRW 후보가 「해외 참고가격」 구역에 KRW 로 표시된다 (현재 동작)", () => {
-    const summary = summarizeCandidateOverseasPrices([
-      { market: "UNKNOWN", currency: "KRW", amount: 88_000, priceTier: "EXACT" },
-    ]);
-    const view = buildOverseasReference(summary);
+  it("🔴🔴 market-intelligence 가 KRW 를 해외 축에 «넣지 않는다»", () => {
+    const src = readFileSync(
+      path.join(__dirname, "..", "market-intelligence.ts"),
+      "utf8",
+    ).replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    /** 🔴 대입만 보면 속는다 — **해외 축 push «앞» 에서 끊는지** 를 본다. */
+    const branch = src.slice(src.indexOf('if (e.market !== "KR")'), src.indexOf("overseasEvidence.push"));
+    expect(branch).toContain('e.priceCurrency?.trim().toUpperCase() === "KRW"');
+    expect(branch).toContain("krwWithoutKrEvidence");
+    expect(branch).toContain("continue");
+  });
 
-    expect(view).not.toBeNull();
+  /** 🔴 만약 그 가드가 뚫리면 화면이 무엇을 말하게 되는가 — 그 위험을 명시해 둔다. */
+  it("🔴 (위험 고정) 집계기에 KRW 가 들어가면 「해외」 제목 아래 KRW 가 찍힌다", () => {
+    const view = buildOverseasReference(
+      summarizeCandidateOverseasPrices([
+        { market: "UNKNOWN", currency: "KRW", amount: 88_000, priceTier: "EXACT" },
+      ]),
+    );
     expect(view?.lines[0]?.lowest).toBe("KRW 88,000");
-    /** 🔴 제목은 「해외」라고 말한다 — 그래서 모순이다. */
     expect(OVERSEAS_REFERENCE_TITLE).toContain("해외");
-    /** 🟢 유일한 완충: 시장 미확인을 **적기는 한다**. 🔴 그러나 제목을 고치지는 않는다. */
-    expect(view?.unknownMarketNote).toContain("판매 시장을 확인하지 못했습니다");
   });
 
   /** 🟢 반대 축 확인 — 진짜 해외(외화)는 그대로다. 이 결함은 KRW 에 한정된다. */

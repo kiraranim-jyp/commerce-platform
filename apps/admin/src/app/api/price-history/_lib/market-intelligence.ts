@@ -196,7 +196,15 @@ export async function computeMarketIntelligence(
    * 🔴 그리고 **환율 변환을 하지 않는다**(§2). 통화별로 모아 두기만 한다.
    * 🔴 저장하지 않는다 — `price_observations` 에 새 source 를 쓰지 않는다(§5·§11).
    */
-  const geminiPricedCount = { exact: 0, comparison: 0, droppedNoPrice: 0, overseas: 0, marketUnknown: 0 };
+  /** 🔴 WU-051 — `krwWithoutKrEvidence` 는 「해외로도 국내로도 못 쓴 KRW」 다. 0 과 구분한다. */
+  const geminiPricedCount = {
+    exact: 0,
+    comparison: 0,
+    droppedNoPrice: 0,
+    overseas: 0,
+    marketUnknown: 0,
+    krwWithoutKrEvidence: 0,
+  };
   const overseasEvidence: {
     domain: string;
     url: string;
@@ -214,6 +222,24 @@ export async function computeMarketIntelligence(
      *    조용히 국내 최저가가 된다. 그 실측이 이 줄의 근거다(WU-019R §5).
      */
     if (e.market !== "KR") {
+      /**
+       * 🔴🔴 WU-051 §5 — **KRW 는 「해외 참고가격」에 넣지 않는다.**
+       *
+       * WU-050 이 실행으로 찾은 결함: `market !== "KR"` 가지가 **UNKNOWN 도 포함** 하므로,
+       * 한국 샵의 KRW 가격(등록부 밖 + non-`.kr` → `KRW_WITHOUT_DOMAIN_EVIDENCE`)이
+       * WU-049 「🌐 **해외** 참고가격」 구역에 `KRW 88,000` 으로 떴다 — **제목이 거짓** 이다.
+       *
+       * 🔴 고치는 방향을 「KRW 면 국내로 본다」로 잡지 않았다 — 그것이 CPO 가 WU-020 §4 에서
+       *    금지한 **「통화 단독 결정」** 이다. 대신 **어느 가격 축에도 넣지 않는다.**
+       * 🟢 그것이 이 파일의 기존 원칙과 **같은 처리** 다(WU-020 §6 — 「귀속시킬 수 없는
+       *    가격은 버리지 않지만 가격 축에도 넣지 않는다」). 🟢 후보 자체는 남고, 셀러는
+       *    개별 후보 줄에서 그 금액을 **그대로 본다**(WU-028 구역의 `priceText`).
+       * 🔴 국내 축은 한 줄도 바뀌지 않는다 — 이 분기는 이미 `market !== "KR"` 안이다.
+       */
+      if (e.priceCurrency?.trim().toUpperCase() === "KRW") {
+        geminiPricedCount.krwWithoutKrEvidence += 1;
+        continue;
+      }
       /** 🟢 가격이 있으면 **해외/UNKNOWN 축에 남긴다** — 버리지 않는다. */
       if (e.priceAmount != null && e.priceCurrency) {
         overseasEvidence.push({
