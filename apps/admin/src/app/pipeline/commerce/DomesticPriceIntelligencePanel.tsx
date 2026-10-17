@@ -18,6 +18,11 @@ import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 /** 🔴 WU-030 — 결론을 한 덩어리로 모으는 요약 블록(표시 전용 · 계산 0). */
 import { ProductJudgementSummary } from "./ProductJudgementSummary";
 import { OverseasReferencePrice } from "./OverseasReferencePrice";
+import {
+  DOMESTIC_REFERENCE_NOTE,
+  DOMESTIC_REFERENCE_SCOPE,
+  DOMESTIC_REFERENCE_TITLE,
+} from "./overseas-reference";
 import type { OverseasPriceSummary } from "./overseas-reference";
 import {
   GeminiTransientCandidates,
@@ -1858,6 +1863,8 @@ export function DomesticPriceIntelligencePanel({
    *       항상 비어 있다(설계). 그래서 상태로 들고 다른 값을 덮어쓰지 않는다.
    */
   const [overseasReference, setOverseasReference] = useState<OverseasPriceSummary | null>(null);
+  /** 🔴 WU-056 — 국내 축도 같은 모양이다. **별 state** 다(권위 집계와 섞지 않는다). */
+  const [domesticReference, setDomesticReference] = useState<OverseasPriceSummary | null>(null);
   /** 🔴 제외된 URL 을 **조용히 버리지 않는다** — 서버가 낸 이유를 그대로 한 줄로 적는다. */
   const [urlCandidateNotice, setUrlCandidateNotice] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
@@ -2082,6 +2089,8 @@ export function DomesticPriceIntelligencePanel({
           };
           /** 🔴 WU-049 — 통화별 최저가만 담긴 참고 축(환산 0). 없으면 null. */
           overseasReference?: OverseasPriceSummary | null;
+          /** 🔴 WU-056 — 국내 축도 같은 모양이다(참고 축). 없으면 null. */
+          domesticReference?: OverseasPriceSummary | null;
         };
         setRecheckResult(summarizeRecheckResult(json));
         /** 🔴 **덮어쓴다** — 이전 확인의 후보를 화면에 남기지 않는다(「이번 확인」이므로). */
@@ -2089,6 +2098,7 @@ export function DomesticPriceIntelligencePanel({
         setUrlCandidateEvidence(json.domesticShop?.urlCandidateEvidence ?? null);
         setUrlCandidateNotice(describeUrlCandidateMetrics(json.domesticShop?.urlCandidateMetrics ?? null));
         setOverseasReference(json.overseasReference ?? null);
+        setDomesticReference(json.domesticReference ?? null);
       }
       await Promise.all([loadPriceHistory(), loadAlerts()]);
     } catch {
@@ -2204,6 +2214,7 @@ export function DomesticPriceIntelligencePanel({
       urlCandidateEvidence={urlCandidateEvidence}
       urlCandidateNotice={urlCandidateNotice}
       overseasReference={overseasReference}
+      domesticReference={domesticReference}
       onRecheck={() => void recheckNow()}
       confirmingId={confirmingId}
       onConfirmSameProduct={(id) => void confirmSameProduct(id)}
@@ -2231,13 +2242,15 @@ function TransientCandidateSections({
   supplied,
   notice,
   overseasReference,
+  domesticReference,
 }: {
   web?: GeminiTransientRow[] | null;
   supplied?: GeminiTransientRow[] | null;
   notice?: string | null;
   overseasReference?: OverseasPriceSummary | null;
+  domesticReference?: OverseasPriceSummary | null;
 }): React.ReactNode {
-  if (!web?.length && !supplied?.length && !notice && !overseasReference) return null;
+  if (!web?.length && !supplied?.length && !notice && !overseasReference && !domesticReference) return null;
   return (
     <>
       {/**
@@ -2245,6 +2258,22 @@ function TransientCandidateSections({
        *    🟢 환산 0 · 통화별로만 · 「참고용 · 판매판정 미반영」을 구역이 직접 말한다.
        *    🔴 국내 최저가/판매판정/등록 payload 에 영향 0 — 표시만 한다.
        */}
+      {/**
+       * 🔴🔴 WU-056 — **국내 축을 해외 축 «앞» 에 둔다.**
+       *    셀러의 질문 순서가 「국내에 얼마에 파는가」 → 「원산지는 얼마인가」 이기
+       *    때문이다. 🟢 같은 컴포넌트를 문구만 바꿔 쓴다(새 컴포넌트 0).
+       * 🔴 이 구역은 **권위 집계가 아니다** — `domesticCompetition`(국내 최저가)과
+       *    별 칸이고, 문구가 그 수명을 직접 말한다(새로고침하면 사라진다).
+       */}
+      <OverseasReferencePrice
+        summary={domesticReference}
+        title={DOMESTIC_REFERENCE_TITLE}
+        note={DOMESTIC_REFERENCE_NOTE}
+        scope={DOMESTIC_REFERENCE_SCOPE}
+        icon="🇰🇷"
+        testId="domestic-reference"
+        amountTestId="domestic-lowest"
+      />
       <OverseasReferencePrice summary={overseasReference} />
       {/* 🔴 WU-022 — 「지금 확인」이 돌려준 **이번 확인 한정** 후보. DB 링크와
           데이터 수명이 다르므로 구역을 가른다. 판매판정·국내 최저가에 영향 0. */}
@@ -2308,6 +2337,7 @@ export function MiPanelView({
   urlCandidateEvidence = null,
   urlCandidateNotice = null,
   overseasReference = null,
+  domesticReference = null,
   onRecheck,
   confirmingId = null,
   onConfirmSameProduct,
@@ -2364,6 +2394,11 @@ export function MiPanelView({
   urlCandidateNotice?: string | null;
   /** 🔴 WU-049 — MI 가 낸 해외 참고가격 집계(환산 0). 없으면 null. */
   overseasReference?: OverseasPriceSummary | null;
+  /**
+   * 🔴 WU-056 — **이번 확인으로 들어온 국내 가격 집계(참고 축).**
+   *    🔴 `data.domesticCompetition`(권위 집계)과 **다른 값** 이다 — 섞지 않는다.
+   */
+  domesticReference?: OverseasPriceSummary | null;
   recheckResult?: RecheckResult | null;
   onRecheck?: () => void;
   confirmingId?: string | null;
@@ -3329,7 +3364,7 @@ export function MiPanelView({
           🟢 그리고 후보가 없으면 두 구역 모두 **아무것도 렌더하지 않는다** —
              기본 화면은 한 픽셀도 바뀌지 않는다(그 성질은 컴포넌트가 보장한다).
         */}
-        <TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} notice={urlCandidateNotice} overseasReference={overseasReference} />
+        <TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} notice={urlCandidateNotice} overseasReference={overseasReference} domesticReference={domesticReference} />
       </div>
     </CollapsibleSection>
   );

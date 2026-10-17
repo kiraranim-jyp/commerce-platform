@@ -1,6 +1,9 @@
 import type { GeminiTransientEvidence } from "./run-domestic-price-check";
 /** 🔴 MI-020 — 해외 가격의 «읽는 쪽». 순수 함수다(DB·환율 없다). */
-import { summarizeCandidateOverseasPrices } from "./candidate-market";
+import {
+  summarizeCandidateOverseasPrices,
+  type CandidateOverseasPriceRecord,
+} from "./candidate-market";
 import { backfillCanonicalProduct } from "@commerce/shared";
 import {
   computePriceDecision,
@@ -215,6 +218,11 @@ export async function computeMarketIntelligence(
     priceTier: string;
     matchTruth: string | null;
   }[] = [];
+  /**
+   * 🔴 WU-056 — **이번 확인으로 들어온 국내 가격** 만 담는다(아래 루프에서 채운다).
+   *    🟢 타입은 해외 축과 **같은 레코드** 다 — 집계기도 같은 것을 쓴다(사본 0).
+   */
+  const domesticTransientRecords: CandidateOverseasPriceRecord[] = [];
   for (const e of geminiEvidence ?? []) {
     /**
      * 🔴🔴 국내 축의 자격은 **둘** 이다 — KRW 금액 «그리고» `market === "KR"`.
@@ -291,6 +299,29 @@ export async function computeMarketIntelligence(
     } else if (e.priceTier === "COMPARISON") {
       comparisonShopRecords.push(transient);
       geminiPricedCount.comparison += 1;
+    }
+    /**
+     * 🔴🔴 WU-056 — **국내 transient 집계를 «별 칸» 으로 내보낸다.**
+     *
+     * 위 두 버킷은 **DB 후보와 합쳐져** `domesticCompetition` 이 되고, 그 값은
+     * GET 경로(transient 미전달)에서도 만들어진다. 그래서 화면이 POST 직후에
+     * 「이번 확인으로 새로 들어온 국내 가격」을 **분간할 수 없었다**(WU-056 추적:
+     * 패널이 `loadPriceHistory()` 로 GET 값을 덮어쓴다 · Panel:2093).
+     *
+     * 🟢 **새 계산이 아니다** — 해외 축이 쓰는 **같은 집계기** 를 그대로 부른다.
+     *    🔴 그 함수 이름에 `Overseas` 가 붙어 있지만 **해외 전용 로직이 0** 이다
+     *       (통화·시장·tier 로만 묶는다). 이름은 역사적이라 그대로 둔다 —
+     *       바꾸면 WU-020/039/050 계약 3건이 함께 흔들린다.
+     * 🔴 **기존 버킷을 건드리지 않는다.** 이 배열은 읽는 쪽이 따로 있고
+     *    `domesticCompetition`·판매판정·국내 최저가 계산에 들어가지 않는다.
+     */
+    if (e.priceTier === "EXACT" || e.priceTier === "COMPARISON") {
+      domesticTransientRecords.push({
+        market: e.market,
+        currency: "KRW",
+        amount: e.priceKrw,
+        priceTier: e.priceTier,
+      });
     }
     /** 🔴 REFERENCE/EXCLUDED 는 기존 국내 후보와 **같은 이유로** 가격 버킷에
      *     들어가지 않는다(위 루프도 EXACT/COMPARISON 만 담는다). */
@@ -957,6 +988,13 @@ export async function computeMarketIntelligence(
      * 🟢 `UNKNOWN` 을 해외로 합치지 않는다(`byMarket` 로 갈라 센다).
      */
     candidateOverseasPrice: summarizeCandidateOverseasPrices(overseasEvidence),
+    /**
+     * 🔴🔴 WU-056 — **이번 확인으로 들어온 «국내» 가격 집계.**
+     *    🟢 `domesticCompetition` 과 **다른 칸** 이다 — 그쪽은 DB 후보와 합쳐진
+     *       권위값이고 GET 에서도 만들어진다. 이 칸은 **transient 만** 담는다.
+     *    🔴 판매판정·국내 최저가 계산에 들어가지 않는다(읽는 쪽이 따로 있다).
+     */
+    candidateDomesticPrice: summarizeCandidateOverseasPrices(domesticTransientRecords),
     /** 🔴 원본 목록도 같이 돌려준다 — 집계만 주면 「어느 후보였나」를 잃는다. */
     candidateOverseasEvidence: overseasEvidence,
   };

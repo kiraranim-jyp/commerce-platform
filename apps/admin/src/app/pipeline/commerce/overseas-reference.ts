@@ -34,6 +34,22 @@ export const OVERSEAS_REFERENCE_NOTE =
 /** 🔴🔴 이 구역이 판매판정/국내 최저가에 **들어가지 않는다**는 사실을 화면이 말한다. */
 export const OVERSEAS_REFERENCE_SCOPE = "참고용입니다 — 판매판정과 국내 최저가에는 반영되지 않습니다.";
 
+/**
+ * 🔴🔴 WU-056 — **국내 축 문구. 해외 문구를 그대로 쓰지 않는다.**
+ *
+ * 🔴 「판매판정과 국내 최저가에는 반영되지 않습니다」를 **국내에 복사하지 않았다.**
+ *    그 문장이 국내에서는 **단정할 수 없다** — POST `/check` 는 transient 를 포함한
+ *    `sellerAction` 으로 `price_alerts` 를 갱신한다(check/route.ts:168-183). 화면의
+ *    판매판정은 GET 기반이라 바뀌지 않지만, 「영향이 전혀 없다」고 적으면 알림 경로에서
+ *    거짓이 된다. 🔴 문구를 **제품 정책 판단 없이** 넓히지 않는다.
+ * 🟢 그래서 **확실한 사실만** 적는다 — 저장되지 않고, 새로고침하면 사라진다.
+ */
+export const DOMESTIC_REFERENCE_TITLE = "국내 참고가격";
+export const DOMESTIC_REFERENCE_NOTE =
+  "국내 판매처의 상세 페이지에서 확인한 가격입니다 — 원래 통화 그대로입니다.";
+export const DOMESTIC_REFERENCE_SCOPE =
+  "이번 확인에만 쓰이고 저장되지 않습니다 — 새로고침하면 사라집니다.";
+
 export interface OverseasReferenceLine {
   /** `EUR` 같은 ISO 코드. 🔴 기호로 바꾸지 않는다(기호는 통화를 잃는다). */
   currency: string;

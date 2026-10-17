@@ -194,5 +194,17 @@ export async function POST(request: Request) {
      *    값이 없으면 `null` — 「0건」으로 적지 않는다.
      */
     overseasReference: intelligence?.candidateOverseasPrice ?? null,
+    /**
+     * 🔴🔴 WU-056 — **국내 축도 같은 자리로 내보낸다.**
+     *
+     * WU-055 가 국내 가격 evidence 를 `VERIFIED_CURRENT` 까지 올렸지만, 집계는
+     * 화면에 닿지 않았다 — 패널이 POST 직후 `loadPriceHistory()`(GET)로 덮어쓰고
+     * GET 경로는 transient 를 넘기지 않기 때문이다(Panel:2093 · WU-049 와 같은 구조).
+     *
+     * 🟢 **새 계산 0** — MI 가 이미 만든 값을 한 칸 더 내보낼 뿐이다.
+     * 🔴 `domesticCompetition`(권위 집계)·판매판정·국내 최저가는 **건드리지 않는다**.
+     *    이 칸은 「이번 확인으로 들어온 국내 가격」만 담는 **참고 축** 이다.
+     */
+    domesticReference: intelligence?.candidateDomesticPrice ?? null,
   });
 }

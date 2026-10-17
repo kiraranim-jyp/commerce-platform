@@ -18,17 +18,42 @@ import {
  * 🔴🔴 구역 머리에 **「참고용 · 판매판정 미반영」** 을 항상 적는다. 이 문장이
  *    사라지면 셀러가 이 숫자를 확정 가격으로 읽는다(WU-022/028 과 같은 원칙).
  */
-export function OverseasReferencePrice({ summary }: { summary?: OverseasPriceSummary | null }) {
+/**
+ * 🔴🔴 WU-056 — **국내 축도 같은 블록으로 그린다. 새 컴포넌트를 만들지 않았다.**
+ *
+ * 집계 모양(통화별 최저가 · 판매처 수 · 등급)이 국내/해외에서 **동일** 하고,
+ * `buildOverseasReference` 는 통화에 대해 **중립** 이다(환산 0 · 기호 변환 0).
+ * 🟢 그래서 **문구 네 개만 주입구로 열었다.** 기본값은 WU-049 의 상수 그대로이므로
+ *    기존 호출부와 계약 17건은 **한 줄도 바뀌지 않는다**.
+ * 🔴 국내/해외의 «의미» 는 호출부가 문구로 구분한다 — 이 컴포넌트는 판단하지 않는다.
+ */
+export function OverseasReferencePrice({
+  summary,
+  title = OVERSEAS_REFERENCE_TITLE,
+  note = OVERSEAS_REFERENCE_NOTE,
+  scope = OVERSEAS_REFERENCE_SCOPE,
+  icon = "🌐",
+  testId = "overseas-reference",
+  amountTestId = "overseas-lowest",
+}: {
+  summary?: OverseasPriceSummary | null;
+  title?: string;
+  note?: string;
+  scope?: string;
+  icon?: string;
+  testId?: string;
+  amountTestId?: string;
+}) {
   const view = buildOverseasReference(summary);
   if (!view) return null;
 
   return (
     <section
-      data-testid="overseas-reference"
+      data-testid={testId}
       className="rounded-md border border-border/60 bg-muted/20 p-3 text-sm"
     >
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <span className="font-medium">🌐 {OVERSEAS_REFERENCE_TITLE}</span>
+        <span className="font-medium">{icon} {title}</span>
         {view.tierNote && <span className="text-xs text-muted-foreground">{view.tierNote}</span>}
       </div>
 
@@ -36,7 +61,7 @@ export function OverseasReferencePrice({ summary }: { summary?: OverseasPriceSum
         {view.lines.map((l) => (
           <li key={l.currency} className="flex flex-wrap items-baseline gap-x-2">
             {/* 🔴 통화를 기호로 바꾸지 않는다 — ISO 코드 그대로 적어야 통화를 잃지 않는다. */}
-            <span data-testid="overseas-lowest" className="font-medium tabular-nums">
+            <span data-testid={amountTestId} className="font-medium tabular-nums">
               {l.lowest}
             </span>
             <span className="text-xs text-muted-foreground">{l.scope}</span>
@@ -44,9 +69,9 @@ export function OverseasReferencePrice({ summary }: { summary?: OverseasPriceSum
         ))}
       </ul>
 
-      <p className="mt-2 text-xs text-muted-foreground">{OVERSEAS_REFERENCE_NOTE}</p>
+      <p className="mt-2 text-xs text-muted-foreground">{note}</p>
       {/* 🔴🔴 이 두 문장은 지우지 않는다(테스트가 잠근다). */}
-      <p className="text-xs text-muted-foreground">{OVERSEAS_REFERENCE_SCOPE}</p>
+      <p className="text-xs text-muted-foreground">{scope}</p>
       {view.unknownMarketNote && (
         <p className="text-xs text-muted-foreground">{view.unknownMarketNote}</p>
       )}
