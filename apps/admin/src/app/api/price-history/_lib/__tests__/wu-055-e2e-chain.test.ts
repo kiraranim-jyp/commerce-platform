@@ -159,6 +159,11 @@ describe("WU-055-A — 전체 체인 (운영 순서)", () => {
                 typeof b === "string" ? b : (b.blocker ?? ""),
               ),
               brandModelCode: c.facts?.brandModelCode ?? null,
+              /** 🔴 WU-057 §1 — `BRAND_UNCONFIRMED` 는 **어느 쪽이 비었는지** 로 갈린다
+               *     (`cross-seller.ts:751` brandKnown = x.brand && y.brand). 따로 적는다. */
+              originBrand: dna.brand.value || null,
+              candidateBrand: c.facts?.brand ?? null,
+              candidateUrl: c.url,
               humanGt: gtRow?.humanGt ?? null,
             });
           }
