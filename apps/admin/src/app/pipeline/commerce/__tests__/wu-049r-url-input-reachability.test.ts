@@ -215,7 +215,7 @@ describe("D. 단계 → 표현 무게", () => {
   const STAGES: BigStepKey[] = [
     "COLLECTING",
     "MARKET_JUDGING",
-    "SOURCE_SELECTING",
+    /** 🔴 WU-058 — `SOURCE_SELECTING`(소싱 선택)이 제거됐다. 단계가 **넷** 이다. */
     "REGISTRATION_PREPARING",
     "COMMERCE_REGISTERING",
   ];
@@ -233,12 +233,7 @@ describe("D. 단계 → 표현 무게", () => {
     const full = STAGES.filter(
       (stage) => resolveStageFocus({ stage, surface: "PRODUCT", marketDetailOpen: true }).mi === "FULL",
     );
-    expect(full).toEqual([
-      "MARKET_JUDGING",
-      "SOURCE_SELECTING",
-      "REGISTRATION_PREPARING",
-      "COMMERCE_REGISTERING",
-    ]);
+    expect(full).toEqual(["MARKET_JUDGING", "REGISTRATION_PREPARING", "COMMERCE_REGISTERING"]);
   });
 
   /** 🔴🔴 채널 탭에서는 펼쳐도 HIDDEN — **거기서는 입력칸을 찾을 수 없다.** */

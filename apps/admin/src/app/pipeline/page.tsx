@@ -21,7 +21,7 @@ import { ProcessingReportView } from "./ProcessingReport";
 import { ProgressPanel } from "./ProgressPanel";
 import { readPipelineSSEStream } from "./sse";
 import { WorkflowPanel } from "./commerce/WorkflowPanel";
-import { MARKET_SIGNAL_NOT_STARTED, SOURCING_SIGNAL_NOT_STARTED, resolveWorkflow } from "./commerce/workflow";
+import { MARKET_SIGNAL_NOT_STARTED, resolveWorkflow } from "./commerce/workflow";
 import { isStaleSnapshotResponse, resolveSnapshotSaveAction } from "./snapshot-save-guard";
 import type { PipelineProgressEvent, PipelineResponse, TabKey, WorkspaceItem } from "./types";
 import { WorkspaceTabs } from "./WorkspaceTabs";
@@ -137,7 +137,7 @@ export default function PipelinePage() {
   // api/snapshots/_lib/snapshot.ts 참고).
   const [snapshotId, setSnapshotId] = useState<string | null>(null);
   /**
-   * PIVOT-03-C — 상품 정체성. ③ 소싱 선택이 부르는
+   * 상품 정체성(`products.id`). 🔴 WU-058 — 원래 ③ 소싱 선택이 부른
    * `/api/products/[productId]/…` 의 키다(03-C-PRE 가 DTO 에 노출했다).
    *
    * 🔴 `null` 은 「후보가 없다」가 아니라 «정체성이 아직 없다» 는 뜻이다. 그
@@ -404,7 +404,7 @@ export default function PipelinePage() {
         // null을 보고 두 번째 insert를 시도할 수 있다. ref는 지연이 없다.
         snapshotIdRef.current = data.snapshot.id;
         setSnapshotId(data.snapshot.id);
-        /* 🔴 첫 저장에서 Product 정체성이 «발급» 된다 — 그 순간부터 소싱이 열린다. */
+        /* 🔴 첫 저장에서 Product 정체성이 «발급» 된다. */
         setProductId(data.snapshot.productId ?? null);
         // Sprint B-1 — 최초 insert 응답에만 새 job_key가 실려 온다(서버가 그
         // 시점에 한 번만 채번한다) — 이후 update 응답에도 같은 값이 오지만
@@ -925,7 +925,6 @@ export default function PipelinePage() {
     market: MARKET_SIGNAL_NOT_STARTED,
     /* 수집이 끝나기 전에는 Product 정체성도 후보도 없다 — 「정체성이 없다」가
        아니라 「아직 조회하지 않았다」다. 둘을 섞지 않는다. */
-    sourcing: SOURCING_SIGNAL_NOT_STARTED,
     prepare: {
       productInfoOk: false,
       productInfoMissing: null,
@@ -1195,7 +1194,7 @@ export default function PipelinePage() {
             developerMode={developerMode}
             analysisStartedAt={analysisStartedAt}
             snapshotId={snapshotId}
-            /* PIVOT-03-C — ③ 소싱 선택이 쓰는 상품 정체성. */
+            /* 상품 정체성(`products.id`). 🔴 소싱 UI 는 WU-058 에서 제거됐다. */
             productId={productId}
             jobKey={jobKey}
             initialCategoryMappings={categoryMappings ?? undefined}

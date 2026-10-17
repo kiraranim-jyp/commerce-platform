@@ -159,7 +159,10 @@ function resolveNextAction(sellVerdict: SellerFacingVerdictCode | null, outcome:
   }
   // 등록은 가능한 상태 — 남은 판단은 "팔 것인가"다.
   if (sellVerdict === "NOT_RECOMMENDED") {
-    return "등록 자체는 가능하지만 현재 조건으로는 판매를 권장하지 않습니다 — 소싱가나 판매가를 다시 확인해보세요.";
+    /** 🔴 WU-058 — 「소싱가」를 **「원가」** 로 바꿨다. 소싱 UI 가 제품에서 사라졌으므로
+     *     셀러가 그 말을 보고 **없는 화면을 찾게** 된다(§A-1 「제거된 기능을 암시하는 문구」).
+     *     🟢 뜻은 그대로다 — 이 문장이 가리키는 값은 착지원가다. */
+    return "등록 자체는 가능하지만 현재 조건으로는 판매를 권장하지 않습니다 — 원가나 판매가를 다시 확인해보세요.";
   }
   if (sellVerdict === "CONDITIONAL") {
     return "등록 가능한 상태입니다 — 판매 조건(마진·시장 신호)을 확인한 뒤 등록하세요.";

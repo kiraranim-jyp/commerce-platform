@@ -19,11 +19,13 @@ import type { CommerceId } from "./commerce-registry";
  * ── 이 파일이 하는 일 ────────────────────────────────────────────────────
  * 그 셋을 하나로 합친 **유일한** 상태 모델이다.
  *
- *   COLLECTING → MARKET_JUDGING → SOURCE_SELECTING → REGISTRATION_PREPARING
- *   → COMMERCE_REGISTERING
+ *   COLLECTING → MARKET_JUDGING → REGISTRATION_PREPARING → COMMERCE_REGISTERING
+ *
+ * 🔴 WU-058 — 여기 있던 `SOURCE_SELECTING`(소싱 선택)이 **빠졌다**. 소싱은
+ *    AI 후보 URL → MI → 국내/해외 가격비교 로 대체됐고 사용자 진입점이 없다.
  *
  * ②(시장 판단)는 이 흐름과 나란히 도는 별도 작업이 아니라 흐름의 **핵심
- * 판단 지점**이다. 나머지는 그 판단의 앞(수집)과 뒤(소싱·준비·등록)일 뿐이다.
+ * 판단 지점**이다. 나머지는 그 판단의 앞(수집)과 뒤(준비·등록)일 뿐이다.
  *
  * ── DB 컬럼을 만들지 않는 이유 ───────────────────────────────────────────
  * 이 상태는 저장되는 값이 아니라 지금 이미 존재하는 값들(파이프라인 진행률·
@@ -40,31 +42,27 @@ import type { CommerceId } from "./commerce-registry";
  * 이 규칙을 지키는 방법이다.
  */
 /**
- * ── PIVOT-03-C(CPO 확정 2026-10-05) — ③ 소싱 선택을 «이 모델 안에» 넣는다 ───
+ * 🔴🔴 WU-058(CPO 확정 2026-10-17) — **③ 소싱 선택을 이 모델에서 뺐다.**
  *
- * 🔴 새 Stepper 를 만들지 «않았다». 지시서의 5단계를 별도 컴포넌트로 그리면 한
- * 화면에 단계 수도 이름도 다른 진행 표시가 둘이 되고, 그것이 바로 위 주석이
- * 기록한 「상태 모델이 세 개」 사고의 재발이다. 그래서 단계를 하나 «끼웠다».
+ * 제품 흐름이 `수집 → 시장 판단 → 등록 준비 → 커머스 등록` **넷** 으로 고정됐다.
+ * 그 단계는 PIVOT-03-C 에서 «끼워졌던» 것이고, 소싱 진입점이 제품에서 사라지면서
+ * 역할이 없어졌다 — 자리는 **AI 후보 URL → MI → 국내/해외 가격비교** 가 가졌다.
  *
- * 🔴 「상품 확정」을 별도 단계로 두지 않는다 — ③의 «완료 상태» 다:
- *
- *     ③ 완료  =  Selected Source 존재  =  Master 확정  =  SOURCE_SELECTED
- *     ④ 완료  =  READY_FOR_COMMERCE
- *
- * 둘이 다른 단계라서 `SOURCE_SELECTED ≠ READY_FOR_COMMERCE` 가 화면에 저절로
- * 드러난다 — 문구로 설명할 필요가 없다.
+ * 🔴 **새 Stepper 를 만들지 않는다**(그때의 판단은 그대로 유효하다) — 한 화면에
+ *    단계 수도 이름도 다른 진행 표시가 둘이 되면 이 파일 머리 주석이 기록한
+ *    「상태 모델이 세 개」 사고가 재발한다. 그래서 **단계를 하나 뺐을 뿐** 이다.
+ * 🔴 backend(`sourcing_candidates` · `/api/products/[id]/…` · schema)는 **그대로 둔다** —
+ *    참조 관계를 확인하지 않고 지우지 않는다(CPO §1·§5).
  */
 export type BigStepKey =
   | "COLLECTING"
   | "MARKET_JUDGING"
-  | "SOURCE_SELECTING"
   | "REGISTRATION_PREPARING"
   | "COMMERCE_REGISTERING";
 
 export const BIG_STEP_ORDER: readonly BigStepKey[] = [
   "COLLECTING",
   "MARKET_JUDGING",
-  "SOURCE_SELECTING",
   "REGISTRATION_PREPARING",
   "COMMERCE_REGISTERING",
 ] as const;
@@ -72,7 +70,6 @@ export const BIG_STEP_ORDER: readonly BigStepKey[] = [
 export const BIG_STEP_LABELS: Record<BigStepKey, string> = {
   COLLECTING: "상품 수집",
   MARKET_JUDGING: "시장 판단",
-  SOURCE_SELECTING: "소싱 선택",
   REGISTRATION_PREPARING: "등록 준비",
   COMMERCE_REGISTERING: "커머스 등록",
 };
@@ -100,7 +97,7 @@ export type BigStepStatus = "LOCKED" | "IN_PROGRESS" | "ATTENTION" | "COMPLETED"
  * "market"/"price"는 탭이 아니라 스크롤 의도다 — CommerceWorkspace가 이미
  * 갖고 있는 focusMarketVerdict()/handleRequestPriceReview()에 그대로 이어진다.
  */
-export type WorkflowNavTarget = "source" | "content" | "market" | "price" | "sourcing" | CommerceId;
+export type WorkflowNavTarget = "source" | "content" | "market" | "price" | CommerceId;
 
 export interface SubStep {
   key: string;
@@ -118,7 +115,14 @@ export interface SubStep {
 
 export interface BigStep {
   key: BigStepKey;
-  /** 화면에 찍히는 1~5. 내부 인덱스가 아니라 셀러가 읽는 번호다. */
+  /** 화면에 찍히는 1~4(🔴 WU-058 로 넷이 됐다). 내부 인덱스가 아니라 셀러가 읽는 번호다. */
+  /**
+   * 화면에 찍히는 번호. 🔴🔴 WU-058 — **하드코딩하지 않는다.**
+   *    소싱 단계를 뺐을 때 builder 들이 들고 있던 `1,2,4,5` 가 그대로 화면에 찍혀
+   *    「① ② ④ ⑤」가 됐다(새 계약 테스트가 배포 전에 잡았다). 🟢 그래서
+   *    `resolveWorkflow` 가 **배열 순서에서 다시 매긴다** — 단계가 또 바뀌어도
+   *    번호가 어긋나지 않는다.
+   */
   index: number;
   label: string;
   status: BigStepStatus;
@@ -145,7 +149,7 @@ export interface Workflow {
   currentStepKey: BigStepKey;
   /** 현재 단계에서 지금 돌고 있는 항목. 전부 끝났으면 null이다. */
   currentSubStep: SubStep | null;
-  /** 다섯 단계가 전부 끝났는가(COMPLETED). */
+  /** 🔴 **네** 단계가 전부 끝났는가(COMPLETED). */
   completed: boolean;
 }
 
@@ -196,158 +200,6 @@ export interface MarketSignal {
   loadFailed: boolean;
 }
 
-/**
- * ③ 소싱 선택 — PIVOT-03-B ②④ API 가 돌려준 «사실만» 옮긴다.
- *
- * 🔴 **여기서 판정을 만들지 않는다.** `masterConfirmed` · `warning` · `nextAction`
- * 은 서버의 `computeMasterReady()` 결과를 그대로 받은 값이다. UI 가 stage 를 다시
- * 계산하면 화면과 서버가 다른 말을 한다(CP001 사고와 같은 구조).
- *
- * 🔴 `productMissing` 과 `candidateCount === 0` 을 «섞지 않는다»:
- *     productMissing       상품 정체성이 없어 소싱을 «시작할 수 없다»
- *     candidateCount 0     상품은 있고 후보가 아직 없다 — 직접 추가할 수 있다
- * 둘을 같게 그리면 「조사해 보니 후보가 없다」는 거짓이 된다.
- */
-export interface SourcingSignal {
-  /** 후보를 아직 조회하지 않았다(스냅샷 저장 전 / 패널 미마운트). */
-  notStarted: boolean;
-  /** `ProductSnapshot.productId === null` — 소싱을 시작할 수 없다. */
-  productMissing: boolean;
-  candidateCount: number;
-  /** 🔴 서버 `masterReady.masterConfirmed` 를 그대로. = Selected Source 존재. */
-  masterConfirmed: boolean;
-  /** 🔴 서버 `masterReady.warning` 그대로(품절 등). 문구를 지어내지 않는다. */
-  warning: string | null;
-  /** 🔴 서버 `masterReady.nextAction` 그대로. 「막힌 이유」가 아니라 「다음에 할 일」. */
-  nextAction: string | null;
-  /** 조회 자체를 못 했다(네트워크/서버). 「후보 없음」과 완전히 다른 사건이다. */
-  loadFailed: boolean;
-}
-
-function buildSourceSelecting(signal: SourcingSignal, collectionDone: boolean): BigStep {
-  /* 🔴 ②가 아니라 ①에 매달린다 — buildRegistrationPreparing 과 같은 이유다.
-     시장 판단을 열지 않은 세션에서 소싱이 통째로 잠기면 아무것도 할 수 없다. */
-  const notReached = !collectionDone || signal.notStarted;
-
-  /* 🔴 못 불러왔으면 「확정」이라고 말하지 않는다. ②는 loadFailed 에 done=true 를
-     주지만(등록이 시장 판단과 무관하므로) 여기서 같이 하면 «Master 가 확정됐다»는
-     거짓이 된다. 대신 ④⑤는 ①에 매달려 있어 흐름이 멈추지도 않는다. */
-  const done = !notReached && !signal.loadFailed && !signal.productMissing && signal.masterConfirmed;
-
-  const identity: SubStep = notReached
-    ? { key: "product_identity", label: "상품 정체성", status: "UPCOMING", message: null, target: null }
-    : signal.productMissing
-      ? {
-          key: "product_identity",
-          label: "상품 정체성",
-          status: "ATTENTION",
-          /* 서버 문구를 그대로 쓴다 — 「후보가 없습니다」로 바꾸지 않는다. */
-          message: signal.nextAction ?? "상품을 저장하면 소싱 후보를 모을 수 있습니다",
-          target: "sourcing",
-        }
-      : { key: "product_identity", label: "상품 정체성", status: "DONE", message: null, target: null };
-
-  const candidates: SubStep = (() => {
-    const key = "sourcing_candidates";
-    const label = "소싱 후보";
-    if (notReached || signal.productMissing) {
-      return { key, label, status: "UPCOMING" as const, message: null, target: null };
-    }
-    if (signal.loadFailed) {
-      return {
-        key,
-        label,
-        status: "ATTENTION" as const,
-        message: "소싱 후보를 다시 불러와야 합니다",
-        target: "sourcing" as const,
-      };
-    }
-    if (signal.candidateCount === 0) {
-      /* 🔴 「없음」이 실패가 아니다 — 셀러가 직접 넣을 수 있다. 그래서 ⚠(할 일)다. */
-      return {
-        key,
-        label,
-        status: "ATTENTION" as const,
-        message: signal.nextAction ?? "소싱처를 직접 추가할 수 있습니다",
-        target: "sourcing" as const,
-      };
-    }
-    return {
-      key,
-      label,
-      status: "DONE" as const,
-      message: `${signal.candidateCount}곳`,
-      target: "sourcing" as const,
-    };
-  })();
-
-  const selection: SubStep = (() => {
-    const key = "source_selected";
-    const label = "소싱처 선택";
-    if (notReached || signal.productMissing || signal.loadFailed || signal.candidateCount === 0) {
-      return { key, label, status: "UPCOMING" as const, message: null, target: null };
-    }
-    if (!signal.masterConfirmed) {
-      return {
-        key,
-        label,
-        status: "ATTENTION" as const,
-        message: signal.nextAction ?? "어디서 사올지 고릅니다",
-        target: "sourcing" as const,
-      };
-    }
-    /* 🔴 품절이어도 선택은 «유지» 된다 — 경고만 올린다(PIVOT-02 Case 4).
-       ATTENTION 은 「흐름을 멈추지 않는 할 일」이고, 아래 done 은 그대로 true 다. */
-    if (signal.warning) {
-      return { key, label, status: "ATTENTION" as const, message: signal.warning, target: "sourcing" as const };
-    }
-    return { key, label, status: "DONE" as const, message: null, target: "sourcing" as const };
-  })();
-
-  const subSteps = keepSingleRunning([identity, candidates, selection]);
-  const summary = done
-    ? signal.warning
-      ? `소싱처 확정 · ${signal.warning}`
-      : "소싱처가 확정됐습니다"
-    : null;
-
-  return {
-    key: "SOURCE_SELECTING",
-    index: 3,
-    label: BIG_STEP_LABELS.SOURCE_SELECTING,
-    status: !collectionDone
-      ? "LOCKED"
-      : done
-        ? signal.warning
-          ? "ATTENTION"
-          : "COMPLETED"
-        : signal.loadFailed || signal.productMissing || signal.candidateCount === 0 || !signal.notStarted
-          ? "ATTENTION"
-          : "IN_PROGRESS",
-    done,
-    headline: !collectionDone
-      ? "상품 수집이 끝나면 소싱처를 고릅니다"
-      : signal.notStarted
-        ? "어디서 사올지 아직 고르지 않았습니다"
-        : signal.loadFailed
-          ? "소싱 후보를 다시 불러와야 합니다"
-          : done
-            ? (summary ?? "소싱처가 확정됐습니다")
-            : /* 🔴 서버의 「다음에 할 일」을 그대로 쓴다. */
-              (signal.nextAction ?? "어디서 사올지 고릅니다"),
-    subSteps,
-    summary,
-  };
-}
-
-/**
- * ④ 등록 준비 — 전부 product/채널 준비 상태에서 읽어낸다.
- *
- * 3층 구조 재정렬(CEO 확정, 2026-09-14) — `categoryVerified`가 **여기서 사라졌다.**
- * 상품 수준은 "커머스 카테고리가 확정됐는가"를 묻지 않는다(자세한 이유는
- * buildRegistrationPreparing의 주석). 카테고리 게이트는 채널별 readiness에만
- * 남는다.
- */
 export interface PrepareSignal {
   /** 상품명·브랜드가 채워졌는가. */
   productInfoOk: boolean;
@@ -395,7 +247,6 @@ export interface RegisterSignal {
 export interface WorkflowInput {
   collection: CollectionSignal;
   market: MarketSignal;
-  sourcing: SourcingSignal;
   prepare: PrepareSignal;
   register: RegisterSignal;
 }
@@ -687,7 +538,7 @@ function buildMarketJudging(signal: MarketSignal, previousDone: boolean): BigSte
 /**
  * ④는 ②③이 아니라 **①**이 끝났는지만 본다.
  *
- * 순서상 ④는 뒤에 있지만, 시장 판단이나 소싱 선택이
+ * 순서상 ④는 뒤에 있지만, 시장 판단이
  * 끝나야만 카테고리를 고를 수 있는 것은 아니다. ②에 매달아두면 판단 화면을
  * 한 번도 열지 않은 세션에서 뒤쪽 단계가 통째로 잠긴 채 아무것도 할 수 없게 된다 —
  * 흐름이 하나라는 건 "앞 단계가 끝날 때까지 손도 못 댄다"는 뜻이 아니라
@@ -900,9 +751,6 @@ function buildCommerceRegistering(signal: RegisterSignal, previousDone: boolean)
 export function resolveWorkflow(input: WorkflowInput): Workflow {
   const collecting = buildCollecting(input.collection);
   const market = buildMarketJudging(input.market, collecting.done);
-  /* 🔴 ③도 ①에 매달린다 — ②(시장 판단)를 열지 않은 세션에서 소싱이 잠기면
-     아무것도 할 수 없다. buildRegistrationPreparing 과 같은 판단이다. */
-  const sourcing = buildSourceSelecting(input.sourcing, collecting.done);
   // ④는 ①에 매달린다(위 buildRegistrationPreparing 주석 참고). ⑤만은 ④에
   // 매달려 있어야 한다 — 카테고리가 확정되지 않으면 register API가 CP001로
   // 거부하므로, 열어주는 것 자체가 거짓말이 된다.
@@ -913,7 +761,13 @@ export function resolveWorkflow(input: WorkflowInput): Workflow {
   const prepare = buildRegistrationPreparing(input.prepare, collecting.done);
   const register = buildCommerceRegistering(input.register, prepare.done);
 
-  const steps = [collecting, market, sourcing, prepare, register];
+  /**
+   * 🔴🔴 WU-058 — **번호를 여기서 다시 매긴다.** 각 builder 가 들고 있는 `index` 는
+   *    소싱 제거로 `1,2,4,5` 가 됐고 그 값이 화면에 그대로 찍혔다. 🟢 순서가
+   *    유일한 진실이므로 위치에서 파생시킨다(builder 는 그대로 둔다 — 그 값들을
+   *    일일이 고치면 다음에 또 어긋난다).
+   */
+  const steps = [collecting, market, prepare, register].map((step, i) => ({ ...step, index: i + 1 }));
   // 현재 단계는 "아직 끝나지 않은 첫 단계" 하나뿐이다. 전부 끝났으면 마지막 단계에
   // 머문다(④가 끝나도 화면이 빈 곳을 가리키면 안 된다).
   const current = steps.find((step) => !step.done) ?? steps[steps.length - 1];
@@ -947,23 +801,6 @@ export const MARKET_SIGNAL_NOT_STARTED: MarketSignal = {
   profitabilityFound: false,
   verdictKnown: false,
   verdictLabel: null,
-  loadFailed: false,
-};
-
-/**
- * 소싱 후보를 아직 «조회하지 않은» 상태의 기본값. MARKET_SIGNAL_NOT_STARTED 와
- * 같은 원칙이다 — 시작도 안 한 작업을 진행 중으로 표시하지 않는다.
- *
- * 🔴 `productMissing: false` 다. 「정체성이 없다」가 아니라 「아직 모른다」이고,
- * 둘을 섞으면 조회 전에 「소싱을 시작할 수 없습니다」를 띄우게 된다.
- */
-export const SOURCING_SIGNAL_NOT_STARTED: SourcingSignal = {
-  notStarted: true,
-  productMissing: false,
-  candidateCount: 0,
-  masterConfirmed: false,
-  warning: null,
-  nextAction: null,
   loadFailed: false,
 };
 

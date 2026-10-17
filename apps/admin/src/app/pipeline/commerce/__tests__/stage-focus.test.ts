@@ -15,7 +15,6 @@ import {
   type CollectionSignal,
   type MarketSignal,
   type PrepareSignal,
-  type SourcingSignal,
   type RegisterSignal,
   type WorkflowInput,
 } from "../workflow";
@@ -79,25 +78,11 @@ const CHANNELS: RegisterSignal = {
   ],
 };
 
-/**
- * PIVOT-03-C — ③ 소싱 선택이 «끝난» 기본값. 이 파일의 단정들은 ④⑤에 관한
- * 것이라, ③을 미완으로 두면 current 가 ③에 머물러 의도와 다른 것을 재게 된다.
- */
-const SOURCED: SourcingSignal = {
-  notStarted: false,
-  productMissing: false,
-  candidateCount: 2,
-  masterConfirmed: true,
-  warning: null,
-  nextAction: null,
-  loadFailed: false,
-};
 
 function input(overrides: Partial<WorkflowInput> = {}): WorkflowInput {
   return {
     collection: COLLECTED,
     market: JUDGED,
-    sourcing: SOURCED,
     prepare: PREPARED,
     register: CHANNELS,
     ...overrides,
@@ -110,12 +95,10 @@ function focus(stage: BigStepKey, overrides: Partial<StageFocusInput> = {}) {
 
 describe("본문의 주인공은 현재 단계 하나다", () => {
   it("다섯 단계가 각각 자기 본문을 갖는다 — 빈 단계가 없다", () => {
-    /* PIVOT-03-C — 3 소싱 선택이 끼워졌다. 🔴 단계마다 본문이 «하나» 있어야
-       한다는 규칙은 그대로다 — 새 단계가 본문 없이 서면 화면이 빈다. */
+    /* 🔴 WU-058 — ③ 소싱 선택이 **빠졌다**. 단계마다 본문이 «하나» 씩 넷이다. */
     expect(BIG_STEP_ORDER.map((stage) => focus(stage).main)).toEqual([
       "COLLECTION",
       "MARKET",
-      "SOURCING",
       "PREPARE",
       "REGISTER",
     ]);
@@ -272,8 +255,8 @@ describe("상단 Flow는 탭 내비게이션이 아니다", () => {
     const wf = resolveWorkflow(input({ prepare: { ...PREPARED, requiredFieldBlockingCount: 2 } }));
     expect(wf.currentStepKey).toBe("REGISTRATION_PREPARING");
     const interactions = wf.steps.map((step) => stepInteraction(step, wf.currentStepKey));
-    /* PIVOT-03-C — ③ 소싱이 끼워져 끝난 단계가 셋이 됐다(SOURCED 기본값). */
-    expect(interactions).toEqual(["DETAIL_ONLY", "DETAIL_ONLY", "DETAIL_ONLY", "ACTIVE", "LOCKED"]);
+    /* 🔴 WU-058 — ③ 소싱이 빠져 끝난 단계가 **둘** 이다. */
+    expect(interactions).toEqual(["DETAIL_ONLY", "DETAIL_ONLY", "ACTIVE", "LOCKED"]);
   });
 
   it("활성 단계는 언제나 정확히 하나다", () => {
@@ -294,7 +277,7 @@ describe("③ 체크리스트 항목 ↔ 작업면", () => {
   it("workflow가 만드는 ③ 항목이 전부 열 곳을 갖는다", () => {
     // 목록을 화면에서 다시 적지 않기 때문에, workflow가 항목을 하나 더 만들면
     // 여기서 잡힌다 — 조용히 "열 곳이 없는 항목"이 생기는 것을 막는다.
-    const prepareStep = resolveWorkflow(input()).steps[3];
+    const prepareStep = resolveWorkflow(input()).steps[2];
     expect(prepareStep.subSteps.map((s) => s.key)).toEqual([
       // 3층 구조 재정렬(CEO 확정, 2026-09-14) — "category"가 이 목록에서 빠졌다.
       // 상품 수준은 커머스 카테고리 확정 여부를 묻지 않는다(workflow.ts 참고).
@@ -364,7 +347,7 @@ describe("단계 전환 — 셀러가 누르는 '다음' 버튼은 없다", () =
     // 것 자체가 거짓말이 된다(UX 2.1이 세운 게이트를 UX 2.2가 흔들지 않는다).
     const wf = resolveWorkflow(input({ prepare: { ...PREPARED, requiredFieldBlockingCount: 2 } }));
     expect(focus(wf.currentStepKey).main).toBe("PREPARE");
-    expect(wf.steps[4].status).toBe("LOCKED");
+    expect(wf.steps[3].status).toBe("LOCKED");
   });
 });
 
@@ -425,7 +408,7 @@ describe("쿠팡 탭 왕복 — 탭을 옮겨도 현재 단계는 그대로다",
     const wf = resolveWorkflow(
       input({ market: MARKET_SIGNAL_NOT_STARTED, prepare: { ...PREPARED, requiredFieldBlockingCount: 2 } }),
     );
-    expect(wf.steps[3].status).toBe("ATTENTION");
-    expect(wf.steps[3].subSteps.find((s) => s.key === "required_fields")?.status).toBe("ATTENTION");
+    expect(wf.steps[2].status).toBe("ATTENTION");
+    expect(wf.steps[2].subSteps.find((s) => s.key === "required_fields")?.status).toBe("ATTENTION");
   });
 });

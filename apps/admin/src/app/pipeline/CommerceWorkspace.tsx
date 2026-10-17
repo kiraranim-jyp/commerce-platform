@@ -162,15 +162,12 @@ import { buildRegistrationChannels } from "./commerce/registration-channels";
 import { resolveStageFocus, type WorkSurface } from "./commerce/stage-focus";
 import {
   MARKET_SIGNAL_NOT_STARTED,
-  SOURCING_SIGNAL_NOT_STARTED,
   resolveWorkflow,
   type MarketSignal as WorkflowMarketSignal,
-  type SourcingSignal as WorkflowSourcingSignal,
   type WorkflowChannel,
   type WorkflowNavTarget,
 } from "./commerce/workflow";
 import { SourceDataView } from "./commerce/SourceDataView";
-import { SourcingPanel } from "./commerce/SourcingPanel";
 import type { WorkspaceItem } from "./types";
 
 /**
@@ -320,11 +317,11 @@ export function CommerceWorkspace({
    * 시 그대로 executor에 넘겨 registration_attempts.snapshot_id로 남긴다. */
   snapshotId?: string | null;
   /**
-   * PIVOT-03-C — `ProductSnapshot.productId`. ③ 소싱 선택이 부르는
-   * `/api/products/[productId]/…` 의 «키» 다.
+   * `ProductSnapshot.productId` — `/api/products/[productId]/…` 의 «키» 다.
    *
-   * 🔴 `null` 은 「후보가 없다」가 아니라 «상품 정체성이 아직 없다» 는 뜻이고,
-   * 그 상태에서는 소싱을 시작할 수 없다. 둘을 섞지 않는다.
+   * 🔴 WU-058 — 원래 이 값의 소비자는 ③ 소싱 선택 패널이었고 **그 UI 는 제거됐다**.
+   *    남은 소비자를 확인한 뒤에만 이 prop 을 떼어낸다(지금은 그대로 둔다).
+   * 🔴 `null` 은 「후보가 없다」가 아니라 «상품 정체성이 아직 없다» 는 뜻이다.
    * 🔴 권한 근거로 쓰지 않는다 — 그 라우트가 세션 workspace 로 다시 판단한다.
    */
   productId?: string | null;
@@ -750,20 +747,7 @@ export function CommerceWorkspace({
     );
   }
 
-  /**
-   * PIVOT-03-C — ③ 소싱 선택의 진행 상태. marketSignal 과 «같은 자리» 다.
-   *
-   * 🔴 소싱 패널은 「소싱」 탭에서만 마운트된다. 셀러가 쿠팡 탭으로 넘어가면
-   * 언마운트되지만, 그렇다고 ③이 「아직 조회 안 함」으로 되돌아가면 안 된다 —
-   * 마지막으로 보고된 값을 여기 붙잡아 둔다(sticky visited 원칙).
-   */
-  const [sourcingSignal, setSourcingSignal] = useState<WorkflowSourcingSignal>(SOURCING_SIGNAL_NOT_STARTED);
-  function handleSourcingSignalChange(next: WorkflowSourcingSignal) {
-    setSourcingSignal((prev) =>
-      (Object.keys(next) as (keyof WorkflowSourcingSignal)[]).every((k) => prev[k] === next[k]) ? prev : next,
-    );
-  }
-
+  
   /** MI-FLOW-2 — 상단 진행바/Action Center에서 판단 카드로 데려가는 단일 경로.
    * 앵커가 없으면(아직 렌더 전) 아무 일도 하지 않는다. */
   function focusMarketVerdict() {
@@ -2217,7 +2201,6 @@ export function CommerceWorkspace({
       market:
         marketSignal.notStarted && snapshotId == null ? { ...marketSignal, notStarted: false } : marketSignal,
       /* 🔴 패널이 올려보낸 사실을 그대로 넘긴다 — 여기서 판정하지 않는다. */
-      sourcing: sourcingSignal,
       prepare: {
         productInfoOk: hasTitle && hasBrand,
         productInfoMissing: !hasTitle ? "상품명을 확인해주세요" : !hasBrand ? "브랜드를 확인해주세요" : null,
@@ -2240,7 +2223,6 @@ export function CommerceWorkspace({
     listingStates,
     lotteOnRegistered,
     marketSignal,
-    sourcingSignal,
     snapshotId,
     listingPrice,
   ]);
@@ -2253,12 +2235,6 @@ export function CommerceWorkspace({
     }
     if (target === "price") {
       handleRequestPriceReview();
-      return;
-    }
-    if (target === "sourcing") {
-      /* 🔴 ③은 탭이 아니라 본문이다. 상품정보 화면으로 데려가면 현재 단계가
-         ③이면 본문으로, 아니면 접힘으로 그려진다 — 어느 단계에서도 닫히지 않는다. */
-      setTab("source");
       return;
     }
     setTab(target);
@@ -3533,9 +3509,6 @@ export function CommerceWorkspace({
         currentTarget={tab === LOTTEON_TAB ? null : (tab as WorkflowNavTarget)}
         onOpenStageDetail={(key) => {
           if (key === "MARKET_JUDGING") openMarketDetail();
-          /* 🔴 끝난 ③을 눌러도 단계를 되돌리지 않는다 — 상품정보 화면의 접힘을
-             열 수 있는 자리로 데려가기만 한다(MI 와 같은 원칙). */
-          if (key === "SOURCE_SELECTING") setTab("source");
         }}
       />
 
@@ -3718,11 +3691,6 @@ export function CommerceWorkspace({
               focus={stageFocus}
               workflow={workflow}
               channels={registrationChannels}
-              /* PIVOT-03-C — ③ 소싱 선택. 🔴 기존 ②④ API 를 그대로 소비하는
-                 화면이고, 판정(단계·Master)은 서버 응답을 그대로 쓴다. */
-              sourcing={
-                <SourcingPanel productId={productId ?? null} onSignalChange={handleSourcingSignalChange} />
-              }
               /* REWORK-4 §1(CEO 지시, 2026-09-14) — 여기 있던
                  `commerceManagement={<CommerceManagementSection …/>}`를 뺐다.
                  상품정보 탭에서 「🛒 커머스 관리정보」 섹션을 없앤다는 지시다.
