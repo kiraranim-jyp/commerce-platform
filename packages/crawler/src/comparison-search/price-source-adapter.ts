@@ -247,12 +247,31 @@ export async function enrichCandidatePrices(
    *  안 주면 예전 동작 그대로다(국내 경로). 호출 상한은 어느 쪽이든 같다. */
   query?: ComparisonQuery,
 ): Promise<ComparisonCandidate[]> {
-  const withDefaultSource: ComparisonCandidate[] = candidates.map((c) => ({
-    ...c,
-    priceSource: "search",
-    priceStatus: "UNVERIFIED_SEARCH",
-    verificationAttempted: false,
-  }));
+  /**
+   * 🔴🔴 WU-055 — **이미 «상세 페이지에서» 읽은 가격을 되돌리지 않는다.**
+   *
+   * 이 함수의 전제는 「후보 가격은 **검색 목록** 에서 왔으므로 아직 미검증」이고, 그래서
+   * 전부 `UNVERIFIED_SEARCH` 로 시작한 뒤 Shopify 상세를 열어 승격했다.
+   * 🔴 그 전제가 **transient URL 경로에서는 거짓** 이다 — 거기서는 후보가 애초에
+   *    상세 페이지를 열어서 만들어진다(`factsFromProductUrl`).
+   *
+   * 🟢 판정 기준을 **새로 만들지 않는다** — 이 리포의 단일 규칙(`derivePriceStatus` ·
+   *    match.ts:537)이 이미 `priceSource === "detail"` 을 검증된 가격으로 정의한다.
+   *    여기서는 그 값을 **덮어쓰지 않을** 뿐이다.
+   *
+   * 🔴 영향 범위가 transient 경로로 **한정된다**(전수 확인):
+   * ```
+   * 이 함수의 호출부는 둘뿐 — shopifySuggestAdapter(:345) · transient 루프(runner:1078)
+   * shopify-suggest 후보는 priceSource 를 세우지 않는다 → 이 분기에 들어오지 않는다
+   * priceSource "detail" 을 세우는 bobochoses.com 어댑터는 **enrichScored 가 없다**
+   *   → 이 함수를 애초에 타지 않는다
+   * ```
+   */
+  const withDefaultSource: ComparisonCandidate[] = candidates.map((c) =>
+    c.priceSource === "detail"
+      ? { ...c, priceStatus: "VERIFIED_CURRENT" as const, verificationAttempted: true }
+      : { ...c, priceSource: "search" as const, priceStatus: "UNVERIFIED_SEARCH" as const, verificationAttempted: false },
+  );
   const eligibleIndexes = selectCandidatesForDetailConfirmation(withDefaultSource, query);
   if (eligibleIndexes.length === 0) return withDefaultSource;
 

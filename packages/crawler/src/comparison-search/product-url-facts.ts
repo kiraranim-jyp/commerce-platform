@@ -263,6 +263,29 @@ async function htmlPath(
       imageUrl: null,
       confidence: 0,
       brand: brand ?? undefined,
+      /**
+       * 🔴🔴 WU-055 — **이 한 줄이 없어서 국내 가격비교 도달이 0 이었다.**
+       *
+       * 이 리포의 가격 신뢰도 규칙은 한 곳에 있다(`derivePriceStatus` · match.ts:537):
+       * ```
+       * priceSource === "detail"  ⟹  VERIFIED_CURRENT
+       * 그 외                      ⟹  UNVERIFIED_SEARCH
+       * ```
+       * 그 주석이 자격 사례까지 적어 뒀다 — 「**검색 자체가 상세 페이지를 조회하는
+       * 경우**」(bobochoses.com 국내 검색). 🟢 이 함수가 **정확히 그 경우** 다:
+       * 후보 URL 의 **상세 페이지를 직접 열어** JSON-LD/microdata 에서 가격을 읽는다.
+       *
+       * 🔴 그런데 `priceSource` 를 세우지 않아서, 바로 아래 흐름에서 **두 번 되돌려졌다**:
+       * ```
+       * withConfidence(match.ts:646) → derivePriceStatus → UNVERIFIED_SEARCH
+       * enrichCandidatePrices        → blanket UNVERIFIED_SEARCH (Shopify handle 만 복구)
+       * ⟹ 국내 비-Shopify 후보는 VERIFIED_CURRENT 가 «구조적으로» 불가능 →
+       *    `priceKrw` 가 항상 null → 국내 축 진입 0 (WU-055 실측: KR 5건 전건 탈락)
+       * ```
+       * 🔴 **새 정책이 아니다** — 기존 규칙에 **빠져 있던 사실 하나** 를 적는 것이다.
+       * 🔴 가격이 없으면 세우지 않는다(`null`) — 없는 신뢰도를 만들지 않는다.
+       */
+      priceSource: priced ? "detail" : null,
       /** 🟢 성공 규약을 `enrichCandidatePrices`(price-source-adapter.ts:275)와 맞춘다. */
       priceStatus: priced ? "VERIFIED_CURRENT" : "PRICE_UNAVAILABLE",
       facts,
