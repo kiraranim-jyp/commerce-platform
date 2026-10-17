@@ -179,6 +179,27 @@ D 기존 문구와 모순이 있는가
 
 ---
 
+## 10-b. 🔴🔴 실데이터가 드러낸 결함 1건 — **어휘 누출(수정했다)**
+
+```
+GT 51건으로 재 보니 해외 집계 16건의 tier 분포가
+  EXACT 10 · COMPARISON 2 · REFERENCE 2 · **EXCLUDED 2**
+🔴 해외 축은 **tier 를 거르지 않고** 가격 있는 후보를 전부 담는다.
+   국내 축은 반대로 `EXACT || COMPARISON` 만 담는다 — **두 축이 비대칭** 이다.
+⟹ `EXCLUDED` 가 `TIER_LABEL` 에 없어 `?? tier` 로 떨어지고,
+   셀러 화면에 **「EXCLUDED 2」** 라는 영문 내부 토큰이 그대로 출력됐다.
+```
+
+🟢 **라벨만 붙였다** — `EXCLUDED: "동일상품 아님"`.
+🔴 **집계에서 빼지 않았다** — 그러면 WU-049 가 측정·고정한 해외 집계 수가 바뀐다.
+🔴 **비대칭 자체를 없앨지는 제품 정책** 이라 CPO 판정으로 올린다(§16-⑥).
+🟢 테스트가 「대문자 내부 토큰이 하나도 남지 않는다」를 단언으로 잠갔다.
+
+🔴 이 결함은 WU-049 때부터 **잠재** 해 있었다 — 그때 fixture 에 `EXCLUDED` 가 없어서
+드러나지 않았다. 🟢 실데이터로 재서 찾았다.
+
+---
+
 ## 11. UI 결과 — 마운트 DOM 으로 증명
 
 ```
@@ -222,7 +243,7 @@ M1 응답 칸 제거(`domesticReference`)        **1 FAIL**
 M2 MI 집계를 빈 배열로                      **1 FAIL**
 M3 패널 렌더 testId 제거                    **1 FAIL**
 M4 국내 문구를 **해외 문구로 복사**          **1 FAIL**  ← 「판매판정 미반영」 단정 금지가 잠긴다
-원상복구 **11 passed** · WU-049 **17 passed**(합 28)
+원상복구 **12 passed** · WU-049 **17 passed**(합 **29**)
 ```
 
 ---
@@ -230,7 +251,7 @@ M4 국내 문구를 **해외 문구로 복사**          **1 FAIL**  ← 「판�
 ## 14. Regression / Security
 
 ```
-회귀      admin **564 files / 8,208 passed · failed 0**
+회귀      admin **8,209 passed · failed 0**(564 files · 직전 8,208 → +1 = 어휘 누출 단언)
 typecheck **0** · build **exit 0**
 security  🟢 fetch/URL 경계 **무변경** — `outbound-guard`(SSRF·사설IP·포트) ·
           `guardedLookup`(DNS rebinding) · redirect **한 줄도 건드리지 않았다**
@@ -265,6 +286,9 @@ smoke  GET / **200** · /pipeline 307(인증) · POST /api/price-history/check 4
 🟡 ③ **새로고침 시 참고 구역 소멸** — transient 수명 결정(WU-039 §6) 선행.
 🔴 ④ **`TRANSIENT_SCOPE_NOTICE` 문구** — 알림 경로까지 포함하면 좁다(§10-D).
      제품 정책이라 바꾸지 않았다. **CPO 판정 요청.**
+🔴 ⑥ **해외/국내 집계의 tier 비대칭** — 해외는 `EXCLUDED`/`REFERENCE` 까지 담고
+     국내는 `EXACT|COMPARISON` 만 담는다. 라벨은 고쳤지만 **담는 범위를 맞출지는
+     CPO 판정** 이다(해외 축 숫자가 바뀐다).
 🟡 ⑤ Human DIFFERENT 2건이 「국내 참고가격」 집계(판매처 5곳)에 포함된다 —
      동일상품 가격으로는 쓰이지 않지만 셀러에게는 보인다. 등급을 같이 적어 완화했다.
 ```
@@ -290,21 +314,27 @@ smoke  GET / **200** · /pipeline 307(인증) · POST /api/price-history/check 4
 
 ```
 URL    https://ttaejyo.vercel.app/pipeline      (로그인 필요)
-상품   Bobo Choses  Booty Ghosts Long Sleeve T-Shirt  (B226AC010)
-       — 또는 Hug Hairy Monster T-Shirt (B226AC009)
+상품   Bobo Choses  **Hug Hairy Monster T-Shirt** (**B226AC009**)
+       🔴 B226AC010(Booty Ghosts)이 **아니다** — biskuit 의 88,000원 후보는 AC009 다
+          (WU-054 의 beaumonde AC010 과 **다른 상품** 이고 가격대만 같다)
 ```
 
 **순서**
 1. 상품을 연다 · **「상품정보」 탭** 에 머문다 (🔴 채널 탭에는 MI 가 없다)
 2. `Market Intelligence` → 「**왜 이렇게 판단했나요?**」
    (🟡 한 줄 요약만 보이면 「**가격 판단 상세보기 →**」를 먼저 누른다)
-3. 「**🔗 비교할 판매처 상품 URL (선택)**」 칸에 한 줄에 하나씩 — **국내 1 + 해외 1**
+3. 「**🔗 비교할 판매처 상품 URL (선택)**」 칸에 **아래 두 줄을 그대로** 넣는다
 ```
-https://biskuit.kr/product/detail.html?product_no=
-https://bobochoses.com/products/b226ac010-booty-ghosts-t-shirt
+https://biskuit.kr/product/%EB%B3%B4%EB%B3%B4%EC%87%BC%EC%A6%88-%ED%97%88%EA%B7%B8-%ED%97%A4%EC%96%B4%EB%A6%AC-%EB%AA%AC%EC%8A%A4%ED%84%B0-%ED%8B%B0%EC%85%94%EC%B8%A0-b226ac009/8891/category/367/display/1/
+https://bobochoses.com/products/b226ac009-hug-hairy-monster-t-shirt
 ```
-🔴 위 biskuit URL 은 **예시 형태** 다 — 정확한 상품 주소는 CPO 가 기존 GT 에서 집어
-전달해 주셔야 한다(🔴 CTO 가 추정해 적지 않는다).
+🟢🟢 **추정 주소가 아니다** — 둘 다 **WU-036 Human GT 원본(`wu-036-3way.json`)의
+`candidateUrl` 그대로** 다(C07 · C02). 🔴 CPO 지시대로 **새 주소를 만들지 않았다.**
+🟢 그리고 이 쌍은 **실측으로 두 축을 모두 채운다**(WU-055 체인 S2):
+```
+biskuit.kr      KRW 88,000  COMPARISON  Human **SAME**  → 🟢 국내 가격비교
+bobochoses.com  EUR 40      EXACT       Human **SAME**  → 🟢 해외 참고가격
+```
 
 4. 「**🔄 다시 분석**」
 

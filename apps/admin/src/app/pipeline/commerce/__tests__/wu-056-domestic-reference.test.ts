@@ -92,6 +92,27 @@ describe("A. 국내 참고가격 블록", () => {
     expect(OVERSEAS_REFERENCE_SCOPE).toMatch(/판매판정/);
   });
 
+  /**
+   * 🔴🔴 **실데이터에서 찾은 어휘 누출** — 해외 집계는 tier 를 거르지 않으므로
+   *    `EXCLUDED` 가 들어온다(GT 51건 실측: EXACT 10 · COMPARISON 2 · REFERENCE 2 ·
+   *    **EXCLUDED 2**). 그 어휘가 `TIER_LABEL` 에 없어 화면에 영문 토큰이 찍혔다.
+   * 🔴 **집계에서 빼지 않았다**(WU-049 숫자가 바뀐다) — 라벨만 붙였다.
+   */
+  it("🔴🔴 집계 등급에 영문 내부 토큰이 새지 않는다", () => {
+    const html = renderDomestic({
+      count: 4,
+      byCurrency: { KRW: { count: 4, lowestAmount: 88_000 } },
+      byMarket: { KR: 4 },
+      byPriceTier: { EXACT: 1, COMPARISON: 1, REFERENCE: 1, EXCLUDED: 1 },
+    });
+    expect(html).toContain("동일상품 1");
+    expect(html).toContain("유사상품 1");
+    expect(html).toContain("참고 1");
+    expect(html).toContain("동일상품 아님 1");
+    /** 🔴 대문자 내부 토큰이 **하나도** 남지 않아야 한다. */
+    expect(html).not.toMatch(/EXCLUDED|REFERENCE|COMPARISON|EXACT|CONFIRMED/);
+  });
+
   /** 🟢 기본값이 해외다 — WU-049 호출부가 한 글자도 바뀌지 않는다. */
   it("🟢 props 없이 쓰면 해외 블록이다", () => {
     const html = renderToStaticMarkup(OverseasReferencePrice({ summary: SUMMARY }) as never);

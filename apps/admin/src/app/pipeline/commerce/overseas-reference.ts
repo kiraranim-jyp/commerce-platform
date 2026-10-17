@@ -73,6 +73,23 @@ const TIER_LABEL: Record<string, string> = {
   CONFIRMED: "동일상품",
   COMPARISON: "유사상품",
   REFERENCE: "참고",
+  /**
+   * 🔴🔴 WU-056 — **이 줄이 없어서 화면에 영문 내부 토큰이 찍혔다.**
+   *
+   * 실데이터(GT 51건)로 재 보니 해외 집계 16건의 tier 분포가
+   * `EXACT 10 · COMPARISON 2 · REFERENCE 2 · **EXCLUDED 2**` 였다.
+   * 🔴 해외 축은 **tier 를 거르지 않고** 가격 있는 후보를 전부 담는다
+   *    (market-intelligence.ts 의 `market !== "KR"` 분기). 국내 축은 반대로
+   *    `EXACT || COMPARISON` 만 담는다(:318) — **두 축이 비대칭** 이다.
+   * ⟹ `EXCLUDED` 가 집계에 들어오는데 이 표에 없어서 `?? tier` 로 떨어지고
+   *    셀러 화면에 **「EXCLUDED 2」** 가 그대로 출력됐다.
+   *
+   * 🟢 **집계에서 빼지 않았다** — 그러면 WU-049 가 측정·고정한 해외 집계 수가
+   *    바뀐다(그 축은 보호 대상이다). 🔴 비대칭 자체를 없앨지는 **제품 정책** 이라
+   *    CPO 판정으로 올린다.
+   * 🟢 지금 고치는 것은 **어휘 누출 하나** 다 — 셀러가 읽을 수 있는 말로 적는다.
+   */
+  EXCLUDED: "동일상품 아님",
 };
 
 /**
