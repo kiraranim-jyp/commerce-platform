@@ -537,34 +537,54 @@ Gemini 내부 검색어 3개가 **전부 품번** 을 썼고 둘은 스스로 `s
 🔴🔴 그리고 그때 CEO 에게 **「`/today` 일괄 확인을 절대 누르지 말 것」** 을 명시해야 한다
 (메모 `gemini-flag-is-a-global-switch-not-a-per-product-control`).
 
-### 🔴🔴 현재 착수점 — **없다. WU-023 은 HOLD 로 닫혔고 다음 WU 는 CPO 가 준다** (CPO 확정 2026-10-15)
+### 🔴🔴 현재 착수점 — **WU-056 CEO 테스트 대기 · 다음 WU 는 CPO 가 지정** (CPO 확정 2026-10-17)
 
 🔴🔴 **이 절이 §12 의 유일한 현재 상태다.** 아래 WU 표와 그 뒤 절들은 **종료된 결론**
 이고, 「… 지금 여기」로 적힌 줄이 남아 있어도 **이 절이 이긴다.**
 
 ```
-WU-023          🟢 **HOLD 로 CLOSED** — 실패 보고가 아니라 **구조적 발견** 이다(CPO 판정)
-다음            🔴 **구현형 WU 1건** — CPO 가 **새 세션에서 «크게 한 번에»** 준다
-CTO 지금 할 일   🔴 **없다.** 선제적으로 WU 를 만들지 않는다 · 코드를 만지지 않는다
-CEO Action      🔴 **NONE**
+WU-056          🟢 **GO (Code/Deploy)** — 배포 `ac76d74e` · 🟡 **Production UI PASS 미확인**
+CEO Action      🔴 **Production UI 테스트 1회** — 전문 `docs/MI-DOMESTIC-AGGREGATE-056.md` §16
+다음            🔴 **CPO 가 지정한다.** CTO 가 선제적으로 WU 를 만들지 않는다
+CTO 지금 할 일   🔴 **없다** — 코드/기능/정책을 만지지 않는다
 ```
 
-🔴🔴 **WU-023 이 찾은 것 — 이 문장을 그대로 쓴다**(CPO):
-> **「transient consumer 는 이미 Registry 를 우회할 수 있지만, 그 consumer 에 후보를
-> 공급하는 «생산자 계약» 이 Gemini 에 종속되어 있다.」** — 이것이 현재 구조의 핵심 병목이다.
+🟢🟢 **핵심 전략 루프가 코드 축에서 닫혔다** — 이 문장을 그대로 쓴다:
+> **AI 후보 URL → 우리 MI 판정 → 가격 검증 → 국내/해외 가격비교 집계 → 사용자 UI**
+> 두 축(국내·해외)이 **응답을 타고 화면까지** 연결됐다(WU-049 → 055 → 056).
 
-🔴 **그래서 지금 하지 «않는» 것 둘** — ⒜ Registry 확대 ⒝ AI Search 재개.
-🟢 다음 WU 의 질문은 그 둘이 아니라 이것이다:
+🔴 **그래도 과장하지 않는다 — 남은 병목 넷은 전부 «제품 정책» 이다**:
+```
+① 국내 `EXACT`(동일상품 가격) **0** — 품번은 확인되는데 `BRAND_UNCONFIRMED` 가 남는다
+   (WU-054 addendum · WU-035 가 HOLD 한 그 질문) → **identity 정책 판정 필요**
+② beaumonde(C27) 가격이 **본문 텍스트** 라 `VERIFIED_CURRENT` 미승격 → 안전한 추출 기준 판정 필요
+③ transient 수명 — 새로고침하면 참고가격이 사라진다(**설계** · 저장 금지) → WU-039 §6 미결
+④ `TRANSIENT_SCOPE_NOTICE` 문구가 **알림 경로까지 포함하면 좁다**(WU-056 §10-D)
+   그리고 해외/국내 집계의 **tier 비대칭**(해외는 EXCLUDED 까지 담는다) → 둘 다 CPO 판정
+```
 
-> **「Registry 밖 후보를 transient pipeline 에 공급할 수 있는 «생산자 계약/경로» 를
-> 어떻게 «최소 변경» 으로 만들 수 있는가」**
+### 🔴🔴 **지금 유효한 보호 계약 — 건드리기 전에 반드시 읽는다**
 
-🔴🔴 **그리고 이것은 WU-022(AI Search 재개)와 «다른 문제» 다** — **AI 가 후보를 만들어야
-한다는 전제를 제거하고**, 후보 URL 자체를 공급할 **내부 계약** 을 만들 수 있는지를 먼저 본다.
+| 계약 | 소유 코드 | 불변식 |
+|---|---|---|
+| transient 저장 금지 | `transient-candidates.ts` · runner | `isTransientShopId(shopId)` 가 upsert 앞에서 끊는다 |
+| `__url_candidates__` 생산자 | `url-candidate-pool.ts` (WU-024) | 🟢 **WU-023 병목은 이것으로 해소됐다** · AI 0 · Registry 참조 0 |
+| SSRF / DNS rebinding | `outbound-guard.ts` · `guardedLookup` (WU-025/026) | 사설IP·루프백·비표준포트·리다이렉트·DNS 재바인딩 차단 |
+| `COLOR_VARIANT` 보류 | `cross-seller.ts` (WU-044) | 색조 일치 + 색상명 불일치 → **보류**(DIFFERENT 아님) · 색상사전 확대 금지 |
+| `SIZE_SYSTEM` 비차단 | `cross-seller.ts` (WU-045) | 사이즈 라인 차이 **단독으로 SAME 을 막지 않는다**(reasons 관측으로만) |
+| 품번 충돌 보호 | `compareModelCode` | 공통 접두 ≥4자 뒤 분기 → **conflict**(AC042↔AC043 를 가른다) |
+| microdata reader | `extractMicrodataFromHtml` (WU-053) | Product scope **정확히 1개** 일 때만 읽는다(2개+ = 목록) · Playwright 0 |
+| 가격 신뢰도 단일 owner | `derivePriceStatus`(match.ts:537) | `priceSource === "detail"` ⟹ `VERIFIED_CURRENT` · 그 외 `UNVERIFIED_SEARCH` |
+| 상세 가격 보존 | `product-url-facts` · `enrichCandidatePrices` (WU-055) | 상세에서 읽은 가격을 **되돌리지 않는다**(`priceSource:"detail"`) |
+| 시장 분류 | `classifyCandidateMarket` (WU-020) | KR 증거는 **`.kr` TLD · 등록부 둘뿐** · **통화 단독 결정 금지** |
+| 국내/해외 축 분리 | `market-intelligence.ts` | 국내 = `market==="KR" && priceKrw && tier EXACT\|COMPARISON` · 그 외는 해외/참고 |
+| 환산 금지 | `overseas-reference.ts` | 통화별로만 집계 · **합계 칸이 없다** · 기호 변환 0 |
+| 참고가격 라벨 | `TIER_LABEL` (WU-056) | `EXCLUDED → "동일상품 아님"` — 🔴 **영문 내부 토큰 노출 금지** |
+| 국내 문구 경계 | `DOMESTIC_REFERENCE_SCOPE` (WU-056) | 🔴 「판매판정 미반영」을 **국내에 단정하지 않는다**(알림 경로 때문) |
 
-🔴 그 WU 는 §4-B(조사 → 원인 → **전수검토 10축** → 최적안 → 구현 → E2E → 회귀 → 배포 →
-보고 1회) 와 **완료 조건 10** 을 적용해 받는다. 차단점은 이미 **코드 위치까지 확정** 돼
-있으므로 **조사를 처음부터 반복하지 않는다** — 전문 `docs/HANDOFF-WU-022-023.md` §3-2.
+🔴 **금지는 그대로 유효하다** — AI/Gemini API ❌ · 소비자 구독 우회 ❌ · Registry 확대 ❌ ·
+sourcing → price comparison 연결 ❌ · threshold 완화 ❌ · PRESUMED_SAME 자동 승격 ❌ ·
+SKU-only / GTIN-only SAME ❌ · 색상사전 확대 ❌ · transient 영구 저장 ❌ · 외화 자동 환산 ❌.
 
 ---
 
@@ -594,6 +614,59 @@ CEO Action      🔴 **NONE**
 023 병목 A — transient 생산자 경로        🟢 **HOLD / CLOSED** — 생산자 진입점 부재(코드 위치 확정)
 ```
 🔴 **이 표에 「← 지금 여기」를 다시 붙이지 않는다.** 현재 상태는 위 착수점 절 하나다.
+
+#### 🟢 WU-024 ~ 056 — **결론만** (CPO 확정 2026-10-17 · 전문은 각 `docs/`)
+
+🔴 **이 표를 다시 해석하지 않는다.** 결론만 기준선으로 쓴다. 보호 계약은 위 표에 있다.
+
+```
+024 URL 후보 생산자            🟢 GO  — 🔴🔴 **WU-023 병목 해소** · `__url_candidates__` · AI 0
+025 SSRF 입력 경계             🟢 GO  — 규칙 소유자 하나(`classifyOutboundUrl`) · 사본 금지
+026 fetch DNS rebinding        🟢 GO  — 요청 직전 층(`guardedLookup`)까지 닫았다
+027 배포 게이트                 🟢 GO  — 66커밋 Production 반영
+028 MI 결과 정보구조            🟢 GO  — 가격에 **검증상태** 를 붙였다(「표시가 ↔ 상세확인」)
+029 transient UX               🟢 GO  — 결과를 되물음 «밖» 으로 (입력은 안에 둔다)
+030 ABC 연속 분석               🟢 GO  — 직전 차단 변경 셋 적용
+031 Identity 정확도 감사        🟡 HOLD — 🔴 운영 `[object Object]` 버그 1건 발견·수정
+032 Evidence 완전성             🟡 HOLD — False SAME 0 을 지키는 단조 축 **없다**
+033 잔여 원인                   🟡 HOLD — CONTROL 은 `withConfidence`(WU-004 보강) 로만 성립
+034 BRAND_UNCONFIRMED 분해      🟡 HOLD — 🔴 13 이 아니라 **9** (내 집계 정정)
+035 브랜드 없는 SAME 구조        🟡 HOLD — 안전한 독립 증거 구조 **없음**(SKU/색상 단독 금지)
+036 Human GT 3-Way             🟢 CLOSED — GT 51건 확보(SAME 27 · DIFFERENT 23) · **이후 전 WU 의 분모**
+037 SAME MISS 안전 회복         🟢 GO  — 같은 스토어 다국가 리스팅 1건 회복 · FP 0
+038 직접 URL E2E               🟢 CLOSED — 🔴 벽 셋 확인(그중 가격검증이 뒤에 주범으로 확정)
+039 transient 가격 진입         🟢 GO  — 두 싱크를 MI 입력에서 **합쳤다**(응답 배열은 가른다)
+040 sourcing ↔ 가격비교 추적     🟢 CLOSED — 🔴 `sourcing_candidates` 는 price-history 가 **안 읽는다**
+041 variant 식별자 조사         🟢 CLOSED — GTIN 식별력은 완벽 · 🔴 verdict 효과는 0
+042 GTIN 축 구현                🔴 REVERT — SAME 게이트는 **blockers** 라 축 추가로 안 뚫린다
+043 GTIN variant evidence      🔴 REVERT — 색상 보호 없이 완화하면 **새 False SAME**(C25)
+044 색상 증거 구조              🟢 GO  — `COLOR_VARIANT` 보류 신설(색상사전 확대 0)
+045 SIZE_SYSTEM 비차단          🟢 GO  — +2 SAME · FP 불변
+046 C29/C34 증거 부족           🟡 HOLD — 안전한 기존 증거 없음(MISS 를 억지로 줄이지 않는다)
+047 C34 충돌 · meta desc        🟡 HOLD — meta description 채택 불가(6 안전기준 미달)
+048 baby/kids 품번 정책         🟡 HOLD — **현재 정책 유지가 최적** (AB↔AC 변환 규칙 아님)
+049 해외 참고가격 UI            🟢 GO  — 🔴 원인은 「UI 미구현」이 아니라 **응답 누락**
+049-R 입력 경로 확정            🟢 GO  — 🔴 입력칸은 **2단 접힘** 뒤 · 버튼명은 「🔄 다시 분석」
+050 국내 축 진입 추적            🟡 HOLD — 시장 게이트(KR 증거 둘뿐)는 실재 · 🔴 그 표본의 병목은 아님
+051 KRW 오분류 수정             🟢 GO  — KRW 를 「해외 참고가격」에 넣지 않는다 · 🔴 AI URL 6건은 **상품페이지 0**
+052 목록/상품 판별              🟡 HOLD — 안전한 분리 증거 **없다**(tennis-warehouse 가 오차단된다)
+053 microdata reader           🟢 GO  — JSON-LD 없는 상품을 살렸다(USD 98 · Product scope 1개 게이트)
+054 Product evidence gate      🟡 HOLD — 🔴 **Human SAME 1건이 죽는다**(beaumonde 는 구조화 데이터 0)
+055 가격 검증 병목              🟢 GO  — 🔴🔴 **`priceSource:"detail"` 누락** 이 원인 · 국내 도달 **0 → 5**
+056 국내/해외 집계·노출          🟢 GO  — 응답→화면 연결 완료 · 🔴 `EXCLUDED` 어휘 누출 1건 수정
+```
+
+🔴 **이 트랙에서 반복된 실수 — 다음 세션이 먼저 읽는다**:
+```
+🔴 **칸 이름을 추측했다가 틀린 것이 12번** 이다. 타입/운영 코드에서 **읽고** 쓴다
+   (`crossSellerAxes`✗ · `ProductFacts.category`✗ · `price_krw`✗ · `ExtractedProductData.name`✗ ·
+    `ProductIdentityDna.sku`✗ → 실제는 `identifier` + `tier==="SKU"` …)
+🔴 **운영 게이트를 «지어낸» 것이 1번** — 국내 축 자격을 `verdict==="SAME"` 으로 썼다.
+   실제는 `market==="KR" && priceKrw && priceTier` 이고 그 앞에 `judgeDomesticCandidate` 가 있다.
+   🔴 하니스는 **운영 호출 순서를 그대로 베낀다**(§5-B).
+🔴 **변이가 적용됐는지 확인한다** — 「적용 실패」를 「통과」로 읽은 적이 있다.
+🔴 **단언 좌표를 확인한다** — 엉뚱한 구간을 slice 해 통과한 적이 3번 이상이다.
+```
 
 ### 🟢🟢 WU-010 STEP 1 — **화면 후보 공급 경로는 «셋» 이고 ③이 무관 상품을 올린다**
 
@@ -2541,7 +2614,12 @@ MI 반환까지 와 있고(`candidateOverseasPrice`·`candidateOverseasEvidence`
 🟢 회귀 admin **514 files / 7,663 passed · failed 0** · typecheck **10=baseline** ·
 build exit 0 · guard 6/6 · mutation M1~M6(+M3b) 전부 FAIL · 원상복구 46 passed.
 
-### 🔴🔴 현재 착수점 — **없다. 다음은 코드가 아니다** (CPO 확정 2026-10-13 · WU-018 종결)
+### 🔴 [종료된 기록 · 착수점이 아니다] WU-018 시점의 판단 (2026-10-13)
+
+🔴🔴 **이 절의 제목은 원래 「현재 착수점」이었다 — 착수점이 «둘» 이 되어 강등했다**
+(CPO §12 갱신 GO · 2026-10-17). 🟢 현재 상태는 **§12 맨 앞의 착수점 절 하나** 다.
+🔴 아래 「CTO 가 선제적으로 WU 를 만들지 않는다」 같은 **원칙** 은 여전히 유효하고,
+   「다음은 코드가 아니다」 같은 **그때의 상태 판단** 은 **낡았다**(WU-024~056 이 그 뒤에 있다).
 
 ```
 🟢 WU-016 · 017 · 018 **전부 CLOSED / PASS.** 🔴🔴 그리고 CPO 가 명시했다 —
