@@ -537,21 +537,25 @@ Gemini 내부 검색어 3개가 **전부 품번** 을 썼고 둘은 스스로 `s
 🔴🔴 그리고 그때 CEO 에게 **「`/today` 일괄 확인을 절대 누르지 말 것」** 을 명시해야 한다
 (메모 `gemini-flag-is-a-global-switch-not-a-per-product-control`).
 
-### 🔴🔴 현재 착수점 — **WU-056 CEO 테스트 대기 · 다음 WU 는 CPO 가 지정** (CPO 확정 2026-10-17)
+### 🔴🔴 현재 착수점 — **없다. 핵심 루프 CLOSED · 다음 WU 는 CPO 가 지정** (CPO 확정 2026-10-17)
 
 🔴🔴 **이 절이 §12 의 유일한 현재 상태다.** 아래 WU 표와 그 뒤 절들은 **종료된 결론**
 이고, 「… 지금 여기」로 적힌 줄이 남아 있어도 **이 절이 이긴다.**
 
 ```
-WU-056          🟢 **GO (Code/Deploy)** — 배포 `ac76d74e` · 🟡 **Production UI PASS 미확인**
-CEO Action      🔴 **Production UI 테스트 1회** — 전문 `docs/MI-DOMESTIC-AGGREGATE-056.md` §16
-다음            🔴 **CPO 가 지정한다.** CTO 가 선제적으로 WU 를 만들지 않는다
-CTO 지금 할 일   🔴 **없다** — 코드/기능/정책을 만지지 않는다
+WU-056 / 056-R1  🟢🟢 **CLOSED — Production UI PASS**(CEO 확인 2026-10-17 · 배포 `959cea45`)
+                 확인된 것: 🇰🇷 국내 참고가격 ₩88,000 · 🧾 해외 동일상품 참고가격 EUR 40 ·
+                 원본 상품 `EUR 40.00 + 약 ₩59,960`(🟢 정상 · 제거하지 않았다) ·
+                 두 축 안 섞임 · 내부 토큰 노출 0
+다음             🔴 **CPO 가 지정한다.** CTO 가 선제적으로 WU 를 만들지 않는다
+CTO 지금 할 일    🔴 **없다** — 코드/기능/정책을 만지지 않는다
+CEO Action       🔴 **NONE**
 ```
 
-🟢🟢 **핵심 전략 루프가 코드 축에서 닫혔다** — 이 문장을 그대로 쓴다:
+🟢🟢 **핵심 전략 루프가 Production UI 까지 닫혔다** — 이 문장을 그대로 쓴다:
 > **AI 후보 URL → 우리 MI 판정 → 가격 검증 → 국내/해외 가격비교 집계 → 사용자 UI**
-> 두 축(국내·해외)이 **응답을 타고 화면까지** 연결됐다(WU-049 → 055 → 056).
+> 두 축(국내·해외)이 **응답을 타고 화면까지** 연결됐고 **Production UI 에서 확인됐다**
+> (WU-049 → 055 → 056 → 056-R1 · CEO PASS 2026-10-17).
 
 🔴 **그래도 과장하지 않는다 — 남은 병목 넷은 전부 «제품 정책» 이다**:
 ```
@@ -581,6 +585,7 @@ CTO 지금 할 일   🔴 **없다** — 코드/기능/정책을 만지지 않�
 | 환산 금지 | `overseas-reference.ts` | 통화별로만 집계 · **합계 칸이 없다** · 기호 변환 0 |
 | 참고가격 라벨 | `TIER_LABEL` (WU-056) | `EXCLUDED → "동일상품 아님"` — 🔴 **영문 내부 토큰 노출 금지** |
 | 국내 문구 경계 | `DOMESTIC_REFERENCE_SCOPE` (WU-056) | 🔴 「판매판정 미반영」을 **국내에 단정하지 않는다**(알림 경로 때문) |
+| 🔴 **가격 구역 식별** | `wu-056r1-price-section-identity.test.ts` | 구역 제목 **상호 비포함** · 해외 구역 «안» 에 `₩`/`약`/`≈`/통화기호 **0** · 아이콘 중복 금지 — **Panel mount DOM 으로** 본다 |
 
 🔴 **금지는 그대로 유효하다** — AI/Gemini API ❌ · 소비자 구독 우회 ❌ · Registry 확대 ❌ ·
 sourcing → price comparison 연결 ❌ · threshold 완화 ❌ · PRESUMED_SAME 자동 승격 ❌ ·
@@ -654,6 +659,9 @@ SKU-only / GTIN-only SAME ❌ · 색상사전 확대 ❌ · transient 영구 저
 054 Product evidence gate      🟡 HOLD — 🔴 **Human SAME 1건이 죽는다**(beaumonde 는 구조화 데이터 0)
 055 가격 검증 병목              🟢 GO  — 🔴🔴 **`priceSource:"detail"` 누락** 이 원인 · 국내 도달 **0 → 5**
 056 국내/해외 집계·노출          🟢 GO  — 응답→화면 연결 완료 · 🔴 `EXCLUDED` 어휘 누출 1건 수정
+056-R1 가격 구역 의미 충돌        🟢 **CLOSED / Production UI PASS** — 제목 분리
+       「해외 참고가격」(🌐) → **「해외 동일상품 참고가격」(🧾)**
+       🔴 환산 owner 는 「원본 상품」 헤드라인이었다(내 1차 추적 정정) · krwEquivalent 무변경
 ```
 
 🔴 **이 트랙에서 반복된 실수 — 다음 세션이 먼저 읽는다**:
