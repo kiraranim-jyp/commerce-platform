@@ -17,6 +17,8 @@ import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 /** 🔴 WU-022 — transient 후보 구역. 저장되지 않는 값만 다루는 **표시 전용** 컴포넌트다. */
 /** 🔴 WU-030 — 결론을 한 덩어리로 모으는 요약 블록(표시 전용 · 계산 0). */
 import { ProductJudgementSummary } from "./ProductJudgementSummary";
+import { OverseasReferencePrice } from "./OverseasReferencePrice";
+import type { OverseasPriceSummary } from "./overseas-reference";
 import {
   GeminiTransientCandidates,
   SUPPLIED_URL_HEADING,
@@ -1850,6 +1852,12 @@ export function DomesticPriceIntelligencePanel({
    */
   const [candidateUrlsText, setCandidateUrlsText] = useState("");
   const [urlCandidateEvidence, setUrlCandidateEvidence] = useState<GeminiTransientRow[] | null>(null);
+  /**
+   * 🔴🔴 WU-049 — **해외 참고가격.** MI 가 이미 계산한 집계를 받는다.
+   *    🟢 이 값은 **이번 확인에만** 산다 — GET 경로는 transient 를 넘기지 않아
+   *       항상 비어 있다(설계). 그래서 상태로 들고 다른 값을 덮어쓰지 않는다.
+   */
+  const [overseasReference, setOverseasReference] = useState<OverseasPriceSummary | null>(null);
   /** 🔴 제외된 URL 을 **조용히 버리지 않는다** — 서버가 낸 이유를 그대로 한 줄로 적는다. */
   const [urlCandidateNotice, setUrlCandidateNotice] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
@@ -2072,12 +2080,15 @@ export function DomesticPriceIntelligencePanel({
               notFetchedOverLimit: string[];
             } | null;
           };
+          /** 🔴 WU-049 — 통화별 최저가만 담긴 참고 축(환산 0). 없으면 null. */
+          overseasReference?: OverseasPriceSummary | null;
         };
         setRecheckResult(summarizeRecheckResult(json));
         /** 🔴 **덮어쓴다** — 이전 확인의 후보를 화면에 남기지 않는다(「이번 확인」이므로). */
         setGeminiEvidence(json.domesticShop?.geminiEvidence ?? null);
         setUrlCandidateEvidence(json.domesticShop?.urlCandidateEvidence ?? null);
         setUrlCandidateNotice(describeUrlCandidateMetrics(json.domesticShop?.urlCandidateMetrics ?? null));
+        setOverseasReference(json.overseasReference ?? null);
       }
       await Promise.all([loadPriceHistory(), loadAlerts()]);
     } catch {
@@ -2192,6 +2203,7 @@ export function DomesticPriceIntelligencePanel({
       onCandidateUrlsChange={setCandidateUrlsText}
       urlCandidateEvidence={urlCandidateEvidence}
       urlCandidateNotice={urlCandidateNotice}
+      overseasReference={overseasReference}
       onRecheck={() => void recheckNow()}
       confirmingId={confirmingId}
       onConfirmSameProduct={(id) => void confirmSameProduct(id)}
@@ -2218,14 +2230,22 @@ function TransientCandidateSections({
   web,
   supplied,
   notice,
+  overseasReference,
 }: {
   web?: GeminiTransientRow[] | null;
   supplied?: GeminiTransientRow[] | null;
   notice?: string | null;
+  overseasReference?: OverseasPriceSummary | null;
 }): React.ReactNode {
-  if (!web?.length && !supplied?.length && !notice) return null;
+  if (!web?.length && !supplied?.length && !notice && !overseasReference) return null;
   return (
     <>
+      {/**
+       * 🔴🔴 WU-049 — **해외 참고가격.** MI 가 이미 계산한 값을 그린다.
+       *    🟢 환산 0 · 통화별로만 · 「참고용 · 판매판정 미반영」을 구역이 직접 말한다.
+       *    🔴 국내 최저가/판매판정/등록 payload 에 영향 0 — 표시만 한다.
+       */}
+      <OverseasReferencePrice summary={overseasReference} />
       {/* 🔴 WU-022 — 「지금 확인」이 돌려준 **이번 확인 한정** 후보. DB 링크와
           데이터 수명이 다르므로 구역을 가른다. 판매판정·국내 최저가에 영향 0. */}
       <GeminiTransientCandidates evidence={web} />
@@ -2287,6 +2307,7 @@ export function MiPanelView({
   onCandidateUrlsChange,
   urlCandidateEvidence = null,
   urlCandidateNotice = null,
+  overseasReference = null,
   onRecheck,
   confirmingId = null,
   onConfirmSameProduct,
@@ -2341,6 +2362,8 @@ export function MiPanelView({
   urlCandidateEvidence?: GeminiTransientRow[] | null;
   /** 🔴 제외/미확인 요약 한 줄. 조용히 버리지 않는다. */
   urlCandidateNotice?: string | null;
+  /** 🔴 WU-049 — MI 가 낸 해외 참고가격 집계(환산 0). 없으면 null. */
+  overseasReference?: OverseasPriceSummary | null;
   recheckResult?: RecheckResult | null;
   onRecheck?: () => void;
   confirmingId?: string | null;
@@ -3306,7 +3329,7 @@ export function MiPanelView({
           🟢 그리고 후보가 없으면 두 구역 모두 **아무것도 렌더하지 않는다** —
              기본 화면은 한 픽셀도 바뀌지 않는다(그 성질은 컴포넌트가 보장한다).
         */}
-        <TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} notice={urlCandidateNotice} />
+        <TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} notice={urlCandidateNotice} overseasReference={overseasReference} />
       </div>
     </CollapsibleSection>
   );

@@ -117,6 +117,17 @@ export async function POST(request: Request) {
   // price_alerts 테이블이 아직 없으면(마이그레이션 039 미실행) openAlertIfNotActive/
   // resolveAlertsNotIn이 조용히 no-op이므로 이 블록이 실패해도 위 result는
   // 그대로 반환된다.
+  /**
+   * 🔴🔴 WU-049 — **MI 가 낸 해외 참고가격을 응답에 싣는다.**
+   *
+   * 지금까지 `intelligence` 는 `computeMarketAlert` 를 부르는 데만 쓰이고 **버려졌다**.
+   * 그래서 MI 가 이미 계산한 `candidateOverseasPrice` 를 화면이 **영원히 볼 수 없었다**
+   * (WU-049 추적: GET 경로는 transient 를 안 넘겨 항상 비어 있다).
+   *
+   * 🟢 **새로 계산하지 않는다** — 이미 만든 값을 한 칸 더 내보낼 뿐이다.
+   * 🔴 국내 최저가·판매판정·등록 payload 는 한 글자도 건드리지 않는다.
+   */
+  let intelligence: Awaited<ReturnType<typeof computeMarketIntelligence>> = null;
   try {
     /* 🔴 MI-GEMINI-009 — 방금 돈 Gemini 판정 근거를 **런타임으로** 넘긴다.
      *    저장하지 않았으므로 DB 에서는 읽을 수 없다(§5). 🔴 아래 계산에 영향이
@@ -148,7 +159,7 @@ export async function POST(request: Request) {
       domesticShop.geminiEvidence || domesticShop.urlCandidateEvidence
         ? [...(domesticShop.geminiEvidence ?? []), ...(domesticShop.urlCandidateEvidence ?? [])]
         : null;
-    const intelligence = await computeMarketIntelligence(
+    intelligence = await computeMarketIntelligence(
       snapshotId,
       auth.user.workspaceId,
       transientEvidence,
@@ -175,5 +186,13 @@ export async function POST(request: Request) {
     // 알림 갱신 실패가 가격 확인 자체의 성공/실패를 뒤집지 않는다(PART U 원칙).
   }
 
-  return NextResponse.json({ ...result, domesticShop });
+  return NextResponse.json({
+    ...result,
+    domesticShop,
+    /**
+     * 🔴 **참고 축이다.** 통화별 최저가만 담고 환산하지 않는다.
+     *    값이 없으면 `null` — 「0건」으로 적지 않는다.
+     */
+    overseasReference: intelligence?.candidateOverseasPrice ?? null,
+  });
 }
