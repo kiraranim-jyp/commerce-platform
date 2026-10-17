@@ -213,4 +213,85 @@ describe("WU-054 — Product Evidence Gate 전수 검증", () => {
     },
     10 * 60_000,
   );
+
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴 §addendum — **다음 WU 의 과녁이 맞는지** 한 번만 재 둔다
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * CPO 가 다음 WU 의 목표로 「① 본문 가격 ② 한글 브랜드」를 꼽았다. 🔴 그런데
+   * C27 의 `og:title` 에는 **품번 `B226AC010` 이 그대로 있다**. 그리고 WU-004 가
+   * `confirmBrandCodeInEvidence` 의 건초더미를 **title + url + sku** 로 넓혀 뒀다
+   * (match.ts:601). ⟹ **품번 축이 이미 서 있을 가능성** 이 있다.
+   *
+   * 그렇다면 다음 WU 의 과녁은 「한글 브랜드 사전」이 아니라
+   * **「품번이 확인됐을 때 BRAND_UNCONFIRMED 를 어떻게 다룰 것인가」**(= WU-035 의
+   * 질문)가 된다. 🔴 전제가 틀린 채 큰 WU 를 열면 비싸므로 **구현 0 으로 사실만** 적는다.
+   *
+   * 🔴 새 규칙·새 사전·새 축 **0**. 운영 함수(`withConfidence`)를 그대로 1회 부른다.
+   */
+  maybe(
+    "addendum — C27 의 품번 축이 이미 서 있는가 (다음 WU 과녁 확인)",
+    async () => {
+      const gtRows = (JSON.parse(readFileSync(GT_FILE, "utf8")) as { rows: GtRow[] }).rows;
+      const c27 = gtRows.find((r) => r.id === "C27");
+      expect(c27, "C27 이 GT 에 없다").toBeTruthy();
+
+      const { factsFromProductUrl, withConfidence, productFactsFromListing } = await import("@commerce/crawler");
+
+      /** 🔴 원상품은 WU-038 덤프에 있는 그 스냅샷이 아니다 — C27 의 origin 은
+       *     junioredition B226AC010 이고, 우리 덤프에 없다. 그래서 **DB 를 다시 읽지
+       *     않고**, 이 addendum 은 **후보 쪽 사실만** 본다(원상품 축은 측정하지 않는다). */
+      const probed = await factsFromProductUrl(c27!.candidateUrl);
+      expect(probed.status, "C27 후보를 열지 못했다").toBe("OK");
+      const cand = probed.candidate!;
+
+      /**
+       * 🔴 **원상품 품번을 «우리가 아는 값» 으로 넣어** 품번 축이 서는지만 본다.
+       *    `B226AC010` 은 C01 에서 이미 확인된 그 상품의 품번이고(원상품 제목이
+       *    「Booty Ghosts … by Bobo Choses」), 지어낸 값이 아니다.
+       * 🔴 브랜드는 **의도적으로 비운다** — 「브랜드 없이 품번만 있을 때」를 재는 것이
+       *    이 addendum 의 목적이다.
+       */
+      const originFactsLike = productFactsFromListing({
+        title: "Booty Ghosts Long Sleeve T-Shirt",
+        /**
+         * 🔴🔴 **1차 실행에서 내 하니스가 틀렸다.** origin URL 을 후보 URL 에서
+         *    만들어 **호스트가 같아졌고**(beaumonde.co.kr), 그래서
+         *    `SAME_SELLER_DISTINCT_LISTING` 이 **거짓으로** 발화했다.
+         *    🟢 실제 C27 의 origin 은 **junioredition.com** 이다(GT 에 적혀 있다).
+         */
+        url: "https://www.junioredition.com/en-kr/products/booty-ghosts-long-sleeve-t-shirt",
+        brand: undefined,
+      });
+      const scored = withConfidence(
+        {
+          title: "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+          sku: "B226AC010",
+          sourceUrl: "https://www.junioredition.com/en-kr/products/booty-ghosts-long-sleeve-t-shirt",
+          facts: { ...originFactsLike, brandModelCode: "B226AC010" },
+        } as never,
+        [cand] as never,
+      );
+      const s = scored[0] as unknown as {
+        crossSellerVerdict?: string;
+        crossSellerBlockers?: ({ blocker: string } | string)[];
+        facts?: { brandModelCode?: string | null; brand?: string | null };
+      };
+
+      // eslint-disable-next-line no-console
+      console.log(
+        `\n[WU-054 addendum] C27 후보 제목=${JSON.stringify(cand.title?.slice(0, 70))}\n` +
+          `   후보 facts.brandModelCode = ${JSON.stringify(s.facts?.brandModelCode ?? null)}\n` +
+          `   후보 facts.brand          = ${JSON.stringify(s.facts?.brand ?? null)}\n` +
+          `   verdict = ${s.crossSellerVerdict ?? "null"} · blockers = ${JSON.stringify(
+            (s.crossSellerBlockers ?? []).map((b) => (typeof b === "string" ? b : b.blocker)),
+          )}`,
+      );
+
+      /** 🔴 단언은 **관측 성립** 까지만 — 기대값을 박지 않는다(이건 측정이다). */
+      expect(cand.title, "후보 제목이 비었다").toBeTruthy();
+    },
+    10 * 60_000,
+  );
 });

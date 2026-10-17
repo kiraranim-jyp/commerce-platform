@@ -241,4 +241,46 @@ security 🟢 fetch/URL 경로 **무변경** — SSRF·redirect·DNS rebinding·
      tennis 2건은 이 집합 밖이므로 「microdata 가 51건에서 쓸모없었다」로 읽지 않는다.
 ```
 
+---
+
+## ⑭ 🟢🟢 Addendum — **다음 WU 의 과녁 ③ 이 틀렸다** (HTTP 1회 · 구현 0)
+
+CPO 가 다음 WU 목표로 「① 본문 가격 ② 한글 브랜드」를 꼽았다. 🔴 큰 WU 를 틀린 전제로
+열면 비싸므로 **한 번만** 쟀다 — 운영 `factsFromProductUrl` + `withConfidence` 1회.
+
+```
+C27 후보 제목 = "보보쇼즈 26FW 아동 긴팔 티셔츠 Booty Ghosts T-shirt B226AC010"
+  후보 facts.brandModelCode = **"B226AC010"**   🟢🟢 **품번 축이 이미 서 있다**
+  후보 facts.brand          = null
+  verdict = PRESUMED_SAME · blockers = **["BRAND_UNCONFIRMED"]**   ← **단 하나**
+```
+
+🟢 **CONTROL 일치** — WU-036 이 저장해 둔 C27 의 `miBlockers` 가 `["BRAND_UNCONFIRMED"]`
+이고 이 재현이 **정확히 같다**.
+
+🔴🔴 **그래서 과녁이 바뀐다**:
+```
+🟢 「한글 브랜드 사전」은 **품번 축에 불필요하다** — `confirmBrandCodeInEvidence`(WU-004)가
+   `og:title` 에서 `B226AC010` 을 이미 찾아 `brandModelCode` 를 채운다.
+🔴 C27 의 유일한 blocker 는 `BRAND_UNCONFIRMED` 이고, **그것만 풀리면 SAME 이다.**
+🔴 그 질문은 **WU-035 가 HOLD 한 바로 그 질문** 이다 —
+   「브랜드 확인 없이도 SAME 을 안전하게 확정할 수 있는 독립 증거 구조가 있는가」.
+   🟢 **차이는 이제 실제 사례가 있다는 것** 이다(품번 확인 + `.co.kr` + KRW + Human SAME).
+```
+
+🔴 **다음 WU 의 우선순위 제안**(CTO 가 고르지 않았다 · CPO 판정):
+```
+① 본문 텍스트 가격 → VERIFIED_CURRENT 승격 가능성/위험   (가격 축)
+② **품번이 확인된 경우의 BRAND_UNCONFIRMED 처리**        (identity 축 · WU-035 재개)
+③ 한글 브랜드 사전 — 🔴 **셋째로 내린다.** 품번이 이미 서므로 필요성이 약하고,
+   WU-034 의 판매처명 오염 위험이 그대로 남는다
+```
+
+🔴 **하니스 결함 1건을 자진 보고한다** — 1차 실행에서 origin URL 을 후보 URL 로부터
+만들어 **호스트가 같아졌고**(beaumonde.co.kr), `SAME_SELLER_DISTINCT_LISTING` 이
+**거짓으로** 발화했다. 실제 origin(junioredition.com)으로 고친 뒤 blocker 가 하나로
+줄었다. 🔴 고치기 전 숫자를 결론으로 쓰지 않았다.
+
+---
+
 ## CEO Action — **NONE**
