@@ -38,11 +38,35 @@ const CRAWLER_FACTS = readFileSync(
 /* ═══════════════ ① §1 — 추가 HTTP 없이 «이미 받은 HTML» 에서 읽는다 ═══════════════ */
 
 describe("① 🟢 가격은 이미 받은 HTML 의 JSON-LD 에서만 읽는다", () => {
-  it("순수 함수 `extractFromJsonLd` 를 재사용한다 — 새 추출기를 만들지 않았다", () => {
-    expect(CRAWLER_FACTS).toContain('import { extractFromJsonLd } from "../product-data-extractor"');
+  /**
+   * 🔴🔴 **WU-053 에서 이 단언을 갱신했다 — 문자열을 «의도» 로 바꿨다.**
+   *
+   * 원래 단언은 import 줄을 **정확히** `{ extractFromJsonLd }` 로 고정했다. WU-053 이
+   * 그것을 `{ extractFromJsonLd, extractMicrodataFromHtml }` 로 늘렸고 단언이 깨졌다 —
+   * 🟢 **깨진 것이 맞다**(계약을 건드렸으므로 드러나야 한다).
+   *
+   * 🟢 WU-020 이 지키려던 것은 「그 이름 하나」가 아니라 **「Playwright 를 끌어오지 않는
+   *    순수 함수만 쓴다 · 추가 HTTP 0」** 이다(바로 아래 테스트가 `universalExtract`·
+   *    `launchChromium` 부재로 같은 의도를 본다). `extractMicrodataFromHtml` 도
+   *    **HTML 문자열을 받는 순수 함수** 이므로 그 의도는 유지된다.
+   *
+   * 🔴 그래서 **지우지 않고 허용 목록으로** 다시 적는다 — 이 모듈에서 가져오는 이름이
+   *    하나라도 늘면 이 단언이 다시 깨지고, 그때 **의도적으로 승인** 해야 한다.
+   */
+  it("순수 함수만 재사용한다 — Playwright 를 끌어오지 않는다", () => {
+    const importLine = /import \{([^}]+)\} from "\.\.\/product-data-extractor"/.exec(CRAWLER_FACTS)?.[1];
+    expect(importLine, "product-data-extractor import 가 사라졌다").toBeTruthy();
+    const imported = importLine!
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .sort();
+    expect(imported).toEqual(["extractFromJsonLd", "extractMicrodataFromHtml"]);
     /** 🔴 **이미 받아 둔 `html` 변수** 를 넘겨야 한다 — 새로 받으면 HTTP 가 늘어난다. */
     expect(CRAWLER_FACTS).toMatch(/const priced = priceFromJsonLd\(html\)/);
     expect(CRAWLER_FACTS).toMatch(/function priceFromJsonLd\(html: string\)/);
+    /** 🟢 WU-053 — microdata 도 **같은 `html`** 을 받는다(추가 HTTP 0). */
+    expect(CRAWLER_FACTS).toMatch(/extractMicrodataFromHtml\(html\)/);
   });
 
   it("🔴🔴 후보 경로에서 `universalExtract` 를 부르지 않는다(§1 금지)", () => {

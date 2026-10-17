@@ -168,6 +168,77 @@ function readManufacturerProperty(obj: Record<string, unknown>): string | undefi
   return undefined;
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * WU-053 — **HTML 문자열에서 읽는 schema.org Microdata** (순수 · Playwright 0)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴 왜 «또» 하나인가 — 아래 `extractFromMicrodata(page: Page)` 는 `page.evaluate()`
+ *    를 쓴다. 그래서 **Playwright 가 있는 경로에서만** 쓸 수 있고, 후보 경로
+ *    (`factsFromProductUrl` → `fetchPlainHtml`)는 **HTML 문자열만** 들고 있다.
+ *    🟢 WU-020 이 microdata 를 보류한 사유가 정확히 그것이었다(「가치 없음」이 아니다).
+ *
+ * 🔴🔴 **그래서 둘은 «같은 규약» 을 따라야 한다** — selector 를 추측하지 않고
+ *    `[itemprop="…"]` 의 **문서 순서 첫 요소** 를 쓰고, 값은 `content` 속성이 있으면
+ *    그것, 없으면 텍스트다. 아래 DOM 판과 같은 순서다. 🔴 사이트 전용 class 를
+ *    적지 않는다.
+ *
+ * ── 🔴 안전 게이트 하나 (이것이 이 함수의 핵심이다) ─────────────────────────
+ * ```
+ * schema.org/Product scope 가 **정확히 1개** 일 때만 읽는다.
+ *   0개  → 읽을 것이 없다
+ *   2개+ → **목록 페이지** 다(ItemList 안에 Product 가 여럿) → 첫 상품을 읽으면
+ *          그 페이지의 상품 증거가 «거짓» 이 된다 → 읽지 않는다
+ * ```
+ * 🟢 WU-053 실측: JSON-LD 상품 4건은 Product scope **0** 이라 이 함수가 아무것도
+ *    바꾸지 않고, 목록 2건은 microdata 가 **전무** 하며, microdata-only 상품 2건만
+ *    scope **1** 이었다 → 읽는 페이지 2 · 목록 오인 **0**.
+ *
+ * 🔴 **한계를 적는다**(정규식이므로): 중첩 scope 를 추적하지 않고, 텍스트는
+ *    태그가 끼면 비게 된다(그때는 `undefined` — 지어내지 않는다). 가격은
+ *    `itemprop="offers"` 뒤를 **먼저** 보고, 없으면 문서 전체에서 찾는다(DOM 판과 같다).
+ */
+const MICRODATA_PRODUCT_SCOPE = /itemtype\s*=\s*["']https?:\/\/schema\.org\/Product\/?["']/gi;
+
+function microdataValue(html: string, prop: string, fromIndex = 0): string | undefined {
+  const re = new RegExp(`<[^>]*itemprop\\s*=\\s*["']${prop}["'][^>]*>`, "i");
+  const slice = html.slice(fromIndex);
+  const m = re.exec(slice);
+  if (!m) return undefined;
+  /** `content="…"` 가 있으면 그것이 정규값이다(DOM 판의 `attr(el,"content")` 와 같다). */
+  const content = /content\s*=\s*["']([^"']*)["']/i.exec(m[0]);
+  if (content?.[1]?.trim()) return content[1].trim();
+  /** 🔴 태그가 끼면 비는 것이 맞다 — 억지로 긁지 않는다. */
+  const text = new RegExp(`${m[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^<]*)`, "i").exec(slice);
+  return text?.[1]?.trim() || undefined;
+}
+
+export function extractMicrodataFromHtml(html: string): Partial<ExtractedProductData> | null {
+  const scopes = html.match(MICRODATA_PRODUCT_SCOPE);
+  /** 🔴 0개는 「없음」, 2개 이상은 「목록」이다. 둘 다 읽지 않는다. */
+  if (!scopes || scopes.length !== 1) return null;
+
+  const offersAt = html.search(/<[^>]*itemprop\s*=\s*["']offers["']/i);
+  const from = offersAt >= 0 ? offersAt : 0;
+  const priceRaw = microdataValue(html, "price", from) ?? microdataValue(html, "price");
+  const currency = microdataValue(html, "priceCurrency", from) ?? microdataValue(html, "priceCurrency");
+  const priceResolution = priceRaw
+    ? resolvePriceField(priceRaw, currency)
+    : ({ validity: "MISSING" as const, amount: null, currency: null });
+
+  return {
+    title: microdataValue(html, "name"),
+    brand: microdataValue(html, "brand"),
+    sku: microdataValue(html, "sku"),
+    price:
+      priceResolution.validity === "VALID"
+        ? { amount: priceResolution.amount as number, currency: priceResolution.currency as string }
+        : undefined,
+    priceValidity: priceRaw ? priceResolution.validity : undefined,
+    priceRawText: priceResolution.rawText,
+  };
+}
+
 /** JSON-LD Product 노드에서 name/brand/offers/sku/description을 뽑는다.
  * 이미지 추출용 json-ld.strategy.ts와 같은 스크립트 태그를 다시 파싱하지만, 여기서는
  * 이미지가 아니라 상품 정보 필드가 관심사라 별도 파서로 둔다(관심사 분리).

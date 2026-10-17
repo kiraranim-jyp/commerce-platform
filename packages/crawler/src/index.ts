@@ -5,7 +5,12 @@ export * from "./universal-extractor";
 export * from "./description-facts";
 export * from "./brand-resolver";
 export type { ExtractedProductData, ProductDataSource } from "./product-data-extractor";
-export { extractProductGroupOptions, extractFromJsonLd } from "./product-data-extractor";
+export {
+  extractProductGroupOptions,
+  extractFromJsonLd,
+  /** 🔴 WU-053 — HTML 문자열에서 읽는 순수 microdata 리더(Playwright 0). */
+  extractMicrodataFromHtml,
+} from "./product-data-extractor";
 export type { ExtractionTrace } from "./scoring";
 export type { StrategySource } from "./strategies/types";
 export * from "./comparison-search";

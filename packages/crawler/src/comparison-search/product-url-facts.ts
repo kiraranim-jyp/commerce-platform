@@ -5,7 +5,8 @@ import { classifyUrlShape, toCrawlerUrl } from "./url-shape";
 import { extractShopifyHandle, fetchPlainHtml } from "../shopify-product-json";
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
 /** 🔴 MI-020 — **순수 함수** 하나만 가져온다(HTML 문자열 → JSON-LD). Playwright 없다. */
-import { extractFromJsonLd } from "../product-data-extractor";
+/** 🔴 WU-053 — microdata 도 **순수 리더** 로만 가져온다(Product scope 1개 게이트 내장). */
+import { extractFromJsonLd, extractMicrodataFromHtml } from "../product-data-extractor";
 import type { ComparisonCandidate } from "./types";
 
 /**
@@ -226,9 +227,25 @@ async function htmlPath(
   if (!title) {
     return { status: "NO_FACTS", crawlerUrl, dedupeKey, candidate: null, httpCalls: calls, fetchPath: "PLAIN_HTML" };
   }
-  const brand = brandFromHtml(html);
+  /**
+   * 🔴🔴 WU-053 — **JSON-LD 가 없는 정상 상품 페이지를 살린다.**
+   *
+   * WU-020 이 남긴 제한사항이 이것이었다 — tennis-warehouse 는 `application/ld+json`
+   * 이 **0개** 이고 가격이 **microdata** 에 있어서, 후보 경로가 가격을 영구히 못 읽었다.
+   * 🟢 `extractMicrodataFromHtml` 은 **이미 받은 `html`** 만 읽는다(추가 HTTP 0 ·
+   *    Playwright 0)이고, Product scope 가 **정확히 1개** 일 때만 값을 낸다.
+   *
+   * 🔴 **보강만 한다 — 덮어쓰지 않는다.** JSON-LD/`og:*` 가 이미 준 값이 이긴다.
+   *    실측(WU-053): JSON-LD 상품 4건은 Product scope **0** 이라 이 줄이 `null` 이고
+   *    **기존 결과가 한 글자도 바뀌지 않는다.**
+   * 🔴 **`sku` 는 올리지 않는다.** `match.ts:461` 의 SKU exact-match 로 들어가
+   *    identity 판정을 바꿀 수 있고, CPO 가 「False SAME 증가 = 즉시 HOLD」로 못 박았다.
+   *    가격·브랜드는 identity 축이 아니다(brand 는 기존 축이고 값이 **없을 때만** 채운다).
+   */
+  const micro = extractMicrodataFromHtml(html);
+  const brand = brandFromHtml(html) ?? micro?.brand ?? null;
   const facts = productFactsFromListing({ title, url: crawlerUrl, brand });
-  const priced = priceFromJsonLd(html);
+  const priced = priceFromJsonLd(html) ?? micro?.price ?? null;
   return {
     status: "OK",
     crawlerUrl,
