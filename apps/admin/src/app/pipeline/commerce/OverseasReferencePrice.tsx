@@ -32,7 +32,8 @@ export function OverseasReferencePrice({
   title = OVERSEAS_REFERENCE_TITLE,
   note = OVERSEAS_REFERENCE_NOTE,
   scope = OVERSEAS_REFERENCE_SCOPE,
-  icon = "🌐",
+  /** 🔴 WU-056-R1 — 기존 「🌐 글로벌 시장 가격」과 **아이콘이 겹치면 안 된다**(§5 계약). */
+  icon = "🧾",
   testId = "overseas-reference",
   amountTestId = "overseas-lowest",
 }: {
