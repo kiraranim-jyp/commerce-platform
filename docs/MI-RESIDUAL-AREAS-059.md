@@ -293,11 +293,42 @@ build     **exit 0**
 
 ---
 
-## 13~16. Commit / Deploy / Evidence / External API
+## 13. Commit / Push
 
-§13~§16 은 커밋 후 채운다(이 문서와 함께 1회 push).
 ```
-External API  AI 0 · Gemini 0 · 검색 API 0 · 키 0 · 결제 **₩0** · 외부 HTTP **0**
+339cc8e1  measure(059): 잔여 5영역 전수 — 완화하면 False SAME 이 «실제로» 난다 (HOLD, 운영 변경 0)
+1c659f8c  docs(charter): §12 병목 넷 → 다섯으로 정정 — ①의 원인은 증상이 아니라 PRESUMED_SAME 보류다
+git status                                            → clean
+git rev-list --left-right --count origin/main...HEAD  → 0   0
+```
+
+## 14. Deploy
+
+```
+main push → Vercel Production 자동 배포 · `339cc8e1` 분 **● Ready**(duration 4m)
+🔴 커밋 해시는 CLI 가 보여주지 않는다 — **타임스탬프로만** 대응시켰다(단정하지 않는다).
+   확실한 증거는 빌드 로그의 `Commit:` 줄이다(메모 production-307-is-not-route-evidence).
+🟢 **런타임 동작 변경이 0** 이므로 배포 전후 Production 거동이 같아야 한다 — §15 가 그것이다.
+```
+
+## 15. Production Evidence (read-only GET · 인증 앞단)
+
+```
+GET  /                            **200**
+GET  /pipeline                    307   🟢 인증 리다이렉트(정상 보호)
+GET  /today                       307   🟢 같음
+POST /api/price-history/check     401   🟢 인증 가드(정상)
+🔴 307/401 을 「route 가 없다」로 읽지 않는다.
+🔴 그리고 이 네 값은 **동작 무변경의 증거이지 기능 증거가 아니다** — 이 WU 는
+   화면/판정을 바꾸지 않았으므로 Production 에서 «새로 보일 것» 이 없다.
+```
+
+## 16. External API Evidence
+
+```
+AI / Gemini / 외부 검색 API  **0 호출** · 키 0 · 결제 **₩0**
+외부 HTTP                    **0** — 전부 기존 GT 캐시 + 순수 함수
+🟢 Gemini 잔액 ₩3,171 **보존**(flag OFF 유지 · 이 WU 가 flag 를 건드리지 않았다)
 ```
 
 ---
@@ -319,10 +350,10 @@ External API  AI 0 · Gemini 0 · 검색 API 0 · 키 0 · 결제 **₩0** · �
 ## 18. Final Gate
 
 ```
-Code PASS:   🟢        Deploy PASS:            (§14)
+Code PASS:   🟢        Deploy PASS:            🟢
 Test PASS:   🟢        Production UI PASS:     🔴 CEO 확인 필요 여부는 **CPO 판정**
 Type PASS:   🟢        Production API PASS:    ⚪ 해당 없음(외부 호출 0)
-Build PASS:  🟢        Production PASS:        🟡
+Build PASS:  🟢        Production PASS:        🟡 동작 무변경 확인까지(§15)
 ```
 
 ---
