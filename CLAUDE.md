@@ -549,6 +549,20 @@ WU-056 / 056-R1  🟢🟢 **CLOSED — Production UI PASS**(CEO 확인 2026-10-1
                  두 축 안 섞임 · 내부 토큰 노출 0
 WU-058           🟢 **CLOSED** — 소싱 **UI 제거 완료** · 가격비교 **동결 유지** ·
                  남은 정책 **HOLD** (배포 `52046660` · 2026-10-17)
+WU-069           🔴 **HOLD · 품번 보호 동결** — CONFLICT 5건 분해 · 운영 변경 0
+                 🔴🔴 **`compareModelCode` 는 이 5건의 원인이 아니다** — 5건 전부
+                 `crossSeller CONFLICT` 가 **먼저 이긴다**(match-truth.ts:176 > :178).
+                 그래서 modelCode 를 바꾸는 counterfactual 은 **변화 0건** 이었다
+                 🔴 **삼중 잠금** — ①을 「보류」로 내리면 ③`crossSellerReserved` 가 다시
+                 막는다 ⟹ L1·L2·L3 **전부 0건**. 셋을 다 풀어야(L4) 움직인다
+                 🟡 L4 = SAME **+3**(C33·S1-7·S2-3) · False SAME **+0** · 파생 **0/135** ·
+                 prec 87.5→89.5% · recall 37.8→45.9% — 🔴 그러나 **품번 보호의 해체** 다
+                 🔴🔴 과잉 차단의 실체는 **`AC`(kids) ↔ `AB`(baby) 라인 차이** 이고
+                 **WU-048 이 이미 HOLD 한 그 질문** 이다. 🔴 CEO 가 그걸 «인지하고»
+                 SAME 이라 했는지 **미확인**(사유 공란) — 그 답이 L4 의 전제다
+                 🔴 5건의 원인이 셋으로 갈린다 — ⒜ 라인차이 3 ⒝ 샵 자체 SKU 1(kids21
+                 `700005621LBL`) ⒞ **소재 충돌** 1(C35 · 품번 문제가 아니다)
+                 (`docs/MI-MODEL-CODE-CONFLICT-069.md`)
 WU-068           🟡 **HOLD(CPO 검토 대상)** — 통합 GT 63 재계산 · 운영 변경 0
                  🔴 **CPO 집계 정정** — CEO 라벨은 SAME **10** · DIFF **3** · UNCERTAIN **6**
                  (지시서의 11/5 가 아니다). 분모 = 50 + 13 = **63**(UNCERTAIN 7 제외)
@@ -741,6 +755,7 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **색상 생산자는 제목 전용** | `seller-facts.ts:264` (WU-064) | `extractColorFromTitle(title)` **화이트리스트** · HTML 미사용 · 임의 텍스트를 색상으로 쓰지 않는다 |
 | 🔴 **국내 EXACT 0 의 진짜 원인** | `NO_TITLE_OVERLAP` (WU-064) | 한국어 제목 ↔ 영문 원상품 = 토큰 겹침 0 → **관측된 차이** 로 분류돼 EXACT 영구 차단 |
 | 🔴 **국내는 «세 겹» 으로 막힌다** | WU-065 | ①NO_TITLE_OVERLAP ②colorUnverified ③PRESUMED_SAME 보류 — **하나만 풀면 변화 0** |
+| 🔴 **CONFLICT 는 삼중 잠금** | `match-truth.ts:176·178` + `crossSellerReserved` (WU-069) | ①cross CONFLICT ②modelCode conflict ③보류 — **하나만 풀면 변화 0** · 셋 해제는 품번 보호 해체 |
 | 🔴🔴 **`crossSellerReserved` 는 정밀도의 기둥** | `match-truth.ts:233` (WU-066) | 우회하면 186쌍에서 precision **91.7% → 55.6%** · False SAME 1→16 — **영구 폐기안** |
 | 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
