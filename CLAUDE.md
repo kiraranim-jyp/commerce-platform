@@ -549,6 +549,18 @@ WU-056 / 056-R1  🟢🟢 **CLOSED — Production UI PASS**(CEO 확인 2026-10-1
                  두 축 안 섞임 · 내부 토큰 노출 0
 WU-058           🟢 **CLOSED** — 소싱 **UI 제거 완료** · 가격비교 **동결 유지** ·
                  남은 정책 **HOLD** (배포 `52046660` · 2026-10-17)
+WU-063           🔴 **HOLD** — 국내 체인 전수 역추적 · 운영 변경 0 · **완화 불가를 증명했다**
+                 🔴🔴 병목이 **셋** 이고 가격 parser 는 그중 **최소** 다(17건 중 2건).
+                 종착지: 국내버킷 **5**(전부 COMPARISON) · 해외 4(올바름) ·
+                 **KRW+UNKNOWN 4**(최대 회수 대상) · 가격없음 2 · EXCLUDED 2(올바름)
+                 🔴🔴 **국내 EXACT 0 의 원인 = 색상 «미확인»** — 5건 전부
+                 `modelCode exact` + `colorUnverified true` · 후보 `colorText` **전건 null**
+                 ⟹ MI threshold/SAME 조건과 **무관** 하다
+                 🔴 CF 다섯 **전부 기각** — 특히 CF-4(색상 완화)는 **순손실** 이다
+                 (올라가는 2건이 **둘 다 Human DIFFERENT** · Human SAME 회복 **0**)
+                 🔴 CF-2(KR 증거 확대)는 **같은 샵 안에서 갈린다**(donokids C21✓C22✓**C43✗**)
+                 🟢 해외 대조군 오탐 0 · 🟢 상품페이지/가격/priceStatus 는 국내가 약하지 않다
+                 (`docs/MI-DOMESTIC-CHAIN-063.md`)
 WU-062           🟢 **구현 완료 / 배포** — `EXCLUDED` 를 **해외 금액 집계에서만** 제외(**1줄**)
                  🟢 관측은 남는다 — `byPriceTier`/`byMarket`/`count` **불변** ⟹ 「동일상품 아님 N」 유지
                  🔴 **셀러가 보는 숫자가 바뀐다** — EUR 최저 9→40 · USD 12→98 · 「판매처 N곳」 감소
@@ -667,6 +679,9 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **후보 가격 계층은 둘** | `product-url-facts.ts:248` (WU-061) | `priceFromJsonLd ?? micro?.price` **만** · `extractFromOpenGraph` 는 **원상품 전용**(후보에 끌어오면 불일치) |
 | 🔴 **해외 금액 집계 = EXCLUDED 제외** | `candidate-market.ts` (WU-062) | 금액(`byCurrency`)에서만 뺀다 · `byPriceTier`/`byMarket`/`count` **유지** · `REFERENCE` 는 **빼지 않는다** |
 | 🟢 **transient 는 알림 0** | `computeSellerAction`+`computeMarketAlert` | transient 만 있으면 alert **null** · 🔴 `priceLevel` 이 오르는 순간 **열린다**(CF-3 과 결합) |
+| 🔴 **색상 축이 국내 마지막 방어** | `isColorUnverified` (WU-063) | 국내 버킷 5건 전부 `exact`+`colorUnverified` · 풀면 **Human DIFFERENT 2건만** 올라간다(순손실) |
+| 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
+| 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
 
 🔴 **금지는 그대로 유효하다** — AI/Gemini API ❌ · 소비자 구독 우회 ❌ · Registry 확대 ❌ ·
 sourcing → price comparison 연결 ❌ · threshold 완화 ❌ · PRESUMED_SAME 자동 승격 ❌ ·
