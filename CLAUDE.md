@@ -549,6 +549,18 @@ WU-056 / 056-R1  🟢🟢 **CLOSED — Production UI PASS**(CEO 확인 2026-10-1
                  두 축 안 섞임 · 내부 토큰 노출 0
 WU-058           🟢 **CLOSED** — 소싱 **UI 제거 완료** · 가격비교 **동결 유지** ·
                  남은 정책 **HOLD** (배포 `52046660` · 2026-10-17)
+WU-064           🔴 **HOLD** — 국내 색상 evidence · 운영 변경 0
+                 🔴🔴 **색상을 «완벽히» 복구해도 tier 변화가 «0건» 이다**(EXACT 12 → 12).
+                 ⟹ WU-063 의 「색상 미확인이 직접 원인」을 **정정한다** — 그것은 EXACT
+                 게이트에서 **마지막으로** 걸리는 조건이지 「그것만 풀면 된다」가 아니다.
+                 🟢🟢 **진짜 원인은 「한국어 제목」** 이다 → 원상품(영문)과 토큰 겹침 0
+                 → `NO_TITLE_OVERLAP`(관측된 차이) → **색상·품번과 무관하게** EXACT 차단
+                 🔴 원인 위치: `seller-facts.ts:264` 가 **제목 전용** 이고 HTML 을 안 본다 ·
+                 `extractColorFromTitle` 은 **화이트리스트** 다(주석이 한계를 자인한다)
+                 🔴 국내 17건 HTML — JSON-LD color **1/17** · itemprop/og **0/17**
+                 🟡 결합 CF(색상 복구 **+** NO_TITLE_OVERLAP 비차단) → 국내 EXACT **1건**
+                 (C47) · **FP 0** · precision 91.7→92.3% — 🔴 단 **금지 둘** 을 풀어야 하고 **N=1**
+                 (`docs/MI-DOMESTIC-COLOR-EVIDENCE-064.md`)
 WU-063           🔴 **HOLD** — 국내 체인 전수 역추적 · 운영 변경 0 · **완화 불가를 증명했다**
                  🔴🔴 병목이 **셋** 이고 가격 parser 는 그중 **최소** 다(17건 중 2건).
                  종착지: 국내버킷 **5**(전부 COMPARISON) · 해외 4(올바름) ·
@@ -680,6 +692,8 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **해외 금액 집계 = EXCLUDED 제외** | `candidate-market.ts` (WU-062) | 금액(`byCurrency`)에서만 뺀다 · `byPriceTier`/`byMarket`/`count` **유지** · `REFERENCE` 는 **빼지 않는다** |
 | 🟢 **transient 는 알림 0** | `computeSellerAction`+`computeMarketAlert` | transient 만 있으면 alert **null** · 🔴 `priceLevel` 이 오르는 순간 **열린다**(CF-3 과 결합) |
 | 🔴 **색상 축이 국내 마지막 방어** | `isColorUnverified` (WU-063) | 국내 버킷 5건 전부 `exact`+`colorUnverified` · 풀면 **Human DIFFERENT 2건만** 올라간다(순손실) |
+| 🔴 **색상 생산자는 제목 전용** | `seller-facts.ts:264` (WU-064) | `extractColorFromTitle(title)` **화이트리스트** · HTML 미사용 · 임의 텍스트를 색상으로 쓰지 않는다 |
+| 🔴 **국내 EXACT 0 의 진짜 원인** | `NO_TITLE_OVERLAP` (WU-064) | 한국어 제목 ↔ 영문 원상품 = 토큰 겹침 0 → **관측된 차이** 로 분류돼 EXACT 영구 차단 |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
 
