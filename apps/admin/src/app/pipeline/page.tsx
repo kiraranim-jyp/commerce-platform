@@ -95,6 +95,19 @@ export default function PipelinePage() {
   // 이 값을 받아 "확인 중" 로딩 상태를 보여주고, false로 전환되면 자기
   // 데이터를 다시 읽는다.
   const [priceCheckPriming, setPriceCheckPriming] = useState(false);
+  /**
+   * 🔴🔴 WU-082 — **자동 1회차 응답을 버리지 않는다.**
+   *
+   * 원인(실측): 아래 POST /api/price-history/check 는 `.catch`/`.finally` 만 달려
+   * 있고 **body 를 읽지 않았다**. 그래서 그 응답의 국내/해외 참고 축(transient)이
+   * **통째로 버려졌고**, 패널은 GET 경로만 그리는데 GET 은 transient 를 넘기지
+   * 않는다(WU-049/056 주석). ⟹ 셀러가 「🔄 다시 분석」을 **누르기 전까지**
+   * 국내 가격비교가 화면에 **존재하지 않았다**.
+   *
+   * 🟢 **새 호출 0 · 새 API 0** — 이미 보내던 요청의 응답을 한 번 읽을 뿐이다.
+   * 🔴 판정/가격/집계를 만들지 않는다. 서버가 낸 값을 그대로 패널로 내린다.
+   */
+  const [autoCheckResult, setAutoCheckResult] = useState<unknown>(null);
   const [items, setItems] = useState<WorkspaceItem[]>([]);
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<TabKey>("original");
@@ -467,6 +480,12 @@ export default function PipelinePage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ snapshotId: data.snapshot.id }),
         })
+          /** 🟢 WU-082 — 응답을 **읽는다**. stale-guard 는 아래 finally 와 같은 기준이다. */
+          .then(async (res) => {
+            if (!res.ok) return;
+            const json: unknown = await res.json();
+            if (productRef.current?.sourceUrl === requestedForSourceUrl) setAutoCheckResult(json);
+          })
           .catch(() => {
             // 실패해도 화면 동작에는 영향 없음 — DomesticPriceIntelligencePanel의
             // 기존 "재확인" 버튼으로 판매자가 수동 재시도할 수 있다.
@@ -1203,6 +1222,7 @@ export default function PipelinePage() {
             onDetailOverrideChange={setDetailOverride}
             categoryCachePriming={categoryCachePriming}
             priceCheckPriming={priceCheckPriming}
+            autoCheckResult={autoCheckResult}
           />
 
           {/* P0-UI Epic 1 — JSON/ZIP/원본 URL/처리 리포트 등은 판매자가 매일 볼

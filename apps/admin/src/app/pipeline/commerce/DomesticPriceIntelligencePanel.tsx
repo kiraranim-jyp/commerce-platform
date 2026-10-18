@@ -1719,6 +1719,7 @@ export function DomesticPriceIntelligencePanel({
   onMarketSignalChange,
   onRequestPriceReview,
   autoChecking,
+  autoCheckResult,
   presentation = "FULL",
   onOpenDetail,
   onCloseDetail,
@@ -1769,6 +1770,16 @@ export function DomesticPriceIntelligencePanel({
    * 읽는다 — 컴포넌트 mount 자체를 트리거로 쓰지 않는다는 원칙 그대로,
    * 이 패널은 그 신호를 그냥 전달받아 반응만 한다. */
   autoChecking?: boolean;
+  /**
+   * 🔴🔴 WU-082 — **자동 1회차 POST /check 의 응답.**
+   *
+   * 그 응답에만 있는 참고 축(국내/해외 transient)을 화면이 버리고 있었다 —
+   * page.tsx 가 body 를 읽지 않았고 GET 경로는 transient 를 넘기지 않는다.
+   * 🟢 여기서는 **초기값으로만** 쓴다. 셀러가 「🔄 다시 분석」을 누르면 그 POST
+   *    응답이 **덮어쓴다**(기존 동작 그대로).
+   * 🔴 저장하지 않는다 · GET 이 이 값을 덮지 않는다(WU-059 계약 유지).
+   */
+  autoCheckResult?: unknown;
   /**
    * UX 2.2(CEO 지시, 2026-09-11) — 이 패널의 **표현 무게**. 데이터도, 계산도,
    * 서버 호출도 전혀 달라지지 않는다(아래 useState/useEffect는 어느 값이든
@@ -1868,6 +1879,30 @@ export function DomesticPriceIntelligencePanel({
   const [overseasReference, setOverseasReference] = useState<OverseasPriceSummary | null>(null);
   /** 🔴 WU-056 — 국내 축도 같은 모양이다. **별 state** 다(권위 집계와 섞지 않는다). */
   const [domesticReference, setDomesticReference] = useState<OverseasPriceSummary | null>(null);
+
+  /**
+   * 🔴🔴 WU-082 — **자동 1회차 응답을 참고 축 초기값으로 받는다.**
+   *
+   * 🔴 이 값이 없으면 셀러는 「🔄 다시 분석」을 **누르기 전까지** 국내/해외 참고
+   *    가격을 **볼 수 없다**(실측 원인). 🟢 새 호출 0 — page.tsx 가 이미 보낸
+   *    요청의 응답이다.
+   * 🔴🔴 **`prev ??` 를 쓰지 않는다 — WU-030 계약이 그것을 금지한다**(상품 A→B 에서
+   *    A 의 후보가 남는다). 🟢 그리고 **필요도 없다** — 이 effect 는 `autoCheckResult`
+   *    가 «바뀔 때만» 돌고, 「🔄 다시 분석」은 그 값을 바꾸지 않는다(그 POST 는 패널
+   *    자신의 핸들러가 직접 set 한다). 즉 덮어써도 다시 분석이 진다.
+   */
+  useEffect(() => {
+    if (!autoCheckResult || typeof autoCheckResult !== "object") return;
+    const j = autoCheckResult as {
+      overseasReference?: OverseasPriceSummary | null;
+      domesticReference?: OverseasPriceSummary | null;
+      domesticShop?: { geminiEvidence?: GeminiTransientRow[] | null; urlCandidateEvidence?: GeminiTransientRow[] | null } | null;
+    };
+    setOverseasReference(j.overseasReference ?? null);
+    setDomesticReference(j.domesticReference ?? null);
+    setGeminiEvidence(j.domesticShop?.geminiEvidence ?? null);
+    setUrlCandidateEvidence(j.domesticShop?.urlCandidateEvidence ?? null);
+  }, [autoCheckResult]);
   /** 🔴 제외된 URL 을 **조용히 버리지 않는다** — 서버가 낸 이유를 그대로 한 줄로 적는다. */
   const [urlCandidateNotice, setUrlCandidateNotice] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);

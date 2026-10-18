@@ -282,6 +282,7 @@ export function CommerceWorkspace({
   onDetailOverrideChange,
   categoryCachePriming,
   priceCheckPriming,
+  autoCheckResult,
 }: {
   product: CanonicalProduct;
   /**
@@ -355,6 +356,8 @@ export function CommerceWorkspace({
    * DomesticPriceIntelligencePanel에 그대로 전달해 "확인 중" 로딩 상태를
    * 보여주고, false로 바뀌면 패널이 자기 데이터를 다시 읽게 한다. */
   priceCheckPriming?: boolean;
+  /** 🔴 WU-082 — 자동 1회차 POST /check 의 **응답 그대로**. 서버가 낸 값이고 여기서 가공하지 않는다. */
+  autoCheckResult?: unknown;
 }) {
   // Sprint A-6(작업4) — 이 컴포넌트가 처음 마운트되는 시점 = AI 분석이 끝나고
   // Registration Editor가 실제로 뜬 시점이다. useState 초기화 함수는 최초
@@ -3655,6 +3658,7 @@ export function CommerceWorkspace({
                  구조적으로 성립하지 않는다. */
               profitability={profitability}
               autoChecking={priceCheckPriming}
+              autoCheckResult={autoCheckResult}
               presentation={stageFocus.mi}
               onOpenDetail={openMarketDetail}
               // 되돌아갈 길은 "펼쳐 둔 상태"일 때만 준다 — ②가 현재 단계일 때

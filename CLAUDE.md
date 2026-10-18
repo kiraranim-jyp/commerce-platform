@@ -834,6 +834,44 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
 
+### 🟢🟢 WU-082 `MI-AUTO-CHECK-WIRING` — **국내 가격비교 미노출 원인 확정 + 최소 수정**
+
+🟢 전문 `docs/MI-AUTO-CHECK-WIRING-082.md`. 🔴 API 0 · schema 0 · DB 0 · MI 0 · 가격 0 ·
+시장 0 · 집계 0 · AI 0. 운영 **3 파일 · 약 +35줄** · **새 호출 0**.
+
+🔴🔴 **원인 — 「후보가 없어서」가 아니라 «응답을 버려서» 다**:
+```
+page.tsx:465 자동 1회차 POST /check 가 `.catch`/`.finally` 만 달고 **body 를 읽지 않았다**.
+⟹ 그 응답에만 있는 참고 축(domesticReference · overseasReference ·
+   domesticShop.urlCandidateEvidence)이 **통째로 버려졌다**.
+⟹ 패널은 GET 으로만 그리는데 **GET 은 transient 를 넘기지 않는다**(WU-049/056).
+⟹ 셀러가 「🔄 다시 분석」을 **누르기 전까지 국내 가격비교가 화면에 존재하지 않았다.**
+🔴 **해외 참고가격도 같은 이유로 안 보였다** — 이번 수정이 둘 다 고친다.
+🟢 WU-022 설계가 「⒝ 자동 1회차 포함 여부」를 CPO 결정으로 남긴 **바로 그 자리** 다.
+🟢 WU-081 이 틀린 게 아니다 — 값이 «도달한 상태» 를 쟀고 production 은 도달하지 못했다(분모 차이).
+```
+
+🔴🔴 **시장조사 카테고리는 «실제로 쓰인다» — 제거하지 않았다**:
+```
+① 국내 샵 scope   resolveMarketCategoryScopes (check/route:100 · trigger:76)
+② 해외 scope      comparison/search/route:84
+③ 🔴 **원가 정책**  market-intelligence:568 resolveCategoryCostPolicy  ← 가격 계산에 들어간다
+🟢 셀러 URL 직접 입력 경로(`collectUrlCandidatePool`)는 **안 쓴다**(grep 0) —
+   🔴 그러나 **같은 분석 1회가 ①②③ 을 함께 돌려** 그 경로만 떼어 낼 수 없다.
+⟹ §4 제거 조건 **A 불충족** ⟹ **유지 + owner 보고**(CPO §9).
+```
+
+🔴🔴 **회귀가 내 설계 실수를 잡았다**(§10 포착) — `wu-030` 의 「transient 는 누적되지
+않는다」. 1차 구현의 `setGeminiEvidence((prev) => prev ?? …)` 가 **상품 A 의 후보를
+상품 B 화면에 남긴다**. 🟢 덮어쓰기로 고쳤고 `prev` 는 **애초에 불필요** 했다
+(effect 는 `autoCheckResult` 가 바뀔 때만 돌고 「다시 분석」은 그 값을 안 바꾼다).
+
+🔴🔴 **하니스를 두 번 고쳤다** — ⒜ 1차 render 테스트가 **틀린 컴포넌트**(MiPanelView)를
+마운트했다(effect 는 바깥 패널) ⒝ **변이 5개가 전부 「통과」로 나왔는데 하니스가
+로드조차 안 됐다**(정규식 이스케이프 파손 · 이 트랙 **다섯 번째**). 🟢 고친 뒤 W1~W5 전부 FAIL.
+
+🔴 **CEO Action — Production UI 1회 확인**(보고서 §17 · 「다시 분석을 누르지 않고」 A 시나리오).
+
 ### 🟢🟢 WU-081 `MI-DOMESTIC-REVIEW-UI` — **구현/배포 · CEO 확인 1회 대기**
 
 🟢 전문 `docs/MI-DOMESTIC-REVIEW-UI-081.md`. 🔴 MI 판정 0 · 가격 0 · 시장 0 · 집계 0 ·
