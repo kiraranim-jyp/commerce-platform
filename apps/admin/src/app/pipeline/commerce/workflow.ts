@@ -646,7 +646,7 @@ function buildRegistrationPreparing(signal: PrepareSignal, collectionDone: boole
 
   return {
     key: "REGISTRATION_PREPARING",
-    index: 4,
+    index: 3,
     label: BIG_STEP_LABELS.REGISTRATION_PREPARING,
     status: notReached ? "LOCKED" : done ? "COMPLETED" : "ATTENTION",
     done,
@@ -726,7 +726,7 @@ function buildCommerceRegistering(signal: RegisterSignal, previousDone: boolean)
 
   return {
     key: "COMMERCE_REGISTERING",
-    index: 5,
+    index: 4,
     label: BIG_STEP_LABELS.COMMERCE_REGISTERING,
     status: notReached ? "LOCKED" : done ? "COMPLETED" : "IN_PROGRESS",
     done,

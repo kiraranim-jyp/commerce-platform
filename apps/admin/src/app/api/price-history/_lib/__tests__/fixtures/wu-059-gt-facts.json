@@ -1,0 +1,2512 @@
+{
+ "origins": {
+  "S1": {
+   "canonicalProduct": {
+    "sku": {
+     "value": "B226AC010",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "brand": {
+     "value": "Bobo Choses",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "color": {
+     "value": "Heather Grey",
+     "source": "ORIGINAL",
+     "confidence": 0.7
+    },
+    "price": {
+     "value": {
+      "amount": 37,
+      "currency": "GBP"
+     },
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "title": {
+     "value": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "images": [
+     {
+      "id": "0001",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/297630f2-895f-49d1-be56-4973394509b1-0001.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": true,
+      "useInDescription": false,
+      "useInProductGallery": true
+     }
+    ],
+    "weight": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "options": {
+     "value": [
+      "Size"
+     ],
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "titleKo": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "importer": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "itemName": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "keywords": {
+     "value": [],
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "material": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "seoTitle": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "variants": [
+     {
+      "id": "55603944784248",
+      "sku": "AC22-2",
+      "price": {
+       "amount": 37,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "2-3 Years"
+      },
+      "stockQuantity": 1,
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "55603944817016",
+      "sku": "AC22-2",
+      "price": {
+       "amount": 37,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "4-5 Years"
+      },
+      "stockQuantity": 3,
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "55603944849784",
+      "sku": "AC22-2",
+      "price": {
+       "amount": 37,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "6-7 Years"
+      },
+      "stockQuantity": 3,
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "55603944882552",
+      "sku": "AC22-2",
+      "price": {
+       "amount": 37,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "8-9 Years"
+      },
+      "stockQuantity": 2,
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "55603944915320",
+      "sku": "AC22-2",
+      "price": {
+       "amount": 37,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "10-11 Years"
+      },
+      "stockQuantity": 2,
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "55603944948088",
+      "sku": "AC22-2",
+      "price": {
+       "amount": 37,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "12-13 Years"
+      },
+      "stockQuantity": 1,
+      "stockQuantitySource": "ORIGINAL"
+     }
+    ],
+    "modelName": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "sourceUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+    "description": {
+     "value": "Booty Ghosts Long Sleeve T-Shirt by Bobo Choses. Relaxed fit tee in heather grey, featuring long sleeves, a round neck and a large Bobo Choses ghosts print across the front. Colour - Heather Grey. 100% Organic Cotton. Product code B226AC010 AW26 Made in Portugal.",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "shippingFee": {
+     "value": 0,
+     "source": "DEFAULT",
+     "confidence": 0.5
+    },
+    "shopifyTags": "1-year, 10-years, 11-years, 12-years, 13-years, 2-years, 3-years, 4-years, 5-years, 6-years, 7-years, 8-years, 9-years, bobo-choses, t-shirts, tops",
+    "manufacturer": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "optionGroups": [
+     {
+      "name": "Size",
+      "values": [
+       "2-3 Years",
+       "4-5 Years",
+       "6-7 Years",
+       "8-9 Years",
+       "10-11 Years",
+       "12-13 Years"
+      ]
+     }
+    ],
+    "regularPrice": null,
+    "returnPolicy": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "certification": {
+     "value": "",
+     "source": "DEFAULT",
+     "confidence": 1
+    },
+    "descriptionKo": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "priceValidity": "VALID",
+    "stockQuantity": {
+     "value": 999,
+     "source": "DEFAULT",
+     "confidence": 0.5
+    },
+    "recommendedAge": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "seoDescription": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "brandResolution": {
+     "raw": "Bobo Choses AW26",
+     "confidence": "HIGH",
+     "ruleApplied": [
+      "SEASON_CODE"
+     ]
+    },
+    "countryOfOrigin": {
+     "value": "Portugal",
+     "source": "ORIGINAL",
+     "confidence": 0.75
+    },
+    "careInstructions": {
+     "value": "",
+     "source": "DEFAULT",
+     "confidence": 0
+    },
+    "certificationType": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "childCertification": {
+     "value": null,
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "shopifyProductType": "T Shirt",
+    "categoryRecommendationCache": {
+     "status": "READY",
+     "evidence": [],
+     "candidates": [],
+     "resolvedAt": "2026-08-31T15:46:59.631Z",
+     "sourceUrlKey": "https://www.junioredition.com/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+     "similarityScore": null,
+     "resolverDecision": "REJECT"
+    }
+   }
+  },
+  "S3": {
+   "canonicalProduct": {
+    "sku": {
+     "value": "B126AI018",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "brand": {
+     "value": "Bobo Choses",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "color": {
+     "value": "Green",
+     "source": "ORIGINAL",
+     "confidence": 0.7
+    },
+    "price": {
+     "value": {
+      "amount": 21.6,
+      "currency": "GBP"
+     },
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "title": {
+     "value": "Curious Turnip All Over Swim Cap by Bobo Choses - Last One In Stock - 2-6 Years",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "images": [
+     {
+      "id": "0001",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/abab2cd6-667e-4a4a-b4f1-d72e69bcea02-0001.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": true,
+      "useInDescription": false,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0002",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/15c156f5-6b2d-4023-8a8c-4008d0bc69c5-0002.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0003",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/fc27c0cb-0c99-440e-a81d-800012288c63-0003.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     }
+    ],
+    "weight": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "options": {
+     "value": [
+      "Size"
+     ],
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "titleKo": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "importer": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "itemName": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "keywords": {
+     "value": [],
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "material": {
+     "value": "88% Polyester, 12% Elastane",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "seoTitle": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "variants": [
+     {
+      "id": "55416165106040",
+      "sku": "AC23-2",
+      "price": {
+       "amount": 21.6,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "Kid's Hat 52cm (2-6 Years)"
+      },
+      "stockQuantity": 4,
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "55416165138808",
+      "price": {
+       "amount": 21.6,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "Kid's Hat 54cm (6-10 Years)"
+      },
+      "stockQuantity": 0,
+      "stockQuantitySource": "ORIGINAL"
+     }
+    ],
+    "modelName": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "sourceUrl": "https://www.junioredition.com/en-kr/products/curious-turnip-all-over-swim-cap-by-bobo-choses",
+    "description": {
+     "value": "Curious Turnip All Over Swim Cap by Bobo Choses. Colour - Green. 88% Polyester, 12% Elastane. Hat Size Guide (Approximate): 52 / 2-6 years. 54 / 6-10 years. Product code B126AI018 SS26 Made in China.",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "shippingFee": {
+     "value": 0,
+     "source": "DEFAULT",
+     "confidence": 0.5
+    },
+    "shopifyTags": "10-years, 11-years, 12-years, 13-years, 2-years, 3-years, 4-years, 40-off-sale, 5-years, 50-off-sale, 6-years, 60-off-sale, 7-years, 8-years, 9-years, bobo-choses, bobo-choses-sale, caps, pc-international-non-returnable-sale-item, pc-made-in-china, sale, swimwear",
+    "manufacturer": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "optionGroups": [
+     {
+      "name": "Size",
+      "values": [
+       "Kid's Hat 52cm (2-6 Years)",
+       "Kid's Hat 54cm (6-10 Years)"
+      ]
+     }
+    ],
+    "regularPrice": {
+     "amount": 54,
+     "currency": "GBP"
+    },
+    "returnPolicy": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "certification": {
+     "value": "",
+     "source": "DEFAULT",
+     "confidence": 1
+    },
+    "descriptionKo": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "priceValidity": "VALID",
+    "stockQuantity": {
+     "value": 999,
+     "source": "DEFAULT",
+     "confidence": 0.5
+    },
+    "priceBreakdown": {
+     "feePercent": 10,
+     "shippingKrw": 12000,
+     "marginPercent": 12
+    },
+    "recommendedAge": {
+     "value": "2-6 years",
+     "source": "ORIGINAL",
+     "confidence": 0.7
+    },
+    "seoDescription": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "brandResolution": {
+     "raw": "Bobo Choses 60% Off Sale",
+     "confidence": "HIGH",
+     "ruleApplied": [
+      "MARKETING_SUFFIX"
+     ]
+    },
+    "countryOfOrigin": {
+     "value": "China",
+     "source": "ORIGINAL",
+     "confidence": 0.75
+    },
+    "careInstructions": {
+     "value": "",
+     "source": "DEFAULT",
+     "confidence": 0
+    },
+    "certificationType": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "childCertification": {
+     "value": null,
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "shopifyProductType": "Swim Hat",
+    "channelPriceOverrides": {},
+    "categoryRecommendationCache": {
+     "status": "READY",
+     "evidence": [],
+     "candidates": [
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "영유아동 신발/잡화/기타의류(0~17세)",
+        "남녀공용잡화",
+        "모자",
+        "공용 스냅백/야구모자"
+       ],
+       "score": 100,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "85636",
+          "name": "영유아동 신발/잡화/기타의류(0~17세)"
+         },
+         {
+          "id": "85785",
+          "name": "남녀공용잡화"
+         },
+         {
+          "id": "85789",
+          "name": "모자"
+         },
+         {
+          "id": "70665",
+          "name": "공용 스냅백/야구모자"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 영유아동 신발/잡화/기타의류(0~17세) > 남녀공용잡화 > 모자 > 공용 스냅백/야구모자",
+        "leafName": "공용 스냅백/야구모자",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "70665"
+       },
+       "categoryCode": 70665,
+       "categoryName": "공용 스냅백/야구모자",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "베이비 의류/신발/잡화(~24개월)",
+        "베이비잡화",
+        "신생아모자"
+       ],
+       "score": 100,
+       "hierarchy": {
+        "depth": 5,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "110676",
+          "name": "베이비 의류/신발/잡화(~24개월)"
+         },
+         {
+          "id": "111670",
+          "name": "베이비잡화"
+         },
+         {
+          "id": "111675",
+          "name": "신생아모자"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 베이비 의류/신발/잡화(~24개월) > 베이비잡화 > 신생아모자",
+        "leafName": "신생아모자",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "111675"
+       },
+       "categoryCode": 111675,
+       "categoryName": "신생아모자",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "영유아동 신발/잡화/기타의류(0~17세)",
+        "여아잡화",
+        "모자",
+        "여아 스냅백/야구모자"
+       ],
+       "score": 100,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "85636",
+          "name": "영유아동 신발/잡화/기타의류(0~17세)"
+         },
+         {
+          "id": "85735",
+          "name": "여아잡화"
+         },
+         {
+          "id": "85738",
+          "name": "모자"
+         },
+         {
+          "id": "70391",
+          "name": "여아 스냅백/야구모자"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 영유아동 신발/잡화/기타의류(0~17세) > 여아잡화 > 모자 > 여아 스냅백/야구모자",
+        "leafName": "여아 스냅백/야구모자",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "70391"
+       },
+       "categoryCode": 70391,
+       "categoryName": "여아 스냅백/야구모자",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "영유아동 신발/잡화/기타의류(0~17세)",
+        "여아잡화",
+        "모자",
+        "여아 비니"
+       ],
+       "score": 100,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "85636",
+          "name": "영유아동 신발/잡화/기타의류(0~17세)"
+         },
+         {
+          "id": "85735",
+          "name": "여아잡화"
+         },
+         {
+          "id": "85738",
+          "name": "모자"
+         },
+         {
+          "id": "70393",
+          "name": "여아 비니"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 영유아동 신발/잡화/기타의류(0~17세) > 여아잡화 > 모자 > 여아 비니",
+        "leafName": "여아 비니",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "70393"
+       },
+       "categoryCode": 70393,
+       "categoryName": "여아 비니",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "영유아동 신발/잡화/기타의류(0~17세)",
+        "여아잡화",
+        "모자",
+        "여아 페도라/중절모"
+       ],
+       "score": 100,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "85636",
+          "name": "영유아동 신발/잡화/기타의류(0~17세)"
+         },
+         {
+          "id": "85735",
+          "name": "여아잡화"
+         },
+         {
+          "id": "85738",
+          "name": "모자"
+         },
+         {
+          "id": "70394",
+          "name": "여아 페도라/중절모"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 영유아동 신발/잡화/기타의류(0~17세) > 여아잡화 > 모자 > 여아 페도라/중절모",
+        "leafName": "여아 페도라/중절모",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "70394"
+       },
+       "categoryCode": 70394,
+       "categoryName": "여아 페도라/중절모",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "영유아동 신발/잡화/기타의류(0~17세)",
+        "여아잡화",
+        "모자",
+        "여아 벙거지/챙모자"
+       ],
+       "score": 100,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "85636",
+          "name": "영유아동 신발/잡화/기타의류(0~17세)"
+         },
+         {
+          "id": "85735",
+          "name": "여아잡화"
+         },
+         {
+          "id": "85738",
+          "name": "모자"
+         },
+         {
+          "id": "70395",
+          "name": "여아 벙거지/챙모자"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 영유아동 신발/잡화/기타의류(0~17세) > 여아잡화 > 모자 > 여아 벙거지/챙모자",
+        "leafName": "여아 벙거지/챙모자",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "70395"
+       },
+       "categoryCode": 70395,
+       "categoryName": "여아 벙거지/챙모자",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "영유아동 신발/잡화/기타의류(0~17세)",
+        "여아잡화",
+        "모자",
+        "여아 베레모/헌팅캡"
+       ],
+       "score": 100,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "85636",
+          "name": "영유아동 신발/잡화/기타의류(0~17세)"
+         },
+         {
+          "id": "85735",
+          "name": "여아잡화"
+         },
+         {
+          "id": "85738",
+          "name": "모자"
+         },
+         {
+          "id": "70396",
+          "name": "여아 베레모/헌팅캡"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 영유아동 신발/잡화/기타의류(0~17세) > 여아잡화 > 모자 > 여아 베레모/헌팅캡",
+        "leafName": "여아 베레모/헌팅캡",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "70396"
+       },
+       "categoryCode": 70396,
+       "categoryName": "여아 베레모/헌팅캡",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "영유아동 신발/잡화/기타의류(0~17세)",
+        "여아잡화",
+        "모자",
+        "여아 왕골/밀짚모자"
+       ],
+       "score": 100,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "85636",
+          "name": "영유아동 신발/잡화/기타의류(0~17세)"
+         },
+         {
+          "id": "85735",
+          "name": "여아잡화"
+         },
+         {
+          "id": "85738",
+          "name": "모자"
+         },
+         {
+          "id": "70398",
+          "name": "여아 왕골/밀짚모자"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 영유아동 신발/잡화/기타의류(0~17세) > 여아잡화 > 모자 > 여아 왕골/밀짚모자",
+        "leafName": "여아 왕골/밀짚모자",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "70398"
+       },
+       "categoryCode": 70398,
+       "categoryName": "여아 왕골/밀짚모자",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "영유아동 신발/잡화/기타의류(0~17세)",
+        "여아잡화",
+        "모자",
+        "여아 선캡"
+       ],
+       "score": 100,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "85636",
+          "name": "영유아동 신발/잡화/기타의류(0~17세)"
+         },
+         {
+          "id": "85735",
+          "name": "여아잡화"
+         },
+         {
+          "id": "85738",
+          "name": "모자"
+         },
+         {
+          "id": "70399",
+          "name": "여아 선캡"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 영유아동 신발/잡화/기타의류(0~17세) > 여아잡화 > 모자 > 여아 선캡",
+        "leafName": "여아 선캡",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "70399"
+       },
+       "categoryCode": 70399,
+       "categoryName": "여아 선캡",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "유니섹스/남녀공용 패션",
+        "공용 잡화",
+        "모자",
+        "남녀공용베레모/헌팅캡"
+       ],
+       "score": 95,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "69763",
+          "name": "유니섹스/남녀공용 패션"
+         },
+         {
+          "id": "69797",
+          "name": "공용 잡화"
+         },
+         {
+          "id": "69843",
+          "name": "모자"
+         },
+         {
+          "id": "69849",
+          "name": "남녀공용베레모/헌팅캡"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 유니섹스/남녀공용 패션 > 공용 잡화 > 모자 > 남녀공용베레모/헌팅캡",
+        "leafName": "남녀공용베레모/헌팅캡",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "69849"
+       },
+       "categoryCode": 69849,
+       "categoryName": "남녀공용베레모/헌팅캡",
+       "metaVerified": true
+      }
+     ],
+     "resolvedAt": "2026-09-21T00:19:44.939Z",
+     "sourceUrlKey": "https://www.junioredition.com/products/curious-turnip-all-over-swim-cap-by-bobo-choses",
+     "similarityScore": 100,
+     "resolverDecision": "AUTO_SELECT"
+    }
+   }
+  },
+  "S4": {
+   "canonicalProduct": {
+    "sku": {
+     "value": "AW26MS185",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "brand": {
+     "value": "Main Story",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "color": {
+     "value": "Grey Melange",
+     "source": "ORIGINAL",
+     "confidence": 0.7
+    },
+    "price": {
+     "value": {
+      "amount": 57,
+      "currency": "GBP"
+     },
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "title": {
+     "value": "Bubble Sweatshirt in Grey Melange by Main Story",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "images": [
+     {
+      "id": "0001",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/7d89b395-47c9-4207-bb03-b3e997e512c9-0001.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": true,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0002",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/8939796c-44ea-4873-a7b3-c56285f869ff-0002.jpg",
+      "classification": "MODEL",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0003",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/3a768da1-a48a-4469-ae58-9c1c4686fa7a-0003.jpg",
+      "classification": "MODEL",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0004",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/f3e71c54-bfb3-4670-8bed-56623f617c17-0004.jpg",
+      "classification": "LIFESTYLE",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0005",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/c04e9514-e07d-4509-a063-65bd571e7e6f-0005.jpg",
+      "classification": "LIFESTYLE",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0006",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/32e00633-b27a-479b-927d-9e2c3e765d5f-0006.jpg",
+      "classification": "LIFESTYLE",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0007",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/2cd78640-b839-45e1-8e0a-bc0533fdbc0d-0007.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     }
+    ],
+    "weight": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "options": {
+     "value": [
+      "Size"
+     ],
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "titleKo": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "importer": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "itemName": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "keywords": {
+     "value": [],
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "material": {
+     "value": "100% Organic Cotton",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "seoTitle": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "variants": [
+     {
+      "id": "55625746579832",
+      "sku": "FF21-2",
+      "price": {
+       "amount": 57,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "2 Years"
+      },
+      "stockQuantity": 1,
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "55625746612600",
+      "sku": "FF21-2",
+      "price": {
+       "amount": 57,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "4 Years"
+      },
+      "stockQuantity": 2,
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "55625746645368",
+      "sku": "FF21-2",
+      "price": {
+       "amount": 57,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "6 Years"
+      },
+      "stockQuantity": 2,
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "55625746678136",
+      "sku": "FF21-2",
+      "price": {
+       "amount": 57,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "8 Years"
+      },
+      "stockQuantity": 2,
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "55625746710904",
+      "sku": "FF21-2",
+      "price": {
+       "amount": 57,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "10 Years"
+      },
+      "stockQuantity": 1,
+      "stockQuantitySource": "ORIGINAL"
+     }
+    ],
+    "modelName": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "sourceUrl": "https://www.junioredition.com/en-kr/products/bubble-sweatshirt-in-grey-melange-by-main-story?_pos=1&_sid=a0738e824&_ss=r",
+    "description": {
+     "value": "Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a large Main Story print across the chest, finished with ribbed cuffs, hem and neckline. Colour - Grey Melange. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal.",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "shippingFee": {
+     "value": 0,
+     "source": "DEFAULT",
+     "confidence": 0.5
+    },
+    "shopifyTags": "10-years, 11-years, 2-years, 3-years, 4-years, 5-years, 6-years, 7-years, 8-years, all tops, main-story, sweatshirt, sweatshirts, top, tops",
+    "manufacturer": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "optionGroups": [
+     {
+      "name": "Size",
+      "values": [
+       "2 Years",
+       "4 Years",
+       "6 Years",
+       "8 Years",
+       "10 Years"
+      ]
+     }
+    ],
+    "regularPrice": null,
+    "returnPolicy": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "certification": {
+     "value": "",
+     "source": "DEFAULT",
+     "confidence": 1
+    },
+    "descriptionKo": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "priceValidity": "VALID",
+    "stockQuantity": {
+     "value": 999,
+     "source": "DEFAULT",
+     "confidence": 0.5
+    },
+    "priceBreakdown": {
+     "feePercent": 10,
+     "shippingKrw": 12000,
+     "marginPercent": 12
+    },
+    "recommendedAge": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "seoDescription": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "brandResolution": {
+     "raw": "Main Story AW26",
+     "confidence": "HIGH",
+     "ruleApplied": [
+      "SEASON_CODE"
+     ]
+    },
+    "countryOfOrigin": {
+     "value": "Portugal",
+     "source": "ORIGINAL",
+     "confidence": 0.75
+    },
+    "careInstructions": {
+     "value": "케어라벨 참조",
+     "source": "DEFAULT",
+     "confidence": 0
+    },
+    "certificationType": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "childCertification": {
+     "value": null,
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "shopifyProductType": "Sweatshirt",
+    "categoryRecommendationCache": {
+     "status": "READY",
+     "evidence": [],
+     "candidates": [
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "여성패션",
+        "해외직구",
+        "상의류",
+        "여성 스웨터/니트"
+       ],
+       "score": 95,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "69183",
+          "name": "여성패션"
+         },
+         {
+          "id": "69444",
+          "name": "해외직구"
+         },
+         {
+          "id": "111745",
+          "name": "상의류"
+         },
+         {
+          "id": "69451",
+          "name": "여성 스웨터/니트"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 여성패션 > 해외직구 > 상의류 > 여성 스웨터/니트",
+        "leafName": "여성 스웨터/니트",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "69451"
+       },
+       "categoryCode": 69451,
+       "categoryName": "여성 스웨터/니트",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "여성패션",
+        "여성의류",
+        "골프의류",
+        "여성 골프 니트/가디건"
+       ],
+       "score": 95,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "69183",
+          "name": "여성패션"
+         },
+         {
+          "id": "69184",
+          "name": "여성의류"
+         },
+         {
+          "id": "111637",
+          "name": "골프의류"
+         },
+         {
+          "id": "80993",
+          "name": "여성 골프 니트/가디건"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 여성패션 > 여성의류 > 골프의류 > 여성 골프 니트/가디건",
+        "leafName": "여성 골프 니트/가디건",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "80993"
+       },
+       "categoryCode": 80993,
+       "categoryName": "여성 골프 니트/가디건",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "여성패션",
+        "여성의류",
+        "임산부의류",
+        "가디건",
+        "임산부 숏가디건(볼레로)"
+       ],
+       "score": 95,
+       "hierarchy": {
+        "depth": 7,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "69183",
+          "name": "여성패션"
+         },
+         {
+          "id": "69184",
+          "name": "여성의류"
+         },
+         {
+          "id": "69393",
+          "name": "임산부의류"
+         },
+         {
+          "id": "79303",
+          "name": "가디건"
+         },
+         {
+          "id": "79459",
+          "name": "임산부 숏가디건(볼레로)"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 여성패션 > 여성의류 > 임산부의류 > 가디건 > 임산부 숏가디건(볼레로)",
+        "leafName": "임산부 숏가디건(볼레로)",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "79459"
+       },
+       "categoryCode": 79459,
+       "categoryName": "임산부 숏가디건(볼레로)",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "여성패션",
+        "여성의류",
+        "임산부의류",
+        "가디건",
+        "임산부 기본(허리길이)가디건"
+       ],
+       "score": 95,
+       "hierarchy": {
+        "depth": 7,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "69183",
+          "name": "여성패션"
+         },
+         {
+          "id": "69184",
+          "name": "여성의류"
+         },
+         {
+          "id": "69393",
+          "name": "임산부의류"
+         },
+         {
+          "id": "79303",
+          "name": "가디건"
+         },
+         {
+          "id": "79458",
+          "name": "임산부 기본(허리길이)가디건"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 여성패션 > 여성의류 > 임산부의류 > 가디건 > 임산부 기본(허리길이)가디건",
+        "leafName": "임산부 기본(허리길이)가디건",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "79458"
+       },
+       "categoryCode": 79458,
+       "categoryName": "임산부 기본(허리길이)가디건",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "여성패션",
+        "여성의류",
+        "임산부의류",
+        "가디건",
+        "임산부 롱 가디건"
+       ],
+       "score": 95,
+       "hierarchy": {
+        "depth": 7,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "69183",
+          "name": "여성패션"
+         },
+         {
+          "id": "69184",
+          "name": "여성의류"
+         },
+         {
+          "id": "69393",
+          "name": "임산부의류"
+         },
+         {
+          "id": "79303",
+          "name": "가디건"
+         },
+         {
+          "id": "79457",
+          "name": "임산부 롱 가디건"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 여성패션 > 여성의류 > 임산부의류 > 가디건 > 임산부 롱 가디건",
+        "leafName": "임산부 롱 가디건",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "79457"
+       },
+       "categoryCode": 79457,
+       "categoryName": "임산부 롱 가디건",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "여성패션",
+        "여성의류",
+        "임산부의류",
+        "스웨터/니트",
+        "임산부 후드"
+       ],
+       "score": 95,
+       "hierarchy": {
+        "depth": 7,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "69183",
+          "name": "여성패션"
+         },
+         {
+          "id": "69184",
+          "name": "여성의류"
+         },
+         {
+          "id": "69393",
+          "name": "임산부의류"
+         },
+         {
+          "id": "79302",
+          "name": "스웨터/니트"
+         },
+         {
+          "id": "79456",
+          "name": "임산부 후드"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 여성패션 > 여성의류 > 임산부의류 > 스웨터/니트 > 임산부 후드",
+        "leafName": "임산부 후드",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "79456"
+       },
+       "categoryCode": 79456,
+       "categoryName": "임산부 후드",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "여성패션",
+        "여성의류",
+        "임산부의류",
+        "스웨터/니트",
+        "임산부 카라넥"
+       ],
+       "score": 95,
+       "hierarchy": {
+        "depth": 7,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "69183",
+          "name": "여성패션"
+         },
+         {
+          "id": "69184",
+          "name": "여성의류"
+         },
+         {
+          "id": "69393",
+          "name": "임산부의류"
+         },
+         {
+          "id": "79302",
+          "name": "스웨터/니트"
+         },
+         {
+          "id": "79455",
+          "name": "임산부 카라넥"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 여성패션 > 여성의류 > 임산부의류 > 스웨터/니트 > 임산부 카라넥",
+        "leafName": "임산부 카라넥",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "79455"
+       },
+       "categoryCode": 79455,
+       "categoryName": "임산부 카라넥",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "여성패션",
+        "여성의류",
+        "임산부의류",
+        "스웨터/니트",
+        "임산부 터틀넥"
+       ],
+       "score": 95,
+       "hierarchy": {
+        "depth": 7,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "69183",
+          "name": "여성패션"
+         },
+         {
+          "id": "69184",
+          "name": "여성의류"
+         },
+         {
+          "id": "69393",
+          "name": "임산부의류"
+         },
+         {
+          "id": "79302",
+          "name": "스웨터/니트"
+         },
+         {
+          "id": "79454",
+          "name": "임산부 터틀넥"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 여성패션 > 여성의류 > 임산부의류 > 스웨터/니트 > 임산부 터틀넥",
+        "leafName": "임산부 터틀넥",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "79454"
+       },
+       "categoryCode": 79454,
+       "categoryName": "임산부 터틀넥",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "여성패션",
+        "여성의류",
+        "임산부의류",
+        "스웨터/니트",
+        "임산부 브이넥"
+       ],
+       "score": 95,
+       "hierarchy": {
+        "depth": 7,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "69183",
+          "name": "여성패션"
+         },
+         {
+          "id": "69184",
+          "name": "여성의류"
+         },
+         {
+          "id": "69393",
+          "name": "임산부의류"
+         },
+         {
+          "id": "79302",
+          "name": "스웨터/니트"
+         },
+         {
+          "id": "79453",
+          "name": "임산부 브이넥"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 여성패션 > 여성의류 > 임산부의류 > 스웨터/니트 > 임산부 브이넥",
+        "leafName": "임산부 브이넥",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "79453"
+       },
+       "categoryCode": 79453,
+       "categoryName": "임산부 브이넥",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "도서",
+        "외국도서",
+        "FICTION",
+        "Literary"
+       ],
+       "score": 60,
+       "hierarchy": {
+        "depth": 5,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "66679",
+          "name": "도서"
+         },
+         {
+          "id": "93185",
+          "name": "외국도서"
+         },
+         {
+          "id": "97251",
+          "name": "FICTION"
+         },
+         {
+          "id": "97327",
+          "name": "Literary"
+         }
+        ],
+        "fullPath": "ROOT > 도서 > 외국도서 > FICTION > Literary",
+        "leafName": "Literary",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "97327"
+       },
+       "categoryCode": 97327,
+       "categoryName": "Literary",
+       "metaVerified": true
+      }
+     ],
+     "resolvedAt": "2026-10-07T22:28:08.006Z",
+     "sourceUrlKey": "https://www.junioredition.com/products/bubble-sweatshirt-in-grey-melange-by-main-story",
+     "similarityScore": 95,
+     "resolverDecision": "AUTO_SELECT"
+    }
+   }
+  },
+  "S6": {
+   "canonicalProduct": {
+    "sku": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "brand": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "color": {
+     "value": "Blue",
+     "source": "ORIGINAL",
+     "confidence": 0.7
+    },
+    "price": {
+     "value": {
+      "amount": 26400,
+      "currency": "JPY"
+     },
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "title": {
+     "value": "B.C. Embossed tracksuit jacket",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "images": [
+     {
+      "id": "0001",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/1f990143-50cd-4fed-8605-c2465fb7bccd-0001.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": true,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0002",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/ae13f31b-4277-4343-978f-dc83874e73b5-0002.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0003",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/7a7435cf-638b-4e13-b253-e4a82c1100f5-0003.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0004",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/1656f721-be05-4e3e-883f-02039c0e1865-0004.jpg",
+      "classification": "DETAIL",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0005",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/85acc757-c50a-43d7-9723-dbfb90c90541-0005.jpg",
+      "classification": "DETAIL",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0006",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/636e0eb4-6877-4209-9367-b5dc7b1c78bd-0006.jpg",
+      "classification": "MODEL",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0007",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/6b449a5a-7b37-4ce0-93dd-23ea9b605c63-0007.jpg",
+      "classification": "MODEL",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0008",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/24a7761a-7ff9-4267-b36d-a45d7b825b6d-0008.jpg",
+      "classification": "MODEL",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0009",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/0ee95d1c-d686-4dd1-9ef2-7ddc4a14f2a6-0009.jpg",
+      "classification": "MODEL",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     }
+    ],
+    "weight": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "options": {
+     "value": [
+      "Clothing size"
+     ],
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "titleKo": {
+     "value": "B.C. Embossed tracksuit jacket 키즈 아우터",
+     "source": "AI_GENERATED",
+     "confidence": 0.7
+    },
+    "importer": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "itemName": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "keywords": {
+     "value": [
+      "aw26",
+      "branded",
+      "children",
+      "clothing",
+      "current",
+      "drop-2",
+      "Kid",
+      "outerwear",
+      "키즈 아우터",
+      "아동 아우터",
+      "아우터"
+     ],
+     "source": "ORIGINAL",
+     "confidence": 0.9
+    },
+    "material": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "seoTitle": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "variants": [
+     {
+      "id": "53842860245311",
+      "sku": "B226AC11742101",
+      "price": {
+       "amount": 26400,
+       "currency": "JPY"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Clothing size": "2-3Y"
+      },
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "53842860278079",
+      "sku": "B226AC11742102",
+      "price": {
+       "amount": 26400,
+       "currency": "JPY"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Clothing size": "4-5Y"
+      },
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "53842860310847",
+      "sku": "B226AC11742103",
+      "price": {
+       "amount": 26400,
+       "currency": "JPY"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Clothing size": "6-7Y"
+      },
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "53842860343615",
+      "sku": "B226AC11742104",
+      "price": {
+       "amount": 26400,
+       "currency": "JPY"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Clothing size": "8-9Y"
+      },
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "53842860376383",
+      "sku": "B226AC11742105",
+      "price": {
+       "amount": 26400,
+       "currency": "JPY"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Clothing size": "10-11Y"
+      },
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "53842860409151",
+      "sku": "B226AC11742106",
+      "price": {
+       "amount": 26400,
+       "currency": "JPY"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Clothing size": "12-13Y"
+      },
+      "stockQuantitySource": "ORIGINAL"
+     }
+    ],
+    "modelName": {
+     "value": "B.C. Embossed tracksuit jacket",
+     "source": "ORIGINAL",
+     "confidence": 0.8
+    },
+    "sourceUrl": "https://bobochoses.co.jp/products/b226ac117-b-c-embossed-tracksuit-jacket",
+    "description": {
+     "value": "Blue outerwear. Recycled Polyamide 100%, Polyester 100%. Relaxed fit. Responsibly made in China.",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "shippingFee": {
+     "value": 0,
+     "source": "DEFAULT",
+     "confidence": 0.5
+    },
+    "shopifyTags": "aw26, branded, children, clothing, current, drop-2, Kid, outerwear",
+    "manufacturer": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "optionGroups": [
+     {
+      "name": "Clothing size",
+      "values": [
+       "2-3Y",
+       "4-5Y",
+       "6-7Y",
+       "8-9Y",
+       "10-11Y",
+       "12-13Y"
+      ]
+     }
+    ],
+    "regularPrice": null,
+    "returnPolicy": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "certification": {
+     "value": "",
+     "source": "DEFAULT",
+     "confidence": 1
+    },
+    "descriptionKo": {
+     "value": "상품 종류: 아우터\n색상: Blue\n옵션 Clothing size: 2-3Y, 4-5Y, 6-7Y, 8-9Y, 10-11Y, 12-13Y\n원문 설명: \"Blue outerwear. Recycled Polyamide 100%, Polyester 100%. Relaxed fit. Responsibly made in China.\"",
+     "source": "AI_GENERATED",
+     "confidence": 0.95
+    },
+    "priceValidity": "VALID",
+    "stockQuantity": {
+     "value": 999,
+     "source": "DEFAULT",
+     "confidence": 0.5
+    },
+    "priceBreakdown": {
+     "feePercent": 10,
+     "shippingKrw": 12000,
+     "marginPercent": 12
+    },
+    "recommendedAge": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "seoDescription": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "brandResolution": {
+     "raw": "AW26",
+     "confidence": "HIGH",
+     "ruleApplied": [
+      "SEASON_CODE"
+     ]
+    },
+    "countryOfOrigin": {
+     "value": "China",
+     "source": "ORIGINAL",
+     "confidence": 0.75
+    },
+    "careInstructions": {
+     "value": "케어라벨 참조",
+     "source": "DEFAULT",
+     "confidence": 0
+    },
+    "certificationType": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "childCertification": {
+     "value": null,
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "shopifyProductType": "Outerwear",
+    "categoryRecommendationCache": {
+     "status": "READY",
+     "evidence": [],
+     "candidates": [],
+     "resolvedAt": "2026-10-13T23:03:04.271Z",
+     "sourceUrlKey": "https://bobochoses.co.jp/products/b226ac117-b-c-embossed-tracksuit-jacket",
+     "similarityScore": null,
+     "resolverDecision": "REJECT"
+    }
+   }
+  }
+ },
+ "candidates": {
+  "C27": {
+   "searchId": "S1",
+   "domain": "beaumonde.co.kr",
+   "url": "https://www.beaumonde.co.kr/goods/goods_view.php?goodsNo=1000014021",
+   "humanGt": "SAME",
+   "title": "보보쇼즈 26FW 아동 긴팔 티셔츠 Booty Ghosts T-shirt B226AC010",
+   "facts": {
+    "sourceUrl": "https://www.beaumonde.co.kr/goods/goods_view.php?goodsNo=1000014021",
+    "urlSlug": "goods_view.php",
+    "brand": null,
+    "brandModelCode": null,
+    "sellerSku": null,
+    "title": "보보쇼즈 26FW 아동 긴팔 티셔츠 Booty Ghosts T-shirt B226AC010",
+    "coreTitleTokens": [
+     "보보쇼즈",
+     "26fw",
+     "아동",
+     "긴팔",
+     "티셔츠",
+     "booty",
+     "ghosts",
+     "shirt",
+     "b226ac010"
+    ],
+    "categoryText": null,
+    "colorText": null,
+    "materialText": null,
+    "fitText": null,
+    "ageRangeText": null,
+    "sizeLabels": [],
+    "audienceSignals": [],
+    "imageUrls": []
+   }
+  },
+  "C50": {
+   "searchId": "S6",
+   "domain": "tinyapple.net",
+   "url": "https://www.tinyapple.net/products/bobo-choses-bobo-choses-modern-tracksuit-jacket-multicolor",
+   "humanGt": "DIFFERENT",
+   "title": "Bobo Choses Bobo Choses Modern tracksuit jacket, Multicolor",
+   "facts": {
+    "sourceUrl": "https://www.tinyapple.net/products/bobo-choses-bobo-choses-modern-tracksuit-jacket-multicolor",
+    "urlSlug": "bobo-choses-bobo-choses-modern-tracksuit-jacket-multicolor",
+    "brand": "Bobo Choses",
+    "brandModelCode": null,
+    "sellerSku": null,
+    "title": "Bobo Choses Bobo Choses Modern tracksuit jacket, Multicolor",
+    "coreTitleTokens": [
+     "modern",
+     "tracksuit",
+     "jacket",
+     "multicolor"
+    ],
+    "categoryText": "Top",
+    "colorText": null,
+    "materialText": "Tinyapple | SS26 Bobo Choses | Bobo Choses Modern tracksuit jacket, Multicolor Multicolor outerwear. Designed with long sleeves, zipped, elasticated bottom, elasticated cuffs, mesh lining, high neck, seam pocket and lightweight fabric. 100% Polyester, 100% Recycled Polyamide Wash Cold-30° Do Not Bleach Iron Low(*) Do not Dry-clean Do Not Tumble Dry B126AC151",
+    "fitText": null,
+    "ageRangeText": null,
+    "sizeLabels": [
+     "2-3Y",
+     "4-5Y",
+     "6-7Y",
+     "8-9Y",
+     "10-11Y",
+     "12-13Y"
+    ],
+    "audienceSignals": [
+     "Bobo Choses",
+     " BOY TOPS",
+     " boys top",
+     " boytops",
+     " drop2",
+     " Girl Tops",
+     " girlstop",
+     " girltops",
+     " girtops",
+     " SS26 Bobo Choses",
+     " Sweatshirt",
+     " top",
+     " Tops",
+     " 보보쇼즈",
+     "Top"
+    ],
+    "imageUrls": [
+     "https://cdn.shopify.com/s/files/1/0281/6285/0876/files/GiftnoteFirstgiftformynephewbornyesterday_5b6f6b53-7e3c-4d39-8340-560296e7cb6d.png?v=1770326304",
+     "https://cdn.shopify.com/s/files/1/0281/6285/0876/files/B126AC151_3.jpg?v=1770326314",
+     "https://cdn.shopify.com/s/files/1/0281/6285/0876/files/B126AC151_6.jpg?v=1770326314",
+     "https://cdn.shopify.com/s/files/1/0281/6285/0876/files/download_c1d459b4-692b-4755-bbd5-d6fadfd87b68.jpg?v=1770326314"
+    ]
+   }
+  },
+  "C51": {
+   "searchId": "S6",
+   "domain": "ladida.com",
+   "url": "https://www.ladida.com/products/bobo-choses-multicolor-bc-color-block-tracksuit-jacket",
+   "humanGt": "DIFFERENT",
+   "title": "Bobo Choses Multicolor Bc Color Block Tracksuit Jacket",
+   "facts": {
+    "sourceUrl": "https://www.ladida.com/products/bobo-choses-multicolor-bc-color-block-tracksuit-jacket",
+    "urlSlug": "bobo-choses-multicolor-bc-color-block-tracksuit-jacket",
+    "brand": "Bobo Choses",
+    "brandModelCode": null,
+    "sellerSku": null,
+    "title": "Bobo Choses Multicolor Bc Color Block Tracksuit Jacket",
+    "coreTitleTokens": [
+     "multicolor",
+     "bc",
+     "color",
+     "block",
+     "tracksuit",
+     "jacket"
+    ],
+    "categoryText": "Outerwear",
+    "colorText": null,
+    "materialText": null,
+    "fitText": null,
+    "ageRangeText": null,
+    "sizeLabels": [
+     "4-5Y",
+     "6-7Y",
+     "8-9Y",
+     "2-3Y"
+    ],
+    "audienceSignals": [
+     "124ac054",
+     " 2024",
+     " BACKSTAGE",
+     " boy",
+     " category_hierarchy:boy",
+     " category_hierarchy:boy5outerwear",
+     " category_hierarchy:boy5outerwear5jackets",
+     " jackets",
+     " multicolor",
+     " outerwear",
+     " spring",
+     " ss24",
+     " summer",
+     " sweatshirtsaless24",
+     "Outerwear"
+    ],
+    "imageUrls": [
+     "https://cdn.shopify.com/s/files/1/1078/1720/files/124AC054_1.jpg?v=1704296711",
+     "https://cdn.shopify.com/s/files/1/1078/1720/files/124AC054_2.jpg?v=1704296712",
+     "https://cdn.shopify.com/s/files/1/1078/1720/files/124AC054_5.jpg?v=1704296714",
+     "https://cdn.shopify.com/s/files/1/1078/1720/files/124AC054_3.jpg?v=1704296715",
+     "https://cdn.shopify.com/s/files/1/1078/1720/files/124AC054_4.jpg?v=1704296717",
+     "https://cdn.shopify.com/s/files/1/1078/1720/files/124AC054_6.jpg?v=1704296720"
+    ]
+   }
+  },
+  "C22": {
+   "searchId": "S4",
+   "domain": "donokids.com",
+   "url": "https://www.donokids.com/m/product.html?branduid=3362912",
+   "humanGt": "DIFFERENT",
+   "title": "[[메인스토리] Bubble Sweatshirt _Conker Stripe #AW26MS185]",
+   "facts": {
+    "sourceUrl": "https://www.donokids.com/m/product.html?branduid=3362912",
+    "urlSlug": "product",
+    "brand": null,
+    "brandModelCode": null,
+    "sellerSku": null,
+    "title": "[[메인스토리] Bubble Sweatshirt _Conker Stripe #AW26MS185]",
+    "coreTitleTokens": [
+     "메인스토리",
+     "bubble",
+     "sweatshirt",
+     "conker",
+     "stripe",
+     "aw26ms185"
+    ],
+    "categoryText": null,
+    "colorText": null,
+    "materialText": null,
+    "fitText": null,
+    "ageRangeText": null,
+    "sizeLabels": [],
+    "audienceSignals": [],
+    "imageUrls": []
+   }
+  },
+  "C11": {
+   "searchId": "S3",
+   "domain": "bobochoses.co.jp",
+   "url": "https://bobochoses.co.jp/ja/products/b126ai018-curious-turnip-all-over-swim-cap",
+   "humanGt": "SAME",
+   "title": "Curious Turnip all over swim cap",
+   "facts": {
+    "sourceUrl": "https://bobochoses.co.jp/products/b126ai018-curious-turnip-all-over-swim-cap",
+    "urlSlug": "b126ai018-curious-turnip-all-over-swim-cap",
+    "brand": null,
+    "brandModelCode": "B126AI018",
+    "sellerSku": null,
+    "title": "Curious Turnip all over swim cap",
+    "coreTitleTokens": [
+     "curious",
+     "turnip",
+     "all",
+     "over",
+     "swim",
+     "cap"
+    ],
+    "categoryText": "Hats",
+    "colorText": "green",
+    "materialText": "Green cap. Made in China. Composition: Polyester 88%, Elastane 12%.",
+    "fitText": null,
+    "ageRangeText": null,
+    "sizeLabels": [
+     "HEAD52",
+     "HEAD54"
+    ],
+    "audienceSignals": [
+     "50%",
+     " accessories",
+     " Beachwear",
+     " children",
+     " Current",
+     " drop-2",
+     " ExcludeFromUS",
+     " hats",
+     " Kid",
+     " product-20251212",
+     " ss26",
+     " SS26OfficialSale",
+     "Hats"
+    ],
+    "imageUrls": [
+     "https://cdn.shopify.com/s/files/1/0849/8174/3935/files/B126AI018_3.webp?v=1773914537",
+     "https://cdn.shopify.com/s/files/1/0849/8174/3935/files/B126AI018_1.webp?v=1773914537",
+     "https://cdn.shopify.com/s/files/1/0849/8174/3935/files/B126AI018_2.webp?v=1773914537",
+     "https://cdn.shopify.com/s/files/1/0849/8174/3935/files/B126AI018_7.webp?v=1773914537",
+     "https://cdn.shopify.com/s/files/1/0849/8174/3935/files/B126AI018_6.webp?v=1773914537"
+    ]
+   }
+  },
+  "C48": {
+   "searchId": "S6",
+   "domain": "bobochoses.com",
+   "url": "https://bobochoses.com/products/b226ac117-b-c-embossed-tracksuit-jacket",
+   "humanGt": "SAME",
+   "title": "B.C. Embossed tracksuit jacket",
+   "facts": {
+    "sourceUrl": "https://bobochoses.com/products/b226ac117-b-c-embossed-tracksuit-jacket",
+    "urlSlug": "b226ac117-b-c-embossed-tracksuit-jacket",
+    "brand": "Bobo Choses",
+    "brandModelCode": "B226AC117",
+    "sellerSku": null,
+    "title": "B.C. Embossed tracksuit jacket",
+    "coreTitleTokens": [
+     "embossed",
+     "tracksuit",
+     "jacket"
+    ],
+    "categoryText": "Outerwear",
+    "colorText": "blue",
+    "materialText": "Blue outerwear. Recycled Polyamide 100%, Polyester 100%. Relaxed fit. Responsibly made in China.",
+    "fitText": "relaxed fit",
+    "ageRangeText": null,
+    "sizeLabels": [
+     "2-3Y",
+     "4-5Y",
+     "6-7Y",
+     "8-9Y",
+     "10-11Y",
+     "12-13Y"
+    ],
+    "audienceSignals": [
+     "aw26",
+     " branded",
+     " children",
+     " clothing",
+     " Current",
+     " ExcludeFromUS",
+     " Kid",
+     " outerwear",
+     "Outerwear"
+    ],
+    "imageUrls": [
+     "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC117_8_1.webp?v=1783420449",
+     "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC117_1_1.webp?v=1783420503",
+     "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC117_5_1.webp?v=1783420499",
+     "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC117_4_1.webp?v=1783420494",
+     "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC117_2_1.webp?v=1783420525",
+     "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC117_3_1.webp?v=1783420480",
+     "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC117_6_1.webp?v=1783420474",
+     "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC117_7_2.webp?v=1783420469"
+    ]
+   }
+  }
+ }
+}
