@@ -549,6 +549,17 @@ WU-056 / 056-R1  🟢🟢 **CLOSED — Production UI PASS**(CEO 확인 2026-10-1
                  두 축 안 섞임 · 내부 토큰 노출 0
 WU-058           🟢 **CLOSED** — 소싱 **UI 제거 완료** · 가격비교 **동결 유지** ·
                  남은 정책 **HOLD** (배포 `52046660` · 2026-10-17)
+WU-066           🟡 **HOLD** — GT 확대(186쌍) · 운영 변경 0 · 🔴 **CF-3 REJECT 확정**
+                 🔴 Human GT 는 CTO 가 못 만든다 ⟹ 사람 라벨에서 **함의되는** 쌍만 파생했다
+                 (Human SAME 27 × 다른 원상품 5 = **파생 DIFFERENT 135** · 총 186)
+                 🟢🟢 **A 군 분모를 깼다** — WU-065 의 0 이 **18쌍** 이 됐고 **전부 DIFFERENT**
+                 ⟹ `NO_TITLE_OVERLAP` 은 **진짜 다른 상품을 잘 잡는다.** 풀지 않는다
+                 🔴🔴 **CF-3(`crossSellerReserved` 우회) = 참사** — precision 91.7% → **55.6%** ·
+                 False SAME 1 → **16** · 파생 분모에서 4건 누출 · **C08 이 뚫린다**
+                 🟢 base/cf1/cf2 는 파생 135쌍에서 False SAME **0/135**
+                 🟡 CF-2(제목+색상)만 +1 SAME · FP 0 — 이득이 **1건** 이라 GO 미충족
+                 🔴 **SAME 분모는 27 그대로** — 더 가려면 **코드가 아니라 사람 라벨** 이다
+                 (`docs/MI-EXPANDED-GT-066.md`)
 WU-065           🟡 **HOLD** — `NO_TITLE_OVERLAP` 전수 · 운영 변경 0
                  🔴🔴 **국내 마지막 구간은 «세 겹» 으로 막혀 있다** — ① NO_TITLE_OVERLAP
                  (한국어 제목) ② colorUnverified(색상 추출 실패) ③ crossSellerReserved
@@ -707,6 +718,8 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **색상 생산자는 제목 전용** | `seller-facts.ts:264` (WU-064) | `extractColorFromTitle(title)` **화이트리스트** · HTML 미사용 · 임의 텍스트를 색상으로 쓰지 않는다 |
 | 🔴 **국내 EXACT 0 의 진짜 원인** | `NO_TITLE_OVERLAP` (WU-064) | 한국어 제목 ↔ 영문 원상품 = 토큰 겹침 0 → **관측된 차이** 로 분류돼 EXACT 영구 차단 |
 | 🔴 **국내는 «세 겹» 으로 막힌다** | WU-065 | ①NO_TITLE_OVERLAP ②colorUnverified ③PRESUMED_SAME 보류 — **하나만 풀면 변화 0** |
+| 🔴🔴 **`crossSellerReserved` 는 정밀도의 기둥** | `match-truth.ts:233` (WU-066) | 우회하면 186쌍에서 precision **91.7% → 55.6%** · False SAME 1→16 — **영구 폐기안** |
+| 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
 
