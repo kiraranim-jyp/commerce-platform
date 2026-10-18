@@ -543,10 +543,12 @@ Gemini 내부 검색어 3개가 **전부 품번** 을 썼고 둘은 스스로 `s
 이고, 「… 지금 여기」로 적힌 줄이 남아 있어도 **이 절이 이긴다.**
 
 ```
-WU-073 ~ 078     🟢 **전부 CLOSED**(측정 5 · 구현 1) — 🔴🔴 **결론: 현재 구조의 상한에 닿았다**
+WU-073 ~ 080     🟢 **전부 CLOSED**(측정 7 · 구현 1) — 🔴🔴 **국내 recall 은 현 구조의 한계로 확정**
                  073 발견량은 병목이 아니다 · 074 ④ 원인 확정 · **075 구현/배포**(도착지 방어) ·
-                 076 200 soft-404 HOLD · 077 ⑥ 완화 불가 · 078 언어 축 종료
-                 🔴 **국내 SAME recall 을 보호축 완화로 올리는 길은 전부 닫혔다**(위 통합 계약)
+                 076 200 soft-404 HOLD · 077 ⑥ 완화 불가 · 078 언어 축 종료 ·
+                 079 가격 증거 REJECT(안전 회수 1건이 틀린 상품) · 080 BRAND REJECT(공백은 원상품 쪽)
+                 🔴🔴 **여덟 축 전부에서 「완화 = Human DIFFERENT 동반 개방」이 측정됐다**
+                 (COLOR·TITLE·MODEL_CODE·LINE·MARKET·PRICE·LANGUAGE·BRAND)
 WU-056 / 056-R1  🟢🟢 **CLOSED — Production UI PASS**(CEO 확인 2026-10-17 · 배포 `959cea45`)
                  확인된 것: 🇰🇷 국내 참고가격 ₩88,000 · 🧾 해외 동일상품 참고가격 EUR 40 ·
                  원본 상품 `EUR 40.00 + 약 ₩59,960`(🟢 정상 · 제거하지 않았다) ·
@@ -704,8 +706,9 @@ WU-059           🟢 **CLOSED / HOLD** — 잔여 5영역 전수 측정 · **�
                  ④`fixedPrice` 칸 ⑤C06 False EXACT. 🔴🔴 **①과 ②는 같이 판정한다**
 가격비교 루프      🟢🟢 **CLOSED** — 더 쪼개지 않는다
 다음             🔴 **CPO 가 지정한다.** CTO 가 선제적으로 WU 를 만들지 않는다
-                 🔴 CPO 방향(2026-10-18): 「언어축을 더 파지 않고, **국내 가격비교의 실제
-                 미회수 원인을 «새로운 독립 증거» 에서** 찾는다」 — 🔴 **범위는 미지정**
+                 🔴🔴 CPO 확정(2026-10-18 · WU-080 CLOSED): 「다음 작업은 **기존 8개 보호축을
+                 다시 파는 WU 가 되어서는 안 된다**. 필요하면 **CPO 가 완전히 새로운
+                 독립 증거/경로를 지정** 한다」 — 🔴 **지금은 범위 없음 · CTO 작업 없음**
 CTO 지금 할 일    🔴 **없다** — 코드/기능/정책을 만지지 않는다
 CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7항)
 ```
@@ -787,6 +790,7 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **가격 구역 식별** | `wu-056r1-price-section-identity.test.ts` | 구역 제목 **상호 비포함** · 해외 구역 «안» 에 `₩`/`약`/`≈`/통화기호 **0** · 아이콘 중복 금지 — **Panel mount DOM 으로** 본다 |
 | 🔴 **단계는 넷 · 번호는 파생** | `workflow.ts` · `stage-focus.ts` (WU-058) | 큰 단계 **4** · 라벨에 「소싱」 0 · 단계마다 본문 **하나**(빈 단계 0) · **번호는 배열 순서에서 파생**(하드코딩 금지) |
 | 🔴 **URL 분류기는 양방향 오류** | `classifyUrlShape` (WU-073) | 한국 CMS 목록(`goods_list`·`product_list`·`shopbrand`)이 **PRODUCT_PAGE** · SSG `itemView.ssg` 는 **오차단** — 🔴 「②의 탈락 = 정확한 차단」으로 읽지 않는다 · 고치지 않는다(WU-052 HOLD) |
+| 🔴🔴🔴 **여덟 보호축을 다시 파지 않는다** | WU-063~080 통합 (CPO CLOSED 2026-10-18) | **COLOR · TITLE · MODEL_CODE · LINE · MARKET · PRICE · LANGUAGE · BRAND** — 여덟 축 전부에서 「완화하면 Human DIFFERENT 가 같이 열린다」가 **측정됐다** · 🔴 **국내 recall 은 현 구조의 한계로 «확정»** · 🔴 「gate 가 너무 엄격하다」로 읽지 않는다 · 🔴 **이 축들을 다시 파는 WU 를 만들지 않는다**(새 경로는 **CPO 가 지정**) |
 | 🔴 **domain = brand 금지(계약으로 잠김)** | `wu-080-brand-producer.test.ts` | 도메인/판매처 이름으로 브랜드를 만들면 **2 FAIL** · 🔴 샵이 `brand` 자리에 **자기 이름** 을 적는 경우가 실재한다(biskuit 「비스킷」) |
 | 🔴🔴 **BRAND_UNCONFIRMED 는 «정확한 상태» 다** | `cross-seller.ts:751·999` (WU-080) | 13건 중 6건은 **원상품 brand 가 null** 이라 걸린다(후보는 있다) · 🔴 원상품 공백을 메우면 보류→**충돌** 로 악화(SAME 4 더 막힘 · DIFFERENT 2 열림) |
 | 🔴 **generic 숫자 parser 금지(계약으로 잠김)** | `wu-079-price-producer.test.ts` | 「N원」을 가격으로 쓰면 **4 FAIL** · 🔴 `class`(price/sale/cost) 축은 성공군에서 **5/9 오추출**(배송비·적립금·다른상품) |
@@ -863,6 +867,14 @@ domain(**§17 REJECT 조건**) · seller metadata(C07/C47 이 반증) · brand+m
 🔴 **B3 변이가 1차에서 통과했고 잡아서 하니스를 고쳤다**(§14) — microdata brand 가 있는
 케이스가 없어 분기가 안 탔다. 🟢 보강 후 **1 FAIL**. 🟢 **B5(domain=brand)가 2 FAIL** 로
 그 금지 축을 잠근다.
+
+🔴🔴 **CPO 최종 판정(2026-10-18) — REJECT / CLOSED**:
+```
+BRAND 완화 ❌ · BRAND extractor 수정 ❌ · seller/domain fallback ❌ ·
+추가 WU 자동 생성 ❌ · 기존 MI 보호계약 유지 ✅ · **국내 recall 현 구조의 한계로 확정** ✅
+🟢 「`BRAND_UNCONFIRMED` 는 잘못된 판정이 아니라 **현재 확보된 증거 수준을 정확히
+   반영하는 상태**」(CPO 문장 그대로)
+```
 
 🔴🔴 **누적 결론 — 여덟 축이 같은 답을 냈다**:
 > 국내 SAME recall 을 올리는 모든 경로가 **「보호축 완화」로 수렴** 하고,
