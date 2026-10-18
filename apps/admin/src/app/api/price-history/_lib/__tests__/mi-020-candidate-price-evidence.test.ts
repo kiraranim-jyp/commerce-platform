@@ -77,8 +77,15 @@ describe("① 🟢 가격은 이미 받은 HTML 의 JSON-LD 에서만 읽는다"
 
   it("🔴 htmlPath 의 HTTP 는 **여전히 1회** 다 — fetch 호출을 늘리지 않았다", () => {
     const body = CRAWLER_FACTS.slice(CRAWLER_FACTS.indexOf("async function htmlPath"));
-    const fetches = body.match(/await fetchPlainHtml\(/g) ?? [];
+    /**
+     * 🔴 WU-075 에서 owner 이름이 `fetchPlainHtml` → `fetchPlainHtmlWithFinalUrl` 로
+     *    바뀌었다(최종 도착 URL 을 같이 돌려준다). **성질은 그대로 「1회」** 이므로
+     *    가드를 **유지하고 이름만 넓힌다.** 🔴 동시에 **강화** 한다 — 원시 fetch 로
+     *    몰래 늘리는 길도 막는다(이름만 보면 그 길이 열려 있었다).
+     */
+    const fetches = body.match(/await fetchPlainHtml\w*\(/g) ?? [];
     expect(fetches.length).toBe(1);
+    expect(body).not.toMatch(/fetchWithDomainRateLimit|globalThis\.fetch|await fetch\(/);
     expect(body).toContain("const calls = priorCalls + 1");
   });
 

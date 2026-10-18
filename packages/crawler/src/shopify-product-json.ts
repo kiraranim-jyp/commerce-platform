@@ -597,17 +597,47 @@ export async function fetchShopifyProductJs(url: string): Promise<ShopifyProduct
   };
 }
 
-/** Playwright 없이 plain fetch로만 HTML을 가져온다 — 통화처럼 Shopify JSON에
- * 빠져 있는 필드를 JSON-LD/OpenGraph 메타에서 보강할 때만 쓰는 best-effort 헬퍼다. */
-export async function fetchPlainHtml(url: string): Promise<string | null> {
+/**
+ * 🔴🔴 WU-075 — **최종 도착 URL 을 같이 돌려준다.**
+ *
+ * `fetch` 는 **이미 리다이렉트를 따라간다**(기본값 `redirect: "follow"`). 그런데
+ * 기존 `fetchPlainHtml` 은 `response.url` 을 **버렸다.** 그래서 호출부가
+ * 「`/products/X` 를 요청했는데 **홈이 왔다**」를 구분할 **수단이 없었다.**
+ *
+ * 🔴 실측(WU-074): CEO 가 「404」라고 판정한 4건이 **전부 HTTP 200** 이었고,
+ *    비상품 6건은 최종 경로가 **정확히 `/`** 였다. `!response.ok` 가드는
+ *    soft-404 에 구조적으로 무력하다.
+ *
+ * 🟢 **추가 HTTP 0** — 같은 응답에서 한 칸을 더 읽을 뿐이다.
+ * 🔴 여기서 «판별» 하지 않는다. 이 함수는 받아오기만 하고, 상품 여부는
+ *    `product-url-facts.ts` 가 `classifyUrlShape` 로 정한다(규칙 소유자를 늘리지 않는다).
+ */
+export async function fetchPlainHtmlWithFinalUrl(
+  url: string,
+): Promise<{ html: string; finalUrl: string } | null> {
   try {
     const response = await fetchWithDomainRateLimit(url, {
       headers: { "User-Agent": CHROME_UA },
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!response.ok) return null;
-    return await response.text();
+    const html = await response.text();
+    // 🔴 `response.url` 이 빈 문자열인 구현도 있다. 그때는 요청 URL 로 둔다 —
+    //    「모른다」를 「다른 곳에 도착했다」로 읽지 않는다.
+    return { html, finalUrl: response.url || url };
   } catch {
     return null;
   }
+}
+
+/**
+ * Playwright 없이 plain fetch로만 HTML을 가져온다 — 통화처럼 Shopify JSON에
+ * 빠져 있는 필드를 JSON-LD/OpenGraph 메타에서 보강할 때만 쓰는 best-effort 헬퍼다.
+ *
+ * 🔴 fetch 규칙의 owner 는 위 `fetchPlainHtmlWithFinalUrl` **하나** 다. 이 함수는
+ *    기존 호출부(site-strategy)를 위해 HTML 만 꺼내 주는 **얇은 껍데기** 다 —
+ *    헤더/타임아웃/상태코드 규칙이 둘로 갈리면 한쪽만 고쳐져 조용히 달라진다.
+ */
+export async function fetchPlainHtml(url: string): Promise<string | null> {
+  return (await fetchPlainHtmlWithFinalUrl(url))?.html ?? null;
 }

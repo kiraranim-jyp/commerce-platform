@@ -781,7 +781,8 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **가격 구역 식별** | `wu-056r1-price-section-identity.test.ts` | 구역 제목 **상호 비포함** · 해외 구역 «안» 에 `₩`/`약`/`≈`/통화기호 **0** · 아이콘 중복 금지 — **Panel mount DOM 으로** 본다 |
 | 🔴 **단계는 넷 · 번호는 파생** | `workflow.ts` · `stage-focus.ts` (WU-058) | 큰 단계 **4** · 라벨에 「소싱」 0 · 단계마다 본문 **하나**(빈 단계 0) · **번호는 배열 순서에서 파생**(하드코딩 금지) |
 | 🔴 **URL 분류기는 양방향 오류** | `classifyUrlShape` (WU-073) | 한국 CMS 목록(`goods_list`·`product_list`·`shopbrand`)이 **PRODUCT_PAGE** · SSG `itemView.ssg` 는 **오차단** — 🔴 「②의 탈락 = 정확한 차단」으로 읽지 않는다 · 고치지 않는다(WU-052 HOLD) |
-| 🔴🔴 **④ 는 «제목» 하나로 통과시킨다** | `product-url-facts.ts:226` · `fetchPlainHtml` (WU-074) | HTTP ok + `<title>` 이 전부 · `response.url` 을 **버린다** → 홈/soft-404 가 상품으로 통과 · 🔴 CEO 의 「404」 4건이 **전부 HTTP 200** |
+| 🟢🟢 **도착지 모양 방어** | `product-url-facts.ts` · `fetchPlainHtmlWithFinalUrl` (WU-075) | `classifyUrlShape(finalUrl) !== PRODUCT_PAGE` ⟹ **`REDIRECTED_AWAY`** · 추가 HTTP **0** · 🔴 fetch owner 는 `fetchPlainHtmlWithFinalUrl` **하나**(`fetchPlainHtml` 은 위임 껍데기) · 🔴 리다이렉트 **없는** 200 soft-404 는 **미방어**(WU-076) |
+| 🔴 **④ 의 과거 결함(WU-074)** | `product-url-facts.ts` (기록) | HTTP ok + `<title>` 이 전부였고 `response.url` 을 버렸다 → 홈/soft-404 가 통과 · 🟢 **WU-075 에서 닫혔다** · 🔴 CEO 의 「404」 4건이 **전부 HTTP 200** 이라는 사실은 유효 |
 | 🟢🟢 **최종 URL 모양이 유일한 안전축** | `classifyUrlShape(finalUrl)` (WU-074) | 비상품 6/6 차단 · 오차단 **0/64** · **추가 HTTP 0** · 🔴 JSON-LD/og:type/soft-404 텍스트는 **전부 정상상품을 죽인다** |
 | 🔴 **방어 배선이 둘로 갈려 있다** | `resolveCandidate` (WU-074) | Gemini 경로만 거친다 · **AI·URL 후보 경로는 안 거친다** · 🔴 고치는 것은 CPO 판정 사안 |
 | 🔴 **발견량은 병목이 아니다** | WU-073 funnel | AI 국내 후보 **46** → 최종 EXACT **0** · 레버는 **② URL 분류 → ⑥ 시장 증거** 순 · 🔴 discovery 를 늘리는 WU 를 만들지 않는다 |
@@ -808,6 +809,31 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
+
+### 🟢🟢 WU-075 `MI-REDIRECT-AWAY` — **구현 완료 / 배포** (안 A · 운영 2파일)
+
+🟢 전문 `docs/MI-REDIRECT-AWAY-075.md`. 🔴 추가 HTTP **0** · 새 판별 규칙 0 · UI 0 · schema 0.
+
+```
+⒜ `fetchPlainHtmlWithFinalUrl`(shopify-product-json.ts) — `response.url` 을 **보존**
+   🔴 기존 `fetchPlainHtml` 은 **남겼다**(새 함수에 위임하는 얇은 껍데기).
+      fetch 규칙 owner 를 둘로 가르지 않기 위해서다 — 기존 호출부/테스트 변경 **0**
+⒝ `product-url-facts.ts` — `classifyUrlShape(finalUrl) !== "PRODUCT_PAGE"` 면
+   **`REDIRECTED_AWAY`**(새 status). 🟢 판별기는 **입구에서 쓰던 그것** 이다
+🟢🟢 소비자 변경 **0** — 두 drop union 이 `ProductUrlFactsStatus` 를 그대로 포함한다
+```
+
+🟢🟢 **실데이터 E2E(CEO 라벨 19건 · 실제 HTTP)** — 비상품 **6/6 제거** · 정상 **13/13 유지** ·
+오차단 **0**. Positive/Negative/경계 **14 계약** · 🔴 mutation **M1 6F · M2 6F ·
+M3(`response.url` 안 씀) 6F · M4 1F** → 복구 14 passed.
+
+🔴 **회귀에서 1 failed 가 났고 이름을 포착했다**(§10) — `mi-020` 의 「htmlPath HTTP 1회」
+가드가 **함수 이름 문자열** 을 세고 있었다. 🟢 성질은 보존됐고 이름만 바뀐 것이라
+가드를 **유지·강화** 했다(원시 `fetch` 추가 경로도 막도록 — **그 가드는 그걸 못 막고 있었다**).
+
+🔴 **남은 상한** — **리다이렉트하지 «않는» 200 soft-404 는 여전히 통과한다**(WU-074 표본
+0건 · 미측정). 🔴 텍스트 휴리스틱은 **넣지 않았다** — WU-076 대상(CPO 지시).
+🔴 `site-strategies/shopify`(원상품 수집)에는 이 방어가 **없다** — 후보 경로가 아니다.
 
 ### 🟢🟢 WU-074 `MI-PRODUCT-EVIDENCE` — **방어는 이미 있다. 배선이 없다** (측정 전용 · 구현 0)
 

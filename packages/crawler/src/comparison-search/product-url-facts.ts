@@ -2,7 +2,7 @@ import { CRAWLER_USER_AGENT } from "../utils/user-agent";
 import { decodeHtmlEntities } from "./html-entities";
 import { productFactsFromListing, productFactsFromShopifyProduct } from "./seller-facts";
 import { classifyUrlShape, toCrawlerUrl } from "./url-shape";
-import { extractShopifyHandle, fetchPlainHtml } from "../shopify-product-json";
+import { extractShopifyHandle, fetchPlainHtmlWithFinalUrl } from "../shopify-product-json";
 import { fetchWithDomainRateLimit } from "../rate-limit/domain-rate-limiter";
 /** 🔴 MI-020 — **순수 함수** 하나만 가져온다(HTML 문자열 → JSON-LD). Playwright 없다. */
 /** 🔴 WU-053 — microdata 도 **순수 리더** 로만 가져온다(Product scope 1개 게이트 내장). */
@@ -49,7 +49,14 @@ export type ProductUrlFactsStatus =
   /** 상품 URL 로 보였지만 응답을 받지 못했다. 「상품이 없다」가 아니다. */
   | "UNREACHABLE"
   /** 응답은 받았지만 상품명조차 읽지 못했다 — 지어내지 않고 멈춘다. */
-  | "NO_FACTS";
+  | "NO_FACTS"
+  /**
+   * 🔴🔴 WU-075 — 상품 URL 로 요청했는데 **도착지가 상품이 아니다**(홈·목록 등).
+   *    soft-404 와 「상품 삭제 후 홈으로 보내기」가 여기로 들어온다. HTTP 는
+   *    **200** 이므로 `UNREACHABLE` 과 구분한다 — 「못 받았다」가 아니라
+   *    **「다른 것을 받았다」** 다.
+   */
+  | "REDIRECTED_AWAY";
 
 export interface ProductUrlFactsResult {
   status: ProductUrlFactsStatus;
@@ -218,11 +225,40 @@ async function htmlPath(
   _domain: string,
   priorCalls: number,
 ): Promise<ProductUrlFactsResult> {
-  const html = await fetchPlainHtml(crawlerUrl);
+  const fetched = await fetchPlainHtmlWithFinalUrl(crawlerUrl);
   const calls = priorCalls + 1;
-  if (html === null) {
+  if (fetched === null) {
     return { status: "UNREACHABLE", crawlerUrl, dedupeKey, candidate: null, httpCalls: calls, fetchPath: "PLAIN_HTML" };
   }
+  const { html, finalUrl } = fetched;
+
+  /**
+   * 🔴🔴 WU-075 — **도착지의 모양을 본다.** (추가 HTTP 0 · 새 규칙 0)
+   *
+   * 지금까지 ④ 의 통과 조건은 「HTTP ok + `<title>` 존재」**뿐** 이었다. 그래서
+   * 「상품 URL → 홈 리다이렉트」가 **상품으로 통과** 했다(WU-074 실측 6/6).
+   *
+   * 🟢 판별기는 **새로 만들지 않는다** — 입구에서 이미 쓴 `classifyUrlShape` 를
+   *    **도착지에** 한 번 더 적용할 뿐이다. 입구에서 `PRODUCT_PAGE` 임을 확인했으므로
+   *    여기서 달라졌다면 **서버가 우리를 다른 곳으로 보냈다** 는 뜻이다.
+   *
+   * 🔴 **측정된 것만 막는다.** JSON-LD 필수화 ❌ · `og:type` 게이트 ❌ ·
+   *    soft-404 텍스트 휴리스틱 ❌ — 셋 다 WU-074 에서 **정상 상품을 죽였다**
+   *    (JSON-LD 12.5% · og:type 9.4% · 텍스트 17.2% 오차단).
+   * 🔴 이 축의 상한도 적어 둔다 — **리다이렉트하지 «않는» 200 soft-404 는 통과한다.**
+   *    그 모양은 WU-074 표본에 0건이었고 **미측정** 이다(WU-076 대상).
+   */
+  if (classifyUrlShape(finalUrl) !== "PRODUCT_PAGE") {
+    return {
+      status: "REDIRECTED_AWAY",
+      crawlerUrl,
+      dedupeKey,
+      candidate: null,
+      httpCalls: calls,
+      fetchPath: "PLAIN_HTML",
+    };
+  }
+
   const title = titleFromHtml(html);
   if (!title) {
     return { status: "NO_FACTS", crawlerUrl, dedupeKey, candidate: null, httpCalls: calls, fetchPath: "PLAIN_HTML" };
