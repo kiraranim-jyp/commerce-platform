@@ -781,6 +781,8 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **가격 구역 식별** | `wu-056r1-price-section-identity.test.ts` | 구역 제목 **상호 비포함** · 해외 구역 «안» 에 `₩`/`약`/`≈`/통화기호 **0** · 아이콘 중복 금지 — **Panel mount DOM 으로** 본다 |
 | 🔴 **단계는 넷 · 번호는 파생** | `workflow.ts` · `stage-focus.ts` (WU-058) | 큰 단계 **4** · 라벨에 「소싱」 0 · 단계마다 본문 **하나**(빈 단계 0) · **번호는 배열 순서에서 파생**(하드코딩 금지) |
 | 🔴 **URL 분류기는 양방향 오류** | `classifyUrlShape` (WU-073) | 한국 CMS 목록(`goods_list`·`product_list`·`shopbrand`)이 **PRODUCT_PAGE** · SSG `itemView.ssg` 는 **오차단** — 🔴 「②의 탈락 = 정확한 차단」으로 읽지 않는다 · 고치지 않는다(WU-052 HOLD) |
+| 🟡 **200 soft-404 는 «능력만» 실재** | WU-076 CONTROL | 40 호스트 중 **2**(littleluna·wconcept · **둘 다 한국몰**) · 🟢 **후보 적중 0/90** → HOLD · 🔴 텍스트 휴리스틱 **금지 유지**(정상상품 11/64 오차단) · 🟢 열 때의 축은 **`canonical`→루트**(오차단 0/64 · 추가 HTTP 0) |
+| 🔴 **CONTROL twin 은 «식별자» 를 바꿔야 한다** | WU-076 | 경로 **마지막 칸** 을 바꾸면 Cafe24 는 `…/display/1/` 꼬리표라 **같은 상품** 이 온다 — 🔴 1차에서 「200 5건」이 나왔고 실제는 **2건** 이었다 · 무효 판정 = **bogus 제목 == 후보 제목** |
 | 🟢🟢 **도착지 모양 방어** | `product-url-facts.ts` · `fetchPlainHtmlWithFinalUrl` (WU-075) | `classifyUrlShape(finalUrl) !== PRODUCT_PAGE` ⟹ **`REDIRECTED_AWAY`** · 추가 HTTP **0** · 🔴 fetch owner 는 `fetchPlainHtmlWithFinalUrl` **하나**(`fetchPlainHtml` 은 위임 껍데기) · 🔴 리다이렉트 **없는** 200 soft-404 는 **미방어**(WU-076) |
 | 🔴 **④ 의 과거 결함(WU-074)** | `product-url-facts.ts` (기록) | HTTP ok + `<title>` 이 전부였고 `response.url` 을 버렸다 → 홈/soft-404 가 통과 · 🟢 **WU-075 에서 닫혔다** · 🔴 CEO 의 「404」 4건이 **전부 HTTP 200** 이라는 사실은 유효 |
 | 🟢🟢 **최종 URL 모양이 유일한 안전축** | `classifyUrlShape(finalUrl)` (WU-074) | 비상품 6/6 차단 · 오차단 **0/64** · **추가 HTTP 0** · 🔴 JSON-LD/og:type/soft-404 텍스트는 **전부 정상상품을 죽인다** |
@@ -809,6 +811,39 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
+
+### 🟡 WU-076 `MI-SOFT404-200` — **능력은 실재 · 적중 0 ⟹ HOLD** (측정 전용 · 구현 0)
+
+🟢 전문 `docs/MI-SOFT404-200-076.md`. 🔴 운영 변경 **0** · 배포 0 · HTTP 139(read-only).
+
+🔴🔴 **Human GT 대신 CONTROL probe 를 썼다** — 같은 호스트에 **존재할 수 없는 상품 URL** 을
+넣고 무엇이 오는지 본다(사람 라벨이 아니라 **사이트가 스스로 내는 반증**).
+
+```
+CONTROL 40 호스트 — 404 **34** · 🔴 **200 2** · 403 2 · 실패 2
+🔴 200 soft-404 «능력» 보유: **littleluna.co.kr · wconcept.co.kr** — **둘 다 한국 쇼핑몰**
+🟢 **실제 후보 적중 0/90** ⟹ CPO 가 미리 정한 **HOLD 조건 성립**
+🟢 덤 — 운영 분포(N=90): OK 66 · UNREACHABLE 15 · **REDIRECTED_AWAY 8** · NO_FACTS 1
+   ⟹ **WU-075 가 실제로 일하고 있다**(WU-074 의 6건보다 2건 더)
+```
+
+🔴🔴 **1차 CONTROL 이 무효였고 내가 잡았다** — 경로 **마지막 칸** 을 바꿨는데 Cafe24 계열은
+마지막이 `…/display/1/` **꼬리표** 라 **같은 상품** 이 왔다(bogus 제목 == 후보 제목).
+🟢 **숫자 세그먼트**(상품번호)를 바꾼 2차에서 biskuit·miniboutique·mustit 은 **전부 404**.
+🔴 **1차의 「200 5건」을 그대로 보고했으면 틀렸다 — 확정값은 2건이다.**
+
+🟢🟢 **「발화한다면 잡을 축」이 확정됐다** — littleluna 의 soft-404 는 `canonical` 이 **사이트 루트** 다.
+🔴 **WU-075 의 축으로는 못 잡는다**(리다이렉트가 없다) ⟹ **두 축은 서로 다른 구멍** 을 덮는다.
+🔴 그러나 **지금 차단 이득 0 · 오차단 0/64** ⟹ 「해롭지 않지만 이득도 0」 → **넣지 않았다**.
+🟢 wconcept 모양(제목 없음)은 기존 `NO_FACTS` 가 **이미 막는다**.
+
+🔴 **`brand == og:site_name` 은 오염 지표로 쓸 수 없다** — 12건 중 **10건이 브랜드 공식몰**
+(bobochoses · main-story)이고 거기서는 그것이 **정답** 이다.
+🟢 WU-074 의 `facts.brand = "Kids21"` 오염은 **WU-075 로 사라졌다**.
+
+🟢 **구멍의 모양을 «실행 계약» 으로 고정했다**(`wu-076-soft404-gap.test.ts` · 네트워크 0) —
+운영이 지금 그 모양을 **통과시킨다**는 것을 owner 호출로 단언한다. 🔴 나중에 막으면
+그 단언이 **FAIL 로 뒤집히고** 그것이 수정 증거다(쿠팡 고시 선례).
 
 ### 🟢🟢 WU-075 `MI-REDIRECT-AWAY` — **구현 완료 / 배포** (안 A · 운영 2파일)
 
