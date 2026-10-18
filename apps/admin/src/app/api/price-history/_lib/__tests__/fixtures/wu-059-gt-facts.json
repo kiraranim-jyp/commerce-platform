@@ -2216,6 +2216,1149 @@
      "resolverDecision": "REJECT"
     }
    }
+  },
+  "S2": {
+   "canonicalProduct": {
+    "sku": {
+     "value": "B226AC009",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "brand": {
+     "value": "Bobo Choses",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "color": {
+     "value": "Light Blue",
+     "source": "ORIGINAL",
+     "confidence": 0.7
+    },
+    "price": {
+     "value": {
+      "amount": 37,
+      "currency": "GBP"
+     },
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "title": {
+     "value": "Hug Hairy Monster T-Shirt by Bobo Choses",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "images": [
+     {
+      "id": "0001",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/57605a5c-d5ea-4357-a106-47d1ef5d797b-0001.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": true,
+      "useInDescription": false,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0002",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/a8849b50-399e-4a2c-b72a-0587365d8e0a-0002.jpg",
+      "classification": "MODEL",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     }
+    ],
+    "weight": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "options": {
+     "value": [
+      "Size"
+     ],
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "titleKo": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "importer": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "itemName": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "keywords": {
+     "value": [],
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "material": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "seoTitle": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "variants": [
+     {
+      "id": "55603976569208",
+      "sku": "AC23-2",
+      "price": {
+       "amount": 37,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "2-3 Years"
+      },
+      "stockQuantity": 2,
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "55603976601976",
+      "sku": "AC23-2",
+      "price": {
+       "amount": 37,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "4-5 Years"
+      },
+      "stockQuantity": 3,
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "55603976634744",
+      "sku": "AC23-2",
+      "price": {
+       "amount": 37,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "6-7 Years"
+      },
+      "stockQuantity": 3,
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "55603976667512",
+      "sku": "AC23-2",
+      "price": {
+       "amount": 37,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "8-9 Years"
+      },
+      "stockQuantity": 3,
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "55603976700280",
+      "sku": "AC23-2",
+      "price": {
+       "amount": 37,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "10-11 Years"
+      },
+      "stockQuantity": 2,
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "55603976733048",
+      "sku": "AC23-2",
+      "price": {
+       "amount": 37,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "12-13 Years"
+      },
+      "stockQuantity": 1,
+      "stockQuantitySource": "ORIGINAL"
+     }
+    ],
+    "modelName": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "sourceUrl": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+    "description": {
+     "value": "Hug Hairy Monster T-Shirt by Bobo Choses. Relaxed fit tee in a soft blue, featuring long sleeves, a round neck and a large monster hug print across the front. Colour - Light Blue. 100% Organic Cotton. Product code B226AC009 AW26 Made in Portugal.",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "shippingFee": {
+     "value": 0,
+     "source": "DEFAULT",
+     "confidence": 0.5
+    },
+    "shopifyTags": "1-year, 10-years, 11-years, 12-years, 13-years, 2-years, 3-years, 4-years, 5-years, 6-years, 7-years, 8-years, 9-years, bobo-choses, t-shirts, tops",
+    "manufacturer": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "optionGroups": [
+     {
+      "name": "Size",
+      "values": [
+       "2-3 Years",
+       "4-5 Years",
+       "6-7 Years",
+       "8-9 Years",
+       "10-11 Years",
+       "12-13 Years"
+      ]
+     }
+    ],
+    "regularPrice": null,
+    "returnPolicy": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "certification": {
+     "value": "",
+     "source": "DEFAULT",
+     "confidence": 1
+    },
+    "descriptionKo": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "priceValidity": "VALID",
+    "stockQuantity": {
+     "value": 999,
+     "source": "DEFAULT",
+     "confidence": 0.5
+    },
+    "priceBreakdown": {
+     "feePercent": 10,
+     "shippingKrw": 12000,
+     "marginPercent": 12
+    },
+    "recommendedAge": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "seoDescription": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "brandResolution": {
+     "raw": "Bobo Choses AW26",
+     "confidence": "HIGH",
+     "ruleApplied": [
+      "SEASON_CODE"
+     ]
+    },
+    "countryOfOrigin": {
+     "value": "Portugal",
+     "source": "ORIGINAL",
+     "confidence": 0.75
+    },
+    "careInstructions": {
+     "value": "",
+     "source": "DEFAULT",
+     "confidence": 0
+    },
+    "certificationType": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "childCertification": {
+     "value": null,
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "shopifyProductType": "T Shirt",
+    "categoryRecommendationCache": {
+     "status": "READY",
+     "evidence": [],
+     "candidates": [
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "키즈 의류(3~8세)",
+        "남아의류",
+        "티셔츠",
+        "남아 라운드티셔츠"
+       ],
+       "score": 100,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "85543",
+          "name": "키즈 의류(3~8세)"
+         },
+         {
+          "id": "85580",
+          "name": "남아의류"
+         },
+         {
+          "id": "85581",
+          "name": "티셔츠"
+         },
+         {
+          "id": "85582",
+          "name": "남아 라운드티셔츠"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 키즈 의류(3~8세) > 남아의류 > 티셔츠 > 남아 라운드티셔츠",
+        "leafName": "남아 라운드티셔츠",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "85582"
+       },
+       "categoryCode": 85582,
+       "categoryName": "남아 라운드티셔츠",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "키즈 의류(3~8세)",
+        "남녀공용의류",
+        "티셔츠",
+        "공용 라운드티셔츠"
+       ],
+       "score": 100,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "85543",
+          "name": "키즈 의류(3~8세)"
+         },
+         {
+          "id": "85611",
+          "name": "남녀공용의류"
+         },
+         {
+          "id": "85617",
+          "name": "티셔츠"
+         },
+         {
+          "id": "85618",
+          "name": "공용 라운드티셔츠"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 키즈 의류(3~8세) > 남녀공용의류 > 티셔츠 > 공용 라운드티셔츠",
+        "leafName": "공용 라운드티셔츠",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "85618"
+       },
+       "categoryCode": 85618,
+       "categoryName": "공용 라운드티셔츠",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "키즈 의류(3~8세)",
+        "여아의류",
+        "티셔츠",
+        "여아 라운드티셔츠"
+       ],
+       "score": 100,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "85543",
+          "name": "키즈 의류(3~8세)"
+         },
+         {
+          "id": "85544",
+          "name": "여아의류"
+         },
+         {
+          "id": "85545",
+          "name": "티셔츠"
+         },
+         {
+          "id": "85546",
+          "name": "여아 라운드티셔츠"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 키즈 의류(3~8세) > 여아의류 > 티셔츠 > 여아 라운드티셔츠",
+        "leafName": "여아 라운드티셔츠",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "85546"
+       },
+       "categoryCode": 85546,
+       "categoryName": "여아 라운드티셔츠",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "키즈 의류(3~8세)",
+        "여아의류",
+        "티셔츠",
+        "여아 브이넥티셔츠"
+       ],
+       "score": 100,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "85543",
+          "name": "키즈 의류(3~8세)"
+         },
+         {
+          "id": "85544",
+          "name": "여아의류"
+         },
+         {
+          "id": "85545",
+          "name": "티셔츠"
+         },
+         {
+          "id": "85547",
+          "name": "여아 브이넥티셔츠"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 키즈 의류(3~8세) > 여아의류 > 티셔츠 > 여아 브이넥티셔츠",
+        "leafName": "여아 브이넥티셔츠",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "85547"
+       },
+       "categoryCode": 85547,
+       "categoryName": "여아 브이넥티셔츠",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "키즈 의류(3~8세)",
+        "여아의류",
+        "티셔츠",
+        "여아 카라티셔츠"
+       ],
+       "score": 100,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "85543",
+          "name": "키즈 의류(3~8세)"
+         },
+         {
+          "id": "85544",
+          "name": "여아의류"
+         },
+         {
+          "id": "85545",
+          "name": "티셔츠"
+         },
+         {
+          "id": "85549",
+          "name": "여아 카라티셔츠"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 키즈 의류(3~8세) > 여아의류 > 티셔츠 > 여아 카라티셔츠",
+        "leafName": "여아 카라티셔츠",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "85549"
+       },
+       "categoryCode": 85549,
+       "categoryName": "여아 카라티셔츠",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "키즈 의류(3~8세)",
+        "여아의류",
+        "티셔츠",
+        "여아 터틀넥/하이넥티셔츠"
+       ],
+       "score": 100,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "85543",
+          "name": "키즈 의류(3~8세)"
+         },
+         {
+          "id": "85544",
+          "name": "여아의류"
+         },
+         {
+          "id": "85545",
+          "name": "티셔츠"
+         },
+         {
+          "id": "85548",
+          "name": "여아 터틀넥/하이넥티셔츠"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 키즈 의류(3~8세) > 여아의류 > 티셔츠 > 여아 터틀넥/하이넥티셔츠",
+        "leafName": "여아 터틀넥/하이넥티셔츠",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "85548"
+       },
+       "categoryCode": 85548,
+       "categoryName": "여아 터틀넥/하이넥티셔츠",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "키즈 의류(3~8세)",
+        "여아의류",
+        "티셔츠",
+        "여아 후드집업"
+       ],
+       "score": 100,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "85543",
+          "name": "키즈 의류(3~8세)"
+         },
+         {
+          "id": "85544",
+          "name": "여아의류"
+         },
+         {
+          "id": "85545",
+          "name": "티셔츠"
+         },
+         {
+          "id": "85551",
+          "name": "여아 후드집업"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 키즈 의류(3~8세) > 여아의류 > 티셔츠 > 여아 후드집업",
+        "leafName": "여아 후드집업",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "85551"
+       },
+       "categoryCode": 85551,
+       "categoryName": "여아 후드집업",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "키즈 의류(3~8세)",
+        "여아의류",
+        "티셔츠",
+        "여아 맨투맨티셔츠"
+       ],
+       "score": 100,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "85543",
+          "name": "키즈 의류(3~8세)"
+         },
+         {
+          "id": "85544",
+          "name": "여아의류"
+         },
+         {
+          "id": "85545",
+          "name": "티셔츠"
+         },
+         {
+          "id": "85552",
+          "name": "여아 맨투맨티셔츠"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 키즈 의류(3~8세) > 여아의류 > 티셔츠 > 여아 맨투맨티셔츠",
+        "leafName": "여아 맨투맨티셔츠",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "85552"
+       },
+       "categoryCode": 85552,
+       "categoryName": "여아 맨투맨티셔츠",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "키즈 의류(3~8세)",
+        "여아의류",
+        "티셔츠",
+        "여아 후드티셔츠"
+       ],
+       "score": 100,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "85543",
+          "name": "키즈 의류(3~8세)"
+         },
+         {
+          "id": "85544",
+          "name": "여아의류"
+         },
+         {
+          "id": "85545",
+          "name": "티셔츠"
+         },
+         {
+          "id": "85553",
+          "name": "여아 후드티셔츠"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 키즈 의류(3~8세) > 여아의류 > 티셔츠 > 여아 후드티셔츠",
+        "leafName": "여아 후드티셔츠",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "85553"
+       },
+       "categoryCode": 85553,
+       "categoryName": "여아 후드티셔츠",
+       "metaVerified": true
+      },
+      {
+       "path": [
+        "ROOT",
+        "패션의류잡화",
+        "키즈 의류(3~8세)",
+        "여아의류",
+        "트레이닝복",
+        "여아 트레이닝 티셔츠"
+       ],
+       "score": 100,
+       "hierarchy": {
+        "depth": 6,
+        "nodes": [
+         {
+          "id": "0",
+          "name": "ROOT"
+         },
+         {
+          "id": "69182",
+          "name": "패션의류잡화"
+         },
+         {
+          "id": "85543",
+          "name": "키즈 의류(3~8세)"
+         },
+         {
+          "id": "85544",
+          "name": "여아의류"
+         },
+         {
+          "id": "85579",
+          "name": "트레이닝복"
+         },
+         {
+          "id": "70300",
+          "name": "여아 트레이닝 티셔츠"
+         }
+        ],
+        "fullPath": "ROOT > 패션의류잡화 > 키즈 의류(3~8세) > 여아의류 > 트레이닝복 > 여아 트레이닝 티셔츠",
+        "leafName": "여아 트레이닝 티셔츠",
+        "platform": "coupang",
+        "resolved": true,
+        "leafCategoryId": "70300"
+       },
+       "categoryCode": 70300,
+       "categoryName": "여아 트레이닝 티셔츠",
+       "metaVerified": true
+      }
+     ],
+     "resolvedAt": "2026-09-06T22:42:42.921Z",
+     "sourceUrlKey": "https://www.junioredition.com/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+     "similarityScore": 100,
+     "resolverDecision": "AUTO_SELECT"
+    }
+   }
+  },
+  "S5": {
+   "canonicalProduct": {
+    "sku": {
+     "value": "01195-VERNICE-NERO",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "brand": {
+     "value": "Pèpè Shoes",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "color": {
+     "value": "",
+     "source": "DETAIL_PAGE_REFERENCE",
+     "confidence": 1
+    },
+    "price": {
+     "value": {
+      "amount": 119,
+      "currency": "GBP"
+     },
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "title": {
+     "value": "Lulu T Bar Shoes in Vernice Nero by PèPè - Last Ones In Stock - 28-29 EUR",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "images": [
+     {
+      "id": "0001",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/3613766e-7687-4782-83b2-496f62a2ceae-0001.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": true,
+      "useInDescription": false,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0002",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/60a347c5-7795-4d18-a2be-946d6fca46dc-0002.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0003",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/a69559ec-3dae-4ebb-b1fc-c81793ae7566-0003.jpg",
+      "classification": "LIFESTYLE",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0004",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/a76131a2-9737-4805-a5e9-91d615fd66ff-0004.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0005",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/0e2b5a37-68fe-4b52-be78-c55555bba00f-0005.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0006",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/52273190-278d-42f9-86fe-c7abc9da23f3-0006.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     },
+     {
+      "id": "0007",
+      "originalUrl": "https://ggxncgcbvuscwawpagbq.supabase.co/storage/v1/object/public/product-images/bb3cb84c-4740-4612-9b05-febb4db6eaaa-0007.jpg",
+      "classification": "PRODUCT",
+      "selectedVariant": "ORIGINAL",
+      "isRepresentative": false,
+      "useInDescription": true,
+      "useInProductGallery": true
+     }
+    ],
+    "weight": {
+     "value": "",
+     "source": "DETAIL_PAGE_REFERENCE",
+     "confidence": 1
+    },
+    "options": {
+     "value": [
+      "Size"
+     ],
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "titleKo": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "importer": {
+     "value": "",
+     "source": "DETAIL_PAGE_REFERENCE",
+     "confidence": 1
+    },
+    "itemName": {
+     "value": "",
+     "source": "DETAIL_PAGE_REFERENCE",
+     "confidence": 1
+    },
+    "keywords": {
+     "value": [],
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "material": {
+     "value": "100% leather",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "seoTitle": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "variants": [
+     {
+      "id": "40096045203519",
+      "sku": "KA1-2",
+      "price": {
+       "amount": 119,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "skuSource": "ORIGINAL",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "28 EUR (UK 10)"
+      },
+      "stockQuantity": 1,
+      "stockQuantitySource": "ORIGINAL"
+     },
+     {
+      "id": "40096045236287",
+      "price": {
+       "amount": 119,
+       "currency": "GBP"
+      },
+      "priceMode": "ABSOLUTE",
+      "priceSource": "ORIGINAL",
+      "optionValues": {
+       "Size": "29 EUR (UK 11)"
+      },
+      "stockQuantity": 0,
+      "stockQuantitySource": "ORIGINAL"
+     }
+    ],
+    "modelName": {
+     "value": "Pèpè Shoes",
+     "source": "USER_EDITED",
+     "confidence": 1
+    },
+    "sourceUrl": "https://www.junioredition.com/en-kr/products/lulu-t-bar-shoes-in-vernice-nero-by-pepe",
+    "description": {
+     "value": "Lulu T bar by PèPè shoes. Button T bar shoes in black patent leather with low T bar detail . Soft and flexible leather sole. Lined with 100% leather. Handmade using traditional methods in Italy. PèPè shoes are handcrafted in Italy using traditional artisanal skills and techniques. The shapes are iconic and refined in butter-soft leathers, a benchmark of Italian craftsmanship. Only a limited quantity are made to order each season, with many colours and leathers exclusive to us at Junior Edition. They are an extra special product to be treasured and appreciated by parents and children alike. Article code: 01195-VERNICE-NERO. We recommend allowing an extra +0.5\" / +1.3cm for growth. Approximate inner length: EUR 17 / UK 1 / 11.3cm EUR 18 / UK 2 / 11.9cm EUR 19 / UK 2.5 / 12.5cm EUR 20 / UK 3 / 13.1cm EUR 21 / UK 4 / 13.7cm EUR 22 / UK 5 / 14.4cm EUR 23 / UK 6 / 15cm EUR 24 / UK 7 / 15.7cm EUR 25 / UK 7.5 / 16.4cm EUR 26 / UK 8 / 17cm EUR 27 / UK 9 / 17.7cm EUR 28 / UK 10 / 18.4cm EUR 29 / UK 11 / 19cm EUR 30 / UK 11.5 / 19.7cm EUR 31 / UK 12 / 20.4cm EUR 32 / UK 13 / 21cm EUR 33 / UK 1 / 21.6cm EUR 34 / UK 2 / 22.3cm Please note this is a handmade product and small variations will occur. Colour - Vernice Nero (Black Patent). Leather upper with leather lining. Handmade leather sole. We love these handmade iconic shoes by Pèpè.",
+     "source": "ORIGINAL",
+     "confidence": 0.95
+    },
+    "shippingFee": {
+     "value": 0,
+     "source": "DEFAULT",
+     "confidence": 0.5
+    },
+    "shopifyTags": "28-eur-uk-10, 29-eur-uk-11, footwear, pepe-shoes, shoes, small",
+    "manufacturer": {
+     "value": "",
+     "source": "DETAIL_PAGE_REFERENCE",
+     "confidence": 1
+    },
+    "optionGroups": [
+     {
+      "name": "Size",
+      "values": [
+       "28 EUR (UK 10)",
+       "29 EUR (UK 11)"
+      ]
+     }
+    ],
+    "regularPrice": null,
+    "returnPolicy": {
+     "value": "",
+     "source": "REQUIRED",
+     "confidence": 0
+    },
+    "certification": {
+     "value": "",
+     "source": "DEFAULT",
+     "confidence": 1
+    },
+    "descriptionKo": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "priceValidity": "VALID",
+    "stockQuantity": {
+     "value": 999,
+     "source": "DEFAULT",
+     "confidence": 0.5
+    },
+    "priceBreakdown": {
+     "feePercent": 10,
+     "shippingKrw": 12000,
+     "marginPercent": 12
+    },
+    "recommendedAge": {
+     "value": "",
+     "source": "DETAIL_PAGE_REFERENCE",
+     "confidence": 1
+    },
+    "seoDescription": {
+     "value": "",
+     "source": "ORIGINAL",
+     "confidence": 0
+    },
+    "countryOfOrigin": {
+     "value": "ㅁㅇㄹ",
+     "source": "USER_EDITED",
+     "confidence": 1
+    },
+    "careInstructions": {
+     "value": "ㅁㅇㄹ",
+     "source": "USER_EDITED",
+     "confidence": 1
+    },
+    "priceOverrideKrw": {
+     "value": 295800,
+     "source": "USER_EDITED",
+     "confidence": 1
+    },
+    "certificationType": {
+     "value": "ㅁㅇㄻㄹ",
+     "source": "USER_EDITED",
+     "confidence": 1
+    },
+    "childCertification": {
+     "value": {
+      "name": "ㅁㄴㅇㄹ",
+      "companyName": "ㅁㄴㅇㄹ",
+      "certificationDate": "2026-01-02",
+      "certificationNumber": "ㅁㅇㄻㄴㅇㄹ"
+     },
+     "source": "USER_EDITED",
+     "confidence": 1
+    },
+    "lotteOnChannelInfo": {
+     "codes": {
+      "brandNo": "",
+      "originCode": "",
+      "taxTypeCode": "01",
+      "externalProductNo": ""
+     },
+     "notice": {
+      "itemCode": "",
+      "articlesText": ""
+     },
+     "category": {
+      "selected": {
+       "name": "유아동남아구두",
+       "noticeItemCodes": [],
+       "safetyTypeCodes": []
+      },
+      "displayCategoryNos": [
+       "FC03090100"
+      ],
+      "standardCategoryNo": "BC49030100"
+     },
+     "delivery": {
+      "courierCode": "9999",
+      "returnPlaceNo": "PLO3837441",
+      "outboundPlaceNo": "PLO3837441",
+      "weekdayCloseTime": "1400",
+      "returnCourierCode": "9999",
+      "deliveryCostPolicyNo": "4279403",
+      "deliveryRegionGroupCode": "GN102"
+     },
+     "certification": {
+      "safetyText": "",
+      "importProxyCode": ""
+     }
+    },
+    "shopifyProductType": "Shoes",
+    "categoryResolverKpi": {
+     "evidence": [
+      "사용자가 직접 검색어를 입력함 — 자동 신호 보정 건너뜀",
+      "✓ Predict API: \"여아 구두\"(코드 70346, 유사도 100%) — 등록 전 최종 확인이 필요합니다.",
+      "✓ 쿠팡 카테고리 메타 조회로 실제 존재/등록 가능이 확인됐습니다."
+     ],
+     "predictResult": null,
+     "manualOverride": false,
+     "selectedResult": {
+      "code": 70346,
+      "name": "여아 구두",
+      "hierarchy": {
+       "depth": 5,
+       "nodes": [
+        {
+         "id": "0",
+         "name": "ROOT"
+        },
+        {
+         "id": "69182",
+         "name": "패션의류잡화"
+        },
+        {
+         "id": "85636",
+         "name": "영유아동 신발/잡화/기타의류(0~17세)"
+        },
+        {
+         "id": "85713",
+         "name": "여아신발"
+        },
+        {
+         "id": "70346",
+         "name": "여아 구두"
+        }
+       ],
+       "fullPath": "ROOT > 패션의류잡화 > 영유아동 신발/잡화/기타의류(0~17세) > 여아신발 > 여아 구두",
+       "leafName": "여아 구두",
+       "platform": "coupang",
+       "resolved": true,
+       "leafCategoryId": "70346"
+      }
+     },
+     "similarityScore": 0,
+     "resolverDecision": "REJECT"
+    },
+    "channelPriceOverrides": {},
+    "categoryRecommendationCache": {
+     "status": "READY",
+     "evidence": [],
+     "candidates": [],
+     "resolvedAt": "2026-09-22T00:12:56.902Z",
+     "sourceUrlKey": "https://www.junioredition.com/products/lulu-t-bar-shoes-in-vernice-nero-by-pepe",
+     "similarityScore": null,
+     "resolverDecision": "REJECT"
+    }
+   }
   }
  },
  "candidates": {
@@ -2251,7 +3394,10 @@
     "sizeLabels": [],
     "audienceSignals": [],
     "imageUrls": []
-   }
+   },
+   "humanReason": null,
+   "priceStatus": "PRICE_UNAVAILABLE",
+   "price": null
   },
   "C50": {
    "searchId": "S6",
@@ -2308,7 +3454,10 @@
      "https://cdn.shopify.com/s/files/1/0281/6285/0876/files/B126AC151_6.jpg?v=1770326314",
      "https://cdn.shopify.com/s/files/1/0281/6285/0876/files/download_c1d459b4-692b-4755-bbd5-d6fadfd87b68.jpg?v=1770326314"
     ]
-   }
+   },
+   "humanReason": null,
+   "priceStatus": null,
+   "price": null
   },
   "C51": {
    "searchId": "S6",
@@ -2367,7 +3516,10 @@
      "https://cdn.shopify.com/s/files/1/1078/1720/files/124AC054_4.jpg?v=1704296717",
      "https://cdn.shopify.com/s/files/1/1078/1720/files/124AC054_6.jpg?v=1704296720"
     ]
-   }
+   },
+   "humanReason": null,
+   "priceStatus": null,
+   "price": null
   },
   "C22": {
    "searchId": "S4",
@@ -2398,6 +3550,12 @@
     "sizeLabels": [],
     "audienceSignals": [],
     "imageUrls": []
+   },
+   "humanReason": null,
+   "priceStatus": "VERIFIED_CURRENT",
+   "price": {
+    "amount": 134000,
+    "currency": "KRW"
    }
   },
   "C11": {
@@ -2452,7 +3610,10 @@
      "https://cdn.shopify.com/s/files/1/0849/8174/3935/files/B126AI018_7.webp?v=1773914537",
      "https://cdn.shopify.com/s/files/1/0849/8174/3935/files/B126AI018_6.webp?v=1773914537"
     ]
-   }
+   },
+   "humanReason": null,
+   "priceStatus": null,
+   "price": null
   },
   "C48": {
    "searchId": "S6",
@@ -2505,6 +3666,455 @@
      "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC117_3_1.webp?v=1783420480",
      "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC117_6_1.webp?v=1783420474",
      "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AC117_7_2.webp?v=1783420469"
+    ]
+   },
+   "humanReason": null,
+   "priceStatus": null,
+   "price": null
+  },
+  "C05": {
+   "searchId": "S2",
+   "domain": "tinyapple.net",
+   "url": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+   "humanGt": "SAME",
+   "humanReason": null,
+   "title": "Bobo Choses Hug Hairy Monster T-shirt, Light Blue",
+   "priceStatus": null,
+   "price": null,
+   "facts": {
+    "sourceUrl": "https://www.tinyapple.net/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+    "urlSlug": "bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+    "brand": "Bobo Choses",
+    "brandModelCode": null,
+    "sellerSku": null,
+    "title": "Bobo Choses Hug Hairy Monster T-shirt, Light Blue",
+    "coreTitleTokens": [
+     "hug",
+     "hairy",
+     "monster"
+    ],
+    "categoryText": "Cardigans and Sweaters",
+    "colorText": "shirt light blue",
+    "materialText": "Tinyapple | FW26 Bobo Choses | Hug Hairy Monster T-shirt, Light Blue 100% Organic Cotton Wash Cold-30° Do Not Bleach Iron Low Do not Dry-clean Do Not Tumble Dry B226AC009",
+    "fitText": null,
+    "ageRangeText": null,
+    "sizeLabels": [
+     "2-3Y",
+     "4-5Y",
+     "6-7Y",
+     "8-9Y",
+     "10-11Y",
+     "12-13Y"
+    ],
+    "audienceSignals": [
+     "Bobo Choses",
+     " BOY TOPS",
+     " boys top",
+     " boytops",
+     " cardigan",
+     " Cardigans and Sweaters",
+     " drop1",
+     " FW26 Bobo Choses",
+     " girl cardigan",
+     " Girl Tops",
+     " girlstop",
+     " girltops",
+     " girtops",
+     " top",
+     " Tops",
+     " 보보쇼즈",
+     "Cardigans and Sweaters"
+    ],
+    "imageUrls": [
+     "https://cdn.shopify.com/s/files/1/0281/6285/0876/files/1_ccdc90fc-639b-4a1a-a033-47a9d267e575.png?v=1783621210",
+     "https://cdn.shopify.com/s/files/1/0281/6285/0876/files/B226AC009_6.jpg?v=1783621220"
+    ]
+   }
+  },
+  "C06": {
+   "searchId": "S2",
+   "domain": "global.trenbe.com",
+   "url": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+   "humanGt": "DIFFERENT",
+   "humanReason": "컬러가 다름",
+   "title": "Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009 451 160484657 [P]",
+   "priceStatus": null,
+   "price": null,
+   "facts": {
+    "sourceUrl": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+    "urlSlug": "bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+    "brand": "BOBO CHOSES",
+    "brandModelCode": null,
+    "sellerSku": null,
+    "title": "Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009 451 160484657 [P]",
+    "coreTitleTokens": [
+     "kids",
+     "hug",
+     "hairy",
+     "monster",
+     "long",
+     "sleeve",
+     "b226ac009",
+     "451",
+     "160484657"
+    ],
+    "categoryText": "NEW",
+    "colorText": "shirt light blue",
+    "materialText": null,
+    "fitText": null,
+    "ageRangeText": null,
+    "sizeLabels": [],
+    "audienceSignals": [
+     "255",
+     " all_product",
+     " kids",
+     " kids_kids_men",
+     " kids_kids_men_top",
+     " kids_kids_men_tshirts_shirts",
+     " partner_product",
+     "NEW"
+    ],
+    "imageUrls": [
+     "https://cdn.shopify.com/s/files/1/0711/8110/7414/files/1791433074233_bed88f311a4f734823033957c0cb105f_0.jpg?v=1791451641",
+     "https://cdn.shopify.com/s/files/1/0711/8110/7414/files/1748223146189_d046cd4d5a9cbb9ce97a72faeb2aac10_1_40c7dbb6-a8e0-484b-a812-49ec78fb9ce2.jpg?v=1791451641",
+     "https://cdn.shopify.com/s/files/1/0711/8110/7414/files/1791273114138_f5492bac6cba7aec5555dffcbd549cbf_1.jpg?v=1791451642",
+     "https://cdn.shopify.com/s/files/1/0711/8110/7414/files/1791273114199_f080e0f533c89f4ff7ce2a5473465498_2.jpg?v=1791451641",
+     "https://cdn.shopify.com/s/files/1/0711/8110/7414/files/1791273114220_3487934ac652bd45053bde3b11e2d9e3_3.jpg?v=1791451642"
+    ]
+   }
+  },
+  "C19": {
+   "searchId": "S4",
+   "domain": "junioredition.com",
+   "url": "https://www.junioredition.com/products/bubble-sweatshirt-in-conker-stripe-by-main-story",
+   "humanGt": "DIFFERENT",
+   "humanReason": null,
+   "title": "Bubble Sweatshirt in Conker Stripe by Main Story",
+   "priceStatus": null,
+   "price": null,
+   "facts": {
+    "sourceUrl": "https://www.junioredition.com/products/bubble-sweatshirt-in-conker-stripe-by-main-story",
+    "urlSlug": "bubble-sweatshirt-in-conker-stripe-by-main-story",
+    "brand": "Main Story",
+    "brandModelCode": "AW26MS185",
+    "sellerSku": null,
+    "title": "Bubble Sweatshirt in Conker Stripe by Main Story",
+    "coreTitleTokens": [
+     "bubble",
+     "sweatshirt"
+    ],
+    "categoryText": "Sweatshirt",
+    "colorText": "Conker Stripe",
+    "materialText": "Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a small Main Story logo embroidered on the chest, finished with ribbed cuffs, hem and neckline. Colour - Conker Stripe. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal.",
+    "fitText": "relaxed fit",
+    "ageRangeText": null,
+    "sizeLabels": [
+     "2 Years",
+     "4 Years",
+     "6 Years",
+     "8 Years",
+     "10 Years"
+    ],
+    "audienceSignals": [
+     "10-years",
+     " 11-years",
+     " 2-years",
+     " 3-years",
+     " 4-years",
+     " 5-years",
+     " 6-years",
+     " 7-years",
+     " 8-years",
+     " all tops",
+     " main-story",
+     " sweatshirt",
+     " sweatshirts",
+     " top",
+     " tops",
+     "Sweatshirt"
+    ],
+    "imageUrls": [
+     "https://cdn.shopify.com/s/files/1/0874/8574/files/Main-Story-AW26-Bubble-Sweatshirt-Conker-Stripe.jpg?v=1786095357",
+     "https://cdn.shopify.com/s/files/1/0874/8574/files/Main-Story-AW26-Bubble-Sweatshirt-Conker-Stripe-Lifestyle.jpg?v=1786095357",
+     "https://cdn.shopify.com/s/files/1/0874/8574/files/Main-Story-AW26-Bubble-Sweatshirt-Conker-Stripe-Look.jpg?v=1786095357",
+     "https://cdn.shopify.com/s/files/1/0874/8574/files/Main-Story-AW26-Bubble-Sweatshirt-Conker-Stripe-Look-1.jpg?v=1786095357",
+     "https://cdn.shopify.com/s/files/1/0874/8574/files/Main-Story-AW26-Bubble-Sweatshirt-Conker-Stripe-Lifestyle-1.jpg?v=1786095357",
+     "https://cdn.shopify.com/s/files/1/0874/8574/files/Main-Story-AW26-Bubble-Sweatshirt-Conker-Stripe-1.jpg?v=1786095357"
+    ]
+   }
+  },
+  "C20": {
+   "searchId": "S4",
+   "domain": "junioredition.com",
+   "url": "https://www.junioredition.com/products/bubble-sweatshirt-in-graystone-by-main-story",
+   "humanGt": "DIFFERENT",
+   "humanReason": "다른 컬러",
+   "title": "Bubble Sweatshirt in Graystone by Main Story",
+   "priceStatus": null,
+   "price": null,
+   "facts": {
+    "sourceUrl": "https://www.junioredition.com/products/bubble-sweatshirt-in-graystone-by-main-story",
+    "urlSlug": "bubble-sweatshirt-in-graystone-by-main-story",
+    "brand": "Main Story",
+    "brandModelCode": "AW26MS185",
+    "sellerSku": null,
+    "title": "Bubble Sweatshirt in Graystone by Main Story",
+    "coreTitleTokens": [
+     "bubble",
+     "sweatshirt"
+    ],
+    "categoryText": "Sweatshirt",
+    "colorText": "Graystone",
+    "materialText": "Bubble Sweatshirt by Main Story. A relaxed fit sweatshirt with dropped shoulders and a large Main Story print across the chest, finished with ribbed cuffs, hem and neckline. Colour - Graystone. 100% Organic Cotton. From Main Story AW26 Collection. Product code AW26MS185 Made in Portugal.",
+    "fitText": "relaxed fit",
+    "ageRangeText": null,
+    "sizeLabels": [
+     "2 Years",
+     "4 Years",
+     "6 Years",
+     "8 Years",
+     "10 Years"
+    ],
+    "audienceSignals": [
+     "10-years",
+     " 11-years",
+     " 2-years",
+     " 3-years",
+     " 4-years",
+     " 5-years",
+     " 6-years",
+     " 7-years",
+     " 8-years",
+     " all tops",
+     " main-story",
+     " sweatshirt",
+     " sweatshirts",
+     " top",
+     " tops",
+     "Sweatshirt"
+    ],
+    "imageUrls": [
+     "https://cdn.shopify.com/s/files/1/0874/8574/files/Main-Story-AW26-Bubble-Sweatshirt-Graystone.jpg?v=1786095718",
+     "https://cdn.shopify.com/s/files/1/0874/8574/files/Main-Story-AW26-Bubble-Sweatshirt-Graystone-Lifestyle.jpg?v=1786095719",
+     "https://cdn.shopify.com/s/files/1/0874/8574/files/Main-Story-AW26-Bubble-Sweatshirt-Graystone-Look.jpg?v=1786095718",
+     "https://cdn.shopify.com/s/files/1/0874/8574/files/Main-Story-AW26-Bubble-Sweatshirt-Graystone-Look-1.jpg?v=1786095718",
+     "https://cdn.shopify.com/s/files/1/0874/8574/files/Main-Story-AW26-Bubble-Sweatshirt-Graystone-Lifestyle-3.jpg?v=1786095719",
+     "https://cdn.shopify.com/s/files/1/0874/8574/files/Main-Story-AW26-Bubble-Sweatshirt-Graystone-Lifestyle-2.jpg?v=1786095719",
+     "https://cdn.shopify.com/s/files/1/0874/8574/files/Main-Story-AW26-Bubble-Sweatshirt-Graystone-Lifestyle-1.jpg?v=1786095719",
+     "https://cdn.shopify.com/s/files/1/0874/8574/files/Main-Story-AW26-Bubble-Sweatshirt-Graystone-1.jpg?v=1786095718"
+    ]
+   }
+  },
+  "C42": {
+   "searchId": "S4",
+   "domain": "main-story.com",
+   "url": "https://main-story.com/products/bubble-sweatshirt-grey-melange-1",
+   "humanGt": "SAME",
+   "humanReason": null,
+   "title": "Bubble Sweatshirt - Grey Melange",
+   "priceStatus": null,
+   "price": null,
+   "facts": {
+    "sourceUrl": "https://main-story.com/products/bubble-sweatshirt-grey-melange-1",
+    "urlSlug": "bubble-sweatshirt-grey-melange-1",
+    "brand": "Main Story",
+    "brandModelCode": null,
+    "sellerSku": null,
+    "title": "Bubble Sweatshirt - Grey Melange",
+    "coreTitleTokens": [
+     "bubble",
+     "sweatshirt",
+     "melange"
+    ],
+    "categoryText": null,
+    "colorText": "our grey",
+    "materialText": "Our Grey Melange oversized Bubble Sweatshirt is made from soft organic cotton jersey fleece, with a relaxed, wide fit and dropped shoulders that combines comfort and a laid-back look. Garment-dyed for extra softness, it delivers a gentle, cosy feel against the skin. Main Story Start Date Print on the chest Embroidered Logo 100% Organic Cotton Responsibly Made in Portugal",
+    "fitText": null,
+    "ageRangeText": null,
+    "sizeLabels": [
+     "2",
+     "4",
+     "6",
+     "8",
+     "10",
+     "12",
+     "14",
+     "16"
+    ],
+    "audienceSignals": [
+     "_label_new",
+     " cotton",
+     " kidswear",
+     " organic"
+    ],
+    "imageUrls": [
+     "https://cdn.shopify.com/s/files/1/2263/4907/files/AW26MS185-BubbleSweatshirt-GreyMelange_front.jpg?v=1784452279",
+     "https://cdn.shopify.com/s/files/1/2263/4907/files/AW26MS185-BubbleSweatshirt-GreyMelange_back.jpg?v=1784452281",
+     "https://cdn.shopify.com/s/files/1/2263/4907/files/Look53_2503d932-2690-4d70-8799-4a4abf8fe5f5.jpg?v=1785671006",
+     "https://cdn.shopify.com/s/files/1/2263/4907/files/Look23_5ece1432-a740-4589-97ad-2f2b9f7349e9.jpg?v=1786218857",
+     "https://cdn.shopify.com/s/files/1/2263/4907/files/20260106_MAINSTORY_LOOKBOOK_AW26_1273.jpg?v=1786218857",
+     "https://cdn.shopify.com/s/files/1/2263/4907/files/20260113_MAINSTORY_AW26_ROTHERHITE__46_ab111bd4-ddaa-46eb-a273-17c0ca7e8012.jpg?v=1786220754"
+    ]
+   }
+  },
+  "C25": {
+   "searchId": "S4",
+   "domain": "main-story.com",
+   "url": "https://main-story.com/collections/shop/products/bubble-sweatshirt-graystone",
+   "humanGt": "DIFFERENT",
+   "humanReason": "다른 컬러",
+   "title": "Bubble Sweatshirt - Graystone",
+   "priceStatus": null,
+   "price": null,
+   "facts": {
+    "sourceUrl": "https://main-story.com/products/bubble-sweatshirt-graystone",
+    "urlSlug": "bubble-sweatshirt-graystone",
+    "brand": "Main Story",
+    "brandModelCode": null,
+    "sellerSku": null,
+    "title": "Bubble Sweatshirt - Graystone",
+    "coreTitleTokens": [
+     "bubble"
+    ],
+    "categoryText": null,
+    "colorText": "sweatshirt in graystone",
+    "materialText": "Our oversized Bubble Sweatshirt in a Graystone shade is made from soft organic cotton jersey fleece, with a relaxed, wide fit and dropped shoulders that combines comfort and a laid-back look. Garment-dyed for extra softness, it delivers a gentle, cosy feel against the skin. Main Story Start Date Print on the chest Embroidered Logo 100% Organic Cotton Responsibly Made in Portugal",
+    "fitText": null,
+    "ageRangeText": null,
+    "sizeLabels": [
+     "2",
+     "4",
+     "6",
+     "8",
+     "10",
+     "12",
+     "14",
+     "16"
+    ],
+    "audienceSignals": [
+     "_label_new",
+     " cotton",
+     " kidswear",
+     " organic"
+    ],
+    "imageUrls": [
+     "https://cdn.shopify.com/s/files/1/2263/4907/files/AW26MS185-BubbleSweatshirt-Graystone_front.jpg?v=1784452256",
+     "https://cdn.shopify.com/s/files/1/2263/4907/files/AW26MS185-BubbleSweatshirt-Graystone_back.jpg?v=1784452258",
+     "https://cdn.shopify.com/s/files/1/2263/4907/files/Look2_cee6a518-c02f-4733-b9d4-59577ad01933.jpg?v=1786208240",
+     "https://cdn.shopify.com/s/files/1/2263/4907/files/20260106_MAINSTORY_LOOKBOOK_AW26_0388_049a8a1b-c5b6-4d35-bfd5-c0f099dbb9ae.jpg?v=1786208236",
+     "https://cdn.shopify.com/s/files/1/2263/4907/files/20260113_MAINSTORY_AW26_ROTHERHITE__4_645f4b28-a9e4-47f4-9259-d1a8f7451b2d.jpg?v=1786219814"
+    ]
+   }
+  },
+  "C14": {
+   "searchId": "S6",
+   "domain": "kihanan.com",
+   "url": "https://kihanan.com/products/drop2-2026aw-bobochoses-b-c-embossed-tracksuit-jacket-b226ac117",
+   "humanGt": "SAME",
+   "humanReason": null,
+   "title": "★DROP2★2026AW★BOBOCHOSES ボボショーズ B.C. Embossed tracksuit jacket B226AC117",
+   "priceStatus": null,
+   "price": null,
+   "facts": {
+    "sourceUrl": "https://kihanan.com/products/drop2-2026aw-bobochoses-b-c-embossed-tracksuit-jacket-b226ac117",
+    "urlSlug": "drop2-2026aw-bobochoses-b-c-embossed-tracksuit-jacket-b226ac117",
+    "brand": "BOBOCHOSES ボボショーズ",
+    "brandModelCode": null,
+    "sellerSku": null,
+    "title": "★DROP2★2026AW★BOBOCHOSES ボボショーズ B.C. Embossed tracksuit jacket B226AC117",
+    "coreTitleTokens": [
+     "drop2",
+     "2026aw",
+     "embossed",
+     "tracksuit",
+     "jacket",
+     "b226ac117"
+    ],
+    "categoryText": "アウター",
+    "colorText": null,
+    "materialText": null,
+    "fitText": null,
+    "ageRangeText": null,
+    "sizeLabels": [
+     "2-3y(98cm)",
+     "4-5y(110cm)",
+     "6-7y(122cm)",
+     "8-9y(134cm)",
+     "10-11y(148cm)",
+     "12-13y(155cm)"
+    ],
+    "audienceSignals": [
+     "2026AW",
+     " kids",
+     " アウター",
+     " 通常配送商品",
+     "アウター"
+    ],
+    "imageUrls": [
+     "https://cdn.shopify.com/s/files/1/0633/0852/9733/files/B226AC117_1.jpg?v=1784099683",
+     "https://cdn.shopify.com/s/files/1/0633/0852/9733/files/B226AC117_2.jpg?v=1784099683",
+     "https://cdn.shopify.com/s/files/1/0633/0852/9733/files/B226AC117_6.jpg?v=1784099684",
+     "https://cdn.shopify.com/s/files/1/0633/0852/9733/files/B226AC117_7.jpg?v=1784099717",
+     "https://cdn.shopify.com/s/files/1/0633/0852/9733/files/B226AC117_11.jpg?v=1784099717",
+     "https://cdn.shopify.com/s/files/1/0633/0852/9733/files/B226AC117_12.jpg?v=1784099716",
+     "https://cdn.shopify.com/s/files/1/0633/0852/9733/files/B226AC117_13.jpg?v=1784099717"
+    ]
+   }
+  },
+  "C37": {
+   "searchId": "S3",
+   "domain": "bobochoses.co.jp",
+   "url": "https://bobochoses.co.jp/products/b126ai018-curious-turnip-all-over-swim-cap",
+   "humanGt": "SAME",
+   "humanReason": null,
+   "title": "Curious Turnip all over swim cap",
+   "priceStatus": null,
+   "price": null,
+   "facts": {
+    "sourceUrl": "https://bobochoses.co.jp/products/b126ai018-curious-turnip-all-over-swim-cap",
+    "urlSlug": "b126ai018-curious-turnip-all-over-swim-cap",
+    "brand": null,
+    "brandModelCode": "B126AI018",
+    "sellerSku": null,
+    "title": "Curious Turnip all over swim cap",
+    "coreTitleTokens": [
+     "curious",
+     "turnip",
+     "all",
+     "over",
+     "swim",
+     "cap"
+    ],
+    "categoryText": "Hats",
+    "colorText": "green",
+    "materialText": "Green cap. Made in China. Composition: Polyester 88%, Elastane 12%.",
+    "fitText": null,
+    "ageRangeText": null,
+    "sizeLabels": [
+     "HEAD52",
+     "HEAD54"
+    ],
+    "audienceSignals": [
+     "50%",
+     " accessories",
+     " Beachwear",
+     " children",
+     " Current",
+     " drop-2",
+     " ExcludeFromUS",
+     " hats",
+     " Kid",
+     " product-20251212",
+     " ss26",
+     " SS26OfficialSale",
+     "Hats"
+    ],
+    "imageUrls": [
+     "https://cdn.shopify.com/s/files/1/0849/8174/3935/files/B126AI018_3.webp?v=1773914537",
+     "https://cdn.shopify.com/s/files/1/0849/8174/3935/files/B126AI018_1.webp?v=1773914537",
+     "https://cdn.shopify.com/s/files/1/0849/8174/3935/files/B126AI018_2.webp?v=1773914537",
+     "https://cdn.shopify.com/s/files/1/0849/8174/3935/files/B126AI018_7.webp?v=1773914537",
+     "https://cdn.shopify.com/s/files/1/0849/8174/3935/files/B126AI018_6.webp?v=1773914537"
     ]
    }
   }

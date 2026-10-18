@@ -549,6 +549,14 @@ WU-056 / 056-R1  🟢🟢 **CLOSED — Production UI PASS**(CEO 확인 2026-10-1
                  두 축 안 섞임 · 내부 토큰 노출 0
 WU-058           🟢 **CLOSED** — 소싱 **UI 제거 완료** · 가격비교 **동결 유지** ·
                  남은 정책 **HOLD** (배포 `52046660` · 2026-10-17)
+WU-060           🟢 **CLOSED** — C06 False EXACT **원인 확정** · 운영 변경 0
+                 🔴🔴 **게이트가 놓친 FP 가 아니다** — 다섯 축 전부 일치 · blockers 0 ·
+                 후보가 **스스로** 같은 품번·같은 색상명을 적는다(사람은 **눈으로** 다른 색을 봤다)
+                 🔴 C05(SAME)과 `colorText` 가 **글자 그대로 같다** → 텍스트 축에 신호 0
+                 🔴 보호조건 6개 전수 측정 — 차단 성공 셋은 전부 **「데이터 풍부도」 프록시** ·
+                 분모 **1** 이라 고를 수 없다 → **구현 0** (`docs/MI-FALSE-EXACT-ROOT-CAUSE-060.md`)
+                 🟢🟢 **CF-3 을 열어도 알림 체인은 닫혀 있다** — 승격 5건 중 국내 축 자격 **0**
+                 (시장 4 + **가격 1**). 즉 ①②의 실제 게이트는 **④(가격 추출)** 다 · N=5
 WU-059           🟢 **CLOSED / HOLD** — 잔여 5영역 전수 측정 · **운영 동작 변경 0**
                  (배포 `339cc8e1` · 2026-10-18) · 🔴 **CPO 판정 5건** 이 §19 에 있다
                  (`docs/MI-RESIDUAL-AREAS-059.md`) — ①CF-3 ②파생 알림 ③해외 tier
@@ -639,6 +647,9 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **EXACT 보류 게이트** | `match-truth.ts:233·237` (WU-059) | `PRESUMED_SAME` ⟹ 식별자 경로도 **막는다** · `BRAND_UNCONFIRMED` 단독 완화 **금지**(FP +2 실측) |
 | 🔴 **참고가격 ↔ 판정 경계** | `market-intelligence.ts:253·318` (WU-059) | 해외 = `push` 뒤 `continue`(판정 0) · 국내 = `EXACT\|COMPARISON` **만** 적재(판정 입력) |
 | 🔴 **transient 수명** | `DomesticPriceIntelligencePanel` (WU-059) | 참고 축은 **POST 응답에서만** set · GET 이 덮지 않는다 · `sessionStorage`/`localStorage` **금지** |
+| 🔴 **색상 축이 마지막 방어** | `isColorUnverified` · `COLOR_VARIANT` (WU-060) | C22(품번 exact·단독 blocker)를 막는 **유일한** 축 — 빼면 **False EXACT** 가 된다 |
+| 🔴 **동일판매처 이중 잠금** | `sameSellerDistinctListing` + `crossSellerReserved` | 🔴 분류표만 빼도 결과가 **안 바뀐다**(잠금이 둘) — 「통과했다」를 「가드 없다」로 읽지 않는다 |
+| 🔴 **False EXACT 보호조건 금지** | `wu-060-false-exact.test.ts` | 사이즈/소재/카테고리 **부재** 를 EXACT 차단 근거로 쓰지 않는다(인과 0 · 쓰레기를 보상) |
 
 🔴 **금지는 그대로 유효하다** — AI/Gemini API ❌ · 소비자 구독 우회 ❌ · Registry 확대 ❌ ·
 sourcing → price comparison 연결 ❌ · threshold 완화 ❌ · PRESUMED_SAME 자동 승격 ❌ ·
