@@ -549,6 +549,17 @@ WU-056 / 056-R1  🟢🟢 **CLOSED — Production UI PASS**(CEO 확인 2026-10-1
                  두 축 안 섞임 · 내부 토큰 노출 0
 WU-058           🟢 **CLOSED** — 소싱 **UI 제거 완료** · 가격비교 **동결 유지** ·
                  남은 정책 **HOLD** (배포 `52046660` · 2026-10-17)
+WU-070           🟢 **DIFFERENT 분모 확보 · L4 위험 측정됨** — 운영 변경 0
+                 🔴🔴 **WU-069 의 「분모 0」을 정정한다** — AC↔AB 에 DIFFERENT **2건**,
+                 라인 구조가 있는 DIFFERENT 전체 **26쌍** 이다(AC↔AC 10 · AC↔AI 9 · AI↔AB 1 · AI↔AC 5)
+                 🟢 품번 구조가 파싱된다 — `B<season><LINE><num>` · 관측 라인 AC 6 · AB 2 · AI 1
+                 🔴 번호 변환 규칙 **없다**(AC009↔AB040 차 31 · AC010↔AB046 차 36)
+                 🟢🟢 **L4 가 26쌍을 하나도 뚫지 않는다**(False SAME 증가 0 · 여는 3건 전부 SAME)
+                 🔴🔴 **그러나 막는 것은 «라인» 이 아니다** — 브랜드 다름 13 ·
+                 COLOR/CATEGORY 충돌 동반 13 이다. 라인 코드는 **아무도 보지 않는다**
+                 🔴 남은 구멍 — 「AC↔AB + 같은브랜드 + 같은색 + DIFFERENT」 표본이 **0** 이다
+                 (그것이 L4 가 뚫릴 **유일한 모양** 이고 **미측정** 이다)
+                 (`docs/MI-LINE-CODE-CONFLICT-070.md`)
 WU-069           🔴 **HOLD · 품번 보호 동결** — CONFLICT 5건 분해 · 운영 변경 0
                  🔴🔴 **`compareModelCode` 는 이 5건의 원인이 아니다** — 5건 전부
                  `crossSeller CONFLICT` 가 **먼저 이긴다**(match-truth.ts:176 > :178).
@@ -755,6 +766,7 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **색상 생산자는 제목 전용** | `seller-facts.ts:264` (WU-064) | `extractColorFromTitle(title)` **화이트리스트** · HTML 미사용 · 임의 텍스트를 색상으로 쓰지 않는다 |
 | 🔴 **국내 EXACT 0 의 진짜 원인** | `NO_TITLE_OVERLAP` (WU-064) | 한국어 제목 ↔ 영문 원상품 = 토큰 겹침 0 → **관측된 차이** 로 분류돼 EXACT 영구 차단 |
 | 🔴 **국내는 «세 겹» 으로 막힌다** | WU-065 | ①NO_TITLE_OVERLAP ②colorUnverified ③PRESUMED_SAME 보류 — **하나만 풀면 변화 0** |
+| 🔴 **라인 코드를 보는 코드는 없다** | `compareModelCode` (WU-070) | `AC`/`AB`/`AI` 를 **아무도 구분하지 않는다** · L4 를 막는 것은 색상·카테고리·브랜드다 |
 | 🔴 **CONFLICT 는 삼중 잠금** | `match-truth.ts:176·178` + `crossSellerReserved` (WU-069) | ①cross CONFLICT ②modelCode conflict ③보류 — **하나만 풀면 변화 0** · 셋 해제는 품번 보호 해체 |
 | 🔴🔴 **`crossSellerReserved` 는 정밀도의 기둥** | `match-truth.ts:233` (WU-066) | 우회하면 186쌍에서 precision **91.7% → 55.6%** · False SAME 1→16 — **영구 폐기안** |
 | 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
