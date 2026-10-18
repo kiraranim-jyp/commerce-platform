@@ -549,6 +549,16 @@ WU-056 / 056-R1  🟢🟢 **CLOSED — Production UI PASS**(CEO 확인 2026-10-1
                  두 축 안 섞임 · 내부 토큰 노출 0
 WU-058           🟢 **CLOSED** — 소싱 **UI 제거 완료** · 가격비교 **동결 유지** ·
                  남은 정책 **HOLD** (배포 `52046660` · 2026-10-17)
+WU-067           🟡 **CEO 라벨 대기** — 블라인드 리뷰 페이지 배포 · 운영 변경 0
+                 🔴 미라벨 41건 fetch → 읽힘 23 → 목록URL 3 제외 → **리뷰 19건**
+                 🔴🔴 CPO 1순위 범주(「CF-2 로 EXACT 가 되는 후보」)가 **0건** 이다
+                 (이 풀은 `modelCode unavailable` 이 대부분이라 CF-2 가 안 걸린다)
+                 🟢🟢 **대신 라벨 없이 현재 EXACT 로 들어가는 4건을 찾았다**
+                 (eraldo · cissywears · tinyapple · thefrontshop) — 라벨되면
+                 precision 분모가 **12 → 16** 이 되어 WU-060 이후 숫자가 단단해진다
+                 🔴 부수 관측 — `bbambam.com` 제목이 **mojibake**(EUC-KR 오디코딩).
+                 그 둘은 목록 URL 이라 GT 영향 0 이지만 **범위는 미측정** 이다
+                 🟡 **CEO Action 1회** — 19건 · 15~25분 (`docs/MI-BLIND-GT-REVIEW-067.md` §11)
 WU-066           🟡 **HOLD** — GT 확대(186쌍) · 운영 변경 0 · 🔴 **CF-3 REJECT 확정**
                  🔴 Human GT 는 CTO 가 못 만든다 ⟹ 사람 라벨에서 **함의되는** 쌍만 파생했다
                  (Human SAME 27 × 다른 원상품 5 = **파생 DIFFERENT 135** · 총 186)
