@@ -138,6 +138,19 @@ export const WEB_SEARCH_HEADING = "🔎 웹 검색 후보";
  */
 export const SUPPLIED_URL_HEADING = "🔗 직접 입력한 후보";
 /**
+ * 🔴🔴 WU-081 — **국내 후보 검토 구역.** 해외 축 제목과 **의미가 겹치지 않게** 짓는다.
+ * ```
+ * 🇰🇷 국내 참고가격            (WU-056 · 금액 «집계»)
+ * 🧾 해외 동일상품 참고가격     (WU-056-R1 · 금액 «집계»)
+ * 🔎 웹 검색 후보 / 🔗 직접 입력한 후보  (WU-022/024 · 후보 «행»)
+ * ✅ 아래가 이번에 추가되는 것 — 후보 «행» 이고 **검토** 를 위한 자리다
+ * ```
+ * 🔴 「동일상품」이라고 **단정하지 않는다** — 「후보」 이고 판단은 사람이 한다.
+ */
+export const DOMESTIC_REVIEW_HEADING = "🇰🇷 국내 후보 검토";
+/** 🔴 후보가 0건일 때의 문구 — **판정 의미를 부여하지 않는다**(§11). */
+export const DOMESTIC_REVIEW_EMPTY = "국내 비교 후보가 없습니다.";
+/**
  * 🔴 입력칸 안내문. **두 가지를 반드시 말한다** — ⒜ 이번 확인에만 쓰이고 저장되지
  *    않는다 ⒝ 동일상품 판정은 **우리가** 한다(셀러가 「동일상품」이라고 선언하는
  *    칸이 아니다). ⒝ 가 빠지면 셀러가 URL 을 넣는 행위를 「동일상품 확인」으로 읽는다.
@@ -155,12 +168,34 @@ export interface GeminiTransientCandidatesProps {
   heading?: string;
   /** 🟢 두 구역이 같은 화면에 설 수 있으므로 테스트 훅도 가른다. */
   testId?: string;
+  /**
+   * 🔴🔴 WU-081 — **사람 검토(CEO)**. 기본은 `undefined` 라 기존 두 구역은
+   *    **한 픽셀도 바뀌지 않는다**(버튼이 아예 렌더되지 않는다).
+   *
+   * 🔴 **자동 판정과 같은 칸을 쓰지 않는다.** `row.crossSellerVerdict`(시스템)과
+   *    `review[url]`(사람)은 **별개 상태** 이고 서로 덮어쓰지 않는다 —
+   *    `systemVerdict = SIMILAR` 과 `humanReview = SAME` 이 **공존** 한다.
+   * 🔴 이 값은 MI 판정 · 가격 · 알림 · 판매판정 · 등록 payload 에 **들어가지 않는다.**
+   */
+  review?: Record<string, HumanReview>;
+  onReview?: (url: string, verdict: HumanReview) => void;
 }
+
+/** 🔴 사람 검토 값 — 시스템 verdict 어휘(`SAME`/`PRESUMED_SAME`/…)와 **다른 타입** 이다. */
+export type HumanReview = "SAME" | "DIFFERENT";
+
+/** 🟢 사람 검토 «결과» 문구 — 시스템 판정 라벨(`tierDisplay`)과 섞지 않는다. */
+const HUMAN_REVIEW_LABEL: Record<HumanReview, string> = {
+  SAME: "✅ 동일상품",
+  DIFFERENT: "❌ 다른 상품",
+};
 
 export function GeminiTransientCandidates({
   evidence,
   heading = WEB_SEARCH_HEADING,
   testId = "gemini-transient",
+  review,
+  onReview,
 }: GeminiTransientCandidatesProps): JSX.Element | null {
   if (!evidence || evidence.length === 0) return null;
 
@@ -249,6 +284,37 @@ export function GeminiTransientCandidates({
                 <p data-testid="gt-blockers" className="mt-0.5 text-[11px] text-text-tertiary">
                   보류 근거: {blockers.join(" · ")}
                 </p>
+              )}
+              {/**
+               * 🔴🔴 WU-081 — **사람 검토.** `onReview` 가 없으면 이 블록은 **렌더되지 않는다**
+               *    (기존 두 구역이 그 상태다 — 한 픽셀도 바뀌지 않는다).
+               * 🔴 위의 `gt-verdict`(시스템 판정)를 **덮지 않는다.** 둘이 같은 행에 **공존** 한다.
+               */}
+              {onReview && (
+                <div data-testid="gt-human-review" className="mt-1 flex items-center gap-2 border-t border-border/40 pt-1">
+                  <span className="text-[11px] text-text-tertiary">CEO 검토</span>
+                  <button
+                    type="button"
+                    data-testid="gt-review-same"
+                    onClick={() => onReview(row.discoveredUrl, "SAME")}
+                    className="rounded border border-border px-1.5 py-0.5 text-[11px] text-text-primary hover:bg-surface"
+                  >
+                    동일상품
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="gt-review-different"
+                    onClick={() => onReview(row.discoveredUrl, "DIFFERENT")}
+                    className="rounded border border-border px-1.5 py-0.5 text-[11px] text-text-primary hover:bg-surface"
+                  >
+                    다른 상품
+                  </button>
+                  {review?.[row.discoveredUrl] && (
+                    <span data-testid="gt-review-result" className="text-[11px] font-medium text-text-primary">
+                      검토 결과: {HUMAN_REVIEW_LABEL[review[row.discoveredUrl]]}
+                    </span>
+                  )}
+                </div>
               )}
             </li>
           );

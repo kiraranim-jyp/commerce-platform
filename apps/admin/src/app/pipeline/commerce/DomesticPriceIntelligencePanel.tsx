@@ -27,6 +27,9 @@ import type { OverseasPriceSummary } from "./overseas-reference";
 import {
   GeminiTransientCandidates,
   SUPPLIED_URL_HEADING,
+  DOMESTIC_REVIEW_HEADING,
+  DOMESTIC_REVIEW_EMPTY,
+  type HumanReview,
   SUPPLIED_URL_INPUT_NOTICE,
   type GeminiTransientRow,
 } from "./GeminiTransientCandidates";
@@ -2243,13 +2246,34 @@ function TransientCandidateSections({
   notice,
   overseasReference,
   domesticReference,
+  domesticReview,
+  onDomesticReview,
 }: {
   web?: GeminiTransientRow[] | null;
   supplied?: GeminiTransientRow[] | null;
   notice?: string | null;
   overseasReference?: OverseasPriceSummary | null;
   domesticReference?: OverseasPriceSummary | null;
+  /** 🔴 WU-081 — 사람 검토 상태. 시스템 verdict 와 **별개 칸** 이다. */
+  domesticReview?: Record<string, HumanReview>;
+  onDomesticReview?: (url: string, verdict: HumanReview) => void;
 }): React.ReactNode {
+  /**
+   * 🔴🔴 WU-081 — **국내 후보를 «옮긴다». 복제하지 않는다.**
+   *
+   * 같은 행을 두 구역에 그리면 셀러가 후보가 두 배로 있는 것으로 읽는다. 그래서
+   * `market === "KR"` 인 행만 국내 구역으로 **이동** 시키고 기존 두 구역은 나머지를
+   * 그린다 — **총 행 수는 바뀌지 않는다**(계약으로 잠갔다).
+   * 🟢 출처는 잃지 않는다 — 행 안의 `gt-source` 뱃지가 계속 말한다.
+   * 🔴 `market` 은 운영 `classifyCandidateMarket` 산출이다. 여기서 추측하지 않는다.
+   */
+  const isKr = (r: GeminiTransientRow) => r.market === "KR";
+  const krRows = [...(web ?? []), ...(supplied ?? [])].filter(isKr);
+  const webRest = (web ?? []).filter((r) => !isKr(r));
+  const suppliedRest = (supplied ?? []).filter((r) => !isKr(r));
+  /** 🔴 국내 구역은 **참고 집계가 있을 때** 선다 — 후보 0 이어도 empty state 를 말한다. */
+  const showDomesticReview = krRows.length > 0 || !!domesticReference;
+
   if (!web?.length && !supplied?.length && !notice && !overseasReference && !domesticReference) return null;
   return (
     <>
@@ -2275,13 +2299,38 @@ function TransientCandidateSections({
         amountTestId="domestic-lowest"
       />
       <OverseasReferencePrice summary={overseasReference} />
+      {/**
+       * 🔴🔴 WU-081 — **국내 후보 «검토» 구역.** 위 두 참고가격 구역은 **금액 집계** 이고
+       *    이 구역은 **후보 행 + 사람 검토** 다. 🟢 컴포넌트는 기존 것을 그대로 쓴다.
+       * 🔴 검토 버튼은 **이 구역에만** 달린다 — 아래 두 구역은 `onReview` 가 없어
+       *    버튼이 렌더되지 않는다(기존 화면 불변).
+       */}
+      {showDomesticReview && (
+        <>
+          {krRows.length > 0 ? (
+            <GeminiTransientCandidates
+              evidence={krRows}
+              heading={DOMESTIC_REVIEW_HEADING}
+              testId="domestic-review-transient"
+              review={domesticReview}
+              onReview={onDomesticReview}
+            />
+          ) : (
+            <section data-testid="domestic-review-empty" className="mt-3 rounded-md border border-border bg-surface/40 p-2">
+              <p className="text-[11px] font-medium text-text-secondary">{DOMESTIC_REVIEW_HEADING}</p>
+              {/* 🔴 「국내 동일상품이 없다」로 적지 않는다 — 후보 부재와 상품 부재는 다르다. */}
+              <p className="mt-0.5 text-[11px] text-text-tertiary">{DOMESTIC_REVIEW_EMPTY}</p>
+            </section>
+          )}
+        </>
+      )}
       {/* 🔴 WU-022 — 「지금 확인」이 돌려준 **이번 확인 한정** 후보. DB 링크와
           데이터 수명이 다르므로 구역을 가른다. 판매판정·국내 최저가에 영향 0. */}
-      <GeminiTransientCandidates evidence={web} />
+      <GeminiTransientCandidates evidence={webRest} />
       {/* 🔴 WU-024 — 같은 컴포넌트 · 다른 구역 · 다른 머리 문구. 표시 규칙(통화
           그대로 · UNKNOWN 시장 뱃지 없음 · 승격 버튼 없음)은 한 글자도 다르지 않다. */}
       <GeminiTransientCandidates
-        evidence={supplied}
+        evidence={suppliedRest}
         heading={SUPPLIED_URL_HEADING}
         testId="url-candidate-transient"
       />
@@ -2421,6 +2470,17 @@ export function MiPanelView({
    * 유일한 상세 계산(priceCalculationDetail 슬롯)을 편다. ③의 접힘은 여전히
    * **하나**다 — 요약 넷 + 토글 하나가 CPO가 지정한 모양이다.
    */
+  /**
+   * 🔴🔴 WU-081 — **사람 검토(CEO)는 화면 state 로만 산다.**
+   *    CPO §6: 「영구 DB schema 를 새로 만드는 것을 기본값으로 하지 않는다」.
+   *    🟢 검토는 **이번 확인 화면** 에서 보고 판단하는 일이므로 transient 후보와
+   *       **같은 수명** 이면 충분하다(후보 자체가 새로고침하면 사라진다 · WU-059 계약).
+   * 🔴 이 값은 서버로 가지 않는다 — fetch · onPriceLevelChange · 등록 payload **어디에도** 없다.
+   */
+  const [domesticReview, setDomesticReview] = useState<Record<string, HumanReview>>({});
+  const handleDomesticReview = (url: string, verdict: HumanReview) =>
+    setDomesticReview((prev) => ({ ...prev, [url]: verdict }));
+
   const [showPriceDetail, setShowPriceDetail] = useState(false);
   /**
    * 바깥의 "가격 계산 기준 보기" 요청을 이 토글에 잇는다. useEffect가 아니라
@@ -3364,7 +3424,7 @@ export function MiPanelView({
           🟢 그리고 후보가 없으면 두 구역 모두 **아무것도 렌더하지 않는다** —
              기본 화면은 한 픽셀도 바뀌지 않는다(그 성질은 컴포넌트가 보장한다).
         */}
-        <TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} notice={urlCandidateNotice} overseasReference={overseasReference} domesticReference={domesticReference} />
+        <TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} notice={urlCandidateNotice} overseasReference={overseasReference} domesticReference={domesticReference} domesticReview={domesticReview} onDomesticReview={handleDomesticReview} />
       </div>
     </CollapsibleSection>
   );

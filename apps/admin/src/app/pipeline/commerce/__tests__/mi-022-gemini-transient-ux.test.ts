@@ -242,7 +242,19 @@ describe("⑥ 🔴 판정·가격 계산에 손대지 않았다 — 소스 계�
     expect(panel).toContain("const [geminiEvidence, setGeminiEvidence]");
     expect(panel).toContain("geminiEvidence={geminiEvidence}");
     expect(panel).toContain("<TransientCandidateSections web={geminiEvidence}");
-    expect(panel).toContain("<GeminiTransientCandidates evidence={web} />");
+    /**
+     * 🔴🔴 WU-081 — **앵커를 갱신하고 «강화» 했다.** 렌더 입력이 `web` → `webRest`
+     *    (국내 행을 🇰🇷 구역으로 **옮긴** 나머지)로 바뀌었다. 🟢 **배선 성질은 그대로** 다.
+     *    🔴 그래서 이름 하나가 아니라 **「그 파생이 `web` 에서 나온다」** 까지 잠근다 —
+     *       이름만 보면 엉뚱한 배열을 넣어도 통과한다(WU-075 에서 당한 계열).
+     */
+    expect(panel).toContain("<GeminiTransientCandidates evidence={webRest} />");
+    expect(panel).toContain("const webRest = (web ?? []).filter(");
+    /** 🔴 국내 구역도 **transient 입력에서만** 나온다(새 데이터 출처를 만들지 않았다). */
+    expect(panel).toContain("const krRows = [...(web ?? []), ...(supplied ?? [])].filter(isKr)");
+    /** 🔴 그리고 그 구역이 판정/집계 어휘와 **같은 줄에 서지 않는다**(위 FORBIDDEN 과 같은 원칙). */
+    const krLines = panel.split(String.fromCharCode(10)).filter((l) => l.includes("krRows") || l.includes("domesticReview"));
+    expect(krLines.filter((l) => FORBIDDEN.some((f) => l.toLowerCase().includes(f.toLowerCase())))).toEqual([]);
   });
 
   it("🔴 저장 호출 0 — transient 구역에 PATCH/POST 승격 경로가 없다", () => {

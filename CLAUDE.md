@@ -790,6 +790,8 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **가격 구역 식별** | `wu-056r1-price-section-identity.test.ts` | 구역 제목 **상호 비포함** · 해외 구역 «안» 에 `₩`/`약`/`≈`/통화기호 **0** · 아이콘 중복 금지 — **Panel mount DOM 으로** 본다 |
 | 🔴 **단계는 넷 · 번호는 파생** | `workflow.ts` · `stage-focus.ts` (WU-058) | 큰 단계 **4** · 라벨에 「소싱」 0 · 단계마다 본문 **하나**(빈 단계 0) · **번호는 배열 순서에서 파생**(하드코딩 금지) |
 | 🔴 **URL 분류기는 양방향 오류** | `classifyUrlShape` (WU-073) | 한국 CMS 목록(`goods_list`·`product_list`·`shopbrand`)이 **PRODUCT_PAGE** · SSG `itemView.ssg` 는 **오차단** — 🔴 「②의 탈락 = 정확한 차단」으로 읽지 않는다 · 고치지 않는다(WU-052 HOLD) |
+| 🔴 **사람 검토는 시스템 판정을 덮지 않는다** | `GeminiTransientCandidates` · `MiPanelView` (WU-081) | `gt-verdict`(시스템)와 `gt-review-result`(사람)는 **다른 state·타입·DOM** · 클릭이 `fetch` **0회** · MI/가격/알림/판매판정/등록 payload 에 **들어가지 않는다** · 🔴 `onReview` 없는 구역엔 버튼이 **렌더되지 않는다** |
+| 🔴 **국내 행은 «옮긴다» 복제하지 않는다** | `TransientCandidateSections` (WU-081) | `market==="KR"` 행만 🇰🇷 구역으로 이동 · 기존 두 구역은 나머지 · **총 행 수 불변**(계약) |
 | 🔴🔴🔴 **여덟 보호축을 다시 파지 않는다** | WU-063~080 통합 (CPO CLOSED 2026-10-18) | **COLOR · TITLE · MODEL_CODE · LINE · MARKET · PRICE · LANGUAGE · BRAND** — 여덟 축 전부에서 「완화하면 Human DIFFERENT 가 같이 열린다」가 **측정됐다** · 🔴 **국내 recall 은 현 구조의 한계로 «확정»** · 🔴 「gate 가 너무 엄격하다」로 읽지 않는다 · 🔴 **이 축들을 다시 파는 WU 를 만들지 않는다**(새 경로는 **CPO 가 지정**) |
 | 🔴 **domain = brand 금지(계약으로 잠김)** | `wu-080-brand-producer.test.ts` | 도메인/판매처 이름으로 브랜드를 만들면 **2 FAIL** · 🔴 샵이 `brand` 자리에 **자기 이름** 을 적는 경우가 실재한다(biskuit 「비스킷」) |
 | 🔴🔴 **BRAND_UNCONFIRMED 는 «정확한 상태» 다** | `cross-seller.ts:751·999` (WU-080) | 13건 중 6건은 **원상품 brand 가 null** 이라 걸린다(후보는 있다) · 🔴 원상품 공백을 메우면 보류→**충돌** 로 악화(SAME 4 더 막힘 · DIFFERENT 2 열림) |
@@ -831,6 +833,34 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
+
+### 🟢🟢 WU-081 `MI-DOMESTIC-REVIEW-UI` — **구현/배포 · CEO 확인 1회 대기**
+
+🟢 전문 `docs/MI-DOMESTIC-REVIEW-UI-081.md`. 🔴 MI 판정 0 · 가격 0 · 시장 0 · 집계 0 ·
+API 0 · schema 0 · DB 0 · AI 0. 운영 **2 파일**(약 +95줄).
+
+```
+🇰🇷 **국내 후보 검토** 구역 신설 — 기존 후보 카드(`GeminiTransientCandidates`)를
+   **그대로** 쓰고 「CEO 검토 [동일상품][다른 상품]」 블록만 더했다.
+🔴 `onReview` 가 없으면 렌더되지 않으므로 기존 두 구역(🔎웹·🔗직접입력)은 **불변**.
+🔴 `market === "KR"` 행을 **옮긴다 — 복제하지 않는다**(총 행 수 불변을 계약으로 잠금).
+🔴 후보 0 이면 「국내 비교 후보가 없습니다」 — **「동일상품이 없다」로 적지 않는다**.
+```
+
+🟢🟢 **system verdict 와 human review 는 다른 state · 다른 타입 · 다른 DOM 노드** 다 —
+SAME 클릭 후 `gt-verdict`·`gt-price`·`gt-blockers` **문자열이 동일** 하고 `fetch` **0회**
+(마운트 DOM 으로 증명). 🟢 검토는 **화면 state 로만** 산다(영속 schema **불필요** 확인).
+
+🟢 실데이터 — WU-063 표의 `market==="KR"` **7건**(biskuit·mustit·littleluna·miniboutique·
+luksusbaby). §5-B CONTROL 재현 mismatch **0/51**. 🔴 `EXCLUDED` 2건도 **구역에 선다**
+(WU-062 정책 유지 — 금액 집계에서만 빠진다).
+
+🔴 **회귀 1 failed 포착·규명**(§10) — `mi-022` 의 「배선 존재」 앵커가
+`evidence={geminiEvidence}` **문자열** 을 보고 있었다. 🟢 금지목록 검사는 통과했으므로
+**진짜 위반이 아니고**, 앵커를 갱신하며 **강화** 했다(유도식 + 판정 어휘 동반 금지).
+🔴 mutation M2 도 1차 통과를 잡아 단언을 강화했다(「검토 결과」라는 **말** 까지 단언).
+
+🔴 **CEO Action — Production UI 1회 확인**(보고서 §15 에 URL·순서·기대결과·FAIL 기준).
 
 ### 🔴 WU-080 `MI-BRAND-EVIDENCE` — **REJECT · BRAND 는 올바르게 동작한다** (구현 0)
 
