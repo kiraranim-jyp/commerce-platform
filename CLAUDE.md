@@ -549,6 +549,15 @@ WU-056 / 056-R1  🟢🟢 **CLOSED — Production UI PASS**(CEO 확인 2026-10-1
                  두 축 안 섞임 · 내부 토큰 노출 0
 WU-058           🟢 **CLOSED** — 소싱 **UI 제거 완료** · 가격비교 **동결 유지** ·
                  남은 정책 **HOLD** (배포 `52046660` · 2026-10-17)
+WU-061           🟢 **CLOSED** — 가격 증거/비교 경계 닫기 · 운영 변경 0
+                 🟢🟢 **국내 가격 증거 회수 11/13** — 실패 2건은 **같은 사이트 하나**(beaumonde.co.kr)
+                 🔴🔴 **가격 계층 3층(meta)을 추가하지 않는다** — 증분 회수 **0** 인데
+                 불일치가 들어온다(C15 mustit ①226,000 ↔ ③233,000 KRW · 1/12 = 8.3%)
+                 🔴 `EXCLUDED` 영향도 산출 — 금액 집계에서 빼면 EUR 9→40 · USD 12→98
+                 🟢🟢 **transient 는 알림을 만들지 못한다** — `computeSellerAction`+
+                 `computeMarketAlert` 를 **직접 불러** null 을 단언했다(소스 grep 아님)
+                 🟢 Vision 실험 설계만 산출(FP 후보 **1** · precision 11/12 · recall 11/27)
+                 (`docs/MI-PRICE-EVIDENCE-CLOSURE-061.md`)
 WU-060           🟢 **CLOSED** — C06 False EXACT **원인 확정** · 운영 변경 0
                  🔴🔴 **게이트가 놓친 FP 가 아니다** — 다섯 축 전부 일치 · blockers 0 ·
                  후보가 **스스로** 같은 품번·같은 색상명을 적는다(사람은 **눈으로** 다른 색을 봤다)
@@ -650,6 +659,9 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **색상 축이 마지막 방어** | `isColorUnverified` · `COLOR_VARIANT` (WU-060) | C22(품번 exact·단독 blocker)를 막는 **유일한** 축 — 빼면 **False EXACT** 가 된다 |
 | 🔴 **동일판매처 이중 잠금** | `sameSellerDistinctListing` + `crossSellerReserved` | 🔴 분류표만 빼도 결과가 **안 바뀐다**(잠금이 둘) — 「통과했다」를 「가드 없다」로 읽지 않는다 |
 | 🔴 **False EXACT 보호조건 금지** | `wu-060-false-exact.test.ts` | 사이즈/소재/카테고리 **부재** 를 EXACT 차단 근거로 쓰지 않는다(인과 0 · 쓰레기를 보상) |
+| 🔴 **후보 가격 계층은 둘** | `product-url-facts.ts:248` (WU-061) | `priceFromJsonLd ?? micro?.price` **만** · `extractFromOpenGraph` 는 **원상품 전용**(후보에 끌어오면 불일치) |
+| 🔴 **해외 집계 숫자 고정** | `wu-061-price-closure.test.ts` | `EXCLUDED` 포함 최저가가 **현행** 이다 — 바꾸면 깨진다(CPO 판정 전 임의 필터링 금지) |
+| 🟢 **transient 는 알림 0** | `computeSellerAction`+`computeMarketAlert` | transient 만 있으면 alert **null** · 🔴 `priceLevel` 이 오르는 순간 **열린다**(CF-3 과 결합) |
 
 🔴 **금지는 그대로 유효하다** — AI/Gemini API ❌ · 소비자 구독 우회 ❌ · Registry 확대 ❌ ·
 sourcing → price comparison 연결 ❌ · threshold 완화 ❌ · PRESUMED_SAME 자동 승격 ❌ ·
