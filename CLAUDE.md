@@ -780,6 +780,8 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 국내 문구 경계 | `DOMESTIC_REFERENCE_SCOPE` (WU-056) | 🔴 「판매판정 미반영」을 **국내에 단정하지 않는다**(알림 경로 때문) |
 | 🔴 **가격 구역 식별** | `wu-056r1-price-section-identity.test.ts` | 구역 제목 **상호 비포함** · 해외 구역 «안» 에 `₩`/`약`/`≈`/통화기호 **0** · 아이콘 중복 금지 — **Panel mount DOM 으로** 본다 |
 | 🔴 **단계는 넷 · 번호는 파생** | `workflow.ts` · `stage-focus.ts` (WU-058) | 큰 단계 **4** · 라벨에 「소싱」 0 · 단계마다 본문 **하나**(빈 단계 0) · **번호는 배열 순서에서 파생**(하드코딩 금지) |
+| 🔴 **URL 분류기는 양방향 오류** | `classifyUrlShape` (WU-073) | 한국 CMS 목록(`goods_list`·`product_list`·`shopbrand`)이 **PRODUCT_PAGE** · SSG `itemView.ssg` 는 **오차단** — 🔴 「②의 탈락 = 정확한 차단」으로 읽지 않는다 · 고치지 않는다(WU-052 HOLD) |
+| 🔴 **발견량은 병목이 아니다** | WU-073 funnel | AI 국내 후보 **46** → 최종 EXACT **0** · 레버는 **② URL 분류 → ⑥ 시장 증거** 순 · 🔴 discovery 를 늘리는 WU 를 만들지 않는다 |
 | 🔴 **소싱 backend 보존** | `sourcing_candidates` · 관련 route/schema | UI 호출부 **0** 이지만 **지우지 않는다**(참조 확인 전 삭제 금지 · CPO §1·§5) |
 | 🔴 **EXACT 보류 게이트** | `match-truth.ts:233·237` (WU-059) | `PRESUMED_SAME` ⟹ 식별자 경로도 **막는다** · `BRAND_UNCONFIRMED` 단독 완화 **금지**(FP +2 실측) |
 | 🔴 **참고가격 ↔ 판정 경계** | `market-intelligence.ts:253·318` (WU-059) | 해외 = `push` 뒤 `continue`(판정 0) · 국내 = `EXACT\|COMPARISON` **만** 적재(판정 입력) |
@@ -803,6 +805,46 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
+
+### 🟢 WU-073 `MI-DISCOVERY-FUNNEL` — **발견량은 병목이 아니다** (측정 전용 · 구현 0)
+
+🟢 전문 `docs/MI-DISCOVERY-FUNNEL-073.md`. 🔴 운영 변경 **0** · AI 0 · HTTP 0 · 배포 0.
+
+| 단계 | 입력 | 국내 | 탈락(국내) | 원인 |
+|---|---:|---:|---:|---|
+| ① AI 후보 | 181 | **46** | — | 4 모델 합산 |
+| ② URL 분류 | 181 | **30** | **91(16)** | `NOT_PRODUCT_PAGE` 87 · `SELF_REFERENCE` 4 |
+| ③ fetch | 90 | 23 | 20(7) | 🔴 GT 선별 — **측정 범위 밖** |
+| ④ product evidence | 70 | 23 | **0** | 🔴 통과율 100% |
+| ⑤ price | 17 | 15 | 2 | beaumonde 구조화 0 |
+| ⑥ market KR | 17 | **7** | 10 | 도메인 증거 없음 · 외화 |
+| ⑦ 국내 버킷 | 17 | **5** | 2 | tier EXCLUDED |
+| ⑧ 최종 EXACT | 5 | **0** | — | 삼중 잠금(WU-069) |
+
+🔴🔴 **그래서 다음 개선은 discovery 가 아니다** — AI 는 국내 후보를 46건 올린다.
+가장 크게 깎이는 구간은 **② URL 분류**(46→30) 이고 그 다음이 **⑥ 시장 확정**(17→7) 이다.
+
+🔴🔴 **`classifyUrlShape` 가 «양방향으로» 틀린다**(이 WU 의 핵심 발견):
+```
+🔴 오통과 5 — 한국 CMS 목록이 **PRODUCT_PAGE** 가 된다
+   beaumonde `goods_list.php` · bbambam `product_list.html`×2 ·
+   foretforet `shopbrand.html` · donokids `shopbrand.html`
+🔴 오차단 1 — SSG 의 **진짜 상품** `item/itemView.ssg?itemId=` 가 UNKNOWN_PAGE
+🟢 `collections/*` 는 올바르게 LISTING_PAGE
+⟹ 분류기가 **영문권 URL 문법에 맞춰져** 있다. ②의 91 탈락을 「정확한 차단」으로 읽지 않는다
+🔴 **고치지 않았다** — WU-052 가 「안전한 목록/상품 분리 증거 없음」으로 HOLD 한 자리다
+```
+
+🔴 **④ product evidence 가 아무것도 거르지 못한다** — 70→70 이고 CEO 가 블라인드에서
+**404·홈** 이라 판정한 **6건이 전부 통과** 했다. 🟢 ⑥⑦⑧ 가 막아 **가격에는 안 들어간다**
+(깊이방어 작동) 🔴 단 **화면 후보 목록에는 보인다**(WU-010 성질).
+
+🔴 **내가 틀렸다가 정정한 것** — 「오통과 7건」이 실제 **5건** 이다. URL **전체** 로
+매칭해 추적 파라미터 `?icid=MAIN.product_listmain_2` 가 걸렸고 **진짜 상품 2건**
+(littleluna·miniboutique)이 섞였다. 🟢 **경로만** 보도록 고쳤다 — WU-007A 와 같은 계열.
+
+🔴 **섞지 않는 분모 셋** — ①~④(181 · WU-067 표본) ↔ ⑤~⑧(17 · WU-063 표본) ↔
+「국내 46」(도메인 휴리스틱) vs 「⑥ 7」(운영 `classifyCandidateMarket`).
 
 🔴 **금지는 그대로 유효하다** — AI/Gemini API ❌ · 소비자 구독 우회 ❌ · Registry 확대 ❌ ·
 sourcing → price comparison 연결 ❌ · threshold 완화 ❌ · PRESUMED_SAME 자동 승격 ❌ ·
