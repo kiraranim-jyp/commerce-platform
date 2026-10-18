@@ -549,6 +549,20 @@ WU-056 / 056-R1  🟢🟢 **CLOSED — Production UI PASS**(CEO 확인 2026-10-1
                  두 축 안 섞임 · 내부 토큰 노출 0
 WU-058           🟢 **CLOSED** — 소싱 **UI 제거 완료** · 가격비교 **동결 유지** ·
                  남은 정책 **HOLD** (배포 `52046660` · 2026-10-17)
+WU-071           🔴 **L4 보류 유지** — 위험 형태 탐색 + 샵 SKU 경로 · 운영 변경 0
+                 🔴 위험 형태(라인다름+같은브랜드+COLOR/CATEGORY 충돌 없음+DIFFERENT) **0건**
+                 — 🔴 단 「안전」이 아니다. 라인 다른 DIFFERENT 17쌍이 **브랜드 9 · COLOR 8** 로
+                 걸린 것이고 **라인을 보는 축은 없다**(「아무것도 안 막음」 0)
+                 🔴🔴 **방어축 분해 — COLOR 가 단독 하중** 이다. 빼면 **12건 즉시 뚫린다**
+                 (그 목록에 CPO 가 지목한 **S1/C33** 이 있다) · CATEGORY 제거는 1건
+                 🔴🔴 **그리고 국내 후보에는 그 COLOR 방어가 애초에 없다**
+                 (`colorText` 전건 null · WU-064) ⟹ L4 안전성은 **해외 표본에서만** 쟀다
+                 🟢 ⑤ 샵 SKU 경로 확정 — `seller-facts.ts:208` 이 slug 를 품번으로 승격
+                 (`extractCodeLikeSlugSegment` · kids21 `700005621lbl` 통과).
+                 🔴 그 함수 주석의 「재고번호는 안전하게 빠진다」 전제가 **반증됐다**
+                 🟡 안전 후보 1 — 승격 13건에서 **진짜 품번은 전부 글자 시작 · 샵 SKU 는
+                 전부 숫자 시작**(N=13 · 잃는 것 0) 🔴 새 규칙이라 수정하지 않았다
+                 (`docs/MI-L4-RISK-SHAPE-071.md`)
 WU-070           🟢 **DIFFERENT 분모 확보 · L4 위험 측정됨** — 운영 변경 0
                  🔴🔴 **WU-069 의 「분모 0」을 정정한다** — AC↔AB 에 DIFFERENT **2건**,
                  라인 구조가 있는 DIFFERENT 전체 **26쌍** 이다(AC↔AC 10 · AC↔AI 9 · AI↔AB 1 · AI↔AC 5)
@@ -766,6 +780,8 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **색상 생산자는 제목 전용** | `seller-facts.ts:264` (WU-064) | `extractColorFromTitle(title)` **화이트리스트** · HTML 미사용 · 임의 텍스트를 색상으로 쓰지 않는다 |
 | 🔴 **국내 EXACT 0 의 진짜 원인** | `NO_TITLE_OVERLAP` (WU-064) | 한국어 제목 ↔ 영문 원상품 = 토큰 겹침 0 → **관측된 차이** 로 분류돼 EXACT 영구 차단 |
 | 🔴 **국내는 «세 겹» 으로 막힌다** | WU-065 | ①NO_TITLE_OVERLAP ②colorUnverified ③PRESUMED_SAME 보류 — **하나만 풀면 변화 0** |
+| 🔴🔴 **COLOR 가 L4 의 단독 하중** | `cross-seller.ts` COLOR conflict (WU-071) | 빼면 **12건** 즉시 False SAME · 🔴 국내 후보엔 그 방어가 **애초에 없다**(colorText null) |
+| 🔴 **slug 가 품번으로 승격된다** | `seller-facts.ts:208` · `extractCodeLikeSlugSegment` | kids21 **샵 자체 SKU** 가 통과한다 · 🟢 지금은 conflict → EXCLUDED 로 **안전 방향** 오류다 |
 | 🔴 **라인 코드를 보는 코드는 없다** | `compareModelCode` (WU-070) | `AC`/`AB`/`AI` 를 **아무도 구분하지 않는다** · L4 를 막는 것은 색상·카테고리·브랜드다 |
 | 🔴 **CONFLICT 는 삼중 잠금** | `match-truth.ts:176·178` + `crossSellerReserved` (WU-069) | ①cross CONFLICT ②modelCode conflict ③보류 — **하나만 풀면 변화 0** · 셋 해제는 품번 보호 해체 |
 | 🔴🔴 **`crossSellerReserved` 는 정밀도의 기둥** | `match-truth.ts:233` (WU-066) | 우회하면 186쌍에서 precision **91.7% → 55.6%** · False SAME 1→16 — **영구 폐기안** |
