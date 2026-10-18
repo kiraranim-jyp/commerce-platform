@@ -549,6 +549,10 @@ WU-056 / 056-R1  🟢🟢 **CLOSED — Production UI PASS**(CEO 확인 2026-10-1
                  두 축 안 섞임 · 내부 토큰 노출 0
 WU-058           🟢 **CLOSED** — 소싱 **UI 제거 완료** · 가격비교 **동결 유지** ·
                  남은 정책 **HOLD** (배포 `52046660` · 2026-10-17)
+WU-059           🟢 **CLOSED / HOLD** — 잔여 5영역 전수 측정 · **운영 동작 변경 0**
+                 (배포 `339cc8e1` · 2026-10-18) · 🔴 **CPO 판정 5건** 이 §19 에 있다
+                 (`docs/MI-RESIDUAL-AREAS-059.md`) — ①CF-3 ②파생 알림 ③해외 tier
+                 ④`fixedPrice` 칸 ⑤C06 False EXACT. 🔴🔴 **①과 ②는 같이 판정한다**
 가격비교 루프      🟢🟢 **CLOSED** — 더 쪼개지 않는다
 다음             🔴 **CPO 가 지정한다.** CTO 가 선제적으로 WU 를 만들지 않는다
 CTO 지금 할 일    🔴 **없다** — 코드/기능/정책을 만지지 않는다
@@ -580,14 +584,35 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 > 두 축(국내·해외)이 **응답을 타고 화면까지** 연결됐고 **Production UI 에서 확인됐다**
 > (WU-049 → 055 → 056 → 056-R1 · CEO PASS 2026-10-17).
 
-🔴 **그래도 과장하지 않는다 — 남은 병목 넷은 전부 «제품 정책» 이다**:
+🔴 **그래도 과장하지 않는다 — 남은 병목은 전부 «제품 정책» 이다** (🔴 WU-059 가 전수로 쟀다):
 ```
-① 국내 `EXACT`(동일상품 가격) **0** — 품번은 확인되는데 `BRAND_UNCONFIRMED` 가 남는다
-   (WU-054 addendum · WU-035 가 HOLD 한 그 질문) → **identity 정책 판정 필요**
-② beaumonde(C27) 가격이 **본문 텍스트** 라 `VERIFIED_CURRENT` 미승격 → 안전한 추출 기준 판정 필요
-③ transient 수명 — 새로고침하면 참고가격이 사라진다(**설계** · 저장 금지) → WU-039 §6 미결
-④ `TRANSIENT_SCOPE_NOTICE` 문구가 **알림 경로까지 포함하면 좁다**(WU-056 §10-D)
-   그리고 해외/국내 집계의 **tier 비대칭**(해외는 EXCLUDED 까지 담는다) → 둘 다 CPO 판정
+① 국내 `EXACT` **0** — 🔴🔴 **원인이 정정됐다**(WU-059). 「`BRAND_UNCONFIRMED` 가 남는다」는
+   **증상** 이고, EXACT 를 막는 코드는 `match-truth.ts:233·237` 의
+   **`crossSellerReserved`**(`verdict === "PRESUMED_SAME"`) 다. 🔴 `matchLevel` 은 **레버가 아니다**
+   (`very_high` ↔ `low` 로 바꿔도 tier 가 같다 — 식별자 경로 둘이 모두 EXACT 로 매핑된다).
+   🔴🔴 그리고 **WU-057 의 「FP 분모 0」은 틀렸다** — 완화는 «게이트» 단위로 적용되므로
+   분모도 `BRAND_UNCONFIRMED` **단독** 군이어야 하고 거기에 Human DIFFERENT 가 **3건** 있다.
+   GT 51 측정: 현행 EXACT 12(SAME 11·DIFF **1**) · 전면완화 28(DIFF **9**) ·
+   단독완화 19(DIFF **3** — C50·C51) · **+품번 exact 17(DIFF 1 · FP +0)** ← 🟡 유일한 후보
+   🔴 그 CF-3 도 **구현하지 않았다** — 품번 재사용 샵의 **다른 리스팅을 못 본 경우** 가
+   표본에 없다(C19·C20 은 둘 다 관측돼서 막혔다) → **미측정 FP 모드.** CPO 판정 사안.
+   🔴 현행에 **False EXACT 1건**(C06 `global.trenbe.com`)이 **이미 있다** — precision 11/12.
+② beaumonde(C27) 가격이 **본문 텍스트** → 🔴 WU-059 실측으로 HOLD 가 강화됐다:
+   `ld+json` 0 · microdata 0 · `og:price` 0 · `itemprop=price` 0 · **본문 금액 8개**(168,000원 포함) ·
+   유일한 구조화 후보가 `set_goods_fixedPrice`(= **정가**, 플랫폼 종속) → 가격 오인 위험
+③ transient 수명 — 🟢 **WU-059 가 보호계약으로 확정했다.** 참고 축은 POST 응답에서만 set 되고
+   GET 이 **덮지 않는다**(세션 내 생존 · F5 에만 소멸). 🔴 client 영속화를 넣으면 참고가격이
+   그것을 만든 POST 보다 오래 살아 **옆의 판정(GET=DB 전용)과 벌어진다** → 도입 금지.
+④ 🔴🔴 **국내 참고가격은 «판정 입력» 이다**(WU-039 가 의도적으로 합쳤다 · WU-059 전수 확인).
+   해외는 `push` 뒤 `continue` 라 판정에 **닿지 않는다**(문구가 정확하다).
+   🔴 그리고 국내 경로가 `computeMarketAlert → openAlertIfNotActive` 로 **영속 `price_alerts`
+   행** 을 만들 수 있다 — 「저장되지 않습니다」는 **가격** 이야기다.
+   🟢 지금은 국내 EXACT 0 이라 발화하지 않는다. 🔴🔴 **그래서 ①과 ④는 «같은 선» 이다 —
+   CF-3 을 승인하면 ④가 함께 열린다. 따로 판정하면 안 된다.**
+⑤ 해외/국내 집계의 **tier 비대칭** — 국내는 적재 시점에 `EXACT|COMPARISON` 둘뿐인데
+   해외 집계기(`summarizeCandidateOverseasPrices`)는 **tier 를 필터하지 않는다** →
+   🔴 「동일상품 아님」(`EXCLUDED`)이 「해외 **동일상품** 참고가격」의 **최저가** 가 될 수 있다.
+   🔴 WU-059 가 **숫자를 바꾸지 않았다**(CPO: 임의 필터링 금지) → CPO 판정.
 ```
 
 ### 🔴🔴 **지금 유효한 보호 계약 — 건드리기 전에 반드시 읽는다**
@@ -611,6 +636,9 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **가격 구역 식별** | `wu-056r1-price-section-identity.test.ts` | 구역 제목 **상호 비포함** · 해외 구역 «안» 에 `₩`/`약`/`≈`/통화기호 **0** · 아이콘 중복 금지 — **Panel mount DOM 으로** 본다 |
 | 🔴 **단계는 넷 · 번호는 파생** | `workflow.ts` · `stage-focus.ts` (WU-058) | 큰 단계 **4** · 라벨에 「소싱」 0 · 단계마다 본문 **하나**(빈 단계 0) · **번호는 배열 순서에서 파생**(하드코딩 금지) |
 | 🔴 **소싱 backend 보존** | `sourcing_candidates` · 관련 route/schema | UI 호출부 **0** 이지만 **지우지 않는다**(참조 확인 전 삭제 금지 · CPO §1·§5) |
+| 🔴 **EXACT 보류 게이트** | `match-truth.ts:233·237` (WU-059) | `PRESUMED_SAME` ⟹ 식별자 경로도 **막는다** · `BRAND_UNCONFIRMED` 단독 완화 **금지**(FP +2 실측) |
+| 🔴 **참고가격 ↔ 판정 경계** | `market-intelligence.ts:253·318` (WU-059) | 해외 = `push` 뒤 `continue`(판정 0) · 국내 = `EXACT\|COMPARISON` **만** 적재(판정 입력) |
+| 🔴 **transient 수명** | `DomesticPriceIntelligencePanel` (WU-059) | 참고 축은 **POST 응답에서만** set · GET 이 덮지 않는다 · `sessionStorage`/`localStorage` **금지** |
 
 🔴 **금지는 그대로 유효하다** — AI/Gemini API ❌ · 소비자 구독 우회 ❌ · Registry 확대 ❌ ·
 sourcing → price comparison 연결 ❌ · threshold 완화 ❌ · PRESUMED_SAME 자동 승격 ❌ ·
