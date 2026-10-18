@@ -549,6 +549,18 @@ WU-056 / 056-R1  🟢🟢 **CLOSED — Production UI PASS**(CEO 확인 2026-10-1
                  두 축 안 섞임 · 내부 토큰 노출 0
 WU-058           🟢 **CLOSED** — 소싱 **UI 제거 완료** · 가격비교 **동결 유지** ·
                  남은 정책 **HOLD** (배포 `52046660` · 2026-10-17)
+WU-065           🟡 **HOLD** — `NO_TITLE_OVERLAP` 전수 · 운영 변경 0
+                 🔴🔴 **국내 마지막 구간은 «세 겹» 으로 막혀 있다** — ① NO_TITLE_OVERLAP
+                 (한국어 제목) ② colorUnverified(색상 추출 실패) ③ crossSellerReserved
+                 (PRESUMED_SAME 보류). 🔴 **하나만 풀면 아무 일도 안 일어난다**
+                 (CF-1 전면비차단 · CF-2 품번 · CF-3 독립증거 — **전부 변화 0건**)
+                 🔴 NO_TITLE_OVERLAP 은 **4/51 · 전부 국내**(원 LA → 후보 MIXED) ·
+                 **A 군(같은 문자체계인데 겹침 0) 0건** ⟹ 「진짜 불일치」 분모가 없다
+                 🔴🔴 B 군(품번 exact+독립증거≥2) **2건 중 1건이 Human DIFFERENT**(C08)
+                 ⟹ 독립증거 «개수» 로는 동일성을 가를 수 없다
+                 🟡 결합(색상+비차단)만 C47 +1 SAME · FP 0 — 🔴 N=1 · 금지 둘 동시 해제 필요
+                 🟢 C08 은 결합에서도 ③이 막았다 · 🟢 C06 은 전 CF 불변(anchor)
+                 (`docs/MI-TITLE-OVERLAP-065.md`)
 WU-064           🔴 **HOLD** — 국내 색상 evidence · 운영 변경 0
                  🔴🔴 **색상을 «완벽히» 복구해도 tier 변화가 «0건» 이다**(EXACT 12 → 12).
                  ⟹ WU-063 의 「색상 미확인이 직접 원인」을 **정정한다** — 그것은 EXACT
@@ -694,6 +706,7 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **색상 축이 국내 마지막 방어** | `isColorUnverified` (WU-063) | 국내 버킷 5건 전부 `exact`+`colorUnverified` · 풀면 **Human DIFFERENT 2건만** 올라간다(순손실) |
 | 🔴 **색상 생산자는 제목 전용** | `seller-facts.ts:264` (WU-064) | `extractColorFromTitle(title)` **화이트리스트** · HTML 미사용 · 임의 텍스트를 색상으로 쓰지 않는다 |
 | 🔴 **국내 EXACT 0 의 진짜 원인** | `NO_TITLE_OVERLAP` (WU-064) | 한국어 제목 ↔ 영문 원상품 = 토큰 겹침 0 → **관측된 차이** 로 분류돼 EXACT 영구 차단 |
+| 🔴 **국내는 «세 겹» 으로 막힌다** | WU-065 | ①NO_TITLE_OVERLAP ②colorUnverified ③PRESUMED_SAME 보류 — **하나만 풀면 변화 0** |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
 
