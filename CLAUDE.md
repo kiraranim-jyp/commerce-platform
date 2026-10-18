@@ -549,6 +549,20 @@ WU-056 / 056-R1  🟢🟢 **CLOSED — Production UI PASS**(CEO 확인 2026-10-1
                  두 축 안 섞임 · 내부 토큰 노출 0
 WU-058           🟢 **CLOSED** — 소싱 **UI 제거 완료** · 가격비교 **동결 유지** ·
                  남은 정책 **HOLD** (배포 `52046660` · 2026-10-17)
+WU-072           🔴🔴 **L4 종료(REJECT)** — 국내 COLOR × L4 정량화 · 운영 변경 0
+                 ① 국내 17건 중 **구조화 색상이 있는 것은 1건**(C08 JSON-LD 「블루」).
+                 `colorText` 는 3건(전부 **제목 유래**) · 「색상/컬러」 **문자열** 은 10건인데
+                 **산문** 이다. 🔴 그리고 microdata 색상 0 은 **「읽는 칸이 없어서」** 다
+                 (`ExtractedProductData` 에 `color` 칸이 **없다** — typecheck 가 잡았다)
+                 ② 국내에서 L4 는 **네 모드 전부 불변**(EXACT 1 · SAME 0 · DIFF 1).
+                 🔴 안전해서가 아니라 **조건 ③에 14/17 이 막혀 발화하지 못해서** 다
+                 🔴🔴 **국내/한국계 현재 EXACT 1건이 Human DIFFERENT 다**(C06) —
+                 국내 precision **0/1** · 국내 Human SAME 중 EXACT 도달 **0건**
+                 ③ 「숫자 시작 slug 거부」 → **S2-4 회복 안 됨** · 전체 지표 전부 불변
+                 (cross-seller 가 여전히 `conflicts[MODEL_CODE]` 를 낸다 — 삼중 잠금 ①)
+                 ⟹ 🔴 **두 안건 다 REJECT.** 전략 고정 —
+                 **「품번 충돌 보호를 완화하는 대신 국내 recall 은 다른 축에서 해결한다」**
+                 (`docs/MI-DOMESTIC-COLOR-L4-072.md`)
 WU-071           🔴 **L4 보류 유지** — 위험 형태 탐색 + 샵 SKU 경로 · 운영 변경 0
                  🔴 위험 형태(라인다름+같은브랜드+COLOR/CATEGORY 충돌 없음+DIFFERENT) **0건**
                  — 🔴 단 「안전」이 아니다. 라인 다른 DIFFERENT 17쌍이 **브랜드 9 · COLOR 8** 로
@@ -780,6 +794,7 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **색상 생산자는 제목 전용** | `seller-facts.ts:264` (WU-064) | `extractColorFromTitle(title)` **화이트리스트** · HTML 미사용 · 임의 텍스트를 색상으로 쓰지 않는다 |
 | 🔴 **국내 EXACT 0 의 진짜 원인** | `NO_TITLE_OVERLAP` (WU-064) | 한국어 제목 ↔ 영문 원상품 = 토큰 겹침 0 → **관측된 차이** 로 분류돼 EXACT 영구 차단 |
 | 🔴 **국내는 «세 겹» 으로 막힌다** | WU-065 | ①NO_TITLE_OVERLAP ②colorUnverified ③PRESUMED_SAME 보류 — **하나만 풀면 변화 0** |
+| 🔴 **국내 구조화 색상은 1/17** | WU-072 | microdata 색상은 **읽는 칸 자체가 없다** · 색상 글자 10/17 은 **산문**(WU-047 HOLD 자리) |
 | 🔴🔴 **COLOR 가 L4 의 단독 하중** | `cross-seller.ts` COLOR conflict (WU-071) | 빼면 **12건** 즉시 False SAME · 🔴 국내 후보엔 그 방어가 **애초에 없다**(colorText null) |
 | 🔴 **slug 가 품번으로 승격된다** | `seller-facts.ts:208` · `extractCodeLikeSlugSegment` | kids21 **샵 자체 SKU** 가 통과한다 · 🟢 지금은 conflict → EXCLUDED 로 **안전 방향** 오류다 |
 | 🔴 **라인 코드를 보는 코드는 없다** | `compareModelCode` (WU-070) | `AC`/`AB`/`AI` 를 **아무도 구분하지 않는다** · L4 를 막는 것은 색상·카테고리·브랜드다 |
