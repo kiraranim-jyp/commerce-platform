@@ -781,6 +781,9 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **가격 구역 식별** | `wu-056r1-price-section-identity.test.ts` | 구역 제목 **상호 비포함** · 해외 구역 «안» 에 `₩`/`약`/`≈`/통화기호 **0** · 아이콘 중복 금지 — **Panel mount DOM 으로** 본다 |
 | 🔴 **단계는 넷 · 번호는 파생** | `workflow.ts` · `stage-focus.ts` (WU-058) | 큰 단계 **4** · 라벨에 「소싱」 0 · 단계마다 본문 **하나**(빈 단계 0) · **번호는 배열 순서에서 파생**(하드코딩 금지) |
 | 🔴 **URL 분류기는 양방향 오류** | `classifyUrlShape` (WU-073) | 한국 CMS 목록(`goods_list`·`product_list`·`shopbrand`)이 **PRODUCT_PAGE** · SSG `itemView.ssg` 는 **오차단** — 🔴 「②의 탈락 = 정확한 차단」으로 읽지 않는다 · 고치지 않는다(WU-052 HOLD) |
+| 🔴🔴 **④ 는 «제목» 하나로 통과시킨다** | `product-url-facts.ts:226` · `fetchPlainHtml` (WU-074) | HTTP ok + `<title>` 이 전부 · `response.url` 을 **버린다** → 홈/soft-404 가 상품으로 통과 · 🔴 CEO 의 「404」 4건이 **전부 HTTP 200** |
+| 🟢🟢 **최종 URL 모양이 유일한 안전축** | `classifyUrlShape(finalUrl)` (WU-074) | 비상품 6/6 차단 · 오차단 **0/64** · **추가 HTTP 0** · 🔴 JSON-LD/og:type/soft-404 텍스트는 **전부 정상상품을 죽인다** |
+| 🔴 **방어 배선이 둘로 갈려 있다** | `resolveCandidate` (WU-074) | Gemini 경로만 거친다 · **AI·URL 후보 경로는 안 거친다** · 🔴 고치는 것은 CPO 판정 사안 |
 | 🔴 **발견량은 병목이 아니다** | WU-073 funnel | AI 국내 후보 **46** → 최종 EXACT **0** · 레버는 **② URL 분류 → ⑥ 시장 증거** 순 · 🔴 discovery 를 늘리는 WU 를 만들지 않는다 |
 | 🔴 **소싱 backend 보존** | `sourcing_candidates` · 관련 route/schema | UI 호출부 **0** 이지만 **지우지 않는다**(참조 확인 전 삭제 금지 · CPO §1·§5) |
 | 🔴 **EXACT 보류 게이트** | `match-truth.ts:233·237` (WU-059) | `PRESUMED_SAME` ⟹ 식별자 경로도 **막는다** · `BRAND_UNCONFIRMED` 단독 완화 **금지**(FP +2 실측) |
@@ -805,6 +808,60 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
+
+### 🟢🟢 WU-074 `MI-PRODUCT-EVIDENCE` — **방어는 이미 있다. 배선이 없다** (측정 전용 · 구현 0)
+
+🟢 전문 `docs/MI-PRODUCT-EVIDENCE-074.md`. 🔴 운영 변경 **0** · AI 0 · 배포 0 · HTTP 89(read-only).
+
+🔴🔴 **① 원인 확정** — ④ 의 게이트는 **둘뿐** 이다:
+```
+⒜ `fetchPlainHtml`(shopify-product-json.ts:602) — `!response.ok` 면 null
+   🔴 그런데 `response.url`(최종 도착지)을 **버린다**
+⒝ `product-url-facts.ts:226-228` — `<title>`/`og:title` 이 있으면 **OK**
+⟹ 「`/products/X` 를 요청했는데 **홈이 왔다**」를 구분할 **수단이 없다**
+🔴🔴 CEO 가 「404」라 본 4건이 **전부 HTTP 200** 이다 ⟹ 진짜 soft-404 ·
+   `!response.ok` 가드는 구조적으로 **무력**
+```
+
+🟢🟢 **② 방어는 이미 구현돼 있다 — 배선 비대칭이 결함의 형태다**:
+```
+Gemini 후보  gemini-candidate-pool.ts:290 → resolveCandidate 🟢 → :298 facts
+AI   후보    ai-answer-pool.ts:95         → factsFromProductUrl **직접** 🔴
+URL  후보    url-candidate-pool.ts:154    → factsFromProductUrl **직접** 🔴
+🟢 `url-resolver.ts:78-101` 주석이 **`main-story.com` 을 실측 사례로 지명** 한다 —
+   그것이 CEO 가 「홈페이지 메인호출」이라 한 **S4-1 바로 그것** 이다
+🔴 WU-073 이 funnel 을 잰 경로가 **AI 후보** 다 — 방어가 **없는** 쪽이다
+```
+
+🔴 **③ 축별 전수** (비상품 **6**=CEO 사유 라벨 · 정상상품 **64**=CEO13+GT51):
+
+| 축 | 비상품 차단 | 🔴 정상상품 오차단 |
+|---|---:|---:|
+| 현재 로직(title 만) | **0%** | 0 |
+| HTTP 404/410 | **0%** | 0 |
+| soft-404 **텍스트** | 33.3% | 🔴 **17.2%**(오탐이 더 많다) |
+| JSON-LD Product 없음 | 100% | 🔴 12.5% |
+| 구조화+가격 없음 | 100% | 🔴 12.5%(**beaumonde** 포함) |
+| `og:type` ≠ product | 100% | 🔴 9.4%(**전부 한국 쇼핑몰**) |
+| 🟢 `resolveCandidate`(운영) | **100%** | **0** |
+| 🟢🟢 **최종 URL 모양 ≠ 상품** | **100%** | **0** |
+
+🟢🟢 **최적안의 비용이 «0» 이다** — `fetchPlainHtml` 은 **이미 리다이렉트를 따라간다**
+(`fetch` 기본값). `response.url` 을 **읽지 않을 뿐** 이다 → 추가 HTTP 0 · 새 파서 0 · 새 규칙 0.
+
+🔴🔴 **변이가 내 인과 설명을 정정했다** — W1(`shape="UNUSABLE"` 줄 제거)이 **통과** 했다.
+루트 URL 은 애초에 `PRODUCT_PAGE` 가 아니고 `isCrawlable` 이 그것을 요구하므로 **이미 막힌다.**
+⟹ 막는 것은 그 줄이 아니라 **「최종 URL 의 모양을 본다」는 사실 하나** 다(W5 가 FAIL 로 확정).
+
+🔴 **하류** — 비상품 6건은 `PRICE_UNAVAILABLE` **6/6** 이라 **가격엔 안 들어간다**(깊이방어).
+🔴 단 ⒜ **화면 후보 목록에 보이고** ⒝ kids21 2건의 `facts.brand` 가 **"Kids21"**(사이트명)이라
+**판정 입력이 오염된다**. 🟢 지금은 안전 방향(거짓 충돌)이지만 반대 방향은 **미측정**.
+
+🔴 **구현하지 않았다**(CPO 금지). 안 A(최소 · `response.url` 재분류) / 안 B(전체 배선) 는
+보고서 §10 에 있고 **CPO 판정 사안** 이다.
+
+🔴 **CF-8 의 상한** — 「리다이렉트하지 **않는** soft-404」(같은 URL 에 200 으로 「없는 상품」을
+그리는 사이트)는 이 표본에 **0건** 이고 그 모양에서는 **발화하지 않는다**(미측정).
 
 ### 🟢 WU-073 `MI-DISCOVERY-FUNNEL` — **발견량은 병목이 아니다** (측정 전용 · 구현 0)
 
