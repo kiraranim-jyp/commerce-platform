@@ -143,6 +143,29 @@ export function summarizeCandidateOverseasPrices(
   for (const r of records) {
     byMarket[r.market] = (byMarket[r.market] ?? 0) + 1;
     byPriceTier[r.priceTier] = (byPriceTier[r.priceTier] ?? 0) + 1;
+    /**
+     * ══════════════════════════════════════════════════════════════════════
+     * 🔴🔴 WU-062(CPO 승인 2026-10-18) — **「동일상품 아님」은 동일상품 금액이 아니다.**
+     * ══════════════════════════════════════════════════════════════════════
+     *
+     * 이 집계의 소비처 제목이 **「해외 동일상품 참고가격」** 인데, `EXCLUDED`
+     * (= 화면 라벨 「동일상품 아님」) 후보의 금액이 **최저가가 될 수 있었다.**
+     * 실측(WU-061): EUR 최저 **9 → 40**(4.4배) · USD **12 → 98**(8.2배) ·
+     * GT 51 의 `EXCLUDED` 비중 **8/51 = 15.7%**.
+     *
+     * 🔴 **관측을 지우는 것이 아니다.** 바로 위 두 줄(`byMarket`·`byPriceTier`)이
+     *    **먼저** 세어졌으므로 「동일상품 아님 N건」 표시는 **그대로 남는다**.
+     *    여기서 빠지는 것은 **금액 집계(`byCurrency`)** 하나이고, 입력 배열도
+     *    반환 `count: records.length` 도 건드리지 않는다.
+     *
+     * 🟢 **국내 축은 영향이 없다.** 같은 함수를 국내도 쓰지만 국내 레코드는 적재
+     *    시점에 이미 `EXACT | COMPARISON` 둘뿐이다(`market-intelligence.ts`) —
+     *    즉 이 분기는 국내 입력에서 **발화하지 않는다**(테스트로 잠갔다).
+     *
+     * 🔴 `REFERENCE` 는 **빼지 않는다.** CPO 가 `EXCLUDED` 하나만 승인했고,
+     *    `REFERENCE`(참고)는 「다른 상품이라고 관측된 것」이 아니다.
+     */
+    if (r.priceTier === "EXCLUDED") continue;
     if (r.amount == null || !Number.isFinite(r.amount)) continue;
     const bucket = byCurrency[r.currency];
     if (!bucket) byCurrency[r.currency] = { count: 1, lowestAmount: r.amount };

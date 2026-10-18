@@ -102,11 +102,15 @@ describe("③ 의미 분리", () => {
   });
 
   /**
-   * 🔴🔴 **영향도 — 숫자 전후.** 집계기가 tier 를 필터하지 않으므로
-   *    「동일상품 아님」(`EXCLUDED`) 후보가 **최저가** 를 만든다.
-   * 🔴 이 테스트는 **현행 숫자를 고정** 한다(CPO: 임의 필터링 금지). 바꾸려면 여기가 깨진다.
+   * 🔴🔴 **WU-062(CPO GO) 로 이 단언이 뒤집혔다.** WU-061 이 고정했던 「전」 숫자는
+   *    아래 주석에 남긴다 — 되돌아가면 안 되는 값이기 때문이다.
+   * ```
+   * 변경 전(WU-061 까지)   EUR {count 3, lowest **9**} · USD {count 2, lowest **12**}
+   * 변경 후(WU-062)        EUR {count 2, lowest **40**} · USD {count 1, lowest **98**}
+   * ```
+   * 🟢 같은 입력을 **한 번만** 넣는다 — 이제 집계기 자신이 `EXCLUDED` 를 뺀다.
    */
-  it("🔴 EXCLUDED 가 최저가를 만든다 — 전후 숫자를 고정한다", () => {
+  it("🟢 EXCLUDED 가 금액 집계에서 빠진다 — 전후 숫자를 고정한다", () => {
     const recs = [
       { market: "OVERSEAS", currency: "EUR", amount: 40, priceTier: "EXACT" },
       { market: "OVERSEAS", currency: "EUR", amount: 75, priceTier: "COMPARISON" },
@@ -114,18 +118,46 @@ describe("③ 의미 분리", () => {
       { market: "OVERSEAS", currency: "USD", amount: 98, priceTier: "REFERENCE" },
       { market: "OVERSEAS", currency: "USD", amount: 12, priceTier: "EXCLUDED" },
     ];
-    const before = summarizeCandidateOverseasPrices(recs as never);
-    const after = summarizeCandidateOverseasPrices(recs.filter((r) => r.priceTier !== "EXCLUDED") as never);
+    const s = summarizeCandidateOverseasPrices(recs as never);
 
-    /** 전(현행) */
-    expect(before.byCurrency.EUR).toEqual({ count: 3, lowestAmount: 9 });
-    expect(before.byCurrency.USD).toEqual({ count: 2, lowestAmount: 12 });
-    expect(before.byPriceTier.EXCLUDED).toBe(2);
-    /** 후(최소 수정안 — EXCLUDED 제외) */
-    expect(after.byCurrency.EUR).toEqual({ count: 2, lowestAmount: 40 });
-    expect(after.byCurrency.USD).toEqual({ count: 1, lowestAmount: 98 });
-    /** 🔴 **차이가 작지 않다** — EUR 9→40(4.4배) · USD 12→98(8.2배) */
-    expect(after.byCurrency.EUR.lowestAmount / before.byCurrency.EUR.lowestAmount).toBeGreaterThan(4);
+    /** 🟢 금액 집계 — `EXCLUDED` 제외(변경 전 EUR 9 · USD 12 였다). */
+    expect(s.byCurrency.EUR).toEqual({ count: 2, lowestAmount: 40 });
+    expect(s.byCurrency.USD).toEqual({ count: 1, lowestAmount: 98 });
+
+    /** 🔴 **관측/검증 결과는 유지된다**(CPO 조건) — 화면의 「동일상품 아님 2」가 살아 있다. */
+    expect(s.byPriceTier).toEqual({ EXACT: 1, COMPARISON: 1, EXCLUDED: 2, REFERENCE: 1 });
+    expect(s.byMarket).toEqual({ OVERSEAS: 5 });
+    expect(s.count).toBe(5);
+
+    /** 🔴 `REFERENCE` 는 빼지 않았다 — USD 최저가가 그 값(98)이다. */
+    expect(s.byCurrency.USD.lowestAmount).toBe(98);
+  });
+
+  /**
+   * 🟢 **국내 축 불변**(CPO 조건 ④) — 국내 레코드는 적재 시점에 이미 두 tier 뿐이라
+   *    이 분기가 **발화하지 않는다**. 같은 함수를 쓰지만 숫자가 바뀌지 않는다.
+   */
+  it("🟢 국내 집계는 바뀌지 않는다 (EXCLUDED 가 애초에 들어오지 않는다)", () => {
+    const domestic = [
+      { market: "KR", currency: "KRW", amount: 117_000, priceTier: "COMPARISON" },
+      { market: "KR", currency: "KRW", amount: 88_000, priceTier: "EXACT" },
+    ];
+    const s = summarizeCandidateOverseasPrices(domestic as never);
+    expect(s.byCurrency.KRW).toEqual({ count: 2, lowestAmount: 88_000 });
+    expect(s.count).toBe(2);
+    expect(s.byPriceTier).toEqual({ COMPARISON: 1, EXACT: 1 });
+  });
+
+  /** 🟢 EXACT / COMPARISON / REFERENCE 의 의미가 바뀌지 않았다(CPO 조건 ③). */
+  it("🟢 EXACT·COMPARISON·REFERENCE 는 그대로 집계된다", () => {
+    for (const tier of ["EXACT", "COMPARISON", "REFERENCE"]) {
+      const s = summarizeCandidateOverseasPrices([{ market: "OVERSEAS", currency: "EUR", amount: 10, priceTier: tier }] as never);
+      expect(s.byCurrency.EUR, tier).toEqual({ count: 1, lowestAmount: 10 });
+    }
+    /** 🔴 EXCLUDED 만 금액에서 빠진다. */
+    const ex = summarizeCandidateOverseasPrices([{ market: "OVERSEAS", currency: "EUR", amount: 10, priceTier: "EXCLUDED" }] as never);
+    expect(ex.byCurrency).toEqual({});
+    expect(ex.byPriceTier.EXCLUDED).toBe(1);
   });
 
   /** 🟢 국내 축은 적재 시점에 이미 두 tier 뿐이라 같은 문제가 없다(비대칭의 다른 쪽). */

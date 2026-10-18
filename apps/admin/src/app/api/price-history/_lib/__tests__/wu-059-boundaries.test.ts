@@ -197,17 +197,24 @@ describe("§4 참고가격 ↔ 판매판정 경계 (코드 위치로 고정)", (
 
 describe("§5 tier 비대칭 — 측정값으로 고정한다", () => {
   /**
-   * 🔴🔴 집계기는 **tier 를 필터하지 않는다.** 그래서 「해외 동일상품 참고가격」의
-   *    최저가가 `EXCLUDED`(= 화면 라벨 「동일상품 아님」) 후보에서 나올 수 있다.
-   * 🔴 **숫자를 바꾸지 않는다**(CPO §5) — 사실만 고정하고 판정은 CPO 에게 올린다.
+   * 🔴🔴 **WU-062 에서 이 단언이 뒤집혔다 — 그것이 수정이 적용됐다는 증거다.**
+   * ```
+   * WU-059 이 고정한 «그때» 동작   lowestAmount **9** (EXCLUDED 가 최저가를 만들었다)
+   * WU-062 이후 동작(CPO 승인)     lowestAmount **40** (금액 집계에서만 EXCLUDED 를 뺀다)
+   * ```
+   * 🟢 그리고 **관측은 지워지지 않았다** — `byPriceTier.EXCLUDED` 가 그대로 1 이라
+   *    화면의 「동일상품 아님 1」 표시가 유지된다.
    */
-  it("🔴 해외 집계의 최저가가 EXCLUDED 후보에서 나올 수 있다", () => {
+  it("🟢 해외 금액 집계에서 EXCLUDED 가 빠진다 (WU-062 · 관측은 남는다)", () => {
     const s = summarizeCandidateOverseasPrices([
       { market: "OVERSEAS", currency: "EUR", amount: 40, priceTier: "EXACT" } as never,
       { market: "OVERSEAS", currency: "EUR", amount: 9, priceTier: "EXCLUDED" } as never,
     ]);
-    expect(s.byCurrency.EUR.lowestAmount).toBe(9);
+    expect(s.byCurrency.EUR.lowestAmount).toBe(40);
+    expect(s.byCurrency.EUR.count).toBe(1);
+    /** 🔴 관측/검증 결과는 유지된다(CPO 조건). */
     expect(s.byPriceTier.EXCLUDED).toBe(1);
+    expect(s.count).toBe(2);
   });
 
   /** 🟢 국내 축은 **적재 시점에** EXACT/COMPARISON 만 담는다 — 비대칭의 다른 쪽. */

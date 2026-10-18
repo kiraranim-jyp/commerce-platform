@@ -549,6 +549,11 @@ WU-056 / 056-R1  🟢🟢 **CLOSED — Production UI PASS**(CEO 확인 2026-10-1
                  두 축 안 섞임 · 내부 토큰 노출 0
 WU-058           🟢 **CLOSED** — 소싱 **UI 제거 완료** · 가격비교 **동결 유지** ·
                  남은 정책 **HOLD** (배포 `52046660` · 2026-10-17)
+WU-062           🟢 **구현 완료 / 배포** — `EXCLUDED` 를 **해외 금액 집계에서만** 제외(**1줄**)
+                 🟢 관측은 남는다 — `byPriceTier`/`byMarket`/`count` **불변** ⟹ 「동일상품 아님 N」 유지
+                 🔴 **셀러가 보는 숫자가 바뀐다** — EUR 최저 9→40 · USD 12→98 · 「판매처 N곳」 감소
+                 🟢 국내 축 **불변**(국내 입력엔 EXCLUDED 가 애초에 없다) · `REFERENCE` 유지
+                 🔴 **CEO Production 확인 1회 필요**(`docs/MI-EXCLUDED-AGGREGATE-062.md` §19 의 7항)
 WU-061           🟢 **CLOSED** — 가격 증거/비교 경계 닫기 · 운영 변경 0
                  🟢🟢 **국내 가격 증거 회수 11/13** — 실패 2건은 **같은 사이트 하나**(beaumonde.co.kr)
                  🔴🔴 **가격 계층 3층(meta)을 추가하지 않는다** — 증분 회수 **0** 인데
@@ -660,7 +665,7 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **동일판매처 이중 잠금** | `sameSellerDistinctListing` + `crossSellerReserved` | 🔴 분류표만 빼도 결과가 **안 바뀐다**(잠금이 둘) — 「통과했다」를 「가드 없다」로 읽지 않는다 |
 | 🔴 **False EXACT 보호조건 금지** | `wu-060-false-exact.test.ts` | 사이즈/소재/카테고리 **부재** 를 EXACT 차단 근거로 쓰지 않는다(인과 0 · 쓰레기를 보상) |
 | 🔴 **후보 가격 계층은 둘** | `product-url-facts.ts:248` (WU-061) | `priceFromJsonLd ?? micro?.price` **만** · `extractFromOpenGraph` 는 **원상품 전용**(후보에 끌어오면 불일치) |
-| 🔴 **해외 집계 숫자 고정** | `wu-061-price-closure.test.ts` | `EXCLUDED` 포함 최저가가 **현행** 이다 — 바꾸면 깨진다(CPO 판정 전 임의 필터링 금지) |
+| 🔴 **해외 금액 집계 = EXCLUDED 제외** | `candidate-market.ts` (WU-062) | 금액(`byCurrency`)에서만 뺀다 · `byPriceTier`/`byMarket`/`count` **유지** · `REFERENCE` 는 **빼지 않는다** |
 | 🟢 **transient 는 알림 0** | `computeSellerAction`+`computeMarketAlert` | transient 만 있으면 alert **null** · 🔴 `priceLevel` 이 오르는 순간 **열린다**(CF-3 과 결합) |
 
 🔴 **금지는 그대로 유효하다** — AI/Gemini API ❌ · 소비자 구독 우회 ❌ · Registry 확대 ❌ ·
