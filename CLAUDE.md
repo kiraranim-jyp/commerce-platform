@@ -549,7 +549,20 @@ WU-056 / 056-R1  🟢🟢 **CLOSED — Production UI PASS**(CEO 확인 2026-10-1
                  두 축 안 섞임 · 내부 토큰 노출 0
 WU-058           🟢 **CLOSED** — 소싱 **UI 제거 완료** · 가격비교 **동결 유지** ·
                  남은 정책 **HOLD** (배포 `52046660` · 2026-10-17)
-WU-067           🟡 **CEO 라벨 대기** — 블라인드 리뷰 페이지 배포 · 운영 변경 0
+WU-068           🟡 **HOLD(CPO 검토 대상)** — 통합 GT 63 재계산 · 운영 변경 0
+                 🔴 **CPO 집계 정정** — CEO 라벨은 SAME **10** · DIFF **3** · UNCERTAIN **6**
+                 (지시서의 11/5 가 아니다). 분모 = 50 + 13 = **63**(UNCERTAIN 7 제외)
+                 Baseline EXACT **16** = SAME 14 · **False SAME 2** · prec **87.5%**(91.7%→)
+                 CF-2     EXACT **17** = SAME 15 · False SAME 2 · prec 88.2% · 파생 135 유입 **0**
+                 🔴🔴 **새 False EXACT 1건** — `S1-6 tinyapple.net`「반팔이고, 컬러 다름」
+                 C06 과 **같은 클래스·같은 샵** 이다
+                 ⒜ SAME 회복 **1**(C47) ⒝ False SAME 증가 **0** ⒞ 분모효과 **-4.2p**
+                 🔴 **precision +0.7p 를 GO 근거로 쓰지 않는다**(CPO 금지 논법)
+                 🔴🔴 **recall 최대 덩어리가 바뀌었다** — 제목·색상이 아니라
+                 **품번 충돌 과잉 차단 5건**(CEO SAME 인데 EXCLUDED · 올바른 차단은 1건).
+                 `bobochoses.com`(브랜드 공식몰)이 conflict 로 막힌다
+                 (`docs/MI-INTEGRATED-GT-068.md`)
+WU-067           🟢 **CLOSED** — 블라인드 리뷰 19건 · CEO 라벨 수신 완료
                  🔴 미라벨 41건 fetch → 읽힘 23 → 목록URL 3 제외 → **리뷰 19건**
                  🔴🔴 CPO 1순위 범주(「CF-2 로 EXACT 가 되는 후보」)가 **0건** 이다
                  (이 풀은 `modelCode unavailable` 이 대부분이라 CF-2 가 안 걸린다)

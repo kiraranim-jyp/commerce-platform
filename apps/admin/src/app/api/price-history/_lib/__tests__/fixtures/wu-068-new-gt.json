@@ -1,0 +1,832 @@
+[
+ {
+  "id": "S1-1",
+  "searchId": "S1",
+  "url": "https://www.rboutique.com/en-us/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+  "domain": "www.rboutique.com",
+  "gt": "SAME",
+  "why": null,
+  "status": "OK",
+  "title": "'Booty Ghosts' cotton T-shirt BOBO CHOSES &ndash; RBoutique",
+  "facts": {
+   "sourceUrl": "https://www.rboutique.com/products/booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+   "urlSlug": "booty-ghosts-cotton-t-shirt-bobo-choses-38533",
+   "brand": "BOBO CHOSES",
+   "brandModelCode": null,
+   "sellerSku": null,
+   "title": "'Booty Ghosts' cotton T-shirt BOBO CHOSES &ndash; RBoutique",
+   "coreTitleTokens": [
+    "booty",
+    "ghosts",
+    "cotton",
+    "shirt",
+    "ndash",
+    "rboutique"
+   ],
+   "categoryText": null,
+   "colorText": null,
+   "materialText": null,
+   "fitText": null,
+   "ageRangeText": null,
+   "sizeLabels": [],
+   "audienceSignals": [],
+   "imageUrls": []
+  },
+  "price": {
+   "amount": 44,
+   "currency": "USD"
+  },
+  "priceStatus": "VERIFIED_CURRENT"
+ },
+ {
+  "id": "S1-2",
+  "searchId": "S1",
+  "url": "https://www.eraldo.com/en-us/products/bobo-choses-booty-ghosts-t-shirt-340496",
+  "domain": "www.eraldo.com",
+  "gt": "SAME",
+  "why": null,
+  "status": "OK",
+  "title": "Bobo Choses Booty Ghost-print Long-sleeve T-shirt",
+  "facts": {
+   "sourceUrl": "https://www.eraldo.com/products/bobo-choses-booty-ghosts-t-shirt-340496",
+   "urlSlug": "bobo-choses-booty-ghosts-t-shirt-340496",
+   "brand": "Bobo Choses",
+   "brandModelCode": null,
+   "sellerSku": null,
+   "title": "Bobo Choses Booty Ghost-print Long-sleeve T-shirt",
+   "coreTitleTokens": [
+    "booty",
+    "ghost",
+    "print",
+    "long",
+    "sleeve",
+    "shirt"
+   ],
+   "categoryText": "Top Bambino",
+   "colorText": "grey",
+   "materialText": null,
+   "fitText": null,
+   "ageRangeText": null,
+   "sizeLabels": [],
+   "audienceSignals": [
+    "brand_bobo-choses",
+    " col_1137",
+    " col_414",
+    " col_426",
+    " col_455",
+    " coll_mg_489",
+    " gender_brand_kids_bobo-choses",
+    " gender_kids",
+    " gender_kids_kids-boys-clothing-414",
+    " gender_season_brand_kids_aw26_bobo-choses",
+    " gender_season_kids_aw26",
+    " sconto_coupon",
+    " sconto_coupon_aus",
+    " sconto_coupon_cin",
+    " sconto_coupon_eur",
+    " sconto_coupon_ita",
+    " sconto_coupon_kja",
+    " sconto_coupon_row",
+    " sconto_coupon_uk",
+    " sconto_coupon_usa",
+    " sconto_newsletter",
+    " season_aw26",
+    " season_brand_aw26_bobo-choses",
+    "Top Bambino"
+   ],
+   "imageUrls": [
+    "https://cdn.shopify.com/s/files/1/0863/6573/3195/files/7752386.jpg?v=1785536122",
+    "https://cdn.shopify.com/s/files/1/0863/6573/3195/files/7752386_0.jpg?v=1785536122",
+    "https://cdn.shopify.com/s/files/1/0863/6573/3195/files/7752386_1.jpg?v=1785536123"
+   ]
+  },
+  "price": null,
+  "priceStatus": null
+ },
+ {
+  "id": "S1-3",
+  "searchId": "S1",
+  "url": "https://cissywears.com/en-us/products/bobo-choses-booty-ghosts-t-shirt",
+  "domain": "cissywears.com",
+  "gt": "SAME",
+  "why": null,
+  "status": "OK",
+  "title": "Bobo Choses Booty Ghosts T-Shirt",
+  "facts": {
+   "sourceUrl": "https://cissywears.com/products/bobo-choses-booty-ghosts-t-shirt",
+   "urlSlug": "bobo-choses-booty-ghosts-t-shirt",
+   "brand": "Bobo Choses",
+   "brandModelCode": null,
+   "sellerSku": null,
+   "title": "Bobo Choses Booty Ghosts T-Shirt",
+   "coreTitleTokens": [
+    "booty",
+    "ghosts",
+    "shirt"
+   ],
+   "categoryText": "T-Shirt",
+   "colorText": null,
+   "materialText": null,
+   "fitText": null,
+   "ageRangeText": null,
+   "sizeLabels": [
+    "2-3y",
+    "4-5y",
+    "6-7y"
+   ],
+   "audienceSignals": [
+    "Brands. Brands: Bobo Choses",
+    " Clothing. Clothing: Kid",
+    " halloween",
+    "T-Shirt"
+   ],
+   "imageUrls": [
+    "https://cdn.shopify.com/s/files/1/0557/1765/8702/files/B226AC010_1.jpg?v=1783171523",
+    "https://cdn.shopify.com/s/files/1/0557/1765/8702/files/B226AC010_6.jpg?v=1783171495"
+   ]
+  },
+  "price": null,
+  "priceStatus": null
+ },
+ {
+  "id": "S1-4",
+  "searchId": "S1",
+  "url": "https://kolkid.ca/products/bobo-choses-booty-ghosts-t-shirt",
+  "domain": "kolkid.ca",
+  "gt": "SAME",
+  "why": null,
+  "status": "OK",
+  "title": "Bobo Choses Booty Ghosts T-Shirt",
+  "facts": {
+   "sourceUrl": "https://kolkid.ca/products/bobo-choses-booty-ghosts-t-shirt",
+   "urlSlug": "bobo-choses-booty-ghosts-t-shirt",
+   "brand": "Bobo Choses",
+   "brandModelCode": null,
+   "sellerSku": null,
+   "title": "Bobo Choses Booty Ghosts T-Shirt",
+   "coreTitleTokens": [
+    "booty",
+    "ghosts",
+    "shirt"
+   ],
+   "categoryText": "Clothing",
+   "colorText": "heather grey",
+   "materialText": "Heather grey t-shirt Organic Cotton 100% Loose fit Responsibly made in Portugal MADE WITH ORGANIC COTTON",
+   "fitText": "loose fit",
+   "ageRangeText": null,
+   "sizeLabels": [
+    "2-3Y",
+    "4-5Y",
+    "6-7Y"
+   ],
+   "audienceSignals": [
+    "aw26",
+    " pfs:label-new",
+    " tops",
+    "Clothing"
+   ],
+   "imageUrls": [
+    "https://cdn.shopify.com/s/files/1/2131/0515/files/u1nt2eprootnhpo7xywv.jpg?v=1781804103",
+    "https://cdn.shopify.com/s/files/1/2131/0515/files/Untitled_design_-_2026-06-19T175736.515.jpg?v=1781906264"
+   ]
+  },
+  "price": null,
+  "priceStatus": null
+ },
+ {
+  "id": "S1-5",
+  "searchId": "S1",
+  "url": "https://www.junioredition.com/en-kr/products/booty-ghosts-t-shirt-by-bobo-choses",
+  "domain": "www.junioredition.com",
+  "gt": "DIFFERENT",
+  "why": "반팔이고, 컬러 다름",
+  "status": "OK",
+  "title": "Booty Ghosts T-Shirt by Bobo Choses",
+  "facts": {
+   "sourceUrl": "https://www.junioredition.com/products/booty-ghosts-t-shirt-by-bobo-choses",
+   "urlSlug": "booty-ghosts-t-shirt-by-bobo-choses",
+   "brand": "Bobo Choses",
+   "brandModelCode": "B226AC141",
+   "sellerSku": null,
+   "title": "Booty Ghosts T-Shirt by Bobo Choses",
+   "coreTitleTokens": [
+    "booty",
+    "ghosts",
+    "shirt"
+   ],
+   "categoryText": "T Shirt",
+   "colorText": "Light Blue",
+   "materialText": "Booty Ghosts T-Shirt by Bobo Choses. Relaxed fit light blue tee featuring short sleeves, a ribbed neckline and a large playful print across the front of two ghosts wearing booties. Colour - Light Blue. 100% Organic Cotton. Product code B226AC141 AW26 Made in Portugal.",
+   "fitText": "relaxed fit",
+   "ageRangeText": null,
+   "sizeLabels": [
+    "2-3 Years",
+    "4-5 Years",
+    "6-7 Years",
+    "8-9 Years",
+    "10-11 Years",
+    "12-13 Years"
+   ],
+   "audienceSignals": [
+    "1-year",
+    " 10-years",
+    " 11-years",
+    " 12-years",
+    " 13-years",
+    " 2-years",
+    " 3-years",
+    " 4-years",
+    " 5-years",
+    " 6-years",
+    " 7-years",
+    " 8-years",
+    " 9-years",
+    " bobo-choses",
+    " t-shirts",
+    " tops",
+    "T Shirt"
+   ],
+   "imageUrls": [
+    "https://cdn.shopify.com/s/files/1/0874/8574/files/Bobo-Choses-AW26-Booty-Ghosts-T-Shirt.jpg?v=1784286236",
+    "https://cdn.shopify.com/s/files/1/0874/8574/files/Bobo-Choses-AW26-Booty-Ghosts-T-Shirt-Look-1.jpg?v=1784286236",
+    "https://cdn.shopify.com/s/files/1/0874/8574/files/Bobo-Choses-AW26-Booty-Ghosts-T-Shirt-Look-2.jpg?v=1784286236",
+    "https://cdn.shopify.com/s/files/1/0874/8574/files/Bobo-Choses-AW26-Booty-Ghosts-T-Shirt-Look.jpg?v=1784286236"
+   ]
+  },
+  "price": null,
+  "priceStatus": null
+ },
+ {
+  "id": "S1-6",
+  "searchId": "S1",
+  "url": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt",
+  "domain": "www.tinyapple.net",
+  "gt": "DIFFERENT",
+  "why": "반팔이고, 컬러 다름",
+  "status": "OK",
+  "title": "Bobo Choses Booty Ghosts T-shirt",
+  "facts": {
+   "sourceUrl": "https://www.tinyapple.net/products/bobo-choses-booty-ghosts-t-shirt",
+   "urlSlug": "bobo-choses-booty-ghosts-t-shirt",
+   "brand": "Bobo Choses",
+   "brandModelCode": null,
+   "sellerSku": null,
+   "title": "Bobo Choses Booty Ghosts T-shirt",
+   "coreTitleTokens": [
+    "booty",
+    "ghosts",
+    "shirt"
+   ],
+   "categoryText": "Cardigans and Sweaters",
+   "colorText": null,
+   "materialText": "Tinyapple | FW26 Bobo Choses | Booty Ghosts T-shirt 100% Organic Cotton Wash Cold-30° Do Not Bleach Do Not Iron Do not Dry-clean Do Not Tumble Dry REF: B226AC141",
+   "fitText": null,
+   "ageRangeText": null,
+   "sizeLabels": [
+    "2-3Y",
+    "4-5Y",
+    "6-7Y",
+    "8-9Y",
+    "10-11Y",
+    "12-13Y"
+   ],
+   "audienceSignals": [
+    "Bobo Choses",
+    " BOY TOPS",
+    " boys top",
+    " boytops",
+    " cardigan",
+    " drop1",
+    " FW26 Bobo Choses",
+    " Girl Tops",
+    " girlstop",
+    " girltops",
+    " girtops",
+    " top",
+    " Tops",
+    " 보보쇼즈",
+    "Cardigans and Sweaters"
+   ],
+   "imageUrls": [
+    "https://cdn.shopify.com/s/files/1/0281/6285/0876/files/Untitleddesign_21.png?v=1784611718"
+   ]
+  },
+  "price": null,
+  "priceStatus": null
+ },
+ {
+  "id": "S1-7",
+  "searchId": "S1",
+  "url": "https://bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+  "domain": "bobochoses.com",
+  "gt": "SAME",
+  "why": null,
+  "status": "OK",
+  "title": "Booty Ghosts T-shirt",
+  "facts": {
+   "sourceUrl": "https://bobochoses.com/products/b226ab046-booty-ghosts-t-shirt",
+   "urlSlug": "b226ab046-booty-ghosts-t-shirt",
+   "brand": "Bobo Choses",
+   "brandModelCode": "B226AB046",
+   "sellerSku": null,
+   "title": "Booty Ghosts T-shirt",
+   "coreTitleTokens": [
+    "booty",
+    "ghosts",
+    "shirt"
+   ],
+   "categoryText": "T-shirts",
+   "colorText": "light heather grey",
+   "materialText": "Light heather grey t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+   "fitText": "loose fit",
+   "ageRangeText": null,
+   "sizeLabels": [
+    "3M",
+    "6M",
+    "9M",
+    "12M",
+    "18M",
+    "24M"
+   ],
+   "audienceSignals": [
+    "aw26",
+    " Baby",
+    " children",
+    " clothing",
+    " Current",
+    " drop-1",
+    " t-shirts",
+    " Tops",
+    "T-shirts"
+   ],
+   "imageUrls": [
+    "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AB046_1_1.webp?v=1783428013",
+    "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AB046_2_1.webp?v=1783427888",
+    "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AB046_3_1.webp?v=1783427997"
+   ]
+  },
+  "price": null,
+  "priceStatus": null
+ },
+ {
+  "id": "S2-1",
+  "searchId": "S2",
+  "url": "https://www.stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+  "domain": "www.stockmann.ee",
+  "gt": "SAME",
+  "why": null,
+  "status": "OK",
+  "title": "BOBO CHOSES Trikoos&auml;rk Hug Monster | Stockmann",
+  "facts": {
+   "sourceUrl": "https://www.stockmann.ee/et-ee/bobo-choses-trikoosark-hug-monster/18119748633-1.html",
+   "urlSlug": "18119748633-1",
+   "brand": "BOBO CHOSES",
+   "brandModelCode": null,
+   "sellerSku": null,
+   "title": "BOBO CHOSES Trikoos&auml;rk Hug Monster | Stockmann",
+   "coreTitleTokens": [
+    "trikoos",
+    "auml",
+    "rk",
+    "hug",
+    "monster",
+    "stockmann"
+   ],
+   "categoryText": null,
+   "colorText": null,
+   "materialText": null,
+   "fitText": null,
+   "ageRangeText": null,
+   "sizeLabels": [],
+   "audienceSignals": [],
+   "imageUrls": []
+  },
+  "price": {
+   "amount": 40,
+   "currency": "EUR"
+  },
+  "priceStatus": "VERIFIED_CURRENT"
+ },
+ {
+  "id": "S2-2",
+  "searchId": "S2",
+  "url": "https://www.thefrontshop.com/products/hug-hairy-monster-t-shirt",
+  "domain": "www.thefrontshop.com",
+  "gt": "SAME",
+  "why": null,
+  "status": "OK",
+  "title": "Bobo Choses - Hug Hairy Monster T-Shirt",
+  "facts": {
+   "sourceUrl": "https://www.thefrontshop.com/products/hug-hairy-monster-t-shirt",
+   "urlSlug": "hug-hairy-monster-t-shirt",
+   "brand": "BOBO CHOSES",
+   "brandModelCode": null,
+   "sellerSku": null,
+   "title": "Bobo Choses - Hug Hairy Monster T-Shirt",
+   "coreTitleTokens": [
+    "hug",
+    "hairy",
+    "monster",
+    "shirt"
+   ],
+   "categoryText": "T-SHIRT",
+   "colorText": null,
+   "materialText": "· Soft cotton long-sleeve tee with a comfortable, breathable feel · Features a playful monster hug graphic in vibrant colors · Classic crewneck with a relaxed, easy fit · Perfect for everyday wear and seasonal layering Bobo Choses Size : child's height 2-3Y: 98 cm 4-5Y: 110 cm 6-7Y: 122 cm 8-9Y: 134 cm 10-11Y: 148 cm 12-13Y: 158 cm 100% Organic Cotton",
+   "fitText": null,
+   "ageRangeText": null,
+   "sizeLabels": [
+    "2-3Y",
+    "4-5Y",
+    "6-7Y",
+    "8-9Y"
+   ],
+   "audienceSignals": [
+    "AW26",
+    " BCAW26",
+    " BCAW26DR1",
+    "T-SHIRT"
+   ],
+   "imageUrls": [
+    "https://cdn.shopify.com/s/files/1/0222/8046/files/HugHairyMonsterT-shirt.jpg?v=1783443253",
+    "https://cdn.shopify.com/s/files/1/0222/8046/files/B226AC009_6.jpg?v=1784038864"
+   ]
+  },
+  "price": null,
+  "priceStatus": null
+ },
+ {
+  "id": "S2-3",
+  "searchId": "S2",
+  "url": "https://bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+  "domain": "bobochoses.com",
+  "gt": "SAME",
+  "why": null,
+  "status": "OK",
+  "title": "Hug Hairy Monster T-shirt",
+  "facts": {
+   "sourceUrl": "https://bobochoses.com/products/b226ab040-hug-hairy-monster-t-shirt",
+   "urlSlug": "b226ab040-hug-hairy-monster-t-shirt",
+   "brand": "Bobo Choses",
+   "brandModelCode": "B226AB040",
+   "sellerSku": null,
+   "title": "Hug Hairy Monster T-shirt",
+   "coreTitleTokens": [
+    "hug",
+    "hairy",
+    "monster",
+    "shirt"
+   ],
+   "categoryText": "T-shirts",
+   "colorText": "light blue",
+   "materialText": "Light blue t-shirt. Organic Cotton 100%. Loose fit. Responsibly made in Portugal.",
+   "fitText": "loose fit",
+   "ageRangeText": null,
+   "sizeLabels": [
+    "3M",
+    "6M",
+    "9M",
+    "12M",
+    "18M",
+    "24M"
+   ],
+   "audienceSignals": [
+    "aw26",
+    " Baby",
+    " children",
+    " clothing",
+    " Current",
+    " drop-1",
+    " t-shirts",
+    " Tops",
+    "T-shirts"
+   ],
+   "imageUrls": [
+    "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AB040_1.webp?v=1784891519",
+    "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AB040_7.webp?v=1784891519",
+    "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AB040_2.webp?v=1784891520",
+    "https://cdn.shopify.com/s/files/1/0705/1899/7292/files/B226AB040_3_1.webp?v=1783428209"
+   ]
+  },
+  "price": null,
+  "priceStatus": null
+ },
+ {
+  "id": "S2-4",
+  "searchId": "S2",
+  "url": "https://kids21.com/products/700005621lbl",
+  "domain": "kids21.com",
+  "gt": "SAME",
+  "why": null,
+  "status": "OK",
+  "title": "Bobo Choses Hug Hairy Monster T-shirt",
+  "facts": {
+   "sourceUrl": "https://kids21.com/products/700005621lbl",
+   "urlSlug": "700005621lbl",
+   "brand": "Bobo Choses",
+   "brandModelCode": "700005621LBL",
+   "sellerSku": null,
+   "title": "Bobo Choses Hug Hairy Monster T-shirt",
+   "coreTitleTokens": [
+    "hug",
+    "hairy",
+    "monster",
+    "shirt"
+   ],
+   "categoryText": "T-shirts",
+   "colorText": null,
+   "materialText": "Description: Short sleeves. Round neckline. Graphic print at the front. Straight fit. Material composition: 100% Organic Cotton",
+   "fitText": null,
+   "ageRangeText": null,
+   "sizeLabels": [
+    "9 Months",
+    "12 Months",
+    "18 Months",
+    "2 Years"
+   ],
+   "audienceSignals": [
+    "Active",
+    " AW2026",
+    " Babies",
+    " Bobo Choses",
+    " Free_Horse_T-shirt",
+    " Gifts",
+    " Light Blue",
+    " NEW",
+    " T-shirts",
+    " Tops",
+    " Visa_GCC",
+    "T-shirts"
+   ],
+   "imageUrls": [
+    "https://cdn.shopify.com/s/files/1/0667/7784/1941/files/700005621LBL_1.jpg?v=1782282256",
+    "https://cdn.shopify.com/s/files/1/0667/7784/1941/files/700005621LBL_2.jpg?v=1782282258",
+    "https://cdn.shopify.com/s/files/1/0667/7784/1941/files/700005621LBL_3.jpg?v=1782282259"
+   ]
+  },
+  "price": null,
+  "priceStatus": null
+ },
+ {
+  "id": "S3-1",
+  "searchId": "S3",
+  "url": "https://www.stadtlandkind.ch/en/products/uv-sun-hat-curious-turnip-green",
+  "domain": "www.stadtlandkind.ch",
+  "gt": "SAME",
+  "why": null,
+  "status": "OK",
+  "title": "UV Sonnenhut Curious Turnip Green",
+  "facts": {
+   "sourceUrl": "https://www.stadtlandkind.ch/products/uv-sun-hat-curious-turnip-green",
+   "urlSlug": "uv-sun-hat-curious-turnip-green",
+   "brand": "Bobo Choses",
+   "brandModelCode": null,
+   "sellerSku": null,
+   "title": "UV Sonnenhut Curious Turnip Green",
+   "coreTitleTokens": [
+    "uv",
+    "sonnenhut",
+    "curious",
+    "turnip"
+   ],
+   "categoryText": null,
+   "colorText": "Green",
+   "materialText": null,
+   "fitText": null,
+   "ageRangeText": null,
+   "sizeLabels": [],
+   "audienceSignals": [],
+   "imageUrls": []
+  },
+  "price": {
+   "amount": 25,
+   "currency": "CHF"
+  },
+  "priceStatus": "VERIFIED_CURRENT"
+ },
+ {
+  "id": "S3-2",
+  "searchId": "S3",
+  "url": "https://kids21.com/products/700002005grn",
+  "domain": "kids21.com",
+  "gt": "UNCERTAIN",
+  "why": "404 Page Not Found",
+  "status": "OK",
+  "title": "Kids21 Singapore",
+  "facts": {
+   "sourceUrl": "https://kids21.com/products/700002005grn",
+   "urlSlug": "700002005grn",
+   "brand": "Kids21",
+   "brandModelCode": null,
+   "sellerSku": null,
+   "title": "Kids21 Singapore",
+   "coreTitleTokens": [
+    "singapore"
+   ],
+   "categoryText": null,
+   "colorText": null,
+   "materialText": null,
+   "fitText": null,
+   "ageRangeText": null,
+   "sizeLabels": [],
+   "audienceSignals": [],
+   "imageUrls": []
+  },
+  "price": null,
+  "priceStatus": "PRICE_UNAVAILABLE"
+ },
+ {
+  "id": "S4-1",
+  "searchId": "S4",
+  "url": "https://main-story.com/products/bubble-sweatshirt-grey-melange",
+  "domain": "main-story.com",
+  "gt": "UNCERTAIN",
+  "why": "홈페이지 매인호출로 상품정보가 아님",
+  "status": "OK",
+  "title": "main story",
+  "facts": {
+   "sourceUrl": "https://main-story.com/products/bubble-sweatshirt-grey-melange",
+   "urlSlug": "bubble-sweatshirt-grey-melange",
+   "brand": null,
+   "brandModelCode": null,
+   "sellerSku": null,
+   "title": "main story",
+   "coreTitleTokens": [
+    "main",
+    "story"
+   ],
+   "categoryText": null,
+   "colorText": null,
+   "materialText": null,
+   "fitText": null,
+   "ageRangeText": null,
+   "sizeLabels": [],
+   "audienceSignals": [],
+   "imageUrls": []
+  },
+  "price": null,
+  "priceStatus": "PRICE_UNAVAILABLE"
+ },
+ {
+  "id": "S5-1",
+  "searchId": "S5",
+  "url": "https://www.thefrontshop.com/products/pepe-style-1195-vernice-fard",
+  "domain": "www.thefrontshop.com",
+  "gt": "UNCERTAIN",
+  "why": "404 Page Not Found",
+  "status": "OK",
+  "title": "더프론트샵",
+  "facts": {
+   "sourceUrl": "https://www.thefrontshop.com/products/pepe-style-1195-vernice-fard",
+   "urlSlug": "pepe-style-1195-vernice-fard",
+   "brand": null,
+   "brandModelCode": null,
+   "sellerSku": null,
+   "title": "더프론트샵",
+   "coreTitleTokens": [
+    "더프론트샵"
+   ],
+   "categoryText": null,
+   "colorText": null,
+   "materialText": null,
+   "fitText": null,
+   "ageRangeText": null,
+   "sizeLabels": [],
+   "audienceSignals": [],
+   "imageUrls": []
+  },
+  "price": null,
+  "priceStatus": "PRICE_UNAVAILABLE"
+ },
+ {
+  "id": "S6-1",
+  "searchId": "S6",
+  "url": "https://kids21.com/products/700002037mlt",
+  "domain": "kids21.com",
+  "gt": "UNCERTAIN",
+  "why": "404 Page Not Found",
+  "status": "OK",
+  "title": "Kids21 Singapore",
+  "facts": {
+   "sourceUrl": "https://kids21.com/products/700002037mlt",
+   "urlSlug": "700002037mlt",
+   "brand": "Kids21",
+   "brandModelCode": null,
+   "sellerSku": null,
+   "title": "Kids21 Singapore",
+   "coreTitleTokens": [
+    "singapore"
+   ],
+   "categoryText": null,
+   "colorText": null,
+   "materialText": null,
+   "fitText": null,
+   "ageRangeText": null,
+   "sizeLabels": [],
+   "audienceSignals": [],
+   "imageUrls": []
+  },
+  "price": null,
+  "priceStatus": "PRICE_UNAVAILABLE"
+ },
+ {
+  "id": "S6-2",
+  "searchId": "S6",
+  "url": "https://global.trenbe.com/products/bobo-choses-modern-tracksuit-jacket-for-kids-160301440-p",
+  "domain": "global.trenbe.com",
+  "gt": "UNCERTAIN",
+  "why": "홈페이지 메인이라 확인불가",
+  "status": "OK",
+  "title": "trenbe - Trusted Luxury. Worldwide Value.",
+  "facts": {
+   "sourceUrl": "https://global.trenbe.com/products/bobo-choses-modern-tracksuit-jacket-for-kids-160301440-p",
+   "urlSlug": "bobo-choses-modern-tracksuit-jacket-for-kids-160301440-p",
+   "brand": null,
+   "brandModelCode": null,
+   "sellerSku": null,
+   "title": "trenbe - Trusted Luxury. Worldwide Value.",
+   "coreTitleTokens": [
+    "trenbe",
+    "trusted",
+    "luxury",
+    "worldwide",
+    "value"
+   ],
+   "categoryText": null,
+   "colorText": null,
+   "materialText": null,
+   "fitText": null,
+   "ageRangeText": null,
+   "sizeLabels": [],
+   "audienceSignals": [],
+   "imageUrls": []
+  },
+  "price": null,
+  "priceStatus": "PRICE_UNAVAILABLE"
+ },
+ {
+  "id": "S6-3",
+  "searchId": "S6",
+  "url": "https://global.trenbe.com/products/bobo-choses-kids-jacket-modern-tracksuit-159406743-p",
+  "domain": "global.trenbe.com",
+  "gt": "UNCERTAIN",
+  "why": "404 Page not found",
+  "status": "OK",
+  "title": "trenbe - Trusted Luxury. Worldwide Value.",
+  "facts": {
+   "sourceUrl": "https://global.trenbe.com/products/bobo-choses-kids-jacket-modern-tracksuit-159406743-p",
+   "urlSlug": "bobo-choses-kids-jacket-modern-tracksuit-159406743-p",
+   "brand": null,
+   "brandModelCode": null,
+   "sellerSku": null,
+   "title": "trenbe - Trusted Luxury. Worldwide Value.",
+   "coreTitleTokens": [
+    "trenbe",
+    "trusted",
+    "luxury",
+    "worldwide",
+    "value"
+   ],
+   "categoryText": null,
+   "colorText": null,
+   "materialText": null,
+   "fitText": null,
+   "ageRangeText": null,
+   "sizeLabels": [],
+   "audienceSignals": [],
+   "imageUrls": []
+  },
+  "price": null,
+  "priceStatus": "PRICE_UNAVAILABLE"
+ },
+ {
+  "id": "S6-4",
+  "searchId": "S6",
+  "url": "https://www.wconcept.co.kr/Product/306219521",
+  "domain": "www.wconcept.co.kr",
+  "gt": "DIFFERENT",
+  "why": null,
+  "status": "OK",
+  "title": "[W CONCEPT]",
+  "facts": {
+   "sourceUrl": "https://www.wconcept.co.kr/Product/306219521",
+   "urlSlug": "306219521",
+   "brand": null,
+   "brandModelCode": null,
+   "sellerSku": null,
+   "title": "[W CONCEPT]",
+   "coreTitleTokens": [
+    "concept"
+   ],
+   "categoryText": null,
+   "colorText": null,
+   "materialText": null,
+   "fitText": null,
+   "ageRangeText": null,
+   "sizeLabels": [],
+   "audienceSignals": [],
+   "imageUrls": []
+  },
+  "price": null,
+  "priceStatus": "PRICE_UNAVAILABLE"
+ }
+]
