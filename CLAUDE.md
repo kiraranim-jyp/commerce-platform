@@ -781,6 +781,8 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **가격 구역 식별** | `wu-056r1-price-section-identity.test.ts` | 구역 제목 **상호 비포함** · 해외 구역 «안» 에 `₩`/`약`/`≈`/통화기호 **0** · 아이콘 중복 금지 — **Panel mount DOM 으로** 본다 |
 | 🔴 **단계는 넷 · 번호는 파생** | `workflow.ts` · `stage-focus.ts` (WU-058) | 큰 단계 **4** · 라벨에 「소싱」 0 · 단계마다 본문 **하나**(빈 단계 0) · **번호는 배열 순서에서 파생**(하드코딩 금지) |
 | 🔴 **URL 분류기는 양방향 오류** | `classifyUrlShape` (WU-073) | 한국 CMS 목록(`goods_list`·`product_list`·`shopbrand`)이 **PRODUCT_PAGE** · SSG `itemView.ssg` 는 **오차단** — 🔴 「②의 탈락 = 정확한 차단」으로 읽지 않는다 · 고치지 않는다(WU-052 HOLD) |
+| 🔴🔴 **⑥ market gate 는 완화 불가** | `classifyCandidateMarket` (WU-077) | 탈락 10 = 해외 4 + **증거부족 4** + 가격없음 2 · 🔴 회수하면 **국내 최저가가 Human DIFFERENT(₩59,000)** 로 바뀐다 · 한국어/사업자 축은 **같은 4건**(독립 아님) · `.kr` 단독은 **변화 0** |
+| 🔴 **라벨만 보면 놓치는 오류가 있다** | WU-077 CF-2 | KRW 단독 완화의 최저가는 Human **SAME** 인데 출처가 **해외 사이트의 한국 표시가**(junioredition) — 🔴 Human GT 만으로 CF 를 판정하지 않는다 |
 | 🟡 **200 soft-404 는 «능력만» 실재** | WU-076 CONTROL | 40 호스트 중 **2**(littleluna·wconcept · **둘 다 한국몰**) · 🟢 **후보 적중 0/90** → HOLD · 🔴 텍스트 휴리스틱 **금지 유지**(정상상품 11/64 오차단) · 🟢 열 때의 축은 **`canonical`→루트**(오차단 0/64 · 추가 HTTP 0) |
 | 🔴 **CONTROL twin 은 «식별자» 를 바꿔야 한다** | WU-076 | 경로 **마지막 칸** 을 바꾸면 Cafe24 는 `…/display/1/` 꼬리표라 **같은 상품** 이 온다 — 🔴 1차에서 「200 5건」이 나왔고 실제는 **2건** 이었다 · 무효 판정 = **bogus 제목 == 후보 제목** |
 | 🟢🟢 **도착지 모양 방어** | `product-url-facts.ts` · `fetchPlainHtmlWithFinalUrl` (WU-075) | `classifyUrlShape(finalUrl) !== PRODUCT_PAGE` ⟹ **`REDIRECTED_AWAY`** · 추가 HTTP **0** · 🔴 fetch owner 는 `fetchPlainHtmlWithFinalUrl` **하나**(`fetchPlainHtml` 은 위임 껍데기) · 🔴 리다이렉트 **없는** 200 soft-404 는 **미방어**(WU-076) |
@@ -811,6 +813,50 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
+
+### 🔴 WU-077 `MI-MARKET-KR` — **⑥ 완화 불가 · 최저가가 틀어진다** (측정 전용 · 구현 0)
+
+🟢 전문 `docs/MI-MARKET-KR-077.md`. 🔴 운영 변경 **0** · HTTP **0** · 배포 0.
+🟢 §5-B CONTROL — 운영 `classifyCandidateMarket` 을 **그대로 불러** 전건 재현(mismatch **0/51**).
+
+🔴🔴 **분모 셋을 가른다 — WU-073 의 「17」을 정정한다**:
+```
+① 내 도메인 휴리스틱 **17**  ② WU-063 표의 `kr` 라벨 **9**  ③ 운영 KR 확정 **7**
+🔴 WU-073 의 ⑤~⑧ 분모는 **①** 이다. 섞지 않는다.
+```
+
+🔴 **CPO 종료 질문의 답 — 탈락 10 은 «셋» 으로 갈린다**:
+```
+⒜ 실제로 외화 표시        **4** — global.trenbe(USD)×3 · kihanan(JPY) ⟹ 해외가 **맞다**
+⒝ KRW 인데 도메인 증거 없음 **4** — luxboy 1 · donokids 3  ← **유일한 회수 후보**
+⒞ 가격 자체가 없다        **2** — beaumonde ×2 ⟹ ⑥이 아니라 **⑤ 문제**(이미 HOLD)
+```
+
+🔴🔴 **CF 전수 — 완화하면 「국내 최저가」가 틀린 가격이 된다**:
+
+| 축 | KR | 버킷 | SAME | 🔴 DIFF | 최저가 출처 |
+|---|---:|---:|---:|---:|---|
+| **현재(운영)** | 7 | **5** | 3 | 2 | **₩88,000 biskuit · 🟢 SAME** |
+| KRW 만으로 | 27 | 21 | 13 | 8 | ₩40,300 **junioredition(해외)** |
+| `.kr` 만으로 | 9 | **5** | 3 | 2 | ₩88,000 · 🟢 SAME (**변화 0**) |
+| +한국어 / +사업자 / 복합 | 11 | 9 | 5 | **4** | **₩59,000 luxboy · 🔴 DIFFERENT** |
+
+```
+🔴 CF-4·5·6 이 **숫자가 완전히 같다** — 한국어 축과 사업자 축이 **같은 4건** 을 연다
+   (독립 증거가 아니다) · precision 60.0% → **55.6%**
+🔴🔴 그리고 셀러가 보는 **국내 최저가가 Human DIFFERENT(₩59,000)로 바뀐다**
+   ⟹ WU-063 제1원칙(「틀린 최저가가 미노출보다 더 큰 오류」)으로 **기각**
+🔴 **CF-2 는 «다른 성질» 로 틀린다** — 최저가가 Human **SAME** 이라 라벨로는 안 잡히는데
+   출처가 `junioredition.com`(**해외 사이트의 한국 표시가**)이다. WU-051 이 막은 그 모양.
+   🔴 **Human 라벨만 봤으면 놓쳤을 오류다.**
+🔴 C22(DIFF)와 C21·C43(SAME)은 **증거가 글자 그대로 같다**(같은 샵) ⟹ 샵 단위로는 못 가른다
+```
+
+🔴 **Y2 변이(`.kr`+외화를 KR 로)가 통과했고 조사했다** — 가드 공백이 **아니다**:
+표본에 그 모양이 **0건** 이고, 🟢 Y2 를 넣으면 **기존 `mi-020` 계약이 FAIL 한다**(실행 확인).
+
+🔴🔴 **그래서 ⑥은 «가장 큰» 병목이 아니다** — ⑥ 고유 손실은 **4건** 이고 그중 절반이
+Human DIFFERENT 다. ⟹ **현재 구조의 상한에 닿았다**(WU-063~072 가 판정 축을 전부 닫았다).
 
 ### 🟡 WU-076 `MI-SOFT404-200` — **능력은 실재 · 적중 0 ⟹ HOLD** (측정 전용 · 구현 0)
 
