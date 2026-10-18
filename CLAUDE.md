@@ -787,6 +787,9 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **가격 구역 식별** | `wu-056r1-price-section-identity.test.ts` | 구역 제목 **상호 비포함** · 해외 구역 «안» 에 `₩`/`약`/`≈`/통화기호 **0** · 아이콘 중복 금지 — **Panel mount DOM 으로** 본다 |
 | 🔴 **단계는 넷 · 번호는 파생** | `workflow.ts` · `stage-focus.ts` (WU-058) | 큰 단계 **4** · 라벨에 「소싱」 0 · 단계마다 본문 **하나**(빈 단계 0) · **번호는 배열 순서에서 파생**(하드코딩 금지) |
 | 🔴 **URL 분류기는 양방향 오류** | `classifyUrlShape` (WU-073) | 한국 CMS 목록(`goods_list`·`product_list`·`shopbrand`)이 **PRODUCT_PAGE** · SSG `itemView.ssg` 는 **오차단** — 🔴 「②의 탈락 = 정확한 차단」으로 읽지 않는다 · 고치지 않는다(WU-052 HOLD) |
+| 🔴 **generic 숫자 parser 금지(계약으로 잠김)** | `wu-079-price-producer.test.ts` | 「N원」을 가격으로 쓰면 **4 FAIL** · 🔴 `class`(price/sale/cost) 축은 성공군에서 **5/9 오추출**(배송비·적립금·다른상품) |
+| 🔴 **통화 가드의 owner 는 pricing 패키지다** | `packages/pricing/src/price-validity.ts` `resolveSourcePrice` | `priceFromJsonLd` 의 `if (!currency)` 는 **도달하지 않는 2차 방어선** — 통화 규칙을 고칠 때 **그 파일을 본다** |
+| 🟡 **SHOPIFY_JSON 경로는 HTML 을 안 본다** | `factsFromProductUrl` (WU-079) | 그 경로 후보는 페이지의 JSON-LD 가격을 **영구히 못 본다** · 🟢 지금은 `enrichCandidatePrices` 가 메운다 · 🔴 그 경로 실패 조건은 **미측정** |
 | 🔴🔴 **보호축을 «하나씩» 풀지 않는다** | WU-065~078 통합 (CPO 확정 2026-10-18) | `NO_TITLE_OVERLAP` 효과 **0** · `COLOR` 위험 확인 · `MODEL_CODE/CONFLICT` FP 위험 · `MARKET` 안전한 추가 증거 **없음** · `BRAND` **FP +2 실측**(WU-059) ⟹ 🔴 **현재 MI 보호 로직을 그대로 유지한다** · 🔴 BRAND·MODEL_CODE 약화 방향 **계속 금지** |
 | 🟡 **언어 축은 «안전조건» 이지 회수수단이 아니다** | WU-078 | `NO_TITLE_OVERLAP` 4건은 **품번 exact 4/4**(한글 제목에 라틴 품번) · 음역은 SAME 3(≥2) / DIFF 1(=1) 로 갈리지만 **회수 0**(BRAND 축이 남는다) · 🟢 풀 때 **C08 이 뚫리는 것을 막는 전제조건** · 🔴 단독 WU 로 다시 열지 않는다 |
 | 🔴 **정규식을 쉘/파이썬으로 편집하지 않는다** | WU-078 교훈 | 이스케이프가 **0x08·0x01 제어문자**로 박혀 측정이 조용히 틀렸다 · 🔴 역참조(``) 금지 · Edit/Write 로 쓴다 |
@@ -822,6 +825,46 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
+
+### 🔴 WU-079 `MI-PRICE-EVIDENCE-RECOVERY` — **REJECT** (측정 전용 · 구현 0)
+
+🟢 전문 `docs/MI-PRICE-EVIDENCE-RECOVERY-079.md`. 🔴 운영 변경 **0** · 배포 0 · HTTP 15.
+
+🔴🔴 **분모를 정정했다** — `factsFromProductUrl` **하나만** 불러 「실패군 4건」으로 셌는데
+운영 **전체 체인** 에서 luksusbaby 2건은 `enrichCandidatePrices` 가 채워
+**`VERIFIED_CURRENT · priceSource="detail"`** 이다. ⟹ **진짜 실패군은 beaumonde 2건뿐.**
+
+```
+beaumonde  JSON-LD 0 · microdata 0 · meta 0 · data-* 0 · embedded state 0
+           🔴 미치환 템플릿(`<%=displayOptionkey%>`)이 그대로 → **JS 렌더**
+           ⟹ 「놓쳤다」가 아니라 **「없다」**
+```
+
+| CF | 실패군 회수 | 🔴 성공군 오추출 |
+|---|---|---|
+| CF-1 「판매가」 라벨 | **1/2**(C13만) | 🟢 **0/9** |
+| CF-2 embedded state | 0/2 | — |
+| CF-3 `class`(price/sale/cost) | 2/2 | 🔴 **5/9**(배송비·적립금·**다른 상품**) |
+| CF-4 사이트 전용 | 🔴 안정 구조 **없음** | — |
+
+🔴🔴 **그런데 회수 방향이 거꾸로다** — 안전 축이 회수하는 1건이 **Human DIFFERENT(C13)**
+이고, Human **SAME(C27)** 은 「판매가」가 **설명 문구** 라 **회수 불가** 다.
+⟹ 국내 버킷 5→6 · DIFFERENT 2→**3** · precision **60.0% → 50.0%** (최저가는 불변).
+🔴 WU-063 제1원칙으로 **REJECT**.
+
+🔴 **Q7 의 답 — 가격 추출은 «다음 병목이 아니다»**: 구조화 데이터가 있는 국내 샵은
+**이미 전부 회수된다**(성공군 9/9 · 오추출 0). 남은 2건은 **JS 렌더 사이트 1곳** 의
+site 정책 문제이고 WU-054 가 이미 HOLD 했다.
+
+🔴🔴 **1차 하니스가 CPO §11 을 위반했고 내가 잡아 고쳤다** — 캐시만 읽어서
+`extractFromJsonLd` 를 **죽여도 통과** 했다. 🟢 운영 owner 직접 호출 계약 6건을 추가했고
+**V4(generic 숫자 parser 주입)가 4 FAIL** 로 그 금지를 잠근다.
+🔴 V3 무효과도 규명 — 통화 가드의 **진짜 owner 는 `packages/pricing/src/price-validity.ts`**
+(`resolveSourcePrice`)이고 `priceFromJsonLd` 의 검사는 **도달하지 않는 2차 방어선** 이다(V3b 4 FAIL).
+
+🟡 **보류 보관 1건** — `fetchPath = SHOPIFY_JSON` 후보는 **HTML 을 받지 않아** 그 페이지의
+JSON-LD(`offers.price` + `priceCurrency`)를 **영구히 못 본다**. 🟢 지금은
+`enrichCandidatePrices` 가 메워 증상이 없다. 🔴 미측정이라 WU 로 열지 않는다.
 
 ### 🟡 WU-078 `MI-LANGUAGE-EVIDENCE` — **언어는 병목이 아니었다** (측정 전용 · 구현 0)
 
