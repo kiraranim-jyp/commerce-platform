@@ -787,6 +787,8 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **가격 구역 식별** | `wu-056r1-price-section-identity.test.ts` | 구역 제목 **상호 비포함** · 해외 구역 «안» 에 `₩`/`약`/`≈`/통화기호 **0** · 아이콘 중복 금지 — **Panel mount DOM 으로** 본다 |
 | 🔴 **단계는 넷 · 번호는 파생** | `workflow.ts` · `stage-focus.ts` (WU-058) | 큰 단계 **4** · 라벨에 「소싱」 0 · 단계마다 본문 **하나**(빈 단계 0) · **번호는 배열 순서에서 파생**(하드코딩 금지) |
 | 🔴 **URL 분류기는 양방향 오류** | `classifyUrlShape` (WU-073) | 한국 CMS 목록(`goods_list`·`product_list`·`shopbrand`)이 **PRODUCT_PAGE** · SSG `itemView.ssg` 는 **오차단** — 🔴 「②의 탈락 = 정확한 차단」으로 읽지 않는다 · 고치지 않는다(WU-052 HOLD) |
+| 🔴 **domain = brand 금지(계약으로 잠김)** | `wu-080-brand-producer.test.ts` | 도메인/판매처 이름으로 브랜드를 만들면 **2 FAIL** · 🔴 샵이 `brand` 자리에 **자기 이름** 을 적는 경우가 실재한다(biskuit 「비스킷」) |
+| 🔴🔴 **BRAND_UNCONFIRMED 는 «정확한 상태» 다** | `cross-seller.ts:751·999` (WU-080) | 13건 중 6건은 **원상품 brand 가 null** 이라 걸린다(후보는 있다) · 🔴 원상품 공백을 메우면 보류→**충돌** 로 악화(SAME 4 더 막힘 · DIFFERENT 2 열림) |
 | 🔴 **generic 숫자 parser 금지(계약으로 잠김)** | `wu-079-price-producer.test.ts` | 「N원」을 가격으로 쓰면 **4 FAIL** · 🔴 `class`(price/sale/cost) 축은 성공군에서 **5/9 오추출**(배송비·적립금·다른상품) |
 | 🔴 **통화 가드의 owner 는 pricing 패키지다** | `packages/pricing/src/price-validity.ts` `resolveSourcePrice` | `priceFromJsonLd` 의 `if (!currency)` 는 **도달하지 않는 2차 방어선** — 통화 규칙을 고칠 때 **그 파일을 본다** |
 | 🟡 **SHOPIFY_JSON 경로는 HTML 을 안 본다** | `factsFromProductUrl` (WU-079) | 그 경로 후보는 페이지의 JSON-LD 가격을 **영구히 못 본다** · 🟢 지금은 `enrichCandidatePrices` 가 메운다 · 🔴 그 경로 실패 조건은 **미측정** |
@@ -825,6 +827,47 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
+
+### 🔴 WU-080 `MI-BRAND-EVIDENCE` — **REJECT · BRAND 는 올바르게 동작한다** (구현 0)
+
+🟢 전문 `docs/MI-BRAND-EVIDENCE-080.md`. 🔴 운영 변경 **0** · 배포 0 · DB 는 **읽기만**.
+
+```
+BRAND blocker **14**/51 = MISMATCH **1** + UNCONFIRMED **13**(SAME 9 · 🔴 DIFF 4)
+```
+
+🔴🔴 **원인은 후보가 아니라 «원상품» 이다** — UNCONFIRMED 13 중 **6건은 후보 brand 가
+있는데도** 걸렸다(`brandKnown = Boolean(x.brand && y.brand)`). 🟢 **DB 로 확인**:
+```
+bobochoses.com(브랜드 **공식몰**)  brand.value = **""** (1건은 "AW26")
+junioredition.com(리테일러)        brand.value = **"Bobo Choses"**
+🔴 역설 — **공식몰에서 못 읽고 리테일러에서 읽는다.** 원인은 공식몰 JSON-LD
+   `brand.name = "AW26"`(시즌코드)이고 `SEASON_CODE` 규칙이 **올바르게** 버린다
+🟢 전수로는 빈값 **42/527 ≈ 8%** — 우리 GT 가 거기 몰려 있다(표본 편향)
+```
+
+🔴🔴 **그 공백을 메우면 «악화» 된다**(CF-3 · 운영 owner 직접 호출):
+```
+🟢 BRAND OK 3 — C48 SAME · 🔴 **C50·C51 DIFFERENT**
+🔴 UNCONFIRMED → **MISMATCH 악화 4** — C07 C14 C15 C47 **전부 Human SAME**
+   (한글 「보보쇼즈」 · 일본어 혼재 · **샵 이름 「비스킷」** 이 통과 못 한다)
+⟹ SAME 4건을 **더 세게 막고** DIFFERENT 2건을 연다
+```
+
+🔴 **MISMATCH 1건의 정체는 ④ 샵 이름 오인** — biskuit 가 `brand` 자리에 **자기 이름**
+(「비스킷」)을 적었다. 🟢 우리 extractor 는 **명시된 자리를 정직하게 읽었다**(결함 아님).
+
+🔴 **독립 증거 후보 5개 전부 실격** — JSON-LD(이미 읽음) · 본문 라벨(§10 금지) ·
+domain(**§17 REJECT 조건**) · seller metadata(C07/C47 이 반증) · brand+modelCode(중복 축).
+
+🔴 **B3 변이가 1차에서 통과했고 잡아서 하니스를 고쳤다**(§14) — microdata brand 가 있는
+케이스가 없어 분기가 안 탔다. 🟢 보강 후 **1 FAIL**. 🟢 **B5(domain=brand)가 2 FAIL** 로
+그 금지 축을 잠근다.
+
+🔴🔴 **누적 결론 — 여덟 축이 같은 답을 냈다**:
+> 국내 SAME recall 을 올리는 모든 경로가 **「보호축 완화」로 수렴** 하고,
+> 그 완화는 **예외 없이 Human DIFFERENT 를 같이 연다**
+> (색상·제목·품번·라인·시장·가격·언어·브랜드 — WU-063~080).
 
 ### 🔴 WU-079 `MI-PRICE-EVIDENCE-RECOVERY` — **REJECT** (측정 전용 · 구현 0)
 
