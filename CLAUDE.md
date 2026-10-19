@@ -812,6 +812,8 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **가격 구역 식별** | `wu-056r1-price-section-identity.test.ts` | 구역 제목 **상호 비포함** · 해외 구역 «안» 에 `₩`/`약`/`≈`/통화기호 **0** · 아이콘 중복 금지 — **Panel mount DOM 으로** 본다 |
 | 🔴 **단계는 넷 · 번호는 파생** | `workflow.ts` · `stage-focus.ts` (WU-058) | 큰 단계 **4** · 라벨에 「소싱」 0 · 단계마다 본문 **하나**(빈 단계 0) · **번호는 배열 순서에서 파생**(하드코딩 금지) |
 | 🔴 **URL 분류기는 양방향 오류** | `classifyUrlShape` (WU-073) | 한국 CMS 목록(`goods_list`·`product_list`·`shopbrand`)이 **PRODUCT_PAGE** · SSG `itemView.ssg` 는 **오차단** — 🔴 「②의 탈락 = 정확한 차단」으로 읽지 않는다 · 고치지 않는다(WU-052 HOLD) |
+| 🔴🔴 **⑧ 은 «비용» 게이트인데 «노출» 까지 결정한다** | `isEvidenceEvaluationWorthwhile` + `transientEvidenceSink.push` (WU-096) | `candidates[0].matchLevel !== "low"` 가 false 면 **샵 전체 DROPPED** → transient 배열에 **안 실린다** → 화면에서 사라진다 · 🔴 **WU-091 의 「후보 노출 ≠ SAME 판정」과 충돌** · 🟢 등록부 «검색 화면» 은 이 게이트와 **무관**(직접 렌더) |
+| 🔴 **UI 게이트가 경로마다 다르다** | `mayShowCandidate` ↔ `evidence.map()` (WU-096) | 등록부 검색 표 = `mayShowCandidate` · **transient 카드 = 게이트 0(전건 렌더)** · 🔴 섞으면 「UI 에서 사라진다」는 **거짓 결론** 이 난다(실제로 1차에 났다) |
 | 🟢🟢 **숫자만인 URL 세그먼트는 식별자가 아니다** | `SLUG_IS_NUMERIC_ONLY` ×3 (WU-095) | `match.ts` · `product-identity.ts` · `shared/product-facts.ts` **세 벌 전부** 같은 가드 · 🔴 하나만 고치면 다른 경로에서 거짓 신호가 계속 난다(M1~M3 각 2 FAIL) · 🔴 **Shopify handle 일치는 그대로 살아 있다**(M4 3 FAIL 이 양방향으로 잠근다) |
 | 🔴 **GT 라벨은 «인덱스» 로 붙이지 않는다** | `fixtures/wu-093-human-gt.json` (WU-095) | `withConfidence` 가 **정렬** 하므로 코드가 바뀌면 순서가 바뀐다 · 🔴 실제로 「human SAME 인데 conf 0」이 나왔다 · 🟢 **SKU 키** 로 고정 |
 | 🔴🔴🔴 **`matchLevel` 을 신뢰하지 않는다** | `extractSlug` · `match.ts:81·477` (WU-094) | Cafe24 URL 이 전부 `…/display/1/` 로 끝나 **slug 가 「1」로 충돌** → 0.95 바닥값이 **무조건** 발화 · 🔴 CF 로 끄면 **0.95 → 0.1** · 🔴 소비처 **여섯**(그중 **Gemini 스킵**·**가격 비용**) · 🔴 **SAME 로직에 결합 금지**(정밀도 2/5) |
@@ -868,6 +870,49 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
+
+### 🔴🔴 WU-096 `MI-FUNNEL` — **최초 병목은 ⑧ 하나다** (측정 전용 · 구현 0)
+
+🟢 전문 `docs/MI-FUNNEL-096.md`. 🔴 운영 변경 **0** · 배포 0 · AI 0 · UI 0 · 8축 0.
+🔴 **WU-095 «이후» 값으로 다시 쟀다** — 087/088/089 숫자는 수정 전이라 **인용 금지**.
+
+```
+① AI 182 → ② 추출 103 → ③ fetch 64 → ④ facts 64 → ⑤ 가격 12 → ⑥ market 8
+→ ⑦ MI 판정 64 → **⑧ 샵판정 30곳: JUDGED 4 / 🔴 DROPPED 26** → ⑨ 자격 0 → ⑩ UI 0
+국내(KR 5) ①~⑦ **손실 0** · 해외(3)도 **손실 0** ⟹ 🔴 **둘이 갈리는 지점이 «없다»**
+   둘 다 **⑧ 같은 게이트** 에서 죽는다
+```
+
+🔴🔴 **최초 병목 = `isEvidenceEvaluationWorthwhile`**(run-domestic-price-check:364):
+```
+if (candidates[0].matchLevel !== "low") return true;   ⟹ top 이 low 면 **샵 전체 DROPPED**
+KR 후보를 가진 샵 4곳(biskuit·littleluna·miniboutique·mustit) **전부 DROPPED**
+🟢 JUDGED 4곳은 전부 **market UNKNOWN · price null** ⟹ 어느 가격축에도 못 들어간다
+```
+
+🔴 **CPO §4 분리** — 가격 **실패 52**(전부 `NO_PRICE_EVIDENCE`) ↔ 가격은 있는데
+**판정으로 제외 12**(국내 5 · 해외 3). 🔴 **두 수를 합치지 않는다**.
+
+🔴 **CPO §5 분리** — **UI 에서 사라지는 것 0**. transient 카드는 `evidence.map()` 으로
+**전건 렌더**(게이트 0)다. 🔴 1차에 `mayShowCandidate` 로 쟀는데 **틀린 owner** 였다
+(그건 등록부 «검색 표» 게이트다). 🟢 실제 노출 = **JUDGED 4건**(전부 가격 미확인).
+
+🔴🔴 **WU-095 의 부작용 1건을 확정했다 — 둘로 갈라 적는다**:
+```
+AI URL 경로(원상품 Shopify)   수정 전후 **둘 다 {low:64}** ⟹ 🟢 **회귀 아니다**
+   (원상품 slug 가 숫자가 아니라 Cafe24 후보 slug "1" 과 **애초에 달랐다**)
+등록부 경로(원상품 Cafe24)    very_high 5 → **low 5** ⟹ 🔴 **이제 DROPPED** (실측)
+🟢 단 **잃은 판정은 없다** — 통과하던 때에도 그 경로는 **SAME 0 · 국내 EXACT 0** 이었다
+🔴 달라진 것은 「판정」이 아니라 **「후보가 백엔드 산출에 실리는가」** 다
+```
+
+🔴🔴 **그래서 독립 병목 후보가 «하나» 나왔다(CPO 판정 사안)** — ⑧ 은 **증거평가 «비용»**
+게이트인데 `transientEvidenceSink.push` 가 그 뒤에 있어 **후보 노출까지 결정한다**.
+🔴 **WU-091 의 「후보 노출 ≠ SAME 판정」과 충돌** 한다. 🟢 이것은 **판정 완화가 아니라
+«노출 경로» 문제** 라 **8축·threshold 를 건드리지 않고** 다룰 수 있는 **유일한 자리** 다.
+🔴 **CTO 는 구현하지 않았다.**
+
+🟢 회귀 **599 files / 8,361 passed · failed 0** · typecheck 0 · build exit 0.
 
 ### 🟢🟢 WU-095 `MI-SLUG-FIX` — **거짓 slug 신호 제거 · 구현/배포**
 
