@@ -802,6 +802,8 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **가격 구역 식별** | `wu-056r1-price-section-identity.test.ts` | 구역 제목 **상호 비포함** · 해외 구역 «안» 에 `₩`/`약`/`≈`/통화기호 **0** · 아이콘 중복 금지 — **Panel mount DOM 으로** 본다 |
 | 🔴 **단계는 넷 · 번호는 파생** | `workflow.ts` · `stage-focus.ts` (WU-058) | 큰 단계 **4** · 라벨에 「소싱」 0 · 단계마다 본문 **하나**(빈 단계 0) · **번호는 배열 순서에서 파생**(하드코딩 금지) |
 | 🔴 **URL 분류기는 양방향 오류** | `classifyUrlShape` (WU-073) | 한국 CMS 목록(`goods_list`·`product_list`·`shopbrand`)이 **PRODUCT_PAGE** · SSG `itemView.ssg` 는 **오차단** — 🔴 「②의 탈락 = 정확한 차단」으로 읽지 않는다 · 고치지 않는다(WU-052 HOLD) |
+| 🟢🟢 **숫자만인 URL 세그먼트는 식별자가 아니다** | `SLUG_IS_NUMERIC_ONLY` ×3 (WU-095) | `match.ts` · `product-identity.ts` · `shared/product-facts.ts` **세 벌 전부** 같은 가드 · 🔴 하나만 고치면 다른 경로에서 거짓 신호가 계속 난다(M1~M3 각 2 FAIL) · 🔴 **Shopify handle 일치는 그대로 살아 있다**(M4 3 FAIL 이 양방향으로 잠근다) |
+| 🔴 **GT 라벨은 «인덱스» 로 붙이지 않는다** | `fixtures/wu-093-human-gt.json` (WU-095) | `withConfidence` 가 **정렬** 하므로 코드가 바뀌면 순서가 바뀐다 · 🔴 실제로 「human SAME 인데 conf 0」이 나왔다 · 🟢 **SKU 키** 로 고정 |
 | 🔴🔴🔴 **`matchLevel` 을 신뢰하지 않는다** | `extractSlug` · `match.ts:81·477` (WU-094) | Cafe24 URL 이 전부 `…/display/1/` 로 끝나 **slug 가 「1」로 충돌** → 0.95 바닥값이 **무조건** 발화 · 🔴 CF 로 끄면 **0.95 → 0.1** · 🔴 소비처 **여섯**(그중 **Gemini 스킵**·**가격 비용**) · 🔴 **SAME 로직에 결합 금지**(정밀도 2/5) |
 | 🔴 **「모델명 유사도 0%」와 「URL slug 일치」가 같이 있으면 버그다** | `matchReasons` (WU-094) | 두 문장은 같이 설 수 없다 — reasons 가 **스스로 모순을 적고 있었다** · 🔴 점수를 볼 때 **reasons 를 같이** 읽는다 |
 | 🔴🔴 **「안 맞는다」를 「틀린 답」으로 읽지 않는다** | WU-093 GT (CEO 라벨 10건) | **False SAME 0 · Human DIFFERENT 8/8 차단 · recall 0/2** ⟹ 증상은 **「답 없음」** 이다 · 🔴 그리고 **같은 화면의 S1(matching)과 S2(coverage)는 서로 다른 문제** 라 한 처방으로 안 풀린다 |
@@ -856,6 +858,56 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
+
+### 🟢🟢 WU-095 `MI-SLUG-FIX` — **거짓 slug 신호 제거 · 구현/배포**
+
+🟢 전문 `docs/MI-SLUG-FIX-095.md`. 운영 **3 파일 · +59/-3줄**(대부분 주석) ·
+🔴 새 SAME 규칙 **0** · threshold **0** · 8축 **0** · UI **0** · 가격 정책 **0** · Registry **0**.
+
+🔴🔴 **수정은 「1개 함수」로 끝나지 않았다 — 복제본이 «셋» 이다**(CPO 질문의 답):
+```
+① match.ts:81            extractSlug      → 0.95 바닥값(:477) · 품번 URL 포함(:494)
+② product-identity.ts:60 extractSlug(복제) → 🔴 **즉시 EXACT_PRODUCT**(:155) → 화면 🟢「동일상품」
+③ shared/product-facts.ts:717 extractUrlSlug → sameSellerDistinctListing · slugCarriesCode ·
+                               dedupe key · extractCodeLikeSlugSegment
+🔴 ②가 **더 센 경로** 다 — 점수가 아니라 **확정** 이고 `overseasMatchDisplay` 가 TIERS.SAME 으로 바꾼다
+🟢 ③은 **결과가 안 바뀐다**(「둘 다 "1"」과 「둘 다 null」이 같은 분기) — 그래도 같이 고쳤다
+```
+
+🟢 **고친 방법 — 새 규칙이 아니라 «기존 기준의 재사용»**:
+```
+숫자만으로 된 세그먼트는 **식별 신호로 쓰지 않는다**(null = 「모른다」)
+🟢 근거: `extractCodeLikeSlugSegment` 가 이미 식별자에 `[a-z]`와 `[0-9]`를 **둘 다** 요구한다
+🔴 「두 번째 세그먼트를 쓴다」는 **사이트별 규칙** 이라 채택하지 않았다
+```
+
+🟢 **STEP2 유형별 실측(N=4,247)** — Cafe24 유형 **32/32(100%)** 가 숫자 slug ·
+🟢 **Shopify(/products/) 1,402 중 숫자는 1건(0.07%)** ⟹ 그쪽은 정상이고 **깨뜨리지 않았다**.
+🔴 slug `"1"` 하나가 **URL 26 · 호스트 3 · 거짓 일치 쌍 325** 를 만들고 있었다.
+
+🟢🟢 **STEP5 전후 비교(S1 5건 · 운영 함수)**:
+```
+          수정 전                      수정 후
+conf      **0.95 ×5**                  **0.1 ×3 · 0 ×2**
+matchLevel **very_high ×5**            **low ×5**
+reason    「URL slug 일치」 ×5          **사라짐**
+matchType **EXACT ×5**                 **NOT_MATCHED ×5**
+pTruth    **EXACT_PRODUCT ×3**         **0** (SIMILAR/CONFLICT)
+🔴 SAME 승격 **0** — 성공 기준은 「SAME 증가」가 **아니다**(CPO §5)
+🟢 False SAME **0 유지**
+```
+
+🔴 **STEP6 가격** — 상세확인 대상 **2 → 0**(잘못된 very_high 가 고른 2건이 사라졌다 · 정책 변경 0).
+🔴 **STEP7 Gemini** — `foundVeryHighInP0` 의 입력이 **very_high 5 → 0** ⟹ **거짓 스킵이 사라진다**.
+🔴 flag OFF 라 **호출 증가량은 측정불가** 이고 **비용 추정도 하지 않았다**.
+
+🔴🔴 **측정 오류를 하나 잡았다** — GT 를 **인덱스** 로 매핑했는데 `withConfidence` 가 **정렬**
+을 해서 수정 전/후로 **라벨이 엉뚱한 후보에 붙었다**(수정 후 「human SAME 인데 conf 0」).
+🔴 그대로 보고했으면 **거짓 결론** 이었다. 🟢 fixture 를 **SKU 키** 로 바꿔 고정했다.
+
+🟢 계약 **7**(네트워크 0) · 음성대조 **M1 2F · M2 2F · M3 2F · M4(조건 반전) 3F** → 복구 7 passed.
+🟢🟢 회귀 **599 files / 8,361 passed · failed 0** — 기존 계약이 **하나도 안 깨졌다**
+(= 그 거짓 신호에 **의존하는 올바른 계약이 없었다**). typecheck 0 · build exit 0.
 
 ### 🔴🔴🔴 WU-094 `MI-MATCHLEVEL` — **`very_high` 는 지금 «거짓값» 이다** (구현 0)
 

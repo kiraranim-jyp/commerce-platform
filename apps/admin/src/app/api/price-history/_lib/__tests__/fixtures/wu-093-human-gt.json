@@ -1,12 +1,13 @@
-{"wu":"WU-093","humanReview":[
-{"id":"S1-looxloo.com-1","case":"S1","verdict":"SAME","note":null},
-{"id":"S1-looxloo.com-2","case":"S1","verdict":"DIFFERENT","note":"양말임"},
-{"id":"S1-looxloo.com-3","case":"S1","verdict":"DIFFERENT","note":"양말임"},
-{"id":"S1-looxloo.com-4","case":"S1","verdict":"SAME","note":null},
-{"id":"S1-looxloo.com-5","case":"S1","verdict":"DIFFERENT","note":"색상 다름"},
-{"id":"S2-looxloo.com-1","case":"S2","verdict":"DIFFERENT","note":"하의임"},
-{"id":"S2-looxloo.com-2","case":"S2","verdict":"DIFFERENT","note":"다른제품"},
-{"id":"S2-looxloo.com-3","case":"S2","verdict":"DIFFERENT","note":"다른제품"},
-{"id":"S2-looxloo.com-4","case":"S2","verdict":"DIFFERENT","note":"다른제품"},
-{"id":"S2-looxloo.com-5","case":"S2","verdict":"DIFFERENT","note":"다른제품"}
+{"wu":"WU-093","note":"🔴 CEO 라벨은 «SKU» 로 고정한다 — 인덱스로 매핑하면 withConfidence 의 정렬 때문에 수정 전/후로 라벨이 엉뚱한 후보에 붙는다(WU-095 에서 실제로 났다).",
+"humanReview":[
+{"sku":"76A7D-L30-05","case":"S1","title":"보보쇼즈 베이비 허그헤어리몬스터티셔츠","verdict":"SAME","note":null},
+{"sku":"76A7D-810-01","case":"S1","title":"보보쇼즈 허그헤어리몬스터숏양말","verdict":"DIFFERENT","note":"양말임"},
+{"sku":"76A7D-P10-02","case":"S1","title":"보보쇼즈 베이비 허그헤어리몬스터숏양말","verdict":"DIFFERENT","note":"양말임"},
+{"sku":"76A7D-330-03","case":"S1","title":"보보쇼즈 허그몬스터티셔츠","verdict":"SAME","note":null},
+{"sku":"76A7D-334-02","case":"S1","title":"보보쇼즈 허그몬스터스웨트셔츠","verdict":"DIFFERENT","note":"색상 다름"},
+{"sku":"76A7D-410-10","case":"S2","title":"보보쇼즈 BR BC앰버데님팬츠","verdict":"DIFFERENT","note":"하의임"},
+{"sku":"26119-CBC-01","case":"S2","title":"도기앞치마세트","verdict":"DIFFERENT","note":"다른제품"},
+{"sku":"26119-CBC-50","case":"S2","title":"플라워앞치마세트","verdict":"DIFFERENT","note":"다른제품"},
+{"sku":"35W70-BBC-01","case":"S2","title":"모노하트이유식턱받이","verdict":"DIFFERENT","note":"다른제품"},
+{"sku":"35970-ABC-01","case":"S2","title":"MH_mom&baby밴드","verdict":"DIFFERENT","note":"다른제품"}
 ]}

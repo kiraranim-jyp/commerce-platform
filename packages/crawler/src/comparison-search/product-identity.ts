@@ -57,12 +57,24 @@ function normalizeModelName(text: string): string {
 
 /** match.ts의 private extractSlug()와 동일 로직 — match.ts를 수정하지 않기 위해
  * (CPO 지시: 기존 match.ts 미변경) 여기 독립적으로 둔다. */
+/**
+ * 🔴🔴🔴 WU-095 — match.ts 의 같은 이름 함수와 **같은 가드** 다(근거는 그쪽 주석).
+ *    🔴 이쪽이 **더 센 경로** 다 — 점수 바닥값이 아니라 `deriveProductMatchTruthFromText`
+ *    가 **즉시 `EXACT_PRODUCT`** 를 확정하고, 그것이 화면에서 **🟢 「동일상품」**
+ *    (`overseasMatchDisplay` → `TIERS.SAME`)이 된다.
+ */
+const SLUG_IS_NUMERIC_ONLY = /^\d+$/;
+
 function extractSlug(url: string): string | null {
   try {
     const { pathname } = new URL(url);
     const segments = pathname.split("/").filter(Boolean);
     const last = segments[segments.length - 1];
-    return last ? last.replace(/\.html$/i, "").toLowerCase() : null;
+    if (!last) return null;
+    const slug = last.replace(/\.html$/i, "").toLowerCase();
+    /** 🔴 WU-095 — 숫자만이면 **식별 신호로 쓰지 않는다**(null = 「모른다」). */
+    if (!slug || SLUG_IS_NUMERIC_ONLY.test(slug)) return null;
+    return slug;
   } catch {
     return null;
   }

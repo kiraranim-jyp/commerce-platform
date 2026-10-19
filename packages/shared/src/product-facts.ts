@@ -714,12 +714,25 @@ export function buildCoreTitleTokens(
 
 /** URL의 마지막 경로 조각. Shopify(`/products/handle`)도 Smallable
  * (`/product/{slug}-{id}`)도 같은 방식으로 동작한다. */
+/**
+ * 🔴🔴 WU-095 — match.ts / product-identity.ts 의 `extractSlug` 와 **같은 가드**.
+ *    🟢 이 함수의 소비처(`sameSellerDistinctListing` · `slugCarriesCode` ·
+ *    dedupe key · `extractCodeLikeSlugSegment`)에서는 **결과가 바뀌지 않는다** —
+ *    「둘 다 "1" 로 같다」와 「둘 다 null」이 **같은 분기** 로 떨어진다.
+ *    🔴 그래도 같이 고치는 이유는 **셋이 같은 개념** 이기 때문이다.
+ */
+const SLUG_IS_NUMERIC_ONLY = /^\d+$/;
+
 export function extractUrlSlug(url: string | null | undefined): string | null {
   if (!url) return null;
   try {
     const segments = new URL(url).pathname.split("/").filter(Boolean);
     const last = segments[segments.length - 1];
-    return last ? normalizeFactText(last.replace(/\.html$/i, "")) : null;
+    if (!last) return null;
+    const slug = normalizeFactText(last.replace(/\.html$/i, ""));
+    /** 🔴 WU-095 — 숫자만이면 **식별 신호로 쓰지 않는다**(null = 「모른다」). */
+    if (!slug || SLUG_IS_NUMERIC_ONLY.test(slug)) return null;
+    return slug;
   } catch {
     return null;
   }

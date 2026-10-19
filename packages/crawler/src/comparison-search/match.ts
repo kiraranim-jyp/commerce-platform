@@ -78,12 +78,43 @@ export function splitModelColor(title: string): { model: string; color: string |
 
 /** URL의 마지막 경로 세그먼트("슬러그")를 뽑는다 — Shopify(`/products/handle`)와
  * Childrensalon(`/{slug}.html`) 둘 다 이 방식으로 동작한다. */
+/**
+ * 🔴🔴🔴 WU-095 — **숫자만으로 된 세그먼트는 «상품 식별 문자열» 이 아니다.**
+ *
+ * ── 왜 생겼나 (WU-094 실측) ───────────────────────────────────────────────
+ * Cafe24 상품 URL 은 전부 `…/display/1/` 로 끝난다. 마지막 세그먼트를 slug 로
+ * 쓰면 **서로 다른 사이트의 서로 다른 상품이 전부 같은 slug** 가 된다. 실측:
+ * ```
+ * slug "1"  URL 26 · 호스트 3 · **거짓 일치 쌍 325**
+ * Cafe24 유형 URL 32건 중 **32건(100%)** 이 숫자 slug
+ * 🟢 Shopify(/products/) 1,402건 중 숫자 slug 는 **1건**(0.07%) — 그쪽은 정상이다
+ * ```
+ * 그래서 아래 `score = Math.max(score, 0.95)` 가 **무조건** 발화해 confidence 가
+ * 0.95(→ `very_high`)로 **거짓 상승** 했다(CF: 끄면 0.1 / 0.0).
+ *
+ * ── 🔴 왜 «다른 세그먼트를 고르지» 않았나 ─────────────────────────────────
+ * 「두 번째 세그먼트를 쓴다」는 **사이트별 규칙** 이고 이 리포가 금지하는 방향이다.
+ * 🟢 대신 **이미 있는 기준을 재사용** 한다 — `extractCodeLikeSlugSegment`
+ *    (product-facts.ts)가 식별자 후보에 `[a-z]` 와 `[0-9]` 를 **둘 다** 요구한다.
+ *    즉 「숫자만은 식별자가 아니다」는 **이 리포의 기존 원칙** 이다.
+ *
+ * 🔴 **새 SAME 규칙도 threshold 도 추가하지 않는다** — 거짓 신호를 **빼는** 것뿐이다.
+ * 🔴 이 함수는 **세 벌로 복제돼 있다**(match.ts · product-identity.ts ·
+ *    shared/product-facts.ts `extractUrlSlug`). 셋 다 같은 가드를 가진다 —
+ *    하나만 고치면 다른 경로에서 같은 거짓 신호가 **계속 난다**.
+ */
+const SLUG_IS_NUMERIC_ONLY = /^\d+$/;
+
 function extractSlug(url: string): string | null {
   try {
     const { pathname } = new URL(url);
     const segments = pathname.split("/").filter(Boolean);
     const last = segments[segments.length - 1];
-    return last ? normalizeText(last.replace(/\.html$/i, "")) : null;
+    if (!last) return null;
+    const slug = normalizeText(last.replace(/\.html$/i, ""));
+    /** 🔴 WU-095 — 숫자만이면 **식별 신호로 쓰지 않는다**(null = 「모른다」). */
+    if (!slug || SLUG_IS_NUMERIC_ONLY.test(slug)) return null;
+    return slug;
   } catch {
     return null;
   }

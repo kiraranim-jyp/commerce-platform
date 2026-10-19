@@ -28,7 +28,15 @@ import { deriveProductMatchTruth } from "@commerce/crawler/src/comparison-search
 const OUT = path.join(process.env.TEMP ?? ".", "mi-p0-02");
 const LIVE = process.env.MI_P0_02_LIVE === "1";
 const GT = JSON.parse(readFileSync(path.join(__dirname, "fixtures/wu-093-human-gt.json"), "utf8"))
-  .humanReview as { id: string; verdict: string; note: string | null }[];
+  .humanReview as { sku: string; case: string; title: string; verdict: string; note: string | null }[];
+
+/**
+ * 🔴🔴 WU-095 — **라벨은 «SKU» 로 붙인다.**
+ *    1차에 인덱스(`S1-domain-N`)로 매핑했는데 `withConfidence` 가 **정렬** 을 하므로
+ *    slug 수정 전/후로 순서가 바뀌어 **GT 라벨이 엉뚱한 후보에 붙었다**
+ *    (수정 후 S1-4 가 human SAME 인데 conf 0 인 양말이었다). 🔴 그대로 보고했으면
+ *    「수정하니 SAME 후보가 0점이 됐다」는 **거짓 결론** 이었다.
+ */
 
 const SHOPS = [
   { id: "1479ca9d-8a13-4cf2-813a-0e25ec3c9439", name: "CHOCO.EL(초코엘)", domain: "chocoel.co.kr", currency: "KRW", collectionStrategy: "AUTO_SCRAPE" as const },
@@ -72,9 +80,10 @@ describe("WU-094 — matchLevel 의미/사용처 (LIVE)", () => {
         const sel = new Set(selectCandidatesForDetailConfirmation(r.candidates, q));
         r.candidates.forEach((x, i) => {
           const id = `${c.id}-${r.domain}-${i + 1}`;
-          const g = GT.find((y) => y.id === id);
+          /** 🟢 SKU 로 찾는다 — 순서가 바뀌어도 라벨이 따라간다. */
+          const g = GT.find((y) => y.sku === (x.sku ?? ""));
           rows.push({
-            id, case: c.id, title: x.title,
+            id, case: c.id, title: x.title, sku: x.sku ?? null,
             confidence: x.confidence ?? null,
             matchLevel: x.matchLevel ?? null,
             /** 🔴 `very_high` 가 **어디로 흘러가는가** 를 운영 함수로 읽는다. */
