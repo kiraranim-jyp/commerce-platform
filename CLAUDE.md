@@ -812,6 +812,8 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **가격 구역 식별** | `wu-056r1-price-section-identity.test.ts` | 구역 제목 **상호 비포함** · 해외 구역 «안» 에 `₩`/`약`/`≈`/통화기호 **0** · 아이콘 중복 금지 — **Panel mount DOM 으로** 본다 |
 | 🔴 **단계는 넷 · 번호는 파생** | `workflow.ts` · `stage-focus.ts` (WU-058) | 큰 단계 **4** · 라벨에 「소싱」 0 · 단계마다 본문 **하나**(빈 단계 0) · **번호는 배열 순서에서 파생**(하드코딩 금지) |
 | 🔴 **URL 분류기는 양방향 오류** | `classifyUrlShape` (WU-073) | 한국 CMS 목록(`goods_list`·`product_list`·`shopbrand`)이 **PRODUCT_PAGE** · SSG `itemView.ssg` 는 **오차단** — 🔴 「②의 탈락 = 정확한 차단」으로 읽지 않는다 · 고치지 않는다(WU-052 HOLD) |
+| 🔴🔴🔴 **transient sink 는 «집계 입력» 이다** | `transientEvidenceSink` → `market-intelligence:226` (WU-097) | 화면 배열이자 **가격 축 적재 입력** 이다 · 🔴 「보여주려고」 넣으면 **가격 집계가 오염된다** · 🔴 `priceTier` 가 **필수** 라 판정 없는 후보는 **넣을 수 없다**(지어내면 금지) · 🟢 계약 6건이 이 경계를 잠근다 |
+| 🔴 **판정하지 않은 후보에는 «라벨» 이 없다** | WU-097 ↔ WU-091 ③ | `DROPPED` 는 verdict·matchTruth·blocker 가 **존재하지 않는다** ⟹ WU-091 의 「행마다 판정 라벨」을 **못 지킨다** · 🔴 「판정 보류」라는 새 상태는 **제품 정책** 이고 CTO 가 만들지 않는다 |
 | 🔴🔴 **⑧ 은 «비용» 게이트인데 «노출» 까지 결정한다** | `isEvidenceEvaluationWorthwhile` + `transientEvidenceSink.push` (WU-096) | `candidates[0].matchLevel !== "low"` 가 false 면 **샵 전체 DROPPED** → transient 배열에 **안 실린다** → 화면에서 사라진다 · 🔴 **WU-091 의 「후보 노출 ≠ SAME 판정」과 충돌** · 🟢 등록부 «검색 화면» 은 이 게이트와 **무관**(직접 렌더) |
 | 🔴 **UI 게이트가 경로마다 다르다** | `mayShowCandidate` ↔ `evidence.map()` (WU-096) | 등록부 검색 표 = `mayShowCandidate` · **transient 카드 = 게이트 0(전건 렌더)** · 🔴 섞으면 「UI 에서 사라진다」는 **거짓 결론** 이 난다(실제로 1차에 났다) |
 | 🟢🟢 **숫자만인 URL 세그먼트는 식별자가 아니다** | `SLUG_IS_NUMERIC_ONLY` ×3 (WU-095) | `match.ts` · `product-identity.ts` · `shared/product-facts.ts` **세 벌 전부** 같은 가드 · 🔴 하나만 고치면 다른 경로에서 거짓 신호가 계속 난다(M1~M3 각 2 FAIL) · 🔴 **Shopify handle 일치는 그대로 살아 있다**(M4 3 FAIL 이 양방향으로 잠근다) |
@@ -870,6 +872,42 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
+
+### 🔴 WU-097 `MI-SINK-BOUNDARY` — **안전한 분리가 성립하지 않는다 · HOLD** (구현 0)
+
+🟢 전문 `docs/MI-SINK-BOUNDARY-097.md`. 🔴 운영 변경 **0** · 배포 0 · UI 0 · 8축 0.
+
+🔴🔴 **핵심 사실 — sink 는 «화면 전용 배열» 이 아니다**:
+```
+judgeDomesticCandidate → DROPPED → [MI-REAL-12] → **continue** (sink 이전에서 끊긴다)
+                       → JUDGED  → … → **transientEvidenceSink.push**
+그 배열의 소비처가 **둘** 이다:
+  check/route.ts:159        두 배열을 **합쳐** computeMarketIntelligence 에 넘긴다
+  market-intelligence:226   `for (const e of geminiEvidence ?? [])` → **가격 축 적재**
+                            (:252 overseasEvidence.push · 국내는 domesticTransientRecords)
+  GeminiTransientCandidates:223  evidence.map() — 전건 렌더
+⟹ 🔴 **A(노출)와 B(판정/가격비교)가 «같은 배열» 을 쓴다.**
+```
+
+🔴 **그래서 「sink 앞에서 보존」은 안전하지 않다** — ⒜ 집계 루프를 탄다(가격 오염) ·
+⒝ `priceTier` 가 **필수 필드** 라 **지어내야** 한다(이 트랙이 세 번 틀린 그 행위) ·
+⒞ 국내 축은 **판정 입력** 이라 `price_alerts` **영속 행** 이 생길 수 있다(WU-039/059).
+
+🔴🔴 **설계안(별도 배열)도 마지막 축을 못 지킨다** — WU-091 의 ③**「행마다 판정 라벨」**:
+```
+DROPPED 후보는 **판정을 하지 않았다** ⟹ verdict·matchTruth·blocker 가 **존재하지 않는다**
+⟹ 「판정 보류」라는 **새 상태 어휘** 가 필요하고 그것은 **제품 정책** 이다
+🔴 라벨 없이 보여주면 **2026-09-19 사고 모양**(「유력 후보 5건」)에 다시 가까워진다
+```
+
+🟢 **코드 0 으로 한 것 — 현재 경계를 계약 6건으로 잠갔다**(`wu-097-sink-boundary.test.ts` ·
+네트워크 0). 🟢 나중에 분리를 구현하면 **③⑤⑥ 이 FAIL 로 뒤집히고 그것이 수정의 증거** 다.
+
+🔴 **행동 단언은 포기했다** — `computeMarketIntelligence` 를 직접 부르려 했으나 손으로 만든
+입력이 **집계 루프에 도달하지 못했다**(결과 불변). 🔴 그 상태로 「영향 없음」이라 적으면
+거짓이라 **소스 수준 단언으로 낮추고** 한계를 보고서에 적었다.
+
+🟢 회귀 **600 files / 8,367 passed · failed 0** · typecheck 0.
 
 ### 🔴🔴 WU-096 `MI-FUNNEL` — **최초 병목은 ⑧ 하나다** (측정 전용 · 구현 0)
 
