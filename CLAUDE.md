@@ -920,6 +920,31 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
 
+### 🟢 WU-105 `MI-SKROUTZ-403` — **원인은 HTTP 403(외부 거부)** (구현 0)
+
+🟢 전문 `docs/MI-SKROUTZ-403-105.md`. 🔴 운영 변경 0 · 배포 0 · AI 0 · 우회 시도 0.
+
+```
+① DNS         🟢 정상(104.18.33.2 · 172.64.154.254 — Cloudflare 대역)
+② 운영 owner   factsFromProductUrl → **UNREACHABLE** · httpCalls 1 · PLAIN_HTML
+③ raw fetch    🟢 **HTTP 403** · text/html — 🔴 **예외가 아니다**
+④ node:https   16KB **403**(6,112B) · 64KB **403**(6,112B) ⟹ 🔴 **overflow 아니다**
+🔴 TLS/connection/timeout 오류 **0건** — 응답이 정상적으로 왔다
+```
+
+🔴 **WU-084 와 다른 유형이다** — overflow 판별식(16KB 실패 · 64KB 성공)이 **성립하지 않는다**.
+🟢 **우리 fetcher 결함이 아니다** — `fetchPlainHtmlWithFinalUrl` 의 `!response.ok → null` 이
+**설계대로** 동작해 403 을 `UNREACHABLE` 로 떨어뜨렸다.
+
+🔴🔴 **내 1차 판정 줄이 틀렸고 정정했다** — 하니스가 「🟡 우리 쪽(상한을 올리면 받아진다)」
+로 출력했다. 원인은 판정식이 `big.ok` 를 본 것인데 그 `ok` 는 **「응답을 받았다」** 지
+**「200 이다」가 아니다**(403 도 true). 🔴 그대로 보고했으면 **「우리 fetcher 를 고치면 된다」는
+거짓 결론** 이었다.
+
+🟡 **관측 1건(고치지 않았다)** — `UNREACHABLE` 이라는 이름이 **「거부됨(4xx)」과 「닿지 못함」을
+뭉갠다**. 🔴 WU-096 의 `UNREACHABLE 16건` 중 **4xx 비율은 미측정** 이다.
+🔴 403 의 이유도 **단정하지 않았다** — 우회 시도(UA 변경 등)는 **하지 않았다**(금지 방향).
+
 ### 🟡 WU-104 `MI-SAME-TRACE` — **WU-103 의 「전부 통과」를 정정한다** (구현 0)
 
 🟢 전문 `docs/MI-SAME-TRACE-104.md`. 🔴 운영 변경 0 · 배포 0 · 새 AI 호출 0.
