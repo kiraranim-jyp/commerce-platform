@@ -1,0 +1,18 @@
+{"wu":"WU-100","criterion":"USEFUL = 원상품과 «동일상품» 후보로 다시 검토할 가치가 있는 후보 (「같은 브랜드라 참고할 만함」은 USEFUL 이 아니다 · CPO 확정 2026-10-19)",
+"note":"🔴 2차 전수 재라벨. 이미지 25/26 보강 후 · 1차 라벨은 화면에 표시하지 않았다.",
+"result":"NOISE 26 / 26 · USEFUL 0 · UNSURE 0",
+"review":[
+{"domain":"bobochoses.com","value":"NOISE"},{"domain":"rboutique.com","value":"NOISE"},
+{"domain":"global.trenbe.com","value":"NOISE"},{"domain":"stockmann.ee","value":"NOISE"},
+{"domain":"junioredition.com","value":"NOISE"},{"domain":"kihanan.com","value":"NOISE"},
+{"domain":"biskuit.kr","value":"NOISE"},{"domain":"m.luxboy.com","value":"NOISE"},
+{"domain":"donokids.com","value":"NOISE"},{"domain":"bobochoses.co.jp","value":"NOISE"},
+{"domain":"littleluna.co.kr","value":"NOISE"},{"domain":"miniboutique.co.kr","value":"NOISE"},
+{"domain":"main-story.com","value":"NOISE"},{"domain":"beaumonde.co.kr","value":"NOISE"},
+{"domain":"m.web.mustit.co.kr","value":"NOISE"},{"domain":"eraldo.com","value":"NOISE"},
+{"domain":"kolkid.ca","value":"NOISE"},{"domain":"luksusbaby.kr","value":"NOISE"},
+{"domain":"kids21.com","value":"NOISE"},{"domain":"bornyesterdaykids.com","value":"NOISE"},
+{"domain":"parkette.ca","value":"NOISE"},{"domain":"blanchou.ca","value":"NOISE"},
+{"domain":"stadtlandkind.ch","value":"NOISE"},{"domain":"tinybebe.com.au","value":"NOISE"},
+{"domain":"ladida.com","value":"NOISE"},{"domain":"wconcept.co.kr","value":"NOISE"}
+]}
