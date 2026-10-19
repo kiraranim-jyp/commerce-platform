@@ -1040,6 +1040,45 @@ sink 는 **샵당 best 1건** 만 실으므로(WU-096/109) 운영 산출만 쓰�
 **WU-093 에서 이미 GT** — 전부 DIFFERENT) ⒝ 원상품은 **2개** 다 ⒞ 새 AI 호출 **0**.
 🔴 그래서 「후보를 최대한 확보했다」로 적지 않는다 — **AI URL 풀 한 생산자** 의 산출이다.
 
+🟢🟢 **CEO GT 수신 27/27 — SAME 19 · DIFFERENT 6 · UNCERTAIN 2**(2026-10-19 ·
+전문 `docs/MI-CANDIDATE-LIST-112-GT.md` · 라벨 `fixtures/wu-112-human-gt.json` **URL 키**):
+```
+🔴🔴 ⒜ **「이 샵은 제외됨」 안에 Human SAME 3건** — rboutique USD 44 · stockmann EUR 40 ·
+   bornyesterdaykids ⟹ **⑧ EVIDENCE_NOT_WORTHWHILE 가 동일상품을 버린다**(3/6)
+   🔴 WU-100 의 「26/26 NOISE」와 **반대** 지만 모순이 아니다 — **분모가 다르다**
+      (그 원상품 B226AC112 는 **조사 대상이 아니었다** · WU-102) ⟹ 「분모 밖」으로 적는다
+🔴🔴 ⒝ **False EXACT 1건이 «셀러가 보는 최저가» 다** — tinyapple **USD 53**(반팔 ·
+   Human DIFFERENT)이 tier **EXACT** 로 집계에 들어가 **S1 USD 최저가** 가 됐다
+   🔴 원인은 **8축이 아니라 «같은 샵 안의 대표 선택»** — 같은 샵의 Human SAME
+      `…-heather-grey` **USD 58** 이 «샵 2순위» 라 적재되지 않았다(WU-109 §4 가 남긴 자리)
+🔴 **Human SAME 19 중 가격비교 반영 8 (42%)** · 손실 11 = EXCLUDED(품번충돌) **4** ·
+   샵 제외(⑧) **3** · 샵 2순위 **2** · 가격 없음 1(beaumonde) · KRW+시장미확정 1(billsstore)
+🟢 정밀도 — 시스템 SAME **6/7** · tier EXACT **5/6**
+🔴 **WU-108 의 「오포함 0」을 정정한다** — 그때는 Human GT 가 없었다(지금 **오포함 1**)
+```
+
+🟢 **CEO 라벨이 열려 있던 질문 둘에 답했다**:
+```
+① 🔴🔴 **AC ↔ AB(baby) 라인 차이 = CEO 기준 동일상품** — `b226ab046`·`b226ab040` **둘 다 SAME**
+   ⟹ WU-048/069 가 HOLD 한 질문에 라벨이 붙었다(WU-093 S1-1 과 합쳐 **N=3**)
+   🔴 그러나 그 완화는 WU-069/070 에서 **「품번 보호 해체」** 로 측정됐다 ⟹ **CPO 판정**
+② 🟢 **품번이 같아도 색이 다르면 DIFFERENT** — luxboy 는 품번 **exact** 인데 Human DIFFERENT
+   🟢🟢 우리는 PRESUMED_SAME + market UNKNOWN 으로 **금액에서 빼냈다 = 정답**
+   🔴 ⟹ ①과 ②는 **같은 레버의 양면** 이다. ①을 단독으로 열면 ②가 뚫린다
+🟡 CEO 는 **반팔↔긴팔을 다른 상품** 으로, **kids↔baby 라인·세트 구성을 같은 상품** 으로 봤다
+   🔴 소매 길이를 보는 코드는 **없다**(8축에 없다) · 🔴 새 축을 만들지 않았다
+```
+
+🟡 **최소 수정 설계 — 🔴 구현 0 · CPO 지정 대기**(영향 큰 순):
+```
+P1 **샵 대표(best) 선택**   🔴 False EXACT 제거 + S1 USD 최저가 53→**58** · 🟢 8축 무변경 · 가장 좁다
+P2 ⑧ 게이트               🟢 SAME 3 회수 · 🔴 노이즈 3 동반(6건 중 3)
+P3 샵당 1건 제한(sink)     🟢 SAME 2 회수 · 🔴 집계 구조 변경
+P4 품번 충돌(AB·샵SKU)     🟢 SAME 4 회수 · 🔴🔴 **품번 보호 해체** · luxboy 가 뚫릴 방향
+P5 billsstore·beaumonde    🔴 **가격 작업이라 보류 중**(§00-B)
+🔴 CTO 는 하나도 구현하지 않았다 — P1 도 판정 산출을 바꾸므로 **CPO 가 지정한다**
+```
+
 🟡 **CEO Action — 후보 27건 판정 1회**(15~25분). 🔴 **「이 샵은 제외됨」 안에 SAME 이 있으면
 우리가 동일상품을 버리고 있다는 증거** 다. 🔴 가격은 보지 않아도 된다.
 🔴 GT 수신 후에만 ⒜ DROPPED 안의 SAME ⒝ 시스템 SAME 중 Human DIFFERENT 를 보고
