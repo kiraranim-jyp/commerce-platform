@@ -549,6 +549,16 @@ WU-073 ~ 080     🟢 **전부 CLOSED**(측정 7 · 구현 1) — 🔴🔴 **국
                  079 가격 증거 REJECT(안전 회수 1건이 틀린 상품) · 080 BRAND REJECT(공백은 원상품 쪽)
                  🔴🔴 **여덟 축 전부에서 「완화 = Human DIFFERENT 동반 개방」이 측정됐다**
                  (COLOR·TITLE·MODEL_CODE·LINE·MARKET·PRICE·LANGUAGE·BRAND)
+WU-090 ~ 095     🟢 **전부 CLOSED**(구현 3 · 측정 3) — 🔴🔴 **거짓 식별 신호를 하나 제거했다**
+                 090 Smallable 두 경로 OK · **091 후보 노출 ≠ SAME 판정**(배포) ·
+                 092 S1=matching / S2=coverage 분리 · **093 CEO GT 10건**(SAME 2 · DIFF 8) ·
+                 094 `very_high` 는 **거짓값** 이었다 · **095 숫자 slug 가드**(배포)
+                 🔴🔴 **CPO 확정** — 「**정상화된 matchLevel 만 사용한다**」 ·
+                 WU-093 의 **「very_high 40% precision」은 폐기** ·
+                 「숫자-only recall 손실」은 **독립 증거가 있을 때만** 다룬다 ·
+                 **리팩터로 범위를 넓히지 않는다**
+                 🔴 다음 WU 는 「AI 후보 → MI → 국내/해외 가격비교 노출」에 **직접 영향을 주는
+                 독립적인 병목이 확인될 때만** CPO 가 지정한다
 WU-081 ~ 089     🟢 **전부 CLOSED**(구현 3 · 측정 6) — 🔴🔴 **가격/MI 경로에 남은 안전 레버 0**
                  **081** 국내 후보 Human Review UI(배포) · **082** 자동 1회차 응답 배선(배포) ·
                  083 Smallable 품번 REJECT · **084** Header overflow 복구(배포) ·
@@ -909,6 +919,17 @@ pTruth    **EXACT_PRODUCT ×3**         **0** (SIMILAR/CONFLICT)
 🟢🟢 회귀 **599 files / 8,361 passed · failed 0** — 기존 계약이 **하나도 안 깨졌다**
 (= 그 거짓 신호에 **의존하는 올바른 계약이 없었다**). typecheck 0 · build exit 0.
 
+🔴🔴 **CPO 최종 판정(2026-10-19) — GO / CLOSED**:
+```
+🟢 「단순 정확도 개선이 아니라 **잘못된 식별 신호가 운영 판정·비용 게이트·Gemini
+   게이트까지 전파되던 공통 결함을 제거한 것**」 (CPO 문장)
+🟢 **SAME 이 증가하지 않은 것은 실패가 아니다** — 목적은 거짓 증거 제거였다
+🔴 **후속 위험 하나는 «열지 않는다»** — 「상품번호 4117 같은 숫자-only 세그먼트가
+   null 이 되어 생기는 recall 손실」은 **별도 문제** 이고, 숫자-only 가 실제
+   상품 식별자로 쓰이는 사이트에서 recall 을 잃는다는 **독립 증거가 확보될 때만** 다룬다
+🔴 **네 번째 복제는 계약 테스트가 막는다** ⟹ **지금 리팩터로 범위를 넓히지 않는다**
+```
+
 ### 🔴🔴🔴 WU-094 `MI-MATCHLEVEL` — **`very_high` 는 지금 «거짓값» 이다** (구현 0)
 
 🟢 전문 `docs/MI-MATCHLEVEL-094.md`. 🔴 운영 변경 **0** · 배포 0 · 8축 0 · UI 0 · 가격 정책 0.
@@ -935,8 +956,9 @@ Cafe24 상품 URL 은 전부 `…/display/**1**/` 로 끝난다 ⟹ **slug 가 �
 ⑥ ComparisonShopSearch.tsx:83    해외 폴백 `very_high → tier **SAME**` 표시
 ```
 
-🔴 **GT 교차(N=10 · 일반화 금지)** — `very_high` **5건 = human SAME 2 · DIFFERENT 3**
-⟹ 그 등급 자체의 정밀도 **2/5 = 40%**. 🟢 단 `matchTruth` 가 EXACT 를 **하나도 내지 않아**
+🔴 **GT 교차(N=10 · 일반화 금지)** — `very_high` **5건 = human SAME 2 · DIFFERENT 3**.
+🔴🔴 **그 「정밀도 2/5 = 40%」는 WU-095 에서 «폐기» 됐다**(CPO 확정) — **거짓 0.95 바닥값**
+위에서 잰 값이기 때문이다. 🔴 **어떤 지표로도 인용하지 않는다.** 🟢 단 `matchTruth` 가 EXACT 를 **하나도 내지 않아**
 **False SAME 0**(깊이방어 작동) — 🔴 「안전하다」가 아니라 **「다른 축이 막아 줬다」** 다.
 
 🔴🔴 **모집단 정정** — WU-093 이 「분모가 달라서 very_high 가 많다」로 적은 것을 **정정한다**.
@@ -1015,7 +1037,7 @@ S2 → **coverage**  5건 전부 다른 상품 ⟹ 🔴 **매칭을 아무리 �
 ```
 ⒜ 🔴 **S1-1 이 「베이비」 라인인데 CEO 가 SAME 이라 했다** — WU-069 가 HOLD 한 **그 질문** 이다.
    🔴 메모가 비어 있어 **인지 여부는 여전히 미확인** · **N=1 로 그 HOLD 를 풀지 않는다**
-⒝ 🟢 **matchLevel very_high 5/5** — WU-017/088 의 「전건 low」와 **분모가 다르다**
+⒝ 🔴🔴 **[WU-095 에서 폐기]** 「matchLevel very_high 5/5 는 **분모가 다르다**」
    (그쪽은 AI URL 후보 · 이쪽은 **등록부 검색 후보**) ⟹ WU-088 의 가격 자격 필터를
    **통과하는 모양이 실재한다**. 🔴 1상품이라 일반화하지 않는다
 ⒞ 🔴 **matchLevel 과 verdict 가 갈린다** — very_high 인데 CONFLICT 가 2건이다
