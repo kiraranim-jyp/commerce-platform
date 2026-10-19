@@ -907,6 +907,7 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **[WU-098 에서 정정] 판정하지 않은 후보에도 «교차판매처» 라벨은 있다** | `observed.candidate` (WU-098) | `DROPPED` 는 verdict·matchTruth·blocker 가 **존재하지 않는다** ⟹ WU-091 의 「행마다 판정 라벨」을 **못 지킨다** · 🔴 「판정 보류」라는 새 상태는 **제품 정책** 이고 CTO 가 만들지 않는다 |
 | 🔴🔴 **⑧ 은 «비용» 게이트인데 «노출» 까지 결정한다** | `isEvidenceEvaluationWorthwhile` + `transientEvidenceSink.push` (WU-096) | `candidates[0].matchLevel !== "low"` 가 false 면 **샵 전체 DROPPED** → transient 배열에 **안 실린다** → 화면에서 사라진다 · 🔴 **WU-091 의 「후보 노출 ≠ SAME 판정」과 충돌** · 🟢 등록부 «검색 화면» 은 이 게이트와 **무관**(직접 렌더) |
 | 🔴 **UI 게이트가 경로마다 다르다** | `mayShowCandidate` ↔ `evidence.map()` (WU-096) | 등록부 검색 표 = `mayShowCandidate` · **transient 카드 = 게이트 0(전건 렌더)** · 🔴 섞으면 「UI 에서 사라진다」는 **거짓 결론** 이 난다(실제로 1차에 났다) |
+| 🟢🟢 **샵 대표는 «색상 증거» 를 2차 키로 쓴다** | `orderByCrossSellerVerdict` (WU-113) | verdict 등급이 **같을 때만** 발화하는 2차 키 · 색이 **있고 COLOR 충돌이 없는** 후보가 먼저 · 🔴 1차 키를 **넘지 못한다** · 🔴 원상품 색 없으면 **순서 불변** · 🔴 제목에 색을 적은 후보가 **유사도에서 손해** 보는 모양이 실재했다(tinyapple USD 53 ↔ 58) · M1~M4 가 잠근다 |
 | 🔴🔴 **집계와 UI 가 `priceStatus` 를 다르게 본다** | `summarizeCandidateOverseasPrices` ↔ `isPriceDisplayable` (WU-111) | 집계는 **안 보고**(EXCLUDED 만 뺀다) UI 는 **VERIFIED_CURRENT 만** 숫자를 낸다 ⟹ 🔴 「해외 최저가」가 뜨는데 **그 근거 줄에는 「가격 확인 필요」** 가 뜰 수 있다(S1 EUR 40 실측) · 🔴 **가격 정책이라 CTO 가 고치지 않는다** |
 | 🟢 **Shopify JSON 가격은 «통화가 명시될 때만»** | `shopifyVariantPrice` (WU-110) | `variants[0].price` **AND** `price_currency` 둘 다 있어야 한다 · 통화 **대문자 3글자** · 0 이하 **null** · 🔴 **`variants[0]` 고정**(선택 규칙은 `fetchShopifyProductJson` 소관) · 🔴 **추가 HTTP 0** · M1~M5 가 잠근다 |
 | 🔴🔴 **판정 함수를 직접 부르는 테스트는 «배선» 을 못 본다** | WU-110 교훈 | `price: shopifyVariantPrice(body)` 를 `null` 로 되돌려도 **0 failed** 였다 · 🟢 **소스 앵커를 같이** 둔다(배선 + 안전조건) |
@@ -1012,6 +1013,51 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 기준을 한 줄로 고정**. 🔴 ⒝ 없이는 재측정해도 **같은 충돌이 난다**.
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
+
+### 🟢🟢 WU-113 `MI-BEST-SELECTION` — **샵 대표 선택 P1 · 구현/배포**
+
+🟢 전문 `docs/MI-BEST-SELECTION-113.md`. 운영 **1 파일** · 🔴 새 데이터 0 · 새 HTTP 0 ·
+새 색상사전 0 · threshold 0 · 8축 0 · ⑧ 게이트 0 · 가격 0 · UI 0 · Registry 0 · AI 0.
+
+🔴🔴 **원인 — 같은 등급에서 «색을 적은 후보» 가 그 토큰 때문에 밀렸다**:
+```
+tinyapple (원상품 색상 **heather grey**)
+ #0 BEST  v=SAME truth=STRONG_IDENTIFIER conf **1.00** color **null**  → Human **DIFFERENT**(반팔) USD 53
+ #1       v=SAME truth=STRONG_IDENTIFIER conf **0.64** color **"shirt heather grey"** → Human **SAME** USD 58
+⟹ verdict·truth 가 **같아** 2차 키가 없던 코드는 **confidence** 로 갈렸고,
+   제목에 색을 적은 후보가 **유사도에서 손해** 를 봤다 ⟹ 「USD 최저가 53」이 **다른 상품** 이었다
+```
+
+🟢 **구현 — 기존 신호 둘만 2차 키로 쓴다**(새 규칙 0):
+```
+colorRank = 색이 «있고»(isColorUnverified===false) **COLOR 충돌이 없으면** 0, 그 외 1
+sort((a,b) => rank(a)-rank(b) **||** colorRank(a)-colorRank(b))
+🟢 isColorUnverified 는 **EXACT 게이트가 이미 쓰는 술어**(match-truth.ts:58) · 같은 파일이 이미 import
+🔴 **2차 키** 라 1차 키(SAME 0 … CONFLICT 3)를 **넘지 못한다** · 원상품 색 없으면 **순서 불변**
+🔴 색이 **어긋난** 후보는 올려주지 않는다 — 「색만 있으면 이긴다」가 아니다
+```
+
+🟢🟢 **E2E(GT 27건 재조인 · URL 키) — best 가 바뀐 곳은 «하나» 다**:
+```
+- tinyapple USD 53 [DIFFERENT] tier EXACT → **null**   + tinyapple USD 58 [SAME] → **EXACT**
+🟢 나머지 21 샵 대표 **불변**
+Human DIFFERENT 가 best      1 → **0**      Human SAME 인데 best 탈락  1 → **0**
+금액 집계 진입 9 → 9 (**구성이 정확해졌다**) · 오포함 **1 → 0** · tier EXACT 정밀도 **5/6 → 6/6**
+🟢🟢 **해외 USD 최저가 53 → 58** · 🟢 EUR 40 · GBP 33 · CAD 64 · 🇰🇷 ₩88,000 **전부 불변**
+```
+
+🔴🔴 **음성 대조가 내 단언의 구멍을 찾았다** — 1차 M2(COLOR 충돌 검사 제거) **0 failed**.
+원인은 그 케이스의 색상 후보가 **충돌 하나뿐** 이라 `colorTieBreak` 가 false 가 되어
+**colorRank 에 도달하지 않은 것** 이다. 🟢 「깨끗한 색상 + 충돌 색상이 **같이** 있는」 모양을 추가해
+M1 3F · M2 1F · M3 1F · M4 1F → 복구 **12 passed**.
+🔴 그리고 **미커밋 상태에서 `git checkout --` 로 복구해 구현을 지웠다**(1차 M2~M4 무효) —
+🟢 이후 **파일 백업** 으로 복구했다. 🔴 미커밋 구현의 복구 수단으로 git checkout 을 쓰지 않는다.
+
+🟢 회귀 **603 files / 8,396 passed · failed 0** · typecheck 0 · build exit 0 · 배포.
+🔴 **보류 전수 대조** — P2 ⑧ 게이트 ❌(술어 원문 그대로 · 계약으로 잠금) · P3 샵당 1건 구조 ❌ ·
+P4 품번 보호 ❌(AB 라인 4건 **여전히 EXCLUDED**) · P5 가격 ❌ · 8축 ❌ · threshold ❌.
+🟡 **CEO Action — 따져 실제 화면 1회**(🔴 USD 최저가가 **58** 인지 · 53 이면 FAIL).
+🔴 후보 27건은 **그대로** 라 **다시 판정하실 필요 없다**(기존 GT 유효).
 
 ### 🟢 WU-112 `MI-CANDIDATE-LIST` — **후보 전수 목록 구축 · CEO GT 대기** (구현 0)
 

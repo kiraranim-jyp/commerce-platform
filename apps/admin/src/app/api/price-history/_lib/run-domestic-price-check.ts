@@ -398,13 +398,55 @@ export function isEvidenceEvaluationWorthwhile(
  */
 const CROSS_SELLER_PREFERENCE: Record<string, number> = { SAME: 0, PRESUMED_SAME: 1, CONFLICT: 3 };
 
-export function orderByCrossSellerVerdict(candidates: ComparisonCandidate[]): ComparisonCandidate[] {
-  if (!candidates.some((c) => c.crossSellerVerdict)) return candidates;
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * WU-113 P1(CPO 지시, 2026-10-19) — **같은 등급 안에서는 색상 증거가 있는 후보를 먼저 본다.**
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔴🔴 WU-112 의 CEO GT 가 실패를 하나 잡았다. `tinyapple.net` 에서 verdict(SAME)와
+ *    matchTruth(STRONG_IDENTIFIER)가 **같은** 두 후보가 confidence 로만 갈렸고,
+ *    **Human DIFFERENT(반팔) 쪽이 대표** 가 되어 그 가격(USD 53)이 **해외 동일상품
+ *    최저가로 화면에 떴다**. 원상품 색상은 `heather grey` 였고 —
+ *
+ * ```
+ * #0 BEST  conf 1.00  color **null**                ← Human DIFFERENT
+ * #1       conf 0.64  color "shirt heather grey"    ← Human SAME (색을 적은 유일한 후보)
+ * ```
+ *
+ * 🔴 즉 **제목에 색을 적은 후보가 그 토큰 때문에 텍스트 유사도에서 손해를 봤다.**
+ *
+ * 🟢 그래서 **새 축을 만들지 않고 이미 있는 두 신호만** 2차 키로 쓴다 —
+ *    ⒜ `isColorUnverified`(원상품에 색이 있는데 후보 색이 비었는가 · EXACT 게이트가
+ *       **이미** 쓰는 그 술어) ⒝ 이미 계산된 `crossSellerConflicts` 의 `COLOR` 항목.
+ *
+ * 🔴 **안전 성질**(전부 「바뀌지 않는다」 쪽이다):
+ *    · 2차 키다 — `CROSS_SELLER_PREFERENCE` 를 **넘지 못한다**(CONFLICT 가 SAME 을 이길 수 없다)
+ *    · 원상품 색이 없으면 전원 동률 ⟹ **순서 불변**
+ *    · 후보 전원이 색이 없으면 동률 ⟹ **순서 불변**
+ *    · 색이 **어긋난** 후보는 올려주지 않는다(⒝ 로 제외) — 「색만 있으면 이긴다」가 아니다
+ *    · threshold·8축·SAME 조건·가격·⑧ 게이트는 **한 글자도 건드리지 않는다**
+ */
+function hasColorConflict(c: ComparisonCandidate): boolean {
+  return (c.crossSellerConflicts ?? []).some((x) => x.conflict === "COLOR");
+}
+
+export function orderByCrossSellerVerdict(
+  candidates: ComparisonCandidate[],
+  /** 🔴 생략하면 **예전 동작 그대로** 다(기존 호출부·테스트 불변). */
+  foreignColor?: string | null,
+): ComparisonCandidate[] {
+  /** 색상 증거가 있는 후보가 «하나라도» 있을 때만 2차 키가 의미를 갖는다. */
+  const colorTieBreak =
+    Boolean(foreignColor?.trim()) &&
+    candidates.some((c) => !isColorUnverified(foreignColor, c.facts?.colorText) && !hasColorConflict(c));
+  if (!candidates.some((c) => c.crossSellerVerdict) && !colorTieBreak) return candidates;
   // 판정이 없는 후보(2)는 동일상품/추정보다 뒤, 반증(3)보다 앞. Array.sort는
   // 안정 정렬이라 같은 등급 안에서는 confidence 내림차순이 그대로 유지된다.
   const rank = (c: ComparisonCandidate) =>
     c.crossSellerVerdict ? (CROSS_SELLER_PREFERENCE[c.crossSellerVerdict] ?? 2) : 2;
-  return [...candidates].sort((a, b) => rank(a) - rank(b));
+  const colorRank = (c: ComparisonCandidate) =>
+    colorTieBreak && !isColorUnverified(foreignColor, c.facts?.colorText) && !hasColorConflict(c) ? 0 : 1;
+  return [...candidates].sort((a, b) => rank(a) - rank(b) || colorRank(a) - colorRank(b));
 }
 
 export interface CandidateSelection {
@@ -433,11 +475,13 @@ export async function selectDomesticCandidate(
   domain: string,
   foreignModelCode: string | null,
   fetchModelCode: (url: string) => Promise<string | null>,
+  /** WU-113 P1 - 색상 2차 키. 생략하면 예전 동작 그대로다. */
+  foreignColor?: string | null,
 ): Promise<CandidateSelection> {
   // MATCHING-2.0-INTEGRATION-1 — 판정이 있으면 판정 순으로 먼저 세운다(없으면
   // 입력 그대로). 아래 두 분기가 모두 이 목록을 쓰므로, 식별자 추출을 지원하지
   // 않는 도메인에서도 반증된 후보가 대표가 되지 않는다.
-  const ordered = orderByCrossSellerVerdict(candidates);
+  const ordered = orderByCrossSellerVerdict(candidates, foreignColor);
   /**
    * MI-DISCOVERY-P5.2 Step 1(CPO 지시, 2026-10-07) — 제목에서 «이미 확정된» 품번을
    * 확인하는 경로는 **도메인 등록부와 무관** 하다. HTTP 요청이 필요 없고
@@ -687,7 +731,13 @@ export async function judgeDomesticCandidate(input: JudgeDomesticInput): Promise
   }
 
   const { candidate: best, modelCodeEvidence, domesticModelCode, skippedConflictCount } =
-    await selectDomesticCandidate(candidates, input.domain, input.foreignModelCode, input.fetchModelCode);
+    await selectDomesticCandidate(
+      candidates,
+      input.domain,
+      input.foreignModelCode,
+      input.fetchModelCode,
+      input.foreignColor,
+    );
 
   const { matchType: initialMatchType } = toDomesticMatchType(best.matchLevel ?? "low");
   let matchType = initialMatchType;
