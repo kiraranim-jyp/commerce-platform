@@ -974,6 +974,43 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
 
+### 🟡 WU-108 `MI-PRICE-ACCURACY` — **가격비교는 정확하다 · 누락 1건** (구현 0)
+
+🟢 전문 `docs/MI-PRICE-ACCURACY-108.md`. 🔴 운영 변경 **0** · 배포 0 · 새 AI 검색 0.
+🟢 모집단 **S1(B226AC010) 15 · S2(B226AC009) 12** — 동일상품이 **실재** 하는 표본.
+
+🟢🟢 **잘못 포함된 가격 0 — 네 축이 전부 정확하다**:
+```
+국내/해외 뒤섞임 **0**(국내 1 = KR · 해외 14 = OVERSEAS · 중복 집계 0)
+가격 없는 후보가 있는 것처럼 **0** · EXCLUDED/UNVERIFIED 오포함 **0**
+🟢 **EXCLUDED 가 금액에서 «정확히» 빠진다** — count 7 인데 byCurrency 합 **5**
+   S1 에서 EUR 35(EXCLUDED)가 빠져 **EUR 칸이 아예 없고** GBP 최저가가 35 가 아니라 **33** 이다
+   🟢 WU-062 설계 그대로 — byMarket/byPriceTier/count 는 **관측으로 남는다**
+🟢 **국내 축이 실제로 작동한다** — S2 biskuit.kr **KRW 88,000 · COMPARISON · KR**
+🟢 CONFLICT → EXCLUDED **전건** · 통화 섞임 0 · 환산 0
+```
+
+🔴🔴 **유일한 결함 — SAME/EXACT 인데 가격이 없어 빠진다(1건)**:
+```
+global.trenbe.com  MI **SAME** · truth **STRONG_IDENTIFIER** · tier **EXACT**
+                   price **null** · priceStatus UNVERIFIED_SEARCH ⟹ 어느 축에도 못 들어간다
+🟢 원인은 **MI 도 집계도 UI 도 아니다** — `factsFromProductUrl` 이 **가격을 못 읽는다**
+🔴 그 축은 **CPO 가 WU-079 에서 REJECT** 했다(generic parser ❌ · site adapter ❌)
+   ⟹ 🔴 **이번에도 고치지 않았다.** 🟡 단 표본이 다르다(그때 beaumonde · 이번 trenbe,
+   그리고 **MI 가 SAME/EXACT 까지 간 후보**) — **새 정보** 라 기록한다
+```
+
+🟢 **설계대로 «버려진» 것도 확인했다** — `m.luxboy.com` **KRW 59,000** 이 `.com`+KRW 라
+**UNKNOWN** 이 되어 국내·해외 **어느 축에도 안 들어갔다**. 🟢🟢 그리고 **WU-077 이 그 금액을
+Human DIFFERENT 로 측정했다** ⟹ **안 넣은 것이 정답** 이었다.
+
+🔴 **미해결로 남긴 질문 1** — `tier` 는 **샵당 best 1건에만** 있어 같은 샵 2번째 후보가
+**`UNJUDGED` 로 해외 금액 집계에 들어간다**(S1 2 · S2 1). 🔴 **의도된 동작인지 CPO 확인 필요** ·
+CTO 가 판단하지 않았다.
+
+🟡 **CEO Action — 최종 화면 1회**(🔴 수정/배포 없음 · 「정상인데 FAIL 로 보기 쉬운 것 둘」 포함).
+🔴 결론 **HOLD** — 완료 기준 4개 중 **②③ 증명 · ①(사람 확인)④(누락 1건) 미완**.
+
 ### 🔴🔴🔴 WU-106 `MI-BOTTLENECK-VERDICT` — **수정할 병목 없음 · 현 상태 유지** (종합)
 
 🟢 전문 `docs/MI-BOTTLENECK-VERDICT-106.md`. 🔴 새 측정 **0** · 운영 변경 **0** · 배포 0.
