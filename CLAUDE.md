@@ -802,6 +802,8 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **가격 구역 식별** | `wu-056r1-price-section-identity.test.ts` | 구역 제목 **상호 비포함** · 해외 구역 «안» 에 `₩`/`약`/`≈`/통화기호 **0** · 아이콘 중복 금지 — **Panel mount DOM 으로** 본다 |
 | 🔴 **단계는 넷 · 번호는 파생** | `workflow.ts` · `stage-focus.ts` (WU-058) | 큰 단계 **4** · 라벨에 「소싱」 0 · 단계마다 본문 **하나**(빈 단계 0) · **번호는 배열 순서에서 파생**(하드코딩 금지) |
 | 🔴 **URL 분류기는 양방향 오류** | `classifyUrlShape` (WU-073) | 한국 CMS 목록(`goods_list`·`product_list`·`shopbrand`)이 **PRODUCT_PAGE** · SSG `itemView.ssg` 는 **오차단** — 🔴 「②의 탈락 = 정확한 차단」으로 읽지 않는다 · 고치지 않는다(WU-052 HOLD) |
+| 🔴🔴🔴 **`matchLevel` 을 신뢰하지 않는다** | `extractSlug` · `match.ts:81·477` (WU-094) | Cafe24 URL 이 전부 `…/display/1/` 로 끝나 **slug 가 「1」로 충돌** → 0.95 바닥값이 **무조건** 발화 · 🔴 CF 로 끄면 **0.95 → 0.1** · 🔴 소비처 **여섯**(그중 **Gemini 스킵**·**가격 비용**) · 🔴 **SAME 로직에 결합 금지**(정밀도 2/5) |
+| 🔴 **「모델명 유사도 0%」와 「URL slug 일치」가 같이 있으면 버그다** | `matchReasons` (WU-094) | 두 문장은 같이 설 수 없다 — reasons 가 **스스로 모순을 적고 있었다** · 🔴 점수를 볼 때 **reasons 를 같이** 읽는다 |
 | 🔴🔴 **「안 맞는다」를 「틀린 답」으로 읽지 않는다** | WU-093 GT (CEO 라벨 10건) | **False SAME 0 · Human DIFFERENT 8/8 차단 · recall 0/2** ⟹ 증상은 **「답 없음」** 이다 · 🔴 그리고 **같은 화면의 S1(matching)과 S2(coverage)는 서로 다른 문제** 라 한 처방으로 안 풀린다 |
 | 🔴🔴🔴 **S1 의 SAME 2 와 DIFFERENT 1 은 «구별 불가» 다** | `crossSellerReasons` (WU-093) | 축 문자열이 **글자 그대로 같다**(코드 null · 색상 null · 상품군 TOP · 제목겹침 「보보쇼즈」) ⟹ 🔴 **완화 = False SAME +1**(precision 2/3) · 🔴 가격 축은 **만들지 않는다**(S1-1 이 가격 달라도 SAME) |
 | 🔴🔴 **「후보 0」을 보면 하니스부터 의심한다** | `DomesticSourceRef` (WU-092) | `collectionStrategy`/`currency` 가 없으면 운영이 **요청을 안 보내고** `unsupported` 를 준다 · 🔴 `as never` 로 타입을 가리면 **「A_DISCOVERY」라는 거짓 결론** 이 난다(실제로 났다) |
@@ -854,6 +856,50 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
+
+### 🔴🔴🔴 WU-094 `MI-MATCHLEVEL` — **`very_high` 는 지금 «거짓값» 이다** (구현 0)
+
+🟢 전문 `docs/MI-MATCHLEVEL-094.md`. 🔴 운영 변경 **0** · 배포 0 · 8축 0 · UI 0 · 가격 정책 0.
+
+🔴🔴🔴 **CPO 의 세 질문에 답하기 «전에» 결함이 나왔다**:
+```
+`extractSlug`(match.ts:81)가 **경로의 마지막 세그먼트** 를 쓰는데
+Cafe24 상품 URL 은 전부 `…/display/**1**/` 로 끝난다 ⟹ **slug 가 서로 「1」로 같다**
+⟹ match.ts:477 `score = Math.max(score, 0.95)` **무조건 발화** ⟹ 전부 very_high
+🔴 **CF: 그 바닥값만 끄면 conf 0.95 → 0.1 / 0.0** (진짜 점수는 0.1 이하 · 전부 low 여야 한다)
+🟢 증거가 화면에 **이미 있었다** — reasons 가 「모델명 유사도 **0%**」와 「URL slug 일치」를
+   **동시에** 적는다. 두 문장은 같이 설 수 없다
+🟢 **WU-076 이 같은 성질을 기록해 뒀다**(Cafe24 꼬리표) — 🔴 그때는 **CONTROL 설계 문제**
+   로만 읽었고 **운영 점수 경로에 같은 함정이 있다는 것을 보지 못했다**
+```
+
+🔴 **소비처가 여섯이고 둘은 «비용·탐색 정책» 이다**:
+```
+① toDomesticMatchType            very_high → **EXACT · autoVerified**(초기값 · matchTruth 가 덮는다)
+② selectCandidatesForDetailConfirmation  가격 **상세확인 자격** = 외부 HTTP **비용**
+③ foundVeryHighInP0              🔴🔴 **Gemini 호출을 스킵**(WU-016 게이트)
+④ isEvidenceEvaluationWorthwhile  `matchLevel !== "low"`
+⑤ attach-match-truth             deriveMatchTruth 의 **첫 인자**
+⑥ ComparisonShopSearch.tsx:83    해외 폴백 `very_high → tier **SAME**` 표시
+```
+
+🔴 **GT 교차(N=10 · 일반화 금지)** — `very_high` **5건 = human SAME 2 · DIFFERENT 3**
+⟹ 그 등급 자체의 정밀도 **2/5 = 40%**. 🟢 단 `matchTruth` 가 EXACT 를 **하나도 내지 않아**
+**False SAME 0**(깊이방어 작동) — 🔴 「안전하다」가 아니라 **「다른 축이 막아 줬다」** 다.
+
+🔴🔴 **모집단 정정** — WU-093 이 「분모가 달라서 very_high 가 많다」로 적은 것을 **정정한다**.
+원인은 모집단이 아니라 **버그** 다(① AI URL low 64/64 · ② Registry very_high 1/175 · ③ 5/10).
+
+🔴 **STEP4** — 상한 2 가 **발화했다**(자격 5 → 2). 🔴 WU-088 의 「발화 0」과 다르다.
+🔴🔴 그 2건이 Human SAME 과 일치한 것은 **rank 가 가른 게 아니다** — `EXACT_PRODUCT` 가
+**3건**(S1-5 포함)이라 **동률** 이고 **배열 순서** 로 앞의 둘이 뽑혔다. 🔴 「2/2」로 적지 않는다.
+
+🔴 **CPO 세 질문** — A 🟡 설계상 ranking 이나 **값이 틀렸다** · B 🔴 **NO** · C 🔴🔴 **NO**.
+🔴 **고치지 않았다** — 영향이 ②③에 걸쳐 **CPO 판정 사안** 이다(「필요할 때만 구현 결정」).
+
+🟢 분모 — 저장 URL 4,259 중 마지막 세그먼트가 **숫자 157** · 값 **「1」이 26건** ·
+호스트는 **전부 한국 쇼핑몰**(looxloo·biskuit·miniboutique·mustit·littleluna·luxboy·wconcept).
+🟢 해외 Shopify handle 은 **고유 문자열이라 안 걸린다**.
 
 ### 🟢 WU-093 `MI-GT-REVIEW` — **CEO GT 수신 완료 · 구별 불가가 확정됐다** (운영 0)
 
