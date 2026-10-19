@@ -118,3 +118,102 @@ URL  https://ttaejyo.vercel.app/pipeline
       표시될 수 있습니다** — 🔴 그것이 이번에 찾은 결함입니다
       (**정상이 아니고**, 제가 고치지 않았습니다)
 ```
+
+---
+
+# WU-111 STEP 3 — 두 후보 육안 GT (🔴 판정은 CEO · 구현 0)
+
+> 🔴 CPO 지시 2026-10-19. 「`eraldo.com EUR 40` 의 실제 동일상품 여부를 **Human GT** 로
+> 확정하고, WU-110 의 신규 가격 후보가 MI 정확도를 훼손하지 않았는지만 확인한다. **코드 수정 0.**」
+
+🔴 **CTO 는 SAME/DIFFERENT 를 적지 않았다**(§12-00 ③ · WU-093 선례). 아래는 **판정 근거가 되는
+관측값** 이고 판정 칸은 CEO 대기다.
+
+```
+GT 페이지  https://claude.ai/code/artifact/f8060423-ea80-4e02-8ba8-705194f93509
+파일       docs/wu-111-gt-review.html (자립형 721KB) · 생성기 scripts/wu-111-build-gt.mjs
+🟢 이미지 **4/4** 를 data: URI 로 임베드 — 원격 이미지 0(로그인·네트워크 없이 사진이 뜬다)
+🔴 운영 추출기 변경 0 — 검증 화면용으로 og:image/og:title 만 **읽었다**
+```
+
+## A. B226AC010 — `eraldo.com` EUR 40
+
+| | 원상품 | 후보 |
+|---|---|---|
+| 제목 | Booty Ghosts T-shirt | Bobo Choses Booty Ghost-print **Long-sleeve** T-shirt |
+| 가격(페이지) | EUR 40 | 🔴 **og:price `67,077 KRW`** |
+| 우리 판정 | — | tier **COMPARISON** · `TEXT_CONFIRMED` · UNVERIFIED_SEARCH |
+
+```
+🔴 **갈릴 수 있는 관측 축 하나** — 후보 제목에 **「Long-sleeve」** 가 있고 원상품 제목에는 없다.
+   🔴 그것이 「다른 상품」인지 「같은 상품의 다른 표기」인지는 **CTO 가 판정하지 않았다**.
+🔴 **WU-099/100 의 CEO 라벨을 끌어오지 않는다** — 그 평가의 원상품은 **B226AC112(Pop T-shirt)**
+   였다(WU-102 가 확정). 같은 샵·같은 제목이라도 **분모가 다르다**.
+🟢 품번 축은 **증거 0** — 후보 URL/제목에 `B226AC010` 이 **없다**(`sameByUrl: false`).
+   그래서 tier 도 EXACT 가 아니라 **COMPARISON** 이다.
+```
+
+### 🔴🔴 그리고 STEP 3 에서 **새 관측 1건** — 같은 URL 이 **두 통화** 를 낸다
+
+```
+Shopify JSON  variants[0].price **40.00** + price_currency **EUR**  ← 우리 집계가 쓰는 값
+HTML og:price **67,077 KRW**                                        ← 사람이 그 페이지에서 보는 값
+🟢 WU-110 의 안전조건은 **지켜졌다** — 통화가 **명시된** 값만 썼다(지어내지 않았다)
+🔴 그러나 「해외 동일상품 참고가격 EUR 40」과 **셀러가 그 링크를 눌러서 보는 금액이 다를 수 있다**
+🟢 **우리 버그가 아니다** — Smallable 과 같은 성질(방문자에 따라 통화를 바꾼다 ·
+   메모 `smallable-market-is-shipping-destination` · WU-090 에서 같은 모양을 기록했다)
+🔴 **고치지 않았다** — 통화/표시 정책이고 이 WU 의 범위가 아니다. 🔴 전수 빈도 **미측정**
+```
+
+## B. B226AC009 — `global.trenbe.com` USD 84
+
+| | 원상품 | 후보 |
+|---|---|---|
+| 제목 | Hug Hairy Monster T-shirt | Bobo Choses Kids Hug Hairy Monster **Long Sleeve** T-Shirt (Light Blue) **B226AC009** … |
+| 가격 | EUR 40 | USD 84 (og:price 84.00 USD · JSON 과 일치) |
+| 우리 판정 | — | tier **EXACT** · `STRONG_IDENTIFIER` · UNVERIFIED_SEARCH |
+
+```
+🟢 품번 축 **증거 있음** — 후보 제목·URL 에 **B226AC009 가 그대로** 있다(`sameByUrl: true`)
+   ⟹ `confirmBrandCodeInEvidence`(WU-004)가 그것을 읽어 EXACT 에 닿았다
+🟢 **집계 최저가는 이 판정과 무관하다** — USD 최저가는 **58**(tinyapple.net · VERIFIED_CURRENT)
+   이고 84 는 최저가가 아니다 ⟹ 🔴 **GT 결과가 어느 쪽이든 USD 최저가는 58 이어야 한다**
+🔴 색상 축은 미확인 — 후보는 「Light Blue」를 적고 원상품 `colorText` 는 이 표본에서 확인하지 않았다
+```
+
+## 📋 CEO 보고 양식 (채워 주실 칸)
+
+```
+B226AC010
+- eraldo.com EUR40: SAME / DIFFERENT / UNCERTAIN
+- 근거:
+
+B226AC009
+- trenbe USD84: SAME / DIFFERENT / UNCERTAIN
+- 근거:
+```
+
+## `priceStatus` 정책 변경 필요 여부
+
+```
+현재 즉시 수정: **NO**
+이유:
+ ① 🔴 **판정 입력이 아직 없다** — 두 후보의 Human GT 가 들어오기 전에 집계 조건을 바꾸면
+    「맞는 가격을 뺐는지 틀린 가격을 뺐는지」를 알 수 없다
+ ② 🔴 **영향 분모가 미측정** 이다 — 「집계 최저가가 UNVERIFIED 인 통화」가 전체에서 몇 건인지
+    모른다(이 표본에선 **S1 EUR 1건** · S2 는 최저가 영향 0)
+ ③ 🔴 어느 선택지에도 **비용이 있다** — 제외하면 S1 의 EUR 축이 **사라지고**,
+    UI 표시는 **UI 변경**(CPO 금지)이다
+ ④ 🟢 **지금 당장 잘못된 금액이 판매판정에 들어가지는 않는다** — 해외 축은
+    `push` 뒤 `continue` 라 판정에 닿지 않고(WU-059), 국내 축은 `VERIFIED_CURRENT && KRW`
+    를 요구해 진입 0 이다 ⟹ **급하게 고쳐야 하는 안전 결함이 아니다**
+🔴 단 **모순은 남아 있다** — 「해외 최저가」와 그 근거 줄의 표시가 갈린다. **CPO 판정 대기.**
+```
+
+## STEP 3 실행 비용 / 회귀
+
+```
+HTTP **9**(read-only · 페이지 4 + 이미지 4 + Shopify JSON 1) · AI 0 · 운영 변경 **0** ·
+배포 0 · 테스트 추가 0(측정 전용) · typecheck/build 영향 0
+```
+

@@ -1010,7 +1010,31 @@ factsFromProductUrl 직후 **undefined** → withConfidence 의 **derivePriceSta
 사라진다**) ⒝ UI 에 「검증 전」 표시(🔴 **UI 변경** · CPO 금지) ⒞ 현상 유지(🔴 모순 잔존).
 🔴 CPO 가 금지한 「priceStatus 를 예쁘게 채우기」와 **다른 축** 이다 — **집계 «조건»** 문제다.
 
-🟡 **CEO Action — WU-110 배포 결과 최종 화면 1회**(🔴 B226AC010 의 대상은 **eraldo.com**).
+🟢 **STEP 3 — 육안 GT 페이지 구축**(판정은 CEO · 운영 변경 0 · HTTP 9 read-only):
+```
+https://claude.ai/code/artifact/f8060423-ea80-4e02-8ba8-705194f93509
+A B226AC010 eraldo.com **EUR 40** · tier COMPARISON · TEXT_CONFIRMED · 품번 증거 **0**
+  🔴 후보 제목에 **「Long-sleeve」** 가 있고 원상품엔 없다(관측 · CTO 판정 안 함)
+  🔴 **WU-099/100 의 CEO 라벨을 끌어오지 않는다** — 그 원상품은 **B226AC112** 였다(분모 다름)
+B B226AC009 trenbe **USD 84** · tier EXACT · 제목·URL 에 **B226AC009 그대로**
+  🟢 **USD 최저가는 58** 이라 이 GT 결과와 **무관하게** 최저가는 58 이어야 한다
+```
+
+🔴🔴 **STEP 3 새 관측 — 같은 URL 이 «두 통화» 를 낸다**(고치지 않았다):
+```
+eraldo  Shopify JSON variants[0] **40.00 + EUR** ← 우리 집계가 쓰는 값
+        HTML og:price **67,077 KRW**            ← 사람이 그 페이지에서 보는 값
+🟢 WU-110 안전조건은 지켜졌다(통화가 **명시된** 값만 썼다)
+🔴 그러나 「해외 참고가격」과 **셀러가 링크를 눌러 보는 금액이 다를 수 있다**
+🟢 우리 버그가 아니다 — Smallable 과 같은 성질(WU-090) · 🔴 전수 빈도 **미측정**
+```
+
+🔴 **`priceStatus` 즉시 수정 여부 — NO**: ① GT 입력이 **아직 없다** ② 영향 **분모 미측정**
+③ 어느 선택지에도 비용이 있다 ④ 🟢 지금 **판매판정에는 닿지 않는다**(해외는 `continue` ·
+국내는 `VERIFIED_CURRENT && KRW`) ⟹ **급한 안전 결함이 아니다**. 🔴 모순은 남는다 · CPO 판정.
+
+🟡 **CEO Action 2건** — ⒜ WU-110 배포 결과 **최종 화면 1회** ⒝ 위 GT 페이지에서 **2건 판정**
+(🔴 B226AC010 의 대상은 **eraldo.com** 이다 — `stockmann.ee` 가 아니다).
 
 ### 🟢🟢 WU-110 `MI-SHOPIFY-PRICE` — **해외 가격 누락 해소 · 구현/배포**
 
