@@ -1013,6 +1013,38 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
 
+### 🟢 WU-112 `MI-CANDIDATE-LIST` — **후보 전수 목록 구축 · CEO GT 대기** (구현 0)
+
+🟢 전문 `docs/MI-CANDIDATE-LIST-112.md`. 🔴 운영 변경 **0** · 배포 0 · MI 입력 0 ·
+저장 0 · AI 0 · Registry 0 · 8축 0 · **가격 작업 0**(CPO 보류 준수).
+
+```
+목록  https://claude.ai/code/artifact/e333b58b-d70a-4e83-b21c-2af4b6bff8e5
+      docs/wu-112-candidate-list.html (자립형 7.53MB) · 이미지 **27/27**(실패 0)
+      🟢 **원상품 패널이 sticky** — 스크롤해도 비교 대상이 사라지지 않는다(WU-099 지적 반영)
+후보  **27** = 🇰🇷 국내 3 · 🌎 해외 19 · ❔ 미확정 5 (원상품 2개 · 샵 22)
+      S1 B226AC010 15 · S2 B226AC009 12 · DROPPED 샵의 후보 **6** · 품번 9 · 가격 25
+verdict S1 **SAME 4** · PRESUMED_SAME 5 · SIMILAR 2 · CONFLICT 4
+        S2 **SAME 3** · PRESUMED_SAME 3 · SIMILAR 1 · CONFLICT 5
+      🔴 WU-093 의 「SAME 0」과 **분모가 다르다**(그쪽 등록부 검색 · 이쪽 AI URL)
+      🔴 이 SAME 은 **시스템 판정** 이고 Human GT 가 아니다 — 그것이 검토 대상이다
+```
+
+🔴🔴 **운영 산출이 아니라 «후보 전수» 를 냈다** — ⑧ 게이트가 샵 전체를 DROPPED 로 떨어뜨리고
+sink 는 **샵당 best 1건** 만 실으므로(WU-096/109) 운영 산출만 쓰면 **CEO 가 볼 후보가 사라진다**.
+🟢 그래서 전수를 싣고 운영 판정값을 **같이** 보여준다(verdict · tier · 「이 샵은 제외됨」).
+🔴 **판정 없는 후보의 `priceTier` 는 null 로 뒀다** — 지어내지 않았다(두 번 틀린 그 행위).
+🟢 화면에 「시스템 줄은 참고용 · 대표님 판정이 정답」이라고 **적었다**.
+
+🔴 **이 목록에 «없는» 것**: ⒜ **등록부 검색 경로** 후보(🟢 B226AC009 의 그 경로 5건은
+**WU-093 에서 이미 GT** — 전부 DIFFERENT) ⒝ 원상품은 **2개** 다 ⒞ 새 AI 호출 **0**.
+🔴 그래서 「후보를 최대한 확보했다」로 적지 않는다 — **AI URL 풀 한 생산자** 의 산출이다.
+
+🟡 **CEO Action — 후보 27건 판정 1회**(15~25분). 🔴 **「이 샵은 제외됨」 안에 SAME 이 있으면
+우리가 동일상품을 버리고 있다는 증거** 다. 🔴 가격은 보지 않아도 된다.
+🔴 GT 수신 후에만 ⒜ DROPPED 안의 SAME ⒝ 시스템 SAME 중 Human DIFFERENT 를 보고
+**그 둘이 나올 때만** MI 최소 수정을 설계한다(8축 CLOSED 유지).
+
 ### 🔴🔴 WU-111 `MI-PRICESTATUS` — **집계와 UI 가 다른 기준을 쓴다** (구현 0)
 
 🟢 전문 `docs/MI-PRICESTATUS-111.md`. 🔴 운영 변경 **0** · 배포 0.
