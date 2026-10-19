@@ -920,6 +920,37 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
 
+### 🟡 WU-104 `MI-SAME-TRACE` — **WU-103 의 「전부 통과」를 정정한다** (구현 0)
+
+🟢 전문 `docs/MI-SAME-TRACE-104.md`. 🔴 운영 변경 0 · 배포 0 · 새 AI 호출 0.
+
+🔴🔴 **동일상품 5건을 «한 건씩» 돌렸더니 후단 도달이 2/5 다**(WU-103 은 4 로 셌다 —
+그 보고서가 적은 한계 ②「풀 소실 계산이 거칠다」가 **맞았다**):
+```
+1 bobochoses.com/**ko-kr**/  ①🟢②🟢③PRODUCT④OK → 🔴 **자기참조 제외**(같은 호스트)
+2 search.shopping.naver.com  ①🟢 ②🔴**추출 탈락** ③**LISTING_PAGE** → 🔴 미도달
+3 global.trenbe.com          ①🟢②🟢③PRODUCT④OK → 🟢 **JUDGED / EXACT**
+4 www.skroutz.ro             ①🟢②🟢③PRODUCT ④🔴**UNREACHABLE** → 🔴 미도달
+5 biskuit.kr                 ①🟢②🟢③PRODUCT④OK → 🟢 **JUDGED / COMPARISON**
+```
+
+🟢 **분모를 정직하게 가르면 유효 후보는 3건** 이다 — #1 은 **원상품 자신의 다른 로케일**
+(판매처 후보가 아니다) · #2 는 **검색 결과 페이지**(상품 URL 이 아니다). ⟹ **2/3 도달**,
+🔴 손실 1건은 **UNREACHABLE** 이라 **우리 판정 로직의 손실이 아니다**.
+
+🟢🟢 **⑥/⑧ 소실은 여전히 0 이다** — 죽은 지점은 ②추출 1(올바름) · ④fetch 1 · 자기참조 1.
+⟹ 🟢 **WU-103 의 핵심 결론(selection 이 동일상품을 안 버린다)은 유지** 된다.
+
+🔴🔴 **교차검증에서 새 사실** — 두 통과 후보 **둘 다 `facts.brandModelCode` 가 null** 인데
+(URL 에는 `b226ac009` 가 있다) `trenbe` 가 **EXACT** 에 닿았다 ⟹ 🟢
+`confirmBrandCodeInEvidence`(WU-004 가 건초더미를 title+url+sku 로 넓힌 함수)가 **URL 에서
+품번을 확인한 증거** 다. 🟢 `biskuit.kr` 은 brand 가 **「비스킷」(샵 이름)** 인데도 COMPARISON
+에 닿았다 — 그 현상은 **EXACT 승격만** 막는다.
+
+🔴 **한계** — 유효 표본 **3건** · `skroutz.ro` UNREACHABLE **원인 미규명**(WU-084 헤더
+overflow 여부 **미확인**) · 「동일상품 5건」은 **URL 품번 기반 하한** · `trenbe` EXACT 의
+**정답 여부는 사람이 확인하지 않았다**.
+
 ### 🟢🟢 WU-103 `MI-FUNNEL-TRUE` — **파이프라인은 동일상품을 «거의 잃지 않는다»** (구현 0)
 
 🟢 전문 `docs/MI-FUNNEL-TRUE-103.md`. 🔴 운영 변경 0 · 배포 0 · **새 AI 호출 0**.
