@@ -1,0 +1,29 @@
+{
+  "_note": "WU-111 STEP 3 — CEO 육안 GT. 🔴 도메인 키로 고정한다(WU-095 교훈: 인덱스 금지).",
+  "_source": "CEO 판정 2026-10-19 · GT 페이지 artifact f8060423-ea80-4e02-8ba8-705194f93509",
+  "_scope": "🔴 이 GT 의 원상품은 B226AC010 / B226AC009 다. 다른 원상품 측정에 끌어오지 않는다.",
+  "candidates": [
+    {
+      "originCode": "B226AC010",
+      "domain": "eraldo.com",
+      "url": "https://www.eraldo.com/products/bobo-choses-booty-ghosts-t-shirt-340496",
+      "candidateTitle": "Bobo Choses Booty Ghost-print Long-sleeve T-shirt",
+      "aggregatedPrice": { "amount": 40, "currency": "EUR" },
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "systemPriceTier": "COMPARISON",
+      "systemMatchTruth": "TEXT_CONFIRMED",
+      "humanVerdict": "SAME"
+    },
+    {
+      "originCode": "B226AC009",
+      "domain": "global.trenbe.com",
+      "url": "https://global.trenbe.com/products/bobo-choses-kids-hug-hairy-monster-long-sleeve-t-shirt-light-blue-b226ac009-451-160484657-p",
+      "candidateTitle": "Bobo Choses Kids Hug Hairy Monster Long Sleeve T-Shirt (Light Blue) B226AC009",
+      "aggregatedPrice": { "amount": 84, "currency": "USD" },
+      "priceStatus": "UNVERIFIED_SEARCH",
+      "systemPriceTier": "EXACT",
+      "systemMatchTruth": "STRONG_IDENTIFIER",
+      "humanVerdict": "SAME"
+    }
+  ]
+}
