@@ -793,6 +793,7 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **사람 검토는 시스템 판정을 덮지 않는다** | `GeminiTransientCandidates` · `MiPanelView` (WU-081) | `gt-verdict`(시스템)와 `gt-review-result`(사람)는 **다른 state·타입·DOM** · 클릭이 `fetch` **0회** · MI/가격/알림/판매판정/등록 payload 에 **들어가지 않는다** · 🔴 `onReview` 없는 구역엔 버튼이 **렌더되지 않는다** |
 | 🔴 **국내 행은 «옮긴다» 복제하지 않는다** | `TransientCandidateSections` (WU-081) | `market==="KR"` 행만 🇰🇷 구역으로 이동 · 기존 두 구역은 나머지 · **총 행 수 불변**(계약) |
 | 🔴🔴🔴 **여덟 보호축을 다시 파지 않는다** | WU-063~080 통합 (CPO CLOSED 2026-10-18) | **COLOR · TITLE · MODEL_CODE · LINE · MARKET · PRICE · LANGUAGE · BRAND** — 여덟 축 전부에서 「완화하면 Human DIFFERENT 가 같이 열린다」가 **측정됐다** · 🔴 **국내 recall 은 현 구조의 한계로 «확정»** · 🔴 「gate 가 너무 엄격하다」로 읽지 않는다 · 🔴 **이 축들을 다시 파는 WU 를 만들지 않는다**(새 경로는 **CPO 가 지정**) |
+| 🔴🔴 **AI URL 품질은 산출을 못 늘린다** | WU-089 counterfactual | 상세페이지 전용으로 바꿔도 **price 12→12 · market 8→8 · 국내 9→9 · 해외 3→3**(전부 **0**) · 줄어드는 건 **분모**(181→68) · 🔴 「AI 지침」 owner 가 **코드에 없다**(붙여넣기 경로) |
 | 🔴🔴 **가격 상세확인은 «상한» 이 아니라 «자격» 에서 막힌다** | `selectCandidatesForDetailConfirmation` (WU-088) | ⒜ matchLevel 자격 필터에서 **64/64 전건 탈락** · ⒝ 상한 2 는 **발화 0** ⟹ 🔴 **상한을 올려도 변화 0** · 「비용 게이트가 낮다」로 읽지 않는다 |
 | 🟢 **헤더 초과만 직접 스택으로** | `domain-rate-limiter.ts` `isHeadersOverflow` (WU-084) | `UND_ERR_HEADERS_OVERFLOW` **전용 코드** 로만 판별(문구 금지) · **overflow 에서만** 1회 재시도 · 기존 `retryThroughDirectStack`(64KB · SSRF 가드) 재사용 · hostname 조건 **0** · 실패 시 **원래 오류 전파** |
 | 🔴 **domain = brand 금지(계약으로 잠김)** | `wu-080-brand-producer.test.ts` | 도메인/판매처 이름으로 브랜드를 만들면 **2 FAIL** · 🔴 샵이 `brand` 자리에 **자기 이름** 을 적는 경우가 실재한다(biskuit 「비스킷」) |
@@ -835,6 +836,39 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
+
+### 🔴 WU-089 `MI-AI-URL-QUALITY` — **「상세페이지만」 요구해도 산출 0 증가 · REJECT** (구현 0)
+
+🟢 전문 `docs/MI-AI-URL-QUALITY-089.md`. 🔴 운영 변경 **0** · HTTP **0**(캐시 재사용) · 배포 0.
+
+🔴🔴 **붙여넣기 경로에는 「AI 지침」 owner 가 «코드에 없다»** — `ai-answer-urls` /
+`ai-answer-pool` / `url-candidate-pool` **전부 0**. UI 문구는 **셀러에게** 하는 말이고,
+`buildPrompt`(WU-014)는 **Gemini API 경로 · flag OFF** 다. ⟹ §9 조건 ① **불충족**.
+
+🟢 **181 전수 유형**(🔴 URL 모양이 아니라 **운영 판정** 으로 분류):
+```
+PRODUCT_DETAIL **68**(국내 20 · 해외 48)  ├ evidence 61  └ evidence 없음 7
+NOT_EXTRACTED **88** · UNREACHABLE 15 · REDIRECTED_AWAY 8 · NO_FACTS 2
+비율 — 전체 **37.6%** · 국내 **43.5%** · 해외 **35.6%**
+NOT_EXTRACTED 88 의 운영 모양: **LISTING 58 · UNKNOWN 29 · PRODUCT_PAGE 1**
+```
+
+🔴🔴 **KPI — 상세페이지 전용으로 바꿔도 «산출이 그대로» 다**:
+```
+URL 181 → **68**(-113) · extraction 93 → 68(-25) · fetch 68 → 68(**0**)
+evidence 61 → 61(**0**) · **price 12 → 12(0)** · **market 8 → 8(0)**
+국내 price 9→9(0) · 해외 price 3→3(0)
+⟹ 줄어드는 것은 **분모** 뿐이다. §10 GO 조건 **하나도 성립하지 않는다**.
+```
+
+🔴 **내가 1차에 틀렸다** — `PRODUCT_DETAIL` 을 `status OK && (brand||code)` 로 정의해
+**가격은 있는데 brand/품번 없는 3건** 을 빼먹었고 「상세만 남기면 가격이 준다」는 **거짓
+결론** 이 될 뻔했다. 🟢 owner 는 `factsFromProductUrl` 의 `status` 다 — 그걸로 고쳤다.
+
+🔴🔴 **이 WU 가 상류/하류를 최종적으로 갈랐다** — 상류(AI URL 품질)를 **완벽히 해도**
+가격 12 · 자격 8 은 **그대로** 다. 남은 병목은 **전부 하류** 이고 그 owner 는
+**matchLevel**(WU-088)이며 그 축은 **이미 닫혔다**(WU-017 · threshold 완화 금지).
+🟡 측정된 유일한 이득은 **비용/시간**(fetch 93 → 68 · **-27%**) 이고 그것은 **운영 문서** 영역이다.
 
 ### 🔴 WU-088 `MI-PRICE-GATE` — **비용 게이트는 «한 번도 발화하지 않는다» · REJECT** (구현 0)
 
