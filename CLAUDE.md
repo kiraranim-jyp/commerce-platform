@@ -1014,6 +1014,38 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
 
+### 🟡 WU-116 `MI-DOMESTIC-SUPPLY-116` — **AI 경로도 국내 공급을 못 늘렸다** (구현 0 · 가격 0)
+
+🟢 전문 `docs/MI-DOMESTIC-SUPPLY-116.md`. 🔴 운영 변경 **0** · 배포 0 · 가격 **0** ·
+Registry **0** · Adapter **0** · 8축 **0** · AI API **0** · 자동 브라우저 **0** · 포털 **0**.
+
+🟢 공급원 = `cto-websearch`(WU-073 과 같은 라벨 · 비용 0) · 질의 **2건**.
+🔴 검색이 돌려준 URL 을 **그대로** 넣었고 **best 선정·가격 보강을 부르지 않았다**
+(`judgeDomesticCandidate` 0 · `enrichCandidatePrices` 0 ⟹ 후보가 잘리지 않는다).
+
+```
+        AI URL  추출통과  후보  **새 후보**
+S1        7       3       1      **1**
+S2        6       2       1      **0**(trenbe · 기존 GT)
+[NEW] kream.co.kr  PRODUCT_PAGE · market **KR** · **CONFLICT** · 품번 null
+      「(Kids) Bobo Choses Long Puff T-Shirt Lavender」 ← 🔴 제목이 **다른 상품** 이다
+      🔴 단 **CTO 가 판정하지 않았다** · CEO 판정 1건 대기
+```
+
+🔴🔴 **관측된 병목이 Registry 가 아니다**:
+```
+AI 가 준 13 URL 중 **상품 상세는 5개** · 나머지는 브랜드/컬렉션/홈/가이드글/중고키워드/쿠팡샵
+🟢 그 탈락은 **올바르다**(운영 추출기·classifyUrlShape 가 걸렀다)
+🔴🔴 ⟹ **한국어 검색이 「상품 상세 URL」 을 거의 돌려주지 않는다.**
+   국내에서 **파는 샵 이름은 나오는데**(보몽드·도노키즈·크로켓·OCO·쿠팡)
+   그 샵의 **상세 URL 이 검색 결과에 없다**
+🔴 그 상세 URL 을 **내가 추측해 만들지 않았다**(URL 지어내기는 금지 행위)
+🔴 **일반화 금지** — 원상품 2개 · 질의 2건 · 검색어 튜닝 반복 **안 함**
+```
+
+🔴 **WU-115 결론은 그대로 유지** — 「현재 Registry 만으로는 공급이 부족하다」.
+🔴 그러나 「국내 동일상품을 찾을 수 없다」로 **올리지 않는다**(표본 2건).
+
 ### 🔴🔴 WU-115 `MI-DOMESTIC-SUPPLY` — **국내 공급 부족 확정 · 어댑터가 막는다** (구현 0)
 
 🟢 전문 `docs/MI-DOMESTIC-SUPPLY-115.md`. 🔴 운영 변경 **0** · DB 변경 **0** · Registry 변경 **0** · 가격 **0**.
