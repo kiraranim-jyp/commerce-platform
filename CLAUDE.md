@@ -802,6 +802,8 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **가격 구역 식별** | `wu-056r1-price-section-identity.test.ts` | 구역 제목 **상호 비포함** · 해외 구역 «안» 에 `₩`/`약`/`≈`/통화기호 **0** · 아이콘 중복 금지 — **Panel mount DOM 으로** 본다 |
 | 🔴 **단계는 넷 · 번호는 파생** | `workflow.ts` · `stage-focus.ts` (WU-058) | 큰 단계 **4** · 라벨에 「소싱」 0 · 단계마다 본문 **하나**(빈 단계 0) · **번호는 배열 순서에서 파생**(하드코딩 금지) |
 | 🔴 **URL 분류기는 양방향 오류** | `classifyUrlShape` (WU-073) | 한국 CMS 목록(`goods_list`·`product_list`·`shopbrand`)이 **PRODUCT_PAGE** · SSG `itemView.ssg` 는 **오차단** — 🔴 「②의 탈락 = 정확한 차단」으로 읽지 않는다 · 고치지 않는다(WU-052 HOLD) |
+| 🔴🔴 **「후보 0」을 보면 하니스부터 의심한다** | `DomesticSourceRef` (WU-092) | `collectionStrategy`/`currency` 가 없으면 운영이 **요청을 안 보내고** `unsupported` 를 준다 · 🔴 `as never` 로 타입을 가리면 **「A_DISCOVERY」라는 거짓 결론** 이 난다(실제로 났다) |
+| 🔴 **한국어 제목은 «띄어쓰기» 로 축이 죽는다** | `coreTitleTokens` (WU-092 관측) | 「허그 헤어리 몬스터 티셔츠」 ↔ 「허그헤어리몬스터티셔츠」가 **브랜드명 한 토큰만** 겹친다 · 🔴 정규화는 **새 매칭 규칙** 이라 금지 · 🔴 전수 빈도 **미측정** |
 | 🔴🔴 **후보 노출 ≠ SAME 판정** | `CandidateComparison` (WU-091) | SAME 이 아닌 후보도 **보인다** · 🔴 단 **기본 접힘**(`details` 에 `open` 금지) · **행마다 판정 라벨** · 「가격비교에 사용되지 않습니다」 명시 — 넷 중 하나라도 빠지면 **2026-09-19 사고**(「유력 후보 5건」)가 되돌아온다 · 🔴 `isVisualCheckTier` 정책은 **불변** |
 | 🔴 **「후보 없음」과 「동일상품 없음」은 다른 문장** | `NO_CANDIDATE_AT_ALL` / `NO_SAME_BUT_CANDIDATES` | 둘을 같은 말로 만들면 셀러에게 **같은 실패** 로 보인다(M6 가 1 FAIL 로 잠금) |
 | 🔴 **사람 검토는 시스템 판정을 덮지 않는다** | `GeminiTransientCandidates` · `MiPanelView` (WU-081) | `gt-verdict`(시스템)와 `gt-review-result`(사람)는 **다른 state·타입·DOM** · 클릭이 `fetch` **0회** · MI/가격/알림/판매판정/등록 payload 에 **들어가지 않는다** · 🔴 `onReview` 없는 구역엔 버튼이 **렌더되지 않는다** |
@@ -850,6 +852,56 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
+
+### 🔴🔴 WU-092 `MI-CANDIDATE-CAUSE` — **두 샘플은 «서로 다른» 문제다** (구현 0)
+
+🟢 전문 `docs/MI-CANDIDATE-CAUSE-092.md`. 🔴 운영 변경 **0** · 배포 0 · DB 읽기만 · 8축 0.
+
+```
+S1 biskuit B226AC009    → **C(matching)** — 동일상품 후보가 «실제로 왔는데» 축이 **2/5**
+S2 bobochoses B226AC042 → **A(coverage)** — 등록부 샵이 그 상품을 **팔지 않는다**
+🔴 「동일상품을 못 찾음」이라는 **한 문장으로 적으면 둘 다 틀린다**(CPO §3)
+```
+
+🟢 **STEP 2 — URL 정규화 문제가 «아니다»**(CPO 가설 확인) — 쿼리 O/X 결과가 **완전히 동일**.
+🔴 단 S2 는 `price: null` 이다 — `fetchPath=SHOPIFY_JSON` 이 **HTML 을 안 받아** JSON-LD
+가격을 영구히 못 본다(**WU-079 가 보류 보관한 그 자리** · CEO 는 ₩162,000 을 봤다).
+
+🔴🔴 **하니스 결함을 잡았다 — 그대로 보고했으면 거짓 결론이었다**:
+```
+1차: SHOPS 를 {id,name,domain} 만으로 만들고 `as never` 로 타입을 **가렸다**
+  → collectionStrategy 가 없어 운영이 요청을 **안 보내고** status:"unsupported"
+  → 6/6 unsupported · 후보 0 ⟹ 「A_DISCOVERY」로 보고할 뻔했다
+🟢 DB 값을 넣자 후보 **5건씩** → 결론이 **A → C 로 뒤집혔다**
+```
+
+🔴🔴 **그리고 내 1차 원인 가설이 counterfactual 로 «반증» 됐다**:
+```
+가설   원상품 brand 가 **「비스킷」**(샵 이름)이라 BRAND_MISMATCH 가 막는다(WU-080 사례)
+실측   brand 를 「Bobo Choses」로 바꾸면 **blockers 는 사라지는데**
+       **verdict 가 하나도 안 바뀐다**(SIMILAR 3 · CONFLICT 2 그대로) · **SAME 0 → 0**
+⟹ 🔴 **brand 는 구속 조건이 아니다.**
+
+🟢 진짜 구속 = **축 2/5** (SAME_MIN_AXES=5)
+   원상품/후보 **둘 다** code null · color null (후보는 샵 자체 SKU 76A7D-L30-05)
+   축 = [핵심 상품명 일부 「보보쇼즈」, 상품군 TOP↔TOP]
+🔴🔴 **제목 축이 브랜드명 한 토큰뿐인 이유 = 띄어쓰기**(새 관측)
+   원상품 「허그 헤어리 몬스터 티셔츠」 ↔ 후보 「허그헤어리몬스터티셔츠」
+   🔴 **고치지 않았다** — 새 매칭 규칙이라 CPO 금지(「후보 판정 기준 변경」)
+```
+
+🔴 **부수 관측** — 등록부 검색 후보의 `matchLevel` 이 **very_high 5건** 이다.
+WU-017/088 의 「전건 low」와 **분모가 다르다**(그쪽은 **AI URL 후보**) ⟹ 🔴 **WU-088 의
+가격 자격 필터를 «통과하는» 모양이 실재한다.** 🔴 단 N=5 · 1상품이라 **일반화하지 않는다**.
+
+🟢 **등록부 실측** — 전체 34 · `biskuit.kr` **없다** · `bobochoses.com` 있으나 **enabled=false** ·
+AUTO_*+enabled **7곳**. 🔴 등록부를 **바꾸지 않았다**.
+
+🟢 **STEP 5 — 시장조사 카테고리는 «유지»**(A). WU-082 의 소비처 셋이 그대로 있고
+③ `resolveCategoryCostPolicy` 는 **가격 계산에 들어간다**. 남은 것은 **UX 개선**(제품 정책).
+
+🟢 typecheck **0**(🔴 한때 2 — `ProductFacts` 에 **없는 칸** 을 읽으려 했고 **타입이 막았다**.
+이 트랙 19번째 같은 실수인데 **처음으로 사전에** 잡혔다) · 회귀 **598 files / 8,354 passed**.
 
 ### 🟢🟢 WU-091 `MI-CANDIDATE-VISIBILITY` — **후보 노출과 SAME 판정을 갈랐다** (구현/배포)
 
