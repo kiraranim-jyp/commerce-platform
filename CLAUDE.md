@@ -895,7 +895,30 @@ fetch 실패 **0**. 🔴 WU-093 에서 한 번 오진한 자리라 **갈라서**
 🔴 운영 추출기는 **고치지 않았다**(검증 화면용으로 facts 를 읽기만 했다).
 
 🟢 회귀 **600 files / 8,367 passed · failed 0** · typecheck 0 · build exit 0.
-🟡 **CEO Action — 평가 1회(26건)**. 🔴 「대부분이 충돌로 보이는 것」이 **이 WU 가 묻는 질문** 이다.
+🔴🔴 **CEO 평가 26/26 수신 — 그런데 «절반이 측정불가» 다**:
+```
+USEFUL **2** · NOISE **12** · UNSURE **12**
+🔴🔴 UNSURE 12 ↔ **이미지 문제 12** 가 «완전히 일치» 한다(교차 확인)
+   imageUrl 이 애초에 null **11** + 이미지가 잘려서 판단불가 **1**(luksusbaby)
+   「이미지 null 인데 UNSURE 아닌 곳」 **0** ⟹ 가치 판단이 아니라 **못 본 것** 이다
+⟹ 유효 분모는 26 이 아니라 **14**(53.8%) · 🔴 나머지 12 는 **측정불가**(0% 아님)
+```
+
+🔴🔴 **그리고 USEFUL 2 가 같은 상품군을 NOISE 라 한 것과 «충돌» 한다**:
+```
+NOISE   bobochoses.com     Booty Ghosts T-shirt
+NOISE   junioredition.com  Booty Ghosts T-Shirt by Bobo Choses
+USEFUL  eraldo.com         Booty Ghost-print **Long-sleeve** T-shirt   ← 더 다른데 USEFUL
+USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실상 같은 제목
+🔴 「유용함」이 **동일상품인지 참고가치인지 기준이 글로 없다** · CTO 가 해석하지 않았다
+```
+
+🔴 ⟹ **「DROPPED 보존이 가치 있다/없다」를 이 숫자로 결정하지 않는다.**
+🟡 재측정 선택지 둘(**CTO 가 고르지 않았다**) — ⒜ 이미지 11건을 검증 화면용 `og:image` 로
+보충해 분모를 26 으로(WU-093 에서 원상품에 쓴 방법 · 운영 추출기 변경 0) ⒝ **「유용함」의
+기준을 한 줄로 고정**. 🔴 ⒝ 없이는 재측정해도 **같은 충돌이 난다**.
+
+🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈). 🔴 「대부분이 충돌로 보이는 것」이 **이 WU 가 묻는 질문** 이다.
 
 ### 🟡 WU-098 `MI-PENDING-STATE` — **분리는 가능하다 · 가치는 미측정** (구현 0)
 
