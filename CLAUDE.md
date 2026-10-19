@@ -1014,6 +1014,32 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
 
+### 🔴🔴 WU-119 — **`SNAPSHOT REUSE POLICY CONFLICT` · STOP** (구현 0)
+
+🟢 전문 `docs/MI-SNAPSHOT-REUSE-119.md`. 🔴 운영 변경 **0** · DB **0** · schema **0** · 가격 **0**.
+
+🟢 **transient 계약과는 직접 충돌이 아니다** — 그 계약이 막는 지점은
+`upsertDomesticProductLink` 앞 가드와 `recordDomesticSourceCheckAttempt` 래퍼,
+즉 **`domestic_product_links`(= 판정·가격 경로)** 다(주석 원문 확인).
+
+🔴🔴 **그러나 §12-0 과는 정면으로 만난다** — 「외부 URL 영구 저장 ❌」이 있고
+`product_snapshots` 는 **영속 테이블** 이라 범위를 한 상품으로 좁혀도 **저장은 저장** 이다.
+⟹ 🔴 CPO 가 적어 둔 **STOP 조건 그 자체** 다.
+
+🔴 **담을 칸이 없다** — 스냅샷 칸 전수(WU-021 확인)에 후보 URL 자리가 **없다**.
+⒜ `workspace` jsonb 에 넣으면 **그 칸의 의미가 둘이 된다**(상품 사실 ↔ 후보 목록) ·
+⒝ **새 칸/테이블 = migration**(헌장이 「혹시 모르니까 migration」 금지).
+🔴 그리고 **CTO 는 로컬에서 운영 DB 에 쓸 수 없다**(service-role 부재) ⟹ 배포 후 쓰기 검증 필요.
+
+🟡 **CPO 가 열어야 하는 것 둘** — ① §12-0 에 **예외 한 줄**(「사람이 SAME 으로 확정한 URL 은
+그 스냅샷 안에서만 보관하고 다음 조사의 **입력 후보로만** 쓴다」) ② 저장 위치(jsonb ↔ 새 칸).
+🔴 **CTO 는 둘 중 아무것도 고르지 않았다.**
+
+🟢 **STOP 이어도 잃은 것이 없다** — WU-118 이 이미 **재투입 19/19 생존** 을 측정했다.
+🔴 단 「재사용하면 국내 후보가 늘어난다」로 적지 않는다 — 국내 병목은 **①(AI 가 국내 상세
+URL 을 거의 주지 않는다)** 이고 재사용은 그 **6·4개를 보존** 할 뿐이다. 해외 4건은 되살아나도
+**같은 ⑧ 게이트·샵 2순위를 다시 만난다**(P2/P3 보류) ⟹ 화면 증가는 **보장되지 않는다**.
+
 ### 🔴🔴 WU-118 `MI-SUPPLY-FUNNEL` — **공급 병목 확정 · SAME URL 은 버려지지 않는다** (구현 0)
 
 🟢 전문 `docs/MI-SUPPLY-FUNNEL-118.md`. 🔴 운영 변경 **0** · 가격 **0** · Registry 0 · 8축 0 · UI 0.
