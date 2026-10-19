@@ -89,6 +89,42 @@ interface ShopifyProductJsonBody {
   tags?: string[] | string;
   options?: { name?: string; values?: string[] }[];
   images?: { src?: string }[];
+  /**
+   * 🔴🔴 WU-110 — **가격과 통화는 «이미 받은 이 JSON 안에» 있다.**
+   *    실측(global.trenbe.com · B226AC009): `variants[0].price` = `"84.00"` ·
+   *    `variants[0].price_currency` = `"USD"` (HTML 의 JSON-LD/og:price 와 일치).
+   * 🔴 그런데 이 파일이 그 둘을 읽지 않아 **MI 가 SAME/EXACT 로 판정한 동일상품의
+   *    해외 가격이 집계에서 빠졌다**(WU-108/109 실측 1건).
+   * 🔴 **추가 HTTP 0** — 같은 응답을 다시 쓴다.
+   */
+  variants?: { price?: string; price_currency?: string }[];
+}
+
+/**
+ * 🔴🔴 WU-110 — Shopify product JSON 의 **첫 variant** 에서 가격을 읽는다.
+ *
+ * 🔴 **둘 다 있어야 한다**(CPO 고정 안전조건):
+ * ```
+ * price "84.00" + price_currency "USD"  →  { amount: 84, currency: "USD" }
+ * price 있고 통화 없음                   →  null
+ * 통화 있고 price 없음                   →  null
+ * ```
+ * 🔴 숫자로 바꿀 수 없으면(빈 문자열·NaN) **null** 이다 — 0 으로 만들지 않는다.
+ * 🔴 통화는 **대문자 3글자** 만 받는다. 그 모양이 아니면 **믿지 않는다**.
+ */
+/** 🟢 계약 테스트가 **이 함수를 직접** 부른다 — `fetchWithDomainRateLimit` 은 전역
+ * `fetch` 를 쓰지 않아(SSRF 가드 경유) 주입으로는 잠글 수 없다. 판정 owner 는 이것이다. */
+export function shopifyVariantPrice(
+  body: ShopifyProductJsonBody,
+): { amount: number; currency: string } | null {
+  const v = body.variants?.[0];
+  const raw = v?.price;
+  const cur = v?.price_currency?.trim().toUpperCase();
+  if (!raw || !cur) return null;
+  if (!/^[A-Z]{3}$/.test(cur)) return null;
+  const amount = Number(raw);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  return { amount, currency: cur };
 }
 
 /** 🔴 상품명을 «지어내지 않는다» — 둘 중 실제로 있는 것만 읽고, 없으면 null 이다. */
@@ -193,8 +229,16 @@ export async function factsFromProductUrl(url: string): Promise<ProductUrlFactsR
       candidate: {
         title: body.title,
         url: crawlerUrl,
-        // 🔴 통화를 모르므로 가격을 만들지 않는다(파일 머리 주석 참고).
-        price: null,
+        /**
+         * 🔴🔴 WU-110 — **통화가 «명시된» 경우에만** 가격을 만든다.
+         *    파일 머리 주석의 「통화를 모르므로 가격을 만들지 않는다」는 **그대로 유효** 하다 —
+         *    바뀐 것은 **이 JSON 이 통화를 명시한다는 사실을 우리가 읽는다** 는 것뿐이다.
+         * 🔴 `price` 와 `price_currency` 가 **둘 다** 있어야 한다. 하나라도 없으면 **null** —
+         *    통화 없는 숫자를 가격으로 쓰지 않는다(`resolveSourcePrice` 계약과 같은 방향).
+         * 🔴 `variants[0]` 고정이다 — 「구매 가능한 variant 우선」 같은 선택 규칙은
+         *    `fetchShopifyProductJson` 소관이고 **이 WU 의 범위가 아니다**(CPO 고정).
+         */
+        price: shopifyVariantPrice(body),
         regularPrice: null,
         imageUrl: facts.imageUrls[0] ?? null,
         confidence: 0,
