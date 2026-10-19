@@ -1014,6 +1014,32 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
 
+### 🔴 WU-120 `MI-DROPPED-CF` — **②탈락은 주로 «진짜 비상품» 이다 · 코드 변경 0**
+
+🟢 전문 `docs/MI-DROPPED-CF-120.md`. 🔴 운영 변경 **0** · 가격 **0** · 8축 0 · threshold 0.
+
+🔴 **1차 CF 는 질문에 답하지 못했다** — ②탈락 30건을 `factsFromProductUrl` 에 넣었더니
+**전건 `NOT_PRODUCT_URL` · 965ms(HTTP 0)** 이었다 ⟹ **모양 게이트를 두 번 쟀다**.
+🟢 그래서 **국내 5건을 raw fetch 로 직접** 받아 다시 쟀다.
+
+```
+luksusbaby/collections ×2 · croket/brand · lfmall/search  → **Product 0 · 품번 0 · 링크 0**
+   ⟹ 🔴 **진짜 상품 특정 불가(C)** · 그 차단은 **올바르다**
+🔴🔴 **beaumonde.co.kr/(홈)** → **품번 B226AC009 6회 · 상품링크 패턴 498개**
+   ⟹ 🟡 **경우 B 가 실재한다**(목록/홈 안에 상세 링크가 있다)
+🔴🔴 **그러나 증분 0** — 그 상세 URL(`goods_view.php?goodsNo=1000014021`)은
+   **이미 후보 풀에 있었다**(WU-112 에서 CEO 가 **SAME** 이라 한 그 후보다)
+⟹ 🔴 CPO 성공 기준(「국내 SAME/SIMILAR 후보가 **실제로 증가**」) **미충족** ⟹ **코드 0**
+```
+
+🟡 **메커니즘만 기록한다**(CTO 가 구현하지 않았다) — 「목록/홈 → 상세 링크 **1-hop** 추출」.
+🔴 새 생산자이고 추가 HTTP·링크 선별 규칙이 필요하며 **WU-052/073 의 HOLD 와 직접 만난다**.
+🔴 효과가 이 표본에서 **0** 이므로 **CPO 승인 없이 열지 않는다**.
+
+🟢🟢 **그래서 WU-118 결론이 유지된다** — 국내 병목은 **① AI 가 국내 상세 URL 을 거의
+주지 않는다** 이고, 🔴 「우리가 URL 단계에서 버려서」는 **주된 원인이 아니다**(버린 것의 **4/5 가
+진짜 비상품**). 🔴 **측정불가** — 해외 ②탈락 **25건** 의 실제 내용(HTTP 미사용 · 모양은 전부 목록/불명).
+
 ### 🔴🔴 WU-119 — **`SNAPSHOT REUSE POLICY CONFLICT` · STOP** (구현 0)
 
 🟢 전문 `docs/MI-SNAPSHOT-REUSE-119.md`. 🔴 운영 변경 **0** · DB **0** · schema **0** · 가격 **0**.
