@@ -835,6 +835,38 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
 
+### 🟡 WU-087 `MI-AI-FUNNEL` — **배선은 끝났다 · 병목은 «가격» 과 «AI URL 품질»** (구현 0)
+
+🟢 전문 `docs/MI-AI-FUNNEL-087.md`. 🔴 운영 변경 **0** · AI API 0 · 배포 0.
+🔴 **새 AI 를 부르지 않았다** — WU-073 저장분(4개 모델 · URL **181**)을 답변 산문으로 되돌려
+운영 추출기에 넣었다. ⟹ 「B226AC112 를 새로 조사시킨 결과가 **아니다**」.
+
+| 단계 | 전체 | 국내 | 해외 |
+|---|---:|---:|---:|
+| ① AI URL | **181** | 46 | 135 |
+| ② URL 추출 | 94 | 30 | 64 |
+| ③ fetch OK | 69 | 20 | 49 |
+| ④ evidence | 62 | 13 | 49 |
+| ⑤ **가격** | **12** | 9 | 3 |
+| ⑥ market 확정 | 8 | 5 | 3 |
+| ⑦ 자격 | **8** | **5** | **3** |
+
+🔴🔴 **⑤ 가 최대 손실(62→12 · -50)** 이고 **분모 오염이 아니다** — 운영 경로
+(`collectUrlCandidatePool → withConfidence → **enrichCandidatePrices**`)로 다시 돌려
+**같은 숫자**(국내 자격 5)를 얻었다. 🟢 owner: `price-source-adapter.ts` 의
+`selectCandidatesForDetailConfirmation` 이 0 이면 **보강이 아예 안 돈다** +
+Shopify 경로는 `price:null` 고정(fetch OK 69 중 **SHOPIFY_JSON 53**).
+🔴 **버그가 아니라 비용 정책** 이다 ⟹ §7 의 수정 조건 **불충족 · 코드 변경 0**.
+
+🔴 **AI URL 의 48% 가 상품 페이지가 아니다** — `PRODUCT_PAGE 94 · LISTING 58 · UNKNOWN 29`.
+🟢 `REDIRECTED_AWAY` **8건** — **WU-075 가 실제로 일하고 있다**.
+🟢 `KRW_WITHOUT_DOMAIN_EVIDENCE` 4건을 **KR 로 올리지 않았다**(CPO §4 준수).
+
+🟡 **HOLD** — 배선은 연결되나 **양**(181 → 국내 **5** · 2.8%)이 운영 가치를 말하기엔 부족하다.
+🔴 국내 5건에 **품번이 0건** 이다 — 「동일상품 5건」이 아니라 **「가격 자격 5건」** 이다.
+🔴🔴 **다음 레버는 코드가 아니다** — ⒜ 가격 확보는 **비용 정책** ⒝ AI URL 품질은
+**프롬프트/운영 지침**. 🔴 둘 다 CPO/CEO 영역이고 CTO 가 정하지 않는다.
+
 ### 🟢🟢 WU-086 `MI-AI-URL-E2E` — **AI URL → 국내 가격비교 경로는 «이미 있다»** (구현 0)
 
 🟢 전문 `docs/MI-AI-URL-E2E-086.md`. 🔴 운영 변경 **0** · Registry 0 · 8축 0 · AI API 0 · 배포 0.
