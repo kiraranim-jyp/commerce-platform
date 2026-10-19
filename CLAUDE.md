@@ -871,6 +871,7 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **[WU-098 에서 정정] 판정하지 않은 후보에도 «교차판매처» 라벨은 있다** | `observed.candidate` (WU-098) | `DROPPED` 는 verdict·matchTruth·blocker 가 **존재하지 않는다** ⟹ WU-091 의 「행마다 판정 라벨」을 **못 지킨다** · 🔴 「판정 보류」라는 새 상태는 **제품 정책** 이고 CTO 가 만들지 않는다 |
 | 🔴🔴 **⑧ 은 «비용» 게이트인데 «노출» 까지 결정한다** | `isEvidenceEvaluationWorthwhile` + `transientEvidenceSink.push` (WU-096) | `candidates[0].matchLevel !== "low"` 가 false 면 **샵 전체 DROPPED** → transient 배열에 **안 실린다** → 화면에서 사라진다 · 🔴 **WU-091 의 「후보 노출 ≠ SAME 판정」과 충돌** · 🟢 등록부 «검색 화면» 은 이 게이트와 **무관**(직접 렌더) |
 | 🔴 **UI 게이트가 경로마다 다르다** | `mayShowCandidate` ↔ `evidence.map()` (WU-096) | 등록부 검색 표 = `mayShowCandidate` · **transient 카드 = 게이트 0(전건 렌더)** · 🔴 섞으면 「UI 에서 사라진다」는 **거짓 결론** 이 난다(실제로 1차에 났다) |
+| 🔴🔴 **집계와 UI 가 `priceStatus` 를 다르게 본다** | `summarizeCandidateOverseasPrices` ↔ `isPriceDisplayable` (WU-111) | 집계는 **안 보고**(EXCLUDED 만 뺀다) UI 는 **VERIFIED_CURRENT 만** 숫자를 낸다 ⟹ 🔴 「해외 최저가」가 뜨는데 **그 근거 줄에는 「가격 확인 필요」** 가 뜰 수 있다(S1 EUR 40 실측) · 🔴 **가격 정책이라 CTO 가 고치지 않는다** |
 | 🟢 **Shopify JSON 가격은 «통화가 명시될 때만»** | `shopifyVariantPrice` (WU-110) | `variants[0].price` **AND** `price_currency` 둘 다 있어야 한다 · 통화 **대문자 3글자** · 0 이하 **null** · 🔴 **`variants[0]` 고정**(선택 규칙은 `fetchShopifyProductJson` 소관) · 🔴 **추가 HTTP 0** · M1~M5 가 잠근다 |
 | 🔴🔴 **판정 함수를 직접 부르는 테스트는 «배선» 을 못 본다** | WU-110 교훈 | `price: shopifyVariantPrice(body)` 를 `null` 로 되돌려도 **0 failed** 였다 · 🟢 **소스 앵커를 같이** 둔다(배선 + 안전조건) |
 | 🟢🟢 **숫자만인 URL 세그먼트는 식별자가 아니다** | `SLUG_IS_NUMERIC_ONLY` ×3 (WU-095) | `match.ts` · `product-identity.ts` · `shared/product-facts.ts` **세 벌 전부** 같은 가드 · 🔴 하나만 고치면 다른 경로에서 거짓 신호가 계속 난다(M1~M3 각 2 FAIL) · 🔴 **Shopify handle 일치는 그대로 살아 있다**(M4 3 FAIL 이 양방향으로 잠근다) |
@@ -975,6 +976,41 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 기준을 한 줄로 고정**. 🔴 ⒝ 없이는 재측정해도 **같은 충돌이 난다**.
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
+
+### 🔴🔴 WU-111 `MI-PRICESTATUS` — **집계와 UI 가 다른 기준을 쓴다** (구현 0)
+
+🟢 전문 `docs/MI-PRICESTATUS-111.md`. 🔴 운영 변경 **0** · 배포 0.
+
+🔴🔴 **먼저 — WU-110 보고서의 샵 이름을 정정한다**: S1 에 새로 들어온 **EUR 40** 은
+**`stockmann.ee` 가 아니라 `eraldo.com`** 이다. 🔴 같은 금액이라 **같은 샵이라 추정하고
+확인하지 않았다.** 🔴 CEO 테스트 대상도 그에 맞춰 정정했다.
+
+🟢 **CPO 가 물은 것(`priceStatus = undefined`)은 문제가 아니다**:
+```
+factsFromProductUrl 직후 **undefined** → withConfidence 의 **derivePriceStatus** 가
+다시 정한다 → 운영 값 **UNVERIFIED_SEARCH** · UI 두 곳은 `?? "UNVERIFIED_SEARCH"` 폴백
+```
+
+🔴🔴🔴 **그 조사에서 «다른 결함» 이 드러났다 — 집계와 UI 의 기준이 다르다**:
+```
+해외 **금액 집계**  priceStatus 를 **보지 않는다**(EXCLUDED 만 뺀다 · WU-062)
+**UI 숫자 표시**    isPriceDisplayable = **VERIFIED_CURRENT 만**(price-truth.ts:14)
+⟹ 🔴 실측 — S1 **EUR 최저 40(eraldo.com) · UNVERIFIED_SEARCH**
+   「해외 최저가 EUR 40」이 표시되는데 **그 근거 후보 줄에는 「가격 확인 필요」** 가 뜬다
+   🔴 그 통화 축의 **유일한 근거** 라 셀러가 40 의 출처를 **화면에서 확인할 수 없다**
+   (S2 의 trenbe USD 84 도 같은 모양 · 🟢 단 최저가가 아니라 영향 0)
+🟢 나머지 최저가는 전부 VERIFIED_CURRENT (USD 53/58 · GBP 37/33 · CAD 64 · KRW 88,000)
+```
+
+🔴 **WU-110 이 만든 결함이 «아니다»** — `UNVERIFIED_SEARCH` 가 금액 집계에 들어가는 것은
+**원래 그랬고**(WU-062 는 `EXCLUDED` 만 뺐다) WU-110 이 후보를 늘려 **드러낸** 것이다.
+🟢 그래서 **WU-110 을 되돌릴 이유가 아니다**(되돌리면 SAME/EXACT 누락이 돌아온다).
+
+🔴 **수정하지 않았다 — 가격 정책이다**: ⒜ UNVERIFIED 를 금액에서 제외(🔴 S1 **EUR 축이
+사라진다**) ⒝ UI 에 「검증 전」 표시(🔴 **UI 변경** · CPO 금지) ⒞ 현상 유지(🔴 모순 잔존).
+🔴 CPO 가 금지한 「priceStatus 를 예쁘게 채우기」와 **다른 축** 이다 — **집계 «조건»** 문제다.
+
+🟡 **CEO Action — WU-110 배포 결과 최종 화면 1회**(🔴 B226AC010 의 대상은 **eraldo.com**).
 
 ### 🟢🟢 WU-110 `MI-SHOPIFY-PRICE` — **해외 가격 누락 해소 · 구현/배포**
 
