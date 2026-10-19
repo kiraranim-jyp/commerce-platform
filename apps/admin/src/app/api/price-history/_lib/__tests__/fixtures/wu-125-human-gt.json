@@ -1,0 +1,96 @@
+{
+  "_note": "WU-123/125 CEO 육안 GT 통합. URL 키로 고정한다(인덱스 금지).",
+  "_source": "CEO 판정 2026-10-20 (WU-123 7건 · WU-125 2건)",
+  "_scope": "원상품은 B226AC010 / B226AC009 둘뿐이다.",
+  "counts": {
+    "SAME": 5,
+    "DIFFERENT": 4,
+    "total": 9
+  },
+  "candidates": [
+    {
+      "origin": "B226AC010",
+      "host": "junioredition.com",
+      "url": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/booty-ghosts-long-sleeve-t-shirt-by-bobo-choses",
+      "system": "SAME",
+      "human": "SAME",
+      "blockers": []
+    },
+    {
+      "origin": "B226AC010",
+      "host": "tinyapple.net",
+      "url": "https://www.tinyapple.net/en-kr/products/bobo-choses-booty-ghosts-t-shirt",
+      "system": "SAME",
+      "human": "DIFFERENT",
+      "reason": "긴팔이 아니다",
+      "blockers": [],
+      "_note": "유일한 진짜 오판 - blocker 0"
+    },
+    {
+      "origin": "B226AC009",
+      "host": "tinyapple.net",
+      "url": "https://www.tinyapple.net/en-kr/products/bobo-choses-hug-hairy-monster-t-shirt-light-blue",
+      "system": "SAME",
+      "human": "SAME",
+      "blockers": []
+    },
+    {
+      "origin": "B226AC010",
+      "host": "tinyapple.net",
+      "url": "https://www.tinyapple.net/en-kr/products/bobo-choses-bobo-choses-embossed-t-shirt-multicolor",
+      "system": "PRESUMED_SAME",
+      "human": "DIFFERENT",
+      "reason": "전혀 다른제품",
+      "blockers": [
+        "NO_TITLE_OVERLAP",
+        "MATERIAL"
+      ]
+    },
+    {
+      "origin": "B226AC010",
+      "host": "scoutandcokids.com",
+      "url": "https://scoutandcokids.com/collections/bobo-choses/products/bobo-choses-booty-ghosts-t-shirt",
+      "system": "SAME",
+      "human": "SAME",
+      "blockers": []
+    },
+    {
+      "origin": "B226AC009",
+      "host": "scoutandcokids.com",
+      "url": "https://scoutandcokids.com/collections/bobo-choses/products/bobo-choses-hug-hairy-monster-t-shirt",
+      "system": "SAME",
+      "human": "SAME",
+      "blockers": []
+    },
+    {
+      "origin": "B226AC009",
+      "host": "cemarose.ca",
+      "url": "https://cemarose.ca/products/bobo-choses-kids-booty-ghosts-sweatshirt-light-blue-c7907",
+      "system": "PRESUMED_SAME",
+      "human": "DIFFERENT",
+      "reason": "재질이 다르다",
+      "blockers": [
+        "NO_TITLE_OVERLAP",
+        "GARMENT_FORM"
+      ]
+    },
+    {
+      "origin": "B226AC009",
+      "host": "junioredition.com",
+      "url": "https://www.junioredition.com/en-kr/collections/bobo-choses/products/hug-hairy-monster-t-shirt-by-bobo-choses",
+      "system": "SAME",
+      "human": "SAME",
+      "blockers": []
+    },
+    {
+      "origin": "B226AC009",
+      "host": "tinyapple.net",
+      "url": "https://www.tinyapple.net/en-kr/products/bobo-choses-bobo-choses-pop-t-shirt-blue",
+      "system": "PRESUMED_SAME",
+      "human": "DIFFERENT",
+      "blockers": [
+        "NO_TITLE_OVERLAP"
+      ]
+    }
+  ]
+}

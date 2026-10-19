@@ -1014,6 +1014,32 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
 
+### 🟢🟢 WU-125 GT — **패턴 확정: 「확정 SAME」은 정확하고 「보류」가 틀린다** (구현 0)
+
+🟢 CEO GT 2건 수신(2026-10-20) — junioredition **SAME**(sys SAME ✅) ·
+tinyapple 「Pop T-shirt, Blue」 **DIFFERENT**(sys **PRESUMED_SAME** · blocker `NO_TITLE_OVERLAP`).
+🟢 라벨 통합 `fixtures/wu-125-human-gt.json`(**URL 키** · 9건).
+
+```
+WU-123+125 통합 **9건** (SAME 5 · DIFFERENT 4)
+**확정 SAME 5건**  → human SAME **4** · DIFFERENT **1**(c2) ⟹ precision **4/5**
+**보류 4건**        → human SAME **0** · DIFFERENT **4**   ⟹ 🔴🔴 **보류는 4/4 가 다른 상품이었다**
+🟢🟢 그리고 **보류 4건 모두 blocker 를 적고 있었다**
+   (NO_TITLE_OVERLAP ×4 · MATERIAL · GARMENT_FORM) ⟹ **MI 는 이유를 알고 보류했다**
+🟢 recall — human SAME **4/4 전부** 올라왔다(**놓친 동일상품 0**)
+```
+
+🔴🔴 **그래서 결론이 하나로 모였다**:
+```
+① 🟢 동일상품을 **놓치지 않는다**(recall 4/4)
+② 🔴 **유일한 진짜 오판은 c2 하나** — 품번·색상이 둘 다 null 이고 blocker 0 이었다
+   🔴 그 축(소매 길이)은 **18건 추가 표본에서 재현 0** ⟹ **새 축 열지 않는다**
+③ 🔴🔴 「넓게 SAME 으로 보인다」의 실체는 **보류(PRESUMED_SAME)가 금액 집계에
+   tier COMPARISON 으로 들어가는 것** 이다 — 그 4건은 **전부 다른 상품** 이었다
+   🟢 최소안은 **이미 있는 blocker 를 읽어 보류를 금액에서 빼는 것**(새 축 0 · threshold 0)
+   🔴 **가격 집계 변경** 이라 §00-B 보류 ⟹ **가격 단계 1순위** 로 예약한다
+```
+
 ### 🟢 WU-125 `MI-SLEEVE-SAMPLE` — **소매 길이 차이는 반복되지 않았다 · 8축 유지** (구현 0)
 
 🟢 전문 `docs/MI-SLEEVE-SAMPLE-125.md` · 검토화면 artifact 5975df8e. 🔴 운영 변경 **0** · 가격 **0**.
