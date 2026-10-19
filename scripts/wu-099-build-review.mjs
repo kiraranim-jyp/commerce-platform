@@ -45,6 +45,17 @@ async function dataUri(imgUrl, pageUrl) {
   }
 }
 
+/**
+ * 🔴🔴 **CEO 지적(2026-10-19): 「원상품이 뭔지 알려줘야 비교할 수 있다」.**
+ *    1차 페이지는 후보만 보여주고 원상품을 **설명 문장에만** 적었다 — 육안 비교가
+ *    목적인데 **비교 대상이 화면에 없었다**. 🟢 운영 facts 로 원상품을 올린다.
+ * 🔴 가격이 `null` 이면 **「없음」으로 적는다**(SHOPIFY_JSON 경로 · WU-079 보류 항목).
+ */
+const ORIGIN_SRC = path.join(process.env.TEMP ?? ".", "mi-p0-02", "wu-099-origin.json");
+const origin = JSON.parse(readFileSync(ORIGIN_SRC, "utf8"));
+origin.img = await dataUri(origin.imageUrl, origin.url);
+console.log(`원상품 이미지 ${origin.img ? "🟢" : "🔴 없음"}`);
+
 const data = JSON.parse(readFileSync(SRC, "utf8"));
 let ok = 0;
 let fail = 0;
@@ -162,6 +173,16 @@ const html = `<title>WU-099 — 보류 후보 가치 검증 (26건)</title>
   .bar button{font:inherit;font-size:14px;cursor:pointer;background:var(--ink);color:#fff;
     border:0;border-radius:9px;padding:9px 18px}
   .prog{font-size:13px;color:var(--dim)}
+  /* 🔴 CEO 지적 — 원상품이 **스크롤해도 보여야** 비교가 된다. */
+  .origin{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:132px 1fr;gap:14px;
+    background:var(--card);border:2px solid var(--accent);border-radius:12px;padding:12px;margin:0 0 20px;
+    box-shadow:0 6px 18px rgba(0,0,0,.06)}
+  @media(max-width:620px){.origin{grid-template-columns:96px 1fr}}
+  .opic img{width:100%;height:132px;object-fit:contain;background:#f3f1ec;
+    border:1px solid var(--rule);border-radius:8px;display:block}
+  @media(max-width:620px){.opic img{height:96px}}
+  .olabel{margin:0;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .ot{margin:2px 0 6px;font-size:16px;font-weight:600;line-height:1.35}
   textarea{position:absolute;left:-9999px}
 </style>
 <div class="wrap">
@@ -171,7 +192,7 @@ const html = `<title>WU-099 — 보류 후보 가치 검증 (26건)</title>
   <div class="howto">
     <b>보시는 방법</b>
     <ol>
-      <li>각 후보가 <b>원상품(Bobo Choses Pop T-shirt · B226AC112)</b>의 비교 후보로 다시 볼 가치가 있는지 봅니다.</li>
+      <li><b>맨 위에 고정된 원상품</b>과 각 후보를 비교해, 다시 볼 가치가 있는지 봅니다.</li>
       <li><b>유용함</b> / <b>불필요</b> / <b>판단 어려움</b> 중 하나를 누릅니다.</li>
       <li>전부 고른 뒤 맨 아래 <b>결과 복사</b> → 그대로 붙여넣어 주십시오.</li>
     </ol>
@@ -180,6 +201,24 @@ const html = `<title>WU-099 — 보류 후보 가치 검증 (26건)</title>
       <b>가격비교·동일상품 판정·알림은 전혀 바뀌지 않습니다.</b><br>
       ※ <b>상품코드·색상이 「없음」</b>이거나 <b>가격이 없는</b> 것은 정상입니다 — 그것이 지금 측정 중인 상태입니다.</p>
   </div>
+  <section class="origin" aria-label="비교 기준 원상품">
+    <div class="opic">${
+      origin.img
+        ? `<img src="${origin.img}" alt="${esc(origin.title)}">`
+        : `<div class="noimg">이미지 없음</div>`
+    }</div>
+    <div>
+      <p class="olabel">비교 기준 — 원상품</p>
+      <p class="ot">${esc(origin.title)}</p>
+      <dl>
+        ${field("브랜드", origin.brand)}
+        ${field("상품코드", origin.modelCode)}
+        ${field("색상", origin.color)}
+        ${field("가격", money(origin.price))}
+      </dl>
+      <a class="ext" href="${esc(origin.url)}" target="_blank" rel="noreferrer">원상품 페이지 열기 ↗</a>
+    </div>
+  </section>
   ${data.dropped.map(card).join("")}
 </div>
 <div class="bar"><span class="prog" id="prog"></span><button type="button" id="copy">결과 복사</button></div>
