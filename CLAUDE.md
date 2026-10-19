@@ -1014,6 +1014,44 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
 
+### 🔴🔴 WU-114 `MI-CANDIDATE-INVENTORY` — **국내는 「노출」이 아니라 「공급」 문제다** (구현 0)
+
+🟢 전문 `docs/MI-CANDIDATE-INVENTORY-114.md`. 🔴 운영 변경 **0** · 배포 0 · 가겍 작업 **0**.
+
+🔴🔴 **WU-112 분모를 정정한다 — 국내 후보 생산자는 «둘» 이다**:
+```
+ⓐ AI URL 풀  collectUrlCandidatePool  — WU-112 가 재었다(27건)
+ⓑ 등록부 검색  searchDomesticShops      — 🔴 WU-112 **분모 밖** 이었다
+🔴🔴 그 ⓑ 를 운영 함수로 돌렸는다 — **후보 0 / 0**
+   S1 · S2 둘 다 샵 상황 **{ok: 6} · 오류 0** 인데 **후보가 0** 이다
+   ⟹ 「검색 실패」가 아니다 — **그 상품을 안 한다**(WU-009/010/085/092 와 같은 답)
+⟹ 🔴 **국내 후보 공급자는 사실상 「AI URL 풀」 하나다**
+```
+
+🔴 **후보 재고 전수**:
+```
+        천후보  AI풀  등록부  🇰🇷국내  🌎해외  ❔미확정  🔴화면에 서는 수
+S1        15     15     **0**      2      10      3        **8**
+S2        12     12     **0**      1       9      2        **9**
+🇰🇷 한국 도메인 후보 — S1 **4**(beaumonde ×2 · luksusbaby ×2) · S2 **1**(biskuit)
+🟢 국내 Human SAME **2건**(beaumonde · biskuit)은 **둘 다 샵 대표로 화면에 선다**
+🔴 단 beaumonde 는 가겍이 없어 market **UNKNOWN** — 국내 지표에는 못 들어간다
+   🔴 그 복구는 **가겍 작업** 이라 보류다(§00-B)
+```
+
+🔴🔴 **CPO 분기표 — 답**:
+```
+① 국내 후보 추분함                    ❌ 아니다(상품당 1~4건 · 공급자 하나)
+② 발견 단계 문제                     🟡 **여기에 가장 가깝다**(등록부 0 · AI 풀만 산출)
+③ 전부 SIMILAR/CONFLICT              ❌ 아니다(beaumonde · biskuit 가 PRESUMED_SAME)
+④ SAME 인데 UI 에 안 보인다           🟡 **국내가 아니라 «해외» 에서 4건**
+   rboutique(⑧) · cissywears(샵 2순위) · stockmann(⑧) · bornyesterdaykids(⑧)
+⟹ 🔴 「국내가 안 보인다」의 원인은 **노출이 아니라 공급** 이다
+```
+
+🔴 주사항 — 테이블에서 **가겍 칸을 뻐다**. 1차 출력이 biskuit 를 「가겍없음」으로 찍었고
+원인은 **필드 이름을 섞은 것**(AI 풀 `priceAmount` ↔ 등록부 `price`) 이다 — 실제는 **KRW 88,000** 이 있다.
+
 ### 🟢🟢 WU-113 `MI-BEST-SELECTION` — **샵 대표 선택 P1 · 구현/배포**
 
 🟢 전문 `docs/MI-BEST-SELECTION-113.md`. 운영 **1 파일** · 🔴 새 데이터 0 · 새 HTTP 0 ·
