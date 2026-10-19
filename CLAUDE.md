@@ -1014,6 +1014,34 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
 
+### 🟢🟢 WU-122 `MI-SAMPLE-MI` — **신규 후보에 MI SAME 이 실재한다** (구현 0)
+
+🟢 전문 `docs/MI-SAMPLE-MI-122.md`. 🔴 운영 변경 **0** · 1-hop **0** · 가격 **0**.
+
+```
+표본 **24 / source 14**(상한 30 준수) · 층화 = host 별 「단서 2 + 무단서 1」
+상품확인 **17** · **SAME 5 · PRESUMED_SAME 2** · CONFLICT 8 · UNKNOWN 9
+🟢 SAME/PRESUMED 7건은 **전부 기존 후보 풀 밖 URL** 이다 —
+   junioredition/en-kr(code **B226AC010** · S1 SAME) · tinyapple/en-kr ×2(S1·S2 SAME) ·
+   scoutandcokids ×2(S1·S2 SAME) · tinyapple embossed(PRESUMED) · cemarose sweatshirt(PRESUMED)
+🔴 **CTO 가 동일상품으로 확정하지 않았다** — 운영 MI 산출이고 GT 는 CEO 몫이다
+```
+
+🔴🔴 **편향 둘이 같이 측정됐다 — 1-hop 설계의 전제조건이다**:
+```
+① 🟢 **문자열 단서가 강한 선별 신호** — 단서 10건 중 SAME **5(50%)** ·
+   무단서 14건 중 SAME **0**(PRESUMED 1) ⟹ 🔴 「링크 전부 투입」이 아니라 **선별 필수**
+② 🔴🔴 목록 href 를 그대로 쓰면 **SNS 가 후보로 들어온다** — 표본 24 중 **6건이**
+   **facebook·twitter·pinterest·plus.google·pages.coupang·빈 host** 이고 **상품확인 0/6**
+   ⟹ 🔴 **비상품 링크 필터가 선행 조건** 이다(UNKNOWN 9 중 6 이 이것 · fetch 결함 아님)
+```
+
+🟢🟢 **CPO 분기 ① 성립** — 「거의 전부 DIFFERENT」도 「대부분 UNKNOWN/실패」도 아니다
+⟹ **1-hop 을 별도 WU 로 설계할 가치가 확인됐다**. 🔴 단 구조는 CPO 문장 그대로여야 한다 —
+**「검색 결과 → 관련 상품 링크 추출 → 후보 «선별» → MI」**(링크 679 투입 ❌).
+🔴 **이번에 구현하지 않았다.** 🔴 표본은 **24/679(3.5%)** 라 전수 환산 금지 ·
+host 별 상한 3 이라 **큰 목록이 과소 대표** 됐다 · 이 SAME 7건은 **Human GT 가 아니다**.
+
 ### 🔴🔴 WU-121 `MI-OVERSEAS-DROPPED` — **해외는 국내와 정반대다** (구현 0)
 
 🟢 전문 `docs/MI-OVERSEAS-DROPPED-121.md`. 🔴 운영 변경 **0** · 1-hop **0** · 가격 **0**.
