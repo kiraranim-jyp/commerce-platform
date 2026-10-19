@@ -835,6 +835,32 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
 
+### 🟢🟢 WU-086 `MI-AI-URL-E2E` — **AI URL → 국내 가격비교 경로는 «이미 있다»** (구현 0)
+
+🟢 전문 `docs/MI-AI-URL-E2E-086.md`. 🔴 운영 변경 **0** · Registry 0 · 8축 0 · AI API 0 · 배포 0.
+
+```
+외부 AI 답변(산문) → A 추출 **11 발견 → 8 통과** (탈락 3 = 홈/카테고리/스토어 · 올바름)
+  → B 후보 풀  accepted 8 · **usable 6** · MI 자격 6 · 탈락 2(feelway UNREACHABLE)
+               🟢🟢 **Registry 참조가 «코드» 에 0** (언급 2회는 주석)
+               🔴 탈락 사유에 Registry 계열 **0** — 계약으로 잠갔다
+  → C 시장/가격  **market KR + KRW 4건** · provider 호출 **0**
+       miniboutique **B226AC112 · ₩108,000 · KR** / biskuit ₩88,000 / littleluna ₩117,000
+       donokids ×2 는 UNKNOWN(`.com`+KRW) 🟢 올바르다(WU-051/077)
+```
+
+🟢🟢 **WU-085 의 「직접 입력」 결과가 AI 경로에서 재현됐다** — 「중간에서 버리는 코드」는
+**발견되지 않았다**. 탈락 둘 다 **올바른 이유** 다. ⟹ CPO §5 의 「**코드 변경 0 도 정상
+결론**」에 해당한다.
+
+🔴 **과장하지 않는다** — 잰 것은 **「국내 가격 자격」까지** 다. `priceTier` 게이트는
+`judgeDomesticCandidate` 가 만들고 **이 하니스가 만들지 않았다**(WU-085 에서 지어내다 걸렸다).
+🔴 그리고 CoupleShot·BBambam·Beaumonde·SSG 는 **B226AC112 URL 미확보** → 미측정
+(URL 을 **지어내지 않았다**).
+
+🔴 **라벨 오류 1건 자가 정정** — `searchResults.length`(도메인 묶음 4)를 「통과 4」로 적었다.
+후보 수는 **6**(`usableProductUrls`)이다. 계약을 그 칸으로 고쳤다.
+
 ### 🟡 WU-085 `MI-B226AC112-E2E` — **백엔드는 작동한다 · 후보가 «생성되지 않는다»** (구현 0)
 
 🟢 전문 `docs/MI-B226AC112-E2E-085.md`. 🔴 운영 변경 **0** · 배포 0.
