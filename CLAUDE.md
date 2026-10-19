@@ -974,6 +974,46 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
 
+### 🔴🔴 WU-109 `MI-AGGREGATE-ACCURACY` — **Trenbe 결함 확정 · 구현은 다음 세션**
+
+🟢 전문 `docs/MI-AGGREGATE-ACCURACY-109.md`. 🔴 운영 변경 **0** · 배포 0 · 작업트리 **clean**.
+
+🟢 **① UNJUDGED 집계 — 정상. 내 하니스 오류였다**:
+```
+`transientEvidenceSink.push` 는 **한 곳**(:1255)이고 **JUDGED 분기 안** 이다
+⟹ 🟢 **샵당 best 1건** 만 집계 입력. `UNJUDGED` 는 **운영에 존재하지 않는다**
+🔴 WU-108 의 「UNJUDGED 가 집계에 들어간다」는 **내가 전 후보를 넣어서** 생긴 값이다
+   (이 트랙 **네 번째** 같은 종류의 하니스 오류)
+🟢 중복 집계 **0**(샵당 1건) · 운영 재현 byPriceTier — S1 {EXACT 3·EXCLUDED 2} ·
+   S2 {EXACT 2·EXCLUDED 3·COMPARISON 1} ⟹ **UNJUDGED 0**
+🔴 **WU-108 숫자 정정** — S1 OS count 7→**5**(USD 최저 44→**53** · GBP 33→**37**) ·
+   S2 OS 7→**6**(🔴 **EUR 40 이 사라졌다** — 원인 미규명) · S2 KR **1 · ₩88,000** 불변
+```
+
+🔴🔴🔴 **② Trenbe 가격 누락 — 진짜 결함이다**:
+```
+운영  status OK · fetchPath **SHOPIFY_JSON** · price **null**
+🔴 가격이 **두 곳에 다 있다**:
+   ⒜ 운영이 **이미 받은** Shopify JSON — variants[0].price **"84.00"** +
+      **`price_currency` 필드가 있다**(키 전수 출력으로 확인)
+   ⒝ HTML — JSON-LD priceCurrency **USD** · og:price **84.00 / USD**
+⟹ 🔴 **통화까지 있는데 운영이 읽지 않는다**
+🟢🟢 **WU-079 가 「보류 보관」한 바로 그 자리이고, 그때 「미측정」이던 조건이 측정됐다** —
+   `enrichCandidatePrices` 가 **메우지 못한 실례** 이고 그 후보가 **SAME/EXACT** 다
+```
+
+🟡 **최소 수정안(🔴 아직 구현 안 함 · CPO 승인 필요)** — `product-url-facts.ts` 의
+`SHOPIFY_JSON` 분기에서 **이미 받은 JSON** 의 `variants[0].price` + `price_currency` 를 읽는다.
+🟢 **추가 HTTP 0** · 🔴 `price_currency` 없으면 **null 유지**(통화 가드 계약) ·
+🔴 사이트 전용/generic parser 가 **아니다**. 🔴 단 **모든 Shopify 후보에 가격이 새로 생겨**
+영향 범위가 넓다 ⟹ **WU-079 가 REJECT 한 축과 인접** 하므로 **CPO 판정 사안**.
+
+🔴🔴 **구현을 이번 세션에 하지 않은 이유 — 헌장 §4-B 「용량 판단」**:
+「한 세션에 끝까지 못 갈 크기면 넘긴다 · **작업트리를 더럽힌 채 끊기는 것이 가장 나쁘다**」
+
+🟢 **정확도 현황** — 국내 **PASS**(1/1) · 해외 **부분**(누락 1) ·
+**DIFFERENT 오포함 0** · **SAME 누락 1** · typecheck 0 · 600 files / 8,367 passed.
+
 ### 🟡 WU-108 `MI-PRICE-ACCURACY` — **가격비교는 정확하다 · 누락 1건** (구현 0)
 
 🟢 전문 `docs/MI-PRICE-ACCURACY-108.md`. 🔴 운영 변경 **0** · 배포 0 · 새 AI 검색 0.
