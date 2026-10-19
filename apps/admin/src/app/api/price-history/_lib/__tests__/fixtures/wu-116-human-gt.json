@@ -1,0 +1,18 @@
+{
+  "_note": "WU-116 — CEO 육안 GT. 🔴 URL 키로 고정한다(WU-095 교훈: 인덱스 금지).",
+  "_source": "CEO 판정 2026-10-20 · 「DIFFERENT」",
+  "_scope": "🔴 원상품은 B226AC010 이다. 다른 원상품 측정에 끌어오지 않는다.",
+  "candidates": [
+    {
+      "originCode": "B226AC010",
+      "domain": "kream.co.kr",
+      "url": "https://kream.co.kr/products/1030865",
+      "candidateTitle": "(Kids) Bobo Choses Long Puff T-Shirt Lavender",
+      "market": "KR",
+      "systemVerdict": "CONFLICT",
+      "systemModelCode": null,
+      "humanVerdict": "DIFFERENT",
+      "_agreement": "🟢 시스템 CONFLICT 와 Human DIFFERENT 가 일치한다 — 올바른 차단이다"
+    }
+  ]
+}

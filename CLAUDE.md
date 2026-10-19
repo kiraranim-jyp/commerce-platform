@@ -1014,6 +1014,37 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
 
+### 🟢🟢 WU-117 — **동일상품 단계 CLOSED** (CPO 결정 ⒞ · 2026-10-20)
+
+🟢 전문 `docs/MI-SAME-PRODUCT-CLOSE-117.md`. 🔴 이번 WU 코드 변경 **0**
+(동일상품 경로의 마지막 수정은 **WU-113** 이고 배포 반영 완료).
+
+🟢 **마지막 GT 1건 — 시스템이 맞았다**: `kream.co.kr` 「Long Puff T-Shirt Lavender」
+시스템 **CONFLICT** ↔ CEO **DIFFERENT** ⟹ **올바른 차단**(라벨 `fixtures/wu-116-human-gt.json`).
+🔴🔴 그래서 **MI 수정 조건이 성립하지 않는다** — CPO 가 고정한 ⒜ DROPPED 안의 SAME /
+⒝ 시스템 SAME 중 Human DIFFERENT **둘 중 어느 것도 아니다** ⟹ 🟢 **MI 를 더 고치지 않는다**.
+
+```
+누적 Human GT **28건** (WU-112 27 + WU-116 1 · 🔴 WU-111 2건은 중복이라 합산 안 함)
+🟢 현재 배포 상태 정확도 — 금액 집계 진입 9건 **전부 Human SAME**(오포함 **0**) ·
+   tier EXACT **6/6** · 해외 최저가 USD **58** · EUR 40 · GBP 33 · CAD 64 · 🇰🇷 biskuit KR
+🔴 재현율은 낮다 — Human SAME 19 중 반영 **9**. 나머지 10의 자리는 ⑧ 게이트 3 ·
+   샵 2순위 1 · 품번충돌 EXCLUDED 4 · 가격없음 1 · KRW+시장미확정 1 ⟹ **P2~P5 보류**
+```
+
+🔴 **국내에 대해 확정된 것 셋**:
+```
+① 🟢 국내 Human SAME 2건(biskuit · beaumonde)은 **둘 다 샵 대표로 화면에 선다**
+   ⟹ 🔴 「국내 SAME 이 UI 에 안 보인다」는 **사실이 아니다**(WU-114)
+② 🔴 **공급이 적다** — 등록부 경로 **0**(어댑터 부재 · WU-115) ·
+   AI 경로 신규 **1건**(그것도 DIFFERENT · WU-116)
+③ 🔴 beaumonde 는 **가격이 없어** market UNKNOWN ⟹ **가격 단계의 일**(§00-B 보류)
+```
+
+🟡 **CEO Action — 따져 화면 1회**(① USD 최저가 **58** ② 🇰🇷 biskuit 한 줄).
+🔴 「정상인데 FAIL 로 보이기 쉬운 것 셋」을 보고서 §5 에 적었다(국내 1줄 · 「동일상품 아님」 표시 ·
+「가격 확인 필요」). ⟹ 🟡 **그 확인 뒤 가격 단계로 넘어간다.**
+
 ### 🟡 WU-116 `MI-DOMESTIC-SUPPLY-116` — **AI 경로도 국내 공급을 못 늘렸다** (구현 0 · 가격 0)
 
 🟢 전문 `docs/MI-DOMESTIC-SUPPLY-116.md`. 🔴 운영 변경 **0** · 배포 0 · 가격 **0** ·
