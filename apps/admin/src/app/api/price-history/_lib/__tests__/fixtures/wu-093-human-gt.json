@@ -1,0 +1,12 @@
+{"wu":"WU-093","humanReview":[
+{"id":"S1-looxloo.com-1","case":"S1","verdict":"SAME","note":null},
+{"id":"S1-looxloo.com-2","case":"S1","verdict":"DIFFERENT","note":"양말임"},
+{"id":"S1-looxloo.com-3","case":"S1","verdict":"DIFFERENT","note":"양말임"},
+{"id":"S1-looxloo.com-4","case":"S1","verdict":"SAME","note":null},
+{"id":"S1-looxloo.com-5","case":"S1","verdict":"DIFFERENT","note":"색상 다름"},
+{"id":"S2-looxloo.com-1","case":"S2","verdict":"DIFFERENT","note":"하의임"},
+{"id":"S2-looxloo.com-2","case":"S2","verdict":"DIFFERENT","note":"다른제품"},
+{"id":"S2-looxloo.com-3","case":"S2","verdict":"DIFFERENT","note":"다른제품"},
+{"id":"S2-looxloo.com-4","case":"S2","verdict":"DIFFERENT","note":"다른제품"},
+{"id":"S2-looxloo.com-5","case":"S2","verdict":"DIFFERENT","note":"다른제품"}
+]}

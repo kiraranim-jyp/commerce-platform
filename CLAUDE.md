@@ -802,6 +802,8 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **가격 구역 식별** | `wu-056r1-price-section-identity.test.ts` | 구역 제목 **상호 비포함** · 해외 구역 «안» 에 `₩`/`약`/`≈`/통화기호 **0** · 아이콘 중복 금지 — **Panel mount DOM 으로** 본다 |
 | 🔴 **단계는 넷 · 번호는 파생** | `workflow.ts` · `stage-focus.ts` (WU-058) | 큰 단계 **4** · 라벨에 「소싱」 0 · 단계마다 본문 **하나**(빈 단계 0) · **번호는 배열 순서에서 파생**(하드코딩 금지) |
 | 🔴 **URL 분류기는 양방향 오류** | `classifyUrlShape` (WU-073) | 한국 CMS 목록(`goods_list`·`product_list`·`shopbrand`)이 **PRODUCT_PAGE** · SSG `itemView.ssg` 는 **오차단** — 🔴 「②의 탈락 = 정확한 차단」으로 읽지 않는다 · 고치지 않는다(WU-052 HOLD) |
+| 🔴🔴 **「안 맞는다」를 「틀린 답」으로 읽지 않는다** | WU-093 GT (CEO 라벨 10건) | **False SAME 0 · Human DIFFERENT 8/8 차단 · recall 0/2** ⟹ 증상은 **「답 없음」** 이다 · 🔴 그리고 **같은 화면의 S1(matching)과 S2(coverage)는 서로 다른 문제** 라 한 처방으로 안 풀린다 |
+| 🔴🔴🔴 **S1 의 SAME 2 와 DIFFERENT 1 은 «구별 불가» 다** | `crossSellerReasons` (WU-093) | 축 문자열이 **글자 그대로 같다**(코드 null · 색상 null · 상품군 TOP · 제목겹침 「보보쇼즈」) ⟹ 🔴 **완화 = False SAME +1**(precision 2/3) · 🔴 가격 축은 **만들지 않는다**(S1-1 이 가격 달라도 SAME) |
 | 🔴🔴 **「후보 0」을 보면 하니스부터 의심한다** | `DomesticSourceRef` (WU-092) | `collectionStrategy`/`currency` 가 없으면 운영이 **요청을 안 보내고** `unsupported` 를 준다 · 🔴 `as never` 로 타입을 가리면 **「A_DISCOVERY」라는 거짓 결론** 이 난다(실제로 났다) |
 | 🔴 **한국어 제목은 «띄어쓰기» 로 축이 죽는다** | `coreTitleTokens` (WU-092 관측) | 「허그 헤어리 몬스터 티셔츠」 ↔ 「허그헤어리몬스터티셔츠」가 **브랜드명 한 토큰만** 겹친다 · 🔴 정규화는 **새 매칭 규칙** 이라 금지 · 🔴 전수 빈도 **미측정** |
 | 🔴🔴 **후보 노출 ≠ SAME 판정** | `CandidateComparison` (WU-091) | SAME 이 아닌 후보도 **보인다** · 🔴 단 **기본 접힘**(`details` 에 `open` 금지) · **행마다 판정 라벨** · 「가격비교에 사용되지 않습니다」 명시 — 넷 중 하나라도 빠지면 **2026-09-19 사고**(「유력 후보 5건」)가 되돌아온다 · 🔴 `isVisualCheckTier` 정책은 **불변** |
@@ -853,7 +855,7 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
 
-### 🟡 WU-093 `MI-GT-REVIEW` — **육안 검증 페이지 구축 · CEO 판정 대기** (운영 0)
+### 🟢 WU-093 `MI-GT-REVIEW` — **CEO GT 수신 완료 · 구별 불가가 확정됐다** (운영 0)
 
 🟢 전문 `docs/MI-GT-REVIEW-093.md`. 🔴 운영 변경 **0** · 배포 **0** · DB 읽기만 ·
 API 0 · schema 0 · 8축 0 · **UI 본편 개편 0**. 🔴 검증 페이지는 **`apps/admin` 밖** 이다.
@@ -882,8 +884,46 @@ S2 B226AC042  후보 5 · facts 5/5 · CONFLICT 1 · UNKNOWN 4 · matchLevel low
 🔴 **S1 원상품 이미지가 운영 facts 에 없어**(`imageUrl: null`) 검증 화면용으로만 `og:image` 를
 가져왔고 **화면에 그 사실을 적었다**. 🔴 운영 추출기는 **고치지 않았다**.
 
-🟡 **CEO Action — 육안 판정 1회(10건)**. 보고서 §CEO 에 **「판정에 반영하지 마셔야 하는 것 셋」**
-(상품코드 「없음」 · 브랜드가 판매처 이름 · S2 가격 「없음」)을 적어 뒀다.
+🟢🟢 **CEO 라벨 10/10 수신**(2026-10-19) — **human SAME 2 · DIFFERENT 8 · UNCERTAIN 0**
+```
+시스템 SAME 판정 **0** ⟹ 🟢 **False SAME 0** (틀린 것을 SAME 이라 한 적이 «없다»)
+Human DIFFERENT 8 ⟹ 🟢 **8/8 전건 차단**(양말·앞치마·턱받이·밴드 전부 올바르게 배제)
+Human SAME 2      ⟹ 🔴 **recall 0/2**
+⟹ 🔴 **「너무 안 맞다」의 실체는 「틀린 답」이 아니라 「답 없음」** 이다.
+   거기에 **WU-091 이 후보를 전부 보여주기 시작한 것** 이 겹쳐 인상이 나빠졌다.
+   🔴 그러나 **S2 의 5건은 전부 DIFFERENT 가 맞다** — 그 화면에서 시스템은 틀리지 않았다.
+```
+
+🔴🔴🔴 **가장 중요한 발견 — 셋이 «구별 불가» 하다**:
+```
+S1-1 human **SAME**       sys SIMILAR / very_high / 축 3
+S1-4 human **SAME**       sys SIMILAR / very_high / 축 3
+S1-5 human **DIFFERENT**  sys SIMILAR / very_high / 축 3   ← 축 문자열이 **글자 그대로 같다**
+가를 수 있는 축 전수 — 상품코드 null·null·null · 색상 null·null·null ·
+상품군 TOP·TOP·TOP · 제목겹침 「보보쇼즈」 하나씩 ⟹ 🔴 **전부 동일**
+⟹ 문턱을 낮춰 2건을 살리면 **S1-5 도 같이 열린다** · False SAME **+1** · precision **2/3**
+🔴 **여덟 축에서 측정된 그 패턴의 «아홉 번째» 재현** 이다(완화 = Human DIFFERENT 동반 개방)
+🟡 유일하게 갈리는 것은 **가격**(원상품 88,000 == S1-4 88,000) — 🔴 **구현/제안 안 한다**
+   (새 매칭 규칙 · §8 금지 · 그리고 **S1-1 은 가격이 달라도 SAME** 이라 1/2 밖에 못 잡는다)
+```
+
+🔴🔴 **§11 세 질문의 답 — 두 샘플은 «서로 다른» 처방을 요구한다**:
+```
+S1 → **matching**  동일상품이 후보에 **실재한다**(2건) · 🔴 완화하면 FP 가 같이 열린다
+S2 → **coverage**  5건 전부 다른 상품 ⟹ 🔴 **매칭을 아무리 고쳐도 0** 이다
+```
+
+🔴 **추가 관측(CPO 판단 재료 · CTO 가 고르지 않는다)**:
+```
+⒜ 🔴 **S1-1 이 「베이비」 라인인데 CEO 가 SAME 이라 했다** — WU-069 가 HOLD 한 **그 질문** 이다.
+   🔴 메모가 비어 있어 **인지 여부는 여전히 미확인** · **N=1 로 그 HOLD 를 풀지 않는다**
+⒝ 🟢 **matchLevel very_high 5/5** — WU-017/088 의 「전건 low」와 **분모가 다르다**
+   (그쪽은 AI URL 후보 · 이쪽은 **등록부 검색 후보**) ⟹ WU-088 의 가격 자격 필터를
+   **통과하는 모양이 실재한다**. 🔴 1상품이라 일반화하지 않는다
+⒞ 🔴 **matchLevel 과 verdict 가 갈린다** — very_high 인데 CONFLICT 가 2건이다
+```
+
+🔴 **코드를 한 줄도 바꾸지 않았다**(§8 금지 전수 준수) · **CEO Action 없음**.
 
 ### 🔴🔴 WU-092 `MI-CANDIDATE-CAUSE` — **두 샘플은 «서로 다른» 문제다** (구현 0)
 
