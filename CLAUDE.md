@@ -793,6 +793,7 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **사람 검토는 시스템 판정을 덮지 않는다** | `GeminiTransientCandidates` · `MiPanelView` (WU-081) | `gt-verdict`(시스템)와 `gt-review-result`(사람)는 **다른 state·타입·DOM** · 클릭이 `fetch` **0회** · MI/가격/알림/판매판정/등록 payload 에 **들어가지 않는다** · 🔴 `onReview` 없는 구역엔 버튼이 **렌더되지 않는다** |
 | 🔴 **국내 행은 «옮긴다» 복제하지 않는다** | `TransientCandidateSections` (WU-081) | `market==="KR"` 행만 🇰🇷 구역으로 이동 · 기존 두 구역은 나머지 · **총 행 수 불변**(계약) |
 | 🔴🔴🔴 **여덟 보호축을 다시 파지 않는다** | WU-063~080 통합 (CPO CLOSED 2026-10-18) | **COLOR · TITLE · MODEL_CODE · LINE · MARKET · PRICE · LANGUAGE · BRAND** — 여덟 축 전부에서 「완화하면 Human DIFFERENT 가 같이 열린다」가 **측정됐다** · 🔴 **국내 recall 은 현 구조의 한계로 «확정»** · 🔴 「gate 가 너무 엄격하다」로 읽지 않는다 · 🔴 **이 축들을 다시 파는 WU 를 만들지 않는다**(새 경로는 **CPO 가 지정**) |
+| 🔴🔴 **가격 상세확인은 «상한» 이 아니라 «자격» 에서 막힌다** | `selectCandidatesForDetailConfirmation` (WU-088) | ⒜ matchLevel 자격 필터에서 **64/64 전건 탈락** · ⒝ 상한 2 는 **발화 0** ⟹ 🔴 **상한을 올려도 변화 0** · 「비용 게이트가 낮다」로 읽지 않는다 |
 | 🟢 **헤더 초과만 직접 스택으로** | `domain-rate-limiter.ts` `isHeadersOverflow` (WU-084) | `UND_ERR_HEADERS_OVERFLOW` **전용 코드** 로만 판별(문구 금지) · **overflow 에서만** 1회 재시도 · 기존 `retryThroughDirectStack`(64KB · SSRF 가드) 재사용 · hostname 조건 **0** · 실패 시 **원래 오류 전파** |
 | 🔴 **domain = brand 금지(계약으로 잠김)** | `wu-080-brand-producer.test.ts` | 도메인/판매처 이름으로 브랜드를 만들면 **2 FAIL** · 🔴 샵이 `brand` 자리에 **자기 이름** 을 적는 경우가 실재한다(biskuit 「비스킷」) |
 | 🔴🔴 **BRAND_UNCONFIRMED 는 «정확한 상태» 다** | `cross-seller.ts:751·999` (WU-080) | 13건 중 6건은 **원상품 brand 가 null** 이라 걸린다(후보는 있다) · 🔴 원상품 공백을 메우면 보류→**충돌** 로 악화(SAME 4 더 막힘 · DIFFERENT 2 열림) |
@@ -834,6 +835,37 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
+
+### 🔴 WU-088 `MI-PRICE-GATE` — **비용 게이트는 «한 번도 발화하지 않는다» · REJECT** (구현 0)
+
+🟢 전문 `docs/MI-PRICE-GATE-088.md`. 🔴 운영 변경 **0** · 배포 0 · 추가 HTTP **0**.
+
+🔴🔴🔴 **CPO 질문의 답 = 0 이고, 분모 자체가 0 이다.**
+
+```
+게이트는 «두 겹» 이다 (price-confirmation.ts):
+  ⒜ **자격 필터**  matchLevel ∈ {very_high, high, medium} OR truth === SAME_MODEL_VARIANT
+  ⒝ **샵당 상한**  MAX_DETAIL_CONFIRMATIONS_PER_SHOP = **2**
+
+후보 64 · matchLevel 분포 **{"low": 64}** — **전건 low**
+  A 상세확인 대상        **0**
+  B1 ⒜ 자격 필터 탈락    **64**(국내 20 · 해외 44)
+  B2 ⒝ 상한에 밀림       **0**        ← 🔴 **상한에 «도달조차» 안 한다**
+  현재 가격 확보          12(국내 9 · 해외 3) ← 🟢 상세확인과 **무관**
+                                        (`factsFromProductUrl` 의 JSON-LD/microdata)
+CF 대상 0 · 추가 HTTP **0** · 추가 회수 **0** · incremental value **0**
+⟹ 상한을 2 → N 으로 올려도 **변화가 없다.**
+```
+
+🔴 **WU-087 의 내 서술을 정정한다** — 「`selectCandidatesForDetailConfirmation` 이 0 이라
+보강이 안 돈다」는 맞지만 원인은 **상한이 아니라 자격 필터** 다.
+🔴 **B1 과 B2 를 합치지 않았다**(CPO §3) — 합치면 「비용 게이트를 풀면 N 건이 산다」가 거짓이 된다.
+🔴 CF 에서 `matchLevel` 을 **주입하려다 멈췄다**(금지) — 운영이 만든 후보 **그대로** 를
+한 개짜리 배열로 넘겨 **상한만** 비활성화했다.
+
+🔴🔴 **그래서 「가격 gate 를 올리자」는 근거가 전혀 없다.** 진짜 owner 는 **matchLevel** 이고
+그것은 **이미 닫힌 축** 이다(WU-017: 적중률 3.8% · `high` **0건** · threshold 완화 **금지**).
+🟢 남는 비(非)코드 레버는 WU-087 의 그것 하나 — **AI 에게 「상품 상세 URL 만」 요구하기**.
 
 ### 🟡 WU-087 `MI-AI-FUNNEL` — **배선은 끝났다 · 병목은 «가격» 과 «AI URL 품질»** (구현 0)
 
