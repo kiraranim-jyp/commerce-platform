@@ -163,6 +163,16 @@ function headerRecord(init?: RequestInit): Record<string, string> | undefined {
   return headers as Record<string, string>;
 }
 
+/**
+ * 🔴 WU-084 — **헤더 초과인지** 를 runtime 에서 가른다.
+ *    undici 가 전용 코드를 준다(`UND_ERR_HEADERS_OVERFLOW`). 🔴 `TypeError: fetch failed`
+ *    라는 **문구만 보고 판단하지 않는다** — DNS 실패·연결 거부도 같은 문구다(실측).
+ */
+function isHeadersOverflow(error: unknown): boolean {
+  const cause = (error as { cause?: { code?: unknown } } | null)?.cause;
+  return cause?.code === "UND_ERR_HEADERS_OVERFLOW";
+}
+
 async function retryThroughDirectStack(url: string, init?: RequestInit): Promise<Response | null> {
   const direct = await fetchHtmlDirect(url, undefined, headerRecord(init));
   if (!direct) return null;
@@ -254,7 +264,30 @@ async function fetchGuarded(url: string, init?: RequestInit): Promise<Response> 
 export async function fetchWithDomainRateLimit(url: string, init?: RequestInit): Promise<Response> {
   const release = await acquireDomainSlot(url);
   try {
-    let response = await fetchGuarded(url, init);
+    /**
+     * 🔴🔴 WU-084 — **헤더 초과만** 직접 스택으로 되돌린다.
+     *
+     * 실측: 일부 사이트가 응답 헤더를 **19KB** 보낸다(Smallable). Node 의 `fetch`
+     * (undici) 기본 상한은 **16KB** 라 본문을 받기도 전에 끊긴다 —
+     * `TypeError: fetch failed` + `cause.code = UND_ERR_HEADERS_OVERFLOW`.
+     *
+     * 🟢 **새 fetch 방식을 만들지 않는다** — 429 폴백이 이미 쓰는
+     *    `retryThroughDirectStack`(= `fetchHtmlDirect`)을 그대로 쓴다. 그 경로는
+     *    **`maxHeaderSize: 64KB`** 이고 `classifyOutboundUrl` + `guardedLookup`
+     *    (WU-025/026 SSRF·DNS rebinding 계약)을 **그대로 지킨다**.
+     * 🔴 **hostname 조건이 없다.** 그리고 **이 오류에서만** 재시도한다 —
+     *    DNS 실패(`ENOTFOUND`)·연결 거부·timeout 은 **그대로 던진다**(무차별 재시도 금지).
+     * 🔴 관측 분모는 **91 URL / 41 호스트 중 1 호스트** 다. 일반화하지 않는다.
+     */
+    let response: Response;
+    try {
+      response = await fetchGuarded(url, init);
+    } catch (error) {
+      if (!isHeadersOverflow(error)) throw error;
+      const direct = await retryThroughDirectStack(url, init);
+      if (!direct) throw error;
+      return direct;
+    }
     recordRateLimitResponse(url, response.status, response.headers.get("retry-after"));
 
     let attempt = 0;

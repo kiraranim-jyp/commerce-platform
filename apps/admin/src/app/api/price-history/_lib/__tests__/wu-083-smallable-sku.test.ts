@@ -35,11 +35,27 @@ describe("WU-083 — Smallable 판매처 SKU (캐시 필요)", () => {
   (READY ? it : it.skip)("① fetch · ② 추출 · ③ 품번 부재 · control", () => {
     const html = readFileSync(HTML, "utf8");
     const cmp = JSON.parse(readFileSync(CMP, "utf8")) as { name: string | null; sku: string | null; color: string | null; price: string | null; cur: string | null; boboCode: string[] }[];
-    const pages = JSON.parse(readFileSync(PAGES, "utf8")) as Record<string, { owner: { status: string; fetchPath: string } }>;
+    const pages = JSON.parse(readFileSync(PAGES, "utf8")) as Record<
+      string,
+      { owner: { status: string; fetchPath: string; httpCalls?: number; brand?: string | null; price?: unknown; modelCode?: string | null } }
+    >;
 
-    /* ── ① 운영은 못 받는다 ── */
-    expect(pages.SMALLABLE.owner.status).toBe("UNREACHABLE");
+    /*
+     * ── ① 🟢🟢 **WU-084 가 이 단언을 뒤집었다 — 그것이 수정의 증거다.**
+     *
+     * 🔴 WU-083 측정 시점: `UNREACHABLE`(헤더 19KB > Node 기본 16KB).
+     * 🟢 WU-084 가 `UND_ERR_HEADERS_OVERFLOW` 일 때만 **기존 직접 스택**
+     *    (maxHeaderSize 64KB · SSRF 가드 유지)으로 되돌리게 해서 **`OK`** 가 됐다.
+     * 🔴 원인 기록은 지우지 않는다 — fetchPath 는 여전히 PLAIN_HTML 이고
+     *    httpCalls 도 **1** 이다(요청이 늘지 않았다).
+     */
+    expect(pages.SMALLABLE.owner.status).toBe("OK");
     expect(pages.SMALLABLE.owner.fetchPath).toBe("PLAIN_HTML");
+    expect(pages.SMALLABLE.owner.httpCalls).toBe(1);
+    /** 🟢 그리고 **다섯 축 중 셋** 이 실제로 들어온다(품번은 여전히 없다 — 아래 ③). */
+    expect(pages.SMALLABLE.owner.brand).toBe("Bobo Choses");
+    expect(pages.SMALLABLE.owner.price).toEqual({ amount: 82673, currency: "KRW" });
+    expect(pages.SMALLABLE.owner.modelCode ?? null).toBeNull();
 
     /* ── ② 받아 오면 무엇이 읽히는가 ── */
     const lds = [...html.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)].map((m) => m[1]);

@@ -793,6 +793,7 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **사람 검토는 시스템 판정을 덮지 않는다** | `GeminiTransientCandidates` · `MiPanelView` (WU-081) | `gt-verdict`(시스템)와 `gt-review-result`(사람)는 **다른 state·타입·DOM** · 클릭이 `fetch` **0회** · MI/가격/알림/판매판정/등록 payload 에 **들어가지 않는다** · 🔴 `onReview` 없는 구역엔 버튼이 **렌더되지 않는다** |
 | 🔴 **국내 행은 «옮긴다» 복제하지 않는다** | `TransientCandidateSections` (WU-081) | `market==="KR"` 행만 🇰🇷 구역으로 이동 · 기존 두 구역은 나머지 · **총 행 수 불변**(계약) |
 | 🔴🔴🔴 **여덟 보호축을 다시 파지 않는다** | WU-063~080 통합 (CPO CLOSED 2026-10-18) | **COLOR · TITLE · MODEL_CODE · LINE · MARKET · PRICE · LANGUAGE · BRAND** — 여덟 축 전부에서 「완화하면 Human DIFFERENT 가 같이 열린다」가 **측정됐다** · 🔴 **국내 recall 은 현 구조의 한계로 «확정»** · 🔴 「gate 가 너무 엄격하다」로 읽지 않는다 · 🔴 **이 축들을 다시 파는 WU 를 만들지 않는다**(새 경로는 **CPO 가 지정**) |
+| 🟢 **헤더 초과만 직접 스택으로** | `domain-rate-limiter.ts` `isHeadersOverflow` (WU-084) | `UND_ERR_HEADERS_OVERFLOW` **전용 코드** 로만 판별(문구 금지) · **overflow 에서만** 1회 재시도 · 기존 `retryThroughDirectStack`(64KB · SSRF 가드) 재사용 · hostname 조건 **0** · 실패 시 **원래 오류 전파** |
 | 🔴 **domain = brand 금지(계약으로 잠김)** | `wu-080-brand-producer.test.ts` | 도메인/판매처 이름으로 브랜드를 만들면 **2 FAIL** · 🔴 샵이 `brand` 자리에 **자기 이름** 을 적는 경우가 실재한다(biskuit 「비스킷」) |
 | 🔴🔴 **BRAND_UNCONFIRMED 는 «정확한 상태» 다** | `cross-seller.ts:751·999` (WU-080) | 13건 중 6건은 **원상품 brand 가 null** 이라 걸린다(후보는 있다) · 🔴 원상품 공백을 메우면 보류→**충돌** 로 악화(SAME 4 더 막힘 · DIFFERENT 2 열림) |
 | 🔴 **generic 숫자 parser 금지(계약으로 잠김)** | `wu-079-price-producer.test.ts` | 「N원」을 가격으로 쓰면 **4 FAIL** · 🔴 `class`(price/sale/cost) 축은 성공군에서 **5/9 오추출**(배송비·적립금·다른상품) |
@@ -833,6 +834,37 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
+
+### 🟢🟢 WU-084 `MI-HEADER-OVERFLOW` — **공통 fetch 복구 · 구현/배포**
+
+🟢 전문 `docs/MI-HEADER-OVERFLOW-084.md`. 운영 **1 파일 · +33줄** · 새 fetch 방식 **0** ·
+hostname 조건 **0** · MI/보호축/가격/시장 **0**.
+
+```
+🟢 판별   err.cause.code === "UND_ERR_HEADERS_OVERFLOW"  (undici 전용 코드)
+   🔴 `TypeError: fetch failed` **문구로 판단하지 않는다** — DNS 실패·연결 거부도 같은 문구다
+🟢🟢 복구  **429 폴백이 이미 쓰는** `retryThroughDirectStack` → `fetchHtmlDirect` 재사용
+   그 경로가 **maxHeaderSize 64KB** 이고 `classifyOutboundUrl`+`guardedLookup`
+   (WU-025/026 SSRF·DNS rebinding 계약)을 **그대로 지킨다**
+   🔴 `node:https` 를 새로 부르면 그 가드를 **우회** 했을 것이다 — 그래서 안 만들었다
+🔴 **overflow 에서만** 재시도 · 직접 스택도 실패하면 **원래 오류를 던진다**
+```
+
+🔴 **분모를 숨기지 않는다** — 91 URL / 41 호스트 전수에서 **overflow 1건 / 1 호스트**
+(나머지: 정상 76 · network 5 · 404/403/503 9). ⟹ §7 조건 ⑩만 약하고 나머지 9개는 충족.
+
+🟢🟢 **Smallable E2E — `UNREACHABLE` → `OK`** · `httpCalls` **1**(요청 불변) ·
+brand **"Bobo Choses"** · price **82673 KRW** · 🔴 `modelCode` **null 그대로**
+(WU-083 REJECT 유지 — 품번을 **만들지 않았다**).
+
+🔴🔴 **운영상 의미를 과장하지 않는다** — 이것은 「Smallable 을 비교에 넣었다」가 아니라
+**「입구를 열었다」** 다. 품번 없음 · `colorText` null(WU-064) · `.com`+KRW ⟹ **UNKNOWN**
+(WU-051 대로 올바르다) ⟹ **어느 금액 축에도 안 들어간다.** 🟢 화면 후보로는 보인다.
+
+🟢 **회귀가 수정을 증명했다** — WU-083 의 `UNREACHABLE` 단언이 **FAIL** 로 뒤집혔다.
+계약을 갱신하며 `httpCalls 1`·brand·price 단언을 **추가** 했고 원인 기록은 주석에 남겼다.
+🟢 mutation M1(무차별 retry) 1F · M2(폴백 제거) 2F · M3(조용히 삼킴) 1F ·
+**M4(「문구」로 판별) 1F** → 복구 5 passed.
 
 ### 🔴 WU-083 `MI-SELLER-SKU` — **품번 복원 REJECT · 원인은 «헤더 크기»** (구현 0)
 
