@@ -1014,6 +1014,43 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
 
+### 🔴🔴 WU-115 `MI-DOMESTIC-SUPPLY` — **국내 공급 부족 확정 · 어댑터가 막는다** (구현 0)
+
+🟢 전문 `docs/MI-DOMESTIC-SUPPLY-115.md`. 🔴 운영 변경 **0** · DB 변경 **0** · Registry 변경 **0** · 가격 **0**.
+
+🔴 **`MANUAL` 은 12곳이 아니라 13곳이다**(DB 실측) — 지시서/헌장의 「12」를 정정한다.
+
+🔴🔴 **STEP 2 결과 — 새 국내 후보 0건이고, 원인이 「MANUAL 이라서」가 아니다**:
+```
+판매처 4곳(chouchouenfant · coconjennie · karymarket · nokimore)에 반사실로
+**AUTO_SCRAPE 를 세워도** 전부 `status: "unsupported"` · 후보 **0**
+🔴 게이트가 **둘** 이다(index.ts:271·278):
+  ① 전략이 AUTO_* 가 아니면 unsupported
+  ② **findPriceSourceAdapter(domain,"DOMESTIC") === null** 이면 unsupported  ← 🔴 여기서 막힌다
+⟹ 🔴🔴 **등록부 전략을 바꿔도 후보는 0 이다. 막는 것은 «도메인 어댑터 부재» 다.**
+🟢 국내 어댑터는 **8개** — looxloo · bobochoses(**disabled**) · rulii · skysport(**TENNIS**) ·
+   deuxbebe · littleluna · chocoel · foretforet ⟹ 아동의류 실효 **6곳**
+🔴 등록부 34곳 중 **26곳은 어댑터가 없다** — 「등록부에 있다」≠「뒤질 수 있다」
+```
+
+🟢 **조사 전에 대상을 가렸다** — 포털/오픈마켓 **9곳은 검색하지 않았다**(약관 · 메모
+`portal-scraping-blocked-by-terms`). robots 13곳 전수 조회 — 200 **11** · 실패 2 ·
+**전면차단 4**(musinsa · wconcept · kidikidi · shoppinghow — 전부 포털).
+
+🔴🔴 **STEP 4 성립 — 「현재 Registry 구조로는 국내 동일상품 후보 공급이 부족하다」 확정**:
+```
+① MANUAL 13 중 판매처는 **4** 이고 그 4곳은 **어댑터가 없어 검색 자체가 안 된다**
+② 나머지 **9곳은 포털** 이고 약관으로 자동수집 대상이 아니다
+③ 아동의류 실효 6곳은 WU-114 에서 **정상 응답 + 후보 0**(그 상품을 안 판다)
+⟹ 🔴 공급을 늘리는 길은 **샵별 어댑터 추가** 하나이고 그것은 §12-0 이 **금지한 방향** 이다
+   ⇒ 🔴 **CTO 는 어댑터를 만들지 않았다.** 다음 결정은 CPO 몫이다
+🟡 참고 — 현재 국내 후보 3건은 **전부 「AI URL 풀」** 산출이다(WU-114) ⇒
+   🔴 지금 국내 공급은 **등록부가 아니라 AI 가 하고 있다**(그 확대는 AI 정책 영역)
+```
+
+🔴 **측정불가로 남긴 것** — 판매처 4곳이 그 상품을 **파는지 안 파는지는 모른다**
+(검색이 돌지 않았으므로 「없다」가 아니라 **「확인 불가」**). 포털 9곳도 「후보 0」으로 세지 않는다.
+
 ### 🔴🔴 WU-114 `MI-CANDIDATE-INVENTORY` — **국내는 「노출」이 아니라 「공급」 문제다** (구현 0)
 
 🟢 전문 `docs/MI-CANDIDATE-INVENTORY-114.md`. 🔴 운영 변경 **0** · 배포 0 · 가격 작업 **0**.
