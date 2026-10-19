@@ -1014,6 +1014,24 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
 
+### 🟢 WU-125 `MI-SLEEVE-SAMPLE` — **소매 길이 차이는 반복되지 않았다 · 8축 유지** (구현 0)
+
+🟢 전문 `docs/MI-SLEEVE-SAMPLE-125.md` · 검토화면 artifact 5975df8e. 🔴 운영 변경 **0** · 가격 **0**.
+
+```
+새 표본 **18**(host 9 · WU-121 의 679 에서 · **새 AI/검색 0** · WU-122 의 24건 제외)
+상품확인 **12** · SAME **1** · PRESUMED **1** · **CONFLICT 10** · UNKNOWN 6
+🟢🟢 CONFLICT 10 은 전부 **다른 품번** 이다(B226AB098·AB042·AB041·AC027·**AC141** …)
+   특히 junioredition 「Booty Ghosts T-Shirt」는 **제목이 거의 같은데 품번 AC141** 이라 막혔다
+   ⟹ 🟢 **품번 충돌 축이 살아 있다는 직접 증거**
+🔴🔴 **c2 유형(제목 비슷·품번 null·색상 null·blocker 0 → SAME) 재현 0/18**
+⟹ 🔴 **소매 길이 축을 열 근거가 추가되지 않았다** ⟹ 🟢 **8축 그대로 유지**
+```
+
+🔴 「소매 길이가 원인이 아니다」로 **단정하지 않는다** — **이 표본에서 재현되지 않았다** 가 정확하다.
+🔴 표본 **18/679(2.7%)** · 상품확인 실패 6건 원인 **미규명**.
+🟡 **CEO Action — 2건만** 판정(화면 · CTO 가 미리 채운 판정 0).
+
 ### 🔴🔴 WU-123/124 — **CEO GT 7건 + 오판 3건의 증거** (구현 0 · 가격 0)
 
 🟢 전문 `docs/MI-FP-EVIDENCE-124.md` · 검토화면 artifact 5796fa20. 🔴 운영 변경 **0**.

@@ -9,7 +9,9 @@ import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36";
-const SRC = path.join(process.env.TEMP ?? ".", "mi-p0-02", "wu-122.json");
+/** 🔴 WU-125 에서 재사용한다 — 입력 파일과 출력 파일만 env 로 바꾼다(로직 동일). */
+const SRC = path.join(process.env.TEMP ?? ".", "mi-p0-02", process.env.WU_SRC ?? "wu-122.json");
+const DEST = process.env.WU_DEST ?? "docs/wu-123-gt-review.html";
 const MAX = 900_000;
 
 const ORIGINS = {
@@ -87,7 +89,7 @@ const main = async () => {
   }
 
   writeFileSync(
-    "docs/wu-123-gt-review.html",
+    DEST,
     `<title>새로 찾은 후보 ${rows.length}건 — 같은 상품인지 봐 주십시오</title>
 <style>
 :root{--ink:#17150f;--mut:#6f6c62;--line:#ded8c8;--bg:#faf7ef;--ok:#1f6b3a;--no:#9a2f2f;--acc:#8c3b12}
@@ -182,6 +184,6 @@ ${cards.join("\n")}
 })();
 </script>`,
   );
-  console.log(`rows=${rows.length} → docs/wu-123-gt-review.html`);
+  console.log(`rows=${rows.length} → ${DEST}`);
 };
 main();
