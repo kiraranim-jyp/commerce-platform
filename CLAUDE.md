@@ -834,6 +834,36 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
 
+### 🔴 WU-083 `MI-SELLER-SKU` — **품번 복원 REJECT · 원인은 «헤더 크기»** (구현 0)
+
+🟢 전문 `docs/MI-SELLER-SKU-083.md`. 🔴 운영 변경 **0** · MI 0 · 보호축 0 ·
+AI/Vision/OCR/검색엔진 **0** · 배포 0.
+
+🔴🔴 **세 단계가 갈렸다**:
+```
+① 데이터를 못 가져온다  🔴🔴 **원인이 파싱이 아니라 «응답 헤더 크기» 다**
+     운영 owner → UNREACHABLE · raw fetch → TypeError
+     🟢 실측: 16,384B(Node 기본) **Header overflow** → 65,536B **200 · 본문 745KB · 헤더 19,197B**
+     🟢 메모 `smallable-market-is-shipping-destination` 과 WU-016 의 UNREACHABLE 이 **같은 원인**
+     🔴 **일반화되지 않는다** — WU-076 의 UNREACHABLE 15건 중 헤더 원인 **0건**(분모 1 호스트)
+② 가져오면 읽히는가     🟢 **JSON-LD Product 가 정상** — brand `Bobo Choses` · color `Ecru` ·
+     `82673 KRW` · 사이즈 141 declination. 🟢 공통 extractor 가 그대로 읽을 모양이다
+③ 제조사 품번           🔴🔴 **페이지에 «없다»** — `B226AC112` 0건 · 품번 «모양» 0건 · `mpn` null
+     🔴 **8건 전수** 에서 0건(1건이 아니다). 전부 Smallable 자체 SKU(`AAA…`) · 상품번호(`430700`)
+```
+
+🔴 **CPO §3 분기 C 확정** ⟹ **추론 금지 · Smallable 전용 mapping 금지 · §10 GO 조건 ①⑥ 불충족**
+⟹ 🔴 **REJECT(품번 복원).** 🟢 control — 공식몰 OK · 국내 OK(제목에 품번) · SSG 는 WU-073 오차단.
+
+🟡 **별개 레버 하나(구현 0 · CPO 판정)** — Smallable 이 MI 에 못 들어가는 **직접** 원인은
+품번이 아니라 **fetch 실패** 다. 🟢 그 페이지엔 WU-016 이 「품번 없이 SAME(0.81)」에 닿을 때
+쓴 **다섯 축이 전부 구조화 데이터로** 있다. 🟡 최소안 = `fetchPlainHtmlWithFinalUrl`(WU-075 의
+**단일 fetch owner**)에서 **실패 시 1회만** `node:https`(maxHeaderSize 64KB) 재시도
+(hostname 조건 0 · 성공 경로 불변). 🔴 **분모 1 호스트** 라 이 트랙 기준(「N=1 로 일반화 금지」)에
+걸리고 이 WU 의 GO 조건이 승인하지 않는다 ⟹ **CTO 가 운영 fetch 를 임의로 바꾸지 않았다.**
+
+🟡 **CEO Action — 육안 비교 1회**(보고서 §11 · Smallable 4개 상품에 Bobo 품번이 정말 없는지).
+
 ### 🟢🟢 WU-082 `MI-AUTO-CHECK-WIRING` — **국내 가격비교 미노출 원인 확정 + 최소 수정**
 
 🟢 전문 `docs/MI-AUTO-CHECK-WIRING-082.md`. 🔴 API 0 · schema 0 · DB 0 · MI 0 · 가격 0 ·
