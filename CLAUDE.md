@@ -1014,6 +1014,38 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
 
+### 🔴🔴 WU-123/124 — **CEO GT 7건 + 오판 3건의 증거** (구현 0 · 가격 0)
+
+🟢 전문 `docs/MI-FP-EVIDENCE-124.md` · 검토화면 artifact 5796fa20. 🔴 운영 변경 **0**.
+
+🟢 **CEO GT(WU-123) — 7/7**: SAME **4** · DIFFERENT **3** · UNCERTAIN 0.
+🟢 **놓친 동일상품 0**(human SAME 4건 전부 SAME/PRESUMED 로 올라왔다).
+
+🔴🔴 **그런데 오판 3건은 «같은 문제가 아니다»**:
+```
+c4 human DIFF · sys **PRESUMED_SAME**(보류) · blockers **NO_TITLE_OVERLAP · MATERIAL**
+c7 human DIFF · sys **PRESUMED_SAME**(보류) · blockers **NO_TITLE_OVERLAP · GARMENT_FORM**
+   🟢 c7 은 이유까지 적었다 — 「보류: 옷의 형태 **SHIRT ↔ SWEATSHIRT**」
+   ⟹ 🔴 **MI 판정 결함이 아니다.** 문제는 **PRESUMED_SAME 이 금액 집계에 들어가는 것**
+      (tier **COMPARISON** · WU-112 의 eraldo 와 같은 모양)
+c2 human DIFF · sys 🔴 **SAME** · blockers **0** ⟸ 🔴🔴 **진짜 오판은 이것 하나**
+   축 5개(제목 booty/ghosts · TOP↔TOP · 소재 cotton · KIDS · AGE)로 **SAME_MIN_AXES=5 를 정확히 채웠다**
+   🔴 식별력 있는 축은 **제목 하나** 이고 **품번·색상이 둘 다 null** 이다
+```
+
+🟢🟢 **사람이 가른 축은 «소매 길이» 다** — c1 제목에 **Long Sleeve** 가 있고 human SAME ·
+c2 는 없고 human DIFFERENT(「긴팔이 아니다」). 🔴 그런데 `GARMENT_FORM` 은 **둘 다 SHIRT** 로
+읽어 발화하지 않는다(그 축은 **옷 종류** 를 보고 **소매 길이를 보지 않는다**). 🔴 **N=2 · 일반화 금지.**
+
+🔴 **기존 구조 안에 c2 를 막는 안전한 레버가 없다** — 색상 null · 품번 null ·
+GARMENT_FORM 미발화 · 축 수 올리기는 **threshold** · 소매 길이는 **새 축** ⟹ **둘 다 금지축** .
+🟡 반대로 **c4·c7 최소안은 기존 축만으로 가능** — 「**blocker 있는 PRESUMED_SAME 을 금액
+집계에서 제외**」(새 축 0 · threshold 0 · 이미 계산된 blocker 를 읽기만 한다). 🔴 단 **가격 집계
+변경** 이라 §00-B 보류에 걸린다 ⟹ **가격 단계를 열 때 1순위 후보** 로 보관한다.
+
+🔴 **정확도를 갈라 적는다** — 확정 SAME 4건 중 human SAME **3**(precision **3/4**) ·
+보류 3건 중 human SAME **1**. 🔴 WU-123 의 「4/5」는 둘을 **합친** 값이다.
+
 ### 🟢🟢 WU-122 `MI-SAMPLE-MI` — **신규 후보에 MI SAME 이 실재한다** (구현 0)
 
 🟢 전문 `docs/MI-SAMPLE-MI-122.md`. 🔴 운영 변경 **0** · 1-hop **0** · 가격 **0**.
