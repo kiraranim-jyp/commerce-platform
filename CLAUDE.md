@@ -835,6 +835,37 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
 
+### 🟡 WU-085 `MI-B226AC112-E2E` — **백엔드는 작동한다 · 후보가 «생성되지 않는다»** (구현 0)
+
+🟢 전문 `docs/MI-B226AC112-E2E-085.md`. 🔴 운영 변경 **0** · 배포 0.
+
+🔴🔴 **CPO §5 의 분리 답 — 둘 다 아니다**:
+```
+URL 을 «넣으면» 백엔드는 **끝까지 간다**(실측):
+   miniboutique  code **B226AC112** · ₩108,000 · VERIFIED_CURRENT · market **KR** 🟢
+   smallable     market UNKNOWN(KRW_WITHOUT_DOMAIN_EVIDENCE) 🟢 올바르다(WU-051)
+   SSG           **NOT_PRODUCT_PAGE** 🔴 WU-073 이 기록한 «오차단»(WU-052 HOLD 자리)
+🔴 그런데 **그 샵들이 국내 등록부에 없다** — control 11곳 중 등록부에 있는 것은 **3곳**
+   (gmarket · littleluna · ssg[**NOT_AVAILABLE**]) · **miniboutique·bbambam·feelway·
+   beaumonde·coupleshot 은 없다**(등록부 전체 34)
+🔴 그리고 자동 1회차 POST `/check` body 는 `{snapshotId}` 뿐 ⟹ **URL 풀도 안 돈다**
+⟹ 자동 분석에서 그 후보는 **존재한 적이 없다.** UI 가 숨긴 것도, 백엔드가 제거한 것도 아니다.
+```
+
+🟢 **WU-009/010 의 결론이 이 control 에서 재현됐다** — 「`NO_LINK` 의 원인은 검색이 아니라
+**등록부**」. 🔴 새 원인이 아니다.
+
+🔴 **최소 수정이 없다** — 등록부 추가(§12-0 금지) · 자동 1회차에 넣을 URL 없음 ·
+SSG 분류기(WU-052 HOLD) · 8축 완화(금지). ⟹ 🟡 **HOLD**.
+
+🟢🟢 **그리고 이 WU 는 「국내 가격비교가 고장났다」를 반증했다** — 후보 URL 하나만 주어지면
+**fetch → 품번 → 가격 → 시장 → 국내 자격** 까지 간다. 막힌 것은 **「그 URL 이 어디서 오는가」** 다.
+
+🔴 **내가 두 번 틀렸고 둘 다 적는다** — ⒜ `priceTierFromLink` 에 `{matchTruth:null,
+verified:false}` 를 **지어넣어** COMPARISON 을 얻었다(이 트랙 **2번째** 같은 실수) →
+**tier 를 「측정불가」로 되돌렸다** ⒝ 등록부 칸을 `scope` 로 추측했다(실제 `category_scope` ·
+이 트랙 **18번째**) → `information_schema` 로 읽어 고쳤다.
+
 ### 🟢🟢 WU-084 `MI-HEADER-OVERFLOW` — **공통 fetch 복구 · 구현/배포**
 
 🟢 전문 `docs/MI-HEADER-OVERFLOW-084.md`. 운영 **1 파일 · +33줄** · 새 fetch 방식 **0** ·
