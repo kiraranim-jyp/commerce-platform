@@ -1,0 +1,87 @@
+<title>따져 화면 확인 — 동일상품 단계</title>
+<style>
+:root{--ink:#17150f;--mut:#6f6c62;--line:#ded8c8;--bg:#faf7ef;--ok:#1f6b3a;--no:#9a2f2f;--acc:#8c3b12}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.7 -apple-system,"Segoe UI",system-ui,sans-serif}
+.wrap{max-width:820px;margin:0 auto;padding:40px 20px 80px}
+h1{font-size:27px;margin:0 0 8px;letter-spacing:-.01em}
+.sub{color:var(--mut);font-size:15px;margin:0 0 28px}
+.step{background:#fff;border:1px solid var(--line);border-radius:4px;padding:20px 22px;margin:0 0 18px}
+.step h2{font-size:19px;margin:0 0 4px}
+.num{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fdfcf8;font-size:15px;font-weight:700;margin-right:9px;vertical-align:2px}
+.big{font-size:40px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:10px 0 2px}
+.ok{color:var(--ok)}.no{color:var(--no)}
+.row{display:flex;gap:16px;flex-wrap:wrap;margin:14px 0 0}
+.box{flex:1 1 240px;border:1px solid var(--line);border-radius:4px;padding:14px 16px;background:#fffdf7}
+.box.good{border-left:4px solid var(--ok)}
+.box.bad{border-left:4px solid var(--no)}
+.lab{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin-bottom:4px}
+p{margin:8px 0 0}
+.where{background:#f3f0e7;border-radius:3px;padding:10px 13px;font-size:15px;margin:12px 0 0}
+.calm{border-left:4px solid var(--acc);background:#fffdf7}
+ul{margin:8px 0 0;padding-left:22px}
+li{margin:6px 0}
+a.btn{display:inline-block;margin:6px 0 0;padding:11px 18px;background:var(--ink);color:#fdfcf8;text-decoration:none;border-radius:4px;font-size:16px}
+.small{font-size:14px;color:var(--mut)}
+</style>
+<div class="wrap">
+<h1>따져 화면 확인 — 딱 두 가지만</h1>
+<p class="sub">숫자 두 개만 보시면 됩니다. 나머지는 보지 않으셔도 됩니다.</p>
+
+<a class="btn" href="https://ttaejyo.vercel.app/pipeline" target="_blank" rel="noreferrer">따져 열기 →</a>
+<p class="small">로그인 후, 상품 <b>B226AC009</b>(허그 헤어리 몬스터 티셔츠) 화면을 열어 주십시오.</p>
+
+<div class="step">
+  <h2><span class="num">1</span>해외 가격 중에 <b>달러 가장 싼 값</b></h2>
+  <div class="where">화면에서 <b>「해외 동일상품 참고가격」</b> 이라고 적힌 칸을 보십시오.
+  그 안에 달러($) 금액이 여러 개 있으면 <b>그중 가장 싼 값</b>을 보시면 됩니다.</div>
+  <div class="row">
+    <div class="box good">
+      <div class="lab">이렇게 보이면 정상</div>
+      <div class="big ok">$58</div>
+      <p>고친 것이 제대로 반영됐습니다.</p>
+    </div>
+    <div class="box bad">
+      <div class="lab">이 숫자가 보이면 문제</div>
+      <div class="big no">$53</div>
+      <p>「$53」이 보이면 저에게 그대로 알려 주십시오. 제가 다시 봅니다.</p>
+    </div>
+  </div>
+  <p class="small">$58 과 $53 중 <b>어느 쪽이 보이는지만</b> 알려 주시면 됩니다.
+  달러 금액이 아예 없으면 「없다」고 해 주십시오.</p>
+</div>
+
+<div class="step">
+  <h2><span class="num">2</span>국내 판매처에 <b>비스킷</b> 이 있는지</h2>
+  <div class="where">화면에서 <b>🇰🇷 국내</b> 라고 적힌 칸을 보십시오.</div>
+  <div class="row">
+    <div class="box good">
+      <div class="lab">이렇게 보이면 정상</div>
+      <div class="big ok">비스킷 1곳</div>
+      <p>국내 판매처가 <b>한 줄</b>만 보이는 것이 현재 정상입니다.</p>
+    </div>
+    <div class="box bad">
+      <div class="lab">이러면 문제</div>
+      <div class="big no">국내 칸이 비어 있음</div>
+      <p>비스킷이 아예 안 보이면 알려 주십시오.</p>
+    </div>
+  </div>
+</div>
+
+<div class="step calm">
+  <h2>보셔도 걱정 안 하셔도 되는 것 셋</h2>
+  <ul>
+    <li><b>국내가 한 줄뿐인 것</b> — 이 상품을 파는 국내 가게를 그만큼밖에 못 찾은 것입니다.
+      고장이 아니라 <b>앞으로 더 찾아야 할 일</b>입니다.</li>
+    <li><b>「동일상품 아님」이라고 적힌 후보</b> — 다른 상품이라고 <b>일부러 표시</b>한 것입니다.
+      그 가격은 비교에 쓰이지 않습니다.</li>
+    <li><b>「가격 확인 필요」가 붙은 후보</b> — 가격을 아직 확정하지 않았다는 표시입니다.
+      <b>가격 정리는 다음 차례</b>로 미뤄 둔 상태입니다.</li>
+  </ul>
+</div>
+
+<div class="step">
+  <h2>알려 주실 내용 (한 줄이면 충분합니다)</h2>
+  <p>① 달러 최저가: <b>$58</b> / <b>$53</b> / 없음 &nbsp;&nbsp; ② 국내 비스킷: <b>보인다</b> / <b>안 보인다</b></p>
+  <p class="small">예: 「58 보이고 비스킷도 보여」 — 이렇게만 주셔도 됩니다.</p>
+</div>
+</div>
