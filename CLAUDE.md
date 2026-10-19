@@ -853,6 +853,38 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
 
+### 🟡 WU-093 `MI-GT-REVIEW` — **육안 검증 페이지 구축 · CEO 판정 대기** (운영 0)
+
+🟢 전문 `docs/MI-GT-REVIEW-093.md`. 🔴 운영 변경 **0** · 배포 **0** · DB 읽기만 ·
+API 0 · schema 0 · 8축 0 · **UI 본편 개편 0**. 🔴 검증 페이지는 **`apps/admin` 밖** 이다.
+
+```
+URL   https://claude.ai/code/artifact/9d4a3278-b3ea-4282-8338-5eb7bc3a8ddb
+파일  docs/wu-093-gt-review.html (자립형 2.48MB) · 생성기 scripts/wu-093-build-review.mjs
+🟢 이미지 12장을 **data: URI** 로 임베드 — 원격 이미지 **0** ⟹ 로그인·네트워크 없이 사진이 뜬다
+   (육안 비교가 목적이라 **사진이 안 뜨면 이 WU 가 성립하지 않는다**)
+```
+
+🟢 **후보 전수 10건 · 운영이 낸 그대로**(§6 필터링 0) — 둘 다 `looxloo.com` 만 후보를 냈고
+나머지 **5곳은 `status: ok` 인데 후보 0** 이다(🔴 「검색 실패」가 **아니다**).
+```
+S1 B226AC009  후보 5 · facts 5/5 · SIMILAR 3 · CONFLICT 2 · **matchLevel very_high 5**
+S2 B226AC042  후보 5 · facts 5/5 · CONFLICT 1 · UNKNOWN 4 · matchLevel low 5
+```
+
+🔴 **CTO 는 판정하지 않았다**(§9) — 산출 JSON 의 `humanReview` 는 **전부 null** 이고
+「같아 보인다」를 한 줄도 적지 않았다. 🔴 §11 의 ①은 **CEO 판정 대기** 다.
+
+🔴 **버그 하나를 잡았다** — 1차에 이미지 **10/12 실패**. 원인은 `Referer` 에 **한글이 든 URL** 을
+넣어 fetch 가 던진 것(`ByteString`)이고 🔴 **이미지 자체는 200** 이었다 —
+「판매처가 막는다」로 읽었으면 틀렸다. 🟢 `origin` 만 보내 **12/12** 성공.
+
+🔴 **S1 원상품 이미지가 운영 facts 에 없어**(`imageUrl: null`) 검증 화면용으로만 `og:image` 를
+가져왔고 **화면에 그 사실을 적었다**. 🔴 운영 추출기는 **고치지 않았다**.
+
+🟡 **CEO Action — 육안 판정 1회(10건)**. 보고서 §CEO 에 **「판정에 반영하지 마셔야 하는 것 셋」**
+(상품코드 「없음」 · 브랜드가 판매처 이름 · S2 가격 「없음」)을 적어 뒀다.
+
 ### 🔴🔴 WU-092 `MI-CANDIDATE-CAUSE` — **두 샘플은 «서로 다른» 문제다** (구현 0)
 
 🟢 전문 `docs/MI-CANDIDATE-CAUSE-092.md`. 🔴 운영 변경 **0** · 배포 0 · DB 읽기만 · 8축 0.
