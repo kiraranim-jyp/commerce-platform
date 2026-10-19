@@ -849,6 +849,36 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
 
+### 🟢 WU-090 `MI-SMALLABLE-E2E` — **두 경로 모두 작동 · CEO 육안 1회 대기** (구현 0)
+
+🟢 전문 `docs/MI-SMALLABLE-E2E-090.md`. 🔴 운영 변경 **0** · 배포 **0**(테스트만).
+
+🔴🔴 **Smallable URL 이 들어가는 경로는 «둘» 이고 서로 다른 코드를 탄다** — 이것을 먼저 적는다:
+```
+「새 상품 분석」(원상품)  /api/pipeline → **universalExtract**
+    site-strategy 는 **shopify·prestashop 둘뿐** → Smallable 은 **Playwright** 경로
+    ⟹ 헤더 상한 문제가 **애초에 없다** · 🔴 **WU-084 와 무관**
+「다시 분석」 후보 URL   collectUrlCandidatePool → factsFromProductUrl
+    → fetchPlainHtmlWithFinalUrl → **fetchWithDomainRateLimit**  ← 🟢 **WU-084 가 고친 자리**
+🔴 즉 WU-016 의 「Smallable UNREACHABLE」은 **후보 경로** 였다.
+```
+
+🟢 **둘 다 실측으로 작동한다**:
+```
+원상품(Playwright)  title "Bobo Choses Organic Cotton T-shirt | Ecru" · brand **Bobo Choses**
+                    price **EUR 50** · images **6** (🔴 일부 전략 TimeoutError 섞였으나 전체 성공)
+후보(fetch)         UNREACHABLE → **OK** · brand **Bobo Choses** · price **KRW 82,673** ·
+                    httpCalls **1** · modelCode **null**(WU-083 유지)
+```
+
+🔴🔴 **같은 URL 인데 경로마다 통화가 다르다**(EUR 50 ↔ KRW 82,673) — Smallable 이 **방문자에
+따라 통화를 바꾼다**(메모 `smallable-market-is-shipping-destination` 계열). 🔴 **우리 버그가
+아니지만** 셀러가 두 통화를 볼 수 있다는 **사실은 기록** 한다. 🔴 이번 범위에서 고치지 않았다.
+
+🔴 **CEO 테스트는 «두 경로 모두»** 봐야 한다 — CPO 시나리오(새 상품 분석)만 하면
+**WU-084 가 고친 자리를 보지 못한다**. 보고서 §CEO 에 A/B 와 **「정상인데 FAIL 로 보이기 쉬운 셋」**
+(통화 차이 · 품번 없음 · 국내 비교 미진입)을 적어 뒀다.
+
 ### 🔴 WU-089 `MI-AI-URL-QUALITY` — **「상세페이지만」 요구해도 산출 0 증가 · REJECT** (구현 0)
 
 🟢 전문 `docs/MI-AI-URL-QUALITY-089.md`. 🔴 운영 변경 **0** · HTTP **0**(캐시 재사용) · 배포 0.
