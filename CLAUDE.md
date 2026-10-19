@@ -874,6 +874,23 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
 
+### 🟡 WU-099 `MI-DROPPED-REVIEW` — **가치 검증 페이지 구축 · CEO 평가 대기** (운영 0)
+
+🟢 전문 `docs/MI-DROPPED-REVIEW-099.md`. 🔴 **운영 파일 변경 0** · 배포 0 · MI 전달 0 · UI 본편 0.
+```
+URL  https://claude.ai/code/artifact/5249e23c-ce08-4afd-891f-0cb977453335
+대상 운영 judgeDomesticCandidate 의 **DROPPED 샵당 top 1건** = **26건**(JUDGED 4)
+     crossSellerVerdict **CONFLICT 16 · SIMILAR 8 · UNKNOWN 2** · dropGate **전건 EVIDENCE_NOT_WORTHWHILE**
+🟢 보존 범위가 샵당 1건이라 **DomesticJudgement 계약 변경 0**(WU-098 §5 앞쪽 선택지)
+🔴 생성물에 `priceTier` **0** · `matchTruth` **0**(grep) — **만들지 않았다**
+```
+
+🔴 **이미지 11/26 없음 — 「차단」이 아니라 「없음」이다**: `imageUrl` 이 **애초에 null 11/11** ·
+fetch 실패 **0**. 🔴 WU-093 에서 한 번 오진한 자리라 **갈라서** 적는다. 운영 추출은 **고치지 않았다**.
+
+🟢 회귀 **600 files / 8,367 passed · failed 0** · typecheck 0 · build exit 0.
+🟡 **CEO Action — 평가 1회(26건)**. 🔴 「대부분이 충돌로 보이는 것」이 **이 WU 가 묻는 질문** 이다.
+
 ### 🟡 WU-098 `MI-PENDING-STATE` — **분리는 가능하다 · 가치는 미측정** (구현 0)
 
 🟢 전문 `docs/MI-PENDING-STATE-098.md`. 🔴 운영 변경 **0** · 배포 0 · 테스트 0 · UI 0.
