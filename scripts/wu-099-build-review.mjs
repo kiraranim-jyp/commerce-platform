@@ -28,6 +28,27 @@ const originOf = (u) => {
   }
 };
 
+/**
+ * 🔴🔴 WU-100 — **검증 화면용 이미지 보강.** 운영 추출기는 **고치지 않는다**(CPO STEP 2).
+ * 🔴 사이트별 규칙을 만들지 않는다 — **모든 후보에서 `og:image` 를 같이 가져와**
+ *    운영 `imageUrl` 과 **다르면 둘 다** 보여준다. 그러면
+ *    ⒜ imageUrl 이 null 인 11건 ⒝ 이미지가 잘려 판단 불가였던 1건 을
+ *    **같은 규칙 하나로** 해결한다(하드코딩 0).
+ */
+async function ogImage(pageUrl) {
+  try {
+    const r = await fetch(pageUrl, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(25000) });
+    if (!r.ok) return null;
+    const html = await r.text();
+    const m =
+      html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ??
+      html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+    return m ? new URL(m[1], pageUrl).toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 async function dataUri(imgUrl, pageUrl) {
   if (!imgUrl) return null;
   try {
@@ -59,10 +80,23 @@ console.log(`원상품 이미지 ${origin.img ? "🟢" : "🔴 없음"}`);
 const data = JSON.parse(readFileSync(SRC, "utf8"));
 let ok = 0;
 let fail = 0;
+let ogAdded = 0;
 for (const d of data.dropped) {
-  d.img = await dataUri(d.imageUrl, d.url);
+  /**
+   * 🔴 **후보당 한 장만** 임베드한다 — 둘을 다 넣으니 페이지가 **11.85MB** 가 됐다.
+   * 🟢 `og:image`(페이지 대표 이미지)를 **우선** 쓴다 — 목록 썸네일보다 상품을 잘 보여주고,
+   *    그것이 ⒜ imageUrl null 11건 ⒝ 잘려서 판단불가 1건 을 **한 규칙으로** 해결한다.
+   * 🔴 화면에 **「페이지 대표 이미지」라고 적는다** — 어느 그림인지 숨기지 않는다.
+   */
+  const og = await ogImage(d.url);
+  d.ogUrl = og;
+  d.img = og ? await dataUri(og, d.url) : null;
+  d.fromOg = Boolean(d.img);
+  if (!d.img) d.img = await dataUri(d.imageUrl, d.url);
+  if (d.fromOg) ogAdded += 1;
   d.img ? ok++ : fail++;
 }
+console.log(`og:image 보강 ${ogAdded}건`);
 console.log(`이미지 임베드 ${ok} · 실패 ${fail}`);
 
 /** 🔴 시스템 판정 어휘를 **그대로** 쓴다 — 새 라벨을 만들지 않는다. */
@@ -91,8 +125,10 @@ const card = (d, i) => `
   <div class="body">
     <div class="pic">${
       d.img
-        ? `<img src="${d.img}" alt="${esc(d.title)}" loading="lazy">`
-        : `<div class="noimg">이미지 없음</div>`
+        ? `<img src="${d.img}" alt="${esc(d.title)}" loading="lazy"><span class="isrc">${
+            d.fromOg ? "페이지 대표 이미지" : "목록 썸네일"
+          }</span>`
+        : `<div class="noimg">이미지를 가져오지 못했습니다<br><small>링크를 열어 확인해 주십시오</small></div>`
     }</div>
     <div>
       <p class="t">${esc(d.title)}</p>
@@ -142,6 +178,9 @@ const html = `<title>WU-099 — 보류 후보 가치 검증 (26건)</title>
   .v.CONFLICT{color:var(--no)} .v.SIMILAR{color:var(--dim)} .v.UNKNOWN{color:var(--un)}
   .body{display:grid;grid-template-columns:200px 1fr;gap:14px}
   @media(max-width:620px){.body{grid-template-columns:1fr}}
+  .crit{background:#fff8e8;border-left:3px solid var(--un);padding:8px 10px;margin:6px 0;border-radius:4px}
+  .pic{display:grid;gap:4px}
+  .isrc{font-size:10px;color:var(--dim);text-align:center}
   .pic img{width:100%;height:190px;object-fit:contain;background:#f3f1ec;
            border:1px solid var(--rule);border-radius:8px;display:block}
   .noimg{height:190px;display:flex;align-items:center;justify-content:center;color:var(--dim);
@@ -192,8 +231,12 @@ const html = `<title>WU-099 — 보류 후보 가치 검증 (26건)</title>
   <div class="howto">
     <b>보시는 방법</b>
     <ol>
-      <li><b>맨 위에 고정된 원상품</b>과 각 후보를 비교해, 다시 볼 가치가 있는지 봅니다.</li>
-      <li><b>유용함</b> / <b>불필요</b> / <b>판단 어려움</b> 중 하나를 누릅니다.</li>
+      <li><b>맨 위에 고정된 원상품</b>과 각 후보를 비교합니다.</li>
+      <li class="crit"><b>기준은 하나입니다 — 「이것이 원상품과 «동일상품» 후보로 다시 볼 가치가 있는가」.</b>
+        <br>🟢 <b>유용함</b> — 동일상품 후보로 다시 검토할 가치가 있다
+        <br>🔴 <b>불필요</b> — 동일상품 후보로 볼 가치가 없다
+        <br>🟡 <b>판단 어려움</b> — 정보가 부족해 판단할 수 없다
+        <br><b>🔴 「같은 브랜드라 참고할 만하다」는 «유용함» 이 아닙니다.</b></li>
       <li>전부 고른 뒤 맨 아래 <b>결과 복사</b> → 그대로 붙여넣어 주십시오.</li>
     </ol>
     <p style="margin:9px 0 0;font-size:13px;color:var(--dim)">
