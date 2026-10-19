@@ -63,11 +63,13 @@ const main = async () => {
   for (const g of data) {
     const originImg = await grab(await ogImage(g.originUrl), g.originUrl);
     const cards = [];
+    let idx = 0;
     for (const [mk, label] of GROUPS) {
       const rows = g.candidates.filter((c) => c.market === mk);
       if (rows.length === 0) continue;
       const inner = [];
       for (const c of rows) {
+        const id = `${g.sid}-${++idx}`;
         let img = await grab(c.imageUrl, c.url);
         if (!img) {
           const og = await ogImage(c.url);
@@ -90,7 +92,17 @@ const main = async () => {
     c.priceTier ? ` · tier ${esc(c.priceTier)}` : ""
   }${c.shopJudgement === "DROPPED" ? " · <span class=dr>이 샵은 제외됨</span>" : ""}</div>
   <div class="u"><a href="${esc(c.url)}" target="_blank" rel="noreferrer">링크 열기 ↗</a></div>
-  <div class="gt">판정: <b>SAME</b> / <b>DIFFERENT</b> / <b>UNCERTAIN</b></div>
+  <fieldset class="gt" data-id="${id}" data-sid="${esc(g.sid)}" data-code="${esc(g.code)}"
+            data-domain="${esc(c.domain)}" data-url="${esc(c.url)}" data-title="${esc(c.title ?? "")}">
+    <legend>판정</legend>
+    <div class="opts">
+      <label class="o same"><input type="radio" name="v-${id}" value="SAME"><span>같은 상품</span></label>
+      <label class="o diff"><input type="radio" name="v-${id}" value="DIFFERENT"><span>다른 상품</span></label>
+      <label class="o unc"><input type="radio" name="v-${id}" value="UNCERTAIN"><span>애매</span></label>
+    </div>
+    <input class="why" type="text" placeholder="이유 (선택 — 예: 긴팔이다 / 색이 다르다)"
+           aria-label="${esc(c.domain)} 판정 이유">
+  </fieldset>
 </div>`);
       }
       cards.push(`<h3>${label} <span class="cnt">${rows.length}건</span></h3><div class="grid">${inner.join("")}</div>`);
@@ -141,14 +153,37 @@ h3{font-size:14px;margin:22px 0 10px;letter-spacing:.02em}
 .sys{font-size:11.5px;color:var(--mut)}
 .dr{color:var(--dr)}
 .u{font-size:12px}.u a{color:var(--mut)}
-.gt{font-size:12px;border-top:1px dashed var(--line);padding-top:6px;margin-top:auto}
+.gt{margin:auto 0 0;border:0;border-top:1px dashed var(--line);padding:8px 0 0;display:flex;flex-direction:column;gap:6px}
+.gt legend{font-size:11px;color:var(--mut);padding:0}
+.opts{display:flex;gap:5px}
+.o{flex:1;position:relative}
+.o input{position:absolute;inset:0;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.o span{display:block;text-align:center;font-size:11.5px;padding:6px 2px;border:1px solid var(--line);border-radius:3px;background:#fdfcf8;color:var(--mut)}
+.o input:focus-visible+span{outline:2px solid var(--acc);outline-offset:1px}
+.same input:checked+span{background:#1f6b3a;border-color:#1f6b3a;color:#fff;font-weight:650}
+.diff input:checked+span{background:var(--dr);border-color:var(--dr);color:#fff;font-weight:650}
+.unc input:checked+span{background:#7a6a2f;border-color:#7a6a2f;color:#fff;font-weight:650}
+.why{font:inherit;font-size:12px;padding:5px 7px;border:1px solid var(--line);border-radius:3px;background:#fff;width:100%;box-sizing:border-box}
+.card.done{border-color:#b9ae93;box-shadow:0 0 0 2px #efe9d8}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;gap:10px;align-items:center;
+     background:#fffdf7;border-top:1px solid var(--line);padding:10px 16px;font-size:14px}
+.bar b{font-variant-numeric:tabular-nums}
+.bar button{font:inherit;font-size:13px;padding:7px 13px;border:1px solid var(--ink);background:var(--ink);color:#fdfcf8;border-radius:3px;cursor:pointer}
+.bar button.gh{background:transparent;color:var(--ink)}
+.bar .sp{flex:1}
+#out{display:none;width:100%;height:220px;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
+     border:1px solid var(--line);padding:10px;box-sizing:border-box;margin:16px 0 0;background:#fff}
+#out.on{display:block}
+.pad{height:70px}
 </style>
 <div class="wrap">
 <h1>WU-112 — 동일상품 후보 목록 (육안 GT)</h1>
 <p class="sub">판정은 대표님이 하십니다. CTO 는 동일상품 여부를 적지 않았습니다.</p>
 <div class="box">
-<b>해 주실 일</b> — 각 후보가 맨 위 <b>원상품</b>과 같은 상품인지
-<b>SAME / DIFFERENT / UNCERTAIN</b> 중 하나로 봐 주십시오. 애매하면 <b>UNCERTAIN</b> 이 맞습니다.
+<b>해 주실 일</b> — 각 후보 카드 아래에서 <b>같은 상품 / 다른 상품 / 애매</b> 중 하나를
+<b>눌러</b> 주시고, 이유가 있으면 그 아래 칸에 적어 주십시오(선택).
+다 하신 뒤 화면 맨 아래 <b>「결과 복사」</b> 를 누르시면 그대로 저에게 붙여 주실 수 있습니다.
+<br>🟢 입력은 <b>자동 저장</b>되니 중간에 닫으셔도 됩니다. 애매하면 <b>애매</b> 가 맞습니다.
 <br><br>
 🔴 <b>「우리 시스템」 줄은 참고용</b>입니다 — 그것이 정답이 아니라, 대표님 판정이 정답입니다.
 「이 샵은 제외됨」은 <b>지금 가격비교에 쓰이지 않는 후보</b>라는 뜻이고,
@@ -158,7 +193,86 @@ h3{font-size:14px;margin:22px 0 10px;letter-spacing:.02em}
 🔴 가격은 <b>이번 판정에 쓰지 않습니다</b> — 가격 작업은 동일상품 판정이 끝난 뒤입니다.
 </div>
 ${sections.join("\n")}
-</div>`,
+<textarea id="out" readonly aria-label="판정 결과 JSON"></textarea>
+<div class="pad"></div>
+</div>
+<div class="bar">
+  <span><b id="prog">0</b> / <b id="tot">0</b> 판정</span>
+  <span class="sp"></span>
+  <button id="copy" type="button">결과 복사</button>
+  <button id="show" type="button" class="gh">JSON 보기</button>
+</div>
+<script>
+(function(){
+  /* 🔴 외부 요청 0 — 저장은 localStorage 뿐이고 실패해도 입력은 그대로 동작한다. */
+  var KEY = "wu112-gt";
+  var sets = [].slice.call(document.querySelectorAll(".gt"));
+  document.getElementById("tot").textContent = String(sets.length);
+  var prog = document.getElementById("prog");
+  var out = document.getElementById("out");
+
+  function rows(){
+    return sets.map(function(f){
+      var r = f.querySelector("input[type=radio]:checked");
+      return {
+        sid: f.dataset.sid, originCode: f.dataset.code, domain: f.dataset.domain,
+        url: f.dataset.url, title: f.dataset.title,
+        verdict: r ? r.value : null, reason: f.querySelector(".why").value.trim() || null
+      };
+    });
+  }
+  function json(){
+    var all = rows();
+    var done = all.filter(function(x){ return x.verdict; });
+    return JSON.stringify({
+      wu: "WU-112", judgedAt: new Date().toISOString(),
+      total: all.length, judged: done.length,
+      counts: ["SAME","DIFFERENT","UNCERTAIN"].reduce(function(a,k){
+        a[k] = done.filter(function(x){ return x.verdict === k; }).length; return a;
+      }, {}),
+      candidates: all
+    }, null, 1);
+  }
+  function sync(){
+    var all = rows();
+    var n = all.filter(function(x){ return x.verdict; }).length;
+    prog.textContent = String(n);
+    sets.forEach(function(f){
+      var on = !!f.querySelector("input[type=radio]:checked");
+      f.closest(".card").classList.toggle("done", on);
+    });
+    out.value = json();
+    try { localStorage.setItem(KEY, JSON.stringify(all)); } catch(e){}
+  }
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY) || "[]");
+    saved.forEach(function(s){
+      var f = sets.filter(function(x){ return x.dataset.url === s.url; })[0];
+      if (!f) return;
+      if (s.verdict) { var r = f.querySelector("input[value=" + s.verdict + "]"); if (r) r.checked = true; }
+      if (s.reason) f.querySelector(".why").value = s.reason;
+    });
+  } catch(e){}
+  document.addEventListener("change", sync);
+  document.addEventListener("input", function(e){ if (e.target.classList.contains("why")) sync(); });
+  document.getElementById("show").addEventListener("click", function(){
+    out.classList.toggle("on");
+    if (out.classList.contains("on")) out.scrollIntoView({ block: "center" });
+  });
+  document.getElementById("copy").addEventListener("click", function(){
+    var b = this, t = b.textContent;
+    function ok(){ b.textContent = "복사됐습니다"; setTimeout(function(){ b.textContent = t; }, 1800); }
+    try {
+      navigator.clipboard.writeText(json()).then(ok, fallback);
+    } catch(e){ fallback(); }
+    function fallback(){
+      out.classList.add("on"); out.select(); out.scrollIntoView({ block: "center" });
+      b.textContent = "아래 칸을 복사해 주십시오"; setTimeout(function(){ b.textContent = t; }, 2600);
+    }
+  });
+  sync();
+})();
+</script>`,
   );
   console.log(`images ok=${got} skipped=${skipped} none=${none}`);
   console.log("docs/wu-112-candidate-list.html written");
