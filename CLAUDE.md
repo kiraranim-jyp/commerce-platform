@@ -1014,6 +1014,29 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
 
+### 🟢 WU-127 — **AI 후보 공급 경로 확정: 쓸 수 있는 것은 하나** (구현 0)
+
+🟢 전문 `docs/MI-SUPPLY-PATH-127.md`. 🔴 운영 변경 **0** · 가격 **0**.
+
+```
+공급 생산자는 **둘** 뿐이다(운영 코드 전수 grep · 테스트 제외):
+① `__gemini_discovery__`  → 🔴 flag OFF · 비용 미승인
+② `__url_candidates__`    → 🟢 **지금 작동한다** · 입력은 **candidateUrls**(셀러가 붙여넣는 값)
+🔴 **세 번째 생산자는 없다** ⟹ 🟢 정책 충돌 없이 쓸 수 있는 경로는 **② 하나**
+```
+
+🟢🟢 **국내와 해외는 «같은 파이프라인» 이다**(CPO 질문 3 의 답):
+```
+candidateUrls → collectUrlCandidatePool → facts → withConfidence → attachMatchTruth
+              → judgeDomesticCandidate → sink → computeMarketIntelligence(:226 같은 배열)
+갈리는 곳은 **classifyCandidateMarket 하나** — KR 이면 국내 축(🔴 가격+tier 를 **더** 요구) ·
+그 외는 해외 축(push 뒤 continue). 🔴 **국내 전용 경로가 따로 있는 것이 아니다**
+```
+
+🔴 자동 1회차 배선은 **정책 셋(Gemini flag · 외부 AI · 스냅샷 재사용) 중 하나를 열어야**
+생긴다 ⟹ **CPO 결정**. 🔴 그리고 **실제 따져 화면은 CTO 가 볼 수 없다** ⟹ 제품 PASS 는
+**CEO 확인 1회로만** 닫힌다(「검토 화면 정상」을 제품 PASS 로 쓰지 않는다).
+
 ### 🔴🔴🔴 WU-126 — **따져에 국내 후보가 없는 이유 = 자동 분석의 «입력 배선»** (구현 0)
 
 🟢 전문 `docs/MI-E2E-EXPOSURE-126.md`. 🔴 운영 변경 **0** · 가격 **0**.
