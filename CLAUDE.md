@@ -920,6 +920,32 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
 
+### 🟢🟢 WU-103 `MI-FUNNEL-TRUE` — **파이프라인은 동일상품을 «거의 잃지 않는다»** (구현 0)
+
+🟢 전문 `docs/MI-FUNNEL-TRUE-103.md`. 🔴 운영 변경 0 · 배포 0 · **새 AI 호출 0**.
+🟢 WU-102 가 정정한 뒤 **올바른 분모**(AI 가 정답을 찾은 S1·S2)로 다시 쟀다.
+
+```
+S1 원상품 b226ac010 (brand·code·color **셋 다 있음**) · AI URL **36** · 동일상품 **2**
+   🟢 bobochoses.com/**ko-kr**/… → 추출 → 풀 → **JUDGED**
+   🔴 search.shopping.naver.com/search?query=B226AC010 → ② 추출 탈락 **(올바름 · 검색 URL)**
+S2 원상품 b226ac009 · AI URL **29** · 동일상품 **3**
+   🟢 global.trenbe → JUDGED · 🟢 biskuit.kr → JUDGED · 🔴 skroutz.ro → ③④ **UNREACHABLE**
+🟢🟢 **⑥ candidate selection 소실 = 0 / 0** ⟹ `EVIDENCE_NOT_WORTHWHILE` 는
+     **동일상품을 버리지 않는다**. JUDGED 가 실제로 났다(S1 1 · S2 3)
+🔴 손실은 **①의 «비율»** 이다 — AI URL 중 동일상품 **2/36(5.6%) · 3/29(10.3%)**
+```
+
+🔴🔴 **WU-096 의 「최초 병목 = ⑧」은 동일상품 손실의 설명으로 «폐기» 된다** —
+올바른 분모에서 **⑥ 소실이 0** 이다. 🟡 「다른 상품이 거기서 많이 걸러진다」는 **관측으로 유효**.
+🟢 그리고 이번 WU 가 **WU-100 의 보강 증거** 를 줬다 — 게이트는 동일상품을 **안 버린다**(0/5).
+
+🔴 **한계** — ⒜ 동일상품을 「품번이 URL 에 있는가」로 1차 판정했으니 **2/36·3/29 는 하한**
+⒝ 내 「풀 소실」 계산이 **거칠다**(S2 에서 통과 3·소실 1 이 동시에 나왔다 · 합쳐 쓰지 않는다)
+⒞ 표본 **검색 2 · 동일상품 5** ⟹ 「최초 손실 지점」은 **표본 부족으로 판별 불가**
+⒟ S1 통과 1건은 **같은 샵 다른 로케일** 이다 — 「다른 판매처」가 **아니다**
+⒠ 🔴 **AI 가 왜 그 비율인지 추론하지 않았다**(프롬프트 원문 없음 · CPO 금지)
+
 ### 🔴🔴🔴 WU-102 `MI-AI-DISCOVERY-CAUSE` — **WU-101 을 정정한다** (구현 0)
 
 🟢 전문 `docs/MI-AI-DISCOVERY-CAUSE-102.md`. 🔴 운영 변경 0 · AI 호출 0 · Registry 0.
