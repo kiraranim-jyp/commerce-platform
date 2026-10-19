@@ -8,7 +8,7 @@ import { MARKET_EVIDENCE_EMPTY } from "../market-evidence-frame";
 import { resetMarketCollectionsForTests } from "../market-collection";
 import { MI_VERDICT_EVIDENCE_TOGGLE_LABEL, buildMiVerdictExplanation } from "../mi-verdict-copy";
 /** 🟢 WU-024 — 화면 문구를 **소유자에서 읽는다**(테스트가 문구를 다시 적지 않는다). */
-import { SUPPLIED_URL_INPUT_NOTICE } from "../GeminiTransientCandidates";
+import { SUPPLIED_URL_INPUT_NOTICE, SUPPLIED_URL_INPUT_SUMMARY } from "../GeminiTransientCandidates";
 import {
   headingsInOrder,
   overseasResults,
@@ -467,7 +467,15 @@ describe("마운트하고 effect가 전부 돈 뒤의 첫 화면", () => {
       "상품 판단 신뢰도",
       ...explanation,
       MI_VERDICT_EVIDENCE_TOGGLE_LABEL,
-      "🔗 비교할 판매처 상품 URL (선택)",
+      /**
+       * 🔴🔴 WU-091 §5(CPO 지시 2026-10-19) — 라벨이 바뀌었다.
+       *    「🔗 비교할 판매처 상품 URL (선택)」을 **보조 기능** 으로 내리고
+       *    접힌 구역의 제목으로 바꿨다. CEO 육안 테스트에서 그 칸이 **주된 후보
+       *    탐색 방법처럼** 보였고 **같은 원상품 URL 을 다시 넣어야 하는 것처럼** 읽혔다.
+       * 🟢 이 계약의 «성질» 은 그대로다 — 「이 화면이 더하는 것은 이 목록뿐이다」.
+       *    🔴 문자열만 갱신하고 **항목 수를 늘리지 않았다**(늘었으면 그것이 결함 신호다).
+       */
+      SUPPLIED_URL_INPUT_SUMMARY,
       SUPPLIED_URL_INPUT_NOTICE,
       "🔄 다시 분석",
     ]);

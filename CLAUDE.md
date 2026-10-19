@@ -802,6 +802,8 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **가격 구역 식별** | `wu-056r1-price-section-identity.test.ts` | 구역 제목 **상호 비포함** · 해외 구역 «안» 에 `₩`/`약`/`≈`/통화기호 **0** · 아이콘 중복 금지 — **Panel mount DOM 으로** 본다 |
 | 🔴 **단계는 넷 · 번호는 파생** | `workflow.ts` · `stage-focus.ts` (WU-058) | 큰 단계 **4** · 라벨에 「소싱」 0 · 단계마다 본문 **하나**(빈 단계 0) · **번호는 배열 순서에서 파생**(하드코딩 금지) |
 | 🔴 **URL 분류기는 양방향 오류** | `classifyUrlShape` (WU-073) | 한국 CMS 목록(`goods_list`·`product_list`·`shopbrand`)이 **PRODUCT_PAGE** · SSG `itemView.ssg` 는 **오차단** — 🔴 「②의 탈락 = 정확한 차단」으로 읽지 않는다 · 고치지 않는다(WU-052 HOLD) |
+| 🔴🔴 **후보 노출 ≠ SAME 판정** | `CandidateComparison` (WU-091) | SAME 이 아닌 후보도 **보인다** · 🔴 단 **기본 접힘**(`details` 에 `open` 금지) · **행마다 판정 라벨** · 「가격비교에 사용되지 않습니다」 명시 — 넷 중 하나라도 빠지면 **2026-09-19 사고**(「유력 후보 5건」)가 되돌아온다 · 🔴 `isVisualCheckTier` 정책은 **불변** |
+| 🔴 **「후보 없음」과 「동일상품 없음」은 다른 문장** | `NO_CANDIDATE_AT_ALL` / `NO_SAME_BUT_CANDIDATES` | 둘을 같은 말로 만들면 셀러에게 **같은 실패** 로 보인다(M6 가 1 FAIL 로 잠금) |
 | 🔴 **사람 검토는 시스템 판정을 덮지 않는다** | `GeminiTransientCandidates` · `MiPanelView` (WU-081) | `gt-verdict`(시스템)와 `gt-review-result`(사람)는 **다른 state·타입·DOM** · 클릭이 `fetch` **0회** · MI/가격/알림/판매판정/등록 payload 에 **들어가지 않는다** · 🔴 `onReview` 없는 구역엔 버튼이 **렌더되지 않는다** |
 | 🔴 **국내 행은 «옮긴다» 복제하지 않는다** | `TransientCandidateSections` (WU-081) | `market==="KR"` 행만 🇰🇷 구역으로 이동 · 기존 두 구역은 나머지 · **총 행 수 불변**(계약) |
 | 🔴🔴🔴 **여덟 보호축을 다시 파지 않는다** | WU-063~080 통합 (CPO CLOSED 2026-10-18) | **COLOR · TITLE · MODEL_CODE · LINE · MARKET · PRICE · LANGUAGE · BRAND** — 여덟 축 전부에서 「완화하면 Human DIFFERENT 가 같이 열린다」가 **측정됐다** · 🔴 **국내 recall 은 현 구조의 한계로 «확정»** · 🔴 「gate 가 너무 엄격하다」로 읽지 않는다 · 🔴 **이 축들을 다시 파는 WU 를 만들지 않는다**(새 경로는 **CPO 가 지정**) |
@@ -848,6 +850,47 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **`NO_TITLE_OVERLAP` 은 유효하다** | `cross-seller.ts:871` (WU-066) | A 군 **18/18 이 DIFFERENT** — 전면 비차단 금지(단독 완화는 효과도 0) |
 | 🔴 **KR 증거는 샵 단위여야 한다** | `classifyCandidateMarket` (WU-063) | 페이지 단위 신호(사업자등록·`lang=ko`)는 **같은 샵에서 갈린다** — 채택 금지 |
 | 🔴 **통화 단독 KR 결정 금지** | `classifyCandidateMarket` | `.kr`+외화 = **충돌** · KRW+도메인증거없음 = UNKNOWN (mutation M2b·M2c 로 잠겼다) |
+
+### 🟢🟢 WU-091 `MI-CANDIDATE-VISIBILITY` — **후보 노출과 SAME 판정을 갈랐다** (구현/배포)
+
+🟢 전문 `docs/MI-CANDIDATE-VISIBILITY-091.md`. 🔴 판정 0 · 가격 0 · 시장 0 · 집계 0 ·
+API 0 · schema 0 · DB 0 · AI 0 · Registry 0 · 8축 0. 운영 **5 파일 · +210/-24줄**.
+
+🔴🔴 **이 WU 는 2026-09-19 사고와 «정면으로» 만난다** — 먼저 적는다:
+```
+그때: 국내에 동일상품이 0 인데 후보 5건이 **가격까지 달고** 떴다(Pèpè Lulu T Bar Shoes)
+🟢 **사고의 본질은 「보여줬다」가 아니라 「유력 후보처럼 보여줬다」** 였다
+   (펼쳐져 있었고 · 가격이 달려 있었고 · **판정 라벨이 없었다**)
+⟹ 그래서 넷을 **동시에** 지킨다 — ① 기본 **접힘**(open 없음) ② 「동일상품 없음」을
+   **먼저** 말함 ③ **행마다 판정 라벨 + note(제외 이유)** ④ 「가격비교에 사용되지 않습니다」
+```
+
+🟢🟢 **데이터는 «이미» 화면까지 오고 있었다** — 원인은 컴포넌트 **안의 필터 한 줄**:
+```
+rows = r.candidates 전부  →  **selectVisualCheckCandidates** (SAME/옵션다름만)  →  카드
+🟢 그래서 **데이터 전달 경로 수정이 필요 없었다**(CPO §7 허용 범위를 쓰지 않았다)
+🟢 **상품코드도 이미 왔다** — search route 가 `NextResponse.json({ok,results})` 로
+   후보를 **통째로** 직렬화한다 ⟹ UI 타입이 **선언만 안 했을 뿐** (서버 0 · 판정 0)
+```
+
+🟢 **「후보 없음」과 「동일상품 없음」을 갈랐다**(CPO §6 의 핵심):
+```
+후보 0            🔎 비교 후보를 찾지 못했습니다.
+후보 N · SAME 0   🟡 후보는 찾았지만 동일상품으로 확인된 판매처가 없습니다.
+                  + 「N곳 · M건 검색됨」 + **[후보 M건 보기]**(접힘)
+🟢 국내/해외는 **원래 같은 컴포넌트** 라 한 번에 적용됐다
+🔴 네이버 검색 링크 **제거** · 직접 URL 입력은 **「+ 다른 판매처 URL 직접 확인」 접힘** 으로
+```
+
+🔴 **회귀 2건 실패를 둘 다 규명했다** — ⒜ `product-tab-mounted` 는 **의도된 라벨 변경** 인데
+그 실패가 **내 실수를 같이 잡았다**(summary + sr-only label 이 **같은 문구를 두 번**) →
+🟢 `aria-label` 로 고쳐 중복 0. 계약은 **문자열만 갱신 · 항목 수 불변**.
+⒝ `p54b-product-url-facts` 는 **네트워크 일시 실패**(`packages/` 변경 **0** · 단독 13 passed).
+
+🟢 음성대조 **6종 전부 FAIL**(M1 13 · **M2 open 1** · M3 3 · M4 2 · M5 1 · **M6 1**) → 복구 19 passed.
+🟢 회귀 **598 files / 8,354 passed · failed 0** · typecheck **0** · build exit 0.
+
+🔴 **CEO Action — Production UI 1회 확인**(보고서 §CEO · 「정상인데 FAIL 로 보기 쉬운 것 둘」 포함).
 
 ### 🟢 WU-090 `MI-SMALLABLE-E2E` — **두 경로 모두 작동 · CEO 육안 1회 대기** (구현 0)
 

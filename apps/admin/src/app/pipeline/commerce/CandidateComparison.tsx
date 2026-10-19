@@ -48,6 +48,12 @@ export interface ComparableCandidate {
    *  «색상» 이라고 부르지 않는다(소재일 수도 있다) — 화면도 「옵션」이라 쓴다. */
   variantDifference?: { model: string; queryOption: string; candidateOption: string };
   matchReasons?: string[];
+  /**
+   * 🔴🔴 WU-091 — **상품코드.** 셀러가 「왜 동일상품이 아닌가」를 스스로 보려면
+   *    품번이 보여야 한다. 🔴 **없으면 «없다» 고 적는다** — 지어내지 않는다
+   *    (WU-083 이 Smallable 에서 품번을 만들지 않은 것과 같은 원칙).
+   */
+  modelCode?: string | null;
   /** P0-A.29-B 의 관측 원점수. 🔴 null 이면 «아무것도 표시하지 않는다» —
    *  0 으로 그리면 「낮음」이라는 없는 사실을 말하게 된다. */
   visionScore?: number | null;
@@ -117,6 +123,45 @@ function summarizeReasons(reasons: string[] | undefined): string[] {
  * 🔴 카드에 올릴 후보만 남긴다. **등급을 다시 매기지 않는다** — 이미 매겨진
  *    등급을 match-display 의 정책에 통과시킬 뿐이다.
  */
+/**
+ * 🔴🔴 WU-091 — **접힌 목록의 쌓는 순서.** 확정에 가까운 쪽이 위다.
+ *    🔴 `DEFAULT_TIER_ORDER` 를 쓰지 않는다 — 거기에 `UNKNOWN`/`CONFLICT` 가
+ *    **없어서** `indexOf` 가 -1 을 주고 **제외 후보가 맨 위로 올라온다**.
+ */
+const ALL_TIER_ORDER: MatchDisplayTier[] = [
+  "SAME",
+  "SAME_MODEL_OPTION_DIFF",
+  "PRESUMED_SAME",
+  "SIMILAR",
+  "UNKNOWN",
+  "CONFLICT",
+];
+
+/**
+ * 🔴🔴 WU-091 — **카드에 못 올라간 나머지 후보.**
+ *
+ * ── 왜 필요한가 (CPO 지시 2026-10-19) ─────────────────────────────────────
+ * 「시스템이 SAME 으로 인정하지 않은 후보도 보여주고, **왜 비교가격에 포함되지
+ *  않았는지** 이해할 수 있게 만든다.」 지금까지 그 후보는 화면에서 통째로
+ * 사라져서 셀러에게는 **「검색이 실패했다」와 구분되지 않았다.**
+ *
+ * ── 🔴🔴 그런데 2026-09-19 사고를 되살리면 안 된다 (이 파일 머리 주석) ──────
+ * 그때의 문제는 「보여줬다」가 아니라 **「유력 후보처럼 보여줬다」** 였다 —
+ * 기본으로 펼쳐져 있었고 **가격이 달려 있었고** 판정 라벨이 없었다.
+ * 그래서 이번 목록은 **넷을 동시에** 지킨다:
+ * ```
+ * ① 기본 **접힘**(details 에 open 을 주지 않는다)
+ * ② 머리에서 **「동일상품으로 확인된 후보가 없습니다」를 «먼저»** 말한다
+ * ③ 행마다 **판정 라벨 + 그 판정의 note** 를 붙인다
+ * ④ 구역에 **「가격비교에 사용되지 않습니다」** 를 명시한다
+ * ```
+ * 🔴 그리고 **등급을 다시 매기지 않는다** — isVisualCheckTier 정책은 **그대로** 다.
+ */
+export function selectOtherCandidates(rows: CandidateWithShop[]): CandidateWithShop[] {
+  const order = (t: MatchDisplayTier) => ALL_TIER_ORDER.indexOf(t);
+  return rows.filter((r) => !isVisualCheckTier(r.tier)).sort((a, b) => order(a.tier) - order(b.tier));
+}
+
 export function selectVisualCheckCandidates(rows: CandidateWithShop[]): CandidateWithShop[] {
   const order = (t: MatchDisplayTier) => VISUAL_CHECK_TIER_ORDER.indexOf(t);
   return rows.filter((r) => isVisualCheckTier(r.tier)).sort((a, b) => order(a.tier) - order(b.tier));
@@ -190,6 +235,93 @@ function CandidatePrice({ candidate }: { candidate: ComparableCandidate }) {
   );
 }
 
+/**
+ * 🔴🔴 WU-091 — 구역 문구. **테스트가 이 상수를 단언** 하므로 화면과 계약이 갈리지 않는다.
+ * 🔴 「후보 없음」과 「동일상품 없음」을 **다른 문장** 으로 가른다 — CPO 지시 §6 의 핵심이다
+ *    (셀러에게 둘은 **전혀 다른 상황** 인데 지금까지 같은 말로 보였다).
+ */
+export const NO_CANDIDATE_AT_ALL = "🔎 비교 후보를 찾지 못했습니다.";
+export const NO_SAME_BUT_CANDIDATES = "🟡 후보는 찾았지만 동일상품으로 확인된 판매처가 없습니다.";
+export const OTHER_CANDIDATES_NOTICE =
+  "아래 후보는 동일상품으로 확정되지 않아 가격비교에 사용되지 않습니다. 판정과 이유를 함께 보여 드립니다.";
+
+/**
+ * 🔴🔴 WU-091 — **접힌 후보 목록.** 기본은 닫힘이고, 펼쳐야 보인다.
+ *
+ * 🔴 details 를 쓴 이유 — 상태를 들고 있지 않아도 되고, **닫힘이 기본값** 이라
+ *    2026-09-19 사고(「펼쳐진 채 가격이 달려 유력 후보처럼 보였다」)의 모양을
+ *    **구조적으로** 못 만든다. open 속성을 주지 않는 한 접혀 있다.
+ */
+function OtherCandidates({ rows, marketLabel }: { rows: CandidateWithShop[]; marketLabel: string }) {
+  if (rows.length === 0) return null;
+  return (
+    <details data-testid="cc-others" className="mt-2 rounded border border-border bg-background">
+      <summary data-testid="cc-others-summary" className="cursor-pointer px-2.5 py-2 text-[11px] font-medium text-text-secondary">
+        {marketLabel} 후보 {rows.length}건 보기
+      </summary>
+      <div className="space-y-1.5 border-t border-border px-2.5 py-2">
+        <p data-testid="cc-others-notice" className="text-[10px] text-text-tertiary">
+          {OTHER_CANDIDATES_NOTICE}
+        </p>
+        {rows.map(({ shopName, candidate, tier }, i) => {
+          const d = tierDisplay(tier);
+          const reasons = summarizeReasons(candidate.matchReasons);
+          return (
+            <div
+              key={`${candidate.url}-${i}`}
+              data-testid="cc-other-row"
+              className="space-y-1 rounded border border-border bg-surface p-2"
+            >
+              <div className="flex flex-wrap items-center gap-1">
+                {/* 🔴 **판정 라벨이 행마다 선다** — 이것이 없으면 「유력 후보」로 읽힌다. */}
+                <span
+                  data-testid="cc-other-verdict"
+                  className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${d.className}`}
+                >
+                  {d.icon} {d.label}
+                </span>
+                <span data-testid="cc-other-shop" className="text-[10px] text-text-tertiary">
+                  {shopName}
+                </span>
+              </div>
+              <p data-testid="cc-other-title" className="line-clamp-2 text-[11px] text-text-primary">
+                {candidate.title}
+              </p>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <CandidatePrice candidate={candidate} />
+                {/* 🔴 품번은 **있으면** 적고 없으면 «없음» 이라고 적는다 — 지어내지 않는다. */}
+                <span data-testid="cc-other-code" className="text-[10px] text-text-tertiary">
+                  상품코드 {candidate.modelCode ? candidate.modelCode : "없음"}
+                </span>
+              </div>
+              {/* 🔴 **왜 비교가격에 안 들어갔는가** — 새 문장을 지어내지 않고 그 판정의 note 를 쓴다. */}
+              <p data-testid="cc-other-note" className="text-[10px] text-text-secondary">
+                {d.note}
+              </p>
+              {reasons.length > 0 && (
+                <ul data-testid="cc-other-reasons" className="flex flex-wrap gap-x-2 text-[10px] text-text-secondary">
+                  {reasons.map((r) => (
+                    <li key={r}>· {r}</li>
+                  ))}
+                </ul>
+              )}
+              <a
+                data-testid="cc-other-link"
+                href={candidate.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-block text-[10px] font-medium text-text-primary underline"
+              >
+                상품 보기 ↗
+              </a>
+            </div>
+          );
+        })}
+      </div>
+    </details>
+  );
+}
+
 export function CandidateComparison({
   origin,
   rows,
@@ -201,14 +333,33 @@ export function CandidateComparison({
   marketLabel: string;
 }) {
   const selected = selectVisualCheckCandidates(rows);
+  /** 🔴 WU-091 — 카드에 못 올라간 나머지. **거르지 않는다**(전부 들어온다). */
+  const others = selectOtherCandidates(rows);
+  const shopCount = new Set(rows.map((r) => r.shopName)).size;
 
   // 🔴 0건을 «침묵» 으로 두지 않는다. 그게 이번 사고 직전의 화면이었다 —
   //    셀러는 판정이 없었던 것인지 자기가 못 본 것인지 알 수 없었다.
   if (selected.length === 0) {
     return (
-      <section className="rounded-md border border-border bg-surface p-3">
-        <h4 className="text-xs font-semibold text-text-primary">{marketLabel} 동일상품 후보</h4>
-        <p className="mt-1 text-[11px] text-text-tertiary">동일상품 후보가 없습니다.</p>
+      <section data-testid="cc-section" className="rounded-md border border-border bg-surface p-3">
+        <h4 className="text-xs font-semibold text-text-primary">{marketLabel} 후보</h4>
+        {/* 🔴🔴 WU-091 — **「동일상품 없음」 ≠ 「후보 없음」.** 둘을 다른 문장으로 가른다.
+            지금까지 둘 다 「동일상품 후보가 없습니다」여서 셀러에게 **같은 실패** 로 보였다. */}
+        {others.length === 0 ? (
+          <p data-testid="cc-empty" className="mt-1 text-[11px] text-text-tertiary">
+            {NO_CANDIDATE_AT_ALL}
+          </p>
+        ) : (
+          <>
+            <p data-testid="cc-count" className="mt-1 text-[11px] text-text-secondary">
+              {shopCount}곳 · {rows.length}건 검색됨
+            </p>
+            <p data-testid="cc-no-same" className="text-[11px] text-text-tertiary">
+              {NO_SAME_BUT_CANDIDATES}
+            </p>
+            <OtherCandidates rows={others} marketLabel={marketLabel} />
+          </>
+        )}
       </section>
     );
   }
@@ -320,6 +471,11 @@ export function CandidateComparison({
           </div>
         );
       })}
+
+      {/* 🔴🔴 WU-091 — 동일상품을 찾았더라도 **나머지 후보를 숨기지 않는다.**
+          🔴 그러나 여기서도 **접혀 있고** 「가격비교에 사용되지 않습니다」를 말한다 —
+          카드(위)와 목록(아래)의 **의미 차이가 화면에서 보여야** 한다. */}
+      <OtherCandidates rows={others} marketLabel={marketLabel} />
     </section>
   );
 }

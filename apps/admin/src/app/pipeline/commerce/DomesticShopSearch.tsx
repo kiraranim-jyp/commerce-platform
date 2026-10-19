@@ -91,6 +91,14 @@ function displayTierForCandidate(c: Pick<Candidate, "matchTruth" | "matchLevel">
 export interface Candidate {
   title: string;
   url: string;
+  /**
+   * 🔴🔴 WU-091 — **서버는 이 값을 «이미» 보내고 있었다.**
+   *    `/api/domestic-price-sources/search` 가 후보 객체를 통째로 직렬화하므로
+   *    (`NextResponse.json({ ok: true, results })`) `facts` 가 그대로 온다.
+   *    화면 타입이 **선언하지 않아서** 품번을 쓰지 못하고 있었을 뿐이다.
+   *    ⟹ 🟢 **서버/판정 변경 0** · 선언 한 칸.
+   */
+  facts?: { brandModelCode?: string | null } | null;
   price: { amount: number; currency: string } | null;
   regularPrice?: { amount: number; currency: string } | null;
   imageUrl: string | null;
@@ -309,6 +317,8 @@ export function DomesticShopSearch({
                 price: c.price,
                 imageUrl: c.imageUrl,
                 matchReasons: c.matchReasons,
+                /** 🔴 없으면 `null` 을 넘긴다 — 화면이 「없음」이라고 적는다(지어내지 않는다). */
+                modelCode: c.facts?.brandModelCode ?? null,
               },
             })),
           )}
@@ -362,9 +372,13 @@ function ResultHeadline({ results, title, brand }: { results: SearchResult[]; ti
       detail = `자동 검색을 지원하는 국내 ${searchedCount}곳에서 검색했고, 결과가 없었습니다.`;
     }
 
-    // 검색은 새로 만들지 않는다 — 아래는 네이버 검색 결과 페이지로 가는 평범한
-    // 링크(anchor)일 뿐이고, API 호출도 크롤러도 없다.
-    const query = [brand, title].filter(Boolean).join(" ").trim();
+    /**
+     * 🔴🔴 WU-091 §4(CPO 지시 2026-10-19) — **네이버 검색 링크를 제거했다.**
+     *    이유는 「링크가 위험해서」가 아니라 **흐름이 맞지 않아서** 다 —
+     *    우리 후보 탐색 결과를 보여주는 자리에서 **외부 검색으로 빠뜨린다**.
+     *    🔴 `brand`/`title` prop 은 **지우지 않았다** — 헤드라인 분기와
+     *    상위 호출부가 쓰는 값이고, 지우면 그쪽이 깨진다.
+     */
     return (
       <div className="space-y-1.5 rounded-md border border-border bg-background px-3 py-2.5 text-xs">
         <p className="text-text-secondary">{headline}</p>
@@ -374,16 +388,7 @@ function ResultHeadline({ results, title, brand }: { results: SearchResult[]; ti
             {failedCount}곳은 이번 검색이 실패했습니다 — 다시 검색하면 결과가 달라질 수 있습니다.
           </p>
         )}
-        {query && (
-          <a
-            href={`https://search.shopping.naver.com/search/all?query=${encodeURIComponent(query)}`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-block rounded-md border border-border bg-surface px-2.5 py-1.5 text-[11px] font-medium text-text-primary hover:bg-background"
-          >
-            네이버에서 상품명으로 확인 ↗
-          </a>
-        )}
+
       </div>
     );
   }

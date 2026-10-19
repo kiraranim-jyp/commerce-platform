@@ -31,6 +31,7 @@ import {
   DOMESTIC_REVIEW_EMPTY,
   type HumanReview,
   SUPPLIED_URL_INPUT_NOTICE,
+  SUPPLIED_URL_INPUT_SUMMARY,
   type GeminiTransientRow,
 } from "./GeminiTransientCandidates";
 // MATCHING-UNIFY-1 — 국내 가격비교 표와 같은 라벨을 쓰기 위한 공통 매핑.
@@ -3406,18 +3407,23 @@ export function MiPanelView({
                 그 후보를 이 칸이 **이번 확인에만** 공급한다.
                 🔴 등록부에 추가하지 않는다 · 저장하지 않는다 · AI 를 부르지 않는다.
                 🔴 「동일상품인가」는 셀러가 아니라 **기존 MI 가 페이지를 열어** 판정한다. */}
-            <div className="mt-3">
-              <label
-                htmlFor="wu024-candidate-urls"
-                className="block text-[11px] font-medium text-text-secondary"
+            {/* 🔴🔴 WU-091 §5 — **보조 기능으로 내렸다.** 기본은 «접힘» 이다.
+                자동 탐색 결과가 먼저 보이고, 정말 필요할 때만 펼친다.
+                🔴 기능/배선/검증은 **한 줄도 바꾸지 않았다** — 감싸고 이름만 바꿨다. */}
+            <details data-testid="wu091-supplied-url" className="mt-3">
+              <summary
+                data-testid="wu091-supplied-url-summary"
+                className="cursor-pointer text-[11px] font-medium text-text-secondary"
               >
-                🔗 비교할 판매처 상품 URL (선택)
-              </label>
+                {SUPPLIED_URL_INPUT_SUMMARY}
+              </summary>
+
               <p className="mt-0.5 text-[11px] text-text-tertiary">
                 {SUPPLIED_URL_INPUT_NOTICE}
               </p>
               <textarea
                 id="wu024-candidate-urls"
+                aria-label={SUPPLIED_URL_INPUT_SUMMARY}
                 data-testid="wu024-candidate-urls"
                 value={candidateUrlsText}
                 onChange={(e) => onCandidateUrlsChange?.(e.target.value)}
@@ -3426,7 +3432,7 @@ export function MiPanelView({
                 placeholder="https://… (한 줄에 하나)"
                 className="mt-1 w-full rounded-md border border-border bg-surface/40 p-1.5 text-[11px] text-text-primary placeholder:text-text-tertiary disabled:opacity-50"
               />
-            </div>
+            </details>
             <div className="mt-2 flex items-center justify-end">
               <button
                 type="button"

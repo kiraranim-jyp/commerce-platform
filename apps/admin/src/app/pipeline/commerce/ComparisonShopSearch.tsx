@@ -148,6 +148,12 @@ interface Candidate {
   priceOptionValues?: Record<string, string>;
   /** P0-A.29-E ⑤ — 무엇이 달라서 「동일 모델 · 옵션 다름」인가. */
   variantDifference?: { model: string; queryOption: string; candidateOption: string };
+  /**
+   * 🔴🔴 WU-091 — 국내와 **같은 이유** 로 선언만 추가한다. 비교 검색 API 도
+   *    후보 객체를 통째로 직렬화하므로 `facts` 는 **이미 화면까지 온다**.
+   *    🟢 서버/판정 변경 **0**.
+   */
+  facts?: { brandModelCode?: string | null } | null;
 }
 
 interface SearchResult {
@@ -480,6 +486,8 @@ export function ComparisonShopSearch({
                 priceOptionValues: c.priceOptionValues,
                 variantDifference: c.variantDifference,
                 matchReasons: c.matchReasons,
+                /** 🔴 없으면 `null` — 화면이 「없음」이라고 적는다(지어내지 않는다). */
+                modelCode: c.facts?.brandModelCode ?? null,
               },
             })),
           )}
