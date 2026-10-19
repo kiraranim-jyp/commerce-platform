@@ -871,6 +871,8 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 | 🔴 **[WU-098 에서 정정] 판정하지 않은 후보에도 «교차판매처» 라벨은 있다** | `observed.candidate` (WU-098) | `DROPPED` 는 verdict·matchTruth·blocker 가 **존재하지 않는다** ⟹ WU-091 의 「행마다 판정 라벨」을 **못 지킨다** · 🔴 「판정 보류」라는 새 상태는 **제품 정책** 이고 CTO 가 만들지 않는다 |
 | 🔴🔴 **⑧ 은 «비용» 게이트인데 «노출» 까지 결정한다** | `isEvidenceEvaluationWorthwhile` + `transientEvidenceSink.push` (WU-096) | `candidates[0].matchLevel !== "low"` 가 false 면 **샵 전체 DROPPED** → transient 배열에 **안 실린다** → 화면에서 사라진다 · 🔴 **WU-091 의 「후보 노출 ≠ SAME 판정」과 충돌** · 🟢 등록부 «검색 화면» 은 이 게이트와 **무관**(직접 렌더) |
 | 🔴 **UI 게이트가 경로마다 다르다** | `mayShowCandidate` ↔ `evidence.map()` (WU-096) | 등록부 검색 표 = `mayShowCandidate` · **transient 카드 = 게이트 0(전건 렌더)** · 🔴 섞으면 「UI 에서 사라진다」는 **거짓 결론** 이 난다(실제로 1차에 났다) |
+| 🟢 **Shopify JSON 가격은 «통화가 명시될 때만»** | `shopifyVariantPrice` (WU-110) | `variants[0].price` **AND** `price_currency` 둘 다 있어야 한다 · 통화 **대문자 3글자** · 0 이하 **null** · 🔴 **`variants[0]` 고정**(선택 규칙은 `fetchShopifyProductJson` 소관) · 🔴 **추가 HTTP 0** · M1~M5 가 잠근다 |
+| 🔴🔴 **판정 함수를 직접 부르는 테스트는 «배선» 을 못 본다** | WU-110 교훈 | `price: shopifyVariantPrice(body)` 를 `null` 로 되돌려도 **0 failed** 였다 · 🟢 **소스 앵커를 같이** 둔다(배선 + 안전조건) |
 | 🟢🟢 **숫자만인 URL 세그먼트는 식별자가 아니다** | `SLUG_IS_NUMERIC_ONLY` ×3 (WU-095) | `match.ts` · `product-identity.ts` · `shared/product-facts.ts` **세 벌 전부** 같은 가드 · 🔴 하나만 고치면 다른 경로에서 거짓 신호가 계속 난다(M1~M3 각 2 FAIL) · 🔴 **Shopify handle 일치는 그대로 살아 있다**(M4 3 FAIL 이 양방향으로 잠근다) |
 | 🔴 **GT 라벨은 «인덱스» 로 붙이지 않는다** | `fixtures/wu-093-human-gt.json` (WU-095) | `withConfidence` 가 **정렬** 하므로 코드가 바뀌면 순서가 바뀐다 · 🔴 실제로 「human SAME 인데 conf 0」이 나왔다 · 🟢 **SKU 키** 로 고정 |
 | 🔴🔴🔴 **`matchLevel` 을 신뢰하지 않는다** | `extractSlug` · `match.ts:81·477` (WU-094) | Cafe24 URL 이 전부 `…/display/1/` 로 끝나 **slug 가 「1」로 충돌** → 0.95 바닥값이 **무조건** 발화 · 🔴 CF 로 끄면 **0.95 → 0.1** · 🔴 소비처 **여섯**(그중 **Gemini 스킵**·**가격 비용**) · 🔴 **SAME 로직에 결합 금지**(정밀도 2/5) |
@@ -973,6 +975,46 @@ USEFUL  kolkid.ca          Booty Ghosts T-Shirt                       ← 사실
 기준을 한 줄로 고정**. 🔴 ⒝ 없이는 재측정해도 **같은 충돌이 난다**.
 
 🟢 CEO 라벨은 `fixtures/wu-099-human-value.json` 에 **도메인 키** 로 고정했다(WU-095 교훈).
+
+### 🟢🟢 WU-110 `MI-SHOPIFY-PRICE` — **해외 가격 누락 해소 · 구현/배포**
+
+🟢 전문 `docs/MI-SHOPIFY-PRICE-110.md`. 운영 **1 파일 · +44/-2줄**(대부분 주석) ·
+🔴 **추가 HTTP 0** · 8축 0 · threshold 0 · 국내 로직 0 · UI 0 · Registry 0 · WU-079 재개방 0.
+
+🟢🟢 **MI 가 SAME/EXACT 로 판정한 동일상품의 해외 가격이 들어왔다**:
+```
+global.trenbe.com   price **null → USD 84** · market **UNKNOWN → OVERSEAS**
+                    tier **EXACT 유지** · httpCalls **1**(추가 HTTP 0)
+원인은 **이미 받은 JSON 을 읽지 않은 것** 이었다 —
+   variants[0].price "84.00" + **price_currency** 가 둘 다 있었다
+   (`price_currency` 는 shopify-product-json.ts:61 에 **이미 선언돼 있었다**)
+```
+
+🔴 **안전조건(CPO 고정)** — `price` **AND** `price_currency` 둘 다 · 통화는 **대문자 3글자** ·
+숫자 아니거나 0 이하면 **null** · **`variants[0]` 고정**(선택 규칙은 가져오지 않았다).
+🟢 파일 머리의 「통화를 모르므로 가격을 만들지 않는다」는 **그대로 유효** 하다 —
+바뀐 것은 **그 JSON 이 통화를 명시한다는 사실을 읽는다** 는 것뿐이다.
+
+🟢 **회귀 0** — 국내 **₩88,000 불변** · `EXCLUDED` 금액 제외 **유지** · 통화 분리 **유지** ·
+DIFFERENT 오포함 **0** · S2 해외 최저가 **58 불변**.
+🟡 🔴 **S1 에 `EUR 40`(stockmann)이 «새로» 들어왔다** — 예상한 영향 범위다
+(「모든 Shopify 후보에 가격이 생긴다」). 🟢 **다른 통화 최저가는 하나도 안 바뀌었다**.
+🔴 그 후보가 **진짜 동일상품인지는 사람이 확인하지 않았다**.
+
+🔴🔴 **음성 대조가 두 구멍을 찾았다 — 이 교훈을 남긴다**:
+```
+1차 M1(안전조건 절반 제거) **0 failed** · M5(**배선 제거**) **0 failed**
+🔴 원인 — 단언이 판정 함수를 «직접» 부르므로 **배선이 끊겨도 통과** 한다
+🟢 소스 앵커 2건(배선 · 안전조건)을 더해 **M1~M5 전부 1 failed** 로 잠갔다
+```
+🔴 그 과정에서 **두 번 더 틀렸다** — ⒜ **정규식을 스크립트로 편집하다 백슬래시가 또**
+**소실됐다**(WU-078 재발 · 파일이 구문 오류가 됐다) → 🟢 **정규식을 아예 쓰지 않는 앵커** 로
+바꿨다 ⒝ **단언 좌표가 틀렸다**(`fetchPath` 의 **첫 등장이 타입 선언**) → 🟢 **쉼표가 붙은**
+실제 반환 리터럴로 고쳤다. 🟢 둘 다 **FAIL 로 드러났다**.
+
+🟢 계약 **11**(네트워크 0) · 회귀 **601 files / 8,378 passed · failed 0** · typecheck 0 ·
+build exit 0 · 배포 `f8dee897` · Production **200**.
+🟡 **CEO Action — 최종 화면 1회**(보고서 §CEO).
 
 ### 🔴🔴 WU-109 `MI-AGGREGATE-ACCURACY` — **Trenbe 결함 확정 · 구현은 다음 세션**
 
