@@ -1,4 +1,7 @@
 import { extractFromJsonLd, extractFromOpenGraph } from "../product-data-extractor";
+/** 🔴 WU-134 — 거부 판정은 **브랜드 규칙 owner** 가 한다(사본 금지). */
+import { resolveBrandName } from "../brand-resolver";
+import { extractSiteBrandName } from "../site-brand-name";
 import {
   extractShopifyHandle,
   fetchPlainHtml,
@@ -54,6 +57,47 @@ async function fillMissingCurrency(
 }
 
 /**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴 WU-134 — **`vendor` 가 브랜드가 아닐 때만** 사이트 이름을 보러 간다
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 왜 — WU-133 전수 추적이 찾은 사슬의 머리가 이것이다:
+ * ```
+ * bobochoses.com(브랜드 **공식몰**) Shopify `vendor` = **"AW26"**(시즌코드)
+ *   → `resolveBrandName` 이 올바르게 버린다 → brand.value = ""
+ *   → brandKnown=false → 모든 후보 BRAND_UNCONFIRMED → PRESUMED_SAME
+ *   → crossSellerReserved → TEXT_CONFIRMED → COMPARISON → 가격비교 **0건**
+ * ```
+ * 🔴 그런데 이 경로는 **HTML 을 아예 읽지 않는다**(WU-079 가 기록한 그 성질) —
+ *    그래서 페이지가 두 자리에 적어 둔 "Bobo Choses" 를 **볼 수가 없었다.**
+ *
+ * 🟢 **바로 위 `fillMissingCurrency` 와 완전히 같은 모양** 이다 — 「그 값이 비었을
+ *    때만 HTML 을 한 번 더 받는다」. 🔴 그래서 추가 HTTP 는 **`vendor` 가 브랜드로
+ *    쓸 수 없는 스토어에서만** 발생한다(실측: 후보 17건 중 **0건** · 원상품 1건).
+ * 🔴 **브랜드를 여기서 «정하지» 않는다** — `siteBrandName` 칸에 담아 올리고,
+ *    쓸지는 `canonical-product.ts` 가 더 좁은 조건에서 정한다.
+ */
+async function fillRejectedBrand(
+  result: SiteStrategyResult,
+  url: string,
+): Promise<SiteStrategyResult> {
+  const raw = result.productData.brand?.trim();
+  /** 🔴 brand 가 **애초에 없으면** 보러 가지 않는다 — 「모르면 채우지 않는다」. */
+  if (!raw) return result;
+  const resolution = resolveBrandName(raw);
+  /** 🟢 **거부된 경우만** — 정상 브랜드면 추가 HTTP 0 이고 아무것도 바뀌지 않는다. */
+  if (!resolution?.changed || resolution.cleaned.trim()) return result;
+  /** 🔴 이미 채워져 있으면 다시 받지 않는다(다른 전략이 넣었을 수 있다). */
+  if (result.productData.siteBrandName) return result;
+
+  const html = await fetchPlainHtml(url);
+  if (!html) return result;
+  const site = extractSiteBrandName(html);
+  if (!site) return result;
+  return { ...result, productData: { ...result.productData, siteBrandName: site.value } };
+}
+
+/**
  * Shopify는 모든 스토어에 인증 없이 접근 가능한 공개 상품 JSON(`/products/{handle}.json`,
  * `/products/{handle}.js`) 엔드포인트를 제공한다. detect()는 URL의 `/products/{handle}`
  * 패턴만 보고 판별하므로 Playwright 네비게이션이 실행되기 전에도 안전하게 호출할 수
@@ -74,12 +118,13 @@ export const shopifySiteStrategy: SiteStrategy = {
     const sourceUrl = stripShopifyLocalePrefix(url);
     const result = await fetchShopifyProductJson(url, { forceCanonicalMarket: true });
     if (!result) return null;
-    return fillMissingCurrency(result, sourceUrl);
+    /** 🔴 WU-134 — `vendor` 가 브랜드로 쓸 수 없을 때만 사이트 이름을 보러 간다. */
+    return fillRejectedBrand(await fillMissingCurrency(result, sourceUrl), sourceUrl);
   },
 
   async fallback(url) {
     const result = await fetchShopifyProductJs(url);
     if (!result) return null;
-    return fillMissingCurrency(result, url);
+    return fillRejectedBrand(await fillMissingCurrency(result, url), url);
   },
 };

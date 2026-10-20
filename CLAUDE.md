@@ -467,6 +467,48 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 
 ## 12. 현재 상태 — MI 측정 트랙 **전부 종료** (갱신 2026-10-12)
 
+### 🟢🟢🟢 **WU-134 종료 — 실제 human SAME 이 «처음으로» 가격비교에 섰다** (2026-10-20)
+
+🟢 전문 `docs/HANDOFF-WU-134.md`. 🔴 **CEO 액션 없음.** 다음 범위는 CPO 가 지정한다.
+
+🔴🔴 **WU-133 이 확정한 사슬의 «머리» 를 고쳤다** — 원상품 brand 공백 하나였다.
+
+```
+🟢 STEP 1 실측  bobochoses.com(공식몰) vendor = JSON-LD brand = **"AW26"**(시즌코드)
+                🟢 그런데 `og:site_name` == JSON-LD `Organization.name` == **"Bobo Choses"**
+                후보 17건 — Product.brand 보유 11 · null 6 ⟹ 🟢 **발화 조건에 걸리는 리테일러 0**
+                🔴 내 1차 가설(「브랜드 품번을 sku 로 싣는 곳이 공식몰」) **반증**
+                   — trenbe·thefrontshop·luxboy(리테일러)도 그렇게 싣는다
+🟢 STEP 2 반사실(구현 «전» · 같은 후보 집합에 brand 만 바꿔 두 번 판정)
+   BEFORE brand=""            displaySAME 0 · trueSAME 0 · falseSAME 0 · DIFF 방어 2/2
+   AFTER  brand="Bobo Choses" displaySAME 5 · trueSAME **3** · falseSAME **0** · DIFF 방어 **3/3**
+   🟢 Negative 가 **더 강해졌다**(parkette.ca 가 COLOR 충돌로 새로 막혔다)
+   🔴 악화 1건 — biskuit.kr 이 UNCONFIRMED → **BRAND_MISMATCH**(결과 등급 변화 0)
+🟢 구현       신규 `site-brand-name.ts` + 배선 3곳
+   🔴 발화 조건 **셋 동시** — brand 가 **있었고** · **거부됐고** · 사이트가 **두 자리에 같은
+      이름** 을 적어 뒀다. 🔴 brand 가 애초에 없으면 **발화하지 않는다**(「모르면 채우지 않는다」)
+   🔴 **도메인을 쓰지 않는다**(계약 A-8) · WU-080 금지(후보/판매처 이름)는 **그대로**
+   🔴 `vendor` 가 거부된 스토어에서만 **HTML 1회 추가** — 기존 `fillMissingCurrency` 와 같은 모양
+🟢🟢 STEP 4 실제 경로 E2E  vendor "AW26" → siteBrandName → canonical brand "Bobo Choses"
+   GT 17(SAME 13·DIFF 4) · pool 17/17 · 판정 12 · trueSAME **3** · falseSAME **0** · DIFF 방어 **3/3**
+   🟢🟢 **📊 가격비교 — 해외 4건**(국내 0) ⟸ **전까지 0 이었다**
+🟢 계약 17 · 음성대조 **M1~M6 전부 FAIL → 복구** · 회귀 **8,524 passed · 0 failed** · tsc 0 · build 0
+```
+
+🔴🔴 **계약이 내 회귀를 잡았다** — 1차 구현이 `cleaned || recovered || brand || ""` 였고,
+거부된 경우 `cleaned` 가 빈 문자열이라 `||` 가 건너뛰어 **「AW26」이 브랜드로 되돌아왔다**
+(REWORK-12 ④ 가 없앤 버그의 재발). 🟢 `recovered || (cleaned ?? brand ?? "")` 로 고쳤다.
+🔴 그리고 **M2·M4 변이가 1차에 적용되지 않았다**(sed 가 줄바꿈·`||` 에서 실패) — 「적용
+실패」를 「통과」로 읽지 않도록 **적용 확인을 넣고** 다시 돌렸다(메모 그 함정).
+
+🔴 **측정불가/한계** — ⒜ 🔴🔴 **기존 스냅샷 543건은 brand 가 빈 채로 저장돼 있다**(이 수정은
+**새 추출** 에만 적용 · 기존 상품은 「새 상품 분석」을 다시 해야 한다) ⒝ **국내 가격비교는 여전히 0**
+(biskuit.kr 이 BRAND_MISMATCH + NO_TITLE_OVERLAP · **8축 CLOSED** 라 안 건드렸다)
+⒞ 표본 **원상품 1개** — AC010 은 스냅샷 없음 · AC042 는 human SAME GT 0 ⟹ **교차검증 상품 없음**
+⒟ 가격비교 4건 중 **1건은 라벨이 이 분모에 없다**(「4건 전부 정답」으로 적지 않는다).
+
+---
+
 ### 🔴🔴🔴 **WU-133 — 「SAME 0」의 원인 확정 · HOLD** (2026-10-20 · CPO 지시)
 
 🟢 전문 `docs/HANDOFF-WU-133.md`. 🔴 **CPO 판정 사안 둘** 이 나왔다 — CTO 가 열지 않았다.

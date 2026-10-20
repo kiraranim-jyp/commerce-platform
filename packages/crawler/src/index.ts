@@ -4,6 +4,8 @@ export * from "./image-extractor";
 export * from "./universal-extractor";
 export * from "./description-facts";
 export * from "./brand-resolver";
+/** 🔴 WU-134 — 사이트가 밝힌 이름(브랜드 «결정» 은 호출부가 한다). */
+export * from "./site-brand-name";
 export type { ExtractedProductData, ProductDataSource } from "./product-data-extractor";
 export {
   extractProductGroupOptions,

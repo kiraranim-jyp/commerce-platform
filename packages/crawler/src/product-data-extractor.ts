@@ -5,6 +5,8 @@ import { resolveSourcePrice, type PriceValidity } from "@commerce/pricing";
 import { hasRealOptionAxes } from "./utils/real-option-axes";
 import { normalizeOptionModel } from "./common-option-model";
 import { extractSmallableSizeOptions } from "./smallable-size-options";
+/** 🔴 WU-134 — 사이트가 «두 자리에 같이» 밝힌 이름. 🔴 브랜드 «결정» 은 호출부가 한다. */
+import { extractSiteBrandName } from "./site-brand-name";
 
 export type ProductDataSource = "json-ld" | "microdata" | "open-graph" | "dom" | "shopify-json";
 
@@ -27,6 +29,16 @@ export interface SelectedVariantResolution {
 export interface ExtractedProductData {
   title?: string;
   brand?: string;
+  /**
+   * 🔴🔴 WU-134 — **사이트가 «두 자리에 같이» 적어 둔 자기 이름**
+   *    (`og:site_name` == JSON-LD `Organization.name`).
+   *
+   * 🔴 **이것은 브랜드가 아니다.** 브랜드로 쓸지는 `canonical-product.ts` 가
+   *    훨씬 좁은 조건에서만 정한다 — 「원상품이 brand 를 적어 뒀는데 그 값이
+   *    **시즌코드로 거부된** 경우」. 🔴 도메인에서 만들지 않는다(site-brand-name.ts).
+   * 🔴 후보(교차판매처) 경로는 이 칸을 **쓰지 않는다** — WU-080 이 REJECT 한 축이다.
+   */
+  siteBrandName?: string;
   price?: { amount: number; currency: string };
   /** N-4.18-Q2 P0-1(대표님 지시, 2026-08-26: "정상가와 할인가를 분리한다") —
    * Shopify variants[].compare_at_price(할인 전 정가)에서만 채워진다(실측
@@ -1044,6 +1056,11 @@ export async function extractProductData(
   const data: ExtractedProductData = {
     title: pick("title"),
     brand: pick("brand"),
+    /**
+     * 🔴 WU-134 — 사이트가 밝힌 이름. **추가 HTTP 0**(이미 받은 `html` 을 읽는다) ·
+     *    **브랜드 결정 0**(호출부가 정한다 · 위 타입 주석).
+     */
+    siteBrandName: extractSiteBrandName(html)?.value,
     price: validPriceCandidate?.price,
     priceValidity: validPriceCandidate ? "VALID" : invalidPriceCandidate ? "INVALID" : "MISSING",
     priceRawText: validPriceCandidate ? undefined : invalidPriceCandidate?.priceRawText,

@@ -277,7 +277,64 @@ function buildCanonicalProductRaw(
   // 섞여 오는 경우(실측: "Bobo Choses SS26 Baby 50% Off Sale")가 있어 정제한다.
   // 규칙에 안 걸리면 원본 그대로 — 지어내지 않는다.
   const brandResolution = resolveBrandName(productData.brand);
-  const resolvedBrandName = brandResolution?.cleaned ?? productData.brand ?? "";
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 WU-134 — **거부된 브랜드를 «사이트가 밝힌 이름» 으로 복구한다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * WU-133 전수 추적이 찾은 사슬의 **머리** 가 이 줄이었다:
+   * ```
+   * bobochoses.com(브랜드 **공식몰**) vendor = JSON-LD brand = "AW26"(시즌코드)
+   *   → `resolveBrandName` 이 **올바르게** 버린다(REWORK-12 ④) → brand.value = ""
+   *   → brandKnown=false → **모든 후보** BRAND_UNCONFIRMED → PRESUMED_SAME
+   *   → crossSellerReserved → TEXT_CONFIRMED → COMPARISON → 가격비교 **0건**
+   * ```
+   * 🟢 그런데 그 페이지는 브랜드를 **두 자리에 적어 두고 있었다**
+   *    (`og:site_name` == `Organization.name` == "Bobo Choses").
+   *
+   * ── 🔴 발화 조건이 «좁다» — 그게 이 수정의 전부다 ─────────────────────────
+   * ```
+   * ① 원상품이 brand 를 **적어 뒀고**(`productData.brand` 가 있다)
+   * ② 그 값이 **거부돼 빈 값이 됐고**(`changed && cleaned === ""`)
+   * ③ 사이트가 **두 자리에 같은 이름** 을 적어 뒀다(`siteBrandName`)
+   * 🔴 ①이 없으면(brand 가 애초에 없으면) **발화하지 않는다** — 「모르면 채우지
+   *    않는다」(CPO). 그 모양이 멀티브랜드 리테일러의 위험 모양이다
+   * ```
+   * 🟢 **실측(WU-134 STEP 1 · 후보 17건): 이 조건에 걸리는 리테일러는 0건** 이다.
+   *    리테일러는 Product.brand 를 갖고 있거나(11) 아예 없다(6) — 둘 다 안 탄다.
+   *
+   * ── 🔴 WU-080 을 깨지 않는다 ───────────────────────────────────────────────
+   * ```
+   * WU-080 이 막은 것   후보/도메인/판매처 이름을 브랜드로 쓰기 ⟹ **그대로 금지**
+   *                      (계약 `wu-080-brand-producer` 가 2 FAIL 로 잠근다)
+   * 🟢 여기는 **원상품** 이고, **거부된 경우** 이고, **도메인을 쓰지 않는다**
+   * ```
+   * 🟢 반사실 실측(WU-134 · Positive+Negative 동시):
+   *    trueSAME **0 → 3** · falseSAME **0 → 0** · 실제 DIFFERENT 방어 **2/2 → 3/3**
+   *    🔴 악화 1건도 적는다 — `biskuit.kr` 이 UNCONFIRMED → **BRAND_MISMATCH** 가 된다
+   *       (그 샵이 brand 자리에 자기 이름 「비스킷」을 적는다 · WU-080 이 본 그 모양).
+   *       🟢 결과 등급은 둘 다 SAME 이 아니라 **변화 0** 이다.
+   */
+  const brandRejectedAsNonBrand = Boolean(
+    productData.brand?.trim() && brandResolution?.changed && !brandResolution.cleaned.trim(),
+  );
+  const recoveredSiteBrand = brandRejectedAsNonBrand ? (productData.siteBrandName ?? "").trim() : "";
+  /**
+   * 🔴🔴 **`||` 로 이어 쓰지 않는다 — 계약이 내 회귀를 잡았다(B-4).**
+   *
+   * 1차 구현이 `cleaned || recovered || brand || ""` 였다. 🔴 거부된 경우 `cleaned`
+   * 가 **빈 문자열** 이므로 `||` 가 그것을 건너뛰고 **`productData.brand`("AW26")로
+   * 되돌아갔다** — REWORK-12 ④ 가 없앤 그 버그가 **그대로 재발** 하는 모양이다.
+   *
+   * 🟢 그래서 **기존 `??` 사슬을 건드리지 않고** 복구값만 **앞에** 둔다:
+   * ```
+   * 거부 + 사이트이름 있음 → 복구값
+   * 거부 + 사이트이름 없음 → `cleaned`(빈 문자열) ⟹ 「브랜드 · 입력 필요」 유지
+   * 정상                  → `cleaned`
+   * brand 자체가 없음      → 복구값이 "" 이고(위 게이트) `productData.brand ?? ""`
+   * ```
+   */
+  const resolvedBrandName = recoveredSiteBrand || (brandResolution?.cleaned ?? productData.brand ?? "");
 
   return {
     sourceUrl,
