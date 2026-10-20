@@ -467,6 +467,67 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 
 ## 12. 현재 상태 — MI 측정 트랙 **전부 종료** (갱신 2026-10-12)
 
+### 🟢🟢 **WU-136 종료 — 셀러의 1순위가 「판매여부」가 됐다**(2026-10-20 · 배포 `56104d2`)
+
+🟢 전문 `docs/HANDOFF-WU-136.md`. 🟡 남은 것은 **CEO 화면 확인 1회**(그 문서 §6). 다음 범위는 CPO 가 지정한다.
+🔴 MI 판정 0 · threshold 0 · Registry 0 · 8축 0 · 등록 로직 0 · AI 0 · DB 0 · **새 영역 0** · **기술 데이터 삭제 0**.
+
+🔴🔴🔴 **먼저 — 실측이 설계를 뒤집었다. 이 숫자를 다시 재지 않는다**:
+```
+Shopify 공개 `/products/{handle}.json` · human SAME 호스트 9 (2026-10-20)
+  inventory_management  **9/9 가 "shopify"**
+  inventory_quantity    🔴 **2곳만** 준다(thefrontshop 1 · junioredition 2) · 나머지 **7곳 없음**
+⟹ 🔴 운영 `isVariantAvailable`(shopify-product-json.ts:91)의 `inventory_quantity ?? 0` 을
+   후보 경로에 **그대로 쓰면 7곳이 「품절」로 떨어진다** — 그 파일 주석이 금지한
+   「『모른다』를 『0이다』로 취급」 그 자체다
+🟢 그래서 **운영 owner 를 고치지 않고**(원상품 경로 불변) 후보 경로에
+   `shopifyVariantAvailability(body): boolean | **null**` 을 따로 뒀다
+🔴 그 전까지 후보 생산자는 판매여부 칸을 **아예 세우지 않았다**(전건 null) — 그래서
+   화면의 `soldOut !== true` 가 **모르는 것을 판매중처럼** 보여주고 있었다
+```
+
+🟢 **구현 — 신규 함수 둘 · 운영 4파일 · 추가 HTTP 0**
+```
+① product-url-facts   `shopifyVariantAvailability` + 후보 `soldOut` 배선(같은 응답 재사용)
+② mi-same-candidates  `saleState` 3상태(ON_SALE/SOLD_OUT/**UNKNOWN**) ·
+                      `buildMarketJudgement`(**판매여부를 가격보다 먼저**) ·
+                      verdict **넷**(NO_SAME / SAME_BUT_NONE_ON_SALE / ON_SALE_NO_PRICE / ON_SALE)
+③ MarketPriceComparison  영역 **재구성**(제목 「📊 동일상품 가격 비교」 → **「📊 시장 판매 판단」**)
+   🔴 **영역 추가 0** — 순서를 뒤집고 기존 블록 전체를 **`▸ MI 상세 분석`** 뒤로 접었다
+④ 후보 구역 넷 `collapsed`(**`▸` 접힘**) — 🔴 행·판정 라벨·네 버튼·저장 경로 **0 변경**
+🔴 `open` 을 붙이지 않았다 — 펼치면 후보가 「유력」으로 읽힌다(2026-09-19 사고 기전)
+🔴 통화 **환산 0** · 내부 토큰 노출 **0** · `summarize` 어휘 **0**(wu-130 F-4 유지)
+```
+
+🟢🟢 **실제 경로 E2E(운영 함수 · 실제 HTTP · B226AC009 · WU-134 하니스 재사용 · 새 하니스 0)**
+```
+GT 17(SAME 13·DIFF 4) · pool 17/17 · 판정 12 · trueSAME **3** · falseSAME **0** · DIFF 방어 **3/3**
+🟢🟢 🛒 verdict **ON_SALE** · 판매중 확인 **3곳** · 판매여부 확인불가 **2곳** · 🇰🇷 0 · 🌎 **3**
+   💰 GBP 37(2곳 · **전부 판매중 확인**)  ·  💰 USD 58(2곳 · **그중 판매중 확인 1곳**)
+   thefrontshop ON_SALE USD58(human SAME) · junioredition ON_SALE GBP37 ·
+   scoutandcokids ON_SALE GBP37 · tinyapple **UNKNOWN** USD58(human SAME) ·
+   trenbe **UNKNOWN · 가격 확인 필요**(human SAME)
+🟢🟢 **배선이 발화했다** — 전까지 **전건 `stock=null`** 이던 것이 3곳에서 판매중 확정
+🔴 Negative 동시 단언 — 미확인이 판매처 수에 **안 들어간다** · SAME 아닌 후보 **0건** ·
+   품절이 가격 축에 **안 들어간다** · 세 상태 합 == 판매처 수(어디로도 사라지지 않는다)
+```
+
+🟢 계약 신규 **43**(순수/소스 33 + **마운트 DOM 10**) · 음성대조 **M1~M9 전부 FAIL → 복구**
+(🟢 적용 확인 포함) · 회귀 **8,567 passed · 0 failed** · tsc 0 · build 0.
+🔴 기존 계약 3건이 FAIL 했고 **의도된 변경** 이라 앵커를 갱신·**강화** 했다 —
+`mi-022`(「그 구역이 **접혀 있다**」) · `wu-130 F-3`(「제목이 **하나뿐**」) ·
+`wu-132 B-2`(「**판매 결론이 제목 바로 뒤에** 선다」).
+
+🔴🔴 **측정불가/한계** — ⒜ 🔴 **판매여부는 Shopify 후보에서만 확정된다.** 비-Shopify
+(PLAIN_HTML) 경로엔 신호가 **없다** ⟹ 전건 미확인이고 **판매중으로 세지 않는다**
+(국내 후보가 대부분 그 경로라 **🇰🇷 판매중은 구조적으로 0 에 가깝다** · 실측 0)
+⒝ Shopify 안에서도 qty 를 주는 곳이 **2/9** ⟹ 「확인불가」가 **정상 상태** 다
+⒞ 표본 **원상품 1개 · 판매처 5곳**(교차검증 상품 없음 — WU-134 ⒞ 그대로)
+⒟ 기존 스냅샷 **543건 brand 공백** ⟹ **「새 상품 분석」을 다시 해야** 이 화면이 제대로 선다
+⒠ 🔴 실제 따져 화면은 CTO 가 볼 수 없다 — 위는 **운영 함수 + 마운트 DOM** 이다
+⒡ 🔴 「④ 팔 가치가 있는가」는 **원가·수수료 축** 이라 §00-B 가격 보류 ⟹ 만들지 않았다.
+
+---
 ### 🟡 **WU-135 — 등록 payload 까지 연결됨 · 실등록은 STOP**(2026-10-20)
 
 🟢 전문 `docs/HANDOFF-WU-135.md`. 🔴 **운영 코드 변경 0**(하니스/계약만) · 회귀 8,524 · tsc 0 · build 0.
