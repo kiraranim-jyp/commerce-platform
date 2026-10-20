@@ -467,6 +467,55 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 
 ## 12. 현재 상태 — MI 측정 트랙 **전부 종료** (갱신 2026-10-12)
 
+### 🔴🔴🔴 **WU-137 — 「새 상품 분석」이 브랜드 복구를 버리고 있었다**(2026-10-20 · 배포 `1137e96`)
+
+🟢 전문 `docs/HANDOFF-WU-137.md`. 🟡 **실등록은 아직 안 됐다** — 남은 것은 CEO 화면 작업이다(§7).
+
+🔴🔴🔴 **WU-134 가 운영에서 «한 번도» 발화하지 않았다. 이 사실을 먼저 적는다**:
+```
+universalExtract 의 **빠른 경로**(`tryFastPath` · universal-extractor.ts:143)가
+productData 를 **칸 하나씩 손으로 옮기면서** `siteBrandName` 을 빠뜨렸다
+  ⟹ `canonical-product` 가 거부된 `vendor = "AW26"` 를 복구할 수 없었다
+🔴 실측 증거 — WU-134 배포(**18:24 KST**) 뒤인 **20시 스냅샷도 brand=""** ·
+   B226AC009 스냅샷 **16/16 전건** 이 빈 문자열이다
+🔴🔴 원인은 **WU-110 이 기록한 그 함정** — WU-134 라이브 테스트가
+   `shopifySiteStrategy.extract` 를 **직접** 불러 「전략은 채운다」까지만 증명하고
+   **라우트가 실제로 쓰는 경로** 를 보지 않았다
+🟢 느린(Playwright) 경로는 `extractProductData` 를 그대로 써서 **영향이 없었다** —
+   **Shopify 스토어만 빠른 경로를 타서 브랜드 공식몰이 정확히 그 구멍에 빠졌다**
+🟢 수정 **1줄** + 계약 **5**(배선 · 브랜드 규칙 격리 · 칸 전수 · 느린 경로 · 타입) ·
+   음성대조 **M11 1 FAIL → 복구** · 운영 경로 실측 `universalExtract` →
+   canonical brand **"Bobo Choses"**
+```
+
+🔴 **WU-135 의 「셀러 설정 7칸이 비어 있다」를 정정한다**(DB 실측 `seller_settings`):
+```
+🟢 이미 있다 — manufacturer 「규하맘샵」 · as_company_name 「규하맘샵AS」 ·
+   as_phone_number · quality_guarantee · as_contact_number
+🔴 WU-135 의 그 숫자는 **하니스가 설정을 안 읽은** 값이었다(운영
+   `resolveNaverContext` 는 `loadSellerSettings()` 를 부른다)
+🔴 그리고 브랜드 복구가 고시 `manufacturer` 칸도 같이 닫는다 —
+   `resolveManufacturer` 가 「브랜드 프로필 → 상품 브랜드」로 폴백하고
+   `coupang_brand_profiles` 는 **0행** 이다
+```
+
+🔴🔴 **측정불가 — 이 숫자를 운영 등록 준비 상태로 쓰지 않는다**:
+```
+운영 라우트의 컨텍스트 owner 는 `resolveNaverContext` 이고 그 함수는
+⒜ 실제 Naver API ⒝ `loadSellerSettings()`(service-role 키) ⒞ **해결된 leaf 카테고리**
+를 요구한다. 🔴 CTO 하니스는 ⒜⒝를 쓸 수 없고 ⒞ 를 `UNRESOLVED_CATEGORY` 로 둔다
+⟹ 그 하니스의 「MISSING 7」은 **운영 값이 아니다**. 🔴 설정 세 칸을 넣어도 MISSING
+   에 남았고 그 원인(카테고리 미해결 ↔ 배선)을 **가르지 못했다** — 「운영에서도 비어
+   있다」로 적지 않는다. 🟢 증명된 것은 하나다 — **운영 추출 경로에서 브랜드가 산다**
+```
+
+🔴 **하니스를 세 번 틀렸고 셋 다 적는다** — ⒜ `product.title` 을 문자열로 가정(객체다)
+⒝ validation 칸을 `state`/`label` 로 읽어 **MISSING 목록이 빈 채로 출력**(실제는
+`{field,status,reason}` · 그대로 보고했으면 「남은 칸 없음」이라는 거짓) ⒞ 4번째 인자에
+`r.images` 를 넣음(실제 `WorkspaceItem[]` · 🟢 **typecheck 가 잡았다**).
+🟢 ⒝는 **목록 길이 == `missingCount`** 단언을 넣어 재발을 막았다.
+
+
 ### 🟢🟢 **WU-136 종료 — 셀러의 1순위가 「판매여부」가 됐다**(2026-10-20 · 배포 `56104d2`)
 
 🟢 전문 `docs/HANDOFF-WU-136.md`. 🟡 남은 것은 **CEO 화면 확인 1회**(그 문서 §6). 다음 범위는 CPO 가 지정한다.
