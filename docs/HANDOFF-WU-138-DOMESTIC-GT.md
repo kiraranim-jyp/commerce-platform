@@ -103,7 +103,66 @@ SAME **13** · DIFFERENT **4**  (전부 B226AC009 · WU-131 이 시딩한 그 17
 
 ---
 
-## 6. 🔴 CPO 판정이 필요한 것 하나
+## 6. 🟢🟢 **실행 결과 — 국내 GT 5건 전수 funnel** (CPO 승인 분모 · 2026-10-21)
+
+`wu-138-domestic-funnel.test.ts`(게이트 `WU_138_PROBE=1` · 운영 함수 · 원상품 HTTP 2건).
+
+```
+B226AC009 원상품  brand "Bobo Choses" · code B226AC009 · color "Light blue"
+B226AC010 원상품  brand "Bobo Choses" · code B226AC010 · color "Heather grey"
+🟢 두 원상품 모두 **브랜드가 산다**(WU-137 배선 수정이 여기서도 발화한다)
+```
+
+| 원상품 | 호스트 | human | 후보 | 판정 | 대표 | tier | 시장 | 가격 | 최종 | 축 |
+|---|---|---|---:|---:|---:|---|---|---|---:|---|
+| AC009 | `biskuit.kr` | SAME | O | O | O | PRESUMED_SAME | **KR** | **KRW 88,000** | X | **A MI** |
+| AC010 | `beaumonde.co.kr` | SAME | O | O | O | PRESUMED_SAME | **UNKNOWN** | **없음** | X | **A MI + B 가격** |
+| AC009 | `m.luxboy.com` | DIFFERENT | **X** | X | X | — | — | — | X | ② URL 게이트 |
+| AC010 | `luksusbaby.kr` | DIFFERENT | **X** | X | X | — | — | — | X | ② URL 게이트 |
+| AC010 | `kream.co.kr` | DIFFERENT | **X** | X | X | — | — | — | X | ② URL 게이트 |
+
+```
+🇰🇷 국내 SAME 2 — 최종 비교 도달 **0** · 둘 다 **A(MI 판정)** 에서 탈락
+🇰🇷 국내 DIFFERENT 3 — 누출 0  🔴 단 아래 ⒞ 때문에 **「방어됐다」로 적지 않는다**
+```
+
+### 🔴🔴 **두 SAME 의 blocker 가 «다르다» — 이것이 이번 측정의 핵심이다**
+
+```
+biskuit.kr     BRAND_MISMATCH · NO_TITLE_OVERLAP   🟢 가격은 **있다**(KRW 88,000)
+beaumonde      **BRAND_UNCONFIRMED 하나**          🔴 가격이 **없다** · market UNKNOWN
+```
+
+🟢🟢 **CPO 가 예측한 ⒞ 가 그대로 나왔다** — `beaumonde` 는 **SAME 이 돼도 화면에 못 선다**
+(가격 0 · market UNKNOWN). ⟹ 🔴 **MI 를 고쳐도 국내 가격비교는 그 1건으로는 안 생긴다.**
+WU-061/079 가 측정한 「JS 렌더 · 구조화 데이터 0」 사이트이고 **B 축(가격 수집)** 이다.
+
+⟹ 🔴 **국내 최종 비교를 만들 수 있는 후보는 실질적으로 `biskuit.kr` 1건이고**, 그 1건을
+열려면 `NO_TITLE_OVERLAP` 을 열어야 하며 **그것은 WU-138 STEP 4 에서 DIFFERENT 누출로
+측정됐다**(순손실). ⟹ **경우 2(기존 축으로 구분 불가) + 경우 3(가격 수집 문제) 동시 성립.**
+
+### 🔴 측정불가 / 정정 (숨기지 않는다)
+
+```
+⒜ 🔴 `beaumonde` 의 `BRAND_UNCONFIRMED` 는 biskuit 와 **다른 사유** 다 — 그 샵이
+   brand 를 **아예 안 적는다**(biskuit 는 자기 이름을 적는다). 🔴 메우면 WU-080 이
+   REJECT 한 그 방향이고 **악화** 가 측정됐다 ⟹ 열지 않았다
+⒝ 🔴 `beaumonde` 는 market **UNKNOWN** 이다 — `.co.kr` 인데 **가격이 없어** 통화
+   증거가 없다(운영 `classifyCandidateMarket` 은 통화 단독 결정을 금지한다) ⟹
+   **가격이 생기면 KR 로 확정될 가능성** 이 있다. 🔴 지금은 미확인이다
+⒞ 🔴🔴 **DIFFERENT 3건의 「후보 생성 X」를 「차단 성공」으로 적지 않는다.**
+   같은 세션의 WU-138 본 실행에서 `m.luxboy.com` 은 **후보로 들어왔다**(O·O·O).
+   이 실행에서는 X 다 ⟹ **실행 간 불안정** 이고 원인 미규명(입력 URL 수·중복 경로).
+   🔴 그래서 「DIFFERENT 누출 0」은 **분모가 비어서 나온 값** 이고 **측정불가** 다.
+   🟢 유효한 DIFFERENT 방어 측정은 **WU-138 본 실행의 4/4**(해외 포함) 쪽이다
+⒟ 🔴 `luksusbaby.kr/collections/bobo-choses` 는 **컬렉션 URL** 이라 상품 상세가 아니다 —
+   그 차단은 **올바르다**(WU-073/075 축). 🔴 「동일상품을 버렸다」로 읽지 않는다
+⒠ 🔴 국내 SAME 분모는 **2** 다. 「국내 MI 정확도 X%」를 적지 않는다(CPO 지시)
+```
+
+---
+
+## 7. 🔴 CPO 판정이 필요한 것 하나
 
 ```
 🟡 **`B226AC010` 을 측정 분모에 넣을 것인가** — 🟢 기술적으로 가능하고 추가 비용은
