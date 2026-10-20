@@ -107,7 +107,19 @@ describe("WU-136 — 시장 판매 판단 (마운트 DOM)", () => {
 
   it("🔴 R-6 가격을 확인하지 못하면 숫자를 지어내지 않는다", async () => {
     await mount({ rows: [sameRow({ soldOut: false, priceStatus: "UNVERIFIED_SEARCH" })] });
-    expect(txt("market-seller-price")).toBe("가격 확인 필요");
+    /**
+     * 🔴🔴 WU-139 — **앵커를 갱신하고 «강화» 했다.** 그 칸이 「가격 확인 필요」라는
+     *    **글자** 였는데, 이제 **판매처로 가는 링크** 다(CPO: 「가격을 못 가져오는
+     *    판매처는 버리지 않는다 — 링크를 보여주고 셀러가 직접 확인하게 한다」).
+     * 🟢 지키는 성질은 그대로다 — **가격을 지어내지 않는다.**
+     * 🔴 **강화** — 「숫자가 없다」에 더해 **「그 자리가 실제 링크이고 href 가 그
+     *    후보 URL 이다」** 까지 단언한다. 글자로 되돌리면 FAIL 한다.
+     */
+    const priceCell = q("market-seller-price");
+    expect(priceCell?.textContent).not.toMatch(/\d/);
+    const link = q("market-seller-price-link") as HTMLAnchorElement | null;
+    expect(link?.tagName).toBe("A");
+    expect(link?.getAttribute("href")).toBe("https://a.example/products/x");
     expect(txt("market-verdict")).toBe(MARKET_VERDICT_TEXT.ON_SALE_NO_PRICE);
   });
 

@@ -21,6 +21,15 @@ import {
   MARKET_TABLE_HEADERS,
   MARKET_VERDICT_TEXT,
   ON_SALE_SPLIT_PREFIX,
+  /** 🔴 WU-139 — 가격 미확인 후보를 버리지 않고 링크로 주고, 1~2건으로 기준가를 안내한다. */
+  PRICE_GUIDE_EMPTY,
+  PRICE_GUIDE_RANGE_NOTE,
+  PRICE_GUIDE_SINGLE_NOTE,
+  PRICE_GUIDE_TITLE,
+  PRICE_LINK_TEXT,
+  buildPriceGuide,
+  priceGuideCountNote,
+  priceGuideHeadline,
   SALE_STATE_TEXT,
   buildMarketJudgement,
   onSaleCountNote,
@@ -202,12 +211,75 @@ export function MarketPriceComparison({
                       data-testid="market-seller-price"
                       className="py-0.5 whitespace-nowrap text-text-secondary"
                     >
-                      {s.price ? `${s.price.currency} ${s.price.amount}` : "가격 확인 필요"}
+                      {/**
+                       * 🔴🔴 WU-139 — **가격을 못 가져온 후보를 «버리지 않는다»**(CPO 전략).
+                       *    전까지는 「가격 확인 필요」라는 **글자** 였다. 🟢 이제 그 자리가
+                       *    **판매처로 가는 링크** 다 — 셀러가 직접 확인할 수 있어야 그
+                       *    후보가 실제 가치를 낸다. 🔴 가격을 **지어내지 않는다.**
+                       */}
+                      {s.price ? (
+                        `${s.price.currency} ${s.price.amount}`
+                      ) : (
+                        <a
+                          data-testid="market-seller-price-link"
+                          href={s.row.discoveredUrl}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="underline"
+                        >
+                          {PRICE_LINK_TEXT}
+                        </a>
+                      )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+            {/**
+             * 🔴🔴🔴 WU-139 — **확인된 가격 1~2개만 있어도 기준가를 안내한다**(CPO).
+             *
+             * 🔴 목적은 「모든 가격 수집」이 아니라 **「셀러가 판매가를 결정할 근거」** 다.
+             * 🔴🔴 **1건을 「시장 평균가」처럼 적지 않는다** — `basis` 가 SINGLE ↔ RANGE 를
+             *    가르고 **문장이 달라진다**(CPO 명시 금지).
+             * 🔴 **추천 판매가를 계산하지 않는다** — 그 수식은 원가·수수료 축이고
+             *    §00-B 가격 보류다. 지어내면 셀러가 그 숫자로 실제 가격을 정한다.
+             * 🔴 통화 **환산 0**.
+             */}
+            <div className="mt-2 grid gap-2 md:grid-cols-2">
+              {(["KR", "OVERSEAS"] as const).map((mk) => {
+                const g = buildPriceGuide(judgement, mk);
+                if (g.sameCount === 0) return null;
+                const head = priceGuideHeadline(g);
+                return (
+                  <div
+                    key={mk}
+                    data-testid={`price-guide-${mk === "KR" ? "domestic" : "overseas"}`}
+                    className="rounded border border-border/60 p-2"
+                  >
+                    <p className="text-[11px] font-medium text-text-primary">{PRICE_GUIDE_TITLE[mk]}</p>
+                    <p data-testid="price-guide-counts" className="text-[11px] text-text-secondary">
+                      {priceGuideCountNote(g)}
+                    </p>
+                    {head ? (
+                      <>
+                        <p data-testid="price-guide-headline" className="text-[12px] font-medium text-text-primary">
+                          {head}
+                        </p>
+                        {/* 🔴 표본이 하나면 그 사실을 **문장으로** 말한다. */}
+                        <p data-testid="price-guide-note" className="text-[11px] text-text-tertiary">
+                          {g.basis === "SINGLE" ? PRICE_GUIDE_SINGLE_NOTE : PRICE_GUIDE_RANGE_NOTE}
+                        </p>
+                      </>
+                    ) : (
+                      <p data-testid="price-guide-empty" className="text-[11px] text-text-tertiary">
+                        {PRICE_GUIDE_EMPTY}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </>
         )}
       </div>

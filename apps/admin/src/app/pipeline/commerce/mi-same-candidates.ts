@@ -220,6 +220,118 @@ export const MARKET_LABEL: Record<"KR" | "OVERSEAS" | "UNKNOWN", string> = {
   UNKNOWN: "❔ 미확정",
 };
 
+/* ═══════ 🔴🔴 WU-139 — **가격을 못 가져온 후보를 «버리지 않는다»** (CPO 전략 수정) ═══════
+ *
+ * 🔴 CPO: 「동일상품은 최대한 정확하게. **가격을 못 가져오는 판매처는 버리지 않는다** —
+ *    링크를 보여주고 셀러가 직접 확인하게 한다. **확인된 가격 1~2개만 있어도** 그것을
+ *    기준으로 적정 판매가격대를 안내한다. 목적은 『모든 가격 수집』이 아니라
+ *    **『셀러가 판매가를 결정할 근거』** 다.」
+ *
+ * 🔴🔴 **그래서 MI 는 한 글자도 완화하지 않는다** — 판정은 그대로 엄격하고, 바뀌는 것은
+ *    **가격 축의 부분 성공을 허용** 하는 것뿐이다(CPO ①②③ 분리).
+ *
+ * 🔴🔴🔴 **1건을 「시장 평균가」처럼 적지 않는다**(CPO 명시 금지). 그래서 아래
+ *    `PriceGuide.basis` 가 **SINGLE ↔ RANGE 를 가른다** — 문장이 달라야 한다.
+ */
+
+/** 🔴 「없다 / 1건 기준 / 가격대」를 **다른 말** 로 적기 위한 축. */
+export type PriceGuideBasis = "NONE" | "SINGLE" | "RANGE";
+
+export interface PriceGuide {
+  market: "KR" | "OVERSEAS";
+  /** 동일상품으로 판정된 판매처 수(가격 유무와 **무관**). */
+  sameCount: number;
+  onSaleCount: number;
+  /** 🟢 가격을 확인한 곳. */
+  pricedCount: number;
+  /** 🔴 **버리지 않는다** — 링크를 주는 곳. */
+  unpricedCount: number;
+  byCurrency: MarketPriceRange[];
+  basis: PriceGuideBasis;
+}
+
+/**
+ * 🔴 한 시장의 가격 가이드. **집계를 새로 만들지 않는다** — `buildMarketJudgement` 가
+ *    이미 낸 `sellers` 를 시장으로 나눠 센다(판정 0 · threshold 0 · 환산 0).
+ * 🔴 **품절은 가격 축에서 빼고**(팔 수 없는 가격은 기준가가 아니다) **미확인은 남긴다**
+ *    (빼면 그 통화 축이 사라져 셀러가 기준가를 아예 못 본다 · WU-136 과 같은 규칙).
+ */
+export function buildPriceGuide(j: MarketJudgement, market: "KR" | "OVERSEAS"): PriceGuide {
+  const mine = j.sellers.filter((s) => s.market === market);
+  const priced = mine.filter((s) => s.price != null && s.sale !== "SOLD_OUT");
+  const byCurrencyMap = new Map<string, MarketPriceRange>();
+  for (const s of priced) {
+    const p = s.price as { amount: number; currency: string };
+    const cur = byCurrencyMap.get(p.currency);
+    if (!cur) {
+      byCurrencyMap.set(p.currency, {
+        currency: p.currency,
+        lowest: p.amount,
+        highest: p.amount,
+        n: 1,
+        onSale: s.sale === "ON_SALE" ? 1 : 0,
+      });
+      continue;
+    }
+    cur.lowest = Math.min(cur.lowest, p.amount);
+    cur.highest = Math.max(cur.highest, p.amount);
+    cur.n += 1;
+    if (s.sale === "ON_SALE") cur.onSale += 1;
+  }
+  const byCurrency = [...byCurrencyMap.values()].sort((a, b) => a.currency.localeCompare(b.currency));
+  /**
+   * 🔴 **표본 하나를 가격대라고 부르지 않는다.** 한 통화 안에 둘 이상이고 금액이
+   *    실제로 다를 때만 `RANGE` 다 — 같은 금액 둘은 「가격대」가 아니다.
+   */
+  const basis: PriceGuideBasis =
+    priced.length === 0 ? "NONE" : byCurrency.some((c) => c.n >= 2 && c.highest > c.lowest) ? "RANGE" : "SINGLE";
+  return {
+    market,
+    sameCount: mine.length,
+    onSaleCount: mine.filter((s) => s.sale === "ON_SALE").length,
+    pricedCount: priced.length,
+    unpricedCount: mine.filter((s) => s.price == null).length,
+    byCurrency,
+    basis,
+  };
+}
+
+/** 🔴 그 숫자들을 **셀러의 말** 로. 「동일상품 확인」과 「가격 확인」을 가른다. */
+export function priceGuideCountNote(g: PriceGuide): string {
+  const parts = [`동일상품 확인 ${g.sameCount}곳`, `판매중 확인 ${g.onSaleCount}곳`, `가격 확인 ${g.pricedCount}곳`];
+  if (g.unpricedCount > 0) parts.push(`가격 확인 필요 ${g.unpricedCount}곳`);
+  return parts.join(" · ");
+}
+
+/**
+ * 🔴🔴 **기준가격 문장.** `basis` 에 따라 **다른 말** 을 쓴다 —
+ *    1건을 「가격대」나 「평균」으로 적으면 CPO 가 금지한 그 거짓이 된다.
+ * 🔴 통화 **환산 0** · 추천가를 **계산하지 않는다**(그 수식은 원가·수수료 축이고
+ *    §00-B 가격 보류다 — 지어내면 셀러가 그 숫자로 가격을 정한다).
+ */
+export function priceGuideHeadline(g: PriceGuide): string | null {
+  if (g.basis === "NONE") return null;
+  return g.byCurrency
+    .map((c) =>
+      c.n >= 2 && c.highest > c.lowest
+        ? `${c.currency} ${c.lowest} ~ ${c.highest}`
+        : `${c.currency} ${c.lowest}`,
+    )
+    .join(" · ");
+}
+
+export const PRICE_GUIDE_TITLE: Record<"KR" | "OVERSEAS", string> = {
+  KR: "💰 국내 확인 가격",
+  OVERSEAS: "💰 해외 확인 가격",
+};
+/** 🔴 **1건을 시장 평균처럼 읽히게 두지 않는다**(CPO 명시 금지). */
+export const PRICE_GUIDE_SINGLE_NOTE = "확인 가능한 가격 1건 기준입니다 — 시장 평균가가 아닙니다.";
+export const PRICE_GUIDE_RANGE_NOTE = "현재 확인된 판매가 범위입니다 — 전체 시장 가격대가 아닙니다.";
+/** 🔴 가격이 없는 SAME 후보를 **버리지 않는다** — 링크를 준다. */
+export const PRICE_LINK_TEXT = "🔗 가격 확인";
+/** 🔴 「가격을 못 가져왔다」와 「동일상품이 없다」는 다른 문장이다. */
+export const PRICE_GUIDE_EMPTY = "확인된 가격이 아직 없습니다 — 아래 판매처에서 직접 확인할 수 있습니다.";
+
 /**
  * 🔴🔴 CPO WU-136 §3 — **「시장 전체 판매처」로 읽히게 두지 않는다.**
  *
