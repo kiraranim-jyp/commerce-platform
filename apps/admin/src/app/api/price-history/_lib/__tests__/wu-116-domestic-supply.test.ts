@@ -120,9 +120,10 @@ describe("WU-116 — AI URL 풀 국내 공급 확대 (LIVE · 가격 0)", () => 
         // eslint-disable-next-line no-console
         console.log(
           `\n════ ${c.sid} / ${c.code} ════\n` +
-            `  AI URL ${ex.urls.length} → 추출 통과 ${pool.acceptedUrls?.length ?? "?"} →` +
+            /** 🔴 WU-118 정정 — 풀 산출 칸은 `pool.metrics` 아래다(내가 없는 칸을 읽었다). */
+            `  AI URL ${ex.urls.length} → 추출 통과 ${pool.metrics.acceptedUrls} →` +
             ` 후보 **${rows.length}** (새 후보 **${rows.filter((x) => x.isNew).length}**)\n` +
-            `  탈락 사유 ${JSON.stringify(pool.droppedUrls?.map((d) => d.reason) ?? [])}`,
+            `  탈락 사유 ${JSON.stringify(pool.metrics.dropped.map((d) => d.reason))}`,
         );
         for (const x of rows)
           // eslint-disable-next-line no-console

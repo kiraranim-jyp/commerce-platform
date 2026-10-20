@@ -2084,9 +2084,26 @@ export function DomesticPriceIntelligencePanel({
     setRecheckResult(null);
     try {
       /** 🔴 WU-024 — 비어 있으면 칸 자체를 **보내지 않는다**(서버에서 「안 돌았다」가 된다). */
+      /**
+       * 🔴🔴 WU-129(CPO 지시 2026-10-20) — **AI 조사 결과를 «그대로» 붙여넣을 수 있어야 한다.**
+       *
+       * 결함이었다: 예전 코드는 입력을 공백으로 쪼개 **모든 토큰** 을 보냈다. 그래서 AI 답변
+       * 산문을 붙여넣으면 **단어마다 항목** 이 되어 `candidateUrls` 상한을 넘기고 **400** 이 났다.
+       * ⟹ 셀러는 **URL 을 한 줄씩 직접 찾아 넣는 수밖에 없었다**(= CPO 가 지적한 그 UX).
+       *
+       * 🟢 그래서 **URL 모양만** 남긴다. 그 뒤는 **기존 경로 그대로** 다 —
+       *    `collectUrlCandidatePool` 이 `extractCandidateUrlsFromAiAnswer` 로 다시 한 번
+       *    입력 경계를 적용하고(순수 · HTTP 0), MI 가 국내/해외를 **같은 파이프라인** 으로 판정한다.
+       * 🔴 AI 를 부르지 않는다 · 저장하지 않는다 · AI 의 판단은 쓰지 않는다(**URL 만** 쓴다).
+       */
+      /**
+       * 🔴 **괄호·쉼표·따옴표에 싸인 링크를 잃지 않는다.** 계약 테스트가 그것을 잡았다 —
+       *    AI 답변에는 `(https://…)` · `https://…,` 같은 모양이 흔하고, 토큰 전체를
+       *    `^https?://…$` 로 검사하면 그 링크가 **조용히 사라진다**.
+       */
       const suppliedUrls = candidateUrlsText
         .split(/\s+/)
-        .map((s) => s.trim())
+        .map((s) => s.match(/https?:\/\/[^\s)\]}>,"']+/i)?.[0] ?? "")
         .filter(Boolean);
       const res = await fetch("/api/price-history/check", {
         method: "POST",
@@ -3428,8 +3445,8 @@ export function MiPanelView({
                 value={candidateUrlsText}
                 onChange={(e) => onCandidateUrlsChange?.(e.target.value)}
                 disabled={rechecking}
-                rows={2}
-                placeholder="https://… (한 줄에 하나)"
+                rows={4}
+                placeholder="AI 답변을 그대로 붙여넣으세요 — 링크만 자동으로 골라냅니다"
                 className="mt-1 w-full rounded-md border border-border bg-surface/40 p-1.5 text-[11px] text-text-primary placeholder:text-text-tertiary disabled:opacity-50"
               />
             </details>

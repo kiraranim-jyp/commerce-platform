@@ -47,8 +47,8 @@ describe("WU-124 — 오판 3건의 증거 (LIVE)", () => {
         q[code] = { title: f.candidate!.title, sourceUrl: f.crawlerUrl!, facts: f.candidate!.facts } as ComparisonQuery;
         // eslint-disable-next-line no-console
         console.log(
-          `원상품 ${code} — title«${f.candidate!.title}» category=${JSON.stringify(f.candidate!.facts?.category)}` +
-            ` material=${JSON.stringify(f.candidate!.facts?.materialComposition ?? null)} color=${JSON.stringify(f.candidate!.facts?.colorText)}`,
+          `원상품 ${code} — title«${f.candidate!.title}» category=${JSON.stringify((f.candidate!.facts as { category?: unknown })?.category)}` +
+            ` material=${JSON.stringify((f.candidate!.facts as { materialComposition?: unknown })?.materialComposition ?? null)} color=${JSON.stringify(f.candidate!.facts?.colorText)}`,
         );
       }
 
@@ -81,7 +81,7 @@ describe("WU-124 — 오판 3건의 증거 (LIVE)", () => {
           title: cand.title,
           code: cand.facts?.brandModelCode ?? null,
           color: cand.facts?.colorText ?? null,
-          category: cand.facts?.category ?? null,
+          category: (cand.facts as { category?: unknown })?.category ?? null,
           material: (cand.facts as { materialComposition?: unknown })?.materialComposition ?? null,
           reasons: x.crossSellerReasons ?? [],
           blockers: (x.crossSellerBlockers ?? []).map((b) => b.blocker),

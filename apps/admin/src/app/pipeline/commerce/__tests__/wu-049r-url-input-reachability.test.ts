@@ -133,8 +133,13 @@ describe("A. FULL — 되물음 한 번", () => {
 
     const input = container.querySelector(URL_INPUT);
     expect(input).not.toBeNull();
-    /** 🔴 placeholder 까지 본다 — 「무엇을 넣어야 하는가」가 화면에 있어야 한다. */
-    expect(input?.getAttribute("placeholder")).toContain("https://");
+    /**
+     * 🔴 placeholder 까지 본다 — 「무엇을 넣어야 하는가」가 화면에 있어야 한다.
+     * 🔴🔴 **WU-129 에서 문구가 바뀌었다**(CPO 지시) — 「https:// 를 한 줄에 하나」가
+     *    셀러에게 **「판매처 URL 을 직접 찾아오라」** 로 읽혔다. 이제 **AI 답변을 그대로
+     *    붙여넣는** 칸이다. 🟢 **지키는 성질은 같다** — 「무엇을 넣는지 말한다」.
+     */
+    expect(input?.getAttribute("placeholder")).toContain("붙여넣");
     expect(container.textContent).toContain(RECHECK);
   });
 
