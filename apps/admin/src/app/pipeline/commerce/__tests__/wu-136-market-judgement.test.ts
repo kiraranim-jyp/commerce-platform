@@ -294,6 +294,21 @@ describe("E. 영역 경계", () => {
     expect(src).toContain("MARKET_TABLE_HEADERS");
   });
 
+  it("🔴🔴 E-5b 국내/해외 분해가 «판매중 확인» 범위로 한정된다 (CPO §3)", () => {
+    /**
+     * 🔴 우리가 셀 수 있는 것은 「발견된 SAME 후보 중 판매중으로 확인된 곳」 이고
+     *    **시장 전체 판매처가 아니다**(판매여부 신호가 Shopify 경로에만 있다 · 실측 2/9).
+     * 🔴 그래서 그 줄은 **반드시 수식어를 들고** 있어야 한다.
+     */
+    expect(src).toContain("ON_SALE_SPLIT_PREFIX");
+    const at = src.indexOf('data-testid="market-split"');
+    expect(at).toBeGreaterThan(-1);
+    expect(src.slice(at, at + 260)).toContain("ON_SALE_SPLIT_PREFIX");
+    /** 🔴 그 줄이 세는 것은 **ON_SALE 뿐** 이다 — 총 판매처 수를 넣으면 FAIL. */
+    expect(src.slice(at, at + 260)).toContain("domesticOnSale");
+    expect(src.slice(at, at + 260)).not.toContain("sellers.length");
+  });
+
   it("🔴🔴 E-6 판매여부·판매처 표가 가격 범위 «앞» 에 선다 (셀러의 1순위)", () => {
     const counts = src.indexOf("market-sale-counts");
     const range = src.indexOf("market-price-range");

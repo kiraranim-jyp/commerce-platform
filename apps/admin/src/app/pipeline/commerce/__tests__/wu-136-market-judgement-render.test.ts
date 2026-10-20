@@ -144,6 +144,14 @@ describe("WU-136 — 시장 판매 판단 (마운트 DOM)", () => {
     });
     expect(txt("market-split")).toContain("국내 1곳");
     expect(txt("market-split")).toContain("해외 1곳");
+    /**
+     * 🔴🔴 CPO §3 — **「시장 전체 판매처」로 읽히게 두지 않는다.**
+     *    판매여부는 현재 Shopify 경로에서만 확정되므로(실측 2/9) 이 숫자는 시장을
+     *    대표하지 않는다. 🔴 수식어를 떼면 「🇰🇷 1곳 · 🌎 1곳」이 시장 전체 집계로
+     *    읽히고, 그것이 「모르는 것을 판매중으로 세는 것」과 같은 종류의 거짓이다.
+     */
+    expect(txt("market-split")).toContain("판매중 확인");
+    expect(txt("market-split")).not.toMatch(/시장\s*(전체|판매처)/);
     /** 🔴 환산하지 않는다 — 두 통화가 각각 선다. */
     expect(txt("market-price-range")).toContain("KRW");
     expect(txt("market-price-range")).toContain("USD");

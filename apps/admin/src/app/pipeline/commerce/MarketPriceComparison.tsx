@@ -20,6 +20,7 @@ import {
   MARKET_LABEL,
   MARKET_TABLE_HEADERS,
   MARKET_VERDICT_TEXT,
+  ON_SALE_SPLIT_PREFIX,
   SALE_STATE_TEXT,
   buildMarketJudgement,
   onSaleCountNote,
@@ -137,10 +138,17 @@ export function MarketPriceComparison({
             <p data-testid="market-sale-counts" className="text-[11px] text-text-secondary">
               {onSaleCountNote(judgement)}
             </p>
+            {/**
+             * 🔴🔴 CPO §3 — **「시장 전체 판매처」로 읽히게 두지 않는다.**
+             *    수식어 없는 「🇰🇷 0곳 · 🌎 3곳」은 시장 전체 집계로 읽힌다. 🔴 그런데
+             *    판매여부 신호는 현재 **Shopify 경로에서만** 확정되므로(실측 2/9) 이
+             *    숫자는 **시장을 대표하지 않는다** — 「발견된 SAME 후보 중 판매중으로
+             *    확인된 곳」이다. 🟢 그래서 접두사를 붙여 그 범위를 직접 말한다.
+             */}
             {judgement.onSaleCount > 0 && (
               <p data-testid="market-split" className="text-[11px] text-text-secondary">
-                {MARKET_LABEL.KR} {judgement.domesticOnSale}곳 · {MARKET_LABEL.OVERSEAS}{" "}
-                {judgement.overseasOnSale}곳
+                {ON_SALE_SPLIT_PREFIX} — {MARKET_LABEL.KR} {judgement.domesticOnSale}곳 ·{" "}
+                {MARKET_LABEL.OVERSEAS} {judgement.overseasOnSale}곳
               </p>
             )}
             {/* 🔴 통화별로만 · **환산 0**(기존 `overseas-reference` 계약과 같은 축). */}

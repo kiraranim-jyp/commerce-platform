@@ -220,6 +220,16 @@ export const MARKET_LABEL: Record<"KR" | "OVERSEAS" | "UNKNOWN", string> = {
   UNKNOWN: "❔ 미확정",
 };
 
+/**
+ * 🔴🔴 CPO WU-136 §3 — **「시장 전체 판매처」로 읽히게 두지 않는다.**
+ *
+ * 우리가 셀 수 있는 것은 「**발견된 SAME 후보 중 판매여부를 확인할 수 있었고 실제
+ * 판매중으로 확인된 곳**」 이다. 🔴 판매여부 신호가 현재 **Shopify 경로에서만** 확정되므로
+ * (실측 2/9) 이 숫자는 **시장을 대표하지 않는다.** 🟢 그래서 국내/해외 분해 줄에도
+ * **「판매중 확인 —」을 붙인다** — 수식어 없는 「🇰🇷 0곳 · 🌎 3곳」은 시장 전체로 읽힌다.
+ */
+export const ON_SALE_SPLIT_PREFIX = "판매중 확인";
+
 /** 🔴 「판매중 N곳」은 **ON_SALE 만** 센 숫자다 — 그 사실을 화면이 같이 말한다. */
 export function onSaleCountNote(j: MarketJudgement): string {
   const parts: string[] = [`판매중 확인 ${j.onSaleCount}곳`];
@@ -243,8 +253,16 @@ export function priceRangeScope(r: MarketPriceRange): string {
   return r.onSale === r.n ? `${r.n}곳 · 전부 판매중 확인` : `${r.n}곳 · 그중 판매중 확인 ${r.onSale}곳`;
 }
 
-/** 🔴 유사·보류 후보는 **접는다**(삭제가 아니다 · CPO §D). */
-export const SIMILAR_FOLD_LABEL = (n: number) => `추가 검토 후보 ${n}건`;
+/**
+ * 🔴 유사·보류 후보 구역은 **접는다**(삭제가 아니다 · CPO §D).
+ *
+ * 🔴 접힘의 «말» 은 **각 구역의 기존 머리 문구를 그대로 쓴다**(「🇰🇷 국내 후보 검토」 ·
+ *    「🌎 해외 자동검색 후보」 · 「🔁 이전 확인 후보 재검증」 · 「🔗 직접 확인한 판매처」).
+ *    넷을 「추가 검토 후보」 하나로 바꾸면 **출처가 사라진다** — 그 출처는 WU-130 이
+ *    「생산자가 늘 때 조용히 엉뚱한 배열에 담긴다」를 막기 위해 세운 축이고
+ *    계약으로 잠겨 있다. 🟢 CPO 가 요구한 성질(「셀러 시야에서 치운다」)은 **접힘**
+ *    자체가 만족한다 ⟹ 라벨 상수를 **따로 두지 않았다**(쓰지 않는 상수를 남기지 않는다).
+ */
 /** 🔴 기술 데이터는 **접는다**(삭제가 아니다 · CPO §E). */
 export const MI_DETAIL_FOLD_LABEL = "MI 상세 분석";
 
