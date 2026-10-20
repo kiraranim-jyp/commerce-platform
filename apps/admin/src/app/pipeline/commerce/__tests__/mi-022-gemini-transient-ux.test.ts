@@ -250,8 +250,19 @@ describe("⑥ 🔴 판정·가격 계산에 손대지 않았다 — 소스 계�
      */
     expect(panel).toContain("<GeminiTransientCandidates evidence={webRest} />");
     expect(panel).toContain("const webRest = (web ?? []).filter(");
-    /** 🔴 국내 구역도 **transient 입력에서만** 나온다(새 데이터 출처를 만들지 않았다). */
-    expect(panel).toContain("const krRows = [...(web ?? []), ...(supplied ?? [])].filter(isKr)");
+    /**
+     * 🔴 국내 구역도 **transient 입력에서만** 나온다(새 데이터 출처를 만들지 않았다).
+     *
+     * 🔴🔴 WU-130 — 입력이 **셋** 이 되어 앵커를 갱신했다(해외 자동검색 합류).
+     *    🟢 성질은 그대로다 — 🇰🇷 구역의 행은 **전부 transient 배열에서** 온다.
+     *    🔴 **강화** 한 점: 세 배열이 **전부** 그 파생에 들어가야 한다. 하나를
+     *       빠뜨리면 그 출처의 KR 후보가 **조용히 사라지는** 길이 생긴다.
+     */
+    expect(panel).toContain(
+      "const krRows = [...(web ?? []), ...(supplied ?? []), ...(overseasAuto ?? [])].filter(isKr)",
+    );
+    expect(panel).toContain("const overseasAutoRest = (overseasAuto ?? []).filter(");
+    expect(panel).toContain("<TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} overseasAuto={overseasAutoEvidence}");
     /** 🔴 그리고 그 구역이 판정/집계 어휘와 **같은 줄에 서지 않는다**(위 FORBIDDEN 과 같은 원칙). */
     const krLines = panel.split(String.fromCharCode(10)).filter((l) => l.includes("krRows") || l.includes("domesticReview"));
     expect(krLines.filter((l) => FORBIDDEN.some((f) => l.toLowerCase().includes(f.toLowerCase())))).toEqual([]);

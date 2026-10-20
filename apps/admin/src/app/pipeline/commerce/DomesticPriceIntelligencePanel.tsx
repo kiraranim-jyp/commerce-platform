@@ -27,6 +27,8 @@ import type { OverseasPriceSummary } from "./overseas-reference";
 import {
   GeminiTransientCandidates,
   SUPPLIED_URL_HEADING,
+  /** 🔴 WU-130 — 해외 자동검색 구역의 머리 문구. owner 는 그 컴포넌트 파일이다. */
+  OVERSEAS_AUTO_HEADING,
   DOMESTIC_REVIEW_HEADING,
   DOMESTIC_REVIEW_EMPTY,
   type HumanReview,
@@ -1873,6 +1875,12 @@ export function DomesticPriceIntelligencePanel({
   const [candidateUrlsText, setCandidateUrlsText] = useState("");
   const [urlCandidateEvidence, setUrlCandidateEvidence] = useState<GeminiTransientRow[] | null>(null);
   /**
+   * 🔴🔴 WU-130 — **해외 자동검색 후보.** 위 둘과 **다른 state** 다(출처 보존).
+   *    🟢 셀러가 아무것도 붙여넣지 않아도 채워지는 유일한 후보 배열이다 —
+   *       그래서 「붙여넣은 결과」와 한 칸에 담으면 그 사실이 화면에서 사라진다.
+   */
+  const [overseasAutoEvidence, setOverseasAutoEvidence] = useState<GeminiTransientRow[] | null>(null);
+  /**
    * 🔴🔴 WU-049 — **해외 참고가격.** MI 가 이미 계산한 집계를 받는다.
    *    🟢 이 값은 **이번 확인에만** 산다 — GET 경로는 transient 를 넘기지 않아
    *       항상 비어 있다(설계). 그래서 상태로 들고 다른 값을 덮어쓰지 않는다.
@@ -1897,12 +1905,18 @@ export function DomesticPriceIntelligencePanel({
     const j = autoCheckResult as {
       overseasReference?: OverseasPriceSummary | null;
       domesticReference?: OverseasPriceSummary | null;
-      domesticShop?: { geminiEvidence?: GeminiTransientRow[] | null; urlCandidateEvidence?: GeminiTransientRow[] | null } | null;
+      domesticShop?: {
+        geminiEvidence?: GeminiTransientRow[] | null;
+        urlCandidateEvidence?: GeminiTransientRow[] | null;
+        /** 🔴 WU-130 — **자동 1회차의 핵심 칸.** 셀러가 아무것도 하지 않은 상태의 후보다. */
+        overseasAutoEvidence?: GeminiTransientRow[] | null;
+      } | null;
     };
     setOverseasReference(j.overseasReference ?? null);
     setDomesticReference(j.domesticReference ?? null);
     setGeminiEvidence(j.domesticShop?.geminiEvidence ?? null);
     setUrlCandidateEvidence(j.domesticShop?.urlCandidateEvidence ?? null);
+    setOverseasAutoEvidence(j.domesticShop?.overseasAutoEvidence ?? null);
   }, [autoCheckResult]);
   /** 🔴 제외된 URL 을 **조용히 버리지 않는다** — 서버가 낸 이유를 그대로 한 줄로 적는다. */
   const [urlCandidateNotice, setUrlCandidateNotice] = useState<string | null>(null);
@@ -2135,6 +2149,11 @@ export function DomesticPriceIntelligencePanel({
              *    칸** 이다 — 합치면 「웹 검색이 찾은 후보」라는 문장이 거짓이 된다.
              */
             urlCandidateEvidence?: GeminiTransientRow[] | null;
+            /**
+             * 🔴🔴 WU-130 — **해외 자동검색 결과.** 위 둘과 또 다른 칸이다 —
+             *    셀러가 아무것도 붙여넣지 않아도 채워지는 유일한 배열이다.
+             */
+            overseasAutoEvidence?: GeminiTransientRow[] | null;
             urlCandidateMetrics?: {
               suppliedUrls: number;
               acceptedUrls: number;
@@ -2152,6 +2171,7 @@ export function DomesticPriceIntelligencePanel({
         /** 🔴 **덮어쓴다** — 이전 확인의 후보를 화면에 남기지 않는다(「이번 확인」이므로). */
         setGeminiEvidence(json.domesticShop?.geminiEvidence ?? null);
         setUrlCandidateEvidence(json.domesticShop?.urlCandidateEvidence ?? null);
+        setOverseasAutoEvidence(json.domesticShop?.overseasAutoEvidence ?? null);
         setUrlCandidateNotice(describeUrlCandidateMetrics(json.domesticShop?.urlCandidateMetrics ?? null));
         setOverseasReference(json.overseasReference ?? null);
         setDomesticReference(json.domesticReference ?? null);
@@ -2268,6 +2288,7 @@ export function DomesticPriceIntelligencePanel({
       candidateUrlsText={candidateUrlsText}
       onCandidateUrlsChange={setCandidateUrlsText}
       urlCandidateEvidence={urlCandidateEvidence}
+      overseasAutoEvidence={overseasAutoEvidence}
       urlCandidateNotice={urlCandidateNotice}
       overseasReference={overseasReference}
       domesticReference={domesticReference}
@@ -2296,6 +2317,7 @@ export function DomesticPriceIntelligencePanel({
 function TransientCandidateSections({
   web,
   supplied,
+  overseasAuto,
   notice,
   overseasReference,
   domesticReference,
@@ -2304,6 +2326,8 @@ function TransientCandidateSections({
 }: {
   web?: GeminiTransientRow[] | null;
   supplied?: GeminiTransientRow[] | null;
+  /** 🔴 WU-130 — 해외 자동검색 후보. 위 둘과 **다른 구역** 이다(출처 보존). */
+  overseasAuto?: GeminiTransientRow[] | null;
   notice?: string | null;
   overseasReference?: OverseasPriceSummary | null;
   domesticReference?: OverseasPriceSummary | null;
@@ -2321,13 +2345,25 @@ function TransientCandidateSections({
    * 🔴 `market` 은 운영 `classifyCandidateMarket` 산출이다. 여기서 추측하지 않는다.
    */
   const isKr = (r: GeminiTransientRow) => r.market === "KR";
-  const krRows = [...(web ?? []), ...(supplied ?? [])].filter(isKr);
+  const krRows = [...(web ?? []), ...(supplied ?? []), ...(overseasAuto ?? [])].filter(isKr);
   const webRest = (web ?? []).filter((r) => !isKr(r));
   const suppliedRest = (supplied ?? []).filter((r) => !isKr(r));
+  /** 🔴 WU-130 — 자동검색 후보도 **같은 규칙** 으로 가른다. 해외 등록부의 샵이라도
+   *  `classifyCandidateMarket` 이 KR 로 판정하면 국내 구역으로 **옮긴다**(복제 아님) —
+   *  시장은 여기서 추측하지 않고 운영 판정을 그대로 따른다. */
+  const overseasAutoRest = (overseasAuto ?? []).filter((r) => !isKr(r));
   /** 🔴 국내 구역은 **참고 집계가 있을 때** 선다 — 후보 0 이어도 empty state 를 말한다. */
   const showDomesticReview = krRows.length > 0 || !!domesticReference;
 
-  if (!web?.length && !supplied?.length && !notice && !overseasReference && !domesticReference) return null;
+  if (
+    !web?.length &&
+    !supplied?.length &&
+    !overseasAuto?.length &&
+    !notice &&
+    !overseasReference &&
+    !domesticReference
+  )
+    return null;
   return (
     <>
       {/**
@@ -2377,6 +2413,19 @@ function TransientCandidateSections({
           )}
         </>
       )}
+      {/**
+       * 🔴🔴 WU-130 — **해외 자동검색 후보.** 셀러가 아무것도 붙여넣지 않아도 서는
+       *    유일한 구역이라 **아래 두 구역보다 먼저** 둔다 — 그것이 「아무것도 안 하면
+       *    후보가 없다」는 인상을 깨는 자리다.
+       * 🟢 표시 규칙(통화 그대로 · UNKNOWN 시장 뱃지 없음 · 승격 버튼 없음 · 기본 접힘
+       *    아님 등)은 기존 두 구역과 **한 글자도 다르지 않다** — 같은 컴포넌트다.
+       * 🔴 `onReview` 를 주지 않는다 — 사람 검토 블록은 🇰🇷 구역의 계약이다(WU-081).
+       */}
+      <GeminiTransientCandidates
+        evidence={overseasAutoRest}
+        heading={OVERSEAS_AUTO_HEADING}
+        testId="overseas-auto-transient"
+      />
       {/* 🔴 WU-022 — 「지금 확인」이 돌려준 **이번 확인 한정** 후보. DB 링크와
           데이터 수명이 다르므로 구역을 가른다. 판매판정·국내 최저가에 영향 0. */}
       <GeminiTransientCandidates evidence={webRest} />
@@ -2437,6 +2486,7 @@ export function MiPanelView({
   candidateUrlsText = "",
   onCandidateUrlsChange,
   urlCandidateEvidence = null,
+  overseasAutoEvidence = null,
   urlCandidateNotice = null,
   overseasReference = null,
   domesticReference = null,
@@ -2492,6 +2542,12 @@ export function MiPanelView({
   onCandidateUrlsChange?: (value: string) => void;
   /** 🔴 그 URL 들의 판정 결과. `geminiEvidence` 와 **다른 구역** 에 선다(출처 보존). */
   urlCandidateEvidence?: GeminiTransientRow[] | null;
+  /**
+   * 🔴🔴 WU-130 — **해외 자동검색 후보.** 위 둘과 **다른 구역** 에 선다(출처 보존).
+   *    🟢 셀러가 아무것도 하지 않아도 채워지는 배열이라, 「붙여넣어야 나온다」는
+   *       인상을 깨는 유일한 칸이다. 🔴 `null` = 그 경로가 돌지 못했다.
+   */
+  overseasAutoEvidence?: GeminiTransientRow[] | null;
   /** 🔴 제외/미확인 요약 한 줄. 조용히 버리지 않는다. */
   urlCandidateNotice?: string | null;
   /** 🔴 WU-049 — MI 가 낸 해외 참고가격 집계(환산 0). 없으면 null. */
@@ -2972,6 +3028,9 @@ export function MiPanelView({
     transient: [
       { sourceLabel: "직접 입력", rows: urlCandidateEvidence ?? [] },
       { sourceLabel: "웹 검색", rows: geminiEvidence ?? [] },
+      /** 🔴 WU-130 — 자동검색 후보도 요약에 **센다**. 빠뜨리면 요약이 「후보 없음」인데
+       *  아래에는 행이 서는 모순이 생긴다(이 저장소에서 반복된 그 버그). */
+      { sourceLabel: "해외 자동검색", rows: overseasAutoEvidence ?? [] },
     ],
   };
 
@@ -3482,7 +3541,7 @@ export function MiPanelView({
           🟢 그리고 후보가 없으면 두 구역 모두 **아무것도 렌더하지 않는다** —
              기본 화면은 한 픽셀도 바뀌지 않는다(그 성질은 컴포넌트가 보장한다).
         */}
-        <TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} notice={urlCandidateNotice} overseasReference={overseasReference} domesticReference={domesticReference} domesticReview={domesticReview} onDomesticReview={handleDomesticReview} />
+        <TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} overseasAuto={overseasAutoEvidence} notice={urlCandidateNotice} overseasReference={overseasReference} domesticReference={domesticReference} domesticReview={domesticReview} onDomesticReview={handleDomesticReview} />
       </div>
     </CollapsibleSection>
   );

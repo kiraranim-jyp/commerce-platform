@@ -442,10 +442,23 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 
 ## 12. 현재 상태 — MI 측정 트랙 **전부 종료** (갱신 2026-10-12)
 
-### 🔴🔴🔴 **다음 세션은 `docs/HANDOFF-WU-130.md` 를 먼저 읽는다** (2026-10-20)
+### 🔴🔴🔴 **현재 착수점 — WU-130 ① 은 «끝났다». 다음은 CEO 확인 1회 → ③④** (2026-10-20)
 
-🔴 그 문서 하나로 **WU-130 ⒜부터 바로 시작** 할 수 있다 — 확정 사실 · 함정 · 금지 · STOP 조건 ·
-CEO 에게 할 말까지 들어 있다. 🔴 재조사 금지.
+🔴 **다음 세션은 `docs/HANDOFF-WU-130.md` 를 먼저 읽는다**(함정·금지·STOP 조건). 🔴 재조사 금지.
+
+```
+🟢 ① 해외 합류        **구현/배포 완료** — 전문 `docs/MI-OVERSEAS-MERGE-130.md`
+🟡 ② CEO 화면 확인 1회  **대기** — 「아무것도 붙여넣지 말고 B226AC009 를 열어서
+                       🌎 해외 자동검색 후보가 자동으로 뜨는지만」
+🔴 ③ 붙여넣기 UI 제거   **②가 확인된 뒤** (먼저 하면 화면이 완전히 비어 보인다 · 파서는 보존)
+🔴 ④ 가격 구역 통합     ③ 뒤 · 계약 `wu-056r1` 갱신 동반 · **표시만** 바꾼다
+🔴 가격 정책           **HOLD 유지**(§00-B) — WU-130 E2E 에서 WU-111 모순이 **재현** 됐다
+```
+
+🟢🟢 **①이 닫은 구멍 한 문장**: 해외 검색은 **이미 자동으로 돌고 있었지만 브라우저에만**
+살아서 `judgeDomesticCandidate` 와 해외 금액 집계에 **한 번도 들어가지 못했다** —
+「🧾 해외 동일상품 참고가격」이 **셀러가 URL 을 붙여넣을 때만** 채워진 이유다.
+🔴 **대가** — 지금은 해외 검색이 **두 번** 돈다(브라우저 1 + `/check` 1). 한쪽 제거는 ④의 일이다.
 
 ### 🔴🔴🔴 00. **이것부터 읽는다 — 목표는 «하나» 다** (CPO 재정립 2026-10-19)
 
@@ -892,6 +905,10 @@ CEO Action       🟡 **Production UI 1회 확인**(WU-058 보고서 §19 의 7�
 |---|---|---|
 | transient 저장 금지 | `transient-candidates.ts` · runner | `isTransientShopId(shopId)` 가 upsert 앞에서 끊는다 |
 | `__url_candidates__` 생산자 | `url-candidate-pool.ts` (WU-024) | 🟢 **WU-023 병목은 이것으로 해소됐다** · AI 0 · Registry 참조 0 |
+| 🔴🔴🔴 **해외 shopId 는 «갈아» 넣는다** | `overseas-auto-pool.ts` (WU-130) | `searchComparisonShops` 의 shopId 는 **`comparison_shops` 실제 uuid** 다 — 그대로 `searchResults` 에 넣으면 `upsertDomesticProductLink` 가 **해외 판매처를 국내 링크 테이블에 저장한다**(국내 최저가·판정 입력·`price_alerts` 오염) · 🟢 `shopId: OVERSEAS_AUTO_SHOP_ID` 한 줄이 그것을 막는다(A-1/A-2 가 **2 FAIL** 로 잠금) · 🔴 `domain` 은 **그대로**(품번 추출기·샵 대표 선택이 그 값으로 분기) |
+| 🔴 **해외 후보는 `transientPools` 로 보내지 않는다** | `run-domestic-price-check` (WU-130) | `searchOneShop` 안에서 `withConfidence`·`enrichScored` 가 **이미** 돈다(실측 matchLevel 4/4) ⟹ 그 루프에 넣으면 **재점수 + 가격보강을 두 번** 한다 · 🟢 합류 자리는 `searchResults` 생성 줄이고 그래서 중복 집합이 해외 후보를 **같이 본다** · 🔴 `foundVeryHighInP0` 는 합류 **앞** 에서 확정(국내 검색 범위 불변 · C-5) |
+| 🔴 **일시 샵은 셋 · 술어는 하나** | `TRANSIENT_SHOP_IDS` (WU-130) | `__gemini_discovery__` · `__url_candidates__` · `__overseas_auto__` · 🔴 생산자를 넣고 **집합에 빼먹으면 DB 로 흘러간다** · 🟢 계약이 **집합 전수를 돌려** 잠근다(숫자만 고치는 길 없음) |
+| 🔴 **출처는 셋으로 가른다** | `GeminiTransientEvidence.source` (WU-130) | `SELLER_URL` ↔ `GEMINI_DISCOVERY` ↔ **`OVERSEAS_AUTO`** · 🔴 「그 외는 Gemini」로 두지 않는다(생산자가 늘 때 조용히 엉뚱한 배열에 담긴다) · 🔴 응답 **세 배열은 가른 채로** 내보내고 합치는 곳은 **MI 입력 한 곳** |
 | SSRF / DNS rebinding | `outbound-guard.ts` · `guardedLookup` (WU-025/026) | 사설IP·루프백·비표준포트·리다이렉트·DNS 재바인딩 차단 |
 | `COLOR_VARIANT` 보류 | `cross-seller.ts` (WU-044) | 색조 일치 + 색상명 불일치 → **보류**(DIFFERENT 아님) · 색상사전 확대 금지 |
 | `SIZE_SYSTEM` 비차단 | `cross-seller.ts` (WU-045) | 사이즈 라인 차이 **단독으로 SAME 을 막지 않는다**(reasons 관측으로만) |
@@ -1067,9 +1084,53 @@ CEO 가 보는 것    **배포된 따져 화면** · 정상/비정상 피드백 
    evidence 세 번째 가지) ⒟ check/route(배열을 같이 넘긴다)
 ```
 
-🔴 합류 «전» 실측 둘 — ① `searchComparisonShops` 반환이 `ComparisonSearchResult` 모양인가
-② 해외 후보에 `judgeDomesticCandidate` 를 그대로 써도 되는가(국내 품번 추출기가 null 을 주는지 **실측**).
-🔴 UI 순서 고정 — ① 합류 → ② E2E → ③ **그 뒤에** 붙여넣기 UI 제거 → ④ 가격 영역 통합.
+🟢🟢 **구현/배포 완료 (2026-10-20) — 전문 `docs/MI-OVERSEAS-MERGE-130.md`**
+
+🟢 **합류 전 실측 둘 — 둘 다 확인됐다**:
+```
+① 반환은 `ComparisonSearchResult` 그대로(shopId·shopName·domain·status·candidates) ·
+   🟢🟢 그리고 `searchOneShop` 안에서 **`withConfidence` 가 이미 돈다**(matchLevel **4/4**)
+   ⟹ 🔴 그래서 `transientPools`(재점수 + `enrichCandidatePrices`)로 **보내지 않았다** —
+      보내면 **같은 일을 두 번** 한다(계약 C-2 가 잠근다)
+② `fetchDomesticModelCode` 는 해외 도메인에 **null 4/4**(추출기 등록부는 둘뿐) ·
+   🔴 단 `bobochoses.com` 은 그 등록부에 **있다**(공식몰이라 정답이고 기존 두 생산자도 같은 경로)
+🟢 추가 — 해외 등록부 35행에 `.kr` **0** · `KRW` **0** ⟹ KR 축 오염 경로가 없다
+```
+
+🟢🟢 **E2E 실측(운영 함수 · 실제 HTTP · 원상품 `b226ac009` · 🔴 `b226ac010` 스냅샷은 DB 에 없다)**:
+```
+등록부 35 → 자격 30 → {unsupported 20 · ok 9 · error 1} → 후보 22
+JUDGED **2** · DROPPED 3(전부 기존 ⑧ `EVIDENCE_NOT_WORTHWHILE`)
+  junioredition.com PRESUMED_SAME · COMPARISON · **GBP 37** · VERIFIED_CURRENT
+  villagekids.co.uk PRESUMED_SAME · COMPARISON · **GBP 21.2** · UNVERIFIED_SEARCH
+🟢🟢 🧾 해외 동일상품 참고가격 = {count 2 · GBP lowest **21.2** · OVERSEAS 2 · COMPARISON 2}
+🟢 산출물 shopId **전건 `__overseas_auto__`**(등록부 uuid 0) · providerCalls 0
+```
+
+🔴🔴 **그 숫자를 넘겨 읽지 않는다**:
+```
+① 🔴 두 건 다 **PRESUMED_SAME(보류)** 이고 tier COMPARISON 으로 금액 집계에 들어간다 —
+   WU-123/125 가 지적한 **그 모양** 이다. 🟢 **내가 만든 규칙이 아니고** §00-B 가격 보류 사안
+② 🔴 최저가 GBP 21.2 의 `priceStatus` 가 **UNVERIFIED_SEARCH** ⟹ **WU-111 모순이 재현** 됐다.
+   🟢 WU-110 과 같은 모양(합류가 **만든 것이 아니라 드러낸 것**) · 🔴 고치지 않았다(가격 정책)
+③ 🔴 **CTO 가 「동일상품이다」를 확정하지 않았다** — SAME/DIFFERENT 는 CEO GT 몫이다
+④ 🔴 표본 **원상품 1개** · 실제 따져 화면은 **CTO 가 볼 수 없다**
+```
+
+🔴 **합류 위치가 만든 변화 둘(숨기지 않는다)** — 🟢 중복 집합이 해외 후보를 같이 봐서
+붙여넣은 URL 이 `ALREADY_CANDIDATE` 로 빠진다(HTTP 절약) · 🔴 Gemini 게이트
+`deterministicHit` 가 해외 `very_high` 도 본다(**flag OFF 라 현재 효과 0**) ·
+🟢 국내 검색 «범위» 는 불변(`foundVeryHighInP0` 는 합류 **앞** 에서 확정 · 계약 C-5).
+🔴 그리고 해외 샵 `error` 가 `domesticShop.sourceErrors` 에 실린다(실측 30곳 중 **1건**).
+
+🔴🔴 **대가 하나 — 지금 해외 검색이 «두 번» 돈다**(브라우저 `useCollectOnce` 1 + `/check` 1).
+🟢 비용은 HTTP 뿐(유료 provider 0). 🔴 한쪽 제거는 **④ 통합** 때 owner 가 하나가 될 때의 일이다.
+
+🟢 계약 **22** · 음성대조 **7종 전부 FAIL → 복구 PASS**(M1 은 **2 FAIL**) ·
+회귀 **606 files / 8,429 passed · failed 0** · typecheck **0** · build exit 0.
+🔴 기존 계약 3건(wu-024 C·D · mi-022 ⑥)이 FAIL 했고 **의도된 변경** 이라 앵커를 갱신·**강화** 했다.
+
+🔴 UI 순서 고정 — ① 합류 **완료** → ② **CEO 확인 1회** → ③ 그 뒤에 붙여넣기 UI 제거 → ④ 가격 영역 통합.
 
 ### 🟡 WU-129 — **착수 전 용량 판단 + 범위 정정**(STOP · 다음 세션 1건으로 묶는다)
 

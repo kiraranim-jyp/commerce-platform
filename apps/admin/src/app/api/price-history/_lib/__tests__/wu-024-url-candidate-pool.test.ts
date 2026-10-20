@@ -7,6 +7,7 @@ import { collectUrlCandidatePool, isPubliclyRoutableHttpUrl } from "../url-candi
 import {
   GEMINI_VIRTUAL_SHOP_ID,
   isTransientShopId,
+  OVERSEAS_AUTO_SHOP_ID,
   TRANSIENT_SHOP_IDS,
   TRANSIENT_URL_SHOP_ID,
 } from "../transient-candidates";
@@ -280,10 +281,22 @@ describe("B. 🟢🟢 병목 A — 등록부에 없는 판매처의 후보가 �
 /* ══════════════════ C. 🔴🔴 저장 차단 — 이 WU 의 가장 강한 제약 ══════════════════ */
 
 describe("C. 🔴🔴 공급된 URL 은 저장되지 않는다 (등록부·링크 모두)", () => {
-  it("일시 샵 술어가 **두 id 전부** 를 막는다 — 등록부 id 는 막지 않는다", () => {
+  /**
+   * 🔴🔴 WU-130 — 일시 샵이 **셋** 이 됐다(해외 자동검색 합류). 🟢 단언의 **성질은
+   *    그대로** 다 — 「집합에 든 id 전부가 막히고 등록부 uuid 는 막히지 않는다」.
+   * 🔴 그래서 숫자만 늘리지 않고 **집합 전수를 돌려** 잠갔다 — 생산자가 또 늘 때
+   *    「숫자만 고치고 술어 확인을 빠뜨리는」 길을 없앤다.
+   */
+  it("일시 샵 술어가 **집합의 id 전부** 를 막는다 — 등록부 id 는 막지 않는다", () => {
     expect(isTransientShopId(TRANSIENT_URL_SHOP_ID)).toBe(true);
     expect(isTransientShopId(GEMINI_VIRTUAL_SHOP_ID)).toBe(true);
-    expect(TRANSIENT_SHOP_IDS.size).toBe(2);
+    expect(isTransientShopId(OVERSEAS_AUTO_SHOP_ID)).toBe(true);
+    for (const id of TRANSIENT_SHOP_IDS) {
+      expect(isTransientShopId(id)).toBe(true);
+      /** 🔴 전부 uuid 모양이 **아니어야** 한다 — FK 로 들어갈 수 없다는 것이 안전의 근거다. */
+      expect(id).not.toMatch(/^[0-9a-f-]{36}$/i);
+    }
+    expect(TRANSIENT_SHOP_IDS.size).toBe(3);
     /** 🔴 등록부 id(uuid)를 막으면 **진짜 샵의 저장이 멈춘다**. */
     expect(isTransientShopId("3f2a7c18-9b11-4a55-8c21-0d7b6e5f4a33")).toBe(false);
     expect(isTransientShopId("")).toBe(false);
@@ -332,11 +345,33 @@ describe("C. 🔴🔴 공급된 URL 은 저장되지 않는다 (등록부·링�
 /* ══════════════════ D. 🔴 출처 보존 — 「웹 검색」과 「사람이 준 URL」을 섞지 않는다 ══════════════════ */
 
 describe("D. 🔴 출처를 잃지 않는다", () => {
+  /**
+   * 🔴🔴 WU-130 — 출처가 **셋** 이 되어 앵커를 갱신했다. 🟢 **성질은 그대로** 다 —
+   *    「출처별로 «다른 배열» 에 담기고, 공급받지 않은 경로는 `null` 이다」.
+   * 🔴 그리고 **강화** 했다 — 이름 하나가 아니라 **세 id ↔ 세 배열의 대응** 과
+   *    「세 배열이 서로 다른 변수다」까지 본다(이름만 보면 엉뚱한 배열을 넣어도 통과한다).
+   */
   it("evidence 가 출처별 «다른 배열» 로 나간다", () => {
-    expect(RUNNER).toContain("const transientEvidenceSink = isSuppliedUrl ? urlCandidateEvidence : geminiEvidence;");
-    expect(RUNNER).toContain('source: isSuppliedUrl ? "SELLER_URL" : "GEMINI_DISCOVERY",');
-    /** 🔴 공급받지 않았으면 `null` — 「후보 0」과 구분한다. */
+    /** 🔴 담을 배열을 고르는 **그 술어** — id 세 개가 각각 적혀 있어야 한다. */
+    expect(RUNNER).toContain("result.shopId === TRANSIENT_URL_SHOP_ID");
+    expect(RUNNER).toContain("result.shopId === OVERSEAS_AUTO_SHOP_ID");
+    expect(RUNNER).toContain("const transientEvidenceSink =");
+    expect(RUNNER).toContain("source: evidenceSource,");
+    /** 🔴 세 출처 문자열이 **전부** 있어야 한다 — 하나로 뭉치면 보고가 거짓이 된다. */
+    for (const s of ['"SELLER_URL"', '"OVERSEAS_AUTO"', '"GEMINI_DISCOVERY"']) {
+      expect(RUNNER).toContain(s);
+    }
+    /** 🔴 세 배열이 **서로 다른 변수** 다. */
+    const sink = RUNNER.slice(
+      RUNNER.indexOf("const transientEvidenceSink ="),
+      RUNNER.indexOf("transientEvidenceSink.push("),
+    );
+    for (const arr of ["urlCandidateEvidence", "overseasAutoEvidence", "geminiEvidence"]) {
+      expect(sink).toContain(arr);
+    }
+    /** 🔴 공급받지 않았으면 `null` — 「후보 0」과 구분한다(세 경로 전부). */
     expect(RUNNER).toContain("urlCandidateEvidence: urlCandidateMetrics === null ? null : urlCandidateEvidence");
+    expect(RUNNER).toContain("overseasAutoEvidence: overseasAutoMetrics === null ? null : overseasAutoEvidence");
   });
 
   it("🔴 두 경로의 HTTP 비용을 합산하지 않는다", () => {

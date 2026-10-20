@@ -38,7 +38,14 @@ import {
  *    `candidateUrls` 가 비어 있으면 아래 분기가 **한 줄도 돌지 않는다** → 기존 동작 100% 유지.
  */
 import { collectUrlCandidatePool, type UrlCandidatePoolMetrics } from "./url-candidate-pool";
-import { isTransientShopId, TRANSIENT_URL_SHOP_ID } from "./transient-candidates";
+/**
+ * 🔴🔴 WU-130 — **세 번째 일시 후보 생산자.** flag 도 키도 외부 AI 도 없다 —
+ *    이미 운영되는 해외 비교 판매처 검색(`/api/comparison/search` 가 쓰는 그 함수)을
+ *    `/check` 가 **스스로** 한 번 돌린다. 🔴 지금까지 그 검색은 **화면에서만** 돌았고
+ *    그래서 그 후보들이 MI 와 해외 금액 집계에 **한 번도 들어가지 못했다.**
+ */
+import { collectOverseasAutoPool, type OverseasAutoPoolMetrics } from "./overseas-auto-pool";
+import { isTransientShopId, OVERSEAS_AUTO_SHOP_ID, TRANSIENT_URL_SHOP_ID } from "./transient-candidates";
 import {
   classifyCandidateMarket,
   type CandidateMarket,
@@ -150,8 +157,13 @@ export interface GeminiTransientEvidence {
    *    **다른 사실** 이고, 하나로 적으면 화면과 보고서가 거짓을 말한다. 🔴 그래서
    *    응답에서도 두 배열을 **가른다**(`geminiEvidence` ↔ `urlCandidateEvidence`) —
    *    같은 칸에 담아 개수만 세면 그 구분이 사라진다.
+   *
+   * 🔴🔴 WU-130 — 값이 **셋** 이 됐다. 「우리가 해외 등록부를 자동으로 뒤졌다」는
+   *    위 둘과 또 다른 사실이다(사람이 아무것도 하지 않아도 생긴다). 🔴 배열도 가른다
+   *    (`overseasAutoEvidence`) — 「붙여넣어서 나온 것」과 「자동으로 나온 것」을 한
+   *    칸에 담으면 **셀러가 아무것도 안 해도 된다는 사실 자체가 보고에서 사라진다.**
    */
-  source: "GEMINI_DISCOVERY" | "SELLER_URL";
+  source: "GEMINI_DISCOVERY" | "SELLER_URL" | "OVERSEAS_AUTO";
   /** 🔴 가상 shopId 가 아니라 **실제 판매처 도메인** 이다. */
   domain: string;
   /**
@@ -220,6 +232,16 @@ export interface DomesticPriceCheckResult {
   urlCandidateEvidence?: GeminiTransientEvidence[] | null;
   /** 🔴 WU-024 — URL 경로의 계측(공급 수 · 제외 사유 · HTTP 수). `null` = 안 돌았다. */
   urlCandidateMetrics?: UrlCandidatePoolMetrics | null;
+  /**
+   * 🔴🔴 WU-130 — **해외 자동검색 경로의 transient evidence.** 위 둘과 같은 수명
+   *    (요청 범위 · DB 저장 0)이고 **같은 판정 함수** 를 통과했지만 **출처가 다르다** —
+   *    셀러가 아무것도 붙여넣지 않아도 생긴다.
+   *
+   * 🔴 `null` = 그 경로가 돌지 못했다(등록부 조회 실패 등) · `[]` = 돌았는데 후보가 0.
+   */
+  overseasAutoEvidence?: GeminiTransientEvidence[] | null;
+  /** 🔴 WU-130 — 해외 자동검색 계측(등록부 수 · 자격 샵 수 · status 분포 · 후보 수). */
+  overseasAutoMetrics?: OverseasAutoPoolMetrics | null;
   /** 🔴 010R §6 — Gemini 가격 보강 호출 수. 국내 상세 fetch 와 **다른 칸** 이다. */
   geminiPriceEnrichCalls?: number;
   /** 🔴 WU-024 — URL 경로의 가격 보강 호출 수. Gemini 칸과 **합산하지 않는다**. */
@@ -918,11 +940,67 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     collectionStrategy: s.collectionStrategy,
   });
 
+  /* ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴 WU-130 — **해외 자동검색을 여기서 «같이» 시작한다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 왜 필요한가 — 해외 비교 판매처 검색은 **이미 운영되고 있었지만 화면에서만** 돌았다
+   * (`ComparisonShopSearch` → `/api/comparison/search`). 그래서 그 후보들은
+   * `judgeDomesticCandidate` 를 통과한 적도, 해외 금액 집계(`candidateOverseasPrice`)에
+   * 들어간 적도 **없다** — 「🧾 해외 동일상품 참고가격」은 셀러가 **URL 을 붙여넣을 때만**
+   * 채워졌다. 🔴 그것이 「아무것도 안 하면 후보가 없다」의 해외쪽 원인이다.
+   *
+   * 🔴 **await 를 뒤로 미룬다.** 국내 검색과 **병렬** 로 돌려 벽시계 시간을 늘리지
+   *    않는다(실측 해외 1회 ≈ 3초). 🟢 실패해도 국내 경로를 멈추지 않는다.
+   * 🔴 `categoryScopes` 를 **다시 계산하지 않는다** — 호출부가 준 그 값을 넘긴다.
+   */
+  let overseasAutoMetrics: OverseasAutoPoolMetrics | null = null;
+  const overseasAutoPromise = collectOverseasAutoPool({
+    query,
+    categoryScopes: input.categoryScopes ?? null,
+  }).catch(() => null);
+
   const p0Results = await searchDomesticShops(query, p0Sources.map(toRef));
   const foundVeryHighInP0 = p0Results.some((r) => r.candidates.some((c) => c.matchLevel === "very_high"));
   const otherResults =
     otherSources.length > 0 && !foundVeryHighInP0 ? await searchDomesticShops(query, otherSources.map(toRef)) : [];
-  const searchResults = [...p0Results, ...otherResults];
+  const overseasAuto = await overseasAutoPromise;
+  overseasAutoMetrics = overseasAuto?.metrics ?? null;
+  if (overseasAutoMetrics) {
+    /** 🔴 계측을 로그로 내보낸다 — Production 화면은 로그인 뒤라 CTO 가 응답을 읽을 수
+     *  없다(메모 `production-payload-is-unreachable`). 기존 `[WU-024-urlpool]` 와 같은
+     *  규약이고 **계산하지 않는다**(pool 이 낸 값을 그대로 옮긴다). */
+    console.log(
+      `[WU-130-overseas] ${JSON.stringify({
+        snapshot: input.snapshotId,
+        registrySources: overseasAutoMetrics.registrySources,
+        eligibleShops: overseasAutoMetrics.eligibleShops,
+        outcomes: overseasAutoMetrics.outcomes,
+        candidates: overseasAutoMetrics.candidates,
+        providerCalls: overseasAutoMetrics.providerCalls,
+      })}`,
+    );
+  }
+  /**
+   * 🔴🔴 **일시 shopId 가 달려 있어야만** 이 자리에 넣을 수 있다. 실제
+   *    `comparison_shops.id` 를 넣으면 아래 루프가 `upsertDomesticProductLink` 로
+   *    **해외 판매처를 국내 링크 테이블에 저장한다**(= 국내 최저가·판정·알림 오염).
+   *    🟢 `collectOverseasAutoPool` 이 그 id 를 갈아 넣는 것이 그 함수의 유일한 일이다.
+   *
+   * 🔴 왜 `transientPools` 가 아니라 **여기** 인가 — 그 루프는 `withConfidence` 재점수 +
+   *    `enrichCandidatePrices` 를 돌린다. 해외 경로는 `searchOneShop` 안에서 **그 둘을
+   *    이미** 끝냈다(실측: 반환 후보의 `matchLevel` 4/4 · `priceStatus` 채워짐).
+   *    여기 넣으면 **같은 일을 두 번** 하고 HTTP 비용이 늘어난다.
+   * 🟢 그리고 이 자리이기 때문에 아래 두 중복 집합(`existingCanonicalUrls` ·
+   *    `existingUrls`)이 해외 후보를 **같이 본다** — 붙여넣은 URL 이 이미 자동으로
+   *    찾아진 후보면 `ALREADY_CANDIDATE` 로 빠지고 HTTP 를 쓰지 않는다.
+   * 🔴 **그 대가 하나를 적는다** — 아래 Gemini 게이트의 `deterministicHit` 가 이제
+   *    해외 후보의 `very_high` 도 본다(= Gemini 를 더 자주 건너뛴다). 🟢 flag 가
+   *    OFF 라 **현재 효과는 0** 이고, 조건의 뜻(「결정적 후보가 이미 있으면 안 부른다」)은
+   *    그대로다. 🔴 `foundVeryHighInP0`(국내 2차 검색 여부)는 **이 줄 «위»** 에서
+   *    국내 결과만으로 이미 확정됐다 — 국내 검색 범위는 한 글자도 바뀌지 않는다.
+   */
+  const searchResults = [...p0Results, ...otherResults, ...(overseasAuto?.searchResults ?? [])];
 
   /* ─────────── 🔴 MI-GEMINI-INTEGRATION-005 ① — Gemini 후보 합류 ───────────
    * flag 기본 OFF. OFF 면 아래가 **한 줄도 돌지 않는다** → 기존 동작 100% 유지.
@@ -973,6 +1051,11 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
   let urlCandidateMetrics: UrlCandidatePoolMetrics | null = null;
   let urlCandidatePriceEnrichCalls = 0;
   const urlCandidateEvidence: GeminiTransientEvidence[] = [];
+  /**
+   * 🔴🔴 WU-130 — 해외 자동검색 후보의 판정 근거. 🔴 위 두 배열과 **섞지 않는다**
+   *    (출처 보존 · §7). 🟢 담기는 자리는 아래 **한 곳** 이고 판정 규칙은 **동일** 하다.
+   */
+  const overseasAutoEvidence: GeminiTransientEvidence[] = [];
 
   if (input.candidateUrls && input.candidateUrls.length > 0) {
     /**
@@ -1298,12 +1381,27 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
        *    출처별로 가른다.** 「웹 검색이 찾았다」와 「사람이 URL 을 줬다」를 한 배열에
        *    담으면 화면·보고서가 그 구분을 잃는다(§7). 🔴 판정은 둘이 **완전히 같은
        *    함수** 를 통과했다 — 출처별 판정 규칙은 **0** 이다. */
-      const isSuppliedUrl = result.shopId === TRANSIENT_URL_SHOP_ID;
+      /**
+       * 🔴🔴 WU-130 — 출처가 **셋** 이 됐다. 🔴 「그 외는 Gemini」로 두지 않고
+       *    **세 id 를 각각 적는다** — 생산자가 늘 때 조용히 엉뚱한 배열에 담기면
+       *    보고가 거짓이 된다(기본값 쪽으로 흘러들어도 타입이 잡아 주지 않는다).
+       */
+      const evidenceSource: GeminiTransientEvidence["source"] =
+        result.shopId === TRANSIENT_URL_SHOP_ID
+          ? "SELLER_URL"
+          : result.shopId === OVERSEAS_AUTO_SHOP_ID
+            ? "OVERSEAS_AUTO"
+            : "GEMINI_DISCOVERY";
       /** 🟢 담을 배열을 **이름 있는 변수** 로 고른다 — 가드 소스 검사가 push 자리를
        *  안정적으로 지목할 수 있어야 한다(테스트가 그 앵커를 쓴다). */
-      const transientEvidenceSink = isSuppliedUrl ? urlCandidateEvidence : geminiEvidence;
+      const transientEvidenceSink =
+        evidenceSource === "SELLER_URL"
+          ? urlCandidateEvidence
+          : evidenceSource === "OVERSEAS_AUTO"
+            ? overseasAutoEvidence
+            : geminiEvidence;
       transientEvidenceSink.push({
-        source: isSuppliedUrl ? "SELLER_URL" : "GEMINI_DISCOVERY",
+        source: evidenceSource,
         domain: result.domain,
         /**
          * 🔴🔴 WU-028 — **상품명을 같이 들고 나온다.** 화면이 판매처(domain)만 보여
@@ -1568,6 +1666,9 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     /** 🔴 WU-024 — 같은 원칙. URL 을 공급받지 않았으면 `null`(「후보 0」이 아니다). */
     urlCandidateEvidence: urlCandidateMetrics === null ? null : urlCandidateEvidence,
     urlCandidateMetrics,
+    /** 🔴 WU-130 — 같은 원칙. 그 경로가 돌지 못했으면 `null`(「후보 0」이 아니다). */
+    overseasAutoEvidence: overseasAutoMetrics === null ? null : overseasAutoEvidence,
+    overseasAutoMetrics,
     /** 🔴 010R §6 — Gemini 가격 보강 HTTP 호출 수(국내 검색과 분리). */
     geminiPriceEnrichCalls,
     urlCandidatePriceEnrichCalls,

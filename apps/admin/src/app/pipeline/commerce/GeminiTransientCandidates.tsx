@@ -37,7 +37,7 @@ export interface GeminiTransientRow {
   /** 🔴 WU-028 — 판매처만으로는 「무엇이 그 가격인가」를 말할 수 없다. */
   title?: string | null;
   /** 🔴 WU-028 — 이 후보가 **어디서 왔는가**. 행에서도 출처가 보여야 한다. */
-  source?: "GEMINI_DISCOVERY" | "SELLER_URL" | null;
+  source?: "GEMINI_DISCOVERY" | "SELLER_URL" | "OVERSEAS_AUTO" | null;
   /** 🔴 WU-028 — 가격 «신뢰도». 숫자 옆에 이것이 없으면 가격이 확정처럼 읽힌다. */
   priceStatus?: string | null;
   discoveredUrl: string;
@@ -81,9 +81,11 @@ export function priceText(row: GeminiTransientRow): string {
 }
 
 /** 🔴 WU-028 — 행에 붙는 **출처** 배지. 입력부와 결과부를 잇는 유일한 표시다. */
-export const SOURCE_LABEL: Record<"GEMINI_DISCOVERY" | "SELLER_URL", string> = {
+export const SOURCE_LABEL: Record<"GEMINI_DISCOVERY" | "SELLER_URL" | "OVERSEAS_AUTO", string> = {
   SELLER_URL: "직접 입력",
   GEMINI_DISCOVERY: "웹 검색",
+  /** 🔴 WU-130 — 「자동」이라고 **적는다**. 셀러가 한 일이 아니라는 것이 이 배지의 전부다. */
+  OVERSEAS_AUTO: "해외 자동검색",
 };
 
 /**
@@ -137,6 +139,13 @@ export const WEB_SEARCH_HEADING = "🔎 웹 검색 후보";
  *    「웹 검색 후보」로 적으면 거짓이다(§7 출처 보존). 구역을 가르는 이유가 그것이다.
  */
 export const SUPPLIED_URL_HEADING = "🔗 직접 입력한 후보";
+/**
+ * 🔴🔴 WU-130 — **해외 자동검색 후보.** 위 둘과 머리 문구를 가르는 이유가 하나 더 있다 —
+ *    이 구역은 셀러가 **아무것도 하지 않아도** 서기 때문에, 「직접 입력한 후보」로 적으면
+ *    셀러가 자기가 넣은 줄 알고 「왜 내가 넣지 않은 판매처가 있나」로 읽는다.
+ * 🔴 「동일상품」이라고 **단정하지 않는다** — 「후보」이고 판정은 행마다 따로 적힌다.
+ */
+export const OVERSEAS_AUTO_HEADING = "🌎 해외 자동검색 후보";
 /**
  * 🔴🔴 WU-081 — **국내 후보 검토 구역.** 해외 축 제목과 **의미가 겹치지 않게** 짓는다.
  * ```

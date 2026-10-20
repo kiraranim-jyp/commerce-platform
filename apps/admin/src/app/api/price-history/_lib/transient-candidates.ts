@@ -35,6 +35,25 @@ export const TRANSIENT_URL_SHOP_ID = "__url_candidates__";
 export const TRANSIENT_URL_SHOP_NAME = "직접 입력 후보(일시)";
 
 /**
+ * 🔴🔴 WU-130 — **세 번째 일시 샵.** 해외 비교 판매처 등록부(`comparison_shops`)를
+ *    `/check` 가 **스스로** 뒤진 결과다(지금까지 그 검색은 화면에서만 돌았다).
+ *
+ * ── 🔴🔴🔴 왜 «일시» id 가 반드시 필요한가 (파괴적 함정) ────────────────────
+ * ```
+ * `searchComparisonShops` 가 돌려주는 shopId 는 **`comparison_shops` 의 실제 id** 다.
+ * 그 값을 그대로 `searchResults` 에 넣으면 아래 루프가 비(非)transient 로 보고
+ * `upsertDomesticProductLink` 를 부른다 ⟹ **해외 판매처가 «국내» 링크 테이블에
+ * 저장된다**(`domestic_product_links.source_id` 는 `domestic_price_sources` FK).
+ * 🔴 그 오염은 ⒜ FK/의미 ⒝ 국내 최저가·판정 입력 ⒞ `price_alerts` 오발화 까지 번진다.
+ * 🟢 그래서 id 를 일시 샵으로 **갈아** 넣는다 — `isTransientShopId` 가 upsert 앞에서 끊는다.
+ * ```
+ * 🔴 `domain` 은 **실제 판매처 그대로** 다(위 `groupCandidatesByHost` 주석과 같은 이유 —
+ *    품번 추출기 선택과 샵당 대표 선택이 그 값으로 분기한다).
+ */
+export const OVERSEAS_AUTO_SHOP_ID = "__overseas_auto__";
+export const OVERSEAS_AUTO_SHOP_NAME = "해외 자동검색(일시)";
+
+/**
  * 🔴🔴 **저장 차단의 유일한 기준.** 두 호출부(`recordDomesticSourceCheckAttempt`
  *    래퍼 · `upsertDomesticProductLink` 앞 가드)가 **같은 술어** 를 본다.
  *
@@ -43,8 +62,15 @@ export const TRANSIENT_URL_SHOP_NAME = "직접 입력 후보(일시)";
  * 목록이 늘어날 때 한쪽만 고쳐지면 **FK 가 없는 id 가 upsert 로 흘러간다.**
  *
  * 🔴 이 집합에 **등록부 id(uuid)를 넣지 않는다** — 넣으면 진짜 샵의 저장이 멈춘다.
+ *
+ * 🔴🔴 WU-130 — 일시 샵이 **셋** 이 됐다. 생산자를 하나 더 붙일 때 이 집합에 넣는 것을
+ *    잊으면 그 후보가 **DB 로 흘러간다** — 그래서 술어를 하나로 모아 두는 것이 계약이다.
  */
-export const TRANSIENT_SHOP_IDS: ReadonlySet<string> = new Set([GEMINI_VIRTUAL_SHOP_ID, TRANSIENT_URL_SHOP_ID]);
+export const TRANSIENT_SHOP_IDS: ReadonlySet<string> = new Set([
+  GEMINI_VIRTUAL_SHOP_ID,
+  TRANSIENT_URL_SHOP_ID,
+  OVERSEAS_AUTO_SHOP_ID,
+]);
 
 export function isTransientShopId(shopId: string): boolean {
   return TRANSIENT_SHOP_IDS.has(shopId);

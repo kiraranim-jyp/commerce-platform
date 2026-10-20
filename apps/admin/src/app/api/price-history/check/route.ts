@@ -155,9 +155,25 @@ export async function POST(request: Request) {
      * 🔴 **응답의 두 배열은 그대로 둔다** — 화면의 출처 구분(WU-028)을 깨지 않는다.
      *    합치는 것은 **MI 입력 한 곳** 뿐이다.
      */
+    /**
+     * 🔴🔴 WU-130 — **해외 자동검색 후보도 같은 자리로 넘긴다.**
+     *
+     * 그 후보들은 지금까지 화면(`/api/comparison/search`)에서만 살아서 MI 의 해외 금액
+     * 집계(`candidateOverseasPrice`)에 **한 번도 들어가지 못했다** — 「🧾 해외 동일상품
+     * 참고가격」이 셀러가 URL 을 붙여넣을 때만 채워진 이유다.
+     *
+     * 🟢 **저장 0 · 환산 0 · 새 계산 0** — 위 두 배열과 완전히 같은 성질이다
+     *    (`market !== "KR"` 이면 해외 축으로 가고 통화별로만 모인다 · WU-020 §2).
+     * 🔴 **응답의 세 배열은 그대로 둔다** — 화면의 출처 구분(WU-028)을 깨지 않는다.
+     *    합치는 것은 **MI 입력 한 곳** 뿐이다.
+     */
     const transientEvidence =
-      domesticShop.geminiEvidence || domesticShop.urlCandidateEvidence
-        ? [...(domesticShop.geminiEvidence ?? []), ...(domesticShop.urlCandidateEvidence ?? [])]
+      domesticShop.geminiEvidence || domesticShop.urlCandidateEvidence || domesticShop.overseasAutoEvidence
+        ? [
+            ...(domesticShop.geminiEvidence ?? []),
+            ...(domesticShop.urlCandidateEvidence ?? []),
+            ...(domesticShop.overseasAutoEvidence ?? []),
+          ]
         : null;
     intelligence = await computeMarketIntelligence(
       snapshotId,
