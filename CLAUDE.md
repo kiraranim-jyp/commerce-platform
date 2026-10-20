@@ -1042,6 +1042,30 @@ CEO 가 보는 것    **배포된 따져 화면** · 정상/비정상 피드백 
 4순위  **가격** — 1~3 이 실제 따져에서 확인된 «뒤» 에만
 ```
 
+### 🔴🔴🔴 WU-130 ① — **해외 합류 설계: 그대로 합치면 DB 를 오염시킨다**(구현 0)
+
+🟢 전문 `docs/MI-OVERSEAS-MERGE-130-DESIGN.md`. 🔴 코드 변경 **0** · 작업트리 clean.
+
+🔴🔴🔴 **파괴적 함정(선확정)** — `/check` 후보 루프는 **비transient shopId 면**
+`upsertDomesticProductLink` 로 **`domestic_product_links` 에 쓴다**. 그런데
+`searchComparisonShops` 가 돌려주는 shopId 는 **`comparison_shops` 의 실제 id** 다 ⟹
+그대로 `searchResults` 에 넣으면 **해외 판매처가 국내 링크 테이블에 저장된다**
+(FK/의미 오염 · 국내 최저가·판정 입력 오염 · `price_alerts` 오발화). 🔴 **모른 채 합치면 안 된다.**
+
+🟢 **그래서 합류 방식은 기존 아키텍처가 이미 정해 뒀다** — **transient 생산자 세 번째**:
+```
+① __gemini_discovery__  ② __url_candidates__  ③ **신규 __overseas_auto__**
+🟢 isTransientShopId() 가 **upsert 앞에서 끊는다** ⟹ DB 오염이 **구조적으로 불가능**
+🟢 그 뒤는 기존 경로 그대로 — facts → MI → sink → computeMarketIntelligence → 해외 집계
+구현 단위 4 — ⒜ transient-candidates(상수) ⒝ overseas-auto-pool(신규 · 기존 함수 재사용 ·
+   scope 는 /api/comparison/search 와 **같은 함수**) ⒞ run-domestic-price-check(합류 한 줄 +
+   evidence 세 번째 가지) ⒟ check/route(배열을 같이 넘긴다)
+```
+
+🔴 합류 «전» 실측 둘 — ① `searchComparisonShops` 반환이 `ComparisonSearchResult` 모양인가
+② 해외 후보에 `judgeDomesticCandidate` 를 그대로 써도 되는가(국내 품번 추출기가 null 을 주는지 **실측**).
+🔴 UI 순서 고정 — ① 합류 → ② E2E → ③ **그 뒤에** 붙여넣기 UI 제거 → ④ 가격 영역 통합.
+
 ### 🟡 WU-129 — **착수 전 용량 판단 + 범위 정정**(STOP · 다음 세션 1건으로 묶는다)
 
 🟢 전문 `docs/MI-SINGLE-PRICE-AREA-129-PLAN.md`. 🔴 코드 변경 **0** · 작업트리 clean.
