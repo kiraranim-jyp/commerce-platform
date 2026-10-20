@@ -3,6 +3,8 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { MiPanelView } from "../DomesticPriceIntelligencePanel";
+/** 🔴 WU-132 ③ — 🇰🇷/🌎 집계가 **옮겨 간** 자리. 화면의 유일한 가격비교 영역이다. */
+import { MarketPriceComparison } from "../MarketPriceComparison";
 import { DOMESTIC_REVIEW_HEADING, type GeminiTransientRow } from "../GeminiTransientCandidates";
 import { withDomesticComparable } from "./product-tab-composition";
 
@@ -67,8 +69,26 @@ describe("WU-082 — 자동 1회차만으로 국내 축이 보인다", () => {
     expect(sec("domestic-review-empty")).toBeNull();
   });
 
-  it("🟢 AFTER — 자동 1회차 값이 오면 **🇰🇷 국내 참고가격** 이 선다", async () => {
+  /**
+   * 🔴🔴 WU-132 ③ — **🇰🇷 집계가 서는 «자리» 가 바뀌었다.** 가격 비교 영역을 둘 두지
+   *    않기 위해 MI 패널의 `unified-price-comparison` 을 제거했고, 그 블록은
+   *    「📊 동일상품 가격 비교」(`MarketPriceComparison`)로 **옮겼다**.
+   *
+   * 🟢 WU-082 가 잠그려던 성질은 **그대로** 다 — 「자동 1회차 값이 오면 화면이 선다」.
+   *    🔴 그래서 **두 자리를 같이** 단언한다(한쪽만 보면 옮기는 과정에서 값을 흘려도
+   *    통과한다): ⒜ 패널은 「조회가 돌았다」를 말하고 ⒝ 그 영역이 **숫자** 를 그린다.
+   */
+  it("🟢 AFTER — 자동 1회차 값이 오면 **🇰🇷 집계가 가격비교 영역에** 선다", async () => {
+    /** ⒜ 패널 — 집계만 와도 「조회했다」를 말한다(WU-130 ② 계약). */
     await mount({ domesticReference: DOMESTIC_SUMMARY });
+    expect(sec("domestic-review-empty")).toBeTruthy();
+    /** 🔴 집계 블록은 **이제 패널에 없다** — 두 영역이 되면 FAIL 이다. */
+    expect(sec("domestic-reference")).toBeNull();
+
+    /** ⒝ 가격비교 영역 — 숫자는 여기서 선다. */
+    await act(async () => {
+      root.render(createElement(MarketPriceComparison, { domesticReference: DOMESTIC_SUMMARY } as never));
+    });
     expect(sec("domestic-reference")).toBeTruthy();
     expect(sec("domestic-lowest")?.textContent).toMatch(/88,?000/);
   });

@@ -23,8 +23,11 @@ import type { JSX } from "react";
  *    사고를 고친 자리다. 🔴 그래서 여기서 `crossSellerVerdict` 원문(`PRESUMED_SAME`)을
  *    그대로 찍지 않고 **그 owner 가 정한 말** 을 쓴다 — 새 어휘를 만들지 않는다.
  */
-import { domesticMatchDisplay, tierDisplay, type MatchDisplayTier } from "./match-display";
-import type { MatchTruth } from "@commerce/crawler/src/comparison-search/match-truth";
+/**
+ * 🔴 WU-132 — 등급 선택 owner. 🟢 이 파일은 **타입만** 거꾸로 내보내므로(아래
+ *    `GeminiTransientRow`) 런타임 순환이 생기지 않는다(type import 는 지워진다).
+ */
+import { transientDisplay } from "./mi-same-candidates";
 
 /**
  * 🔴 `GeminiTransientEvidence`(run-domestic-price-check.ts)의 **화면이 읽는 칸만**
@@ -37,7 +40,19 @@ export interface GeminiTransientRow {
   /** 🔴 WU-028 — 판매처만으로는 「무엇이 그 가격인가」를 말할 수 없다. */
   title?: string | null;
   /** 🔴 WU-028 — 이 후보가 **어디서 왔는가**. 행에서도 출처가 보여야 한다. */
-  source?: "GEMINI_DISCOVERY" | "SELLER_URL" | "OVERSEAS_AUTO" | null;
+  source?: "GEMINI_DISCOVERY" | "SELLER_URL" | "OVERSEAS_AUTO" | "REVIEWED_SAME" | null;
+  /**
+   * 🔴🔴 WU-132 ④ — **후보 대표 이미지.** 셀러가 「동일상품인가」를 가르는 수단이
+   *    글자뿐이면 판단이 안 된다 — WU-099 에서 CEO 평가 26건 중 **12건이 「이미지가
+   *    없어서」 측정불가** 로 돌아온 그 자리다.
+   * 🔴 없으면 `null` 이고 화면이 「이미지 없음」이라고 **적는다**(대체 사진 금지).
+   */
+  imageUrl?: string | null;
+  /**
+   * 🔴🔴 WU-132 ② — **지금 팔고 있는가.** 🔴 `null` 은 「판매중」이 **아니다** —
+   *    「그 사이트에서 확인할 방법이 없다」다(기존 `StockBadge` 와 같은 규칙).
+   */
+  soldOut?: boolean | null;
   /** 🔴 WU-028 — 가격 «신뢰도». 숫자 옆에 이것이 없으면 가격이 확정처럼 읽힌다. */
   priceStatus?: string | null;
   discoveredUrl: string;
@@ -81,11 +96,19 @@ export function priceText(row: GeminiTransientRow): string {
 }
 
 /** 🔴 WU-028 — 행에 붙는 **출처** 배지. 입력부와 결과부를 잇는 유일한 표시다. */
-export const SOURCE_LABEL: Record<"GEMINI_DISCOVERY" | "SELLER_URL" | "OVERSEAS_AUTO", string> = {
+export const SOURCE_LABEL: Record<
+  "GEMINI_DISCOVERY" | "SELLER_URL" | "OVERSEAS_AUTO" | "REVIEWED_SAME",
+  string
+> = {
   SELLER_URL: "직접 입력",
   GEMINI_DISCOVERY: "웹 검색",
   /** 🔴 WU-130 — 「자동」이라고 **적는다**. 셀러가 한 일이 아니라는 것이 이 배지의 전부다. */
   OVERSEAS_AUTO: "해외 자동검색",
+  /**
+   * 🔴🔴 WU-132 ⑥ — 「이전에 **당신이** 동일상품이라고 판단한 후보를 우리가 다시
+   *    확인했다」는 뜻이다. 🔴 「직접 입력」으로 적으면 셀러가 **지금 넣은 줄** 안다.
+   */
+  REVIEWED_SAME: "이전 확인 후보",
 };
 
 /**
@@ -112,25 +135,19 @@ export function priceConfidenceText(row: GeminiTransientRow): string | null {
  * 🟢 `matchTruth` 가 그 함수의 입력이다. 없으면(판정 전) **지어내지 않고** null.
  */
 export function verdictDisplay(row: GeminiTransientRow): { icon: string; label: string; note: string } | null {
-  if (row.matchTruth) {
-    const d = domesticMatchDisplay(row.matchTruth as MatchTruth);
-    return { icon: d.icon, label: d.label, note: d.note };
-  }
   /**
-   * 🔴 `matchTruth` 가 없을 때 **정보를 잃지 않는다.** 교차판매처 판정값
-   *    (`SAME`/`PRESUMED_SAME`/…)은 `MatchDisplayTier` 와 **같은 어휘** 라 같은
-   *    owner(`tierDisplay`)가 그대로 말로 바꿔 준다 — 새 매핑을 만들지 않는다.
+   * 🔴🔴 WU-132 — **등급을 고르는 규칙은 이제 owner 가 «하나» 다**(`transientDisplay`).
+   *
+   * 왜 옮겼나 — 가격비교 선별기(`selectMiSameCandidates`)가 **같은 판단**(「이 행의
+   * 등급이 SAME 인가」)을 해야 했고, 여기에 사본을 두면 **화면의 배지와 가격비교가
+   * 서로 다른 등급을 말하는 날** 이 온다. 🔴 이 저장소가 반복해서 고쳐 온 그 실수다
+   * (`match-display.ts` 머리 주석의 MATCHING-UNIFY-1 과 같은 이유).
+   * 🟢 규칙 자체는 **한 글자도 바뀌지 않았다** — `matchTruth` 우선, 없으면
+   *    교차판매처 판정값, 둘 다 없으면 `null`.
    */
-  const verdict = row.crossSellerVerdict;
-  if (verdict && (DISPLAYABLE_VERDICTS as readonly string[]).includes(verdict)) {
-    const d = tierDisplay(verdict as MatchDisplayTier);
-    return { icon: d.icon, label: d.label, note: d.note };
-  }
-  return null;
+  const d = transientDisplay(row);
+  return d ? { icon: d.icon, label: d.label, note: d.note } : null;
 }
-
-/** 🔴 `MatchDisplayTier` 와 글자가 같은 값만 넘긴다 — 모르는 값은 지어내지 않는다. */
-const DISPLAYABLE_VERDICTS = ["SAME", "SAME_MODEL_OPTION_DIFF", "PRESUMED_SAME", "SIMILAR", "UNKNOWN", "CONFLICT"] as const;
 
 /** 🟢 기본 머리 문구 — Gemini 웹 검색 경로의 것이다(WU-022 에서 CPO 가 지정). */
 export const WEB_SEARCH_HEADING = "🔎 웹 검색 후보";
@@ -146,6 +163,15 @@ export const SUPPLIED_URL_HEADING = "🔗 직접 입력한 후보";
  * 🔴 「동일상품」이라고 **단정하지 않는다** — 「후보」이고 판정은 행마다 따로 적힌다.
  */
 export const OVERSEAS_AUTO_HEADING = "🌎 해외 자동검색 후보";
+/**
+ * 🔴🔴 WU-132 ⑥ — **이전에 「동일상품」으로 판단한 후보를 다시 확인한 구역.**
+ *
+ * 🔴 「직접 입력한 후보」와 가르는 이유 — 셀러가 **지금 넣지 않은** URL 이다. 같은
+ *    구역에 담으면 「내가 이걸 넣었나?」로 읽힌다(WU-130 이 세 번째 구역을 만든 이유).
+ * 🔴 「동일상품」이라고 **단정하지 않는다** — 판정은 이번에도 처음부터 다시 했고,
+ *    그 결과가 바뀌었을 수 있다(그래서 행마다 판정이 따로 적힌다).
+ */
+export const REVIEWED_SAME_HEADING = "🔁 이전 확인 후보 재검증";
 /**
  * 🔴🔴 WU-081 — **국내 후보 검토 구역.** 해외 축 제목과 **의미가 겹치지 않게** 짓는다.
  * ```
@@ -216,6 +242,36 @@ export interface GeminiTransientCandidatesProps {
   onReview?: (url: string, verdict: HumanReview) => void;
   /** 🔴 WU-131 — 후보별 저장 상태. 「눌렀다」가 아니라 **「저장됐다」** 를 말한다. */
   saveState?: Record<string, ReviewSaveState>;
+  /**
+   * 🔴🔴 WU-132 ④ — **원상품 이미지.** 이 값이 있으면 행마다 **원본 ↔ 후보** 사진을
+   *    나란히 그린다. 🟢 없으면(기본) 기존 구역은 **한 픽셀도 바뀌지 않는다**.
+   *
+   * 🔴 **대체 사진을 쓰지 않는다** — 없으면 그 칸에 「이미지 없음」이라고 적는다.
+   *    WU-099 에서 CEO 평가 26건 중 12건이 「이미지가 없어서」 **측정불가** 로
+   *    돌아왔고, 그때 빈 칸을 다른 사진으로 메웠다면 그 12건은 **거짓 판단** 이 됐다.
+   */
+  originImageUrl?: string | null;
+  /** 🟢 원본 칸의 설명. 없으면 「원본 상품」이라고만 적는다. */
+  originTitle?: string | null;
+}
+
+/** 🔴 이미지가 없을 때 적는 말. 🔴 빈 칸으로 두지 않는다(「없다」와 「못 그렸다」를 가른다). */
+export const IMAGE_MISSING_TEXT = "이미지 없음";
+export const ORIGIN_IMAGE_LABEL = "원본 상품";
+export const CANDIDATE_IMAGE_LABEL = "이 후보";
+
+/** 🔴 재고 문구 — 기존 `StockBadge`(DomesticShopSearch)와 **같은 세 상태** 다. */
+export const STOCK_TEXT = {
+  SOLD_OUT: "🔴 품절",
+  IN_STOCK: "🟢 판매중",
+  UNKNOWN: "⚪ 재고 확인불가",
+} as const;
+
+export function stockText(soldOut: boolean | null | undefined): string {
+  if (soldOut === true) return STOCK_TEXT.SOLD_OUT;
+  if (soldOut === false) return STOCK_TEXT.IN_STOCK;
+  /** 🔴 `null` 을 「판매중」으로 바꾸지 않는다 — 확인하지 못한 것이다. */
+  return STOCK_TEXT.UNKNOWN;
 }
 
 /**
@@ -255,8 +311,12 @@ export function GeminiTransientCandidates({
   review,
   onReview,
   saveState,
+  originImageUrl,
+  originTitle,
 }: GeminiTransientCandidatesProps): JSX.Element | null {
   if (!evidence || evidence.length === 0) return null;
+  /** 🔴 WU-132 ④ — 원상품 이미지가 **없으면** 비교 칸을 만들지 않는다(빈 틀 금지). */
+  const showImagePair = originImageUrl != null;
 
   return (
     <section data-testid={testId} className="mt-3 rounded-md border border-border bg-surface/40 p-2">
@@ -298,6 +358,46 @@ export function GeminiTransientCandidates({
                   </span>
                 )}
               </div>
+              {/**
+               * 🔴🔴 WU-132 ④ — **원본 ↔ 후보 사진을 나란히.** 이것이 셀러가
+               *    「동일상품인가」를 실제로 가르는 수단이다(글자만으로는 못 가른다 —
+               *    WU-099 에서 측정됐다).
+               * 🔴 한쪽이 없으면 그 칸에 **「이미지 없음」이라고 적는다** — 다른 상품
+               *    사진으로 메우지 않는다(그러면 판단 자체가 거짓이 된다).
+               */}
+              {showImagePair && (
+                <div data-testid="gt-image-pair" className="mt-1 grid grid-cols-2 gap-2">
+                  <figure className="m-0">
+                    <figcaption className="text-[10px] text-text-tertiary">{ORIGIN_IMAGE_LABEL}</figcaption>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      data-testid="gt-origin-image"
+                      src={originImageUrl ?? undefined}
+                      alt={originTitle ?? ORIGIN_IMAGE_LABEL}
+                      className="h-24 w-full rounded border border-border/60 object-contain"
+                    />
+                  </figure>
+                  <figure className="m-0">
+                    <figcaption className="text-[10px] text-text-tertiary">{CANDIDATE_IMAGE_LABEL}</figcaption>
+                    {row.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        data-testid="gt-candidate-image"
+                        src={row.imageUrl}
+                        alt={row.title ?? CANDIDATE_IMAGE_LABEL}
+                        className="h-24 w-full rounded border border-border/60 object-contain"
+                      />
+                    ) : (
+                      <p
+                        data-testid="gt-candidate-image-missing"
+                        className="flex h-24 w-full items-center justify-center rounded border border-dashed border-border/60 text-[10px] text-text-tertiary"
+                      >
+                        {IMAGE_MISSING_TEXT}
+                      </p>
+                    )}
+                  </figure>
+                </div>
+              )}
               {/* 🔴 WU-028 — **무엇이** 그 가격인지. domain 만 있을 때는 링크를 열어야 알았다. */}
               {row.title && (
                 <p data-testid="gt-title" className="mt-1 truncate text-[11px] text-text-primary">
@@ -327,6 +427,15 @@ export function GeminiTransientCandidates({
                   {confidence}
                 </p>
               )}
+              {/**
+               * 🔴🔴 WU-132 ② — **재고를 가격 옆에서 말한다.** 「동일상품이고 가격도
+               *    확인됐는데 품절」이면 그 가격은 경쟁가격이 아니다(기존 국내 집계
+               *    owner 가 품절을 빼는 그 이유).
+               * 🔴 `null` 을 「판매중」으로 적지 않는다 — 세 상태를 그대로 가른다.
+               */}
+              <p data-testid="gt-stock" className="text-[11px] text-text-tertiary">
+                {stockText(row.soldOut)}
+              </p>
               {/* 🟢 판정의 한 줄 근거도 owner 가 들고 있다 — 화면이 새로 쓰지 않는다. */}
               {verdict && (
                 <p data-testid="gt-verdict-note" className="mt-0.5 text-[11px] text-text-tertiary">

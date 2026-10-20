@@ -124,6 +124,46 @@ export async function listCandidateReviews(input: {
 }
 
 /**
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴 WU-132 ⑥ — **셀러가 「동일상품」이라 한 URL 만** 돌려준다 (재투입 입력)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * 왜 필요한가 — WU-118 이 측정했다: 사람이 SAME 이라 한 URL 을 다시 넣으면
+ * **19/19 가 후보로 살아남는다**(파이프라인이 그 URL 을 버리지 않는다). 없던 것은
+ * **그 URL 을 다음 조회의 입력으로 되돌리는 경로** 하나였다.
+ *
+ * 🔴 **`SAME` 만** 고른다. 과거 `DIFFERENT`/`SIMILAR`/`UNDECIDED` 는 **넣지 않는다**
+ *    (CPO 금지 — 「과거 DIFFERENT 는 자동 편입 금지」).
+ * 🔴 **사람 판단을 MI 판정으로 위조하지 않는다.** 이 함수가 돌려주는 것은 **URL 뿐**
+ *    이고, 그 URL 이 동일상품인지는 기존 판정기가 페이지를 열어 **처음부터 다시** 낸다.
+ * 🔴 **새 질의를 만들지 않는다** — 이력 조회 owner(`listCandidateReviews`)를 그대로
+ *    쓴다(두 곳이 갈라지면 화면의 이력과 재투입 대상이 달라진다).
+ * 🔴 상한을 받는다 — 재투입이 fetch 비용이므로 호출부가 그 값을 소유한다.
+ */
+export async function listReviewedSameUrls(input: {
+  snapshotId: string;
+  originCode: string | null;
+  workspaceId: string;
+  limit: number;
+}): Promise<string[]> {
+  if (input.limit <= 0) return [];
+  const rows = await listCandidateReviews(input);
+  const urls: string[] = [];
+  const seen = new Set<string>();
+  for (const r of rows) {
+    if (r.humanVerdict !== "SAME") continue;
+    /** 🔴 저장 키와 **같은 정규화기** 로 접는다 — 두 축(snapshot/originCode)에서
+     *  같은 URL 이 두 행으로 올 수 있다(부분 유니크가 둘이다 · WU-131 계약 ⒝). */
+    const key = reviewKey(r.candidateUrl);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    urls.push(r.candidateUrl);
+    if (urls.length >= input.limit) break;
+  }
+  return urls;
+}
+
+/**
  * 「이번 조회에서 본 후보」를 남긴다(= 📚 이력의 생산자).
  *
  * 🔴🔴 **사람 판단을 건드리지 않는다.** `human_verdict`/`reviewed_at` 을 쓰지 않으므로

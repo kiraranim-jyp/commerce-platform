@@ -164,10 +164,21 @@ describe("B. 배선", () => {
     expect(split).not.toContain("domesticTransientRecords");
   });
 
-  it("Panel 이 그 값을 받아 국내 구역에 넘긴다", () => {
+  /**
+   * 🔴🔴 WU-132 ③ — **구역의 «자리» 가 바뀌었다(값과 성질은 그대로).** 가격 비교
+   *    영역을 둘 두지 않기 위해 MI 패널의 `unified-price-comparison` 을 제거했고,
+   *    🇰🇷 블록은 「📊 동일상품 가격 비교」(`MarketPriceComparison`)로 **옮겼다**.
+   * 🔴 앵커를 갱신하며 **사슬 전체로 강화** 한다(올려보내는 선까지 단언한다).
+   */
+  it("Panel 이 그 값을 받아 «가격비교 영역» 으로 올려보내고, 그 영역이 그린다", () => {
     expect(PANEL).toContain("setDomesticReference(json.domesticReference ?? null)");
-    expect(PANEL).toContain('testId="domestic-reference"');
-    expect(PANEL).toContain("summary={domesticReference}");
+    expect(PANEL).toContain("onMarketComparisonChangeRef.current?.(marketComparisonInput)");
+    expect(PANEL).toContain("domesticReference,");
+    const AREA = strip("apps/admin/src/app/pipeline/commerce/MarketPriceComparison.tsx");
+    expect(AREA).toContain('testId: "domestic-reference"');
+    expect(AREA).toContain("reference={domesticReference}");
+    /** 🔴🔴 **옮긴 것이 맞다** — 패널이 그 블록을 더 이상 그리지 않는다(둘이 되면 FAIL). */
+    expect(PANEL).not.toContain('testId="domestic-reference"');
   });
 
   /** 🔴 transient 저장 금지 불변식이 그대로다. */

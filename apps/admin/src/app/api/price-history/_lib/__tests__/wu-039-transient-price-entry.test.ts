@@ -56,7 +56,29 @@ describe("A. transient 두 싱크가 전부 MI 입력이 된다", () => {
 
   /** 🔴 둘 다 없을 때 `[]` 가 아니라 `null` 이어야 한다 — 「후보 0」과 「안 돌았다」는 다르다. */
   it("둘 다 없으면 null 을 넘긴다", () => {
-    expect(routeSrc).toContain("domesticShop.geminiEvidence || domesticShop.urlCandidateEvidence");
+    /**
+     * 🔴🔴 WU-132 — 생산자가 **넷** 이 됐다(Gemini · 직접입력 · 해외자동 · 재투입).
+     *    🟢 계약의 뜻은 그대로다: **하나라도 돌았으면 배열, 전부 안 돌았으면 `null`.**
+     *    🔴 그래서 숫자가 아니라 **네 칸이 전부 그 or 체인에 들어 있는지** 를 본다 —
+     *       하나를 빠뜨리면 그 생산자만 돌았을 때 `null` 이 되어 **집계에서 통째로
+     *       사라진다**(조용한 손실이고, 그게 이 단언이 막는 것이다).
+     */
+    /** 🔴 좌표를 추측하지 않는다 — 그 삼항식 선언부터 `: null;` 까지만 자른다. */
+    const start = routeSrc.indexOf("const transientEvidence =");
+    expect(start).toBeGreaterThan(-1);
+    const end = routeSrc.indexOf(": null;", start);
+    expect(end).toBeGreaterThan(start);
+    const expr = routeSrc.slice(start, end);
+    for (const field of [
+      "domesticShop.geminiEvidence",
+      "domesticShop.urlCandidateEvidence",
+      "domesticShop.overseasAutoEvidence",
+      "domesticShop.reviewedSameEvidence",
+    ]) {
+      /** 🔴 조건에도 있고(`||` 체인) **실제로 합쳐지기도** 해야 한다. */
+      expect(expr).toContain(field);
+      expect(expr).toContain(`...(${field} ?? [])`);
+    }
     expect(routeSrc).toMatch(/:\s*null;/);
   });
 

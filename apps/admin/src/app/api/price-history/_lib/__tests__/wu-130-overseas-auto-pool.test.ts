@@ -53,6 +53,16 @@ const PANEL = readFileSync(
 )
   .replace(/\/\*[\s\S]*?\*\//g, "")
   .replace(/\/\/.*$/gm, "");
+/**
+ * 🔴 WU-132 ③ — 가격 비교 **영역** 의 새 owner. WU-130 ④ 가 MI 패널 안에 만든
+ *    `unified-price-comparison` 이 **이 파일로 옮겨 왔다**(영역을 둘 두지 않는다).
+ */
+const AREA = readFileSync(
+  path.join(__dirname, "..", "..", "..", "..", "pipeline", "commerce", "MarketPriceComparison.tsx"),
+  "utf8",
+)
+  .replace(/\/\*[\s\S]*?\*\//g, "")
+  .replace(/\/\/.*$/gm, "");
 
 /** 🔴 등록부의 실제 모양(uuid) — 이 값이 산출물에 남으면 저장 오염이다. */
 const REAL_SHOP_UUID = "743f72f4-a911-439a-b63b-ba8ae6bedcd0";
@@ -365,13 +375,18 @@ describe("D. 🔴 화면(마운트 DOM)", () => {
 
   it("D-4 🔴 KR 로 판정된 행은 🇰🇷 구역으로 **옮긴다** — 총 행 수가 바뀌지 않는다", () => {
     /** 🟢 패널 소스로 그 파생을 잠근다(렌더는 패널 전체 마운트가 필요하므로 앵커로 본다). */
+    /** 🔴 WU-132 — 입력이 **넷** 이 됐다(이전 판단 재투입). 성질·강화는 그대로다. */
     expect(PANEL).toContain(
-      "const krRows = [...(web ?? []), ...(supplied ?? []), ...(overseasAuto ?? [])].filter(isKr)",
+      "const krRows = [...(web ?? []), ...(supplied ?? []), ...(overseasAuto ?? []), ...(reviewedSame ?? [])].filter(isKr)",
     );
     expect(PANEL).toContain("const overseasAutoRest = (overseasAuto ?? []).filter((r) => !isKr(r));");
     /** 🔴 복제가 아니다 — 자동검색 구역은 `overseasAutoRest`(KR 제거 후)만 받는다. */
     expect(PANEL).toContain("evidence={overseasAutoRest}");
     expect(PANEL).not.toContain("evidence={overseasAuto}");
+    /** 🔴 WU-132 — 재투입 구역도 **같은 규칙** 이다(KR 제거 후만 받는다). */
+    expect(PANEL).toContain("const reviewedSameRest = (reviewedSame ?? []).filter((r) => !isKr(r));");
+    expect(PANEL).toContain("evidence={reviewedSameRest}");
+    expect(PANEL).not.toContain("evidence={reviewedSame}");
   });
 
   it("D-5 🔴 요약이 자동검색 후보를 **센다** — 요약과 본문이 다른 말을 하지 않는다", () => {
@@ -397,7 +412,8 @@ describe("E. 🇰🇷 국내 (WU-130 ②)", () => {
     expect(PANEL).toContain("const showDomesticReview = checkRan");
     const def = PANEL.slice(PANEL.indexOf("const checkRan ="), PANEL.indexOf("const showDomesticReview"));
     /** 🔴 세 배열 **전부** 가 「조회가 돌았다」의 근거다 — 하나만 보면 국내 구역이 또 사라진다. */
-    for (const k of ["web != null", "supplied != null", "overseasAuto != null"]) {
+    /** 🔴 WU-132 — **네** 배열 전부가 근거다. 하나만 보면 국내 구역이 또 사라진다. */
+    for (const k of ["web != null", "supplied != null", "overseasAuto != null", "reviewedSame != null"]) {
       expect(def).toContain(k);
     }
   });
@@ -447,30 +463,39 @@ describe("F. ③④ 화면 구조 (WU-130)", () => {
     }
   });
 
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 WU-132 ③ — **그 영역은 «제거» 됐고 자리가 하나로 합쳐졌다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * WU-130 ④ 는 MI 패널 **안** 에 `unified-price-comparison` 을 만들었다. 그런데
+   * 「📊 시장 가격 비교」가 패널 **밖** 에 따로 있어서 **가격 비교 영역이 둘** 이었다 —
+   * WU-128 이 지목한 중복의 남은 절반이다. CPO 확정: 「가격비교 영역을 둘 두지 않는다」.
+   *
+   * 🟢 그래서 F-3/F-4/F-5 의 **뜻을 그대로 새 owner 에 적용** 한다. 약해지는 단언은
+   *    없고, **「패널에 그 영역이 없다」는 단언이 하나 늘었다**(강화).
+   */
   it("F-3 🔴 두 참고가격이 **한 영역 안** 에 들어간다 — 구역 «안» 분리", () => {
-    /** 🔴 좌표를 추측하지 않는다 — 여는 testid 부터 그 `</section>` 까지만 자른다
-     *  (이 트랙에서 slice 좌표를 틀려 통과한 적이 세 번 이상이다). */
-    const start = PANEL.indexOf('data-testid="unified-price-comparison"');
+    /** 🔴 좌표를 추측하지 않는다 — 여는 testid 부터 그 `</section>` 까지만 자른다. */
+    const start = AREA.indexOf('data-testid="market-price-comparison"');
     expect(start).toBeGreaterThan(-1);
-    const end = PANEL.indexOf("</section>", start);
+    const end = AREA.indexOf("</section>", start);
     expect(end).toBeGreaterThan(start);
-    const area = PANEL.slice(start, end);
-    expect(area).toContain("UNIFIED_PRICE_COMPARISON_TITLE");
-    /** 🔴 국내·해외 블록이 **그 영역 안** 에 있어야 한다(밖에 있으면 통합이 아니다). */
-    expect(area).toContain('testId="domestic-reference"');
-    expect(area).toContain("summary={overseasReference}");
-    /** 🟢 안쪽 두 블록의 식별(testid·제목·아이콘)은 **그대로** 다 — `wu-056r1` 이 계속 잡는다. */
+    const area = AREA.slice(start, end);
+    expect(area).toContain("MI_SAME_AREA_TITLE");
+    /** 🔴 국내·해외가 **그 영역 안** 에서 갈린다(밖에 있으면 통합이 아니다). */
+    expect(area).toContain("MI_SAME_DOMESTIC_HEADING");
+    expect(area).toContain("MI_SAME_OVERSEAS_HEADING");
+    expect(area).toContain('testId: "domestic-reference"');
+    expect(area).toContain("reference={overseasReference}");
     expect(area).toContain("DOMESTIC_REFERENCE_TITLE");
+    /** 🔴🔴 **패널에는 더 이상 그 영역이 없다** — 둘이 되면 FAIL 이다. */
+    expect(PANEL).not.toContain("unified-price-comparison");
+    expect(PANEL).not.toContain("<OverseasReferencePrice");
   });
 
   it("F-4 🔴 통합은 **표시만** 이다 — 집계/판정/알림 어휘가 그 영역에 없다", () => {
-    /** 🔴 좌표를 추측하지 않는다 — 여는 testid 부터 그 `</section>` 까지만 자른다
-     *  (이 트랙에서 slice 좌표를 틀려 통과한 적이 세 번 이상이다). */
-    const start = PANEL.indexOf('data-testid="unified-price-comparison"');
-    expect(start).toBeGreaterThan(-1);
-    const end = PANEL.indexOf("</section>", start);
-    expect(end).toBeGreaterThan(start);
-    const area = PANEL.slice(start, end);
+    /** 🔴 파일 전체를 본다 — 그 파일이 **곧 그 영역** 이다(섞인 다른 코드가 없다). */
     for (const forbidden of [
       "domesticTransientRecords",
       "candidateDomesticPrice",
@@ -479,11 +504,16 @@ describe("F. ③④ 화면 구조 (WU-130)", () => {
       "sellerDecision",
       "summarize",
     ]) {
-      expect(area).not.toContain(forbidden);
+      expect(AREA).not.toContain(forbidden);
     }
   });
 
-  it("F-5 🔴 값이 둘 다 없으면 **빈 테두리를 만들지 않는다**", () => {
-    expect(PANEL).toContain("{(domesticReference || overseasReference) && (");
+  it("F-5 🔴 조회가 돌지 않았으면 **빈 테두리를 만들지 않는다**", () => {
+    /**
+     * 🔴🔴 **조건이 「값이 있는가」에서 「조회가 돌았는가」로 «강화» 됐다**(WU-130 ② 계약).
+     *    전자는 후보 0 일 때 영역을 지워 「조회조차 안 했다」로 읽히게 만든다.
+     */
+    expect(AREA).toContain("const checkRan = rows != null || !!domesticReference || !!overseasReference");
+    expect(AREA).toContain("if (!checkRan) return null;");
   });
 });

@@ -54,6 +54,24 @@ export const OVERSEAS_AUTO_SHOP_ID = "__overseas_auto__";
 export const OVERSEAS_AUTO_SHOP_NAME = "해외 자동검색(일시)";
 
 /**
+ * 🔴🔴 WU-132 — **네 번째 일시 샵.** 셀러가 **이전에 「동일상품」으로 판단한 URL** 을
+ *    다음 조회의 후보로 **되돌려 넣는** 경로다(`candidate_reviews.human_verdict='SAME'`).
+ *
+ * ── 왜 `__url_candidates__` 를 재사용하지 않았나 ───────────────────────────
+ * ```
+ * 저장 차단에는 아무 일시 id 나 써도 된다. 가르는 이유는 **화면이 거짓을 말하지
+ * 않게** 하는 것 하나다 — 그 id 로 들어온 후보는 화면에서 「🔗 직접 입력한 후보」로
+ * 적히고, 셀러는 **자기가 넣지 않은 URL** 을 보며 「내가 넣었나?」로 읽는다.
+ * 🔴 WU-130 이 세 번째 id 를 만든 이유와 **같은 이유** 다(§7 출처 보존).
+ * ```
+ * 🔴 **사람 판단을 MI 판정으로 승격하지 않는다.** 이 경로가 하는 일은 「그 URL 을
+ *    **다시 열어 본다**」 뿐이고, SAME/DIFFERENT 는 기존 판정기가 처음부터 다시 낸다.
+ * 🔴 과거 `DIFFERENT` 는 **넣지 않는다**(호출부가 `SAME` 만 고른다).
+ */
+export const REVIEWED_SAME_SHOP_ID = "__reviewed_same__";
+export const REVIEWED_SAME_SHOP_NAME = "이전 확인 후보(일시)";
+
+/**
  * 🔴🔴 **저장 차단의 유일한 기준.** 두 호출부(`recordDomesticSourceCheckAttempt`
  *    래퍼 · `upsertDomesticProductLink` 앞 가드)가 **같은 술어** 를 본다.
  *
@@ -65,11 +83,14 @@ export const OVERSEAS_AUTO_SHOP_NAME = "해외 자동검색(일시)";
  *
  * 🔴🔴 WU-130 — 일시 샵이 **셋** 이 됐다. 생산자를 하나 더 붙일 때 이 집합에 넣는 것을
  *    잊으면 그 후보가 **DB 로 흘러간다** — 그래서 술어를 하나로 모아 두는 것이 계약이다.
+ * 🔴🔴 WU-132 — **넷** 이 됐다. 계약 테스트가 이 집합을 **전수 순회** 하므로 숫자만
+ *    고쳐 통과시키는 길이 없다(생산자를 더하고 여기에 빼먹으면 그 테스트가 FAIL 한다).
  */
 export const TRANSIENT_SHOP_IDS: ReadonlySet<string> = new Set([
   GEMINI_VIRTUAL_SHOP_ID,
   TRANSIENT_URL_SHOP_ID,
   OVERSEAS_AUTO_SHOP_ID,
+  REVIEWED_SAME_SHOP_ID,
 ]);
 
 export function isTransientShopId(shopId: string): boolean {

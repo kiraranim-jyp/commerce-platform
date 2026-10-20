@@ -45,7 +45,14 @@ import { collectUrlCandidatePool, type UrlCandidatePoolMetrics } from "./url-can
  *    그래서 그 후보들이 MI 와 해외 금액 집계에 **한 번도 들어가지 못했다.**
  */
 import { collectOverseasAutoPool, type OverseasAutoPoolMetrics } from "./overseas-auto-pool";
-import { isTransientShopId, OVERSEAS_AUTO_SHOP_ID, TRANSIENT_URL_SHOP_ID } from "./transient-candidates";
+import {
+  isTransientShopId,
+  OVERSEAS_AUTO_SHOP_ID,
+  /** 🔴 WU-132 — 네 번째 일시 샵. 「이전에 동일상품으로 판단한 URL」의 출처다. */
+  REVIEWED_SAME_SHOP_ID,
+  REVIEWED_SAME_SHOP_NAME,
+  TRANSIENT_URL_SHOP_ID,
+} from "./transient-candidates";
 import {
   classifyCandidateMarket,
   type CandidateMarket,
@@ -132,6 +139,19 @@ export interface DomesticPriceCheckInput {
    *    상품인지는 여전히 기존 MI 가 **페이지를 열어** 판정한다(승격된 원칙 그대로).
    */
   candidateUrls?: readonly string[];
+  /**
+   * 🔴🔴 WU-132 ⑥ — **이전에 셀러가 「동일상품」으로 판단한 후보 URL** 을 다시 넣는다.
+   *
+   * 왜 `candidateUrls` 와 **다른 칸** 인가 — 산출물의 **출처 배지가 갈려야** 한다.
+   * 같은 칸에 넣으면 화면이 「🔗 직접 입력한 후보」라고 적고, 셀러는 자기가 넣지
+   * 않은 URL 을 보며 「내가 넣었나?」로 읽는다(§7 출처 보존 · WU-130 과 같은 이유).
+   *
+   * 🔴 **사람 판단을 MI 판정으로 승격하지 않는다.** 이 경로가 하는 일은 「그 URL 을
+   *    **다시 열어 본다**」 뿐이고 SAME/DIFFERENT 는 기존 판정기가 처음부터 다시 낸다.
+   * 🔴 과거 `DIFFERENT`/`UNDECIDED` 는 호출부가 **넣지 않는다**(`SAME` 만 고른다).
+   * 🔴 저장되지 않는다 — `REVIEWED_SAME_SHOP_ID` 를 달고 들어와 일시 가드가 끊는다.
+   */
+  reviewedSameUrls?: readonly string[];
 }
 
 /**
@@ -163,7 +183,7 @@ export interface GeminiTransientEvidence {
    *    (`overseasAutoEvidence`) — 「붙여넣어서 나온 것」과 「자동으로 나온 것」을 한
    *    칸에 담으면 **셀러가 아무것도 안 해도 된다는 사실 자체가 보고에서 사라진다.**
    */
-  source: "GEMINI_DISCOVERY" | "SELLER_URL" | "OVERSEAS_AUTO";
+  source: "GEMINI_DISCOVERY" | "SELLER_URL" | "OVERSEAS_AUTO" | "REVIEWED_SAME";
   /** 🔴 가상 shopId 가 아니라 **실제 판매처 도메인** 이다. */
   domain: string;
   /**
@@ -171,6 +191,21 @@ export interface GeminiTransientEvidence {
    *    말하려면 domain 만으로는 부족하다. 🟢 가공 0 — 후보가 들고 온 제목 그대로다.
    */
   title: string;
+  /**
+   * 🔴🔴 WU-132 ④ — **후보 대표 이미지.** 셀러가 「동일상품인가」를 눈으로 가르려면
+   *    글자가 아니라 **사진** 이 필요하다(CEO 가 WU-099 에서 지적한 그 자리 —
+   *    이미지가 없어 26건 중 12건이 **측정불가** 로 돌아왔다).
+   * 🟢 **새 수집을 하지 않는다** — 판정이 고른 그 후보(`best.imageUrl`)가 이미 들고
+   *    있는 값을 옮긴다(추가 HTTP **0**). 🔴 없으면 `null` 이고 화면이 그렇게 적는다.
+   */
+  imageUrl: string | null;
+  /**
+   * 🔴🔴 WU-132 ② — **지금 팔고 있는가.** 가격비교에 올리기 전에 보는 축이다.
+   * 🟢 판정이 고른 후보의 실측값 그대로다(`best.soldOut`) — 추측하지 않는다.
+   * 🔴 `null` 은 「판매중」이 **아니다** — 「그 사이트에서 확인할 방법이 없다」다.
+   *    (그 구분은 `ComparisonCandidate.soldOut` 주석이 owner 다)
+   */
+  soldOut: boolean | null;
   discoveredUrl: string;
   matchTruth: MatchTruth | null;
   verified: boolean;
@@ -242,6 +277,19 @@ export interface DomesticPriceCheckResult {
   overseasAutoEvidence?: GeminiTransientEvidence[] | null;
   /** 🔴 WU-130 — 해외 자동검색 계측(등록부 수 · 자격 샵 수 · status 분포 · 후보 수). */
   overseasAutoMetrics?: OverseasAutoPoolMetrics | null;
+  /**
+   * 🔴🔴 WU-132 ⑥ — **이전에 「동일상품」으로 판단한 URL 의 재투입 결과.**
+   *
+   * 🔴 위 셋과 **다른 칸** 이다 — 「셀러가 방금 붙여넣었다」와 「예전에 동일상품이라고
+   *    판단해 둔 것을 우리가 되돌려 넣었다」는 **다른 사실** 이고, 한 칸에 담으면
+   *    화면이 셀러에게 「당신이 넣은 URL」이라고 거짓을 말한다(§7 출처 보존).
+   * 🔴 `null` = 재투입할 URL 이 없었다 · `[]` = 넣었는데 후보가 0(전부 접근 실패/중복).
+   */
+  reviewedSameEvidence?: GeminiTransientEvidence[] | null;
+  /** 🔴 WU-132 — 재투입 계측. `collectUrlCandidatePool` 의 그 모양 그대로다. */
+  reviewedSameMetrics?: UrlCandidatePoolMetrics | null;
+  /** 🔴 WU-132 — 재투입 경로의 가격 보강 호출 수. 다른 두 칸과 **합산하지 않는다**. */
+  reviewedSamePriceEnrichCalls?: number;
   /** 🔴 010R §6 — Gemini 가격 보강 호출 수. 국내 상세 fetch 와 **다른 칸** 이다. */
   geminiPriceEnrichCalls?: number;
   /** 🔴 WU-024 — URL 경로의 가격 보강 호출 수. Gemini 칸과 **합산하지 않는다**. */
@@ -1056,6 +1104,15 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
    *    (출처 보존 · §7). 🟢 담기는 자리는 아래 **한 곳** 이고 판정 규칙은 **동일** 하다.
    */
   const overseasAutoEvidence: GeminiTransientEvidence[] = [];
+  /**
+   * 🔴🔴 WU-132 ⑥ — **이전에 「동일상품」으로 판단한 URL 의 재투입 결과.** 위 셋과
+   *    **섞지 않는다**(출처 보존). 🟢 판정 규칙은 **완전히 동일** 하다 — 사람 판단이
+   *    verdict 를 만들지 않는다(그 URL 을 다시 열어 보는 것이 전부다).
+   */
+  const reviewedSameEvidence: GeminiTransientEvidence[] = [];
+  let reviewedSameMetrics: UrlCandidatePoolMetrics | null = null;
+  /** 🔴 WU-132 — 재투입 경로의 가격 보강 HTTP. 🔴 Gemini/직접입력 칸과 **합산하지 않는다**. */
+  let reviewedSamePriceEnrichCalls = 0;
 
   if (input.candidateUrls && input.candidateUrls.length > 0) {
     /**
@@ -1092,6 +1149,53 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
       })}`,
     );
     transientPools.push(...urlPool.searchResults);
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴 WU-132 ⑥ — **이전에 「동일상품」으로 판단한 후보를 다시 넣는다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 왜 필요한가 — WU-118 이 측정한 그 공백이다: 사람이 SAME 이라 한 URL 을 재투입하면
+   * **19/19 가 후보로 살아남는데**(파이프라인은 그 URL 을 버리지 않는다) 운영에는
+   * **그것을 다시 넣는 경로가 0** 이었다. 그래서 매번 검색부터 시작하고, 검색 결과에
+   * 다시 안 나오면 「왜 또 못 찾나」가 반복됐다.
+   *
+   * 🟢 **새 생산자 코드가 아니다** — `collectUrlCandidatePool`(WU-024)을 **그대로**
+   *    부르고 `shopId` 만 갈아 넣는다(출처 배지를 가르기 위한 유일한 차이).
+   * 🟢 **중복은 HTTP 를 쓰지 않는다** — 이미 자동검색/붙여넣기로 찾아진 URL 이면
+   *    `ALREADY_CANDIDATE` 로 빠진다(아래 집합이 `transientPools` 까지 본다).
+   * 🔴 호출부가 `SAME` 만 넘긴다 — 과거 `DIFFERENT` 는 여기 오지 않는다.
+   */
+  if (input.reviewedSameUrls && input.reviewedSameUrls.length > 0) {
+    const alreadyCanonical = new Set<string>();
+    for (const r of [...searchResults, ...transientPools]) {
+      for (const c of r.candidates) alreadyCanonical.add(canonicalizeProductUrl(c.url).toLowerCase());
+    }
+    const reviewedPool = await collectUrlCandidatePool({
+      urls: input.reviewedSameUrls,
+      originUrl: query.sourceUrl,
+      maxUrls: MAX_SUPPLIED_CANDIDATE_URLS,
+      existingCanonicalUrls: alreadyCanonical,
+      /** 🔴 **여기가 이 블록의 전부다** — 산출물의 출처를 가른다. */
+      shopId: REVIEWED_SAME_SHOP_ID,
+      shopNamePrefix: REVIEWED_SAME_SHOP_NAME,
+    });
+    reviewedSameMetrics = reviewedPool.metrics;
+    /** 🔴 계측을 로그로 내보낸다 — Production 응답은 CTO 가 읽을 수 없다
+     *  (메모 `production-payload-is-unreachable`). 기존 두 로그와 같은 규약이다. */
+    console.log(
+      `[WU-132-reviewed] ${JSON.stringify({
+        snapshot: input.snapshotId,
+        supplied: reviewedSameMetrics.suppliedUrls,
+        accepted: reviewedSameMetrics.acceptedUrls,
+        usable: reviewedSameMetrics.usableProductUrls,
+        miEligible: reviewedSameMetrics.miEligibleCandidates,
+        fetchCalls: reviewedSameMetrics.fetchCalls,
+        providerCalls: reviewedSameMetrics.providerCalls,
+        dropped: reviewedSameMetrics.dropped.map((d) => d.reason),
+      })}`,
+    );
+    transientPools.push(...reviewedPool.searchResults);
   }
 
   if (isGeminiDiscoveryEnabled()) {
@@ -1207,10 +1311,13 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
      * 🔴 실패/없음은 `priceStatus: "PRICE_UNAVAILABLE"` 로 돌아온다(fail-soft). */
     let priced = scored;
     const isUrlPool = r.shopId === TRANSIENT_URL_SHOP_ID;
+    /** 🔴 WU-132 — 재투입 경로의 HTTP 를 **Gemini 칸에 더하지 않는다**(출처가 섞인다). */
+    const isReviewedPool = r.shopId === REVIEWED_SAME_SHOP_ID;
     try {
       priced = await enrichCandidatePrices(scored, r.domain, query);
-      /** 🔴 두 경로의 HTTP 를 **합산하지 않는다** — 비용 보고가 출처를 잃는다. */
+      /** 🔴 **세 경로의 HTTP 를 합산하지 않는다** — 비용 보고가 출처를 잃는다. */
       if (isUrlPool) urlCandidatePriceEnrichCalls += 1;
+      else if (isReviewedPool) reviewedSamePriceEnrichCalls += 1;
       else geminiPriceEnrichCalls += 1;
     } catch {
       /* 🔴 가격 보강 실패가 가격확인 전체를 깨뜨리지 않는다 — 점수만 있는
@@ -1391,7 +1498,10 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
           ? "SELLER_URL"
           : result.shopId === OVERSEAS_AUTO_SHOP_ID
             ? "OVERSEAS_AUTO"
-            : "GEMINI_DISCOVERY";
+            : /** 🔴 WU-132 — 네 번째 출처. 「그 외는 Gemini」로 두지 않는다. */
+              result.shopId === REVIEWED_SAME_SHOP_ID
+              ? "REVIEWED_SAME"
+              : "GEMINI_DISCOVERY";
       /** 🟢 담을 배열을 **이름 있는 변수** 로 고른다 — 가드 소스 검사가 push 자리를
        *  안정적으로 지목할 수 있어야 한다(테스트가 그 앵커를 쓴다). */
       const transientEvidenceSink =
@@ -1399,7 +1509,9 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
           ? urlCandidateEvidence
           : evidenceSource === "OVERSEAS_AUTO"
             ? overseasAutoEvidence
-            : geminiEvidence;
+            : evidenceSource === "REVIEWED_SAME"
+              ? reviewedSameEvidence
+              : geminiEvidence;
       transientEvidenceSink.push({
         source: evidenceSource,
         domain: result.domain,
@@ -1410,6 +1522,13 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
          * 🟢 판정이 고른 **바로 그 후보** 의 제목이다 — 새로 만들거나 가공하지 않는다.
          */
         title: best.title,
+        /**
+         * 🔴 WU-132 ④ — **후보가 들고 온 그 이미지** 다. 새로 받지 않는다(HTTP 0) ·
+         *    다른 상품 사진으로 대체하지 않는다 · 없으면 `null`.
+         */
+        imageUrl: best.imageUrl ?? null,
+        /** 🔴 WU-132 ② — 실측값 그대로. `null` 을 「판매중」으로 바꾸지 않는다. */
+        soldOut: best.soldOut ?? null,
         discoveredUrl: best.url,
         matchTruth: finalMatchTruth,
         verified: finalVerified,
@@ -1669,6 +1788,11 @@ export async function runDomesticPriceCheck(input: DomesticPriceCheckInput): Pro
     /** 🔴 WU-130 — 같은 원칙. 그 경로가 돌지 못했으면 `null`(「후보 0」이 아니다). */
     overseasAutoEvidence: overseasAutoMetrics === null ? null : overseasAutoEvidence,
     overseasAutoMetrics,
+    /** 🔴 WU-132 — 같은 원칙. 재투입할 URL 이 없었으면 `null`(「후보 0」이 아니다). */
+    reviewedSameEvidence: reviewedSameMetrics === null ? null : reviewedSameEvidence,
+    reviewedSameMetrics,
+    /** 🔴 WU-132 — 재투입 경로의 가격 보강 HTTP 수. 다른 두 칸과 **합산하지 않는다**. */
+    reviewedSamePriceEnrichCalls,
     /** 🔴 010R §6 — Gemini 가격 보강 HTTP 호출 수(국내 검색과 분리). */
     geminiPriceEnrichCalls,
     urlCandidatePriceEnrichCalls,

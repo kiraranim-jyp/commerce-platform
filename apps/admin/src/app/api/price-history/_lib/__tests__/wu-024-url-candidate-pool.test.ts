@@ -8,6 +8,8 @@ import {
   GEMINI_VIRTUAL_SHOP_ID,
   isTransientShopId,
   OVERSEAS_AUTO_SHOP_ID,
+  /** 🔴 WU-132 — 네 번째 일시 샵(이전 「동일상품」 판단의 재투입). */
+  REVIEWED_SAME_SHOP_ID,
   TRANSIENT_SHOP_IDS,
   TRANSIENT_URL_SHOP_ID,
 } from "../transient-candidates";
@@ -291,12 +293,19 @@ describe("C. 🔴🔴 공급된 URL 은 저장되지 않는다 (등록부·링�
     expect(isTransientShopId(TRANSIENT_URL_SHOP_ID)).toBe(true);
     expect(isTransientShopId(GEMINI_VIRTUAL_SHOP_ID)).toBe(true);
     expect(isTransientShopId(OVERSEAS_AUTO_SHOP_ID)).toBe(true);
+    /** 🔴 WU-132 — 네 번째 생산자. 집합에 빼먹으면 그 후보가 **DB 로 흘러간다**. */
+    expect(isTransientShopId(REVIEWED_SAME_SHOP_ID)).toBe(true);
     for (const id of TRANSIENT_SHOP_IDS) {
       expect(isTransientShopId(id)).toBe(true);
       /** 🔴 전부 uuid 모양이 **아니어야** 한다 — FK 로 들어갈 수 없다는 것이 안전의 근거다. */
       expect(id).not.toMatch(/^[0-9a-f-]{36}$/i);
     }
-    expect(TRANSIENT_SHOP_IDS.size).toBe(3);
+    /**
+     * 🔴🔴 WU-132 — **넷** 이 됐다. 🟢 이 숫자를 계약으로 두는 이유는 위 for 문과
+     *    짝이기 때문이다 — 숫자만 고쳐 통과시키려 해도 **그 id 가 전수 검사에 같이
+     *    걸리므로** 술어 등록을 빠뜨린 채로는 통과하지 못한다.
+     */
+    expect(TRANSIENT_SHOP_IDS.size).toBe(4);
     /** 🔴 등록부 id(uuid)를 막으면 **진짜 샵의 저장이 멈춘다**. */
     expect(isTransientShopId("3f2a7c18-9b11-4a55-8c21-0d7b6e5f4a33")).toBe(false);
     expect(isTransientShopId("")).toBe(false);
@@ -429,7 +438,13 @@ describe("E. 🟢 URL 미공급 · Gemini OFF → 기존 경로와 완전히 같
 
   it("Gemini 후보도 **같은 루프** 를 통과한다 — 사본이 없다", () => {
     expect((RUNNER.match(/enrichCandidatePrices\(scored/g) ?? []).length).toBe(1);
-    expect((RUNNER.match(/transientPools\.push/g) ?? []).length).toBe(2);
+    /**
+     * 🔴🔴 WU-132 — **셋** 이 됐다(URL 공급 · 재투입 · Gemini). 🟢 그래도 계약의 뜻은
+     *    그대로다: 생산자가 늘어도 **소비 루프는 하나** 이고 점수/가격보강 사본이 없다.
+     * 🔴 그래서 숫자보다 **그 사실** 을 직접 단언한다 — 루프와 보강 호출이 각각 하나다.
+     */
+    expect((RUNNER.match(/transientPools\.push/g) ?? []).length).toBe(3);
+    expect((RUNNER.match(/for \(const r of transientPools\) \{/g) ?? []).length).toBe(1);
   });
 });
 

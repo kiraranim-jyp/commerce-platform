@@ -157,9 +157,33 @@ describe("D. 배선이 유지된다", () => {
     expect(ret).toContain("overseasReference: intelligence?.candidateOverseasPrice ?? null");
   });
 
-  it("Panel 이 그 값을 받아 구역에 넘긴다", () => {
+  /**
+   * 🔴🔴 WU-132 ③ — **구역의 «자리» 가 바뀌었다(값과 성질은 그대로).**
+   *
+   * 가격 비교 영역을 **둘 두지 않기** 위해 MI 패널 안의 `unified-price-comparison` 을
+   * 제거했고, 이 블록은 「📊 동일상품 가격 비교」(`MarketPriceComparison`)로 **옮겼다**.
+   *
+   * 🔴 그래서 앵커를 갱신하고 **사슬 전체로 강화** 한다 — 「패널이 받는다」만 보면
+   *    위로 올려보내는 선이 끊겨도 통과한다(그게 WU-110 에서 당한 계열이다):
+   * ```
+   * route 응답 → 패널 state → **패널이 위로 보고** → 영역이 그린다
+   * ```
+   */
+  it("Panel 이 그 값을 받아 «가격비교 영역» 으로 올려보내고, 그 영역이 그린다", () => {
     expect(panelSrc).toContain("setOverseasReference(json.overseasReference ?? null)");
-    expect(panelSrc).toContain("<OverseasReferencePrice summary={overseasReference} />");
+    /** 🔴 올려보내는 선 — 이 줄이 없으면 값이 패널 안에서 죽는다. */
+    expect(panelSrc).toContain("onMarketComparisonChangeRef.current?.(marketComparisonInput)");
+    expect(panelSrc).toContain("overseasReference,");
+    /** 🔴 그리는 쪽 — 그 영역이 실제로 이 컴포넌트를 쓴다. */
+    const area = strip(
+      readFileSync(
+        path.join(repoRoot, "apps/admin/src/app/pipeline/commerce/MarketPriceComparison.tsx"),
+        "utf8",
+      ),
+    );
+    expect(area).toContain("<OverseasReferencePrice summary={reference}");
+    /** 🔴🔴 **옮긴 것이 맞다** — 패널에는 그 컴포넌트가 더 이상 없다(둘이 되면 FAIL). */
+    expect(panelSrc).not.toContain("<OverseasReferencePrice");
   });
 
   /** 🔴🔴 **국내 축을 건드리지 않았다** — route 가 DB 쓰기를 늘리지 않았다. */

@@ -97,6 +97,19 @@ export interface UrlCandidatePoolInput {
    *    (`judgeDomesticCandidate` 의 `fetchModelCode` 와 같은 모양).
    */
   fetchFacts?: (url: string) => Promise<ProductUrlFactsResult>;
+  /**
+   * 🔴🔴 WU-132 — **산출물에 달릴 일시 샵 id.** 기본값은 WU-024 의 그 값이므로
+   *    기존 호출부와 계약은 **한 줄도 바뀌지 않는다**.
+   *
+   * 왜 열었나 — 이 모듈이 하는 일(「URL 목록을 열어 후보를 만든다」)은 **출처와
+   * 무관** 한데, 산출물의 출처 배지는 `shopId` 로 갈린다. 「셀러가 붙여넣은 URL」과
+   * 「이전에 동일상품으로 판단한 URL」은 **다른 사실** 이라 같은 배지를 달면 화면이
+   * 거짓을 말한다(§7 출처 보존 · WU-130 이 세 번째 id 를 만든 그 이유).
+   * 🔴 **저장 차단과는 무관하다** — 어느 값이든 `isTransientShopId` 가 막는다.
+   *    여기서 열리는 것은 **화면이 읽는 출처** 하나다.
+   */
+  shopId?: string;
+  shopNamePrefix?: string;
 }
 
 export interface UrlCandidatePoolMetrics {
@@ -223,8 +236,9 @@ export async function collectUrlCandidatePool(input: UrlCandidatePoolInput): Pro
   if (collected.length === 0) return { searchResults: [], metrics };
   return {
     searchResults: groupCandidatesByHost(collected, {
-      shopId: TRANSIENT_URL_SHOP_ID,
-      shopNamePrefix: TRANSIENT_URL_SHOP_NAME,
+      /** 🔴 WU-132 — 기본값은 WU-024 의 그 값이다(호출부 무변경). */
+      shopId: input.shopId ?? TRANSIENT_URL_SHOP_ID,
+      shopNamePrefix: input.shopNamePrefix ?? TRANSIENT_URL_SHOP_NAME,
     }),
     metrics,
   };

@@ -73,7 +73,12 @@ import {
   PRICE_CALCULATION_ANCHOR_ID,
   PRICE_COMPARISON_ANCHOR_ID,
 } from "./commerce/DomesticPriceIntelligencePanel";
-import type { PriceLevel, SellerFinalVerdict } from "./commerce/DomesticPriceIntelligencePanel";
+import type { MarketComparisonInput, PriceLevel, SellerFinalVerdict } from "./commerce/DomesticPriceIntelligencePanel";
+/**
+ * 🔴🔴 WU-132 ①②③ — 화면에 **하나뿐인** 동일상품 가격 비교 영역. MI 패널 안의
+ *    `unified-price-comparison` 을 **대체** 한다(영역을 둘 두지 않는다).
+ */
+import { MarketPriceComparison } from "./commerce/MarketPriceComparison";
 import { resolveSellVerdict, type ScopedSellVerdict } from "./commerce/sell-verdict-scope";
 import { applyChannelNoticeOverride, type ChannelNoticeOverrideEdit } from "@commerce/listing";
 import { ActionCenter, type ChecklistItem } from "./commerce/ActionCenter";
@@ -798,6 +803,19 @@ export function CommerceWorkspace({
    * 내려보내기만 한다(계산도 개수 세기도 없다).
    */
   const [overseasMarketEvidence, setOverseasMarketEvidence] = useState<MarketEvidenceSummary | null>(null);
+  /**
+   * 🔴🔴🔴 WU-132 ① — **MI 가 낸 후보/집계. 방향이 위와 «반대» 다.**
+   *
+   * 위 `overseasMarketEvidence` 는 「가격비교 패널 → MI」이고 이것은 「MI →
+   * 가격비교 영역」이다. 🔴 두 패널이 **자기 검색** 을 돌려 `mayShowCandidate` 로
+   * 거르기 때문에 `/check` 의 MI verdict 를 **한 번도 보지 못했고**, 그래서 「MI 가
+   * SAME 이라 판정한 후보」가 가격 비교에 **구조적으로 닿지 못했다**(전수검토 결론).
+   *
+   * 🟢 여기서 **만들지도 고르지도 않는다** — 들고 있다가 그 영역에 넘긴다(위와 같은 규약).
+   * 🔴 선별(SAME + 판매중 + 가격확인)은 `mi-same-candidates` 가 한다 — 규칙을 두 곳에
+   *    두면 화면과 집계가 언젠가 다른 말을 한다.
+   */
+  const [marketComparison, setMarketComparison] = useState<MarketComparisonInput | null>(null);
   const [domesticEvidenceOpen, setDomesticEvidenceOpen] = useState(false);
   const [overseasEvidenceOpen, setOverseasEvidenceOpen] = useState(false);
   const [marketEvidenceRequest, setMarketEvidenceRequest] = useState(0);
@@ -3685,6 +3703,24 @@ export function CommerceWorkspace({
               onOpenDomesticEvidence={() => openMarketEvidence("DOMESTIC")}
               onOpenOverseasEvidence={() => openMarketEvidence("OVERSEAS")}
               openPriceDetailRequest={priceDetailRequest}
+              /**
+               * 🔴🔴🔴 WU-132 ① — **MI 산출을 「📊 시장 가격 비교」 영역으로 넘긴다.**
+               *
+               * 전수검토가 찾은 구조적 사실: 그 영역의 두 패널은 **클라이언트가 자기
+               * 검색을 돌려** 거르므로 `/check` 의 MI verdict 를 **한 번도 보지 않았다.**
+               * 그래서 「MI 가 SAME 이라 판정한 후보」가 가격 비교에 **구조적으로 닿지
+               * 못했다.** 🟢 이 state 가 그 공급선이고, 방향은
+               * `ComparisonShopSearch.onEvidenceChange`(→ `overseasMarketEvidence`)와 **같다**.
+               * 🔴 이 파일은 값을 **만들지 않는다** — 들고만 있는다(그 규약과 동일).
+               */
+              onMarketComparisonChange={setMarketComparison}
+              /**
+               * 🔴 WU-132 ④ — 후보 검토 구역의 **원본 ↔ 후보** 육안 비교용. 아래 두
+               *    가격비교 패널에 넘기는 그 값과 **같은 값** 이다(두 화면이 서로 다른
+               *    원본 사진을 보여주지 않는다). 🔴 판정·가격·집계에 들어가지 않는다.
+               */
+              originImageUrl={product.images[0] ? getSelectedImageUrl(product.images[0]) : null}
+              originTitle={product.title.value}
             />
           ) : (
             stageFocus.mi !== "HIDDEN" && <MarketIntelligenceSkeleton />
@@ -3777,6 +3813,21 @@ export function CommerceWorkspace({
                  다시 국내/해외를 눌러야 했던 두 번째 클릭이 그 겹이었다. */
               marketEvidence={
                 <div id={PRICE_COMPARISON_ANCHOR_ID} className="scroll-mt-4 space-y-4">
+                  {/**
+                   * 🔴🔴🔴 WU-132 ①②③ — **이 영역이 「동일상품 가격 비교」의 유일한 자리다.**
+                   *
+                   * 🟢 MI 가 판정한 후보(SAME + 현재 판매중 + 가격확인)를 🇰🇷/🌎 로 나눠
+                   *    보여주고, 그 안에 WU-130 ④ 에서 **옮겨 온** 두 참고가격 집계가 선다.
+                   * 🔴 아래 두 패널은 **원자료 드릴다운** 으로 남는다(그 제목이 이미
+                   *    「… 의 원자료」라고 말한다) — 가격비교 영역이 둘이 되는 것이 아니다.
+                   * 🔴 **맨 위** 에 둔다: 결론이 근거보다 먼저 와야 셀러가 표를 다 읽지
+                   *    않아도 판단할 수 있다(MI 요약 → 드릴다운과 같은 순서).
+                   */}
+                  <MarketPriceComparison
+                    rows={marketComparison?.rows ?? null}
+                    domesticReference={marketComparison?.domesticReference ?? null}
+                    overseasReference={marketComparison?.overseasReference ?? null}
+                  />
                   <DomesticShopSearch
                     title={product.title.value}
                     brand={product.brand.value}

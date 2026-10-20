@@ -17,18 +17,19 @@ import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 /** 🔴 WU-022 — transient 후보 구역. 저장되지 않는 값만 다루는 **표시 전용** 컴포넌트다. */
 /** 🔴 WU-030 — 결론을 한 덩어리로 모으는 요약 블록(표시 전용 · 계산 0). */
 import { ProductJudgementSummary } from "./ProductJudgementSummary";
-import { OverseasReferencePrice } from "./OverseasReferencePrice";
-import {
-  DOMESTIC_REFERENCE_NOTE,
-  DOMESTIC_REFERENCE_SCOPE,
-  DOMESTIC_REFERENCE_TITLE,
-} from "./overseas-reference";
+/**
+ * 🔴🔴 WU-132 ③ — **`OverseasReferencePrice` 를 이 패널이 더 이상 그리지 않는다.**
+ *    그 두 블록은 「📊 동일상품 가격 비교」(`MarketPriceComparison`)로 옮겨 갔다 —
+ *    가격 비교 영역을 **둘 두지 않기** 위해서다. 🟢 집계 타입만 계속 쓴다.
+ */
 import type { OverseasPriceSummary } from "./overseas-reference";
 import {
   GeminiTransientCandidates,
   SUPPLIED_URL_HEADING,
   /** 🔴 WU-130 — 해외 자동검색 구역의 머리 문구. owner 는 그 컴포넌트 파일이다. */
   OVERSEAS_AUTO_HEADING,
+  /** 🔴 WU-132 — 재투입 구역의 머리 문구. 같은 owner 다. */
+  REVIEWED_SAME_HEADING,
   DOMESTIC_REVIEW_HEADING,
   DOMESTIC_REVIEW_EMPTY,
   /** 🔴 WU-131 — 📚 이전에 확인한 후보 구역. owner 는 그 컴포넌트 파일이다. */
@@ -1718,6 +1719,20 @@ function GlobalMarketRowView({ row }: { row: GlobalMarketRow }) {
  * 읽기 전용 판단 화면이다. */
 export type { PriceLevel };
 
+/**
+ * 🔴🔴 WU-132 ① — **「📊 시장 가격 비교」 영역에 공급되는 것 전부.**
+ *
+ * 🔴 **가공된 값이 아니다** — 서버가 낸 네 배열을 합친 것과 두 집계 그대로다.
+ *    선별은 받는 쪽(`mi-same-candidates`)이 한다(규칙을 두 곳에 두지 않는다).
+ * 🔴 `rows === null` 은 「조회가 돌지 않았다」이고 `[]` 는 「돌았는데 후보 0」이다 —
+ *    받는 쪽이 그 둘을 다른 화면으로 그린다(WU-130 ② 계약).
+ */
+export interface MarketComparisonInput {
+  rows: GeminiTransientRow[] | null;
+  domesticReference: OverseasPriceSummary | null;
+  overseasReference: OverseasPriceSummary | null;
+}
+
 export function DomesticPriceIntelligencePanel({
   snapshotId,
   snapshotOriginPrice = null,
@@ -1736,6 +1751,11 @@ export function DomesticPriceIntelligencePanel({
   onOpenDomesticEvidence,
   onOpenOverseasEvidence,
   openPriceDetailRequest = 0,
+  /** 🔴 WU-132 ① — MI 산출을 「📊 시장 가격 비교」 영역으로 올려보낸다. */
+  onMarketComparisonChange,
+  /** 🔴 WU-132 ④ — 검토 구역의 원본 ↔ 후보 육안 비교용. */
+  originImageUrl = null,
+  originTitle = null,
 }: {
   snapshotId: string;
   /**
@@ -1850,6 +1870,25 @@ export function DomesticPriceIntelligencePanel({
    * 번째 클릭에서 값이 그대로라 아무 일도 일어나지 않는다.
    */
   openPriceDetailRequest?: number;
+  /**
+   * 🔴🔴🔴 WU-132 ① — **MI 산출을 「📊 시장 가격 비교」 영역으로 올려보내는 통로.**
+   *
+   * 왜 필요한가(전수검토의 핵심 사실) — 그 영역의 두 패널은 **클라이언트가 자기
+   * 검색을 돌려** `mayShowCandidate` 로 거르므로 `/check` 의 **MI verdict 를 한 번도
+   * 보지 않는다.** 그래서 「MI 가 SAME 이라 판정한 후보」가 가격 비교에 **구조적으로
+   * 닿지 못했다.** 🟢 이 콜백이 그 공급선이다.
+   *
+   * 🔴 **값을 가공하지 않는다** — 서버가 낸 네 배열과 두 집계를 그대로 올린다.
+   *    선별(SAME + 판매중 + 가격확인)은 그 영역의 선별기가 한다(`mi-same-candidates`).
+   * 🟢 방향은 `ComparisonShopSearch.onEvidenceChange` 와 **같다** — 새 패턴이 아니다.
+   */
+  onMarketComparisonChange?: (input: MarketComparisonInput) => void;
+  /**
+   * 🔴 WU-132 ④ — 원상품 대표 이미지/제목. 검토 구역이 「원본 ↔ 후보」 사진을
+   *    나란히 그리는 데만 쓴다. 🔴 판정·가격·집계에 들어가지 않는다.
+   */
+  originImageUrl?: string | null;
+  originTitle?: string | null;
 }) {
   const [data, setData] = useState<PriceHistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1885,6 +1924,12 @@ export function DomesticPriceIntelligencePanel({
    */
   const [overseasAutoEvidence, setOverseasAutoEvidence] = useState<GeminiTransientRow[] | null>(null);
   /**
+   * 🔴🔴 WU-132 ⑥ — **이전에 「동일상품」으로 판단한 URL 을 다시 확인한 결과.**
+   *    🟢 셀러가 아무것도 하지 않아도 채워지고(이력이 있으면), 위 셋과 **다른 칸** 이다 —
+   *       「당신이 지금 넣은 URL」이 아니라는 사실이 화면에서 사라지면 안 된다.
+   */
+  const [reviewedSameEvidence, setReviewedSameEvidence] = useState<GeminiTransientRow[] | null>(null);
+  /**
    * 🔴🔴 WU-049 — **해외 참고가격.** MI 가 이미 계산한 집계를 받는다.
    *    🟢 이 값은 **이번 확인에만** 산다 — GET 경로는 transient 를 넘기지 않아
    *       항상 비어 있다(설계). 그래서 상태로 들고 다른 값을 덮어쓰지 않는다.
@@ -1914,6 +1959,8 @@ export function DomesticPriceIntelligencePanel({
         urlCandidateEvidence?: GeminiTransientRow[] | null;
         /** 🔴 WU-130 — **자동 1회차의 핵심 칸.** 셀러가 아무것도 하지 않은 상태의 후보다. */
         overseasAutoEvidence?: GeminiTransientRow[] | null;
+        /** 🔴 WU-132 ⑥ — 이전 판단을 재투입한 결과. 자동 1회차에서도 채워진다. */
+        reviewedSameEvidence?: GeminiTransientRow[] | null;
       } | null;
     };
     setOverseasReference(j.overseasReference ?? null);
@@ -1921,7 +1968,53 @@ export function DomesticPriceIntelligencePanel({
     setGeminiEvidence(j.domesticShop?.geminiEvidence ?? null);
     setUrlCandidateEvidence(j.domesticShop?.urlCandidateEvidence ?? null);
     setOverseasAutoEvidence(j.domesticShop?.overseasAutoEvidence ?? null);
+    setReviewedSameEvidence(j.domesticShop?.reviewedSameEvidence ?? null);
   }, [autoCheckResult]);
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴🔴 WU-132 ① — **MI 산출을 「📊 시장 가격 비교」 영역으로 올려보낸다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * 🔴 **가공하지 않는다.** 네 배열을 합치고 두 집계를 그대로 올린다 — 선별(SAME +
+   *    판매중 + 가격확인)은 그 영역의 선별기(`mi-same-candidates`)가 한다. 여기서
+   *    선별하면 「무엇을 보여주는가」 규칙이 두 곳에 생긴다.
+   * 🔴 합치는 곳이 **여기 한 곳** 이다 — 네 번 세어지지 않는다(출처는 행 배지가 말한다).
+   * 🟢 콜백은 ref 로 잡는다 — 부모가 매 렌더 새 함수를 넘겨도 보고가 무한히 돌지 않는다
+   *    (`ComparisonShopSearch.onEvidenceChange` 와 **같은 규약**).
+   * 🔴 `null` 과 `[]` 를 섞지 않는다 — 넷이 전부 `null` 이면 「조회가 돌지 않았다」다.
+   */
+  const marketComparisonInput = useMemo<MarketComparisonInput>(() => {
+    const anyEvidence =
+      geminiEvidence != null ||
+      urlCandidateEvidence != null ||
+      overseasAutoEvidence != null ||
+      reviewedSameEvidence != null;
+    return {
+      rows: anyEvidence
+        ? [
+            ...(geminiEvidence ?? []),
+            ...(urlCandidateEvidence ?? []),
+            ...(overseasAutoEvidence ?? []),
+            ...(reviewedSameEvidence ?? []),
+          ]
+        : null,
+      domesticReference,
+      overseasReference,
+    };
+  }, [
+    geminiEvidence,
+    urlCandidateEvidence,
+    overseasAutoEvidence,
+    reviewedSameEvidence,
+    domesticReference,
+    overseasReference,
+  ]);
+  const onMarketComparisonChangeRef = useRef(onMarketComparisonChange);
+  onMarketComparisonChangeRef.current = onMarketComparisonChange;
+  useEffect(() => {
+    onMarketComparisonChangeRef.current?.(marketComparisonInput);
+  }, [marketComparisonInput]);
+
   /** 🔴 제외된 URL 을 **조용히 버리지 않는다** — 서버가 낸 이유를 그대로 한 줄로 적는다. */
   const [urlCandidateNotice, setUrlCandidateNotice] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
@@ -2158,6 +2251,8 @@ export function DomesticPriceIntelligencePanel({
              *    셀러가 아무것도 붙여넣지 않아도 채워지는 유일한 배열이다.
              */
             overseasAutoEvidence?: GeminiTransientRow[] | null;
+            /** 🔴 WU-132 ⑥ — 이전 판단(`human_verdict='SAME'`)을 재투입한 결과. */
+            reviewedSameEvidence?: GeminiTransientRow[] | null;
             urlCandidateMetrics?: {
               suppliedUrls: number;
               acceptedUrls: number;
@@ -2176,6 +2271,7 @@ export function DomesticPriceIntelligencePanel({
         setGeminiEvidence(json.domesticShop?.geminiEvidence ?? null);
         setUrlCandidateEvidence(json.domesticShop?.urlCandidateEvidence ?? null);
         setOverseasAutoEvidence(json.domesticShop?.overseasAutoEvidence ?? null);
+        setReviewedSameEvidence(json.domesticShop?.reviewedSameEvidence ?? null);
         setUrlCandidateNotice(describeUrlCandidateMetrics(json.domesticShop?.urlCandidateMetrics ?? null));
         setOverseasReference(json.overseasReference ?? null);
         setDomesticReference(json.domesticReference ?? null);
@@ -2293,6 +2389,11 @@ export function DomesticPriceIntelligencePanel({
       onCandidateUrlsChange={setCandidateUrlsText}
       urlCandidateEvidence={urlCandidateEvidence}
       overseasAutoEvidence={overseasAutoEvidence}
+      /** 🔴 WU-132 ⑥ — 재투입 결과. 위 셋과 **다른 구역** 에 선다(출처 보존). */
+      reviewedSameEvidence={reviewedSameEvidence}
+      /** 🔴 WU-132 ④ — 검토 구역의 원본 ↔ 후보 육안 비교용. 판정에 들어가지 않는다. */
+      originImageUrl={originImageUrl}
+      originTitle={originTitle}
       /** 🔴 WU-131 — 이력 읽기/판단 저장의 좌표. 바깥 패널만 이 값을 안다. */
       reviewSnapshotId={snapshotId}
       urlCandidateNotice={urlCandidateNotice}
@@ -2335,25 +2436,27 @@ export function isSuppliedUrlInputVisible(): boolean {
 }
 
 /**
- * 🔴🔴 WU-130 ④ — **중복 참고가격 두 구역을 «한 영역» 으로 합친다.**
+ * 🔴🔴🔴 WU-132 ③ — **WU-130 ④ 의 `unified-price-comparison` 은 «제거» 됐다.**
  *
- * WU-128 이 지목한 중복이 이것이다 — 🇰🇷 국내 참고가격과 🧾 해외 동일상품 참고가격이
- * **서로 떨어진 두 구역** 이라 셀러가 「국내/해외를 비교한 결과」로 읽지 못했다.
+ * 왜 — 그 영역이 MI 패널 **안** 에 있고 「📊 시장 가격 비교」가 **밖** 에 따로 있어서
+ * **가격 비교 영역이 둘** 이었다(WU-128 이 지목한 중복의 남은 절반). CPO 확정:
+ * 「가격비교 영역을 둘 두지 않는다」.
  *
- * 🟢 **표시만 바꾼다**(CPO 조건 ②) — 집계 입력(`domesticTransientRecords` ·
- *    `candidateDomesticPrice`) · 판정 · `computeMarketAlert` · 통화·환산 규칙은
- *    **한 글자도 건드리지 않았다**. 두 블록을 **감싸는 테두리와 제목 하나** 가 전부다.
- * 🔴 안쪽 두 블록의 제목·testid·🧾 아이콘·「환산 없음」 성질은 **그대로** 다 —
- *    그래서 `wu-056r1` 계약 다섯이 **깨지지 않고** 「구역 안 분리」로만 강화된다.
+ * 🟢 **지운 것이 아니라 옮겼다** — 안쪽 두 블록(🇰🇷 국내 참고가격 · 🧾 해외 동일상품
+ *    참고가격)은 `MarketPriceComparison` 으로 그대로 이동했고, 같은
+ *    `OverseasReferencePrice` 에 같은 `OverseasPriceSummary` 를 넘긴다.
+ * 🔴 **집계·판정·알림은 한 글자도 바뀌지 않았다** — `domesticTransientRecords` ·
+ *    `candidateDomesticPrice` · `computeMarketAlert` 는 그대로다(WU-129 가 경고한
+ *    자리 — 「표시 구역만 제거하고 집계 입력은 그대로 둔다」).
+ * 🔴 그래서 `overseasReference`/`domesticReference` **state 와 응답 칸은 남아 있다** —
+ *    이 패널이 그 값을 **위로 올려보내고**(`onMarketComparisonChange`) 그 영역이 그린다.
  */
-export const UNIFIED_PRICE_COMPARISON_TITLE = "📊 동일상품 가격 비교";
-/** 🔴 두 축이 **같은 영역 안에서** 비교된다는 사실을 구역이 직접 말한다. */
-export const UNIFIED_PRICE_COMPARISON_NOTE = "🇰🇷 국내와 🌎 해외를 한곳에서 비교합니다 — 참고용이며 판매판정에 반영되지 않습니다.";
 
 function TransientCandidateSections({
   web,
   supplied,
   overseasAuto,
+  reviewedSame,
   notice,
   overseasReference,
   domesticReference,
@@ -2361,12 +2464,21 @@ function TransientCandidateSections({
   onDomesticReview,
   reviewSaveState,
   reviewHistory,
+  originImageUrl,
+  originTitle,
 }: {
   web?: GeminiTransientRow[] | null;
   supplied?: GeminiTransientRow[] | null;
   /** 🔴 WU-130 — 해외 자동검색 후보. 위 둘과 **다른 구역** 이다(출처 보존). */
   overseasAuto?: GeminiTransientRow[] | null;
+  /** 🔴 WU-132 ⑥ — 이전에 「동일상품」으로 판단한 URL 을 다시 확인한 결과. */
+  reviewedSame?: GeminiTransientRow[] | null;
   notice?: string | null;
+  /**
+   * 🔴🔴 WU-132 ③ — 이 둘은 이제 **그리지 않는다**(「📊 동일상품 가격 비교」 영역이
+   *    그린다). 🟢 그래도 받는 이유는 **「조회가 돌았는가」의 근거** 이기 때문이다 —
+   *    후보가 0 이어도 조회가 돌았으면 🇰🇷 검토 구역이 서야 한다(WU-130 ② 계약).
+   */
   overseasReference?: OverseasPriceSummary | null;
   domesticReference?: OverseasPriceSummary | null;
   /** 🔴 WU-081 — 사람 검토 상태. 시스템 verdict 와 **별개 칸** 이다. */
@@ -2376,6 +2488,12 @@ function TransientCandidateSections({
   reviewSaveState?: Record<string, ReviewSaveState>;
   /** 🔴 WU-131 §3-B — 📚 이전에 확인한 후보. `null` = 아직 안 읽었다. */
   reviewHistory?: ReviewHistoryRow[] | null;
+  /**
+   * 🔴🔴 WU-132 ④ — **원상품 이미지/제목.** 검토 구역의 행이 「원본 ↔ 후보」 사진을
+   *    나란히 그리는 데 쓴다. 🔴 없으면 비교 칸을 **만들지 않는다**(빈 틀 금지).
+   */
+  originImageUrl?: string | null;
+  originTitle?: string | null;
 }): React.ReactNode {
   /**
    * 🔴🔴 WU-081 — **국내 후보를 «옮긴다». 복제하지 않는다.**
@@ -2387,9 +2505,11 @@ function TransientCandidateSections({
    * 🔴 `market` 은 운영 `classifyCandidateMarket` 산출이다. 여기서 추측하지 않는다.
    */
   const isKr = (r: GeminiTransientRow) => r.market === "KR";
-  const krRows = [...(web ?? []), ...(supplied ?? []), ...(overseasAuto ?? [])].filter(isKr);
+  const krRows = [...(web ?? []), ...(supplied ?? []), ...(overseasAuto ?? []), ...(reviewedSame ?? [])].filter(isKr);
   const webRest = (web ?? []).filter((r) => !isKr(r));
   const suppliedRest = (supplied ?? []).filter((r) => !isKr(r));
+  /** 🔴 WU-132 — 재투입 후보도 **같은 규칙** 으로 가른다(국내는 🇰🇷 구역으로 이동). */
+  const reviewedSameRest = (reviewedSame ?? []).filter((r) => !isKr(r));
   /** 🔴 WU-130 — 자동검색 후보도 **같은 규칙** 으로 가른다. 해외 등록부의 샵이라도
    *  `classifyCandidateMarket` 이 KR 로 판정하면 국내 구역으로 **옮긴다**(복제 아님) —
    *  시장은 여기서 추측하지 않고 운영 판정을 그대로 따른다. */
@@ -2408,7 +2528,12 @@ function TransientCandidateSections({
    * 🔴 「국내에 동일상품이 없다」로는 **적지 않는다**(WU-091 어휘 계약).
    */
   const checkRan =
-    web != null || supplied != null || overseasAuto != null || !!domesticReference || !!overseasReference;
+    web != null ||
+    supplied != null ||
+    overseasAuto != null ||
+    reviewedSame != null ||
+    !!domesticReference ||
+    !!overseasReference;
   const showDomesticReview = checkRan;
 
   /**
@@ -2433,32 +2558,12 @@ function TransientCandidateSections({
        *    별 칸이고, 문구가 그 수명을 직접 말한다(새로고침하면 사라진다).
        */}
       {/**
-       * 🔴🔴 WU-130 ④ — **한 영역 안에 🇰🇷 국내 + 🌎 해외.** 두 구역이 떨어져 있던 것이
-       *    WU-128 이 지목한 **중복** 이다. 🟢 감싸기만 했다 — 안쪽 두 블록의 제목·testid·
-       *    아이콘·환산 금지 성질은 그대로이고 **집계 계산은 한 글자도 바뀌지 않았다**.
-       * 🔴 값이 둘 다 없으면 안쪽이 각자 `null` 을 내므로 **빈 테두리만 남지 않게** 한다.
+       * 🔴🔴🔴 WU-132 ③ — **여기 있던 `unified-price-comparison` 영역이 사라졌다.**
+       *    가격 비교 영역을 **둘 두지 않기** 위해서다(CPO 확정). 그 두 블록은
+       *    「📊 동일상품 가격 비교」(`MarketPriceComparison`)로 **옮겨 갔고**, 이 패널은
+       *    그 값을 `onMarketComparisonChange` 로 **위로 올려보낸다**.
+       * 🔴 집계·판정·알림 경로는 **한 글자도 바뀌지 않았다**(WU-129 의 경고 그대로).
        */}
-      {(domesticReference || overseasReference) && (
-        <section
-          data-testid="unified-price-comparison"
-          className="mt-3 rounded-md border border-border bg-surface/30 p-2"
-        >
-          <p className="text-[11px] font-medium text-text-secondary">{UNIFIED_PRICE_COMPARISON_TITLE}</p>
-          <p className="mt-0.5 text-[11px] text-text-tertiary">{UNIFIED_PRICE_COMPARISON_NOTE}</p>
-          <div className="mt-2 space-y-2">
-            <OverseasReferencePrice
-              summary={domesticReference}
-              title={DOMESTIC_REFERENCE_TITLE}
-              note={DOMESTIC_REFERENCE_NOTE}
-              scope={DOMESTIC_REFERENCE_SCOPE}
-              icon="🇰🇷"
-              testId="domestic-reference"
-              amountTestId="domestic-lowest"
-            />
-            <OverseasReferencePrice summary={overseasReference} />
-          </div>
-        </section>
-      )}
       {/**
        * 🔴🔴 WU-081 — **국내 후보 «검토» 구역.** 위 두 참고가격 구역은 **금액 집계** 이고
        *    이 구역은 **후보 행 + 사람 검토** 다. 🟢 컴포넌트는 기존 것을 그대로 쓴다.
@@ -2475,6 +2580,9 @@ function TransientCandidateSections({
               review={domesticReview}
               onReview={onDomesticReview}
               saveState={reviewSaveState}
+              /** 🔴 WU-132 ④ — 원본 ↔ 후보 사진을 나란히. 없으면 칸을 만들지 않는다. */
+              originImageUrl={originImageUrl}
+              originTitle={originTitle}
             />
           ) : (
             <section data-testid="domestic-review-empty" className="mt-3 rounded-md border border-border bg-surface/40 p-2">
@@ -2505,6 +2613,26 @@ function TransientCandidateSections({
         review={domesticReview}
         onReview={onDomesticReview}
         saveState={reviewSaveState}
+        /** 🔴 WU-132 ④ — 해외에도 **같은** 육안 비교를 준다(국내만 주면 GT 가 한쪽으로 쌓인다). */
+        originImageUrl={originImageUrl}
+        originTitle={originTitle}
+      />
+      {/**
+       * 🔴🔴 WU-132 ⑥ — **이전에 「동일상품」으로 판단한 후보를 다시 확인한 구역.**
+       *    🟢 같은 컴포넌트 · 같은 네 버튼 · 같은 저장 경로다 — 다른 것은 **머리 문구와
+       *       출처 배지** 뿐이고, 그것이 「셀러가 지금 넣은 URL 이 아니다」를 말한다.
+       *    🔴 판정은 **이번에도 처음부터 다시** 했다 — 과거 사람 판단을 verdict 로
+       *       쓰지 않는다(그래서 결과가 달라질 수 있고, 그 변화가 GT 다).
+       */}
+      <GeminiTransientCandidates
+        evidence={reviewedSameRest}
+        heading={REVIEWED_SAME_HEADING}
+        testId="reviewed-same-transient"
+        review={domesticReview}
+        onReview={onDomesticReview}
+        saveState={reviewSaveState}
+        originImageUrl={originImageUrl}
+        originTitle={originTitle}
       />
       {/* 🔴 WU-022 — 「지금 확인」이 돌려준 **이번 확인 한정** 후보. DB 링크와
           데이터 수명이 다르므로 구역을 가른다. 판매판정·국내 최저가에 영향 0. */}
@@ -2573,6 +2701,11 @@ export function MiPanelView({
   onCandidateUrlsChange,
   urlCandidateEvidence = null,
   overseasAutoEvidence = null,
+  /** 🔴 WU-132 ⑥ — 재투입 후보. 위 셋과 **다른 구역** 에 선다. */
+  reviewedSameEvidence = null,
+  /** 🔴 WU-132 ④ — 검토 구역의 원본 ↔ 후보 육안 비교용. 판정에 들어가지 않는다. */
+  originImageUrl = null,
+  originTitle = null,
   /** 🔴 WU-131 — 검토 이력 API 의 좌표. **없으면 저장 경로가 돌지 않는다**(렌더 전용 하니스). */
   reviewSnapshotId,
   urlCandidateNotice = null,
@@ -2636,6 +2769,17 @@ export function MiPanelView({
    *       인상을 깨는 유일한 칸이다. 🔴 `null` = 그 경로가 돌지 못했다.
    */
   overseasAutoEvidence?: GeminiTransientRow[] | null;
+  /**
+   * 🔴🔴 WU-132 ⑥ — **이전에 「동일상품」으로 판단한 URL 의 재검증 결과.** 위 셋과
+   *    **다른 칸** 이다 — 셀러가 지금 넣은 URL 이 아니라는 사실이 사라지면 안 된다.
+   */
+  reviewedSameEvidence?: GeminiTransientRow[] | null;
+  /**
+   * 🔴 WU-132 ④ — 원상품 대표 이미지/제목(육안 비교용).
+   *    🔴 판정·가격·집계·등록 payload 에 **들어가지 않는다** — 그리는 데만 쓴다.
+   */
+  originImageUrl?: string | null;
+  originTitle?: string | null;
   /**
    * 🔴🔴 WU-131 — **검토 이력 API 의 좌표.** 이 값이 없으면 이력을 읽지도 저장하지도
    *    않는다(렌더 전용 하니스가 그 상태다) — 🔴 없는 주소로 fetch 해서 404 를
@@ -3195,6 +3339,8 @@ export function MiPanelView({
       /** 🔴 WU-130 — 자동검색 후보도 요약에 **센다**. 빠뜨리면 요약이 「후보 없음」인데
        *  아래에는 행이 서는 모순이 생긴다(이 저장소에서 반복된 그 버그). */
       { sourceLabel: "해외 자동검색", rows: overseasAutoEvidence ?? [] },
+      /** 🔴 WU-132 — 재투입 후보도 **센다**(같은 이유 — 요약과 아래 행이 어긋나면 안 된다). */
+      { sourceLabel: "이전 확인 후보", rows: reviewedSameEvidence ?? [] },
     ],
   };
 
@@ -3720,7 +3866,7 @@ export function MiPanelView({
           🟢 그리고 후보가 없으면 두 구역 모두 **아무것도 렌더하지 않는다** —
              기본 화면은 한 픽셀도 바뀌지 않는다(그 성질은 컴포넌트가 보장한다).
         */}
-        <TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} overseasAuto={overseasAutoEvidence} notice={urlCandidateNotice} overseasReference={overseasReference} domesticReference={domesticReference} domesticReview={domesticReview} onDomesticReview={handleDomesticReview} reviewSaveState={reviewSaveState} reviewHistory={reviewHistory} />
+        <TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} overseasAuto={overseasAutoEvidence} reviewedSame={reviewedSameEvidence} notice={urlCandidateNotice} overseasReference={overseasReference} domesticReference={domesticReference} domesticReview={domesticReview} onDomesticReview={handleDomesticReview} reviewSaveState={reviewSaveState} reviewHistory={reviewHistory} originImageUrl={originImageUrl} originTitle={originTitle} />
       </div>
     </CollapsibleSection>
   );

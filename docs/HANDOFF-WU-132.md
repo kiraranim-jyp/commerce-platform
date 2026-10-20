@@ -1,5 +1,96 @@
 # 🔴 인수인계 — WU-132 **SAME→가격비교 / SIMILAR→셀러검토 / feedback→재활용**
 
+---
+
+## 🟢🟢 실행 완료 기록 (2026-10-20 · ①~⑬ 한 세션)
+
+> 🔴 **CTO 가 할 코드 작업이 없다.** 남은 것은 **CEO 화면 확인 1회**(§6)다.
+
+```
+운영 변경   8 파일 + 신규 2(`MarketPriceComparison.tsx` · `mi-same-candidates.ts`)
+계약        신규 36 · 기존 7 파일 **갱신·강화**(약화 0)
+음성 대조   M1~M9 **전부 FAIL → 복구 PASS**
+회귀        608 files / **8,499 passed · failed 0** (기준 8,462 + 신규 37)
+typecheck   0 · build exit 0
+```
+
+### 🟢 무엇이 바뀌었나
+
+```
+① MI verdict 공급   패널 → `onMarketComparisonChange` → CommerceWorkspace →
+                   「📊 시장 가격 비교」 **안쪽 맨 위** 「📊 동일상품 가격 비교」
+                   🔴 전수검토의 그 구멍을 닫았다 — 두 패널은 **자기 검색** 을 돌려
+                      `/check` 의 MI verdict 를 **한 번도 보지 못했다**
+② 세 축 필터        SAME(tier) · 판매중(`soldOut !== true`) · 가격확인(`VERIFIED_CURRENT`)
+                   🔴 `=== false` 를 쓰지 않은 이유: 국내 `sold_out` 은 **true 0행·null 113행**
+                      ⟹ 그러면 가격비교가 **구조적으로 항상 빈다**(운영 집계 owner 와 같은 규칙)
+③ 영역 하나로       MI 패널의 `unified-price-comparison` **제거** · 두 참고가격 블록은
+                   새 영역으로 **이동**(복제 아님) · 집계·판정·알림 **한 글자도 안 바꿨다**
+④ 육안 비교        후보 행에 **원본 ↔ 후보 이미지 나란히** + 재고 세 상태
+                   🟢 `imageUrl`/`soldOut` 은 **판정이 고른 그 후보** 값(추가 HTTP **0**)
+                   🔴 후보 이미지 없으면 **「이미지 없음」** — 원본 사진으로 메우지 않는다
+⑤ 3상태 저장       WU-131 경로 **그대로**(새 저장 경로 0 · 엔드포인트 그대로)
+                   🔴 버튼은 **넷 유지** — WU-131 §8 이 「유사」를 요구했고 CPO 의 셋은 부분집합
+⑥ feedback 재투입   `candidate_reviews.human_verdict='SAME'` URL → **네 번째 일시 생산자**
+                   `__reviewed_same__` · 🔴 과거 DIFFERENT **편입 0** · URL **만** 넘긴다
+```
+
+### 🔴🔴 E2E 실측 (실제 HTTP · 두 상품 교차검증 · `WU_132_PROBE=1`)
+
+```
+📚 검토 이력(운영 DB) 17행 · SAME 13 · DIFFERENT 4 · origin_code B226AC009
+
+S1 b226ac042  해외 등록부 35 → 자격 30 → {unsupported 20 · ok 10} → 후보 35
+              JUDGED 1(designerkidswear CAD 351.4 · PRESUMED_SAME) · 재투입 대상 0
+              📊 가격비교 **0건**
+S2 b226ac009  해외 자동 후보 22 → JUDGED 2
+              🔁 재투입 13 → accepted 13 → usable 10 → MI 10 → JUDGED 7
+              🟢🟢 **후보가 2 → 9 로 늘었다**(새 판매처 7곳: biskuit.kr · bobochoses.com ·
+                 cissywears.com · global.trenbe.com · kids21.com · scoutandcokids.com ·
+                 junioredition.com) ⟸ ⑥ 의 실측 효과
+              tier 분포 — PRESUMED_SAME 7 · CONFLICT 2 · **SAME 0**
+              📊 가격비교 **0건**
+🟢 산출물 shopId 전건 일시 id · 등록부 uuid **0** · providerCalls **0**
+```
+
+🔴🔴 **가장 중요한 실측 결과 — 「동일상품 가격 비교」가 현재 데이터로 «0건» 이다.**
+```
+원인은 구현이 아니다 — MI 가 이 두 상품의 후보를 **전부 보류(PRESUMED_SAME)/충돌** 로
+판정한다. 🟢 그리고 그 보류를 넣지 않는 것이 **정확하다** — WU-123/125 가 보류 4건을
+**4/4 Human DIFFERENT** 로 측정했다. ⟹ CPO 지시(「SAME 만」)를 그대로 구현한 결과다.
+🔴 그래서 CEO 화면에는 「동일상품으로 판정되고 가격까지 확인된 후보가 아직 없습니다」가
+   뜨고, 같은 영역의 **참고가격 집계는 숫자가 있다**(유사상품 포함 참고 축 · KRW 88,000).
+🟢 그 차이를 영역 문구가 **직접 말한다**(`MI_SAME_AREA_SCOPE` 마지막 문장) —
+   말하지 않으면 셀러가 그 숫자를 「동일상품 가격」으로 읽는다(2026-09-19 사고의 기전).
+🔴 **보류를 가격비교에 넣는 완화는 CTO 가 하지 않았다** — 8축 CLOSED · CPO 판정 사안.
+```
+
+🔴 **하니스 결함 1건을 스스로 잡았다(그대로 보고했으면 거짓 결론)**
+```
+1차 probe 가 운영의 두 단계(`withConfidence` → `enrichCandidatePrices`)를 빠뜨렸다.
+결과: `priceStatus` **전건 비었고** global.trenbe 가 `STRONG_IDENTIFIER/SAME` 로 나왔다.
+⟹ 「SAME 1건인데 가격 미확인이라 0건」이라는 **거짓 원인** 을 보고할 뻔했다.
+🟢 순서를 그대로 베끼자 `TEXT_CONFIRMED/PRESUMED_SAME` 으로 바뀌었다 — 헌장 §5-B 가
+   막으라고 한 바로 그 실수다.
+```
+
+🔴 **측정불가/한계로 남긴 것**
+```
+⒜ SAME 케이스가 실데이터에 **0건** 이라 「가격비교 행이 화면에 선다」는 **계약 테스트
+   (B-3 마운트 DOM)로만** 증명됐다 — 실데이터로는 증명하지 못했다
+⒝ 재투입 13건 중 **3건은 열어 보지 않았다**(`maxUrls` 10 · thefrontshop · tinyapple ×2).
+   🔴 상한은 붙여넣기 경로와 **공유 상수** 라 임의로 올리지 않았다
+⒞ 과거 GT 17행은 `image_url` 이 **전건 null**(그때 evidence 에 그 칸이 없었다) ⟹
+   📚 이력 구역에는 사진이 없다. 🟢 **이번 조회 후보는 8/9 가 이미지를 들고 온다**
+⒟ 실제 따져 화면은 **CTO 가 볼 수 없다**(로그인 뒤) — 제품 PASS 는 CEO 확인으로만 닫힌다
+```
+
+🟢 **부수 수정 1건** — 재투입 경로의 가격 보강 HTTP 가 `geminiPriceEnrichCalls` 에
+섞여 들어가고 있었다(출처가 사라진다) ⟹ `reviewedSamePriceEnrichCalls` 로 **갈랐다**.
+
+---
+
+
 > 🔴🔴🔴 **새 세션은 준비 단계 없이 §3 의 ⒜ 부터 «바로 코드»** 다.
 > **재조사 금지 · 재설계 금지 · 설계 WU 추가 금지**(헌장 §4-C ①).
 > 🔴 그리고 **거기서 멈추지 않는다** — 아래 **13 단계를 한 세션에서 끝까지** 간다.

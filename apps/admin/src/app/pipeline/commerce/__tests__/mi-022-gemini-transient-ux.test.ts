@@ -258,11 +258,17 @@ describe("⑥ 🔴 판정·가격 계산에 손대지 않았다 — 소스 계�
      *    🔴 **강화** 한 점: 세 배열이 **전부** 그 파생에 들어가야 한다. 하나를
      *       빠뜨리면 그 출처의 KR 후보가 **조용히 사라지는** 길이 생긴다.
      */
+    /**
+     * 🔴🔴 WU-132 — 입력이 **넷** 이 됐다(이전 판단 재투입이 더해졌다). 🟢 성질은
+     *    그대로이고 **강화** 도 그대로다 — 네 배열이 **전부** 그 파생에 들어가야 한다.
+     *    🔴 하나를 빠뜨리면 그 출처의 KR 후보가 **조용히 사라진다**.
+     */
     expect(panel).toContain(
-      "const krRows = [...(web ?? []), ...(supplied ?? []), ...(overseasAuto ?? [])].filter(isKr)",
+      "const krRows = [...(web ?? []), ...(supplied ?? []), ...(overseasAuto ?? []), ...(reviewedSame ?? [])].filter(isKr)",
     );
     expect(panel).toContain("const overseasAutoRest = (overseasAuto ?? []).filter(");
-    expect(panel).toContain("<TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} overseasAuto={overseasAutoEvidence}");
+    expect(panel).toContain("const reviewedSameRest = (reviewedSame ?? []).filter(");
+    expect(panel).toContain("<TransientCandidateSections web={geminiEvidence} supplied={urlCandidateEvidence} overseasAuto={overseasAutoEvidence} reviewedSame={reviewedSameEvidence}");
     /** 🔴 그리고 그 구역이 판정/집계 어휘와 **같은 줄에 서지 않는다**(위 FORBIDDEN 과 같은 원칙). */
     const krLines = panel.split(String.fromCharCode(10)).filter((l) => l.includes("krRows") || l.includes("domesticReview"));
     expect(krLines.filter((l) => FORBIDDEN.some((f) => l.toLowerCase().includes(f.toLowerCase())))).toEqual([]);

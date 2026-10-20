@@ -13,7 +13,8 @@ import {
 } from "../_lib/run-domestic-price-check";
 import { runPriceCheck } from "../_lib/run-price-check";
 /** 🔴 WU-131 — 후보 «이력» 의 생산자. `domestic_product_links` 와 **다른 표** 다. */
-import { recordSeenCandidates } from "../_lib/candidate-review";
+/** 🔴 WU-132 ⑥ — 그 이력을 **다음 조회의 입력으로** 되돌리는 읽기 경로. */
+import { listReviewedSameUrls, recordSeenCandidates } from "../_lib/candidate-review";
 
 /**
  * 🔴 요청 payload 경계 — 상한(`MAX_SUPPLIED_CANDIDATE_URLS`)보다 넉넉하게 받되
@@ -80,6 +81,35 @@ export async function POST(request: Request) {
   }
 
   const product = backfillCanonicalProduct(snapshot.workspace.canonicalProduct);
+
+  /**
+   * ══════════════════════════════════════════════════════════════════════════
+   * 🔴🔴 WU-132 ⑥ — **이전에 「동일상품」으로 판단한 후보를 다시 넣는다**
+   * ══════════════════════════════════════════════════════════════════════════
+   *
+   * WU-118 이 측정한 공백이 이것이다 — 사람이 SAME 이라 한 URL 은 재투입하면
+   * **19/19 가 후보로 살아남는데** 운영에 **되돌려 넣는 경로가 0** 이었다. 그래서
+   * 매번 검색부터 시작하고, 같은 질문(「왜 또 못 찾나」)이 반복됐다.
+   *
+   * 🔴 `SAME` **만** 고른다(과거 DIFFERENT 자동 편입 금지 · CPO 명시).
+   * 🔴 사람 판단을 MI 판정으로 **쓰지 않는다** — 넘기는 것은 **URL 뿐** 이고
+   *    SAME/DIFFERENT 는 기존 판정기가 페이지를 열어 **처음부터 다시** 낸다.
+   * 🔴 실패해도 가격확인을 멈추지 않는다(알림·이력과 같은 격리 원칙).
+   * 🔴 상한은 붙여넣기 경로와 **같은 상수** 다 — 재투입이 fetch 비용이기 때문이다.
+   */
+  let reviewedSameUrls: string[] = [];
+  try {
+    const dnaForReuse = buildProductIdentityDna(product);
+    reviewedSameUrls = await listReviewedSameUrls({
+      snapshotId,
+      originCode: dnaForReuse.brandModelCode ? dnaForReuse.brandModelCode.toUpperCase() : null,
+      workspaceId: auth.user.workspaceId,
+      limit: MAX_SUPPLIED_CANDIDATE_URLS,
+    });
+  } catch {
+    /* 🔴 이력 조회 실패가 가격확인 자체를 깨뜨리지 않는다. */
+  }
+
   const result = await runPriceCheck({
     snapshotId,
     sourceUrl: product.sourceUrl,
@@ -106,6 +136,8 @@ export async function POST(request: Request) {
       categoryScopes: resolveMarketCategoryScopes(product, snapshot.workspace.marketCategoryProfileId),
       /** 🔴 WU-024 — 안 보내면 `undefined` 이고 그 경로는 **한 줄도 돌지 않는다**(기존 동작). */
       candidateUrls,
+      /** 🔴 WU-132 ⑥ — 비어 있으면 그 경로도 **한 줄도 돌지 않는다**(기존 동작 유지). */
+      reviewedSameUrls: reviewedSameUrls.length > 0 ? reviewedSameUrls : undefined,
     });
   } catch (error) {
     domesticShop = {
@@ -173,12 +205,21 @@ export async function POST(request: Request) {
      * 🔴 **응답의 세 배열은 그대로 둔다** — 화면의 출처 구분(WU-028)을 깨지 않는다.
      *    합치는 것은 **MI 입력 한 곳** 뿐이다.
      */
+    /**
+     * 🔴🔴 WU-132 — **재투입 후보도 같은 자리로 넘긴다.** 그러지 않으면 이전에
+     *    동일상품으로 확인한 판매처의 가격이 집계에 **영원히 못 들어간다** —
+     *    그것이 이 재투입의 목적이다. 🟢 저장 0 · 환산 0 · 새 계산 0(위 셋과 동일).
+     */
     const transientEvidence =
-      domesticShop.geminiEvidence || domesticShop.urlCandidateEvidence || domesticShop.overseasAutoEvidence
+      domesticShop.geminiEvidence ||
+      domesticShop.urlCandidateEvidence ||
+      domesticShop.overseasAutoEvidence ||
+      domesticShop.reviewedSameEvidence
         ? [
             ...(domesticShop.geminiEvidence ?? []),
             ...(domesticShop.urlCandidateEvidence ?? []),
             ...(domesticShop.overseasAutoEvidence ?? []),
+            ...(domesticShop.reviewedSameEvidence ?? []),
           ]
         : null;
     intelligence = await computeMarketIntelligence(
@@ -222,6 +263,20 @@ export async function POST(request: Request) {
    *    쓰지 않으므로 이미 판단한 후보가 재조회로 **초기화되지 않는다**.
    * 🔴 실패해도 가격확인 결과를 뒤집지 않는다(알림 갱신과 같은 격리 원칙).
    * 🔴 가격은 **표시용** 으로만 실린다 — 집계·판정·alert 에 들어가지 않는다.
+   */
+  /**
+   * 🔴🔴 WU-132 — **`reviewedSameEvidence` 는 여기에 «넣지 않는다».**
+   *
+   * 이유가 둘이고 둘 다 데이터 사실이다:
+   * ```
+   * ⒜ 그 행은 **이미 이 표에 있다** — 재투입 URL 의 출처가 바로 이 표다.
+   * ⒝ 🔴 `source` check constraint 에 `REVIEWED_SAME` 이 **없다**(079 migration).
+   *    기존 값(SELLER_URL 등)으로 적으면 upsert 가 그 행의 **원래 출처를 덮어쓴다** —
+   *    「이 후보가 어디서 처음 왔는가」가 영구히 사라진다.
+   * ```
+   * 🔴 그래서 **쓰지 않는다**(새 enum 값 추가 = migration 이고 이번 범위 밖이다).
+   * 🟢 화면에서 잃는 것은 없다 — 그 후보는 이번 조회의 「🔁 이전 확인 후보」 구역에
+   *    **새 판정과 함께** 서고, 📚 이력 구역에도 그 행이 그대로 있다.
    */
   try {
     const dna = buildProductIdentityDna(product);

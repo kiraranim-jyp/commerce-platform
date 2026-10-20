@@ -3,6 +3,8 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DomesticPriceIntelligencePanel } from "../DomesticPriceIntelligencePanel";
+/** 🔴 WU-132 ③ — 두 참고 구역이 **옮겨 간** 자리. 화면의 유일한 가격비교 영역이다. */
+import { MarketPriceComparison } from "../MarketPriceComparison";
 import { OVERSEAS_REFERENCE_TITLE, DOMESTIC_REFERENCE_TITLE } from "../overseas-reference";
 import { PRICE_SECTION_TITLE } from "../price-hierarchy";
 import { GLOBAL_MARKET_HINT_LABEL } from "../global-market";
@@ -75,6 +77,28 @@ function clickByText(text: string): boolean {
   return true;
 }
 
+/**
+ * 🔴🔴 WU-132 ③ — **두 참고 구역이 서는 «자리» 가 바뀌었다(성질은 그대로).**
+ *
+ * 가격 비교 영역을 **둘 두지 않기** 위해 MI 패널의 `unified-price-comparison` 을
+ * 제거했고, 그 안의 두 블록은 「📊 동일상품 가격 비교」(`MarketPriceComparison`)로
+ * **옮겼다**. 🟢 이 파일이 잠그는 것(**구역 식별** · 환산 금지 · 아이콘 충돌 금지)은
+ * 한 글자도 약해지지 않는다 — **같은 단언을 새 owner 에 적용** 한다.
+ *
+ * 🔴 그리고 **원본 카드의 환산이 살아 있는지** 는 여전히 패널을 마운트해서 본다
+ *    (그 테스트가 이 파일의 ⒝ 미채택 증거다).
+ */
+async function mountComparisonArea() {
+  await act(async () => {
+    root.render(
+      createElement(MarketPriceComparison, {
+        domesticReference: DOMESTIC_SUMMARY,
+        overseasReference: OVERSEAS_SUMMARY,
+      } as never),
+    );
+  });
+}
+
 async function mountAndRecheck() {
   vi.stubGlobal("fetch", stubFetch());
   await act(async () => {
@@ -112,9 +136,20 @@ afterEach(async () => {
 
 describe("WU-056-R1 — 화면 단위 구역 식별", () => {
   it("🟢 두 참고 구역이 «각자» 렌더된다", async () => {
-    await mountAndRecheck();
+    await mountComparisonArea();
     expect(container.querySelector('[data-testid="overseas-reference"]')).not.toBeNull();
     expect(container.querySelector('[data-testid="domestic-reference"]')).not.toBeNull();
+  });
+
+  /**
+   * 🔴🔴 WU-132 ③ — **가격 비교 영역은 화면에 «하나» 다.** MI 패널을 통째로 마운트해
+   *    그 영역이 **없다** 는 것을 확인한다 — 둘이 되면 WU-128 이 지목한 중복이 되돌아온다.
+   */
+  it("🔴🔴 MI 패널 안에는 가격 비교 영역이 **없다**(영역은 하나다)", async () => {
+    await mountAndRecheck();
+    expect(container.querySelector('[data-testid="unified-price-comparison"]')).toBeNull();
+    expect(container.querySelector('[data-testid="overseas-reference"]')).toBeNull();
+    expect(container.querySelector('[data-testid="domestic-reference"]')).toBeNull();
   });
 
   /**
@@ -124,7 +159,7 @@ describe("WU-056-R1 — 화면 단위 구역 식별", () => {
    *    금지하면 정상인 원본 카드까지 잡아 거짓 FAIL 이 난다.
    */
   it("🔴🔴 해외 참고가격 구역 «안» 에 환산값이 없다", async () => {
-    await mountAndRecheck();
+    await mountComparisonArea();
     const section = container.querySelector('[data-testid="overseas-reference"]')!;
     const text = section.textContent ?? "";
     expect(text).toContain("EUR 40");
@@ -174,7 +209,7 @@ describe("WU-056-R1 — 화면 단위 구역 식별", () => {
 
   /** 🔴 아이콘도 겹치지 않는다 — WU-049 가 `🌐` 를 썼던 자리다. */
   it("🔴 해외 참고가격 아이콘이 🌐 가 아니다", async () => {
-    await mountAndRecheck();
+    await mountComparisonArea();
     const section = container.querySelector('[data-testid="overseas-reference"]')!;
     expect(section.textContent).toContain("🧾");
     expect(section.textContent).not.toContain("🌐");
