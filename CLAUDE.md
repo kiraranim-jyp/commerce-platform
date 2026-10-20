@@ -467,6 +467,39 @@ write 테스트 범위: 기존 데이터 **1건** · 영향 범위가 작은 필
 
 ## 12. 현재 상태 — MI 측정 트랙 **전부 종료** (갱신 2026-10-12)
 
+### 🟡 **WU-135 — 등록 payload 까지 연결됨 · 실등록은 STOP**(2026-10-20)
+
+🟢 전문 `docs/HANDOFF-WU-135.md`. 🔴 **운영 코드 변경 0**(하니스/계약만) · 회귀 8,524 · tsc 0 · build 0.
+
+```
+🟢 STEP 2 경로 확정  ListingModel owner 하나 → buildNaverProductPayload → validateNaverPayload
+                    → /api/smartstore/register(requireRegistrationAccess · resolveNaverContext
+                    · getNaverCredentials · /v2/products · markSnapshotRegistered)
+🟢 자격증명 실측     naver ✅/✅ · **lotteon ❌/❌** · coupang 설정 1행 · REGISTERED 스냅샷 **37건**
+🟢 STEP 3·4 실측(실제 상품 B226AC009 · 원상품 URL **해외**)
+   ① 재추출 brand **"Bobo Choses"**  ② 저장분 brand **""**  ③ payload brandName **null → Bobo Choses**
+   ④ validation ok=false · 항목 **36** · READY **28** · MISSING **7** · **BLOCKED 0**
+   ⑤ 🟢🟢 **MI → 등록 데이터 생존 6/6**(브랜드·상품명·대표이미지·상세정보·재고·판매가)
+🔴 MISSING 7 은 **전부 셀러 설정/입력** 이다 — 택배사 · 소재 · 제조사 · 품질보증 ·
+   A/S 책임자 · A/S 전화 · 옵션조합(기본 재고) ⟹ **코드 결함 0**
+```
+
+🔴🔴 **실제 등록(STEP 5/6)은 하지 않았다 — 사유 셋**: ⒜ 위 **셀러 설정 7칸이 비어 있다**
+(그 값은 셀러/CEO 가 입력하는 사업 데이터이고 CTO 가 지어내면 **공개 상품의 신고 내용**이 된다)
+⒝ 실등록은 **외부로 나가는 되돌리기 어려운 상업 행위** 다(§12 「실등록 STOP」 · §3 사업 승인은 CEO)
+⒞ 기술적으로도 호출 불가(로그인 세션 + egress 프록시 · 메모 `production-payload-is-unreachable`).
+🟢 **그래서 남은 것은 코드가 아니다** — 막는 7칸이 정확히 특정됐고 BLOCKED 는 0 이다.
+
+🔴 **제한사항** — ⒜ 기존 스냅샷 543건은 brand 가 빈 채로 저장돼 있다(등록 전 **재분석 필요** ·
+일괄 재추출 543회는 임의로 돌리지 않았다) ⒝ 국내 가격비교 여전히 0(8축 CLOSED) ⒞ 표본
+**상품 1개 · 채널 1개**(lotteon 자격증명 없음) ⒟ 🔴 하니스에서 **칸 이름을 두 번 틀렸다**
+(`brandName` 실제 자리는 `detailAttribute.naverShoppingSearchInfo` · validation 배열은 **`fields`**) —
+🟢 둘 다 「브랜드가 사라졌다」·「검사 0」이라는 **거짓 결론 직전에** 잡았다.
+
+🟡 **CPO/CEO 결정 둘** — ① Settings 7칸 입력 ② 실등록 승인(어느 상품을 어느 채널에).
+🟢 그 둘이 열리면 CTO 가 할 일은 **등록 실행과 결과 확인** 이고 코드 작업은 없다.
+
+---
 ### 🟢🟢🟢 **WU-134 종료 — 실제 human SAME 이 «처음으로» 가격비교에 섰다** (2026-10-20)
 
 🟢 전문 `docs/HANDOFF-WU-134.md`. 🔴 **CEO 액션 없음.** 다음 범위는 CPO 가 지정한다.
